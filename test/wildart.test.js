@@ -95,3 +95,18 @@ test('at the water (AN5): drinking with the forelegs splayed, wading in the shal
     assert.ok(pixels(animalSprite(`pet:${kind}`, 'wadedrink', 2, 0)) > pixels(animalSprite(`pet:${kind}`, 'swim', 2, 0)) * 0.8, `${kind}: drinking in the shallows, the head at the water`);
   }
 });
+
+test("the turkey's strut and the bear's swipe (AN2)", () => {
+  for (const kind of Object.keys(SPECIES)) for (const pose of ['strut', 'swipe']) for (let f = 0; f < ANIMAL_FRAMES[pose]; f++) assert.ok(pixels(animalSprite(`pet:${kind}`, pose, 6, f)) > 12, `${kind} ${pose} ${f} draws`);
+  // the tom: the fan raised in a wheel behind him - seen from the front, far wider and taller than standing
+  const st = animalSprite('pet:turkey', 'strut', 0, 0), sd = animalSprite('pet:turkey', 'idle', 0, 0);
+  assert.ok(st.w > sd.w * 1.35 && st.h > sd.h, `the fan up (${st.w}x${st.h} against ${sd.w}x${sd.h})`);
+  // the bear: rocked back, a forepaw up, then raking forward - the forefeet off the ground, the two frames apart
+  for (const kind of ['blackbear', 'grizzly']) {
+    const a = animalModel(kind, { pose: 'swipe', phase: 0 }), b = animalModel(kind, { pose: 'swipe', phase: 0.5 });
+    let low = 0; for (let y = 0; y < a.d; y++) for (let x = Math.ceil(a.w * 0.5); x < a.w; x++) if (a.get(x, y, 0)) low++;
+    assert.equal(low, 0, `${kind}: up off its forefeet`);
+    assert.ok(!same(animalSprite(`pet:${kind}`, 'swipe', 2, 0), animalSprite(`pet:${kind}`, 'swipe', 2, 1)), `${kind}: the paw up, then forward`);
+    void b;
+  }
+});

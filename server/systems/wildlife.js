@@ -1021,6 +1021,7 @@ function herdLead(world, a) {
 // what it does standing about (by what it eats, and where it is)
 function activityPose(w, S, map, a) {
   if (S.swims === 'float' && wet(map, a.x, a.y)) return APOSE.float;
+  if (w.kind === 'turkey' && !w.young && !(a.id & 1) && rng() < 0.3) return APOSE.call;   // (a tom struts: the fan up, the wings down - AN2)
   if (S.swims && wet(map, a.x, a.y)) return APOSE.swim;
   switch (S.diet) {
     case 'graze': case 'browse': return rng() < 0.75 ? APOSE.graze : APOSE.auto;

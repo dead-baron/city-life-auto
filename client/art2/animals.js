@@ -14,6 +14,7 @@
 //     the ground) | 'fall' (knocked off its feet: on its side, the legs going)
 //     AN5, at the water: 'drink' (the forelegs splayed, the head right down to the water) | 'wade' (standing or walking
 //     in the shallows: the legs under the water to the knees)
+//     AN2: 'swipe' (a bear rocked back off its forefeet, a forepaw raised (phase < 0.5) and raking forward)
 //     kind may carry a variant: 'deer:y' the young (smaller, a fawn's spots, no antlers), 'deer:L' the legendary
 //     pure white one (it glows faintly)
 //   renderUpright(vox, heading, { fy = 0.38, dither }) -> GBuf (anchor at the model centre on the ground)
@@ -92,10 +93,11 @@ export function animalModel(kind, o = {}) {
   if (pose0 === 'rear' || pose0 === 'climb') return pitchUp(animalModel(kind, { ...o, pose: pose0 === 'rear' ? 'stand' : 'alert', phase: 0 }), A, pose0 === 'rear' ? 1.15 : 1.45, pose0 === 'rear');
   if (pose0 === 'dead') return onSide(animalModel(kind, { ...o, pose: 'stand', phase: 0.12 }), A);
   if (pose0 === 'fall') return onSide(animalModel(kind, { ...o, pose: 'stand', gait: 'run', phase: o.phase || 0 }), A);   // (AN7: the legs going as it hits the ground)
+  if (pose0 === 'swipe') return flinch(animalModel(kind, { ...o, pose: 'swipeleg' }), A, 0.36);   // (AN2: the bear's swipe)
   if (pose0 === 'hit') return flinch(animalModel(kind, { ...o, pose: 'alert', phase: 0 }), A, 0.2);              // (AN7: the flinch)
   if (pose0 === 'swim') return waterline(animalModel(kind, { ...o, pose: 'alert' }), A);
   if (pose0 === 'wade' || pose0 === 'wadedrink') return waterline(animalModel(kind, { ...o, pose: pose0 === 'wade' ? 'stand' : 'drink', wl: A.h * 0.3 }), A, 0.3);   // (AN5: in the shallows; drinking there)
-  const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, down = pose === 'down', lie = pose === 'lie' || down, alert = pose === 'alert', stalk = pose === 'stalk', limp = pose === 'limp';
+  const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, down = pose === 'down', lie = pose === 'lie' || down, alert = pose === 'alert', stalk = pose === 'stalk', limp = pose === 'limp', swipe = pose === 'swipeleg';
   const hk = A.len <= 30 && (!A.jl || A.len < 14) ? 1.2 : 1;            // pets get the chunky big-headed look of A1 (the wild ones true to life, but for a rabbit)
   const L = Math.ceil(A.len * 1.7 + 10 + (A.antlers ? 8 : 0) + (TAIL_ROOM[A.tail] || 0)), W = Math.ceil(A.w * 2.3 + 12 + (A.antlers >= 2 ? 22 : 0)), Hh = Math.ceil(A.h * 2.2 + 12 + (A.antlers >= 2 ? 16 : 0));
   const m = new Vox(L, W, Hh);
@@ -157,6 +159,7 @@ export function animalModel(kind, o = {}) {
       const top = bz - bodyR * 0.3, L2 = Math.max(top, (A.h - bodyR) * 0.92 - bodyR * 0.3) * (back ? 1.07 : 1.015) / 2;   // (crouched in a stalk: the legs bend)
       let fx = back ? -0.6 : 0.6, fz = 0;
       if (moving) { const p = (((phase + OFF[i]) % 1) + 1) % 1; if (p < D) fx = stride * (0.5 - p / D); else { const u = (p - D) / (1 - D); fx = stride * (u - 0.5); fz = Math.sin(u * Math.PI) * lift; } }
+      if (swipe && i === 1) { const up = phase < 0.5; fx = stride * (up ? 0.25 : 1.15); fz = A.h * (up ? 0.62 : 0.4); }   // (AN2: the paw up, then raking forward)
       if (drink && !back) fx = stride * (i === 0 ? 0.62 : -0.28);   // (AN5: drinking, the forelegs splayed)
       if (limp && i === 1) { fx = stride * 0.12; fz = A.h * 0.22 + Math.sin(phase * Math.PI * 2) * 0.6; }   // (AN7: the hurt foreleg held up, dangling)
       const dx = fx, dz = fz - top, d = Math.max(0.5, Math.min(L2 * 1.995, Math.hypot(dx, dz))), th = Math.atan2(dz, dx), al = Math.acos(Math.min(1, d / (2 * L2)));

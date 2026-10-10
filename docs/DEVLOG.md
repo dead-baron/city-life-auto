@@ -6515,7 +6515,7 @@ feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-abo
   table in a minute), the waiting one's cue up, watchers; the neighbours' fence on the wire; the debug menu's 11 kinds;
   the classic view draws every prop the server sends (and the cue), lazily. `test/art2.test.js`, `test/sound.test.js`,
   `test/npcpeople.test.js` pass as before.
-## 2026-10-10 · The animals' missing poses (task #391, part 2): hit, wounded and down (AN7), at the water (AN5)
+## 2026-10-10 · The animals' missing poses (task #391, part 2): hit, wounded and down (AN7), at the water (AN5), the strut and the swipe (AN2)
 
 The owner: "improve animal art to match the wildlife concepts and give them better animations" (AN1-AN8); the last
 animals entry did the coats, shapes and gaits - these are the poses the concepts show that the game didn't draw.
@@ -6540,12 +6540,23 @@ animals entry did the coats, shapes and gaits - these are the poses the concepts
     in the water was drawn swimming, a moose in the shallows too;
   - **drinking in the shallows** (`wadedrink`): the same, the muzzle at the water.
   - Swimming was already drawn (`swim`, and the sea otter's float).
-- **Before/after sheets** `docs/art-v2/compare/AN7_hit-wounded-down.png` (deer, black bear; elk and boar after) and
-  `docs/art-v2/compare/AN5_waters-edge.png` (deer, moose, black bear; elk, boar, coyote, grizzly after), the concept at
+- **AN2, the turkey's strut and the bear's swipe:**
+  - **the strut** (`client/art2/birds.js` `strut`, 2 frames: puffing up and down): a tom puffed up, his fan raised in a
+    wheel behind him with its pale rim, the wings drooped to trail their tips on the ground, the head drawn back. The
+    server: a standing tom (an adult, every other one of a flock) now and then struts instead of pecking (`wildlife.js`
+    `activityPose`: `APOSE.call`, an existing code - nothing new on the wire); the client draws a turkey's call as the
+    strut;
+  - **the swipe** (`swipe`, 2 frames): a bear at you (`APOSE.attack`, close) rocks back off its forefeet, a forepaw up,
+    then raking forward (until now it reared right up); charging in, it runs.
+- **Before/after sheets** `docs/art-v2/compare/AN7_hit-wounded-down.png` (deer, black bear; elk and boar after),
+  `docs/art-v2/compare/AN5_waters-edge.png` (deer, moose, black bear; elk, boar, coyote, grizzly after) and
+  `docs/art-v2/compare/AN2_strut-swipe.png` (the AN2 sheet of the coats is `AN2_boar-bear-turkey.png`), the concept at
   half size on top, the game's own bake below.
-- **Left:** AN2 (the turkey's strut, the bear's swipe), AN4, the quail's size at game scale; AN5's beaver diving (the
-  tail up) and the otter with a fish.
-- **Tests:** `test/wildart.test.js` (2 new, 5 in all): every species draws the new poses; the flinch lifts the
+- **Left:** AN4 (the moose, the goats, the predators), the quail's size at game scale; AN5's beaver diving (the tail
+  up) and the otter with a fish.
+- **Tests:** `test/wildart.test.js` (3 new, 6 in all): every species draws the new poses; the flinch lifts the
   forefeet (standing, they're down), the limp's right forefoot never touches the ground (walking, it does), bedded down
   the head is lower than lying up, knocked down isn't the dead pose; drinking splays the forelegs wider than grazing,
-  wading stands taller than swimming and shorter than standing, drinking in the shallows keeps the head.
+  wading stands taller than swimming and shorter than standing, drinking in the shallows keeps the head; the tom's fan
+  up (from the front far wider and taller than standing), the bears' swipe up off the forefeet, the paw up then forward.
+  `test/wildlife.test.js` passes as before.

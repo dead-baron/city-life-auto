@@ -94,7 +94,9 @@ function wildPose(p, S2, base, sp, now, M) {
   if (p.swim) return base === 'seaotter' && (ap === APOSE.float || sp < 25) ? 'float' : 'swim';
   switch (ap) {
     case APOSE.climb: return 'climb';
-    case APOSE.rear: case APOSE.attack: return BEARS.has(base) ? 'rear' : sp > 30 ? 'run' : 'alert';
+    case APOSE.attack: if (BEARS.has(base)) return sp > 30 ? 'run' : 'swipe';   // (AN2: at you, a forepaw raking)
+    // falls through
+    case APOSE.rear: return BEARS.has(base) ? 'rear' : sp > 30 ? 'run' : 'alert';
     case APOSE.charge: return 'run';
     case APOSE.stalk: return sp > 6 ? 'stalk' : 'stalk';
     case APOSE.rest: return S2.bird ? 'idle' : p.hp < 0.5 ? 'down' : 'lie';   // (badly hurt: bedded down wounded, the head on the ground - AN7)
@@ -102,7 +104,9 @@ function wildPose(p, S2, base, sp, now, M) {
     case APOSE.drink: if (sp <= 12 && !S2.bird) return 'drink';   // (AN5: the forelegs splayed, the head down to the water)
     // falls through
     case APOSE.graze: case APOSE.gnaw: case APOSE.eat: case APOSE.peck: return sp > 12 ? 'walk' : S2.bird ? 'peck' : 'graze';
-    case APOSE.alert: case APOSE.warn: case APOSE.call: case APOSE.flinch: return sp > 12 ? 'walk' : 'alert';
+    case APOSE.call: if (base === 'turkey' && sp <= 12) return 'strut';   // (AN2: a tom's display, the fan up)
+    // falls through
+    case APOSE.alert: case APOSE.warn: case APOSE.flinch: return sp > 12 ? 'walk' : 'alert';
     default: return sp > 12 && p.hp < 0.5 && !S2.bird ? 'limp' : sp > 70 ? 'run' : sp > 12 ? 'walk' : 'idle';   // (badly hurt: limping on a foreleg held up - AN7; server: the limp)
   }
 }
