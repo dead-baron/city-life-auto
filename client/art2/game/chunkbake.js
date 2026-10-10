@@ -11,7 +11,8 @@
 //             Y (= world Y - Z) [cy*768, cy*768+768)
 //     lights  the static light sources anchored in the chunk (statics.staticLights)
 //     live    what the host animates on top, from the items anchored in the chunk: heads (signal heads
-//             with their lens positions, see signalLenses), xing (level crossing posts)
+//             with their lens positions, see signalLenses), xing (level crossing posts), flags ([kind, x, y,
+//             z0] of a bare flagpole: its flag flies live, liveart.js)
 //     gh      ground heights under world positions (see below), for standing moving things on kerbs and
 //             bridge decks
 //   The ground comes from groundbake.bakeGround (flat colours by tile type while that module is missing,
@@ -227,7 +228,7 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
   const t1 = now();
   let items = [], lights = [], n = 0, made = 0, staticErr = null, under = null, bid = null;
   const local = new Map(), blds = [];      // building index -> local number; [b, x0, y0, x1, y1, base] per number
-  const live = { heads: [], xing: [] };
+  const live = { heads: [], xing: [], flags: [] };
   if (P.statics) {
     try { items = P.statics.staticItems(M, cx, cy, opt) || []; } catch (e) { staticErr = String((e && e.stack) || e); items = []; }
     // painter's order under the depth test: north to south, then west to east (ties go to the later one).
@@ -264,6 +265,7 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
       if (it.x < ox || it.x >= ox + CHUNK || it.y < oy || it.y >= oy + CHUNK) continue;
       if (it.heads) for (const h of it.heads) live.heads.push(signalLenses(it, h));
       if (it.xing) live.xing.push(it.xing);
+      if (it.flag) live.flags.push(it.flag);
     }
     if (typeof P.statics.staticLights === 'function') {
       try { lights = P.statics.staticLights(M, cx, cy, opt) || []; } catch (e) { staticErr = staticErr || String((e && e.message) || e); lights = []; }

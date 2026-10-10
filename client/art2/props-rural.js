@@ -244,12 +244,13 @@ export function lionStatue() {
   m.smooth = 1;
   return m;
 }
-// a flagpole with a flag streaming east: 'stars' (a stars-and-stripes style flag) or a hex colour
+// a flagpole with a flag streaming east: 'stars' (a stars-and-stripes style flag) or a hex colour; none: the bare pole
+// (the game's: its flag is drawn live, in the wind - game/liveart.js)
 export function flagpole(h = 110, flag = 'stars') {
   const m = new Vox(46, 8, h + 4);
-  const p = m.mat({ ramp: MAT.chrome, k: 3, flag: F_THIN }), red = m.mat({ ramp: R('#c8343a'), k: 3, flag: F_THIN }), white = m.mat({ ramp: R('#f0eee8'), k: 3, flag: F_THIN }), blue = m.mat({ ramp: R(flag === 'stars' ? '#2a3a7a' : flag), k: 3, flag: F_THIN });
+  const p = m.mat({ ramp: MAT.chrome, k: 3, flag: F_THIN }), red = m.mat({ ramp: R('#c8343a'), k: 3, flag: F_THIN }), white = m.mat({ ramp: R('#f0eee8'), k: 3, flag: F_THIN }), blue = m.mat({ ramp: R(flag === 'stars' ? '#2a3a7a' : flag || '#2a3a7a'), k: 3, flag: F_THIN });
   m.box(2, 3, 0, 4, 5, h, p); m.ell(3, 4, h + 1, 2, 2, 2, p);
-  m.fill((x, y, z) => { const fx = x - 4, fz = h - 2 - z + Math.sin(fx * 0.25) * 1.2; if (fx < 0 || fx > 40 || fz < 0 || fz > 24 || Math.abs(y - 4) > 0.8) return -1; if (flag !== 'stars') return blue; if (fx < 16 && fz < 13) return (Math.round(fx) % 3 === 1 && Math.round(fz) % 3 === 1) ? white : blue; return Math.floor(fz / 2) % 2 ? white : red; }, 0, 0, h - 30, 46, 8, h);
+  if (flag) m.fill((x, y, z) => { const fx = x - 4, fz = h - 2 - z + Math.sin(fx * 0.25) * 1.2; if (fx < 0 || fx > 40 || fz < 0 || fz > 24 || Math.abs(y - 4) > 0.8) return -1; if (flag !== 'stars') return blue; if (fx < 16 && fz < 13) return (Math.round(fx) % 3 === 1 && Math.round(fz) % 3 === 1) ? white : blue; return Math.floor(fz / 2) % 2 ? white : red; }, 0, 0, h - 30, 46, 8, h);
   return m;
 }
 export function barrierArm(len = 70, open = false) {

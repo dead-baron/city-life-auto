@@ -13,8 +13,8 @@
 //   fades    whole buildings round the player ease to transparent (the engine shows the street under
 //            them), so nothing standing in front of you hides you or what is near you
 //   live     what moves on the static world: the lit lens of every signal head (the chunk bakes bring the
-//            heads, chunkbake.signalLenses), level crossing barrier arms and flashers, sliding gates,
-//            spike strips (as decals)
+//            heads, chunkbake.signalLenses), flags in the wind (liveart.js), level crossing barrier arms and
+//            flashers, sliding gates, spike strips (as decals)
 //   lights   the chunks' static lights (lamps keep v1's warm-up and flicker, windows and neon follow
 //            the dark) and the moving ones (headlight and flashlight cones, tail and brake lights,
 //            sirens, lit trains, muzzle flashes, explosions, fire, camp fires, signal heads, a light to
@@ -49,6 +49,7 @@ import { F_GROUND, F_NOCAST, F_WATER } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
 import { WEAPONS, BLADE_COLORS, hexRgb } from '../../../shared/items.js';
+import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES } from './liveart.js';   // (the moving parts of the static world: flags in the wind)
 const PLASMA_I = WEAPONS.plasma.i;   // (the plasma blade: its light in the hand, _lights)
 
 export { DECK_Z };
@@ -1613,9 +1614,10 @@ export class World2 {
     const x0 = this.vx0 - 120, x1 = this.vx1 + 120, y0 = this.vy0 - 40, y1 = this.vy1 + 160;
     o.alpha = 1; o.flash = 0; o.xray = false; o.flipX = false; o.tint = null; o.shadow = false;
     const heads = this.liveHeads; heads.length = 0; this.nfL = 0;
+    this._flagStep(F);
     for (const [k, st] of this.chunkState) {
       const lv = st.live;
-      if (!lv || !lv.heads.length) continue;
+      if (!lv) continue;
       const cx = k % 1000, cy = Math.floor(k / 1000);
       if ((cx + 1) * CHUNK < x0 || cx * CHUNK > x1 || (cy + 1) * CHUNK < y0 || cy * CHUNK > y1) continue;
       for (const h of lv.heads) {
@@ -1626,9 +1628,12 @@ export class World2 {
         heads.push(h, i);
         if (h.ny < 0.25) continue;
         const c = h.L[i], key = this._genLamp(i);
+        o.shadow = false;
         if (key) E.drawSprite(key, c[0], c[1], c[2] - 2, o);
       }
+      if (lv.flags) for (const fl of lv.flags) if (fl[1] > x0 && fl[1] < x1 && fl[2] > y0 && fl[2] < y1) this._flag(fl);
     }
+    o.shadow = false;
     // level crossings (v1's arm pivots, beside the statics' crossbuck posts)
     const xs = (M.rail && M.rail.crossings) || [];
     for (let i = 0; i < xs.length; i++) {
@@ -1676,6 +1681,29 @@ export class World2 {
         if (key) E.drawDecal(key, s.x, s.y, s.a || 0, 1, this._gz(s.x, s.y));
       }
     }
+  }
+  // Flags in the wind (task #426: liveart.js; the chunks' live.flags, [kind, x, y, z0] of every bare flagpole): the
+  // cloth stands out as far as the wind where it is says (limp and hanging in calm air), streams the way it blows,
+  // and flaps - or in calm air sways - at the wind's pace, each flag a little out of step with the others. The
+  // flap's phase is summed frame by frame (never the clock times the wind now, which races when the wind changes:
+  // task #388); with Settings' wind sway off the cloth holds still. Frames are made as needed, the last one shown
+  // meanwhile.
+  _flagStep(F) {
+    const P = (this.flagP ||= {});
+    flagPose(wind.strength, P);
+    this.flagPh = ((this.flagPh || 0) + Math.min(0.1, Math.max(0, F.dt || 0)) * P.hz) % 1;
+    this.flagDi = ((Math.round(wind.dir / TAU * FLAG_DIRS) % FLAG_DIRS) + FLAG_DIRS) % FLAG_DIRS;
+  }
+  _flag(fl) {
+    const [kind, x, y, z0] = fl, E = this.E, o = this.opts;
+    const li = Math.round(flagPose(flagWind(wind, x, y), this.flagQ || (this.flagQ = {})).lift * (FLAG_LIFTS - 1)), di = this.flagDi;
+    const fr = this.gfx.wind === false ? 0 : Math.floor((this.flagPh + (((Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663)) >>> 0) / 4294967296)) * FLAG_FRAMES) % FLAG_FRAMES;
+    let key = this._conv(`gflag|${kind}|${li}|${di}|${fr}`, () => flagSprite(kind, li, di, fr), true);
+    if (!key) key = fl._k && E.hasSprite(fl._k) ? fl._k : null;
+    if (!key) return;
+    fl._k = key;
+    o.shadow = true;
+    E.drawSprite(key, x, y, z0 || 0, o);
   }
   _fLight(x, y, z, r, col, k) {
     let L = this.fLights[this.nfL];

@@ -16,6 +16,8 @@
        &cabs=T       the Ferris wheel's gondolas where they are at loop time T (shared/rides.js; the wheel bakes without)
        &balloon=r,t,pal  a balloon flight on route r (balloonRoutes) t seconds after lift-off, in palette pal
        &slide=k,t[,k,t...]  someone on Splash Canyon's slide k t seconds after boarding (slideRider; drawn as host.js _slider)
+       &live=1       the live parts on the baked chunks as the game's host draws them: the signal lenses lit at the clock
+                     (shared/signals.js), the flags in the wind given by &wind (liveart.js)
      window.render(t, windT) draws another frame at that clock (returns when done); window.ready once baked. -->
 <canvas id="cv"></canvas><div id="hud"></div>
 <script type="module">
@@ -24,6 +26,8 @@ import { bakeChunk, loadProviders, SpriteCache, CHUNK } from '../../client/art2/
 import { generateCity } from '../../shared/map.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../shared/rides.js';
 import * as Act from '../../client/art2/game/actors.js';
+import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES } from '../../client/art2/game/liveart.js';
+import { signalFor } from '../../shared/signals.js';
 import { canopyGrid } from '../../client/art2/game/canopy.js';
 const q = new URLSearchParams(location.search);
 const [camX, camY] = (q.get('cam') || '18300,12780').split(',').map(Number);
@@ -42,11 +46,13 @@ await loadProviders();
 const M = generateCity(1337);
 if (q.get('canopy') !== '0') eng.setCanopy(canopyGrid(M));   // (the redwoods' canopy for the light; &canopy=0 without)
 const cache = new SpriteCache(200e6);
+const lives = [];   // (&live=1: the chunks' live parts)
 const ccx = Math.floor(camX / CHUNK), ccy = Math.floor(camY / CHUNK);
 const fades = new Map(), fadeK = +(q.get('fade') || 0);
 const lightK = +(q.get('lights') || 0), lights = [];   // &lights=1: the chunks' static lights at night strength (the game's host adds them every frame)
 for (let cy = ccy - R; cy <= ccy + R; cy++) for (let cx = ccx - R; cx <= ccx + R; cx++) {
   const r = bakeChunk(M, cx, cy, { quality: Q, seed: 1337, artPx: eng.ap }, cache);
+  if (r.live) lives.push(r.live);
   const g = r.g; g.under = r.under; g.blds = r.blds;
   if (lightK) for (const L of r.lights || []) if (L.kind !== 'fire') lights.push(L);
   eng.uploadChunk(cx, cy, g);
@@ -82,6 +88,24 @@ window.render = (t, windT = t) => {
   // (the wind's clocks as render/flora/wind.js keeps them: the gust patches' travel and the flutter clock)
   eng.beginFrame({ camX, camY, zoom, viewW: W / zoom, viewH: H / zoom, time: t, preset: P, wet, quality: Q, wind, gd: [windT * 150 % 8192, 0, windT * 74 % 8192, windT * 36 % 8192], ft: windT * 0.74 % 256, fades });
   for (const [key, x, y, z, air] of sprites) eng.drawSprite(key, x, y, z, { alpha: 1, shadow: true, air, flash: 0, xray: false, flipX: false, tint: null });
+  if (q.get('live')) {
+    // (host.js _furniture: the lit lens of every signal head facing the camera; _flag: each flag's cloth, its flap's
+    // phase here the wind clock times its pace - the game sums it frame by frame)
+    const o = { alpha: 1, shadow: false, flash: 0, xray: false, flipX: false, tint: null }, wd = { strength: ws, gust: wg, gd: [windT * 150 % 8192, 0, windT * 74 % 8192, windT * 36 % 8192] };
+    const SIG = [[255, 59, 59], [255, 194, 61], [61, 220, 132]];
+    for (const lv of lives) for (const h of lv.heads || []) {
+      const n = M.nodes[h.node], s = signalFor(n, h.edge, t), i = s === 'R' ? 0 : s === 'Y' ? 1 : 2, c = h.L[i];
+      if (lightK) eng.addLight({ x: c[0] + h.nx * 8, y: c[1] + h.ny * 8, z: c[2], r: 56, col: SIG[i].map((v) => v / 255), k: 1.45 * lightK });
+      if (h.ny < 0.25) continue;
+      eng.drawSprite(sprite('glamp|' + i, () => { const G = { w: 3, h: 4, ax: 1, ay: 3, col: new Uint8ClampedArray(48), nrm: new Uint8ClampedArray(48), z: new Uint16Array(12), emi: new Uint8ClampedArray(48), flag: new Uint8Array(12) }; for (let k = 0; k < 12; k++) { G.col.set([...SIG[i], 255], k * 4); G.nrm.set([128, 196, 230, 255], k * 4); G.emi.set([...SIG[i], 255], k * 4); G.z[k] = 4 - Math.floor(k / 3); G.flag[k] = 4; } return G; }), c[0], c[1], c[2] - 2, o);
+    }
+    const di = ((Math.round(Math.atan2(wdy, wdx) / (Math.PI * 2) * FLAG_DIRS) % FLAG_DIRS) + FLAG_DIRS) % FLAG_DIRS, hz = flagPose(ws).hz;
+    o.shadow = true;
+    for (const lv of lives) for (const [kind, x, y, z0] of lv.flags || []) {
+      const li = Math.round(flagPose(flagWind(wd, x, y)).lift * (FLAG_LIFTS - 1)), fr = Math.floor((windT * hz + ((Math.imul(x | 0, 73856093) ^ Math.imul(y | 0, 19349663)) >>> 0) / 4294967296) * FLAG_FRAMES) % FLAG_FRAMES;
+      eng.drawSprite(sprite(`gflag|${kind}|${li}|${di}|${fr}`, () => flagSprite(kind, li, di, fr)), x, y, z0 || 0, o);
+    }
+  }
   for (const L of lights) eng.addLight({ x: L.x, y: L.y, z: L.z || 0, r: L.r, col: L.col, k: L.k * lightK });
   eng.endFrame();
   eng.gl.readPixels(0, 0, 1, 1, eng.gl.RGBA, eng.gl.UNSIGNED_BYTE, new Uint8Array(4));
