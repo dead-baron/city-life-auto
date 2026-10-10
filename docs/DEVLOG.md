@@ -6043,3 +6043,59 @@ and the poster wall, a corridor to two screens, the screen rooms with rows of re
 - **A fix on the way:** `client/art2/game/host.js` did not parse on main (a dancer's pose code had ended up inside the
   comment on its line, so the art v2 renderer couldn't load and `test/art2.test.js` failed): the comment is at the end
   of the line now.
+## 2026-10-10 · People going about their lives (task #423, part 1)
+
+The owner: "populate the world with NPCs doing things - hunting, fishing, mining, farming, playing pool or games - so it
+feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-about.png`).
+
+- **Activity spots, by rules from the map** (`server/systems/activities.js` `spotsOf`, once per map, by 1024 px cell):
+  - **anglers:** two at a pier's rail (the pier rails, piers, the bait shack's table and rod racks), facing the water,
+    rods out (the fishing bit, as the fisherman persona), a cooler at one's feet;
+  - **chess:** two sat facing each other over a board at a table in town (the parks' picnic tables, the plazas' cafe
+    tables), one or two standing by to watch, now and then glancing about;
+  - **picnics:** two or three sat on a picnic blanket (out in the country, two round a picnic table);
+  - **a street painter:** at an easel a little way off a fountain, a statue, the gazebo, a map board or the big wheel,
+    painting it;
+  - **washing the car** in a home's driveway (the driveways' parking spots), when a car's parked there (`traffic.js`
+    parks them): beside it, facing it, a sponge going round, a bucket of suds at their feet;
+  - **neighbours chatting** on the front yards between two houses next door (between their driveways), face to face,
+    now and then a look away;
+  - **pickers** down the rows of a farm's field, kneeling at the plants, a crate of tomatoes by them;
+  - **miners** swinging pickaxes at a quarry's rock face (the pit's back wall; one at the old mine's adit) - the felling
+    swing with a new pickaxe (`client/art2/items.js`; the descriptor's `ch` 5, `server/net.js`);
+  - **a hunter** in a blaze-orange vest and cap, his rifle slung on his back (not in his hands), walking the edge of the
+    woods by a hunting camp and back along a clear line (no trunks or rocks in the way), stopping to look about, his dog
+    trotting out ahead (the walked dogs' trot, `personas.js`).
+- **Filled near players, out of sight:** within 1100 px of someone, never closer than 380, never where anyone can see
+  the people pop up (`inAnyView`), at most 4 groups round a player; each spot is on by a day/night chance when someone
+  comes near (no chess, picnics, painting, car washing or picking at night; none of those in the rain either), else it
+  rests a few minutes; two groups of a kind round a player at most (one car being washed, one chat over the fence -
+  there are 209 driveways). On the starting map: 14 painters' spots, 37 picnics, 12 chess tables, 11 anglers' rails,
+  209 driveways, 6 neighbours' yards, 12 fields, 3 rock faces, 2 hunters' woods (found in ~50 ms, once). **Emptied** when nobody's within
+  1600 px and nobody can see it (and the density manager's usual far clean-up applies to them too). Cheap: they stand
+  (sit) still and loop a pose; the fill/empty pass runs once a second.
+- **Like anyone else:** they're townsfolk (`npc.js`): a gunfight scatters them, a fight they stop to watch; away from
+  their spot the pose and the prop are put down (nobody sits in mid air); once it's over they walk back to it and take
+  it up again, or, far off by then (over 420 px), go on their way.
+- **Poses and props on the wire:** the descriptor's `gt` (`sit`, `sitlow`, `kneel`) and `pp` (`easel`, `cooler`,
+  `chess`, `sponge`, `crate`). The art v2 renderer: `client/art2/game/peds.js` `personaPose` holds the activity's pose while they stand
+  about; `client/art2/people.js` draws the easel (three legs, the ledge, a canvas with a painting of sky and grass, the
+  brush dabbing it), the blue cooler with its white lid, the chess board with a few pieces still standing, the yellow
+  sponge and the bucket of suds, the crate of tomatoes.
+- **Already about** (personas.js): the joggers (laps of a park or the beach) and the dog walker with three dogs.
+- **Debug menu:** a new last category, 🎣 People going about: each kind (anglers, chess, a picnic, a painter, washing the
+  car, neighbours chatting, pickers, miners, a hunter) - the nearest spot filled, you a little way off it (the dev `act` command, msg.k;
+  a car parked in the driveway first for the car wash).
+- **Rained off, the car gone:** when it rains the chess players, the picnic, the painter and the car washer go on their
+  way (nobody starts those in the rain); the car washer goes when the car's driven off.
+- **Left for part 2:** the pickup game at the courts, pool in the bars; a fence for the neighbours to chat over; the miners' clink; the classic renderer's poses and props for these (it draws no persona
+  walks or props either).
+- **Fixed on the way:** `client/art2/game/host.js` didn't parse (the dance moves' comment, put mid-line, swallowed the
+  rest of the line with its closing braces), so the art v2 renderer failed to load; the comment is at the line's end now.
+- **Tests:** `test/activities.test.js` (7 new; the last: the debug menu's buttons, each kind filled where you land): the spots found on the map (on open ground, the anglers facing the
+  water, chess in town); a spot filled, posed, props on the wire, holding its spot; the car washed only with a car in
+  the driveway, beside it and facing it, the neighbours face to face, the pickers kneeling in the field with their
+  crate, the miners' pickaxes on the wire, the car washer off when the car's gone; the hunter walking with his dog, the
+  rifle slung, not in hand; a gunfight scattering them and them going back to it; filling round a player out of sight, a sensible number,
+  gone when nobody's near. These pass as before: `test/npcpeople.test.js`, `test/view.test.js`,
+  `test/reactions.test.js`, `test/art2.test.js` (which failed on main: the host.js fix).

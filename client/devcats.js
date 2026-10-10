@@ -109,4 +109,11 @@ export const DEV_SECTIONS = [
   ] },
   // a night out (IN14: server/systems/bowling.js)
   { id: 'nightout', title: '🎳 Bowling & cinema', items: [['🎳 Pinwheel Lanes (bowling alley, at the shoe counter)', 'near', { k: 'bowling' }], ['🎬 The Grand Theatre (cinema, at the ticket counter)', 'near', { k: 'cinema' }]] },
+  // people going about their lives (task #423: server/systems/activities.js) - the nearest spot, filled, you a little way off
+  { id: 'activities', title: '🎣 People going about', items: [
+    ['🎣 Anglers on a pier', 'act', { k: 'anglers' }], ['♟ Chess in the park', 'act', { k: 'chess' }], ['🧺 A picnic', 'act', { k: 'picnic' }],
+    ['🎨 A street painter', 'act', { k: 'painter' }], ['🧽 Washing the car', 'act', { k: 'carwash' }], ['💬 Neighbours chatting', 'act', { k: 'chat' }],
+    ['🍅 Pickers in a field', 'act', { k: 'pickers' }], ['⛏ Miners at the rock face', 'act', { k: 'miners' }],
+    ['🦺 A hunter and his dog', 'act', { k: 'hunter' }],
+  ] },
 ];
