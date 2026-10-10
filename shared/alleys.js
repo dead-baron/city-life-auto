@@ -212,7 +212,8 @@ function dressEdges(m, X, backs, tile, isAlley, distAt, nearDoor, nearSolid) {
 // what stands against an alley wall, by the district's grit (0 tidy uptown .. 1 the roughest)
 function pickKind(g, u) {
   const W = [
-    ['bags', 2.4 + g], ['bin', 2], ['bins', g > 0.3 ? 1.4 : 0.4], ['boxes', 1.6], ['pallet', 0.4 + 1.4 * g], ['crates', 0.3 + 1.2 * g],
+    ['bags', 0.3 + 1.6 * g * g], ['bin', 2],   // (bags: a few, and mostly down the rough districts' alleys - the owner, 2026-10-10)
+    ['bins', g > 0.3 ? 1.4 : 0.4], ['boxes', 1.6], ['pallet', 0.4 + 1.4 * g], ['crates', 0.3 + 1.2 * g],
     ['tires', g > 0.6 ? 0.9 : 0], ['drum', g > 0.7 ? 0.8 : 0], ['mattress', g > 0.7 ? 0.8 : 0], ['cart', g > 0.55 ? 0.7 : 0],
     ['pots', g < 0.45 ? 3.2 * (1 - g) : 0], ['bike', g < 0.6 ? 0.8 : 0],
   ];

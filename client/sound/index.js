@@ -10,6 +10,7 @@ import { WEAPONS } from '../../shared/items.js';
 import { VehicleSounds } from './vehicles.js';
 import { Ambience } from './ambience.js';
 import { Music } from './music.js';
+import { Track } from './track.js';
 import { Places } from './places.js';
 import { People } from './people.js';
 import { surfaceAt } from './surface.js';
@@ -23,6 +24,7 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
   const veh = new VehicleSounds(E, { voices: mobile ? VOICES.enginesPhone : VOICES.enginesComputer });
   const amb = new Ambience(E);
   const music = new Music(E);
+  const titleTrack = new Track(E, 'title');   // (the owner's own title track, recorded; the old tune if it can't play)
   const places = new Places(E, music);
   const people = new People(E);
   const titleEl = document.getElementById('title'), tutEl = document.getElementById('tutorial');
@@ -36,7 +38,7 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
     surf: (x, y) => (A.S && A.S.map ? surfaceAt(A.S.map, x, y) : 'pavement'),
   };
   const sys = {
-    E, mix, veh, amb, music, places, people,
+    E, mix, veh, amb, music, places, people, titleTrack,
     get scene() { return scene; },
     // main.js's own sfx(name, vol, p) calls: their old names, no place (vol already has the distance in it; p: the
     // recipe's parameters - the thunder's distance and strength)
@@ -81,7 +83,10 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
       const title = !!(titleEl && !titleEl.classList.contains('hidden')) || !!(tutEl && !tutEl.classList.contains('hidden'));   // (the title screen, the city tour)
       const was = scene;
       scene = title ? 'title' : 'game';
-      music.set('title', title && !document.hidden ? 0.7 : 0);
+      // the title's music: the owner's recorded track (nothing fetched while the music is off); the old tune only where
+      // the track can't play (it failed to load or to decode)
+      const mp = mix.prefs, want = title && !document.hidden && mp.on && mp.music && mp.mus > 0 ? 0.7 : 0;
+      music.set('title', titleTrack.set(want) ? 0 : want);
       if (scene !== was && scene === 'game') music.set('title', 0);
       if (document.hidden) music.silence();
       if (performance.now() - lastFrame > 2000) { veh.silence(); amb.silence(); places.music.set('club', 0); places.music.set('shop', 0); places.music.set('lobby', 0); }
@@ -92,7 +97,7 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
     // for the debug menu: the voices in use, the engines, the beds, and what became of the sounds asked for
     status() {
       const t = ctx.currentTime;
-      return { state: ctx.state, voices: E.pool.active(t) + '/' + E.pool.max, engines: veh.voices.filter((v) => v.veh).length + '/' + veh.voices.length, beds: amb.heard(), ...E.stats };
+      return { state: ctx.state, voices: E.pool.active(t) + '/' + E.pool.max, engines: veh.voices.filter((v) => v.veh).length + '/' + veh.voices.length, beds: amb.heard(), track: titleTrack.status(), ...E.stats };
     },
   };
   if (timer) setInterval(() => { try { sys.pulse(); } catch (e) { console.warn('[sound]', e); } }, 90);

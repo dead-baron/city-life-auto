@@ -5418,3 +5418,44 @@ The owner made a track for the title screen ("CLA Main Screen": made with a text
   - the turns, the bass with them, and the riff opening up with the drums;
   - the drums, the fills and the pickups;
   - the tape stopping with the song and starting fresh, on a stand-in AudioContext.
+
+## 2026-10-10 · No garbage heaps on the pavements; a few black bin bags, by the bins and down the rough alleys
+The owner, from two screenshots: "The city has a lot of piles of I think garbage around ... They kind of look bad around the city", then: "Black bags are fine but not so many and best if they're usually near a garbage can or in alleys in the rough districts."
+- **The greenish heaps** were trash piles: loose garbage heaped on the pavement. **The reddish ones** were rubble: broken brick and stone. Both are out of the city.
+  - Before, they were scattered on the inner pavements of Southside, the industrial streets and the red-light blocks, and down the back alleys (`shared/map.js` street dressing and `dressAlleys`).
+  - The junkyard's heaps are oil drums now.
+- **Black bin bags** stand only:
+  - beside a street bin now and then (a third of the bins in the rough districts, one in twenty elsewhere);
+  - beside a dumpster down an alley (half of them in the rough districts, a few elsewhere).
+  - The alleys' wall dressing has far fewer bags, and those it has are down the rough districts' alleys (`shared/alleys.js`).
+- **The count** (seed 1337):
+  - before: 116 trash piles, 40 heaps of rubble and 143 bags on the map;
+  - now: no heaps, and 66 bags (41 of them in the rough districts).
+- The world's hash changes: browsers bake their chunks again. No `WORLD_VERSION` bump: nothing anyone owns moved.
+
+## 2026-10-10 · The title screen plays the owner's own track, a recorded loop
+The owner made the title music themselves (a YuE2 instrumental workflow in ComfyUI) and sent the FLAC master. Their verdict on the loop: "It sounds great, lets go with this for the Main Screen music and I will send much more for the game later."
+- **The loop** (`tools/music/make-loop.py`): 16 bars cut from the master on its real bar lines, from 0:22.4 to 1:06.8 (44.34 s).
+  - The bar lines came from the recording itself, with a beat tracker. The track's tempo creeps from about 86 to 90 BPM over its two minutes, so no fixed BPM would have found them.
+  - The end's downbeat is lined up with the start's to the sample, and the 90 ms before the seam are blended into what comes before the start.
+  - The file carries a quarter-second wrap-around margin each side, so it repeats itself across both seams. The player loops from margin to margin + loop, which is right even where a decoder adds or trims samples at the start.
+- **The files** (`assets/music/title-*.opus` and `.mp3`, named by their contents):
+  - Mono, because the track is mono: left and right are 99.4% alike. That halves the download and the memory.
+  - Opus at 96 kbps is 549 KB; the MP3 fallback at 128 kbps is 702 KB.
+  - The bench decodes both in Chromium (`python3 tools/sound/bench.py --only tracks`): each comes out exactly the expected length and is 8.2 MB in memory. Decoding takes 0.05-0.13 s. At the seam the jump is a smaller step than the music's own.
+  - Mobile Safari couldn't be tested here; the fallback is built for it.
+- **The player** (`client/sound/track.js`, `tracks.js`):
+  - **One download:** Opus where the browser says it can play it, the MP3 where it can't or where the Opus won't decode. Nothing is fetched while the music is off.
+  - **Decoded only while it plays:** the decoded audio is freed 4 s after the title closes. The compressed bytes are kept, so the next visit to the title decodes again without a download.
+  - **Its level:** it plays on the music bus (the music slider and switch apply), brought to a set loudness. With the default sliders that's about -28 LUFS at the speakers, against the old tune's -34.
+  - **The old title tune** stays as the fallback when the track can't play.
+  - **The debug menu's sound line** shows the track's state.
+- **Tests:** `test/track.test.js` (4):
+  - the files, sizes, names and the loop's 16 bars;
+  - the choice of file, the loop points and the level;
+  - one Opus download, the loop, the fade and the memory let go, then decoding again with no download;
+  - the MP3 fallbacks and the old tune taking over.
+
+  In the game page (headless), the track loads as Opus and plays on the title screen.
+- **What the owner sends from now on:** the FLAC master is all that's needed. The Opus, MP3 and ABC exports aren't: the game's files are cut and encoded from the master, and the ABC is the generator's planning sketch, not a transcription.
+- **Parked:** the engine rebuild of the owner's earlier track (branch `title-track`).
