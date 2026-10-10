@@ -888,7 +888,9 @@ island (`terrain`'s land decoding, labelling and three distance fields over 1.57
    in a fresh process, the spike first).
 
 **The region size.** 504 stays right: a whole number of net and bake chunks, a 3 x 3 window about today's whole map, one
-region's byte layer 254 KB. One thing for the layout: Metro City is exactly 504 tiles wide (542..1045), so with its x
+region's byte layer 254 KB. Kept as today's 20 bytes a tile, a region is 5.1 MB and the window 46 MB (today's whole map
+31.5 MB), so a region should keep only what play reads: `compLab` (4 of the 20 bytes) is read only by the generators
+(`countryside.js`, `naturesites.js`). One thing for the layout: Metro City is exactly 504 tiles wide (542..1045), so with its x
 offset on a region column (2016 or 2520 instead of 2133) it would sit in one column of regions instead of two (it is
 647 tall, so two rows either way). Where islands fit, aligning them to region columns halves the regions each touches.
 
@@ -906,7 +908,8 @@ region should only need the part of an island inside it and a margin.
 2. **Grids sized to the island** (`shared/map.js`, `naturesites.js`, `countryside.js`): `CityMap` with an origin and a
    size (the island's rectangle and a margin), its own index function in place of `y * MAP_W + x`, the whole-map passes
    (`terrain`'s distance fields and labels, the ring's distance field) run on the rectangle. Mechanical but big (about
-   440 uses). For Metro City the per-tile layers drop from 30 MB to about 5 MB and `terrain` to about a fifth.
+   440 uses). Today's layers take 20 bytes a tile (31.5 MB for the whole map); for Metro City's 504 x 647 rectangle and
+   a 24-tile margin that is about 7.7 MB, and `terrain` drops to about a fifth.
 3. **Island-local ids, names and random streams**: `bld` and the POI, prop and edge ids per island; names numbered per
    district; the ATM spacing per island; a stream per island (`regionSeed`-style) for the passes of item 6. This changes
    today's world: one `WORLD_VERSION` bump, best taken with stage 1's first live step.
