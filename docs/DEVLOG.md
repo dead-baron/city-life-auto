@@ -6030,11 +6030,12 @@ dents and parts falling off as it worsens, not a repetitive grey speckle overlay
 - **Body work** at the garage (`economy.js`) beats the dents out, fills the holes and fits new parts.
 - **Fixed on the way:** `client/art2/game/host.js` didn't parse since the dance merge (a trailing comment had
   swallowed the persona-pose code in `_ped`), so art v2 couldn't load; `test/art2.test.js` failed at HEAD.
-- **Tests:** `test/vehdamage.test.js` (8 new): the word round-trips and the stage follows health, the sides; a bat at
+- **Tests:** `test/vehdamage.test.js` (9 new): the word round-trips and the stage follows health, the sides; a bat at
   a car's nose (80 px from its middle) and its tail lands and dents that end, a swing facing away misses; a rifle round
   does far more than a pistol's, holes on the side it hit, a shotgun kills a sedan's engine in 8 blasts or fewer and it
   shows on the wire; three plasma hits cut a car in two (on the wire, where the blade went in), it explodes and stays
   in two, a motorbike is cut in one; parts come off in order (the rear bumper when hit from behind, then a door
-  hanging); a rocket 20 px from a bus's tail destroys it; art v2: a look per stage keyed and cached, the crumpled
+  hanging); a ram dents the rammer's front and the side it t-boned on the other car; a rocket 20 px from a bus's tail
+  destroys it; art v2: a look per stage keyed and cached, the crumpled
   model, a door swung out past the body, two halves that make the car with a glowing face; the debug menu's looks. These pass as before: `test/explosions.test.js`,
   `test/core.test.js`, `test/tow.test.js`, `test/reactions.test.js`, `test/art2.test.js`.
