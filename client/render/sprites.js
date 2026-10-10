@@ -158,6 +158,23 @@ function procVehicle(def, paint) {
     g.fillStyle = '#333'; g.fillRect(L - 18, 3, 2, W - 6);
     return cv;
   }
+  if (def.id === 'rescueboat') { // RS1: an orange rigid inflatable - the tube collar round a grey deck, the console, the arch, two outboards
+    g.clearRect(-2, -2, L + 4, W + 4);
+    const cy = W / 2, hull = (inset) => { g.beginPath(); g.moveTo(3 + inset, inset); g.lineTo(L * 0.66, inset); g.bezierCurveTo(L - inset * 0.5, inset, L - inset * 0.3, cy, L - inset * 0.3, cy); g.bezierCurveTo(L - inset * 0.3, cy, L - inset * 0.5, W - inset, L * 0.66, W - inset); g.lineTo(3 + inset, W - inset); g.quadraticCurveTo(inset, W - inset, inset, W - inset - 4); g.lineTo(inset, inset + 4); g.quadraticCurveTo(inset, inset, 3 + inset, inset); g.closePath(); };
+    g.fillStyle = '#e8601e'; hull(1); g.fill();
+    g.strokeStyle = '#a8400f'; g.lineWidth = 1; hull(1.5); g.stroke();
+    g.fillStyle = '#f2f2ee'; for (let k = 16; k < L * 0.62; k += 26) { g.fillRect(k, 2, 7, 3); g.fillRect(k, W - 5, 7, 3); }   // reflective patches
+    g.strokeStyle = '#5a5c62'; hull(9); g.stroke();
+    g.fillStyle = '#4a4c52'; hull(10); g.fill();                                                          // the deck
+    g.fillStyle = '#2c2e36'; rr(g, L * 0.5, cy - 7, L * 0.12, 14, 2); g.fill();                         // the console
+    g.fillStyle = '#22324a'; g.fillRect(L * 0.62 - 2, cy - 6, 2, 12);                                    // its windscreen
+    g.fillStyle = '#4a3a36'; g.fillRect(L * 0.36, cy - 9, 8, 7); g.fillRect(L * 0.36, cy + 2, 8, 7);    // jockey seats
+    g.fillStyle = '#c9ccd2'; g.fillRect(12, cy - 15, 2, 30);                                             // the arch
+    g.fillStyle = '#e83a30'; g.fillRect(11, cy - 8, 4, 7); g.fillStyle = '#3a6ae8'; g.fillRect(11, cy + 1, 4, 7);   // its light bar
+    g.fillStyle = '#ef6a1a'; g.beginPath(); g.arc(17, cy + 11, 3.5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#4a4c52'; g.beginPath(); g.arc(17, cy + 11, 1.6, 0, Math.PI * 2); g.fill();   // life ring
+    g.fillStyle = '#2c2e36'; rr(g, -1, cy - 10, 7, 8, 2); g.fill(); rr(g, -1, cy + 2, 7, 8, 2); g.fill();   // twin outboards
+    return cv;
+  }
   if (def.id === 'flatbed') {
     g.fillStyle = paint; rr(g, L - 38, 2, 36, W - 4, 5); g.fill();
     g.fillStyle = '#1b2333'; g.fillRect(L - 14, 6, 8, W - 12);

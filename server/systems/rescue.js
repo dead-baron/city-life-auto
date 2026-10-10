@@ -15,6 +15,7 @@
 //   run(world, v, dt, now)          one boat, every tick
 //   recall(world, v)                the one who called it cancelled: back to its berth, no charge
 //   wayTo(map, a, b)                the way through the water from a to b (px points), or null
+//   waterSpot(world, x, y)          (dev menu, tests) open water a boat from the dock nearest (x, y) can get to, or null
 import { K, T, TILE } from '../../shared/constants.js';
 import { BOAT_BLOCK, PED_BLOCK, isSwimming, nearestLand } from '../../shared/map.js';
 import { angleDiff, clamp } from '../../shared/math.js';
@@ -176,6 +177,20 @@ export function wayTo(m, a, b, avoid = null) {
   out.len = 0;
   for (let i = 1; i < out.length; i++) out.len += Math.hypot(out[i].x - out[i - 1].x, out[i].y - out[i - 1].y);
   return out;
+}
+
+// Open water out from the dock nearest (x, y) - 500 to 1300 px off, with room round it, and a way there from the dock -
+// to go down in (the dev menu; tests).
+export function waterSpot(world, x, y) {
+  const m = world.map, D = docksOf(m).slice().sort((p, q) => Math.hypot(p.x - x, p.y - y) - Math.hypot(q.x - x, q.y - y));
+  const wet = (px, py) => { for (const [dx, dy] of [[0, 0], [60, 0], [-60, 0], [0, 60], [0, -60]]) if (BOAT_BLOCK[m.tileAtPx(px + dx, py + dy)] || !isSwimming(m, { x: px + dx, y: py + dy })) return false; return true; };
+  for (const d of D.slice(0, 3)) {
+    for (let r = 500; r <= 1300; r += 200) for (let k = 0; k < 16; k++) {
+      const px = d.x + Math.cos(k * Math.PI / 8) * r, py = d.y + Math.sin(k * Math.PI / 8) * r;
+      if (wet(px, py) && wayTo(m, freeBerth(world, m, d), { x: px, y: py })) return { x: px, y: py, dock: d.name };
+    }
+  }
+  return null;
 }
 
 // ---- sending one ----------------------------------------------------------------------------------------------------------

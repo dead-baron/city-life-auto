@@ -5548,3 +5548,56 @@ page's code to 721 KB of its 720 KB budget. The city tour is paused (TUTORIAL_ON
 back on (fetched at startup then, ready by the time Play is pressed); until then its calls do nothing and the tour
 counts as seen. The page is 715 KB again, with room for the next merges. `shared/tutorial.js` stays in the page: the
 phone and the map waypoints use its `districtAt`. Tests: the full suite.
+
+## 2026-10-10 · Rescue anywhere: the rescue boat on the water, the ambulance off the road; riders in open boats (tasks #409, #420)
+The owner: "can ambulances reach you in the wilderness? In the water they can't - add a search-and-rescue boat when you
+call for help in the water". And: "on boats with an open top you should see the player or NPC driving it, and any
+passengers riding in it." The concept: `docs/art-v2/targets/RS1_rescue-wilds-water.png`.
+- **The rescue boat** (`server/systems/rescue.js`, `shared/vehicles.js` `rescueboat`). Down in the water, calling for help
+  (or a body in the water near a dock while someone's about) sends it.
+  - It comes from the harbour, marina or hire dock nearest by water (berths close together count as one dock; the
+    Syndicate's moorings don't). A lake's hire dock is soon found to be on other water. Players: up to 7200 px off;
+    a body: 2600.
+  - Its way is an A* through the water, round the shore, piers, pillars, rocks and boats lying still, then straightened
+    with room for the hull. Lights and siren on the way out.
+  - It comes in lined up and stops alongside you. The crew member on your side kneels and pulls you in (3 s). A player is
+    back up aboard on half health and pays the ambulance's fee only then. Then it runs you back to the dock and sets
+    you ashore. You can go over the side sooner. Anyone else is taken away.
+  - Then it goes back to its berth, lights off, and is gone once nobody's watching.
+  - It holds your respawn clock while it's nearly there or pulling you in.
+  - If a player takes it, the crew go over the side, and whoever called it can call another.
+  - The toast says where it's coming from. "No rescue boat can reach you out here" if no dock's water joins yours; in a pool by the edge, the ambulance as before.
+- **The ambulance off the road** (`ems.js`, `server/systems/offroad.js`). When the street it can get to is far from the
+  patient, it leaves the road there. It drives on over fields, grass, tracks and sand, round trees, rocks and water (a
+  ground A* with room for the van, at most 3200 px of it). It pulls up 100 px short of them, or as near as it gets.
+  - The crew walk the rest along a way round what's in between, running when it's far.
+  - Their time limits (getting there, the scene, back to the van, boarding) grow with the walk, up to 45 s of walking.
+  - Your respawn clock is held while they're on their way in or at work on you.
+  - A hijacked ambulance frees you to call another (as a wrecked one did).
+- **Its look:**
+  - Art v2 voxel RIB (`client/art2/vehicles.js` `rescueBoat`): fat orange tubes with a grey rubbing strake and white
+    reflective patches, a dark deep-V hull, a grey non-slip deck, the centre console with its windscreen, two jockey
+    seats, an A-frame over the stern with the light bar and a life ring, and twin outboards.
+  - The classic renderer's procedural sprite (`client/render/sprites.js`) is the same boat from above.
+  - The siren is the ambulance's (`client/sound/vehicles.js`), and the engine is an outboard.
+  - The crew (`server/entities.js` `rescue`) wear orange life jackets with reflective tape, dark dry-suit trousers, and
+    red helmets with visors. They kneel at the side to pull someone in.
+- **Riders in open boats** (task #420): the speedboat, the dock motorboat, the jet ski and the rescue boat have a place per
+  seat (`crew` in `shared/vehicles.js`: the driver's, the one beside it, then the back seats). Both renderers draw who's
+  aboard there, as they draw bike riders. The police boat's wheelhouse hides who's in it.
+  - The snapshot says who's in a back seat. In a vehicle, bit 7 of a ped's extra byte (in the water otherwise) is set
+    for seat 2 and on (`server/net.js`).
+  - The client keeps that apart from swimming (`e.back`).
+- **Debug menu → 🛟 Rescue (water & wilds)** (`client/devcats.js`; dev command `rescue`, `server/dev.js` `devRescue`):
+  - go down in the water off the nearest dock with help called;
+  - go down out in the wilds, 400-900 px off the road;
+  - boats with people aboard (a speedboat, a dinghy and the rescue boat, crewed);
+  - the rescue boat to drive.
+- **Tests:** `test/rescue.test.js` (4 new):
+  - down in the water, the rescue boat comes. It pulls you aboard, revives you for the fee and sets you ashore on dry
+    land, and it is never on land.
+  - a player who takes it puts the crew over the side and frees the caller to call another.
+  - 750-1100 px off the road in the wilds, the ambulance leaves the road and gets nearer than the road. The crew revive
+    you, and you don't wake up at a hospital meanwhile.
+  - the open boats' seats are inside their hulls; only a back seat has the wire bit.
+  - The ambulance tests (`test/ems.test.js`) and the revive tests pass as before.

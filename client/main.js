@@ -318,7 +318,7 @@ function onBinary(buf) {
     e.buf.push({ t: s.tick, x: it.x, y: it.y, a: it.a, z: it.lz });
     if (e.buf.length > 5) e.buf.shift();
     e.flags = it.flags; e.hp = it.hp; e.parent = it.parent;
-    if (it.kind === K.PED) { e.extra = it.extra & 31; e.blink = (it.extra >> 5) & 3; e.swim = (it.extra & 128) !== 0; } // weapon | blink | in water
+    if (it.kind === K.PED) { e.extra = it.extra & 31; e.blink = (it.extra >> 5) & 3; const b7 = (it.extra & 128) !== 0, iv = (it.flags & PF.INVEH) !== 0; e.swim = b7 && !iv; e.back = b7 && iv; } // weapon | blink | in water (in a vehicle: a back seat)
     else e.extra = it.extra;
     e.seen = s.tick;
   }
@@ -1009,7 +1009,7 @@ async function startArt2(map) {
   S.art2Off = null;
   if (token !== S.art2Token || S.map !== map) return; // a newer city arrived meanwhile
   // what the renderer borrows from here: how people look and pose, body heights, seats, the birds
-  const api = { pedLook, pedPose, vehLift, selfPos, walkInAt, umbrellaSprite, birds, PED_BUILD_SCALE, CSCALE, SEAT_BIKE, SEAT_JETSKI, RIDER_H, UMBRELLA_COLORS };
+  const api = { pedLook, pedPose, vehLift, selfPos, walkInAt, umbrellaSprite, birds, PED_BUILD_SCALE, CSCALE, SEAT_BIKE, RIDER_H, UMBRELLA_COLORS };
   let w = null;
   // (a city read back from this browser's copy is read by the bake workers themselves: no copy sent from here)
   const worldKey = S.mapFrom === 'cache' && window.CLA_WORLD ? window.CLA_WORLD.key : null;
@@ -2536,7 +2536,7 @@ const SWING_TIME = 0.3, BANG_S = 0.42;
 // each person on their own clock, `span` seconds or a little more each
 function heldWay(id, now, span, n) { const s = Math.floor((now + id * 2.3) / (span + (id % 5))); return ((Math.imul(s + 1, 0x9e3779b1) >>> 9) + id) % n; }
 // the FISHING bit on these means kneeling (a medic at someone hurt, an officer holding someone down), not fishing
-const KNEELERS = new Set(['medic', 'cop', 'swat', 'agent', 'soldier']);
+const KNEELERS = new Set(['medic', 'cop', 'swat', 'agent', 'soldier', 'rescue']);
 function pedPose(e) {
   const f = e.flags;
   if (f & PF.DEAD) return 'dead';
@@ -3232,7 +3232,6 @@ function drawCrateEnt(c, now) {
 }
 
 const SEAT_BIKE = [[2, 0], [-12, 0]];
-const SEAT_JETSKI = [[-2, 0], [-14, 0]];
 const RIDER_H = 28; // art rows from the top of the head down to the hips
 // A rider astride a bike or jet ski: the upper body of the drawn character, facing the way the
 // vehicle points, sat on the saddle (legs hidden by the bodywork).
@@ -3833,10 +3832,11 @@ function drawVehicleEnt(v, now, dt) {
     g.fillStyle = '#c8262b'; g.fillText(txt, v.rx, v.ry + 4);
     g.font = 'bold 8px monospace'; g.fillStyle = '#1b2333'; g.fillText('FOR SALE', v.rx, v.ry - 12);
   }
-  // riders on bikes and jet skis sit in the open: driver up front, a passenger behind
-  if (def.kind === 'bike' || def.id === 'jetski') {
-    const seats = def.kind === 'bike' ? SEAT_BIKE : SEAT_JETSKI;
-    for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) { const pass = (p.flags & PF.PASSENGER) !== 0; drawRider(p, v, def, !pass && def.seat !== undefined ? [def.seat, 0] : seats[pass ? 1 : 0]); }
+  // riders on bikes and jet skis sit in the open: driver up front, a passenger behind; in an open boat at its seats
+  // (def.crew: the driver's, the one beside it, then the back seats in turn - task #420)
+  if (def.kind === 'bike' || def.crew) {
+    const seats = def.kind === 'bike' ? SEAT_BIKE : def.crew; let nb = 0;
+    for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) { const pass = (p.flags & PF.PASSENGER) !== 0; drawRider(p, v, def, !pass && def.seat !== undefined ? [def.seat, 0] : seats[p.back ? Math.min(seats.length - 1, 2 + nb++) : pass ? 1 : 0]); }
   }
   void dt;
 }

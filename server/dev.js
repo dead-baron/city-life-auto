@@ -33,6 +33,10 @@ import * as looks from './systems/looks.js';
 import { SPECIES } from '../shared/fauna.js';
 import { undergroundOf } from '../shared/underground.js';
 import * as underground from './systems/underground.js';
+import * as rescue from './systems/rescue.js';
+import * as revive from './systems/revive.js';
+import { kerbFor } from './systems/kerbdrive.js';
+import { Z } from '../shared/citylayout.js';
 
 // make a live animal the pure white legend of its kind (dev: see one up close)
 function w2legend(world, e) {
@@ -44,7 +48,7 @@ function w2legend(world, e) {
 
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -508,6 +512,7 @@ export function command(world, p, c, msg) {
       q.meDirty = true;
       break;
     }
+    case 'rescue': devRescue(world, p, ped, String(msg.at || 'water')); break;   // tasks #409, #420
     case 'goto': devmode.goTo(world, p, msg.pid); break;     // teleport to an online player
     case 'bring': devmode.bring(world, p, msg.pid); break;   // fetch an online player to you
     case 'grant': devmode.grant(world, p, msg.pid); break;   // give someone Dev Debug Mode (their progress stops saving too)
@@ -517,4 +522,47 @@ export function command(world, p, c, msg) {
   if (world.loopTime < lt0 - DAY_LOOP_S / 2) world.day = (world.day || 0) + 1;   // (the clock set back past 06:00: a new day, as the clients count it)
   p.meDirty = true;
   store.touch();
+}
+
+// Rescue anywhere (tasks #409, #420): at 'water' you go down in open water off the nearest dock and call for help (the
+// rescue boat comes); at 'wild' out in the open country, well off the road (the ambulance drives on over the ground and
+// its crew walk in); 'crew' brings a speedboat alongside with people aboard (who rides in an open boat is drawn there).
+function devRescue(world, p, ped, at) {
+  if (!ped || ped.vehId || ped.dead) { world.notify(p, '[dev] On your feet and out of any vehicle first.', 'warn'); return; }
+  const m = world.map;
+  if (at === 'crew') {
+    let sp = null;
+    for (let r = 120; r <= 1600 && !sp; r += 80) for (let k = 0; k < 16 && !sp; k++) {
+      const x = ped.x + Math.cos(k * Math.PI / 8) * r, y = ped.y + Math.sin(k * Math.PI / 8) * r;
+      if (rescue.inWater(m, { x, y }) && rescue.inWater(m, { x: x + 70, y }) && rescue.inWater(m, { x: x - 70, y }) && rescue.inWater(m, { x, y: y + 40 }) && rescue.inWater(m, { x, y: y - 40 })) sp = { x, y };
+    }
+    if (!sp) { world.notify(p, '[dev] No open water near you - try by the shore.', 'warn'); return; }
+    for (const [model, dy, n] of [['speedboat', 0, 4], ['dinghy', 90, 2], ['rescueboat', -90, 4]]) {
+      if (!rescue.inWater(m, { x: sp.x, y: sp.y + dy })) continue;
+      const v = world.spawnVehicle(model, sp.x, sp.y + dy, 0, { npcOwned: true });
+      for (let s = 0; s < n; s++) { const c = npc.spawnNpc(world, model === 'rescueboat' ? 'rescue' : 'casual', v.x, v.y, model === 'rescueboat' ? 'medic' : 'civ'); c.vehId = v.id; c.seat = s; v.seats[s] = c.id; }
+    }
+    world.notify(p, '[dev] Boats with people aboard, out on the water by you.', 'info');
+    return;
+  }
+  let to = null;
+  if (at === 'water') to = rescue.waterSpot(world, ped.x, ped.y);
+  else {
+    // the open country 400-900 px from the nearest road, nearest you (within 9000 px)
+    const WILDS = new Set([Z.WILD, Z.WEST, Z.NORTH]);
+    let best = 9000;
+    for (let ty = 0; ty < m.h; ty += 6) for (let tx = 0; tx < m.w; tx += 6) {
+      const x = tx * 32 + 16, y = ty * 32 + 16, dd = Math.hypot(x - ped.x, y - ped.y);
+      if (dd >= best || !WILDS.has(m.zoneAt(x, y)) || !m.isWalkable(x, y) || m.isWater(x, y)) continue;
+      const k = kerbFor(world, x, y), d = Math.hypot(k.x - x, k.y - y);
+      if (d > 400 && d < 900) { best = dd; to = { x, y }; }
+    }
+  }
+  if (!to) { world.notify(p, `[dev] Nowhere ${at === 'water' ? 'out on the water' : 'out in the wilds'} round here.`, 'warn'); return; }
+  ped.x = to.x; ped.y = to.y; ped.lz = 0; ped.sub = false; ped.ug = 0; p.teleportAt = world.time; world.place(ped);
+  p.profile.bank = Math.max(p.profile.bank, 1000);   // (the fee)
+  p.amb = null; p.ambUsed = false;
+  combat.kill(world, ped, null, 'crash', 0);
+  revive.callAmbulance(world, p);
+  world.notify(p, `[dev] Down ${at === 'water' ? `in the water (${to.dock})` : 'in the wilds'} - help called.`, 'info');
 }
