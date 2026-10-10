@@ -45,6 +45,7 @@ import { courtHoops, idealPower, shotWindow } from '../shared/hoops.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
 import { ANIMAL_ART } from '../shared/animal-art.js';
+import { APOSE } from '../shared/fauna.js';   // (a pet home with its owner: APOSE.happy - server pets.js)
 import { BuildingLayer } from './render/buildings.js';
 import { Highway, liftOf, levelKey } from './render/highway.js';
 import { underDeck } from '../shared/levels.js';
@@ -3857,15 +3858,18 @@ function drawAnimal(p, now) {
   g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.rx + 2, p.ry + 4, 13, 6, 0, 0, 6.28); g.fill();
   if (!art || !atlas.animals) { g.fillStyle = '#a0703a'; g.beginPath(); g.ellipse(p.rx, p.ry, 12, 7, p.ra, 0, 6.28); g.fill(); g.restore(); return; }
   const f = art.f;
-  const r = !f ? art.r : sp > 70 ? f.run[Math.floor(now * 14 + p.id) % 4] : sp > 12 ? f.walk[Math.floor(now * 8 + p.id) % 4] : now - p.stillSince > 1.2 ? f.sit : f.idle;
+  // home with its owner (server pets.js: APOSE.happy): no sitting - quick little hops up at them, a bounce in its stride
+  const happy = (p.extra & 31) === APOSE.happy && !(p.flags & (PF.DEAD | PF.DOWN));
+  const hk = (now * 2.4 + p.id * 0.37) % 1, hop = happy && hk < 0.55 ? Math.sin(Math.PI * hk / 0.55) * (sp > 12 ? 2.5 : 7) : 0;
+  const r = !f ? art.r : sp > 70 ? f.run[Math.floor(now * 14 + p.id) % 4] : sp > 12 ? f.walk[Math.floor(now * 8 + p.id) % 4] : happy ? f.walk[Math.floor(now * 10 + p.id) % 4] : now - p.stillSince > 1.2 ? f.sit : f.idle;
   const [sx, sy, sw, sh] = r, pad = art.pad || 0;
   g.imageSmoothingEnabled = false;
   if (art.view === 'top') {
-    g.translate(p.rx, p.ry); g.rotate(p.ra);
+    g.translate(p.rx, p.ry - hop); g.rotate(p.ra);
     const k = 0.9; g.drawImage(atlas.animals, sx, sy, sw, sh, -sw * k / 2, -sh * k / 2, sw * k, sh * k);
   } else {
     const k = 0.75, flip = Math.cos(p.ra) < -0.2;
-    g.translate(p.rx, p.ry + 4); if (flip) g.scale(-1, 1);
+    g.translate(p.rx, p.ry + 4 - hop); if (flip) g.scale(-1, 1);
     g.drawImage(atlas.animals, sx, sy, sw, sh, -sw * k / 2, -(sh - pad) * k, sw * k, sh * k);
   }
   g.imageSmoothingEnabled = true;
@@ -3936,7 +3940,7 @@ function pedVisual(p, now) {
   const f = p.flags;
   if (f & PF.INVEH) return;
   if (p.smokeUntil && now < p.smokeUntil && Math.random() < 0.05) S.fx.smoke(p.rx + (Math.random() - 0.5) * 12, p.ry + (Math.random() - 0.5) * 6, false);   // (cut in two by the plasma blade: the seared halves smoke a while)
-  if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { if ((p.as || 0) > 12 || p.stillSince === undefined) p.stillSince = now; return; }
+  if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { if ((p.as || 0) > 12 || p.stillSince === undefined || (p.extra & 31) === APOSE.happy) p.stillSince = now; return; }   // (happy: it doesn't sit)
   if (p.blink === 3) return; // inside a home
   const L = pedLook(p, now);
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }

@@ -1,7 +1,14 @@
 // Lost pets: now and then (every eight minutes or so) a dog or a cat slips its lead somewhere near a player. Its owner is
 // out looking for it well across town. Find the pet, take its collar (it trots along at your heel)
 // and walk it back to the owner for a reward. Pets can't be hurt and aren't witnesses.
+// Home again (task #427, the owner: "the pet shouldn't disappear as soon as you do that, the pet should run up to the owner
+// and be excited, wag its tail, or run around the owner, and then the pet should follow the owner until they despawn off
+// screen later or walk off"): handed back, it dashes to its owner, races round them and hops up at them with its tail
+// going (APOSE.happy on the wire: the client wags it fast and bounces it) while they stand and watch; then the owner heads
+// off and it trots at their heel - both gone the usual way: the owner once out of everyone's way (npc.js manageDensity),
+// the pet with them.
 import { K, T } from '../../shared/constants.js';
+import { APOSE } from '../../shared/fauna.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { pedStep } from '../../shared/physics.js';
 import { PET_EVERY_S, PET_OWNER_PX, PET_REWARD, PET_SAMARITAN } from '../../shared/rules.js';
@@ -26,6 +33,9 @@ const HEEL_PX = 34;      // a led pet keeps this far behind you
 const LEASH_PX = 900;    // get this far from your pet (a car, a teleport) and it slips away again
 const CATCH_UP_PX = 170; // a pet held up by a corner catches up once it's this far behind
 const PET_SPEED = { dog: 120, puppy: 100, cat: 95 };
+// home again: round its owner this far out, this many times, then hopping up at them this long (at most this long getting
+// to them); with them a good while and out of everyone's sight, it's gone home with them even if they're still about
+const JOY_R = 26, JOY_LAPS = 1.5, HOP_S = 1.8, RUN_S = 6, HOMEWARD_S = 150;
 
 let rng = Math.random;
 export function setRng(r) { rng = r; }
@@ -77,7 +87,13 @@ function remove(world, pet) {
 
 export function lostPets(world) {
   const out = [];
-  for (const e of world.entities.values()) if (e.kind === K.PED && e.pet && !e.pet.walked && !e.removed) out.push(e);   // (walked: a dog walker's, personas.js)
+  for (const e of world.entities.values()) if (e.kind === K.PED && e.pet && !e.pet.walked && !e.pet.home && !e.removed) out.push(e);   // (walked: a dog walker's, personas.js; home: back with its owner)
+  return out;
+}
+// the pets back with their owners
+export function homePets(world) {
+  const out = [];
+  for (const e of world.entities.values()) if (e.kind === K.PED && e.pet && e.pet.home && !e.removed) out.push(e);
   return out;
 }
 
@@ -111,7 +127,71 @@ export function giveBack(world, p, pet) {
   world.emit(owner ? owner.x : pet.x, owner ? owner.y : pet.y, { e: 'cash', x: pet.x, y: pet.y, n: PET_REWARD });
   world.notify(p, `"${pet.pet.name}! Oh thank you!" +$${PET_REWARD}, +${PET_SAMARITAN} Samaritan.`, 'good');
   events.feed(world, { kind: 'pet', text: `${p.name} brought ${pet.pet.name} the ${pet.pet.kind} home`, x: pet.x, y: pet.y });
-  remove(world, pet);
+  reunite(world, pet);
+}
+
+// Off the collar and back with its owner: no longer lost (off the radar, nobody's to lead), it runs to them
+function reunite(world, pet) {
+  const pp = pet.pet, owner = world.get(pp.owner);
+  if (world.happenings) world.happenings = world.happenings.filter((e) => e.id !== pp.ev);
+  pp.follow = 0;
+  if (!owner || owner.dead || owner.removed) { world.remove(pet); return; }
+  pp.home = { phase: 'run', t0: world.time };
+  pp.mood = APOSE.happy;
+  if (owner.npc) { owner.npc.petOwner = 0; owner.npc.petHome = pet.id; owner.npc.keep = true; }
+}
+
+// Every tick, a pet home again: to its owner, round and round them, hopping up at them; then at their heel as they go.
+// The owner stands and watches it till then (unless something else has them: a fight, running off).
+function homeStep(world, pet, dt) {
+  const pp = pet.pet, H = pp.home, now = world.time, owner = world.get(pp.owner);
+  const speed = PET_SPEED[pp.kind] || 100;
+  let inp = { bits: 0, mx: 0, my: 0, aim: pet.a }, fast = 1;
+  if (!owner || owner.removed || owner.dead) {   // its owner's gone (out of everyone's way, or worse): so is it, once nobody sees
+    pp.mood = 0;
+    if (!inAnyView(world, pet.x, pet.y, 40)) { world.remove(pet); return; }
+  } else {
+    const dx = owner.x - pet.x, dy = owner.y - pet.y, d = Math.hypot(dx, dy);
+    if (H.phase === 'run') {   // a dash to them
+      if (d < JOY_R + 4 || now - H.t0 > RUN_S) { H.phase = 'joy'; H.t0 = now; H.a0 = Math.atan2(pet.y - owner.y, pet.x - owner.x); H.dir = rng() < 0.5 ? 1 : -1; }
+      else { inp = seek(pet, owner.x, owner.y, true); fast = 1.3; }
+    }
+    if (H.phase === 'joy') {
+      const t = now - H.t0, lap = (2 * Math.PI * JOY_R) / (speed * 1.25);
+      if (t < JOY_LAPS * lap) {   // round and round them
+        const a = H.a0 + H.dir * (2 * Math.PI * t / lap + 0.7);
+        inp = seek(pet, owner.x + Math.cos(a) * JOY_R, owner.y + Math.sin(a) * JOY_R, true); fast = 1.25;
+      } else if (t < JOY_LAPS * lap + HOP_S) {   // up at them, hopping, the tail going
+        const fx = owner.x - dx / (d || 1) * 16, fy = owner.y - dy / (d || 1) * 16;
+        if (Math.hypot(fx - pet.x, fy - pet.y) > 4) inp = seek(pet, fx, fy, false);
+        pet.a = Math.atan2(dy, dx);
+      } else {   // done: off they go together
+        H.phase = 'heel'; H.t0 = now; pp.mood = 0;
+        if (owner.npc) {
+          owner.npc.keep = false; owner.npc.state = 'wander'; owner.npc.until = 0;
+          let near = null, nd = Infinity;
+          for (const p of world.players.values()) if (p.ped && !p.ped.dead) { const q = Math.hypot(p.ped.x - owner.x, p.ped.y - owner.y); if (q < nd) { nd = q; near = p.ped; } }
+          if (near) owner.npc.awayFrom = Math.atan2(owner.y - near.y, owner.x - near.x);   // (off home: away from you)
+        }
+      }
+    }
+    if (H.phase === 'heel') {   // at their heel as they go
+      if (now - H.t0 > HOMEWARD_S && !inAnyView(world, pet.x, pet.y, 40) && !inAnyView(world, owner.x, owner.y, 40)) { world.remove(pet); return; }
+      if (d > CATCH_UP_PX && !inAnyView(world, pet.x, pet.y, 40)) {   // held up by a corner, out of sight: there at their heel
+        const bx = owner.x - Math.cos(owner.a) * HEEL_PX, by = owner.y - Math.sin(owner.a) * HEEL_PX;
+        const at = walkable(world.map, bx, by) ? { x: bx, y: by } : { x: owner.x, y: owner.y };
+        pet.x = at.x; pet.y = at.y; pet.vx = 0; pet.vy = 0;
+      } else if (d > HEEL_PX) { inp = seek(pet, owner.x, owner.y, d > 120); fast = d > 120 ? 1.15 : 1; }
+    } else if (owner.npc && (owner.npc.state === 'idle' || owner.npc.state === 'wander')) {   // the owner stands and watches it
+      owner.npc.state = 'idle'; owner.npc.until = now + 2; owner.npc.lookAt = now + 2; owner.vx = 0; owner.vy = 0;
+      owner.a = Math.atan2(pet.y - owner.y, pet.x - owner.x);
+    }
+  }
+  const mods = players.pedMods(world, pet);
+  mods.speedMul *= speed / 100 * fast; mods.canSwim = false;
+  pedStep(pet, inp, dt, world.map, mods);
+  if (inp.mx || inp.my) pet.a = Math.atan2(inp.my, inp.mx);
+  world.place(pet);
 }
 
 events.setPetTarget((world, p) => targetFor(world, p));
@@ -138,6 +218,7 @@ export function update(world, dt) {
       if (ps.length && lostPets(world).length < MAX_LOST) spawnLost(world, ps[Math.floor(rng() * ps.length)]);
     }
   }
+  for (const pet of homePets(world)) homeStep(world, pet, dt);
   for (const pet of lostPets(world)) {
     const pp = pet.pet;
     const owner = world.get(pp.owner);

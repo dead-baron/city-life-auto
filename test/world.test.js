@@ -150,7 +150,7 @@ test('lost pets: one runs off near you, take its collar, walk it to the owner fo
   act.run();
   assert.equal(prof.cash, PET_REWARD);
   assert.ok(prof.samaritan >= PET_SAMARITAN);
-  assert.ok(!w.get(pet.id), 'home again');
+  assert.ok(w.get(pet.id) && pet.pet.home && !pets.lostPets(w).includes(pet), 'home again: with its owner, no longer lost (test/pets.test.js)');
 });
 
 test('nightclubs: shutters down by day, open after dark, a bar inside', async () => {

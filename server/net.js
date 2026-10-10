@@ -43,14 +43,17 @@ function descriptor(e) {
   }
 }
 export const _descriptor = (e) => descriptor(e);   // (tests)
+export const _fields = (world, e) => fields(world, e);   // (tests: [flags, hp, parent, extra] on the wire)
 function descVersion(e) { return e.kind === K.PED ? (e.appVer || 0) : e.kind === K.VEH ? (e.descVer || 0) : 0; }
 
 function fields(world, e) {
   switch (e.kind) {
     // extra: bits 0-4 weapon, 5-6 blink (1 slow, 2 fast, 3 hidden indoors), bit 7 in the water (incl. under a bridge)
     // parent: the vehicle you're in, or the train car you're riding
-    // (an animal: extra bits 0-4 what it's doing - fauna.js APOSE - and bit 7 in the water)
+    // (an animal: extra bits 0-4 what it's doing - fauna.js APOSE - and bit 7 in the water; a pet: its mood - APOSE.happy
+    // home with its owner, pets.js)
     case K.PED: if (e.wild) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, (wildlife.poseOf(e) & 31) | (WATER_T[(e.ug ? ugMapOf(world.map) : world.map).tileAtPx(e.x, e.y)] === 1 ? 128 : 0)];
+      if (e.pet) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, ((e.pet.mood || 0) & 31) | (isSwimming(world.map, e) ? 128 : 0)];
       return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0), (e.cuffed ? 0 : WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(e.ug ? ugMapOf(world.map) : world.map, e) ? 128 : 0)];
     case K.VEH: return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), 0, 0];
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];

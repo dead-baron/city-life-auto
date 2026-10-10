@@ -5061,3 +5061,21 @@ The owner: "NPCs dancing at a night club won't leave the club when morning comes
   - the line moves;
   - all of them gone once nobody's near, and back after.
   A run over every club on the map showed each shut 3-6 s after the end of the night, nobody left inside or vanished.
+
+## 2026-10-09 · A lost pet handed back runs to its owner, celebrates and goes home with them (task #427)
+The owner: "When you find a lost pet and return it to its owner the pet shouldn't disappear as soon as you do that, the pet should run up to the owner and be excited, wag its tail, or run around the owner, and then the pet should follow the owner until they despawn off screen later or walk off."
+- **Why it vanished:** handing it back removed it on the spot (`pets.js giveBack` → `remove`).
+- **Now** (`server/systems/pets.js` `reunite` / `homeStep`): you get the same reward. The pet comes off your collar and off the radar (it's no longer a lost pet), and:
+  - it dashes over to its owner;
+  - it races round them (one and a half laps), then hops up at them in front, its tail going, while the owner stands and turns to watch it;
+  - then the owner heads off, away from you, as an ordinary passer-by. The pet trots at their heel, and if a corner holds it up out of sight, it catches up.
+  - **Gone the usual way:** the owner is cleared once nobody's near (`npc.js manageDensity`), and the pet goes with them as soon as nobody can see it. A pet out of sight with its owner for a couple of minutes has gone home too. If the owner is gone before it reaches them, it goes once out of sight.
+- **On the wire:** a pet's extra byte carries its mood. `APOSE.happy` (`shared/fauna.js`, beside the wild animals' poses) is set while it greets them (`server/net.js`).
+- **Drawn** in both renderers:
+  - **Art v2** (`client/art2/game/host.js _pet`): it never sits while happy. Standing, the idle pose's wag runs four times as fast and it hops (a quick bounce with a beat between, its shadow left on the ground). Racing round them, there's a bounce in its stride.
+  - **Classic** (`client/main.js drawAnimal`): a quick wiggle and the same hops.
+- **Tests:** `test/pets.test.js` (3):
+  - handed back, it stays, isn't lost and goes off the radar, and is happy on the wire; it reaches the owner, goes round them more than once and bounces in front while they stand; then it's calm, the owner walks off and it keeps within a few steps of them;
+  - nobody near: the owner is cleared and the pet with them;
+  - an owner gone first: the pet goes once out of sight.
+  `test/world.test.js`'s lost-pet test now expects it home with its owner rather than gone.
