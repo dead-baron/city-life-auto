@@ -313,7 +313,7 @@ const ICLS = {
   umbrella: 'umb',     // held up in the right hand, the shaft straight up (the other arm swings free)
 };
 // ---- lights to carry and felling trees (#358, #359): the axe swung like a sledge, the lantern carried by its bail ----
-Object.assign(ICLS, { axe: 'big', lantern: 'bill' });
+Object.assign(ICLS, { axe: 'big', lantern: 'bill', pickaxe: 'big' });   // (pickaxe: a miner's - server activities.js)
 // ---- end ----
 // The umbrella's hold, in body space (x right, y forward, z up): the right hand in front of the right shoulder at a
 // set height whatever the build, the shaft UMBRELLA_LEN long straight up, so its top - where the renderer puts the

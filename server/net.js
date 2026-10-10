@@ -14,7 +14,7 @@ import * as vehicles from './systems/vehicles.js';
 import { blinkState } from './systems/homes.js';
 import { bagWireTier, bagBlinks } from './systems/cargo.js';
 import { netRect, NET_KEEP } from './view.js';
-const CHOP_CODE = { hatchet: 1, axe: 2, fellaxe: 3, chainsaw: 4 };   // ch: a ped felling a tree, with what (felling.js)
+const CHOP_CODE = { hatchet: 1, axe: 2, fellaxe: 3, chainsaw: 4, pickaxe: 5 };   // (pickaxe: a miner at the rock face - activities.js)   // ch: a ped felling a tree, with what (felling.js)
 
 const writer = new SnapshotWriter(1500);
 const MAX_BUFFERED = 512 * 1024;

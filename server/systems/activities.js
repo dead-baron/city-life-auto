@@ -9,6 +9,7 @@
 //   carwash   washing the car parked in a home's driveway: a sponge, a bucket (when a car's parked there: traffic.js)
 //   chat      neighbours chatting between two homes next door to each other
 //   pickers   two picking down the rows of a farm's field, a crate of produce by them
+//   miners    swinging pickaxes at a quarry's rock face (one at the old mine's adit): the felling swing (net.js ch 5)
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
 // player at most), and emptied when nobody's near any more. They stand (sit) and loop a pose: the descriptor's gt (the
 // client's personaPose: 'sit', 'sitlow') and prop (pp: 'easel', 'cooler', 'chess': client/art2/people.js), the anglers'
@@ -41,6 +42,7 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   carwash: { day: 0.35, night: 0 },
   chat: { day: 0.4, night: 0.1 },
   pickers: { day: 0.8, night: 0 },
+  miners: { day: 0.8, night: 0.2 },
 };
 const ANCHOR = { pierrail: 'anglers', pier: 'anglers', fishtable: 'anglers', rods: 'anglers', picnic: 'chess', cafetable: 'chess', blanket: 'picnic', fountain: 'painter', statue: 'painter', gazebo: 'painter', mapboard: 'painter', ferris: 'painter' };
 
@@ -109,6 +111,20 @@ export function spotsOf(map) {
     if (!walkable(map, x - 22, y) || !walkable(map, x + 22, y) || !clear(x, y, 200)) continue;
     list.push({ k: 'pickers', x, y, a: Math.PI / 2, wild: true }); taken.push({ x, y });
   }
+  // miners: at a quarry's rock face (the pit's back wall), and at the old mine's adit
+  for (const q of map.quarries || []) {
+    for (const f of [0.3, 0.7]) {
+      const x = q.x + q.w * f, y = q.y + 26;
+      if (walkable(map, x, y) && clear(x, y, 140)) { list.push({ k: 'miners', x, y, a: -Math.PI / 2, wild: true }); taken.push({ x, y }); }
+    }
+  }
+  for (const p of map.props || []) {
+    if (p.t !== 'mineportal') continue;
+    for (const [dx, dy] of [[0, 40], [0, -40], [40, 0], [-40, 0]]) {
+      const x = p.x + dx, y = p.y + dy;
+      if (walkable(map, x, y) && clear(x, y, 140)) { list.push({ k: 'miners', x, y, a: Math.atan2(-dy, -dx), wild: true, single: true }); taken.push({ x, y }); break; }
+    }
+  }
   const cells = new Map();
   list.forEach((s, i) => {
     s.id = i;
@@ -157,6 +173,9 @@ function members(s) {
   } else if (s.k === 'chat') {      // face to face, a word over the fence
     out.push({ x: s.x - c * 11, y: s.y - sn * 11, a: s.a, arche: rng() < 0.4 ? 'senior' : 'casual', chat: true });
     out.push({ x: s.x + c * 11, y: s.y + sn * 11, a: s.a + Math.PI, arche: rng() < 0.4 ? 'senior' : 'casual', chat: true });
+  } else if (s.k === 'miners') {    // swinging a pickaxe at the rock face (a second along the face, at a quarry)
+    out.push({ x: s.x, y: s.y, a: s.a, arche: 'construction', chop: true });
+    if (!s.single) out.push({ x: s.x - Math.sin(s.a) * 34, y: s.y + Math.cos(s.a) * 34, a: s.a, arche: 'construction', chop: true });
   } else if (s.k === 'pickers') {   // down along the rows, picking into a crate
     out.push({ x: s.x - 22, y: s.y, a: s.a, arche: 'farmer', gt: 'kneel', pp: 'crate' });
     out.push({ x: s.x + 22, y: s.y + 6, a: s.a, arche: 'farmer', gt: 'kneel' });
@@ -202,7 +221,7 @@ export function fill(world, s, opts = {}) {
     dressAs(world, ped, m.look);
     ped.a = m.a; ped.vx = ped.vy = 0;
     const n = ped.npc;
-    n.act = { g: s.id, k: s.k, x: m.x, y: m.y, a: m.a, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat };
+    n.act = { g: s.id, k: s.k, x: m.x, y: m.y, a: m.a, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop };
     n.state = 'idle'; n.until = world.time + 9999; n.sway = false; n.umbrellaType = false;
     pose(ped, true);
     g.ids.push(ped.id);
@@ -215,6 +234,7 @@ function pose(ped, on) {
   const a = ped.npc.act, gt = on ? a.gt : null, pp = on ? a.pp : null;
   if ((ped.gt || null) !== gt || (ped.pp || null) !== pp) { ped.gt = gt; ped.pp = pp; ped.appVer = (ped.appVer || 0) + 1; }
   if (a.fish) ped.fishing = on ? (ped.fishing || { npc: true }) : null;
+  if (a.chop && !!ped.chop !== on) { ped.chop = on ? { tool: 'pickaxe', npc: true } : null; ped.appVer = (ped.appVer || 0) + 1; }   // (the swing: net.js ch)
 }
 
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
@@ -225,7 +245,7 @@ export function steer(world, ped, now) {
   if (!a) return null;
   const d = Math.hypot(a.x - ped.x, a.y - ped.y);
   if (d > 420) { pose(ped, false); n.act = null; n.state = 'wander'; n.until = 0; return null; }   // (far off after a scare: on their way)
-  if (d > 5) { if (ped.gt || ped.pp || ped.fishing) pose(ped, false); return { inp: seekTo(ped, a.x, a.y, 0.9), factor: 0.55 }; }   // back to it
+  if (d > 5) { if (ped.gt || ped.pp || ped.fishing || ped.chop) pose(ped, false); return { inp: seekTo(ped, a.x, a.y, 0.9), factor: 0.55 }; }   // back to it
   ped.vx = ped.vy = 0;
   if (n.state !== 'idle') { n.state = 'idle'; n.until = now + 9999; }
   pose(ped, true);
@@ -247,7 +267,7 @@ export function update(world) {
   // nobody sits in mid air
   for (const g of A.values()) for (const i of g.ids) {
     const e = world.get(i);
-    if (e && e.npc && e.npc.act && (e.gt || e.pp || e.fishing) && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) > 5) pose(e, false);
+    if (e && e.npc && e.npc.act && (e.gt || e.pp || e.fishing || e.chop) && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) > 5) pose(e, false);
   }
   if (world.tick % 20 === 13) fillRound(world);
 }
@@ -260,7 +280,7 @@ function fillRound(world) {
     g.ids = g.ids.filter((i) => { const e = world.get(i); return e && !e.removed && !e.dead && e.npc && e.npc.act; });
     const near = anchors.some((p) => Math.hypot(p.x - g.x, p.y - g.y) < ACT_DROP) || inAnyView(world, g.x, g.y, 64);
     if (g.ids.length && near) continue;
-    if (!near) for (const i of g.ids) { const e = world.get(i); if (e && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e); else if (e) { e.npc.act = null; e.gt = e.pp = null; e.fishing = null; e.appVer = (e.appVer || 0) + 1; } }
+    if (!near) for (const i of g.ids) { const e = world.get(i); if (e && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e); else if (e) { e.npc.act = null; e.gt = e.pp = null; e.fishing = null; e.chop = null; e.appVer = (e.appVer || 0) + 1; } }
     A.delete(id);
     (world.actRest ||= new Map()).set(id, now + (g.ids.length ? 30 : 240));   // (emptied by a scare: a good while before it's on again)
   }

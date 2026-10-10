@@ -60,7 +60,7 @@ test('a spot fills with people doing the activity: placed, posed, their props on
   assert.ok(Math.abs(a.a - 0) < 0.01 && a.gt === 'sit', 'still sat at the board');
 });
 
-test('the car washed in the driveway (when one is parked there), neighbours chatting, pickers in the fields', () => {
+test('the car washed in the driveway (when one is parked there), neighbours chatting, pickers in the fields, miners', () => {
   clear();
   for (const k of ['carwash', 'chat', 'pickers']) assert.ok(of(k).length >= 2, `some ${k} spots (${of(k).length})`);
   const cw = of('carwash').find((s) => !w.query(s.x, s.y, 60, K.VEH).length);
@@ -80,6 +80,9 @@ test('the car washed in the driveway (when one is parked there), neighbours chat
   assert.ok(people(pk).every((e) => e.gt === 'kneel'), 'down at the plants');
   assert.equal(people(pk)[0].pp, 'crate');
   assert.equal(m.tileAtPx(pk.x, pk.y), T.FIELD, 'in the field');
+  assert.ok(of('miners').length >= 2, `some miners' spots (${of('miners').length})`);
+  const mn = fill(w, of('miners')[0], { seen: true });
+  for (const e of people(mn)) { assert.equal(e.chop && e.chop.tool, 'pickaxe', 'a pickaxe swung'); assert.equal(_descriptor(e).ch, 5, 'the swing on the wire'); }
   w.remove(v);
 });
 
@@ -128,7 +131,7 @@ test('the debug menu takes you to each kind, filled, a little way off', async ()
   clear();
   const { p } = joinPlayer(w);
   const kinds = DEV_SECTIONS.flatMap((sec) => sec.items).filter(([, c]) => c === 'act').map(([, , x]) => x.k);
-  assert.equal(kinds.length, 7);
+  assert.equal(kinds.length, 8);
   for (const k of kinds) {
     command(w, p, 'act', { k });
     const g = [...w.acts.values()].find((q) => q.k === k && Math.hypot(q.x - p.ped.x, q.y - p.ped.y) < 340);

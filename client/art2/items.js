@@ -312,6 +312,12 @@ ITEMS.axe = { ia: -55, hs: 0.85, off: [-3, 0], parts: [
   poly([[14.2, -1.6], [18.4, -1.8], [19.6, -6.4], [17.6, -7.6], [15.6, -4.6], [14.2, -3.4]], M.steel, { k: 0.08, pat: (u, v) => (v < -6.6 ? 0.25 : 0) }),
   poly(box(14.2, -1.6, 18.4, 1.9), M.dark, { k: 0.05 }),
 ] };
+// a miner's pickaxe (people at work: server activities.js): the hickory handle, a curved steel head pointed both ways
+ITEMS.pickaxe = { ia: -55, hs: 0.85, off: [-3, 0], parts: [
+  cap([-4, 0], [17.4, 0], 1.15, M.wood, { pat: grain }),
+  cap([-4.4, 0], [-1.6, 0], 1.35, M.woodDark),
+  poly([[15.2, -1.4], [17.4, -6.2], [19.2, -10.4], [18.8, -6.0], [18.0, -1.4], [18.0, 1.4], [18.8, 6.0], [19.2, 10.4], [17.4, 6.2], [15.2, 1.4]], M.steel, { k: 0.08 }),
+] };
 ITEMS.lantern = { ia: 0, hs: 0.9, is: 1.2, bill: true, parts: [
   ring([0, -7.2], 2.1, 0.45, M.dark),
   poly(rbox(-3.4, -5.2, 3.4, -4.2, 0.4), M.dark),
