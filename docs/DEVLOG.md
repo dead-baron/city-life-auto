@@ -4854,3 +4854,31 @@ Found by the club ride-out test after the traffic change shifted who was on the 
 - **A dying bike** (`server/systems/bikers.js`): nobody mounts a bike whose engine is dead, whether mounting up, getting back on after a spill, riding home or giving chase. It doesn't count as one of the riders either, so the club parks without it and the member walks home.
 - **Riding together** (`server/systems/vehicles.js resolveVehicleHit`): when two of a club's bikes bump while the club is riding them, they still push each other apart, but neither takes damage. A wheel's width apart in formation, a nudge isn't a crash. A club bike someone has taken, or a car that hits one, is damaged as before.
 - **Tests:** `test/motorbikes.test.js` passes again in full. `test/npcpeople.test.js` now expects a park bench to use the held ways of sitting ('sitx', task #379) instead of the old quick 'sit'.
+
+## 2026-10-09 · The music studio: an SNES-style music engine and the first three drafts (task #442)
+The owner wants the game's music designed together. They write notes and send reference tracks; I write original songs, render them, and log each round in the Sound & Music Design doc (a claude.ai doc in the project). The 14 reference MP3s were only measured: tempo, key, groove, mix, loudness and structure, by a script in a scratch folder. They were deleted afterwards. Nothing of theirs is in the repo, and no melody, riff or hook is borrowed.
+- **The engine** (`client/sound/studio/`) works in plain JS on Float32Arrays, with no Web Audio. That way the same code renders a song in Node and, later, in a browser worker into one buffer.
+  - `dsp.js` holds the building blocks. It runs at the SNES's 32 kHz and has a seeded random source (every render is identical), PolyBLEP oscillators, a state-variable filter, biquads, SNES-style ADSR and a soft clipper.
+  - `voices.js` has seven voices and their presets:
+    - subtractive synth: leads, brass with a bright attack and a scoop, reedy sax, strings, pads, rubbery and fuzz basses;
+    - two-operator FM: electric piano, clav;
+    - bells with their own partials: glockenspiel, vibes, marimba, toy piano;
+    - Karplus-Strong strings: nylon and steel guitar, muted skank, crunch guitar, harp, upright bass;
+    - flute and whistle;
+    - drawbar organ;
+    - a formant vocal for the vocoder-like voice.
+  - `drums.js` has 30 synthesized hits: a full kit, Latin percussion and timpani. Each hit is normalised and placed by the kit's pan and level, and an open hat is choked by the next closed one.
+- **Writing music** (`score.js`): parts are written as text. Bar lines are checked, so a wrong length fails where it was written. A section's chords can be turned into a pad, comp, strum, arpeggio, picked pattern or bass line. A tune can be harmonized a third below, and drums are written on a grid.
+- **The mix** (`render.js`):
+  - Each part has its own channel: EQ, drive and chorus or pan.
+  - All parts share one filtered ping-pong echo, the SNES's signature space.
+  - There's an optional tape lo-fi stage, plus a glue compressor and the SNES's soft top end.
+  - Every song is matched for loudness, with a soft ceiling.
+  - It reports each part's level so a mix can be balanced without ears in the room.
+- **The drafts** (`songs/`):
+  - *Wide Awake City*, a menu theme (D major, 112 BPM, built from the Ping Island brief);
+  - *Getaway Job*, for the heist station (G minor, 144 BPM, light swing, from the Tank! brief);
+  - *Tomatoes in the Morning*, for the garden (F major, 100 BPM, from the Boat and Spring briefs).
+  Measured with the same analysis as the references, each lands on its target's tempo, key and balance.
+- **Rendering** (`tools/render-music.mjs <song>`): writes a WAV in about 5-12 s.
+- **Not in the game yet.** The studio isn't loaded anywhere, so startup code and budgets are unchanged. Next: render songs in a worker the first time they're needed, play them as one source per speaker, and run radio stations synced by the server (station, song, start time).
