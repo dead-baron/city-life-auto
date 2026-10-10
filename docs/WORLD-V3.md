@@ -59,8 +59,8 @@ What changes is how they are joined: a bridge to every island (WR3), the ring hi
 | **Cedar Isle** (Cedar Falls, Falls Center, Lake District, Cedar Farms, South Port, Cedar Hills) | the south island | WR3's beach islands south-east of Metro City: Cedar Bridge (the red suspension bridge) from Southbank, the East Toll Bridge to the Sandpiper Coast | moves |
 | **Smuggler's Rock** (the syndicate's) | a rock off Dry Creek | a rock at the bay's mouth, boat only | moves |
 | **Prison Island** (J1-J4: walls, guard towers, cells, the yard, the pier) | - (cells are in police stations) | out at sea south-east of the bay mouth (WR3), reached by the prison boat only | **new** |
-| **Gull Isles** (Gull Harbor, Coral Cay, Paradise Cay, Wreck Island, Seal Islets) | along the south edge | outside the bay mouth to the south-west and south, boat only (ferries) | moves |
-| **Lighthouse Rock, The Islets** | small rocks | off the west coast, under the North Cape | moves |
+| **Gull Isles** (Gull Harbor, Coral Cay, Paradise Cay) | along the south edge | outside the bay mouth to the south-west and south, boat only (ferries) | moves |
+| **Lighthouse Rock, The Islets** (Wreck Island and the Seal Islets among them) | small rocks round the map | Lighthouse Rock off Highland Woods' coast, the islets round the bay's mouth and the west coast | moves |
 | **The bay** (Liberty Bay, district 13) | the open water between islands | an enclosed bay: shallows along the shores, a deep fairway from the mouth to the river and the ports, the river mouth, the shark water outside the mouth | rebuilt |
 | Beaches in the bay | Sunset Beach, Pelican Key, Cedar Isle's | kept; plus the mainland beaches (Sandpiper Coast, the west coast coves, Egret Point) | exists + new |
 | Marinas and docks | the Harbor marina (Metro City), Westport Pier, the docks and jetties round the islands | kept; plus Port Westport's container port, the toll-bridge marina (I4) and quays up the river | exists + new |
@@ -185,8 +185,9 @@ Coordinates are World v3 tiles (x east, y south); see the layout picture. Each r
 biggest roads down to the trails.
 
 **R1 Granite Peaks** (the north-west mountains, about 2.3 x 0.7 km; WR3's snow peaks; WR2-A, NA1-B, N5, NR1-D, SC3-G)
-- Moves in: Granite Peaks (district 33) with Pine Lake, Summit Tarn and its falls, Granite Hot Springs, Old Granite Mine,
-  Granite Quarry and its assay office, the observatory, Ridge Fire Lookout, North Ridge Mast, Granite Cove Campground.
+- Moves in: Granite Peaks (district 33) with Summit Tarn and its falls, Granite Hot Springs, Old Granite Mine, The
+  Sentinel Stones, the Ridge Trail hunting camp, Granite Quarry and its assay office, the observatory, Ridge Fire Lookout,
+  North Ridge Mast, Granite Cove Campground.
 - Roads: the Highland Highway over the pass (a tunnel through the ridge and a bridge over the gorge, WR1 view 2); the
   Valley Highway's north end meeting it at the pass; Peak Road up to the observatory; switchback mountain roads on stone
   walls (NT1-C); jeep tracks to the quarry; trails up the granite, cairns, a summit trail.
@@ -198,8 +199,8 @@ biggest roads down to the trails.
 
 **R2 Highland Woods** (the west coast forest, about 1.6 x 1.3 km; WR3's forest with lighthouses and the waterfall; NA1-A,
 N1-A..E, D15-A/B, NT1-A, NT1-E, SC3-A..C, HU1-HU7)
-- Moves in: Highland Woods (district 29) with Redwood Creek and its falls, Giants Loop, Fern Gorge, Redwood Cove, the
-  hunting camp, Pine Ridge Campground, the Highland stop and mast.
+- Moves in: Highland Woods (district 29) with Redwood Creek and its falls, Giants Loop, Fern Gorge, Redwood Cove, Pine
+  Lake, the trapper's cabin, Pine Ridge Campground, the Highland stop and mast.
 - New town: **Timber Bend** at the Highland Highway interchange (main street, sawmill and log yard, the hunting lodge and
   butcher (HU2), a motel, a gas station and diner, the Coast Line's west terminus).
 - Roads: the Coast Highway along the bay; the Highland Highway north through the forest; the Redwood Coast Road down the
@@ -212,8 +213,8 @@ N1-A..E, D15-A/B, NT1-A, NT1-E, SC3-A..C, HU1-HU7)
 
 **R3 Egret Coast** (the west arm, about 0.7 x 1 km; marsh and dunes; N7, NK1-D, NK1-O, E3e)
 - New: **Egret Point** fishing village at the arm's tip (piers, a fish market, the fishing fleet, a charter boat to
-  the outer islands), **Egret Point Light**, a salt marsh with boardwalks (NK1-O), dunes with board ramps down to the beach (EL1), duck
-  blinds, the Westport Raceway's new spot (open flat ground).
+  the outer islands), **Egret Point Light**, a salt marsh with boardwalks (NK1-O), dunes with board ramps down to the
+  beach (EL1), duck blinds, the Westport Raceway's new spot (open flat ground).
 - Roads: the Redwood Coast Road's south end; marsh boardwalks and dirt tracks.
 - Activities: duck and goose hunting, fishing, crabbing, birding, beachcombing, the raceway.
 
@@ -225,8 +226,8 @@ N1-A..E, D15-A/B, NT1-A, NT1-E, SC3-A..C, HU1-HU7)
 
 **R5 Willow Valley** (the middle, about 1.6 x 1.5 km; WR3's farmland and the lake with the lookout; WR2-C, NA1-D, D13,
 D13-B, SC3-E, NT1-D, FA1)
-- New town: **Willow Crossing** on the Long Reach, where Dry Creek's Willow River joins it (church, grain elevator, the farm co-op, feed store (ST2), a diner, the
-  farmers' market (D13-B), the weir and the river water bus quay).
+- New town: **Willow Crossing** on the Long Reach, where Dry Creek's Willow River joins it (church, grain elevator,
+  the farm co-op, feed store (ST2), a diner, the farmers' market (D13-B), the weir and the river water bus quay).
 - **Kestrel Lake** (WR3's lake, about 500 x 300 m): the river channel ends here; a lookout on **Lookout Hill** (WR3's
   binoculars), a lakeside campground, a boathouse and rentals, fishing docks, an island.
 - Roads: the Valley Highway north up the valley; a section grid of county roads every 250 m (Section Roads, County Road
@@ -242,8 +243,8 @@ D13-B, SC3-E, NT1-D, FA1)
 D14, VG1, VG2, MI1-MI7, SC3-F, WR1 view 1)
 - Moves in: Dry Creek (districts 9, 41, 42) whole, at the desert's west edge where the farmland meets it - its fields
   face the valley, its desert faces east - with its airstrip, Route 9, the Rusty Spur, the oil field, the solar and wind
-  farms, the drive-in, Red Rock Wash, Canyon Oasis, Mirage Lake and Camp, the Sentinel Stones, the boneyard, the mission
-  ruins, the balloon field, Splash Canyon Water Park.
+  farms, the drive-in, Red Rock Wash, Canyon Oasis, Mirage Lake and Camp, the boneyard, the mission ruins, the balloon
+  field, the Canyon Track hunting camp, Splash Canyon Water Park.
 - New city: **Lucky Mesa**, the casino city (VG1): the Strip of themed resorts with invented names and looks (a
   lotus-crowned tower, a domed palace, a pyramid with a beam, glass towers), the fountain show, wedding chapels, the old
   downtown's covered street of lights, motels and pawn shops on the side streets, the welcome sign on the highway, the
@@ -382,10 +383,11 @@ highways (Metro City - Lucky Mesa, Metro City - Timber Bend - Willow Crossing).
 **Air**: Westport International (moves to its island), Dry Creek Airstrip (moves), Lucky Mesa's airport (new),
 helipads at the hospitals and police HQ (exist).
 
-**The river channel, the Long Reach** (new; W1, NK1-E/N, SC3-D): from the bay's north-east corner up between the farmland and the
-desert to Kestrel Lake, about 2 km, 50-80 m wide, deep enough for boats the whole way (a navigable fairway, quays at Old
-Town and Willow Crossing, the lift bridge at the mouth); above the lake the upper river (Kestrel Creek) comes down from the
-mountains with rapids and falls (not navigable). Creeks feed it (Silver Thread Creek from the waterfall). Generated
+**The river channel, the Long Reach** (new; W1, NK1-E/N, SC3-D): from the bay's north-east corner up between the
+farmland and the desert to Kestrel Lake, about 2 km, 50-80 m wide, deep enough for boats the whole way (a navigable
+fairway, quays at Old Town and Willow Crossing, the lift bridge at the mouth); above the lake the upper river (Kestrel
+Creek) comes down from the mountains with rapids and falls (not navigable). Dry Creek's Willow River and the valley's
+ditches feed it; Silver Thread Creek runs on its own from the waterfall through the forest to the bay. Generated
 by the water generator (`WORLD-V2.md` "Water"; `client/art2/rivergen.js`) along a fixed course.
 
 ### 1.8 Systems tied to places
@@ -394,7 +396,7 @@ by the water generator (`WORLD-V2.md` "Water"; `client/art2/rivergen.js`) along 
 |---|---|---|
 | Respawn (hospitals, clinics, home) | spread evenly: today's in the islands, plus a clinic in each new town | exists + new places |
 | Police (stations, cells, motor pools), the law | today's stations; a sheriff in each new region; Prison Island for long sentences | exists + new |
-| Gangs and turf (`isTurf`, turf districts) | today's turf (The Yards, Southside, Port Westport, Smuggler's Rock); the syndicate in Lucky Mesa; the biker clubs on the Desert Highway (MC1-MC5) | exists + new |
+| Gangs and turf (`isTurf`, turf districts) | today's turf (The Yards, Southside, Smuggler's Rock; Port Westport's once it has ground); the syndicate in Lucky Mesa; the biker clubs on the Desert Highway (MC1-MC5) | exists + new |
 | Bounties (BO1) | the bounty office; targets roam the regions | exists |
 | Trains (`trains.js`), robbery of the mail car | the two lines, their stations and crossings | rebuilt |
 | Buses, taxis, rideshare (`transit.js`) | the towns' shelters; intercity coaches | exists + new |
@@ -427,7 +429,7 @@ hand-placed lines.
 
 What it shows:
 - **The bay** (about 2.4 x 1.6 km) with **Metro City** (and Southbank and Pelican Key) in the middle, **Westport** to the
-  west with its port on the west channel, the **airport island** south of Metro City, **Cedar Isle** to the south-east,
+  west (its west shore is where WR3 draws the container port), the **airport island** south of Metro City, **Cedar Isle** to the south-east,
   **Smuggler's Rock** at the mouth, **Prison Island** out at sea, the **Gull Isles** outside the mouth to the south-west,
   **Lighthouse Rock** and **The Islets** off the west coast.
 - **The mainland** round three sides: Granite Peaks (north-west), Highland Woods (west), Egret Coast (the west arm),
@@ -477,7 +479,7 @@ Things for the owner to decide:
    desert and airstrip into the Red Rock Desert.
 4. **The size**: 5 x 4 km is 13 times today's area, and the plan has about 12 times today's land - some 11.7 km² of new
    mainland against today's 0.96 km² in all, most of it wild (forest, farms, desert) with a handful of towns. The regions
-   can start smaller (the mainland only as deep as the lake: about 5 x 3 km) and grow north later, since regions are
+   can start smaller (without the mountains' northern half: about 5 x 3.6 km) and grow north later, since regions are
    generated on their own (part 4); the new land fills region by region, each as designed as today's (nature places,
    country sites, towns), not scattered.
 5. **Names**: Lucky Mesa, Copper Gulch, Dusty Hollow, Timber Bend, Willow Crossing, Sandpiper Bay, Egret Point, Silver
