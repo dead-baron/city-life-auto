@@ -180,8 +180,9 @@ function orders(order) {
   return out;
 }
 
-// Every bus line, worked out once per map: [{ id, name, paint, zone, stops: [stop], steps: [{ edge, from, stops: [k] }], len }]
-// (a step's stops in the order the bus comes to them)
+// Every bus line, worked out once per map: [{ id, name, paint, zone, stops: [stop], steps: [{ edge, from, stops: [k] }], len,
+// across: [{ sx, sy, k }] }] (a step's stops in the order the bus comes to them; a stop's ferry: the ferry route whose
+// mainland terminal it serves; across: a shelter the line passes across the street from, and the stop it calls at there)
 export function busLines(world) {
   const m = world.map;
   if (m._busLines) return m._busLines;
@@ -200,7 +201,6 @@ export function busLines(world) {
     byZone.get(z).push(st);
   });
   // each mainland ferry terminal on the line of the town nearest it
-  const terminals = [];
   for (const R of ferryRoutes(world)) {
     const end = R.ends[0];
     let bz = -1, bd = Infinity;
@@ -210,7 +210,6 @@ export function busLines(world) {
     const st = terminalStop(world, R, (q) => !!route(net, ref, q) && !!route(net, q, ref));
     if (!st) continue;
     byZone.get(bz).push(st);
-    terminals.push(st);
   }
   for (const [z, all] of [...byZone].sort((a, b) => a[0] - b[0])) {
     if (all.length < MIN_STOPS) continue;
