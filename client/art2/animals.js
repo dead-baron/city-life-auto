@@ -40,21 +40,22 @@ export const ANIMALS = {
   sheep: { len: 28, h: 18, w: 14, coat: '#ece2c8', face: '#2c2a2e', ears: 'side', tail: 'stub', snout: 3, head: 4.5, fluffy: 2 },
   pig: { len: 30, h: 15, w: 14, coat: '#f0a8a0', ears: 'up', tail: 'curl', snout: 3, head: 5.5, nose: '#e08a8a' },
   goat: { len: 26, h: 18, w: 9, coat: '#f2eee4', ears: 'side', tail: 'up', snout: 4, head: 4.5, horns: 'back', beard: 1 },
-  deer: { len: 34, h: 26, w: 10, coat: '#b8743a', belly: '#f0e4cc', ears: 'up', tail: 'stub', snout: 5, head: 5, neck: 10, antlers: 1 },
-  rabbit: { len: 10, h: 6, w: 6, coat: '#9a7a5a', belly: '#f0e4d4', ears: 'rabbit', tail: 'puff', snout: 1.5, head: 3.4 },
-  raccoon: { len: 18, h: 9, w: 9, coat: '#7a7678', mask: '#26242a', ears: 'cat', tail: 'ringed', snout: 2.5, head: 4 },
-  coyote: { len: 26, h: 17, w: 8, coat: '#a8885a', belly: '#e8dcc0', ears: 'up', tail: 'bushy', snout: 5, head: 4.6 },
+  // (the wild ones: jl jointed legs, lower the shins' colour, hoof dark hooves; throat a pale throat patch)
+  deer: { len: 34, h: 26, w: 10, coat: '#a8693a', belly: '#f0e4cc', pattern: 'rump', patch: '#f4eee2', ears: 'up', tail: 'stub', snout: 5, head: 5, neck: 10, antlers: 1, jl: 1, lower: '#8a5630', hoof: 1, throat: '#f2ece0', nose: '#2a2228' },
+  rabbit: { len: 11, h: 7, w: 6.5, coat: '#9a7652', belly: '#f0e4d4', ears: 'rabbit', tail: 'puff', snout: 1.5, head: 3.6, jl: 1, lower: '#b8946a', haunch: 1 },
+  raccoon: { len: 18, h: 9, w: 9, coat: '#7a7678', mask: '#26242a', ears: 'cat', tail: 'ringed', snout: 2.5, head: 4, jl: 1, lower: '#3a383c' },
+  coyote: { len: 26, h: 17, w: 8, coat: '#a8885a', belly: '#e8dcc0', ears: 'up', tail: 'bushy', snout: 5, head: 4.6, jl: 1, lower: '#c0a070', throat: '#ece2cc', tips: '#6a5a46' },
   // the wilds (shared/fauna.js): deer and their kin, the predators, the water's edge, small game
-  elk: { len: 44, h: 32, w: 13, coat: '#a8784a', belly: '#6a4a30', mane: '#4e3424', pattern: 'rump', patch: '#e2cea4', ears: 'up', tail: 'stub', snout: 6, head: 6, neck: 13, antlers: 2 },
-  moose: { len: 50, h: 40, w: 15, coat: '#3e2c22', socks: '#a8988a', ears: 'side', tail: 'stub', snout: 9, head: 7, neck: 10, antlers: 3, hump: 1.4, bell: 1, droop: 1 },
-  mtgoat: { len: 28, h: 23, w: 11, coat: '#f2eee6', ears: 'side', tail: 'stub', snout: 4.5, head: 4.4, neck: 6, horns: 'black', beard: 1, fluffy: 1, hump: 0.8, socks: '#2a262c' },
-  boar: { len: 32, h: 19, w: 12, coat: '#5a4a40', mane: '#2a2220', ears: 'up', tail: 'thin', snout: 7, head: 5.6, nose: '#7a6a62', tusks: 1 },
-  blackbear: { len: 36, h: 24, w: 15, coat: '#2e2a32', muzzle: '#9a7a58', ears: 'round', tail: 'stub', snout: 4, head: 6.5, fluffy: 1, bear: 1 },
-  grizzly: { len: 44, h: 30, w: 18, coat: '#7a5634', muzzle: '#9a7650', tips: '#b89a70', ears: 'round', tail: 'stub', snout: 5, head: 7.5, fluffy: 1, bear: 1, hump: 1.5 },
-  cougar: { len: 34, h: 18, w: 9, coat: '#c08a54', belly: '#ecdcc0', ears: 'cat', tail: 'longcat', tailTip: '#3a2a22', snout: 2.2, head: 4.6, cat: 1 },
-  bobcat: { len: 22, h: 13, w: 8, coat: '#a8885e', patch: '#5a4632', pattern: 'spots', belly: '#e8dcc4', ears: 'tufted', tail: 'stub', snout: 1.6, head: 4, cat: 1 },
-  redfox: { len: 20, h: 12, w: 6.5, coat: '#d0682a', belly: '#f2ece0', ears: 'up', tail: 'fox', tailTip: '#f4f0e8', snout: 4, head: 4, socks: '#2a2228' },
-  greyfox: { len: 19, h: 11.5, w: 6.5, coat: '#8a8a8e', patch: '#b8683a', pattern: 'flank', belly: '#f0ece4', ears: 'up', tail: 'fox', tailTip: '#26242a', snout: 3.6, head: 4 },
+  elk: { len: 44, h: 32, w: 13, coat: '#b08458', belly: '#6a4a30', mane: '#4e3424', pattern: 'rump', patch: '#e2cea4', ears: 'up', tail: 'stub', snout: 6, head: 6, neck: 13, antlers: 2, jl: 1, lower: '#4a3222', hoof: 1 },
+  moose: { len: 50, h: 40, w: 15, coat: '#3e2c22', socks: '#a8988a', ears: 'side', tail: 'stub', snout: 9, head: 7, neck: 10, antlers: 3, hump: 1.4, bell: 1, droop: 1, jl: 1, lower: '#a8988a', hoof: 1 },
+  mtgoat: { len: 28, h: 23, w: 11, coat: '#f2eee6', ears: 'side', tail: 'stub', snout: 4.5, head: 4.4, neck: 6, horns: 'black', beard: 1, fluffy: 1, hump: 0.8, socks: '#2a262c', jl: 1, lower: '#ece6da', hoof: 1 },
+  boar: { len: 32, h: 19, w: 12, coat: '#4a3a2e', mane: '#241c18', ears: 'up', tail: 'thin', snout: 7, head: 5.8, nose: '#6a5a52', tusks: 1, jl: 1, lower: '#2e2420', hoof: 1, tips: '#6e5a48' },
+  blackbear: { len: 36, h: 24, w: 15, coat: '#2e2a32', muzzle: '#9a7a58', ears: 'round', tail: 'stub', snout: 4, head: 6.5, fluffy: 1, bear: 1, jl: 1 },
+  grizzly: { len: 44, h: 30, w: 18, coat: '#7a5634', muzzle: '#9a7650', tips: '#b89a70', ears: 'round', tail: 'stub', snout: 5, head: 7.5, fluffy: 1, bear: 1, hump: 1.5, jl: 1, lower: '#5a3e26' },
+  cougar: { len: 34, h: 18, w: 9, coat: '#c08a54', belly: '#ecdcc0', ears: 'cat', tail: 'longcat', tailTip: '#3a2a22', snout: 2.2, head: 4.6, cat: 1, jl: 1 },
+  bobcat: { len: 22, h: 13, w: 8, coat: '#a8885e', patch: '#5a4632', pattern: 'spots', belly: '#e8dcc4', ears: 'tufted', tail: 'stub', snout: 1.6, head: 4, cat: 1, jl: 1 },
+  redfox: { len: 20, h: 12, w: 6.5, coat: '#d0682a', belly: '#f2ece0', ears: 'up', tail: 'fox', tailTip: '#f4f0e8', snout: 4, head: 4, socks: '#2a2228', jl: 1, lower: '#2a2228' },
+  greyfox: { len: 19, h: 11.5, w: 6.5, coat: '#8a8a8e', patch: '#b8683a', pattern: 'flank', belly: '#f0ece4', ears: 'up', tail: 'fox', tailTip: '#26242a', snout: 3.6, head: 4, jl: 1 },
   beaver: { len: 22, h: 8, w: 11, coat: '#6a4630', ears: 'tiny', tail: 'paddle', snout: 2.5, head: 4.5, buck: 1 },
   otter: { len: 26, h: 7, w: 7, coat: '#5a3e2c', belly: '#8a6a52', ears: 'tiny', tail: 'otter', snout: 2, head: 3.6 },
   seaotter: { len: 24, h: 8, w: 9, coat: '#5a4434', face: '#d8ccb8', ears: 'tiny', tail: 'otter', snout: 1.6, head: 4.4 },
@@ -71,7 +72,7 @@ function youngOf(A, base) {
 }
 // the legend of a kind: pure white, pale gold antlers and horns, a faint glow
 function legendOf(A) {
-  return { ...A, coat: '#f6f4f0', belly: '#ffffff', patch: A.pattern === 'spots' || A.pattern === 'rump' || A.pattern === 'flank' ? '#e6e4e0' : '#f6f4f0', patch2: null, mane: A.mane ? '#eceae4' : null, socks: null, face: A.face ? '#ffffff' : null, mask: A.mask ? '#d8d6d2' : null, muzzle: A.muzzle ? '#e8e2d8' : null, tips: null, tailTip: A.tailTip ? '#ffffff' : null, nose: A.nose ? '#d8c8c8' : null, legend: 1 };
+  return { ...A, coat: '#f6f4f0', belly: '#ffffff', patch: A.pattern === 'spots' || A.pattern === 'rump' || A.pattern === 'flank' ? '#e6e4e0' : '#f6f4f0', patch2: null, mane: A.mane ? '#eceae4' : null, socks: null, face: A.face ? '#ffffff' : null, mask: A.mask ? '#d8d6d2' : null, muzzle: A.muzzle ? '#e8e2d8' : null, tips: null, tailTip: A.tailTip ? '#ffffff' : null, nose: A.nose ? '#d8c8c8' : null, lower: A.lower ? '#e8e6e2' : null, throat: A.throat ? '#ffffff' : null, legend: 1 };
 }
 
 // extra room behind the rump for the long tails (so they stay inside the model)
@@ -87,7 +88,7 @@ export function animalModel(kind, o = {}) {
   if (pose0 === 'dead') return onSide(animalModel(kind, { ...o, pose: 'stand', phase: 0.12 }), A);
   if (pose0 === 'swim') return waterline(animalModel(kind, { ...o, pose: 'alert' }), A);
   const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, lie = pose === 'lie', alert = pose === 'alert', stalk = pose === 'stalk';
-  const hk = A.len <= 30 ? 1.2 : 1;                                       // pets get the chunky big-headed look of A1
+  const hk = A.len <= 30 && !A.jl ? 1.2 : 1;                             // pets get the chunky big-headed look of A1 (the wild ones true to life)
   const L = Math.ceil(A.len * 1.7 + 10 + (A.antlers ? 8 : 0) + (TAIL_ROOM[A.tail] || 0)), W = Math.ceil(A.w * 2.3 + 12 + (A.antlers >= 2 ? 22 : 0)), Hh = Math.ceil(A.h * 2.2 + 12 + (A.antlers >= 2 ? 16 : 0));
   const m = new Vox(L, W, Hh);
   const cache = new Map();
@@ -128,13 +129,34 @@ export function animalModel(kind, o = {}) {
     return Math.abs((y - cy) / (r * ex)) ** pw + Math.abs((z - zc) / (rz * ex)) ** pw <= 1 ? coat(x, y, z) : -1;
   });
   if (A.udder) m.ell(x0 + A.len * 0.3, cy, bz - bodyR * 1.15, 3, 3, 2, R('#f0b0a8'));
-  if (A.mane && !A.hump) for (let x = x0 + 4; x < x1 - 1; x += 0.6) m.box(x, cy - 0.8, bz + bodyR * 0.85, x + 1, cy + 0.8, bz + bodyR * 0.85 + 1.4, R(A.mane));   // a boar's bristles
+  if (A.mane && !A.hump) for (let x = x0 + 4; x < x1 - 1; x += 0.6) m.box(x, cy - 0.8, bz + bodyR * 0.85, x + 1, cy + 0.8, bz + bodyR * 0.85 + 1.4 + (A.tusks ? 2.6 * Math.exp(-((((x - x0) / A.len - 0.8) / 0.2) ** 2)) : 0), R(A.mane));   // a boar's bristles, a crest over the shoulders
+  if (A.haunch && !lie) for (const s of [-1, 1]) m.ell(x0 + A.len * 0.24, cy + s * bodyR * 0.45, bz - bodyR * 0.15, A.len * 0.26, bodyR * 0.5, bodyR * 0.8, base);   // a rabbit's big haunches
   // legs: front pair and back pair, swinging in opposite phase; a sit folds the back legs under
   const legR = Math.max(1.1, A.w * 0.13 + (A.len > 40 ? 0.8 : 0)) * (A.bear ? 1.35 : 1);
   const sw = Math.sin(phase * Math.PI * 2) * (run ? 0.75 : 0.4);
   const legs = [[x1 - 3, cy - bodyR * 0.55, sw], [x1 - 3, cy + bodyR * 0.55, -sw], [x0 + 3, cy - bodyR * 0.55, -sw], [x0 + 3, cy + bodyR * 0.55, sw]];
+  // the wild ones (A.jl, the AN1-AN4 sheets) get jointed legs: a knee bending forward on the forelegs, a hock pointing
+  // back on the hind legs, the feet stepping through a stance (planted, sliding back under the body) and a swing
+  // (lifted, carried forward). Walking: a four-beat walk (hind, fore, hind, fore); running: a gallop (a rabbit's hop),
+  // the forelegs together and the hind legs together, stretched out, then gathered under the body
+  const jl = A.jl && !sit && !lie, moving = o.phase != null && !graze;
+  const D = run ? 0.38 : stalk ? 0.72 : 0.62, OFF = run ? [0, 0.1, 0.5, 0.6] : [0.25, 0.75, 0, 0.5];
+  const stride = A.h * (run ? 1.15 : stalk ? 0.4 : 0.55) * (A.bear ? 0.8 : 1), lift = A.h * (run ? 0.3 : 0.16);
+  const lower = A.lower ? R(A.lower) : base, hoof = A.hoof ? dark : lower;
   legs.forEach(([lx, ly, a], i) => {
     const back = i >= 2;
+    if (jl) {
+      const top = bz - bodyR * 0.3, L2 = top * (back ? 1.07 : 1.015) / 2;
+      let fx = back ? -0.6 : 0.6, fz = 0;
+      if (moving) { const p = (((phase + OFF[i]) % 1) + 1) % 1; if (p < D) fx = stride * (0.5 - p / D); else { const u = (p - D) / (1 - D); fx = stride * (u - 0.5); fz = Math.sin(u * Math.PI) * lift; } }
+      const dx = fx, dz = fz - top, d = Math.max(0.5, Math.min(L2 * 1.995, Math.hypot(dx, dz))), th = Math.atan2(dz, dx), al = Math.acos(Math.min(1, d / (2 * L2)));
+      const kx = lx + Math.cos(th + (back ? -al : al)) * L2, kz = top + Math.sin(th + (back ? -al : al)) * L2;
+      const seg = (x0s, z0s, x1s, z1s, r0, r1, mt) => { const n = Math.ceil(Math.hypot(x1s - x0s, z1s - z0s) * 2) + 1; for (let k = 0; k <= n; k++) { const t = k / n, x = x0s + (x1s - x0s) * t, z = z0s + (z1s - z0s) * t, r = r0 + (r1 - r0) * t; m.box(x - r, ly - r, Math.max(0, z - 0.5), x + r, ly + r, Math.max(0, z) + 0.6, mt); } };
+      seg(lx, top + legR, kx, kz, legR * (back ? 1.6 : 1.3), legR * 0.85, base);   // (the thigh, the forearm)
+      seg(kx, kz, lx + fx, fz + 0.6, legR * 0.8, legR * 0.7, lower);                // (the cannon, the shin)
+      m.box(lx + fx - legR * 0.8, ly - legR * 0.8, fz, lx + fx + legR + 0.6, ly + legR * 0.8, fz + 1.2, hoof);   // (a hoof or a paw)
+      return;
+    }
     if (sit && back) { m.ell(lx + 2, ly, 2.5, 4, legR + 1, 2.5, coat(lx, ly, 3)); return; }
     if (lie) {                                                             // front paws out in front, haunches folded beside the rump
       if (back) m.ell(lx + 3, ly + (ly < cy ? -1 : 1), legR + 1, A.len * 0.18, legR + 1.2, legR + 0.8, coat(lx, ly, 2));
@@ -156,6 +178,7 @@ export function animalModel(kind, o = {}) {
   const hx = x1 + (graze ? 2 : stalk ? neck * 0.55 : neck * 0.35), hz = graze ? HD + 1 : stalk ? bz + bodyR * 0.2 + neck * 0.3 : bz + bodyR * 0.4 + neck * (lie ? 0.55 : alert ? 0.95 : 0.75) + (sit ? 2 : 0) + (alert ? 1.5 : 0);
   for (let s = 0; s <= 1; s += 0.08) { const x = x1 - 2 + (hx - x1 + 2) * s, z = bz + (hz - bz) * s; m.ell(x, cy, z, HD * 0.65, HD * 0.62, HD * 0.7, coat(x, cy, z + 2)); }
   if (A.mane && !A.tusks) for (let s = 0; s <= 1; s += 0.05) { const x = x1 - 4 + (hx - x1) * s, z = bz + bodyR + (hz - bz - 2) * s; m.box(x - 1.5, cy - 1, z, x + 1, cy + 1, z + 2.5, R(A.mane)); }
+  if (A.throat && !lie) { const x = x1 - 2 + (hx - x1 + 2) * 0.8 + HD * 0.25, z = bz + (hz - bz) * 0.8 - HD * 0.2; m.ell(x, cy, z, HD * 0.5, HD * 0.55, HD * 0.5, R(A.throat)); }   // a deer's white throat
   m.ell(hx + 1, cy, hz, HD, HD * (hk > 1 ? 1.02 : 0.9), HD * 0.9, A.mask ? base : coat(hx, cy, hz + 4));
   if (A.face) m.ell(hx + 1.5, cy, hz, HD * 0.85, HD * 0.8, HD * 0.85, face);
   if (A.mask) m.box(hx + 1, cy - HD * 0.9, hz, hx + HD, cy + HD * 0.9, hz + 2, face);
@@ -183,12 +206,12 @@ export function animalModel(kind, o = {}) {
   if (A.horns === 'black' || A.horns === 'nub') for (const s of [-1, 1]) for (let k = 0; k < (A.horns === 'nub' ? 1.2 : 6); k += 0.4) m.ell(hx - k * 0.75 - (k > 3 ? (k - 3) * 0.4 : 0), cy + s * HD * 0.35, hz + HD * 0.7 + k * 0.85, 0.65, 0.6, 0.55, A.legend ? R('#e8d8a8') : R('#2a262c'));   // a mountain goat's black daggers, curving back
   else if (A.horns) for (const s of [-1, 1]) for (let k = 0; k < 4; k += 0.5) m.ell(hx - (A.horns === 'back' ? k * 0.8 : 0), cy + s * (HD * 0.4 + (A.horns === 'short' ? k * 0.5 : 0)), hz + HD * 0.7 + k * 0.6, 0.7, 0.7, 0.6, R('#d8ccb0'));
   const tine = A.legend ? R('#ecdcae') : R('#c8b48a');
-  if (A.antlers === 1) for (const s of [-1, 1]) for (let k = 0; k < 8; k += 0.5) { const tn = k > 3 && Math.round(k) % 2 === 0 ? 1.5 : 0; m.ell(hx - k * 0.3 - tn, cy + s * (HD * 0.5 + k * 0.5), hz + HD * 0.6 + k, 0.6, 0.6, 0.6, tine); }
+  if (A.antlers === 1) for (const s of [-1, 1]) for (let k = 0; k < 8; k += 0.5) { const tn = k > 3 && Math.round(k) % 2 === 0 ? 1.5 : 0; m.ell(hx - k * 0.3 - tn, cy + s * (HD * 0.5 + k * 0.5), hz + HD * 0.6 + k, 0.75, 0.7, 0.7, tine); }
   if (A.antlers === 2) for (const s of [-1, 1]) {   // an elk's rack: long beams sweeping back, the tines forward
     for (let k = 0; k <= 17; k += 0.5) {
       const x = hx - k * 0.62 - (k > 9 ? (k - 9) * 0.6 : 0), y = cy + s * (HD * 0.45 + k * 0.5), z = hz + HD * 0.55 + k * 1.1;
-      m.ell(x, y, z, 0.95, 0.95, 0.95, tine);
-      if ([2.5, 5.5, 8.5, 11.5, 14.5].includes(k)) for (let t = 0; t < 5; t += 0.5) m.ell(x + t * 0.78, y, z + t * 0.62, 0.7, 0.7, 0.7, tine);
+      m.ell(x, y, z, 1.15, 1.1, 1.1, tine);
+      if ([2.5, 5.5, 8.5, 11.5, 14.5].includes(k)) for (let t = 0; t < 5; t += 0.5) m.ell(x + t * 0.78, y, z + t * 0.62, 0.85, 0.8, 0.8, tine);
     }
   }
   if (A.antlers === 3) for (const s of [-1, 1]) {   // a moose's palms: out to the side and up, broad and flat, points round the rim

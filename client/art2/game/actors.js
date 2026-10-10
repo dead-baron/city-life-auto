@@ -299,7 +299,7 @@ export function animalKind(kind) {
   const [base, v] = k.split(':');
   if (PET_ART[base]) return PET_ART[base];
   if (!ANIMALS[base] && !BIRDS[base]) return 'golden';
-  return v === 'y' || v === 'L' ? `${base}:${v}` : base;
+  return v === 'y' || v === 'L' || (v === 'f' && BIRDS[base]) ? `${base}:${v}` : base;   // (':f' a hen: the quail's plain brown hen)
 }
 const animPose = (pose) => (ANIMAL_FRAMES[pose] ? pose : pose === 'move' ? 'walk' : 'idle');
 const wrap8 = (d) => ((Math.round(d) % 8) + 8) % 8;

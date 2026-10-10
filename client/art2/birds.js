@@ -18,10 +18,12 @@ import { F_LEAF } from './gbuf.js';
 // back, belly, breast, head, neckC, ring (a white neck ring), chin (a goose's white chinstrap), wattle (red skin),
 // plume (a quail's topknot), billC, feet, bars (light bars on the wings and tail)
 export const BIRDS = {
-  quail: { len: 9, w: 6, h: 6, leg: 2.6, neck: 2.2, head: 2.3, bill: 0.9, tail: 'short', body: '#7a7e8a', back: '#8a6e50', belly: '#d0b88a', breast: '#6a7080', head: '#6a6e78', face: '#2a2428', stripe: '#f2f0ea', plume: 1, feet: '#6a5a4a' },
+  // (the quail of AN8: the cock blue-grey with the black face in its white border, a chestnut cap, the scaled belly and
+  // the comma of a topknot; the hen 'quail:f' plain brown and scaled, a smaller topknot)
+  quail: { len: 11, w: 7.5, h: 8.5, leg: 2.6, neck: 4.4, head: 3.3, bill: 0.9, tail: 'short', body: '#66748c', back: '#5e4e3e', belly: '#d8c49a', breast: '#6a7a94', head: '#6a7890', face: '#16121a', stripe: '#f4f2ec', crown: '#8a4a28', plume: 1, scales: '#3e3430', feet: '#c87a3a' },
   pheasant: { len: 12, w: 6, h: 7, leg: 3.6, neck: 3.6, head: 2.4, bill: 1.1, tail: 'long', body: '#b8642a', back: '#8a5a30', belly: '#6a3a1e', breast: '#c8742e', head: '#2a6a4a', ring: '#f2f0ea', wattle: '#d03a2a', bars: '#e0b070', feet: '#8a7a6a' },
   turkey: { len: 17, w: 10, h: 10, leg: 6, neck: 7.5, head: 2.4, bill: 1.2, tail: 'fan', body: '#4a3a30', back: '#5e4c38', belly: '#2e2620', breast: '#3e3028', head: '#a8bce0', neckC: '#c84a3a', wattle: '#c8302a', bars: '#d8c098', feet: '#9a7468' },
-  duck: { len: 12, w: 7, h: 6, leg: 2.4, neck: 3.4, head: 2.6, bill: 2.4, flat: 1, tail: 'short', body: '#a8a8a4', back: '#7a705e', belly: '#d8d4cc', breast: '#7a3e2a', head: '#2a6a3e', ring: '#f2f0ea', billC: '#e0c040', feet: '#e08a2a' },
+  duck: { len: 12, w: 7, h: 6, leg: 2.4, neck: 3.4, head: 2.6, bill: 2.4, flat: 1, tail: 'short', body: '#a8a8a4', back: '#7a705e', belly: '#d8d4cc', breast: '#7a3e2a', head: '#2a6a3e', ring: '#f2f0ea', billC: '#e0c040', feet: '#e08a2a', stern: '#26242a' },
   goose: { len: 18, w: 9, h: 8, leg: 4, neck: 9, head: 2.8, bill: 2.6, flat: 1, tail: 'short', body: '#8a7a68', back: '#6e6050', belly: '#e8e2d8', breast: '#b8ae9e', head: '#1e1c20', neckC: '#1e1c20', chin: '#f2f0ea', billC: '#26242a', feet: '#26242a' },
 };
 const CHICK = { quail: ['#c8a878', '#8a6a48'], pheasant: ['#c8a070', '#8a6a48'], turkey: ['#b89868', '#7a5a3a'], duck: ['#e8d060', '#6a5a38'], goose: ['#c8c070', '#8a8048'] };
@@ -31,9 +33,10 @@ function variant(kind) {
   const B = BIRDS[base] || BIRDS.quail;
   if (v === 'y') {
     const [c, d] = CHICK[base] || CHICK.quail, k = base === 'goose' || base === 'turkey' ? 0.42 : 0.5;
-    return { ...B, len: B.len * k, w: B.w * k * 1.1, h: B.h * k * 1.15, leg: B.leg * k, neck: B.neck * k * 0.7, head: B.head * k * 1.45, bill: B.bill * k, tail: 'none', body: c, back: d, belly: c, breast: c, head: c, neckC: null, ring: null, chin: null, wattle: null, plume: 0, bars: null, face: null, stripe: null, fluffy: 1 };
+    return { ...B, len: B.len * k, w: B.w * k * 1.1, h: B.h * k * 1.15, leg: B.leg * k, neck: B.neck * k * 0.7, head: B.head * k * 1.45, bill: B.bill * k, tail: 'none', body: c, back: d, belly: c, breast: c, head: c, neckC: null, ring: null, chin: null, wattle: null, plume: 0, bars: null, face: null, stripe: null, crown: null, scales: null, stern: null, fluffy: 1 };
   }
-  if (v === 'L') return { ...B, body: '#f6f4f0', back: '#ecebe6', belly: '#ffffff', breast: '#f8f6f2', head: '#f8f6f2', neckC: B.neckC ? '#f4f2ee' : null, ring: null, chin: null, wattle: B.wattle ? '#e8c8c0' : null, face: null, stripe: null, bars: '#e4e2dc', billC: '#e8d8a0', feet: '#d8c8a8', legend: 1 };
+  if (v === 'f') return { ...B, body: '#6a5a4a', back: '#5e4c3e', breast: '#7a6a58', belly: '#ccb48e', head: '#6a5a4a', face: null, stripe: null, crown: null, plume: 0.65, scales: '#4e4036' };   // a hen
+  if (v === 'L') return { ...B, body: '#f6f4f0', back: '#ecebe6', belly: '#ffffff', breast: '#f8f6f2', head: '#f8f6f2', neckC: B.neckC ? '#f4f2ee' : null, ring: null, chin: null, wattle: B.wattle ? '#e8c8c0' : null, face: null, stripe: null, crown: null, scales: null, stern: null, bars: '#e4e2dc', billC: '#e8d8a0', feet: '#d8c8a8', legend: 1 };
   return B;
 }
 
@@ -54,8 +57,9 @@ export function birdModel(kind, o = {}) {
   const col = (x, y, z) => {
     if (z > bz + B.h * 0.18) return B.bars && Math.abs(y - cy) > B.w * 0.3 && Math.round(x * 0.9) % 3 === 0 ? R(B.bars) : R(B.back);
     if (x > cx + B.len * 0.18 && z < bz + B.h * 0.1) return R(B.breast);
-    if (z < bz - B.h * 0.25) return R(B.belly);
-    return R(B.body);
+    if (B.stern && x < cx - B.len * 0.3) return R(B.stern);   // (a drake's black stern)
+    if (z < bz - B.h * 0.25) return B.scales && (Math.round(x * 1.1) + Math.round(z * 1.3) * 2) % 4 === 0 ? R(B.scales) : R(B.belly);   // (a quail's scaled belly)
+    return B.scales && z < bz + B.h * 0.05 && (Math.round(x * 0.8) + Math.round(y)) % 5 === 0 ? R(B.belly) : R(B.body);   // (and the pale streaks on its flanks)
   };
   m.fill((x, y, z) => { const dx = x - cx, dz = z - bz - dx * tilt; return (dx / (B.len / 2)) ** 2 + ((y - cy) / (B.w / 2)) ** 2 + (dz / (B.h / 2)) ** 2 <= 1 ? col(x, y, z) : -1; });
   // folded wings along the flanks (spread in flight: broad, the primaries dark, beating)
@@ -66,7 +70,7 @@ export function birdModel(kind, o = {}) {
       const dy = Math.abs(y - cy) - y0w;
       if (dy < 0 || dy > span) return -1;
       // (the beat kept shallow: a wing raised steeply would fold over itself from the camera's height)
-      const t = dy / span, chord = B.len * (0.66 - t * 0.36), zc = bz + B.h * 0.2 + flap * t * span * 0.3;
+      const t = dy / span, chord = B.len * (0.66 - t * 0.36), zc = bz + B.h * 0.2 + flap * t * span * (B.len < 15 ? 0.55 : 0.3);   // (the small birds' beat deep: a quail's flush, wings up over its back)
       if (Math.abs(z - zc) > 1 || x < cx - chord * 0.5 - t * 1.5 || x > cx + chord * 0.5 - t * 1.5) return -1;
       return t > 0.7 || x < cx - chord * 0.5 - t * 1.5 + 1.2 ? prim : cov;
     }, 0, 0, 0, m.w, m.d, m.h);
@@ -89,7 +93,8 @@ export function birdModel(kind, o = {}) {
   if (B.stripe) for (const s of [-1, 1]) m.box(hx - B.head * 0.6, cy + s * B.head * 0.82 - 0.4, hz + B.head * 0.15, hx + B.head * 0.7, cy + s * B.head * 0.82 + 0.4, hz + B.head * 0.15 + 0.5, R(B.stripe));
   if (B.chin) for (const s of [-1, 1]) m.ell(hx - 0.2, cy + s * B.head * 0.62, hz - B.head * 0.25, B.head * 0.5, 0.5, B.head * 0.42, R(B.chin));
   if (B.wattle) m.ell(hx + B.head * 0.55, cy, hz - B.head * 0.75, 0.6, 0.6, B.head * 0.45, R(B.wattle));
-  if (B.plume) for (let k = 0; k < 3; k += 0.4) m.ell(hx + 0.3 + k * 0.45, cy, hz + B.head * 0.85 + k * 0.6 - (k > 2 ? (k - 2) * 0.8 : 0), 0.45, 0.45, 0.45, dark);   // a quail's topknot, nodding forward
+  if (B.crown) m.ell(hx - 0.2, cy, hz + B.head * 0.45, B.head * 0.75, B.head * 0.62, B.head * 0.5, R(B.crown));   // a cock quail's chestnut cap
+  if (B.plume) { const P = B.plume, bob = o.gait ? Math.sin(phase * Math.PI * 2) * 0.4 : 0; for (let k = 0; k < 4.8 * P; k += 0.3) { const up = Math.min(k, 3 * P), over = Math.max(0, k - 3 * P); m.ell(hx + 0.4 + up * 0.25 + over * 0.7 + bob, cy, hz + B.head * 0.8 + up * 0.9 - over * 0.55, k > 4 * P ? 0.95 : 0.6, 0.55, k > 4 * P ? 0.85 : 0.6, dark); } }   // a quail's topknot: a comma up and curling forward, bobbing as it goes
   // eyes, and the bill: a duck's and a goose's flat and broad, the others short and pointed
   for (const s of [-1, 1]) m.box(hx + B.head * 0.35, cy + s * B.head * 0.6 - 0.4, hz + B.head * 0.2, hx + B.head * 0.35 + 0.8, cy + s * B.head * 0.6 + 0.4, hz + B.head * 0.2 + 0.8, dark);
   const bill = R(B.billC || (B.legend ? '#d8c8a0' : '#c8b088'));

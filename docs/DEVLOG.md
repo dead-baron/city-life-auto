@@ -5658,3 +5658,39 @@ hospital, the police station and the subway entrances were rebuilt to the owner'
 off-road 4x4 joined. The budget is now 1000 KB (and 76 files): the art grows with every concept the owner sends, and
 the workers fetch this code once, after the page, so it never delays getting into the city. The page itself stays at
 717 of 720 KB. Tests: test/perf.test.js.
+
+## 2026-10-10 · The wild animals closer to their concepts (task #391)
+
+The owner: "improve animal art to match the wildlife concepts and give them better animations" (AN1-AN8, HU1-HU7;
+AN8 the quail). Before/after sheets beside each concept: AN1 deer and elk, AN2 boar, bear and turkey, AN3 small game,
+AN8 quail (the helper's scratchpad, `compare-AN*.png`; the sheet is the game's own bake, 1 art px per world px).
+- **Jointed legs and real gaits** (`client/art2/animals.js`, the wild ones carry `jl`): deer, elk, moose, mountain
+  goats, boar, both bears, the cougar and bobcat, coyote, both foxes, the raccoon and the rabbit.
+  - A knee bends forward on the forelegs and a hock points back on the hind legs (a two-bone reach to the foot).
+  - The feet step through a stance (planted, sliding back under the body) and a swing (lifted, carried forward).
+  - The walk is a four-beat walk: hind, fore, hind, fore.
+  - The run is a gallop (a rabbit's hop): the forelegs together, the hind legs together, stretched out, then
+    gathered under the body, a foot on the ground in every frame.
+  - The legs are the coat colour, not the pale belly, with darker shins and dark hooves.
+  - Still 4 frames a cycle: the bake costs about what it did (the walk, run and idle of nine kinds at eight headings,
+    864 sprites: 5.6 s before, 5.8 s after on the shared test machine).
+  - The pets keep their straight-legged rig.
+- **Coats and shapes:**
+  - The deer: warmer brown, a white rump patch and throat, a dark nose, heavier antlers. The elk: paler, the dark
+    shins of AN1, a heavier rack.
+  - The boar: darker, a bristle crest over the shoulders, grizzled.
+  - The coyote: grizzled along the back, a pale throat.
+  - The rabbit: bigger haunches.
+  - The wild ones' heads are true to life, not the pets' big-headed look.
+  - The drake mallard has his black stern.
+- **The quail of AN8** (`client/art2/birds.js`):
+  - The cock is plumper, blue-grey, with the black face in its white border, a chestnut cap, the comma of a topknot
+    (curling forward, bobbing as he walks) and the scaled belly.
+  - The hen (`quail:f`, new) is plain brown and scaled with a smaller topknot. A covey's two adults spawn one after
+    the other, so the client draws the odd id as the hen (`client/art2/game/host.js`): one cock and one hen a covey.
+  - The flush beats deeper: the wings come up over the back (all the small birds).
+- **Tests:** `test/wildart.test.js` (3 new):
+  - every species draws walking, running, head down, alert and dead, and its walk and run cycles move;
+  - the jointed legs keep a foot on the ground through the walk and the gallop, and the gallop stretches and gathers;
+  - a covey's cock, hen and chicks are drawn apart (the cock bluer, the chicks small), and the flush raises the wings.
+  - `node tools/perf.mjs --quick`: within budget (bake 952 of 1000 KB).

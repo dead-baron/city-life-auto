@@ -1212,7 +1212,7 @@ export class World2 {
   _pet(p, now) {
     const A = this.A, E = this.E;
     if (!A || !A.animalKey) return;
-    const kind = p.d.ar.slice(4), base = kind.split(':')[0], sp = p.as || 0, still = now - (p.stillSince ?? now) > 1.2;
+    const kind0 = p.d.ar.slice(4), kind = kind0 === 'quail' && (p.id & 1) ? 'quail:f' : kind0, base = kind.split(':')[0], sp = p.as || 0, still = now - (p.stillSince ?? now) > 1.2;   // (a covey's two adults come one after the other: one the cock, one the hen)
     const S2 = SPECIES[base];
     // a pet home with its owner (server pets.js: APOSE.happy): never sitting still - the tail going fast, hopping
     const happy = !S2 && ((p.extra || 0) & 31) === APOSE.happy && !(p.flags & (PF.DEAD | PF.DOWN));
