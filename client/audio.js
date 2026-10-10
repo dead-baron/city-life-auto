@@ -93,5 +93,5 @@ export function soundStatus() {
   let s = null;
   try { s = sys.status(); } catch { /* old */ }
   if (!s) return 'Sound: on';
-  return `Sound: on · voices ${s.voices} · engines ${s.engines} · beds ${s.beds.length ? s.beds.join(' ') : 'none'} · ${s.played} played, ${s.pool + s.gap + s.budget} dropped, ${s.cut} cut off`;
+  return `Sound: on · voices ${s.voices} · engines ${s.engines} · beds ${s.beds.length ? s.beds.join(' ') : 'none'} · ${s.played} played, ${s.pool + s.gap + s.budget} dropped, ${s.cut} cut off${s.track ? ' · ' + s.track : ''}`;
 }

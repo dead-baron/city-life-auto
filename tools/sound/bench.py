@@ -7,6 +7,12 @@ JSON.
   python3 tools/sound/bench.py --live       the live path: client/audio.js started by a click, a few seconds of play
   python3 tools/sound/bench.py --levels     measure every instrument's own loudness (before its trim) and write
                                             client/sound/levels.js and test/fixtures/sound-levels.json
+  python3 tools/sound/bench.py --render title --seconds 106 --wav title.wav
+                                            a song as the game plays it (the real mixer, the default settings), to listen to
+  python3 tools/sound/bench.py --only tracks   each recorded track (client/sound/tracks.js) decoded as the game does: size,
+                                            memory, decode time, and its seam checked
+  python3 tools/sound/bench.py --render-track title --fmt opus --seconds 100 --wav loop.wav
+                                            a recorded track looping as it does in the game, to listen to the seam
 
 The numbers: render time against the scene's 30 s (the audio thread's work, on this machine: a phone is several
 times slower), peak (dBFS) and A-weighted loudness (dBA below full scale) for the whole and each bus, how hard the
@@ -42,6 +48,11 @@ def main():
     ap.add_argument('--levels', action='store_true')
     ap.add_argument('--live', action='store_true', help='the live path: client/audio.js on a real AudioContext, started by a real click')
     ap.add_argument('--retrim', action='store_true', help='recompute the trims from the measurements already in test/fixtures/sound-levels.json')
+    ap.add_argument('--render', default='', help='a song to render to --wav')
+    ap.add_argument('--seconds', type=float, default=60)
+    ap.add_argument('--wav', default='song.wav')
+    ap.add_argument('--render-track', default='')
+    ap.add_argument('--fmt', default='opus')
     a = ap.parse_args()
     if a.retrim:
         with open(os.path.join(ROOT, 'test', 'fixtures', 'sound-levels.json')) as f:
@@ -60,6 +71,28 @@ def main():
             pg.goto(f'http://127.0.0.1:{a.port}/tools/sound/bench.html?debug')
             pg.wait_for_function('window.bench !== undefined', timeout=30000)
             only = set(a.only.split(','))
+            if a.render_track:
+                import base64
+                import wave
+                got = pg.evaluate(f"window.bench.renderTrack({{ name: {json.dumps(a.render_track)}, fmt: {json.dumps(a.fmt)}, seconds: {a.seconds} }})")
+                with wave.open(a.wav, 'wb') as w:
+                    w.setnchannels(2)
+                    w.setsampwidth(2)
+                    w.setframerate(got['sr'])
+                    w.writeframes(base64.b64decode(got['b64']))
+                print('wrote', a.wav)
+                only = set()
+            if a.render:
+                import base64
+                import wave
+                got = pg.evaluate(f"window.bench.renderSong({{ song: {json.dumps(a.render)}, seconds: {a.seconds} }})")
+                with wave.open(a.wav, 'wb') as w:
+                    w.setnchannels(2)
+                    w.setsampwidth(2)
+                    w.setframerate(got['sr'])
+                    w.writeframes(base64.b64decode(got['b64']))
+                print('wrote', a.wav)
+                only = set()
             if a.live:
                 print('before a tap:', pg.evaluate('window.bench.liveImport()'))
                 pg.mouse.click(40, 40)
@@ -97,6 +130,8 @@ def main():
                 rep['songs'] = pg.evaluate('window.bench.runSongs()')
             if 'instruments' in only:
                 rep['instruments'] = pg.evaluate('window.bench.runInstruments()')
+            if 'tracks' in only:
+                rep['tracks'] = pg.evaluate('window.bench.runTracks()')
             if 'tyres' in only:
                 rep['tyres'] = pg.evaluate('window.bench.runTyres()')
             b.close()
@@ -135,6 +170,9 @@ def report(rep):
         print('== beds at gain 1 (dBA rms):', {k: v['rmsA'] for k, v in rep['beds'].items()})
     if rep.get('tyres'):
         print('== your car, the effects bus (dBA rms; loudest 400 ms):', {k: (v['rmsA'], v['max400']) for k, v in rep['tyres'].items()})
+    if rep.get('tracks'):
+        for k, v in rep['tracks'].items():
+            print(f'== track {k}:', v)
     if rep.get('songs'):
         for k, v in rep['songs'].items():
             print(f"== song {k}: rms {v['rmsA']} dBA, peak {v['peak']}, loudest 400ms {v['max400']}, {v['nodesPerSec']} nodes/s, {v['wallMs']} ms")

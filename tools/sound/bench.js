@@ -15,7 +15,9 @@ import { SoundEngine } from '../../client/sound/engine.js';
 import { Ambience } from '../../client/sound/ambience.js';
 import { Music } from '../../client/sound/music.js';
 import { INSTR } from '../../client/sound/instruments.js';
-import { SOUND_DEFAULTS } from '../../client/sound/mixer.js';
+import { SOUND_DEFAULTS, createMixer } from '../../client/sound/mixer.js';
+import { TRACKS } from '../../client/sound/tracks.js';
+import { loopPoints } from '../../client/sound/track.js';
 import { T, VF, PF } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { WEAPONS } from '../../shared/items.js';
@@ -448,4 +450,64 @@ export async function runTyres() {
   return out;
 }
 
-window.bench = { runScene, runBeds, runSongs, runInstruments, runYardstick, runChain, liveImport, runLive, runTyres };
+// ---- a song as the game plays it, for listening (bench.py --render): through the real mixer at the default settings,
+// as 16-bit stereo PCM in base64 ----
+export async function renderSong({ song = 'title', seconds = 60, level = 0.7 } = {}) {
+  const ctx = new OfflineAudioContext(2, SR * seconds, SR);
+  const E = new SoundEngine(ctx, createMixer(ctx, SOUND_DEFAULTS), { voices: 1 });
+  const M = new Music(E);
+  M.set(song, level);
+  const step = 0.1;
+  for (let t = step; t < seconds - 0.05; t += step) ctx.suspend(Math.round(t / Q) * Q).then(() => { M.set(song, level); M.tick(); E.reap(ctx.currentTime); ctx.resume(); });
+  M.tick();
+  const buf = await ctx.startRendering();
+  const L = buf.getChannelData(0), Rc = buf.getChannelData(1), n = L.length, pcm = new Int16Array(n * 2);
+  const q = (x) => Math.max(-32768, Math.min(32767, Math.round(x * 32767)));
+  for (let i = 0; i < n; i++) { pcm[2 * i] = q(L[i]); pcm[2 * i + 1] = q(Rc[i]); }
+  const u8 = new Uint8Array(pcm.buffer);
+  let s = '';
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return { sr: SR, b64: btoa(s) };
+}
+
+// ---- the recorded tracks (client/sound/tracks.js): each format fetched and decoded as the game does - its length, the
+// memory it takes decoded, how long decoding takes, and the seam: the file must repeat itself, with the loop's length
+// as its period, across both margins (seamDb: the difference, in dB under the signal), and the jump from the loop's
+// end back to its start must be no bigger a step than the music's own (jumpStep: the step at the jump over the 99th
+// percentile of the steps round it) ----
+const b64 = (u8) => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+export async function runTracks() {
+  const out = {};
+  for (const [name, t] of Object.entries(TRACKS)) {
+    for (const fmt of ['opus', 'mp3']) {
+      const bytes = await (await fetch('../../' + t[fmt])).arrayBuffer();
+      const oc = new OfflineAudioContext(t.channels, SR, SR);
+      const t0 = performance.now();
+      let buf;
+      try { buf = await oc.decodeAudioData(bytes.slice(0)); } catch (e) { out[`${name}.${fmt}`] = { error: String(e) }; continue; }
+      const ms = performance.now() - t0, d = buf.getChannelData(0), sr = buf.sampleRate, L = Math.round(t.loop * sr), m = Math.round(t.margin * sr);
+      let e = 0, s = 0;
+      for (let i = 0; i < 2 * m && i + L < d.length; i++) { const a = d[i], b = d[i + L]; e += (a - b) * (a - b); s += a * a; }
+      const steps = [];
+      for (let i = m + L - 2400; i < m + L - 1; i++) steps.push(Math.abs(d[i + 1] - d[i]));
+      steps.sort((a2, b2) => a2 - b2);
+      const jump = Math.abs(d[m] - d[m + L - 1]);
+      out[`${name}.${fmt}`] = { kb: Math.round(bytes.byteLength / 1024), seconds: +buf.duration.toFixed(4), expected: +(t.loop + 2 * t.margin).toFixed(4), sampleRate: sr, channels: buf.numberOfChannels,
+        decodeMs: Math.round(ms), decodedMB: +((buf.length * buf.numberOfChannels * 4) / 1048576).toFixed(1), seamDb: +(10 * Math.log10((e + 1e-20) / (s + 1e-20))).toFixed(1), jumpStep: +(jump / (steps[Math.floor(steps.length * 0.99)] || 1e-9)).toFixed(2) };
+    }
+  }
+  return out;
+}
+// ---- a recorded track as it loops in the game, for listening (bench.py --render-track) ----
+export async function renderTrack({ name = 'title', fmt = 'opus', seconds = 100 } = {}) {
+  const t = TRACKS[name], bytes = await (await fetch('../../' + t[fmt])).arrayBuffer();
+  const ctx = new OfflineAudioContext(2, SR * seconds, SR), buf = await ctx.decodeAudioData(bytes);
+  const s = ctx.createBufferSource(), lp = loopPoints(t);
+  s.buffer = buf; s.loop = true; s.loopStart = lp.start; s.loopEnd = lp.end; s.connect(ctx.destination); s.start(0, lp.start);
+  const r = await ctx.startRendering(), L = r.getChannelData(0), R2 = r.getChannelData(1), pcm = new Int16Array(L.length * 2);
+  const q = (x) => Math.max(-32768, Math.min(32767, Math.round(x * 32767)));
+  for (let i = 0; i < L.length; i++) { pcm[2 * i] = q(L[i]); pcm[2 * i + 1] = q(R2[i]); }
+  return { sr: SR, b64: b64(new Uint8Array(pcm.buffer)) };
+}
+
+window.bench = { renderSong, renderTrack, runTracks, runScene, runBeds, runSongs, runInstruments, runYardstick, runChain, liveImport, runLive, runTyres };
