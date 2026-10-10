@@ -196,6 +196,7 @@ test('a pickup game at the courts: the ball dribbled, shot at the rim, bounced o
   const seen = new Set();
   for (let i = 0; i < 60; i++) { run(w, 1); for (const e of [a, c]) if (e.gt === 'cue' && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) < 6) seen.add(e.id); }
   assert.equal(seen.size, 2, 'both take their turn at the table, bent over the cue');
+  assert.ok(!w.acts.has(s.id) && (!w.get(g.ball) || w.get(g.ball).removed), 'nobody near the courts any more: the game packed up, the ball with it');
   // the neighbours chat over a garden fence (drawn with the first of them)
   const gc = fill(w, of('chat')[0], { seen: true });
   assert.equal(people(gc)[0].pp, 'fence'); assert.equal(_descriptor(people(gc)[0]).pp, 'fence');
