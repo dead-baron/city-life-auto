@@ -6485,7 +6485,8 @@ but the generator itself still built the constant frame `MAP_W` x `MAP_H` and in
 
 - **The frame is a parameter:** `new CityMap(seed, w = MAP_W, h = MAP_H)` and
   `generateCity(seed, { frame: { w, h } })` (`shared/map.js`). Without it, today's frame; the frame alone is not one of
-  World v3's island builds (the rest of `opts` is what it was), and the island builds take a frame too.
+  World v3's island builds (the rest of `opts` is what it was; `{ frame: undefined }` is today's world), and the island
+  builds take a frame too (checked by hand: Metro City's and Westport's in a bigger frame are theirs to the bit).
 - **Every pass builds in the map's frame** (its origin is 0, 0 while it's built, so a tile is `y * m.w + x`):
   map.js from "The generator" on (the functions that had `const W = MAP_W` take `W = m.w, H = m.h`; `chamfer`,
   `components`, `decodeLand` and the docks' `tileIdx` take the map), naturesites.js (its pixel `at(m, x, y)`,
@@ -6510,8 +6511,8 @@ but the generator itself still built the constant frame `MAP_W` x `MAP_H` and in
   memory, layers and sea points): 5040 x 4032 builds in 9.6-10.3 s (today's 4.4 s) at a peak RSS of 630-680 MB
   (today's 300 MB); its 17 per-tile layers are 407 MB; `seaPoints` and `offshore` are 190,000 points each, which the
   server's boats and jobs scan whole - a spatial index before the v3 world runs (docs/WORLD-V3.md 8.2).
-- **The page's code:** about +110 bytes gzipped (comments trimmed): the page is at 720.41 KB of its 720 KB budget
-  (the check rounds: 96 bytes to spare). The page loads the whole generator (map.js's build passes, naturesites.js,
+- **The page's code:** about +120 bytes gzipped (comments trimmed): the page is at 720.41 KB of its 720 KB budget
+  (the check rounds: 90 bytes to spare). The page loads the whole generator (map.js's build passes, naturesites.js,
   countryside.js) only because its queries live in the same module as the generator - moving the generator out of the
   page's static imports (the city worker already imports it only when the server can't serve the city) would free a
   lot of the page's budget.
