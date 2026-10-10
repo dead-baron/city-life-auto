@@ -54,7 +54,7 @@ What changes is how they are joined: a bridge to every island (WR3), the ring hi
 | **Metro City** (the central island: Downtown, Midtown, Northgate, Civic Center, Arts District, Bayside Heights, Neon Strip, The Pink Mile, Old Town, Sunset Beach, Harbor, The Yards, Greenfield Park) | the middle of the map | the middle of the bay, as WR3's downtown island; its elevated Metro Ring kept | moves |
 | **Southbank** (Pine Hills, Southside) | across the river from Metro City | stays joined to Metro City across its river (the two move as one) | moves |
 | **Pelican Key** | off Sunset Beach | stays off Sunset Beach (moves with Metro City); Pelican Way bridge | moves |
-| **Westport** (Westport Center, Old Quarter, Lakeview, Stadium District, West Hills, Port Westport) | the big west island | WR3's port island west of Metro City: the container port faces the west channel; Harbor Bridge east to Metro City, Strait Bridge north to the mainland | moves (without Highland Woods and the airport) |
+| **Westport** (Westport Center, Old Quarter, Lakeview, Stadium District, West Hills) | the big west island | WR3's port island west of Metro City; Harbor Bridge east to Metro City, Strait Bridge north to the mainland. WR3's container port with cranes is new ground for Port Westport (district 26, which has no ground today) | moves (without Highland Woods and the airport) |
 | **Airport island** (Westport International) | Westport's south-west | its own island south of Metro City (WR3's airport island), the Airport Causeway to The Yards | moves |
 | **Cedar Isle** (Cedar Falls, Falls Center, Lake District, Cedar Farms, South Port, Cedar Hills) | the south island | WR3's beach islands south-east of Metro City: Cedar Bridge (the red suspension bridge) from Southbank, the East Toll Bridge to the Sandpiper Coast | moves |
 | **Smuggler's Rock** (the syndicate's) | a rock off Dry Creek | a rock at the bay's mouth, boat only | moves |
@@ -63,7 +63,7 @@ What changes is how they are joined: a bridge to every island (WR3), the ring hi
 | **Lighthouse Rock, The Islets** | small rocks | off the west coast, under the North Cape | moves |
 | **The bay** (Liberty Bay, district 13) | the open water between islands | an enclosed bay: shallows along the shores, a deep fairway from the mouth to the river and the ports, the river mouth, the shark water outside the mouth | rebuilt |
 | Beaches in the bay | Sunset Beach, Pelican Key, Cedar Isle's | kept; plus the mainland beaches (Sandpiper Coast, the west coast coves, Egret Point) | exists + new |
-| Marinas and docks | Harbor marina, Port Westport, South Port, Westport Pier | kept; plus the toll-bridge marina (I4) and quays up the river | exists + new |
+| Marinas and docks | the Harbor marina (Metro City), Westport Pier, the docks and jetties round the islands | kept; plus Port Westport's container port, the toll-bridge marina (I4) and quays up the river | exists + new |
 
 ### 1.3 Every city district (`shared/map.js` DISTRICTS)
 
@@ -82,7 +82,7 @@ All 47 districts are kept. *Style* is the building/fill style, *tier* the wealth
 | 8 | Harbor | harbor / industrial | Metro City | Metro City (Harbor Bridge, Bay Ferry) | moves |
 | 9 | Dry Creek (farms) | rural / rural | Dry Creek island | the valley-desert border east of the river: Dry Creek moves whole and becomes where the farmland meets the desert (WR4) | moves |
 | 10 | Sunset Beach | beach / mid | Metro City | Metro City | moves |
-| 11 | Ironworks | factory / industrial | Metro City | Metro City | moves |
+| 11 | Ironworks | factory / industrial | in the table, but no ground today (no seeds) | the port island's factories, beside Port Westport | **new ground** |
 | 12 | Greenfield Park | park / mid | Metro City | Metro City | moves |
 | 13 | Liberty Bay | water | the sea | the bay and the open sea | rebuilt |
 | 14 | Pelican Key | beach / mid | Pelican Key | Pelican Key (off Sunset Beach) | moves |
@@ -91,12 +91,12 @@ All 47 districts are kept. *Style* is the building/fill style, *tier* the wealth
 | 17 | The Pink Mile | redlight / red | Metro City | Metro City | moves |
 | 18 | Old Town | oldtown / low | Metro City | Metro City (Old Town Bridge to Northshore, the river water bus quay) | moves |
 | 19 | Lighthouse Rock | wild | sea isle | off the west coast | moves |
-| 20, 21 | The Islets | wild | sea isles | off the west coast | moves |
-| 22 | Gull Isles (wild ground) | wild | Gull Isles | outer islands | moves |
+| 20, 21 | The Islets | wild | sea isles (17 islets, all district 20; 21 has no ground) | round the bay's mouth and the west coast | moves |
+| 22 | Gull Isles (wild ground) | wild | no ground today (the isles are Gull Harbor's, Coral Cay's and Paradise Cay's) | outer islands' wild ground | moves |
 | 23 | Westport Center | towers / lux | Westport | Westport island | moves |
 | 24 | Lakeview | luxury / lux | Westport | Westport island | moves |
 | 25 | Stadium District | commercial / mid | Westport | Westport island | moves |
-| 26 | Port Westport | harbor / industrial, turf | Westport | Westport island (the port faces the west channel) | moves |
+| 26 | Port Westport | harbor / industrial, turf | in the table, but no ground today (its seeds lose to Old Quarter and the airport) | WR3's container port with cranes on Westport's shore | **new ground** |
 | 27 | Westport International | airport | Westport | the airport island | moves |
 | 28 | West Hills | houses / suburb | Westport | Westport island | moves |
 | 29 | Highland Woods | wild (redwood) | Westport (north) | the mainland: the heart of the Highland Woods region (west coast) | moves |
@@ -109,7 +109,7 @@ All 47 districts are kept. *Style* is the building/fill style, *tier* the wealth
 | 36 | Falls Center | commercial / mid | Cedar Isle | Cedar Isle | moves |
 | 37 | Lake District | luxury / lux | Cedar Isle | Cedar Isle | moves |
 | 38 | Cedar Farms | rural / rural | Cedar Isle | Cedar Isle (island farms; the big farmland is the new Willow Valley) | moves |
-| 39 | South Port | harbor / industrial | Cedar Isle | Cedar Isle (Bay Ferry, Gull car ferry) | moves |
+| 39 | South Port | harbor / industrial | in the table, but no ground today (Cedar Hills and the town cover its seeds) | Cedar Isle's south shore: the ferry piers and the police dock | **new ground** |
 | 40 | Cedar Hills | wild (golf, hills) | Cedar Isle | Cedar Isle | moves |
 | 41 | Dry Creek Desert | desert | Dry Creek island | with Dry Creek, the desert's west edge | moves |
 | 42 | Dry Creek Airstrip | airport / rural | Dry Creek island | with Dry Creek | moves |
@@ -454,9 +454,10 @@ City in the picture). Each cut gets a new shore - a waterfront strip, a sea wall
 district as it does its coasts today - or, where two pieces land beside each other again on the mainland, a new blend.
 
 Things for the owner to decide:
-1. **Westport's port faces the open west channel** (moving it whole keeps it on its west side, as in WR3's port island
-   with its cranes on the west). Alternatively mirror Westport so the port faces Metro City across the bay (a mirror is
-   a regeneration, not a move: its streets come out differently).
+1. **Where Westport's port goes.** Port Westport (district 26) has no ground today - Old Quarter and the airport took its
+   west shore - so WR3's container port with its cranes is new ground: on the west channel (as WR3 draws it, beside the
+   Old Quarter) or on the bay side facing Metro City's Harbor. Ironworks (11) and South Port (39) are the same: in the
+   district table without ground; the port island's factories and Cedar Isle's ferry piers can give them some.
 2. **Cedar Isle keeps its farms** (Cedar Farms) as island farms; the big farmland is the new valley. Or Cedar Farms
    moves to the valley and Cedar Isle becomes the beach and golf island.
 3. **Dry Creek moves whole** to be the border where farms meet desert. Or it splits: its farms into the valley, its
