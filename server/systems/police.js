@@ -2,13 +2,15 @@
 // officers on foot who come at you harder the more stars you have (design notes 2026-10-08): at 1-2 they run you down
 // and tackle you, at 3 they carry tasers (a few pistols - everyone's, once you shoot at them), at 4 they open fire but
 // still dive at you up close, and at 5 come the FBI, SWAT and now and then the army. A suspect sitting in a stopped car
-// is dragged out of it. Cuffed, you're taken in (custody.js); the units stand down when the heat clears.
+// is dragged out of it. Cuffed, you're taken in (custody.js); the units stand down when the heat clears. A star from
+// small crimes is different: one officer comes for a word (stops.js, task #405). And the police go after NPC crooks: a
+// mugger who got away, the one who started a street fight, now and then an officer on foot who sees one (task #395).
 import { K } from '../../shared/constants.js';
 import { pedStep, PED } from '../../shared/physics.js';
 import { isTurf, PED_BLOCK } from '../../shared/map.js';
 import { localToWorld } from '../../shared/math.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
-import { spawnNpc, despawnNpc, seek, startFight, footWay, walkInAt, sidestep } from './npc.js';
+import { spawnNpc, despawnNpc, seek, startFight, footWay, walkInAt, sidestep, flee, backOff, markBrawl, holding } from './npc.js';
 import { driveToward, planRoute } from './traffic.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
@@ -17,10 +19,11 @@ import * as vehicles from './vehicles.js';
 import * as custody from './custody.js';
 import * as standoff from './standoff.js';
 import * as struggle from './struggle.js';
+import * as stops from './stops.js';
 import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
 import { wildStyle } from './wildlife.js';
-import { WILD_UNITS, POLICE_UNITS, POLICE_FAR, REPORT_SEARCH_S, REPORT_SPOT_PX, TACKLE_PX, TACKLE_DOWN_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_RECOVER_S, TACKLE_APPROACH, PISTOL_SHARE_3, FBI_SHARE_5, ARMY_SHARE_5, BREAK_DAZE_S } from '../../shared/rules.js';
+import { WILD_UNITS, POLICE_UNITS, POLICE_FAR, REPORT_SEARCH_S, REPORT_SPOT_PX, TACKLE_PX, TACKLE_DOWN_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_RECOVER_S, TACKLE_APPROACH, PISTOL_SHARE_3, FBI_SHARE_5, ARMY_SHARE_5, BREAK_DAZE_S, PATROL_PURSUE, BRAWL_AFTER_S } from '../../shared/rules.js';
 
 const rng = mulberry32(911);
 
@@ -29,13 +32,17 @@ function unitsWanted(stars) { return stars <= 0 ? 0 : Math.min(6, stars + (stars
 export function update(world, dt) {
   world.police ??= new Set();
   if (world.tick % 20 === 7) dispatch(world);
+  if (world.tick % 20 === 13) patrols(world);
   if (world.npcCalls && world.npcCalls.length && world.tick % 10 === 3) npcCalls(world);
   if (world.witnessCalls && world.witnessCalls.length && world.tick % 10 === 6) witnessCalls(world);
+  if (world.fightCalls && world.fightCalls.length && world.tick % 10 === 8) fightCalls(world);
   for (const vid of [...world.police]) {
     const v = world.get(vid);
     if (!v) { world.police.delete(vid); continue; }
     runUnit(world, v, dt);
   }
+  if (world.stops && world.stops.size) for (const s of [...world.stops.values()]) stops.run(world, s, dt);   // (a word with someone: stops.js)
+  if (world.pursuers && world.pursuers.size) for (const id of [...world.pursuers]) pursueStep(world, id, dt);
 }
 
 function dispatch(world) {
@@ -43,6 +50,7 @@ function dispatch(world) {
   for (const vid of world.police) { const v = world.get(vid); if (v && v.ai) units.set(v.ai.target, (units.get(v.ai.target) || 0) + 1); }
   for (const p of world.players.values()) {
     if (!p.ped || p.ped.dead || p.wanted <= 0 || p.custody) continue;   // (cuffed: custody.js has them)
+    if (law.soft(p)) { stops.ensure(world, p); continue; }   // (a star from small crimes: an officer comes for a word)
     const have = units.get(p.pid) || 0;
     // lying low out in the wilds: once they've lost you, the cars already out keep searching but no more are sent
     const lost = world.time - p.seenAt > 3 && !!wildStyle(world.map, p.ped.x, p.ped.y);
@@ -158,6 +166,21 @@ export function sendTransport(world, p) {
   return v;
 }
 
+// A car for a word with someone on a star from small crimes (stops.js): from out of sight like any unit, toward where it
+// happened, one officer, no siren. stops.js drives it while the stop lasts (ai.stop); after that it's a unit like any.
+export function sendStopCar(world, p, x, y) {
+  const n = spawnPoint(world, p, x, y, { at: { x, y }, minD: 600, maxD: 1300, clearPx: 450, noMoto: true });
+  if (!n) return null;
+  const v = world.spawnVehicle('police', n.x + 32, n.y + 32, Math.atan2(y - n.y, x - n.x), {});
+  v.despawnable = false; v.sirenOn = false;
+  const cop = spawnNpc(world, 'cop', v.x, v.y, 'cop');
+  cop.npc.unit = v.id; cop.vehId = v.id; cop.seat = 0; v.seats[0] = cop.id;
+  armCop(cop, 1, 'police');
+  v.ai = { kind: 'police', target: p.pid, stop: p.pid, mode: 'drive', route: null, routeAt: 0, force: 'police' };
+  world.police.add(v.id);
+  return v;
+}
+
 // What an officer carries and how they come at you (npc.tactic): 'tackle' (1-2 stars: a baton, and a dive), 'taser'
 // (3 stars, most of them) or 'fire' (a few at 3 - and all of them once you've shot at the police - and everyone from 4).
 // Each officer keeps the same habit (hashed from their id); hot: the suspect has been hitting the police.
@@ -172,7 +195,7 @@ function armCop(cop, stars, force, hot = false) {
 }
 
 // On foot: officers sprint longer than anyone (a chase is their job).
-const copMods = (world, c) => ({ ...players.pedMods(world, c), drainMul: 0.35 });
+export const copMods = (world, c) => ({ ...players.pedMods(world, c), drainMul: 0.35 });
 
 // A running dive at the suspect (the dive-roll: shared/physics.js), aimed a little ahead of where they're going.
 function dive(c, t, now) {
@@ -214,6 +237,36 @@ function tackleHit(world, c, t) {
   return true;
 }
 export const _tackleHit = tackleHit;   // (for the tests)
+// One officer on foot going for a takedown, with no gun or taser (a stop's hothead, the police breaking up a street
+// fight, an officer running down a crook): run them down, dive at them a little ahead of where they're going, wrestle
+// them down when right on them; on them while they're down, the cuffs - a wanted player fights back (struggle.js), an NPC
+// crook gets a dice roll. After an NPC they run flat out (CHASE_NPC: as quick as a purse snatcher, the quickest of
+// them - they'd never catch one otherwise); after a player, at the usual pace. gentle: come on at a walk to someone on
+// the ground (1-2 stars). True once they're cuffed.
+const CHASE_NPC = 1.2;
+export function tackleStep(world, c, t, dt, gentle = false) {
+  const now = world.time;
+  if (now < c.downUntil || now < c.stunUntil) return false;
+  const d = Math.hypot(t.x - c.x, t.y - c.y), down = now < t.stunUntil || now < t.downUntil;
+  if (down && d < 30 && !t.vehId) {
+    if (t.player ? !struggle.grab(world, c, t) : !struggle.npcBreaksFree(world, c, t)) { law.arrest(world, c, t); return true; }
+    return false;
+  }
+  const ready = now > (c.npc.nextDive || 0);
+  let inp;
+  if (!down && d <= 22 && ready) inp = grab(world, c, t, now);
+  else if (!down && d < TACKLE_PX && d > 22 && ready && world.map.los(c.x, c.y, t.x, t.y)) inp = dive(c, t, now);
+  else {
+    const wp = footWay(world, c, t.x, t.y);
+    inp = down && gentle ? seek(c, wp.x, wp.y, false, TACKLE_APPROACH) : seek(c, wp.x, wp.y, true);
+    if (d < 24) { inp.mx *= 0.2; inp.my *= 0.2; }
+  }
+  const mods = copMods(world, c);
+  if (t.npc) mods.speedMul *= CHASE_NPC;
+  pedStep(c, sidestep(world, c, inp, dt), dt, world.map, mods);
+  if (c.rollT > 0) tackleHit(world, c, t);
+  return false;
+}
 // After a prisoner breaks away (custody.js breakAway, the owner's note, task #377), an officer running after them can trip:
 // on the face or in a roll, down and dazed a moment (the knockdown event's k; the stun's sparks round the head)
 function trips(world, c, now) {
@@ -228,19 +281,19 @@ function trips(world, c, now) {
   return true;
 }
 // How long a car has been at a standstill (s)
-function stillFor(world, car) {
+export function stillFor(world, car) {
   if (Math.hypot(car.vx, car.vy) > 45) { car.stillSince = 0; return 0; }
   if (!car.stillSince) car.stillSince = world.time;
   return world.time - car.stillSince;
 }
 // The door of the car on the officer's side (out beside it)
-function doorOf(car, c) {
+export function doorOf(car, c) {
   const right = ((c.x - car.x) * -Math.sin(car.a) + (c.y - car.y) * Math.cos(car.a)) >= 0;
   const [x, y] = localToWorld(car.x, car.y, car.a, car.def.L * 0.08, (right ? 1 : -1) * (car.def.W / 2 + 14));
   return { x, y };
 }
 // Dragged out of a stopped car onto the ground
-function pullOut(world, c, t, car) {
+export function pullOut(world, c, t, car) {
   vehicles.ejectPed(world, t, true, { x: c.x, y: c.y });
   t.vx = 0; t.vy = 0; t.rollT = 0;
   t.downUntil = Math.max(t.downUntil || 0, world.time + TACKLE_DOWN_S);
@@ -329,6 +382,132 @@ function runNpcUnit(world, v, crew, dt) {
   }
 }
 
+// ---- a street fight (happenings.js; task #395): the police come and break it up ------------------------------------
+// Now and then somebody calls it in (rules.js FIGHT_POLICE; on the dispatch log as a street fight): a few seconds later a
+// squad car comes, sirens on, for whoever started it (law.js brawling: one of them, or both). The crew run in on foot:
+// the one who didn't start it backs off, whoever did makes a run for it - and the officers run them down with a tackle,
+// never a gun or a taser, and take them in (law.arrest: the cells; now and then one shakes them off and runs on). While
+// the police are after them they stay fair game. It gives up after NPC_CHASE_S, or once they're clean away.
+export function callFight(world, ids, delay) { (world.fightCalls ||= []).push({ ids: [...ids], at: world.time + delay }); }
+function fightCalls(world) {
+  const now = world.time, keep = [];
+  for (const c of world.fightCalls) {
+    if (c.at > now) { keep.push(c); continue; }
+    const ts = c.ids.map((id) => world.get(id)).filter((t) => t && !t.removed && law.brawling(world, t) && !hunted(world, t));
+    if (!ts.length) continue;
+    const t0 = ts[0];
+    if (!c.logged) { c.logged = true; law.logDispatch(world, 'fight', t0.x, t0.y, null, 1, 'witness'); }
+    const n = spawnPoint(world, { ped: t0 }, t0.x, t0.y, { at: { x: t0.x, y: t0.y }, minD: 520, maxD: 1150, clearPx: 360 });
+    if (!n) { if (now - c.at < 20) keep.push(c); continue; }   // (nowhere out of sight to come from yet: in a moment)
+    const v = world.spawnVehicle('police', n.x + 32, n.y + 32, Math.atan2(t0.y - n.y, t0.x - n.x), {});
+    v.despawnable = false; v.sirenOn = true;
+    for (let i = 0; i < 2; i++) {
+      const cop = spawnNpc(world, 'cop', v.x, v.y, 'cop');
+      cop.npc.unit = v.id; cop.vehId = v.id; cop.seat = i; v.seats[i] = cop.id;
+      armCop(cop, 1, 'police');
+    }
+    v.ai = { kind: 'police', target: null, npcTargets: ts.map((t) => t.id), since: now, seenAt: now, lx: t0.x, ly: t0.y, mode: 'drive', route: null, routeAt: 0, force: 'police' };
+    for (const t of ts) t.npc.keep = true;
+    world.police.add(v.id);
+  }
+  world.fightCalls = keep;
+}
+function runFightUnit(world, v, crew, dt) {
+  const ai = v.ai, now = world.time;
+  const ts = ai.npcTargets.map((id) => world.get(id)).filter((t) => t && !t.dead && !t.removed && t.npc && !t.cuffed);
+  ai.npcTargets = ts.map((t) => t.id);
+  for (const t of ts) {
+    const near = (x, y, r) => Math.hypot(t.x - x, t.y - y) < r && world.map.los(x, y, t.x, t.y);
+    if (near(v.x, v.y, 700) || crew.some((c) => !c.vehId && near(c.x, c.y, 520))) { ai.seenAt = now; ai.lx = t.x; ai.ly = t.y; }
+  }
+  if (!ts.length || v.wreckAt || now - ai.since > NPC_CHASE_S || now - ai.seenAt > 25) { for (const t of ts) t.npc.keep = false; ai.npcTargets = []; standDown(world, v, crew, dt); return; }
+  for (const t of ts) { t.npc.keep = true; markBrawl(world, t, now + BRAWL_AFTER_S); }   // (wanted by the police: still fair game)
+  const seen = now - ai.seenAt < 2;
+  if (ai.mode === 'drive') {
+    const driver = v.seats[0] ? world.get(v.seats[0]) : null;
+    if (!driver || driver.dead) { ai.mode = 'foot'; for (const c of crew) if (c.vehId) vehicles.ejectPed(world, c, true); return; }
+    let t = ts[0];
+    for (const q of ts) if (Math.hypot(q.x - v.x, q.y - v.y) < Math.hypot(t.x - v.x, t.y - v.y)) t = q;
+    const kx = seen ? t.x : ai.lx, ky = seen ? t.y : ai.ly, dist = Math.hypot(kx - v.x, ky - v.y);
+    if (dist < 190) { ai.mode = 'foot'; v.input = { throttle: 0, steer: 0, hb: true }; for (const c of crew) { vehicles.ejectPed(world, c, true); c.npc.state = 'chase'; } return; }
+    if (seen && dist < 520) driveToward(world, v, kx, ky, 300, {});
+    else {
+      if (!ai.route || now - ai.routeAt > 3) { ai.route = planRoute(world, v.x, v.y, kx, ky); ai.routeAt = now; }
+      while (ai.route.length > 1 && Math.hypot(ai.route[0].x - v.x, ai.route[0].y - v.y) < 60) ai.route.shift();
+      driveToward(world, v, ai.route[0].x, ai.route[0].y, 480, {});
+    }
+    return;
+  }
+  // on foot: each officer after the nearest of them nobody else is after (two officers, two of them: one each)
+  const taken = new Set();
+  for (const c of crew) {
+    if (c.vehId || struggle.pinning(world, c)) continue;
+    let t = null, bd = Infinity;
+    for (const q of ts) { const dq = Math.hypot(q.x - c.x, q.y - c.y) + (taken.has(q.id) ? 1e6 : 0); if (dq < bd) { bd = dq; t = q; } }
+    taken.add(t.id);
+    const d = Math.hypot(t.x - c.x, t.y - c.y);
+    if (d < 280) { scatter(world, t, c); if (t.npc.state !== 'flee' && now >= t.downUntil) flee(world, t, c.x, c.y, 6); }   // (they run for it)
+    if (!seen && d > 250) { const wp = footWay(world, c, ai.lx, ai.ly); if (now >= c.downUntil && now >= c.stunUntil) pedStep(c, sidestep(world, c, seek(c, wp.x, wp.y, true), dt), dt, world.map, copMods(world, c)); }
+    else tackleStep(world, c, t, dt);
+  }
+}
+// The police are on them: the fight's over. Whoever they were fighting backs off (if they didn't start it too), and they
+// make a run for it.
+function scatter(world, t, c) {
+  const n = t.npc;
+  if (n.state !== 'fight' || world.time < t.downUntil) return;
+  const o = world.get(n.target);
+  if (o && o.npc && !o.dead && o.npc.state === 'fight' && o.npc.target === t.id && !law.brawling(world, o)) backOff(world, o, t);
+  flee(world, t, c.x, c.y, 6);
+}
+
+// ---- an officer on foot runs down an NPC crook (task #395, the owner: "patrolling police rarely run and tackle NPC
+// criminals - a rare detail") ------------------------------------------------------------------------------------------
+// An officer walking a beat, or whose unit is done here and heading off, who sees a purse snatcher on the run or whoever
+// started a street fight: now and then (PATROL_PURSUE - the same answer for the same officer and crook) they go after
+// them on foot, tackle them and take them in (their car waits for them: standDown). An officer on foot with no car whose
+// word with a player turned into a chase (stops.js) keeps after them the same way.
+const PATROL_SEE_PX = 420, PURSUE_S = 40, PURSUE_LOST_S = 8;
+export function pursue(world, c, t) {
+  const n = c.npc;
+  n.pursue = t.id; n.pursueAt = world.time; n.pursueSeen = world.time; n.keep = true;
+  (world.pursuers ||= new Set()).add(c.id);
+}
+const crook = (world, e) => !!(e.npc && !e.dead && !e.removed && !e.vehId && !e.cuffed && ((e.npc.flagged && e.npc.role === 'mugger') || law.brawling(world, e)));
+// someone the police are already after: an officer on foot, or a car sent for them
+function hunted(world, e) {
+  for (const id of world.pursuers || []) { const q = world.get(id); if (q && q.npc && q.npc.pursue === e.id) return true; }
+  for (const vid of world.police || []) { const v = world.get(vid); if (v && v.ai && (v.ai.npcTarget === e.id || (v.ai.npcTargets && v.ai.npcTargets.includes(e.id)))) return true; }
+  return false;
+}
+function patrols(world) {
+  for (const c of world.entities.values()) {
+    const n = c.npc;
+    if (c.kind !== K.PED || !n || n.role !== 'cop' || c.dead || c.vehId || c.sub || c.ug || c.onTrain || c.pinning || n.pursue || n.stop || n.desk || n.war || n.shootout || n.boat || n.trainCop) continue;
+    const u = n.unit ? world.get(n.unit) : null;
+    if (!(n.beat || (u && u.ai && u.ai.downSince && !u.ai.prisoner))) continue;   // walking a beat, or their unit's done here
+    if (n.beat && holding(world, c)) continue;   // (they have someone in cuffs)
+    for (const e of world.query(c.x, c.y, PATROL_SEE_PX, K.PED)) {
+      if (!crook(world, e) || hash2(c.id, e.id, 395) >= PATROL_PURSUE || hunted(world, e) || !world.map.los(c.x, c.y, e.x, e.y)) continue;
+      pursue(world, c, e);
+      world.emit(c.x, c.y, { e: 'say', id: c.id, x: Math.round(c.x), y: Math.round(c.y), text: 'Police! Stop right there!' });
+      break;
+    }
+  }
+}
+function pursueStep(world, id, dt) {
+  const c = world.get(id), n = c && c.npc, now = world.time, t = n ? world.get(n.pursue) : null;
+  const quit = () => { if (n) { n.pursue = 0; n.keep = false; } world.pursuers.delete(id); };
+  if (!n || c.dead || c.removed || c.vehId || n.role !== 'cop' || !t || t.dead || t.removed || t.vehId || now - n.pursueAt > PURSUE_S) return quit();
+  if (t.player ? !(t.player.wanted > 0) || !!t.player.custody || law.soft(t.player) : !t.npc) return quit();
+  if (Math.hypot(t.x - c.x, t.y - c.y) < 600 && world.map.los(c.x, c.y, t.x, t.y)) n.pursueSeen = now;
+  else if (now - n.pursueSeen > PURSUE_LOST_S) return quit();
+  if (struggle.pinning(world, c)) return;
+  if (t.npc && law.brawling(world, t)) markBrawl(world, t, now + BRAWL_AFTER_S);   // (wanted by the police: still fair game)
+  if (t.npc && Math.hypot(t.x - c.x, t.y - c.y) < 280) { scatter(world, t, c); if (t.npc.state !== 'flee' && t.npc.state !== 'mug' && now >= t.downUntil) flee(world, t, c.x, c.y, 5); }   // (they run for it)
+  if (tackleStep(world, c, t, dt, !!t.player)) quit();
+}
+
 // ---- a crime a player saw and called in (law.js reportSaw) -----------------------------------------------------------
 // A few seconds after the call one squad car comes to where the caller was, no siren, and looks round for the suspect
 // they described: in sight and close enough, in the same clothes (or the same car they were seen in), and the officer
@@ -375,7 +554,9 @@ function runCallUnit(world, v, crew, dt) {
     const sp = spots(world, v, call, crew);
     if (sp) {
       law.calledIn(world, sp, call, caller);
-      ai.call = null; ai.target = sp.pid; v.sirenOn = true;   // (the usual chase from here: runUnit)
+      ai.call = null; ai.target = sp.pid;
+      if (law.soft(sp)) stops.take(world, sp, v);   // (a small crime: the officer wants a word - stops.js)
+      else v.sirenOn = true;   // (the usual chase from here: runUnit)
       return;
     }
   }
@@ -399,9 +580,9 @@ function runCallUnit(world, v, crew, dt) {
 function runUnit(world, v, dt) {
   const ai = v.ai;
   if (!ai || ai.kind !== 'police') { world.police.delete(v.id); v.despawnable = true; return; }
-  if (ai.npcTarget || ai.call) {
+  if (ai.npcTarget || ai.call || ai.npcTargets) {
     const crew = crewOf(world, v);
-    if (ai.call) runCallUnit(world, v, crew, dt); else runNpcUnit(world, v, crew, dt);
+    if (ai.call) runCallUnit(world, v, crew, dt); else if (ai.npcTargets) runFightUnit(world, v, crew, dt); else runNpcUnit(world, v, crew, dt);
     return;
   }
   const now = world.time;
@@ -416,9 +597,12 @@ function runUnit(world, v, dt) {
     v.ai = null; v.despawnable = true; v.sirenOn = false;
     return;
   }
+  if (ai.stop) { const s = world.stops && world.stops.get(ai.stop); if (s && s.car === v.id) return; ai.stop = 0; }   // (a word with someone: stops.js drives it)
   if (ai.prisoner) { custody.runCar(world, v, crew, dt); return; }   // taking someone in
-  const active = p && p.ped && !p.ped.dead && p.wanted > 0;
+  // (on a star from small crimes nobody's chased: an officer comes for a word instead - stops.js)
+  const active = p && p.ped && !p.ped.dead && p.wanted > 0 && !law.soft(p);
   if (!active || v.wreckAt) { standDown(world, v, crew, dt); return; }
+  if (ai.downSince !== undefined) ai.downSince = undefined;   // (after them again: not on the way off any more - patrols)
   if (p.custody) {
     // they're cuffed: the officer holding them stays with them (custody.js), and the others with their officer; the rest go
     if (crew.some((c) => c.id === p.custody.holder)) custody.standBy(world, v, crew, p, dt); else standDown(world, v, crew, dt);
@@ -475,7 +659,7 @@ function runUnit(world, v, dt) {
   // they parked at the street by its door, a long walk from the counter, on purpose)
   const farOK = now - (ai.footAt || 0) > 8 && !walkInAt(world.map, t.x, t.y);
   for (const c of crew) {
-    if (c.vehId || c.npc.war || c.ug) continue; // busy in a gang fight (gangwar.js drives them); gone down a manhole after a suspect (underground.js)
+    if (c.vehId || c.npc.war || c.ug || c.npc.pursue) continue; // busy in a gang fight (gangwar.js drives them); gone down a manhole after a suspect (underground.js); after a crook (pursueStep)
     if (struggle.pinning(world, c)) continue;   // on top of the suspect, going for the cuffs (struggle.js moves them)
     // stumbling back from a prisoner who broke away (custody.js), or tripped running after them
     if (now < (c.staggerUntil || 0)) { pedStep(c, { bits: 0, mx: 0, my: 0, aim: c.a }, dt, world.map, copMods(world, c)); continue; }
@@ -552,7 +736,7 @@ function standDown(world, v, crew, dt) {
   const now = world.time;
   v.sirenOn = false;
   for (const c of crew) {
-    if (c.vehId || c.npc.war) continue;
+    if (c.vehId || c.npc.war || c.npc.pursue) continue;   // (running down a crook they saw: pursueStep)
     const inp = seek(c, v.x, v.y, false);
     if (now >= c.downUntil && now >= c.stunUntil) pedStep(c, inp, dt, world.map, players.pedMods(world, c));
     if (Math.hypot(v.x - c.x, v.y - c.y) < v.def.L / 2 + 26 || PED_BLOCK[world.map.tileAtPx(c.x, c.y)]) {
@@ -560,6 +744,9 @@ function standDown(world, v, crew, dt) {
       if (seat >= 0) { v.seats[seat] = c.id; c.vehId = v.id; c.seat = seat; } else { despawnNpc(world, c); }
     }
   }
+  // one of them off after a crook they saw (pursueStep): the car waits for them, and from when they're done they have the
+  // usual while to get back to it
+  if (crew.some((c) => c.npc.pursue && !c.vehId)) { v.ai.downSince = now; if (v.seats[0]) v.input = { throttle: 0, steer: 0, hb: true }; return; }
   let visible = false;
   for (const q of world.players.values()) if (q.ped && !q.ped.hidden && Math.hypot(q.ped.x - v.x, q.ped.y - v.y) < 900) { visible = true; break; }
   if (!visible || now - (v.ai.downSince ??= now) > 40) {

@@ -20,8 +20,10 @@ import { ROB_CALLED_HEAT } from '../../shared/rules.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
 // sev: how much more (or less) likely a witness is to call it in than for an assault (WITNESS_REPORT); sight: how far
-// people notice it, as a share of the usual (a bike lifted off a rack is easy to miss)
+// people notice it, as a share of the usual (a bike lifted off a rack is easy to miss); minor: a small crime - what
+// passers-by see of it adds up to a star, one an officer sees is a star at once (smallCrime, task #405)
 export const CRIMES = {
+  punch:       { heat: 15, label: 'Assault', sev: 1, minor: true },   // (bare fists: a punch, a shove - onDamage; a weapon's is an assault)
   assault:     { heat: 15, label: 'Assault', sev: 1 },
   copAssault:  { heat: 40, label: 'Assaulting an officer', felony: true, sev: 1.3 },
   murder:      { heat: 45, label: 'Murder', felony: true, sev: 1.5 },
@@ -30,22 +32,22 @@ export const CRIMES = {
   hitrun:      { heat: 15, label: 'Hit and run', sev: 1.1 },
   brandish:    { heat: 6,  label: 'Shots fired', sev: 1.2 },
   theft:       { heat: 10, label: 'Vehicle theft', sev: 0.85 },
-  bikeTheft:   { heat: 5,  label: 'Bike theft', sev: 0.55, sight: 0.6 },
+  bikeTheft:   { heat: 5,  label: 'Bike theft', sev: 0.55, sight: 0.6, minor: true },
   bikejack:    { heat: 15, label: 'Pulling someone off their bike', sev: 1, sight: 0.8 },
   policeTheft: { heat: 25, label: 'Stealing a police vehicle', felony: true, sev: 1.2 },
   carjack:     { heat: 25, label: 'Carjacking', felony: true, sev: 1.3 },
   cargoTheft:  { heat: 15, label: 'Cargo theft', sev: 0.85 },
-  ram:         { heat: 8,  label: 'Reckless ramming', sev: 0.7 },
+  ram:         { heat: 8,  label: 'Reckless ramming', sev: 0.7, minor: true },
   possession:  { heat: 20, label: 'Contraband possession', sev: 1 },
   poaching:    { heat: 30, label: 'Poaching protected sea life', felony: true, sev: 1 },
   robbery:     { heat: ROB_CALLED_HEAT, label: 'Armed robbery', felony: true, sev: 1.5 },   // (1 star; it grows from there: robbery.js)
   trainRobbery: { heat: 50, label: 'Train robbery', felony: true, sev: 1.5 },
   escape:      { heat: 25, label: 'Escaping custody', felony: true, sev: 1 },
-  treeFelling: { heat: FELL_HEAT, label: 'Vandalism: felling a tree', sev: 0.6 },   // (in town or a park: felling.js)
+  treeFelling: { heat: FELL_HEAT, label: 'Vandalism: felling a tree', sev: 0.6, minor: true },   // (in town or a park: felling.js)
 };
 
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
-  WITNESS_REPORT, WITNESS_TIER, WITNESS_SIGHT, VICTIM_REPORT, WITNESS_SPREAD, SAW_S, SAW_NOTE_S, REPORT_COOLDOWN_S, FELL_HEAT } from '../../shared/rules.js';
+  WITNESS_REPORT, WITNESS_TIER, WITNESS_SIGHT, VICTIM_REPORT, WITNESS_SPREAD, SAW_S, SAW_NOTE_S, REPORT_COOLDOWN_S, FELL_HEAT, SUSPICION_STAR, SUSPICION_HOLD_S, SUSPICION_FADE_S } from '../../shared/rules.js';
 import { hash2 } from '../../shared/rng.js';
 import { decodeLook, lookToApp, policeLook } from '../../shared/look.js';
 import { PAINTS } from '../../shared/vehicles.js';
@@ -109,7 +111,7 @@ export function addPolicePts(world, p, n) {
 const DISPATCH_TTL = 300;
 export function logDispatch(world, type, x, y, p, stars, via) {
   world.dispatch ??= [];
-  world.dispatch.push({ id: (world.dispatchSeq = (world.dispatchSeq || 0) + 1), t: world.time, x: Math.round(x), y: Math.round(y), l: CRIMES[type]?.label || ({ mugging: 'Purse snatching' })[type] || type, s: stars, via, who: p ? p.pid : null });
+  world.dispatch.push({ id: (world.dispatchSeq = (world.dispatchSeq || 0) + 1), t: world.time, x: Math.round(x), y: Math.round(y), l: CRIMES[type]?.label || ({ mugging: 'Purse snatching', fight: 'Street fight', flee: 'Ran from an officer' })[type] || type, s: stars, via, who: p ? p.pid : null });
   if (world.dispatch.length > 60) world.dispatch.splice(0, world.dispatch.length - 60);
   for (const q of world.players.values()) if (q.badge) q.meDirty = true;
 }
@@ -123,8 +125,16 @@ function isCop(ped) { return !!ped && ((ped.npc && (ped.npc.role === 'cop')) || 
 function isFlagged(world, ped) {
   if (!ped) return false;
   if (ped.player) return ped.player.wanted > 0 || ped.player.bounty > 0;
-  return !!(ped.npc && (ped.npc.flagged || ped.npc.role === 'gang' || ped.npc.role === 'mugger'));
+  return !!(ped.npc && (ped.npc.flagged || ped.npc.role === 'gang' || ped.npc.role === 'mugger')) || brawling(world, ped);
 }
+// An NPC who started a street fight (task #395: npc.js markBrawl): a criminal while it lasts and a little after (and while
+// the police are after them) - hitting them is no crime; killing them still is (dead, they're not brawling: immune).
+// The police take them in (police.js).
+export const brawling = (world, e) => !!(e && e.npc && !e.dead && (e.npc.brawl || 0) > world.time);
+
+// The 1-star police stop (task #405): a star from small crimes (smallCrime) brings an officer for a word, not the chase
+// (stops.js). p.soft: the star is that kind - any other heat makes it the usual kind (addHeat).
+export const soft = (p) => !!p && p.wanted === 1 && !!p.soft;
 
 // ---------------------------------------------------------------------------
 // Who saw it, and who calls it in. With a crime (its CRIMES key), not everyone who sees it reports it (design notes
@@ -132,14 +142,15 @@ function isFlagged(world, ped) {
 // wealth: WITNESS_TIER - in the rough parts most look away, and see less: WITNESS_SIGHT), how bad it was (sev) and
 // their own disposition (npc.snitch); the victim more likely than a bystander. Players who see it aren't counted:
 // they're told and can call it in from the phone (res.saw: sawCrime / reportSaw). Without a crime (a paint shop
-// asking if anyone's looking), everyone who sees counts. count: who reported it; seen: who saw it.
+// asking if anyone's looking), everyone who sees counts. count: who reported it; seen: who saw it; copId: an NPC officer
+// who saw it (stops.js: theirs to deal with, if they're free).
 export function witnesses(world, x, y, perp, victim, loud = false, crime = null) {
   const night = world.clock.isNight;
   const tier = crime ? world.map.districtAt(x, y).tier || 'mid' : 'mid';
   const sight = (crime && CRIMES[crime] && CRIMES[crime].sight) || 1;
   const pedRange = 300 * (night ? 0.55 : 1) * (WITNESS_SIGHT[tier] ?? 1) * sight;   // GDD: night narrows witness cones
   const camFactor = night ? 0.75 : 1;           // GDD: camera radii -25% at night
-  const res = { count: 0, seen: 0, cop: false, cam: false, saw: [] };
+  const res = { count: 0, seen: 0, cop: false, copId: 0, cam: false, saw: [] };
   const seq = crime ? (world.crimeSeq = (world.crimeSeq || 0) + 1) : 0;
   for (const e of world.query(x, y, Math.max(pedRange, 420), K.PED)) {
     if (e === perp || e.dead || e.pet || e.wild || (e.npc && e.npc.blind)) continue; // blind: the clerk being robbed doesn't count as a witness (nor do animals)
@@ -159,7 +170,7 @@ export function witnesses(world, x, y, perp, victim, loud = false, crime = null)
     if (crime && e.player) { if (e.player !== (perp && perp.player)) res.saw.push(e.player); continue; }
     if (crime && e.npc && !cop && !reports(e, e === victim, tier, CRIMES[crime] ? CRIMES[crime].sev : 1, seq)) continue;   // saw it, kept quiet
     res.count++;
-    if (cop) res.cop = true;
+    if (cop) { res.cop = true; if (!res.copId && e.npc) res.copId = e.id; }
   }
   for (const c of world.map.cameras) {
     if (perp && perp.sub) break;
@@ -238,16 +249,64 @@ export function reportSaw(world, p, id, police) {
   p.meDirty = true;
   return null;
 }
-// a unit found the suspect a player called in: they're wanted for it now
+// a unit found the suspect a player called in: they're wanted for it now (a small crime: the officer wants a word)
 export function calledIn(world, sp, call, caller) {
   const spec = CRIMES[call.type];
   if (!spec || !sp.ped) return;
-  if (spec.felony) sp.profile.felonies++;
-  addHeat(world, sp, spec.heat, sp.ped.x, sp.ped.y);
-  logDispatch(world, call.type, sp.ped.x, sp.ped.y, sp, sp.wanted, 'witness');
-  world.notify(sp, `${spec.label}: a witness called you in, and the police know your description!`, 'bad');
+  if (spec.minor && !usual(sp)) { if (!soft(sp)) star(world, sp, call.type, sp.ped.x, sp.ped.y, 'witness'); }   // (on that star already: likely the same punches - no more of it)
+  else {
+    if (spec.felony) sp.profile.felonies++;
+    addHeat(world, sp, spec.heat, sp.ped.x, sp.ped.y);
+    logDispatch(world, call.type, sp.ped.x, sp.ped.y, sp, sp.wanted, 'witness');
+    world.notify(sp, `${spec.label}: a witness called you in, and the police know your description!`, 'bad');
+  }
   if (caller) { caller.profile.samaritan += 2; world.notify(caller, 'The police found the suspect you reported. +2 Samaritan', 'good'); caller.meDirty = true; }
   store.touch();
+}
+
+// ---- small crimes (task #405; the owner: "one punch with witnesses shouldn't bring a cop") ---------------------------
+// What passers-by see of a small crime (CRIMES minor) builds a hidden suspicion, not heat: each counts 1, fading by one
+// every SUSPICION_FADE_S once SUSPICION_HOLD_S go by without another, and SUSPICION_STAR of them make a star - one that
+// brings an officer for a word (soft; stops.js). An officer who sees one: the star at once. On that star already, the
+// next star is 2 - the usual chase. Wanted the usual way already, a small crime is heat like any other.
+const usual = (p) => p.wanted > 0 && !soft(p);
+export function suspicionOf(world, p) {
+  const s = p.suspicion || 0, quiet = world.time - (p.suspicionAt ?? world.time) - SUSPICION_HOLD_S;
+  return quiet > 0 ? Math.max(0, s - quiet / SUSPICION_FADE_S) : s;
+}
+function smallCrime(world, p, type, x, y, w) {
+  const now = world.time;
+  if (!w.cop) {
+    p.suspicion = suspicionOf(world, p) + 1; p.suspicionAt = now;
+    if (p.suspicion < SUSPICION_STAR - 1e-6) {
+      const close = p.suspicion >= SUSPICION_STAR - 1;   // (one more and someone calls: always said)
+      if (close || now - (p.suspicionMsgAt ?? -99) > 6) { p.suspicionMsgAt = now; world.notify(p, `${CRIMES[type].label} - people saw that${close ? ', and they\'re getting their phones out' : ''}.`, 'warn'); }
+      p.meDirty = true;
+      return false;
+    }
+  }
+  star(world, p, type, x, y, w.cop ? 'officer' : w.cam ? 'camera' : 'witness', w.copId);
+  return true;
+}
+// The star small crimes make: 1, the kind that brings an officer for a word (by: an NPC officer who saw it - theirs to deal
+// with, stops.js); on that star already, 2 stars and the usual kind
+export { star as smallStar };   // (dev.js: the debug menu's 1 star)
+function star(world, p, type, x, y, via, by = 0) {
+  const label = CRIMES[type].label;
+  p.suspicion = 0;
+  if (soft(p)) {
+    addHeat(world, p, Math.max(0, STAR_HEAT[2] + 6 - p.heat), x, y);
+    logDispatch(world, type, x, y, p, p.wanted, via);
+    world.notify(p, `${label} again${via === 'officer' ? ', in front of the police' : ''} - now they're coming for you!`, 'bad');
+    return;
+  }
+  addHeat(world, p, Math.max(0, STAR_HEAT[1] + 6 - p.heat), x, y);
+  if (p.wanted !== 1) return;   // (a disguise blown: the old record's stars, the usual kind)
+  p.soft = true; p.softSeq = (p.softSeq || 0) + 1;
+  p.stopAt = { x, y, by };
+  logDispatch(world, type, x, y, p, 1, via);
+  world.notify(p, via === 'officer' ? `${label} - an officer saw that and wants a word with you.`
+    : `${label} - ${via === 'camera' ? 'a camera caught that' : 'someone called the police'}. An officer's coming for a word.`, 'bad');
 }
 
 // Riders in the same train car see each other whatever the street around them is doing.
@@ -303,6 +362,7 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
     p.meDirty = true;
     return;
   }
+  if (spec.minor && !usual(p)) return smallCrime(world, p, type, x, y, w);   // (a small crime: it adds up - task #405)
   if (spec.felony) p.profile.felonies++; // only crimes someone saw go on your record
   addHeat(world, p, spec.heat, x, y);
   logDispatch(world, type, x, y, p, p.wanted, w.cam ? 'camera' : w.cop ? 'officer' : 'witness');
@@ -313,6 +373,7 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
 export function addHeat(world, p, amount, x, y) {
   const now = world.time;
   const prof = p.profile;
+  p.soft = false;   // (heat from anything but small crimes: the usual chase - star() makes a small crime's star soft again)
   if (p.disguised && prof.peakWanted > 0) {
     // GDD: a minor infraction in disguise spikes heat straight back to the cached peak
     p.heat = Math.max(p.heat, STAR_HEAT[prof.peakWanted]);
@@ -337,7 +398,7 @@ export function addHeat(world, p, amount, x, y) {
 }
 
 export function clearWanted(world, p) {
-  p.heat = 0; p.wanted = 0; p.flareUntil = 0; p.searchR = 0; p.cityBounty = 0;
+  p.heat = 0; p.wanted = 0; p.flareUntil = 0; p.searchR = 0; p.cityBounty = 0; p.soft = false; p.suspicion = 0;
   bounties.sync(world, p);
   p.faction = p.badge ? FACTION.ENFORCER : FACTION.CITIZEN;
   p.meDirty = true;
@@ -356,7 +417,9 @@ export function onDamage(world, attacker, victim, amount, cause) {
   const last = attacker.recentAssault.get(victim.id) || -99;
   if (now - last < 5) return;
   attacker.recentAssault.set(victim.id, now);
-  crime(world, attacker, isCop(victim) ? 'copAssault' : 'assault', victim, victim.x, victim.y, { quiet: !!attacker.quietWeapon });
+  // bare fists (a punch, a shove) are a small crime; a weapon, a gun or an officer is as ever
+  const wpn = WEAPONS[attacker.weapon], fist = cause === 'melee' && (!wpn || wpn.id === 'fists');
+  crime(world, attacker, isCop(victim) ? 'copAssault' : fist ? 'punch' : 'assault', victim, victim.x, victim.y, { quiet: !!attacker.quietWeapon });
 }
 
 export function onKill(world, attacker, victim, cause) {
@@ -427,7 +490,10 @@ export function update(world, dt) {
       }
       if (seen) { p.seenAt = now; p.lastSeenX = ped.x; p.lastSeenY = ped.y; p.searchR = 60; }
       const unseen = now - p.seenAt;
-      if (unseen > 3) {
+      // a star from small crimes: it holds while an officer's on the way for a word or looking round for you, and once
+      // they're done with you (let you go, gave up) it fades, seen or not (stops.js)
+      const done = soft(p) && !p.stop && p.stopDone === p.softSeq;
+      if ((unseen > 3 || done) && !p.stop) {
         // out in the wilds the trail goes cold faster: the search spreads wider and heat cools quicker
         const wild = sight < 1;
         p.searchR = Math.min(wild ? 1500 : 1100, p.searchR + (wild ? 42 : 28) * dt);
@@ -437,7 +503,7 @@ export function update(world, dt) {
         if (stars < p.wanted) {
           p.wanted = stars;
           p.meDirty = true;
-          if (stars === 0) { clearWanted(world, p); world.notify(p, 'You lost the cops. Wanted level cleared.', 'good'); }
+          if (stars === 0) { clearWanted(world, p); world.notify(p, done ? 'The police let it go. Wanted level cleared.' : 'You lost the cops. Wanted level cleared.', 'good'); }
         }
       }
       // contraband in view of police
@@ -476,9 +542,9 @@ export function radarFor(world, p) {
   const out = [];
   const now = world.time;
   if (p.badge && p.ped) {
-    // NPC muggers on the run, only while an officer (you) can actually see them
+    // NPC muggers on the run (and whoever started a street fight), only while an officer (you) can actually see them
     for (const e of world.query(p.ped.x, p.ped.y, 900, K.PED)) {
-      if (!e.npc || e.dead || !e.npc.flagged || e.npc.role !== 'mugger') continue;
+      if (!e.npc || e.dead || !((e.npc.flagged && e.npc.role === 'mugger') || brawling(world, e))) continue;
       if (world.map.los(p.ped.x, p.ped.y, e.x, e.y)) out.push({ k: 'wanted', x: Math.round(e.x), y: Math.round(e.y), s: 1 });
     }
     for (const q of world.players.values()) {
@@ -579,6 +645,7 @@ export function arrest(world, cop, target) {
     const t = target.player;
     if (t.custody) return;
     if (t.wanted <= 0) { questioned(world, cop, target); return; }
+    t.soft = false;   // (cuffed: custody.js has them, and the police treat it as they always have)
     const stars = Math.max(1, t.wanted);
     if (cop && cop.player) {
       const reward = ARREST_REWARD_PER_STAR * stars;

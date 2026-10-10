@@ -61,7 +61,7 @@ test('a street fight: two passers-by come to blows, a crowd watches; step in and
 test('left alone, a street fight ends with one of them on the ground - nobody is killed', () => {
   const { w, p } = setup();
   teleport(w, p.ped, p.ped.x, p.ped.y);
-  assert.ok(happenings.startNow(w, 'fight', p));
+  assert.ok(happenings.startNow(w, 'fight', p, { cops: false }));   // (left alone: nobody calls the police either - test/brawls.test.js)
   const e = ev(w, 'fight'), a = w.get(e.a), b = w.get(e.b);
   for (let i = 0; i < 50 && ev(w, 'fight'); i++) run(w, 1);
   assert.ok(!ev(w, 'fight'), 'it ended');

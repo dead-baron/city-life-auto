@@ -286,6 +286,23 @@ export const REPORT_COOLDOWN_S = 90;     // one call per player this often
 export const SAW_NOTE_S = 600;           // "you saw a crime" pops up at most this often (each one is still on the phone to call in)
 export const REPORT_SEARCH_S = 45;       // the unit looks round the caller this long
 export const REPORT_SPOT_PX = 360;       // ...and knows the suspect when it has them in sight this close
+// Small crimes seen add up (law.js): this many is a star (one an officer sees: at once); each fades after a quiet while
+export const SUSPICION_STAR = 4;
+export const SUSPICION_HOLD_S = 30;
+export const SUSPICION_FADE_S = 40;
+// That star: an officer for a word (stops.js). A word ends [warn, fine, arrest]; ran first: STOP_RAN of the warning
+export const COP_TEMPER = { easy: 0.6, book: 0.3, hot: 0.1 };
+export const STOP_OUTCOME = { easy: [0.85, 0.13, 0.02], book: [0.3, 0.6, 0.1] };
+export const STOP_RAN = 0.4;
+export const STOP_FINE = 100;
+export const STOP_CHASE = { easy: 0.3, book: 0.85 };
+export const STOP_ESCALATE_S = 12;       // out of reach this long: 2 stars
+export const STOP_LOOK_S = 30;
+// Street fights: the starter (or both) fair game; the police called; one on foot runs down a crook (police.js)
+export const FIGHT_MUTUAL = 0.35;
+export const BRAWL_AFTER_S = 20;
+export const FIGHT_POLICE = 0.45;
+export const PATROL_PURSUE = 0.3;
 
 // Bounties (server/systems/bounties.js): a revenge measure. The same player kills you again and again, and you can put a
 // price on their head - your own money, held in escrow, paid only to a hunter who took the contract and kills, arrests or

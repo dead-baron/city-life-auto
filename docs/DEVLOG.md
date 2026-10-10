@@ -5278,3 +5278,43 @@ The owner, after hearing the re-mastered round 2: "I don't think the music is ri
   - hospital and home music (#404);
   - the menus' music (#372);
   - Ride of the Valkyries (the owner's MIDI is kept outside the repo).
+
+## 2026-10-10 · Small crimes add up to a star, and at 1 star an officer comes for a word (task #405)
+The owner: "One punch with witnesses shouldn't bring a cop; it should take a fair number of small crimes before 1 star, unless done in front of an officer. At 1 star police pull up casually, investigate where it happened, walk up and talk; stand still for a warning or talk to them; run and they may or may not chase; outrun them too long and it becomes 2 stars (then aggressive). Tackling and hard arrests start at 2 stars; some officers try to arrest right away - variety by officer personality."
+- **Small crimes add up** (`server/systems/law.js` `smallCrime`). Bare-fisted punches and shoves, lifting a bike, reckless ramming and felling a tree in town are now minor (`CRIMES` `minor`). What passers-by see of them builds a hidden suspicion, not heat. Each counts 1; after 30 s without another it fades by one every 40 s (`SUSPICION_HOLD_S`, `SUSPICION_FADE_S`). Four make a star (`SUSPICION_STAR`). You're told when people saw something, and warned when one more would get them calling.
+  - An officer who sees one: the star at once.
+  - On that star already, another small crime is 2 stars, the usual chase.
+  - Serious crimes are heat as before.
+- **At 1 star, an officer comes for a word** (new: `server/systems/stops.js`).
+  - **Who comes.** The officer who saw it, or one walking a beat close by; otherwise a police car is sent (`police.js` `sendStopCar`). It comes with no siren, at an easy pace, to the kerb nearest where it happened.
+  - **The search.** The officer gets out, walks over and looks round. Once they see you, they walk up and call out.
+  - **Stand still or talk** (the action button: "Talk to the officer"): a word, then by their temper a warning (the star cleared), a fine ($100, cash then the bank) or now and then the cuffs, where you stand with no tackle. Having run from them first makes a warning less likely.
+  - **Walk off, run or drive away:** they call out, then come after you or let you go, by temper. Out of their reach for 12 s while they're after you and it's 2 stars, the usual chase. Stop and stand, and it's the word after all.
+  - **Tempers** (`COP_TEMPER`, the same for the same officer, from their id): most laid back (mostly a warning), some by the book (mostly a fine), a few hotheads who go for the arrest at once even at 1 star (a tackle; you can fight back).
+  - **Edge cases.** Hit the officer and it's 2 stars at once. Nobody found round the scene in 30 s and the officer leaves; the star then fades. A small crime a player calls in brings a car that wants a word, not a chase.
+- **Their lines** are speech bubbles (the `say` event); the prompt and the toasts tell you what's happening.
+- **Debug menu:** "★ 1 star (a word)" puts you on that kind of star.
+- **Tests:** `test/stops.test.js` (11):
+  - a seen punch is no star, several in a short while are, and the count fades;
+  - an officer who sees one: a star at once, and they come over;
+  - the car's easy approach, the walk up, the word and the warning;
+  - looking round a scene with nobody there, then leaving;
+  - each temper's verdicts; running: no tackle at 1 star, 2 stars when out of reach;
+  - a hothead's tackle; hitting the officer; the debug star; a called-in small crime.
+
+## 2026-10-10 · Street fights: whoever started it is fair game, and the police break it up with tackles (task #395)
+The owner: "In NPC street fights, whoever started it (or both if equal) count as criminals; attacking them isn't a crime for you; police sometimes come and break it up - tackling, not shooting. Also patrolling police rarely run and tackle NPC criminals (a rare detail)."
+- **Who started it** (`server/systems/happenings.js`): one of the two, or both about a third of the time (`FIGHT_MUTUAL`). The players nearby are told which ("the one in the red top started it").
+  - Whoever started it is a criminal while it lasts and 20 s after (`BRAWL_AFTER_S`; `law.js` `brawling`): hitting them is no crime. Hitting the other one is, and killing either still is.
+  - A passer-by who lays into someone who never hit them started it; hitting back is no crime of theirs.
+- **The police break it up.** Somebody calls it in about half the time (`FIGHT_POLICE`; it's on the dispatch log). A few seconds later a squad car comes, sirens on (`police.js` `callFight`). The crew run in on foot:
+  - the one who didn't start it backs off;
+  - whoever did makes a run for it, and the officers run them down with a tackle, never a gun or a taser, and take them in.
+- **Now and then an officer on foot runs down a crook** they see: a purse snatcher on the run, or whoever started a fight (`PATROL_PURSUE`, `police.js` `pursue`). They tackle them and take them in; most let it go. An officer whose unit is done here does it too, and the car waits for them.
+- **Debug menu:** "👮 A fight the police break up".
+- **Tests:** `test/brawls.test.js` (5):
+  - the starter is fair game (the other isn't, and killing still is a crime);
+  - the passer-by who started it;
+  - the police breaking a fight up with tackles and taking the starter in;
+  - an officer on foot running down a purse snatcher (the purse dropped);
+  - an officer whose unit is done running one down, the car waiting.

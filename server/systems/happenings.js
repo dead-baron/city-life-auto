@@ -2,7 +2,10 @@
 // shootouts, robberies, lost pets): every few minutes (HAPPEN_EVERY_S) something happens near someone out on foot in
 // town - never the same kind twice running:
 //   - a street fight: two passers-by come to blows; a crowd stops to watch and film it (npc.js spectacle). Break it
-//     up (ACT near them) and they back off; otherwise it ends when one of them goes down.
+//     up (ACT near them) and they back off; otherwise it ends when one of them goes down. Whoever started it (or both,
+//     FIGHT_MUTUAL of the time - the players near are told which) is a criminal while it lasts and BRAWL_AFTER_S after
+//     (task #395): hitting them is no crime, killing them still is. Now and then (FIGHT_POLICE) somebody calls the
+//     police, who come and break it up with tackles (police.js callFight).
 //   - someone collapses on the pavement: help them up (ACT beside them) - or after a minute they come round and limp
 //     off by themselves.
 //   - a dropped wallet: someone walking along drops it and only notices a little way on - they stand there patting
@@ -13,12 +16,15 @@ import { K, T } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import {
   HAPPEN_EVERY_S, FIGHT_BREAKUP_SAMARITAN, FAINT_HELP_REWARD, FAINT_HELP_SAMARITAN, WALLET_TIP, WALLET_SAMARITAN,
+  FIGHT_MUTUAL, BRAWL_AFTER_S, FIGHT_POLICE,
 } from '../../shared/rules.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import * as npc from './npc.js';
 import * as events from './events.js';
 import * as wildlife from './wildlife.js';
+import * as law from './law.js';
+import * as police from './police.js';
 
 let rng = mulberry32(7321);
 export function setRng(r) { rng = r; }
@@ -59,7 +65,7 @@ function newcomer(world, x, y) {
 }
 const someone = (world, x, y, not = null) => passerBy(world, x, y, NEAR[0], NEAR[1], not) || newcomer(world, x, y);
 
-function start(world, kind, p) {
+function start(world, kind, p, opts = {}) {
   const at = p.ped;
   if (kind === 'fight') {
     const a = someone(world, at.x, at.y);
@@ -68,14 +74,19 @@ function start(world, kind, p) {
     let b = passerBy(world, a.x, a.y, 0, 160, a);
     if (!b) { const ang = rng() * Math.PI * 2; b = npc.spawnNpc(world, 'casual', a.x + Math.cos(ang) * 40, a.y + Math.sin(ang) * 40, 'civ'); }
     if (!b) return false;
-    const ev = events.add(world, { kind: 'fight', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, until: world.time + FIGHT_S + 10, a: a.id, b: b.id, text: 'Street fight' });
+    // who started it: a - or both of them, as bad as each other (task #395)
+    const by = (opts.both ?? rng() < FIGHT_MUTUAL) ? [a, b] : [a];
+    const ev = events.add(world, { kind: 'fight', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, until: world.time + FIGHT_S + 10, a: a.id, b: b.id, by: by.map((q) => q.id), text: 'Street fight' });
     for (const [q, o] of [[a, b], [b, a]]) {
       q.npc.happening = ev.id; q.npc.keep = true;
       q.weapon = 'fists';
       npc.startFight(world, q, o, FIGHT_S);
     }
+    for (const q of by) npc.markBrawl(world, q, ev.until + BRAWL_AFTER_S);   // (fair game while it lasts: finish cuts it to a little after)
     npc.spectacle(world, ev.x, ev.y, { r: 420, near: 90, chance: 0.6, secs: 12 });   // (a crowd stops to watch, and film)
-    events.tellNear(world, ev.x, ev.y, 'A fight\'s broken out on the street - break it up?', 'info');
+    events.tellNear(world, ev.x, ev.y, by.length > 1 ? 'A fight\'s broken out on the street - both of them asked for it. Break it up?'
+      : `A fight's broken out on the street - the one in the ${law.colourName(a.app && a.app.tc)} top started it. Break it up?`, 'info');
+    if (opts.cops ?? rng() < FIGHT_POLICE) police.callFight(world, ev.by, 5 + rng() * 6);   // (somebody calls the police)
     return true;
   }
   if (kind === 'faint') {
@@ -110,6 +121,7 @@ function finish(world, ev, how) {
     const q = id && world.get(id);
     if (!q || !q.npc) continue;
     q.npc.happening = 0; q.npc.keep = false; q.npc.lostWallet = 0;
+    if (ev.by && ev.by.includes(q.id)) q.npc.brawl = Math.min(q.npc.brawl || 0, world.time + BRAWL_AFTER_S);   // (whoever started it: a criminal a little while yet)
   }
   void how;
 }
@@ -226,6 +238,7 @@ export function update(world) {
   for (const k of kinds) if (start(world, k, p)) { world.lastHappening = k; break; }
 }
 
-// (dev and tests: start one now, near this player)
-export function startNow(world, kind, p) { const ok = start(world, kind, p); if (ok) world.lastHappening = kind; return ok; }
+// (dev and tests: start one now, near this player; a fight's opts: both - both started it, cops - the police are called
+// (true) or not (false))
+export function startNow(world, kind, p, opts = {}) { const ok = start(world, kind, p, opts); if (ok) world.lastHappening = kind; return ok; }
 events.setWalletTarget((world, p) => walletTarget(world, p));

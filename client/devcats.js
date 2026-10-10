@@ -24,7 +24,7 @@ export const DEV_SECTIONS = [
     ['🗡 Fence (katanas)', 'near', { k: 'fence' }],
   ] },
   { id: 'law', title: '🚨 Wanted & police', items: [
-    ['★★ 2 stars', 'wanted', { n: 2 }], ['★★★★ 4 stars', 'wanted', { n: 4 }], ['🧽 Clear wanted', 'clean'],
+    ['★ 1 star (a word)', 'wanted', { soft: 1 }], ['★★ 2 stars', 'wanted', { n: 2 }], ['★★★★ 4 stars', 'wanted', { n: 4 }], ['🧽 Clear wanted', 'clean'],
     ['👮 Join the police', 'cop'], ['⬆ Promote police rank', 'promote'], ['🏛 Police station', 'near', { k: 'police' }],
     ['⚖ Courthouse', 'near', { k: 'courthouse' }], ['💥 Gang vs police shootout', 'shootout'],
     ['💀 A test bounty on me (the golden skull)', 'bounty'], ['🎯 Licensed bounty hunter', 'hunter'], ['💀 Let me put a bounty on the nearest player', 'revenge'],
@@ -59,7 +59,7 @@ export const DEV_SECTIONS = [
     ['🏪 Rob a store', 'near', { k: 'convenience' }], ['🏦 Rob a bank', 'near', { k: 'bank' }], ['🏧 ATM', 'near', { k: 'atm' }],
     ['🔫 Gun shop', 'near', { k: 'gunshop' }], ['💍 Pawn shop', 'near', { k: 'pawn' }], ['🕶 Fence', 'near', { k: 'fence' }], ['💰 +$1,000 hot money (stolen here)', 'hot'],
     ['🏴 Gang HQ', 'near', { k: 'gang' }], ['🏝 Smuggler\'s Den', 'near', { k: 'smuggler' }],
-    ['🎁 Contraband drop', 'drop', { n: 4 }], ['👜 Snatch-and-grab nearby', 'snatch'], ['👊 A street fight nearby', 'happen', { k: 'fight' }], ['🚑 Someone collapses nearby', 'happen', { k: 'faint' }], ['👛 Someone drops a wallet nearby', 'happen', { k: 'wallet' }],
+    ['🎁 Contraband drop', 'drop', { n: 4 }], ['👜 Snatch-and-grab nearby', 'snatch'], ['👊 A street fight nearby', 'happen', { k: 'fight' }], ['👮 A fight the police break up', 'happen', { k: 'fight', cops: 1 }], ['🚑 Someone collapses nearby', 'happen', { k: 'faint' }], ['👛 Someone drops a wallet nearby', 'happen', { k: 'wallet' }],
   ] },
   { id: 'fun', title: '🎉 Events & sport', items: [
     ['🐶 Lost pet nearby', 'pet'], ['🏁 Water race start (craft waiting)', 'near', { k: 'race' }], ['🏐 Pitch or court', 'near', { k: 'venue' }],

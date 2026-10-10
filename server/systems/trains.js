@@ -470,7 +470,7 @@ function arrived(world, t) {
   // police come aboard for a wanted passenger
   for (const id of t.riders) {
     const q = world.get(id);
-    if (!q || !q.player || q.dead || q.player.wanted <= 0) continue;
+    if (!q || !q.player || q.dead || q.player.wanted <= 0 || law.soft(q.player)) continue;   // (a star from small crimes: nobody boards for that - stops.js)
     let cops = 0;
     for (const cid of t.riders) { const c = world.get(cid); if (c && c.npc && c.npc.role === 'cop' && !c.dead) cops++; }
     const want = Math.min(4, 1 + q.player.wanted) - cops;
