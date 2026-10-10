@@ -8,7 +8,7 @@ import { CHUNK_TILES } from '../shared/constants.js';
 import {
   REGION_TILES, REGION_CHUNKS, REGIONS_X, REGIONS_Y, REGION_COUNT, FRAME_W, FRAME_H, FRAME_CHUNKS_X, FRAME_CHUNKS_Y,
   inFrame, regionIndex, regionXY, regionKey, regionAt, regionBounds, localIndex, chunkRegion, regionsInRect, regionsAround,
-  regionSeed, PLACEMENTS, placedRect, placedRegions, toFrame, fromFrame, cutRegion,
+  regionSeed, PLACEMENTS, placedRect, placedRegions, toFrame, fromFrame, cutRegion, placementsIn, placementsAround,
 } from '../shared/world3.js';
 
 test('the v3 frame: 5040 x 4032 tiles, 10 x 8 regions of 504, each a whole number of net chunks', () => {
@@ -119,6 +119,17 @@ test('the placements: every island\'s v3 rectangle inside the frame; the offset 
   // a keep mask leaves what it rejects as the fill
   const g = cutRegion(layer, W, H, M, placedRegions(M)[3], 9, (i) => (i & 1) === 0, Uint32Array);
   assert.ok(g instanceof Uint32Array && g.includes(9));
+});
+
+test('what has to be built for a region, and for the window round a tile', () => {
+  // every placed piece is listed by each region it touches, and only by those
+  for (let ri = 0; ri < REGION_COUNT; ri++) for (const k of placementsIn(ri)) assert.ok(placedRegions(PLACEMENTS[k]).includes(ri), `${k} in ${regionKey(ri)}`);
+  for (const [k, p] of Object.entries(PLACEMENTS)) for (const ri of placedRegions(p)) assert.ok(placementsIn(ri).includes(k));
+  assert.deepEqual(placementsIn(regionIndex(9, 0)), []);   // the far north-east corner: new land only
+  // the window round downtown needs five of today's pieces built (docs/WORLD-V3.md 4.6)
+  const [x0, y0, x1, y1] = placedRect(PLACEMENTS.metro);
+  assert.deepEqual(placementsAround((x0 + x1) >> 1, (y0 + y1) >> 1), ['metro', 'westport', 'airport', 'cedar', 'northshore']);
+  assert.deepEqual(placementsAround(-1, -1), []);
 });
 
 // --- the spike (heavy: three world builds in a child process; `flock /tmp/cla-heavy.lock node --test test/world3.test.js`)

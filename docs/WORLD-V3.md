@@ -799,7 +799,8 @@ their chunks again once.
   region); `regionIndex`, `regionXY`, `regionKey` ('r3-5'), `regionAt(tx, ty)`, `regionBounds`, `localIndex` (a tile's
   index in its region's own grids, as `ty * MAP_W + tx` is today), `chunkRegion`, `regionsInRect`, `regionsAround` (the
   3 x 3 window); `regionSeed(worldSeed, region)` (integer mixing only, the same in every engine, all 80 distinct);
-  `PLACEMENTS` (part 2's offsets for the thirteen pieces), `placedRect`, `placedRegions`, `toFrame` / `fromFrame`; and
+  `PLACEMENTS` (part 2's offsets for the thirteen pieces), `placedRect`, `placedRegions`, `toFrame` / `fromFrame`,
+  `placementsIn(region)` and `placementsAround(tx, ty)` (what has to be built for a region or the window); and
   `cutRegion` - one region's grid of a per-tile layer, cut from a map built in today's frame and placed by an offset.
 - **`generateCity(seed, opts)`**: `opts` is the spike's only - `opts.land(land)` masks the land before anything else
   reads it, `opts.special(sp, home, m)` says whether a planned business is this build's, `opts.lines(lines, m)` may
@@ -889,6 +890,12 @@ island (`terrain`'s land decoding, labelling and three distance fields over 1.57
 region's byte layer 254 KB. One thing for the layout: Metro City is exactly 504 tiles wide (542..1045), so with its x
 offset on a region column (2016 or 2520 instead of 2133) it would sit in one column of regions instead of two (it is
 647 tall, so two rows either way). Where islands fit, aligning them to region columns halves the regions each touches.
+
+**What a window needs built.** The 3 x 3 window round downtown touches five of the placed pieces (Metro City, Westport,
+the airport island, Cedar Isle, Northshore: `placementsAround`); 53 of the 80 regions hold none of today's pieces (new
+land and sea only). Built whole the way the spike builds one, five pieces would take some 15-20 s on this machine
+against today's 5 s for the whole world - so island builds have to get cheaper (step 2 below), be kept (step 5), and a
+region should only need the part of an island inside it and a margin.
 
 **Next steps, in order**
 1. **Island builds** (stage 1, no change to the world): `generateCity(seed, { island })` naming a piece of part 2's

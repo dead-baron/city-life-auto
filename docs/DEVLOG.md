@@ -5824,6 +5824,8 @@ work needed whatever the final layout is - stage 1's first spike, written up in 
     not, and the seam with Dry Creek. Ids, names and the ATMs are numbered and spaced world-wide, the order-dependent
     passes share one random stream, the grids are `MAP_W x MAP_H`, the coordinates are today's, and a build leaves
     module state behind.
+  - The window round downtown needs five of today's pieces built, some 15-20 s if each is built the spike's way, so
+    island builds must get cheaper and be kept.
   - The next steps are listed in order: island builds, grids sized to the island, island-local ids and random streams
     (one `WORLD_VERSION` bump), the skeleton, then the client's worker and cache and the server.
 - **The art hash changes** (`shared/map.js` is part of the chunk bake's code), so browsers bake their chunks again once.
@@ -5831,10 +5833,11 @@ work needed whatever the final layout is - stage 1's first spike, written up in 
 Files: `shared/world3.js` (new), `shared/map.js` (the `opts` parameter), `tools/world3-spike.mjs` (new),
 `docs/WORLD-V3.md` (4.6).
 - **Tests:**
-  - `test/world3.test.js` (7 new). The frame's sizes; region index, bounds and `regionAt` round trips; every chunk in one
+  - `test/world3.test.js` (8 new). The frame's sizes; region index, bounds and `regionAt` round trips; every chunk in one
     region; rectangles and the window clipped to the frame; region seeds distinct, pinned and well mixed; every
-    placement inside the frame, and `cutRegion` putting each value at its tile plus the offset.
-  - Two of the seven run the spike. Today's world is still the stamped one, two spike builds are identical, and Metro
+    placement inside the frame, and `cutRegion` putting each value at its tile plus the offset; what a region and the
+    window round downtown need built (five of the pieces).
+  - Two of the eight run the spike. Today's world is still the stamped one, two spike builds are identical, and Metro
     City lands in its four regions with at least the measured share the same as today's. With Dry Creek joined on (and
     the other islands' roads left out), its roads are exactly today's and its distance fields are the same.
   - `test/dmath.test.js` passes as before.

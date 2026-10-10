@@ -99,6 +99,16 @@ export function placedRect(p) {
   return [x0 + ox, y0 + oy, x1 + ox, y1 + oy];
 }
 export const placedRegions = (p) => regionsInRect(...placedRect(p));
+// The placed pieces a region holds part of - what has to be built to make it - in PLACEMENTS' order; and the same for
+// the regions round a tile (the client's window).
+export function placementsIn(ri) {
+  const [x0, y0, x1, y1] = regionBounds(ri);
+  return Object.keys(PLACEMENTS).filter((k) => { const [a, b, c, d] = placedRect(PLACEMENTS[k]); return a < x1 && c > x0 && b < y1 && d > y0; });
+}
+export function placementsAround(tx, ty, r = 1) {
+  const want = new Set(regionsAround(tx, ty, r).flatMap(placementsIn));
+  return Object.keys(PLACEMENTS).filter((k) => want.has(k));
+}
 export const toFrame = (p, tx, ty) => [tx + p.offset[0], ty + p.offset[1]];
 export const fromFrame = (p, fx, fy) => [fx - p.offset[0], fy - p.offset[1]];
 
