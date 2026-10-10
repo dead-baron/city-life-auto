@@ -196,6 +196,9 @@ export const ITEMS = {
   whiskey: { name: 'Shot of Rye',       stamina: true, buff: 'energy', sell: 0 },
   redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
   whitewine: { name: 'Willow River White', buff: 'wine', sell: 12 },
+  // The Grand Theatre's counter (shared/cinema.js): a ticket gets you a seat in a screen (server/systems/cinema.js); popcorn's eaten
+  filmTicket: { name: 'Film Ticket',     sell: 0 },
+  popcorn: { name: 'Popcorn',           food: true, heal: 8, sell: 0 },
 };
 
 // Hides and pelts come in grades (shared/fauna.js gradeOf: how cleanly it was taken, and skinned with a hunting
@@ -449,3 +452,5 @@ SHOPS.pawn.sells.push(...ORE_ITEMS);
 // the assay office at the Granite Quarry (shared/countryside.js): it buys ore best, and sells the pickaxes
 SHOPS.assay = { title: 'Granite Quarry Assay Office', buy: PICK_OFFERS(['pickStone', 'pickIron', 'pickSteel', 'pickDiamond']), sells: ORE_ITEMS.concat(['nugget', 'quartz']),
   sellPrice: Object.fromEntries(ORE_ITEMS.concat(['nugget', 'quartz']).map((id) => [id, Math.round(ITEMS[id].sell * ASSAY_PAYS)])) };
+// The Grand Theatre's ticket and popcorn counter (shared/cinema.js; the prices are CINE's there)
+SHOPS.cinema = { title: 'The Grand Theatre - tickets & popcorn', buy: [{ kind: 'item', id: 'filmTicket', price: 12, qty: 1 }, { kind: 'item', id: 'popcorn', price: 5, qty: 1 }] };
