@@ -3,6 +3,7 @@
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS, DAY_LOOP_S } from '../shared/constants.js';
 import { generateCity, cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/map.js';
+import { coverHides } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
@@ -2672,6 +2673,15 @@ function nearVeins(sp) {
   if (near(q.x + q.w / 2, q.y + q.h / 2) || (mine && near(mine.x, mine.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
 }
 
+// (the tunnels' art: its module loads once one is near - shared/tunnels.js has where they are)
+function tunnelsTop(F) {
+  const L = S.map && S.map.tunnels;
+  if (!L || !L.length || F.sub) return;
+  if (S.tunMod) { S.tunMod.drawTunnels(g, F, S.map); return; }
+  if (S.tunP || !L.some((t) => Math.abs((t.box[0] + t.box[2]) / 2 - F.sp.x) < 3000 && Math.abs((t.box[1] + t.box[3]) / 2 - F.sp.y) < 3000)) return;
+  S.tunP = import('./tunnels.js').then((mod) => { S.tunMod = mod; }).catch((e) => console.warn('[tunnels]', e)).finally(() => { S.tunP = null; });
+}
+
 function prepFrame(dt) {
   const fx = S.fx;
   const now = S.loopClock;
@@ -2808,6 +2818,7 @@ function prepFrame(dt) {
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
   for (const e of S.ents.values()) {
     if (!vis(e) || !e.d) continue;
+    if (S.map.cover && e !== meEnt && e !== myCar && coverHides(S.map, sp.x, sp.y, e.rx, e.ry)) continue;   // under a tunnel's hill you aren't under (shared/tunnels.js)
     if (e.kind === K.PED && e.parent) { const c = S.ents.get(e.parent); if (c && c.kind === K.TRAIN) { if (c.d && c.d.tr === myTrain) riders.push(e); continue; } } // riders of other trains are under the roof
     if (e.kind === K.TRAIN) cars.push(e);
     else if (e.kind === K.PED) peds.push(e);
@@ -3131,6 +3142,7 @@ function drawOverlays(F, v2) {
 
   // the ore veins at the quarry and the mine (once you're near: client/underground/view.js), the ring while you mine
   nearVeins(sp); drawVeinsTop(F); drawMineRing(F);
+  tunnelsTop(F);   // the hills over the tunnels, their portals, the inside of the one you're in (client/tunnels.js)
   // name tags + public flares + rumor marker
   drawWorldLabels(F.peds, F.vehs, now, z);
   // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
