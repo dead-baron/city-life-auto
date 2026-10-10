@@ -9,6 +9,15 @@
 //     pose: 'stand' | 'sit' | 'graze' (head down) | 'lie' (on the belly) | 'alert' (head up high) | 'stalk' (low,
 //     creeping) | 'rear' (up on the hind legs: a bear) | 'swim' (only the head and back above the water) | 'float'
 //     (a sea otter on its back) | 'climb' (a squirrel on a trunk, head up) | 'dead' (on its side, legs out)
+//     AN7, hit and hurt: 'hit' (the flinch: reared back off the forelegs, head up) | 'limp' (wounded: the walk with a
+//     foreleg held up off the ground, the head low) | 'down' (bedded down wounded: legs folded under, the head down on
+//     the ground) | 'fall' (knocked off its feet: on its side, the legs going)
+//     AN5, at the water: 'drink' (the forelegs splayed, the head right down to the water) | 'wade' (standing or walking
+//     in the shallows: the legs under the water to the knees)
+//     AN2: 'swipe' (a bear rocked back off its forefeet, a forepaw raised (phase < 0.5) and raking forward)
+//     'eatfish' (AN5: an otter sat up on the bank, a fish crosswise in its jaws)
+//     'dive' (AN5: a swimmer going under, nose first - the rump and the tail up out of the water)
+//     AN4: 'pounce' (a cat's leap: off the ground, stretched out, the forepaws reaching (phase < 0.5) or about to land)
 //     kind may carry a variant: 'deer:y' the young (smaller, a fawn's spots, no antlers), 'deer:L' the legendary
 //     pure white one (it glows faintly)
 //   renderUpright(vox, heading, { fy = 0.38, dither }) -> GBuf (anchor at the model centre on the ground)
@@ -86,8 +95,13 @@ export function animalModel(kind, o = {}) {
   if (pose0 === 'float') return floatModel(A);
   if (pose0 === 'rear' || pose0 === 'climb') return pitchUp(animalModel(kind, { ...o, pose: pose0 === 'rear' ? 'stand' : 'alert', phase: 0 }), A, pose0 === 'rear' ? 1.15 : 1.45, pose0 === 'rear');
   if (pose0 === 'dead') return onSide(animalModel(kind, { ...o, pose: 'stand', phase: 0.12 }), A);
+  if (pose0 === 'fall') return onSide(animalModel(kind, { ...o, pose: 'stand', gait: 'run', phase: o.phase || 0 }), A);   // (AN7: the legs going as it hits the ground)
+  if (pose0 === 'swipe') return flinch(animalModel(kind, { ...o, pose: 'swipeleg' }), A, 0.36);   // (AN2: the bear's swipe)
+  if (pose0 === 'hit') return flinch(animalModel(kind, { ...o, pose: 'alert', phase: 0 }), A, 0.2);              // (AN7: the flinch)
   if (pose0 === 'swim') return waterline(animalModel(kind, { ...o, pose: 'alert' }), A);
-  const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, lie = pose === 'lie', alert = pose === 'alert', stalk = pose === 'stalk';
+  if (pose0 === 'dive') return waterline(tipDown(animalModel(kind, { ...o, pose: 'stand', phase: 0 }), 0.75), A);   // (AN5: going under)
+  if (pose0 === 'wade' || pose0 === 'wadedrink') return waterline(animalModel(kind, { ...o, pose: pose0 === 'wade' ? 'stand' : 'drink', wl: A.h * 0.3 }), A, 0.3);   // (AN5: in the shallows; drinking there)
+  const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, down = pose === 'down', lie = pose === 'lie' || down, alert = pose === 'alert', stalk = pose === 'stalk', limp = pose === 'limp', swipe = pose === 'swipeleg', pounce = pose === 'pounce';
   const hk = A.len <= 30 && (!A.jl || A.len < 14) ? 1.2 : 1;            // pets get the chunky big-headed look of A1 (the wild ones true to life, but for a rabbit)
   const L = Math.ceil(A.len * 1.7 + 10 + (A.antlers ? 8 : 0) + (TAIL_ROOM[A.tail] || 0)), W = Math.ceil(A.w * 2.3 + 12 + (A.antlers >= 2 ? 22 : 0)), Hh = Math.ceil(A.h * 2.2 + 12 + (A.antlers >= 2 ? 16 : 0));
   const m = new Vox(L, W, Hh);
@@ -99,9 +113,9 @@ export function animalModel(kind, o = {}) {
   const face = A.face ? R(A.face) : A.mask ? R(A.mask) : base;
   const cy = W / 2, bodyR = A.w / 2 * (A.len <= 30 ? 1.15 : 1), legLen = A.h - bodyR * 1.1;
   const bob = run ? Math.abs(Math.sin(phase * Math.PI * 2)) * 1.5 * (A.hop || 1) : Math.abs(Math.sin(phase * Math.PI * 2)) * 0.5;   // (a rabbit's hop: up off the ground)
-  const sit = pose === 'sit', graze = pose === 'graze';
+  const eatfish = pose === 'eatfish', sit = pose === 'sit' || eatfish, drink = pose === 'drink', graze = pose === 'graze' || drink;
   const x0 = 5 + (A.tail === 'long' || A.tail === 'feather' ? 4 : 2) + (TAIL_ROOM[A.tail] || 0), x1 = x0 + A.len;          // rump .. chest
-  const bz = lie ? bodyR * 1.05 + 0.3 : (sit ? A.h * 0.7 : stalk ? (A.h - bodyR) * 0.72 : A.h - bodyR) + bob;
+  const bz = lie ? bodyR * 1.05 + 0.3 : (sit ? A.h * 0.7 : stalk ? (A.h - bodyR) * 0.72 : A.h - bodyR) + bob + (pounce ? A.h * 0.45 : 0);   // (pounce: in the air)
   void legLen;
   // coat pattern
   const coat = (x, y, z) => {
@@ -146,9 +160,13 @@ export function animalModel(kind, o = {}) {
   legs.forEach(([lx, ly, a], i) => {
     const back = i >= 2;
     if (jl) {
-      const top = bz - bodyR * 0.3, L2 = Math.max(top, (A.h - bodyR) * 0.92 - bodyR * 0.3) * (back ? 1.07 : 1.015) / 2;   // (crouched in a stalk: the legs bend)
+      const top = bz - bodyR * 0.3, L2 = Math.max(top - (pounce ? A.h * 0.45 : 0), (A.h - bodyR) * 0.92 - bodyR * 0.3) * (back ? 1.07 : 1.015) / 2;   // (crouched in a stalk: the legs bend)
       let fx = back ? -0.6 : 0.6, fz = 0;
       if (moving) { const p = (((phase + OFF[i]) % 1) + 1) % 1; if (p < D) fx = stride * (0.5 - p / D); else { const u = (p - D) / (1 - D); fx = stride * (u - 0.5); fz = Math.sin(u * Math.PI) * lift; } }
+      if (pounce) { const reach = phase < 0.5; fx = back ? -stride * (reach ? 1.0 : 0.55) : stride * (reach ? 1.05 : 0.6); fz = back ? A.h * (reach ? 0.42 : 0.3) : A.h * (reach ? 0.6 : 0.3); }   // (AN4: stretched out, then gathering to land)
+      if (swipe && i === 1) { const up = phase < 0.5; fx = stride * (up ? 0.25 : 1.15); fz = A.h * (up ? 0.62 : 0.4); }   // (AN2: the paw up, then raking forward)
+      if (drink && !back) fx = stride * (i === 0 ? 0.62 : -0.28);   // (AN5: drinking, the forelegs splayed)
+      if (limp && i === 1) { fx = stride * 0.12; fz = A.h * 0.22 + Math.sin(phase * Math.PI * 2) * 0.6; }   // (AN7: the hurt foreleg held up, dangling)
       const dx = fx, dz = fz - top, d = Math.max(0.5, Math.min(L2 * 1.995, Math.hypot(dx, dz))), th = Math.atan2(dz, dx), al = Math.acos(Math.min(1, d / (2 * L2)));
       const kx = lx + Math.cos(th + (back ? -al : al)) * L2, kz = top + Math.sin(th + (back ? -al : al)) * L2;
       const seg = (x0s, z0s, x1s, z1s, r0, r1, mt) => { const n = Math.ceil(Math.hypot(x1s - x0s, z1s - z0s) * 2) + 1; for (let k = 0; k <= n; k++) { const t = k / n, x = x0s + (x1s - x0s) * t, z = z0s + (z1s - z0s) * t, r = r0 + (r1 - r0) * t; m.box(x - r, ly - r, Math.max(0, z - 0.5), x + r, ly + r, Math.max(0, z) + 0.6, mt); } };
@@ -176,7 +194,7 @@ export function animalModel(kind, o = {}) {
   // neck and head
   const neck = A.neck || A.head * 0.9;
   const HD = A.head * hk;
-  const hx = x1 + (graze ? 2 : stalk ? neck * 0.55 : neck * 0.35), hz = graze ? HD + 1 : stalk ? bz + bodyR * 0.2 + neck * 0.3 : bz + bodyR * 0.4 + neck * (lie ? 0.55 : alert ? 0.95 : 0.75) + (sit ? 2 : 0) + (alert ? 1.5 : 0);
+  const hx = x1 + (drink ? 3.5 : graze ? 2 : stalk ? neck * 0.55 : down ? neck * 0.75 : neck * 0.35), hz = drink ? Math.max(HD * 0.55, (o.wl || 0) + HD * 0.4) : graze ? HD + 1 : down ? HD * 0.85 : stalk ? bz + bodyR * 0.2 + neck * 0.3 : bz + bodyR * 0.4 + neck * (lie ? 0.55 : alert ? 0.95 : limp ? 0.3 : 0.75) + (sit ? 2 : 0) + (alert ? 1.5 : 0);   // (down: the head stretched out on the ground; limp: hung low)
   const neckC = A.neckC ? R(A.neckC) : null;   // (an elk's dark neck and head)
   for (let s = 0; s <= 1; s += 0.08) { const x = x1 - 2 + (hx - x1 + 2) * s, z = bz + (hz - bz) * s; m.ell(x, cy, z, HD * 0.65, HD * 0.62, HD * 0.7, neckC && s > 0.15 ? neckC : coat(x, cy, z + 2)); }
   if (A.mane && !A.tusks) for (let s = 0; s <= 1; s += 0.05) { const x = x1 - 4 + (hx - x1) * s, z = bz + bodyR + (hz - bz - 2) * s; m.box(x - 1.5, cy - 1, z, x + 1, cy + 1, z + 2.5, R(A.mane)); }
@@ -188,6 +206,11 @@ export function animalModel(kind, o = {}) {
   const sx = hx + HD * 0.7, sz = hz - HD * 0.25 - (A.droop ? 1.6 : 0);
   m.ell(sx + A.snout * 0.5, cy, sz, A.snout * 0.7 + 1, HD * (A.droop ? 0.62 : 0.5), HD * (A.droop ? 0.55 : 0.42), A.muzzle ? R(A.muzzle) : A.mask ? R('#d8d4d0') : A.belly && !A.cat && !A.legend ? belly : coat(sx, cy, sz));
   m.box(sx + A.snout + 0.5, cy - 1, sz, sx + A.snout + 1.8, cy + 1, sz + 1.5, nose);
+  if (eatfish) {   // (AN5: the fish crosswise in its jaws, silver, the tail fin out to one side, a bite gone - wag: the chewing)
+    const fx = sx + A.snout * 0.55, fz = sz - HD * 0.35 - (o.wag || 0) * 0.6;
+    m.ell(fx, cy + 1, fz, 1.7, 4.8, 1.6, R('#dce6ee')); m.ell(fx, cy + 1, fz + 0.9, 1.2, 4.4, 0.7, R('#5a7a8c'));
+    m.box(fx - 1, cy + 5.4, fz - 1.8, fx + 1, cy + 6.8, fz + 1.8, R('#5a7a8c'));
+  }
   if (A.tusks) for (const s of [-1, 1]) for (let k = 0; k < 2.6; k += 0.4) m.box(sx + A.snout * 0.55 - k * 0.3, cy + s * 1.6, sz + k * 0.7 - 0.6, sx + A.snout * 0.55 - k * 0.3 + 0.9, cy + s * 1.6 + 0.9, sz + k * 0.7 + 0.3, R('#f0ead8'));   // a boar's tusks
   if (A.buck) m.box(sx + A.snout + 0.2, cy - 0.8, sz - HD * 0.45, sx + A.snout + 1.2, cy + 0.8, sz - HD * 0.1, R('#e08a2a'));   // a beaver's orange teeth
   if (A.bell) m.ell(hx - 0.5, cy, hz - HD * 0.95, 1.1, 0.9, 2.6, coat(hx, cy, hz));   // a moose's bell
@@ -283,6 +306,23 @@ function pitchUp(m, A, ang, keepLegs) {
     return null;
   });
 }
+// hit (AN7): the flinch - rocked back onto the hind feet, the forehand up off the ground, the head up (round the hind
+// feet, nose up by ang; the full length kept)
+function flinch(m, A, ang) {
+  const px = 5 + (A.tail === 'long' || A.tail === 'feather' ? 4 : 2) + (TAIL_ROOM[A.tail] || 0) + 3, c = Math.cos(ang), s = Math.sin(ang);
+  return remap(m, m.w, m.d, Math.ceil(m.h + (m.w - px) * s + 2), (X, Y, Z) => {
+    const dx = X - px, x = px + dx * c + Z * s, z = -dx * s + Z * c;
+    return x >= 0 && x < m.w && z >= 0 && z < m.h ? [x, Y, z] : null;
+  });
+}
+// diving (AN5): nose down round the chest, so the rump and the tail rise (then cut at the water)
+function tipDown(m, ang) {
+  const px = m.w * 0.62, c = Math.cos(ang), s = Math.sin(ang);
+  return remap(m, m.w, m.d, Math.ceil(m.h + px * s + 2), (X, Y, Z) => {
+    const dx = X - px, x = px + dx * c - Z * s, z = dx * s + Z * c;
+    return x >= 0 && x < m.w && z >= 0 && z < m.h ? [x, Y, z] : null;
+  });
+}
 // dead: rolled onto its side, the legs out stiff
 function onSide(m, A) {
   const cy = m.d / 2, H = Math.ceil(A.w * 1.4 + 4), D = Math.ceil(m.d / 2 + m.h + 2);
@@ -293,8 +333,8 @@ function onSide(m, A) {
   });
 }
 // swimming: only what shows above the water - the head, the top of the back - sat at the surface
-function waterline(m, A) {
-  const cut = Math.max(1, Math.round(A.h * 0.62));
+function waterline(m, A, k = 0.62) {   // (k: how deep, of the shoulder's height: wading 0.3)
+  const cut = Math.max(1, Math.round(A.h * k));
   return remap(m, m.w, m.d, Math.max(4, m.h - cut), (X, Y, Z) => [X, Y, Z + cut]);
 }
 // a sea otter on its back in the kelp: the pale head up, paws on the chest, the hind feet and tail out behind, low

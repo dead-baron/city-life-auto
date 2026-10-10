@@ -308,9 +308,9 @@ export function sitFrame(d, id, now) {
 
 // ---- the city's people (server personas.js): a persona's walk (the descriptor's gt) and prop (pp), a seat on a bench (sb)
 const STRIDES = new Set(['hunch', 'strut', 'skate', 'blade', 'push']);
-const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'leads', guitar: 'guitar', call: 'call', phone: 'phone', board: 'board', map: 'map', stretcher: 'stretcher', stretcherPt: 'stretcherPt' , easel: 'easel', cooler: 'cooler', chess: 'chess', sponge: 'sponge', crate: 'crate', rifle: 'rifle' };   // (easel, cooler, chess: people at their activities - server activities.js)   // (stretcher: the paramedics', ems.js)
+const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'leads', guitar: 'guitar', call: 'call', phone: 'phone', board: 'board', map: 'map', stretcher: 'stretcher', stretcherPt: 'stretcherPt' , easel: 'easel', cooler: 'cooler', chess: 'chess', sponge: 'sponge', crate: 'crate', rifle: 'rifle', fence: 'fence', cueup: 'cueup' };   // (easel, cooler, chess: people at their activities - server activities.js)   // (stretcher: the paramedics', ems.js)
 // people at their activities (server activities.js): sat at a chess board (on a bench's height), on a picnic blanket
-const ACT_POSES = { sit: 'sit', sitlow: 'sitlow', kneel: 'kneel' };
+const ACT_POSES = { sit: 'sit', sitlow: 'sitlow', kneel: 'kneel', cue: 'cue' };   // (cue: bent over the pool table, part 2)
 // the same look with the prop in hand (keyed apart: art2Key)
 export function withProp(A, pp) { return PROP_CARRY[pp] ? { ...A, pp, carry: PROP_CARRY[pp] } : A; }
 // the pose a persona walks or stands in, for the pose the game picked (running for their life: the plain run)

@@ -6557,3 +6557,101 @@ imports it.
   station, town and landmark on land of its biome or district (Silver Thread Falls on its creek on purpose); every
   highway and arterial on land but along its bridges; the frame's edges. `test/world3.test.js` (the skeleton's) passes
   with the fixes.
+## 2026-10-10 · People going about their lives (task #423, part 2): a pickup game, pool, the fence, the clink
+
+The owner: "populate the world with NPCs doing things - hunting, fishing, mining, farming, playing pool or games - so it
+feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-about.png`); part 1's "left for part 2".
+
+- **A pickup game at the courts** (`server/systems/activities.js` `stepPickup`): a spot on each half court of North
+  Point Courts (`shared/hoops.js` `courtHoops`), two to four people round the key, facing the rim. The ball is a real
+  ball (`K.BALL`, ballKind `pickup`, sent as the hoops ball, `t` 3 - so both renderers draw it as they draw yours): one
+  dribbles it (bouncing at his side), shoots - an arc up over the rim, in or off it (the 'hoop' event: the swish or the
+  rim's clang) - and the rebound comes down and bounces on to the next one; the shooter moves to a new spot round the key
+  each time (shooting around). Scared off, the ball lies where it fell; off in the rain like the picnics; the ball goes
+  when the group is emptied. Day 0.75, night 0.2, one game round a player.
+- **Pool at the Rusty Spur** (`poolTable`: the bar room's table where `client/art2/game/statics.js` `roadhouseRoom` draws
+  it - there's no pool mini-game and no other pool table in the world, the town bars' tables are only in their window
+  art): two take turns - the one shooting goes round the table to the shot (the long sides, the ends) and bends over
+  his cue (the descriptor's `gt` `cue`), the other waits at the end of the table, his cue stood up (`pp` `cueup`); a miss
+  passes the turn (most of the time), a watcher or two stand by. More often at night (0.9) than by day (0.5).
+- **The neighbours' fence:** the first of the two chatting has `pp` `fence`: a short run of white garden fence between
+  them, drawn with him (two posts, two rails, pointed pickets: waist high) - no world change.
+- **The miners' clink** (`client/sound/people.js`): a miner's pickaxe (the descriptor's `ch` 5, not a player's) clinks
+  on the rock (the 'pickaxe' sound) as the swing strikes - the swing's last frame, timed as art v2 draws it
+  (`host.js`: `floor(now * 6 + id) % 4`), heard within ~780 px.
+- **Art v2** (`client/art2/people.js`): the `cue` pose (bent low over the table, feet apart, the bridge hand on the felt,
+  the cue drawn back and through: 4 frames) with the cue and its blue chalked tip; `cueup` (the cue stood beside him,
+  in hand); the `fence`. `client/art2/game/peds.js`: `cue` in `ACT_POSES`, `fence` / `cueup` in `PROP_CARRY`.
+- **Debug menu:** 🏀 A pickup game at the courts, 🎱 Pool at the Rusty Spur (the dev `act` command's kinds `hoops`, `pool`).
+- **The classic view** (`client/render/actprops.js`, new, loaded with the first person at an activity - main.js
+  `drawUpright` has only the hook): every activity's prop, part 1's and these - the easel with its painting, the cooler,
+  the chess board on the table, the sponge going round and the bucket, the crate of tomatoes, the hunter's slung rifle,
+  the garden fence, the cue stood up - and the pool player's cue, drawn back and through. The poses: sat at the board,
+  on the blanket, kneeling in the rows and bent over the pool table are drawn low, as the classic view draws a kneel
+  (and sitting by a campfire). The page's code: +~150 bytes gzipped (the hook, the debug menu's two buttons) - it's at
+  737,758 of the 737,791 bytes that still round to its 720 KB.
+- **Tests:** `test/activities.test.js` (2 new, 9 in all): a pickup game on each half court, two to four round the key
+  facing the rim, the ball sent as the hoops ball, shots up over the rim (each in or off it, the 'hoop' event), the ball
+  going round them; the Rusty Spur's table found with floor round it, the turns taken (both bent over the cue at the
+  table in a minute), the waiting one's cue up, watchers; the neighbours' fence on the wire; the debug menu's 11 kinds;
+  the classic view draws every prop the server sends (and the cue), lazily. `test/art2.test.js`, `test/sound.test.js`,
+  `test/npcpeople.test.js` pass as before.
+## 2026-10-10 · The animals' missing poses (task #391, part 2): hit, wounded and down (AN7), at the water (AN5), the strut and the swipe (AN2), the cats' pounce (AN4)
+
+The owner: "improve animal art to match the wildlife concepts and give them better animations" (AN1-AN8); the last
+animals entry did the coats, shapes and gaits - these are the poses the concepts show that the game didn't draw.
+- **AN7, hit, wounded and down** (`client/art2/animals.js`, the art v2 renderer; no server change - what the client
+  already knows: the hit's 'react' event, the share of health, the down flag, the resting pose):
+  - **the flinch** (`hit`): as a hit lands (0.3 s from it) the animal rocks back onto its hind feet, the forehand up off
+    the ground and the head up (`flinch`: the model turned nose-up round the hind feet, its whole length kept);
+  - **walking wounded** (`limp`, 4 frames): under half its health it moves (the server already slows it to 0.65)
+    on three legs - the right foreleg held up, dangling, the head hung low; the cycle a little slower than a walk;
+  - **bedded down wounded** (`down`, 2 frames): resting under half its health (the server's `hurtRest`), it lies with
+    its legs folded under and its head stretched out on the ground (lying up, the head stays up);
+  - **knocked off its feet** (`fall`): the down flag (a gore, a car) now draws it on its side with the legs going (it
+    was the resting lie).
+  - The birds keep theirs (the turkey: the alert for the hit, the walk for the limp, the bird's down pose for down).
+  - `client/art2/game/actors.js` (`ANIMAL_FRAMES`: hit 1, limp 4, down 2, fall 2), `client/art2/game/host.js` `wildPose`.
+- **AN5, at the water** (the four-legged ones that don't swim for a living - not the beaver, the otters or the birds):
+  - **drinking** (`drink`, 2 frames; the server's `APOSE.drink`, drawn as grazing until now): the forelegs splayed, the
+    head reaching out right down to the water;
+  - **wading** (`wade`, 4 frames): in the shallows - water (not the deep) with land within a stride (`host.js`
+    `shallows`, from the map the client has: nothing new on the wire) - the legs under the water to the knees
+    (`waterline` at 0.3 of the shoulder height; swimming stays at 0.62: only the head and the back). Until now anything
+    in the water was drawn swimming, a moose in the shallows too;
+  - **drinking in the shallows** (`wadedrink`): the same, the muzzle at the water.
+  - **going under** (`dive`: the server's `APOSE.dive`, a beaver or an otter diving - it was drawn swimming): nose
+    first, the rump and the tail up out of the water (`tipDown`, then cut at the water).
+  - **an otter with its catch** (`eatfish`, 2 frames: chewing): on the bank, eating (`APOSE.eat`, a fish-eater: it
+    was drawn grazing), it sits up with a silver fish crosswise in its jaws, the tail fin out to one side.
+  - Swimming was already drawn (`swim`, and the sea otter's float).
+- **AN2, the turkey's strut and the bear's swipe:**
+  - **the strut** (`client/art2/birds.js` `strut`, 2 frames: puffing up and down): a tom puffed up, his fan raised in a
+    wheel behind him with its pale rim, the wings drooped to trail their tips on the ground, the head drawn back. The
+    server: a standing tom (an adult, every other one of a flock) now and then struts instead of pecking (`wildlife.js`
+    `activityPose`: `APOSE.call`, an existing code - nothing new on the wire); the client draws a turkey's call as the
+    strut;
+  - **the swipe** (`swipe`, 2 frames): a bear at you (`APOSE.attack`, close) rocks back off its forefeet, a forepaw up,
+    then raking forward (until now it reared right up); charging in, it runs.
+- **AN4, the predators:** a cougar or a bobcat stalking that stops is **crouched to spring** (`crouch`: the stalk's
+  low body, the legs still, the tail twitching - the stalk's legs used to keep walking on the spot); at you, it
+  **pounces** (`pounce`, 2 frames: off the ground stretched out, the forepaws reaching, then gathering to land - it
+  charged in the gallop). The moose in the shallows of AN4 is AN5's wading. Already drawn: the walks and runs, the
+  grizzly's rear, the black bear up a trunk (`climb`).
+- **The quail at game scale** (AN8): 19 x 19 px from the side, 12 x 16 from the front - about a rabbit's size, a
+  little over a duck's (twice life size beside a person): left as it is.
+- **Before/after sheets** `docs/art-v2/compare/AN7_hit-wounded-down.png` (deer, black bear; elk and boar after),
+  `docs/art-v2/compare/AN5_waters-edge.png` (deer, moose, black bear; elk, boar, coyote, grizzly after),
+  `docs/art-v2/compare/AN2_strut-swipe.png` (the AN2 sheet of the coats is `AN2_boar-bear-turkey.png`) and
+  `docs/art-v2/compare/AN4_moose-goats-predators.png` (the cougar, the bobcat, the moose), the concept at half size on
+  top, the game's own bake below.
+- **Left:** AN4's mountain goat leaping between rocks and the fox's mouse-pounce (no server state for either); AN5's
+  sea otters' clam and holding hands, the beaver carrying a branch.
+- **Tests:** `test/wildart.test.js` (4 new, 7 in all): every species draws the new poses; the flinch lifts the
+  forefeet (standing, they're down), the limp's right forefoot never touches the ground (walking, it does), bedded down
+  the head is lower than lying up, knocked down isn't the dead pose; drinking splays the forelegs wider than grazing,
+  wading stands taller than swimming and shorter than standing, drinking in the shallows keeps the head; the tom's fan
+  up (from the front far wider and taller than standing), the bears' swipe up off the forefeet, the paw up then forward;
+  the cats' pounce off the ground and stretched out longer than standing; a beaver or an otter going under, its tail up
+  (taller than swimming), the otter with a fish in its jaws. `test/wildlife.test.js`, `test/art2.test.js`, `test/perf.test.js` pass
+  as before.

@@ -61,3 +61,72 @@ test('a covey of quail: the cock with his black face and topknot, the plain brow
   const top = (m) => { for (let z = m.h - 1; z >= 0; z--) for (let y = 0; y < m.d; y++) for (let x = 0; x < m.w; x++) if (m.get(x, y, z)) return z; return -1; };
   assert.ok(top(fl[0]) - top(fl[2]) >= 3, 'the flush: the wings up over the back, then down');
 });
+
+test('hit, wounded and down (AN7): the flinch, the limp on a foreleg held up, bedded down wounded, knocked off its feet', () => {
+  for (const kind of Object.keys(SPECIES)) for (const pose of ['hit', 'limp', 'down', 'fall']) {
+    for (let f = 0; f < ANIMAL_FRAMES[pose]; f++) assert.ok(pixels(animalSprite(`pet:${kind}`, pose, 6, f)) > 12, `${kind} ${pose} ${f} draws`);
+  }
+  const front = (m, z1) => { let n = 0; for (let z = 0; z <= z1; z++) for (let y = 0; y < m.d; y++) for (let x = Math.ceil(m.w * 0.5); x < m.w; x++) if (m.get(x, y, z)) n++; return n; };
+  const frontRight = (m) => { let n = 0; for (let y = Math.ceil(m.d / 2) + 1; y < m.d; y++) for (let x = Math.ceil(m.w * 0.5); x < m.w; x++) if (m.get(x, y, 0)) n++; return n; };
+  const top = (m) => { for (let z = m.h - 1; z >= 0; z--) for (let y = 0; y < m.d; y++) for (let x = Math.ceil(m.w * 0.6); x < m.w; x++) if (m.get(x, y, z)) return z; return -1; };
+  for (const kind of ['deer', 'elk', 'boar', 'blackbear', 'coyote']) {
+    // the flinch: rocked back, the forelegs up off the ground
+    assert.equal(front(animalModel(kind, { pose: 'hit' }), 0), 0, `${kind}: the flinch lifts the forehand`);
+    assert.ok(front(animalModel(kind, { pose: 'alert' }), 0) > 0, `${kind}: standing, the forefeet on the ground`);
+    // the limp: the right foreleg never comes down; walking, it does
+    const limp = [0, 1, 2, 3].map((f) => frontRight(animalModel(kind, { pose: 'limp', phase: f / 4 })));
+    const walk = [0, 1, 2, 3].map((f) => frontRight(animalModel(kind, { phase: f / 4 })));
+    assert.ok(limp.every((n) => n === 0) && walk.some((n) => n > 0), `${kind}: the hurt foreleg held up (${limp} / ${walk})`);
+    // bedded down wounded: lower than lying up, the head on the ground; knocked off its feet: not the dead pose
+    assert.ok(top(animalModel(kind, { pose: 'down' })) < top(animalModel(kind, { pose: 'lie' })), `${kind}: down, the head low`);
+    assert.ok(!same(animalSprite(`pet:${kind}`, 'fall', 6, 1), animalSprite(`pet:${kind}`, 'dead', 6, 0)), `${kind}: knocked down, the legs going`);
+  }
+});
+
+test('at the water (AN5): drinking with the forelegs splayed, wading in the shallows to the knees, drinking there', () => {
+  for (const kind of Object.keys(SPECIES)) for (const pose of ['drink', 'wade', 'wadedrink']) {
+    for (let f = 0; f < ANIMAL_FRAMES[pose]; f++) assert.ok(pixels(animalSprite(`pet:${kind}`, pose, 6, f)) > 12, `${kind} ${pose} ${f} draws`);
+  }
+  const span = (m) => { let lo = 1e9, hi = -1; for (let y = 0; y < m.d; y++) for (let x = Math.ceil(m.w * 0.5); x < m.w; x++) if (m.get(x, y, 0)) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return hi - lo; };
+  for (const kind of ['deer', 'elk', 'moose', 'blackbear', 'boar']) {
+    assert.ok(span(animalModel(kind, { pose: 'drink' })) > span(animalModel(kind, { pose: 'graze' })), `${kind}: drinking, the forelegs splayed`);
+    const h = (pose) => animalModel(kind, { pose }).h;
+    assert.ok(h('wade') > h('swim') && h('wade') < h('stand'), `${kind}: wading, the legs in the water (${h('swim')} < ${h('wade')} < ${h('stand')})`);
+    assert.ok(pixels(animalSprite(`pet:${kind}`, 'wadedrink', 2, 0)) > pixels(animalSprite(`pet:${kind}`, 'swim', 2, 0)) * 0.8, `${kind}: drinking in the shallows, the head at the water`);
+  }
+});
+
+test("the turkey's strut and the bear's swipe (AN2)", () => {
+  for (const kind of Object.keys(SPECIES)) for (const pose of ['strut', 'swipe']) for (let f = 0; f < ANIMAL_FRAMES[pose]; f++) assert.ok(pixels(animalSprite(`pet:${kind}`, pose, 6, f)) > 12, `${kind} ${pose} ${f} draws`);
+  // the tom: the fan raised in a wheel behind him - seen from the front, far wider and taller than standing
+  const st = animalSprite('pet:turkey', 'strut', 0, 0), sd = animalSprite('pet:turkey', 'idle', 0, 0);
+  assert.ok(st.w > sd.w * 1.35 && st.h > sd.h, `the fan up (${st.w}x${st.h} against ${sd.w}x${sd.h})`);
+  // the bear: rocked back, a forepaw up, then raking forward - the forefeet off the ground, the two frames apart
+  for (const kind of ['blackbear', 'grizzly']) {
+    const a = animalModel(kind, { pose: 'swipe', phase: 0 }), b = animalModel(kind, { pose: 'swipe', phase: 0.5 });
+    let low = 0; for (let y = 0; y < a.d; y++) for (let x = Math.ceil(a.w * 0.5); x < a.w; x++) if (a.get(x, y, 0)) low++;
+    assert.equal(low, 0, `${kind}: up off its forefeet`);
+    assert.ok(!same(animalSprite(`pet:${kind}`, 'swipe', 2, 0), animalSprite(`pet:${kind}`, 'swipe', 2, 1)), `${kind}: the paw up, then forward`);
+    void b;
+  }
+});
+
+test("the cats' pounce and crouch (AN4)", () => {
+  for (const kind of Object.keys(SPECIES)) for (const pose of ['pounce', 'crouch']) for (let f = 0; f < ANIMAL_FRAMES[pose]; f++) assert.ok(pixels(animalSprite(`pet:${kind}`, pose, 6, f)) > 12, `${kind} ${pose} ${f} draws`);
+  const ground = (m) => { let n = 0; for (let y = 0; y < m.d; y++) for (let x = 0; x < m.w; x++) if (m.get(x, y, 0)) n++; return n; };
+  const reach = (m) => { let lo = 1e9, hi = -1; for (let z = 0; z < m.h; z++) for (let y = 0; y < m.d; y++) for (let x = 0; x < m.w; x++) if (m.get(x, y, z)) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return hi - lo; };
+  for (const kind of ['cougar', 'bobcat']) {
+    const p = animalModel(kind, { pose: 'pounce', phase: 0 });
+    assert.equal(ground(p), 0, `${kind}: the pounce, off the ground`);
+    assert.ok(reach(p) > reach(animalModel(kind, { pose: 'stand' })), `${kind}: stretched out, longer than standing`);
+  }
+  // AN5: a swimmer going under, the rump and the tail up out of the water - taller than swimming
+  for (const kind of ['beaver', 'otter']) {
+    assert.ok(pixels(animalSprite(`pet:${kind}`, 'dive', 2, 0)) > 12, `${kind} dives`);
+    assert.ok(animalModel(kind, { pose: 'dive' }).h > animalModel(kind, { pose: 'swim' }).h, `${kind}: the tail up as it goes under`);
+  }
+  // AN5: an otter sat up on the bank with a fish in its jaws (the silver of the fish: in the eating pose, not sitting)
+  const silver = (m) => { let n = 0; for (let z = 0; z < m.h; z++) for (let y = 0; y < m.d; y++) for (let x = 0; x < m.w; x++) if (m.get(x, y, z)) n++; return n; };
+  assert.ok(silver(animalModel('otter', { pose: 'eatfish' })) > silver(animalModel('otter', { pose: 'sit' })), 'the otter: a fish in its jaws');
+  assert.ok(pixels(animalSprite('pet:otter', 'eatfish', 0, 1)) > 12);
+});

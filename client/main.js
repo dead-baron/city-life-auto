@@ -4103,7 +4103,7 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;
   const d8 = dir8(p.ra + ((p._look && p._look.turn) || 0));   // (spun round as they go down: pedLook's turn)
   // concept-art body (all 8 directions drawn); the procedural painter until it has loaded
-  const kneel = pose === 'kneel' || pose === 'sitlow';   // (sitting by a fire: drawn low like a kneel here)
+  const kneel = pose === 'kneel' || pose === 'sitlow' || pose === 'idle' && /^(sit|kne|cue)/.test(p.d.gt);   // (sitting by a fire: drawn low like a kneel here)
   if (kneel) { pose = 'carry'; fr = 0; } // reaching both hands down to the patient
   if (pose === 'idle' && p.d.gt === 'dance') { const k = Math.floor(now * 3.4 + p.id * 0.37) & 3; pose = k & 1 ? 'carry' : 'idle'; fr = k * 2; }   // (dancing, task #394: here the arms out on the beat)
   const body = bodySprite(p.d.app, d8, pose, fr, p.extra);
@@ -4140,6 +4140,7 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = hitK - 0.4; g.drawImage(spr, -CW / 2, -FOOT_Y); g.globalCompositeOperation = 'source-over'; }
   g.imageSmoothingEnabled = true;
   g.restore();
+  if (p.d.pp || p.d.gt) S.act ? S.act.draw(g, p, now) : S.actP ||= import('./render/actprops.js').then((m) => S.act = m);   // (activities.js)
   if (pose === 'fish') { const a = p.ra; g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(p.rx + Math.cos(a) * 20, p.ry - 14 + Math.sin(a) * 10); g.lineTo(p.rx + Math.cos(a) * 46, p.ry + Math.sin(a) * 30); g.stroke(); }
   if (f & PF.UMBRELLA) { const u = umbrellaSprite(p.id % UMBRELLA_COLORS.length); g.drawImage(u, p.rx - 20, p.ry - 62, 40, 40); }
 }

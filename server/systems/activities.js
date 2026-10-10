@@ -12,6 +12,10 @@
 //   hunter    a hunter in blaze orange, a rifle slung on his back, walking the woods' edge by a hunting camp, his dog
 //             out ahead
 //   miners    swinging pickaxes at a quarry's rock face (one at the old mine's adit): the felling swing (net.js ch 5)
+//   hoops     a pickup game at the courts (shared/hoops.js courtHoops): two to four shooting around, the ball (a K.BALL,
+//             ballKind 'pickup': drawn as the hoops ball) dribbled, shot at the rim, the rebound bounced on to the next
+//   pool      two at the Rusty Spur's pool table taking turns (round the table to the next shot, bent over the cue),
+//             the other waiting at the end of the table with his cue up; a watcher or two
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
 // player at most), and emptied when nobody's near any more. They stand (sit) and loop a pose: the descriptor's gt (the
 // client's personaPose: 'sit', 'sitlow') and prop (pp: 'easel', 'cooler', 'chess': client/art2/people.js), the anglers'
@@ -28,6 +32,7 @@ import { item } from '../../shared/look.js';
 import { wildStyle } from './wildlife.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { BUILDS } from '../entities.js';
+import { courtHoops } from '../../shared/hoops.js';
 
 let rng = mulberry32(42300);
 export function setRng(r) { rng = r; }
@@ -47,6 +52,8 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   pickers: { day: 0.8, night: 0 },
   miners: { day: 0.8, night: 0.2 },
   hunter: { day: 0.7, night: 0 },
+  hoops: { day: 0.75, night: 0.2, cap: 1 },
+  pool: { day: 0.5, night: 0.9, cap: 1 },
 };
 // a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
 const pk = (r, a) => a[Math.floor(r() * a.length) % a.length];
@@ -161,6 +168,15 @@ export function spotsOf(map) {
       break;
     }
   }
+  // a pickup game on each half court (shared/hoops.js): the spot out on the court in front of the rim, facing it
+  for (const h of courtHoops(map)) {
+    const c = h.court, mx = (c.x0 + c.x1) / 2, my = (c.y0 + c.y1) / 2, d = Math.hypot(mx - h.rim.x, my - h.rim.y) || 1;
+    const x = h.rim.x + (mx - h.rim.x) / d * 70, y = h.rim.y + (my - h.rim.y) / d * 70;
+    if (walkable(map, x, y) && clear(x, y, 60)) { list.push({ k: 'hoops', x, y, a: Math.atan2(h.rim.y - y, h.rim.x - x), rim: h.rim, court: c, wild: false }); taken.push({ x, y }); }
+  }
+  // pool at the Rusty Spur (its bar room's table: where client/art2/game/statics.js roadhouseRoom draws it)
+  const pt = poolTable(map);
+  if (pt) { list.push({ k: 'pool', x: pt.cx, y: pt.cy, a: 0, table: pt, wild: false }); taken.push({ x: pt.cx, y: pt.cy }); }
   const cells = new Map();
   list.forEach((s, i) => {
     s.id = i;
@@ -171,6 +187,17 @@ export function spotsOf(map) {
   S = { list, cells };
   SPOTS.set(map, S);
   return S;
+}
+// the Rusty Spur's pool table { x0, y0, x1, y1, cx, cy } in world px, or null: the bar room's layout as roadhouseRoom
+// (client/art2/game/statics.js) draws it - one section, the floor in front of the bar, the table 30% along it
+export function poolTable(map) {
+  const R = map.roadhouse, b = R && map.buildings[R.b], wi = b && b.walkIn, u = wi && wi.units.find((q) => q.kind === 'roadhouse');
+  if (!u) return null;
+  const ox = b.tx * TILE, oy = b.ty * TILE, ux0 = (Math.max(u.x0, b.tx) - b.tx) * TILE, ux1 = (Math.min(u.x1, b.tx + b.tw - 1) - b.tx + 1) * TILE;
+  const Ya = (u.counterRow - b.ty) * TILE + 44, Yb = (wi.y1 - b.ty + 1) * TILE - 6, mid = (Ya + Yb) / 2, x0 = ux0 + 36, W = ux1 - ux0 - 72;
+  if (Yb - Ya < 60 || W < 300) return null;
+  const tx = ox + Math.round(x0 + W * 0.3), ty = oy + Math.round(mid - 22);
+  return { x0: tx, y0: ty, x1: tx + 100, y1: ty + 52, cx: tx + 50, cy: ty + 26 };
 }
 export function spotsNear(map, x, y, r) {
   const S = spotsOf(map), out = [];
@@ -207,7 +234,7 @@ function members(s) {
     const v = s.car, a = v ? v.a : s.a, side = s.side || 1, off = ((v && v.def.W) || 44) / 2 + 9, x = (v ? v.x : s.x) - Math.sin(a) * off * side, y = (v ? v.y : s.y) + Math.cos(a) * off * side;
     out.push({ x, y, a: Math.atan2((v ? v.y : s.y) - y, (v ? v.x : s.x) - x), arche: 'casual', pp: 'sponge' });
   } else if (s.k === 'chat') {      // face to face, a word over the fence
-    out.push({ x: s.x - c * 11, y: s.y - sn * 11, a: s.a, arche: rng() < 0.4 ? 'senior' : 'casual', chat: true });
+    out.push({ x: s.x - c * 11, y: s.y - sn * 11, a: s.a, arche: rng() < 0.4 ? 'senior' : 'casual', chat: true, pp: 'fence' });   // (the garden fence between them: drawn with him)
     out.push({ x: s.x + c * 11, y: s.y + sn * 11, a: s.a + Math.PI, arche: rng() < 0.4 ? 'senior' : 'casual', chat: true });
   } else if (s.k === 'miners') {    // swinging a pickaxe at the rock face (a second along the face, at a quarry)
     out.push({ x: s.x, y: s.y, a: s.a, arche: 'construction', chop: true });
@@ -217,8 +244,33 @@ function members(s) {
   } else if (s.k === 'pickers') {   // down along the rows, picking into a crate
     out.push({ x: s.x - 22, y: s.y, a: s.a, arche: 'farmer', gt: 'kneel', pp: 'crate' });
     out.push({ x: s.x + 22, y: s.y + 6, a: s.a, arche: 'farmer', gt: 'kneel' });
+  } else if (s.k === 'hoops') {     // two to four round the key, facing the rim (shooting around: hoopSpot)
+    const n = 2 + Math.floor(rng() * 3);
+    for (let i = 0; i < n; i++) { const q = hoopSpot(s, i, n); out.push({ x: q.x, y: q.y, a: q.a, arche: rng() < 0.6 ? 'athlete' : 'casual', hoop: i }); }
+  } else if (s.k === 'pool') {      // the one shooting bent over the table, the other waiting at its end, cue up; watchers
+    const T = s.table;
+    out.push({ ...poolSpot(T, 0), arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 0, gt: 'cue' });
+    out.push({ x: T.x1 + 16, y: T.cy + 8, a: Math.PI, arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 1, pp: 'cueup' });
+    const w = 1 + (rng() < 0.4 ? 1 : 0);
+    for (let i = 0; i < w; i++) { const x = T.x0 - 14 - i * 12, y = T.y1 + 10 + i * 8; out.push({ x, y, a: Math.atan2(T.cy - y, T.cx - x), arche: rng() < 0.5 ? 'hustler' : 'casual', watch: true }); }
   }
   return out;
+}
+// where the i-th of n stands round the key (shooting around: a new spot after each shot), facing the rim
+function hoopSpot(s, i, n, turn = 0) {
+  const base = Math.atan2(s.y - s.rim.y, s.x - s.rim.x), spread = n > 1 ? 1.5 : 0;
+  const a = base + (n > 1 ? (i / (n - 1) - 0.5) * spread : 0) + (turn ? (hsh(s.x, s.y, turn * 7 + i) - 0.5) * 0.8 : 0), d = 62 + ((i * 37 + turn * 23) % 70);
+  let x = s.rim.x + Math.cos(a) * d, y = s.rim.y + Math.sin(a) * d;
+  const C = s.court; x = Math.max(C.x0 + 8, Math.min(C.x1 - 8, x)); y = Math.max(C.y0 + 8, Math.min(C.y1 - 8, y));
+  return { x, y, a: Math.atan2(s.rim.y - y, s.rim.x - x) };
+}
+// a shooter's place at the pool table (k: which shot), facing across it: the long sides and the ends
+function poolSpot(T, k) {
+  const j = k % 6, f = [0.3, 0.7, 0.5, 0.25, 0.75, 0.5][j];
+  if (j < 2) return { x: T.x0 + 100 * f, y: T.y1 + 9, a: -Math.PI / 2 };
+  if (j === 2) return { x: T.x0 - 9, y: T.cy, a: 0 };
+  if (j < 5) return { x: T.x0 + 100 * f, y: T.y0 - 9, a: Math.PI / 2 };
+  return { x: T.x1 + 9, y: T.cy - 6, a: Math.PI };
 }
 // the car parked in the driveway (no one in it), or null
 function carAt(world, s) {
@@ -260,7 +312,7 @@ export function fill(world, s, opts = {}) {
     dressAs(world, ped, m.look);
     ped.a = m.a; ped.vx = ped.vy = 0;
     const n = ped.npc;
-    n.act = { g: s.id, k: s.k, x: m.x, y: m.y, a: m.a, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: 1 };
+    n.act = { g: s.id, k: s.k, x: m.x, y: m.y, a: m.a, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1 };
     n.state = 'idle'; n.until = world.time + 9999; n.sway = false; n.umbrellaType = false;
     pose(ped, true);
     g.ids.push(ped.id);
@@ -270,8 +322,72 @@ export function fill(world, s, opts = {}) {
       g.ids.push(dog.id);
     }
   }
+  if (s.k === 'hoops') {   // the ball, in the first one's hands (stepPickup plays it)
+    const h = world.get(g.ids[0]);
+    const b = world.add({ id: world.newId(), kind: K.BALL, x: h.x, y: h.y, a: 0, z: 0, vx: 0, vy: 0, vz: 0, ballKind: 'pickup', cx: -1, cy: -1 });
+    Object.assign(g, { ball: b.id, hold: 0, phase: 'dribble', t0: world.time, until: world.time + 1 + rng() * 2, turn: 0, spot: s });
+  }
+  if (s.k === 'pool') Object.assign(g, { turn: 0, shot: 0, until: world.time + 6 + rng() * 5, table: s.table });
   A.set(s.id, g);
   return g;
+}
+// ---- the pickup game: the ball dribbled, shot at the rim, the rebound bounced on to the next one --------------------------
+const SHOT_S = 0.95, DROP_S = 0.45, PASS_S = 0.75;
+const quad = (u, z0, apex, z1) => (1 - u) * (1 - u) * z0 + 2 * (1 - u) * u * (2 * apex - (z0 + z1) / 2) + u * u * z1;
+function stepPickup(world, g) {
+  const b = world.get(g.ball);
+  if (!b || b.removed) return;
+  const now = world.time, s = g.spot, rim = s.rim;
+  const hs = g.ids.map((i) => world.get(i)).filter((e) => e && !e.removed && !e.dead && e.npc && e.npc.act && e.npc.act.hoop >= 0);
+  const there = hs.filter((e) => Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) < 6);
+  const H = hs[g.hold % (hs.length || 1)];
+  if (hs.length < 2 || Math.hypot(H.x - H.npc.act.x, H.y - H.npc.act.y) > 60) { if (b.z > 0) b.z = Math.max(0, b.z - 6); return; }   // (the game's off: scared away - the ball lies there)
+  for (const e of there) if (e !== H || g.phase !== 'dribble') e.a = Math.atan2(b.y - e.y, b.x - e.x);   // (watching the ball)
+  if (g.phase === 'dribble') {
+    const hx = H.x + Math.cos(H.a + 0.8) * 7, hy = H.y + Math.sin(H.a + 0.8) * 7;
+    b.x = hx; b.y = hy; b.z = Math.abs(Math.sin((now - g.t0) * Math.PI * 3.2)) * 16; b.a = (b.a || 0) + 0.1;
+    if (Math.hypot(H.x - H.npc.act.x, H.y - H.npc.act.y) >= 6) return;   // (walking to the spot: dribbling on the way)
+    H.a = Math.atan2(rim.y - H.y, rim.x - H.x);
+    if (now < g.until) return;
+    const made = rng() < 0.45, d = Math.hypot(rim.x - H.x, rim.y - H.y) || 1, ux = (rim.x - H.x) / d, uy = (rim.y - H.y) / d;
+    g.phase = 'shot'; g.t0 = now; g.made = made;
+    g.path = { x0: H.x, y0: H.y, z0: 34, x1: made ? rim.x : rim.x - ux * 6, y1: made ? rim.y : rim.y - uy * 6, z1: rim.z, apex: Math.max(rim.z + 28, 58 + d * 0.2) };
+    g.fall = made ? { x: rim.x, y: rim.y } : { x: rim.x - ux * (22 + rng() * 20) + uy * (rng() - 0.5) * 30, y: rim.y - uy * (22 + rng() * 20) - ux * (rng() - 0.5) * 30 };
+    H.attackAnimUntil = now + 0.25;
+    return;
+  }
+  const t = now - g.t0, P = g.path;
+  if (g.phase === 'shot') {
+    if (t <= SHOT_S) { const u = t / SHOT_S; b.x = P.x0 + (P.x1 - P.x0) * u; b.y = P.y0 + (P.y1 - P.y0) * u; b.z = quad(u, P.z0, P.apex, P.z1); b.a += 0.3; return; }
+    if (!g.scored) { g.scored = true; world.emit(rim.x, rim.y, { e: 'hoop', x: Math.round(rim.x), y: Math.round(rim.y), in: g.made ? 1 : 0 }); }
+    const u = Math.min(1, (t - SHOT_S) / DROP_S);
+    b.x = P.x1 + (g.fall.x - P.x1) * u; b.y = P.y1 + (g.fall.y - P.y1) * u; b.z = Math.max(0, P.z1 * (1 - u * u));
+    if (u < 1) return;
+    // the rebound: on to the next one, a bounce on the way; the shooter off to a new spot
+    g.scored = false; g.hold = (g.hold + 1) % hs.length; g.turn++;
+    const q = hoopSpot(s, H.npc.act.hoop, hs.length, g.turn);
+    H.npc.act.x = q.x; H.npc.act.y = q.y; H.npc.act.a = q.a;
+    g.phase = 'pass'; g.t0 = now; g.path = { x0: b.x, y0: b.y };
+    return;
+  }
+  // the pass: along the floor to the next one's hands, bouncing once half way
+  const N = hs[g.hold % hs.length], u = Math.min(1, t / PASS_S), tx = N.x + Math.cos(N.a + 0.8) * 7, ty = N.y + Math.sin(N.a + 0.8) * 7;
+  b.x = P.x0 + (tx - P.x0) * u; b.y = P.y0 + (ty - P.y0) * u;
+  b.z = Math.max(0, u < 0.5 ? 22 * Math.sin(u * 2 * Math.PI) : 26 * Math.sin((u - 0.5) * Math.PI) * (1 - (u - 0.5)));
+  b.a += 0.2;
+  if (u >= 1) { g.phase = 'dribble'; g.t0 = now; g.until = now + 1.2 + rng() * 2.4; }
+}
+// ---- pool: the turn passes; the next one goes round the table to the shot, the other stands back with his cue up -----------
+function stepPool(world, g) {
+  if (world.time < g.until) return;
+  const T = g.table, ps = g.ids.map((i) => world.get(i)).filter((e) => e && !e.removed && !e.dead && e.npc && e.npc.act && e.npc.act.pool >= 0);
+  if (ps.length < 2) return;
+  g.until = world.time + 6 + rng() * 6; g.turn ^= rng() < 0.7 ? 1 : 0; g.shot++;   // (a miss: the turn passes; potted one: again)
+  for (const e of ps) {
+    const a = e.npc.act, mine = a.pool === g.turn;
+    const q = mine ? poolSpot(T, g.shot + Math.floor(rng() * 3)) : { x: T.x1 + 16, y: T.cy + 8, a: Math.PI };
+    Object.assign(a, { x: q.x, y: q.y, a: q.a, gt: mine ? 'cue' : null, pp: mine ? null : 'cueup' });
+  }
 }
 // hold the activity's pose and prop (on: at the spot; off: away from it - walking back, gone off)
 function pose(ped, on) {
@@ -284,7 +400,7 @@ function pose(ped, on) {
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
-const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash']);
+const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash', 'hoops']);
 export function steer(world, ped, now) {
   const n = ped.npc, a = n.act;
   if (!a) return null;
@@ -321,6 +437,9 @@ export function update(world) {
   if (!A) { if (world.tick % 20 === 13) fillRound(world); return; }
   // every tick: away from their spot (running from trouble, stopped to watch it), the pose and the prop are put down -
   // nobody sits in mid air
+  for (const g of A.values()) {
+    if (g.k === 'hoops') stepPickup(world, g); else if (g.k === 'pool') stepPool(world, g);
+  }
   for (const g of A.values()) for (const i of g.ids) {
     const e = world.get(i);
     if (e && e.npc && e.npc.act && !e.npc.act.patrol && (e.gt || e.pp || e.fishing || e.chop) && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) > 5) pose(e, false);
@@ -337,6 +456,7 @@ function fillRound(world) {
     const near = anchors.some((p) => Math.hypot(p.x - g.x, p.y - g.y) < ACT_DROP) || inAnyView(world, g.x, g.y, 64);
     if (g.ids.length && near) continue;
     if (!near) for (const i of g.ids) { const e = world.get(i); if (e && e.pet) { if (!inAnyView(world, e.x, e.y, 32)) world.remove(e); } else if (e && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e); else if (e) { e.npc.act = null; e.gt = e.pp = null; e.fishing = null; e.chop = null; e.appVer = (e.appVer || 0) + 1; } }
+    if (g.ball) { const b = world.get(g.ball); if (b && !b.removed) world.remove(b); }   // (the pickup game's ball)
     A.delete(id);
     (world.actRest ||= new Map()).set(id, now + (g.ids.length ? 30 : 240));   // (emptied by a scare: a good while before it's on again)
   }
@@ -352,7 +472,7 @@ function fillRound(world) {
       if (A.has(s.id) || now < (rest.get(s.id) || 0) || (kinds[s.k] || 0) >= (KINDS[s.k].cap || 2)) continue;   // (not the whole street washing its cars at once)
       if (anchors.some((b) => Math.hypot(b.x - s.x, b.y - s.y) < GAP)) continue;
       const P = KINDS[s.k];
-      if (rain && (s.k === 'carwash' || s.k === 'picnic' || s.k === 'painter' || s.k === 'chess')) continue;
+      if (rain && RAIN_OFF.has(s.k)) continue;
       if (rng() >= (night ? P.night : P.day)) { rest.set(s.id, now + 120 + rng() * 180); continue; }   // (not today: try again later)
       if (!fill(world, s)) { rest.set(s.id, now + 15); continue; }   // (in sight just now, no car in the driveway: a little later)
       kinds[s.k] = (kinds[s.k] || 0) + 1;

@@ -154,11 +154,68 @@ test('the debug menu takes you to each kind, filled, a little way off', async ()
   clear();
   const { p } = joinPlayer(w);
   const kinds = DEV_SECTIONS.flatMap((sec) => sec.items).filter(([, c]) => c === 'act').map(([, , x]) => x.k);
-  assert.equal(kinds.length, 9);
+  assert.equal(kinds.length, 11);
   for (const k of kinds) {
     command(w, p, 'act', { k });
     const g = [...w.acts.values()].find((q) => q.k === k && Math.hypot(q.x - p.ped.x, q.y - p.ped.y) < 340);
     assert.ok(g && g.ids.length, `${k}: there, with its people`);
     assert.ok(!PED_BLOCK[m.tileAtPx(p.ped.x, p.ped.y)], `${k}: you on open ground`);
   }
+});
+
+test('a pickup game at the courts: the ball dribbled, shot at the rim, bounced on to the next; pool at the Rusty Spur; a fence to chat over', async () => {
+  const { courtHoops } = await import('../shared/hoops.js');
+  const { poolTable } = await import('../server/systems/activities.js');
+  clear();
+  assert.equal(of('hoops').length, courtHoops(m).length, 'a pickup game on each half court');
+  const s = of('hoops')[0];
+  const g = fill(w, s, { seen: true });
+  assert.ok(g && g.ids.length >= 2 && g.ids.length <= 4, 'two to four of them');
+  for (const e of people(g)) { const r = s.rim, d = Math.hypot(r.x - e.x, r.y - e.y); assert.ok(d < 160 && Math.abs(Math.cos(e.a) - (r.x - e.x) / d) < 0.05, 'round the key, facing the rim'); }
+  const b = w.get(g.ball);
+  assert.ok(b && b.kind === K.BALL && _descriptor(b).t === 3, 'the ball: drawn as the hoops ball');
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, s.x, s.y + 700);
+  let top = 0, shots = 0, was = g.phase, events = 0;
+  const holders = new Set(), emit0 = w.emit.bind(w);
+  w.emit = (x, y, ev) => { if (ev.e === 'hoop') events++; return emit0(x, y, ev); };
+  for (let i = 0; i < 260; i++) { run(w, 0.05); top = Math.max(top, b.z); if (g.phase === 'shot' && was !== 'shot') shots++; was = g.phase; holders.add(g.hold); }
+  w.emit = emit0;
+  assert.ok(shots >= 2 && events >= 2, `shots at the rim (${shots}), each in or off it (${events})`);
+  assert.ok(top > s.rim.z, 'up over the rim');
+  assert.ok(holders.size >= 2, 'the ball goes round them');
+  // pool at the Rusty Spur's table: turns taken, cues
+  const T = poolTable(m);
+  assert.ok(T && of('pool').length === 1, 'the Rusty Spur pool table');
+  for (const [x, y] of [[T.x0 - 9, T.cy], [T.cx, T.y1 + 9], [T.cx, T.y0 - 9], [T.x1 + 16, T.cy + 8]]) assert.ok(!PED_BLOCK[m.tileAtPx(x, y)], 'room round the table');
+  teleport(w, p.ped, T.cx, T.cy + 600);
+  const gp = fill(w, of('pool')[0], { seen: true });
+  const [a, c] = people(gp);
+  assert.equal(a.gt, 'cue'); assert.equal(c.pp, 'cueup'); assert.equal(_descriptor(a).gt, 'cue'); assert.equal(_descriptor(c).pp, 'cueup');
+  assert.ok(people(gp).length >= 3, 'a watcher or two');
+  const seen = new Set();
+  for (let i = 0; i < 60; i++) { run(w, 1); for (const e of [a, c]) if (e.gt === 'cue' && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) < 6) seen.add(e.id); }
+  assert.equal(seen.size, 2, 'both take their turn at the table, bent over the cue');
+  assert.ok(!w.acts.has(s.id) && (!w.get(g.ball) || w.get(g.ball).removed), 'nobody near the courts any more: the game packed up, the ball with it');
+  // the neighbours chat over a garden fence (drawn with the first of them)
+  const gc = fill(w, of('chat')[0], { seen: true });
+  assert.equal(people(gc)[0].pp, 'fence'); assert.equal(_descriptor(people(gc)[0]).pp, 'fence');
+});
+
+test('the classic view draws every activity prop and the pool cue (render/actprops.js, loaded with the first of them)', async () => {
+  const { draw } = await import('../client/render/actprops.js');
+  const calls = [];
+  const g = new Proxy({}, { get: (o, k) => (k in o ? o[k] : (...a) => calls.push([k, ...a])), set: (o, k, v) => { o[k] = v; return true; } });
+  const pps = ['easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle', 'fence', 'cueup'];
+  for (const pp of [...pps, null]) {
+    calls.length = 0;
+    draw(g, { id: 7, rx: 500, ry: 300, ra: 0.6, d: pp ? { pp } : { gt: 'cue' } }, 12.3);
+    assert.ok(calls.some(([k]) => k === 'fillRect' || k === 'stroke'), `${pp || 'the cue'}: drawn`);
+    for (const [, ...a] of calls) for (const v of a) assert.ok(typeof v !== 'number' || Number.isFinite(v), `${pp || 'the cue'}: finite`);
+  }
+  // every pp the server sends is drawn; the page loads it lazily (not in main.js's import graph)
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../server/systems/activities.js', import.meta.url), 'utf8');
+  for (const m of src.matchAll(/pp: '(\w+)'/g)) assert.ok(pps.includes(m[1]), `the server's ${m[1]}: drawn in the classic view`);
+  assert.ok(!/^import .*actprops/m.test(readFileSync(new URL('../client/main.js', import.meta.url), 'utf8')), 'not with the page');
 });

@@ -79,29 +79,43 @@ const petHop = (t, id) => { const k = (t * 2.4 + id * 0.37) % 1; return k < 0.55
 // snapshot's extra byte) and how fast it's going: flying, swimming (a sea otter floats on its back), up a trunk,
 // reared, charging, stalking low, bedded down, head down feeding, head up and alert; else by its speed. Dead: on its
 // side (a bird with a wing out).
-const BEARS = new Set(['blackbear', 'grizzly']);
+const BEARS = new Set(['blackbear', 'grizzly']), CATS = new Set(['cougar', 'bobcat']);
 // the art kind of an animal ('pet:<kind>' on the wire): a covey's two adult quail (a pair of mallards) spawn one after
 // the other, so the odd id is drawn as the hen (birds.js ':f') and the even one as the cock (the drake)
 const HENS = new Set(['quail', 'duck']);
 const petKind = (p) => { const k = p.d.ar.slice(4); return HENS.has(k) && (p.id & 1) ? `${k}:f` : k; };
-function wildPose(p, S2, base, sp) {
+function wildPose(p, S2, base, sp, now, M) {
   if (p.flags & PF.DEAD) return 'dead';
-  if (p.flags & PF.DOWN) return 'lie';
+  if (p.flags & PF.DOWN) return 'fall';   // (knocked off its feet: on its side, the legs going - AN7)
+  if (p.hitAt !== undefined && now - p.hitAt < 0.3 && !S2.bird) return 'hit';   // (the flinch as the hit lands - AN7)
   const ap = (p.extra || 0) & 31;
   if (ap === APOSE.fly) return 'fly';
+  if (p.swim && !S2.bird && !S2.swims && M && shallows(M, p.rx, p.ry)) return ap === APOSE.drink && sp <= 12 ? 'wadedrink' : 'wade';   // (AN5: a deer, a moose in the shallows - the legs in the water to the knees)
+  if (p.swim && ap === APOSE.dive && !S2.bird) return 'dive';   // (AN5: going under, the tail up)
   if (p.swim) return base === 'seaotter' && (ap === APOSE.float || sp < 25) ? 'float' : 'swim';
   switch (ap) {
     case APOSE.climb: return 'climb';
-    case APOSE.rear: case APOSE.attack: return BEARS.has(base) ? 'rear' : sp > 30 ? 'run' : 'alert';
+    case APOSE.attack: if (BEARS.has(base)) return sp > 30 ? 'run' : 'swipe';   // (AN2: at you, a forepaw raking)
+      if (CATS.has(base) && sp > 30) return 'pounce';   // (AN4: a cat springs)
+    // falls through
+    case APOSE.rear: return BEARS.has(base) ? 'rear' : sp > 30 ? 'run' : 'alert';
     case APOSE.charge: return 'run';
-    case APOSE.stalk: return sp > 6 ? 'stalk' : 'stalk';
-    case APOSE.rest: return S2.bird ? 'idle' : 'lie';
+    case APOSE.stalk: return sp > 6 ? 'stalk' : 'crouch';   // (AN4: still, crouched to spring, the tail twitching)
+    case APOSE.rest: return S2.bird ? 'idle' : p.hp < 0.5 ? 'down' : 'lie';   // (badly hurt: bedded down wounded, the head on the ground - AN7)
     case APOSE.sit: return S2.bird ? 'idle' : 'sit';
-    case APOSE.graze: case APOSE.gnaw: case APOSE.drink: case APOSE.eat: case APOSE.peck: return sp > 12 ? 'walk' : S2.bird ? 'peck' : 'graze';
-    case APOSE.alert: case APOSE.warn: case APOSE.call: case APOSE.flinch: return sp > 12 ? 'walk' : 'alert';
-    default: return sp > 70 ? 'run' : sp > 12 ? 'walk' : 'idle';
+    case APOSE.drink: if (sp <= 12 && !S2.bird) return 'drink';   // (AN5: the forelegs splayed, the head down to the water)
+    // falls through
+    case APOSE.eat: if (sp <= 12 && S2.diet === 'fish') return 'eatfish';   // (AN5: an otter on the bank with its catch)
+    // falls through
+    case APOSE.graze: case APOSE.gnaw: case APOSE.peck: return sp > 12 ? 'walk' : S2.bird ? 'peck' : 'graze';
+    case APOSE.call: if (base === 'turkey' && sp <= 12) return 'strut';   // (AN2: a tom's display, the fan up)
+    // falls through
+    case APOSE.alert: case APOSE.warn: case APOSE.flinch: return sp > 12 ? 'walk' : 'alert';
+    default: return sp > 12 && p.hp < 0.5 && !S2.bird ? 'limp' : sp > 70 ? 'run' : sp > 12 ? 'walk' : 'idle';   // (badly hurt: limping on a foreleg held up - AN7; server: the limp)
   }
 }
+// the shallows: water (not the deep) with land within a stride of it
+const shallows = (M, x, y) => M.tileAtPx(x, y) === TT.WATER && [[22, 0], [-22, 0], [0, 22], [0, -22]].some(([dx, dy]) => WATER_T[M.tileAtPx(x + dx, y + dy)] !== 1);
 const UP_N = [128, 128, 255, 255], FACE_N = [128, 196, 230, 255]; // flat ground; an upright figure facing the camera
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
@@ -1225,7 +1239,7 @@ export class World2 {
     // a wild animal: what it's doing comes from the server (fauna.js APOSE in the extra byte; bit 7 in the water);
     // a pet or a farm animal: standing still a while it sits, or puts its head down and grazes (now and then looking
     // up); down or dead: lying on its side
-    const pose = S2 ? wildPose(p, S2, base, sp)
+    const pose = S2 ? wildPose(p, S2, base, sp, now, this.map)
       : p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still || happy ? 'idle'
         : GRAZERS.has(kind) ? ((Math.floor(now / 3.3) + p.id) % 4 ? 'graze' : 'idle') : WILD_IDLE.has(kind) ? 'idle' : 'sit';
     const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(p.ra);
@@ -1240,7 +1254,7 @@ export class World2 {
         return;
       }
     }
-    const rate = pose === 'run' ? 14 : pose === 'fly' ? (S2 && S2.size === 'medium' ? 7 : 11) : pose === 'walk' ? 8 : pose === 'stalk' ? 5 : pose === 'idle' ? (happy ? 12 : 3) : pose === 'swim' ? 2.5 : 1.5;   // (happy: the tail wagging nineteen to the dozen)
+    const rate = pose === 'run' ? 14 : pose === 'limp' ? 6 + sp / 20 : pose === 'fly' ? (S2 && S2.size === 'medium' ? 7 : 11) : pose === 'walk' ? 8 : pose === 'stalk' ? 5 : pose === 'idle' ? (happy ? 12 : 3) : pose === 'swim' ? 2.5 : 1.5;   // (happy: the tail wagging nineteen to the dozen)
     const fr = pose === 'dead' || (pose === 'lie' && p.flags & PF.DEAD) ? 0 : Math.floor(now * rate + p.id) % n;
     let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null;

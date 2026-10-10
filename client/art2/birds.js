@@ -48,9 +48,9 @@ function variant(kind) {
 
 export function birdModel(kind, o = {}) {
   const B = variant(kind), pose = o.pose || 'stand', phase = o.phase || 0, run = o.gait === 'run';
-  const fly = pose === 'fly', swim = pose === 'swim', dead = pose === 'dead', peck = pose === 'peck', alert = pose === 'alert';
+  const fly = pose === 'fly', swim = pose === 'swim', dead = pose === 'dead', peck = pose === 'peck', alert = pose === 'alert', strut = pose === 'strut' && B.tail === 'fan';   // (strut: a tom's display, AN2)
   const span = fly ? B.len * 1.25 : 0;
-  const L = Math.ceil(B.len * 2 + B.neck + 12), W = Math.ceil(B.w + 8 + span * 2), H = Math.ceil(B.h + B.leg + B.neck + 10 + (fly ? span : 0));
+  const L = Math.ceil(B.len * 2 + B.neck + 12), W = Math.ceil(B.w + 8 + span * 2 + (strut ? B.len * 0.8 : 0)), H = Math.ceil(B.h + B.leg + B.neck + 10 + (fly ? span : 0));
   const m = new Vox(L, W, H), cy = W / 2;
   const glow = B.legend ? [214, 232, 255, 70] : null, cache = new Map();
   const R = (c, k = 3) => { const key = c + k; if (!cache.has(key)) cache.set(key, m.mat({ ramp: ramp(c, 6, 3), k, flag: B.fluffy ? F_LEAF : 0, emi: glow })); return cache.get(key); };
@@ -67,7 +67,8 @@ export function birdModel(kind, o = {}) {
     if (z < bz - B.h * 0.25) return B.scales && (Math.round(x * 1.1) + Math.round(z * 1.3) * 2) % 4 === 0 ? R(B.scales) : R(B.belly);   // (a quail's scaled belly)
     return B.scales && z < bz + B.h * 0.05 && (Math.round(x * 0.8) + Math.round(y)) % 5 === 0 ? R(B.belly) : R(B.body);   // (and the pale streaks on its flanks)
   };
-  m.fill((x, y, z) => { const dx = x - cx, dz = z - bz - dx * tilt; return (dx / (B.len / 2)) ** 2 + ((y - cy) / (B.w / 2)) ** 2 + (dz / (B.h / 2)) ** 2 <= 1 ? col(x, y, z) : -1; });
+  const puff = strut ? 1.12 + phase * 0.06 : 1;   // (strutting: puffed up, breathing in and out)
+  m.fill((x, y, z) => { const dx = x - cx, dz = z - bz - dx * tilt; return (dx / (B.len / 2 * puff)) ** 2 + ((y - cy) / (B.w / 2 * puff)) ** 2 + (dz / (B.h / 2 * puff)) ** 2 <= 1 ? col(x, y, z) : -1; });
   // folded wings along the flanks (spread in flight: broad, the primaries dark, beating)
   if (fly) {
     // each wing a broad plate out from the shoulder, its chord narrowing to the tip, raised or lowered with the beat
@@ -82,17 +83,19 @@ export function birdModel(kind, o = {}) {
       const chord = B.len * (small ? 0.62 - t * t * 0.4 : 0.66 - t * 0.36), y = cy + s * (y0w + sp * t * ca), z = bz + B.h * 0.2 + sp * t * sa, xa = cx - chord * 0.5 - t * 1.5;
       for (let x = xa; x <= xa + chord; x += 0.5) m.box(x, y - 0.5, z - 0.6, x + 0.6, y + 0.5, z + 0.6, t > 0.7 || x < xa + 1.2 ? prim : cov);
     }
-  } else if (!dead) for (const s of [-1, 1]) m.ell(cx - B.len * 0.06, cy + s * B.w * 0.36, bz + B.h * 0.12, B.len * 0.36, B.w * 0.16, B.h * 0.3, R(B.back));
+  } else if (strut) for (const s of [-1, 1]) for (let t = 0; t <= 1; t += 0.1) m.ell(cx - B.len * 0.1 + t * 2, cy + s * B.w * 0.5, bz + B.h * 0.1 - t * (bz - 0.8), B.len * 0.3, B.w * 0.12, 1.2, t > 0.75 ? R(B.bars || B.back) : R(B.back));   // (the wings drooped, the tips trailing on the ground)
+  else if (!dead) for (const s of [-1, 1]) m.ell(cx - B.len * 0.06, cy + s * B.w * 0.36, bz + B.h * 0.12, B.len * 0.36, B.w * 0.16, B.h * 0.3, R(B.back));
   if (dead) m.fill((x, y, z) => ((x - cx) / (B.len * 0.45)) ** 2 + ((y - cy - B.w * 0.9) / (B.w * 0.75)) ** 2 <= 1 && z < 1.5 ? R(B.back) : -1);   // a wing spread on the ground
   // the tail
   const tx = cx - B.len / 2, tz = bz + B.h * 0.1;
   if (B.tail === 'short') m.ell(tx - 1, cy, tz + (swim ? 1 : 0.4), 2, B.w * 0.28, 0.9, R(B.back));
   else if (B.tail === 'long') for (let k = 0; k < 11; k += 0.5) m.box(tx - k, cy - 0.6, tz + k * 0.22, tx - k + 1, cy + 0.6, tz + k * 0.22 + 0.9, Math.round(k) % 2 && B.bars ? R(B.bars) : R(B.back));
+  else if (strut) m.fill((x, y, z) => { const r = Math.hypot((y - cy) * 0.85, z - tz), dx = tx + 1 - x; return dx > -0.5 && dx < 2 + (z - tz) * 0.12 && z > tz - 1 && r < B.len * 0.62 ? (r > B.len * 0.55 ? R(B.bars || B.back) : r > B.len * 0.5 ? R('#2a221c') : R(B.back)) : -1; });   // (the fan raised in a wheel, a pale rim)
   else if (B.tail === 'fan') m.fill((x, y, z) => { const dx = tx + 1 - x, r = Math.hypot(dx, (y - cy) * 0.9); return dx > 0 && r < B.len * 0.42 && Math.abs(z - (tz + dx * 0.35)) < 0.8 ? (r > B.len * 0.36 ? R(B.bars || B.back) : R(B.back)) : -1; });
   // the neck and the head (down at the ground pecking; stretched up when alert; out straight in flight)
   const nx0 = cx + B.len * 0.36, nz0 = bz + B.h * 0.22;
-  const hx = dead ? nx0 + B.neck * 0.8 : peck ? nx0 + B.neck * 0.7 + 1 : fly ? nx0 + B.neck * 0.95 : nx0 + B.neck * (alert ? 0.15 : 0.32) + (run ? 1 : 0) + step * (o.gait ? 0.5 : 0);
-  const hz = dead ? 1.3 : peck ? B.head * 0.8 : fly ? nz0 + 1 : nz0 + B.neck * (alert ? 1.05 : 0.85);
+  const hx = dead ? nx0 + B.neck * 0.8 : strut ? nx0 + B.neck * 0.05 : peck ? nx0 + B.neck * 0.7 + 1 : fly ? nx0 + B.neck * 0.95 : nx0 + B.neck * (alert ? 0.15 : 0.32) + (run ? 1 : 0) + step * (o.gait ? 0.5 : 0);
+  const hz = dead ? 1.3 : strut ? nz0 + B.neck * 0.62 : peck ? B.head * 0.8 : fly ? nz0 + 1 : nz0 + B.neck * (alert ? 1.05 : 0.85);
   const neckM = B.neckC ? R(B.neckC) : R(B.head);
   for (let t = 0; t <= 1; t += 0.06) { const x = nx0 + (hx - nx0) * t, z = nz0 + (hz - nz0) * t; m.ell(x, cy, z, 1.1 + (1 - t) * 0.6, 1 + (1 - t) * 0.5, 1.1, t < 0.25 ? col(x, cy, z) : neckM); }
   if (B.ring) { const x = nx0 + (hx - nx0) * 0.3, z = nz0 + (hz - nz0) * 0.3; m.ell(x, cy, z, 1.3, 1.25, 0.55, R(B.ring)); }

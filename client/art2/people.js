@@ -1894,7 +1894,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump'].includes(pn)) kind = null;
+  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump', 'cue'].includes(pn)) kind = null;
   if (pn === 'hood') kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
@@ -1939,6 +1939,11 @@ Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, ma
 // canvas), cooler (an angler's, on the deck at their side), chess (the board on the table in front of a seated player)
 CARRY.push('easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle');
 Object.assign(ACC_HANDS, { easel: 1, sponge: 1 });   // (sponge: washing the car, the bucket at their feet; crate: a picker's)
+// part 2: fence (the garden fence the neighbours chat over, in front of him), cueup (waiting his turn at the pool table,
+// the cue stood up beside him); the pose cue (bent over the table, the bridge hand on the felt, the stroke: 4 frames)
+CARRY.push('fence', 'cueup');
+Object.assign(ACC_HANDS, { cueup: 1 });
+Object.assign(POSES, { cue: 4 });
 const MAT = (c, g = 0) => (Q) => { if (g) Q.gloss = g; return cloth(c); };
 const M365 = { metal: MAT('#a4a8b0', 0.5), rubber: MAT('#26262a'), blanket: MAT('#6a7a9a'), tartan: MAT('#8a2a34'), wood: MAT('#d0903e', 0.4), deck: MAT('#2a9aa8', 0.3), lead: MAT('#c8262b'), dark: MAT('#1c1c22', 0.4), wheel: MAT('#f2c21b'), bag: MAT('#3a5a3a') };
 const GAITS2 = {
@@ -1992,6 +1997,13 @@ const GAITS2 = {
     P.lean = 0.2; P.headPitch = -0.12;
     wrapAcc(D, P, acc || 'cart');
   },
+  cue(D, P, f) {   // bent low over the table, feet apart, the left hand's bridge on the felt, the right drawing the cue back and through
+    const k = [0, -2.2, -3.6, 1.8][f & 3];
+    P.acc = false; P.cue = true; P.lean = 0.95; P.headPitch = -0.85; P.twist = -0.12;
+    P.pel = [0.4, -1.6, D.pelZ - 0.8];
+    P.fL = [-D.hipX - 1.2, 4.2, D.ank]; P.fR = [D.hipX + 1.4, -3.6, D.ank]; P.kneeL = [-0.2, 1, 0.2]; P.kneeR = [0.2, 1, 0];
+    P.hands = (S) => { P.hL = [-1.6, 17.5, 21.2]; P.hR = [2.2, 3.4 + k, 22.4]; P.elL = [-1, 0.2, -0.4]; P.elR = [1, -0.2, -0.6]; P.openL = 1; };
+  },
 };
 function wrapAcc(D, P, acc) { if (!acc) return; const sw = P.hands; P.hands = (S) => { if (sw) sw(S); accHands(D, P, S, acc); }; }
 // the hands on a prop (accHands)
@@ -2007,6 +2019,7 @@ function accHands2(D, P, S, acc) {
   if (acc === 'map') { P.hR = vadd(S.chest, mv(S.SP, [4.4, 7.4, -1.6])); P.hL = vadd(S.chest, mv(S.SP, [-4.4, 7.4, -1.6])); P.elR = [1, -0.5, -0.5]; P.elL = [-1, -0.5, -0.5]; P.headPitch += 0.3; return true; }
   if (acc === 'sponge') { P.hR = [2.0 + P.breath * 5, 13.4, 23 + P.breath * 3]; P.elR = [1, -0.3, -0.4]; P.lean = 0.16; return true; }   // (wiping the car's side)
   if (acc === 'easel') { P.hR = [2.6 + P.breath * 3, 12.2, 31 + P.breath * 4]; P.elR = [1, -0.4, -0.5]; P.hL = vadd(S.shL, [-2.6, 4.4, -r * 0.62]); P.elL = [-1, -0.3, -0.5]; P.headPitch += 0.08; return true; }   // (a dab of the brush, the palette low in the other hand)
+  if (acc === 'cueup') { P.hR = vadd(S.shR, [1.8, 2.6, -r * 0.45]); P.elR = [1, -0.2, -0.7]; return true; }   // (the cue stood up beside him, waiting his turn)
   return false;
 }
 // what the props and walks add to the figure (buildFigure)
@@ -2020,6 +2033,11 @@ function figure365(B, C, E, D, P, S, acc) {
     const a = S['an' + k];
     B(vadd(a, [0, 1.4, -3.9]), S.PF, [0.75, 3.6, 0.6], GR.ACC, 'blade', M365.dark);
     for (const y of [-1.4, 1.4, 4.2]) E(vadd(a, [0, y, -4.7]), I, [0.6, 0.8, 0.8], GR.ACC, 'wheel', M365.wheel);
+  }
+  if (P.cue) {   // the pool cue: from behind the drawing hand, through the bridge, on toward the cue ball; the chalked tip
+    const a = S.haR, b = S.haL, d = vsub(b, a);
+    C(vadd(a, vmul(d, -0.55)), vadd(b, vmul(d, 0.35)), 0.75, 0.4, GR.ACC, 'cue', M365.wood);
+    E(vadd(b, vmul(d, 0.37)), I, [0.45, 0.45, 0.45], GR.ACC, 'tip', MAT('#3a6ad0'));
   }
   if (ACT_PROPS[acc]) { ACT_PROPS[acc](B, C, E, S); return; }   // (at an activity: whatever the pose)
   if (!P.acc || !acc || P.item !== null) return;
@@ -2068,6 +2086,16 @@ const ACT_PROPS = {
   crate(B, C, E) {   // a wooden crate of tomatoes by the picker
     B([-9.5, 4, 3.4], I3, [4.0, 3.0, 3.2], GR.ACC, 'crate', (Q) => cloth(Math.abs(Q.l2) > 0.7 || Math.abs(Q.l0) > 0.85 ? '#a8743c' : '#8a5a2c'));
     for (const [x, y] of [[-11, 3], [-9, 5], [-8, 2.6], [-10.4, 5.4]]) E([x, y, 7], I3, [1.2, 1.2, 1.0], GR.ACC, 'fruit', MAT('#d8382a', 0.4));
+  },
+  fence(B) {   // a short run of garden fence between the neighbours: two posts, two rails, white pickets with pointed tops
+    const W = MAT('#f2efe6', 0.2), P2 = MAT('#d8d2c2', 0.2);
+    for (const x of [-14, 14]) B([x, 11, 12], I3, [1.1, 1.1, 12], GR.ACC, 'post', P2);
+    for (const z of [7, 18]) B([0, 11.8, z], I3, [14, 0.45, 0.8], GR.ACC, 'rail', P2);
+    for (let x = -11.4; x <= 11.5; x += 3.8) { B([x, 11, 10.5], I3, [1.0, 0.45, 10.5], GR.ACC, 'picket', W); B([x, 11, 21.6], I3, [0.55, 0.45, 0.8], GR.ACC, 'picket', W); }
+  },
+  cueup(B, C, E, S) {   // the cue stood up beside him, its butt on the floor, the tip above his head, chalked blue
+    const h = S.haR, a = [h[0] + 0.6, h[1] + 0.4, 0.6], b = [h[0] + 1.6, h[1] + 1.2, 50];
+    C(a, b, 0.8, 0.4, GR.ACC, 'cue', M365.wood); E([b[0], b[1], 50.6], I3, [0.45, 0.45, 0.5], GR.ACC, 'tip', MAT('#3a6ad0'));
   },
   chess(B, C) {   // the board on the table between the players, a few pieces still standing
     B([0, 15, 19.4], I3, [4.2, 4.2, 0.35], GR.ACC, 'chessb', (Q) => cloth(Math.abs(Q.l0) > 0.9 || Math.abs(Q.l1) > 0.9 ? '#5a3a22' : (Math.floor((Q.l0 + 1) * 4) + Math.floor((Q.l1 + 1) * 4)) & 1 ? '#efe2c4' : '#3a2a20'));
