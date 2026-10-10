@@ -28,12 +28,12 @@ import { K, T, TILE } from '../../shared/constants.js';
 import { mulberry32 } from '../../shared/rng.js';
 import {
   CLUB_CLOSE_MAX_S, CLUB_DANCERS, CLUB_LINE, CLUB_ADMIT_S, BOUNCER_HP, BOUNCER_STR, BOUNCER_FIGHT_S, BOUNCER_CHASE_PX,
-  CLUB_DANCERS_MAX, CLUB_PEAK_H, CLUB_MOVE_S, CLUB_COUPLE_P, CLUB_DROP_S,
+  CLUB_DANCERS_MAX, CLUB_PEAK_H, CLUB_MOVE_S, CLUB_COUPLE_P, CLUB_DROP_S, CLUB_FIGHT,
 } from '../../shared/rules.js';
 import { DANCE_SOLO, DANCE_COUPLES, DANCE_JUMP, COUPLE_PX } from '../../shared/dance.js';
 import { ARCHETYPES, BUILDS } from '../entities.js';
 import { inAnyView } from '../view.js';
-import { spawnNpc, despawnNpc, startFight, walkInAt, leaveBuilding } from './npc.js';
+import { spawnNpc, despawnNpc, startFight, walkInAt, leaveBuilding, flee, startFilming, filmChance } from './npc.js';
 
 let rng = mulberry32(4320);
 export function setRng(r) { rng = r; }
@@ -457,5 +457,33 @@ function sic(world, c, attacker, any = false) {
   }
   const p = attacker.player;
   if (n && p && world.time - (p.bouncerWarnAt || -99) > 15) { p.bouncerWarnAt = world.time; world.notify(p, 'You hurt someone at the club - the bouncers are coming for you!', 'bad'); }
+  return n;
+}
+
+// ---- a fight on the floor: someone dancing is hurt (dance.js hurt, from combat.damage) ----------------------------------
+// They leave the floor (npc.js onAttacked: they flee or fight by temperament, as anyone hurt does); the dancers round them
+// react as the street does to a fight (npc.js spectacle): the nearest step back out of it, a few further off stop and get
+// their phones out (rules.js CLUB_FIGHT), the rest dance on. The line brings new dancers for the spots left.
+function offFloor(world, e, c) {
+  unpair(world, e);
+  const n = e.npc;
+  n.desk = null; n.keep = false; n.dancer = false; n.partner = 0;
+  if (e.gt === 'dance') { e.gt = null; e.dm = undefined; e.appVer = (e.appVer || 0) + 1; }
+  if (c) c.dancers = c.dancers.filter((id) => id !== e.id);
+}
+export function dancerHurt(world, ped, attacker) {
+  const c = ped.npc.clubKey !== undefined ? clubByKey(world, ped.npc.clubKey) : null;
+  offFloor(world, ped, c);
+  if (!c) return 0;
+  const now = world.time, F = CLUB_FIGHT;
+  let n = 0;
+  for (const id of [...c.dancers]) {
+    const e = world.get(id);
+    if (!alive(e) || !e.npc || !e.npc.dancer || e === attacker) continue;
+    const d = Math.hypot(e.x - ped.x, e.y - ped.y);
+    if (d > F.r) continue;
+    if (d < F.near) { offFloor(world, e, c); flee(world, e, ped.x, ped.y, F.backS[0] + rng() * (F.backS[1] - F.backS[0])); n++; }
+    else if (now - (e.npc.filmedAt ?? -1e9) > 45 && rng() < filmChance(e) * F.film) { offFloor(world, e, c); startFilming(world, e, ped.x, ped.y, F.filmS[0] + rng() * (F.filmS[1] - F.filmS[0])); n++; }
+  }
   return n;
 }

@@ -31,7 +31,7 @@ test('blades: a killing blow can be a finisher - a stab with a knife, a slash wi
     const { w, p, v } = duel(id);
     v.hp = 1; v.a = Math.PI;   // (facing the attacker: no backstab)
     w.rand = () => 0;          // (the finisher's roll comes up)
-    p.ped.lastCombatAt = w.time; v.npc.state = 'fight';
+    p.ped.lastCombatAt = w.time; v.npc.state = 'fight'; v.npc.guardNext = 1e9;   // (no guard raised: combat.js npcGuard)
     combat.tryAttack(w, p.ped, 0);
     assert.ok(v.dead, `${id}: down`);
     const fin = evs(w, 'finisher')[0];

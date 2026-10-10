@@ -22,7 +22,7 @@ import { inAnyView } from '../view.js';
 import * as npclooks from './npclooks.js';
 import * as personas from './personas.js';
 import * as activities from './activities.js';
-import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S } from '../../shared/rules.js';
+import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME } from '../../shared/rules.js';
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
 const PREFERRED = new Set([T.SIDEWALK, T.PLAZA]);
@@ -476,7 +476,18 @@ export function onCarjacked(world, driver, jacker) {
 export function onVehicleHit(world, v, attacker) {
   if (!v.ai) return;
   v.ai.panicUntil = world.time + 10; // drive frantic and panicked
-  void attacker;
+  // someone damaging the car with a weapon (combat.js: law.vehicleDamaged has made it a crime): its driver, by temperament,
+  // stops and gets out to fight them - or drives off in a panic (and, the victim, most likely calls it in: law.witnesses)
+  const drv = v.seats[0] ? world.get(v.seats[0]) : null, n = drv && drv.npc;
+  if (!n || drv.dead || !attacker || attacker === drv || attacker.kind !== K.PED || attacker.vehId === v.id) return;
+  if (n.role === 'cop' || n.role === 'medic' || n.role === 'railguard' || world.time - (n.vandalAt ?? -99) < 8) return;
+  n.vandalAt = world.time;
+  if (Math.hypot(v.vx, v.vy) < VEH_CRIME.stopPx && rng() < (n.fight || 0) * VEH_CRIME.fight) {
+    v.ai = null; v.despawnable = true; v.input = { throttle: 0, steer: 0, hb: true };   // (left in the road: cleared like any abandoned car)
+    vehicles.ejectPed(world, drv, false);
+    n.role = 'civ';
+    startFight(world, drv, attacker, 16);
+  }
 }
 
 export function onGunfire(world, x, y, shooter, radius = 360) {
@@ -507,7 +518,7 @@ export function onGunfire(world, x, y, shooter, radius = 360) {
 // when it's over, or run like anyone else if trouble comes their way (a shot near them, a hit: the state changes and the
 // phone goes away).
 const FILM_CHANCE = { casual: 0.45, socialite: 0.55, athlete: 0.3, hustler: 0.4, executive: 0.22, construction: 0.32, sweeper: 0.2, senior: 0.1, drunk: 0.35 };
-const filmChance = (ped) => FILM_CHANCE[ped.npc.archetype] ?? 0.25;
+export const filmChance = (ped) => FILM_CHANCE[ped.npc.archetype] ?? 0.25;
 // a blast or the like: the people close by run (further out, some film it: spectacle)
 export function panic(world, x, y, radius) {
   for (const e of world.query(x, y, radius, K.PED)) {
@@ -526,7 +537,7 @@ export function spectacle(world, x, y, { r = 480, near = 120, chance = 1, secs =
     if (rng() < filmChance(e) * chance) startFilming(world, e, x, y, secs * (0.7 + rng() * 0.6));
   }
 }
-function startFilming(world, ped, x, y, secs) {
+export function startFilming(world, ped, x, y, secs) {
   const n = ped.npc;
   n.state = 'film'; n.fx = x; n.fy = y; n.until = world.time + secs; n.filmedAt = world.time;
   n.photo = rng() < 0.35; n.nextFlash = world.time + 0.5 + rng() * 0.8;

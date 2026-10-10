@@ -193,9 +193,10 @@ function paintBody(g, a, d, pose, fr, w) {
   const fv = FV[d];
   // which template arm the action poses replace: the one on the side the character holds things
   // (their right hand: screen left when facing us, screen right from behind; the front arm on a diagonal)
-  const act = pose === 'aim' || pose === 'punch' || pose === 'swing' || pose === 'fish' || pose === 'carry';
+  const two = pose === 'carry' || pose === 'guard';
+  const act = pose === 'aim' || pose === 'punch' || pose === 'swing' || pose === 'fish' || two;
   const actArm = SIDE(d) ? -1 : d === 0 ? 0 : d === 4 ? 1 : fv[0] < 0 ? 0 : 1;
-  const hideArm = (k) => act && (pose === 'carry' || k === actArm);
+  const hideArm = (k) => act && (two || k === actArm);
   // colour of one template pixel
   const longSleeve = LONG_SLEEVES.has(a.t);
   const handRows = I.armBox.map((b) => (b ? b.y1 - 1 : CH));
@@ -404,6 +405,13 @@ function holds(Pp, a, d, I, pal, bob, pose, fr, w, actArm) {
     const lx = l ? Math.round(l.cx) : sx - 2, rx = r ? Math.round(r.cx) : sx + 2;
     drawArm(lx, sy, dx + (SIDE(d) ? 0 : 2), dy - 3);
     drawArm(rx, sy, dx - (SIDE(d) ? 0 : 2), dy - 3);
+  } else if (pose === 'guard') {
+    // the guard: both forearms up in front of the face, braced (the fists), or the weapon held across in front of it
+    // in both hands, the blade up the far side
+    const [dx, dy] = reach(3), l = I.armBox[0], r = I.armBox[1], up = 8;
+    const lx = l ? Math.round(l.cx) : sx - 2, rx = r ? Math.round(r.cx) : sx + 2;
+    const a = drawArm(lx, sy, dx + 2, dy - up), b = drawArm(rx, sy, dx - 2, dy - up);
+    if (w > 0 && w !== 13) weapon(Pp, w, (a.hx + b.hx) >> 1, Math.min(a.hy, b.hy), -Math.PI / 2 - (fv[0] < 0 ? -0.5 : 0.5));
   } else if ((w > 0 && w !== 13) || w === 'flashlight') {
     // walking with it: in the hand of the hanging arm on the near side
     const b = I.armBox[actArm >= 0 ? actArm : 1] || I.armBox[0];

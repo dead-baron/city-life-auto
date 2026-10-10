@@ -49,7 +49,7 @@ import * as trains from './trains.js';
 import * as transit from './transit.js';
 import * as ferries from './ferries.js';
 
-import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE, GUARD } from '../../shared/rules.js';
+import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE, GUARD, NPC_GUARD } from '../../shared/rules.js';
 import * as felling from './felling.js';
 import * as lights from './lights.js';
 import * as revive from './revive.js';
@@ -424,7 +424,11 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   const guard = !!(inp.bits & IN.BLOCK) && !!gw.guard && !ped.carrying && !ped.fishing && !(ped.rollT > 0) && !tumbling
     && world.time >= ped.downUntil && world.time >= ped.stunUntil && !isSwimming(world.map, ped);
   ped.guardUntil = guard ? world.time + 0.12 : 0;
-  if (guard) ped.aimUntil = world.time + 0.3;   // (shown held up and ready: the aim pose)
+  if (guard) ped.aimUntil = world.time + 0.3;   // (the aim pose for an older page; the guard's own pose: the 'guard' event)
+  if (guard ? world.time - (ped.guardShownAt ?? -9) >= NPC_GUARD.showS : ped.guardShownAt !== undefined) {
+    world.emit(ped.x, ped.y, { e: 'guard', id: ped.id, t: guard ? NPC_GUARD.showS + 0.25 : 0 });
+    ped.guardShownAt = guard ? world.time : undefined;
+  }
   pedStep(ped, inp, dt, world.map, { ...pedMods(world, ped), analog: true });
   if (ped.hardLanding) { ped.hardLanding = false; combat.damage(world, ped, 45, null, 'fall'); ped.tumbleUntil = world.time + 0.8; }
   // down a waterfall or off its cliff (shared/ledges.js): a splash at the foot, or a thud on dry ground

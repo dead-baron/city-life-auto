@@ -6330,3 +6330,100 @@ against `MAP_W` / `MAP_H`, so a map could only ever be the whole world.
   in a loop along a row), bound loops by `m.x0 .. m.x0 + m.w` and `m.y0 .. m.y0 + m.h`, never `MAP_W` / `MAP_H`.
 - Today's world is the whole window, so nothing changes in play: the map signature and the world hash
   (`5a3a1b7301e7`) are the same. The art hash changes (the bake's code changed), so kept chunks are baked again once.
+
+## 2026-10-10 · This morning's combat, finished: a wider input, dancing stops when you're hurt, car damage is a crime, deflected arrows drop, NPCs guard
+
+The gaps this morning's combat and dancing work left (the entries above: "Blocking should work with the bat and sword and
+katana. The plasmablade also blocks but it will deflect most bullets"; "dancing animations for NPCs and the player";
+"Weapons damage vehicles (strong ones significantly); lightsabers destroy a vehicle in a few hits, maybe splitting it in
+half then exploding"), each one done and tested in turn.
+- **The input word is 32 bits** (`shared/protocol.js`, `server/session.js`): `IN.DANCE` took the 16th and last bit. The
+  input message is now 13 bytes: the action bits' high word (bits 16-31) follows the old 11 bytes.
+  - An old page meets a new server: its 11 bytes are read with the high word 0.
+  - A new page meets an old server: the old server reads the first 11 bytes, which are the old message, and ignores the
+    rest. So the minutes after a deploy, when the server has restarted and the page hasn't updated yet, work both ways.
+  - A snapshot's `prevBits` stays 16 bits, since only the low word reaches the prediction.
+  - Nothing else needed changing: the client's sampling, the prediction's replay, the queue trimming, the bots and the
+    practice worker all carry the bits as a number. `IN` has room from 65536 up (keep below 2^31).
+- **Dancing stops when you're hurt** (`server/systems/dance.js` `hurt`, from `combat.damage`). Being hit, shot, cut,
+  burned, run over or falling stops your dance. So does being knocked down, stunned or sent tumbling without a scratch
+  (`dance.input`).
+  - A club's dancer who's hurt leaves the floor. They then react as anyone hurt does (`npc.onAttacked`): they flee or
+    fight back, by temperament. Before this, a dancer always ran, still in the dance pose, and was put back on the
+    floor at the next drop.
+  - The floor round them reacts as a street does to a fight (`nightclubs.js` `dancerHurt`, `rules.js CLUB_FIGHT`). The
+    dancers within 64 px step back out of it. Further off, a few stop and get their phones out. The rest dance on, and
+    the line refills the spots.
+  - Someone dancing in the street (a persona) stops for good, and if nobody did it (a fire, say) gets away from it.
+- **Damaging a car is a crime when it's seen** (`law.js` `vehicleDamaged`, `rules.js VANDAL_HEAT`, `VEH_CRIME`). This
+  covers a swing with a melee weapon, the plasma blade's hits and its cut, a bullet and an arrow. Shooting was already
+  "Shots fired"; hitting the car is now a crime of its own as well.
+  - An empty car is **vandalism**, a new small crime (heat 8): what passers-by see adds up, and an officer who sees it
+    gives a star at once.
+  - A car with someone in it is an **assault** on them (an officer inside: assaulting an officer).
+  - It goes through the usual witnesses, so police who see it come for you. One count per car or person every 5 s.
+  - Your own car (owned, rented, issued, or a police car on duty) is no crime.
+  - The NPC driver reacts by temperament (`npc.js onVehicleHit`). Going slow enough, a fighter stops, gets out and comes
+    for you. Anyone else drives off in a panic, and as the victim they most likely call it in.
+- **A deflected arrow drops** (`combat.js` `arrowDrop`, the `arrowdrop` event). When the plasma blade turns an arrow
+  aside, the arrow falls a step or two off the blade, along the way it glanced, and lies a few seconds, fading out.
+  Nobody can pick it up.
+  - Both renderers draw it from one pooled chunk in `client/render/vehdmg.js` (loaded with the first one, not with the
+    page). The classic view uses the chunk's picture; art v2 uses the arrow's own sprite (`host.js _arrowDrop`).
+  - A fire arrow does what it does coming down anywhere else: it flares where it lands, lights a campfire it falls by
+    and burns away. It's drawn charred and goes sooner.
+  - Only the plasma blade deflects. The other guards stop blows, not arrows: the owner's rule from this morning.
+- **NPCs guard** (`combat.js npcGuard`, `rules.js NPC_GUARD`). An NPC in a fight with fists, a bat, a sword, the katana
+  or the plasma blade now and then raises a guard as someone swings at them.
+  - The chance goes by what they hold (fists 22% up to the plasma blade 45%) and by their temperament (×0.5 for the
+    timid, ×1.3 for the bold). The guard is held 0.7 s and not raised again for 1.4 s.
+  - The player's rules apply: from in front a blow is blocked (the clash, little gets through); from behind it's no
+    help, and there's no striking while it's up (`tryAttack`, for players too). Someone not in a fight is taken by
+    surprise.
+- **The guard has a pose of its own**, for players and NPCs alike. It used to borrow the aim pose because every ped flag
+  bit is taken.
+  - The new `guard` event says who is guarding and for how long. A player's guard is sent again every 0.4 s while held
+    and with t 0 when it drops; an NPC's once.
+  - The page's `pedPose` turns the event into the pose. The server still sets the aim flag for an older page.
+  - Art v2 (`client/art2/dances.js`, out of the chunk bake's reach like the dances): knees bent, the head down. Fists go
+    up in front of the face; a weapon is held across in front of the face in both hands, the blade up and out.
+  - Classic (`client/render/body.js`): both forearms raised, the weapon held across.
+- **A car cut in two collides as two halves** (`vehicles.js bodyBoxes`). It has a box per half for cars and for
+  people, each slid 14 px off the cut as the clients draw them, so you can stand in the gap. It used to keep one box.
+- **Pinwheel Lanes' settees, little tables and ball returns are solid** (`shared/bowling.js alleyFurniture`). They are
+  rows of solid circles in the map's `solidProps`, where art v2 draws them, so the prediction and the server agree.
+  This changes the world and the art hashes: browsers rebuild the city and re-bake their chunks once.
+- **The page's code** stays within its 720 KB budget: 0.65 KB gzipped more (the guard pose and its event, the input's
+  second word, the new rules), 718 KB now. The comments in shared files the page loads are kept to a line; the detail
+  is in the server code.
+
+Files: `shared/protocol.js`, `shared/input.js`, `shared/rules.js` (CLUB_FIGHT, VANDAL_HEAT, VEH_CRIME, NPC_GUARD),
+`shared/bowling.js`, `server/session.js`, `server/systems/{dance,combat,law,npc,nightclubs,personas,players,vehicles}.js`,
+`client/main.js`, `client/render/{vehdmg,body}.js`, `client/art2/dances.js`, `client/art2/game/host.js`.
+Tests:
+- `test/inputword.test.js` (new, 3): every bit round-trips; an old page's message read by the new server, the new
+  message read the old server's way, both through a live session; a high bit pressed, held and kept through the
+  queue's trimming.
+- `test/dance.test.js` (+2): a punch, a shot, a burn, being run over or knocked down stops the player's dance; a club
+  dancer hurt leaves the floor and flees or fights by temperament, the nearest step back, the far side dances on; a
+  street dancer burned stops and runs.
+- `test/vehdamage.test.js` (+4): a bat on an empty car in front of an officer is a star; your own car is no crime; a
+  bullet into an occupied one is an assault on its driver; a fighter of a driver gets out and comes for you, a timid one
+  drives off in a panic; the plasma cut with a driver in is an assault; one count every few seconds; the cut car's two
+  boxes, the gap you can stand in, the slid half pushing you out.
+- `test/firebow.test.js` (+1): a plain and a fire arrow turned aside by a guarding plasma blade drop near it,
+  unhurting, none to pick up; the client's chunk thrown from the blade to where it rests, tagged for art v2, a fire one
+  flaring and going sooner.
+- `test/blocking.test.js` (+2): NPCs with each guard weapon raise a guard at the odds and block, and can't strike
+  meanwhile; worse odds hit; from behind no help; a gun or someone not fighting doesn't guard; a player's guard is shown
+  on raising, now and then while held and dropped on release; art v2's guard pose differs from the aim and idle with
+  fists and each weapon; the page and the classic body know it.
+- `test/bowling.test.js` (+1): a ball return per pair of lanes, the settees, each solid; walking at a settee you stop
+  short.
+- Two tests adjusted for NPCs that guard:
+  - `test/blades.test.js`: the finisher's victim keeps the guard down. Its roll of 0 would otherwise raise it.
+  - `test/brawls.test.js`: "stopped fighting once the police were on it" now counts only the knockdowns after the
+    officers got out. A knockdown during the fight before they arrived isn't the police's.
+- These pass as before: `test/nightclubs.test.js`, `test/crime.test.js`, `test/witnesses.test.js`, `test/art2.test.js`,
+  `test/dmath.test.js`, `test/perf.test.js`, `test/streetlife.test.js`, `test/police.test.js`, `test/arrests.test.js`,
+  `test/gameplay.test.js` and the rest of the files above.

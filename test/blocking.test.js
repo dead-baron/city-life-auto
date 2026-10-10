@@ -130,3 +130,79 @@ test('the plasma blade deflects bullets: most from in front while guarding, fewe
   }
   assert.ok(n > 60 && turned / n > 0.75, `guarding, facing the shooter: ${turned} of ${n} turned aside`);
 });
+
+// ---- NPCs guard; the guard's own pose (H14) ----
+test('an NPC fighting with fists or a blade raises a guard now and then as someone swings - blocked from in front only, no striking meanwhile', async () => {
+  const { NPC_GUARD } = await import('../shared/rules.js');
+  const { spawnNpc } = await import('../server/systems/npc.js');
+  const evs2 = (w, e) => w.events.filter((q) => q.ev.e === e).map((q) => q.ev);
+  // a brawler with weapon wid fighting the player (who swings from in front, or from behind)
+  const brawl = (wid, fight, roll, behind = false) => {
+    const s = pair('fists', 'bat', 1, 24);
+    const n = spawnNpc(s.w, 'casual', s.d.x, s.d.y, 'civ');
+    s.w.remove(s.d); s.w.players.delete(s.p.pid);
+    n.weapon = wid; n.npc.fight = fight; n.npc.state = 'fight'; n.npc.target = s.a.id; n.npc.until = s.w.time + 30;
+    n.a = behind ? Math.PI : 0;   // (facing the player east of them - or away)
+    n.hp = n.maxHp = 1000;
+    s.w.rand = () => roll;
+    s.w.events.length = 0;
+    const hp0 = n.hp;
+    combat.tryAttack(s.w, s.a, Math.PI);
+    return { ...s, n, hurt: hp0 - n.hp, blocked: evs2(s.w, 'block').length > 0, shown: evs2(s.w, 'guard')[0] };
+  };
+  // the chance: by weapon and temperament
+  const ch = (wid, fight) => NPC_GUARD.chance[wid] * (NPC_GUARD.temper[0] + NPC_GUARD.temper[1] * fight);
+  assert.ok(ch('katana', 1) > ch('fists', 1) && ch('fists', 1) > ch('fists', 0), 'a blade guards more than fists; a fighter more than a coward');
+  for (const wid of ['fists', 'bat', 'sword', 'katana', 'plasma']) {
+    const g = brawl(wid, 1, ch(wid, 1) - 0.01);
+    assert.ok(g.blocked && g.shown && g.shown.id === g.n.id && g.shown.t === NPC_GUARD.holdS, `${wid}: the guard goes up and blocks (shown to everyone)`);
+    assert.ok(g.hurt < WEAPONS.bat.dmg * (1 - WEAPONS[wid].guard) + 1, `${wid}: little gets through (${g.hurt.toFixed(1)})`);
+    assert.equal(combat.tryAttack(g.w, g.n, 0), false, 'guarding: no striking');
+    const no = brawl(wid, 1, ch(wid, 1) + 0.01);
+    assert.ok(!no.blocked && !no.shown && no.hurt > 0, `${wid}: at worse odds, no guard - hit`);
+  }
+  const back = brawl('katana', 1, 0.01, true);
+  assert.ok(back.shown && !back.blocked && back.hurt > 0, 'from behind the guard is no help');
+  const gun = brawl('pistol', 1, 0.01);
+  assert.ok(!gun.shown && !gun.blocked, 'a gun: no guard');
+  // not in a fight: no guard
+  const s2 = pair('fists', 'bat', 1, 24);
+  const n2 = spawnNpc(s2.w, 'casual', s2.d.x, s2.d.y, 'civ');
+  s2.w.remove(s2.d); s2.w.players.delete(s2.p.pid);
+  n2.a = 0; n2.npc.state = 'wander'; s2.w.rand = () => 0.01; s2.w.events.length = 0;
+  combat.tryAttack(s2.w, s2.a, Math.PI);
+  assert.ok(!evs2(s2.w, 'guard').length, 'someone not fighting is taken by surprise');
+});
+
+test("the guard has a pose of its own: a player's shown while held and dropped when let go; drawn by both renderers", async () => {
+  const { readFileSync } = await import('node:fs');
+  const { NPC_GUARD } = await import('../shared/rules.js');
+  const src = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+  const s = pair('katana');
+  const log = [], emit = s.w.emit.bind(s.w);
+  s.w.emit = (x, y, ev) => { log.push(ev); return emit(x, y, ev); };
+  const g = () => log.filter((ev) => ev.e === 'guard' && ev.id === s.d.id);
+  send(s.w, s.p, IN.BLOCK);
+  assert.ok(g().length === 1 && g()[0].t > NPC_GUARD.showS, 'up: shown');
+  let n = 0;
+  for (let i = 0; i < 20; i++) { log.length = 0; send(s.w, s.p, IN.BLOCK); n += g().length; }
+  assert.ok(n >= 2 && n <= 4, `held a second: shown again now and then (${n})`);
+  log.length = 0; send(s.w, s.p, 0);
+  assert.ok(g().length === 1 && g()[0].t === 0, 'let go: dropped at once');
+  log.length = 0; send(s.w, s.p, 0);
+  assert.equal(g().length, 0);
+  // art v2: the guard is its own pose - fists up, a weapon across - not the aim
+  const { POSES } = await import('../client/art2/people.js');
+  const { pedSprite } = await import('../client/art2/game/peds.js');
+  assert.equal(POSES.guard, 1);
+  const app = { s: 2, h: 1, hc: '#3a2414', t: 4, tc: '#a02a2a', tc2: '#eee', l: '#2a3a5a', sh: '#eee', bd: 1 };
+  const sum = (G) => { let h = 0; for (let i = 0; i < G.col.length; i += 3) h = (Math.imul(h, 31) + G.col[i]) | 0; return h + ':' + G.w + 'x' + G.h; };
+  for (const wpn of [0, WEAPONS.bat.i, WEAPONS.katana.i, WEAPONS.plasma.i]) {
+    const gd = sum(pedSprite(app, 'guard', 1, 0, wpn, { ar: 'casual' })), aim = sum(pedSprite(app, 'aim', 1, 0, wpn, { ar: 'casual' })), idle = sum(pedSprite(app, 'idle', 1, 0, wpn, { ar: 'casual' }));
+    assert.ok(gd !== aim && gd !== idle, `weapon ${wpn}: the guard pose is its own`);
+  }
+  // the classic view: the page knows the pose (pedPose, the 'guard' event), the body draws it
+  const main = src('client/main.js');
+  assert.ok(/case 'guard'/.test(main) && /return 'guard'/.test(main) && /'thump', 'guard'\]/.test(main), 'main.js: the event, the pose, upright');
+  assert.ok(/pose === 'guard'/.test(src('client/render/body.js')), 'render/body.js draws it');
+});

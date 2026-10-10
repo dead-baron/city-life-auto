@@ -8,9 +8,10 @@ export const MSG_SNAPSHOT = 2;
 
 export const CTRL = { NONE: 0, PED: 1, DRIVER: 2, PASSENGER: 3, RIDER: 4 }; // RIDER: on a train (no prediction; camera follows your ped)
 
-// ---- Client -> server input (11 bytes) -------------------------------------
+// ---- Client -> server input (13 bytes: the bits' high word at 11; an old page's 11 read as 0) -------------
+export const INPUT_BYTES = 13;
 export function encodeInput(seq, bits, mxq, myq, aimq) {
-  const buf = new ArrayBuffer(11);
+  const buf = new ArrayBuffer(INPUT_BYTES);
   const dv = new DataView(buf);
   dv.setUint8(0, MSG_INPUT);
   dv.setUint32(1, seq >>> 0, true);
@@ -18,12 +19,13 @@ export function encodeInput(seq, bits, mxq, myq, aimq) {
   dv.setInt8(7, mxq);
   dv.setInt8(8, myq);
   dv.setUint16(9, aimq & 0xffff, true);
+  dv.setUint16(11, (bits >>> 16) & 0xffff, true);
   return buf;
 }
 export function decodeInput(dv) {
   return {
     seq: dv.getUint32(1, true),
-    bits: dv.getUint16(5, true),
+    bits: (dv.getUint16(5, true) | (dv.byteLength >= INPUT_BYTES ? dv.getUint16(11, true) << 16 : 0)) >>> 0,
     mx: dequantizeAxis(dv.getInt8(7)),
     my: dequantizeAxis(dv.getInt8(8)),
     aim: dequantizeAngle(dv.getUint16(9, true)),

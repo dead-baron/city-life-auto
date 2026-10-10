@@ -16,7 +16,8 @@ export const IN = {
   TANK: 4096,    // classic tank-style driving (optional keyboard setting)
   LIGHT: 8192,   // L / D-pad up on foot / 🔦 - flashlight on / off (if you have one)
   BLOCK: 16384,  // guard: right mouse · LT on foot · touch aim stick (combat.js)
-  DANCE: 32768,  // G / L3 / the phone's 💃 - dance where you stand, the next move each press (server dance.js; the input's last bit)
+  DANCE: 32768,  // G / L3 / the phone's 💃 - dance where you stand, the next move each press (server dance.js)
+  // 65536 and up: free - the input is 32 bits on the wire (protocol.js: a second word); keep below 2^31 (signed ops)
 };
 
 // ---- the gamepad (client/input.js; tasks #301, #411) ----------------------------------------------------------------

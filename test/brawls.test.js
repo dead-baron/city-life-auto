@@ -136,14 +136,15 @@ test('the police break up a street fight: a squad car, the one who did not start
   try {
     assert.ok(happenings.startNow(w, 'fight', p, { both: false, cops: true }));
     const ev = fight(w), a = w.get(ev.a), b = w.get(ev.b);
-    let unit = null, targets = null, onFoot = false, bFought = false;
+    let unit = null, targets = null, onFoot = false, bFought = false, out0 = -1;
     const done = (() => {
       for (let i = 0; i < 20 * 90; i++) {
         p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: 0, my: 0, aim: 0 });
         w.step();
         if (!unit) for (const id of w.police) { const v = w.get(id); if (v && v.ai && v.ai.npcTargets) { unit = v; targets = [...v.ai.npcTargets]; } }
         if (unit && unit.ai && unit.ai.mode === 'foot') onFoot = true;
-        if (onFoot && !b.removed && b.npc.state === 'fight' && b.npc.target === a.id && heard.some((e) => e.e === 'knockdown' && e.id === a.id)) bFought = true;
+        if (onFoot && out0 < 0) out0 = heard.length;   // (from when the officers got out: a knockdown in the fight before isn't theirs)
+        if (onFoot && !b.removed && b.npc.state === 'fight' && b.npc.target === a.id && heard.slice(out0).some((e) => e.e === 'knockdown' && e.id === a.id)) bFought = true;
         if (a.removed) return true;
       }
       return false;

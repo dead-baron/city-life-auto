@@ -38,6 +38,9 @@ export function createSession(world, conn, opts) {
       if (t - budgetAt > 1000) { budgetAt = t; msgBudget = 0; }
       if (++msgBudget > 120) return; // flood guard
       if (isBinary) {
+        // (the input: 13 bytes, the action bits 32 wide - protocol.js; a page from before that sends 11, read with the high
+        // word 0, and a server from before reads the first 11 of the new form: they meet for the minutes after a deploy.
+        // A snapshot's prevBits stays 16 bits: only the low word reaches the prediction)
         if (!player || data.byteLength < 11) return;
         const dv = ArrayBuffer.isView(data) ? new DataView(data.buffer, data.byteOffset, data.byteLength) : new DataView(data);
         if (dv.getUint8(0) === MSG_INPUT) players.queueInput(player, decodeInput(dv));

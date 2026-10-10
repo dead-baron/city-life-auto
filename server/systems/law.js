@@ -16,7 +16,7 @@ import * as cells from './cells.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 import { undergroundOf, ugLos } from '../../shared/underground.js';
-import { ROB_CALLED_HEAT } from '../../shared/rules.js';
+import { ROB_CALLED_HEAT, VANDAL_HEAT, VEH_CRIME } from '../../shared/rules.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
 // sev: how much more (or less) likely a witness is to call it in than for an assault (WITNESS_REPORT); sight: how far
@@ -44,6 +44,7 @@ export const CRIMES = {
   trainRobbery: { heat: 50, label: 'Train robbery', felony: true, sev: 1.5 },
   escape:      { heat: 25, label: 'Escaping custody', felony: true, sev: 1 },
   treeFelling: { heat: FELL_HEAT, label: 'Vandalism: felling a tree', sev: 0.6, minor: true },   // (in town or a park: felling.js)
+  vandalism:   { heat: VANDAL_HEAT, label: 'Vandalism: damaging a vehicle', sev: 0.7, minor: true },   // (an empty one: vehicleDamaged)
 };
 
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
@@ -454,6 +455,24 @@ export function vehicleRam(world, attacker, victimV, impact) {
   attacker.lastRam = now;
   crime(world, attacker, 'ram', victim, victimV.x, victimV.y);
   void impact;
+}
+
+// A player's weapon damaging a vehicle (combat.js: a swing at it, the plasma blade's cut, a bullet, an arrow): someone
+// else's is a crime when it's seen - vandalism when it's empty, an assault on whoever's in it (an officer's: assaulting
+// an officer). Your own (owned, rented, issued; a police car on duty) is nobody's business. Its driver reacts (npc.js
+// onVehicleHit).
+export function vehicleDamaged(world, attacker, v) {
+  if (!attacker || !attacker.player || !v || v.wreckAt || v.ferry || attacker.vehId === v.id) return false;
+  const p = attacker.player;
+  if (v.owner === p.pid || v.rentedBy === p.pid || v.issuedTo === p.pid || (v.motorPool !== undefined && p.badge)) return false;
+  let victim = null;
+  for (const id of v.seats) { const e = id ? world.get(id) : null; if (e && !e.dead) { victim = e; break; } }   // (the driver first)
+  const now = world.time, key = victim ? victim.id : -v.id;
+  attacker.recentAssault ||= new Map();
+  if (now - (attacker.recentAssault.get(key) ?? -99) < VEH_CRIME.repeatS) return false;
+  attacker.recentAssault.set(key, now);
+  crime(world, attacker, victim ? (isCop(victim) ? 'copAssault' : 'assault') : 'vandalism', victim, v.x, v.y, { quiet: !!attacker.quietWeapon });
+  return true;
 }
 
 export function hitAndRun(world, driver, ped, killed, v) {

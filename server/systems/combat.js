@@ -6,7 +6,7 @@ import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
 import { WEAPONS, stepWeapon } from '../../shared/items.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT, VEHICLE_WEAPON, VEHICLE_WEAPON_DEFAULT } from '../../shared/rules.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT, VEHICLE_WEAPON, VEHICLE_WEAPON_DEFAULT, NPC_GUARD } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -21,6 +21,7 @@ import * as wanderer from './wanderer.js';
 import * as nightclubs from './nightclubs.js';
 import * as explosions from './explosions.js';   // (chain reactions: task #398)
 import * as campfires from './campfires.js';
+import * as dance from './dance.js';
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -35,6 +36,7 @@ export function tryAttack(world, ped, aim) {
   if (ped.dead || now < ped.nextAttack || now < ped.reloadUntil || now < ped.stunUntil || now < ped.downUntil) return false;
   if (ped.hidden || now < (ped.protectUntil || 0) || ped.cellSafe) return false; // spawn / step-out protection, a police station's cell block (cells.js): no fighting
   if (ped.rollT > 0) return false;
+  if (now < (ped.guardUntil || 0)) return false;   // (guarding: no striking - a player's guard, an NPC's: npcGuard)
   if (!ped.vehId && isSwimming(world.map, ped)) return false; // can't fight while swimming
   const w = WEAPONS[ped.weapon] || WEAPONS.fists;
   if (w.type === 'tool') return false;
@@ -103,6 +105,7 @@ function melee(world, ped, w, aim) {
   world.emit(ped.x, ped.y, { e: 'swing', x: ped.x, y: ped.y, id: ped.id, side: ped.swingSide });
   if (!best) { meleeVehicle(world, ped, w, aim); return true; }   // (nobody in reach: a vehicle's body in the swing - task #402)
   const dir = Math.atan2(best.y - ped.y, best.x - ped.x);
+  npcGuard(world, best);   // (someone fighting back with fists or a blade: now and then the guard goes up)
   if (blocked(world, best, ped, w, dir)) return true;
   if (!best.wild && !ped.wild) npc.spectacle(world, best.x, best.y, { r: 300, near: 60, chance: 0.35, secs: 7 });   // (a fight: a few phones come out)
   const was = { speed: Math.hypot(best.vx, best.vy), heading: Math.atan2(best.vy, best.vx) }; // (for the reaction: running into it?)
@@ -186,18 +189,35 @@ export function meleeVehicle(world, ped, w, aim) {
     if (hit.plasmaHits >= vehicles.plasmaCuts(hit.def)) {
       const c = Math.cos(hit.a), s = Math.sin(hit.a);
       vehicles.noteHit(hit, zone, 1);
+      law.vehicleDamaged(world, ped, hit);   // (someone else's: a crime when it's seen)
       vehicles.cutVehicle(world, hit, ped, (hx - hit.x) * c + (hy - hit.y) * s);
       if (hit.ai) npc.onVehicleHit(world, hit, ped);
       return hit;
     }
   }
   vehicles.damageVehicle(world, hit, w.dmg * (ped.build ? ped.build.str : 1) * vehWeapon(w), ped, false, false, zone);
+  law.vehicleDamaged(world, ped, hit);
   if (hit.ai) npc.onVehicleHit(world, hit, ped);
   return hit;
 }
 
 // Guarding (players.js: the guard held with fists, a bat, a sword, the katana or the plasma blade; rules.js GUARD).
 export const guarding = (world, t) => world.time < (t.guardUntil || 0) && !t.dead && !t.vehId;
+// An NPC in a fight, with fists or a melee weapon that guards, as someone swings at them: now and then (rules.js NPC_GUARD,
+// by the weapon and their temperament) the guard goes up - the player's rules from there (blocked: from in front only).
+// Shown to everyone by the 'guard' event (t: how long - the clients' guard pose, main.js pedPose).
+export function npcGuard(world, t) {
+  const n = t.npc, now = world.time;
+  if (!n || n.state !== 'fight' || t.dead || t.vehId || guarding(world, t) || now < (n.guardNext || 0)) return false;
+  if (now < (t.downUntil || 0) || now < (t.stunUntil || 0) || t.rollT > 0 || t.carrying) return false;
+  const gw = WEAPONS[t.weapon] || WEAPONS.fists, c = NPC_GUARD.chance[gw.id];
+  if (!c || !gw.guard) return false;
+  n.guardNext = now + NPC_GUARD.coolS;
+  if (world.rand() >= c * (NPC_GUARD.temper[0] + NPC_GUARD.temper[1] * Math.max(0, Math.min(1, n.fight ?? 0.5)))) return false;
+  t.guardUntil = now + NPC_GUARD.holdS;
+  world.emit(t.x, t.y, { e: 'guard', id: t.id, t: NPC_GUARD.holdS });
+  return true;
+}
 // A blow at someone guarding, from in front of them: blocked - a clash (the 'block' event), the attacker's blow bounces
 // off and their combo is broken, the guard rocks back a step, and only what the guard doesn't stop gets through (no
 // stagger, no bleeding, no knockdown). From behind or the side the guard is no help.
@@ -230,10 +250,20 @@ function deflects(world, t, a) {
   const c = deflectChance(angleDiff(t.a || 0, a + Math.PI), g);
   if (!(c > 0) || world.rand() >= c) return false;
   const back = a + Math.PI, glance = back + (world.rand() - 0.5) * 2.4;
-  world.emit(t.x, t.y, { e: 'deflect', x: t.x, y: t.y, a: +back.toFixed(2), g: +glance.toFixed(2), id: t.id });
+  const ev = { e: 'deflect', x: t.x, y: t.y, a: +back.toFixed(2), g: +glance.toFixed(2), id: t.id };
+  world.emit(t.x, t.y, ev);
   t.attackAnimUntil = Math.max(t.attackAnimUntil || 0, world.time + 0.16);
   t.swingSide = (t.swingSide || 0) ^ 1;
-  return true;
+  return ev;   // (truthy: turned aside - ev.g the way it glanced)
+}
+// A deflected arrow drops: knocked out of the air, it falls a step or two off the blade, the way it glanced, and lies
+// there a few seconds, fading (the 'arrowdrop' event: sx, sy where it was turned; x, y where it comes to rest - the
+// clients throw it down: render/vehdmg.js, both renderers). Nobody can pick it up. A fire arrow does what it does
+// coming down anywhere else: it flares where it lands, lights a campfire it falls by, and burns away.
+function arrowDrop(world, t, w, g) {
+  const d = 16 + world.rand() * 20, x = t.x + Math.cos(g) * d, y = t.y + Math.sin(g) * d;
+  world.emit(x, y, { e: 'arrowdrop', x: Math.round(x), y: Math.round(y), sx: Math.round(t.x), sy: Math.round(t.y), a: +g.toFixed(2), f: w.fire ? 1 : 0 });
+  if (w.fire) { const cf = campfires.fireNear(world, x, y, FIRE_ARROW.lightPx); if (cf) campfires.setLit(world, cf.i, true); }
 }
 
 // A bow: the arrow flies (stepArrow), the string twangs - nobody but someone right beside you hears it, and the
@@ -258,7 +288,8 @@ function stepArrow(world, p, dt, owner) {
   const w = WEAPONS[p.weapon], a = Math.atan2(p.vy, p.vx);
   if (hit.kind === K.PED && hit.id !== p.owner) {
     const t = hit;
-    if (deflects(world, t, a)) { world.remove(p); return; }   // (the plasma blade: turned aside, it falls away)
+    const dv = deflects(world, t, a);
+    if (dv) { arrowDrop(world, t, w, dv.g); world.remove(p); return; }   // (the plasma blade: turned aside, it drops)
     world.emit(t.x, t.y, { e: 'blood', x: t.x, y: t.y, a, n: 7, g: 1 });
     world.emit(t.x, t.y, { e: 'arrowhit', x: t.x, y: t.y, a: +a.toFixed(2), id: t.id, f: w.fire ? 1 : 0 });
     const mult = t.wild ? (w.wild || 1) : t.player || !(owner && owner.player) ? 1 : NPC_GUN_MULT / (t.grit || 1);
@@ -274,6 +305,7 @@ function stepArrow(world, p, dt, owner) {
     world.emit(nx, ny, { e: 'spark', x: nx, y: ny });
     if (w.fire) { hit.burnUntil = Math.max(hit.burnUntil || 0, world.time + FIRE_ARROW.vehBurnS); world.emit(nx, ny, { e: 'arrowstick', x: Math.round(nx), y: Math.round(ny), a: +a.toFixed(2), wall: 1, f: 1 }); }   // (it catches: flames on it a while)
     vehicles.damageVehicle(world, hit, w.fire ? FIRE_ARROW.veh : 4, owner, false, false, vehicles.zoneAt(hit, nx, ny));
+    if (owner) { law.vehicleDamaged(world, owner, hit); if (hit.ai) npc.onVehicleHit(world, hit, owner); }
     world.remove(p);
     return;
   }
@@ -402,6 +434,7 @@ function hitscan(world, ped, w, a, acc) {
     vehicles.damageVehicle(world, hit, w.dmg * vehWeapon(w), ped, false, false, vehicles.zoneAt(hit, hx, hy));
     // exposed riders on bikes take hits too
     if (hit.def.kind === 'bike' && hit.seats[0]) { const rider = world.get(hit.seats[0]); if (rider) damage(world, rider, w.dmg * 0.5, ped, 'gun', a); }
+    law.vehicleDamaged(world, ped, hit);   // (shots fired is a crime already: hitting someone else's vehicle is one more)
     if (hit.ai) npc.onVehicleHit(world, hit, ped);
     return true;
   }
@@ -433,6 +466,7 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
     }
   }
   ped.hp -= amount;
+  if (ped.dancing || ped.gt === 'dance') dance.hurt(world, ped, attacker);   // (hurt: the dance stops - yours or an NPC's)
   ped.lastHitAt = now;
   ped.lastCombatAt = now;
   if (attacker) { ped.lastHitBy = attacker.id; attacker.lastCombatAt = now; }

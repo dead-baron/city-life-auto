@@ -210,3 +210,106 @@ test('the debug menu shows each damage look: a car damaged to a stage a little w
   v = mine().pop();
   assert.ok(unpackVehDamage(net._fields(w, v)[2]).holes >= 5);
 });
+
+// ---- damaging a car is a crime when it's seen (server/systems/law.js vehicleDamaged; npc.js onVehicleHit) ----
+const law = await import('../server/systems/law.js');
+const { spawnNpc } = await import('../server/systems/npc.js');
+// a scene with an officer looking on (cameras out of it), the player beside a car
+function seen(w, p, car) {
+  w.map.cameras = w.map.cameras.filter((c) => Math.hypot(c.x - car.x, c.y - car.y) > c.r + 600);
+  const cop = spawnNpc(w, 'cop', car.x, car.y - 140, 'cop');
+  cop.a = Math.PI / 2; cop.npc.state = 'idle';
+  p.heat = 0; p.wanted = 0; p.suspicion = 0; p.soft = false;
+  return cop;
+}
+
+test('damaging a car is a crime when seen: an empty one is vandalism, one with someone in it an assault; your own is no crime', () => {
+  const { w, p, road } = scene();
+  const car = w.spawnVehicle('sedan', road.x + 400, road.y, 0, { npcOwned: true });
+  seen(w, p, car);
+  teleport(w, p.ped, car.x + car.def.L / 2 + 26, car.y + 6);
+  attack(w, p.ped, 'bat', Math.PI);
+  assert.ok(car.hp < car.def.hp, 'the bat hit it');
+  assert.ok(p.wanted >= 1, 'vandalism in front of an officer: a star');
+  assert.ok(p.ped.recentAssault.has(-car.id), '(counted as vandalism)');
+  // your own car: nobody's business
+  const mine = w.spawnVehicle('sedan', road.x + 800, road.y, 0, { npcOwned: false });
+  mine.owner = p.pid;
+  seen(w, p, mine);
+  teleport(w, p.ped, mine.x + mine.def.L / 2 + 26, mine.y + 6);
+  attack(w, p.ped, 'bat', Math.PI);
+  assert.ok(mine.hp < mine.def.hp, 'the bat hit it');
+  assert.equal(p.wanted, 0, 'no crime');
+  assert.ok(!p.ped.recentAssault.has(-mine.id));
+  // a car with someone in it: an assault on them (a gun: shots fired is one already - the car's damage another)
+  const occ = w.spawnVehicle('sedan', road.x + 1200, road.y, 0, { npcOwned: true });
+  const drv = spawnNpc(w, 'casual', occ.x, occ.y, 'civ');
+  occ.seats[0] = drv.id; drv.vehId = occ.id; drv.seat = 0;
+  seen(w, p, occ);
+  teleport(w, p.ped, occ.x + occ.def.L / 2 + 40, occ.y + 6);
+  attack(w, p.ped, 'pistol', Math.PI);
+  assert.ok(occ.holes > 0, 'shot');
+  assert.ok(drv.aggressors.has(p.ped.id), 'the driver was assaulted');
+  assert.ok(p.wanted >= 1 && p.heat >= 15, 'assault: stars');
+  assert.ok(p.ped.recentAssault.has(drv.id));
+});
+
+test("a car's driver reacts by temperament: a fighter gets out and comes for you, anyone else drives off in a panic", () => {
+  for (const fight of [1, 0]) {
+    const { w, p, road } = scene();
+    const car = w.spawnVehicle('sedan', road.x + 400, road.y, 0, { npcOwned: true });
+    const drv = spawnNpc(w, 'casual', car.x, car.y, 'civ');
+    car.seats[0] = drv.id; drv.vehId = car.id; drv.seat = 0; car.ai = { kind: 'test' };
+    drv.npc.fight = fight;
+    teleport(w, p.ped, car.x + car.def.L / 2 + 26, car.y + 6);
+    attack(w, p.ped, 'bat', Math.PI);
+    assert.ok(car.hp < car.def.hp, 'hit');
+    if (fight) {
+      assert.equal(drv.vehId, 0, 'out of the car');
+      assert.equal(drv.npc.state, 'fight'); assert.equal(drv.npc.target, p.ped.id, 'at whoever did it');
+      assert.equal(car.ai, null);
+    } else {
+      assert.equal(drv.vehId, car.id, 'stays in');
+      assert.ok(car.ai.panicUntil > w.time, 'drives off in a panic');
+    }
+  }
+});
+
+test('the plasma blade cutting a car with someone in it is an assault on them; an arrow into an empty one vandalism', () => {
+  const { w, p, road } = scene();
+  const car = w.spawnVehicle('sedan', road.x + 400, road.y, 0, { npcOwned: true });
+  const drv = spawnNpc(w, 'casual', car.x, car.y, 'civ');
+  car.seats[0] = drv.id; drv.vehId = car.id; drv.seat = 0;
+  seen(w, p, car);
+  teleport(w, p.ped, car.x + car.def.L / 2 + 26, car.y + 6);
+  for (let i = 0; i < PLASMA_CUT.car; i++) attack(w, p.ped, 'plasma', Math.PI);
+  assert.ok(car.cut !== undefined || car.halves || car.wreckAt || car.dead, 'cut');
+  assert.ok(drv.aggressors.has(p.ped.id) && p.wanted >= 1, 'an assault on its driver');
+  // an arrow into an empty car
+  const car2 = w.spawnVehicle('sedan', road.x + 1000, road.y, 0, { npcOwned: true });
+  seen(w, p, car2);
+  assert.equal(law.vehicleDamaged(w, p.ped, car2), true, 'counted');
+  assert.equal(law.vehicleDamaged(w, p.ped, car2), false, 'once every few seconds');
+  assert.ok(p.wanted >= 1);
+});
+
+test('a car cut in two collides as two halves: a box each, slid apart, a gap between them', () => {
+  const { w, p, road } = scene();
+  const car = w.spawnVehicle('sedan', road.x + 400, road.y, 0, { npcOwned: false });
+  const one = vehicles.bodyBoxes(car);
+  assert.equal(one.length, 1); assert.equal(one[0].hl, car.def.L / 2);
+  vehicles.cutVehicle(w, car, p.ped, 0);   // (through the middle)
+  const [a, b] = vehicles.bodyBoxes(car);
+  assert.ok(a && b, 'two boxes');
+  assert.ok(Math.abs(a.hl + b.hl - car.def.L / 2) < 1e-6, 'the halves make the car');
+  assert.ok(Math.abs((b.x - b.hl) - (a.x + a.hl) - 2 * PLASMA_CUT.slide) < 1e-6, 'slid apart: the gap');
+  // someone standing in the gap isn't pushed out; someone at the back end of the slid half is
+  const gapPed = joinPlayer(w).p.ped, endPed = joinPlayer(w).p.ped;
+  teleport(w, gapPed, car.x, car.y + 2); gapPed.r = Math.min(gapPed.r, PLASMA_CUT.slide - 2);
+  teleport(w, endPed, car.x - car.def.L / 2 - PLASMA_CUT.slide + 4, car.y);
+  const g0 = { x: gapPed.x, y: gapPed.y }, e0 = { x: endPed.x, y: endPed.y };
+  car.vx = car.vy = 0;
+  w.step();
+  assert.ok(Math.hypot(gapPed.x - g0.x, gapPed.y - g0.y) < 1, 'in the gap: free');
+  assert.ok(Math.hypot(endPed.x - e0.x, endPed.y - e0.y) > 2, 'against the slid half: pushed out');
+});

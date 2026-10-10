@@ -565,3 +565,10 @@ export const VEHICLE_WEAPON_DEFAULT = 0.6;
 // The plasma blade cuts a vehicle in two: this many hits by kind (a heavy truck or a bus: heavy) and it's sliced through
 // - the halves slide apart (slide px each, over slideS) with glowing edges, the engine dead, and it explodes boomS later.
 export const PLASMA_CUT = { car: 3, heavy: 5, bike: 1, boat: 3, slide: 14, slideS: 0.7, boomS: 1.8 };
+// a fight on a club's floor (server nightclubs.js dancerHurt)
+export const CLUB_FIGHT = { near: 64, r: 260, backS: [3, 5], film: 0.6, filmS: [5, 9] };
+// a weapon damaging someone else's vehicle (server law.js vehicleDamaged, npc.js onVehicleHit)
+export const VANDAL_HEAT = 8;
+export const VEH_CRIME = { repeatS: 5, fight: 1, stopPx: 120 };
+// an NPC's guard, and showing anyone's (server combat.js npcGuard, players.js)
+export const NPC_GUARD = { chance: { fists: 0.22, bat: 0.3, sword: 0.35, katana: 0.4, plasma: 0.45 }, temper: [0.5, 0.8], holdS: 0.7, coolS: 1.4, showS: 0.4 };
