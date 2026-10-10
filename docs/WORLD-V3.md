@@ -1011,9 +1011,13 @@ them (step 4).
    because of what is left out (with the bridges kept it is 87.6%) or its cut from Granite Peaks (5,136 of its
    differing tiles are more than 64 tiles from it; built with Granite Peaks still joined on, no better: 88.5% of the
    tiles of its districts, 71 of 109 road edges). Built with Metro City (bridges kept), its streets come back: 93 of
-   104 road edges, 94.1% of its tiles. So Northshore's streets depend on Metro City being built - something in the road
-   layout's whole-world passes (the network repair, which joins and prunes the network as a whole, or the shared random
-   stream, 4.6 item 6): to be found next (a scratch experiment, not in the tool yet).
+   104 road edges, 94.1% of its tiles. The cause: "the two bridges from Metro City run straight on up through town as
+   its avenues" (`islands.js` `islandRoads`: the North Bridge at x = 958 and the Harbor Bridge at x = 1018, each one
+   line from Metro City's north shore to y = 118), and they are laid only where `metroNorthEnd` finds Metro City's
+   shore - built alone, Northshore has neither avenue (they aren't in the left-out list: never laid), and its grid and
+   lots come out round their absence. The fix, in the island build (no change to the live world): answer
+   `metroNorthEnd` from today's land, and cut a road that leaves the island at its shore - its run on the island is
+   the island's (here Northshore's two avenues), the rest the skeleton's bridge - instead of leaving it out whole.
 2. **The random stream**, likely, also gives Highland Woods' wild ground other trees (747 of 1,241 props, the same with
    the bridges kept; `buildWilds` draws from it) and some of Cedar Isle's (5,391 of 5,905). Westport's props are mostly
    the bridges' doing (4,089 of 4,260 with them kept).
@@ -1031,8 +1035,9 @@ them (step 4).
 6. **The grids are the whole map's** (4.6 item 7): every build costs at least 1.2 s and 23 MB.
 
 **Next steps, in order** (4.6's, updated)
-1. **Island builds**: done (this section). Left: a road over a seam is kept whole (it runs on over the sea where the
-   other piece was) - with the designed shores it ends at the shore; Northshore's and Gull Harbor's differences found.
+1. **Island builds**: done (this section). Left: cut a road at the island's shore instead of leaving a bridge out whole
+   or keeping a road over a seam whole (the Westport Beltway runs on over the sea where the airport was), and answer
+   `metroNorthEnd` from today's land, which brings back Northshore's two avenues (item 1 above).
 2. **Grids sized to the island** (4.6 step 2): now measured as the floor of every island build.
 3. **Island-local ids, names and random streams** (4.6 step 3; one `WORLD_VERSION` bump).
 4. **The skeleton** takes the bridges each build lists (`m.islandBuild.leftOut`: Bay, North, Harbor, Cedar, Strait
