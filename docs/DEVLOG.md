@@ -6213,9 +6213,12 @@ and today's world has a real one.
   runs through a spur of the mountain: the longest stretch of a road in the peaks with mountain on both sides becomes
   a tunnel, about 1 km long, its mouths a couple of tiles into the rock (`spurTunnels`). The world changes only
   there (rock along the bore's sides); no homes move.
+- **For World v3:** `generateCity(seed, opts)` takes `opts.tunnels(m)` - the v3 build hands in its dotted stretches
+  as specs (`{ edge, s0, s1, closed }`, `edge: 'rail'` for the main line); the v3 spike gets no Granite Peaks one.
 
 `shared/tunnels.js` (new), `shared/map.js` (the build, `los`), `client/tunnels.js` (new), `client/main.js`.
 Tests: `test/tunnels.test.js` - the cover layer and the list for today's tunnel, rock beside the bore and road
 through it; sight blocked between inside and outside (both ways, and across the hill) and not between two inside; a
-car driving in at one mouth and out of the other; a closed mouth stopping a car on a small synthetic map; what's
-hidden from a viewer outside and inside, and which tunnel's hill fades.
+car driving in at one mouth and out of the other; a closed mouth stopping a car on a small synthetic map; a rail
+tunnel's cover and mouths; what's hidden from a viewer outside and inside, which tunnel's hill fades and how fast.
+Played in both renderers (noon outside, noon and night inside).
