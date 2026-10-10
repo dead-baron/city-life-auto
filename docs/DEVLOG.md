@@ -5816,7 +5816,8 @@ work needed whatever the final layout is - stage 1's first spike, written up in 
   then placed in its v3 rectangle (regions r4-4, r5-4, r4-5, r5-5) and compared with today's world. It builds in 2-3.6 s
   against today's 4.5-5.4 s and keeps 46 MB against 68 MB (the grids are still the whole map's).
   - What came out the same: 95.3% of its land tiles, 396 of its 414 road edges and 80% of its buildings. With Dry Creek
-    left joined on, 99.3% of the tiles and every one of its streets.
+    left joined on, 99.3% of the tiles and every one of its streets. Cedar Isle alone (`--island cedar`, an island with
+    no seam): 98.8% of its tiles and 237 of its 243 road edges.
   - What stops an island building on its own: the planned businesses are world-wide (the build threw at Cedar Isle's
     hardware store), the other islands' roads, bridges and the railway are laid from data whether their land is there or
     not, and the seam with Dry Creek. Ids, names and the ATMs are numbered and spaced world-wide, the order-dependent
