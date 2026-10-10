@@ -5459,3 +5459,42 @@ The owner made the title music themselves (a YuE2 instrumental workflow in Comfy
   In the game page (headless), the track loads as Opus and plays on the title screen.
 - **What the owner sends from now on:** the FLAC master is all that's needed. The Opus, MP3 and ABC exports aren't: the game's files are cut and encoded from the master, and the ABC is the generator's planning sketch, not a transcription.
 - **Parked:** the engine rebuild of the owner's earlier track (branch `title-track`).
+
+## 2026-10-10 · The menu track rebuilt in the engine, a layer at a time: the beat, then the bass
+
+The owner: "build the beat first to match it, then the bass, then layer on the other instruments." The menu's second
+track (the owner's "CLA Main Screen", D minor, a Dm-A7 two-bar loop) is being rebuilt in the engine from the
+recording itself, one part at a time, each one checked against the recording before the next.
+- **The beat** (`MENU_BEAT`, `client/sound/banks/menu.js`):
+  - The owner's drum stem is cut into four one-shots: the kick, the snare, a ghost note and the hat. The bank is
+    fetched with a dynamic import only when the song plays, and the song waits for it.
+  - Each one-shot is kept at its own rate, from 16 kHz for the kick to 48 kHz for the hat.
+  - The 16 bars are transcribed hit by hit: each one-shot's place and gain are fitted to the stem's picture band by
+    band. The typical A and B bars are kept, and each hit's level is checked against the stem in its own band.
+  - The tempo goes bar by bar, creeping from 86.1 to 87 BPM as the recording's does.
+- **The kick's thump:** the kick one-shot was the drum stem's kicks lined up on their click and averaged. Each kick's
+  thump (a decaying sine near 62 Hz) sits at its own phase to the click, so averaging cancelled most of it. Against
+  the full mix, the engine's kicks were 6-14 dB short below 85 Hz. Now the one-shot's low end comes from its most
+  typical single kick, at the median kick's strength, and is within 2-5 dB of the mix. Its gains stay on the old
+  peak (`kick_ref` in make-bank.py).
+- **The bass** (`MENU_BASS`, the 'mbass' voice), measured from the recording's low end:
+  - **The notes:** its pitch on the same 16th grid, each note's level in a narrow band round its fundamental, how it
+    falls and where it lets go, each the median over the 8 repeats.
+  - **Bar A:** a long low D for half the bar, then four quiet eighths an octave up.
+  - **Bar B:** a short A on the one, a rest, then a long G (A7's seventh) to the end of the bar.
+  - **The sound:** almost a sine (the G's octave sits 33 dB down). It swells in over 70 ms from a few cents flat,
+    falls away about 10 dB a second, and lets go at the note's end.
+  - **The tuning:** the song's `tune` is now 7 cents sharp, as the recording holds its bass and keys notes. The 22
+    before came from the old take.
+  - **The duck:** the full mix ducks everything but the drums under each snare (about 6 dB, back within a tenth of a
+    second) and, a little, under each kick. The song's `fx.duck` does the same, on its own gain (`F.ton`).
+  - **How close:** each note's level and fall are within 1-2 dB of the recording.
+- **The A/B files** (sent to the owner): the recording's drum and bass stems, the engine's beat and bass, and one
+  that swaps every 4 bars.
+- **Next:** the keys and the lead. The low end of the full mix shows an octave over the bass that the keys must bring.
+- **Tests:** `test/menusong.test.js` (5):
+  - the loop, its tempo and its length;
+  - the beat as transcribed;
+  - the bass's notes, lengths and levels;
+  - the bank's rates and scale, and that it's fetched lazily;
+  - playing it on a stand-in AudioContext: it waits for the bank, then come the hits, the bass and the ducks.

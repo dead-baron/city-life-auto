@@ -10,7 +10,9 @@ kind lined up and averaged where they repeat exactly, as a kick does).
 Each one-shot is kept at its own rate (--rates, else --rate: a kick has nothing above 8 kHz, a hat's fizz goes past
 16) as 16-bit PCM in base64, stored at full scale. The score's gains are on the one-shot at 48 kHz brought to full
 scale (as the transcription fitted them); `norm` is what the stored sound is multiplied by to be that again (its
-peak moves a little when it's resampled). `peak` is the one-shot's own peak in the recording.
+peak moves a little when it's resampled). `peak` is the one-shot's own peak in the recording. A one-shot changed since
+its gains were fitted (the kick given back its sub) brings the peak they were fitted on as NAME_ref in the .npz: it
+is brought to scale by that instead, so the gains still hold for the part that was there.
 """
 import argparse
 import base64
@@ -32,9 +34,9 @@ def main():
     z = np.load(a.npz)
     rates = {k: int(v) for k, v in (kv.split('=') for kv in a.rates.split(',') if kv)}
     lines, total = [], 0
-    for k in sorted(z.files):
+    for k in sorted(f for f in z.files if not f.endswith('_ref')):
         r = rates.get(k, a.rate)
-        x0 = z[k].astype(np.float64); pk48 = float(np.abs(x0).max())
+        x0 = z[k].astype(np.float64); pk48 = float(z[k + '_ref']) if k + '_ref' in z.files else float(np.abs(x0).max())
         x = resample_poly(x0, r, 48000) if r != 48000 else x0.copy()
         n = max(8, int(0.004 * r)); x[-n:] *= np.linspace(1, 0, n)   # (a few ms of fade at the end)
         pk = float(np.abs(x).max())
@@ -46,7 +48,7 @@ def main():
         f.write('// A sample bank (made by tools/music/make-bank.py - edit there, not here): one-shots as 16-bit PCM in base64,\n')
         f.write(f'// each at its own rate and stored at full scale. {a.src}\n')
         f.write('export const BANK = {\n' + '\n'.join(lines) + '\n};\n')
-    print(f'wrote client/sound/banks/{a.name}.js: {len(z.files)} samples, {total / 1024:.0f} KB of base64')
+    print(f'wrote client/sound/banks/{a.name}.js: {len(lines)} samples, {total / 1024:.0f} KB of base64')
 
 
 if __name__ == '__main__':

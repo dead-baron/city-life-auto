@@ -99,9 +99,26 @@ export const MENU_BEAT = {
     [13, 'ghost', 0.14, 0.14], [14, 'kick', 0.79, 0.03], [14, 'hat', 0.06, 0.02], [15, 'ghost', 0.08, 0.09], [15, 'ghost', 0.18, 0.57], [15, 'hat', 0.02, 0.58]],
 };
 export const MENU_TEMPO = [86.1, 86.16, 86.22, 86.28, 86.35, 86.41, 86.47, 86.53, 86.6, 86.66, 86.72, 86.78, 86.85, 86.91, 86.97, 87.04];
+// The bass, measured the same way from the recording's low end (its pitch on the same grid, each note's level in a
+// narrow band round its fundamental, how it falls and where it lets go), median over the eight repeats: [step, note,
+// length in 16ths (to where it lets go), level - the fundamental's peak in the recording's units]. Bar A: a long low D
+// for half the bar, then four quiet eighths an octave up, each let go a little early; bar B: a short A on the one, a
+// rest, a long G (A7's seventh) to the end of the bar. It's almost all fundamental (G's octave sits 33 dB down), and
+// the mix ducks it under each snare (6 dB, back within a tenth of a second) and, a little, each kick.
+export const MENU_BASS = {
+  A: [[0, 38, 8, 0.3], [8, 50, 1.25, 0.043], [10, 50, 1.25, 0.056], [12, 50, 1.25, 0.035], [14, 50, 1.25, 0.037]],
+  B: [[0, 45, 1.1, 0.06], [6, 43, 7.75, 0.235]],
+};
+// a wave's peak against its fundamental (Web Audio normalises a periodic wave to its own peak)
+function wavePeak(h) { let m = 0; for (let i = 0; i < 512; i++) { let y = 0; for (let k = 1; k < h.length; k++) y += h[k] * Math.sin(k * i * Math.PI / 256); m = Math.max(m, Math.abs(y)); } return m; }
+const SUB = [0, 1, 0.06, 0.03];   // (the menu's bass: a sine with a breath of its octave and twelfth)
 export function menuScore(bars = 16) {
   const S = 16, sc = Array.from({ length: bars * S }, () => []);
-  for (let b = 0; b < bars; b++) for (const [s, k, v, late] of MENU_BEAT[b % 2 ? 'B' : 'A']) sc[b * S + s].push({ p: 'hit', s: k, v, late });
+  for (let b = 0; b < bars; b++) {
+    const k = b % 2 ? 'B' : 'A';
+    for (const [s, h, v, late] of MENU_BEAT[k]) sc[b * S + s].push({ p: 'hit', s: h, v, late });
+    for (const [s, n, len, v] of MENU_BASS[k]) sc[b * S + s].push({ p: 'mbass', n: [n], len, v });
+  }
   return sc;
 }
 // the riff's three formants for each note (by pitch class): the synth "says" something a little different on each
@@ -124,10 +141,11 @@ export const SONGS = {
   // hard the drums are pushed into the saturation, and the share of them crunched
   title: { bpm: 92, steps: 16, bars: TITLE_FORM.length, echo: 0.14, gain: 2.4, drumVol: 0.8, score: titleScore(),
     fx: { hiss: 0.01, wow: [[0.55, 0.0022], [0.21, 0.0016], [6.5, 0.00007]], top: 9500, drive: 5, crunch: 0.65, grit: 0.35 } },
-  // the menu's second track (above): its tempo bar by bar, its tuning (cents sharp, as the recording is), its one-shots,
-  // and a light tape - the recording's own sounds already carry its grit, so nothing is squashed or crunched again
-  menu: { bpm: 86.57, tempo: MENU_TEMPO, steps: 16, bars: 16, tune: 22, bank: 'menu', echo: 0, gain: 1.6, score: menuScore(),
-    fx: { hiss: 0.0015, wow: [[0.5, 0.0004], [0.19, 0.0003]], top: 16000, drive: 0, crunch: 0, grit: 0, glue: false, vox: false } },
+  // the menu's second track (above): its tempo bar by bar, its tuning (cents sharp, as the recording's bass and keys hold
+  // their notes), its one-shots, a light tape - the recording's own sounds already carry its grit, so nothing is
+  // squashed or crunched again - and the recording's duck: everything but the drums dipping under each kick and snare
+  menu: { bpm: 86.57, tempo: MENU_TEMPO, steps: 16, bars: 16, tune: 7, bank: 'menu', echo: 0, gain: 1.6, score: menuScore(),
+    fx: { hiss: 0.0015, wow: [[0.5, 0.0004], [0.19, 0.0003]], top: 16000, drive: 0, crunch: 0, grit: 0, glue: false, vox: false, duck: { kick: 0.3, snare: 0.5 } } },
   // the club: A minor, four on the floor, an off-beat bass, open hats, a stab now and then
   club: { bpm: 124, steps: 16, bars: 8, echo: 0.15,
     chords: ['Am', 'Am', 'F', 'G', 'Am', 'Am', 'F', 'Em'], bassPat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 2], bassInst: 'clubbass',
@@ -257,6 +275,7 @@ export class Music {
     if (X.grit) { const grit = shaper(CRUSH); p.inp.connect(gain(1 - X.grit, glue)); p.inp.connect(gain(2, grit)); grit.connect(gain(X.grit / 2, glue)); } else p.inp.connect(glue);
     glue.connect(gain(0.6, wow)); wow.connect(top); top.connect(p.lp);
     const F = p.fx = { wow, top, vox: null, drums: gain(1), src: [] };
+    if (X.duck) F.ton = gain(1, p.inp);   // (everything but the drums, ducked under them: 'hit')
     if (X.vox !== false) {
       const vox = gain(1), fA = bp(700, 3.5), fB = bp(1150, 5), fC = bp(2600, 5), gA = gain(0.25), gB = gain(0.5), gC = gain(0.4), drive = gain(7), fuzz = shaper(FUZZ);
       const low = krate(c.createBiquadFilter()), body = gain(0.6, drive);
@@ -353,6 +372,20 @@ export class Music {
       case 'keys': for (const m of ev.n) for (const d of [-9, 9]) E.tone(p.inp, t, hz(m + tn), ev.len * sd, 0.1 * ev.v * hum, { wave: 'saw8', det: d, lp: 1000, q: 1.2, a: 0.004 }); break;
       case 'lead': E.tone(p.inp, t + 0.01, hz(ev.n[0] + tn), ev.len * sd * 0.95, 0.16 * ev.v * hum, { wave: 'pulse12', lp: 1000, q: 3, a: 0.012, hold: ev.len * sd * 0.5, vib: ev.len > 2 ? 12 : 0 }); break;
       case 'rbass': { const f = hz(ev.n[0] + tn); E.tone(p.inp, t, f * 0.94, ev.len * sd * 0.95, 0.13 * ev.v * hum, { wave: 'soft', f2: f, glide: 0.06, a: 0.006, hold: ev.len * sd * 0.4 }); break; }
+      // (the menu's bass, as measured: almost a sine, swelling in over 70 ms from a few cents flat, falling away slowly -
+      // about 10 dB a second - and let go at the note's end; ev.v is the fundamental's peak in the recording's units)
+      case 'mbass': {
+        const c = this.ctx, f = hz(ev.n[0] + tn), dur = ev.len * sd, end = t + dur + 0.6;
+        const W = this.sub || (this.sub = { w: c.createPeriodicWave(new Float32Array(SUB.length), Float32Array.from(SUB)), k: wavePeak(SUB) });
+        const o = c.createOscillator(), g = c.createGain(), v = ev.v * W.k * (0.95 + R() * 0.1);
+        o.setPeriodicWave(W.w);
+        o.frequency.setValueAtTime(f * 0.988, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.06);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.07);
+        g.gain.setTargetAtTime(0, t + 0.07, 0.85); g.gain.setTargetAtTime(0, t + dur, 0.08);
+        o.connect(g); g.connect(F && F.ton ? F.ton : p.inp); o.start(t); o.stop(end);
+        E.note(o, end); E.note(g, end);
+        break;
+      }
       // (a one-shot from the song's bank, at its gain - give or take the drummer's few per cent)
       case 'hit': {
         const B = this.banks[p.S.bank], buf = B && B[ev.s];
@@ -360,6 +393,9 @@ export class Music {
         const c = this.ctx, src = c.createBufferSource(), g = c.createGain(), end = t + buf.duration + 0.1;
         src.buffer = buf; g.gain.value = ev.v * (p.S.drumVol || 1) * (0.94 + R() * 0.12);
         src.connect(g); g.connect(F ? F.drums : p.inp); src.start(t);
+        // (the mix ducking everything but the drums under a kick or a snare: down within 20 ms, back within a tenth)
+        const dk = F && F.ton && p.S.fx.duck && p.S.fx.duck[ev.s];
+        if (dk) { const tg = F.ton.gain; tg.setTargetAtTime(1 - dk, t - 0.005, 0.012); tg.setTargetAtTime(1, t + 0.04, 0.04); }
         E.note(src, end); E.note(g, end);
         break;
       }
