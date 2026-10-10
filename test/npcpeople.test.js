@@ -225,7 +225,7 @@ test('the walks and props are drawn: the client turns gt / pp / sb into the peop
     for (let f = 0; f < Pd.PED_POSES[q]; f++) { const G = Pd.pedSprite(Pd.withProp(A, gt === 'hunch' ? 'cane' : 'phone'), q, f % 8, f, 0); assert.ok(G.w > 10 && G.h > 30, `${q} ${f}`); }
   }
   assert.equal(Pd.personaPose({ gt: 'hunch' }, 'walk3'), 'walk3', 'running for their life: the plain run');
-  assert.equal(Pd.personaPose({ sb: 1 }, 'idle'), 'sit', 'a seat on the bench');
+  assert.equal(Pd.personaPose({ sb: 1 }, 'idle'), 'sitx', 'a seat on the bench: one of the ways of sitting, held a while (peds.js sitFrame)');
   for (const pp of ['trolley', 'leads', 'guitar', 'call', 'cane', 'board', 'map']) assert.ok(Pd.pedSprite(Pd.withProp(A, pp), 'walk0', 2, 1, 0).w > 10, pp);
   assert.equal(Pd.pedFrame('hunch', 7), 5);
 });

@@ -159,7 +159,7 @@ const toBike = (world, R, m, v, run = false) => walkTo(world, R, m, { x: v.x + v
 
 // ---- riding -------------------------------------------------------------------------------------------------------------
 function mount(world, m, v) {
-  if (!alive(m) || !v || v.removed || v.wreckAt || v.seats[0]) return false;
+  if (!alive(m) || !v || v.removed || v.wreckAt || v.dead || v.seats[0]) return false;   // (not one with its engine dead: smoking, about to go up)
   if (m.sit) { m.sit = null; m.appVer = (m.appVer || 0) + 1; }
   m.vehId = v.id; m.seat = 0; v.seats[0] = m.id; m.vx = 0; m.vy = 0;
   v.parked = false; v.lastDriver = m.id; v.ai = { kind: m.npc && m.npc.thief ? 'thief' : 'club' };
@@ -186,7 +186,7 @@ function drive(world, st, R, c, dt) {
     let ready = 0, total = 0;
     c.members.forEach((id, k) => {
       const m = world.get(id), v = world.get(c.bikes[k]);
-      if (!alive(m) || !v || v.removed || v.wreckAt) return;
+      if (!alive(m) || !v || v.removed || v.wreckAt || v.dead) return;
       total++;
       if (m.vehId === v.id) { ready++; return; }
       if (m.npc.state === 'fight') return;
@@ -200,12 +200,12 @@ function drive(world, st, R, c, dt) {
   // riding out or home in formation, or chasing: anyone who came off picks himself up and gets back on
   if (c.mode !== 'park' && world.tick % 10 === 2) c.members.forEach((id, k) => {
     const m = world.get(id), v = world.get(c.bikes[k]);
-    if (!alive(m) || m.vehId || !v || v.removed || v.wreckAt || v.seats[0] || v.parked || m.npc.state === 'fight' || now < m.downUntil) return;
+    if (!alive(m) || m.vehId || !v || v.removed || v.wreckAt || v.dead || v.seats[0] || v.parked || m.npc.state === 'fight' || now < m.downUntil) return;
     const d = Math.hypot(m.x - v.x, m.y - v.y);
     if (d < v.def.L / 2 + 26 || (!inAnyView(world, m.x, m.y, 30) && !inAnyView(world, v.x, v.y, 30))) mount(world, m, v);
     else if (d < 400 && (!m.npc.guard || Math.hypot(m.npc.guard.x - v.x, m.npc.guard.y - v.y) > 40)) { m.npc.path = []; m.npc.guard = { x: v.x, y: v.y, a: v.a, run: true }; }
   });
-  const riders = c.members.map((id, k) => ({ m: world.get(id), v: world.get(c.bikes[k]), k })).filter((r) => alive(r.m) && r.v && r.m.vehId === r.v.id && !r.v.wreckAt);
+  const riders = c.members.map((id, k) => ({ m: world.get(id), v: world.get(c.bikes[k]), k })).filter((r) => alive(r.m) && r.v && r.m.vehId === r.v.id && !r.v.wreckAt && !r.v.dead);
   if (c.mode === 'chase') return chase(world, st, R, c, riders);
   if (c.mode === 'park') return parkStep(world, R, c, riders);
   if (!riders.length) { toHang(world, R, c); return; }

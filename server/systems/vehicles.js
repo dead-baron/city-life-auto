@@ -156,7 +156,9 @@ function resolveVehicleHit(world, a, b, hit) {
   a.av += crossA * j * 0.06 / ma;
   b.av -= crossA * j * 0.06 / mb;
   const impact = -vn;
-  if (impact > 110) {
+  // two of a club's bikes riding together, a wheel's width apart: a nudge, not a crash (bikers.js)
+  const pack = a.club && a.club === b.club && a.ai?.kind === 'club' && b.ai?.kind === 'club';
+  if (impact > 110 && !pack) {
     const dmg = (impact - 90) * 0.18;
     const da = driverOf(world, a), db = driverOf(world, b);
     const aFaster = speedOf(a) >= speedOf(b);
