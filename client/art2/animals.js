@@ -42,14 +42,14 @@ export const ANIMALS = {
   goat: { len: 26, h: 18, w: 9, coat: '#f2eee4', ears: 'side', tail: 'up', snout: 4, head: 4.5, horns: 'back', beard: 1 },
   // (the wild ones: jl jointed legs, lower the shins' colour, hoof dark hooves; throat a pale throat patch)
   deer: { len: 34, h: 26, w: 10, coat: '#a8693a', belly: '#f0e4cc', pattern: 'rump', patch: '#f4eee2', ears: 'up', tail: 'stub', snout: 5, head: 5, neck: 10, antlers: 1, jl: 1, lower: '#8a5630', hoof: 1, throat: '#f2ece0', nose: '#2a2228' },
-  rabbit: { len: 11, h: 7, w: 6.5, coat: '#9a7652', belly: '#f0e4d4', ears: 'rabbit', tail: 'puff', snout: 1.5, head: 3.6, jl: 1, lower: '#b8946a', haunch: 1 },
+  rabbit: { len: 11, h: 7, w: 6.5, coat: '#9a7652', belly: '#f0e4d4', ears: 'rabbit', tail: 'puff', snout: 1.5, head: 3.6, jl: 1, lower: '#b8946a', haunch: 1, hop: 2.2 },
   raccoon: { len: 18, h: 9, w: 9, coat: '#7a7678', mask: '#26242a', ears: 'cat', tail: 'ringed', snout: 2.5, head: 4, jl: 1, lower: '#3a383c' },
   coyote: { len: 26, h: 17, w: 8, coat: '#a8885a', belly: '#e8dcc0', ears: 'up', tail: 'bushy', snout: 5, head: 4.6, jl: 1, lower: '#c0a070', throat: '#ece2cc', tips: '#6a5a46' },
   // the wilds (shared/fauna.js): deer and their kin, the predators, the water's edge, small game
   elk: { len: 44, h: 32, w: 13, coat: '#b08458', belly: '#6a4a30', mane: '#4e3424', pattern: 'rump', patch: '#e2cea4', ears: 'up', tail: 'stub', snout: 6, head: 6, neck: 13, antlers: 2, jl: 1, lower: '#4a3222', hoof: 1 },
   moose: { len: 50, h: 40, w: 15, coat: '#3e2c22', socks: '#a8988a', ears: 'side', tail: 'stub', snout: 9, head: 7, neck: 10, antlers: 3, hump: 1.4, bell: 1, droop: 1, jl: 1, lower: '#a8988a', hoof: 1 },
   mtgoat: { len: 28, h: 23, w: 11, coat: '#f2eee6', ears: 'side', tail: 'stub', snout: 4.5, head: 4.4, neck: 6, horns: 'black', beard: 1, fluffy: 1, hump: 0.8, socks: '#2a262c', jl: 1, lower: '#ece6da', hoof: 1 },
-  boar: { len: 32, h: 19, w: 12, coat: '#4a3a2e', mane: '#241c18', ears: 'up', tail: 'thin', snout: 7, head: 5.8, nose: '#6a5a52', tusks: 1, jl: 1, lower: '#2e2420', hoof: 1, tips: '#6e5a48' },
+  boar: { len: 32, h: 19, w: 12, coat: '#4a3a2e', mane: '#241c18', ears: 'up', tail: 'thin', snout: 7, head: 6.4, nose: '#6a5a52', tusks: 1, jl: 1, lower: '#2e2420', hoof: 1, tips: '#6e5a48' },
   blackbear: { len: 36, h: 24, w: 15, coat: '#2e2a32', muzzle: '#9a7a58', ears: 'round', tail: 'stub', snout: 4, head: 6.5, fluffy: 1, bear: 1, jl: 1 },
   grizzly: { len: 44, h: 30, w: 18, coat: '#7a5634', muzzle: '#9a7650', tips: '#b89a70', ears: 'round', tail: 'stub', snout: 5, head: 7.5, fluffy: 1, bear: 1, hump: 1.5, jl: 1, lower: '#5a3e26' },
   cougar: { len: 34, h: 18, w: 9, coat: '#c08a54', belly: '#ecdcc0', ears: 'cat', tail: 'longcat', tailTip: '#3a2a22', snout: 2.2, head: 4.6, cat: 1, jl: 1 },
@@ -88,7 +88,7 @@ export function animalModel(kind, o = {}) {
   if (pose0 === 'dead') return onSide(animalModel(kind, { ...o, pose: 'stand', phase: 0.12 }), A);
   if (pose0 === 'swim') return waterline(animalModel(kind, { ...o, pose: 'alert' }), A);
   const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, lie = pose === 'lie', alert = pose === 'alert', stalk = pose === 'stalk';
-  const hk = A.len <= 30 && !A.jl ? 1.2 : 1;                             // pets get the chunky big-headed look of A1 (the wild ones true to life)
+  const hk = A.len <= 30 && (!A.jl || A.len < 14) ? 1.2 : 1;            // pets get the chunky big-headed look of A1 (the wild ones true to life, but for a rabbit)
   const L = Math.ceil(A.len * 1.7 + 10 + (A.antlers ? 8 : 0) + (TAIL_ROOM[A.tail] || 0)), W = Math.ceil(A.w * 2.3 + 12 + (A.antlers >= 2 ? 22 : 0)), Hh = Math.ceil(A.h * 2.2 + 12 + (A.antlers >= 2 ? 16 : 0));
   const m = new Vox(L, W, Hh);
   const cache = new Map();
@@ -98,7 +98,7 @@ export function animalModel(kind, o = {}) {
   const dark = m.mat({ ramp: ramp(A.legend ? '#8a8a96' : '#2a2228', 5, 2), k: 1 }), nose = A.nose ? R(A.nose) : dark;
   const face = A.face ? R(A.face) : A.mask ? R(A.mask) : base;
   const cy = W / 2, bodyR = A.w / 2 * (A.len <= 30 ? 1.15 : 1), legLen = A.h - bodyR * 1.1;
-  const bob = run ? Math.abs(Math.sin(phase * Math.PI * 2)) * 1.5 : Math.abs(Math.sin(phase * Math.PI * 2)) * 0.5;
+  const bob = run ? Math.abs(Math.sin(phase * Math.PI * 2)) * 1.5 * (A.hop || 1) : Math.abs(Math.sin(phase * Math.PI * 2)) * 0.5;   // (a rabbit's hop: up off the ground)
   const sit = pose === 'sit', graze = pose === 'graze';
   const x0 = 5 + (A.tail === 'long' || A.tail === 'feather' ? 4 : 2) + (TAIL_ROOM[A.tail] || 0), x1 = x0 + A.len;          // rump .. chest
   const bz = lie ? bodyR * 1.05 + 0.3 : (sit ? A.h * 0.7 : stalk ? (A.h - bodyR) * 0.72 : A.h - bodyR) + bob;
@@ -114,7 +114,7 @@ export function animalModel(kind, o = {}) {
     if (A.pattern === 'flank' && z < bz + bodyR * 0.2 && z > bz - bodyR * 0.5 && x > x0 + 3) return patch;   // a grey fox's rusty sides
     if (A.pattern === 'fawn' && z > bz - bodyR * 0.1 && x > x0 + 2 && x < x1 - 2 && hash(Math.floor(x / 2.2), Math.floor(y / 2.2) * 17 + Math.floor(z / 2.2), 11) > 0.8) return patch;   // a fawn's spots along the back
     if (A.pattern === 'stripes' && z > bz - bodyR * 0.3 && Math.floor((y + Math.sin(x * 0.4)) / 1.6) % 2 === 0) return patch;   // a piglet's stripes
-    if (A.tips && z > bz + bodyR * 0.7 && hash(Math.floor(x / 1.5), Math.floor(y / 1.5) * 7 + Math.floor(z / 1.5), 13) > 0.72) return R(A.tips);   // a grizzly's silver-tipped back
+    if (A.tips && z > bz + bodyR * 0.7 && x < x1 + 1 && hash(Math.floor(x / 1.5), Math.floor(y / 1.5) * 7 + Math.floor(z / 1.5), 13) > 0.72) return R(A.tips);   // a grizzly's silver-tipped back
     return base;
   };
   // body: a stretched ellipsoid, the chest a little deeper; sitting tilts the back down
@@ -152,7 +152,7 @@ export function animalModel(kind, o = {}) {
       const dx = fx, dz = fz - top, d = Math.max(0.5, Math.min(L2 * 1.995, Math.hypot(dx, dz))), th = Math.atan2(dz, dx), al = Math.acos(Math.min(1, d / (2 * L2)));
       const kx = lx + Math.cos(th + (back ? -al : al)) * L2, kz = top + Math.sin(th + (back ? -al : al)) * L2;
       const seg = (x0s, z0s, x1s, z1s, r0, r1, mt) => { const n = Math.ceil(Math.hypot(x1s - x0s, z1s - z0s) * 2) + 1; for (let k = 0; k <= n; k++) { const t = k / n, x = x0s + (x1s - x0s) * t, z = z0s + (z1s - z0s) * t, r = r0 + (r1 - r0) * t; m.box(x - r, ly - r, Math.max(0, z - 0.5), x + r, ly + r, Math.max(0, z) + 0.6, mt); } };
-      seg(lx, top + legR, kx, kz, legR * (back ? 1.6 : 1.3), legR * 0.85, base);   // (the thigh, the forearm)
+      seg(lx, top + legR, kx, kz, legR * (back ? 1.6 : 1.3) * (A.bear ? 0.8 : 1), legR * 0.85, base);   // (the thigh, the forearm)
       seg(kx, kz, lx + fx, fz + 0.6, legR * 0.8, legR * 0.7, lower);                // (the cannon, the shin)
       m.box(lx + fx - legR * 0.8, ly - legR * 0.8, fz, lx + fx + legR + 0.6, ly + legR * 0.8, fz + 1.2, hoof);   // (a hoof or a paw)
       return;

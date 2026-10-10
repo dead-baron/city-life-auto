@@ -5662,8 +5662,8 @@ the workers fetch this code once, after the page, so it never delays getting int
 ## 2026-10-10 · The wild animals closer to their concepts (task #391)
 
 The owner: "improve animal art to match the wildlife concepts and give them better animations" (AN1-AN8, HU1-HU7;
-AN8 the quail). Before/after sheets beside each concept: AN1 deer and elk, AN2 boar, bear and turkey, AN3 small game,
-AN8 quail (the helper's scratchpad, `compare-AN*.png`; the sheet is the game's own bake, 1 art px per world px).
+AN8 the quail). Before/after sheets under each concept, in `docs/art-v2/compare/` (AN1 deer and elk, AN2 boar, bear
+and turkey, AN3 small game, AN8 quail): the rows are the game's own bake (actors.js), 1 art px per world px, shown x2.
 - **Jointed legs and real gaits** (`client/art2/animals.js`, the wild ones carry `jl`): deer, elk, moose, mountain
   goats, boar, both bears, the cougar and bobcat, coyote, both foxes, the raccoon and the rabbit.
   - A knee bends forward on the forelegs and a hock points back on the hind legs (a two-bone reach to the foot).
@@ -5680,15 +5680,20 @@ AN8 quail (the helper's scratchpad, `compare-AN*.png`; the sheet is the game's o
     shins of AN1, a heavier rack.
   - The boar: darker, a bristle crest over the shoulders, grizzled.
   - The coyote: grizzled along the back, a pale throat.
-  - The rabbit: bigger haunches.
-  - The wild ones' heads are true to life, not the pets' big-headed look.
+  - The rabbit: bigger haunches, and its run is a hop, up off the ground.
+  - The wild ones' heads are true to life, not the pets' big-headed look (the rabbit keeps its big head).
+  - The turkey is bigger, as in AN2.
   - The drake mallard has his black stern.
+  - The birds' legs reach the ground and are deep enough across the line of sight that the character view's steep
+    look no longer skips them (the turkey stood on floating feet).
 - **The quail of AN8** (`client/art2/birds.js`):
   - The cock is plumper, blue-grey, with the black face in its white border, a chestnut cap, the comma of a topknot
     (curling forward, bobbing as he walks) and the scaled belly.
   - The hen (`quail:f`, new) is plain brown and scaled with a smaller topknot. A covey's two adults spawn one after
     the other, so the client draws the odd id as the hen (`client/art2/game/host.js`): one cock and one hen a covey.
-  - The flush beats deeper: the wings come up over the back (all the small birds).
+  - The cock stands up plump, his breast high (a tilted egg), the head high on the neck.
+  - The flush (all the small birds: quail, mallards, pheasants): the wings come up over the back and down below the
+    body, drawn as plates at any angle in two flat tones, so a steep wing reads as a wing.
 - **Tests:** `test/wildart.test.js` (3 new):
   - every species draws walking, running, head down, alert and dead, and its walk and run cycles move;
   - the jointed legs keep a foot on the ground through the walk and the gallop, and the gallop stretches and gathers;
