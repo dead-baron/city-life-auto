@@ -276,5 +276,6 @@ export function downState(world, p) {
   return {
     help: !!p.downHelp, finished: !!p.finished, amb: v ? { x: Math.round(v.x), y: Math.round(v.y) } : null, ambUsed: !!p.ambUsed,
     canAmb: !p.amb && !p.ambUsed && p.profile.bank >= AMBULANCE_FEE, fee: AMBULANCE_FEE,
+    ...(inWater(world.map, ped) ? { wet: 1 } : null),   // (down in the water: the call brings the rescue boat - task #409)
   };
 }

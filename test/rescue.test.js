@@ -25,6 +25,7 @@ test('down in the water: the rescue boat comes out from a dock, pulls you aboard
   teleport(w, a.p.ped, at.x, at.y);
   assert.ok(rescue.inWater(m, a.p.ped), 'in the water');
   combat.kill(w, a.p.ped, null, 'crash', 0);
+  assert.equal(revive.downState(w, a.p).wet, 1, 'the death screen offers the rescue boat');
   revive.callAmbulance(w, a.p);
   assert.ok(a.p.amb && a.p.amb.boat, 'a rescue boat is on its way (not an ambulance)');
   const boat = w.get(a.p.amb.vehId);
@@ -86,6 +87,7 @@ test('far out in the wilds the ambulance drives on over the open ground and its 
   const a = joinPlayer(w, { cash: 0, bank: 1000 });
   teleport(w, a.p.ped, wild[0], wild[1]);
   combat.kill(w, a.p.ped, null, 'melee', 0);
+  assert.ok(!revive.downState(w, a.p).wet, 'on land: the ambulance');
   revive.callAmbulance(w, a.p);
   assert.ok(a.p.amb && !a.p.amb.boat, 'an ambulance is on its way');
   const vid = a.p.amb.vehId;

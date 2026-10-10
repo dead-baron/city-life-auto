@@ -5566,6 +5566,7 @@ passengers riding in it." The concept: `docs/art-v2/targets/RS1_rescue-wilds-wat
   - Then it goes back to its berth, lights off, and is gone once nobody's watching.
   - It holds your respawn clock while it's nearly there or pulling you in.
   - If a player takes it, the crew go over the side, and whoever called it can call another.
+  - The death screen's button says "🚤 Call a rescue boat" in the water (`downState` `wet`).
   - The toast says where it's coming from. "No rescue boat can reach you out here" if no dock's water joins yours; in a pool by the edge, the ambulance as before.
 - **The ambulance off the road** (`ems.js`, `server/systems/offroad.js`). When the street it can get to is far from the
   patient, it leaves the road there. It drives on over fields, grass, tracks and sand, round trees, rocks and water (a
