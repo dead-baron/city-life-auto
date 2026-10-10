@@ -6539,6 +6539,8 @@ animals entry did the coats, shapes and gaits - these are the poses the concepts
     (`waterline` at 0.3 of the shoulder height; swimming stays at 0.62: only the head and the back). Until now anything
     in the water was drawn swimming, a moose in the shallows too;
   - **drinking in the shallows** (`wadedrink`): the same, the muzzle at the water.
+  - **going under** (`dive`: the server's `APOSE.dive`, a beaver or an otter diving - it was drawn swimming): nose
+    first, the rump and the tail up out of the water (`tipDown`, then cut at the water).
   - Swimming was already drawn (`swim`, and the sea otter's float).
 - **AN2, the turkey's strut and the bear's swipe:**
   - **the strut** (`client/art2/birds.js` `strut`, 2 frames: puffing up and down): a tom puffed up, his fan raised in a
@@ -6561,10 +6563,11 @@ animals entry did the coats, shapes and gaits - these are the poses the concepts
   `docs/art-v2/compare/AN4_moose-goats-predators.png` (the cougar, the bobcat, the moose), the concept at half size on
   top, the game's own bake below.
 - **Left:** AN4's mountain goat leaping between rocks and the fox's mouse-pounce (no server state for either); AN5's
-  beaver diving (the tail up), the otter with a fish, the sea otters' clam and holding hands.
+  otter with a fish, the sea otters' clam and holding hands, the beaver carrying a branch.
 - **Tests:** `test/wildart.test.js` (4 new, 7 in all): every species draws the new poses; the flinch lifts the
   forefeet (standing, they're down), the limp's right forefoot never touches the ground (walking, it does), bedded down
   the head is lower than lying up, knocked down isn't the dead pose; drinking splays the forelegs wider than grazing,
   wading stands taller than swimming and shorter than standing, drinking in the shallows keeps the head; the tom's fan
   up (from the front far wider and taller than standing), the bears' swipe up off the forefeet, the paw up then forward;
-  the cats' pounce off the ground and stretched out longer than standing. `test/wildlife.test.js` passes as before.
+  the cats' pounce off the ground and stretched out longer than standing; a beaver or an otter going under, its tail up
+  (taller than swimming). `test/wildlife.test.js`, `test/art2.test.js`, `test/perf.test.js` pass as before.

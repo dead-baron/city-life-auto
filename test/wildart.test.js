@@ -120,4 +120,9 @@ test("the cats' pounce and crouch (AN4)", () => {
     assert.equal(ground(p), 0, `${kind}: the pounce, off the ground`);
     assert.ok(reach(p) > reach(animalModel(kind, { pose: 'stand' })), `${kind}: stretched out, longer than standing`);
   }
+  // AN5: a swimmer going under, the rump and the tail up out of the water - taller than swimming
+  for (const kind of ['beaver', 'otter']) {
+    assert.ok(pixels(animalSprite(`pet:${kind}`, 'dive', 2, 0)) > 12, `${kind} dives`);
+    assert.ok(animalModel(kind, { pose: 'dive' }).h > animalModel(kind, { pose: 'swim' }).h, `${kind}: the tail up as it goes under`);
+  }
 });

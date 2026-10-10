@@ -91,6 +91,7 @@ function wildPose(p, S2, base, sp, now, M) {
   const ap = (p.extra || 0) & 31;
   if (ap === APOSE.fly) return 'fly';
   if (p.swim && !S2.bird && !S2.swims && M && shallows(M, p.rx, p.ry)) return ap === APOSE.drink && sp <= 12 ? 'wadedrink' : 'wade';   // (AN5: a deer, a moose in the shallows - the legs in the water to the knees)
+  if (p.swim && ap === APOSE.dive && !S2.bird) return 'dive';   // (AN5: going under, the tail up)
   if (p.swim) return base === 'seaotter' && (ap === APOSE.float || sp < 25) ? 'float' : 'swim';
   switch (ap) {
     case APOSE.climb: return 'climb';

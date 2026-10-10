@@ -15,6 +15,7 @@
 //     AN5, at the water: 'drink' (the forelegs splayed, the head right down to the water) | 'wade' (standing or walking
 //     in the shallows: the legs under the water to the knees)
 //     AN2: 'swipe' (a bear rocked back off its forefeet, a forepaw raised (phase < 0.5) and raking forward)
+//     'dive' (AN5: a swimmer going under, nose first - the rump and the tail up out of the water)
 //     AN4: 'pounce' (a cat's leap: off the ground, stretched out, the forepaws reaching (phase < 0.5) or about to land)
 //     kind may carry a variant: 'deer:y' the young (smaller, a fawn's spots, no antlers), 'deer:L' the legendary
 //     pure white one (it glows faintly)
@@ -97,6 +98,7 @@ export function animalModel(kind, o = {}) {
   if (pose0 === 'swipe') return flinch(animalModel(kind, { ...o, pose: 'swipeleg' }), A, 0.36);   // (AN2: the bear's swipe)
   if (pose0 === 'hit') return flinch(animalModel(kind, { ...o, pose: 'alert', phase: 0 }), A, 0.2);              // (AN7: the flinch)
   if (pose0 === 'swim') return waterline(animalModel(kind, { ...o, pose: 'alert' }), A);
+  if (pose0 === 'dive') return waterline(tipDown(animalModel(kind, { ...o, pose: 'stand', phase: 0 }), 0.75), A);   // (AN5: going under)
   if (pose0 === 'wade' || pose0 === 'wadedrink') return waterline(animalModel(kind, { ...o, pose: pose0 === 'wade' ? 'stand' : 'drink', wl: A.h * 0.3 }), A, 0.3);   // (AN5: in the shallows; drinking there)
   const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, down = pose === 'down', lie = pose === 'lie' || down, alert = pose === 'alert', stalk = pose === 'stalk', limp = pose === 'limp', swipe = pose === 'swipeleg', pounce = pose === 'pounce';
   const hk = A.len <= 30 && (!A.jl || A.len < 14) ? 1.2 : 1;            // pets get the chunky big-headed look of A1 (the wild ones true to life, but for a rabbit)
@@ -304,6 +306,14 @@ function flinch(m, A, ang) {
   const px = 5 + (A.tail === 'long' || A.tail === 'feather' ? 4 : 2) + (TAIL_ROOM[A.tail] || 0) + 3, c = Math.cos(ang), s = Math.sin(ang);
   return remap(m, m.w, m.d, Math.ceil(m.h + (m.w - px) * s + 2), (X, Y, Z) => {
     const dx = X - px, x = px + dx * c + Z * s, z = -dx * s + Z * c;
+    return x >= 0 && x < m.w && z >= 0 && z < m.h ? [x, Y, z] : null;
+  });
+}
+// diving (AN5): nose down round the chest, so the rump and the tail rise (then cut at the water)
+function tipDown(m, ang) {
+  const px = m.w * 0.62, c = Math.cos(ang), s = Math.sin(ang);
+  return remap(m, m.w, m.d, Math.ceil(m.h + px * s + 2), (X, Y, Z) => {
+    const dx = X - px, x = px + dx * c - Z * s, z = dx * s + Z * c;
     return x >= 0 && x < m.w && z >= 0 && z < m.h ? [x, Y, z] : null;
   });
 }
