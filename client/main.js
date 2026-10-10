@@ -33,7 +33,7 @@ import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
 import { startTutorial, stopTutorial, tutorialActive, tutorialNext, tutorialPrev, tutorialTogglePause, tutorialKey, tutorialSeen, tutorialSeenOld, markTutorialSeen } from './tutorial.js';
 import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
-import { drawStarView } from './stargaze.js';
+let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild } from './update.js';
 import { buildGive, buildQuickGive } from './devgive.js';
 import { DEV_SECTIONS } from './devcats.js';
@@ -262,7 +262,7 @@ function onText(m) {
       break;
     case 'menu': S.hud.openMenu(m); break;
     case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
-    case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; break;   // (the observatory: the night sky through the eyepiece)
+    case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; if (!drawStarView) import('./stargaze.js').then((mod) => { drawStarView = mod.drawStarView; }).catch((e) => console.warn('[stargaze]', e)); break;   // (the observatory: the night sky through the eyepiece)
     case 'ug': S.ugLayer = m.ug || 0; S.ugVeins = m.veins || []; S.ugVeinsAt = performance.now(); break;   // down the sewers / in the cave (1 / 2), and the ore veins' state (server/systems/underground.js)
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
@@ -3127,7 +3127,7 @@ function drawOverlays(F, v2) {
     const st = S.stars, t = (performance.now() - st.t0) / 1000;
     if (st.px === null) { st.px = sp.x; st.py = sp.y; }
     if (t > st.dur || Math.hypot(sp.x - st.px, sp.y - st.py) > 24) S.stars = null;
-    else drawStarView(g, canvas.width / DPR, canvas.height / DPR, st, t);
+    else if (drawStarView) drawStarView(g, canvas.width / DPR, canvas.height / DPR, st, t);
   }
 
   // HUD bits

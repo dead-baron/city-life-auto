@@ -5211,3 +5211,6 @@ The owner: "Vehicle explosions are looking great, let's sometimes have a burning
   - now and then, not every time. Across 600 seeds each for a car, a bus, a tanker, a motorbike and the trike: never more wheels off it than it has. A motorbike that threw both has none left, boats have none, and the same seed gives the same wheel;
   - a real explosion's `wh` matches its seed's plan, and never up on the highway. Its path is the same every time; it's flung up, bounces, rolls away (over 150 px), slows and stops a while later, lying flat; it never enters a wall;
   - on a made-up street: it glances off a wall and rolls back, never through it; into the water it sinks; on grass it doesn't get as far.
+
+## 2026-10-09 · The observatory's star view loads when you look through the telescope
+Merging the world-visuals and gameplay batches put the page's first load at 721 KB, 1 KB over its 720 KB budget. The night sky through the Granite Peak Observatory's eyepiece (`client/stargaze.js`, 4 KB gzipped) now loads the first time the server says you're looking, instead of with every page. The page is back at 717 KB and the budget is unchanged.
