@@ -82,3 +82,16 @@ test('hit, wounded and down (AN7): the flinch, the limp on a foreleg held up, be
     assert.ok(!same(animalSprite(`pet:${kind}`, 'fall', 6, 1), animalSprite(`pet:${kind}`, 'dead', 6, 0)), `${kind}: knocked down, the legs going`);
   }
 });
+
+test('at the water (AN5): drinking with the forelegs splayed, wading in the shallows to the knees, drinking there', () => {
+  for (const kind of Object.keys(SPECIES)) for (const pose of ['drink', 'wade', 'wadedrink']) {
+    for (let f = 0; f < ANIMAL_FRAMES[pose]; f++) assert.ok(pixels(animalSprite(`pet:${kind}`, pose, 6, f)) > 12, `${kind} ${pose} ${f} draws`);
+  }
+  const span = (m) => { let lo = 1e9, hi = -1; for (let y = 0; y < m.d; y++) for (let x = Math.ceil(m.w * 0.5); x < m.w; x++) if (m.get(x, y, 0)) { lo = Math.min(lo, x); hi = Math.max(hi, x); } return hi - lo; };
+  for (const kind of ['deer', 'elk', 'moose', 'blackbear', 'boar']) {
+    assert.ok(span(animalModel(kind, { pose: 'drink' })) > span(animalModel(kind, { pose: 'graze' })), `${kind}: drinking, the forelegs splayed`);
+    const h = (pose) => animalModel(kind, { pose }).h;
+    assert.ok(h('wade') > h('swim') && h('wade') < h('stand'), `${kind}: wading, the legs in the water (${h('swim')} < ${h('wade')} < ${h('stand')})`);
+    assert.ok(pixels(animalSprite(`pet:${kind}`, 'wadedrink', 2, 0)) > pixels(animalSprite(`pet:${kind}`, 'swim', 2, 0)) * 0.8, `${kind}: drinking in the shallows, the head at the water`);
+  }
+});

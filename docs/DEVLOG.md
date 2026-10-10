@@ -6515,7 +6515,7 @@ feels deeper and alive" (concept sheet `docs/art-v2/targets/AV1_people-going-abo
   table in a minute), the waiting one's cue up, watchers; the neighbours' fence on the wire; the debug menu's 11 kinds;
   the classic view draws every prop the server sends (and the cue), lazily. `test/art2.test.js`, `test/sound.test.js`,
   `test/npcpeople.test.js` pass as before.
-## 2026-10-10 · The animals' missing poses (task #391, part 2): hit, wounded and down (AN7)
+## 2026-10-10 · The animals' missing poses (task #391, part 2): hit, wounded and down (AN7), at the water (AN5)
 
 The owner: "improve animal art to match the wildlife concepts and give them better animations" (AN1-AN8); the last
 animals entry did the coats, shapes and gaits - these are the poses the concepts show that the game didn't draw.
@@ -6531,10 +6531,21 @@ animals entry did the coats, shapes and gaits - these are the poses the concepts
     was the resting lie).
   - The birds keep theirs (the turkey: the alert for the hit, the walk for the limp, the bird's down pose for down).
   - `client/art2/game/actors.js` (`ANIMAL_FRAMES`: hit 1, limp 4, down 2, fall 2), `client/art2/game/host.js` `wildPose`.
-- **Before/after sheet** `docs/art-v2/compare/AN7_hit-wounded-down.png` (deer, black bear; elk and boar after), the
-  concept at half size on top, the game's own bake below.
-- **Left:** AN5 (drinking at the water's edge, wading, swimming), AN2 (the turkey's strut, the bear's swipe), AN4, the
-  quail's size at game scale.
-- **Tests:** `test/wildart.test.js` (1 new, 4 in all): every species draws the four poses; the flinch lifts the
+- **AN5, at the water** (the four-legged ones that don't swim for a living - not the beaver, the otters or the birds):
+  - **drinking** (`drink`, 2 frames; the server's `APOSE.drink`, drawn as grazing until now): the forelegs splayed, the
+    head reaching out right down to the water;
+  - **wading** (`wade`, 4 frames): in the shallows - water (not the deep) with land within a stride (`host.js`
+    `shallows`, from the map the client has: nothing new on the wire) - the legs under the water to the knees
+    (`waterline` at 0.3 of the shoulder height; swimming stays at 0.62: only the head and the back). Until now anything
+    in the water was drawn swimming, a moose in the shallows too;
+  - **drinking in the shallows** (`wadedrink`): the same, the muzzle at the water.
+  - Swimming was already drawn (`swim`, and the sea otter's float).
+- **Before/after sheets** `docs/art-v2/compare/AN7_hit-wounded-down.png` (deer, black bear; elk and boar after) and
+  `docs/art-v2/compare/AN5_waters-edge.png` (deer, moose, black bear; elk, boar, coyote, grizzly after), the concept at
+  half size on top, the game's own bake below.
+- **Left:** AN2 (the turkey's strut, the bear's swipe), AN4, the quail's size at game scale; AN5's beaver diving (the
+  tail up) and the otter with a fish.
+- **Tests:** `test/wildart.test.js` (2 new, 5 in all): every species draws the new poses; the flinch lifts the
   forefeet (standing, they're down), the limp's right forefoot never touches the ground (walking, it does), bedded down
-  the head is lower than lying up, knocked down isn't the dead pose.
+  the head is lower than lying up, knocked down isn't the dead pose; drinking splays the forelegs wider than grazing,
+  wading stands taller than swimming and shorter than standing, drinking in the shallows keeps the head.

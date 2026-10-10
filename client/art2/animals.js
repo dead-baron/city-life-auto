@@ -12,6 +12,8 @@
 //     AN7, hit and hurt: 'hit' (the flinch: reared back off the forelegs, head up) | 'limp' (wounded: the walk with a
 //     foreleg held up off the ground, the head low) | 'down' (bedded down wounded: legs folded under, the head down on
 //     the ground) | 'fall' (knocked off its feet: on its side, the legs going)
+//     AN5, at the water: 'drink' (the forelegs splayed, the head right down to the water) | 'wade' (standing or walking
+//     in the shallows: the legs under the water to the knees)
 //     kind may carry a variant: 'deer:y' the young (smaller, a fawn's spots, no antlers), 'deer:L' the legendary
 //     pure white one (it glows faintly)
 //   renderUpright(vox, heading, { fy = 0.38, dither }) -> GBuf (anchor at the model centre on the ground)
@@ -92,6 +94,7 @@ export function animalModel(kind, o = {}) {
   if (pose0 === 'fall') return onSide(animalModel(kind, { ...o, pose: 'stand', gait: 'run', phase: o.phase || 0 }), A);   // (AN7: the legs going as it hits the ground)
   if (pose0 === 'hit') return flinch(animalModel(kind, { ...o, pose: 'alert', phase: 0 }), A, 0.2);              // (AN7: the flinch)
   if (pose0 === 'swim') return waterline(animalModel(kind, { ...o, pose: 'alert' }), A);
+  if (pose0 === 'wade' || pose0 === 'wadedrink') return waterline(animalModel(kind, { ...o, pose: pose0 === 'wade' ? 'stand' : 'drink', wl: A.h * 0.3 }), A, 0.3);   // (AN5: in the shallows; drinking there)
   const phase = o.phase || 0, run = o.gait === 'run', pose = pose0, down = pose === 'down', lie = pose === 'lie' || down, alert = pose === 'alert', stalk = pose === 'stalk', limp = pose === 'limp';
   const hk = A.len <= 30 && (!A.jl || A.len < 14) ? 1.2 : 1;            // pets get the chunky big-headed look of A1 (the wild ones true to life, but for a rabbit)
   const L = Math.ceil(A.len * 1.7 + 10 + (A.antlers ? 8 : 0) + (TAIL_ROOM[A.tail] || 0)), W = Math.ceil(A.w * 2.3 + 12 + (A.antlers >= 2 ? 22 : 0)), Hh = Math.ceil(A.h * 2.2 + 12 + (A.antlers >= 2 ? 16 : 0));
@@ -104,7 +107,7 @@ export function animalModel(kind, o = {}) {
   const face = A.face ? R(A.face) : A.mask ? R(A.mask) : base;
   const cy = W / 2, bodyR = A.w / 2 * (A.len <= 30 ? 1.15 : 1), legLen = A.h - bodyR * 1.1;
   const bob = run ? Math.abs(Math.sin(phase * Math.PI * 2)) * 1.5 * (A.hop || 1) : Math.abs(Math.sin(phase * Math.PI * 2)) * 0.5;   // (a rabbit's hop: up off the ground)
-  const sit = pose === 'sit', graze = pose === 'graze';
+  const sit = pose === 'sit', drink = pose === 'drink', graze = pose === 'graze' || drink;
   const x0 = 5 + (A.tail === 'long' || A.tail === 'feather' ? 4 : 2) + (TAIL_ROOM[A.tail] || 0), x1 = x0 + A.len;          // rump .. chest
   const bz = lie ? bodyR * 1.05 + 0.3 : (sit ? A.h * 0.7 : stalk ? (A.h - bodyR) * 0.72 : A.h - bodyR) + bob;
   void legLen;
@@ -154,6 +157,7 @@ export function animalModel(kind, o = {}) {
       const top = bz - bodyR * 0.3, L2 = Math.max(top, (A.h - bodyR) * 0.92 - bodyR * 0.3) * (back ? 1.07 : 1.015) / 2;   // (crouched in a stalk: the legs bend)
       let fx = back ? -0.6 : 0.6, fz = 0;
       if (moving) { const p = (((phase + OFF[i]) % 1) + 1) % 1; if (p < D) fx = stride * (0.5 - p / D); else { const u = (p - D) / (1 - D); fx = stride * (u - 0.5); fz = Math.sin(u * Math.PI) * lift; } }
+      if (drink && !back) fx = stride * (i === 0 ? 0.62 : -0.28);   // (AN5: drinking, the forelegs splayed)
       if (limp && i === 1) { fx = stride * 0.12; fz = A.h * 0.22 + Math.sin(phase * Math.PI * 2) * 0.6; }   // (AN7: the hurt foreleg held up, dangling)
       const dx = fx, dz = fz - top, d = Math.max(0.5, Math.min(L2 * 1.995, Math.hypot(dx, dz))), th = Math.atan2(dz, dx), al = Math.acos(Math.min(1, d / (2 * L2)));
       const kx = lx + Math.cos(th + (back ? -al : al)) * L2, kz = top + Math.sin(th + (back ? -al : al)) * L2;
@@ -182,7 +186,7 @@ export function animalModel(kind, o = {}) {
   // neck and head
   const neck = A.neck || A.head * 0.9;
   const HD = A.head * hk;
-  const hx = x1 + (graze ? 2 : stalk ? neck * 0.55 : down ? neck * 0.75 : neck * 0.35), hz = graze ? HD + 1 : down ? HD * 0.85 : stalk ? bz + bodyR * 0.2 + neck * 0.3 : bz + bodyR * 0.4 + neck * (lie ? 0.55 : alert ? 0.95 : limp ? 0.3 : 0.75) + (sit ? 2 : 0) + (alert ? 1.5 : 0);   // (down: the head stretched out on the ground; limp: hung low)
+  const hx = x1 + (drink ? 3.5 : graze ? 2 : stalk ? neck * 0.55 : down ? neck * 0.75 : neck * 0.35), hz = drink ? Math.max(HD * 0.55, (o.wl || 0) + HD * 0.4) : graze ? HD + 1 : down ? HD * 0.85 : stalk ? bz + bodyR * 0.2 + neck * 0.3 : bz + bodyR * 0.4 + neck * (lie ? 0.55 : alert ? 0.95 : limp ? 0.3 : 0.75) + (sit ? 2 : 0) + (alert ? 1.5 : 0);   // (down: the head stretched out on the ground; limp: hung low)
   const neckC = A.neckC ? R(A.neckC) : null;   // (an elk's dark neck and head)
   for (let s = 0; s <= 1; s += 0.08) { const x = x1 - 2 + (hx - x1 + 2) * s, z = bz + (hz - bz) * s; m.ell(x, cy, z, HD * 0.65, HD * 0.62, HD * 0.7, neckC && s > 0.15 ? neckC : coat(x, cy, z + 2)); }
   if (A.mane && !A.tusks) for (let s = 0; s <= 1; s += 0.05) { const x = x1 - 4 + (hx - x1) * s, z = bz + bodyR + (hz - bz - 2) * s; m.box(x - 1.5, cy - 1, z, x + 1, cy + 1, z + 2.5, R(A.mane)); }
@@ -308,8 +312,8 @@ function onSide(m, A) {
   });
 }
 // swimming: only what shows above the water - the head, the top of the back - sat at the surface
-function waterline(m, A) {
-  const cut = Math.max(1, Math.round(A.h * 0.62));
+function waterline(m, A, k = 0.62) {   // (k: how deep, of the shoulder's height: wading 0.3)
+  const cut = Math.max(1, Math.round(A.h * k));
   return remap(m, m.w, m.d, Math.max(4, m.h - cut), (X, Y, Z) => [X, Y, Z + cut]);
 }
 // a sea otter on its back in the kelp: the pale head up, paws on the chest, the hind feet and tail out behind, low
