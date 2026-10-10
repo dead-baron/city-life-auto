@@ -16,6 +16,7 @@ import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { enterEdge } from './traffic.js';
 import { rejoin } from './transit.js';
+import { startTurn } from './roadends.js';   // (turning round in the street by a manoeuvre: task #384)
 
 export const MEMORY = 24, TTL = 45;   // the blocked-road memory: this many roads at most, each kept this long (s)
 export const GAP = 6;                 // a driver re-plans at most once in this long (s)
@@ -47,7 +48,7 @@ export function jammed(world, v) {
   const bai = b.ai, drv = b.seats[0] && world.get(b.seats[0]);
   if (drv && drv.player) { b._stillAt ??= world.time; return world.time - b._stillAt > 8; }   // (a player waiting at the lights isn't in the way)
   if (!bai) return true;                                  // nobody driving it: left in the road
-  if (bai.kind === 'traffic') return !!bai.jam;           // a queue: jammed if the car ahead of it is
+  if (bai.kind === 'traffic') return !!bai.jam || !!bai.parkIt;   // a queue: jammed if the car ahead of it is (or that one gave up and pulled up: traffic.js parkIt)
   return true;                                            // a police car, an ambulance, a tow truck at work
 }
 
@@ -111,9 +112,12 @@ function findWay(world, v) {
   const other = e.a === ai.from ? e.b : e.a, s2 = Math.max(0, e.len - s);
   if (ai.route && v.taxi && rejoin(world, v, e, other, s2)) { /* (on its new way) */ }
   else { delete ai.route; enterEdge(world, v, e.id, other, 0, s2); }
-  ai.reverseUntil = now + 1.1;
   ai.passBlk = 0; ai.passUntil = 0;
   ai.howOut = 'turn';
+  // round by a manoeuvre - forward and back on full lock, looking where it goes (roadends.js) - into the lane back (it
+  // used to back off for a second and swing for the far lane: in a narrow street, round and round)
+  if (!ai.route) startTurn(world, v, e.id, other, -1);
+  else ai.reverseUntil = now + 1.1;
   return true;
 }
 

@@ -20,6 +20,7 @@ import { inAnyView } from '../view.js';
 import { HIGHWAY_SPEED } from '../../shared/rules.js';
 import { routeSteps, haltsOn, haltCap, haltAt, rejoin } from './transit.js';
 import { isBlocked, unjam, goRound } from './reroute.js';   // (drivers who find another way round a backup: task #315)
+import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384)
 
 const rng = mulberry32(4242);
 
@@ -56,6 +57,11 @@ function chooseExit(world, n, inEdge, def = null) {
     if (def.rough > 1) { const paved = opts.filter((o) => net.edges[o.edge].kind !== 'dirt'); if (paved.length) opts = paved; }
   }
   if (!opts.length) return null;
+  // through traffic keeps out of the cul-de-sacs and the roads that just stop: they'd only have to turn round at the end
+  // and come back (where three arms of a junction were dead ends, out of one and straight into the next) - unless
+  // there's no other way on (roadends.js)
+  const through = opts.filter((o) => !deadWay(net, o.edge, n.id));
+  if (through.length) opts = through;
   // through traffic keeps to the streets: an alley (one car wide: two meeting in it are stuck there) only when it's the
   // only way on
   const streets = opts.filter((o) => net.edges[o.edge].kind !== 'alley');
@@ -77,6 +83,17 @@ function chooseExit(world, n, inEdge, def = null) {
   // highway drivers mostly stay on the highway
   if (n.lvl === 1 && straight.length && rng() < 0.6) return straight[0];
   return opts[Math.floor(rng() * opts.length)];
+}
+
+// Backed out of a road's end to junction n (roadends.js): on by one of the other roads from there - its waypoints set,
+// the way chosen as if it had driven out of the road's end (inEdge). Null if there's no other way.
+export function leaveBy(world, v, n, inEdge) {
+  const ai = v.ai, nx = chooseExit(world, world.map.net.nodes[n], inEdge, v.def);
+  if (!nx || nx.edge === inEdge) return null;
+  delete ai.route;
+  enterEdge(world, v, nx.edge, n, 0, 0);
+  ai.cameBy = inEdge;
+  return nx;
 }
 
 // Lane for a road we are about to enter, given the turn into it (right turns from the kerb lane,
@@ -154,10 +171,14 @@ function crossJunction(world, v) {
   if (ai.route && !ai.route.loop && ai.route.i + 1 >= routeSteps(world, ai.route).length) delete ai.route;
   const lane = v.def.pedal || ai.route ? 0 : laneFor(ne, nx.turn, ai.lane);   // (a cyclist, a bus and a taxi keep to the kerb)
   const a = lanePath(net, e, ai.from, ai.lane), b = lanePath(net, ne, to, lane);
-  const turn = turnPath(a[a.length - 1], endDir(a), b[0], startDir(b), Math.abs(nx.turn) > 0.5 ? 6 : 3);
+  const uturn = nx.edge === ai.edge;   // (back the way it came: only ever at a road's end - exitsFrom)
   if (ai.route) { ai.route.i = (ai.route.i + 1) % routeSteps(world, ai.route).length; enterRoute(world, v, ai.route.i, 0); }
   else enterEdge(world, v, nx.edge, to, lane, 0);
   ai.cameBy = e.id;   // (the road it came into the junction by: junctionClear)
+  // at a road's end it turns round by a manoeuvre, into the lane back (roadends.js); anywhere else, a smooth path
+  // through the junction onto its next road
+  if (uturn) { startTurn(world, v, nx.edge, to, isRoadEnd(net, to) ? to : -1); return; }
+  const turn = turnPath(a[a.length - 1], endDir(a), b[0], startDir(b), Math.abs(nx.turn) > 0.5 ? 6 : 3);
   ai.pts.unshift(...turn.map((p) => ({ x: p.x, y: p.y })));
 }
 
@@ -341,7 +362,9 @@ function steerTraffic(world, v, t) {
   const now = world.time;
   const net = world.map.net;
   const panic = ai.panicUntil && now < ai.panicUntil;
-  if (!ai.pts || !ai.pts.length) { crossJunction(world, v); if (!v.ai) return; }
+  if (ai.parkIt) { v.input = { throttle: 0, steer: 0, hb: true }; ai.ctl = null; return; }   // (given up: parkIt)
+  if (ai.turn && stepTurn(world, v)) return;   // turning round (roadends.js)
+  if (!ai.pts || !ai.pts.length) { crossJunction(world, v); if (!v.ai) return; if (ai.turn) { stepTurn(world, v); return; } }
   let wp = ai.pts[0];
   const d = Math.hypot(wp.x - v.x, wp.y - v.y);
   // orbit guard: a waypoint inside the turning circle makes a car loop around it forever.
@@ -358,7 +381,8 @@ function steerTraffic(world, v, t) {
     ai.pts.shift();
     if (wp.halt !== undefined) haltAt(world, v, wp.halt);   // (a bus at its stop, a taxi where it's picking up or dropping off)
     if (wp.stop) { crossJunction(world, v); if (!v.ai) return; ai.replans = 0; }
-    if (!ai.pts.length) { crossJunction(world, v); if (!v.ai) return; }
+    if (!ai.pts.length && !ai.turn) { crossJunction(world, v); if (!v.ai) return; }
+    if (ai.turn) { stepTurn(world, v); return; }   // (at a road's end: turning round)
     wp = ai.pts[0];
   }
   let desired = panic ? 520 : Math.min(ai.kindSpeed || 250, v.model === 'bus' ? 220 : 999);
@@ -388,6 +412,15 @@ function steerTraffic(world, v, t) {
     if (hold) desired = Math.min(desired, Math.max(0, gap * 1.6));
     else if (ai.turning && ds < 260) desired = Math.min(desired, 150 + ds * 0.4);
     holding = hold && gap < 220;
+    if (ai.next && ai.next.edge === ai.edge) {
+      // the road's end: up to it slowly, to turn round there - one car at a time (the next waits short of the turning
+      // circle: roadends.js)
+      desired = Math.min(desired, 45 + ds * 0.45);
+      const room = holdShort(world, v, stop.node, ds);
+      if (room < Infinity) { desired = Math.min(desired, Math.max(0, room * 1.5)); holding ||= room < 80; }
+      // (the road gives out short of the end of its lane - a turning circle cut off by the water: it turns round there)
+      else if (ds < v.def.L / 2 + 50 && roadGivesOut(world, v)) { ai.pts.splice(0, stopIdx + 1); crossJunction(world, v); if (ai.turn) stepTurn(world, v); return; }
+    }
   }
   if (!panic && (world.tick + v.id) % 4 === 0) ai.yieldUntil = sirenBehind(world, v) ? now + 1.5 : ai.yieldUntil;
   if (!panic && ai.yieldUntil && now < ai.yieldUntil) {
@@ -421,10 +454,43 @@ function steerTraffic(world, v, t) {
     driveToward(world, v, room && !busy ? tx : wp.x, room && !busy ? ty : wp.y, Math.min(desired, 40), {});
     return;
   }
+  // a ring of cars each stopped for the next: one of them backs up to make room (breakRing)
+  if (!panic && (world.tick + v.id) % 10 === 0) breakRing(world, v);
   // stopped behind a backup: another lane, or another way (reroute.js)
   if (!panic && unjam(world, v, holding)) { if (!v.ai || !ai.pts || !ai.pts.length) return; }
   const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190));
   driveToward(world, v, la.x, la.y, desired, { ignoreObstacles: panic, ignore: ai.passUntil > now && ai.passBlk ? new Set([ai.passBlk]) : null, round: !!v.bus && ai.roundUntil > now });
+}
+
+// A ring of cars each stopped for the next - two nose to nose in a junction, three or four boxed in round one - waits for
+// ever: nobody in it is held up by a breakdown, so nobody looks for another way (reroute.js). The owner (2026-10-09):
+// "get some vehicles to back up and make room for other vehicles to get through". After RING_S, the car in the ring
+// with the most room behind it (an NPC's: a player's car or one at work waits) backs off, a car's length or so, and the
+// others get by.
+const RING_S = 5;
+function breakRing(world, v) {
+  const ai = v.ai, now = world.time;
+  if (Math.abs(vehForwardSpeed(v)) > 10 || !v._blk || ai.turn) { ai.ringAt = undefined; return; }
+  const ring = [v];
+  let b = world.get(v._blk);
+  for (let k = 0; k < 8 && b && b !== v; k++) {
+    if (b.kind !== K.VEH || Math.hypot(b.vx, b.vy) > 10) { ai.ringAt = undefined; return; }
+    ring.push(b);
+    b = b._blk ? world.get(b._blk) : null;
+  }
+  if (b !== v) { ai.ringAt = undefined; return; }
+  ai.ringAt ??= now;
+  if (now - ai.ringAt < RING_S) return;
+  let best = null, room = 30;
+  for (const q of ring) {
+    if (!q.ai || q.ai.kind !== 'traffic' || q.ai.turn || q.ai.reverseUntil > now) continue;
+    const r = roomBehind(world, q, 96);
+    if (r > room || (r === room && best && q.id < best.id)) { room = r; best = q; }
+  }
+  if (best !== v) return;
+  ai.ringAt = undefined; ai.stuck = 0;
+  ai.reverseUntil = now + Math.min(1.8, 0.5 + room / 70);
+  world.ringsBroken = (world.ringsBroken || 0) + 1;
 }
 
 // The painted stop line is this far back from where a lane meets a signalled junction (px)
@@ -512,16 +578,22 @@ function replanFromHere(world, v) {
   // on a route: back onto it from here (a bus where its line runs this way down this street, a taxi on a new way to
   // where it's going); failing that it leaves the route
   if (ai.route) {
-    if (rejoin(world, v, e, from, s + 40)) { ai.replans = (ai.replans || 0) + 1; if (ai.replans > 4) { v.ai = null; v.despawnable = true; } return; }
+    if (rejoin(world, v, e, from, s + 40)) { ai.replans = (ai.replans || 0) + 1; if (ai.replans > 4) parkIt(v); return; }
     delete ai.route;
   }
   enterEdge(world, v, e.id, from, Math.min(ai.lane || 0, e.nl - 1), s + 40);
   ai.replans = (ai.replans || 0) + 1;
-  if (ai.replans > 4) { v.ai = null; v.despawnable = true; } // hopeless: park it and let the cleanup take it
+  if (ai.replans > 4) parkIt(v);
 }
+// Hopeless: it pulls up where it is (a breakdown, for the tow trucks) and the clean-up takes it once nobody can see it.
+// (It used to drop out of traffic with the driver still at the wheel and the pedals as they were: driving round and
+// round, never cleared while a player was near.)
+function parkIt(v) { v.ai.parkIt = true; v.ai.hopeless = true; v.ai.ctl = null; v.input = { throttle: 0, steer: 0, hb: true }; }
 
 // Put a vehicle (already driven by an NPC) into traffic on the nearest lane, going the way it
 // faces.
+export { chooseExit as _chooseExit, breakRing as _breakRing };   // (tests: test/roadends.test.js)
+
 export function joinTraffic(world, v) {
   v.ai = { kind: 'traffic', lane: 0 };
   replanFromHere(world, v);
@@ -554,7 +626,8 @@ function manage(world) {
     // cleared away once nobody's looking, near a player or not (the road crew; the jam behind it moves again)
     if (Math.hypot(v.vx, v.vy) < 8 && !v.parked && !mine.has(v.id) && (isTraffic || (!v.ai && v.despawnable && !v.seats.some((s) => s)))) v.stillSince ??= now;
     else v.stillSince = undefined;
-    if (v.stillSince !== undefined && now - v.stillSince > (isTraffic ? 50 : 90) && !inAnyView(world, v.x, v.y, 96) && !(v.ai && v.ai.route)) { removeVehicle(world, v); continue; }
+    // (one that's given up - boxed in turning round, lost for good: roadends.js, parkIt - as soon as nobody's looking)
+    if (v.stillSince !== undefined && now - v.stillSince > (isTraffic ? (v.ai.hopeless ? 4 : 50) : 90) && !inAnyView(world, v.x, v.y, 96) && !(v.ai && v.ai.route)) { removeVehicle(world, v); continue; }
     if (!v.despawnable || near(v.x, v.y, range) || inAnyView(world, v.x, v.y, 64)) continue;
     if (v.ai && v.ai.kind !== 'traffic') continue; // police/ems manage their own
     removeVehicle(world, v);
@@ -622,7 +695,8 @@ function manage(world) {
     if (!cands.length) continue;
     for (let tries = 0; tries < 10; tries++) {
       const e = cands[Math.floor(rng() * cands.length)];
-      const from = e.oneway || rng() < 0.5 ? e.a : e.b;
+      let from = e.oneway || rng() < 0.5 ? e.a : e.b;
+      if (!e.oneway && deadWay(net, e.id, from)) from = from === e.a ? e.b : e.a;   // (on the way to a road's end: on its way out instead)
       let lane = Math.floor(rng() * e.nl);
       let lp = lanePath(net, e, from, lane);
       const L = lp[lp.length - 1].s;
