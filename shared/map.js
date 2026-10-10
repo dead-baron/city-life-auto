@@ -524,8 +524,21 @@ export function cityFromData(o) {
 // The generator (from here to mapSignature) builds the map's frame, m.w x m.h from 0, 0: a tile's index is
 // `y * m.w + x`. Code that reads a built map goes through its idx / inside.
 let OPTS = null;   // (World v3's spike: what generateCity was asked to build; null for the live world)
+// (World v3's placed builds, docs/WORLD-V3.md 8.4 - opts.place, shared/world3-islands.js placement: every position the
+// build takes from today's world goes through at + (p - from) * s - PX / PY in tiles, QX / QY in px; sizes don't scale.
+// Position seeds and hashes read today's coordinates back, LX / LY (the tile less the placement's offset), so a place
+// built at scale 1 is today's, moved; IX / IY: the true inverse, for reading today's grids. The identity without it.)
+let PL = null;
+const PX = (x) => (PL ? PL.at[0] + (x - PL.from[0]) * PL.s : x), PY = (y) => (PL ? PL.at[1] + (y - PL.from[1]) * PL.s : y);
+const QX = (x) => (PL ? PX(x / TILE) * TILE : x), QY = (y) => (PL ? PY(y / TILE) * TILE : y);
+const LX = (x) => (PL ? x - PL.dx : x), LY = (y) => (PL ? y - PL.dy : y);
+const IX = (x) => (PL ? PL.from[0] + (x - PL.at[0]) / PL.s : x), IY = (y) => (PL ? PL.from[1] + (y - PL.at[1]) / PL.s : y);
+const IQX = (x) => (PL ? IX(x / TILE) * TILE : x), IQY = (y) => (PL ? IY(y / TILE) * TILE : y);
+const LQX = (x) => (PL ? x - PL.dx * TILE : x), LQY = (y) => (PL ? y - PL.dy * TILE : y);   // (LX / LY in px)
+const gridOff = (d, c) => (d ? ((d % c) + c) % c : 0);   // (a sampling grid's origin: placed with the build, LX / LY)
 function buildCity(seed, opts = null, frame = null) {
   OPTS = opts;
+  PL = opts?.place || null;
   for (const k in ISLANDS) ISLANDS[k].box = ISLAND_BOX0[k].slice();   // (each build starts clean: terrain sets the boxes of the islands it has)
   const m = new CityMap(seed, frame?.w, frame?.h);
   const rand = mulberry32(seed);
@@ -579,8 +592,8 @@ function buildCity(seed, opts = null, frame = null) {
     if (!st) { m.fill(b.x, b.y, b.w, b.h, DISTRICTS[b.d].ground === T.WATER ? T.GRASS : DISTRICTS[b.d].ground); continue; }
     m.fill(b.x, b.y, b.w, b.h, DISTRICTS[b.d].ground);
     if (b.park) continue;
-    if (b.green) { filler(m, { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' }, b.x, b.w, STYLE.park, mulberry32(seed ^ (b.x * 17 + b.y))); continue; }
-    if (v2At(m, b)) { b.v2 = true; v2Block(m, b, rows, mulberry32(seed ^ (b.x * 97 + b.y * 13))); continue; } // World v2: real-sized lots
+    if (b.green) { filler(m, { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' }, b.x, b.w, STYLE.park, mulberry32(seed ^ (LX(b.x) * 17 + LY(b.y)))); continue; }
+    if (v2At(m, b)) { b.v2 = true; v2Block(m, b, rows, mulberry32(seed ^ (LX(b.x) * 97 + LY(b.y) * 13))); continue; } // World v2: real-sized lots
     const minH = Math.min(...Object.keys(st.gen).map((k) => PREFABS[k].th));
     const minW = Math.min(...Object.keys(st.gen).map((k) => PREFABS[k].tw));
     const fS = facesStreet(m, b, 'S'), fN = facesStreet(m, b, 'N');
@@ -590,13 +603,13 @@ function buildCity(seed, opts = null, frame = null) {
     const sideways = !fS && !fN && (facesStreet(m, b, 'E') || facesStreet(m, b, 'W'));
     const drives = !!DRIVE_HOUSES[b.d];
     if ((!fS && !fN && !sideways) || (drives && (sideways || b.h < minH || b.w < minW)) || (sideways && (b.w > 20 || b.h > 20) && ['houses', 'beach', 'luxury'].includes(DISTRICTS[b.d].style))) {
-      filler(m, { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' }, b.x, b.w, STYLE.park, mulberry32(seed ^ (b.x * 29 + b.y * 3)));
+      filler(m, { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' }, b.x, b.w, STYLE.park, mulberry32(seed ^ (LX(b.x) * 29 + LY(b.y) * 3)));
       continue;
     }
     if (b.h < minH || b.w < minW || (!fS && !fN)) {
       // too small (or nowhere for a door): one solid building or a pocket park / plaza
       const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' };
-      const rr = mulberry32(seed ^ (b.x * 131 + b.y * 7));
+      const rr = mulberry32(seed ^ (LX(b.x) * 131 + LY(b.y) * 7));
       // with no street along its north side, the shops across that edge may open onto it: keep a
       // strip of paving there in front of their doors
       const gap = !fN && b.h >= 6 ? 2 : 0;
@@ -613,15 +626,15 @@ function buildCity(seed, opts = null, frame = null) {
     else {
       // (a strip along the north side stays open: it may be the only way to a door across it)
       const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'N' };
-      const rr = mulberry32(seed ^ (b.x * 173 + b.y * 11));
+      const rr = mulberry32(seed ^ (LX(b.x) * 173 + LY(b.y) * 11));
       filler(m, row, b.x, b.w, { ...st, roof: 0 }, rr);
       if (st.roof && !drives && b.w >= 6 && b.h >= 8 && rr() < Math.max(0.5, st.roof)) roofBuilding(m, row, b.x + 1, b.y + 3, b.w - 2, b.h - 4, st, rr);
     }
   }
   claimEstates(m, rows, estateRows, rand); // beach houses first: the beach blocks are few
   placeSpecials(m, rows, seed);
-  for (const row of rows) (row.v2 ? fillRowV2 : fillRow)(m, row, mulberry32(seed ^ (row.x * 31 + row.y * 977)));
-  for (const b of m.blocks) if (b.park) buildPark(m, b, mulberry32(seed ^ (b.x * 13 + b.y)), b.park);
+  for (const row of rows) (row.v2 ? fillRowV2 : fillRow)(m, row, mulberry32(seed ^ (LX(row.x) * 31 + LY(row.y) * 977)));
+  for (const b of m.blocks) if (b.park) buildPark(m, b, mulberry32(seed ^ (LX(b.x) * 13 + LY(b.y))), b.park);
   for (const [type, key, x, y, south, , dims] of estateRows) estateHouse(m, rand, type, key, x, y, south, dims);
   fillScraps(m, mulberry32(seed ^ 0x5c4a)); // the stepped edges along Broadway and the curving streets
   clearDoorways(m);
@@ -781,17 +794,18 @@ function terrain(m, opts = null) {
   if (opts && opts.land) opts.land(land, m);   // (World v3's spike: one island's land alone, the rest sea)
   m.land = land;
   const { lab, comps } = components(m, land);
-  const compAt = (x, y) => lab[y * W + x];
+  const compAt = (x, y) => lab[Math.floor(PY(y)) * W + Math.floor(PX(x))];   // (today's tile: placed, PX / PY)
   const main = compAt(800, 500);
   // the river: the channel of sea that cuts into the central island from the south-west.
   // Trace its centre column by column (water runs between the north city and Southbank).
   const riverMid = new Map();
-  let prev = 690;
-  for (let x = 772; x <= 1016; x++) {
+  let prev = PY(690);
+  const rx0 = Math.ceil(PX(772)), rx1 = PX(1016), ry0 = Math.ceil(PY(560)), ry1 = PY(760);
+  for (let x = rx0; x <= rx1; x++) {
     let best = null;
-    for (let y = 560; y < 760; y++) {
+    for (let y = ry0; y < ry1; y++) {
       if (land[y * W + x]) continue;
-      let y2 = y; while (y2 < 760 && !land[y2 * W + x]) y2++;
+      let y2 = y; while (y2 < ry1 && !land[y2 * W + x]) y2++;
       const mid = (y + y2 - 1) / 2;
       if (y2 - y < 60 && (!best || Math.abs(mid - prev) < Math.abs(best.mid - prev))) best = { y0: y, y1: y2 - 1, mid };
       y = y2;
@@ -804,23 +818,24 @@ function terrain(m, opts = null) {
   // it runs west, out to the sea (m.flow: naturesites.js setFlow)
   for (const [x, mid] of riverMid) {
     const a = riverMid.get(x + 2) ?? mid, b = riverMid.get(x - 2) ?? mid;
-    for (let y = 560; y < 760; y++) if (m.river[y * W + x]) setFlow(m, y * W + x, -4, b - a);
+    for (let y = ry0; y < ry1; y++) if (m.river[y * W + x]) setFlow(m, y * W + x, -4, b - a);
   }
   const yRiver = (x) => {
-    if (x < 772) return Infinity;
-    if (x > 1016) return 600;
+    if (x < rx0) return Infinity;
+    if (x > rx1) return PY(600);
     for (let k = 0; k < 12; k++) { if (riverMid.has(x - k)) return riverMid.get(x - k); if (riverMid.has(x + k)) return riverMid.get(x + k); }
-    return 690;
+    return PY(690);
   };
   m.yRiver = yRiver;
   // zones
-  const compZone = new Map((OPTS?.islandAt ? ISLAND_AT.concat(OPTS.islandAt) : ISLAND_AT).map(([[x, y], z]) => [compAt(x, y), z]));   // (an island build: its pieces of a landmass keep the landmass's zone)
+  const compZone = new Map(ISLAND_AT.map(([[x, y], z]) => [compAt(x, y), z]).concat((OPTS?.islandAt || []).map(([[x, y], z]) => [lab[y * W + x], z])));   // (an island build: its pieces of a landmass keep the landmass's zone)
   for (let i = 0; i < N; i++) {
     if (!land[i]) continue;
     const c = lab[i], x = i % W, y = (i / W) | 0;
-    if (c === main) m.zone[i] = x >= 1045 ? Z.EAST : y < yRiver(x) ? Z.CITY : Z.SOUTH;
+    if (c === main) m.zone[i] = x >= PX(1045) ? Z.EAST : y < yRiver(x) ? Z.CITY : Z.SOUTH;
     else m.zone[i] = compZone.get(c) ?? Z.WILD;
   }
+  if (OPTS?.zones) OPTS.zones(m);   // (World v3's placed builds on the v3 land: its zones, shared/world3-land.js)
   // island boxes for the tour and the map
   const box = {};
   for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) {
@@ -846,13 +861,14 @@ function terrain(m, opts = null) {
     const nearSea = m.distSea[i] <= 10;
     const z = m.zone[i];
     if (z === Z.CITY || z === Z.SOUTH) { m.tiles[i] = T.GRASS; continue; }
-    const c = terrainAt(cls, cw, x, y);   // (only where it counts: the city is all grass to start with)
+    const c = PL ? terrainAt(cls, cw, Math.floor(IX(x)), Math.floor(IY(y))) : terrainAt(cls, cw, x, y);   // (only where it counts: the city is all grass to start with)
     if (nearSea && (z !== Z.EAST || c !== 4)) { m.tiles[i] = T.SAND; continue; }
-    m.tiles[i] = c === 3 ? (Math.sin(x * 0.045 + Math.cos(y * 0.06) * 2) + Math.sin(y * 0.05 - x * 0.02) + (hash2(x, y, 5) - 0.5) * 0.5 > 0.9 ? T.SAND : T.DIRT) : c === 4 ? T.DIRT : T.GRASS;
+    const lx = LX(x), ly = LY(y);
+    m.tiles[i] = c === 3 ? (Math.sin(lx * 0.045 + Math.cos(ly * 0.06) * 2) + Math.sin(ly * 0.05 - lx * 0.02) + (hash2(lx, ly, 5) - 0.5) * 0.5 > 0.9 ? T.SAND : T.DIRT) : c === 4 ? T.DIRT : T.GRASS;
   }
   m.terrainCls = { cls, cw };
   // districts of the places without seeds: Smuggler's Rock, the lighthouse rock, the islets
-  const lighthouse = compAt(300, 70);
+  const lighthouse = compAt(300, 70);   // (compAt places it)
   for (let i = 0; i < N; i++) {
     const z = m.zone[i];
     if (z === Z.EAST) m.dist[i] = 9;
@@ -868,7 +884,7 @@ function terrain(m, opts = null) {
 // little noise so they don't run along straight lines; the park is a hard rectangle.
 function paintDistricts(m) {
   const W = m.w, H = m.h;
-  const seeds = SEEDS.concat(ISLAND_SEEDS).map(([d, x, y]) => ({ d, x, y, z: m.zone[y * W + x] })).filter((s) => s.z);
+  const seeds = SEEDS.concat(ISLAND_SEEDS).map(([d, x, y]) => ({ d, x: PX(x), y: PY(y), z: m.zone[Math.floor(PY(y)) * W + Math.floor(PX(x))] })).filter((s) => s.z);
   const seeded = new Set(seeds.map((s) => s.z));
   // (each zone's seeds in their order; and the wobble's sines worked out once per row, column and diagonal - the same
   // numbers from the same arguments, without four of them for every tile)
@@ -882,9 +898,10 @@ function paintDistricts(m) {
     const i = y * W + x;
     const z = m.zone[i];
     if (!seeded.has(z)) continue;
-    if (x >= PARK.x0 + 3 && x < PARK.x1 - 3 && y >= PARK.y0 + 3 && y < PARK.y1 - 3) { m.dist[i] = 12; continue; }
-    if (z === Z.CITY && x >= ARTS.x0 && x < ARTS.x1 && y >= ARTS.y0 && y < ARTS.y1) { m.dist[i] = 46; continue; }
-    const wx = x + 7 * sinY[y] + 4 * sinS[x + y], wy = y + 7 * sinX[x] + 4 * cosD[x - y + H];
+    if (x >= PX(PARK.x0) + 3 && x < PX(PARK.x1) - 3 && y >= PY(PARK.y0) + 3 && y < PY(PARK.y1) - 3) { m.dist[i] = 12; continue; }
+    if (z === Z.CITY && x >= PX(ARTS.x0) && x < PX(ARTS.x1) && y >= PY(ARTS.y0) && y < PY(ARTS.y1)) { m.dist[i] = 46; continue; }
+    const lx = LX(x), ly = LY(y);   // (the wobble: today's)
+    const wx = x + 7 * sinY[ly] + 4 * sinS[lx + ly], wy = y + 7 * sinX[lx] + 4 * cosD[lx - ly + H];
     let best = null, bd = Infinity;
     for (const s of byZone.get(z)) {
       const d = (s.x - wx) ** 2 + (s.y - wy) ** 2;
@@ -892,6 +909,7 @@ function paintDistricts(m) {
     }
     if (best) m.dist[i] = best.d;
   }
+  if (OPTS?.dists) OPTS.dists(m);   // (World v3's placed builds on the v3 land: its districts, shared/world3-land.js)
   // built-up districts start out as plain ground for the streets and lots; the rest keeps its
   // woods, scrub and sand
   for (let i = 0; i < W * H; i++) {
@@ -903,11 +921,12 @@ function paintDistricts(m) {
   }
   // inland lakes (fresh water: fishable like the river)
   m.lake = new Uint8Array(W * H);
-  for (const [lx, ly, rx, ry] of LAKES) {
+  for (const [lx0, ly0, rx, ry] of LAKES) {
+    const lx = PX(lx0), ly = PY(ly0);
     for (let y = Math.floor(ly - ry - 1); y <= ly + ry + 1; y++) for (let x = Math.floor(lx - rx - 1); x <= lx + rx + 1; x++) {
-      const k = ((x - lx) / rx) ** 2 + ((y - ly) / ry) ** 2 + 0.12 * Math.sin(x * 0.7 + y * 0.4);
+      const k = ((x - lx) / rx) ** 2 + ((y - ly) / ry) ** 2 + 0.12 * Math.sin(LX(x) * 0.7 + LY(y) * 0.4);
       const i = y * W + x;
-      if (k > 1 || !m.land[i]) continue;
+      if (k > 1 || x < 0 || y < 0 || x >= W || y >= H || !m.land[i]) continue;
       m.lake[i] = 1; m.river[i] = 1;
       m.tiles[i] = k < 0.4 ? T.DEEP : T.WATER;
     }
@@ -930,9 +949,16 @@ function layoutRoads(m, rand) {
   const seaD = (x, y) => { const i = at(x, y); return i < 0 ? 0 : m.distSea[i] / 4; };
   const rivD = (x, y) => { const i = at(x, y); return i < 0 ? 0 : m.distRiver[i] / 4; };
   const inPark = (x, y) => x > PARK.x0 + 2 && x < PARK.x1 - 2 && y > PARK.y0 + 2 && y < PARK.y1 - 2;
+  // (a placed build, PL: the parts that lay their lines in today's coordinates - metro.js, islands.js, the countryside -
+  // look the map up at the placed tile, and what they laid is placed after them, each point once)
+  const seen = PL ? new WeakSet() : null;
+  const mark = () => { if (PL) for (const l of lines) for (const p of l.pts) seen.add(p); };
+  const placeNew = () => { if (PL) for (const l of lines) for (const p of l.pts) if (!seen.has(p)) { seen.add(p); p.x = QX(p.x); p.y = QY(p.y); } };
+  const placed = (f) => (PL ? (x, y) => f(PX(x), PY(y)) : f);
+  const back = (p) => (PL && p ? { x: IQX(p.x), y: IQY(p.y) } : p);
 
   // ring highway, its distance field and the frontage roads
-  const ring = ringLine();
+  const ring = ringLine(PL ? (x, y) => [PX(x), PY(y)] : null);
   m.ring = ring;
   // distance to the ring (tiles) and which way it runs there (1 east-west, 2 north-south)
   const core = new Uint8Array(W * H);
@@ -960,14 +986,16 @@ function layoutRoads(m, rand) {
 
   // the streets of Metro City (metro.js): the avenues across the island, Broadway, and each district's own
   // irregular blocks, service alleys and plazas between them
-  const metro = metroRoads({ m, Z, BAND, at, inPark, lines, ringH, styleOf: (d) => DISTRICTS[d].style, gridded: (d) => !OWN_PLAN.has(d) });
-  m.plazas = metro.plazas;
+  mark();
+  const metro = metroRoads({ m, Z, BAND, at: placed(at), inPark, lines, ringH, styleOf: (d) => DISTRICTS[d].style, gridded: (d) => !OWN_PLAN.has(d) });
+  placeNew();
+  m.plazas = PL ? metro.plazas.map((q) => ({ ...q, x0: PX(q.x0), y0: PY(q.y0), x1: PX(q.x1), y1: PY(q.y1) })) : metro.plazas;
   // coast drives (around the city and Southbank, away from the ring) and river drives
-  const coastOk = (x, y) => { const z = zoneOf(x, y); return (z === Z.CITY || z === Z.SOUTH) && rD(x, y) >= BAND + 1 && !inPark(x, y); };
-  for (const c of contours(m.distSea, W, H, 9 * 4, (x, y) => { const z = m.zone[y * W + x]; return z === Z.CITY || z === Z.SOUTH; }, 540, 220, 1060, 920)) {
+  const coastOk = (x, y) => { const z = zoneOf(x, y); return (z === Z.CITY || z === Z.SOUTH) && rD(x, y) >= BAND + 1 && !inPark(IX(x), IY(y)); };
+  for (const c of contours(m.distSea, W, H, 9 * 4, (x, y) => { const z = m.zone[y * W + x]; return z === Z.CITY || z === Z.SOUTH; }, Math.floor(PX(540)), Math.floor(PY(220)), Math.ceil(PX(1060)), Math.ceil(PY(920)))) {
     for (const p of clipLine(smoothLine(c, 40), coastOk, 14 * TILE, 12)) lines.push({ pts: p, kind: 'drive', lvl: 0, name: 'Coast Drive' });
   }
-  for (const c of contours(m.distRiver, W, H, 8 * 4, (x, y) => { const z = m.zone[y * W + x]; return (z === Z.CITY || z === Z.SOUTH) && m.distSea[y * W + x] > 10 * 4; }, 700, 540, 1060, 800)) {
+  for (const c of contours(m.distRiver, W, H, 8 * 4, (x, y) => { const z = m.zone[y * W + x]; return (z === Z.CITY || z === Z.SOUTH) && m.distSea[y * W + x] > 10 * 4; }, Math.floor(PX(700)), Math.floor(PY(540)), Math.ceil(PX(1060)), Math.ceil(PY(800)))) {
     for (const p of clipLine(smoothLine(c, 40), coastOk, 14 * TILE, 12)) lines.push({ pts: p, kind: 'drive', lvl: 0, name: 'Riverside Drive' });
   }
   // Pine Hills: winding collectors with cul-de-sacs off them
@@ -976,7 +1004,7 @@ function layoutRoads(m, rand) {
     cubic({ x: 790, y: 735 }, { x: 830, y: 690 }, { x: 880, y: 790 }, { x: 935, y: 715 }, 24),
     cubic({ x: 795, y: 790 }, { x: 850, y: 830 }, { x: 870, y: 740 }, { x: 932, y: 780 }, 24),
     cubic({ x: 845, y: 700 }, { x: 860, y: 740 }, { x: 830, y: 770 }, { x: 850, y: 815 }, 18),
-  ].map((c) => c.map((p) => ({ x: p.x * TILE, y: p.y * TILE })));
+  ].map((c) => c.map((p) => ({ x: PX(p.x) * TILE, y: PY(p.y) * TILE })));
   for (const c of collectors) {
     for (const p of clipLine(c, phOk, 12 * TILE, 12)) {
       lines.push({ pts: p, kind: 'drive', lvl: 0, name: 'Pine Hills Drive' });
@@ -1062,25 +1090,29 @@ function layoutRoads(m, rand) {
 
   // Dry Creek: the county road east, the farm road north-south, back into Southside
   const ruralOk = (x, y) => isLand(x, y) && seaD(x, y) >= 6;
-  const county = [{ x: 1036 * TILE, y: 528 * TILE }, { x: 1140 * TILE, y: 528 * TILE }, { x: 1200 * TILE, y: 514 * TILE }];
+  const county = [{ x: 1036 * TILE, y: 528 * TILE }, { x: 1140 * TILE, y: 528 * TILE }, { x: 1200 * TILE, y: 514 * TILE }].map((q) => ({ x: QX(q.x), y: QY(q.y) }));
   for (const p of clipLine(county, ruralOk, 10 * TILE)) lines.push({ pts: p, kind: 'rural', lvl: 0, name: 'County Road' });
-  const farmRd = [{ x: 1140 * TILE, y: 452 * TILE }, { x: 1140 * TILE, y: 690 * TILE }, { x: 1110 * TILE, y: 730 * TILE }, { x: 1040 * TILE, y: 734 * TILE }];
+  const farmRd = [{ x: 1140 * TILE, y: 452 * TILE }, { x: 1140 * TILE, y: 690 * TILE }, { x: 1110 * TILE, y: 730 * TILE }, { x: 1040 * TILE, y: 734 * TILE }].map((q) => ({ x: QX(q.x), y: QY(q.y) }));
   for (const p of clipLine(rounded(farmRd, 18 * TILE), ruralOk, 10 * TILE)) lines.push({ pts: p, kind: 'rural', lvl: 0, name: 'Farm Road' });
   // the Eastern Parkway: where town meets the country, every street from the grid ends on it
-  for (const p of clipLine([{ x: 1047 * TILE, y: 296 * TILE }, { x: 1047 * TILE, y: 910 * TILE }], (x, y) => isLand(x, y) && seaD(x, y) >= 4 && !m.river[at(x, y)], 10 * TILE)) lines.push({ pts: p, kind: 'art', lvl: 0, name: 'Eastern Parkway' });
+  for (const p of clipLine([{ x: QX(1047 * TILE), y: QY(296 * TILE) }, { x: QX(1047 * TILE), y: QY(910 * TILE) }], (x, y) => isLand(x, y) && seaD(x, y) >= 4 && !m.river[at(x, y)], 10 * TILE)) lines.push({ pts: p, kind: 'art', lvl: 0, name: 'Eastern Parkway' });
 
   // the other islands, the highways and bridges between them (islands.js)
   const ctx = {
-    m, lines, rand, Z, isLand, zoneOf, seaD,
-    lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; },
-    metroWestEnd: metro.westEnd, metroNorthEnd: metro.northEnd, metroSouthEnd: metro.southEnd,
-    ownShore: OPTS?.ownShore,   // (World v3's island builds only: where a road from another island meets this one's shore)
+    m, lines, rand, Z, isLand: placed(isLand), zoneOf: placed(zoneOf), seaD: placed(seaD),
+    lake: placed((x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; }),
+    metroWestEnd: back(metro.westEnd), metroNorthEnd: PL ? (x) => back(metro.northEnd(x)) : metro.northEnd, metroSouthEnd: PL ? (x) => back(metro.southEnd(x)) : metro.southEnd,
+    ownShore: PL && OPTS?.ownShore ? (x, y) => back(OPTS.ownShore(Math.floor(PX(x)), Math.floor(PY(y)))) : OPTS?.ownShore,   // (World v3's island builds only: where a road from another island meets this one's shore)
   };
+  mark();
   m.islandRings = islandRoads(ctx);
+  placeNew();
   stationAccess(m, lines, isLand, seaD);
   // campgrounds, roadside stops, masts, wind farms... out in the wild, each with its own road in
   const avoid = AIRPORTS.flatMap((A) => [A.runway, A.apron, A.taxi, A.terminal, ...A.hangars].map(([x, y, w, h]) => [x - 5, y - 5, w + 10, h + 10])).concat(FIELDS.map(([x, y, w, h]) => [x - 2, y - 2, w + 4, h + 4]), FARM_FIELDS.map(([x, y, w, h]) => [x - 2, y - 2, w + 4, h + 4]));
-  countrysideRoads({ m, lines, isLand, seaD, lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; }, wildAt: (tx, ty) => wildAt(m, tx, ty), avoid });
+  mark();
+  countrysideRoads({ m, lines, isLand: placed(isLand), seaD: placed(seaD), lake: placed((x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; }), wildAt: placed((tx, ty) => wildAt(m, tx, ty)), avoid });
+  placeNew();
   return lines;
 }
 
@@ -1145,7 +1177,7 @@ function stationAccess(m, lines, isLand, seaD) {
   const ok = (l) => l.lvl === 0 && !['hwy', 'ramp', 'front'].includes(l.kind);
   for (const [name, tx, ty] of RAIL_STATIONS) {
     let best = null, bd = Infinity;
-    for (const p of pts) { const d = Math.hypot(p.x - tx * TILE, p.y - ty * TILE); if (d < bd) { bd = d; best = p; } }
+    for (const p of pts) { const d = Math.hypot(p.x - QX(tx * TILE), p.y - QY(ty * TILE)); if (d < bd) { bd = d; best = p; } }
     if (!best || best.under) continue;
     let near = Infinity, tgt = null;
     for (const l of lines) {
@@ -1511,6 +1543,7 @@ function waterfrontStrip(m) {
 function findBlocks(m) {
   const W = m.w, H = m.h;
   ALL_PARKS = [{ ...PARK, pond: true, pitch: true }, ...PARKS.map((q) => ({ ...q, pond: !q.lake && !q.pitch }))];
+  if (PL) ALL_PARKS = ALL_PARKS.map((q) => ({ ...q, x0: PX(q.x0), y0: PY(q.y0), x1: PX(q.x1), y1: PY(q.y1) }));   // (a placed build)
   const free = new Uint8Array(W * H);
   for (let i = 0; i < W * H; i++) {
     if (builtAt(m, i) && m.tiles[i] === T.GRASS && !m.reserve[i]) free[i] = 1;
@@ -1696,7 +1729,7 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
   if (!cands.length) return false;
   if (seaSide) { const near = cands.filter(([row]) => nearSea(row)); if (near.length) cands = near; const home = cands.filter(([row]) => row.d === sp.d); if (home.length) cands = home; }
   // prefer lots near the heart of the district (or right at the spot a special was planned for: at, tiles)
-  const [sx, sy] = sp.at ? [sp.at[0] * TILE, sp.at[1] * TILE] : seedOf(sp.d);
+  const [sx, sy] = sp.at ? [QX(sp.at[0] * TILE), QY(sp.at[1] * TILE)] : seedOf(sp.d);
   const mid = (c) => [(c[0].iv[c[1]][0] + c[0].iv[c[1]][1]) / 2 * TILE, (c[0].y + c[0].h / 2) * TILE];
   cands.sort((a, b) => (sp.at ? Math.hypot(mid(a)[0] - sx, mid(a)[1] - sy) - Math.hypot(mid(b)[0] - sx, mid(b)[1] - sy) : Math.hypot(a[0].x * TILE - sx, a[0].y * TILE - sy) - Math.hypot(b[0].x * TILE - sx, b[0].y * TILE - sy)));
   const pickR = rand();
@@ -1713,8 +1746,9 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
 }
 // the rows round the hero corner are rebuilt by buildHeroCorner: no special business (the only dealership, a
 // hospital...) is put where it would be cleared away
-const nearHero = (row, iv) => row.y < HERO.y + 20 && row.y + row.h > HERO.y - 20 && iv[0] < HERO.x + 30 && iv[1] > HERO.x - 30;
-function seedOf(d) {
+const nearHero = (row, iv) => row.y < PY(HERO.y) + 20 && row.y + row.h > PY(HERO.y) - 20 && iv[0] < PX(HERO.x) + 30 && iv[1] > PX(HERO.x) - 30;
+function seedOf(d) { const [x, y] = seedOf0(d); return [QX(x), QY(y)]; }   // (placed: PL)
+function seedOf0(d) {
   const s = SEEDS.filter((q) => q[0] === d);
   if (d === 46) return [(ARTS.x0 + ARTS.x1) / 2 * TILE, (ARTS.y0 + ARTS.y1) / 2 * TILE];   // (laid out by a rectangle, not seeds)
   if (!s.length) return [800 * TILE, 500 * TILE];
@@ -1911,10 +1945,10 @@ function roofBuilding(m, row, x, y, w, h, st, rand) {
     const kinds = st.roofKinds || ['tar'];
     while (x0 < x + w) {
       const left = x + w - x0;
-      let bw = left <= 13 ? left : 5 + Math.floor(hash2(x0, y, 301) * 8);
+      let bw = left <= 13 ? left : 5 + Math.floor(hash2(LX(x0), LY(y), 301) * 8);
       if (left - bw < 4) bw = left;
-      const kind = kinds[Math.floor(hash2(x0, y, 302) * kinds.length)];
-      roofOne(m, row, x0, y, bw, h, kind, Math.floor(hash2(x0, y, 303) * 1e9));
+      const kind = kinds[Math.floor(hash2(LX(x0), LY(y), 302) * kinds.length)];
+      roofOne(m, row, x0, y, bw, h, kind, Math.floor(hash2(LX(x0), LY(y), 303) * 1e9));
       x0 += bw;
     }
     rand(); rand(); // the same draws as one building, so nothing else in the city moves
@@ -1996,8 +2030,8 @@ const BUILT_UP = new Set(['towers', 'civic', 'commercial', 'nightlife', 'redligh
 // A row of fronts that runs on across the Arts District's west edge (the Civic Center's long block below North
 // Boulevard) is two rows, each its own district's, so the galleries and the theatre get the arts end of it.
 function artsSplit(m, row) {
-  const X = ARTS.x0;
-  if (row.y + row.h <= ARTS.y0 || row.y >= ARTS.y1 || row.x > X - 8 || row.x + row.w < X + 8) return [row];
+  const X = PX(ARTS.x0);
+  if (row.y + row.h <= PY(ARTS.y0) || row.y >= PY(ARTS.y1) || row.x > X - 8 || row.x + row.w < X + 8) return [row];
   const left = { ...row, w: X - row.x, iv: [[row.x, X]], d: m.dist[(row.y + (row.h >> 1)) * m.w + row.x + ((X - row.x) >> 1)] };
   const right = { ...row, x: X, w: row.x + row.w - X, iv: [[X, row.x + row.w]], d: 46 };
   return [left, right];
@@ -2106,7 +2140,7 @@ function paveSquare(m, R) {
   return out;
 }
 function paveMuseumSquare(m) {
-  const R = { x0: Math.ceil(MUSEUM_SQUARE.x0), y0: MUSEUM_SQUARE.y0, x1: Math.floor(MUSEUM_SQUARE.x1), y1: MUSEUM_SQUARE.y1 };
+  const R = { x0: Math.ceil(PX(MUSEUM_SQUARE.x0)), y0: Math.round(PY(MUSEUM_SQUARE.y0)), x1: Math.floor(PX(MUSEUM_SQUARE.x1)), y1: Math.round(PY(MUSEUM_SQUARE.y1)) };
   Object.defineProperty(m, '_museumSq', { value: paveSquare(m, R), enumerable: false, configurable: true });
 }
 // ...and dressed once the buildings stand: the fountain at its heart, statues on their plinths round it, plane trees and
@@ -2324,12 +2358,12 @@ function streetAtms(m) {
     const want = ATM_TARGET[d.style] ?? 2;
     let have = atms.filter((p) => distAt(p.x, p.y) === di).length;
     if (have >= want) return;
-    const list = cands[di].map((c) => ({ ...c, w: busy(c) + hash2(c.x | 0, c.y | 0, 7) + (c.prefab ? 2 : 0) })).sort((a, b) => b.w - a.w);
+    const list = cands[di].map((c) => ({ ...c, w: busy(c) + hash2(LQX(c.x) | 0, LQY(c.y) | 0, 7) + (c.prefab ? 2 : 0) })).sort((a, b) => b.w - a.w);
     for (const c of list) {
       if (have >= want) break;
       if (atms.some((q) => Math.hypot(q.x - c.x, q.y - c.y) < ATM_SPACING)) continue;
-      const look = d.style === 'nightlife' || d.style === 'redlight' ? (hash2(c.x | 0, c.y | 0, 3) < 0.5 ? 'neon' : 'cash')
-        : ATM_LOOKS[Math.floor(hash2(c.x | 0, c.y | 0, 5) * ATM_LOOKS.length)];
+      const look = d.style === 'nightlife' || d.style === 'redlight' ? (hash2(LQX(c.x) | 0, LQY(c.y) | 0, 3) < 0.5 ? 'neon' : 'cash')
+        : ATM_LOOKS[Math.floor(hash2(LQX(c.x) | 0, LQY(c.y) | 0, 5) * ATM_LOOKS.length)];
       const poi = wallAtm(m, c.b, c.x, look, false, c.loose);
       if (!poi) continue;
       atms.push(poi);
@@ -2349,7 +2383,7 @@ function kioskAtm(m, di, atms, loose) {
   if (!bb) return;
   for (let ty = Math.max(2, bb[1]); ty < Math.min(m.h - 2, bb[3] + 1); ty++) for (let tx = Math.max(2, bb[0]); tx < Math.min(m.w - 2, bb[2] + 1); tx++) {
     const i = ty * m.w + tx;
-    if (m.dist[i] !== di || !F.has(m.tiles[i]) || m.reserve[i] & 3 || m.deck[i] || hash2(tx, ty, 41) > 0.3) continue;
+    if (m.dist[i] !== di || !F.has(m.tiles[i]) || m.reserve[i] & 3 || m.deck[i] || hash2(LX(tx), LY(ty), 41) > 0.3) continue;
     // pavement with the road in front (south) and no pavement behind it: the back edge
     if (m.tileAt(tx, ty + 2) !== T.ROAD && m.tileAt(tx, ty + 1) !== T.ROAD) continue;
     const back = m.tileAt(tx, ty - 1);
@@ -2703,8 +2737,8 @@ function driveHouses(m, rand) {
   const memo = new Map(), kinds = {};
   for (const d in DRIVE_HOUSES) kinds[d] = [DRIVE_HOUSES[d], DRIVE_HOUSES[d].filter((k) => PREFABS[k].cars)];
   const houseAt = (d, tx, ty, painted, th) => {
-    const ks = kinds[d][painted ? 1 : 0], key = ks[Math.floor(hash2(tx, ty, 71) * ks.length)], L = LOT[key];
-    const tw = L[0] - 1 + Math.floor(hash2(tx, ty, 73) * 3), mk = key + ':' + tw + ':' + th;   // (the narrower end of the city's lots)
+    const ks = kinds[d][painted ? 1 : 0], key = ks[Math.floor(hash2(LX(tx), LY(ty), 71) * ks.length)], L = LOT[key];
+    const tw = L[0] - 1 + Math.floor(hash2(LX(tx), LY(ty), 73) * 3), mk = key + ':' + tw + ':' + th;   // (the narrower end of the city's lots)
     let pf = memo.get(mk);
     if (!pf) memo.set(mk, (pf = scaledPrefab(PREFABS[key], tw, th, key)));
     return { key, dims: { tw, th }, pf };
@@ -2828,7 +2862,7 @@ function buildPaintShops(m) {
     const b = m.buildings[p.b];
     return b && b.tw >= 5 && b.th >= 5;
   });
-  cands.sort((a, b) => hash2(a.x | 0, a.y | 0, 31) - hash2(b.x | 0, b.y | 0, 31));
+  cands.sort((a, b) => hash2(LQX(a.x) | 0, LQY(a.y) | 0, 31) - hash2(LQX(b.x) | 0, LQY(b.y) | 0, 31));
   const picked = [];
   const isl = (p) => m.zoneAt(p.x, p.y);
   // one per part of the world first, then anywhere
@@ -3004,7 +3038,7 @@ function buildCornerStores(m) {
   const distOf = (p) => m.dist[Math.floor(p.y / TILE) * m.w + Math.floor(p.x / TILE)];
   m.pumps = (m.sitePumps || []).slice();   // (the designed places' own forecourts first: naturesites.js route9)
   const gas = [];
-  for (const p of [...conv].sort((a, b) => hash2(a.x | 0, a.y | 0, 41) - hash2(b.x | 0, b.y | 0, 41))) {
+  for (const p of [...conv].sort((a, b) => hash2(LQX(a.x) | 0, LQY(a.y) | 0, 41) - hash2(LQX(b.x) | 0, LQY(b.y) | 0, 41))) {
     if (m.buildings[p.b].kind === 'liquor' || gas.length >= 5 || gas.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 3500)) continue;
     // needs open paving in front for the pumps
     const ok = [-48, 48].every((dx) => [40, 64].every((dy) => { const t = m.tileAtPx(p.x + dx, p.y + (p.y > m.buildings[p.b].ty * TILE ? dy : -dy)); return t === T.SIDEWALK || t === T.PLAZA || t === T.LOT || t === T.GRASS; }));
@@ -3195,7 +3229,7 @@ export const UNDERPASS_RAMP = 9 * TILE; // the line dips into a short tunnel thi
 export const RAIL_MAX_BRIDGE_TILES = 115; // the longest stretch of open water the line may cross (on a bridge)
 
 function railLine(m) {
-  const C = RAIL_ROUTE.map(([x, y, f]) => ({ x: x * TILE, y: y * TILE, sub: f === 'sub' }));
+  const C = RAIL_ROUTE.map(([x, y, f]) => ({ x: PX(x) * TILE, y: PY(y) * TILE, sub: f === 'sub' }));
   const loop = rounded(C, 12 * TILE, true, 14);
   // a point is in the subway when the corners either side of its stretch of the route both are
   const subAt = (p) => {
@@ -3252,7 +3286,7 @@ function stationIndex(m, pts) {
   const clash = (c) => used.some((u) => { const d = Math.abs(c - u); return Math.min(d, n - d) < 2 * half + 40; });
   const out = RAIL_STATIONS.map(([name, tx, ty]) => {
     let i0 = 0, bd = Infinity;
-    pts.forEach((p, i) => { const d = Math.hypot(p.x - tx * TILE, p.y - ty * TILE); if (d < bd) { bd = d; i0 = i; } });
+    pts.forEach((p, i) => { const d = Math.hypot(p.x - QX(tx * TILE), p.y - QY(ty * TILE)); if (d < bd) { bd = d; i0 = i; } });
     let best = i0, bc = Infinity;
     for (let k = -WINDOW; k <= WINDOW; k++) {
       const c = (i0 + k + n) % n;
@@ -3516,7 +3550,7 @@ export function railAt(rail, s) {
 // the race courses.
 function simpleBuilding(m, x, y, w, h, name, kind, d, roofKind = 'tar', sign = null) {
   const bid = m.buildings.length;
-  m.roofs.push({ tx: x, ty: y, tw: w, th: h, kind: roofKind, seed: (x * 7919 + y * 104729) | 0, d, b: bid });
+  m.roofs.push({ tx: x, ty: y, tw: w, th: h, kind: roofKind, seed: (LX(x) * 7919 + LY(y) * 104729) | 0, d, b: bid });
   const b = { id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x, ty: y, tw: w, th: h, kind, name, business: null, signs: [] };
   if (sign) b.signs.push(sign);
   m.buildings.push(b);
@@ -3586,7 +3620,7 @@ function buildGullIsles(m, rand) {
   let k = 0;
   for (const i of quay) {
     const x = i % W, y = (i / W) | 0;
-    if (hash2(x, y, 801) > 0.05 || m.tiles[at(x, y + 1)] === T.WATER) continue;
+    if (hash2(LX(x), LY(y), 801) > 0.05 || m.tiles[at(x, y + 1)] === T.WATER) continue;
     addProp(m, ['crates', 'pallet', 'bench_m', 'drum', 'crates'][k++ % 5], (x + 0.5) * TILE, (y + 0.5) * TILE, 0);
   }
   // the lighthouse on the south-west point, where its track ends
@@ -3729,7 +3763,7 @@ function buildTackleShops(m) {
   const nearWater = (p) => m.distSea[Math.floor(p.y / TILE) * m.w + Math.floor(p.x / TILE)] < 44 * 4 || m.distRiver[Math.floor(p.y / TILE) * m.w + Math.floor(p.x / TILE)] < 34 * 4;
   const distOf = (p) => m.dist[Math.floor(p.y / TILE) * m.w + Math.floor(p.x / TILE)];
   const cands = m.pois.filter((p) => p.kind === 'delivery' && p.b !== undefined && !p.fixed && nearWater(p) && !DISTRICTS[distOf(p)].turf && !/warehouse|factory|hotel|motel|lounge|ritz/i.test(p.label));
-  cands.sort((a, b) => hash2(a.x | 0, a.y | 0, 23) - hash2(b.x | 0, b.y | 0, 23));
+  cands.sort((a, b) => hash2(LQX(a.x) | 0, LQY(a.y) | 0, 23) - hash2(LQX(b.x) | 0, LQY(b.y) | 0, 23));
   const picked = [];
   for (const c of cands) {
     if (picked.length >= 6) break;
@@ -3759,7 +3793,7 @@ function buildGunShops(m) {
     if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || !d || d.turf) return false;
     return !/warehouse|factory|hotel|motel|lounge|ritz|school|high|academy|chapel|church|museum|theatre|playhouse|station|club|bar|cannery|freight|salvage|pool|records/i.test(p.label || '') && !/hotel|warehouse|school|church|fire|club|theatre|pool|junkyard|construction|beachbar|royale|diamond|monarch|vellori|arcade|diner|rest\d|bistro|cafe|bar/.test(b.kind || '');
   });
-  cands.sort((a, b) => hash2(a.x | 0, a.y | 0, 41) - hash2(b.x | 0, b.y | 0, 41));
+  cands.sort((a, b) => hash2(LQX(a.x) | 0, LQY(a.y) | 0, 41) - hash2(LQX(b.x) | 0, LQY(b.y) | 0, 41));
   const used = new Set(have.map(distOf));
   let n = 0;
   while (have.length < GUN_SHOPS) {
@@ -3842,7 +3876,7 @@ function buildClothesShops(m) {
     if (/^Trail & Field/.test(p.label || '')) take(p, 'clothing', 'outfitter', p.label);
     else if (p.label === 'Cut & Fade') take(p, 'barber', null, p.label);
   }
-  const cands = m.pois.filter(ok).sort((a, b) => hash2(a.x | 0, a.y | 0, 364) - hash2(b.x | 0, b.y | 0, 364));
+  const cands = m.pois.filter(ok).sort((a, b) => hash2(LQX(a.x) | 0, LQY(a.y) | 0, 364) - hash2(LQX(b.x) | 0, LQY(b.y) | 0, 364));
   for (const [kind, store, name, ds] of CLOTHES_SHOPS) {
     if (m.pois.some((q) => q.kind === kind && q.label === name)) continue;   // (placed already)
     if (kind === 'clothing' && store === 'outfitter' && m.pois.some((q) => q.store === 'outfitter')) continue;
@@ -4071,7 +4105,7 @@ function buildWaterfronts(m, rand) {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const q = m.tileAt(tx + dx, ty + dy); if (q === T.ROAD || q === T.BRIDGE) nearRoad = true; }
     if (nearRoad || m.reserve[i] & 3) continue;
     const st = DISTRICTS[m.dist[i]].style;
-    const h = hash2(tx, ty, 91);
+    const h = hash2(LX(tx), LY(ty), 91);
     const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
     if (st === 'harbor' || st === 'industrial' || st === 'factory') { if (h < 0.18) addProp(m, ['pallet', 'drum', 'spool', 'pallet_b', 'dump_b', 'pipes'][Math.floor(h * 33) % 6], x, y, 10); }
     else if (t === T.SAND) { if (h < 0.06) addProp(m, ['palm_a', 'palm_b', 'palm_c', 'palm_d'][Math.floor(h * 66) % 4], x, y, 10); else if (h > 0.95) addProp(m, ['umbrella_r', 'umbrella_y', 'umbrella_b', 'umbrella_g'][Math.floor(h * 400) % 4], x, y, 0); }
@@ -4103,7 +4137,7 @@ function buildWaterfronts(m, rand) {
   }
   // Sunset Beach: the public fishing pier straight out to sea, plus the volleyball court
   let pier = null;
-  for (let ty = 470; ty < 600 && !pier; ty += 2) for (let tx = 560; tx < 640; tx++) {
+  for (let ty = PY(470); ty < PY(600) && !pier; ty += 2) for (let tx = PX(560); tx < PX(640); tx++) {
     const i = ty * W + tx;
     if (m.dist[i] === 10 && m.tiles[i] === T.SAND && isWater(m.tileAt(tx - 1, ty)) && isWater(m.tileAt(tx - 10, ty))) { pier = { tx, ty }; break; }
   }
@@ -4118,7 +4152,7 @@ function buildWaterfronts(m, rand) {
   }
   // a beach volleyball court on the widest sand
   let court = null;
-  for (let ty = 440; ty < 620 && !court; ty += 2) for (let tx = 566; tx < 640; tx += 2) {
+  for (let ty = PY(440); ty < PY(620) && !court; ty += 2) for (let tx = PX(566); tx < PX(640); tx += 2) {
     let ok = true;
     for (let y = ty - 2; y < ty + 10 && ok; y++) for (let x = tx - 2; x < tx + 18; x++) { const i = y * W + x; if (m.tiles[i] !== T.SAND || m.dist[i] !== 10) { ok = false; break; } }
     if (ok) court = [tx, ty];
@@ -4346,7 +4380,7 @@ function buildBoatDocks(m) {
     const L = findLaunch(m, Math.floor(h.x / TILE), Math.floor(h.y / TILE), 28, 9, used);
     if (!L) continue;
     used.push(L);
-    const side = (L.tx + L.ty) % 2 ? 1 : -1;
+    const side = (LX(L.tx) + LY(L.ty)) % 2 ? 1 : -1;
     layPier(m, L, 6, side);
     const px = -L.dy, py = L.dx;
     // the boathouse: a roofed slip two tiles wide, four long, beside the pier
@@ -4480,19 +4514,19 @@ const seaIsle = wildBiome;
 const TOWN_GREEN = { houses: 0.5, luxury: 0.55, beach: 0.35, apartments: 0.3, oldtown: 0.3 };
 function buildTownGreen(m) {
   const W = m.w, H = m.h, CELL = 3;
-  for (let gy = 3; gy < H - 4; gy += CELL) for (let gx = 3; gx < W - 4; gx += CELL) {
-    const tx = gx + Math.floor(hash2(gx, gy, 151) * CELL), ty = gy + Math.floor(hash2(gx, gy, 152) * CELL), i = ty * W + tx;
+  for (let gy = 3 + gridOff(PL?.dy, CELL); gy < H - 4; gy += CELL) for (let gx = 3 + gridOff(PL?.dx, CELL); gx < W - 4; gx += CELL) {
+    const tx = gx + Math.floor(hash2(LX(gx), LY(gy), 151) * CELL), ty = gy + Math.floor(hash2(LX(gx), LY(gy), 152) * CELL), i = ty * W + tx;
     if (m.tiles[i] !== T.GRASS || m.reserve[i] || m.lake[i]) continue;
     const D = DISTRICTS[m.dist[i]], dens = D && TOWN_GREEN[D.style];
     if (!dens) continue;
     let open = true;
     for (let dy = -3; dy <= 3 && open; dy++) for (let dx = -3; dx <= 3; dx++) { const j = (ty + dy) * W + tx + dx; if (m.tiles[j] !== T.GRASS || (m.reserve[j] & ~32)) { open = false; break; } }
     if (!open) continue;
-    const g = 0.6 * vnoise2(gx, gy, 14, 153) + 0.4 * vnoise2(gx, gy, 5, 154);
-    if (hash2(gx, gy, 155) >= smooth01(0.5, 0.75, g) * dens) continue;
+    const g = 0.6 * vnoise2(LX(gx), LY(gy), 14, 153) + 0.4 * vnoise2(LX(gx), LY(gy), 5, 154);
+    if (hash2(LX(gx), LY(gy), 155) >= smooth01(0.5, 0.75, g) * dens) continue;
     const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
-    if (D.style === 'beach') addProp(m, ['palm_a', 'palm_b', 'palm_d'][Math.floor(hash2(gx, gy, 156) * 3)], x, y, 10);
-    else addProp(m, hash2(gx, gy, 157) < 0.5 ? 'tree_a' : 'tree_b', x, y, 12);
+    if (D.style === 'beach') addProp(m, ['palm_a', 'palm_b', 'palm_d'][Math.floor(hash2(LX(gx), LY(gy), 156) * 3)], x, y, 10);
+    else addProp(m, hash2(LX(gx), LY(gy), 157) < 0.5 ? 'tree_a' : 'tree_b', x, y, 12);
   }
 }
 // value noise over tiles (s: feature size in tiles), 0..1
@@ -4520,34 +4554,34 @@ function buildWilds(m, rand) {
   // sometimes a pine beside it, well clear of roads, tracks, fields and buildings. (World v2's country stage lays
   // nature out properly: docs/WORLD-V2.md "Nature is designed, not scattered".)
   const RCELL = 12, rocky = new Uint8Array(W * H); // (the trees keep off the outcrops)
-  for (let gy = 0; gy < H; gy += RCELL) for (let gx = 0; gx < W; gx += RCELL) {
-    const tx = gx + 2 + Math.floor(hash2(gx, gy, 91) * (RCELL - 4)), ty = gy + 2 + Math.floor(hash2(gx, gy, 92) * (RCELL - 4));
+  for (let gy = 0 + gridOff(PL?.dy, RCELL); gy < H; gy += RCELL) for (let gx = 0 + gridOff(PL?.dx, RCELL); gx < W; gx += RCELL) {
+    const tx = gx + 2 + Math.floor(hash2(LX(gx), LY(gy), 91) * (RCELL - 4)), ty = gy + 2 + Math.floor(hash2(LX(gx), LY(gy), 92) * (RCELL - 4));
     if (tx < 4 || ty < 4 || tx >= W - 4 || ty >= H - 4) continue;
     const i = ty * W + tx;
     if (!wild(i) || (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT)) continue;
     const c = seaIsle(m.dist[i], terrainAt(cls, cw, tx, ty));
-    if (hash2(gx, gy, 93) >= (c === 4 ? 0.4 : c === 3 ? 0.25 : c === 2 ? 0.1 : 0.06)) continue;
+    if (hash2(LX(gx), LY(gy), 93) >= (c === 4 ? 0.4 : c === 3 ? 0.25 : c === 2 ? 0.1 : 0.06)) continue;
     if (inField(tx, ty, 96) || !clear(tx, ty, 4)) continue;
-    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, s = 52 + Math.floor(hash2(gx, gy, 94) * 4) * 10;
+    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, s = 52 + Math.floor(hash2(LX(gx), LY(gy), 94) * 4) * 10;
     addProp(m, 'boulder', x, y, Math.round(s * 0.5), { s });
     for (let dy = -4; dy <= 3; dy++) for (let dx = -4; dx <= 4; dx++) { const j = (ty + dy) * W + tx + dx; if (j >= 0 && j < rocky.length) rocky[j] = 1; }
-    const n = 2 + Math.floor(hash2(gx, gy, 95) * 3);
+    const n = 2 + Math.floor(hash2(LX(gx), LY(gy), 95) * 3);
     for (let k = 0; k < n; k++) {
-      const a = hash2(gx + k, gy, 96) * Math.PI * 2, r = s * 0.85 + hash2(gx, gy + k, 97) * 28;
+      const a = hash2(LX(gx) + k, LY(gy), 96) * Math.PI * 2, r = s * 0.85 + hash2(LX(gx), LY(gy) + k, 97) * 28;
       const kind = c === 3 ? (k % 2 ? 'bush_a' : 'cactus') : c === 4 ? (k % 2 ? 'shrub_b' : 'flowers_a') : k % 2 ? 'shrub_a' : 'flowers_a';
       addProp(m, kind, x + Math.cos(a) * r, y + Math.sin(a) * r * 0.7 + 8, 0);
     }
-    if (c !== 3 && hash2(gx, gy, 98) < 0.35) addProp(m, 'tree_b', x - s * 0.95, y - 18, 12);
+    if (c !== 3 && hash2(LX(gx), LY(gy), 98) < 0.35) addProp(m, 'tree_b', x - s * 0.95, y - 18, 12);
   }
   const CELL = 2; // a tree at most every 2 x 2 tiles (64 px: crowns overlap, trunks leave room to walk and steer)
-  for (let gy = 2; gy < H - 3; gy += CELL) for (let gx = 2; gx < W - 3; gx += CELL) {
-    const fx = gx + hash2(gx, gy, 3) * CELL, fy = gy + hash2(gx, gy, 4) * CELL, tx = Math.floor(fx), ty = Math.floor(fy);
+  for (let gy = 2 + gridOff(PL?.dy, CELL); gy < H - 3; gy += CELL) for (let gx = 2 + gridOff(PL?.dx, CELL); gx < W - 3; gx += CELL) {
+    const fx = gx + hash2(LX(gx), LY(gy), 3) * CELL, fy = gy + hash2(LX(gx), LY(gy), 4) * CELL, tx = Math.floor(fx), ty = Math.floor(fy);
     const i = ty * W + tx;
     if (!wild(i) || m.dist[i] === 29) continue;   // (Highland Woods: redwoodGroves below)
     const t = m.tiles[i];
     if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
-    const c = seaIsle(m.dist[i], terrainAt(cls, cw, tx, ty)), h = hash2(gx, gy, 61);
-    const g = 0.65 * vnoise2(gx, gy, 16, 71) + 0.35 * vnoise2(gx, gy, 6, 72); // where the groves are
+    const c = seaIsle(m.dist[i], terrainAt(cls, cw, tx, ty)), h = hash2(LX(gx), LY(gy), 61);
+    const g = 0.65 * vnoise2(LX(gx), LY(gy), 16, 71) + 0.35 * vnoise2(LX(gx), LY(gy), 6, 72); // where the groves are
     const x = Math.round(fx * TILE), y = Math.round(fy * TILE);
     let p = 0;
     if (t === T.SAND) p = 0.012;
@@ -4557,8 +4591,8 @@ function buildWilds(m, rand) {
     else if (c === 3) p = smooth01(0.76, 0.92, g) * 0.08 + 0.005;
     if (h >= p) {
       // the edge of a forest grove: now and then a fallen log (solid along its length, not smashable)
-      if (c === 2 && t !== T.SAND && !rocky[i] && g > 0.3 && g < 0.42 && hash2(gx, gy, 66) < 0.035 && !inField(tx, ty, 64) && clear(tx, ty, 3)) {
-        const a = hash2(gx, gy, 67) * Math.PI, len = 90 + Math.floor(hash2(gx, gy, 68) * 4) * 20;
+      if (c === 2 && t !== T.SAND && !rocky[i] && g > 0.3 && g < 0.42 && hash2(LX(gx), LY(gy), 66) < 0.035 && !inField(tx, ty, 64) && clear(tx, ty, 3)) {
+        const a = hash2(LX(gx), LY(gy), 67) * Math.PI, len = 90 + Math.floor(hash2(LX(gx), LY(gy), 68) * 4) * 20;
         addProp(m, 'log', x, y, 0, { a: Math.round(a * 100) / 100, len });
         for (const k of [-0.36, 0, 0.36]) m.addSolidProp(x + Math.cos(a) * len * k, y + Math.sin(a) * len * k * 0.7, 11);
       }
@@ -4567,8 +4601,8 @@ function buildWilds(m, rand) {
     if (rocky[i] || inField(tx, ty, 32) || !clear(tx, ty, 2)) continue;
     if (t === T.SAND) { addProp(m, ['palm_a', 'palm_b', 'palm_d'][Math.floor(h * 997) % 3], x, y, 10); continue; }
     // the stand: one kind of tree over a wide area (conifers 0, mixed 1, broadleaf 2, birch and aspen 3)
-    const sv = vnoise2(gx, gy, 40, 73), stand = sv < 0.38 ? 0 : sv < 0.55 ? 1 : sv < 0.78 ? 2 : 3;
-    addProp(m, hash2(gx, gy, 62) < 0.5 ? 'tree_a' : 'tree_b', x, y, 12, { g: stand });
+    const sv = vnoise2(LX(gx), LY(gy), 40, 73), stand = sv < 0.38 ? 0 : sv < 0.55 ? 1 : sv < 0.78 ? 2 : 3;
+    addProp(m, hash2(LX(gx), LY(gy), 62) < 0.5 ? 'tree_a' : 'tree_b', x, y, 12, { g: stand });
   }
   redwoodGroves(m, wild, inField, clear, rocky);
   void rand;
@@ -4590,21 +4624,21 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
   };
   const nearWater = (tx, ty, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const t = m.tileAt(tx + dx, ty + dy); if (t === T.WATER || t === T.DEEP) return true; } return false; };
   const roomFor = (x, y, r) => giants.every(([gx2, gy2, gr]) => Math.hypot(gx2 - x, gy2 - y) > gr + r + 18);
-  for (let gy = 2; gy < H - 3; gy += CG) for (let gx = 2; gx < W - 3; gx += CG) {
-    const tx = gx + Math.floor(hash2(gx, gy, 301) * CG), ty = gy + Math.floor(hash2(gx, gy, 302) * CG);
+  for (let gy = 2 + gridOff(PL?.dy, CG); gy < H - 3; gy += CG) for (let gx = 2 + gridOff(PL?.dx, CG); gx < W - 3; gx += CG) {
+    const tx = gx + Math.floor(hash2(LX(gx), LY(gy), 301) * CG), ty = gy + Math.floor(hash2(LX(gx), LY(gy), 302) * CG);
     if (tx < 3 || ty < 3 || tx >= W - 3 || ty >= H - 3 || m.dist[ty * W + tx] !== 29) continue;
-    const g = 0.6 * vnoise2(gx, gy, 20, 303) + 0.4 * vnoise2(gx, gy, 8, 304), h = hash2(gx, gy, 305);   // (g: the groves; low g a clearing)
+    const g = 0.6 * vnoise2(LX(gx), LY(gy), 20, 303) + 0.4 * vnoise2(LX(gx), LY(gy), 8, 304), h = hash2(LX(gx), LY(gy), 305);   // (g: the groves; low g a clearing)
     if (h >= smooth01(0.26, 0.5, g) * 0.92) continue;
     if (!okAt(tx, ty, 3) || nearWater(tx, ty, 2)) continue;
-    const x = Math.round((tx + hash2(gx, gy, 306)) * TILE), y = Math.round((ty + hash2(gx, gy, 307)) * TILE), u = hash2(gx, gy, 308);
+    const x = Math.round((tx + hash2(LX(gx), LY(gy), 306)) * TILE), y = Math.round((ty + hash2(LX(gx), LY(gy), 307)) * TILE), u = hash2(LX(gx), LY(gy), 308);
     // a fairy ring: second-growth redwoods round an old stump (in the thick of a grove)
     if (g > 0.45 && u < 0.08 && okAt(tx, ty, 5) && roomFor(x, y, 110)) {
       addProp(m, 'rwstump', x, y, 18, { r: 26 });
       giants.push([x, y, 26]);
-      forage.push({ x: x + 6, y: y + 30, k: hash2(gx * 7 + 1, gy * 11 + 2, 93491) < 0.55 ? 'ghostglass' : 'goldTrumpet' });   // (the old stump's rot feeds them)
-      const n = 5 + Math.floor(hash2(gx, gy, 309) * 3), R = 78 + hash2(gx, gy, 310) * 22, a0 = hash2(gx, gy, 311) * Math.PI * 2;
+      forage.push({ x: x + 6, y: y + 30, k: hash2(LX(gx) * 7 + 1, LY(gy) * 11 + 2, 93491) < 0.55 ? 'ghostglass' : 'goldTrumpet' });   // (the old stump's rot feeds them)
+      const n = 5 + Math.floor(hash2(LX(gx), LY(gy), 309) * 3), R = 78 + hash2(LX(gx), LY(gy), 310) * 22, a0 = hash2(LX(gx), LY(gy), 311) * Math.PI * 2;
       for (let k = 0; k < n; k++) {
-        const a = a0 + (k / n) * Math.PI * 2 + (hash2(gx + k, gy, 312) - 0.5) * 0.4, rx = Math.round(x + Math.cos(a) * R), ry = Math.round(y + Math.sin(a) * R * 0.8);
+        const a = a0 + (k / n) * Math.PI * 2 + (hash2(LX(gx) + k, LY(gy), 312) - 0.5) * 0.4, rx = Math.round(x + Math.cos(a) * R), ry = Math.round(y + Math.sin(a) * R * 0.8);
         const ktx = Math.floor(rx / TILE), kty = Math.floor(ry / TILE);
         if (!okAt(ktx, kty, 2)) continue;
         addProp(m, 'redwood', rx, ry, REDWOOD_SIZES.redwood2, { sp: 'redwood2', k: 1 });
@@ -4614,12 +4648,12 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
     }
     // a fallen giant, lying roughly east-west, solid along its length
     if (g > 0.35 && u > 0.94 && okAt(tx, ty, 6) && roomFor(x, y, 150)) {
-      const len = 180 + Math.floor(hash2(gx, gy, 313) * 5) * 24, a = 0, flip = hash2(gx, gy, 315) < 0.5 ? 1 : 0;   // (drawn east-west: redwoods.js nurseLog)
+      const len = 180 + Math.floor(hash2(LX(gx), LY(gy), 313) * 5) * 24, a = 0, flip = hash2(LX(gx), LY(gy), 315) < 0.5 ? 1 : 0;   // (drawn east-west: redwoods.js nurseLog)
       addProp(m, 'rwlog', x, y, 0, { len, a: Math.round(a * 100) / 100, flip });
       for (const kk of [-0.4, -0.2, 0, 0.2, 0.4]) m.addSolidProp(x + Math.cos(a) * len * kk, y + Math.sin(a) * len * kk * 0.7 - 6, 15);
       giants.push([x, y, 60]);
-      forage.push({ x: Math.round(x + (hash2(gx, gy, 334) - 0.5) * len * 0.5), y: y + 24, k: 'shelfOyster' });   // (on its side, toward you)
-      if (hash2(gx * 5 + 9, gy * 7 + 4, 61331) < 0.3) forage.push({ x: Math.round(x + (flip ? 1 : -1) * (len / 2 + 6)), y: y + 26, k: 'ghostglass' });   // (by the root plate)
+      forage.push({ x: Math.round(x + (hash2(LX(gx), LY(gy), 334) - 0.5) * len * 0.5), y: y + 24, k: 'shelfOyster' });   // (on its side, toward you)
+      if (hash2(LX(gx) * 5 + 9, LY(gy) * 7 + 4, 61331) < 0.3) forage.push({ x: Math.round(x + (flip ? 1 : -1) * (len / 2 + 6)), y: y + 26, k: 'ghostglass' });   // (by the root plate)
       continue;
     }
     const sp = u < 0.22 ? 'giantL' : u < 0.7 ? 'giant' : 'giantS', r = REDWOOD_SIZES[sp];
@@ -4628,24 +4662,24 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
     giants.push([x, y, r]);
     // mushrooms in the damp at the foot of one giant in three (on the side toward you - behind it they'd be hidden -
     // clear of the trunk)
-    if (hash2(gx, gy, 330) < 0.34) {
-      const a = Math.PI * (0.14 + hash2(gx * 13 + 7, gy * 3 + 1, 52711) * 0.72), d = r + 24;
-      forage.push({ x: Math.round(x + Math.cos(a) * d), y: Math.round(y + Math.sin(a) * d * 0.8), k: mushroomAtFoot(hash2(gx * 3 + 17, gy * 5 + 3, 77177)) });
+    if (hash2(LX(gx), LY(gy), 330) < 0.34) {
+      const a = Math.PI * (0.14 + hash2(LX(gx) * 13 + 7, LY(gy) * 3 + 1, 52711) * 0.72), d = r + 24;
+      forage.push({ x: Math.round(x + Math.cos(a) * d), y: Math.round(y + Math.sin(a) * d * 0.8), k: mushroomAtFoot(hash2(LX(gx) * 3 + 17, LY(gy) * 5 + 3, 77177)) });
     }
   }
   // between the giants: a Douglas fir or a tanoak where there's room, big-leaf maples by the water
   const CU = 3;
-  for (let gy = 2; gy < H - 3; gy += CU) for (let gx = 2; gx < W - 3; gx += CU) {
-    const tx = gx + Math.floor(hash2(gx, gy, 321) * CU), ty = gy + Math.floor(hash2(gx, gy, 322) * CU);
+  for (let gy = 2 + gridOff(PL?.dy, CU); gy < H - 3; gy += CU) for (let gx = 2 + gridOff(PL?.dx, CU); gx < W - 3; gx += CU) {
+    const tx = gx + Math.floor(hash2(LX(gx), LY(gy), 321) * CU), ty = gy + Math.floor(hash2(LX(gx), LY(gy), 322) * CU);
     if (tx < 3 || ty < 3 || tx >= W - 3 || ty >= H - 3 || m.dist[ty * W + tx] !== 29) continue;
-    const h = hash2(gx, gy, 323), wet = nearWater(tx, ty, 4);
+    const h = hash2(LX(gx), LY(gy), 323), wet = nearWater(tx, ty, 4);
     if (h >= (wet ? 0.3 : 0.11) || !okAt(tx, ty, 2)) continue;
-    const x = Math.round((tx + hash2(gx, gy, 324)) * TILE), y = Math.round((ty + hash2(gx, gy, 325)) * TILE);
+    const x = Math.round((tx + hash2(LX(gx), LY(gy), 324)) * TILE), y = Math.round((ty + hash2(LX(gx), LY(gy), 325)) * TILE);
     if (!roomFor(x, y, 30)) continue;
-    const u = hash2(gx, gy, 326);
+    const u = hash2(LX(gx), LY(gy), 326);
     const sp = wet ? (u < 0.7 ? 'maple' : 'mapleAutumn') : u < 0.45 ? 'fir' : u < 0.8 ? 'oak' : 'redwood2';
     if (sp === 'redwood2') { addProp(m, 'redwood', x, y, REDWOOD_SIZES.redwood2, { sp, k: 1 }); giants.push([x, y, 16]); continue; }
-    addProp(m, 'tree_a', x, y, 12, { sp, k: sp === 'fir' ? 1.7 + hash2(gx, gy, 327) * 0.3 : sp === 'oak' ? 1.0 + hash2(gx, gy, 327) * 0.2 : 1.3 });
+    addProp(m, 'tree_a', x, y, 12, { sp, k: sp === 'fir' ? 1.7 + hash2(LX(gx), LY(gy), 327) * 0.3 : sp === 'oak' ? 1.0 + hash2(LX(gx), LY(gy), 327) * 0.2 : 1.3 });
     giants.push([x, y, 14]);
   }
 }
@@ -4681,13 +4715,13 @@ function buildStreetProps(m) {
     const isRoad = (a, b) => { const q = m.tileAt(a, b); return q === T.ROAD || q === T.BRIDGE; };
     const nearRoad = isRoad(tx + 1, ty) || isRoad(tx - 1, ty) || isRoad(tx, ty + 1) || isRoad(tx, ty - 1);
     const d = DISTRICTS[m.dist[ty * W + tx]];
-    const h = hash2(tx, ty, 77);
+    const h = hash2(LX(tx), LY(ty), 77);
     let skip = false;
     for (let dy = -1; dy <= 1 && !skip; dy++) for (let dx = -2; dx <= 2; dx++) if (doorsNear.has(doorKey(tx + dx, ty + dy))) skip = true;
     if (skip) continue;
     const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
     if (nearRoad) {
-      if ((tx * 7 + ty * 13) % 9 === 0 && (tx + ty) % 2 === 0) addProp(m, 'lamp', x, y);
+      if ((LX(tx) * 7 + LY(ty) * 13) % 9 === 0 && (LX(tx) + LY(ty)) % 2 === 0) addProp(m, 'lamp', x, y);
       else if (h < 0.025) addProp(m, 'hydrant', x, y, 6);
       continue;
     }
@@ -4703,11 +4737,11 @@ function buildStreetProps(m) {
         beach: ['palm_a', 'palm_d', 'bench_m', 'umbrella_y', 'trashcan'],
         arts: ['bikerack', 'planter_g', 'bench_m', 'news_c', 'trashcan', 'tree_b', 'flowers_a', 'bikerack'],
       }[d.style] || ['trashcan'];
-      const t = pool[Math.floor(hash2(tx, ty, 5) * pool.length)];
+      const t = pool[Math.floor(hash2(LX(tx), LY(ty), 5) * pool.length)];
       addProp(m, t, x, y, t.startsWith('tree') || t.startsWith('dump') || t === 'crates' || t === 'phonebox' ? 10 : t === 'bollard' ? 5 : 0);
       // now and then a few black bin bags beside a street bin (the owner: "a few black bin bags around the city ...
       // next to a garbage can occasionally, just not everywhere"): more often at the rough end of town
-      if (t === 'trashcan' && hash2(tx, ty, 6) < (d.tier === 'rough' || d.tier === 'low' ? 0.35 : 0.05)) {
+      if (t === 'trashcan' && hash2(LX(tx), LY(ty), 6) < (d.tier === 'rough' || d.tier === 'low' ? 0.35 : 0.05)) {
         for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (m.tiles[(ty + oy) * W + tx + ox] === T.SIDEWALK) { addProp(m, 'bags', x + ox * 20, y + oy * 20, 0); break; }
       }
     }
@@ -4732,15 +4766,15 @@ function landscapeHighway(m) {
     let clear = true;
     for (let dy = -1; dy <= 1 && clear; dy++) for (let dx = -1; dx <= 1; dx++) { const t = m.tiles[i + dy * W + dx]; if (t !== T.GRASS || m.deck[i + dy * W + dx]) { clear = false; break; } }
     if (!clear) continue;
-    const h = hash2(tx, ty, 707);
+    const h = hash2(LX(tx), LY(ty), 707);
     const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
     if (rd >= 12 && rd <= 15 && h < 0.012 && lastBoard.every((b) => Math.hypot(b[0] - tx, b[1] - ty) > 30)) {
       let room = true;
       for (let dx = -3; dx <= 3 && room; dx++) for (let dy = -1; dy <= 1; dy++) { const j = i + dy * W + dx; if (m.tiles[j] !== T.GRASS || m.deck[j]) { room = false; break; } }
-      if (room) { addProp(m, 'billboard', x, y, 10, { ad: Math.floor(hash2(tx, ty, 708) * 6) }); lastBoard.push([tx, ty]); continue; }
+      if (room) { addProp(m, 'billboard', x, y, 10, { ad: Math.floor(hash2(LX(tx), LY(ty), 708) * 6) }); lastBoard.push([tx, ty]); continue; }
     }
-    if (h < 0.05 && (tx + ty) % 3 === 0) addProp(m, hash2(tx, ty, 709) < 0.7 ? 'tree_a' : 'tree_b', x, y, 12);
-    else if (h < 0.075) addProp(m, ['shrub_a', 'shrub_b', 'bush_a', 'bush_c', 'flowers_a'][Math.floor(hash2(tx, ty, 710) * 5)], x, y, 0);
+    if (h < 0.05 && (LX(tx) + LY(ty)) % 3 === 0) addProp(m, hash2(LX(tx), LY(ty), 709) < 0.7 ? 'tree_a' : 'tree_b', x, y, 12);
+    else if (h < 0.075) addProp(m, ['shrub_a', 'shrub_b', 'bush_a', 'bush_c', 'flowers_a'][Math.floor(hash2(LX(tx), LY(ty), 710) * 5)], x, y, 0);
   }
 }
 
@@ -4756,8 +4790,8 @@ function buildBusStops(m, doorsNear) {
     if (z !== Z.CITY && z !== Z.SOUTH && z !== Z.WEST && z !== Z.NORTH && z !== Z.ISLE) continue;
     for (let s = 8 * TILE; s < e.len - 8 * TILE; s += 26 * TILE) {
       const q = pointAt(e.pts, s);
-      if (hash2(Math.round(q.x / TILE), Math.round(q.y / TILE), 404) < 0.35) continue;
-      const side = hash2(Math.round(q.x / TILE), 7, 405) < 0.5 ? -1 : 1; // either side of the road
+      if (hash2(Math.round(LQX(q.x) / TILE), Math.round(LQY(q.y) / TILE), 404) < 0.35) continue;
+      const side = hash2(Math.round(LQX(q.x) / TILE), 7, 405) < 0.5 ? -1 : 1; // either side of the road
       const y = side < 0 ? q.y - e.hw - TILE * 1.25 : q.y + e.hw + TILE * 1.6;
       const tx = Math.floor(q.x / TILE), ty = Math.floor(y / TILE);
       let ok = true;
@@ -4779,14 +4813,14 @@ function dressAlleys(m) {
     let k = 0;
     for (let s = 2.5 * TILE; s < e.len - 2.5 * TILE; s += 2.6 * TILE, k++) {
       const q = pointAt(e.pts, s);
-      const h = hash2(Math.round(q.x), Math.round(q.y), 611);
+      const h = hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 611);
       if (h > 0.55) continue;
-      const side = hash2(Math.round(q.x), Math.round(q.y), 612) < 0.5 ? -1 : 1;
+      const side = hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 612) < 0.5 ? -1 : 1;
       const x = q.x - q.ty * side * (e.hw - 12), y = q.y + q.tx * side * (e.hw - 12);
-      const t = pool[Math.floor(hash2(Math.round(q.x), Math.round(q.y), 613) * pool.length)];
+      const t = pool[Math.floor(hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 613) * pool.length)];
       addProp(m, t, x, y, t.startsWith('dump') ? 14 : t === 'crates' || t === 'acunit' ? 12 : t === 'drum' || t === 'tires' ? 9 : 0);
       const dd = DISTRICTS[m.dist[Math.floor(y / TILE) * m.w + Math.floor(x / TILE)]], rough = !!dd && (dd.tier === 'rough' || dd.tier === 'low');
-      if (t.startsWith('dump') && hash2(Math.round(q.x), Math.round(q.y), 614) < (rough ? 0.5 : 0.06)) addProp(m, 'bags', x + q.tx * 34, y + q.ty * 34, 0);   // (bags by the dumpster: mostly in the rough districts)
+      if (t.startsWith('dump') && hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 614) < (rough ? 0.5 : 0.06)) addProp(m, 'bags', x + q.tx * 34, y + q.ty * 34, 0);   // (bags by the dumpster: mostly in the rough districts)
       if (k % 5 === 2) { const l = addProp(m, 'lamp', q.x + q.ty * side * (e.hw - 4), q.y - q.tx * side * (e.hw - 4)); l.a = Math.atan2(q.tx * side, -q.ty * side); l.wall = true; }
     }
   }
@@ -4878,7 +4912,7 @@ const HERO_PROPS = [
   ['news_a', -260, -228, 0], ['trashcan', 176, 168, 7],
 ];
 function buildHeroCorner(m) {
-  const X0 = HERO.x * TILE, Y0 = HERO.y * TILE;
+  const X0 = QX(HERO.x * TILE), Y0 = QY(HERO.y * TILE);
   const node = m.nodes.find((n) => n && n.lvl === 0 && n.edges.length === 4 && Math.hypot(n.x - X0, n.y - Y0) < 64);
   if (!node) return;
   node.hero = true;
@@ -4913,9 +4947,9 @@ function buildHeroCorner(m) {
     for (const [a0, a1] of [[ex0, zx0], [zx1, ex1]]) {
       let x = a0;
       while (a1 - x >= 3) {
-        let w = a1 - x <= 12 ? a1 - x : 6 + (hash2(x, fy, 811) * 5 | 0);
+        let w = a1 - x <= 12 ? a1 - x : 6 + (hash2(LX(x), LY(fy), 811) * 5 | 0);
         if (a1 - x - w < 3) w = a1 - x;
-        roofOne(m, { d: b.d }, x, fy + (north ? 0 : 1), w, fh - (north ? 1 : 1), 'tar', Math.floor(hash2(x, fy, 812) * 1e9));
+        roofOne(m, { d: b.d }, x, fy + (north ? 0 : 1), w, fh - (north ? 1 : 1), 'tar', Math.floor(hash2(LX(x), LY(fy), 812) * 1e9));
         if (!north) m.buildings[m.buildings.length - 1].back = true;
         x += w;
       }

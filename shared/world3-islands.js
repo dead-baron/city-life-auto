@@ -17,19 +17,68 @@ import { ARTS } from './metro.js';
 import { setIslandBuilds, ISLAND_AT } from './map.js';
 import { islandMask } from './world3.js';
 
-// (asked = generateCity's opts: { island, keepLinks } - keepLinks keeps the roads to other islands, the bridges, as
-// laid today: to measure what leaving them out changes)
+// A placement (docs/WORLD-V3.md 8.4): the piece built at its place in another frame - today's position p (tiles) goes to
+// at + (p - from) * scale (`from`: today's [x0, y0, ...], the picture's; shared/world3-skeleton.js ISLANDS' `picture`).
+// dx, dy: the offset at - from (whole tiles), what position seeds and hashes take back off (map.js LX / LY), so a place
+// built at scale 1 is today's, moved.
+export function placement(place) {
+  const at = place.at, from = place.from, s = place.scale ?? 1;
+  if (!Number.isInteger(at[0] - from[0]) || !Number.isInteger(at[1] - from[1])) throw new Error('placement: at - from must be whole tiles');
+  return { at: [at[0], at[1]], from: [from[0], from[1]], s, dx: at[0] - from[0], dy: at[1] - from[1] };
+}
+// a byte grid of W x H with today's land at its top-left, moved to the placement (scale 1: by its offset; else each tile
+// takes today's at from + (p - at) / scale, the picture's way: shared/world3-land.js)
+function placeGrid(g, W, H, pl) {
+  const out = new Uint8Array(W * H);
+  if (pl.s === 1) {
+    for (let y = Math.max(0, -pl.dy); y < H && y + pl.dy < H; y++) for (let x = Math.max(0, -pl.dx); x < W && x + pl.dx < W; x++) { const v = g[y * W + x]; if (v) out[(y + pl.dy) * W + x + pl.dx] = v; }
+    return out;
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const sx = pl.from[0] + Math.floor((x + 0.5 - pl.at[0]) / pl.s), sy = pl.from[1] + Math.floor((y + 0.5 - pl.at[1]) / pl.s);
+    if (sx >= 0 && sy >= 0 && sx < W && sy < H) out[y * W + x] = g[sy * W + sx];
+  }
+  return out;
+}
+
+// (asked = generateCity's opts: { island, keepLinks, place } - keepLinks keeps the roads to other islands, the bridges, as
+// laid today: to measure what leaving them out changes; place: { at, scale, from } builds it at its place, 8.4)
 export function islandOpts(key, asked = {}) {
   const seeds = SEEDS.concat(ISLAND_SEEDS);
+  const pl = asked.place ? placement(asked.place) : null;
+  const PX = (x) => (pl ? pl.at[0] + (x - pl.from[0]) * pl.s : x), PY = (y) => (pl ? pl.at[1] + (y - pl.from[1]) * pl.s : y);
   let today = null, mass = null, W = 0, H = 0;   // (W, H: the frame being built - the map's, from when its land is handed over)
   const tileOf = (x, y) => { const tx = Math.floor(x), ty = Math.floor(y); return tx >= 0 && ty >= 0 && tx < W && ty < H ? ty * W + tx : -1; };
   // (a planned business's home: its spot, its district's first seed, or where map.js seedOf puts it - the Arts
   // District's rectangle, Metro City for a district without seeds)
   const home = (sp) => { if (sp.at) return sp.at; const s = seeds.find((q) => q[0] === sp.d); return s ? [s[1], s[2]] : sp.d === 46 ? [(ARTS.x0 + ARTS.x1) >> 1, (ARTS.y0 + ARTS.y1) >> 1] : [800, 500]; };
   let own = null;
+  // (asked.land: the v3 frame's land, shared/world3-land.js buildLand3 - the build's land is the place's there: the
+  // land of its zones in its picture's rectangle (the polygon, less the canal); the canal is the generator's river
+  // (boatable, bridged); its districts and zones are the land layer's. The frame must be the land's.)
+  const land3 = asked.land || null, Z3 = asked.zones || [1, 2];
+  const land3Land = (land, m) => {
+    const L = land3.layers, N = m.w * m.h;
+    if (land3.w !== m.w || land3.h !== m.h) throw new Error(`island build on the v3 land: the frame must be the land's (${land3.w} x ${land3.h})`);
+    W = m.w; H = m.h;
+    const pic = asked.place, x0 = Math.max(0, pic.at[0] - 40), y0 = Math.max(0, pic.at[1] - 40);
+    const x1 = Math.min(W, Math.ceil(pic.at[0] + (pic.from[2] - pic.from[0]) * (pic.scale ?? 1)) + 40), y1 = Math.min(H, Math.ceil(pic.at[1] + (pic.from[3] - pic.from[1]) * (pic.scale ?? 1)) + 40);
+    land.fill(0);
+    today = new Uint8Array(N); mass = new Uint8Array(N);
+    for (let i = 0; i < N; i++) if (L.land[i]) today[i] = 1;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const i = y * W + x;
+      if (L.land[i] && Z3.includes(L.zone[i])) { land[i] = 1; mass[i] = 1; }
+      else if (L.water[i] === 5) m.river[i] = 1;   // (WATER3.CANAL)
+    }
+    own = land;
+    o.zones = (mm) => { for (let i = 0; i < N; i++) if (land[i]) mm.zone[i] = L.zone[i]; };
+    o.dists = (mm) => { for (let i = 0; i < N; i++) if (land[i]) mm.dist[i] = L.dist[i]; };
+  };
   const o = {
     island: key,
     islandAt: [],
+    place: pl,
     // a road that comes from another island (Northshore's two avenues, the bridges from Metro City run on through town:
     // islands.js) starts at this island's shore when that island isn't built: from (x, y0) down its land to the shore
     ownShore(x, y0) {
@@ -39,6 +88,7 @@ export function islandOpts(key, asked = {}) {
       return { x: x * TILE, y: y * TILE };
     },
     land(land, m) {
+      if (land3) return land3Land(land, m);
       own = land;
       today = land.slice();
       W = m.w; H = m.h;
@@ -69,8 +119,15 @@ export function islandOpts(key, asked = {}) {
         while (sp) { const j = st[--sp]; for (const k of near(j, j % W)) if (k >= 0 && k < N && land[k] && !mass[k]) { mass[k] = 1; st[sp++] = k; } }
       }
       for (let i = 0; i < N; i++) if (!keep[i]) land[i] = 0;
+      if (pl) {
+        // (placed: the land, today's and its landmasses moved to the place; the zone points with them)
+        const k2 = placeGrid(land, W, H, pl);
+        land.set(k2);
+        today = placeGrid(today, W, H, pl); mass = placeGrid(mass, W, H, pl);
+        o.islandAt = o.islandAt.map(([[x, y], z]) => [[Math.floor(PX(x)), Math.floor(PY(y))], z]);
+      }
     },
-    special(sp, at, m) { const h = home(sp), i = h ? tileOf(h[0], h[1]) : -1; return !h || (i >= 0 && !!m.land[i]); },
+    special(sp, at, m) { const h = home(sp), i = h ? tileOf(PX(h[0]), PY(h[1])) : -1; return !h || (i >= 0 && !!m.land[i]); },
     lines(lines, m) {
       const leftOut = [], overSeam = [];
       let others = 0;

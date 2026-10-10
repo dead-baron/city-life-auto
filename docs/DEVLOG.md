@@ -6667,3 +6667,39 @@ districts) live in the same modules as the build code, and a module loads whole.
 city from the server (or the browser's copy) and the city worker loads the generator only when it must build, so the
 page needs none of it. Splitting the runtime part of those modules from the build part takes the generator out of the
 page's code: about 150-190 KB off the 720. That split is the next wave's first job; the budget comes back down after it.
+
+## 2026-10-10 · World v3, stage 2, step 2: Metro City + Southbank built at its gulf place
+
+What was asked (the coordinator, from the owner's gulf plan, part 7: "making the urban city islands like metro city and
+Southbank much larger ... with a narrower yet still boatable waterway that splits the large island up in two"): build
+Metro City + Southbank in the v3 frame at its gulf place - first at today's size (the proof that everything the build
+takes from today's world goes through the placement), then at 1.15 on the gulf's land, with the canal through it.
+
+What it does (docs/WORLD-V3.md 8.4 has the numbers):
+- **A placement for an island build:** `generateCity(seed, { island: 'metro', frame, place: { at, scale, from } })`.
+  Every position the build takes from today's world goes through `at + (p - from) * scale`. That covers the district
+  seeds, the river's trace and the zone line, the Metro Ring, the railway and its stations, the parks and lakes, the
+  planned businesses' spots, the hero corner, the Arts District and Museum Square. Sizes don't scale. The street plan
+  (`metro.js`), `islands.js`' and the countryside's roads run in today's coordinates, and what they lay is placed.
+  Position seeds and hashes read today's coordinates back (the offset taken off), so at scale 1 the place is today's,
+  moved.
+- **Step A (scale 1):** Metro City at [1850, 2050] is the island build moved: every land, district, zone, river and
+  sea-distance tile, all 451 road edges, 312 of 316 buildings, 196 of 201 POIs, 92% of the props (Pelican Key's beach
+  end and the world-wide ATMs differ).
+- **Step B (1.15 on `buildLand3`'s land:** the polygon, the canal as river water, the land layer's districts and
+  zones): it builds in 9 s in the v3 frame. 1.30x the land, every district with ground, streets and buildings, every
+  kind of POI, 484 road edges in 3 pieces (today's 451), 467 buildings (316). Two avenue bridges cross the canal; the
+  skeleton's six canal bridges aren't laid yet.
+- **Not done yet:** the picture (`docs/world-v3-metro.png`), the street plan placed from inside `metro.js` (at 1.15
+  its pitches scale with the place), the canal's bridges.
+- The live world is unchanged: the world hash stays `6b6e16fdef9f`. The page's code grows 1.5 KB gzipped (the
+  placement's helpers in `shared/map.js`): 722 KB, at its budget, until the generator leaves the page.
+
+The files: `shared/world3-islands.js` (`placement`, the land moved or taken from the v3 land, the zones and districts
+hooks), `shared/map.js` (the placement's helpers `PX` / `PY` / `QX` / `QY` / `LX` / `LY` / `IX` / `IY` / `gridOff` and
+their uses in the generator's passes), `shared/citylayout.js` (`ringLine(tf)`), `tools/world3-place.mjs` (Step A's
+comparison; `--land`: Step B's report), `test/world3place.test.js`, `docs/WORLD-V3.md` 8.4.
+
+Tests: `test/world3place.test.js` (new: Metro City at its gulf place at scale 1 is the island build moved - its layers
+to the tile, every road edge, buildings 97%+, POIs 95%+, props 90%+); `test/world3.test.js` passes as before (today's
+world is still the stamped one).
