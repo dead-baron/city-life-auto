@@ -1,6 +1,6 @@
 // Player sessions: join/leave (30-second Ghost State), input application, context
 // interactions, death + respawn, persistence sync and HUD prompts.
-import { PF, FACTION, TILE } from '../../shared/constants.js';
+import { PF, FACTION, TILE, K } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
 import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION } from '../../shared/physics.js';
@@ -277,6 +277,28 @@ function finalizeLogout(world, p, dropLoot) {
   world.players.delete(p.pid);
   law.onPlayerGone(world, p);
   rentals.onPlayerGone(world, p);
+}
+
+// Start fresh (task #413: Settings under Repair install, or the debug menu, pressed twice): this player's character and
+// everything that's theirs are gone for good - their body leaves the world at once (no ghost, nothing dropped), their
+// homes go back on the market, their car out in the street goes (with someone else in it, it's nobody's now: theirs to
+// drive off in), the bounties on their head are called off (the placers' money back in their banks: it lived on this
+// profile) and the saved profile is deleted; a login with the same token after this is a brand-new character. Only ever
+// the caller's own account: session.js passes the session's player, never a pid from the message.
+export function wipeAccount(world, p) {
+  if (p.devMode) devmode.exit(world, p, true);
+  struggle.onLeave(world, p); custody.onLeave(world, p);   // (the officers on them let go, as when anyone logs off)
+  revive.clearDown(world, p);
+  bounties.onWipe(world, p);
+  p.conn = null; p.ghostUntil = 0;
+  if (world.players.get(p.pid) === p) finalizeLogout(world, p, false);
+  for (const [id, pid] of [...world.homeOwner]) if (pid === p.pid) world.homeOwner.delete(id);
+  for (const v of [...world.entities.values()]) {
+    if (v.kind !== K.VEH || v.owner !== p.pid) continue;
+    if (!v.seats.some((s) => s)) world.remove(v);
+    else { v.owner = null; v.ownerName = null; v.despawnable = true; v.descVer = (v.descVer || 0) + 1; }   // (its owner tag goes for everyone: net.js descriptor o)
+  }
+  store.remove(p.pid);
 }
 
 export function queueInput(p, inp) {

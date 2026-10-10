@@ -241,6 +241,24 @@ function expire(world, prof, gone, p) {
   store.touch();
 }
 
+// Start fresh (players.js wipeAccount, task #413): a character erased for good can never be collected on, and the money
+// held for a bounty lives on its target's profile - so before that goes, each placer gets theirs back in the bank (as
+// when one runs out) and the hunters on the contract are told it's off.
+export function onWipe(world, p) {
+  const prof = p.profile, gone = (prof.bounties || []).slice();
+  if (!gone.length) return;
+  prof.bounties = [];
+  for (const c of gone) {
+    const by = store.get(c.by);
+    if (by) by.bank += c.amount;   // (online or not: it's their bank)
+    const bp = world.players.get(c.by);
+    if (bp) { world.notify(bp, `Your ${money(c.amount)} bounty on ${prof.name} is off - they're gone for good. The money is back in your bank.`, 'info'); bp.meDirty = true; }
+    for (const pid of c.takers) { const q = world.players.get(pid); if (q) { world.notify(q, `The contract on ${prof.name} is off - they're gone for good.`, 'info'); q.meDirty = true; } }
+  }
+  events.feed(world, { kind: 'bounty', text: `The bounty on ${prof.name} is off` });
+  store.touch();
+}
+
 export function update(world, dt) {
   for (const p of world.players.values()) {
     const list = p.profile.bounties;

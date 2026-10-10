@@ -153,7 +153,7 @@ body.kbm #b-fs { display: none; }
 #dev.as-overlay button.pfocus { background: #f2f2f2; color: #111; }
 
 /* ---- settings ---- */
-#settings { position: absolute; inset: 0; z-index: 40; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
+#settings { position: absolute; inset: 0; z-index: 41; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }   /* (41: over the pause menu it's opened from, which comes later in the page - at 40 it sat under it and took every click) */
 #settings .panel { background: rgba(0,0,0,.85); }
 .srow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; font-size: 17px; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,.08); }
 .srow select { font: inherit; font-size: 15px; background: #222; color: #fff; border: 1px solid #555; padding: 4px 6px; max-width: 220px; }
@@ -536,11 +536,13 @@ body.portrait #phone { justify-content: center; padding: 0; }
 #wwheel .ww-s.on { border-color: #f2c21b; background: rgba(60,48,8,.92); z-index: 1; }
 #wwheel .ww-mid { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 150px; text-align: center; font: 700 14px Rubik, sans-serif; color: #fff; text-shadow: 0 2px 3px #000; }
 #wwheel .ww-mid small { display: block; color: #ccc; font-size: 11px; font-weight: 600; }
-/* the plasma blade's colours (the bag) */
+/* the plasma blade's colours (the bag) and Start fresh, armed (Settings, the debug menu) */
 #inv .inv-blade { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; width: 100%; padding: 2px 4px 4px; }
 #inv .inv-blade small { color: #aaa; font-size: 11px; margin-right: 2px; }
 #inv .inv-blade .sw { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); padding: 0; cursor: pointer; }
 #inv .inv-blade .sw.on { border-color: #fff; box-shadow: 0 0 0 2px #f2c21b; }
+#s-fresh.armed, #dev .dev-fresh.armed { background: #7a1414 !important; border-color: #ff5a4a !important; color: #fff !important; animation: freshpulse .8s ease-out infinite; }
+@keyframes freshpulse { from { box-shadow: 0 0 0 0 rgba(255,90,74,.75); } to { box-shadow: 0 0 0 8px rgba(255,90,74,0); } }
 @media (max-height: 430px) {
   #wheel .wheel-slot { width: 100px; height: 70px; margin: -35px 0 0 -50px; }
   #wheel .s0 { transform: translate(0, -82px); } #wheel .s1 { transform: translate(114px, 0); } #wheel .s2 { transform: translate(0, 82px); } #wheel .s3 { transform: translate(-114px, 0); }

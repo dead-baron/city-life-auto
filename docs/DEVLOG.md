@@ -4911,3 +4911,21 @@ The owner: "Let's have it come in a lot of different colors, you can have the bl
   - Your weapon box, the touch WPN button, the bag, the picker and the wheel show the blade in your colour.
 - **Tests:** `test/bladecolor.test.js` (5): the colours, blue first; the server keeps it, ignores anything off the list, sends it to everyone, and it lasts through a respawn; through a session it's only ever the sender's own; the sear says whose blade it was; both renderers, the light and the arcs follow it.
 - **Checked end to end** with two browsers: Settings and the bag set it, the other player sees it, and back to blue clears it. In art v2 outdoors the blade is drawn red and green with its white core. Art v2's recolour also checked in Node: every glowing pixel of the blade takes the colour, and the blue sprite is untouched.
+
+## 2026-10-09 · Start fresh: erase your character and begin again as a new player (task #413)
+The owner: "Let's have an option in debug that lets you clear your character entirely and start from scratch from the main menu, lets you go through the first time user flow from the very beginning. Should have to press this option twice so people don't accidentally hit it but it will clear you entirely. Maybe make this an option under the repair install mode, or if you hit repair install it will ask if you want to start fresh."
+- **Where:** "⟲ Start fresh (erase my character)" in Settings, right under Repair install (in the game and on the title screen), and in the debug menu.
+- **Pressed twice:** the first press arms it for 5 seconds. The button turns red and pulses, and a warning says what goes (money and bank, homes, cars, clothes, weapons, record) and that it can't be undone. A second press within the 5 seconds erases; otherwise it disarms. It isn't offered in offline practice (nothing there is saved) or while not connected.
+- **On the server** (`server/session.js` 'wipe', `server/systems/players.js wipeAccount`): only ever the sender's own character; the message carries no pid.
+  - The body leaves the world at once (no ghost, nothing dropped), and the homes go back on the market.
+  - Your car out in the street goes. With someone else in it, it's nobody's car now and theirs to drive off in.
+  - The bounties on your head are called off. The money held for them lived on your profile, so each placer gets theirs back in the bank and the hunters on the contract are told (`bounties.js onWipe`).
+  - The profile is deleted from the store (`remove`, in both stores), so the next save leaves it out. The server answers `wiped` and closes the connection.
+- **In the browser** (`client/main.js freshPress / freshDone`): the page forgets everything it kept for the game and reloads. That's every `cla.*` key (the token, the settings, the tour) and nothing of another game on the same site; the kept city and art stay, as they're only caches. You come back as a new guest: the title, the graphics choice on Play, then the character creator. A tab that still had the old token gets a brand-new character too.
+- **Settings over the pause menu:** Settings opened from the pause menu was drawn under it (the same z-index, earlier in the page), so a mouse or a finger couldn't use it, only a pad's focus. It's drawn over it now (`#settings` z-index 41).
+- **Tests:** `test/startfresh.test.js` (5): the body, homes, car and profile are gone and nobody else is touched (a message naming someone else is ignored); the bounties are called off, with the placer paid back and the hunter told, and an owned car someone is driving is left to them; a login afterwards is a brand-new account, even with the old token; both stores forget the profile; two presses, the warning, only the `cla.*` keys.
+- **Checked end to end** in headless Chromium:
+  - armed, then disarmed after 5 s;
+  - erased through pause → Options → Start fresh;
+  - back on the title as a new guest, then the graphics choice and the creator;
+  - the old profile gone from profiles.json.

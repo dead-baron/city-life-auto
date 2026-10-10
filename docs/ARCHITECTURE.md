@@ -66,6 +66,7 @@ JSON text frames:
 | `menu` | both | storefront menu payload / option chosen |
 | `weapon`, `ping`, `dev` | c→s | weapon select, latency probe, playtest commands (dev servers only) |
 | `look` | both | the character creator and the wardrobe; `{a: 'blade', c}` picks the plasma blade's colour (kept on the profile, `me.blade`) |
+| `wipe` / `wiped` | c→s / s→c | Start fresh: the sender's own character is deleted for good (never another's: no pid is read from the message); the server answers `wiped` and closes (4005), and the page clears its `cla.*` storage and reloads as a new player |
 
 ## Accounts and saving
 

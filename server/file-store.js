@@ -30,6 +30,8 @@ export class FileStore {
     this.dirty = true;
     return p;
   }
+  // a profile gone for good (Start fresh: players.js wipeAccount): the next save leaves it out
+  remove(pid) { this.dirty = true; return this.profiles.delete(pid); }
   touch() { this.dirty = true; }
   serialize() { return JSON.stringify({ version: 1, saved: Date.now(), profiles: [...this.profiles.values()] }); }
   async flush() {

@@ -271,6 +271,7 @@ function onText(m) {
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
+    case 'wiped': freshDone(); break;   // Start fresh: the character is gone (server players.js wipeAccount)
     default: break;
   }
 }
@@ -1187,6 +1188,10 @@ function setupDev() {
     if (S.devOpenSec === sec.id) { body.classList.remove('hidden'); head.classList.add('open'); }
   }
   if (S.devMode) add('⏏ Leave dev mode (keep my progress)', 'dev-leave', () => { send({ t: 'devmode', leave: true }); closeOverlay('dev'); });
+  // erase this character and go through the first-time flow again (task #413: press twice; also in Settings)
+  const fb = add('⟲ Start fresh: erase my character…', 'dev-fresh'), fm = document.createElement('p');
+  fm.className = 'dev-none'; cmds.appendChild(fm);
+  fb.onclick = () => freshPress(fb, (t) => { fm.textContent = t; });
   renderDevPlayers();
   box.classList.add('hidden');
   $('dev-btn').classList.remove('hidden');
@@ -1823,6 +1828,40 @@ async function repairInstall() {
   u.searchParams.set('fresh', Date.now().toString(36));
   location.replace(u.href);
 }
+// ---- Start fresh (task #413): Settings (under Repair install) and the debug menu, pressed twice - the first press arms
+// it, with a warning, for a few seconds; the second asks the server to delete this character for good (only ever your own:
+// server players.js wipeAccount), then this browser forgets everything it kept for the game (the cla.* keys - never
+// another game's on the same site; the kept city and art stay, they're only caches) and reloads as a brand-new player:
+// the title, the graphics choice, the character creator.
+const FRESH_ARM_MS = 5000;
+function freshPress(b, say) {
+  if (!(performance.now() - Number(b.dataset.armed || -1e9) < FRESH_ARM_MS)) {
+    b.dataset.label ||= b.textContent; b.dataset.armed = String(performance.now()); b.classList.add('armed');
+    b.textContent = '⚠ Press again to erase your character for good';
+    say('This deletes your character for good: your money and bank, homes, cars, clothes, weapons, record - everything. It can\'t be undone. Press again within 5 seconds to go ahead.');
+    clearTimeout(b.freshT); b.freshT = setTimeout(() => { freshDisarm(b); say(''); }, FRESH_ARM_MS);
+    return;
+  }
+  freshDisarm(b);
+  if (S.practice) { say('Start fresh erases your online character: reload the page to leave offline practice first.'); return; }
+  if (!S.welcomed || !S.ws) { say('Not connected to the city right now - try again once it says Signed in.'); return; }
+  say('Erasing your character...');
+  S.wipeSay = say;
+  send({ t: 'wipe' });
+  clearTimeout(S.wipeT); S.wipeT = setTimeout(() => { if (S.wipeSay) { S.wipeSay = null; say('The city didn\'t answer - nothing was erased. Try again.'); } }, 8000);
+}
+function freshDisarm(b) { delete b.dataset.armed; b.classList.remove('armed'); if (b.dataset.label) b.textContent = b.dataset.label; clearTimeout(b.freshT); }
+// the server erased the character ({ t: 'wiped' }): no reconnecting with the old token - forget it all and start over
+function freshDone() {
+  S.wipeSay = null; clearTimeout(S.wipeT);
+  const ws = S.ws; S.ws = null; S.token = null; S.welcomed = false;
+  try { if (ws) ws.close(); } catch { /* closing */ }
+  for (const k of ['localStorage', 'sessionStorage']) {
+    try { const st = window[k]; for (const key of Object.keys(st)) if (key.startsWith('cla.')) st.removeItem(key); } catch { /* storage blocked */ }
+  }
+  location.replace(location.pathname + location.search);
+}
+$('s-fresh').onclick = () => freshPress($('s-fresh'), (t) => { $('s-fresh-msg').textContent = t; });
 $('t-install').onclick = openInstall;
 $('s-install').onclick = openInstall;
 $('i-go').onclick = nativeInstall;
