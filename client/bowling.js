@@ -24,11 +24,12 @@ export class BowlingView {
   draw(g, F, ctx) {
     const S = this.S, A = S.map.bowling, b = ctx.walkInAt(F.sp.x, F.sp.y);
     const now = performance.now() / 1000;
+    const me = S.me && S.me.bowl;
     if (b && b.id === A.b) {
       A.lanes.forEach((L, i) => this.drawLane(g, L, this.lanes[i], now));
+      if (me && A.lanes[me.lane]) this.drawBoard(g, A.lanes[me.lane], me);
       this.drawAim(g, F, A);
     }
-    const me = S.me && S.me.bowl;
     if (me) this.drawCard(g, ctx, me, A);
   }
   // the pins up, the ones knocked flying then lying till the sweep, "STRIKE!" over the deck
@@ -46,6 +47,16 @@ export class BowlingView {
       const h = lanePt(L, 0, L.len + 8);
       g.save(); g.font = 'bold 7px sans-serif'; g.textAlign = 'center'; g.fillStyle = `rgba(255,214,64,${1 - (now - ln.strikeAt) / 1.5})`; g.fillText('STRIKE!', h.x, h.y - 16 - (now - ln.strikeAt) * 6); g.restore();
     }
+  }
+  // your lane's scoreboard over the pins (the screen on the back wall, art v2's bowlingRoom): your frame and your score
+  drawBoard(g, L, me) {
+    const rows = me.card || [], up = rows.find((r) => r.me) || rows[0];
+    if (!up) return;
+    const c = scoreCard(up.rolls), x = L.ax + 22, y = L.backEdge - 39;
+    g.save(); g.textAlign = 'center';
+    g.font = 'bold 6px sans-serif'; g.fillStyle = '#ffd24a'; g.fillText(c.done ? 'FINAL' : `FRAME ${c.frame + 1}`, x, y - 2);
+    g.font = 'bold 8px sans-serif'; g.fillStyle = '#ffffff'; g.fillText(String(totalScore(up.rolls)), x, y + 7);
+    g.restore();
   }
   // with your ball: the line it would take (the hook bending it late) and the meter beside you
   drawAim(g, F, A) {
