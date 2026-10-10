@@ -5384,3 +5384,17 @@ The owner: "In NPC street fights, whoever started it (or both if equal) count as
   - the police breaking a fight up with tackles and taking the starter in;
   - an officer on foot running down a purse snatcher (the purse dropped);
   - an officer whose unit is done running one down, the car waiting.
+
+## 2026-10-10 · No garbage heaps on the pavements; a few black bin bags, by the bins and down the rough alleys
+The owner, from two screenshots: "The city has a lot of piles of I think garbage around ... They kind of look bad around the city", then: "Black bags are fine but not so many and best if they're usually near a garbage can or in alleys in the rough districts."
+- **The greenish heaps** were trash piles: loose garbage heaped on the pavement. **The reddish ones** were rubble: broken brick and stone. Both are out of the city.
+  - Before, they were scattered on the inner pavements of Southside, the industrial streets and the red-light blocks, and down the back alleys (`shared/map.js` street dressing and `dressAlleys`).
+  - The junkyard's heaps are oil drums now.
+- **Black bin bags** stand only:
+  - beside a street bin now and then (a third of the bins in the rough districts, one in twenty elsewhere);
+  - beside a dumpster down an alley (half of them in the rough districts, a few elsewhere).
+  - The alleys' wall dressing has far fewer bags, and those it has are down the rough districts' alleys (`shared/alleys.js`).
+- **The count** (seed 1337):
+  - before: 116 trash piles, 40 heaps of rubble and 143 bags on the map;
+  - now: no heaps, and 66 bags (41 of them in the rough districts).
+- The world's hash changes: browsers bake their chunks again. No `WORLD_VERSION` bump: nothing anyone owns moved.

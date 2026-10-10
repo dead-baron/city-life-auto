@@ -2644,7 +2644,7 @@ function addLots(c, I) {
     }
     if (key === 'junkyard') {
       for (let k = 0; k < 8; k++) put(I, vitem(`tir:${k % 3}`, 'tires', [2 + k % 3], x0 + 150 + rnd() * (w - 190), y0 + 40 + rnd() * (h - 80)));
-      for (let k = 0; k < 5; k++) put(I, vitem(`tp:${k % 3}`, 'trashPile', [k % 3], x0 + 150 + rnd() * (w - 190), y0 + 40 + rnd() * (h - 80)));
+      for (let k = 0; k < 5; k++) put(I, vitem(`drm:${k % 3}`, 'oilDrum', [['#3a5a8a', '#4a6a3a', '#8a3a2a'][k % 3], k % 2], x0 + 150 + rnd() * (w - 190), y0 + 40 + rnd() * (h - 80)));   // (drums, not heaps of garbage)
       fenceLine(I, 'chain', x0 + 4, y0 + 4, x0 + w - 4, y0 + 4, { barbed: true });
       return;
     }

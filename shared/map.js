@@ -4654,19 +4654,25 @@ function buildStreetProps(m) {
       else if (h < 0.025) addProp(m, 'hydrant', x, y, 6);
       continue;
     }
-    // inner sidewalk ring: district dressing (the rough end of town gets litter and junk)
+    // inner sidewalk ring: district dressing (the rough end of town gets more bins, dumpsters and junk - but no garbage
+    // piled on the pavement: the owner, 2026-10-10, "I'd rather not have garbage like that piled up everywhere in the city")
     if (h < (d.tier === 'rough' || d.tier === 'low' ? 0.08 : 0.05)) {
       const pool = {
         houses: ['tree_a', 'shrub_a', 'mailbox', 'bush_a'], apartments: ['tree_b', 'bench_a', 'bush_b', 'trashcan'], civic: ['tree_a', 'bench_b', 'planter_sq'],
         towers: ['planter_sq', 'bench_m', 'news_a', 'news_b', 'trashcan', 'palm_s', 'bollard', 'tree_b'], commercial: ['news_c', 'trashcan', 'bench_a', 'planter_g', 'bikerack', 'phonebox', 'tree_a', 'mailbox'],
-        nightlife: ['palm_s', 'palm_d', 'trashcan', 'news_b', 'foodcart', 'phonebox', 'bollard'], industrial: ['dump_g', 'drum', 'pallet_s', 'cone', 'bags', 'crates', 'trashpile'],
-        southside: ['bags', 'dump_o', 'tires', 'shrub_b', 'rubble', 'trashpile', 'phonebox'], harbor: ['drum', 'pallet', 'spool', 'dump_b', 'crates'], factory: ['dump_g', 'drum', 'pallet_s', 'cone', 'tires', 'crates'], park: ['tree_a', 'bench_a', 'shrub_a'],
-        luxury: ['palm_s', 'planter_sq', 'flowers_a', 'tree_a', 'bench_m', 'bollard'], redlight: ['trashcan', 'bags', 'news_b', 'dump_o', 'palm_s', 'trashpile', 'phonebox'], oldtown: ['trashcan', 'bags', 'mailbox', 'dump_g', 'news_c', 'tires', 'phonebox', 'tree_b'],
+        nightlife: ['palm_s', 'palm_d', 'trashcan', 'news_b', 'foodcart', 'phonebox', 'bollard'], industrial: ['dump_g', 'drum', 'pallet_s', 'cone', 'crates', 'spool'],
+        southside: ['trashcan', 'dump_o', 'tires', 'shrub_b', 'phonebox', 'news_c'], harbor: ['drum', 'pallet', 'spool', 'dump_b', 'crates'], factory: ['dump_g', 'drum', 'pallet_s', 'cone', 'tires', 'crates'], park: ['tree_a', 'bench_a', 'shrub_a'],
+        luxury: ['palm_s', 'planter_sq', 'flowers_a', 'tree_a', 'bench_m', 'bollard'], redlight: ['trashcan', 'news_b', 'dump_o', 'palm_s', 'phonebox', 'bollard'], oldtown: ['trashcan', 'bench_a', 'mailbox', 'dump_g', 'news_c', 'tires', 'phonebox', 'tree_b'],
         beach: ['palm_a', 'palm_d', 'bench_m', 'umbrella_y', 'trashcan'],
         arts: ['bikerack', 'planter_g', 'bench_m', 'news_c', 'trashcan', 'tree_b', 'flowers_a', 'bikerack'],
       }[d.style] || ['trashcan'];
       const t = pool[Math.floor(hash2(tx, ty, 5) * pool.length)];
       addProp(m, t, x, y, t.startsWith('tree') || t.startsWith('dump') || t === 'crates' || t === 'phonebox' ? 10 : t === 'bollard' ? 5 : 0);
+      // now and then a few black bin bags beside a street bin (the owner: "a few black bin bags around the city ...
+      // next to a garbage can occasionally, just not everywhere"): more often at the rough end of town
+      if (t === 'trashcan' && hash2(tx, ty, 6) < (d.tier === 'rough' || d.tier === 'low' ? 0.35 : 0.05)) {
+        for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (m.tiles[(ty + oy) * W + tx + ox] === T.SIDEWALK) { addProp(m, 'bags', x + ox * 20, y + oy * 20, 0); break; }
+      }
     }
   }
   buildBusStops(m, doorsNear);
@@ -4726,10 +4732,11 @@ function buildBusStops(m, doorsNear) {
   }
 }
 
-// Back alleys: dumpsters, bin bags, crates, AC units and rubbish against the walls, the odd wall
-// lamp - all of it smashable by anything driving through.
+// Back alleys: dumpsters (a few bin bags beside one now and then, mostly in the rough districts), crates, AC units,
+// drums and pallets against the walls, the odd wall lamp - all of it smashable by anything driving through. (No heaps
+// of loose garbage: the owner, 2026-10-10.)
 function dressAlleys(m) {
-  const pool = ['dump_g', 'dump_b', 'bags', 'trashpile', 'crates', 'acunit', 'drum', 'tires', 'pallet', 'dump_g', 'trashpile', 'bags'];
+  const pool = ['dump_g', 'dump_b', 'crates', 'acunit', 'drum', 'tires', 'pallet', 'dump_g', 'crates', 'pallet'];
   for (const e of m.edges) {
     if (e.kind !== 'alley' || e.lvl !== 0) continue;
     let k = 0;
@@ -4741,6 +4748,8 @@ function dressAlleys(m) {
       const x = q.x - q.ty * side * (e.hw - 12), y = q.y + q.tx * side * (e.hw - 12);
       const t = pool[Math.floor(hash2(Math.round(q.x), Math.round(q.y), 613) * pool.length)];
       addProp(m, t, x, y, t.startsWith('dump') ? 14 : t === 'crates' || t === 'acunit' ? 12 : t === 'drum' || t === 'tires' ? 9 : 0);
+      const dd = DISTRICTS[m.dist[Math.floor(y / TILE) * MAP_W + Math.floor(x / TILE)]], rough = !!dd && (dd.tier === 'rough' || dd.tier === 'low');
+      if (t.startsWith('dump') && hash2(Math.round(q.x), Math.round(q.y), 614) < (rough ? 0.5 : 0.06)) addProp(m, 'bags', x + q.tx * 34, y + q.ty * 34, 0);   // (bags by the dumpster: mostly in the rough districts)
       if (k % 5 === 2) { const l = addProp(m, 'lamp', q.x + q.ty * side * (e.hw - 4), q.y - q.tx * side * (e.hw - 4)); l.a = Math.atan2(q.tx * side, -q.ty * side); l.wall = true; }
     }
   }
