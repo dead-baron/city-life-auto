@@ -503,7 +503,7 @@ let islandBuilds = null;
 export function setIslandBuilds(f) { islandBuilds = f; }
 export function generateCity(seed = 1337, opts = null) {
   if (opts && opts.island && !islandBuilds) throw new Error('island builds: import shared/world3-islands.js first');
-  const frame = opts && opts.frame;   // (World v3's server: { w, h }, today's land in its top-left; not an island build)
+  const frame = opts && opts.frame;   // ({ w, h }: World v3's server)
   if (frame) { const { frame: _f, ...rest } = opts; opts = Object.keys(rest).length ? rest : null; }
   return withDeterministicMath(() => buildCity(seed, opts && opts.island ? islandBuilds(opts.island, opts) : opts, frame));
 }
@@ -527,7 +527,7 @@ let OPTS = null;   // (World v3's spike: what generateCity was asked to build; n
 function buildCity(seed, opts = null, frame = null) {
   OPTS = opts;
   for (const k in ISLANDS) ISLANDS[k].box = ISLAND_BOX0[k].slice();   // (each build starts clean: terrain sets the boxes of the islands it has)
-  const m = frame ? new CityMap(seed, frame.w, frame.h) : new CityMap(seed);
+  const m = new CityMap(seed, frame?.w, frame?.h);
   const rand = mulberry32(seed);
   terrain(m, opts);
   paintDistricts(m);
@@ -2370,8 +2370,8 @@ let ATM_BOX = null;
 function distBoxes(m) {
   if (ATM_BOX && ATM_BOX.m === m) return ATM_BOX.out;
   const out = [];
-  for (let ty = 0; ty < m.h; ty++) for (let tx = 0, i = ty * m.w; tx < m.w; tx++, i++) {
-    const d = m.dist[i];
+  for (let ty = 0; ty < m.h; ty++) for (let tx = 0, r = ty * m.w; tx < m.w; tx++) {
+    const d = m.dist[r + tx];
     const b = out[d];
     if (!b) out[d] = [tx, ty, tx, ty];
     else { if (tx < b[0]) b[0] = tx; if (tx > b[2]) b[2] = tx; if (ty > b[3]) b[3] = ty; }
