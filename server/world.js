@@ -59,6 +59,7 @@ import * as golf from './systems/golf.js';
 import * as hoops from './systems/hoops.js';
 import * as bikers from './systems/bikers.js';
 import * as streetlife from './systems/streetlife.js';
+import * as activities from './systems/activities.js';
 import * as bowling from './systems/bowling.js';
 import * as net from './net.js';
 
@@ -124,6 +125,7 @@ const SYSTEMS = [
   ['players', players.update],      // ghost timers, respawns, prompts, persistence
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
+  ['activities', activities.update], // people going about their lives: anglers, chess in the park, picnics, a painter (activities.js)
 ];
 
 export class World {

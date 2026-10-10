@@ -21,6 +21,7 @@ import * as wildlife from './wildlife.js';
 import { inAnyView } from '../view.js';
 import * as npclooks from './npclooks.js';
 import * as personas from './personas.js';
+import * as activities from './activities.js';
 import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S } from '../../shared/rules.js';
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
@@ -186,7 +187,7 @@ export function update(world, dt) {
     }
     if ((n.role === 'civ' || n.role === 'mugger') && n.state !== 'crawl') checkDive(world, ped, now);
     let inp = NO_INPUT, factor = 0.55;
-    const pin = n.persona && (n.state === 'wander' || n.state === 'idle') ? personas.steer(world, ped, now) : null;   // (personas.js)
+    const pin = n.persona && (n.state === 'wander' || n.state === 'idle') ? personas.steer(world, ped, now) : n.act && (n.state === 'wander' || n.state === 'idle') ? activities.steer(world, ped, now) : null;   // (personas.js; at an activity: activities.js)
     if (pin) { inp = pin.inp; factor = pin.factor; } else switch (n.state) {
       case 'wander': inp = wander(world, ped, now); factor = rain && !ped.umbrella ? 0.85 : 0.55; break;
       case 'idle': inp = idle(world, ped, now); break;
