@@ -1017,9 +1017,13 @@ them (step 4).
 2. **The random stream**, likely, also gives Highland Woods' wild ground other trees (747 of 1,241 props, the same with
    the bridges kept; `buildWilds` draws from it) and some of Cedar Isle's (5,391 of 5,905). Westport's props are mostly
    the bridges' doing (4,089 of 4,260 with them kept).
-3. **Gull Harbor's planned businesses** (Harbor General Store, The Salty Gull Cafe) find no lot when it is built alone,
-   and none of its 7 POIs match: to look into (map.js `seedOf` looks only in `SEEDS`, so the "same part of the world"
-   pass of `placeSpecials` compares an island district's rows with Metro City's zone).
+3. **The planned businesses are placed world-wide.** Built alone, Gull Harbor has no lot for two of its own: Harbor
+   General Store rightly (today it has none there either: `placeSpecials`' last pass, "anywhere at all", puts it in the
+   Neon Strip), but The Salty Gull Cafe's lot goes to the fish market, which today stands further south; built with
+   Metro City as well, both are where they are today. Which lot a business takes depends on the ones placed before it
+   anywhere in the world, so an island's businesses come out as today's only once the fallbacks stay on their own
+   island (each island's list placed on its own, and a business with no lot on its island told, as the island build
+   does now). Metro City's 51 POIs that differ are mostly this and the ATMs.
 4. **The railway is laid whole** in every build (14,127 points, 12 stations - Coral Cay's build has all twelve, none on
    it): clipping it to an island needs the rail code to take open runs instead of one loop (`reserveRail`,
    `stationIndex` and `buildRailway` index it modulo its length). It is the skeleton's (step 4).
