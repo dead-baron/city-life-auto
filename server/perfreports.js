@@ -48,7 +48,7 @@ export function reportLine(r) {
     `   art on screen not ready yet: ${r.late}% of frames (${r.lateMove}% on the move; moving ${r.moving}% of the time), longest ${r.lateMax} s`,
     `   frames: ${r.fps} fps, ${r.p50} ms typical, ${r.p95} ms slow (95th) · sharpness ${Math.round(r.scale * 100)}% · bakes ${r.bake} ms avg on ${r.workers} worker${r.workers === 1 ? '' : 's'} · ${r.kept} chunks from the browser's store · ${r.ahead} baked ahead · ${r.cdn || 0} downloaded from the server${r.cdn ? ` (${r.cdnMs} ms avg)` : ''} · ${r.fetched || 0} fetched ahead (${r.fetchMiss || 0} not baked there yet)${r.cdnOff ? ' · the server\'s art switched off' : ''}`,
   ].join('\n');
-  const city = r.city === 'cache' ? 'read back' : r.city === 'built' ? 'built in a worker' : r.city === 'page' ? 'built on the page' : '';
+  const city = r.city === 'cache' ? 'read back' : r.city === 'served' ? 'downloaded from the server' : r.city === 'built' ? 'built in a worker' : r.city === 'page' ? 'built on the page' : '';
   return [
     `${deviceName(r)} · ${r.cores || '?'} cores${r.mem ? ` · ${r.mem} GB` : ''} · ${r.preset} · ${r.w}x${r.h}@${r.dpr}${r.gpu ? ` · ${r.gpu}` : ''}`,
     `   whole screen drawn at ${s1(a.screen)} s: code ${s1(a.code)} · welcome ${s1(a.welcome)} · city ${s1(a.city)}${city ? ` (${city}${r.ms && r.ms.city ? `, ${s1(r.ms.city)} s` : ''})` : ''} · renderer ${s1(a.renderer)} · workers ${s1(a.workers)} · first art ${s1(a.art)}`,

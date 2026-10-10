@@ -93,7 +93,9 @@ async function freshen() {
 }
 
 // the city, started now in its own worker (client/worldgen.js): the seed the server ran last time (it hardly ever
-// changes), kept under the world's hash when this page's modules are that build's
+// changes), kept under the world's hash when this page's modules are that build's; the worker downloads the game
+// server's region files of it (server/worldcdn.js: its address as main.js works it out, client/config.js) before it
+// builds it (not offline, nor with ?worldcdn=0)
 function startWorld() {
   if (typeof Worker === 'undefined') return null;
   const seed = (Number(lsGet(SEED)) >>> 0) || 1337;
@@ -101,7 +103,9 @@ function startWorld() {
   let w;
   try { w = new Worker(new URL('./worldgen.js', import.meta.url), { type: 'module', name: 'city' }); } catch { return null; }
   const job = { seed, key, from: null, ms: 0, stored: null, worker: w };
+  let fail = null;
   job.promise = new Promise((res, rej) => {
+    fail = rej;
     w.onmessage = (e) => {
       const m = e.data || {};
       if (m.ok === true) { job.from = m.from; job.ms = m.ms; res(m.data); }
@@ -111,7 +115,9 @@ function startWorld() {
     w.onerror = (e) => { rej(new Error((e && e.message) || 'the city worker failed')); w.terminate(); };
   });
   job.promise.catch(() => {});
-  try { w.postMessage({ seed, key, keep: BOOT.fresh }); } catch { w.terminate(); return null; }
+  const post = (base) => { try { w.postMessage({ seed, key, keep: BOOT.fresh, base }); } catch { fail(new Error('the city worker could not start')); w.terminate(); } };
+  if (!key || navigator.onLine === false || /[?&]worldcdn=0\b/.test(location.search)) post(null);
+  else import('./config.js').then(({ serverUrl }) => { const u = new URL(serverUrl()); post(`${u.protocol === 'wss:' ? 'https:' : 'http:'}//${u.host}/world/`); }).catch(() => post(null));
   return job;
 }
 

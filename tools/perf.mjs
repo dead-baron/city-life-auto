@@ -26,7 +26,7 @@ const ROOT = resolve(new URL('..', import.meta.url).pathname);
 export const BUDGET = {
   code: {
     page: { files: 89, kb: 720 },        // client/boot.js + main.js and everything they import at once (76 files, 620 KB; 88 -> 89 files for shared/lights.js, task #359)
-    city: { files: 26, kb: 320 },        // client/worldgen.js: the city built off the page's thread (22, 277)
+    city: { files: 28, kb: 330 },        // client/worldgen.js: the city built off the page's thread (22, 277); 26 -> 28 files, 320 -> 330 KB on 2026-10-10 for the region files' reader (shared/regionpack.js, world3.js): measured now with the generator it loads only when the server can't serve the city - a served city loads 5 files, 16 KB
     renderer: { files: 28, kb: 363 },    // art2/game/host.js and what it loads before drawing, beyond the page's (23, 302; 350 -> 352 for the hood pose, task #361; 352 -> 354 for the paramedics' stretcher, task #313; 354 -> 355 for the carried lights, the lamps on the head, the axe and the lantern, task #359; 355 -> 363 for the people's close renders: the creator's faces, hair locks and the new hairstyles, 2026-10-09; held at 363 on 2026-10-09 as CP1's hats, the issued uniforms and the faces at game size came in: the close face moved out to client/art2/peopleclose.js and what only the creator and the server use of the look system to shared/look.js, the renderer loading shared/lookcore.js)
     bake: { files: 80, kb: 1000 },       // a bake worker, its providers included (63, 823; 950 -> 1000 KB and 74 -> 76 -> 80 files on 2026-10-10, the second step for the bowling alley built with the world and the dance poses: the hospital, police station and subway built to IN1-B/IN2-B/SU5-B, the rescue boat and 4x4 - the art grows with the concepts, and the workers fetch this once, after the page)
   },
@@ -63,7 +63,7 @@ export function codeReport(root = ROOT) {
   const renderer = closure(['client/art2/game/host.js', 'client/art2/game/engine.js', 'client/art2/game/lightgame.js', 'client/art2/game/actors.js', 'client/art2/game/peds.js'], { root }).filter((f) => !inPage.has(f));
   return {
     page: sizeOf(page, root),
-    city: sizeOf(closure(['client/worldgen.js'], { root }), root),
+    city: sizeOf(closure(['client/worldgen.js'], { dynamic: true, root }), root),   // (the generator too: it loads it when the server can't serve the city)
     renderer: sizeOf(renderer, root),
     bake: sizeOf(closure(['client/art2/game/worker.js'], { dynamic: true, root }), root),
     pageHasRenderer: page.includes('client/art2/game/host.js'),
