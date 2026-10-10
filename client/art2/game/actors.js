@@ -45,7 +45,7 @@ import { birdModel, BIRDS } from '../birds.js';
 import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
 import { CRITTERS, critterFrames, shadowBlob } from '../critters.js';
 import { groundSprite as forageGround } from '../forage.js';
-import { VEHICLE_BY_INDEX, PAINTS } from '../../../shared/vehicles.js';
+import { VEHICLE_BY_INDEX, PAINTS, unpackVehDamage } from '../../../shared/vehicles.js';
 const ART = {};   // (useArt: ferrisCab, hotAirBalloon, starfish)
 export function useArt(o) { Object.assign(ART, o); }
 
@@ -214,23 +214,33 @@ export const vehDef = (d) => VEHICLE_BY_INDEX[d && d.m] || VEHICLE_BY_INDEX[1];
 // the art2 model for a game model (every game model has its own art2 model of the same id)
 export const vehType = (d) => { const id = vehDef(d).id; return VEHICLE_DIMS[id] ? id : 'sedan'; };
 // st from the wire flags (shared/constants.js VF): the host may also pass its own object
-// dmg: 0 clean, 1 dented (scuffs, a cracked windscreen), 2 smashed (the front crushed in, glass broken: the
-// SMOKE flag, hp < 35%); hp (0..1, the snapshot's hp byte) adds the dented level below 70%
-export function vehState(flags, sirenPhase = 1, hp = 1) {
-  return { lights: !!(flags & 1), siren: flags & (2 | 16384) ? sirenPhase : 0, brake: !!(flags & 4), rev: !!(flags & 8), wreck: !!(flags & 16), burn: !!(flags & 32), dmg: flags & 64 ? 2 : hp < 0.7 ? 1 : 0, bloody: !!(flags & 512) };
+// dmg: the damage stage 0-4 (task #402: scuffed, dented, crumpled, the engine dead - a door hanging; the burnt shell is
+// the wreck) from the server's damage word dw (a vehicle record's parent field: shared/vehicles.js packVehDamage), with
+// zones (the sides it was hit on), holes (bullet holes), off (parts gone or hanging) and cut (cut in two by a plasma
+// blade: where along it). Without a word: the SMOKE flag is a crumpled front, hp (0..1) below 60% a dented one.
+export function vehState(flags, sirenPhase = 1, hp = 1, dw = 0) {
+  const D = unpackVehDamage(dw >>> 0);
+  const dmg = D.stage ? Math.min(4, D.stage) : flags & 64 ? 3 : hp < 0.6 ? 2 : 0;
+  return { lights: !!(flags & 1), siren: flags & (2 | 16384) ? sirenPhase : 0, brake: !!(flags & 4), rev: !!(flags & 8), wreck: !!(flags & 16), burn: !!(flags & 32), dmg, zones: D.zones, holes: D.holes, off: D.off, cut: D.cut, bloody: !!(flags & 512) };
 }
 // tow: on a tow truck's hook (the wire's extra byte: server tow.js) - 1 / 2 its nose up (half way, still being winched up /
 // right up), -1 / -2 its tail up; the model's the same, it's drawn tilted (renderCompact opt.lift)
+// (holes in steps of 0-3 and the zones only where they show: a few damage looks per model, cached like the other states)
 function normSt(st = {}) {
-  const s = { wreck: !!st.wreck, burn: !!st.burn, lights: !!st.lights, siren: st.siren === true ? 3 : st.siren | 0, brake: !!st.brake, rev: !!st.rev, bloody: !!st.bloody, dmg: st.dmg === true ? 2 : Math.max(0, Math.min(2, st.dmg | 0)), tow: Math.max(-2, Math.min(2, st.tow | 0)) };
-  if (s.wreck || s.burn) { s.lights = false; s.siren = 0; s.brake = false; s.rev = false; s.dmg = 0; s.bloody = false; }
+  const s = { wreck: !!st.wreck, burn: !!st.burn, lights: !!st.lights, siren: st.siren === true ? 3 : st.siren | 0, brake: !!st.brake, rev: !!st.rev, bloody: !!st.bloody, dmg: st.dmg === true ? 3 : Math.max(0, Math.min(4, st.dmg | 0)), tow: Math.max(-2, Math.min(2, st.tow | 0)),
+    zones: (st.zones | 0) & 15, holes: Math.min(3, Math.ceil((st.holes | 0) / 2)), off: (st.off | 0) & 63, cut: (st.cut | 0) & 255, half: st.half === 'a' || st.half === 'b' ? st.half : '' };
+  if (!s.dmg) { s.zones = 0; s.off = 0; }
+  if (s.dmg && !s.zones) s.zones = 1;
+  if (!s.cut) s.half = '';
+  if (s.wreck || s.burn) { s.lights = false; s.siren = 0; s.brake = false; s.rev = false; s.bloody = false; }
+  if (s.wreck) { s.dmg = 0; s.zones = 0; s.holes = 0; s.off = 0; }   // (the burnt shell)
   return s;
 }
 // the tow truck's wheel lift: px the hooked end rises for every px along the body (right up; half that being winched up)
 export const TOW_TILT = 0.11;
 // st.tow from a vehicle's wire record (main.js keeps the extra byte: bits 0-1 the end up - 1 nose, 2 tail - bit 2 being winched)
 export const towOf = (extra) => { const e = (extra | 0) & 3; return !e ? 0 : (e === 2 ? -1 : 1) * ((extra & 4) ? 1 : 2); };
-const stKey = (s) => (s.wreck ? 'W' : '') + (s.burn ? 'B' : '') + (s.lights ? 'L' : '') + (s.siren ? 'S' + s.siren : '') + (s.brake ? 'K' : '') + (s.rev ? 'R' : '') + (s.bloody ? 'X' : '') + (s.dmg ? 'D' + s.dmg : '') || '-';
+const stKey = (s) => (s.wreck ? 'W' : '') + (s.burn ? 'B' : '') + (s.lights ? 'L' : '') + (s.siren ? 'S' + s.siren : '') + (s.brake ? 'K' : '') + (s.rev ? 'R' : '') + (s.bloody ? 'X' : '') + (s.dmg ? 'D' + s.dmg + 'z' + s.zones + 'o' + s.off : '') + (s.holes ? 'H' + s.holes : '') + (s.half ? 'C' + s.cut + s.half : '') || '-';
 function vehLook(d) {
   const t = vehType(d), tn = d.tn ?? -1, p = (((d.p ?? 0) % PAINTS.length) + PAINTS.length) % PAINTS.length;
   if (CIVIL.has(t)) return { t, paint: carPaint(PAINTS[tn >= 0 ? tn : p]) };
@@ -240,7 +250,8 @@ function vehLook(d) {
 }
 // WRECK + BURN: the fresh wreck still burning (charred, embers glowing; the host adds the fire); WRECK: the
 // burnt-out shell (a bicycle just buckles); BURN alone: on fire before it blows (hp < 15%)
-const modelState = (t, s) => (s.wreck ? (PEDAL.has(t) ? 'wrecked' : s.burn ? 'smoulder' : 'burnt') : s.burn ? 'burning' : s.dmg === 2 ? 'wrecked' : s.dmg ? 'dented' : 'clean');
+// (the dents, parts and holes: o.damage - art2/vehicles.js applyDamage; a half of one cut in two: o.half)
+const modelState = (t, s) => (s.wreck ? (PEDAL.has(t) ? 'wrecked' : s.burn ? 'smoulder' : 'burnt') : s.burn ? 'burning' : 'clean');
 export function vehicleKey(d, st, hi = 0, N = 32) {
   const s = normSt(st), k = vehLook(d);
   return `v|${k.t}|${k.paint || k.cab || k.band || 'L'}|${(((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS}|${stKey(s)}|${wrapHi(hi, N)}|${N}${s.tow ? '|T' + s.tow : ''}`;
@@ -252,7 +263,8 @@ const COARSE = { ferry: 2, waterbus: 2 };
 function vehModel(d, s) {
   const k = vehLook(d), vr = (((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS, key = `${k.t}|${k.paint || k.cab || k.band || 'L'}|${vr}|${stKey(s)}`;
   return MODELS.get(key, () => {
-    const o = { paint: k.paint, cab: k.cab, band: k.band, variant: vr, lights: s.lights ? 1 : 0, brake: s.brake, reverse: s.rev, siren: s.siren || false, bloody: s.bloody, state: modelState(k.t, s) };
+    const o = { paint: k.paint, cab: k.cab, band: k.band, variant: vr, lights: s.lights ? 1 : 0, brake: s.brake, reverse: s.rev, siren: s.siren || false, bloody: s.bloody, state: modelState(k.t, s),
+      damage: s.dmg || s.holes ? { stage: s.dmg, zones: s.zones, holes: s.holes * 2, off: s.off } : null, half: s.half || null, cut: s.cut, cool: s.wreck };
     const q = ART_PX > 1 ? COARSE[k.t] : 0;
     return compactVox(q ? halveVox(vehicleModel(k.t, { ...o, dry: true }), q) : vehicleModel(k.t, o));
   });

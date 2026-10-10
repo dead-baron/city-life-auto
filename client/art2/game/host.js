@@ -1160,7 +1160,7 @@ export class World2 {
     if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
     const wpn = phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
-    if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined)) && Pd.personaPose) {   // (a dance move: danced whatever's in hand - task #394) const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : Pd.pedFrame(q, L.fr); } }
+    if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined)) && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
     const bo = bladeOpt(p, wpn);   // (a plasma blade in its owner's colour)
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo]);
@@ -1264,7 +1264,8 @@ export class World2 {
     if (!def || !A || !A.vehicleKey || !A.vehState) return;
     const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
     const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
-    const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase);
+    const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase, v.hp, v.parent);   // (parent: its damage word - task #402)
+    if (st.cut) { this._vehCut(v, now, me, st, hi, N); return; }   // (cut in two by a plasma blade)
     if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);   // (on a tow truck's hook: drawn tilted, the hooked end up - server tow.js)
     let use = this._spr('actors', 'vehicle', A.vehicleKey(v.d, st, hi, N), [v.d, st, hi, N]);
     if (!use && v._v2k && E.hasSprite(v._v2k)) use = v._v2k;
@@ -1273,7 +1274,7 @@ export class World2 {
     if (v._hi !== hi || v._hn !== N || v._hf !== fx) {
       v._hi = hi; v._hn = N; v._hf = fx;
       for (let d = -1; d <= 1; d += 2) { const h = (hi + d + N) % N; this._ask('actors', 'vehicle', A.vehicleKey(v.d, st, h, N), [v.d, st, h, N], me ? -2 : 1); }
-      if (f & (VF.SIREN | VF.BEACON)) { const s2 = A.vehState(f, 3 - phase); this._ask('actors', 'vehicle', A.vehicleKey(v.d, s2, hi, N), [v.d, s2, hi, N], me ? -2 : 0); }
+      if (f & (VF.SIREN | VF.BEACON)) { const s2 = A.vehState(f, 3 - phase, v.hp, v.parent); this._ask('actors', 'vehicle', A.vehicleKey(v.d, s2, hi, N), [v.d, s2, hi, N], me ? -2 : 0); }
     }
     // A ferry swings through heading after heading on every trip, and the car ferry's take a while to draw: once one is
     // near, all its headings are asked for, a few a frame and the nearest first, so a turn doesn't show an old heading
@@ -1334,6 +1335,25 @@ export class World2 {
         E.drawSprite(rk, x, y, Math.max(0, z0), o);
         o.under = 0;
       }
+    }
+  }
+
+  // A vehicle cut in two by a plasma blade (task #402; the cut's place on the wire): its halves, each its own sprite (the
+  // model cut there, the face molten - cooled once it's burnt out), sliding apart along it from when it was cut (the
+  // 'vcut' event: e.cutAt) - one that was cut before it came into view is already apart.
+  _vehCut(v, now, me, st, hi, N) {
+    const A = this.A, E = this.E, o = this.opts, t0 = v.cutAt ?? (v._cut0 ??= now - 9);
+    const k = Math.min(1, Math.max(0, (now - t0) / 0.7)), sep = 14 * (1 - (1 - k) * (1 - k)), c = Math.cos(v.ra), s = Math.sin(v.ra);
+    const z0 = this._z0(v, false);
+    o.alpha = 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = true; o.tint = v.tint || null; o.under = 0;
+    for (const h of ['a', 'b']) {
+      const sh = { ...st, half: h };
+      let use = this._spr('actors', 'vehicle', A.vehicleKey(v.d, sh, hi, N), [v.d, sh, hi, N]);
+      if (!use) use = this._near((q) => A.vehicleKey(v.d, sh, q, N), hi, N);
+      if (!use) continue;
+      const d = h === 'a' ? -sep : sep;
+      E.drawSprite(use, v.rx + c * d, v.ry + s * d, Math.max(0, z0), o);
+      this.n.drawn++;
     }
   }
 
@@ -1561,7 +1581,7 @@ export class World2 {
         const bo = bladeOpt(e, wpn);
         if (this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo], prio)) budget--;
       } else if (e.kind === K.VEH && A && A.vehicleKey && A.vehState) {
-        const N = this.tier.N, hi = quant(e.ra || 0, N), st = A.vehState(e.flags, 1);
+        const N = this.tier.N, hi = quant(e.ra || 0, N), st = A.vehState(e.flags, 1, e.hp, e.parent);
         if (this._ask('actors', 'vehicle', A.vehicleKey(e.d, st, hi, N), [e.d, st, hi, N], prio)) budget--;
       } else if (e.kind === K.TRAIN && A && A.trainKey && TRAIN_CARS[e.d.c]) {
         const N = this.tier.N, hi = quant(e.ra || 0, N), mode = `roof${e.flags & 8 ? '-lit' : ''}${e.flags & 16 ? '-empty' : ''}`;

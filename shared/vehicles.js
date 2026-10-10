@@ -139,3 +139,28 @@ export function respray(v, rand) {
   v.bloody = false;
   v.descVer = (v.descVer || 0) + 1;
 }
+
+// ---- damage you can see (task #402) ----
+// The server decides how damaged a vehicle is; the clients draw it from one 32-bit word on the wire (a vehicle's
+// record's parent field, which vehicles don't otherwise use): bits 0-2 the stage (VDMG), 3-6 the sides it has been
+// hit on (VZ: the front, the back, the left side, the right side - dents and crumples go there), 7-9 how shot up it is
+// (bullet holes, 0-7), 10-15 the parts gone or hanging (VPART), 16-23 where a plasma blade cut it in two (0: it
+// wasn't; else the cut's place along it, 1 at the tail to 255 at the nose).
+export const VDMG = { NEW: 0, SCUFFED: 1, DENTED: 2, CRUMPLED: 3, HANGING: 4, BURNT: 5 };
+export const VZ = { F: 1, B: 2, L: 4, R: 8 };
+// BUMPER_F / BUMPER_B / BONNET: fallen off; DOOR_L / DOOR_R: hanging open; WHEEL: a buckled front wheel
+export const VPART = { BUMPER_F: 1, BUMPER_B: 2, DOOR_L: 4, DOOR_R: 8, BONNET: 16, WHEEL: 32 };
+// the stage from its health (0..1), whether its engine's dead and whether it's a wreck: scuffs below 85%, dents and a
+// cracked windscreen below 60%, a crumpled bonnet, smoke and the bumper hanging off below 35% (the SMOKE flag), a
+// door hanging and fire under the bonnet once the engine dies, the burnt-out shell once it's blown up
+export const damageStage = (hp, dead, wreck) => (wreck ? 5 : dead ? 4 : hp < 0.35 ? 3 : hp < 0.6 ? 2 : hp < 0.85 ? 1 : 0);
+export const packVehDamage = (o) => ((o.stage & 7) | ((o.zones & 15) << 3) | ((o.holes & 7) << 7) | ((o.off & 63) << 10) | ((o.cut & 255) << 16)) >>> 0;
+export const unpackVehDamage = (w) => ({ stage: Math.min(5, (w >>> 0) & 7), zones: (w >>> 3) & 15, holes: (w >>> 7) & 7, off: (w >>> 10) & 63, cut: (w >>> 16) & 255 });
+// which side of a box (centre x, y, heading a, half length hl, half width hw) a point is on: VZ.F / B / L / R
+// (heading 0 faces east; its right side faces south)
+export function hitZone(x, y, a, hl, hw, px, py) {
+  const c = Math.cos(a), s = Math.sin(a), dx = px - x, dy = py - y;
+  const lx = (dx * c + dy * s) / hl, ly = (dy * c - dx * s) / hw;
+  if (Math.abs(lx) >= Math.abs(ly)) return lx >= 0 ? VZ.F : VZ.B;
+  return ly >= 0 ? VZ.R : VZ.L;
+}

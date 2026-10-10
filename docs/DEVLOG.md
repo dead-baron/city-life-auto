@@ -5984,3 +5984,51 @@ With the bowling alley (`shared/bowling.js`, built with the world, so the bake r
 (`shared/dance.js`) in, a bake worker loads 77 files against a budget of 76 (its code, 969 KB, is within its 1000).
 The file budget is now 80: each new kind of place the world builds brings its module, and the workers fetch them once,
 after the page. Tests: test/perf.test.js.
+
+## 2026-10-10 · Vehicle damage you can see: hits on the body, weapons that hurt, the plasma blade's cut (task #402)
+
+The owner: "ramming or hitting a vehicle only registers at its centre - use its body. Weapons damage vehicles (strong
+ones significantly); lightsabers destroy a vehicle in a few hits, maybe splitting it in half then exploding. Damage look:
+dents and parts falling off as it worsens, not a repetitive grey speckle overlay." (concept: docs/art-v2/targets/V7)
+
+- **Hits on the body** (`server/systems/combat.js`): a swing with nobody in reach now lands on the first vehicle whose
+  rotated box the blow meets (along the aim and either side of it, within the weapon's reach) - `meleeVehicle`; a
+  rocket landing by a vehicle is measured to its nearest part, not its middle (the tail of a bus counts). Bullets,
+  arrows and crashes already met the box; now each hit also says which side it landed on (`shared/vehicles.js`
+  `hitZone`: the front, the back, the left or the right side; a crash: the end it was going, or the side the other
+  car came from).
+- **Weapons damage vehicles** (`shared/rules.js` `VEHICLE_WEAPON`): what a weapon does to a vehicle as a multiple of
+  its damage to a person, then divided by the vehicle's toughness - a pistol plinks (0.6), a rifle (1.5) or a shotgun
+  blast (1.4 a pellet) tears in: a sedan's engine dies after about ten rifle rounds or five shotgun blasts; a
+  sledgehammer dents, fists barely scuff. Melee weapons hurt vehicles now (they didn't at all).
+- **The plasma blade cuts** (`PLASMA_CUT`): three hits on a car (five on a heavy truck or a bus, one on a motorbike) and
+  it's sliced in two where the blade went in (`vehicles.js` `cutVehicle`): the engine dies, everyone tumbles out, it
+  catches at once and explodes 1.8 s later; the wreck stays in two.
+- **The damage on the wire**: a vehicle's record's parent field (unused for vehicles) carries one word
+  (`shared/vehicles.js` `packVehDamage`): the stage (scuffed below 85%, dented below 60%, crumpled below 35% - the
+  smoke -, the engine dead with a door hanging, the burnt shell), the sides it's been hit on, bullet holes (0-7), the
+  parts gone or hanging, and where it was cut. As it gets worse parts come off (`shedParts`, the 'vpart' event): the
+  bumper on the end that took the most, then the bonnet (when the front was hit); a door is left hanging on the side
+  that took the most, a front wheel buckled.
+- **The look in art v2** (`client/art2/vehicles.js` `applyDamage`, `cutHalf`): drawn into the voxel model itself where
+  it was hit - scrapes (stage 1), dents caved into the hit sides and the hit end bitten in, a cracked windscreen (2),
+  the end crumpled with fold lines across it, chevron folds in the bonnet, a headlight out, the bumper gone (3), the
+  bonnet off showing the engine, a door sagging open, a buckled wheel (4), bullet holes - black pits with a ring of
+  worn paint - over the roof and the sides it was shot from. The old grey primer speckle and per-voxel scuffs are no
+  longer used for the game's vehicles, and the burning / burnt looks are blotchy rather than speckled (the scorch from
+  the bonnet back). The cut car's halves are two sprites (`client/art2/game/host.js` `_vehCut`) of the model cut
+  there - a glowing rim round a dark cross-section, cooled once it's burnt out - sliding apart from the moment it's
+  cut. A few looks per model (the holes in steps, the zones only where they show), cached like the other states
+  (`client/art2/game/actors.js` `vehState` reads the word).
+- **The classic view and the effects** (`client/render/vehdmg.js`, loaded with the first damaged vehicle or event, not
+  with the page): the damage drawn on the car in its place (scrapes, dents, a crumpled end, a cracked windscreen, the
+  bumper and bonnet gone, a door hanging off the side, holes, the cut as a glowing line); the cut's molten sparks and
+  drips; the parts that come off thrown and left lying, in the car's paint (`render/boom.js`'s piece strip).
+- **Tests:** `test/vehdamage.test.js` (7 new): the word round-trips and the stage follows health, the sides; a bat at
+  a car's nose (80 px from its middle) and its tail lands and dents that end, a swing facing away misses; a rifle round
+  does far more than a pistol's, holes on the side it hit, a shotgun kills a sedan's engine in 8 blasts or fewer and it
+  shows on the wire; three plasma hits cut a car in two (on the wire, where the blade went in), it explodes and stays
+  in two, a motorbike is cut in one; parts come off in order (the rear bumper when hit from behind, then a door
+  hanging); a rocket 20 px from a bus's tail destroys it; art v2: a look per stage keyed and cached, the crumpled
+  model, two halves that make the car with a glowing face. These pass as before: `test/explosions.test.js`,
+  `test/core.test.js`, `test/tow.test.js`, `test/reactions.test.js`, `test/art2.test.js`.

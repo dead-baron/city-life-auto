@@ -1328,7 +1328,9 @@ export function vehicleModel(type, o = {}) {
     deco(m, M.rust, 0, 0, 0, L, W, 14, (x, y, z, vv, side) => vv === M.body && side !== 'z' && vnoiseLite(x, y, z) > 0.78);
   }
   if (o.bloody) deco(m, M.blood, L * 0.8, 0, 0, L, W, m.h, (x, y, z, vv) => vv !== M.glass && vv !== M.tyre && vnoiseLite(x * 1.6, y * 1.6, z * 1.6) > 0.55);
+  if (o.damage) applyDamage(m, M, o.damage, type);
   if (o.state && o.state !== 'clean') applyState(m, M, o.state, type);
+  if (o.half) cutHalf(m, o.half, o.cut | 0, !!o.cool);
   m.smooth = 2;
   if (o.dry) return m;                                   // anchors only: no normals
   m.prepare(2);
@@ -1343,14 +1345,14 @@ export function vehicleModel(type, o = {}) {
 // no tyres; smoulder: burnt with glowing embers.
 function applyState(m, M, state, type) {
   const L = m.w, W = m.d, cy = W / 2, burntish = state === 'burnt' || state === 'smoulder';
-  const charred = m.mat({ ramp: ramp('#2a282c', 6, 2, { light: 0.35 }), k: 1.4, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.6 + (z > 14 ? 0.4 : 0) });
+  const charred = m.mat({ ramp: ramp('#2a282c', 6, 2, { light: 0.35 }), k: 1.4, shade: (x, y, z) => (hash(x >> 2, y >> 2, z >> 2) - 0.5) * 1.1 + (hash(x | 0, y | 0, z | 0) - 0.5) * 0.3 + (z > 14 ? 0.4 : 0) });   // (blotchy, not speckled: task #402)
   const ash = m.mat({ ramp: R('#5a5450', 5, 2), k: 2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 2 });
   const ember = m.mat({ ramp: R('#e86a2a', 5, 3), k: 3, emi: [255, 120, 40, 230] });
   // fire behind the glass: a dim orange glow broken by soot, brightest low in the cabin
   const fireGlass = m.mat({ ramp: R('#d86a28', 6, 3), k: 2.2, emi: [255, 120, 40, 150], flag: F_NOCAST, shade: (x, y, z) => (hash(x >> 1, z >> 1, 5) - 0.5) * 2.4 - (z - 20) * 0.08 });
   const soot = m.mat({ ramp: R('#2a2626', 5, 2), k: 1.5, flag: F_GLASS });
   const primer = m.mat({ ramp: R('#8a8a86', 5, 2), k: 2.2, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) });
-  const scorch = m.mat({ ramp: R('#3a3438', 5, 2), k: 1.5, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.4 });
+  const scorch = m.mat({ ramp: R('#3a3438', 5, 2), k: 1.5, shade: (x, y, z) => (hash(x >> 2, y >> 2, z >> 2) - 0.5) * 1.1 + (hash(x | 0, y | 0, z | 0) - 0.5) * 0.3 });
   const crack = m.mat({ ramp: R('#c8d8e4', 5, 3), k: 3, flag: F_GLASS });
   const scuffs = new Map();
   const scuffOf = (v) => { if (!scuffs.has(v)) { const Mv = m.mats[v]; scuffs.set(v, m.mat({ ...Mv, k: Math.max(0, Mv.k - 1.2), shade: null, emi: null })); } return scuffs.get(v); };
@@ -1374,8 +1376,8 @@ function applyState(m, M, state, type) {
       continue;
     }
     if (state === 'burning') {
-      if (glass) { m.v[i] = hash(x >> 1, (y >> 1) + (z >> 1) * 3, 21) > 0.55 ? fireGlass : soot; continue; }
-      const sc = (front - 0.45) * 2.4 + (vnoiseLite(x, y, z) - 0.5) * 1.2 + (z > 20 ? 0.25 : 0);
+      if (glass) { m.v[i] = hash(x >> 2, (y >> 2) + (z >> 2) * 3, 21) > 0.5 ? fireGlass : soot; continue; }
+      const sc = (front - 0.6) * 2.8 + (vnoiseLite(x, y, z) - 0.5) * 0.9 + (z > 20 ? 0.2 : 0);   // (from the bonnet back: the fire's under it)
       if (!isLamp(v) && v !== M.tyre && sc > 0.35) m.v[i] = sc > 0.85 ? charred : scorch;
       continue;
     }
@@ -1394,6 +1396,189 @@ function applyState(m, M, state, type) {
   if (state === 'wrecked') {
     // a flat front tyre: the bottom rows of one front wheel squashed out
     for (let z = 0; z < 3; z++) for (let y = 0; y < W; y++) for (let x = Math.floor(L * 0.74); x < L; x++) { const i = m.idx(x, y, z); if (m.v[i] === M.tyre && y > cy) m.v[i] = 0; }
+  }
+  m.prepared = false;
+}
+
+// ---- damage you can see (task #402; docs/art-v2/targets/V7) ----
+// o.damage { stage 1-4, zones, holes, off } (the server's word: shared/vehicles.js packVehDamage) drawn into the model
+// itself, where it was hit (zones: 1 the front, 2 the back, 4 the left side, 8 the right): scrapes (1); dents and a
+// cracked windscreen (2); the hit end crumpled - a folded bonnet, a headlight out - and the bumper gone (3); a door
+// sagging open, a buckled front wheel, the bonnet off showing the engine (4: the engine's dead); bullet holes (holes
+// 0-7, a few each) over the top and the sides it was shot from. off: 1 / 2 the front / rear bumper gone, 4 / 8 the left /
+// right door hanging, 16 the bonnet gone, 32 a buckled front wheel. No speckle: every mark has a place and a shape.
+function applyDamage(m, M, D, type) {
+  const L = m.w, W = m.d, H = m.h, st = D.stage | 0, off = D.off | 0, holes = D.holes | 0;
+  const Z = (D.zones | 0) || (st ? 1 : 0);
+  if (!st && !holes) return;
+  const small = PEDAL.has(type) || MOTO.has(type) || type === 'bike' || type === 'jetski';
+  const isLamp = (v) => v === M.head || v === M.tail || v === M.rev || v === M.brakeL || v === M.ind;
+  const solid = (v) => v && v !== M.tyre && v !== M.rim && !(m.mats[v].flag & F_GLASS);
+  const crease = m.mat({ ramp: R('#26262a', 5, 2), k: 1.4 });
+  const crack = m.mat({ ramp: R('#d4e2ec', 5, 3), k: 3, flag: F_GLASS });
+  const hole = m.mat({ ramp: R('#0e0e10', 4, 1), k: 0.4 });
+  const engine = m.mat({ ramp: R('#46464a', 6, 2), k: 1.8, shade: (x, y, z) => (hash(x >> 1, y >> 1, z) - 0.5) * 2 });
+  const scr = new Map();   // worn through where it's scraped: the same colour, flatter and lighter
+  const scrape = (v) => { if (!scr.has(v)) { const Mv = m.mats[v]; scr.set(v, m.mat({ ...Mv, k: Math.min(Mv.ramp ? Mv.ramp.length - 1 : 5, Mv.k + 0.9), shade: null, emi: null })); } return scr.get(v); };
+  const top = (x, y) => { for (let z = H - 1; z >= 0; z--) if (m.v[m.idx(x, y, z)]) return z; return -1; };
+  const at = (x, y, z) => (x >= 0 && y >= 0 && z >= 0 && x < L && y < W && z < H ? m.v[m.idx(x, y, z)] : 0);
+  const set = (x, y, z, v) => { if (x >= 0 && y >= 0 && z >= 0 && x < L && y < W && z < H) m.v[m.idx(x, y, z)] = v; };
+  const deep = st >= 3 ? (small ? 3 : 7) : st === 2 ? (small ? 1 : 3) : 0;
+  // 1. crumpled ends: an irregular bite out of a hit end, the folded metal shaded in bands across it
+  for (const [z1, end] of [[1, 1], [2, -1]]) {
+    if (!(Z & z1) || !deep) continue;
+    const bite = (y, z) => deep * (0.55 + 0.45 * hash(y >> 2, z >> 2, 9 + z1)) * (0.8 + 0.4 * Math.abs(Math.sin(y * 0.31 + z1)));
+    for (let z = 2; z < H; z++) for (let y = 0; y < W; y++) {
+      const b = bite(y, z);
+      for (let i = 0; i < b + 2; i++) {
+        const x = end > 0 ? L - 1 - i : i, v = at(x, y, z);
+        if (!v) continue;
+        if (i < b) { set(x, y, z, 0); continue; }
+        if (solid(v) && !isLamp(v) && i < b + 1) set(x, y, z, (y + ((z >> 2) & 1) * 3) % 7 < 2 ? crease : scrape(v));   // (folds: lines across the crumpled face)
+      }
+    }
+  }
+  // 2. dented sides: a shallow cave-in along the side it was hit on, between the wheels, creased
+  for (const [z1, side] of [[4, -1], [8, 1]]) {
+    if (!(Z & z1) || !deep) continue;
+    const c = L * (0.42 + (hash(z1, st, 3) - 0.5) * 0.2), span = L * (st >= 3 ? 0.26 : 0.16), d = Math.max(1, Math.round(deep * 0.45));
+    for (let x = Math.max(0, Math.floor(c - span)); x < Math.min(L, Math.ceil(c + span)); x++) {
+      const k = Math.cos(((x - c) / span) * Math.PI / 2), dd = Math.round(d * k * k);
+      for (let z = 4; z < H; z++) for (let i = 0; i < dd + 1; i++) {
+        let y = -1;
+        for (let j = 0; j < W / 2; j++) { const yy = side < 0 ? j : W - 1 - j; if (at(x, yy, z)) { y = yy; break; } }
+        if (y < 0) break;
+        const v = at(x, y, z);
+        if (!solid(v)) break;
+        if (i < dd) set(x, y, z, 0);
+        else set(x, y, z, Math.abs(k - 0.4) < 0.1 || (k > 0.7 && z % 6 === 0) ? crease : scrape(v));   // (a crease round the dent, a fold or two across it)
+      }
+    }
+  }
+  // 3. scrapes: a few bare streaks along each hit side or end (stage 1 on)
+  for (let n = 0; n < 4; n++) for (const z1 of [1, 2, 4, 8]) {
+    if (!(Z & z1)) continue;
+    const zz = Math.round(H * (0.18 + 0.2 * hash(n, z1, 5))), len = Math.round(L * (0.12 + 0.18 * hash(n, z1, 6))), x0 = Math.round((L - len) * hash(n, z1, 7));
+    if (z1 >= 4) {
+      for (let x = x0; x < x0 + len; x++) {
+        const z = zz + ((x - x0) >> 3) % 2;
+        for (let j = 0; j < W / 2; j++) { const y = z1 === 4 ? j : W - 1 - j, v = at(x, y, z); if (v) { if (solid(v)) set(x, y, z, scrape(v)); break; } }
+      }
+    } else {
+      const y0 = Math.round(W * (0.1 + 0.6 * hash(n, z1, 8)));
+      for (let y = y0; y < Math.min(W, y0 + Math.round(W * 0.25)); y++) for (let j = 0; j < L / 3; j++) { const x = z1 === 1 ? L - 1 - j : j, v = at(x, y, zz); if (v) { if (solid(v)) set(x, y, zz, scrape(v)); break; } }
+    }
+  }
+  // 4. the windscreen cracked (dents, or shot): a web round an impact point
+  if (st >= 2 || holes >= 2) {
+    const wx = L * 0.62, belt = m.look && m.look.belt ? m.look.belt : 18;
+    for (let z = 0; z < H; z++) for (let y = 0; y < W; y++) for (let x = Math.floor(L * 0.5); x < L; x++) {
+      const i = m.idx(x, y, z), v = m.v[i];
+      if (!v || !(m.mats[v].flag & F_GLASS)) continue;
+      const dy = y - W * 0.6, dz = z - belt - 6 + (x - wx) * 0.3, a = Math.atan2(dz, dy), r = Math.hypot(dy, dz);
+      if (r < 2 || Math.abs((a * 7 / Math.PI) % 1) < 0.14 || Math.abs(r - 5) < 0.5 || (st >= 3 && Math.abs(r - 9) < 0.5)) m.v[i] = crack;
+    }
+  }
+  // 5. the front's crumpled: a headlight out; the bonnet folded into ridges
+  if (st >= 3 && (Z & 1) && !small) {
+    const right = !!(Z & 8) || !(Z & 4);
+    for (let z = 0; z < H; z++) for (let y = right ? W >> 1 : 0; y < (right ? W : W >> 1); y++) for (let x = Math.floor(L * 0.8); x < L; x++) { const i = m.idx(x, y, z); if (isLamp(m.v[i]) && m.v[i] === M.head) m.v[i] = M.dark; }
+    for (let x = Math.floor(L * 0.7); x < L - deep; x++) for (let y = 2; y < W - 2; y++) {
+      const z = top(x, y), v = z >= 0 ? at(x, y, z) : 0;
+      if (!solid(v) || z > H * 0.62 || z < 6) continue;
+      const r = (x + Math.abs((y % 14) - 7)) % 8;   // (chevron folds across it)
+      if (r === 0) { set(x, y, z + 1, v); set(x, y, z, scrape(v)); } else if (r === 1) set(x, y, z, crease);
+    }
+  }
+  // 6. the parts gone: a bumper (the exposed end dark), the bonnet (the engine showing)
+  for (const [bit, end] of [[1, 1], [2, -1]]) {
+    if (!(off & bit) || small) continue;
+    for (let z = 2; z < Math.round(H * 0.3); z++) for (let y = 0; y < W; y++) {
+      let n = 0;
+      for (let j = 0; j < L / 3 && n < 4; j++) {
+        const x = end > 0 ? L - 1 - j : j, v = at(x, y, z);
+        if (!v) continue;
+        if (v === M.tyre || v === M.rim) break;
+        set(x, y, z, n < 3 ? 0 : M.dark); n++;
+      }
+    }
+  }
+  if ((off & 16) && !small) {
+    for (let x = Math.floor(L * 0.72); x < L - 2; x++) for (let y = 3; y < W - 3; y++) {
+      const z = top(x, y);
+      if (z < 6 || z > H * 0.62 || !solid(at(x, y, z))) continue;
+      set(x, y, z, 0); set(x, y, z - 1, engine); if (z > 7) set(x, y, z - 2, engine);
+    }
+  }
+  // 7. a door hanging (the front door on that side sagging open: its skin dropped at the back edge, the doorway dark)
+  for (const [bit, side] of [[4, -1], [8, 1]]) {
+    if (!(off & bit) || small) continue;
+    const x0 = Math.floor(L * 0.42), x1 = Math.floor(L * 0.62), belt = m.look && m.look.belt ? m.look.belt : 18;
+    for (let x = x0; x < x1; x++) {
+      const sag = Math.round(((x1 - x) / (x1 - x0)) * 4);
+      for (let j = 0; j < 3; j++) {
+        const y = side < 0 ? j : W - 1 - j;
+        for (let z = 4; z <= belt + 1; z++) { const v = at(x, y, z); if (solid(v) && j < 2) { set(x, y, z, 0); if (j === 0 && z - sag >= 1) set(x, y, z - sag, v === M.glass ? v : scrape(v)); } else if (solid(v) && j === 2) set(x, y, z, M.dark); }
+      }
+    }
+  }
+  // 8. a buckled front wheel (on the side the door hangs, or the left): leaning in at the top, down a voxel
+  if ((off & 32) && !small) {
+    const right = !!(off & 8), keep = [];
+    for (let z = 0; z < H * 0.4; z++) for (let y = right ? W >> 1 : 0; y < (right ? W : W >> 1); y++) for (let x = Math.floor(L * 0.6); x < L; x++) {
+      const i = m.idx(x, y, z), v = m.v[i];
+      if (v === M.tyre || v === M.rim) { keep.push(x, y, z, v); m.v[i] = 0; }
+    }
+    for (let k = 0; k < keep.length; k += 4) { const z = keep[k + 2], lean = Math.round(z * 0.35) * (right ? -1 : 1); set(keep[k], keep[k + 1] + lean, Math.max(0, z - 1), keep[k + 3]); }
+  }
+  // 9. bullet holes: a few for each step of holes, over the roof and bonnet and the sides it was hit on - a black pit
+  // with a bright ring of bare metal round it
+  for (let n = 0; n < holes * 3; n++) {
+    const sides = [Z & 4 ? 4 : 0, Z & 8 ? 8 : 0].filter(Boolean), useSide = sides.length && hash(n, 3, 31) < 0.45;
+    if (useSide) {
+      const z1 = sides[n % sides.length], x = Math.round(L * (0.15 + 0.7 * hash(n, 1, 32))), z = Math.round(H * (0.15 + 0.3 * hash(n, 2, 33)));
+      for (let j = 0; j < W / 2; j++) {
+        const y = z1 === 4 ? j : W - 1 - j, v = at(x, y, z);
+        if (!v) continue;
+        if (!solid(v)) break;
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const w = at(x + dx, y, z + dz); if (solid(w)) set(x + dx, y, z + dz, scrape(w)); }
+        set(x, y, z, hole);
+        break;
+      }
+    } else {
+      const x = Math.round(L * (0.12 + 0.76 * hash(n, 4, 34))), y = Math.round(W * (0.18 + 0.64 * hash(n, 5, 35))), z = top(x, y), v = z >= 0 ? at(x, y, z) : 0;
+      if (!v) continue;
+      if (m.mats[v].flag & F_GLASS) { set(x, y, z, crack); continue; }
+      if (!solid(v)) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const w = at(x + dx, y + dy, z); if (solid(w)) set(x + dx, y + dy, z, scrape(w)); }
+      set(x, y, z, hole);
+    }
+  }
+  m.prepared = false;
+}
+
+// One half of a vehicle cut in two by the plasma blade (task #402): cut 1..255 along it from the tail; half 'a' the rear,
+// 'b' the front. The cut face is molten - glowing orange, the metal round it heat-blued - or, cool (the burnt wreck),
+// gone dark. The game draws the two halves apart (host.js).
+function cutHalf(m, half, cut, cool) {
+  const L = m.w, W = m.d, H = m.h, cx = ((Math.max(1, Math.min(255, cut || 128)) - 1) / 254) * L;
+  const glow = m.mat(cool ? { ramp: R('#3a2c26', 5, 2), k: 1.2 } : { ramp: R('#ff9a3a', 5, 3), k: 3, emi: [255, 150, 60, 255] });
+  const heat = m.mat(cool ? { ramp: R('#2a2628', 5, 2), k: 1.2 } : { ramp: R('#b8562a', 5, 3), k: 2.4, emi: [255, 90, 30, 120] });
+  const inner = m.mat({ ramp: R('#262024', 5, 2), k: 1.3 });   // (the cut through the cabin: dark inside the glowing rim)
+  const xm = Math.max(1, Math.min(L - 2, Math.round(cx)));
+  const shell = (y, z) => { for (const [dy, dz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const yy = y + dy, zz = z + dz; if (yy < 0 || zz < 0 || yy >= W || zz >= H || !m.v[m.idx(xm, yy, zz)]) return true; } return false; };
+  const rim = new Uint8Array(W * H);
+  for (let z = 0; z < H; z++) for (let y = 0; y < W; y++) rim[z * W + y] = m.v[m.idx(xm, y, z)] && shell(y, z) ? 1 : 0;
+  for (let z = 0; z < H; z++) for (let y = 0; y < W; y++) {
+    const xc = cx + (z - H * 0.4) * 0.12 + (hash(y >> 1, z >> 1, 77) - 0.5) * 1.6;
+    for (let x = 0; x < L; x++) {
+      const i = m.idx(x, y, z);
+      if (!m.v[i]) continue;
+      const d = half === 'a' ? xc - x : x - xc;
+      if (d < 0) { m.v[i] = 0; continue; }
+      if (d < 1.2) m.v[i] = rim[z * W + y] ? glow : inner;
+      else if (d < 2.6 && rim[z * W + y] && !(m.mats[m.v[i]].flag & F_GLASS)) m.v[i] = heat;
+    }
   }
   m.prepared = false;
 }

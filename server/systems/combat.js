@@ -6,7 +6,7 @@ import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
 import { WEAPONS, stepWeapon } from '../../shared/items.js';
-import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT } from '../../shared/rules.js';
+import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT, VEHICLE_WEAPON, VEHICLE_WEAPON_DEFAULT } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
@@ -101,7 +101,7 @@ function melee(world, ped, w, aim) {
     if (d < bestD) { bestD = d; best = o; }
   }
   world.emit(ped.x, ped.y, { e: 'swing', x: ped.x, y: ped.y, id: ped.id, side: ped.swingSide });
-  if (!best) return true;
+  if (!best) { meleeVehicle(world, ped, w, aim); return true; }   // (nobody in reach: a vehicle's body in the swing - task #402)
   const dir = Math.atan2(best.y - ped.y, best.x - ped.x);
   if (blocked(world, best, ped, w, dir)) return true;
   if (!best.wild && !ped.wild) npc.spectacle(world, best.x, best.y, { r: 300, near: 60, chance: 0.35, secs: 7 });   // (a fight: a few phones come out)
@@ -157,6 +157,43 @@ function melee(world, ped, w, aim) {
   if (!best.dead) { best.finisher = null; best.halved = false; best.killBlade = null; }   // (it lived after all)
   if (floored) law.subdue(world, ped, best);
   return true;
+}
+
+// What a weapon does to a vehicle, as a multiple of its damage to a person (rules.js VEHICLE_WEAPON - task #402)
+export const vehWeapon = (w) => VEHICLE_WEAPON[w.id] ?? VEHICLE_WEAPON_DEFAULT;
+// A swing with nobody in reach: the first vehicle whose body (its rotated box, not its middle) the blow meets - along
+// the aim and either side of it, within the weapon's reach. It takes the weapon's vehicle damage there (a dent on that
+// side); the plasma blade cuts: after a few hits (rules.js PLASMA_CUT) it's sliced in two where the blade went in.
+// Returns the vehicle hit, or null.
+export function meleeVehicle(world, ped, w, aim) {
+  if (ped.vehId) return null;
+  const reach = w.range + 8;
+  let hit = null, bestT = 2, hx = 0, hy = 0;
+  for (const v of world.query(ped.x, ped.y, reach + 110, K.VEH)) {
+    if (v.removed || v.wreckAt || v.ferry || v.fly || !!v.sub !== !!ped.sub || !sameLevel(v.lz, ped.lz)) continue;
+    for (const da of [0, -w.arc / 4, w.arc / 4]) {
+      const a = aim + (w.arc ? da : 0), x2 = ped.x + Math.cos(a) * reach, y2 = ped.y + Math.sin(a) * reach;
+      const t = segObb(ped.x, ped.y, x2, y2, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
+      if (t >= 0 && t < bestT) { bestT = t; hit = v; hx = ped.x + (x2 - ped.x) * t; hy = ped.y + (y2 - ped.y) * t; }
+    }
+  }
+  if (!hit) return null;
+  const zone = vehicles.zoneAt(hit, hx, hy);
+  world.emit(hx, hy, { e: 'spark', x: Math.round(hx), y: Math.round(hy) });
+  if (w.plasma) {
+    world.emit(hx, hy, { e: 'sizzle', x: Math.round(hx), y: Math.round(hy), a: +aim.toFixed(2), id: ped.id });
+    hit.plasmaHits = (hit.plasmaHits || 0) + 1;
+    if (hit.plasmaHits >= vehicles.plasmaCuts(hit.def)) {
+      const c = Math.cos(hit.a), s = Math.sin(hit.a);
+      vehicles.noteHit(hit, zone, 1);
+      vehicles.cutVehicle(world, hit, ped, (hx - hit.x) * c + (hy - hit.y) * s);
+      if (hit.ai) npc.onVehicleHit(world, hit, ped);
+      return hit;
+    }
+  }
+  vehicles.damageVehicle(world, hit, w.dmg * (ped.build ? ped.build.str : 1) * vehWeapon(w), ped, false, false, zone);
+  if (hit.ai) npc.onVehicleHit(world, hit, ped);
+  return hit;
 }
 
 // Guarding (players.js: the guard held with fists, a bat, a sword, the katana or the plasma blade; rules.js GUARD).
@@ -236,7 +273,7 @@ function stepArrow(world, p, dt, owner) {
   if (hit.kind === K.VEH && hit.id !== p.owner) {
     world.emit(nx, ny, { e: 'spark', x: nx, y: ny });
     if (w.fire) { hit.burnUntil = Math.max(hit.burnUntil || 0, world.time + FIRE_ARROW.vehBurnS); world.emit(nx, ny, { e: 'arrowstick', x: Math.round(nx), y: Math.round(ny), a: +a.toFixed(2), wall: 1, f: 1 }); }   // (it catches: flames on it a while)
-    vehicles.damageVehicle(world, hit, w.fire ? FIRE_ARROW.veh : 4, owner);
+    vehicles.damageVehicle(world, hit, w.fire ? FIRE_ARROW.veh : 4, owner, false, false, vehicles.zoneAt(hit, nx, ny));
     world.remove(p);
     return;
   }
@@ -359,7 +396,10 @@ function hitscan(world, ped, w, a, acc) {
   }
   if (hit.kind === K.VEH) {
     world.emit(hx, hy, { e: 'spark', x: hx, y: hy });
-    vehicles.damageVehicle(world, hit, w.dmg * 0.6, ped);
+    // where on its body the round went in (its rotated box: traceTarget), a hole there; the strong guns tear into it
+    // (rules.js VEHICLE_WEAPON - task #402)
+    hit.holes = Math.min(99, (hit.holes || 0) + 1);
+    vehicles.damageVehicle(world, hit, w.dmg * vehWeapon(w), ped, false, false, vehicles.zoneAt(hit, hx, hy));
     // exposed riders on bikes take hits too
     if (hit.def.kind === 'bike' && hit.seats[0]) { const rider = world.get(hit.seats[0]); if (rider) damage(world, rider, w.dmg * 0.5, ped, 'gun', a); }
     if (hit.ai) npc.onVehicleHit(world, hit, ped);
@@ -460,8 +500,10 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
       const a = Math.atan2(e.y - y, e.x - x), fm = Math.max(0, f);
       e.blastAt = world.time;   // (custody.js: a blast bursts a police car's doors open)
       e.vx += Math.cos(a) * 220 * k * fm / e.def.mass; e.vy += Math.sin(a) * 220 * k * fm / e.def.mass;
-      // a rocket landing on / next to a vehicle destroys it outright (armored ones take two)
-      if (rocket && f > 0.25) {
+      vehicles.noteHit(e, vehicles.zoneAt(e, x, y), 1);   // (dented on the side facing the blast - task #402)
+      // a rocket landing on / next to a vehicle's body destroys it outright (armored ones take two) - by its nearest
+      // part, not its middle: the tail of a bus counts (task #402)
+      if (rocket && fn > 0.25) {
         const armored = ARMORED_VEHICLES.includes(e.def.id);
         vehicles.damageVehicle(world, e, armored ? e.def.hp / ARMORED_ROCKETS + 1 : e.hp + 1, attacker, true, true);
       } else vs.push([fn, fm, e]);
