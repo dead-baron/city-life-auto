@@ -800,7 +800,7 @@ function onEvent(ev) {
     case 'golfcup': sfx('golfcup', distVol(ev.x, ev.y)); break;
     case 'golfsplash': sfx('splash', distVol(ev.x, ev.y)); break;
     case 'hoop': sfx(ev.in ? (ev.sw ? 'swish' : 'hoopin') : 'clank', distVol(ev.x, ev.y)); break;   // (shooting hoops: server/systems/hoops.js)
-    case 'bowl': case 'bowlset': case 'bowlx': if (ev.e === 'bowl' && ev.n) sfx('clank', distVol(ev.x, ev.y)); if (S.bowlView) S.bowlView.event(ev); break;   // (Pinwheel Lanes: server/systems/bowling.js; drawn by client/bowling.js)
+    case 'bowl': case 'bowlset': case 'bowlx': if (S.bowlView) S.bowlView.event(ev); break;   // (Pinwheel Lanes: server/systems/bowling.js; drawn by client/bowling.js)
     case 'ride': rideOn(ev); if (ev.k === 'balloon') { const L = balloonSite(S.map); if (L) sfx('burner', distVol(L.launch.x, L.launch.y)); } break;   // a ride under way: the wheel's cab you're in, a balloon going up
     case 'rideend': if (S.rides) S.rides.delete(ev.id); break;
     case 'bells': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y), v = Math.max(0, 1 - d / 2600); for (let k = 0; k < (ev.n || 3); k++) setTimeout(() => sfx('churchbell', v * (k % 2 ? 0.85 : 1)), k * 1150); break; }   // (the mission's bells carry a long way)

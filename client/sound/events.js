@@ -177,6 +177,10 @@ export const EVENT_SOUNDS = {
   ride: (ev, A) => { if (ev.k === 'balloon') A.ui('burner', 0.6); else A.ui('ridebell', 0.6); },
   rideend: null,                                 // (the ride's over: its cab just stops)
   bells: (ev, A) => { A.mute('churchbell', (ev.n || 3) * 1.2 + 1); A.at('churchbells', ev.x, ev.y, 1, { n: ev.n || 3 }); },
+  // ---- Pinwheel Lanes (server/systems/bowling.js) ----
+  bowl: (ev, A) => (ev.n ? A.at('woodcrunch', ev.x, ev.y, Math.min(1, 0.45 + ev.n * 0.06)) : A.at('thud', ev.x, ev.y, 0.4)),   // (the pins going down; a gutter ball's thump at the pit)
+  bowlx: (ev, A) => A.ui('good', 0.6),           // (a strike)
+  bowlset: null,                                 // (the pinsetter sets a new rack)
 };
 
 // For the frame: true for a vehicle whose engine is running (someone at the wheel, not wrecked or dead)
