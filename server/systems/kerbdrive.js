@@ -75,7 +75,8 @@ export function planTo(world, v, k) {
 }
 
 // Drive v.ai.route at up to `speed` (slowing to a crawl for the last stretch to its end). True when it's there.
-export function follow(world, v, speed, arriveAt = 34, round = undefined) {
+// ignore: a Set of vehicle ids not to brake for (a tow truck passing the car it's come for, close beside it - tow.js)
+export function follow(world, v, speed, arriveAt = 34, round = undefined, ignore = null) {
   const ai = v.ai, r = ai.route;
   if (!r || !r.length) { halt(v); return true; }
   const reach = Math.max(60, Math.min(110, Math.hypot(v.vx, v.vy) * 0.25));
@@ -87,7 +88,7 @@ export function follow(world, v, speed, arriveAt = 34, round = undefined) {
   const end = r[r.length - 1], left = r.length === 1 ? Math.hypot(end.x - v.x, end.y - v.y) : Infinity;
   if (left < arriveAt) { halt(v); return true; }
   const wp = r[0];
-  driveToward(world, v, wp.x, wp.y, Math.min(cornerSpeed(v, r, speed), left < 320 ? 50 + left * 0.75 : Infinity), { round: left < 260 ? false : round });   // (nearly there: pull up behind whatever's stopped, no going round it; round: true - round what's stopped, siren or not)
+  driveToward(world, v, wp.x, wp.y, Math.min(cornerSpeed(v, r, speed), left < 320 ? 50 + left * 0.75 : Infinity), ignore ? { round: left < 260 ? false : round, ignore } : { round: left < 260 ? false : round });   // (nearly there: pull up behind whatever's stopped, no going round it; round: true - round what's stopped, siren or not)
   waterGuard(world, v);
   return false;
 }

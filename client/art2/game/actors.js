@@ -142,9 +142,13 @@ const NBUF = [0, 0, 0];
 // opt.px: world px per art pixel (1, or the live game's 2): one ray per art pixel, so the model is drawn straight
 // at the art pixel - its shading, dither and outline on the art grid (crisper than shrinking a full-size render);
 // the anchor lands on an art pixel corner and G.ap says the size
+// opt.lift: k - the body tilted along its length (a car up on a tow truck's wheel lift, server tow.js): each voxel raised
+// k px for every px it is from the end left on the ground - k > 0 its nose up (the tail stays down), k < 0 its tail up.
+// A shear, not a turn (it's a few degrees): the ray meets each layer where that layer has been lifted to.
 export function renderCompact(C, heading = 0, opt = {}) {
   const { w, d, h, v, N, AO, SH, mats, sheen } = C, wd = w * d, S = opt.px || 1, vs = C.vs || 1, iv = 1 / vs;
-  const R = Math.ceil(Math.hypot(w * vs, d * vs) / 2) + 2, ax = Math.ceil(R / S), ay = Math.ceil((R + h * vs) / S);
+  const kk = opt.lift || 0, p0 = -Math.sign(kk) * w * vs / 2, up = Math.abs(kk) * w * vs;   // (p0: the end on the ground, along the length)
+  const R = Math.ceil(Math.hypot(w * vs, d * vs) / 2) + 2, ax = Math.ceil(R / S), ay = Math.ceil((R + h * vs + up) / S);
   const G = new GBuf(2 * ax, ay + Math.ceil((R + 2) / S));
   G.ax = ax; G.ay = ay; if (S > 1) G.ap = S;
   const c = Math.cos(heading), s = Math.sin(heading), dither = opt.dither ?? 0.5, fo = opt.flag || 0, brk = 5 + (S - 1) * 2;
@@ -153,13 +157,17 @@ export function renderCompact(C, heading = 0, opt = {}) {
     const X = (px - ax) * S + 0.5, sy = (py - ay) * S + 0.5;
     for (let Z = h - 1; Z >= 0; Z--) {
       // (a model at half resolution, vs 2: its layers and cells 2 world px apart - the ray in model voxels)
-      const zw = (Z + 0.5) * vs, Y = sy + zw, mx = (c * X + s * Y) * iv + w / 2, my = (-s * X + c * Y) * iv + d / 2;
+      const zw = (Z + 0.5) * vs;
+      let Y = sy + zw, lift = 0;
+      if (kk) { const u = (c * X + s * (sy + zw) - s * kk * p0) / (1 - s * kk); lift = kk * (u - p0); Y += lift; }   // (tilted: where along it the ray meets this layer, and how high that is)
+      const mx = (c * X + s * Y) * iv + w / 2, my = (-s * X + c * Y) * iv + d / 2;
       if (mx < 0 || my < 0 || mx >= w || my >= d) continue;
       const vi = Z * wd + (my | 0) * w + (mx | 0), mt = v[vi];
       if (!mt) continue;
       const M = mats[mt];
       let nx = N[vi * 3] / 127, ny = N[vi * 3 + 1] / 127, nz = N[vi * 3 + 2] / 127;
       if (!nx && !ny && !nz) nz = 1;
+      if (kk) { const tx = nx - kk * nz; nz += kk * nx; nx = tx; }   // (the faces tilt with it)
       const ao = AO[vi] / 255;
       let t;
       if (M.paint) t = Math.round(M.k + (nz >= 0.5 ? 0.55 : (ao - 0.75) * 1.1) + (nz > 0.7 ? 0.5 : 0) + SH[vi] / 16 + (nz >= 0.5 ? paintSheen(sh0, mx, my, c, s, sheen) : 0));
@@ -167,8 +175,9 @@ export function renderCompact(C, heading = 0, opt = {}) {
       t += bayer(px, py) * dither;
       const RM = M.ramp;
       NBUF[0] = c * nx - s * ny; NBUF[1] = s * nx + c * ny; NBUF[2] = nz;
-      G.put(px, py, RM[clampi(Math.round(t), 0, RM.length - 1)], NBUF, vs > 1 ? zw - 0.5 : Z, M.emi, M.flag | fo);
-      depth[py * G.w + px] = Y + (vs > 1 ? zw - 0.5 : Z);
+      const zo = (vs > 1 ? zw - 0.5 : Z) + lift;
+      G.put(px, py, RM[clampi(Math.round(t), 0, RM.length - 1)], NBUF, zo, M.emi, M.flag | fo);
+      depth[py * G.w + px] = Y + zo;
       break;
     }
   }
@@ -210,11 +219,17 @@ export const vehType = (d) => { const id = vehDef(d).id; return VEHICLE_DIMS[id]
 export function vehState(flags, sirenPhase = 1, hp = 1) {
   return { lights: !!(flags & 1), siren: flags & (2 | 16384) ? sirenPhase : 0, brake: !!(flags & 4), rev: !!(flags & 8), wreck: !!(flags & 16), burn: !!(flags & 32), dmg: flags & 64 ? 2 : hp < 0.7 ? 1 : 0, bloody: !!(flags & 512) };
 }
+// tow: on a tow truck's hook (the wire's extra byte: server tow.js) - 1 / 2 its nose up (half way, still being winched up /
+// right up), -1 / -2 its tail up; the model's the same, it's drawn tilted (renderCompact opt.lift)
 function normSt(st = {}) {
-  const s = { wreck: !!st.wreck, burn: !!st.burn, lights: !!st.lights, siren: st.siren === true ? 3 : st.siren | 0, brake: !!st.brake, rev: !!st.rev, bloody: !!st.bloody, dmg: st.dmg === true ? 2 : Math.max(0, Math.min(2, st.dmg | 0)) };
+  const s = { wreck: !!st.wreck, burn: !!st.burn, lights: !!st.lights, siren: st.siren === true ? 3 : st.siren | 0, brake: !!st.brake, rev: !!st.rev, bloody: !!st.bloody, dmg: st.dmg === true ? 2 : Math.max(0, Math.min(2, st.dmg | 0)), tow: Math.max(-2, Math.min(2, st.tow | 0)) };
   if (s.wreck || s.burn) { s.lights = false; s.siren = 0; s.brake = false; s.rev = false; s.dmg = 0; s.bloody = false; }
   return s;
 }
+// the tow truck's wheel lift: px the hooked end rises for every px along the body (right up; half that being winched up)
+export const TOW_TILT = 0.11;
+// st.tow from a vehicle's wire record (main.js keeps the extra byte: bits 0-1 the end up - 1 nose, 2 tail - bit 2 being winched)
+export const towOf = (extra) => { const e = (extra | 0) & 3; return !e ? 0 : (e === 2 ? -1 : 1) * ((extra & 4) ? 1 : 2); };
 const stKey = (s) => (s.wreck ? 'W' : '') + (s.burn ? 'B' : '') + (s.lights ? 'L' : '') + (s.siren ? 'S' + s.siren : '') + (s.brake ? 'K' : '') + (s.rev ? 'R' : '') + (s.bloody ? 'X' : '') + (s.dmg ? 'D' + s.dmg : '') || '-';
 function vehLook(d) {
   const t = vehType(d), tn = d.tn ?? -1, p = (((d.p ?? 0) % PAINTS.length) + PAINTS.length) % PAINTS.length;
@@ -228,7 +243,7 @@ function vehLook(d) {
 const modelState = (t, s) => (s.wreck ? (PEDAL.has(t) ? 'wrecked' : s.burn ? 'smoulder' : 'burnt') : s.burn ? 'burning' : s.dmg === 2 ? 'wrecked' : s.dmg ? 'dented' : 'clean');
 export function vehicleKey(d, st, hi = 0, N = 32) {
   const s = normSt(st), k = vehLook(d);
-  return `v|${k.t}|${k.paint || k.cab || k.band || 'L'}|${(((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS}|${stKey(s)}|${wrapHi(hi, N)}|${N}`;
+  return `v|${k.t}|${k.paint || k.cab || k.band || 'L'}|${(((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS}|${stKey(s)}|${wrapHi(hi, N)}|${N}${s.tow ? '|T' + s.tow : ''}`;
 }
 // The biggest models are kept at half resolution in the live game, 2 world px a voxel - what it draws them at anyway
 // (ART_PX 2). The car ferry at full size is 470 x 150 x 123 voxels: 52 MB packed (a phone worker keeps 20 MB of models)
@@ -246,7 +261,7 @@ function vehModel(d, s) {
 // vehicle's centre on the ground
 export function vehicleSprite(d, st, hi = 0, N = 32) {
   const s = normSt(st), C = vehModel(d, s), a = wrapHi(hi, N) * TAU / N;
-  return trimSprite(renderCompact(C, a, { dither: 0.35, px: ART_PX }));
+  return trimSprite(renderCompact(C, a, { dither: 0.35, px: ART_PX, lift: s.tow ? Math.sign(s.tow) * TOW_TILT * (Math.abs(s.tow) === 2 ? 1 : 0.5) : 0 }));
 }
 // lamp and fitting positions in local coordinates at heading 0 (+x forward, +y right, z up, origin the
 // centre on the ground): head / tail / brake / rev lamps [[x, y, z]], siren [[x, y, z, colour]] (0 red,

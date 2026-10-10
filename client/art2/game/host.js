@@ -1282,11 +1282,13 @@ export class World2 {
     const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
     const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
     const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase);
+    if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);   // (on a tow truck's hook: drawn tilted, the hooked end up - server tow.js)
     let use = this._spr('actors', 'vehicle', A.vehicleKey(v.d, st, hi, N), [v.d, st, hi, N]);
     if (!use && v._v2k && E.hasSprite(v._v2k)) use = v._v2k;
     if (!use) use = this._near((h) => A.vehicleKey(v.d, st, h, N), hi, N);
-    if (v._hi !== hi || v._hn !== N || v._hf !== f) {
-      v._hi = hi; v._hn = N; v._hf = f;
+    const fx = f + ((v.extra | 0) & 7) * 65536;   // (the flags and the tow state)
+    if (v._hi !== hi || v._hn !== N || v._hf !== fx) {
+      v._hi = hi; v._hn = N; v._hf = fx;
       for (let d = -1; d <= 1; d += 2) { const h = (hi + d + N) % N; this._ask('actors', 'vehicle', A.vehicleKey(v.d, st, h, N), [v.d, st, h, N], me ? -2 : 1); }
       if (f & (VF.SIREN | VF.BEACON)) { const s2 = A.vehState(f, 3 - phase); this._ask('actors', 'vehicle', A.vehicleKey(v.d, s2, hi, N), [v.d, s2, hi, N], me ? -2 : 0); }
     }

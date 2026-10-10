@@ -5079,3 +5079,39 @@ The owner: "When you find a lost pet and return it to its owner the pet shouldn'
   - nobody near: the owner is cleared and the pet with them;
   - an owner gone first: the pet goes once out of sight.
   `test/world.test.js`'s lost-pet test now expects it home with its owner rather than gone.
+
+## 2026-10-09 · Tow trucks back up to the car, touch it with their tail and tow it away tilted (task #414)
+The owner: "Tow trucks should back up to a vehicle that needs towing if possible so it touches the vehicle with the back of its truck and then pulls it up and tows it away from there."
+- **Before:** the truck drove to a kerb point just ahead of the car and the car was winched round onto the hook from wherever it stood. Coming up behind it, the truck often waited there until the stall timer let it hook from where it was.
+- **Now** (`server/systems/tow.js`):
+  - **The plan** (`backPlan`, worked out when the truck is sent):
+    - It finds the car's lane and the end of the car that's ahead in it: its nose, or its tail if the wreck has spun round.
+    - It picks where the truck stops: 160 px ahead of that end, or 120 or 90 if the street ends sooner. That strip has to be road all the way, with nothing solid, no vehicle and nobody in it.
+    - It picks a side to pass on, the road's middle first. That side also has to be clear.
+  - **Getting there:**
+    - The truck comes from the end of the street the lane comes from (`send`), so it arrives along the lane behind the car.
+    - It swings out and passes the car with a gap. It doesn't brake for the car it came for (`kerbdrive.js follow`, `ignore`).
+    - It cuts back onto the car's line well before the stop, so it pulls in straight.
+  - **Reversing** (`backStep`, a new `back` mode):
+    - The reversing lights come on.
+    - The truck steers its tail onto the line out from the car's end. It works like a Stanley controller run backwards.
+    - It slows as the gap closes and stops when its tail touches the car (3 px).
+    - In a run over eight placements and headings, it stopped lined up within 0.06 rad and 2 px every time.
+  - **Hooking up:** the truck works the winch, and the car comes up onto the wheel lift by the end the truck touched (`v.towEnd`). It rides behind the truck either nose first, the same way round, or tail first, the other way round.
+  - **The old way as a fallback:** the truck pulls up ahead and winches the car round, as before, if:
+    - there's no room: the street ends just ahead, or a wall or vehicle is in the way;
+    - the car is in a junction or across the lane;
+    - the car is moved while the truck is coming;
+    - the truck is held up for 9 s getting round it.
+    If there was no room when it was sent, the truck looks again now and then on the way.
+  - **A truck held up for good:** the truck could stop mid-turn, nose-on to a car with someone sitting in it, and wait there until it gave up. Now, each time it replans, it first backs off a little: `traffic.js` reversing swings its nose round.
+- **Tilted on the hook, in both renderers:**
+  - **On the wire** (`server/net.js`): the vehicle's extra byte, 0 until now, says which end is up (1 nose, 2 tail), plus 4 while it is still being winched up.
+  - **Art v2** (`client/art2/game/actors.js`): `renderCompact` takes `opt.lift`, a shear along the body. Each voxel is raised by its distance from the end left on the ground, and the faces tilt with it. The car is drawn with that end up (`TOW_TILT`, 0.11 px a px; half that while being winched), keyed in the sprite cache (`vehicleKey` `|T±1/2`). `host.js` gets the tow state from the extra byte and asks for new sprites when it changes.
+  - **Classic view** (`client/main.js vehTurn`): the same shear in the canvas transform.
+- **Tests:** `test/tow.test.js` (5):
+  - a wreck: drive, back, hook, leave. It's seen reversing; at the hook-up its tail touches the car (≤ 4 px), with the car behind it and lined up. The car rides nose to the truck, the same way round, and the wire shows its nose up, winched first;
+  - a wreck facing the wrong way: the truck backs onto its tail, and the car rides away backwards, tail up, on the wire;
+  - no room (a van stopped just ahead): no plan and no backing up; it's hooked the old way.
+  - The two tests from before still pass.
+  - The tests now run with no traffic, buses or ferries (`quiet`): a car going by could ram a parked car off the road, which made the player's-car test flaky. A seeded run of the file over fourteen `Math.random` seeds passes.

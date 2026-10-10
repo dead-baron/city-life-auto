@@ -3791,13 +3791,13 @@ function drawVehicleEnt(v, now, dt) {
     const side = vehicleSide(v.d, def, !!(f & VF.WRECK));
     const sw = side.width / 2, sh = side.height / 2;
     for (let k = 0; k < lift; k += 1.5) {
-      g.save(); g.translate(-Math.sin(v.ra) * leanPx * (k / lift), -k); g.rotate(v.ra);
+      g.save(); g.translate(-Math.sin(v.ra) * leanPx * (k / lift), -k); vehTurn(g, v, def);
       g.drawImage(side, -sw / 2, -sh / 2, sw, sh);
       g.restore();
     }
   }
   g.translate(-Math.sin(v.ra) * leanPx + Math.cos(v.ra) * dip, -lift + Math.sin(v.ra) * dip);
-  g.rotate(v.ra);
+  vehTurn(g, v, def);
   if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);
   const L = def.L, Wd = def.W;
   if (f & VF.BLOODY) { g.fillStyle = 'rgba(120,10,16,.85)'; for (let k = 0; k < 5; k++) { const h = ((v.id * 13 + k * 7) % 17) / 17; g.beginPath(); g.arc(L * 0.3 + h * L * 0.15, -Wd * 0.3 + ((k * 0.37 + h) % 1) * Wd * 0.6, 2 + h * 3, 0, 6.28); g.fill(); } }
@@ -3827,6 +3827,16 @@ function drawVehicleEnt(v, now, dt) {
     for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) { const pass = (p.flags & PF.PASSENGER) !== 0; drawRider(p, v, def, !pass && def.seat !== undefined ? [def.seat, 0] : seats[pass ? 1 : 0]); }
   }
   void dt;
+}
+
+// A vehicle's turn on the canvas - and up on a tow truck's wheel lift (its extra byte: bits 0-1 the end up, 1 nose 2 tail;
+// bit 2 still being winched up - server tow.js) its body tilted: that end raised up the screen, the other end on the ground
+const TOW_TILT_V1 = 0.11;   // (px up for every px along it: as art v2 draws it, actors.js TOW_TILT)
+function vehTurn(g, v, def) {
+  const tw = (v.extra | 0) & 3;
+  if (!tw) { g.rotate(v.ra); return; }
+  const k = TOW_TILT_V1 * (v.extra & 4 ? 0.5 : 1), kk = tw === 2 ? -k : k, c = Math.cos(v.ra), s = Math.sin(v.ra);
+  g.transform(c, s - kk, -s, c, 0, -k * def.L / 2);
 }
 
 // how high a vehicle's body stands (world px of visible side wall)
