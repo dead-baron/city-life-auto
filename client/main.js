@@ -4229,7 +4229,7 @@ const SIG_COL = { G: '#3ddc84', Y: '#ffc23d', R: '#ff3b3b' };
 function signalsTick(view) {
   S.sigHeads = [];
   for (const sg of S.map.signals || []) {
-    if (sg.x < view.x0 - 260 || sg.x > view.x1 + 260 || sg.y < view.y0 - 260 || sg.y > view.y1 + 260) continue;
+    if (!sg || sg.x < view.x0 - 260 || sg.x > view.x1 + 260 || sg.y < view.y0 - 260 || sg.y > view.y1 + 260) continue;
     const n = S.map.nodes[sg.node];
     if (sg.wire) { for (const h of sg.heads) S.sigHeads.push({ x: h.x, y: h.y, c: SIG_COL[signalFor(n, h.edge, S.loopTime)] }); continue; }
     const pr = S.map.props[sg.pi];
@@ -4240,7 +4240,7 @@ function signalsTick(view) {
 }
 function drawSignals(view) {
   for (const sg of S.map.signals || []) {
-    if (sg.x < view.x0 - 260 || sg.x > view.x1 + 260 || sg.y < view.y0 - 260 || sg.y > view.y1 + 260) continue;
+    if (!sg || sg.x < view.x0 - 260 || sg.x > view.x1 + 260 || sg.y < view.y0 - 260 || sg.y > view.y1 + 260) continue;
     const n = S.map.nodes[sg.node];
     if (sg.wire) { drawSpanWire(sg, n); continue; }
     {
@@ -4339,7 +4339,7 @@ function drawAtmMarks(view, now) {
   const cash = S.me && S.me.cash > 0;
   const wp = S.waypoint && S.waypoint.atm ? S.waypoint : null;
   for (const a of S.map.atms || []) {
-    if (a.x < view.x0 - 60 || a.x > view.x1 + 60 || a.y < view.y0 - 80 || a.y > view.y1 + 60) continue;
+    if (!a || a.x < view.x0 - 60 || a.x > view.x1 + 60 || a.y < view.y0 - 80 || a.y > view.y1 + 60) continue;
     const target = wp && Math.abs(wp.x - a.x) < 1 && Math.abs(wp.y - a.y) < 1;
     const near = Math.hypot(a.x - me.x, a.y - me.y) < 420;
     const bob = Math.sin(now * 2.6 + a.x * 0.01) * (target ? 6 : 2.5);

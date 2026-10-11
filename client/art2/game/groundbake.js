@@ -1151,7 +1151,7 @@ function propsNear(C, pad) {
 function parking(C, G) {
   const { M, b, seed } = C;
   for (const sp of M.parking || []) {
-    if (sp.x < C.X0 - 80 || sp.x > C.X0 + CHUNK + 80 || sp.y < C.Y0 - 80 || sp.y > C.Y0 + CHUNK + 80) continue;
+    if (!sp || sp.x < C.X0 - 80 || sp.x > C.X0 + CHUNK + 80 || sp.y < C.Y0 - 80 || sp.y > C.Y0 + CHUNK + 80) continue;
     const HL = 52, HW = 31;
     rect(C, sp.x, sp.y, Math.cos(sp.a), Math.sin(sp.a), HL, HW, (gi, u, w, gx, gy, i) => {
       if (!roadLike(b.mat[i])) return;
