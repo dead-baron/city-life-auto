@@ -225,7 +225,12 @@ export function devFarm(world, p, msg = {}) {
   const F = at.F, looks = [[0, 0, 0], [1, 0, 0], [2, 0, 0], [2, 0.2, 0], [2, 0.5, 0], [2, 0.85, 0], [3, 0, 0], [0, 0, 0x1f], [1, 0, 0x0f], [3, 0, 0x3f]];
   F.rows.forEach((row, r) => { const [s, g, m] = looks[r % looks.length]; row.s = s; row.g = g; row.m = m & row.ok; });
   F.dirty = true;
-  const [a] = rowEnds(F, Math.min(F.n - 1, 1));
+  let [a] = rowEnds(F, Math.min(F.n - 1, 1));
+  if (msg.k === 'combine' && F.n > 2) {   // (the combine: two ripe rows, its header over both)
+    for (const r of [1, 2]) { F.rows[r].s = ROW.RIPE; F.rows[r].m = 0; }
+    const [a1] = rowEnds(F, 1), [a2] = rowEnds(F, 2);
+    a = { x: (a1.x + a2.x) / 2, y: (a1.y + a2.y) / 2 };
+  }
   if (ped.vehId) { const old = world.get(ped.vehId); if (old) old.seats[old.seats.indexOf(ped.id)] = 0; ped.vehId = 0; ped.seat = -1; }
   const v = world.spawnVehicle(msg.k === 'combine' ? 'combine' : 'tractor', a.x, a.y, F.v ? Math.PI / 2 : 0, { npcOwned: false, paint: 0 });
   v.despawnable = false;

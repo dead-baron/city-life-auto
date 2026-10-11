@@ -8635,11 +8635,19 @@ The owner: "Have we added farm jobs and gardening mechanics yet?" - and wants bo
   rain, picked, eaten, sold; dying; a prize; someone else's yard; kept across a rejoin and grown meanwhile, caught up
   after a server's downtime; the plots sent), test/farming.test.js (the tractor's numbers; ploughing, sowing, growing,
   harvesting a row, the tick doing it, the rows sent; the contract from the counter: the tractor issued, entered without
-  a crime, paid by the row, the bonus, the return; the phone's job).
-- Playtest (headless, both renderers; scratchpad/h61): a garden at every stage and then ripe, the tractor down a row.
+  a crime, paid by the row, the bonus, the return; the phone's job; picking by hand into a crate the stand buys; the
+  combine harvesting two rows in a pass, not ploughing, its contract).
+- Playtest (headless, both renderers; scratchpad/h61): a garden at every stage and then ripe, the tractor down a row,
+  the combine harvesting two rows (stubble behind its header, the ripe crop ahead).
   What's wrong: the plots are placed by the map's tiles, not the painted lot - in the classic view one house's plots sat
   on its painted hedge (hence the margin now), and a patio or a pool painted on a lawn could still get one; art v2's
   yards can have bushes over them. The rows' texture reads busy at art v2's zoom (calmed a little). A tractor seen before
   the page has loaded farmart.js is the classic view's plain box until it has.
-- Not done (step 3): hand work in the rows at harvest time, the combine harvester (index 49 is free for it; art v2 has
-  its model). The fields' state isn't saved across a server restart (it starts again in its mix).
+- **The combine harvester** (vehicle 49: slower still, 1400 health; art v2's 'combine' model, the classic view's in
+  farmart.js): its header, at its front and two rows wide, harvests both rows under it as it goes; it only harvests.
+  The co-op's counter offers "Harvest: the co-op combine on the ripe rows" while something's ripe (the same contract,
+  harvest rows only: startWork's model 'combine').
+- **By hand at harvest time**: on foot in a ripe row the Act button picks the stretch you're on (walk along it); every
+  FARM.handPer stretches fill a Produce Box (FARM.handBox, $45) set down by you - the farm stand (any co-op counter) buys it
+  (jobs.js deliveryZoneFor), so does the grocery; picked clean (FARM.cover of it) the row's harvested.
+- Not done: the fields' state isn't saved across a server restart (it starts again in its mix); no NPC farm hands.
