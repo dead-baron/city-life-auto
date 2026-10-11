@@ -111,6 +111,9 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | The hub tabs along the top of the map and the pause menu: MAP, JOBS (the job board), PEOPLE (who's online), GEAR (your bag), SYS (the pause menu) | click | D-pad / stick to them, A | tap |
 | Dev teleport to any district, station or landmark | ` → 📍 Teleport (map or list) | Start → 🐞 Debug menu → 📍 Teleport | 🐞 → 📍 Teleport |
 | Dev spectator: free camera over the whole world, art layers, schematic view, PNG / hi-res PNG screenshots | ` → 🎥 Spectator; WASD / arrows fly (Shift faster), E / Q or wheel zoom, drag pans, C find me, P save PNG, H hide panel, Esc exit | Start → 🐞 Debug menu → 🎥 Spectator; left stick flies, RT / LT zoom, X save PNG, Y hide panel, B exit | 🐞 → 🎥 Spectator; drag to fly, pinch to zoom |
+| On fire (a blast, your car going up, a fire arrow, walking into a burning wreck or a campfire): dive-roll on the ground to put it out - running about puts it out more slowly, the water at once, the rain helps | Space (roll) | A | ROLL |
+| Dev: the tank (debug menu → 🔥 Fire, the tank & the Boom Tester): drive it like any vehicle (it turns on the spot), the turret follows your aim, fire the cannon | WASD · mouse · left click | Left stick · right stick · R3 (RT is the gas) | Left stick · aim stick · FIRE |
+| Dev: the Boom Tester (the same section, or the give menu): shoot it - the explosion picked goes off where the shot lands; reload steps through the kinds (small, medium, big, ultra, car, launch, pieces, wheel, tanker, truck, fire) | left click · R | RT · R3 | FIRE · RELOAD |
 
 ## Project layout
 

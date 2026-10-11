@@ -8166,3 +8166,70 @@ before, and each track laid along the land and none over a table's top, most wan
 Trail at most half on the snow, the fire lookout off it, no dry wash by a moved site's box), test/dmath.test.js,
 test/mapwindow.test.js: the relief test passes; the wild test's last run failed only its two snow checks as they were
 then (the trail 53 of 125 points on the snow against 35%, the camp in it) - eased to the above, not run again.
+
+## 2026-10-11 · Fire on people, the explosion tester and the tank (H58)
+
+The owner: "NPCs and players catch on fire if they are near an explosion or their vehicle blows up or they run into
+fire. NPCs run for it and either run off screen or run then stop, drop and roll, or they just fall to the ground and burn
+to death. If NPCs are near water there's a chance they'll run to the water and jump in to put themselves out. Rain makes
+the fire go out faster. Player characters: you want to roll on the ground to put yourself out, running around on fire
+makes you go out but a little slower, jumping in water puts you out immediately." - "Explosions debug happens when you
+press it in the debug menu but you can't see what's happening on screen because the debug menu is on top. Maybe this
+debug should be an item you shoot or something you can trigger while in game so we can test explosions as rapidly as we
+had before." - "Add a tank you can drive and shoot and blow things up with, can spawn in debug."
+
+- **Fire on people** (`server/systems/burning.js`; `shared/rules.js` BURN): someone alight has `ped.burnT` (the seconds
+  the fire has left, standing still in the dry) and takes BURN.dps a second (a player's grit divides it). What sets
+  people alight: a blast (`combat.blast` → `blastCatch`: likelier the nearer its heart), their vehicle blowing up with
+  them in it (`vehicles.js` blownOut: thrown clear on fire), a fire arrow (`combat.js` stepArrow), and brushing against
+  fire every few ticks - a burning vehicle or a fresh wreck, a lit campfire (not sitting by one), someone else alight.
+  It goes out by itself in BURN.secs (9 s), faster running about (x1.6), much faster dive-rolling on the ground (x9: a
+  couple of rolls), faster again in the rain (x2.2), and at once in the water (a hiss). Getting into a car or going
+  indoors puts it out. A player is told; the death screen says "Burned to death." (or "...set alight by" whoever).
+- **Burning NPCs** panic (`burning.js` npcCatch / npcStep; `npc.js` hands them over while `n.burn`): near water (380 px)
+  most run for it and jump in; otherwise a third run off as far as they can, a third run a moment and then stop, drop
+  and roll (down, rolling side to side, out in 2.4 s), a third stagger a few steps and fall, burning where they lie until
+  they die. Cops and medics just burn. Shaken, the ones who put it out run on a while.
+- **Seen and heard**: the burn bit rides in the ped record's parent field (its top bit: `net.js`; `main.js` strips it);
+  flames lick up the body (along it, lying down) and dark smoke rises - the pooled particles (`render/fx.js`), which both
+  renderers draw and art v2 lights; 'ignite' plays a whoomph and a scream, 'scream' every second or two while it burns,
+  the ambience's fire crackle follows the nearest one alight, 'douse' hisses.
+- **The Boom Tester** (`server/systems/boomtest.js`; `shared/items.js` boomtest, index 29 - the wire's last free weapon
+  index): a dev-only weapon in the give menu and the debug menu's new 🔥 section. Its shot flies like a rocket and sets
+  off the kind picked where it lands (on what it hits, or at the end of its range): small / medium / big / ultra blasts,
+  a car going up (its own plan), launched, blown apart, losing a burning wheel, a fuel tanker, an explosives truck, or a
+  burst of fire that sets people alight. The reload key steps through the kinds (BOOM_TEST_KINDS). The debug menu stays
+  closed while you test.
+- **The tank** (`server/systems/tank.js`; `shared/vehicles.js` tank, index 60 - clear of the fleet's run; `shared/rules.js`
+  TANK): on tracks - it turns on the spot and never slides (`shared/physics.js`: def.tracks), mass 14 (it shoves cars
+  aside), small arms barely scratch it (def.armor 0.06 in `vehicles.js` damageVehicle), a rocket or a shell takes a sixth
+  of it (def.rockets in `combat.blast`), and a chain reaction never sets it off by chance. Its turret turns to the
+  driver's aim at 2.4 rad/s on its own (it holds its bearing while the hull turns under it); the fire button sends a
+  shell every 1.8 s that flies 900 px and goes up where it lands - a blast that wrecks vehicles like a rocket's (the
+  projectile's `land` hook in `combat.js` stepProjectile, shared with the Boom Tester). The turret's angle from the hull
+  rides in the vehicle record's damage word's top byte (`tank.turretByte`). Art v2: the hull and the turret are their own
+  voxel models (`client/art2/vehicles.js` tank, tankturret; `actors.js` vehType: `d.tt`), the turret drawn over its pivot
+  at its own heading (`host.js` _turret); the classic view draws the tracks (treads running), the hull and the turret
+  (`main.js` drawTank). Sounds: a slow diesel under the tracks' rasp (`sound/vehicles.js` tank), the cannon's boom and
+  the breech's clang ('tankfire'). Debug only: the debug menu's 🔥 section spawns one; nobody sells it.
+- The debug menu's new section (`client/devcats.js`, last): the Boom Tester, a tank, set me on fire, people on fire
+  ahead of me (`dev.js` 'burn'), rain.
+
+Files: server/systems/burning.js (new), server/systems/boomtest.js (new), server/systems/tank.js (new), server/systems/combat.js
+(blast sets alight; fire arrows; the projectile's land hook; the tester's fire and reload; def.rockets; the death text),
+server/systems/npc.js (burning NPCs' steps), server/systems/vehicles.js (blown out on fire; a tank's armour),
+server/systems/players.js (the tank's cannon at the wheel), server/systems/explosions.js (no chance set-off for a tank),
+server/systems/campfires.js (fireIdx exported), server/net.js (the burn bit, the turret byte), server/world.js, server/dev.js
+('burn'), shared/rules.js (BURN, TANK, BOOM_TEST_KINDS), shared/items.js (boomtest), shared/vehicles.js (tank),
+shared/physics.js (tracks), client/main.js (the burn bit, burnFx, drawTank, the cannon flash), client/art2/vehicles.js,
+client/art2/game/actors.js, client/art2/game/host.js, client/sound/events.js, client/sound/ambience.js,
+client/sound/vehicles.js, client/devcats.js, README.md (controls), test/burning.test.js (new), test/tank.test.js (new).
+
+Tests: test/burning.test.js (a player alight: hurt, out by itself in BURN.secs, rolling < running < standing, the rain,
+the water at once and nobody catches in it; the wire's bit; burned to death, and by whom; a blast, a car blowing up with
+you in it, a fire arrow, a burning wreck, a campfire; NPCs' run / roll / fall, the rollers out and alive, the fallers
+dead, near water many run in), test/tank.test.js (turns on the spot where a car can't; the turret to the aim, the hull
+still, its angle on the wire; thirty rifle rounds a scratch; a shell flies and wrecks a car, one per reload; it shoves a
+car along; the Boom Tester's index, the reload stepping its kinds, a shot going up where it lands, every kind going off
+as it says), test/sound.test.js, test/gameplay.test.js, test/motorbikes.test.js, test/explosions.test.js,
+test/firebow.test.js, test/perf.test.js.
