@@ -23,7 +23,7 @@ const MAX_GAP = 160;     // tiles: the longest gap over water an avenue is bridg
 const END_SEA = 6 * 4;   // a cut road ends this far from the sea (chamfer quarter tiles: 6 tiles), room for its turnaround
 const SLIDE = 80;        // tiles: how far a canal bridge may move along the canal to stand on land at both ends
 
-export function joinPlace(lines, m, own) {
+export function joinPlace(lines, m, own, canal = false) {   // (canal: the place has the canal - its bridges are laid)
   const W = m.w, H = m.h;
   const tile = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx >= 0 && ty >= 0 && tx < W && ty < H ? ty * W + tx : -1; };
   const isLand = (x, y) => { const i = tile(x, y); return i >= 0 && !!own[i]; };
@@ -55,7 +55,7 @@ export function joinPlace(lines, m, own) {
   }
   // 2. the canal's bridges
   const streets = () => lines.filter((l) => l.lvl === 0 && l.pts.length >= 2 && !['hwy', 'ramp'].includes(l.kind));
-  for (const A of ARTERIALS.filter((q) => /^Canal /.test(q.name))) {
+  for (const A of canal ? ARTERIALS.filter((q) => /^Canal /.test(q.name)) : []) {
     let P = A.pts.map(([x, y]) => ({ x: x * TILE, y: y * TILE }));
     // (one whose ends aren't both on the land - Canal Bridge 6 lies along the canal's east mouth, where the land
     // layer's smoothed corners leave only water - moves along the canal, towards its middle, until they are: SLIDE)

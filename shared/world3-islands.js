@@ -186,7 +186,7 @@ export function islandOpts(key, asked = {}) {
       // (on the v3 land: the canal's bridges, the roads off the place cut at the shore, the railway left out - H21,
       // shared/world3-crossings.js)
       if (land3) {
-        m.islandBuild.crossings = joinPlace(lines, m, own);
+        m.islandBuild.crossings = joinPlace(lines, m, own, !!SK_ISLANDS.find((I) => I.key === key)?.canal);
         m.islandBuild.leftOut.push({ name: 'The railway', kind: 'rail', on: [] });
       }
     },

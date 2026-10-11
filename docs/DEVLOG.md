@@ -6874,7 +6874,9 @@ What it does (docs/WORLD-V3.md 8.4, "Step B, the crossings"):
   hero corner) placed onto tile centres or edges as today's, its patterns' pitches as they are, its hashes, wobbles and
   street names on today's coordinates read back. At scale 1 it is today's plan moved (Step A's test unchanged); at 1.15
   the block depths are today's (18 tiles, today's 19) with more streets (130 side-street pieces, today's 99) - but the
-  spacing along a row is still wider (32 tiles, today's 23): to find next.
+  spacing along a row is still wider (32 tiles, today's 23): the cells between the placed avenues are 15% wider but
+  hold the same number of streets (most are under two of their pattern's lengths), so the extra goes into each row's
+  last block - the row's walk wants to divide a placed cell into today's block lengths (8.4).
 
 Not done (time): the spacing along a row (above), and the east shore's designed waterfront (item 4: a park, piers, a
 marina - it has the polygon's shore, the coast drive and the promenade strip now, an unplanned strip between them).

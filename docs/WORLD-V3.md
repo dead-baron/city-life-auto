@@ -1696,8 +1696,12 @@ called from the island build's `lines` hook on the v3 land; `test/world3place.te
   back (`lx`, `ly`). Its lines aren't placed after it (map.js marks them). At scale 1 it is today's plan, moved (Step
   A's test, unchanged). At 1.15 the block depths are today's (the north-south pieces of the side streets between
   junctions: median 18 tiles, today's 19) and there are more streets (130 side-street pieces, today's 99). **Not yet
-  today's: the spacing along a row** (the east-west pieces: median 32 tiles, today's 23) - something in the row's walk
-  (`xsRow`: the carry-on from the row above, `clearOf`, the passages) still spaces them wider: to find next.
+  today's: the spacing along a row** (the east-west pieces: median 32 tiles, today's 23). The likely cause (from the
+  plan's numbers, not yet measured row by row): the cells between the placed avenues are 15% wider, and most hold only
+  1.5-2 of their pattern's lengths (the inner cells are 90-94 tiles today, `len` 44-80), so they take the same number
+  of north-south streets and the extra width goes into the last block of each row (today's 62 + 32 becomes 62 + 46)
+  rather than into another street. The fix wants the row's walk to divide a cell into blocks of today's mean length
+  when placed (`tf` only: scale 1 must stay today's), or a through street where a placed gap grows by a pitch.
 - **The numbers** (placed / the island build): land 256,920 tiles / 187,926 (x1.37), road edges 546 / 451, blocks
   219 / 161, buildings 484 / 316, POIs 228 / 201 (no stations: the railway), props 5,816 / 4,404; one road network.
 
@@ -1716,7 +1720,8 @@ core's blocks read as today's, more of them. What still looks wrong:
 - **The side streets along a row** are spaced wider than today's (above), so the blocks are longer east-west.
 
 **What's left** (next steps, in order):
-1. **The spacing along a row at today's** (above): the east-west pieces of the side streets are 1.4x today's.
+1. **The spacing along a row at today's** (above): the east-west pieces of the side streets are 1.4x today's - the
+   row's walk to divide a placed cell into today's block lengths.
 2. **The east shore's waterfront:** the land is the polygon's now, with the coast drive and the waterfront strip
    (promenade, palms, lamps) along it, but the plan doesn't reach it (today's `AREAS` stop at today's cut at Dry Creek)
    and nothing is designed: a waterfront park, the promenade, piers, a small marina - generated the way the districts
