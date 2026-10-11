@@ -45,6 +45,10 @@ export const WEAPONS = {
   // ---- end lights to carry ----
   // the fire bow: its arrows burn (combat.js stepArrow, rules.js FIRE_ARROW)
   firebow:  { i: 30, name: 'Emberfang Bow',   type: 'bow', dmg: 62, range: 560, speed: 900, spread: 0.012, cd: 0.3, mag: 1, reload: 0.85, quiet: true, fire: true, ammoName: 'fire arrows', starter: 8 },
+  // the explosion tester (H58, dev only: the debug menu's give list): its shot flies like a rocket and sets off the kind
+  // of explosion picked (the reload key steps through shared/rules.js BOOM_TEST_KINDS) where it lands - server boomtest.js
+  // (index 29: the last free one of the wire's five bits)
+  boomtest: { i: 29, name: 'Boom Tester (dev)', type: 'boomtest', range: 620, speed: 1100, cd: 0.3, dev: true },
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }

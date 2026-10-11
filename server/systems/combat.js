@@ -23,6 +23,7 @@ import * as explosions from './explosions.js';   // (chain reactions: task #398)
 import * as campfires from './campfires.js';
 import * as dance from './dance.js';
 import * as burning from './burning.js';   // (fire on people: H58)
+import * as boomtest from './boomtest.js';   // (the explosion tester: H58)
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -59,6 +60,7 @@ export function tryAttack(world, ped, aim) {
     ped.player.profile.weapons[w.id] = Math.max(0, (ped.player.profile.weapons[w.id] || 0) - 1);
     ped.player.meDirty = true;
   }
+  if (w.type === 'boomtest') { boomtest.fire(world, ped, w, aim); return true; }   // (the explosion tester: boomtest.js)
   if (w.type === 'rocket') {
     const sx = ped.x + Math.cos(aim) * 20, sy = ped.y + Math.sin(aim) * 20;
     const proj = world.spawnProjectile(ped.id, sx, sy, aim, 560, w.range, w.id);
@@ -541,8 +543,8 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
       // a rocket landing on / next to a vehicle's body destroys it outright (armored ones take two) - by its nearest
       // part, not its middle: the tail of a bus counts (task #402)
       if (rocket && fn > 0.25) {
-        const armored = ARMORED_VEHICLES.includes(e.def.id);
-        vehicles.damageVehicle(world, e, armored ? e.def.hp / ARMORED_ROCKETS + 1 : e.hp + 1, attacker, true, true);
+        const armored = e.def.rockets || (ARMORED_VEHICLES.includes(e.def.id) ? ARMORED_ROCKETS : 0);   // (def.rockets: a tank takes that many - tank.js)
+        vehicles.damageVehicle(world, e, armored ? e.def.hp / armored + 1 : e.hp + 1, attacker, true, true);
       } else vs.push([fn, fm, e]);
     } else if (e.kind === K.CRATE) {
       explosions.blastCrate(world, e, f, L, attacker);   // (a crate of explosives goes up too)
@@ -561,6 +563,7 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
 
 export function reload(world, ped) {
   const w = WEAPONS[ped.weapon];
+  if (w && w.type === 'boomtest') { boomtest.nextKind(world, ped); return; }   // (the explosion tester: the next kind)
   if (!w || !w.mag || !ped.player) return;
   const total = ammoOf(ped, w.id);
   if ((ped.mag[w.id] || 0) >= Math.min(w.mag, total)) return;
@@ -685,6 +688,7 @@ function stepProjectile(world, p, dt) {
     const t = hit.hitT < 1 ? hit.hitT : 1;
     const ex = p.x + (nx - p.x) * t, ey = p.y + (ny - p.y) * t;
     const w = WEAPONS[p.weapon];
+    if (p.land) { p.land(world, p, ex, ey, owner); world.remove(p); return; }   // (a tank's shell, the explosion tester's shot: tank.js, boomtest.js)
     world.emit(ex, ey, { e: 'explode', x: ex, y: ey, r: w.radius, s: 1 + Math.floor(world.rand() * 2147483646) });   // (s: the seed every client plays the same blast from)
     blast(world, ex, ey, w.radius, w.dmg, owner, 0, true, p.lz || 0);
     world.remove(p);

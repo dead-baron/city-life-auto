@@ -72,6 +72,12 @@ export const VEHICLES = {
   trike:     { i: 42, name: 'Tribuck Trike',    kind: 'bike', L: 60,  W: 38, max: 560, accel: 330, brake: 680, rev: 80,  turn: 2.6, grip: 11,  drift: 3.4, mass: 0.9, hp: 160, seats: 2, slots: [[-26, 0]], price: 8600, rough: 1.1, seat: 4, stable: true, sprite: 'bike', moto: 'cruiser', blurb: 'three wheels: never throws you off' },
   ratbike:   { i: 43, name: 'Rustbucket',       kind: 'bike', L: 54,  W: 22, max: 600, accel: 420, brake: 640, rev: 70,  turn: 3.0, grip: 10,  drift: 3.4, mass: 0.6, hp: 140, seats: 1, slots: [[-20, 0]], price: 2200, rough: 0.8, seat: -3, sprite: 'bike', moto: 'cruiser', blurb: 'wire, rust and leather bags: goes anywhere' },
   bagger:    { i: 44, name: 'Saddlebag King',   kind: 'bike', L: 58,  W: 26, max: 640, accel: 370, brake: 700, rev: 70,  turn: 2.8, grip: 10.5, drift: 3.2, mass: 0.75, hp: 140, seats: 2, slots: [[-24, 0]], price: 8800, rough: 1.1, seat: -2, sprite: 'bike', moto: 'cruiser', blurb: 'batwing fairing, hard bags' },
+  // ---- the tank (H58; the owner: "Add a tank you can drive and shoot and blow things up with, can spawn in debug"): on
+  // tracks (it turns on the spot and never slides: shared/physics.js), heavy enough to shove cars aside, a turret that
+  // turns to the driver's aim and fires shells that go up where they land (server tank.js; shared/rules.js TANK). Small
+  // arms barely scratch it (armor: their damage multiplied by it); rockets: a rocket or a shell takes 1/rockets of it.
+  // Debug only for now - nobody sells one. (i 60: clear of the fleet's run of indexes.)
+  tank:      { i: 60, name: 'Ironclad Battle Tank', kind: 'car', L: 150, W: 80, max: 270, accel: 150, brake: 700, rev: 170, turn: 1.25, grip: 16, drift: 14, mass: 14, hp: 3000, seats: 1, slots: [[-62, 0]], tracks: true, turret: true, armor: 0.06, rockets: 6, rough: 0.15 },
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);

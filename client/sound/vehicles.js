@@ -38,6 +38,8 @@ const P = {
   scooter: { f0: 60, f1: 190, gears: 1, wave: 'buzz', sub: 0.1, noise: 0.24, nf: 3600, lp0: 900, lp1: 3000, q: 2, am: 0.3, amr: 1, vol: 0.26, horn: [784, 988], hw: 'square' },
   twostroke: { f0: 48, f1: 260, gears: 4, wave: 'buzz', sub: 0.12, noise: 0.34, nf: 3000, lp0: 1000, lp1: 4600, q: 5, am: 0.5, amr: 1, vol: 0.34, horn: [698, 880], hw: 'square' },
   thumper: { f0: 30, f1: 150, gears: 5, wave: 'saw8', sub: 0.5, noise: 0.2, nf: 1400, lp0: 450, lp1: 2600, q: 2.5, am: 0.55, amr: 1, vol: 0.36, horn: [587, 740], hw: 'square' },
+  // the tank (H58): a big slow diesel under the clank and squeal of its tracks (the rasp, beating hard)
+  tank: { f0: 12, f1: 52, gears: 3, wave: 'saw8', sub: 1, noise: 0.5, nf: 1100, lp0: 160, lp1: 900, q: 1.6, am: 0.9, amr: 1, vol: 0.55, horn: [98, 123], hw: 'saw8' },
 };
 export const ENGINE_CLASS = {
   compact: 'small', sedan: 'sedan', taxi: 'sedan', sports: 'sports', pickup: 'muscle', flatbed: 'truck', van: 'van', bus: 'bus',
@@ -47,6 +49,7 @@ export const ENGINE_CLASS = {
   bicycle: 'pedal', cruiser: 'pedal', mtb: 'pedal', roadbike: 'pedal', bmx: 'pedal', cargobike: 'pedal',
   vtwin: 'vtwin', tourer: 'vtwin', chopper: 'vtwin', bobber: 'vtwin', bagger: 'vtwin', trike: 'vtwin', ratbike: 'vtwin',
   caferacer: 'thumper', dirtbike: 'twostroke', scooter: 'scooter',
+  tank: 'tank',
 };
 export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', rescueboat: 'ambulance', rescue4x4: 'ambulance', firetruck: 'fire' };
 const AIR_BRAKES = new Set(['truck', 'bus']);

@@ -11,6 +11,7 @@ import { ugMapOf } from '../shared/underground.js';
 import * as wildlife from './systems/wildlife.js';
 import * as players from './systems/players.js';
 import * as vehicles from './systems/vehicles.js';
+import * as tank from './systems/tank.js';
 import { blinkState } from './systems/homes.js';
 import { bagWireTier, bagBlinks } from './systems/cargo.js';
 import { netRect, NET_KEEP } from './view.js';
@@ -59,8 +60,8 @@ function fields(world, e) {
     // (a vehicle on a tow truck's hook: extra bits 0-1 the end up on the wheel lift - 1 its nose, 2 its tail - and bit 2
     // still being winched up: tow.js; the clients draw it tilted)
     // (parent: the damage you can see - its stage, the sides it's dented on, bullet holes, the parts off, a plasma cut:
-    // vehicles.js vehDamageWord, shared/vehicles.js packVehDamage - task #402)
-    case K.VEH: return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), vehicles.vehDamageWord(world, e), e.towedBy ? (e.towEnd === -1 ? 2 : 1) | (e.towFrom ? 4 : 0) : 0];
+    // vehicles.js vehDamageWord, shared/vehicles.js packVehDamage - task #402; a tank's top byte: its turret's angle from the hull, tank.js)
+    case K.VEH: return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), (vehicles.vehDamageWord(world, e) | (e.def.turret ? tank.turretByte(e) << 24 : 0)) >>> 0, e.towedBy ? (e.towEnd === -1 ? 2 : 1) | (e.towFrom ? 4 : 0) : 0];
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
     case K.BAG: return [bagBlinks(world, e) ? 1 : 0, 1, 0, bagWireTier(e)];   // flags 1: about to vanish (it blinks)
     case K.PROJ: return [0, 1, 0, 0];

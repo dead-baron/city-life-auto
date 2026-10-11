@@ -123,4 +123,11 @@ export const DEV_SECTIONS = [
     ['🚗 Rear-ended (crumpled back)', 'vdmg', { s: 3, z: 2 }], ['🚗 Engine dead (door hanging, then fire)', 'vdmg', { s: 4 }], ['🔫 Shot up', 'vdmg', { s: 'shot' }],
     ['🗡 Cut in two (plasma blade)', 'vdmg', { s: 'cut' }], ['🛻 Pickup at its worst', 'vdmg', { s: 4, m: 'pickup' }], ['🚐 Van at its worst', 'vdmg', { s: 4, m: 'van' }],
   ] },
+  // fire on people, the tank, the explosion tester (H58: server burning.js, tank.js, boomtest.js)
+  { id: 'fire', title: '🔥 Fire, the tank & the Boom Tester', items: [
+    ['🧨 Boom Tester (shoot it: the blast where it lands; reload picks the kind)', 'give', { kind: 'weapon', id: 'boomtest', n: 1 }],
+    ['🪖 A tank (drive; the turret follows your aim; fire the cannon)', 'car', { m: 'tank' }],
+    ['🔥 Set me on fire (roll, run or find water)', 'burn', { k: 'me' }], ['🔥 People on fire ahead of me', 'burn', { k: 'crowd' }],
+    ['🌧 Rain (fires go out faster)', 'rain'],
+  ] },
 ];

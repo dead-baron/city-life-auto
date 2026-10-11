@@ -229,7 +229,7 @@ export function toughOf(def) { return def.kind === 'bike' ? VEHICLE_TOUGH.bike :
 // zone (shared/vehicles.js VZ): the side it was hit on, for the dents the clients draw there (task #402).
 export function damageVehicle(world, v, amount, attackerPed, raw = false, boom = false, zone = 0) {
   if (v.wreckAt || amount <= 0 || v.ferry) return;   // (the ferries can't be hurt: ferries.js)
-  const dmg = raw ? amount : amount / toughOf(v.def);
+  const dmg = (raw ? amount : amount / toughOf(v.def)) * (v.def.armor && !raw && !boom ? v.def.armor : 1);   // (a tank's armour: small arms barely scratch it - tank.js)
   if (attackerPed) v.lastAttacker = attackerPed.id;
   if (zone) noteHit(v, zone, dmg);
   if (v.dead) {

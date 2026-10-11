@@ -61,6 +61,7 @@ import * as bikers from './systems/bikers.js';
 import * as streetlife from './systems/streetlife.js';
 import * as activities from './systems/activities.js';
 import * as burning from './systems/burning.js';
+import * as tank from './systems/tank.js';
 import * as bowling from './systems/bowling.js';
 import * as cinema from './systems/cinema.js';
 import * as net from './net.js';
@@ -131,6 +132,7 @@ const SYSTEMS = [
   ['cinema', cinema.update],        // The Grand Theatre: the films in the screens, the audience
   ['activities', activities.update], // people going about their lives: anglers, chess in the park, picnics, a painter (activities.js)
   ['burning', burning.update],      // people on fire: burning down, going out, catching it from fire (H58)
+  ['tank', tank.update],            // the tanks' turrets turning to their drivers' aim (H58)
 ];
 
 export class World {
