@@ -19,14 +19,16 @@ test('World v3: the whole world in one build - every gulf place, the small islan
   for (const [k, [land, edges, blds, pois]] of Object.entries(alone)) {
     const r = rows[k];
     assert.ok(Math.abs(r.land - land) <= land * 0.001, `${k}: land ${r.land}, alone ${land}`);
-    assert.ok(r.edges >= edges * 0.9 && r.edges <= edges * 1.15, `${k}: road edges ${r.edges}, alone ${edges}`);
+    // (more edges than alone: the skeleton's roads cross the places and meet their streets - 8.7: Westport 373 / 320,
+    // the airport 26 / 19 with Airport Road and Runway Road)
+    assert.ok(r.edges >= edges * 0.9 && r.edges <= Math.max(edges * 1.3, edges + 10), `${k}: road edges ${r.edges}, alone ${edges}`);
     assert.ok(r.buildings >= blds * 0.9 && r.buildings <= blds * 1.15, `${k}: buildings ${r.buildings}, alone ${blds}`);
     assert.ok(r.pois >= pois * 0.9 && r.pois <= pois * 1.2, `${k}: POIs ${r.pois}, alone ${pois}`);
   }
   // Pelican Key, Northshore and Gull Harbor (scale 1) have their streets and buildings; the other small islands their land
   for (const k of ['pelican', 'northshore', 'gull']) assert.ok(rows[k].edges > 5 && rows[k].buildings > 5, `${k}: ${JSON.stringify(rows[k])}`);
   for (const k of ['coral', 'paradise', 'lighthouse', 'smuggler']) assert.ok(rows[k].land > 1000, `${k}: ${rows[k].land} land tiles`);
-  // the mainland: its ground dressed (trees, rocks, scrub), no streets of its own yet
+  // the mainland: its ground dressed (trees, rocks, scrub); its roads are the skeleton's (test/world3roads.test.js)
   assert.ok(rows.mainland.land > 10e6, `mainland land ${rows.mainland.land}`);
   assert.ok(rows.mainland.props > 100000, `mainland props ${rows.mainland.props}`);
   // everything in the frame: what no piece builds went off it and was dropped

@@ -7137,21 +7137,31 @@ What it does (docs/WORLD-V3.md 8.7 has the details):
   and the three closures (the Valley and Desert Highways' north portals, the Coast Highway's east portal): a tunnel
   whose mouth at the frame's edge is closed by a barrier.
 - Joined up: the arterials cross the places' streets at grade, the generator's repair joins the ends to the nearest
-  road, and an end that meets no road is carried on over land to the nearest within 160 tiles (the West Sea Road at
-  both ends, the Toll Point Bridge). An arterial that ends at a highway's bore stops short (Kestrel Road ends on the
-  North Highway inside its tunnel: the skeleton's junction there is underground - for the owner).
+  road, and an end that meets no road is carried on over land to the nearest within 160 tiles (the gulf crossings'
+  ends into the places' streets, the West Sea Road at both ends) - but an end at a landmark (the Granite Lookout, Red
+  Rock Dam) stays the landmark's dead end. A highway that ends at an interchange ends on the other highway's path (its
+  250 m arc passes a few tiles off the control point: the Highland Highway stopped 9 tiles short of the Coast Highway
+  at Westport Junction); the Bay Ring's ends cut on a place's land go on into its streets as avenues. An arterial
+  that ends at a highway's bore stops short (Kestrel Road ends on the North Highway inside its tunnel: the skeleton's
+  junction there is underground - for the owner).
 - The network: one piece of 1,010 of the build's 1,015 junctions; the other 5 are Coral Cay's lanes (boats only).
 - `tools/world3-world-map.mjs` draws the roads over the tiles (highways orange, the deck light orange, the arterials
-  white, the bores dark red), and its region bake no longer takes a chunk with a bridge over the sea for open sea.
+  white, the bores dark red), and its region bake no longer takes a chunk with a bridge over the sea for open sea (it
+  reused the sea's pixels there, which left the bridges out of the picture).
 - The live world is unchanged: the world hash stays `6b6e16fdef9f`; the page and the city worker never import the
   new module.
 
-Not done (next): the main line (MAIN_LINE, double track, the junctions and stations - 8.4 left the railway out of the
-places), ramps at the towns' interchanges (an arterial meets a highway at grade there), a lifting span for the lift
-bridges and a people-only kind for the footbridges, the Harbor Tunnel's walls (a bore under the sea stands its rock
-walls in the water).
+Not done (next, 8.7's list): the main line (MAIN_LINE, double track, the junctions and stations - 8.4 left the
+railway out of the places), the interchanges' ramps (the highways meet at grade, and an arterial meets a highway at
+grade at a town), a lifting span for the lift bridges and a people-only kind for the footbridges, a tunnel under
+water drawn as one (the client draws a hill over the Harbor Tunnel's bore, and the bore's rock walls stand in the
+channel: walls only on land is a one-line change in `shared/tunnels.js`, left for the next art change since that
+file is in the art's hash - for the owner), Kestrel Road's junction, the roads of
+Toll Point and the Egret Coast (the Toll Point Bridge's and the Port Bridge's far ends are loose).
 
-The files: `shared/world3-roads.js` (new), `shared/world3-world.js` (the two calls), `tools/world3-world-map.mjs`,
-`test/world3roads.test.js` (new), `docs/WORLD-V3.md` 8.7, `docs/world-v3-world.png`, `docs/world-v3-world-r4-3.png`.
+The files: `shared/world3-roads.js` (new), `shared/world3-world.js` (the two calls), `tools/world3-world-map.mjs`, `test/world3roads.test.js` (new), `test/world3world.test.js` (a place's road edges
+up to 1.3x its single build's, or 10 more: the skeleton's roads cross it), `docs/WORLD-V3.md` 8.7, `docs/world-v3-world.png`,
+`docs/world-v3-world-r4-3.png`.
 
-Tests: `test/world3roads.test.js` (new: one world build, about 70 s), `test/world3.test.js`.
+Tests: `test/world3roads.test.js` (new: one world build, about 70 s), `test/world3world.test.js`, `test/world3.test.js`
+(today's world still the stamped one), the guards of `test/dmath.test.js` and `test/mapwindow.test.js`.
