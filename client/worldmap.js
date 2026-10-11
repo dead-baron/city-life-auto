@@ -289,6 +289,7 @@ class WorldMap {
         plateText(g, x, y - 14, q.n, 11, '#c8ffd8', false);
       }
       if (me.job && me.job.veh) { const [x, y] = P(me.job.veh[0], me.job.veh[1]); g.fillStyle = '#3cff8a'; g.strokeStyle = '#0a0f1d'; g.lineWidth = 2.5; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke(); drawIcon(g, 'car', x, y - 18, 14); }   // (the job's truck)
+      if (me.job && me.job.area) { const [x, y] = P(me.job.area[0], me.job.area[1]), r = Math.max(8, me.job.area[2] * sc); g.fillStyle = 'rgba(255,170,40,.16)'; g.strokeStyle = '#ffae2a'; g.lineWidth = 2; g.setLineDash([6, 4]); g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill(); g.stroke(); g.setLineDash([]); plateText(g, x, y - r - 10, 'SEARCH AREA', 11, '#ffd08a', true); }   // (a rescue call: server sar.js)
       if (me.job) { const [x, y] = P(me.job.x, me.job.y); g.fillStyle = '#ffd34a'; g.strokeStyle = '#0a0f1d'; g.lineWidth = 2.5; g.beginPath(); g.arc(x, y, 8, 0, 6.28); g.fill(); g.stroke(); drawIcon(g, 'jobs', x, y - 20, 16); }
       // police / bounty intel (the server already applies the visibility rules)
       for (const r of me.radar || []) {

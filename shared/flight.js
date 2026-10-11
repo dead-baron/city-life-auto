@@ -63,6 +63,8 @@ export function tileTop(m, tx, ty) {
   if (!m.inside(tx, ty)) return 0;
   const t = m.tileAt(tx, ty);
   if (t === T.BUILDING) { const b = m.bld[m.idx(tx, ty)]; return b >= 0 ? bldTop(m, m.buildings[b]) : 200; }
+  // a walk-in building's floor (a hospital, a shop): its roof is over it - the hospitals' roof pads are up there (H59)
+  if (t === T.FLOOR || t === T.COUNTER) { const b = m.bld[m.idx(tx, ty)]; return b >= 0 ? bldTop(m, m.buildings[b]) : 0; }
   if (t === T.WALL) return 60;
   return 0;
 }

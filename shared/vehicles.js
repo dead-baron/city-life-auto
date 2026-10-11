@@ -88,6 +88,9 @@ export const VEHICLES = {
   // arms barely scratch it (armor: their damage multiplied by it); rockets: a rocket or a shell takes 1/rockets of it.
   // Debug only for now - nobody sells one. (i 47: the next free index after the fleet's; 60-63 are the aircraft.)
   tank:      { i: 47, name: 'Ironclad Battle Tank', kind: 'car', L: 150, W: 80, max: 270, accel: 150, brake: 700, rev: 170, turn: 1.25, grip: 16, drift: 14, mass: 14, hp: 3000, seats: 1, slots: [[-62, 0]], tracks: true, turret: true, armor: 0.06, rockets: 6, rough: 0.15 },
+  // ---- the search-and-rescue helicopter (H59: server/systems/sar.js issues one to a rescue pilot): red and white, a
+  // winch and its harness by the side door (hoist: the clients draw the cable). (i 64: the next free aircraft index)
+  rescueheli: { i: 64, name: 'Lifeline Rescue Helicopter', kind: 'air', air: 'heli', L: 156, W: 56, max: 740, accel: 350, brake: 400, rev: 0, turn: 2.0, grip: 8, drift: 2, mass: 1.7, hp: 420, seats: 4, slots: [[-36, 0]], climb: 175, sink: 205, ceiling: 1000, rotor: 78, hoist: true, livery: 'rescue' },
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);

@@ -5,7 +5,7 @@
 import { K } from '../../shared/constants.js';
 import { PED_BLOCK, DISTRICTS } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S, WORK_TRUCK_RETURN } from '../../shared/rules.js';
+import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S, WORK_TRUCK_RETURN, SAR } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
 import * as events from './events.js';
@@ -16,6 +16,7 @@ import * as bounties from './bounties.js';
 import * as transit from './transit.js';
 import * as ferries from './ferries.js';
 import * as dance from './dance.js';
+import * as sar from './sar.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -161,6 +162,8 @@ export function boardFor(world, p) {
   const farm = p.ped ? nearestFarm(world, p) : world.map.pois.find((q) => q.kind === 'farm');
   const list = (world.jobBoard || []).filter((j) => j.kind === 'delivery' || (j.kind === 'patrol' && p.badge)).map((j) => describe(world, j));
   if (farm) list.push({ id: 'farm', kind: 'farm', pay: 4 * 140 + 200, title: 'Harvest contract at ' + farm.label, x: farm.x, y: farm.y });
+  const base = sar.baseFor(world, p);   // search & rescue pilot: a shift of rescue calls from the nearest hospital (sar.js)
+  if (base) list.push({ id: 'sar', kind: 'sar', fly: true, icon: '🚁', sub: 'rescue calls: the lost, the hurt, the stranded - a rescue helicopter is issued', pay: SAR.base + 2 * SAR.perKm, title: `Search & rescue pilot - a shift from ${base.name}`, x: base.x, y: base.y });
   return { t: 'board', jobs: list, job: p.job ? { text: p.job.text, type: p.job.type } : null, saw: law.sawList(world, p) };
 }
 
@@ -207,6 +210,7 @@ function take(world, p, id) {
   if (!p.ped || p.ped.dead) return 'Not right now.';
   if (p.job) return 'You already have a job - cancel it first.';
   if (id === 'farm') return jobs.startFarm(world, p, nearestFarm(world, p));
+  if (id === 'sar') return sar.start(world, p, sar.baseFor(world, p));
   const j = (world.jobBoard || []).find((q) => q.id === Number(id));
   if (!j) return 'That job was taken.';
   if (j.kind === 'patrol') {
@@ -235,6 +239,7 @@ export function jobTarget(world, p) {
 }
 const truckMark = (p, v) => (p.ped && p.ped.vehId === v.id ? null : [Math.round(v.x), Math.round(v.y)]);
 function target(world, p, j) {
+  if (j.type === 'sar') return sar.target(world, p, j);   // (the search circle, the flare, the harness: sar.js)
   if ((j.type === 'courier' || j.type === 'farm') && j.crates && j.crates.length) {
     const waiting = j.crates.map((id) => world.get(id)).filter((c) => c && c.kind === K.CRATE && c.state === 'ground' && !c.touched);
     if (waiting.length === j.crates.length) {

@@ -63,6 +63,7 @@ import * as devmode from '../devmode.js';
 import * as underground from './underground.js';
 import * as dance from './dance.js';
 import * as safety from './safety.js';
+import * as sar from './sar.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -526,7 +527,7 @@ export function findInteraction(world, p) {
       const spot = jobs.boatFishingSpot(world, ped);
       if (spot) return { label: 'Fish offshore (deep-sea)', run: () => jobs.castLine(world, p, spot) };
     }
-    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p);
+    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p);
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
@@ -624,6 +625,8 @@ export function findInteraction(world, p) {
   if (lane) return lane;
   const seat = cinema.interaction(world, p);   // (The Grand Theatre's screens: server/systems/cinema.js)
   if (seat) return seat;
+  const rescue = sar.interaction(world, p);   // a hospital's helipad: sign on as a rescue pilot (sar.js)
+  if (rescue) return rescue;
 
   if (p.profile.weapons.rod !== undefined) {
     const spot = jobs.fishingSpot(world, ped);

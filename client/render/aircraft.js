@@ -37,6 +37,8 @@ export function drawAir(g, F, S, dt, v2 = false) {
   const sky = F.sky, sun = sky && sky.sunDir ? sky.sunDir : { x: 0.55, y: 0.83 };
   const now = F.now;
   drawPads(g, F, S, v2);
+  const job = S.me && S.me.job;
+  if (job && job.flare) drawFlare(g, job.flare, now);   // (a rescue call: they're found - server sar.js)
   for (const v of list) {
     const def = VEHICLE_BY_INDEX[v.d.m];
     if (!def) continue;
@@ -68,6 +70,7 @@ export function drawAir(g, F, S, dt, v2 = false) {
     g.filter = 'none';
     g.restore();
   }
+  if (job && job.hoist) drawHoist(g, job.hoist, list, dt, now);
 }
 
 function silhouette(g, def, v) {
@@ -171,4 +174,43 @@ function drawPads(g, F, S, v2) {
     if (p.kind === 'hospital') { g.fillStyle = '#d8382e'; g.fillRect(r - 22, -r + 10, 12, 4); g.fillRect(r - 18, -r + 6, 4, 12); }
     g.restore();
   }
+}
+
+// ---- search and rescue (server sar.js; the job target's flare and hoist) ------------------------------------------------
+// The smoke flare by someone found out in the wild: a red glow on the ground and orange smoke rising, drifting off.
+function drawFlare(g, [x, y], now) {
+  g.save();
+  for (let i = 0; i < 14; i++) {
+    const ph = (now * 0.32 + i / 14) % 1, r = 6 + ph * 36;
+    g.globalAlpha = (1 - ph) * 0.5;
+    g.fillStyle = i % 3 ? '#ff7a3c' : '#ffa060';
+    g.beginPath(); g.arc(x + ph * 80 + Math.sin(now * 1.3 + i * 2.1) * 9 * ph, y - ph * 170, r, 0, Math.PI * 2); g.fill();
+  }
+  g.globalAlpha = 0.25; g.fillStyle = '#ff3020'; g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.fill();
+  g.globalAlpha = 0.7 + 0.3 * Math.sin(now * 23); g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+// The harness: [the helicopter's id, the cable paid out (px), clipped on, where they are]. Seen from above, the cable
+// hangs out of the side door, its drawn length growing as it pays out (reaching for them when they're beside it); its
+// yellow harness ring at the end - them hanging in it, swaying, once they're clipped on and winched up.
+function drawHoist(g, h, list, dt, now) {
+  const v = list.find((q) => q.id === h[0]), def = v && VEHICLE_BY_INDEX[v.d.m];
+  if (!def) return;
+  const k = 1 + Math.min(0.5, altOf(v, 0) / 1600), c = Math.cos(v.ra), s = Math.sin(v.ra);
+  const dx = v.rx + (c * def.L * 0.1 - s * def.W * 0.5) * k, dy = v.ry + (s * def.L * 0.1 + c * def.W * 0.5) * k;
+  v._cable = v._cable === undefined ? h[1] : v._cable + (h[1] - v._cable) * Math.min(1, dt * 8);
+  const len = 8 + v._cable * 0.4;
+  let ax = -s, ay = c;
+  if (!h[2]) { const tx = h[3] - dx, ty = h[4] - dy, d = Math.hypot(tx, ty); if (d > 1 && d < len * 1.6) { ax = tx / d; ay = ty / d; } }
+  const sw = Math.sin(now * 2.3) * (h[2] ? 0.18 : 0.08), ex = dx + (ax * Math.cos(sw) - ay * Math.sin(sw)) * len, ey = dy + (ay * Math.cos(sw) + ax * Math.sin(sw)) * len;
+  g.save();
+  g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 3; g.beginPath(); g.moveTo(dx + 6, dy + 8); g.lineTo(ex + 6 + len * 0.3, ey + 8 + len * 0.3); g.stroke();   // (its shadow)
+  g.strokeStyle = '#202226'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(dx, dy); g.lineTo(ex, ey); g.stroke();
+  g.fillStyle = '#3a3c40'; g.fillRect(dx - 4, dy - 4, 8, 8);   // (the winch arm over the door)
+  if (h[2]) {   // them, in the harness: an orange survival suit, arms up on the strop
+    g.fillStyle = '#ef7a1a'; g.beginPath(); g.ellipse(ex, ey + 4, 6, 9, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#e2b48c'; g.beginPath(); g.arc(ex, ey - 6, 4.5, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#ffd21f'; g.lineWidth = 2; g.beginPath(); g.arc(ex, ey + 2, 7, 0, Math.PI * 2); g.stroke();
+  } else { g.strokeStyle = '#ffd21f'; g.lineWidth = 3; g.beginPath(); g.arc(ex, ey, 6, 0, Math.PI * 2); g.stroke(); }
+  g.restore();
 }
