@@ -38,6 +38,9 @@ export const config = {
   allowedOrigins: (process.env.CLA_ORIGINS || '*').split(',').map((s) => s.trim()).filter(Boolean),
   saveIntervalMs: 5000,
   npcBudget: Number(process.env.CLA_NPC_BUDGET || 700),
+  // The world the server runs: today's (default - the live deploy never sets it) or 'v3', World v3's whole world built
+  // here (server/world3.js: about 25 s and 1 GB more at start; docs/WORLD-V3.md 8.9) - for trying it locally and in tests.
+  world: process.env.CLA_WORLD === 'v3' ? 'v3' : 'today',
   // What happens to a player the first time they come back after an update (a new build: version.json,
   // stamped on every commit): 'spawn' (default) - a fresh start at a spawn point (their home if they
   // picked one, else a hospital): on foot, not wanted, nothing carried, full health, progress kept;

@@ -54,7 +54,7 @@ export function init(world) {
   world.trains = [];
   world.xing = [];
   const rail = world.map.rail;
-  if (!rail) return;
+  if (!rail || !rail.stations || !rail.stations.length) return;   // (no railway: World v3's isn't laid yet)
   const sts = rail.stations;
   world.railTiming = buildTiming(rail);
   // As many trains as it takes for one to reach each station about every TRAIN_HEADWAY_S, spread

@@ -216,6 +216,7 @@ function onText(m) {
   switch (m.t) {
     case 'welcome':
       loadMark('welcome');
+      if (worldChanged(m)) break;   // (the server runs another world than the one this page asked its city worker for)
       if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
       try { localStorage.setItem('cla.seed', String(m.seed >>> 0)); } catch { /* storage blocked */ }
       S.welcomed = true; S.pid = m.pid; S.dev = !!m.dev;
@@ -916,6 +917,17 @@ function holdForCity(m) {
     job.promise.then((data) => { job.map = cityFromData(data); }, (e) => { console.warn('[city] the worker could not build it - building it here', e); job.failed = true; })
       .then(releaseHeld);
   }
+  return true;
+}
+// The world the server runs - welcome.world 'v3' when it runs World v3 (CLA_WORLD=v3: server/world3.js, never live) -
+// isn't the one boot.js asked the city worker for (it reads 'cla.world' back): remember it and load the page again.
+function worldChanged(m) {
+  const want = m.world === 'v3' ? 'v3' : '';
+  let had;
+  try { had = localStorage.getItem('cla.world') || ''; } catch { return false; }
+  if (want === had) return false;
+  try { if (want) localStorage.setItem('cla.world', want); else localStorage.removeItem('cla.world'); } catch { return false; }
+  location.reload();
   return true;
 }
 // the city from the worker is in, for this seed

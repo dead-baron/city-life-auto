@@ -99,7 +99,8 @@ async function freshen() {
 function startWorld() {
   if (typeof Worker === 'undefined') return null;
   const seed = (Number(lsGet(SEED)) >>> 0) || 1337;
-  const key = META && META.world ? `${META.world}:${seed}` : null;
+  const v3 = lsGet('cla.world') === 'v3';   // (the server ran World v3 last time - CLA_WORLD=v3, never live: main.js worldChanged)
+  const key = META && META.world ? `${META.world}${v3 ? '-v3' : ''}:${seed}` : null;
   let w;
   try { w = new Worker(new URL('./worldgen.js', import.meta.url), { type: 'module', name: 'city' }); } catch { return null; }
   const job = { seed, key, from: null, ms: 0, stored: null, worker: w };
@@ -115,7 +116,7 @@ function startWorld() {
     w.onerror = (e) => { rej(new Error((e && e.message) || 'the city worker failed')); w.terminate(); };
   });
   job.promise.catch(() => {});
-  const post = (base) => { try { w.postMessage({ seed, key, keep: BOOT.fresh, base }); } catch { fail(new Error('the city worker could not start')); w.terminate(); } };
+  const post = (base) => { try { w.postMessage({ seed, key, keep: BOOT.fresh && !v3, base }); } catch { fail(new Error('the city worker could not start')); w.terminate(); } };
   if (!key || navigator.onLine === false || /[?&]worldcdn=0\b/.test(location.search)) post(null);
   else import('./config.js').then(({ serverUrl }) => { const u = new URL(serverUrl()); post(`${u.protocol === 'wss:' ? 'https:' : 'http:'}//${u.host}/world/`); }).catch(() => post(null));
   return job;
