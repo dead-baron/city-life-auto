@@ -13,6 +13,7 @@ import { railIndex, drawRailChunk, drawStation, drawPortals, drawRailSwitches, d
 import { drawRoads, edgeRect, drawGores } from './roads.js';
 import { Shores } from './shore.js';
 import { drawCountryProp, drawQuarry, drawRaceway } from './country.js';
+import { drawTownLook, drawTownKit } from './townart.js';   // (H40: World v3's small towns' own buildings and yards)
 import { LOW_MEM, freeCanvas, capSet } from '../platform.js';
 import { flora, FLORA_PROPS } from './flora/index.js';
 
@@ -128,6 +129,7 @@ export class GroundCache {
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, m, st, cx, cy);
     for (const h of m.railHubs || []) drawStationHouse(g, h, cx, cy);   // (H35: World v3's station houses)
     for (const t of m.lifeguards || []) drawLifeguardTower(g, t, cx, cy);   // (H35: the beach towns' lifeguard towers)
+    for (const k of m.townKit || []) drawTownKit(g, k, cx, cy);   // (H40: the towns' porches, yards, silos, steeple, the boardwalk's rails and lamps)
     if (L.props) for (const s of this.stalls.get(k) || []) drawStall(g, s);
     for (const r of this.roofs.get(k) || []) drawBuildingBase(g, r); // the roof itself is lifted onto its walls (render/buildings.js)
     drawPortals(g, m, cx, cy);
@@ -599,6 +601,7 @@ function drawPrefab(g, p) {
   if (p.rot === 2) { g.translate(x + w, y + h); g.rotate(Math.PI); g.drawImage(img, sx, sy, sw, sh, 0, 0, w, h); }
   else g.drawImage(img, sx, sy, sw, sh, x, y, w, h);
   g.restore();
+  if (p.look && !p.rot) drawTownLook(g, p, p.solid || pf.solid);   // (H40: a World v3 town's own building over its lot)
 }
 
 // ---------------------------------------------------------------------------

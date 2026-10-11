@@ -61,27 +61,29 @@ const ROOM = { hwy: 24, main: 18, station: 30 };
 
 // the planned businesses (map.js SPECIALS' form; biz 'delivery' is a named place; fixed: the generator's later passes
 // don't make one a gun shop, a tackle shop or a bank)
+// (8.13.2, H40: `look` - the town's own model the place moves into, townModels below; the clinics take a small lot - a
+// one-storey clapboard clinic, not the city hospital's block; the co-op a store's lot with room for its loading dock)
 export const TOWN_SPECIALS = [
-  { d: 57, prefab: 'hospital', biz: ['hospital'], names: ['Timber Bend Clinic'], fixed: true },
-  { d: 57, prefab: 'police', biz: ['police'], names: ['Timber Bend Sheriff'], fixed: true },
-  { d: 57, prefab: 'conv', biz: ['convenience'], names: ['Timber Bend Fuel'], gas: true, fixed: true },
-  { d: 57, prefab: 'diner', biz: ['delivery'], names: ['The Sawdust Diner'], fixed: true },
-  { d: 57, prefab: 'strip', biz: ['lodge', 'butcher', 'hardware', 'tackle'], names: ['Timber Bend Hunting Lodge', 'Bend Game Butcher', 'Axe & Saw Hardware', 'Redwood Creek Tackle'], fixed: true },
-  { d: 57, prefab: 'industrial', biz: ['delivery'], names: ['Timber Bend Sawmill'], fixed: true },   // (not a plain warehouse: map.js' bowling alley takes the biggest)
-  { d: 57, prefab: 'hotel', biz: ['delivery'], names: ['Pine Rest Motel'], fixed: true },
-  { d: 58, prefab: 'hospital', biz: ['hospital'], names: ['Willow Crossing Clinic'], fixed: true },
-  { d: 58, prefab: 'police', biz: ['police'], names: ['Willow County Sheriff'], fixed: true },
-  { d: 58, prefab: 'conv', biz: ['convenience'], names: ['Willow Crossing Fuel'], gas: true, fixed: true },
-  { d: 58, prefab: 'church', biz: ['delivery'], names: ['Willow Crossing Chapel'], fixed: true },
-  { d: 58, prefab: 'farmstead', biz: ['farm'], names: ['Willow Valley Farm Co-op'], fixed: true },
-  { d: 58, prefab: 'industrial', biz: ['delivery'], names: ['Willow Crossing Grain Elevator'], fixed: true },
-  { d: 58, prefab: 'diner', biz: ['delivery'], names: ['Crossroads Diner'], fixed: true },
-  { d: 58, prefab: 'strip', biz: ['market', 'farmstand', 'fruitstand', 'delivery'], names: ["Willow Crossing Farmers' Market", 'Valley Farm Stand', 'Orchard Fruit Stand', 'Valley Feed & Seed'], fixed: true },
-  { d: 59, prefab: 'hospital', biz: ['hospital'], names: ['Sandpiper Bay Clinic'], fixed: true },
-  { d: 59, prefab: 'conv', biz: ['convenience'], names: ['Sandpiper Bay Fuel'], gas: true, fixed: true },
-  { d: 59, prefab: 'strip', biz: ['sports', 'tackle', 'snack', 'delivery'], names: ['Sandpiper Surf Co.', 'Pier Tackle & Bait', 'Shorebird Snack Bar', 'Lifeguard Station'], fixed: true },
+  { d: 57, prefab: 'liquor', biz: ['hospital'], names: ['Timber Bend Clinic'], fixed: true, look: 'clinic' },
+  { d: 57, prefab: 'police', biz: ['police'], names: ['Timber Bend Sheriff'], fixed: true, look: 'sheriff' },
+  { d: 57, prefab: 'conv', biz: ['convenience'], names: ['Timber Bend Fuel'], gas: true, fixed: true, look: 'shopfront' },
+  { d: 57, prefab: 'diner', biz: ['delivery'], names: ['The Sawdust Diner'], fixed: true, look: 'shopfront' },
+  { d: 57, prefab: 'strip', biz: ['lodge', 'butcher', 'hardware', 'tackle'], names: ['Timber Bend Hunting Lodge', 'Bend Game Butcher', 'Axe & Saw Hardware', 'Redwood Creek Tackle'], fixed: true, look: 'lodgerow' },
+  { d: 57, prefab: 'industrial', biz: ['delivery'], names: ['Timber Bend Sawmill'], fixed: true, look: 'sawmill' },   // (not a plain warehouse: map.js' bowling alley takes the biggest)
+  { d: 57, prefab: 'hotel', biz: ['delivery'], names: ['Pine Rest Motel'], fixed: true, look: 'motel' },
+  { d: 58, prefab: 'liquor', biz: ['hospital'], names: ['Willow Crossing Clinic'], fixed: true, look: 'clinic' },
+  { d: 58, prefab: 'police', biz: ['police'], names: ['Willow County Sheriff'], fixed: true, look: 'sheriff' },
+  { d: 58, prefab: 'conv', biz: ['convenience'], names: ['Willow Crossing Fuel'], gas: true, fixed: true, look: 'shopfront' },
+  { d: 58, prefab: 'church', biz: ['delivery'], names: ['Willow Crossing Chapel'], fixed: true, look: 'church' },
+  { d: 58, prefab: 'quickstop', biz: ['farm'], names: ['Willow Valley Farm Co-op'], fixed: true, look: 'coop' },
+  { d: 58, prefab: 'industrial', biz: ['delivery'], names: ['Willow Crossing Grain Elevator'], fixed: true, look: 'elevator' },
+  { d: 58, prefab: 'diner', biz: ['delivery'], names: ['Crossroads Diner'], fixed: true, look: 'shopfront' },
+  { d: 58, prefab: 'strip', biz: ['market', 'farmstand', 'fruitstand', 'delivery'], names: ["Willow Crossing Farmers' Market", 'Valley Farm Stand', 'Orchard Fruit Stand', 'Valley Feed & Seed'], fixed: true, look: 'feedrow' },
+  { d: 59, prefab: 'liquor', biz: ['hospital'], names: ['Sandpiper Bay Clinic'], fixed: true, look: 'clinic' },
+  { d: 59, prefab: 'conv', biz: ['convenience'], names: ['Sandpiper Bay Fuel'], gas: true, fixed: true, look: 'beachshop' },
+  { d: 59, prefab: 'strip', biz: ['sports', 'tackle', 'snack', 'delivery'], names: ['Sandpiper Surf Co.', 'Pier Tackle & Bait', 'Shorebird Snack Bar', 'Lifeguard Station'], fixed: true, look: 'surfrow' },
   { d: 59, prefab: 'beachbar', biz: ['delivery'], names: ['The Sandpiper'], fixed: true },
-  { d: 59, prefab: 'diner', biz: ['delivery'], names: ['Boardwalk Diner'], fixed: true },
+  { d: 59, prefab: 'diner', biz: ['delivery'], names: ['Boardwalk Diner'], fixed: true, look: 'beachshop' },
 ];
 
 // The towns' own building styles (the generator's STYLE form, handed in as opts.styles by district, so only the v3
@@ -278,6 +280,122 @@ export function townsDone(m) {
     let blds = 0;
     for (const b of m.buildings) if (b && m.dist[(b.ty + (b.th >> 1)) * m.w + b.tx + (b.tw >> 1)] === t.d) blds++;
     out.push({ key: t.key, name: t.name, d: t.d, buildings: blds, pois: pois.length, kinds, bus: m.props.filter(busAt).length });
+  }
+  return out;
+}
+
+// ---- The towns' own models (8.13.2, H40; concepts WR2-A, WR2-C, D13, D13-B, D15-A/B, BE1, BE2, SR7) ----------------
+// Each town building gets a look (b.look, and its lot's: m.prefabs[b.prefab].look) that both renderers draw in place of
+// the prefab's city art - the logging town's wooden shopfronts with porches and false fronts, cabins, the sawmill, the
+// lodge's row, the farm town's farmhouses, white church, grain elevator, co-op and feed store, the beach town's
+// cottages, houses on stilts and surf shop row; and the clinic, the sheriff and the motel as small-town buildings. What
+// stands round them is m.townKit (k, x, y in px; a: heading, 0 = along x; len, n: size; z: lift; s: solid radius): the
+// porches, the lodge's antlers, the sawmill's saw line, log stacks and log loader, the elevator's silos, the church's
+// steeple, the co-op's loading dock, the feed sacks, the surf shop's boards, and Sandpiper Bay's boardwalk (rails on
+// the sea side, benches, lamps), its pier (rails, the shelter at its end) and a lifeguard tower on the sand.
+// A sawmill's shed and an elevator's head house take the west part of the building (b.lookW tiles): its yard, the
+// logs and the silos, stand on the rest - inside the solid footprint, so nothing new blocks a street.
+const HOUSE_LOOK = { 57: 'cabin', 58: 'farmhouse', 59: 'cottage' }, SHOP_LOOK = { 57: 'shopfront', 58: 'shopfront', 59: 'beachshop' };
+const SHOP_KINDS = new Set(['diner', 'rest1', 'rest2', 'conv', 'quickstop', 'liquor', 'repair', 'strip', 'shops1', 'shops2', 'boutique']);
+const PART = { sawmill: 0.56, elevator: 0.32 };
+export function townModels(m) {
+  const W = m.w, kit = (m.townKit ||= []), named = new Map(TOWN_SPECIALS.filter((s) => s.look).map((s) => [s.names[0], s.look]));
+  const open = (x, y) => { const tl = m.tileAtPx(x, y); return tl !== T.ROAD && tl !== T.BRIDGE && tl !== T.WATER && tl !== T.DEEP && tl !== T.BUILDING; };
+  const out = [];
+  for (const t of TOWNS3) {
+    const looks = {}, n = {};
+    const add = (k, x, y, o = {}) => { const it = { k, x: Math.round(x), y: Math.round(y), ...o }; if (it.s && !open(it.x, it.y)) delete it.s; if (it.s) m.addSolidProp(it.x, it.y, it.s); kit.push(it); n[k] = (n[k] || 0) + 1; return it; };
+    for (const b of m.buildings) {
+      if (!b || b.gone || m.dist[(b.ty + (b.th >> 1)) * W + b.tx + (b.tw >> 1)] !== t.d) continue;
+      // (a lot the generator built as a plain roof - a house or a shop it had no prefab for: small ones are houses)
+      const p = b.prefab >= 0 ? m.prefabs[b.prefab] : null, roof = !p && b.kind === 'roof' && b.name !== 'Lot', house = b.kind.startsWith('house') || (roof && b.tw <= 16 && b.th <= 14);
+      if (!p && !roof) continue;
+      const look = named.get(b.name) || (house ? (t.d === 59 && (b.kind === 'house9' || b.id % 3 === 0) ? 'stilts' : HOUSE_LOOK[t.d]) : SHOP_KINDS.has(b.kind) || roof ? SHOP_LOOK[t.d] : null);
+      if (!look) continue;
+      b.look = look; if (p) p.look = look;
+      looks[look] = (looks[look] || 0) + 1;
+      const x0 = b.tx * TILE, y0 = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE, south = !b.door || b.door.ty >= b.ty + b.th;
+      const fy = south ? y0 + h : y0, o = south ? 1 : -1, a = south ? 0 : Math.PI;   // (the front wall's line, outward, the front's heading)
+      const doorX = b.door ? (b.door.tx + 0.5) * TILE : x0 + w / 2;
+      const sign = (re) => (b.signs || []).find((s) => re.test(s.text));
+      if (PART[look]) b.lookW = Math.max(4, Math.round(b.tw * PART[look]));
+      switch (look) {
+        case 'shopfront': case 'beachshop': case 'lodgerow': case 'surfrow': case 'feedrow':
+          add('porch', x0 + w / 2, fy + o * 17, { len: Math.max(48, w - 8), a }); break;
+        case 'cabin': case 'farmhouse': case 'cottage':
+          add('porch', Math.max(x0 + 60, Math.min(x0 + w - 60, doorX)), fy + o * 17, { len: Math.min(w - 16, look === 'farmhouse' ? 200 : 120), a }); break;
+        case 'stilts': add('porch', Math.max(x0 + 56, Math.min(x0 + w - 56, doorX)), fy + o * 17, { len: Math.min(w - 16, 112), a, z: 16 }); break;
+        case 'church': add('steeple', x0 + w / 2, fy + o * 20, { a }); break;
+        case 'coop': add('dock', x0 + w / 2, fy + o * 20, { len: Math.max(80, Math.round(w * 0.6 / 8) * 8), a }); break;
+        case 'sawmill': {
+          const sx = x0 + b.lookW * TILE, yw = w - b.lookW * TILE;   // (the log yard east of the shed)
+          for (const f of [0.22, 0.5, 0.78]) add('logs', sx + yw / 2 + 8, y0 + h * f, { len: Math.max(64, Math.round((yw - 56) / 8) * 8) });
+          add('loader', sx + 46, y0 + h * 0.64, { a: 0 });
+          add('saw', x0 + b.lookW * TILE * 0.4, fy + o * 60, { len: 112, a, s: 18 });
+          break;
+        }
+        case 'elevator': {
+          const sx = x0 + b.lookW * TILE, yw = w - b.lookW * TILE, k = Math.max(2, Math.min(5, Math.round(yw / 100)));
+          add('silos', sx + yw / 2, y0 + h / 2, { n: k, len: Math.round((yw - 8) / 8) * 8 });
+          break;
+        }
+      }
+      if (look === 'lodgerow') { const s = sign(/LODGE/i); if (s) add('antlers', s.x, fy + o * 2, { z: 50, a }); }
+      if (look === 'feedrow') { const s = sign(/FEED/i); if (s) add('sacks', s.x + 34, fy + o * 44, { a }); }
+      if (look === 'surfrow') { const s = sign(/SURF/i); if (s) add('boards', s.x + 40, fy + o * 46, { n: 5, a }); }
+    }
+    // the beach town's boardwalk (8.13.1's planks along the top of the sand, townsFront): a rail along its sea side
+    // (stepping with the planks down the diagonal shore, open where the pier leaves it), benches facing the sea and
+    // lamps along its land side; the pier: rails down both sides, a shelter and a rail across its end; a lifeguard
+    // tower on the sand beside it
+    if (t.front) {
+      const f = t.front, P = f.pier, dock = (x, y) => m.tiles[y * W + x] === T.DOCK, cols = [];
+      for (let x = f.x0; x < f.x1; x++) {
+        let y = t.box[1], seen = false;
+        for (; y < t.box[3] + 60; y++) { if (m.dist[y * W + x] === t.d) seen = true; else if (seen && dock(x, y)) break; }
+        if (!seen || y >= t.box[3] + 60) continue;
+        let yb = y; while (yb < y + f.walk && dock(x, yb)) yb++;
+        cols.push([x, y, yb]);
+      }
+      const pierCol = (x) => x >= P.x && x < P.x + P.w;
+      let run = null;
+      const flush = () => { if (run) add('rail', (run[0] + run[1] + 1) / 2 * TILE, run[2] * TILE - 3, { len: (run[1] - run[0] + 1) * TILE, a: 0 }); run = null; };
+      cols.forEach(([x, top, yb], i) => {
+        if (pierCol(x)) { flush(); return; }
+        if (run && run[2] === yb && run[1] === x - 1) run[1] = x;
+        else {
+          const prev = cols[i - 1];
+          flush();
+          if (prev && prev[0] === x - 1 && !pierCol(prev[0]) && prev[2] !== yb) add('rail', x * TILE, (Math.min(prev[2], yb) + Math.max(prev[2], yb)) / 2 * TILE - 3, { len: Math.abs(prev[2] - yb) * TILE, a: Math.PI / 2 });
+          run = [x, x, yb];
+        }
+        const k = x - f.x0;
+        if (Math.abs(x - P.x - P.w / 2) > 4 && k % 14 === 7) add('bench', (x + 0.5) * TILE, top * TILE + 12, { a: 0 });
+        if (k % 14 === 0) add('lamp', (x + 0.5) * TILE, top * TILE + 6);
+      });
+      flush();
+      const pc = cols.filter(([x]) => pierCol(x));
+      if (pc.length) {
+        const ys = Math.max(...pc.map((c) => c[2]));
+        let ye = ys; while (ye < m.h && dock(P.x, ye)) ye++;
+        if (ye - ys > 6) {
+          for (const x of [P.x * TILE + 3, (P.x + P.w) * TILE - 3]) add('rail', x, (ys + ye) / 2 * TILE, { len: (ye - ys) * TILE, a: Math.PI / 2 });
+          add('rail', (P.x + P.w / 2) * TILE, ye * TILE - 3, { len: P.w * TILE, a: 0 });
+          add('shelter', (P.x + P.w / 2) * TILE, (ye - 2) * TILE, { a: 0 });
+          add('lamp', (P.x + 0.5) * TILE, (ys + 12) * TILE);
+          // the lifeguard station's tower on the sand east of the pier (drawn as the beach towns' are: m.lifeguards)
+          for (const dx of [12, 16, 20, 8]) {
+            const c = cols.find((q) => q[0] === P.x + P.w + dx);
+            if (!c) continue;
+            const lx = (c[0] + 0.5) * TILE, ly = (c[2] + 7) * TILE;
+            if (m.tileAtPx(lx, ly) !== T.SAND || m.tileAtPx(lx, ly + 2 * TILE) !== T.SAND) continue;
+            (m.lifeguards ||= []).push({ x: lx, y: ly, town: t.key }); m.addSolidProp(lx, ly, 18); n.tower = 1;
+            break;
+          }
+        }
+      }
+    }
+    out.push({ key: t.key, looks, kit: n });
   }
   return out;
 }
