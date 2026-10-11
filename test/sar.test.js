@@ -302,3 +302,24 @@ test('coast guard: smugglers you lose get away; someone overboard hauled aboard 
   assert.ok(h.prof.cash > cash2, 'landed on dry ground: handed over and paid');
   phone.handle(w, h.p, { a: 'cancel' });
 });
+
+test('coast guard by air: low over the smugglers they heave to; a crewman goes down the line to seize the cargo', () => {
+  const { p, prof, v } = onPatrol('air');
+  const c = smugglers(p, 11);
+  assert.ok(c, 'a smugglers\' run');
+  const b = w.get(c.boat);
+  for (let i = 0; i < (COAST.stopS + 1) * 20 && !c.stopped; i++) { put(v, b.x + 40, b.y, COAST.stopAlt + 200); w.step(); }
+  assert.ok(!c.stopped, 'too high over them: they keep going');
+  for (let i = 0; i < (COAST.stopS + 1) * 20 && !c.stopped; i++) { put(v, b.x + 40, b.y, 180); w.step(); }
+  assert.ok(c.stopped, 'low over them: they heave to');
+  run(w, 2);
+  put(v, b.x + 30, b.y, 160);
+  run(w, 0.2);
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /line/.test(act.label), `the Act prompt (${act && act.label})`);
+  const cash = prof.cash;
+  act.run();
+  assert.equal(p.job.call, null, 'seized');
+  assert.ok(prof.cash - cash >= COAST.bust, `the reward (+$${prof.cash - cash})`);
+  phone.handle(w, p, { a: 'cancel' });
+});

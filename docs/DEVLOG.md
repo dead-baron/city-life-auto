@@ -8444,10 +8444,14 @@ And: "Private helicopter pilot for rich billionaire customers flying around the 
   T.FLOOR, so the roof pad over the middle had no roof under it - a helicopter "landing" there sank to the ground inside.
   A walk-in building's floor now counts as under its roof for flying (`floorAt`), so the roof pads work (and you can't
   fly through a shop at roof height any more).
-- **Art v2 and the roof pad**: art v2 stands its buildings up, so the roof isn't over the footprint and the roof pad
-  isn't drawn there (as before). The server takes either pad, and the job's marker points at the yard's helipad (drawn in
-  both renderers); on the classic view the roof pad shows and works too. Drawing the roof pad at the roof's drawn height
-  in v2 (and lifting an aircraft on a roof with it) is left for later.
+- **Art v2 draws aircraft at their height** (the owner's call, after the first playtest showed a helicopter "on" a
+  hospital's roof drawn down on its front wall): art v2 stands everything up - something at a height is drawn that much
+  up the screen - and now an aircraft is too, by its altitude times `V2_LIFT` (0.66: a roof's drawn height over its
+  flying height, measured on the hospitals' roofs; `client/render/aircraft.js` liftOf), its shadow staying on the ground
+  - or on the roof under it. So a helicopter down on a roof sits on the drawn roof, the roof pads are drawn up there (they
+  were hidden in v2), and the harness's cable hangs straight down the screen to the one below. The camera follows half
+  the lift of your own aircraft (`main.js`), so you and the ground under you both stay on screen. The classic view is as
+  it was. The job's marker points at the hospital's roof pad (the yard's helipad takes them too).
 - **Charter pilot** (`server/systems/charter.js`; `shared/rules.js` CHARTER): from the phone (Jobs › Flying) - the company's
   Skylark is issued at the nearest helipad. Bookings one after another: a rich customer (invented names: Sterling
   Vanderholt, Margaux Ellery-Price...) waits at one of the places a helicopter goes - the airport's helipad, the airport's

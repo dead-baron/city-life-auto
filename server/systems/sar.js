@@ -211,8 +211,8 @@ function board(world, p, j, c, v, vic) {
   if (!seatIn(world, p, c, v, vic)) return false;
   wave(vic, false);
   c.aboard = true; c.boardedAt = world.time; j.stage = 'deliver';
-  const pad = nearestPad(world.map, v.x, v.y, false) || nearestPad(world.map, v.x, v.y);
-  j.text = `Fly them to a hospital - land on its roof pad or its helipad${pad ? ` (${pad.name.replace(/ helipad$/, '')})` : ''}`;
+  const pad = nearestPad(world.map, v.x, v.y, true) || nearestPad(world.map, v.x, v.y);
+  j.text = `Fly them to a hospital - land on its roof pad${pad ? ` (${pad.name.replace(/ (roof pad|helipad)$/, '')})` : ''} or the helipad in its yard`;
   world.notify(p, c.hurt ? 'Patient aboard! Get them to a hospital fast - land on its roof, or the helipad in its yard. Gently does it.' : 'They\'re aboard, cold and tired but fine. Fly them to a hospital to be checked over.', 'good');
   world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y });
   p.meDirty = true;
@@ -301,7 +301,7 @@ export function target(world, p, j) {
   const c = j.call, v = world.get(j.truck);
   if (!c) return { text: j.text, x: Math.round(j.base.x), y: Math.round(j.base.y), stage: 'wait' };
   if (c.aboard) {
-    const pad = v ? nearestPad(world.map, v.x, v.y, false) || nearestPad(world.map, v.x, v.y) : null;   // (the yard's pad: drawn in both renderers - art v2 doesn't show the roof's)
+    const pad = v ? nearestPad(world.map, v.x, v.y, true) || nearestPad(world.map, v.x, v.y) : null;   // (the roof's pad: drawn up on the roof in both renderers)
     return { text: j.text, x: Math.round(pad ? pad.x : j.base.x), y: Math.round(pad ? pad.y : j.base.y), stage: 'deliver' };
   }
   if (!c.found) return { text: j.text, x: c.cx, y: c.cy, stage: 'search', area: [c.cx, c.cy, SAR.circleR] };
