@@ -1318,7 +1318,7 @@ never runs the generator: it fetches the regions round the player and keeps them
      is the region file's job (item 2); the client's moving window (item 4) - today the client still holds the whole
      map. **What means the whole world follows the world's frame the map carries** (`m.frame = { w, h }`: a whole map's
      own extent, a window's the world's; done 2026-10-10): the open sea past the edge and the border, the camera's
-     bounds, the art's and the ground's chunk grids, the map pictures, the router's grid, the underground, the
+     bounds, the art's and the ground's chunk grids, the map pictures and the big map's framing, the router's grid, the underground, the
      server's net chunks and its ferry planner (it holds the whole world: the map's own extent). Today's frame's
      constants are left only where they mean today's frame by nature (`test/mapwindow.test.js` lists them).
      Near a window's edge the queries that look round a point (a flood, a ray, the bake's margin) see a wall where the

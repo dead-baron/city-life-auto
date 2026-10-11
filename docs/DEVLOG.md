@@ -6845,8 +6845,9 @@ What it does:
   (`edgeInfo(x, y, out, frame)`, `edgeBrake(s, frame)` - the physics pass the map's frame, the law's radar too) and
   its new `clampCam(cam, frame)` (the camera's bounds, from `client/main.js`); the ground chunks' grid and the sea
   painted past the edge (main.js); the art's chunk grid (`client/art2/game/host.js` `artGrid(map)`, which `planBake`
-  takes; `standin.js`; `server/artcdn.js` `artChunks(map)`); the map pictures (the HUD's minimap and big map, the
-  spectator's schematic and camera, the dev teleport and homes pictures); the router's grid (`client/route.js`); the
+  takes; `standin.js`; `server/artcdn.js` `artChunks(map)`); the map pictures (the HUD's minimap; the big map's
+  framing, `client/hud.js` `mapFrameOf(map)`: the world's frame less today's margins of sea, today's world's
+  `MAP_FRAME` as it was; the spectator's schematic and camera; the dev teleport and homes pictures); the router's grid (`client/route.js`); the
   underground's regions and physics map (`shared/underground.js`); the server's net chunks (`server/world.js`
   `chunksX` / `chunksY`); the ferry planner's grids (`server/systems/ferries.js`: the map's own extent, indexed as its
   layers are). The page's served regions (`client/worldgen.js`) are the index's: today's frame's are asked for along
@@ -6868,14 +6869,20 @@ What it does:
 The files: `shared/mapcore.js`, `shared/mapwindow.js`, `shared/border.js`, `shared/physics.js`, `shared/underground.js`,
 `server/world.js`, `server/pointgrid.js` (new), `server/systems/boats.js`, `jobs.js`, `ferries.js`, `law.js`,
 `server/artcdn.js`, `client/main.js`, `client/hud.js`, `client/spectator.js`, `client/devtp.js`, `client/devhomes.js`,
-`client/route.js`, `client/worldgen.js`, `client/art2/game/host.js`, `standin.js`, `docs/WORLD-V3.md` (part 8).
+`client/route.js`, `client/worldgen.js`, `client/worldmap.js`, `client/art2/game/host.js`, `standin.js`,
+`docs/WORLD-V3.md` (part 8).
+
+Still today's by nature or for later: the big map's prebuilt picture (`assets/map`, `assets/worldmap.webp`: today's
+world's, checked against the map signature - another world's map shows the tile map); at v3 the HUD's and the
+spectator's one-pixel-a-tile pictures are 5040 x 4032 (81 MB of pixels) and want a coarser picture.
 
 Tests: `test/worldframe.test.js` (new: today's world built in a frame of MAP_W + 240 x MAP_H + 240 - the map's and a
 window's frame, the edge past the new one, the border slowing and stopping a swimmer at the new edge and not the old;
 the server's world run 45 s with players on a street by the old edge, swimming on past it and out past the new edge -
 traffic and people, the harbour patrol out past the old edge, the net chunks past the old grid, the ferries planned on
 the bigger frame; the underground under the frame; the art's chunk grids, `planBake` past the old grid and not past
-the new edge, the router on the map and on a window of it; the sea's point index against the whole list's scans),
+the new edge, the big map's frame, the router on the map and on a window of it; the sea's point index against the
+whole list's scans),
 `test/mapwindow.test.js` (the guards), `test/border.test.js`, `ferries.test.js`, `water.test.js`, `art2.test.js`,
 `artcdn.test.js`, `worldmap.test.js`, `regions.test.js`, `underground.test.js`, `mining.test.js`, `dmath.test.js`,
-`perf.test.js`.
+`perf.test.js`, `gameplay.test.js`, `police.test.js`, `view.test.js`, `npcpeople.test.js`, `hudlayers.test.js`.
