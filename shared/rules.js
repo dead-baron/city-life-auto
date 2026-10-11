@@ -630,3 +630,18 @@ export const SAR = {
 // perKm a km (1000 px); the tip up to tip of the fare: none after a hard landing, less the more health the helicopter
 // loses on the way (none at hurtHp), and the quicker the better (par: parS + a second per perKmS px).
 export const CHARTER = { firstS: 8, gapS: 20, shiftS: 3600, waitS: 600, pickupMax: 6000, minTrip: 3000, landR: 320, boardS: 3, destR: 240, base: 180, perKm: 70, tip: 0.5, hurtHp: 60, parS: 60, perKmS: 300 };
+// ---- the coast guard (H59; the owner: "Coastguard jobs: patrol in boats and helicopters to hunt down criminal activity on
+// the water, usually smugglers or traffickers. Do search and rescue type missions too") - server/systems/coastguard.js.
+// Calls firstS after signing on, gapS after each, from dist px off; smuggle: the share that are smugglers (the rest:
+// someone overboard). Smugglers run run px along the coast at top px/s; within stopR px of them in a boat (a helicopter:
+// stopHeliR px across, below stopAlt px) for stopS s and they heave to; board them from a boat within boardR px (a
+// helicopter below boardAlt px, within boardR px); further than loseR px for loseS s and they're gone. The bust pays bust +
+// cut of the cargo's value. Overboard: a search circle of circleR px, found within seeR px, a call nobody reaches in callS
+// s goes to another boat; hauled aboard from a boat within reachBoat px; ashore (the boat slow within ashoreR px of dry
+// land, the helicopter landed on dry ground) pays rescue, up to fast more for a quick one (par parS s). samaritan: points
+// a call.
+export const COAST = {
+  firstS: 8, gapS: [20, 40], shiftS: 3600, dist: [1200, 4000], smuggle: 0.65,
+  run: [2500, 5000], top: 470, stopR: 240, stopHeliR: 320, stopAlt: 320, stopS: 4, boardR: 180, boardAlt: 220, loseR: 5000, loseS: 25, bust: 300, cut: 0.5,
+  circleR: 500, seeR: 600, callS: 600, reachBoat: 120, ashoreR: 110, rescue: 280, fast: 0.5, parS: 150, samaritan: 10,
+};

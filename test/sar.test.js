@@ -199,3 +199,106 @@ test('charter pilot: a customer waits at a helipad, an airfield, a mansion\'s la
   run(w, 0.2);
   assert.ok(v.despawnable, 'the helicopter goes back');
 });
+
+// ---- the coast guard (server/systems/coastguard.js) --------------------------------------------------------------------
+const coast = await import('../server/systems/coastguard.js');
+const { COAST } = await import('../shared/rules.js');
+const { WATER_T } = await import('../shared/mapcore.js');
+const W = S.water;
+// a coast guard on shift (mode 'boat' | 'air'), at the controls of what they were issued
+function onPatrol(mode) {
+  const { p, prof } = joinPlayer(w);
+  const berth = (w.map.marina || []).find((b) => !b.gang);
+  p.ped.x = berth.x; p.ped.y = berth.y; w.place(p.ped);
+  const r = phone.handle(w, p, { a: 'take', id: mode === 'air' ? 'coastair' : 'coast' });
+  assert.equal(r.err, null, 'signed on');
+  const v = w.get(p.job.truck);
+  assert.equal(v.issuedTo, p.pid, 'issued to you');
+  v.seats[0] = p.ped.id; p.ped.vehId = v.id; p.ped.seat = 0;
+  return { p, prof, v };
+}
+const put = (v, x, y, alt = 0) => { v.x = x; v.y = y; v.vx = 0; v.vy = 0; v.alt = alt; v.vz = 0; if (alt) v.spool = 1; w.place(v); };
+const byLand = () => W.find((s) => [0, 1, 2, 3, 4, 5, 6, 7].some((k) => !WATER_T[w.map.tileAtPx(s.x + Math.cos(k * Math.PI / 4) * 50, s.y + Math.sin(k * Math.PI / 4) * 50)]));
+function smugglers(p, from) {
+  for (let i = from; i < W.length; i += 37) {
+    const a = W[i], b = W.find((s) => { const d = Math.hypot(s.x - a.x, s.y - a.y); return d >= COAST.run[0] && d <= COAST.run[1]; });
+    const c = b && coast.smugglerAt(w, p, a, b);
+    if (c) return c;
+  }
+  return null;
+}
+
+test('coast guard by boat: smugglers run contraband along the coast; stay alongside and they heave to; board them and the crates are seized', () => {
+  assert.ok(phone.boardFor(w, joinPlayer(w).p).jobs.some((j) => j.id === 'coast'), 'on the phone');
+  const { p, prof, v } = onPatrol('boat');
+  assert.equal(v.def.kind, 'boat', 'a patrol boat');
+  const c = smugglers(p, 0);
+  assert.ok(c, 'a smugglers\' run');
+  const b = w.get(c.boat), crates = c.crates.map((id) => w.get(id));
+  assert.equal(b.def.id, 'speedboat');
+  assert.ok(crates.length === 2 && crates.every((q) => q.contraband && q.state === 'loaded' && q.parent === b.id), 'contraband crates aboard, out in the open');
+  assert.ok(w.get(b.seats[0]).npc, 'a smuggler at the wheel');
+  const x0 = b.x, y0 = b.y;
+  put(v, b.x + 3000, b.y);
+  run(w, 4);
+  assert.ok(Math.hypot(b.x - x0, b.y - y0) > 300, `under way (${Math.hypot(b.x - x0, b.y - y0).toFixed(0)} px)`);
+  assert.ok(!c.stopped, 'far off: they keep going');
+  for (let i = 0; i < (COAST.stopS + 1) * 20 && !c.stopped; i++) { put(v, b.x, b.y + 150); w.step(); }
+  assert.ok(c.stopped, 'stayed alongside: they heave to');
+  assert.ok(c.crew.every((id) => w.get(id).handsUp), 'hands up');
+  run(w, 2);
+  put(v, b.x, b.y + 140);
+  run(w, 0.2);
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /seize/.test(act.label), `the Act prompt (${act && act.label})`);
+  const cash = prof.cash;
+  act.run();
+  assert.equal(p.job.call, null, 'done');
+  assert.ok(prof.cash - cash >= COAST.bust, `the reward (+$${prof.cash - cash})`);
+  assert.ok(crates.every((q) => !w.get(q.id) || w.get(q.id).removed), 'the crates seized');
+  assert.equal(p.job.busts, 1);
+  phone.handle(w, p, { a: 'cancel' });
+});
+
+test('coast guard: smugglers you lose get away; someone overboard hauled aboard the boat and run ashore; the harness from the helicopter', () => {
+  const { p, prof, v } = onPatrol('boat');
+  const c = smugglers(p, 5);
+  const b = w.get(c.boat);
+  put(v, b.x + COAST.loseR + 2500, b.y);
+  run(w, COAST.loseS + 2);
+  assert.equal(p.job.call, null, 'they got away');
+  assert.ok(!w.get(c.crew[0]) || w.get(c.crew[0]).removed, 'gone');
+  // someone overboard
+  const s = byLand();
+  assert.ok(s, 'water by the shore');
+  const o = coast.overboardAt(w, p, s.x, s.y);
+  const t = phone.jobTarget(w, p);
+  assert.ok(t.area && Math.hypot(t.area[0] - s.x, t.area[1] - s.y) <= COAST.circleR, 'a search circle');
+  put(v, s.x + 90, s.y);
+  run(w, 0.3);
+  assert.ok(o.found && phone.jobTarget(w, p).flare, 'found: the flare');
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /aboard/.test(act.label), `the Act prompt (${act && act.label})`);
+  act.run();
+  assert.ok(o.aboard, 'hauled aboard');
+  const cash = prof.cash;
+  run(w, 0.3);
+  assert.equal(p.job.call, null, 'run in by the shore: handed over');
+  assert.ok(prof.cash - cash >= COAST.rescue, `paid (+$${prof.cash - cash})`);
+  phone.handle(w, p, { a: 'cancel' });
+  // the helicopter
+  const h = onPatrol('air');
+  assert.equal(h.v.def.id, 'rescueheli', 'the air patrol\'s helicopter');
+  const s2 = W[Math.floor(W.length / 2)];
+  const o2 = coast.overboardAt(w, h.p, s2.x, s2.y);
+  put(h.v, s2.x + 10, s2.y, 120);
+  run(w, 0.3);
+  assert.ok(o2.found);
+  for (let i = 0; i < 200 && !o2.aboard; i++) { h.v.x = s2.x + 10; h.v.y = s2.y; h.v.vx = 0; h.v.vy = 0; send(h.p, IN.ACTION); }
+  assert.ok(o2.aboard, 'winched up');
+  put(h.v, yard.x, yard.y, 0);
+  const cash2 = h.prof.cash;
+  run(w, 0.3);
+  assert.ok(h.prof.cash > cash2, 'landed on dry ground: handed over and paid');
+  phone.handle(w, h.p, { a: 'cancel' });
+});

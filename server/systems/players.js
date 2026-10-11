@@ -64,6 +64,7 @@ import * as underground from './underground.js';
 import * as dance from './dance.js';
 import * as safety from './safety.js';
 import * as sar from './sar.js';
+import * as coastguard from './coastguard.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -527,7 +528,7 @@ export function findInteraction(world, p) {
       const spot = jobs.boatFishingSpot(world, ped);
       if (spot) return { label: 'Fish offshore (deep-sea)', run: () => jobs.castLine(world, p, spot) };
     }
-    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p);
+    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p);
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;

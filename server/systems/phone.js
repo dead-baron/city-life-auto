@@ -5,7 +5,7 @@
 import { K } from '../../shared/constants.js';
 import { PED_BLOCK, DISTRICTS } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S, WORK_TRUCK_RETURN, SAR, CHARTER } from '../../shared/rules.js';
+import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S, WORK_TRUCK_RETURN, SAR, CHARTER, COAST } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
 import * as events from './events.js';
@@ -18,6 +18,7 @@ import * as ferries from './ferries.js';
 import * as dance from './dance.js';
 import * as sar from './sar.js';
 import * as charter from './charter.js';
+import * as coastguard from './coastguard.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -166,6 +167,7 @@ export function boardFor(world, p) {
   const base = sar.baseFor(world, p);   // search & rescue pilot: a shift of rescue calls from the nearest hospital (sar.js)
   if (base) list.push({ id: 'sar', kind: 'sar', fly: true, icon: '🚁', sub: 'rescue calls: the lost, the hurt, the stranded - a rescue helicopter is issued', pay: SAR.base + 2 * SAR.perKm, title: `Search & rescue pilot - a shift from ${base.name}`, x: base.x, y: base.y });
   list.push({ id: 'charter', kind: 'charter', fly: true, icon: '🛩', sub: 'fly rich customers between helipads, airfields, mansions and the islands - a tip for a smooth ride', pay: CHARTER.base + 4 * CHARTER.perKm, title: 'Charter pilot - VIP helicopter flights', x: 0, y: 0 });   // (charter.js)
+  list.push({ id: 'coast', kind: 'coast', fly: true, icon: '⚓', sub: 'boat patrol: run down smugglers, board them and seize the cargo; pull people out of the water', pay: COAST.bust + 200, title: 'Coast guard - boat patrol', x: 0, y: 0 }, { id: 'coastair', kind: 'coast', fly: true, icon: '🚁', sub: 'air patrol: the same from a helicopter - hover over smugglers to stop them, the harness for people in the water', pay: COAST.bust + 200, title: 'Coast guard - air patrol', x: 0, y: 0 });   // (coastguard.js)
   return { t: 'board', jobs: list, job: p.job ? { text: p.job.text, type: p.job.type } : null, saw: law.sawList(world, p) };
 }
 
@@ -214,6 +216,7 @@ function take(world, p, id) {
   if (id === 'farm') return jobs.startFarm(world, p, nearestFarm(world, p));
   if (id === 'sar') return sar.start(world, p, sar.baseFor(world, p));
   if (id === 'charter') return charter.start(world, p);
+  if (id === 'coast' || id === 'coastair') return coastguard.start(world, p, id === 'coastair' ? 'air' : 'boat');
   const j = (world.jobBoard || []).find((q) => q.id === Number(id));
   if (!j) return 'That job was taken.';
   if (j.kind === 'patrol') {
@@ -244,6 +247,7 @@ const truckMark = (p, v) => (p.ped && p.ped.vehId === v.id ? null : [Math.round(
 function target(world, p, j) {
   if (j.type === 'sar') return sar.target(world, p, j);   // (the search circle, the flare, the harness: sar.js)
   if (j.type === 'charter') return charter.target(world, p, j);   // (the customer, then where they're going: charter.js)
+  if (j.type === 'coast') return coastguard.target(world, p, j);   // (the smugglers, the one in the water, ashore: coastguard.js)
   if ((j.type === 'courier' || j.type === 'farm') && j.crates && j.crates.length) {
     const waiting = j.crates.map((id) => world.get(id)).filter((c) => c && c.kind === K.CRATE && c.state === 'ground' && !c.touched);
     if (waiting.length === j.crates.length) {
