@@ -1335,6 +1335,7 @@ never runs the generator: it fetches the regions round the player and keeps them
    window, keeping the regions the old and new windows share and dropping the far ones. The renderer and the chunk
    baker read the window.
 5. **The join check:** the world hash and each region's signature are checked against what was read from the cache.
+   **(Done for World v3's window, 2026-10-11: 8.12.2.)**
 6. **The server** keeps the whole world in memory: about 300-600 MB at v3. Its systems already run near players;
    whole-world scans per tick move to spatial indexes.
 
@@ -1389,8 +1390,9 @@ For the window (the next steps):
   points and the levels' segments should move into the regions, and the phone's GPS keep a coarse graph. **(Moved,
   2026-10-10, 8.9: the index is 0.35 MB today, 0.71 MB at v3; the road graph is still whole.)**
 - POIs are cut into regions today; the phone's apps and the big map list places world-wide, so a small global list
-  (name, kind, position) belongs in the index.
+  (name, kind, position) belongs in the index. **(Done, 2026-10-11, 8.12.2: `places`, and the districts' middles.)**
 - The join check is still the whole map's signature; per-region signatures come with the window (part 8 item 5).
+  **(Done for the window, 2026-10-11, 8.12.2: each region's signature and the world's in the index.)**
 
 ### 8.2 The generator's frame (done, 2026-10-10)
 
@@ -2654,7 +2656,8 @@ download of the whole, the build), and the live game is unchanged.
   (`hud.js` `setMap`: what was seen stays); **art v2 keeps running** (`host.js` `setMap`): its bake workers get the
   new window (`pool.js` `reworld`, `worker.js` op `reworld`), the grids worked out from the map are dropped, the
   chunks already baked stay (a chunk is the same art in both windows). The welcome's whole-map signature check is
-  skipped for a window (per-region signatures: part 8 item 5).
+  skipped for a window (per-region signatures: part 8 item 5 - done in 8.12.2: each region checked as it's assembled,
+  the world's signature in the index against the welcome's).
 
 **Tests:** `test/regionwindow.test.js` (today's world cut into 256-tile regions, 6 x 5, so a window is a part of it: the
 window's layers are windowOf's to the byte, every query the whole map's inside it, each regional list holds exactly
