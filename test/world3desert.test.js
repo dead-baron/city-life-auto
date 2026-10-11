@@ -14,7 +14,7 @@ import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { skeletonLines, nearestOnPath, STATIONS } from '../shared/world3-skeleton.js';
 import { GULCH, HOLLOW, DESERT, DESERT_SPECIALS, DESERT_IDS } from '../shared/world3-desert.js';
-import { undergroundOf, UG } from '../shared/underground.js';
+import { undergroundOf, UG, caveOf } from '../shared/underground.js';
 import { prepare } from '../tools/world3-build.mjs';
 
 test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, the dam, the lookout, the motel, the camp', { timeout: 300000 }, () => {
@@ -76,14 +76,14 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
   check(m.props.some((p) => p && p.t === 'mineportal' && Math.abs(p.x - (DESERT.adit[0] + 0.5) * TILE) < 2 * TILE), 'the adit\'s portal');
   check(m.buildings.some((b) => b && b.name === 'Copper Gulch Crusher'), 'the crusher');
   check((m.landmarks || []).some((l) => l.name === 'Copper Gulch Mine'), 'the mine on the map');
-  // (the v3 world's only mine and pit: the cave world of shared/underground.js under its adit, the ore veins round the
-  // pit's faces and on the cave's walls - mined as today's)
-  const U = undergroundOf(m);
-  check(U && U.cave && mine && U.cave.X === mine.x && U.cave.face === mine.y, 'the cave world through the adit');
+  // (the cave world of shared/underground.js under its adit - a cave per mine, the Old Granite Mine has its own, 8.19 -
+  // the ore veins round the pit's faces and on the cave's walls - mined as today's)
+  const U = undergroundOf(m), cave = U && mine && U.caves.find((K) => K.X === mine.x && K.face === mine.y);
+  check(cave, 'the cave world through the adit');
   const pitVeins = U ? U.veins.filter((v) => v.ug === 0 && pit && v.x >= pit.x - 60 && v.x <= pit.x + pit.w + 60 && v.y >= pit.y - 60 && v.y <= pit.y + pit.h + 60).length : 0;
-  const caveVeins = U ? U.veins.filter((v) => v.ug === UG.CAVE).length : 0;
+  const caveVeins = U && cave ? U.veins.filter((v) => v.ug === UG.CAVE && caveOf(U, v.x, v.y) === cave).length : 0;
   check(pitVeins >= 5 && caveVeins >= 10, `the ore veins: ${pitVeins} round the pit, ${caveVeins} in the cave`);
-  console.log('mining', JSON.stringify({ pitVeins, caveVeins, chambers: U?.cave?.chambers?.length }));
+  console.log('mining', JSON.stringify({ pitVeins, caveVeins, chambers: cave?.chambers?.length }));
 
   // 5. Dusty Hollow: its ruins, the hideout, the smuggler's drop
   const hb = m.buildings.filter((b) => b && b.art && b.art.ghost);

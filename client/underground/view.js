@@ -124,9 +124,9 @@ class UgView {
       g.fillStyle = '#5e6a5a'; g.beginPath(); g.arc(lx, ly, 9, 0, 6.283); g.fill();
       g.fillStyle = '#1b1f1a'; g.beginPath(); g.arc(lx, ly, 6, 0, 6.283); g.fill();
     }
-    // the den: a bed of old leaves and bones
-    if (L.cave) {
-      const d = L.cave.den;
+    // the den: a bed of old leaves and bones (each cave's: a cave per mine)
+    for (const K2 of L.caves || []) {
+      const d = K2.den;
       if (d.x > x0 - 80 && d.x < x0 + CH + 80 && d.y > y0 - 80 && d.y < y0 + CH + 80) {
         const lx = d.x - x0, ly = d.y - y0;
         g.fillStyle = '#5a4528'; g.beginPath(); g.ellipse(lx, ly, 46, 30, 0, 0, 6.283); g.fill();
@@ -202,8 +202,8 @@ class UgView {
       g.fillStyle = '#1e7a46'; g.fillRect(d.x - 16, d.y - 40, 32, 11);
       g.fillStyle = '#e8f4ea'; g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillText('METRO', d.x, d.y - 31.5);
     }
-    if (!L.cave) return;
-    const K2 = L.cave;
+    if (!L.caves || !L.caves.length) return;
+    for (const K2 of L.caves) {   // (a cave per mine)
     for (const s of K2.spikes) {   // stalagmites (and their stalactites' drips)
       if (!inView(s.x, s.y)) continue;
       const h = 10 + s.s * 14;
@@ -232,6 +232,7 @@ class UgView {
           g.fillStyle = `rgba(170,120,255,${0.8 * pulse})`; g.beginPath(); g.moveTo(cx - 3, cy); g.lineTo(cx, cy - h2); g.lineTo(cx + 3, cy); g.closePath(); g.fill();
         }
       }
+    }
     }
     for (const r of this.rubble) {
       if (!inView(r.x, r.y)) continue;
@@ -320,7 +321,7 @@ class UgView {
       g.strokeStyle = '#151217'; g.lineWidth = 2; g.beginPath(); g.moveTo(b.x - 7, b.y - f); g.lineTo(b.x, b.y); g.lineTo(b.x + 7, b.y - f); g.stroke();
     }
     // a few bats asleep at each roost (dark shapes on the roof)
-    if (this.L.cave && this.S.ugLayer === UG.CAVE) for (const r of this.L.cave.roosts) {
+    if (this.S.ugLayer === UG.CAVE) for (const K2 of this.L.caves || []) for (const r of K2.roosts) {
       if (r.x < view.x0 - 60 || r.x > view.x1 + 60 || r.y < view.y0 - 60 || r.y > view.y1 + 60) continue;
       g.fillStyle = '#121014';
       for (let k = 0; k < 6; k++) { const bx = r.x + (hh(r.i, k, 1) - 0.5) * 60, by = r.y + (hh(r.i, k, 2) - 0.5) * 40; g.beginPath(); g.ellipse(bx, by, 2.6, 4, 0, 0, 6.283); g.fill(); }
@@ -442,7 +443,7 @@ class UgView {
     const day = F.sky ? 1 - (F.sky.night || 0) : 1;
     if (ug === UG.SEWER) for (const gr of L.grates || []) hole(gr.x, gr.y, 90, 0.18 + 0.55 * day);
     // the glowing things
-    if (ug === UG.CAVE && L.cave) for (const gl of L.cave.glow) hole(gl.x, gl.y, gl.r, gl.k * (0.85 + 0.15 * Math.sin(now * 1.3 + gl.x * 0.01)));
+    if (ug === UG.CAVE) for (const K2 of L.caves || []) for (const gl of K2.glow) hole(gl.x, gl.y, gl.r, gl.k * (0.85 + 0.15 * Math.sin(now * 1.3 + gl.x * 0.01)));
     // just enough to make yourself out by
     const me = F.meEnt;
     if (me) hole(me.rx, me.ry, 64, ug === UG.SEWER ? 0.3 : 0.18);
@@ -454,10 +455,10 @@ class UgView {
   // the glowing things' own colour, added over the dark (soft blue-green halos)
   glows(g, view, now) {
     const L = this.L, S = this.S;
-    if ((S.ugLayer || 0) !== UG.CAVE || !L.cave) return;
+    if ((S.ugLayer || 0) !== UG.CAVE || !L.caves || !L.caves.length) return;
     g.save();
     g.globalCompositeOperation = 'lighter';
-    for (const gl of L.cave.glow) {
+    for (const K2 of L.caves) for (const gl of K2.glow) {
       if (gl.x < view.x0 - gl.r || gl.x > view.x1 + gl.r || gl.y < view.y0 - gl.r || gl.y > view.y1 + gl.r) continue;
       const pulse = 0.8 + 0.2 * Math.sin(now * 1.3 + gl.x * 0.01), col = gl.kind === 'crystal' ? '150,110,255' : gl.kind === 'worms' ? '90,200,255' : '60,230,200';
       const gr = g.createRadialGradient(gl.x, gl.y, 0, gl.x, gl.y, gl.r * 0.7);

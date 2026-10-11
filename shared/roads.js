@@ -212,6 +212,7 @@ export function buildNetwork(lines, seed = 1) {
         w: K.w * TILE, hw: (K.w * TILE) / 2, nl: K.nl, median: K.median, oneway: !!(l.oneway || K.oneway), bridge: false, culdesac: !!l.culdesac,
       };
       if (l.lvl === 'ramp' && l.zr && c0.s < 1 && c1.s > l.len - 1) e.zr = l.zr.slice(); // (a whole ramp: its climb as laid)
+      if (l.notraffic) e.notraffic = true;   // (World v3's wild tracks: the traffic keeps off them - server/systems/traffic.js)
       e.len = measure(e.pts);
       edges.push(e);
       na.edges.push(e.id); nb.edges.push(e.id);

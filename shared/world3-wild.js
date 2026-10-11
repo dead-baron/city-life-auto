@@ -243,7 +243,9 @@ export function wildSites3(lines, m) {
     for (const p of pts) claimed.push([Math.floor(p.x / TILE) - 3, Math.floor(p.y / TILE) - 3, Math.floor(p.x / TILE) + 4, Math.floor(p.y / TILE) + 4]);
     out.placed.push({ name: S.name, type: S.type, x, y, w: S.w, h: S.h, d: site.d, road: name, joins: [Math.round(best.q.x), Math.round(best.q.y)] });
   }
+  const n0 = lines.length;
   out.tracks = wildTracks3(lines, m, hwys, mains, hwyLines, tunnels);
+  for (let k = n0; k < lines.length; k++) lines[k].notraffic = true;   // (H51: the tracks are dirt cul-de-sacs the traffic keeps off - its edges' flag, server/systems/traffic.js)
   // the desert's dry washes (the biomes' gravel bars, reserve 128) kept off the moved desert sites: their ground plain
   for (const q of MOVED) if (q.keep) for (let y = q.to[1] + q.keep[1]; y < q.to[1] + q.keep[3]; y++) for (let x = q.to[0] + q.keep[0]; x < q.to[0] + q.keep[2]; x++) { const i = y * W + x; if (m.reserve[i] & 128 && m.dist[i] === D3.DESERT) { m.reserve[i] &= ~128; m.tiles[i] = T.DIRT; } }
   return out;

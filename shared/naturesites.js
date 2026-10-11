@@ -1879,7 +1879,7 @@ function oldMine(m, H) {
   for (const [dx, dy, r] of [[-250, -40, 30], [256, -30, 26]]) H.addProp(m, 'outcrop', X + dx, face + dy, r, { w: 100, d: 64, h: 70, s: dx > 0 ? 5 : 6, style: 'granite' });
   for (const [dx, dy] of [[-200, 150], [180, 140]]) H.addProp(m, 'gravel', X + dx, face + dy, 0);
   (m.landmarks ||= []).push({ name: 'Old Granite Mine', type: 'mine', x: Math.round(X - 260), y: Math.round(face - 220), w: 520, h: 420 });
-  m.natureSites.push({ kind: 'mine', name: 'Old Granite Mine', x: Math.round(X), y: Math.round(face), seams, ...(H.place?.d ? { cave: false } : null) });   // (the world build: the cave world stays under Copper Gulch Mine's adit - 8.18, 8.19)
+  m.natureSites.push({ kind: 'mine', name: 'Old Granite Mine', x: Math.round(X), y: Math.round(face), seams });   // (its cave: shared/underground.js, a cave per mine - World v3's beside Copper Gulch Mine's, 8.19)
 }
 
 // clear a map prop away (its picture and its solid footprint): for a designed place that replaces random dressing
