@@ -4,7 +4,7 @@
 // dev command 'home', op 'go': server/dev.js devHome). Loaded only when the debug menu's "Every home" is pressed; it
 // opens (or closes again) under the Homes section's buttons.
 import { T, TILE } from '../shared/constants.js';
-import { MAP_FRAME } from './hud.js';
+import { mapFrameOf } from './hud.js';
 
 // (the town's kinds first; the estates - farmhouses, cottages, beach houses... - after, whatever kinds the map has)
 const KINDS = [['mansion', 'Mansions', '#ff7de9'], ['house', 'Houses', '#f2c21b'], ['apartment', 'Apartments', '#7de0ff'], ['shack', 'Shacks', '#c8a070']];
@@ -40,7 +40,7 @@ export function showHomes(map, go) {
   head.textContent = `${homes.length} homes · tap one to go to its door`;
   box.appendChild(head);
   // the map
-  const [fx0, fy0, fx1, fy1] = MAP_FRAME;
+  const [fx0, fy0, fx1, fy1] = mapFrameOf(map);
   const cv = document.createElement('canvas'); cv.className = 'dev-tp-map';
   box.appendChild(cv);
   const draw = (hover) => {

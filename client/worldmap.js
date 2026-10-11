@@ -9,7 +9,7 @@ import { TILE } from '../shared/constants.js';
 import { PACK_TIERS } from '../shared/items.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { mapSignature } from '../shared/mapcore.js';
-import { MAP_FRAME, districtCentroids, iconSkip, packIcon } from './hud.js';
+import { mapFrameOf, districtCentroids, iconSkip, packIcon } from './hud.js';
 import { MAP_CATS, KIND_ICON, MAJOR_KINDS } from './mapwaypoints.js';
 import { drawIcon } from './pixicons.js';
 
@@ -21,7 +21,8 @@ export function createWorldMap(map) { return new WorldMap(map); }
 class WorldMap {
   constructor(map) {
     this.map = map;
-    this.view = { z: 1, cx: (MAP_FRAME[0] + MAP_FRAME[2]) / 2, cy: (MAP_FRAME[1] + MAP_FRAME[3]) / 2 };
+    const MF = mapFrameOf(map);   // (the part of the world the map shows: the world's frame)
+    this.view = { z: 1, cx: (MF[0] + MF[2]) / 2, cy: (MF[1] + MF[3]) / 2 };
     this.scale = 1; this.origin = [0, 0]; this.fit = 1;
     this.art = null; this.ov = null; this.tiles = new Map();
     this.hits = [];   // the icons drawn last frame, for clicks: [x, y, r, poi]
@@ -83,7 +84,7 @@ class WorldMap {
     if (c.width !== Math.round(cw * dpr) || c.height !== Math.round(ch * dpr)) { c.width = Math.round(cw * dpr); c.height = Math.round(ch * dpr); }
     const g = c.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const [fx0, fy0, fx1, fy1] = MAP_FRAME, WW = fx1 - fx0, WH = fy1 - fy0;
+    const [fx0, fy0, fx1, fy1] = mapFrameOf(this.map), WW = fx1 - fx0, WH = fy1 - fy0;
     const fit = Math.min(cw / WW, ch / WH) * 0.98;
     const V = this.view, sc = fit * V.z;
     // keep the frame on screen: zoomed out it sits in the middle; zoomed in, its edge stops at the screen's

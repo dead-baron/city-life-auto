@@ -4,7 +4,7 @@
 // the district (or open ground where it has no streets).
 import { T, TILE } from '../shared/constants.js';
 import { DISTRICTS, ISLANDS } from '../shared/mapcore.js';
-import { MAP_FRAME } from './hud.js';
+import { mapFrameOf } from './hud.js';
 
 const PAVED = new Set([T.SIDEWALK, T.PLAZA]);
 const OPEN = new Set([T.LOT, T.GRASS, T.SAND, T.DIRT, T.DOCK, T.FIELD]);
@@ -72,7 +72,7 @@ export function teleportPlaces(map) {
 export function buildTeleport(box, map, go) {
   const list = teleportPlaces(map);
   box.innerHTML = '';
-  const [fx0, fy0, fx1, fy1] = MAP_FRAME;
+  const [fx0, fy0, fx1, fy1] = mapFrameOf(map);
   const cv = document.createElement('canvas');
   cv.className = 'dev-tp-map';
   box.appendChild(cv);

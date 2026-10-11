@@ -481,8 +481,11 @@ export function packIcon(g, x, y, r, k) {
   g.fillStyle = T.col; g.fillRect(x - w, y - h + 2 * k, w * 2, h * 2 - 2 * k); g.fillRect(x - w + 1.5 * k, y - h, w * 2 - 3 * k, 2 * k);
   g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - w + 1.5 * k, y + 1 * k, w * 2 - 3 * k, 3 * k);
 }
-// The part of the world the city map shows (px): every island, trimmed of open sea at the edges.
-export const MAP_FRAME = [24 * TILE, 10 * TILE, 1304 * TILE, 1170 * TILE];
+// The part of the world the city map shows (px): every island, trimmed of open sea at the edges - the world's frame
+// (the map's m.frame) less today's margins of open sea. Today's world: MAP_FRAME (tools/build-worldmap2.mjs bakes the
+// big map's picture over it).
+export const mapFrameOf = (map) => { const F = map.frame; return [24 * TILE, 10 * TILE, (F.w - 8) * TILE, (F.h - 30) * TILE]; };
+export const MAP_FRAME = [24 * TILE, 10 * TILE, 1304 * TILE, 1170 * TILE];   // (today's world's: mapFrameOf(map) for the world the server runs)
 
 let centroids = null;
 export function districtCentroids(map) {

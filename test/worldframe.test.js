@@ -18,6 +18,7 @@ import { IN } from '../shared/input.js';
 import { artGrid, planBake } from '../client/art2/game/host.js';
 import { artChunks } from '../server/artcdn.js';
 import { createRouter } from '../client/route.js';
+import { mapFrameOf, MAP_FRAME } from '../client/hud.js';
 import { pointGrid } from '../server/pointgrid.js';
 import { queueInput } from '../server/systems/players.js';
 
@@ -130,6 +131,9 @@ test('the client\'s grids from a map of another frame: the art\'s chunks, the ar
   const edge = new Map();
   planBake(edge, new Map(), { x0: NEW_X - 400, y0: Y - 495, x1: NEW_X + 1360, y1: Y + 495, cx: NEW_X + 480, cy: Y, gx: 0, gy: 0 }, 0, 0, 200, [], artGrid(F));
   assert.ok([...edge.keys()].every((k) => k % 1000 < cx), 'none past the new edge (the sea there is the stand-in)');
+  // the big map's frame: the world's, less today's margins (today's world: as it was)
+  assert.deepEqual(mapFrameOf(F), [MAP_FRAME[0], MAP_FRAME[1], MAP_FRAME[2] + 240 * TILE, MAP_FRAME[3] + 240 * TILE]);
+  assert.deepEqual(mapFrameOf({ frame: { w: MAP_W, h: MAP_H } }), MAP_FRAME);
   // the router: routes on the map of the bigger frame, and on a window of it, alike
   const ends = [];
   for (const e of F.edges) if (e.lvl === 0 && e.pts.length > 1 && ends.length < 2) { const p = e.pts[0]; if (p.x > OLD_X - 9000 && (!ends.length || Math.hypot(p.x - ends[0].x, p.y - ends[0].y) > 3000)) ends.push({ x: p.x, y: p.y }); }
