@@ -358,8 +358,10 @@ function reconcile(s) {
     const e = S.ents.get(s.ctrlId);
     const def = e && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
     if (!def) { S.pred = null; return; }
+    if (def.kind === 'air' && !S.airMod) { S.pred = null; loadAir(); return; }   // (flying: predicted once render/aircraft.js is in)
     st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), ug: S.ugLayer || 0 };
     S.pred = { kind, s: st, def, prev: null };
+    if (def.kind === 'air') { Object.assign(st, { alt: s.self.rdy, vz: s.self.stamina, spool: s.self.rollT, bank: s.self.rdx, slip: 0, spin: 0, launch: 0 }); S.pred.air = true; }   // (net.js: an aircraft's climb rate, spool, bank and altitude in those slots)
   }
   // replay unacknowledged inputs; keep the state before the last one as `prev` so the render
   // interpolation continues exactly as fixedStep would have left it
@@ -393,6 +395,7 @@ function stepPred(inp) {
   const P = S.pred;
   if (!P) return;
   if (P.kind === 'ped') { pedStep(P.s, inp, DT, S.map, P.mods); pushOutOfTrains(P.s); }
+  else if (P.air) S.airMod.predict(P.s, inp, DT, S.map, P.def, !P.s.dead);   // (flying: shared/flight.js)
   else {
     vehStep(P.s, driveInput(P.s, inp), DT, S.map, P.def, { rain: S.weather === WEATHER.RAIN });
     // predict smashing street furniture exactly like the server does (same momentum loss), so
@@ -417,7 +420,7 @@ function fixedStep() {
   const selfScreen = worldToScreen(selfPos());
   const wcur = S.me ? WEAPONS[S.me.weapon] : null;
   const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
-  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed });
+  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)) });
   const inOverlay = overlayPad();
   const spec = !!(S.spec && S.spec.on);
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
@@ -2610,6 +2613,13 @@ function selfPos() {
   return { x: S.cam.x, y: S.cam.y, a: 0, z: 0 };
 }
 
+// ---- flying (shared/flight.js): the aircraft's module loads the first time one is near or you take its controls ----
+function airDefOf(e) { const d = e && e.kind === K.VEH && e.d ? VEHICLE_BY_INDEX[e.d.m] : null; return d && d.kind === 'air' ? d : null; }
+function loadAir() {
+  if (S.airMod || S.airP) return;
+  S.airP = import('./render/aircraft.js').then((m) => { S.airMod = m; }).catch((e) => console.warn('[aircraft]', e)).finally(() => { S.airP = null; });
+}
+
 function worldToScreen(p) {
   if (!p) return null;
   return { x: (p.x - S.cam.x) * S.cam.zoom + W / 2, y: (p.y - S.cam.y) * S.cam.zoom + H / 2 };
@@ -2787,7 +2797,7 @@ function prepFrame(dt) {
   for (const e of S.ents.values()) interp(e, S.renderTick);
   // own entity follows prediction
   const sp = selfPos();
-  if (S.pred) { const e = S.ents.get(S.ctrlId); if (e) { e.rx = sp.x; e.ry = sp.y; e.ra = sp.a; e.rz = sp.z; } }
+  if (S.pred) { const e = S.ents.get(S.ctrlId); if (e) { e.rx = sp.x; e.ry = sp.y; e.ra = sp.a; e.rz = sp.z; if (S.pred.air) { const pr = S.pred.prev || S.pred.s, k = Math.min(1, S.acc / DT); e.ralt = lerp(pr.alt || 0, S.pred.s.alt || 0, k); e.rbank = S.pred.s.bank || 0; } } }
   // things riding on my driven vehicle (passengers, loaded crates) follow the prediction too
   if (S.pred && S.pred.kind === 'veh') {
     for (const e of S.ents.values()) {
@@ -2836,7 +2846,9 @@ function prepFrame(dt) {
   // speed: a phone's bakes), it eases off - down to 1.25x - and comes back slowly once the art keeps up again
   if (S.art2 && S.art2.lateNow && speed > 300 && S.art2.lateNow()) S.zoMax = Math.max(0.25, (S.zoMax ?? 0.5) - 0.12 * dt);
   else if ((S.zoMax ?? 0.5) < 0.5) S.zoMax = Math.min(0.5, S.zoMax + 0.015 * dt);
-  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, 1 + Math.min(S.zoMax ?? 0.5, speed / 1300));
+  const myAir = S.airMod && (S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) ? S.ents.get(S.ctrlId) : null;
+  const airPull = myAir && airDefOf(myAir) ? S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4) : 1;   // (flying: the higher, the more you see)
+  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, 1 + Math.min(S.zoMax ?? 0.5, speed / 1300)) / airPull;
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
@@ -2926,10 +2938,11 @@ function prepFrame(dt) {
   // at the water's level: swimmers and boats (drawn under bridge decks)
   const swimmers = peds.filter((p) => !(p.flags & PF.INVEH) && p.swim);
   const boats = vehs.filter((v) => VEHICLE_BY_INDEX[v.d.m] && VEHICLE_BY_INDEX[v.d.m].kind === 'boat');
+  const air = vehs.filter((v) => airDefOf(v));   // (aircraft: drawn over everything - drawOverlays, render/aircraft.js)
   return {
     dt, now, nowMs: performance.now(), fx, sp: S.specArt ? { x: S.cam.x, y: S.cam.y, a: 0, z: 0 } : sp, z, shx, shy, view, clock, rain, sky, quality, mark, spec: S.specArt,
     chunkView: S.chunkView, meEnt, myCar, myTrain, sub, ug,
-    peds, vehs, crates, bags, projs, balls, cars, riders, swimmers, boats,
+    peds, vehs, crates, bags, projs, balls, cars, riders, swimmers, boats, air,
     insideB: null, roofArt: [], bl: [], bA: [], refl: [],
   };
 }
@@ -3220,6 +3233,8 @@ function drawOverlays(F, v2) {
     else if (gfx.particles && F.sky && F.sky.night > 0.3 && !S.fliesAsk) { S.fliesAsk = 1; import('./render/fireflies.js').then((m) => { S.flies = new m.Fireflies(S); }).catch((e) => console.warn('[fireflies]', e)); }
   }
   g.setTransform(...S.worldTf);
+  if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
+  else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (the helipads)
   drawBowling(F);
   drawCinema(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
@@ -3272,6 +3287,8 @@ function drawOverlays(F, v2) {
     if (showTouch !== S.uiTouch) { S.uiTouch = showTouch; $('touch').classList.toggle('hidden', !showTouch); }
     const inVeh = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER;
     if (inVeh !== S.uiInVeh) { S.uiInVeh = inVeh; document.body.classList.toggle('in-veh', inVeh); }
+    const inAir = S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId));   // (at the controls of an aircraft: the ▲ / ▼ buttons)
+    if (inAir !== S.uiInAir) { S.uiInAir = inAir; document.body.classList.toggle('in-air', inAir); }
     const dead = !!(S.me && S.me.dead);
     if (dead !== S.uiDead) { S.uiDead = dead; document.body.classList.toggle('dead', dead); }
     if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; $('st-fill').style.width = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100) + '%'; } }
@@ -3918,7 +3935,7 @@ function vehVisual(v, now, dt) {
 }
 function drawVehicleEnt(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
-  if (!def) return;
+  if (!def || def.kind === 'air') return;   // (aircraft: over everything - render/aircraft.js)
   const f = v.flags;
   // a land vehicle in the water is sinking: it settles, darkens and fades, bubbling (vehVisual)
   const sinking = vehSinking(v, def);

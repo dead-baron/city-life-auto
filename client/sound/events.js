@@ -188,6 +188,8 @@ export const EVENT_SOUNDS = {
   bowl: (ev, A) => (ev.n ? A.at('woodcrunch', ev.x, ev.y, Math.min(1, 0.45 + ev.n * 0.06)) : A.at('thud', ev.x, ev.y, 0.4)),   // (the pins going down; a gutter ball's thump at the pit)
   bowlx: (ev, A) => A.ui('good', 0.6),           // (a strike)
   bowlset: null,                                 // (the pinsetter sets a new rack)
+  // ---- flying (server/systems/aircraft.js) ----
+  touchdown: (ev, A) => A.at('scrape', ev.x, ev.y, 0.45),   // (the wheels / skids meeting the ground)
 };
 
 // For the frame: true for a vehicle whose engine is running (someone at the wheel, not wrecked or dead)

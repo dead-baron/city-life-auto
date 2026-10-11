@@ -62,6 +62,7 @@ import * as streetlife from './systems/streetlife.js';
 import * as activities from './systems/activities.js';
 import * as bowling from './systems/bowling.js';
 import * as cinema from './systems/cinema.js';
+import * as aircraft from './systems/aircraft.js';
 import * as net from './net.js';
 import { warmGround } from './systems/offroad.js';
 
@@ -129,6 +130,7 @@ const SYSTEMS = [
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
   ['cinema', cinema.update],        // The Grand Theatre: the films in the screens, the audience
   ['activities', activities.update], // people going about their lives: anglers, chess in the park, picnics, a painter (activities.js)
+  ['aircraft', aircraft.update],    // helicopters and planes: the parked ones at their pads and stands, mid-air collisions (aircraft.js)
 ];
 
 export class World {

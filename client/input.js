@@ -336,6 +336,11 @@ export function sample(view) {
   if (k('KeyH')) bits |= IN.HORN;
   if (k('KeyL')) bits |= IN.LIGHT; // flashlight on / off
   if (k('KeyG')) bits |= IN.DANCE; // dance (the next move each press: server dance.js)
+  if (view.air) {   // at the controls of an aircraft (shared/flight.js): Space climbs, Shift descends
+    bits &= ~(IN.DIVE | IN.SPRINT);
+    if (k('Space')) bits |= IN.CLIMB;
+    if (k('ShiftLeft') || k('ShiftRight')) bits |= IN.DESCEND;
+  }
   if (pressedOnce.has('Tab')) bits |= IN.NEXTW;
   if (mouse.wheel > 0) bits |= IN.NEXTW;
   if (mouse.wheel < 0) bits |= IN.PREVW;
@@ -376,8 +381,9 @@ export function sample(view) {
     if (p.start) input.padStart = true;
     if (p.dDownEdge) input.padCall = true;
     if (p.dLeftEdge) input.padPhone = true;
-    const driving = view.driver && settings.padDrive !== 'stick';
-    if (driving) {
+    const driving = view.driver && (settings.padDrive !== 'stick' || !!view.air);   // (flying: the stick points the way, RT / LT climb and descend, R3 fires)
+    if (view.air) { mx = p.lx; my = p.ly; if (p.rt > 0.3) bits |= IN.CLIMB; if (p.lt > 0.3) bits |= IN.DESCEND; }
+    else if (driving) {
       // GTA1/2-style car controls: RT gas, LT brake / reverse, left stick steers, A handbrake.
       // The right stick aims drive-by fire and R3 (clicking it) shoots (padFires below).
       bits |= IN.TANK;
@@ -392,7 +398,7 @@ export function sample(view) {
     if (p.r3Edge && !driving) bits |= IN.RELOAD; // (at the wheel R3 is the drive-by's trigger; an empty gun reloads itself)
     if (p.up) bits |= view.inVehicle ? IN.HORN : IN.LIGHT; // D-pad up: horn / siren in a vehicle, the flashlight on foot
     if (p.l3 && !view.inVehicle) bits |= IN.DANCE; // L3 (click the left stick): dance
-    if (view.inVehicle) { if (!driving && p.lt > 0.4) bits |= IN.DIVE; } // stick-drive mode: LT = handbrake
+    if (view.inVehicle) { if (!driving && !view.air && p.lt > 0.4) bits |= IN.DIVE; } // stick-drive mode: LT = handbrake
     else if (p.lt > 0.4) bits |= IN.BLOCK;
     else if (Math.hypot(p.lx, p.ly) > FULL_STICK) bits |= IN.SPRINT;  // no run button on a pad: the stick all the way out sprints
     const rmag = Math.hypot(p.rx, p.ry);
@@ -419,6 +425,8 @@ export function sample(view) {
     if (tt.has('reload')) bits |= IN.RELOAD;
     if (tb.has('horn') || tt.has('horn')) bits |= IN.HORN;
     if (tb.has('light') || tt.has('light')) bits |= IN.LIGHT;
+    if (tb.has('climb')) bits |= IN.CLIMB;
+    if (tb.has('descend')) bits |= IN.DESCEND;
     tt.clear();
   }
   const ml = Math.hypot(mx, my);
