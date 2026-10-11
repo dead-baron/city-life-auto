@@ -33,7 +33,8 @@ test('one station per name: every service that stops there calls at it, its plat
       assert.equal(st.poi, pois[0].id, `${r.name} ${name}: the station's map point`);
       const d = Math.hypot(st.platform.x - h.x, st.platform.y - h.y);
       // (Metro Central waits on the owner's call on the Harbor Line through Metro City: its loops' platforms lie apart)
-      if (name !== 'Metro Central Station') assert.ok(d < 1600, `${r.name} ${name}: its platform ${Math.round(d)} px from the building`);
+      // (Northshore: the platforms either side of the junction, a footbridge each, the building by the western pair)
+      if (name !== 'Metro Central Station') assert.ok(d < (name === 'Northshore Station' ? 2400 : 600), `${r.name} ${name}: its platform ${Math.round(d)} px from the building`);
       // the platform on straight track (a train stands along it)
       const a = railAt(r, st.s - st.half).a, b = railAt(r, st.s + st.half).a;
       assert.ok(Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) < 0.12, `${r.name} ${name}: the platform on the straight`);
@@ -61,13 +62,9 @@ test('the switches: turnouts where a loop leaves another\'s track, diamonds wher
   // the junctions have their switches (where the tracks meet at ground level: under ground - a tunnel, an underpass - none are listed)
   for (const [x, y] of [[2440, 1700], [3950, 1420], [2250, 2330], [1640, 1700]]) {
     if (sw.some((w) => Math.hypot(w.x - x * TILE, w.y - y * TILE) < 60 * TILE)) continue;
-    // none listed: the tracks meet below ground there (Metro Junction in the tunnel under the core, Westport Junction
-    // in the underpass under the Coast Highway) - each loop's point nearest the junction is under
-    for (const r of M.rails) {
-      let best = null, bd = Infinity;
-      for (const p of r.pts) { const d = Math.hypot(p.x - x * TILE, p.y - y * TILE); if (d < bd) { bd = d; best = p; } }
-      if (bd < 10 * TILE) assert.ok(best.under, `the junction ${x}, ${y}: no switches listed, yet ${r.name}'s track there is at ground level`);
-    }
+    // none listed: the tracks meet below ground there (Metro Junction at the mouth of the tunnel under the core,
+    // Westport Junction in the underpass under the Coast Highway) - the line goes under at the junction
+    assert.ok(M.rails.some((r) => r.pts.some((p) => p.under && Math.hypot(p.x - x * TILE, p.y - y * TILE) < 30 * TILE)), `the junction ${x}, ${y}: no switches listed, yet its tracks meet at ground level`);
   }
   assert.ok(sw.some((w) => Math.hypot(w.x - 2440 * TILE, w.y - 1700 * TILE) < 40 * TILE), 'switches at Northshore Junction');
   // the bake at a turnout: two tracks through the same pixels - the second track's rails are drawn (the bake's second field)

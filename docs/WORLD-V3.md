@@ -2479,8 +2479,8 @@ owner is deciding). Nothing live changes: the world hash stays `6b6e16fdef9f` (t
 - **The pictures:** `docs/world-v3-hub-northshore.png`, `docs/world-v3-hub-westport-junction.png` and
   `docs/world-v3-hub-old-town.png` (`tools/world3-hub-map.mjs`: the chunk bake at 1/4 round a station, the building, the
   platforms and the switches marked). The numbers (seed 1337): every station one, its loops' platforms within about
-  330 px of its building (Northshore's six loops at the platforms either side of the junction; Metro Central's 3 km
-  apart: the Harbor Line through Metro City is the owner's to decide); 8 turnouts and 4 diamonds listed; two bores (the
+  370 px of its building (Northshore's six loops at the two pairs of platforms either side of the junction, 2 km apart;
+  Metro Central's 3 km apart: the Harbor Line through Metro City is the owner's to decide); 8 turnouts and 4 diamonds listed; two bores (the
   Grand Loop's 277-tile one through the mountains, a track each way). What looks right: Northshore's junction compact -
   the stem's double track rising into the coast line through its turnouts (the switch rails and frogs drawn) and two
   diamonds, the platforms side by side with a footbridge over the tracks; Westport Junction's one station, its two
@@ -2491,6 +2491,13 @@ owner is deciding). Nothing live changes: the world hash stays `6b6e16fdef9f` (t
     edge, their crowns hang over the track);
   - **a junction under a highway** (Westport Junction, in the underpass under the Coast Highway) has its switches below
     ground: none drawn, none listed;
+  - **Old Town's platforms stand on piers** at the end of the Bay Bridge Line's trestle, and the line crosses the shore
+    road at grade right at the mouth of the tunnel under the core; the picture's building stood in the water beside the
+    east platform (the building is now set back up to 340 px onto land when there is some - not yet seen in a picture);
+  - **Northshore is one station in two halves:** with the junction a T, no stretch carries all three services, so the
+    Grand Loop and the Harbor Line call at the pair of platforms west of the junction, the Bay Loop at the pair east of
+    it (about 2 km apart along the coast line, the building by the western pair) - a station on the stem with the
+    junction moved clear of the town would put them together;
   - the station building is placeholder art (the subway's entrance kiosk) and the concourse just the forecourt and
     the footbridges.
 - **The tests:** `test/world3hubs.test.js` (one world build: one station per name, every service calling, its one map

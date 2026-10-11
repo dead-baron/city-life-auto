@@ -3092,9 +3092,9 @@ function buildRailHubs(m) {
     const all = h.calls.map(([ri, si]) => m.rails[ri].stations[si]), sts = all.some((st) => !st.under) ? all.filter((st) => !st.under) : all;
     const mx = sts.reduce((a, st) => a + st.platform.x, 0) / sts.length, my = sts.reduce((a, st) => a + st.platform.y, 0) / sts.length;
     let pick = null, pd = Infinity;
-    for (const st of sts) {
-      const nx = -Math.sin(st.a) * st.side, ny = Math.cos(st.a) * st.side, x = st.x + nx * (PLATFORM_OUT + 56), y = st.y + ny * (PLATFORM_OUT + 56), t = m.tileAtPx(x, y);
-      const d = Math.hypot(x - mx, y - my) + (t === T.ROAD || t === T.BUILDING || t === T.WALL || t === T.WATER || t === T.DEEP || t === T.BRIDGE ? 5000 : 0);
+    for (const st of sts) for (const off of [56, 116, 176, 236]) {   // (behind the platform; further back off a pier, a quay)
+      const nx = -Math.sin(st.a) * st.side, ny = Math.cos(st.a) * st.side, x = st.x + nx * (PLATFORM_OUT + off), y = st.y + ny * (PLATFORM_OUT + off), t = m.tileAtPx(x, y);
+      const d = Math.hypot(x - mx, y - my) + off + (t === T.ROAD || t === T.BUILDING || t === T.WALL || t === T.WATER || t === T.DEEP || t === T.BRIDGE || t === T.DOCK ? 5000 : 0);
       if (d < pd) { pd = d; pick = { x, y, a: Math.atan2(ny, nx) }; }
     }
     h.x = Math.round(pick.x); h.y = Math.round(pick.y); h.a = pick.a;
