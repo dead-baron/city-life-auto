@@ -14,7 +14,8 @@
 // RAMP tiles before the water to RAMP tiles past it (the generator lays the bed and decks it over the water), and below
 // ground again beyond. Each station is a stop on both tracks (a terminal once, after its turning loop); a station at
 // a line's junction with its loop stands SHIFT tiles back along the line, clear of the junction.
-// Only + - * / and Math.sqrt: the same in every engine.
+// The route is built with + - * / and Math.sqrt only (the same in every engine); the passes by the stations measure with
+// Math.hypot, at build time, under generateCity's deterministic maths. Nothing is computed when the module loads.
 import { TILE, T } from './constants.js';
 import { SUBWAYS, STATIONS, RADIUS } from './world3-skeleton.js';
 import { roundLoop, trackOf } from './world3-rail.js';
