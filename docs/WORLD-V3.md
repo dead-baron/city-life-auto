@@ -4322,7 +4322,8 @@ House #9) went with the old streets...").
   90 s: the runbook's step 3).
 - A stale file can't be served: the key is the v3 build's code and the seed (the same code builds the same world, to
   the bit in every engine: `shared/dmath.js`), and the map's signature is checked on top.
-- Today's world (the live game) is cut at every start as before (a fraction of a second; no marker is written).
+- Today's world (the live game) is cut at every start as before - 0.35 s and 32 MB raw (8.23's harness), not worth
+  a second way its files could be served - and no marker is written for it.
 
 **The trains' fixed cost** (`server/systems/trains.js` `update`, `nearSomeone`, `NEAR_PX`)
 - Measured (in process, the v3 world, 16 trains, nobody on): **the tick 1.03 ms, the trains 0.64 ms of it**; by
@@ -4350,8 +4351,17 @@ House #9) went with the old streets...").
   plan is `planRoute`'s, as before. `planTo` and the ambulance's way out use it. `planRoute` itself is untouched
   (H51's work on the traffic's route choice). On today's world the same routes for every pair (`test/ems.test.js`: 160
   random pairs).
-- Not the heap or a periodic system: the collections in the runs were 339-372 pauses, at most one over 20 ms (25 ms),
-  and the worst ticks fell on no system's period (`world.tick % 400` 100 and 13).
+- **And the off-road tables:** with the plans answered at once the worst tick was still ems - 669-813 ms: a CPU profile
+  of the worst ticks (the samples inside each) put it in `arrive` -> `offroad.js clearWalk` -> `propMask`: the first
+  ambulance to arrive anywhere makes the off-road mask of the whole frame (5040 x 4032 tiles, every solid prop of the
+  world) and the drops (`shared/ledges.js`), once per map, in its tick. `server/world.js` makes them when it's given a
+  map over 4 M tiles (World v3's frame; `offroad.js` `warmGround`) - at the start, not in a tick.
+- **And the tiles near the line:** with 50 bots arriving at once the first ticks took up to 2.26 s. The trains'
+  `loopTiles` (every point of every loop, the 7 x 7 tiles round each: what `railThreat` and `railBlocked` look up) was
+  made by the first person near a track, in their tick; now with the trains (`initLoops`).
+- Not the heap or a periodic system: the collections in the runs were 339-372 pauses (scavenges), at most four over
+  20 ms (one of 54 ms, on the busy machine), and the worst ticks fell on no system's period (`world.tick % 400` 100,
+  13, 294).
 
 **The bots spread at v3: a capacity test** (`tools/bots.js --spread`, `tools/junctions.mjs`)
 - `--spread` now spreads the bots over the junctions of the world the server runs: it asks the server's `/stats` for

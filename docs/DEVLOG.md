@@ -8063,8 +8063,11 @@ hash 6b6e16fdef9f and art hash f79a72d2dddc stamped the same before and after).
   but its cars are placed (and collide, sound their horn, carry riders) only near someone; the signals keep their sets
   from tick to tick. Nobody on: the trains 0.64 -> 0.47 ms a tick (`server/systems/trains.js`).
 - **The worst tick (the 160 ms in 600):** the ambulances - planning a way to a junction they can't reach searched the
-  whole v3 road network first (120-630 ms in one tick). `kerbdrive.js` `routeTo` knows which part of the network each
-  junction is in and answers those at once, as `planRoute` would; `planRoute` itself is untouched.
+  whole v3 road network first (`kerbdrive.js` `routeTo` knows which part of the network each junction is in and
+  answers those at once, as `planRoute` would; `planRoute` itself is untouched), and the first one to arrive made the
+  off-road tables of the whole world in its tick (0.4-0.8 s: now made with the World for a v3-sized map, `offroad.js`
+  `warmGround`). And the tiles near the railway, made by the first person near a track (the first ticks with 50 bots
+  arriving: up to 2.3 s): now with the trains.
 - **The bots at v3:** `tools/bots.js --spread` spreads over the junctions of the world the server runs, read from its
   index (`tools/junctions.mjs`), and logs the systems' ms.
 
