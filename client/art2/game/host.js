@@ -585,7 +585,7 @@ export class World2 {
         if (st0 === 1 || st0 === 2 || tNow < st0) continue;
         peeks.set(pk, 1);
         this.pool.request(pk, 'peekChunk', { cx, cy, q: this.q, ck: `q${this.q}|a${this.E.ap || 1}|u1|${cx},${cy}${mode >= 0 ? `|c${mode}` : ''}` }, d - 1e6, (r, err) => {
-          if (err || !r || r.none || !r.g || this.failed) { peeks.set(pk, !err && this.cdn && mode < 0 ? performance.now() + PEEK_AGAIN_MS : 2); return; }
+          if (err || !r || r.none || !r.g || this.failed) { peeks.set(pk, !err && this.cdn && !this.cdnOff && mode < 0 ? performance.now() + PEEK_AGAIN_MS : 2); return; }
           peeks.set(pk, 2);
           if (r.cdn) { this.n.cdn = (this.n.cdn || 0) + 1; this.t.cdnSum = (this.t.cdnSum || 0) + (r.dlMs || 0); }   // (the server's: worker.js)
           this.results.set(pk, { jk: pk, key: k, cx, cy, mode, r, prio: d - 1e6, ver, preview: !r.exact });
@@ -608,7 +608,7 @@ export class World2 {
       if (E.chunkKeys) for (const ck of E.chunkKeys()) { const [x, y] = typeof ck === 'string' ? ck.split(',') : ck; if (bake.has(+y * 1000 + +x)) held++; }
       // (just after a jump - a teleport, a respawn - the screen is all stand-ins: up to JUMP_UP a frame until it's drawn,
       // not one or two - in a slow page, a frame a chunk was most of the wait. docs/WORLD-V3.md 8.12.1)
-      let n = this.jump && !this.jump.drawn ? Math.max(tier.chunkUp, JUMP_UP) : tier.chunkUp, free = Math.max(0, cap - held);
+      let n = this.jump && !this.jump.drawn && !this.jump.over ? Math.max(tier.chunkUp, JUMP_UP) : tier.chunkUp, free = Math.max(0, cap - held);
       for (const res of ready) {
         if (n <= 0) break;
         if (!need.has(res.key)) { if (free <= 0) continue; free--; }
@@ -633,7 +633,8 @@ export class World2 {
     // after a jump (a teleport, a respawn): how long until every chunk on screen was in the page (landed: drawn or
     // waiting to be), and until all were drawn, in how many frames (stats().jump; docs/WORLD-V3.md 8.12.1)
     const J = this.jump;
-    if (J && !J.drawn) {
+    if (J && !J.drawn && !J.over && performance.now() - J.t0 > 30000) J.over = true;   // (a chunk that won't bake: not counted on)
+    if (J && !J.drawn && !J.over) {
       J.frames++;
       let landed = true, drawn = true;
       for (const k of need.keys()) {
@@ -645,8 +646,8 @@ export class World2 {
         if (!has) { landed = false; break; }
       }
       const ms = performance.now() - J.t0;
-      if (landed && !J.landed) J.landed = Math.round(ms);
-      if (drawn) J.drawn = Math.round(ms);
+      if (landed && !J.landed) J.landed = Math.max(1, Math.round(ms));
+      if (drawn) J.drawn = Math.max(1, Math.round(ms));
     }
     // how often a chunk on screen is still a stand-in once the game is under way (the perf report: main.js), and how
     // long the longest such stretch lasted - on the move (over 300 px/s) and overall
