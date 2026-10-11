@@ -14,7 +14,7 @@ import { prepare } from '../tools/world3-build.mjs';
 
 test('World v3: the mainland\'s biomes - their districts, ground and dressing; Northshore at its beach', { timeout: 300000 }, () => {
   // the new districts are the generator's (after today's: today's ids don't move), shaped like today's
-  assert.equal(DISTRICTS.length, 63);   // (57-59: the first mainland towns, 8.13 - test/world3towns.test.js; 60-62: Lucky Mesa, 8.15 - test/world3mesa.test.js)
+  assert.equal(DISTRICTS.length, 65);   // (57-59: the first mainland towns, 8.13 - test/world3towns.test.js; 60-62: Lucky Mesa, 8.15 - test/world3mesa.test.js; 63-64: Copper Gulch, Dusty Hollow, 8.18 - test/world3desert.test.js)
   DISTRICTS3.forEach((d, k) => assert.equal(DISTRICTS[47 + k], d));
   const prep = prepare();
   const m = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });

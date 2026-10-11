@@ -1,0 +1,123 @@
+// World v3 (docs/WORLD-V3.md 8.18): the Red Rock Desert's places besides Lucky Mesa, in the whole-world build - Copper
+// Gulch's and Dusty Hollow's districts (after Lucky Mesa's: no id moves), Copper Gulch's main street (Mine Road pulled
+// straight) and side streets on the one road network, Depot Road up to its station, its planned places (the assay
+// office, the saloon, the general store, the sheriff); Copper Gulch Mine (the open pit a quarry as today's, the adit
+// with its seams, as the Old Granite Mine's), the freight yard's ore cars by the main line; Dusty Hollow's empty
+// buildings, its hideout and smuggler's drop; Red Rock Dam on the reservoir's shore and the dry wash below; the lookout,
+// the arch and the hoodoos; the motel, its pool and the billboards; the desert camp; nothing in the highways' room or on
+// the main line. One world build.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { generateCity, DISTRICTS } from '../shared/map.js';
+import '../shared/world3-islands.js';
+import { TILE, T } from '../shared/constants.js';
+import { FRAME_W, FRAME_H } from '../shared/world3.js';
+import { skeletonLines, nearestOnPath, STATIONS } from '../shared/world3-skeleton.js';
+import { GULCH, HOLLOW, DESERT, DESERT_SPECIALS, DESERT_IDS } from '../shared/world3-desert.js';
+import { undergroundOf, UG } from '../shared/underground.js';
+import { prepare } from '../tools/world3-build.mjs';
+
+test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, the dam, the lookout, the motel, the camp', { timeout: 300000 }, () => {
+  // the districts follow Lucky Mesa's (60-62)
+  assert.deepEqual([DESERT_IDS.gulch, DESERT_IDS.hollow], [63, 64]);
+  assert.deepEqual([63, 64].map((d) => [DISTRICTS[d].id, DISTRICTS[d].name, DISTRICTS[d].style]), [[63, 'Copper Gulch', 'oldtown'], [64, 'Dusty Hollow', 'desert']]);
+  assert.equal(DISTRICTS[62].name, 'Mesa Flats');
+  const prep = prepare();
+  const m = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });
+  const W = m.w, N = W * m.h;
+  const distAt = (x, y) => m.dist[Math.floor(y / TILE) * W + Math.floor(x / TILE)];
+  const bad = [];
+  const check = (ok, msg) => { if (!ok) bad.push(msg); };
+  const D = m.world3.desert;
+  console.log('desert', JSON.stringify(D));
+
+  // 1. the ground
+  const tiles = { 63: 0, 64: 0 };
+  for (let i = 0; i < N; i++) if (m.dist[i] === 63 || m.dist[i] === 64) tiles[m.dist[i]]++;
+  check(tiles[63] > 9000 && tiles[64] > 3000, `the districts' ground ${JSON.stringify(tiles)}`);
+
+  // 2. Copper Gulch's streets on the one network (as test/world3mesa.test.js), its main street straight on its row
+  const comp = new Int32Array(m.nodes.length).fill(-1), sizes = [];
+  for (let s = 0; s < m.nodes.length; s++) {
+    if (comp[s] >= 0) continue;
+    const c = sizes.length, st = [s]; comp[s] = c; let n = 0;
+    while (st.length) { const u = st.pop(); n++; for (const id of m.nodes[u].edges) { const e = m.edges[id], v = e.a === u ? e.b : e.a; if (comp[v] < 0) { comp[v] = c; st.push(v); } } }
+    sizes.push(n);
+  }
+  const main = sizes.indexOf(Math.max(...sizes));
+  for (const [name] of GULCH.streets) {
+    const edges = m.edges.filter((e) => e.name === name && e.lvl === 0);
+    check(edges.length > 0, `${name} laid`);
+    for (const e of edges) check(comp[e.a] === main && comp[e.b] === main, `${name} at ${Math.round(e.pts[0].x / TILE)}, ${Math.round(e.pts[0].y / TILE)} on the one network`);
+  }
+  const row = (GULCH.main.y + 0.5) * TILE;
+  let onRow = 0;
+  for (const e of m.edges.filter((q) => q.name === GULCH.main.line && q.lvl === 0)) for (let j = 1; j < e.pts.length; j++) { const a = e.pts[j - 1], b = e.pts[j]; if (Math.abs(a.y - row) < 2 && Math.abs(b.y - row) < 2 && a.x >= GULCH.main.a * TILE && b.x <= GULCH.main.b * TILE + TILE) onRow += Math.abs(b.x - a.x); }
+  check(onRow >= 120 * TILE, `the main street: ${(onRow / TILE).toFixed(0)} tiles straight on its row`);
+  const stn = STATIONS.find((s) => s.name === 'Copper Gulch' && s.line === 'main');
+  const near = Math.min(...m.edges.filter((e) => e.name === 'Depot Road').flatMap((e) => e.pts.map((p) => Math.hypot(p.x / TILE - stn.at[0], p.y / TILE - stn.at[1]))));
+  check(near <= 32, `Depot Road ends ${near.toFixed(0)} tiles from the station`);
+
+  // 3. the town's places
+  const pois = m.pois.filter((p) => p && distAt(p.x, p.y) === 63);
+  for (const sp of DESERT_SPECIALS) sp.names.forEach((nm, k) => check(pois.some((p) => p.kind === sp.biz[k] && p.label === nm), `${nm} (${sp.biz[k]}) in Copper Gulch (${(m.pois.find((p) => p && p.label === nm) || {}).kind || 'not built'})`));
+  check(pois.some((p) => p.kind === 'assay' && p.counter), 'the assay office buys ore at its counter');
+  const gb = m.buildings.filter((b) => b && m.dist[(b.ty + (b.th >> 1)) * W + b.tx + (b.tw >> 1)] === 63);
+  check(gb.length >= 25, `${gb.length} buildings in Copper Gulch`);
+  check(m.pois.some((p) => p && p.label === 'Copper Gulch Freight Yard' && p.ore), 'the freight yard');
+  check((D.built.oreCars || 0) >= 3, `${D.built.oreCars} ore cars by the main line`);
+  check(m.props.some((p) => p && p.t === 'watertower' && distAt(p.x, p.y) === 63), 'the water tower');
+
+  // 4. the mine: the open pit a quarry (the bake's terraces, the miners), the adit a mine as the Old Granite Mine's
+  const pit = (m.quarries || []).find((q) => q.name === 'Copper Gulch Mine');
+  check(pit && pit.w >= 80 * TILE && pit.h >= 60 * TILE, 'the open pit');
+  const mine = (m.natureSites || []).find((q) => q.kind === 'mine' && q.name === 'Copper Gulch Mine');
+  check(mine && mine.seams.length >= 3, 'the adit and its seams');
+  check(m.props.some((p) => p && p.t === 'mineportal' && Math.abs(p.x - (DESERT.adit[0] + 0.5) * TILE) < 2 * TILE), 'the adit\'s portal');
+  check(m.buildings.some((b) => b && b.name === 'Copper Gulch Crusher'), 'the crusher');
+  check((m.landmarks || []).some((l) => l.name === 'Copper Gulch Mine'), 'the mine on the map');
+  // (the v3 world's only mine and pit: the cave world of shared/underground.js under its adit, the ore veins round the
+  // pit's faces and on the cave's walls - mined as today's)
+  const U = undergroundOf(m);
+  check(U && U.cave && mine && U.cave.X === mine.x && U.cave.face === mine.y, 'the cave world through the adit');
+  const pitVeins = U ? U.veins.filter((v) => v.ug === 0 && pit && v.x >= pit.x - 60 && v.x <= pit.x + pit.w + 60 && v.y >= pit.y - 60 && v.y <= pit.y + pit.h + 60).length : 0;
+  const caveVeins = U ? U.veins.filter((v) => v.ug === UG.CAVE).length : 0;
+  check(pitVeins >= 5 && caveVeins >= 10, `the ore veins: ${pitVeins} round the pit, ${caveVeins} in the cave`);
+  console.log('mining', JSON.stringify({ pitVeins, caveVeins, chambers: U?.cave?.chambers?.length }));
+
+  // 5. Dusty Hollow: its ruins, the hideout, the smuggler's drop
+  const hb = m.buildings.filter((b) => b && b.art && b.art.ghost);
+  check(hb.length >= 8, `${hb.length} empty buildings in Dusty Hollow`);
+  const hp = m.pois.filter((p) => p && distAt(p.x, p.y) === 64);
+  check(hp.some((p) => p.kind === 'gang') && hp.some((p) => p.kind === 'smuggler'), `Dusty Hollow's hideout and drop (${hp.map((p) => p.kind)})`);
+  check(hp.every((p) => p.kind === 'gang' || p.kind === 'smuggler'), 'nothing else open in Dusty Hollow');
+
+  // 6. the dam, the wash, the lookout, the arch, the motel, the billboards, the camp
+  check(D.built.dam >= 100, `the dam: ${D.built.dam} tiles of wall`);
+  check(D.built.wash >= 200, `the dry wash: ${D.built.wash} tiles`);
+  check(m.props.some((p) => p && p.t === 'lookout' && Math.hypot(p.x / TILE - DESERT.lookout[0], p.y / TILE - DESERT.lookout[1]) < 12), 'the lookout on its mesa');
+  check(m.props.some((p) => p && p.t === 'seaarch' && Math.hypot(p.x / TILE - DESERT.arch[0], p.y / TILE - DESERT.arch[1]) < 2) && (D.built.hoodoos || 0) >= 3, 'the arch and the hoodoos');
+  check(D.built.motel && D.built.motel.rooms && D.built.motel.office, `the motel ${JSON.stringify(D.built.motel)}`);
+  const [mx0, my0, mx1, my1] = DESERT.motel;
+  let pool = 0;
+  for (let y = my0; y < my1; y++) for (let x = mx0; x < mx1; x++) if (m.tiles[y * W + x] === T.WATER) pool++;
+  check(pool >= 30, `the motel's pool: ${pool} tiles`);
+  check(D.built.billboards >= 2, `${D.built.billboards} billboards on the highway`);
+  check(D.built.camp >= 5, `the camp: ${D.built.camp} things`);
+  check(D.built.tracks >= 400, `the jeep tracks: ${D.built.tracks} tiles`);
+
+  // 7. clear of the highways and the main line
+  const SK = skeletonLines(), hwys = SK.filter((l) => l.kind === 'hwy'), rails = SK.filter((l) => l.kind === 'main');
+  const mineBox = [DESERT.pit[0] - 20, DESERT.pit[1] - 10, DESERT.pit[2] + 10, DESERT.pit[3] + 50];
+  const ours = m.buildings.filter((b) => {
+    if (!b) return false;
+    const d = m.dist[(b.ty + (b.th >> 1)) * W + b.tx + (b.tw >> 1)];
+    return d === 63 || d === 64 || b.art?.ghost || /Sundowner|Red Rock Dam|Crusher/.test(b.name || '') || (b.tx >= mineBox[0] && b.tx < mineBox[2] && b.ty >= mineBox[1] && b.ty < mineBox[3]);
+  });
+  for (const b of ours) for (const [x, y] of [[b.tx, b.ty], [b.tx + b.tw, b.ty], [b.tx, b.ty + b.th], [b.tx + b.tw, b.ty + b.th]]) {
+    for (const h of hwys) { const q = nearestOnPath(h.path, x, y); check(q.d >= 22, `${b.name} at ${b.tx}, ${b.ty} ${q.d.toFixed(0)} tiles from the ${h.name}`); }
+    for (const r of rails) { const q = nearestOnPath(r.path, x, y); check(q.d >= 14, `${b.name} at ${b.tx}, ${b.ty} ${q.d.toFixed(0)} tiles from the main line (${r.name})`); }
+  }
+  console.log('Red Rock Desert', JSON.stringify({ tiles, gulch: gb.length, hollow: hb.length, pois: pois.length, station: Math.round(near), ours: ours.length }));
+  assert.deepEqual(bad.slice(0, 20), [], `${bad.length} problems`);
+});
