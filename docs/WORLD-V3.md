@@ -2816,6 +2816,9 @@ any of it: today's world keeps its path - the kept city, the download of the who
   player read the window's POIs (always inside it).
 - At v3: 860 places, 339 of them outside the window round the gulf's hospital (the mainland's towns, Westport, the
   airport...).
+- **The districts' names on the big map** likewise: the index carries each district's middle (`mids`: `[d, x, y, here]`,
+  `client/hud.js` `districtCentroids`' way over the whole map, at the cut), and a window's big map names every district
+  of the world - before, the window's alone, and kept from the first window (a cache for the page's one map).
 
 **The regions kept in the browser** (`client/regionstore.js`, new; IndexedDB `cla-regions`)
 - The city worker (`client/worldgen.js` `fetchWindow`) looks in the store first for the index and each region, and
@@ -2842,7 +2845,7 @@ any of it: today's world keeps its path - the kept city, the download of the who
   window too, today's whole assembly unchanged (no places, no picture); the kept regions - the first visit downloads
   10 files and keeps them, the return visit downloads none (the same tiles), a move downloads the 3 regions it hadn't
   kept, a spoiled kept region is downloaded again past the HTTP cache and the good one kept, a kept index that doesn't
-  read downloaded again.
+  read downloaded again; the districts' middles in a window - every district of the world, as the whole map's.
 - `test/world3window.test.js` (the v3 world built once): every region's signature and the world's; a window round the
   gulf's hospital lists all 860 places, the 339 outside it as the world has them; the picture 1260 x 1008, its tiles
   the world's.
@@ -2851,7 +2854,8 @@ any of it: today's world keeps its path - the kept city, the download of the who
 
 | | |
 |---|---|
-| The v3 index | 5.22 MB raw, **0.95 MB gzipped** with the signatures, the places and the picture (the world has grown since 8.12's 0.71: the towns, the main line) |
+| The v3 index | 5.22 MB raw, **0.95 MB gzipped**; of it the new fields, each gzipped alone: **the picture 51 KB**, the places 13 KB, the signatures 1 KB (the rest is the world grown since 8.9's 0.71: the towns, the main line) |
+| Today's index | 0.359 -> **0.371 MB** gzipped (1.406 -> 1.438 MB raw); its 9 region files byte for byte as before |
 | The signatures | 81 x 7 characters; checking a region about 5 ms (a 4.4 MB region; 45 ms for 9) |
 | The minimap at v3 | **5.1 MB** (the coarse picture) + **9.1 MB** (the window's) of pixels, against 81.3 MB |
 | The places | 860 at v3 (339 outside the window round the gulf's hospital) |
@@ -2861,8 +2865,6 @@ any of it: today's world keeps its path - the kept city, the download of the who
 | **A return visit** (the page loaded again, the same browser) | the window round where the player was: **10 files from the browser, 0 downloaded**, ready 3.0 s after the reload |
 
 **What's left**
-- The district names on the big map are the window's (`districtCentroids` reads the window's dist layer): the world's
-  districts' middles belong in the index too.
 - The kept regions are never evicted (the whole v3 world is about 12 MB) and a stale world's are cleared only when a
   new world keeps its first file.
 - 8.12's items 2, 4, 5 and 8 stand (the first window round where the player was last, the railway's loops in a window,
