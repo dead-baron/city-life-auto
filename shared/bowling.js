@@ -209,14 +209,14 @@ export const totalScore = (rolls) => { const c = scoreCard(rolls); let s = 0; fo
 // The biggest plain warehouse with a single storefront and room for eight lanes becomes Pinwheel Lanes: the lanes along the
 // back, the approach and the settees, the shoe counter by the door. A walk-in (its roof fades as you go in) with one unit,
 // the counter's; m.bowling holds the lanes.
-export function buildBowlingAlley(m, { T, DISTRICTS }) {
+export function buildBowlingAlley(m, { T, DISTRICTS, keep = null }) {   // (keep: delivery stops it never takes - World v3's Westport Freight)
   const byB = new Map();
   for (const p of m.pois) if (p.b !== undefined) { if (!byB.has(p.b)) byB.set(p.b, []); byB.get(p.b).push(p); }
   let best = null;
   for (const b of m.buildings) {
     if (!b || b.gone || b.prefab < 0 || b.walkIn || b.home !== undefined || b.kind !== 'warehouse' || b.tw < 14 || b.th < 12) continue;
     const list = byB.get(b.id) || [];
-    if (list.length !== 1 || list[0].kind !== 'delivery') continue;
+    if (list.length !== 1 || list[0].kind !== 'delivery' || (keep && keep.includes(list[0].label))) continue;
     if (!best || b.tw * b.th > best.tw * best.th || (b.tw * b.th === best.tw * best.th && b.id < best.id)) best = b;
   }
   if (!best) return;

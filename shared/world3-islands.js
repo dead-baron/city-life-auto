@@ -11,6 +11,7 @@
 //   listed in m.islandBuild.leftOut with where it ran on the island (`on`: tile x, y pairs - the seam it leaves).
 // What it can't build yet is in 4.7 (the railway is still laid whole; ids, names and the random stream are world-wide).
 import { TILE } from './constants.js';
+import { measure } from './geom.js';
 import { SEEDS } from './citylayout.js';
 import { ISLAND_SEEDS } from './islands.js';
 import { ARTS } from './metro.js';
@@ -52,11 +53,12 @@ export function islandOpts(key, asked = {}) {
   // (a planned business's home: its spot, its district's first seed, or where map.js seedOf puts it - the Arts
   // District's rectangle, Metro City for a district without seeds)
   const home = (sp) => { if (sp.at) return sp.at; const s = seeds.find((q) => q[0] === sp.d); return s ? [s[1], s[2]] : sp.d === 46 ? [(ARTS.x0 + ARTS.x1) >> 1, (ARTS.y0 + ARTS.y1) >> 1] : [800, 500]; };
-  let own = null;
+  let own = null, own3 = null;
   // (asked.land: the v3 frame's land, shared/world3-land.js buildLand3 - the build's land is the place's there: the
   // land of its zones in its picture's rectangle (the polygon, less the canal); the canal is the generator's river
   // (boatable, bridged); its districts and zones are the land layer's. The frame must be the land's.)
   const land3 = asked.land || null, Z3 = asked.zones || [1, 2];
+  const D3 = asked.dists || null;   // (or the land of its districts there: Westport and the airport share zone 7 - 8.5)
   const land3Land = (land, m) => {
     const L = land3.layers, N = m.w * m.h;
     if (land3.w !== m.w || land3.h !== m.h) throw new Error(`island build on the v3 land: the frame must be the land's (${land3.w} x ${land3.h})`);
@@ -68,7 +70,7 @@ export function islandOpts(key, asked = {}) {
     for (let i = 0; i < N; i++) if (L.land[i]) today[i] = 1;
     for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
       const i = y * W + x;
-      if (L.land[i] && Z3.includes(L.zone[i])) { land[i] = 1; mass[i] = 1; }
+      if (L.land[i] && (D3 ? D3.includes(L.dist[i]) : Z3.includes(L.zone[i]))) { land[i] = 1; mass[i] = 1; }
       else if (L.water[i] === 5) m.river[i] = 1;   // (WATER3.CANAL)
     }
     // (the canal's water within 12 tiles of the open sea is the sea's: its mouths, and where it ate a thin strip of land
@@ -89,6 +91,26 @@ export function islandOpts(key, asked = {}) {
     o.ownRiver = true;   // (the canal is the river: map.js's trace of today's river would mark the bay's water)
     o.zones = (mm) => { for (let i = 0; i < N; i++) if (land[i]) mm.zone[i] = L.zone[i]; };
     o.dists = (mm) => { for (let i = 0; i < N; i++) if (land[i]) mm.dist[i] = L.dist[i]; };
+    // (8.5: a place picked by its districts keeps the planned businesses of every district it has - Port Westport's
+    // Westport Freight, whose district is new ground; and its quays, map.js buildQuays)
+    if (D3) { own3 = new Set(); for (let i = 0; i < N; i++) if (land[i]) own3.add(L.dist[i]); }
+    o.quays = asked.quays || null;
+  };
+  // (8.5: a line from the place onto the mainland cut where it meets it - the runs of its points off the mainland's
+  // land that have a point on the place's; null when it reaches another island's land too: a bridge, left out)
+  const seamCut = (line, m) => {
+    const B = land3.layers.biome, runs = [];
+    let run = [], has = false, other = false;
+    for (const p of line.pts) {
+      const i = tileOf(p.x / TILE, p.y / TILE), foreign = i >= 0 && !m.land[i] && !!today[i] && !mass[i];
+      if (foreign && !B[i]) other = true;
+      if (foreign) { if (run.length > 1 && has) runs.push(run); run = []; has = false; continue; }
+      run.push(p);
+      if (i >= 0 && m.land[i]) has = true;
+    }
+    if (run.length > 1 && has) runs.push(run);
+    if (other || !runs.length) return null;
+    return runs.map((pts) => { const q = pts.map((p) => ({ ...p })); measure(q); return { ...line, pts: q }; });
   };
   const o = {
     island: key,
@@ -142,9 +164,9 @@ export function islandOpts(key, asked = {}) {
         o.islandAt = o.islandAt.map(([[x, y], z]) => [[Math.floor(PX(x)), Math.floor(PY(y))], z]);
       }
     },
-    special(sp, at, m) { const h = home(sp), i = h ? tileOf(PX(h[0]), PY(h[1])) : -1; return !h || (i >= 0 && !!m.land[i]); },
+    special(sp, at, m) { const h = home(sp), i = h ? tileOf(PX(h[0]), PY(h[1])) : -1; return !h || (i >= 0 && !!m.land[i]) || !!(own3 && own3.has(sp.d)); },
     lines(lines, m) {
-      const leftOut = [], overSeam = [];
+      const leftOut = [], overSeam = [], seams = [];
       let others = 0;
       for (let k = lines.length; k--;) {
         let mine = false, seam = false, theirs = false;
@@ -157,10 +179,14 @@ export function islandOpts(key, asked = {}) {
         // (its own, or over a seam onto land of its landmass another piece takes - kept whole, as today: it ends at
         // the designed shore later; or a bridge to another landmass - left out unless asked to keep it)
         if (mine && (!theirs || asked.keepLinks)) { if (seam) overSeam.push(lines[k].name || lines[k].kind); continue; }
+        // (8.5, asked.seams on the v3 land: a road from the place onto the mainland ends at the place's edge for now -
+        // cut there and listed; the mainland's own build comes later)
+        const parts = mine && land3 && asked.seams ? seamCut(lines[k], m) : null;
+        if (parts) { seams.push({ name: lines[k].name || '', kind: lines[k].kind }); lines.splice(k, 1, ...parts); continue; }
         if (mine) leftOut.push({ name: lines[k].name || '', kind: lines[k].kind, on }); else others++;
         lines.splice(k, 1);
       }
-      m.islandBuild = { island: key, leftOut: leftOut.reverse(), overSeam: overSeam.reverse(), otherLines: others, noRoom: [] };
+      m.islandBuild = { island: key, leftOut: leftOut.reverse(), overSeam: overSeam.reverse(), otherLines: others, noRoom: [], seams: seams.reverse() };
     },
   };
   return o;

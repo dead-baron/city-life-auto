@@ -339,6 +339,7 @@ function buildCity(seed, opts = null, frame = null) {
 
   // --- waterfronts, farms, islands, street furniture, traffic graph ------------------------------
   buildWaterfronts(m, rand);
+  if (OPTS?.quays) buildQuays(m, OPTS.quays);   // (World v3's Port Westport: docs/WORLD-V3.md 8.5)
   buildFarm(m, rand);
   buildAirports(m);
   runwayLights(m, { addProp });
@@ -347,7 +348,7 @@ function buildCity(seed, opts = null, frame = null) {
   buildOutposts(m, rand);
   buildScenePaintings(m);
   buildGullIsles(m, rand);
-  buildNatureSites(m, { addProp, terrainAt: (cls, cw, tx, ty) => wildBiome(m.dist[ty * m.w + tx], terrainAt(cls, cw, tx, ty)), distStyle: DISTRICTS.map((d) => (d ? d.style : '')) });
+  buildNatureSites(m, { addProp, terrainAt: (cls, cw, tx, ty) => wildBiome(m.dist[ty * m.w + tx], clsAt(cls, cw, tx, ty)), distStyle: DISTRICTS.map((d) => (d ? d.style : '')), place: PL ? { x: (x) => Math.round(PX(x)), y: (y) => Math.round(PY(y)), s: PL.s, lx: LX, ly: LY } : null });
   buildWilds(m, rand);
   buildTownGreen(m);
   buildStreetProps(m);
@@ -363,7 +364,7 @@ function buildCity(seed, opts = null, frame = null) {
   buildCornerStores(m);
   buildClothesShops(m);   // (task #364: the clothing stores by style and district, the barbers and salons)
   buildInteriors(m);
-  buildBowlingAlley(m, { T, DISTRICTS });   // (Pinwheel Lanes: eight lanes in the biggest plain warehouse - shared/bowling.js)
+  buildBowlingAlley(m, { T, DISTRICTS, keep: OPTS?.quays ? OPTS.quays.map((q) => q.freight).filter(Boolean) : null });   // (Pinwheel Lanes: eight lanes in the biggest plain warehouse - shared/bowling.js; World v3's ports keep their freight stop)
   buildCinema(m, { T, DISTRICTS });   // (The Grand Theatre becomes a cinema: the lobby, two screens - shared/cinema.js)
   buildCellBlocks(m);   // (task #362: the cells at the back of every police station - shared/cells.js)
   buildDealerLots(m);
@@ -792,10 +793,11 @@ function layoutRoads(m, rand) {
   placeNew();
   stationAccess(m, lines, isLand, seaD);
   // campgrounds, roadside stops, masts, wind farms... out in the wild, each with its own road in
-  const avoid = AIRPORTS.flatMap((A) => [A.runway, A.apron, A.taxi, A.terminal, ...A.hangars].map(([x, y, w, h]) => [x - 5, y - 5, w + 10, h + 10])).concat(FIELDS.map(([x, y, w, h]) => [x - 2, y - 2, w + 4, h + 4]), FARM_FIELDS.map(([x, y, w, h]) => [x - 2, y - 2, w + 4, h + 4]));
-  mark();
-  countrysideRoads({ m, lines, isLand: placed(isLand), seaD: placed(seaD), lake: placed((x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; }), wildAt: placed((tx, ty) => wildAt(m, tx, ty)), avoid });
-  placeNew();
+  const avoid = AIRPORTS.map(airportPlan).flatMap((A) => [A.runway, A.apron, A.taxi, A.terminal, ...A.hangars].map(([x, y, w, h]) => [x - 5, y - 5, w + 10, h + 10])).concat(FIELDS.map(([x, y, w, h]) => [PTX(x) - 2, PTY(y) - 2, w + 4, h + 4]), FARM_FIELDS.map(([x, y, w, h]) => [PTX(x) - 2, PTY(y) - 2, w + 4, h + 4]));
+  // (a placed build: the sites are looked for round their spots placed, in the place's frame - countryside.js `at`; the
+  // lots keep their size)
+  if (PL) countrysideRoads({ m, lines, isLand, seaD, lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; }, wildAt: (tx, ty) => wildAt(m, tx, ty), avoid, at: (x, y) => [PTX(x), PTY(y)] });
+  else countrysideRoads({ m, lines, isLand, seaD, lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; }, wildAt: (tx, ty) => wildAt(m, tx, ty), avoid });
   return lines;
 }
 
@@ -2264,7 +2266,8 @@ function buildEstates(m, rand) {
     estateHouse(m, rand, type, key, x, y, south, null, x !== x0 || y !== y0);
   }
   // cabins, lodges and farmhouses out on the other islands
-  for (const [type, key, x0, y0, south] of ISLAND_ESTATES) {
+  for (const [type, key, ex, ey, south] of ISLAND_ESTATES) {
+    const x0 = PTX(ex), y0 = PTY(ey);   // (placed: World v3's gulf places)
     const pf = PREFABS[key], p = spot(key, x0, y0, south);
     if (!p) continue;
     const [x, y] = p;
@@ -3800,10 +3803,59 @@ function buildWaterfronts(m, rand) {
 
 // Dry Creek: crop fields either side of the railway, the farm co-op on the farm road, woods.
 const FARM_FIELDS = [[1056, 548, 30, 40], [1100, 548, 34, 40], [1056, 594, 32, 40], [1100, 594, 34, 46], [1160, 560, 40, 30], [1146, 600, 50, 34], [1060, 640, 26, 36]];
+// (World v3's gulf places, docs/WORLD-V3.md 8.5: a spot of today's world placed, whole tiles - the fields, the farm
+// stands, the estates, the scene spots, the airports, the country sites; and the concept picture's terrain class at a
+// placed tile, read back through the placement)
+const PTX = (x) => (PL ? Math.round(PX(x)) : x), PTY = (y) => (PL ? Math.round(PY(y)) : y);
+const clsAt = (cls, cw, tx, ty) => (PL ? terrainAt(cls, cw, Math.floor(IX(tx)), Math.floor(IY(ty))) : terrainAt(cls, cw, tx, ty));
+// An airport where it is built: today's, or placed - each part keeps its size. On a smaller place (scale < 1: the v3
+// airport, 0.65) a runway, a terminal and hangars can't shrink: the layout keeps today's spacing across (the runway,
+// the taxiway, the apron, the terminal, the planes, the hangars side by side, from the runway's placed corner) and is
+// shorter along the runway: the runway and the taxiway by the scale, the apron as deep as its planes need, the hangars
+// in a row under it (buildAirports keeps those that stand on the land)
+function airportPlan(A) {
+  if (!PL) return A;
+  if (PL.s >= 1) {
+    const P = ([x, y, w, h]) => [PTX(x), PTY(y), w, h];
+    return { ...A, runway: P(A.runway), taxi: P(A.taxi), apron: P(A.apron), terminal: P(A.terminal), hangars: A.hangars.map(P), planes: A.planes.map(([x, y]) => [PX(x), PY(y)]), poiAt: [PX(A.poiAt[0]), PY(A.poiAt[1])] };
+  }
+  const ox = PTX(A.runway[0]) - A.runway[0], oy = PTY(A.runway[1]) - A.runway[1], R = ([x, y, w, h]) => [x + ox, y + oy, w, h];
+  const runway = R(A.runway), taxi = R(A.taxi), apron = R(A.apron);
+  runway[3] = Math.round(A.runway[3] * PL.s); taxi[3] = Math.round(A.taxi[3] * PL.s);
+  apron[3] = Math.max(Math.round(A.apron[3] * PL.s), ...A.planes.map(([, y]) => y - A.apron[1] + 12), A.terminal[1] + A.terminal[3] - A.apron[1] + 8);
+  const hy = apron[1] + apron[3] + (A.hangars.length ? A.hangars[0][1] - A.apron[1] - A.apron[3] : 0);
+  return { ...A, runway, taxi, apron, terminal: R(A.terminal), hangars: A.hangars.map((h) => [h[0] + ox, hy, h[2], h[3]]), planes: A.planes.map(([x, y]) => [x + ox, y + oy]), poiAt: [A.poiAt[0] + ox, A.poiAt[1] + oy] };
+}
 // open country (the woods, hills, desert, farmland and the airfields), not town
 function wildAt(m, tx, ty) {
   const d = DISTRICTS[m.dist[ty * m.w + tx]];
   return !!d && WILD_STYLES.has(d.style) && d.style !== 'water';
+}
+// World v3's container quays (docs/WORLD-V3.md 8.5; only island builds on the v3 land ask for them: opts.quays): along
+// the side of the rectangle that faces the channel, the shore is a straight quay - three tiles of dock where the land
+// meets the water - with stacks of crates behind it and a crane every 48 tiles (m.quays: where the art's gantry crane
+// goes, client/art2/props-transit.js; no prop draws it yet)
+function buildQuays(m, quays) {
+  m.quays = [];
+  const W = m.w, open = (t) => t === T.GRASS || t === T.SAND || t === T.DIRT || t === T.PLAZA || t === T.LOT || t === T.SIDEWALK;
+  for (const q of quays) {
+    const [x0, y0, x1, y1] = q.rect, west = q.faces !== 'east', edge = [];
+    for (let y = y0; y < y1; y++) {
+      let sx = -1;
+      if (west) { for (let x = Math.max(1, x0 - 24); x < x1; x++) if (m.land[y * W + x]) { sx = x; break; } }
+      else for (let x = Math.min(W - 2, x1 + 24); x > x0; x--) if (m.land[y * W + x]) { sx = x; break; }
+      if (sx < 0 || m.land[y * W + sx + (west ? -1 : 1)]) continue;
+      edge.push([sx, y]);
+      for (let k = 0; k < 3; k++) { const x = sx + (west ? k : -k), i = y * W + x; if (open(m.tiles[i]) && !(m.reserve[i] & 1)) { m.tiles[i] = T.DOCK; m.reserve[i] |= 16; } }
+    }
+    const cranes = [];
+    for (let k = 0; k < edge.length; k++) {
+      const [sx, y] = edge[k], bx = sx + (west ? 5 : -5), i = y * W + bx;
+      if (k % 48 === 24) cranes.push({ x: (sx + (west ? 1.5 : -0.5)) * TILE, y: (y + 0.5) * TILE, a: west ? Math.PI : 0 });
+      if (k % 6 === 3 && open(m.tiles[i]) && !m.reserve[i]) addProp(m, 'crates', (bx + 0.5) * TILE, (y + 0.5) * TILE, 12);
+    }
+    m.quays.push({ name: q.name, x: x0 * TILE, y: y0 * TILE, w: (x1 - x0) * TILE, h: (y1 - y0) * TILE, length: edge.length, cranes });
+  }
 }
 function buildFarm(m, rand) {
   const W = m.w, H = m.h;
@@ -3829,7 +3881,8 @@ function buildFarm(m, rand) {
   // the drop site out in the boonies, and woods
   m.dropSites.push({ x: 1176 * TILE, y: 760 * TILE, name: 'the Dry Creek boonies' });
   // Cedar Farms: fields between the section roads and a market stand that takes harvests
-  for (const [fx2, fy2, fw, fh] of FIELDS) {
+  for (const [fx1, fy1, fw, fh] of FIELDS) {
+    const fx2 = PTX(fx1), fy2 = PTY(fy1);   // (placed: World v3's gulf places)
     let n = 0;
     for (let y = fy2; y < fy2 + fh; y++) for (let x = fx2; x < fx2 + fw; x++) {
       const i = y * W + x;
@@ -3837,7 +3890,9 @@ function buildFarm(m, rand) {
     }
     if (n > 200) m.fields.push({ x: fx2 * TILE, y: fy2 * TILE, w: fw * TILE, h: fh * TILE });
   }
-  for (const [sx, sy, name, south] of FARM_STANDS) {
+  for (const [sx1, sy1, name, south] of FARM_STANDS) {
+    const sx = PTX(sx1), sy = PTY(sy1);
+    if (PL && (!m.inside(sx, sy) || !m.land[sy * W + sx])) continue;   // (placed: built by the place it stands on)
     // the farmstead from the concept painting: farmhouse, barn, silos, paddock
     const pf2 = PREFABS.farmstead || PREFABS.house2, key = PREFABS.farmstead ? 'farmstead' : 'house2';
     clearArea(m, sx, sy, pf2.tw, pf2.th);
@@ -3868,7 +3923,7 @@ function buildOutposts(m, rand) {
     const tx = Math.floor(n.x / TILE), ty = Math.floor(n.y / TILE);
     if ((m.countrySites || []).some((s) => tx > s.x - 8 && tx < s.x + s.w + 8 && ty > s.y - 8 && ty < s.y + s.h + 8)) continue;
     const st = DISTRICTS[m.dist[ty * W + tx]].style;
-    const desert = st === 'desert' || (m.terrainCls && terrainAt(m.terrainCls.cls, m.terrainCls.cw, tx, ty) === 3);
+    const desert = st === 'desert' || (m.terrainCls && clsAt(m.terrainCls.cls, m.terrainCls.cw, tx, ty) === 3);
     const key = desert ? 'shack' : cabins % 2 ? 'house3' : 'house1';
     const pf = PREFABS[key];
     if (!pf) continue;
@@ -4038,7 +4093,7 @@ function buildBoatDocks(m) {
   if (marinaPoi) anchors.push({ x: marinaPoi.x, y: marinaPoi.y, name: 'Harbor Boat & Jet Ski Hire' });
   if (m.pelican) anchors.push({ x: m.pelican.dock.x, y: m.pelican.dock.y, name: 'Pelican Key Jet Skis' });
   for (const v of m.gullIsles || []) anchors.push({ x: v.x, y: v.y, name: v.rent });   // (the only way off the Gull Isles is by boat)
-  for (const lk of LAKES) if (lk[4] === 'Cedar Lake' || lk[4] === 'Lakeview Lake') anchors.push({ x: (lk[0] + lk[2] / 2) * TILE, y: (lk[1] + lk[3] / 2) * TILE, name: `${lk[4]} Boat Hire`, lake: true });
+  for (const lk of LAKES) if (lk[4] === 'Cedar Lake' || lk[4] === 'Lakeview Lake') anchors.push({ x: QX((lk[0] + lk[2] / 2) * TILE), y: QY((lk[1] + lk[3] / 2) * TILE), name: `${lk[4]} Boat Hire`, lake: true });   // (QX / QY: World v3's gulf places)
   for (const an of anchors) {
     const cx = Math.floor(an.x / TILE), cy = Math.floor(an.y / TILE);
     const L = findLaunch(m, cx, cy, an.lake ? 22 : 34, an.lake ? 6 : 8, used, 2);
@@ -4098,9 +4153,10 @@ function buildScenePaintings(m) {
     }
     const badIn = (x, y, w, h) => sat[(y + h) * (W + 1) + x + w] - sat[y * (W + 1) + x + w] - sat[(y + h) * (W + 1) + x] + sat[y * (W + 1) + x];
     let best = null, bd = Infinity;
-    for (let y = 2; y + sp.h + 4 < H; y += 2) for (let x = 2; x + sp.w + 4 < W; x += 2) {
+    const nx = PL ? PX(sp.near[0]) : sp.near[0], ny = PL ? PY(sp.near[1]) : sp.near[1];   // (placed: World v3's gulf places)
+    for (let y = 2 + gridOff(PL?.dy, 2); y + sp.h + 4 < H; y += 2) for (let x = 2 + gridOff(PL?.dx, 2); x + sp.w + 4 < W; x += 2) {
       if (badIn(x - 2, y - 2, sp.w + 4, sp.h + 4)) continue;
-      const d = Math.hypot(x + sp.w / 2 - sp.near[0], y + sp.h / 2 - sp.near[1]);
+      const d = Math.hypot(x + sp.w / 2 - nx, y + sp.h / 2 - ny);
       if (d < bd) { bd = d; best = { x, y }; }
     }
     if (!best) continue;
@@ -4114,7 +4170,11 @@ function buildScenePaintings(m) {
 
 function buildAirports(m) {
   m.airports = [];
-  for (const A of AIRPORTS) {
+  const onLand = (x, y, w, h) => { for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) if (!m.inside(tx, ty) || !m.land[ty * m.w + tx]) return false; return true; };
+  for (const A0 of AIRPORTS) {
+    const A = airportPlan(A0);
+    if (PL && !onLand(A.terminal[0], A.terminal[1], 1, 1)) continue;   // (placed: an airport is built by the place it stands on)
+    if (PL && PL.s < 1) A.hangars = A.hangars.filter(([x, y, w, h]) => onLand(x, y, w, h));
     const [rx, ry, rw, rh] = A.runway, [ax, ay, aw, ah] = A.apron, [tx2, ty2, tw, th] = A.terminal;
     const tax = A.taxi;
     clearArea(m, Math.min(rx, ax) - 2, Math.min(ry, ay) - 2, Math.max(rx + rw, ax + aw) - Math.min(rx, ax) + 4, Math.max(ry + rh, ay + ah) - Math.min(ry, ay) + 4);
@@ -4190,7 +4250,7 @@ function buildWilds(m, rand) {
     if (tx < 4 || ty < 4 || tx >= W - 4 || ty >= H - 4) continue;
     const i = ty * W + tx;
     if (!wild(i) || (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT)) continue;
-    const c = seaIsle(m.dist[i], terrainAt(cls, cw, tx, ty));
+    const c = seaIsle(m.dist[i], clsAt(cls, cw, tx, ty));
     if (hash2(LX(gx), LY(gy), 93) >= (c === 4 ? 0.4 : c === 3 ? 0.25 : c === 2 ? 0.1 : 0.06)) continue;
     if (inField(tx, ty, 96) || !clear(tx, ty, 4)) continue;
     const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, s = 52 + Math.floor(hash2(LX(gx), LY(gy), 94) * 4) * 10;
@@ -4211,7 +4271,7 @@ function buildWilds(m, rand) {
     if (!wild(i) || m.dist[i] === 29) continue;   // (Highland Woods: redwoodGroves below)
     const t = m.tiles[i];
     if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
-    const c = seaIsle(m.dist[i], terrainAt(cls, cw, tx, ty)), h = hash2(LX(gx), LY(gy), 61);
+    const c = seaIsle(m.dist[i], clsAt(cls, cw, tx, ty)), h = hash2(LX(gx), LY(gy), 61);
     const g = 0.65 * vnoise2(LX(gx), LY(gy), 16, 71) + 0.35 * vnoise2(LX(gx), LY(gy), 6, 72); // where the groves are
     const x = Math.round(fx * TILE), y = Math.round(fy * TILE);
     let p = 0;

@@ -47,7 +47,9 @@ const ACCESS_TO = {
 };
 
 // ---- layout ------------------------------------------------------------------------------------
-// ctx: { m, lines, isLand, lake, seaD, wildAt(tx, ty), avoid: [[x, y, w, h] tiles] }
+// ctx: { m, lines, isLand, lake, seaD, wildAt(tx, ty), avoid: [[x, y, w, h] tiles], at(x, y) -> [x, y] }
+// (at: World v3's gulf places - a site's spot placed, in the place's frame; its lot keeps its size, and its hashes read
+// the lot's position back by the offset: hx, hy)
 export function countrysideRoads(ctx) {
   const { m, lines } = ctx;
   const W = m.w, H = m.h;
@@ -132,7 +134,8 @@ export function countrysideRoads(ctx) {
     corners.push([qx, qy]);
     return corners.map(([a, b]) => ({ x: a * TILE, y: b * TILE }));
   };
-  for (const S of SITES) {
+  for (const S0 of SITES) {
+    const S = ctx.at ? { ...S0, near: ctx.at(S0.near[0], S0.near[1]) } : S0;
     const M = 2;
     const ok = ACCESS_TO[S.road];
     // (roads on the same piece of land only: never across the water to the next island)
@@ -180,6 +183,7 @@ export function countrysideRoads(ctx) {
     if (!best) continue;
     const { x, y, q } = best;
     const site = { ...S, x, y, d: m.dist[(y + (S.h >> 1)) * W + x + (S.w >> 1)] };
+    if (ctx.at) { site.hx = x - (S.near[0] - S0.near[0]); site.hy = y - (S.near[1] - S0.near[1]); }
     m.countrySites.push(site);
     for (let ty = y - 1; ty < y + S.h + 1; ty++) for (let tx = x - 1; tx < x + S.w + 1; tx++) m.reserve[ty * W + tx] |= 32;
     claim([x - 1, y - 1, x + S.w + 1, y + S.h + 1]);
@@ -209,7 +213,7 @@ export function buildCountryside(m, H) {
 
 const px = (t) => (t + 0.5) * TILE;
 const fill = (m, x, y, w, h, t) => { for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) if (tx >= 0 && ty >= 0 && tx < m.w && ty < m.h) m.set(tx, ty, t); };
-const hs = (s, k, salt) => hash2(s.x * 31 + k, s.y * 17 + k * 7, salt);
+const hs = (s, k, salt) => hash2((s.hx ?? s.x) * 31 + k, (s.hy ?? s.y) * 17 + k * 7, salt);
 // the lot's own way in: the bottom middle down to where its access road starts
 const gateway = (m, s, t, wd = 3) => fill(m, s.x + (s.w >> 1) - (wd >> 1), s.y + s.h - 3, wd, 4, t);
 const treesRound = (m, s, H, skip) => {
