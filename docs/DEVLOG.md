@@ -7471,6 +7471,11 @@ Files: shared/world3-towns.js (new), shared/world3-world.js, shared/map.js, shar
 tools/world3-world-map.mjs (`--towns`: each town through the chunk bake at 1/8), test/world3towns.test.js (new),
 test/world3biomes.test.js (60 districts), docs/WORLD-V3.md 8.13, docs/world-v3-town-*.png (new).
 
-Tests: test/world3towns.test.js (one world build: each town's ground, its streets on the one network, its buildings,
-its basics and planned places, no building in a highway's room or by the main line, the bowling alley still in the
-city), test/world3biomes.test.js, test/world3.test.js (the live world's hash).
+Tests: test/world3towns.test.js (one world build, 35 s: each town's ground, its streets on the one network, its
+buildings, its basics and planned places, no building in a highway's room or by the main line, the bowling alley still
+in the city), test/world3biomes.test.js (34 s), test/world3roads.test.js (31 s: the one network with the towns' streets
+in it), test/dmath.test.js, test/mapwindow.test.js - all pass; the stamp: the world hash 6b6e16fdef9f (unchanged), the
+art hash a9251a8dfb94 (map.js, mapcore.js); the code budgets (tools/perf.mjs codeReport): page 465 of 485 KB, city 353
+of 360. Pictures: docs/world-v3-town-timber.png, docs/world-v3-town-willow.png, docs/world-v3-town-sandpiper.png
+(`tools/world3-world-map.mjs --sample 0 --towns`) - each reads as a town in its biome; what's wrong (too much street, a
+city's buildings, Sandpiper Bay back from its beach, the gun shops) and what's left are in 8.13.
