@@ -2755,8 +2755,8 @@ the industrial prefab). `test/world3biomes.test.js` counts 60 districts now.
 | Willow Crossing | 19,320 tiles on the Long Reach's east bank round the hub | 6 lines, 815 tiles | 43 | 21 | 3 |
 | Sandpiper Bay | 26,496 tiles between Sandpiper Drive's arms and the beach | 10 lines, 1,518 tiles | 36 | 27 | 2 |
 
-Each town also has what the generator's district passes give a built district: ATMs, a gun shop (the generator puts
-one in each district with room), a tackle shop by the water, homes (`home`: the apartments and houses for sale).
+Each town also has what the generator's district passes give a built district: ATMs, a gun shop (what's left, 7), a
+tackle shop by the water, homes (`home`: the apartments and houses for sale).
 
 **The pictures** (`node --expose-gc tools/world3-world-map.mjs --sample 0 --towns`: each town's box and 24 tiles round
 it through the game's chunk bake at 1/8, 56-99 chunks, 22-28 s a town): `docs/world-v3-town-timber.png`,
@@ -2796,3 +2796,7 @@ wrong:
    `fruitstand`, `snack` as a strip's units: the hunting lodge's counter, the market's menu) and the towns' gas
    stations - a playtest on the v3 world (`CLA_WORLD=v3`).
 6. Timber Bend's crossing of the Highland Highway as a diamond (8.11 item 3), now that the town is laid out.
+7. **The generator's world-wide passes reach the towns:** `buildGunShops` spreads its 11 gun shops by farthest point
+   (2,400 px apart, one a district), so the three towns, far from the gulf, each take one - the gulf has three fewer
+   in the v3 world than built alone; `buildTackleShops` puts one by the water at Timber Bend and Willow Crossing. For
+   the owner: the count by the world's size (v3), or the towns' hunting stores as their gun shops.
