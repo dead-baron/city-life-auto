@@ -3711,10 +3711,11 @@ city worker 34 files, 359 KB of 360).
   - **Giants Loop** further east on Timber Road (604, 1128): the trailhead lot north of the road, the loop through the
     redwoods; **the Highland Hunting Lodge** west of the lot in the world build (east and south of it, as today's, it
     would stand on the road).
-  - **Fern Gorge** south of Timber Road (693, 1144; west of where the main line meets the road, outside its room):
+  - **Fern Gorge** south of Timber Road (693, 1140; west of where the main line meets the road, outside its room):
     `fernGorge` moved whole by its anchor's offset, its track the road by it (`roadNear`); the pull-off off the road's
-    far edge (an arterial, not today's dirt track). At 681 its box wasn't all open ground and it wasn't built - the
-    search is today's (the whole box open or nothing).
+    far edge (an arterial, not today's dirt track). Its spot is tight: today's rules want its whole box open ground
+    (at 681 it wasn't), its trailhead within 24 tiles of the road (at 693, 1144 it was 24.5) and the landmark outside
+    the main line's room (at 693, 1136 a corner was 14.6 tiles from it).
   - **The Old Granite Mine** above Lookout Road (745, 452): its search box and target round its moved spot, the peaks'
     district. **One cave**: `shared/underground.js` takes the first mine with a cave, and the world build marks this one
     `cave: false` - the cave world stays under Copper Gulch Mine's adit (8.18); its seams are worked (`places.js`).
@@ -3753,8 +3754,8 @@ above Lookout Road's end; the canyon south of Mesa Road with the Canyon Track do
 its south-east corner; Mirage Lake with its track in from Canyon Road; the water park whole on Mine Road's south side,
 its pool, island and slides; the boneyard's planes on plain ground now, the Boneyard Track to its gate. What looks
 wrong:
-- **Fern Gorge isn't in the redwoods picture** (taken with it at 681, where it wasn't built; the test's last run has it
-  at 693, 1144 - it wants its own picture); Giants Loop's trail doesn't read at 1/8 (a thin path in the redwoods).
+- **Fern Gorge isn't in the redwoods picture** (taken with it at 681, where it wasn't built; it wants a picture at
+  693, 1140); Giants Loop's trail doesn't read at 1/8 (a thin path in the redwoods).
 - **The canyon is a flat red rectangle**: the painting's own ground (red rock, its cliffs drawn) on the v3 desert's tan,
   with a hard edge - it wants the painting's edge blended into the ground or the canyon built of the desert's mesas; a
   biome wash runs into its north-east corner and out of its south-east one (kept off inside its box only).
