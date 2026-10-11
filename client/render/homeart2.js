@@ -104,7 +104,7 @@ export class HomeArt {
     this.floor = this.buildFloor();
     this.buildWalls();
     this.buildFurniture();
-    this.envKey = ''; this.people = new Map(); this.cars = new Map();
+    this.envKey = ''; this.people = new Map(); this.cars = new Map(); this.figs = new Map();
   }
   floorKind(tx, ty) {
     const ch = this.L.cell(tx, ty);
@@ -112,7 +112,7 @@ export class HomeArt {
     const r = this.R.at(tx, ty);
     if (r && r.kind === 'garage') return 'g';
     if (r && (r.kind === 'bath')) return 't';
-    if (r && r.kind === 'bed' && this.tier >= 2) return 'c';
+    if (r && r.kind === 'bed' && this.tier >= 2 && !r.tiles.some(([x, y]) => L4K(this.L, x, y))) return 'c';   // (a bedroom carpeted - not a great room with the kitchen in it)
     return '.';
   }
   buildFloor() {
@@ -122,6 +122,16 @@ export class HomeArt {
       if (WALLISH.has(L.cell(tx, ty)) && L.cell(tx, ty) !== 'D') continue;
       G.put(x, y, floorPx(this.floorKind(tx, ty), this.tier, wx, wy, x, y), UP, 0);
     }
+    // a threshold across each doorway, along the wall it's in
+    const sill = ramp(this.tier >= 2 ? '#c8b89a' : '#6a5038', 4, 2);
+    for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
+      if (L.cell(tx, ty) !== '+') continue;
+      const across = WALLISH.has(L.cell(tx - 1, ty)) || WALLISH.has(L.cell(tx + 1, ty));   // (in a wall running east-west)
+      for (let y = Math.floor(ty * T / ap); y < (ty + 1) * T / ap; y++) for (let x = Math.floor(tx * T / ap); x < (tx + 1) * T / ap; x++) {
+        const u = x * ap - tx * T, v = y * ap - ty * T, k = across ? v : u;
+        if (k >= 11 && k < 21) G.put(x, y, step(sill, k === 11 || k === 20 ? 0.2 : 0.6, x, y, 0.3), UP, 0);
+      }
+    }
     // a soft shadow along the foot of every wall's face (the walls stand up)
     for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
       const wy = y * ap, tx = Math.floor(x * ap / T), ty = Math.floor(wy / T), above = L.cell(tx, ty - 1);
@@ -129,6 +139,15 @@ export class HomeArt {
       const k = wy - ty * T; if (k > 8) continue;
       const j = (y * G.w + x) * 4, m = 0.6 + k * 0.05;
       G.col[j] *= m; G.col[j + 1] *= m; G.col[j + 2] *= m;
+    }
+    // a soft shadow under each piece of furniture, a little to the south-east (the light's from the windows behind)
+    for (const p0 of L.pieces) {
+      const p = p0.ch === 'P' ? { x: p0.x + 8, y: p0.y + 12, w: p0.w - 16, h: p0.h - 14 } : p0;   // (a plant's pot: a small one)
+      for (let y = Math.floor((p.y + 3) / ap); y < (p.y + p.h + 5) / ap; y++) for (let x = Math.floor((p.x + 2) / ap); x < (p.x + p.w + 4) / ap; x++) {
+        if (!G.inside(x, y)) continue;
+        const j = (y * G.w + x) * 4, e = Math.min(x * ap - p.x - 2, y * ap - p.y - 3, p.x + p.w + 4 - x * ap, p.y + p.h + 5 - y * ap), m = e < 3 ? 0.84 : 0.7;
+        G.col[j] *= m; G.col[j + 1] *= m; G.col[j + 2] *= m;
+      }
     }
     // the garage's bays painted on the floor, and an oil stain
     for (const b of L.bays) for (let y = Math.floor((b.y - 56) / ap); y < (b.y + 56) / ap; y++) for (const ex of [b.x - CAR_IN.w / 2 - 6, b.x + CAR_IN.w / 2 + 4]) for (let k = 0; k < 2; k += ap) G.put(Math.floor((ex + k) / ap), y, ramp('#e8d890', 4, 2)[1], UP, 0);
@@ -196,12 +215,14 @@ export class HomeArt {
       const kind = L.key === 'trailer' ? 0 : L.key === 'apartment' ? 1 : L.key === 'mansion' ? 3 : 2;
       return step(ramp(OUTSIDE[kind], 5, 2), 0.5 + (kind === 0 ? (wx % 6 < 1 ? -0.3 : 0) : kind === 1 ? ((v % 4 === 0 || (wx + (Math.floor(v / 4) & 1) * 4) % 9 === 0) ? -0.35 : 0) : kind === 2 ? (v % 4 === 0 ? -0.25 : 0) : (v % 7 === 0 || wx % 14 === 0 ? -0.2 : 0)), x, y, 0.3);
     }
+    const u = wx - tx * T;
+    if ((u < 3 && L.cell(tx - 1, ty) === '+') || (u >= T - 3 && L.cell(tx + 1, ty) === '+')) return step(ramp(t >= 2 ? '#f0ece0' : LOOK[t].wood, 4, 2), u === 1 || u === T - 2 ? 0.75 : 0.4, x, y, 0.2);   // a doorway's casing
     if (v < 3) return step(ramp(t >= 2 ? '#f0ece0' : '#5a4636', 4, 2), 0.5, x, y, 0.2);   // the skirting
     const r = this.R.at(tx, ty + 1) || this.R.at(tx, ty + 2);
     const kind = r ? r.kind : 'living';
     if (ch === '=') {
       if (this.inGlass(tx, ty, wx, v)) return [120, 160, 200];   // (the sky's colour comes with the light: relight)
-      const u = wx - tx * T, frame = v >= 12 && v < 40 && u >= 2 && u < T - 2;
+      const frame = v >= 12 && v < 40 && u >= 2 && u < T - 2;
       if (frame) return step(ramp(t >= 2 ? '#f0ece4' : '#a08a6a', 4, 2), v < 14 ? 0.3 : 0.6, x, y, 0.2);
       if (t >= 1 && v >= 12 && v < 44 && (u < 4 || u >= T - 4) && !L4ch(L, tx + (u < 4 ? -1 : 1), ty)) return step(ramp(LOOK[t].cover, 5, 2), 0.5 + (wx % 3 === 0 ? -0.2 : 0), x, y, 0.3);   // the curtains
     }
@@ -226,7 +247,13 @@ export class HomeArt {
         const fr = u < u0 + 2 || u >= u0 + pw - 2 || v < v0 + 2 || v >= v0 + ph - 2;
         G.put(x, y, fr ? step(ramp(t >= 3 ? '#d8b050' : '#6a4a2a', 4, 2), 0.5, x, y, 0.2) : step(sc, (v - v0) / ph * 0.8 + 0.1, x, y, 0.5), SOUTH, v);
       }
-      if (t >= 2 && hash(tx, 9, 2) > 0.5) this.lamps.push({ x: tx * T + 16, y: T + 2, z: 36, kind: 'sconce' });
+      if (t >= 2 && hash(tx, 9, 2) > 0.5) {   // a wall lamp beside it
+        this.lamps.push({ x: tx * T + 29, y: T + 2, z: 36, kind: 'sconce' });
+        for (let v = 30; v < 40; v++) for (let uu = tx * T + 27; uu < tx * T + 32; uu++) {
+          const x = Math.floor((uu - wx0) / ap), y = Math.floor((T - v - wy0) / ap), lit = v >= 33;
+          G.put(x, y, lit ? [250, 226, 170] : [176, 140, 70], SOUTH, v, lit ? [255, 214, 140, 200] : null);
+        }
+      }
     }
     void h;
   }
@@ -332,7 +359,8 @@ export class HomeArt {
     let c = this.people.get(pk);
     if (!c) {
       if (this.people.size > 160) this.people.clear();
-      const G = pedSprite(app, pose, dir8, frame, 0, { ar: 'player' });
+      let G = this.figs.get(key);   // (the figure made once - a few ms - and shaded again only where it stands)
+      if (!G) { if (this.figs.size > 120) this.figs.clear(); G = pedSprite(app, pose, dir8, frame, 0, { ar: 'player' }); this.figs.set(key, G); }
       c = { cv: this.shade(G, x - G.ax, y - G.ay, 1, this.E), ax: G.ax, ay: G.ay };
       this.people.set(pk, c);
     }
@@ -352,6 +380,7 @@ export class HomeArt {
   }
 }
 const L4ch = (L, tx, ty) => L.cell(tx, ty) === '=';
+const L4K = (L, tx, ty) => L.cell(tx, ty) === 'K' || L.cell(tx, ty) === 'T';
 // a 1 px ring round a sprite's shape, for the thing in reach (drawn pulsing over it)
 function outline(G, cv) {
   const w = G.w + 2, h = G.h + 2;

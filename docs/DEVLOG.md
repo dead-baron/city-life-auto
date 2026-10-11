@@ -8767,3 +8767,49 @@ crashes) and an audio thread starved by the bakes on a phone are the likelier "b
 home code made (homes.js -> homeinside.js -> economy.js, which hands homes.js its menu builder as it loads) crashed any
 test that loaded homes.js first, on a `let` not yet initialised: the builder is kept on its setter function now
 (homes.js, and station.js the same way); the server itself booted either way.
+
+## 2026-10-11 · Inside your home, made to look like the game: art v2's 3/4 view, the furniture, you at the street's size (H64)
+
+The owner asked for "more of the owning a house features ... going inside your own house"; H62 built the inside as a
+level of its own, but drew it as a flat floor plan of placeholder shapes - walls dark bands with no height, the furniture
+boxes, you small and squat - nothing like the concepts (M1 homes cut away, M4 home interiors, HO1 room by room, HO2
+furniture and decor, HO3 life at home, HO4 decorating).
+- Art v2 (client/render/homeart2.js, new; loaded only with art v2 on, the first time you go in): the plan drawn in the
+  game's own 3/4 view and pixel art. The walls stand up - the back (north) wall full height with its face showing (the
+  windows with the sky in them: blue by day, orange at dusk, the city's lights at night; curtains, a picture or two
+  and wall lamps by the price), every other wall cut low so you see in (the walk-in businesses' way: art2/interior.js),
+  their faces papered by the room behind them (wainscot in a good house, tiles in the kitchen and the bathroom, cinder
+  block in the garage, wood panelling in a trailer), skirting and doorway casings; the front wall's outside along the
+  bottom (tin, brick, siding or stone) with the front door shut in it and a mat inside, the garage's roller door. Floors
+  by room: planks, tiles (checks in a cheap one, marble in a mansion), a carpeted bedroom in a house, the garage's
+  concrete with its bays painted; rugs by the price (in front of the couch, by the bed, under a good table).
+- The furniture as voxel models (client/art2/props-home.js, new - in neither the page nor the chunk bake): beds (a bare
+  mattress in a trailer to a four-poster in a mansion), the wardrobe (a steel locker in a trailer), the safe, kitchen
+  counters with the hob and oven, the sink and the wall cupboards over them, the fridge, the dining table and its chairs
+  (candles in a mansion), couches and an armchair, the TV (a box set or a flat screen, on at night), the bookshelf, the
+  plants, the hall table with its lamp and the keys, the garage's tool chest and key board, the shower (a curtain or
+  glass), the toilet and the basin - each turned to face the room, a soft shadow under it. You and anyone in there with
+  you are art v2's own people (render/game/peds.js) at the street's size, walking, asleep in the bed, in the shower; the
+  cars in the garage are art v2's cars; everything standing is sorted by where it stands, so you pass behind the cut
+  walls and the bed's foot. The thing in reach is outlined round its shape, pulsing.
+- The light: lit on the CPU once for each step of the day (eight), no WebGL of its own - the day through the windows,
+  at night each room's ceiling light, the lamps and the wall lamps on and the TV's flicker; in bands with a dither, the
+  street's hand-shaded look. A home builds in 0.1-0.3 s in node, its light in 10-60 ms.
+- The camera: the street's scale (main.js baseZoom), the whole place framed when it fits, else following you.
+- The classic view keeps the plan's sprites, cleaner: the walls raised with their faces showing, the windows on the back
+  wall's face, the camera at the street's scale.
+- H62's list: the city isn't drawn under the inside any more (main.js render: `S.homeIn`, set by homeview.js - the HUD,
+  the radar and the clock still run); no FIRE / ROLL / CAR / THROW / RELOAD buttons, aim stick or district card in there
+  (a style homeview.js adds - nothing in style.css); the cars parked in the garage are solid (shared/homelayout.js
+  carRects, blocked's nc, stepInside's s.nc; the server counts them where it sends the cars), parked nose-in at the
+  garage's back wall, spread across it - the key board moved to the roller door's end of the house's and the mansion's
+  garages so the door from the hall and the board stay clear.
+- Budgets: the page's code unchanged but for main.js's two lines; art v2's renderer and bake untouched (the furniture is
+  lazily loaded with the inside); the art and world hashes don't move.
+Files: client/render/homeart2.js, client/art2/props-home.js (new); client/render/homeview.js, shared/homelayout.js (the
+bays, the parked cars), server/systems/homeinside.js (the count of parked cars; the dev `homein` `at` never puts you in
+a car), client/main.js (no city under the inside). Tests: test/homeart.test.js (new: the garage's cars solid, inside the
+garage, not on each other, the door from the hall and the key board clear, every plan walkable to everything with the
+garage full, walking into a car stops at it; every furniture model builds at every tier; every kind of home builds and
+lights by day and night, you and a car drawn; none of it in the page's code or the bake's); test/homeinside.test.js
+still passes.
