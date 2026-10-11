@@ -543,6 +543,9 @@ function paintMinimap(c, map) {
     }
   }
   g.putImageData(img, map.x0, map.y0);
+  g.save(); g.beginPath(); g.rect(map.x0, map.y0, map.w, map.h); g.clip();
+  miniLines(g, map);
+  g.restore();
 }
 const MINI_COL = () => ({
   [T.ROAD]: [70, 70, 78], [T.BRIDGE]: [90, 90, 98], [T.SIDEWALK]: [150, 150, 145], [T.PLAZA]: [140, 110, 95], [T.LOT]: [80, 80, 86],
@@ -567,16 +570,23 @@ function buildMinimap(map) {
     }
   }
   g.putImageData(img, 0, 0);
+  miniLines(g, map);
+  return c;
+}
+// the railway and the elevated roads over the minimap's tiles
+function miniLines(g, map) {
+  // (World v3's window holds the part of the loop inside it: no line across where it leaves the window)
+  const part = map.w < map.frame.w || map.h < map.frame.h, gap = (p, q) => part && Math.abs(q.x - p.x) + Math.abs(q.y - p.y) > 40 * TILE;
   // the railway: a dark line round the loop with cross-ties, a dot at every station
   if (map.rail) {
     const pts = map.rail.pts;
     g.lineWidth = 2; g.strokeStyle = '#2a2420';
     g.beginPath();
-    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE); }
+    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; if (gap(p, q)) continue; g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE); }
     g.stroke();
     g.strokeStyle = '#c9c2b0'; g.lineWidth = 0.6; g.setLineDash([1, 3]);
     g.beginPath();
-    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE); }
+    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; if (gap(p, q)) continue; g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE); }
     g.stroke(); g.setLineDash([]);
     for (const st of map.rail.stations) { g.fillStyle = '#2a2420'; g.beginPath(); g.arc(st.x / TILE, st.y / TILE, 3.2, 0, 6.28); g.fill(); g.fillStyle = '#f4f0e6'; g.beginPath(); g.arc(st.x / TILE, st.y / TILE, 1.8, 0, 6.28); g.fill(); }
   }
@@ -592,7 +602,6 @@ function buildMinimap(map) {
       g.stroke();
     }
   }
-  return c;
 }
 
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }

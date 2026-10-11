@@ -2442,3 +2442,54 @@ wrong:
    the server.
 4. More trains (two a loop now: the Grand Loop's stations see one about every 6-7 minutes each way), and a timetable that
    spaces the loops' trains through the shared junctions.
+
+### 8.12 The page keeps a window of the world (2026-10-10, H32)
+
+Part 8 items 1 and 4: the page holds the 3 x 3 regions round the player - a window - not the whole world, and moves it
+as the player crosses a region's border. Only World v3's world (a server run with `CLA_WORLD=v3`) is windowed: today's
+world is 3 x 3 regions, so its window would be the whole map - it keeps today's path untouched (the kept city, the
+download of the whole, the build), and the live game is unchanged.
+
+**What moves**
+- **The window's city** (`shared/regionpack.js` `assembleCity(index, regions, { window: [x0, y0, w, h] })`): the per-tile
+  layers of the rectangle the regions cover (`x0`, `y0`, `w`, `h` and the world's `frame`: shared/mapwindow.js's form,
+  so every query answers in world tiles as the whole map does inside it); the regional lists (props, POIs, buildings,
+  lamps, parking, signals, cameras, blocks, roofs, prefabs, the levels' segments...) holding only the window's items
+  **at their world-wide indices: sparse arrays** - `list[i]` is the world's item i or a hole, `.length` the world's
+  count - so every index the server sends (a prop smashed, a POI's menu, a building) means the same item, and
+  `forEach` / `filter` / `map` skip the holes; `solidProps` keyed by the window's tiles, `propSolid` its props' entries;
+  what the index points at in a region not held left out (a gate's solid pieces: null). The index's lists stay whole:
+  the road graph (the GPS and the phone's apps), the homes, the districts, the gates, the stations. The railway's loop
+  points are compacted to the window's, in order (railAt searches them by arc length). `regionsNear` (3 x 3 round the
+  player's region, shifted in at the frame's edge so a window is always 9 regions) and `windowRect`.
+- **Sparse arrays, not Maps:** a Map would change every reader (`list[i]`, `.length`, `.filter`); a sparse array keeps
+  them, and only the readers that walk a list with `for...of` or `.find` see a hole. The audit (client and the shared
+  runtime): `client/main.js` (the welcome's reset of props and gates, the poles, the cameras, the POIs' and lamps'
+  lights and reflections, a gate's pieces), `client/hud.js` (the map's icons), `client/spectator.js`,
+  `client/render/buildings.js`, `highway.js`, `lighting.js`, `client/art2/game/statics.js` (the levels' segments, a
+  walk-in's building), `shared/mapcore.js` `poiNear`, `shared/bowling.js`, `shared/cinema.js` skip holes now; the
+  rest already did (`p && ...`, propgrid, campfires, the sounds) or read by index.
+- **The worker** (`client/worldgen.js` `fetchWindow`, `client/worldwindow.js` `WindowKeeper`): fetches the index and only
+  the window's 9 regions (round where the player was last - `cla.at3`, kept by the page every 5 s - or the frame's
+  middle the first time), assembles the window and hands its layers over (transferred). It stays: the page tells it
+  the player's tile every 300 ms (`{ where }`); within 96 tiles of the border of the region the window is centred on,
+  the regions the next window brings are fetched early; 16 tiles past it (no back and forth along a border), or
+  outside the window altogether (a teleport, a respawn), it assembles the next window from what it has and posts it
+  (`{ window, data, win }`). It keeps the regions' files as they came (gzipped, 35-260 KB each), the 24 most recently
+  used. `?wholeworld` asks for the whole v3 world as before.
+- **The page** (`client/main.js` `keepWindow`, `swapWorld`): swaps the new window in - what the page changed on the
+  window's items goes over (broken props, lit fires, open gates, smashed barriers; the server's broken list again);
+  the flora, the ground cache, the buildings layer, the router, the spectator (when not watching) are made again for
+  the new map, the weather keeps its state; the HUD's minimap paints the new window's part over what it had
+  (`hud.js` `setMap`: what was seen stays); **art v2 keeps running** (`host.js` `setMap`): its bake workers get the
+  new window (`pool.js` `reworld`, `worker.js` op `reworld`), the grids worked out from the map are dropped, the
+  chunks already baked stay (a chunk is the same art in both windows). The welcome's whole-map signature check is
+  skipped for a window (per-region signatures: part 8 item 5).
+
+**Tests:** `test/regionwindow.test.js` (today's world cut into 256-tile regions, 6 x 5, so a window is a part of it: the
+window's layers are windowOf's to the byte, every query the whole map's inside it, each regional list holds exactly
+the window's items at their world indices, solidProps re-keyed; today's own 3 x 3 regions: the window round any tile,
+a corner's too, is the whole map, as assembled whole; the keeper's moves - early fetches near a border, the
+hysteresis, the move with nothing waited for, back, a teleport, the frame's corner). `test/world3window.test.js` (the
+v3 world built once, cut as the server cuts it: a window round a hospital - 1512 x 1512 tiles, the tiles to the byte,
+its items only - and the moves across a border and to the corner).
