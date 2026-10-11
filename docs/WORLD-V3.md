@@ -3427,9 +3427,9 @@ by the crossing. What looks wrong:
   with holes, gaps between the buildings, tumbleweeds; the fallen porches are too small to read at this scale.
 - **The lookout isn't on the mesa:** it stands beside the outcrop (the player can't climb a prop); a mesa with a ramp or
   stairs up to its top is a model of its own. The arch is the sea arch's model on dry ground.
-- The ore cars and the camp are too small to read at 1/8; the camp's picture shows only its track and the bare ground
-  it keeps (it was baked when two of its tents were asked for by a model's name, `domeTent`, which the map doesn't
-  draw - now `tent`s by colour and a lit fire; not baked again).
+- The ore cars and the camp are too small to read at 1/8: the camp is its gravel track, the bare ground it keeps and
+  three dots of tent (two of them were first asked for by a model's name, `domeTent`, which the map doesn't draw - now
+  `tent`s by colour round a lit fire). It wants a closer picture, and pickups parked there (spaces only for now).
 
 **What's left:** loot to search in Dusty Hollow's ruins (a `search` site as the wreck's - `server/systems/places.js`
 takes the first one); the sheriff's post and a gas station out on the highway (the town has its sheriff; no roadside gas
