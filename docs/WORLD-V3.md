@@ -2016,3 +2016,72 @@ the shore isn't designed). What the whole picture shows wrong:
    `buildGullIsles` first (Gull Harbor is built, its harbour isn't placed: it runs in today's coordinates, where the
    mainland is now).
 5. The chunk bake of the whole frame (`--bake`, an hour and three quarters on one thread) or by region.
+
+### 8.7 Stage 3, step 1: the skeleton's roads laid in the world build (2026-10-10, H27)
+
+The world build of 8.6 had every place at its gulf place, but no road left an island and the mainland had none. Now
+the skeleton's highways and arterials are laid in it: `shared/world3-roads.js` `layRoads(lines, m, L)` (one call from
+`shared/world3-world.js`' `lines` hook, after `joinPlace`) and `roadTunnels(m)` (its `tunnels` hook). The lines are the
+skeleton's paths (`linePath` at each kind's radius: highways 250 m, the Bay Ring and the Bay Bridge 120 m, arterials
+50 m) in v3 frame tiles, laid as they are (no placement), in px. Nothing live changes: the world hash stays
+`6b6e16fdef9f`, and the module is only the world build's (the page and the city worker never import it).
+
+**The highways** (`HIGHWAYS`, today's highway kind: two lanes each way, the median, no pavement):
+- **At grade in the country, up on the elevated deck where they pass over something.** Each highway is sampled every
+  2 tiles: it wants the deck (lvl 1) within 6 tiles of a built place's land (a town) and within 16 tiles of an
+  arterial it crosses in the country (the skeleton's `overpass`, `skeletonCrossings`); it must be at grade within 40
+  tiles of an interchange (the highways meeting there join), in its tunnels (a bore is at ground level) and at its
+  ends. A deck stretch gets a highway-wide ramp of 24 tiles at each end (`lvl: 'ramp'`, the highway's kind: the climb
+  is the highway, not a slip road - its painted gore is dropped); stretches closer than two ramps merge. Laid: 13
+  deck stretches, every one an overpass (the highways pass behind the built places: none crosses a town yet).
+- **Where an arterial ends at a highway** (a T the skeleton draws a few tiles past it: Canyon Road on the Desert
+  Highway) they meet at grade; **at the towns' crossings** (the skeleton's `interchange`: an arterial across a highway
+  at a town) too, as a junction - ramps between the two are a later step.
+- **The interchanges** (`INTERCHANGES`): the highways meeting there are at grade and join at one junction (the lines
+  share the control point). The Metro Ring Interchange is Metro City's ring (the places' own, below).
+- **The Bay Ring and the Bay Bridge** (`existing`): the places' own ring roads carry them (Westport's Beltway, Metro
+  City's Metro Ring, Cedar Isle's), so they are laid only off the places' land - their bridges (the Harbor Bridge, the
+  Cedar Bridge, the East Toll Bridge, the Bay Bridge over the north channel) and the mainland's stretches - and run on
+  10 tiles into a place's land to meet its streets (the generator's repair joins a dead end to the nearest road
+  within reach). Laid: the Bay Ring 1,487 m of its 3,197, the Bay Bridge 414 of 782.
+- **The bridges** are the generator's: a road over water is a bridge deck (`T.BRIDGE`), the deck over water stands on
+  wet pillars. **The tunnels** (`tunnels`, as control-point pairs) are handed to `shared/tunnels.js` as stretches of the
+  built edges (`roadTunnels`: each skeleton tunnel's run along the ground edges of its line; a sliver under 8 tiles at
+  a junction by a mouth is left out): the Redwood and Peaks Tunnels (Granite Peaks Highway), the North Highway's two
+  under the North Ridge, and **the three closures**: the Valley Highway's and the Desert Highway's north portals and
+  the Coast Highway's east portal end in a tunnel whose mouth at the frame's edge is closed (`closed`: the barrier of
+  wall tiles across the bore just inside it).
+
+**The arterials** (`ARTERIALS` but the canal's six, which `joinPlace` lays; the arterial kind: two lanes, sidewalks by
+the districts it runs through, so in the towns): their bridges by the same rule (the West Sea Road's causeway hops,
+the Long Reach's, the gulf's crossings), **the Harbor Tunnel** under the north channel as a tunnel stretch (402 m, its
+whole length), the Summit Road's tunnel. **The footbridges** (the Harbor Footbridge, the Southbank Walk, the Pelican
+Walk) are the narrow lanes 8.4 used (`minor`, marked `foot` on the line; the road kinds have no people-only kind yet),
+**the lift bridges** (the Northshore Lift Bridge, the Port Bridge) road bridges listed in `m.world3.roads.lifts` (no
+lifting span yet). An arterial that ends at a highway's bore (**Kestrel Road ends on the North Highway inside its
+tunnel under the North Ridge**: the skeleton's junction there is in the tunnel) stops 7 tiles short of it, a dead end.
+
+**Joined to the places:** the arterials cross the places' streets at grade (Shore Road along Northshore's waterfront,
+Westport Avenue across Westport, Southbank Avenue), the crossings' ends meet the places' streets by the generator's
+repair, and **an end that meets no road** (within 3 tiles of another line on the ground) is carried on over land, in
+a straight run that doesn't pass a bore, to the nearest road within 160 tiles (`carryEnds`): the West Sea Road to the
+Redwood Coast Road and into Gull Harbor, the Toll Point Bridge to Cedar Isle's streets and on Toll Point. Westport's
+Beltway and Strait Bridge stay cut at its edge (8.5's seams): the Coast Highway and the Bay Ring's mainland stretch
+pass there and the repair joins the seams' ends.
+
+**The network:** one piece - 1,010 of the build's 1,015 junctions (1,502 road edges); the other 5 are an island only
+boats reach (Coral Cay's lanes and tracks). Every skeleton road's edges are in it. No road point is over open water
+off a bridge, the deck or a bore.
+
+**The test** (`test/world3roads.test.js`, one world build, about 70 s): every point of a laid highway (what isn't the
+places' own) and of every arterial is on a road tile, a bridge, the deck or a tunnel's bore; every highway edge has
+two lanes each way, a skeleton highway is up on the deck with its ramps; the graph is one network (every skeleton
+road in it, what's left over far from any of them); at each interchange whose highways are laid the highways meet at
+one junction on the network; no road over open water but on a bridge (the Union Bridge, the Cedar North Bridge, the
+Toll Point Bridge and the West Sea Road have their bridge tiles); the lift bridges and footbridges are listed; the
+Granite Peaks Highway, the North Highway, the Summit Road and the Harbor Tunnel have their tunnels; each closure is a
+closed mouth at the frame's edge with its barrier.
+
+**The picture:** `docs/world-v3-world.png` (`tools/world3-world-map.mjs` now draws the roads over the tiles: highways
+orange, the deck light orange, the skeleton's arterials white, the bores dark red, a closure's barrier black) and
+`docs/world-v3-world-r4-3.png` (region 4, 3 through the chunk bake: Northshore and its interchange).

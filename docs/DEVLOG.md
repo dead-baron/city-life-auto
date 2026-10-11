@@ -7114,3 +7114,44 @@ from the server or reads its kept copy, and then the worker loads 5 files, 16 KB
 placement hooks in the generator's passes (`PL`, `pin` / `unpin`) and the container yard's pass (`buildContainerPort`),
 reached only by v3 builds. The budget goes to 360 KB. When the v3 world replaces today's, the v3 code is the
 generator, and today's island-at-a-time machinery can go.
+
+## 2026-10-10 · World v3, stage 3, step 1: the skeleton's roads laid in the whole-world build
+
+Asked (8.6's next step, the brief for this wave): the world build has every place at its gulf place, but no road
+leaves an island and the mainland has none - lay the skeleton's lines: the highways (two lanes each way,
+grade-separated: the elevated deck over a town, at grade in the country), their interchanges, the closures at the
+frame's edges, their bridges and tunnels; the arterials with their bridges (the lift bridges, the footbridges) and the
+Harbor Tunnel; joined to the places' streets, so the whole world's roads are one network (plus the islands only boats
+reach).
+
+What it does (docs/WORLD-V3.md 8.7 has the details):
+- `shared/world3-roads.js` (new) `layRoads(lines, m, L)`, one call from `shared/world3-world.js`' `lines` hook after
+  `joinPlace`: each skeleton highway's path (`linePath` at its radius) laid in the v3 frame as the highway kind - at
+  grade, up on the deck (lvl 1, with a highway-wide 24-tile ramp at each end) over a built place's land and over the
+  arterials it crosses in the country (the skeleton's 17 `overpass`es), at grade within 40 tiles of an interchange
+  and in its tunnels; the Bay Ring and the Bay Bridge (the places' ring roads carry them) only off the places' land.
+  Each arterial (but the canal's, `joinPlace`'s) as the arterial kind; the footbridges as narrow `foot` lanes, the
+  lift bridges listed (`m.world3.roads`). Bridges are the generator's own (a road over water is a bridge deck).
+- `roadTunnels(m)`, the `tunnels` hook: the skeleton's tunnel stretches as `shared/tunnels.js` specs on the built
+  edges - the Redwood, Peaks and North Ridge tunnels, the Summit Road's, the Harbor Tunnel under the north channel -
+  and the three closures (the Valley and Desert Highways' north portals, the Coast Highway's east portal): a tunnel
+  whose mouth at the frame's edge is closed by a barrier.
+- Joined up: the arterials cross the places' streets at grade, the generator's repair joins the ends to the nearest
+  road, and an end that meets no road is carried on over land to the nearest within 160 tiles (the West Sea Road at
+  both ends, the Toll Point Bridge). An arterial that ends at a highway's bore stops short (Kestrel Road ends on the
+  North Highway inside its tunnel: the skeleton's junction there is underground - for the owner).
+- The network: one piece of 1,010 of the build's 1,015 junctions; the other 5 are Coral Cay's lanes (boats only).
+- `tools/world3-world-map.mjs` draws the roads over the tiles (highways orange, the deck light orange, the arterials
+  white, the bores dark red), and its region bake no longer takes a chunk with a bridge over the sea for open sea.
+- The live world is unchanged: the world hash stays `6b6e16fdef9f`; the page and the city worker never import the
+  new module.
+
+Not done (next): the main line (MAIN_LINE, double track, the junctions and stations - 8.4 left the railway out of the
+places), ramps at the towns' interchanges (an arterial meets a highway at grade there), a lifting span for the lift
+bridges and a people-only kind for the footbridges, the Harbor Tunnel's walls (a bore under the sea stands its rock
+walls in the water).
+
+The files: `shared/world3-roads.js` (new), `shared/world3-world.js` (the two calls), `tools/world3-world-map.mjs`,
+`test/world3roads.test.js` (new), `docs/WORLD-V3.md` 8.7, `docs/world-v3-world.png`, `docs/world-v3-world-r4-3.png`.
+
+Tests: `test/world3roads.test.js` (new: one world build, about 70 s), `test/world3.test.js`.

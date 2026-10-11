@@ -59,6 +59,21 @@ for (const p of M.props) {
   else if (/cactus|scrub|tumble/.test(p.t)) dot(p.x, p.y, [120, 140, 70], 0.6);
 }
 for (const b of M.buildings) for (let y = b.ty; y < b.ty + b.th; y += S) for (let x = b.tx; x < b.tx + b.tw; x += S) dot((x + 0.5) * TILE, (y + 0.5) * TILE, [120, 70, 60], 0.5);
+// (8.7: the skeleton's roads drawn over the tiles - highways orange, up on the deck light orange, the arterials white,
+// the tunnels' bores dark red, a closed mouth's barrier black - so the network reads at 1 px = 2 tiles)
+const skel = new Set([...(M.world3?.roads?.arterials || []).map((a) => a.name)]);
+for (const e of M.edges) {
+  const c = e.kind === 'hwy' ? (e.lvl === 0 ? [236, 140, 40] : [250, 196, 110]) : skel.has(e.name) ? [240, 238, 228] : null;
+  if (!c) continue;
+  for (let k = 0; k + 1 < e.pts.length; k++) {
+    const a = e.pts[k], b = e.pts[k + 1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / (TILE * S)));
+    for (let j = 0; j <= n; j++) dot(a.x + (b.x - a.x) * j / n, a.y + (b.y - a.y) * j / n, c, 1);
+  }
+}
+if (M.cover) for (let y = 0; y < M.h; y += S) for (let x = 0; x < M.w; x += S) {
+  const i = y * M.w + x;
+  if (M.cover[i]) dot((x + 0.5) * TILE, (y + 0.5) * TILE, M.tiles[i] === T.WALL ? [0, 0, 0] : [150, 50, 40], 1);
+}
 const OUT = join(ROOT, 'docs/world-v3-world.png');
 const tmp = OUT + '.rgb';
 writeFileSync(tmp, img);
@@ -82,13 +97,14 @@ await loadProviders();
 const cache = new SpriteCache(200e6);
 const CT = CHUNK_TILES, CX = Math.ceil(M.w / CT), CY = Math.ceil(M.h / CT);
 const kindOf = (cx, cy) => {
-  let land = 0, wet = 0, road = 0, bld = 0;
+  let land = 0, wet = 0, road = 0, bld = 0, span = 0;
   for (let ty = cy * CT; ty < Math.min(M.h, cy * CT + CT); ty++) for (let tx = cx * CT; tx < Math.min(M.w, cx * CT + CT); tx++) {
     const i = ty * M.w + tx;
     if (M.land[i]) land++; if (M.river[i]) wet++;
     const t = M.tiles[i]; if (t === T.ROAD) road++; else if (t === T.BUILDING || t === T.WALL) bld++;
+    if (t === T.BRIDGE || M.deck[i] || M.cover?.[i]) span++;   // (a bridge, the deck or a bore over the sea: not open sea)
   }
-  return !land && !wet ? 'sea' : road + bld > CT * 4 ? 'town' : land < CT * CT / 2 ? 'coast' : 'wild';
+  return !land && !wet && !span ? 'sea' : road + bld > CT * 4 ? 'town' : land < CT * CT / 2 ? 'coast' : 'wild';
 };
 const kinds = { sea: [], coast: [], wild: [], town: [] };
 for (let cy = 0; cy < CY; cy++) for (let cx = 0; cx < CX; cx++) kinds[kindOf(cx, cy)].push([cx, cy]);
