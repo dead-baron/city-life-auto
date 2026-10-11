@@ -7346,6 +7346,9 @@ loop, `drawRailSwitches`), tools/world3-hub-map.mjs (new: a station through the 
 (new), test/world3rail.test.js, docs/world-v3-hub-northshore.png, docs/world-v3-hub-westport-junction.png,
 docs/world-v3-hub-old-town.png, docs/WORLD-V3.md 8.10.1.
 
-Tests: test/world3hubs.test.js (one world build: one station per name with every service calling, one map point, the
-platforms on the straight and side by side; the switches at every junction, the bake through one; the bores under
-their cover, a train inside hidden from outside).
+Tests: test/world3hubs.test.js (new; one world build: one station per name with every service calling, one map point,
+the platforms on the straight and side by side; the switches at the junctions - those below ground none - and the bake
+through one; the bores under their cover, a train inside hidden from outside), test/world3rail.test.js (3 of 3: the
+loops, the trains five minutes with no overlaps, riding), test/trains.test.js (today's loop, 19 of 19),
+test/tunnels.test.js, test/signals.test.js, test/covers.test.js, test/perf.test.js' code budgets and "never the
+generator" (pass).
