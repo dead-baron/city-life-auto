@@ -6,7 +6,8 @@
 // city it built under it (client/worldgen.js), so it only builds it again when the world changed - not for a change
 // of code that leaves it the same. `art` is a hash of everything a kept chunk is made by (the bake's code, its packing
 // and stored form - ART_ROOTS - and the world): baked chunks are kept under it (client/art2/game/chunkstore.js), in
-// the browser and on the server (server/artcdn.js). Run before committing:
+// the browser and on the server (server/artcdn.js). `world3` and `art3` are World v3's (world3Hash, below). Run before
+// committing:
 //   node tools/stamp-version.mjs
 import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from 'node:fs';
 import { join, relative, dirname, resolve } from 'node:path';
@@ -86,6 +87,19 @@ export async function artHash(root = ROOT, world = null) {
   const files = [...new Set(codes.flatMap((c) => c.files))].sort();
   return { hash: createHash('sha1').update(codes.map((c) => c.hash).join('') + w).digest('hex').slice(0, 12), files };
 }
+// World v3's world (a server run with CLA_WORLD=v3; docs/WORLD-V3.md 8.23, step 0 b): `world3`, a hash of what builds it
+// - the v3 build's code (server/world3.js and everything it imports: the generator, shared/world3-*.js), the cut into
+// region files (shared/regionpack.js) and today's world (the v3 build reads its districts and coast) - in tens of ms at
+// every stamp, where hashing the world itself would take its 45 s build. Its region files and the regions and chunks
+// the browsers keep are keyed by it ('<world3>-v3'; the art by `art3`, the art's hash of it: '<art3>-v3'), so they go
+// when the v3 world's code changes - and a code change that leaves the world as it was re-keys them too (the price
+// of not building it). Today's `world` and `art` don't move with it.
+export const WORLD3_ROOTS = ['server/world3.js', 'shared/regionpack.js'];
+export function world3Hash(root = ROOT, world) {
+  const codes = WORLD3_ROOTS.map((f) => codeHash(f, root));
+  const files = [...new Set(codes.flatMap((c) => c.files))].sort();
+  return { hash: createHash('sha1').update(codes.map((c) => c.hash).join('') + world).digest('hex').slice(0, 12), files };
+}
 // the stamp (only when run as a script: tests import worldHash)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const DIRS = ['client', 'shared', 'server', 'assets'];
@@ -107,6 +121,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   for (const f of files) { const b = readFileSync(join(ROOT, f)); h.update(f); h.update(b); hashes.push(createHash('sha1').update(b).digest('hex').slice(0, 10)); }
   const version = h.digest('hex').slice(0, 12);
   const world = (await worldHash()).hash, art = (await artHash(ROOT, world)).hash;
-  writeFileSync(join(ROOT, 'version.json'), JSON.stringify({ version, built: new Date().toISOString(), world, art, files, hashes }, null, 0) + '\n');
-  console.log('version', version, files.length, 'files', 'world', world, 'art', art);
+  const world3 = world3Hash(ROOT, world).hash, art3 = (await artHash(ROOT, world3)).hash;
+  writeFileSync(join(ROOT, 'version.json'), JSON.stringify({ version, built: new Date().toISOString(), world, art, world3, art3, files, hashes }, null, 0) + '\n');
+  console.log('version', version, files.length, 'files', 'world', world, 'art', art, 'world3', world3, 'art3', art3);
 }

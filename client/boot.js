@@ -21,6 +21,11 @@ const isArt = (f) => (/\.(png|webp|woff)$/.test(f) ? 1 : 0);
 const PAGE = new Set(['index.html', 'client/boot.js', 'client/style.css', 'manifest.webmanifest']);   // (a change here needs a reload)
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode, full */ } };
+// World v3's world: the server ran it last time (CLA_WORLD=v3, never live: main.js worldChanged) or ?world=v3 says it does.
+// Its city and its art are keyed apart from today's (docs/WORLD-V3.md 8.23, step 0 a and b): version.json's world3 and
+// art3 with '-v3' after them, as the server serves them (server/worldcdn.js worldKey, server/artcdn.js artKey)
+const V3 = lsGet('cla.world') === 'v3' || /[?&]world=v3\b/.test(location.search);
+const v3Key = (a, b) => `${a || b}-v3`;
 
 async function readMeta() {
   try {
@@ -99,8 +104,8 @@ async function freshen() {
 function startWorld() {
   if (typeof Worker === 'undefined') return null;
   const seed = (Number(lsGet(SEED)) >>> 0) || 1337;
-  const v3 = lsGet('cla.world') === 'v3' || /[?&]world=v3\b/.test(location.search);   // (the server ran World v3 last time - CLA_WORLD=v3, never live: main.js worldChanged - or ?world=v3 says it does)
-  const key = META && META.world ? `${META.world}${v3 ? '-v3' : ''}:${seed}` : null;
+  const v3 = V3;
+  const key = META && META.world ? `${v3 ? v3Key(META.world3, META.world) : META.world}:${seed}` : null;
   let w;
   try { w = new Worker(new URL('./worldgen.js', import.meta.url), { type: 'module', name: 'city' }); } catch { return null; }
   const job = { seed, key, from: null, ms: 0, stored: null, worker: w };
@@ -135,6 +140,6 @@ if (await freshen()) {
   BOOT.done = performance.now();
   window.CLA_WORLD = /[?&]cityonpage\b/.test(location.search) ? null : startWorld();   // (?cityonpage: build it on the page, as before)
   // baked chunks are kept under this build of the art (art2/game/chunkstore.js) - only when the modules are that build's
-  window.CLA_ART_KEY = BOOT.fresh && META && META.art && !/[?&]nokeep\b/.test(location.search) ? META.art : null;
+  window.CLA_ART_KEY = BOOT.fresh && META && META.art && !/[?&]nokeep\b/.test(location.search) ? (V3 ? v3Key(META.art3, META.art) : META.art) : null;
   await import('./main.js');
 }

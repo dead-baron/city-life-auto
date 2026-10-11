@@ -11,10 +11,12 @@
 //                                                reading another format) | packing (not written yet) | file (no such file)
 //
 // world is version.json's world hash (tools/stamp-version.mjs: the generator's code), the key browsers keep the city
-// under (client/worldcache.js). The cut is taken from the city as generated, before the World runs (the running world
-// changes the map: smashed props' and gates' solid entries, cell doors, smash.js's break grid), then gzipped and written
-// to <dataDir>/world/<world>-<seed>/ in the background (older builds' folders deleted).
-import { mkdirSync, readdirSync, rmSync, createReadStream, readFileSync, writeFileSync, renameSync } from 'node:fs';
+// under (client/worldcache.js); World v3's world (CLA_WORLD=v3) is served under version.json's world3 + '-v3' (the v3
+// build's code: docs/WORLD-V3.md 8.23, step 0 b). The cut is taken from the city as generated, before the World runs (the
+// running world changes the map: smashed props' and gates' solid entries, cell doors, smash.js's break grid), then gzipped
+// and written to <dataDir>/world/<world>-<seed>/ in the background (older builds' folders deleted). World v3's files are
+// kept between restarts (keptWorld): the same world key, seed, format and map signature - served as they are, no cut.
+import { mkdirSync, readdirSync, rmSync, createReadStream, readFileSync, writeFileSync, renameSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzip } from 'node:zlib';
 import { packRegions, PACK_VERSION } from '../shared/regionpack.js';
@@ -36,18 +38,27 @@ export function cutWorld(city, meta) {
 // cut: what cutWorld returned; world: version.json's world hash (read from root when not given); delayMs: the gzip and
 // the writing wait this long (the server's first ticks and the players reconnecting after a restart go first)
 // variant: 'v3' when the server runs World v3's world (CLA_WORLD=v3, server/world3.js): its files are another world's,
-// served (and kept by the pages) under the world's hash with '-v3' after it
-export function createWorldCdn({ cut, root, dataDir, seed, world = null, variant = '', delayMs = 0, log = console.log, onBytes = null } = {}) {
-  const base = world || readWorld(root);
-  const S = { world: base && variant ? `${base}-${variant}` : base, seed: seed >>> 0, dir: null, state: 'packing', files: new Map(), ms: { cut: cut ? cut.ms : 0, gzip: 0, write: 0 }, bytes: 0, served: 0, servedBytes: 0, missed: 0, error: null };
+// served (and kept by the pages) under version.json's world3 with '-v3' after it
+// kept: keptWorld's files (a start before this one wrote them: served at once, no cut); sig: the map's signature as cut
+// (cutWorld's) - given, the files are marked with it when written (kept.json), so the next start can keep them
+export function createWorldCdn({ cut, kept = null, sig = null, root, dataDir, seed, world = null, variant = '', delayMs = 0, log = console.log, onBytes = null } = {}) {
+  const S = { world: worldKey(root, world, variant), seed: seed >>> 0, dir: null, state: 'packing', files: new Map(), ms: { cut: cut ? cut.ms : 0, gzip: 0, write: 0 }, bytes: 0, served: 0, servedBytes: 0, missed: 0, error: null, kept: false };
+  const others = (base) => { try { for (const d of readdirSync(base)) if (join(base, d) !== S.dir) rmSync(join(base, d), { recursive: true, force: true }); } catch { /* best effort */ } };
   const ready = (async () => {
+    if (S.world && kept && kept.dir === join(dataDir, 'world', `${S.world}-${S.seed}`)) {
+      S.dir = kept.dir; S.files = kept.files; S.bytes = kept.bytes; S.kept = true; S.state = 'ready';
+      others(join(dataDir, 'world'));
+      log(`[world] serving the city as ${S.files.size} region files, ${(S.bytes / 1e6).toFixed(2)} MB gzipped, kept from the start before (no cut) in ${S.dir}`);
+      return;
+    }
     if (!S.world || !cut) { S.state = 'off'; return; }
     if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs).unref());
     try {
       const base = join(dataDir, 'world');
       S.dir = join(base, `${S.world}-${S.seed}`);
       mkdirSync(S.dir, { recursive: true });
-      try { for (const d of readdirSync(base)) if (join(base, d) !== S.dir) rmSync(join(base, d), { recursive: true, force: true }); } catch { /* best effort */ }
+      others(base);
+      try { rmSync(join(S.dir, KEPT), { force: true }); } catch { /* none */ }   // (written again once every file is)
       const list = [['index.bin', cut.pack.index], ...cut.pack.regions.map((r) => [`${r.key}.bin`, r.bytes])];
       let t0 = performance.now();
       const zs = await Promise.all(list.map(([, b]) => new Promise((res, rej) => gzip(b, { level: 9 }, (e, z) => (e ? rej(e) : res(z))))));
@@ -57,6 +68,7 @@ export function createWorldCdn({ cut, root, dataDir, seed, world = null, variant
         writeFileSync(tmp, zs[i]); renameSync(tmp, file);
         S.files.set(name, { file, size: zs[i].length }); S.bytes += zs[i].length;
       });
+      if (sig) writeKept(S.dir, { v: PACK_VERSION, world: S.world, seed: S.seed, sig, files: [...S.files].map(([name, f]) => [name, f.size]) });
       S.ms.write = Math.round(performance.now() - t0);
       cut.pack = null;   // (the raw cut goes: the files serve now)
       S.state = 'ready';
@@ -90,9 +102,47 @@ export function createWorldCdn({ cut, root, dataDir, seed, world = null, variant
     return true;
   }
   function summary() {
-    return { world: S.world, seed: S.seed, state: S.state, files: S.files.size, MB: +(S.bytes / 1e6).toFixed(2), ms: S.ms, served: S.served, servedMB: +(S.servedBytes / 1e6).toFixed(1), missed: S.missed, error: S.error || undefined };
+    return { world: S.world, seed: S.seed, state: S.state, files: S.files.size, MB: +(S.bytes / 1e6).toFixed(2), ms: S.ms, kept: S.kept || undefined, served: S.served, servedMB: +(S.servedBytes / 1e6).toFixed(1), missed: S.missed, error: S.error || undefined };
   }
   return { handle, summary, ready, get state() { return S.state; }, get world() { return S.world; }, _state: S };
 }
 
-function readWorld(root) { try { return JSON.parse(readFileSync(join(root, 'version.json'), 'utf8')).world || null; } catch { return null; } }
+// the key the world's files are served (and kept by the pages) under: version.json's world hash - World v3's (variant
+// 'v3') its world3 hash (the v3 build's code; an older version.json without it: its world hash) with '-v3' after it
+export function worldKey(root, world = null, variant = '') {
+  let v = null;
+  if (!world) { try { v = JSON.parse(readFileSync(join(root, 'version.json'), 'utf8')); } catch { v = null; } }
+  const base = world || (v && ((variant === 'v3' && v.world3) || v.world)) || null;
+  return base && variant ? `${base}-${variant}` : base;
+}
+
+// World v3's files kept between restarts (docs/WORLD-V3.md 8.23): the server builds the same world from the same code,
+// and cutting it into 81 files (5-7 s and 0.4 GB at the start) and gzipping them (4 s) again gives the same files. A
+// start that finds this world key's folder (the v3 build's code and the seed: <world3>-v3-<seed>) marked complete
+// (kept.json, written after every file) with the same file format and the same map signature, every file there at its
+// size, serves those and doesn't cut. Anything else - another world key, another format, another signature, a file
+// missing or cut short (a start killed while writing) - and it's cut and written afresh. Today's world (the live game)
+// is cut at every start as before.
+// -> { dir, files: Map(name -> { file, size }), bytes } or null
+const KEPT = 'kept.json';
+export function keptWorld({ root, dataDir, seed, world = null, variant = '', sig }) {
+  const key = worldKey(root, world, variant);
+  if (!key || !sig || !dataDir) return null;
+  const dir = join(dataDir, 'world', `${key}-${seed >>> 0}`);
+  try {
+    const k = JSON.parse(readFileSync(join(dir, KEPT), 'utf8'));
+    if (!k || k.v !== PACK_VERSION || k.world !== key || k.seed !== (seed >>> 0) || k.sig !== sig || !Array.isArray(k.files) || !k.files.some(([n]) => n === 'index.bin')) return null;
+    const files = new Map();
+    let bytes = 0;
+    for (const [name, size] of k.files) {
+      if (!FILE.test(name)) return null;
+      const file = join(dir, name), st = statSync(file);
+      if (!st.isFile() || st.size !== size) return null;
+      files.set(name, { file, size }); bytes += size;
+    }
+    return { dir, files, bytes };
+  } catch { return null; }
+}
+function writeKept(dir, k) {
+  try { const f = join(dir, KEPT); writeFileSync(`${f}.tmp`, JSON.stringify(k)); renameSync(`${f}.tmp`, f); } catch { /* best effort: cut again next start */ }
+}

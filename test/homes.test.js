@@ -294,3 +294,20 @@ test('debug homes: any home by its number, the next and the previous (round the 
   dev.command(w, p, 'home', { op: 'go', id: H.length + 5 });
   assert.equal(p.ped.x, x);
 });
+
+// World v3's switch, step 0 d (docs/WORLD-V3.md 8.23): at the WORLD_VERSION bump (9 -> 10) every home bought in today's
+// world is bought back at its deed, and the note names it - from LEGACY_HOMES[9], today's homes by index, as World v2's
+// bump named world v1's (tools/world2/legacy-homes.mjs --wv 9)
+test("today's homes by name for World v3's bump: LEGACY_HOMES[9] is this world's homes, by index, [price, name]", async () => {
+  const { WORLD_VERSION } = await import('../shared/constants.js');
+  const { LEGACY_HOMES } = await import('../server/systems/legacy-homes.js');
+  assert.ok(Array.isArray(LEGACY_HOMES[1]) && LEGACY_HOMES[1].length > 100, "world v1's list kept");
+  if (WORLD_VERSION !== 9) return;   // (once World v3 is live, world 9's list is the world before - no longer this map's)
+  const w = makeWorld();
+  assert.deepEqual(LEGACY_HOMES[9], w.map.homes.map((h) => [h.price, h.name]), 'run node tools/world2/legacy-homes.mjs --wv 9 after a change to the homes');
+  // what the note at the bump says, from the list: a profile of world 9 with two homes, one of them deeded
+  const [h1, h2] = w.map.homes;
+  const names = [h1.id, h2.id].map((id) => LEGACY_HOMES[9][id][1]);
+  assert.deepEqual(names, [h1.name, h2.name]);
+  assert.ok(homes.worldNoteText({ from: 9, homes: 1, refund: h1.price, names: names.slice(0, 1) }).includes(`Your home (${h1.name}) went`));
+});
