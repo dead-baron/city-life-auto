@@ -7714,3 +7714,45 @@ Tests: test/world3mesa.test.js (one world build: the districts, the streets on t
 boulevard, Station Road to the station, each resort's look, door, pool and palms, the covered street and its old
 casinos, every planned place, clear of the highway and the main line), test/world3biomes.test.js, test/world3roads.test.js,
 test/world3towns.test.js.
+
+## 2026-10-11 · World v3: the ferries at their v3 piers
+
+The owner's words: "a ferry system that goes to the islands - some walk on, some you can drive on for the bigger
+islands" (2026-10-08), and for the v3 gulf "the space between the islands and the mainland create enough space for a
+good waterway for boats to travel through and even the walk-on ferry" (2026-10-10, docs/WORLD-V3.md part 7). The plan
+(1.7): the Bay Ferry's walk-on loop (Metro City's harbour, Westport, Northshore's pier, Cedar Isle, Southbank), the River
+Water Bus up the Long Reach to Kestrel Lake, the Gull Harbor car ferry from Port Westport, the cays' and Lighthouse
+Rock's water buses, the Prison Boat (custody only) - now built and run in the v3 world build (docs/WORLD-V3.md 8.17).
+- **The piers where each route calls** (the skeleton's FERRIES points; `shared/world3-ferries.js` FERRY3 says which
+  point is a stop and whose land the pier stands on): the shore of that place nearest the point where a pier can run
+  straight out onto open water with room for the boat (no bridge over its berth).
+  - **Five walk-on terminals** (FE1) for the Bay Ferry: a deck out over the water with the waiting room on it, benches
+    and lamps, a gangway with bollards to the pier head where the boat lies stern-in.
+  - **The car ferry's two ramps** (FE2): a marshalling lot by a street, a ticket booth, the slip down to the stern.
+  - **Pontoons** for the water buses: Old Town Quay, Willow Crossing and Kestrel Lake on the river; Cedar Isle South,
+    Coral Cay and Paradise Cay; Westport's south quay and Lighthouse Rock; the Cedar Isle police dock and Prison Island.
+  - **Boards ashore:** from a terminal or a pontoon straight back over the beach or the grass to the street or the
+    promenade when one is within 30 tiles (Northshore Pier stands on the beach).
+  - Kept clear of the container port's crane quay and the ship moored at it (the first ramp stood between two gantries).
+- **The routes on the v3 map without the whole-map flood:** today's planner floods the whole grid (8.9: 1.3 s at v3 and
+  nothing found); at v3 it reads the listed stops and plans each leg inside the box round the skeleton's points between
+  two stops (the route's line as the hint) - the water there, the distance to land, A* at the boat's clearance (nearer
+  the banks where a river narrows), straightened. Bridges are passed under.
+- **The boats on their timetable, leg after leg:** each leg is shaped as today's two-pier route, so the trip (out bow
+  first, across, turning, backing in, 20 s at each pier), the riding (walk on free; drive on for the car ferry), the HUD
+  and the Transit app's times are today's; the Bay Ferry runs round its loop, the others out and back. The Prison Boat
+  is listed but runs no boat: no arrests system takes prisoners to the island yet.
+- `tools/world3-ferry-map.mjs`: pictures of the stops through the game's chunk bake.
+- Nothing live changes: the world hash stays 6b6e16fdef9f; today's ferries are found and run as before.
+
+Files: shared/world3-ferries.js (new), shared/world3-world.js (the one call: `buildFerries3` in `done`),
+server/systems/ferries.js (`routes3`, the legs, `ferryInfo3`; today's routes untouched), server/systems/transit.js (no
+bus terminal stop for the Prison Boat), client/phone.js (the Transit app names every stop of a route of many; no
+Prison Boat), tools/world3-ferry-map.mjs (new), test/world3ferries.test.js (new),
+docs/WORLD-V3.md 8.17, docs/world-v3-ferry-*.png (seven stops through the chunk bake).
+
+Tests: test/world3ferries.test.js (one world build: every route's stops built - terminals, ramps, pontoons - each near
+its skeleton point; the routes planned per corridor in time, every way on the water; a boat on each route calling at
+every stop in turn; a rider on foot round the Bay Ferry past Westport to Northshore Pier; a car to Gull Harbor and off
+onto its lot), test/ferries.test.js (today's, unchanged), test/world3server.test.js (the server's world on the v3
+map runs the ferries now: no errors), test/world3.test.js (the live world's hash), test/dmath.test.js.

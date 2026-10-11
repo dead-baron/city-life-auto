@@ -202,6 +202,7 @@ export function busLines(world) {
   });
   // each mainland ferry terminal on the line of the town nearest it
   for (const R of ferryRoutes(world)) {
+    if (R.custody) continue;   // (World v3's Prison Boat: no passengers)
     const end = R.ends[0];
     let bz = -1, bd = Infinity;
     for (const [z, all] of byZone) { if (all.length < MIN_STOPS) continue; for (const s of all) { const d = Math.hypot(s.x - end.sx, s.y - end.sy); if (d < bd) { bd = d; bz = z; } } }

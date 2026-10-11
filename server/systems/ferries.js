@@ -19,6 +19,7 @@ import { DISTRICTS } from '../../shared/map.js';
 import { nearestEdge } from '../../shared/roads.js';
 import { FERRY_DWELL_S } from '../../shared/rules.js';
 import { spawnNpc } from './npc.js';
+import { berth3, corridorWay, hintBetween } from '../../shared/world3-ferries.js';
 
 const ROUTES = [
   { island: 'Gull Harbor', model: 'ferry', name: 'Gull Harbor Ferry' },
@@ -219,6 +220,7 @@ export function ferryRoutes(world) {
   const routes = [];
   Object.defineProperty(m, '_ferryRoutes', { value: routes, enumerable: false, configurable: true });
   if (!m.tiles || !m.net) return routes;
+  if (m.world3 && m.world3.ferries) { routes3(m, routes); return routes; }   // (World v3: the piers the world build laid)
   const G = geography(m);
   // one pass over the map: each land mass's dock tiles, and how much of each route's island district is on which
   const W = m.w, N = W * m.h, slot = new Int8Array(256).fill(-1), counts = ROUTES.map(() => new Map()), docks = new Map(), slips = new Map();
@@ -277,6 +279,44 @@ export function ferryRoutes(world) {
   return routes;
 }
 
+// World v3's routes (docs/WORLD-V3.md 8.17): the stops the world build laid (shared/world3-ferries.js, m.world3.ferries),
+// each leg's way planned in its corridor round the skeleton's points (no whole-map flood). A route of many stops runs
+// leg by leg: each leg is shaped as a route of two piers is (ends, ways, heads, swings, len), so the boat's trip, the
+// riding and the timetable are today's, leg after leg - round a loop, or out to the last stop and back.
+function routes3(m, routes) {
+  const failed = [];   // (a leg with no way by water: its route isn't run - listed for the log and the tests)
+  Object.defineProperty(routes, 'failed', { value: failed, enumerable: false });
+  for (const F of m.world3.ferries) {
+    if (!F.stops || F.stops.length < 2) continue;
+    const dims = DIMS[F.model], stops = F.stops.map((st) => berth3(m, st, dims)), legs = [];
+    const n = stops.length, nl = F.loop ? n : n - 1;
+    for (let i = 0; i < nl; i++) {
+      const j = (i + 1) % n, A = stops[i], B = stops[j];
+      // (where the water narrows - a river's bridge piers, a ford - the boat keeps nearer the banks: less room either side)
+      let way = null;
+      for (let c = dims.clear; c >= 1 && !way; c--) way = corridorWay(m, A.turn, B.turn, hintBetween(F, i, j), c);
+      if (!way) { failed.push(`${F.name}: ${A.name} - ${B.name}`); legs.length = 0; break; }
+      const ways = [way, measure(way.slice().reverse().map((p) => ({ x: p.x, y: p.y })))], ends = [A, B];
+      const heads = ways.map((w) => headAt(w, 0)), swings = heads.map((h, k) => Math.max(1, Math.abs(wrapA(h - ends[k].a)) / SWING_RATE));
+      legs.push({ id: routes.length, name: F.name, model: F.model, car: F.car, mainland: A.name, island: B.name, ends, way, ways, heads, swings, len: Math.round(way[way.length - 1].s), from: i, to: j });
+    }
+    if (!legs.length) continue;
+    const len = legs.reduce((a, L) => a + L.len, 0);
+    routes.push({ id: routes.length, name: F.name, model: F.model, car: F.car, loop: F.loop, custody: F.custody, island: stops[n - 1].name, mainland: stops[0].name, stops, legs, ends: legs[0].ends, way: legs[0].way, ways: legs[0].ways, heads: legs[0].heads, swings: legs[0].swings, len });
+  }
+}
+// the leg a boat is on (a route of two piers is its own one leg)
+const legOf = (R, F) => (R.legs ? R.legs[F.leg || 0] : R);
+// in at a stop of a route of many (F.end the end of its leg it's in at): on to the leg that leaves from there
+function nextLeg(R, F) {
+  const nl = R.legs.length, i = F.leg || 0;
+  if (R.loop) { if (F.end === 1) { F.leg = (i + 1) % nl; F.end = 0; } return; }
+  if (F.end === 1) { if (i + 1 < nl) { F.leg = i + 1; F.end = 0; } }   // (at the last stop: back the way it came)
+  else if (i > 0) { F.leg = i - 1; F.end = 1; }
+}
+// the stop a boat on leg i is at, at end `end` of it
+const stopOf = (R, i, end) => (R.legs ? (end === 0 ? R.legs[i].from : R.legs[i].to) : end);
+
 // ---- running them --------------------------------------------------------------------------------------------------
 const ease = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
 const wrapA = (a) => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
@@ -322,7 +362,7 @@ function advance(world, F, R, now) {
 }
 
 function spawnFerry(world, R) {
-  const e = R.ends[0];
+  const e = legOf(R, { leg: 0 }).ends[0];
   const v = world.spawnVehicle(R.model, e.x, e.y, e.a, { despawnable: false, npcOwned: true, paint: R.car ? 2 : 9 });
   v.ferry = { route: R.id };
   const cap = spawnNpc(world, 'casual', e.x, e.y, 'driver');
@@ -338,13 +378,16 @@ export function update(world, dt) {
   const routes = ferryRoutes(world);
   if (!routes.length) return;
   const now = world.time;
-  world.ferries ??= routes.map((R) => ({ route: R.id, v: 0, end: 0, phase: 'dock', t0: now, dur: FERRY_DWELL_S }));
+  world.ferries ??= routes.map((R) => ({ route: R.id, v: 0, end: 0, phase: 'dock', t0: now, dur: FERRY_DWELL_S, ...(R.legs ? { leg: 0 } : {}) }));
   for (const F of world.ferries) {
     const R = routes[F.route];
+    if (R.custody) continue;   // (the Prison Boat: custody only - no arrests system takes prisoners to the island yet)
     let v = F.v ? world.get(F.v) : null;
-    if (!v) { if (world.tick % 20 !== 5) continue; v = spawnFerry(world, R); F.v = v.id; F.end = 0; F.phase = 'dock'; F.t0 = now; F.dur = FERRY_DWELL_S; }
-    advance(world, F, R, now);
-    const p = placeOf(F, R, now);
+    if (!v) { if (world.tick % 20 !== 5) continue; v = spawnFerry(world, R); F.v = v.id; F.end = 0; F.phase = 'dock'; F.t0 = now; F.dur = FERRY_DWELL_S; if (R.legs) F.leg = 0; }
+    const was = F.phase;
+    advance(world, F, legOf(R, F), now);
+    if (R.legs && was === 'back' && F.phase === 'dock') nextLeg(R, F);
+    const p = placeOf(F, legOf(R, F), now);
     v.vx = (p.x - v.x) / Math.max(dt, 1e-3); v.vy = (p.y - v.y) / Math.max(dt, 1e-3); v.av = wrapA(p.a - v.a) / Math.max(dt, 1e-3);
     if (F.phase === 'dock') { v.vx = 0; v.vy = 0; v.av = 0; }
     v.x = p.x; v.y = p.y; v.a = p.a; v.lz = 0;
@@ -400,7 +443,7 @@ function driveOff(world, car, R, end, there) {
   }
 }
 function unloadDone(world, F) { const v = world.get(F.v); if (v) for (const sid of v.seats) { const q = sid ? world.get(sid) : null; if (q && q.player) q.player.meDirty = true; } }
-const termName = (R, end) => (end === 0 ? `${R.mainland} pier` : `${R.island} pier`);
+const termName = (R, end) => (R.from !== undefined ? (end === 0 ? R.mainland : R.island) : end === 0 ? `${R.mainland} pier` : `${R.island} pier`);   // (a World v3 leg: its stops' own names - "Northshore Pier", "Old Town Quay")
 
 // ---- riding ---------------------------------------------------------------------------------------------------------
 const ferryOf = (world, v) => (v && v.ferry && world.ferries ? world.ferries[v.ferry.route] : null);
@@ -417,7 +460,7 @@ export function interaction(world, p) {
   if (!ped || !world.ferries) return null;
   const routes = ferryRoutes(world);
   for (const F of world.ferries) {
-    const v = F.v ? world.get(F.v) : null, R = routes[F.route];
+    const v = F.v ? world.get(F.v) : null, R = legOf(routes[F.route], F);
     if (!v || F.phase !== 'dock' || world.time - F.t0 > F.dur - 1) continue;
     const to = F.end === 0 ? R.island : R.mainland;
     if (!ped.vehId) {
@@ -475,7 +518,7 @@ export function leaveDeckCar(world, ped, car) {
 export function exitToward(world, v) {
   const F = ferryOf(world, v);
   if (!F || F.phase !== 'dock') return null;
-  const e = ferryRoutes(world)[F.route].ends[F.end];
+  const e = legOf(ferryRoutes(world)[F.route], F).ends[F.end];
   return { x: e.sx - e.ox * 60, y: e.sy - e.oy * 60 };
 }
 
@@ -487,7 +530,7 @@ export function rideInfo(world, p) {
   if (v && v.onDeck) v = world.get(v.onDeck.f);
   const F = ferryOf(world, v);
   if (!F) return null;
-  const R = ferryRoutes(world)[F.route], docked = F.phase === 'dock';
+  const R = legOf(ferryRoutes(world)[F.route], F), docked = F.phase === 'dock';
   const to = docked ? termName(R, 1 - F.end) : termName(R, 1 - F.end);
   return { k: 'ferry', line: R.name, at: docked ? termName(R, F.end) : null, next: to, eta: docked ? Math.max(0, Math.round(F.dur - (world.time - F.t0))) : Math.round(timeTo(F, R, world.time)), car: !!(world.get(ped.vehId) && world.get(ped.vehId).onDeck) };
 }
@@ -511,6 +554,7 @@ function timeTo(F, R, now) {
 export function ferryInfo(world) {
   const routes = ferryRoutes(world), now = world.time;
   return routes.map((R) => {
+    if (R.legs) return ferryInfo3(world, R, now);
     const F = world.ferries ? world.ferries[R.id] : null, v = F && F.v ? world.get(F.v) : null;
     // seconds until the boat next leaves each pier (in at one now: its time left there; the other, after the trip over)
     let leaves = null;
@@ -527,4 +571,32 @@ export function ferryInfo(world) {
       boat: v ? { x: Math.round(v.x), y: Math.round(v.y), a: +v.a.toFixed(2), in: F.phase === 'dock' ? F.end : -1 } : null, leaves,
     };
   });
+}
+
+// a route of many stops (World v3) for the Transit app and the map: every stop, the whole way round, when the boat next
+// leaves each stop (the timetable walked on from where the boat is now: each leg's trip and the dwell at each stop)
+function ferryInfo3(world, R, now) {
+  const F = world.ferries ? world.ferries[R.id] : null, v = F && F.v && !R.custody ? world.get(F.v) : null, n = R.stops.length;
+  let leaves = null;
+  if (F && v) {
+    leaves = new Array(n).fill(null);
+    const S = { leg: F.leg || 0, end: F.end };
+    let td;
+    if (F.phase === 'dock') td = now + F.dur - (now - F.t0);
+    else { td = now + timeTo(F, legOf(R, S), now) + FERRY_DWELL_S; S.end = 1 - S.end; nextLeg(R, S); }
+    for (let k = 0; k < 2 * n + 2; k++) {
+      const at = stopOf(R, S.leg, S.end);
+      if (leaves[at] === null) leaves[at] = Math.max(0, Math.round(td - now));
+      const L = legOf(R, S), arrive = td + legTo(L, 1 - S.end);
+      S.end = 1 - S.end; nextLeg(R, S);
+      td = arrive + FERRY_DWELL_S;
+    }
+  }
+  const path = [];
+  for (const L of R.legs) path.push([Math.round(L.ends[0].x), Math.round(L.ends[0].y)], ...L.way.map((p) => [Math.round(p.x), Math.round(p.y)]), [Math.round(L.ends[1].x), Math.round(L.ends[1].y)]);
+  return {
+    id: R.id, name: R.name, car: R.car, island: R.island, mainland: R.mainland, len: R.len, loop: !!R.loop, custody: !!R.custody,
+    stops: R.stops.map((e) => e.name), piers: R.stops.map((e) => ({ x: Math.round(e.sx), y: Math.round(e.sy) })), path,
+    boat: v ? { x: Math.round(v.x), y: Math.round(v.y), a: +v.a.toFixed(2), in: F.phase === 'dock' ? stopOf(R, F.leg || 0, F.end) : -1 } : null, leaves,
+  };
 }

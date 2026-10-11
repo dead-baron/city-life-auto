@@ -3356,3 +3356,120 @@ narrow lanes - so none are laid); the canopy of lights as a model of its own (st
 now); the casinos as walk-ins with their games (GM3, GM4), the counting room and the boss's office as rooms (VG2); the
 resorts' crowns and the classic renderer's drawing of their looks (`resort` on the roof record); the airport, the welcome
 sign on the highway, the fountain show; the resorts' car parks; a desert look for the flats (yards, trailers).
+
+### 8.17 The ferries at their v3 piers (2026-10-11, H42)
+
+The skeleton's six ferry routes (`shared/world3-skeleton.js` FERRIES; part 1.7, part 7's water) built and run in the
+v3 world: the piers and terminals laid by the world build where each route calls, the routes planned per corridor on
+the v3 map, the boats on their timetable. Nothing live changes: the world hash stays `6b6e16fdef9f`, and today's
+ferries are found and run as before (`test/ferries.test.js`: today's world has no `m.world3`, so `ferryRoutes` takes
+today's way).
+
+**Where each route calls** (`shared/world3-ferries.js` FERRY3: which of a route's skeleton points is a stop, whose
+land the pier stands on, what is built there):
+
+| Route | Stops (built) | Boat |
+|---|---|---|
+| Bay Ferry (round) | Metro City Harbor, Westport, Northshore Pier, Cedar Isle, Southbank - walk-on terminals | water bus |
+| River Water Bus | Old Town Quay, Willow Crossing, Kestrel Lake - pontoons | water bus |
+| Gull Harbor Car Ferry | Port Westport, Gull Harbor - ramps | the car ferry |
+| Cay Water Bus | Cedar Isle South, Coral Cay, Paradise Cay - pontoons | water bus |
+| Lighthouse Water Bus | Westport South Quay, Lighthouse Rock - pontoons | water bus |
+| Prison Boat (custody only) | Cedar Isle Police Dock, Prison Island - pontoons | listed, not run |
+
+**The piers** (`buildFerries3(m, H3)`, one call at the end of the world build's `done`, after the towns, the main line
+and the beach front: nothing laid later moves them). For each stop, the shore nearest the skeleton's point (within 240
+tiles) of that place's districts (Metro City's picture's for the harbour and Southbank, Westport's and Port Westport's,
+Northshore's and its beach towns', Cedar Isle's, the small islands' and Prison Island's own, the mainland's for the
+river and the lake) where a pier can run straight out - north, south, east or west - onto open water with room for the
+boat to lie at its end (no bridge over the berth), with open ground behind it, off the container port's crane apron and
+clear of the ship moored at its quay (`m.port`); the nearest such shore wins, with a street near behind it counting for
+it. What is built (tiles out from the shore tile):
+- **A walk-on terminal** (FE1): a deck out over the water, 15 across and 6 out (its first two rows may cover the open
+  shore), the waiting room on it (7 x 4, a metal roof, the route's sign), benches, a lamp and a bin on the open half;
+  the gangway (3 across, 4 out) with bollards along it to the pier head (7 across) where the boat lies stern-in;
+  mooring posts at the head's corners. The street or the promenade behind is left as it is: the deck meets it. (Built
+  out over the water because the cities' waterfronts have no room ashore: a forecourt and a waiting room behind the
+  shore found no place at Metro City's harbour, Northshore or Southbank.)
+- **The car ferry's ramp** (FE2): the marshalling lot (12 x 10, paving) by a street (within 14 tiles), a ticket booth
+  on it, the slip (7 across, 3 out) down to the ferry's stern, bollards beside it; where no such shore is found, a
+  smaller lot (8 x 5) with no street needed (Gull Harbor's).
+- **A water bus stop:** a patch of boards ashore, a gangway (3 across, 3 out) to a pontoon (5 across, 2 out), a lamp, a
+  bollard, mooring posts.
+- **The way ashore** (a terminal, a pontoon): boards 3 across straight back over the beach or the grass to the street,
+  the promenade or a path, when one is within 30 tiles.
+
+Each stop is listed in `m.world3.ferries` (`[{ name, model, car, loop, custody, stops: [{ name, kind, x, y, ox, oy,
+shore, land, building, pt }], hint }]`; `x, y` the pier's end where the boat's stern lies, `ox, oy` the way out,
+`land` the car ferry's landing); a stop that found no shore would be named in `missing` (none).
+
+**The routes on the v3 map** (`server/systems/ferries.js` `routes3`, `shared/world3-ferries.js` `berth3`,
+`corridorWay`, `hintBetween`). Today the planner floods the whole grid (the land masses, the distance to land, A* over
+all of it - 8.9: 1.3 s at v3 and no routes found). At v3 it reads the listed stops instead and plans each leg between
+two stops inside its corridor: the box round the skeleton's points between them (the route's line is the hint), 60
+tiles each side (three times that if no way is found); in that box only, the water (with whatever stands over it on a
+deck - a bridge, its sidewalks and parapets: the boats pass under, as `BOAT_BLOCK` lets them pass under a bridge; not a
+pier, a quay or a building on one), how far each water tile is from land (to 16), A* over cells of 2 x 2 tiles
+at least the boat's clearance from land, straightened. Where the water narrows below the boat's clearance (the
+river), the leg is planned again keeping nearer the banks (clearance 2, then 1). A boat's berth at a stop: lying
+stern-in at the pier's end, bow out; its turning point the first place out with water `turn` tiles all round it.
+
+**The boats** run as today's do (the same trip: out of the pier bow first, swinging round, across, turning round,
+backing in; 20 s at each pier), leg after leg: each leg is shaped as a route of two piers is (`ends`, `ways`, `heads`,
+`swings`, `len`), the boat's state keeps which leg it is on (`F.leg`), and in at a stop it goes on to the leg that
+leaves from there - round the Bay Ferry's loop, out to the last stop and back on the others. Riding is today's: walk
+aboard while it's in (free) - "Board the Bay Ferry to Westport" - stay aboard past stops, get off at any with the
+vehicle key; drive aboard the car ferry at the ramp and off onto the far lot. The HUD's next stop and time, the Transit
+app's list (`ferryInfo`: every stop, the way round, when the boat next leaves each stop - the timetable walked on from
+where the boat is) follow the legs. The Prison Boat is planned and listed (`custody: true`) but runs no boat: no
+arrests system takes prisoners to the island yet (`server/systems/custody.js` walks them to the cells at the police
+stations); the buses leave it out.
+
+**The numbers** (this machine, node 22, two shared cores): **the planner 263-275 ms for the six routes** at v3 (8.9: the
+whole-grid flood took 1.3 s and found nothing; with a leg failing and retried in its wider box, 0.8 s). The ways: the
+Bay Ferry 2,791 m round its five stops, the River Water Bus 2,340 m out to Kestrel Lake, the Gull Harbor car ferry
+768 m, the Cay Water Bus 1,824 m, the Lighthouse Water Bus 2,337 m, the Prison Boat 997 m. Two things the first runs
+found: the bridges' sidewalks and parapets stand over the water as tiles of their own, so a planner that took only
+water and bridge decks as water found the channels under the Bay Ring's bridges shut (no Bay Ferry, no River Water Bus)
+- the boats' water is now whatever isn't land, a pier or a building; and the first ramp and pontoon at Port Westport
+stood on the container quay between two gantry cranes, beside the moored ship - the whole quay strip is kept clear now,
+and both stand at the port's south end ([1209, 2399] and [1308, 2403]).
+
+**Tests** (`test/world3ferries.test.js`, one world build, about 41 s: the build 39 s, the rest 1.2 s): every route's stops built (the six routes, no
+stop missing, each within 250 tiles of its skeleton point, the pier's boards to its end and open water off it; each
+terminal's waiting room and deck, each ramp's lot and booth, each pontoon's boards ashore); the routes planned in time
+(under 5 s), a leg between each pair of stops, every way from turning point to turning point on the water; a boat on
+each route calling at every stop in turn and lying at its pier (the Bay Ferry round its five and back to the first,
+the others out and back), the timetable knowing every stop; a rider on foot boarding at Metro City Harbor, staying
+aboard past Westport, getting off onto Northshore Pier; a car driven aboard at Port Westport and off onto Gull Harbor's
+lot. `test/ferries.test.js` (today's, unchanged) and `test/world3server.test.js` (the server's world on the v3 map, which
+now plans and runs the ferries too: no errors) pass.
+
+**The pictures** (`node tools/world3-ferry-map.mjs [--stop <name>] [--span 1600]`: one world build, the chunks round
+each stop through the game's chunk bake at 1/4, the boat's outline where it lies, its turning point and the way on):
+`docs/world-v3-ferry-westport.png`, `-metro-city-harbor.png`, `-northshore-pier.png` (terminals),
+`-port-westport.png`, `-gull-harbor.png` (the car ferry's ramps), `-willow-crossing.png`, `-westport-west-quay.png`
+(pontoons; the lighthouse bus's Westport stop, named Westport South Quay since). What reads right: each pier runs
+straight out from its shore onto open water with the boat's berth clear beyond it and its way out (Westport's from the
+promenade, Northshore's from the beach, Metro City's from the west shore's sand between the Harbor Bridge's road and
+rail decks); the River Water Bus's pontoon at Willow Crossing sits on the east bank just below the road bridge, the way
+going on upriver under it; the car ferry's ramp at the port's south end clear of the cranes and the moored ship, and at
+Gull Harbor a lot off the island's ring road. What's wrong:
+- **The waiting rooms are plain boxes:** a roof record (metal, the route's sign) drawn as the classic flat roof - not
+  FE1's pitched green roof, its clock and ticket window, the covered gangway beside it; the decks are the dock tile's
+  plain boards, no concrete quay edge, piles or rails; bollards and mooring posts are specks at 1/4. A terminal model in
+  art v2 (as the stations' houses have) is what's missing; the ramp's lot is plain paving (FE2's lanes, barriers and
+  booth window aren't drawn) and the booth reads as a small house.
+- **Metro City Harbor's deck is close under the bridges:** its south edge 2-3 tiles from the road bridge's deck - the
+  nearest shore to the skeleton's point with room; a few tiles north would read better.
+- **Northshore Pier stood on the beach**, 20-odd tiles of sand from the street with no way to it: a terminal or a
+  pontoon now gets boards (3 across) straight back over the sand or the grass to the street, the promenade or a path
+  when one is within 30 tiles (`-northshore-pier.png` and `-metro-city-harbor.png` are drawn with them).
+- **The boats aren't in the bake** (they are vehicles): the white outline is where the boat lies.
+- **Gull Harbor's lot** sits beside the ring road's sidewalk with no drive of its own (the relaxed spec: no street
+  needed within reach); cars cross the kerb to it.
+
+**What's left:** the terminal and ramp models (FE1, FE2); the Prison
+Boat as the arrests system's transport, once prisoners go to the island; the lift bridges opening for tall boats (the
+boats pass under every deck today). The Transit app (`client/phone.js`) lists every stop of a route of many by its
+own name with its time (`ferryInfo`'s `stops`, `piers`, `leaves`) and leaves the Prison Boat out.
