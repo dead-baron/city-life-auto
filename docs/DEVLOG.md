@@ -8181,8 +8181,9 @@ had before." - "Add a tank you can drive and shoot and blow things up with, can 
 - **Fire on people** (`server/systems/burning.js`; `shared/rules.js` BURN): someone alight has `ped.burnT` (the seconds
   the fire has left, standing still in the dry) and takes BURN.dps a second (a player's grit divides it). What sets
   people alight: a blast (`combat.blast` → `blastCatch`: likelier the nearer its heart), their vehicle blowing up with
-  them in it (`vehicles.js` blownOut: thrown clear on fire), a fire arrow (`combat.js` stepArrow), and brushing against
-  fire every few ticks - a burning vehicle or a fresh wreck, a lit campfire (not sitting by one), someone else alight.
+  them in it (`vehicles.js` blownOut: thrown clear on fire), a fire arrow (`combat.js` stepArrow), and walking or
+  running into fire (checked every few ticks) - a burning vehicle or a fresh wreck, a lit campfire (not sitting by one),
+  someone alight brushing past; standing still beside a fire you don't catch, and spawn protection keeps it off.
   It goes out by itself in BURN.secs (9 s), faster running about (x1.6), much faster dive-rolling on the ground (x9: a
   couple of rolls), faster again in the rain (x2.2), and at once in the water (a hiss). Getting into a car or going
   indoors puts it out. A player is told; the death screen says "Burned to death." (or "...set alight by" whoever).
@@ -8227,7 +8228,7 @@ client/sound/vehicles.js, client/devcats.js, README.md (controls), test/burning.
 
 Tests: test/burning.test.js (a player alight: hurt, out by itself in BURN.secs, rolling < running < standing, the rain,
 the water at once and nobody catches in it; the wire's bit; burned to death, and by whom; a blast, a car blowing up with
-you in it, a fire arrow, a burning wreck, a campfire; NPCs' run / roll / fall, the rollers out and alive, the fallers
+you in it, a fire arrow, walking into a burning wreck, a campfire, but not standing still beside one; NPCs' run / roll / fall, the rollers out and alive, the fallers
 dead, near water many run in), test/tank.test.js (turns on the spot where a car can't; the turret to the aim, the hull
 still, its angle on the wire; thirty rifle rounds a scratch; a shell flies and wrecks a car, one per reload; it shoves a
 car along; the Boom Tester's index, the reload stepping its kinds, a shot going up where it lands, every kind going off
