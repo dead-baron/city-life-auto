@@ -17,7 +17,7 @@
 // The ends meet the places' streets by the generator's own repair (a dead end within reach joins the nearest road).
 // Generator-only: nothing live imports it (the page never builds the v3 world).
 import { TILE } from './constants.js';
-import { HIGHWAYS, ARTERIALS, INTERCHANGES, CLOSURES, LANDMARKS, RADIUS, linePath, pointAt, nearestOnPath, stretchRanges, skeletonLines, skeletonCrossings } from './world3-skeleton.js';
+import { HIGHWAYS, ARTERIALS, INTERCHANGES, CLOSURES, LANDMARKS, MAIN_LINE, RADIUS, linePath, pointAt, nearestOnPath, stretchRanges, inRanges, skeletonLines, skeletonCrossings } from './world3-skeleton.js';
 
 const RAMP = 24;        // tiles: a highway's climb from the ground to the deck
 const OVER = 16;        // tiles of deck either side of an arterial a highway passes over
@@ -89,6 +89,7 @@ export function layRoads(lines, m, L) {
     return best && best.p;
   };
   const ends = [];   // (the loose ends carryEnds looks at: { l, end, kind })
+  const sites = interchangeSites(paths, out);   // (the interchanges built as diamonds: the through highway on the deck)
   for (const H0 of HIGHWAYS) {
     const path = paths.get(H0.name), Ls = path.length, tun = stretchRanges(path, H0.tunnels);
     const e0 = endAt(H0, H0.pts[0]), e1 = endAt(H0, H0.pts[H0.pts.length - 1]);
@@ -96,10 +97,13 @@ export function layRoads(lines, m, L) {
     const n = Math.ceil(Ls / SAMPLE) + 1, S = (k) => Math.min(Ls, k * SAMPLE);
     const keep = new Uint8Array(n).fill(1), want = new Uint8Array(n), ground = new Uint8Array(n);
     const overs = overAt.get(H0.name) || [];
+    const mine = sites.filter((st) => st.U === H0.name);
     for (let k = 0; k < n; k++) {
       const s = S(k), [x, y] = pointAt(path, s);
       if (tun.some(([a, b]) => s >= a - 2 && s <= b + 2)) ground[k] = 1;
-      if (INTERCHANGES.some((ic) => Math.hypot(ic.at[0] - x, ic.at[1] - y) < IC_GROUND)) ground[k] = 1;
+      // (at an interchange it passes through, the highway is up on the deck over the other: its ramps come down)
+      if (mine.some((st) => s >= st.d0 && s <= st.d1)) want[k] = 1;
+      else if (!mine.some((st) => s >= st.d0 - RAMP - 2 && s <= st.d1 + RAMP + 2) && INTERCHANGES.some((ic) => Math.hypot(ic.at[0] - x, ic.at[1] - y) < IC_GROUND)) ground[k] = 1;
       if (H0.existing) {
         // (the places' own ring roads carry it: laid off their land, IN tiles into it to meet their streets)
         if (placeAt(x, y)) { const i = idx(x, y); if (m.distSea[i] > IN * 4) keep[k] = 0; }
@@ -219,6 +223,7 @@ export function layRoads(lines, m, L) {
     if (A.lift) out.lifts.push(A.name);
     for (const [a, b] of tun) out.tunnels.push({ name: A.name, kind: 'art', pts: sub(path, a, b), closed: false, closure: null });
   }
+  layInterchanges(lines, sites, paths, out);
   carryEnds(lines, m, ends, bores, out);
   m.w3tunnels = out.tunnels;   // (roadTunnels reads them once the network is built)
   return out;
@@ -331,4 +336,124 @@ function pointOn(P, s) {
     acc += len;
   }
   return P[P.length - 1];
+}
+
+// 4. The interchanges (docs/WORLD-V3.md 8.11): where a highway passes through an interchange's point and other roads end
+// there (INTERCHANGES; and an arterial's end on a highway's control point), the through highway goes up on the deck
+// over them and the roads below run on under it, joined at grade; each carriageway of the through highway gets an
+// off-ramp before them and an on-ramp after them on its own right, down to (up from) the road below D_OFF tiles out
+// from the highway (a diamond, as the Metro Ring's: shared/citylayout.js diamondRamp). A road that ends there (a T: a
+// trumpet's or a fork's) runs on under the deck as a stub to the far side's ramps. The engine has two levels, so a
+// cloverleaf's loops and a stack's third and fourth levels are diamonds here (the ramps' feet are junctions below).
+const D_OFF = 12;       // tiles from the through highway's centre line to where its ramps meet the road below
+const RUN_OUT = 10;     // tiles of level run-out at a ramp's foot
+const CURVE = 30;       // tiles of a ramp's curve off the deck (its climb or descent)
+const DECK_PART = 20;   // tiles of a ramp along the deck (the taper and the auxiliary lane)
+const TAPER = 8;        // tiles of the taper from the outer lane out to the auxiliary lane
+const EXT = RUN_OUT + CURVE + DECK_PART;
+const LANE_PX = 135.5, AUX_PX = 216.5;   // px right of a highway's centre line: its outer lane, the auxiliary lane beside it
+const RAIL_CLEAR = 8;    // tiles: the main line's track (either way, 1.5 tiles off its path) and bed clear of a ramp
+const ROAD_CLEAR = 7;    // tiles: another road's centre line clear of a ramp's low half (the ramp's and an arterial's half-widths and room)
+const RAIL = MAIN_LINE.map((R) => { const path = linePath(R, R.r || RADIUS.main); return { path, tun: stretchRanges(path, R.tunnels) }; });
+const tangentAt = (P, s) => { const a = pointAt(P, Math.max(0, s - 2)), b = pointAt(P, Math.min(P.length, s + 2)), l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
+
+// the interchanges to build: { name, kind, U (the through highway), s (along it), C (tiles), arms: [{ name, kind, side,
+// S (the ramps' foot on it), stub }], d0, d1 (the through highway's deck run) }; those that can't be built are listed
+// in out.interchanges with why
+function interchangeSites(paths, out) {
+  out.interchanges = [];
+  const sites = [];
+  const near = (p, q, d = 2) => Math.hypot(p[0] - q[0], p[1] - q[1]) < d;
+  for (const U of HIGHWAYS) {
+    if (U.existing) continue;
+    const P = paths.get(U.name);
+    for (let i = 1; i + 1 < U.pts.length; i++) {
+      const C0 = U.pts[i], ic = INTERCHANGES.find((c) => near(c.at, C0));
+      if (ic && ic.kind === 'ramps') continue;
+      const q = nearestOnPath(P, C0[0], C0[1]), s = q.s, C = pointAt(P, s);
+      // the roads that end there: the highways (their ends are put on this one's path: SNAP) and the arterials whose
+      // end is on it
+      const lowers = [];
+      for (const H of HIGHWAYS) if (H !== U) for (const end of [0, 1]) if (near(end ? H.pts[H.pts.length - 1] : H.pts[0], C0)) lowers.push({ name: H.name, kind: 'hwy', path: paths.get(H.name), end, base: C });
+      for (const A of ARTERIALS) for (const end of [0, 1]) {
+        const E = end ? A.pts[A.pts.length - 1] : A.pts[0];
+        if (near(E, C0) && near(E, C, 4)) lowers.push({ name: A.name, kind: A.foot ? 'minor' : 'art', path: pathOf(A, 'art'), end, base: E });
+      }
+      if (!lowers.length) continue;
+      const name = ic ? ic.name : `${U.name} x ${lowers.map((l) => l.name).join(' / ')}`;
+      const r = [-tangentAt(P, s)[1], tangentAt(P, s)[0]];
+      // each road's arm: the point D_OFF tiles out from the highway along its last straight (as laid: to the base)
+      const arms = [];
+      const outAt = (b, d) => { for (let u = 1; u < 160; u += 0.5) { const p = [b[0] + d[0] * u, b[1] + d[1] * u]; if (nearestOnPath(P, p[0], p[1]).d >= D_OFF) return p; } return null; };
+      for (const lo of lowers) {
+        const pts = lo.path.pts, Q = lo.end ? pts[pts.length - 2] : pts[1], b = lo.base, l = Math.hypot(Q[0] - b[0], Q[1] - b[1]) || 1;
+        const dir = [(Q[0] - b[0]) / l, (Q[1] - b[1]) / l], S = outAt(b, dir);
+        if (!S) continue;
+        arms.push({ name: lo.name, kind: lo.kind, side: (S[0] - C[0]) * r[0] + (S[1] - C[1]) * r[1] > 0 ? 1 : -1, S, dir, base: b });
+      }
+      // (a T: the road runs on under the deck as a stub to the far side's ramps)
+      for (const side of [1, -1]) {
+        if (!arms.length || arms.some((a) => a.side === side)) continue;
+        const a0 = arms[0], d = [-a0.dir[0], -a0.dir[1]], S = outAt(a0.base, d);
+        if (S) arms.push({ name: a0.name, kind: a0.kind, side, S, dir: d, base: a0.base, stub: true });
+      }
+      if (!arms.some((a) => a.side === 1) || !arms.some((a) => a.side === -1)) { out.interchanges.push({ name, U: U.name, built: false, why: 'no road on one side' }); continue; }
+      const sS = arms.map((a) => nearestOnPath(P, a.S[0], a.S[1]).s);
+      const d0 = Math.min(...sS) - EXT - 4, d1 = Math.max(...sS) + EXT + 4;
+      const tun = stretchRanges(P, U.tunnels);
+      if (d0 - RAMP < 4 || d1 + RAMP > P.length - 4 || tun.some(([a, b]) => b > d0 - RAMP - 8 && a < d1 + RAMP + 8)) { out.interchanges.push({ name, U: U.name, built: false, why: 'the through highway is in its tunnel there (no room for the deck)' }); continue; }
+      // (the main line keeps clear of the ramps: where it runs through an interchange - Westport's, Sandpiper's - its
+      // track would cross them at grade, so that one is left at grade for now)
+      const ramps = rampLines(P, arms);
+      const rail = ramps.some((rp) => rp.pts.some(([x, y]) => RAIL.some((R) => { const v = nearestOnPath(R.path, x, y); return v.d < RAIL_CLEAR && !inRanges(R.tun, v.s, 4); })));
+      if (rail) { out.interchanges.push({ name, U: U.name, built: false, why: 'the main line runs through it (its track would cross the ramps)' }); continue; }
+      // (nor does another road: a ramp's low half crosses nothing on the ground but the road it meets - the Summit Road
+      // runs through the Gorge Junction)
+      const others = [...HIGHWAYS.filter((H) => H !== U && !lowers.some((l) => l.name === H.name)).map((H) => ({ name: H.name, path: paths.get(H.name), tun: stretchRanges(paths.get(H.name), H.tunnels) })),
+        ...ARTERIALS.filter((A) => !lowers.some((l) => l.name === A.name)).map((A) => { const path = pathOf(A, 'art'); return { name: A.name, path, tun: stretchRanges(path, A.tunnels) }; })];
+      const hit = others.find((o) => ramps.some((rp) => { const mid = (rp.zr[0] + rp.zr[1]) / 2, n = rp.pts.length; return rp.pts.some(([x, y], j) => { const f = j / (n - 1); if (rp.off ? f < mid : f > mid) return false; const v = nearestOnPath(o.path, x, y); return v.d < ROAD_CLEAR && !inRanges(o.tun, v.s, 4); }); }));
+      if (hit) { out.interchanges.push({ name, U: U.name, built: false, why: `${hit.name} runs through it (it would cross the ramps at grade)` }); continue; }
+      sites.push({ name, kind: ic ? ic.kind : 'diamond', U: U.name, s, C, arms, d0, d1, ramps, lowers: lowers.map((l) => l.name) });
+    }
+  }
+  return sites;
+}
+
+// each carriageway's two ramps on its own right (tiles): { pts, off, dir, to, foot, zr } - the off-ramp from the deck
+// before the road below down to it, the on-ramp from it up to the deck after it
+function rampLines(P, arms) {
+  const cubic = (p0, c1, c2, p1, n) => { const o = []; for (let k = 1; k < n; k++) { const t = k / n, u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t; o.push([a * p0[0] + b * c1[0] + c * c2[0] + d * p1[0], a * p0[1] + b * c1[1] + c * c2[1] + d * p1[1]]); } return o; };
+  const len = (Q) => { let l = 0; for (let k = 1; k < Q.length; k++) l += Math.hypot(Q[k][0] - Q[k - 1][0], Q[k][1] - Q[k - 1][1]); return l; };
+  // (off tiles to the right of the carriageway running dir along the path)
+  const beside = (s, dir, off) => { const p = pointAt(P, s), t = tangentAt(P, s); return [p[0] - t[1] * dir * off, p[1] + t[0] * dir * off]; };
+  const out = [];
+  for (const dir of [1, -1]) {
+    const arm = arms.find((a) => a.side === dir);   // (each carriageway's ramps on its own right)
+    const sS = nearestOnPath(P, arm.S[0], arm.S[1]).s, T = tangentAt(P, sS).map((v) => v * dir);
+    for (const off of [true, false]) {
+      const sg = off ? -1 : 1;   // (the off-ramp upstream of the road below, the on-ramp downstream)
+      // along the deck: the taper (the outer lane out to the auxiliary lane) and the auxiliary lane
+      const deck = [];
+      for (let q = EXT; q >= RUN_OUT + CURVE - 0.01; q -= 2) { const u = Math.min(1, (EXT - q) / TAPER), e = u * u * (3 - 2 * u); deck.push(beside(sS + sg * dir * q, dir, (LANE_PX + (AUX_PX - LANE_PX) * e) / TILE)); }
+      const P2 = deck[deck.length - 1], F = [arm.S[0] + sg * T[0] * RUN_OUT, arm.S[1] + sg * T[1] * RUN_OUT];
+      const k = Math.hypot(F[0] - P2[0], F[1] - P2[1]) * 0.42;
+      const raw = off
+        ? deck.concat(cubic(P2, [P2[0] + T[0] * k, P2[1] + T[1] * k], [F[0] - T[0] * k, F[1] - T[1] * k], F, 16), [F, arm.S])
+        : [arm.S, F].concat(cubic(F, [F[0] + T[0] * k, F[1] + T[1] * k], [P2[0] - T[0] * k, P2[1] - T[1] * k], P2, 16), deck.slice().reverse());
+      const pts = raw.filter((p, j) => j === 0 || Math.hypot(p[0] - raw[j - 1][0], p[1] - raw[j - 1][1]) > 0.05);
+      const L = len(pts), dl = len(deck);
+      out.push({ pts, off, dir, to: arm.name, foot: arm.S, zr: off ? [dl / L, (L - RUN_OUT) / L] : [RUN_OUT / L, (L - dl) / L] });
+    }
+  }
+  return out;
+}
+
+// lay each site's stubs and ramps (one call from layRoads, after the highways and arterials)
+function layInterchanges(lines, sites, paths, out) {
+  const px = (p) => ({ x: p[0] * TILE, y: p[1] * TILE });
+  for (const st of sites) {
+    for (const a of st.arms) if (a.stub) lines.push({ pts: [px(a.base), px(a.S)], kind: a.kind, lvl: 0, name: a.name });
+    for (const r of st.ramps) lines.push({ pts: r.pts.map(px), kind: 'ramp', lvl: 'ramp', z0: r.off ? 1 : 0, z1: r.off ? 0 : 1, zr: r.zr, name: r.off ? `Exit to ${r.to}` : `On-ramp to ${st.U}` });
+    out.interchanges.push({ name: st.name, kind: st.kind, U: st.U, lowers: st.lowers, built: true, at: st.C.map(Math.round), deck: [Math.round(st.d0), Math.round(st.d1)], stubs: st.arms.filter((a) => a.stub).map((a) => a.name), ramps: st.ramps.map((r) => ({ dir: r.dir, off: r.off, to: r.to, foot: r.foot.map(Math.round) })) });
+  }
 }

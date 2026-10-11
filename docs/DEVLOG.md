@@ -7313,3 +7313,39 @@ to the NPCs, Northshore's boards; riding a Bay Loop or Harbor Line train), test/
 of 19), test/world3server.test.js (the v3 world's region files read back into the same city; the server's world runs
 on it), test/world3.test.js, test/world3world.test.js, test/world3roads.test.js, test/world3biomes.test.js,
 test/perf.test.js (all pass).
+
+## 2026-10-10 · World v3, stage 3, step 4: the interchanges, grade-separated
+
+Asked (the brief for this wave, from 8.7's "the interchanges are crossroads"): the skeleton's interchanges built as
+interchanges - ramps between the two highways (a cloverleaf or a stack where the skeleton says, a diamond onto an
+arterial), the through lanes grade-separated, one over the other on the deck as the Metro Ring's ramps are - not
+crossroads; and the mainland's first towns (Timber Bend, Willow Crossing, Sandpiper Bay: not done this time, below).
+
+What it does (docs/WORLD-V3.md 8.11 has the details):
+- `shared/world3-roads.js` `interchangeSites(paths, out)` (one call at the top of `layRoads`' highway pass) finds each
+  interchange's through highway (the one whose control point it is) and the roads ending there, and works out the deck
+  run the ramps need; the through highway goes up on the deck there (8.7's deck rule, with its 24-tile climbs) and the
+  roads ending there stay at grade and run on under it - joined as one road where two meet from either side, a stub to
+  the far side where one ends (a T). `rampLines(P, arms)` lays each carriageway's exit before the road below and
+  on-ramp after it, on its own right, 12 tiles out (a diamond, as the Metro Ring's `diamondRamp`: along the deck with a
+  taper, a curve down, a level run-out onto the road below); `layInterchanges(lines, sites, paths, out)` (one call after
+  the arterials) adds the stubs and the ramps. The network joins the ramps' deck ends to the deck (merges) and their feet
+  to the road below (junctions).
+- Built: Westport Junction, the Northshore Interchange, the Dry Creek Interchange, Kestrel Pass (the Valley Highway
+  over the Highland and North Highways). The engine has two levels, so the trumpets, the cloverleaf and the four-level
+  stack are diamonds: left turns at the ramps' feet.
+- Left at grade, with the reason in `m.world3.roads.interchanges`: Westport Interchange and Sandpiper (the main line
+  runs through them: the ramps would cross the track), North Mesa (the Desert Highway's tunnel starts there), the Gorge
+  Junction (the Summit Road runs through it: the ramps would cross it at grade), the diamond onto Route 9 (Coast East's
+  track) - each a decision for the owner, listed in 8.11.
+- `tools/world3-world-map.mjs` draws the ramps (yellow) and logs each interchange.
+
+Not done: the towns (step 2 of the brief) - see the report; 8.11 lists what the towns' crossings want.
+
+Files: shared/world3-roads.js, test/world3roads.test.js, tools/world3-world-map.mjs, docs/world-v3-world.png,
+docs/world-v3-world-r4-0.png, docs/WORLD-V3.md 8.11.
+
+Tests: test/world3roads.test.js (one world build, about 30 s: check 3 now - at each built interchange the through
+highway on the deck at its point and no junction at grade with it, a ramp down from its deck to each road below and
+one up, an exit and an on-ramp each way, every ramp on the network; those not built are so for a tunnel, the main line
+or a road through them, and meet at a junction as before), test/world3.test.js (the live world's hash unchanged).
