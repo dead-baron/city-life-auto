@@ -3236,7 +3236,7 @@ function drawOverlays(F, v2) {
   g.setTransform(...S.worldTf);
   if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
   else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (the helipads)
-  else if (S.me && S.me.job && S.me.job.flare) loadAir();   // (a rescue's smoke flare: drawn there too)
+  else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)
   drawBowling(F);
   drawCinema(F);
   // aim sight for sticks / touch (the mouse has its own cursor)

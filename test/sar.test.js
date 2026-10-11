@@ -204,7 +204,7 @@ test('charter pilot: a customer waits at a helipad, an airfield, a mansion\'s la
 const coast = await import('../server/systems/coastguard.js');
 const { COAST } = await import('../shared/rules.js');
 const { WATER_T } = await import('../shared/mapcore.js');
-const W = S.water;
+const W = coast.seaSites(w.map);
 // a coast guard on shift (mode 'boat' | 'air'), at the controls of what they were issued
 function onPatrol(mode) {
   const { p, prof } = joinPlayer(w);

@@ -54,8 +54,10 @@ export function sitesOf(m) {
   const landNear = (tx, ty, r) => { for (let a = 0; a < 8; a++) { const c = Math.cos(a * Math.PI / 4), s = Math.sin(a * Math.PI / 4); for (let d = 2; d <= r; d += 2) { const x = tx + Math.round(c * d), y = ty + Math.round(s * d); if (m.inside(x, y) && !WATER_T[m.tileAt(x, y)]) return true; } } return false; };
   const pool = (x, y) => (m.pools || []).some((r) => (r.ring ? Math.hypot((x - r.ring.cx) / r.ring.rx, (y - r.ring.cy) / r.ring.ry) < 1.4 : x >= r.x - 64 && x < r.x + r.w + 64 && y >= r.y - 64 && y < r.y + r.h + 64));
   const propsNear = (tx, ty) => { let n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!m.inside(tx + dx, ty + dy)) continue; const ps = m.solidProps.size ? m.solidProps.get(m.idx(tx + dx, ty + dy)) : null; if (ps) n += ps.filter((q) => !q.off).length; } return n; };
+  const underDeck = (tx, ty) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (m.inside(tx + dx, ty + dy) && m.deck[m.idx(tx + dx, ty + dy)]) return true; return false; };   // (not under the elevated highway)
   for (let ty = m.y0 + 2; ty < m.y0 + m.h - 2; ty += step) for (let tx = m.x0 + 2; tx < m.x0 + m.w - 2; tx += step) {
     const t = m.tileAt(tx, ty), x = tx * TILE + TILE / 2, y = ty * TILE + TILE / 2;
+    if (m.deck && underDeck(tx, ty)) continue;
     if (t === T.WATER) { if (landNear(tx, ty, 8) && !pool(x, y)) S.water.push({ x, y }); continue; }
     if (!OPEN_T.has(t) || !WILD.has(styleAt(tx, ty))) continue;
     const n = propsNear(tx, ty);

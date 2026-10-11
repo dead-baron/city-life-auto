@@ -8460,10 +8460,35 @@ And: "Private helicopter pilot for rich billionaire customers flying around the 
   `sar` (`server/dev.js`) signs you on in your rescue helicopter, and with `k` starts a call of that kind at the nearest
   such place (`hover`: hovering over them; `hooked`: them on the cable; `roof`: a patient aboard, down on the nearest
   hospital's roof pad).
-- Not done: the coast guard (patrols by boat and helicopter after smugglers' boats, rescues on the water) - next.
+- **The coast guard** (`server/systems/coastguard.js`; `shared/rules.js` COAST; the owner: "Coastguard jobs: patrol in
+  boats and helicopters to hunt down criminal activity on the water, usually smugglers or traffickers. Do search and rescue
+  type missions too"): from the phone (Jobs › Flying), a boat patrol - the orange rescue boat (`rescueboat`, its coast
+  guard livery as it is) issued at the nearest harbour on the sea - or an air patrol - a rescue helicopter at the nearest
+  helipad. A shift of calls, two in three smugglers:
+  - **Smugglers**: a speedboat with two contraband crates aboard - out in the open on its deck, like any cargo - and two
+    Syndicate men runs 2.5-5 km along the coast toward Smuggler's Rock (`rescue.js` wayTo plans the way round the land,
+    `boats.js` boatSteer drives it). Stay alongside (within 240 px in a boat, or within 320 px across and below 320 px in
+    the helicopter) for 4 s and they heave to and put their hands up (shooting the one at the wheel works too). Then
+    board them - Act alongside in the boat, or low over them in the helicopter ("a crewman goes down the line"): the
+    crates are seized, the crew arrested and the boat impounded: $300 + half the cargo's value, 10 Samaritan points. Lose
+    them (5 km off for 25 s), let them make their drop or sink them with the cargo and the call's lost. Running them down
+    isn't reckless ramming for the coast guard (`law.js` vehicleRam).
+  - **Someone overboard**: a search circle (500 px) where they went in; within 600 px they're found (the flare). In the
+    boat, pull alongside, slow, and Act - hauled aboard; in the helicopter the harness, as the rescue pilot's (hold Act
+    over them; the page draws the cable). Then ashore - the boat run in slow by dry land, the helicopter landed on dry
+    ground - handed to the paramedics: $280, up to half again for a quick rescue.
+  - Only the sea: a flood from the open sea's points (m.offshore) over what boats can cross marks the water joined to it,
+    so the patrol boat, the smugglers and the calls are never on a lake inland (Lakeview's hire dock was the nearest
+    "harbour" in the first playtest). Neither the rescue calls nor the coast guard's are under the elevated highway any
+    more (`sar.js` sitesOf skips water and ground within two tiles of `m.deck` - a swimmer under the viaduct in the
+    playtest, with the helicopter hovering over the road deck).
+  - One-off costs: the sweep for rescue sites (`sitesOf`) takes about 90 ms the first time a call is made on today's map,
+    the sea's flood about 160 ms the first time the coast guard is used (a few times that on World v3's bigger map).
+  - The dev menu's command `coast`: `mode` 'boat' | 'air', `k` 'smuggle' | 'overboard', `near` (brought up close), `stop`
+    (they heave to at once).
 
-Files: server/systems/sar.js (new), server/systems/charter.js (new), shared/vehicles.js (rescueheli), shared/rules.js (SAR,
-CHARTER), shared/flight.js (a walk-in building's roof), server/systems/aircraft.js (the last touchdown), server/systems/npc.js
+Files: server/systems/sar.js (new), server/systems/charter.js (new), server/systems/coastguard.js (new), server/systems/law.js
+(the coast guard's ramming), shared/vehicles.js (rescueheli), shared/rules.js (SAR, CHARTER, COAST), shared/flight.js (a walk-in building's roof), server/systems/aircraft.js (the last touchdown), server/systems/npc.js
 (people a pilot's coming for stay put), server/systems/phone.js (the Flying jobs, their targets), server/systems/players.js
 (Act at a hospital's helipad, the harness), server/world.js, server/dev.js ('sar'), client/render/aircraft.js (the flare,
 the harness), client/hud.js (the search circle on the minimap), client/worldmap.js (on the world map), client/main.js (the
@@ -8474,5 +8499,8 @@ search circle with them inside it and not the spot; cancelling clears it; spotte
 landing for the hurt, the hard landing counted, the hand-over on the roof pad and the pay (less for the hard landing); the
 harness over someone on rough ground - too high it runs out, let go it winches up, not over them nothing, low and steady it
 clips on and winches in; the harness in the water; a patient who runs out of time dies with no pay; the charter: the
-places (pads, lawns, islands), the booking, boarding, the fare and a tip for a smooth flight, no tip after a hard landing.
+places (pads, lawns, islands), the booking, boarding, the fare and a tip for a smooth flight, no tip after a hard landing;
+the coast guard: the issued patrol boat and helicopter, a smugglers' run with contraband crates aboard under way, made to
+heave to alongside (hands up), boarded and the crates seized for the reward, smugglers lost who get away, someone overboard
+found in the circle, hauled aboard the boat and run ashore for the pay, winched up by the helicopter and landed ashore.
 test/flight.test.js, test/phones.test.js, test/honestliving.test.js, test/mapwindow.test.js, test/perf.test.js.

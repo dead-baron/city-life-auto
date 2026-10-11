@@ -18,7 +18,7 @@
 //   interaction(world, p)     Act: boarding a stopped smuggler, pulling someone aboard, the harness
 //   target(world, p, j)       the job tracker's target (phone.js jobTarget)
 //   smugglerAt(world, p, a, b) / overboardAt(world, p, x, y)   a call (tests, the dev menu)
-import { K } from '../../shared/constants.js';
+import { K, TILE } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WATER_T, BOAT_BLOCK } from '../../shared/mapcore.js';
 import { airfields, findPadSpot, floorAt, FLY } from '../../shared/flight.js';
@@ -35,7 +35,30 @@ const rng = mulberry32(5050);
 const isBoat = (v) => !!v && v.def.kind === 'boat';
 const isAirV = (v) => !!v && v.def.kind === 'air';
 const placeName = (m, x, y) => { const d = m.districtAt(x, y); return d ? d.name : 'the coast'; };
-const docks = (m) => [...(m.marina || []).filter((b) => !b.gang), ...(m.rentals || []).flatMap((r) => r.spots)];
+// The sea: the water a boat can get to from the open sea (m.offshore's points) - a flood over what boats can cross, once
+// per map - so the patrol boat, the smugglers and the calls are out on the coast, never on a lake inland.
+const SEA = new WeakMap();
+function seaOf(m) {
+  if (SEA.has(m)) return SEA.get(m);
+  const start = (m.offshore || [])[0], W = m.w, H = m.h;
+  let mark = null;
+  if (start) {
+    mark = new Uint8Array(W * H);
+    const q = new Int32Array(W * H), ok = (x, y) => x >= 0 && y >= 0 && x < W && y < H && !BOAT_BLOCK[m.tileAt(x + m.x0, y + m.y0)];
+    let h = 0, t = 0;
+    const push = (x, y) => { if (ok(x, y) && !mark[y * W + x]) { mark[y * W + x] = 1; q[t++] = y * W + x; } };
+    push(Math.floor(start.x / TILE) - m.x0, Math.floor(start.y / TILE) - m.y0);
+    while (h < t) { const i = q[h++], x = i % W, y = (i - x) / W; push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1); }
+  }
+  SEA.set(m, mark);
+  return mark;
+}
+const onSea = (m, x, y) => { const s = seaOf(m); if (!s) return true; const tx = Math.floor(x / TILE) - m.x0, ty = Math.floor(y / TILE) - m.y0; return tx >= 0 && ty >= 0 && tx < m.w && ty < m.h && !!s[ty * m.w + tx]; };
+const SEA_SITES = new WeakMap();
+// sar.js sitesOf's water near the shore, out on the sea
+export function seaSites(m) { let L = SEA_SITES.get(m); if (!L) { L = sitesOf(m).water.filter((s) => onSea(m, s.x, s.y)); SEA_SITES.set(m, L); } return L; }
+// the harbours' berths on the sea (not the Syndicate's), and the boat hire docks on it
+const docks = (m) => [...(m.marina || []).filter((b) => !b.gang), ...(m.rentals || []).flatMap((r) => r.spots)].filter((d) => onSea(m, d.x, d.y));
 
 // ---- signing on ------------------------------------------------------------------------------------------------------------
 function boatSpot(world, x, y) {
@@ -81,7 +104,7 @@ export function start(world, p, mode = 'boat') {
 
 // ---- the calls --------------------------------------------------------------------------------------------------------------
 function newCall(world, p) {
-  const m = world.map, W = sitesOf(m).water, ped = p.ped, v = world.get(p.job.truck) || ped;
+  const m = world.map, W = seaSites(m), ped = p.ped, v = world.get(p.job.truck) || ped;
   const near = W.filter((s) => { const d = Math.hypot(s.x - v.x, s.y - v.y); return d >= COAST.dist[0] && d <= COAST.dist[1]; });
   const pool = near.length ? near : W;
   if (!pool.length) { p.job.nextAt = world.time + 30; return null; }
@@ -364,7 +387,7 @@ export function devCoast(world, p, msg = {}) {
     v.seats[0] = ped.id; ped.vehId = v.id; ped.seat = 0; p.lastVehicle = v.id;
   }
   if (j.call) endCall(world, p, null);
-  const W = sitesOf(world.map).water.slice().sort((a, b) => Math.hypot(a.x - v.x, a.y - v.y) - Math.hypot(b.x - v.x, b.y - v.y));
+  const W = seaSites(world.map).slice().sort((a, b) => Math.hypot(a.x - v.x, a.y - v.y) - Math.hypot(b.x - v.x, b.y - v.y));
   let c = null;
   if (msg.k === 'smuggle') {
     for (const a of W.slice(0, 40)) {
@@ -377,9 +400,12 @@ export function devCoast(world, p, msg = {}) {
     if (!s) return 'No water near here.';
     c = overboardAt(world, p, s.x, s.y);
   }
+  if (c && c.kind === 'smuggle' && msg.stop) c.press = COAST.stopS;   // (msg.stop: they heave to at once)
   if (c && msg.near) {
     const t = c.kind === 'smuggle' ? world.get(c.boat) : { x: c.x, y: c.y };
-    v.x = t.x + (mode === 'air' ? 10 : 0); v.y = t.y + (mode === 'air' ? 0 : 130); v.vx = 0; v.vy = 0;
+    let at = { x: t.x + 10, y: t.y };
+    if (mode !== 'air') for (let r = 130; r <= 400 && at.x === t.x + 10; r += 30) for (let k = 0; k < 16; k++) { const x = t.x + Math.cos(k * Math.PI / 8) * r, y = t.y + Math.sin(k * Math.PI / 8) * r; if (!BOAT_BLOCK[world.map.tileAtPx(x, y)] && WATER_T[world.map.tileAtPx(x, y)]) { at = { x, y }; break; } }
+    v.x = at.x; v.y = at.y; v.vx = 0; v.vy = 0;
     if (mode === 'air') { v.alt = c.kind === 'smuggle' ? 200 : 120; v.vz = 0; v.spool = 1; }
     world.place(v); ped.x = v.x; ped.y = v.y; world.place(ped);
   }
