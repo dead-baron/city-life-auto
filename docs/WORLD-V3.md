@@ -2698,3 +2698,51 @@ its items only - and the moves across a border and to the corner).
    (not yet seen in a playtest). To look at in a real browser.
 6. **The minimap is a frame-sized canvas** (5040 x 4032, 81 MB of pixels): wants a coarser picture at v3 (8.2's note).
 7. **Regions aren't kept in the browser** (IndexedDB): each visit downloads the window (about 2 MB).
+
+### 8.13 Stage 3, step 5: the first mainland towns (2026-10-10, H34)
+
+8.11's "what's left" item 1: Timber Bend, Willow Crossing and Sandpiper Bay built by today's generator on new ground,
+each a district of its own with a street grid, blocks and buildings by style, its basics and its own places. Nothing
+live changes: the world hash stays `6b6e16fdef9f`; the towns' code is `shared/world3-towns.js` (the world build's only:
+the page and the city worker never import it); the generator gained two small hooks (`opts.specials`, a special's
+`fixed`), and `shared/mapcore.js` `DISTRICTS` three entries.
+
+**How a town is built** (`shared/world3-towns.js`, one call each from `shared/world3-world.js`):
+- **Its district** (`DISTRICTS` 57-59, after the biomes' 47-56, so no id moves: Timber Bend and Willow Crossing in
+  today's `oldtown` style, Sandpiper Bay in `beach`) and **a built zone** (Northshore's, 8: `BUILT_ZONES` and
+  `buildBusStops`' list) are painted on the land layer in the town's box round the skeleton's town point
+  (`paintTowns3(L, W, H)`, at the top of `worldOpts`, before the build reads the layer): on land, off the highways'
+  room (24 tiles of their line), the main line (18) and its stations (30). The biomes read the land layer's districts,
+  so their ground and dressing make way (8.8: `dress3` dresses 48-56, `redwoodGroves` Highland Woods' 47): no field,
+  farmstead, redwood or dune grass in a town. The generator then lays the town's ground as any built district's
+  (plain ground for the lots, the beach town's sand kept).
+- **Its streets** (`layTowns3(lines, m)`, in the `lines` hook after `layRoads`): a grid of streets (`st`) and a main
+  street (an east-west `art`: one lane each way with sidewalks, so `buildBusStops` gives it bus stops), each line
+  clipped to the town's ground in runs of 8 tiles or more, and kept off an arterial running alongside it within 10
+  tiles; the arterials through the town (Timber Road; Willow Road and the Mine Road; Sandpiper Drive's two arms) cross
+  the grid and the generator joins them where they cross, so the town's streets are on the one network.
+- **Its blocks and buildings** are the generator's, from the free ground between the streets (`findBlocks`, `STYLE`):
+  rows of shops, houses, the corner store, a diner, a bar in the country towns; beach houses, cafes, a beach bar and a
+  hotel at Sandpiper Bay.
+- **Its planned businesses** (`TOWN_SPECIALS`, the generator's `SPECIALS` form, handed in as `opts.specials` so only
+  the v3 build places them; `fixed`, so the generator's later passes don't make one a gun shop, a tackle shop or a
+  bank):
+
+  | Town | The basics | Its own places |
+  |---|---|---|
+  | Timber Bend (57) | Timber Bend Fuel (gas station), Timber Bend Clinic (`hospital`), Timber Bend Sheriff (`police`), The Sawdust Diner | a strip of the hunting lodge (`lodge`), Bend Game Butcher (`butcher`), Axe & Saw Hardware (`hardware`), Redwood Creek Tackle (`tackle`); Timber Bend Sawmill; Pine Rest Motel |
+  | Willow Crossing (58) | Willow Crossing Fuel, Willow Crossing Clinic, Willow County Sheriff, Crossroads Diner | Willow Valley Farm Co-op (`farm`, the farmstead prefab), Willow Crossing Grain Elevator, Willow Crossing Chapel (the church), a strip of the farmers' `market`, a `farmstand`, a `fruitstand` and Valley Feed & Seed |
+  | Sandpiper Bay (59) | Sandpiper Bay Fuel, Sandpiper Bay Clinic, Boardwalk Diner, The Sandpiper (the beach bar) | a strip of Sandpiper Surf Co. (`sports`: the surf shop), Pier Tackle & Bait (`tackle`), Shorebird Snack Bar (`snack`) and the Lifeguard Station |
+
+- **The gas stations** (`townsDone(m)`, in the `done` hook): `buildCornerStores` makes five at most, 3,500 px apart,
+  and they are all in the city; each town's planned store is a convenience store (so it isn't one of the five) and
+  becomes its gas station here, with its two pumps on the paving in front (`m.pumps`, solid). A town whose main street
+  `buildBusStops` left no bus stop (doors all along it) gets one on its main street's sidewalk. The summary is
+  `m.world3.towns` (`painted`, `streets`, `built`).
+
+**The test** (`test/world3towns.test.js`, one world build, about 40 s): the districts after the biomes'; each town's
+ground (over 8,000 tiles), its streets laid and every edge of them on the one network, its main street an arterial;
+over 20 buildings; a gas station with its pumps, a clinic or the sheriff, a diner or a bar, a bus stop; every planned
+place in the town with its kind; no building corner within 22 tiles of a highway's line or 14 of the main line's; the
+bowling alley still in the city (a town's plain warehouse would have taken it: the sawmill and the grain elevator are
+the industrial prefab). `test/world3biomes.test.js` counts 60 districts now.
