@@ -2980,7 +2980,7 @@ function tickVisuals(F) {
   }
   if (F.rain || S.wx.wet > 0.2) tyreSpray(F.vehs, dt);
   // rockets trail fire and smoke, fire arrows (30) burn, hunting arrows (24) don't; smashed hydrants gush
-  for (const pr of F.projs) { const w = pr.d && pr.d.w; if (w === 24) continue; if (w === 30) { fx.fire(pr.rx + Math.cos(pr.ra) * 8, pr.ry + Math.sin(pr.ra) * 8); continue; } fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
+  for (const pr of F.projs) { const w = pr.d && pr.d.w; if (w === 24) continue; if (w === 30) { fx.fire(pr.rx + Math.cos(pr.ra) * 8, pr.ry + Math.sin(pr.ra) * 8); continue; } const up = S.art2 && S.art2.ready ? (pr.extra | 0) * 2.64 : 0; fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10 - up); fx.smoke(pr.rx, pr.ry - up, false); }   // (up: a missile's trail at its height in art v2)
   S.geysers = S.geysers.filter((gy) => gy.until > F.nowMs);
   for (const gy of S.geysers) fx.geyser(gy.x, gy.y);
   // street furniture that moves (none of it down in the subway)

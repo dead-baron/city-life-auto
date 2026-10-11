@@ -8641,8 +8641,13 @@ entry above changed the first round of it; this one measures all three and fixes
     city scene unchanged); and on a phone the audio runs with a roomier buffer (audio.js latencyHint 'balanced':
     flying, the art's bakes take every core, and an audio thread that misses its moment crackles - not measurable
     here, the likeliest other half of "blown out").
-- Not done: art v2 block models for the aircraft after HE1 and the gunship's missiles at their height (task 4).
+- The gunship's missiles at their height in art v2: a projectile's record carries its height in its extra byte (the
+  altitude's steps, net.js - a missile from an aircraft glides down from the aircraft's height to where it lands:
+  aircraft.js alt0), drawn up by it as the aircraft are (host.js) with its flame and smoke trail up there too
+  (main.js).
+- Not done: art v2 block models for the aircraft after HE1 (task 4) - they're still the 2D drawing, lifted.
 Tests: test/flight.test.js (flying low over a street: the page's prediction matches step for step, nothing touched;
-out of reach of a swing and the police up there; nothing smashed under one flown by nobody), test/art2.test.js (the
+out of reach of a swing and the police up there; nothing smashed under one flown by nobody; a missile's height on the
+wire), test/art2.test.js (the
 flight band, no roads), test/sound.test.js (the high-pass), test/perf.test.js; the bench's air scene
 (tools/sound/bench.py --only air).

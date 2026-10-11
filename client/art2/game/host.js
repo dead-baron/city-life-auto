@@ -1535,7 +1535,7 @@ export class World2 {
       for (const pr of F.projs) {
         const N = 32, hi = quant(pr.ra, N), w = pr.d.w | 0;
         if (!this.projWarm.has(w)) { this.projWarm.add(w); for (let h = 0; h < N; h++) this.warmQ.unshift(['actors', 'proj', A.projKey(w, h, N), [w, h, N], -1]); }
-        this._small('proj', A.projKey(w, hi, N), [w, hi, N], pr, pr.rx, pr.ry, 14 + ((pr.rz || 0) > 0.01 ? DECK_Z * pr.rz : 0));
+        this._small('proj', A.projKey(w, hi, N), [w, hi, N], pr, pr.rx, pr.ry, 14 + ((pr.rz || 0) > 0.01 ? DECK_Z * pr.rz : 0) + (pr.extra | 0) * 2.64);   // (a gunship's missile at its height: altitude steps of 4 px, drawn 0.66 up as the aircraft are - render/aircraft.js V2_LIFT)
       }
       // your arrows lying where they came down (me.arrows: walk over one to pick it up), on the ground
       const ma = S.me && S.me.arrows;

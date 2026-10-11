@@ -140,6 +140,14 @@ test('the attack helicopter: its pilot fires missiles (the bazooka\'s rocket) fr
   assert.ok(v.missileAt > first, 'and another once the pods have reloaded');
   assert.ok(v.alt > 900, 'still flying');
   assert.equal(v.hp, v.def.hp, 'its own missiles never hurt it (they used to blow it up when they struck right under it)');
+  // its missile on the wire: its height (extra, in the altitude's steps) - from the gunship's, gliding down to where it lands
+  const pr = w.spawnProjectile(p.ped.id, v.x, v.y, 0, 900, 1100, 'rocket');
+  pr.air = true; pr.alt0 = v.alt;
+  assert.equal(altOfByte(net._fields(w, pr)[3]), altOfByte(altByte(v.alt)), 'fired: at the gunship\'s height');
+  pr.dist = 550;
+  assert.ok(Math.abs(altOfByte(net._fields(w, pr)[3]) - v.alt / 2) <= FLY.ALT_Q, 'half way: half way down');
+  const bullet = w.spawnProjectile(p.ped.id, v.x, v.y, 0, 900, 1100, 'rocket');
+  assert.equal(net._fields(w, bullet)[3], 0, 'one fired on the ground: on the ground');
 });
 
 test('a blast on the ground doesn\'t reach an aircraft well above it, but one just off the ground is hit', async () => {
