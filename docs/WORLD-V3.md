@@ -2471,7 +2471,7 @@ owner is deciding). Nothing live changes: the world hash stays `6b6e16fdef9f` (t
   `addRailBores`): a skeleton tunnel under dry, roadless ground is a bore through the hill - the track at ground level
   (`bore`, not `under`) under `shared/tunnels.js`' cover: the hill drawn over it, its portals, sight blocked, the hill
   fading for whoever is inside, a train in it hidden from outside. Stamped along the track every 8 px (a long bore -
-  1.2 km - would take `addTunnel`'s tile-by-tile search minutes); one bore per track, the double track's two side by
+  277 tiles - would take `addTunnel`'s tile-by-tile search minutes); one bore per track, the double track's two side by
   side. A tunnel under water (the Long Reach) or a town's streets (Metro City's core) stays below ground.
 - **Every loop's clocks and the phone:** the `tt` broadcast is a list per loop on World v3 (`loopTimetable`), the
   client draws every loop's platform clocks (a platform two loops share shows the sooner train); the phone's railway
@@ -2479,14 +2479,14 @@ owner is deciding). Nothing live changes: the world hash stays `6b6e16fdef9f` (t
 - **The pictures:** `docs/world-v3-hub-northshore.png`, `docs/world-v3-hub-westport-junction.png` and
   `docs/world-v3-hub-old-town.png` (`tools/world3-hub-map.mjs`: the chunk bake at 1/4 round a station, the building, the
   platforms and the switches marked). The numbers (seed 1337): every station one, its loops' platforms within about
-  370 px of its building (Northshore's six loops at the two pairs of platforms either side of the junction, 2 km apart;
-  Metro Central's 3 km apart: the Harbor Line through Metro City is the owner's to decide); 8 turnouts and 4 diamonds listed; two bores (the
+  370 px of its building (Northshore's six loops at the two pairs of platforms either side of the junction, 61 tiles
+  apart; Metro Central's 100 tiles apart: the Harbor Line through Metro City is the owner's to decide); 8 turnouts and 4 diamonds listed; two bores (the
   Grand Loop's 277-tile one through the mountains, a track each way). What looks right: Northshore's junction compact -
   the stem's double track rising into the coast line through its turnouts (the switch rails and frogs drawn) and two
   diamonds, the platforms side by side with a footbridge over the tracks; Westport Junction's one station, its two
   platforms facing, the building on its forecourt. What looks wrong:
   - **Northshore's junction is still in the town** (its place is the owner's): the Northshore Loop's road runs down the
-    stem beside the west track and across the coast line at grade at the junction itself;
+    stem over its west track (a long level crossing) and across the coast line at grade at the junction itself;
   - **the redwoods stand over Westport Junction's platforms** (the forest's trees aren't cleared off a platform's far
     edge, their crowns hang over the track);
   - **a junction under a highway** (Westport Junction, in the underpass under the Coast Highway) has its switches below
@@ -2496,7 +2496,7 @@ owner is deciding). Nothing live changes: the world hash stays `6b6e16fdef9f` (t
     east platform (the building is now set back up to 340 px onto land when there is some - not yet seen in a picture);
   - **Northshore is one station in two halves:** with the junction a T, no stretch carries all three services, so the
     Grand Loop and the Harbor Line call at the pair of platforms west of the junction, the Bay Loop at the pair east of
-    it (about 2 km apart along the coast line, the building by the western pair) - a station on the stem with the
+    it (61 tiles apart along the coast line, the building by the western pair) - a station on the stem with the
     junction moved clear of the town would put them together;
   - the station building is placeholder art (the subway's entrance kiosk) and the concourse just the forecourt and
     the footbridges.
