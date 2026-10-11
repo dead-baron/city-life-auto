@@ -339,7 +339,7 @@ export function interaction(world, p) {
     if (!c.stopped || !b) return null;
     const d = Math.hypot(v.x - b.x, v.y - b.y);
     const ok = isBoat(v) ? d < COAST.boardR && Math.hypot(v.vx, v.vy) < 80 : (v.alt || 0) < COAST.boardAlt && d < COAST.boardR;
-    return ok ? { label: isBoat(v) ? 'Board them and seize the cargo' : 'Send a crewman down the line to seize the cargo', run: () => seize(world, p) } : null;
+    return ok ? { label: isBoat(v) ? 'Board them and seize the cargo' : 'Board them down the line', run: () => seize(world, p) } : null;
   }
   if (!c.found || c.aboard) return null;
   const vic = world.get(c.vic);
