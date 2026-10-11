@@ -8,14 +8,17 @@
 //   index.bin   the frame and the region grid; every scalar (seed, w, h, _sig, softEdge, and any new one such as a
 //               window's x0 / y0, without code changes here); every list without a position or that must stay whole
 //               (the road graph - nodes, edges, roads, net - which the phone's GPS and the transit app need whole;
-//               districts' and islands' data, homes, hospitals, spawns, rail, venues, gates, cellBlocks, natureSites,
-//               levels, flow, noTree, terrainCls, ... - everything not listed below); propSolid as its keys alone; the
-//               map of shared objects (refs) and the values JSON can't hold (fix)
+//               districts' and islands' data, homes, hospitals, spawns, rail (less its points), venues, gates,
+//               cellBlocks, natureSites, levels (less its segments), flow, noTree, terrainCls, ... - everything not
+//               listed below); propSolid as its keys alone; the map of shared objects (refs) and the values JSON can't
+//               hold (fix)
 //   r<x>-<y>.bin every per-tile layer (each typed array of w * h: tiles, dist, zone, river, reserve, deck, lvl0Block,
 //               roadAxis, roadRank, bld, land, distSea, distRiver, lake, cover) cut to the region's rectangle; and the
-//               items of the REGIONAL lists whose position is in the region, each with its world-wide index; and
-//               solidProps' tiles in the region
-//   (left out)  OMIT: per-tile layers only the generator reads (no client code does - test/regions.test.js checks)
+//               items of the REGIONAL lists whose position is in the region, each with its world-wide index (a list
+//               inside a field by its path: 'levels.segs'); solidProps' tiles in the region; and which of its items
+//               are another list's items (refs: offshore points that are sea points, lamps that are props)
+//   (left out)  OMIT: fields only the generator reads - two per-tile layers and the leftover lots' tiles (no client
+//               code does - test/regions.test.js checks)
 //
 // What a structured clone keeps and a file can't, and how it comes back:
 //   - one object reached from two places (an edge in roads, edges and net.edges; a gate's solid entries in solidProps
@@ -34,13 +37,15 @@ import { REGION_TILES } from './world3.js';
 import { TILE } from './constants.js';
 
 export const PACK_VERSION = 2;   // (2: an item that is another list's item is said in its region, not the index)
-export const OMIT = ['compLab', 'ringD'];
+export const OMIT = ['compLab', 'ringD', 'leftover'];   // (leftover: the lots' scraps' tiles, read by the generator's later passes alone)
 // the lists cut into regions, and how an item says where it is ('px': x, y in world px; 'tile': tx, ty - or x, y - in
 // tiles; 'key': a Map keyed by tile index)
 export const REGIONAL = {
   props: 'px', solidProps: 'key', pois: 'px', buildings: 'tile', prefabs: 'tile', roofs: 'tile', blocks: 'tile', lamps: 'px', parking: 'px',
   stalls: 'px', pillars: 'px', cameras: 'px', signals: 'px', pickables: 'px', forage: 'px', atms: 'px', seaPoints: 'px', offshore: 'px',
   brickWalls: 'tile', marina: 'px', wayside: 'px', restSpots: 'px',
+  // (format 2: the railway's points; a list inside a field, by its path - the levels' deck segments, by their middle)
+  railPts: 'px', 'levels.segs': 'seg',
 };
 // prop index -> its solid entry, as the generator keeps propSolid (shared/map.js: m.propSolid.set(e.pi, e))
 function solidIndex(sp) { const by = new Map(); for (const arr of sp.values()) for (const e of arr) if (e && e.pi >= 0) by.set(e.pi, e); return by; }
@@ -59,6 +64,7 @@ export function regionOf(g, tx, ty) {
 export function itemTile(kind, it, win) {
   if (kind === 'key') return [win[0] + (it % win[2]), win[1] + Math.floor(it / win[2])];
   if (kind === 'px') return [Math.floor(it.x / TILE), Math.floor(it.y / TILE)];
+  if (kind === 'seg') return [Math.floor((it.ax + it.bx) / 2 / TILE), Math.floor((it.ay + it.by) / 2 / TILE)];
   return [it.tx !== undefined ? it.tx : it.x, it.ty !== undefined ? it.ty : it.y];
 }
 
@@ -170,8 +176,9 @@ export function packRegions(city, opts = {}) {
     regions.push({ key: regionKey(rx, ry), rx, ry, rect: [X0, Y0, rw, rh], lists: {}, blobs: layers.map((k) => cutLayer(city[k], win, X0, Y0, rw, rh)) });
   }
   const where = {};   // (the region of each item of a regional list)
+  const field = (o, f) => { for (const k of f.split('.')) { if (o === null || typeof o !== 'object') return undefined; o = o[k]; } return o; };
   for (const f of Object.keys(REGIONAL)) {
-    const src = city[f], plain = root[f];
+    const src = field(city, f), plain = field(root, f);
     if (!Array.isArray(plain) || !(Array.isArray(src) || src instanceof Map)) continue;
     const kind = REGIONAL[f], per = regions.map(() => [[], []]), wf = where[f] = new Int32Array(plain.length);
     let i = 0;
@@ -183,7 +190,7 @@ export function packRegions(city, opts = {}) {
     }
     per.forEach(([idx, items], r) => { if (idx.length) regions[r].lists[f] = { i: regions[r].blobs.push(Int32Array.from(idx)) - 1, d: items }; });
     regional[f] = plain.length;
-    root[f] = null;
+    put(root, f.split('.'), null);
   }
   // an item of a regional list that is another's (offshore's points are seaPoints', the lamps props): said in its own
   // region, not the index (World v3's 81,745 offshore points were 3.4 MB of its index): [f, g, pairs of i, j]
@@ -240,7 +247,8 @@ export function assembleCity(indexBytes, regionBytes) {
   const { d: X, blobs } = readPack(indexBytes);
   const { win, root } = X, N = win[2] * win[3];
   const layers = X.layers.map(([k, t]) => { const T = TYPES[t]; if (!T) throw new Error('a bad index'); return new T(N); });
-  for (const f of Object.keys(X.regional)) root[f] = new Array(X.regional[f]);
+  const list = {};   // (a regional list by its name - a field, or a path to a list inside one: 'levels.segs')
+  for (const f of Object.keys(X.regional)) { const p = f.split('.'); if (p.length > 1 && (at(root, p, p.length - 1) === null || typeof at(root, p, p.length - 1) !== 'object')) throw new Error('a bad index'); put(root, p, (list[f] = new Array(X.regional[f]))); }
   const got = new Set(), same = [];
   for (const bytes of regionBytes) {
     const { d: R, blobs: rb } = readPack(bytes);
@@ -248,11 +256,11 @@ export function assembleCity(indexBytes, regionBytes) {
     got.add(R.key);
     layers.forEach((a, i) => pasteLayer(a, win, R.rect, rb[i]));
     for (const f of Object.keys(R.lists)) {
-      const { i, d } = R.lists[f], idx = rb[i], arr = root[f];
+      const { i, d } = R.lists[f], idx = rb[i], arr = Object.hasOwn(list, f) ? list[f] : null;
       if (!arr || idx.length !== d.length) throw new Error('a bad region file');
       for (let j = 0; j < idx.length; j++) { if (idx[j] < 0 || idx[j] >= arr.length) throw new Error('a bad region file'); arr[idx[j]] = d[j]; }
     }
-    for (const [f, g, i] of R.refs || []) { if (!X.regional[f] || !X.regional[g] || !rb[i]) throw new Error('a bad region file'); same.push([root[f], root[g], rb[i]]); }
+    for (const [f, g, i] of R.refs || []) { if (!Object.hasOwn(list, f) || !Object.hasOwn(list, g) || !rb[i]) throw new Error('a bad region file'); same.push([list[f], list[g], rb[i]]); }
   }
   if (got.size !== X.regions.length) throw new Error('a region missing');
   // (once every region is in: an item may be one of another region's)

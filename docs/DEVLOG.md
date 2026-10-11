@@ -7128,13 +7128,19 @@ tried locally and in tests. Without the setting nothing changes (the world hash 
   the land 0.9-1.1, the world 14-16; the cut 2.9-4.8 s); **memory 850-870 MB after the build (peak 920-960), 1.56-1.66 GB
   when it starts listening** (the World's state, and the cut's raw copy held until it's gzipped), **1.16 GB once the
   files are written**. One thing broke: the trains, with no railway (the v3 build doesn't lay it yet) - no trains then.
-- **The region files at v3:** 80 regions (10 x 8) and the index, **8.70 MB gzipped** (358 MB raw); regions 34-244 KB
-  (median 63 KB; the 9 largest together 1.97 MB). **The index 1.26 MB -> 0.86 MB gzipped** (5.97 -> 2.62 MB raw): 84,911
-  of its references were items of one regional list that are another's (81,745 offshore points that are sea points,
-  2,796 lamps that are props, 104 ATMs that are POIs) - each is said in its own region now (`shared/regionpack.js`: a
-  region's `refs`, the format's version 2; today's files are the same city to the bit). What's left whole in it: the road
-  graph (roads 660 KB of JSON, nodes 285 KB), the levels (311 KB, segs 282), `leftover` (283 KB), Port Westport's `port`
-  (181 KB). The railway is empty at v3 (not laid).
+- **The region files at v3:** 80 regions (10 x 8) and the index, **8.63 MB gzipped** (358 MB raw); regions 34-260 KB
+  (median 63 KB; the 9 largest together 2.03 MB). **The index 1.26 MB -> 0.71 MB gzipped** (5.97 -> 2.06 MB raw), the
+  format's version 2 (`shared/regionpack.js`; the files are still the city to the bit, less what only the generator
+  reads):
+  - 84,911 of its references were items of one regional list that are another's (81,745 offshore points that are sea
+    points, 2,796 lamps that are props, 104 ATMs that are POIs): each is said in its own region now (a region's `refs`).
+  - The railway's points (`railPts`, 14,127 in today's world; none at v3, where it isn't laid) and the levels' deck
+    segments (`levels.segs`, by their middle - a list inside a field, by its path) are regional; the levels' grid stays.
+  - `leftover` (the lots' scraps' tiles, 283 KB of JSON at v3) is the generator's alone: left out, as `compLab` and
+    `ringD` are.
+  - Today's world: the index 0.68 -> 0.35 MB, the whole 2.04 -> 2.01 MB.
+  - What's left whole in it: the road graph (`roads` 660 KB of JSON, `nodes` 285 KB - the GPS's), Port Westport's
+    `port` (181 KB), `gores` (55), `homes` (42).
 - **The page against a v3 server:** the world's files are another world's under the same build, so they're served
   (and kept) under the world's hash + `-v3` (`server/worldcdn.js` `variant`); the welcome says `world: 'v3'` (absent
   for today's world, so the live welcome is unchanged), and a page whose city worker asked for the other world
@@ -7142,21 +7148,27 @@ tried locally and in tests. Without the setting nothing changes (the world hash 
   The worker (`client/worldgen.js`) downloads a v3 world (2 minutes' wait, asking again while the server is still
   writing its files - a 404 'packing'), never builds one (the generator would build today's), doesn't keep it
   (hundreds of MB) and hands its layers to the page without a copy.
-  **In the headless page: the city served in 12.1 s** (81 files downloaded, unzipped and assembled), **the page's JS
+  **In the headless page: the city served in 9-12 s** (81 files downloaded, unzipped and assembled), **the page's JS
   heap 468-497 MB** (527 MB allocated). The game starts in the v3 world (a hospital by the gulf), the minimap and the
   dev menu's teleports work (Midtown, Port Westport, Highland Woods), the server's world runs round the player (people,
   traffic), and the art's chunks are baked for the v3 map - Midtown's screen drawn after about 45 s in the headless page
-  (bakes 1.5-6.5 s each on its one worker; the sea shows through where neither a bake nor a stand-in is in yet).
+  (`docs/world-v3-server-metro.png`; bakes 1.5-6.5 s each on its one worker). Port Westport and Highland Woods were still
+  the sea's stand-in after 40 s, though the server's CDN had baked their chunks: frames of up to 5-9 s in the headless
+  page, or the page not taking those chunks - to look at in a real browser first (WORLD-V3.md 8.9).
 - **What's left** (docs/WORLD-V3.md 8.9): the page holds the whole world (470-500 MB, and the bake worker a copy) - a
-  phone needs the moving window, the next step (a window of 9 regions is about 2 MB); the index's levels, `leftover`
-  and port into the regions; the server's 1.6 GB while it packs and its 25-28 s start; the slow first frames.
+  phone needs the moving window, the next step (a window of 9 regions is at most about 2 MB plus the 0.7 MB index); the
+  port's lists into the regions and a coarse road graph for the phone; the server's 1.6 GB while it packs and its
+  25-28 s start; the slow first frames.
 
 The files: `server/config.js` (`world`), `server/world3.js` (new), `server/index.js`, `server/session.js` (the
 welcome's `world`), `server/worldcdn.js` (`variant`), `server/systems/trains.js` (no railway, no trains),
-`shared/regionpack.js` (a region's `refs`; `PACK_VERSION` 2), `client/boot.js`, `client/main.js` (`worldChanged`),
-`client/worldgen.js`, `test/world3server.test.js` (new), `test/regions.test.js`, `docs/WORLD-V3.md` 8.9.
+`shared/regionpack.js` (a region's `refs`, `railPts` and `levels.segs` regional, `leftover` left out; `PACK_VERSION`
+2), `client/boot.js`, `client/main.js` (`worldChanged`),
+`client/worldgen.js`, `test/world3server.test.js` (new), `test/regions.test.js`, `docs/WORLD-V3.md` 8.9,
+`docs/world-v3-server-metro.png` (new).
 
 Tests: `test/world3server.test.js` (new: the v3 world built as the server builds it, about 23 s; the server's world on
 it for 8 s with players at Metro City, Westport's container port, Cedar Isle and the mainland - no errors, people and
 traffic round the towns), `test/regions.test.js` (a v3 world served under its own id, the worker waiting while it's
-packed and never building it; today's files still the city to the bit) pass.
+packed and never building it; the railway's points and the levels' segments cut into the regions; today's files still
+the city to the bit), `test/trains.test.js` pass.

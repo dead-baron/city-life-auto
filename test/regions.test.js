@@ -65,7 +65,7 @@ test('the split: a region holds its rectangle of every layer and the items whose
       assert.equal(bad, -1, `${r.key} ${k}: the map's rectangle`);
     });
     for (const [f, { i, d: items }] of Object.entries(d.lists)) {
-      const idx = blobs[i], src = f === 'solidProps' ? [...m.solidProps.keys()] : m[f];
+      const idx = blobs[i], src = f === 'solidProps' ? [...m.solidProps.keys()] : f.split('.').reduce((o, k) => o[k], m);   // ('levels.segs': a list inside a field)
       for (let j = 0; j < idx.length; j++) {
         const it = src[idx[j]], [tx, ty] = itemTile(REGIONAL[f], it, WIN);
         assert.equal(regionOf(g, tx, ty), ri, `${f}[${idx[j]}] is in ${r.key}`);
@@ -74,8 +74,9 @@ test('the split: a region holds its rectangle of every layer and the items whose
       if (f === 'props') for (let j = 0; j < idx.length; j += 97) assert.deepEqual([items[j].t, items[j].x, items[j].y], [m.props[idx[j]].t, m.props[idx[j]].x, m.props[idx[j]].y], `props[${idx[j]}] as it is`);
     }
   }
-  for (const f of Object.keys(REGIONAL)) if (seen[f]) assert.equal(seen[f].size, f === 'solidProps' ? m.solidProps.size : m[f].length, `${f}: every item once`);
+  for (const f of Object.keys(REGIONAL)) if (seen[f]) assert.equal(seen[f].size, f === 'solidProps' ? m.solidProps.size : f.split('.').reduce((o, k) => o[k], m).length, `${f}: every item once`);
   assert.ok(seen.props && seen.pois && seen.buildings && seen.lamps && seen.parking && seen.solidProps, 'the big lists are cut');
+  assert.ok(seen.railPts && seen['levels.segs'] && X.root.railPts === null && X.root.levels.segs === null && X.root.levels.grid, "the railway's points and the levels' segments too (the levels' grid stays whole)");
 });
 
 test("a World v3 frame splits 10 x 8, and a map that is a window onto it travels with its origin", () => {
