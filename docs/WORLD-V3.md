@@ -2743,6 +2743,13 @@ station house and the lifeguard tower are new art).
   house moves to the nearest spot round the platforms that is clear, facing away from the nearest track (its map
   point and forecourt with it) - Old Town's stood in the water. It is art only: it doesn't block the way yet.
 
+**The numbers** (seed 1337): 17 streets along the shore and 15 cross streets (3 over the main line), 6,258 tiles of
+street, 16 ends carried on to a road; 281 buildings in the beach towns - 41 houses, 35 cafes, restaurants, diners and
+beach bars, 8 hotels, 3 corner stores, two small towers, an apartment block, a filling station, a clothes shop, the
+rest low roofs - covering 10.7% of the district's land (Northshore's town 15.5%); 3,438 tiles of promenade, 5 car
+parks, 6 lifeguard towers. Along the main line 384 trees cleared, 5 props off platforms, 7 off station houses. The
+world build takes about the same (the streets' clearance grids are the beach towns' box only).
+
 **The test** (`test/world3beach.test.js`, one world build, about 35 s): the beach towns' streets (rows, cross streets,
 some over the line) on the network with the Shore Road; their buildings (houses, cafes and bars), less dense than
 Northshore; the beach in front all along, the promenade, the car parks, the lifeguard towers on the sand; no tree on a

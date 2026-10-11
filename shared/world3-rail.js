@@ -172,7 +172,8 @@ export function seatStationHouses(m) {
   for (const h of m.railHubs) {
     const cx = h.x + Math.cos(h.a) * 18, cy = h.y + Math.sin(h.a) * 18;
     if (fits(cx, cy, h.a)) continue;
-    // (the whole house; failing that - a dense block - its middle at least on open ground)
+    // (the whole house; failing that - a dense block - its middle at least on open ground; every platform within 560 px)
+    const plats = h.calls.map(([ri, si]) => m.rails[ri].stations[si].platform).filter(Boolean);
     let best = null;
     for (const us of [undefined, [0]]) for (let r = 60; r <= 900 && !best; r += 20) for (let k = 0; k < 64 && !best; k++) {
       const x = h.x + Math.cos(k / 64 * Math.PI * 2) * r, y = h.y + Math.sin(k / 64 * Math.PI * 2) * r;
@@ -180,7 +181,9 @@ export function seatStationHouses(m) {
       const [d, q] = nearest(x, y);
       if (!q || d > 500) continue;
       const a = Math.atan2(y - q.y, x - q.x);
-      if (fits(x, y, a, us)) best = { x: x - Math.cos(a) * 18, y: y - Math.sin(a) * 18, a };
+      const hx = x - Math.cos(a) * 18, hy = y - Math.sin(a) * 18;
+      if (plats.some((p) => Math.hypot(p.x - hx, p.y - hy) > 560)) continue;
+      if (fits(x, y, a, us)) best = { x: hx, y: hy, a };
     }
     if (!best) continue;
     h.x = Math.round(best.x); h.y = Math.round(best.y); h.a = best.a; h.moved = true; moved++;

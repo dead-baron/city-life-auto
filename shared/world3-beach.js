@@ -139,6 +139,31 @@ export function beachStreets(lines, m, L) {
     out.cols++;
     if (over) out.crossing++;
   }
+  // 3. north of the main line: a cross street that stops at its bed carries on beyond it (from the line's room up), so
+  // the streets along the shore there are cut into blocks too
+  c = 0;
+  const railAt = (x, y) => inB(x, y) && !!rail[(y - by) * BW + x - bx];
+  for (let x = box[0] + (COL >> 1); x <= box[2]; x += COL, c++) {
+    if (c % CROSS === 1) continue;
+    let y = Math.floor(shoreY(x)) - 1;
+    while (y > box[1] && !railAt(x, y)) y--;   // (up to the line's room)
+    if (y <= box[1]) continue;
+    while (y > box[1] && railAt(x, y)) y--;    // (across it)
+    let n = 0;
+    while (y > box[1] && !(okAt(x, y, false) && okAt(x - 3, y, false) && okAt(x + 3, y, false)) && n < REACH) { y--; n++; }
+    if (n >= REACH) continue;
+    const ys = y;
+    while (y > box[1] && okAt(x, y - 1, false) && okAt(x - 3, y - 1, false) && okAt(x + 3, y - 1, false)) y--;
+    if (ys - y < 16) continue;
+    const pts = [];
+    for (let yy = ys; yy > y; yy -= 8) pts.push([x + 0.5, yy + 0.5]);
+    pts.push([x + 0.5, y + 0.5]);
+    const top = carry(x, y, 0, -1);
+    if (top) pts.push([x + 0.5, top[1] + 0.5]);
+    emit(pts, COL_NAMES[c % COL_NAMES.length]);
+    out.cols++;
+    out.north = (out.north || 0) + 1;
+  }
   out.length = Math.round(out.length);
   m.beachTowns = { box, ...out };
   return out;
