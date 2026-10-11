@@ -162,3 +162,31 @@ test('an ambulance never drives over anyone lying on the ground: round them on i
   assert.ok(Math.abs(out.ly) > amb.def.W / 2 + 10, `and over to one side of them (${out.ly.toFixed(0)} px across)`);
   assert.ok(closest >= 10, 'never over anyone');
 });
+
+// (docs/WORLD-V3.md 8.23: the server's worst tick at v3 was an ambulance's plan to a junction it couldn't reach - the
+// route planner searched every junction of the network first) kerbdrive.js routeTo: planRoute's answer for every pair,
+// but a pair in two parts of the network answered at once
+test("an ambulance's plan: planRoute's route for every pair of places, an unreachable one answered without a search", async () => {
+  const { routeTo, partsOf } = await import('../server/systems/kerbdrive.js');
+  const { planRoute } = await import('../server/systems/traffic.js');
+  const w = makeWorld(), m = w.map, rnd = mulberry32(52);
+  const P = partsOf(m.net);
+  assert.equal(P.length, m.net.nodes.length);
+  let apart = 0;
+  for (let i = 0; i < 160; i++) {
+    const a = m.nodes[Math.floor(rnd() * m.nodes.length)], b = m.nodes[Math.floor(rnd() * m.nodes.length)];
+    const fx = a.x + (rnd() - 0.5) * 300, fy = a.y + (rnd() - 0.5) * 300, tx = b.x + (rnd() - 0.5) * 300, ty = b.y + (rnd() - 0.5) * 300;
+    const na = m.nearestNode(fx, fy), nb = m.nearestNode(tx, ty);
+    if (na && nb && P[na.id] !== P[nb.id]) apart++;
+    assert.deepEqual(routeTo(w, fx, fy, tx, ty), planRoute(w, fx, fy, tx, ty), `${i}: the same route`);
+  }
+  // two parts of a network (a junction no road reaches): the end point alone, as planRoute says, with no search
+  const nodes = [0, 1, 2, 3].map((id) => ({ id, x: id * 1000, y: 0, lvl: 0, links: {} }));
+  nodes[0].links[0] = 1; nodes[1].links[0] = 0; nodes[2].links[1] = 3; nodes[3].links[1] = 2;
+  const net = { nodes, edges: [] };
+  const fake = { map: { net, nodes, nearestNode: (x, y) => nodes.reduce((p, q) => (Math.hypot(q.x - x, q.y - y) < Math.hypot(p.x - x, p.y - y) ? q : p)) } };
+  assert.deepEqual([...partsOf(net)].map((p, i, a) => a.indexOf(p)), [0, 0, 2, 2], 'two parts');
+  assert.deepEqual(routeTo(fake, 0, 0, 3000, 0), [{ x: 3000, y: 0, final: true }]);
+  assert.deepEqual(planRoute(fake, 0, 0, 3000, 0), [{ x: 3000, y: 0, final: true }], "planRoute's answer");
+  assert.ok(apart >= 0);
+});

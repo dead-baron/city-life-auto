@@ -17,8 +17,9 @@ import { World } from './world.js';
 import * as players from './systems/players.js';
 import { readBuild, watchBuild } from './build.js';
 import { createArtCdn } from './artcdn.js';
-import { cutWorld, createWorldCdn } from './worldcdn.js';
+import { cutWorld, createWorldCdn, keptWorld } from './worldcdn.js';
 import { generateCity } from '../shared/map.js';
+import { mapSignature } from '../shared/mapcore.js';
 import { ferryRoutes } from './systems/ferries.js';
 import { TICK_MS } from '../shared/constants.js';
 
@@ -35,9 +36,18 @@ const WORLD3 = config.world === 'v3';   // (CLA_WORLD=v3: World v3's whole world
 const bootT0 = performance.now();
 const map = WORLD3 ? (await (await import('./world3.js')).buildWorld3(config.seed)).map : generateCity(config.seed);
 // the city as region files for the pages (server/worldcdn.js): cut now, as generated - the World changes the map once it runs
-let worldCut = null;
-try { worldCut = cutWorld(map, WORLD3 ? { seed: config.seed >>> 0, world: 'v3' } : { seed: config.seed >>> 0 }); } catch (e) { console.error('[world] could not cut the city into region files:', e); }
+// (World v3's: the files a start before this one wrote for this world, when they're all there and of this city, are
+// served as they are - no cut: 5-7 s and 0.4 GB off the start; docs/WORLD-V3.md 8.23)
+let worldCut = null, worldKept = null, worldSig = null;
+if (WORLD3) {
+  const had = Object.hasOwn(map, '_sig');
+  worldSig = mapSignature(map);
+  if (!had) delete map._sig;   // (as cutWorld leaves it)
+  worldKept = keptWorld({ root: config.root, dataDir: config.dataDir, seed: config.seed, variant: 'v3', sig: worldSig });
+}
+if (!worldKept) { try { worldCut = cutWorld(map, WORLD3 ? { seed: config.seed >>> 0, world: 'v3' } : { seed: config.seed >>> 0 }); } catch (e) { console.error('[world] could not cut the city into region files:', e); } }
 if (WORLD3 && worldCut) console.log(`[world] World v3: cut into ${worldCut.pack.regions.length} region files in ${worldCut.ms} ms`);
+if (worldKept) console.log(`[world] World v3: its ${worldKept.files.size} region files kept from the start before (${worldKept.dir}): not cut again`);
 // the build we run (version.json): players coming back from an older one start fresh (CLA_FRESH_ON_UPDATE)
 const BUILD_FILE = join(config.root, 'version.json');
 const bootBuild = readBuild(BUILD_FILE);
@@ -50,7 +60,7 @@ let artCdn = null;
 try { artCdn = createArtCdn({ map, root: config.root, dataDir: config.dataDir, seed: config.seed, world: WORLD3 ? 'v3' : null, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[art] not serving chunks:', e); }
 // the city from the server: the region files gzipped and written in the background, then served (server/worldcdn.js)
 let worldCdn = null;
-if (worldCut) { try { worldCdn = createWorldCdn({ cut: worldCut, root: config.root, dataDir: config.dataDir, seed: config.seed, variant: WORLD3 ? 'v3' : '', delayMs: 3000, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[world] not serving the city:', e); } }
+if (worldCut || worldKept) { try { worldCdn = createWorldCdn({ cut: worldCut, kept: worldKept, sig: worldSig, root: config.root, dataDir: config.dataDir, seed: config.seed, variant: WORLD3 ? 'v3' : '', delayMs: 3000, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[world] not serving the city:', e); } }
 worldCut = null;
 // Client-only updates arrive without a restart (deploy/auto-update.sh pulls them): look at version.json
 // every 20 s and tell every page about a new build, so they reload into it (client/update.js).

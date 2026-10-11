@@ -198,15 +198,20 @@ test('the load report says the city was downloaded from the server', async () =>
   assert.match(reportLine(r), /city 1\.0 \(downloaded from the server, 0\.5 s\)/);
 });
 
-test("World v3's world (CLA_WORLD=v3): its files under the world's hash + '-v3'; the page's worker asks again while they're being written, and never builds it", async () => {
+test("World v3's world (CLA_WORLD=v3): its files under version.json's world3 + '-v3'; the page's worker asks again while they're being written, and never builds it", async () => {
   const dataDir = mkdtempSync(join(tmpdir(), 'cla-world3-'));
-  const world = JSON.parse(readFileSync(join(ROOT, 'version.json'), 'utf8')).world;
+  const { world, world3 } = JSON.parse(readFileSync(join(ROOT, 'version.json'), 'utf8'));
   const cdn = createWorldCdn({ cut: cutWorld(CITY(), { seed: 1337 }), root: ROOT, dataDir, seed: 1337, variant: 'v3', log: () => {} });
   try {
     await cdn.ready;
-    assert.equal(cdn.world, `${world}-v3`);
+    assert.equal(cdn.world, `${world3}-v3`, "the v3 build's code (docs/WORLD-V3.md 8.23, step 0 b)");
     let res = fakeRes();
-    cdn.handle(`/world/${world}-v3/1337/index.bin?v=${PACK_VERSION}`, {}, res); await res.finished;
+    cdn.handle(`/world/${world3}-v3/1337/index.bin?v=${PACK_VERSION}`, {}, res); await res.finished;
+    assert.equal(res.status, 200, "the v3 world's index");
+    res = fakeRes(); cdn.handle(`/world/${world}-v3/1337/index.bin?v=${PACK_VERSION}`, {}, res);
+    assert.equal(res.status, 404, "today's world hash with -v3: not its key now");
+    res = fakeRes();
+    cdn.handle(`/world/${world3}-v3/1337/index.bin?v=${PACK_VERSION}`, {}, res); await res.finished;
     assert.equal(res.status, 200, "the v3 world's index");
     res = fakeRes(); cdn.handle(`/world/${world}/1337/index.bin?v=${PACK_VERSION}`, {}, res);
     assert.equal(res.status, 404); assert.equal(res.headers['x-world-miss'], 'hash', "today's world isn't what it serves");

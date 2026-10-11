@@ -4123,16 +4123,19 @@ are the whole lists' picks, in the same order - `test/world3passes.test.js` - so
 **What grows at v3 and isn't a whole-world scan** (next, in order)
 1. **The trains: 1.0-1.6 ms a tick with nobody on.** Every train on every loop (the main line's services, the subways)
    steps, signals, places its cars and looks for riders every tick. A train no player is near could step coarsely (its
-   place along its loop is all the timetable needs) and place its cars only when someone is near.
+   place along its loop is all the timetable needs) and place its cars only when someone is near. **Cut (8.23.1):** a
+   train nobody is near runs without placing its cars; what's left is the signals.
 2. **The worst tick, 160 ms once in 600** (both runs, before and after these changes; today's world 30 ms): to find -
-   a collection of the v3 heap, or a system's first look at something big.
+   a collection of the v3 heap, or a system's first look at something big. **Found and fixed (8.23.1):** the
+   ambulances' route planner searching the whole v3 road network for a junction it couldn't reach (120-630 ms).
 3. **wildlife, vehicles, npc, net** grow with what's round the players - more of the world's players out in the open
    country means more animals; that's the game, not a scan. The ferries (0.04 ms a tick: nine routes) and the people's
    density (npc 1.5-1.7 ms against 1.3-1.4, for 206-212 people against 219-226) aren't scans of the world either.
 4. **The start: 50-53 s.** The deploy's health check (`deploy/auto-update.sh` `healthy`) waits 90 s for `/health`
    before it rolls a version back: on the VM's cores the margin may be thin (the runbook's step 3). Writing the region
    files region by region (the cut's raw 384 MB never whole) and keeping them between restarts while the world's
-   signature is the same (8.9's item 5) would take 5-7 s and 0.4 GB off; not done here.
+   signature is the same (8.9's item 5) would take 5-7 s and 0.4 GB off; not done here. **Done for the restarts
+   (8.23.1):** the files are kept while the v3 world is the same; the first start after a change still cuts.
 
 **The art CDN at v3**
 - **It baked today's world** (found here, fixed): the bake thread (`server/artbake.js`) built its city from the seed -
@@ -4181,15 +4184,20 @@ server can't serve the city - only today's world is ever built there: a v3 world
       live art hash and draws them in the live game at the same chunk (and the other way round). Today that's only the
       testers' browsers: **play the v3 test server in its own browser profile, or clear the site's data after**. For
       the switch: the art (and world) hash must change with it (b), and the test server's art served and kept under
-      `<art>-v3` as its region files are (`-v3`, 8.9).
+      `<art>-v3` as its region files are (`-v3`, 8.9). **Done (8.23.1):** the v3 world's art is baked, served and kept
+      under `<art3>-v3` (its own directory on the server), today's under `art` as before.
    b. **version.json's `world` for v3.** `tools/stamp-version.mjs` hashes today's world (`generateCity(seed)`): with v3
       live it must hash the v3 world - a 45 s build at every stamp, too slow for every commit - or the v3 build's code
       (the generator's modules and `shared/world3-*.js`), so that the browsers' kept regions and chunks go when the v3
-      world changes. Today the v3 world's files keep their URL while today's world's hash does (8.12.2).
+      world changes. Today the v3 world's files keep their URL while today's world's hash does (8.12.2). **Done
+      (8.23.1):** `world3` (the v3 build's code, the cut and today's world: tens of ms at every stamp) and `art3`; the
+      v3 world's region files and kept regions under `<world3>-v3`, its art under `<art3>-v3`.
    c. **A playtest on the test server with the art fix:** the CDN's chunks round Port Westport and Highland Woods
       drawn (8.9's item 4 should be gone), `__S.art2.stats().jump` after a far teleport.
    d. **The world's home list for the note:** `server/systems/legacy-homes.js` `LEGACY_HOMES[9]` - today's homes'
       prices and names, generated from today's map before the switch (the refund itself comes from the deeds).
+      **Done (8.23.1):** `LEGACY_HOMES[9]`, 166 homes (`node tools/world2/legacy-homes.mjs --wv 9`; run it again if
+      today's homes change before the switch - `test/homes.test.js` says so).
 1. **The bump:** `shared/constants.js` `WORLD_VERSION` 9 -> 10, with its line in the list ("10 World v3: the whole
    world - the mainland, the gulf, the main line..."). Every profile saved in world 9 goes through `homes.checkWorld` on
    its next join - **World v2's way, as it was released then** (tested since): its homes released and bought back at
@@ -4230,7 +4238,9 @@ server can't serve the city - only today's world is ever built there: a v3 world
      today's world, stands in as before). Keep today's art directory for the rollback (it's the build before: kept
      until the next build).
    - **The region files:** written within about 10 s of listening, every start (nothing to warm; 8.9's item 5 would
-     keep them).
+     keep them). **Since 8.23.1** kept between restarts while the v3 world is the same (`<world3>-v3-<seed>`, its
+     `kept.json`): a restart doesn't cut them again. The art: move `~/cla-data-v3/art/<art3>-v3` (the switch's
+     `art3`), not `<art hash>`.
 5. **The rollback:** unset `CLA_WORLD` (the unit), revert the bump and stamp (today's world and art hashes come back:
    the browsers reload and download today's city again), move today's art directory back. **Profiles that joined v3
    are world 10:** `checkWorld` tests `wv !== WORLD_VERSION`, so going back to 9 releases what they bought at v3 (the
@@ -4252,3 +4262,147 @@ in order), `test/artcdn.test.js` (the thread's ready carries the signature; new:
 before marked `v3` doesn't stand in for today's, this build's directory marked `v3` is emptied, a page on the build
 before still gets its own chunk), `test/ems.test.js`,
 `test/bikes.test.js`, `test/worldframe.test.js`.
+
+#### 8.23.1 The switch's step 0 built; the server's costs at v3 cut (2026-10-11, H52)
+
+The owner's brief: "before the owner can switch the live game to World v3, the switch's step 0 must be built and the
+server's costs at v3 cut" - the art key per world (0 a), version.json's world hash for v3 (0 b), today's homes by name
+(0 d - the brief's "0 c"), and 8.23's list: the trains' fixed cost, the one 160 ms tick in 600, the start, the bots
+spread at v3 and a capacity test. **No switch is made; today's live game is unchanged** (below: each change and how
+it's safe).
+
+**0 b: World v3's own hash** (`tools/stamp-version.mjs` `world3Hash`)
+- version.json carries `world3`: a hash of what builds the v3 world - the v3 build's code (`server/world3.js` and all
+  it imports: the generator, `shared/world3-*.js` - 50 files), the cut into region files (`shared/regionpack.js`) and
+  today's world's hash (the v3 build reads its districts and coast). **About 20 ms at every stamp**, where hashing the
+  world itself would take its 45 s build. And `art3`: the art's hash (`artHash`) of the v3 world - the bake's code and
+  `world3`. Today: `world3` 8b2916d20dcf, `art3` 7f23d63b17ab.
+- The v3 world's region files are served under `<world3>-v3` (`server/worldcdn.js` `worldKey`; before: today's world
+  hash + `-v3`), and the page asks for them and keeps them (`client/regionstore.js`, keyed by the world) under the same
+  key (`client/boot.js`): a change to the v3 build's code is a new key - the browsers' kept regions and cached files of
+  the world before go, as today's world's do when its hash changes (8.12.2's `cla.fresh3` stays as the backstop).
+- The price of a code hash: a change to any of its 53 files that leaves the world as it was re-keys it too (the v3
+  regions downloaded again: about 2 MB a window; the v3 art baked again - below).
+
+**0 a: the art key per world** (`server/artcdn.js` `artKey`, `client/boot.js`)
+- A server running World v3 bakes, serves and keeps its chunks under **`<art3>-v3`** - its own directory on the server
+  (`<dataDir>/art/<art3>-v3/`, a directory so named is v3's whatever its `world.txt` says), its own URLs
+  (`/art/<art3>-v3/...`) - and the page (in the v3 world: `cla.world`, or `?world=v3`) keys its baked chunks in the
+  browser (`client/art2/game/worker.js`: the store's keys and the server's URLs are the one art key) the same way. A
+  browser that played the v3 test server never draws its chunks in the live game, nor the other way round: each
+  world's keys are another's "other build", which the store tidies away (`chunkstore.js` `tidy`) and the server
+  doesn't serve (a 404: the page bakes it).
+- `chunkstore.js` (one of the art hash's own files) is unchanged: the art hash of today's world doesn't move.
+
+**How today's keys and URLs were checked unchanged:** the stamp before and after - `world` 6b6e16fdef9f and `art`
+f79a72d2dddc the same (only `world3` and `art3` added); `worldKey(root)` is version.json's `world` and `artKey(v)` its
+`art` (`test/world3keys.test.js`); the server's paths for today's world are the same (`/world/<hex>/...`,
+`/art/<hex>/...`: the `-v3` suffix is optional in both); the page's today branch is `META.world` / `META.art` as
+before (the test reads boot.js); today's world's region files are cut at every start and never marked to be kept.
+
+**0 d: today's homes by name** (`server/systems/legacy-homes.js`, `tools/world2/legacy-homes.mjs --wv 9`): how World
+v2's bump named the homes it released - `homes.checkWorld` takes a released home's name from `LEGACY_HOMES[wv]` (the
+profile's old world), and World v2's bump had world v1's list, generated from that world's map. `LEGACY_HOMES[9]` is
+today's: 166 homes, `[price, name]` by index; the tool keeps world v1's list as it was. Nothing reads it until the bump
+(a profile of world 9 is this world's): at the bump, a released home is named in the note ("Your home (Old Quarter
+House #9) went with the old streets...").
+
+**The start: the region files kept between restarts** (`server/worldcdn.js` `keptWorld`, `server/index.js`)
+- When the server has cut World v3's files it marks the folder (`kept.json`: the file format, the world key, the seed,
+  the map's signature, each file and its size - written after the last file). The next start builds the world, works
+  out its signature (**0.2 s**) and, when the folder `<world3>-v3-<seed>` is marked with the same format, key, seed and
+  signature and every file is there at its size, serves those files at once: **no cut, no gzip**. Anything else -
+  another key, format or signature, a file missing or cut short (a start killed while writing) - is cut and written
+  afresh (the marker goes first).
+- Measured, the server twice on the same data directory (`CLA_WORLD=v3`, the art thread off, this shared machine):
+  **the first start** - the build 52.0 s, the cut 5.4 s, listening after **58.5 s at 1.87 GB**, its files gzipped
+  (4.4 s) and served 67 s after the start; **the second** - the build 44.5 s, its 81 files kept (no cut), listening
+  after **45.7 s at 1.24 GB** with the files served from the first moment. The cut's 5.4 s and **0.62 GB** come off
+  every restart while the v3 world is the same (the build itself, 44-52 s here, is the rest; and the health check's
+  90 s: the runbook's step 3).
+- A stale file can't be served: the key is the v3 build's code and the seed (the same code builds the same world, to
+  the bit in every engine: `shared/dmath.js`), and the map's signature is checked on top.
+- Today's world (the live game) is cut at every start as before - 0.35 s and 32 MB raw (8.23's harness), not worth
+  a second way its files could be served - and no marker is written for it.
+
+**The trains' fixed cost** (`server/systems/trains.js` `update`, `nearSomeone`, `NEAR_PX`)
+- Measured (in process, the v3 world, 16 trains, nobody on): **the tick 1.03 ms, the trains 0.64 ms of it**; by
+  function (a CPU profile of 400 ticks): `signals` 85 ms, the update 22, `stepTrain` 17, the crossings 15, `railAt`
+  12, `placeCars` 10, `collide` 10, `carPose` 6.
+- On World v3's loops a train no player is near - **6000 px** from its nose and from its tail (past what anyone sees,
+  and past the people, traffic and animals round them), no player aboard - runs as before: its drive, the signals, its
+  stops, so the timetable, the crossings and the trains round it go on exactly as they did. What its cars do is left
+  until someone is near: placing them, the collisions, the horn, people stepping off the line, its riders and
+  boarders. The tick a player is near it, its cars are placed first (`test/world3rail.test.js`). `signals` keeps each
+  train's list and sets from tick to tick (no garbage per train per tick). Today's world's one loop runs as it did.
+- **After: the tick 0.80 ms, the trains 0.47 ms** with nobody on; with 6 players spread, the trains 1.52 -> 1.37 ms.
+  What's left is the signals (0.25 ms of it: each moving train's track ahead looked at, its cells held, every tick) -
+  next: hold the cells by what changed (the points coming in at the head, going at the tail), not all of them again.
+
+**The worst tick: found - the ambulances' plans** (`server/systems/kerbdrive.js` `routeTo`, `partsOf`)
+- The harness (6 players spread, 1,200 ticks, each tick's systems): the worst tick **134 ms, of it ems 120 ms**; again
+  after the trains' change, **648 ms, ems 635**. An ambulance plans its way to the kerb (`planTo`: both ends of the
+  street) and, leaving, to a junction out of sight (`exitNode`) with traffic.js `planRoute` - a search of the road
+  network outward from the start until it reaches the end. At v3 a junction it can't reach (another part of the
+  network) is found unreachable only after the whole of the start's part - most of the world's roads - has been
+  searched: 120-630 ms in one tick, again each time a stuck ambulance plans again.
+- `routeTo`: which part of the network each junction is in, worked out once per network (a union of the links); a
+  plan between two parts is answered at once with what `planRoute` answers for it (the end point alone); every other
+  plan is `planRoute`'s, as before. `planTo` and the ambulance's way out use it. `planRoute` itself is untouched
+  (H51's work on the traffic's route choice). On today's world the same routes for every pair (`test/ems.test.js`: 160
+  random pairs).
+- **And the off-road tables:** with the plans answered at once the worst tick was still ems - 669-813 ms: a CPU profile
+  of the worst ticks (the samples inside each) put it in `arrive` -> `offroad.js clearWalk` -> `propMask`: the first
+  ambulance to arrive anywhere makes the off-road mask of the whole frame (5040 x 4032 tiles, every solid prop of the
+  world) and the drops (`shared/ledges.js`), once per map, in its tick. `server/world.js` makes them when it's given a
+  map over 4 M tiles (World v3's frame; `offroad.js` `warmGround`) - at the start, not in a tick.
+- **And the tiles near the line:** with 50 bots arriving at once the first ticks took up to 2.26 s. The trains'
+  `loopTiles` (every point of every loop, the 7 x 7 tiles round each: what `railThreat` and `railBlocked` look up) was
+  made by the first person near a track, in their tick - **0.81 s** on its own (timed on the kept city; the traffic's
+  edge grid and the point grids are 1-5 ms) - now with the trains (`initLoops`).
+- **After** (the same harness, 6 players spread, 1,600 ticks with a CPU profile running): **the worst tick 56 ms**
+  (then 54, 51, 50, 44 - each spread over the usual systems: no one cause), the mean 12.8 ms. Before: 134-813 ms, ems.
+  What the start pays for it: the World made in **1.13 s** with the off-road tables (0.3 s without), and the rail
+  tiles' 0.8 s - about 1.6 s more before the server listens.
+- Not the heap or a periodic system: the collections in the runs were 339-372 pauses (scavenges), at most four over
+  20 ms (one of 54 ms, on the busy machine), and the worst ticks fell on no system's period (`world.tick % 400` 100,
+  13, 294).
+
+**The bots spread at v3: a capacity test** (`tools/bots.js --spread`, `tools/junctions.mjs`)
+- `--spread` now spreads the bots over the junctions of the world the server runs: it asks the server's `/stats` for
+  its world's key and seed and reads the road graph from its index (waiting while the server writes its files);
+  today's world built from the seed only when the server serves no index. The log adds the systems' ms.
+- **50 bots spread over the v3 world's 1,207 junctions for 60 s** (`CLA_WORLD=v3 CLA_DEV=1`, the art thread off, the
+  second start above; the bots' own process on the same two shared cores): **the tick 28-41 ms** (`/stats`' average,
+  each 5 s) - net 5.2-7.8, vehicles 4.9-7.6, traffic 3.5-5.0, wildlife 2.2-3.2, npc 1.9-3.6, players 1.9-2.3 ms -
+  with 1,100-1,175 entities (460-485 people, 420-500 vehicles), **6.5-7.6 KB/s a bot**, no errors; the worst tick
+  48-171 ms after the first 30 s, **2.26 s in the first** (the 50 arriving at once - a first look at something big,
+  below). The machine's two cores carry the server, the 50 bots' snapshots (1,000 a second decoded) and two other
+  helpers' work: on the VM's Ampere core with the bots elsewhere it is less (docs/DEPLOY.md's 100 spread on today's
+  world: 19 ms). (This ran before the two warm-ups above: the 2.26 s was the rail tiles.)
+- **Today's world the same way, on the same machine, 20 minutes later:** the tick 24-39 ms, the worst 105-175 ms,
+  1,046-1,215 entities, 7.6-8.3 KB/s a bot - **World v3 costs the server about what today's world does** with the same
+  players spread (fewer things round each of them out in the open country: 7.9 entities a snapshot against 10.1). Not
+  measured: 100 bots.
+
+**What's left** (in order)
+1. **Step 0 c, the playtest** on the test server with the art fix (8.23's runbook): not done here.
+2. **The v3 art at every change of the generator's code:** `art3` follows `world3`, a hash of the code - a change
+   that leaves the world as it was still re-keys the art, and the server bakes all of it again (8-9 hours a quality on
+   the VM, 8.23). Once the server has built the world it could hash the world itself (`canonicalHash` of the city, a
+   second or two) and, when that's the same as the art directory's of the key before, carry the chunks over to the new
+   key (a rename) instead of baking them again.
+3. **The signals:** 0.25 ms a tick with 16 trains, nobody on - each moving train's cells held again every tick; hold
+   them by what changed (the points coming in at its head, going at its tail).
+4. **The first start after a change** still cuts (5.4 s, 0.6 GB at listening): cutting region by region, freeing each.
+5. **The capacity on the VM**, and with 100 bots (here: 50, on two shared cores with the bots' own process).
+
+**Tests:** `test/world3keys.test.js` (new: version.json's `world3` and `art3` are the stamp's; `world3` moves with the
+v3 build's modules, the cut and today's world, not with the page or the server's systems; the server's keys - today's
+as they were, v3's `-v3`; the page's keys in boot.js; the art CDN at v3 in its own directory, today's chunks never
+standing in; the region files kept between restarts and every way they're not; today's never marked; the bots'
+junctions from the server's index), `test/regions.test.js` (the v3 world under `world3`), `test/homes.test.js`
+(`LEGACY_HOMES[9]` is this world's homes), `test/ems.test.js` (`routeTo` is `planRoute`'s answer), `test/trains.test.js`
+(today's trains unchanged), `test/world3rail.test.js` and `test/world3subway.test.js` (the cars' places from the train:
+a far train's aren't placed; new: a far train's cars unplaced, placed the tick someone is near). All pass, with
+`test/world3server.test.js` and `test/artcdn.test.js` (the World v3 ones and the art CDN's under the heavy lock).

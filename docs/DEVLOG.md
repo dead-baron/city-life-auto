@@ -8041,3 +8041,40 @@ camps and the trapper's cabin in their regions, the beaver pond on Redwood Creek
 one cave under Copper Gulch Mine; the canyon in the desert, the wash, the oasis's track; the water park's slides),
 test/world3desert.test.js, test/world3roads.test.js, test/world3world.test.js: all pass. `tools/perf.mjs`' code
 report: the city worker 34 files, 359 KB of 360.
+
+## 2026-10-11 · World v3's switch, step 0 built; the server's costs at v3 cut (H52)
+The owner's brief (WORLD-V3.md 8.23's runbook): "before the owner can switch the live game to World v3, the switch's
+step 0 must be built and the server's costs at v3 cut". No switch is made; today's live game is unchanged (its world
+hash 6b6e16fdef9f and art hash f79a72d2dddc stamped the same before and after).
+- **The art key per world (step 0 a):** a server running World v3 bakes, serves and keeps its art under `<art3>-v3`
+  (its own directory, its own URLs) and the page keys its kept chunks the same way, so a browser that played the v3
+  test server never draws v3 chunks in the live game, nor the other way round (`server/artcdn.js` `artKey`,
+  `client/boot.js`).
+- **World v3's own hash (step 0 b):** version.json's `world3` - the v3 build's code, the cut and today's world, about 20
+  ms at every stamp - and `art3`; the v3 world's region files and the regions the browsers keep go under
+  `<world3>-v3`, so they go when the v3 world changes (`tools/stamp-version.mjs` `world3Hash`, `server/worldcdn.js`
+  `worldKey`).
+- **Today's homes by name (step 0 d):** `LEGACY_HOMES[9]`, today's 166 homes by index, so the note at World v3's bump
+  names the home each player had - as World v2's bump named world v1's (`tools/world2/legacy-homes.mjs --wv 9`).
+- **The start:** World v3's region files are kept between restarts while the world is the same (`kept.json`: the
+  format, the key, the seed, the map's signature, every file at its size) - a restart no longer cuts (6 s, 0.7 GB) and
+  gzips (4 s) them again (`server/worldcdn.js` `keptWorld`). Today's world is cut at every start as before.
+- **The trains' fixed cost:** on World v3's loops a train no player is near runs its drive, signals and stops as before,
+  but its cars are placed (and collide, sound their horn, carry riders) only near someone; the signals keep their sets
+  from tick to tick. Nobody on: the trains 0.64 -> 0.47 ms a tick (`server/systems/trains.js`).
+- **The worst tick (the 160 ms in 600):** the ambulances - planning a way to a junction they can't reach searched the
+  whole v3 road network first (`kerbdrive.js` `routeTo` knows which part of the network each junction is in and
+  answers those at once, as `planRoute` would; `planRoute` itself is untouched), and the first one to arrive made the
+  off-road tables of the whole world in its tick (0.4-0.8 s: now made with the World for a v3-sized map, `offroad.js`
+  `warmGround`). And the tiles near the railway, made by the first person near a track (the first ticks with 50 bots
+  arriving: up to 2.3 s): now with the trains.
+- **The bots at v3:** `tools/bots.js --spread` spreads over the junctions of the world the server runs, read from its
+  index (`tools/junctions.mjs`), and logs the systems' ms.
+
+Files: tools/stamp-version.mjs, version.json, server/worldcdn.js, server/artcdn.js, server/index.js, client/boot.js,
+server/systems/legacy-homes.js, tools/world2/legacy-homes.mjs, server/systems/trains.js, server/systems/kerbdrive.js,
+server/systems/ems.js, tools/bots.js, tools/junctions.mjs (new), docs/WORLD-V3.md 8.23 and 8.23.1.
+
+Tests: test/world3keys.test.js (new: the keys, the kept region files, the art CDN at v3, the bots' junctions),
+test/regions.test.js, test/homes.test.js, test/ems.test.js, test/trains.test.js; test/world3rail.test.js and
+test/world3subway.test.js changed (a far train's cars from the train itself; a new test of the far trains).

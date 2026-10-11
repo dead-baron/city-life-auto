@@ -12,7 +12,7 @@
 //   never queued, no stand-in. Round the players online (focus) the chunks are baked first after the asks.
 //
 // art is version.json's art hash, the key the pages keep their baked chunks under (a new build of the bake code or the
-// world is a new hash: everything is baked afresh, the old files deleted). Client-only pushes don't restart the
+// world is a new hash: everything is baked afresh, the old files deleted); World v3's world: '<art3>-v3' (artKey). Client-only pushes don't restart the
 // server: when version.json's art changes on disk, the bake threads start again on the new code. In the background,
 // every chunk of the map for the qualities in PREWARM, the busiest first (towns before the country, the country before
 // open sea). What pages ask for goes to the front of the queue. CLA_ART_THREADS bake threads (0: off).
@@ -38,7 +38,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
   const keyOf = (q, ap, cx, cy) => `${q}/${ap}/${cx}/${cy}`;
   const fileOf = (q, ap, cx, cy, dir = S.dir) => join(dir, `q${q}a${ap}`, `${cx}_${cy}.bin`);
   const onDisk = (key, file) => { if (S.done.has(key)) return true; if (existsSync(file)) { S.done.add(key); return true; } return false; };
-  const readArt = () => { try { return JSON.parse(readFileSync(join(root, 'version.json'), 'utf8')).art || null; } catch { return null; } };
+  const readArt = () => { try { return artKey(JSON.parse(readFileSync(join(root, 'version.json'), 'utf8')), world); } catch { return null; } };
 
   // the order the background bakes go in: the busiest chunks first (places, then roads, then land), open sea last
   const order = (() => {
@@ -64,7 +64,8 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     // which world an art directory's chunks are of (world.txt: 'v3' or 'today'; none - from before 2026-10-11 - is
     // today's): both worlds' builds share one art hash (docs/WORLD-V3.md 8.23), so this build's directory holding the
     // other world's chunks starts afresh, and the build before stands in only when it's the same world's
-    const mine = world || 'today', worldOf = (dir) => { try { return readFileSync(join(dir, 'world.txt'), 'utf8').trim() || 'today'; } catch { return 'today'; } };
+    // (a directory of World v3's own art key - '<art3>-v3', artKey - is v3's whatever it says)
+    const mine = world || 'today', worldOf = (dir) => { if (dir.endsWith('-v3')) return 'v3'; try { return readFileSync(join(dir, 'world.txt'), 'utf8').trim() || 'today'; } catch { return 'today'; } };
     if (readdirSync(S.dir).some((d) => d !== 'world.txt') && worldOf(S.dir) !== mine) { log(`[art] ${S.dir} held ${worldOf(S.dir)}'s chunks: baked afresh for ${mine}`); for (const d of readdirSync(S.dir)) rmSync(join(S.dir, d), { recursive: true, force: true }); }
     try { writeFileSync(join(S.dir, 'world.txt'), mine + '\n'); } catch { /* best effort */ }
     // The build before this one is kept (the newest of the others): its chunks go to the pages still on it, and to
@@ -167,7 +168,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     if (!path.startsWith('/art/')) return false;
     const qi = path.indexOf('?'), pre = qi >= 0 && /[?&]pre=1\b/.test(path.slice(qi));
     if (qi >= 0) path = path.slice(0, qi);
-    const m = /^\/art\/([0-9a-f]{6,40})\/([0-3])\/([12])\/(\d{1,3})\/(\d{1,3})$/.exec(path);
+    const m = /^\/art\/([0-9a-f]{6,40}(?:-v3)?)\/([0-3])\/([12])\/(\d{1,3})\/(\d{1,3})$/.exec(path);
     const head = { 'access-control-allow-origin': '*', 'cache-control': 'no-store', 'access-control-expose-headers': 'x-art-eta, x-art-stale' };
     const serve = (st, file, extra = null) => {
       S.stats.served++; S.stats.servedBytes += st.size;
@@ -269,6 +270,18 @@ export function askAhead(asked, key) {
     if (d >= ASK_BURST_MS || (d > -ASK_BURST_MS && i < j)) n++;
   }
   return n;
+}
+
+// The key a world's art is baked, served and kept under (docs/WORLD-V3.md 8.23, step 0 a): today's world - version.json's
+// art, as always; World v3's (CLA_WORLD=v3) - its art3 (the art's hash of the v3 world's: tools/stamp-version.mjs) with
+// '-v3' after it, as its region files are (server/worldcdn.js worldKey), so a browser that played the v3 test server
+// never draws its chunks in the live game, nor the other way round (the page keys them the same way: client/boot.js).
+// The server's art directory is the key (<dataDir>/art/<key>/). A version.json from before art3: its art with '-v3'.
+export function artKey(v, world = null) {
+  if (!v) return null;
+  if (world !== 'v3') return v.art || null;
+  const a = v.art3 || v.art;
+  return a ? `${a}-v3` : null;
 }
 
 // the art's chunk grid over the world the server runs (the map's frame, m.frame: tiles)

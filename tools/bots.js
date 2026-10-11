@@ -3,24 +3,27 @@
 //
 // Usage: node tools/bots.js [count=20] [seconds=60] [url=ws://localhost:8080/ws] [--spread]
 //   --spread  (dev servers only) teleports each bot to a random intersection so the load
-//             resembles a real city instead of everyone standing at the hospital.
+//             resembles a real city instead of everyone standing at the hospital: the junctions of the
+//             world the server runs - today's, or World v3's (CLA_WORLD=v3) - read from its region
+//             files' index (the road graph is whole in it: server/worldcdn.js), else built here
 // Writes a timestamped log to logs/bots-<time>.log
 import { mkdirSync, appendFileSync } from 'node:fs';
 import { encodeInput, decodeSnapshot, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis } from '../shared/input.js';
-import { generateCity } from '../shared/map.js';
+import { junctions } from './junctions.mjs';
 
 const COUNT = Number(process.argv.slice(2).filter((a) => !a.startsWith('--'))[0] || 20);
 const SECONDS = Number(process.argv.slice(2).filter((a) => !a.startsWith('--'))[1] || 60);
 const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const SPREAD = process.argv.includes('--spread');
 const URL_WS = args[2] || 'ws://localhost:8080/ws';
-const NODES = SPREAD ? generateCity(Number(process.env.CLA_SEED || 1337)).nodes.filter((n) => !n.island) : [];
 const HTTP = URL_WS.replace(/^ws/, 'http').replace(/\/ws$/, '');
 
 mkdirSync('logs', { recursive: true });
 const LOG = `logs/bots-${new Date().toISOString().replace(/[:.]/g, '-')}.log`;
 const log = (s) => { const line = `[${new Date().toISOString()}] ${s}`; console.log(line); appendFileSync(LOG, line + '\n'); };
+
+const NODES = SPREAD ? await junctions(HTTP, { say: log }) : [];
 
 const totals = { bytes: 0, snaps: 0, welcomed: 0, errors: 0, entitiesSeen: 0, inVehicle: 0 };
 
@@ -82,7 +85,8 @@ const iv = setInterval(async () => {
   const kb = (totals.bytes - last.bytes) / 1024 / 5;
   const sn = (totals.snaps - last.snaps) / 5;
   last = { bytes: totals.bytes, snaps: totals.snaps };
-  log(`bots=${totals.welcomed}/${COUNT} recv=${kb.toFixed(1)}KB/s total (${(kb / Math.max(1, totals.welcomed)).toFixed(2)} KB/s per bot) snaps/s=${sn.toFixed(0)} | server tick avg=${stats.tickMsAvg}ms max=${stats.tickMsMax}ms ents=${stats.entities} npc=${stats.npcPeds} veh=${stats.vehicles} errors=${totals.errors}`);
+  const top = Object.entries(stats.systemMs || {}).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${k} ${v}`).join(', ');
+  log(`bots=${totals.welcomed}/${COUNT} recv=${kb.toFixed(1)}KB/s total (${(kb / Math.max(1, totals.welcomed)).toFixed(2)} KB/s per bot) snaps/s=${sn.toFixed(0)} | server tick avg=${stats.tickMsAvg}ms max=${stats.tickMsMax}ms ents=${stats.entities} npc=${stats.npcPeds} veh=${stats.vehicles} errors=${totals.errors}${top ? ` | ms: ${top}` : ''}`);
 }, 5000);
 
 setTimeout(() => {
