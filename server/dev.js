@@ -56,9 +56,10 @@ import * as farming from './systems/farming.js';
 import * as homes from './systems/homes.js';
 import * as homeinside from './systems/homeinside.js';
 import * as policeair from './systems/policeair.js';
+import * as airtraffic from './systems/airtraffic.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -565,6 +566,18 @@ export function command(world, p, c, msg) {
     case 'farm': { const err = farming.devFarm(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // a tractor at the fields, the rows in every state (H61)
 
     case 'homein': { const err = homeinside.devIn(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // inside a home (H62): msg.id | msg.kind - yours, and in; msg.at: by the bed, the safe...
+    case 'airtraffic': {   // aircraft about the world (H66): msg.k 'land' | 'takeoff' at the runway nearest you (msg.seen: even in view), 'news' over you
+      if (!ped) break;
+      const A = (world.airTraffic ||= { flights: new Map(), nextAt: world.time + 60, newsAt: 0 });
+      for (const f of A.flights.values()) if (f.kind === (msg.k === 'news' ? 'news' : 'plane')) { const ov = world.get(f.vid); A.flights.delete(f.vid); if (ov) { for (const id of ov.seats) { const c = id && world.get(id); if (c && !c.player) world.remove(c); } world.remove(ov); } }
+      if (msg.k === 'news') { airtraffic.news(world, A, p); break; }
+      let best = null, bd = 1e12;
+      for (const r of airtraffic.runways(world.map)) { const d = Math.hypot(r.x - ped.x, r.y - ped.y); if (d < bd) { bd = d; best = r; } }
+      if (!best) break;
+      const v = airtraffic.planeFlight(world, A, { rw: best, mode: msg.k === 'takeoff' ? 'out' : 'land', force: true, seen: !!msg.seen });
+      if (!v) world.notify(p, '[dev] no way in or out clear at that runway', 'warn');
+      break;
+    }
     case 'policeair': {   // the police air unit (H66): up after you now - 3 stars at least; msg.near: already in the air close by
       if (!ped) break;
       if ((p.wanted | 0) < 3) law.addHeat(world, p, STAR_HEAT[3] - p.heat + 1, ped.x, ped.y);

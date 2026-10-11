@@ -680,3 +680,9 @@ export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, 
 // at orbitR px; its crew see them within sightPx (out in the open) and radio where they are to the cars. Unseen for lostS
 // s (or the stars gone) it flies home and lands; brought down (or gone home), another isn't sent for againS s.
 export const POLICE_AIR = { stars: 3, alt: 300, clear: 70, sightPx: 1100, orbitR: 200, lostS: 25, againS: 90 };
+// ---- aircraft about the world (H66) - server/systems/airtraffic.js. Every everyS s or so (the first after firstS) a light
+// plane at a runway or an airstrip with someone within nearPx: out (the take-off roll, a climb out to cruise px and away)
+// or in (from approachPx out on the runway's line, at approachV px/s, gliding down glide px a px to the touch-down point,
+// rolling out and stopping). A news helicopter over a chase at newsStars or more: circling newsR px out at newsAlt for
+// newsS s, then away; another not before newsEveryS s.
+export const AIR_TRAFFIC = { firstS: 60, everyS: 150, nearPx: 3200, approachPx: 2600, approachV: 470, glide: 0.11, cruise: 420, newsStars: 3, newsR: 520, newsAlt: 420, newsS: 90, newsEveryS: 240 };
