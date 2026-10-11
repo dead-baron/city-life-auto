@@ -10,6 +10,7 @@ import { T, TILE, TICK_HZ } from '../shared/constants.js';
 import { railAt } from '../shared/mapcore.js';
 import { SERVICES, MAIN_JUNCTIONS } from '../shared/world3-skeleton.js';
 import { TRACK_OFF } from '../shared/world3-rail.js';
+import * as trains from '../server/systems/trains.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const mod = (a, n) => ((a % n) + n) % n;
@@ -90,6 +91,7 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
   assert.equal(loops.size, SERVICES.length * 2, 'trains on every loop');
   const run = ts.map(() => ({ dist: 0, stops: new Set(), last: null }));
   let hits = 0, steps = 0, firstHit = null;
+  const downs = new Set();   // (the level crossings whose gates came down)
   const N = TICK_HZ * 60 * 5;   // (five minutes of game time: each train through several stations and junctions)
   for (let k = 0; k < N; k++) {
     const before = ts.map((t) => t.s);
@@ -100,6 +102,7 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
       run[i].dist += mod(t.s - before[i], len);
       if (t.dwellUntil) run[i].stops.add(t.stop);
     });
+    w.xing.forEach((x, i) => { if (x.down) downs.add(i); });
     if (k % 2) continue;
     // every pair of cars of different trains: their outlines never overlap
     const cars = [];
@@ -111,6 +114,13 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
     }
   }
   assert.equal(hits, 0, `trains ran into each other: ${JSON.stringify(firstHit)}`);
+  // the gates: every loop's crossings, once each - they came down for the trains of the loops other than the first too
+  assert.equal(w.xing.length, M.railXings.length);
+  const others = [...downs].filter((i) => !M.railXings[i].uses.some((u) => u[0] === 0));
+  assert.ok(downs.size > 20 && others.length > 5, `${downs.size} crossings closed, ${others.length} of them off the first loop`);
+  // the NPCs see a train coming on any loop: right in front of a moving train on a loop other than the first
+  const t = ts.find((q) => q.r > 0 && q.v > 100 && !w.rails[q.r].pts[Math.floor(q.s / 8) % w.rails[q.r].pts.length].under);
+  if (t) { const q = railAt(w.rails[t.r], t.s + 200); assert.ok(trains.railThreat(w, q.x, q.y), 'a train coming on its loop is a threat'); }
   ts.forEach((t, i) => {
     const r = w.rails[t.r];
     assert.ok(run[i].dist > 8000, `${r.name} train ${t.i}: ran ${Math.round(run[i].dist)} px`);

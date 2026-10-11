@@ -142,7 +142,7 @@ function initLoops(world) {
     }
   });
   world.railLap = world.railTimings[0].reduce((a, q) => a + q.total + TRAIN_DWELL_S, 0);
-  world.xing = rails[0].crossings.map(() => ({ down: false, eta: 99, closure: 0, broken: [0, 0] }));
+  world.xing = (world.map.railXings || rails[0].crossings).map(() => ({ down: false, eta: 99, closure: 0, broken: [0, 0] }));
 }
 const CELL = 32, FOOT = [-24, 0, 24];
 function cellsOfRail(rail) {
@@ -810,6 +810,7 @@ const now = (world) => world.time;
 // a train coming?" is a lookup.
 function railTiles(world) {
   if (world.railTileIdx) return world.railTileIdx;
+  if (world.rails) return loopTiles(world);
   const idx = new Map(), pts = world.map.rail.pts;
   pts.forEach((p, i) => {
     if (p.under) return;
@@ -823,12 +824,58 @@ function railTiles(world) {
   world.railTileIdx = idx;
   return idx;
 }
+// (World v3: each tile near the line -> the nearest point of every loop near it, as [loop, point] pairs: two loops on one
+// track both, so a train of either is seen coming)
+function loopTiles(world) {
+  const idx = new Map();
+  world.rails.forEach((rail, ri) => {
+    const pts = rail.pts;
+    pts.forEach((p, i) => {
+      if (p.under) return;
+      const tx = Math.floor(p.x / 32), ty = Math.floor(p.y / 32);
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+        const k = (ty + dy) * 100000 + tx + dx, cx = (tx + dx + 0.5) * 32, cy = (ty + dy + 0.5) * 32;
+        let a = idx.get(k);
+        if (!a) idx.set(k, a = []);
+        let j = 0;
+        while (j < a.length && a[j] !== ri) j += 2;
+        if (j === a.length) { a.push(ri, i); continue; }
+        const q = pts[a[j + 1]];
+        if (Math.hypot(q.x - cx, q.y - cy) > Math.hypot(p.x - cx, p.y - cy)) a[j + 1] = i;
+      }
+    });
+  });
+  world.railTileIdx = idx;
+  return idx;
+}
+// (World v3's railThreat and railBlocked: each loop near (x, y), its trains)
+function loopThreat(world, x, y, lookS, standing) {
+  const a = railTiles(world).get(Math.floor(y / 32) * 100000 + Math.floor(x / 32));
+  if (!a) return null;
+  const now = world.time;
+  for (let j = 0; j < a.length; j += 2) {
+    const rail = world.rails[a[j]], p = rail.pts[a[j + 1]], q = rail.pts[(a[j + 1] + 1) % rail.pts.length];
+    const ang = Math.atan2(q.y - p.y, q.x - p.x), nx = -Math.sin(ang), ny = Math.cos(ang);
+    const off = (x - p.x) * nx + (y - p.y) * ny;
+    if (Math.abs(off) > DANGER_PX + 16) continue;
+    for (const t of world.trains) {
+      if (t.r !== a[j]) continue;
+      const wait = t.dwellUntil ? t.dwellUntil - now : 0;
+      const over = mod(t.s - p.s, rail.len) < t.len + 30;
+      const ahead = mod(p.s - t.s, rail.len);
+      const coming = ahead < Math.max(320, t.v * lookS) && wait < 3;
+      if ((over && (standing || t.v > 5 || wait < 3)) || coming) return { x: p.x, y: p.y, nx: nx * Math.sign(off || 1), ny: ny * Math.sign(off || 1), off, over };
+    }
+  }
+  return null;
+}
 const DANGER_PX = 54; // within this of the track centre a passing train hits you
 // Is (x, y) on the line with a train due? Returns the nearest track point and which side is
 // closer to get off on, or null.
 export function railThreat(world, x, y, lookS = 4.5, standing = false) {
   const rail = world.map.rail;
   if (!rail || !world.trains) return null;
+  if (world.rails) return loopThreat(world, x, y, lookS, standing);
   const i = railTiles(world).get(Math.floor(y / 32) * 100000 + Math.floor(x / 32));
   if (i === undefined) return null;
   const p = rail.pts[i], q = rail.pts[(i + 1) % rail.pts.length];
@@ -853,6 +900,7 @@ export function railThreat(world, x, y, lookS = 4.5, standing = false) {
 export function railBlocked(world, x1, y1, x2, y2) {
   const rail = world.map.rail;
   if (!rail || !world.trains || !world.trains.length) return false;
+  if (world.rails) { for (let k = 1; k <= 8; k++) if (loopThreat(world, x1 + (x2 - x1) * k / 8, y1 + (y2 - y1) * k / 8, 4.5, true)) return true; return false; }
   const idx = railTiles(world), now = world.time;
   let prev = 0;
   for (let k = 1; k <= 8; k++) {
@@ -995,13 +1043,16 @@ function collide(world, t, dt) {
 
 // ---- level crossings ----------------------------------------------------------------------------
 function updateCrossings(world) {
-  const rail = world.map.rail, now = world.time;
-  rail.crossings.forEach((c, i) => {
+  const rail = world.map.rail, now = world.time, X = world.rails && world.map.railXings;
+  (X || rail.crossings).forEach((c, i) => {
     const st = world.xing[i];
     let down = false, eta = 99;
     for (const t of world.trains) {
-      if (off0(t)) continue;
-      const ahead = mod(c.s - t.s, rail.len), behind = mod(t.s - c.s, rail.len);
+      // (World v3: a crossing is each loop's that uses it, at its own place along that loop)
+      const u = X ? c.uses.find((q) => q[0] === t.r) : null;
+      if (X ? !u : off0(t)) continue;
+      const L = X ? world.rails[t.r].len : rail.len, cs = X ? u[1] : c.s;
+      const ahead = mod(cs - t.s, L), behind = mod(t.s - cs, L);
       if (behind < t.len + 30) { down = true; eta = 0; continue; }
       if (ahead < CROSSING_WARN_PX) {
         const wait = t.dwellUntil ? t.dwellUntil - now : 0;
@@ -1038,8 +1089,8 @@ function updateCrossings(world) {
 export function crossingStates(world) { return (world.xing || []).map((s) => ({ d: s.down ? 1 : 0, b: s.broken.map((b) => (b ? 1 : 0)) })); }
 
 function hornForCrossings(world, t) {
-  if (t.v < 80 || off0(t)) return;
-  const rail = world.map.rail;
+  if (t.v < 80) return;
+  const rail = railOf(world, t);
   rail.crossings.forEach((c, i) => {
     const ahead = mod(c.s - t.s, rail.len);
     if (ahead < 620 && ahead > 200 && t.hornedFor !== i) {
@@ -1092,11 +1143,11 @@ function queueBeyond(world, v, path, from, len) {
 }
 export function crossingLimit(world, v, fwd) {
   if (!world.xing || !world.xing.length) return Infinity;
-  const rail = world.map.rail;
+  const rail = world.map.rail, xs = (world.rails && world.map.railXings) || rail.crossings;   // (World v3: every loop's)
   const reach = 320 + Math.max(0, fwd) * 0.8 + v.def.L / 2;
   let limit = Infinity, path = null;
-  for (let i = 0; i < rail.crossings.length; i++) {
-    const c = rail.crossings[i];
+  for (let i = 0; i < xs.length; i++) {
+    const c = xs[i];
     if (Math.abs(c.x - v.x) > reach + c.hw + 80 || Math.abs(c.y - v.y) > reach + c.hw + 80) continue;
     path ??= drivePath(v, reach);
     const hit = throughCrossing(path, c);

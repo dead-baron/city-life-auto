@@ -375,7 +375,17 @@ function buildCity(seed, opts = null, frame = null) {
   buildDealerLots(m);
   clearHospitalFronts(m);
   buildRailway(m, railPts);
-  if (railLines) { m.rails = railLines.map((line) => buildRailway(m, line.pts, line)); m.rail = m.rails[0]; }   // (World v3: each loop its own rail; m.rail the first)
+  if (railLines) {   // (World v3: each loop its own rail; m.rail the first)
+    m.rails = railLines.map((line) => buildRailway(m, line.pts, line)); m.rail = m.rails[0];
+    // the level crossings of all the loops, once each (two loops on one track cross a road at one crossing): `uses` the
+    // loops and where along each; a loop's crossing knows its own (xi) - the gates' states are by this list
+    m.railXings = [];
+    m.rails.forEach((r, ri) => r.crossings.forEach((c) => {
+      let xi = m.railXings.findIndex((o) => Math.hypot(o.x - c.x, o.y - c.y) < 24);
+      if (xi < 0) { xi = m.railXings.length; m.railXings.push({ x: c.x, y: c.y, a: c.a, hw: c.hw, s: c.s, uses: [] }); }
+      m.railXings[xi].uses.push([ri, c.s]); c.xi = xi;
+    }));
+  }
   buildOffshore(m, rand);
   buildBoatDocks(m); unpin();
   buildSignals(m);

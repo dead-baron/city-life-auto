@@ -1666,7 +1666,7 @@ export class World2 {
     }
     o.shadow = false;
     // level crossings (v1's arm pivots, beside the statics' crossbuck posts)
-    const xs = (M.rail && M.rail.crossings) || [];
+    const xs = M.railXings || (M.rail && M.rail.crossings) || [];   // (World v3: every loop's crossings, once each)
     for (let i = 0; i < xs.length; i++) {
       const c = xs[i];
       if (c.x < x0 - 160 || c.x > x1 + 160 || c.y < y0 - 160 || c.y > y1 + 160) continue;

@@ -2381,6 +2381,12 @@ Measured over 20 minutes of game time: all twelve trains ran (12.5-17 km each), 
 in order (a round of the Bay Loop about every 6-7 minutes, of the Grand Loop about every 13), held at a signal 1-19 s in all;
 no train stood still for good.
 
+**The level crossings and the people at the line:** the loops' crossings are listed once each (`m.railXings`: two
+loops on one track cross a road at one crossing; `uses` gives each loop and where along it), and the gates go down for
+any train of those loops (`updateCrossings`); the drivers stop at every loop's (`crossingLimit`), the client draws the
+arms by that list (`host.js`). The NPCs keep off every loop's track (`railThreat`, `railBlocked`: each tile near the
+line knows the nearest point of every loop near it).
+
 **The art:** the chunk bake draws every loop (`client/art2/game/groundbake.js` `railLoop`: a later loop takes a pixel
 only where it is clearly the nearer track, so a track two loops share is drawn once and its sleepers keep their
 spacing; `statics.js` `addRailLoop`: a platform, a tunnel mouth or a crossing's signals that two loops share are put
@@ -2417,11 +2423,10 @@ wrong:
 
 **What's left** (in order):
 1. **What still reads only the first loop** (`off0`): the waiting crowds and the commuters walking to a platform
-   (`gatherCommuters`, `callWaiting`), the level crossings' gates and the drivers at them (`updateCrossings`,
-   `crossingLimit`, `world.xing`, the client's `M.rail.crossings`), the NPCs keeping off the line (`railThreat`,
-   `railBlocked`, `keepPedsSafe`), the station boards and the platform clocks (`timetable`, `stationBoard`: a station POI
-   is the first loop's that made it). Each wants its loops: crossings by loop and index (the welcome's and the `xing`
-   event's), a station's boards listing every service that stops there.
+   (`gatherCommuters`, `callWaiting`), the station boards and the platform clocks (`timetable`, `stationBoard`: a
+   station POI is the first loop's that made it) - a station's boards want every service that stops there. A double
+   track's road crossing is two crossings (each track its gates, the arms between the tracks crossing): one crossing
+   with its arms outside both tracks wants an arm offset per crossing (`CROSSING_ARM` is one constant now).
 2. The junctions designed (above), the towns' crossings as bridges or cuttings, the tunnels' mouths and cover.
 3. The client's trains (`client/render/trains.js`) and its minimap read `map.rail` (the first loop) for the line's
    drawing; the cars themselves come from the server.
