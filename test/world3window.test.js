@@ -71,3 +71,28 @@ test('the v3 window moves across a region border and at the frame corner: the re
   const c = cityFromData(await keeper.assemble(cut.pack.index, corner));
   assert.equal(c.tileAt(FRAME_W - 10, FRAME_H - 10), M.tileAt(FRAME_W - 10, FRAME_H - 10));
 });
+
+// ---- (H39, WORLD-V3.md 8.12's follow-ups) on the v3 world: the signatures, the whole world's places, the coarse picture ----
+import { gzipSync } from 'node:zlib';
+import { regionSig, PICTURE_K } from '../shared/regionpack.js';
+import { mapSignature } from '../shared/mapcore.js';
+
+test("the v3 index: every region's signature and the world's; a window lists the whole world's places and carries the coarse picture of the frame", () => {
+  assert.equal(X.sig, mapSignature(M), "the world's signature: the welcome's");
+  assert.equal(Object.keys(X.sigs).length, X.regions.length);
+  for (const [k, b] of files) assert.equal(regionSig(b), X.sigs[k], k);
+  const poi = M.pois.find((p) => p && p.kind === 'hospital') || M.pois[0];
+  const keys = regionsNear(X.frame, Math.floor(poi.x / TILE), Math.floor(poi.y / TILE)), rect = windowRect(X.frame, keys);
+  const w = cityFromData(assembleCity(cut.pack.index, keys.map((k) => files.get(k)), { window: rect }));
+  const all = M.pois.filter(Boolean), outside = all.filter((p) => !w.inside(Math.floor(p.x / TILE), Math.floor(p.y / TILE)));
+  assert.equal(w.places.filter(Boolean).length, all.length);
+  assert.ok(outside.length > 50, `${outside.length} of ${all.length} places outside the window`);
+  for (const p of outside) { const q = w.places[p.id]; assert.deepEqual([q.kind, q.label, q.x, q.y], [p.kind, p.label, p.x, p.y]); assert.equal(q.d, M.dist[M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))]); }
+  const kinds = new Set(outside.map((p) => p.kind));
+  // the coarse picture: a tile every PICTURE_K, the whole frame
+  const P = w.picture;
+  assert.deepEqual([P.k, P.w, P.h], [PICTURE_K, Math.ceil(FRAME_W / PICTURE_K), Math.ceil(FRAME_H / PICTURE_K)]);
+  for (let i = 0; i < 4000; i++) { const x = (i * 7919) % P.w, y = (i * 104729) % P.h; assert.equal(P.tiles[y * P.w + x], M.tileAt(Math.min(FRAME_W - 1, x * P.k + (P.k >> 1)), Math.min(FRAME_H - 1, y * P.k + (P.k >> 1)))); }
+  const gz = gzipSync(cut.pack.index, { level: 9 }).length;
+  console.log(`[v3 window] the index ${(cut.pack.index.length / 1e6).toFixed(2)} MB raw, ${(gz / 1e6).toFixed(2)} MB gzipped; places ${all.length} (${outside.length} outside the window: ${[...kinds].slice(0, 12).join(', ')}...); picture ${P.w} x ${P.h} (${(P.tiles.length / 1e6).toFixed(2)} MB of tiles; the minimap's canvas ${(P.w * P.h * 4 / 1e6).toFixed(1)} MB, not ${(FRAME_W * FRAME_H * 4 / 1e6).toFixed(1)})`);
+});

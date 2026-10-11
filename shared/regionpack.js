@@ -35,6 +35,16 @@
 // server/worldcdn.js gzips each file; the browser unzips it with DecompressionStream('gzip').
 import { REGION_TILES } from './world3.js';
 import { TILE } from './constants.js';
+//
+// (World v3 8.12, part 8 item 5 - H39) The index also says, for a page that holds a window of the world:
+//   sigs     each region's signature (regionSig of its file as written, raw): the page checks each region it assembles
+//            against it, drops one that doesn't match and fetches it again (client/worldwindow.js)
+//   sig      the world's signature (shared/mapcore.js mapSignature of the whole map: what the server's welcome says)
+//   places   every POI as [id, kind, label, x, y, district]: the phone's apps, the big map's icons and the GPS's
+//            destinations list the whole world's places from a window (assembleCity's `places`)
+//   picture  a coarse picture of the whole frame (a tile every PICTURE_K, when the frame is big: World v3's) for the
+//            minimap and the big map before the player has been there
+// Optional fields: an index without them is read as before (nothing checked, no places, no picture).
 
 export const PACK_VERSION = 2;   // (2: an item that is another list's item is said in its region, not the index)
 export const OMIT = ['compLab', 'ringD', 'leftover'];   // (leftover: the lots' scraps' tiles, read by the generator's later passes alone)
@@ -53,6 +63,21 @@ export const REGIONAL = {
 // prop index -> its solid entry, as the generator keeps propSolid (shared/map.js: m.propSolid.set(e.pi, e))
 function solidIndex(sp) { const by = new Map(); for (const arr of sp.values()) for (const e of arr) if (e && e.pi >= 0) by.set(e.pi, e); return by; }
 const TYPES = { Uint8Array, Int8Array, Uint16Array, Int16Array, Uint32Array, Int32Array, Float32Array, Float64Array, Uint8ClampedArray };
+
+// a region file's signature: a 32-bit hash of its bytes as written (raw, not gzipped), base 36
+export function regionSig(bytes) {
+  let h = 0x811c9dc5 ^ bytes.length;
+  const n4 = bytes.length >> 2, w = (bytes.byteOffset & 3) === 0 ? new Int32Array(bytes.buffer, bytes.byteOffset, n4) : null;
+  if (w) for (let i = 0; i < n4; i++) { h = Math.imul(h ^ w[i], 0x01000193); h ^= h >>> 15; }
+  else for (let i = 0; i < n4 * 4; i += 4) { h = Math.imul(h ^ (bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24)), 0x01000193); h ^= h >>> 15; }
+  for (let i = n4 * 4; i < bytes.length; i++) h = Math.imul(h ^ bytes[i], 0x01000193);
+  return (h >>> 0).toString(36);
+}
+// does a region's file (raw) match the index's signature for it? (an index without signatures: nothing to check)
+export function regionMatches(sigs, key, raw) { return !sigs || (Object.hasOwn(sigs, key) && regionSig(raw) === sigs[key]); }
+// the coarse picture's step (tiles per pixel): only for a big frame (World v3's 5040 x 4032: 1260 x 1008 pixels)
+export const PICTURE_K = 4;
+const pictureK = (W, H) => (W * H > 4e6 ? PICTURE_K : 0);
 
 // the region grid over a frame of W x H tiles
 export function regionGrid(W, H, R = REGION_TILES) { return { W, H, R, nx: Math.ceil(W / R), ny: Math.ceil(H / R) }; }
@@ -208,14 +233,39 @@ export function packRegions(city, opts = {}) {
   byRegion.forEach((m, ri) => { if (m.size) regions[ri].refs = [...m].map(([k, ij]) => [...k.split(' '), regions[ri].blobs.push(Int32Array.from(ij)) - 1]); });
   let propSolid = null;
   if (psKeys) propSolid = blobs.push(Int32Array.from(city.propSolid.keys())) - 1;
+  const files = regions.map((r) => ({ key: r.key, bytes: writePack({ key: r.key, rx: r.rx, ry: r.ry, rect: r.rect, lists: r.lists, refs: r.refs || [] }, r.blobs) }));
+  const sigs = Object.fromEntries(files.map((f) => [f.key, regionSig(f.bytes)]));
+  const sig = opts.sig || (typeof city._sig === 'string' ? city._sig : null);
   const index = writePack({
     frame: [g.W, g.H, g.R, g.nx, g.ny], win, order, omit, layers: layers.map((k) => [k, city[k].constructor.name]), regional, propSolid,
     regions: regions.map((r) => r.key), root, refs: keepRefs, fix, meta: opts.meta || null,
+    sigs, sig, places: placesOf(city, win), picture: pictureOf(city, win, W, H, blobs),
   }, blobs);
-  return {
-    index,
-    regions: regions.map((r) => ({ key: r.key, bytes: writePack({ key: r.key, rx: r.rx, ry: r.ry, rect: r.rect, lists: r.lists, refs: r.refs || [] }, r.blobs) })),
-  };
+  return { index, regions: files };
+}
+// every POI, small: [id, kind, label, x, y, district (the dist layer's at its tile, -1 off the map), its home's id (a home for sale)]
+function placesOf(city, win) {
+  if (!Array.isArray(city.pois) || !ArrayBuffer.isView(city.dist)) return null;
+  const out = [];
+  city.pois.forEach((p, i) => {
+    if (!p || typeof p !== 'object') return;
+    const tx = Math.floor(p.x / TILE) - win[0], ty = Math.floor(p.y / TILE) - win[1];
+    const d = tx >= 0 && ty >= 0 && tx < win[2] && ty < win[3] ? city.dist[ty * win[2] + tx] : -1;
+    out.push(p.home !== undefined ? [i, p.kind, p.label, p.x, p.y, d, p.home] : [i, p.kind, p.label, p.x, p.y, d]);
+  });
+  return out;
+}
+// the whole frame's tiles, a tile every k (the middle of each k x k block): [k, w, h, blob]
+function pictureOf(city, win, W, H, blobs) {
+  const k = pictureK(W, H);
+  if (!k || !ArrayBuffer.isView(city.tiles)) return null;
+  const pw = Math.ceil(W / k), ph = Math.ceil(H / k), pic = new Uint8Array(pw * ph), h = k >> 1;
+  for (let y = 0; y < ph; y++) {
+    const ty = Math.min(H - 1, y * k + h) - win[1];
+    if (ty < 0 || ty >= win[3]) continue;
+    for (let x = 0; x < pw; x++) { const tx = Math.min(W - 1, x * k + h) - win[0]; if (tx >= 0 && tx < win[2]) pic[y * pw + x] = city.tiles[ty * win[2] + tx]; }
+  }
+  return [k, pw, ph, blobs.push(pic) - 1];
 }
 
 // a layer's rectangle (X0, Y0, rw, rh: world tiles) out of the map's window, row by row through the window's width
@@ -351,8 +401,13 @@ export function assembleCity(indexBytes, regionBytes, opts = {}) {
     if (li >= 0) out[k] = layers[li];
     else if (k in root) out[k] = root[k];
   }
-  if (sub) { out.x0 = win[0]; out.y0 = win[1]; out.w = win[2]; out.h = win[3]; out.frame = { w: X.frame[0], h: X.frame[1] }; }
+  if (sub) {
+    out.x0 = win[0]; out.y0 = win[1]; out.w = win[2]; out.h = win[3]; out.frame = { w: X.frame[0], h: X.frame[1] };
+    // (the whole world's places - the phone's apps, the big map - and its coarse picture - the minimap - from the index)
+    if (Array.isArray(X.places)) { const pl = []; for (const [id, kind, label, x, y, d, home] of X.places) pl[id] = home === undefined ? { id, kind, label, x, y, d } : { id, kind, label, x, y, d, home }; out.places = pl; }
+    if (Array.isArray(X.picture) && blobs[X.picture[3]]) out.picture = { k: X.picture[0], w: X.picture[1], h: X.picture[2], tiles: blobs[X.picture[3]] };
+  }
   return out;
 }
-// what an index says (the frame, the regions, the meta) without assembling
-export function readIndex(indexBytes) { const { d } = readPack(indexBytes); return { frame: d.frame, regions: d.regions, meta: d.meta, omit: d.omit }; }
+// what an index says (the frame, the regions, the meta, the signatures) without assembling
+export function readIndex(indexBytes) { const { d } = readPack(indexBytes); return { frame: d.frame, regions: d.regions, meta: d.meta, omit: d.omit, sigs: d.sigs || null, sig: d.sig || null }; }

@@ -154,3 +154,102 @@ test('the window moves: near a border it fetches what comes in, past it the new 
   const d2 = await keeper.assemble(pack.index, far);
   assert.equal(cityFromData(d2).tileAt(100, 1100), CITY().tileAt(100, 1100));
 });
+
+// ---- (H39, WORLD-V3.md 8.12's follow-ups) the signatures, the places, the kept regions ----
+import { regionSig, regionMatches } from '../shared/regionpack.js';
+import { mapSignature } from '../shared/mapcore.js';
+
+test("the index carries each region's signature and the world's: every file matches its own, the world's is the map's", () => {
+  const pack = PACK(256), X = readIndex(pack.index);
+  assert.equal(X.sig, mapSignature(CITY()), "the world's signature: what the server's welcome says");
+  assert.deepEqual(Object.keys(X.sigs).sort(), X.regions.slice().sort());
+  for (const r of pack.regions) { assert.equal(regionSig(r.bytes), X.sigs[r.key], r.key); assert.ok(regionMatches(X.sigs, r.key, r.bytes)); }
+  assert.equal(new Set(Object.values(X.sigs)).size, X.regions.length, 'no two regions alike');
+  const bad = pack.regions[7].bytes.slice(); bad[bad.length >> 1] ^= 1;
+  assert.ok(!regionMatches(X.sigs, pack.regions[7].key, bad), 'one bit off: refused');
+  assert.ok(!regionMatches(X.sigs, pack.regions[6].key, pack.regions[7].bytes), "another region's file: refused");
+  assert.ok(regionMatches(null, 'r0-0', bad), 'an index without signatures (an older server): nothing to check');
+});
+
+test('a corrupted region is refused: dropped (here and in the store) and fetched again past every cache; refused again, the window is not assembled', async () => {
+  const pack = PACK(256), X = readIndex(pack.index), good = new Map(pack.regions.map((r) => [r.key, r.bytes]));
+  const corrupt = (b) => { const c = b.slice(); c[c.length - 9] ^= 0x55; return c; };
+  const asked = [], forgot = [];
+  let badTimes = 1;
+  const keeper = new WindowKeeper({ frame: X.frame, sigs: X.sigs, forget: (k) => forgot.push(k),
+    fetchRegion: async (k, fresh) => { asked.push([k, !!fresh]); return k === 'r2-2' && badTimes-- > 0 ? corrupt(good.get(k)) : good.get(k); } });
+  const win = await keeper.start(700, 600);
+  const w = cityFromData(await keeper.assemble(pack.index, win));
+  assert.deepEqual(keeper.refused, ['r2-2']); assert.deepEqual(forgot, ['r2-2']);
+  assert.deepEqual(asked.filter(([k]) => k === 'r2-2'), [['r2-2', false], ['r2-2', true]], 'fetched again, fresh');
+  assert.equal(w.tileAt(600, 600), CITY().tileAt(600, 600));
+  // the server keeps sending a bad one: no window, and the error says which region
+  badTimes = 99;
+  const k2 = new WindowKeeper({ frame: X.frame, sigs: X.sigs, fetchRegion: async (k) => (k === 'r1-1' ? corrupt(good.get(k)) : good.get(k)) });
+  const w2 = await k2.start(700, 600);
+  await assert.rejects(k2.assemble(pack.index, w2), /r1-1 isn't the server's/);
+  // a file that doesn't even open (the worker's unzip throws): the same
+  const k3 = new WindowKeeper({ frame: X.frame, sigs: X.sigs, fetchRegion: async (k) => good.get(k), open: async (b) => { if (b === good.get('r3-3')) throw new Error('bad gzip'); return b; } });
+  await assert.rejects(k3.assemble(pack.index, await k3.start(700, 600)), /r3-3 isn't the server's \(a bad file\)/);
+});
+
+test("the whole world's places in a window: every POI (id, kind, label, position, district), those outside the window too", () => {
+  const m = CITY(), pack = PACK(256);
+  const { rect, map: w } = windowAt(pack, 700, 600);
+  assert.ok(Array.isArray(w.places));
+  const all = m.pois.filter(Boolean);
+  assert.equal(w.places.filter(Boolean).length, all.length);
+  let outside = 0;
+  for (const p of all) {
+    const q = w.places[p.id];
+    assert.deepEqual([q.id, q.kind, q.label, q.x, q.y], [p.id, p.kind, p.label, p.x, p.y]);
+    assert.equal(q.d, m.dist[m.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))], `${p.label}'s district`);
+    if (p.home !== undefined) assert.equal(q.home, p.home);
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+    if (tx < rect[0] || ty < rect[1] || tx >= rect[0] + rect[2] || ty >= rect[1] + rect[3]) { outside++; assert.equal(w.pois[p.id], undefined, 'not in the window'); }
+  }
+  assert.ok(outside > 20, `${outside} places outside the window`);
+  // today's world assembled whole: as before (no places list, no picture: the POIs are all there)
+  const whole = assembleCity(pack.index, pack.regions.map((r) => r.bytes));
+  assert.ok(!('places' in whole) && !('picture' in whole));
+  assert.equal(readIndex(PACK(256).index).frame[0] * readIndex(PACK(256).index).frame[1] > 4e6, false, "today's frame: no coarse picture");
+});
+
+test("the regions kept in the browser: a return visit's window comes from the store, only what wasn't kept is downloaded; a kept file that isn't right is fetched again", async () => {
+  const { gzipSync } = await import('node:zlib');
+  const { fetchWindow } = await import('../client/worldgen.js');
+  const pack = PACK(256), files = new Map([['index.bin', pack.index], ...pack.regions.map((r) => [`${r.key}.bin`, r.bytes])]);
+  const kept = new Map(), store = { get: async (n) => kept.get(n) || null, put: async (n, b) => { kept.set(n, b); return true; }, drop: async (n) => kept.delete(n) };
+  let asked = [];
+  const fetchFn = async (url, o) => { const name = url.split('/').pop().split('?')[0]; asked.push([name, (o && o.cache) || '']); const b = files.get(name); return b ? new Response(gzipSync(b), { status: 200 }) : new Response('', { status: 404 }); };
+  const first = await fetchWindow('http://cdn/world/', 'abcdef123456-v3:1337', 1337, [700, 600], { fetchFn, store });
+  assert.deepEqual([first.win.kept, first.win.fetched], [0, 10]);
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(kept.size, 10, 'the index and the 9 regions kept (gzipped, as they came)');
+  assert.equal(first.win.sig, mapSignature(CITY()));
+  // the return visit: nothing downloaded
+  asked = [];
+  const again = await fetchWindow('http://cdn/world/', 'abcdef123456-v3:1337', 1337, [700, 600], { fetchFn, store });
+  assert.deepEqual([again.win.kept, again.win.fetched, asked.length], [10, 0, 0]);
+  const a = cityFromData(first.data), b = cityFromData(again.data);
+  assert.equal(Buffer.compare(Buffer.from(a.tiles.buffer), Buffer.from(b.tiles.buffer)), 0);
+  // a move east: the 3 regions not kept are downloaded (and kept), the rest read back
+  asked = [];
+  again.keeper.want(768 - 20, 640); await again.keeper.idle();
+  assert.deepEqual(asked.map(([n]) => n).sort(), ['r4-1.bin', 'r4-2.bin', 'r4-3.bin']);
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(kept.size, 13);
+  // a kept region spoiled: dropped and downloaded again, past the HTTP cache
+  const z = kept.get('r2-2.bin').slice(); z[z.length - 12] ^= 0xff; kept.set('r2-2.bin', z);
+  asked = [];
+  const third = await fetchWindow('http://cdn/world/', 'abcdef123456-v3:1337', 1337, [700, 600], { fetchFn, store });
+  assert.deepEqual(asked, [['r2-2.bin', 'reload']]);
+  assert.deepEqual(third.keeper.refused, ['r2-2']);
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(Buffer.compare(Buffer.from(kept.get('r2-2.bin')), gzipSync(files.get('r2-2.bin'))), 0, 'the good one kept in its place');
+  // a kept index that doesn't read: downloaded again
+  kept.set('index.bin', new Uint8Array([1, 2, 3])); asked = [];
+  const fourth = await fetchWindow('http://cdn/world/', 'abcdef123456-v3:1337', 1337, [700, 600], { fetchFn, store });
+  assert.deepEqual(asked, [['index.bin', 'reload']]);
+  assert.equal(fourth.win.fetched, 1);
+});

@@ -55,7 +55,7 @@ export function createMapWaypoints(ctx) {
 
   function places(g) {
     const map = ctx.map();
-    let list = map.pois.filter((p) => g.kinds.includes(p.kind));
+    let list = (map.places || map.pois).filter((p) => p && g.kinds.includes(p.kind));   // (World v3's window: the whole world's places)
     if (g.id === 'homes') {
       const mine = new Set(ctx.myHomes().map((h) => h.id));
       list = list.filter((p) => !mine.has(p.home));
@@ -108,7 +108,7 @@ export function createMapWaypoints(ctx) {
       ctx.setFilter(list.map(({ p }) => p));
       const title = group === 'mine' ? 'My homes' : g.title;
       el.innerHTML = `<button class="bm-row back" data-back="1">◀ ${esc(title)}</button>`
-        + (list.length ? list.map(({ p, d }, i) => `<button class="bm-row" data-i="${i}"><span class="ic">${i + 1}</span><span class="nm">${esc(p.label)}<small>${esc(districtAt(ctx.map(), p.x, p.y) || '')}</small></span><span class="d">${fmt(d)}</span></button>`).join('') : '<p class="bm-hint">None in the city.</p>');
+        + (list.length ? list.map(({ p, d }, i) => `<button class="bm-row" data-i="${i}"><span class="ic">${i + 1}</span><span class="nm">${esc(p.label)}<small>${esc((DISTRICTS[p.d] && DISTRICTS[p.d].name) || districtAt(ctx.map(), p.x, p.y) || '')}</small></span><span class="d">${fmt(d)}</span></button>`).join('') : '<p class="bm-hint">None in the city.</p>');
       el.querySelectorAll('[data-i]').forEach((b) => { b.onclick = () => { const { p } = list[Number(b.dataset.i)]; ctx.setWaypoint({ x: p.x, y: p.y, label: p.label }); render(); }; });
     }
     el.querySelectorAll('[data-group]').forEach((b) => { b.onclick = () => { group = b.dataset.group; render(); }; });

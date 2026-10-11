@@ -68,10 +68,11 @@ export function createPhone(ctx) {
       const g = PLACE_GROUPS.find((q) => q.id === group);
       const map = ctx.map();
       // (a place with more than one counter - the market's rows of stalls - is listed once, at the nearest)
-      const pois = map.pois.filter((p) => g.kinds.includes(p.kind)).map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d)
+      // (World v3's window: the whole world's places, from the index - map.places)
+      const pois = (map.places || map.pois).filter((p) => p && g.kinds.includes(p.kind)).map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d)
         .filter((q, i, all) => !all.slice(0, i).some((o) => o.p.label === q.p.label && Math.hypot(o.p.x - q.p.x, o.p.y - q.p.y) < 640));
       el.innerHTML = `<h3>${g.title}</h3>` + (pois.length ? pois.map(({ p, d }, i) =>
-        `<button class="ph-row" data-poi="${p.id}"><span class="ic">${i === 0 ? '★' : '•'}</span><span class="nm">${esc(p.label)}<small>${esc(KIND_NOTE[p.kind] || '')} · ${esc(districtAt(map, p.x, p.y) || '')}</small></span><span class="d">${m(d)}</span></button>`).join('') : '<p class="ph-empty">None in the city yet.</p>');
+        `<button class="ph-row" data-poi="${p.id}"><span class="ic">${i === 0 ? '★' : '•'}</span><span class="nm">${esc(p.label)}<small>${esc(KIND_NOTE[p.kind] || '')} · ${esc((DISTRICTS[p.d] && DISTRICTS[p.d].name) || districtAt(map, p.x, p.y) || '')}</small></span><span class="d">${m(d)}</span></button>`).join('') : '<p class="ph-empty">None in the city yet.</p>');
     } else if (screen === 'feed') {
       const ago = (s) => (s < 60 ? `${s}s ago` : `${Math.round(s / 60)} min ago`);
       el.innerHTML = '<h3>City feed</h3><p class="ph-hint">What\'s going on anywhere in the city. Tap one to set a waypoint.</p>' + (!feed ? '<p class="ph-empty">Loading…</p>'
@@ -135,7 +136,7 @@ export function createPhone(ctx) {
     };
     for (const b of el.querySelectorAll('[data-act="court"]')) b.onclick = () => {
       const me = ctx.pos();
-      const ct = ctx.map().pois.filter((p) => p.kind === 'courthouse').sort((a, q) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(q.x - me.x, q.y - me.y))[0];
+      const ct = (ctx.map().places || ctx.map().pois).filter((p) => p && p.kind === 'courthouse').sort((a, q) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(q.x - me.x, q.y - me.y))[0];
       if (!ct) return;
       ctx.setWaypoint({ x: ct.x, y: ct.y, label: ct.label });
       ctx.toast(`Waypoint set: ${ct.label}`, 'info');
@@ -152,7 +153,7 @@ export function createPhone(ctx) {
       // the nearest cash machine (a bank counter does the same job)
       const me = ctx.pos();
       let best = null, bd = Infinity;
-      for (const p of ctx.map().pois) { if (!p || (p.kind !== 'atm' && p.kind !== 'bank')) continue; const d = Math.hypot(p.x - me.x, p.y - me.y); if (d < bd) { bd = d; best = p; } }
+      for (const p of ctx.map().places || ctx.map().pois) { if (!p || (p.kind !== 'atm' && p.kind !== 'bank')) continue; const d = Math.hypot(p.x - me.x, p.y - me.y); if (d < bd) { bd = d; best = p; } }
       if (!best) { ctx.toast('No ATM anywhere near.', 'warn'); return; }
       ctx.setWaypoint({ x: best.x, y: best.y, label: best.kind === 'atm' ? 'Nearest ATM' : best.label, atm: true });
       ctx.toast(`Nearest ATM: ${m(bd)} away - follow the green $`, 'good');
@@ -160,7 +161,7 @@ export function createPhone(ctx) {
     };
     for (const b of el.querySelectorAll('[data-group]')) b.onclick = () => { group = b.dataset.group; screen = 'group'; render(); };
     for (const b of el.querySelectorAll('[data-poi]')) b.onclick = () => {
-      const p = ctx.map().pois[Number(b.dataset.poi)];
+      const p = (ctx.map().places || ctx.map().pois)[Number(b.dataset.poi)];
       ctx.setWaypoint({ x: p.x, y: p.y, label: p.label });
       ctx.toast(`Waypoint set: ${p.label}`, 'info');
       ctx.close();

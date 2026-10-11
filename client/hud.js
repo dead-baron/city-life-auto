@@ -348,7 +348,7 @@ export class HUD {
     g.fillStyle = 'rgb(25,60,130)'; g.fillRect(0, 0, size, size);   // (past the map's edge: the open sea, the minimap's deep water)
     const mx = cx / TILE, my = cy / TILE, tr = range / TILE;
     g.imageSmoothingEnabled = false;
-    g.drawImage(this.mini, mx - tr, my - tr, tr * 2, tr * 2, 0, 0, size, size);
+    drawMini(g, this.mini, mx - tr, my - tr, tr * 2, tr * 2, 0, 0, size, size);
     const toR = (x, y) => [(x - cx) * scale + size / 2, (y - cy) * scale + size / 2];
     const me = this.me;
     // the route to your waypoint along the roads (client/route.js): the GPS line
@@ -522,7 +522,7 @@ const ICON_MERGE = 640;
 export function iconSkip(map) {
   if (map._iconSkip) return map._iconSkip;
   const skip = new Set(), kept = [];
-  for (const p of map.pois) {
+  for (const p of map.places || map.pois) {   // (World v3's window: the whole world's places, from the index)
     if (!p || p.kind === 'delivery' || p.kind === 'vending' || p.kind === 'reception' || p.kind === 'evidence') continue;   // (no icons)
     if (kept.some((q) => q.kind === p.kind && Math.hypot(q.x - p.x, q.y - p.y) < ICON_MERGE)) skip.add(p.id); else kept.push(p);
   }
@@ -530,11 +530,43 @@ export function iconSkip(map) {
   return skip;
 }
 
-// (the window's part of the world's picture, painted over the minimap's canvas: what was seen before stays)
+// World v3's window (a part of the world, docs/WORLD-V3.md 8.12): the minimap is the whole frame coarse - a pixel every
+// k tiles: the index's picture of the world (shared/regionpack.js), else the windows painted in as they come; 5 MB of
+// pixels at v3, not a frame-sized canvas's 81 - and the window's own picture over it, a pixel a tile (c.win: 9 MB).
+function coarseMinimap(c, map) {
+  const P = map.picture, k = (c.k = P ? P.k : 4);
+  c.width = Math.ceil(map.frame.w / k); c.height = Math.ceil(map.frame.h / k);
+  if (P && P.w === c.width && P.h === c.height) {
+    const g = c.getContext('2d'), img = g.createImageData(P.w, P.h), col = MINI_COL();
+    for (let i = 0; i < P.tiles.length; i++) { const c3 = col[P.tiles[i]] || [0, 0, 0]; img.data[i * 4] = c3[0]; img.data[i * 4 + 1] = c3[1]; img.data[i * 4 + 2] = c3[2]; img.data[i * 4 + 3] = 255; }
+    g.putImageData(img, 0, 0);
+  }
+  paintMinimap(c, map);
+  return c;
+}
+// (a new window: its part of the coarse picture when the index had none - what was seen before stays - and its own)
 function paintMinimap(c, map) {
   if (!c || !c.getContext) return;
-  const g = c.getContext('2d'), img = g.createImageData(map.w, map.h);
-  const col = MINI_COL();
+  const k = c.k || 1, g = c.getContext('2d'), col = MINI_COL();
+  if (!map.picture) {
+    const x0 = Math.ceil(map.x0 / k), y0 = Math.ceil(map.y0 / k), w = Math.floor((map.x0 + map.w) / k) - x0, h = Math.floor((map.y0 + map.h) / k) - y0;
+    if (w > 0 && h > 0) {
+      const img = g.createImageData(w, h);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const tx = Math.min(map.x0 + map.w - 1, (x0 + x) * k + (k >> 1)), ty = Math.min(map.y0 + map.h - 1, (y0 + y) * k + (k >> 1));
+        const c3 = col[map.tiles[map.idx(tx, ty)]] || [0, 0, 0], i = (y * w + x) * 4;
+        img.data[i] = c3[0]; img.data[i + 1] = c3[1]; img.data[i + 2] = c3[2]; img.data[i + 3] = 255;
+      }
+      g.putImageData(img, x0, y0);
+    }
+  }
+  g.save(); g.scale(1 / k, 1 / k); g.beginPath(); g.rect(map.x0, map.y0, map.w, map.h); g.clip();
+  miniLines(g, map);
+  g.restore();
+  const W = c.win && c.win.width === map.w && c.win.height === map.h ? c.win : document.createElement('canvas');
+  if (W !== c.win) { W.width = map.w; W.height = map.h; }
+  W.x0 = map.x0; W.y0 = map.y0;
+  const wg = W.getContext('2d'), img = wg.createImageData(map.w, map.h);
   for (let ty = map.y0; ty < map.y0 + map.h; ty++) {
     const row = map.row(ty), o = (ty - map.y0) * map.w;
     for (let tx = map.x0; tx < map.x0 + map.w; tx++) {
@@ -542,10 +574,18 @@ function paintMinimap(c, map) {
       img.data[i] = c3[0]; img.data[i + 1] = c3[1]; img.data[i + 2] = c3[2]; img.data[i + 3] = 255;
     }
   }
-  g.putImageData(img, map.x0, map.y0);
-  g.save(); g.beginPath(); g.rect(map.x0, map.y0, map.w, map.h); g.clip();
-  miniLines(g, map);
-  g.restore();
+  wg.putImageData(img, 0, 0);
+  wg.save(); wg.translate(-map.x0, -map.y0); miniLines(wg, map); wg.restore();
+  c.win = W;
+}
+// the minimap's part (sx, sy, sw, sh: in tiles) drawn into (dx, dy, dw, dh): today's world one canvas, a pixel a tile;
+// World v3's window the coarse picture with the window's own over it
+export function drawMini(g, c, sx, sy, sw, sh, dx, dy, dw, dh) {
+  const k = c.k || 1, W = c.win;
+  g.drawImage(c, sx / k, sy / k, sw / k, sh / k, dx, dy, dw, dh);
+  if (!W) return;
+  const x0 = Math.max(sx, W.x0), y0 = Math.max(sy, W.y0), x1 = Math.min(sx + sw, W.x0 + W.width), y1 = Math.min(sy + sh, W.y0 + W.height);
+  if (x1 > x0 && y1 > y0) g.drawImage(W, x0 - W.x0, y0 - W.y0, x1 - x0, y1 - y0, dx + (x0 - sx) * dw / sw, dy + (y0 - sy) * dh / sh, (x1 - x0) * dw / sw, (y1 - y0) * dh / sh);
 }
 const MINI_COL = () => ({
   [T.ROAD]: [70, 70, 78], [T.BRIDGE]: [90, 90, 98], [T.SIDEWALK]: [150, 150, 145], [T.PLAZA]: [140, 110, 95], [T.LOT]: [80, 80, 86],
@@ -554,6 +594,7 @@ const MINI_COL = () => ({
 });
 function buildMinimap(map) {
   const c = document.createElement('canvas');
+  if (map.w < map.frame.w || map.h < map.frame.h) return coarseMinimap(c, map);   // (World v3's window)
   c.width = map.frame.w; c.height = map.frame.h;   // (the world's picture, one pixel a tile: the map paints its part)
   const g = c.getContext('2d');
   const img = g.createImageData(c.width, c.height);

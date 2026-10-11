@@ -236,6 +236,7 @@ function onText(m) {
         if (!(m.build && String(m.build) === myBuild().v)) { if (S.updating) $('play').disabled = true; else outdatedBuild(m.sig); return; }
         if (!S.mismatchSaid) { S.mismatchSaid = true; console.warn('[map] this browser built a different city from the same build', mapSignature(S.map), 'vs', m.sig); send({ t: 'diag', what: `map signature ${mapSignature(S.map)} vs server ${m.sig} (${navigator.userAgent})` }); }
       }
+      if (m.sig && S.win && S.win.sig && m.sig !== S.win.sig && windowNotServers(m)) return;   // (World v3's window: the index's world signature; each region's is checked as it's assembled - client/worldwindow.js)
       S.ents.clear(); S.pred = null; S.pending = [];
       for (const p of S.map.props) if (p && p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
       S.confirmedBreaks.clear(); S.predBreaks.clear();
@@ -1008,8 +1009,9 @@ function setupWorld(seed, here = false) {
 // changed on the window's items (broken props, lit fires, open gates, smashed barriers) goes over to the new one.
 function keepWindow(job) {
   S.win = job.win;
+  console.info(`[world] the window ${job.win.keys.join(' ')}: ${job.win.kept || 0} files from this browser, ${job.win.fetched || 0} downloaded`);
   job.onWindow = (m) => {
-    if (m.windowError) { console.warn('[world] the next window:', m.windowError); return; }
+    if (m.windowError) { console.warn('[world] the next window:', m.windowError); if (S.hud && S.winErr !== m.windowError) { S.winErr = m.windowError; S.hud.toast('The world round you didn\'t load (trying again): ' + m.windowError, 'warn'); } return; }
     if (!S.map || !m.data || (m.data.seed >>> 0) !== S.map.seed) return;
     const t = performance.now();
     swapWorld(cityFromData(m.data));
@@ -1026,6 +1028,18 @@ function keepWindow(job) {
     try { job.worker.postMessage({ where: at }); } catch { /* gone */ }
     if (performance.now() - saved > 5000) { saved = performance.now(); try { localStorage.setItem('cla.at3', JSON.stringify(at)); } catch { /* blocked */ } }
   }, 300);
+}
+// the index the city worker read (kept in this browser or downloaded) is another world's than the server's: the kept
+// files go; a newer build reloads into it, the same build reloads once (then plays on and tells the server)
+function windowNotServers(m) {
+  console.warn('[world] the world\'s files are not the server\'s world:', S.win.sig, 'vs', m.sig);
+  const drop = import('./regionstore.js').then((r) => r.dropRegions()).catch(() => {});
+  if (!(m.build && String(m.build) === myBuild().v)) { if (S.updating) $('play').disabled = true; else outdatedBuild(m.sig); return true; }
+  let tried = null;
+  try { tried = sessionStorage.getItem('cla.reload3'); sessionStorage.setItem('cla.reload3', m.sig); } catch { /* blocked */ }
+  if (tried !== m.sig) { drop.then(() => location.reload()); return true; }
+  send({ t: 'diag', what: `world v3 index signature ${S.win.sig} vs server ${m.sig}` });
+  return false;
 }
 function swapWorld(m) {
   const old = S.map;
