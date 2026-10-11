@@ -81,7 +81,7 @@ export const MOVED = [
   { name: 'Willow River Orchard', anchor: [1100, 438], to: farmAt(1100, 438), r: 3, d: D3.VALLEY },
   { name: 'Willow River Vineyard', anchor: [1121, 369], to: farmAt(1121, 369), r: 3, d: D3.VALLEY },
   { name: 'Redwood Cove', anchor: [58, 283], to: [320, 1180], r: 3, d: D3.WOODS },
-  { name: 'Granite Cove', anchor: [555, 225], to: [2720, 443], r: 3, d: D3.VALLEY },   // (the peaks reach no sea: Kestrel Lake's north shore, the bay open south to the lake)
+  { name: 'Granite Cove', anchor: [555, 225], to: [2720, 448], r: 3, d: D3.VALLEY },   // (the peaks reach no sea: Kestrel Lake's north shore, the bay open south to the lake)
 ];
 // The tracks today's nature sites look for by name (H47), laid to their moved places from the nearest road they may
 // join: the Ridge Trail up to Summit Tarn from Summit Road (the fire lookout on its high stretch, the hunting camp by
@@ -100,7 +100,7 @@ export const WILD_TRACKS = [
   { name: 'Mission Track', end: [4000, 878], d: D3.DESERT },
   // (H51) the ways down to the coves: from the nearest road to the top of each (the cove's own trail on down)
   { name: 'Redwood Cove Track', end: [334, 1170], d: D3.WOODS },
-  { name: 'Granite Cove Track', end: [2722, 427], d: D3.VALLEY, reach: 420 },   // (from Kestrel Road: no road comes nearer the lake's north shore)
+  { name: 'Granite Cove Track', end: [2722, 432], d: D3.VALLEY, reach: 420 },   // (from Kestrel Road: no road comes nearer the lake's north shore)
 ];
 // today's wild districts -> the v3 region they move to (Highland Woods, Granite Peaks; Dry Creek's farmland the valley,
 // its desert the Red Rock Desert)

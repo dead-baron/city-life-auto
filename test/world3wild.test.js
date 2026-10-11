@@ -135,6 +135,9 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
   const trackNames = new Set(WILD_TRACKS.map((K) => K.name));
   const flagged = m.edges.filter((e) => e.notraffic), unflagged = m.edges.filter((e) => trackNames.has(e.name) && e.kind === 'dirt' && !e.notraffic);
   check(flagged.length >= WILD_TRACKS.length && flagged.every((e) => trackNames.has(e.name)) && unflagged.length === 0, `the tracks flagged notraffic (${flagged.length}; others: ${flagged.filter((e) => !trackNames.has(e.name)).map((e) => e.name)}; missed: ${unflagged.map((e) => e.name)})`);
+  // (H51) Granite Cove's bay open to Kestrel Lake (water all the way south from the beach), its water the lake's
+  const gc = named('Granite Cove')[0];
+  if (gc) { const cx = Math.floor(gc.x / TILE), cy = Math.floor(gc.y / TILE); let wet = 0, lake = 0; for (let ty = cy + 2; ty <= cy + 16; ty++) { if (!m.land[ty * W + cx]) wet++; if (m.lake[ty * W + cx]) lake++; } check(wet === 15 && lake === 15, `Granite Cove's bay open to the lake: ${wet} of 15 tiles south of the beach water, ${lake} the lake's`); }
   // (H51) Route 9's airstrip in the desert
   const strip = named('Route 9 Airstrip')[0];
   check(strip && m.dist[Math.floor(strip.y / TILE) * W + Math.floor(strip.x / TILE)] === 50, 'Route 9\'s airstrip in the desert');

@@ -3633,7 +3633,7 @@ canyon); the Old Granite Mine and the Granite Quarry once Granite Peaks' places 
 `places.js` take the first mine and the first pit: they'll want a list); dirt bike trails; the jeep tracks on the
 road network (they are ground, not roads: the traffic doesn't use them).
 
-### 8.19 Today's wild land's places in the v3 world: Highland Woods', Granite Peaks' and Dry Creek's (2026-10-11, H44, H47, in progress)
+### 8.19 Today's wild land's places in the v3 world: Highland Woods', Granite Peaks' and Dry Creek's (2026-10-11, H44, H47, H51)
 
 8.6 sends whatever of today's world no piece builds off the frame - today's Highland Woods (district 29), Granite Peaks
 (33) and Dry Creek (9, 41, 42) - but part 1.5 moves their designed places into the new regions, and the owner split Dry
@@ -3777,6 +3777,98 @@ each wants its anchor placed and its fields blended with 8.8's); **a cave of its
 cave world is one - `undergroundOf(m).cave`, the server's `L.cave` - and it wants a list: one cave region per mine,
 entered by its own mouth); the tracks are polylines on the road network as the sites' roads in (dirt): the traffic
 may take them, as it does the country sites' roads.
+
+**H51: the rest of it - Dry Creek's farmland, the coves, a cave per mine, the tracks kept from the traffic** (H47's
+"What's left"; 8.19 finished). Same module (`shared/world3-wild.js`); one new call from the generator: map.js
+buildFarm's one-line hook `WD.farm` (the world build's `world.farm`: `wildFarm3`). The live world doesn't change (the
+world hash stays 6b6e16fdef9f; the city worker 34 files, 351 KB of 360).
+
+- **Dry Creek's farmland in Willow Valley's east side** (`FARM`: today's farm moved whole by one offset, +2164, +220 -
+  its box 3194-3370, 570-920: open valley between the Long Reach's Willow Road and the strip of woods before the desert,
+  north of the main line):
+  - **its roads** (`wildFarmRoads3`, laid with the sites' roads in the lines hook): **the Farm Road** down the middle
+    (today's line, its head by the orchard), its south end joined to the nearest road it may meet (straight, over dry
+    land, across no highway, clear of the main line); **the County Road** across it; **the Winery Road** from the Farm
+    Road's head round the vineyard's east side to the road above the winery (today's vineyard looks for a road twelve
+    tiles above its winery);
+  - **its fields, the co-op and the farmhouses** (`wildFarm3`, map.js buildFarm's hook - the generator's own
+    `placePrefab`, `offTheRoad`, `estateHouse`... handed in): today's seven fields at the offset on the valley's open
+    ground - no field tile over a road (two tiles kept), the river, a lake, the main line's room or a town (their own
+    districts) - **the Dry Creek Farm Co-op** (the farm that takes harvests, its cargo pad), the drop site, and today's
+    **five farmhouses and cottages for sale** by the County Road (offTheRoad and a road ahead for the drive, as
+    today's). Built before the biomes' dressing and reserved, so **8.8's fields, farmsteads and trees keep off it**: the
+    valley's patchwork goes round the farm;
+  - **Willow River Orchard** and **Willow River Vineyard** (`MOVED`, at the farm's offset: `naturesites.js` takes their
+    anchors through `PXs` / `PYs` and their district through `DS`; the orchard's stand at the head of the Farm Road
+    piece nearest it - `headD`).
+- **Redwood Cove** on the Redwood Coast (`MOVED` to 320, 1180: the woods' own sandy beach - 400 tiles of it round the
+  spot - north of 8.20's three coves, Timber Road's coast end above it): today's cove whole (the tidepool shelf, the
+  golden stars, the rocky south end, the sea stacks and the seal rock, driftwood, the fire ring), its district through
+  `DS`; **the Redwood Cove Track** (`WILD_TRACKS`) from the Redwood Coast Road to the top of the beach and the cove's
+  trail on down (`trackEnd`: in the world build its trail starts at its track, not at Pine Ridge Campground, which is
+  far inland now).
+- **Granite Cove** on **Kestrel Lake's north shore** (`MOVED` to 2720, 448): the peaks reach no sea in the v3 world (the
+  probe: no Granite Peaks tile touches the sea; their only shores are Summit Tarn's and Silver Thread Creek's), and the
+  cove's bay opens south, so it went to the one long south-facing shore of the brief's choices - the lake's north shore
+  east of Lookout Hill. The bay bitten into the shore is the lake's water (`m.lake`), the granite cliffs round it, the
+  steps, the beach bar, the shower, the shade; **the Granite Cove Track** to the top of the steps from Kestrel Road (no
+  road comes nearer the north shore: a track may reach further than 160 tiles now, `WILD_TRACKS`' `reach`). (The owner may move
+  either cove: `MOVED`'s `to` and the track's `end`.)
+- **A cave per mine** (`shared/underground.js`): `L.caves`, one per mine with a cave (the map's mines in order; a mine
+  marked `cave: false` has none - the Old Granite Mine's mark is gone), each **its own region entered by its own mouth**
+  (`caveOf(L, x, y)`: the cave a spot belongs to - by region, else the nearest mouth; `caveNear`: the nearest mouth),
+  its own chambers, river, glow, roosts, rocks, den and boat, its veins named after it (`... (Copper Gulch Mine)`); the
+  first cave's seeds are today's, so **today's one cave comes out exactly as it was** (`L.cave` is the first).
+  `server/systems/underground.js`: in and out by the cave whose mouth you stand at, each cave's bats, rocks, den bear
+  and boat for whoever is in it (`world.caves[k]`; `world.cave` is the first's, as before); `server/dev.js`: the cave
+  mouths in the near list, `ug` with `k: 'cave'` into the nearest (or `cave: k`); the client's underground view draws
+  every cave's dressing; the page loads the veins' module near any pit or mine (main.js `nearVeins`).
+- **The tracks kept from the traffic**: every line `wildTracks3` lays is flagged `notraffic` (after the call, so H50's
+  re-laid paths keep it), `shared/roads.js` copies the flag onto the line's edges (only when set: today's edges are
+  unchanged), and the traffic (`server/systems/traffic.js`) neither spawns on such an edge nor turns into one while
+  there's another way on. Route 9's airstrip was already built (with the Route 9 stop, H44): in the desert at 3840, 1493.
+
+How the one cave was checked to play as before: a fingerprint of today's layout taken before the change (the cave's
+chambers, passages, river, mouth, glow, roosts, rocks, den, boat and spikes; its region's cells; the 29 veins; the
+sewers) is identical after it, and is pinned in `test/underground.test.js`; that file's cave tests (in by the adit, the
+bats, the den bear, the falling rocks, the boat) pass unchanged; `world.cave` is still the cave's state.
+
+Tests: `test/underground.test.js` (today's world: a list of one, the layout as it was, in and out by its mouth, its
+state), `test/roadends.test.js` (a road flagged `notraffic` is never taken at a junction while there's another way),
+`test/world3wild.test.js` (one world build, as before and: two caves - the Old Granite Mine's and Copper Gulch Mine's -
+apart, each with its veins and its mouth's way in; the tracks' edges flagged and only theirs; Route 9's airstrip; the
+farm's fields on the valley's ground and none over the river, a lake, a town or the main line's room, the co-op, the
+farmhouses, its three roads on the one network; the orchard, the vineyard and the two coves built once at their spots
+(`MOVED`); the cove tracks laid and on the network (`WILD_TRACKS`)), `test/world3desert.test.js` (Copper Gulch Mine's
+cave found in the list, its own veins).
+
+Pictures (`tools/world3-world-map.mjs --towns --only farm,redwoodcove,granitecove,drycreek`; `WILD_VIEWS`):
+`docs/world-v3-town-farm.png`, `-redwoodcove.png`, `-granitecove.png`, and `-drycreek.png` again. What looks right: the
+farm reads as a farm - the Farm Road down the middle, the County Road across it with the five farmhouses and the co-op
+along it (houses with their drives), seven fields in two crops either side of the Farm Road south of it, the Farm Road
+on south-west to Willow Road; the Winery Road curving round the vineyard's east side and over the winery: the winery on
+its gravel courtyard, the vine rows either side of the gravel track; the valley's own big fields go round all of it.
+Redwood Cove: the pale beach under the giants, the tidepool shelf (blue pools ringed with rocks) on the north half of
+the cove, the stacks and the seal rock offshore. Granite Cove: the granite cliffs round the beach and the bay at the
+top of the lake, the Granite Cove Track along the lake's north side to it. Dry Creek's desert as H47 left it (the
+tracks flagged for the traffic look the same). What looks wrong:
+- **The farm stands in an orchard:** 8.8's dressing fills the valley round it with orchard rows (fruit trees on every
+  side, right up to the fields and the houses), so Willow River Orchard (west of the Farm Road's head) is lost among the
+  biome's orchard trees; the farm wants open pasture and hedgerows round it (the biomes' orchards kept back from the
+  farm's box, as they are from the lake's shore).
+- **Redwood Cove isn't a cove:** the v3 coast there is a straight beach, and the cove's builder dresses the shore it
+  finds (today's stood on a bend) - a bay bitten into it as 8.20's coves are would make it one; the Redwood Cove Track
+  is hidden under the redwoods' canopy at 1/8.
+- **Granite Cove's bay was a pond** (the first bake: its bay stopped two tiles short of the lake's real shore, which
+  lies further south than the skeleton's polygon): moved five tiles south (2720, 448) and checked by the test (water
+  all the way from the beach into the lake, the lake's water). Its track is a 351-tile straight line across the
+  valley's fields from Kestrel Road - a lane along the shore would serve it better.
+- The co-op is a plain house (the house2 prefab, as today's); the small things (the fruit stand, the pools' life, the
+  driftwood) don't read at 1/8.
+
+**What's left** after 8.19: the farm's surroundings (the biomes' orchards kept off it) and the orchard made to read
+(its own trees in rows with gaps, the stand on the road); Redwood Cove's bay carved into the straight coast; a shore
+lane to Granite Cove; the moved sites' smaller gaps noted above (H44's and H47's lists).
 
 ### 8.20 The west coast: Egret Point, its light, the raceway and the marsh; Silver Thread Falls, North Cape Light, the coves (2026-10-11, H45)
 
