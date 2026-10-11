@@ -89,10 +89,14 @@ function blur(g, gw, gh, r, mask) {
   for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { if (mask && !mask[y * gw + x]) continue; let s = 0, n = 0; for (let k = -r; k <= r; k++) { const yy = y + k; if (yy < 0 || yy >= gh) continue; s += tmp[yy * gw + x]; n++; } g[y * gw + x] = s / n; }
 }
 
-// The height field (decimetres, one per tile) of the built map m on the land layers L, before the cliffs: what the
-// cliffs and m.relief are made from. Pure: the same map and land give the same field (the tests build it twice).
-export function reliefOf3(m, L) {
-  const W = m.w, H = m.h, C = RELIEF_CELL, gw = Math.ceil(W / C) + 1, gh = Math.ceil(H / C) + 1;
+// The coarse ground (steps 1 and 2 of reliefOf3, on the RELIEF_CELL grid): the biomes' levels and shapes, the hills and
+// headlands, the coast down to the sea - from the land layers alone, so the world build's lines hook can read it before
+// anything is built (H50: the wild tracks are laid along it, world3-wild.js). Kept per land (the same land, the same field).
+const COARSE = new WeakMap();
+function coarse3(W, H, L) {
+  const hit = COARSE.get(L);
+  if (hit && hit.W === W && hit.H === H) return hit;
+  const C = RELIEF_CELL, gw = Math.ceil(W / C) + 1, gh = Math.ceil(H / C) + 1;
   // 1. the coarse ground: the biomes', blurred; inland water a little lower (valleys); the sea -2
   const g = new Float32Array(gw * gh), g2 = new Float32Array(gw * gh), sea = new Uint8Array(gw * gh);
   for (let cy = 0; cy < gh; cy++) for (let cx = 0; cx < gw; cx++) {
@@ -121,6 +125,24 @@ export function reliefOf3(m, L) {
     }
     g[k] = 1 + (g[k] - 1) * cf + add;
   }
+  const out = { W, H, g, gw, gh };
+  COARSE.set(L, out);
+  return out;
+}
+// The land's height (metres) at tile (x, y) before anything is built (the coarse ground, bilinear): what the wild tracks
+// are laid along (H50).
+export function landHeight3(W, H, L) {
+  const { g, gw, gh } = coarse3(W, H, L), C = RELIEF_CELL;
+  return (x, y) => {
+    const fx = clamp(x / C, 0, gw - 1.001), fy = clamp(y / C, 0, gh - 1.001), ix = Math.floor(fx), iy = Math.floor(fy), u = fx - ix, v = fy - iy, k = iy * gw + ix;
+    return (g[k] * (1 - u) + g[k + 1] * u) * (1 - v) + (g[k + gw] * (1 - u) + g[k + gw + 1] * u) * v;
+  };
+}
+
+// The height field (decimetres, one per tile) of the built map m on the land layers L, before the cliffs: what the
+// cliffs and m.relief are made from. Pure: the same map and land give the same field (the tests build it twice).
+export function reliefOf3(m, L) {
+  const W = m.w, H = m.h, C = RELIEF_CELL, { g, gw } = coarse3(W, H, L);
   // 3. per tile: the coarse ground (bilinear), the peaks' crags, the beaches under the headlands
   const z = new Float32Array(W * H);
   const spotW = (tx, ty) => { let w = 0; for (const [, at, R, , coast] of HIGH_SPOTS) if (at && coast) w = Math.max(w, 1 - Math.sqrt((tx - at[0]) * (tx - at[0]) + (ty - at[1]) * (ty - at[1])) / (R * 1.15)); return w; };
@@ -143,25 +165,36 @@ export function reliefOf3(m, L) {
   // 4. the desert's mesas and buttes, the gorge, the falls' escarpments
   const tables = tablesOf3(m, L, z);
   for (const t of tables) table(z, W, H, t);
+  canyonCut(m, z, W);
   gorge(m, z, W, H);
   for (const f of fallsOf3(m)) escarpment(m, z, W, H, f);
   return { z, tables };
 }
 
 // the tables: a jittered grid over the desert (230 tiles), a mesa or a butte in most cells - where nothing is built
-// and no water lies under it - and the lookout's mesa (8.18) by Dusty Hollow
-function tablesOf3(m, L, z) {
-  const W = m.w, H = m.h, out = [{ ...LOOKOUT_MESA, x: LOOKOUT_MESA.at[0], y: LOOKOUT_MESA.at[1], mesa: true, s: 1, lookout: true }];
+// and no water lies under it - and the lookout's mesa (8.18) by Dusty Hollow. tableSpots3: every cell's table at its
+// full size, before what's built decides (H50: the wild tracks, laid before the tables, keep round these)
+export function tableSpots3(W, H) {
+  const out = [{ ...LOOKOUT_MESA, x: LOOKOUT_MESA.at[0], y: LOOKOUT_MESA.at[1], mesa: true, s: 1, lookout: true }];
   const P = BIOMES[BIO.desert - 1].poly, S = 230;
   let x0 = W, y0 = H, x1 = 0, y1 = 0;
   for (const [x, y] of P) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
-  const graded = (i) => GRADED(m, i);
   for (let gy = Math.floor(y0 / S); gy * S < y1; gy++) for (let gx = Math.floor(x0 / S); gx * S < x1; gx++) {
     const u = hash(gx, gy, 7201);
     if (u < 0.12) continue;
     const mesa = u > 0.5, cx = Math.round((gx + 0.22 + 0.56 * hash(gx, gy, 7202)) * S), cy = Math.round((gy + 0.22 + 0.56 * hash(gx, gy, 7203)) * S);
-    let rx = mesa ? 50 + 60 * hash(gx, gy, 7204) : 16 + 16 * hash(gx, gy, 7204), ry = mesa ? rx * (0.55 + 0.3 * hash(gx, gy, 7205)) : rx * (0.8 + 0.3 * hash(gx, gy, 7205));
+    const rx = mesa ? 50 + 60 * hash(gx, gy, 7204) : 16 + 16 * hash(gx, gy, 7204), ry = mesa ? rx * (0.55 + 0.3 * hash(gx, gy, 7205)) : rx * (0.8 + 0.3 * hash(gx, gy, 7205));
     const h = mesa ? 30 + 20 * hash(gx, gy, 7206) : 26 + 18 * hash(gx, gy, 7206);
+    out.push({ x: cx, y: cy, rx, ry, h, mesa, s: gx * 31 + gy });
+  }
+  return out;
+}
+function tablesOf3(m, L, z) {
+  const W = m.w, H = m.h, [look, ...spots] = tableSpots3(W, H), out = [look];
+  const graded = (i) => GRADED(m, i);
+  for (const sp of spots) {
+    const { x: cx, y: cy, mesa, s } = sp;
+    let { rx, ry } = sp;
     // (shrunk once, then given up, if it would cover anything built, reserved or wet - or leave the desert)
     for (let tries = 0; tries < 3; tries++, rx *= 0.72, ry *= 0.72) {
       let bad = 0, n = 0;
@@ -171,18 +204,22 @@ function tablesOf3(m, L, z) {
         const t = m.tiles[i];   // (a road may cross it - a cutting - but nothing built, kept or wet may stand on it)
         if (L.biome[i] !== BIO.desert || L.water[i] || (graded(i) && t !== T.ROAD && !(m.reserve[i] & 2)) || (m.reserve[i] & ~2) || t === T.WATER) bad++;
       }
-      if (bad <= n * 0.01 && !out.some((o) => Math.abs(o.x - cx) < o.rx + rx + 30 && Math.abs(o.y - cy) < o.ry + ry + 30)) { out.push({ x: cx, y: cy, rx: Math.round(rx), ry: Math.round(ry), h: Math.round(h), mesa, s: gx * 31 + gy }); break; }
+      if (bad <= n * 0.01 && !out.some((o) => Math.abs(o.x - cx) < o.rx + rx + 30 && Math.abs(o.y - cy) < o.ry + ry + 30)) { out.push({ x: cx, y: cy, rx: Math.round(rx), ry: Math.round(ry), h: Math.round(sp.h), mesa, s }); break; }
     }
   }
   return out;
 }
+// how far (tiles) outside a table's rim a tile lies (negative: on its top) - a ragged superellipse. The bake has a copy
+// (client/art2/game/groundbake.js tableEdge: the top's cap rock, the talus at the foot) - keep the two the same
+export function tableEdge(t, x, y) {
+  const ax = (x - t.x) / t.rx, ay = (y - t.y) / t.ry, a2 = ax * ax, b2 = ay * ay;
+  return (Math.sqrt(Math.sqrt(a2 * a2 + b2 * b2)) * (1 + 0.16 * (vn(x, y, 21, 7301 + t.s) - 0.5) + 0.06 * (vn(x, y, 7, 7302 + t.s) - 0.5)) - 1) * Math.min(t.rx, t.ry);
+}
 // a table: a flat top inside a ragged superellipse rim, a cliff 3 tiles wide down to its talus, the apron 11 more
 function table(z, W, H, t) {
-  const R = Math.min(t.rx, t.ry), pad = 16;
+  const pad = 16;
   for (let y = Math.max(0, Math.floor(t.y - t.ry - pad)); y <= Math.min(H - 1, t.y + t.ry + pad); y++) for (let x = Math.max(0, Math.floor(t.x - t.rx - pad)); x <= Math.min(W - 1, t.x + t.rx + pad); x++) {
-    const ax = (x - t.x) / t.rx, ay = (y - t.y) / t.ry, a2 = ax * ax, b2 = ay * ay;
-    const q = Math.sqrt(Math.sqrt(a2 * a2 + b2 * b2)) * (1 + 0.16 * (vn(x, y, 21, 7301 + t.s) - 0.5) + 0.06 * (vn(x, y, 7, 7302 + t.s) - 0.5));
-    const e = (q - 1) * R;
+    const e = tableEdge(t, x, y);
     let add;
     if (e <= 0) add = t.h + 2 * vn(x, y, 40, 7303 + t.s);
     else if (e <= 3) add = t.h * (1 - 0.7 * e / 3);
@@ -190,6 +227,20 @@ function table(z, W, H, t) {
     else continue;
     const i = y * W + x;
     if (z[i] > 0) z[i] += add;
+  }
+}
+// Red Rock Canyon (the scene painting's box, 8.19) cut into the plateau: its floor 7 m down, rising to its walls (the
+// painting's rock) and its box's edge over 7 tiles - the hillshade draws its sides (H50)
+function canyonCut(m, z, W) {
+  const pt = (m.paintings || []).find((p) => p.key === 'canyon');
+  if (!pt) return;
+  const x0 = Math.floor(pt.x / TILE), y0 = Math.floor(pt.y / TILE), x1 = x0 + Math.round(pt.w / TILE), y1 = y0 + Math.round(pt.h / TILE), R = 7;
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const i = y * W + x;
+    if (z[i] <= 0) continue;
+    let d = Math.min(x - x0, y - y0, x1 - 1 - x, y1 - 1 - y, R);
+    for (let dy = -R + 1; dy < R && d > 0; dy++) for (let dx = -R + 1; dx < R; dx++) if (m.tiles[(y + dy) * W + x + dx] === T.WALL) d = Math.min(d, Math.max(Math.abs(dx), Math.abs(dy)) - 1);
+    z[i] -= 7 * sstep(0, R, d);
   }
 }
 // the gorge under the Gorge Bridge: a floor 10 tiles either side of its line, walls up to the land 16-24 tiles out
@@ -248,6 +299,7 @@ const GRADED = (m, i) => { const t = m.tiles[i]; return t === T.ROAD || t === T.
 const WILD = new Set(['wild', 'rocky', 'desert', 'rural']);
 const CLIFFS = new WeakMap();   // (the map -> its cliff bands' mask, for the tests: not kept on the map)
 export const reliefCliffs = (m) => CLIFFS.get(m) || null;
+export { vn as reliefNoise };
 
 // The relief laid on the built map (World v3's dress hook, before the biomes' dressing - shared/world3-world.js):
 // the height field, the roads' grades, the cliff bands and their faces, m.relief. Returns its summary.
@@ -259,6 +311,11 @@ export function buildRelief3(m, L, addProp) {
   const gc = GRADE_CELL, cw = Math.ceil(W / gc) + 1, chh = Math.ceil(H / gc) + 1, S = new Float32Array(cw * chh), Cn = new Float32Array(cw * chh);
   const near = new Uint8Array(N).fill(255);
   for (let i = 0; i < N; i++) if (GRADED(m, i)) { const x = i % W, y = (i / W) | 0, k = ((y / gc) | 0) * cw + ((x / gc) | 0); S[k] += z[i]; Cn[k]++; near[i] = 0; }
+  // (H50: a dirt track's line too, wherever its ground is - no cliff band within GRADE_R of a track)
+  for (const e of m.edges || []) if (e.kind === 'dirt' && !e.lvl) for (let k = 1; k < e.pts.length; k++) {
+    const a = e.pts[k - 1], b = e.pts[k], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / TILE));
+    for (let j = 0; j <= n; j++) { const x = Math.floor((a.x + (b.x - a.x) * j / n) / TILE), y = Math.floor((a.y + (b.y - a.y) * j / n) / TILE); if (x >= 0 && y >= 0 && x < W && y < H) near[y * W + x] = 0; }
+  }
   blur(S, cw, chh, GRADE_AVG); blur(Cn, cw, chh, GRADE_AVG);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (!near[i]) continue; let d = near[i]; if (x) d = Math.min(d, near[i - 1] + 1); if (y) { d = Math.min(d, near[i - W] + 1); if (x) d = Math.min(d, near[i - W - 1] + 1); if (x < W - 1) d = Math.min(d, near[i - W + 1] + 1); } near[i] = d; }
   for (let y = H; y--;) for (let x = W; x--;) { const i = y * W + x; if (!near[i]) continue; let d = near[i]; if (x < W - 1) d = Math.min(d, near[i + 1] + 1); if (y < H - 1) { d = Math.min(d, near[i + W] + 1); if (x < W - 1) d = Math.min(d, near[i + W + 1] + 1); if (x) d = Math.min(d, near[i + W - 1] + 1); } near[i] = d; }
@@ -286,26 +343,52 @@ export function buildRelief3(m, L, addProp) {
     const h = z[i], s = Math.max(Math.abs(h - zat(x - 1, y)), Math.abs(h - zat(x + 1, y)), Math.abs(h - zat(x, y - 1)), Math.abs(h - zat(x, y + 1)));
     if (s >= CLIFF_SLOPE && (z[i - 1] > 0 && z[i + 1] > 0 && z[i - W] > 0 && z[i + W] > 0)) { cliff[i] = 1; cliffs++; }
   }
-  // (a lone tile or a pair is no band: dropped)
-  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) { const i = y * W + x; if (!cliff[i]) continue; let n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) n += cliff[i + dy * W + dx]; if (n < 3) { cliff[i] = 0; cliffs--; } }
+  // (a band less than two tiles thick is no band - a lone tile, a pair, a one-tile line where a slope steepens by a
+  // track: dropped; H50)
+  const thick = (i) => (cliff[i] && cliff[i + 1] && cliff[i + W] && cliff[i + W + 1]) ? 1 : 0;
+  const keepB = new Uint8Array(N);
+  for (let y = 1; y < H - 2; y++) for (let x = 1; x < W - 2; x++) { const i = y * W + x; if (thick(i)) keepB[i] = keepB[i + 1] = keepB[i + W] = keepB[i + W + 1] = 1; }
+  for (let i = 0; i < N; i++) if (cliff[i] && !keepB[i]) { cliff[i] = 0; cliffs--; }
   for (let i = 0; i < N; i++) if (cliff[i]) { m.tiles[i] = T.WALL; m.reserve[i] |= 32; }
   CLIFFS.set(m, cliff);
-  // the faces: each run (up to 8 tiles) of band whose south neighbour is lower open ground, its face on that edge
+  // the desert's tables (H50): red sandstone all round each rim - its band in blocks (a 6-tile grid), each block's face
+  // as tall as the table on the south, two thirds of it east and west, a low lip on the north (the face looks away)
   let faces = 0;
+  const own = new Uint8Array(N);
+  for (const t of tables) {
+    const B = 6, bx0 = Math.max(1, Math.floor(t.x - t.rx - 8)), by0 = Math.max(1, Math.floor(t.y - t.ry - 8)), bx1 = Math.min(W - 2, Math.ceil(t.x + t.rx + 8)), by1 = Math.min(H - 2, Math.ceil(t.y + t.ry + 8));
+    for (let gy = by0; gy <= by1; gy += B) for (let gx = bx0; gx <= bx1; gx += B) {
+      let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, n = 0, sx = 0, sy = 0;
+      for (let y = gy; y < Math.min(by1 + 1, gy + B); y++) for (let x = gx; x < Math.min(bx1 + 1, gx + B); x++) {
+        const i = y * W + x;
+        if (!cliff[i] || own[i] || tableEdge(t, x, y) > 4) continue;
+        own[i] = 1; n++; sx += x; sy += y; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+      }
+      if (n < 4) continue;
+      const nx = (sx / n - t.x) / t.rx, ny = (sy / n - t.y) / t.ry, nl = Math.sqrt(nx * nx + ny * ny) || 1, f = ny / nl;
+      const k = f > 0.45 ? 1 : f > -0.45 ? 0.65 : 0.3, h = Math.round(clamp((40 + t.h * 3) * k, 30, 160) / 10) * 10;
+      addProp(m, 'cliff', (x0 + x1 + 1) / 2 * TILE, (y1 + 1) * TILE, 0, { w: (x1 - x0 + 1) * TILE, d: (y1 - y0 + 1) * TILE, h, s: (gx * 7 + gy * 13) % 8 + 1, st: 'sandstone', relief: 1 });
+      faces++;
+    }
+  }
+  // the other bands' faces: each run (up to 8 tiles) of band whose south neighbour is lower open ground, its face on
+  // that edge
   for (let y = 1; y < H - 1; y++) {
     let run = 0, drop = 0, depth = 0;
     for (let x = 1; x < W; x++) {
-      const i = y * W + x, foot = x < W - 1 && cliff[i] && !cliff[i + W] && z[i - W] - z[i + W] > 3;
+      const i = y * W + x, foot = x < W - 1 && cliff[i] && !own[i] && !cliff[i + W] && z[i - W] - z[i + W] > 3;
       if (foot && run < 8) { run++; drop = Math.max(drop, z[i - W * Math.min(3, y)] - z[i + W]); let dd = 1; while (dd < 5 && y - dd > 0 && cliff[i - dd * W]) dd++; depth = Math.max(depth, dd); continue; }
       if (run >= 2) {
         const x0 = x - run, st = (DISTRICTS[m.dist[y * W + x0]] || {}).style, cx = (x0 + run / 2) * TILE, cy = (y + 1) * TILE, h = Math.round(clamp(40 + drop * 3, 50, 160) / 10) * 10;
-        if (st === 'desert' || st === 'rocky' || m.dist[y * W + x0] === 48) addProp(m, 'cliff', cx, cy, 0, { w: run * TILE, d: depth * TILE, h, s: (x0 * 7 + y) % 50 + 1, relief: 1 });
+        if (st === 'desert' || st === 'rocky' || m.dist[y * W + x0] === 48) addProp(m, 'cliff', cx, cy, 0, { w: run * TILE, d: depth * TILE, h, s: (x0 * 7 + y) % 50 + 1, relief: 1, ...(st === 'desert' && { st: 'sandstone' }) });
         else addProp(m, 'cliffwall', cx, cy - 0.4 * TILE, 0, { len: run * TILE, h, d: 64, s: x0 + y, relief: 1 });
         faces++;
       }
       run = foot ? 1 : 0; drop = foot ? z[i - W] - z[i + W] : 0; depth = foot ? 1 : 0;
     }
   }
+  // the tables, for the bake (its cap rock on each top, the talus at the foot) and the dressing (no small mesas on them)
+  m.tables = tables.map((t) => ({ x: t.x, y: t.y, rx: t.rx, ry: t.ry, s: t.s }));
   // m.relief: metres per tile, ordered-dithered
   const rel = new Uint8Array(N);
   let top = 0;

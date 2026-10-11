@@ -24,6 +24,9 @@ import { WILD_SITES, WILD_ROOM, MOVED, WILD_TRACKS, FARM } from '../shared/world
 import { T } from '../shared/constants.js';
 import { SITES } from '../shared/countryside.js';
 import { undergroundOf, caveOf, UG } from '../shared/underground.js';
+import { SNOW_CLS } from '../shared/world3-biomes.js';
+import { terrainAt } from '../shared/mapcore.js';
+import { tableEdge } from '../shared/world3-relief.js';
 import { prepare } from '../tools/world3-build.mjs';
 
 test('World v3: today\'s wild land\'s country sites at their v3 spots, each on its road', { timeout: 300000 }, () => {
@@ -174,5 +177,31 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
   check((m.tracks || []).some((t) => pt && Math.hypot(t.pts[0][0] / TILE - pt.x / TILE + 6, t.pts[0][1] / TILE - pt.y / TILE - 16) < 22), 'the oasis\'s track in from the Canyon Track');
   const wp = named('Splash Canyon Water Park')[0];
   check(wp && wp.slides && wp.slides.length > 0, 'the water park and its slides');
+  // (H50) the tracks laid along the land, not straight: each found its way (no straight fallback), most wander off the
+  // line from their start to their end; the Ridge Trail mostly off the snow, the fire lookout and the hunting camp off
+  // it (the hunting camp, which naturesites.js sets by the trail's middle at the snow line, not yet: WORLD-V3.md 8.22);
+  // no desert track over a table's top; the dry washes end short of the moved sites' boxes
+  const snowAt = (x, y) => m.dist[Math.floor(y) * W + Math.floor(x)] === 48 && terrainAt(m.terrainCls.cls, m.terrainCls.cw, Math.floor(x), Math.floor(y)) === SNOW_CLS;   // (the snow the game draws)
+  let wander = 0;
+  for (const K of WILD_TRACKS) {
+    const t = (Wd.tracks || []).find((q) => q.name === K.name);
+    check(t && !t.missed && !t.fallback, `${K.name} laid along the land (${JSON.stringify(t)})`);
+    const r = (m.roads || []).filter((q) => q.name === K.name).sort((a, b) => b.pts.length - a.pts.length)[0];
+    if (!r) continue;
+    const a = r.pts[0], b = r.pts[r.pts.length - 1], dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1;
+    let dev = 0; for (const p of r.pts) dev = Math.max(dev, Math.abs((p.x - a.x) * dy - (p.y - a.y) * dx) / l / TILE);
+    if (dev >= 3) wander++;
+    if (K.d === 50) for (const p of r.pts) if ((m.tables || []).some((tb) => tableEdge(tb, p.x / TILE, p.y / TILE) < -2)) { check(false, `${K.name} over a table's top at ${Math.round(p.x / TILE)}, ${Math.round(p.y / TILE)}`); break; }
+    if (K.name === 'Ridge Trail') { const sn = r.pts.filter((p) => snowAt(p.x / TILE, p.y / TILE)).length; check(sn <= r.pts.length * 0.5, `the Ridge Trail on the snow: ${sn} of ${r.pts.length} points`); }   // (its points a tile or two apart: by its length; Summit Road, where it starts, runs in the snowfield - 53 of 125 in the build of 07:45)
+  }
+  check(wander >= WILD_TRACKS.length - 2, `tracks wandering off the straight line: ${wander} of ${WILD_TRACKS.length}`);
+  const lk = (m.landmarks || []).find((l) => l.name === 'Ridge Fire Lookout');
+  check(lk && !snowAt((lk.x + lk.w / 2) / TILE, (lk.y + lk.h / 2) / TILE), 'the Ridge Fire Lookout off the snow');
+  for (const q of MOVED) if (q.keep) {
+    const a = q.to[0] + q.keep[0], b = q.to[1] + q.keep[1], c = q.to[0] + q.keep[2], d = q.to[1] + q.keep[3];
+    let wash = 0;
+    for (let y = b - 5; y < d + 5; y++) for (let x = a - 5; x < c + 5; x++) if (m.reserve[y * W + x] & 128 && m.dist[y * W + x] === 50) wash++;
+    check(wash === 0, `${q.name}: ${wash} tiles of a dry wash within 5 tiles of its box`);
+  }
   assert.deepEqual(bad, []);
 });
