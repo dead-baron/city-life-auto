@@ -3524,6 +3524,7 @@ function doorsTick(view, peds, dt) {
   S.doorAnim ??= {};
   for (const id of S.map.walkIns || []) {
     const b = S.map.buildings[id];
+    if (!b || !b.walkIn) continue;   // (World v3's window: a building it doesn't hold)
     const x0 = b.tx * TILE, y0 = b.ty * TILE, x1 = x0 + b.tw * TILE, y1 = y0 + b.th * TILE;
     if (x1 < view.x0 || x0 > view.x1 || y1 < view.y0 || y0 > view.y1) continue;
     for (let i = 0; i < b.walkIn.units.length; i++) {
@@ -3538,6 +3539,7 @@ function doorsTick(view, peds, dt) {
 function coverWalkIns(view) {
   for (const id of S.map.walkIns || []) {
     const b = S.map.buildings[id];
+    if (!b || !b.walkIn) continue;   // (World v3's window: a building it doesn't hold)
     const x0 = b.tx * TILE, y0 = b.ty * TILE, x1 = x0 + b.tw * TILE, y1 = y0 + b.th * TILE;
     if (x1 < view.x0 || x0 > view.x1 || y1 < view.y0 || y0 > view.y1) continue;
     for (let i = 0; i < b.walkIn.units.length; i++) drawShopDoor(g, b.walkIn.units[i], b.walkIn.south, S.doorAnim[id * 16 + i] || 0);
