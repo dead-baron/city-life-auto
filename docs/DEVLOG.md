@@ -8232,6 +8232,9 @@ Tests: test/flight.test.js (new: a helicopter spools, lifts off, hovers, flies w
 without power it crashes; a plane takes off from a runway and not from grass, banks, stalls; buildings by height and
 landing on a roof; the server's parked aircraft, a flight, the altitude on the wire, jumping out, a crash),
 test/gameplay.test.js, test/motorbikes.test.js, test/sound.test.js, test/inputword.test.js, test/gamepad.test.js,
-test/kbdrive.test.js, test/perf.test.js (the page's budget holds: the flight module is lazy), test/mapwindow.test.js,
-test/dmath.test.js - all pass.
+test/kbdrive.test.js, test/perf.test.js (the page 472 of 485 KB - was 470: main.js's hooks; the flight code itself loads
+lazily with render/aircraft.js; the renderer 356 of 363, unchanged), test/mapwindow.test.js, test/dmath.test.js,
+test/vehdamage.test.js, test/explosions.test.js, test/bikes.test.js, test/tow.test.js, test/world.test.js - all pass.
+Playtested headless (art v2): the helipads drawn, the parked helicopter and a plane at a hospital's yard, a helicopter
+flown up from 300 to 666 px with the camera pulling back from 0.86 to 0.47, a plane at 950 px banking.
 
