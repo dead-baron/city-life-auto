@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity, DISTRICTS } from '../shared/map.js';
 import '../shared/world3-islands.js';
-import { TILE } from '../shared/constants.js';
+import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { skeletonLines, nearestOnPath } from '../shared/world3-skeleton.js';
 import { TOWNS3, TOWN_SPECIALS } from '../shared/world3-towns.js';
@@ -39,20 +39,36 @@ test('World v3: the first mainland towns - districts, streets on the network, bu
 
   for (const t of TOWNS3) {
     // 1. its ground
-    let tiles = 0;
-    for (let i = 0; i < N; i++) if (m.dist[i] === t.d) tiles++;
-    check(tiles > 8000, `${t.name}: ${tiles} tiles of its district`);
-    // 2. its streets: each grid street laid, every one of its edges in the one network
-    const names = new Set([...t.ew, ...t.ns].map((q) => q[2]));
+    let tiles = 0, road = 0, built = 0;
+    for (let i = 0; i < N; i++) if (m.dist[i] === t.d) { tiles++; if (m.tiles[i] === T.ROAD) road++; if (m.bld[i] >= 0) built++; }
+    check(tiles > 3000, `${t.name}: ${tiles} tiles of its district`);
+    // 2. its streets (8.13.1): the side streets and lanes laid, every edge of them on the one network; few dead ends
+    const names = new Set(t.streets.map((q) => q[0]));
     const edges = m.edges.filter((e) => names.has(e.name) && e.lvl === 0 && distAt(e.pts[0].x, e.pts[0].y) === t.d);
-    check(edges.length >= 8, `${t.name}: ${edges.length} street edges`);
+    check(edges.length >= 5, `${t.name}: ${edges.length} street edges`);
     for (const nm of names) check(edges.some((e) => e.name === nm), `${t.name}: ${nm} laid`);
     for (const e of edges) check(comp[e.a] === main && comp[e.b] === main, `${t.name}: ${e.name} at ${Math.round(e.pts[0].x / TILE)}, ${Math.round(e.pts[0].y / TILE)} on the one network`);
-    const mainSt = t.ew.find((q) => q[1] === 'art')[2];
-    check(edges.some((e) => e.name === mainSt && e.kind === 'art'), `${t.name}: ${mainSt} an arterial`);
-    // 3. its buildings
+    const ends = new Set();
+    for (const e of edges) for (const n of [e.a, e.b]) if (m.nodes[n].edges.length === 1) ends.add(n);
+    check(ends.size <= 2, `${t.name}: ${ends.size} dead ends`);
+    // the main street: the arterial through the town, straight east-west on its row across the town's ground
+    const row = (t.main.y + 0.5) * TILE;
+    const mainEdges = m.edges.filter((e) => e.name === t.main.line && e.lvl === 0 && e.kind === 'art');
+    let onRow = 0, offRow = 0;
+    for (const e of mainEdges) for (const p of e.pts) {
+      if (distAt(p.x, p.y) !== t.d && !(p.x > (t.main.a + 4) * TILE && p.x < (t.main.b - 4) * TILE && Math.abs(p.y - row) < 40 * TILE)) continue;
+      if (p.x < (t.main.a + 4) * TILE || p.x > (t.main.b - 4) * TILE) continue;
+      if (Math.abs(p.y - row) <= 2) onRow++; else offRow++;
+    }
+    check(onRow >= 2 && offRow === 0, `${t.name}: ${t.main.line} straight through the town (${onRow} points on its row, ${offRow} off it)`);
+    // 3. its buildings: lots fronting the main street (a door within 8 tiles of its row), less asphalt than buildings
     const blds = m.buildings.filter((b) => b && m.dist[(b.ty + (b.th >> 1)) * W + b.tx + (b.tw >> 1)] === t.d);
-    check(blds.length >= 20, `${t.name}: ${blds.length} buildings`);
+    check(blds.length >= 16, `${t.name}: ${blds.length} buildings`);
+    // (a lot along the main street: the building's side toward it within 10 tiles of its row, inside the town's stretch of it)
+    const fronting = blds.filter((b) => b.tx + b.tw > t.main.a && b.tx < t.main.b && ((b.ty + b.th <= t.main.y && b.ty + b.th >= t.main.y - 10) || (b.ty > t.main.y && b.ty <= t.main.y + 10)));
+    check(fronting.length >= 5, `${t.name}: ${fronting.length} buildings fronting ${t.main.line}`);
+    check(road < built, `${t.name}: ${road} tiles of road, ${built} of buildings`);
+    console.log(t.name, JSON.stringify({ tiles, road, built, buildings: blds.length, fronting: fronting.length, ends: ends.size, edges: edges.length, onRow, offRow }));
     // 4. its basics and its own places
     const pois = m.pois.filter((p) => p && distAt(p.x, p.y) === t.d);
     const has = (kind, label) => pois.some((p) => p.kind === kind && (!label || p.label === label));
@@ -70,6 +86,17 @@ test('World v3: the first mainland towns - districts, streets on the network, bu
       for (const h of hwys) { const q = nearestOnPath(h.path, x, y); check(q.d >= 22, `${t.name}: ${b.name} at ${b.tx}, ${b.ty} ${q.d.toFixed(0)} tiles from the ${h.name}`); }
       for (const r of rails) { const q = nearestOnPath(r.path, x, y); check(q.d >= 14, `${t.name}: ${b.name} at ${b.tx}, ${b.ty} ${q.d.toFixed(0)} tiles from the main line (${r.name})`); }
     }
+  }
+  // the beach town's front (8.13.1): the boardwalk's planks along the top of its sand, the pier out over the sea
+  const front = m.world3.towns.front || [];
+  console.log('front', JSON.stringify(front));
+  for (const t of TOWNS3.filter((q) => q.front)) {
+    const f = front.find((q) => q.key === t.key) || {};
+    check(f.boardwalk >= 200, `${t.name}: ${f.boardwalk} tiles of boardwalk`);
+    check(f.pier >= 60, `${t.name}: ${f.pier} tiles of pier`);
+    let wet = 0;
+    for (let y = t.box[1]; y < m.h && y < t.box[3] + 120; y++) { const i = y * W + t.front.pier.x, tl = m.tiles[i]; if (tl === T.DOCK && prep.land.layers.water[i]) wet++; }
+    check(wet >= 10, `${t.name}: the pier ${wet} tiles over the water`);
   }
   // the bowling alley stays in the city (a town's big building isn't its plain warehouse)
   const bowl = m.pois.find((p) => p && p.kind === 'bowling');

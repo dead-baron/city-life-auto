@@ -42,6 +42,8 @@ const STYLE = {
   warehouse: { H: 44, floors: 1, walls: ['#6f7c74', '#7a7064', '#64707e', '#7e6a5a', '#77797a'] },
   shack: { H: 30, floors: 1, walls: ['#8a6a44', '#7a5c3a'] },
 };
+// (World v3's small towns, 8.13.1: wood siding - the logging town's timber, the farm town's boards, the beach towns' pastels)
+const TOWN_WALLS = { 57: ['#6e4a30', '#7a5436', '#8a6440'], 58: ['#e8e4d8', '#d8c8a0', '#c84a3a'], 59: ['#9ac8d0', '#e8d8b0', '#f0c8b0'], 54: ['#9ac8d0', '#e8d8b0', '#b8d8b8'] };
 const AWNINGS = ['#c8262b', '#2a6a3a', '#2350c8', '#e8b923', '#7a3ac8', '#1f7a7a', '#d0603a', '#3a3a44'];
 const NEON = ['#ff3ea5', '#3ef0ff', '#b46bff', '#ffd23e', '#4dff7a'];
 
@@ -201,7 +203,7 @@ function paintFacade(map, it) {
   const cv = document.createElement('canvas'); cv.width = w; cv.height = H;
   const gl = document.createElement('canvas'); gl.width = w; gl.height = H;
   const g = cv.getContext('2d'), q = gl.getContext('2d');
-  const wall = S.walls[it.seed % S.walls.length];
+  const ws = TOWN_WALLS[it.d.id] || S.walls, wall = ws[it.seed % ws.length];
   const rough = !!it.d.turf || it.d.style === 'southside';
   const lux = it.d.style === 'towers' || it.d.style === 'civic';
   const lit = (x, y, ww, hh, col, a = 0.85) => { q.globalAlpha = a; q.fillStyle = col; q.fillRect(x, y, ww, hh); q.globalAlpha = 1; };
