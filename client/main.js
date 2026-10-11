@@ -4480,9 +4480,9 @@ function drawSkull(x, y, z, now) {
 function drawJobTruck([x, y], view, now, z) {
   const ph = (now * 1.2) % 1, col = '#3cff8a', m = 64 + 30 / z, x0 = view.x0 + m, x1 = view.x1 - m, y0 = view.y0 + m, y1 = view.y1 - m;
   g.save(); g.strokeStyle = col; g.lineWidth = 3 / z;
-  g.globalAlpha = 1 - ph; g.beginPath(); g.arc(x, y, 48 + ph * 34, 0, 6.28); g.stroke();
-  g.globalAlpha = 0.9; g.beginPath(); g.arc(x, y, 48, 0, 6.28); g.stroke();
-  g.font = `bold ${12 / z}px monospace`; g.textAlign = 'center'; g.fillStyle = col; g.fillText('YOUR TRUCK', x, y - 56);
+  g.globalAlpha = 1 - ph; g.beginPath(); g.arc(x, y, 82 + ph * 36, 0, 6.28); g.stroke();   // (round a flatbed, 150 px long)
+  g.globalAlpha = 0.9; g.beginPath(); g.arc(x, y, 82, 0, 6.28); g.stroke();
+  g.font = `bold ${12 / z}px monospace`; g.textAlign = 'center'; g.fillStyle = col; g.fillText('YOUR TRUCK', x, y - 90);
   if (x < x0 || x > x1 || y < y0 || y > y1) {
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, dx = x - cx, dy = y - cy, k = Math.min((x1 - cx) / (Math.abs(dx) || 1e-6), (y1 - cy) / (Math.abs(dy) || 1e-6)), s = 18 / z;
     g.translate(cx + dx * k, cy + dy * k); g.rotate(Math.atan2(dy, dx)); g.globalAlpha = 0.8 + 0.2 * Math.sin(now * 6);

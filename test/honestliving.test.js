@@ -203,3 +203,17 @@ test('no world car is parked on a home\'s lot, driveway or in its garage (the ow
     assert.ok(!w.query(q.x, q.y, 30, K.VEH).some((v) => v.parked), `a parked car on a home's lot at ${Math.round(q.x)},${Math.round(q.y)}`);
   }
 });
+
+test('a job truck whose driver has left the game is let go: the company collects it', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const wh = w.map.pois.find((q) => q.kind === 'warehouse');
+  jobs.startCourier(w, p, wh, { dest: destFor(w, wh), pay: 300, limit: 900, tier: 1 });
+  const v = w.get(p.job.truck);
+  assert.ok(!v.despawnable);
+  players.leave(w, p);
+  for (let i = 0; i < 8 && w.players.has(p.pid); i++) run(w, 10);
+  assert.ok(!w.players.has(p.pid), 'gone');
+  run(w, 10);
+  assert.ok(v.despawnable || v.removed, 'no longer kept');
+});

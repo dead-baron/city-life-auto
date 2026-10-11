@@ -20,6 +20,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import * as vehicles from './vehicles.js';
 import * as combat from './combat.js';
 import * as law from './law.js';
+import * as safety from './safety.js';
 import * as cargo from './cargo.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 
@@ -1223,7 +1224,7 @@ export function interaction(world, p) {
   if (ped.onTrain) {
     const t = trainOf(world, ped), r = ped.onTrain;
     if (p.crack) return { label: `Cracking the strongbox... ${Math.ceil(p.crack.until - now)}s`, run: () => {} };
-    if (r.c === t.mail && now >= t.boxReadyAt && Math.hypot(r.ox - MAIL_BOX.ox, r.oy - MAIL_BOX.oy) < 40) return { label: 'Crack the strongbox', run: () => startCrack(world, p, t) };
+    if (r.c === t.mail && now >= t.boxReadyAt && Math.hypot(r.ox - MAIL_BOX.ox, r.oy - MAIL_BOX.oy) < 40) return { label: 'Crack the strongbox - Train robbery', crime: 'trainRobbery', run: () => startCrack(world, p, t) };
     const st = stationAt(world, t);
     if (st) return { label: st.under ? `Get off - up the stairs at ${st.name}` : `Get off at ${st.name}`, key: 'F', run: () => getOff(world, p) };
     return { label: 'Jump off the train', key: 'F', run: () => getOff(world, p) };
@@ -1316,7 +1317,7 @@ export function riderInput(world, p, ped, inp, pressed, dt) {
   const t = trainOf(world, ped);
   if (!t) { ped.onTrain = null; return; }
   if (pressed & IN.VEHICLE) { getOff(world, p); return; }
-  if (pressed & IN.ACTION) { const act = interaction(world, p); if (act) act.run(); if (!ped.onTrain) return; }
+  if (pressed & IN.ACTION) { const act = interaction(world, p); if (act && safety.confirm(world, p, act.crime, act.label)) act.run(); if (!ped.onTrain) return; }   // (a crime: Safety mode asks first - safety.js)
   const now = world.time;
   const canMove = now >= ped.downUntil && now >= ped.stunUntil && !p.crack;
   const m = Math.hypot(inp.mx, inp.my);

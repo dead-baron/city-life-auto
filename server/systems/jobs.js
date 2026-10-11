@@ -33,6 +33,8 @@ export function update(world) {
     if (online.length && active < 3) spawnDrop(world);
   }
   if (world.dropRumor && now > world.dropRumor.until) world.dropRumor = null;
+  // a job's truck whose driver left the game: the company collects it (tidied away like any parked car - workTruck)
+  if (world.tick % 200 === 57) for (const v of world.entities.values()) if (v.workTruck && !v.despawnable && !world.players.has(v.issuedTo)) v.despawnable = true;
   // jobs: expiry
   for (const p of world.players.values()) {
     if (p.job && now > p.job.expires) failJob(world, p, 'Contract expired.');
