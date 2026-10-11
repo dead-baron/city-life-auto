@@ -9,7 +9,7 @@
 //   plants     tree canopies up on their trunks, palms, bushes and boulders, each with a soft shadow
 // drawStandIn(g, M, cx, cy) draws into a 2D context (a canvas or OffscreenCanvas of STANDIN_PX square); the
 // engine scales it to the chunk (setChunkFallback). The index of what reaches each chunk is built once per map.
-import { CHUNK, DECK_Z } from './chunkbake.js';
+import { CHUNK, DECK_Z } from './chunkgeom.js';
 import { T, TILE } from '../../../shared/constants.js';
 import { DISTRICTS } from '../../../shared/mapcore.js';
 

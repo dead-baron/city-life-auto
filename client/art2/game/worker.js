@@ -138,6 +138,10 @@ async function fromCdn(cx, cy, q, ck, o = null) {
       if (CDN.miss.size > 2000) CDN.miss.clear();
       // being baked, and soon ready: ask again then (not a miss in a row - the server is keeping up)
       if (soon) { CDN.soon++; CDN.miss.set(mk, now + soon * 0.8); return { soon }; }
+      // queued on the server, later (eta: it's coming - this page asked for it): ask again about then, and not a miss in
+      // a row either - after a teleport the screen's asks all come back like this, and the 15 s pause they used to set
+      // kept the chunks the server then baked from ever being asked for again (docs/WORLD-V3.md 8.12.1)
+      if (eta > 0) { CDN.queued = (CDN.queued || 0) + 1; CDN.miss.set(mk, now + Math.min(30000, Math.max(1000, eta * 0.9))); return null; }
       CDN.miss.set(mk, now + (o && o.pre ? 12000 : 30000));
       if (!(o && o.pre) && ++CDN.missRun >= 6) { CDN.missRun = 0; CDN.pauseUntil = now + 15000; }
       return null;
@@ -215,6 +219,17 @@ function takeWorld(m, mapMod) {
   try { if (mapMod && mapMod.cityFromData) mapMod.cityFromData(M); else if (mapMod) Object.setPrototypeOf(M, mapMod.CityMap.prototype); } catch (e) { P.errors.map = String((e && e.message) || e); }
 }
 
+// World v3's window (host.js setMap, docs/WORLD-V3.md 8.12): a chunk, with a chunk round it, not wholly inside the
+// window this worker has is baked against the window's walls - shown for now (until the page's window comes round it and
+// it's baked again), never kept in the store, where it would stand for the real art. The world's frame is the same
+// open sea in every window: past it doesn't count. Today's world is never windowed (8.12.1).
+function inWindow(cx, cy) {
+  const F = M && M.frame;
+  if (!F || M.x0 === undefined || (M.x0 <= 0 && M.y0 <= 0 && M.x0 + M.w >= F.w && M.y0 + M.h >= F.h)) return true;
+  const n = 768 / 32, x0 = Math.max(0, (cx - 1) * n), y0 = Math.max(0, (cy - 1) * n), x1 = Math.min(F.w, (cx + 2) * n), y1 = Math.min(F.h, (cy + 2) * n);
+  return x0 >= M.x0 && y0 >= M.y0 && x1 <= M.x0 + M.w && y1 <= M.y0 + M.h;
+}
+
 async function handle(msg) {
   const { id, op, args } = msg;
   const t0 = performance.now();
@@ -279,6 +294,7 @@ async function handle(msg) {
       if (dl && dl.soon) { self.postMessage({ id, ok: true, result: { kept: false, soon: true }, ms: performance.now() - t0 }); return; }   // (the server has it in a moment: no bake here)
       if (dl) { stats.prebaked = (stats.prebaked || 0) + 1; self.postMessage({ id, ok: true, result: { kept: true, cdn: true }, ms: performance.now() - t0 }); return; }
     }
+    if (!inWindow(cx, cy)) { self.postMessage({ id, ok: true, result: { kept: false }, ms: performance.now() - t0 }); return; }   // (World v3: past the window's walls - the server's or a bake once the window is here)
     const it = bakeSteps(M, cx, cy, { ...(opt || {}), artPx: ART, scratch: ART > 1 }, statCache, chunkProviders);
     let step = it.next();
     while (!step.done) { await pause(); step = it.next(); }
@@ -336,6 +352,7 @@ async function handle(msg) {
       }
     }
     const tb = performance.now();
+    const M0 = M;   // (the world it's baked against: a window may move meanwhile)
     const it = bakeSteps(M, cx, cy, { ...(opt || {}), artPx: ART, scratch: ART > 1 }, statCache, chunkProviders);
     let step = it.next();
     while (!step.done) { await pause(); step = it.next(); }
@@ -347,7 +364,8 @@ async function handle(msg) {
     stats.chunks++; stats.chunkMs += performance.now() - t0; stats.bakeOnlyMs = (stats.bakeOnlyMs || 0) + performance.now() - tb;
     const result = { cx, cy, g, under, blds: r.blds || [], lights: r.lights, gh: r.gh, live: r.live, n: r.n, items: r.items, made: r.made, bake: r.ms, errors: r.errors };
     // (kept for next time: copied before the arrays go, compressed and stored after - one at a time)
-    const keep = ck && !r.errors && dirtySig(cx, cy) === d0 ? packChunk(result) : null;   // (unless something changed there meanwhile)
+    // (unless something changed there meanwhile, or it was baked against a window's walls: inWindow)
+    const keep = ck && !r.errors && dirtySig(cx, cy) === d0 && M === M0 && inWindow(cx, cy) ? packChunk(result) : null;
     self.postMessage({ id, ok: true, result, ms: performance.now() - t0 }, transfer);
     if (keep) KEEP.q = KEEP.q.then(() => putChunk(ck, keep)).then(() => { if (KEEP.tidy && ++KEEP.n % 12 === 0) return tidy(KEEP.art, KEEP.cap); return null; }).catch(() => {});
     return;
@@ -366,7 +384,7 @@ async function handle(msg) {
   }
   if (op === 'stats') {
     const c = (k) => (k ? { bytes: k.bytes, n: k.m.size, max: k.max, hits: k.hits, misses: k.misses } : null);
-    self.postMessage({ id, ok: true, result: { ...stats, cdn: { n: CDN.n, ms: Math.round(CDN.ms), misses: CDN.misses, fails: CDN.fails, off: CDN.off, on: !!CDN.base, err: CDN.err || '', soon: CDN.soon, waited: CDN.waited, fetched: CDN.fetched, stale: CDN.stale, slow: CDN.slow, paused: performance.now() < CDN.pauseUntil }, statBytes: statCache ? statCache.bytes : 0, statN: statCache ? statCache.m.size : 0, sprBytes: sprCache ? sprCache.bytes : 0, sprN: sprCache ? sprCache.m.size : 0, stat: c(statCache), spr: c(sprCache) }, ms: 0 });
+    self.postMessage({ id, ok: true, result: { ...stats, cdn: { n: CDN.n, ms: Math.round(CDN.ms), misses: CDN.misses, fails: CDN.fails, off: CDN.off, on: !!CDN.base, err: CDN.err || '', soon: CDN.soon, waited: CDN.waited, fetched: CDN.fetched, stale: CDN.stale, slow: CDN.slow, paused: performance.now() < CDN.pauseUntil, queued: CDN.queued || 0 }, statBytes: statCache ? statCache.bytes : 0, statN: statCache ? statCache.m.size : 0, sprBytes: sprCache ? sprCache.bytes : 0, sprN: sprCache ? sprCache.m.size : 0, stat: c(statCache), spr: c(sprCache) }, ms: 0 });
     return;
   }
   throw new Error(`unknown op ${op}`);

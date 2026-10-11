@@ -7442,3 +7442,47 @@ v3 world: a window round a hospital, a move east, the frame's corner), a headles
 (`CLA_WORLD=v3`, `?world=v3`: joining, crossing a border, a far teleport), test/regions.test.js, test/mapwindow.test.js, test/bowling.test.js, test/cinema.test.js,
 test/hudlayers.test.js (all pass); the code budgets (node tools/perf.mjs codeReport: page 463 of 485 KB, city 348 of
 360, renderer 362 of 363, bake 738 of 765).
+
+## 2026-10-10 · The art after a far teleport; room in the renderer's code
+
+What the last waves found (docs/WORLD-V3.md 8.9's open item 4, 8.12's item 8): "after a far teleport the art v2 view
+shows the sea's stand-in for a long time - 40 s and more in the headless page - although the server's art CDN has the
+chunks baked and the minimap shows land"; and the renderer's code at 363 of its 363 KB. What was wrong, and fixed
+(docs/WORLD-V3.md 8.12.1 has the detail):
+- **The server baked each look back to front** (`server/artcdn.js`): a page asks nearest first, the server took asks
+  newest first - the chunk under the player came last. Now the latest look (asks within 2 s of the newest) goes first,
+  in the order it asked (`askNext`; `askAhead` for the 404's eta).
+- **A run of misses paused the page's asking for 15 s, each missed chunk for 30 s** (`client/art2/game/worker.js`
+  `fromCdn`): after a teleport every chunk on screen is queued on the server at first, so the asking stopped and the
+  page baked everything itself. A 404 with an eta (queued: it's coming) is asked for again about then and doesn't count.
+- **The page looked for a chunk in its store and on the server once** (`host.js` `_chunks`): now again every 2.5 s
+  while the view needs it; and **just after a jump** (teleport, respawn) up to 4 chunks are uploaded a frame, not 1-2.
+- **World v3's window swap** dropped the bakes asked for against the old window (they came back with its walls and sea
+  and were drawn) and redraws the stand-ins made from it; the bake worker never keeps a chunk baked against a window's
+  walls (`inWindow`) - it could have gone into the browser's store as the real art.
+- `__S.art2.stats().jump`: for the last jump, when every chunk on screen was in the page and when all were drawn.
+- **The renderer's room:** `client/art2/game/chunkgeom.js` (new: the chunk's geometry and `groundZ`) - the page's thread
+  no longer loads the bake code (chunkbake.js runs in the workers); `client/art2/game/hostextra.js` (new, loaded when
+  needed): the window swap's work, the debug line, the 2D stand-in engine. **The renderer 363 -> 356 of 363 KB**;
+  nothing drawn changes. The page (464 of 485) unchanged - no easy win (the dev menu's sections are built synchronously).
+  The art's hash changes once (chunkgeom.js joins the art's code): the CDN and kept chunks are baked afresh after the
+  deploy. Today's world is unchanged (world 6b6e16fdef9f).
+
+Files: server/artcdn.js, client/art2/game/worker.js, client/art2/game/host.js, client/art2/game/hostextra.js (new),
+client/art2/game/chunkgeom.js (new), client/art2/game/chunkbake.js, client/art2/game/standin.js, test/art2teleport.test.js
+(new), test/artcdn.test.js, docs/WORLD-V3.md 8.12.1.
+
+Measured (today's world, headless Chromium 1280 x 720, one bake worker, two cores shared with other jobs; the dev
+teleport sent -> every chunk on screen drawn; the woods, the farms, downtown, the woods again): a fresh server (cold
+CDN) 30.2 / 23.8 / 34.2 / 7.6 s before, 24.9 / 23.6 / 25.7 / 8.4 s after the asking fixes; with the chunks baked on the
+server 21.0 / 15.7 / 17.3 / 7.4 s before, WARMAFTER s after all of it - JUMPLINE. In the headless page the rest is its
+frames (one every 1-2 s: the camera follows the teleport several seconds after it's sent).
+
+Tests: test/art2teleport.test.js (the order after a teleport: the chunk under the camera first, the looks before the
+bakes, nearest first; a chunk the server didn't have is looked for again; the window swap - hostextra.js loaded then,
+what was baked or asked for against the old window baked again, its stand-ins dropped; the renderer's first load
+without chunkbake.js and hostextra.js), test/artcdn.test.js (the asks' order and etas), test/art2.test.js,
+test/worldframe.test.js, test/daylight.test.js, test/redwood-fade.test.js, test/bladecolor.test.js,
+test/firebow.test.js, test/signals.test.js, test/perf.test.js's code budgets, generator and version tests (all pass);
+four headless playtests of today's world with teleports (0 errors). Code budgets: page 464 of 485 KB, city 353 of
+360, renderer 356 of 363, bake 740 of 765.

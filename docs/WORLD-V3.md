@@ -2698,3 +2698,76 @@ its items only - and the moves across a border and to the corner).
    (not yet seen in a playtest). To look at in a real browser.
 6. **The minimap is a frame-sized canvas** (5040 x 4032, 81 MB of pixels): wants a coarser picture at v3 (8.2's note).
 7. **Regions aren't kept in the browser** (IndexedDB): each visit downloads the window (about 2 MB).
+
+### 8.12.1 The art after a far teleport, and the renderer's room (2026-10-10, H36)
+
+8.9's open item 4 and 8.12's item 8: after a far teleport (and in the v3 world after the window moved) art v2 showed
+stand-ins - the sea's - for 40 s and more in the headless page, though the server's art CDN had the chunks baked and the
+minimap showed land. And the renderer's code was at its budget (363 of 363 KB).
+
+**What was wrong** (the paths a teleport takes, read through and measured in today's world)
+1. **The server baked each look back to front.** A page asks for what its screen needs nearest first, a few at a time
+   as the answers come back; the server took its asks newest first - so of one look the farthest chunk was baked first
+   and the one the player stands in last. Now (`server/artcdn.js` `askNext`, `askAhead`): the latest look first (the
+   asks within 2 s of the newest), in the order it asked; then the look before it. The 404's eta follows the same order.
+2. **A run of misses paused the page's asking for 15 s, and each missed chunk for 30 s** (`worker.js` `fromCdn`). After
+   a teleport every chunk on screen is a miss at first - the server queues it, and its 404 says when it should be ready
+   (the eta) - so six of them paused the asking, and the chunks the server then baked were never asked for again: the
+   page baked them itself, one at a time on its one worker. Now a 404 with an eta isn't a miss in a row: that chunk is
+   asked for again about when the eta says (1-30 s). Only misses without one (the server won't bake it) pause the asking.
+3. **The page looked in the store and on the server once per chunk** (`host.js` `_chunks`): a chunk the server didn't
+   have at the first look waited for a bake here. Now a chunk the view still needs is looked for again every 2.5 s (a
+   look in the browser's store, and past its back-off one request).
+4. **One chunk uploaded a frame** (two on High and Ultra): in a slow page - the headless one draws a frame every 1-2 s -
+   that was most of the wait once the chunks were in. Just after a jump (a teleport, a respawn) the screen is all
+   stand-ins: up to 4 a frame now, until it's drawn.
+5. **World v3's window swap** (`setMap`; its work now in `hostextra.js` `reworld`): it baked again only the chunks
+   already drawn outside the old window; the bakes asked for once the camera had jumped - against the old window, its
+   walls and sea - came back and were drawn; and the stand-ins drawn from the old window (the sea's where it had no
+   land) stayed up until a bake landed. Now those bakes are dropped and asked for again, and the stand-ins drawn again
+   from the new window. And the bake worker keeps nothing it baked against a window's walls (`worker.js` `inWindow`: a
+   chunk, with a chunk round it, not wholly inside the window - the world's frame aside); before, such a chunk could go
+   into the browser's store and stand for the real art on the next visit. (Never so in today's world: not windowed.)
+6. **The headless page itself:** one bake worker (two cores), a frame every 1-2 s, the server's bake thread and other
+   jobs on the same two cores - the rest of the time below. `__S.art2.stats().jump` says, for the last jump, when every
+   chunk on screen was in the page (`landed`), when all were drawn (`drawn`) and in how many frames.
+
+**The numbers** (today's world, headless Chromium 1280 x 720, Medium, one bake worker; from the dev teleport sent to
+every chunk on screen drawn - the woods (6500, 6500), the farms (25000, 31100), downtown (26500, 16500), the woods again)
+
+| | woods | farms | downtown | woods again |
+|---|---|---|---|---|
+| A fresh server (its CDN cold), before | 30.2 s | 23.8 s | 34.2 s | 7.6 s |
+| A fresh server, after (1-3, 5) | 24.9 s | 23.6 s | 25.7 s | 8.4 s |
+| The CDN warm (the chunks baked on the server), before | 21.0 s | 15.7 s | 17.3 s | 7.4 s |
+| The CDN warm, after (1-3, 5) | 19.3 s | 16.4 s | 18.1 s | 10.0 s |
+| The CDN warm, after (all) | WARM2 |
+
+In the headless page most of what's left is frames: the camera follows the teleport a few seconds after it's sent, and
+then every chunk on screen was in the page after LANDED (`stats().jump`), drawn in the same frame. On a cold server the
+screen's 7 chunks are baked between the server's bake thread and the page's one worker on two shared cores.
+
+**The renderer's room** (tools/perf.mjs: KB as sent, gzipped)
+- `client/art2/game/chunkgeom.js` (new): the chunk's geometry (`CHUNK`, `DECK_Z`, the ground-height grid) and `groundZ`;
+  host.js and standin.js read them there, chunkbake.js re-exports them - **the page's thread no longer loads the bake
+  code** (chunkbake.js, 6.9 KB: it runs in the workers).
+- `client/art2/game/hostextra.js` (new, loaded the first time it's needed): the window swap (`reworld`), the debug
+  overlay's line (`diag`: '...' until it's in), the 2D stand-in engine (`?art2stub`).
+- **The renderer 362.5 -> 356.0 KB** of its 363 (26 files); nothing drawn changes. The page's code is unchanged (464 of
+  485 KB): its one easy-looking win, the dev menu's sections (`client/devcats.js`, 5 KB), is built synchronously by
+  main.js - left. The art's hash changes once (chunkgeom.js joins the art's code, moved, not changed): the server's CDN
+  and the browsers' kept chunks are baked afresh after the deploy.
+
+**Tests:** `test/art2teleport.test.js` (new: after a teleport the chunk under the camera is asked for first, every look
+in the store and the server before any bake, nearest first; a chunk the server didn't have is looked for again, and
+not when there's no server art; the window swap loads hostextra.js then and bakes again what was baked or asked for
+against the old window, drops its stand-ins, gives the workers the new window; the renderer's first load leaves out
+chunkbake.js and hostextra.js), `test/artcdn.test.js` (the asks' order: the latest look first, each in the order it
+asked; the etas).
+
+**What's left**
+- The v3 world wasn't playtested after these changes (the machine's heavy-job lock was taken by the v3 builds): the
+  window swap is covered by the unit test; a far teleport in `CLA_WORLD=v3` with `stats().jump` is the check.
+- On a fresh server the page and the server may bake the same chunk at once (the page bakes when the server's eta is
+  over 6 s): on two cores they share the CPU. A real desktop (three bake workers, 60 frames a second) and the live
+  server (warm) should take a second or two: to measure there with `__S.art2.stats().jump`.

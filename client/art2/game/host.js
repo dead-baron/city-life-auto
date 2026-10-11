@@ -28,7 +28,7 @@
 //   const w = await World2.create({ S, map, canvas, gfx, lowMem, api, onFail })   null: no WebGL2
 //   w.ready, w.resize(W, H, dpr), w.frame(F), w.propChanged(i), w.resync(), w.diag(), w.stats(), w.dispose()
 // api: helpers lent by main.js (pedLook, vehLift, birds, umbrella colours, seats, scales).
-import { CHUNK, DECK_Z, groundZ } from './chunkbake.js';
+import { CHUNK, DECK_Z, groundZ } from './chunkgeom.js';   // (not the bake itself: that runs in the workers)
 import { WorkerPool, takeWarmPool, isPhone } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
@@ -68,6 +68,8 @@ const TIERS = [
 ];
 const LOWMEM_CHUNKS = 10;
 const MARGIN = 420;        // world px baked round the view (shadows fall in from beyond its edge)
+const PEEK_AGAIN_MS = 2500; // a chunk the view needs that the server didn't have yet: looked for again this often (_chunks)
+const JUMP_UP = 4;          // chunks uploaded a frame just after a jump, until the screen is drawn (_chunks)
 const TOWN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown', 'arts']);
 const BAG_TINT = [0.86, 0.92, 1.0];  // a plastic bag: a paper sheet tinted cool
 const CHAR_TINT = [0.32, 0.27, 0.25]; // a fire arrow burnt out (a deflected one dropped: _arrowDrop)
@@ -285,43 +287,8 @@ const SIG_RGB = [[255, 59, 59], [255, 194, 61], [61, 220, 132]], SIG_RGB01 = SIG
 const XARM_Z = 20, XPOST_H = 24;           // level crossing barrier: pivot height, post height
 const XING0 = { d: 0, b: [0, 0] };
 
-// ---- a 2D stand-in for the engine (?art2stub): the same API, painter's order, no lighting ---------------
-class StubEngine {
-  constructor(canvas) { this.cv = canvas; this.g = canvas.getContext('2d'); this.chunks = new Map(); this.fb = new Map(); this.spr = new Map(); this.list = []; this.n = 0; }
-  // (a G-buffer, or the packed planes the workers send - p0 is the albedo - at G.ap world px per texel)
-  static toCanvas(G) { const c = document.createElement('canvas'); c.width = G.w; c.height = G.h; const src = G.col || G.p0, id = new ImageData(new Uint8ClampedArray(src.buffer, src.byteOffset, G.w * G.h * 4).slice(), G.w, G.h); c.getContext('2d').putImageData(id, 0, 0); c.ap = G.ap || 1; return c; }
-  setQuality() {} onContextLost() {} dispose() { this.chunks.clear(); this.spr.clear(); }
-  resize(w, h, dpr) { this.W = w; this.H = h; this.dpr = dpr; this.cv.width = Math.round(w * dpr); this.cv.height = Math.round(h * dpr); }
-  hasChunk(cx, cy) { return this.chunks.has(cy * 1000 + cx); }
-  uploadChunk(cx, cy, G) { this.chunks.set(cy * 1000 + cx, StubEngine.toCanvas(G)); }
-  setChunkFallback(cx, cy, cv) { this.fb.set(cy * 1000 + cx, cv); }
-  dropChunk(cx, cy) { this.chunks.delete(cy * 1000 + cx); this.fb.delete(cy * 1000 + cx); }
-  chunkKeys() { return [...new Set([...this.chunks.keys(), ...this.fb.keys()])].map((k) => [k % 1000, Math.floor(k / 1000)]); }
-  hasSprite(k) { return this.spr.has(k); }
-  uploadSprite(k, G) { const c = StubEngine.toCanvas(G); c.ax = G.ax; c.ay = G.ay; this.spr.set(k, c); }
-  uploadSpriteFromCanvas(k, cv, ax, ay) { cv.ax = ax; cv.ay = ay; this.spr.set(k, cv); }
-  beginFrame(o) { this.f = o; this.list.length = 0; this.n = 0; }
-  drawSprite(key, x, y, z0 = 0, o = {}) { this.list.push({ key, x, y, z0, a: o.alpha ?? 1 }); }
-  drawDecal(key, x, y, ang, alpha) { this.list.push({ key, x, y, z0: -1, a: alpha, ang }); }
-  addLight() { this.n++; }
-  endFrame() {
-    const { g, f } = this, z = f.zoom * this.dpr;
-    g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#10141c'; g.fillRect(0, 0, this.cv.width, this.cv.height);
-    g.setTransform(z, 0, 0, z, Math.round(this.cv.width / 2 - f.camX * z), Math.round(this.cv.height / 2 - f.camY * z));
-    g.imageSmoothingEnabled = false;
-    for (const [k, c] of this.fb) if (!this.chunks.has(k)) g.drawImage(c, (k % 1000) * CHUNK, Math.floor(k / 1000) * CHUNK, CHUNK, CHUNK);
-    for (const [k, c] of this.chunks) g.drawImage(c, (k % 1000) * CHUNK, Math.floor(k / 1000) * CHUNK, c.width * c.ap, c.height * c.ap);
-    this.list.sort((a, b) => a.y - b.y);
-    for (const it of this.list) {
-      const s = this.spr.get(it.key); if (!s) continue;
-      g.globalAlpha = it.a;
-      if (it.z0 < 0) { g.save(); g.translate(it.x, it.y); g.rotate(it.ang || 0); g.drawImage(s, -s.width / 2, -s.height / 2); g.restore(); }
-      else { const ap = s.ap || 1; g.drawImage(s, Math.round(it.x - s.ax * ap), Math.round(it.y - it.z0 - s.ay * ap), s.width * ap, s.height * ap); }
-      g.globalAlpha = 1;
-    }
-  }
-  stats() { return { chunks: this.chunks.size, sprites: this.spr.size, lights: this.n, stub: true }; }
-}
+// (the 2D stand-in for the engine, ?art2stub, World v3's window swap and the debug line: hostextra.js, loaded when needed)
+const extra = () => World2.extra || (World2.extra = import('./hostextra.js'));
 
 // ---- the host -----------------------------------------------------------------------------------------------
 export class World2 {
@@ -337,7 +304,7 @@ export class World2 {
     // the art pixel: 2 world px (the 16-bit look); ?artpx=1 draws the art at full resolution (comparisons)
     const artPx = /[?&]artpx=1\b/.test(location.search) ? 1 : 2;
     if (E && E.Art2Engine) { try { engine = E.Art2Engine.create(o.canvas, { quality: q, lowMem: !!o.lowMem, artPx }); } catch (e) { console.error('[art2] engine', e); engine = null; why = String((e && e.message) || e); } if (!engine) why = why || E.Art2Engine.lastWhy || ''; }
-    if (!engine && /[?&]art2stub\b/.test(location.search)) engine = new StubEngine(o.canvas);
+    if (!engine && /[?&]art2stub\b/.test(location.search)) { try { engine = new (await extra()).StubEngine(o.canvas); } catch (e) { console.error('[art2] stub', e); } }
     if (!engine) { World2.lastWhy = why || 'WebGL2 is not available'; console.warn('[art2] no engine:', World2.lastWhy); return null; }
     const w = new World2(o, engine, L, q);
     w.init();
@@ -443,6 +410,7 @@ export class World2 {
     console.warn('[art2] the bake workers were lost - starting new ones', old ? old.lastWhy : '');
     let p = null;
     try { p = new WorkerPool({ lowMem: this.lowMem, artPx: this.E.ap || 1 }); } catch (e) { console.error('[art2] worker pool', e); this.reviving = false; return false; }
+    this.workerMap = this.map;
     p.init(worldData(this.map), null, { artKey: this.artKey, cdn: this.cdn }).then((r) => {
       this.reviving = false;
       if (this.failed) { p.dispose(); return; }
@@ -456,24 +424,14 @@ export class World2 {
 
   resize(W, H, dpr) { this.W = W; this.H = H; this.dpr = dpr; if (this.E.resize) this.E.resize(W, H, dpr); }
 
-  // World v3's window moved (client/main.js swapWorld, docs/WORLD-V3.md 8.12): the same renderer on the new window -
-  // the bake workers get it (each its own copy, as at the start), the grids worked out from the map are dropped; the
-  // chunks baked stay (a chunk is the same art in both windows: a window keeps a region round the player)
+  // World v3's window moved (client/main.js swapWorld, docs/WORLD-V3.md 8.12): the map now, the rest - the workers' new
+  // window, the chunks baked against the old one - as soon as hostextra.js is in (reworld; a few ms the first time)
   setMap(map) {
-    const t = performance.now(), old = this.map;
-    // (a chunk baked here while the player was outside the old window - a teleport - was baked against its walls:
-    // baked again, as is one within a chunk of the old window's edge; the rest is the same art in both windows)
-    const n = CHUNK / TILE;
-    for (const k of this.chunkState.keys()) {
-      const cx = k % 1000, cy = Math.floor(k / 1000), x0 = (cx - 1) * n, y0 = (cy - 1) * n, x1 = (cx + 2) * n - 1, y1 = (cy + 2) * n - 1;
-      if (!(old && old.inside(x0, y0) && old.inside(x1, y1))) this.ver.set(k, (this.ver.get(k) || 0) + 1);
-    }
+    const old = this.workerMap || this.map;
+    this.workerMap = this.workerMap || old;
     this.map = map; this.grid = artGrid(map);
     this.lampGrid = null; this.lampG = null; this.poiG = null; this.seaK = null;
-    if (this.E.setCanopy) { try { this.E.setCanopy(canopyGrid(map)); } catch (e) { console.warn('[art2] canopy', e); } }
-    if (this.pool && this.pool.reworld) this.pool.reworld(worldData(map));
-    this.resync(false);
-    this.t.reworld = performance.now() - t;
+    extra().then((X) => { if (!this.failed && this.map === map) X.reworld(this, map, this.workerMap || old); }, (e) => console.error('[art2] setMap', e));
   }
 
   // engine.onContextLost: 'lost', 'restored' (everything must be uploaded again: has* answer false, and what
@@ -616,22 +574,25 @@ export class World2 {
     // a look in the browser's store of baked chunks first, for what the view needs and doesn't have: drawn at once,
     // and when it was kept with other props broken (exact: false) it stands in until its own bake lands
     if (baking && this.artKey) {
-      const peeks = this.peeks || (this.peeks = new Map());
+      // (1 asked, 2 answered; else the time to look again: a chunk the server didn't have yet is looked for again while
+      // the view still needs it - the server bakes what pages ask for first, so it's often there before a bake here
+      // is done: after a teleport, every chunk on screen is asked for at once. docs/WORLD-V3.md 8.12.1)
+      const peeks = this.peeks || (this.peeks = new Map()), tNow = performance.now();
       for (const [k, d] of need) {
         const cx = k % 1000, cy = Math.floor(k / 1000);
         if (E.hasChunk(cx, cy)) continue;
-        const mode = modeOf(cx, cy), ver = this.ver.get(k) || 0, pk = `p${cx},${cy},${ver},${mode}`;
-        if (peeks.has(pk)) continue;
+        const mode = modeOf(cx, cy), ver = this.ver.get(k) || 0, pk = `p${cx},${cy},${ver},${mode}`, st0 = peeks.get(pk);
+        if (st0 === 1 || st0 === 2 || tNow < st0) continue;
         peeks.set(pk, 1);
         this.pool.request(pk, 'peekChunk', { cx, cy, q: this.q, ck: `q${this.q}|a${this.E.ap || 1}|u1|${cx},${cy}${mode >= 0 ? `|c${mode}` : ''}` }, d - 1e6, (r, err) => {
-          if (err || !r || r.none || !r.g || this.failed) { peeks.set(pk, 2); return; }
+          if (err || !r || r.none || !r.g || this.failed) { peeks.set(pk, !err && this.cdn && mode < 0 ? performance.now() + PEEK_AGAIN_MS : 2); return; }
           peeks.set(pk, 2);
           if (r.cdn) { this.n.cdn = (this.n.cdn || 0) + 1; this.t.cdnSum = (this.t.cdnSum || 0) + (r.dlMs || 0); }   // (the server's: worker.js)
           this.results.set(pk, { jk: pk, key: k, cx, cy, mode, r, prio: d - 1e6, ver, preview: !r.exact });
         });
       }
       for (const [pk, st] of peeks) { if (st === 1 || this.results.has(pk)) jobs.add(pk); }   // (waiting, or landed and not yet up)
-      if (peeks.size > 400) for (const [pk, st] of peeks) if (st === 2 && !this.results.has(pk)) peeks.delete(pk);
+      if (peeks.size > 400) for (const [pk, st] of peeks) if (st !== 1 && !this.results.has(pk)) peeks.delete(pk);
     }
     if (this.pre) for (const jk of this.pre.out) jobs.add(jk);   // (baking ahead into the store: _prebake)
     if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && !jobs.has(jk));
@@ -645,7 +606,9 @@ export class World2 {
       const cap = E.chunkCap ? E.chunkCap() : this.lowMem ? Math.min(LOWMEM_CHUNKS, tier.chunks) : tier.chunks;
       let held = 0;
       if (E.chunkKeys) for (const ck of E.chunkKeys()) { const [x, y] = typeof ck === 'string' ? ck.split(',') : ck; if (bake.has(+y * 1000 + +x)) held++; }
-      let n = tier.chunkUp, free = Math.max(0, cap - held);
+      // (just after a jump - a teleport, a respawn - the screen is all stand-ins: up to JUMP_UP a frame until it's drawn,
+      // not one or two - in a slow page, a frame a chunk was most of the wait. docs/WORLD-V3.md 8.12.1)
+      let n = this.jump && !this.jump.drawn ? Math.max(tier.chunkUp, JUMP_UP) : tier.chunkUp, free = Math.max(0, cap - held);
       for (const res of ready) {
         if (n <= 0) break;
         if (!need.has(res.key)) { if (free <= 0) continue; free--; }
@@ -666,6 +629,24 @@ export class World2 {
         this.n.chunkUp++;
         this._loadMark('art');
       }
+    }
+    // after a jump (a teleport, a respawn): how long until every chunk on screen was in the page (landed: drawn or
+    // waiting to be), and until all were drawn, in how many frames (stats().jump; docs/WORLD-V3.md 8.12.1)
+    const J = this.jump;
+    if (J && !J.drawn) {
+      J.frames++;
+      let landed = true, drawn = true;
+      for (const k of need.keys()) {
+        const cx = k % 1000, cy = Math.floor(k / 1000);
+        if (!((cx + 1) * CHUNK > this.vx0 && cx * CHUNK < this.vx1 && (cy + 1) * CHUNK > this.vy0 && cy * CHUNK < this.vy1) || E.hasChunk(cx, cy)) continue;
+        drawn = false;
+        let has = false;
+        for (const r of this.results.values()) if (r.key === k) { has = true; break; }
+        if (!has) { landed = false; break; }
+      }
+      const ms = performance.now() - J.t0;
+      if (landed && !J.landed) J.landed = Math.round(ms);
+      if (drawn) J.drawn = Math.round(ms);
     }
     // how often a chunk on screen is still a stand-in once the game is under way (the perf report: main.js), and how
     // long the longest such stretch lasted - on the move (over 300 px/s) and overall
@@ -828,7 +809,7 @@ export class World2 {
     const S = this.S, v = this.camV || (this.camV = { x: 0, y: 0, px: this.camX, py: this.camY, out: { x: 0, y: 0 } });
     const dt = Math.min(0.1, Math.max(0.001, F.dt || 0.016)), dx = this.camX - v.px, dy = this.camY - v.py;
     v.px = this.camX; v.py = this.camY;
-    if (Math.abs(dx) + Math.abs(dy) > 900) { v.x = 0; v.y = 0; } else { const k = 1 - Math.exp(-5 * dt); v.x += (dx / dt - v.x) * k; v.y += (dy / dt - v.y) * k; }
+    if (Math.abs(dx) + Math.abs(dy) > 900) { v.x = 0; v.y = 0; this.jump = { t0: performance.now(), frames: 0, landed: 0, drawn: 0 }; } else { const k = 1 - Math.exp(-5 * dt); v.x += (dx / dt - v.x) * k; v.y += (dy / dt - v.y) * k; }
     const o = v.out, p = S.pred && S.pred.kind === 'veh' && S.pred.s;
     o.x = p ? p.vx : v.x; o.y = p ? p.vy : v.y;
     return o;
@@ -2227,11 +2208,14 @@ export class World2 {
       upQ: this.upQ.size, sprOut: this.sprOut, warmQ: this.warmQ.length, fades: this.fades.size, badKeys: this.badKeys.size, lastErr: this.lastErr, engine: es, part: this.part,
       ahead: this.pre ? { baked: this.pre.done, had: this.pre.had, out: this.pre.out.size, list: this.pre.list.length } : null, late: this.late || null,
       fetched: this.fa ? { got: this.fa.got, had: this.fa.had, miss: this.fa.miss, out: this.fa.out.size, off: !!this.cdnOff } : null,
+      jump: this.jump ? { landed: this.jump.landed, drawn: this.jump.drawn, frames: this.jump.frames } : null,
     };
   }
+  // the debug overlay's line (hostextra.js: '...' until it's in)
   diag() {
-    const p = this.pool ? this.pool.stats() : null, t = this.t;
-    return `q${this.q}${this.lowMem ? ' lowmem' : ''} chunks ${this.chunkState.size}+${this.fallbacks.size} placeholder (workers ${p ? p.workers + '/' + p.slots + (p.restarted ? ' restarted ' + p.restarted : '') : '-'}${this.n.revived ? ' new pool ' + this.n.revived : ''}, queue ${p ? p.queued : '-'}, run ${p ? p.running : '-'}, failing ${this.chunkFails.size}) bake avg ${(t.bakeN ? t.bakeSum / t.bakeN : 0).toFixed(0)} max ${t.bakeMax.toFixed(0)} ms (kept ${this.n.kept || 0}, ahead ${this.pre ? this.pre.done + '+' + this.pre.had : 0})${this.late ? ` late ${this.late.frames}/${this.late.of}` : ''}  sprites req ${this.n.sprReq} up ${this.n.sprUp} now ${this.n.sync} gen ${this.n.gen} out ${this.sprOut}  fades ${this.fades.size}  lights ${this.n.lights}  lost ${this.lost}  host ${t.frameMs.toFixed(1)} ms${this.lastErr ? '  err ' + this.lastErr.slice(0, 60) : ''}`;
+    if (World2.X) return World2.X.diag(this);
+    extra().then((X) => { World2.X = X; }, () => {});
+    return '...';
   }
 }
 
