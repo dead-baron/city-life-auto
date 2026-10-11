@@ -2510,7 +2510,12 @@ at each, the through highway on the deck at its point and no junction at grade w
 ramp down from the through highway's deck to it and one up from it to the deck; an exit and an on-ramp each way; every
 ramp on the network; an interchange not built is so for a tunnel, the main line or a road through it, and its highways
 meet at a junction as in 8.7. The other checks hold as before (every laid point on a road tile, the deck or a bore; one network; no
-highway dead-ends but in a closure - the stubs end at their ramps).
+highway dead-ends but in a closure - the stubs end at their ramps). **`test/world3interchanges.test.js`** (no build,
+under a second) checks the plan from the skeleton alone (`interchangePlan()`): every skeleton interchange with a
+highway through it built or listed with its reason; Westport Junction, Northshore, Dry Creek and Kestrel Pass built;
+each deck run on its highway and clear of its bores; a road below each side, its ramps' foot 12 tiles out; four
+ramps, each joining the deck inside the run and the road below at its foot, its climb inside it; every ramp clear of
+the main line (off its tunnels) and its low half clear of every other arterial.
 
 **The pictures:** `docs/world-v3-world.png` (the ramps yellow over the tiles) and `docs/world-v3-world-r4-0.png` (region
 4, 0 through the chunk bake: Kestrel Pass). What looks right: each built interchange reads as a diamond - the through

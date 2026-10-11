@@ -7342,10 +7342,12 @@ What it does (docs/WORLD-V3.md 8.11 has the details):
 
 Not done: the towns (step 2 of the brief) - see the report; 8.11 lists what the towns' crossings want.
 
-Files: shared/world3-roads.js, test/world3roads.test.js, tools/world3-world-map.mjs, docs/world-v3-world.png,
+Files: shared/world3-roads.js, test/world3roads.test.js, test/world3interchanges.test.js (new), tools/world3-world-map.mjs, docs/world-v3-world.png,
 docs/world-v3-world-r4-0.png, docs/WORLD-V3.md 8.11.
 
 Tests: test/world3roads.test.js (one world build, about 30 s: check 3 now - at each built interchange the through
 highway on the deck at its point and no junction at grade with it, a ramp down from its deck to each road below and
 one up, an exit and an on-ramp each way, every ramp on the network; those not built are so for a tunnel, the main line
-or a road through them, and meet at a junction as before), test/world3.test.js (the live world's hash unchanged).
+or a road through them, and meet at a junction as before), test/world3interchanges.test.js (new, no build: the plan
+from the skeleton alone - which are built, their deck runs clear of the bores, four ramps each joining the deck and the
+road below, clear of the main line and the other roads), test/world3.test.js (the live world's hash unchanged).
