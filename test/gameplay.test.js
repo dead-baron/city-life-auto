@@ -126,7 +126,7 @@ test('gunshots: a blood spray off the victim; some people drop at once, some tak
   let spray = 0;
   const emit0 = w.emit.bind(w);
   w.emit = (x, y, ev) => { if (ev.e === 'blood' && ev.g) spray++; emit0(x, y, ev); };
-  for (let i = 0; i < 4 && !spray; i++) { p.ped.nextAttack = 0; combat.tryAttack(w, p.ped, Math.atan2(v.y - p.ped.y, v.x - p.ped.x)); }
+  for (let i = 0; i < 12 && !spray; i++) { p.ped.nextAttack = 0; combat.tryAttack(w, p.ped, Math.atan2(v.y - p.ped.y, v.x - p.ped.x)); }   // (a pistol's spread can miss a few times running: rare in the full suite)
   w.emit = emit0;
   assert.ok(spray, 'bullet blood spray');
   assert.ok(!v.dead, 'tough enough to take a shot');

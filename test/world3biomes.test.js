@@ -61,7 +61,7 @@ test('World v3: the mainland\'s biomes - their districts, ground and dressing; N
   assert.ok(km(48, 'rocks') > 600 && km(48, 'trees') > 1000, 'Granite Peaks: granite, and pines below the tree line');
   assert.equal((per.get(48) || {}).snowTrees || 0, 0, 'no tree above the snow line');
   assert.ok(km(50, 'rocks') > 150 && km(50, 'cacti') > 300 && km(50, 'plants') > 500, 'the desert: rocks, cacti, scrub');
-  assert.ok(km(50, 'big') > 40, 'the desert: mesas and buttes');
+  assert.ok(km(50, 'big') > 5 && (m.tables || []).length >= 8, `the desert: mesas (the relief's tables: ${(m.tables || []).length}) and a few buttes (${Math.round(km(50, 'big'))} per km²)`);   // (H50: the tables are the mesas - world3-relief.js; dress3's blocks thinned to buttes)
   assert.ok(km(53, 'plants') > 5000, 'the Egret Coast: reeds');
   // Willow Valley: fields, orchards, farmsteads
   const inD = (r, d) => m.dist[Math.floor((r.y + r.h / 2) / TILE) * W + Math.floor((r.x + r.w / 2) / TILE)] === d;
