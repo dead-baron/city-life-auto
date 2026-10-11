@@ -7114,3 +7114,43 @@ from the server or reads its kept copy, and then the worker loads 5 files, 16 KB
 placement hooks in the generator's passes (`PL`, `pin` / `unpin`) and the container yard's pass (`buildContainerPort`),
 reached only by v3 builds. The budget goes to 360 KB. When the v3 world replaces today's, the v3 code is the
 generator, and today's island-at-a-time machinery can go.
+
+## 2026-10-10 · World v3, stage 3, step 2: the mainland's biomes - districts, ground and dressing
+
+Asked (the coordinator, from 8.6's picture: "the mainland reads as one green field, the Red Rock Desert is the same
+sand chevrons repeated over 2.7 km², and Northshore stands 60-80 tiles back from its shore"): put the new districts
+47-56 and zones 11-18 into the generator so the world build stops using stand-ins; give each biome its ground and
+dressing as today's wild places are designed - Highland Woods a real redwood and pine forest, Granite Peaks rock,
+scree, snow on the summits and alpine meadows, Willow Valley a patchwork of fields, farmsteads, orchards and hedgerows
+with room for the county roads, the Red Rock Desert mesas, buttes, outcrops, dry washes, scrub and cacti with no
+repeated pattern, North Ridge rock and scrub, the Sandpiper Coast dunes and beach grass, the Egret Coast a marsh with
+reeds and tidal creeks; Northshore down to its shore; tests; the picture redrawn.
+
+What it does (docs/WORLD-V3.md 8.8 has the numbers):
+- **The districts:** `DISTRICTS3` are `DISTRICTS`' from 47 on (shared/mapcore.js: after today's, so nothing live
+  moves, and the page knows them); the world build paints the land layer's districts and zones as they are. The beach
+  towns (52, 54) stay unbuilt until their streets are laid.
+- **The biomes** (shared/world3-biomes.js, the world build's only, through the generator's hooks): Highland Woods'
+  redwood groves with stands of pine; Granite Peaks' scree and granite, snowfields above the snow line (a new terrain
+  class and a new snow ground in the bake), alpine meadows and mountain pines below the tree line; Willow Valley's
+  sections of fields (the generator's crops), orchards, lavender and sunflower rows, pastures, hedgerows and
+  farmsteads (the farmstead prefab: farmhouse, barn, silos); the desert's sand sheets and dry washes by noise, mesas,
+  buttes, outcrops, scrub, cacti and joshua trees by patches; rock and scrub on the ridge and the rocks; the marsh's
+  tidal creeks, reeds and cattails; dune grass on the beaches. Nothing stands on the skeleton's lines (room for H27's
+  roads). The build ends by writing the terrain classes at the v3 frame (the ground bake, the plants and the wildlife
+  read them).
+- **Northshore** meets its beach along its middle already; its east end (The Bluffs) stands 55-127 tiles back because
+  today's coast is further north there, and moving the town down would sink the middle: left at (2000, 1600), for the
+  owner (8.8).
+- **The picture** (tools/world3-world-map.mjs `--quick`) draws the ground by biome and the props to their size.
+
+Files: shared/world3-biomes.js (new), shared/world3-world.js (no stand-ins; the hooks), shared/map.js (four hooks:
+`dress`, `done`, `unbuilt`, `dressed`; `redwoodGroves` takes 47 and `opts.pine`), shared/mapcore.js (the ten
+districts), shared/world3-land.js (`DISTRICTS3` the slice), client/art2/ground.js (`snowfield`),
+client/art2/game/groundbake.js (`M_.SNOW`), client/art2/game/statics.js (47's redwood floor; desert scrub on the dry
+washes), server/systems/wildlife.js (47 is redwood habitat, snow is mountain), tools/world3-world-map.mjs,
+test/world3biomes.test.js (new), docs/world-v3-world.png.
+
+Tests: test/world3biomes.test.js (one world build: districts, ground, densities, room on the skeleton's lines, no
+repeat in the desert, Northshore at its beach), test/world3.test.js (the live world's hash unchanged),
+test/world3land.test.js, test/world3world.test.js.

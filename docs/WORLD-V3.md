@@ -2016,3 +2016,97 @@ the shore isn't designed). What the whole picture shows wrong:
    `buildGullIsles` first (Gull Harbor is built, its harbour isn't placed: it runs in today's coordinates, where the
    mainland is now).
 5. The chunk bake of the whole frame (`--bake`, an hour and three quarters on one thread) or by region.
+
+### 8.8 Stage 3, step 2: the mainland's biomes - their districts, ground and dressing (2026-10-10, H28)
+
+The whole-world build (8.6) made the mainland one green field: its districts stood in as today's wild ones, its
+ground was today's terrain classes (the desert today's sine bands of sand, repeating every 140 tiles or so) and its
+dressing today's wild density. Now each biome is its own district with its own ground and dressing, designed as
+today's wild places are (the concepts WR2-A..C, NA1-A..F, N1..N8, E3c-f). Nothing live changes: the world hash stays
+`6b6e16fdef9f` (`test/world3.test.js`); the art hash changes (the snow ground, below).
+
+**The districts and zones in the generator:** `DISTRICTS3` (47-56) are `shared/mapcore.js` `DISTRICTS`' from 47 on
+(appended after today's, so today's ids don't move: the page knows them, as it must to show a v3 map;
+`shared/world3-land.js` `DISTRICTS3` is that slice), with their styles (wild, rural, desert, rocky, beach) and grounds.
+The world build paints them as the land layer has them and keeps zones 11-18 (no `STAND_IN`, no `Z.WILD`). The
+Sandpiper Coast and Northshore's beach towns (52, 54: `beach`) stay unbuilt until their streets are laid
+(`opts.unbuilt`: the generator's `builtAt` skips them). The renderer and the wildlife take 47 as Highland Woods (the
+redwood floor, the redwood habitat).
+
+**How the build does it** (`shared/world3-biomes.js`, called through four hooks of the generator, one call each:
+`opts.dists` -> `groundOf3`, `opts.dress` -> `dress3` just before `buildWilds`, `opts.pine` in `redwoodGroves`,
+`opts.done` -> `terrain3` before the signature; `buildWilds` leaves 48-56 to `dress3`, `opts.dressed`):
+- **The room for the roads:** `skeletonRoom` marks 22 tiles either side of the skeleton's highways and 14 of its
+  arterials and the main line; nothing is put there (no field, rock, farmstead, creek or plant), so the roads the next
+  step lays (H27) find it clear. Willow Valley's fields keep 12 tiles off a 250-tile section grid lined up on County
+  Road 7 and Valley Road (`SECTION`, `SECTION_X0`): room for the section roads.
+- **Highland Woods (47):** the generator's `redwoodGroves` (giants in groves with clearings, fairy rings, nurse logs,
+  firs and maples by the water), and stands of pine where `pineAt3` says so (the woods' north toward the peaks and
+  patches through the redwoods: no giant there, pines, firs, cedars and spruce thick between). Its creeks are the
+  land's (Silver Thread Creek, Kestrel Creek). 25,400 trees per km², 13,400 of them pines.
+- **Granite Peaks (48):** a height field (`peakHeight`: big and middling noise, higher to the north): above the snow
+  line (0.68) **snowfields** - terrain class 9 (`SNOW_CLS`), drawn by the ground bake as wind-packed snow, blue in the
+  hollows, rock through it (`ground.js` `snowfield`, `groundbake.js` `M_.SNOW`), bare of plants; scree (dirt in the
+  mountain biome) with granite outcrops, more the higher; alpine meadows (grass) below the tree line with lupines,
+  paintbrush, alpine daisies, heather; stands of mountain pine, fir, whitebark pine and larch below the tree line (0.56).
+  2,200 rocks and 6,500 trees per km².
+- **Willow Valley (49):** each 250-tile section cut into two to four strips with hedgerow room between: crop fields
+  (`T.FIELD` and `m.fields`: the ground bake's wheat, corn, vegetables, hay and ploughed soil by field), apple and
+  orange orchards, lavender and sunflower rows, pastures with shade trees; a farmstead (the `farmstead` prefab:
+  farmhouse, barn, silos, paddock) at the road end of three sections in five, with a windbreak behind it; hedgerows
+  (hedges with an oak now and then) along most strip edges. 71 fields (52 in the valley's own land), 22 farmsteads, 19
+  orchards, 4,200 hedges.
+- **The Red Rock Desert (50):** hardpan (desert dirt) with sand sheets and dunes where three noises of different sizes
+  add up (19% of it: no band, no repeat - sand at a tile says nothing about the tile 150-600 tiles on, 24% at worst),
+  dry washes winding across it (gravel: the renderer's shingle, desert scrub on it, mesquite and palo verde along
+  them); the rock country in groups with open flats between: mesas (two to four flat-topped sandstone blocks in a row,
+  the tallest in the middle, 200-320 px across, 70-120 high), buttes (90-210 across, 80-120 high), outcrops and
+  boulders; scrub (creosote, sage, brittlebush, bursage, dry grass), cacti (saguaros, prickly pear, barrel, cholla,
+  ocotillo, agave, yucca) and joshua trees by patches. 815 rocks (170 big), 1,200 cacti and 2,000 shrubs per km².
+- **North Ridge (51), Prison Island (55), the Egret Rocks (56):** rock and scrub - granite (basalt on the Egret Rocks)
+  outcrops, juniper, twisted shrubs, sage, a pine now and then.
+- **The Egret Coast (53):** salt marsh (grass) cut by tidal creeks (shallow water, as a river's, within 65 m of the
+  sea), reeds and cattails thick along the water and in drifts across the marsh, a willow or cypress now and then;
+  dune and beach grass on its dunes. 18,400 plants per km².
+- **The Sandpiper Coast and Northshore's beaches (52, 54):** dune and beach grass and ice plant on the beach's landward
+  half; the grass behind is the town green's (`buildTownGreen`: groves of palms) until the beach towns are built.
+- **The terrain classes at the v3 frame:** the build ends by writing `m.terrainCls` for the v3 frame (4-tile cells:
+  the pieces' classes through their pictures, the mainland's from the land layer, snow on the summits) - what the
+  ground bake, the plants and the wildlife read. Until now they read today's grid at v3 coordinates.
+
+**The numbers** (this machine): the world build 15.5 s (15.2 before: the biomes cost about 0.5 s); the mainland's
+dressing 26,000 trees, 5,900 rocks (148 mesas), 46,000 plants and 4,200 hedges from `dress3`, Highland Woods' trees
+from `redwoodGroves`. Ground: 445,000 tiles of desert sand, 64,000 of wash, 262,000 of alpine meadow, 10,800 of tidal
+creek. The city worker's code 342 of 360 KB (`world3-biomes.js` is the world build's, not the worker's).
+
+**The test** (`test/world3biomes.test.js`, one world build, about 30 s): the generator's `DISTRICTS` holds the new
+ones after today's; every mainland district has its land and its ground (Highland Woods' forest floor, the peaks'
+scree and meadows, the valley's fields 20-75%, the desert's hardpan and sand, the coasts' beaches); the terrain classes
+read forest, mountain with snow (5-50%) and desert; the densities per km² (trees in the woods and the pines among
+them, the peaks' rocks and trees and none above the snow line, the desert's rocks, mesas, cacti and scrub, the marsh's
+reeds, the valley's fields, farmsteads, orchards and hedges); nothing on the skeleton's lines; the desert doesn't
+repeat; Northshore meets its beach.
+
+**Northshore at its shore:** measured on the build, Northshore's town meets the beach along its middle (55 of 113
+columns, the streets and buildings within 8 tiles of the sand): today's south coast there lands 4-20 tiles above the
+v3 shore, and the beach is in front of it. What stands back is the town's two ends - the car park at its west end
+(13-26 tiles of grass) and **The Bluffs' loop at its east end, 55-127 tiles back**: today's coast is 50-110 tiles
+further north there. One `at` can't close both: moving the town down the 60-80 tiles the Bluffs want would put the
+middle's south blocks in the sea (the land is the land layer's), so the placement stays (2000, 1600). For the owner:
+the ground in front of the Bluffs is the beach towns' (54) - built with their streets, it fills that gap; or the
+Bluffs' slope down to the beach can be designed (a cliff path, gardens), as the name says.
+
+**The picture** (`node --expose-gc tools/world3-world-map.mjs --quick`: the picture only, no bake timing): the ground
+by its biome as the game paints it (forest floor, alpine and dry grass, pasture, desert, scree, snow), the fields by
+crop, the props to their size (tree crowns, outcrops in their rock's colour, plants by kind). It reads as the regions
+now. What's wrong in it:
+- **Willow Valley is too regular:** the strips run the full width of their 250-tile sections, so the valley reads as
+  rows of long rectangles; real fields vary more (smaller, split crosswise, the odd field cornered by the river), and
+  the lavender rows read grey from above.
+- **Highland Woods is uniform:** the clearings are small at this scale and the pine stands hardly show against the
+  redwoods; a few big meadows, burns or a lake would break it.
+- **The snowfields are blobs** of one noise; real snow lies in the north-facing hollows and on the highest ridges.
+- **The mesas are small** at 1 px = 2 tiles (a mesa is 7-10 tiles across): the desert reads as flats with patches of
+  sand; bigger mesas (raised as Dry Creek's canyon scene paintings are) would carry it.
+- The beach towns (52, 54) and the Egret Coast's marsh are plain at this scale, and Prison Island is a patchwork of
+  grass and dirt waiting for its prison.
