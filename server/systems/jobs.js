@@ -2,7 +2,7 @@
 // contraband drops for the black market / evidence locker, and the deep-sim fishing loop.
 import { K, T } from '../../shared/constants.js';
 import { ITEMS, FISH_TABLE, OFFSHORE_FISH } from '../../shared/items.js';
-import { POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY } from '../../shared/rules.js';
+import { POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, WORK_TRUCK, WORK_TRUCK_RETURN } from '../../shared/rules.js';
 import * as law from './law.js';
 import { waterKind, CAR_SPAWN_BLOCK } from '../../shared/map.js';
 import { VEHICLES } from '../../shared/vehicles.js';
@@ -12,6 +12,7 @@ import * as npc from './npc.js';
 import * as events from './events.js';
 import * as trains from './trains.js';
 import { pointGrid } from '../pointgrid.js';
+import * as vehicles from './vehicles.js';
 
 const rng = mulberry32(5150);
 const BAIT_ORDER = ['squid', 'glowlure', 'shrimp', 'lure', 'worms'];
@@ -32,9 +33,12 @@ export function update(world) {
     if (online.length && active < 3) spawnDrop(world);
   }
   if (world.dropRumor && now > world.dropRumor.until) world.dropRumor = null;
+  // a job's truck whose driver left the game: the company collects it (tidied away like any parked car - workTruck)
+  if (world.tick % 200 === 57) for (const v of world.entities.values()) if (v.workTruck && !v.despawnable && !world.players.has(v.issuedTo)) v.despawnable = true;
   // jobs: expiry
   for (const p of world.players.values()) {
     if (p.job && now > p.job.expires) failJob(world, p, 'Contract expired.');
+    if (p.truckReturn) checkReturn(world, p);
     if (p.job && p.job.type === 'poach') stepPoach(world, p, 0.05);
     const ped = p.ped;
     if (ped && ped.fishing && ped.vehId) { const bv = world.get(ped.vehId); if (!bv || Math.hypot(bv.vx, bv.vy) > 60) cancelFishing(world, p, 'You pulled your line in.'); }
@@ -77,8 +81,8 @@ export function startCourier(world, p, poi, opts = {}) {
     pickupText: `Pick up the ${name} at ${poi.label}`,
   };
   c.job.dest = dest.id;
-  const truck = workTruck(world, p, pad, 'flatbed');
-  world.notify(p, (opts.dest ? `Job accepted: pick up the ${name} at ${poi.label} - it's marked on your map.` : 'Contract accepted. Your crate is on the loading pad.') + (truck ? ' A company flatbed is parked by the crate - it\'s yours to use.' : ''), 'good');
+  const truck = workTruck(world, p, pad, 'flatbed', poi);
+  world.notify(p, (opts.dest ? `Job accepted: pick up the ${name} at ${poi.label} - it's marked on your map.` : 'Contract accepted. Your crate is on the loading pad.') + (truck ? ' A company flatbed is parked by the crate (the green ring) - it\'s yours to use.' : ''), 'good');
   return null;
 }
 
@@ -90,42 +94,101 @@ export function startFarm(world, p, poi) {
     const c = world.spawnCrate(1, pad.x + (i % 2) * 34 - 17, pad.y + Math.floor(i / 2) * 34, { owner: p.pid, label: 'Produce Box', value: 140, contraband: false, job: { type: 'farm', pid: p.pid } });
     ids.push(c.id);
   }
-  // a co-op flatbed waits nearby to help haul (taking it isn't theft)
-  workTruck(world, p, pad, 'flatbed', true);
   p.job = { type: 'farm', crates: ids, dest: grocery.id, tx: grocery.x, ty: grocery.y, expires: world.time + 1200, text: `Haul 4 Produce Boxes to ${grocery.label} in the city`, pickupText: `Load the 4 Produce Boxes at ${poi.label}` };
+  // a co-op flatbed waits nearby to help haul (taking it isn't theft)
+  workTruck(world, p, pad, 'flatbed', poi);
   world.notify(p, 'Harvest contract! 4 Produce Boxes are in the field by the farm road. A co-op flatbed is parked next to them - take it, it is not stealing.', 'good');
   return null;
 }
 
-// A company truck for a cargo job: parked on open ground near the pickup, free to take (not
-// theft), and tidied away like any parked car once nobody is around. Skipped when a free truck
-// with open cargo slots is already waiting there.
-export function workTruck(world, p, pad, model = 'flatbed', always = false) {
-  if (!always) {
-    for (const v of world.query(pad.x, pad.y, 320, K.VEH)) {
-      if (v.wreckAt || v.seats.some((x) => x) || v.def.slots.length < 4 || v.cargo.every((c) => c)) continue; // a truck, not any car with a trunk
-      if (!v.npcOwned || v.issuedTo === p.pid) return null; // a free one is already here
+// A company truck for a cargo job (the owner, 2026-10-11: "Delivery jobs that are supposed to give you a flatbed to use
+// don't always seem to spawn a flatbed for you"): every job that promises one gets one. A free truck of that model
+// already waiting by the pickup is issued to you; otherwise one is parked on open ground near the pickup, searching
+// further out (WORK_TRUCK.searchR) until there's room. Taking it isn't theft; the job keeps it for you (it isn't
+// tidied away - accepted from the phone across town, it's still there when you arrive), it's marked for you (a ring,
+// an arrow at the screen's edge and on the minimap: phone.jobTarget's veh) until you're in it, a garage won't keep it
+// (homes.js storeVehicle), and brought back to where it was issued once the job's done it pays WORK_TRUCK_RETURN
+// (truckInteraction / returnTruck). poi: the place it belongs to (named when you bring it back).
+export function workTruck(world, p, pad, model = 'flatbed', poi = null) {
+  const def = VEHICLES[model];
+  let v = null;
+  for (const q of world.query(pad.x, pad.y, 320, K.VEH)) {   // a free one already here: yours now
+    if (q.model !== model || q.wreckAt || q.sinkAt || q.seats.some((x) => x) || q.cargo.some((c) => c) || q.owner || q.rentedBy || q.forSale || q.onEvent || q.towedBy) continue;
+    if (q.issuedTo && q.issuedTo !== p.pid) continue;   // (someone else's job truck: theirs)
+    if ((q.lz || 0) > 0.3) continue;
+    v = q; break;
+  }
+  for (let r = 70; !v && r <= WORK_TRUCK.searchR; r += 30) {
+    const n = Math.max(12, Math.round(r / 20));
+    for (let k = 0; k < n && !v; k++) {
+      const a = (k / n) * Math.PI * 2;
+      const x = pad.x + Math.cos(a) * r, y = pad.y + Math.sin(a) * r;
+      const heading = Math.abs(Math.cos(a)) > 0.7 ? Math.PI / 2 : 0;
+      const ok = [-0.5, 0, 0.5].every((f) => [-0.5, 0.5].every((g) => {
+        const px = x + Math.cos(heading) * def.L * f - Math.sin(heading) * def.W * g, py = y + Math.sin(heading) * def.L * f + Math.cos(heading) * def.W * g;
+        return !CAR_SPAWN_BLOCK[world.map.tileAtPx(px, py)];
+      }));
+      if (!ok || world.query(x, y, def.L, K.VEH).length) continue;
+      v = world.spawnVehicle(model, x, y, heading, { npcOwned: false });
     }
   }
-  const def = VEHICLES[model];
-  for (let r = 70; r <= 260; r += 30) for (let k = 0; k < 12; k++) {
-    const a = (k / 12) * Math.PI * 2;
-    const x = pad.x + Math.cos(a) * r, y = pad.y + Math.sin(a) * r;
-    const heading = Math.abs(Math.cos(a)) > 0.7 ? Math.PI / 2 : 0;
-    const ok = [-0.5, 0, 0.5].every((f) => [-0.5, 0.5].every((g) => {
-      const px = x + Math.cos(heading) * def.L * f - Math.sin(heading) * def.W * g, py = y + Math.sin(heading) * def.L * f + Math.cos(heading) * def.W * g;
-      return !CAR_SPAWN_BLOCK[world.map.tileAtPx(px, py)];
-    }));
-    if (!ok || world.query(x, y, def.L, K.VEH).length) continue;
-    const v = world.spawnVehicle(model, x, y, heading, { npcOwned: false });
-    v.issuedTo = p.pid; v.despawnable = true; v.workTruck = true;
-    return v;
-  }
+  if (!v) return null;
+  v.npcOwned = false; v.parked = false;
+  v.issuedTo = p.pid; v.workTruck = true; v.despawnable = false;   // (kept while the job's on: releaseTruck lets it go)
+  v.returnTo = { x: Math.round(v.x), y: Math.round(v.y), label: poi ? poi.label : 'the yard' };
+  if (world.parked) for (const [i, id] of world.parked) if (id === v.id) world.parked.delete(i);   // (a parked one taken over: not the spawner's any more)
+  if (p.job) p.job.truck = v.id;
+  p.meDirty = true;
+  return v;
+}
+
+// The job's over: done (the return bonus is on offer for a while: checkReturn), or not (the company collects it).
+function releaseTruck(world, p, done) {
+  const v = p.job && p.job.truck ? world.get(p.job.truck) : null;
+  if (!v || v.removed || v.wreckAt) return;
+  if (done && v.returnTo) {
+    p.truckReturn = { id: v.id, until: world.time + WORK_TRUCK.returnS };
+    world.notify(p, `Bring the ${v.def.name} back to ${v.returnTo.label} for a $${WORK_TRUCK_RETURN} bonus - it's marked on your map.`, 'info');
+  } else v.despawnable = true;
+}
+function checkReturn(world, p) {
+  const r = p.truckReturn, v = world.get(r.id);
+  if (v && !v.removed && !v.wreckAt && world.time < r.until && !p.job) return;
+  if (v && !v.removed && !(p.job && p.job.truck === v.id)) v.despawnable = true;   // (taken on again for a new job: kept)
+  p.truckReturn = null; p.meDirty = true;
+}
+// the truck you're returning: { v, x, y, label } (the job tracker: phone.jobTarget)
+export function returnInfo(world, p) {
+  const r = p.truckReturn, v = r && world.get(r.id);
+  return v && !v.removed && v.returnTo ? { v, ...v.returnTo } : null;
+}
+// Driving it, back where it was issued: hand it in
+export function truckInteraction(world, p) {
+  const ped = p.ped, ri = returnInfo(world, p);
+  if (!ri || ped.vehId !== ri.v.id || ped.seat !== 0) return null;
+  if (Math.hypot(ri.v.x - ri.x, ri.v.y - ri.y) > WORK_TRUCK.returnR) return null;
+  return { label: `Return the ${ri.v.def.name} to the company (+$${WORK_TRUCK_RETURN} bonus)`, run: () => returnTruck(world, p) };
+}
+export function returnTruck(world, p) {
+  const ri = returnInfo(world, p);
+  if (!ri) return 'Nothing to return.';
+  const v = ri.v;
+  if (v.cargo.some((c) => c)) { world.notify(p, 'Unload the cargo first.', 'warn'); return 'Unload the cargo first.'; }
+  if (v.seats.some((s, i) => i > 0 && s)) { world.notify(p, 'Passengers have to get out first.', 'warn'); return 'Passengers have to get out first.'; }
+  if (p.ped && p.ped.vehId === v.id) vehicles.exitVehicle(world, p.ped);
+  p.profile.cash += WORK_TRUCK_RETURN;
+  p.truckReturn = null;
+  world.remove(v);
+  world.emit(ri.x, ri.y, { e: 'cash', x: ri.x, y: ri.y });
+  world.notify(p, `Truck returned. Bonus +$${WORK_TRUCK_RETURN}.`, 'good');
+  p.meDirty = true;
+  store.touch();
   return null;
 }
 
 export function failJob(world, p, msg) {
   if (!p.job) return;
+  releaseTruck(world, p, false);
   for (const id of p.job.crates || []) { const c = world.get(id); if (c && c.job) c.job = null; }
   p.job = null;
   world.notify(p, msg, 'bad');
@@ -172,6 +235,7 @@ function deliverLegit(world, p, crate, type) {
     if (!owner.job.crates.length) {
       const bonus = type === 'farm' ? 200 : 0;
       if (owner === p && bonus) { prof.cash += bonus; world.notify(p, `Harvest complete! Bonus +$${bonus}.`, 'good'); }
+      releaseTruck(world, owner, true);
       owner.job = null; owner.meDirty = true;
     } else if (owner === p) world.notify(p, `${owner.job.crates.length} box(es) left.`, 'info');
   }

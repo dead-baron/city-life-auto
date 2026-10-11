@@ -1692,6 +1692,7 @@ const mapwp = createMapWaypoints({
   findMe: () => mapFindMe(),
   markHere: () => mapMarkCentre(),
   device: () => input.device,
+  job: () => S.me && S.me.job,
 });
 function openPhone() { if (!S.playing || !S.map) return; if (topOverlay() !== 'phone') openOverlay('phone'); phone.open(); }
 // arrive at a phone waypoint -> it clears itself
@@ -2120,6 +2121,7 @@ function syncSettings() {
   $('s-edgefire').checked = settings.touchEdgeFire;
   $('s-padfire').checked = settings.padStickFire;
   $('s-blade').value = String((S.me && S.me.blade) | 0); $('s-blade').disabled = !S.welcomed;   // (kept with your character: the server's)
+  $('s-safety').checked = !!(S.me && S.me.safety); $('s-safety').disabled = !S.welcomed;   // (Safety mode: the server's too - server/systems/safety.js)
   $('s-vibrate').checked = settings.vibrate;
   $('s-autofs').checked = settings.autoFullscreen !== false;
   syncGfxPanel();
@@ -2258,6 +2260,7 @@ $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; sav
 // the plasma blade's colour (task #411): kept with your character, so it's the server's to keep (server looks.js setBlade)
 $('s-blade').innerHTML = BLADE_COLORS.map((b, i) => `<option value="${i}">${b.name}${i ? '' : ' (its own)'}</option>`).join('');
 $('s-blade').onchange = (e) => { if (S.welcomed) send({ t: 'look', a: 'blade', c: Number(e.target.value) }); };
+$('s-safety').onchange = (e) => { if (S.welcomed) send({ t: 'safety', on: e.target.checked }); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
 $('s-diag').onchange = (e) => { settings.diag = e.target.checked; diag.on = e.target.checked; saveSettings(); if (!diag.on && diag.el) { diag.el.remove(); diag.el = null; } };
@@ -3238,6 +3241,7 @@ function drawOverlays(F, v2) {
   tunnelsTop(F);   // the hills over the tunnels, their portals, the inside of the one you're in (client/tunnels.js)
   // name tags + public flares + rumor marker
   drawWorldLabels(F.peds, F.vehs, now, z);
+  if (S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z);
   // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
   const edge = S.playing && S.me && !S.me.dead ? edgeInfo(sp.x, sp.y, EDGE_I, S.map && S.map.frame) : null;
   if (edge && edge.d > 0) drawEdgeArrow(sp, edge, now);
@@ -4471,6 +4475,22 @@ function drawSkull(x, y, z, now) {
   g.imageSmoothingEnabled = sm;
 }
 
+// The job's company truck, until you're in it (server phone.jobTarget veh; the owner, 2026-10-11): a pulsing ring on it
+// and, off screen, an arrow at the screen's edge pointing to it.
+function drawJobTruck([x, y], view, now, z) {
+  const ph = (now * 1.2) % 1, col = '#3cff8a', m = 64 + 30 / z, x0 = view.x0 + m, x1 = view.x1 - m, y0 = view.y0 + m, y1 = view.y1 - m;
+  g.save(); g.strokeStyle = col; g.lineWidth = 3 / z;
+  g.globalAlpha = 1 - ph; g.beginPath(); g.arc(x, y, 82 + ph * 36, 0, 6.28); g.stroke();   // (round a flatbed, 150 px long)
+  g.globalAlpha = 0.9; g.beginPath(); g.arc(x, y, 82, 0, 6.28); g.stroke();
+  g.font = `bold ${12 / z}px monospace`; g.textAlign = 'center'; g.fillStyle = col; g.fillText('YOUR TRUCK', x, y - 90);
+  if (x < x0 || x > x1 || y < y0 || y > y1) {
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, dx = x - cx, dy = y - cy, k = Math.min((x1 - cx) / (Math.abs(dx) || 1e-6), (y1 - cy) / (Math.abs(dy) || 1e-6)), s = 18 / z;
+    g.translate(cx + dx * k, cy + dy * k); g.rotate(Math.atan2(dy, dx)); g.globalAlpha = 0.8 + 0.2 * Math.sin(now * 6);
+    g.fillStyle = col; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
+    g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * 0.8, -s * 0.85); g.lineTo(-s * 0.35, 0); g.lineTo(-s * 0.8, s * 0.85); g.closePath(); g.fill(); g.stroke();
+  }
+  g.restore();
+}
 function drawWorldLabels(peds, vehs, now, z) {
   const fs = 12 / z;
   g.textAlign = 'center';

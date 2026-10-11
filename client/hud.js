@@ -441,6 +441,8 @@ export class HUD {
         } else { g.beginPath(); g.arc(x, y, big ? 7 : 4.5, 0, 6.28); g.fill(); g.stroke(); }
       };
       if (me.job) target(me.job.x, me.job.y, '#ffd400');
+      if (me.job && me.job.dest) target(me.job.dest[0], me.job.dest[1], '#ff9a2e');   // (picking up: where it goes after)
+      if (me.job && me.job.veh) target(me.job.veh[0], me.job.veh[1], '#3cff8a');   // (the job's truck, until you're in it)
       if (this.waypoint) target(this.waypoint.x, this.waypoint.y, '#4fd6ff');
     }
     // player arrow

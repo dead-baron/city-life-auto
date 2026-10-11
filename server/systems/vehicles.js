@@ -10,6 +10,7 @@ export const SINK_S = 3.2; // a car that drove into the water sinks, then blows 
 import * as combat from './combat.js';
 import * as cargo from './cargo.js';
 import * as law from './law.js';
+import * as safety from './safety.js';
 import * as npc from './npc.js';
 import * as cruiser from './cruiser.js';
 import * as traffic from './traffic.js';
@@ -494,11 +495,10 @@ export function tryEnter(world, ped) {
   }
   if (seat < 0) return false;
   if (seat === 0 && p) {
-    const mine = v.owner === p.pid || v.rentedBy === p.pid || v.issuedTo === p.pid || (v.motorPool !== undefined && p.badge);
     const already = v.stolenBy && v.stolenBy.has(p.pid);
-    if (!mine && !already && !v.carjacked) {
-      if (v.def.police && !p.badge) law.crime(world, ped, 'policeTheft', null, v.x, v.y);
-      else if (v.npcOwned || v.owner) law.crime(world, ped, v.def.pedal ? 'bikeTheft' : 'theft', v.owner ? world.players.get(v.owner)?.ped || null : null, v.x, v.y);
+    if (!already && !v.carjacked) {
+      const type = takeCrime(p, v);
+      if (type) law.crime(world, ped, type, v.owner ? world.players.get(v.owner)?.ped || null : null, v.x, v.y);
     }
     (v.stolenBy ||= new Set()).add(p.pid);
   }
@@ -527,9 +527,56 @@ function carjack(world, ped, v, driver) {
     if (q && q.npc) { ejectPed(world, q, true); if (spd > BAIL_SPEED) bail(world, q, v, spd, i); }
   }
   v.carjacked = true;
-  law.crime(world, ped, v.def.pedal ? 'bikejack' : 'carjack', driver, v.x, v.y);
+  law.crime(world, ped, jackCrime(v, spd), driver, v.x, v.y);
   if (driver.npc) npc.onCarjacked(world, driver, ped);
   if (driver.player) world.notify(driver.player, `You were carjacked by ${ped.name || 'someone'}!`, 'bad');
+}
+
+// ---- what getting in is, before you do it (the owner, 2026-10-11: "'Act' on cars will tell you if you're stealing a car
+// or if it's your own car") - the Act prompt (players.js findInteraction) and Safety mode (safety.js) ----------------------
+const mineOf = (p, v) => v.owner === p.pid || v.rentedBy === p.pid || v.issuedTo === p.pid || (v.motorPool !== undefined && p.badge);
+// taking an empty vehicle: the crime it is (none: yours, or nobody's). Someone else's company truck is theft too.
+function takeCrime(p, v) {
+  if (mineOf(p, v)) return null;
+  if (v.def.police && !p.badge) return 'policeTheft';
+  if (v.npcOwned || v.owner || (v.workTruck && v.issuedTo)) return v.def.pedal ? 'bikeTheft' : 'theft';
+  return null;
+}
+// pulling someone out (carjack): a felony only when a police car's or the driver's hurt - thrown out of a moving car
+function jackCrime(v, spd) { return v.def.pedal ? 'bikejack' : v.def.police ? 'copCarjack' : spd > BAIL_SPEED ? 'carjackHurt' : 'carjack'; }
+// What getting into v would be for player p: { kind: 'own'|'work'|'rental'|'pool'|'ride'|'take'|'jack', crime }
+export function entryInfo(world, p, v) {
+  const ped = p.ped, driver = driverOf(world, v);
+  if (driver && driver !== ped && driver.player && v.seats.some((s, i) => i > 0 && !s)) return { kind: 'ride', crime: null };
+  if (driver && driver !== ped && (driver.npc || driver.player)) return { kind: 'jack', crime: jackCrime(v, speedOf(v)) };
+  if (v.owner === p.pid) return { kind: 'own', crime: null };
+  if (v.issuedTo === p.pid && v.workTruck) return { kind: 'work', crime: null };
+  if (v.rentedBy === p.pid) return { kind: 'rental', crime: null };
+  if (mineOf(p, v)) return { kind: 'pool', crime: null };
+  const already = v.stolenBy && v.stolenBy.has(p.pid);
+  return { kind: 'take', crime: already ? null : takeCrime(p, v) };
+}
+export function enterLabel(world, p, v) {
+  const n = v.def.name, e = entryInfo(world, p, v), c = e.crime && law.CRIMES[e.crime];
+  const crime = c ? ` - ${c.label}${c.felony ? ' (felony)' : ''}` : '';
+  switch (e.kind) {
+    case 'own': return `Get in your ${n}`;
+    case 'work': return `Get in the ${n} - issued to you for the job`;
+    case 'rental': return `Get in your rental ${n}`;
+    case 'pool': return `Get in the ${n}`;
+    case 'ride': return `Ride along in the ${n}`;
+    case 'jack': return `Pull the driver out of the ${n}${crime}`;
+    default: return c ? `Steal the ${n}${crime}` : `Get in the ${n}`;
+  }
+}
+// A player getting in by pressing a button: Safety mode asks first when it'd be a crime (safety.js).
+export function playerEnter(world, ped) {
+  const p = ped.player;
+  if (p && !ped.vehId && !ped.dead) {
+    const v = nearestVehicle(world, ped, 56);
+    if (v && !v.forSale && !v.ferry && !v.wreckAt) { const e = entryInfo(world, p, v); if (!safety.confirm(world, p, e.crime, `veh:${v.id}`)) return false; }
+  }
+  return tryEnter(world, ped);
 }
 
 export function exitVehicle(world, ped) {

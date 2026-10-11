@@ -8166,3 +8166,83 @@ before, and each track laid along the land and none over a table's top, most wan
 Trail at most half on the snow, the fire lookout off it, no dry wash by a moved site's box), test/dmath.test.js,
 test/mapwindow.test.js: the relief test passes; the wild test's last run failed only its two snow checks as they were
 then (the trail 53 of 125 points on the snow against 35%, the camp in it) - eased to the above, not run again.
+
+## 2026-10-11 · Jobs and the honest living: the job's truck always there and marked, work trucks, the Act prompt, Safety mode, felonies, no cars on home lots (H57)
+
+The owner's notes, in their words: "Delivery jobs that are supposed to give you a flatbed to use don't always seem to
+spawn a flatbed for you. If there is a truck or equipment that is spawned for your job you take on, let's make sure it's
+visible on screen with a visual indicator like a pulsing circle UI around it"; "Jobs, make arrow in minimap, make clearer
+where your job is, arrow for truck you are given. Work trucks you can paint and steal if you want but you can't just park
+a work truck in your garage and keep it. You get paid extra for dropping truck off back home."; "Safety citizen mode,
+warns you before stealing a car accidentally or other crimes to help you live a good life."; "'Act' on cars will tell you
+if you're stealing a car or if it's your own car"; "Stealing a car is a felony? Maybe we tone down the severity of some
+less severe crimes"; "Owned player properties have vehicles parked halfway in the garages, shouldn't have vehicles parked
+there."
+- **The job's truck, always** (`server/systems/jobs.js` `workTruck`): why it went missing - the courier job skipped the
+  truck when any free cargo truck stood within 320 px, the spot search gave up at 260 px, and the truck it did park was
+  "tidied away like any parked car once nobody is around": a job taken from the phone across town lost its flatbed to the
+  despawner before you got there. Now a free flatbed already at the pickup is issued to you (and taken off the parked-car
+  spawner's books), otherwise one is parked on open ground searching out to `WORK_TRUCK.searchR` (1,400 px), and the job
+  keeps it (`despawnable` false) until the job ends (or its driver leaves the game: `jobs.update` lets it go). The farm's
+  co-op flatbed is the same truck. `p.job.truck` is its id.
+- **Marked until you're in it**: the job tracker (`phone.jobTarget`) carries `veh` (the truck, while you're not in it) and,
+  while you're picking up, `dest` (where the cargo goes after). On screen (`client/main.js` `drawJobTruck`): a green pulsing
+  ring and YOUR TRUCK on it and, when it's off screen, a green arrow at the screen's edge pointing to it. The minimap
+  (`client/hud.js`): the pickup / job target yellow as before, the destination orange, the truck green - a blip in range,
+  an arrow on the rim when not. The world map (`client/worldmap.js`): the truck as a green dot with a car icon; its side
+  panel (`client/mapwaypoints.js`) shows your job and how far.
+- **Work trucks** (`homes.js` `storeVehicle`, `vehicleInteraction`): drive one, paint it, keep it out - but a garage won't
+  keep one (the prompt says so; storing it is refused with why). Once the job's done, bring it back to where it was issued
+  for `WORK_TRUCK_RETURN` ($150, `shared/rules.js`): the tracker says "Bonus: bring the Flatbed Work Truck back to ..." and
+  points there, and at the spot (within 240 px) Act hands it in (`jobs.truckInteraction`, `returnTruck`); the offer lasts
+  15 minutes (`WORK_TRUCK.returnS`), then the company collects it. A job given up: collected (no bonus). Someone else
+  taking your company truck is vehicle theft.
+- **The Act prompt says what getting in is** (`vehicles.js` `entryInfo`, `enterLabel`; `players.js` `findInteraction`):
+  "Get in your Sedan", "Get in the Flatbed Work Truck - issued to you for the job", "Get in your rental ...", "Steal the
+  Sedan - Vehicle theft", "Steal the Police Interceptor - Stealing a police vehicle (felony)", "Pull the driver out of the
+  Sedan - Carjacking" (and "Violent carjacking (felony)" when it's moving), "Ride along in the ..." (a player's car with a
+  free seat). Someone else's crate: "Pick up Wood Box - Cargo theft".
+- **Safety mode** (`server/systems/safety.js`; Settings → Safety mode; `store.js`: on for new characters, existing ones
+  off until switched on - kept with the character): the first press of an act the game knows is a crime before it
+  happens only warns and names it ("Safety mode: that's Vehicle theft - a crime. Press again to do it anyway") - the
+  same act again within `SAFETY_CONFIRM_S` (4 s) does it. Covered: getting into a car that isn't yours or pulling a
+  driver out (F and Act both: `vehicles.playerEnter`), someone else's cargo, the armored truck's back doors, the mail
+  train's strongbox (`trains.js`), a break from custody (any interaction can carry a `crime` - `players.js` `doAct`). The page sends `{ t: 'safety', on }`; `me.safety`.
+- **Crime severities** (`law.js` CRIMES) - the changes and why:
+  - `carjack` (Carjacking): no longer a felony (heat 25 → 20): pulling someone out of a stopped car is theft with a
+    shove - serious, wanted, but not a record.
+  - new `carjackHurt` (Violent carjacking, felony, heat 25): the driver thrown out of a moving car (over `BAIL_SPEED`,
+    where the bail hurts them) - the owner's "felony only when the driver is hurt".
+  - new `copCarjack` (Carjacking a police vehicle, felony, heat 30): an officer pulled out of their car.
+  - new `copPunch` (Striking an officer, no felony, heat 40 - the same chase as before): a bare-fisted punch or shove
+    at an officer was `copAssault`, a felony - the easiest felony to earn by accident (a swing in a scuffle). A weapon on an officer is
+    still `copAssault`, a felony.
+  - kept: `theft` (taking a parked car: never was a felony - the felony the owner saw was the carjacking), `policeTheft`
+    (stealing a police car: felony, as the brief says), murder, killing an officer, vehicular homicide (a death), armed
+    robbery, train robbery, escaping custody and poaching (each a deliberate act or a death).
+- **No cars parked on home lots** (`homes.js` `homeLotSpots`, `traffic.js` the parked-car spawner): the parking spots
+  on a home's lot (its prefab's or a mansion's grounds), its driveway or garage (`m.garages`, `h.garage`,
+  `h.garageDoor`) get no NPC or world car - only the owner's own (`spawnOwnedAt`). Today's live world (seed 1337): 166
+  homes; 172 of the 646 parking spots are on home lots (all of them the painted driveway spots), at 115 homes - those
+  172 no longer get a parked car. The other 94 driveway-type spots (farms, the motel, the roadhouse, the parks) keep theirs.
+- Nothing in the world changes (no generator change: the world hash stays 6b6e16fdef9f); the page's code 471 KB of 485
+  (was 470: `drawJobTruck`, the minimap's two arrows, the setting), the city worker 351 of 360 (`shared/rules.js`).
+
+Files: server/systems/jobs.js (workTruck, releaseTruck, checkReturn, returnInfo, truckInteraction, returnTruck),
+server/systems/vehicles.js (takeCrime, jackCrime, entryInfo, enterLabel, playerEnter), server/systems/safety.js (new:
+on, confirm, set), server/systems/players.js (doAct, the vehicle prompt, the crate's crime, me.safety), server/systems/law.js
+(CRIMES), server/systems/homes.js (homeLotSpots, the garage's refusal), server/systems/traffic.js, server/systems/phone.js
+(jobTarget: veh, dest, the return; target), server/systems/streetlife.js (the armored truck's crime), server/systems/trains.js
+(the strongbox's crime), server/session.js
+(`safety`), server/store.js (safety on for new characters), shared/rules.js (WORK_TRUCK_RETURN, WORK_TRUCK,
+SAFETY_CONFIRM_S), client/main.js (drawJobTruck, the setting), client/hud.js, client/worldmap.js, client/mapwaypoints.js,
+index.html, README.md, test/honestliving.test.js.
+
+Tests: test/honestliving.test.js (new, 8 tests: every courier pickup (60 of them) gets its flatbed, issued, kept and
+marked, the destination too; a free flatbed at the pickup is issued instead of a second one, not tidied away while you're
+across town, unmarked once you're in it; the garage refuses a work truck and says why; the job done, the tracker points
+back, the bonus paid at the spot; the Act labels; Safety mode on for new characters - warns naming the crime, the arm
+expires, the F key confirms, off goes straight in, someone else's crate carries its crime; the crime table; no parked car
+on a home lot with cars parked round about; a departed player's truck let go), test/stops.test.js (a punch at an officer
+ is "Striking an officer" now), and the files the change touches (police, crime, stops, homes, streetlife,
+revive, chaos, bikes, gameplay, arrests, phones).

@@ -84,6 +84,7 @@ export function createMapWaypoints(ctx) {
       ctx.setFilter(null);
       const mine = ctx.myHomes(), ps = ctx.players();
       el.innerHTML = `<h2 class="bm-title">${ctx.police() ? 'DISPATCH' : 'MAP'}</h2>`
+        + (ctx.job && ctx.job() ? `<div class="bm-wp">${iconImg('jobs', 18)}<span>${esc(ctx.job().text)}<small>${fmt(dist(ctx.job()))}</small></span></div>` : '')   // (your job: the arrows on the map)
         + (wp ? `<div class="bm-wp">${iconImg('pin', 18)}<span>${esc(wp.label)}<small>${fmt(dist(wp))}</small></span><button class="bm-x" data-clear="1" title="Clear the waypoint">${iconImg('close', 12)}</button></div>` : '')
         + '<div class="bm-cats">' + MAP_CATS.map((c) => `<div class="bm-cat"><button class="bm-catname" data-group="${c.id}">${iconImg(c.icon, 20)}<span>${c.title}</span></button><button class="bm-check${cats.has(c.id) ? ' on' : ''}" data-toggle="${c.id}" title="Show on the map" aria-pressed="${cats.has(c.id)}"></button></div>`).join('') + '</div>'
         + legend()
