@@ -3440,7 +3440,8 @@ terminal's waiting room and deck, each ramp's lot and booth, each pontoon's boar
 each route calling at every stop in turn and lying at its pier (the Bay Ferry round its five and back to the first,
 the others out and back), the timetable knowing every stop; a rider on foot boarding at Metro City Harbor, staying
 aboard past Westport, getting off onto Northshore Pier; a car driven aboard at Port Westport and off onto Gull Harbor's
-lot. `test/ferries.test.js` (today's, unchanged) passes.
+lot. `test/ferries.test.js` (today's, unchanged) and `test/world3server.test.js` (the server's world on the v3 map, which
+now plans and runs the ferries too: no errors) pass.
 
 **The pictures** (`node tools/world3-ferry-map.mjs [--stop <name>] [--span 1600]`: one world build, the chunks round
 each stop through the game's chunk bake at 1/4, the boat's outline where it lies, its turning point and the way on):

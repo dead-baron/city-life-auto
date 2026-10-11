@@ -7717,11 +7717,12 @@ test/world3towns.test.js.
 
 ## 2026-10-11 · World v3: the ferries at their v3 piers
 
-The owner's plan (docs/WORLD-V3.md 1.7, part 7): "a ferry system that goes to the islands - some walk on, some you can
-drive on for the bigger islands"; in v3 "the walk-on ferry loop (the Bay Ferry: Metro City's harbour, Westport,
-Northshore's pier, Cedar Isle, Southbank)", the River Water Bus up the Long Reach to Kestrel Lake, the Gull Harbor car
-ferry from Port Westport, the cays' and Lighthouse Rock's water buses, the Prison Boat (custody only) - built and run in
-the v3 world build (docs/WORLD-V3.md 8.17).
+The owner's words: "a ferry system that goes to the islands - some walk on, some you can drive on for the bigger
+islands" (2026-10-08), and for the v3 gulf "the space between the islands and the mainland create enough space for a
+good waterway for boats to travel through and even the walk-on ferry" (2026-10-10, docs/WORLD-V3.md part 7). The plan
+(1.7): the Bay Ferry's walk-on loop (Metro City's harbour, Westport, Northshore's pier, Cedar Isle, Southbank), the River
+Water Bus up the Long Reach to Kestrel Lake, the Gull Harbor car ferry from Port Westport, the cays' and Lighthouse
+Rock's water buses, the Prison Boat (custody only) - now built and run in the v3 world build (docs/WORLD-V3.md 8.17).
 - **The piers where each route calls** (the skeleton's FERRIES points; `shared/world3-ferries.js` FERRY3 says which
   point is a stop and whose land the pier stands on): the shore of that place nearest the point where a pier can run
   straight out onto open water with room for the boat (no bridge over its berth).
@@ -7749,4 +7750,5 @@ docs/WORLD-V3.md 8.17, docs/world-v3-ferry-*.png (seven stops through the chunk 
 Tests: test/world3ferries.test.js (one world build: every route's stops built - terminals, ramps, pontoons - each near
 its skeleton point; the routes planned per corridor in time, every way on the water; a boat on each route calling at
 every stop in turn; a rider on foot round the Bay Ferry past Westport to Northshore Pier; a car to Gull Harbor and off
-onto its lot), test/ferries.test.js (today's, unchanged).
+onto its lot), test/ferries.test.js (today's, unchanged), test/world3server.test.js (the server's world on the v3
+map runs the ferries now: no errors), test/world3.test.js (the live world's hash), test/dmath.test.js.
