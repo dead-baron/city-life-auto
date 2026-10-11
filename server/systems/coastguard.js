@@ -352,7 +352,7 @@ export function interaction(world, p) {
 // ---- the page's view of it (phone.js jobTarget) --------------------------------------------------------------------------------
 export function target(world, p, j) {
   const c = j.call, mine = world.get(j.truck);
-  if (!c) return { text: j.text, x: Math.round(mine ? mine.x : p.ped.x), y: Math.round(mine ? mine.y : p.ped.y), stage: 'wait' };
+  if (!c) { const at = mine || p.ped || { x: 0, y: 0 }; return { text: j.text, x: Math.round(at.x), y: Math.round(at.y), stage: 'wait' }; }
   if (c.kind === 'smuggle') { const b = world.get(c.boat); const end = c.way[c.way.length - 1]; return { text: j.text, x: Math.round(b ? b.x : end.x), y: Math.round(b ? b.y : end.y), stage: j.stage, ...(c.stopped ? null : { dest: [end.x, end.y] }) }; }
   if (!c.found) return { text: j.text, x: c.cx, y: c.cy, stage: 'search', area: [c.cx, c.cy, COAST.circleR] };
   if (c.aboard) { const L = landing(world, mine); return { text: j.text, x: L.x, y: L.y, stage: 'ashore' }; }

@@ -178,7 +178,7 @@ function step(world, p, dt) {
 // ---- the page's view of it (phone.js jobTarget) --------------------------------------------------------------------------------
 export function target(world, p, j) {
   const t = j.trip, v = world.get(j.truck);
-  if (!t) return { text: j.text, x: Math.round(v ? v.x : p.ped.x), y: Math.round(v ? v.y : p.ped.y), stage: 'wait' };
+  if (!t) { const at = v || p.ped || { x: 0, y: 0 }; return { text: j.text, x: Math.round(at.x), y: Math.round(at.y), stage: 'wait' }; }
   if (!t.aboard) { const c = world.get(t.cust); return { text: j.text, x: Math.round(c ? c.x : t.a.x), y: Math.round(c ? c.y : t.a.y), stage: 'pickup', dest: [Math.round(t.b.x), Math.round(t.b.y)] }; }
   return { text: j.text, x: Math.round(t.b.x), y: Math.round(t.b.y), stage: 'go' };
 }
