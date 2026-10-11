@@ -5,7 +5,7 @@
 // - paintTowns3(L, W, H): each town's district (shared/mapcore.js DISTRICTS 57-59) and a built zone painted on the land
 //   layer round the skeleton's town point, before the build reads it - on land, off the highways' room (24 tiles of
 //   their line), the main line (18) and its stations (30). The biomes read the land layer's districts, so their ground
-//   and dressing make way (8.8: world3-biomes.js dresses 47-56 only).
+//   and dressing make way (8.8: world3-biomes.js dress3 dresses 48-56, the generator's redwoodGroves Highland Woods' 47).
 // - layTowns3(lines, m): a street grid in each town, clipped to its ground, crossing the arterials that run through it
 //   (the generator joins lines where they cross); the main street an east-west arterial, so the town gets bus stops.
 // - TOWN_SPECIALS: the planned businesses (the generator's SPECIALS form, handed in as opts.specials, so only the v3
@@ -17,8 +17,7 @@
 // The blocks and buildings are the generator's, by the district's style (STYLE): oldtown for the two country towns
 // (shops, houses, a diner, the corner store), beach for Sandpiper Bay (beach houses, a beach bar, a cafe).
 import { TILE, T } from './constants.js';
-import { skeletonLines } from './world3-skeleton.js';
-import { STATIONS } from './world3-skeleton.js';
+import { skeletonLines, STATIONS } from './world3-skeleton.js';
 
 const Z_TOWN = 8;   // (a built zone: map.js BUILT_ZONES, and buildBusStops' list - Northshore's, the mainland's built zone)
 export const TOWNS3 = [
