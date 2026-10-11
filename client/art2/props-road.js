@@ -62,6 +62,43 @@ export function stationEntrance(on = 1, color = '#d8582a') {
   for (const y of [2, 41]) { m.box(64, y, 0, 66, y + 2, 40, ir); m.box(62, y - 1, 40, 68, y + 3, 46, glow); }
   return m;
 }
+// (H35) a main-line station house: a modest one-storey building in cream render under a hipped slate roof, tall
+// windows lit at night, a canopy on iron posts along its platform side (y 0..CAN) and the doors and a clock gable on
+// the street side (y = D). Built along +x (its length), facing +y.
+export function stationHouse(on = 1, len = 140) {
+  const CAN = 26, D = 92, m = new Vox(len, D, 74);
+  const wall = m.mat({ ramp: R('#e2d6bc'), k: 3, shade: (x, y, z) => (Math.round(z) % 9 === 0 ? -0.5 : 0) }), base = m.mat({ ramp: R('#8a7a66'), k: 3 });
+  const roof = m.mat({ ramp: R('#4a5662'), k: 3, shade: (x, y, z) => (Math.round(z) % 3 === 0 ? -0.6 : 0) }), trim = m.mat({ ramp: R('#2e4a3e'), k: 3 });
+  const glass = m.mat({ ramp: R('#f0d8a0', 5, 3), k: 4, emi: [255, 220, 150, 30 + on * 170], flag: F_GLASS }), can = m.mat({ ramp: R('#7a8a8a'), k: 3, shade: (x) => (Math.round(x) % 8 === 0 ? -0.8 : 0) });
+  const door = m.mat({ ramp: R('#5a3a24'), k: 3 }), clk = m.mat({ ramp: R('#f0eee6'), k: 4, emi: [255, 250, 230, 20 + on * 120], flag: F_NOCAST, shade: (x, y, z) => ((Math.abs(x - len / 2) < 0.8 && z > 58 && z < 64) || (Math.abs(z - 61) < 0.8 && x > len / 2 && x < len / 2 + 4) ? -3 : 0) });
+  const y0 = CAN + 2, y1 = D - 2;
+  m.box(2, y0, 0, len - 2, y1, 4, base);
+  m.box(4, y0 + 2, 4, len - 4, y1 - 2, 40, wall);
+  for (let x = 14; x < len - 12; x += 18) for (const y of [y0 + 1, y1 - 2]) { if (y > y0 + 1 && Math.abs(x + 4 - len / 2) < 12) continue; m.box(x, y, 12, x + 8, y + 1, 32, glass); m.box(x - 1, y, 32, x + 9, y + 1, 34, trim); }
+  m.box(len / 2 - 9, y1 - 2, 4, len / 2 + 9, y1 - 1, 30, door); m.box(len / 2 - 11, y1 - 2, 30, len / 2 + 11, y1 - 1, 33, trim);
+  // the hipped roof
+  for (let z = 0; z < 22; z++) { const k = z * 1.25; m.box(2 + k, y0 + k * 0.7, 40 + z, len - 2 - k, y1 - k * 0.7, 41 + z, roof); }
+  // the clock gable over the doors
+  m.box(len / 2 - 12, y1 - 4, 40, len / 2 + 12, y1, 66, wall); m.box(len / 2 - 13, y1 - 5, 66, len / 2 + 13, y1, 69, roof);
+  m.cyl('y', len / 2, 0, 60, 6, y1, y1 + 1, clk);
+  // the platform-side canopy on iron posts
+  for (let x = 8; x < len; x += 30) m.box(x, 2, 0, x + 2, 4, 38, trim);
+  m.box(0, 0, 38, len, y0 + 2, 41, can); m.box(0, 0, 36, len, 2, 41, trim);
+  return m;
+}
+// a lifeguard tower on the beach: a hut on stilts with a ramp down to the sand, a red cross and a flag
+export function lifeguardTower() {
+  const m = new Vox(46, 70, 66);
+  const wood = m.mat({ ramp: R('#d8cdb4'), k: 3 }), hut = m.mat({ ramp: R('#5aa8c8'), k: 3, shade: (x, y, z) => (Math.round(x) % 6 === 0 ? -0.6 : 0) }), roof = m.mat({ ramp: R('#e8e4d8'), k: 3 }), red = m.mat({ ramp: R('#d8342a'), k: 3 }), glass = m.mat({ ramp: R('#2a3444'), k: 2, flag: F_GLASS });
+  for (const [x, y] of [[8, 8], [36, 8], [8, 36], [36, 36]]) m.box(x, y, 0, x + 3, y + 3, 26, wood);
+  m.box(4, 4, 26, 42, 42, 29, wood);
+  m.box(8, 8, 29, 38, 38, 50, hut); m.box(9, 37, 36, 37, 38, 46, glass);
+  m.box(20, 37, 38, 26, 39, 44, red); m.box(22, 37, 36, 24, 39, 46, red);
+  m.box(5, 5, 50, 41, 41, 53, roof);
+  for (let k = 0; k < 26; k++) m.box(18, 42 + k, 26 - k, 28, 43 + k, 27 - k, wood);
+  m.box(40, 6, 53, 41, 7, 66, wood); m.box(41, 6, 60, 46, 7, 66, red);
+  return m;
+}
 // a toll plaza canopy: pillars between lanes, a beam with a red X or green arrow over each lane
 export function tollGantry(lanes = 4, laneW = 80, open = [1, 1, 0, 1], on = 1) {
   const span = lanes * laneW + 20, m = new Vox(30, span, 78);

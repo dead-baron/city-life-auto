@@ -118,6 +118,40 @@ function railBed(g, m, idx, seg) {
 
 // Tunnel mouths: the line runs down a short cutting between concrete retaining walls into a
 // portal (the subway under the core, the little underpasses under the highways).
+// (H35) World v3's station house (m.railHubs: one per station, at its map point, `a` the way it faces away from the
+// tracks): a hipped slate roof over cream walls, its canopy on the platform side, the clock gable and doors on the
+// street side, the name on a board; and a beach town's lifeguard tower (m.lifeguards) - seen from above.
+export function drawStationHouse(g, h, cx, cy) {
+  const x0 = cx * CHUNK_PX, y0 = cy * CHUNK_PX;
+  if (h.x + 140 < x0 || h.x - 140 > x0 + CHUNK_PX || h.y + 140 < y0 || h.y - 140 > y0 + CHUNK_PX) return;
+  g.save(); g.translate(h.x + Math.cos(h.a) * 18, h.y + Math.sin(h.a) * 18); g.rotate(h.a - Math.PI / 2);
+  // (local: x along the building, +y toward the street, -y the platform side)
+  g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-66, -42, 140, 92);
+  g.fillStyle = '#e2d6bc'; g.fillRect(-68, -18, 136, 62);                       // walls (seen at the eaves)
+  g.fillStyle = '#4a5662'; g.fillRect(-66, -16, 132, 58);                       // the hipped roof
+  g.fillStyle = '#5a6672'; g.beginPath(); g.moveTo(-66, -16); g.lineTo(-40, 13); g.lineTo(40, 13); g.lineTo(66, -16); g.closePath(); g.fill();
+  g.strokeStyle = '#323c46'; g.lineWidth = 2; g.beginPath(); g.moveTo(-40, 13); g.lineTo(40, 13); g.moveTo(-66, -16); g.lineTo(-40, 13); g.lineTo(-66, 42); g.moveTo(66, -16); g.lineTo(40, 13); g.lineTo(66, 42); g.stroke();
+  g.fillStyle = '#e2d6bc'; g.fillRect(-13, 34, 26, 12); g.fillStyle = '#4a5662'; g.fillRect(-14, 30, 28, 6);   // the clock gable
+  g.fillStyle = '#f0eee6'; g.beginPath(); g.arc(0, 40, 5, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#222'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 40); g.lineTo(0, 37); g.moveTo(0, 40); g.lineTo(3, 40); g.stroke();
+  g.fillStyle = '#7a8a8a'; g.fillRect(-70, -46, 140, 30);                       // the platform-side canopy
+  g.fillStyle = '#6a7a7a'; for (let x = -66; x < 70; x += 8) g.fillRect(x, -46, 1, 30);
+  g.fillStyle = '#2e4a3e'; g.fillRect(-70, -47, 140, 2); for (let x = -62; x < 70; x += 30) g.fillRect(x, -45, 3, 3);
+  g.fillStyle = '#1c2a44'; g.fillRect(-34, 47, 68, 12); g.fillStyle = '#fff'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(h.name.replace(/ Station$/, '').toUpperCase().slice(0, 16), 0, 53);
+  g.restore();
+}
+export function drawLifeguardTower(g, t, cx, cy) {
+  const x0 = cx * CHUNK_PX, y0 = cy * CHUNK_PX;
+  if (t.x + 60 < x0 || t.x - 60 > x0 + CHUNK_PX || t.y + 60 < y0 || t.y - 60 > y0 + CHUNK_PX) return;
+  g.save(); g.translate(t.x, t.y);
+  g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(-14, -10, 34, 34);
+  g.fillStyle = '#d8cdb4'; g.fillRect(-5, 18, 10, 26); for (let y = 20; y < 44; y += 4) { g.fillStyle = '#b8ad94'; g.fillRect(-5, y, 10, 1); }   // the ramp
+  g.fillStyle = '#e8e4d8'; g.fillRect(-18, -18, 36, 36);                         // the roof
+  g.fillStyle = '#5aa8c8'; g.fillRect(-18, 14, 36, 4);
+  g.fillStyle = '#d8342a'; g.fillRect(-2, -8, 4, 16); g.fillRect(-8, -2, 16, 4); g.fillRect(17, -22, 7, 5);   // the cross, the flag
+  g.restore();
+}
+
 export function drawPortals(g, m, cx, cy) {
   if (!m.rail) return;
   const pts = m.rail.pts, n = pts.length;

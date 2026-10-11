@@ -2882,3 +2882,79 @@ wrong:
    (2,400 px apart, one a district), so the three towns, far from the gulf, each take one - the gulf has three fewer
    in the v3 world than built alone; `buildTackleShops` puts one by the water at Timber Bend and Willow Crossing. For
    the owner: the count by the world's size (v3), or the towns' hunting stores as their gun shops.
+
+### 8.14 Northshore's beach towns; the stations' houses and clear platforms (2026-10-10, H35)
+
+Part 7: "Northshore keeps today's density and runs on along the coast as beach towns. The Coast Highway moves behind
+them ... so the waterfront is beaches and the Shore Road" (the owner, 12:44, asked for a large urban area with lots of
+beachfront, then at 12:50 "We can make northshore less dense"). 8.8 left district 54 (Northshore Beaches) unbuilt and
+The Bluffs 55-127 tiles back from the sand; 8.10.1 left trees over Westport Junction's platforms and the station
+building as the subway's kiosk. Nothing live changes: the world hash stays `6b6e16fdef9f`; the art hash changes (the
+station house and the lifeguard tower are new art).
+
+**The beach towns** (`shared/world3-beach.js`, two calls from `shared/world3-world.js`: `beachStreets` at the end of its
+`lines` hook, `beachFront` at the start of its `rails` hook; 54 is no longer `unbuilt`):
+- **The streets:** a loose grid on district 54's land (not its beach) either side of today's Northshore, from the
+  Coast Highway's room down to the Shore Road (the beachfront road, an arterial of the skeleton): streets parallel to
+  the Shore Road every 46 tiles inland (`ROW`, following its curve), cross streets every 76 (`COL`) from the Shore Road
+  up (north of the main line every third of them). They keep clear of the roads already laid (by kind: 26 tiles off a highway's middle, 11 off an arterial's), 18
+  tiles off the main line's polyline and 5 off Northshore's own blocks; every third cross street goes over the main
+  line (the generator makes the gated level crossing), the rest stop short of its bed. A street's end within 14 tiles
+  of a road (not a highway) is carried on to it: a junction. Invented names (Surf Street, Dune Street, Pier Avenue,
+  Driftwood Lane, ...).
+- **The blocks** are the generator's, in the district's `beach` style: beach houses (house1/2/5/9), cafes,
+  restaurants, diners and beach bars, hotels, a few small apartment blocks and corner stores, the rest low roofs -
+  less dense than a city (`ROW` 46 x `COL` 76 against the city's 24-30; the test: building cover under 3/4 of
+  Metro City's). The Bluffs' gap down to the beach is the beach town's blocks now.
+- **The front** (before the blocks): the promenade - 3 tiles of paving on the sand along the Shore Road's sea side;
+  car parks (14 x 8 tiles of LOT) on the Shore Road's land side every 150 tiles or so, steps (a paved flight) from the
+  promenade down onto the sand opposite each; lifeguard towers on the sand every 120 tiles, two thirds of the way down
+  to the water (`m.lifeguards`, solid; art v2 `lifeguardTower`, the classic renderer `drawLifeguardTower`). Nothing
+  the dressing grew stays on the promenade or the car parks (`clearBeachFront`, from the `done` hook).
+- **The beach** in front stays the land layer's (`beach: 30` tiles for Northshore's biome): sand all along between the
+  Shore Road and the sea.
+
+**The stations** (`shared/world3-rail.js`, from the `done` hook, which now gets map.js `removeProps`):
+- **No trees over the track or a platform** (`clearRailDressing`): the build kept props only 46 px off the track
+  (map.js `clearPropsOnRail`); now a tree keeps its crown's reach off the track (`CROWN` by its felling size: 70-150
+  px, plus a platform's width beside one), nothing but a lamp stands on a platform, and nothing on the station house
+  or under a tree's crown over it. A bore's and a tunnel's track is under cover: what grows on top stays.
+- **A station house** for each station (`m.railHubs`): a modest one-storey building in cream render under a hipped
+  slate roof, tall windows lit at night, a canopy on iron posts along its platform side, the doors and a clock gable on
+  the street side (art v2: `client/art2/props-road.js` `stationHouse`, put by `statics.js` `railHubs` in place of the
+  subway kiosk; the classic renderer: `client/render/trains.js` `drawStationHouse`, from above). **Seated on open
+  ground** (`seatStationHouses`): where buildRailHubs' spot is wet, a road, a building or within 70 px of a track, the
+  house moves to the nearest spot round the platforms that is clear, facing away from the nearest track (its map
+  point and forecourt with it) - Old Town's stood in the water. It is art only: it doesn't block the way yet.
+
+**The numbers** (seed 1337): 19 streets along the shore and 17 cross streets (4 over the main line), 6,125 tiles of
+street, 14 ends carried on to a road; 358 buildings in the beach towns - 49 houses, 55 cafes, restaurants, diners and
+beach bars, 9 hotels, 9 corner stores, a small tower, the rest low roofs - covering 16.7% of the district's land (its
+beach included; Metro City's built districts 19.8%, Northshore's town 20.4% in this build: less dense, if not by much -
+wider spacing makes bigger blocks, which the generator fills as full); 3,439 tiles of promenade, 5 car parks, 6
+lifeguard towers. Along the main line 392 trees cleared, 5 props off platforms, 7 off station houses.
+
+**The pictures** (through the chunk bake): `docs/world-v3-world-r5-3.png` (`tools/world3-world-map.mjs --region 5,3`:
+the beach towns east of Northshore, tiles 2520-3023 x 1512-2015) and `docs/world-v3-hub-westport-junction.png`,
+`docs/world-v3-hub-old-town.png` (`tools/world3-hub-map.mjs`). What looks right: south of the main line a beach town -
+red-roofed beach houses, small blocks, cafes and parking courts in a grid off the Shore Road, the beach in front all
+along; the station house with its canopy on Westport Junction's forecourt. What looks wrong:
+- **The first bake left the land north of the main line green:** its streets along the shore had no cross streets, so
+  it was one free region and the generator's block cutter (at most 40 rectangles a region) built none of it. Cross
+  streets now run north of the line too (every third column: less dense up there; the region's picture was re-baked
+  with them on every column in between, so it shows more blocks than the build now makes).
+- **The redwoods still read as standing over Westport Junction's platforms:** the props on and beside the platforms
+  are gone (the test), but a giant redwood is drawn upward by its height (365-770 px), so the giants south of the line
+  - their trunks 150-700 px off it - cover the track and the platforms in the picture. Wants the corridor cleared by
+  the trees' drawn height on the south side (or only shorter trees, firs and redwood2, along the line).
+- **Old Town's house stands on the water** beside its platforms on piers (no open ground within reach of them).
+- **A grid:** straight cross streets every 76 tiles; a beach town's would wander, and the rows follow the Shore Road's
+  curve only. The Shore Road runs on the land layer's beach, so a strip of sand runs behind it up to the first houses.
+- **Three level crossings** in the town (the cross streets over the main line at grade): ruling 2 wants bridges in
+  towns - the owner's call (bridge them, or stop them short as the others do).
+- The station house and the lifeguard towers are art only (they don't block the way; the towers do, by a solid).
+
+**The test** (`test/world3beach.test.js`, one world build, about 35 s): the beach towns' streets (rows, cross streets,
+some over the line) on the network with the Shore Road; their buildings (houses, cafes and bars), less dense than
+Northshore; the beach in front all along, the promenade, the car parks, the lifeguard towers on the sand; no tree on a
+platform or with its crown over the track at a station; every station's house on open ground; the art v2 models.

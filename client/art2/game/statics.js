@@ -1254,7 +1254,7 @@ function voxModel(m, a) {
     case 'tank': return X.storageTank(a[0], a[1], a[2]); case 'cellTower': return K.cellTower(a[0]); case 'screen': return K.outdoorScreen(a[0], a[1]); case 'solar': return TW.solarPanel(a[0], a[1]);
     case 'runwayLight': return RD.runwayLight(a[0]); case 'viewer': return D.viewer(); case 'wheelbarrow': return U.wheelbarrow(); case 'airliner': return RD.airliner(a[0], a[1], a[2], a[3] || 0);
     case 'lighthouse': return WL.lighthouse(a[0], a[1]); case 'pillar': return RD.pillar(a[0], a[1], a[2]); case 'canopy': return U.fuelCanopy(a[0], a[1], a[2], a[3]); case 'fuelPump': return U.fuelPump(a[0], a[1]);
-    case 'platformCanopy': return RD.platformCanopy(a[0], a[1], a[2]); case 'stationEntrance': return RD.stationEntrance(a[0], a[1]); case 'crossingSignal': return RD.crossingSignal(a[0], a[1]);
+    case 'platformCanopy': return RD.platformCanopy(a[0], a[1], a[2]); case 'stationEntrance': return RD.stationEntrance(a[0], a[1]); case 'stationHouse': return RD.stationHouse(a[0], a[1]); case 'lifeguardTower': return RD.lifeguardTower(); case 'crossingSignal': return RD.crossingSignal(a[0], a[1]);
     case 'subwayKiosk': return RD.subwayKiosk(a[0], a[1]);   // (SU5-B: a subway stop's street entrance on its kiosk's footprint)
     case 'erCanopy': return RD.erCanopy(a[0]);   // (IN1-B: the hospital's ambulance bay)
     case 'controlTower': return RD.controlTower(a[0], a[1]); case 'fence': return D.fence(a[0], a[1], a[2] || {}); case 'fenceKind': return K.fenceKind(a[0], a[1]); case 'gatePillar': return D.gatePillar(a[0], a[1]);
@@ -1316,7 +1316,7 @@ function vdim(m, a) {
     case 'flare': return [14, 14, 90]; case 'tank': return [(a[0] || 44) * 2 + 4, (a[0] || 44) * 2 + 4, (a[1] || 120) + 26]; case 'cellTower': return [30, 30, (a[0] || 150) + 6]; case 'screen': return [(a[0] || 120) + 16, 12, (a[1] || 56) + 26];
     case 'solar': return [a[0] || 30, a[1] || 20, 8]; case 'runwayLight': return [4, 4, 6]; case 'viewer': return [14, 10, 40]; case 'wheelbarrow': return [30, 14, 14]; case 'airliner': return [a[0] || 460, a[1] || 420, 140];
     case 'lighthouse': return [48, 48, (a[0] || 140) + 36]; case 'pillar': return [(a[1] || 30) + 4, a[2] || 90, a[0] || 90]; case 'canopy': return [a[0] || 150, a[1] || 80, (a[2] || 52) + 10]; case 'fuelPump': return [12, 10, 34];
-    case 'platformCanopy': return [a[0] || 200, a[1] || 40, 62]; case 'stationEntrance': return [70, 44, 54]; case 'crossingSignal': return [24, 8, 70]; case 'controlTower': return [70, 70, (a[0] || 220) + 50];
+    case 'platformCanopy': return [a[0] || 200, a[1] || 40, 62]; case 'stationEntrance': return [70, 44, 54]; case 'stationHouse': return [a[1] || 140, 92, 74]; case 'lifeguardTower': return [46, 70, 66]; case 'crossingSignal': return [24, 8, 70]; case 'controlTower': return [70, 70, (a[0] || 220) + 50];
     case 'subwayKiosk': return [128, 96, 64]; case 'erCanopy': return [120, 62, 60];
     case 'fence': return [a[1] || 60, 6, ({ picket: 16, wood: 30, chain: 32, iron: 28, stone: 12 }[a[0]] || 20) + 6]; case 'fenceKind': return [a[1] || 60, 6, 26]; case 'gatePillar': return [14, 14, (a[1] || 36) + 16];
     case 'compoundWall': return [a[0] || 80, 10, (a[1] || 40) + 8]; case 'guardTower': return [40, 40, (a[0] || 70) + 40]; case 'hedge': return [a[0] || 40, 10, (a[1] || 12) + 3]; case 'volleyNet': return [a[0] || 70, 4, 26];
@@ -2326,13 +2326,17 @@ function addRail(c, I) {
   for (const R of c.M.rails || [c.M.rail]) addRailLoop(c, I, R, c.M.rails ? once : () => true);
   if (c.M.railXings) crossingSignals(I, c.M.railXings);   // (every loop's crossings, once each)
   if (c.M.railHubs) railHubs(I, c.M.railHubs);
+  for (const t of c.M.lifeguards || []) put(I, vitem('lgt', 'lifeguardTower', [], t.x, t.y, 0));   // (H35: World v3's beach towns, shared/world3-beach.js)
 }
 // (H33) World v3's stations, one per name: the station building on its forecourt (the map point), lit, with the station's
 // name over its door, and a footbridge over the tracks between each pair of platforms that face each other.
 function railHubs(I, hubs) {
   for (const h of hubs) {
-    put(I, vitem('ent', 'stationEntrance', [1, '#f28c28'], h.x, h.y, 0));
-    lightAt(I, h.x, h.y + 10, 60, 140, [1, 0.85, 0.6], 1.5, 'sign');
+    // (H35) the station house: its platform-side canopy toward the tracks, its doors and clock gable on the street side
+    const hd = qa(h.a - PI / 2, 16), ox = Math.cos(h.a) * 18, oy = Math.sin(h.a) * 18;
+    put(I, vitem(`sth:${hd.toFixed(2)}`, 'stationHouse', [1, 140], h.x + ox, h.y + oy, hd));
+    lightAt(I, h.x + Math.cos(h.a) * 70, h.y + Math.sin(h.a) * 70, 60, 140, [1, 0.85, 0.6], 1.5, 'sign');
+    lightAt(I, h.x - Math.cos(h.a) * 20, h.y - Math.sin(h.a) * 20, 70, 150, [1, 0.94, 0.8], 1.3, 'lamp');
     put(I, { key: `stb:${h.name}`, recipe: { t: 'sign', text: h.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: 26, posts: true }, x: h.x, y: h.y - 40, ext: [80, 60, 80, 12] });
     for (const f of h.bridges || []) { const fh = qa(f.a, 16); put(I, vitem(`fbr:${f.len}:${fh.toFixed(2)}`, 'footbridge', [f.len, 30, 6], f.x, f.y, fh)); }
   }

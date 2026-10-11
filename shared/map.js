@@ -413,7 +413,7 @@ function buildCity(seed, opts = null, frame = null) {
   if (hosp || !OPTS?.island) m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 };   // (an island build may have neither: the world's are elsewhere)
   if (pd || !OPTS?.island) m.spawns.police = { x: pd.x, y: pd.y + 44 };
   m.spawns.default = m.spawns.hospital;
-  if (OPTS?.done) OPTS.done(m);   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js)
+  if (OPTS?.done) OPTS.done(m, { removeProps });   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js; the main line's dressing cleared)
   mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)
   m.softEdge = true; // (from here on the sea runs on past the edge: tileAt)
   return m;
