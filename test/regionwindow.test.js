@@ -88,6 +88,33 @@ test("today's world at its own regions (3 x 3): the window round any tile is the
   assert.deepEqual(regionsNear(frame, 656, 600).length, 9);
 });
 
+test("the city worker's window (client/worldgen.js fetchWindow): the index and only the window's regions downloaded, gzipped, then assembled", async () => {
+  const { gzipSync } = await import('node:zlib');
+  const { fetchWindow } = await import('../client/worldgen.js');
+  const pack = PACK(256), files = new Map([['index.bin', pack.index], ...pack.regions.map((r) => [`${r.key}.bin`, r.bytes])]);
+  const asked = [];
+  const fetchFn = async (url) => {
+    const name = url.split('/').pop().split('?')[0];
+    asked.push(name);
+    const b = files.get(name);
+    return b ? new Response(gzipSync(b), { status: 200 }) : new Response('', { status: 404 });
+  };
+  const w = await fetchWindow('http://cdn/world/', 'abcdef123456-v3:1337', 1337, [700, 600], { fetchFn });
+  assert.deepEqual(w.win.rect, [256, 256, 768, 768]);
+  assert.equal(asked.length, 10, 'the index and 9 regions, not 30');
+  const m = cityFromData(w.data);
+  assert.deepEqual([m.x0, m.y0, m.w, m.h], [256, 256, 768, 768]);
+  assert.equal(m.tileAt(700, 600), CITY().tileAt(700, 600));
+  // the keeper it hands on moves the window from the files it fetched
+  asked.length = 0;
+  assert.equal(w.keeper.want(768 - 20, 640), null);
+  await w.keeper.idle();
+  const next = w.keeper.want(768 + 20, 640);
+  const d = await w.keeper.assemble(w.index, next);
+  assert.deepEqual([d.x0, d.y0, d.w, d.h], [512, 256, 768, 768]);
+  assert.deepEqual(asked.sort(), ['r4-1.bin', 'r4-2.bin', 'r4-3.bin']);
+});
+
 test('the window moves: near a border it fetches what comes in, past it the new window (the shared regions kept), and back', async () => {
   const pack = PACK(256), frame = readIndex(pack.index).frame;
   const asked = [];
