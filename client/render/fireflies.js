@@ -46,7 +46,7 @@ export class Fireflies {
     if (this.map === M) return this.camps;
     this.map = M; this.camps = []; this.cells.clear();
     if (!M || !M.props) return this.camps;
-    const rest = new Set((M.restSpots || []).map((s) => `${s.x},${s.y}`));
+    const rest = new Set((M.restSpots || []).filter((s) => s).map((s) => `${s.x},${s.y}`));
     for (const p of M.props) {
       if (!p || p.t !== 'campfire') continue;
       const i = M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE)), d = DISTRICTS[M.dist[i]];
