@@ -42,7 +42,9 @@ test('its region files, as the server cuts them: the index and 10 x 8 regions, r
   assert.deepEqual(X.frame.slice(3), [10, 8]);
   assert.equal(cut.pack.regions.length, 80);
   assert.deepEqual(X.meta, { seed: 1337, world: 'v3' });
-  assert.ok(cut.pack.index.length < 4e6, `the index ${(cut.pack.index.length / 1e6).toFixed(2)} MB raw`);
+  // (5.3 MB raw since the window's follow-ups - the world's places, the region signatures and its coarse picture, 8.12.2 -
+  // came together with Lucky Mesa's and the towns' roads in the graph the index keeps whole; under a megabyte gzipped)
+  assert.ok(cut.pack.index.length < 6e6, `the index ${(cut.pack.index.length / 1e6).toFixed(2)} MB raw`);
   let back = cityFromData(assembleCity(cut.pack.index, cut.pack.regions.map((r) => r.bytes)));
   cut = null;
   delete back._sig;
