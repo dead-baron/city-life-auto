@@ -448,6 +448,13 @@ function rampLines(P, arms) {
   return out;
 }
 
+// the interchanges planned from the skeleton alone (no build): { sites, listed } - for the tests and the tools
+export function interchangePlan() {
+  const out = {}, paths = new Map(HIGHWAYS.map((h) => [h.name, pathOf(h, 'hwy')]));
+  const sites = interchangeSites(paths, out);
+  return { sites, listed: out.interchanges };
+}
+
 // lay each site's stubs and ramps (one call from layRoads, after the highways and arterials)
 function layInterchanges(lines, sites, paths, out) {
   const px = (p) => ({ x: p[0] * TILE, y: p[1] * TILE });
