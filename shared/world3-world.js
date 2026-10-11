@@ -21,6 +21,7 @@ import { ISLANDS, PIECES, ARTERIALS, PORT_WESTPORT } from './world3-skeleton.js'
 import { PLACEMENTS } from './world3.js';
 import { WATER3, TERRAIN3 } from './world3-land.js';
 import { joinPlace } from './world3-crossings.js';
+import { layRoads, roadTunnels } from './world3-roads.js';
 
 // the mainland's districts (DISTRICTS3, 47-56) as today's wild ones for now: Highland Woods, Granite Peaks, Cedar Hills
 // (Willow Valley's farmland), Dry Creek Desert, The Islets (grass: the coasts), Smuggler's Rock (Prison Island),
@@ -161,6 +162,7 @@ export function worldOpts(asked) {
     },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground)
     special: (sp) => built.has(sp.d),
+    tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)
     lines(lines, m) {
       const out = { split: 0, offFrame: 0 };
       const inF = (p) => p.x >= 0 && p.y >= 0 && p.x < W * TILE && p.y < H * TILE;
@@ -198,6 +200,7 @@ export function worldOpts(asked) {
         if (wet) crossings.push({ name: A.name, foot: !!A.foot, from: a, to: b, len: Math.round(len), water: wet });
       }
       m.world3 = { pieces: pieces.map((p) => ({ key: p.key, at: p.at, s: p.s })), split: out.split, offFrame: out.offFrame, cut: j.cut, dropped: j.dropped, bridged: j.bridged, canal: j.canal, crossings };
+      m.world3.roads = layRoads(lines, m, L);   // (the skeleton's highways and arterials: shared/world3-roads.js, 8.7)
     },
   };
   return o;
