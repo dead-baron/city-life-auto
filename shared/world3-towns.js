@@ -318,6 +318,7 @@ export function townModels(m) {
       // (its front: the door's side; a plain roof's, the side a street's sidewalk is on - the south when both or neither)
       const street = (ty) => { for (let k = 0; k < 3; k++) { const tl = m.tileAt(b.tx + (b.tw >> 1), ty + k * (ty < b.ty ? -1 : 1)); if (tl === T.SIDEWALK || tl === T.ROAD) return true; } return false; };
       const x0 = b.tx * TILE, y0 = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE, south = b.door ? b.door.ty >= b.ty + b.th : street(b.ty + b.th) || !street(b.ty - 1);
+      const front = !!b.door || street(b.ty + b.th) || street(b.ty - 1);   // (a plain roof with no street either side: no porch)
       const fy = south ? y0 + h : y0, o = south ? 1 : -1, a = south ? 0 : Math.PI;   // (the front wall's line, outward, the front's heading)
       const doorX = b.door ? (b.door.tx + 0.5) * TILE : x0 + w / 2;
       const sign = (re) => (b.signs || []).find((s) => re.test(s.text));
@@ -326,10 +327,12 @@ export function townModels(m) {
         case 'shopfront': case 'beachshop': case 'lodgerow': case 'surfrow': case 'feedrow':
           // (one storey under a low gable, its false front on the porch: the same boards - b.lookC)
           b.lookC = WOODS[t.d][b.id % WOODS[t.d].length];
-          add('porch', x0 + w / 2, fy + o * 17, { len: Math.max(48, w - 8), a, ff: south ? 104 : 0, c: look === 'lodgerow' ? '#4e3424' : b.lookC }); break;
+          if (front) add('porch', x0 + w / 2, fy + o * 17, { len: Math.max(48, w - 8), a, ff: south ? 104 : 0, c: look === 'lodgerow' ? '#4e3424' : b.lookC });
+          break;
         case 'cabin': case 'farmhouse': case 'cottage':
-          add('porch', Math.max(x0 + 60, Math.min(x0 + w - 60, doorX)), fy + o * 17, { len: Math.min(w - 16, look === 'farmhouse' ? 200 : 120), a }); break;
-        case 'stilts': add('porch', Math.max(x0 + 56, Math.min(x0 + w - 56, doorX)), fy + o * 17, { len: Math.min(w - 16, 112), a, z: 16 }); break;
+          if (front) add('porch', Math.max(x0 + 60, Math.min(x0 + w - 60, doorX)), fy + o * 17, { len: Math.min(w - 16, look === 'farmhouse' ? 200 : 120), a });
+          break;
+        case 'stilts': if (front) add('porch', Math.max(x0 + 56, Math.min(x0 + w - 56, doorX)), fy + o * 17, { len: Math.min(w - 16, 112), a, z: 16 }); break;
         case 'church': add('steeple', x0 + w / 2, fy + o * 20, { a }); break;
         case 'coop': add('dock', x0 + w / 2, fy + o * 20, { len: Math.max(80, Math.round(w * 0.6 / 8) * 8), a }); break;
         case 'sawmill': {

@@ -3119,17 +3119,31 @@ place with a look is in it (the building, its lot, its POI); the sawmill's and t
 footprints; nothing solid on a road (the saw line; the tower on the sand); no model on a road; the boardwalk's rails,
 benches and the shelter on the planks.
 
-**The pictures** (`node --expose-gc tools/world3-world-map.mjs --sample 0 --towns`): `docs/world-v3-town-timber.png`,
-`docs/world-v3-town-willow.png`, `docs/world-v3-town-sandpiper.png`. What looks right: the sawmill reads as a mill from
-above - a ribbed shed with its log yard and the yellow loader beside it; Willow Crossing's white church with its dark
-steeple in the north loop, the row of white silos in the south loop by the elevator's head house; the beach town's
-boardwalk railed along its sea side and the pier railed out to its shelter, the lifeguard tower on the sand. What
-looks wrong:
-- **At 1/8 the porches, false fronts, antlers, sacks and boards are a few pixels:** they want a look in the game (a
-  playtest on the v3 world, `CLA_WORLD=v3`) - not done.
-- **The big plain-roof rows** (the generator's lots it had no prefab for, at the towns' ends and along Willow Road's
-  south arm) are one long shopfront each: one porch and one false front the length of the row, cut into sections of
-  7-13 tiles by art v2 - a row of separate shopfronts each with its own front would read better.
+**The pictures** (`node --expose-gc tools/world3-world-map.mjs --sample 0 --towns --close`): the towns at 1/8,
+`docs/world-v3-town-timber.png`, `docs/world-v3-town-willow.png`, `docs/world-v3-town-sandpiper.png`; and up close at
+1/2 (`--close`, new: 2 x 2 chunks round one model) `docs/world-v3-town-timber-loader.png` (the sawmill),
+`docs/world-v3-town-timber-antlers.png` (the lodge row), `docs/world-v3-town-willow-steeple.png` (the church, the
+elevator), `docs/world-v3-town-willow-dock.png` (the co-op), `docs/world-v3-town-sandpiper-boards.png` (the surf shop
+row, the clinic), `docs/world-v3-town-sandpiper-shelter.png` (the pier's end). What looks right: from above the towns
+are pitched roofs now - no flat roofs with the city's rooftop kit; the sawmill a ribbed shed with its name over the
+open bay, the saw line out in front, three stacks of logs and the yellow loader in its yard; the lodge row's false
+front with the antlers over the lodge's door and the porch's posts and rail along the street; the white church with
+its steeple standing out from its front (the doors in its foot, the spire, the gilt cross); the elevator's head house
+with four tall white silos; the co-op's barn-red front; the surf shop's boards in their rack before its peach false
+front; the boardwalk railed along its sea side, the pier railed out to its shelter, the lifeguard tower on the sand.
+What looks wrong:
+- **At 1/8 the porches, false fronts, antlers, sacks and boards are a few pixels;** in the game (a playtest on the v3
+  world, `CLA_WORLD=v3`) they are not checked yet.
+- **The big plain-roof lots** (the generator's lots it had no prefab for, at the towns' ends and along Willow Road's
+  south arm) are big: as houses (up to 16 x 14 tiles) they are barn-sized farmhouses and cabins, as shop rows one long
+  shopfront each (one porch and one false front the length of the row, art v2 cutting the roof into sections of 7-13
+  tiles) - separate shopfronts each with its own front, and smaller houses, would read better (the generator's lot
+  sizes: `TOWN_STYLES`).
+- **The yards stand on the building's ground:** the log yard and the silos are inside the solid footprint, so the
+  ground under them is the building's dark paving, and the silos stand right against the next lot's building behind.
+- (Fixed while looking: a plain roof with no street on either side got a porch and a false front floating between two
+  buildings - no porch now; the mill's shed and the head house had the city's rooftop kit, AC units and red stacks -
+  none now.)
 - **The elevator is not by the track:** the generator puts the planned places in the town's blocks; Willow Crossing has
   no station and the main line passes outside the town (8.13's item 2) - the elevator with its siding wants the line.
 - **The boardwalk still stair-steps** with the diagonal shore (planks by columns) and its rail with it.
