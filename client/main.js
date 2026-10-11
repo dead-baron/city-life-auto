@@ -1034,7 +1034,6 @@ function swapWorld(m) {
   if (old.levels && m.levels && old.levels.broken) m.levels.broken = old.levels.broken;
   (old.gates || []).forEach((gt, i) => { const g2 = m.gates && m.gates[i]; if (g2) gt.props.forEach((pr, j) => { if (pr && g2.props[j]) g2.props[j].off = pr.off; }); });
   S.map = m;
-  for (const i of S.confirmedBreaks) setPropBroken(i, 0, false);
   S.flora = new Flora(m); S.flora.configure(gfx); if (atlas.ready) S.flora.registerAtlas(atlas);
   S.ground = new GroundCache(m, LOW_MEM ? 12 : 24);
   S.wx.map = m; S.wx.sites.clear(); S.wx.vents.clear();
@@ -1044,6 +1043,7 @@ function swapWorld(m) {
   S.hud.setMap(m);
   S.router = createRouter(m);
   if (S.art2 && S.art2.setMap) S.art2.setMap(m); else startArt2(m);
+  for (const i of S.confirmedBreaks) setPropBroken(i, 0, false);   // (the server's broken props the old window didn't hold)
 }
 
 // ---- the classic (v1) art ------------------------------------------------------------------------------

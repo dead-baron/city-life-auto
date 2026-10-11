@@ -2493,3 +2493,28 @@ a corner's too, is the whole map, as assembled whole; the keeper's moves - early
 hysteresis, the move with nothing waited for, back, a teleport, the frame's corner). `test/world3window.test.js` (the
 v3 world built once, cut as the server cuts it: a window round a hospital - 1512 x 1512 tiles, the tiles to the byte,
 its items only - and the moves across a border and to the corner).
+
+**The numbers** (this machine, node 22, two cores shared with two other helpers)
+
+| | |
+|---|---|
+| A window of the v3 world (round the frame's middle: r4-3 ... r6-5) | **1512 x 1512 tiles; its per-tile layers 36.6 MB** (the whole frame's 407 MB); props 20,079 of the world's 205,276 (the list's length stays the world's), POIs 459 of 713 |
+| Getting it (node, from a local v3 server: the index and 9 regions downloaded, unzipped and assembled) | **0.72 s**; the JS heap after it 40 MB (and the layers' 37 MB outside it) |
+| The region files the server writes now | 81 files, 11.7 MB gzipped (the world has grown since 8.9: the main line, the biomes) |
+
+**What's left** (in order)
+1. **Per-region signatures** (part 8 item 5): the welcome's whole-map signature check is skipped for a window; each
+   region's own signature in the index, checked as each region comes in.
+2. **The first window** is round where the player was last (`cla.at3`) or the frame's middle the first time: a new
+   player usually spawns outside it, and the window moves at once after joining (one more assembly, about a second,
+   the player held by the window's walls meanwhile). The welcome could say where the player will be (World v3 only).
+3. **The phone's apps and the big map list only the window's places** (`pois` holds only the window's): a small global
+   list (name, kind, position) belongs in the index (8.1's note).
+4. **The railway's loops in a window** are the window's part of each loop, compacted (railAt searches by arc length):
+   the minimap draws no line across where a loop leaves the window; the art's stations and the trains near a window's
+   edge want a look.
+5. **The swap copies**: every bake worker gets a structured clone of the new window, and the page makes the flora,
+   ground cache, buildings layer and router again; the regions both windows share could be moved, not copied, and the
+   router (the whole road graph) kept.
+6. **The minimap is a frame-sized canvas** (5040 x 4032, 81 MB of pixels): wants a coarser picture at v3 (8.2's note).
+7. **Regions aren't kept in the browser** (IndexedDB): each visit downloads the window (about 2 MB).
