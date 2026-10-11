@@ -7751,4 +7751,6 @@ Tests: test/world3desert.test.js (one world build: the districts, the streets on
 straight, Depot Road to the station, the planned places, the freight yard, the mine - the pit, the adit, the seams, the
 cave world through the adit, the veins round the pit and in the cave - Dusty Hollow, the dam and the wash, the lookout,
 the arch, the motel, the billboards, the camp, the tracks, every building clear of the highways and the main line),
-test/world3biomes.test.js, test/world3mesa.test.js, test/world3towns.test.js.
+test/world3biomes.test.js (65 districts; its per-district arrays room for more), test/world3mesa.test.js,
+test/world3towns.test.js, test/world3server.test.js, test/dmath.test.js; `node tools/perf.mjs --quick`: all within budget
+(the city worker 34 files, 357 KB of 360 - this module isn't in it).
