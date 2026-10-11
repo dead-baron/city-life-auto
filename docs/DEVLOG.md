@@ -8183,7 +8183,8 @@ there."
   "tidied away like any parked car once nobody is around": a job taken from the phone across town lost its flatbed to the
   despawner before you got there. Now a free flatbed already at the pickup is issued to you (and taken off the parked-car
   spawner's books), otherwise one is parked on open ground searching out to `WORK_TRUCK.searchR` (1,400 px), and the job
-  keeps it (`despawnable` false) until the job ends. The farm's co-op flatbed is the same truck. `p.job.truck` is its id.
+  keeps it (`despawnable` false) until the job ends (or its driver leaves the game: `jobs.update` lets it go). The farm's
+  co-op flatbed is the same truck. `p.job.truck` is its id.
 - **Marked until you're in it**: the job tracker (`phone.jobTarget`) carries `veh` (the truck, while you're not in it) and,
   while you're picking up, `dest` (where the cargo goes after). On screen (`client/main.js` `drawJobTruck`): a green pulsing
   ring and YOUR TRUCK on it and, when it's off screen, a green arrow at the screen's edge pointing to it. The minimap
@@ -8205,16 +8206,16 @@ there."
   off until switched on - kept with the character): the first press of an act the game knows is a crime before it
   happens only warns and names it ("Safety mode: that's Vehicle theft - a crime. Press again to do it anyway") - the
   same act again within `SAFETY_CONFIRM_S` (4 s) does it. Covered: getting into a car that isn't yours or pulling a
-  driver out (F and Act both: `vehicles.playerEnter`), someone else's cargo, the armored truck's back doors, a break from
-  custody (any interaction can carry a `crime` - `players.js` `doAct`). The page sends `{ t: 'safety', on }`; `me.safety`.
+  driver out (F and Act both: `vehicles.playerEnter`), someone else's cargo, the armored truck's back doors, the mail
+  train's strongbox (`trains.js`), a break from custody (any interaction can carry a `crime` - `players.js` `doAct`). The page sends `{ t: 'safety', on }`; `me.safety`.
 - **Crime severities** (`law.js` CRIMES) - the changes and why:
   - `carjack` (Carjacking): no longer a felony (heat 25 → 20): pulling someone out of a stopped car is theft with a
     shove - serious, wanted, but not a record.
   - new `carjackHurt` (Violent carjacking, felony, heat 25): the driver thrown out of a moving car (over `BAIL_SPEED`,
     where the bail hurts them) - the owner's "felony only when the driver is hurt".
   - new `copCarjack` (Carjacking a police vehicle, felony, heat 30): an officer pulled out of their car.
-  - new `copPunch` (Striking an officer, no felony, heat 25): a bare-fisted punch or shove at an officer was
-    `copAssault`, a felony - the easiest felony to earn by accident (a swing in a scuffle). A weapon on an officer is
+  - new `copPunch` (Striking an officer, no felony, heat 40 - the same chase as before): a bare-fisted punch or shove
+    at an officer was `copAssault`, a felony - the easiest felony to earn by accident (a swing in a scuffle). A weapon on an officer is
     still `copAssault`, a felony.
   - kept: `theft` (taking a parked car: never was a felony - the felony the owner saw was the carjacking), `policeTheft`
     (stealing a police car: felony, as the brief says), murder, killing an officer, vehicular homicide (a death), armed
@@ -8224,22 +8225,24 @@ there."
   `h.garageDoor`) get no NPC or world car - only the owner's own (`spawnOwnedAt`). Today's live world (seed 1337): 166
   homes; 172 of the 646 parking spots are on home lots (all of them the painted driveway spots), at 115 homes - those
   172 no longer get a parked car. The other 94 driveway-type spots (farms, the motel, the roadhouse, the parks) keep theirs.
-- Nothing in the world changes (no generator change: the world hash is the same); the page's code grows by ~2 KB
-  (`drawJobTruck`, the minimap's two arrows, the setting).
+- Nothing in the world changes (no generator change: the world hash stays 6b6e16fdef9f); the page's code 471 KB of 485
+  (was 470: `drawJobTruck`, the minimap's two arrows, the setting), the city worker 351 of 360 (`shared/rules.js`).
 
 Files: server/systems/jobs.js (workTruck, releaseTruck, checkReturn, returnInfo, truckInteraction, returnTruck),
 server/systems/vehicles.js (takeCrime, jackCrime, entryInfo, enterLabel, playerEnter), server/systems/safety.js (new:
 on, confirm, set), server/systems/players.js (doAct, the vehicle prompt, the crate's crime, me.safety), server/systems/law.js
 (CRIMES), server/systems/homes.js (homeLotSpots, the garage's refusal), server/systems/traffic.js, server/systems/phone.js
-(jobTarget: veh, dest, the return; target), server/systems/streetlife.js (the armored truck's crime), server/session.js
+(jobTarget: veh, dest, the return; target), server/systems/streetlife.js (the armored truck's crime), server/systems/trains.js
+(the strongbox's crime), server/session.js
 (`safety`), server/store.js (safety on for new characters), shared/rules.js (WORK_TRUCK_RETURN, WORK_TRUCK,
 SAFETY_CONFIRM_S), client/main.js (drawJobTruck, the setting), client/hud.js, client/worldmap.js, client/mapwaypoints.js,
 index.html, README.md, test/honestliving.test.js.
 
-Tests: test/honestliving.test.js (new, 7 tests: every courier pickup (60 of them) gets its flatbed, issued, kept and
+Tests: test/honestliving.test.js (new, 8 tests: every courier pickup (60 of them) gets its flatbed, issued, kept and
 marked, the destination too; a free flatbed at the pickup is issued instead of a second one, not tidied away while you're
 across town, unmarked once you're in it; the garage refuses a work truck and says why; the job done, the tracker points
 back, the bonus paid at the spot; the Act labels; Safety mode on for new characters - warns naming the crime, the arm
 expires, the F key confirms, off goes straight in, someone else's crate carries its crime; the crime table; no parked car
-on a home lot with cars parked round about), and the files the change touches (police, crime, stops, homes, streetlife,
+on a home lot with cars parked round about; a departed player's truck let go), test/stops.test.js (a punch at an officer
+ is "Striking an officer" now), and the files the change touches (police, crime, stops, homes, streetlife,
 revive, chaos, bikes, gameplay, arrests, phones).

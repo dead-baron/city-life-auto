@@ -48,7 +48,7 @@ export const CRIMES = {
   // (the owner, 2026-10-11: "tone down the severity of some less severe crimes so it's not as easy to get a felony")
   carjackHurt: { heat: 25, label: 'Violent carjacking', felony: true, sev: 1.3 },   // (the driver thrown out of a moving car: vehicles.js carjack)
   copCarjack:  { heat: 30, label: 'Carjacking a police vehicle', felony: true, sev: 1.3 },
-  copPunch:    { heat: 25, label: 'Striking an officer', sev: 1.2 },   // (bare fists on an officer: no felony - a weapon's is copAssault)
+  copPunch:    { heat: 40, label: 'Striking an officer', sev: 1.3 },   // (bare fists on an officer: the same chase, no felony - a weapon's is copAssault)
 };
 
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
