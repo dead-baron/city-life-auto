@@ -17,14 +17,18 @@ import { MAP_W, MAP_H } from '../shared/constants.js';   // (today's frame: its 
 const FETCH_MS = 15000;   // the index and every region, all of it, or the city is built here
 
 // the city from the server's region files, or null (no server, a miss, a bad file, too slow, no DecompressionStream)
-export async function fetchCity(base, key, seed, { fetchFn = globalThis.fetch, ms = FETCH_MS } = {}) {
+// (wait: a server still writing its files - a 404 'packing' - is asked again every 2 s until the time is up: World v3's)
+export async function fetchCity(base, key, seed, { fetchFn = globalThis.fetch, ms = FETCH_MS, wait = false } = {}) {
   const world = String(key || '').split(':')[0];
   if (!base || !/^[0-9a-f]{6,40}(-v3)?$/.test(world) || typeof fetchFn !== 'function' || typeof DecompressionStream === 'undefined') return null;
   const url = `${base}${world}/${seed >>> 0}/`, ctl = typeof AbortController === 'function' ? new AbortController() : null;
   const get = async (name) => {
-    const r = await fetchFn(`${url}${name}?v=${PACK_VERSION}`, ctl ? { signal: ctl.signal } : undefined);   // (the format in the URL: a new one isn't read from the HTTP cache)
-    if (!r.ok || !r.body) throw new Error(`${name}: ${r.status}`);
-    return new Uint8Array(await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+    for (;;) {
+      const r = await fetchFn(`${url}${name}?v=${PACK_VERSION}`, ctl ? { signal: ctl.signal } : undefined);   // (the format in the URL: a new one isn't read from the HTTP cache)
+      if (wait && r.status === 404 && r.headers && r.headers.get('x-world-miss') === 'packing' && !(ctl && ctl.signal.aborted)) { await new Promise((res) => setTimeout(res, 2000)); continue; }
+      if (!r.ok || !r.body) throw new Error(`${name}: ${r.status}`);
+      return new Uint8Array(await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+    }
   };
   let timer = null;
   try {
@@ -54,7 +58,7 @@ const isV3 = (key) => /^[0-9a-f]{6,40}-v3:/.test(String(key || ''));
 // which city: { data, from }
 export async function cityFor({ seed, key, base }, { read = readWorld, fetchFn, build = buildCity } = {}) {
   let data = key ? await read(key) : null, from = 'cache';
-  if (!data && key && base) { data = await fetchCity(base, key, seed, { ...(fetchFn ? { fetchFn } : null), ...(isV3(key) ? { ms: 4 * FETCH_MS } : null) }); from = 'served'; }
+  if (!data && key && base) { data = await fetchCity(base, key, seed, { ...(fetchFn ? { fetchFn } : null), ...(isV3(key) ? { ms: 8 * FETCH_MS, wait: true } : null) }); from = 'served'; }
   if (!data && isV3(key)) throw new Error('World v3\'s world could not be downloaded from the game server');
   if (!data) { from = 'built'; data = await build(seed); }
   return { data, from };

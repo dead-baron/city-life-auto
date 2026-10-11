@@ -99,7 +99,7 @@ async function freshen() {
 function startWorld() {
   if (typeof Worker === 'undefined') return null;
   const seed = (Number(lsGet(SEED)) >>> 0) || 1337;
-  const v3 = lsGet('cla.world') === 'v3';   // (the server ran World v3 last time - CLA_WORLD=v3, never live: main.js worldChanged)
+  const v3 = lsGet('cla.world') === 'v3' || /[?&]world=v3\b/.test(location.search);   // (the server ran World v3 last time - CLA_WORLD=v3, never live: main.js worldChanged - or ?world=v3 says it does)
   const key = META && META.world ? `${META.world}${v3 ? '-v3' : ''}:${seed}` : null;
   let w;
   try { w = new Worker(new URL('./worldgen.js', import.meta.url), { type: 'module', name: 'city' }); } catch { return null; }

@@ -33,7 +33,7 @@
 import { REGION_TILES } from './world3.js';
 import { TILE } from './constants.js';
 
-export const PACK_VERSION = 1;
+export const PACK_VERSION = 2;   // (2: an item that is another list's item is said in its region, not the index)
 export const OMIT = ['compLab', 'ringD'];
 // the lists cut into regions, and how an item says where it is ('px': x, y in world px; 'tile': tx, ty - or x, y - in
 // tiles; 'key': a Map keyed by tile index)
@@ -169,30 +169,42 @@ export function packRegions(city, opts = {}) {
     const X0 = rx * g.R, Y0 = ry * g.R, rw = Math.min(g.R, W - X0), rh = Math.min(g.R, H - Y0);
     regions.push({ key: regionKey(rx, ry), rx, ry, rect: [X0, Y0, rw, rh], lists: {}, blobs: layers.map((k) => cutLayer(city[k], win, X0, Y0, rw, rh)) });
   }
+  const where = {};   // (the region of each item of a regional list)
   for (const f of Object.keys(REGIONAL)) {
     const src = city[f], plain = root[f];
     if (!Array.isArray(plain) || !(Array.isArray(src) || src instanceof Map)) continue;
-    const kind = REGIONAL[f], per = regions.map(() => [[], []]);
+    const kind = REGIONAL[f], per = regions.map(() => [[], []]), wf = where[f] = new Int32Array(plain.length);
     let i = 0;
     for (const it of src instanceof Map ? src.keys() : src) {
       const [tx, ty] = it && (typeof it === 'object' || kind === 'key') ? itemTile(kind, it, win) : [0, 0];
-      const p = per[regionOf(g, tx, ty)];
-      p[0].push(i); p[1].push(plain[i]);
+      const r = regionOf(g, tx, ty), p = per[r];
+      p[0].push(i); p[1].push(plain[i]); wf[i] = r;
       i++;
     }
     per.forEach(([idx, items], r) => { if (idx.length) regions[r].lists[f] = { i: regions[r].blobs.push(Int32Array.from(idx)) - 1, d: items }; });
     regional[f] = plain.length;
     root[f] = null;
   }
+  // an item of a regional list that is another's (offshore's points are seaPoints', the lamps props): said in its own
+  // region, not the index (World v3's 81,745 offshore points were 3.4 MB of its index): [f, g, pairs of i, j]
+  const keepRefs = [], byRegion = regions.map(() => new Map());
+  for (const r of refs) {
+    const [p, h] = r;
+    if (p.length !== 2 || h.length !== 2 || !where[p[0]] || !where[h[0]] || typeof p[1] !== 'number' || typeof h[1] !== 'number') { keepRefs.push(r); continue; }
+    const m = byRegion[where[p[0]][p[1]]], k = `${p[0]} ${h[0]}`;
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(p[1], h[1]);
+  }
+  byRegion.forEach((m, ri) => { if (m.size) regions[ri].refs = [...m].map(([k, ij]) => [...k.split(' '), regions[ri].blobs.push(Int32Array.from(ij)) - 1]); });
   let propSolid = null;
   if (psKeys) propSolid = blobs.push(Int32Array.from(city.propSolid.keys())) - 1;
   const index = writePack({
     frame: [g.W, g.H, g.R, g.nx, g.ny], win, order, omit, layers: layers.map((k) => [k, city[k].constructor.name]), regional, propSolid,
-    regions: regions.map((r) => r.key), root, refs, fix, meta: opts.meta || null,
+    regions: regions.map((r) => r.key), root, refs: keepRefs, fix, meta: opts.meta || null,
   }, blobs);
   return {
     index,
-    regions: regions.map((r) => ({ key: r.key, bytes: writePack({ key: r.key, rx: r.rx, ry: r.ry, rect: r.rect, lists: r.lists }, r.blobs) })),
+    regions: regions.map((r) => ({ key: r.key, bytes: writePack({ key: r.key, rx: r.rx, ry: r.ry, rect: r.rect, lists: r.lists, refs: r.refs || [] }, r.blobs) })),
   };
 }
 
@@ -229,7 +241,7 @@ export function assembleCity(indexBytes, regionBytes) {
   const { win, root } = X, N = win[2] * win[3];
   const layers = X.layers.map(([k, t]) => { const T = TYPES[t]; if (!T) throw new Error('a bad index'); return new T(N); });
   for (const f of Object.keys(X.regional)) root[f] = new Array(X.regional[f]);
-  const got = new Set();
+  const got = new Set(), same = [];
   for (const bytes of regionBytes) {
     const { d: R, blobs: rb } = readPack(bytes);
     if (!X.regions.includes(R.key) || got.has(R.key) || rb.length < layers.length) throw new Error('a bad region file');
@@ -240,8 +252,11 @@ export function assembleCity(indexBytes, regionBytes) {
       if (!arr || idx.length !== d.length) throw new Error('a bad region file');
       for (let j = 0; j < idx.length; j++) { if (idx[j] < 0 || idx[j] >= arr.length) throw new Error('a bad region file'); arr[idx[j]] = d[j]; }
     }
+    for (const [f, g, i] of R.refs || []) { if (!X.regional[f] || !X.regional[g] || !rb[i]) throw new Error('a bad region file'); same.push([root[f], root[g], rb[i]]); }
   }
   if (got.size !== X.regions.length) throw new Error('a region missing');
+  // (once every region is in: an item may be one of another region's)
+  for (const [a, b, ij] of same) for (let k = 0; k + 1 < ij.length; k += 2) { if (ij[k] < 0 || ij[k] >= a.length || ij[k + 1] < 0 || ij[k + 1] >= b.length) throw new Error('a bad region file'); a[ij[k]] = b[ij[k + 1]]; }
   for (const [p, h] of X.refs) put(root, p, at(root, h));
   const conv = [];
   for (const [p, t, v] of X.fix) {
