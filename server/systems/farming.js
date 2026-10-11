@@ -143,6 +143,7 @@ export function startWork(world, p, poi) {
   track(world, p);
   const pad = poi.cargoPad || { x: poi.x, y: poi.y + 60 };
   const v = jobs.workTruck(world, p, pad, 'tractor', poi);
+  if (v) v.paint = 0;   // (the co-op's tractors are red)
   world.notify(p, `Farm work! ${FARM.rows} rows of the field by ${poi.label}: drive the co-op tractor down a row and it does what the row needs - plough the stubble, sow the ploughed, harvest the ripe. $${FARM.pay.plough}-$${FARM.pay.harvest} a row.${v ? ' The tractor is parked by the yard (the green ring).' : ''}`, 'good');
   p.meDirty = true;
   return null;
@@ -170,4 +171,26 @@ function sendNear(world, p) {
   if (ver === (p.fieldsSig || '')) return;
   p.fieldsSig = ver;
   p.conn.sendJSON({ t: 'fields', f: near.map((F) => ({ i: F.i, x: F.f.x, y: F.f.y, w: F.f.w, h: F.f.h, v: F.v ? 1 : 0, rw: FARM.rowW, segs: FARM.segs, r: F.rows.flatMap((row) => [row.s, Math.round(row.g * 100), row.m, row.ok]) })) });
+}
+
+// ---- dev ('farm'): at the fields by the co-op in a tractor, the rows beside you in every state (stubble, ploughed,
+// sown, sprouting, growing, tall, ripe, some half done)
+export function devFarm(world, p) {
+  const ped = p.ped;
+  if (!ped) return 'no body';
+  const coop = world.map.pois.find((q) => q.kind === 'farm');
+  const at = coop && nextRow(world, coop.x, coop.y);
+  if (!at) return 'no fields';
+  const F = at.F, looks = [[0, 0, 0], [1, 0, 0], [2, 0, 0], [2, 0.2, 0], [2, 0.5, 0], [2, 0.85, 0], [3, 0, 0], [0, 0, 0x1f], [1, 0, 0x0f], [3, 0, 0x3f]];
+  F.rows.forEach((row, r) => { const [s, g, m] = looks[r % looks.length]; row.s = s; row.g = g; row.m = m & row.ok; });
+  F.dirty = true;
+  const [a] = rowEnds(F, Math.min(F.n - 1, 1));
+  if (ped.vehId) { const old = world.get(ped.vehId); if (old) old.seats[old.seats.indexOf(ped.id)] = 0; ped.vehId = 0; ped.seat = -1; }
+  const v = world.spawnVehicle('tractor', a.x, a.y, F.v ? Math.PI / 2 : 0, { npcOwned: false, paint: 0 });
+  v.despawnable = false;
+  ped.x = v.x; ped.y = v.y; ped.vehId = v.id; ped.seat = 0; v.seats[0] = ped.id; v.lastDriver = ped.id; p.lastVehicle = v.id;
+  world.place(ped);
+  p.fieldsSig = null;
+  world.notify(p, '[dev] A tractor at the fields; the rows beside you in every state. Drive down one to work it.', 'info');
+  return null;
 }

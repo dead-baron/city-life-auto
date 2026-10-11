@@ -7,6 +7,8 @@
 // with it, so the rows' live state goes on top of it near you). Small and cheap: a plot is one sprite (its soil and its
 // three plants at their stage), a row a sprite per stretch of it (its look: stubble, ploughed, sown, growing, ripe);
 // made once each, at the art's pixel (2 world px).
+import { PAINTS } from '../../shared/vehicles.js';
+
 const P = 2;   // world px per art pixel
 const hsh = (x, y, s) => { let h = (x * 374761393 + y * 668265263 + s * 974711) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
@@ -50,19 +52,41 @@ const STUB = [[176, 150, 92], [150, 124, 70], [196, 172, 112]], PLOW = [[84, 56,
 const RIPE = [[214, 178, 74], [188, 150, 56], [238, 208, 112]];
 export function rowLook(s, g) { return s === 0 ? 0 : s === 1 ? 1 : s === 3 ? 6 : g < 8 ? 2 : g < 30 ? 3 : g < 65 ? 4 : 5; }
 export function rowPixel(look, a, b) {
-  if (look === 0) return (b & 3) === 1 && hsh(a, b, 5) < 0.7 ? STUB[1] : hsh(a, b, 6) > 0.86 ? STUB[2] : STUB[0];
+  if (look === 0) return (b & 3) === 1 && hsh(a >> 1, b, 5) < 0.7 ? STUB[1] : hsh(a >> 1, b >> 1, 6) > 0.9 ? STUB[2] : STUB[0];
   const furrow = (b & 3) === 0 ? PLOW[1] : (b & 3) === 1 ? PLOW[2] : PLOW[0];
-  if (look === 6) return (b & 3) === 2 ? RIPE[1] : hsh(a, b, 7) > 0.8 ? RIPE[2] : (b & 3) === 0 && hsh(a, b, 8) > 0.5 ? RIPE[1] : RIPE[0];
+  if (look === 6) return (b & 3) === 2 ? RIPE[1] : hsh(a >> 1, b >> 1, 7) > 0.86 ? RIPE[2] : (b & 3) === 0 && hsh(a >> 1, b, 8) > 0.5 ? RIPE[1] : RIPE[0];
   if (look === 1) return furrow;
   const line = (b & 7) === 3 || (b & 7) === 4;
   if (look === 2) return line && (a & 3) === 0 ? [168, 140, 96] : furrow;                      // the seed drills
   if (look === 3) return line && (a & 3) < 2 ? GREEN[(a >> 2) % 3] : furrow;                  // sprouting
-  if (look === 4) return (b & 7) >= 2 && (b & 7) <= 5 && hsh(a, b, 9) > 0.2 ? GREEN[(a + b) % 3] : furrow;   // growing
-  return (b & 7) !== 0 || hsh(a, b, 10) > 0.6 ? GREEN[(a * 3 + b) % 3] : furrow;              // tall
+  if (look === 4) return (b & 7) >= 2 && (b & 7) <= 5 && hsh(a >> 1, b, 9) > 0.2 ? GREEN[(a + b) % 3] : furrow;   // growing
+  return (b & 7) !== 0 || hsh(a >> 1, b, 10) > 0.6 ? GREEN[(a * 3 + b) % 3] : furrow;              // tall
+}
+
+// The tractor in the classic view (art v2 has its own model; the classic atlas has none): seen from above, facing +x -
+// the big rear wheels under the cab at the back, the small front ones by the hood, the exhaust stack, the cab's roof.
+export function drawTractor(g, L, W, paint, wreck) {
+  const body = wreck ? '#3b302b' : paint, dark = '#1b1a18';
+  g.fillStyle = dark;
+  g.fillRect(-L / 2 + 2, -W / 2, 32, 13); g.fillRect(-L / 2 + 2, W / 2 - 13, 32, 13);          // the rear tyres
+  g.fillRect(L / 2 - 24, -W / 2 + 5, 17, 9); g.fillRect(L / 2 - 24, W / 2 - 14, 17, 9);       // the front tyres
+  g.fillStyle = '#3a3936';
+  for (let k = 0; k < 32; k += 5) { g.fillRect(-L / 2 + 3 + k, -W / 2, 2, 13); g.fillRect(-L / 2 + 3 + k, W / 2 - 13, 2, 13); }   // the treads
+  g.fillStyle = body;
+  g.fillRect(-L / 2 + 30, -W / 2 + 15, L - 32, W - 30);                                        // the hood
+  g.fillRect(-L / 2 + 4, -W / 2 + 11, 32, W - 22);                                              // the cab
+  g.fillStyle = wreck ? '#2a2420' : '#efede6';
+  g.fillRect(-L / 2 + 6, -W / 2 + 13, 28, W - 26);                                              // its roof
+  g.fillStyle = wreck ? '#221d1a' : '#3f5f7c';
+  g.fillRect(-L / 2 + 30, -W / 2 + 13, 4, W - 26);                                              // the windscreen's edge
+  g.fillStyle = dark;
+  g.fillRect(L / 2 - 4, -W / 2 + 17, 3, W - 34);                                                // the grille
+  g.beginPath(); g.arc(L / 2 - 18, -W / 2 + 19, 3, 0, 6.283); g.fill();                         // the exhaust stack
 }
 
 export class FarmArt {
   constructor(S) { this.S = S; this.cv = new Map(); }
+  drawTractor(g, def, p, wreck) { drawTractor(g, def.L, def.W, PAINTS[p % PAINTS.length] || '#c8262b', wreck); }
   // ---- the classic view: canvases made once, drawn in the world pass ----
   _canvas(key, w, h, fill) {
     let c = this.cv.get(key);

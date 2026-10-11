@@ -8592,3 +8592,54 @@ hitting things on the ground as I fly by even though I'm up in the air. The soun
 - The sound: the rotor (vol 0.5, a deep sub at 0.9) drove the mix into its soft ceiling right under you. The rotor,
   the propeller and the tank are now level with a truck (sound/vehicles.js); the rescue helicopter has the rotor's sound
   (it had a car's).
+
+## 2026-10-11 · Gardening at home and farm work: the plots in your yard, the tractor on the fields (H61)
+
+The owner: "Have we added farm jobs and gardening mechanics yet?" - and wants both. There was the harvest contract (haul
+4 Produce Boxes in a co-op flatbed), picking at the orchard and the vineyard, and the farms' FIELD tiles. Now:
+- **A garden at home** (server/systems/gardening.js). An owned home's yard has a few plots (up to GARDEN.plots), found
+  from the built map: two tiles of open yard side by side, a tile in from the lot's edge (the painted lots keep their
+  hedges there), clear of the house, its door, its drive and the props, in a bed at the back of the lot - nothing is
+  added to the map, the world's hash is the same. 86 of the 115 houses have one (44 with three or more), the cottages,
+  farmhouses, beach houses and the mansion too; apartments and shacks none. Seeds (tomato, carrot, lettuce, pumpkin)
+  at the farm co-op's counter (Dry Creek's co-op and the Cedar Farms market: SHOPS.farm), the Old Town market and the
+  hardware store. At an empty plot of yours the Act button plants the seeds you carry; at a growing one it waters it
+  (the rain waters them all). A watering lasts GARDEN.waterDays in-game days; a plant grows only while it's wet, ripe
+  after its crop's days of wet growing (GARDEN_CROPS: a day to two and a half - 20 to 50 minutes); dry too long it
+  wilts (water perks it up, but a prize is lost) and then dies (clear it and sow again). Picked ripe, its yield goes in
+  your bag - eaten it heals, the grocery and the co-op buy it (SHOPS.grocery, SHOPS.farm) - and now and then (10%,
+  rolled at planting) it's a prize one worth GARDEN.prizeX times as much. The plots live with the home in the profile
+  (prof.garden[homeId]: they go with it when it's sold) and grow while you're away (stepped with the server; what passed
+  while it was down is caught up from each garden's wall clock). Someone else can't work your plots; everyone sees them.
+- **Farm work** (server/systems/farming.js). The farms' fields (map.fields) are kept on the server in rows FARM.rowW px
+  wide along each field's length, each going round stubble -> ploughed -> sown -> growing (FARM.growDays) -> ripe ->
+  harvested. Driving a tractor down a row does the job it needs once FARM.cover of it (in FARM.segs stretches on field
+  tiles) has been driven over; the stretches done show behind the tractor. The tractor is vehicle 48 (shared/vehicles.js:
+  slow, 900 health, rough 0.08 - dirt and grass hardly slow it; art v2 already had its model, the classic view draws it
+  in render/farmart.js). The farm-work contract - the co-op's counter ("Farm work: the co-op tractor on the fields") or
+  the phone's job list (🚜 Farm work at ...) - issues the co-op's red tractor like a work truck (jobs.js workTruck: the
+  ring and arrows until you're in it, no theft, a garage won't keep it, the return bonus after) and points the tracker
+  at the end of the nearest row that needs work; each row pays FARM.pay (plough 22, sow 18, harvest 30), FARM.rows rows
+  (8) finish it with a FARM.bonus ($150). Without the contract a tractor still works the rows, unpaid.
+- **On the page** (client/render/farmart.js, loaded the first time the server sends a 'garden' or 'fields' message - the
+  page's own code grew by a few lines: main.js's two messages and two draw calls, the bag's icons). The server sends the
+  plots near you (anyone's) and the rows of the fields near you when they change; the page draws them on the ground in
+  both renderers - the classic world pass after the flora, art v2 as ground decals before the entities (one line in
+  host.js), each plot one sprite (its soil, dry or wet, and its three plants at their stage, wilted, dead or a prize),
+  each row a sprite per stretch (stubble, ploughed, sown, sprouting, growing, tall, ripe), made once at the art's pixel.
+- Dev: the debug menu's 🌱 Gardening & farm work ('garden': a garden of your own at every stage, the nearest free house
+  bought; 'garden' k ripe; 'farm': a tractor at the fields with the rows in every state). README: the rows for both.
+- Numbers in shared/rules.js (GARDEN, GARDEN_CROPS, FARM); the items at the end of shared/items.js (seed_<crop>,
+  <crop>, prize_<crop>); jobs.js gains jobDone (a job that pays as it goes, over: the truck's return bonus on offer).
+- Tests: test/gardening.test.js (the plots from the map; seeds bought, planted, watered, growing only while wet, wilting,
+  rain, picked, eaten, sold; dying; a prize; someone else's yard; kept across a rejoin and grown meanwhile, caught up
+  after a server's downtime; the plots sent), test/farming.test.js (the tractor's numbers; ploughing, sowing, growing,
+  harvesting a row, the tick doing it, the rows sent; the contract from the counter: the tractor issued, entered without
+  a crime, paid by the row, the bonus, the return; the phone's job).
+- Playtest (headless, both renderers; scratchpad/h61): a garden at every stage and then ripe, the tractor down a row.
+  What's wrong: the plots are placed by the map's tiles, not the painted lot - in the classic view one house's plots sat
+  on its painted hedge (hence the margin now), and a patio or a pool painted on a lawn could still get one; art v2's
+  yards can have bushes over them. The rows' texture reads busy at art v2's zoom (calmed a little). A tractor seen before
+  the page has loaded farmart.js is the classic view's plain box until it has.
+- Not done (step 3): hand work in the rows at harvest time, the combine harvester (index 49 is free for it; art v2 has
+  its model). The fields' state isn't saved across a server restart (it starts again in its mix).

@@ -3990,7 +3990,7 @@ function drawVehicleEnt(v, now, dt) {
   }
   g.translate(-Math.sin(v.ra) * leanPx + Math.cos(v.ra) * dip, -lift + Math.sin(v.ra) * dip);
   vehTurn(g, v, def);
-  if (def.tracks) drawTank(v, def, !!(f & VF.WRECK)); else if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);
+  if (def.tracks) drawTank(v, def, !!(f & VF.WRECK)); else if (def.id === 'tractor' && S.farmArt) S.farmArt.drawTractor(g, def, v.d.p | 0, !!(f & VF.WRECK)); else if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);   // (the tractor: render/farmart.js)
   if (v.parent) S.boom.vdmgDraw(g, v, def);   // (its damage: render/vehdmg.js)
   const L = def.L, Wd = def.W;
   if (f & VF.BLOODY) { g.fillStyle = 'rgba(120,10,16,.85)'; for (let k = 0; k < 5; k++) { const h = ((v.id * 13 + k * 7) % 17) / 17; g.beginPath(); g.arc(L * 0.3 + h * L * 0.15, -Wd * 0.3 + ((k * 0.37 + h) % 1) * Wd * 0.6, 2 + h * 3, 0, 6.28); g.fill(); } }

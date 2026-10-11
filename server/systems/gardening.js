@@ -59,7 +59,8 @@ function findSpots(map, h) {
   const lot = pf || (mn && mn.lot) || { tx: b.tx - 3, ty: b.ty - 3, tw: b.tw + 6, th: b.th + 6 };
   const near = (tx, ty) => tx >= b.tx - 1 && tx < b.tx + b.tw + 1 && ty >= b.ty - 1 && ty < b.ty + b.th + 1;   // (a tile's clearance from the walls)
   const cands = [];
-  for (let ty = lot.ty; ty < lot.ty + lot.th; ty++) for (let tx = lot.tx; tx < lot.tx + lot.tw - 1; tx++) {
+  // (a tile in from the lot's edge: the painted lots have their hedges and fences there)
+  for (let ty = lot.ty + 1; ty < lot.ty + lot.th - 1; ty++) for (let tx = lot.tx + 1; tx < lot.tx + lot.tw - 2; tx++) {
     if (!yardTile(map, tx, ty) || !yardTile(map, tx + 1, ty) || near(tx, ty) || near(tx + 1, ty)) continue;
     const x = (tx + 1) * TILE, y = (ty + 0.5) * TILE;
     if (Math.hypot(x - h.x, y - h.y) < 96) continue;                                  // not by the door
@@ -252,5 +253,33 @@ export function clearPlot(world, p) {
   face(p, at.s);
   world.notify(p, 'You pull up the dead plant. The plot is ready for new seeds.', 'info');
   done(world, p);
+  return null;
+}
+
+// ---- dev ('garden'): a garden of your own - the nearest house with a yard bought for you, its plots planted at every
+// stage (a seed, a sprout, one in flower, one ripe and a prize); msg.k 'ripe': everything in your gardens ripe
+export function devGarden(world, p, msg, buy) {
+  const ped = p.ped, prof = p.profile;
+  if (!ped) return 'no body';
+  if (msg && msg.k === 'ripe') {
+    for (const h of ownedHomes(world, prof)) { const gd = gardenOf(prof, h.id); if (gd) for (const q of gd.plots) if (q && !q.dead) { q.g = 1; q.m = 1; q.d = 0; } }
+    p.gardenSig = null;
+    return null;
+  }
+  let h = ownedHomes(world, prof).find((q) => plotSpots(world.map, q).length >= 3 && Math.hypot(q.x - ped.x, q.y - ped.y) < 3000);
+  if (!h) {
+    h = world.map.homes.filter((q) => q && !q.gone && !world.homeOwner.has(q.id) && plotSpots(world.map, q).length >= 3).sort((a, b) => Math.hypot(a.x - ped.x, a.y - ped.y) - Math.hypot(b.x - ped.x, b.y - ped.y))[0];
+    if (!h) return 'no free house with a yard';
+    const err = buy(world, p, h, () => true);
+    if (err) return err;
+  }
+  const spots = plotSpots(world.map, h), gd = gardenOf(prof, h.id, spots.length);
+  const set = [['tomato', 0.05, 1, false], ['carrot', 0.3, 1, false], ['tomato', 0.9, 1, false], ['pumpkin', 1, 1, true]];
+  spots.forEach((s, i) => { const [c, g, m, pz] = set[i % set.length]; gd.plots[i] = { c, g, m, d: 0, p: pz, dead: false }; });
+  if (spots.length >= 3) gd.plots[1] = { c: 'lettuce', g: 0.6, m: 0, d: GARDEN.wiltDays * DAY, p: false, dead: false };   // (a wilting one)
+  for (const c of CROP_IDS) prof.inventory[`seed_${c}`] = (prof.inventory[`seed_${c}`] || 0) + 2;
+  ped.x = spots[0].x; ped.y = spots[0].y + 30; world.place(ped);
+  p.gardenSig = null;
+  world.notify(p, `[dev] ${h.name}'s garden: ${spots.length} plots, planted at every stage, and seeds in your bag.`, 'info');
   return null;
 }
