@@ -13,7 +13,7 @@
 // comes out the same on the server and in every browser (integer hashes and plain arithmetic, no trigonometry).
 // ugMapOf(map) is a stand-in map for the physics: shared/physics.js steps anyone with e.ug through it - rock is
 // WALL, walkways and cave floors walkable, the cave river DEEP (you swim it, or take the boat).
-import { TILE, T, MAP_W, MAP_H } from './constants.js';
+import { TILE, T } from './constants.js';
 import { mulberry32 } from './rng.js';
 import { edgeCovers, coverSeed } from './covers.js';
 
@@ -72,10 +72,11 @@ function vnoise(x, y, cell, s) {
   return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
 }
 
-// A region: a box of cells in tiles (x0, y0, w, h), everything ROCK until carved.
-function region(x0, y0, x1, y1) {
+// A region: a box of cells in tiles (x0, y0, w, h), everything ROCK until carved. F: the world's frame (the map's
+// m.frame: the underground lies under the whole world, whatever part of it a map holds).
+function region(F, x0, y0, x1, y1) {
   x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
-  x1 = Math.min(MAP_W - 1, Math.ceil(x1)); y1 = Math.min(MAP_H - 1, Math.ceil(y1));   // (MAP_W, MAP_H: the world's whole frame - the underground lies under all of it)
+  x1 = Math.min(F.w - 1, Math.ceil(x1)); y1 = Math.min(F.h - 1, Math.ceil(y1));
   const w = Math.max(1, x1 - x0 + 1), h = Math.max(1, y1 - y0 + 1);
   return { x0, y0, w, h, c: new Uint8Array(w * h) };
 }
@@ -219,6 +220,7 @@ export function undergroundOf(map) {
 }
 function build(map) {
   const seed = ((map.seed ?? 1337) | 0) >>> 0;
+  const F = map.frame || { w: (map.x0 || 0) + map.w, h: (map.y0 || 0) + map.h };   // (the world's frame; a plain copy of a whole map: its extent)
   const routes = map.edges ? sewerRoutes(map) : [];
   const regions = [];
   // the sewers' region: round every route
@@ -227,7 +229,7 @@ function build(map) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     const grow = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
     for (const r of routes) { for (const p of r.pts) grow(p.x, p.y); for (const m of r.manholes) grow(m.x, m.y); if (r.door) { grow(r.door.x, r.door.y); grow(r.door.tx, r.door.ty); } }
-    sewer = region(x0 / TILE - 6, y0 / TILE - 6, x1 / TILE + 6, y1 / TILE + 6);
+    sewer = region(F, x0 / TILE - 6, y0 / TILE - 6, x1 / TILE + 6, y1 / TILE + 6);
     sewer.ug = UG.SEWER;
     for (const r of routes) {
       for (let i = 1; i < r.pts.length; i++) capsule(sewer, r.pts[i - 1].x, r.pts[i - 1].y, r.pts[i].x, r.pts[i].y, SEWER_HW, C.WALK);
@@ -249,7 +251,7 @@ function build(map) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const c of cave.chambers) { const r = c.long ? 0 : c.r; const xs = c.long ? [c.long.ax, c.long.bx] : [c.x]; const ys = c.long ? [c.long.ay, c.long.by] : [c.y]; for (const x of xs) for (const y of ys) { x0 = Math.min(x0, x - r - c.r); x1 = Math.max(x1, x + r + c.r); y0 = Math.min(y0, y - r - c.r); y1 = Math.max(y1, y + r + c.r); } }
     x0 = Math.min(x0, cave.mouth.x - 200); x1 = Math.max(x1, cave.mouth.x + 200); y0 = Math.min(y0, cave.mouth.y - 200); y1 = Math.max(y1, cave.mouth.y + 200);
-    cr = region(x0 / TILE - 4, y0 / TILE - 4, x1 / TILE + 4, y1 / TILE + 4);
+    cr = region(F, x0 / TILE - 4, y0 / TILE - 4, x1 / TILE + 4, y1 / TILE + 4);
     cr.ug = UG.CAVE;
     const s2 = seed ^ 0x3c3c;
     for (const c of cave.chambers) {
@@ -276,7 +278,7 @@ function build(map) {
   if (cave) dressCave(L);
   if (sewer) dressSewers(L);
   L.veins = veins(map, L);
-  L.phys = physMap(L);
+  L.phys = physMap(L, F);
   return L;
 }
 
@@ -395,16 +397,16 @@ function veins(map, L) {
 }
 
 // ---- the physics' stand-in map ------------------------------------------------------------------------------------------
-function physMap(L) {
+function physMap(L, F) {
   const regs = L.regions;
   const tileAt = (tx, ty) => {
     for (const R of regs) { const v = cellAt(R, tx, ty); if (v >= 0) return CELL_T[v]; }
     return T.WALL;
   };
   return {
-    // (the underground's physics map spans the world's whole frame: MAP_W x MAP_H, origin 0, 0)
-    x0: 0, y0: 0, w: MAP_W, h: MAP_H, ug: true, solidProps: new Map(), levels: null, lvl0Block: null,
-    idx: (tx, ty) => ty * MAP_W + tx, row: (ty) => ty * MAP_W, col: (tx) => tx, inside: (tx, ty) => tx >= 0 && ty >= 0 && tx < MAP_W && ty < MAP_H,
+    // (the underground's physics map spans the world's frame F (the map's m.frame), origin 0, 0)
+    x0: 0, y0: 0, w: F.w, h: F.h, frame: F, ug: true, solidProps: new Map(), levels: null, lvl0Block: null,
+    idx: (tx, ty) => ty * F.w + tx, row: (ty) => ty * F.w, col: (tx) => tx, inside: (tx, ty) => tx >= 0 && ty >= 0 && tx < F.w && ty < F.h,
     tileAt, tileAtPx: (x, y) => tileAt(Math.floor(x / TILE), Math.floor(y / TILE)),
   };
 }

@@ -6,7 +6,9 @@
 //
 // The server runs edgeBrake on everything that moves (shared/physics.js pedStep and vehStep), and the client runs
 // the same when predicting your own movement, so the two agree.
-import { WORLD_W, WORLD_H } from './constants.js';
+// The edge is the world's frame (the map's m.frame = { w, h } in tiles: a window carries the whole world's); without
+// one, today's frame.
+import { TILE, WORLD_W, WORLD_H } from './constants.js';
 
 export const EDGE_SLOW = 480;     // px past the map's edge where the slowing starts
 export const EDGE_OUT = 1280;     // px past the edge: no further
@@ -14,8 +16,10 @@ const OUT_V = 720;                // the fastest anything goes heading out, at E
 const SIDE_V = 620;               // ...and along the edge: down to a crawl at EDGE_OUT
 
 // How far (x, y) is past the map's edge (d, 0 inside the map) and the unit vector of the shortest way back (nx, ny).
-export function edgeInfo(x, y, out = {}) {
-  const qx = x < 0 ? 0 : x > WORLD_W ? WORLD_W : x, qy = y < 0 ? 0 : y > WORLD_H ? WORLD_H : y;
+// F: the world's frame (m.frame, tiles).
+export function edgeInfo(x, y, out = {}, F = null) {
+  const WW = F ? F.w * TILE : WORLD_W, WH = F ? F.h * TILE : WORLD_H;
+  const qx = x < 0 ? 0 : x > WW ? WW : x, qy = y < 0 ? 0 : y > WH ? WH : y;
   const dx = qx - x, dy = qy - y, d = Math.sqrt(dx * dx + dy * dy);
   out.d = d; out.nx = d > 0 ? dx / d : 0; out.ny = d > 0 ? dy / d : 0;
   return out;
@@ -26,10 +30,10 @@ export const edgeHold = (d) => (d <= EDGE_SLOW ? 0 : d >= EDGE_OUT ? 1 : (d - ED
 
 // Brake a moving thing {x, y, vx, vy} past the edge (after its step): its speed out capped lower the further out it
 // is, its speed along the edge dragged down too, its speed back toward the city untouched; at EDGE_OUT it is put
-// back on the line. Returns how hard it held (0 inside the slowing band's start).
+// back on the line. Returns how hard it held (0 inside the slowing band's start). F: the world's frame (m.frame).
 const E = { d: 0, nx: 0, ny: 0 };
-export function edgeBrake(s) {
-  const e = edgeInfo(s.x, s.y, E);
+export function edgeBrake(s, F = null) {
+  const e = edgeInfo(s.x, s.y, E, F);
   if (e.d <= EDGE_SLOW) return 0;
   const k = edgeHold(e.d), back = s.vx * e.nx + s.vy * e.ny;      // (+ toward the city)
   const sx = s.vx - back * e.nx, sy = s.vy - back * e.ny, side = Math.sqrt(sx * sx + sy * sy);
@@ -38,4 +42,13 @@ export function edgeBrake(s) {
   s.vx = b * e.nx + sx * ks; s.vy = b * e.ny + sy * ks;
   if (e.d > EDGE_OUT) { s.x += e.nx * (e.d - EDGE_OUT); s.y += e.ny * (e.d - EDGE_OUT); }
   return k;
+}
+
+// The camera's bounds: over the world and the sea past its edge as far as you can go (it follows you out there),
+// never past where nothing can go. F: the world's frame (m.frame). Clamps cam {x, y} (px) in place.
+export function clampCam(cam, F) {
+  const WW = F.w * TILE, WH = F.h * TILE;
+  cam.x = Math.max(-EDGE_OUT, Math.min(WW + EDGE_OUT, cam.x));
+  cam.y = Math.max(-EDGE_OUT, Math.min(WH + EDGE_OUT, cam.y));
+  return cam;
 }

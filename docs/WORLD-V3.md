@@ -1316,8 +1316,11 @@ never runs the generator: it fetches the regions round the player and keeps them
    - **What's left:** (the generator builds in a frame of its own now: `generateCity(seed, { frame: { w, h } })`,
      done 2026-10-10, 8.2); the lists (props, POIs, buildings, roads, solid props' list views) are still whole in a window - splitting them
      is the region file's job (item 2); the client's moving window (item 4) - today the client still holds the whole
-     map. Whole-frame uses kept on purpose: the art's chunk grid, the camera's bounds and the border sea, the map
-     pictures, the router's grid, the underground, the server's ferry routes (it holds the whole world).
+     map. **What means the whole world follows the world's frame the map carries** (`m.frame = { w, h }`: a whole map's
+     own extent, a window's the world's; done 2026-10-10): the open sea past the edge and the border, the camera's
+     bounds, the art's and the ground's chunk grids, the map pictures, the router's grid, the underground, the
+     server's net chunks and its ferry planner (it holds the whole world: the map's own extent). Today's frame's
+     constants are left only where they mean today's frame by nature (`test/mapwindow.test.js` lists them).
      Near a window's edge the queries that look round a point (a flood, a ray, the bake's margin) see a wall where the
      whole map has land: the client's window must hold a margin round what it draws and simulates.
 2. **The region file:**
@@ -1422,11 +1425,18 @@ The build's time hardly grows with the frame: most of it is the city, which is t
 terrain's distance fields and labels, the districts, the blocks' flood, the wilds' grids) add about 5 s at v3.
 
 For the next steps:
-- `seaPoints` and `offshore` at v3 are 190,000 points each, and the server scans them whole (server/systems/boats.js,
-  jobs.js): they need a spatial index (or a coarser sampling far out at sea) before the v3 world runs.
-- The runtime's whole-frame uses (mapwindow.test.js's list) still mean today's frame: tileAt's soft edge and the border
-  (border.js), the camera's bounds, the art's chunk grid, the underground, the ferry planner. With the v3 world they
-  follow the built map's frame.
+- ~~`seaPoints` and `offshore` at v3 are 190,000 points each, and the server scans them whole (server/systems/boats.js,
+  jobs.js)~~ **done (2026-10-10):** they go through a spatial index (`server/pointgrid.js`: 1024 px buckets; a query
+  looks only at the cells near it).
+- ~~The runtime's whole-frame uses (mapwindow.test.js's list) still mean today's frame~~ **done (2026-10-10):** tileAt's
+  soft edge and the border (border.js), the camera's bounds (`clampCam`), the art's and the ground's chunk grids, the
+  map pictures, the router's grid, the underground, the server's net chunks (`World.chunksX` / `chunksY`) and the
+  ferry planner follow the map's frame (`m.frame`). `test/worldframe.test.js` runs the server's world for 45 s on
+  today's world in a bigger frame (MAP_W + 240 x MAP_H + 240) with players by the old edge, past it and past the new
+  one. Still today's frame by nature: the page asks for today's frame's region files along with the index (the rest
+  once the index says the world's), and the world map's prebuilt pictures (`assets/map`, `assets/worldmap.webp`) are
+  today's world's. At v3 the HUD's and the spectator's map pictures (one pixel a tile, 5040 x 4032: 81 MB of pixels)
+  want a coarser picture, and the art CDN's background order scores 35,280 chunks (fine on the server, to watch).
 - The region files (8.1) at the v3 frame: 10 x 8 regions (tested); the index's whole lists need the changes 8.1 lists.
 ### 8.3 Stage 2, step 1: the land of the v3 frame (2026-10-10)
 

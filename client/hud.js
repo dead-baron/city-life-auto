@@ -1,7 +1,7 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, fishing cue, shop menus, death screen, radar + big map.
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
-import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER } from '../shared/constants.js';
+import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
 import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
@@ -527,9 +527,9 @@ export function iconSkip(map) {
 
 function buildMinimap(map) {
   const c = document.createElement('canvas');
-  c.width = MAP_W; c.height = MAP_H;   // (the world's picture: the map paints its part)
+  c.width = map.frame.w; c.height = map.frame.h;   // (the world's picture, one pixel a tile: the map paints its part)
   const g = c.getContext('2d');
-  const img = g.createImageData(MAP_W, MAP_H);
+  const img = g.createImageData(c.width, c.height);
   const col = {
     [T.ROAD]: [70, 70, 78], [T.BRIDGE]: [90, 90, 98], [T.SIDEWALK]: [150, 150, 145], [T.PLAZA]: [140, 110, 95], [T.LOT]: [80, 80, 86],
     [T.GRASS]: [50, 105, 45], [T.BUILDING]: [190, 160, 120], [T.WATER]: [35, 85, 165], [T.DEEP]: [25, 60, 130], [T.SAND]: [215, 195, 140],

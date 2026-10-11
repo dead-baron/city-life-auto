@@ -2,7 +2,7 @@
 // paintings - on a little city map and as a list. Tap a dot or a name to go there. Each place gets
 // a spot you can stand on, worked out once from the map: the open pavement nearest the middle of
 // the district (or open ground where it has no streets).
-import { T, TILE, MAP_W, MAP_H } from '../shared/constants.js';
+import { T, TILE } from '../shared/constants.js';
 import { DISTRICTS, ISLANDS } from '../shared/mapcore.js';
 import { MAP_FRAME } from './hud.js';
 
@@ -84,7 +84,7 @@ export function buildTeleport(box, map, go) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.fillStyle = '#0b1830'; g.fillRect(0, 0, w, h);
     const sc = w / (fx1 - fx0);
-    if (img) { const kx = img.width / (MAP_W * TILE), ky = img.height / (MAP_H * TILE);   // (the world map picture: the whole frame)
+    if (img) { const kx = img.width / (map.frame.w * TILE), ky = img.height / (map.frame.h * TILE);   // (the world map picture: the world's frame)
       g.drawImage(img, fx0 * kx, fy0 * ky, (fx1 - fx0) * kx, (fy1 - fy0) * ky, 0, 0, w, h); }
     g.font = '600 9px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
     for (const p of list) {

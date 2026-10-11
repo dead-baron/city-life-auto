@@ -7,7 +7,8 @@
 //     roadAxis, roadRank, bld, cover, land, lake, distSea, ...) cut to the rectangle;
 //   - the tile-keyed maps (solidProps, flow: keyed by the tile's index) cut and keyed by the window's index;
 //   - the lists (props, pois, buildings, roads, nodes, edges, ...) kept whole for now (the region files split them);
-//   - caches (fields named _...) left behind: they're worked out again for the window when asked.
+//   - caches (fields named _...) left behind: they're worked out again for the window when asked;
+//   - the world's frame (m.frame = { w, h }): the whole world's, not the window's.
 // Outside the rectangle tileAt answers T.WALL (nothing moves into land the window doesn't hold), past the world's edge
 // the open sea as before.
 import { CityMap, cityFromData } from './mapcore.js';
@@ -36,6 +37,7 @@ export function windowOf(map, x0, y0, w, h) {
     } else win[k] = v;
   }
   win.x0 = ax; win.y0 = ay; win.w = W; win.h = H;
+  win.frame = { w: map.frame.w, h: map.frame.h };   // (the world's frame: its edge, the chunk grids, the camera's bounds)
   // the wild biome at a tile (terrainCls.at, a closure over the map's own layers): the window's own
   if (map.terrainCls) win.terrainCls = { cls: map.terrainCls.cls, cw: map.terrainCls.cw };
   const m = cityFromData(win);

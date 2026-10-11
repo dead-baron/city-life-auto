@@ -11,6 +11,7 @@ import { store } from '../store.js';
 import * as npc from './npc.js';
 import * as events from './events.js';
 import * as trains from './trains.js';
+import { pointGrid } from '../pointgrid.js';
 
 const rng = mulberry32(5150);
 const BAIT_ORDER = ['squid', 'glowlure', 'shrimp', 'lure', 'worms'];
@@ -299,7 +300,7 @@ export function boatFishingSpot(world, ped) {
   return { x: v.x + Math.cos(a) * (v.def.W / 2 + 20), y: v.y + Math.sin(a) * (v.def.W / 2 + 20), kind: 'offshore', a };
 }
 function nearestOffshore(world, x, y, minD, maxD) {
-  const list = (world.map.offshore || []).filter((q) => { const d = Math.hypot(q.x - x, q.y - y); return d >= minD && d <= maxD; });
+  const list = pointGrid(world.map.offshore || []).within(x, y, minD, maxD);   // (the points near: server/pointgrid.js)
   return list.length ? list[Math.floor(rng() * list.length)] : (world.map.offshore || [])[0];
 }
 

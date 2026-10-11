@@ -11,8 +11,8 @@
 //      cityData); then { stored: true | false } once a city got here is kept (or couldn't be)
 //      { ok: false, error }
 import { readWorld, writeWorld } from './worldcache.js';
-import { assembleCity, regionKeys, PACK_VERSION } from '../shared/regionpack.js';
-import { MAP_W, MAP_H } from '../shared/constants.js';
+import { assembleCity, readIndex, regionKeys, PACK_VERSION } from '../shared/regionpack.js';
+import { MAP_W, MAP_H } from '../shared/constants.js';   // (today's frame: its regions are asked for before the index says the world's)
 
 const FETCH_MS = 15000;   // the index and every region, all of it, or the city is built here
 
@@ -28,7 +28,11 @@ export async function fetchCity(base, key, seed, { fetchFn = globalThis.fetch, m
   };
   let timer = null;
   try {
-    const all = Promise.all([get('index.bin'), ...regionKeys(MAP_W, MAP_H).map((k) => get(`${k}.bin`))]);
+    // (the regions of today's frame asked for with the index, not waiting for it; the world's frame is the index's: the
+    // regions it lists that weren't asked for yet are asked for once it's read, and only its regions are assembled)
+    const early = new Map(regionKeys(MAP_W, MAP_H).map((k) => [k, get(`${k}.bin`)]));
+    for (const p of early.values()) p.catch(() => {});
+    const all = get('index.bin').then(async (index) => [index, ...(await Promise.all(readIndex(index).regions.map((k) => early.get(k) || get(`${k}.bin`))))]);
     all.catch(() => {});
     const files = await Promise.race([all, new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('too slow')), ms); })]);
     const data = assembleCity(files[0], files.slice(1));

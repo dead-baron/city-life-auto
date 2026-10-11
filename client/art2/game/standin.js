@@ -10,12 +10,11 @@
 // drawStandIn(g, M, cx, cy) draws into a 2D context (a canvas or OffscreenCanvas of STANDIN_PX square); the
 // engine scales it to the chunk (setChunkFallback). The index of what reaches each chunk is built once per map.
 import { CHUNK, DECK_Z } from './chunkbake.js';
-import { T, TILE, MAP_W, MAP_H } from '../../../shared/constants.js';
+import { T, TILE } from '../../../shared/constants.js';
 import { DISTRICTS } from '../../../shared/mapcore.js';
 
 export const STANDIN_PX = CHUNK / 4;
 const S4 = CHUNK / STANDIN_PX;
-const CX = Math.ceil(MAP_W * TILE / CHUNK), CY = Math.ceil(MAP_H * TILE / CHUNK);   // (the world's whole frame: the art's chunk grid)
 // the ground by tile type, in the new ground's colours
 export const GROUND_RGB = {
   [T.WALL]: [70, 66, 72], [T.GRASS]: [84, 118, 56], [T.SIDEWALK]: [170, 164, 152], [T.ROAD]: [66, 68, 76], [T.PLAZA]: [178, 160, 138],
@@ -44,6 +43,7 @@ function index(M) {
   let I = IDX.get(M);
   if (I) return I;
   I = { edges: new Map(), blds: new Map(), plants: new Map() };
+  const CX = Math.ceil(M.frame.w * TILE / CHUNK), CY = Math.ceil(M.frame.h * TILE / CHUNK);   // (the art's chunk grid over the world's frame: the map's m.frame)
   const put = (m, x0, y0, x1, y1, v) => {
     const a = Math.max(0, Math.floor(x0 / CHUNK)), b = Math.min(CX - 1, Math.floor(x1 / CHUNK)), c = Math.max(0, Math.floor(y0 / CHUNK)), d = Math.min(CY - 1, Math.floor(y1 / CHUNK));
     for (let cy = c; cy <= d; cy++) for (let cx = a; cx <= b; cx++) { const k = cy * 1000 + cx; let l = m.get(k); if (!l) m.set(k, l = []); l.push(v); }

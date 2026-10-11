@@ -503,7 +503,7 @@ export function update(world, dt) {
         }
       }
       // out past the map's edge there's nowhere to hide: the harbour patrol has you on radar (border.js)
-      if (!seen && !ped.hidden && edgeInfo(ped.x, ped.y, EDGE_I).d > 0) {
+      if (!seen && !ped.hidden && edgeInfo(ped.x, ped.y, EDGE_I, world.map.frame).d > 0) {
         seen = true;
         if (now - (p.lastEdgePing || -99) > 15) { p.lastEdgePing = now; world.notify(p, 'The harbour patrol has you on radar out here - the police know where you are.', 'bad'); }
       }

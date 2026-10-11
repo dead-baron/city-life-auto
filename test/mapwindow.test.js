@@ -178,22 +178,13 @@ test('the art v2 ground bake of a chunk inside the window: the same bytes as fro
 });
 
 // The guard: code that reads the map goes through m.idx / m.inside, and the generator builds in the map's own frame
-// (m.w x m.h: generateCity's opts.frame), never the world's constants. What may keep them: code that means the world's
-// whole frame - each with its reason.
+// (m.w x m.h: generateCity's opts.frame), never the world's constants. What may keep them: code that means today's frame
+// by nature - each with its reason. (What means the whole world - the edge and the sea past it, the camera's bounds, the
+// chunk grids, the map pictures, the router's grid, the underground, the ferry planner, the server's net chunks - follows
+// the world's frame the map carries, m.frame: test/worldframe.test.js.)
 const PAUSED = new Set(['shared/tutorial.js', 'client/tutorial.js']);   // (the tour is paused: CLAUDE.md)
 const WHOLE_FRAME = {
-  'shared/constants.js': 'the world\'s frame is defined here (MAP_W x MAP_H tiles, WORLD_W x WORLD_H px)',
-  'shared/mapcore.js': 'tileAt: the open sea past the world\'s edge',
-  'shared/underground.js': 'the underground lies under the whole world: its regions and physics map are the frame\'s',
-  'server/systems/ferries.js': 'the server plans the ferries over the whole world it holds: its grids are the frame\'s',
-  'server/artcdn.js': 'the art CDN\'s chunk grid spans the world',
-  'client/art2/game/host.js': 'the art\'s chunk grid spans the world',
-  'client/art2/game/standin.js': 'the art\'s chunk grid spans the world',
-  'client/main.js': 'the camera\'s bounds (the world\'s edge and the sea past it) and the ground chunks\' grid',
-  'client/spectator.js': 'the schematic picture and the camera span the world',
-  'client/devtp.js': 'the world map picture\'s size',
-  'client/devhomes.js': 'the dev picture of the whole world',
-  'client/route.js': 'the road list is the world\'s: the router\'s grid spans the world',
+  'shared/constants.js': 'today\'s frame is defined here (MAP_W x MAP_H tiles, WORLD_W x WORLD_H px)',
 };
 const INDEX = /\*\s*MAP_[WH]\b|\bMAP_[WH]\s*\*/;
 const BOUNDS = /[<>]=?\s*MAP_[WH]\b|\bMAP_[WH]\s*[-+]\s*\d/;
@@ -219,6 +210,33 @@ test('the guard: no `* MAP_W` index arithmetic and no MAP_W / MAP_H bounds check
   }
   assert.deepEqual(bad, [], 'index the map through m.idx / m.inside (or add the whole-frame use, with its reason)');
   for (const f of Object.keys(WHOLE_FRAME)) assert.ok(used.has(f), `${f} is on the whole-frame list but no longer needs it`);
+});
+
+// The world's frame is the map's (m.frame: the whole world's, a window's too): outside the generator, today's frame's
+// constants are named only where they mean today's frame by nature - each use listed here as [file, the code, its reason].
+const NAMES = /\b(MAP_W|MAP_H|WORLD_W|WORLD_H|CHUNKS_X|CHUNKS_Y)\b/;
+const TODAY_FRAME = [
+  ['shared/constants.js', 'export const', 'today\'s frame is defined here'],
+  ['shared/mapcore.js', 'constructor(seed, w = MAP_W, h = MAP_H)', 'a build\'s frame unless it\'s given one (generateCity\'s opts.frame): today\'s'],
+  ['shared/border.js', 'WORLD_W', 'the edge without a frame given (no map at hand): today\'s'],
+  ['client/worldgen.js', 'MAP_W', 'today\'s frame\'s regions are asked for along with the index, before it says the world\'s (the rest then)'],
+];
+test('the guard: outside the generator, the world\'s frame is the map\'s (m.frame), today\'s constants only where they mean today\'s frame', () => {
+  const GENERATOR = new Set([...GENERATOR_FILES, 'shared/worldmask.js', 'shared/world3.js', 'shared/world3-land.js', 'shared/world3-skeleton.js']);
+  const bad = [], used = new Set();
+  for (const f of [...jsFiles('server'), ...jsFiles('client'), ...jsFiles('shared')]) {
+    if (PAUSED.has(f) || GENERATOR.has(f)) continue;
+    let src = readFileSync(join(ROOT, f), 'utf8');
+    src.split('\n').forEach((line, i) => {
+      const code = line.replace(/\/\/.*$/, '');
+      if (!NAMES.test(code) || /^\s*import\b/.test(code)) return;
+      const ok = TODAY_FRAME.find(([file, what]) => file === f && code.includes(what));
+      if (ok) { used.add(ok[0] + ok[1]); return; }
+      bad.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
+    });
+  }
+  assert.deepEqual(bad, [], 'follow the world\'s frame the map carries (m.frame), or list the use with its reason');
+  for (const [f, what] of TODAY_FRAME) assert.ok(used.has(f + what), `${f} (${what}): on the list but no longer used`);
 });
 
 // The generator builds in the map's frame: its passes name the world's constants only where they mean the world's
