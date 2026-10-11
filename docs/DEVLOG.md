@@ -8603,7 +8603,8 @@ entry above changed the first round of it; this one measures all three and fixes
   aircraft smashes the street furniture or is dragged by a hydrant's spray at all, flown by anyone (shared/smash.js,
   props.js - one flown by nobody or by an NPC pilot still smashed what it passed over; the page predicts none for any);
   above FLY.HIGH it's out of reach of a swing (combat.js meleeVehicle), of the police dragging the pilot out
-  (police.js pullOut) and of angry drivers doing the same (npc.js), doesn't shove the crates under it (cargo.js), and
+  (police.js pullOut; hovering up there isn't "stopped" for them either - no door to walk up to, the shooters shoot)
+  and of angry drivers doing the same (npc.js), doesn't shove the crates under it (cargo.js), and
   traffic at junctions (traffic.js), cars going round a block or turning in the street (reroute.js, roadends.js), tow
   trucks (tow.js), ambulances parking (ems.js) and animals (wildlife.js) don't treat one overhead as in their way.
   Measured with the old path put back (scratch: flying at 60 px along the line of a street's 9 lamp posts and

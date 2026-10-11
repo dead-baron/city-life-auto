@@ -757,7 +757,7 @@ function runUnit(world, v, dt) {
   const driver = v.seats[0] ? world.get(v.seats[0]) : null;
   // the suspect's car at a standstill (not out on the water, not up on the deck): up to 4 stars they're dragged out of it
   const car = t.vehId ? world.get(t.vehId) : null;
-  const parked = !!car && p.wanted <= 4 && car.def.kind !== 'boat' && !(car.lz > 0.3) && !car.ferry && stillFor(world, car) > 1.2;
+  const parked = !!car && p.wanted <= 4 && car.def.kind !== 'boat' && !(car.lz > 0.3) && !car.ferry && !((car.alt || 0) > FLY.HIGH) && stillFor(world, car) > 1.2;   // (a helicopter hovering up there: no door to walk up to - the shooters shoot)
   // holed up in the place they robbed: a standoff (standoff.js) - the cars to spots round the building, never at it
   const so = standoff.of(world, p);
   if (so && ai.mode === 'drive') { standoff.drive(world, v, crew, so, dt); return; }
