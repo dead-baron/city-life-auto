@@ -2429,9 +2429,10 @@ wrong:
 - **A double track's road crossing is two crossings,** each track with its own gates (the arms between the tracks).
 
 **What's left** (in order):
-1. **What still reads only the first loop** (`off0`): the waiting crowds and the commuters walking to a platform
-   (`gatherCommuters`, `callWaiting`) and the platform clocks (`timetable`, the `tt` broadcast). The station boards
-   and the map point's "next train" list every service that stops there (`loopBoard`, `nextTrainIn` by the POI). A double
+1. **What still reads only the first loop** (`off0`): the platform clocks (`timetable`, the `tt` broadcast, by the
+   first loop's stations). The station boards and the map point's "next train" list every service that stops there
+   (`loopBoard`, `nextTrainIn` by the POI), and every loop's platforms get their waiting crowds (`gatherAt`, kept by
+   loop and station: a player at Cedar Falls saw commuters wait on both Bay Loop platforms and board). A double
    track's road crossing is two crossings (each track its gates, the arms between the tracks crossing): one crossing
    with its arms outside both tracks wants an arm offset per crossing (`CROSSING_ARM` is one constant now).
 2. The junctions designed (above), the towns' crossings as bridges or cuttings, the tunnels' mouths and cover.

@@ -706,17 +706,26 @@ function fillRiders(world, t) {
 // on. They arrive from out of sight.
 const WAIT_LEAD_S = 35;
 function gatherCommuters(world) {
-  const rail = world.map.rail, now = world.time;
+  if (world.rails) { world.rails.forEach((rail, r) => gatherAt(world, rail, r)); return; }   // (World v3: every loop's platforms)
+  gatherAt(world, world.map.rail, -1);
+}
+// (a loop's waiting crowds are kept by r * 1000 + its station; today's one loop's by the station)
+const waitKey = (r, si) => (r < 0 ? si : r * 1000 + si);
+function gatherAt(world, rail, r) {
+  const now = world.time;
   rail.stations.forEach((st, si) => {
     if (!playerNear(world, st.platform.x, st.platform.y, POP_NEAR)) return;
     world.waiting ??= new Map();
-    const list = (world.waiting.get(si) || []).filter((id) => { const q = world.get(id); return q && !q.removed && !q.dead && q.npc && q.npc.waitTrain === si; });
-    world.waiting.set(si, list);
-    const eta = nextTrainIn(world, si);
+    const key = waitKey(r, si);
+    const list = (world.waiting.get(key) || []).filter((id) => { const q = world.get(id); return q && !q.removed && !q.dead && q.npc && q.npc.waitTrain === key; });
+    world.waiting.set(key, list);
+    let eta = Infinity;
+    if (r < 0) eta = nextTrainIn(world, si);
+    else for (const t of world.trains) if (t.r === r) eta = Math.min(eta, etaTo(world, t, si));
     if (eta > WAIT_LEAD_S || list.length >= (st.kiosk ? 5 : 4) || world.npcCount + world.trafficCount > world.npcBudget) return;
     if (rng() > 0.35) return;
     // a spot to wait at, and somewhere out of sight to walk in from
-    const spot = waitSpot(world, st, list.length);
+    const spot = waitSpot(world, st, list.length, rail);
     let from = null;
     for (let k = 0; k < 10 && !from; k++) {
       const a = rng() * 6.28, r = 500 + rng() * 300, x = spot.x + Math.cos(a) * r, y = spot.y + Math.sin(a) * r;
@@ -725,22 +734,21 @@ function gatherCommuters(world) {
     }
     if (!from) return;
     const q = spawnNpc(world, COMMUTERS[Math.floor(rng() * COMMUTERS.length)], from.x, from.y, 'civ');
-    q.npc.waitTrain = si; q.npc.waitX = spot.x; q.npc.waitY = spot.y; q.npc.waitGiveUp = now + 150; q.npc.state = 'wander'; q.npc.keep = true;
+    q.npc.waitTrain = key; q.npc.waitX = spot.x; q.npc.waitY = spot.y; q.npc.waitGiveUp = now + 150; q.npc.state = 'wander'; q.npc.keep = true;
     list.push(q.id);
   });
 }
-function waitSpot(world, st, n = 0) {
+function waitSpot(world, st, n = 0, rail = world.map.rail) {
   if (st.under && st.kiosk) { const q = st.kiosk.queue[Math.min(n, st.kiosk.queue.length - 1)]; return { x: q.x, y: q.y + (rng() - 0.5) * 4 }; } // in line in the queue lane
   if (st.under) { const a = rng() * 6.28; return { x: st.platform.x + Math.cos(a) * 26, y: st.platform.y + Math.sin(a) * 26 }; }
-  const q = railAt(world.map.rail, st.s + (rng() - 0.5) * st.half * 1.6);
+  const q = railAt(rail, st.s + (rng() - 0.5) * st.half * 1.6);
   const off = 74 + rng() * 22; // (back from the edge: clear of the band a train sweeps)
   return { x: q.x - Math.sin(q.a) * st.side * off, y: q.y + Math.cos(q.a) * st.side * off };
 }
 // A train has pulled in at station si: whoever is waiting there gets on.
 function callWaiting(world, t, si) {
-  if (off0(t)) return;   // (the waiting crowds are the first loop's stations')
-  const st = world.map.rail.stations[si];
-  for (const id of (world.waiting && world.waiting.get(si)) || []) {
+  const st = railOf(world, t).stations[si];
+  for (const id of (world.waiting && world.waiting.get(world.rails ? waitKey(t.r, si) : si)) || []) {
     const q = world.get(id);
     if (!q || q.dead || !q.npc || q.onTrain || Math.hypot(q.x - st.platform.x, q.y - st.platform.y) > st.half + 400) continue;
     q.npc.waitTrain = undefined; q.npc.keep = false;

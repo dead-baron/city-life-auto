@@ -7296,7 +7296,7 @@ What it does (docs/WORLD-V3.md 8.10 has the numbers):
   a station's board lists every service stopping there, each way. Riding is today's on every loop.
 - **The art:** the chunk bake draws every loop (a track two loops share once).
 - **The region files** cut each loop's points into the regions (today's files unchanged).
-- **Left** (8.10): the waiting crowds and the platform clocks read the first loop only; Northshore Junction lies
+- **Left** (8.10): the platform clocks read the first loop only (the waiting crowds are every loop's); Northshore Junction lies
   across the Northshore Loop's houses, its platforms scattered on the curves; the line crosses Metro City's grid at
   grade; a double track's road crossing is two sets of gates.
 
