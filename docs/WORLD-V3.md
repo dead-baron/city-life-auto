@@ -3665,7 +3665,9 @@ stays 6b6e16fdef9f; the city worker 34 files, 358 KB of 360).
   `shared/naturesites.js` takes the anchors through `PXs` / `PYs` and the district through `DS` (`H.place.d`, the world
   build's `wildDist`: 29 -> 47, 33 -> 48, 9 and 42 -> 49, 41 -> 50; one-line hook in `map.js`). Moved: **Pine Lake** (its
   lake, its camp and paths, between the stop and the campground as today's), **Summit Tarn** with its falls, creek and cabin meadow, **Granite Hot
-  Springs** above Summit Road (the road below it is its way in), **The Sentinel Stones** by the observatory's road.
+  Springs** above Summit Road (the road below it is its way in), **The Sentinel Stones** by the observatory's road;
+  Dry Creek's **boneyard** (the stored planes you strip for parts), **Old Mission Ruins** (the bells) and **the balloon
+  field** in the desert's west, between the Desert Highway and Canyon Road.
 - **Every pit, every mine** (8.18's list): `shared/underground.js` lays the ore veins round each quarry's faces (the
   Granite Quarry's and Copper Gulch Mine's, each named), `server/systems/places.js` takes every mine's seams.
 
@@ -3673,7 +3675,8 @@ Tests: `test/world3wild.test.js` (one world build: every wild country site in th
 its spot, on its region's ground, its road in laid, on the one network, reaching its gate and meeting no highway; every
 lot clear of the highways', the main line's and the stations' room; The Rusty Spur, two quarries with their veins; each
 moved nature site built once at its spot on its region's ground, its landmark clear of the highways and the main line,
-no road over Summit Tarn or Pine Lake).
+no road over Summit Tarn or Pine Lake), `test/world3.test.js`, `test/world3desert.test.js` (Copper Gulch's pit and
+its veins with the Granite Quarry's beside it), `test/world3roads.test.js`, `test/world3world.test.js`: all pass.
 
 Pictures (`tools/world3-world-map.mjs --towns --only pinelake,tarn,summit`; `WILD_VIEWS`, also `quarry`, `drycreek`,
 `route9`): `docs/world-v3-town-pinelake.png`, `-tarn.png`, `-summit.png`. What looks right: the stop's forecourt and
@@ -3697,5 +3700,5 @@ fixed box of today's for its spot; then the cave world takes a list of mines - o
 and the Ridge Trail Hunting Camp (both on the Ridge Trail); Dry Creek's farmland into Willow Valley's east side (map.js
 `buildFarm`, `DRY_CREEK_ESTATES`, the fields, the Willow River's orchard and vineyard - skipped in the world build
 now), its desert's nature sites (Red Rock Wash, Canyon Oasis, Mirage Lake and its camp, the boneyard, the mission ruins,
-the balloon field, the Canyon Track hunting camp, Splash Canyon Water Park, Route 9's airstrip behind the stop); trails
-to the stones and the tarn.
+the Canyon Track hunting camp, Splash Canyon Water Park, Route 9's airstrip behind the stop); trails to the stones, the
+tarn, the boneyard, the ruins and the balloon field (they have none yet).

@@ -7835,19 +7835,20 @@ and the desert ... rebuild Dry Creek to blend in well").
   Red Rock Desert's west (a placement table): open ground of the region, clear of the roads, the highways' and the main
   line's room, the stations, the towns and the desert's places, each with its own road in from the nearest road it may
   join - never a highway. map.js builds them as today's.
-- **Four nature sites moved whole** round their anchors: Pine Lake between the stop and the campground, Summit Tarn and
-  its falls, Granite Hot Springs above Summit Road, The Sentinel Stones by the observatory. naturesites.js takes those
+- **Seven nature sites moved whole** round their anchors: Pine Lake between the stop and the campground, Summit Tarn and
+  its falls, Granite Hot Springs above Summit Road, The Sentinel Stones by the observatory; Dry Creek's boneyard, the
+  old mission ruins and the balloon field in the desert's west. naturesites.js takes those
   sites' anchors and districts through the placement (`PXs`, `DS`); the world build's pin finds the moved square.
 - The ore veins lie round every quarry's pit (the Granite Quarry's and Copper Gulch Mine's in the v3 world); every
   mine's seams are worked.
 - Not done yet: the rest of the wild nature sites (Redwood Creek and its falls, Giants Loop, Fern Gorge, Redwood Cove,
   the trapper's cabin, Granite Cove, the Old Granite Mine and its cave, Ridge Fire Lookout, the hunting camps), Dry
-  Creek's farmland into Willow Valley and its desert places (WORLD-V3.md 8.19's list). Nothing live changes: the world
+  Creek's farmland into Willow Valley and the rest of its desert places (WORLD-V3.md 8.19's list). Nothing live changes: the world
   hash stays 6b6e16fdef9f.
 
 Files: shared/world3-wild.js (new), shared/world3-world.js (the calls, `pick` asks `movedAt`), shared/map.js (the nature
 sites' placement carries the district map: one line), shared/naturesites.js (Pine Lake, Summit Tarn, the hot springs,
-the stones through `PXs` / `DS`), shared/underground.js (the veins round every pit), server/systems/places.js (every
+the stones, the boneyard, the mission ruins, the balloon field through `PXs` / `DS`), shared/underground.js (the veins round every pit), server/systems/places.js (every
 mine's seams), tools/world3-world-map.mjs (`WILD_VIEWS`), test/world3wild.test.js (new), docs/WORLD-V3.md 8.19,
 docs/world-v3-town-pinelake.png, docs/world-v3-town-tarn.png, docs/world-v3-town-summit.png.
 

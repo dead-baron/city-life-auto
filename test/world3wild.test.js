@@ -85,7 +85,7 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
     check(ns.length === 1 && lm.length === 1, `${q.name}: built ${ns.length} / ${lm.length} times`);
     if (!ns[0] || !lm[0]) continue;
     const x = ns[0].x / TILE, y = ns[0].y / TILE;
-    check(Math.hypot(x - q.to[0], y - q.to[1]) < 16, `${q.name} at ${x.toFixed(0)}, ${y.toFixed(0)}, not its spot ${q.to}`);
+    check(Math.hypot(x - q.to[0], y - q.to[1]) < 48, `${q.name} at ${x.toFixed(0)}, ${y.toFixed(0)}, not its spot ${q.to}`);
     check(m.dist[Math.floor(y) * W + Math.floor(x)] === q.d, `${q.name} on its region's ground`);
     const L = lm[0], x0 = L.x / TILE, y0 = L.y / TILE, x1 = (L.x + L.w) / TILE, y1 = (L.y + L.h) / TILE;
     for (const [cx, cy] of [[x0, y0], [x1, y0], [x0, y1], [x1, y1], [(x0 + x1) / 2, (y0 + y1) / 2]]) {

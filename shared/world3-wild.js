@@ -44,12 +44,17 @@ export const WILD_SITES = [
 // goes to its v3 spot at scale 1 (map.js pin: shared/world3-world.js `pick` asks movedAt for a position no piece builds).
 // Pine Lake between the Highland stop and Pine Ridge Campground as today's; Summit Tarn (its lake: islands.js LAKES),
 // its falls, creek and cabin meadow, Granite Hot Springs above Summit Road and The Sentinel Stones by the observatory's
-// road on the peaks.
+// road on the peaks; Dry Creek's boneyard, mission ruins and balloon field in the desert's west.
 export const MOVED = [
   { name: 'Pine Lake', anchor: [136, 216], to: [700, 1060], r: 40, d: D3.WOODS },
   { name: 'Summit Tarn', anchor: [575, 82], to: [900, 180], r: 35, d: D3.PEAKS },
   { name: 'Granite Hot Springs', anchor: [603, 125], to: [500, 113], r: 25, d: D3.PEAKS },
   { name: 'The Sentinel Stones', anchor: [744, 31], to: [720, 140], r: 20, d: D3.PEAKS },
+  // Dry Creek's desert places in the Red Rock Desert's west, between the Desert Highway and Canyon Road (r: just the
+  // anchor - nothing else of today's round it moves)
+  { name: 'Dry Creek Boneyard', anchor: [1248, 632], to: [3900, 1270], r: 4, d: D3.DESERT },
+  { name: 'Old Mission Ruins', anchor: [1190, 405], to: [4000, 900], r: 4, d: D3.DESERT },
+  { name: 'Dry Creek Balloon Field', anchor: [1150, 463], to: [3860, 1380], r: 4, d: D3.DESERT },
 ];
 // today's wild districts -> the v3 region they move to (Highland Woods, Granite Peaks; Dry Creek's farmland the valley,
 // its desert the Red Rock Desert)

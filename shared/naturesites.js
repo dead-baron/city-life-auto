@@ -393,8 +393,8 @@ function lavenderFields(m, H) {
 // there; a gate from the airstrip's side with the yard's sign, oil drums about.
 function boneyard(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const X0 = 1248, X1 = 1279, Y0 = 632, Y1 = 704;
-  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 42 || m.dist[i] === 41);
+  const X0 = PXs(H, 1248, 632), X1 = X0 + 31, Y0 = PYs(H, 632), Y1 = Y0 + 72;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === DS(H, 42) || m.dist[i] === DS(H, 41));
   for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1 - 4; tx++) if (!open(at(tx, ty))) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= X0 * TILE && q.x < (X1 + 1) * TILE && q.y >= Y0 * TILE && q.y < (Y1 + 1) * TILE) dropProp(m, i); });
@@ -575,8 +575,8 @@ function fernGorge(m, H) {
 // cloister's arcade with two arches down, rubble everywhere; saguaros, prickly pear and boulders round it.
 function missionRuins(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const CX = 1190, CY = 405;
-  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 9 || m.dist[i] === 41);
+  const CX = PXs(H, 1190, 405), CY = PYs(H, 405);
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === DS(H, 9) || m.dist[i] === DS(H, 41));
   for (let ty = CY - 6; ty <= CY + 7; ty++) for (let tx = CX - 6; tx <= CX + 6; tx++) if (!open(at(tx, ty))) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.abs(q.x / TILE - CX) < 7 && Math.abs(q.y / TILE - CY) < 7.5) dropProp(m, i); });
@@ -603,8 +603,8 @@ function missionRuins(m, H) {
 // its inflation fan, a windsock, and a sign for the rides at the track.
 function balloonField(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const X0 = 1150, X1 = 1178, Y0 = 463, Y1 = 486;
-  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 9 || m.dist[i] === 41);
+  const X0 = PXs(H, 1150, 463), X1 = X0 + 28, Y0 = PYs(H, 463), Y1 = Y0 + 23;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === DS(H, 9) || m.dist[i] === DS(H, 41));
   for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) if (!open(at(tx, ty))) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= X0 * TILE && q.x < (X1 + 1) * TILE && q.y >= Y0 * TILE && q.y < (Y1 + 1) * TILE) dropProp(m, i); });
