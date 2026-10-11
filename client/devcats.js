@@ -115,6 +115,7 @@ export const DEV_SECTIONS = [
     ['🎨 A street painter', 'act', { k: 'painter' }], ['🧽 Washing the car', 'act', { k: 'carwash' }], ['💬 Neighbours chatting', 'act', { k: 'chat' }],
     ['🍅 Pickers in a field', 'act', { k: 'pickers' }], ['⛏ Miners at the rock face', 'act', { k: 'miners' }],
     ['🦺 A hunter and his dog', 'act', { k: 'hunter' }], ['🏀 A pickup game at the courts', 'act', { k: 'hoops' }], ['🎱 Pool at the Rusty Spur', 'act', { k: 'pool' }],
+    ['🍔 Eating at a diner (a cafe, a bistro)', 'act', { k: 'diners' }],
   ] },
   // vehicle damage you can see (task #402: server/dev.js 'vdmg')
   { id: 'vdmg', title: '🚗 Vehicle damage', items: [

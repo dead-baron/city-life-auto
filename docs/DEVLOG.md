@@ -6727,3 +6727,59 @@ loads whole. Now the modules are split, the code moved as it was (nothing about 
   passes (the new modules compute nothing with Math.sin & co. as they load). Two headless playtests, 0 page errors: the
   page got its city from the worker (signature dytn7k, no generator module fetched by the page), and with
   `?cityonpage` the page loaded the generator and built the same city (dytn7k).
+## 2026-10-10 · The diner, the fast-food place and the restaurant, walked in (IN8); the B takes' leftovers fixed
+The owner's concept `docs/art-v2/targets/IN8_diner-fast-food-restaurant.png`: the food places you can walk into, built to it; and
+the faults the last interiors work left (the entry above): a street lamp standing through the hospital's ambulance canopy,
+the HOSPITAL plaque repeated on two-section hospitals, and the classic renderer still showing the old lobby paintings.
+Art and people only: the server's rooms (the counter row, the doorway, the walkable floor) are as they were, and the world
+is unchanged (its hash too) - browsers re-bake the art chunks once (the art hash), they don't download the city again.
+- **Which places** (`shared/foodrooms.js`, new): the food walk-ins are the `coffee` ones (shared/map.js WALK_IN), fitted out
+  by their lot - `diner` (the diner lots and the hero corner's diner) the **diner**; `rest1`, the Garden Bistro
+  (`greenbistro`) and Cafe Rouge (`redawning`) the **restaurant**; the cafes (`rest2`) and the strip-mall units the
+  **fast-food** counter. `foodLayout` lays out the floor in front of the counter in world px (rooms with the door south,
+  the counter at the back - all of them on the map today; others keep the plain counter and shelves), keeping the way in
+  from the door clear: the art in both renderers and the people at the tables use the same layout. (The Rusty Spur keeps
+  its own bar room; the snack carts aren't walk-ins.)
+- **Art v2** (`client/art2/game/statics.js` `foodRoom`, `FOOD_FLOOR`, `FOOD_WALL`; the layout rides in the cut recipe):
+  - the **diner**: the black-and-white checker floor; red booths with high backs down the wall away from the door, white
+    tables with the sauces; chrome stools with red seats along the counter; a white counter top over a red front with
+    chrome strips, the till and the pie case on it; the jukebox in the front corner; the wall red below, cream above.
+  - the **fast-food place**: cream tile; the counter red with a yellow band, the trays and the till; the queue lane up to
+    the till (chrome posts, a blue belt); the drinks machine; small tables with a red chair and a yellow one; the wall in
+    red-and-white tile with a yellow band, the menu boards over the kitchen (plain shapes: picture blocks and price bars,
+    no words).
+  - the **restaurant**: dark planks; tables with white cloths to the floor, a candle and two plates, dark wood chairs; the
+    host stand inside the door and the red runner to it; a dark wood counter with a brass rail (the pass, plates on it);
+    the wall wood-panelled below and green above, a picture in a gold frame; plants by the door.
+  - behind every counter: quarry tile, the kitchen line along the back wall (the grill / the fryers / the stove), and
+    above it the pass's heat lamps with plates (the diner's specials board) or the menu boards.
+- **People** (`server/systems/activities.js` 'diners', the activities' way of sitting and looping a pose): in each food
+  place with tables, one to three tables (booths) taken, one or two sat at each over their food (`gt: 'sit'`), and a
+  cook in white with an apron at the kitchen line (west of the till; the clerk is at the till - shared/map.js, the server
+  who sells). Debug menu → people → "🍔 Eating at a diner (a cafe, a bistro)" (`act` k 'diners').
+- **Buying food**: as before - the counter sells what the coffee walk-ins sell (Hot Coffee, a stamina buff); no new food
+  or prices were added (the game's food is the hot dog, 15 health when eaten, sold at the snack carts, the Rusty Spur and
+  the golf club). *Owner's call:* should the diner, the fast-food counter and the restaurant sell it (or a meal) too?
+- **The hospital's front**: the ambulance canopy moves in along the front (away from the doors) until no street lamp
+  or tree stands under it (`statics.js`, the hospital's lot dressing) - art only, the lamps stay where the world puts them,
+  so no world change; one HOSPITAL (POLICE) plaque, on the section with the doors (a walk-in drawn in sections had it on
+  each).
+- **The classic renderer** (`client/render/roomart.js`, new, loaded with the first walk-in interior - the page's code
+  doesn't grow but for the hook in `tiles.js` `interiorArt`): the food places drawn plainly from the same layout; and the
+  hospital's and the police station's lobbies as the B takes have them (IN1-B, IN2-B) in place of the old paintings - the
+  hospital's white tile, the white desk with its blue stripe curving out, the rows of blue chairs, the pharmacy window,
+  the red doors, the lifts, the vending machine and the cooler; the police lobby's stone tile, wood desk with the
+  computer, the flag, chairs either side of the doors, the notice board, clock and shield, and the armory cage with its
+  rifles and ammo cases east of the cells. Drawn, not painted, so no people stand about painted under the live staff.
+  (The pharmacy keeps its painting.)
+- **Playtest** (headless, `tools/playtest.py`): walked into the hero corner's diner, the Garden Bistro and a cafe's
+  fast-food counter and stood at a hospital's front; with the debug menu's diners filled, the one at the booth and the
+  cook beside the clerk show once the slow headless page has made their sprites (about 20 s there).
+- **Pictures**: `docs/art-v2/compare/IN8_food-places.png` (art v2 before / after and the classic, for the diner, a fast-food
+  cafe, the Garden Bistro and a strip-mall unit), `IN1-B_hospital-front-fixes.png`, `IN1-B_IN2-B_classic-lobbies.png`.
+- **Tests:** `test/foodrooms.test.js` (new: every food place laid out on the shop floor, in front of the counter, the
+  doorway clear, a diner with booths and stools, a restaurant with cloths and the host stand, the fast-food queue, the
+  drinks machine and tables; people sat in the room and the cook behind the counter, on the wire as sitting; every food
+  place's cut-away builds and carries its fit-out; each hospital one HOSPITAL plaque and no lamp under its canopy; the
+  classic renderer draws every food place, hospital and police lobby), `test/activities.test.js` (the debug menu's 12
+  kinds), `test/cells.test.js`, `test/perf.test.js`.
