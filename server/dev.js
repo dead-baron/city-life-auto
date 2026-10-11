@@ -560,7 +560,7 @@ export function command(world, p, c, msg) {
     case 'sar': { const err = sar.devSar(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }
     case 'coast': { const err = coastguard.devCoast(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the coast guard (H59): msg.mode 'boat' | 'air', msg.k 'smuggle' | 'overboard', msg.near   // search and rescue (H59): msg.k a call's kind near you, msg.hover over them, msg.roof on a hospital's roof pad
     case 'garden': { const err = gardening.devGarden(world, p, msg, homes.buy); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // a garden of your own at every stage (H61); msg.k 'ripe': all of it ripe
-    case 'farm': { const err = farming.devFarm(world, p); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // a tractor at the fields, the rows in every state (H61)
+    case 'farm': { const err = farming.devFarm(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // a tractor at the fields, the rows in every state (H61)
     default: world.notify(p, `[dev] unknown command ${c}. Try: ${DEV_COMMANDS.join(', ')}`, 'warn'); return;
   }
   world.loopTime %= DAY_LOOP_S;

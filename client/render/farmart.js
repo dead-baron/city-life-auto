@@ -84,9 +84,35 @@ export function drawTractor(g, L, W, paint, wreck) {
   g.beginPath(); g.arc(L / 2 - 18, -W / 2 + 19, 3, 0, 6.283); g.fill();                         // the exhaust stack
 }
 
+// The combine harvester in the classic view (facing +x): the wide header and its reel at the front, the body and the
+// grain tank, the cab over the header, the unloading auger folded along the side, the big front wheels.
+export function drawCombine(g, L, W, paint, wreck) {
+  const body = wreck ? '#3b302b' : paint, dark = '#1b1a18';
+  g.fillStyle = dark;
+  g.fillRect(L / 2 - 58, -W / 2 + 16, 30, 16); g.fillRect(L / 2 - 58, W / 2 - 32, 30, 16);     // the drive wheels
+  g.fillRect(-L / 2 + 8, -W / 2 + 26, 20, 12); g.fillRect(-L / 2 + 8, W / 2 - 38, 20, 12);     // the steering wheels
+  g.fillStyle = body;
+  g.fillRect(-L / 2 + 4, -W / 2 + 30, L - 34, W - 60);                                           // the body
+  g.fillStyle = wreck ? '#2c2622' : '#9a2a22';
+  g.fillRect(-L / 2 + 18, -W / 2 + 36, 50, W - 72);                                              // the grain tank
+  g.fillStyle = wreck ? '#2a2420' : '#d8c070';
+  g.fillRect(-L / 2 + 22, -W / 2 + 40, 42, W - 80);                                              // the grain in it
+  g.fillStyle = wreck ? '#33291f' : '#5a5650';
+  g.fillRect(L / 2 - 26, -W / 2 + 2, 24, W - 4);                                                 // the header
+  g.fillStyle = wreck ? '#2b2620' : '#c8a640';
+  for (let y = -W / 2 + 6; y < W / 2 - 6; y += 6) g.fillRect(L / 2 - 6, y, 5, 3);               // its cutter bar's teeth
+  g.fillStyle = body;
+  g.fillRect(L / 2 - 22, -W / 2 + 4, 4, W - 8);                                                  // the reel
+  g.fillRect(-L / 2 + 30, -W / 2 + 22, 46, 6);                                                   // the auger, folded
+  g.fillStyle = wreck ? '#2a2420' : '#efede6';
+  g.fillRect(L / 2 - 52, -14, 24, 28);                                                           // the cab's roof
+  g.fillStyle = wreck ? '#221d1a' : '#3f5f7c';
+  g.fillRect(L / 2 - 30, -12, 3, 24);                                                            // its windscreen
+}
+
 export class FarmArt {
   constructor(S) { this.S = S; this.cv = new Map(); }
-  drawTractor(g, def, p, wreck) { drawTractor(g, def.L, def.W, PAINTS[p % PAINTS.length] || '#c8262b', wreck); }
+  drawTractor(g, def, p, wreck) { (def.id === 'combine' ? drawCombine : drawTractor)(g, def.L, def.W, PAINTS[p % PAINTS.length] || '#c8262b', wreck); }
   // ---- the classic view: canvases made once, drawn in the world pass ----
   _canvas(key, w, h, fill) {
     let c = this.cv.get(key);

@@ -212,6 +212,7 @@ export function deliveryZoneFor(world, p, crate) {
   } else if (crate.job && crate.job.pid !== p.pid && near('fence')) {
     return { label: `Fence stolen cargo (+$${Math.round(crate.value * 0.6)})`, run: () => fence(world, p, crate, 0.6) };
   }
+  if (crate.hand && near('farm', 90)) return { label: `Sell the crate to the farm stand (+$${crate.value})`, run: () => deliverLegit(world, p, crate, 'hand') };   // (picked by hand in the rows: farming.js)
   return null;
 }
 

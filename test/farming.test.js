@@ -128,3 +128,72 @@ test('the farm-work contract: from the co-op\'s counter, a tractor issued, paid 
   assert.ok(r.ok, r.err || '');
   assert.equal(p.job.type, 'fieldwork');
 });
+
+test('by hand at harvest time: walk a ripe row picking it, every few stretches a crate; the farm stand buys the crate', async () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const cargo = await import('../server/systems/cargo.js');
+  const jobs = await import('../server/systems/jobs.js');
+  const players = await import('../server/systems/players.js');
+  const F = farming.fieldsOf(w).find((f) => f.rows.some((r) => r.okN === FARM.segs));
+  const r = F.rows.findIndex((row) => row.okN === FARM.segs);
+  F.rows[r].s = ROW.RIPE; F.rows[r].m = 0;
+  const [a, b] = farming.rowEnds(F, r);
+  const at = (k) => ({ x: a.x + (b.x - a.x) * ((k + 0.5) / FARM.segs), y: a.y + (b.y - a.y) * ((k + 0.5) / FARM.segs) });
+  let crate = null;
+  for (let k = 0; k < FARM.handPer; k++) {
+    teleport(w, p.ped, at(k).x, at(k).y);
+    for (const c of [...w.entities.values()]) if (c.kind === K.CRATE && c.hand && c !== crate) crate = c;
+    const act = players.findInteraction(w, p);   // (the Act button's prompt: players.js)
+    assert.match(act.label, /Pick the crop by hand/);
+    act.run();
+  }
+  crate = [...w.entities.values()].find((c) => c.kind === K.CRATE && c.hand);
+  assert.ok(crate && crate.label === 'Produce Box' && crate.owner === p.pid, 'a crate of it');
+  assert.equal(F.rows[r].s, ROW.RIPE, 'the row not done yet');
+  for (let k = FARM.handPer; k < FARM.segs; k++) { teleport(w, p.ped, at(k).x, at(k).y); farming.handPick(w, p); }
+  assert.equal(F.rows[r].s, ROW.STUBBLE, 'picked clean by hand: harvested');
+  // carried to the farm stand
+  teleport(w, p.ped, crate.x, crate.y);
+  cargo.pickUp(w, p.ped, crate);
+  assert.equal(p.ped.carrying, crate.id);
+  const stand = w.map.pois.find((q) => q.kind === 'farm');
+  teleport(w, p.ped, stand.x, stand.y);
+  const dz = jobs.deliveryZoneFor(w, p, crate);
+  assert.match(dz.label, /farm stand/);
+  const cash = p.profile.cash;
+  dz.run();
+  assert.equal(p.profile.cash, cash + FARM.handBox);
+});
+
+test('the combine (vehicle 49): its header harvests the two ripe rows under it as it goes, and only harvests; its contract at the co-op', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  assert.equal(VEHICLE_BY_INDEX[49], VEHICLES.combine);
+  assert.ok(VEHICLES.combine.max < VEHICLES.tractor.max, 'slower than the tractor');
+  // two ripe rows side by side, the combine straddling them (its middle on the line between them)
+  const F = farming.fieldsOf(w).find((f) => f.rows.some((r, i) => i + 1 < f.n && r.okN >= FARM.segs - 1 && f.rows[i + 1].okN >= FARM.segs - 1));
+  const r = F.rows.findIndex((row, i) => i + 1 < F.n && row.okN >= FARM.segs - 1 && F.rows[i + 1].okN >= FARM.segs - 1);
+  F.rows[r].s = ROW.RIPE; F.rows[r + 1].s = ROW.RIPE; F.rows[r].m = 0; F.rows[r + 1].m = 0;
+  const [a0, b0] = farming.rowEnds(F, r), [a1, b1] = farming.rowEnds(F, r + 1);
+  const a = { x: (a0.x + a1.x) / 2, y: (a0.y + a1.y) / 2 }, b = { x: (b0.x + b1.x) / 2, y: (b0.y + b1.y) / 2 };
+  const ang = Math.atan2(b.y - a.y, b.x - a.x);
+  const v = w.spawnVehicle('combine', a.x, a.y, ang, { npcOwned: false });
+  p.ped.vehId = v.id; p.ped.seat = 0; v.seats[0] = p.ped.id;
+  const f = v.def.L / 2 - 12;
+  for (let t = -0.1; t <= 1.0001; t += 0.02) { v.x = a.x + (b.x - a.x) * t - Math.cos(ang) * f; v.y = a.y + (b.y - a.y) * t - Math.sin(ang) * f; farming.work(w, p, v); }
+  assert.equal(F.rows[r].s, ROW.STUBBLE, 'one row harvested');
+  assert.equal(F.rows[r + 1].s, ROW.STUBBLE, 'and the one beside it, in the same pass');
+  // it doesn't plough
+  F.rows[r].s = ROW.STUBBLE; F.rows[r].m = 0;
+  for (let t = -0.1; t <= 1.0001; t += 0.02) { v.x = a.x + (b.x - a.x) * t - Math.cos(ang) * f; v.y = a.y + (b.y - a.y) * t - Math.sin(ang) * f; farming.work(w, p, v); }
+  assert.equal(F.rows[r].s, ROW.STUBBLE, 'a combine only harvests');
+  // the co-op's counter offers it while something's ripe
+  const coop = w.map.pois.find((q) => q.kind === 'farm');
+  teleport(w, p.ped, coop.x, coop.y);
+  p.ped.vehId = 0; p.ped.seat = -1; v.seats[0] = 0;
+  F.rows[r].s = ROW.RIPE;
+  economy.handleMenu(w, p, coop.id, 'job:combine');
+  assert.equal(p.job && p.job.only, 'harvest');
+  assert.equal(w.get(p.job.truck).model, 'combine', 'the co-op\'s combine issued');
+});

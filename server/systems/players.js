@@ -66,6 +66,7 @@ import * as safety from './safety.js';
 import * as sar from './sar.js';
 import * as coastguard from './coastguard.js';
 import * as gardening from './gardening.js';
+import * as farming from './farming.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -631,6 +632,8 @@ export function findInteraction(world, p) {
   if (rescue) return rescue;
   const plot = gardening.interaction(world, p);   // a garden plot in your own yard: plant, water, pick (gardening.js)
   if (plot) return plot;
+  const rowWork = farming.handInteraction(world, p);   // a ripe row on foot: pick it by hand into crates (farming.js)
+  if (rowWork) return rowWork;
 
   if (p.profile.weapons.rod !== undefined) {
     const spot = jobs.fishingSpot(world, ped);

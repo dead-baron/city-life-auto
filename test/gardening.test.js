@@ -50,6 +50,7 @@ test('every house with a yard has garden plots, in the yard, apart; an apartment
 test('buy seeds at the co-op, plant, water, it grows over days only while wet, wilts when dry, is picked and eaten and sold', () => {
   const { w, p, prof, h } = scene();
   assert.match(label(w, p), /buy seeds/);
+  assert.match(players.findInteraction(w, p).label, /buy seeds/, 'the Act button\'s prompt at your plot');
   // the co-op's counter sells seeds
   const coop = w.map.pois.find((q) => q.kind === 'farm');
   const menu = economy.buildMenu(w, p, coop);

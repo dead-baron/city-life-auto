@@ -95,6 +95,9 @@ export const VEHICLES = {
   // slow, tough, at home on rough ground (rough: hardly slowed by dirt, grass or the fields). Driven down a field's row it
   // ploughs, sows or harvests it. (i 48: the next free index after the tank's; art v2's 'tractor' model, a red one)
   tractor:   { i: 48, name: 'Furrowmaster Tractor', kind: 'car', L: 84, W: 54, max: 250, accel: 170, brake: 600, rev: 110, turn: 2.0, grip: 11, drift: 6, mass: 3.2, hp: 900, seats: 1, slots: [[-34, 0]], rough: 0.08 },
+  // ---- the combine harvester (H61: farming.js): slower still, its header as wide as two rows - it harvests both as it
+  // goes (it doesn't plough or sow). (i 49; art v2's 'combine' model)
+  combine:   { i: 49, name: 'Reaper Combine Harvester', kind: 'car', L: 150, W: 120, max: 190, accel: 110, brake: 500, rev: 80, turn: 1.4, grip: 12, drift: 8, mass: 6, hp: 1400, seats: 1, slots: [[-60, 0]], rough: 0.08 },
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);

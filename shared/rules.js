@@ -663,5 +663,7 @@ export const GARDEN_CROPS = {
 // going round stubble -> ploughed -> sown -> growing (growDays in-game days) -> ripe -> harvested (stubble again).
 // Driving a tractor down a row does the job it needs - plough, sow or harvest - once cover of its length is done
 // (its length in segs pieces). On the farm-work contract (the co-op's counter, the phone) each row pays pay[job], rows
-// rows finish it (+bonus); it runs contractS s; the tractor's issued like a work truck (jobs.js workTruck).
-export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough: 22, sow: 18, harvest: 30 }, rows: 8, bonus: 150, contractS: 1500, near: 1600 };
+// rows finish it (+bonus); it runs contractS s; the tractor's issued like a work truck (jobs.js workTruck). By hand at
+// harvest time: each stretch of a ripe row picked on foot, and every handPer of them fill a crate (a Produce Box worth
+// handBox at the farm stand or the grocery).
+export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough: 22, sow: 18, harvest: 30 }, rows: 8, bonus: 150, contractS: 1500, near: 1600, handPer: 3, handBox: 45 };

@@ -303,6 +303,7 @@ export function buildMenu(world, p, poi) {
       title = poi.label;   // (the co-op's counter: seeds and what you grow - SHOPS.farm; farm work on the fields - farming.js)
       sub = 'Harvest contracts, farm work on the fields with the co-op tractor (paid by the row), seeds for your garden - and they buy what you grow.';
       if (!p.job) opts.push({ id: 'job:fieldwork', label: 'Farm work: the co-op tractor on the fields (paid by the row)' });
+      if (!p.job && farming.anyRipe(world)) opts.push({ id: 'job:combine', label: 'Harvest: the co-op combine on the ripe rows (two at a time)' });
       break;
     case 'grocery':
       sub = 'Carry Produce Boxes to the front door to get paid. They buy what you grow in your garden, too.';
@@ -650,7 +651,7 @@ function execute(world, p, poi, opt) {
     case 'job': {
       if (parts[1] === 'quit') { jobs.failJob(world, p, 'Job abandoned.'); return null; }
       if (p.job) return 'Finish your current job first.';
-      if (parts[1] === 'fieldwork') return farming.startWork(world, p, poi);   // (the tractor on the fields: farming.js)
+      if (parts[1] === 'fieldwork' || parts[1] === 'combine') return farming.startWork(world, p, poi, parts[1] === 'combine' ? 'combine' : 'tractor');   // (the tractor, the combine on the fields: farming.js)
       return parts[1] === 'courier' ? jobs.startCourier(world, p, poi) : jobs.startFarm(world, p, poi);
     }
     default: return 'Unknown option.';

@@ -138,6 +138,6 @@ export const DEV_SECTIONS = [
   // gardening and farm work (H61: server gardening.js, farming.js)
   { id: 'farm', title: '🌱 Gardening & farm work', items: [
     ['🏡 A garden of my own (the nearest house, plants at every stage, seeds)', 'garden'], ['🍅 Everything in my gardens ripe', 'garden', { k: 'ripe' }],
-    ['🚜 A tractor at the fields (the rows in every state)', 'farm'], ['🌧 Rain (it waters the gardens)', 'rain'],
+    ['🚜 A tractor at the fields (the rows in every state)', 'farm'], ['🌾 A combine at the fields (it harvests two ripe rows at once)', 'farm', { k: 'combine' }], ['🌧 Rain (it waters the gardens)', 'rain'],
   ] },
 ];

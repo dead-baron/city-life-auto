@@ -87,12 +87,20 @@ export function update(world) {
   }
 }
 
-// one tick of a tractor over the field: the segment under it done for its row's job; the row's job done once enough is
+// one tick of a tractor over the field: the segment under it done for its row's job; the row's job done once enough is.
+// A combine: the stretches under its header (two rows wide, at its front) harvested - it only harvests.
 export function work(world, p, v) {
-  const at = rowAt(world, v.x, v.y);
+  if (v.model !== 'combine') return workAt(world, p, v.x, v.y, null);
+  const c = Math.cos(v.a), s = Math.sin(v.a), f = v.def.L / 2 - 12;
+  let job = null;
+  for (const off of [-FARM.rowW / 2, FARM.rowW / 2]) job = workAt(world, p, v.x + c * f - s * off, v.y + s * f + c * off, 'harvest') || job;
+  return job;
+}
+function workAt(world, p, x, y, only) {
+  const at = rowAt(world, x, y);
   if (!at) return null;
   const { F, r, k, row } = at, job = jobOf(row);
-  if (!job || !(row.ok & (1 << k)) || row.m & (1 << k)) return null;
+  if (!job || (only && job !== only) || !(row.ok & (1 << k)) || row.m & (1 << k)) return null;
   row.m |= 1 << k;
   F.dirty = true;
   if (bits(row.m & row.ok) < Math.ceil(row.okN * FARM.cover)) return null;
@@ -121,39 +129,72 @@ function finishRow(world, p, F, r, job) {
   return job;
 }
 
+// ---- by hand at harvest time: on foot in a ripe row, pick the stretch you're on; every FARM.handPer stretches fill a
+// crate (a Produce Box: carry it to the farm stand or the grocery - jobs.js deliveryZoneFor)
+export function handInteraction(world, p) {
+  const ped = p.ped;
+  if (!ped || ped.dead || ped.vehId || ped.carrying || ped.hidden) return null;
+  const at = rowAt(world, ped.x, ped.y);
+  if (!at || at.row.s !== ROW.RIPE || !(at.row.ok & (1 << at.k))) return null;
+  if (at.row.m & (1 << at.k)) return { label: 'Picked here - move along the row', run: () => {} };
+  return { label: `Pick the crop by hand (${(p.handPicked || 0)}/${FARM.handPer} for a crate)`, run: () => handPick(world, p) };
+}
+export function handPick(world, p) {
+  const ped = p.ped, at = ped && rowAt(world, ped.x, ped.y);
+  if (!at || at.row.s !== ROW.RIPE || at.row.m & (1 << at.k) || !(at.row.ok & (1 << at.k))) return null;
+  const { F, r, k, row } = at;
+  row.m |= 1 << k;
+  F.dirty = true;
+  p.handPicked = (p.handPicked || 0) + 1;
+  let crate = null;
+  if (p.handPicked >= FARM.handPer) {
+    p.handPicked = 0;
+    crate = world.spawnCrate(1, ped.x + 14, ped.y + 10, { owner: p.pid, label: 'Produce Box', value: FARM.handBox, contraband: false });
+    crate.hand = true;
+    world.notify(p, `A crate of the crop, picked by hand. Carry it to the farm stand or the grocery for $${FARM.handBox}.`, 'good');
+  } else world.notify(p, `You pick along the row (${p.handPicked}/${FARM.handPer} for a crate).`, 'info');
+  if (bits(row.m & row.ok) >= Math.ceil(row.okN * FARM.cover)) finishRow(world, p, F, r, 'harvest');
+  p.meDirty = true;
+  return crate;
+}
+
 // ---- the farm-work contract ---------------------------------------------------------------------------------------
-// the field nearest (x, y) with rows that need a job, and its row nearest to there that does
-function nextRow(world, x, y, only = -1) {
+// the field nearest (x, y) with rows that need a job (that job: a combine only harvests), and its row nearest to there
+function nextRow(world, x, y, only = -1, job = null) {
   let best = null, bd = Infinity;
   for (const F of fieldsOf(world)) {
     if (only >= 0 && F.i !== only) continue;
     F.rows.forEach((row, r) => {
-      if (row.okN < 3 || !jobOf(row)) return;
+      if (row.okN < 3 || !jobOf(row) || (job && jobOf(row) !== job)) return;
       for (const e of rowEnds(F, r)) { const d = Math.hypot(e.x - x, e.y - y); if (d < bd) { bd = d; best = { F, r, e }; } }
     });
   }
   return best;
 }
-export function startWork(world, p, poi) {
+export function startWork(world, p, poi, model = 'tractor') {
   if (!poi) return 'No farm near.';
   if (p.job) return 'You already have a job - finish it first.';
-  const at = nextRow(world, poi.x, poi.y);
-  if (!at) return 'The fields are all growing - nothing to plough, sow or harvest just now. Try again later.';
-  p.job = { type: 'fieldwork', field: at.F.i, rows: FARM.rows, done: 0, expires: world.time + FARM.contractS, tx: at.e.x, ty: at.e.y, text: '', pickupText: '' };
+  const only = model === 'combine' ? 'harvest' : null;
+  const at = nextRow(world, poi.x, poi.y, -1, only);
+  if (!at) return only ? 'Nothing is ripe for the combine just now - try the tractor, or come back later.' : 'The fields are all growing - nothing to plough, sow or harvest just now. Try again later.';
+  p.job = { type: 'fieldwork', field: at.F.i, rows: FARM.rows, done: 0, expires: world.time + FARM.contractS, tx: at.e.x, ty: at.e.y, text: '', pickupText: '', only };
   track(world, p);
   const pad = poi.cargoPad || { x: poi.x, y: poi.y + 60 };
-  const v = jobs.workTruck(world, p, pad, 'tractor', poi);
-  if (v) v.paint = 0;   // (the co-op's tractors are red)
-  world.notify(p, `Farm work! ${FARM.rows} rows of the field by ${poi.label}: drive the co-op tractor down a row and it does what the row needs - plough the stubble, sow the ploughed, harvest the ripe. $${FARM.pay.plough}-$${FARM.pay.harvest} a row.${v ? ' The tractor is parked by the yard (the green ring).' : ''}`, 'good');
+  const v = jobs.workTruck(world, p, pad, model, poi);
+  if (v) v.paint = 0;   // (the co-op's machines are red)
+  if (only) world.notify(p, `Harvest! ${FARM.rows} rows of the ripe crop by ${poi.label} with the co-op's combine: its header takes two rows at once as you drive down them. $${FARM.pay.harvest} a row.${v ? ' The combine is parked by the yard (the green ring).' : ''}`, 'good');
+  else world.notify(p, `Farm work! ${FARM.rows} rows of the field by ${poi.label}: drive the co-op tractor down a row and it does what the row needs - plough the stubble, sow the ploughed, harvest the ripe. $${FARM.pay.plough}-$${FARM.pay.harvest} a row.${v ? ' The tractor is parked by the yard (the green ring).' : ''}`, 'good');
   p.meDirty = true;
   return null;
 }
+// a ripe row in the fields (the co-op's counter offers the combine then)
+export const anyRipe = (world) => fieldsOf(world).some((F) => F.rows.some((row) => row.s === ROW.RIPE && row.okN >= 3));
 // the tracker's text and mark: the next row to work in the contract's field (or the nearest one anywhere)
 function track(world, p) {
   const j = p.job, ped = p.ped;
   if (world.tick % 10 !== 0 && j.text) return;
   const from = ped ? (ped.vehId ? world.get(ped.vehId) || ped : ped) : { x: j.tx, y: j.ty };
-  const at = nextRow(world, from.x, from.y, j.field) || nextRow(world, from.x, from.y);
+  const at = nextRow(world, from.x, from.y, j.field, j.only) || nextRow(world, from.x, from.y, -1, j.only);
   const text = at ? `Farm work ${j.done}/${j.rows}: ${jobOf(at.F.rows[at.r])} a row (the marker: its end)` : `Farm work ${j.done}/${j.rows}: the fields are all growing - wait for the next to ripen`;
   if (at) { j.tx = at.e.x; j.ty = at.e.y; }
   if (text !== j.text) { j.text = text; j.pickupText = text; p.meDirty = true; }
@@ -175,7 +216,7 @@ function sendNear(world, p) {
 
 // ---- dev ('farm'): at the fields by the co-op in a tractor, the rows beside you in every state (stubble, ploughed,
 // sown, sprouting, growing, tall, ripe, some half done)
-export function devFarm(world, p) {
+export function devFarm(world, p, msg = {}) {
   const ped = p.ped;
   if (!ped) return 'no body';
   const coop = world.map.pois.find((q) => q.kind === 'farm');
@@ -186,7 +227,7 @@ export function devFarm(world, p) {
   F.dirty = true;
   const [a] = rowEnds(F, Math.min(F.n - 1, 1));
   if (ped.vehId) { const old = world.get(ped.vehId); if (old) old.seats[old.seats.indexOf(ped.id)] = 0; ped.vehId = 0; ped.seat = -1; }
-  const v = world.spawnVehicle('tractor', a.x, a.y, F.v ? Math.PI / 2 : 0, { npcOwned: false, paint: 0 });
+  const v = world.spawnVehicle(msg.k === 'combine' ? 'combine' : 'tractor', a.x, a.y, F.v ? Math.PI / 2 : 0, { npcOwned: false, paint: 0 });
   v.despawnable = false;
   ped.x = v.x; ped.y = v.y; ped.vehId = v.id; ped.seat = 0; v.seats[0] = ped.id; v.lastDriver = ped.id; p.lastVehicle = v.id;
   world.place(ped);
