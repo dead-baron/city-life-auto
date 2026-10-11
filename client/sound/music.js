@@ -427,7 +427,7 @@ export class Music {
         const key = lead ? 'leadW' : 'keyW', H = lead ? LEADW : KEYW;
         const W = this[key] || (this[key] = { w: c.createPeriodicWave(new Float32Array(H.length), Float32Array.from(H)), k: wavePeak(H) });
         const o = c.createOscillator(), g = c.createGain(), v = ev.v * W.k * (0.95 + R() * 0.1);
-        o.setPeriodicWave(W.w); o.frequency.setValueAtTime(f, t); o.detune.setValueAtTime(lead ? 0 : (R() - 0.5) * 8, t);
+        o.setPeriodicWave(W.w); o.frequency.setValueAtTime(f, t); o.detune.setValueAtTime(lead ? -3 : (R() - 0.5) * 8, t);
         g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + (lead ? 0.015 : 0.006));
         g.gain.setTargetAtTime(0, t + 0.02, lead ? 0.8 : 0.6);
         // (the tail only above about B4: the recording's lower notes stop dead when let go, its room rings the upper)
@@ -435,7 +435,7 @@ export class Music {
         g.gain.setTargetAtTime(0, end - 0.15, 0.03);   // (the tail's last whisper faded before it stops: no click)
         if (lead) {
           const lfo = c.createOscillator(), lg = c.createGain();
-          lfo.frequency.value = 6.3; lg.gain.setValueAtTime(0, t); lg.gain.setValueAtTime(0, t + 0.1); lg.gain.linearRampToValueAtTime(25, t + 0.25);
+          lfo.frequency.value = 6.3; lg.gain.setValueAtTime(0, t); lg.gain.setValueAtTime(0, t + 0.11); lg.gain.linearRampToValueAtTime(28, t + 0.17);
           lfo.connect(lg); lg.connect(o.detune); lfo.start(t); lfo.stop(end);
           E.note(lfo, end); E.note(lg, end);
         }
