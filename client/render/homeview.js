@@ -122,8 +122,7 @@ function frame(now) {
   g.setTransform(k, 0, 0, k, Math.round(W / 2 - cx * k), Math.round(H / 2 - cy * k));
   g.imageSmoothingEnabled = false;
   const u = !st.sleep && !st.shower ? useAt(L, me.x, me.y, HOME_IN.reach) : null;
-  if (v2) drawArt(L, me, u, now);
-  else {
+  if (!(v2 && drawArt(L, me, u, now))) {   // (the classic drawing while art v2's is still being made)
     if (!bake || bake.key !== `${st.plan}:${st.tier}`) bake = { key: `${st.plan}:${st.tier}`, cv: bakeRooms(L) };
     g.drawImage(bake.cv, -16, -24, L.w + 32, L.h + 40);
     windows(L, now);
@@ -145,6 +144,7 @@ function drawArt(L, me, u, now) {
   const ap = Math.max(1, Math.min(2, (S.art2 && S.art2.E && S.art2.E.ap) || 2));
   if (!art || art.L !== L || art.ap !== ap) art = new artMod.HomeArt(L, ap);
   art.relight(daylight());
+  if (!art.work(art.ready ? 4 : 10)) return false;   // (made and lit a little at a time: never a stall on the way in)
   const f = art.floor;
   g.drawImage(f.cv, 0, 0, f.G.w * ap, f.G.h * ap);
   const list = [];
@@ -190,6 +190,7 @@ function drawArt(L, me, u, now) {
     for (let k = 0; k < 5; k++) { const t = (now / 900 + k / 5) % 1; g.beginPath(); g.arc(me.x - 10 + k * 5, me.y - 30 - t * 26, 5 + t * 8, 0, 6.28); g.fill(); }
   }
   tvGlow(L, now);
+  return true;
 }
 // the TV's light flickering on the room at night (over the baked light)
 function tvGlow(L, now) {

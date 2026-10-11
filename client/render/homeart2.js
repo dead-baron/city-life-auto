@@ -98,13 +98,29 @@ function rug(G, ap, rx, ry, rw, rh, tier, seed) {
 
 // ---- building the scene ---------------------------------------------------------------------------------------------
 export class HomeArt {
+  // Built a little at a time (work(ms) each frame: a phone never stalls on the way in - homeview.js draws the classic
+  // view until it's ready), then lit the same way for each step of the day
   constructor(L, ap = 2) {
     this.L = L; this.ap = ap; this.tier = L.tier; this.R = rooms(L);
-    this.items = []; this.lamps = []; this.windows = [];
-    this.floor = this.buildFloor();
-    this.buildWalls();
-    this.buildFurniture();
+    this.items = []; this.lamps = []; this.windows = []; this.floor = null;
     this.envKey = ''; this.people = new Map(); this.cars = new Map(); this.figs = new Map();
+    this.ready = false; this.job = this.build(); this.lightJob = null;
+  }
+  *build() {
+    yield* this.buildFloor();
+    yield* this.buildWalls();
+    yield* this.buildFurniture();
+  }
+  // do the building and the lighting for up to ms; ready once it's all built and lit
+  work(ms) {
+    const t = performance.now();
+    while (performance.now() - t < ms) {
+      const j = this.job || this.lightJob;
+      if (!j) break;
+      if (j.next().done) { if (this.job) this.job = null; else this.lightJob = null; }
+    }
+    this.ready = !this.job && !!(this.floor && this.floor.cv) && this.items.every((it) => it.cv);
+    return this.ready;
   }
   floorKind(tx, ty) {
     const ch = this.L.cell(tx, ty);
@@ -115,12 +131,15 @@ export class HomeArt {
     if (r && r.kind === 'bed' && this.tier >= 2 && !r.tiles.some(([x, y]) => L4K(this.L, x, y))) return 'c';   // (a bedroom carpeted - not a great room with the kitchen in it)
     return '.';
   }
-  buildFloor() {
+  *buildFloor() {
     const L = this.L, ap = this.ap, G = new GBuf(Math.ceil(L.w / ap), Math.ceil(L.h / ap));
-    for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
-      const wx = x * ap, wy = y * ap, tx = Math.floor(wx / T), ty = Math.floor(wy / T);
-      if (WALLISH.has(L.cell(tx, ty)) && L.cell(tx, ty) !== 'D') continue;
-      G.put(x, y, floorPx(this.floorKind(tx, ty), this.tier, wx, wy, x, y), UP, 0);
+    for (let y = 0; y < G.h; y++) {
+      for (let x = 0; x < G.w; x++) {
+        const wx = x * ap, wy = y * ap, tx = Math.floor(wx / T), ty = Math.floor(wy / T);
+        if (WALLISH.has(L.cell(tx, ty)) && L.cell(tx, ty) !== 'D') continue;
+        G.put(x, y, floorPx(this.floorKind(tx, ty), this.tier, wx, wy, x, y), UP, 0);
+      }
+      if (y % 24 === 23) yield;
     }
     // a threshold across each doorway, along the wall it's in
     const sill = ramp(this.tier >= 2 ? '#c8b89a' : '#6a5038', 4, 2);
@@ -161,10 +180,10 @@ export class HomeArt {
       if (r) rug(G, ap, r.x, r.y, r.w, r.h, t, p.tx * 7 + p.ty);
     }
     if (L.door) rug(G, ap, L.door.x - 20, L.door.y - T / 2 - 18, 40, 16, Math.min(1, t), 5);
-    return { G, x: 0, y: 0 };
+    this.floor = { G, x: 0, y: 0 };
   }
   // the walls: a sprite for each run along a row (sorted by where it stands), its cap and - where it shows - its face
-  buildWalls() {
+  *buildWalls() {
     const L = this.L, ap = this.ap, t = this.tier, R = this.R;
     const hOf = (tx, ty) => (WALLISH.has(L.cell(tx, ty)) ? (ty === 0 ? HF : HC) : 0);
     const last = L.rows - 1;
@@ -193,6 +212,7 @@ export class HomeArt {
         this.items.push({ G, x: wx0, y: wy0, base: (ty + 1) * T + (ty === last ? 1 : 0), wall: true });
         tx = tx1 + 1;
       }
+      yield;
     }
     // the front door: a gap in the cut front wall, the door shut in it, the step outside
     if (L.door) {
@@ -258,7 +278,7 @@ export class HomeArt {
     void h;
   }
   // the furniture: each piece a voxel model turned to face the room
-  buildFurniture() {
+  *buildFurniture() {
     const L = this.L, ap = this.ap;
     const wall = (x, y) => WALLISH.has(L.cell(x, y));
     for (const p of L.pieces) {
@@ -278,6 +298,7 @@ export class HomeArt {
       this.items.push(it);
       if (p.ch === 'A') this.lamps.push({ x: p.x + 9, y: p.y + 18, z: 44, kind: 'lamp' });
       if (p.ch === 'V') this.lamps.push({ x: cx, y: cy, z: 24, kind: 'tv' });
+      yield;
     }
   }
 
@@ -339,17 +360,26 @@ export class HomeArt {
   }
   // light everything again for a new light (the time of day in eight steps)
   relight(d) {
+    if (this.job) return;   // (still building)
     const q = Math.round(d * 8) / 8, key = String(q);
     if (key === this.envKey) return;
     this.envKey = key; this.E = this.env(q);
-    const E = this.E, ap = this.ap;
-    this.floor.cv = this.shade(this.floor.G, 0, 0, ap, E, this.floor.cv);
-    for (const it of this.items) {
-      if (it.remake && it.on !== E.on) { it.on = E.on; const G = it.remake(E.on); it.G = G; }
-      it.cv = this.shade(it.G, it.x, it.y, ap, E, it.cv, !!it.wall);
-      if (it.piece && it.piece.use) it.ol = outline(it.G, it.ol);
-    }
     this.people.clear(); this.cars.clear();
+    this.lightJob = this.lightAll(this.E);
+  }
+  *lightAll(E) {   // (piece by piece: until it's done the rest keep the light they had)
+    const ap = this.ap;
+    const cv = this.shade(this.floor.G, 0, 0, ap, E, this.floor.cv2);
+    this.floor.cv2 = this.floor.cv; this.floor.cv = cv;   // (two canvases: the one on screen is never half lit)
+    yield;
+    for (const it of this.items) {
+      if (it.remake && it.on !== E.on) { it.on = E.on; it.G = it.remake(E.on); }
+      const c = this.shade(it.G, it.x, it.y, ap, E, it.cv2, !!it.wall);
+      it.cv2 = it.cv; it.cv = c;
+      if (it.piece && it.piece.use && !it.ol) it.ol = outline(it.G, null);
+      else if (it.remake && it.piece && it.piece.use) it.ol = outline(it.G, it.ol);
+      yield;
+    }
   }
 
   // ---- what moves: you and your friends, the cars in the garage ---------------------------------------------------

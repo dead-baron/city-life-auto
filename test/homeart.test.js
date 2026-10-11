@@ -71,9 +71,11 @@ test('the inside in the game\'s 3/4 view: every kind of home builds and lights b
     const { HomeArt } = await import('../client/render/homeart2.js');
     for (const k of PLAN_KEYS) for (const tier of [0, 3]) {
       const L = layout(k, tier), A = new HomeArt(L, 2);
+      A.work(1e9);
       assert.ok(A.items.length > L.pieces.length, `${k}: the walls and the furniture`);
       for (const d of [1, 0]) {
         A.relight(d);
+        let n = 0; while (!A.work(1) || A.lightJob) assert.ok(++n < 1e4, `${k}: never done lighting`);
         const lit = (cv) => { let n = 0; const p = cv.px.data; for (let i = 3; i < p.length; i += 4) if (p[i]) n++; return n; };
         assert.ok(lit(A.floor.cv) > (L.w * L.h) / 16, `${k} ${d ? 'day' : 'night'}: the floor`);
         for (const it of A.items) assert.ok(lit(it.cv) > 0, `${k}: an empty sprite`);
