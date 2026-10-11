@@ -322,7 +322,7 @@ function onBinary(buf) {
     e.buf.push({ t: s.tick, x: it.x, y: it.y, a: it.a, z: it.lz });
     if (e.buf.length > 5) e.buf.shift();
     e.flags = it.flags; e.hp = it.hp; e.parent = it.parent;
-    if (it.kind === K.PED) { e.extra = it.extra & 31; e.blink = (it.extra >> 5) & 3; const b7 = (it.extra & 128) !== 0, iv = (it.flags & PF.INVEH) !== 0; e.swim = b7 && !iv; e.back = b7 && iv; } // weapon | blink | in water (in a vehicle: a back seat)
+    if (it.kind === K.PED) { e.burn = it.parent >= 0x80000000; if (e.burn) e.parent = it.parent - 0x80000000; e.extra = it.extra & 31; e.blink = (it.extra >> 5) & 3; const b7 = (it.extra & 128) !== 0, iv = (it.flags & PF.INVEH) !== 0; e.swim = b7 && !iv; e.back = b7 && iv; } // weapon | blink | in water (in a vehicle: a back seat)
     else e.extra = it.extra;
     e.seen = s.tick;
   }
@@ -4106,7 +4106,15 @@ function pedVisual(p, now) {
   // lying still (the drawn body on the ground) doesn't drip; standing, the sparks fly round the head
   const lying = !L.upright && LYING.has(L.pose) && !L.flying && !L.swimming && (!!S.art2 || !!lyingSprite(p.d.app, L.pose.startsWith('dead') ? 1 : 0));
   if (!lying && (f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
+  if (p.burn) burnFx(p, !!L.upright && !lying);
   if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry - (L.upright ? 20 : 0) + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
+}
+// on fire (server burning.js): flames licking up the body (along it, lying down) and dark smoke rising - the pooled
+// particles, which both renderers draw (and art v2 lights)
+function burnFx(p, up) {
+  const fx = S.fx, h = up ? 10 : 2, w = up ? 8 : 18, r = Math.random;
+  if (r() < 0.9) fx.spawn(3, p.rx + (r() - 0.5) * w, p.ry - h - r() * (up ? 16 : 5), (r() - 0.5) * 16, -24 - r() * 30, 0.28 + r() * 0.3, 4 + r() * 4, r() < 0.5 ? '#ff8a1a' : '#ffd23a', -7);
+  if (r() < 0.25) fx.smoke(p.rx, p.ry - h - 16, true);
 }
 function drawPed(p, now) {
   const f = p.flags;

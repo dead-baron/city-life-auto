@@ -153,6 +153,8 @@ export const EVENT_SOUNDS = {
   thanks: speech('happy'),
   scream: (ev, A) => A.at('scream', ev.x, ev.y),
   yelp: (ev, A) => A.at('yelp', ev.x, ev.y),
+  ignite: (ev, A) => { A.at('burner', ev.x, ev.y, 0.8); A.at('scream', ev.x, ev.y); },   // someone catching fire: the whoomph, the scream (server burning.js)
+  douse: (ev, A) => A.at('sear', ev.x, ev.y, 0.9),                                       // ...and the hiss as the water puts it out
   thud: at('thud'),
   kick: at('kick', 0.8),
   poof: (ev, A) => { if (ev.k === 'plasma') { A.at('hum', ev.x, ev.y, 1.4); A.at('zing', ev.x, ev.y); } else A.at('poof', ev.x, ev.y, 0.6); },

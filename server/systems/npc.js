@@ -22,6 +22,7 @@ import { inAnyView } from '../view.js';
 import * as npclooks from './npclooks.js';
 import * as personas from './personas.js';
 import * as activities from './activities.js';
+import * as burning from './burning.js';
 import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME } from '../../shared/rules.js';
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
@@ -141,6 +142,7 @@ export function update(world, dt) {
   for (const ped of world.entities.values()) {
     if (ped.kind !== K.PED || !ped.npc || ped.dead || ped.vehId || ped.onTrain || ped.npc.boardTrain || ped.npc.stairs || ped.ug) continue; // train riders, boarders, subway stairs: trains.js; down the sewers: underground.js
     const n = ped.npc;
+    if (n.burn && ped.burnT > 0) { if (now >= ped.downUntil && now >= ped.stunUntil) pedStep(ped, burning.npcStep(world, ped, now), dt, world.map, walkMods(world, ped, 1)); continue; }   // (on fire: running for it - burning.js)
     if (n.guard && n.state !== 'fight' && n.state !== 'flee') { // Syndicate guard on the Rock: hold the post, keep watch
       const dd = Math.hypot(ped.x - n.guard.x, ped.y - n.guard.y);
       if (dd > 10) {   // (guard.run: a biker running for his bike - bikers.js; a bouncer back to his door steps round what's in the way)
@@ -172,7 +174,7 @@ export function update(world, dt) {
     if (now < ped.downUntil || now < ped.stunUntil) continue;
     if (n.state === 'passed') { ped.vx = 0; ped.vy = 0; continue; }
     // critically hurt: no more fighting - limp away from the trouble, bleeding; the worst hurt may crawl
-    if (n.state !== 'limp' && n.state !== 'crawl' && n.role !== 'cop' && ped.hp < ped.maxHp * NPC_CRITICAL) startLimp(world, ped, n.fx ?? ped.x + 1, n.fy ?? ped.y);
+    if (n.state !== 'limp' && n.state !== 'crawl' && n.state !== 'burn' && n.role !== 'cop' && ped.hp < ped.maxHp * NPC_CRITICAL) startLimp(world, ped, n.fx ?? ped.x + 1, n.fy ?? ped.y);
     if (n.state === 'limp' && ped.hp < ped.maxHp * CRAWL_HP && !n.crawlRolled) { n.crawlRolled = true; if (rng() < 0.6) startCrawl(world, ped, n.fx ?? ped.x + 1, n.fy ?? ped.y); }
     // ended up in the water (thrown from a car, knocked off a dock): swim for the nearest shore
     if (isSwimming(world.map, ped)) {

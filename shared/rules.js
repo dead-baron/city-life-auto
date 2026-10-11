@@ -572,3 +572,27 @@ export const VANDAL_HEAT = 8;
 export const VEH_CRIME = { repeatS: 5, fight: 1, stopPx: 120 };
 // an NPC's guard, and showing anyone's (server combat.js npcGuard, players.js)
 export const NPC_GUARD = { chance: { fists: 0.22, bat: 0.3, sword: 0.35, katana: 0.4, plasma: 0.45 }, temper: [0.5, 0.8], holdS: 0.7, coolS: 1.4, showS: 0.4 };
+// ---- fire on people (H58; the owner, 2026-10-11: "NPCs and players catch on fire if they are near an explosion or their
+// vehicle blows up or they run into fire ... Rain makes the fire go out faster. Player characters: you want to roll on the
+// ground to put yourself out, running around on fire makes you go out but a little slower, jumping in water puts you out
+// immediately") - server/systems/burning.js. secs: how long a fire burns on someone who does nothing about it (s); dps:
+// health it takes a second (a player's grit divides it); run: running about burns it out this many times faster than
+// standing still, roll: a dive roll on the ground this many (two or three rolls and it's out), rain: the rain this many
+// times faster again; blast: the chance a blast sets you alight at its heart (falling off to nothing at its edge);
+// touch: the chance a second of brushing against something burning (a wreck, a campfire, someone alight) sets you alight;
+// npc: what a burning NPC does - run (off, as far as they can), roll (run, then stop, drop and roll: out in rollS),
+// fall (a few steps, then down, burning until they die: fallDps); near water (within waterPx) water of them run for it.
+export const BURN = {
+  secs: 9, dps: 6, run: 1.6, roll: 9, rain: 2.2, blast: 0.85, touch: 1.6, campPx: 20, vehPx: 12, pedPx: 18,
+  npc: { run: 0.35, roll: 0.35, fall: 0.3 }, rollAfter: [1.2, 2.6], rollS: 2.4, fallAfter: [0.6, 1.4], fallDps: 14,
+  water: 0.7, waterPx: 380, screamS: [0.9, 2.2],
+};
+// ---- the tank (H58; the owner: "Add a tank you can drive and shoot and blow things up with, can spawn in debug"):
+// the turret turns to the driver's aim at turretRate rad/s, independently of the hull; a shell every reload s, flying at
+// speed px/s up to range px, then going up as a blast of r px doing dmg (shared/explosions.js sizes); small arms barely
+// scratch it (armor: what a gun's damage to it is multiplied by - a blast or a shell does its full share).
+export const TANK = { turretRate: 2.4, reload: 1.8, speed: 900, range: 900, r: 120, dmg: 95, armor: 0.06 };
+// ---- the explosion tester (H58; the owner: "Maybe this debug should be an item you shoot or something you can trigger
+// while in game so we can test explosions as rapidly as we had before"): a dev-only launcher (shared/items.js boomtest)
+// whose shot sets off the kind picked (the reload key steps through them) where it lands - server/systems/boomtest.js
+export const BOOM_TEST_KINDS = ['small', 'medium', 'big', 'ultra', 'car', 'launch', 'pieces', 'wheel', 'tanker', 'truck', 'fire'];

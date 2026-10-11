@@ -376,6 +376,7 @@ export function explode(world, v, attackerPed) {
 import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S, PLASMA_CUT } from '../../shared/rules.js';
 import { VDMG, VZ, VPART, damageStage, packVehDamage, hitZone } from '../../shared/vehicles.js';
 import * as ferries from './ferries.js';
+import * as burning from './burning.js';   // (thrown out of it on fire: H58)
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);
@@ -432,7 +433,7 @@ function blownOut(world, ped, v, attackerPed) {
   ped.downUntil = Math.max(ped.downUntil, world.time + 3.5);
   const left = ped.maxHp * (0.06 + world.rand() * 0.1);
   combat.damage(world, ped, Math.max(1, ped.hp - left) * combat.gritOf(ped, 'explosion'), attackerPed, 'explosion', a);   // (left on that much: a player's grit undone)
-  if (!ped.dead) { ped.bleeding = true; ped.burnUntil = world.time + 2; if (ped.player) world.notify(ped.player, 'Blown clear of the wreck - badly hurt. Heal up fast!', 'bad'); }
+  if (!ped.dead) { ped.bleeding = true; burning.ignite(world, ped, attackerPed); if (ped.player) world.notify(ped.player, 'Blown clear of the wreck - badly hurt. Heal up fast!', 'bad'); }
 }
 
 // Drove off a dock or a bridge-less shore: everyone spills into the water and swims for it.

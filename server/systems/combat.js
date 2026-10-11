@@ -22,6 +22,7 @@ import * as nightclubs from './nightclubs.js';
 import * as explosions from './explosions.js';   // (chain reactions: task #398)
 import * as campfires from './campfires.js';
 import * as dance from './dance.js';
+import * as burning from './burning.js';   // (fire on people: H58)
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -298,6 +299,7 @@ function stepArrow(world, p, dt, owner) {
     if (t.wild && !w.fire) t.arrows = (t.arrows || 0) + 1;   // (a fire arrow burns away: none to get back)
     if (!t.dead && hurtable(world, t)) reactions.shot(world, t, owner || t, w, { n: 1, dist: p.dist, a, lethal: t.hp - dmg <= 0 });
     damage(world, t, dmg, owner, 'arrow', a);
+    if (w.fire && !t.dead && !t.wild) burning.ignite(world, t, owner);   // (a fire arrow sets them alight - burning.js)
     world.remove(p);
     return;
   }
@@ -499,7 +501,7 @@ export function kill(world, ped, attacker, cause, dir = 0) {
   if (attacker && attacker.player) attacker.player.profile.stats.kills++;
   if (ped.player) {
     const by = attacker ? (attacker.player ? attacker.player.name : attacker.npc && attacker.npc.role === 'cop' ? (FORCE_NAME[attacker.archetype] || 'the police') : (attacker.name || 'a local')) : null;
-    players.onPedDeath(world, ped, attacker, by ? `Taken out by ${by}.` : causeText(cause));
+    players.onPedDeath(world, ped, attacker, by ? (cause === 'fire' ? `Burned to death - set alight by ${by}.` : `Taken out by ${by}.`) : causeText(cause));
   } else {
     npc.onDeath(world, ped, attacker);
     world.bodies.add(ped);
@@ -508,7 +510,7 @@ export function kill(world, ped, attacker, cause, dir = 0) {
 
 const FORCE_NAME = { swat: 'SWAT', agent: 'the FBI', soldier: 'the army' };
 function causeText(cause) {
-  return ({ train: 'Hit by a train.', vehicle: 'Flattened by traffic.', crash: 'Wiped out at speed.', explosion: 'Caught in an explosion.', bail: 'Bailed out too fast.' })[cause] || 'You flatlined.';
+  return ({ train: 'Hit by a train.', vehicle: 'Flattened by traffic.', crash: 'Wiped out at speed.', explosion: 'Caught in an explosion.', bail: 'Bailed out too fast.', fire: 'Burned to death.', shell: 'Hit by a tank shell.' })[cause] || 'You flatlined.';
 }
 
 // L: the blast's link of a chain (explosions.js: what it sets off goes up a beat later, as the next link); big: its
@@ -527,6 +529,7 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
       const a = Math.atan2(e.y - y, e.x - x);
       if (e.dead || hurtable(world, e)) reactions.blasted(world, e, a, f, k);
       if (!e.dead) damage(world, e, dmg * f + 10, attacker, 'explosion', a);
+      if (!e.dead) burning.blastCatch(world, e, f, attacker);   // (near its heart: set alight - burning.js)
     } else if (e.kind === K.VEH && e.id !== excludeVehId && !e.wreckAt) {
       // fn: how close its near end is (whether it goes up, and when: explosions.js); f, its middle: how hard it's hit
       const fn = Math.max(f, 1 - explosions.bodyDist(e, x, y) / r);
