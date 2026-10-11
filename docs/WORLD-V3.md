@@ -4145,7 +4145,10 @@ headland under the redwoods and Lookout Hill's orchard shaded with the land. Wha
   the snow (53 of 125 points in the build of 07:45), and **the Ridge Trail Hunting Camp still stands in the snow**
   (naturesites.js `huntingCamps` sets it by the trail's middle, at the snow line, and looks for room round it: it wants
   to look for room off the snow, or a spot along the trail's bare stretch). The trail is faint at 1/8 (a dirt trail on
-  dark alpine ground).
+  dark alpine ground). The ridge picture now reaches east to the trail's start (its box to 1110): the switchbacks down
+  from Summit Road, the long stretch along the snow line, the way down to the tarn.
+- A long straight brown band north of Summit Road in the ridge picture (tiles 816-1008 at about 46) reads as a track:
+  by its look one of H48's crag steps on the peaks (a band of rubble along a step of the height field) - to look at.
 
 Tests: `test/world3relief.test.js` (as before, and: `m.tables` as the relief's, the bake's rim the relief's; sandstone
 faces on three sides of each table at least; no 8.8 mesa on a table or its talus; no band under two tiles thick; the
