@@ -3653,8 +3653,8 @@ them. The live world doesn't change (the world hash stays 6b6e16fdef9f).
   boat** at the end of the second pier (`charter: true`) and **Egret Point Charters** (`charter`) on the quay, its POI
   knowing its boat (`boat`) - the desk sells today's deep-sea charter (`server/systems/economy.js`), not yet a run to the
   outer islands. By the quay: **Egret Point Fish Market** (`fishmarket`), **The Gaff Hook** (the bar,
-  `club`), **Egret Point Bait & Tackle** (`tackle`). Along Wharf Street, **23 fishing shacks** either side (weathered
-  siding, tin roofs) - homes for sale as today's shacks (`m.homes`, `shack`, $6,000, one car). Nets, pots, crates, fish
+  `club`), **Egret Point Bait & Tackle** (`tackle`). Along Wharf Street, **21 fishing shacks** either side (weathered
+  siding, tin roofs; widths, setbacks and gaps irregular) - homes for sale as today's shacks (`m.homes`, `shack`, $6,000, one car). Nets, pots, crates, fish
   tables, rods and life rings on the quay. The buildings of ours have no `prefab`, so the shops serve at their doors
   (no walk-in interiors: `buildInteriors` wants a prefab).
 - **Light Road** (a country lane, `rural`: no pavements) off Wharf Street south down the arm to the top of the beach at
@@ -3699,11 +3699,12 @@ the arm): `docs/world-v3-town-egret.png`, `-egretlight.png`, `-silverfalls.png`,
 `docs/world-v3-world-r1-5.png`. What looks right: Wharf Street crossing the Redwood Coast Road to the quay, the shacks
 either side in weathered colours, the fish market and the bar by the quay, the four piers out into the cove's water; the
 dirt oval with its bleachers, the pits and the snack bar on Raceway Road; Light Road down the arm through the marsh to the
-light at the tip; the boardwalk over the creeks; at the falls the pool under the band with the white streams and the
+light on the beach at the tip with its rocks (Light Road and Raceway Road narrow country lanes now); the boardwalk
+zigzagging over the creeks to the hide, the spur to the pond's platform; at the falls the pool under the band with the white streams and the
 platform by the road; North Cape Light and its cottage in a clearing, the track to the road, the tide pools along the
 waterline and the stacks offshore; the three coves bitten into the shore. What looks wrong:
-- **Egret Point is a suburban row:** 23 shacks evenly spaced along a straight street, two cul-de-sacs - NT1-F's village is a
-  cluster round the harbour, shacks on stilts at the water, nets and boats pulled up on the shore. The quay is a wide
+- **Egret Point is still a row:** the shacks staggered (irregular widths, setbacks and gaps) but in two lines along a
+  straight street ending in turnarounds - NT1-F's village is a cluster round the harbour, shacks on stilts at the water, nets and boats pulled up on the shore. The quay is a wide
   brown deck on the beach with a strip of sand between it and the street's end; the fish market is the convenience
   store's archetype (no awnings, no fish on ice). The fleet isn't in the bake (boats are vehicles: they show in the game).
 - **The Redwood Coast Road runs on past Wharf Street** to a stub with a turnaround (the arterial's end, 20 tiles on).

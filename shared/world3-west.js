@@ -218,14 +218,17 @@ export function buildWest(m, addProp) {
     // the fishing shacks: weathered siding, tin roofs, either side of the road; homes as today's shacks
     const walls = ['#8a9aa0', '#a08a70', '#7a8a7a', '#b0a088', '#6e7e88', '#9a7a62'];
     let k = 0;
-    for (const N of [true, false]) for (let x = 866; x + 7 <= 1012; x += 11) {
-      if (!N && x + 7 >= 960 && x <= 976) continue;   // (Light Road's mouth)
-      const y = N ? R - 11 : R + 6, h = 6;
-      const b = addBld(m, x, y, 7, h, 'shack', `Fishing Shack`, 'metal', { spec: { floors: 1, style: 'siding', wallColor: walls[k % walls.length], pitch: 'gable', roof: 'metal', roofColor: ['#7a8288', '#8a6a50', '#6a7076'][k % 3], slope: 0.4 + (k % 3) * 0.08 } });
+    // (irregular: widths 6-8, set back 0-2 tiles, gaps of 3-7 - a village's row, not a suburb's)
+    for (const N of [true, false]) for (let x = 866, w = 7; x + 8 <= 1012; x += w + 3 + Math.floor(hash(x, N ? 6 : 7, 85) * 5)) {
+      w = 6 + Math.floor(hash(x, N ? 1 : 2, 82) * 3);
+      if (!N && x + w >= 960 && x <= 976) continue;   // (Light Road's mouth)
+      const h = 5 + Math.floor(hash(x, N ? 3 : 4, 84) * 2), back = Math.floor(hash(x, N ? 5 : 8, 83) * 3);
+      const y = N ? R - 5 - h - back : R + 6 + back;
+      const b = addBld(m, x, y, w, h, 'shack', `Fishing Shack`, 'metal', { spec: { floors: 1, style: 'siding', wallColor: walls[k % walls.length], pitch: 'gable', roof: 'metal', roofColor: ['#7a8288', '#8a6a50', '#6a7076'][k % 3], slope: 0.4 + (k % 3) * 0.08 } });
       k++;
       if (!b) continue;
-      const id = m.homes.length, door = { x: (x + 3.5) * TILE, y: (N ? y + h + 0.8 : y - 0.8) * TILE };
-      const home = { id, kind: 'shack', name: `Egret Point Shack #${id + 1}`, price: 6000, slots: 1, x: door.x, y: door.y, garage: { x: (x + 6.2) * TILE, y: (N ? y + h + 1.6 : y - 1.6) * TILE, a: N ? -Math.PI / 2 : Math.PI / 2 }, b: b.id };
+      const id = m.homes.length, door = { x: (x + w / 2) * TILE, y: (N ? y + h + 0.8 : y - 0.8) * TILE };
+      const home = { id, kind: 'shack', name: `Egret Point Shack #${id + 1}`, price: 6000, slots: 1, x: door.x, y: door.y, garage: { x: (x + w - 0.8) * TILE, y: (N ? y + h + 1.6 : y - 1.6) * TILE, a: N ? -Math.PI / 2 : Math.PI / 2 }, b: b.id };
       m.homes.push(home);
       m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: door.x, y: door.y, r: 40, b: b.id });
       b.home = id; b.name = home.name; out.homes++;

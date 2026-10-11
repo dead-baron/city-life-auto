@@ -7837,7 +7837,7 @@ skeleton's points, on the Redwood Coast Road and streets and tracks off it (docs
   the raceway and its streets' strips so the marsh's tidal creeks don't cut them.
 - **Egret Point:** Wharf Street from the Redwood Coast Road's end to the quay on the arm's sheltered east shore; four
   piers with the fleet moored along them (33 boats you can take), the charter boat and Egret Point Charters, the fish
-  market, The Gaff Hook (the bar), the bait and tackle shop; 23 fishing shacks along the street, for sale as today's
+  market, The Gaff Hook (the bar), the bait and tackle shop; 21 fishing shacks along the street, for sale as today's
   shacks. Light Road (a country lane) on down the arm to **Egret Point Light** on the beach at the tip, basalt rocks round
   its foot.
 - **The Westport Raceway's new spot:** a dirt oval on the flat ground by the Redwood Coast Road, the grandstand's
@@ -7850,7 +7850,7 @@ skeleton's points, on the Redwood Coast Road and streets and tracks off it (docs
   beach with twelve tide pools (starfish, urchins, anemones, crabs) and sea stacks. **Three coves** down the Redwood Coast
   Road: a pull-off, a track through the redwoods, a bay with its beach between basalt points, sea stacks, driftwood.
 - `tools/world3-world-map.mjs --towns` pictures them (`--only egret,egretlight,silverfalls,northcape`).
-- The pictures say what's wrong (docs/WORLD-V3.md 8.20): the village a suburban row, not a cluster round the harbour; the
+- The pictures say what's wrong (docs/WORLD-V3.md 8.20): the village still a row, not a cluster round the harbour; the
   raceway plain (no kerbs, no fence); the marsh one flat green; the falls a weir, not a gorge; North Cape on a flat beach,
   no headland.
 - Not done: walk-in interiors for the village's shops (our buildings have no prefab: they serve at the door); the
