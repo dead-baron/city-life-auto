@@ -1962,9 +1962,15 @@ Bay Bridge is cut at the shore and the skeleton's eleven gulf crossings are list
 **The picture:** `docs/world-v3-world.png` (`node --expose-gc tools/world3-world-map.mjs`: the built map's tiles over the
 whole frame, 1 px = 2 tiles, props as dots - 25 s with the build). **The game's chunk bake over the whole frame is too
 slow for now:** timed on samples, 284 ms a chunk of wild ground, 411 of coast, 478 of town; the frame has 18,857 wild,
-996 coast and 1,086 town chunks (14,341 of open sea, baked once) - **about 105 minutes on one thread**. The tool bakes it
-with `--bake [--shrink 64]` (`docs/world-v3-world-bake.png`) when there is an hour to spare; per region at 1/16 costs the
-same per chunk. What the picture shows wrong:
+996 coast and 1,086 town chunks (14,341 of open sea, baked once) - **about 105 minutes on one thread** (175 when the
+other helpers had the cores: 415 / 1,702 / 921 ms). The tool bakes it with `--bake [--shrink 64]`
+(`docs/world-v3-world-bake.png`) when there is an hour or two to spare. **A region at 1/16** (`--region rx,ry`, lit as
+`tools/world3-place-map.mjs` does it): `docs/world-v3-world-r4-4.png`, region 4, 4 (tiles 2016-2519 both ways: Metro
+City's north-east, the canal's east half), 338 chunks in 132 s. It reads as the city: the Metro Ring, Broadway's
+diagonal, the grid, the car parks, Coast Drive round the new east shore, the canal's bridges. Wrong there: the canal's
+water meets the sea at its east mouth in a straight edge (two blues: 8.4's 12-tile rule); the new east shore is a strip
+of one red-roofed building repeated sixteen times in a column, and beside it a lot of plain grass and dirt (8.4 item 2:
+the shore isn't designed). What the whole picture shows wrong:
 - **The mainland reads as one green field:** Highland Woods' forest, Willow Valley's farmland, the Sandpiper Coast and
   Northshore's beach strip are all grass with sparse tree dots (the wild dressing's density is today's, set for small
   wild islands; the forest doesn't read as forest), and Granite Peaks is flat dirt. The biomes want their own dressing

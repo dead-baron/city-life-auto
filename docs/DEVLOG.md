@@ -7035,7 +7035,9 @@ What it does (docs/WORLD-V3.md 8.6 has the numbers):
   the live world is the same to the bit and the world build's output the same to the count.
 - **The picture:** `docs/world-v3-world.png` - the built map's tiles, 1 px = 2 tiles. The game's chunk bake over the
   whole frame would take about 105 minutes on one thread (timed: 284-478 ms a chunk, 20,939 chunks with land), so the
-  tool does it only when asked (`--bake`). What it shows wrong: the mainland reads as one green field (the forest, the
+  tool does it only when asked (`--bake`); one region at 1/16 takes about 2 minutes (`--region 4,4`:
+  `docs/world-v3-world-r4-4.png`, Metro City's north-east and the canal - the canal meets the sea in a straight edge,
+  the new east shore is one red-roofed building repeated in a column beside plain ground). What the whole shows wrong: the mainland reads as one green field (the forest, the
   farmland and the coasts all grass with sparse trees), the desert is a wallpaper of identical sand chevrons, Northshore
   stands back from the shore with no beach towns, a few strays from passes still in today's coordinates sit in the
   frame's top-left, and no roads leave the islands yet.
@@ -7048,8 +7050,8 @@ land, zones and districts, the stand-ins, the lines), `shared/world3-islands.js`
 build; two guards for spots of places it doesn't build; `redwoodGroves`' giants by cell), `shared/naturesites.js`
 (`PXs` takes the anchor's y),
 `tools/world3-build.mjs` (new: the build, its time, memory and sizes per place), `tools/world3-world-map.mjs` (new: the
-picture, the chunk bake's timing, `--bake`), `test/world3world.test.js` (new), `docs/WORLD-V3.md` 8.6,
-`docs/world-v3-world.png`.
+picture, the chunk bake's timing, `--bake`, `--region`), `test/world3world.test.js` (new), `docs/WORLD-V3.md` 8.6,
+`docs/world-v3-world.png`, `docs/world-v3-world-r4-4.png`.
 
 Tests: `test/world3world.test.js` (new: one whole-world build, about 25 s), `test/world3.test.js` (today's world still
 the stamped one), `test/mapwindow.test.js`, `test/dmath.test.js`, `test/nature.test.js` pass.

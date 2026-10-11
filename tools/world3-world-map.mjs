@@ -5,7 +5,8 @@
 // - the game's chunk bake (client/art2/game/chunkbake.js), timed on a sample of chunks of each kind of ground to say
 //   what the whole frame costs; with --bake [--shrink 64] it bakes every chunk that has land or inland water (deep sea
 //   once) and writes docs/world-v3-world-bake.png (heavy: see 8.6 for the time).
-//   node --expose-gc tools/world3-world-map.mjs [--bake] [--shrink 64] [--sample 60]
+//   node --expose-gc tools/world3-world-map.mjs [--bake] [--shrink 64] [--sample 60] [--region rx,ry]
+// (--region: one region of 504 tiles baked and lit at 1/16, about 2 minutes: docs/world-v3-world-r<rx>-<ry>.png)
 // (heavy: run it under `flock /tmp/cla-heavy.lock`)
 import { writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -101,6 +102,53 @@ for (const k of ['coast', 'wild', 'town']) {
 }
 const total = ['coast', 'wild', 'town'].reduce((s, k) => s + per[k] * kinds[k].length, 0);
 log(`chunks: ${Object.entries(kinds).map(([k, l]) => `${k} ${l.length}`).join(', ')}; ms per chunk ${Object.entries(per).map(([k, v]) => `${k} ${v.toFixed(0)}`).join(', ')}; the whole frame's bake about ${(total / 60000).toFixed(0)} min on one thread`);
+
+// (--region rx,ry: one region of 504 tiles - 21 x 21 chunks - baked and lit as tools/world3-place-map.mjs does it, at
+// 1/16: a pixel is half a tile -> docs/world-v3-world-r<rx>-<ry>.png)
+const REGION = arg('--region', null);
+if (REGION) {
+  const [rx, ry] = REGION.split(',').map(Number);
+  const { F_WATER } = await imp('client/art2/gbuf.js');
+  const RC = 21, S16 = 16, CHP = CT * TILE, CS16 = CHP / S16, GW2 = RC * CS16, GH2 = RC * CS16;
+  const rimg = Buffer.alloc(GW2 * GH2 * 3);
+  const Lv = [-0.42, -0.5, 0.76], LN = Math.hypot(...Lv), LXv = Lv[0] / LN, LYv = Lv[1] / LN, LZv = Lv[2] / LN;
+  const shade = new Float32Array(CHP * CHP);
+  let seaPx = null, n = 0;
+  const tb = performance.now();
+  for (let cy = ry * RC; cy < ry * RC + RC; cy++) for (let cx = rx * RC; cx < rx * RC + RC; cx++) {
+    let px = kindOf(cx, cy) === 'sea' ? seaPx : null;
+    if (!px) {
+      const g = bakeChunk(M, cx, cy, opt, cache, providers).g, col = g.col, nrm = g.nrm, z = g.z, flag = g.flag;
+      let tall = 0;
+      for (let i = 0; i < CHP * CHP; i++) if (z[i] > tall) tall = z[i];
+      for (let y = 0; y < CHP; y++) for (let x = 0; x < CHP; x++) {
+        const i = y * CHP + x, j = i * 4;
+        let lam = LZv;
+        if (nrm[j + 3]) { const nx = nrm[j] / 127.5 - 1, ny = nrm[j + 1] / 127.5 - 1, nz = nrm[j + 2] / 127.5 - 1; lam = Math.max(0, nx * LXv + ny * LYv + nz * LZv); }
+        let k = 0.58 + 0.52 * lam;
+        if (flag[i] & F_WATER) k = 0.96 + 0.08 * lam;
+        else if (tall > 6) { const z0 = z[i]; for (let d = 2; d <= 40; d += 2) { const sx = x - d, sy = y - d; if (sx < 0 || sy < 0) break; if (z[sy * CHP + sx] > z0 + d * 1.1 + 3) { k *= 0.7; break; } } }
+        shade[i] = k;
+      }
+      px = Buffer.alloc(CS16 * CS16 * 3);
+      for (let by = 0; by < CS16; by++) for (let bx = 0; bx < CS16; bx++) {
+        let R = 0, G = 0, B = 0;
+        for (let y = by * S16; y < by * S16 + S16; y++) for (let x = bx * S16; x < bx * S16 + S16; x++) { const i = y * CHP + x, j = i * 4, k = shade[i]; R += col[j] * k; G += col[j + 1] * k; B += col[j + 2] * k; }
+        const o = (by * CS16 + bx) * 3, q = S16 * S16;
+        px[o] = Math.min(255, R / q); px[o + 1] = Math.min(255, G / q); px[o + 2] = Math.min(255, B / q);
+      }
+      if (kindOf(cx, cy) === 'sea') seaPx = px;
+      n++;
+    }
+    const ox = (cx - rx * RC) * CS16, oy = (cy - ry * RC) * CS16;
+    for (let y = 0; y < CS16; y++) px.copy(rimg, ((oy + y) * GW2 + ox) * 3, y * CS16 * 3, (y + 1) * CS16 * 3);
+  }
+  const OUT3 = join(ROOT, `docs/world-v3-world-r${rx}-${ry}.png`), tmp3 = OUT3 + '.rgb';
+  writeFileSync(tmp3, rimg);
+  r = spawnSync('python3', ['-c', py(tmp3, OUT3, GW2, GH2, `World v3, the whole world in one build: region ${rx}, ${ry} (tiles ${rx * 504}-${rx * 504 + 503}, ${ry * 504}-${ry * 504 + 503}), the game's chunk bake at 1/16`)], { stdio: 'inherit' });
+  rmSync(tmp3, { force: true });
+  log(`${OUT3} (${n} chunks baked in ${Math.round((performance.now() - tb) / 1000)} s)`);
+}
 
 if (BAKE) {
   const CH = CT * TILE * 2 / 2;   // (the bake's chunk in art px at artPx 2: CHUNK_TILES * TILE)
