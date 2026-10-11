@@ -127,8 +127,8 @@ class WorldMap {
     if (police) { g.fillStyle = 'rgba(8,16,40,.35)'; g.fillRect(0, 0, cw, ch); }
 
     // the railway: a dark line with light ties (dashed where it runs underground)
-    if (this.map.rail) {
-      const pts = this.map.rail.pts;
+    for (const R of this.map.rails || (this.map.rail ? [this.map.rail] : [])) {   // (World v3's main line: every loop)
+      const pts = R.pts;
       g.lineCap = 'round'; g.lineJoin = 'round';
       for (const [under, col, wd, dash] of [[false, 'rgba(18,14,10,.85)', 4.5, []], [false, '#efe6cf', 1.6, [3, 4]], [true, 'rgba(18,14,10,.6)', 3, [5, 5]]]) {
         g.strokeStyle = col; g.lineWidth = wd; g.setLineDash(dash);

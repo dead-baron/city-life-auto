@@ -605,10 +605,16 @@ const RAIL_HB = 30;                                    // half width of the ball
 function railField(C) {
   const { M, b, WX0, WY0 } = C;
   b.lS.fill(0); b.lV.fill(1e9);
-  const R = M.rail;
+  C.railBridge = [];
+  // (World v3's main line is a list of loops, M.rails: two loops on the same track draw it once - a later one takes a
+  // pixel only where it is clearly the nearer track - so the sleepers keep one loop's spacing)
+  const list = M.rails || [M.rail];
+  for (let li = 0; li < list.length; li++) railLoop(C, list[li], li ? 6 : 0);
+}
+function railLoop(C, R, bias) {
+  const { b, WX0, WY0 } = C;
   if (!R || !R.pts) return;
   const P = R.pts, n = P.length, X1 = WX0 + WN, Y1 = WY0 + WN, rr = RAIL_HB + 2;
-  C.railBridge = [];
   for (let i = 0; i < n; i++) {
     const a = P[i], c = P[(i + 1) % n];
     if (a.under || c.under) continue;
@@ -621,7 +627,7 @@ function railField(C) {
         const X = WX0 + px + 0.5 - a.x, i2 = py * WN + px;
         let t = (X * sx + Y * sy) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
         const dx = X - sx * t, dy = Y - sy * t, d = Math.sqrt(dx * dx + dy * dy);
-        if (d > RAIL_HB || d >= Math.abs(b.lV[i2])) continue;
+        if (d > RAIL_HB || d >= Math.abs(b.lV[i2]) - bias) continue;
         b.lV[i2] = X * nx + Y * ny; b.lS[i2] = s0 + t * sl;
         b.aux[i2] |= A_RAIL; C.hasRail = 1;
         if (bridge) b.sub[i2] = 1; else b.sub[i2] = 0;

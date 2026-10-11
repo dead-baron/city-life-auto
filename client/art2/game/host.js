@@ -1666,7 +1666,7 @@ export class World2 {
     }
     o.shadow = false;
     // level crossings (v1's arm pivots, beside the statics' crossbuck posts)
-    const xs = (M.rail && M.rail.crossings) || [];
+    const xs = M.railXings || (M.rail && M.rail.crossings) || [];   // (World v3: every loop's crossings, once each)
     for (let i = 0; i < xs.length; i++) {
       const c = xs[i];
       if (c.x < x0 - 160 || c.x > x1 + 160 || c.y < y0 - 160 || c.y > y1 + 160) continue;
@@ -1675,7 +1675,8 @@ export class World2 {
       const flash = Math.floor(now * 3) % 2;
       for (let side = 0; side < 2; side++) {
         const sg = side ? -1 : 1;
-        const px = c.x + rx * sg * CROSSING_ARM + tx * sg * (hw + 6), py = c.y + ry * sg * CROSSING_ARM + ty * sg * (hw + 6), gz = this._gz(px, py);
+        const arm = c.arm || CROSSING_ARM;   // (World v3: a double track's crossing has its gates outside both tracks)
+        const px = c.x + rx * sg * arm + tx * sg * (hw + 6), py = c.y + ry * sg * arm + ty * sg * (hw + 6), gz = this._gz(px, py);
         o.shadow = true;
         const post = this._genXPost();
         if (post) E.drawSprite(post, px, py, gz, o);

@@ -2324,3 +2324,121 @@ world: see "The page" below.
    one.
 7. **What the world itself lacks** (8.6's list): the railway (no trains, no stations), the roads off the islands, the
    mainland's districts; no ferries are planned at v3 (the ferry planner finds no routes).
+
+### 8.10 Stage 3, step 3: the main line and its trains (2026-10-10, H30)
+
+The owner (part 5): "I want the main train system to loop around the entire world and cover a large stretch. Maybe the
+main train has two tracks in areas so you can catch it going either way, and it does kind of loop into itself so not
+sure how that might work with the trains not crashing into each other ... should be scenic the entire way". Ruling 4:
+double track everywhere, one track each way; junctions guarded by signals; three services, each both ways. Now the
+skeleton's `MAIN_LINE` is laid in the world build and its trains run on it. Nothing live changes: the world hash stays
+`6b6e16fdef9f`; the art hash changes (the bake draws a list of loops).
+
+**The line as loops** (`shared/world3-rail.js`, one call from `shared/world3-world.js`' new `rails` hook):
+- **A loop per service each way** (`mainLineLoops`): the service's run of segments (`SERVICES[].run`) joined end to
+  end, one way as written and the other reversed - six loops: the Grand Loop 10.76 / 10.74 km (11 stops), the Bay
+  Loop 4.89 / 4.85 km (8), the Harbor Line 2.66 / 2.63 km (6). Every corner is turned on an arc (`roundLoop`: the
+  skeleton's `linePath` with a radius per corner - 300 m, 200 m on the gulf's segments, the tighter of the two at a
+  junction - and the closing corner too), so where a service turns off another's segment at a junction it curves off
+  on its own arc: a turnout.
+- **Double track:** each loop's track is its path offset 48 px to the right of the way it runs (`TRACK_OFF`): a loop
+  running a segment one way is always on that segment's track for that way, 96 px (3 tiles) from the other way's.
+  Two loops running the same segment the same way share its track (the same arcs to the point); where a loop crosses
+  the other way's track at a junction it crosses it at grade (a diamond).
+- **The tunnels** (the skeleton's stretches, as distances along the loop) are `under`: the track below ground, as
+  today's subway stretch (nothing laid on top; the trains are drawn underground).
+
+**The railway passes take a list of lines** (`shared/map.js`): `OPTS.rails(m)` hands the generator a list of
+`{ pts, stations: [{ name, x, y }], side }`; `reserveRail(m, pts, line)` and `buildRailway(m, pts, line)` run for each
+(the track bed, the bridge decks over water, the gated level crossings where a road crosses it, the underpasses where
+it meets a highway at grade - `UNDERPASS_RAMP` either side - and the stations), each line's stations found as today's
+are (`stationIndex`, kept per line), its platforms on `side` (1: the right of the way it runs, the outer side - so a
+double track has one platform each side), and a station's map point (its POI) shared by every loop that stops there on
+that side. `m.rails` is the list and `m.rail` the first loop. Today's world is the one-loop case, as it was:
+`m.railPts`, `RAIL_STATIONS` through `QX`/`QY`, `m.railStationIdx`, the side by what's in the way.
+
+**What's laid** (the world build, seed 1337): the six loops' points (146,000 of them, every 8 px); 18-29 level crossings
+on each loop (the arterials and the places' streets it meets), the underpasses under the highways at grade (the Grand
+Loop 1,138 points, 284 m), the gulf on decks (the Bay Loop 3,000 points: the Bay Bridge Line's crossing, the Cedar
+Bridge, the East Toll Bridge, the lagoon), the skeleton's six tunnels (the Grand Loop 1.2 km under the North Ridge, the
+Long Reach and the peaks; the tunnel under Metro City's core), 31 station map points. The build takes about 1.5 s
+more (23 s in all with the other helpers on the cores). `shared/regionpack.js` cuts each loop's points into the region
+files (`'rail.pts'`, `'rails.1.pts'` ... - today's `rail.pts` is `railPts`, a reference: nothing moves for today's world).
+
+**The trains** (`server/systems/trains.js`): with more than one loop (`map.rails`) each loop gets two trains
+(`LOOP_TRAINS`), placed at its stations; a train runs its own loop (`t.r`), and everything that reads a train's line
+reads its loop (`railOf`: driving, placing the cars, its stations and stops, the arrivals, boarding and alighting, the
+ride's HUD, the timetable's run times). **The signals** (`signals`): the track is cut into 32 px cells - a train's
+footprint is its track and 24 px either side, so the two tracks of the double track, 96 px apart, never share a cell -
+and a train holds the cells under it and ahead of it as far as it could need to stop (its braking distance and the
+block headway). It runs only onto cells it holds, so no two trains are ever on the same cell: none runs into another,
+none meets one head on. **A junction** (`boxesOf`: the cells where another loop's track passes on another heading or a
+few px aside - a diamond, a turnout - not where two loops run the same track the same way) is taken whole, with a
+train's length of clear track beyond it, or not at all: a train never stops inside a junction, so two trains at a
+junction can't hold each other up for good. Today's world: one loop, no signals - its trains run exactly as before
+(`test/trains.test.js`, 19 of 19).
+Measured over 20 minutes of game time: all twelve trains ran (12.5-17 km each), stopped at every one of their stations
+in order (a round of the Bay Loop about every 6-7 minutes, of the Grand Loop about every 13), held at a signal 1-19 s in all;
+no train stood still for good. The cost (this machine): the signals' setup 0.24 s when the World starts; the index of the
+tiles near the line for the NPCs' care, built the first time it's asked, 0.65 s and 38 MB (151,702 tiles: every
+loop's nearest point to each); a minute of game time with the twelve trains and no players 1.1 s.
+
+**The level crossings and the people at the line:** the loops' crossings are listed once each (`m.railXings`: two
+loops on one track cross a road at one crossing, and the double track's two tracks at one crossing too - its gates
+outside both, `arm` 114 px from its middle where a single track's are `CROSSING_ARM`, 66 - so nobody waits between
+the tracks: 88 crossings for the loops' 146, 40 of them double track; `uses` gives each loop and where along it), and
+the gates go down for any train of those loops (`updateCrossings`); the drivers stop at every loop's (`crossingLimit`), the client draws the
+arms by that list (`host.js`). The NPCs keep off every loop's track (`railThreat`, `railBlocked`: each tile near the
+line knows the nearest point of every loop near it).
+
+**Riding** is today's on every loop (`test/world3rail.test.js`: board a Bay Loop or Harbor Line train at its platform,
+ride to the next stop, get off onto its platform).
+
+**The art:** the chunk bake draws every loop (`client/art2/game/groundbake.js` `railLoop`: a later loop takes a pixel
+only where it is clearly the nearer track, so a track two loops share is drawn once and its sleepers keep their
+spacing; `statics.js` `addRailLoop`: a platform, a tunnel mouth or a crossing's signals that two loops share are put
+once).
+
+**The test** (`test/world3rail.test.js`, one world build as the server builds it, about 40 s): a loop per service each
+way, every stop a station on it with its platform on the outer side; on Coast West the two tracks 96 px apart; the
+track bed (no track over open water off a deck, the bed under the rest); the gulf on decks; the Grand Loop's tunnels;
+level crossings on every loop and the underpasses; loops through every junction; one map point per station place; and
+the trains run five minutes of game time: every loop has its trains, each runs and stops at its stations, and no two
+trains' cars ever overlap (their outlines, checked every other tick).
+
+**The pictures:** `docs/world-v3-world.png` (the main line drawn green over the tiles: dark in its tunnels, dark grey-green
+under the highways, pale on its decks; the stations white) and `docs/world-v3-world-r4-3.png` (region 4, 3 through
+the chunk bake: Northshore Junction, the Bay Bridge Line's trestle over the north channel). What looks right: the Grand
+Loop round the whole mainland - along the coast, up through the desert past Copper Gulch and Lucky Mesa, under the
+North Ridge, across Willow Valley, up through the Gorge into the peaks and down through Timber Bend; the double track
+everywhere; the junction's two curves (from the west and from the east) joining the Bay Bridge Line south, each a
+double track; the trestle across the channel beside the Bay Bridge; the Cedar Line over the Cedar Bridge. What looks
+wrong:
+- **Northshore Junction is in the town:** the coast line runs straight through the Northshore Loop (its houses either
+  side, level crossings on its loop road) and the junction's curves cut across the loop's south-east corner; the line
+  also runs through the top of Northshore's grid at grade. The junction wants to be clear of the town (or the town's
+  loop moved), the hub station designed as one station with four platforms beside it.
+- **The towns are crossed at grade:** in the gulf the Harbor Line runs at grade through Metro City's grid west of
+  Metro Junction (the Harbor Loop has 27-29 level crossings), and the Bay Bridge Line crosses the Shore Road and the
+  beach at grade before its trestle. Ruling 2 says bridges in towns: the line in a cutting or a tunnel through Metro
+  City (the core's tunnel carried on to the Harbor Bridge), or the streets bridged over it.
+- **The tunnels have no mouths in the hills:** a skeleton tunnel is the track below ground (as today's subway); the
+  mountains are flat ground, so the line just vanishes and comes back - the bores want `shared/tunnels.js`' cover and
+  portals, as the roads' have (8.7).
+- **The Northshore station** stands at a different spot for each loop (2449, 1702 for the Grand Loop; 2402-2478,
+  1718-1739 for the others' curves): in the bake, short platforms with canopies scattered on the junction's curves and
+  one on the coast line - the hub wants one station.
+- **The turnouts are drawn as tracks overlapping:** where a curve joins the Bay Bridge Line the two tracks run over
+  each other for a few hundred px (the bake draws each loop's track; a switch - points, a frog - isn't drawn).
+
+**What's left** (in order):
+1. **What still reads only the first loop** (`off0`): the platform clocks (`timetable`, the `tt` broadcast, by the
+   first loop's stations). The station boards and the map point's "next train" list every service that stops there
+   (`loopBoard`, `nextTrainIn` by the POI), and every loop's platforms get their waiting crowds (`gatherAt`, kept by
+   loop and station: a player at Cedar Falls saw commuters wait on both Bay Loop platforms and board).
+2. The junctions designed (above), the towns' crossings as bridges or cuttings, the tunnels' mouths and cover.
+3. The in-game world map draws every loop (`client/worldmap.js`); the phone's nearest stations and the v1 renderer's
+   crossings (`client/phone.js`, `client/main.js`) read `map.rail` (the first loop) - the cars themselves come from
+   the server.
+4. More trains (two a loop now: the Grand Loop's stations see one about every 6-7 minutes each way), and a timetable that
+   spaces the loops' trains through the shared junctions.

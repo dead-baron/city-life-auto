@@ -250,6 +250,8 @@ function buildCity(seed, opts = null, frame = null) {
   rampGores(m);
   const railPts = m.railPts;
   reserveRail(m, railPts);
+  const railLines = OPTS?.rails ? OPTS.rails(m) : null;   // (World v3: the main line's loops, a list of lines - shared/world3-rail.js)
+  if (railLines) for (const line of railLines) reserveRail(m, line.pts, line);
   buildStationLots(m);
   reserveSubwayPlazas(m);
   waterfrontStrip(m);
@@ -373,6 +375,23 @@ function buildCity(seed, opts = null, frame = null) {
   buildDealerLots(m);
   clearHospitalFronts(m);
   buildRailway(m, railPts);
+  if (railLines) {   // (World v3: each loop its own rail; m.rail the first)
+    m.rails = railLines.map((line) => buildRailway(m, line.pts, line)); m.rail = m.rails[0];
+    // the level crossings of all the loops, once each (two loops on one track cross a road at one crossing): `uses` the
+    // loops and where along each; a loop's crossing knows its own (xi) - the gates' states are by this list
+    // the double track's two crossings of a road are one: its gates outside both tracks (`arm`, from the middle)
+    m.railXings = [];
+    const pair = (o, c) => { const dx = c.x - o.x, dy = c.y - o.y, tx = Math.cos(o.a), ty = Math.sin(o.a), across = Math.abs(-dx * ty + dy * tx), along = Math.abs(dx * tx + dy * ty); return Math.abs(Math.sin(c.a - o.a)) < 0.2 && along < 40 && across > 60 && across < 130 ? across : 0; };
+    m.rails.forEach((r, ri) => r.crossings.forEach((c) => {
+      let xi = m.railXings.findIndex((o) => Math.hypot(o.x0 - c.x, o.y0 - c.y) < 24 || (o.x1 !== undefined && Math.hypot(o.x1 - c.x, o.y1 - c.y) < 24));
+      if (xi < 0) {
+        xi = m.railXings.findIndex((o) => o.x1 === undefined && pair(o, c));
+        if (xi >= 0) { const o = m.railXings[xi], d = pair(o, c); o.x1 = c.x; o.y1 = c.y; o.x = (o.x0 + c.x) / 2; o.y = (o.y0 + c.y) / 2; o.arm = CROSSING_ARM + d / 2; o.hw = Math.max(o.hw, c.hw); }
+      }
+      if (xi < 0) { xi = m.railXings.length; m.railXings.push({ x: c.x, y: c.y, x0: c.x, y0: c.y, a: c.a, hw: c.hw, s: c.s, uses: [] }); }
+      m.railXings[xi].uses.push([ri, c.s]); c.xi = xi;
+    }));
+  }
   buildOffshore(m, rand);
   buildBoatDocks(m); unpin();
   buildSignals(m);
@@ -2944,8 +2963,9 @@ const PLATFORM_IN = 40, PLATFORM_OUT = 104; // the platform runs from this far o
 // crossings that best fits a whole platform - a train waiting at a station shouldn't sit across
 // a street. Stations never share track. Worked out from the road tiles, so the reserve pass
 // (before the lots go down) and the build pass agree.
-function stationIndex(m, pts) {
-  if (m.railStationIdx) return m.railStationIdx;
+const lineStations = new WeakMap();   // (a line of a list: World v3's loops, each with its own stations)
+function stationIndex(m, pts, line = null) {
+  if (line ? lineStations.has(line) : m.railStationIdx) return line ? lineStations.get(line) : m.railStationIdx;
   const n = pts.length;
   const roadPt = pts.map((p) => {
     if (p.underpass) return 1;
@@ -2962,9 +2982,10 @@ function stationIndex(m, pts) {
   const half = Math.ceil((PLATFORM_HALF + 4) / 8), WINDOW = 170;
   const used = [];
   const clash = (c) => used.some((u) => { const d = Math.abs(c - u); return Math.min(d, n - d) < 2 * half + 40; });
-  const out = RAIL_STATIONS.map(([name, tx, ty]) => {
+  const defs = line ? line.stations.map((st) => [st.name, st.x, st.y]) : RAIL_STATIONS.map(([name, tx, ty]) => [name, QX(tx * TILE), QY(ty * TILE)]);
+  const out = defs.map(([name, sx, sy]) => {
     let i0 = 0, bd = Infinity;
-    pts.forEach((p, i) => { const d = Math.hypot(p.x - QX(tx * TILE), p.y - QY(ty * TILE)); if (d < bd) { bd = d; i0 = i; } });
+    pts.forEach((p, i) => { const d = Math.hypot(p.x - sx, p.y - sy); if (d < bd) { bd = d; i0 = i; } });
     let best = i0, bc = Infinity;
     for (let k = -WINDOW; k <= WINDOW; k++) {
       const c = (i0 + k + n) % n;
@@ -2977,7 +2998,7 @@ function stationIndex(m, pts) {
     used.push(best);
     return { name, i: best };
   });
-  m.railStationIdx = out;
+  if (line) lineStations.set(line, out); else m.railStationIdx = out;
   return out;
 }
 // Where the line meets a highway at ground level it dips under it in a short tunnel (no level
@@ -3008,7 +3029,7 @@ function markUnderpasses(m, pts) {
     for (const p of range) { p.under = true; p.underpass = true; }
   }
 }
-function reserveRail(m, pts) {
+function reserveRail(m, pts, line = null) {
   if (!pts.length) return;   // (no railway: OPTS.noRail)
   markUnderpasses(m, pts);
   for (const p of pts) {
@@ -3024,7 +3045,7 @@ function reserveRail(m, pts) {
     }
   }
   const n = pts.length;
-  for (const { i } of stationIndex(m, pts)) {
+  for (const { i } of stationIndex(m, pts, line)) {
     if (pts[i].under) continue; // subway stations need nothing up top but a stairway
     const span = Math.ceil((PLATFORM_HALF + 48) / 8);
     for (let k = -span; k <= span; k++) {
@@ -3038,7 +3059,9 @@ function reserveRail(m, pts) {
   }
 }
 
-function buildRailway(m, pts) {
+// (a line of a list - World v3's loops: `line` - is returned, its platforms on its `side`, a station's map point shared
+// by the loops that stop there; today's one is m.rail)
+function buildRailway(m, pts, line = null) {
   if (!pts.length) { m.rail = { pts, len: 0, stations: [], crossings: [], rural: [] }; return; }   // (no railway: OPTS.noRail)
   const total = pts[pts.length - 1].s + Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y);
   // Where the line meets open water: a long run of water under the centre line is a crossing (a
@@ -3082,7 +3105,7 @@ function buildRailway(m, pts) {
   const stations = [];
   const rail0 = { pts, len: total };
   const along = (s0, fn) => { for (let d = -PLATFORM_HALF; d <= PLATFORM_HALF; d += 16) { const r = railAt(rail0, s0 + d); fn(r, -Math.sin(r.a), Math.cos(r.a), d); } };
-  for (const { name, i } of stationIndex(m, pts)) {
+  for (const { name, i } of stationIndex(m, pts, line)) {
     const best = pts[i];
     const q = railAt(rail0, best.s);
     if (best.under) {
@@ -3104,7 +3127,7 @@ function buildRailway(m, pts) {
     }
     const bad = (sd) => { let n = 0; along(best.s, (r, nx, ny) => { for (let off = PLATFORM_IN; off <= PLATFORM_OUT; off += 16) { const t = m.tileAtPx(r.x + nx * sd * off, r.y + ny * sd * off); if (t === T.ROAD || t === T.BUILDING || t === T.WALL || t === T.BRIDGE) n++; else if (t === T.WATER || t === T.DEEP) n += 0.5; } }); return n; };
     const lot = (m.stationLots || []).find((l) => l.name === name);
-    const side = lot ? lot.side : bad(1) <= bad(-1) ? 1 : -1;
+    const side = line ? line.side : lot ? lot.side : bad(1) <= bad(-1) ? 1 : -1;
     along(best.s, (r, nx, ny) => {
       for (let off = PLATFORM_IN; off <= PLATFORM_OUT; off += 12) {
         const x = r.x + nx * side * off, y = r.y + ny * side * off;
@@ -3123,12 +3146,14 @@ function buildRailway(m, pts) {
     }
     const qc = railAt(rail0, best.s + st.clockD);
     st.platform = { x: qc.x - Math.sin(qc.a) * side * 72, y: qc.y + Math.cos(qc.a) * side * 72 };
+    const same = line && m.pois.find((o) => o.kind === 'station' && o.label === st.name && Math.hypot(o.x - st.platform.x, o.y - st.platform.y) < 400);
+    if (same) { st.poi = same.id; st.shared = true; stations.push(st); continue; }   // (another loop's platform here: its map point)
     st.poi = m.pois.length;
     m.pois.push({ id: m.pois.length, kind: 'station', label: st.name, x: st.platform.x, y: st.platform.y, r: 150, station: stations.length });
     stations.push(st);
   }
   stations.sort((a, b) => a.s - b.s);
-  stations.forEach((st, i) => { m.pois[st.poi].station = i; });
+  stations.forEach((st, i) => { if (!st.shared) m.pois[st.poi].station = i; });
   // the long rural run: the stretch of line through Dry Creek's fields, clear of the station
   const nearStation = (p) => stations.some((st) => { const d = Math.abs(p.s - st.s); return Math.min(d, total - d) < PLATFORM_HALF + 900; });
   const RURAL = new Set([9, 41, 42]); // Dry Creek's farms, the desert and the airstrip
@@ -3140,6 +3165,7 @@ function buildRailway(m, pts) {
     if (!bestRun || cur.length > bestRun.length) bestRun = cur;
     rural = { s0: pts[bestRun[0]].s + 200, s1: pts[bestRun[bestRun.length - 1]].s - 100 };
   }
+  if (line) return { name: line.name, service: line.service, way: line.way, pts, len: total, stations, crossings, rural };
   m.rail = { pts, len: total, stations, crossings, rural };
 }
 
