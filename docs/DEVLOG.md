@@ -7714,3 +7714,41 @@ Tests: test/world3mesa.test.js (one world build: the districts, the streets on t
 boulevard, Station Road to the station, each resort's look, door, pool and palms, the covered street and its old
 casinos, every planned place, clear of the highway and the main line), test/world3biomes.test.js, test/world3roads.test.js,
 test/world3towns.test.js.
+
+## 2026-10-11 · World v3: Copper Gulch and its mine, Dusty Hollow, the dam, the lookout, the motel
+
+The owner's plan (docs/WORLD-V3.md 1.5 R6): "New: Copper Gulch mining town and Copper Gulch Mine (WR3's mine: the canyon
+adit MI1, the open pit MI6 ...), Dusty Hollow ghost town (WR2-B), Red Rock Dam and its reservoir with the dry wash below
+(WR2-B), a lookout tower on a mesa, the sheriff's post ... a motel with a pool and billboards (WR1 view 1), the natural
+arch, mesas and hoodoos (NR1-B), a desert camp" - built in the v3 world build at the skeleton's points, on Mine Road,
+Hollow Road, Canyon Road and Route 9 and jeep tracks off them (docs/WORLD-V3.md 8.18).
+- **Two districts** after Lucky Mesa's: 63 Copper Gulch (built by the generator in its own style: company houses,
+  shacks, workshops) and 64 Dusty Hollow (a desert district: its ruins are built whole).
+- **Copper Gulch:** Mine Road pulled straight as its main street, loops of side streets, Depot Road up to the main line's
+  station; the assay office (buys ore at its counter), the saloon, the general store, the sheriff, a diner, the clinic;
+  the water tower; the freight yard by the main line with a row of ore cars, the hopper and the spoil.
+- **Copper Gulch Mine:** the open pit a quarry as today's (the bake's benches and crane, the miners at its face), its haul
+  road, the crusher by its rim; the canyon adit in its cliff, built as the Old Granite Mine's, with its seams. The v3
+  world's only mine and pit, so today's mining works there unchanged: the cave world opens through the adit, ore veins
+  lie round the pit and in the cave, the seams take the old pick.
+- **Dusty Hollow:** twelve empty wooden buildings on a gravel street, porches fallen in front of them; nothing open but
+  the hideout (`gang`) and the smuggler's drop; loot chests in the ruins (not searchable yet).
+- **Red Rock Dam** along the reservoir's south shore with the dry wash below; **the lookout** by its sandstone mesa, **the
+  arch** and five **hoodoos**; **the Sundowner Motel** with its pool on Mine Road by the Desert Highway and four
+  **billboards** along the highway; **Mesa Camp** off Route 9 (tents, a campfire, string lights); the **jeep tracks** to
+  them in gravel (dirt doesn't show on the desert's ground).
+- `tools/world3-world-map.mjs --towns` pictures them too; `--only` takes a list (`--only gulch,hollow,dam,motel,camp`).
+- Not done: the pit's terraces all round, the excavator, the dump trucks and the conveyor (no models: today's quarry
+  drawing stands in); Dusty Hollow's loot as a search site; a lookout you can climb onto the mesa for; the roadside gas
+  station and diner; dirt bike trails. Nothing live changes: the world hash stays 6b6e16fdef9f.
+
+Files: shared/world3-desert.js (new), shared/world3-world.js (the calls), shared/mapcore.js (`DISTRICTS` 63-64),
+tools/world3-world-map.mjs (the desert's views in `--towns`, `--only` a list), test/world3desert.test.js (new),
+test/world3biomes.test.js (65 districts), docs/WORLD-V3.md 8.18, docs/world-v3-town-gulch.png, -hollow.png, -dam.png,
+-motel.png, -camp.png.
+
+Tests: test/world3desert.test.js (one world build: the districts, the streets on the one network, the main street
+straight, Depot Road to the station, the planned places, the freight yard, the mine - the pit, the adit, the seams, the
+cave world through the adit, the veins round the pit and in the cave - Dusty Hollow, the dam and the wash, the lookout,
+the arch, the motel, the billboards, the camp, the tracks, every building clear of the highways and the main line),
+test/world3biomes.test.js, test/world3mesa.test.js, test/world3towns.test.js.
