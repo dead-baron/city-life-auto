@@ -40,26 +40,26 @@ const PLANS = {
   // bedroom, the bathroom and the garage
   house: [
     '#####==####==#######',
-    '#KKKF1#HHt#WWS#gggY#',
+    '#KKKF1#HHt#WWS#gggg#',
     '#.....#ttt+...#gggg#',
     '#TT...#LNt#.BB#gggg#',
     '#TT...#####.BB#gggg#',
     '#.....+.......+gggg#',
     '#C...V#..2....#gggg#',
-    '#C...A#.......#gggg#',
+    '#C...A#.......#gggY#',
     '###D###########RRRR#',
   ],
   // a mansion: the big kitchen and dining room, the great room, the master bedroom and its bathroom, a den, the garage
   mansion: [
     '##########==##########==######',
-    '#KKKKF.1#HHtt#WWW...S#ggggggY#',
+    '#KKKKF.1#HHtt#WWW...S#ggggggg#',
     '#.......#tttt+.......#ggggggg#',
     '#TTTT...#LNtt#..BBB..#ggggggg#',
     '#TTTT...######..BBB..#ggggggg#',
     '#.......+.....2......+ggggggg#',
     '#Q..........#.......Q#ggggggg#',
     '#OCCC..V....#.3...3..#ggggggg#',
-    '#..A....2...+.......P#ggggggg#',
+    '#..A....2...+.......P#ggggggY#',
     '#####D################RRRRRR##',
   ],
 };
@@ -106,6 +106,14 @@ export function layout(key, tier = 0) {
     if (at(tx, ty) === 'R' && at(tx, ty - 1) === 'g' && tx % 2 === 1) bays.push({ x: (tx + 0.5) * TILE_IN, y: (ty - 2) * TILE_IN });
   }
   bays = bays.slice(0, 4);
+  // (H64: the cars park nose-in at the garage's back wall, spread evenly across it - clear of the door from the hall,
+  // which comes in lower down, and of the key board by the roller door; parked, a car is solid: carRects)
+  if (bays.length) {
+    let gx0 = C, gx1 = 0, gy0 = R;
+    for (let ty = 0; ty < R; ty++) for (let tx = 0; tx < C; tx++) if (at(tx, ty) === 'g') { gx0 = Math.min(gx0, tx); gx1 = Math.max(gx1, tx); gy0 = Math.min(gy0, ty); }
+    const gw = (gx1 - gx0 + 1) * TILE_IN;
+    bays = bays.map((_, i) => ({ x: gx0 * TILE_IN + gw * (i + 0.5) / bays.length, y: gy0 * TILE_IN + 4 + CAR_IN.l / 2 }));
+  }
   const L = {
     key, tier, cols: C, rows: R, w: C * TILE_IN, h: R * TILE_IN, grid: rows, pieces, door, bays,
     spawn: { x: door.x, y: door.y - TILE_IN },
@@ -116,15 +124,24 @@ export function layout(key, tier = 0) {
   return L;
 }
 
-// Does a body at (x, y) touch a wall or a piece of furniture?
-export function blocked(L, x, y, r = BODY_IN) {
+// A car parked in a bay (H64): its footprint, the biggest a bay takes (homeview.js draws them no bigger)
+export const CAR_IN = { l: 104, w: 52 };
+// The first n bays' cars, as rects (px) - the cars parked in the garage are solid
+export function carRects(L, n) {
+  return L.bays.slice(0, Math.max(0, n | 0)).map((b) => ({ x: b.x - CAR_IN.w / 2 - 2, y: b.y - CAR_IN.l / 2 - 2, w: CAR_IN.w + 4, h: CAR_IN.l + 4 }));
+}
+
+// Does a body at (x, y) touch a wall or a piece of furniture - or one of the nc cars parked in the garage?
+export function blocked(L, x, y, r = BODY_IN, nc = 0) {
   const x0 = Math.floor((x - r) / TILE_IN), x1 = Math.floor((x + r - 0.001) / TILE_IN);
   const y0 = Math.floor((y - r) / TILE_IN), y1 = Math.floor((y + r - 0.001) / TILE_IN);
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (L.solid(tx, ty)) return true;
+  if (nc > 0) for (const c of carRects(L, nc)) if (x + r > c.x && x - r < c.x + c.w && y + r > c.y && y - r < c.y + c.h) return true;
   return false;
 }
 
-// One step of walking round the inside (the server's and the page's, the same): along the walls, never through them.
+// One step of walking round the inside (the server's and the page's, the same): along the walls, never through them
+// (s.nc: how many cars are parked in the garage - they're solid too)
 export function stepInside(L, s, mx, my, dt, speed) {
   let len = Math.hypot(mx, my);
   if (len < 0.15) return false;
@@ -133,9 +150,9 @@ export function stepInside(L, s, mx, my, dt, speed) {
   const slide = (axis, d) => {
     const from = s[axis];
     s[axis] = from + d;
-    if (!blocked(L, s.x, s.y)) return;
+    if (!blocked(L, s.x, s.y, BODY_IN, s.nc)) return;
     let lo = 0, hi = 1;   // as far as it goes
-    for (let i = 0; i < 6; i++) { const m = (lo + hi) / 2; s[axis] = from + d * m; if (blocked(L, s.x, s.y)) hi = m; else lo = m; }
+    for (let i = 0; i < 6; i++) { const m = (lo + hi) / 2; s[axis] = from + d * m; if (blocked(L, s.x, s.y, BODY_IN, s.nc)) hi = m; else lo = m; }
     s[axis] = from + d * lo;
   };
   slide('x', dx); slide('y', dy);

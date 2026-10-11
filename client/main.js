@@ -2728,8 +2728,9 @@ function render(dt) {
   if (!F) return;
   tickVisuals(F);
   F.mark('visuals');
-  const v2 = !F.ug && art2Draws(F);
-  if (F.ug) drawUnderground(F);
+  const v2 = !F.ug && !S.homeIn && art2Draws(F);
+  if (S.homeIn) showWorld2(false);   // (inside your home: render/homeview.js draws it all - not the city under it too)
+  else if (F.ug) drawUnderground(F);
   else if (v2) S.art2.frame(F);
   else if (v1Draws(F)) drawWorldV1(F);
   else { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#10141c'; g.fillRect(0, 0, canvas.width, canvas.height); }

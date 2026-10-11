@@ -321,6 +321,7 @@ export function send(world, p, full) {
   if (full) {
     m.name = h.name; m.garage = h.garage ? 1 : 0; m.sleepS = HOME_IN.sleepS; m.wakeH = HOME_IN.wakeH;
     m.cars = p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air').slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
+    s.nc = m.cars.length;   // (the cars parked in the bays are solid: shared/homelayout.js stepInside - the page counts the same ones)
   }
   p.conn.sendJSON(m);
 }
@@ -354,7 +355,7 @@ export function devIn(world, p, msg) {
     const L = planFor(h);
     for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
       const x = (tx + 0.5) * L.w / L.cols, y = (ty + 0.5) * L.h / L.rows;
-      if (L.solid(tx, ty)) continue;
+      if (L.solid(tx, ty) || blocked(L, x, y, undefined, ped.home.nc)) continue;   // (not in a parked car)
       const u = useAt(L, x, y, HOME_IN.reach);
       if (u && u.use === msg.at) { ped.home.x = x; ped.home.y = y; send(world, p, true); return null; }
     }
