@@ -4740,6 +4740,7 @@ function collectLights(sky, view, vehs, peds, dt) {
   for (const v of vehs) {
     const def = VEHICLE_BY_INDEX[v.d.m];
     if (!def) continue;
+    if (def.kind === 'air' && v._spot && ((v.parent >>> 24) & 128)) L.add(v._spot.x, v._spot.y, 170, LIGHT.white, 1);   // (the police unit's searchlight: render/aircraft.js spotOf)
     const lift = v.rz ? liftOf(v.rz) : 0, vy = v.ry - lift;
     const c = Math.cos(v.ra), sn = Math.sin(v.ra), hl = def.L / 2, hw = def.W / 2;
     if (v.flags & VF.LIGHTS) {

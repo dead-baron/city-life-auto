@@ -1292,7 +1292,8 @@ export class World2 {
   // the headings either side are asked for whenever it turns (yours sooner), and the siren's other flash
   _veh(v, now, me) {
     const def = VEHICLE_BY_INDEX[v.d.m], A = this.A;
-    if (!def || def.kind === 'air' || !A || !A.vehicleKey || !A.vehState) return;   // (aircraft: the page's overlay draws them - render/aircraft.js)
+    if (def && def.kind === 'air') { this._air(v, now, me); return; }   // (aircraft: their block models - H66)
+    if (!def || !A || !A.vehicleKey || !A.vehState) return;
     const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
     const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
     const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase, v.hp, v.parent);   // (parent: its damage word - task #402)
@@ -1370,6 +1371,12 @@ export class World2 {
     }
   }
 
+  // An aircraft (H66): its block model (art2/aircraft.js - loaded the first time one is near, out of the renderer's code)
+  // up the screen by its height, the rotor turning; until it's made the overlay draws it (render/aircraft.js: v._v2at)
+  _air(v, now, me) {
+    if (!this.AM) { if (!this.amP) this.amP = import('../aircraft.js').then((m) => { this.AM = m; }, (e) => console.warn('[art2] aircraft', e)); return; }
+    if (this.AM.drawAir(this, v, now, me)) v._v2at = performance.now();
+  }
   // A vehicle cut in two by a plasma blade (task #402; the cut's place on the wire): its halves, each its own sprite (the
   // model cut there, the face molten - cooled once it's burnt out), sliding apart along it from when it was cut (the
   // 'vcut' event: e.cutAt) - one that was cut before it came into view is already apart.
@@ -2047,7 +2054,8 @@ export class World2 {
     // 2. moving lights
     for (const v of F.vehs) {
       const def = VEHICLE_BY_INDEX[v.d.m];
-      if (!def || def.kind === 'air') continue;
+      if (!def) continue;
+      if (def.kind === 'air') { if (this.AM) this.AM.airLights(this, v, now, night); continue; }   // (their lamps, the searchlight's pool - H66)
       const f = v.flags, c = Math.cos(v.ra), s = Math.sin(v.ra), zb = this._z0(v, def.kind === 'boat');
       const vl = this.prov.actors && this.A.vehicleLights ? this.A.vehicleLights(v.d) : null;
       const hl = (vl ? vl.L : def.L) / 2;
