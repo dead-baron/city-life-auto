@@ -3761,9 +3761,13 @@ wrong:
   thin path in the redwoods).
 - **The canyon is a flat red rectangle**: the painting's own ground (red rock, its cliffs drawn) on the v3 desert's tan,
   with a hard edge - it wants the painting's edge blended into the ground or the canyon built of the desert's mesas; a
-  biome wash runs into its north-east corner and out of its south-east one (kept off inside its box only).
+  biome wash runs into its north-east corner and out of its south-east one (kept off inside its box only). (H50, 8.22:
+  its floor the desert's ground, its rock at its walls spilling past them, the box cut 7 m into the plateau; the washes
+  end 6-14 tiles short of each moved site's box.)
 - **The tracks are dead straight** (the Ridge Trail across the snowfield, the Canyon Track, the Mirage Track): a
-  mountain trail wants switchbacks, a desert track a wander; the Ridge Trail and the lookout stand in the snow.
+  mountain trail wants switchbacks, a desert track a wander; the Ridge Trail and the lookout stand in the snow. (H50,
+  8.22: each laid as the cheapest way along the land - its grade, the snow, the tables, the other roads, a wander -
+  `trackPath`; the straight way only as a fallback.)
 - **The Old Granite Mine is a lone cliff on an open slope** (a short band of rock with a door in it) - it wants the
   mountain behind it: the peaks' relief (H48's) or a bigger band.
 - The water park sits against the road with no car park, a biome wash skirting its fence; the dry washes stop at the
@@ -4066,23 +4070,65 @@ the North Ridge's crest 40 m over its foot, the gorge's floor 15 m under its sid
 track climbing through a gap in its south rim, a talus slope in shade round its south-east foot; the butte west of it the
 same; the falls' escarpment either side of the pool with its basalt faces, Falls Pass Road through it on its grade. What
 looks wrong:
-- **The tables read as rings:** the band's ground is red rock (the region picture's dark grey scree is from before), the faces are the
+- **The tables read as rings** (H50: fixed - below)**:** the band's ground is red rock (the region picture's dark grey scree is from before), the faces are the
   `cliff` model's granite (the desert wants a sandstone face), and only the south rims have faces: the north, east and
   west rims are their rubble and the hillshade. The tops are the plain's colour (a flat top is not shaded; it wants its
   own ground - bare rock, sparse scrub - or a rim's shadow).
-- **8.8's small red mesas still stand** across the desert and on the tables' tops (`dress3`): they want to go, or to
+- **8.8's small red mesas still stand** (H50: kept off the tables, thinned) across the desert and on the tables' tops (`dress3`): they want to go, or to
   become boulders, now that the tables are there.
 - **The old gorge line crossed Silver Thread Falls** in the first bake (broad dark bands across the view): moved east,
   clear of the falls; the falls' picture now shows the escarpment's slopes in shade and the band's faces. A thin line of
-  red rock west of the lookout's mesa (`-hollow.png`) is a one-tile band where a slope steepens by a track: to look at.
+  red rock west of the lookout's mesa (`-hollow.png`) is a one-tile band where a slope steepens by a track: to look at
+  (H50: no band under two tiles thick now).
 - At 1/8 the hillshade hardly reads **under trees and crops**: North Cape's headland is under the redwoods' canopy (only
-  the ground is shaded), Lookout Hill under the orchard's rows (`--only northcape,kestrel`; not kept in docs).
+  the ground is shaded), Lookout Hill under the orchard's rows (`--only northcape,kestrel`; not kept in docs). (H50: the
+  chunk bake shades after its statics now.)
 
 **What's left:** the cliff bands are solid both ways - `shared/ledges.js` could make them one-way drops as the falls'
 (the city worker's code is full: it would have to be the world build that marks them); the faces on the other rims;
 `m.relief` is a per-tile layer, so the region files carry it (shared/regionpack.js cuts every layer) - the page's window
 (`shared/mapwindow.js`) is to be checked for it, and nothing moves in height (`groundHeight`, the physics: the relief is
 drawn, not felt); Redwood Creek Falls gets its escarpment when H47 moves it (any nature site with `falls` does).
+
+**H50: the land's looks** (2026-10-11; the brief: "the land's looks" - the tables that read as rings, the canyon's flat
+red rectangle, the hillshade under the trees and the crops, the dead straight tracks). The live world doesn't change
+(the world hash stays 6b6e16fdef9f); the art hash does (the bake's code); a map without `relief` (today's) bakes as
+before.
+- **The desert's tables** (`shared/world3-relief.js`): **red sandstone all round each rim** - the band in blocks on a
+  6-tile grid, each block a `cliff` face with the new sandstone look (`client/art2/game/statics.js` `cliff`: `st:
+  'sandstone'` - the rock kit's sandstone, sage in its joints, no moss), as tall as the table on the south rim, two
+  thirds of it east and west, a low lip on the north (the face looks away); the desert's other bands' faces sandstone
+  too. **Each top its own cap-rock ground** and **a talus at the foot**: the tables are on the map (`m.tables`: x, y, rx,
+  ry, s - the index carries them) and the ground bake (`groundbake.js` `tabMat`, its copy of `tableEdge`) paints the top
+  red rock in patches with hardpan between, the 11 tiles below the rim a scatter of red rock thinning outward; the
+  biomes' dressing gives the top its sparse scrub. **8.8's small mesas** (`world3-biomes.js` `dress3`) are kept off
+  each table, its rim and talus (a superellipse round its rim, 30 tiles out) and thinned on the flats (a few buttes;
+  two to four blocks in a row one time in eight, not one in two); near a table (twice its size) one in twelve. **No band
+  under two tiles thick** (the one-tile line west of the lookout's mesa: a tile is kept only in a 2 x 2 of band).
+- **Red Rock Canyon** (v3 only): cut into the plateau (`canyonCut`: its floor 7 m down, rising to its walls and its
+  box's edge over 7 tiles - the hillshade draws its sides); the bake paints its floor the desert's ground and its rock
+  at its walls, spilling up to 6 tiles past them inside the box and out (`canyonRock`) - no flat red rectangle, no hard
+  edge. Today's canyon bakes as before.
+- **The dry washes end short of the moved sites** (`world3-wild.js`): cleared in each site's box and 6-14 tiles round it
+  (noise), so a wash ends before the boneyard, the water park, the canyon, rather than running under them.
+- **The hillshade over the canopy and the crops** (`chunkbake.js`, `groundbake.js` `shadeRelief`): the chunk bake shades
+  the whole chunk once its statics stand - the trees, the orchards' rows, the rocks - and the chunk's `under` layer the
+  same; the ground bake leaves it then (`opt.reliefLater`; a plain ground bake still shades its ground). North Cape's
+  headland reads under the redwoods, Lookout Hill under its orchard.
+- **The tracks laid along the land** (`world3-wild.js` `trackPath`, 8.19's `WILD_TRACKS`): the cheapest way on a 2-tile
+  grid from the roads a dirt track may join to the track's end - a step's cost its length times (1 + (grade / 18%)^2)
+  on the land's height before anything is built (`landHeight3`: the relief's coarse ground, kept per land so the lines
+  hook reads it), 20 times over snow, 8 on a desert table's spot (`tableSpots3`: the tables are laid after the roads),
+  6 on another road (a track leaves its road and keeps off the others), 0.55-1.65 by a slow noise (the wander); never
+  on water or within 2 tiles of it, 4 of a highway, 10 of the main line; simplified to 1.2 tiles and rounded (3-tile
+  corners). The straight way stays as the fallback. The relief keeps its cliff bands GRADE_R off a dirt track's line.
+
+Tests: `test/world3relief.test.js` (as before, and: `m.tables` as the relief's, the bake's rim the relief's; sandstone
+faces on three sides of each table at least; no 8.8 mesa on a table or its talus; no band under two tiles thick; the
+canyon's floor below the ground round it; Lookout Hill's canopy shaded - a chunk baked with and without the relief),
+`test/world3wild.test.js` (as before, and: each track found its way along the land, most wander off the straight line,
+none over a table's top; the Ridge Trail mostly off the snow, the fire lookout and the hunting camp off it; no dry wash
+within 5 tiles of a moved site's box).
 
 ### 8.23 The switch: the server and the deploy carry World v3 - measured, the cheap wins, the runbook (2026-10-11, H49)
 

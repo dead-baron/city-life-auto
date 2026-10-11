@@ -145,7 +145,7 @@ export function* groundSteps(M, cx, cy, opt = {}) {
   const TX0 = Math.floor(WX0 / TILE) - TP, TY0 = Math.floor(WY0 / TILE) - TP;
   // ap 2: the live game draws the chunk at 1 art pixel = 2 world px - the paint (lane lines, zebras, stop lines,
   // arrows, stalls, court lines, wear) is decided once per art pixel so it comes out in whole art pixels
-  const C = { M, b, q, seed, X0, Y0, WX0, WY0, TX0, TY0, deckZ: opt.deckZ ?? 6, E: [], ap: opt.artPx === 2 ? 2 : 1 };
+  const C = { M, b, q, seed, X0, Y0, WX0, WY0, TX0, TY0, deckZ: opt.deckZ ?? 6, E: [], ap: opt.artPx === 2 ? 2 : 1, later: !!opt.reliefLater };
   // (opt.scratch: a bake worker's - the G-buffer is used up before the next bake, so one is kept and cleared rather than
   // a fresh 9 MB every chunk)
   const G = opt.scratch ? scratchG() : new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;
@@ -217,6 +217,24 @@ function tileFacts(C) {
   const springs = M.springs || [];          // hot spring pools: milky blue-green mineral water (ellipses)
   const mazes = M.mazes || [];              // hedge mazes: the walls' tiles are lawn under the hedges, the paths gravel
   const tracks = (M.tracks || []).filter((r) => r.bb[2] >= TX0 * TILE - 64 && r.bb[0] <= (TX0 + TN) * TILE + 64 && r.bb[3] >= TY0 * TILE - 64 && r.bb[1] <= (TY0 + TN) * TILE + 64);   // dirt tracks off-road (Red Rock Canyon)
+  // (World v3 8.22, H50: the desert's tables - their tops' cap rock, the talus at their feet - and Red Rock Canyon's floor
+  // as the desert round it, its rock at its walls; a map with relief only: today's bakes as before)
+  const tabs = M.relief && M.tables ? M.tables.filter((t) => t.x + t.rx + 18 >= TX0 && t.x - t.rx - 18 <= TX0 + TN && t.y + t.ry + 18 >= TY0 && t.y - t.ry - 18 <= TY0 + TN) : null;
+  const tabMat = (tx, ty, base) => {
+    let e = 99, s = 0;
+    for (const t of tabs) { const v = tableEdge(t, tx, ty); if (v < e) { e = v; s = t.s; } }
+    if (e <= 0) return rvn(tx, ty, 9, 7311 + s) > 0.48 ? M_.REDROCK : M_.CRACKED;   // (the cap rock: bare rock, hardpan between)
+    if (e > 3 && e < 14 && rhash(tx, ty, 7312 + s) < 0.85 - (e - 3) / 11) return M_.REDROCK;   // (the talus: loose rock, thinning outward)
+    return base;
+  };
+  // (the canyon: its rock at its walls and spilling a few tiles past them, inside its box and out - no hard edge)
+  const cyn = M.relief ? paint.find((p) => p.key === 'canyon') : null;
+  const nearCanyon = (X, Y) => cyn && X >= cyn.x - 7 * TILE && Y >= cyn.y - 7 * TILE && X < cyn.x + cyn.w + 7 * TILE && Y < cyn.y + cyn.h + 7 * TILE;
+  const canyonRock = (tx, ty, base) => {
+    let d = 9;
+    for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) { const x = tx + dx, y = ty + dy, a = Math.max(Math.abs(dx), Math.abs(dy)); if (a < d && M.inside(x, y) && M.tiles[M.idx(x, y)] === T.WALL && inRect(cyn, x * TILE + 16, y * TILE + 16)) d = a; }
+    return d <= 1 || (d <= 6 && rhash(tx, ty, 7313) < 0.85 - d / 7) ? M_.REDROCK : base;
+  };
   const onTrack = (X, Y) => tracks.some((r) => { if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
   for (let j = 0; j < TN; j++) { const ty = TY0 + j, row = M.row(ty), rowIn = ty >= M.y0 && ty < M.y0 + M.h; for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, k = j * TN + i;
@@ -239,18 +257,18 @@ function tileFacts(C) {
       else if (inRects(parks, X, Y)) m = hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK;
       else if (!wild) m = (b.tres[k] & 64) ? M_.FOREST : (b.tres[k] & 32) ? M_.MEADOW : st === 'park' ? (hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK) : (D.tier === 'rough' || D.tier === 'industrial') ? M_.DRYGRASS : st === 'beach' ? M_.MEADOW : M_.LAWN;   // (32: a designed nature place in town - meadow, not lawn)
       else if (st === 'rural' || st === 'airport') m = bio === 2 ? M_.FOREST : bio === 3 ? M_.DRYGRASS : st === 'airport' ? M_.LAWN : M_.PASTURE;
-      else if (st === 'desert') m = M_.DRYGRASS;
+      else if (st === 'desert') m = tabs && tabs.length ? tabMat(tx, ty, M_.DRYGRASS) : M_.DRYGRASS;
       else m = bio === 2 ? M_.FOREST : bio === 4 ? (b.tz[k] === Z.EAST ? M_.DRYGRASS : M_.ALPINE) : bio === 3 ? M_.DRYGRASS : bio === 5 ? M_.MEADOW : M_.MEADOW;
     } else if (t === T.DIRT) {
       if (mazes.length && inRects(mazes, X, Y)) m = M_.PATH;   // (a maze's paths: gravel)
       else if (tracks.length && onTrack(X, Y)) m = M_.DIRT;     // (a dirt track across the desert or the canyon)
       else if (inRects(quarries, X, Y)) m = M_.QUARRY;
-      else if (inRects(paint, X, Y, 'canyon')) m = M_.REDROCK;
+      else if (inRects(paint, X, Y, 'canyon')) m = M.relief ? canyonRock(tx, ty, M_.DESERT) : M_.REDROCK;
       else if (b.tdeck[k]) m = M_.UNDERDECK;
       else if (b.tres[k] & 2) m = M_.GRAVEL;
       else if (!wild) m = (D.tier === 'industrial' || D.tier === 'rough') ? M_.GRAVEL : M_.DIRT;
       else if (bio === 9) m = M_.SNOW;
-      else if (bio === 3 || st === 'desert') m = M_.DESERT;
+      else if (bio === 3 || st === 'desert') m = nearCanyon(X, Y) ? canyonRock(tx, ty, M_.DESERT) : tabs && tabs.length ? tabMat(tx, ty, M_.DESERT) : M_.DESERT;
       else if (bio === 4) m = b.tz[k] === Z.EAST && st !== 'rural' ? M_.REDROCK : st === 'rural' ? M_.DIRT : M_.SCREE;
       else if (bio === 2) m = (b.tres[k] & 32) ? M_.DIRT : M_.FORESTDIRT;   // (32: a designed place's trails and clearings - packed earth, paler than the duff round them)
       else m = M_.DIRT;
@@ -865,6 +883,18 @@ function paint(C, G) {
 // shaded by its slope under a light from the north-west, a touch lighter the higher it stands; per tile from a 4 x 4
 // box of heights either side (the box undoes the dithering), bilinear per pixel; the water left as it is
 function relief(C, G) {
+  if (C.later) return;   // (the chunk bake shades the whole chunk after its statics: shadeRelief)
+  reliefOn(C, G, null);
+}
+// The hillshade over a whole baked chunk (H50): the ground and everything standing on it - the canopy, the orchards'
+// rows, the crops, the rocks - so the hills read under the trees (client/art2/game/chunkbake.js calls it after the
+// statics, the ground bake told to leave it: opt.reliefLater); `under` (the chunk before its buildings) shaded alike
+export function shadeRelief(M, cx, cy, G, under) {
+  if (!M.relief) return;
+  const X0 = cx * CHUNK, Y0 = cy * CHUNK, WX0 = X0 - PAD, WY0 = Y0 - PAD;
+  reliefOn({ M, b: scratch(), WX0, WY0, TX0: Math.floor(WX0 / TILE) - TP, TY0: Math.floor(WY0 / TILE) - TP }, G, under);
+}
+function reliefOn(C, G, under) {
   const { M, b, TX0, TY0, WY0, WX0 } = C, R = M.relief;
   if (!R) return;
   const zb = (tx, ty) => { let s = 0; for (let dy = -2; dy < 2; dy++) for (let dx = -2; dx < 2; dx++) { const x = tx + dx, y = ty + dy; if (M.inside(x, y)) s += R[M.row(y) + M.col(x)]; } return s / 16; };
@@ -886,8 +916,20 @@ function relief(C, G) {
       if (k > 0.995 && k < 1.005) continue;
       const j = gi * 4;
       col[j] = Math.min(255, col[j] * k); col[j + 1] = Math.min(255, col[j + 1] * k); col[j + 2] = Math.min(255, col[j + 2] * k * (k < 1 ? 1.04 : 1));
+      if (under) { under[j] = Math.min(255, under[j] * k); under[j + 1] = Math.min(255, under[j + 1] * k); under[j + 2] = Math.min(255, under[j + 2] * k * (k < 1 ? 1.04 : 1)); }
     }
   }
+}
+// shared/world3-relief.js's table rim (tableEdge) and its noise, copied: how far outside a table's rim a tile lies
+const rhash = (x, y, s) => { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1442695041) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+function rvn(x, y, sc, s) {
+  const fx = x / sc, fy = y / sc, ix = Math.floor(fx), iy = Math.floor(fy), u0 = fx - ix, v0 = fy - iy, u = u0 * u0 * (3 - 2 * u0), v = v0 * v0 * (3 - 2 * v0);
+  const a = rhash(ix, iy, s), b = rhash(ix + 1, iy, s), c = rhash(ix, iy + 1, s), d = rhash(ix + 1, iy + 1, s);
+  return (a + (b - a) * u) * (1 - v) + (c + (d - c) * u) * v;
+}
+export function tableEdge(t, x, y) {
+  const ax = (x - t.x) / t.rx, ay = (y - t.y) / t.ry, a2 = ax * ax, b2 = ay * ay;
+  return (Math.sqrt(Math.sqrt(a2 * a2 + b2 * b2)) * (1 + 0.16 * (rvn(x, y, 21, 7301 + t.s) - 0.5) + 0.06 * (rvn(x, y, 7, 7302 + t.s) - 0.5)) - 1) * Math.min(t.rx, t.ry);
 }
 // pool water: a tiled floor seen through clear turquoise water - grout lines, a dark band of waterline tiles round
 // the edge, lane lines with T-ends on the floor along the pool (pool.lanes lanes along its long side), the deep end

@@ -8041,3 +8041,43 @@ camps and the trapper's cabin in their regions, the beaver pond on Redwood Creek
 one cave under Copper Gulch Mine; the canyon in the desert, the wash, the oasis's track; the water park's slides),
 test/world3desert.test.js, test/world3roads.test.js, test/world3world.test.js: all pass. `tools/perf.mjs`' code
 report: the city worker 34 files, 359 KB of 360.
+
+## 2026-10-11 · World v3: the land's looks - the tables, the canyon, the hillshade under the trees, the tracks (H50)
+
+The brief: "the land's looks" - WORLD-V3.md 8.22's and 8.19's lists of what looks wrong: "the desert's tables read as
+rings (a red rim, grey granite faces on the south rims only, tops the colour of the plain)", "Red Rock Canyon reads as a
+flat red rectangle with a hard edge", "the hillshade barely shows under trees and crops", "the tracks are dead straight,
+and the Ridge Trail and its fire lookout stand on the snowfield".
+- **The tables** (`shared/world3-relief.js`): red sandstone faces all round each rim (the band in 6-tile blocks: the
+  `cliff` model's new sandstone look, full height on the south rim, two thirds east and west, a low lip on the north);
+  the tables on the map (`m.tables`) so the bake paints each top its own cap rock (red rock in patches, hardpan
+  between) and a talus of loose red rock at the foot; 8.8's small red mesas kept off the tables and their talus and
+  thinned to a few buttes (`world3-biomes.js` `dress3`); no cliff band under two tiles thick (the one-tile red line by
+  the lookout's mesa).
+- **Red Rock Canyon** (v3 only; today's bakes as before): its floor the desert's ground, its rock at its walls spilling a
+  few tiles past them, inside its box and out; the box cut 7 m into the plateau so the hillshade draws its sides. The
+  dry washes end 6-14 tiles short of each moved site's box instead of running under it.
+- **The hillshade over everything standing**: the chunk bake shades the chunk after its statics (the canopy, the
+  orchards' rows, the crops, the rocks) - North Cape's headland and Lookout Hill read at 1/8.
+- **The tracks laid along the land** (`world3-wild.js` `trackPath`): the cheapest way from the roads they may join to
+  their ends on a 2-tile grid - dearer the steeper (the land's height before anything is built: `landHeight3`), much
+  dearer on snow, round the desert's tables, off the other roads, with a little wander; the straight way only as a
+  fallback. The Ridge Trail keeps to the bare ground below the snow where it can, and its fire lookout and hunting camp
+  off the snow.
+- Nothing live changes: the world hash stays 6b6e16fdef9f; the art hash changes (the bake's code: `groundbake.js`,
+  `chunkbake.js`, `statics.js`). The bake's code 750 KB of 765, the city worker 350 of 360 (unchanged).
+
+Files: shared/world3-relief.js (tableSpots3, tableEdge, landHeight3, canyonCut, the sandstone rims, the bands' thickness,
+m.tables, a dirt track's line kept clear), shared/world3-biomes.js (dress3: the small mesas off the tables), shared/world3-wild.js
+(trackPath, the washes' ends, the Lookout Hill view), shared/world3-world.js (wildSites3 gets the land: one line),
+client/art2/game/groundbake.js (the cap rock and the talus, the canyon's floor and rock, shadeRelief),
+client/art2/game/chunkbake.js (the hillshade after the statics), client/art2/game/statics.js (the cliff's sandstone),
+test/world3relief.test.js, test/world3wild.test.js, docs/WORLD-V3.md 8.22 (and 8.19's notes), docs/world-v3-world-r8-1.png,
+docs/world-v3-town-hollow.png, -canyon.png, -ridge.png, -silverfalls.png, -northcape.png, -lookouthill.png.
+
+Tests: test/world3relief.test.js (one world build: as before, and the tables' sandstone faces on three sides at least,
+no small mesa on a table or its talus, no band under two tiles thick, the canyon's floor below the ground round it,
+`m.tables` and the bake's rim the relief's, Lookout Hill's canopy shaded), test/world3wild.test.js (one world build: as
+before, and each track laid along the land and none over a table's top, most wandering off the straight line, the Ridge
+Trail mostly off the snow, the fire lookout and the hunting camp off it, no dry wash by a moved site's box),
+test/dmath.test.js, test/mapwindow.test.js.

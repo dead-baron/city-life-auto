@@ -360,7 +360,8 @@ export function makeStatic(r) {
         if (sn > 0 && Math.abs(x) < W * 0.22) y = D / 2;   // (the face round the adit stays straight)
         poly.push([x + W / 2 + pad, y + D / 2 + 6]);
       }
-      return rockSprite(W + pad * 2, D + 16, r.h + 6, (Tr) => Tr.plateau({ poly }, { style: 'granite', tiers: [[0, r.h * 0.6], [D * 0.22, r.h * 0.84], [D * 0.42, r.h]], veg: { kind: 'grass', density: 0.1, band: 2 }, hang: { kind: 'moss', amount: 0.35 }, moss: 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
+      const ss = r.st === 'sandstone';   // (World v3 8.22: the desert's tables and bands - red sandstone, its scrub, no moss)
+      return rockSprite(W + pad * 2, D + 16, r.h + 6, (Tr) => Tr.plateau({ poly }, { style: ss ? 'sandstone' : 'granite', tiers: [[0, r.h * 0.6], [D * 0.22, r.h * 0.84], [D * 0.42, r.h]], veg: ss ? { kind: 'sage', density: 0.05, band: 2 } : { kind: 'grass', density: 0.1, band: 2 }, hang: ss ? null : { kind: 'moss', amount: 0.35 }, moss: ss ? 0 : 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
     }
     case 'crystal': { // (the cave kit's crystals glow full; out in the open half that, so they read as crystal, not lamps)
       const G = crystals(r.s || 1, r.size || 20, '#5ac8ff');
@@ -1906,7 +1907,7 @@ function propItems(c, p, pi, I) {
     case 'roadsign': { const k = p.k || 'arrow', hd = qa((p.a || 0) + PI / 2, 8); V(`rsign:${k}:${hd.toFixed(2)}`, 'roadSign', [k], hd); return; }
     case 'fingerpost': V('fpost', 'fingerPost', [], qa(u * PI, 4)); return;
     case 'stand': V('pstand', 'stand', []); return;
-    case 'cliff': put(I, { key: `cliff:${p.w}:${p.d}:${p.h}:${p.s || 1}`, recipe: { t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1 }, x, y, ext: [p.w / 2 + 20, p.d + p.h + 30, p.w / 2 + 20, 20], pi }); return;
+    case 'cliff': put(I, { key: `cliff:${p.w}:${p.d}:${p.h}:${p.s || 1}${p.st ? ':' + p.st : ''}`, recipe: { t: 'cliff', w: p.w, d: p.d, h: p.h, s: p.s || 1, st: p.st }, x, y, ext: [p.w / 2 + 20, p.d + p.h + 30, p.w / 2 + 20, 20], pi }); return;
     case 'mineportal': V('mport', 'minePortal', []); lightAt(I, x, y + 6, 30, 90, [1, 0.75, 0.4], 0.8, 'lamp'); return;
     case 'minecart': V('mcart', 'mineCart', [], PI / 2); return;
     case 'barrel': V('mbarrel', 'mBarrel', []); return;

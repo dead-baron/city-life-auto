@@ -245,7 +245,7 @@ export function worldOpts(asked) {
       m.world3.mesa = { painted: mesa, streets: layMesa3(lines, m) };   // (Lucky Mesa's Strip and side streets: shared/world3-mesa.js, 8.15)
       m.world3.desert = { painted: desert, streets: layDesert3(lines, m) };   // (Copper Gulch's main street and side streets: shared/world3-desert.js, 8.18)
       m.world3.west = { painted: west, streets: layWest3(lines, m) };   // (Egret Point's Harbor Road, Light Road, Raceway Road: shared/world3-west.js, 8.20)
-      m.world3.wild = wildSites3(lines, m);   // (H44, 8.19: today's wild land's country sites at their v3 spots, each with its road in: shared/world3-wild.js)
+      m.world3.wild = wildSites3(lines, m, L);   // (H44, 8.19: today's wild land's country sites at their v3 spots, each with its road in: shared/world3-wild.js)
     },
   };
   return o;

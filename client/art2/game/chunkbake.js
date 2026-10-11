@@ -208,14 +208,17 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
   const t0 = now();
   const ox = cx * CHUNK, oy = cy * CHUNK, ag = opt.artPx === 2 ? 2 : 1;
   let G = null, groundErr = null;
+  // (World v3 8.22, H50: the hillshade over the whole chunk once its statics stand - the canopy and the crops on the
+  // slopes too - so the ground bake leaves it: reliefLater)
+  const later = !!(M.relief && P.ground && P.ground.shadeRelief && !opt.groundCol);
   if (P.ground && !opt.groundCol) {
     try {
       if (P.ground.groundSteps) {
-        const it = P.ground.groundSteps(M, cx, cy, opt);
+        const it = P.ground.groundSteps(M, cx, cy, later ? { ...opt, reliefLater: true } : opt);
         let r = it.next();
         while (!r.done) { yield 'ground'; r = it.next(); }
         G = r.value;
-      } else G = P.ground.bakeGround(M, cx, cy, opt);
+      } else G = P.ground.bakeGround(M, cx, cy, later ? { ...opt, reliefLater: true } : opt);
     } catch (e) { groundErr = String((e && e.stack) || e); G = null; }
     if (G && (G.w !== CHUNK || G.h !== CHUNK)) { groundErr = `bakeGround gave ${G.w}x${G.h}`; G = null; }
   }
@@ -270,6 +273,7 @@ export function* bakeSteps(M, cx, cy, opt = {}, cache = null, P = providers) {
     }
   }
   const t2 = now();
+  if (later && G.w === CHUNK) { try { P.ground.shadeRelief(M, cx, cy, G, under); } catch (e) { groundErr = groundErr || String((e && e.message) || e); } }
   if (!under && opt.under !== false) under = opt.scratch ? scratchCopy('under', G.col) : G.col.slice();   // no buildings here: the whole chunk is "under"
   // the under layer's alpha carries the local building number of the surface on top (0: no building)
   if (under) for (let i = 0, j = 3; i < CHUNK * CHUNK; i++, j += 4) under[j] = bid ? bid[i] : 0;

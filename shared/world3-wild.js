@@ -13,7 +13,9 @@ import { TILE, T } from './constants.js';
 import { rounded, measure, segX } from './geom.js';
 import { skeletonLines, STATIONS, nearestOnPath } from './world3-skeleton.js';
 import { SITES } from './countryside.js';
-import { D3 } from './world3-biomes.js';
+import { D3, peakHeight, SNOW_LINE } from './world3-biomes.js';
+import { landHeight3, tableSpots3, reliefNoise } from './world3-relief.js';   // (H50: the tracks laid along the land)
+import { TERRAIN3 } from './world3-land.js';
 import { DESERT, HOLLOW, GULCH } from './world3-desert.js';
 import { stamp } from './world3-towns.js';
 
@@ -113,6 +115,8 @@ export const WILD_VIEWS = [
   { key: 'oldmine', name: 'The Old Granite Mine above Lookout Road', box: [680, 400, 820, 500] },
   { key: 'canyon', name: 'Red Rock Canyon and its oasis off Mesa Road; Mirage Lake and its camp', box: [3760, 430, 4010, 800] },
   { key: 'splash', name: 'Splash Canyon Water Park on Mine Road', box: [3990, 1180, 4110, 1260] },
+  // (H50) the land's looks: the hillshade under Lookout Hill's orchard
+  { key: 'lookouthill', name: 'Lookout Hill above Kestrel Lake: the hillshade under its orchard', box: [2530, 350, 2670, 470] },
 ];
 // the room kept round the skeleton's lines (tiles): the highways', the main line's and its stations' as the desert's
 // places keep (world3-desert.js), a road's own few tiles
@@ -140,7 +144,7 @@ function placeBoxes() {
   return out;
 }
 
-export function wildSites3(lines, m) {
+export function wildSites3(lines, m, L) {
   const W = m.w, H = m.h, out = { placed: [], missed: [] };
   const SK = skeletonLines(), hwys = SK.filter((l) => l.kind === 'hwy'), mains = SK.filter((l) => l.kind === 'main');
   const tunnels = (m.world3?.roads?.tunnels || []).map((t) => ({ pts: t.pts.map((p) => (Array.isArray(p) ? p : [p.x / TILE, p.y / TILE])) }));
@@ -243,16 +247,28 @@ export function wildSites3(lines, m) {
     for (const p of pts) claimed.push([Math.floor(p.x / TILE) - 3, Math.floor(p.y / TILE) - 3, Math.floor(p.x / TILE) + 4, Math.floor(p.y / TILE) + 4]);
     out.placed.push({ name: S.name, type: S.type, x, y, w: S.w, h: S.h, d: site.d, road: name, joins: [Math.round(best.q.x), Math.round(best.q.y)] });
   }
-  out.tracks = wildTracks3(lines, m, hwys, mains, hwyLines, tunnels);
-  // the desert's dry washes (the biomes' gravel bars, reserve 128) kept off the moved desert sites: their ground plain
-  for (const q of MOVED) if (q.keep) for (let y = q.to[1] + q.keep[1]; y < q.to[1] + q.keep[3]; y++) for (let x = q.to[0] + q.keep[0]; x < q.to[0] + q.keep[2]; x++) { const i = y * W + x; if (m.reserve[i] & 128 && m.dist[i] === D3.DESERT) { m.reserve[i] &= ~128; m.tiles[i] = T.DIRT; } }
+  out.tracks = wildTracks3(lines, m, hwys, mains, hwyLines, tunnels, L);
+  // the desert's dry washes (the biomes' gravel bars, reserve 128) kept off the moved desert sites: their ground plain,
+  // and each wash ending 6-14 tiles short of the box (H50: they read as running under the sites)
+  for (const q of MOVED) if (q.keep) {
+    const a = q.to[0] + q.keep[0], b = q.to[1] + q.keep[1], c = q.to[0] + q.keep[2], d = q.to[1] + q.keep[3];
+    for (let y = Math.max(0, b - 14); y < Math.min(H, d + 14); y++) for (let x = Math.max(0, a - 14); x < Math.min(W, c + 14); x++) {
+      const i = y * W + x, ox = Math.max(a - x, 0, x - c + 1), oy = Math.max(b - y, 0, y - d + 1);
+      if ((ox || oy) && Math.sqrt(ox * ox + oy * oy) >= 6 + 8 * reliefNoise(x, y, 9, 7611)) continue;
+      if (m.reserve[i] & 128 && m.dist[i] === D3.DESERT) { m.reserve[i] &= ~128; m.tiles[i] = T.DIRT; }
+    }
+  }
   return out;
 }
 
-// The tracks the moved nature sites look for by name (WILD_TRACKS): from the nearest point of a road a dirt track may
-// join (within 160 tiles; never a highway, nor within 14 tiles of one, nor in a tunnel), straight to the track's end -
-// over dry land, across no highway, clear of the main line (10 tiles) and of its box; the nearest such start wins.
-function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels) {
+// The tracks the moved nature sites look for by name (WILD_TRACKS): from a road a dirt track may join (within 160 tiles;
+// never a highway, nor within 14 tiles of one, nor in a tunnel) to the track's end - over dry land, across no highway,
+// clear of the main line (10 tiles) and of its box. H50: laid along the land, not straight - the cheapest way on a 2-tile
+// grid (trackPath) where a step costs its length, more the steeper it climbs (the land's height before anything is
+// built: world3-relief.js landHeight3 - a mountain trail zigzags), several times over snow, round the desert's tables
+// (their spots, world3-relief.js tableSpots3: the tables are laid after the roads) and with a little wander; the
+// straight way as before when no such way is found (or no land is given).
+function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels, L) {
   const W = m.w, H = m.h, out = [], ok = ACCESS.dirt, TR = 160;
   const fine = (a, b, avoid) => {
     const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])));
@@ -266,6 +282,7 @@ function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels) {
     for (const h of hwyLines) for (let j = 0; j + 1 < h.pts.length; j++) if (segX(A, B, h.pts[j], h.pts[j + 1])) return false;
     return true;
   };
+  const zAt = L ? landHeight3(W, H, L) : null, spots = L ? tableSpots3(W, H) : [];
   for (const K of WILD_TRACKS) {
     const [ex, ey] = K.end, starts = [];
     for (const l of lines) {
@@ -283,15 +300,104 @@ function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels) {
       }
     }
     starts.sort((a, b) => a.d - b.d || a.x - b.x || a.y - b.y);
-    const s = starts.slice(0, 120).find((q) => fine([q.x, q.y], K.end, K.avoid));
-    if (!s) { out.push({ name: K.name, missed: true }); continue; }
-    const pts = rounded([{ x: s.x * TILE, y: s.y * TILE }, { x: (s.x + ex) / 2 * TILE, y: (s.y + ey) / 2 * TILE }, { x: ex * TILE, y: ey * TILE }], 4 * TILE, false, 8);
+    let way = zAt && starts.length ? trackPath(m, K, starts, zAt, spots, mains, hwyLines, lines, L) : null;
+    if (!way) {
+      const s = starts.slice(0, 120).find((q) => fine([q.x, q.y], K.end, K.avoid));
+      if (s) way = { from: s, pts: [[s.x, s.y], [(s.x + ex) / 2, (s.y + ey) / 2], [ex, ey]], straight: true };
+    }
+    if (!way) { out.push({ name: K.name, missed: true }); continue; }
+    const pts = rounded(way.pts.map(([x, y]) => ({ x: x * TILE, y: y * TILE })), (way.straight ? 4 : 3) * TILE, false, 8);
     measure(pts);
     lines.push({ pts, kind: 'dirt', lvl: 0, name: K.name, culdesac: true });
     for (let j = 0; j < pts.length; j++) { const i = Math.floor(pts[j].y / TILE) * W + Math.floor(pts[j].x / TILE); if (i >= 0 && i < W * H) m.reserve[i] |= 32; }
-    out.push({ name: K.name, from: [Math.round(s.x), Math.round(s.y)], to: K.end, len: Math.round(s.d) });
+    out.push({ name: K.name, from: [Math.round(way.from.x), Math.round(way.from.y)], to: K.end, len: Math.round(pts[pts.length - 1].s / TILE), straight: Math.round(way.from.d), ...(way.straight && { fallback: true }) });
   }
   return out;
+}
+// The cheapest way from any of the starts to K.end on a 2-tile grid (A*, 8 neighbours): a step costs its length times
+// (1 + (grade / 18%)^2) - the land's grade along it - times 20 over snow (the peaks above the snow line), 8 on a desert
+// table's spot (its top, rim and talus), 6 on another road (a track leaves its road and keeps off the others),
+// 0.55-1.65 by a slow noise (the wander); never over water (nor within 2 tiles of it), within 4 tiles of a highway or a
+// ramp, 10 of the main line, in K.avoid. Its corners simplified (1.2 tiles). Returns { from, pts: [[x, y] tiles] } or
+// null.
+const TG = 2, TPAD = 40, WANDER = 0.55;
+function trackPath(m, K, starts, zAt, spots, mains, hwyLines, lines, L) {
+  const W = m.w, H = m.h, [ex, ey] = K.end;
+  let x0 = ex, y0 = ey, x1 = ex, y1 = ey;
+  for (const q of starts) { x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }
+  x0 = Math.max(0, Math.floor(x0) - TPAD); y0 = Math.max(0, Math.floor(y0) - TPAD); x1 = Math.min(W, Math.ceil(x1) + TPAD); y1 = Math.min(H, Math.ceil(y1) + TPAD);
+  const BW = x1 - x0, BH = y1 - y0, box = [x0, y0, x1, y1], no = new Uint8Array(BW * BH);
+  for (const r of mains) stamp(no, box, r.path, 10);
+  for (const h of hwyLines) stamp(no, box, { pts: h.pts.map((p) => [p.x / TILE, p.y / TILE]) }, 4);
+  const rd = new Uint8Array(BW * BH);
+  for (const l of lines) if (l.lvl === 0 && l.kind !== 'hwy' && l.kind !== 'ramp') stamp(rd, box, { pts: l.pts.map((p) => [p.x / TILE, p.y / TILE]) }, 2.5);
+  const GW = Math.ceil(BW / TG), GH = Math.ceil(BH / TG), NC = GW * GH;
+  const cost = new Float32Array(NC), z = new Float32Array(NC);   // (cost: the step multiplier at a cell, 0 where it can't go)
+  for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {
+    const c = gy * GW + gx, tx = Math.min(x1 - 1, x0 + gx * TG + 1), ty = Math.min(y1 - 1, y0 + gy * TG + 1);
+    z[c] = zAt(tx, ty);
+    if (no[(ty - y0) * BW + tx - x0]) continue;
+    if (K.avoid && tx > K.avoid[0] - 3 && ty > K.avoid[1] - 3 && tx < K.avoid[2] + 3 && ty < K.avoid[3] + 3) continue;
+    let wet = false;
+    for (let dy = -2; dy <= 2 && !wet; dy++) for (let dx = -2; dx <= 2; dx++) { const x = tx + dx, y = ty + dy; if (x < 0 || y < 0 || x >= W || y >= H) continue; const i = y * W + x; if (!m.land[i] || m.river[i] || m.lake[i] || m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP) { wet = true; break; } }
+    if (wet) continue;
+    const i = ty * W + tx;
+    let k = WANDER + 1.1 * reliefNoise(tx, ty, 28, 7621 + K.end[0]);
+    if (m.dist[i] === D3.PEAKS && (L.terrain[i] === TERRAIN3.ROCK || L.terrain[i] === TERRAIN3.SCRUB) && peakHeight(tx, ty) >= SNOW_LINE) k *= 20;   // (the snow: the bare peaks above the snow line, as world3-world.js's SNOW_CLS)
+    if (rd[(ty - y0) * BW + tx - x0]) k *= 6;
+    for (const t of spots) if (((tx - t.x) / (t.rx + 18)) ** 2 + ((ty - t.y) / (t.ry + 18)) ** 2 < 1) { k *= 8; break; }
+    cost[c] = k;
+  }
+  const cell = (x, y) => { const gx = Math.floor((x - x0) / TG), gy = Math.floor((y - y0) / TG); return gx < 0 || gy < 0 || gx >= GW || gy >= GH ? -1 : gy * GW + gx; };
+  const goal = cell(ex, ey);
+  if (goal < 0) return null;
+  cost[goal] = cost[goal] || 1;   // (its end is where the site is: reached whatever stands round it)
+  const g = new Float32Array(NC).fill(Infinity), from = new Int32Array(NC).fill(-1), src = new Int32Array(NC).fill(-1), shut = new Uint8Array(NC);
+  // a binary heap of [f, cell]
+  const hf = [], hc = [];
+  const push = (f, c) => { let j = hf.length; hf.push(f); hc.push(c); while (j) { const p = (j - 1) >> 1; if (hf[p] <= hf[j]) break; [hf[p], hf[j]] = [hf[j], hf[p]]; [hc[p], hc[j]] = [hc[j], hc[p]]; j = p; } };
+  const pop = () => { const c = hc[0], lf = hf.pop(), lc = hc.pop(); if (hf.length) { hf[0] = lf; hc[0] = lc; let j = 0; for (;;) { const a = 2 * j + 1, b = a + 1; let q = j; if (a < hf.length && hf[a] < hf[q]) q = a; if (b < hf.length && hf[b] < hf[q]) q = b; if (q === j) break; [hf[q], hf[j]] = [hf[j], hf[q]]; [hc[q], hc[j]] = [hc[j], hc[q]]; j = q; } } return c; };
+  const gxOf = (c) => c % GW, gyOf = (c) => (c / GW) | 0;
+  const hEst = (c) => WANDER * TG * Math.hypot(gxOf(c) - gxOf(goal), gyOf(c) - gyOf(goal));
+  starts.forEach((q, j) => { const c = cell(q.x, q.y); if (c < 0 || !cost[c] || g[c] <= 0) return; g[c] = 0; src[c] = j; push(hEst(c), c); });
+  const NB = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  let found = false;
+  while (hf.length) {
+    const c = pop();
+    if (shut[c]) continue;
+    shut[c] = 1;
+    if (c === goal) { found = true; break; }
+    const cx = gxOf(c), cy = gyOf(c);
+    for (const [dx, dy] of NB) {
+      const nx = cx + dx, ny = cy + dy;
+      if (nx < 0 || ny < 0 || nx >= GW || ny >= GH) continue;
+      const n = ny * GW + nx;
+      if (shut[n] || !cost[n]) continue;
+      const len = TG * (dx && dy ? 1.4142 : 1), grade = Math.abs(z[n] - z[c]) / len / 0.18;
+      const gn = g[c] + len * (1 + grade * grade) * (cost[c] + cost[n]) / 2;
+      if (gn < g[n]) { g[n] = gn; from[n] = c; src[n] = src[c]; push(gn + hEst(n), n); }
+    }
+  }
+  if (!found) return null;
+  const P = [];
+  for (let c = goal; c >= 0; c = from[c]) P.push([x0 + gxOf(c) * TG + 1, y0 + gyOf(c) * TG + 1]);
+  P.reverse();
+  const s0 = starts[src[goal]];
+  P[0] = [s0.x, s0.y]; P[P.length - 1] = [ex, ey];
+  return { from: s0, pts: simplify(P, 1.2) };
+}
+// Douglas-Peucker: the polyline's points within eps (tiles) of the line between the kept ones dropped
+function simplify(P, eps) {
+  if (P.length < 3) return P;
+  const keep = new Uint8Array(P.length); keep[0] = keep[P.length - 1] = 1;
+  const st = [[0, P.length - 1]];
+  while (st.length) {
+    const [a, b] = st.pop();
+    let best = -1, bd = eps;
+    for (let j = a + 1; j < b; j++) { const d = dPoly([P[a], P[b]], P[j][0], P[j][1]); if (d > bd) { bd = d; best = j; } }
+    if (best >= 0) { keep[best] = 1; st.push([a, best], [best, b]); }
+  }
+  return P.filter((_, j) => keep[j]);
 }
 
 // Once the world is built: what stands on each lot (map.js buildCountryside), the summary for m.world3.wild.

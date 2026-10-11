@@ -116,7 +116,13 @@ export function dress3(m, L, keep, H) {
   const plant = (kind, tx, ty, sp, k, r = 0, jx = 0.5, jy = 0.5) => { add(m, kind, Math.round((tx + jx) * TILE), Math.round((ty + jy) * TILE), r, { sp, k }); free[ty * W + tx] = 1; };
 
   // the mesas and buttes of the Red Rock Desert, the granite of the peaks and the ridge: a big rock on a 36-tile grid
-  // where the rock noise says so, smaller outcrops and boulders on a 12-tile grid
+  // where the rock noise says so, smaller outcrops and boulders on a 12-tile grid. (H50: the relief's tables - m.tables,
+  // world3-relief.js - are the desert's mesas now: no rock on a table, its talus or near its foot; a few buttes on the
+  // flats, fewer still round the tables)
+  const tabs = m.tables || [];
+  const nearTable = (tx, ty, pad, k = 1) => tabs.some((t) => ((tx - t.x) / (t.rx * k + pad)) ** 2 + ((ty - t.y) / (t.ry * k + pad)) ** 2 < 1);
+  // (on a table, its rim or its talus: the tables' squarish rim - a superellipse, ragged by up to a ninth - and a pad)
+  const onTable = (tx, ty, pad) => tabs.some((t) => { const a = (tx - t.x) / (t.rx * 1.12 + pad), b = (ty - t.y) / (t.ry * 1.12 + pad); return a * a * a * a + b * b * b * b < 1; });
   for (let gy = 0; gy < HH; gy += 36) for (let gx = 0; gx < W; gx += 36) {
     const tx = gx + 6 + Math.floor(hash2(gx, gy, 5501) * 24), ty = gy + 6 + Math.floor(hash2(gx, gy, 5502) * 24);
     if (tx >= W - 8 || ty >= HH - 8) continue;
@@ -124,8 +130,8 @@ export function dress3(m, L, keep, H) {
     if (!okTile(i, T.DIRT, T.GRASS, T.SAND) || !clear(tx, ty, 8)) continue;
     if (d === D3.DESERT) {
       const r = vn(tx, ty, 300, 5504);   // (the rock country: the mesas stand in groups, with open flats between)
-      if (u >= sm(0.45, 0.75, r) * 0.7) continue;
-      if (hash2(gx, gy, 5505) < 0.45) {   // a mesa: two to four flat-topped blocks in a row, the tallest in the middle
+      if (u >= sm(0.45, 0.75, r) * (tabs.length ? 0.3 : 0.7) || onTable(tx, ty, 30) || (nearTable(tx, ty, 40, 2) && u >= 0.08)) continue;
+      if (hash2(gx, gy, 5505) < (tabs.length ? 0.12 : 0.45)) {   // a mesa: two to four flat-topped blocks in a row, the tallest in the middle
         const parts = 2 + Math.floor(hash2(gx, gy, 5506) * 3), a = hash2(gx, gy, 5507) < 0.5 ? 1 : 0;
         for (let k = 0; k < parts; k++) {
           const ox = a ? Math.round((k - (parts - 1) / 2) * 7) : Math.round((hash2(gx + k, gy, 5508) - 0.5) * 4), oy = a ? Math.round((hash2(gx, gy + k, 5509) - 0.5) * 3) : Math.round((k - (parts - 1) / 2) * 5);
@@ -151,7 +157,7 @@ export function dress3(m, L, keep, H) {
     if (!dressedBy3(d) || free[i] || !okTile(i, T.DIRT, T.GRASS, T.SAND) || !clear(tx, ty, 3)) continue;
     const u = hash2(gx, gy, 5542), rocky = d === D3.PEAKS ? 0.18 + peakHeight(tx, ty) * 0.3 : d === D3.DESERT ? 0.05 + vn(tx, ty, 300, 5504) * 0.12 : d === D3.RIDGE || d === D3.ROCKS || d === D3.PRISON ? 0.25 : 0;
     if (u >= rocky) continue;
-    if (hash2(gx, gy, 5543) < 0.45) outcrop(tx, ty, 50 + u * 160, 34 + hash2(gx, gy, 5544) * 30, 26 + hash2(gx, gy, 5545) * 26, d === D3.DESERT ? 'sandstone' : 'granite', gx * 3 + gy);
+    if (hash2(gx, gy, 5543) < 0.45) { if (d === D3.DESERT && onTable(tx, ty, 22)) continue; outcrop(tx, ty, 50 + u * 160, 34 + hash2(gx, gy, 5544) * 30, 26 + hash2(gx, gy, 5545) * 26, d === D3.DESERT ? 'sandstone' : 'granite', gx * 3 + gy); }
     else { const s = 52 + Math.floor(hash2(gx, gy, 5546) * 4) * 10; add(m, 'boulder', (tx + 0.5) * TILE, (ty + 0.5) * TILE, Math.round(s * 0.5), { s }); take(tx, ty, 2); n.rocks++; }
   }
 

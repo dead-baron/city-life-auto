@@ -8,12 +8,14 @@ import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
-import { reliefOf3, reliefCliffs, HIGH_SPOTS, LOOKOUT_MESA, CLIFF_SLOPE } from '../shared/world3-relief.js';
+import { reliefOf3, reliefCliffs, HIGH_SPOTS, LOOKOUT_MESA, CLIFF_SLOPE, tableEdge } from '../shared/world3-relief.js';
+import { tableEdge as bakeEdge } from '../client/art2/game/groundbake.js';
+import { bakeChunk, loadProviders, providers } from '../client/art2/game/chunkbake.js';
 import { prepare } from '../tools/world3-build.mjs';
 
 const fnv = (a) => { let h = 2166136261; for (let i = 0; i < a.length; i++) h = Math.imul(h ^ (Math.round(a[i] * 10) & 0xffff), 16777619); return h >>> 0; };
 
-test('World v3: the land\'s relief - heights, cliff bands off the roads, the landmarks on high ground', { timeout: 300000 }, () => {
+test('World v3: the land\'s relief - heights, cliff bands off the roads, the landmarks on high ground', { timeout: 300000 }, async () => {
   const prep = prepare();
   const m = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });
   const W = m.w, H = m.h, R = m.relief, sum = m.world3.relief;
@@ -84,5 +86,48 @@ test('World v3: the land\'s relief - heights, cliff bands off the roads, the lan
   check(box(1362, 794, 3) <= Math.min(box(1332, 834, 3), box(1392, 754, 3)) - 15, `the gorge: ${box(1362, 794, 3)} m on its floor, ${box(1332, 834, 3)} and ${box(1392, 754, 3)} either side`);
   // the gulf's islands stay flat (today's places)
   check(box(2300, 2500, 4) < 6, `Metro City ${box(2300, 2500, 4)} m`);
+
+  // (H50) the tables' looks: m.tables for the bake, its rim the same as the relief's; red sandstone faces all round each
+  // rim (the south, and the north, east and west too); no small mesa of 8.8's on a table, its talus or by its foot; no
+  // band less than two tiles thick; Red Rock Canyon cut into the plateau
+  check(m.tables && m.tables.length === sum.tables, `m.tables: ${m.tables && m.tables.length} of ${sum.tables}`);
+  for (const t of m.tables || []) for (const [x, y] of [[t.x, t.y], [t.x + t.rx, t.y + 3], [t.x - 7, t.y - t.ry], [t.x + 11, t.y + t.ry + 6]]) check(Math.abs(tableEdge(t, x, y) - bakeEdge(t, x, y)) < 1e-9, `the bake's rim of the table at ${t.x}, ${t.y} is the relief's`);
+  const faces = m.props.filter((p) => p.t === 'cliff' && p.st === 'sandstone');
+  for (const t of m.tables || []) {
+    const own = faces.filter((p) => Math.abs(p.x / TILE - t.x) < t.rx + 8 && Math.abs(p.y / TILE - t.y) < t.ry + 10);
+    const north = own.filter((p) => p.y / TILE < t.y - t.ry * 0.5).length, south = own.filter((p) => p.y / TILE > t.y + t.ry * 0.5).length;
+    const east = own.filter((p) => p.x / TILE > t.x + t.rx * 0.6).length, west = own.filter((p) => p.x / TILE < t.x - t.rx * 0.6).length;
+    check([north, south, east, west].filter((n) => n > 0).length >= 3 && north + south + east + west >= 8, `the table at ${t.x}, ${t.y}: sandstone faces north ${north}, south ${south}, east ${east}, west ${west} (a road's cutting may open one side)`);
+  }
+  const towers = m.props.filter((p) => p.t === 'outcrop' && p.style === 'sandstone' && (m.tables || []).some((t) => tableEdge(t, p.x / TILE, p.y / TILE) < 16));
+  check(towers.length === 0, `small mesas on the tables or their talus: ${towers.length}`);
+  let thin = 0;
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const i = y * W + x;
+    if (!cliffAt[i]) continue;
+    let ok = false;
+    for (const [ox, oy] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) { const j = i + oy * W + ox; if (cliffAt[j] && cliffAt[j + 1] && cliffAt[j + W] && cliffAt[j + W + 1]) { ok = true; break; } }
+    if (!ok) thin++;
+  }
+  check(thin === 0, `cliff tiles not in a band two tiles thick: ${thin}`);
+  const cy = (m.paintings || []).find((p) => p.key === 'canyon');
+  if (cy) {
+    const cx0 = Math.floor(cy.x / TILE), cy0 = Math.floor(cy.y / TILE), cw = Math.round(cy.w / TILE), ch = Math.round(cy.h / TILE);
+    let low = 1e9;
+    for (let y = cy0 + 6; y < cy0 + ch - 6; y += 2) for (let x = cx0 + 6; x < cx0 + cw - 6; x += 2) if (m.tiles[y * W + x] !== T.WALL) low = Math.min(low, box(x, y, 1));
+    const round = ring(Math.round(cx0 + cw / 2), Math.round(cy0 + ch / 2), Math.round(Math.max(cw, ch) / 2 + 12), Math.round(Math.max(cw, ch) / 2 + 30));
+    check(low <= round - 4, `Red Rock Canyon's floor ${low.toFixed(1)} m in ground ${round.toFixed(1)} m`);
+  }
+  // (H50) the hillshade over the canopy: a chunk on Lookout Hill's slope baked with and without the relief - the trees'
+  // crowns (what stands over 8 px) shaded too
+  await loadProviders();
+  const [lx, ly] = HIGH_SPOTS[0][1], ccx = Math.floor((lx + 30) * TILE / 768), ccy = Math.floor((ly + 30) * TILE / 768), opt = { quality: 1, seed: 1337, artPx: 2 };
+  const withR = bakeChunk(m, ccx, ccy, opt, null, providers).g, keep = m.relief;
+  m.relief = null;
+  const without = bakeChunk(m, ccx, ccy, opt, null, providers).g;
+  m.relief = keep;
+  let tall = 0, shaded = 0;
+  for (let i = 0; i < withR.z.length; i++) { if (withR.z[i] < 8) continue; tall++; if (Math.abs(withR.col[i * 4] - without.col[i * 4]) + Math.abs(withR.col[i * 4 + 1] - without.col[i * 4 + 1]) > 2) shaded++; }
+  check(tall > 2000 && shaded > tall * 0.3, `Lookout Hill's canopy shaded: ${shaded} of ${tall} px standing over 8`);
   assert.deepEqual(bad, []);
 });
