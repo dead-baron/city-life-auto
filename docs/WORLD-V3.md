@@ -2442,3 +2442,65 @@ wrong:
    the server.
 4. More trains (two a loop now: the Grand Loop's stations see one about every 6-7 minutes each way), and a timetable that
    spaces the loops' trains through the shared junctions.
+
+#### 8.10.1 The stations as one, the switches, the mountain bores (2026-10-10, H33)
+
+Four of 8.10's wrongs, put right (the junction's place and the Harbor Line through Metro City left as they are: the
+owner is deciding). Nothing live changes: the world hash stays `6b6e16fdef9f` (today's one loop as before).
+- **One station per name** (`shared/map.js` `hubIndex` / `hubPlan`, `buildRailHubs`): every station on the main line is
+  one station, whichever loops call there (both ways of a service, and at Northshore all three services, six loops).
+  Its place is planned once for all the loops calling: each loop's candidates are its points near the skeleton's spot
+  where a whole platform stands on straight track, off the bores and tunnels, its outer side clear of every other
+  loop's track (a street under the platform costs 1000 px); then each loop takes the cheapest, preferring a spot
+  another loop already stops at on the same track (one platform for both) or one facing another's across the double
+  track (side by side). One map point for the station (`poi.services`: the services calling), moved to the station's
+  building: behind the platform nearest the middle of them, on a paved forecourt; a footbridge over the tracks
+  between each pair of platforms that face each other (`m.railHubs`). A subway-style platform below ground (the
+  Harbor Line's Old Town, in the tunnel under the core) shares the station's map point too.
+- **The junctions' corners are tight** (`shared/world3-rail.js` `HUB_R`, 20 tiles): a loop turning at a junction turns
+  on a 640 px curve instead of 200-300 m, so the platforms either side of the junction stand on straight track and the
+  junction is compact. Northshore: the stem from the Bay Bridge comes up into the coast line through its turnouts and
+  two diamonds; the six loops stop at three platforms each side of the coast line's double track, west and east of
+  the junction, the building on the north side.
+- **The switches** (`m.railSwitches`: each turnout - where a track leaves another's, its points and its frog - and each
+  diamond): the chunk bake keeps a second track through a pixel (`groundbake.js`: `lV2`/`lS2`, `railSecond`), so both
+  tracks' rails are drawn where they part and cross - the points closing in, the frog where the rails cross, the
+  diamond; the classic renderer draws every loop's bed and ties before any rails (so both tracks' rails show), and the
+  switches' marks (`drawRailSwitches`: the frog, the point lever, the diamond's check rails).
+- **The mountain bores** (`shared/world3-rail.js` `mountainBores`, `shared/tunnels.js` `addRailBore`, `shared/map.js`
+  `addRailBores`): a skeleton tunnel under dry, roadless ground is a bore through the hill - the track at ground level
+  (`bore`, not `under`) under `shared/tunnels.js`' cover: the hill drawn over it, its portals, sight blocked, the hill
+  fading for whoever is inside, a train in it hidden from outside. Stamped along the track every 8 px (a long bore -
+  277 tiles - would take `addTunnel`'s tile-by-tile search minutes); one bore per track, the double track's two side by
+  side. A tunnel under water (the Long Reach) or a town's streets (Metro City's core) stays below ground.
+- **Every loop's clocks and the phone:** the `tt` broadcast is a list per loop on World v3 (`loopTimetable`), the
+  client draws every loop's platform clocks (a platform two loops share shows the sooner train); the phone's railway
+  list is one row per station (its map point) with the services calling.
+- **The pictures:** `docs/world-v3-hub-northshore.png`, `docs/world-v3-hub-westport-junction.png` and
+  `docs/world-v3-hub-old-town.png` (`tools/world3-hub-map.mjs`: the chunk bake at 1/4 round a station, the building, the
+  platforms and the switches marked). The numbers (seed 1337): every station one, its loops' platforms within about
+  370 px of its building (Northshore's six loops at the two pairs of platforms either side of the junction, 61 tiles
+  apart; Metro Central's 100 tiles apart: the Harbor Line through Metro City is the owner's to decide); 8 turnouts and 4 diamonds listed; two bores (the
+  Grand Loop's 277-tile one through the mountains, a track each way). What looks right: Northshore's junction compact -
+  the stem's double track rising into the coast line through its turnouts (the switch rails and frogs drawn) and two
+  diamonds, the platforms side by side with a footbridge over the tracks; Westport Junction's one station, its two
+  platforms facing, the building on its forecourt. What looks wrong:
+  - **Northshore's junction is still in the town** (its place is the owner's): the Northshore Loop's road runs down the
+    stem over its west track (a long level crossing) and across the coast line at grade at the junction itself;
+  - **the redwoods stand over Westport Junction's platforms** (the forest's trees aren't cleared off a platform's far
+    edge, their crowns hang over the track);
+  - **a junction under a highway** (Westport Junction, in the underpass under the Coast Highway) has its switches below
+    ground: none drawn, none listed;
+  - **Old Town's platforms stand on piers** at the end of the Bay Bridge Line's trestle, and the line crosses the shore
+    road at grade right at the mouth of the tunnel under the core; the picture's building stood in the water beside the
+    east platform (the building is now set back up to 340 px onto land when there is some - not yet seen in a picture);
+  - **Northshore is one station in two halves:** with the junction a T, no stretch carries all three services, so the
+    Grand Loop and the Harbor Line call at the pair of platforms west of the junction, the Bay Loop at the pair east of
+    it (61 tiles apart along the coast line, the building by the western pair) - a station on the stem with the
+    junction moved clear of the town would put them together;
+  - the station building is placeholder art (the subway's entrance kiosk) and the concourse just the forecourt and
+    the footbridges.
+- **The tests:** `test/world3hubs.test.js` (one world build: one station per name, every service calling, its one map
+  point, the platforms on the straight, the two ways' platforms side by side; the switches at every junction and the
+  bake through one; the bores under their cover, a train inside hidden from outside); `test/world3rail.test.js` (the
+  Grand Loop's tunnels count its bores).

@@ -109,6 +109,7 @@ function scratch() {
     mat: new Uint8Array(WA), zb: new Uint8Array(WA), aux: new Uint8Array(WA), sub: new Uint8Array(WA),
     rE: new Int16Array(WA), rD: new Float32Array(WA), rS: new Float32Array(WA), rV: new Float32Array(WA),
     lS: new Float32Array(WA), lV: new Float32Array(WA), dist: new Uint16Array(WA), ex: new Uint8Array(WA),
+    lS2: new Float32Array(WA), lV2: new Float32Array(WA),   // (H33: a second track through a pixel - a switch, a diamond)
     tt: new Uint8Array(TN * TN), td: new Uint8Array(TN * TN), tb: new Uint8Array(TN * TN), tz: new Uint8Array(TN * TN), tm: new Uint8Array(TN * TN),
     tf: new Float32Array(TN * TN), tdp: new Float32Array(TN * TN), tw: new Uint8Array(TN * TN), tsand: new Uint8Array(TN * TN), tdeck: new Uint8Array(TN * TN),
     tres: new Uint8Array(TN * TN), tbld: new Int16Array(TN * TN), tsf: new Float32Array(TN * TN), tso: new Int8Array(TN * TN),
@@ -604,7 +605,7 @@ function inPoly(poly, x, y) {
 const RAIL_HB = 30;                                    // half width of the ballast bed
 function railField(C) {
   const { M, b, WX0, WY0 } = C;
-  b.lS.fill(0); b.lV.fill(1e9);
+  b.lS.fill(0); b.lV.fill(1e9); b.lV2.fill(1e9);
   C.railBridge = [];
   // (World v3's main line is a list of loops, M.rails: two loops on the same track draw it once - a later one takes a
   // pixel only where it is clearly the nearer track - so the sleepers keep one loop's spacing)
@@ -627,7 +628,12 @@ function railLoop(C, R, bias) {
         const X = WX0 + px + 0.5 - a.x, i2 = py * WN + px;
         let t = (X * sx + Y * sy) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
         const dx = X - sx * t, dy = Y - sy * t, d = Math.sqrt(dx * dx + dy * dy);
-        if (d > RAIL_HB || d >= Math.abs(b.lV[i2]) - bias) continue;
+        if (d > RAIL_HB) continue;
+        // (H33) the nearer track takes the pixel; another track through it (not the same one: a turnout's, a diamond's)
+        // is kept as the second, so both tracks' rails are drawn there - the points, the frog, the crossing
+        const cur = Math.abs(b.lV[i2]);
+        if (d >= cur - bias) { if (Math.abs(d - cur) > 3 && d < Math.abs(b.lV2[i2])) { b.lV2[i2] = X * nx + Y * ny; b.lS2[i2] = s0 + t * sl; } continue; }
+        if (cur <= RAIL_HB && cur - d > 3) { b.lV2[i2] = b.lV[i2]; b.lS2[i2] = b.lS[i2]; }
         b.lV[i2] = X * nx + Y * ny; b.lS[i2] = s0 + t * sl;
         b.aux[i2] |= A_RAIL; C.hasRail = 1;
         if (bridge) b.sub[i2] = 1; else b.sub[i2] = 0;
@@ -1224,7 +1230,18 @@ function railTrack(C, G) {
     const ra = Math.abs(av - 12);
     if (ra < 1.6) { setC(G, gi, ra < 0.6 ? MAT.chrome[4] : v > 0 === av > 12 ? MAT.metal[3] : MAT.metalDark[1]); G.z[gi] = (deck ? C.deckZ : 0) + 3; G.flag[gi] = F_GROUND | F_WET; }
     else if (ra < 2.6 && !xing) setC(G, gi, MAT.metalDark[0]);
+    railSecond(C, G, i, gi, X, Y, av, ra, xing, deck);
   }
+}
+// (H33) Where a second track runs through the pixel (World v3's loops at a turnout or a diamond): its sleepers where this
+// track has none, its rails over everything - so a switch shows its points and its frog, and a diamond its crossing.
+function railSecond(C, G, i, gi, X, Y, av, ra, xing, deck) {
+  const b = C.b, v2 = b.lV2[i], av2 = Math.abs(v2);
+  if (av2 > RAIL_HB) return;
+  if (!xing && !deck && av >= 21 && av2 < 21) { const lx = ((b.lS2[i] % 18) + 18) % 18; if (lx < 10) { setC(G, gi, sd(SLEEPER, 0.42 + (lx === 0 ? 0.18 : 0), X, Y, 0.4)); G.z[gi] = 2; } }
+  const rb = Math.abs(av2 - 12);
+  if (rb < 1.6) { setC(G, gi, rb < 0.6 ? MAT.chrome[4] : v2 > 0 === av2 > 12 ? MAT.metal[3] : MAT.metalDark[1]); G.z[gi] = (deck ? C.deckZ : 0) + 3; G.flag[gi] = F_GROUND | F_WET; }
+  else if (rb < 2.6 && ra >= 1.6 && !xing) setC(G, gi, MAT.metalDark[0]);
 }
 const PANEL = MAT.asphaltWorn;
 // station platforms: paving, a pale coping at the track edge, the yellow line, tactile studs; a face down to the track

@@ -28,7 +28,7 @@ import {
 } from './citylayout.js';
 import { metroRoads, HERO, ARTS, MUSEUM_SQUARE } from './metro.js';
 import { buildLevels } from './levels.js';
-import { buildTunnels, spurTunnels, coverAtPx } from './tunnels.js';
+import { buildTunnels, spurTunnels, coverAtPx, TUNNEL_WALL } from './tunnels.js';
 import { islandRoads, ISLAND_SEEDS, LAKES, PARKS, AIRPORTS, FIELDS, ISLAND_ESTATES, FARM_STANDS, RINGS, SCENE_SPOTS, SCENE_ISLANDS } from './islands.js';
 import { SCENE_MASKS } from './interior-art.js';
 import { ROAD_RANK } from './roads.js';
@@ -391,6 +391,8 @@ function buildCity(seed, opts = null, frame = null) {
       if (xi < 0) { xi = m.railXings.length; m.railXings.push({ x: c.x, y: c.y, x0: c.x, y0: c.y, a: c.a, hw: c.hw, s: c.s, uses: [] }); }
       m.railXings[xi].uses.push([ri, c.s]); c.xi = xi;
     }));
+    buildRailHubs(m);   // (H33: one station per name - its building, its one map point, the services calling)
+    railSwitches(m);    // (H33: the turnouts and the diamonds where the loops' tracks part and cross)
   }
   buildOffshore(m, rand);
   buildBoatDocks(m); unpin();
@@ -403,6 +405,7 @@ function buildCity(seed, opts = null, frame = null) {
   pruneRestSpots(m);   // (a rest spot something was built near after all goes: naturesites.js)
   lateTiles(m);
   buildTunnels(m, OPTS ? (OPTS.tunnels ? OPTS.tunnels(m) : []) : spurTunnels(m));   // (the roads under the ground: m.cover, m.tunnels - shared/tunnels.js; World v3 hands in its own: opts.tunnels(m) -> specs)
+  addRailBores(m);   // (H33: World v3's main line through the mountains - its bores under the hill's cover)
 
   const hosp = m.pois.find((p) => p.kind === 'hospital' && m.zoneAt(p.x, p.y) === Z.CITY) || m.pois.find((p) => p.kind === 'hospital');
   const pd = m.pois.find((p) => p.kind === 'police');
@@ -2984,6 +2987,7 @@ function stationIndex(m, pts, line = null) {
   const clash = (c) => used.some((u) => { const d = Math.abs(c - u); return Math.min(d, n - d) < 2 * half + 40; });
   const defs = line ? line.stations.map((st) => [st.name, st.x, st.y]) : RAIL_STATIONS.map(([name, tx, ty]) => [name, QX(tx * TILE), QY(ty * TILE)]);
   const out = defs.map(([name, sx, sy]) => {
+    if (line && line.hub) return { name, i: hubIndex(m, line, name, sx, sy) };   // (World v3: one station, every loop's platform at one spot)
     let i0 = 0, bd = Infinity;
     pts.forEach((p, i) => { const d = Math.hypot(p.x - sx, p.y - sy); if (d < bd) { bd = d; i0 = i; } });
     let best = i0, bc = Infinity;
@@ -3001,6 +3005,204 @@ function stationIndex(m, pts, line = null) {
   if (line) lineStations.set(line, out); else m.railStationIdx = out;
   return out;
 }
+// (H33) A station's place on one of World v3's loops: worked out once per station for every loop calling there
+// (hubPlan), so loops on one track stop at one platform and the two tracks' platforms stand side by side.
+const hubPlans = new WeakMap();   // (the list of loops -> station name -> loop -> its point)
+const underpassed = new WeakSet();   // (the loops whose underpasses are marked)
+function hubIndex(m, line, name, sx, sy) {
+  const all = line.all || [line];
+  let plans = hubPlans.get(all);
+  if (!plans) hubPlans.set(all, (plans = new Map()));
+  if (!plans.has(name)) {
+    for (const l of all) if (!underpassed.has(l)) { markUnderpasses(m, l.pts); underpassed.add(l); }   // (every loop's underpasses known first)
+    plans.set(name, hubPlan(m, all.filter((l) => l.stations.some((st) => st.name === name)), all, sx, sy));
+  }
+  return plans.get(name).get(line);
+}
+// Each calling loop's candidates: its points near the station's spot (the skeleton's) where a whole platform stands on
+// straight track, off the bores and tunnels, its outer side clear of every other loop's track (cost: the distance, and
+// a street under the platform 1000 px). Then each loop takes the cheapest - preferring a spot another loop already stops
+// at on the same track (one platform for both), or facing one across the double track (side by side).
+function hubPlan(m, calling, all, sx, sy) {
+  const R = 4000, CELL = 64, half = Math.ceil((PLATFORM_HALF + 8) / 8);
+  const key = (x, y) => (Math.floor(x / CELL) + 8192) * 16384 + Math.floor(y / CELL) + 8192;
+  const grid = (list) => { const g = new Map(); for (const p of list) if (Math.abs(p.x - sx) < R + 600 && Math.abs(p.y - sy) < R + 600) { const k = key(p.x, p.y); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(p); } return g; };
+  const near = (g, x, y, r) => { for (let cx = -1; cx <= 1; cx++) for (let cy = -1; cy <= 1; cy++) for (const p of g.get(key(x + cx * CELL, y + cy * CELL)) || []) if (Math.abs(p.x - x) < r && Math.abs(p.y - y) < r && Math.hypot(p.x - x, p.y - y) < r) return p; return null; };
+  const turn = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  const info = calling.map((line) => {
+    const pts = line.pts, n = pts.length, mine = grid(pts), others = grid(all.filter((o) => o !== line).flatMap((o) => o.pts));
+    const head = (i) => { const p = pts[(i + n) % n], q = pts[(i + 1 + n) % n]; return Math.atan2(q.y - p.y, q.x - p.x); };
+    const road = (p) => { for (const [dx, dy] of [[0, 0], [-24, 0], [24, 0], [0, -24], [0, 24]]) { const tx = Math.floor((p.x + dx) / TILE), ty = Math.floor((p.y + dy) / TILE), t = m.tileAt(tx, ty); if (t === T.ROAD || (t === T.BRIDGE && m.roadAxis[ty * m.w + tx])) return 1; } return 0; };
+    const cand = [];
+    for (let i = 0; i < n; i++) { const d = Math.hypot(pts[i].x - sx, pts[i].y - sy); if (d < R) cand.push([d, i]); }
+    cand.sort((a, b) => a[0] - b[0]);
+    const ok = [];
+    let nearest = cand.length ? cand[0][1] : 0;
+    for (const [d, c] of cand) {
+      if (ok.length >= 640) break;
+      if (turn(head(c - half), head(c)) > 0.05 || turn(head(c), head(c + half)) > 0.05) continue;
+      let fine = true, roads = 0;
+      for (let k = -half; k <= half && fine; k++) { const p = pts[(c + k + n) % n]; if (p.under || p.bore) fine = false; else if (!(k & 3)) roads += road(p); }
+      // the platform's strip (and a little beyond): no other loop's track over it, unless it is this loop's own track
+      for (let k = -half; k <= half && fine; k += 2) {
+        const p = pts[(c + k + n) % n], a = head(c + k), nx = -Math.sin(a) * line.side, ny = Math.cos(a) * line.side;
+        for (let off = PLATFORM_IN - 8; off <= PLATFORM_OUT + 24 && fine; off += 16) {
+          const q = near(others, p.x + nx * off, p.y + ny * off, 36);
+          if (q && !near(mine, q.x, q.y, 6)) fine = false;
+        }
+      }
+      if (fine) ok.push({ i: c, x: pts[c].x, y: pts[c].y, a: head(c), cost: d + roads * 1000 });
+    }
+    return { line, ok, nearest };
+  });
+  const pick = new Map();
+  for (const q of info) pick.set(q.line, q.ok.length ? q.ok.reduce((a, b) => (b.cost < a.cost ? b : a)) : null);
+  for (let round = 0; round < 3; round++) for (const q of info) {
+    let best = pick.get(q.line), bc = Infinity;
+    for (const c of q.ok) {
+      let bonus = 0;
+      for (const [o, p] of pick) {
+        if (o === q.line || !p) continue;
+        const d = Math.hypot(p.x - c.x, p.y - c.y);
+        if (d < 10) bonus = Math.max(bonus, 2500);   // the same platform
+        else if (Math.abs(d - 2 * 48) < 10 && turn(p.a, c.a + Math.PI) < 0.1) bonus = Math.max(bonus, 1500);   // facing it
+      }
+      if (c.cost - bonus < bc) { bc = c.cost - bonus; best = c; }
+    }
+    pick.set(q.line, best);
+  }
+  const out = new Map();
+  for (const q of info) out.set(q.line, pick.get(q.line) ? pick.get(q.line).i : q.nearest);
+  return out;
+}
+// (H33) World v3's stations, one per name: every loop's platform there (side by side on the straight), its one map point
+// moved to the station's building - behind the platform nearest the middle of them all, on the outer side - and the
+// services calling there: m.railHubs [{ name, poi, x, y, a (the building's facing), services, calls [[loop, station]],
+// bridges [{ x, y, a, len }] (the footbridges across the tracks between platforms that face each other) }].
+function buildRailHubs(m) {
+  const by = new Map();
+  m.rails.forEach((r, ri) => r.stations.forEach((st, si) => {
+    let h = by.get(st.name);
+    if (!h) by.set(st.name, (h = { name: st.name, poi: st.poi, calls: [], services: [], bridges: [] }));
+    h.calls.push([ri, si]); st.poi = h.poi;
+    if (!h.services.includes(m.rails[ri].service)) h.services.push(m.rails[ri].service);
+  }));
+  m.railHubs = [];
+  for (const h of by.values()) {
+    const all = h.calls.map(([ri, si]) => m.rails[ri].stations[si]), sts = all.some((st) => !st.under) ? all.filter((st) => !st.under) : all;
+    const mx = sts.reduce((a, st) => a + st.platform.x, 0) / sts.length, my = sts.reduce((a, st) => a + st.platform.y, 0) / sts.length;
+    let pick = null, pd = Infinity;
+    for (const st of sts) for (const off of [56, 116, 176, 236]) {   // (behind the platform; further back off a pier, a quay)
+      const nx = -Math.sin(st.a) * st.side, ny = Math.cos(st.a) * st.side, x = st.x + nx * (PLATFORM_OUT + off), y = st.y + ny * (PLATFORM_OUT + off), t = m.tileAtPx(x, y);
+      const d = Math.hypot(x - mx, y - my) + off + (t === T.ROAD || t === T.BUILDING || t === T.WALL || t === T.WATER || t === T.DEEP || t === T.BRIDGE || t === T.DOCK ? 5000 : 0);
+      if (d < pd) { pd = d; pick = { x, y, a: Math.atan2(ny, nx) }; }
+    }
+    h.x = Math.round(pick.x); h.y = Math.round(pick.y); h.a = pick.a;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -3; dx <= 3; dx++) {   // its forecourt
+      const tx = Math.floor(h.x / TILE) + dx, ty = Math.floor(h.y / TILE) + dy, t = m.tileAt(tx, ty);
+      if (!m.inside(tx, ty) || (m.reserve[m.idx(tx, ty)] & 2 && Math.hypot((tx + 0.5) * TILE - h.x, (ty + 0.5) * TILE - h.y) > 70)) continue;
+      if (t === T.GRASS || t === T.SAND || t === T.LOT || t === T.SIDEWALK) m.set(tx, ty, T.PLAZA);   // (not the ballast: DIRT)
+    }
+    const poi = m.pois[h.poi];
+    poi.x = h.x; poi.y = h.y; poi.services = h.services.slice();
+    // the footbridges: between two platforms facing each other across the double track (one per pair)
+    for (let i = 0; i < sts.length; i++) for (let j = i + 1; j < sts.length; j++) {
+      const a = sts[i].platform, b = sts[j].platform, d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < 60 || d > 360) continue;
+      const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
+      if (h.bridges.some((f) => Math.hypot(f.x - x, f.y - y) < 120)) continue;
+      h.bridges.push({ x: Math.round(x), y: Math.round(y), a: Math.atan2(b.y - a.y, b.x - a.x), len: Math.round(d + 40) });
+    }
+    m.railHubs.push(h);
+  }
+}
+// (H33) Where World v3's loops' tracks part (a turnout: the points where one leaves another, the frog where its rail
+// crosses the other's) and cross (a diamond): m.railSwitches [{ kind: 'turnout' | 'diamond', x, y, a (the through
+// track's heading), b (the other's), fx, fy (a turnout's frog) }], once each.
+function railSwitches(m) {
+  const CELL = 64, key = (x, y) => (Math.floor(x / CELL) + 8192) * 16384 + Math.floor(y / CELL) + 8192;
+  const grids = m.rails.map((r) => { const g = new Map(); r.pts.forEach((p, i) => { const k = key(p.x, p.y); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(i); }); return g; });
+  // (the distance to another loop's track itself - its segments either side of its nearest point - and that point)
+  const seg = (P, i, x, y) => { const n = P.length, a = P[i], b = P[(i + 1) % n], dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy || 1; let t = ((x - a.x) * dx + (y - a.y) * dy) / l2; t = t < 0 ? 0 : t > 1 ? 1 : t; return Math.hypot(a.x + dx * t - x, a.y + dy * t - y); };
+  const nearest = (ri, x, y) => { let bd = Infinity, bi = -1; const P = m.rails[ri].pts; for (let cx = -1; cx <= 1; cx++) for (let cy = -1; cy <= 1; cy++) for (const i of grids[ri].get(key(x + cx * CELL, y + cy * CELL)) || []) { const d = Math.hypot(P[i].x - x, P[i].y - y); if (d < bd) { bd = d; bi = i; } } return bi < 0 ? [bd, bi] : [Math.min(seg(P, bi, x, y), seg(P, (bi - 1 + P.length) % P.length, x, y)), bi]; };
+  const out = [], seen = (x, y) => out.some((o) => Math.hypot(o.x - x, o.y - y) < 48);
+  const hd = (P, i) => { const n = P.length, p = P[(i - 1 + n) % n], q = P[(i + 1) % n]; return Math.atan2(q.y - p.y, q.x - p.x); };
+  m.rails.forEach((r, ri) => {
+    const P = r.pts, n = P.length;
+    m.rails.forEach((o, oi) => {
+      if (oi === ri) return;
+      let prev = Infinity;
+      for (let i = 0; i < n; i++) {
+        if (P[i].under) { prev = Infinity; continue; }
+        const [d, j] = nearest(oi, P[i].x, P[i].y);
+        if (j >= 0 && d < 1.5 && prev >= 1.5 && prev < 40) {   // a track coming in to run on another's: the points; the frog back where they were a gauge apart
+          let fx = P[i].x, fy = P[i].y;
+          for (let k = 1; k < 80; k++) { const q = P[(i - k + n) % n], [dq] = nearest(oi, q.x, q.y); if (dq >= 24) { fx = q.x; fy = q.y; break; } }
+          if (!seen(P[i].x, P[i].y)) out.push({ kind: 'turnout', x: Math.round(P[i].x), y: Math.round(P[i].y), a: hd(o.pts, j), b: hd(P, i), fx: Math.round(fx), fy: Math.round(fy) });
+        }
+        if (j >= 0 && d < 6) {
+          const ta = hd(P, i), tb = hd(o.pts, j), dif = Math.abs(Math.atan2(Math.sin(ta - tb), Math.cos(ta - tb)));
+          if (dif > 0.2 && dif < Math.PI - 0.2 && !seen(P[i].x, P[i].y)) out.push({ kind: 'diamond', x: Math.round(P[i].x), y: Math.round(P[i].y), a: tb, b: ta });
+        }
+        if (j >= 0 && d >= 1.5 && d < 40 && prev < 1.5 && i > 0) {   // a track leaving another's: the points behind, the frog ahead
+          const pp = P[i - 1];
+          let fx = P[i].x, fy = P[i].y;
+          for (let k = 1; k < 80; k++) { const q = P[(i + k) % n], [dq] = nearest(oi, q.x, q.y); if (dq >= 24) { fx = q.x; fy = q.y; break; } }
+          if (!seen(pp.x, pp.y)) out.push({ kind: 'turnout', x: Math.round(pp.x), y: Math.round(pp.y), a: hd(o.pts, j), b: hd(P, i), fx: Math.round(fx), fy: Math.round(fy) });
+        }
+        prev = d;
+      }
+    });
+  });
+  m.railSwitches = out;
+}
+// (H33) A bore of one of World v3's main line loops (m.rails[ri]) from s0 to s1 px along its track (shared/tunnels.js'
+// kind of tunnel: m.cover, m.tunnels; made here, in the generator, so the page doesn't load it): a long tunnel through
+// the mountains, so the cover is stamped along the track every 8 px (a slab of the bore at each point - nothing past the
+// mouths; addTunnel's tile-by-tile search is for short ones), the rock either side, its two mouths. Two loops on one
+// track share it (nothing is added where the stretch is already covered); the double track's two bores lie side by side.
+function addRailBore(m, ri, s0, s1) {
+  const R = m.rails && m.rails[ri];
+  if (!R || s1 - s0 < 64 || !m.tunnels || m.tunnels.length >= 255) return null;
+  const P = R.pts.filter((p) => p.s >= s0 && p.s <= s1);
+  if (P.length < 4) return null;
+  const mid = P[P.length >> 1];
+  if (coverAtPx(m, mid.x, mid.y)) return null;
+  const hw = 40, id = m.tunnels.length, mark = id + 1, walls = [], reach = hw + TUNNEL_WALL;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let k = 0; k < P.length; k++) {
+    const p = P[k], q = P[Math.min(P.length - 1, k + 1)], o = P[Math.max(0, k - 1)], l = Math.hypot(q.x - o.x, q.y - o.y) || 1, tx = (q.x - o.x) / l, ty = (q.y - o.y) / l;
+    x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y);
+    for (let ty0 = Math.floor((p.y - reach) / TILE); ty0 <= Math.floor((p.y + reach) / TILE); ty0++) for (let tx0 = Math.floor((p.x - reach) / TILE); tx0 <= Math.floor((p.x + reach) / TILE); tx0++) {
+      if (!m.inside(tx0, ty0)) continue;
+      const dx = (tx0 + 0.5) * TILE - p.x, dy = (ty0 + 0.5) * TILE - p.y, along = dx * tx + dy * ty, across = Math.abs(-dx * ty + dy * tx);
+      if (Math.abs(along) > 6 || across > reach) continue;
+      const i = m.idx(tx0, ty0);
+      if (across <= hw) { if (!m.cover[i]) { m.cover[i] = mark; if (m.tiles[i] === T.WALL) m.tiles[i] = T.DIRT; } }
+      else walls.push(i);
+    }
+  }
+  for (const i of walls) if (!m.cover[i]) m.tiles[i] = T.WALL;
+  const line = [];
+  for (let k = 0; k < P.length; k += 4) line.push(Math.round(P[k].x), Math.round(P[k].y));
+  const a = P[0], a1 = P[1], b = P[P.length - 1], b1 = P[P.length - 2], la = Math.hypot(a1.x - a.x, a1.y - a.y) || 1, lb = Math.hypot(b.x - b1.x, b.y - b1.y) || 1;
+  const pad = reach + TILE;
+  const t = {
+    id, kind: 'rail', edge: 'rail', rail: ri, s0: a.s, s1: b.s, len: b.s - a.s, hw, line,
+    mouths: [{ x: a.x, y: a.y, ox: -(a1.x - a.x) / la, oy: -(a1.y - a.y) / la, closed: false }, { x: b.x, y: b.y, ox: (b.x - b1.x) / lb, oy: (b.y - b1.y) / lb, closed: false }],
+    box: [Math.floor(x0 - pad), Math.floor(y0 - pad), Math.ceil(x1 + pad), Math.ceil(y1 + pad)],
+  };
+  m.tunnels.push(t);
+  return t;
+}
+
+// (H33) World v3's main line through the mountains: each loop's bores (shared/world3-rail.js mountainBores) under the
+// hill's cover - one bore per track (two loops on one track share it).
+function addRailBores(m) {
+  if (!m.rails) return;
+  m.rails.forEach((r, ri) => { for (const b of r.bores || []) addRailBore(m, ri, b.s0, b.s1); });
+}
+
 // Where the line meets a highway at ground level it dips under it in a short tunnel (no level
 // crossing on a highway) - unless that would put the tunnel under water or a station.
 function markUnderpasses(m, pts) {
@@ -3031,7 +3233,7 @@ function markUnderpasses(m, pts) {
 }
 function reserveRail(m, pts, line = null) {
   if (!pts.length) return;   // (no railway: OPTS.noRail)
-  markUnderpasses(m, pts);
+  if (!line || !underpassed.has(line)) { markUnderpasses(m, pts); if (line) underpassed.add(line); }
   for (const p of pts) {
     if (p.under) continue;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
@@ -3120,8 +3322,11 @@ function buildRailway(m, pts, line = null) {
       st.platform = ent || { x: q.x, y: q.y };
       const plaza = (m.subwayPlazas || []).find((pl) => pl.name === name);
       if (plaza) { st.kiosk = subwayKiosk(m, plaza, stations.length); st.platform = st.kiosk.out; }
+      const hubPoi = line && line.hub && m.pois.find((o) => o.kind === 'station' && o.label === st.name && o.hub);
+      if (hubPoi) { st.poi = hubPoi.id; st.shared = true; stations.push(st); continue; }   // (World v3: the station's one map point)
       st.poi = m.pois.length;
       m.pois.push({ id: m.pois.length, kind: 'station', label: st.name, x: st.platform.x, y: st.platform.y, r: 70, station: stations.length });
+      if (line && line.hub) m.pois[st.poi].hub = 1;
       stations.push(st);
       continue;
     }
@@ -3146,10 +3351,11 @@ function buildRailway(m, pts, line = null) {
     }
     const qc = railAt(rail0, best.s + st.clockD);
     st.platform = { x: qc.x - Math.sin(qc.a) * side * 72, y: qc.y + Math.cos(qc.a) * side * 72 };
-    const same = line && m.pois.find((o) => o.kind === 'station' && o.label === st.name && Math.hypot(o.x - st.platform.x, o.y - st.platform.y) < 400);
+    const same = line && m.pois.find((o) => o.kind === 'station' && o.label === st.name && (line.hub ? o.hub : Math.hypot(o.x - st.platform.x, o.y - st.platform.y) < 400));
     if (same) { st.poi = same.id; st.shared = true; stations.push(st); continue; }   // (another loop's platform here: its map point)
     st.poi = m.pois.length;
     m.pois.push({ id: m.pois.length, kind: 'station', label: st.name, x: st.platform.x, y: st.platform.y, r: 150, station: stations.length });
+    if (line && line.hub) m.pois[st.poi].hub = 1;
     stations.push(st);
   }
   stations.sort((a, b) => a.s - b.s);
@@ -3165,7 +3371,7 @@ function buildRailway(m, pts, line = null) {
     if (!bestRun || cur.length > bestRun.length) bestRun = cur;
     rural = { s0: pts[bestRun[0]].s + 200, s1: pts[bestRun[bestRun.length - 1]].s - 100 };
   }
-  if (line) return { name: line.name, service: line.service, way: line.way, pts, len: total, stations, crossings, rural };
+  if (line) return { name: line.name, service: line.service, way: line.way, pts, len: total, stations, crossings, rural, ...(line.bores && line.bores.length ? { bores: line.bores } : {}) };
   m.rail = { pts, len: total, stations, crossings, rural };
 }
 

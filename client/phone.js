@@ -118,7 +118,7 @@ export function createPhone(ctx) {
     for (const b of el.querySelectorAll('[data-act="taxicall"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'call' }); };
     for (const b of el.querySelectorAll('[data-act="taxicancel"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'cancel' }); };
     for (const b of el.querySelectorAll('[data-rail]')) b.onclick = () => {
-      const st = ctx.map().rail && ctx.map().rail.stations[Number(b.dataset.rail)];
+      const st = railStations(ctx.map())[Number(b.dataset.rail)];
       if (!st) return;
       ctx.setWaypoint({ x: st.x, y: st.y, label: st.name });
       ctx.toast(`Waypoint: ${st.name}`, 'info');
@@ -204,9 +204,9 @@ export function createPhone(ctx) {
     }
     const rail = ctx.map().rail;
     if (rail) {
-      const sts = rail.stations.map((st, i) => ({ st, i, d: dist(st) })).sort((a, b) => a.d - b.d).slice(0, 3);
-      h += '<h3>🚆 Railway</h3><p class="ph-hint">Trains run the whole loop round the city; walk onto a stopped train at any station. Free.</p>'
-        + sts.map(({ st, i, d }) => `<button class="ph-row" data-rail="${i}"><span class="ic">≡</span><span class="nm">${esc(st.name)}<small>${st.under ? 'underground' : 'platform'}</small></span><span class="d">${m(d)}</span></button>`).join('');
+      const sts = railStations(ctx.map()).map((st, i) => ({ st, i, d: dist(st) })).sort((a, b) => a.d - b.d).slice(0, 3);
+      h += `<h3>🚆 Railway</h3><p class="ph-hint">${ctx.map().rails ? 'The main line\'s services run both ways round their loops; walk onto a stopped train at its platform.' : 'Trains run the whole loop round the city; walk onto a stopped train at any station.'} Free.</p>`
+        + sts.map(({ st, i, d }) => `<button class="ph-row" data-rail="${i}"><span class="ic">≡</span><span class="nm">${esc(st.name)}<small>${st.services ? esc(st.services.join(' · ')) : st.under ? 'underground' : 'platform'}</small></span><span class="d">${m(d)}</span></button>`).join('');
     }
     return h;
   }
@@ -262,4 +262,18 @@ export function createPhone(ctx) {
     },
     get screen() { return screen; },
   };
+}
+
+// (H33) The railway's stations for the phone: today's loop's, or on World v3's main line one per station (its map point,
+// every loop's platforms there) with the services calling - not just the first loop's.
+function railStations(map) {
+  if (!map.rails) return (map.rail && map.rail.stations) || [];
+  const out = new Map();
+  map.rails.forEach((r) => r.stations.forEach((st) => {
+    const poi = map.pois && map.pois[st.poi], k = st.poi ?? st.name;
+    let o = out.get(k);
+    if (!o) out.set(k, (o = { name: st.name, x: poi ? poi.x : st.x, y: poi ? poi.y : st.y, under: st.under, services: [] }));
+    if (r.service && !o.services.includes(r.service)) o.services.push(r.service);
+  }));
+  return [...out.values()];
 }

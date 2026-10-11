@@ -171,7 +171,7 @@ export function worldOpts(asked) {
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground)
     special: (sp) => built.has(sp.d),
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)
-    rails: () => mainLineLoops(),     // (the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
+    rails: (m) => mainLineLoops(m),     // (the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
     lines(lines, m) {
       const out = { split: 0, offFrame: 0 };
       const inF = (p) => p.x >= 0 && p.y >= 0 && p.x < W * TILE && p.y < H * TILE;
