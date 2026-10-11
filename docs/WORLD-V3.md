@@ -2529,3 +2529,24 @@ down to the road below beside it, the stubs running under the deck to the far si
 - **Four of the eight are still crossroads** (above), the busiest two among them (Westport's and Sandpiper's).
 - Not looked at in the game yet: driving the ramps (the deck's corridors and barriers come from `shared/levels.js` as
   the Metro Ring's do; a playtest on the v3 world is the next check).
+
+**What's left** (in order):
+1. **The mainland's first towns** (this step's second half, not started): Timber Bend, Willow Crossing and Sandpiper
+   Bay as districts of their own (appended after 56 in `shared/mapcore.js` `DISTRICTS`), painted with a built zone on
+   the land layer round the skeleton's town point (the world build's `zones` and `dists` hooks), a street grid joined
+   to the arterials (the `lines` hook), so that today's generator builds their blocks and buildings by style
+   (`STYLE`: commercial along the main street, houses round it, beach at Sandpiper Bay) and their businesses from the
+   storefronts; the clinic and the sheriff as planned businesses with the town's district (gated to the v3 build, so
+   today's world doesn't move); bus stops come with an east-west arterial in a built zone (`buildBusStops`); the gas
+   stations want room in `buildCornerStores` (five at most, 3,500 px apart, all in the city now). What the skeleton
+   says about each: **Timber Bend** (1170, 1060) is the hub of four arterials, 19 tiles from the Highland Highway
+   (inside the highway's 22-tile room) and 105 tiles north of the main line (its station 125 tiles south at 1177,
+   1185): the town west of the highway, the hub its main crossroads, and its crossing of the highway (the Gorge and
+   Woods Roads, 17 tiles from the hub) a diamond once the hub has room; **Willow Crossing** (3360, 1290) is 21-36
+   tiles from Valley Road, Willow Road and the Mine Road's hub on the Long Reach's east bank, beside the River Water
+   Bus - the main line doesn't pass it (part 1.5's `station` for it: the nearest is Dry Creek's, 477 tiles off);
+   **Sandpiper Bay** (4480, 2540) is 37 tiles from Sandpiper Drive, and the main line's "Sandpiper Bay" station is at
+   the Sandpiper Interchange, 488 tiles away (for the owner: a station in the town, or the town by the station).
+2. The interchanges left at grade (above): Westport's and Sandpiper's against the main line, North Mesa's tunnel, the
+   Summit Road through the Gorge Junction.
+3. Wider diamonds in the country (the ramps 20-30 tiles out), and the towns' crossings as diamonds.
