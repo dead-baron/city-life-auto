@@ -381,8 +381,9 @@ export function buildDesert(m, addProp) {
     const [cx, cy] = DESERT.camp;
     track('camp', [[cx, 1646], [cx, cy - 6]], 1.6);
     keep(cx - 14, cy - 10, cx + 14, cy + 12);
-    const items = [['campfire', 0, 0, 10], ['domeTent', -6, -3, 12], ['domeTent', 6, -3, 12], ['tent', -7, 4, 12], ['picnic', 5, 4, 8], ['cooler', 2.5, 3, 4], ['burnbarrel', -3, 6, 6]];
-    for (const [t, dx, dy, r] of items) if (prop(t, cx + dx, cy + dy, r, t === 'tent' ? { v: 3 } : undefined)) out.camp++;
+    // (tents by colour - v 0 orange, 1 green, 2 blue, 3 canvas; the fire lit)
+    const items = [['campfire', 0, 0, 10, { lit: 1 }], ['tent', -6, -3, 12, { v: 0 }], ['tent', 6, -3, 12, { v: 2 }], ['tent', -7, 4, 12, { v: 3 }], ['picnic', 5, 4, 8], ['cooler', 2.5, 3, 4, { v: 1 }], ['burnbarrel', -3, 6, 6]];
+    for (const [t, dx, dy, r, ex] of items) if (prop(t, cx + dx, cy + dy, r, ex)) out.camp++;
     if (open(cx - 8, cy - 7)) { addProp(m, 'festoon', (cx - 8) * TILE, (cy - 7) * TILE, 0, { tx: 16 * TILE, ty: 0, h: 90 }); out.camp++; }
     for (let k = 0; k < 2; k++) m.parking.push({ x: (cx - 10 + k * 20) * TILE, y: (cy + 9) * TILE, a: -Math.PI / 2 });
     landmark('Mesa Camp', 'camp', cx - 14, cy - 10, cx + 14, cy + 12);

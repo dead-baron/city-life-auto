@@ -3390,13 +3390,13 @@ generator builds nothing there, its ruins are built whole). The live world doesn
   porches fallen in front of them (planks, debris, rubble), crates and barrels; nothing open but the **hideout** (`gang`,
   the boarding house) and the **smuggler's drop** (`smuggler`, the livery); loot chests in the ruins.
 - **Red Rock Dam** (4130, 610): a concrete wall along the Red Rock Reservoir's south shore (the skeleton's lake), 129
-  tiles of it in 24-tile blocks (art v2 draws a building whole), lamps on its crest; Canyon Road comes up to its foot;
+  tiles of it in 24-tile blocks (art v2 draws a building whole), lights along its crest; Canyon Road comes up to its foot;
   **the dry wash** below it - gravel bars and dirt - winding south toward the Desert Highway's room.
 - **The lookout on its mesa** (4330, 880): a sandstone mesa with the fire lookout on its shoulder, a jeep track up to it
   from Dusty Hollow; **the natural arch** (art v2's sea arch, on land) and five **hoodoos** by it (4372, 846).
 - **The Sundowner Motel** on Mine Road by the Desert Highway (3846-3880, 1160-1188): the rooms, a wing and the office
   round its car park, the pool with loungers and an umbrella, neon on the eaves; **four billboards** 16 tiles off the
-  Desert Highway either side of the exit.
+  Desert Highway, 30 tiles or more apart, along its run past Mine Road's crossing.
 - **Mesa Camp** (the skeleton's point 4800, 1700) off Route 9: tents round a campfire, string lights, a picnic table, a
   cooler, a burn barrel, two pickups' spaces; a jeep track down from the road.
 - The **jeep tracks** (haul road, adit, Dusty Hollow's street and the track on to the lookout, the camp's) are gravel:
@@ -3427,7 +3427,9 @@ by the crossing. What looks wrong:
   with holes, gaps between the buildings, tumbleweeds; the fallen porches are too small to read at this scale.
 - **The lookout isn't on the mesa:** it stands beside the outcrop (the player can't climb a prop); a mesa with a ramp or
   stairs up to its top is a model of its own. The arch is the sea arch's model on dry ground.
-- The ore cars, the camp's tents and string lights are too small to read at 1/8.
+- The ore cars and the camp are too small to read at 1/8; the camp's picture shows only its track and the bare ground
+  it keeps (it was baked when two of its tents were asked for by a model's name, `domeTent`, which the map doesn't
+  draw - now `tent`s by colour and a lit fire; not baked again).
 
 **What's left:** loot to search in Dusty Hollow's ruins (a `search` site as the wreck's - `server/systems/places.js`
 takes the first one); the sheriff's post and a gas station out on the highway (the town has its sheriff; no roadside gas
