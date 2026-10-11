@@ -8069,7 +8069,7 @@ and the Ridge Trail and its fire lookout stand on the snowfield".
 
 Files: shared/world3-relief.js (tableSpots3, tableEdge, landHeight3, canyonCut, the sandstone rims, the bands' thickness,
 m.tables, a dirt track's line kept clear), shared/world3-biomes.js (dress3: the small mesas off the tables), shared/world3-wild.js
-(trackPath, the washes' ends, the Lookout Hill view), shared/world3-world.js (wildSites3 gets the land: one line),
+(trackPath, the washes' ends, the Lookout Hill view), shared/world3-world.js (wildSites3 gets the land and the build's own snow: one line),
 client/art2/game/groundbake.js (the cap rock and the talus, the canyon's floor and rock, shadeRelief),
 client/art2/game/chunkbake.js (the hillshade after the statics), client/art2/game/statics.js (the cliff's sandstone),
 test/world3relief.test.js, test/world3wild.test.js, docs/WORLD-V3.md 8.22 (and 8.19's notes), docs/world-v3-world-r8-1.png,

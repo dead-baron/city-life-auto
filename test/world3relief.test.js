@@ -99,7 +99,7 @@ test('World v3: the land\'s relief - heights, cliff bands off the roads, the lan
     const east = own.filter((p) => p.x / TILE > t.x + t.rx * 0.6).length, west = own.filter((p) => p.x / TILE < t.x - t.rx * 0.6).length;
     check([north, south, east, west].filter((n) => n > 0).length >= 3 && north + south + east + west >= 8, `the table at ${t.x}, ${t.y}: sandstone faces north ${north}, south ${south}, east ${east}, west ${west} (a road's cutting may open one side)`);
   }
-  const towers = m.props.filter((p) => p.t === 'outcrop' && p.style === 'sandstone' && (m.tables || []).some((t) => tableEdge(t, p.x / TILE, p.y / TILE) < 16));
+  const towers = m.props.filter((p) => p.t === 'outcrop' && p.style === 'sandstone' && p.s < 4 && (m.tables || []).some((t) => tableEdge(t, p.x / TILE, p.y / TILE) < 16));   // (dress3's: s 0-3 - 8.18's lookout rock and hoodoos stand on its mesa by design)
   check(towers.length === 0, `small mesas on the tables or their talus: ${towers.length}`);
   let thin = 0;
   for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
@@ -121,7 +121,7 @@ test('World v3: the land\'s relief - heights, cliff bands off the roads, the lan
   // (H50) the hillshade over the canopy: a chunk on Lookout Hill's slope baked with and without the relief - the trees'
   // crowns (what stands over 8 px) shaded too
   await loadProviders();
-  const [lx, ly] = HIGH_SPOTS[0][1], ccx = Math.floor((lx + 30) * TILE / 768), ccy = Math.floor((ly + 30) * TILE / 768), opt = { quality: 1, seed: 1337, artPx: 2 };
+  const [lx, ly] = HIGH_SPOTS[0][1], ccx = Math.floor((lx + 20) * TILE / 768), ccy = Math.floor(ly * TILE / 768), opt = { quality: 1, seed: 1337, artPx: 2 };   // (the orchard on its south-east slope)
   const withR = bakeChunk(m, ccx, ccy, opt, null, providers).g, keep = m.relief;
   m.relief = null;
   const without = bakeChunk(m, ccx, ccy, opt, null, providers).g;

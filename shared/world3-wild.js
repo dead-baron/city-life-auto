@@ -111,7 +111,7 @@ export const WILD_VIEWS = [
   { key: 'route9', name: 'The Route 9 stop, the solar farm and the drive-in on Route 9', box: [3760, 1420, 4230, 1590] },
   // (H47)
   { key: 'redwoods', name: 'Redwood Creek, its falls and the beaver pond; Giants Loop, the hunting lodge and Fern Gorge on Timber Road', box: [500, 1080, 720, 1180] },
-  { key: 'ridge', name: 'The Ridge Trail up to Summit Tarn: the fire lookout, the hunting camp', box: [860, 60, 1010, 225] },
+  { key: 'ridge', name: 'The Ridge Trail up to Summit Tarn: the fire lookout, the hunting camp', box: [860, 60, 1110, 225] },   // (H50: east to its start on Summit Road)
   { key: 'oldmine', name: 'The Old Granite Mine above Lookout Road', box: [680, 400, 820, 500] },
   { key: 'canyon', name: 'Red Rock Canyon and its oasis off Mesa Road; Mirage Lake and its camp', box: [3760, 430, 4010, 800] },
   { key: 'splash', name: 'Splash Canyon Water Park on Mine Road', box: [3990, 1180, 4110, 1260] },
@@ -144,7 +144,7 @@ function placeBoxes() {
   return out;
 }
 
-export function wildSites3(lines, m, L) {
+export function wildSites3(lines, m, L, snowAt) {
   const W = m.w, H = m.h, out = { placed: [], missed: [] };
   const SK = skeletonLines(), hwys = SK.filter((l) => l.kind === 'hwy'), mains = SK.filter((l) => l.kind === 'main');
   const tunnels = (m.world3?.roads?.tunnels || []).map((t) => ({ pts: t.pts.map((p) => (Array.isArray(p) ? p : [p.x / TILE, p.y / TILE])) }));
@@ -247,7 +247,7 @@ export function wildSites3(lines, m, L) {
     for (const p of pts) claimed.push([Math.floor(p.x / TILE) - 3, Math.floor(p.y / TILE) - 3, Math.floor(p.x / TILE) + 4, Math.floor(p.y / TILE) + 4]);
     out.placed.push({ name: S.name, type: S.type, x, y, w: S.w, h: S.h, d: site.d, road: name, joins: [Math.round(best.q.x), Math.round(best.q.y)] });
   }
-  out.tracks = wildTracks3(lines, m, hwys, mains, hwyLines, tunnels, L);
+  out.tracks = wildTracks3(lines, m, hwys, mains, hwyLines, tunnels, L, snowAt);
   // the desert's dry washes (the biomes' gravel bars, reserve 128) kept off the moved desert sites: their ground plain,
   // and each wash ending 6-14 tiles short of the box (H50: they read as running under the sites)
   for (const q of MOVED) if (q.keep) {
@@ -268,7 +268,7 @@ export function wildSites3(lines, m, L) {
 // built: world3-relief.js landHeight3 - a mountain trail zigzags), several times over snow, round the desert's tables
 // (their spots, world3-relief.js tableSpots3: the tables are laid after the roads) and with a little wander; the
 // straight way as before when no such way is found (or no land is given).
-function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels, L) {
+function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels, L, snowAt) {
   const W = m.w, H = m.h, out = [], ok = ACCESS.dirt, TR = 160;
   const fine = (a, b, avoid) => {
     const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])));
@@ -300,14 +300,15 @@ function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels, L) {
       }
     }
     starts.sort((a, b) => a.d - b.d || a.x - b.x || a.y - b.y);
-    let way = zAt && starts.length ? trackPath(m, K, starts, zAt, spots, mains, hwyLines, lines, L) : null;
+    let way = zAt && starts.length ? trackPath(m, K, starts, zAt, spots, mains, hwyLines, lines, L, snowAt) : null;
     if (!way) {
       const s = starts.slice(0, 120).find((q) => fine([q.x, q.y], K.end, K.avoid));
       if (s) way = { from: s, pts: [[s.x, s.y], [(s.x + ex) / 2, (s.y + ey) / 2], [ex, ey]], straight: true };
     }
     if (!way) { out.push({ name: K.name, missed: true }); continue; }
-    const pts = rounded(way.pts.map(([x, y]) => ({ x: x * TILE, y: y * TILE })), (way.straight ? 4 : 3) * TILE, false, 8);
+    let pts = rounded(way.pts.map(([x, y]) => ({ x: x * TILE, y: y * TILE })), (way.straight ? 4 : 3) * TILE, false, 8);
     measure(pts);
+    if (!way.straight) pts = evenly(pts, 2 * TILE);   // (a point every 2 tiles: what stands 'part way along' it - the fire lookout, a camp - goes by its length)
     lines.push({ pts, kind: 'dirt', lvl: 0, name: K.name, culdesac: true });
     for (let j = 0; j < pts.length; j++) { const i = Math.floor(pts[j].y / TILE) * W + Math.floor(pts[j].x / TILE); if (i >= 0 && i < W * H) m.reserve[i] |= 32; }
     out.push({ name: K.name, from: [Math.round(way.from.x), Math.round(way.from.y)], to: K.end, len: Math.round(pts[pts.length - 1].s / TILE), straight: Math.round(way.from.d), ...(way.straight && { fallback: true }) });
@@ -321,7 +322,7 @@ function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels, L) {
 // ramp, 10 of the main line, in K.avoid. Its corners simplified (1.2 tiles). Returns { from, pts: [[x, y] tiles] } or
 // null.
 const TG = 2, TPAD = 40, WANDER = 0.55;
-function trackPath(m, K, starts, zAt, spots, mains, hwyLines, lines, L) {
+function trackPath(m, K, starts, zAt, spots, mains, hwyLines, lines, L, snowAt) {
   const W = m.w, H = m.h, [ex, ey] = K.end;
   let x0 = ex, y0 = ey, x1 = ex, y1 = ey;
   for (const q of starts) { x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }
@@ -343,7 +344,7 @@ function trackPath(m, K, starts, zAt, spots, mains, hwyLines, lines, L) {
     if (wet) continue;
     const i = ty * W + tx;
     let k = WANDER + 1.1 * reliefNoise(tx, ty, 28, 7621 + K.end[0]);
-    if (m.dist[i] === D3.PEAKS && (L.terrain[i] === TERRAIN3.ROCK || L.terrain[i] === TERRAIN3.SCRUB) && peakHeight(tx, ty) >= SNOW_LINE) k *= 20;   // (the snow: the bare peaks above the snow line, as world3-world.js's SNOW_CLS)
+    if (snowAt ? snowAt(tx, ty) : m.dist[i] === D3.PEAKS && (L.terrain[i] === TERRAIN3.ROCK || L.terrain[i] === TERRAIN3.SCRUB) && peakHeight(tx, ty) >= SNOW_LINE) k *= 20;   // (the snow: the bare peaks above the snow line - world3-world.js's SNOW_CLS, from the world build)
     if (rd[(ty - y0) * BW + tx - x0]) k *= 6;
     for (const t of spots) if (((tx - t.x) / (t.rx + 18)) ** 2 + ((ty - t.y) / (t.ry + 18)) ** 2 < 1) { k *= 8; break; }
     cost[c] = k;
@@ -385,6 +386,18 @@ function trackPath(m, K, starts, zAt, spots, mains, hwyLines, lines, L) {
   const s0 = starts[src[goal]];
   P[0] = [s0.x, s0.y]; P[P.length - 1] = [ex, ey];
   return { from: s0, pts: simplify(P, 1.2) };
+}
+// a measured polyline again with a point every `step` px along it (its first and last kept), measured
+function evenly(P, step) {
+  const L = P[P.length - 1].s, out = [{ x: P[0].x, y: P[0].y }];
+  for (let s = step, k = 1; s < L - step / 2; s += step) {
+    while (k < P.length - 1 && P[k].s < s) k++;
+    const a = P[k - 1], b = P[k], f = (s - a.s) / ((b.s - a.s) || 1);
+    out.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f });
+  }
+  out.push({ x: P[P.length - 1].x, y: P[P.length - 1].y });
+  measure(out);
+  return out;
 }
 // Douglas-Peucker: the polyline's points within eps (tiles) of the line between the kept ones dropped
 function simplify(P, eps) {

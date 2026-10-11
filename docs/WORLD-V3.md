@@ -4121,7 +4121,25 @@ before.
   hook reads it), 20 times over snow, 8 on a desert table's spot (`tableSpots3`: the tables are laid after the roads),
   6 on another road (a track leaves its road and keeps off the others), 0.55-1.65 by a slow noise (the wander); never
   on water or within 2 tiles of it, 4 of a highway, 10 of the main line; simplified to 1.2 tiles and rounded (3-tile
-  corners). The straight way stays as the fallback. The relief keeps its cliff bands GRADE_R off a dirt track's line.
+  corners). The snow is the world build's own (the done hook's SNOW_CLS test, handed to `wildSites3`). The straight way
+  stays as the fallback. The relief keeps its cliff bands GRADE_R off a dirt track's line.
+
+**The pictures** (`tools/world3-world-map.mjs --sample 0 --region 8,1 --towns --only
+hollow,canyon,ridge,silverfalls,northcape,lookouthill`): `docs/world-v3-world-r8-1.png` (baked before the last fixes: the
+small mesas kept off the tables' corners, the warmer tops), `docs/world-v3-town-hollow.png`, `-canyon.png`, `-ridge.png`,
+`-silverfalls.png`, `-northcape.png`, `-lookouthill.png` (new: Lookout Hill's orchard). What looks right: the tables
+read as mesas - a red sandstone rim all round with its faces, the talus scattered at the foot, each top its own red
+rock and pale hardpan; the plain between them open, a few buttes; the lookout's mesa with the jeep track through a gap
+in its south rim and no red line west of it; Red Rock Canyon's floor the desert's ground, its rock at its walls, no
+flat red rectangle; the Canyon Track and the Mirage Track winding in; the woods on the falls' escarpment, North Cape's
+headland under the redwoods and Lookout Hill's orchard shaded with the land. What's still wrong:
+- **The canyon's rock is still a block** with straight south and west edges (the painting's walls fill its box's bottom
+  rows; their tiles are solid, so the bake doesn't paint them as ground), and the cut's shade reads as dark smudges round
+  the oasis: building the canyon from the relief (a cut with walls of its own, the oasis and the wash placed in it, the
+  painting left out) would end both.
+- The tables' tops: the patches of red rock and hardpan are blocky at 1/8 (tile-sized edges); the north rims' low lips
+  read as a red band rather than an edge seen from above.
+- The snowfields' hillshade (H48's): the crags' steps read as dark smudges on the white - the snow wants a softer shade.
 
 Tests: `test/world3relief.test.js` (as before, and: `m.tables` as the relief's, the bake's rim the relief's; sandstone
 faces on three sides of each table at least; no 8.8 mesa on a table or its talus; no band under two tiles thick; the
