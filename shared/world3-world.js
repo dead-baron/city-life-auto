@@ -27,6 +27,7 @@ import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3, peakHei
 import { terrainAt } from './mapcore.js';
 import { paintTowns3, layTowns3, townsDone, townsFront, townModels, TOWN_SPECIALS, TOWN_STYLES } from './world3-towns.js';
 import { paintMesa3, layMesa3, mesaLots, buildMesa, mesaDone, MESA_SPECIALS, MESA_STYLES } from './world3-mesa.js';
+import { buildFerries3 } from './world3-ferries.js';
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -179,6 +180,7 @@ export function worldOpts(asked) {
       const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
       m.world3.housesMoved = seatStationHouses(m);   // (8.14: each station's house on open ground)
       if (H3) { m.world3.railCleared = clearRailDressing(m, H3.removeProps); clearBeachFront(m, H3.removeProps); }   // (8.14: no tree over the main line or a platform; the promenade and car parks clear)
+      m.world3.ferries = buildFerries3(m, H3);   // (H42, 8.17: the ferries' piers, terminals, ramps and pontoons where each route calls: world3-ferries.js)
     },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground)
     special: (sp) => built.has(sp.d),
