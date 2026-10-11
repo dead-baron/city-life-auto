@@ -2368,9 +2368,9 @@ function addRailLoop(c, I, R, once) {
 }
 function crossingSignals(I, list) {
   for (const x of list) {
-    const ta = x.a ?? 0, ux = Math.cos(ta), uy = Math.sin(ta), nx = -uy, ny = ux, off = (x.hw || 80) + 24;
+    const ta = x.a ?? 0, ux = Math.cos(ta), uy = Math.sin(ta), nx = -uy, ny = ux, off = (x.hw || 80) + 24, out = x.arm ? x.arm - 20 : 46;
     for (const sg of [-1, 1]) {
-      const px = x.x + ux * sg * off + nx * sg * 46, py = x.y + uy * sg * off + ny * sg * 46, hd = qa(ta + (sg < 0 ? PI : 0), 16);
+      const px = x.x + ux * sg * off + nx * sg * out, py = x.y + uy * sg * off + ny * sg * 46, hd = qa(ta + (sg < 0 ? PI : 0), 16);
       put(I, vitem(`xs:${hd.toFixed(2)}`, 'crossingSignal', [0, 0], px, py, hd, [12, 4], { xing: { x: x.x, y: x.y, a: ta, hw: x.hw, side: sg } }));
       lightAt(I, px, py, 40, 60, [1, 0.2, 0.15], 0.6, 'sign', 1);
     }

@@ -379,10 +379,16 @@ function buildCity(seed, opts = null, frame = null) {
     m.rails = railLines.map((line) => buildRailway(m, line.pts, line)); m.rail = m.rails[0];
     // the level crossings of all the loops, once each (two loops on one track cross a road at one crossing): `uses` the
     // loops and where along each; a loop's crossing knows its own (xi) - the gates' states are by this list
+    // the double track's two crossings of a road are one: its gates outside both tracks (`arm`, from the middle)
     m.railXings = [];
+    const pair = (o, c) => { const dx = c.x - o.x, dy = c.y - o.y, tx = Math.cos(o.a), ty = Math.sin(o.a), across = Math.abs(-dx * ty + dy * tx), along = Math.abs(dx * tx + dy * ty); return Math.abs(Math.sin(c.a - o.a)) < 0.2 && along < 40 && across > 60 && across < 130 ? across : 0; };
     m.rails.forEach((r, ri) => r.crossings.forEach((c) => {
-      let xi = m.railXings.findIndex((o) => Math.hypot(o.x - c.x, o.y - c.y) < 24);
-      if (xi < 0) { xi = m.railXings.length; m.railXings.push({ x: c.x, y: c.y, a: c.a, hw: c.hw, s: c.s, uses: [] }); }
+      let xi = m.railXings.findIndex((o) => Math.hypot(o.x0 - c.x, o.y0 - c.y) < 24 || (o.x1 !== undefined && Math.hypot(o.x1 - c.x, o.y1 - c.y) < 24));
+      if (xi < 0) {
+        xi = m.railXings.findIndex((o) => o.x1 === undefined && pair(o, c));
+        if (xi >= 0) { const o = m.railXings[xi], d = pair(o, c); o.x1 = c.x; o.y1 = c.y; o.x = (o.x0 + c.x) / 2; o.y = (o.y0 + c.y) / 2; o.arm = CROSSING_ARM + d / 2; o.hw = Math.max(o.hw, c.hw); }
+      }
+      if (xi < 0) { xi = m.railXings.length; m.railXings.push({ x: c.x, y: c.y, x0: c.x, y0: c.y, a: c.a, hw: c.hw, s: c.s, uses: [] }); }
       m.railXings[xi].uses.push([ri, c.s]); c.xi = xi;
     }));
   }

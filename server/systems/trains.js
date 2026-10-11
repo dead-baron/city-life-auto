@@ -1081,9 +1081,9 @@ function updateCrossings(world) {
         if (Math.abs(across) > c.hw + 6) continue;
         for (const side of [0, 1]) {
           const sg = side ? -1 : 1;
-          if (st.broken[side] || Math.abs(along - sg * CROSSING_ARM) > v.def.L / 2 + 4) continue;
+          if (st.broken[side] || Math.abs(along - sg * (c.arm || CROSSING_ARM)) > v.def.L / 2 + 4) continue;
           st.broken[side] = now; changed = true;
-          const bx = c.x + rx * sg * CROSSING_ARM, by = c.y + ry * sg * CROSSING_ARM;
+          const bx = c.x + rx * sg * (c.arm || CROSSING_ARM), by = c.y + ry * sg * (c.arm || CROSSING_ARM);
           world.emit(bx, by, { e: 'gatebreak', x: bx, y: by, a: Math.atan2(v.vy, v.vx) });
         }
       }
@@ -1136,11 +1136,11 @@ function throughCrossing(path, c) {
   let din = -1, dout = -1;
   for (const p of path) {
     const dx = p.x - c.x, dy = p.y - c.y;
-    const inside = Math.abs(dx * tx + dy * ty) < c.hw + 16 && Math.abs(-dx * ty + dy * tx) < CROSSING_ARM;
+    const inside = Math.abs(dx * tx + dy * ty) < c.hw + 16 && Math.abs(-dx * ty + dy * tx) < (c.arm || CROSSING_ARM);   // (World v3: a double track's crossing is wider)
     if (inside && din < 0) din = p.d;
     if (!inside && din >= 0) { dout = p.d; break; }
   }
-  return din < 0 ? null : { din, dout: dout < 0 ? din + 2 * CROSSING_ARM : dout };
+  return din < 0 ? null : { din, dout: dout < 0 ? din + 2 * (c.arm || CROSSING_ARM) : dout };
 }
 function queueBeyond(world, v, path, from, len) {
   for (const p of path) {

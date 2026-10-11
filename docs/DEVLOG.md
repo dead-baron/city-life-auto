@@ -7291,14 +7291,14 @@ What it does (docs/WORLD-V3.md 8.10 has the numbers):
   a junction (a diamond or a turnout) is taken whole with a train's length clear beyond it, or not at all, so trains
   never wait inside one and can't lock each other out. Twenty minutes of game time: all twelve run and call at every
   station, held at signals 1-19 s.
-- **Around the line:** the level crossings of all the loops once each (`m.railXings`): the gates come down for any of
-  their loops' trains, drivers stop at every one, the client draws their arms; the NPCs keep off every loop's track;
+- **Around the line:** the level crossings of all the loops once each (`m.railXings`; a double track's two tracks
+  cross a road at one crossing, its gates outside both): the gates come down for any of their loops' trains, drivers stop at every one, the client draws their arms; the NPCs keep off every loop's track;
   a station's board lists every service stopping there, each way. Riding is today's on every loop.
 - **The art:** the chunk bake draws every loop (a track two loops share once).
 - **The region files** cut each loop's points into the regions (today's files unchanged).
 - **Left** (8.10): the platform clocks read the first loop only (the waiting crowds are every loop's); Northshore Junction lies
   across the Northshore Loop's houses, its platforms scattered on the curves; the line crosses Metro City's grid at
-  grade; a double track's road crossing is two sets of gates.
+  grade.
 
 Files: shared/world3-rail.js (new), shared/world3-world.js (the `rails` hook), shared/map.js (the railway passes by
 line, `railXings`), server/systems/trains.js (the loops, the signals, the crossings, the NPCs' care, the boards),

@@ -2384,8 +2384,10 @@ tiles near the line for the NPCs' care, built the first time it's asked, 0.65 s 
 loop's nearest point to each); a minute of game time with the twelve trains and no players 1.1 s.
 
 **The level crossings and the people at the line:** the loops' crossings are listed once each (`m.railXings`: two
-loops on one track cross a road at one crossing; `uses` gives each loop and where along it), and the gates go down for
-any train of those loops (`updateCrossings`); the drivers stop at every loop's (`crossingLimit`), the client draws the
+loops on one track cross a road at one crossing, and the double track's two tracks at one crossing too - its gates
+outside both, `arm` 114 px from its middle where a single track's are `CROSSING_ARM`, 66 - so nobody waits between
+the tracks: 88 crossings for the loops' 146, 40 of them double track; `uses` gives each loop and where along it), and
+the gates go down for any train of those loops (`updateCrossings`); the drivers stop at every loop's (`crossingLimit`), the client draws the
 arms by that list (`host.js`). The NPCs keep off every loop's track (`railThreat`, `railBlocked`: each tile near the
 line knows the nearest point of every loop near it).
 
@@ -2428,15 +2430,12 @@ wrong:
   one on the coast line - the hub wants one station.
 - **The turnouts are drawn as tracks overlapping:** where a curve joins the Bay Bridge Line the two tracks run over
   each other for a few hundred px (the bake draws each loop's track; a switch - points, a frog - isn't drawn).
-- **A double track's road crossing is two crossings,** each track with its own gates (the arms between the tracks).
 
 **What's left** (in order):
 1. **What still reads only the first loop** (`off0`): the platform clocks (`timetable`, the `tt` broadcast, by the
    first loop's stations). The station boards and the map point's "next train" list every service that stops there
    (`loopBoard`, `nextTrainIn` by the POI), and every loop's platforms get their waiting crowds (`gatherAt`, kept by
-   loop and station: a player at Cedar Falls saw commuters wait on both Bay Loop platforms and board). A double
-   track's road crossing is two crossings (each track its gates, the arms between the tracks crossing): one crossing
-   with its arms outside both tracks wants an arm offset per crossing (`CROSSING_ARM` is one constant now).
+   loop and station: a player at Cedar Falls saw commuters wait on both Bay Loop platforms and board).
 2. The junctions designed (above), the towns' crossings as bridges or cuttings, the tunnels' mouths and cover.
 3. The in-game world map draws every loop (`client/worldmap.js`); the phone's nearest stations and the v1 renderer's
    crossings (`client/phone.js`, `client/main.js`) read `map.rail` (the first loop) - the cars themselves come from
