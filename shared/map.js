@@ -2262,7 +2262,7 @@ function buildEstates(m, rand) {
   m.garages ||= [];
   m.mansions ||= [];
   // Dry Creek: either side of the county road
-  const plan = DRY_CREEK_ESTATES;
+  const plan = WD ? [] : DRY_CREEK_ESTATES;   // (the world build: Dry Creek is none of its places)
   // (a house and the garage beside it, off the roads, with a road ahead of its front for the driveway)
   const spot = (key, x, y, south, i = -1) => {
     const pf = PREFABS[key], s = pf.rot ? south : true;
@@ -3882,18 +3882,20 @@ function buildFarm(m, rand) {
     }
     if (n > 200) m.fields.push({ x: fx * TILE, y: fy * TILE, w: fw * TILE, h: fh * TILE });
   }
-  const pf = PREFABS.house2;
-  // beside the Desert Highway, its yard to the west and its drive north to a road (off the highway itself: offTheRoad)
-  // (and clear of the Dry Creek farmhouses still to come: buildEstates)
-  const [fx, fy] = (offTheRoad(m, 1157, 534, pf.tw + 4, pf.th, (X, Y) => roadAhead(m, X + 6, 2, Y - 2, -1), 40, (X, Y) => !nearDryCreek(X, Y, pf.tw + 4, pf.th, 4)) || [1157, 534]).map((v, k) => v + (k ? 0 : 3));
-  m.fill(fx - 4, fy - 1, pf.tw + 8, pf.th + 2, T.DIRT);
-  const row = { d: 9, x: fx, y: fy, w: pf.tw, h: pf.th, face: 'N' };
-  placePrefab(m, row, 'house2', fx, { biz: ['farm'], names: ['Dry Creek Farm Co-op'] }, rand);
-  driveway(m, fx + 3, 2, fy - 2, -1);
-  const farm = m.pois.find((p) => p.kind === 'farm');
-  farm.cargoPad = { x: (fx - 2.5) * TILE, y: (fy + 3) * TILE };
-  // the drop site out in the boonies, and woods
-  m.dropSites.push({ x: 1176 * TILE, y: 760 * TILE, name: 'the Dry Creek boonies' });
+  if (!WD) {   // (the world build: Dry Creek is none of its places)
+    const pf = PREFABS.house2;
+    // beside the Desert Highway, its yard to the west and its drive north to a road (off the highway itself: offTheRoad)
+    // (and clear of the Dry Creek farmhouses still to come: buildEstates)
+    const [fx, fy] = (offTheRoad(m, 1157, 534, pf.tw + 4, pf.th, (X, Y) => roadAhead(m, X + 6, 2, Y - 2, -1), 40, (X, Y) => !nearDryCreek(X, Y, pf.tw + 4, pf.th, 4)) || [1157, 534]).map((v, k) => v + (k ? 0 : 3));
+    m.fill(fx - 4, fy - 1, pf.tw + 8, pf.th + 2, T.DIRT);
+    const row = { d: 9, x: fx, y: fy, w: pf.tw, h: pf.th, face: 'N' };
+    placePrefab(m, row, 'house2', fx, { biz: ['farm'], names: ['Dry Creek Farm Co-op'] }, rand);
+    driveway(m, fx + 3, 2, fy - 2, -1);
+    const farm = m.pois.find((p) => p.kind === 'farm');
+    farm.cargoPad = { x: (fx - 2.5) * TILE, y: (fy + 3) * TILE };
+    // the drop site out in the boonies, and woods
+    m.dropSites.push({ x: 1176 * TILE, y: 760 * TILE, name: 'the Dry Creek boonies' });
+  }
   // Cedar Farms: fields between the section roads and a market stand that takes harvests
   for (const [fx1, fy1, fw, fh] of FIELDS) {
     pin(fx1, fy1);

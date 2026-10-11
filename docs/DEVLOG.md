@@ -7047,7 +7047,8 @@ What it does (docs/WORLD-V3.md 8.6 has the numbers):
 The files: `shared/world3-world.js` (new: `worldPieces`, `worldOpts` - the pieces, `pick`, `placeLine`, `cls`, the
 land, zones and districts, the stand-ins, the lines), `shared/world3-islands.js` (`'world'`), `shared/map.js`
 (`world3` in `generateCity`; `WD`, `pin` / `unpin` at the sources; `LX` / `LY`, `gridOff` and `clsAt` for the world
-build; two guards for spots of places it doesn't build; `redwoodGroves`' giants by cell), `shared/naturesites.js`
+build; two guards for spots of places it doesn't build; Dry Creek's farm co-op and estates left out of it;
+`redwoodGroves`' giants by cell), `shared/naturesites.js`
 (`PXs` takes the anchor's y),
 `tools/world3-build.mjs` (new: the build, its time, memory and sizes per place), `tools/world3-world-map.mjs` (new: the
 picture, the chunk bake's timing, `--bake`, `--region`), `test/world3world.test.js` (new), `docs/WORLD-V3.md` 8.6,
