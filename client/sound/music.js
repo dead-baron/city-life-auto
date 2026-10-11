@@ -109,15 +109,47 @@ export const MENU_BASS = {
   A: [[0, 38, 8, 0.3], [8, 50, 1.25, 0.043], [10, 50, 1.25, 0.056], [12, 50, 1.25, 0.035], [14, 50, 1.25, 0.037]],
   B: [[0, 45, 1.1, 0.06], [6, 43, 7.75, 0.235]],
 };
+// The keys, measured from the recording's other instruments (everything but the drums) the same way: each note's level
+// in a narrow band round its fundamental every quarter step, the median over the eight repeats: [step, note, length in
+// 16ths, level - the fundamental's peak in the recording's units, how late in 16ths]. Bar A, D minor seven: a low D
+// an octave over the bass held through half the bar (the octave the mix's low end shows), and the chord - A, D, A, C
+// round the lead's F - struck on 1 and 3, and a soft F-and-A stab just after each snare. Bar B, A seven: a low A and
+// E, then C♯, G♯ and B over the lead's E, struck on 1, the and of 2 (with the bass's G) and the e of 4; G-and-G
+// octave stabs after the second snare and on the and of 3 (with a high D), a B and an E between.
+export const MENU_KEYS = {
+  A: [[0, 50, 7.8, 0.126], [0, 69, 1, 0.037], [0, 74, 1.2, 0.072], [0, 81, 1.6, 0.045], [0, 84, 1.8, 0.035],
+    [4, 65, 0.35, 0.018, 0.4], [4, 69, 0.35, 0.023, 0.4], [4, 81, 0.35, 0.018, 0.4],
+    [8, 69, 1.4, 0.065], [8, 74, 1.8, 0.041], [8, 81, 1.8, 0.05], [8, 84, 3.8, 0.054],
+    [12, 65, 0.35, 0.028, 0.4], [12, 69, 0.35, 0.026, 0.4], [12, 74, 0.35, 0.02, 0.4], [12, 81, 0.35, 0.022, 0.4]],
+  B: [[0, 57, 1.7, 0.056], [0, 64, 1.8, 0.046], [0, 67, 1.2, 0.025], [0, 69, 1.8, 0.029], [0, 73, 1.8, 0.063], [0, 79, 1.8, 0.028], [0, 80, 1.8, 0.05], [0, 83, 1.8, 0.025],
+    [4, 67, 0.5, 0.045, 0.3], [4, 79, 0.5, 0.045, 0.1],
+    [6, 64, 1.3, 0.022], [6, 69, 3.8, 0.051], [6, 73, 3.6, 0.07], [6, 79, 1.8, 0.032], [6, 80, 1.8, 0.045],
+    [8, 71, 1, 0.018, 0.5], [8, 80, 0.6, 0.02, 0.5], [10, 67, 0.6, 0.05, 0.15], [10, 79, 0.6, 0.073], [10, 86, 0.8, 0.032],
+    [12, 57, 1, 0.016], [12, 67, 0.5, 0.035, 0.3], [12, 79, 0.6, 0.035], [12, 86, 0.5, 0.014, 0.5],
+    [13, 69, 3, 0.051], [13, 73, 3, 0.045], [13, 80, 3, 0.05], [15, 64, 1, 0.022]],
+};
+// The lead: the top of the chord, sung over it - F in bar A (on 1 and 3), E in bar B (on 1, the and of 2, the e of 4) -
+// almost a sine, with a vibrato that comes in after a tenth of a second (6.3 Hz, about 25 cents either way, as
+// measured on the held F): [step, note, length in 16ths, level, how late]
+export const MENU_LEAD = {
+  A: [[0, 77, 1.8, 0.135], [8, 77, 3.6, 0.14]],
+  B: [[0, 76, 1.8, 0.122], [6, 76, 3.8, 0.122], [13, 76, 2.7, 0.105, 0.25]],
+};
 // a wave's peak against its fundamental (Web Audio normalises a periodic wave to its own peak)
 function wavePeak(h) { let m = 0; for (let i = 0; i < 512; i++) { let y = 0; for (let k = 1; k < h.length; k++) y += h[k] * Math.sin(k * i * Math.PI / 256); m = Math.max(m, Math.abs(y)); } return m; }
 const SUB = [0, 1, 0.06, 0.03];   // (the menu's bass: a sine with a breath of its octave and twelfth)
+// (the menu's keys: warm - the octave 20 dB down, the twelfth 26, a little more above, nothing nasal; its lead: a
+// sine with a breath of its octave)
+const KEYW = [0, 1, 0.1, 0.05, 0.02, 0.008], LEADW = [0, 1, 0.05, 0.02];
+export const MENU_WAVES = { keys: KEYW, lead: LEADW };
 export function menuScore(bars = 16) {
   const S = 16, sc = Array.from({ length: bars * S }, () => []);
   for (let b = 0; b < bars; b++) {
     const k = b % 2 ? 'B' : 'A';
     for (const [s, h, v, late] of MENU_BEAT[k]) sc[b * S + s].push({ p: 'hit', s: h, v, late });
     for (const [s, n, len, v] of MENU_BASS[k]) sc[b * S + s].push({ p: 'mbass', n: [n], len, v });
+    for (const [s, n, len, v, late] of MENU_KEYS[k]) sc[b * S + s].push({ p: 'mkeys', n: [n], len, v, late: late || 0 });
+    for (const [s, n, len, v, late] of MENU_LEAD[k]) sc[b * S + s].push({ p: 'mlead', n: [n], len, v, late: late || 0 });
   }
   return sc;
 }
@@ -382,6 +414,30 @@ export class Music {
         o.frequency.setValueAtTime(f * 0.988, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.06);
         g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.07);
         g.gain.setTargetAtTime(0, t + 0.07, 0.85); g.gain.setTargetAtTime(0, t + dur, 0.08);
+        o.connect(g); g.connect(F && F.ton ? F.ton : p.inp); o.start(t); o.stop(end);
+        E.note(o, end); E.note(g, end);
+        break;
+      }
+      // (the menu's keys and lead, as measured: the keys warm, struck in 6 ms and falling away - about 14 dB a second -
+      // then let go quickly at the note's end into a short tail, as the recording's room leaves them; each note a few
+      // cents off the next, as a real instrument's are. The lead almost a sine, sung: in over 15 ms, held, a vibrato
+      // coming in after a tenth of a second, let go more slowly. ev.v: the fundamental's peak in the recording's units)
+      case 'mkeys': case 'mlead': {
+        const c = this.ctx, lead = ev.p === 'mlead', f = hz(ev.n[0] + tn), dur = ev.len * sd, end = t + dur + (lead ? 1.2 : 0.9);
+        const key = lead ? 'leadW' : 'keyW', H = lead ? LEADW : KEYW;
+        const W = this[key] || (this[key] = { w: c.createPeriodicWave(new Float32Array(H.length), Float32Array.from(H)), k: wavePeak(H) });
+        const o = c.createOscillator(), g = c.createGain(), v = ev.v * W.k * (0.95 + R() * 0.1);
+        o.setPeriodicWave(W.w); o.frequency.setValueAtTime(f, t); o.detune.setValueAtTime(lead ? 0 : (R() - 0.5) * 8, t);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + (lead ? 0.015 : 0.006));
+        g.gain.setTargetAtTime(0, t + 0.02, lead ? 0.8 : 0.6);
+        g.gain.setTargetAtTime(0, t + dur, lead ? 0.05 : 0.03); g.gain.setTargetAtTime(0, t + dur + (lead ? 0.05 : 0.035), lead ? 0.8 : 0.55);
+        g.gain.setTargetAtTime(0, end - 0.15, 0.03);   // (the tail's last whisper faded before it stops: no click)
+        if (lead) {
+          const lfo = c.createOscillator(), lg = c.createGain();
+          lfo.frequency.value = 6.3; lg.gain.setValueAtTime(0, t); lg.gain.setValueAtTime(0, t + 0.1); lg.gain.linearRampToValueAtTime(25, t + 0.25);
+          lfo.connect(lg); lg.connect(o.detune); lfo.start(t); lfo.stop(end);
+          E.note(lfo, end); E.note(lg, end);
+        }
         o.connect(g); g.connect(F && F.ton ? F.ton : p.inp); o.start(t); o.stop(end);
         E.note(o, end); E.note(g, end);
         break;
