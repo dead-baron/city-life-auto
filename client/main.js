@@ -740,6 +740,7 @@ function onEvent(ev) {
     }
     case 'crash': fx.sparks(ev.x, ev.y, 4 + Math.round(ev.p * 8)); sfx('crash', distVol(ev.x, ev.y) * (0.4 + ev.p)); if (distVol(ev.x, ev.y) > 0.8) S.cam.shake = Math.max(S.cam.shake, ev.p * 6); break;
     case 'explode': S.boom.explode(ev, now, distVol(ev.x, ev.y)); sfx('explode', distVol(ev.x, ev.y)); break;   // (render/boom.js: the layered blast from its seed)
+    case 'tankfire': { for (let k = 0; k < 7; k++) fx.fire(ev.x + Math.cos(ev.a) * k * 4, ev.y + Math.sin(ev.a) * k * 4); for (let k = 0; k < 4; k++) fx.smoke(ev.x, ev.y, false); fx.ring(ev.x, ev.y, 26, 'rgba(255,210,120,'); break; }   // (the tank's cannon: H58)
     case 'wreckland': S.boom.land(ev, now); break;   // a wreck blown up into the air comes down
     case 'vcut': case 'vpart': case 'arrowdrop': S.boom.vdmg(ev, now); break;   // (a vehicle cut in two, a part off it: render/vehdmg.js)
     case 'runover': {   // under a car (server carhits.js): lying face down or on the back a few seconds; the car jolts
@@ -3912,6 +3913,20 @@ function vehVisual(v, now, dt) {
   // (the engines, sirens, horns and tyres: client/sound/vehicles.js, from soundFrame)
   void now;
 }
+// the tank in the classic view (H58: server tank.js): the tracks (their treads running as it moves), the hull, and the
+// turret turned to its angle from the hull (the damage word's top byte), the gun reaching out
+function drawTank(v, def, wreck) {
+  const L = def.L, W = def.W, tw = 18, ph = (((v.rx * Math.cos(v.ra) + v.ry * Math.sin(v.ra)) % 6) + 6) % 6;
+  g.fillStyle = '#1c1d19'; g.fillRect(-L / 2, -W / 2, L, tw); g.fillRect(-L / 2, W / 2 - tw, L, tw);
+  g.fillStyle = '#3c3d35'; for (let x = -L / 2 + ph; x < L / 2 - 2; x += 6) { g.fillRect(x, -W / 2, 2, tw); g.fillRect(x, W / 2 - tw, 2, tw); }
+  g.fillStyle = wreck ? '#2b2b27' : '#5a6440'; g.fillRect(-L / 2 + 4, -W / 2 + tw - 3, L - 8, W - 2 * tw + 6);
+  g.fillStyle = wreck ? '#232320' : '#4b5434'; g.fillRect(L / 2 - 26, -W / 2 + tw, 18, W - 2 * tw); g.fillRect(-L / 2 + 8, -12, 30, 24);
+  g.save(); g.translate(-8, 0); g.rotate(((v.parent >>> 24) & 255) / 256 * Math.PI * 2);
+  g.fillStyle = wreck ? '#1d1d1b' : '#2f3424'; g.fillRect(26, -3, 60, 6); g.fillRect(80, -4.5, 8, 9);
+  g.fillStyle = wreck ? '#262623' : '#66713f'; g.beginPath(); g.ellipse(-2, 0, 32, 26, 0, 0, 6.28); g.fill();
+  g.fillStyle = wreck ? '#1f1f1c' : '#454c2e'; g.beginPath(); g.arc(-10, -9, 7, 0, 6.28); g.fill();
+  g.restore();
+}
 function drawVehicleEnt(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def) return;
@@ -3921,7 +3936,7 @@ function drawVehicleEnt(v, now, dt) {
   const sk = Math.min(1, (v.sinkT || 0) / 3);
   // 2.5D lift: side walls (the darkened outline stacked up the screen), the top view raised on
   // them, leaning out on corners and nosing down under braking
-  const lift = sinking ? 0 : vehLift(def);
+  const lift = sinking || def.tracks ? 0 : vehLift(def);
   const spd = vehSpeed(v);
   const leanPx = def.kind === 'boat' ? 0 : -(v.lean || 0) * (def.kind === 'bike' ? 2.5 : 1.6), dip = (f & VF.BRAKE) && spd > 60 ? 1 : 0;
   g.save();
@@ -3945,7 +3960,7 @@ function drawVehicleEnt(v, now, dt) {
   }
   g.translate(-Math.sin(v.ra) * leanPx + Math.cos(v.ra) * dip, -lift + Math.sin(v.ra) * dip);
   vehTurn(g, v, def);
-  if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);
+  if (def.tracks) drawTank(v, def, !!(f & VF.WRECK)); else if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);
   if (v.parent) S.boom.vdmgDraw(g, v, def);   // (its damage: render/vehdmg.js)
   const L = def.L, Wd = def.W;
   if (f & VF.BLOODY) { g.fillStyle = 'rgba(120,10,16,.85)'; for (let k = 0; k < 5; k++) { const h = ((v.id * 13 + k * 7) % 17) / 17; g.beginPath(); g.arc(L * 0.3 + h * L * 0.15, -Wd * 0.3 + ((k * 0.37 + h) % 1) * Wd * 0.6, 2 + h * 3, 0, 6.28); g.fill(); } }

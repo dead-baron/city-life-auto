@@ -1120,6 +1120,14 @@ export class World2 {
     return key;
   }
   // the nearest heading already made (within an eighth of a turn either way), for a thing seen the first time
+  // a tank's turret (H58: server tank.js): its own model at the hull's angle plus the turret's from it (the damage word's
+  // top byte), over the pivot
+  _turret(v, f, N, z0) {
+    const A = this.A, a = v.ra + ((v.parent >>> 24) & 255) / 256 * TAU, hi = quant(a, N), st = A.vehState(f & (VF.WRECK | VF.BURN), 1, 1, 0);
+    const d = v._tud || (v._tud = { m: v.d.m, p: v.d.p, vr: v.d.vr, tn: v.d.tn, tt: 1 });
+    const key = this._spr('actors', 'vehicle', A.vehicleKey(d, st, hi, N), [d, st, hi, N]) || this._near((h) => A.vehicleKey(d, st, h, N), hi, N);
+    if (key) { this.E.drawSprite(key, v.rx - Math.cos(v.ra) * 8, v.ry - Math.sin(v.ra) * 8, Math.max(0, z0), this.opts); this.n.drawn++; }
+  }
   _near(keyOf, hi, N) {
     for (let d = 1; d <= N >> 3; d++) for (let s = -1; s <= 1; s += 2) { const k = keyOf((hi + s * d + N) % N); if (this.E.hasSprite(k)) return k; }
     return null;
@@ -1328,6 +1336,7 @@ export class World2 {
     E.drawSprite(use, v.rx - Math.sin(v.ra) * lean, v.ry, Math.max(0, z0), o);
     o.under = 0;
     this.n.drawn++;
+    if (def.turret) this._turret(v, f, N, z0);   // (a tank: its turret at its own angle - H58)
     // riders on bikes and jet skis sit in the open; in an open boat at its seats (def.crew: the driver's, the one beside
     // it, then the back seats in turn - task #420), a rescue crew member kneeling at the side to pull someone in
     const Pd = this.Pd;

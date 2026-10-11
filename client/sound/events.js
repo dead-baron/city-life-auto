@@ -100,6 +100,8 @@ export const EVENT_SOUNDS = {
     if ((ev.r || 0) >= 160) { A.at('explosion', ev.x, ev.y, 0.7, { r: ev.r * 1.3 }); A.at('rubble', ev.x, ev.y, 1); }
     if (ev.k === 'pieces' || ev.k === 'launch') { A.at('clang', ev.x, ev.y, 0.9); A.at('glass', ev.x, ev.y, 0.8); }
   },
+  // the tank's cannon (H58: server tank.js): a short, deep blast at the muzzle and the clang of the breech
+  tankfire: (ev, A) => { A.at('explosion', ev.x, ev.y, 0.85, { r: 70 }); A.at('clang', ev.x, ev.y, 0.5); A.at('thud', ev.x, ev.y, 0.8); },
   // a part coming off a battered car (task #402: vehicles.js): a bumper or a door clanging down, a wheel's thump
   vpart: (ev, A) => { if (ev.k === 'wheel') A.at('thud', ev.x, ev.y, 0.8); else { A.at('clang', ev.x, ev.y, 0.6); A.at('scrape', ev.x, ev.y, 0.4); } },
   // a car cut in two by a plasma blade: the blade's sear through the metal, the shell parting
