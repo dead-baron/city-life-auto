@@ -91,6 +91,11 @@ function findShore(m, st, tx0, ty0, K) {
   const ok = st.ids === MAINLAND ? (d) => d >= 47 : ((s) => (d) => s.has(d))(new Set(st.ids));
   const at = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? y * W + x : -1);
   const tile = (x, y) => { const i = at(x, y); return i < 0 ? -1 : m.tiles[i]; };
+  // (not on the container port's quay - its cranes' apron - nor where its ship lies alongside: m.port)
+  const avoid = [];
+  if (m.port && m.port.apron) avoid.push([m.port.apron.x - 1, m.port.apron.y0 - 3, m.port.apron.x + m.port.apron.w + 1, m.port.apron.y1 + 3]);
+  if (m.port && m.port.ship) { const sh = m.port.ship; avoid.push([Math.floor(sh.x / TILE) - 3, Math.floor(sh.y / TILE) - 3, Math.ceil((sh.x + sh.w) / TILE) + 3, Math.ceil((sh.y + sh.h) / TILE) + 3]); }
+  const clash = (x, y) => avoid.some((r) => x >= r[0] && y >= r[1] && x < r[2] && y < r[3]);
   let best = null;
   for (let y = Math.max(1, ty0 - SEARCH); y < Math.min(H - 1, ty0 + SEARCH); y++) for (let x = Math.max(1, tx0 - SEARCH); x < Math.min(W - 1, tx0 + SEARCH); x++) {
     const i = y * W + x, t = m.tiles[i];
@@ -106,11 +111,12 @@ function findShore(m, st, tx0, ty0, K) {
         const half = k > K.out ? K.berth[1] : K.rows(k);
         for (let j = -half; j <= half; j++) {
           const q = at(x + dx * k + px * j, y + dy * k + py * j), tq = q < 0 ? -1 : m.tiles[q];
+          if (avoid.length && clash(x + dx * k + px * j, y + dy * k + py * j)) { wet = false; break; }
           if (isW(tq) || (k <= 2 && FREE.has(tq) && m.land[q] && ok(m.dist[q]))) continue;
           wet = false; break;
         }
       }
-      if (!wet) continue;
+      if (!wet || (avoid.length && clash(x, y))) continue;
       if (st.river && !m.river[at(x + dx * (K.out + 4), y + dy * (K.out + 4))]) continue;   // (on the river or the lake)
       // the ground behind it: the place's land, open (no street, building or wall), and the way on ashore
       let room = !isW(tile(x - dx * K.back[1], y - dy * K.back[1]));
@@ -194,7 +200,10 @@ export function buildFerries3(m, H3) {
 // corridor), not over the whole map: the water there (a bridge's deck is over water: the boats pass under), how far
 // each water tile is from land (to 16), A* over cells of 2 x 2 tiles at least `clear` tiles from land, then
 // straightened. A leg that finds no way in its corridor tries once more in a box three times as wide.
+// (the boats' water: open water, and whatever stands over it on a deck - a bridge, its sidewalks and parapets: the boats
+// pass under; not a pier, a quay or a building on one)
 const passW = (t) => t === T.WATER || t === T.DEEP || t === T.BRIDGE;
+export const boatWater = (m, i) => { const t = m.tiles[i]; return passW(t) || (!m.land[i] && t !== T.DOCK && t !== T.BUILDING); };
 export function corridorWay(m, a, b, hint, clear, pad = 60) {
   const W = m.w, H = m.h;
   let x0 = Math.min(a.x, b.x) / TILE, y0 = Math.min(a.y, b.y) / TILE, x1 = Math.max(a.x, b.x) / TILE, y1 = Math.max(a.y, b.y) / TILE;
@@ -202,7 +211,7 @@ export function corridorWay(m, a, b, hint, clear, pad = 60) {
   const bx = Math.max(0, Math.floor(x0) - pad), by = Math.max(0, Math.floor(y0) - pad), bw = Math.min(W, Math.ceil(x1) + pad) - bx, bh = Math.min(H, Math.ceil(y1) + pad) - by;
   const N = bw * bh, dist = new Uint8Array(N), q = new Int32Array(N);
   let qh = 0, qt = 0;
-  for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) { const i = y * bw + x; if (!passW(m.tiles[(by + y) * W + bx + x])) { dist[i] = 0; q[qt++] = i; } else dist[i] = 255; }
+  for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) { const i = y * bw + x; if (!boatWater(m, (by + y) * W + bx + x)) { dist[i] = 0; q[qt++] = i; } else dist[i] = 255; }
   while (qh < qt) {
     const j = q[qh++], d = dist[j];
     if (d >= 16) continue;
@@ -270,7 +279,7 @@ export function corridorWay(m, a, b, hint, clear, pad = 60) {
 export function berth3(m, st, dims) {
   const ox = st.ox, oy = st.oy, sx = st.x, sy = st.y;
   const bx = sx + ox * (dims.L / 2 + 4), by = sy + oy * (dims.L / 2 + 4);
-  const wetAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx >= 0 && ty >= 0 && tx < m.w && ty < m.h && passW(m.tiles[ty * m.w + tx]); };
+  const wetAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx >= 0 && ty >= 0 && tx < m.w && ty < m.h && boatWater(m, ty * m.w + tx); };
   const roomy = (x, y, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (dx * dx + dy * dy <= r * r && !wetAt(x + dx * TILE, y + dy * TILE)) return false; return true; };
   let turn = null;
   for (let f = dims.L / 2 + 64; f <= dims.L + 1400; f += 22) {

@@ -32,8 +32,15 @@ const Lv = [-0.42, -0.5, 0.76], LN = Math.hypot(...Lv), LX = Lv[0] / LN, LY = Lv
 for (const name of names) {
   let R = null, k = -1;
   for (const q of routes) { const j = q.stops.findIndex((s) => s.name === name); if (j >= 0) { R = q; k = j; break; } }
-  if (!R) { log(`no stop ${name}`); continue; }
-  const e = R.stops[k], cx = (e.sx + e.x) / 2, cy = (e.sy + e.y) / 2;
+  let e = R ? R.stops[k] : null;
+  if (!R) {   // (a stop whose route found no way: the pier alone)
+    const F = (M.world3.ferries || []).find((q) => q.stops.some((st) => st.name === name)), st = F && F.stops.find((q) => q.name === name);
+    if (!st) { log(`no stop ${name}`); continue; }
+    e = { sx: st.x, sy: st.y, x: st.x + st.ox * 124, y: st.y + st.oy * 124, a: Math.atan2(st.oy, st.ox), kind: st.kind, turn: null };
+    R = { name: F.name, car: F.car, legs: [] };
+    log(`${name}: ${F.name} has no way planned - the pier alone`);
+  }
+  const cx = (e.sx + e.x) / 2, cy = (e.sy + e.y) / 2;
   const cx0 = Math.floor((cx - SPAN / 2) / CHP), cy0 = Math.floor((cy - SPAN / 2) / CHP), cx1 = Math.floor((cx + SPAN / 2) / CHP), cy1 = Math.floor((cy + SPAN / 2) / CHP);
   const GW = (cx1 - cx0 + 1) * CS, GH = (cy1 - cy0 + 1) * CS, img = Buffer.alloc(GW * GH * 3);
   for (let by0 = cy0; by0 <= cy1; by0++) for (let bx0 = cx0; bx0 <= cx1; bx0++) {
@@ -55,9 +62,9 @@ for (const name of names) {
   const ox = cx0 * CHP, oy = cy0 * CHP, dot = (x, y, c) => { const px = Math.round((x - ox) / S), py = Math.round((y - oy) / S); if (px < 0 || py < 0 || px >= GW || py >= GH) return; const o = (py * GW + px) * 3; img[o] = c[0]; img[o + 1] = c[1]; img[o + 2] = c[2]; };
   const dims = R.car ? { L: 470, W: 150 } : { L: 240, W: 76 }, ca = Math.cos(e.a), sa = Math.sin(e.a);
   for (let t = -1; t <= 1; t += 0.01) for (const sd of [-1, 1]) { dot(e.x + ca * t * dims.L / 2 - sa * sd * dims.W / 2, e.y + sa * t * dims.L / 2 + ca * sd * dims.W / 2, [255, 255, 255]); dot(e.x + ca * sd * dims.L / 2 - sa * t * dims.W / 2, e.y + sa * sd * dims.L / 2 + ca * t * dims.W / 2, [255, 255, 255]); }
-  for (let a = 0; a < 64; a++) dot(e.turn.x + Math.cos(a / 64 * 6.283) * 20, e.turn.y + Math.sin(a / 64 * 6.283) * 20, [255, 220, 0]);
+  if (e.turn) for (let a = 0; a < 64; a++) dot(e.turn.x + Math.cos(a / 64 * 6.283) * 20, e.turn.y + Math.sin(a / 64 * 6.283) * 20, [255, 220, 0]);
   const leg = R.legs.find((L) => L.from === k) || R.legs.find((L) => L.to === k);
-  const way = leg.from === k ? leg.ways[0] : leg.ways[1];
+  const way = leg ? (leg.from === k ? leg.ways[0] : leg.ways[1]) : [{ x: e.x, y: e.y, s: 0 }];
   for (let s = 0; s < Math.min(way[way.length - 1].s, SPAN); s += 8) { let p = way[0]; for (let i = 1; i < way.length; i++) if (way[i].s >= s) { const a = way[i - 1], u = (s - a.s) / Math.max(1e-6, way[i].s - a.s); p = { x: a.x + (way[i].x - a.x) * u, y: a.y + (way[i].y - a.y) * u }; break; } dot(p.x, p.y, [0, 230, 255]); }
   const OUT = join(ROOT, `docs/world-v3-ferry-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`), tmp = OUT + '.rgb';
   writeFileSync(tmp, img);

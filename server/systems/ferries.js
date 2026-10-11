@@ -284,14 +284,18 @@ export function ferryRoutes(world) {
 // leg by leg: each leg is shaped as a route of two piers is (ends, ways, heads, swings, len), so the boat's trip, the
 // riding and the timetable are today's, leg after leg - round a loop, or out to the last stop and back.
 function routes3(m, routes) {
+  const failed = [];   // (a leg with no way by water: its route isn't run - listed for the log and the tests)
+  Object.defineProperty(routes, 'failed', { value: failed, enumerable: false });
   for (const F of m.world3.ferries) {
     if (!F.stops || F.stops.length < 2) continue;
     const dims = DIMS[F.model], stops = F.stops.map((st) => berth3(m, st, dims)), legs = [];
     const n = stops.length, nl = F.loop ? n : n - 1;
     for (let i = 0; i < nl; i++) {
       const j = (i + 1) % n, A = stops[i], B = stops[j];
-      const way = corridorWay(m, A.turn, B.turn, hintBetween(F, i, j), dims.clear);
-      if (!way) { legs.length = 0; break; }
+      // (where the water narrows - a river's bridge piers, a ford - the boat keeps nearer the banks: less room either side)
+      let way = null;
+      for (let c = dims.clear; c >= 1 && !way; c--) way = corridorWay(m, A.turn, B.turn, hintBetween(F, i, j), c);
+      if (!way) { failed.push(`${F.name}: ${A.name} - ${B.name}`); legs.length = 0; break; }
       const ways = [way, measure(way.slice().reverse().map((p) => ({ x: p.x, y: p.y })))], ends = [A, B];
       const heads = ways.map((w) => headAt(w, 0)), swings = heads.map((h, k) => Math.max(1, Math.abs(wrapA(h - ends[k].a)) / SWING_RATE));
       legs.push({ id: routes.length, name: F.name, model: F.model, car: F.car, mainland: A.name, island: B.name, ends, way, ways, heads, swings, len: Math.round(way[way.length - 1].s), from: i, to: j });
@@ -439,7 +443,7 @@ function driveOff(world, car, R, end, there) {
   }
 }
 function unloadDone(world, F) { const v = world.get(F.v); if (v) for (const sid of v.seats) { const q = sid ? world.get(sid) : null; if (q && q.player) q.player.meDirty = true; } }
-const termName = (R, end) => (end === 0 ? `${R.mainland} pier` : `${R.island} pier`);
+const termName = (R, end) => (R.from !== undefined ? (end === 0 ? R.mainland : R.island) : end === 0 ? `${R.mainland} pier` : `${R.island} pier`);   // (a World v3 leg: its stops' own names - "Northshore Pier", "Old Town Quay")
 
 // ---- riding ---------------------------------------------------------------------------------------------------------
 const ferryOf = (world, v) => (v && v.ferry && world.ferries ? world.ferries[v.ferry.route] : null);

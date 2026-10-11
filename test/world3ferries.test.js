@@ -11,7 +11,7 @@ import '../shared/world3-islands.js';
 import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { FERRIES } from '../shared/world3-skeleton.js';
-import { FERRY3 } from '../shared/world3-ferries.js';
+import { FERRY3, boatWater } from '../shared/world3-ferries.js';
 import { prepare } from '../tools/world3-build.mjs';
 import { World } from '../server/world.js';
 import * as ferries from '../server/systems/ferries.js';
@@ -26,6 +26,7 @@ const map = () => {
 };
 const tileAt = (m, x, y) => m.tiles[Math.floor(y / TILE) * m.w + Math.floor(x / TILE)];
 const wet = (t) => t === T.WATER || t === T.DEEP || t === T.BRIDGE;
+const wetAt = (m, x, y) => boatWater(m, Math.floor(y / TILE) * m.w + Math.floor(x / TILE));
 
 test('World v3 ferries: every route\'s stops built - the terminals, the car ferry\'s ramps, the pontoons', { timeout: 300000 }, () => {
   const m = map(), list = m.world3.ferries;
@@ -62,6 +63,19 @@ test('World v3 ferries: the routes planned per corridor on the v3 map, in time, 
   const m = map();
   const t0 = performance.now(), routes = ferries.ferryRoutes({ map: m }), ms = performance.now() - t0;
   console.log(`planned in ${Math.round(ms)} ms:`, routes.map((R) => `${R.name} (${R.stops.map((s) => s.name).join(' - ')}${R.loop ? ', round' : ''}: ${Math.round(R.len / TILE)} m)`).join('; '));
+  if (routes.failed.length) {
+    // (what stands in the way: the tiles round the water a leg's start reaches, nearest its far stop)
+    const R3 = m.world3.ferries;
+    for (const f of routes.failed) {
+      const F = R3.find((q) => f.startsWith(q.name)), [a, b] = f.slice(F.name.length + 2).split(' - ').map((nm) => F.stops.find((s) => s.name === nm));
+      const W = m.w, seen = new Set(), q = [[Math.floor((a.x + a.ox * 400) / TILE), Math.floor((a.y + a.oy * 400) / TILE)]], bt = [Math.floor(b.x / TILE), Math.floor(b.y / TILE)];
+      let best = [1e9, null];
+      for (let h = 0; h < q.length && h < 2e6; h++) { const [x, y] = q[h]; const d = Math.hypot(x - bt[0], y - bt[1]); if (d < best[0]) best = [d, [x, y]]; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, k = ny * W + nx; if (nx < 0 || ny < 0 || nx >= W || ny >= m.h || seen.has(k) || !boatWater(m, k)) continue; seen.add(k); q.push([nx, ny]); } }
+      const types = {}, [cx, cy] = best[1];
+      for (let y = cy - 30; y <= cy + 30; y++) for (let x = cx - 30; x <= cx + 30; x++) { const k = y * W + x; if (!seen.has(k) && !boatWater(m, k)) { const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has((y + dy) * W + x + dx)); if (nb) { const t = m.tiles[k] + (m.land[k] ? '' : '/wet'); types[t] = (types[t] || 0) + 1; } } }
+      console.log(`no way: ${f}; the water from its start reaches ${Math.round(best[0])} tiles from it, at ${cx},${cy}; what stands round there (tile/wet: count):`, JSON.stringify(types));
+    }
+  }
   assert.ok(ms < 5000, `the planner took ${Math.round(ms)} ms`);
   assert.deepEqual(routes.map((R) => R.name), FERRIES.map((F) => F.name), 'every route planned');
   for (const R of routes) {
@@ -71,7 +85,7 @@ test('World v3 ferries: the routes planned per corridor on the v3 map, in time, 
       assert.ok(Math.hypot(w[0].x - L.ends[0].turn.x, w[0].y - L.ends[0].turn.y) < 1 && Math.hypot(w[w.length - 1].x - L.ends[1].turn.x, w[w.length - 1].y - L.ends[1].turn.y) < 1, `${R.name}: ${L.mainland} - ${L.island} from turning point to turning point`);
       for (let i = 1; i < w.length; i++) {
         const n = Math.ceil(Math.hypot(w[i].x - w[i - 1].x, w[i].y - w[i - 1].y) / 16);
-        for (let k = 0; k <= n; k++) { const x = w[i - 1].x + (w[i].x - w[i - 1].x) * k / n, y = w[i - 1].y + (w[i].y - w[i - 1].y) * k / n; assert.ok(wet(tileAt(m, x, y)), `${R.name}: ${L.mainland} - ${L.island} on the water at ${Math.round(x / TILE)},${Math.round(y / TILE)}`); }
+        for (let k = 0; k <= n; k++) { const x = w[i - 1].x + (w[i].x - w[i - 1].x) * k / n, y = w[i - 1].y + (w[i].y - w[i - 1].y) * k / n; assert.ok(wetAt(m, x, y), `${R.name}: ${L.mainland} - ${L.island} on the water at ${Math.round(x / TILE)},${Math.round(y / TILE)}`); }
       }
     }
   }
