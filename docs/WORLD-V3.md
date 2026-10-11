@@ -3393,9 +3393,10 @@ plaza fronting a street, within 48 tiles in the dense core; failing that, a loos
 the railway, another plaza or a deck, most of its edge on the pavement), one plaza for the stops on the two tracks;
 `buildRailway` puts one kiosk on it for both (`plazaKiosks`) and one map point (`poi.sub`, `poi.services`: the line).
 The subway lines' stops aren't the main line's hubs (`buildRailHubs` skips them) and they have no switches
-(`railSwitches` skips them: they are below ground where they meet the main line). 15 of the 17 stations have a kiosk on
-a plaza; Lake District and Falls Center (Cedar Isle's east and north) found none and use today's fallback, the stairs
-from the nearest pavement (Lake District has none within 700 px: its way down is at the track).
+(`railSwitches` skips them: they are below ground where they meet the main line). 14 of the 17 stations have a kiosk on
+a plaza; Arts District (its stops under a park) and Lake District and Falls Center (Cedar Isle's east and north) found
+none and use today's fallback, the stairs from the nearest pavement (Lake District has none within 700 px: its way down
+is at the track). Two plazas are paved over afterwards in part: the airport's by its apron, Northshore's 4 of 32 tiles.
 
 **The trains** (`server/systems/trains.js`): the loops machinery of 8.10 - two trains a line, the signals' cells. Two
 changes: a subway line's points below ground take cells a level deeper (`DEEP`), so a subway train passes under a main
@@ -3422,7 +3423,8 @@ looks wrong:
   plaza search takes the nearest free street frontage, not one over the platform;
 - **no portals**: where a viaduct goes below ground the track just stops (as the main line's tunnels, 8.10); the
   ramps want cuttings and mouths (`client/render/trains.js` `drawPortals` draws today's line's only);
-- **Lake District and Falls Center** have no plaza (above);
+- **Arts District, Lake District and Falls Center** have no plaza (above), and Downtown's kiosk sits in the front
+  garden of the block's big building, its bushes round it (the kiosk is small at 1/4: hard to make out);
 - **the turning loops are big** (110 tiles) and Line 1's at Northshore passes under the main line and the Coast
   Highway (harmless below ground: its own cells);
 - **single track with passing places** (SU6) is not done: double track throughout.

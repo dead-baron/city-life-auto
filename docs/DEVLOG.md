@@ -7726,8 +7726,8 @@ tunnel, or underground"; SU6: "for the most part I imagine it would be a single 
   end. Below ground everywhere but on the viaducts (at grade 12 tiles either side of the water, decked over it).
 - Every station is a stop on both tracks (a terminal once), reached by a kiosk with stairs down on a plaza by the
   street as today's subway (`shared/map.js` `reserveSubwayPlazas`, one kiosk and one map point for the two tracks); a
-  stop the main line has a station of the same name for is "... Subway". Two stations on Cedar Isle found no plaza and
-  use today's fallback, the stairs from the pavement.
+  stop the main line has a station of the same name for is "... Subway". Three stations (Arts District, Lake District,
+  Falls Center) found no plaza and use today's fallback, the stairs from the pavement: 14 kiosks for 17 stations.
 - Their trains run on the main line's signals (`server/systems/trains.js`): two a line, the subway below ground a level
   deeper (cells of its own: a subway train passes under a main line train), and a loop crossing itself (Line 2 at
   Westport Center) has its diamonds. Five minutes of game time: every subway train runs and stops at its stations, no
