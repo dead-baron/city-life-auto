@@ -656,7 +656,7 @@ function layoutRoads(m, rand) {
     ringH[i] = Math.abs(cd[i + W] - cd[i - W]) >= Math.abs(cd[i + 1] - cd[i - 1]) ? 1 : 2;
   }
   m.ringD = ringD;
-  m.railPts = railLine(m);
+  m.railPts = OPTS?.noRail ? [] : railLine(m);   // (a place on the v3 land: the railway isn't the island's - world3-islands.js)
   const rD = (x, y) => { const i = at(x, y); return i < 0 ? 255 : ringD[i]; };
   lines.push({ pts: ring, kind: 'hwy', lvl: 1, name: 'Metro Ring' });
   const inner = offsetLoop(ring, BAND * TILE);
@@ -675,7 +675,7 @@ function layoutRoads(m, rand) {
   m.plazas = PL ? metro.plazas.map((q) => ({ ...q, x0: PX(q.x0), y0: PY(q.y0), x1: PX(q.x1), y1: PY(q.y1) })) : metro.plazas;
   // coast drives (around the city and Southbank, away from the ring) and river drives
   const coastOk = (x, y) => { const z = zoneOf(x, y); return (z === Z.CITY || z === Z.SOUTH) && rD(x, y) >= BAND + 1 && !inPark(IX(x), IY(y)); };
-  for (const c of contours(m.distSea, W, H, 9 * 4, (x, y) => { const z = m.zone[y * W + x]; return z === Z.CITY || z === Z.SOUTH; }, Math.floor(PX(540)), Math.floor(PY(220)), Math.ceil(PX(1060)), Math.ceil(PY(920)))) {
+  for (const c of contours(m.distSea, W, H, 9 * 4, (x, y) => { const z = m.zone[y * W + x]; return z === Z.CITY || z === Z.SOUTH; }, Math.floor(PX(540)), Math.floor(PY(220)), Math.max(Math.ceil(PX(1060)), OPTS?.box?.[2] ?? 0), Math.max(Math.ceil(PY(920)), OPTS?.box?.[3] ?? 0))) {   // (OPTS.box: a place's land reaching past today's - Metro City's new east shore)
     for (const p of clipLine(smoothLine(c, 40), coastOk, 14 * TILE, 12)) lines.push({ pts: p, kind: 'drive', lvl: 0, name: 'Coast Drive' });
   }
   for (const c of contours(m.distRiver, W, H, 8 * 4, (x, y) => { const z = m.zone[y * W + x]; return (z === Z.CITY || z === Z.SOUTH) && m.distSea[y * W + x] > 10 * 4; }, Math.floor(PX(700)), Math.floor(PY(540)), Math.ceil(PX(1060)), Math.ceil(PY(800)))) {
@@ -810,6 +810,7 @@ export const SUBWAY_PLAZA = { w: 8, h: 4 };
 function reserveSubwayPlazas(m) {
   m.subwayPlazas = [];
   const pts = m.railPts, { w: PW, h: PH } = SUBWAY_PLAZA;
+  if (!pts.length) return;
   const free = (i) => m.land[i] && m.tiles[i] === T.GRASS && !m.reserve[i] && !m.deck[i];
   for (const { name, i } of stationIndex(m, pts)) {
     const q = pts[i];
@@ -2993,6 +2994,7 @@ function markUnderpasses(m, pts) {
   }
 }
 function reserveRail(m, pts) {
+  if (!pts.length) return;   // (no railway: OPTS.noRail)
   markUnderpasses(m, pts);
   for (const p of pts) {
     if (p.under) continue;
@@ -3022,6 +3024,7 @@ function reserveRail(m, pts) {
 }
 
 function buildRailway(m, pts) {
+  if (!pts.length) { m.rail = { pts, len: 0, stations: [], crossings: [], rural: [] }; return; }   // (no railway: OPTS.noRail)
   const total = pts[pts.length - 1].s + Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y);
   // Where the line meets open water: a long run of water under the centre line is a crossing (a
   // bridge deck); anything else - the ragged edge of a bank - is filled in as embankment.
