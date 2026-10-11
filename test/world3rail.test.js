@@ -11,6 +11,9 @@ import { railAt } from '../shared/mapcore.js';
 import { SERVICES, MAIN_JUNCTIONS } from '../shared/world3-skeleton.js';
 import { TRACK_OFF } from '../shared/world3-rail.js';
 import * as trains from '../server/systems/trains.js';
+import * as players from '../server/systems/players.js';
+import { joinPlayer, teleport } from './helpers.js';
+import { IN } from '../shared/input.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const mod = (a, n) => ((a % n) + n) % n;
@@ -126,4 +129,33 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
     assert.ok(run[i].dist > 8000, `${r.name} train ${t.i}: ran ${Math.round(run[i].dist)} px`);
     assert.ok(run[i].stops.size >= 2, `${r.name} train ${t.i}: stopped at ${run[i].stops.size} stations`);
   });
+});
+
+test('riding the v3 main line as today: board a Bay Loop or Harbor Line train at its platform, ride, get off at the next stop', () => {
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p } = joinPlayer(w);
+  // a train of a loop other than the first, standing at an open-air platform (they start at their stations)
+  const t = w.trains.find((q) => q.r > 1 && q.dwellUntil && !w.rails[q.r].stations[q.stop].under);
+  assert.ok(t, 'a train in at a platform');
+  t.dwellUntil = w.time + 8;
+  const rail = w.rails[t.r], st = rail.stations[t.stop];
+  teleport(w, p.ped, st.platform.x, st.platform.y);
+  w.step();
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /Board the train/.test(act.label), act && act.label);
+  act.run();
+  assert.ok(p.ped.onTrain, 'aboard');
+  const next = rail.stations[(t.stop + 1) % rail.stations.length];
+  let moved = false, at = false;
+  for (let i = 0; i < TICK_HZ * 300 && !at; i++) { w.step(); if (!t.dwellUntil) moved = true; at = moved && !!t.dwellUntil; }
+  assert.ok(at, `${rail.name}: at the next stop`);
+  assert.equal(rail.stations[t.stop], next, 'the next stop');
+  const e = w.get(t.cars[p.ped.onTrain.c].id);
+  assert.ok(Math.hypot(p.ped.x - e.x, p.ped.y - e.y) < 140, 'rode with the car');
+  const off = players.findInteraction(w, p);
+  assert.ok(off && /Get off/.test(off.label), off && off.label);
+  let seq = 1;
+  for (let i = 0; i < 2; i++) { players.queueInput(p, { seq: seq++, bits: i === 0 ? IN.VEHICLE : 0, mx: 0, my: 0, aim: 0 }); w.step(); }
+  assert.ok(!p.ped.onTrain, 'off the train');
+  assert.ok(Math.hypot(p.ped.x - next.platform.x, p.ped.y - next.platform.y) < next.half + 300, 'on its platform');
 });
