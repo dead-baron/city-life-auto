@@ -53,7 +53,10 @@ export function doorInteraction(world, p) {
   const poi = world.map.poiNear(ped.x, ped.y);
   if (!poi || poi.kind !== 'home' || !world.homeOwner.has(poi.home)) return null;
   const h = world.map.homes[poi.home];
-  if (world.homeOwner.get(h.id) === p.pid) return { label: `Go inside ${h.name}`, run: () => goIn(world, p, h) };
+  if (world.homeOwner.get(h.id) === p.pid) {
+    if (!p.homePre && p.conn) { p.homePre = 1; p.conn.sendJSON({ t: 'home', pre: 1 }); }   // (the page fetches the rooms' drawing now, so they're there the moment you're in)
+    return { label: `Go inside ${h.name}`, run: () => goIn(world, p, h) };
+  }
   const host = hostIn(world, h);   // (someone else's: if they're in, knock)
   if (!host) return null;
   if (p.knock && p.knock.home === h.id && world.time - p.knock.at < 20) return { label: `Waiting for ${host.name} to open the door...`, passive: true, run: () => {} };

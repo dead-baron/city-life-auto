@@ -26,6 +26,7 @@ const PAL = [
 
 export function onMsg(state, m) {
   S = state;
+  if (m.pre) return;   // (at your door: loaded ahead of going in)
   if (m.off) { hide(); return; }
   if (!st || st.id !== m.id || m.plan !== (st && st.plan)) st = { id: m.id, cars: [], name: '', garage: 0, sleepS: HOME_IN.sleepS, wakeH: HOME_IN.wakeH };
   Object.assign(st, m);
@@ -290,6 +291,7 @@ function friend(L, o, now) {
 function lights(L, now) {   // art v2: warm pools of light round the lamps at night
   const d = daylight();
   if (d > 0.8) return;
+  g.save(); g.beginPath(); g.rect(TILE_IN, TILE_IN, L.w - TILE_IN * 2, L.h - TILE_IN * 2); g.clip();   // (the light stays indoors)
   g.globalCompositeOperation = 'lighter';
   for (const p of L.pieces) {
     if (p.ch !== 'A' && p.ch !== 'B' && p.ch !== 'V') continue;
@@ -299,6 +301,7 @@ function lights(L, now) {   // art v2: warm pools of light round the lamps at ni
     g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
   }
   g.globalCompositeOperation = 'source-over';
+  g.restore();
 }
 
 // the place's name, and the night passing while you sleep
