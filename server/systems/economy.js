@@ -21,6 +21,7 @@ import * as cruiser from './cruiser.js';
 import * as trains from './trains.js';
 import * as rentals from './rentals.js';
 import * as hotmoney from './hotmoney.js';
+import * as farming from './farming.js';
 
 import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
@@ -299,9 +300,12 @@ export function buildMenu(world, p, poi) {
       sub = 'Load produce boxes into an open-cargo vehicle and haul them to FreshHub Grocery.';
       opts.push({ id: 'job:farm', label: p.job ? 'You already have a job' : 'Take a harvest contract (4 boxes)', dis: !!p.job });
       if (p.job) opts.push({ id: 'job:quit', label: 'Abandon current job' });
+      title = poi.label;   // (the co-op's counter: seeds and what you grow - SHOPS.farm; farm work on the fields - farming.js)
+      sub = 'Harvest contracts, farm work on the fields with the co-op tractor (paid by the row), seeds for your garden - and they buy what you grow.';
+      if (!p.job) opts.push({ id: 'job:fieldwork', label: 'Farm work: the co-op tractor on the fields (paid by the row)' });
       break;
     case 'grocery':
-      sub = 'Carry Produce Boxes to the front door to get paid.';
+      sub = 'Carry Produce Boxes to the front door to get paid. They buy what you grow in your garden, too.';
       opts.push({ id: 'close', label: 'OK' });
       break;
     case 'fence':
@@ -646,6 +650,7 @@ function execute(world, p, poi, opt) {
     case 'job': {
       if (parts[1] === 'quit') { jobs.failJob(world, p, 'Job abandoned.'); return null; }
       if (p.job) return 'Finish your current job first.';
+      if (parts[1] === 'fieldwork') return farming.startWork(world, p, poi);   // (the tractor on the fields: farming.js)
       return parts[1] === 'courier' ? jobs.startCourier(world, p, poi) : jobs.startFarm(world, p, poi);
     }
     default: return 'Unknown option.';

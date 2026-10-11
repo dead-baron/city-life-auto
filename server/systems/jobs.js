@@ -428,3 +428,11 @@ export function cancelFishing(world, p, msg) {
   if (msg) world.notify(p, msg, 'info');
   p.meDirty = true;
 }
+
+// A job done that pays as it goes (the farm work: farming.js): over, its truck's return bonus on offer (releaseTruck)
+export function jobDone(world, p) {
+  if (!p.job) return;
+  releaseTruck(world, p, true);
+  p.job = null;
+  p.meDirty = true;
+}

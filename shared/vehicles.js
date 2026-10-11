@@ -91,6 +91,10 @@ export const VEHICLES = {
   // ---- the search-and-rescue helicopter (H59: server/systems/sar.js issues one to a rescue pilot): red and white, a
   // winch and its harness by the side door (hoist: the clients draw the cable). (i 64: the next free aircraft index)
   rescueheli: { i: 64, name: 'Lifeline Rescue Helicopter', kind: 'air', air: 'heli', L: 156, W: 56, max: 740, accel: 350, brake: 400, rev: 0, turn: 2.0, grip: 8, drift: 2, mass: 1.7, hp: 420, seats: 4, slots: [[-36, 0]], climb: 175, sink: 205, ceiling: 1000, rotor: 78, hoist: true, livery: 'rescue' },
+  // ---- the farm tractor (H61: server/systems/farming.js; issued on the co-op's farm-work contract like a work truck):
+  // slow, tough, at home on rough ground (rough: hardly slowed by dirt, grass or the fields). Driven down a field's row it
+  // ploughs, sows or harvests it. (i 48: the next free index after the tank's; art v2's 'tractor' model, a red one)
+  tractor:   { i: 48, name: 'Furrowmaster Tractor', kind: 'car', L: 84, W: 54, max: 250, accel: 170, brake: 600, rev: 110, turn: 2.0, grip: 11, drift: 6, mass: 3.2, hp: 900, seats: 1, slots: [[-34, 0]], rough: 0.08 },
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);
