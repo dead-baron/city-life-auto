@@ -7856,4 +7856,5 @@ kitchen, gatehouse, warden's house, lighthouse, the yard and its court, the poli
 through the gate, no road on the island, the harbour at the Prison Boat's last stop and the way from its pier to the
 gate; the weir, the lock's channel open, the River Water Bus through the lock; the quays, the banks, the farm docks; the
 lake's island, lookout, campground, fishing docks, boathouse and rental), test/world3ferries.test.js (unchanged: every
-route, the River Water Bus's boat to Kestrel Lake through the lock and back).
+route, the River Water Bus's boat to Kestrel Lake through the lock and back), test/world3server.test.js (the server's
+world on the v3 map with the prison's gate: no errors; the region files read back into the same city).
