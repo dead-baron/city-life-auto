@@ -7348,8 +7348,17 @@ client/art2/game/host.js, client/art2/game/pool.js, client/art2/game/worker.js, 
 shared/mapcore.js, shared/bowling.js, shared/cinema.js, test/regionwindow.test.js (new), test/world3window.test.js
 (new), docs/WORLD-V3.md 8.12.
 
+Measured: a v3 window is 1512 x 1512 tiles, its layers 36.6 MB of the world's 426.7 MB, assembled in 0.19 s (a move
+0.28 s); **the page's JS heap 81 MB with a window and art v2 drawing** (headless Chromium; 468-497 MB with the whole
+world); the swap's art v2 hand-over 0.21-0.26 s on the main thread (to take out). docs/WORLD-V3.md 8.12 has the rest
+and what's left (per-region signatures, the first window before the player's position is known, a global POI list
+for the phone and the big map, the railway's loops in a window, the swap's copies, the frame-sized minimap, regions
+kept in the browser).
+
 Tests: test/regionwindow.test.js (today's world in 256-tile regions: a window's layers are windowOf's to the byte, its
 lists hold exactly its items at their world indices; today's own regions: every window is the whole map, as assembled
-whole; the keeper's moves), test/regions.test.js, test/mapwindow.test.js, test/bowling.test.js, test/cinema.test.js,
+whole; the worker's download of a window - the index and 9 regions; the keeper's moves), test/world3window.test.js (the
+v3 world: a window round a hospital, a move east, the frame's corner), a headless playtest of the v3 world
+(`CLA_WORLD=v3`, `?world=v3`: joining, crossing a border, a far teleport), test/regions.test.js, test/mapwindow.test.js, test/bowling.test.js, test/cinema.test.js,
 test/hudlayers.test.js (all pass); the code budgets (node tools/perf.mjs codeReport: page 463 of 485 KB, city 348 of
 360, renderer 362 of 363, bake 738 of 765).

@@ -2498,11 +2498,13 @@ its items only - and the moves across a border and to the corner).
 
 | | |
 |---|---|
-| A window of the v3 world (round the frame's middle: r4-3 ... r6-5) | **1512 x 1512 tiles; its per-tile layers 36.6 MB** (the whole frame's 407 MB); props 20,079 of the world's 205,276 (the list's length stays the world's), POIs 459 of 713 |
+| A window of the v3 world (r3-3 ... r5-5, round a hospital by the gulf) | **1512 x 1512 tiles; its per-tile layers 36.6 MB** (the whole world's 426.7 MB); props 20,520 of the world's 205,276 (the list's length stays the world's), POIs 460 of 713, buildings 825 of 1,179 - the cities are round the gulf |
+| Assembling it (node, from the files) | **0.19 s**; a move east 0.28 s (`test/world3window.test.js`) |
 | Getting it (node, from a local v3 server: the index and 9 regions downloaded, unzipped and assembled) | **0.72 s**; the JS heap after it 40 MB (and the layers' 37 MB outside it) |
 | The region files the server writes now | 81 files, 11.7 MB gzipped (the world has grown since 8.9: the main line, the biomes) |
-| **The page** (headless Chromium, `CLA_WORLD=v3`, `?world=v3`) | **in the city after 12.7 s; the main thread's JS heap 148 MB** with a window (**468-497 MB** with the whole world, 8.9), the same after each move |
-| The window's moves in the page | at joining (the frame's middle -> round the player: r3-3 ... r5-5), across a region border (teleported 40 tiles short of it, then 40 past: -> r4-3 ... r6-5, the regions coming in fetched before), and a teleport 1,700 tiles east (-> r6-3 ... r8-5); the v3 test: a move assembled in 0.28 s in node |
+| **The page** (headless Chromium, `CLA_WORLD=v3`, `?world=v3`) | **in the city after 10.6-12.7 s; the main thread's JS heap 81 MB (86 allocated) with art v2 drawing** (148 MB in a run where art v2 didn't start and the classic art loaded) - **468-497 MB with the whole world** (8.9); the same after each move |
+| The swap on the page | art v2's `setMap` (the window cloned to its bake worker): **0.21-0.26 s** on the main thread - a hitch to take out (what's left, 5) |
+| The window's moves in the page | at joining (the frame's middle -> round the player, when they spawn outside it), across a region border (teleported 40 tiles short of the centre region's edge, then 40 past: r4-3 ... r6-5 -> r5-3 ... r7-5, the regions coming in fetched before) and a teleport 1,700 tiles west (-> r1-3 ... r3-5): no errors once the readers below were fixed (the walk-ins' doors stopped the frame drawing; art v2's resync stopped its start) |
 
 **What's left** (in order)
 1. **Per-region signatures** (part 8 item 5): the welcome's whole-map signature check is skipped for a window; each
@@ -2515,8 +2517,11 @@ its items only - and the moves across a border and to the corner).
 4. **The railway's loops in a window** are the window's part of each loop, compacted (railAt searches by arc length):
    the minimap draws no line across where a loop leaves the window; the art's stations and the trains near a window's
    edge want a look.
-5. **The swap copies**: every bake worker gets a structured clone of the new window, and the page makes the flora,
-   ground cache, buildings layer and router again; the regions both windows share could be moved, not copied, and the
-   router (the whole road graph) kept.
+5. **The swap copies**: every bake worker gets a structured clone of the new window (0.21-0.26 s on the page's main
+   thread: a hitch at each border), and the page makes the flora, ground cache, buildings layer and router again. The
+   city worker could post the window to the bake workers itself (a MessageChannel), or only the regions coming in; the
+   router (the whole road graph) could be kept.
+8. **The art's look after a move** wants a check in a real browser: in the headless page art v2 ran and took the new
+   windows, but the frame stopped drawing on a walk-in reader before the last fix, so no screenshot of baked art yet.
 6. **The minimap is a frame-sized canvas** (5040 x 4032, 81 MB of pixels): wants a coarser picture at v3 (8.2's note).
 7. **Regions aren't kept in the browser** (IndexedDB): each visit downloads the window (about 2 MB).
