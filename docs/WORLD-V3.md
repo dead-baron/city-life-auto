@@ -3728,7 +3728,10 @@ city worker 34 files, 359 KB of 360).
   no highway, clear of the main line and of its keep-out box: **the Ridge Trail** from Summit Road up to Summit Tarn
   (summitTarn's **Ridge Fire Lookout** on its high stretch, **the Ridge Trail Hunting Camp** by it - and the tarn's cabin
   has a way in now), **the Canyon Track** from Mesa Road to the canyon's west side (the oasis's turnaround, **the
-  Canyon Track Hunting Camp**), **the Mirage Track** from Canyon Road down to the lake (the camp at its end).
+  Canyon Track Hunting Camp**), **the Mirage Track** from Canyon Road down to the lake (the camp at its end); and the
+  ways in to H44's moved sites that had none: **the Sentinel Trail** from Summit Road to the stones, **the Boneyard
+  Track** from Mine Road to the boneyard's gate, **the Balloon Field Track** and **the Mission Track** (from Canyon Road
+  to the ruins).
 - **The desert's dry washes kept off the moved sites**: the biomes' gravel (reserve 128, painted first) is cleared to
   plain ground in each moved desert site's box (`keep`): the boneyard's plane rows, the mission ruins, the balloon field,
   the canyon, the lake, the water park.
@@ -3747,7 +3750,8 @@ or the Egret Coast) and **Granite Cove** (a bay of the sea: the peaks have no se
 Willow River's orchard on today's Farm Road and the vineyard at fixed coordinates - skipped in the world build now:
 each wants its anchor placed and its fields blended with 8.8's); **a cave of its own for the Old Granite Mine** (the
 cave world is one - `undergroundOf(m).cave`, the server's `L.cave` - and it wants a list: one cave region per mine,
-entered by its own mouth); tracks to the Sentinel Stones, the boneyard, the mission ruins and the balloon field.
+entered by its own mouth); the tracks are polylines on the road network as the sites' roads in (dirt): the traffic
+may take them, as it does the country sites' roads.
 
 ### 8.20 The west coast: Egret Point, its light, the raceway and the marsh; Silver Thread Falls, North Cape Light, the coves (2026-10-11, H45)
 

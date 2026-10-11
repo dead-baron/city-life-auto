@@ -540,7 +540,7 @@ function fernGorge(m, H) {
     if (d < bd) { bd = d; th = q; }
   }
   if (!th || bd > 24) return;
-  if (H.place?.d) th = { x: th.x, y: th.y + 3 * TILE };   // (the world build: its road an arterial, the pull-off off its far edge)
+  if (H.place?.d) { let k = 0; while (k < 9 && m.tiles[at(th.x / TILE, th.y / TILE + k)] !== T.GRASS && m.tiles[at(th.x / TILE, th.y / TILE + k)] !== T.DIRT) k++; th = { x: th.x, y: th.y + k * TILE }; }   // (the world build: its road an arterial - the pull-off off its far edge)
   { let ok = true; for (let ty = Math.floor(th.y / TILE) + 1; ty <= th.y / TILE + 4; ty++) for (let tx = Math.floor(th.x / TILE) - 3; tx <= th.x / TILE + 5; tx++) { const t = m.tiles[at(tx, ty)]; if (t !== T.GRASS && t !== T.DIRT) ok = false; } if (!ok) return; }   // (open ground for the pull-off)
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= (294 + OX) * TILE && q.x < (320 + OX) * TILE && q.y >= (162 + OY) * TILE && q.y < (202 + OY) * TILE) dropProp(m, i); });

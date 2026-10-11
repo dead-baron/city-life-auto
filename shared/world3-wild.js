@@ -64,7 +64,7 @@ export const MOVED = [
   // Water Park on Mine Road (its top-left corner)
   { name: 'Redwood Creek', anchor: [210, 189], to: [560, 1135], r: 30, d: D3.WOODS },
   { name: 'Giants Loop', anchor: [173, 131], to: [604, 1128], r: 3, d: D3.WOODS },
-  { name: 'Fern Gorge', anchor: [309, 172], to: [693, 1136], r: 3, d: D3.WOODS },   // (south of Timber Road, its trailhead on it)
+  { name: 'Fern Gorge', anchor: [309, 172], to: [681, 1136], r: 3, d: D3.WOODS },   // (south of Timber Road, its trailhead on it; west of the main line's crossing)
   { name: 'Old Granite Mine', anchor: [537, 106], to: [745, 452], r: 3, d: D3.PEAKS },
   { name: 'Canyon Oasis', anchor: [1190, 800], to: [3850, 525], r: 3, d: D3.DESERT, keep: [-31, -22, 31, 22] },
   { name: 'Mirage Camp', anchor: [1092, 782], to: [3930, 760], r: 12, d: D3.DESERT, keep: [-16, -36, 16, 20] },
@@ -79,6 +79,12 @@ export const WILD_TRACKS = [
   { name: 'Ridge Trail', end: [940, 170], d: D3.PEAKS },
   { name: 'Canyon Track', end: [3815, 525], d: D3.DESERT, avoid: [3819, 503, 3881, 547] },
   { name: 'Mirage Track', end: [3936, 738], d: D3.DESERT },
+  // the ways in to the moved sites that had none: the stones (from Summit Road), the boneyard (from Mine Road), the
+  // balloon field and the mission ruins
+  { name: 'Sentinel Trail', end: [714, 128], d: D3.PEAKS },
+  { name: 'Boneyard Track', end: [3915, 1267], d: D3.DESERT },
+  { name: 'Balloon Field Track', end: [3874, 1406], d: D3.DESERT },
+  { name: 'Mission Track', end: [4000, 878], d: D3.DESERT },
 ];
 // today's wild districts -> the v3 region they move to (Highland Woods, Granite Peaks; Dry Creek's farmland the valley,
 // its desert the Red Rock Desert)
@@ -102,7 +108,7 @@ export const WILD_VIEWS = [
   { key: 'drycreek', name: 'The oil field, The Rusty Spur, the boneyard and the balloon field by the Desert Highway', box: [3690, 1090, 4030, 1410] },
   { key: 'route9', name: 'The Route 9 stop, the solar farm and the drive-in on Route 9', box: [3760, 1420, 4230, 1590] },
   // (H47)
-  { key: 'redwoods', name: 'Redwood Creek, its falls and the beaver pond; Giants Loop and the hunting lodge on Timber Road', box: [430, 1080, 650, 1185] },
+  { key: 'redwoods', name: 'Redwood Creek, its falls and the beaver pond; Giants Loop, the hunting lodge and Fern Gorge on Timber Road', box: [500, 1080, 720, 1180] },
   { key: 'ridge', name: 'The Ridge Trail up to Summit Tarn: the fire lookout, the hunting camp', box: [860, 60, 1010, 225] },
   { key: 'oldmine', name: 'The Old Granite Mine above Lookout Road', box: [680, 400, 820, 500] },
   { key: 'canyon', name: 'Red Rock Canyon and its oasis off Mesa Road; Mirage Lake and its camp', box: [3760, 430, 4010, 800] },

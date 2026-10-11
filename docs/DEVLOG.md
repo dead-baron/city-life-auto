@@ -7951,14 +7951,15 @@ the boneyard overlapping".
 - **The tracks they look for by name** (`WILD_TRACKS`), laid from the nearest road they may join: **the Ridge Trail**
   from Summit Road up to Summit Tarn (**Ridge Fire Lookout** on its high stretch, **the Ridge Trail Hunting Camp**), **the
   Canyon Track** from Mesa Road into the canyon (the oasis's turnaround, **the Canyon Track Hunting Camp**), **the
-  Mirage Track** down to the lake (the camp at its end).
+  Mirage Track** down to the lake (the camp at its end); and ways in to the moved sites that had none (the Sentinel
+  Trail to the stones, the Boneyard Track, the Balloon Field Track, the Mission Track).
 - **One cave**: the cave world stays under Copper Gulch Mine's adit (the Old Granite Mine is marked `cave: false` in
   the world build; its seams are worked as every mine's).
 - **The desert's dry washes** (the biomes' gravel) are kept off the moved desert sites - the boneyard's plane rows no
   longer stand on one.
 - Not done: Redwood Cove (it needs a shore), Granite Cove (a sea bay), Dry Creek's farmland into Willow Valley (map.js
-  buildFarm, DRY_CREEK_ESTATES, the fields, the orchard, the vineyard), a cave of its own for the second mine, tracks to
-  the stones, the boneyard, the ruins and the balloon field. Nothing live changes: the world hash stays 6b6e16fdef9f.
+  buildFarm, DRY_CREEK_ESTATES, the fields, the orchard, the vineyard), a cave of its own for the second mine. Nothing
+  live changes: the world hash stays 6b6e16fdef9f.
 
 Files: shared/world3-wild.js (MOVED, WILD_TRACKS, wildTracks3, the washes kept off, WILD_VIEWS), shared/naturesites.js
 (redwoodCreek, giantsLoop, fernGorge, oldMine, splashBay, beaverPonds, canyonWash through `PXs` / `DS` / the road by the
