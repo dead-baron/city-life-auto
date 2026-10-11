@@ -4177,7 +4177,7 @@ function buildScenePaintings(m) {
   for (const sp0 of SCENE_SPOTS) {
     const mk = sp0.masked ? SCENE_MASKS[sp0.key] : null;
     if (sp0.masked && !mk) continue;
-    const sp = mk ? { ...sp0, w: mk.w, h: mk.h } : sp0;
+    const sp = { ...sp0, ...(mk && { w: mk.w, h: mk.h }), dist: WD ? WD.dist(sp0.dist) : sp0.dist };   // (WD.dist: the canyon's v3 region - 8.19)
     // summed-area table of "can't paint here" tiles
     const sat = new Int32Array((W + 1) * (H + 1));
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {

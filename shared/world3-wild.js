@@ -52,9 +52,39 @@ export const MOVED = [
   { name: 'The Sentinel Stones', anchor: [744, 31], to: [720, 140], r: 20, d: D3.PEAKS },
   // Dry Creek's desert places in the Red Rock Desert's west, between the Desert Highway and Canyon Road (r: just the
   // anchor - nothing else of today's round it moves)
-  { name: 'Dry Creek Boneyard', anchor: [1248, 632], to: [3900, 1270], r: 4, d: D3.DESERT },
-  { name: 'Old Mission Ruins', anchor: [1190, 405], to: [4000, 900], r: 4, d: D3.DESERT },
-  { name: 'Dry Creek Balloon Field', anchor: [1150, 463], to: [3860, 1380], r: 4, d: D3.DESERT },
+  // (keep: the box round `to`, tiles, the desert's dry washes are kept out of - world3-biomes.js paints them first)
+  { name: 'Dry Creek Boneyard', anchor: [1248, 632], to: [3900, 1270], r: 4, d: D3.DESERT, keep: [-4, -4, 36, 76] },
+  { name: 'Old Mission Ruins', anchor: [1190, 405], to: [4000, 900], r: 4, d: D3.DESERT, keep: [-24, -24, 24, 24] },
+  { name: 'Dry Creek Balloon Field', anchor: [1150, 463], to: [3860, 1380], r: 4, d: D3.DESERT, keep: [-4, -4, 32, 27] },
+  // (H47) Highland Woods' Redwood Creek - its falls, pool, camp and the trapper's beaver pond upstream - where Timber Road
+  // crosses it (naturesites.js finds the road by the moved spot: today's Highland Road isn't in the v3 world), Giants
+  // Loop and the hunting lodge by Timber Road further east; Granite Peaks' Old Granite Mine above Lookout Road (its
+  // seams mined as today's: the cave world stays under Copper Gulch Mine's adit); the desert's Red Rock Canyon (the
+  // painting, its oasis and wash) south of Mesa Road, Mirage Lake and its camp west of Canyon Road, Splash Canyon
+  // Water Park on Mine Road (its top-left corner)
+  { name: 'Redwood Creek', anchor: [210, 189], to: [560, 1135], r: 30, d: D3.WOODS },
+  { name: 'Giants Loop', anchor: [173, 131], to: [604, 1128], r: 3, d: D3.WOODS },
+  { name: 'Fern Gorge', anchor: [309, 172], to: [693, 1140], r: 3, d: D3.WOODS },   // (south of Timber Road, its trailhead on it; clear of the main line's room)
+  { name: 'Old Granite Mine', anchor: [537, 106], to: [745, 452], r: 3, d: D3.PEAKS },
+  { name: 'Canyon Oasis', anchor: [1190, 800], to: [3850, 525], r: 3, d: D3.DESERT, keep: [-31, -22, 31, 22] },
+  { name: 'Mirage Camp', anchor: [1092, 782], to: [3930, 760], r: 12, d: D3.DESERT, keep: [-16, -36, 16, 20] },
+  { name: 'Splash Canyon Water Park', anchor: [1054, 850], to: [4030, 1214], r: 3, d: D3.DESERT, keep: [-3, -3, 47, 25] },
+];
+// The tracks today's nature sites look for by name (H47), laid to their moved places from the nearest road they may
+// join: the Ridge Trail up to Summit Tarn from Summit Road (the fire lookout on its high stretch, the hunting camp by
+// it), the Canyon Track into Red Rock Canyon from Mesa Road (the oasis's turnaround at its end, the hunting camp),
+// the Mirage Track down to Mirage Lake (the camp at its end). end: the track's far end (tiles); avoid: a box it keeps
+// out of (the canyon painting's, placed after the roads).
+export const WILD_TRACKS = [
+  { name: 'Ridge Trail', end: [940, 170], d: D3.PEAKS },
+  { name: 'Canyon Track', end: [3815, 525], d: D3.DESERT, avoid: [3819, 503, 3881, 547] },
+  { name: 'Mirage Track', end: [3936, 738], d: D3.DESERT },
+  // the ways in to the moved sites that had none: the stones (from Summit Road), the boneyard (from Mine Road), the
+  // balloon field and the mission ruins
+  { name: 'Sentinel Trail', end: [714, 128], d: D3.PEAKS },
+  { name: 'Boneyard Track', end: [3915, 1267], d: D3.DESERT },
+  { name: 'Balloon Field Track', end: [3874, 1406], d: D3.DESERT },
+  { name: 'Mission Track', end: [4000, 878], d: D3.DESERT },
 ];
 // today's wild districts -> the v3 region they move to (Highland Woods, Granite Peaks; Dry Creek's farmland the valley,
 // its desert the Red Rock Desert)
@@ -77,6 +107,12 @@ export const WILD_VIEWS = [
   { key: 'quarry', name: 'The Granite Quarry on Falls Pass Road', box: [1190, 390, 1320, 470] },
   { key: 'drycreek', name: 'The oil field, The Rusty Spur, the boneyard and the balloon field by the Desert Highway', box: [3690, 1090, 4030, 1410] },
   { key: 'route9', name: 'The Route 9 stop, the solar farm and the drive-in on Route 9', box: [3760, 1420, 4230, 1590] },
+  // (H47)
+  { key: 'redwoods', name: 'Redwood Creek, its falls and the beaver pond; Giants Loop, the hunting lodge and Fern Gorge on Timber Road', box: [500, 1080, 720, 1180] },
+  { key: 'ridge', name: 'The Ridge Trail up to Summit Tarn: the fire lookout, the hunting camp', box: [860, 60, 1010, 225] },
+  { key: 'oldmine', name: 'The Old Granite Mine above Lookout Road', box: [680, 400, 820, 500] },
+  { key: 'canyon', name: 'Red Rock Canyon and its oasis off Mesa Road; Mirage Lake and its camp', box: [3760, 430, 4010, 800] },
+  { key: 'splash', name: 'Splash Canyon Water Park on Mine Road', box: [3990, 1180, 4110, 1260] },
 ];
 // the room kept round the skeleton's lines (tiles): the highways', the main line's and its stations' as the desert's
 // places keep (world3-desert.js), a road's own few tiles
@@ -206,6 +242,54 @@ export function wildSites3(lines, m) {
     lines.push({ pts, kind: S.road, lvl: 0, name, culdesac: true });
     for (const p of pts) claimed.push([Math.floor(p.x / TILE) - 3, Math.floor(p.y / TILE) - 3, Math.floor(p.x / TILE) + 4, Math.floor(p.y / TILE) + 4]);
     out.placed.push({ name: S.name, type: S.type, x, y, w: S.w, h: S.h, d: site.d, road: name, joins: [Math.round(best.q.x), Math.round(best.q.y)] });
+  }
+  out.tracks = wildTracks3(lines, m, hwys, mains, hwyLines, tunnels);
+  // the desert's dry washes (the biomes' gravel bars, reserve 128) kept off the moved desert sites: their ground plain
+  for (const q of MOVED) if (q.keep) for (let y = q.to[1] + q.keep[1]; y < q.to[1] + q.keep[3]; y++) for (let x = q.to[0] + q.keep[0]; x < q.to[0] + q.keep[2]; x++) { const i = y * W + x; if (m.reserve[i] & 128 && m.dist[i] === D3.DESERT) { m.reserve[i] &= ~128; m.tiles[i] = T.DIRT; } }
+  return out;
+}
+
+// The tracks the moved nature sites look for by name (WILD_TRACKS): from the nearest point of a road a dirt track may
+// join (within 160 tiles; never a highway, nor within 14 tiles of one, nor in a tunnel), straight to the track's end -
+// over dry land, across no highway, clear of the main line (10 tiles) and of its box; the nearest such start wins.
+function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels) {
+  const W = m.w, H = m.h, out = [], ok = ACCESS.dirt, TR = 160;
+  const fine = (a, b, avoid) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])));
+    for (let j = 0; j <= n; j++) {
+      const x = a[0] + (b[0] - a[0]) * (j / n), y = a[1] + (b[1] - a[1]) * (j / n), tx = Math.floor(x), ty = Math.floor(y);
+      if (tx < 0 || ty < 0 || tx >= W || ty >= H || !m.land[ty * W + tx] || m.river[ty * W + tx] || m.lake[ty * W + tx]) return false;
+      if (avoid && x > avoid[0] - 3 && y > avoid[1] - 3 && x < avoid[2] + 3 && y < avoid[3] + 3) return false;
+      if (j % 4 === 0 && mains.some((r) => nearestOnPath(r.path, x, y).d < 10)) return false;
+    }
+    const A = { x: a[0] * TILE, y: a[1] * TILE }, B = { x: b[0] * TILE, y: b[1] * TILE };
+    for (const h of hwyLines) for (let j = 0; j + 1 < h.pts.length; j++) if (segX(A, B, h.pts[j], h.pts[j + 1])) return false;
+    return true;
+  };
+  for (const K of WILD_TRACKS) {
+    const [ex, ey] = K.end, starts = [];
+    for (const l of lines) {
+      if (l.lvl !== 0 || !ok.has(l.kind) || l.foot || (l.culdesac && (l.kind === 'rural' || l.kind === 'dirt'))) continue;
+      for (let k = 0; k + 1 < l.pts.length; k++) {
+        const a = l.pts[k], b = l.pts[k + 1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / (2 * TILE)));
+        for (let j = 0; j < n; j++) {
+          const x = (a.x + (b.x - a.x) * (j / n)) / TILE, y = (a.y + (b.y - a.y) * (j / n)) / TILE, d = Math.hypot(x - ex, y - ey);
+          if (d > TR) continue;
+          const tx = Math.floor(x), ty = Math.floor(y);
+          if (tx < 0 || ty < 0 || tx >= W || ty >= H || !m.land[ty * W + tx] || m.river[ty * W + tx]) continue;
+          if (hwys.some((h) => nearestOnPath(h.path, x, y).d < 14) || tunnels.some((t) => dPoly(t.pts, x, y) < 12)) continue;
+          starts.push({ x, y, d });
+        }
+      }
+    }
+    starts.sort((a, b) => a.d - b.d || a.x - b.x || a.y - b.y);
+    const s = starts.slice(0, 120).find((q) => fine([q.x, q.y], K.end, K.avoid));
+    if (!s) { out.push({ name: K.name, missed: true }); continue; }
+    const pts = rounded([{ x: s.x * TILE, y: s.y * TILE }, { x: (s.x + ex) / 2 * TILE, y: (s.y + ey) / 2 * TILE }, { x: ex * TILE, y: ey * TILE }], 4 * TILE, false, 8);
+    measure(pts);
+    lines.push({ pts, kind: 'dirt', lvl: 0, name: K.name, culdesac: true });
+    for (let j = 0; j < pts.length; j++) { const i = Math.floor(pts[j].y / TILE) * W + Math.floor(pts[j].x / TILE); if (i >= 0 && i < W * H) m.reserve[i] |= 32; }
+    out.push({ name: K.name, from: [Math.round(s.x), Math.round(s.y)], to: K.end, len: Math.round(s.d) });
   }
   return out;
 }

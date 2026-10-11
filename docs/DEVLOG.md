@@ -8002,3 +8002,42 @@ docs/world-v3-town-hollow.png, docs/world-v3-town-silverfalls.png.
 
 Tests: test/world3relief.test.js (one world build: the field deterministic; the cliffs solid and off the roads, the roads
 on their grade; each landmark on its high ground; the tables, the falls, the peaks, the ridge, the gorge; Metro City flat).
+
+## 2026-10-11 · World v3: more of today's wild places at their v3 spots (H47; 8.19 continued)
+The owner's brief for this step (WORLD-V3.md 8.19's "What's left"): "the hard-wired nature sites ... each moved with its
+anchor ... or with its road found another way", "the rest of the desert", "tracks in to the moved sites; the wash and
+the boneyard overlapping".
+- **Moved whole** (`MOVED` in shared/world3-wild.js): **Redwood Creek** where Timber Road crosses it - the falls, the
+  pool, the camp, the pull-off, the bridge, and the beaver pond upstream with **the Redwood Creek trapper's cabin** by it
+  (naturesites.js finds the road by the moved spot: today's Highland Road isn't in the v3 world); **Giants Loop** and
+  the Highland Hunting Lodge further east on Timber Road (the lodge west of the trailhead in the v3 world - east of it,
+  it would stand on the road); **Fern Gorge** south of Timber Road, its trailhead pull-off off the road's far edge; **the
+  Old Granite Mine** above Lookout Road (its search box round the moved spot); **Red Rock Canyon** (the scene painting:
+  map.js's scene spots take their district through the world build - one line) south of Mesa Road with **Canyon
+  Oasis** and **Red Rock Wash**; **Mirage Lake** and **Mirage Camp** west of Canyon Road; **Splash Canyon Water Park**
+  on Mine Road (it was being built at today's coordinates in the v3 frame).
+- **The tracks they look for by name** (`WILD_TRACKS`), laid from the nearest road they may join: **the Ridge Trail**
+  from Summit Road up to Summit Tarn (**Ridge Fire Lookout** on its high stretch, **the Ridge Trail Hunting Camp**), **the
+  Canyon Track** from Mesa Road into the canyon (the oasis's turnaround, **the Canyon Track Hunting Camp**), **the
+  Mirage Track** down to the lake (the camp at its end); and ways in to the moved sites that had none (the Sentinel
+  Trail to the stones, the Boneyard Track, the Balloon Field Track, the Mission Track).
+- **One cave**: the cave world stays under Copper Gulch Mine's adit (the Old Granite Mine is marked `cave: false` in
+  the world build; its seams are worked as every mine's).
+- **The desert's dry washes** (the biomes' gravel) are kept off the moved desert sites - the boneyard's plane rows no
+  longer stand on one.
+- Not done: Redwood Cove (it needs a shore), Granite Cove (a sea bay), Dry Creek's farmland into Willow Valley (map.js
+  buildFarm, DRY_CREEK_ESTATES, the fields, the orchard, the vineyard), a cave of its own for the second mine. Nothing
+  live changes: the world hash stays 6b6e16fdef9f.
+
+Files: shared/world3-wild.js (MOVED, WILD_TRACKS, wildTracks3, the washes kept off, WILD_VIEWS), shared/naturesites.js
+(redwoodCreek, giantsLoop, fernGorge, oldMine, splashBay, beaverPonds, canyonWash through `PXs` / `DS` / the road by the
+spot), shared/underground.js (the cave's mine: the first with a cave), shared/map.js (the scene spots' district: one
+line), test/world3wild.test.js, docs/WORLD-V3.md 8.19, docs/world-v3-town-redwoods.png, -ridge.png, -oldmine.png,
+-canyon.png, -splash.png.
+
+Tests: test/world3wild.test.js (one world build: as before, and each newly moved site built once at its spot on its
+region's ground; the tracks on the one network, reaching their ends, meeting no highway; the lookout, the two hunting
+camps and the trapper's cabin in their regions, the beaver pond on Redwood Creek; the Old Granite Mine's seams and the
+one cave under Copper Gulch Mine; the canyon in the desert, the wash, the oasis's track; the water park's slides),
+test/world3desert.test.js, test/world3roads.test.js, test/world3world.test.js: all pass. `tools/perf.mjs`' code
+report: the city worker 34 files, 359 KB of 360.
