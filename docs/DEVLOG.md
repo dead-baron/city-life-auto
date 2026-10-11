@@ -6869,20 +6869,28 @@ What it does (docs/WORLD-V3.md 8.4, "Step B, the crossings"):
   island's polygon now, and the coast drives' box reaches it (`OPTS.box`): Coast Drive and the waterfront strip
   (promenade, palms, lamps) run along the new east shore.
 
-Not done (time): metro.js's anchors placed at today's pitches (item 3: the blocks are still 1.15x today's), and the
-east shore's designed waterfront (item 4: a park, piers, a marina - it has the polygon's shore, the coast drive and the
-promenade strip now, nothing designed). WORLD-V3.md 8.4 has the plan for both.
+- **The street plan at today's pitches:** `metro.js` `metroRoads` takes a transform (`ctx.tf`: the generator's `PX`,
+  `PY`, `LX`, `LY`) and runs in the placed frame - its anchors (the avenues, Broadway, the through streets, `AREAS`, the
+  hero corner) placed onto tile centres or edges as today's, its patterns' pitches as they are, its hashes, wobbles and
+  street names on today's coordinates read back. At scale 1 it is today's plan moved (Step A's test unchanged); at 1.15
+  the block depths are today's (18 tiles, today's 19) with more streets (130 side-street pieces, today's 99) - but the
+  spacing along a row is still wider (32 tiles, today's 23): to find next.
+
+Not done (time): the spacing along a row (above), and the east shore's designed waterfront (item 4: a park, piers, a
+marina - it has the polygon's shore, the coast drive and the promenade strip now, an unplanned strip between them).
+WORLD-V3.md 8.4 has what still looks wrong in the redrawn picture, and the plan.
 
 The live world is unchanged: the world hash stays `6b6e16fdef9f`. Nothing of this is in the page (the generator isn't).
 
 The files: `shared/world3-crossings.js` (new: `joinPlace` - the avenues' bridges, the canal bridges, the cut roads, the
 crossings list), `shared/world3-islands.js` (the land's rectangle takes in the island's polygon; the canal one water;
 `noRail`, `box`; the `lines` hook calls `joinPlace` on the v3 land), `shared/map.js` (`OPTS.noRail`: the rail passes
-take an empty line; `OPTS.box`: the coast drives' contour box), `test/world3place.test.js`, `docs/WORLD-V3.md` 8.4,
-`docs/world-v3-metro.png`.
+take an empty line; `OPTS.box`: the coast drives' contour box; the street plan called with `tf`, its lines not placed
+after it), `shared/metro.js` (`ctx.tf`), `test/world3place.test.js`, `docs/WORLD-V3.md` 8.4, `docs/world-v3-metro.png`.
 
 Tests: `test/world3place.test.js` (new: on the v3 land the road graph is one network; Bridge Avenue, Northbridge Avenue,
 Canal Bridges 1, 4 and 6 and Canal Footbridge 5 cross the canal, and the avenues carry the other two; no road over the
 water off a bridge, no road ends in the water; the Bay Bridge and Cedar Avenue's bridge gone, no highway on the ground;
-no railway, listed; the skeleton's crossings listed; the canal one water. A todo: the blocks at today's size). Step A's
-test passes as before; `test/world3.test.js` passes (the live world's hash).
+no railway, listed; the skeleton's crossings listed; the canal one water; the block depths as today's, more streets
+and blocks. A todo: the spacing along a row as today's). Step A's test passes as before (scale 1 is today's plan,
+moved, with the plan run in the placed frame); `test/world3.test.js` passes (the live world's hash).
