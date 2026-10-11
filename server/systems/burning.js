@@ -33,7 +33,7 @@ const span = (world, [a, b]) => a + (b - a) * world.rand();
 // (in a vehicle, in the water, an animal, indoors). Already burning: it burns on at least that long.
 export function ignite(world, ped, by = null, secs = BURN.secs) {
   if (!ped || ped.kind !== K.PED || ped.dead || ped.wild || ped.pet || ped.hidden || ped.interior || ped.vehId || ped.onTrain || ped.cellSafe) return false;
-  if (isSwimming(world.map, ped)) return false;
+  if (isSwimming(world.map, ped) || world.time < (ped.protectUntil || 0)) return false;   // (spawn and step-out protection: no fire either)
   const was = burning(ped);
   ped.burnT = Math.max(ped.burnT || 0, secs);
   if (by && by !== ped) ped.burnBy = by.id;
@@ -109,25 +109,26 @@ export function npcStep(world, ped, now) {
   return npc.seek(ped, tx, ty, true);
 }
 
-// Brushing against fire (every CONTACT_TICKS ticks): a burning vehicle or a fresh wreck still alight, a lit campfire,
-// someone else on fire
+// Walking into fire (every CONTACT_TICKS ticks): a burning vehicle or a fresh wreck still alight, a lit campfire, someone
+// else on fire brushing past - on the move (standing still beside a fire you don't catch: you walk or run into it)
 const CONTACT_TICKS = 4;
+const moving = (q) => Math.abs(q.vx) + Math.abs(q.vy) > 30;
 function contacts(world, dt) {
   const now = world.time, p = BURN.touch * dt;
   for (const v of world.entities.values()) {
     if (v.kind !== K.VEH || v.def.pedal || !(v.burnUntil > now || (v.wreckAt && now - v.wreckAt < 20))) continue;
     for (const q of world.query(v.x, v.y, v.def.L / 2 + BURN.vehPx + 12, K.PED)) {
-      if (!burning(q) && !q.vehId && explosions.bodyDist(v, q.x, q.y) < BURN.vehPx && world.rand() < p) ignite(world, q, null);
+      if (!burning(q) && !q.vehId && moving(q) && explosions.bodyDist(v, q.x, q.y) < BURN.vehPx && world.rand() < p) ignite(world, q, null);
     }
   }
   for (const i of campfires.fireIdx(world.map)) {
     const c = world.map.props[i];
     if (!c || c.broken || !campfires.isLit(world, i)) continue;
-    for (const q of world.query(c.x, c.y, BURN.campPx, K.PED)) if (!burning(q) && !q.sit && Math.hypot(q.x - c.x, q.y - c.y) < BURN.campPx && world.rand() < p) ignite(world, q, null, BURN.secs * 0.6);
+    for (const q of world.query(c.x, c.y, BURN.campPx, K.PED)) if (!burning(q) && !q.sit && moving(q) && Math.hypot(q.x - c.x, q.y - c.y) < BURN.campPx && world.rand() < p) ignite(world, q, null, BURN.secs * 0.6);
   }
   for (const b of world.burning) {
     if (b.dead) continue;
-    for (const q of world.query(b.x, b.y, BURN.pedPx, K.PED)) if (q !== b && !burning(q) && Math.hypot(q.x - b.x, q.y - b.y) < BURN.pedPx && world.rand() < p * 0.5) ignite(world, q, b.burnBy ? world.get(b.burnBy) : null, BURN.secs * 0.7);
+    for (const q of world.query(b.x, b.y, BURN.pedPx, K.PED)) if (q !== b && !burning(q) && (moving(b) || moving(q)) && Math.hypot(q.x - b.x, q.y - b.y) < BURN.pedPx && world.rand() < p * 0.5) ignite(world, q, b.burnBy ? world.get(b.burnBy) : null, BURN.secs * 0.7);
   }
 }
 

@@ -121,15 +121,21 @@ test('what sets people alight: a blast, their car blowing up with them in it, a 
   const walker = spawnNpc(w, 'casual', 0, 0);
   walker.npc.desk = null;
   let caught = false;
-  for (let i = 0; i < 200 && !caught; i++) { teleport(w, walker, wreck.x + wreck.def.L / 2 + 4, wreck.y); w.tick++; w.time += 0.05; burning.update(w, 0.05); caught = burning.burning(walker); }
+  for (let i = 0; i < 200 && !caught; i++) { teleport(w, walker, wreck.x + wreck.def.L / 2 + 4, wreck.y); walker.vx = -80; w.tick++; w.time += 0.05; burning.update(w, 0.05); caught = burning.burning(walker); }
   assert.ok(caught, 'brushing against a burning wreck');
   // a lit campfire
   const i = w.map.props.findIndex((q) => q && q.t === 'campfire');
   campfires.setLit(w, i, true);
   const c = w.map.props[i], camper = spawnNpc(w, 'casual', c.x, c.y);
   caught = false;
-  for (let k = 0; k < 200 && !caught && camper; k++) { teleport(w, camper, c.x + 4, c.y); w.tick++; w.time += 0.05; burning.update(w, 0.05); caught = burning.burning(camper); }
-  assert.ok(caught, 'standing in a campfire');
+  for (let k = 0; k < 200 && !caught && camper; k++) { teleport(w, camper, c.x + 4, c.y); camper.vx = 60; w.tick++; w.time += 0.05; burning.update(w, 0.05); caught = burning.burning(camper); }
+  assert.ok(caught, 'walking into a campfire');
+  // standing still beside a burning wreck: no
+  for (const b of [...w.burning]) burning.douse(w, b);
+  wreck.wreckAt = w.time;
+  const still = spawnNpc(w, 'casual', 0, 0);
+  for (let i = 0; i < 100; i++) { teleport(w, still, wreck.x + wreck.def.L / 2 + 4, wreck.y); still.vx = 0; still.vy = 0; w.tick++; w.time += 0.05; burning.update(w, 0.05); }
+  assert.ok(!burning.burning(still), 'standing still beside a fire you don\'t catch');
 });
 
 test('burning NPCs: some run, some stop, drop and roll (and live), some fall and burn to death; near water many run in', () => {
