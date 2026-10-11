@@ -29,10 +29,9 @@ import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc, seek, footWay, sidestep } from './npc.js';
 import { inAnyView } from '../view.js';
 import { pointGrid } from '../pointgrid.js';
-import { kerbFor, planTo, follow, halt, exitNode, sinceProgress, waterGuard } from './kerbdrive.js';
+import { kerbFor, planTo, follow, halt, exitNode, sinceProgress, waterGuard, routeTo } from './kerbdrive.js';
 import { groundPath, clearWalk } from './offroad.js';
 import { trimBehind } from './custody.js';
-import { planRoute } from './traffic.js';
 import * as players from './players.js';
 import * as vehicles from './vehicles.js';
 import * as revive from './revive.js';
@@ -252,7 +251,7 @@ function runAmbulance(world, v, dt, now) {
   if (!ai.exit) {
     const n = exitNode(world, v, ai.badExit);
     ai.exit = n ? { x: n.x, y: n.y, id: n.id } : { x: v.x + Math.cos(v.a) * 1500, y: v.y + Math.sin(v.a) * 1500, id: -1 };
-    ai.route = trimBehind(planRoute(world, v.x, v.y, ai.exit.x, ai.exit.y), v); ai.bestD = undefined; ai.skirted = 0;
+    ai.route = trimBehind(routeTo(world, v.x, v.y, ai.exit.x, ai.exit.y), v); ai.bestD = undefined; ai.skirted = 0;   // (a way out it can't reach: no search of the whole network - kerbdrive.js)
   }
   if (!v.seats[0]) { halt(v); return; }
   const way = clearWay(world, v, ai, null);

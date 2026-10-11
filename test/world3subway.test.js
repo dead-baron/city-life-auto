@@ -115,7 +115,8 @@ test('the subway trains, five minutes with the main line\'s: each runs, stops at
     if (k % 2) continue;
     const cars = [];
     // (a subway car below ground is a level deeper than the main line and its tunnels: it passes under, never into one)
-    ts.forEach((t, i) => t.cars.forEach((c) => { const e = w.get(c.id); cars.push({ i, x: e.x, y: e.y, a: e.a, L: c.def.L, W: c.def.W, deep: subR.has(t.r) && e.sub ? 1 : 0 }); }));
+    // (where each car is: a train nobody is near doesn't place its cars - trains.js update - so from the train itself)
+    ts.forEach((t, i) => trains.__test.carPoses(w, t).forEach((e, ci) => { const c = t.cars[ci]; cars.push({ i, x: e.x, y: e.y, a: e.a, L: c.def.L, W: c.def.W, deep: subR.has(t.r) && e.sub ? 1 : 0 }); }));
     for (let p = 0; p < cars.length; p++) for (let q = p + 1; q < cars.length; q++) {
       const A = cars[p], B = cars[q];
       if (A.i === B.i || A.deep !== B.deep || Math.abs(A.x - B.x) > 260 || Math.abs(A.y - B.y) > 260) continue;

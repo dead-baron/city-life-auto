@@ -110,7 +110,8 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
     // every pair of cars of different trains: their outlines never overlap
     const cars = [];
     // (a subway car below ground runs a level deeper than the main line: shared/world3-subway.js)
-    ts.forEach((t, i) => t.cars.forEach((c) => { const e = w.get(c.id); cars.push({ i, x: e.x, y: e.y, a: e.a, L: c.def.L, W: c.def.W, deep: w.rails[t.r].subway && e.sub ? 1 : 0 }); }));
+    // (where each car is: a train nobody is near doesn't place its cars - trains.js update - so from the train itself)
+    ts.forEach((t, i) => trains.__test.carPoses(w, t).forEach((e, ci) => { const c = t.cars[ci]; cars.push({ i, x: e.x, y: e.y, a: e.a, L: c.def.L, W: c.def.W, deep: w.rails[t.r].subway && e.sub ? 1 : 0 }); }));
     for (let p = 0; p < cars.length; p++) for (let q = p + 1; q < cars.length; q++) {
       const A = cars[p], B = cars[q];
       if (A.i === B.i || A.deep !== B.deep || Math.abs(A.x - B.x) > 260 || Math.abs(A.y - B.y) > 260) continue;
@@ -135,6 +136,27 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
     assert.ok(run[i].dist > 8000, `${r.name} train ${t.i}: ran ${Math.round(run[i].dist)} px`);
     assert.ok(run[i].stops.size >= 2, `${r.name} train ${t.i}: stopped at ${run[i].stops.size} stations`);
   });
+});
+
+// (docs/WORLD-V3.md 8.23: the trains' cost with nobody on) a train nobody is near runs - its drive, the signals, its
+// stops - without placing its cars; the tick a player is near it, its cars are where the train is
+test('a train nobody is near runs on with its cars unplaced; the tick someone is, they are where it is', () => {
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const t = w.trains.find((q) => !w.rails[q.r].subway);
+  const e0 = w.get(t.cars[0].id), at0 = [e0.x, e0.y], s0 = t.s, stops0 = t.stop;
+  for (let i = 0; i < TICK_HZ * 40; i++) w.step();
+  assert.equal(t.near, false);
+  assert.ok(t.s !== s0 || t.stop !== stops0, 'it ran');
+  assert.deepEqual([e0.x, e0.y], at0, 'its cars not placed');
+  const { p } = joinPlayer(w);
+  const nose = railAt(w.rails[t.r], t.s);
+  teleport(w, p.ped, nose.x + trains.NEAR_PX * 0.8, nose.y);
+  w.step();
+  assert.equal(t.near, true, `a player ${Math.round(trains.NEAR_PX * 0.8)} px off`);
+  const poses = trains.__test.carPoses(w, t);
+  t.cars.forEach((c, ci) => { const e = w.get(c.id); assert.ok(Math.hypot(e.x - poses[ci].x, e.y - poses[ci].y) < 1e-6, `car ${ci} where the train is`); });
+  const far = w.trains.find((q) => !q.near && !trains.nearSomeone(w, q));
+  assert.ok(far, 'trains far from the player stay unplaced');
 });
 
 test('riding the v3 main line as today: board a Bay Loop or Harbor Line train at its platform, ride, get off at the next stop', () => {

@@ -53,6 +53,37 @@ export function kerbFor(world, x, y) {
   return { x: best.x + nx * off, y: best.y + ny * off, e: best.e, s: best.s, a: Math.atan2(best.ty, best.tx) };
 }
 
+// Which connected part of the road network each junction is in (made once per network). A plan between two parts is no
+// route, and traffic.js planRoute finds that out only after it has searched every junction of the start's part - at
+// World v3's size 120-630 ms in one tick (an ambulance's plan to a kerb or a way out it can't reach: docs/WORLD-V3.md
+// 8.23, the server's worst tick). routeTo answers those at once with what planRoute answers for them (the end point
+// alone); every other plan is planRoute's, as before.
+const PARTS = new WeakMap();
+export function partsOf(net) {
+  let P = PARTS.get(net);
+  if (P) return P;
+  const n = net.nodes.length, up = new Int32Array(n);
+  for (let i = 0; i < n; i++) up[i] = i;
+  const find = (i) => { while (up[i] !== i) { up[i] = up[up[i]]; i = up[i]; } return i; };
+  for (let i = 0; i < n; i++) {
+    const nd = net.nodes[i];
+    if (!nd || !nd.links) continue;
+    for (const k in nd.links) { const j = nd.links[k]; if (j >= 0 && j < n) { const a = find(i), b = find(j); if (a !== b) up[a] = b; } }
+  }
+  P = new Int32Array(n);
+  for (let i = 0; i < n; i++) P[i] = find(i);
+  PARTS.set(net, P);
+  return P;
+}
+export function routeTo(world, fromX, fromY, toX, toY) {
+  const m = world.map, net = m.net;
+  if (net && net.nodes) {
+    const a = m.nearestNode(fromX, fromY), b = m.nearestNode(toX, toY);
+    if (a && b && a.id !== b.id) { const P = partsOf(net); if (P[a.id] !== P[b.id]) return [{ x: toX, y: toY, final: true }]; }
+  }
+  return planRoute(world, fromX, fromY, toX, toY);
+}
+
 export function planTo(world, v, k) {
   const net = world.map.net, e = k.e;
   if (!e || !net) return trimBehind(planRoute(world, v.x, v.y, k.x, k.y), v);
@@ -60,7 +91,7 @@ export function planTo(world, v, k) {
   for (const end of [e.a, e.b]) {
     const n = net.nodes[end];
     if (!n || n.lvl !== 0) continue;
-    const r = planRoute(world, v.x, v.y, n.x, n.y);
+    const r = routeTo(world, v.x, v.y, n.x, n.y);
     r.pop();   // (its last point is the junction itself: the street from it follows)
     const along = end === e.a ? k.s : e.len - k.s;
     let len = along, px = v.x, py = v.y;

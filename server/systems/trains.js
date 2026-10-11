@@ -186,7 +186,8 @@ function signals(world, t, place = false) {
   const rail = railOf(world, t), P = rail.pts, n = P.length, S = world.sig, own = S.own, C = S.cells[t.r], box = S.box[t.r];
   const free = (k) => { for (let j = 0; j < 3; j++) { const o = own.get(C[k * 3 + j]); if (o !== undefined && o !== t.i) return false; } return true; };
   const dist = (k) => mod(P[k].s - t.s, rail.len);
-  const want = [];
+  const want = t.want || (t.want = []);   // (each train's own list and two sets, used again every tick: no garbage)
+  want.length = 0;
   const iNose = railAt(rail, t.s).i;
   for (let k = railAt(rail, t.s - t.len - 24).i, g = 0; g < n; k = (k + 1) % n, g++) { want.push(k); if (k === iNose) break; }
   if (place && !want.every(free)) return null;
@@ -206,11 +207,12 @@ function signals(world, t, place = false) {
     for (const q of run) want.push(q);
     k = (j + 1) % n;
   }
-  const hold = new Set();
+  const hold = t.spare || new Set();
+  hold.clear();
   for (const q of want) for (let j = 0; j < 3; j++) hold.add(C[q * 3 + j]);
   if (t.held) for (const c of t.held) if (!hold.has(c) && own.get(c) === t.i) own.delete(c);
   for (const c of hold) own.set(c, t.i);
-  t.held = hold;
+  t.spare = t.held; t.held = hold;
   return gap === Infinity ? Infinity : Math.max(0, gap - 64) + HEADWAY_PX;
 }
 
@@ -257,10 +259,29 @@ function runTimeAt(seg, x) {
 }
 
 // ---- per tick ---------------------------------------------------------------------------------
+// World v3's main line and subways run dozens of trains, most of them far from everyone (docs/WORLD-V3.md 8.23: 1.6 ms
+// a tick with nobody on). A train no player is near (NEAR_PX from its nose and its tail - past what anyone sees, and
+// past the people, traffic and animals round them - and no player aboard) runs as before - its drive, the signals, its
+// stops: the timetable, the crossings and the trains round it go on as they did - but its cars aren't placed and what
+// they'd do to what's round them (collisions, the horn, people stepping off the line, riders and boarders walking)
+// waits until someone is near: the tick it is, its cars are placed first. Today's world's one loop runs as it did.
+export const NEAR_PX = 6000;
+export function nearSomeone(world, t) {
+  if (!world.players.size) return false;
+  if (playerAboard(world, t)) return true;
+  const rail = railOf(world, t), a = railAt(rail, t.s), b = railAt(rail, t.s - t.len), r2 = NEAR_PX * NEAR_PX;
+  for (const p of world.players.values()) {
+    const q = p.ped;
+    if (q && ((q.x - a.x) ** 2 + (q.y - a.y) ** 2 < r2 || (q.x - b.x) ** 2 + (q.y - b.y) ** 2 < r2)) return true;
+  }
+  return false;
+}
 export function update(world, dt) {
   if (!world.trains || !world.trains.length) return;
+  const lazy = !!world.rails;   // (World v3's loops)
   for (const t of world.trains) {
     stepTrain(world, t, dt);
+    if (lazy && !(t.near = nearSomeone(world, t))) continue;
     placeCars(world, t);
     stepRiders(world, t, dt);
     stepBoarding(world, t, dt);
@@ -940,6 +961,7 @@ export function keepPedsSafe(world) {
   const now = world.time;
   for (const t of world.trains) {
     if (t.v < 5 && !(t.dwellUntil && t.dwellUntil - now < 3)) continue;
+    if (world.rails && !t.near) continue;   // (nobody near it: nobody on the line ahead of it - update)
     const loco = world.get(t.cars[0].id);
     if (!loco || loco.sub) continue;
     const reach = Math.max(400, t.v * 5) + t.len;
@@ -1515,5 +1537,5 @@ export function meInfo(world, p) {
   };
 }
 
-// test hooks
-export const __test = { arrived };
+// test hooks (carPoses: where a train's cars are, placed or not - World v3's far trains' aren't: update)
+export const __test = { arrived, carPoses: (world, t) => t.cars.map((c) => carPose(railOf(world, t), t, c)) };
