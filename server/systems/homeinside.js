@@ -27,7 +27,7 @@ import { IN } from '../../shared/input.js';
 import { HOME_IN } from '../../shared/rules.js';
 import { ITEMS } from '../../shared/items.js';
 import { VEHICLES } from '../../shared/vehicles.js';
-import { layout, planOf, tierOf, stepInside, useAt, blocked } from '../../shared/homelayout.js';
+import { layout, planOf, tierOf, stepInside, useAt, blocked, TILE_IN } from '../../shared/homelayout.js';
 import { store } from '../store.js';
 import * as homes from './homes.js';
 import * as economy from './economy.js';
@@ -175,8 +175,9 @@ export function interaction(world, p) {
   if (s.sleep) return { label: 'Asleep... the night is passing', passive: true, run: () => {} };
   if (s.shower) return { label: 'In the shower...', passive: true, run: () => {} };
   const u = useAt(planFor(h), s.x, s.y, HOME_IN.reach);
-  if (s.tour) {   // a visitor: the door is the way out (or the sale), the rest is to look at
-    if (u && u.use === 'door') return { label: `The front door - buy ${h.name} (${money(h.price)}) or step outside`, run: () => openMenu(world, p, 'tour') };
+  if (s.tour) {   // a visitor: the door is the way out (or the sale), the rest is to look at - the door first when it's in reach
+    const L = planFor(h), D = L.door, dd = Math.hypot(Math.max(D.x - TILE_IN / 2 - s.x, 0, s.x - D.x - TILE_IN / 2), Math.max(D.y - TILE_IN / 2 - s.y, 0, s.y - D.y - TILE_IN / 2));
+    if ((u && u.use === 'door') || dd <= HOME_IN.reach + 2) return { label: `The front door - buy ${h.name} (${money(h.price)}) or step outside`, run: () => openMenu(world, p, 'tour') };
     return { label: `${u ? `${THING[u.use] || 'That'} comes with the place - ` : 'Having a look round - '}${h.name}, ${money(h.price)}`, passive: true, run: () => {} };
   }
   if (!u) return { label: `${h.name} - walk up to something to use it`, passive: true, run: () => {} };

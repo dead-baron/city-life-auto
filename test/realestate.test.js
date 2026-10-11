@@ -198,6 +198,8 @@ test('an apartment block: one player buys a unit, a second another in the same b
   const free = homes.homeById(w, ids[1]);
   economy.handleMenu(w, c.p, menuAt(w, c.p, c.conn, base).poi, `hu:tour:${free.id}`);
   assert.ok(c.p.ped.home && c.p.ped.home.tour && c.p.ped.home.id === free.id);
+  const at0 = players.findInteraction(w, c.p);   // (just inside the door, beside the hall table: the door's the thing)
+  assert.ok(!at0.passive && /buy/.test(at0.label), at0.label);
   // the respawn point: a unit like any home
   assert.ok(homes.spawnOptions(w, a.p).some((o) => o.id === `home:${u3.id}`));
   const at = homes.resolveSpawn(w, a.p, `home:${u3.id}`);

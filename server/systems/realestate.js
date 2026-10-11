@@ -39,7 +39,7 @@ export function row(world, h) {
   return {
     id: h.id, n: h.name, k: h.kind, w: h.what || KIND_WORD[h.kind] || h.kind, pl: planOf(h), tr: tierOf(h), p: h.price, beds: bedsIn(h),
     g: h.slots, yard: plotSpots(world.map, h).length, dock: h.dock ? 1 : 0, x: Math.round(h.x), y: Math.round(h.y),
-    d: D ? D.name : '', dt: D ? D.tier || '' : '', ...(h.unit ? { u: h.unit, fl: h.floor } : null),
+    d: D ? D.name : '', dt: D ? D.tier || '' : '', ...(h.unit ? { u: h.unit, fl: h.floor } : world.unitsOf && world.unitsOf.has(h.id) ? { u: 1, fl: 1 } : null),   // (a block's own map home: its unit 1)
   };
 }
 
