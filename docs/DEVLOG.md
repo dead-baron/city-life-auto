@@ -7590,3 +7590,53 @@ Files: shared/world3-towns.js (`TOWNS3` laid out again, `pull`, `townsFront`, `T
 Tests: test/world3towns.test.js (one world build: each town's side streets on the network, at most two dead ends, the
 main street straight across the town, lots fronting it, less road than building, the boardwalk and the pier; 8.13's
 basics and places), test/world3beach.test.js (the beach towns less dense than the city).
+
+## 2026-10-11 · World v3: the window's signatures, the world's places, the kept regions, the minimap
+
+The page keeps a window of the v3 world (8.12); its follow-ups, as the owner's plan lists them: "per-region
+signatures" (part 8 item 5: "the world hash and each region's signature are checked against what was read from the
+cache"), the phone's apps and the big map listing the whole world's places ("a small global list (name, kind,
+position) belongs in the index"), "regions kept one by one" in the browser, and a coarser minimap at v3.
+- **The signatures:** the index carries each region's signature (a hash of its file as written) and the world's (the
+  map's, what the welcome says). The city worker's window keeper checks each region as it assembles it: one that
+  doesn't match (or doesn't open) is dropped - from memory and from the browser's store - and fetched again past every
+  cache; refused again, no window is assembled and the page says which region (the title screen at the start, a
+  toast on a move). The welcome's signature is checked against the index's: another build reloads into it, the same
+  build reloads once - and that load is afresh (nothing kept read, everything past the HTTP cache: the v3 world's files
+  keep their URL while today's world's hash does). Today's world: the whole-map check as before.
+- **The world's places:** the index lists every POI (id, kind, label, position, district, home); a window's city
+  carries them as `places`, by the POI's world index, and the phone's Places app (the list, the district, the
+  waypoint), its nearest courthouse and ATM, the big map's icons and its panel read them - a window lists the whole
+  world's places (860 at v3; 339 outside the window round the gulf's hospital). The big map's district names too: each
+  district's middle in the index (before, the first window's districts alone).
+- **The regions kept in the browser** (IndexedDB `cla-regions`, under the world's hash and the seed): the worker reads
+  the index and the window's regions from there and downloads only what it hasn't kept; a new world clears the old
+  one's. A return visit downloads nothing it has.
+- **The minimap at v3:** a coarse picture of the whole frame in the index (a tile every 4, only for a big frame) and
+  the window's own picture over it: 5.1 + 9.1 MB of pixels, not a frame-sized canvas's 81 MB. Today's world: as before.
+- What it weighs: at v3 the picture is 51 KB of the index (gzipped), the places 13 KB, the signatures 1 KB; today's
+  index 0.359 -> 0.371 MB, its regions byte for byte as before.
+- Nothing live changes: today's world keeps its path (its index carries the new lists, unread); the world hash stays
+  6b6e16fdef9f; the files' format stays 2 (the new index fields are optional both ways). The page's code 466 -> 467 KB
+  of 485; the city worker 33 -> 34 files (client/regionstore.js), 357 KB of 360.
+
+Files: shared/regionpack.js (`regionSig`, `regionMatches`, the index's `sigs`, `sig`, `places`, `picture`; a window's
+`places` and `picture`), server/worldcdn.js (the world's signature into the cut), client/worldwindow.js (`region`: the
+check, the fetch again), client/worldgen.js (`fetchWindow`: the store, the index read again, `retryAt`),
+client/regionstore.js (new), client/main.js (`windowNotServers`, the window's toast and log), client/boot.js
+(`cla.fresh3`), client/hud.js
+(`coarseMinimap`, `paintMinimap`, `drawMini`, `iconSkip`, `districtCentroids`), client/worldmap.js, client/phone.js, client/mapwaypoints.js
+(the places), test/regionwindow.test.js, test/world3window.test.js, docs/WORLD-V3.md 8.12 and 8.12.2.
+
+Tests: test/regionwindow.test.js (the signatures; a corrupted region refused, fetched again, refused again; the whole
+world's places and the districts' middles in a window; the kept regions read back - a return visit downloads nothing,
+a spoiled kept file is downloaded again), test/world3window.test.js (the v3 world once: every region's signature and the world's, the 860
+places in a window, the coarse picture), test/regions.test.js (today's world: unchanged).
+
+Playtest (headless Chromium against a local `CLA_WORLD=v3` server, `?world=v3`): the window downloaded (10 files) and
+Play live 1.9 s after opening; spawned at Timber Bend, the window moved round it; the phone's Hospitals & police listed
+17 places, 15 outside the window (Westport, Northshore, Metro City's, with their districts and distances:
+docs/world-v3-window-places.png); the big map drew the coarse world and the whole world's icons
+and, with the districts' middles (a second run), every district's name - 50 (docs/world-v3-window-bigmap.png); a far
+teleport moved the window (assembled 0.76 s, swapped 0.12 s); the page loaded again in the same browser: the window from
+the browser, 10 files kept, 0 downloaded. Art v2's statics bake warned once about a window's railway loop (`railAt`: 8.12's item 4, not this).

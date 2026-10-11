@@ -119,7 +119,9 @@ function startWorld() {
   job.promise.catch(() => {});
   let at = null;   // (World v3: the window round where this player was last - main.js keeps it)
   try { at = v3 ? JSON.parse(lsGet('cla.at3') || 'null') : null; } catch { at = null; }
-  const post = (base) => { try { w.postMessage({ seed, key, keep: BOOT.fresh && !v3, base, at, window: !/[?&]wholeworld\b/.test(location.search) }); } catch { fail(new Error('the city worker could not start')); w.terminate(); } };
+  let fresh3 = false;   // (World v3: the files this browser had weren't the server's world - main.js windowNotServers: none kept, none cached)
+  try { fresh3 = v3 && sessionStorage.getItem('cla.fresh3') === '1'; sessionStorage.removeItem('cla.fresh3'); } catch { fresh3 = false; }
+  const post = (base) => { try { w.postMessage({ seed, key, keep: BOOT.fresh && !v3, base, at, fresh3, window: !/[?&]wholeworld\b/.test(location.search) }); } catch { fail(new Error('the city worker could not start')); w.terminate(); } };
   if (!key || navigator.onLine === false || /[?&]worldcdn=0\b/.test(location.search)) post(null);
   else import('./config.js').then(({ serverUrl }) => { const u = new URL(serverUrl()); post(`${u.protocol === 'wss:' ? 'https:' : 'http:'}//${u.host}/world/`); }).catch(() => post(null));
   return job;

@@ -8,16 +8,21 @@
 //     opts.window), the page swaps it in (client/main.js) and calls moved();
 //   - a player outside the window altogether (a teleport, a respawn) moves it at once.
 // Today's world is 3 x 3 regions: its window is the whole map and never moves.
-// What's kept: each region's file as it came (gzipped: about 35-260 KB at v3), the most recently used `keep` of them.
-import { assembleCity, regionsNear, regionXYOf, windowRect } from '../shared/regionpack.js';
+// What's kept: each region's file as it came (gzipped: about 35-260 KB at v3), the most recently used `keep` of them
+// (and in the browser, client/regionstore.js: the worker's fetchRegion looks there first).
+// Each region is checked as it's assembled against the index's signature for it (part 8 item 5): one that doesn't match
+// (or doesn't open) is dropped - here and in the browser's store (forget) - and fetched again past every cache; if that
+// one doesn't match either, the window isn't assembled and the error says so.
+import { assembleCity, regionsNear, regionXYOf, windowRect, regionMatches } from '../shared/regionpack.js';
 
 const OFFS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 const same = (a, b) => !!a && !!b && a.length === b.length && a.every((k, i) => k === b[i]);
 
 export class WindowKeeper {
-  // frame: the index's [W, H, R, nx, ny]; fetchRegion(key) -> the file's bytes as kept; open(kept) -> its raw bytes
-  constructor({ frame, fetchRegion, open = async (b) => b, near = 96, past = 16, keep = 24 }) {
-    this.frame = frame; this.fetchRegion = fetchRegion; this.open = open;
+  // frame: the index's [W, H, R, nx, ny]; fetchRegion(key, fresh) -> the file's bytes as kept (fresh: past every cache);
+  // open(kept) -> its raw bytes; sigs: the index's signatures (null: nothing checked); forget(key): drop a kept file
+  constructor({ frame, fetchRegion, open = async (b) => b, sigs = null, forget = null, near = 96, past = 16, keep = 24 }) {
+    this.frame = frame; this.fetchRegion = fetchRegion; this.open = open; this.sigs = sigs; this.forget = forget; this.refused = [];
     this.near = near; this.past = past; this.keep = Math.max(9, keep);
     this.cache = new Map();   // key -> Promise of its bytes (in the order they were last used)
     this.pending = new Set();
@@ -28,10 +33,11 @@ export class WindowKeeper {
     const keys = regionsNear(this.frame, tx, ty);
     return { keys, rect: windowRect(this.frame, keys), home: regionXYOf(this.frame, tx, ty) };
   }
-  get(k) {
-    let p = this.cache.get(k);
+  get(k, fresh = false) {
+    let p = fresh ? null : this.cache.get(k);
     if (p) { this.cache.delete(k); this.cache.set(k, p); return p; }
-    p = Promise.resolve().then(() => this.fetchRegion(k));
+    this.cache.delete(k);
+    p = Promise.resolve().then(() => this.fetchRegion(k, fresh));
     this.cache.set(k, p);
     this.pending.add(p);
     p.then(() => this.pending.delete(p), () => { this.pending.delete(p); if (this.cache.get(k) === p) this.cache.delete(k); });
@@ -74,8 +80,19 @@ export class WindowKeeper {
   }
   // the plain city of a window (shared/regionpack.js assembleCity's form, with x0, y0, w, h and frame)
   async assemble(indexBytes, win) {
-    const files = await Promise.all(win.keys.map(async (k) => this.open(await this.get(k))));
+    const files = await Promise.all(win.keys.map((k) => this.region(k)));
     return assembleCity(indexBytes, files, { window: win.rect });
+  }
+  // a region's raw bytes, checked against its signature (fetched again once if they don't match)
+  async region(k) {
+    for (let again = false; ; again = true) {
+      let raw = null;
+      try { raw = await this.open(await this.get(k, again)); } catch { raw = null; }
+      if (raw && regionMatches(this.sigs, k, raw)) return raw;
+      this.cache.delete(k); this.refused.push(k);
+      if (this.forget) { try { await this.forget(k); } catch { /* best effort */ } }
+      if (again) throw new Error(`the region ${k} isn't the server's (${raw ? 'its signature differs' : 'a bad file'}), fetched again too`);
+    }
   }
   moved(win) { this.keys = win.keys.slice(); this.rect = win.rect.slice(); this.home = win.home ? win.home.slice() : regionXYOf(this.frame, win.rect[0] + win.rect[2] / 2, win.rect[1] + win.rect[3] / 2); this.trim(); }
 }

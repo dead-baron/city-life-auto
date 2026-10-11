@@ -9,7 +9,7 @@ import { TILE } from '../shared/constants.js';
 import { PACK_TIERS } from '../shared/items.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { mapSignature } from '../shared/mapcore.js';
-import { mapFrameOf, districtCentroids, iconSkip, packIcon } from './hud.js';
+import { mapFrameOf, districtCentroids, iconSkip, packIcon, drawMini } from './hud.js';
 import { MAP_CATS, KIND_ICON, MAJOR_KINDS } from './mapwaypoints.js';
 import { drawIcon } from './pixicons.js';
 
@@ -122,7 +122,7 @@ class WorldMap {
       }
     } else if (hud.mini) {
       g.imageSmoothingEnabled = false;
-      g.drawImage(hud.mini, ox / TILE, oy / TILE, vw / TILE, vh / TILE, 0, 0, cw, ch);
+      drawMini(g, hud.mini, ox / TILE, oy / TILE, vw / TILE, vh / TILE, 0, 0, cw, ch);   // (World v3's window: the coarse world, the window over it)
     }
     if (police) { g.fillStyle = 'rgba(8,16,40,.35)'; g.fillRect(0, 0, cw, ch); }
 
@@ -357,7 +357,7 @@ let RANKED = null;
 function placesByRank(map) {
   if (RANKED && RANKED.map === map) return RANKED.list;
   const skip = iconSkip(map), order = [...MAJOR_KINDS], rank = (k) => { const i = order.indexOf(k); return i < 0 ? 99 : i; };
-  const list = map.pois.filter((p) => KIND_ICON[p.kind] && !skip.has(p.id)).sort((a, b) => rank(a.kind) - rank(b.kind) || a.id - b.id);
+  const list = (map.places || map.pois).filter((p) => p && KIND_ICON[p.kind] && !skip.has(p.id)).sort((a, b) => rank(a.kind) - rank(b.kind) || a.id - b.id);   // (World v3's window: the whole world's places)
   RANKED = { map, list };
   return list;
 }

@@ -18,13 +18,18 @@ import { mkdirSync, readdirSync, rmSync, createReadStream, readFileSync, writeFi
 import { join } from 'node:path';
 import { gzip } from 'node:zlib';
 import { packRegions, PACK_VERSION } from '../shared/regionpack.js';
+import { mapSignature } from '../shared/mapcore.js';
 
 const FILE = /^(index|r\d{1,2}-\d{1,2})\.bin$/;
 
 // the cut, now (city: the CityMap or cityData; it must not have run yet): { pack, ms }
+// (the index carries the world's signature - what the welcome says - and each region's: the page checks the regions of
+// its window against them, World v3 8.12; worked out here without keeping it on the map, as before)
 export function cutWorld(city, meta) {
   const t0 = performance.now();
-  const pack = packRegions(city, { meta });
+  const had = Object.hasOwn(city, '_sig'), sig = mapSignature(city);
+  if (!had) delete city._sig;
+  const pack = packRegions(city, { meta, sig });
   return { pack, ms: Math.round(performance.now() - t0) };
 }
 
