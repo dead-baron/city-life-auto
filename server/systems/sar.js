@@ -307,3 +307,36 @@ export function target(world, p, j) {
   if (HARNESS[c.kind] && v && (c.cable > 0 || c.hooked)) t.hoist = [v.id, Math.round(c.cable), c.hooked ? 1 : 0, Math.round(c.x), Math.round(c.y)];
   return t;
 }
+
+// ---- the dev menu (server/dev.js 'sar'): on shift at the controls of your rescue helicopter, then msg.k: a call of that
+// kind ('ground' | 'rough' | 'water' | 'lost') at the nearest such place (msg.hover: hovering low right over them, found);
+// msg.roof: down on the nearest hospital's roof pad (a patient aboard with msg.k). -> error | null
+export function devSar(world, p, msg = {}) {
+  const ped = p.ped;
+  if (!ped || ped.dead) return 'Not right now.';
+  if (!p.job || p.job.type !== 'sar') {
+    if (p.job) jobs.failJob(world, p, 'Job cancelled.');
+    const err = start(world, p, nearestPad(world.map, ped.x, ped.y, false));
+    if (err) return err;
+  }
+  const j = p.job, v = world.get(j.truck);
+  if (ped.vehId !== v.id) {
+    if (ped.vehId) { const o = world.get(ped.vehId); if (o) { const i = o.seats.indexOf(ped.id); if (i >= 0) o.seats[i] = 0; } }
+    v.seats[0] = ped.id; ped.vehId = v.id; ped.seat = 0; p.lastVehicle = v.id;
+  }
+  if (j.call) endCall(world, p, null);
+  const kind = ['ground', 'rough', 'water', 'lost'].includes(msg.k) ? msg.k : null;
+  const put = (x, y, alt) => { v.x = x; v.y = y; v.alt = alt; v.vx = 0; v.vy = 0; v.vz = 0; v.spool = 1; world.place(v); ped.x = x; ped.y = y; world.place(ped); p.meDirty = true; };
+  if (kind) {
+    const S = sitesOf(world.map), list = kind === 'water' ? S.water : kind === 'rough' ? S.rough : S.open;
+    let best = null, bd = Infinity;
+    for (const s of list) { const d = Math.hypot(s.x - v.x, s.y - v.y); if (d > 400 && d < bd) { bd = d; best = s; } }
+    if (!best) return `No ${kind} places on this map.`;
+    const c = callAt(world, p, kind, best.x, best.y);
+    if (msg.hover) put(best.x + 10, best.y, HARNESS[kind] ? 120 : 160);
+    if (msg.roof) { c.found = true; const vic = world.get(c.vic); seatIn(world, p, c, v, vic); board(world, p, j, c, v, vic); }
+  }
+  if (msg.roof) { const pad = nearestPad(world.map, v.x, v.y, true); if (!pad) return 'No hospital roof pad.'; put(pad.x, pad.y + (j.call ? 0 : 40), pad.alt); }
+  world.notify(p, `[dev] On shift${kind ? `: a ${kind} call` : ''}${msg.hover ? ', hovering over them' : ''}${msg.roof ? ', on the roof pad' : ''}.`, 'info');
+  return null;
+}

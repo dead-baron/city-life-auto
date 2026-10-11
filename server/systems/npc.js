@@ -142,7 +142,7 @@ export function update(world, dt) {
   for (const ped of world.entities.values()) {
     if (ped.kind !== K.PED || !ped.npc || ped.dead || ped.vehId || ped.onTrain || ped.npc.boardTrain || ped.npc.stairs || ped.ug) continue; // train riders, boarders, subway stairs: trains.js; down the sewers: underground.js
     const n = ped.npc;
-    if (n.sar) continue;   // (someone out in the wild waiting for a rescue pilot: sar.js looks after them)
+    if (n.sar) continue;   // (someone out in the wild waiting for a rescue pilot, a charter's customer: sar.js, charter.js look after them)
     if (n.burn && ped.burnT > 0) { if (now >= ped.downUntil && now >= ped.stunUntil) pedStep(ped, burning.npcStep(world, ped, now), dt, world.map, walkMods(world, ped, 1)); continue; }   // (on fire: running for it - burning.js)
     if (n.guard && n.state !== 'fight' && n.state !== 'flee') { // Syndicate guard on the Rock: hold the post, keep watch
       const dd = Math.hypot(ped.x - n.guard.x, ped.y - n.guard.y);

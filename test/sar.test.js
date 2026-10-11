@@ -148,3 +148,54 @@ test('the harness in the water; a patient left too long dies on the way', () => 
   assert.equal(p.job.lastPay, undefined, 'and nothing paid');
   phone.handle(w, p, { a: 'cancel' });
 });
+
+// ---- the charter pilot (server/systems/charter.js) ----------------------------------------------------------------------
+const charter = await import('../server/systems/charter.js');
+const { CHARTER } = await import('../shared/rules.js');
+
+test('charter pilot: a customer waits at a helipad, an airfield, a mansion\'s lawn or an island; land, they board; land there for the fare and a tip for a smooth ride', () => {
+  const L = charter.placesOf(w.map);
+  assert.ok(L.some((q) => q.kind === 'pad') && L.some((q) => q.kind === 'lawn') && L.some((q) => q.kind === 'island'), `places: ${[...new Set(L.map((q) => q.kind))].join(', ')}`);
+  const { p, prof } = joinPlayer(w);
+  p.ped.x = yard.x + 30; p.ped.y = yard.y + 30; w.place(p.ped);
+  assert.ok(phone.boardFor(w, p).jobs.some((j) => j.id === 'charter' && j.fly), 'on the phone\'s job list');
+  assert.equal(phone.handle(w, p, { a: 'take', id: 'charter' }).err, null);
+  const v = w.get(p.job.truck);
+  assert.equal(v.def.id, 'heli'); assert.equal(v.issuedTo, p.pid, 'the company\'s helicopter, issued to you');
+  p.ped.x = v.x + 30; p.ped.y = v.y; w.place(p.ped);
+  send(p, IN.VEHICLE); send(p, 0);
+  assert.equal(p.ped.vehId, v.id, 'in at the first press (yours)');
+  run(w, CHARTER.firstS + 1);
+  const t = p.job.trip;
+  assert.ok(t && t.fare > CHARTER.base, `a booking: ${t && t.who}, ${t && t.a.name} -> ${t && t.b.name}, $${t && t.fare}`);
+  assert.ok(Math.hypot(t.b.x - t.a.x, t.b.y - t.a.y) >= CHARTER.minTrip, 'somewhere far');
+  assert.ok(phone.jobTarget(w, p).dest, 'the pickup marked, and where they\'re going');
+  // land by them: they board
+  const cust = w.get(t.cust);
+  hover(v, cust.x + 160, cust.y, 0);
+  run(w, CHARTER.boardS + 5);
+  assert.ok(t.aboard && cust.vehId === v.id, 'aboard');
+  // a smooth, quick flight: the fare and a tip
+  const cash = prof.cash;
+  hover(v, t.b.x, t.b.y, floorAt(w.map, t.b.x, t.b.y));
+  run(w, 0.3);
+  assert.equal(p.job.trip, null, 'they stepped out');
+  assert.ok(p.job.lastPay.tip > 0, `a tip ($${p.job.lastPay.tip})`);
+  assert.equal(prof.cash - cash, t.fare + p.job.lastPay.tip, 'the fare and the tip');
+  // the next one: a hard landing on the way - no tip
+  run(w, CHARTER.gapS + 1);
+  const t2 = p.job.trip, c2 = w.get(t2.cust);
+  hover(v, c2.x + 160, c2.y, 0);
+  run(w, CHARTER.boardS + 5);
+  assert.ok(t2.aboard);
+  v.landAt = w.time; v.landSink = FLY.HARD_SINK + 80;
+  run(w, 0.1);
+  const cash2 = prof.cash;
+  hover(v, t2.b.x, t2.b.y, floorAt(w.map, t2.b.x, t2.b.y));
+  run(w, 0.3);
+  assert.equal(p.job.lastPay.tip, 0, 'no tip after a hard landing');
+  assert.equal(prof.cash - cash2, t2.fare, 'just the fare');
+  phone.handle(w, p, { a: 'cancel' });
+  run(w, 0.2);
+  assert.ok(v.despawnable, 'the helicopter goes back');
+});

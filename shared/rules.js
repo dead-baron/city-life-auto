@@ -623,3 +623,10 @@ export const SAR = {
   hoist: { reach: 80, maxLen: 300, payout: 85, winch: 110, drift: 120 },
   life: [260, 380], hardLife: 40, base: 260, perKm: 90, fast: 0.6, parS: 120, perKmS: 70, hardCut: 0.25, minPay: 0.4, samaritan: 6,
 };
+// ---- charter pilot (H59; the owner: "Private helicopter pilot for rich billionaire customers flying around the world from
+// location to location") - server/systems/charter.js. Bookings one after another (firstS after signing on, gapS after
+// each; a customer waits waitS, picked up within pickupMax px of you if there's one, going at least minTrip px); land
+// within landR px and they board (boardS); landed within destR px of the destination they step out. The fare: base +
+// perKm a km (1000 px); the tip up to tip of the fare: none after a hard landing, less the more health the helicopter
+// loses on the way (none at hurtHp), and the quicker the better (par: parS + a second per perKmS px).
+export const CHARTER = { firstS: 8, gapS: 20, shiftS: 3600, waitS: 600, pickupMax: 6000, minTrip: 3000, landR: 320, boardS: 3, destR: 240, base: 180, perKm: 70, tip: 0.5, hurtHp: 60, parS: 60, perKmS: 300 };
