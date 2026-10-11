@@ -7637,5 +7637,6 @@ Playtest (headless Chromium against a local `CLA_WORLD=v3` server, `?world=v3`):
 Play live 1.9 s after opening; spawned at Timber Bend, the window moved round it; the phone's Hospitals & police listed
 17 places, 15 outside the window (Westport, Northshore, Metro City's, with their districts and distances:
 docs/world-v3-window-places.png); the big map drew the coarse world and the whole world's icons
-(docs/world-v3-window-bigmap.png); the page loaded again in the same browser: the window from the browser, 10 files kept,
-0 downloaded. Art v2's statics bake warned once about a window's railway loop (`railAt`: 8.12's item 4, not this).
+and, with the districts' middles (a second run), every district's name - 50 (docs/world-v3-window-bigmap.png); a far
+teleport moved the window (assembled 0.76 s, swapped 0.12 s); the page loaded again in the same browser: the window from
+the browser, 10 files kept, 0 downloaded. Art v2's statics bake warned once about a window's railway loop (`railAt`: 8.12's item 4, not this).

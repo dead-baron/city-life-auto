@@ -2865,7 +2865,8 @@ any of it: today's world keeps its path - the kept city, the download of the who
 | The places | 860 at v3 (339 outside the window round the gulf's hospital) |
 | **The page** (headless Chromium, `CLA_WORLD=v3`, `?world=v3`, a fresh browser) | the window (the index and 9 regions) downloaded and the Play button live **1.9 s** after opening; in the city after 28 s; the window moved at once to round the spawn (r1-1 ... r3-3, Timber Bend): assembled in 1.1 s, swapped in 0.14 s; the minimap 1260 x 1008 (k 4) + the window's 1512 x 1512 |
 | The phone's Places app (hospitals and police), at Timber Bend | 17 places, **15 of them outside the window** - Westport PD and Westport General (Westport Center), Northshore Medical and Sheriff, the city's clinics and Metro City PD (Midtown, Northgate, Downtown, Civic Center) - with their districts and distances (`docs/world-v3-window-places.png`) |
-| The big map, at Timber Bend | the coarse picture of the whole frame, the whole world's places' icons (Metro City's, Westport's, the airport's) beyond the window (`docs/world-v3-window-bigmap.png`) |
+| The big map | the coarse picture of the whole frame, the whole world's places' icons (Metro City's, Westport's) beyond the window; with the districts' middles (a second run, in the city after 13 s) **every district of the world named** - 50, North Ridge to Prison Island, Gull Harbor and Sandpiper Bay (`docs/world-v3-window-bigmap.png`) |
+| A far teleport (the second run: to tile 3300, 2600) | the window r2-3 ... r4-5 -> r5-4 ... r7-6: assembled in 0.76 s, swapped in 0.12 s; the minimap's window picture drawn again over the coarse one |
 | **A return visit** (the page loaded again, the same browser) | the window round where the player was: **10 files from the browser, 0 downloaded**, ready 3.0 s after the reload |
 
 **What's left**
