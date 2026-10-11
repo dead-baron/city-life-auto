@@ -44,6 +44,7 @@ export class GroundCache {
     this.byChunk = (list, getRect) => {
       const out = new Map();
       for (const it of list) {
+        if (!it) continue;   // (World v3's window: an item it doesn't hold)
         const [x0, y0, x1, y1] = getRect(it);
         for (let cy = Math.floor(y0 / CHUNK_PX); cy <= Math.floor(y1 / CHUNK_PX); cy++)
           for (let cx = Math.floor(x0 / CHUNK_PX); cx <= Math.floor(x1 / CHUNK_PX); cx++) {
