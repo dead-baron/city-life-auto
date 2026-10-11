@@ -155,3 +155,68 @@ test('a blast on the ground doesn\'t reach an aircraft well above it, but one ju
   assert.equal(hi.hp, hi.def.hp, 'high up: untouched');
   assert.ok(lo.wreckAt || lo.hp < lo.def.hp, 'just off the ground: hit');
 });
+
+// The owner, flying the helicopter (2026-10-11): "I think it's also hitting things on the ground as I fly by even though
+// I'm up in the air." Low over a street (60 px: over a lamp post's top, under a tree's): the server's flight is the
+// page's prediction step for step (no corrections), and nothing down there - the street furniture, a parked car, someone
+// standing in the road, a crate - touches it or is touched by it.
+test('flying low over a street: nothing on the ground touches it, and the page predicts the server step for step', async () => {
+  const { straightRoad } = await import('./helpers.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  p.profile.safety = false;
+  const r = straightRoad(w.map, 1400);
+  assert.ok(r, 'a long straight street');
+  const v = w.spawnVehicle('heli', r.x + 120, r.y, 0, { npcOwned: false });
+  v.alt = 60; v.spool = 1;
+  v.seats[0] = p.ped.id; p.ped.vehId = v.id; p.ped.seat = 0; p.ped.x = v.x; p.ped.y = v.y; w.place(p.ped);
+  // in its way, on the ground: a parked car, someone standing in the road, a crate
+  const car = w.spawnVehicle('sedan', r.x + 520, r.y, 0, { npcOwned: true });
+  const ped = w.spawnPed(r.x + 760, r.y, {});
+  const crate = w.spawnCrate(1, r.x + 900, r.y);
+  const carAt = { x: car.x, y: car.y, hp: car.hp }, pedHp = ped.hp, crateAt = { x: crate.x, y: crate.y };
+  const brokenBefore = (w.brokenProps || new Map()).size;
+  // the page's prediction, from the same state
+  const s = { x: v.x, y: v.y, a: v.a, vx: v.vx, vy: v.vy, av: v.av || 0, alt: v.alt, vz: v.vz || 0, spool: v.spool, bank: v.bank || 0 };
+  let seq = 0, worst = 0;
+  for (let i = 0; i < 70; i++) {
+    const inp = { seq: ++seq, bits: 0, mx: 1, my: 0, aim: 0 };   // (the stick east, along the street)
+    p.inputQ.push(inp); w.step();
+    flightStep(s, flightInput(s, inp, v.def), 0.05, w.map, v.def, true);
+    worst = Math.max(worst, Math.hypot(s.x - v.x, s.y - v.y), Math.abs(s.alt - v.alt));
+  }
+  assert.ok(v.x > r.x + 900, `flew along it (${Math.round(v.x - r.x)} px)`);
+  assert.ok(worst < 0.01, `the page's prediction matched the server's every step (worst ${worst.toFixed(3)} px)`);
+  assert.equal(v.hp, v.def.hp, 'not a scratch on it');
+  assert.equal((w.brokenProps || new Map()).size, brokenBefore, 'no street furniture smashed under it');
+  assert.ok(Math.hypot(car.x - carAt.x, car.y - carAt.y) < 1 && car.hp === carAt.hp, 'the parked car untouched');
+  assert.ok(ped.hp === pedHp && !(ped.downUntil > w.time), 'the person in the road untouched');
+  assert.ok(Math.hypot(crate.x - crateAt.x, crate.y - crateAt.y) < 1, 'the crate not shoved');
+});
+
+test('up in the air: out of reach of a swing, of the police dragging the pilot out; nothing smashed under one flown by nobody', async () => {
+  const combat = await import('../server/systems/combat.js');
+  const police = await import('../server/systems/police.js');
+  const props = await import('../server/systems/props.js');
+  const { WEAPONS } = await import('../shared/items.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const v = w.spawnVehicle('heli', p.ped.x + 300, p.ped.y, 0, { npcOwned: false });
+  v.alt = 80; v.spool = 1;
+  const pilot = w.spawnPed(v.x, v.y, {}); v.seats[0] = pilot.id; pilot.vehId = v.id; pilot.seat = 0;
+  const cop = w.spawnPed(v.x + 30, v.y, {});
+  const swinger = w.spawnPed(v.x - 30, v.y, {});
+  assert.equal(combat.meleeVehicle(w, swinger, WEAPONS.bat, 0), null, 'a bat doesn\'t reach it up there');
+  police.pullOut(w, cop, pilot, v);
+  assert.equal(pilot.vehId, v.id, 'an officer can\'t drag the pilot out of it up there');
+  v.alt = 0;
+  assert.ok(combat.meleeVehicle(w, swinger, WEAPONS.bat, 0), 'on the ground a bat dents it');
+  // flown by nobody (falling, or an NPC pilot's): props.update never smashes what's under an aircraft
+  const i = w.map.props.findIndex((q) => q && q.t === 'lamp');
+  assert.ok(i >= 0, 'a lamp post');
+  const lamp = w.map.props[i];
+  v.alt = 50; v.x = lamp.x; v.y = lamp.y; v.vx = 300; v.vy = 0; w.place(v);
+  const before = (w.brokenProps || new Map()).size;
+  props.update(w, 0.05);
+  assert.equal((w.brokenProps || new Map()).size, before, 'the lamp post under it stands');
+});

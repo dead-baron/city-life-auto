@@ -17,6 +17,7 @@ import { sameLevel } from '../../shared/levels.js';
 import { enterEdge } from './traffic.js';
 import { rejoin } from './transit.js';
 import { startTurn } from './roadends.js';   // (turning round in the street by a manoeuvre: task #384)
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 export const MEMORY = 24, TTL = 45;   // the blocked-road memory: this many roads at most, each kept this long (s)
 export const GAP = 6;                 // a driver re-plans at most once in this long (s)
@@ -80,7 +81,7 @@ function laneClear(world, v, e, from, k, s, blk) {
     if (t < 0) continue;
     if (t > L) return t > s + v.def.L;   // (the road ends there: room enough if it's past the car)
     const p = pointAt(lp, t);
-    for (const q of world.query(p.x, p.y, 36, K.VEH)) if (q !== v && q !== blk && sameLevel(q.lz, v.lz)) return false;
+    for (const q of world.query(p.x, p.y, 36, K.VEH)) if (q !== v && q !== blk && sameLevel(q.lz, v.lz) && !((q.alt || 0) > FLY.HIGH)) return false;
   }
   return true;
 }
@@ -172,7 +173,7 @@ function stripClear(world, v, b, a, off, pavement) {
         }
       }
       if (lat) continue;
-      for (const q of world.query(x, y, 40, K.VEH)) if (q !== v && q !== b && sameLevel(q.lz, v.lz)) return false;
+      for (const q of world.query(x, y, 40, K.VEH)) if (q !== v && q !== b && sameLevel(q.lz, v.lz) && !((q.alt || 0) > FLY.HIGH)) return false;   // (an aircraft overhead: not in the way)
       // nobody standing in it, and nobody lying anywhere under the car's width (a body, a downed player - task #435:
       // an ambulance went round a stopped car and over the casualty beside it)
       if (t <= to) for (const q of world.query(x, y, v.def.W / 2 + 22, K.PED)) {

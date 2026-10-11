@@ -9,6 +9,7 @@ import { PED_BLOCK } from '../../shared/map.js';
 import * as law from './law.js';
 import * as hotmoney from './hotmoney.js';
 import * as explosions from './explosions.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const GRAV = 620;
 // the crates cleared away when left lying a while: a job's, contraband, explosives (off a traffic truck, task #398)
@@ -78,6 +79,7 @@ function stepGroundCrate(world, c, dt) {
   }
   // vehicles shove crates around
   for (const v of world.query(c.x, c.y, 100, K.VEH)) {
+    if ((v.alt || 0) > FLY.HIGH) continue;   // (an aircraft flying over it)
     const h = circleVsObb(c.x, c.y, 11, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
     if (!h) continue;
     c.x += h.nx * h.depth; c.y += h.ny * h.depth;

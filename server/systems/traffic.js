@@ -539,7 +539,7 @@ function junctionClear(world, v, n, stop) {
     const out = n.dirs[nx.edge], ox = Math.cos(out), oy = Math.sin(out), d0 = (n.trim[nx.edge] || 0) + v.def.L / 2 + 18;
     const px = n.x + ox * d0, py = n.y + oy * d0;
     for (const e of world.query(px, py, v.def.L / 2 + 34, K.VEH)) {
-      if (e === v || !sameLevel(e.lz, v.lz) || Math.hypot(e.vx, e.vy) > 15) continue;   // (just pulling away is no queue)
+      if (e === v || !sameLevel(e.lz, v.lz) || Math.hypot(e.vx, e.vy) > 15 || (e.alt || 0) > FLY.HIGH) continue;   // (just pulling away is no queue; an aircraft overhead none either)
       if (Math.abs(angleDiff(e.a, out)) > 0.8) continue;   // (the other way on that road, or across it)
       if (-(e.x - n.x) * oy + (e.y - n.y) * ox < -10) continue;   // (on the far side of the road)
       return false;
@@ -549,7 +549,7 @@ function junctionClear(world, v, n, stop) {
   // 2. something crossing the junction on another heading (not one ahead of it from the same road, turning)
   const R = (n.half || 40) + 24;
   for (const e of world.query(n.x, n.y, R, K.VEH)) {
-    if (e === v || !sameLevel(e.lz, v.lz)) continue;
+    if (e === v || !sameLevel(e.lz, v.lz) || (e.alt || 0) > FLY.HIGH) continue;   // (an aircraft over the junction: not crossing it)
     if (e.ai && e.ai.from === n.id && e.ai.cameBy === stop.edge) continue;
     // (moving through it; standing still only right in the middle of it - one waiting at its own line on a narrower
     // road can be well inside the circle)
@@ -562,7 +562,7 @@ function junctionClear(world, v, n, stop) {
   // 3. turning left across the other way: what's coming through goes first
   if (nx && nx.turn < -0.5) {
     for (const e of world.query(n.x, n.y, (n.half || 40) + 220, K.VEH)) {
-      if (e === v || !sameLevel(e.lz, v.lz) || Math.abs(angleDiff(e.a, v.a)) < 2.5) continue;
+      if (e === v || !sameLevel(e.lz, v.lz) || Math.abs(angleDiff(e.a, v.a)) < 2.5 || (e.alt || 0) > FLY.HIGH) continue;
       const sp = Math.hypot(e.vx, e.vy);
       if (sp < 40) continue;                                            // (waiting at its own line, or about to)
       if ((e.x - n.x) * e.vx + (e.y - n.y) * e.vy > 0 && Math.hypot(e.x - n.x, e.y - n.y) > (n.half || 40)) continue;   // (gone past)

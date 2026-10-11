@@ -67,14 +67,14 @@ export function update(world, dt) {
   const g = grid(map);
   world.brokenProps ??= new Map();
   for (const v of world.entities.values()) {
-    if (v.kind !== K.VEH || v.def.kind === 'boat' || v.removed) continue;
+    if (v.kind !== K.VEH || v.def.kind === 'boat' || v.def.kind === 'air' || v.removed) continue;   // (an aircraft, flown by anyone: over the street furniture)
     if (v.ownStepTick === world.tick) continue; // player-driven: checked after each input step
     smashFor(world, v);
   }
   // geysers from smashed hydrants drag cars driving through the spray
   if (world.geysers && world.geysers.length) {
     world.geysers = world.geysers.filter((q) => q.until > world.time);
-    for (const v of world.entities.values()) if (v.kind === K.VEH && v.ownStepTick !== world.tick) geyserDrag(v, world.geysers, dt);
+    for (const v of world.entities.values()) if (v.kind === K.VEH && v.def.kind !== 'air' && v.ownStepTick !== world.tick) geyserDrag(v, world.geysers, dt);   // (not an aircraft: the page predicts no spray for one)
   }
   // tidy-up crew: smashed props reappear after a while, but never in front of a player
   if (world.tick % 40 === 7 && world.brokenProps.size) {

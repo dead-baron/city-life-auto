@@ -37,6 +37,7 @@ import * as players from './players.js';
 import * as combat from './combat.js';
 import * as hunting from './hunting.js';
 import * as events from './events.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const rng = mulberry32(5150);
 
@@ -912,7 +913,7 @@ function propAt(map, x, y, r, minR = 0) {
 // the vehicles standing still within reach of it (null: none)
 function parkedNear(world, a, reach) {
   let out = null;
-  for (const v of world.query(a.x, a.y, reach + 130, K.VEH)) if (!v.removed && !v.fly && Math.abs(v.vx) + Math.abs(v.vy) < 40 && sameLevel(a.lz, v.lz)) (out ||= []).push(v);
+  for (const v of world.query(a.x, a.y, reach + 130, K.VEH)) if (!v.removed && !v.fly && !((v.alt || 0) > FLY.HIGH) && Math.abs(v.vx) + Math.abs(v.vy) < 40 && sameLevel(a.lz, v.lz)) (out ||= []).push(v);   // (a helicopter hovering over it: not in its way)
   return out;
 }
 const carAt = (cars, x, y, r) => { if (cars) for (const v of cars) if (circleVsObb(x, y, r, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2)) return true; return false; };

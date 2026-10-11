@@ -25,6 +25,7 @@ import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { CAR_BLOCK } from '../../shared/map.js';
 import { leaveBy } from './traffic.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const TAU = Math.PI * 2;
 
@@ -268,7 +269,7 @@ export function clearance(world, v, dir, steer, open, look = LOOK) {
   const near = [];
   for (const e of world.query(v.x, v.y, v.def.L / 2 + look + 110)) {
     if (e === v || !sameLevel(e.lz, v.lz)) continue;
-    if (e.kind === K.VEH || (e.kind === K.PED && !e.vehId && !e.dead && !e.hidden)) near.push(e);
+    if ((e.kind === K.VEH && !((e.alt || 0) > FLY.HIGH)) || (e.kind === K.PED && !e.vehId && !e.dead && !e.hidden)) near.push(e);   // (an aircraft overhead: not in the way)
   }
   // outline points that start out off the open ground are let be (it's only kept from going further off)
   const c0 = Math.cos(v.a), s0 = Math.sin(v.a);

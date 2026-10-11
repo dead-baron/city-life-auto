@@ -409,7 +409,7 @@ function fight(world, ped, now) {
   if (t.vehId) {
     const v = world.get(t.vehId);
     // GDD: angry drivers pull the player back out of the seat and beat them up
-    if (v && d < v.def.L / 2 + 20 && Math.hypot(v.vx, v.vy) < 40 && n.role !== 'gang' && !n.exCop && now - (n.draggedAt || -99) > 6) {
+    if (v && d < v.def.L / 2 + 20 && Math.hypot(v.vx, v.vy) < 40 && !((v.alt || 0) > FLY.HIGH) && n.role !== 'gang' && !n.exCop && now - (n.draggedAt || -99) > 6) {
       n.draggedAt = now;
       vehicles.ejectPed(world, t, true);
       t.downUntil = now + 0.8;
