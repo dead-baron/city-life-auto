@@ -72,7 +72,7 @@ function workSpots(map) {
   if (map._workSpots) return map._workSpots;
   const out = [], by = boneyard(map), mine = site(map, '_mine', (q) => q.kind === 'mine' && q.seams), wreck = site(map, '_wreck', (q) => q.kind === 'wreck' && q.search);
   if (by) for (const q of by.stored) out.push({ kind: 'plane', x: q.x, y: q.y, ux: Math.cos(q.a), uy: Math.sin(q.a), half: q.half, reach: SALVAGE_REACH });
-  if (mine) for (const q of mine.seams) out.push({ kind: 'seam', x: q.x, y: q.y, reach: 40 });
+  if (mine) for (const s of (map.natureSites || []).filter((q) => q.kind === 'mine' && q.seams)) for (const q of s.seams) out.push({ kind: 'seam', x: q.x, y: q.y, reach: 40 });   // (every mine's seams: docs/WORLD-V3.md 8.19)
   if (wreck) for (const q of wreck.search) out.push({ kind: 'wreck', x: q.x, y: q.y, reach: 44 });
   Object.defineProperty(map, '_workSpots', { value: out, enumerable: false, configurable: true });
   return out;

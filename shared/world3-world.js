@@ -30,6 +30,7 @@ import { paintMesa3, layMesa3, mesaLots, buildMesa, mesaDone, MESA_SPECIALS, MES
 import { buildFerries3 } from './world3-ferries.js';
 import { paintDesert3, layDesert3, buildDesert, desertDone, DESERT_SPECIALS, DESERT_STYLES } from './world3-desert.js';
 import { subwayLoops } from './world3-subway.js';
+import { wildSites3, wildDone } from './world3-wild.js';
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -181,6 +182,7 @@ export function worldOpts(asked) {
       m.world3.towns.models = townModels(m);   // (H40, 8.13.2: the towns' own buildings, their yards, the boardwalk's rails, benches and lamps, the pier's end: world3-towns.js)
       if (m.world3.mesa) m.world3.mesa.done = mesaDone(m);   // (Lucky Mesa's gas station, bus stop and summary: world3-mesa.js, 8.15)
       if (m.world3.desert) m.world3.desert.done = desertDone(m);   // (8.18: the assay office's counter, the summary: world3-desert.js)
+      if (m.world3.wild) m.world3.wild = wildDone(m, m.world3.wild);   // (8.19: what was built on the wild land's lots: world3-wild.js)
       const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
       m.world3.housesMoved = seatStationHouses(m);   // (8.14: each station's house on open ground)
       if (H3) { m.world3.railCleared = clearRailDressing(m, H3.removeProps); clearBeachFront(m, H3.removeProps); }   // (8.14: no tree over the main line or a platform; the promenade and car parks clear)
@@ -234,6 +236,7 @@ export function worldOpts(asked) {
       m.world3.beach = beachStreets(lines, m, L);   // (Northshore's beach towns' streets: shared/world3-beach.js, 8.14)
       m.world3.mesa = { painted: mesa, streets: layMesa3(lines, m) };   // (Lucky Mesa's Strip and side streets: shared/world3-mesa.js, 8.15)
       m.world3.desert = { painted: desert, streets: layDesert3(lines, m) };   // (Copper Gulch's main street and side streets: shared/world3-desert.js, 8.18)
+      m.world3.wild = wildSites3(lines, m);   // (H44, 8.19: today's wild land's country sites at their v3 spots, each with its road in: shared/world3-wild.js)
     },
   };
   return o;
