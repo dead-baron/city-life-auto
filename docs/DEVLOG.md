@@ -7450,7 +7450,7 @@ can make northshore less dense": Northshore runs on along the gulf's north shore
 behind them, the waterfront beaches and the Shore Road. And 8.10.1's wrongs: the redwoods over Westport Junction's
 platforms, the station building a placeholder (the subway's kiosk).
 - **The beach towns** (district 54, shared/world3-beach.js): a loose grid of streets either side of today's Northshore
-  between the Coast Highway's room and the Shore Road (streets along the shore every 40 tiles, cross streets every 60
+  between the Coast Highway's room and the Shore Road (streets along the shore every 46 tiles, cross streets every 76
   from the Shore Road up, every third over the main line at a gated crossing, the ends joined to the arterials and
   Northshore's streets they come near), the generator's beach-style blocks between them (beach houses, cafes, diners,
   beach bars, hotels, a few small apartment blocks), the promenade along the Shore Road's sea side, car parks with

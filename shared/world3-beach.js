@@ -16,8 +16,8 @@ import { TERRAIN3 } from './world3-land.js';
 
 export const BEACH_D = 54;
 const TOWN = new Set([31, 32, 34]);   // (Northshore's own: today's picture)
-const ROW = 40;        // tiles between the streets parallel to the shore (less dense than the city's 24-30)
-const COL = 60;        // tiles between the cross streets
+const ROW = 46;        // tiles between the streets parallel to the shore (less dense than the city's 24-30)
+const COL = 76;        // tiles between the cross streets
 const CROSS = 3;       // every third cross street crosses the main line
 const RAIL_CLEAR = 18; // tiles either side of the main line's polyline (the double track's bed and its platforms)
 const TOWN_CLEAR = 5;  // tiles off Northshore's own blocks
@@ -144,7 +144,7 @@ export function beachStreets(lines, m, L) {
   c = 0;
   const railAt = (x, y) => inB(x, y) && !!rail[(y - by) * BW + x - bx];
   for (let x = box[0] + (COL >> 1); x <= box[2]; x += COL, c++) {
-    if (c % CROSS === 1) continue;
+    if (c % CROSS !== 0) continue;   // (every third: less dense up there - the owner's "less dense")
     let y = Math.floor(shoreY(x)) - 1;
     while (y > box[1] && !railAt(x, y)) y--;   // (up to the line's room)
     if (y <= box[1]) continue;

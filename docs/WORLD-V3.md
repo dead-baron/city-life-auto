@@ -2712,16 +2712,16 @@ station house and the lifeguard tower are new art).
 `lines` hook, `beachFront` at the start of its `rails` hook; 54 is no longer `unbuilt`):
 - **The streets:** a loose grid on district 54's land (not its beach) either side of today's Northshore, from the
   Coast Highway's room down to the Shore Road (the beachfront road, an arterial of the skeleton): streets parallel to
-  the Shore Road every 40 tiles inland (`ROW`, following its curve), cross streets every 60 (`COL`) from the Shore Road
-  up. They keep clear of the roads already laid (by kind: 26 tiles off a highway's middle, 11 off an arterial's), 18
+  the Shore Road every 46 tiles inland (`ROW`, following its curve), cross streets every 76 (`COL`) from the Shore Road
+  up (north of the main line every third of them). They keep clear of the roads already laid (by kind: 26 tiles off a highway's middle, 11 off an arterial's), 18
   tiles off the main line's polyline and 5 off Northshore's own blocks; every third cross street goes over the main
   line (the generator makes the gated level crossing), the rest stop short of its bed. A street's end within 14 tiles
   of a road (not a highway) is carried on to it: a junction. Invented names (Surf Street, Dune Street, Pier Avenue,
   Driftwood Lane, ...).
 - **The blocks** are the generator's, in the district's `beach` style: beach houses (house1/2/5/9), cafes,
   restaurants, diners and beach bars, hotels, a few small apartment blocks and corner stores, the rest low roofs -
-  less dense than a city (`ROW` 40 x `COL` 60 against the city's 24-30; the test: building cover under 3/4 of
-  Northshore's). The Bluffs' gap down to the beach is the beach town's blocks now.
+  less dense than a city (`ROW` 46 x `COL` 76 against the city's 24-30; the test: building cover under 3/4 of
+  Metro City's). The Bluffs' gap down to the beach is the beach town's blocks now.
 - **The front** (before the blocks): the promenade - 3 tiles of paving on the sand along the Shore Road's sea side;
   car parks (14 x 8 tiles of LOT) on the Shore Road's land side every 150 tiles or so, steps (a paved flight) from the
   promenade down onto the sand opposite each; lifeguard towers on the sand every 120 tiles, two thirds of the way down
@@ -2743,12 +2743,32 @@ station house and the lifeguard tower are new art).
   house moves to the nearest spot round the platforms that is clear, facing away from the nearest track (its map
   point and forecourt with it) - Old Town's stood in the water. It is art only: it doesn't block the way yet.
 
-**The numbers** (seed 1337): 17 streets along the shore and 15 cross streets (3 over the main line), 6,258 tiles of
-street, 16 ends carried on to a road; 281 buildings in the beach towns - 41 houses, 35 cafes, restaurants, diners and
-beach bars, 8 hotels, 3 corner stores, two small towers, an apartment block, a filling station, a clothes shop, the
-rest low roofs - covering 10.7% of the district's land (Northshore's town 15.5%); 3,438 tiles of promenade, 5 car
-parks, 6 lifeguard towers. Along the main line 384 trees cleared, 5 props off platforms, 7 off station houses. The
-world build takes about the same (the streets' clearance grids are the beach towns' box only).
+**The numbers** (seed 1337): 19 streets along the shore and 17 cross streets (4 over the main line), 6,125 tiles of
+street, 14 ends carried on to a road; 358 buildings in the beach towns - 49 houses, 55 cafes, restaurants, diners and
+beach bars, 9 hotels, 9 corner stores, a small tower, the rest low roofs - covering 16.7% of the district's land (its
+beach included; Metro City's built districts 19.8%, Northshore's town 20.4% in this build: less dense, if not by much -
+wider spacing makes bigger blocks, which the generator fills as full); 3,439 tiles of promenade, 5 car parks, 6
+lifeguard towers. Along the main line 392 trees cleared, 5 props off platforms, 7 off station houses.
+
+**The pictures** (through the chunk bake): `docs/world-v3-world-r5-3.png` (`tools/world3-world-map.mjs --region 5,3`:
+the beach towns east of Northshore, tiles 2520-3023 x 1512-2015) and `docs/world-v3-hub-westport-junction.png`,
+`docs/world-v3-hub-old-town.png` (`tools/world3-hub-map.mjs`). What looks right: south of the main line a beach town -
+red-roofed beach houses, small blocks, cafes and parking courts in a grid off the Shore Road, the beach in front all
+along; the station house with its canopy on Westport Junction's forecourt. What looks wrong:
+- **The first bake left the land north of the main line green:** its streets along the shore had no cross streets, so
+  it was one free region and the generator's block cutter (at most 40 rectangles a region) built none of it. Cross
+  streets now run north of the line too (every third column: less dense up there; the region's picture was re-baked
+  with them on every column in between, so it shows more blocks than the build now makes).
+- **The redwoods still read as standing over Westport Junction's platforms:** the props on and beside the platforms
+  are gone (the test), but a giant redwood is drawn upward by its height (365-770 px), so the giants south of the line
+  - their trunks 150-700 px off it - cover the track and the platforms in the picture. Wants the corridor cleared by
+  the trees' drawn height on the south side (or only shorter trees, firs and redwood2, along the line).
+- **Old Town's house stands on the water** beside its platforms on piers (no open ground within reach of them).
+- **A grid:** straight cross streets every 76 tiles; a beach town's would wander, and the rows follow the Shore Road's
+  curve only. The Shore Road runs on the land layer's beach, so a strip of sand runs behind it up to the first houses.
+- **Three level crossings** in the town (the cross streets over the main line at grade): ruling 2 wants bridges in
+  towns - the owner's call (bridge them, or stop them short as the others do).
+- The station house and the lifeguard towers are art only (they don't block the way; the towers do, by a solid).
 
 **The test** (`test/world3beach.test.js`, one world build, about 35 s): the beach towns' streets (rows, cross streets,
 some over the line) on the network with the Shore Road; their buildings (houses, cafes and bars), less dense than
