@@ -27,6 +27,7 @@ import { brokenBarrierList } from './systems/barriers.js';
 import { setView } from './view.js';
 import * as devmode from './devmode.js';
 import * as looks from './systems/looks.js';
+import * as safety from './systems/safety.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
 export function createSession(world, conn, opts) {
@@ -104,6 +105,7 @@ export function createSession(world, conn, opts) {
         conn.close(4005, 'wiped');
         return;
       }
+      if (msg.t === 'safety') { safety.set(player, !!msg.on); return; }   // (Settings: Safety mode - server/systems/safety.js)
       if (msg.t === 'plist') { conn.sendJSON(devmode.playerList(world, player)); return; } // who's online (options / map)
       if (msg.t === 'devmode') { if (msg.leave) devmode.exit(world, player); else if (!player.devMode) devmode.tryPassword(world, player, msg.pw); return; }
       if (msg.t === 'dev' && (opts.dev || player.devMode)) { dev.command(world, player, String(msg.c || ''), msg); }

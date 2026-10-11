@@ -162,6 +162,34 @@ export function resolveSpawn(world, p, choice, deathPos) {
   return h;
 }
 
+// ---- home lots -------------------------------------------------------------------------------
+// The parking spots (map.parking) on a home's lot, its driveway or in its garage: no NPC or world car is parked there -
+// only the home's owner's own (spawnOwnedAt). The owner, 2026-10-11: "Owned player properties have vehicles parked
+// halfway in the garages ... Should just not have outside vehicles parked in properties of people [who] don't own them
+// so they don't get in trouble for taking a vehicle on their property." traffic.js's parked-car spawner skips them.
+const lotCache = new WeakMap();
+export function homeLotSpots(map) {
+  let set = lotCache.get(map);
+  if (set) return set;
+  set = new Set();
+  const T = 32, rects = [], pts = [];
+  for (const h of map.homes || []) {
+    if (!h || h.gone) continue;
+    const b = h.b != null ? map.buildings[h.b] : null, pf = b && b.prefab >= 0 && map.prefabs ? map.prefabs[b.prefab] : null;
+    const mn = b && b.prefab < 0 && map.mansions ? map.mansions.find((q) => q.tx === b.tx && q.ty === b.ty) : null;
+    const lot = pf || (mn && mn.lot) || b;   // (the house's whole lot: its prefab, a mansion's walled grounds)
+    if (lot) rects.push([lot.tx * T - 16, lot.ty * T - 16, (lot.tx + lot.tw) * T + 16, (lot.ty + lot.th) * T + 16]);
+    for (const g of map.garages || []) if (g.home === h.id) rects.push([g.tx * T - 32, g.ty * T - 32, (g.tx + g.tw) * T + 32, (g.ty + g.th) * T + 32]);
+    if (h.garage) pts.push(h.garage);
+    if (h.garageDoor) pts.push(h.garageDoor);
+  }
+  (map.parking || []).forEach((sp, i) => {
+    if (rects.some((r) => sp.x >= r[0] && sp.x <= r[2] && sp.y >= r[1] && sp.y <= r[3]) || pts.some((q) => Math.hypot(q.x - sp.x, q.y - sp.y) < 90)) set.add(i);
+  });
+  lotCache.set(map, set);
+  return set;
+}
+
 // ---- garage -----------------------------------------------------------------------
 export function nearOwnGarage(world, p, x, y, r = 170) {
   for (const h of ownedHomes(world, p.profile)) if (Math.hypot(h.garage.x - x, h.garage.y - y) < r) return h;
@@ -188,12 +216,16 @@ export function vehicleInteraction(world, p) {
   if (v.def.police || v.model === 'ambulance' || v.model === 'rescue4x4' || v.model === 'rescueboat' || v.model === 'swat') return null;
   const h = nearOwnGarage(world, p, v.x, v.y);
   if (!h) return null;
+  if (v.workTruck) return { label: `A company ${v.def.name} - your garage won't keep it`, run: () => storeVehicle(world, p, v, h) };   // (storeVehicle says why)
   if (Math.hypot(v.vx, v.vy) > 60) return { label: 'Slow down to park in your garage', run: () => {} };
   return { label: `Park ${v.def.name} in your garage`, run: () => storeVehicle(world, p, v, h) };
 }
 
 export function storeVehicle(world, p, v, home) {
   const prof = p.profile;
+  // a company's work truck (jobs.js workTruck): drive it, paint it, keep it out - but a garage won't keep it (the owner,
+  // 2026-10-11: "you can't just park a work truck in your garage and keep it")
+  if (v.workTruck) { world.notify(p, `That ${v.def.name} belongs to the company - your garage won't keep it. Bring it back where you got it for a bonus.`, 'warn'); return 'work truck'; }
   if (v.owner !== p.pid && prof.vehicles.length >= garageCap(world, prof)) { world.notify(p, `Garage full (${prof.vehicles.length}/${garageCap(world, prof)}). Buy another home for more space.`, 'warn'); return; }
   if (v.seats.some((s, i) => i > 0 && s)) { world.notify(p, 'Passengers have to get out first.', 'warn'); return; }
   const boat = v.def.kind === 'boat';

@@ -5,7 +5,7 @@
 import { K } from '../../shared/constants.js';
 import { PED_BLOCK, DISTRICTS } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S } from '../../shared/rules.js';
+import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S, WORK_TRUCK_RETURN } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
 import * as events from './events.js';
@@ -224,7 +224,17 @@ function take(world, p, id) {
 // Live target for the job tracker / waypoint: pickup first, then the drop-off.
 export function jobTarget(world, p) {
   const j = p.job;
-  if (!j) return null;
+  if (!j) {   // the job's done and its truck's still out: bring it back for the bonus (jobs.js returnTruck)
+    const ri = jobs.returnInfo(world, p);
+    return ri ? { text: `Bonus: bring the ${ri.v.def.name} back to ${ri.label} (+$${WORK_TRUCK_RETURN})`, x: ri.x, y: ri.y, stage: 'return', veh: truckMark(p, ri.v) } : null;
+  }
+  const t = target(world, p, j), v = j.truck ? world.get(j.truck) : null;
+  if (v && !v.removed && !v.wreckAt) t.veh = truckMark(p, v);   // the job's truck, until you're in it: a ring and arrows (main.js, hud.js)
+  if (t.stage === 'pickup' && Number.isFinite(j.tx)) t.dest = [Math.round(j.tx), Math.round(j.ty)];   // (and where it goes after: the minimap)
+  return t;
+}
+const truckMark = (p, v) => (p.ped && p.ped.vehId === v.id ? null : [Math.round(v.x), Math.round(v.y)]);
+function target(world, p, j) {
   if ((j.type === 'courier' || j.type === 'farm') && j.crates && j.crates.length) {
     const waiting = j.crates.map((id) => world.get(id)).filter((c) => c && c.kind === K.CRATE && c.state === 'ground' && !c.touched);
     if (waiting.length === j.crates.length) {

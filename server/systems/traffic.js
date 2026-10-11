@@ -23,6 +23,7 @@ import { routeSteps, haltsOn, haltCap, haltAt, rejoin } from './transit.js';
 import { isBlocked, unjam, goRound } from './reroute.js';   // (drivers who find another way round a backup: task #315)
 import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384)
 import { loadExplosives } from './cargo.js';
+import { homeLotSpots } from './homes.js';
 
 const rng = mulberry32(4242);
 // a flatbed out of the yards, the docks, off the highway or on the country roads (to the quarry, the mine) carries a
@@ -661,10 +662,11 @@ function manage(world) {
   world.parked ??= new Map();
   for (const [i, vid] of world.parked) { if (!world.get(vid)) world.parked.delete(i); }
   const spotGrid = pointGrid(spots);   // (the spots near each player through their spatial index, in the list's order: at World v3's frame the list is the world's)
+  const homeLots = homeLotSpots(world.map);   // (none on a home's lot, driveway or garage: the owner's own cars only - homes.js)
   for (const a of anchors) {
     for (const i of spotGrid.near(a.x, a.y, 1150)) {
       const sp = spots[i];
-      if (world.parked.has(i)) continue;
+      if (world.parked.has(i) || homeLots.has(i)) continue;
       if (hash2(i, 7, world.map.seed) > (sp.sparse ? 0.3 : sp.drive ? 0.5 : 0.7)) continue; // a home's driveway: often a car, often not
       const d2 = (sp.x - a.x) ** 2 + (sp.y - a.y) ** 2;
       if (d2 > 1150 * 1150) continue;

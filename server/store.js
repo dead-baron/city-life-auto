@@ -30,6 +30,7 @@ export function defaultProfile(pid) {
     lastSpawn: null, // the death screen's wake-up spot you last woke at ('h:<i>' | 'home:<id>'): the next one's default
     pos: null,
     stats: { kills: 0, deaths: 0, arrests: 0, deliveries: 0, fish: 0 },
+    safety: true,    // Safety mode: an act that'd be a crime asks first (server/systems/safety.js) - on for new characters
   };
 }
 

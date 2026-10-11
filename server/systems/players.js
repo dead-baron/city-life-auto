@@ -60,6 +60,7 @@ import * as cells from './cells.js';
 import * as devmode from '../devmode.js';
 import * as underground from './underground.js';
 import * as dance from './dance.js';
+import * as safety from './safety.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -367,10 +368,10 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   // down from a tackle (police.js): moving gets you up sooner - if nobody pins you first
   if (ped.scrambleUntil > world.time && world.time < ped.downUntil && !ped.cuffed && Math.hypot(inp.mx || 0, inp.my || 0) > 0.3) ped.downUntil = Math.max(world.time, ped.downUntil - dt * TACKLE_SCRAMBLE);
   if (ped.cuffed || custody.inCell(p)) {   // (in custody: custody.js moves them; the jail panel has the bail)
-    if ((pressed & IN.ACTION) && custody.canBreak(p, world)) custody.breakOut(world, p);   // (make a break for it: on the ground, walked to the car, the car stuck)
+    if ((pressed & IN.ACTION) && custody.canBreak(p, world) && safety.confirm(world, p, 'escape', 'escape')) custody.breakOut(world, p);   // (make a break for it: on the ground, walked to the car, the car stuck; Safety mode asks first)
     if (!ped.cuffed) {   // in a cell: walk round it; the action button sits, holds the bars (cells.js)
       cells.input(world, p, ped, inp, dt);
-      if (pressed & IN.ACTION) { const act = findInteraction(world, p); if (act) act.run(); }
+      if (pressed & IN.ACTION) doAct(world, p);
       if (pressed & IN.FIRE) cells.bang(world, p, ped);   // (the fight button: rattle the bars, or a fist on the wall)
     }
     return;
@@ -409,7 +410,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
       if (w && (w.type === 'gun')) combat.tryAttack(world, ped, inp.aim);
     }
     if ((pressed & IN.VEHICLE) && !v.scripted) vehicles.exitVehicle(world, ped);
-    if (pressed & IN.ACTION) { const act = findInteraction(world, p); if (act) act.run(); }
+    if (pressed & IN.ACTION) doAct(world, p);
     return;
   }
 
@@ -442,11 +443,14 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     else if (!ped.fishing) combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
   }
   if (pressed & IN.THROW) { if (ped.carrying) cargo.throwCrate(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a); }
-  if ((pressed & IN.VEHICLE) && !revive.tryFinish(world, p)) vehicles.tryEnter(world, ped);
-  if (pressed & IN.ACTION) {
-    const act = findInteraction(world, p);
-    if (act) act.run();
-  }
+  if ((pressed & IN.VEHICLE) && !revive.tryFinish(world, p)) vehicles.playerEnter(world, ped);   // (Safety mode asks first when it'd be a crime)
+  if (pressed & IN.ACTION) doAct(world, p);
+}
+
+// The Act button: what findInteraction offers - one that's a crime (act.crime) waits for Safety mode's say-so (safety.js).
+function doAct(world, p) {
+  const act = findInteraction(world, p);
+  if (act && safety.confirm(world, p, act.crime, act.key2 || act.label)) act.run();
 }
 
 // Sliding along the tarmac after bailing out / being blown out of a car: slamming into a wall,
@@ -518,7 +522,7 @@ export function findInteraction(world, p) {
       const spot = jobs.boatFishingSpot(world, ped);
       if (spot) return { label: 'Fish offshore (deep-sea)', run: () => jobs.castLine(world, p, spot) };
     }
-    return transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p);
+    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p);
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
@@ -560,7 +564,7 @@ export function findInteraction(world, p) {
   const fellAct = felling.interaction(world, p);   // at a tree with a cutting tool: hold to fell it (felling.js)
   if (fellAct && ped.chop) return fellAct;
   const crate = cargo.nearestCrate(world, ped);
-  if (crate) return { label: crate.state === 'loaded' ? `Unload ${crateName(crate)}` : `Pick up ${crateName(crate)}`, run: () => cargo.pickUp(world, ped, crate) };
+  if (crate) { const theirs = !!(crate.owner && crate.owner !== p.pid); return { label: (crate.state === 'loaded' ? `Unload ${crateName(crate)}` : `Pick up ${crateName(crate)}`) + (theirs ? ' - Cargo theft' : ''), crime: theirs ? 'cargoTheft' : null, run: () => cargo.pickUp(world, ped, crate) }; }
   const lantern = lights.interaction(world, p);   // a lantern someone set down (lights.js)
   if (lantern) return lantern;
   if (fellAct) return fellAct;
@@ -625,7 +629,7 @@ export function findInteraction(world, p) {
   const sale = dealer.saleNear(world, ped);
   if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };
   const v = vehicles.nearestVehicle(world, ped, 56);
-  if (v) return { label: `Enter ${v.def.name}`, key: 'F', run: () => vehicles.tryEnter(world, ped) };
+  if (v) return { label: vehicles.enterLabel(world, p, v), key: 'F', crime: vehicles.entryInfo(world, p, v).crime, key2: `veh:${v.id}`, run: () => vehicles.tryEnter(world, ped) };
   return transit.stopNote(world, p);   // at a bus stop with nothing else to do: the line and when its next bus comes
 }
 
@@ -753,7 +757,7 @@ export function buildMe(world, p) {
     homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),
     spawnOpts: ped && ped.dead ? homes.spawnOptions(world, p) : null, spawnChoice: p.respawnChoice || null,
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
-    dev: p.dev, devMode: !!p.devMode, god: !!p.invincible,
+    dev: p.dev, devMode: !!p.devMode, god: !!p.invincible, safety: safety.on(p),
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
     ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p), bowl: bowling.meInfo(world, p), cine: cinema.meInfo(world, p),
     arrows: ped && world.arrows && world.arrows.length ? world.arrows.filter((a) => a.owner === ped.id && Math.abs(a.x - ped.x) < 1600 && Math.abs(a.y - ped.y) < 1600).slice(-16).map((a) => [Math.round(a.x), Math.round(a.y), +a.a.toFixed(2)]) : null,

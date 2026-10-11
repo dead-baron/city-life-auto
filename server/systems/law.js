@@ -35,7 +35,7 @@ export const CRIMES = {
   bikeTheft:   { heat: 5,  label: 'Bike theft', sev: 0.55, sight: 0.6, minor: true },
   bikejack:    { heat: 15, label: 'Pulling someone off their bike', sev: 1, sight: 0.8 },
   policeTheft: { heat: 25, label: 'Stealing a police vehicle', felony: true, sev: 1.2 },
-  carjack:     { heat: 25, label: 'Carjacking', felony: true, sev: 1.3 },
+  carjack:     { heat: 20, label: 'Carjacking', sev: 1.25 },   // (a felony only when the driver's hurt or it's a police car: carjackHurt, copCarjack - the owner, 2026-10-11)
   cargoTheft:  { heat: 15, label: 'Cargo theft', sev: 0.85 },
   ram:         { heat: 8,  label: 'Reckless ramming', sev: 0.7, minor: true },
   possession:  { heat: 20, label: 'Contraband possession', sev: 1 },
@@ -45,6 +45,10 @@ export const CRIMES = {
   escape:      { heat: 25, label: 'Escaping custody', felony: true, sev: 1 },
   treeFelling: { heat: FELL_HEAT, label: 'Vandalism: felling a tree', sev: 0.6, minor: true },   // (in town or a park: felling.js)
   vandalism:   { heat: VANDAL_HEAT, label: 'Vandalism: damaging a vehicle', sev: 0.7, minor: true },   // (an empty one: vehicleDamaged)
+  // (the owner, 2026-10-11: "tone down the severity of some less severe crimes so it's not as easy to get a felony")
+  carjackHurt: { heat: 25, label: 'Violent carjacking', felony: true, sev: 1.3 },   // (the driver thrown out of a moving car: vehicles.js carjack)
+  copCarjack:  { heat: 30, label: 'Carjacking a police vehicle', felony: true, sev: 1.3 },
+  copPunch:    { heat: 25, label: 'Striking an officer', sev: 1.2 },   // (bare fists on an officer: no felony - a weapon's is copAssault)
 };
 
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
@@ -420,7 +424,7 @@ export function onDamage(world, attacker, victim, amount, cause) {
   attacker.recentAssault.set(victim.id, now);
   // bare fists (a punch, a shove) are a small crime; a weapon, a gun or an officer is as ever
   const wpn = WEAPONS[attacker.weapon], fist = cause === 'melee' && (!wpn || wpn.id === 'fists');
-  crime(world, attacker, isCop(victim) ? 'copAssault' : fist ? 'punch' : 'assault', victim, victim.x, victim.y, { quiet: !!attacker.quietWeapon });
+  crime(world, attacker, isCop(victim) ? (fist ? 'copPunch' : 'copAssault') : fist ? 'punch' : 'assault', victim, victim.x, victim.y, { quiet: !!attacker.quietWeapon });
 }
 
 export function onKill(world, attacker, victim, cause) {

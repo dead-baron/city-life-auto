@@ -445,7 +445,7 @@ export function interaction(world, p) {
     if (!van || van.wreckAt || Math.hypot(van.vx, van.vy) > 25) continue;
     const b = backOf(van);
     if (Math.hypot(b.x - ped.x, b.y - ped.y) > BACK_REACH) continue;
-    return { label: `Hold to unlock the back of the armored truck (${ARMORED_UNLOCK_S}s) - armed robbery`, run: () => startUnlock(world, p, ev) };
+    return { label: `Hold to unlock the back of the armored truck (${ARMORED_UNLOCK_S}s) - armed robbery`, crime: 'robbery', run: () => startUnlock(world, p, ev) };   // (crime: Safety mode asks first - safety.js)
   }
   return null;
 }

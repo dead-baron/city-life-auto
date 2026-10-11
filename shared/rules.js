@@ -572,3 +572,11 @@ export const VANDAL_HEAT = 8;
 export const VEH_CRIME = { repeatS: 5, fight: 1, stopPx: 120 };
 // an NPC's guard, and showing anyone's (server combat.js npcGuard, players.js)
 export const NPC_GUARD = { chance: { fists: 0.22, bat: 0.3, sword: 0.35, katana: 0.4, plasma: 0.45 }, temper: [0.5, 0.8], holdS: 0.7, coolS: 1.4, showS: 0.4 };
+// Work trucks and the honest living (the owner, 2026-10-11; server jobs.js workTruck / returnTruck, homes.js storeVehicle):
+// bring the company truck back to where it was issued once the job's done for WORK_TRUCK_RETURN ($), within returnR px,
+// up to returnS seconds after the job ends (then it's the company's to collect); the job keeps it for you (never tidied
+// away) and a garage won't keep one.
+export const WORK_TRUCK_RETURN = 150;
+export const WORK_TRUCK = { returnR: 240, returnS: 900, searchR: 1400 };
+// Safety mode (server safety.js): the first act that would be a crime only warns; pressing again within confirmS does it
+export const SAFETY_CONFIRM_S = 4;

@@ -401,7 +401,7 @@ test('hit the officer who came for a word: 2 stars at once, the word is off and 
     p.ped.weapon = 'fists'; p.ped.nextAttack = 0;
     assert.ok(combat.tryAttack(w, p.ped, Math.atan2(cop.y - p.ped.y, cop.x - p.ped.x)) && cop.hp < cop.maxHp, 'a punch at him');
     assert.ok(p.wanted >= 2 && !law.soft(p), `assaulting an officer: ${p.wanted} stars`);
-    assert.ok(told(p, /Assaulting an officer/));
+    assert.ok(told(p, /Striking an officer/));   // (bare fists on an officer: law.js copPunch - no felony since 2026-10-11)
     stand(p); w.step();
     assert.ok(!p.stop && !cop.npc.stop, 'the word is off');
     assert.equal(cop.npc.pursue, p.ped.id, 'he comes after you himself');
