@@ -7731,6 +7731,9 @@ Rock's water buses, the Prison Boat (custody only) - now built and run in the v3
   - **The car ferry's two ramps** (FE2): a marshalling lot by a street, a ticket booth, the slip down to the stern.
   - **Pontoons** for the water buses: Old Town Quay, Willow Crossing and Kestrel Lake on the river; Cedar Isle South,
     Coral Cay and Paradise Cay; Westport's south quay and Lighthouse Rock; the Cedar Isle police dock and Prison Island.
+  - **Boards ashore:** from a terminal or a pontoon straight back over the beach or the grass to the street or the
+    promenade when one is within 30 tiles (Northshore Pier stands on the beach).
+  - Kept clear of the container port's crane quay and the ship moored at it (the first ramp stood between two gantries).
 - **The routes on the v3 map without the whole-map flood:** today's planner floods the whole grid (8.9: 1.3 s at v3 and
   nothing found); at v3 it reads the listed stops and plans each leg inside the box round the skeleton's points between
   two stops (the route's line as the hint) - the water there, the distance to land, A* at the boat's clearance (nearer
