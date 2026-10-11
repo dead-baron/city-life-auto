@@ -3912,6 +3912,7 @@ function buildFarm(m, rand) {
     // the drop site out in the boonies, and woods
     m.dropSites.push({ x: 1176 * TILE, y: 760 * TILE, name: 'the Dry Creek boonies' });
   }
+  if (WD?.farm) WD.farm(m, rand, { FARM_FIELDS, DRY_CREEK_ESTATES, PREFABS, placePrefab, driveway, offTheRoad, roadAhead, roadBeside, estateHouse });   // (World v3: Dry Creek's farm in the valley - world3-wild.js wildFarm3)
   // Cedar Farms: fields between the section roads and a market stand that takes harvests
   for (const [fx1, fy1, fw, fh] of FIELDS) {
     pin(fx1, fy1);

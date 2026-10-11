@@ -104,3 +104,22 @@ test('two cars each stopped for the other: after a few seconds the one with room
   assert.ok(a.ai.reverseUntil > w.time, 'the one with room behind it backs up');
   assert.ok(!(b.ai.reverseUntil > w.time), 'the other waits');
 });
+
+// (H51, docs/WORLD-V3.md 8.19) World v3's wild tracks are flagged notraffic on their edges (shared/world3-wild.js): at a
+// junction the traffic never takes one while there's another way on. (Today's world has none: the flag is set here.)
+test('the traffic keeps off a road flagged notraffic while there is another way on', () => {
+  const w = makeWorld(), net = w.map.net;
+  let tried = 0;
+  for (const n of net.nodes) {
+    if (n.lvl !== 0 || n.edges.length < 3) continue;
+    const inEdge = n.edges[0], opts = exitsFrom(net, n, inEdge);
+    if (opts.length < 2 || opts.some((o) => deadWay(net, o.edge, n.id) || net.edges[o.edge].kind === 'alley')) continue;
+    const e = net.edges[opts[0].edge];
+    e.notraffic = true;
+    try {
+      for (let k = 0; k < 8; k++) { const o = traffic._chooseExit(w, n, inEdge, null); assert.ok(o && o.edge !== e.id, `node ${n.id}: down the track`); }
+    } finally { delete e.notraffic; }
+    if (++tried >= 30) break;
+  }
+  assert.ok(tried >= 30, `${tried} junctions tried`);
+});

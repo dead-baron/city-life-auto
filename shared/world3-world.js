@@ -32,7 +32,7 @@ import { paintDesert3, layDesert3, buildDesert, desertDone, DESERT_SPECIALS, DES
 import { subwayLoops } from './world3-subway.js';
 import { paintWater3, buildWater3, waterDone } from './world3-water.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
-import { wildSites3, wildDone, movedAt, wildDist } from './world3-wild.js';
+import { wildSites3, wildDone, movedAt, wildDist, wildFarm3 } from './world3-wild.js';
 import { buildRelief3 } from './world3-relief.js';   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
@@ -121,7 +121,7 @@ export function worldOpts(asked) {
   const box = [W, H, 0, 0];
   for (const [x, y] of metro.poly) { box[0] = Math.min(box[0], x - 40); box[1] = Math.min(box[1], y - 40); box[2] = Math.max(box[2], x + 40); box[3] = Math.max(box[3], y + 40); }
   const o = {
-    world: { pick, base, placeLine, cls, pieces, dist: wildDist },   // (dist: today's wild districts' v3 regions, for the moved nature sites - 8.19)
+    world: { pick, base, placeLine, cls, pieces, dist: wildDist, farm: (m, rand, G) => { if (m.world3?.wild) m.world3.wild.farmBuilt = wildFarm3(m, rand, G); } },   // (H51: Dry Creek's farm - map.js buildFarm's hook)   // (dist: today's wild districts' v3 regions, for the moved nature sites - 8.19)
     place: base,
     islandAt: [],
     noRail: true,     // (the railway is the skeleton's main line now)

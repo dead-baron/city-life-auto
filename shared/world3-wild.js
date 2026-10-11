@@ -39,6 +39,13 @@ export const WILD_SITES = [
   { name: 'Dry Creek Wind Farm', d: D3.DESERT, near: [3700, 290] },
   { name: 'The Rusty Spur', d: D3.DESERT, near: [3740, 1150] },
 ];
+// (H51) Dry Creek's farmland in Willow Valley's east side (part 5: the owner split Dry Creek between the valley and the
+// desert): today's farm moved whole by one offset, d (tiles: today's + d) - its fields, the co-op that takes harvests,
+// the farmhouses and cottages for sale (wildFarm3, map.js buildFarm's hook), the Willow River Orchard and Vineyard (MOVED,
+// their anchors), and its roads: the Farm Road, the County Road across it and the winery's lane (wildFarmRoads3, laid
+// with the sites' roads and joined to the network).
+export const FARM = { d: [2164, 220], region: D3.VALLEY };   // (its box 3194-3370, 570-920: open valley between the Long Reach's road and the desert's strip of woods, north of the main line)
+const farmAt = (x, y) => [x + FARM.d[0], y + FARM.d[1]];
 // The nature sites moved whole (shared/naturesites.js builds them round their anchor of today's world, placed: its
 // PXs / PYs, and its district through DS - the world build's `world.dist`): a square of today's tiles round each anchor
 // goes to its v3 spot at scale 1 (map.js pin: shared/world3-world.js `pick` asks movedAt for a position no piece builds).
@@ -69,6 +76,12 @@ export const MOVED = [
   { name: 'Canyon Oasis', anchor: [1190, 800], to: [3850, 525], r: 3, d: D3.DESERT, keep: [-31, -22, 31, 22] },
   { name: 'Mirage Camp', anchor: [1092, 782], to: [3930, 760], r: 12, d: D3.DESERT, keep: [-16, -36, 16, 20] },
   { name: 'Splash Canyon Water Park', anchor: [1054, 850], to: [4030, 1214], r: 3, d: D3.DESERT, keep: [-3, -3, 47, 25] },
+  // (H51) the farm's orchard and vineyard by its offset (FARM); Redwood Cove on the Redwood Coast (the woods' west
+  // coast: a sandy beach of the woods' own, north of 8.20's three coves), Granite Cove on Kestrel Lake's north shore
+  { name: 'Willow River Orchard', anchor: [1100, 438], to: farmAt(1100, 438), r: 3, d: D3.VALLEY },
+  { name: 'Willow River Vineyard', anchor: [1121, 369], to: farmAt(1121, 369), r: 3, d: D3.VALLEY },
+  { name: 'Redwood Cove', anchor: [58, 283], to: [320, 1180], r: 3, d: D3.WOODS },
+  { name: 'Granite Cove', anchor: [555, 225], to: [2720, 443], r: 3, d: D3.VALLEY },   // (the peaks reach no sea: Kestrel Lake's north shore, the bay open south to the lake)
 ];
 // The tracks today's nature sites look for by name (H47), laid to their moved places from the nearest road they may
 // join: the Ridge Trail up to Summit Tarn from Summit Road (the fire lookout on its high stretch, the hunting camp by
@@ -85,6 +98,9 @@ export const WILD_TRACKS = [
   { name: 'Boneyard Track', end: [3915, 1267], d: D3.DESERT },
   { name: 'Balloon Field Track', end: [3874, 1406], d: D3.DESERT },
   { name: 'Mission Track', end: [4000, 878], d: D3.DESERT },
+  // (H51) the ways down to the coves: from the nearest road to the top of each (the cove's own trail on down)
+  { name: 'Redwood Cove Track', end: [334, 1170], d: D3.WOODS },
+  { name: 'Granite Cove Track', end: [2722, 427], d: D3.VALLEY },
 ];
 // today's wild districts -> the v3 region they move to (Highland Woods, Granite Peaks; Dry Creek's farmland the valley,
 // its desert the Red Rock Desert)
@@ -113,6 +129,10 @@ export const WILD_VIEWS = [
   { key: 'oldmine', name: 'The Old Granite Mine above Lookout Road', box: [680, 400, 820, 500] },
   { key: 'canyon', name: 'Red Rock Canyon and its oasis off Mesa Road; Mirage Lake and its camp', box: [3760, 430, 4010, 800] },
   { key: 'splash', name: 'Splash Canyon Water Park on Mine Road', box: [3990, 1180, 4110, 1260] },
+  // (H51)
+  { key: 'farm', name: 'Dry Creek\'s farm in Willow Valley: the fields, the co-op, the farmhouses, the orchard and the vineyard', box: [...farmAt(1030, 350), ...farmAt(1206, 700)] },
+  { key: 'redwoodcove', name: 'Redwood Cove on the Redwood Coast', box: [280, 1140, 380, 1220] },
+  { key: 'granitecove', name: 'Granite Cove on Kestrel Lake\'s north shore', box: [2680, 400, 2770, 470] },
 ];
 // the room kept round the skeleton's lines (tiles): the highways', the main line's and its stations' as the desert's
 // places keep (world3-desert.js), a road's own few tiles
@@ -243,6 +263,7 @@ export function wildSites3(lines, m) {
     for (const p of pts) claimed.push([Math.floor(p.x / TILE) - 3, Math.floor(p.y / TILE) - 3, Math.floor(p.x / TILE) + 4, Math.floor(p.y / TILE) + 4]);
     out.placed.push({ name: S.name, type: S.type, x, y, w: S.w, h: S.h, d: site.d, road: name, joins: [Math.round(best.q.x), Math.round(best.q.y)] });
   }
+  out.farm = wildFarmRoads3(lines, m, hwys, mains, hwyLines, tunnels);   // (H51: Dry Creek's farm roads)
   const n0 = lines.length;
   out.tracks = wildTracks3(lines, m, hwys, mains, hwyLines, tunnels);
   for (let k = n0; k < lines.length; k++) lines[k].notraffic = true;   // (H51: the tracks are dirt cul-de-sacs the traffic keeps off - its edges' flag, server/systems/traffic.js)
@@ -292,6 +313,112 @@ function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels) {
     lines.push({ pts, kind: 'dirt', lvl: 0, name: K.name, culdesac: true });
     for (let j = 0; j < pts.length; j++) { const i = Math.floor(pts[j].y / TILE) * W + Math.floor(pts[j].x / TILE); if (i >= 0 && i < W * H) m.reserve[i] |= 32; }
     out.push({ name: K.name, from: [Math.round(s.x), Math.round(s.y)], to: K.end, len: Math.round(s.d) });
+  }
+  return out;
+}
+
+// (H51) Dry Creek's farm roads at the farm's offset: the Farm Road down the middle (its head by the orchard), the County
+// Road across it and the winery's lane round the vineyard's east side to the road above the winery; the Farm Road's
+// south end joined to the nearest road it may meet (rural: never a highway, nor within 14 tiles of one, nor a tunnel) -
+// straight, over dry land, across no highway, clear of the main line.
+const FARM_ROADS = [
+  { name: 'Farm Road', pts: [[1140, 452], [1140, 650]], join: true },
+  { name: 'County Road', pts: [[1036, 528], [1140, 528], [1200, 514]] },
+  { name: 'Winery Road', pts: [[1140, 452], [1176, 448], [1176, 358], [1100, 358]] },
+];
+function wildFarmRoads3(lines, m, hwys, mains, hwyLines, tunnels) {
+  const W = m.w, H = m.h, out = [], ok = ACCESS.rural, TR = 220;
+  const dry = (x, y) => { const tx = Math.floor(x), ty = Math.floor(y); return tx >= 0 && ty >= 0 && tx < W && ty < H && !!m.land[ty * W + tx] && !m.river[ty * W + tx] && !m.lake[ty * W + tx]; };
+  const fine = (a, b) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])));
+    for (let j = 0; j <= n; j++) {
+      const x = a[0] + (b[0] - a[0]) * (j / n), y = a[1] + (b[1] - a[1]) * (j / n);
+      if (!dry(x, y)) return false;
+      if (j % 4 === 0 && mains.some((r) => nearestOnPath(r.path, x, y).d < 10)) return false;
+    }
+    const A = { x: a[0] * TILE, y: a[1] * TILE }, B = { x: b[0] * TILE, y: b[1] * TILE };
+    for (const h of hwyLines) for (let j = 0; j + 1 < h.pts.length; j++) if (segX(A, B, h.pts[j], h.pts[j + 1])) return false;
+    return true;
+  };
+  for (const R of FARM_ROADS) {
+    const P = R.pts.map(([x, y]) => farmAt(x, y));
+    if (R.join) {
+      const [ex, ey] = P[P.length - 1], starts = [];
+      for (const l of lines) {
+        if (l.lvl !== 0 || !ok.has(l.kind) || l.foot || l.culdesac) continue;
+        for (let k = 0; k + 1 < l.pts.length; k++) {
+          const a = l.pts[k], b = l.pts[k + 1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / (2 * TILE)));
+          for (let j = 0; j < n; j++) {
+            const x = (a.x + (b.x - a.x) * (j / n)) / TILE, y = (a.y + (b.y - a.y) * (j / n)) / TILE, d = Math.hypot(x - ex, y - ey);
+            if (d > TR || !dry(x, y)) continue;
+            if (hwys.some((h) => nearestOnPath(h.path, x, y).d < 14) || tunnels.some((t) => dPoly(t.pts, x, y) < 12)) continue;
+            starts.push({ x, y, d });
+          }
+        }
+      }
+      starts.sort((a, b) => a.d - b.d || a.x - b.x || a.y - b.y);
+      const s = starts.slice(0, 160).find((q) => fine([ex, ey], [q.x, q.y]));
+      if (s) P.push([s.x, s.y]);
+      out.push({ name: R.name, joins: s ? [Math.round(s.x), Math.round(s.y)] : null });
+    }
+    // (over dry land only: a stretch that isn't is left out)
+    let run = [];
+    const flush = () => { if (run.length > 1) { const pts = rounded(run.map(([x, y]) => ({ x: x * TILE, y: y * TILE })), 10 * TILE, false, 8); measure(pts); lines.push({ pts, kind: 'rural', lvl: 0, name: R.name }); } run = []; };
+    for (let k = 0; k < P.length; k++) { if (dry(P[k][0], P[k][1])) run.push(P[k]); else flush(); }
+    flush();
+  }
+  return out;
+}
+
+// (H51) Dry Creek's farm in the world build: map.js buildFarm's hook (G: the generator's own pieces - FARM_FIELDS,
+// DRY_CREEK_ESTATES, PREFABS, placePrefab, driveway, offTheRoad, roadAhead, roadBeside, estateHouse), before the biomes'
+// dressing - what it lays is reserved, so 8.8's fields, farmsteads and trees keep off it. Today's fields at the farm's
+// offset on the valley's open ground - no field over a road (two tiles kept), the river, a lake, the main line's room
+// or a town (their own districts); the co-op (the farm that takes harvests, its cargo pad), the drop site, the
+// farmhouses and cottages for sale by the County Road and the Farm Road, as today's.
+export function wildFarm3(m, rand, G) {
+  const W = m.w, out = { fields: 0, tiles: 0, coop: null, homes: [] };
+  const mains = skeletonLines().filter((l) => l.kind === 'main');
+  const nearRoad = (x, y, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const t = m.tiles[(y + dy) * W + x + dx]; if (t === T.ROAD || t === T.BRIDGE) return true; } return false; };
+  for (const [fx0, fy0, fw, fh] of G.FARM_FIELDS) {
+    const [fx, fy] = farmAt(fx0, fy0);
+    let n = 0;
+    for (let y = fy; y < fy + fh; y++) for (let x = fx; x < fx + fw; x++) {
+      const i = y * W + x, t = m.tiles[i];
+      if (!m.land[i] || m.river[i] || m.lake[i] || m.dist[i] !== FARM.region || m.reserve[i] || (t !== T.GRASS && t !== T.DIRT && t !== T.SAND)) continue;
+      if (nearRoad(x, y, 2) || mains.some((r) => nearestOnPath(r.path, x, y).d < WILD_ROOM.main)) continue;
+      m.tiles[i] = T.FIELD; m.reserve[i] |= 4; n++;
+    }
+    if (n > 200) { m.fields.push({ x: fx * TILE, y: fy * TILE, w: fw * TILE, h: fh * TILE }); out.fields++; }
+    out.tiles += n;
+  }
+  // the co-op beside the Farm Road, its yard to the west and its drive north to a road (today's, at the offset)
+  const pf = G.PREFABS.house2, [cx, cy] = farmAt(1157, 534);
+  const at = G.offTheRoad(m, cx, cy, pf.tw + 4, pf.th, (X, Y) => G.roadAhead(m, X + 6, 2, Y - 2, -1), 40);
+  if (at) {
+    const fx = at[0] + 3, fy = at[1];
+    m.fill(fx - 4, fy - 1, pf.tw + 8, pf.th + 2, T.DIRT);
+    G.placePrefab(m, { d: m.dist[fy * W + fx], x: fx, y: fy, w: pf.tw, h: pf.th, face: 'N' }, 'house2', fx, { biz: ['farm'], names: ['Dry Creek Farm Co-op'] }, rand);
+    G.driveway(m, fx + 3, 2, fy - 2, -1);
+    const farm = m.pois.filter((p) => p.kind === 'farm').pop();   // (the co-op's, just placed)
+    if (farm) farm.cargoPad = { x: (fx - 2.5) * TILE, y: (fy + 3) * TILE };
+    for (let y = fy - 2; y < fy + pf.th + 2; y++) for (let x = fx - 5; x < fx + pf.tw + 5; x++) m.reserve[y * W + x] |= 4;
+    out.coop = [fx, fy];
+  }
+  const [dx, dy] = farmAt(1176, 760);
+  m.dropSites.push({ x: dx * TILE, y: dy * TILE, name: 'the Dry Creek boonies' });
+  // the farmhouses and cottages, either side of the County Road (a house and the garage beside it, off the roads, with a
+  // road ahead of its front for the driveway)
+  for (const [type, key, x0, y0, south] of G.DRY_CREEK_ESTATES) {
+    const p = G.PREFABS[key], s = p.rot ? south : true, [ex, ey] = farmAt(x0, y0);
+    const q = G.offTheRoad(m, ex, ey, p.tw + 3, p.th, (X, Y) => G.roadAhead(m, X, p.tw, s ? Y + p.th : Y - 1, s ? 1 : -1) || G.roadBeside(m, X, Y, p.tw + 3, p.th, s), 40);
+    if (!q) continue;
+    const [x, y] = q;
+    if (m.dist[(y + (p.th >> 1)) * W + x + (p.tw >> 1)] !== FARM.region) continue;
+    m.fill(x - 1, y - 1, p.tw + 6, p.th + 2, T.GRASS);
+    G.estateHouse(m, rand, type, key, x, y, south, null, x !== ex || y !== ey);
+    for (let ty = y - 2; ty < y + p.th + 2; ty++) for (let tx = x - 2; tx < x + p.tw + 6; tx++) m.reserve[ty * W + tx] |= 4;
+    out.homes.push([type, x, y]);
   }
   return out;
 }
