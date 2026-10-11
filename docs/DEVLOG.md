@@ -7487,5 +7487,6 @@ what was baked or asked for against the old window baked again, its stand-ins dr
 without chunkbake.js and hostextra.js), test/artcdn.test.js (the asks' order and etas), test/art2.test.js,
 test/worldframe.test.js, test/daylight.test.js, test/redwood-fade.test.js, test/bladecolor.test.js,
 test/firebow.test.js, test/signals.test.js, test/perf.test.js's code budgets, generator and version tests (all pass);
-four headless playtests of today's world with teleports (0 errors). Code budgets: page 464 of 485 KB, city 353 of
+five headless playtests of today's world with four far teleports each (0 errors; the last on the final code, the
+server on the new build: 16.8 / 13.6 / 12.8 / 8.3 s, from the camera's jump 8.2 / 5.2 / 4.6 s). Code budgets: page 464 of 485 KB, city 353 of
 360, renderer 356 of 363, bake 740 of 765.

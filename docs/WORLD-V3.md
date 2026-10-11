@@ -2745,6 +2745,8 @@ every chunk on screen drawn - the woods (6500, 6500), the farms (25000, 31100), 
 | The CDN warm, after (1-3, 5) | 19.3 s | 16.4 s | 18.1 s | 10.0 s |
 | The CDN warm, after (all) | 16.8 s | 13.4 s | 15.7 s | 10.5 s |
 | ... of which from the camera's jump: in the page / drawn (`stats().jump`) | 8.7 / 8.7 s, 4 frames | 5.0 / 5.0 s, 3 frames | 5.8 / 5.8 s, 3 frames | 0 (still resident) |
+| The final code, the server on its new build (this build's art baking, the build before's chunks standing in) | 16.8 s | 13.6 s | 12.8 s | 8.3 s |
+| ... of which from the camera's jump: in the page / drawn | 8.2 / 8.2 s, 4 frames | 5.2 / 5.2 s, 3 frames | 4.6 / 4.6 s, 3 frames | 0 (still resident) |
 
 In the headless page most of what's left is frames: the camera follows the teleport a few seconds after it's sent, and
 then every chunk on screen was in the page 5.0-8.7 s after the camera's jump, in 3-4 frames (`stats().jump`), and
