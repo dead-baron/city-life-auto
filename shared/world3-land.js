@@ -9,6 +9,7 @@
 // Deterministic (CLAUDE.md): integer tiles, + - * / and Math.floor / ceil / min / max only, no random numbers.
 import { T, MAP_W, MAP_H } from './constants.js';
 import { Z } from './citylayout.js';
+import { DISTRICTS } from './mapcore.js';
 import { FRAME_W, FRAME_H, PLACEMENTS, islandMask } from './world3.js';
 import { MAINLAND, BIOMES, ISLANDS, PIECES, PORT_WESTPORT, CANAL, RIVER, STREAMS, LAKES, linePath } from './world3-skeleton.js';
 
@@ -35,18 +36,7 @@ export const ZONES3 = [
 ];
 // The new districts (ids from 47 on, after today's shared/map.js DISTRICTS, shaped as they are): one per biome for the
 // mainland round today's places, Prison Island and the Egret Rocks.
-export const DISTRICTS3 = [
-  { id: 47, name: 'Highland Woods', isl: 'Highland Woods', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 48, name: 'Granite Peaks', isl: 'Granite Peaks', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: false },
-  { id: 49, name: 'Willow Valley', isl: 'Willow Valley', style: 'rural', tier: 'rural', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 50, name: 'Red Rock Desert', isl: 'Red Rock Desert', style: 'desert', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: false },
-  { id: 51, name: 'North Ridge', isl: 'North Ridge', style: 'rocky', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: false },
-  { id: 52, name: 'Sandpiper Coast', isl: 'Sandpiper Coast', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
-  { id: 53, name: 'Egret Coast', isl: 'Egret Coast', style: 'wild', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
-  { id: 54, name: 'Northshore Beaches', isl: 'Northshore', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
-  { id: 55, name: 'Prison Island', isl: 'Prison Island', style: 'rocky', tier: 'rough', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: false },
-  { id: 56, name: 'Egret Rocks', isl: 'Egret Coast', style: 'rocky', tier: 'wild', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: false },
-];
+export const DISTRICTS3 = DISTRICTS.slice(47);   // (they are shared/mapcore.js DISTRICTS' from 47 on: the page knows them)
 // Each biome's ground: its terrain class, how wide its beaches are along the sea (tiles; today's wild coasts have a
 // 2-3 tile strip of sand), its district and its zone.
 export const BIOME3 = {

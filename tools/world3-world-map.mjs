@@ -5,7 +5,8 @@
 // - the game's chunk bake (client/art2/game/chunkbake.js), timed on a sample of chunks of each kind of ground to say
 //   what the whole frame costs; with --bake [--shrink 64] it bakes every chunk that has land or inland water (deep sea
 //   once) and writes docs/world-v3-world-bake.png (heavy: see 8.6 for the time).
-//   node --expose-gc tools/world3-world-map.mjs [--bake] [--shrink 64] [--sample 60] [--region rx,ry]
+//   node --expose-gc tools/world3-world-map.mjs [--quick] [--bake] [--shrink 64] [--sample 60] [--region rx,ry]
+// (--quick: the picture only, no chunk bake timing)
 // (--region: one region of 504 tiles baked and lit at 1/16, about 2 minutes: docs/world-v3-world-r<rx>-<ry>.png)
 // (heavy: run it under `flock /tmp/cla-heavy.lock`)
 import { writeFileSync, rmSync } from 'node:fs';
@@ -34,11 +35,29 @@ const ms0 = performance.now();
 const M = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });
 log(`the world built in ${Math.round(performance.now() - ms0)} ms (${M.w} x ${M.h})`);
 
-// 1. the tiles, 1 px = 2 tiles
+// 1. the tiles, 1 px = 2 tiles - the ground by its biome as the game paints it (m.terrainCls: forest floor, alpine and
+// dry grass, pasture, desert, scree), the fields by crop, the washes' gravel; the props drawn to their size: tree crowns,
+// the outcrops (sandstone red, granite grey, basalt dark), boulders, and the plants by kind (World v3 8.8)
 const COL = {
   [T.WALL]: [70, 66, 62], [T.GRASS]: [96, 140, 74], [T.SIDEWALK]: [176, 172, 164], [T.ROAD]: [62, 62, 66], [T.PLAZA]: [190, 182, 166],
   [T.BUILDING]: [150, 110, 96], [T.WATER]: [70, 140, 170], [T.DEEP]: [36, 86, 128], [T.SAND]: [222, 204, 150], [T.DOCK]: [140, 110, 80],
   [T.DIRT]: [160, 132, 96], [T.FIELD]: [176, 168, 84], [T.BRIDGE]: [120, 120, 126], [T.LOT]: [110, 110, 112], [T.FLOOR]: [160, 140, 120], [T.COUNTER]: [160, 140, 120],
+};
+const { DISTRICTS, terrainAt, wildBiome } = await imp('shared/mapcore.js');
+const { peakHeight, SNOW_LINE } = await imp('shared/world3-biomes.js');
+const TC = M.terrainCls;
+const bioAt = (x, y) => wildBiome(M.dist[y * M.w + x], terrainAt(TC.cls, TC.cw, x, y));
+const CROPS = [[214, 190, 100], [150, 172, 70], [112, 150, 82], [196, 176, 112], [128, 98, 70]];
+const fieldCol = (x, y) => { const X = x * TILE + 16, Y = y * TILE + 16; const f = M.fields.findIndex((r) => X >= r.x && X < r.x + r.w && Y >= r.y && Y < r.y + r.h); return CROPS[(f < 0 ? 0 : f * 7) % CROPS.length]; };
+const groundCol = (t, x, y) => {
+  const i = y * M.w + x, st = (DISTRICTS[M.dist[i]] || DISTRICTS[13]).style, wild = ['wild', 'rural', 'desert', 'rocky', 'airport'].includes(st);
+  if (t === T.FIELD) return fieldCol(x, y);
+  if (!wild || (t !== T.GRASS && t !== T.DIRT && t !== T.SAND)) return COL[t];
+  const b = bioAt(x, y), snow = M.dist[i] === 48 && peakHeight(x, y) >= SNOW_LINE;
+  if (snow && t !== T.GRASS) return [236, 240, 244];
+  if (t === T.SAND) return (M.reserve[i] & 128) ? [204, 194, 170] : b === 3 || st === 'desert' ? [226, 196, 140] : COL[t];
+  if (t === T.DIRT) return st === 'desert' || b === 3 ? [196, 142, 98] : b === 4 ? [138, 132, 124] : b === 2 ? [104, 88, 62] : COL[t];
+  return st === 'desert' || b === 3 ? [168, 160, 104] : b === 2 ? [58, 98, 54] : b === 4 ? [124, 150, 92] : st === 'rural' ? [112, 152, 78] : COL[t];
 };
 const S = 2, GW = Math.ceil(M.w / S), GH = Math.ceil(M.h / S);
 const img = Buffer.alloc(GW * GH * 3);
@@ -49,14 +68,21 @@ for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {
   let best = 0; for (let t = 1; t < 16; t++) if (cnt[t] > cnt[best]) best = t;
   // (a road or a bridge wins its pixel: the network reads)
   if (cnt[T.ROAD]) best = T.ROAD; else if (cnt[T.BRIDGE]) best = T.BRIDGE;
-  const c = COL[best] || [255, 0, 255], o = (gy * GW + gx) * 3;
+  const c = groundCol(best, Math.min(M.w - 1, gx * S), Math.min(M.h - 1, gy * S)) || [255, 0, 255], o = (gy * GW + gx) * 3;
   img[o] = c[0]; img[o + 1] = c[1]; img[o + 2] = c[2];
 }
 const dot = (x, y, c, k = 1) => { const gx = Math.floor(x / TILE / S), gy = Math.floor(y / TILE / S); if (gx < 0 || gy < 0 || gx >= GW || gy >= GH) return; const o = (gy * GW + gx) * 3; for (let j = 0; j < 3; j++) img[o + j] = Math.round(img[o + j] * (1 - k) + c[j] * k); };
+const disc = (x, y, rx, ry, c, k) => { const R = Math.max(rx, ry) / TILE / S; for (let dy = -Math.ceil(ry / TILE / S); dy <= Math.ceil(ry / TILE / S); dy++) for (let dx = -Math.ceil(R); dx <= Math.ceil(R); dx++) if ((dx * TILE * S / Math.max(1, rx)) ** 2 + (dy * TILE * S / Math.max(1, ry)) ** 2 <= 1.0001) dot(x + dx * TILE * S, y + dy * TILE * S, c, k); };
+const PLANT = { reeds: [126, 138, 74], cattails: [110, 120, 64], tallGrass: [120, 150, 80], hedge: [46, 88, 44], lavender: [150, 118, 190], sunflowers: [232, 200, 64], duneGrass: [176, 176, 112], beachGrass: [168, 172, 112], icePlant: [150, 160, 90] };
+const ROCK = { sandstone: [170, 84, 58], granite: [150, 148, 146], basalt: [78, 78, 86] };
 for (const p of M.props) {
-  if (/^tree|^pine|^palm|^oak|^redwood|^shrub|^bush/.test(p.t)) dot(p.x, p.y, [40, 92, 44], 0.6);
-  else if (/rock|boulder|stone/.test(p.t)) dot(p.x, p.y, [128, 124, 118], 0.6);
-  else if (/cactus|scrub|tumble/.test(p.t)) dot(p.x, p.y, [120, 140, 70], 0.6);
+  if (p.t === 'outcrop') { disc(p.x, p.y, p.w / 2, p.d / 2, ROCK[p.style] || ROCK.granite, 0.95); continue; }
+  if (p.t === 'redwood') { disc(p.x, p.y, 96, 96, [34, 70, 40], 0.55); continue; }
+  if (/^tree|^pine|^palm|^oak/.test(p.t)) { disc(p.x, p.y, 40, 40, p.sp === 'apple' || p.sp === 'orange' ? [70, 120, 50] : /mesquite|paloVerde|joshua|deadSnag/.test(p.sp || '') ? [110, 120, 70] : [40, 84, 44], 0.6); continue; }
+  if (p.sp && PLANT[p.sp]) { dot(p.x, p.y, PLANT[p.sp], 0.85); continue; }
+  if (/^shrub|^bush|^flowers/.test(p.t)) dot(p.x, p.y, [70, 110, 60], 0.45);
+  else if (/rock|boulder|stone/.test(p.t)) dot(p.x, p.y, [128, 124, 118], 0.7);
+  else if (/cactus|scrub|tumble/.test(p.t)) dot(p.x, p.y, [90, 132, 70], 0.7);
 }
 for (const b of M.buildings) for (let y = b.ty; y < b.ty + b.th; y += S) for (let x = b.tx; x < b.tx + b.tw; x += S) dot((x + 0.5) * TILE, (y + 0.5) * TILE, [120, 70, 60], 0.5);
 const OUT = join(ROOT, 'docs/world-v3-world.png');
@@ -75,6 +101,9 @@ let r = spawnSync('python3', ['-c', py(tmp, OUT, GW, GH, 'World v3: the whole wo
 rmSync(tmp, { force: true });
 if (r.status !== 0) throw new Error('python3 + PIL could not write the PNG');
 log(OUT);
+// the biomes' ground and dressing (8.8: shared/world3-biomes.js)
+if (M.world3biomes) log(`biomes: ground ${JSON.stringify(M.world3biomes.ground)}, dressing ${JSON.stringify(M.world3biomes.dress)}`);
+if (process.argv.includes('--quick')) process.exit(0);   // (the picture only: no chunk bake timing)
 
 // 2. the chunk bake: timed on a sample of chunks by kind of ground, then (--bake) every chunk
 const { bakeChunk, loadProviders, SpriteCache, providers } = await imp('client/art2/game/chunkbake.js');

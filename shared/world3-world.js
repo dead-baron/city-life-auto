@@ -8,24 +8,21 @@
 //   placement of the piece it belongs to: the piece whose picture has today's district there (Metro City's and Cedar
 //   Isle's rectangles overlap, their districts don't), else the small island whose rectangle holds it (`pick`; map.js
 //   pin / unpin). What is no piece's (Dry Creek, today's wild land) isn't built: its positions go off the frame (NONE).
-// - the mainland as plain ground by its terrain class, with the wild dressing the generator gives wild ground (map.js
-//   buildWilds: trees, rocks, scrub by class); no mainland roads yet. Its districts stand in as today's wild ones
-//   (STAND_IN) until DISTRICTS3 joins map.js's DISTRICTS.
+// - the mainland in its own districts (DISTRICTS3, 47-56: shared/mapcore.js DISTRICTS) and zones (11-18), each biome
+//   with its ground and dressing (shared/world3-biomes.js, 8.8: Highland Woods' redwoods and pines are the generator's
+//   redwoodGroves, the rest is dress3's), the room along the skeleton's lines left clear for its roads (H27).
 // - today's roads between today's islands (laid in today's coordinates, placed point by point) are split where they
 //   leave one piece for another and cut at the shore (shared/world3-crossings.js joinPlace, which also lays the canal's
 //   bridges); the skeleton's crossings between built places are listed in m.world3.crossings for the next step.
 import { TILE, T } from './constants.js';
-import { Z } from './citylayout.js';
 import { measure } from './geom.js';
 import { ISLANDS, PIECES, ARTERIALS, PORT_WESTPORT } from './world3-skeleton.js';
 import { PLACEMENTS } from './world3.js';
 import { WATER3, TERRAIN3 } from './world3-land.js';
 import { joinPlace } from './world3-crossings.js';
+import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3 } from './world3-biomes.js';
+import { terrainAt } from './mapcore.js';
 
-// the mainland's districts (DISTRICTS3, 47-56) as today's wild ones for now: Highland Woods, Granite Peaks, Cedar Hills
-// (Willow Valley's farmland), Dry Creek Desert, The Islets (grass: the coasts), Smuggler's Rock (Prison Island),
-// Lighthouse Rock (the Egret Rocks)
-export const STAND_IN = { 47: 29, 48: 33, 49: 40, 50: 41, 51: 33, 52: 20, 53: 20, 54: 20, 55: 15, 56: 19 };
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
 const CLS = [0, 1, 2, 3, 4, 5, 1, 1, 4];
@@ -101,6 +98,7 @@ export function worldOpts(asked) {
   };
   const base = pieces.find((p) => p.key === 'metro');
   const built = new Set();
+  let keep = null;   // (the room along the skeleton's lines: world3-biomes.js skeletonRoom)
   const metro = ISLANDS.find((I) => I.key === 'metro');
   const box = [W, H, 0, 0];
   for (const [x, y] of metro.poly) { box[0] = Math.min(box[0], x - 40); box[1] = Math.min(box[1], y - 40); box[2] = Math.max(box[2], x + 40); box[3] = Math.max(box[3], y + 40); }
@@ -150,15 +148,24 @@ export function worldOpts(asked) {
         for (let y = cy0; y < cy1; y++) for (let x = cx0; x < cx1; x++) if (canal(x, y) && comp[(y - by) * BW + x - bx] !== body) m.river[y * W + x] = 0;
       }
     },
-    zones(m) { for (let i = 0; i < N; i++) if (m.land[i]) { const z = L.zone[i]; m.zone[i] = z >= 11 ? Z.WILD : z; } },
+    zones(m) { for (let i = 0; i < N; i++) if (m.land[i]) m.zone[i] = L.zone[i]; },   // (the mainland's 11-18: shared/world3-land.js ZONES3)
     dists(m) {
       for (let i = 0; i < N; i++) {
         if (!m.land[i]) continue;
         const d = L.dist[i];
-        m.dist[i] = STAND_IN[d] ?? d;
+        m.dist[i] = d;
         if (d >= 47 && L.terrain[i] === TERRAIN3.SAND) m.tiles[i] = T.SAND;   // (the mainland's beaches)
       }
+      keep = skeletonRoom(W, H);
+      m.world3biomes = { ground: groundOf3(m, L, keep) };   // (the biomes' ground: world3-biomes.js)
     },
+    // the biomes' dressing (world3-biomes.js; buildWilds leaves those districts to it, Highland Woods' pines are its
+    // redwoodGroves'), and at the end the terrain classes at the v3 frame for the renderer and the wildlife
+    dressed: dressedBy3,
+    pine: pineAt3(L, W),
+    unbuilt: new Set([52, 54]),   // (the Sandpiper Coast and Northshore's beach towns: no streets yet - the next step)
+    dress(m, H2) { m.world3biomes.dress = dress3(m, L, keep, H2); },
+    done(m) { const old = m.terrainCls; terrain3(m, (tx, ty) => cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y))); },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground)
     special: (sp) => built.has(sp.d),
     lines(lines, m) {
