@@ -88,11 +88,11 @@ export function createArtCdn({ map, root, dataDir, seed, threads = defaultThread
     w.unref();
     S.workers.push(slot);
   }
-  // the next chunk to bake: one asked for (newest first); else round the players online, nearest first (focus); else the
-  // background's next one not on disk
+  // the next chunk to bake: one asked for (the latest look first, each look in the order it asked: askNext); else round
+  // the players online, nearest first (focus); else the background's next one not on disk
   function next() {
     while (S.asked.length) {
-      const j = S.asked.pop(); S.askedSet.delete(j.key);
+      const j = S.asked.splice(askNext(S.asked), 1)[0]; S.askedSet.delete(j.key);
       if (!S.inflight.has(j.key) && !onDisk(j.key, j.file)) return j;
     }
     const f = nextFocus();
@@ -186,7 +186,7 @@ export function createArtCdn({ map, root, dataDir, seed, threads = defaultThread
     // not baked yet: to the front of the queue (unless it's being baked now, or this is only a look ahead)
     const key = keyOf(q, ap, cx, cy);
     if (!pre && !S.inflight.has(key) && !S.askedSet.has(key) && S.workers.length) {
-      S.asked.push({ key, q, ap, cx, cy, file }); S.askedSet.add(key);
+      S.asked.push({ key, q, ap, cx, cy, file, at: Date.now() }); S.askedSet.add(key);
       if (S.asked.length > ASK_MAX) { const old = S.asked.shift(); S.askedSet.delete(old.key); }
       pump();
     }
@@ -207,9 +207,7 @@ export function createArtCdn({ map, root, dataDir, seed, threads = defaultThread
     const avg = S.stats.baked ? S.stats.bakeMs / S.stats.baked : 2500, th = Math.max(1, S.workers.length);
     if (S.inflight.has(key)) return Math.round(avg * 0.7);
     if (!S.askedSet.has(key)) return 0;
-    let ahead = 0;
-    for (let i = S.asked.length - 1; i >= 0 && S.asked[i].key !== key; i--) ahead++;
-    return Math.round(avg * (1 + (ahead + S.inflight.size) / th));
+    return Math.round(avg * (1 + (askAhead(S.asked, key) + S.inflight.size) / th));
   }
   // how far the background is (for /stats)
   function summary() {
@@ -237,5 +235,31 @@ function defaultThreads() {
   const n = cpus().length;
   return n >= 4 ? 2 : n >= 2 ? 1 : 0;
 }
+// The order the asks are baked in (docs/WORLD-V3.md 8.12.1). A page asks for what its screen needs nearest first (the
+// pool sends its looks in that order), a few at a time as the answers come back - one look is a burst of asks over a
+// second or two. Newest first over the whole list (as it was) baked each burst back to front: after a teleport the
+// chunk the player stands in came last, 40 s and more on a busy server. Now: the latest look first (the asks within
+// ASK_BURST_MS of the newest), in the order it asked; then the look before it, and so on.
+export const ASK_BURST_MS = 2000;
+export function askNext(asked) {
+  let i = asked.length - 1;
+  const top = asked[i].at || 0;
+  while (i > 0 && top - (asked[i - 1].at || 0) < ASK_BURST_MS) i--;
+  return i;
+}
+// how many asks go before this one (for its eta): the later looks, and its own look's asks before it
+export function askAhead(asked, key) {
+  const j = asked.findIndex((a) => a.key === key);
+  if (j < 0) return asked.length;
+  const t = asked[j].at || 0;
+  let n = 0;
+  for (let i = 0; i < asked.length; i++) {
+    if (i === j) continue;
+    const d = (asked[i].at || 0) - t;
+    if (d >= ASK_BURST_MS || (d > -ASK_BURST_MS && i < j)) n++;
+  }
+  return n;
+}
+
 // the art's chunk grid over the world the server runs (the map's frame, m.frame: tiles)
 export const artChunks = (map) => ({ CX: Math.ceil((map.frame.w * TILE) / CHUNK), CY: Math.ceil((map.frame.h * TILE) / CHUNK), CHUNK });

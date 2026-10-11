@@ -99,11 +99,25 @@ test('a chunk not baked yet: the 404 says when it should be ready; a look ahead 
     assert.ok(a > 0, `a time (${a} ms)`);
     res = fakeRes(); cdn.handle(`/art/${art}/1/2/29/23`, {}, res);
     const b = Number(res.headers['x-art-eta']);
-    // (newest first: the second ask goes before the first)
+    // (one look - asks within a second or two - is baked in the order it asked: the page asks nearest first)
     res = fakeRes(); cdn.handle(`/art/${art}/1/2/28/23`, {}, res);
     const a2 = Number(res.headers['x-art-eta']);
-    assert.ok(b > 0 && a2 > b, `the earlier ask is now behind (${b} then ${a2} ms)`);
+    assert.ok(b > 0 && a2 < b, `the first ask of the look goes first (${a2} then ${b} ms)`);
+    // a later look (a teleport: the screen somewhere else) goes before the earlier one, again in its own order
+    for (const j of S.asked) j.at -= 5000;
+    for (const c of ['10/10', '11/10', '10/11']) { res = fakeRes(); cdn.handle(`/art/${art}/1/2/${c}`, {}, res); }
+    const order = [];
+    while (S.asked.length) order.push(cdn._next().key);
+    assert.deepEqual(order, ['1/2/10/10', '1/2/11/10', '1/2/10/11', '1/2/28/23', '1/2/29/23'], 'the latest look first, each in the order it asked');
   } finally { cdn.stop(); rmSync(dataDir, { recursive: true, force: true }); }
+});
+
+test('the asks\' order: the latest look first (askNext), and what goes before each (askAhead)', async () => {
+  const { askNext, askAhead, ASK_BURST_MS } = await import('../server/artcdn.js');
+  const t = 1e6, A = [{ key: 'a', at: t }, { key: 'b', at: t + 300 }, { key: 'c', at: t + ASK_BURST_MS + 900 }, { key: 'd', at: t + ASK_BURST_MS + 1200 }];
+  assert.equal(A[askNext(A)].key, 'c', 'the oldest ask of the newest look');
+  assert.deepEqual(A.map((a) => askAhead(A, a.key)), [2, 3, 0, 1]);
+  assert.equal(askNext([{ key: 'x' }]), 0, 'asks without a time (an old server state) are taken one by one');
 });
 
 test('after a new build: the build before keeps its chunks - for pages still on it, and as stand-ins meanwhile', async () => {
