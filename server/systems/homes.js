@@ -13,12 +13,76 @@ const FALLBACK_PRICE = 25000; // a home of an old world with no deed and no reco
 
 export function init(world) {
   world.homeOwner = new Map();
+  buildUnits(world);   // (the apartment blocks' units: homes of their own, kept off the map - below)
   for (const prof of store.all()) {
     if (checkWorld(world, prof)) continue; // homes from an older world: released, nothing to register
     for (const id of prof.homes || []) {
-      if (world.map.homes[id] && !world.homeOwner.has(id)) world.homeOwner.set(id, prof.pid);
+      if (homeById(world, id) && !world.homeOwner.has(id)) world.homeOwner.set(id, prof.pid);
     }
   }
+}
+
+// ---- apartment blocks: several homes in one building (H65) ------------------------------------------------------------
+// The owner, 2026-10-11: "can we get more of the owning a house features up?" - and the concept art's apartment
+// buildings (docs/art-v2/targets/HO5): a lobby, stairs, doors along the landings. Each of the city's apartment blocks
+// (a map home of kind 'apartment') is a building of units: the map's home is unit 1 (the ground floor - its owners keep
+// it), and units 2.. are homes of their own, found from the built map when the server starts - nothing is added to the
+// map (its hash and signature stay as they are), and they're keyed by their building's home, never by where it stands,
+// so World v3 can move the buildings. A unit's id is UNIT0 + the building's home id * 16 + its number: an id like any
+// home's (profile.homes, the respawn point, the garage, the inside), but out of the map's range. Several players can
+// own homes in one building; the lobby door lists them (economy.js buildMenu). Each unit is an apartment plan furnished
+// by its price (shared/homelayout.js): a studio, a flat a floor up, the penthouse at the top.
+export const UNIT0 = 1000000;
+export const unitId = (baseId, n) => UNIT0 + baseId * 16 + n;
+export const isUnit = (id) => Number(id) >= UNIT0;
+// a home by its id: the map's, or an apartment block's unit
+export function homeById(world, id) {
+  if (id == null) return null;
+  const n = Number(id);
+  if (n >= UNIT0) return (world.units && world.units.get(n)) || null;
+  return (world.map.homes && world.map.homes[n]) || null;
+}
+// how many homes an apartment block holds: by its footprint (an 8x11 walk-up: 6), 4 to 8
+export function unitCount(map, h) {
+  const b = h && h.b != null ? map.buildings[h.b] : null;
+  if (!b) return 1;
+  return Math.max(4, Math.min(8, Math.round((b.tw * b.th) / 15)));
+}
+// unit n of a building (2..): its floor, its plan and its price from the building's (the map's ground-floor flat's)
+export function unitOf(base, n, count) {
+  const floor = 1 + Math.floor((n - 1) / 3);   // (three doors a landing - HO5)
+  const top = n === count && count >= 5;
+  const plan = top ? 'penthouse' : n % 3 === 2 ? 'studio' : 'apartment';
+  const price = Math.round((top ? base.price * 2.5 : plan === 'studio' ? base.price * 0.7 : base.price * (1 + 0.12 * (floor - 1))) / 500) * 500;
+  const what = top ? 'penthouse' : plan === 'studio' ? 'studio' : 'apartment';
+  return {
+    id: unitId(base.id, n), kind: 'apartment', plan, name: `${base.name}, unit ${n}`, price, slots: plan === 'studio' ? 1 : top ? 3 : 2,
+    x: base.x, y: base.y, garage: base.garage, b: base.b, lobby: base.id, unit: n, floor, what,
+  };
+}
+function buildUnits(world) {
+  world.units = new Map();
+  world.unitsOf = new Map();   // the building's home id -> its homes' ids, unit 1 (the map's) first
+  for (const h of world.map.homes || []) {
+    if (!h || h.gone || h.kind !== 'apartment') continue;
+    const n = unitCount(world.map, h);
+    if (n < 2) continue;
+    const ids = [h.id];
+    for (let k = 2; k <= n; k++) { const u = unitOf(h, k, n); world.units.set(u.id, u); ids.push(u.id); }
+    world.unitsOf.set(h.id, ids);
+  }
+}
+// the homes in the building whose lobby door is poi (null: a home of its own)
+export const unitsAt = (world, poi) => (poi && poi.kind === 'home' && world.unitsOf ? world.unitsOf.get(poi.home) || null : null);
+// The home a menu at poi (a home's door) is about: the one you're inside (a unit of that building, or the place you're
+// touring), else the map's home at that door
+export function homeFor(world, p, poi) {
+  const ped = p && p.ped;
+  if (ped && ped.hidden && ped.inside != null) {
+    const h = homeById(world, ped.inside);
+    if (h && (h.lobby ?? h.id) === poi.home) return h;
+  }
+  return world.map.homes[poi.home];
 }
 
 // A profile saved in an older world (shared/constants.js WORLD_VERSION): its homes are indices into a
@@ -62,7 +126,7 @@ export function worldNoteText(note) {
 }
 
 export function ownedHomes(world, prof) {
-  return (prof.homes || []).filter((id) => world.homeOwner.get(id) === prof.pid).map((id) => world.map.homes[id]);
+  return (prof.homes || []).filter((id) => world.homeOwner.get(id) === prof.pid).map((id) => homeById(world, id));
 }
 
 export function garageCap(world, prof) {
@@ -142,7 +206,7 @@ export function resolveSpawn(world, p, choice, deathPos) {
   if (p.policeKill && !(choice && choice.startsWith('h:'))) choice = deathPos ? nearestHospital(world, deathPos) : null;   // (no waking at home)
   // (where you wake is remembered: the next death screen offers it first - defaultChoice)
   if (choice && choice.startsWith('home:')) {
-    const h = world.map.homes[Number(choice.slice(5))];
+    const h = homeById(world, choice.slice(5));
     if (h && world.homeOwner.get(h.id) === prof.pid) { prof.lastSpawn = `home:${h.id}`; return { x: h.x, y: h.y + 8, name: h.name }; }
   }
   if (choice && choice.startsWith('h:')) {
@@ -150,7 +214,7 @@ export function resolveSpawn(world, p, choice, deathPos) {
     if (h) { prof.lastSpawn = choice; return h; }
   }
   if (prof.spawnHome != null && world.homeOwner.get(prof.spawnHome) === prof.pid && !p.policeKill) {
-    const h = world.map.homes[prof.spawnHome];
+    const h = homeById(world, prof.spawnHome);
     prof.lastSpawn = `home:${h.id}`;
     return { x: h.x, y: h.y + 8, name: h.name };
   }
@@ -317,7 +381,7 @@ export function protect(world, ped, s = SPAWN_PROTECT_S) { ped.protectUntil = wo
 export const isProtected = (world, ped) => !!ped && (!!ped.hidden || world.time < (ped.protectUntil || 0));
 
 // ---- going inside -----------------------------------------------------------------------
-export const homePoi = (world, h) => world.map.pois.find((q) => q.kind === 'home' && q.home === h.id);
+export const homePoi = (world, h) => world.map.pois.find((q) => q.kind === 'home' && q.home === (h.lobby ?? h.id));   // (a unit's: its building's lobby door)
 
 export function beginEnter(world, p, h) {
   const ped = p.ped;
@@ -347,7 +411,7 @@ export function goInside(world, p, h) {
 
 export function openInside(world, p) {
   const ped = p.ped;
-  const h = ped && ped.hidden ? world.map.homes[ped.inside] : null;
+  const h = ped && ped.hidden ? homeById(world, ped.inside) : null;
   if (!h || !p.conn) return;
   const poi = homePoi(world, h);
   if (poi) { p.menu = { poi: poi.id }; p.conn.sendJSON({ ...menuBuilder(world, p, poi), inside: true }); }
@@ -361,7 +425,7 @@ const menuBuilder = (world, p, poi) => (setMenuBuilder.fn ? setMenuBuilder.fn(wo
 export function leaveHome(world, p) {
   const ped = p.ped;
   if (!ped || !ped.hidden) return;
-  const h = world.map.homes[ped.inside];
+  const h = homeById(world, ped.inside);
   ped.inside = null; ped.hidden = false;
   ped.vx = 0; ped.vy = 0;
   if (h) { ped.x = h.x + (world.rand() - 0.5) * 20; ped.y = h.y + 10; world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y }); }
@@ -378,7 +442,7 @@ export function update(world) {
     if (!ped) continue;
     if (ped.dead) { ped.entering = null; continue; }
     if (!ped.entering) continue;
-    const h = world.map.homes[ped.entering.home];
+    const h = homeById(world, ped.entering.home);
     if (!h || ped.vehId || now < ped.downUntil || now < ped.stunUntil || Math.hypot(ped.x - ped.entering.x, ped.y - ped.entering.y) > 14) {
       ped.entering = null;
       world.notify(p, 'You stepped away from the door.', 'warn');

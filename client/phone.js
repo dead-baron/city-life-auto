@@ -39,6 +39,7 @@ const flyJobs = (list, job) => (list.length ? '<h3>Flying</h3>' + list.map((j) =
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
   let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null;
+  let homes = null, RE = null;   // the real-estate app (H65): the server's list, and its code - client/realestate.js, loaded when it opens
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
 
@@ -59,6 +60,7 @@ export function createPhone(ctx) {
           <button class="ph-app" data-go="feed"><b>📰</b>City feed</button>
           <button class="ph-app bty" data-go="bounties"><b>💀</b>Bounties</button>
           <button class="ph-app" data-go="transit"><b>🚌</b>Transit</button>
+          <button class="ph-app" data-go="homes"><b>🏠</b>Homes</button>
           <button class="ph-app" data-act="dance"><b>💃</b>Dance</button>
           ${wp ? '<button class="ph-app" data-act="clearwp"><b>✕</b>Clear waypoint</button>' : ''}
         </div>
@@ -84,6 +86,9 @@ export function createPhone(ctx) {
       el.innerHTML = bountiesHtml();
     } else if (screen === 'transit') {
       el.innerHTML = transitHtml();
+    } else if (screen === 'homes') {
+      if (RE) RE.render(el, homes, { ...ctx, dist });
+      else { el.innerHTML = '<p class="ph-empty">Loading…</p>'; import('./realestate.js').then((mod) => { RE = mod; if (screen === 'homes') render(); }).catch((e) => console.warn('[homes]', e)); }
     } else if (screen === 'jobs') {
       if (!board) { el.innerHTML = '<p class="ph-empty">Loading jobs…</p>'; return; }
       const job = board.job;
@@ -100,7 +105,7 @@ export function createPhone(ctx) {
   }
 
   function wire(el) {
-    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); render(); };
+    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } render(); };
     for (const b of el.querySelectorAll('[data-stop]')) b.onclick = () => {
       const [l, k] = b.dataset.stop.split(':').map(Number);
       const L = transit && transit.lines.find((q) => q.id === l), st = L && L.stops[k];
@@ -253,6 +258,7 @@ export function createPhone(ctx) {
     back() { if (screen === 'group') screen = 'places'; else screen = 'home'; render(); return true; },
     onFeed(msg) { feed = msg.items || []; if (screen === 'feed') render(); },
     onTransit(msg) { transit = msg; if (screen === 'transit') render(); },
+    onHomes(msg) { homes = msg; if (screen === 'homes') render(); },
     onBounties(msg) {
       bty = msg;
       if (msg.err) ctx.toast(msg.err, 'warn');
