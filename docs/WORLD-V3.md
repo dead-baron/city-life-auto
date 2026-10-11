@@ -3357,6 +3357,84 @@ now); the casinos as walk-ins with their games (GM3, GM4), the counting room and
 resorts' crowns and the classic renderer's drawing of their looks (`resort` on the roof record); the airport, the welcome
 sign on the highway, the fountain show; the resorts' car parks; a desert look for the flats (yards, trailers).
 
+### 8.16 The subways: Line 1 and Line 2 (2026-10-11, H41)
+
+The owner's markup (part 5): pink subway line 1, yellow line 2, dotted = underground; ruling 5 ("underground where
+dotted, on bridges and viaducts where solid"); SU6 ("for the most part I imagine it would be a single track in a lot of
+places"). The skeleton's `SUBWAYS` and their `STATIONS` are laid in the world build and their trains run. Nothing live
+changes: the world hash stays `6b6e16fdef9f`, the art hash `b5402d70daae` (today's subway exactly as before).
+
+**The lines** (`shared/world3-subway.js` `subwayLoops`, one call from `shared/world3-world.js`' `rails` hook, after the
+main line's loops): double track - the simpler of the two the brief allowed - one track each way, 96 px apart as the main
+line's. Each line is ONE closed loop for the trains: out along the line on one track, round the line's own loop, back on
+the other track, and round a turning loop below ground beyond each free end (`SUB_TURN`: a 110-tile square with 24-tile
+corners, 30 tiles past the end), so a train never reverses and the two ways never share a track.
+- **Line 1** (pink, 3.65 km of route round the loop): Northshore (its turning loop north of the station, under the main
+  line and the Coast Highway), the viaduct beside the Bay Bridge, under Metro City (Northgate, Downtown, Arts District),
+  under the channel to Cedar Falls and the loop under Cedar Isle (Falls Center, Lake District, Cedar Hills). The loop
+  at the line's end is run so the line enters and leaves it with right turns: the two tracks run into its two ends
+  without crossing.
+- **Line 2** (yellow, 5.66 km): the airport (its turning loop under the airport), the viaduct over the strait, Old
+  Quarter, Westport Center, the loop under Westport (Lakeview) run both ways (one way per track), under the channel
+  (Stadium District) and Metro City (Civic Center, Midtown), under the canal to Southbank and Southside, a turning loop
+  under the water past Southbank. At Westport Center the loop meets the line in the middle: its tracks cross there
+  (diamonds below ground, which the signals take whole).
+- **Below ground** everywhere (`under`, `subway`: nothing laid on top, the trains drawn underground, as today's subway)
+  but on the skeleton's viaducts, where the track is at grade from 12 tiles before the water to 12 past it (`RAMP`):
+  the generator lays the bed and decks it over the water (Line 1: about 250 tiles of deck each way, Line 2 about 160).
+- **The stations**: each a stop on both tracks (a terminal - Northshore, the airport, Southside - once, after its
+  turning loop; the three on the Cedar Isle loop once, it is run one way): Line 1 has 12 stops, Line 2 16. A station
+  where a line meets its loop (Cedar Falls, Westport Center) stands 50 tiles back along the line, clear of the
+  junction. A stop whose name the main line has too is "... Subway" (Northshore, Cedar Falls, Westport Center,
+  Lakeview), so each has a map point of its own.
+
+**The way down** (`shared/map.js`): `reserveSubwayPlazas` reserves a plaza for each subway stop as for today's (an 8 x 4
+plaza fronting a street, within 48 tiles in the dense core; failing that, a looser pass on grass kept for anything but
+the railway, another plaza or a deck, most of its edge on the pavement), one plaza for the stops on the two tracks;
+`buildRailway` puts one kiosk on it for both (`plazaKiosks`) and one map point (`poi.sub`, `poi.services`: the line).
+The subway lines' stops aren't the main line's hubs (`buildRailHubs` skips them) and they have no switches
+(`railSwitches` skips them: they are below ground where they meet the main line). 14 of the 17 stations have a kiosk on
+a plaza; Arts District (its stops under a park) and Lake District and Falls Center (Cedar Isle's east and north) found
+none and use today's fallback, the stairs from the nearest pavement (Lake District has none within 700 px: its way down
+is at the track). Two plazas are paved over afterwards in part: the airport's by its apron, Northshore's 4 of 32 tiles.
+
+**The trains** (`server/systems/trains.js`): the loops machinery of 8.10 - two trains a line, the signals' cells. Two
+changes: a subway line's points below ground take cells a level deeper (`DEEP`), so a subway train passes under a main
+line train (the Bay Loop's tunnel under the core crosses Line 1 at Downtown at about 22 degrees: with shared cells the
+cars' outlines met outside the cells - W 76 px against a 48 px footprint); and a loop's own track far along it counts
+for its junctions (`boxesOf`: Line 2 crosses itself at Westport Center). Measured over five minutes of game time with
+the main line's twelve trains: the four subway trains each ran and stopped at their stations, and no two trains' cars
+(at the same level) ever overlapped.
+
+**The tests**: `test/world3subway.test.js` (one world build: the lines laid as one loop each, every station a stop, both
+tracks' stops side by side, below ground but on the viaducts, the decks over the water, nothing at grade over open
+water; the kiosks on their plazas, one per station for both tracks, one map point each listing its line; the trains, five
+minutes: every subway train runs and stops at its stations, no train runs into another, the boards list the line).
+`test/world3rail.test.js` and `test/world3hubs.test.js` count the main line's loops (`!r.subway`); the overlap check
+skips a subway car below ground against one above it.
+
+**The pictures** (`tools/world3-hub-map.mjs --hub Downtown --hub Airport`: a subway stop through the chunk bake at 1/4,
+its kiosk ringed white, the stairs' mouth yellow, the stops below pink, the subways below ground dotted in their
+colours): `docs/world-v3-hub-downtown.png`, `docs/world-v3-hub-airport.png`. What looks right: the SU5-B kiosk on its
+plaza by the street (the airport's by the terminal road's turning circle, Downtown's on the block south of the stops);
+the double track's two stops side by side below; Line 2's turning loop under the airport and out under the sea. What
+looks wrong:
+- **the kiosk can stand far from the platform**: Downtown's is about 14 tiles from its stops, across a block - the
+  plaza search takes the nearest free street frontage, not one over the platform;
+- **no portals**: where a viaduct goes below ground the track just stops (as the main line's tunnels, 8.10); the
+  ramps want cuttings and mouths (`client/render/trains.js` `drawPortals` draws today's line's only);
+- **Arts District, Lake District and Falls Center** have no plaza (above), and Downtown's kiosk sits in the front
+  garden of the block's big building, its bushes round it (the kiosk is small at 1/4: hard to make out);
+- **the turning loops are big** (110 tiles) and Line 1's at Northshore passes under the main line and the Coast
+  Highway (harmless below ground: its own cells);
+- **single track with passing places** (SU6) is not done: double track throughout.
+
+**What's left:** single track with passing places at the stations, where the owner wants it (SU6) - the signals
+already keep the two ways apart, so a single track is the loop's two tracks drawn as one between stations; the portals
+and cuttings at the viaducts' ends; plazas over the platforms; the underground view's tunnel and platforms for the v3
+subway (today's `client/underground/view.js` draws today's line); the in-game world map's subway lines; transfers at
+the stations the subway shares with the main line (Northshore, Cedar Falls, Westport Center, Lakeview).
+
 ### 8.17 The ferries at their v3 piers (2026-10-11, H42)
 
 The skeleton's six ferry routes (`shared/world3-skeleton.js` FERRIES; part 1.7, part 7's water) built and run in the
@@ -3554,81 +3632,3 @@ station or diner yet); the underground river MI4 under the mine (the cave world'
 canyon); the Old Granite Mine and the Granite Quarry once Granite Peaks' places move in (then `underground.js` and
 `places.js` take the first mine and the first pit: they'll want a list); dirt bike trails; the jeep tracks on the
 road network (they are ground, not roads: the traffic doesn't use them).
-
-### 8.16 The subways: Line 1 and Line 2 (2026-10-11, H41)
-
-The owner's markup (part 5): pink subway line 1, yellow line 2, dotted = underground; ruling 5 ("underground where
-dotted, on bridges and viaducts where solid"); SU6 ("for the most part I imagine it would be a single track in a lot of
-places"). The skeleton's `SUBWAYS` and their `STATIONS` are laid in the world build and their trains run. Nothing live
-changes: the world hash stays `6b6e16fdef9f`, the art hash `b5402d70daae` (today's subway exactly as before).
-
-**The lines** (`shared/world3-subway.js` `subwayLoops`, one call from `shared/world3-world.js`' `rails` hook, after the
-main line's loops): double track - the simpler of the two the brief allowed - one track each way, 96 px apart as the main
-line's. Each line is ONE closed loop for the trains: out along the line on one track, round the line's own loop, back on
-the other track, and round a turning loop below ground beyond each free end (`SUB_TURN`: a 110-tile square with 24-tile
-corners, 30 tiles past the end), so a train never reverses and the two ways never share a track.
-- **Line 1** (pink, 3.65 km of route round the loop): Northshore (its turning loop north of the station, under the main
-  line and the Coast Highway), the viaduct beside the Bay Bridge, under Metro City (Northgate, Downtown, Arts District),
-  under the channel to Cedar Falls and the loop under Cedar Isle (Falls Center, Lake District, Cedar Hills). The loop
-  at the line's end is run so the line enters and leaves it with right turns: the two tracks run into its two ends
-  without crossing.
-- **Line 2** (yellow, 5.66 km): the airport (its turning loop under the airport), the viaduct over the strait, Old
-  Quarter, Westport Center, the loop under Westport (Lakeview) run both ways (one way per track), under the channel
-  (Stadium District) and Metro City (Civic Center, Midtown), under the canal to Southbank and Southside, a turning loop
-  under the water past Southbank. At Westport Center the loop meets the line in the middle: its tracks cross there
-  (diamonds below ground, which the signals take whole).
-- **Below ground** everywhere (`under`, `subway`: nothing laid on top, the trains drawn underground, as today's subway)
-  but on the skeleton's viaducts, where the track is at grade from 12 tiles before the water to 12 past it (`RAMP`):
-  the generator lays the bed and decks it over the water (Line 1: about 250 tiles of deck each way, Line 2 about 160).
-- **The stations**: each a stop on both tracks (a terminal - Northshore, the airport, Southside - once, after its
-  turning loop; the three on the Cedar Isle loop once, it is run one way): Line 1 has 12 stops, Line 2 16. A station
-  where a line meets its loop (Cedar Falls, Westport Center) stands 50 tiles back along the line, clear of the
-  junction. A stop whose name the main line has too is "... Subway" (Northshore, Cedar Falls, Westport Center,
-  Lakeview), so each has a map point of its own.
-
-**The way down** (`shared/map.js`): `reserveSubwayPlazas` reserves a plaza for each subway stop as for today's (an 8 x 4
-plaza fronting a street, within 48 tiles in the dense core; failing that, a looser pass on grass kept for anything but
-the railway, another plaza or a deck, most of its edge on the pavement), one plaza for the stops on the two tracks;
-`buildRailway` puts one kiosk on it for both (`plazaKiosks`) and one map point (`poi.sub`, `poi.services`: the line).
-The subway lines' stops aren't the main line's hubs (`buildRailHubs` skips them) and they have no switches
-(`railSwitches` skips them: they are below ground where they meet the main line). 14 of the 17 stations have a kiosk on
-a plaza; Arts District (its stops under a park) and Lake District and Falls Center (Cedar Isle's east and north) found
-none and use today's fallback, the stairs from the nearest pavement (Lake District has none within 700 px: its way down
-is at the track). Two plazas are paved over afterwards in part: the airport's by its apron, Northshore's 4 of 32 tiles.
-
-**The trains** (`server/systems/trains.js`): the loops machinery of 8.10 - two trains a line, the signals' cells. Two
-changes: a subway line's points below ground take cells a level deeper (`DEEP`), so a subway train passes under a main
-line train (the Bay Loop's tunnel under the core crosses Line 1 at Downtown at about 22 degrees: with shared cells the
-cars' outlines met outside the cells - W 76 px against a 48 px footprint); and a loop's own track far along it counts
-for its junctions (`boxesOf`: Line 2 crosses itself at Westport Center). Measured over five minutes of game time with
-the main line's twelve trains: the four subway trains each ran and stopped at their stations, and no two trains' cars
-(at the same level) ever overlapped.
-
-**The tests**: `test/world3subway.test.js` (one world build: the lines laid as one loop each, every station a stop, both
-tracks' stops side by side, below ground but on the viaducts, the decks over the water, nothing at grade over open
-water; the kiosks on their plazas, one per station for both tracks, one map point each listing its line; the trains, five
-minutes: every subway train runs and stops at its stations, no train runs into another, the boards list the line).
-`test/world3rail.test.js` and `test/world3hubs.test.js` count the main line's loops (`!r.subway`); the overlap check
-skips a subway car below ground against one above it.
-
-**The pictures** (`tools/world3-hub-map.mjs --hub Downtown --hub Airport`: a subway stop through the chunk bake at 1/4,
-its kiosk ringed white, the stairs' mouth yellow, the stops below pink, the subways below ground dotted in their
-colours): `docs/world-v3-hub-downtown.png`, `docs/world-v3-hub-airport.png`. What looks right: the SU5-B kiosk on its
-plaza by the street (the airport's by the terminal road's turning circle, Downtown's on the block south of the stops);
-the double track's two stops side by side below; Line 2's turning loop under the airport and out under the sea. What
-looks wrong:
-- **the kiosk can stand far from the platform**: Downtown's is about 14 tiles from its stops, across a block - the
-  plaza search takes the nearest free street frontage, not one over the platform;
-- **no portals**: where a viaduct goes below ground the track just stops (as the main line's tunnels, 8.10); the
-  ramps want cuttings and mouths (`client/render/trains.js` `drawPortals` draws today's line's only);
-- **Arts District, Lake District and Falls Center** have no plaza (above), and Downtown's kiosk sits in the front
-  garden of the block's big building, its bushes round it (the kiosk is small at 1/4: hard to make out);
-- **the turning loops are big** (110 tiles) and Line 1's at Northshore passes under the main line and the Coast
-  Highway (harmless below ground: its own cells);
-- **single track with passing places** (SU6) is not done: double track throughout.
-
-**What's left:** single track with passing places at the stations, where the owner wants it (SU6) - the signals
-already keep the two ways apart, so a single track is the loop's two tracks drawn as one between stations; the portals
-and cuttings at the viaducts' ends; plazas over the platforms; the underground view's tunnel and platforms for the v3
-subway (today's `client/underground/view.js` draws today's line); the in-game world map's subway lines; transfers at
-the stations the subway shares with the main line (Northshore, Cedar Falls, Westport Center, Lakeview).
