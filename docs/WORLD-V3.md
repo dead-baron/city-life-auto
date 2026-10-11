@@ -2051,11 +2051,12 @@ redwood floor, the redwood habitat).
   paintbrush, alpine daisies, heather; stands of mountain pine, fir, whitebark pine and larch below the tree line (0.56).
   2,200 rocks and 6,500 trees per km².
 - **Willow Valley (49):** each 250-tile section cut into two to four strips with hedgerow room between: crop fields
-  (`T.FIELD` and `m.fields`: the ground bake's wheat, corn, vegetables, hay and ploughed soil by field), apple and
+  (`T.FIELD` and `m.fields`: the ground bake's wheat, corn, vegetables, hay and ploughed soil by field; a long strip is
+  two or three fields end to end with a track's room between), apple and
   orange orchards, lavender and sunflower rows, pastures with shade trees; a farmstead (the `farmstead` prefab:
   farmhouse, barn, silos, paddock) at the road end of three sections in five, with a windbreak behind it; hedgerows
-  (hedges with an oak now and then) along most strip edges. 71 fields (52 in the valley's own land), 22 farmsteads, 19
-  orchards, 4,200 hedges.
+  (hedges with an oak now and then) along most strip edges. 153 fields (124 with their middle in the valley), 22
+  farmsteads, 19 orchards, 4,200 hedges.
 - **The Red Rock Desert (50):** hardpan (desert dirt) with sand sheets and dunes where three noises of different sizes
   add up (19% of it: no band, no repeat - sand at a tile says nothing about the tile 150-600 tiles on, 24% at worst),
   dry washes winding across it (gravel: the renderer's shingle, desert scrub on it, mesquite and palo verde along
@@ -2100,9 +2101,10 @@ Bluffs' slope down to the beach can be designed (a cliff path, gardens), as the 
 by its biome as the game paints it (forest floor, alpine and dry grass, pasture, desert, scree, snow), the fields by
 crop, the props to their size (tree crowns, outcrops in their rock's colour, plants by kind). It reads as the regions
 now. What's wrong in it:
-- **Willow Valley is too regular:** the strips run the full width of their 250-tile sections, so the valley reads as
-  rows of long rectangles; real fields vary more (smaller, split crosswise, the odd field cornered by the river), and
-  the lavender rows read grey from above.
+- **Willow Valley is still a grid:** the sections' strips, split into two or three fields each, read as a patchwork
+  of crops, orchards, lavender and sunflower rows with farmsteads at the road ends, but every field is a rectangle on
+  the 250-tile grid; real fields would bend round the river and the lake, and the room left for the roads reads as
+  wide bands of plain grass until the roads are laid.
 - **Highland Woods is uniform:** the clearings are small at this scale and the pine stands hardly show against the
   redwoods; a few big meadows, burns or a lake would break it.
 - **The snowfields are blobs** of one noise; real snow lies in the north-facing hollows and on the highest ridges.
@@ -2110,3 +2112,10 @@ now. What's wrong in it:
   sand; bigger mesas (raised as Dry Creek's canyon scene paintings are) would carry it.
 - The beach towns (52, 54) and the Egret Coast's marsh are plain at this scale, and Prison Island is a patchwork of
   grass and dirt waiting for its prison.
+
+**In the game's renderer** (`--region 1,0`: the chunk bake of tiles 504-1007 x 0-503, Granite Peaks' summits,
+`docs/world-v3-world-r1-0.png`, 441 chunks in 104 s): the snowfields render white, the scree brown with grey stones
+and granite outcrops, mountain pines and larches in stands below the tree line, the alpine meadows' paler grass. Wrong
+there: **the renderer's ground cover grew meadow plants on the snow** (statics.js `coverAt` fell through to its meadow
+branch for class 9) - fixed after the bake (nothing grows on snow), not re-baked; the snowfields' edges are blobby,
+and the scree reads more brown than grey.

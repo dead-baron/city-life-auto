@@ -192,9 +192,16 @@ export function dress3(m, L, keep, H) {
       }
       if (r[2] - r[0] < 8 || r[3] - r[1] < 8) continue;
       if (use === 'field') {
-        let cnt = 0;
-        for (let y = r[1]; y < r[3]; y++) for (let x = r[0]; x < r[2]; x++) { const i = y * W + x; if (x >= 0 && y >= 0 && x < W && y < HH && L.dist[i] === D3.VALLEY && okTile(i, T.GRASS, T.DIRT)) { m.tiles[i] = T.FIELD; cnt++; } }
-        if (cnt > 200) { m.fields.push({ x: r[0] * TILE, y: r[1] * TILE, w: (r[2] - r[0]) * TILE, h: (r[3] - r[1]) * TILE }); n.fields++; }
+        // a long strip is two or three fields end to end, a farm track's room between (each its own crop)
+        const long = across ? r[2] - r[0] : r[3] - r[1], parts = long > 140 ? 2 + Math.floor(hash2(sx + j, sy + 5, 5614) * 2) : 1;
+        for (let q = 0; q < parts; q++) {
+          const c0 = Math.round(long * (q / parts + (q ? (hash2(sx + q, sy + j, 5615) - 0.5) * 0.15 : 0))) + (q ? 2 : 0);
+          const c1 = q < parts - 1 ? Math.round(long * ((q + 1) / parts + (hash2(sx + q + 1, sy + j, 5615) - 0.5) * 0.15)) - 2 : long;
+          const f = across ? [r[0] + c0, r[1], r[0] + c1, r[3]] : [r[0], r[1] + c0, r[2], r[1] + c1];
+          let cnt = 0;
+          for (let y = f[1]; y < f[3]; y++) for (let x = f[0]; x < f[2]; x++) { const i = y * W + x; if (x >= 0 && y >= 0 && x < W && y < HH && L.dist[i] === D3.VALLEY && okTile(i, T.GRASS, T.DIRT)) { m.tiles[i] = T.FIELD; cnt++; } }
+          if (cnt > 200) { m.fields.push({ x: f[0] * TILE, y: f[1] * TILE, w: (f[2] - f[0]) * TILE, h: (f[3] - f[1]) * TILE }); n.fields++; }
+        }
       } else if (use === 'orchard' || use === 'lavender' || use === 'sunflowers') {
         const step = use === 'orchard' ? 4 : 3, sp = use === 'orchard' ? (hash2(sx, sy + j, 5607) < 0.7 ? 'apple' : 'orange') : use;
         let cnt = 0;

@@ -2878,6 +2878,7 @@ function coverAt(c, tx, ty, x, y) {
   }
   if (!WILDS.has(st) || st === 'airport') return null;
   const bio = c.biome(x, y), h = hash(tx, ty, 7101), h2 = vnoise(x, y, 70, 7103) * 0.75 + hash(tx, ty, 7103) * 0.25; // (h2: clumps of one plant)
+  if (bio === 9) return null;   // (World v3's snowfields: nothing grows on them)
   const pa = vnoise(x, y, 170, 7105), pb = vnoise(x, y, 90, 7107);   // patches: big drifts, smaller clumps
   // water's edge: reeds and cattails in clumps along lakes and rivers (not the sea)
   const nearFresh = (M.distRiver && M.distRiver[i] > 0 && M.distRiver[i] <= 8) || (M.lake && (M.lake[M.idx(tx - 1, ty)] || M.lake[M.idx(tx + 1, ty)] || M.lake[M.idx(tx, ty - 1)] || M.lake[M.idx(tx, ty + 1)]));
