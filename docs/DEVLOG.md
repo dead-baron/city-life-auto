@@ -7490,3 +7490,39 @@ test/firebow.test.js, test/signals.test.js, test/perf.test.js's code budgets, ge
 five headless playtests of today's world with four far teleports each (0 errors; the last on the final code, the
 server on the new build: 16.8 / 13.6 / 12.8 / 8.3 s, from the camera's jump 8.2 / 5.2 / 4.6 s). Code budgets: page 464 of 485 KB, city 353 of
 360, renderer 356 of 363, bake 740 of 765.
+## 2026-10-10 · World v3, stage 3, step 5: the first mainland towns
+
+Asked (the brief for this wave, from 8.11's "what's left"): "the first mainland towns" - Timber Bend (the logging town
+at the Highland Highway, in the redwoods), Willow Crossing (the farm town on the Long Reach) and Sandpiper Bay (the
+beach town on the east arm), each with today's generators on new ground: a district of its own, a street grid round
+the skeleton's town point joined to the arterials, blocks and buildings in the right style, the basics (a gas station,
+a convenience store, a diner or bar, a clinic or the sheriff, a bus stop) and the special places the generator already
+has kinds for; clear of the main line's track and stations and the highways' room; the biomes' dressing making way.
+
+What it does (docs/WORLD-V3.md 8.13 has the details):
+- `shared/world3-towns.js` (the world build's only), one call each from `shared/world3-world.js`: `paintTowns3` paints
+  each town's district (57-59 in `shared/mapcore.js` `DISTRICTS`, after the biomes': no id moves) and a built zone on
+  the land layer round the town point - on land, off the highways' room, the main line and its stations - so the
+  biomes' fields, farmsteads, redwoods and dune grass make way; `layTowns3` lays a street grid with an east-west main
+  street (an arterial, so the town gets bus stops), clipped to the town's ground, crossing the arterials through it;
+  `TOWN_SPECIALS` are the planned businesses (handed in as `opts.specials`, so only the v3 build places them): the
+  clinic, the sheriff, the store that becomes the gas station, the diner, the hunting lodge, butcher, hardware and
+  tackle at Timber Bend, the farm co-op, grain elevator, chapel and farmers' market at Willow Crossing, the surf shop,
+  tackle, snack bar and beach bar at Sandpiper Bay; `townsDone` turns each town's store into its gas station with
+  pumps (the generator's five are all in the city) and puts a bus stop on a main street left without one.
+- The generator (`shared/map.js`): `opts.specials` appended to `SPECIALS` in `placeSpecials`, and a special's `fixed`
+  keeps its business (the later passes don't make it a gun shop or a tackle shop). Today's world is untouched: the
+  world hash stays 6b6e16fdef9f (the art hash moves: map.js and mapcore.js are in it).
+
+Files: shared/world3-towns.js (new), shared/world3-world.js, shared/map.js, shared/mapcore.js,
+tools/world3-world-map.mjs (`--towns`: each town through the chunk bake at 1/8), test/world3towns.test.js (new),
+test/world3biomes.test.js (60 districts), docs/WORLD-V3.md 8.13, docs/world-v3-town-*.png (new).
+
+Tests: test/world3towns.test.js (one world build, 35 s: each town's ground, its streets on the one network, its
+buildings, its basics and planned places, no building in a highway's room or by the main line, the bowling alley still
+in the city), test/world3biomes.test.js (34 s), test/world3roads.test.js (31 s: the one network with the towns' streets
+in it), test/dmath.test.js, test/mapwindow.test.js - all pass; the stamp: the world hash 6b6e16fdef9f (unchanged), the
+art hash a9251a8dfb94 (map.js, mapcore.js); the code budgets (tools/perf.mjs codeReport): page 465 of 485 KB, city 353
+of 360. Pictures: docs/world-v3-town-timber.png, docs/world-v3-town-willow.png, docs/world-v3-town-sandpiper.png
+(`tools/world3-world-map.mjs --sample 0 --towns`) - each reads as a town in its biome; what's wrong (too much street, a
+city's buildings, Sandpiper Bay back from its beach, the gun shops) and what's left are in 8.13.

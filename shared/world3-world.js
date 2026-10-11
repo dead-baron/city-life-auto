@@ -24,6 +24,7 @@ import { layRoads, roadTunnels } from './world3-roads.js';
 import { mainLineLoops } from './world3-rail.js';
 import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3, peakHeight, SNOW_LINE, SNOW_CLS } from './world3-biomes.js';
 import { terrainAt } from './mapcore.js';
+import { paintTowns3, layTowns3, townsDone, TOWN_SPECIALS } from './world3-towns.js';
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -52,6 +53,7 @@ export function worldOpts(asked) {
   if (!land3 || !today) throw new Error('world3: pass land (world3-land.js buildLand3(today)) and today (today\'s world: w, h, dist, land)');
   const L = land3.layers, W = land3.w, H = land3.h, N = W * H;
   const W0 = today.w, H0 = today.h, tDist = today.dist, tLand = today.land;
+  const towns = paintTowns3(L, W, H);   // (the first mainland towns' ground on the land layer: shared/world3-towns.js, 8.13)
   const pieces = worldPieces();
   const byDist = new Int16Array(256).fill(-1);
   for (const p of pieces) if (p.ids) for (const d of p.ids) byDist[d] = p.k;
@@ -167,9 +169,10 @@ export function worldOpts(asked) {
     pine: pineAt3(L, W),
     unbuilt: new Set([52, 54]),   // (the Sandpiper Coast and Northshore's beach towns: no streets yet - the next step)
     dress(m, H2) { m.world3biomes.dress = dress3(m, L, keep, H2); },
-    done(m) { const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; }); },
+    done(m) { m.world3.towns.built = townsDone(m); const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; }); },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground)
     special: (sp) => built.has(sp.d),
+    specials: TOWN_SPECIALS,   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)
     rails: (m) => mainLineLoops(m),     // (the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
     lines(lines, m) {
@@ -210,6 +213,7 @@ export function worldOpts(asked) {
       }
       m.world3 = { pieces: pieces.map((p) => ({ key: p.key, at: p.at, s: p.s })), split: out.split, offFrame: out.offFrame, cut: j.cut, dropped: j.dropped, bridged: j.bridged, canal: j.canal, crossings };
       m.world3.roads = layRoads(lines, m, L);   // (the skeleton's highways and arterials: shared/world3-roads.js, 8.7)
+      m.world3.towns = { painted: towns, streets: layTowns3(lines, m) };   // (the towns' street grids: world3-towns.js, 8.13)
     },
   };
   return o;

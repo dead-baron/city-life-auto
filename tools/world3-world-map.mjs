@@ -5,9 +5,10 @@
 // - the game's chunk bake (client/art2/game/chunkbake.js), timed on a sample of chunks of each kind of ground to say
 //   what the whole frame costs; with --bake [--shrink 64] it bakes every chunk that has land or inland water (deep sea
 //   once) and writes docs/world-v3-world-bake.png (heavy: see 8.6 for the time).
-//   node --expose-gc tools/world3-world-map.mjs [--quick] [--bake] [--shrink 64] [--sample 60] [--region rx,ry]
+//   node --expose-gc tools/world3-world-map.mjs [--quick] [--bake] [--shrink 64] [--sample 60] [--region rx,ry] [--towns]
 // (--quick: the picture only, no chunk bake timing)
 // (--region: one region of 504 tiles baked and lit at 1/16, about 2 minutes: docs/world-v3-world-r<rx>-<ry>.png)
+// (--towns: the first mainland towns baked at 1/8, half a minute each: docs/world-v3-town-<key>.png; --sample 0 skips the timing)
 // (heavy: run it under `flock /tmp/cla-heavy.lock`)
 import { writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -200,6 +201,33 @@ if (REGION) {
   r = spawnSync('python3', ['-c', py(tmp3, OUT3, GW2, GH2, `World v3, the whole world in one build: region ${rx}, ${ry} (tiles ${rx * 504}-${rx * 504 + 503}, ${ry * 504}-${ry * 504 + 503}), the game's chunk bake at 1/16`)], { stdio: 'inherit' });
   rmSync(tmp3, { force: true });
   log(`${OUT3} (${n} chunks baked in ${Math.round((performance.now() - tb) / 1000)} s)`);
+}
+
+// (--towns: each of the first mainland towns - shared/world3-towns.js TOWNS3, 8.13 - through the chunk bake at 1/8,
+// its box and 24 tiles round it: docs/world-v3-town-<key>.png)
+if (process.argv.includes('--towns')) {
+  const { TOWNS3 } = await imp('shared/world3-towns.js');
+  const S8 = 8, CHP = CT * TILE, CS8 = CHP / S8;
+  for (const t of TOWNS3) {
+    const [x0, y0, x1, y1] = t.box;
+    const cx0 = Math.floor((x0 - 24) / CT), cy0 = Math.floor((y0 - 24) / CT), cx1 = Math.floor((x1 + 24) / CT), cy1 = Math.floor((y1 + 24) / CT);
+    const GW3 = (cx1 - cx0 + 1) * CS8, GH3 = (cy1 - cy0 + 1) * CS8, img = Buffer.alloc(GW3 * GH3 * 3);
+    const tb = performance.now();
+    for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+      const col = bakeChunk(M, cx, cy, opt, cache, providers).g.col;
+      for (let by = 0; by < CS8; by++) for (let bx = 0; bx < CS8; bx++) {
+        let R = 0, G = 0, B = 0;
+        for (let y = by * S8; y < by * S8 + S8; y++) for (let x = bx * S8; x < bx * S8 + S8; x++) { const j = (y * CHP + x) * 4; R += col[j]; G += col[j + 1]; B += col[j + 2]; }
+        const o = (((cy - cy0) * CS8 + by) * GW3 + (cx - cx0) * CS8 + bx) * 3, q = S8 * S8;
+        img[o] = R / q; img[o + 1] = G / q; img[o + 2] = B / q;
+      }
+    }
+    const OUT4 = join(ROOT, `docs/world-v3-town-${t.key}.png`), tmp4 = OUT4 + '.rgb';
+    writeFileSync(tmp4, img);
+    r = spawnSync('python3', ['-c', py(tmp4, OUT4, GW3, GH3, `World v3: ${t.name} (tiles ${cx0 * CT}-${(cx1 + 1) * CT - 1}, ${cy0 * CT}-${(cy1 + 1) * CT - 1}), the game's chunk bake at 1/8`)], { stdio: 'inherit' });
+    rmSync(tmp4, { force: true });
+    log(`${OUT4} (${(cx1 - cx0 + 1) * (cy1 - cy0 + 1)} chunks in ${Math.round((performance.now() - tb) / 1000)} s)`);
+  }
 }
 
 if (BAKE) {

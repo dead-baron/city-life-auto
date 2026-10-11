@@ -1400,7 +1400,7 @@ function rowFits(row, pf, iv) {
 }
 
 function placeSpecials(m, rows, seed) {
-  const order = SPECIALS.map((s, i) => ({ ...s, i })).filter((s) => !OPTS?.special || OPTS.special(s, s.at || seedOf(s.d).map((v) => v / TILE), m)).sort((a, b) => (b.at ? 1 : 0) - (a.at ? 1 : 0) || PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);   // (one planned for a spot goes first)
+  const order = (OPTS?.specials ? [...SPECIALS, ...OPTS.specials] : SPECIALS).map((s, i) => ({ ...s, i })).filter((s) => !OPTS?.special || OPTS.special(s, s.at || seedOf(s.d).map((v) => v / TILE), m)).sort((a, b) => (b.at ? 1 : 0) - (a.at ? 1 : 0) || PREFABS[b.prefab].tw - PREFABS[a.prefab].tw);   // (one planned for a spot goes first)
   // each draws from a generator of its own, so reworking one district's streets doesn't send every business in the
   // city somewhere new (one that picked differently used to change the numbers all the rest got)
   const own = new Map(order.map((sp) => [sp, mulberry32(seed ^ Math.imul(sp.i + 1, 0x9e3779b1))]));
@@ -1586,7 +1586,7 @@ function placePrefab(m, row, key, x, special, rand, dims = null) {
       const label = special.names[i] || special.names[0];
       if (kind === 'construction') { m.dropSites.push({ x: (x + pf.tw * 0.15) * TILE, y: (y + pf.th * 0.85) * TILE, name: 'the construction site' }); return; }
       const poi = { id: m.pois.length, kind, label, x: dd.px, y: dd.py, r: kind === 'delivery' ? 40 : 48, b: bid };
-      if (key.startsWith('shops')) poi.fixed = true; // a painted storefront keeps the business its sign says
+      if (key.startsWith('shops') || special.fixed) poi.fixed = true; // a painted storefront keeps the business its sign says (and World v3's towns' places theirs)
       m.pois.push(poi);
       b.signs.push({ x: dd.px, y: rot === 0 ? (b.ty + b.th - 0.6) * TILE : (b.ty + 0.6) * TILE, text: label });
       const front = rot === 0 ? (y + pf.th + 2.6) * TILE : (y - 2.6) * TILE;

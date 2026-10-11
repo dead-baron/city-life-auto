@@ -127,6 +127,11 @@ for (const [name, isl, style, tier, g] of [['Highland Woods', 0, 'wild', 'wild',
   const b = style === 'beach';
   DISTRICTS.push({ id: DISTRICTS.length, name, isl: isl || name, style, tier, walk: b ? 'brick' : 'concrete', plaza: b ? 'brick' : 'concrete', road: b ? 'asphalt' : 'asphalt_worn', ground: g === 'G' ? T.GRASS : g === 'S' ? T.SAND : T.DIRT, turf: false });
 }
+// World v3's first mainland towns (docs/WORLD-V3.md 8.13, shared/world3-towns.js): 57-59, only a v3 build paints them
+for (const [name, isl, style, tier] of [['Timber Bend', 'Highland Woods', 'oldtown', 'rural'], ['Willow Crossing', 'Willow Valley', 'oldtown', 'rural'], ['Sandpiper Bay', 'Sandpiper Coast', 'beach', 'mid']]) {
+  const b = style === 'beach';
+  DISTRICTS.push({ id: DISTRICTS.length, name, isl, style, tier, walk: b ? 'brick' : 'concrete', plaza: b ? 'brick' : 'concrete', road: b ? 'asphalt' : 'asphalt_worn', ground: b ? T.SAND : T.GRASS, turf: false });
+}
 export const WATER_D = 13;   // (the open sea's district: the generator's too)
 // Districts nobody builds in: woods, hills, mountains, farmland, desert, airfields.
 export const WILD_STYLES = new Set(['wild', 'rural', 'desert', 'airport', 'water', 'rocky']);

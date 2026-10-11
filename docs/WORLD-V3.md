@@ -2780,3 +2780,105 @@ asked; the etas).
 - On a fresh server the page and the server may bake the same chunk at once (the page bakes when the server's eta is
   over 6 s): on two cores they share the CPU. A real desktop (three bake workers, 60 frames a second) and the live
   server (warm) should take a second or two: to measure there with `__S.art2.stats().jump`.
+
+### 8.13 Stage 3, step 5: the first mainland towns (2026-10-10, H34)
+
+8.11's "what's left" item 1: Timber Bend, Willow Crossing and Sandpiper Bay built by today's generator on new ground,
+each a district of its own with a street grid, blocks and buildings by style, its basics and its own places. Nothing
+live changes: the world hash stays `6b6e16fdef9f`; the towns' code is `shared/world3-towns.js` (the world build's only:
+the page and the city worker never import it); the generator gained two small hooks (`opts.specials`, a special's
+`fixed`), and `shared/mapcore.js` `DISTRICTS` three entries.
+
+**How a town is built** (`shared/world3-towns.js`, one call each from `shared/world3-world.js`):
+- **Its district** (`DISTRICTS` 57-59, after the biomes' 47-56, so no id moves: Timber Bend and Willow Crossing in
+  today's `oldtown` style, Sandpiper Bay in `beach`) and **a built zone** (Northshore's, 8: `BUILT_ZONES` and
+  `buildBusStops`' list) are painted on the land layer in the town's box round the skeleton's town point
+  (`paintTowns3(L, W, H)`, at the top of `worldOpts`, before the build reads the layer): on land, off the highways'
+  room (24 tiles of their line), the main line (18) and its stations (30). The biomes read the land layer's districts,
+  so their ground and dressing make way (8.8: `dress3` dresses 48-56, `redwoodGroves` Highland Woods' 47): no field,
+  farmstead, redwood or dune grass in a town. The generator then lays the town's ground as any built district's
+  (plain ground for the lots, the beach town's sand kept).
+- **Its streets** (`layTowns3(lines, m)`, in the `lines` hook after `layRoads`): a grid of streets (`st`) and a main
+  street (an east-west `art`: one lane each way with sidewalks, so `buildBusStops` gives it bus stops), each line
+  clipped to the town's ground in runs of 8 tiles or more, and kept off an arterial running alongside it within 10
+  tiles; the arterials through the town (Timber Road; Willow Road and the Mine Road; Sandpiper Drive's two arms) cross
+  the grid and the generator joins them where they cross, so the town's streets are on the one network.
+- **Its blocks and buildings** are the generator's, from the free ground between the streets (`findBlocks`, `STYLE`):
+  rows of shops, houses, the corner store, a diner, a bar in the country towns; beach houses, cafes, a beach bar and a
+  hotel at Sandpiper Bay.
+- **Its planned businesses** (`TOWN_SPECIALS`, the generator's `SPECIALS` form, handed in as `opts.specials` so only
+  the v3 build places them; `fixed`, so the generator's later passes don't make one a gun shop, a tackle shop or a
+  bank):
+
+  | Town | The basics | Its own places |
+  |---|---|---|
+  | Timber Bend (57) | Timber Bend Fuel (gas station), Timber Bend Clinic (`hospital`), Timber Bend Sheriff (`police`), The Sawdust Diner | a strip of the hunting lodge (`lodge`), Bend Game Butcher (`butcher`), Axe & Saw Hardware (`hardware`), Redwood Creek Tackle (`tackle`); Timber Bend Sawmill; Pine Rest Motel |
+  | Willow Crossing (58) | Willow Crossing Fuel, Willow Crossing Clinic, Willow County Sheriff, Crossroads Diner | Willow Valley Farm Co-op (`farm`, the farmstead prefab), Willow Crossing Grain Elevator, Willow Crossing Chapel (the church), a strip of the farmers' `market`, a `farmstand`, a `fruitstand` and Valley Feed & Seed |
+  | Sandpiper Bay (59) | Sandpiper Bay Fuel, Sandpiper Bay Clinic, Boardwalk Diner, The Sandpiper (the beach bar) | a strip of Sandpiper Surf Co. (`sports`: the surf shop), Pier Tackle & Bait (`tackle`), Shorebird Snack Bar (`snack`) and the Lifeguard Station |
+
+- **The gas stations** (`townsDone(m)`, in the `done` hook): `buildCornerStores` makes five at most, 3,500 px apart,
+  and they are all in the city; each town's planned store is a convenience store (so it isn't one of the five) and
+  becomes its gas station here, with its two pumps on the paving in front (`m.pumps`, solid). A town whose main street
+  `buildBusStops` left no bus stop (doors all along it) gets one on its main street's sidewalk. The summary is
+  `m.world3.towns` (`painted`, `streets`, `built`).
+
+**The test** (`test/world3towns.test.js`, one world build, about 40 s): the districts after the biomes'; each town's
+ground (over 8,000 tiles), its streets laid and every edge of them on the one network, its main street an arterial;
+over 20 buildings; a gas station with its pumps, a clinic or the sheriff, a diner or a bar, a bus stop; every planned
+place in the town with its kind; no building corner within 22 tiles of a highway's line or 14 of the main line's; the
+bowling alley still in the city (a town's plain warehouse would have taken it: the sawmill and the grain elevator are
+the industrial prefab). `test/world3biomes.test.js` counts 60 districts now.
+
+**What's built** (the world build, seed 1337: `m.world3.towns`; the build takes 25-27 s, as before):
+
+| town | its ground | streets (edges) | buildings | POIs | bus stops |
+|---|---|---|---|---|---|
+| Timber Bend | 14,803 tiles, west of Redwood Creek (the highway's room takes the strip between the creek and the highway) | 7 lines, 853 tiles | 32 | 19 | 1 (the fallback) |
+| Willow Crossing | 19,320 tiles on the Long Reach's east bank round the hub | 6 lines, 815 tiles | 43 | 21 | 3 |
+| Sandpiper Bay | 26,496 tiles between Sandpiper Drive's arms and the beach | 10 lines, 1,518 tiles | 36 | 27 | 2 |
+
+Each town also has what the generator's district passes give a built district: ATMs, a gun shop (what's left, 7), a
+tackle shop by the water, homes (`home`: the apartments and houses for sale).
+
+**The pictures** (`node --expose-gc tools/world3-world-map.mjs --sample 0 --towns`: each town's box and 24 tiles round
+it through the game's chunk bake at 1/8, 56-99 chunks, 22-28 s a town): `docs/world-v3-town-timber.png`,
+`docs/world-v3-town-willow.png`, `docs/world-v3-town-sandpiper.png`. What looks right: each reads as a town in its
+biome - Timber Bend a clearing of streets and brick shops in the redwoods, Timber Road coming in from the west across
+the grid and over Redwood Creek to the hub, Falls Pass Road along the creek's far bank, the main line in the trees to
+the south; Willow Crossing on the Long Reach's bank with Valley Road's bridge in from the west, Willow Road through it
+and the Mine Road out east, wheat, orchards and vineyard rows right up to its edge (the valley's fields made way, none
+under the town); Sandpiper Bay in the palms and dune grass with Sandpiper Drive's two arms through it. What looks
+wrong:
+- **Too much street:** a 28-30 tile grid of the generator's streets is a city's: in a town of 32-43 buildings it is
+  more asphalt than lots, and every street end on the town's edge is a dead end with a turnaround (8-12 per town). A
+  small town wants a main street with a few side streets, not a grid - fewer lines, ending on the arterials.
+- **The arterials cut the grid on the slant** (Timber Road, Willow Road, Sandpiper Drive's arms): slivers of blocks
+  and acute junctions where they cross the grid. The grid could be laid along the arterial (its own axis) instead.
+- **City buildings:** the oldtown style's brick shops and apartment blocks, parking lots; the beach style's beach
+  houses and hotel with wide brown paving between them (its `plaza` filler). The wooden shopfronts, the sawmill and log
+  yard, the grain elevator's silos, the boardwalk want their own prefabs or a small-town style (the art).
+- **Sandpiper Bay stands back from its beach:** its box ends where the sand begins at its south-east corner; no
+  beachfront row, boardwalk, pier (BE2) or lifeguard towers. The town wants laying along the beach (a box south-east,
+  a beachfront drive), its blocks facing the sea.
+
+**What's left** (in order):
+1. The towns' layout (above): a main street and side streets instead of a grid, laid on the arterial's axis; Sandpiper
+   Bay along its beach with the boardwalk and the pier.
+2. **The stations:** Timber Bend's main-line station is 125 tiles south of the town (8.10's, not joined to the town's
+   streets: no road from the town to it was laid), Sandpiper Bay's 488 tiles away at the Sandpiper Interchange, Willow
+   Crossing has none (for the owner, 8.11: a station in the town, or the town by the station).
+3. **The zone:** the towns take Northshore's built zone (8: `BUILT_ZONES`, `buildBusStops`), so the generator's box
+   for Northshore (`ISLANDS.N.box`, the tour's and the map's) spans the mainland; a zone of the towns' own wants
+   `BUILT_ZONES` and `buildBusStops`' list to take it (map.js).
+4. **Part 1.5's table, not yet in the towns:** the trapper at Timber Bend (the Redwood Creek trapper's cabin is in the
+   woods nearby), boat `rental` on the river at Willow Crossing (a boat hire needs its water and its boats' spots, as
+   the lakes' `rental`), the `winery` up the hill, a `bank`, the boardwalk arcade (`ride`), the `marina` (Toll
+   Point's, at the East Toll Bridge), the feed store and the lifeguard station as kinds of their own (named places now).
+5. **Not checked in the game:** the strips' new storefront kinds (`lodge`, `butcher`, `market`, `farmstand`,
+   `fruitstand`, `snack` as a strip's units: the hunting lodge's counter, the market's menu) and the towns' gas
+   stations - a playtest on the v3 world (`CLA_WORLD=v3`).
+6. Timber Bend's crossing of the Highland Highway as a diamond (8.11 item 3), now that the town is laid out.
+7. **The generator's world-wide passes reach the towns:** `buildGunShops` spreads its 11 gun shops by farthest point
+   (2,400 px apart, one a district), so the three towns, far from the gulf, each take one - the gulf has three fewer
+   in the v3 world than built alone; `buildTackleShops` puts one by the water at Timber Bend and Willow Crossing. For
+   the owner: the count by the world's size (v3), or the towns' hunting stores as their gun shops.
