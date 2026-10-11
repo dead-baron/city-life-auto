@@ -2801,8 +2801,11 @@ any of it: today's world keeps its path - the kept city, the download of the who
   region: at the start the title screen says so (8.9's `holdForCity`), on a move the page toasts it and the worker
   waits 10 s before asking again. Nothing is ever built in its place (a v3 world is never built on the page).
 - **The world's** (`client/main.js` `windowNotServers`): the welcome's signature against the index's. Another build:
-  the page reloads into it (as for today's world); the same build: the kept files go and the page reloads once, then
-  plays on and tells the server (`diag`).
+  the page reloads into it (as for today's world); the same build: the page reloads once, then plays on and tells the
+  server (`diag`). Either way the next load is afresh (`cla.fresh3`, read by `client/boot.js`): the kept files are
+  cleared and the window is downloaded past the HTTP cache - **the v3 world's files keep their URL** while today's
+  world's hash does (`version.json`'s world is today's city's hash; a change to the v3 build alone doesn't change it),
+  so after such a change a browser's kept or cached files are another world's, and this is how they go.
 - An index without them (a server from before) is read as before: nothing checked.
 
 **The world's places** (8.1's note)
@@ -2845,7 +2848,8 @@ any of it: today's world keeps its path - the kept city, the download of the who
   window too, today's whole assembly unchanged (no places, no picture); the kept regions - the first visit downloads
   10 files and keeps them, the return visit downloads none (the same tiles), a move downloads the 3 regions it hadn't
   kept, a spoiled kept region is downloaded again past the HTTP cache and the good one kept, a kept index that doesn't
-  read downloaded again; the districts' middles in a window - every district of the world, as the whole map's.
+  read downloaded again; a load afresh - nothing read from the store, which is cleared, every file past the HTTP
+  cache; the districts' middles in a window - every district of the world, as the whole map's.
 - `test/world3window.test.js` (the v3 world built once): every region's signature and the world's; a window round the
   gulf's hospital lists all 860 places, the 339 outside it as the world has them; the picture 1260 x 1008, its tiles
   the world's.

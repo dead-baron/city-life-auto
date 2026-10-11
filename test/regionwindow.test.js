@@ -268,3 +268,26 @@ test("the districts' middles in a window: every district of the world (the big m
   const inWindow = new Set(); for (let ty = w.y0; ty < w.y0 + w.h; ty += 3) for (let tx = w.x0; tx < w.x0 + w.w; tx += 3) inWindow.add(w.dist[w.idx(tx, ty)]);
   assert.ok(w.mids.some(([d]) => !inWindow.has(d)), 'districts outside the window named too');
 });
+
+test("a load afresh (the kept files weren't the server's world: main.js windowNotServers): none read from the store, which is cleared, and every file downloaded past the HTTP cache", async () => {
+  const { gzipSync } = await import('node:zlib');
+  const { fetchWindow } = await import('../client/worldgen.js');
+  const pack = PACK(256), files = new Map([['index.bin', pack.index], ...pack.regions.map((r) => [`${r.key}.bin`, r.bytes])]);
+  const kept = new Map(), store = { get: async (n) => kept.get(n) || null, put: async (n, b) => { kept.set(n, b); return true; }, drop: async (n) => kept.delete(n), clear: async () => { kept.clear(); return true; } };
+  const asked = [];
+  const fetchFn = async (url, o) => { const name = url.split('/').pop().split('?')[0]; asked.push([name, (o && o.cache) || '']); return new Response(gzipSync(files.get(name)), { status: 200 }); };
+  await fetchWindow('http://cdn/world/', 'abcdef123456-v3:1337', 1337, [700, 600], { fetchFn, store });
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(kept.size, 10);
+  kept.set('r9-9.bin', new Uint8Array([1]));   // (anything else kept goes too)
+  asked.length = 0;
+  const w = await fetchWindow('http://cdn/world/', 'abcdef123456-v3:1337', 1337, [700, 600], { fetchFn, store, fresh: true });
+  assert.deepEqual([w.win.kept, w.win.fetched], [0, 10]);
+  assert.ok(asked.length === 10 && asked.every(([, c]) => c === 'reload'), 'past the HTTP cache');
+  await new Promise((r) => setTimeout(r, 10));
+  assert.ok(!kept.has('r9-9.bin') && kept.size === 10, 'the store cleared, then the new files kept');
+  // and a move afterwards in the same load: still past the cache
+  asked.length = 0;
+  w.keeper.want(768 - 20, 640); await w.keeper.idle();
+  assert.deepEqual(asked.map(([n, c]) => `${n} ${c}`).sort(), ['r4-1.bin reload', 'r4-2.bin reload', 'r4-3.bin reload']);
+});

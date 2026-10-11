@@ -29,7 +29,8 @@ function req(db, mode, fn, v = null) {
   }), WAIT_MS * 2, v);
 }
 
-// the store for one world: { get(name) -> its bytes or null, put(name, bytes) -> true once kept, drop(name), kept() }
+// the store for one world: { get(name) -> its bytes or null, put(name, bytes) -> true once kept, drop(name), kept(),
+// clear() (every kept file, this world's and any other's) }
 export function regionStore(world) {
   let dbP = null, marked = null;
   const db = () => (dbP ||= openDb());
@@ -42,6 +43,7 @@ export function regionStore(world) {
     async put(name, bytes) { const d = await db(); if (!d) return false; await mark(d); return req(d, 'readwrite', (s) => s.put({ world, at: Date.now(), bytes }, key(name)), false); },
     async drop(name) { return req(await db(), 'readwrite', (s) => s.delete(key(name)), false); },
     async kept() { return req(await db(), 'readonly', (s) => s.getAllKeys(), []); },
+    async clear() { marked = null; return req(await db(), 'readwrite', (s) => s.clear(), false); },
   };
 }
 // forget every kept file (the world's files weren't the server's world: client/main.js)

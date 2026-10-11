@@ -7601,8 +7601,9 @@ position) belongs in the index"), "regions kept one by one" in the browser, and 
   map's, what the welcome says). The city worker's window keeper checks each region as it assembles it: one that
   doesn't match (or doesn't open) is dropped - from memory and from the browser's store - and fetched again past every
   cache; refused again, no window is assembled and the page says which region (the title screen at the start, a
-  toast on a move). The welcome's signature is checked against the index's: another build reloads into it; the same
-  build drops the kept files and reloads once. Today's world: the whole-map check as before.
+  toast on a move). The welcome's signature is checked against the index's: another build reloads into it, the same
+  build reloads once - and that load is afresh (nothing kept read, everything past the HTTP cache: the v3 world's files
+  keep their URL while today's world's hash does). Today's world: the whole-map check as before.
 - **The world's places:** the index lists every POI (id, kind, label, position, district, home); a window's city
   carries them as `places`, by the POI's world index, and the phone's Places app (the list, the district, the
   waypoint), its nearest courthouse and ATM, the big map's icons and its panel read them - a window lists the whole
@@ -7622,7 +7623,8 @@ position) belongs in the index"), "regions kept one by one" in the browser, and 
 Files: shared/regionpack.js (`regionSig`, `regionMatches`, the index's `sigs`, `sig`, `places`, `picture`; a window's
 `places` and `picture`), server/worldcdn.js (the world's signature into the cut), client/worldwindow.js (`region`: the
 check, the fetch again), client/worldgen.js (`fetchWindow`: the store, the index read again, `retryAt`),
-client/regionstore.js (new), client/main.js (`windowNotServers`, the window's toast and log), client/hud.js
+client/regionstore.js (new), client/main.js (`windowNotServers`, the window's toast and log), client/boot.js
+(`cla.fresh3`), client/hud.js
 (`coarseMinimap`, `paintMinimap`, `drawMini`, `iconSkip`, `districtCentroids`), client/worldmap.js, client/phone.js, client/mapwaypoints.js
 (the places), test/regionwindow.test.js, test/world3window.test.js, docs/WORLD-V3.md 8.12 and 8.12.2.
 

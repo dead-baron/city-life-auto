@@ -75,12 +75,15 @@ const unzip = async (bytes) => new Uint8Array(await new Response(new Blob([bytes
 // store: the files kept in the browser (client/regionstore.js: { get, put, drop }; null: none) - a returning player's
 // window comes from it, and only what it hasn't kept is downloaded (and kept). The index and every region are checked
 // (shared/regionpack.js readIndex, the keeper's signatures): a kept file that isn't right is dropped and downloaded again.
-export async function fetchWindow(base, key, seed, at, { fetchFn = globalThis.fetch, ms = 8 * FETCH_MS, store } = {}) {
+// fresh: the files kept or cached weren't the server's world (client/main.js windowNotServers): the kept ones go, and
+// this window is downloaded past the HTTP cache (the v3 world's files keep their URL while today's world's hash does)
+export async function fetchWindow(base, key, seed, at, { fetchFn = globalThis.fetch, ms = 8 * FETCH_MS, store, fresh: anew = false } = {}) {
   const world = String(key || '').split(':')[0];
   if (!base || !/^[0-9a-f]{6,40}(-v3)?$/.test(world) || typeof fetchFn !== 'function' || typeof DecompressionStream === 'undefined') return null;
   const url = `${base}${world}/${seed >>> 0}/`, until = Date.now() + ms, got = { kept: 0, fetched: 0 };
   if (store === undefined) store = (await import('./regionstore.js')).regionStore(`${world}:${seed >>> 0}`);
-  const getGz = async (name, fresh = false) => {   // (the file as it came: gzipped - what the window keeps)
+  if (anew && store && store.clear) await store.clear().catch(() => {});
+  const getGz = async (name, fresh = anew) => {   // (the file as it came: gzipped - what the window keeps)
     if (store && !fresh) { const b = await store.get(name).catch(() => null); if (b) { got.kept++; return b; } }
     for (;;) {
       const r = await fetchFn(`${url}${name}?v=${PACK_VERSION}`, fresh ? { cache: 'reload' } : undefined);
@@ -94,11 +97,11 @@ export async function fetchWindow(base, key, seed, at, { fetchFn = globalThis.fe
   };
   const { WindowKeeper } = await import('./worldwindow.js');
   let index = null, X = null;
-  for (const fresh of [false, true]) {   // (a kept index that doesn't read: dropped, downloaded again)
+  for (const fresh of [anew, true]) {   // (a kept index that doesn't read: dropped, downloaded again)
     try { index = await unzip(await getGz('index.bin', fresh)); X = readIndex(index); break; } catch (e) { if (fresh) throw e; if (store) await store.drop('index.bin').catch(() => {}); }
   }
   const { frame } = X;
-  const keeper = new WindowKeeper({ frame, fetchRegion: (k, fresh) => getGz(`${k}.bin`, fresh), open: unzip, sigs: X.sigs, forget: (k) => store && store.drop(`${k}.bin`) });
+  const keeper = new WindowKeeper({ frame, fetchRegion: (k, fresh) => getGz(`${k}.bin`, fresh || anew), open: unzip, sigs: X.sigs, forget: (k) => store && store.drop(`${k}.bin`) });
   const p = Array.isArray(at) && Number.isFinite(at[0]) && Number.isFinite(at[1]) ? at : [frame[0] / 2, frame[1] / 2];
   const win = await keeper.start(p[0], p[1]);
   const data = await keeper.assemble(index, win);
@@ -130,7 +133,7 @@ if (typeof self !== 'undefined' && typeof window === 'undefined' && typeof self.
     // (World v3 from the server: its window, not the whole world - ?wholeworld asks for all of it, as before)
     if (isV3(key) && base && e.data.window !== false) {
       try {
-        const w = await fetchWindow(base, key, seed, at);
+        const w = await fetchWindow(base, key, seed, at, { fresh: !!e.data.fresh3 });
         if (!w) throw new Error('World v3\'s world could not be downloaded from the game server');
         WIN = { keeper: w.keeper, index: w.index, key, sig: w.win.sig, retryAt: 0 };
         self.postMessage({ ok: true, seed, key, from: 'served', ms: performance.now() - t0, data: w.data, win: w.win, alive: true }, layersOf(w.data, key));

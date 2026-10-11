@@ -1034,6 +1034,7 @@ function keepWindow(job) {
 function windowNotServers(m) {
   console.warn('[world] the world\'s files are not the server\'s world:', S.win.sig, 'vs', m.sig);
   const drop = import('./regionstore.js').then((r) => r.dropRegions()).catch(() => {});
+  try { sessionStorage.setItem('cla.fresh3', '1'); } catch { /* blocked */ }   // (the next load: nothing kept or cached - boot.js)
   if (!(m.build && String(m.build) === myBuild().v)) { if (S.updating) $('play').disabled = true; else outdatedBuild(m.sig); return true; }
   let tried = null;
   try { tried = sessionStorage.getItem('cla.reload3'); sessionStorage.setItem('cla.reload3', m.sig); } catch { /* blocked */ }
