@@ -2438,7 +2438,8 @@ wrong:
    track's road crossing is two crossings (each track its gates, the arms between the tracks crossing): one crossing
    with its arms outside both tracks wants an arm offset per crossing (`CROSSING_ARM` is one constant now).
 2. The junctions designed (above), the towns' crossings as bridges or cuttings, the tunnels' mouths and cover.
-3. The client's trains (`client/render/trains.js`) and its minimap read `map.rail` (the first loop) for the line's
-   drawing; the cars themselves come from the server.
+3. The in-game world map draws every loop (`client/worldmap.js`); the phone's nearest stations and the v1 renderer's
+   crossings (`client/phone.js`, `client/main.js`) read `map.rail` (the first loop) - the cars themselves come from
+   the server.
 4. More trains (two a loop now: the Grand Loop's stations see one about every 6-7 minutes each way), and a timetable that
    spaces the loops' trains through the shared junctions.

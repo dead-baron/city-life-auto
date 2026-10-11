@@ -7303,7 +7303,7 @@ What it does (docs/WORLD-V3.md 8.10 has the numbers):
 Files: shared/world3-rail.js (new), shared/world3-world.js (the `rails` hook), shared/map.js (the railway passes by
 line, `railXings`), server/systems/trains.js (the loops, the signals, the crossings, the NPCs' care, the boards),
 server/systems/economy.js (a station's next train by its map point), shared/regionpack.js (the loops' points by
-region), client/art2/game/groundbake.js, client/art2/game/statics.js, client/art2/game/host.js (every loop), tools/world3-world-map.mjs (the main line
+region), client/art2/game/groundbake.js, client/art2/game/statics.js, client/art2/game/host.js, client/worldmap.js (every loop), tools/world3-world-map.mjs (the main line
 drawn), test/world3rail.test.js (new), docs/world-v3-world.png, docs/world-v3-world-r4-3.png, docs/WORLD-V3.md 8.10.
 
 Tests: test/world3rail.test.js (one world build: the loops and their stops, the double track, the bed, the decks, the
