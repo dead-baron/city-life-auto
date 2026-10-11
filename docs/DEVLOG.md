@@ -7824,3 +7824,34 @@ docs/WORLD-V3.md 8.16, docs/world-v3-hub-downtown.png, docs/world-v3-hub-airport
 
 Tests: test/world3subway.test.js (one world build: the lines, the stations with their kiosks on plazas, the trains for
 five minutes - running, stopping, no collisions), test/world3rail.test.js, test/world3hubs.test.js.
+## 2026-10-11 · World v3: today's wild land's places at their v3 spots (in progress)
+The v3 world build dropped whatever of today's world lies outside the built places (WORLD-V3.md 8.6: "Positions that
+belong to no built place (Dry Creek, today's wild land) are sent off the frame and dropped") - but part 1.5 moves today's
+wild land's designed places into the new regions, and the owner ruled on Dry Creek (part 5: "split between the valley
+and the desert ... rebuild Dry Creek to blend in well").
+- **The country sites** of today's Highland Woods, Granite Peaks and Dry Creek (fifteen: the campgrounds, the Highland
+  and Route 9 roadside stops, the radio masts, the Granite Quarry, the observatory, the wind farms, the oil field, the
+  solar farm, the drive-in, The Rusty Spur) are placed by today's rules round their spots in the v3 woods, peaks and the
+  Red Rock Desert's west (a placement table): open ground of the region, clear of the roads, the highways' and the main
+  line's room, the stations, the towns and the desert's places, each with its own road in from the nearest road it may
+  join - never a highway. map.js builds them as today's.
+- **Four nature sites moved whole** round their anchors: Pine Lake between the stop and the campground, Summit Tarn and
+  its falls, Granite Hot Springs above Summit Road, The Sentinel Stones by the observatory. naturesites.js takes those
+  sites' anchors and districts through the placement (`PXs`, `DS`); the world build's pin finds the moved square.
+- The ore veins lie round every quarry's pit (the Granite Quarry's and Copper Gulch Mine's in the v3 world); every
+  mine's seams are worked.
+- Not done yet: the rest of the wild nature sites (Redwood Creek and its falls, Giants Loop, Fern Gorge, Redwood Cove,
+  the trapper's cabin, Granite Cove, the Old Granite Mine and its cave, Ridge Fire Lookout, the hunting camps), Dry
+  Creek's farmland into Willow Valley and its desert places (WORLD-V3.md 8.19's list). Nothing live changes: the world
+  hash stays 6b6e16fdef9f.
+
+Files: shared/world3-wild.js (new), shared/world3-world.js (the calls, `pick` asks `movedAt`), shared/map.js (the nature
+sites' placement carries the district map: one line), shared/naturesites.js (Pine Lake, Summit Tarn, the hot springs,
+the stones through `PXs` / `DS`), shared/underground.js (the veins round every pit), server/systems/places.js (every
+mine's seams), tools/world3-world-map.mjs (`WILD_VIEWS`), test/world3wild.test.js (new), docs/WORLD-V3.md 8.19,
+docs/world-v3-town-pinelake.png, docs/world-v3-town-tarn.png, docs/world-v3-town-summit.png.
+
+Tests: test/world3wild.test.js (one world build: each site placed and built once on its region's ground, its road in on
+the one network and meeting no highway, clear of the skeleton's lines; both quarries' veins; the moved nature sites at
+their spots, no road over their water), test/world3.test.js, test/world3desert.test.js, test/world3roads.test.js,
+test/world3world.test.js.

@@ -64,6 +64,15 @@ export function movedAt(x, y) {
   for (const p of MOVED_PIECES) if (x >= p.rect[0] && y >= p.rect[1] && x < p.rect[2] && y < p.rect[3]) return p;
   return null;
 }
+// the pictures' views (tools/world3-world-map.mjs --towns --only <keys>: docs/world-v3-town-<key>.png)
+export const WILD_VIEWS = [
+  { key: 'pinelake', name: 'Pine Lake, the Highland stop, Pine Ridge Campground and the radio mast', box: [610, 1020, 930, 1135] },
+  { key: 'tarn', name: 'Summit Tarn, its falls and the cabin meadow', box: [850, 140, 960, 230] },
+  { key: 'summit', name: 'Granite Hot Springs, The Sentinel Stones and the observatory on Summit Road', box: [470, 90, 760, 200] },
+  { key: 'quarry', name: 'The Granite Quarry on Falls Pass Road', box: [1190, 390, 1320, 470] },
+  { key: 'drycreek', name: 'The oil field, The Rusty Spur and the motel on Mine Road', box: [3690, 1090, 4020, 1215] },
+  { key: 'route9', name: 'The Route 9 stop, the solar farm and the drive-in on Route 9', box: [3760, 1420, 4230, 1590] },
+];
 // the room kept round the skeleton's lines (tiles): the highways', the main line's and its stations' as the desert's
 // places keep (world3-desert.js), a road's own few tiles
 export const WILD_ROOM = { hwy: 24, main: 18, station: 30, road: 4, place: 12 };

@@ -212,9 +212,10 @@ if (process.argv.includes('--towns')) {
   const { TOWNS3 } = await imp('shared/world3-towns.js');
   const { MESA } = await imp('shared/world3-mesa.js');
   const { DESERT_VIEWS } = await imp('shared/world3-desert.js');   // (8.18: Copper Gulch and its mine, Dusty Hollow, the dam, the motel, the lookout, the camp)
+  const { WILD_VIEWS } = await imp('shared/world3-wild.js');   // (8.19: today's wild land's places at their v3 spots)
   const ONLY = arg('--only', null), NIGHT = process.argv.includes('--night');
   const S8 = 8, CHP = CT * TILE, CS8 = CHP / S8;
-  for (const t of [...TOWNS3, MESA, ...DESERT_VIEWS]) {
+  for (const t of [...TOWNS3, MESA, ...DESERT_VIEWS, ...WILD_VIEWS]) {
     if (ONLY && !ONLY.split(',').includes(t.key)) continue;   // (--only a,b: those)
     const [x0, y0, x1, y1] = t.box;
     const cx0 = Math.floor((x0 - 24) / CT), cy0 = Math.floor((y0 - 24) / CT), cx1 = Math.floor((x1 + 24) / CT), cy1 = Math.floor((y1 + 24) / CT);
