@@ -2698,3 +2698,52 @@ its items only - and the moves across a border and to the corner).
    (not yet seen in a playtest). To look at in a real browser.
 6. **The minimap is a frame-sized canvas** (5040 x 4032, 81 MB of pixels): wants a coarser picture at v3 (8.2's note).
 7. **Regions aren't kept in the browser** (IndexedDB): each visit downloads the window (about 2 MB).
+
+### 8.14 Northshore's beach towns; the stations' houses and clear platforms (2026-10-10, H35)
+
+Part 7: "Northshore keeps today's density and runs on along the coast as beach towns. The Coast Highway moves behind
+them ... so the waterfront is beaches and the Shore Road" (the owner, 12:44, asked for a large urban area with lots of
+beachfront, then at 12:50 "We can make northshore less dense"). 8.8 left district 54 (Northshore Beaches) unbuilt and
+The Bluffs 55-127 tiles back from the sand; 8.10.1 left trees over Westport Junction's platforms and the station
+building as the subway's kiosk. Nothing live changes: the world hash stays `6b6e16fdef9f`; the art hash changes (the
+station house and the lifeguard tower are new art).
+
+**The beach towns** (`shared/world3-beach.js`, two calls from `shared/world3-world.js`: `beachStreets` at the end of its
+`lines` hook, `beachFront` at the start of its `rails` hook; 54 is no longer `unbuilt`):
+- **The streets:** a loose grid on district 54's land (not its beach) either side of today's Northshore, from the
+  Coast Highway's room down to the Shore Road (the beachfront road, an arterial of the skeleton): streets parallel to
+  the Shore Road every 40 tiles inland (`ROW`, following its curve), cross streets every 60 (`COL`) from the Shore Road
+  up. They keep clear of the roads already laid (by kind: 26 tiles off a highway's middle, 11 off an arterial's), 18
+  tiles off the main line's polyline and 5 off Northshore's own blocks; every third cross street goes over the main
+  line (the generator makes the gated level crossing), the rest stop short of its bed. A street's end within 14 tiles
+  of a road (not a highway) is carried on to it: a junction. Invented names (Surf Street, Dune Street, Pier Avenue,
+  Driftwood Lane, ...).
+- **The blocks** are the generator's, in the district's `beach` style: beach houses (house1/2/5/9), cafes,
+  restaurants, diners and beach bars, hotels, a few small apartment blocks and corner stores, the rest low roofs -
+  less dense than a city (`ROW` 40 x `COL` 60 against the city's 24-30; the test: building cover under 3/4 of
+  Northshore's). The Bluffs' gap down to the beach is the beach town's blocks now.
+- **The front** (before the blocks): the promenade - 3 tiles of paving on the sand along the Shore Road's sea side;
+  car parks (14 x 8 tiles of LOT) on the Shore Road's land side every 150 tiles or so, steps (a paved flight) from the
+  promenade down onto the sand opposite each; lifeguard towers on the sand every 120 tiles, two thirds of the way down
+  to the water (`m.lifeguards`, solid; art v2 `lifeguardTower`, the classic renderer `drawLifeguardTower`). Nothing
+  the dressing grew stays on the promenade or the car parks (`clearBeachFront`, from the `done` hook).
+- **The beach** in front stays the land layer's (`beach: 30` tiles for Northshore's biome): sand all along between the
+  Shore Road and the sea.
+
+**The stations** (`shared/world3-rail.js`, from the `done` hook, which now gets map.js `removeProps`):
+- **No trees over the track or a platform** (`clearRailDressing`): the build kept props only 46 px off the track
+  (map.js `clearPropsOnRail`); now a tree keeps its crown's reach off the track (`CROWN` by its felling size: 70-150
+  px, plus a platform's width beside one), nothing but a lamp stands on a platform, and nothing on the station house
+  or under a tree's crown over it. A bore's and a tunnel's track is under cover: what grows on top stays.
+- **A station house** for each station (`m.railHubs`): a modest one-storey building in cream render under a hipped
+  slate roof, tall windows lit at night, a canopy on iron posts along its platform side, the doors and a clock gable on
+  the street side (art v2: `client/art2/props-road.js` `stationHouse`, put by `statics.js` `railHubs` in place of the
+  subway kiosk; the classic renderer: `client/render/trains.js` `drawStationHouse`, from above). **Seated on open
+  ground** (`seatStationHouses`): where buildRailHubs' spot is wet, a road, a building or within 70 px of a track, the
+  house moves to the nearest spot round the platforms that is clear, facing away from the nearest track (its map
+  point and forecourt with it) - Old Town's stood in the water. It is art only: it doesn't block the way yet.
+
+**The test** (`test/world3beach.test.js`, one world build, about 35 s): the beach towns' streets (rows, cross streets,
+some over the line) on the network with the Shore Road; their buildings (houses, cafes and bars), less dense than
+Northshore; the beach in front all along, the promenade, the car parks, the lifeguard towers on the sand; no tree on a
+platform or with its crown over the track at a station; every station's house on open ground; the art v2 models.

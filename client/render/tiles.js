@@ -9,7 +9,7 @@ import { PREFABS, GROUND_TEX, PROP_SIZES } from '../../shared/prefab-data.js';
 import { BLOCK_ART } from '../../shared/block-data.js';
 import { INTERIOR_RECTS, INTERIOR_KINDS, SCENE_RECTS } from '../../shared/interior-art.js';
 import { atlas } from './sprites.js';
-import { railIndex, drawRailChunk, drawStation, drawPortals, drawRailSwitches } from './trains.js';
+import { railIndex, drawRailChunk, drawStation, drawPortals, drawRailSwitches, drawStationHouse, drawLifeguardTower } from './trains.js';
 import { drawRoads, edgeRect, drawGores } from './roads.js';
 import { Shores } from './shore.js';
 import { drawCountryProp, drawQuarry, drawRaceway } from './country.js';
@@ -126,6 +126,8 @@ export class GroundCache {
     if (this.rails) { for (const t of [false, true]) m.rails.forEach((r, ri) => drawRailChunk(g, m, this.rails[ri].get(k), r, t)); drawRailSwitches(g, m, cx, cy); }
     else drawRailChunk(g, m, this.rail.get(k));
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, m, st, cx, cy);
+    for (const h of m.railHubs || []) drawStationHouse(g, h, cx, cy);   // (H35: World v3's station houses)
+    for (const t of m.lifeguards || []) drawLifeguardTower(g, t, cx, cy);   // (H35: the beach towns' lifeguard towers)
     if (L.props) for (const s of this.stalls.get(k) || []) drawStall(g, s);
     for (const r of this.roofs.get(k) || []) drawBuildingBase(g, r); // the roof itself is lifted onto its walls (render/buildings.js)
     drawPortals(g, m, cx, cy);

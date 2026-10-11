@@ -21,7 +21,8 @@ import { PLACEMENTS } from './world3.js';
 import { WATER3, TERRAIN3 } from './world3-land.js';
 import { joinPlace } from './world3-crossings.js';
 import { layRoads, roadTunnels } from './world3-roads.js';
-import { mainLineLoops } from './world3-rail.js';
+import { mainLineLoops, clearRailDressing, seatStationHouses } from './world3-rail.js';
+import { beachStreets, beachFront, clearBeachFront } from './world3-beach.js';
 import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3, peakHeight, SNOW_LINE, SNOW_CLS } from './world3-biomes.js';
 import { terrainAt } from './mapcore.js';
 
@@ -165,13 +166,17 @@ export function worldOpts(asked) {
     // redwoodGroves'), and at the end the terrain classes at the v3 frame for the renderer and the wildlife
     dressed: dressedBy3,
     pine: pineAt3(L, W),
-    unbuilt: new Set([52, 54]),   // (the Sandpiper Coast and Northshore's beach towns: no streets yet - the next step)
+    unbuilt: new Set([52]),   // (the Sandpiper Coast: no streets yet; Northshore's beach towns (54) are built - world3-beach.js, 8.14)
     dress(m, H2) { m.world3biomes.dress = dress3(m, L, keep, H2); },
-    done(m) { const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; }); },
+    done(m, H3) {
+      const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
+      m.world3.housesMoved = seatStationHouses(m);   // (8.14: each station's house on open ground)
+      if (H3) { m.world3.railCleared = clearRailDressing(m, H3.removeProps); clearBeachFront(m, H3.removeProps); }   // (8.14: no tree over the main line or a platform; the promenade and car parks clear)
+    },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground)
     special: (sp) => built.has(sp.d),
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)
-    rails: (m) => mainLineLoops(m),     // (the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
+    rails: (m) => { beachFront(m, L); return mainLineLoops(m); },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
     lines(lines, m) {
       const out = { split: 0, offFrame: 0 };
       const inF = (p) => p.x >= 0 && p.y >= 0 && p.x < W * TILE && p.y < H * TILE;
@@ -210,6 +215,7 @@ export function worldOpts(asked) {
       }
       m.world3 = { pieces: pieces.map((p) => ({ key: p.key, at: p.at, s: p.s })), split: out.split, offFrame: out.offFrame, cut: j.cut, dropped: j.dropped, bridged: j.bridged, canal: j.canal, crossings };
       m.world3.roads = layRoads(lines, m, L);   // (the skeleton's highways and arterials: shared/world3-roads.js, 8.7)
+      m.world3.beach = beachStreets(lines, m, L);   // (Northshore's beach towns' streets: shared/world3-beach.js, 8.14)
     },
   };
   return o;

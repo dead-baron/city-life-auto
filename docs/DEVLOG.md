@@ -7442,3 +7442,31 @@ v3 world: a window round a hospital, a move east, the frame's corner), a headles
 (`CLA_WORLD=v3`, `?world=v3`: joining, crossing a border, a far teleport), test/regions.test.js, test/mapwindow.test.js, test/bowling.test.js, test/cinema.test.js,
 test/hudlayers.test.js (all pass); the code budgets (node tools/perf.mjs codeReport: page 463 of 485 KB, city 348 of
 360, renderer 362 of 363, bake 738 of 765).
+
+## 2026-10-10 · World v3: Northshore's beach towns; the stations' houses, no trees over the platforms
+
+The owner (part 7 of docs/WORLD-V3.md, 12:44-12:50) asked for a large urban area with lots of beachfront, then "We
+can make northshore less dense": Northshore runs on along the gulf's north shore as beach towns, the Coast Highway
+behind them, the waterfront beaches and the Shore Road. And 8.10.1's wrongs: the redwoods over Westport Junction's
+platforms, the station building a placeholder (the subway's kiosk).
+- **The beach towns** (district 54, shared/world3-beach.js): a loose grid of streets either side of today's Northshore
+  between the Coast Highway's room and the Shore Road (streets along the shore every 40 tiles, cross streets every 60
+  from the Shore Road up, every third over the main line at a gated crossing, the ends joined to the arterials and
+  Northshore's streets they come near), the generator's beach-style blocks between them (beach houses, cafes, diners,
+  beach bars, hotels, a few small apartment blocks), the promenade along the Shore Road's sea side, car parks with
+  steps down to the sand, lifeguard towers on the beach. The Bluffs' gap down to the beach is filled by the blocks.
+- **The stations:** no tree over the track or on a platform (a tree keeps its crown's reach off the track, more beside a
+  platform; nothing on a platform), and a real station house - cream walls, a hipped slate roof, a canopy along the
+  platform side, a clock gable over the doors - in art v2 and the classic renderer, seated on open ground (Old Town's
+  had stood in the water).
+- Nothing live changes: the world hash stays 6b6e16fdef9f; the art hash changes (the new art).
+
+Files: shared/world3-beach.js (new: `beachStreets`, `beachFront`, `clearBeachFront`), shared/world3-rail.js
+(`seatStationHouses`, `clearRailDressing`), shared/world3-world.js (the calls; 54 built), shared/map.js (the `done`
+hook gets `removeProps`), client/art2/props-road.js (`stationHouse`, `lifeguardTower`), client/art2/game/statics.js
+(the house in place of the kiosk, the towers), client/render/trains.js and tiles.js (`drawStationHouse`,
+`drawLifeguardTower`), test/world3beach.test.js (new), docs/WORLD-V3.md 8.14.
+
+Tests: test/world3beach.test.js (new; one world build: the beach towns' streets on the network, their buildings and
+density, the beach, promenade, car parks and lifeguard towers; no tree on a platform or over the track at a station;
+every station's house on open ground).

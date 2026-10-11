@@ -14,6 +14,7 @@
 // stretch). Only + - * / and Math.sqrt: the same in every engine.
 import { TILE, T } from './constants.js';
 import { MAIN_LINE, MAIN_JUNCTIONS, SERVICES, STATIONS, RADIUS } from './world3-skeleton.js';
+import { treeSize } from './felling.js';
 
 export const TRACK_OFF = 48;   // px from the main line's centre to each track's centre (the two 96 px apart: 3 tiles)
 export const HUB_R = 20;       // tiles: every corner at a junction (H33: the hub stations there stand on straight track)
@@ -145,3 +146,94 @@ function mountainBores(m, loops) {
   }
 }
 export const mainJunctions = () => MAIN_JUNCTIONS.map((j) => ({ name: j.name, x: j.at[0] * TILE, y: j.at[1] * TILE }));
+
+// (H35, 8.14) Each station's house on open ground: the house (140 x 92 px, its canopy toward the tracks, drawn by the
+// renderers at the hub's place moved 18 px along `a`) where map.js buildRailHubs put it if it stands clear there, else
+// the nearest spot round the platforms that is dry, off the roads, the buildings and 70 px off every track - facing away
+// from the nearest track; its map point and its forecourt move with it. Called once, from the `done` hook.
+const HOUSE_OK = new Set([T.GRASS, T.PLAZA, T.SIDEWALK, T.SAND, T.LOT, T.DIRT]);
+export function seatStationHouses(m) {
+  if (!m.railHubs) return 0;
+  const C = 128, key = (cx, cy) => (cx + 8192) * 16384 + cy + 8192, cells = new Map();
+  for (const r of m.rails) for (const p of r.pts) { if (p.under) continue; const k = key(Math.floor(p.x / C), Math.floor(p.y / C)); let a = cells.get(k); if (!a) cells.set(k, (a = [])); a.push(p); }
+  const nearest = (x, y) => { let d = Infinity, q = null; const cx = Math.floor(x / C), cy = Math.floor(y / C); for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) for (const p of cells.get(key(cx + dx, cy + dy)) || []) { const e = Math.hypot(p.x - x, p.y - y); if (e < d) { d = e; q = p; } } return [d, q]; };
+  // (the 16 px cells within about 70 px of a track: a house's corner may not stand in one)
+  const S = 16, close = new Set(), sk = (x, y) => (Math.floor(x / S) + 32768) * 65536 + Math.floor(y / S) + 32768;
+  for (const r of m.rails) for (let j = 0; j < r.pts.length; j += 2) { const p = r.pts[j]; if (p.under) continue; for (let dy = -80; dy <= 80; dy += S) for (let dx = -80; dx <= 80; dx += S) if (dx * dx + dy * dy <= 80 * 80) close.add(sk(p.x + dx, p.y + dy)); }
+  const fits = (x, y, a, us = [-74, -37, 0, 37, 74]) => {
+    const ux = Math.cos(a - Math.PI / 2), uy = Math.sin(a - Math.PI / 2), vx = Math.cos(a), vy = Math.sin(a);
+    for (const u of us) for (const v of [-50, -2, 46]) {
+      const px = x + ux * u + vx * v, py = y + uy * u + vy * v;
+      if (!HOUSE_OK.has(m.tileAtPx(px, py)) || close.has(sk(px, py))) return false;
+    }
+    return true;
+  };
+  let moved = 0;
+  for (const h of m.railHubs) {
+    const cx = h.x + Math.cos(h.a) * 18, cy = h.y + Math.sin(h.a) * 18;
+    if (fits(cx, cy, h.a)) continue;
+    // (the whole house; failing that - a dense block - its middle at least on open ground)
+    let best = null;
+    for (const us of [undefined, [0]]) for (let r = 60; r <= 900 && !best; r += 20) for (let k = 0; k < 64 && !best; k++) {
+      const x = h.x + Math.cos(k / 64 * Math.PI * 2) * r, y = h.y + Math.sin(k / 64 * Math.PI * 2) * r;
+      if (!HOUSE_OK.has(m.tileAtPx(x, y)) || close.has(sk(x, y))) continue;
+      const [d, q] = nearest(x, y);
+      if (!q || d > 500) continue;
+      const a = Math.atan2(y - q.y, x - q.x);
+      if (fits(x, y, a, us)) best = { x: x - Math.cos(a) * 18, y: y - Math.sin(a) * 18, a };
+    }
+    if (!best) continue;
+    h.x = Math.round(best.x); h.y = Math.round(best.y); h.a = best.a; h.moved = true; moved++;
+    const poi = m.pois[h.poi];
+    if (poi) { poi.x = h.x; poi.y = h.y; }
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {   // its forecourt
+      const tx = Math.floor(h.x / TILE) + dx, ty = Math.floor(h.y / TILE) + dy, t = m.tileAt(tx, ty);
+      if (m.inside(tx, ty) && (t === T.GRASS || t === T.SAND || t === T.LOT || t === T.DIRT) && !close.has(sk((tx + 0.5) * TILE, (ty + 0.5) * TILE))) m.set(tx, ty, T.PLAZA);
+    }
+  }
+  return moved;
+}
+
+// (H35, 8.14) The dressing cleared round the main line's bed and platforms: the build only kept props 46 px off the
+// track (map.js clearPropsOnRail), so a redwood's crown hung over the track and the platforms. A tree stays CROWN px
+// (by its size, felling.js treeSize) off the track - and off a platform's far edge beside a platform - and nothing but
+// a lamp stands on a platform. A bore's and a tunnel's track is under cover: what grows on top stays.
+// Called once, from shared/world3-world.js' `done` hook, with map.js removeProps.
+const CROWN = [0, 70, 90, 120, 150];
+export function clearRailDressing(m, removeProps) {
+  const out = { trees: 0, platform: 0 };
+  if (!m.rails || !removeProps) return out;
+  const C = 256, key = (cx, cy) => (cx + 4096) * 8192 + cy + 4096, cells = new Map(), near = new Set();
+  for (const r of m.rails) for (const p of r.pts) {
+    if (p.under || p.bore) continue;
+    const cx = Math.floor(p.x / C), cy = Math.floor(p.y / C), k = key(cx, cy);
+    let a = cells.get(k); if (!a) cells.set(k, (a = [])); a.push(p);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) near.add(key(cx + dx, cy + dy));
+  }
+  const sts = [];
+  for (const r of m.rails) for (const st of r.stations || []) if (!st.under) sts.push(st);
+  const gone = new Set(), houses = (m.railHubs || []).map((h) => [h.x + Math.cos(h.a) * 18, h.y + Math.sin(h.a) * 18]);
+  for (const pr of m.props) {
+    const cx = Math.floor(pr.x / C), cy = Math.floor(pr.y / C);
+    if (!near.has(key(cx, cy)) || pr.t === 'lamp') continue;
+    const size = treeSize(pr);
+    // (the station house: nothing on it, no crown over it)
+    if (houses.some(([x, y]) => Math.hypot(pr.x - x, pr.y - y) < 84 + (size ? CROWN[size] * 0.7 : 0))) { gone.add(pr.x + ',' + pr.y); out.house = (out.house || 0) + 1; continue; }
+    let d = Infinity;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const p of cells.get(key(cx + dx, cy + dy)) || []) { const e = Math.hypot(p.x - pr.x, p.y - pr.y); if (e < d) d = e; }
+    if (d > 300) continue;
+    // on a platform, or beside one (its span along the track and a little past either end, on its side)?
+    let plat = false, by = false;
+    for (const st of sts) {
+      const dx = pr.x - st.x, dy = pr.y - st.y;
+      if (Math.abs(dx) > 500 || Math.abs(dy) > 500) continue;
+      const along = dx * Math.cos(st.a) + dy * Math.sin(st.a), across = (-dx * Math.sin(st.a) + dy * Math.cos(st.a)) * (st.side || 1), L = st.half || 112;
+      if (Math.abs(along) < L + 16 && across > (st.inner || 40) - 8 && across < (st.outer || 104) + 16) plat = true;
+      if (Math.abs(along) < L + 120 && across > 0) by = true;
+    }
+    if (plat) { gone.add(pr.x + ',' + pr.y); out.platform++; continue; }
+    if (size && d < CROWN[size] + (by ? 104 : 24)) { gone.add(pr.x + ',' + pr.y); out.trees++; }
+  }
+  if (gone.size) removeProps(m, (x, y) => gone.has(x + ',' + y));
+  return out;
+}
