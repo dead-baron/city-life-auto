@@ -23,6 +23,7 @@ import { TILE, T } from './constants.js';
 import { skeletonLines, STATIONS } from './world3-skeleton.js';
 import { measure } from './geom.js';
 import { MESA } from './world3-mesa.js';   // (Lucky Mesa's Strip is Mesa Road pulled straight: pulledAt)
+import { GULCH } from './world3-desert.js';   // (Copper Gulch's main street is Mine Road pulled straight: pulledAt, 8.18)
 
 const SAND = 5;   // (world3-land.js TERRAIN3.SAND: the beach stays a beach)
 
@@ -196,7 +197,7 @@ export function townsFront(m) {
 // Whether an arterial's skeleton point (tiles) is where a town pulls it off its course (its main street, its pulls and
 // their ramps): the roads test's check of the skeleton's course passes these by.
 export function pulledAt(name, x, y) {
-  for (const t of [...TOWNS3, MESA]) for (const [n, axis, , a, b, ramp] of [[t.main.line, 'y', 0, t.main.a, t.main.b, t.main.ramp], ...t.pulls]) {
+  for (const t of [...TOWNS3, MESA, GULCH]) for (const [n, axis, , a, b, ramp] of [[t.main.line, 'y', 0, t.main.a, t.main.b, t.main.ramp], ...(t.pulls || [])]) {
     if (n !== name) continue;
     const u = axis === 'y' ? x : y, [x0, y0, x1, y1] = t.box, r = ramp + 8;
     if (u > a - ramp - 1 && u < b + ramp + 1 && x > x0 - r && x < x1 + r && y > y0 - r && y < y1 + r) return true;

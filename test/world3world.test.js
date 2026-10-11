@@ -23,7 +23,8 @@ test('World v3: the whole world in one build - every gulf place, the small islan
     // the airport 26 / 19 with Airport Road and Runway Road)
     assert.ok(r.edges >= edges * 0.9 && r.edges <= Math.max(edges * 1.3, edges + 10), `${k}: road edges ${r.edges}, alone ${edges}`);
     assert.ok(r.buildings >= blds * 0.9 && r.buildings <= blds * 1.15, `${k}: buildings ${r.buildings}, alone ${blds}`);
-    assert.ok(r.pois >= pois * 0.9 && r.pois <= pois * 1.2, `${k}: POIs ${r.pois}, alone ${pois}`);
+    // (and a stop or two more: the subways' stations and the ferries' piers come on top - 8.16, 8.17: the airport's Line 2 terminus)
+    assert.ok(r.pois >= pois * 0.9 && r.pois <= Math.max(pois * 1.2, pois + 2), `${k}: POIs ${r.pois}, alone ${pois}`);
   }
   // Pelican Key, Northshore and Gull Harbor (scale 1) have their streets and buildings; the other small islands their land
   for (const k of ['pelican', 'northshore', 'gull']) assert.ok(rows[k].edges > 5 && rows[k].buildings > 5, `${k}: ${JSON.stringify(rows[k])}`);
