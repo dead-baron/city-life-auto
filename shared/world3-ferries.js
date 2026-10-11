@@ -143,6 +143,19 @@ function layStop(m, st, R, sh, K, H3) {
   const put = (x, y, t) => { const i = at(x, y); m.tiles[i] = t; if (m.reserve) m.reserve[i] |= 16; touched.push([x, y]); if (t === T.DOCK && !m.land[i]) m.river[i] = 0; };
   for (let k = 0; k < K.back[1]; k++) for (let j = -(K.back[0] >> 1); j <= K.back[0] >> 1; j++) put(sx - dx * k + px * j, sy - dy * k + py * j, K.pave);
   for (let k = 1; k <= K.out; k++) { const half = K.rows(k); for (let j = -half; j <= half; j++) put(sx + dx * k + px * j, sy + dy * k + py * j, T.DOCK); }
+  // the way ashore: boards (3 across) back over the beach or the grass to the street, the promenade or a path, when one
+  // is within 30 tiles straight behind (Northshore Pier stands on the beach)
+  if (st.kind !== 'ramp') {
+    const soft = (t) => t === T.SAND || t === T.GRASS || t === T.DIRT, path = [];
+    let k = K.back[1], reached = false;
+    for (; k < K.back[1] + 30; k++) {
+      const t = m.tiles[at(sx - dx * k, sy - dy * k)];
+      if (t === T.ROAD || t === T.SIDEWALK || t === T.PLAZA || t === T.LOT) { reached = true; break; }
+      if (!soft(t)) break;
+      path.push(k);
+    }
+    if (reached) for (const kk of path) for (let j = -1; j <= 1; j++) { const x = sx - dx * kk + px * j, y = sy - dy * kk + py * j; if (soft(m.tiles[at(x, y)])) put(x, y, T.DOCK); }
+  }
   let bld = null;
   if (K.bld) {
     const [j0, j1, k0, k1] = K.bld, xs = [sx + dx * k0 + px * j0, sx + dx * k1 + px * j1], ys = [sy + dy * k0 + py * j0, sy + dy * k1 + py * j1];
