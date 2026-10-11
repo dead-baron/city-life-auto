@@ -3,7 +3,7 @@
 // a spot you can stand on, worked out once from the map: the open pavement nearest the middle of
 // the district (or open ground where it has no streets).
 import { T, TILE, MAP_W, MAP_H } from '../shared/constants.js';
-import { DISTRICTS, ISLANDS } from '../shared/map.js';
+import { DISTRICTS, ISLANDS } from '../shared/mapcore.js';
 import { MAP_FRAME } from './hud.js';
 
 const PAVED = new Set([T.SIDEWALK, T.PLAZA]);

@@ -4,7 +4,7 @@
 // crosswalks, parking stalls and low street props.
 import { T, TILE, CHUNK_PX } from '../../shared/constants.js';
 import { hash2, mulberry32 } from '../../shared/rng.js';
-import { DISTRICTS } from '../../shared/map.js';
+import { DISTRICTS } from '../../shared/mapcore.js';
 import { PREFABS, GROUND_TEX, PROP_SIZES } from '../../shared/prefab-data.js';
 import { BLOCK_ART } from '../../shared/block-data.js';
 import { INTERIOR_RECTS, INTERIOR_KINDS, SCENE_RECTS } from '../../shared/interior-art.js';

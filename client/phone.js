@@ -4,7 +4,7 @@
 // contracts out, taking one, and putting a bounty on someone who keeps killing you. It lives in the
 // overlay system, so a controller navigates it like every other menu.
 import { JOB_TIERS } from '../shared/rules.js';
-import { DISTRICTS } from '../shared/map.js';
+import { DISTRICTS } from '../shared/mapcore.js';
 import { TILE } from '../shared/constants.js';
 // the district a place is in, by name (as the paused tour's districtAt: kept here so the tour stays out of the page)
 const districtAt = (map, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), d = map.inside(tx, ty) ? map.dist[map.idx(tx, ty)] : -1; return DISTRICTS[d] ? DISTRICTS[d].name : null; };

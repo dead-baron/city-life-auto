@@ -34,7 +34,7 @@ import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
 import { MAP_W, MAP_H, TILE, K, PF, VF, DAY_LOOP_S } from '../../../shared/constants.js';
-import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/map.js';
+import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
 import { BARRIER_PIECE } from '../../../shared/levels.js';

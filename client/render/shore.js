@@ -5,8 +5,8 @@
 // itself - a coping-stone seawall in town, wet sand on beaches, a muddy lip on wild banks.
 // Live on top: surf rolling up the beaches and water lapping at the seawalls.
 import { T, TILE, CHUNK_PX } from '../../shared/constants.js';
-import { DISTRICTS } from '../../shared/map.js';
-import { contours } from '../../shared/citylayout.js';
+import { DISTRICTS } from '../../shared/mapcore.js';
+import { contours } from '../../shared/layoutcore.js';
 import { chaikin, offset, simplify } from '../../shared/geom.js';
 import { pattern } from './roads.js';
 

@@ -10,7 +10,7 @@
 // The tiles and props are the server's; this only decides how they look. Placement comes from
 // hashes of world position, so it's the same for everyone and the same every visit.
 import { T, TILE, CHUNK_PX } from '../../../shared/constants.js';
-import { DISTRICTS, WILD_STYLES, terrainAt } from '../../../shared/map.js';
+import { DISTRICTS, WILD_STYLES, terrainAt } from '../../../shared/mapcore.js';
 import { PROP_SIZES } from '../../../shared/prefab-data.js';
 import { hash2 } from '../../../shared/rng.js';
 import { LOW_MEM } from '../../platform.js';

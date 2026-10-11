@@ -31,7 +31,7 @@
 import { TILE, T } from './constants.js';
 import { hash2 } from './rng.js';
 import { pointAt } from './geom.js';
-import { DISTRICTS } from './map.js';
+import { DISTRICTS } from './mapcore.js';
 
 // [half length along the wall, depth out from it] (px) of what stands; decals lie flat (0 depth: walked over)
 export const DRESS = {

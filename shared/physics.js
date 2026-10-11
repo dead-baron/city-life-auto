@@ -2,7 +2,7 @@
 // exact same functions to predict its own character/vehicle between snapshots.
 
 import { TILE, PED_RADIUS, T } from './constants.js';
-import { PED_BLOCK, SWIM_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './map.js';
+import { PED_BLOCK, SWIM_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './mapcore.js';
 import { IN } from './input.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';

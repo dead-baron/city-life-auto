@@ -7,7 +7,7 @@
 // inside the deck's corridors (the polylines of the highway and ramp edges, each so wide), the
 // barriers push back like walls, and z follows the ramp you're on. Everything is geometry, so
 // curved and diagonal decks have smooth barriers. Server and client run the same code.
-import { edgeZ } from './roads.js';
+import { edgeZ } from './roadcore.js';
 import { BARRIER_BREAK_SPEED } from './rules.js';
 
 export const GROUND_Z = 0.3;  // below this you're on the ground (tile collisions apply)

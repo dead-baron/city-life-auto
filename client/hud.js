@@ -5,7 +5,7 @@ import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER } from '../shared/constants.j
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
 import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
-import { DISTRICTS } from '../shared/map.js';
+import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
 import { iconURL } from './pixicons.js';
 import { CALM_PROMPT_S, CALM_HUD_S } from '../shared/rules.js';

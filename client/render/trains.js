@@ -4,7 +4,7 @@
 // board here" glow are drawn live. Procedural canvas drawing, except the subway entrance kiosks
 // (cut from the concept art, in the sprite atlas).
 import { T, TILE, CHUNK_PX } from '../../shared/constants.js';
-import { TRAIN_CARS, COACH_SEATS, LOCO_SEATS, CAB_OX, MAIL_BOX, CROSSING_ARM, railAt } from '../../shared/map.js';
+import { TRAIN_CARS, COACH_SEATS, LOCO_SEATS, CAB_OX, MAIL_BOX, CROSSING_ARM, railAt } from '../../shared/mapcore.js';
 import { atlas } from './sprites.js';
 
 const TIE_STEP = 18, RAIL_OFF = 12;

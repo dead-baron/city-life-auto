@@ -1,7 +1,7 @@
 // Cars smashing street furniture - shared so the driver's client predicts the exact same
 // momentum loss the server applies (otherwise every lamp post you clip causes a correction,
 // which reads as the car jittering).
-import { BREAKABLE, HEAVY_PROPS } from './map.js';
+import { BREAKABLE, HEAVY_PROPS } from './mapcore.js';
 import { PROP_SIZES } from './prefab-data.js';
 import { circleVsObb, obbBounds } from './math.js';
 import { TILE } from './constants.js';

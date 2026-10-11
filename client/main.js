@@ -2,7 +2,7 @@
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS, DAY_LOOP_S } from '../shared/constants.js';
-import { generateCity, cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/map.js';
+import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
 import { pedStep, vehStep, driveInput } from '../shared/physics.js';
@@ -224,8 +224,9 @@ function onText(m) {
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
       document.body.classList.toggle('practice', !!m.practice);
       if (S.spec && S.spec.on) { if (S.map.seed !== (m.seed >>> 0)) exitSpectate(); else send({ t: 'dev', c: 'spectate', on: true }); } // back in after a reconnect
+      if ((!S.map || S.map.seed !== (m.seed >>> 0)) && !cityIn(m.seed) && holdForGenerator(m)) break;   // (the page builds it: the generator first)
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
-      if (m.sig && (S.mapFrom === 'cache' || S.mapFrom === 'served') && m.sig !== mapSignature(S.map)) { console.warn(`[city] the ${S.mapFrom === 'served' ? 'downloaded' : 'kept'} city is not the server's: building it again`); forgetCity(); setupWorld(m.seed, true); }
+      if (m.sig && (S.mapFrom === 'cache' || S.mapFrom === 'served') && m.sig !== mapSignature(S.map)) { if (holdForGenerator(m)) break; console.warn(`[city] the ${S.mapFrom === 'served' ? 'downloaded' : 'kept'} city is not the server's: building it again`); forgetCity(); setupWorld(m.seed, true); }
       S.updating = noteServerBuild(m.build, m.built); // the server runs a newer build: this page reloads into it (client/update.js)
       if (m.sig && m.sig !== mapSignature(S.map)) {
         // the server runs a newer world than this page: reload into it (client/update.js does the rest) - unless both
@@ -917,6 +918,24 @@ function holdForCity(m) {
   }
   return true;
 }
+// the city from the worker is in, for this seed
+function cityIn(seed) { const job = window.CLA_WORLD; return !!(job && job.map && job.seed === (seed >>> 0)); }
+// The generator (shared/map.js, with the concept picture and the nature sites) isn't in the page's code: it loads only
+// when the page must build the city itself (?cityonpage, no worker, the worker failing, a kept or downloaded city that
+// isn't the server's). The welcome and what follows wait for it, as for the worker's city (releaseHeld).
+let GEN = null, genP = null;   // (GEN: the module; false: it didn't load)
+function loadGenerator() {
+  return (genP ||= import('../shared/map.js').then((g) => { GEN = g; return g; }, (e) => { GEN = false; console.warn('[city] the city generator did not load', e); return null; }));
+}
+function holdForGenerator(m) {
+  if (GEN !== null) return false;
+  if (!S.hold || S.holdWs !== S.ws) { S.hold = []; S.holdWs = S.ws; }
+  S.hold.push(m);
+  $('t-status').textContent = 'Building the city...';
+  $('play').disabled = true;
+  loadGenerator().then(releaseHeld);
+  return true;
+}
 function holding(ws, d) {
   if (!S.hold || S.holdWs !== ws) return false;
   S.hold.push(d);
@@ -943,7 +962,8 @@ function setupWorld(seed, here = false) {
     if (S.mapFrom === 'cache' || S.mapFrom === 'served') { delete S.map._sig; mapSignature(S.map); }   // (its fingerprint worked out from what was read or downloaded: server/worldcdn.js)
     loadSpan('city', job.ms);
   } else {
-    S.map = generateCity(seed); S.mapFrom = 'page';
+    if (!GEN) throw new Error('the city generator did not load');   // (loaded first: holdForGenerator)
+    S.map = GEN.generateCity(seed); S.mapFrom = 'page';
     loadSpan('city', performance.now() - t);
   }
   loadMark('city'); LOAD.city = S.mapFrom; t = performance.now();
@@ -1626,8 +1646,9 @@ if (TUTORIAL_ON) loadTutorial();   // (back on: fetched at once, ready by the ti
 let tutMap = null;
 // `then` runs once the tour is finished or skipped (first play: tour first, then into the city)
 function openTutorial(chapter, then) {
+  if (!S.map && !tutMap && !GEN) { loadGenerator().then((g) => { if (g) openTutorial(chapter, then); }); return; }   // (no city yet: the generator first)
   ensureV1Art(); // (the tour draws the map with the classic art)
-  const map = S.map || (tutMap ||= generateCity(1337));
+  const map = S.map || (tutMap ||= GEN.generateCity(1337));
   openOverlay('tutorial');
   startTutorial({ map, fallback: S.hud ? S.hud.mini : null, chapter, onClose: () => { if (overlays.includes('tutorial')) closeOverlay('tutorial'); if (then) setTimeout(then, 0); } });
 }
