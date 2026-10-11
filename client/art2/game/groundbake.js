@@ -114,6 +114,7 @@ function scratch() {
     tf: new Float32Array(TN * TN), tdp: new Float32Array(TN * TN), tw: new Uint8Array(TN * TN), tsand: new Uint8Array(TN * TN), tdeck: new Uint8Array(TN * TN),
     tres: new Uint8Array(TN * TN), tbld: new Int16Array(TN * TN), tsf: new Float32Array(TN * TN), tso: new Int8Array(TN * TN),
     tfl: new Uint8Array(TN * TN), twear: new Float32Array(TN * TN),
+    tsh: new Float32Array(TN * TN),   // (World v3 8.22: the hillshade of each tile, from M.relief)
     wx: new Float32Array((WN / 4 + 2) * (WN / 4 + 2)), wy: new Float32Array((WN / 4 + 2) * (WN / 4 + 2)),
   };
   return B;
@@ -150,7 +151,7 @@ export function* groundSteps(M, cx, cy, opt = {}) {
   const G = opt.scratch ? scratchG() : new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;
   const prof = opt.profile ? {} : null;
   C.prof = prof;
-  for (const [name, f] of [['tiles', tileFacts], ['roads', roadField], ['rail', railField], ['classify', classify], ['shore', shoreDistance], ['paint', paint], ['markings', markings], ['edges', edges], ['decor', decor], ['surf', surf]]) {
+  for (const [name, f] of [['tiles', tileFacts], ['roads', roadField], ['rail', railField], ['classify', classify], ['shore', shoreDistance], ['paint', paint], ['markings', markings], ['edges', edges], ['decor', decor], ['surf', surf], ['relief', relief]]) {
     const t0 = prof ? performance.now() : 0;
     f(C, G);
     if (prof) prof[name] = Math.round(performance.now() - t0);
@@ -286,7 +287,7 @@ function tileFacts(C) {
     } else if (t === T.ROAD) m = D.road === 'asphalt_worn' ? M_.ROADOLD : M_.ROAD;
     else if (t === T.BUILDING) m = M_.FOUND;
     else if (t === T.WALL && mazes.length && inRects(mazes, X, Y)) m = M_.LAWN;
-    else if (t === T.WALL) m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : (b.tres[k] & 32) ? M_.SCREE : M_.WALL;   // (32: a designed place's rock - cliffs, escarpments - natural rubble round their sprites)
+    else if (t === T.WALL) m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : (b.tres[k] & 32) ? (st === 'desert' && b.tres[k] === 32 ? M_.REDROCK : M_.SCREE) : M_.WALL;   // (World v3 8.22: a desert table's cliff band, red rock)   // (32: a designed place's rock - cliffs, escarpments - natural rubble round their sprites)
     else if (t === T.FLOOR) { const bi = b.tbld[k], bd = bi >= 0 ? M.buildings[bi] : null; m = bd && /house|apt|home|shack|mansion|farm/.test(bd.kind) ? M_.FLOORW : M_.FLOOR; }
     else if (t === T.COUNTER) m = M_.COUNTER;
     else m = M_.FOUND;
@@ -857,6 +858,34 @@ function paint(C, G) {
       col[j] = c[0]; col[j + 1] = c[1]; col[j + 2] = c[2]; col[j + 3] = 255;
       if (nx || ny) putN(G, gi, nx, ny); else { nrm[j] = NMID; nrm[j + 1] = NMID; nrm[j + 2] = NUP; nrm[j + 3] = 255; }
       zz[gi] = z; fl[gi] = f;
+    }
+  }
+}
+// 9. the land's relief (World v3 8.22: shared/world3-relief.js, M.relief - metres per tile, dithered): the ground
+// shaded by its slope under a light from the north-west, a touch lighter the higher it stands; per tile from a 4 x 4
+// box of heights either side (the box undoes the dithering), bilinear per pixel; the water left as it is
+function relief(C, G) {
+  const { M, b, TX0, TY0, WY0, WX0 } = C, R = M.relief;
+  if (!R) return;
+  const zb = (tx, ty) => { let s = 0; for (let dy = -2; dy < 2; dy++) for (let dx = -2; dx < 2; dx++) { const x = tx + dx, y = ty + dy; if (M.inside(x, y)) s += R[M.row(y) + M.col(x)]; } return s / 16; };
+  const sh = b.tsh;
+  for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
+    const tx = TX0 + i, ty = TY0 + j, h = zb(tx, ty);
+    const gx = (zb(tx + 3, ty) - zb(tx - 3, ty)) / 6, gy = (zb(tx, ty + 3) - zb(tx, ty - 3)) / 6;
+    const k = (0.42 * gx + 0.5 * gy + 0.76) / Math.sqrt(gx * gx + gy * gy + 1) / 0.76;
+    sh[j * TN + i] = Math.max(0.55, Math.min(1.3, 1 + (k - 1) * 1.4 + (h - 30) * 0.0007));
+  }
+  const col = G.col, fl = G.flag;
+  for (let y = 0; y < CHUNK; y++) {
+    const fy = (WY0 + y + PAD) / TILE - 0.5 - TY0, j0 = Math.floor(fy), vy = fy - j0;
+    for (let x = 0; x < CHUNK; x++) {
+      const gi = y * CHUNK + x;
+      if (fl[gi] & F_WATER) continue;
+      const fx = (WX0 + x + PAD) / TILE - 0.5 - TX0, i0 = Math.floor(fx), vx = fx - i0, k0 = j0 * TN + i0;
+      const k = (sh[k0] * (1 - vx) + sh[k0 + 1] * vx) * (1 - vy) + (sh[k0 + TN] * (1 - vx) + sh[k0 + TN + 1] * vx) * vy;
+      if (k > 0.995 && k < 1.005) continue;
+      const j = gi * 4;
+      col[j] = Math.min(255, col[j] * k); col[j + 1] = Math.min(255, col[j + 1] * k); col[j + 2] = Math.min(255, col[j + 2] * k * (k < 1 ? 1.04 : 1));
     }
   }
 }

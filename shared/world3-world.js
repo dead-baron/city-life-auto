@@ -33,6 +33,7 @@ import { subwayLoops } from './world3-subway.js';
 import { paintWater3, buildWater3, waterDone } from './world3-water.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
 import { wildSites3, wildDone, movedAt, wildDist } from './world3-wild.js';
+import { buildRelief3 } from './world3-relief.js';   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -181,7 +182,7 @@ export function worldOpts(asked) {
     dressed: dressedBy3,
     pine: pineAt3(L, W),
     unbuilt: new Set([52]),   // (the Sandpiper Coast: no streets yet; Northshore's beach towns (54) are built - world3-beach.js, 8.14)
-    dress(m, H2) { if (m.world3?.west) m.world3.west.built = buildWest(m, H2.addProp); if (m.world3?.mesa) m.world3.mesa.built = buildMesa(m, H2.addProp); if (m.world3?.desert) m.world3.desert.built = buildDesert(m, H2.addProp); if (m.world3) m.world3.water = { painted: water, ...buildWater3(m, H2.addProp) }; m.world3biomes.dress = dress3(m, L, keep, H2); },   // (8.20: Egret Point, the lights, the falls - world3-west.js; 8.18: the mine, Dusty Hollow, the dam - world3-desert.js; 8.21: Prison Island, the lock, Kestrel Lake - world3-water.js; Lucky Mesa's resorts - world3-mesa.js, 8.15)
+    dress(m, H2) { if (m.world3?.west) m.world3.west.built = buildWest(m, H2.addProp); if (m.world3?.mesa) m.world3.mesa.built = buildMesa(m, H2.addProp); if (m.world3?.desert) m.world3.desert.built = buildDesert(m, H2.addProp); if (m.world3) m.world3.water = { painted: water, ...buildWater3(m, H2.addProp) }; if (m.world3) m.world3.relief = buildRelief3(m, L, H2.addProp); m.world3biomes.dress = dress3(m, L, keep, H2); },   // (8.20: Egret Point, the lights, the falls - world3-west.js; 8.18: the mine, Dusty Hollow, the dam - world3-desert.js; 8.21: Prison Island, the lock, Kestrel Lake - world3-water.js; Lucky Mesa's resorts - world3-mesa.js, 8.15)
     done(m, H3) {
       m.world3.towns.built = townsDone(m);   // (the towns' gas stations and bus stops: world3-towns.js, 8.13)
       m.world3.towns.models = townModels(m);   // (H40, 8.13.2: the towns' own buildings, their yards, the boardwalk's rails, benches and lamps, the pier's end: world3-towns.js)
