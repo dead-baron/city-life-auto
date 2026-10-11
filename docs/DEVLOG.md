@@ -8397,6 +8397,10 @@ test/firebow.test.js, test/perf.test.js.
   where it runs out (`combat.js` stepProjectile, traceTarget's `walls`). It failed the flight test one run in four.
 - An aircraft up in the air is never "the nearest vehicle" (`vehicles.js` nearestVehicle): no Act prompt, no Safety
   question for one passing overhead.
+- The parked aircraft came on the world's first tick wherever they were, and came back after a theft once nobody was
+  within 900 px - in view of a player zoomed out high up, or of one who'd just arrived (the view test caught one popping
+  up on screen): now they're parked, the first time and again, only where nobody's looking (`aircraft.js` manage, view.js
+  inAnyView).
 - In a vehicle the fire button drives the tank's cannon or the gunship's missiles before any drive-by (`players.js`).
 - Tests: a new character has Safety mode on, so the flight test's theft of the parked helicopter presses F twice (the
   first press only warns); the burning test clears everyone away before checking that standing still beside a fire

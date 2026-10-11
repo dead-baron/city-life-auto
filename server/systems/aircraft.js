@@ -7,6 +7,7 @@ import { obbVsObb } from '../../shared/math.js';
 import { isAir, isPlane, flightStep, flightInput, FLY, airfields, rollOf, findPadSpot, floorAt } from '../../shared/flight.js';
 import * as vehicles from './vehicles.js';
 import * as combat from './combat.js';
+import { inAnyView } from '../view.js';   // (the parked ones never pop up on anyone's screen)
 
 const IDLE = { tank: false, fwd: 0, turn: 0, climb: 0, hb: false, m: 0, dx: 0, dy: 0 };
 export const airborne = (v) => (v.alt || 0) > FLY.HIGH;
@@ -109,7 +110,8 @@ function park(world, sp) {
   return v;
 }
 function manage(world) {
-  if (!world.airSpots) { world.airSpots = spots(world); for (const sp of world.airSpots) park(world, sp); return; }
+  // (the first time: parked where nobody's looking - one in someone's view comes once they've gone, like a taken one)
+  if (!world.airSpots) { world.airSpots = spots(world); for (const sp of world.airSpots) { if (inAnyView(world, sp.x, sp.y, 200)) sp.goneAt = world.time - RESPAWN_S; else park(world, sp); } return; }
   for (const sp of world.airSpots) {
     const v = world.get(sp.id);
     const there = v && !v.wreckAt && Math.hypot(v.x - sp.x, v.y - sp.y) < 300;
@@ -118,7 +120,7 @@ function manage(world) {
     if (world.time - sp.goneAt < RESPAWN_S) continue;
     let near = false;
     for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - sp.x, p.ped.y - sp.y) < 900) { near = true; break; }
-    if (near || world.query(sp.x, sp.y, 120, K.VEH).length) continue;
+    if (near || inAnyView(world, sp.x, sp.y, 200) || world.query(sp.x, sp.y, 120, K.VEH).length) continue;   // (never popping up on anyone's screen)
     park(world, sp);
   }
 }
