@@ -227,3 +227,23 @@ test('the garage: through the door from the hall, your cars on the key board, dr
   const v = w.get(p.ped.vehId);
   assert.equal(v.model, 'sedan');
 });
+
+test('the hall table: the home menu (respawn point, the bank) and selling the place from inside', () => {
+  const w = makeWorld();
+  const { p, prof, conn } = joinPlayer(w, { bank: 1e6 });
+  const h = ownHome(w, p);
+  teleport(w, p.ped, h.x, h.y);
+  homeinside.goIn(w, p, h);
+  standAt(w, p, 'hall');
+  act(w, p);
+  const hm = lastMenu(conn);
+  assert.ok(hm.opts.some((o) => o.id === 'hspawn') && hm.opts.some((o) => o.id === 'hleave'), 'the home menu');
+  prof.cash = 120;
+  economy.handleMenu(w, p, hm.poi, 'dep:all');
+  assert.equal(prof.cash, 0, 'banked from the hall table');
+  assert.equal(lastMenu(conn).opts.some((o) => o.id === 'hi:sell'), true, 'the same menu back up');
+  const bank = prof.bank;
+  economy.handleMenu(w, p, hm.poi, 'hi:sell');
+  assert.ok(!w.homeOwner.has(h.id) && !p.ped.hidden && !p.ped.home, 'sold, and outside');
+  assert.equal(prof.bank, bank + Math.round(h.price * 0.6));
+});

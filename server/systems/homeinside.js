@@ -104,7 +104,6 @@ export function use(world, p, h, what) {
   if (what === 'door') { leave(world, p); return; }
   if (what === 'bed') { s.sleep = world.time + HOME_IN.sleepS; s.mv = false; world.notify(p, 'You get into bed. Lights out...', 'info'); send(world, p, true); return; }
   if (what === 'shower') { s.shower = world.time + HOME_IN.showerS; s.mv = false; ped.bleeding = false; send(world, p, true); return; }   // (the bleeding stops as you step in)
-  if (what === 'hall') { p.homeMenu = null; homes.openInside(world, p); return; }
   if (what === 'garage' && !h.garage) { world.notify(p, 'This place has no garage - your cars come out at a home with one.', 'info'); return; }
   openMenu(world, p, what);
 }
@@ -112,7 +111,7 @@ export function use(world, p, h, what) {
 // ---- the menus of the things you use ---------------------------------------------------------------------------------
 function menuOf(world, p, h, what) {
   const prof = p.profile, st = prof.stash || {}, ped = p.ped;
-  const all = economy.buildMenu(world, p, homes.homePoi(world, h)).opts;   // (the home menu's options: wardrobe and stash)
+  const base = economy.buildMenu(world, p, homes.homePoi(world, h)), all = base.opts;   // (the home menu's options: wardrobe and stash)
   const pick = (pre) => all.filter((o) => o.id === pre || o.id.startsWith(pre + ':'));
   const opts = [];
   let title = h.name, sub = '';
@@ -132,6 +131,10 @@ function menuOf(world, p, h, what) {
     for (const [id, n] of food) opts.push({ id: `hi:eat:${id}`, label: `Eat ${ITEMS[id].name}`, note: `+${ITEMS[id].heal} health · ${n} in the fridge` });
     for (const o of pick('hst')) if (ITEMS[o.id.slice(4)].food) opts.push({ ...o, label: o.label.replace(/^Stash /, 'Put in the fridge: ') });
     for (const o of pick('htk')) if (ITEMS[o.id.slice(4)].food) opts.push({ ...o, label: o.label.replace(/^Take /, 'Take out: '), note: '' });
+  } else if (what === 'hall') {   // the home menu itself, and selling the place (you step out to hand the keys over)
+    title = base.title; sub = base.sub;
+    opts.push(...all.filter((o) => o.id !== 'close'));
+    opts.push({ id: 'hi:sell', label: `Sell this place (+${money(h.price * 0.6)} to the bank)`, note: 'you step outside' });
   } else if (what === 'garage') {
     title = 'Your garage';
     prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat' && d.kind !== 'air') opts.push({ id: `hi:car:${i}`, label: `Drive out in the ${d.name}`, note: 'the door rolls up' }); });
@@ -187,6 +190,11 @@ function own(world, p, h, parts) {
       store.touch();
       world.notify(p, `Ate ${/^[aeiou]/i.test(it.name) ? 'an' : 'a'} ${it.name}. +${it.heal} health.`, 'good');
       return null;
+    }
+    case 'sell': {
+      p.homeMenu = null;
+      leave(world, p);
+      return homes.sell(world, p, h);
     }
     case 'car': {
       const i = Number(parts[2]);
@@ -261,7 +269,8 @@ export function send(world, p, full) {
 
 // ---- dev ----------------------------------------------------------------------------------------------------------
 // The dev command 'homein' (server/dev.js): msg.id (a home) or msg.kind (the first of that kind nobody else owns) -
-// yours for nothing, and you're inside; msg.at: stand by that thing in there ('bed', 'safe', 'fridge', 'garage'...).
+// yours for nothing, and you're inside; msg.cars: cars of your own for the garage; msg.at: stand by that thing in there
+// ('bed', 'safe', 'fridge', 'garage', 'door'...).
 // Returns an error or null.
 export function devIn(world, p, msg) {
   const ped = p.ped;
@@ -278,6 +287,11 @@ export function devIn(world, p, msg) {
     h = want;
   }
   if (!h || !ped.home) return 'Go inside one of your homes first (or give a home id or kind).';
+  if (Array.isArray(msg.cars)) {   // (cars of your own, for the garage: msg.cars ['sedan', ...])
+    for (const m of msg.cars.slice(0, 4)) if (VEHICLES[m] && p.profile.vehicles.length < homes.garageCap(world, p.profile)) p.profile.vehicles.push({ model: m, paint: p.profile.vehicles.length * 3 % 14, variant: 0 });
+    store.touch();
+    send(world, p, true);
+  }
   if (msg.at) {
     const L = planFor(h);
     for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
