@@ -1891,3 +1891,128 @@ map beside the place at its gulf size, baked with the game's chunk bake. What lo
 4. The airport: its west beach site (still anchored in today's coordinates), the Westport Raceway on the mainland.
 5. As 8.4 item 1: the street plans (`islands.js`' rings and section roads) run in today's coordinates and are placed
    after, so at 1.15 their pitches scale with the place.
+
+### 8.6 Stage 2, step 4: the whole v3 world in one build (2026-10-10, H24)
+
+The first build of the whole v3 world: `generateCity(seed, { world3: true, frame: { w: 5040, h: 4032 }, land, today })`,
+`land` = `buildLand3(today)` (8.3), `today` = today's world built (only its `w`, `h`, `dist` and `land` are read).
+One CityMap of the v3 frame. Nothing live changes: the world hash stays `6b6e16fdef9f` (`test/world3.test.js`), and the
+city worker's code is still 337 of 340 KB (`tools/perf.mjs` codeReport: map.js +1.2 KB).
+
+**How one build places many pieces** (`shared/world3-world.js` `worldOpts`, registered through
+`shared/world3-islands.js` as the island registry's `'world'`; `shared/map.js` the generator's side):
+- **The pieces** (`worldPieces`): the gulf's pictures - Metro City + Southbank, Cedar Isle, the airport, Pelican Key
+  (`ISLANDS`), Westport and Northshore (`PIECES`) - each `{ at, from, s }`; and today's small islands placed whole (Gull
+  Harbor, Coral Cay, Paradise Cay, Lighthouse Rock, Smuggler's Rock: `PLACEMENTS`, scale 1, by their rectangle).
+- **The piece of a source position** (`pick`): today's district at that tile - the piece whose `picture.ids` has it
+  (Metro City's and Cedar Isle's `from` rectangles overlap; their districts don't) - else the small island whose
+  rectangle holds it. On today's water, the nearest land's within 8 tiles. What no piece builds (Dry Creek, today's
+  wild land, South Port's 39, which no picture has) goes to `NONE`, off the frame.
+- **In the generator** `PL` is the current piece: `pin(x, y)` sets it from a source position (today's tiles), `unpin()`
+  puts the base back (Metro City + Southbank's: what isn't pinned is Metro City's - the Metro Ring, `metro.js`' plan, the
+  coast drives, Pine Hills' collectors, the hero corner, the Arts District, Museum Square, Sunset Beach's pier and court).
+  Pinned: today's lakes, the planned businesses (`seedOf`, a spot `at`), the parks (`ALL_PARKS`), the estates, Cedar
+  Farms' fields and market stand, the airports (`airportPlan`), the scene spots, the lakes' boat hire, the country sites
+  (`at`), the nature sites' anchors (`naturesites.js` `PXs(H, x, y)`: the anchor's y too), the islands' road lookups
+  (`placed`). The lines laid in today's coordinates (`islands.js`, the countryside) are placed point by point
+  (`placeLine`): each point by its piece; a point over today's water takes the piece of the point before it (a
+  bridge's deck goes with its shore). Hashes and sampling grids read the v3 tile (`LX` / `LY` the identity, `gridOff`
+  0): deterministic and unique, not today's - as at any scale but 1.
+- **The ground:** the land is the land layer's; its inland water (the Long Reach, the lakes, the streams, the canal) is
+  the generator's river water (shallow, fresh), the canal as 8.4 makes it (the sea's within 12 tiles of the sea, one
+  body). The terrain class of a tile (`clsAt` -> `cls`): a piece's reads today's picture back through its placement; the
+  mainland's is the land layer's (`TERRAIN3`: farm and marsh as grass, scrub as rock), its beaches sand. The mainland's
+  districts (47-56) stand in as today's wild ones for now (`STAND_IN`: Highland Woods 29, Granite Peaks 33, Cedar Hills
+  40 for Willow Valley, Dry Creek Desert 41, The Islets 20 for the coasts, Smuggler's Rock 15 for Prison Island,
+  Lighthouse Rock 19 for the Egret Rocks), and zones 11-18 as `Z.WILD`, until `DISTRICTS3` joins `DISTRICTS` (8.3's
+  list, item 2). So the mainland is plain ground with the wild dressing (`buildWilds`' trees, rocks and scrub by class).
+- **The roads between places:** a line of today's that leaves one piece for another (today's bridges between today's
+  islands) is split there (10 splits); its ends over the sea are cut at the shore (`world3-crossings.js` `joinPlace`,
+  which also lays the canal's bridges and the avenues' over the inlet): the Bay Bridge, the Pelican Way and the
+  Westport Beltway's two ends. 76 runs of points no piece builds went off the frame and were dropped. The railway isn't
+  laid (`noRail`). **The skeleton's crossings between built places** (both ends on land, the sea between) are listed in
+  `m.world3.crossings`, not laid: the Union Bridge (280 m), the Harbor Footbridge (250, foot), the Northshore Lift Bridge
+  (305), the Harbor Tunnel (402), the Eastgate Bridge (290), the Southbank Walk (280, foot), the Cedar North Bridge (410),
+  the Toll Point Bridge (361), the Port Bridge (125), Airport Road (150), Runway Road (160), the Pelican Walk (130,
+  foot) and the West Sea Road (2,021 m over the Egret Rocks).
+
+**The numbers** (`node --expose-gc tools/world3-build.mjs`, this machine, node 22, two shared cores):
+- **Time:** the world build **15.2 s** (today's world 4.8-6.1 s and the land 0.9 s before it) - against 7-9 s for each
+  of the six single builds, about 50 s together. It was 62-64 s at first: the profile (`node --cpu-prof`) put 55 s of
+  it in one function, `redwoodGroves`' `roomFor`, which looked for room for each new giant redwood by going over every
+  giant so far - quadratic, and the stand-in makes all of Highland Woods (3.4 km²) today's redwood forest: 47,455
+  redwoods. The giants are kept by 256 px cell now and only the cells within reach are looked at (the same answer:
+  the live world's hash is unchanged); the build's output is the same to the count. What's left of the time: the
+  terrain pass 3.3 s, the nature sites 3.0 s (`restSpots`), the road layout 2.9 s (`countrysideRoads`), the chamfers.
+- **Memory:** the process's peak **885-892 MB** (today's world and the land held, then the world: 363-375 MB before the
+  world build, 838-892 MB after it). Inside the server's 1 GB, with little room: the land's 122 MB can go once the build
+  has read it, and today's world isn't needed after `prepare`.
+- **Sizes:** 11,472,599 land tiles; 1,253 road edges (832 junctions), 740 blocks, 1,181 buildings, 696 POIs, 207,226
+  props (183,324 of them the mainland's wild dressing).
+
+  | place | land tiles | road tiles | road edges | buildings | POIs | props | built alone (8.4, 8.5: edges / buildings / POIs / props) |
+  |---|---|---|---|---|---|---|---|
+  | Metro City + Southbank | 256,920 | 82,225 | 541 | 476 | 232 | 5,652 | 546 / 484 / 228 / 5,816 |
+  | Cedar Isle | 241,720 | 46,567 | 245 | 215 | 168 | 8,004 | 246 / 205 / 159 / 8,226 |
+  | Westport + Port Westport | 216,792 | 62,722 | 333 | 354 | 186 | 6,285 | 320 / 334 / 170 / 6,042 |
+  | the airport | 21,126 | 2,450 | 21 | 4 | 3 | 217 | 19 / 4 / 3 / 228 |
+  | Northshore | 71,493 | 22,230 | 79 | 103 | 80 | 2,141 | (not built alone at its gulf place) |
+  | Pelican Key | 10,193 | 2,155 | 14 | 11 | 7 | 297 | (in Metro City's island build) |
+  | Gull Harbor | 15,398 | 1,371 | 14 | 10 | 5 | 551 | |
+  | Coral Cay | 13,369 | 0 | 4 | 0 | 0 | 573 | |
+  | Paradise Cay, Lighthouse Rock, Smuggler's Rock | 1,276 / 2,298 / 1,782 | 0 | 0 | 0 / 0 / 1 | 0 / 0 / 1 | 0 / 63 / 91 | |
+  | the mainland | 10,620,232 | 2,946 | 2 | 7 | 12 | 183,324 | |
+
+  Each gulf place comes out within a few percent of its single build: the same land to the tile (Cedar Isle 7 tiles
+  less), more buildings and POIs where a place now has its neighbours' businesses' districts and spots on its land
+  (Westport +20 buildings, +16 POIs; Cedar Isle +10, +9), Metro City's 5 road edges fewer.
+
+**The test** (`test/world3world.test.js`, one build, about 25 s): each gulf place's land, road edges, buildings and
+POIs against its single build's; Pelican Key, Northshore and Gull Harbor have streets and buildings, the small islands
+their land; the mainland is dressed (over 100,000 props); every road point, building and POI is in the frame; today's
+Bay Bridge is cut at the shore and the skeleton's eleven gulf crossings are listed.
+
+**The picture:** `docs/world-v3-world.png` (`node --expose-gc tools/world3-world-map.mjs`: the built map's tiles over the
+whole frame, 1 px = 2 tiles, props as dots - 25 s with the build). **The game's chunk bake over the whole frame is too
+slow for now:** timed on samples, 284 ms a chunk of wild ground, 411 of coast, 478 of town; the frame has 18,857 wild,
+996 coast and 1,086 town chunks (14,341 of open sea, baked once) - **about 105 minutes on one thread** (175 when the
+other helpers had the cores: 415 / 1,702 / 921 ms). The tool bakes it with `--bake [--shrink 64]`
+(`docs/world-v3-world-bake.png`) when there is an hour or two to spare. **A region at 1/16** (`--region rx,ry`, lit as
+`tools/world3-place-map.mjs` does it): `docs/world-v3-world-r4-4.png`, region 4, 4 (tiles 2016-2519 both ways: Metro
+City's north-east, the canal's east half), 338 chunks in 132 s. It reads as the city: the Metro Ring, Broadway's
+diagonal, the grid, the car parks, Coast Drive round the new east shore, the canal's bridges. Wrong there: the canal's
+water meets the sea at its east mouth in a straight edge (two blues: 8.4's 12-tile rule); the new east shore is a strip
+of one red-roofed building repeated sixteen times in a column, and beside it a lot of plain grass and dirt (8.4 item 2:
+the shore isn't designed). What the whole picture shows wrong:
+- **The mainland reads as one green field:** Highland Woods' forest, Willow Valley's farmland, the Sandpiper Coast and
+  Northshore's beach strip are all grass with sparse tree dots (the wild dressing's density is today's, set for small
+  wild islands; the forest doesn't read as forest), and Granite Peaks is flat dirt. The biomes want their own dressing
+  (dense woods, fields and farmsteads, scrub, mesas), with the new districts' own ids.
+- **The Red Rock Desert is wallpaper:** today's desert ground (`terrain`'s sine bands of sand and dirt) repeats every
+  140 tiles or so; over 2.7 km² it is rows of identical chevrons.
+- **Northshore stands back from the gulf:** its town (scale 1 at [2000, 1600]) ends 60-80 tiles short of the shore, with
+  plain grass and the beach between; the beach towns that run on along the coast (54, a stand-in now) aren't built.
+- **Strays on the mainland** (7 buildings, 12 POIs, 2 road edges on the mainland's land): **Dry Creek's farm co-op and
+  its five estates** (`buildFarm`, `DRY_CREEK_ESTATES`: houses at [1113-1190, 500-545] with their homes, in today's
+  coordinates, so in Granite Peaks) - **skipped in the world build now** (Dry Creek is none of its places; its drop
+  site too); still there: **a ride and a snack stand** at [1077-1089, 852-855] (a site in today's coordinates, in
+  Highland Woods), **a lighthouse and an ATM** at [1667, 1512] by Westport Junction and a patch of sand at about
+  [488, 676] on Granite Peaks' edge (neither traced yet).
+  And Northshore's own south edge - the Northshore Loop, a delivery stop, a vending machine, an ATM at [2095-2265,
+  1804-1846] - lies on land the land layer gives the beach towns (district 54, not one of Northshore's picture's): not
+  strays, but Northshore's town running onto the beach strip. The unplaced passes are 8.4's list 4; each wants a
+  pin or a skip in the world build.
+- **No roads leave the islands** (the crossings are listed, not laid), and the mainland has none: the next step.
+- **Prison Island and the Egret Rocks are bare ground**, Port Westport the harbor style's grey slab (H25's work).
+
+**What's left** (in order):
+1. Lay the skeleton's lines: the highways, arterials, the main line and the subways on the mainland, and the listed
+   crossings between the places (their ends carried on to the places' streets, as `joinPlace` does the canal's).
+2. `DISTRICTS3` into `DISTRICTS` (and zones 11-18 into the generator's zone lists), so the mainland has its own
+   districts and the beach towns and the Sandpiper Coast can be built.
+3. The time (15 s) and the memory (under 900 MB): the terrain pass, the nature sites' `restSpots`, `countrysideRoads`;
+   free the land layer once the build has read it.
+4. The strays: pin or skip the passes still in today's coordinates (above: the ride and snack stand, the lighthouse),
+   `buildGullIsles` first (Gull Harbor is built, its harbour isn't placed: it runs in today's coordinates, where the
+   mainland is now).
+5. The chunk bake of the whole frame (`--bake`, an hour and three quarters on one thread) or by region.

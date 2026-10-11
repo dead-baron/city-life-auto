@@ -7048,3 +7048,59 @@ their booms over the water; the gate a pavement from a road with the gatehouse b
 solid on a road or a pavement; the ship on the water; Westport Freight still a delivery stop); the code budgets (`test/perf.test.js`, its first test)
 pass - the city's code (the generator, gzipped) is at 340.3 of its 340 KB (it rounds to 340): the next generator
 change needs the budget raised or code moved out.
+## 2026-10-10 · World v3, stage 2, step 4: the whole v3 world in one build
+
+Asked (stage 2's plan, 8.3: "the generator at the v3 frame, building today's places at their gulf positions and
+sizes"): build every gulf place in **one** generateCity call - each was built alone in the full v3 frame, 8-10 s and
+about 650 MB apiece - with today's small islands placed whole, the mainland's land as plain ground with its wild
+dressing, and the skeleton's crossings between places listed; measure it; draw the whole world.
+
+What it does (docs/WORLD-V3.md 8.6 has the numbers):
+- `generateCity(seed, { world3: true, frame, land: buildLand3(today), today })` builds one CityMap of the v3 frame
+  (5040 x 4032): Metro City + Southbank (with the canal), Cedar Isle, Westport with Port Westport, the airport,
+  Pelican Key and Northshore at their gulf places and sizes; Gull Harbor, Coral Cay, Paradise Cay, Lighthouse Rock and
+  Smuggler's Rock placed whole; the islets and the new rocks and Prison Island as the land has them; the mainland as
+  ground by its terrain class (sand on its beaches) with trees, rocks and scrub - no mainland roads yet.
+- **One build, many placements:** every position the generator takes from today's world goes through the placement
+  of its piece - the piece whose picture has today's district there (Metro City's and Cedar Isle's rectangles overlap,
+  their districts don't), else the small island whose rectangle holds it; what no piece builds goes off the frame.
+  In the generator `PL` is the current piece (`pin` / `unpin`); the lines laid in today's coordinates are placed point
+  by point, a point over today's water going with its shore. Hashes read the v3 tile.
+- **The roads between places:** today's bridges between today's islands are split where they leave one piece and cut
+  at the shore (the Bay Bridge, the Pelican Way, the Westport Beltway's ends); the canal's bridges are laid as in a
+  Metro City build; the skeleton's thirteen crossings between built places (the Union Bridge, the Harbor Footbridge,
+  the Northshore Lift Bridge, the Harbor Tunnel, Eastgate, the Southbank Walk, Cedar North, Toll Point, the Port
+  Bridge, Airport and Runway Roads, the Pelican Walk, the West Sea Road) are listed in `m.world3.crossings` for the
+  next step.
+- **The numbers:** the build takes 15 s (the six single builds took about 50 s together), the process peaks at 885-892
+  MB (inside the server's 1 GB, with today's world and the land held); each gulf place within a few percent of its
+  single build (Metro City 541 road edges, 476
+  buildings, 232 POIs; Cedar Isle 245 / 215 / 168; Westport 333 / 354 / 186; the airport 21 / 4 / 3); 207,226 props,
+  183,324 of them the mainland's.
+- **62 s -> 15 s:** the first build took 62-64 s, 55 of them in the redwood groves' `roomFor`, which looked for room for
+  each new giant by going over every giant so far (quadratic: all of Highland Woods is redwood forest now, 47,455
+  redwoods). The giants are kept by 256 px cell and only the cells within reach are looked at - the same answer, so
+  the live world is the same to the bit and the world build's output the same to the count.
+- **The picture:** `docs/world-v3-world.png` - the built map's tiles, 1 px = 2 tiles. The game's chunk bake over the
+  whole frame would take about 105 minutes on one thread (timed: 284-478 ms a chunk, 20,939 chunks with land), so the
+  tool does it only when asked (`--bake`); one region at 1/16 takes about 2 minutes (`--region 4,4`:
+  `docs/world-v3-world-r4-4.png`, Metro City's north-east and the canal - the canal meets the sea in a straight edge,
+  the new east shore is one red-roofed building repeated in a column beside plain ground). What the whole shows wrong: the mainland reads as one green field (the forest, the
+  farmland and the coasts all grass with sparse trees), the desert is a wallpaper of identical sand chevrons, Northshore
+  stands back from the shore with no beach towns, a few strays from passes still in today's coordinates sit in the
+  frame's top-left, and no roads leave the islands yet.
+- The live world is unchanged: the world hash stays `6b6e16fdef9f`; the city worker's code stays at 337 of 340 KB
+  (`map.js` +1.2 KB).
+
+The files: `shared/world3-world.js` (new: `worldPieces`, `worldOpts` - the pieces, `pick`, `placeLine`, `cls`, the
+land, zones and districts, the stand-ins, the lines), `shared/world3-islands.js` (`'world'`), `shared/map.js`
+(`world3` in `generateCity`; `WD`, `pin` / `unpin` at the sources; `LX` / `LY`, `gridOff` and `clsAt` for the world
+build; two guards for spots of places it doesn't build; Dry Creek's farm co-op and estates left out of it;
+`redwoodGroves`' giants by cell), `shared/naturesites.js`
+(`PXs` takes the anchor's y),
+`tools/world3-build.mjs` (new: the build, its time, memory and sizes per place), `tools/world3-world-map.mjs` (new: the
+picture, the chunk bake's timing, `--bake`, `--region`), `test/world3world.test.js` (new), `docs/WORLD-V3.md` 8.6,
+`docs/world-v3-world.png`, `docs/world-v3-world-r4-4.png`.
+
+Tests: `test/world3world.test.js` (new: one whole-world build, about 25 s), `test/world3.test.js` (today's world still
+the stamped one), `test/mapwindow.test.js`, `test/dmath.test.js`, `test/nature.test.js` pass.

@@ -106,7 +106,7 @@ const nearProps = (m, x0, y0, x1, y1, fn) => (PG && PG.m === m ? PG.each(x0, y0,
 const anyProp = (m, x0, y0, x1, y1, pred) => (PG && PG.m === m ? PG.any(x0, y0, x1, y1, pred) : m.props.some((q) => q && pred(q)));
 // (World v3's gulf places, H.place: a site's anchor of today's world placed, whole tiles - its sizes kept - and a
 // position hash's tile read back in today's coordinates, so a place built at scale 1 is today's, moved: map.js)
-const PXs = (H, x) => (H.place ? H.place.x(x) : x), PYs = (H, y) => (H.place ? H.place.y(y) : y);
+const PXs = (H, x, y) => (H.place ? H.place.x(x, y) : x), PYs = (H, y) => (H.place ? H.place.y(y) : y);
 const LXs = (H, x) => (H.place ? H.place.lx(x) : x), LYs = (H, y) => (H.place ? H.place.ly(y) : y);
 export function buildNatureSites(m, H) {
   PG = propGrid(m);
@@ -355,7 +355,7 @@ function waysideFinds(m, H) {
 // cut bunches and the farm's sign by the path in from the beach.
 function lavenderFields(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const X0 = PXs(H, 724), X1 = X0 + 26, Y0 = PYs(H, 1097), Y1 = Y0 + 26;
+  const X0 = PXs(H, 724, 1097), X1 = X0 + 26, Y0 = PYs(H, 1097), Y1 = Y0 + 26;
   const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !(m.reserve[i] & RES) && m.dist[i] === 38;
   let bad = 0; for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) if (!open(at(tx, ty))) bad++;
   if (bad > 12) return;
@@ -1071,7 +1071,7 @@ function pineLake(m, H) {
 // park signs; reeds and cattails in the shallows, stepping stones, mossy rocks and logs on the banks.
 function cedarCreek(m, H) {
   const LUSH = 128, at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const AX = PXs(H, 600), AY = PYs(H, 950), BX = PXs(H, 592), BY = PYs(H, 1025);
+  const AX = PXs(H, 600, 950), AY = PYs(H, 950), BX = PXs(H, 592, 1025), BY = PYs(H, 1025);
   if (!m.lake[at(AX, AY)] || !m.lake[at(BX, BY)] || m.dist[at(AX, AY)] !== 37) return;
   const road = (m.roads || []).find((r) => r.name === 'Falls Road' && r.lvl === 0 && r.pts.some((q) => Math.abs(q.x / TILE - AX) < 30 && Math.abs(q.y / TILE - PYs(H, 988)) < 8));
   if (!road) return;
@@ -1941,7 +1941,7 @@ function northshoreGardens(m, H) {
 // pier with a lantern on the west shore, a canoe on the bank; willows round the edges; herons, swans and ducks.
 function heronMarsh(m, H) {
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
-  const hx = PXs(H, 660), hy = PYs(H, 970);
+  const hx = PXs(H, 660, 970), hy = PYs(H, 970);
   for (let ty = hy; ty < hy + 60; ty++) for (let tx = hx; tx < hx + 50; tx++) if (m.lake[ty * m.w + tx]) { n++; x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty); }
   if (n < 100) return;
   const cyL = (y0 + y1) / 2, open = (i) => m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT;

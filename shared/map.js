@@ -210,10 +210,11 @@ export const CLUB_LOTS = new Set(['club', 'clubnova', 'clubeclipse']);
 let islandBuilds = null;
 export function setIslandBuilds(f) { islandBuilds = f; }
 export function generateCity(seed = 1337, opts = null) {
-  if (opts && opts.island && !islandBuilds) throw new Error('island builds: import shared/world3-islands.js first');
+  if (opts && (opts.island || opts.world3) && !islandBuilds) throw new Error('island builds: import shared/world3-islands.js first');
   const frame = opts && opts.frame;   // ({ w, h }: World v3's server)
   if (opts && 'frame' in opts) { const { frame: _f, ...rest } = opts; opts = Object.keys(rest).length ? rest : null; }
-  return withDeterministicMath(() => buildCity(seed, opts && opts.island ? islandBuilds(opts.island, opts) : opts, frame));
+  const key = opts && (opts.island || (opts.world3 && 'world'));   // (world3: the whole v3 world, shared/world3-world.js)
+  return withDeterministicMath(() => buildCity(seed, key ? islandBuilds(key, opts) : opts, frame));
 }
 // ---------------------------------------------------------------------------
 // The generator (from here to the end; mapSignature: shared/mapcore.js) builds the map's frame, m.w x m.h from 0, 0: a tile's index is
@@ -223,17 +224,18 @@ let OPTS = null;   // (World v3's spike: what generateCity was asked to build; n
 // build takes from today's world goes through at + (p - from) * s - PX / PY in tiles, QX / QY in px; sizes don't scale.
 // Position seeds and hashes read today's coordinates back, LX / LY (the tile less the placement's offset), so a place
 // built at scale 1 is today's, moved; IX / IY: the true inverse, for reading today's grids. The identity without it.)
-let PL = null;
+let PL = null, WD = null;   // (WD: the whole v3 world in one build, 8.6 - PL is then the piece today's district at a source position belongs to: pin / unpin, shared/world3-world.js)
+const pin = (x, y) => { if (WD) PL = WD.pick(x, y); }, unpin = () => { if (WD) PL = WD.base; };
 const PX = (x) => (PL ? PL.at[0] + (x - PL.from[0]) * PL.s : x), PY = (y) => (PL ? PL.at[1] + (y - PL.from[1]) * PL.s : y);
 const QX = (x) => (PL ? PX(x / TILE) * TILE : x), QY = (y) => (PL ? PY(y / TILE) * TILE : y);
-const LX = (x) => (PL ? x - PL.dx : x), LY = (y) => (PL ? y - PL.dy : y);
+const LX = (x) => (PL && !WD ? x - PL.dx : x), LY = (y) => (PL && !WD ? y - PL.dy : y);
 const IX = (x) => (PL ? PL.from[0] + (x - PL.at[0]) / PL.s : x), IY = (y) => (PL ? PL.from[1] + (y - PL.at[1]) / PL.s : y);
 const IQX = (x) => (PL ? IX(x / TILE) * TILE : x), IQY = (y) => (PL ? IY(y / TILE) * TILE : y);
-const LQX = (x) => (PL ? x - PL.dx * TILE : x), LQY = (y) => (PL ? y - PL.dy * TILE : y);   // (LX / LY in px)
-const gridOff = (d, c) => (d ? ((d % c) + c) % c : 0);   // (a sampling grid's origin: placed with the build, LX / LY)
+const LQX = (x) => (PL && !WD ? x - PL.dx * TILE : x), LQY = (y) => (PL && !WD ? y - PL.dy * TILE : y);   // (LX / LY in px)
+const gridOff = (d, c) => (d && !WD ? ((d % c) + c) % c : 0);   // (a sampling grid's origin: placed with the build, LX / LY)
 function buildCity(seed, opts = null, frame = null) {
   OPTS = opts;
-  PL = opts?.place || null;
+  PL = opts?.place || null; WD = opts?.world || null;
   for (const k in ISLANDS) ISLANDS[k].box = ISLAND_BOX0[k].slice();   // (each build starts clean: terrain sets the boxes of the islands it has)
   const m = new CityMap(seed, frame?.w, frame?.h);
   const rand = mulberry32(seed);
@@ -340,15 +342,15 @@ function buildCity(seed, opts = null, frame = null) {
   // --- waterfronts, farms, islands, street furniture, traffic graph ------------------------------
   buildWaterfronts(m, rand);
   if (OPTS?.quays) buildQuays(m, OPTS.quays);   // (World v3's Port Westport: docs/WORLD-V3.md 8.5)
-  buildFarm(m, rand);
-  buildAirports(m);
+  buildFarm(m, rand); unpin();
+  buildAirports(m); unpin();
   runwayLights(m, { addProp });
   buildCountryside(m, { simpleBuilding, placePrefab, addProp, clearArea });
-  buildEstates(m, rand);
+  buildEstates(m, rand); unpin();
   buildOutposts(m, rand);
-  buildScenePaintings(m);
+  buildScenePaintings(m); unpin();
   buildGullIsles(m, rand);
-  buildNatureSites(m, { addProp, terrainAt: (cls, cw, tx, ty) => wildBiome(m.dist[ty * m.w + tx], clsAt(cls, cw, tx, ty)), distStyle: DISTRICTS.map((d) => (d ? d.style : '')), place: PL ? { x: (x) => Math.round(PX(x)), y: (y) => Math.round(PY(y)), s: PL.s, lx: LX, ly: LY } : null });
+  buildNatureSites(m, { addProp, terrainAt: (cls, cw, tx, ty) => wildBiome(m.dist[ty * m.w + tx], clsAt(cls, cw, tx, ty)), distStyle: DISTRICTS.map((d) => (d ? d.style : '')), place: PL ? { x: (x, y) => (y !== undefined && pin(x, y), Math.round(PX(x))), y: (y) => Math.round(PY(y)), s: PL.s, lx: LX, ly: LY } : null }); unpin();
   buildWilds(m, rand);
   buildTownGreen(m);
   buildStreetProps(m);
@@ -371,7 +373,7 @@ function buildCity(seed, opts = null, frame = null) {
   clearHospitalFronts(m);
   buildRailway(m, railPts);
   buildOffshore(m, rand);
-  buildBoatDocks(m);
+  buildBoatDocks(m); unpin();
   buildSignals(m);
   buildStreetAtms(m);
   m.atms = m.pois.filter((p) => p.kind === 'atm');
@@ -545,7 +547,7 @@ function terrain(m, opts = null) {
     const nearSea = m.distSea[i] <= 10;
     const z = m.zone[i];
     if (z === Z.CITY || z === Z.SOUTH) { m.tiles[i] = T.GRASS; continue; }
-    const c = PL ? terrainAt(cls, cw, Math.floor(IX(x)), Math.floor(IY(y))) : terrainAt(cls, cw, x, y);   // (only where it counts: the city is all grass to start with)
+    const c = clsAt(cls, cw, x, y);   // (only where it counts: the city is all grass to start with)
     if (nearSea && (z !== Z.EAST || c !== 4)) { m.tiles[i] = T.SAND; continue; }
     const lx = LX(x), ly = LY(y);
     m.tiles[i] = c === 3 ? (Math.sin(lx * 0.045 + Math.cos(ly * 0.06) * 2) + Math.sin(ly * 0.05 - lx * 0.02) + (hash2(lx, ly, 5) - 0.5) * 0.5 > 0.9 ? T.SAND : T.DIRT) : c === 4 ? T.DIRT : T.GRASS;
@@ -606,6 +608,7 @@ function paintDistricts(m) {
   // inland lakes (fresh water: fishable like the river)
   m.lake = new Uint8Array(W * H);
   for (const [lx0, ly0, rx, ry] of LAKES) {
+    pin(lx0, ly0);
     const lx = PX(lx0), ly = PY(ly0);
     for (let y = Math.floor(ly - ry - 1); y <= ly + ry + 1; y++) for (let x = Math.floor(lx - rx - 1); x <= lx + rx + 1; x++) {
       const k = ((x - lx) / rx) ** 2 + ((y - ly) / ry) ** 2 + 0.12 * Math.sin(LX(x) * 0.7 + LY(y) * 0.4);
@@ -615,6 +618,7 @@ function paintDistricts(m) {
       m.tiles[i] = k < 0.4 ? T.DEEP : T.WATER;
     }
   }
+  unpin();
 }
 
 // ---------------------------------------------------------------------------
@@ -637,8 +641,8 @@ function layoutRoads(m, rand) {
   // look the map up at the placed tile, and what they laid is placed after them, each point once)
   const seen = PL ? new WeakSet() : null;
   const mark = () => { if (PL) for (const l of lines) for (const p of l.pts) seen.add(p); };
-  const placeNew = () => { if (PL) for (const l of lines) for (const p of l.pts) if (!seen.has(p)) { seen.add(p); p.x = QX(p.x); p.y = QY(p.y); } };
-  const placed = (f) => (PL ? (x, y) => f(PX(x), PY(y)) : f);
+  const placeNew = () => { if (PL) for (const l of lines) if (WD) WD.placeLine(l.pts, seen); else for (const p of l.pts) if (!seen.has(p)) { seen.add(p); p.x = QX(p.x); p.y = QY(p.y); } };
+  const placed = (f) => (PL ? (x, y) => { pin(x, y); const r = f(PX(x), PY(y)); unpin(); return r; } : f);
   const back = (p) => (PL && p ? { x: IQX(p.x), y: IQY(p.y) } : p);
 
   // ring highway, its distance field and the frontage roads
@@ -794,11 +798,13 @@ function layoutRoads(m, rand) {
   placeNew();
   stationAccess(m, lines, isLand, seaD);
   // campgrounds, roadside stops, masts, wind farms... out in the wild, each with its own road in
-  const avoid = AIRPORTS.map(airportPlan).flatMap((A) => [A.runway, A.apron, A.taxi, A.terminal, ...A.hangars].map(([x, y, w, h]) => [x - 5, y - 5, w + 10, h + 10])).concat(FIELDS.map(([x, y, w, h]) => [PTX(x) - 2, PTY(y) - 2, w + 4, h + 4]), FARM_FIELDS.map(([x, y, w, h]) => [PTX(x) - 2, PTY(y) - 2, w + 4, h + 4]));
+  const avoid = AIRPORTS.map((A) => airportPlan(A)).flatMap((A) => [A.runway, A.apron, A.taxi, A.terminal, ...A.hangars].map(([x, y, w, h]) => [x - 5, y - 5, w + 10, h + 10])).concat(FIELDS.map(([x, y, w, h]) => (pin(x, y), [PTX(x) - 2, PTY(y) - 2, w + 4, h + 4])), FARM_FIELDS.map(([x, y, w, h]) => [PTX(x) - 2, PTY(y) - 2, w + 4, h + 4]));
+  unpin();
   // (a placed build: the sites are looked for round their spots placed, in the place's frame - countryside.js `at`; the
   // lots keep their size)
-  if (PL) countrysideRoads({ m, lines, isLand, seaD, lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; }, wildAt: (tx, ty) => wildAt(m, tx, ty), avoid, at: (x, y) => [PTX(x), PTY(y)] });
+  if (PL) countrysideRoads({ m, lines, isLand, seaD, lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; }, wildAt: (tx, ty) => wildAt(m, tx, ty), avoid, at: (x, y) => (pin(x, y), [PTX(x), PTY(y)]) });
   else countrysideRoads({ m, lines, isLand, seaD, lake: (x, y) => { const i = at(x, y); return i >= 0 && !!m.lake[i]; }, wildAt: (tx, ty) => wildAt(m, tx, ty), avoid });
+  unpin();
   return lines;
 }
 
@@ -1230,7 +1236,8 @@ function waterfrontStrip(m) {
 function findBlocks(m) {
   const W = m.w, H = m.h;
   ALL_PARKS = [{ ...PARK, pond: true, pitch: true }, ...PARKS.map((q) => ({ ...q, pond: !q.lake && !q.pitch }))];
-  if (PL) ALL_PARKS = ALL_PARKS.map((q) => ({ ...q, x0: PX(q.x0), y0: PY(q.y0), x1: PX(q.x1), y1: PY(q.y1) }));   // (a placed build)
+  if (PL) ALL_PARKS = ALL_PARKS.map((q) => (pin(q.x0, q.y0), { ...q, x0: PX(q.x0), y0: PY(q.y0), x1: PX(q.x1), y1: PY(q.y1) }));
+  unpin();   // (a placed build)
   const free = new Uint8Array(W * H);
   for (let i = 0; i < W * H; i++) {
     if (builtAt(m, i) && m.tiles[i] === T.GRASS && !m.reserve[i]) free[i] = 1;
@@ -1416,7 +1423,8 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
   if (!cands.length) return false;
   if (seaSide) { const near = cands.filter(([row]) => nearSea(row)); if (near.length) cands = near; const home = cands.filter(([row]) => row.d === sp.d); if (home.length) cands = home; }
   // prefer lots near the heart of the district (or right at the spot a special was planned for: at, tiles)
-  const [sx, sy] = sp.at ? [QX(sp.at[0] * TILE), QY(sp.at[1] * TILE)] : seedOf(sp.d);
+  const [sx, sy] = sp.at ? (pin(sp.at[0], sp.at[1]), [QX(sp.at[0] * TILE), QY(sp.at[1] * TILE)]) : seedOf(sp.d);
+  unpin();
   const mid = (c) => [(c[0].iv[c[1]][0] + c[0].iv[c[1]][1]) / 2 * TILE, (c[0].y + c[0].h / 2) * TILE];
   cands.sort((a, b) => (sp.at ? Math.hypot(mid(a)[0] - sx, mid(a)[1] - sy) - Math.hypot(mid(b)[0] - sx, mid(b)[1] - sy) : Math.hypot(a[0].x * TILE - sx, a[0].y * TILE - sy) - Math.hypot(b[0].x * TILE - sx, b[0].y * TILE - sy)));
   const pickR = rand();
@@ -1434,7 +1442,7 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
 // the rows round the hero corner are rebuilt by buildHeroCorner: no special business (the only dealership, a
 // hospital...) is put where it would be cleared away
 const nearHero = (row, iv) => row.y < PY(HERO.y) + 20 && row.y + row.h > PY(HERO.y) - 20 && iv[0] < PX(HERO.x) + 30 && iv[1] > PX(HERO.x) - 30;
-function seedOf(d) { const [x, y] = seedOf0(d); return [QX(x), QY(y)]; }   // (placed: PL)
+function seedOf(d) { const [x, y] = seedOf0(d); pin(x / TILE, y / TILE); const r = [QX(x), QY(y)]; unpin(); return r; }   // (placed: PL)
 function seedOf0(d) {
   const s = SEEDS.filter((q) => q[0] === d);
   if (d === 46) return [(ARTS.x0 + ARTS.x1) / 2 * TILE, (ARTS.y0 + ARTS.y1) / 2 * TILE];   // (laid out by a rectangle, not seeds)
@@ -2254,7 +2262,7 @@ function buildEstates(m, rand) {
   m.garages ||= [];
   m.mansions ||= [];
   // Dry Creek: either side of the county road
-  const plan = DRY_CREEK_ESTATES;
+  const plan = WD ? [] : DRY_CREEK_ESTATES;   // (the world build: Dry Creek is none of its places)
   // (a house and the garage beside it, off the roads, with a road ahead of its front for the driveway)
   const spot = (key, x, y, south, i = -1) => {
     const pf = PREFABS[key], s = pf.rot ? south : true;
@@ -2269,8 +2277,9 @@ function buildEstates(m, rand) {
   }
   // cabins, lodges and farmhouses out on the other islands
   for (const [type, key, ex, ey, south] of ISLAND_ESTATES) {
+    pin(ex, ey);
     const x0 = PTX(ex), y0 = PTY(ey);   // (placed: World v3's gulf places)
-    const pf = PREFABS[key], p = spot(key, x0, y0, south);
+    const pf = PREFABS[key], p = m.inside(x0, y0) && spot(key, x0, y0, south);
     if (!p) continue;
     const [x, y] = p;
     clearArea(m, x - 2, y - 2, pf.tw + 8, pf.th + 4);
@@ -3811,7 +3820,7 @@ const FARM_FIELDS = [[1056, 548, 30, 40], [1100, 548, 34, 40], [1056, 594, 32, 4
 // stands, the estates, the scene spots, the airports, the country sites; and the concept picture's terrain class at a
 // placed tile, read back through the placement)
 const PTX = (x) => (PL ? Math.round(PX(x)) : x), PTY = (y) => (PL ? Math.round(PY(y)) : y);
-const clsAt = (cls, cw, tx, ty) => (PL ? terrainAt(cls, cw, Math.floor(IX(tx)), Math.floor(IY(ty))) : terrainAt(cls, cw, tx, ty));
+const clsAt = (cls, cw, tx, ty) => (WD ? WD.cls(tx, ty, (x, y) => terrainAt(cls, cw, x, y)) : PL ? terrainAt(cls, cw, Math.floor(IX(tx)), Math.floor(IY(ty))) : terrainAt(cls, cw, tx, ty));
 // An airport where it is built: today's, or placed - each part keeps its size. On a smaller place (scale < 1: the v3
 // airport, 0.65) a runway, a terminal and hangars can't shrink: the layout keeps today's spacing across (the runway,
 // the taxiway, the apron, the terminal, the planes, the hangars side by side, from the runway's placed corner) and is
@@ -3819,6 +3828,7 @@ const clsAt = (cls, cw, tx, ty) => (PL ? terrainAt(cls, cw, Math.floor(IX(tx)), 
 // in a row under it (buildAirports keeps those that stand on the land)
 function airportPlan(A) {
   if (!PL) return A;
+  pin(A.runway[0], A.runway[1]);   // (the world build: the airport's piece - callers unpin)
   if (PL.s >= 1) {
     const P = ([x, y, w, h]) => [PTX(x), PTY(y), w, h];
     return { ...A, runway: P(A.runway), taxi: P(A.taxi), apron: P(A.apron), terminal: P(A.terminal), hangars: A.hangars.map(P), planes: A.planes.map(([x, y]) => [PX(x), PY(y)]), poiAt: [PX(A.poiAt[0]), PY(A.poiAt[1])] };
@@ -4046,20 +4056,23 @@ function buildFarm(m, rand) {
     }
     if (n > 200) m.fields.push({ x: fx * TILE, y: fy * TILE, w: fw * TILE, h: fh * TILE });
   }
-  const pf = PREFABS.house2;
-  // beside the Desert Highway, its yard to the west and its drive north to a road (off the highway itself: offTheRoad)
-  // (and clear of the Dry Creek farmhouses still to come: buildEstates)
-  const [fx, fy] = (offTheRoad(m, 1157, 534, pf.tw + 4, pf.th, (X, Y) => roadAhead(m, X + 6, 2, Y - 2, -1), 40, (X, Y) => !nearDryCreek(X, Y, pf.tw + 4, pf.th, 4)) || [1157, 534]).map((v, k) => v + (k ? 0 : 3));
-  m.fill(fx - 4, fy - 1, pf.tw + 8, pf.th + 2, T.DIRT);
-  const row = { d: 9, x: fx, y: fy, w: pf.tw, h: pf.th, face: 'N' };
-  placePrefab(m, row, 'house2', fx, { biz: ['farm'], names: ['Dry Creek Farm Co-op'] }, rand);
-  driveway(m, fx + 3, 2, fy - 2, -1);
-  const farm = m.pois.find((p) => p.kind === 'farm');
-  farm.cargoPad = { x: (fx - 2.5) * TILE, y: (fy + 3) * TILE };
-  // the drop site out in the boonies, and woods
-  m.dropSites.push({ x: 1176 * TILE, y: 760 * TILE, name: 'the Dry Creek boonies' });
+  if (!WD) {   // (the world build: Dry Creek is none of its places)
+    const pf = PREFABS.house2;
+    // beside the Desert Highway, its yard to the west and its drive north to a road (off the highway itself: offTheRoad)
+    // (and clear of the Dry Creek farmhouses still to come: buildEstates)
+    const [fx, fy] = (offTheRoad(m, 1157, 534, pf.tw + 4, pf.th, (X, Y) => roadAhead(m, X + 6, 2, Y - 2, -1), 40, (X, Y) => !nearDryCreek(X, Y, pf.tw + 4, pf.th, 4)) || [1157, 534]).map((v, k) => v + (k ? 0 : 3));
+    m.fill(fx - 4, fy - 1, pf.tw + 8, pf.th + 2, T.DIRT);
+    const row = { d: 9, x: fx, y: fy, w: pf.tw, h: pf.th, face: 'N' };
+    placePrefab(m, row, 'house2', fx, { biz: ['farm'], names: ['Dry Creek Farm Co-op'] }, rand);
+    driveway(m, fx + 3, 2, fy - 2, -1);
+    const farm = m.pois.find((p) => p.kind === 'farm');
+    farm.cargoPad = { x: (fx - 2.5) * TILE, y: (fy + 3) * TILE };
+    // the drop site out in the boonies, and woods
+    m.dropSites.push({ x: 1176 * TILE, y: 760 * TILE, name: 'the Dry Creek boonies' });
+  }
   // Cedar Farms: fields between the section roads and a market stand that takes harvests
   for (const [fx1, fy1, fw, fh] of FIELDS) {
+    pin(fx1, fy1);
     const fx2 = PTX(fx1), fy2 = PTY(fy1);   // (placed: World v3's gulf places)
     let n = 0;
     for (let y = fy2; y < fy2 + fh; y++) for (let x = fx2; x < fx2 + fw; x++) {
@@ -4069,6 +4082,7 @@ function buildFarm(m, rand) {
     if (n > 200) m.fields.push({ x: fx2 * TILE, y: fy2 * TILE, w: fw * TILE, h: fh * TILE });
   }
   for (const [sx1, sy1, name, south] of FARM_STANDS) {
+    pin(sx1, sy1);
     const sx = PTX(sx1), sy = PTY(sy1);
     if (PL && (!m.inside(sx, sy) || !m.land[sy * W + sx])) continue;   // (placed: built by the place it stands on)
     // the farmstead from the concept painting: farmhouse, barn, silos, paddock
@@ -4271,7 +4285,7 @@ function buildBoatDocks(m) {
   if (marinaPoi) anchors.push({ x: marinaPoi.x, y: marinaPoi.y, name: 'Harbor Boat & Jet Ski Hire' });
   if (m.pelican) anchors.push({ x: m.pelican.dock.x, y: m.pelican.dock.y, name: 'Pelican Key Jet Skis' });
   for (const v of m.gullIsles || []) anchors.push({ x: v.x, y: v.y, name: v.rent });   // (the only way off the Gull Isles is by boat)
-  for (const lk of LAKES) if (lk[4] === 'Cedar Lake' || lk[4] === 'Lakeview Lake') anchors.push({ x: QX((lk[0] + lk[2] / 2) * TILE), y: QY((lk[1] + lk[3] / 2) * TILE), name: `${lk[4]} Boat Hire`, lake: true });   // (QX / QY: World v3's gulf places)
+  for (const lk of LAKES) if (lk[4] === 'Cedar Lake' || lk[4] === 'Lakeview Lake') anchors.push({ x: (pin(lk[0] + lk[2] / 2, lk[1] + lk[3] / 2), QX((lk[0] + lk[2] / 2) * TILE)), y: QY((lk[1] + lk[3] / 2) * TILE), name: `${lk[4]} Boat Hire`, lake: true });   // (QX / QY: World v3's gulf places)
   for (const an of anchors) {
     const cx = Math.floor(an.x / TILE), cy = Math.floor(an.y / TILE);
     const L = findLaunch(m, cx, cy, an.lake ? 22 : 34, an.lake ? 6 : 8, used, 2);
@@ -4331,7 +4345,8 @@ function buildScenePaintings(m) {
     }
     const badIn = (x, y, w, h) => sat[(y + h) * (W + 1) + x + w] - sat[y * (W + 1) + x + w] - sat[(y + h) * (W + 1) + x] + sat[y * (W + 1) + x];
     let best = null, bd = Infinity;
-    const nx = PL ? PX(sp.near[0]) : sp.near[0], ny = PL ? PY(sp.near[1]) : sp.near[1];   // (placed: World v3's gulf places)
+    const nx = PL ? (pin(sp.near[0], sp.near[1]), PX(sp.near[0])) : sp.near[0], ny = PL ? PY(sp.near[1]) : sp.near[1];   // (placed: World v3's gulf places)
+    if (!m.inside(Math.floor(nx), Math.floor(ny))) continue;   // (the world build: a spot of a place it doesn't build)
     for (let y = 2 + gridOff(PL?.dy, 2); y + sp.h + 4 < H; y += 2) for (let x = 2 + gridOff(PL?.dx, 2); x + sp.w + 4 < W; x += 2) {
       if (badIn(x - 2, y - 2, sp.w + 4, sp.h + 4)) continue;
       const d = Math.hypot(x + sp.w / 2 - nx, y + sp.h / 2 - ny);
@@ -4486,13 +4501,22 @@ function buildWilds(m, rand) {
 // and the sorrel are the renderer's (statics.js coverAt).
 export const REDWOOD_SIZES = REDWOOD_TRUNK;   // species -> trunk radius (solid)
 function redwoodGroves(m, wild, inField, clear, rocky) {
-  const W = m.w, H = m.h, CG = 7, giants = [], forage = (m.forage ||= []);   // (forage: shared/foraging.js)
+  const W = m.w, H = m.h, CG = 7, forage = (m.forage ||= []);   // (forage: shared/foraging.js)
   const okAt = (tx, ty, pad) => {
     const i = ty * W + tx, t = m.tiles[i];
     return wild(i) && m.dist[i] === 29 && (t === T.GRASS || t === T.DIRT) && !rocky[i] && !m.lake[i] && !(m.noTree && m.noTree.has(i)) && !inField(tx, ty, 64) && clear(tx, ty, pad);
   };
   const nearWater = (tx, ty, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const t = m.tileAt(tx + dx, ty + dy); if (t === T.WATER || t === T.DEEP) return true; } return false; };
-  const roomFor = (x, y, r) => giants.every(([gx2, gy2, gr]) => Math.hypot(gx2 - x, gy2 - y) > gr + r + 18);
+  // (the giants by 256 px cell: room is looked for in the cells within reach of the biggest - the same answer as over
+  // all of them, without a pass over every giant for each new one: a v3 forest has tens of thousands)
+  const gcell = new Map();
+  let gmax = 0;
+  const gadd = (g) => { if (g[2] > gmax) gmax = g[2]; const k = Math.floor(g[0] / 256) * 65536 + Math.floor(g[1] / 256); let l = gcell.get(k); if (!l) gcell.set(k, (l = [])); l.push(g); };
+  const roomFor = (x, y, r) => {
+    const R = gmax + r + 18;
+    for (let cy = Math.floor((y - R) / 256); cy <= Math.floor((y + R) / 256); cy++) for (let cx = Math.floor((x - R) / 256); cx <= Math.floor((x + R) / 256); cx++) for (const [gx2, gy2, gr] of gcell.get(cx * 65536 + cy) || []) if (!(Math.hypot(gx2 - x, gy2 - y) > gr + r + 18)) return false;
+    return true;
+  };
   for (let gy = 2 + gridOff(PL?.dy, CG); gy < H - 3; gy += CG) for (let gx = 2 + gridOff(PL?.dx, CG); gx < W - 3; gx += CG) {
     const tx = gx + Math.floor(hash2(LX(gx), LY(gy), 301) * CG), ty = gy + Math.floor(hash2(LX(gx), LY(gy), 302) * CG);
     if (tx < 3 || ty < 3 || tx >= W - 3 || ty >= H - 3 || m.dist[ty * W + tx] !== 29) continue;
@@ -4503,7 +4527,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
     // a fairy ring: second-growth redwoods round an old stump (in the thick of a grove)
     if (g > 0.45 && u < 0.08 && okAt(tx, ty, 5) && roomFor(x, y, 110)) {
       addProp(m, 'rwstump', x, y, 18, { r: 26 });
-      giants.push([x, y, 26]);
+      gadd([x, y, 26]);
       forage.push({ x: x + 6, y: y + 30, k: hash2(LX(gx) * 7 + 1, LY(gy) * 11 + 2, 93491) < 0.55 ? 'ghostglass' : 'goldTrumpet' });   // (the old stump's rot feeds them)
       const n = 5 + Math.floor(hash2(LX(gx), LY(gy), 309) * 3), R = 78 + hash2(LX(gx), LY(gy), 310) * 22, a0 = hash2(LX(gx), LY(gy), 311) * Math.PI * 2;
       for (let k = 0; k < n; k++) {
@@ -4511,7 +4535,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
         const ktx = Math.floor(rx / TILE), kty = Math.floor(ry / TILE);
         if (!okAt(ktx, kty, 2)) continue;
         addProp(m, 'redwood', rx, ry, REDWOOD_SIZES.redwood2, { sp: 'redwood2', k: 1 });
-        giants.push([rx, ry, 16]);
+        gadd([rx, ry, 16]);
       }
       continue;
     }
@@ -4520,7 +4544,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
       const len = 180 + Math.floor(hash2(LX(gx), LY(gy), 313) * 5) * 24, a = 0, flip = hash2(LX(gx), LY(gy), 315) < 0.5 ? 1 : 0;   // (drawn east-west: redwoods.js nurseLog)
       addProp(m, 'rwlog', x, y, 0, { len, a: Math.round(a * 100) / 100, flip });
       for (const kk of [-0.4, -0.2, 0, 0.2, 0.4]) m.addSolidProp(x + Math.cos(a) * len * kk, y + Math.sin(a) * len * kk * 0.7 - 6, 15);
-      giants.push([x, y, 60]);
+      gadd([x, y, 60]);
       forage.push({ x: Math.round(x + (hash2(LX(gx), LY(gy), 334) - 0.5) * len * 0.5), y: y + 24, k: 'shelfOyster' });   // (on its side, toward you)
       if (hash2(LX(gx) * 5 + 9, LY(gy) * 7 + 4, 61331) < 0.3) forage.push({ x: Math.round(x + (flip ? 1 : -1) * (len / 2 + 6)), y: y + 26, k: 'ghostglass' });   // (by the root plate)
       continue;
@@ -4528,7 +4552,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
     const sp = u < 0.22 ? 'giantL' : u < 0.7 ? 'giant' : 'giantS', r = REDWOOD_SIZES[sp];
     if (!roomFor(x, y, r) || (r > 40 && !okAt(tx, ty, 4))) continue;   // (the biggest keep their flared feet off the road)
     addProp(m, 'redwood', x, y, r, { sp, k: 1 });
-    giants.push([x, y, r]);
+    gadd([x, y, r]);
     // mushrooms in the damp at the foot of one giant in three (on the side toward you - behind it they'd be hidden -
     // clear of the trunk)
     if (hash2(LX(gx), LY(gy), 330) < 0.34) {
@@ -4547,9 +4571,9 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
     if (!roomFor(x, y, 30)) continue;
     const u = hash2(LX(gx), LY(gy), 326);
     const sp = wet ? (u < 0.7 ? 'maple' : 'mapleAutumn') : u < 0.45 ? 'fir' : u < 0.8 ? 'oak' : 'redwood2';
-    if (sp === 'redwood2') { addProp(m, 'redwood', x, y, REDWOOD_SIZES.redwood2, { sp, k: 1 }); giants.push([x, y, 16]); continue; }
+    if (sp === 'redwood2') { addProp(m, 'redwood', x, y, REDWOOD_SIZES.redwood2, { sp, k: 1 }); gadd([x, y, 16]); continue; }
     addProp(m, 'tree_a', x, y, 12, { sp, k: sp === 'fir' ? 1.7 + hash2(LX(gx), LY(gy), 327) * 0.3 : sp === 'oak' ? 1.0 + hash2(LX(gx), LY(gy), 327) * 0.2 : 1.3 });
-    giants.push([x, y, 14]);
+    gadd([x, y, 14]);
   }
 }
 

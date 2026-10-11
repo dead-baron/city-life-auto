@@ -19,6 +19,7 @@ import { setIslandBuilds, ISLAND_AT } from './map.js';
 import { islandMask } from './world3.js';
 import { joinPlace } from './world3-crossings.js';
 import { ISLANDS as SK_ISLANDS } from './world3-skeleton.js';
+import { worldOpts } from './world3-world.js';   // (asked { world3: true }: the whole v3 world, 8.6)
 
 // A placement (docs/WORLD-V3.md 8.4): the piece built at its place in another frame - today's position p (tiles) goes to
 // at + (p - from) * scale (`from`: today's [x0, y0, ...], the picture's; shared/world3-skeleton.js ISLANDS' `picture`).
@@ -47,6 +48,7 @@ function placeGrid(g, W, H, pl) {
 // (asked = generateCity's opts: { island, keepLinks, place } - keepLinks keeps the roads to other islands, the bridges, as
 // laid today: to measure what leaving them out changes; place: { at, scale, from } builds it at its place, 8.4)
 export function islandOpts(key, asked = {}) {
+  if (key === 'world') return worldOpts(asked);
   const seeds = SEEDS.concat(ISLAND_SEEDS);
   const pl = asked.place ? placement(asked.place) : null;
   const PX = (x) => (pl ? pl.at[0] + (x - pl.from[0]) * pl.s : x), PY = (y) => (pl ? pl.at[1] + (y - pl.from[1]) * pl.s : y);
