@@ -1924,13 +1924,16 @@ city worker's code is still 337 of 340 KB (`tools/perf.mjs` codeReport: map.js +
   foot) and the West Sea Road (2,021 m over the Egret Rocks).
 
 **The numbers** (`node --expose-gc tools/world3-build.mjs`, this machine, node 22, two shared cores):
-- **Time:** the world build **62-64 s** (today's world 4.8 s and the land 0.9 s before it). The six single builds
-  were 7-9 s each, about 50 s together: the one build is no faster yet. Its whole-frame passes now have 11.5 M tiles
-  of land where a single build had a place's 0.02-0.26 M (the wild dressing's grids, the blocks, the props' sorts run
-  over the mainland): **to profile next** (`node --cpu-prof`).
-- **Memory:** the process's peak **885 MB** (today's world and the land held, then the world: 363 MB before the world
-  build, 838 MB after it). Inside the server's 1 GB, with little room: the land's 122 MB can go once the build has read
-  it, and today's world isn't needed after `prepare`.
+- **Time:** the world build **15.2 s** (today's world 4.8-6.1 s and the land 0.9 s before it) - against 7-9 s for each
+  of the six single builds, about 50 s together. It was 62-64 s at first: the profile (`node --cpu-prof`) put 55 s of
+  it in one function, `redwoodGroves`' `roomFor`, which looked for room for each new giant redwood by going over every
+  giant so far - quadratic, and the stand-in makes all of Highland Woods (3.4 km²) today's redwood forest: 47,455
+  redwoods. The giants are kept by 256 px cell now and only the cells within reach are looked at (the same answer:
+  the live world's hash is unchanged); the build's output is the same to the count. What's left of the time: the
+  terrain pass 3.3 s, the nature sites 3.0 s (`restSpots`), the road layout 2.9 s (`countrysideRoads`), the chamfers.
+- **Memory:** the process's peak **885-892 MB** (today's world and the land held, then the world: 363-375 MB before the
+  world build, 838-892 MB after it). Inside the server's 1 GB, with little room: the land's 122 MB can go once the build
+  has read it, and today's world isn't needed after `prepare`.
 - **Sizes:** 11,472,599 land tiles; 1,253 road edges (832 junctions), 740 blocks, 1,181 buildings, 696 POIs, 207,226
   props (183,324 of them the mainland's wild dressing).
 
@@ -1951,13 +1954,13 @@ city worker's code is still 337 of 340 KB (`tools/perf.mjs` codeReport: map.js +
   less), more buildings and POIs where a place now has its neighbours' businesses' districts and spots on its land
   (Westport +20 buildings, +16 POIs; Cedar Isle +10, +9), Metro City's 5 road edges fewer.
 
-**The test** (`test/world3world.test.js`, one build, about 75 s): each gulf place's land, road edges, buildings and
+**The test** (`test/world3world.test.js`, one build, about 25 s): each gulf place's land, road edges, buildings and
 POIs against its single build's; Pelican Key, Northshore and Gull Harbor have streets and buildings, the small islands
 their land; the mainland is dressed (over 100,000 props); every road point, building and POI is in the frame; today's
 Bay Bridge is cut at the shore and the skeleton's eleven gulf crossings are listed.
 
 **The picture:** `docs/world-v3-world.png` (`node --expose-gc tools/world3-world-map.mjs`: the built map's tiles over the
-whole frame, 1 px = 2 tiles, props as dots - 70 s with the build). **The game's chunk bake over the whole frame is too
+whole frame, 1 px = 2 tiles, props as dots - 25 s with the build). **The game's chunk bake over the whole frame is too
 slow for now:** timed on samples, 284 ms a chunk of wild ground, 411 of coast, 478 of town; the frame has 18,857 wild,
 996 coast and 1,086 town chunks (14,341 of open sea, baked once) - **about 105 minutes on one thread**. The tool bakes it
 with `--bake [--shrink 64]` (`docs/world-v3-world-bake.png`) when there is an hour to spare; per region at 1/16 costs the
@@ -1970,10 +1973,14 @@ same per chunk. What the picture shows wrong:
   140 tiles or so; over 2.7 km² it is rows of identical chevrons.
 - **Northshore stands back from the gulf:** its town (scale 1 at [2000, 1600]) ends 60-80 tiles short of the shore, with
   plain grass and the beach between; the beach towns that run on along the coast (54, a stand-in now) aren't built.
-- **Strays from today's coordinates on the mainland:** 7 buildings, 12 POIs, 2,946 road tiles and 2 road edges in Granite
-  Peaks and Highland Woods (the frame's top-left, where today's map lies): passes still unplaced - 8.4's list 4 (Dry
-  Creek's farm and estates, the Gull Isles' harbours, `FARM_STANDS`' Dry Creek one, `VILLAGES`, the outposts). Each
-  wants a pin or a skip in the world build.
+- **Strays on the mainland** (7 buildings, 12 POIs, 2 road edges on the mainland's land): **Dry Creek's farm co-op and
+  its five estates** (`buildFarm`, `DRY_CREEK_ESTATES`: houses at [1113-1190, 500-545] with their homes, in today's
+  coordinates, so in Granite Peaks), **a ride and a snack stand** at [1077-1089, 852-855] (a site in today's
+  coordinates, in Highland Woods), **a lighthouse and an ATM** at [1667, 1512] by Westport Junction (not yet traced).
+  And Northshore's own south edge - the Northshore Loop, a delivery stop, a vending machine, an ATM at [2095-2265,
+  1804-1846] - lies on land the land layer gives the beach towns (district 54, not one of Northshore's picture's): not
+  strays, but Northshore's town running onto the beach strip. The unplaced passes are 8.4's list 4; each wants a
+  pin or a skip in the world build.
 - **No roads leave the islands** (the crossings are listed, not laid), and the mainland has none: the next step.
 - **Prison Island and the Egret Rocks are bare ground**, Port Westport the harbor style's grey slab (H25's work).
 
@@ -1982,8 +1989,8 @@ same per chunk. What the picture shows wrong:
    crossings between the places (their ends carried on to the places' streets, as `joinPlace` does the canal's).
 2. `DISTRICTS3` into `DISTRICTS` (and zones 11-18 into the generator's zone lists), so the mainland has its own
    districts and the beach towns and the Sandpiper Coast can be built.
-3. The time: profile the world build (62 s) - the mainland's whole-frame passes; the target is the single builds' sum
-   or less.
+3. The time (15 s) and the memory (under 900 MB): the terrain pass, the nature sites' `restSpots`, `countrysideRoads`;
+   free the land layer once the build has read it.
 4. The strays: pin or skip the passes still in today's coordinates (above), `buildGullIsles` first (Gull Harbor is
    built, its harbour isn't placed).
 5. The chunk bake of the whole frame (`--bake`, an hour and three quarters on one thread) or by region.

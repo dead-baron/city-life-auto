@@ -4325,13 +4325,22 @@ function buildWilds(m, rand) {
 // and the sorrel are the renderer's (statics.js coverAt).
 export const REDWOOD_SIZES = REDWOOD_TRUNK;   // species -> trunk radius (solid)
 function redwoodGroves(m, wild, inField, clear, rocky) {
-  const W = m.w, H = m.h, CG = 7, giants = [], forage = (m.forage ||= []);   // (forage: shared/foraging.js)
+  const W = m.w, H = m.h, CG = 7, forage = (m.forage ||= []);   // (forage: shared/foraging.js)
   const okAt = (tx, ty, pad) => {
     const i = ty * W + tx, t = m.tiles[i];
     return wild(i) && m.dist[i] === 29 && (t === T.GRASS || t === T.DIRT) && !rocky[i] && !m.lake[i] && !(m.noTree && m.noTree.has(i)) && !inField(tx, ty, 64) && clear(tx, ty, pad);
   };
   const nearWater = (tx, ty, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const t = m.tileAt(tx + dx, ty + dy); if (t === T.WATER || t === T.DEEP) return true; } return false; };
-  const roomFor = (x, y, r) => giants.every(([gx2, gy2, gr]) => Math.hypot(gx2 - x, gy2 - y) > gr + r + 18);
+  // (the giants by 256 px cell: room is looked for in the cells within reach of the biggest - the same answer as over
+  // all of them, without a pass over every giant for each new one: a v3 forest has tens of thousands)
+  const gcell = new Map();
+  let gmax = 0;
+  const gadd = (g) => { if (g[2] > gmax) gmax = g[2]; const k = Math.floor(g[0] / 256) * 65536 + Math.floor(g[1] / 256); let l = gcell.get(k); if (!l) gcell.set(k, (l = [])); l.push(g); };
+  const roomFor = (x, y, r) => {
+    const R = gmax + r + 18;
+    for (let cy = Math.floor((y - R) / 256); cy <= Math.floor((y + R) / 256); cy++) for (let cx = Math.floor((x - R) / 256); cx <= Math.floor((x + R) / 256); cx++) for (const [gx2, gy2, gr] of gcell.get(cx * 65536 + cy) || []) if (!(Math.hypot(gx2 - x, gy2 - y) > gr + r + 18)) return false;
+    return true;
+  };
   for (let gy = 2 + gridOff(PL?.dy, CG); gy < H - 3; gy += CG) for (let gx = 2 + gridOff(PL?.dx, CG); gx < W - 3; gx += CG) {
     const tx = gx + Math.floor(hash2(LX(gx), LY(gy), 301) * CG), ty = gy + Math.floor(hash2(LX(gx), LY(gy), 302) * CG);
     if (tx < 3 || ty < 3 || tx >= W - 3 || ty >= H - 3 || m.dist[ty * W + tx] !== 29) continue;
@@ -4342,7 +4351,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
     // a fairy ring: second-growth redwoods round an old stump (in the thick of a grove)
     if (g > 0.45 && u < 0.08 && okAt(tx, ty, 5) && roomFor(x, y, 110)) {
       addProp(m, 'rwstump', x, y, 18, { r: 26 });
-      giants.push([x, y, 26]);
+      gadd([x, y, 26]);
       forage.push({ x: x + 6, y: y + 30, k: hash2(LX(gx) * 7 + 1, LY(gy) * 11 + 2, 93491) < 0.55 ? 'ghostglass' : 'goldTrumpet' });   // (the old stump's rot feeds them)
       const n = 5 + Math.floor(hash2(LX(gx), LY(gy), 309) * 3), R = 78 + hash2(LX(gx), LY(gy), 310) * 22, a0 = hash2(LX(gx), LY(gy), 311) * Math.PI * 2;
       for (let k = 0; k < n; k++) {
@@ -4350,7 +4359,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
         const ktx = Math.floor(rx / TILE), kty = Math.floor(ry / TILE);
         if (!okAt(ktx, kty, 2)) continue;
         addProp(m, 'redwood', rx, ry, REDWOOD_SIZES.redwood2, { sp: 'redwood2', k: 1 });
-        giants.push([rx, ry, 16]);
+        gadd([rx, ry, 16]);
       }
       continue;
     }
@@ -4359,7 +4368,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
       const len = 180 + Math.floor(hash2(LX(gx), LY(gy), 313) * 5) * 24, a = 0, flip = hash2(LX(gx), LY(gy), 315) < 0.5 ? 1 : 0;   // (drawn east-west: redwoods.js nurseLog)
       addProp(m, 'rwlog', x, y, 0, { len, a: Math.round(a * 100) / 100, flip });
       for (const kk of [-0.4, -0.2, 0, 0.2, 0.4]) m.addSolidProp(x + Math.cos(a) * len * kk, y + Math.sin(a) * len * kk * 0.7 - 6, 15);
-      giants.push([x, y, 60]);
+      gadd([x, y, 60]);
       forage.push({ x: Math.round(x + (hash2(LX(gx), LY(gy), 334) - 0.5) * len * 0.5), y: y + 24, k: 'shelfOyster' });   // (on its side, toward you)
       if (hash2(LX(gx) * 5 + 9, LY(gy) * 7 + 4, 61331) < 0.3) forage.push({ x: Math.round(x + (flip ? 1 : -1) * (len / 2 + 6)), y: y + 26, k: 'ghostglass' });   // (by the root plate)
       continue;
@@ -4367,7 +4376,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
     const sp = u < 0.22 ? 'giantL' : u < 0.7 ? 'giant' : 'giantS', r = REDWOOD_SIZES[sp];
     if (!roomFor(x, y, r) || (r > 40 && !okAt(tx, ty, 4))) continue;   // (the biggest keep their flared feet off the road)
     addProp(m, 'redwood', x, y, r, { sp, k: 1 });
-    giants.push([x, y, r]);
+    gadd([x, y, r]);
     // mushrooms in the damp at the foot of one giant in three (on the side toward you - behind it they'd be hidden -
     // clear of the trunk)
     if (hash2(LX(gx), LY(gy), 330) < 0.34) {
@@ -4386,9 +4395,9 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
     if (!roomFor(x, y, 30)) continue;
     const u = hash2(LX(gx), LY(gy), 326);
     const sp = wet ? (u < 0.7 ? 'maple' : 'mapleAutumn') : u < 0.45 ? 'fir' : u < 0.8 ? 'oak' : 'redwood2';
-    if (sp === 'redwood2') { addProp(m, 'redwood', x, y, REDWOOD_SIZES.redwood2, { sp, k: 1 }); giants.push([x, y, 16]); continue; }
+    if (sp === 'redwood2') { addProp(m, 'redwood', x, y, REDWOOD_SIZES.redwood2, { sp, k: 1 }); gadd([x, y, 16]); continue; }
     addProp(m, 'tree_a', x, y, 12, { sp, k: sp === 'fir' ? 1.7 + hash2(LX(gx), LY(gy), 327) * 0.3 : sp === 'oak' ? 1.0 + hash2(LX(gx), LY(gy), 327) * 0.2 : 1.3 });
-    giants.push([x, y, 14]);
+    gadd([x, y, 14]);
   }
 }
 

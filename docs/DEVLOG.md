@@ -7024,11 +7024,15 @@ What it does (docs/WORLD-V3.md 8.6 has the numbers):
   the Northshore Lift Bridge, the Harbor Tunnel, Eastgate, the Southbank Walk, Cedar North, Toll Point, the Port
   Bridge, Airport and Runway Roads, the Pelican Walk, the West Sea Road) are listed in `m.world3.crossings` for the
   next step.
-- **The numbers:** the build takes 62-64 s (no faster yet than the six single builds together: the whole-frame passes
-  now run over 11.5 M tiles of land - to profile), the process peaks at 885 MB (inside the server's 1 GB, with today's
-  world and the land held); each gulf place within a few percent of its single build (Metro City 541 road edges, 476
+- **The numbers:** the build takes 15 s (the six single builds took about 50 s together), the process peaks at 885-892
+  MB (inside the server's 1 GB, with today's world and the land held); each gulf place within a few percent of its
+  single build (Metro City 541 road edges, 476
   buildings, 232 POIs; Cedar Isle 245 / 215 / 168; Westport 333 / 354 / 186; the airport 21 / 4 / 3); 207,226 props,
   183,324 of them the mainland's.
+- **62 s -> 15 s:** the first build took 62-64 s, 55 of them in the redwood groves' `roomFor`, which looked for room for
+  each new giant by going over every giant so far (quadratic: all of Highland Woods is redwood forest now, 47,455
+  redwoods). The giants are kept by 256 px cell and only the cells within reach are looked at - the same answer, so
+  the live world is the same to the bit and the world build's output the same to the count.
 - **The picture:** `docs/world-v3-world.png` - the built map's tiles, 1 px = 2 tiles. The game's chunk bake over the
   whole frame would take about 105 minutes on one thread (timed: 284-478 ms a chunk, 20,939 chunks with land), so the
   tool does it only when asked (`--bake`). What it shows wrong: the mainland reads as one green field (the forest, the
@@ -7041,10 +7045,11 @@ What it does (docs/WORLD-V3.md 8.6 has the numbers):
 The files: `shared/world3-world.js` (new: `worldPieces`, `worldOpts` - the pieces, `pick`, `placeLine`, `cls`, the
 land, zones and districts, the stand-ins, the lines), `shared/world3-islands.js` (`'world'`), `shared/map.js`
 (`world3` in `generateCity`; `WD`, `pin` / `unpin` at the sources; `LX` / `LY`, `gridOff` and `clsAt` for the world
-build; two guards for spots of places it doesn't build), `shared/naturesites.js` (`PXs` takes the anchor's y),
+build; two guards for spots of places it doesn't build; `redwoodGroves`' giants by cell), `shared/naturesites.js`
+(`PXs` takes the anchor's y),
 `tools/world3-build.mjs` (new: the build, its time, memory and sizes per place), `tools/world3-world-map.mjs` (new: the
 picture, the chunk bake's timing, `--bake`), `test/world3world.test.js` (new), `docs/WORLD-V3.md` 8.6,
 `docs/world-v3-world.png`.
 
-Tests: `test/world3world.test.js` (new: one whole-world build, about 75 s), `test/world3.test.js` (today's world still
-the stamped one), `test/mapwindow.test.js`, `test/dmath.test.js` pass.
+Tests: `test/world3world.test.js` (new: one whole-world build, about 25 s), `test/world3.test.js` (today's world still
+the stamped one), `test/mapwindow.test.js`, `test/dmath.test.js`, `test/nature.test.js` pass.
