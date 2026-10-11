@@ -3045,8 +3045,10 @@ Willow Road's south arm thinning into the fields. What looks wrong:
 - **Willow Crossing's corners are asphalt:** the generator's lots and the wide sidewalks where the loops meet the main
   street; the grain elevator is the industrial prefab (no silos), the co-op the farmstead.
 - **Sandpiper Bay's boardwalk is a stair-step** on the diagonal shore (planks by columns), the pier plain planks (no
-  rails, no end); the beachfront row along Pier Street is two houses; the green between the loops and the sand east of
-  them is park (no street faces it).
+  rails, no end); the beachfront row along Pier Street is two houses; the green between the loops and the sand is park
+  (no street faces it). A third loop along the top of the beach (Beach Street, 24 tiles below Pier Street) was tried:
+  884 more tiles of road for 152 more of building - more asphalt than lots again, left out. The beachfront wants its own
+  row of beach houses facing the boardwalk (a lot that fronts planks, not a street: the generator's rows face streets).
 - The drives' ramps back onto their courses bend 20-25 degrees just outside the towns (Timber Road west of Timber
   Bend, the Mine Road east of Willow Crossing).
 
