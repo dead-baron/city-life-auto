@@ -5,12 +5,14 @@
 //     shots and witnesses already keep the levels apart, so a wanted player who goes down unseen is lost to the
 //     street. Officers on foot who saw you go climb down after you a moment later and hunt you through the tunnels.
 //   * Up a ladder (any manhole of the route), through the service door into a subway station, or out of the adit.
+//   * A cave per mine (shared/underground.js L.caves: World v3 has two - docs/WORLD-V3.md 8.19): each entered by its own
+//     mouth, its own bats, rocks, den bear and boat (world.caves[k]; world.cave is the first's, today's world's one).
 //   * The cave: bats roosting in three chambers burst out when someone with a light comes near; the bear in the den
 //     wakes when you come close and drives you off; rocks come down where the roof is cracked - a trickle of dust
 //     first, then the rock (it hurts anyone under it). A motorboat waits on the underground river.
 //   * Mining: face a vein with a good enough pickaxe and work it (stand still); the ore comes free, the vein is used up
 //     and grows back after a while somewhere near it (seeded). The pickaxes' tiers gate the ores.
-import { undergroundOf, UG, PICKS, ORE_BY_ID, bestPick, ugLos, openAt } from '../../shared/underground.js';
+import { undergroundOf, UG, PICKS, ORE_BY_ID, bestPick, ugLos, openAt, caveOf, caveNear } from '../../shared/underground.js';
 import { ITEMS } from '../../shared/items.js';
 import { K } from '../../shared/constants.js';
 import { pedStep } from '../../shared/physics.js';
@@ -27,7 +29,6 @@ export const layoutOf = (world) => undergroundOf(world.map);
 const isCop = (e) => !!(e && e.npc && e.npc.role === 'cop');
 const PICK_NAME = { 1: 'stone pickaxe', 2: 'iron pickaxe', 3: 'steel pickaxe', 4: 'diamond-tipped pickaxe' };
 const oreName = (id) => ITEMS[id].name.toLowerCase();
-const anyUg = (world, ug) => { for (const p of world.players.values()) if (p.ped && !p.ped.dead && p.ped.ug === ug) return true; return false; };
 
 // ---- where you are ------------------------------------------------------------------------------------------------------
 function manholeNear(L, x, y, r) {
@@ -73,12 +74,14 @@ export function interaction(world, p) {
       const door = doorNear(L, ped.x, ped.y, 46);
       if (door) return { label: `Through the service door up into ${door.name}`, run: () => toStation(world, p, door) };
     }
-    if (ped.ug === UG.CAVE && L.cave && Math.hypot(ped.x - L.cave.inside.x, ped.y - L.cave.inside.y) < 56) return { label: 'Walk out of the cave', run: () => leaveCave(world, p) };
+    const K2 = ped.ug === UG.CAVE && caveOf(L, ped.x, ped.y);
+    if (K2 && Math.hypot(ped.x - K2.inside.x, ped.y - K2.inside.y) < 56) return { label: 'Walk out of the cave', run: () => leaveCave(world, p, K2) };
     return mineInteraction(world, p, ped);
   }
   const mh = manholeNear(L, ped.x, ped.y, MANHOLE_REACH);
   if (mh) return { label: 'Lift the manhole cover and climb down into the sewer', run: () => goDown(world, p, mh) };
-  if (L.cave && Math.hypot(ped.x - L.cave.mouth.x, ped.y - L.cave.mouth.y) < 30) return { label: 'Go into the cave (it\'s pitch dark: bring a light)', run: () => enterCave(world, p) };
+  const K2 = caveNear(L, ped.x, ped.y);
+  if (K2 && Math.hypot(ped.x - K2.mouth.x, ped.y - K2.mouth.y) < 30) return { label: 'Go into the cave (it\'s pitch dark: bring a light)', run: () => enterCave(world, p, K2) };
   return mineInteraction(world, p, ped);
 }
 function mineInteraction(world, p, ped) {
@@ -137,18 +140,19 @@ export function toStation(world, p, door) {
   world.notify(p, `Through the service door, along the platform and up the stairs: ${st.name}.`, 'info');
   return true;
 }
-export function enterCave(world, p) {
-  const L = layoutOf(world), ped = p.ped;
-  if (!L.cave || !ped || ped.dead || ped.vehId || ped.ug) return false;
+// (K: which cave - by default the one whose mouth is nearest)
+export function enterCave(world, p, K = null) {
+  const L = layoutOf(world), ped = p.ped, K2 = K || (ped && caveNear(L, ped.x, ped.y));
+  if (!K2 || !ped || ped.dead || ped.vehId || ped.ug) return false;
   if (ped.carrying) { world.notify(p, 'Set the crate down first.', 'warn'); return false; }
-  moveTo(world, p, L.cave.inside.x, L.cave.inside.y, UG.CAVE);
+  moveTo(world, p, K2.inside.x, K2.inside.y, UG.CAVE);
   world.notify(p, p.profile.light ? 'Into the cave. Your flashlight shows the way.' : 'Into the cave. It\'s pitch dark in here - switch on a flashlight if you have one.', 'info');
   return true;
 }
-export function leaveCave(world, p) {
-  const L = layoutOf(world);
-  if (!L.cave || !p.ped) return false;
-  moveTo(world, p, L.cave.mouth.x, L.cave.mouth.y + 26, 0);
+export function leaveCave(world, p, K = null) {
+  const L = layoutOf(world), K2 = K || (p.ped && caveOf(L, p.ped.x, p.ped.y));
+  if (!K2 || !p.ped) return false;
+  moveTo(world, p, K2.mouth.x, K2.mouth.y + 26, 0);
   world.notify(p, 'Out into the daylight.', 'info');
   return true;
 }
@@ -255,11 +259,22 @@ function copsStep(world, dt) {
 
 // ---- the cave's dangers ---------------------------------------------------------------------------------------------------
 function caveStep(world, dt) {
-  const L = layoutOf(world), K2 = L.cave;
-  if (!K2) return;
-  const inCave = [];
-  for (const p of world.players.values()) if (p.ped && !p.ped.dead && p.ped.ug === UG.CAVE) inCave.push(p);
-  const S = world.cave || (world.cave = { roosts: K2.roosts.map(() => ({ until: 0 })), rocks: K2.rocks.map((r, i) => ({ next: 20 + i * 9, fallAt: 0 })), bear: 0, boat: 0 });
+  const L = layoutOf(world);
+  if (!L.caves.length) return;
+  const inCaves = L.caves.map(() => []);   // (who is in each cave: by where they are)
+  for (const p of world.players.values()) if (p.ped && !p.ped.dead && p.ped.ug === UG.CAVE) inCaves[caveOf(L, p.ped.x, p.ped.y).k].push(p);
+  for (const K2 of L.caves) oneCave(world, dt, K2, inCaves[K2.k], caveState(world, K2));
+}
+// each cave's own state (world.caves[k]; world.cave: the first's)
+function caveState(world, K2) {
+  const all = world.caves || (world.caves = []);
+  if (!all[K2.k]) {
+    all[K2.k] = { roosts: K2.roosts.map(() => ({ until: 0 })), rocks: K2.rocks.map((r, i) => ({ next: 20 + i * 9, fallAt: 0 })), bear: 0, boat: 0 };
+    if (!K2.k) world.cave = all[0];
+  }
+  return all[K2.k];
+}
+function oneCave(world, dt, K2, inCave, S) {
   // bats: someone with a light (or right under them) - the roost bursts out and settles again later
   K2.roosts.forEach((r, i) => {
     const st = S.roosts[i];
@@ -296,8 +311,8 @@ function caveStep(world, dt) {
     const b = wildlife.spawnAnimal(world, 'blackbear', K2.den.x, K2.den.y);
     b.sub = true; b.ug = UG.CAVE; b.wild.state = 'den'; b.wild.pose = 8; b.wild.hx = K2.den.x; b.wild.hy = K2.den.y;
     S.bear = b.id;
-  } else if (!inCave.length && bear && !bear.removed && !anyUg(world, UG.CAVE)) { world.remove(bear); S.bear = 0; }
-  if (bear && !bear.removed && !bear.dead) bearStep(world, bear, inCave, dt);
+  } else if (!inCave.length && bear && !bear.removed) { world.remove(bear); S.bear = 0; }   // (nobody left in this cave)
+  if (bear && !bear.removed && !bear.dead) bearStep(world, bear, inCave, dt, K2);
   const boat = S.boat ? world.get(S.boat) : null;
   if (inCave.length && (!boat || boat.removed || boat.dead)) {
     const v = world.spawnVehicle('dinghy', K2.boat.x, K2.boat.y, K2.boat.a, { npcOwned: false });
@@ -307,8 +322,8 @@ function caveStep(world, dt) {
 }
 // The den bear: asleep in the den; someone comes close and it wakes, rears and drives them off - biting whoever stays -
 // then goes back to sleep when they've gone.
-function bearStep(world, b, inCave, dt) {
-  const L = layoutOf(world), W = b.wild, den = L.cave.den;
+function bearStep(world, b, inCave, dt, K2) {
+  const L = layoutOf(world), W = b.wild, den = K2.den;
   let t = null, td = Infinity;
   for (const p of inCave) {
     const q = p.ped, d = Math.hypot(q.x - b.x, q.y - b.y);
@@ -346,7 +361,8 @@ export function update(world, dt) {
     const q = p.ped;
     if (!q || !q.ug || q.vehId || q.dead) continue;
     if (!openAt(L, q.x, q.y)) {
-      if (q.ug === UG.CAVE && L.cave) { q.x = L.cave.inside.x; q.y = L.cave.inside.y; }
+      const K2 = q.ug === UG.CAVE && caveOf(L, q.x, q.y);
+      if (K2) { q.x = K2.inside.x; q.y = K2.inside.y; }
       else { const mh = manholeNear(L, q.x, q.y, 99999); if (mh) { q.x = mh.x; q.y = mh.y; } }
       p.teleportAt = world.time;
     }

@@ -8078,3 +8078,49 @@ server/systems/ems.js, tools/bots.js, tools/junctions.mjs (new), docs/WORLD-V3.m
 Tests: test/world3keys.test.js (new: the keys, the kept region files, the art CDN at v3, the bots' junctions),
 test/regions.test.js, test/homes.test.js, test/ems.test.js, test/trains.test.js; test/world3rail.test.js and
 test/world3subway.test.js changed (a far train's cars from the train itself; a new test of the far trains).
+
+## 2026-10-11 · World v3: the rest of today's wild places - Dry Creek's farm in the valley, the coves, a cave per mine (H51; 8.19 finished)
+The owner's brief for this step (WORLD-V3.md 8.19's "What's left"): "Dry Creek's farmland into Willow Valley's east
+side ... its fields blended with 8.8's: no field over a road, the river, the main line or a town; the farm roads joined
+to the network", "Redwood Cove a sandy cove with driftwood on the Redwood Coast; Granite Cove a rocky bay, on the sea if
+the peaks reach it, else on Kestrel Lake or the Long Reach - with its road in", "a cave per mine ... each mine with a
+cave gets its own cave region, entered by its own mouth ... today's world ... must play exactly as before", "the tracks
+... marked so the server's traffic doesn't drive them".
+- **Dry Creek's farm in Willow Valley's east side** (shared/world3-wild.js `FARM`: today's farm moved whole by one
+  offset to the open valley between the Long Reach's Willow Road and the desert's strip of woods, north of the main
+  line): its roads laid with the sites' (the Farm Road, joined to the nearest road; the County Road across it; the
+  Winery Road round the vineyard to the road above the winery), its seven fields, **the Dry Creek Farm Co-op** (it takes
+  harvests), the drop site and the **five farmhouses and cottages for sale** (map.js buildFarm's one-line hook,
+  `wildFarm3`, with the generator's own helpers), **Willow River Orchard** and **Willow River Vineyard** (moved by their
+  anchors). No field tile over a road, the river, a lake, the main line's room or a town; built before the biomes'
+  dressing and reserved, so 8.8's fields, farmsteads and trees go round it.
+- **Redwood Cove** on the Redwood Coast (320, 1180: the woods' own beach, north of 8.20's three coves) with **the Redwood
+  Cove Track** from the coast road; **Granite Cove** on **Kestrel Lake's north shore** (2720, 448) - the v3 peaks touch
+  no sea (their only shores are Summit Tarn's and a creek's) and the cove's bay opens south - its bay the lake's water,
+  with **the Granite Cove Track**. The owner may move either: `MOVED`'s `to` and the track's `end`.
+- **A cave per mine** (shared/underground.js `L.caves`): each mine with a cave its own region, mouth, chambers, river,
+  glow, bats, rocks, den and boat (`caveOf`, `caveNear`); the server takes you in by the mouth you stand at and runs each
+  cave for whoever is in it (`world.caves[k]`); the dev menu lists every mouth; the client's view draws every cave. The
+  v3 world's Old Granite Mine has its cave beside Copper Gulch Mine's (its `cave: false` mark is gone). **Today's world
+  plays exactly as before**: a list of one whose layout is identical (a fingerprint of the cave, its region's cells and
+  the veins taken before the change, pinned in the test), and the old cave tests pass unchanged.
+- **The tracks kept from the traffic**: the lines `wildTracks3` lays are flagged `notraffic`, roads.js puts the flag on
+  their edges (only when set: today's edges unchanged), and the traffic neither spawns on them nor turns into them while
+  there's another way. Route 9's airstrip was already in the desert (H44).
+- Nothing live changes: the world hash stays 6b6e16fdef9f; the city worker 34 files, 351 KB of 360.
+
+Files: shared/world3-wild.js (FARM, wildFarmRoads3, wildFarm3, MOVED and WILD_TRACKS entries, the notraffic flag,
+WILD_VIEWS farm, redwoodcove, granitecove), shared/naturesites.js (redwoodCove, graniteCove, orchard, vineyard through
+`PXs` / `DS`; trackEnd, headD), shared/map.js (buildFarm's hook: one line), shared/world3-world.js (`world.farm`),
+shared/underground.js (the cave list), shared/roads.js (the edge flag: one line), server/systems/underground.js,
+server/dev.js, server/systems/traffic.js, client/underground/view.js, client/main.js (nearVeins: any pit or mine),
+test/underground.test.js, test/roadends.test.js, test/world3wild.test.js, test/world3desert.test.js, docs/WORLD-V3.md
+8.19, docs/world-v3-town-farm.png, -redwoodcove.png, -granitecove.png, -drycreek.png.
+
+Tests: test/world3wild.test.js (one world build: as before, and the two caves apart with their veins, the tracks'
+edges flagged and only theirs, Route 9's airstrip, the farm's seven fields - 9,240 tiles - none over the river, a lake,
+a town or the main line's room, the co-op, the five farmhouses, its three roads on the one network, the orchard, the
+vineyard and the two coves at their spots, the cove tracks laid - the Redwood Cove Track 80 tiles from the coast road,
+the Granite Cove Track 351 from Kestrel Road), test/world3desert.test.js (Copper Gulch Mine's cave in the list, 20
+veins), test/underground.test.js (today's one cave as it was), test/roadends.test.js (the traffic and the flag),
+test/mining.test.js, test/gameplay.test.js, test/mapwindow.test.js, test/dmath.test.js: all pass.

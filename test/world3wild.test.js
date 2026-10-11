@@ -8,7 +8,11 @@
 // Springs, The Sentinel Stones; H47: Redwood Creek, Giants Loop, Fern Gorge, the Old Granite Mine, Red Rock Canyon's
 // oasis, Mirage Camp, Splash Canyon), each built once at its spot; the tracks they look for by name (the Ridge Trail,
 // the Canyon Track, the Mirage Track) on the one network, the lookout, the hunting camps and the trapper's cabin by
-// them; one cave, under Copper Gulch Mine. One world build.
+// them. (H51) Dry Creek's farm in Willow Valley's east side - its fields on open valley ground (no field over a road,
+// the river, the main line's room or a town), the co-op, the farmhouses for sale, its roads on the network, the
+// orchard and the vineyard; Redwood Cove and Granite Cove on their shores with their tracks; a cave per mine (two:
+// the Old Granite Mine's and Copper Gulch Mine's, each its own region and mouth); the tracks' edges flagged for the
+// traffic to keep off (notraffic) and nothing else; Route 9's airstrip. One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
@@ -16,10 +20,10 @@ import '../shared/world3-islands.js';
 import { TILE } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { skeletonLines, nearestOnPath, STATIONS } from '../shared/world3-skeleton.js';
-import { WILD_SITES, WILD_ROOM, MOVED, WILD_TRACKS } from '../shared/world3-wild.js';
+import { WILD_SITES, WILD_ROOM, MOVED, WILD_TRACKS, FARM } from '../shared/world3-wild.js';
 import { T } from '../shared/constants.js';
 import { SITES } from '../shared/countryside.js';
-import { undergroundOf } from '../shared/underground.js';
+import { undergroundOf, caveOf, UG } from '../shared/underground.js';
 import { prepare } from '../tools/world3-build.mjs';
 
 test('World v3: today\'s wild land\'s country sites at their v3 spots, each on its road', { timeout: 300000 }, () => {
@@ -114,10 +118,54 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
     check(s.length === 1 && m.dist[Math.floor(s[0].y / TILE) * W + Math.floor(s[0].x / TILE)] === d, `${n}: ${s.length}, in district ${d}`);
   }
   check((m.beaverPonds || []).some((b) => b.name === 'Redwood Creek'), 'the beaver pond on Redwood Creek');
-  // the Old Granite Mine's seams are worked; the cave world stays under Copper Gulch Mine's adit (one cave)
-  const ogm = named('Old Granite Mine')[0];
-  check(ogm && ogm.seams.length >= 3 && ogm.cave === false, 'the Old Granite Mine and its seams');
-  check(U && U.cave && U.cave.X === named('Copper Gulch Mine')[0]?.x, 'the cave world under Copper Gulch Mine');
+  // the Old Granite Mine's seams are worked; (H51) a cave per mine: the Old Granite Mine's and Copper Gulch Mine's, each
+  // its own region (apart), entered by its own mouth, its own veins on its walls
+  const ogm = named('Old Granite Mine')[0], cgm = named('Copper Gulch Mine')[0];
+  check(ogm && ogm.seams.length >= 3 && ogm.cave !== false, 'the Old Granite Mine and its seams');
+  check(U && U.caves.length === 2, `two caves: ${U?.caves?.length}`);
+  for (const mine of [ogm, cgm]) {
+    const K = U && mine && U.caves.find((c) => c.X === mine.x && c.face === mine.y);
+    check(K && K.name === mine.name, `${mine?.name}'s cave`);
+    if (!K) continue;
+    check(caveOf(U, K.inside.x, K.inside.y) === K && caveOf(U, K.den.x, K.den.y) === K, `${mine.name}'s cave: in its own region`);
+    check(U.veins.filter((v) => v.ug === UG.CAVE && caveOf(U, v.x, v.y) === K).length >= 10, `${mine.name}'s cave: its veins`);
+  }
+  if (U && U.caves.length === 2) { const [a, b] = U.caves.map((c) => c.region); check(a.x0 + a.w < b.x0 || b.x0 + b.w < a.x0 || a.y0 + a.h < b.y0 || b.y0 + b.h < a.y0, 'the two caves apart'); }
+  // (H51) the tracks' edges flagged for the traffic to keep off - and only theirs
+  const trackNames = new Set(WILD_TRACKS.map((K) => K.name));
+  const flagged = m.edges.filter((e) => e.notraffic), unflagged = m.edges.filter((e) => trackNames.has(e.name) && e.kind === 'dirt' && !e.notraffic);
+  check(flagged.length >= WILD_TRACKS.length && flagged.every((e) => trackNames.has(e.name)) && unflagged.length === 0, `the tracks flagged notraffic (${flagged.length}; others: ${flagged.filter((e) => !trackNames.has(e.name)).map((e) => e.name)}; missed: ${unflagged.map((e) => e.name)})`);
+  // (H51) Granite Cove's bay open to Kestrel Lake (water all the way south from the beach), its water the lake's
+  const gc = named('Granite Cove')[0];
+  if (gc) {
+    const cx = Math.floor(gc.x / TILE), cy = Math.floor(gc.y / TILE), j0 = (cy + 24) * W + cx;   // (j0: the lake's own water further out)
+    let wet = 0, same = 0;
+    for (let ty = cy + 2; ty <= cy + 16; ty++) { const i = ty * W + cx; if (!m.land[i]) wet++; if (!m.land[i] && m.lake[i] === m.lake[j0] && m.river[i] === m.river[j0]) same++; }
+    check(!m.land[j0] && wet === 15 && same === 15, `Granite Cove's bay open to the lake: ${wet} of 15 tiles south of the beach water, ${same} as the lake's`);
+  }
+  // (H51) Route 9's airstrip in the desert
+  const strip = named('Route 9 Airstrip')[0];
+  check(strip && m.dist[Math.floor(strip.y / TILE) * W + Math.floor(strip.x / TILE)] === 50, 'Route 9\'s airstrip in the desert');
+  // (H51) Dry Creek's farm in the valley's east side: its fields on the valley's open ground - none over a road, the river,
+  // a lake, the main line's room or a town; the co-op that takes harvests; the farmhouses and cottages for sale; the
+  // Farm Road, the County Road and the Winery Road on the one network
+  const FB = m.world3.wild.farmBuilt, fx0 = 1030 + FARM.d[0], fy0 = 350 + FARM.d[1], fx1 = 1206 + FARM.d[0], fy1 = 700 + FARM.d[1];
+  console.log('farm', JSON.stringify({ roads: Wd.farm, built: FB }));
+  check(FB && FB.fields >= 5, `the farm's fields: ${FB?.fields}`);
+  let fieldBad = 0;
+  for (const [rx, ry, rw, rh] of FB?.rects || []) for (let ty = ry; ty < ry + rh; ty++) for (let tx = rx; tx < rx + rw; tx++) {
+    const i = ty * W + tx;
+    if (m.tiles[i] !== T.FIELD) continue;
+    if (!m.land[i] || m.river[i] || m.lake[i] || m.dist[i] !== FARM.region || rails.some((r) => nearestOnPath(r.path, tx, ty).d < WILD_ROOM.main - 1)) fieldBad++;
+  }
+  check(fieldBad === 0, `the farm's fields over the river, a lake, a town or the main line: ${fieldBad} tiles`);
+  const coop = m.pois.find((p) => p.kind === 'farm' && p.label === 'Dry Creek Farm Co-op');
+  check(coop && coop.cargoPad && m.dist[Math.floor(coop.y / TILE) * W + Math.floor(coop.x / TILE)] === FARM.region, 'the co-op that takes harvests');
+  check(FB && FB.homes.length >= 3, `the farmhouses and cottages: ${FB?.homes?.length}`);
+  for (const n of ['Farm Road', 'County Road', 'Winery Road']) {
+    const es = m.edges.filter((e) => e.name === n && e.lvl === 0 && e.pts.some((p) => p.x / TILE > fx0 - 250 && p.x / TILE < fx1 + 250 && p.y / TILE > fy0 - 250 && p.y / TILE < fy1 + 250));
+    check(es.length > 0 && es.some((e) => comp[e.a] === main && comp[e.b] === main), `${n} laid, on the one network`);
+  }
   // Red Rock Canyon (the painting) in the desert, its oasis and wash; the water park's slides
   const pt = (m.paintings || []).find((p) => p.key === 'canyon');
   console.log('moved', JSON.stringify({ canyon: pt && [pt.x / TILE, pt.y / TILE], sites: (m.natureSites || []).filter((q) => /Gorge|Creek|Loop|Granite Mine|Oasis|Mirage|Splash|Camp|Cabin/.test(q.name)).map((q) => [q.name, Math.round(q.x / TILE), Math.round(q.y / TILE)]) }));

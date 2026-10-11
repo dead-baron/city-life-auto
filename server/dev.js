@@ -32,7 +32,7 @@ import * as personas from './systems/personas.js';
 import * as activities from './systems/activities.js';
 import * as looks from './systems/looks.js';
 import { SPECIES } from '../shared/fauna.js';
-import { undergroundOf } from '../shared/underground.js';
+import { undergroundOf, caveNear } from '../shared/underground.js';
 import * as underground from './systems/underground.js';
 import * as rescue from './systems/rescue.js';
 import * as revive from './systems/revive.js';
@@ -66,7 +66,7 @@ export const NEAR_KINDS = {
   // under the ground (shared/underground.js): a manhole over the sewers, the cave's mouth (the Old Granite Mine's adit), an
   // ore vein above ground (the quarry's, the mine's outcrops)
   manhole: (m) => { const L = undergroundOf(m); return L ? L.routes.flatMap((r) => r.manholes).map((q) => ({ x: q.x, y: q.y, name: 'a manhole over the sewers' })) : []; },
-  cave: (m) => { const L = undergroundOf(m); return L && L.cave ? [{ x: L.cave.mouth.x, y: L.cave.mouth.y + 4, name: 'the cave\'s mouth' }] : []; },
+  cave: (m) => { const L = undergroundOf(m); return L ? L.caves.map((K) => ({ x: K.mouth.x, y: K.mouth.y + 4, name: L.caves.length > 1 ? `the cave's mouth (${K.name})` : 'the cave\'s mouth' })) : []; },   // (a cave per mine)
   vein: (m) => { const L = undergroundOf(m); return L ? L.veins.filter((v) => !v.ug).map((v) => ({ x: v.x, y: v.y, name: `a vein of ${v.ore} (${v.where})` })) : []; },
   stargaze: (m) => { const s = (m.countrySites || []).find((q) => q.type === 'observatory'); return s ? m.props.filter((q) => q && q.t === 'scope' && q.x >= s.x * 32 && q.x <= (s.x + s.w) * 32 && q.y >= s.y * 32 && q.y <= (s.y + s.h) * 32).map((q) => ({ x: q.x + 14, y: q.y + 24, name: 'the observatory telescope' })) : []; },
 };
@@ -300,7 +300,7 @@ export function command(world, p, c, msg) {
       if (!ped || ped.dead || ped.vehId) break;
       const L = undergroundOf(world.map);
       if (ped.ug) break;
-      if (msg.k === 'cave') { if (L.cave) { ped.x = L.cave.mouth.x; ped.y = L.cave.mouth.y; underground.enterCave(world, p); const c = L.cave.ch[msg.at]; if (c) { ped.x = c.x; ped.y = c.y; } } break; }   // (at: a chamber - grotto, river, worms, pool, crystal, den)
+      if (msg.k === 'cave') { const K2 = L.caves[msg.cave] || caveNear(L, ped.x, ped.y); if (K2) { ped.x = K2.mouth.x; ped.y = K2.mouth.y; underground.enterCave(world, p, K2); const c = K2.ch[msg.at]; if (c) { ped.x = c.x; ped.y = c.y; } } break; }   // (at: a chamber - grotto, river, worms, pool, crystal, den; cave: which, else the nearest)
       let best = null, bd = Infinity;
       for (const r of L.routes) for (const m of r.manholes) { const d = Math.hypot(m.x - ped.x, m.y - ped.y); if (d < bd) { bd = d; best = m; } }
       if (best) { ped.x = best.x; ped.y = best.y; underground.goDown(world, p, best); }

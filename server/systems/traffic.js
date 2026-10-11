@@ -71,6 +71,10 @@ function chooseExit(world, n, inEdge, def = null, goal = null) {
   // only way on
   const streets = opts.filter((o) => net.edges[o.edge].kind !== 'alley');
   if (streets.length) opts = streets;
+  // nor down World v3's wild tracks (dirt cul-de-sacs to the moved places: notraffic, shared/world3-wild.js) unless
+  // there's no other way on
+  const ways = opts.filter((o) => !net.edges[o.edge].notraffic);
+  if (ways.length) opts = ways;
   const open = opts.filter((o) => !isBlocked(world, o.edge));   // (not down a road remembered as blocked: reroute.js)
   if (open.length) opts = open;
   // a driver with somewhere to be (streetlife.js: a street race's finish line, a getaway, an armored truck's run): the
@@ -711,7 +715,7 @@ function manage(world) {
     if (count >= target || world.npcCount + world.trafficCount > world.npcBudget) continue;
     const cands = edgesNear(net, a.x, a.y, 1600).filter((e) => {
       const bb = e.bb || (e.bb = bboxOf(e.pts));
-      return e.kind !== 'alley' && bb.x1 > a.x - 1600 && bb.x0 < a.x + 1600 && bb.y1 > a.y - 1600 && bb.y0 < a.y + 1600 && e.len > 200;
+      return e.kind !== 'alley' && !e.notraffic && bb.x1 > a.x - 1600 && bb.x0 < a.x + 1600 && bb.y1 > a.y - 1600 && bb.y0 < a.y + 1600 && e.len > 200;
     });
     if (!cands.length) continue;
     for (let tries = 0; tries < 10; tries++) {

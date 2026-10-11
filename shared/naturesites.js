@@ -123,6 +123,13 @@ function roadNear(m, x, y, r) {
   }
   return best;
 }
+// (World v3) the end of a road named n nearest (x, y) px, and how far a road's northmost point is from (tx, ty) tiles
+function trackEnd(m, n, x, y) {
+  let best = null;
+  for (const e of m.roads || []) if (e.name === n) for (const q of e.pts) if (!best || Math.hypot(q.x - x, q.y - y) < Math.hypot(best.x - x, best.y - y)) best = q;
+  return best;
+}
+const headD = (e, tx, ty) => { const q = e.pts.reduce((b, p) => (!b || p.y < b.y ? p : b), null); return Math.hypot(q.x / TILE - tx, q.y / TILE - ty); };
 export function buildNatureSites(m, H) {
   PG = propGrid(m);
   try { buildSites(m, H); } finally { PG = null; }
@@ -647,10 +654,10 @@ function balloonField(m, H) {
 // wheelbarrow, beehives along the top for the blossom, and a fruit stand at the road with its sign.
 function orchard(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const X0 = 1100, X1 = 1131, Y0 = 438, Y1 = 463;
-  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 9 || m.dist[i] === 41);
+  const X0 = PXs(H, 1100, 438), X1 = X0 + 31, Y0 = PYs(H, 438), Y1 = Y0 + 25, D9 = DS(H, 9), D41 = DS(H, 41);   // (placed: World v3's valley)
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === D9 || m.dist[i] === D41);
   for (let ty = Y0 - 1; ty <= Y1 + 1; ty++) for (let tx = X0 - 1; tx <= X1 + 1; tx++) if (!open(at(tx, ty))) return;
-  const road = (m.edges || []).find((e) => e.name === 'Farm Road' && e.lvl === 0);
+  const road = H.place ? (m.edges || []).filter((e) => e.name === 'Farm Road' && e.lvl === 0).sort((a, b) => headD(a, X1, Y1) - headD(b, X1, Y1))[0] : (m.edges || []).find((e) => e.name === 'Farm Road' && e.lvl === 0);   // (World v3: the piece whose head is by the orchard)
   if (!road) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= (X0 - 1) * TILE && q.x < (X1 + 2) * TILE && q.y >= (Y0 - 1) * TILE && q.y < (Y1 + 2) * TILE) dropProp(m, i); });
@@ -687,10 +694,10 @@ function orchard(m, H) {
 // the edges. (Vines are solid: you walk the alleys.)
 function vineyard(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const X0 = 1105, X1 = 1166, Y0 = 384, NR = 16, Y1 = Y0 + NR * 3, TX = 1135, WX = 1121, WY = 369;   // vines; the track; the winery
+  const WX = PXs(H, 1121, 369), WY = PYs(H, 369), X0 = WX - 16, X1 = WX + 45, Y0 = WY + 15, NR = 16, Y1 = Y0 + NR * 3, TX = WX + 14;   // the winery; vines; the track (placed: World v3's valley)
   let ry = WY; while (ry > WY - 12 && m.tiles[at(WX, ry)] !== T.ROAD) ry--;
   if (m.tiles[at(WX, ry)] !== T.ROAD) return;
-  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 9 || m.dist[i] === 41);   // (Dry Creek, the desert's edge)
+  const D9 = DS(H, 9), D41 = DS(H, 41), open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === D9 || m.dist[i] === D41);   // (Dry Creek, the desert's edge)
   for (let ty = ry + 2; ty <= Y1 + 2; ty++) for (let tx = X0 - 3; tx <= X1 + 3; tx++) if (!open(at(tx, ty))) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= (X0 - 3) * TILE && q.x < (X1 + 4) * TILE && q.y >= (ry + 1) * TILE && q.y < (Y1 + 3) * TILE) dropProp(m, i); });
@@ -1879,7 +1886,7 @@ function oldMine(m, H) {
   for (const [dx, dy, r] of [[-250, -40, 30], [256, -30, 26]]) H.addProp(m, 'outcrop', X + dx, face + dy, r, { w: 100, d: 64, h: 70, s: dx > 0 ? 5 : 6, style: 'granite' });
   for (const [dx, dy] of [[-200, 150], [180, 140]]) H.addProp(m, 'gravel', X + dx, face + dy, 0);
   (m.landmarks ||= []).push({ name: 'Old Granite Mine', type: 'mine', x: Math.round(X - 260), y: Math.round(face - 220), w: 520, h: 420 });
-  m.natureSites.push({ kind: 'mine', name: 'Old Granite Mine', x: Math.round(X), y: Math.round(face), seams, ...(H.place?.d ? { cave: false } : null) });   // (the world build: the cave world stays under Copper Gulch Mine's adit - 8.18, 8.19)
+  m.natureSites.push({ kind: 'mine', name: 'Old Granite Mine', x: Math.round(X), y: Math.round(face), seams });   // (its cave: shared/underground.js, a cave per mine - World v3's beside Copper Gulch Mine's, 8.19)
 }
 
 // clear a map prop away (its picture and its solid footprint): for a designed place that replaces random dressing
@@ -2299,11 +2306,11 @@ function lighthouseTidepools(m, H) {
 // lies up the sand, and a fire ring with driftwood seats looks out west over the water for the sunset and the
 // stars. A trail runs down from the campground. On the map as "Redwood Cove".
 function redwoodCove(m, H) {
-  const C = [58, 283], R = 13;                                   // the cove (tiles), on the west shore
+  const C = [PXs(H, 58, 283), PYs(H, 283)], R = 13, D = DS(H, 29);   // the cove (tiles), on the west shore (placed: World v3's Redwood Coast)
   const inBox = (tx, ty) => Math.abs(tx - C[0]) <= R + 4 && Math.abs(ty - C[1]) <= R + 8;
   const isT = (tx, ty, t) => m.tiles[ty * m.w + tx] === t;
   const sand0 = [];
-  for (let ty = C[1] - R - 8; ty <= C[1] + R + 8; ty++) for (let tx = C[0] - R - 4; tx <= C[0] + R + 4; tx++) if (isT(tx, ty, T.SAND) && m.dist[ty * m.w + tx] === 29) sand0.push([tx, ty]);
+  for (let ty = C[1] - R - 8; ty <= C[1] + R + 8; ty++) for (let tx = C[0] - R - 4; tx <= C[0] + R + 4; tx++) if (isT(tx, ty, T.SAND) && m.dist[ty * m.w + tx] === D) sand0.push([tx, ty]);
   if (sand0.length < 40) return;
   // widen the beach three tiles into the woods (a ragged edge)
   const widen = [];
@@ -2394,8 +2401,9 @@ function redwoodCove(m, H) {
     for (const [dx, dy, p, a] of [[-22, -4, 0, 0.5], [20, 6, 1, 2.6]]) H.addProp(m, 'seal', X + dx, Y + dy, 0, { pose: p, a, z: 32 });
   }
   // the trail down from the Pine Ridge Campground (south of it) through the giants to the sand
-  const camp = (m.landmarks || []).find((l) => l.name === 'Pine Ridge Campground');
-  if (camp) trail(m, [[camp.x + camp.w * 0.35, camp.y + camp.h], [(C[0] + 8) * TILE, (C[1] - 16) * TILE], [(C[0] + 4) * TILE, (C[1] - 5) * TILE], [(C[0] + 1) * TILE, (C[1] + 1) * TILE]]);
+  const camp = (m.landmarks || []).find((l) => l.name === 'Pine Ridge Campground'), tk = H.place && trackEnd(m, 'Redwood Cove Track', C[0] * TILE, C[1] * TILE);   // (World v3: from its track - the campground is far inland)
+  if (tk) trail(m, [[tk.x, tk.y], [(C[0] + 4) * TILE, (C[1] - 5) * TILE], [(C[0] + 1) * TILE, (C[1] + 1) * TILE]]);
+  else if (camp) trail(m, [[camp.x + camp.w * 0.35, camp.y + camp.h], [(C[0] + 8) * TILE, (C[1] - 16) * TILE], [(C[0] + 4) * TILE, (C[1] - 5) * TILE], [(C[0] + 1) * TILE, (C[1] + 1) * TILE]]);
   (m.landmarks ||= []).push({ name: 'Redwood Cove', type: 'tidepools', x: (C[0] - R - 4) * TILE, y: (C[1] - R - 6) * TILE, w: (2 * R + 8) * TILE, h: (2 * R + 14) * TILE });
   m.natureSites.push({ kind: 'redwoodcove', name: 'Redwood Cove', x: C[0] * TILE, y: C[1] * TILE, pools: pools.length, fire });
 }
@@ -2800,10 +2808,11 @@ function willowRiver(m, H) {
 // umbrellas on the sand, driftwood at the tide line, boulders at the headlands' feet. Agaves, ice plant and
 // flowering shrubs along the cliff top; a map board at the top of the steps.
 function graniteCove(m, H) {
-  const CX = 555, CY = 225;                                   // the bay's centre (tiles)
+  const CX = PXs(H, 555, 225), CY = PYs(H, 225);              // the bay's centre (tiles; placed: World v3's peaks' shore)
   const camp = (m.landmarks || []).find((l) => l.name === 'Granite Cove Campground');
-  if (!camp || m.dist[CY * m.w + CX] !== 33) return;
-  const set = (tx, ty, t, extra = 0) => { const i = ty * m.w + tx; if (KEEP.has(m.tiles[i])) return; m.tiles[i] = t; m.reserve[i] |= RES | extra; if (t === T.WATER) { m.land[i] = 0; m.river[i] = 0; m.lake[i] = 0; } else m.land[i] = 1; };
+  if (!camp || (!H.place && m.dist[CY * m.w + CX] !== 33)) return;   // (World v3: where world3-wild.js MOVED puts it)
+  const LJ = (CY + 12) * m.w + CX, LK = H.place ? m.lake[LJ] : 0, RV = H.place ? m.river[LJ] : 0;   // (World v3: a bay of a lake's is the lake's water - the v3 lakes are river water)
+  const set = (tx, ty, t, extra = 0) => { const i = ty * m.w + tx; if (KEEP.has(m.tiles[i])) return; m.tiles[i] = t; m.reserve[i] |= RES | extra; if (t === T.WATER) { m.land[i] = 0; m.river[i] = RV; m.lake[i] = LK; } else m.land[i] = 1; };
   const e = (tx, ty, cx, cy, rx, ry) => ((tx + 0.5 - cx) / rx) ** 2 + ((ty + 0.5 - cy) / ry) ** 2;
   // anything the map had put here goes (the wilds' trees come later and keep off reserved ground)
   m.props.forEach((p, i) => { if (p && p.t !== 'painted' && Math.abs(p.x / TILE - CX) < 16 && p.y / TILE > CY - 16 && p.y / TILE < CY + 10) dropProp(m, i); });
@@ -2826,7 +2835,7 @@ function graniteCove(m, H) {
   // the steps up the cliff in the gap, from the sand to the top; a map board up there and a trail to the campground road
   const stepFoot = P(CX + 0.5, CY - 4.6), stepTop = P(CX + 0.5, CY - 10.2);
   H.addProp(m, 'stairs', stepFoot[0], stepFoot[1], 0, { len: stepFoot[1] - stepTop[1], h: 76, w: 30 });
-  const road = (m.roads || []).find((r) => /Granite Cove Campground Road/.test(r.name || ''));
+  const road = (m.roads || []).find((r) => (H.place ? /Granite Cove Track/ : /Granite Cove Campground Road/).test(r.name || ''));   // (World v3: its own track)
   const end = road ? road.pts.reduce((a, q) => (q.y > a.y ? q : a), road.pts[0]) : { x: (CX + 5) * TILE, y: (CY - 34) * TILE };
   trail(m, [[stepTop[0], stepTop[1] - 20], [stepTop[0] + 60, stepTop[1] - 200], [end.x, end.y + 40]]);
   H.addProp(m, 'mapboard', stepTop[0] - 52, stepTop[1] - 30, 0);

@@ -2765,9 +2765,8 @@ function drawMineRing(F) {
 // (the quarry's veins: the module that draws them loads once you're near one - the view's little sibling)
 function nearVeins(sp) {
   if (S.ugMod || S.ugViewP || !S.map || !S.map.quarries || !S.map.quarries[0]) return;
-  const q = S.map.quarries[0], mine = (S.map.natureSites || []).find((n) => n.kind === 'mine');
-  const near = (x, y) => Math.abs(sp.x - x) < 2500 && Math.abs(sp.y - y) < 2500;
-  if (near(q.x + q.w / 2, q.y + q.h / 2) || (mine && near(mine.x, mine.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
+  const near = (x, y) => Math.abs(sp.x - x) < 2500 && Math.abs(sp.y - y) < 2500;   // (every pit and mine: World v3 has two of each)
+  if (S.map.quarries.some((q) => near(q.x + q.w / 2, q.y + q.h / 2)) || (S.map.natureSites || []).some((n) => n.kind === 'mine' && near(n.x, n.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
 }
 
 // (the tunnels' art: its module loads once one is near - shared/tunnels.js has where they are)

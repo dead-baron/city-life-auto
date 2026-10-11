@@ -5,7 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
-import { undergroundOf, ugMapOf, cellAtPx, openAt, lightAt, ugLos, UG, C } from '../shared/underground.js';
+import { undergroundOf, ugMapOf, cellAtPx, openAt, lightAt, ugLos, UG, C, caveOf, caveNear } from '../shared/underground.js';
+import { createHash } from 'node:crypto';
 import { pedStep, vehStep } from '../shared/physics.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import { TILE, T, K } from '../shared/constants.js';
@@ -212,4 +213,39 @@ test('the cave: a boat on the underground river, and it floats along it', () => 
   assert.equal(cellAtPx(L, s.x, s.y), C.RIVER, 'the rock holds it on the river');
   // nobody on the street sees a boat down there
   assert.ok(ugLos(L, boat.x, boat.y, boat.x + 40, boat.y), 'the river hall is open');
+});
+
+// (H51, docs/WORLD-V3.md 8.19: a cave per mine - L.caves; World v3 has two, test/world3wild.test.js) Today's world has
+// one mine with a cave: a list of one, laid out exactly as the one cave was (the fingerprint of its layout taken before
+// the list: its chambers, passages, river, mouth, glow, roosts, rocks, den, boat, its region's cells, the veins), the
+// same mouth in and out, its state world.cave as before.
+test('a cave per mine: today\'s world has one, the same as before the list', () => {
+  const w = makeWorld();
+  const L = undergroundOf(w.map), mines = (w.map.natureSites || []).filter((q) => q.kind === 'mine');
+  assert.equal(mines.length, 1, 'one mine: the Old Granite Mine');
+  assert.equal(L.caves.length, 1, 'one cave');
+  const K2 = L.caves[0];
+  assert.equal(L.cave, K2, 'L.cave: the first');
+  assert.equal(K2.name, 'Old Granite Mine');
+  assert.ok(K2.X === mines[0].x && K2.face === mines[0].y, 'through its adit');
+  assert.equal(L.regions.filter((R) => R.ug === UG.CAVE).length, 1, 'one cave region');
+  const h = (s) => createHash('sha1').update(s).digest('hex').slice(0, 12);
+  const keys = ['X', 'face', 'flip', 'mouth', 'inside', 'chambers', 'passages', 'river', 'fork', 'glow', 'roosts', 'rocks', 'den', 'boat', 'spikes'];
+  assert.equal(h(JSON.stringify(Object.fromEntries(keys.map((k) => [k, K2[k]])))), '28fb393c6a12', 'the layout as it was');
+  assert.deepEqual([K2.region.x0, K2.region.y0, K2.region.w, K2.region.h, h(Buffer.from(K2.region.c))], [503, 46, 86, 65, '1a1668207d8f'], 'its region as it was');
+  assert.deepEqual([L.veins.length, h(JSON.stringify(L.veins))], [29, 'e1ea922ae125'], 'the veins as they were');
+  assert.equal(caveOf(L, K2.den.x, K2.den.y), K2);
+  assert.equal(caveOf(L, 0, 0), K2, 'anywhere: the one cave');
+  assert.equal(caveNear(L, 0, 0), K2);
+  // in by its mouth and out again; its state is world.cave (world.caves[0])
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, K2.mouth.x, K2.mouth.y);
+  assert.ok(/Go into the cave/.test(act(w, p).label), 'the way in at its mouth');
+  act(w, p).run();
+  assert.ok(p.ped.ug === UG.CAVE && p.ped.x === K2.inside.x && p.ped.y === K2.inside.y, 'just inside');
+  run(w, 0.2);
+  assert.ok(w.cave && w.caves.length === 1 && w.caves[0] === w.cave && w.cave.bear, 'its state, its bear');
+  assert.ok(/Walk out/.test(act(w, p).label), 'the way out');
+  act(w, p).run();
+  assert.ok(!p.ped.ug && p.ped.x === K2.mouth.x && p.ped.y === K2.mouth.y + 26, 'out at its mouth');
 });
