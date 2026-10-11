@@ -49,7 +49,7 @@ export function serviceRoute(service, way) {
 // A closed loop of control points (the first and the last the same junction) rounded at every corner, the closing
 // one too: started half way along its first leg. Returns the sampled path (tiles) and where it passes each control
 // point (distance along it), the stretches as distance ranges.
-function roundLoop(route) {
+export function roundLoop(route) {
   const { P, R } = route, n = P.length;   // P[n - 1] is P[0]
   const M = [(P[0][0] + P[1][0]) / 2, (P[0][1] + P[1][1]) / 2];
   // the rotated list: M, P1 .. P(n-2), P0, M; control point k (1 <= k <= n - 2) is at k, P0 at n - 1
@@ -93,7 +93,7 @@ function roundLoop(route) {
 
 // One loop's track: points every SAMPLE px, offset TRACK_OFF to the right of the way it runs, in px; each with its
 // distance along (s) and `under` in the skeleton's tunnels.
-function trackOf(path) {
+export function trackOf(path) {
   const P = path.pts, S = path.s, total = path.length * TILE, out = [];
   const inR = (list, s) => list.some(([a, b]) => s >= a && s <= b);
   let j = 1;

@@ -27,6 +27,7 @@ import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3, peakHei
 import { terrainAt } from './mapcore.js';
 import { paintTowns3, layTowns3, townsDone, townsFront, townModels, TOWN_SPECIALS, TOWN_STYLES } from './world3-towns.js';
 import { paintMesa3, layMesa3, mesaLots, buildMesa, mesaDone, MESA_SPECIALS, MESA_STYLES } from './world3-mesa.js';
+import { subwayLoops } from './world3-subway.js';
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -185,7 +186,7 @@ export function worldOpts(asked) {
     specials: [...TOWN_SPECIALS, ...MESA_SPECIALS],   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
     styles: { ...TOWN_STYLES, ...MESA_STYLES },   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)
-    rails: (m) => { beachFront(m, L); const tf = townsFront(m); if (m.world3?.towns) m.world3.towns.front = tf; if (m.world3?.mesa) m.world3.mesa.lots = mesaLots(m); return mainLineLoops(m); },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
+    rails: (m) => { beachFront(m, L); const tf = townsFront(m); if (m.world3?.towns) m.world3.towns.front = tf; if (m.world3?.mesa) m.world3.mesa.lots = mesaLots(m); return [...mainLineLoops(m), ...subwayLoops(m)]; },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
     lines(lines, m) {
       const out = { split: 0, offFrame: 0 };
       const inF = (p) => p.x >= 0 && p.y >= 0 && p.x < W * TILE && p.y < H * TILE;
