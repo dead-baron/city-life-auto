@@ -14,13 +14,13 @@ import { prepare } from '../tools/world3-build.mjs';
 
 test('World v3: the mainland\'s biomes - their districts, ground and dressing; Northshore at its beach', { timeout: 300000 }, () => {
   // the new districts are the generator's (after today's: today's ids don't move), shaped like today's
-  assert.equal(DISTRICTS.length, 63);   // (57-59: the first mainland towns, 8.13 - test/world3towns.test.js; 60-62: Lucky Mesa, 8.15 - test/world3mesa.test.js)
+  assert.equal(DISTRICTS.length, 65);   // (57-59: the first mainland towns, 8.13 - test/world3towns.test.js; 60-62: Lucky Mesa, 8.15 - test/world3mesa.test.js; 63-64: Copper Gulch, Dusty Hollow, 8.18 - test/world3desert.test.js)
   DISTRICTS3.forEach((d, k) => assert.equal(DISTRICTS[47 + k], d));
   const prep = prepare();
   const m = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });
   const L = prep.land.layers, W = m.w, N = W * m.h;
   // each mainland district: its tiles (land) and their ground
-  const land = new Float64Array(64), tiles = Array.from({ length: 64 }, () => new Float64Array(16));
+  const land = new Float64Array(80), tiles = Array.from({ length: 80 }, () => new Float64Array(16));   // (room for the districts to come: 8.18 took 64)
   for (let i = 0; i < N; i++) if (m.land[i]) { const d = m.dist[i]; land[d]++; tiles[d][m.tiles[i]]++; }
   const share = (d, ...ts) => ts.reduce((s, t) => s + tiles[d][t], 0) / land[d];
   for (let d = 47; d <= 56; d++) assert.ok(land[d] > 10000, `${DISTRICTS[d].name}: ${land[d]} land tiles in the build`);

@@ -3473,3 +3473,84 @@ Gull Harbor a lot off the island's ring road. What's wrong:
 Boat as the arrests system's transport, once prisoners go to the island; the lift bridges opening for tall boats (the
 boats pass under every deck today). The Transit app (`client/phone.js`) lists every stop of a route of many by its
 own name with its time (`ferryInfo`'s `stops`, `piers`, `leaves`) and leaves the Prison Boat out.
+
+### 8.18 The Red Rock Desert's places: Copper Gulch and its mine, Dusty Hollow, the dam, the lookout, the motel (2026-10-11, H43)
+
+Part 1.5 R6's places besides Lucky Mesa (concepts WR2-B, NA1-C, MI1, MI6, SC3-F, N4, NR1-B), in the whole-world build at
+the skeleton's TOWNS / LANDMARKS points, on the skeleton's arterials (Mine Road, Hollow Road, Canyon Road, Route 9) and
+jeep tracks off them, clear of the highways' room and the main line's. All of it in `shared/world3-desert.js` (one call
+each from `shared/world3-world.js`: `paintDesert3`, `layDesert3`, `buildDesert`, `desertDone`, plus its specials and
+style handed in with the towns'); the page and the city worker never import it. Two districts after Lucky Mesa's in
+`shared/mapcore.js`: **63 Copper Gulch** (`oldtown`, built by the generator) and **64 Dusty Hollow** (`desert`: the
+generator builds nothing there, its ruins are built whole). The live world doesn't change (the world hash stays
+6b6e16fdef9f).
+
+- **Copper Gulch** (the town point 4560, 1230): Mine Road pulled straight on row 1205 as its main street (towns' `pull`),
+  Assay Street and Company Row looping off it north and south, Depot Road across them up to the main line's Copper Gulch
+  station (it ends 20 tiles from it), Tailings Lane out south. Its own style: company houses and shacks, workshops, few
+  plain roofs. The planned places (`DESERT_SPECIALS`): the **assay office** (`assay`, buying ore at its counter, as the
+  quarry's), **The Copper Spur Saloon** (`club`), the **general store** (`convenience`), the **sheriff** (`police`), the Ore
+  Cart Diner, the clinic. The **water tower** by the main street's east end. The **freight yard** by the main line north
+  of the town: a gravel pad 12-30 tiles off the line on the town's side, ten ore cars in a row 15 tiles off it, the
+  loading hopper, spoil and crates; a named place (`delivery`, `ore`).
+- **Copper Gulch Mine** (the landmark point 4690, 1180, at Mine Road's end): the **open pit** (MI6) is a quarry as today's
+  (`m.quarries`, named: the ground bake paints it, art v2 draws its benches and the crane, the miners work its face), its
+  haul road up from Mine Road's end, the **crusher** by its rim with an ore cart and the spoil heaps; the **canyon adit**
+  (MI1) in its cliff east of the road's end, built as the Old Granite Mine's (`shared/naturesites.js` oldMine: the cliff
+  band solid, the timbered portal, rails and a cart, lanterns, crates, the crystal seams) and a `mine` nature site with
+  its seams. The v3 world has no other mine or quarry (the Old Granite Mine and the Granite Quarry aren't in it yet), so
+  today's mining works here unchanged: **the cave world** of `shared/underground.js` (7 chambers, the river, the boat)
+  opens through the adit, **the ore veins** lie round the pit's faces (7) and on the cave's walls (20), the seams take the
+  old pick (`server/systems/places.js`), the miners stand at the pit's face and the portal (`server/systems/activities.js`).
+- **Dusty Hollow** (4250, 1000): one gravel street off Hollow Road's end, twelve empty wooden buildings either side of it
+  (weathered siding, gabled, no lights - the saloon, the livery, the bank, the hotel, the jail, the chapel...), their
+  porches fallen in front of them (planks, debris, rubble), crates and barrels; nothing open but the **hideout** (`gang`,
+  the boarding house) and the **smuggler's drop** (`smuggler`, the livery); loot chests in the ruins.
+- **Red Rock Dam** (4130, 610): a concrete wall along the Red Rock Reservoir's south shore (the skeleton's lake), 129
+  tiles of it in 24-tile blocks (art v2 draws a building whole), lights along its crest; Canyon Road comes up to its foot;
+  **the dry wash** below it - gravel bars and dirt - winding south toward the Desert Highway's room.
+- **The lookout on its mesa** (4330, 880): a sandstone mesa with the fire lookout on its shoulder, a jeep track up to it
+  from Dusty Hollow; **the natural arch** (art v2's sea arch, on land) and five **hoodoos** by it (4372, 846).
+- **The Sundowner Motel** on Mine Road by the Desert Highway (3846-3880, 1160-1188): the rooms, a wing and the office
+  round its car park, the pool with loungers and an umbrella, neon on the eaves; **four billboards** 16 tiles off the
+  Desert Highway, 30 tiles or more apart, along its run past Mine Road's crossing.
+- **Mesa Camp** (the skeleton's point 4800, 1700) off Route 9: tents round a campfire, string lights, a picnic table, a
+  cooler, a burn barrel, two pickups' spaces; a jeep track down from the road.
+- The **jeep tracks** (haul road, adit, Dusty Hollow's street and the track on to the lookout, the camp's) are gravel:
+  dirt doesn't show on the desert's ground (it is the ground). Everything built is kept from the biomes' dressing
+  (reserve 4).
+
+Tests: `test/world3desert.test.js` (one world build: the districts after Lucky Mesa's, the streets on the one network,
+the main street straight, Depot Road to the station, every planned place, the assay counter, the freight yard and its
+ore cars, the water tower; the pit, the adit, its seams, the crusher, the cave world through the adit and the veins round
+the pit and in the cave; Dusty Hollow's buildings, hideout and drop and nothing else open; the dam, the wash, the
+lookout, the arch and hoodoos, the motel and its pool, the billboards, the camp, the tracks; every building of ours
+clear of the highways and the main line), `test/world3biomes.test.js` (65 districts).
+
+Pictures (`tools/world3-world-map.mjs --towns --only gulch,hollow,dam,motel,camp`; `--only` takes a list now):
+`docs/world-v3-town-gulch.png`, `-hollow.png`, `-dam.png`, `-motel.png`, `-camp.png`. What looks right: Copper Gulch
+is a small grid town on its straight main street with Depot Road up to the station's platforms; the pit is a big quarry
+east of it with the crusher by its rim and the gravel haul road; the adit's cliff and portal at the track's end; the
+freight yard's gravel pad along the main line; Dusty Hollow's two rows of brown-roofed wooden buildings on their gravel
+street, the track on to the red mesa with the lookout beside it, the arch and the hoodoos; the dam across the
+reservoir's south end with Canyon Road's turnaround at its foot; the motel's three buildings and pool on their car park
+by the crossing. What looks wrong:
+- **The pit is flat:** today's quarry drawing - a grey floor with three benches along its north side only. MI6 wants
+  terraces all round, the haul road spiralling down them, the excavator and the dump trucks (no models yet: the crane
+  stands in for them), and the conveyor to the crusher (an ore cart on rails for now; the crusher is a plain shed).
+- **Copper Gulch is green and paved:** the company houses' prefabs bring lawns, and the `parking` filler lays a big car
+  park south of Company Row - a mining town wants dirt yards, porches, the head frame's silhouette over it.
+- **Dusty Hollow is too neat:** a regular grid of whole roofs; at 1/8 nothing says ghost town - it wants sagging roofs
+  with holes, gaps between the buildings, tumbleweeds; the fallen porches are too small to read at this scale.
+- **The lookout isn't on the mesa:** it stands beside the outcrop (the player can't climb a prop); a mesa with a ramp or
+  stairs up to its top is a model of its own. The arch is the sea arch's model on dry ground.
+- The ore cars and the camp are too small to read at 1/8: the camp is its gravel track, the bare ground it keeps and
+  three dots of tent (two of them were first asked for by a model's name, `domeTent`, which the map doesn't draw - now
+  `tent`s by colour round a lit fire). It wants a closer picture, and pickups parked there (spaces only for now).
+
+**What's left:** loot to search in Dusty Hollow's ruins (a `search` site as the wreck's - `server/systems/places.js`
+takes the first one); the sheriff's post and a gas station out on the highway (the town has its sheriff; no roadside gas
+station or diner yet); the underground river MI4 under the mine (the cave world's river is today's, not one laid to the
+canyon); the Old Granite Mine and the Granite Quarry once Granite Peaks' places move in (then `underground.js` and
+`places.js` take the first mine and the first pit: they'll want a list); dirt bike trails; the jeep tracks on the
+road network (they are ground, not roads: the traffic doesn't use them).

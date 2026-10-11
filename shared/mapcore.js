@@ -136,6 +136,11 @@ for (const [name, isl, style, tier] of [['Timber Bend', 'Highland Woods', 'oldto
 for (const [name, style, tier, ground] of [['The Strip', 'nightlife', 'lux', T.PLAZA], ['Old Downtown', 'nightlife', 'low', T.PLAZA], ['Mesa Flats', 'houses', 'suburb', T.DIRT]]) {
   DISTRICTS.push({ id: DISTRICTS.length, name, isl: 'Red Rock Desert', style, tier, walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground, turf: false });
 }
+// World v3's mining town and ghost town in the Red Rock Desert (docs/WORLD-V3.md 8.18, shared/world3-desert.js): 63-64,
+// only a v3 build paints them (Dusty Hollow a desert district: the generator builds nothing there, its ruins are built whole)
+for (const [name, style, tier] of [['Copper Gulch', 'oldtown', 'low'], ['Dusty Hollow', 'desert', 'wild']]) {
+  DISTRICTS.push({ id: DISTRICTS.length, name, isl: 'Red Rock Desert', style, tier, walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: false });
+}
 export const WATER_D = 13;   // (the open sea's district: the generator's too)
 // Districts nobody builds in: woods, hills, mountains, farmland, desert, airfields.
 export const WILD_STYLES = new Set(['wild', 'rural', 'desert', 'airport', 'water', 'rocky']);
