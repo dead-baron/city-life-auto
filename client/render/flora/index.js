@@ -82,11 +82,11 @@ export class Flora {
     if (this.excl) return this.excl;
     const m = this.m, X = new Uint8Array(m.w * m.h);
     const mark = (tx, ty, tw, th) => { for (let y = Math.max(m.y0, ty); y < Math.min(m.y0 + m.h, ty + th); y++) { const r = m.row(y); for (let x = Math.max(m.x0, tx); x < Math.min(m.x0 + m.w, tx + tw); x++) X[r + m.col(x)] = 1; } };
-    for (const p of m.prefabs || []) if (p.tw) mark(p.tx, p.ty, p.tw, p.th);                      // painted lots have their own gardens
+    for (const p of m.prefabs || []) if (p && p.tw) mark(p.tx, p.ty, p.tw, p.th);                      // painted lots have their own gardens
     for (const a of m.handArt || []) mark(Math.floor(a.x / TILE), Math.floor(a.y / TILE), Math.ceil(a.w / TILE), Math.ceil(a.h / TILE));
     for (const a of m.paintings || []) mark(Math.floor(a.x / TILE), Math.floor(a.y / TILE), Math.ceil(a.w / TILE), Math.ceil(a.h / TILE));
     for (const mn of m.mansions || []) if (mn.lot) mark(mn.lot.tx, mn.lot.ty, mn.lot.tw, mn.lot.th);
-    for (const s of m.stalls || []) mark(Math.floor(s.x / TILE), Math.floor(s.y / TILE), Math.ceil(s.w / TILE) + 1, Math.ceil(s.h / TILE) + 1);
+    for (const s of m.stalls || []) if (s) mark(Math.floor(s.x / TILE), Math.floor(s.y / TILE), Math.ceil(s.w / TILE) + 1, Math.ceil(s.h / TILE) + 1);
     return (this.excl = X);
   }
   biomeAt(tx, ty) {

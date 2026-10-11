@@ -262,7 +262,7 @@ export class CityMap {
   poiNear(x, y, kind = null) {
     let best = null, bd = Infinity;
     for (const p of this.pois) {
-      if (kind && p.kind !== kind) continue;
+      if (!p || (kind && p.kind !== kind)) continue;
       const d = (p.x - x) ** 2 + (p.y - y) ** 2;
       if (d <= p.r * p.r && d < bd) { bd = d; best = p; }
     }

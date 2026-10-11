@@ -156,6 +156,8 @@ export class WorkerPool {
   // a message every worker gets, in order with the jobs sent to it after (no answer expected). World patches
   // ('patch': props [[index, broken | null]], reset: that list is everything broken) are also kept, compacted, for
   // a worker that starts later.
+  // World v3's window moved (host.js setMap): every worker, and one that starts later, gets the new window
+  reworld(M) { if (this.initArgs) this.initArgs.M = M; this.broadcast('reworld', { M }); }
   broadcast(op, args) {
     if (op === 'patch' && args) {
       if (args.reset) this.props.clear();

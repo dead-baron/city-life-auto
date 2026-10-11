@@ -362,7 +362,7 @@ export class HUD {
     g.font = `bold ${big ? 14 : 9}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const skipIc = iconSkip(this.map);
     for (const p of this.map.pois) {
-      const icon = POI_ICON[p.kind];
+      const icon = p && POI_ICON[p.kind];
       if (!icon || skipIc.has(p.id)) continue;
       const [x, y] = toR(p.x, p.y);
       if (x < -10 || y < -10 || x > size + 10 || y > size + 10) continue;
@@ -455,6 +455,8 @@ export class HUD {
   panMap(dx, dy) { if (this.worldmap) this.worldmap.pan(dx, dy); }
   centerMap(x, y) { if (this.worldmap) this.worldmap.center(x, y); }
   resetMap() { if (this.worldmap) this.worldmap.reset(); }
+  // World v3's window moved (client/main.js swapWorld): the minimap paints the new window's part over what it had
+  setMap(map) { this.map = map; paintMinimap(this.mini, map); this.resetMap(); }
   get mapView() { return this.worldmap ? this.worldmap.view : null; }
   drawBigMap(cx, cy, heading, opts = {}) { if (this.worldmap) this.worldmap.draw($('bigmap-c'), this, cx, cy, heading, opts); }
 
@@ -521,13 +523,35 @@ export function iconSkip(map) {
   if (map._iconSkip) return map._iconSkip;
   const skip = new Set(), kept = [];
   for (const p of map.pois) {
-    if (p.kind === 'delivery' || p.kind === 'vending' || p.kind === 'reception' || p.kind === 'evidence') continue;   // (no icons)
+    if (!p || p.kind === 'delivery' || p.kind === 'vending' || p.kind === 'reception' || p.kind === 'evidence') continue;   // (no icons)
     if (kept.some((q) => q.kind === p.kind && Math.hypot(q.x - p.x, q.y - p.y) < ICON_MERGE)) skip.add(p.id); else kept.push(p);
   }
   Object.defineProperty(map, '_iconSkip', { value: skip, enumerable: false, configurable: true });
   return skip;
 }
 
+// (the window's part of the world's picture, painted over the minimap's canvas: what was seen before stays)
+function paintMinimap(c, map) {
+  if (!c || !c.getContext) return;
+  const g = c.getContext('2d'), img = g.createImageData(map.w, map.h);
+  const col = MINI_COL();
+  for (let ty = map.y0; ty < map.y0 + map.h; ty++) {
+    const row = map.row(ty), o = (ty - map.y0) * map.w;
+    for (let tx = map.x0; tx < map.x0 + map.w; tx++) {
+      const c3 = col[map.tiles[row + map.col(tx)]] || [0, 0, 0], i = (o + tx - map.x0) * 4;
+      img.data[i] = c3[0]; img.data[i + 1] = c3[1]; img.data[i + 2] = c3[2]; img.data[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, map.x0, map.y0);
+  g.save(); g.beginPath(); g.rect(map.x0, map.y0, map.w, map.h); g.clip();
+  miniLines(g, map);
+  g.restore();
+}
+const MINI_COL = () => ({
+  [T.ROAD]: [70, 70, 78], [T.BRIDGE]: [90, 90, 98], [T.SIDEWALK]: [150, 150, 145], [T.PLAZA]: [140, 110, 95], [T.LOT]: [80, 80, 86],
+  [T.GRASS]: [50, 105, 45], [T.BUILDING]: [190, 160, 120], [T.WATER]: [35, 85, 165], [T.DEEP]: [25, 60, 130], [T.SAND]: [215, 195, 140],
+  [T.DOCK]: [140, 95, 55], [T.DIRT]: [140, 105, 65], [T.FIELD]: [125, 155, 45], [T.WALL]: [0, 0, 0],
+});
 function buildMinimap(map) {
   const c = document.createElement('canvas');
   c.width = map.frame.w; c.height = map.frame.h;   // (the world's picture, one pixel a tile: the map paints its part)
@@ -546,16 +570,23 @@ function buildMinimap(map) {
     }
   }
   g.putImageData(img, 0, 0);
+  miniLines(g, map);
+  return c;
+}
+// the railway and the elevated roads over the minimap's tiles
+function miniLines(g, map) {
+  // (World v3's window holds the part of the loop inside it: no line across where it leaves the window)
+  const part = map.w < map.frame.w || map.h < map.frame.h, gap = (p, q) => part && Math.abs(q.x - p.x) + Math.abs(q.y - p.y) > 40 * TILE;
   // the railway: a dark line round the loop with cross-ties, a dot at every station
   if (map.rail) {
     const pts = map.rail.pts;
     g.lineWidth = 2; g.strokeStyle = '#2a2420';
     g.beginPath();
-    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE); }
+    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; if (gap(p, q)) continue; g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE); }
     g.stroke();
     g.strokeStyle = '#c9c2b0'; g.lineWidth = 0.6; g.setLineDash([1, 3]);
     g.beginPath();
-    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE); }
+    for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; if (gap(p, q)) continue; g.moveTo(p.x / TILE, p.y / TILE); g.lineTo(q.x / TILE, q.y / TILE); }
     g.stroke(); g.setLineDash([]);
     for (const st of map.rail.stations) { g.fillStyle = '#2a2420'; g.beginPath(); g.arc(st.x / TILE, st.y / TILE, 3.2, 0, 6.28); g.fill(); g.fillStyle = '#f4f0e6'; g.beginPath(); g.arc(st.x / TILE, st.y / TILE, 1.8, 0, 6.28); g.fill(); }
   }
@@ -571,7 +602,6 @@ function buildMinimap(map) {
       g.stroke();
     }
   }
-  return c;
 }
 
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }

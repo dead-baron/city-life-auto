@@ -456,6 +456,26 @@ export class World2 {
 
   resize(W, H, dpr) { this.W = W; this.H = H; this.dpr = dpr; if (this.E.resize) this.E.resize(W, H, dpr); }
 
+  // World v3's window moved (client/main.js swapWorld, docs/WORLD-V3.md 8.12): the same renderer on the new window -
+  // the bake workers get it (each its own copy, as at the start), the grids worked out from the map are dropped; the
+  // chunks baked stay (a chunk is the same art in both windows: a window keeps a region round the player)
+  setMap(map) {
+    const t = performance.now(), old = this.map;
+    // (a chunk baked here while the player was outside the old window - a teleport - was baked against its walls:
+    // baked again, as is one within a chunk of the old window's edge; the rest is the same art in both windows)
+    const n = CHUNK / TILE;
+    for (const k of this.chunkState.keys()) {
+      const cx = k % 1000, cy = Math.floor(k / 1000), x0 = (cx - 1) * n, y0 = (cy - 1) * n, x1 = (cx + 2) * n - 1, y1 = (cy + 2) * n - 1;
+      if (!(old && old.inside(x0, y0) && old.inside(x1, y1))) this.ver.set(k, (this.ver.get(k) || 0) + 1);
+    }
+    this.map = map; this.grid = artGrid(map);
+    this.lampGrid = null; this.lampG = null; this.poiG = null; this.seaK = null;
+    if (this.E.setCanopy) { try { this.E.setCanopy(canopyGrid(map)); } catch (e) { console.warn('[art2] canopy', e); } }
+    if (this.pool && this.pool.reworld) this.pool.reworld(worldData(map));
+    this.resync(false);
+    this.t.reworld = performance.now() - t;
+  }
+
   // engine.onContextLost: 'lost', 'restored' (everything must be uploaded again: has* answer false, and what
   // was waiting is dropped), 'failed' (the rebuild failed). Phones drop the graphics of a page in the
   // background (and sometimes when it comes back): that is not counted. Only losses while it is on screen,
@@ -955,7 +975,7 @@ export class World2 {
     if (!list.length) return list;
     if (!this.lampGrid) {
       this.lampGrid = new Map();
-      for (const l of this.map.lamps || []) { const k = Math.floor(l.y / 256) * 1000 + Math.floor(l.x / 256); let a = this.lampGrid.get(k); if (!a) this.lampGrid.set(k, a = []); a.push(l); }
+      for (const l of this.map.lamps || []) { if (!l) continue; const k = Math.floor(l.y / 256) * 1000 + Math.floor(l.x / 256); let a = this.lampGrid.get(k); if (!a) this.lampGrid.set(k, a = []); a.push(l); }
     }
     for (const L of list) {
       if (L.kind !== 'lamp') continue;
@@ -2130,7 +2150,7 @@ export class World2 {
   // without the statics' lights: v1's street lamps, lit windows and shop doors (grid lookups, not scans)
   _grid(list, cell) {
     const m = new Map();
-    for (const o of list || []) { const k = Math.floor(o.y / cell) * 4096 + Math.floor(o.x / cell); let a = m.get(k); if (!a) m.set(k, a = []); a.push(o); }
+    for (const o of list || []) { if (!o) continue; const k = Math.floor(o.y / cell) * 4096 + Math.floor(o.x / cell); let a = m.get(k); if (!a) m.set(k, a = []); a.push(o); }
     return m;
   }
   _eachIn(grid, cell, fn) {
@@ -2188,7 +2208,7 @@ export class World2 {
   // after a reconnect: the server's list of what is broken replaces the workers' and everything rebakes
   resync(rebake = true) {
     const list = [], lit = [], props = this.map.props || [];
-    for (let i = 0; i < props.length; i++) { if (props[i].broken) list.push([i, { a: props[i].broken.a || 0, ...(props[i].broken.f ? { f: 1 } : null) }]); if (props[i].t === 'campfire') lit.push([i, props[i].lit ? 1 : 0]); }
+    for (let i = 0; i < props.length; i++) { if (!props[i]) continue; if (props[i].broken) list.push([i, { a: props[i].broken.a || 0, ...(props[i].broken.f ? { f: 1 } : null) }]); if (props[i].t === 'campfire') lit.push([i, props[i].lit ? 1 : 0]); }
     const L = this.map.levels, barriers = L && L.broken ? [...L.broken.keys()].map((k) => [k, 1]) : [];
     if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: list, lit, barriers, reset: true });
     if (rebake) for (const k of this.chunkState.keys()) this.ver.set(k, (this.ver.get(k) || 0) + 1);

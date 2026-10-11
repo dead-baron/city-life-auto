@@ -7391,3 +7391,54 @@ or a road through them, and meet at a junction as before), test/world3interchang
 from the skeleton alone - which are built, their deck runs clear of the bores, four ramps each joining the deck and the
 road below, clear of the main line and the other roads), test/world3.test.js (the live world's hash unchanged),
 test/world3world.test.js, test/world3rail.test.js, test/world3server.test.js (all pass).
+## 2026-10-10 · World v3: the page keeps a window of the world
+
+The owner's engine route (docs/WORLD-V3.md part 8, items 1, 4 and 5): "the server runs the v3 world with CLA_WORLD=v3;
+the page downloads all 80 region files - 8.6 MB - and holds the whole world: about 0.5 GB of heap, which a phone
+can't". Now the page keeps a window of the world - the 3 x 3 regions round the player - and moves it as the player
+crosses a region's border. Only World v3's world is windowed (`CLA_WORLD=v3`, never live): today's world is 3 x 3
+regions, its window would be the whole map, and it keeps today's path untouched - nothing changes for the live game.
+
+- **The window's city** (`shared/regionpack.js` `assembleCity(index, regions, { window })`, `regionsNear`,
+  `windowRect`): the layers of the regions' rectangle (`x0`, `y0`, `w`, `h`, the world's `frame`: every query in world
+  tiles, as `shared/mapwindow.js`'s windows), the regional lists as **sparse arrays at the world's indices** (an index
+  from the server means the same item; `.length` the world's count), `solidProps` keyed by the window's tiles, the
+  index's lists whole (the road graph for the GPS and the phone's apps, homes, gates, stations). A window is always 3 x 3
+  regions (shifted in at the frame's edge).
+- **The readers** that walk a list with `for...of` or `.find` skip a window's holes now (main.js, hud.js, spectator.js,
+  render/buildings, highway, lighting, art2 statics, mapcore `poiNear`, bowling, cinema); the rest read by index or
+  skipped empties already.
+- **The worker** (`client/worldgen.js` `fetchWindow`, new `client/worldwindow.js` `WindowKeeper`, loaded only for World
+  v3): the index and the window's 9 regions, round where the player was last (`cla.at3`); it stays, told the player's
+  tile every 300 ms: within 96 tiles of a border the regions coming in are fetched early, 16 tiles past it (or outside
+  the window: a teleport) the next window is assembled and handed over. `?wholeworld` downloads the whole v3 world as
+  before.
+- **The page** (`client/main.js` `keepWindow`, `swapWorld`) swaps it in: broken props, fires, gates and barriers carried
+  over; flora, ground, buildings, router and spectator made again, the weather kept; the minimap paints the new part
+  over what it had (`hud.js` `setMap`); **art v2 keeps drawing** (`host.js` `setMap`, `pool.js` `reworld`, the bake
+  worker's `reworld`): its workers get the new window, the baked chunks stay. The welcome's whole-map signature check
+  is skipped for a window (per-region signatures: part 8 item 5, next).
+
+Files: shared/regionpack.js, client/worldwindow.js (new), client/worldgen.js, client/boot.js, client/main.js,
+client/hud.js, client/spectator.js, client/render/buildings.js, client/render/highway.js, client/render/lighting.js,
+client/art2/game/host.js, client/art2/game/pool.js, client/art2/game/worker.js, client/art2/game/statics.js,
+shared/mapcore.js, shared/bowling.js, shared/cinema.js, test/regionwindow.test.js (new), test/world3window.test.js
+(new), docs/WORLD-V3.md 8.12, docs/world-v3-window.png (new), client/sound/places.js, client/render/fireflies.js,
+client/render/flora/index.js, client/render/tiles.js, client/art2/game/groundbake.js, client/phone.js.
+
+Measured: a v3 window is 1512 x 1512 tiles, its layers 36.6 MB of the world's 426.7 MB, assembled in 0.19 s (a move
+0.28 s); **the page's JS heap 177 MB with a window and the frame drawing** (headless Chromium; 468-497 MB with the whole
+world); the swap's art v2 hand-over 0.06-0.40 s on the main thread (to take out). The headless playtest: the hospital
+drawn after the window moved at joining (docs/world-v3-window.png), a border crossed and a far teleport, no errors;
+today's world in the same page as before (the whole map, no window, art v2 drawing, no errors). docs/WORLD-V3.md 8.12 has the rest
+and what's left (per-region signatures, the first window before the player's position is known, a global POI list
+for the phone and the big map, the railway's loops in a window, the swap's copies, the frame-sized minimap, regions
+kept in the browser).
+
+Tests: test/regionwindow.test.js (today's world in 256-tile regions: a window's layers are windowOf's to the byte, its
+lists hold exactly its items at their world indices; today's own regions: every window is the whole map, as assembled
+whole; the worker's download of a window - the index and 9 regions; the keeper's moves), test/world3window.test.js (the
+v3 world: a window round a hospital, a move east, the frame's corner), a headless playtest of the v3 world
+(`CLA_WORLD=v3`, `?world=v3`: joining, crossing a border, a far teleport), test/regions.test.js, test/mapwindow.test.js, test/bowling.test.js, test/cinema.test.js,
+test/hudlayers.test.js (all pass); the code budgets (node tools/perf.mjs codeReport: page 463 of 485 KB, city 348 of
+360, renderer 362 of 363, bake 738 of 765).

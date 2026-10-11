@@ -135,7 +135,7 @@ export function createSpectator({ map, players, mobile }) {
     g.lineWidth = 1; g.strokeStyle = 'rgba(0,0,0,.55)';
     g.beginPath();
     for (const b of map.buildings) {
-      if (b.gone) continue;
+      if (!b || b.gone) continue;
       const x = b.tx * TILE, y = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE;
       if (x > view.x1 || x + w < view.x0 || y > view.y1 || y + h < view.y0) continue;
       g.rect(Math.round(ox + x * z) + 0.5, Math.round(oy + y * z) + 0.5, Math.round(w * z), Math.round(h * z));
@@ -201,7 +201,7 @@ export function createSpectator({ map, players, mobile }) {
     if (z >= 0.3) {
       g.font = '600 11px Rubik, sans-serif';
       for (const b of map.buildings) {
-        if (!b.business || b.gone) continue;
+        if (!b || !b.business || b.gone) continue;
         const x = (b.tx + b.tw / 2) * TILE, y = (b.ty + b.th / 2) * TILE;
         if (x < view.x0 || x > view.x1 || y < view.y0 || y > view.y1) continue;
         g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(b.name, ox + x * z, oy + y * z); g.fillStyle = '#ffe9a8'; g.fillText(b.name, ox + x * z, oy + y * z);

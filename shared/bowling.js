@@ -211,7 +211,7 @@ export const totalScore = (rolls) => { const c = scoreCard(rolls); let s = 0; fo
 // the counter's; m.bowling holds the lanes.
 export function buildBowlingAlley(m, { T, DISTRICTS, keep = null }) {   // (keep: delivery stops it never takes - World v3's Westport Freight)
   const byB = new Map();
-  for (const p of m.pois) if (p.b !== undefined) { if (!byB.has(p.b)) byB.set(p.b, []); byB.get(p.b).push(p); }
+  for (const p of m.pois) if (p && p.b !== undefined) { if (!byB.has(p.b)) byB.set(p.b, []); byB.get(p.b).push(p); }
   let best = null;
   for (const b of m.buildings) {
     if (!b || b.gone || b.prefab < 0 || b.walkIn || b.home !== undefined || b.kind !== 'warehouse' || b.tw < 14 || b.th < 12) continue;

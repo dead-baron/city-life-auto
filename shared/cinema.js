@@ -60,7 +60,7 @@ export function roomAt(C, x, y) {
 // The building whose storefront is The Grand Theatre (found by its name) becomes the cinema: a walk-in with one unit, the
 // counter's; m.cinema holds the rooms and their seats.
 export function buildCinema(m, { T, DISTRICTS }) {
-  const p = m.pois.find((q) => q.label === CINE.NAME && q.b !== undefined);
+  const p = m.pois.find((q) => q && q.label === CINE.NAME && q.b !== undefined);
   const b = p && m.buildings[p.b];
   if (!b || b.gone || b.prefab < 0 || b.walkIn || b.tw < 9 || b.th < 11) return;
   const south = m.prefabs[b.prefab].rot === 0, dir = south ? 1 : -1;

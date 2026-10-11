@@ -228,7 +228,7 @@ function ctxOf(M) {
   // re-indexed after the signals are built)
   const pk = (x, y) => Math.round(x) + ',' + Math.round(y), sigPole = new Map(), armed = new Set();
   M.props.forEach((p, i) => { if (p && p.t === 'sigpole') sigPole.set(pk(p.x, p.y), i); });
-  for (const sg of M.signals || []) if (!sg.wire && sigPole.has(pk(sg.x, sg.y))) armed.add(sigPole.get(pk(sg.x, sg.y)));
+  for (const sg of M.signals || []) if (sg && !sg.wire && sigPole.has(pk(sg.x, sg.y))) armed.add(sigPole.get(pk(sg.x, sg.y)));
   const poleOf = (sg) => sigPole.get(pk(sg.x, sg.y)), poleAt = (x, y) => sigPole.get(pk(x, y)) ?? -1;
   return { M, W, H, tile, at, di, dist, zone, biome, deckAt, roadDir, armed, poleOf, poleAt };
 }
@@ -2039,6 +2039,7 @@ function makeRock(r) {
 // ================================================================================================
 function addSignals(c, I) {
   for (const sg of c.M.signals || []) {
+    if (!sg) continue;
     if (sg.wire) { spanItem(c, I, sg); continue; }
     const L = Math.hypot(sg.hx - sg.x, sg.hy - sg.y), a = Math.atan2(sg.hy - sg.y, sg.hx - sg.x);
     const Lq = clamp(Math.round(L / 4) * 4, 24, 240), hd = qa(a, 64), ux = Math.cos(hd), uy = Math.sin(hd);
@@ -2180,8 +2181,8 @@ function addDecks(c, I) {
     put(I, { key: `dk:${e.cx}:${e.cy}`, recipe: { t: 'deck', x0: X0, y0: Y0, w: X1 - X0, h: Y1 - Y0, T: TM, segs }, x: X0, y: Y0, z0: 0, ext: [0, TM, X1 - X0, Y1 - Y0], deck: { X0, Y0, X1, Y1, segs: e.list } });
   }
   // pillars: short piers under the deck's edges, turned with the deck
-  const near = (x, y) => { let best = null, bd = 1e9; for (const s of L.segs) { if (s.ramp) continue; let t = (x - s.ax) * s.ux + (y - s.ay) * s.uy; t = clamp(t, 0, s.len); const d = Math.hypot(x - s.ax - s.ux * t, y - s.ay - s.uy * t); if (d < bd) { bd = d; best = s; } } return best; };
-  for (const p of M.pillars || []) { const s = near(p.x, p.y), hd = s ? qa(Math.atan2(s.uy, s.ux), 16) : 0; put(I, vitem(`pil:${hd.toFixed(2)}`, 'pillar', [DECK_LIFT - 8, 22, 34], p.x, p.y, hd)); }
+  const near = (x, y) => { let best = null, bd = 1e9; for (const s of L.segs) { if (!s || s.ramp) continue; let t = (x - s.ax) * s.ux + (y - s.ay) * s.uy; t = clamp(t, 0, s.len); const d = Math.hypot(x - s.ax - s.ux * t, y - s.ay - s.uy * t); if (d < bd) { bd = d; best = s; } } return best; };
+  for (const p of M.pillars || []) { if (!p) continue; const s = near(p.x, p.y), hd = s ? qa(Math.atan2(s.uy, s.ux), 16) : 0; put(I, vitem(`pil:${hd.toFixed(2)}`, 'pillar', [DECK_LIFT - 8, 22, 34], p.x, p.y, hd)); }
   // lamps on the ring's median barrier, every ~300 px
   for (const ed of M.edges) {
     if (ed.lvl !== 1 || !ed.median) continue;
@@ -2498,6 +2499,7 @@ function addSetPieces(c, I) {
   }
   // marina slips: mooring piles either side of each berth
   for (const m of M.marina || []) {
+    if (!m) continue;
     const nx = Math.cos((m.a || 0) + PI / 2), ny = Math.sin((m.a || 0) + PI / 2);
     for (const sg of [-1, 1]) put(I, vitem('pile:20', 'piling', [20], m.x + nx * sg * 34 + Math.cos(m.a || 0) * 40, m.y + ny * sg * 34 + Math.sin(m.a || 0) * 40));
   }
@@ -2518,12 +2520,13 @@ function addSetPieces(c, I) {
   }
   // wheel stops at the head of every marked parking bay
   for (const p of M.parking || []) {
-    if (p.drive || p.sparse) continue;
+    if (!p || p.drive || p.sparse) continue;
     const a = p.a || 0;
     put(I, vitem(`ws:${qa(a + PI / 2, 4).toFixed(2)}`, 'wheelStop', [], p.x + Math.cos(a) * 54, p.y + Math.sin(a) * 54, qa(a + PI / 2, 4)));
   }
   // brick walls along the street between buildings
   for (const bw of M.brickWalls || []) {
+    if (!bw) continue;
     const D = c.dist((bw.tx + 0.5) * TILE, (bw.ty + 0.5) * TILE), rough = D.tier === 'rough' || D.tier === 'low', w = bw.tw * TILE;
     const spec = { w, d: 12, seed: 500 + (bw.tx % 7), glowOnly: true, night: NIGHT, style: D.style === 'oldtown' ? 'stone' : 'brick', height: 38, blank: true, graffiti: rough && w >= 96 ? 1 : 0, grime: rough ? 0.6 : 0.2, roof: 'flat' };
     put(I, { key: `bw:${w}:${bw.tx % 7}:${rough ? 1 : 0}`, recipe: { t: 'b', spec, kit: [] }, x: bw.tx * TILE, y: (bw.ty + 1) * TILE - 8, ext: [2, 60, w + 2, 4] });
@@ -2664,7 +2667,7 @@ function addLots(c, I) {
     const key = p.key;
     if (/^house/.test(key)) {
       // a front fence or hedge with a gap at the path, a mailbox, a tree in the yard, beds by the house
-      const fy = y0 + h - 6, gapX = bx0 + (M.buildings.find((b) => b.prefab === pi)?.door?.tx - p.tx - sx0 + 0.5 || (sx1 - sx0) / 2) * TILE;
+      const fy = y0 + h - 6, gapX = bx0 + (M.buildings.find((b) => b && b.prefab === pi)?.door?.tx - p.tx - sx0 + 0.5 || (sx1 - sx0) / 2) * TILE;
       const kind = D.style === 'luxury' ? 'iron' : rnd() < 0.5 ? 'picket' : 'hedge';
       if (front >= 64) {
         if (kind === 'hedge') { fenceLine(I, 'hedge', x0 + 8, fy, gapX - 26, fy, { h: 12 }); fenceLine(I, 'hedge', gapX + 26, fy, x0 + w - 8, fy, { h: 12 }); }
@@ -2684,7 +2687,7 @@ function addLots(c, I) {
     }
     if (key === 'church') { for (const dx of [24, w - 24]) put(I, fitem(`f:cypress:${dx > w / 2 ? 1 : 0}:1.2`, 'cypress', 1000 + (dx > w / 2 ? 1 : 0) * 37 + 49, x0 + dx, y0 + h - 30, 1.2)); fenceLine(I, 'iron', x0 + 8, y0 + h - 6, x0 + w / 2 - 30, y0 + h - 6); fenceLine(I, 'iron', x0 + w / 2 + 30, y0 + h - 6, x0 + w - 8, y0 + h - 6); return; }
     if (key === 'hospital') {   // (IN1-B: the ambulance bay's canopy - beside the glass doors, at the end away from them)
-      const hb = M.buildings.find((q) => q.prefab === pi && q.walkIn), hu = hb && hb.walkIn.south ? hb.walkIn.units[0] : null;
+      const hb = M.buildings.find((q) => q && q.prefab === pi && q.walkIn), hu = hb && hb.walkIn.south ? hb.walkIn.units[0] : null;
       const hdx = hu ? (hu.door.tx + (hu.door.w || 2) / 2) * TILE : null;
       let ex = hdx === null || w < 360 ? x0 + w / 2 : hdx > x0 + w / 2 ? x0 + 96 : x0 + w - 96;
       // (clear of the street lamps along the front: moved in along it, away from the doors, until none stands under it)
@@ -2728,7 +2731,7 @@ function addLots(c, I) {
     if (key === 'tower1' || key === 'tower2' || key === 'hotel' || key === 'bank' || key === 'bank2' || key === 'police' || key === 'police2' || key === 'police3') {
       if (/police/.test(key)) put(I, vitem('flagp', 'flagpole', [110, null], x0 + 30, y0 + h - 14, 0, [3, 4], { flag: ['stars', x0 + 30, y0 + h - 14, 0] }));   // (the bare pole: its flag flies live, in the wind - liveart.js)
       if (/police/.test(key) && front >= 24) {   // (IN2-B: planters and a cast-iron lamp either side of the glass doors)
-        const b = M.buildings.find((q) => q.prefab === pi && q.walkIn), u = b && b.walkIn.south ? b.walkIn.units[0] : null;
+        const b = M.buildings.find((q) => q && q.prefab === pi && q.walkIn), u = b && b.walkIn.south ? b.walkIn.units[0] : null;
         if (u) {
           const dx = (u.door.tx + (u.door.w || 2) / 2) * TILE, dy = (u.door.ty + 1) * TILE;
           for (const sd of [-1, 1]) {
@@ -2780,6 +2783,7 @@ function addYards(c, I) {
 function addCameras(c, I) {
   const ok = (t) => t === T.SIDEWALK || t === T.PLAZA || t === T.GRASS || t === T.LOT || t === T.DIRT;
   for (const cam of c.M.cameras || []) {
+    if (!cam) continue;
     let x = cam.x, y = cam.y;
     if (!ok(c.at(x, y))) {
       let best = null;

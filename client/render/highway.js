@@ -69,6 +69,7 @@ export class Highway {
     this.pillars = map.pillars || [];
     this.pgrid = new Map();
     for (const p of this.pillars) {
+      if (!p) continue;
       const key = Math.floor(p.y / CELL) * 4096 + Math.floor(p.x / CELL);
       let l = this.pgrid.get(key);
       if (!l) this.pgrid.set(key, (l = []));

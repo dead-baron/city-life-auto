@@ -244,11 +244,54 @@ const step = (k) => { if (k === '__proto__' || k === 'constructor' || k === 'pro
 const at = (o, p, n = p.length) => { for (let i = 0; i < n; i++) o = o[step(p[i])]; return o; };
 const put = (o, p, v) => { at(o, p, p.length - 1)[step(p[p.length - 1])] = v; };
 
+// ---- a window of the world (World v3 part 8 items 1 and 4: the page keeps the 3 x 3 regions round the player) ----
+// a region's rectangle [X0, Y0, w, h] in world tiles, from its key and the index's frame ([W, H, R, nx, ny])
+export function regionRect(frame, key) {
+  const m = /^r(\d+)-(\d+)$/.exec(key);
+  if (!m) throw new Error(`not a region: ${key}`);
+  const [W, H, R] = frame, X0 = Number(m[1]) * R, Y0 = Number(m[2]) * R;
+  return [X0, Y0, Math.min(R, W - X0), Math.min(R, H - Y0)];
+}
+// the region [rx, ry] a tile is in (past the frame's edge, the nearest one)
+export function regionXYOf(frame, tx, ty) {
+  const [, , R, nx, ny] = frame;
+  return [Math.min(nx - 1, Math.max(0, Math.floor(tx / R) || 0)), Math.min(ny - 1, Math.max(0, Math.floor(ty / R) || 0))];
+}
+// the (2r + 1) square of regions round the one a tile is in (r = 1: the 3 x 3 window the page keeps - shared/world3.js
+// regionsAround on any frame), row by row; at the frame's edge shifted in, so a window is always 3 x 3 regions where the
+// frame has them (today's 1312 x 1200 is 3 x 3 regions: its window is always the whole map)
+export function regionsNear(frame, tx, ty, r = 1) {
+  const [, , , nx, ny] = frame, [cx, cy] = regionXYOf(frame, tx, ty), n = 2 * r + 1;
+  const x0 = Math.max(0, Math.min(cx - r, nx - n)), y0 = Math.max(0, Math.min(cy - r, ny - n));
+  const out = [];
+  for (let y = y0; y < Math.min(ny, y0 + n); y++) for (let x = x0; x < Math.min(nx, x0 + n); x++) out.push(regionKey(x, y));
+  return out;
+}
+// the rectangle [x0, y0, w, h] the regions cover together (their bounding box: a window's regions are a block)
+export function windowRect(frame, keys) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const k of keys) { const [X, Y, w, h] = regionRect(frame, k); x0 = Math.min(x0, X); y0 = Math.min(y0, Y); x1 = Math.max(x1, X + w); y1 = Math.max(y1, Y + h); }
+  if (!(x1 > x0 && y1 > y0)) throw new Error('windowRect: no regions');
+  return [x0, y0, x1 - x0, y1 - y0];
+}
+// the lists a window holds whole-or-not-at-all in order (a loop's points: shared/mapcore.js railAt searches them by
+// arc length) - compacted to the points present, in order, instead of holes
+const DENSE = (f) => f === 'railPts' || /^rails?(\.\d+)?\.pts$/.test(f);
+
 // the plain city again (the fields of cityData(generateCity(seed)) less OMIT, in its order) from the index and the
 // region files (raw, unzipped). Throws on a bad file.
-export function assembleCity(indexBytes, regionBytes) {
+// opts.window = [x0, y0, w, h] (windowRect of the regions given): a window of the world - only those regions' files,
+// the per-tile layers that rectangle's (x0, y0, w, h and frame on the city: shared/mapwindow.js's form), the regional
+// lists holding only the window's items at their world-wide indices (sparse arrays: list[i] is the world's item i or a
+// hole; .length the world's count), solidProps keyed by the window's tiles, and what the index points at in a region
+// not given left out (a gate's solid pieces: null). The index's whole lists stay whole (the road graph, the homes...).
+export function assembleCity(indexBytes, regionBytes, opts = {}) {
   const { d: X, blobs } = readPack(indexBytes);
-  const { win, root } = X, N = win[2] * win[3];
+  const sub = Array.isArray(opts.window);
+  const { root } = X, win = sub ? opts.window.map((v) => v | 0) : X.win, N = win[2] * win[3], packed = X.win;
+  // (a path the window may not hold: an item of a region not given - skipped, not followed)
+  const reach = (o, p, n = p.length) => { for (let i = 0; i < n; i++) { if (o === null || typeof o !== 'object') return undefined; o = o[step(p[i])]; } return o; };
+  const held = (p) => { const o = reach(root, p, p.length - 1); return o !== null && typeof o === 'object'; };
   const layers = X.layers.map(([k, t]) => { const T = TYPES[t]; if (!T) throw new Error('a bad index'); return new T(N); });
   const list = {};   // (a regional list by its name - a field, or a path to a list inside one: 'levels.segs')
   for (const f of Object.keys(X.regional)) { const p = f.split('.'); if (p.length > 1 && (at(root, p, p.length - 1) === null || typeof at(root, p, p.length - 1) !== 'object')) throw new Error('a bad index'); put(root, p, (list[f] = new Array(X.regional[f]))); }
@@ -265,30 +308,50 @@ export function assembleCity(indexBytes, regionBytes) {
     }
     for (const [f, g, i] of R.refs || []) { if (!Object.hasOwn(list, f) || !Object.hasOwn(list, g) || !rb[i]) throw new Error('a bad region file'); same.push([list[f], list[g], rb[i]]); }
   }
-  if (got.size !== X.regions.length) throw new Error('a region missing');
-  // (once every region is in: an item may be one of another region's)
-  for (const [a, b, ij] of same) for (let k = 0; k + 1 < ij.length; k += 2) { if (ij[k] < 0 || ij[k] >= a.length || ij[k + 1] < 0 || ij[k + 1] >= b.length) throw new Error('a bad region file'); a[ij[k]] = b[ij[k + 1]]; }
-  for (const [p, h] of X.refs) put(root, p, at(root, h));
+  if (!sub && got.size !== X.regions.length) throw new Error('a region missing');
+  // (once every region is in: an item may be one of another region's - in a window, one it holds)
+  for (const [a, b, ij] of same) for (let k = 0; k + 1 < ij.length; k += 2) {
+    if (ij[k] < 0 || ij[k] >= a.length || ij[k + 1] < 0 || ij[k + 1] >= b.length) throw new Error('a bad region file');
+    if (!sub || ij[k + 1] in b) a[ij[k]] = b[ij[k + 1]]; else delete a[ij[k]];
+  }
+  if (!sub) for (const [p, h] of X.refs) put(root, p, at(root, h));
+  else for (const [p, h] of X.refs) { const v = reach(root, h); if (v !== undefined && held(p)) put(root, p, v); }
   const conv = [];
   for (const [p, t, v] of X.fix) {
+    if (sub && !held(p)) continue;
     if (t === 'u') put(root, p, undefined);
     else if (t === 'n') put(root, p, v === '-0' ? -0 : Number(v));
     else if (t === 't') put(root, p, blobs[v]);
     else conv.push([p, t]);
   }
   conv.sort((a, b) => b[0].length - a[0].length);
-  for (const [p, t] of conv) { const v = at(root, p); put(root, p, t === 'M' ? new Map(v) : new Set(v)); }
+  for (const [p, t] of conv) {
+    let v = sub ? reach(root, p) : at(root, p);
+    if (sub) {
+      if (!Array.isArray(v)) continue;
+      // (a regional Map in a window: its entries present, keyed by the window's tiles - solidProps)
+      const f = p.join('.');
+      if (Object.hasOwn(list, f)) {
+        v = v.filter(() => true);
+        if (REGIONAL[f] === 'key') v = v.map(([k, x]) => [(packed[1] + Math.floor(k / packed[2]) - win[1]) * win[2] + (packed[0] + (k % packed[2]) - win[0]), x]);
+      }
+    }
+    put(root, p, t === 'M' ? new Map(v) : new Set(v));
+  }
   if (X.propSolid !== null && root.solidProps instanceof Map) {
     const by = solidIndex(root.solidProps), ps = new Map();
-    for (const k of blobs[X.propSolid]) ps.set(k, by.get(k));
+    for (const k of blobs[X.propSolid]) { const e = by.get(k); if (!sub || e !== undefined) ps.set(k, e); }
     root.propSolid = ps;
   }
+  // (compacted in place: what points at the list - today's rail.pts is railPts - keeps pointing at it)
+  if (sub) for (const f of Object.keys(list)) if (DENSE(f)) { const a = list[f]; let n = 0; for (let i = 0; i < a.length; i++) if (i in a) a[n++] = a[i]; a.length = n; }
   const out = {};
   for (const k of X.order) {
     const li = X.layers.findIndex(([n]) => n === k);
     if (li >= 0) out[k] = layers[li];
     else if (k in root) out[k] = root[k];
   }
+  if (sub) { out.x0 = win[0]; out.y0 = win[1]; out.w = win[2]; out.h = win[3]; out.frame = { w: X.frame[0], h: X.frame[1] }; }
   return out;
 }
 // what an index says (the frame, the regions, the meta) without assembling

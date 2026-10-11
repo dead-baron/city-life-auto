@@ -2612,3 +2612,89 @@ down to the road below beside it, the stubs running under the deck to the far si
 2. The interchanges left at grade (above): Westport's and Sandpiper's against the main line, North Mesa's tunnel, the
    Summit Road through the Gorge Junction.
 3. Wider diamonds in the country (the ramps 20-30 tiles out), and the towns' crossings as diamonds.
+
+### 8.12 The page keeps a window of the world (2026-10-10, H32)
+
+Part 8 items 1 and 4: the page holds the 3 x 3 regions round the player - a window - not the whole world, and moves it
+as the player crosses a region's border. Only World v3's world (a server run with `CLA_WORLD=v3`) is windowed: today's
+world is 3 x 3 regions, so its window would be the whole map - it keeps today's path untouched (the kept city, the
+download of the whole, the build), and the live game is unchanged.
+
+**What moves**
+- **The window's city** (`shared/regionpack.js` `assembleCity(index, regions, { window: [x0, y0, w, h] })`): the per-tile
+  layers of the rectangle the regions cover (`x0`, `y0`, `w`, `h` and the world's `frame`: shared/mapwindow.js's form,
+  so every query answers in world tiles as the whole map does inside it); the regional lists (props, POIs, buildings,
+  lamps, parking, signals, cameras, blocks, roofs, prefabs, the levels' segments...) holding only the window's items
+  **at their world-wide indices: sparse arrays** - `list[i]` is the world's item i or a hole, `.length` the world's
+  count - so every index the server sends (a prop smashed, a POI's menu, a building) means the same item, and
+  `forEach` / `filter` / `map` skip the holes; `solidProps` keyed by the window's tiles, `propSolid` its props' entries;
+  what the index points at in a region not held left out (a gate's solid pieces: null). The index's lists stay whole:
+  the road graph (the GPS and the phone's apps), the homes, the districts, the gates, the stations. The railway's loop
+  points are compacted to the window's, in order (railAt searches them by arc length). `regionsNear` (3 x 3 round the
+  player's region, shifted in at the frame's edge so a window is always 9 regions) and `windowRect`.
+- **Sparse arrays, not Maps:** a Map would change every reader (`list[i]`, `.length`, `.filter`); a sparse array keeps
+  them, and only the readers that walk a list with `for...of` or `.find` see a hole. The audit (client and the shared
+  runtime): `client/main.js` (the welcome's reset of props and gates, the poles, the cameras, the POIs' and lamps'
+  lights and reflections, a gate's pieces), `client/hud.js` (the map's icons), `client/spectator.js`,
+  `client/render/buildings.js`, `highway.js`, `lighting.js`, `client/art2/game/statics.js` (the levels' segments, a
+  walk-in's building), `shared/mapcore.js` `poiNear`, `shared/bowling.js`, `shared/cinema.js` skip holes now; the
+  rest already did (`p && ...`, propgrid, campfires, the sounds) or read by index.
+- **The worker** (`client/worldgen.js` `fetchWindow`, `client/worldwindow.js` `WindowKeeper`): fetches the index and only
+  the window's 9 regions (round where the player was last - `cla.at3`, kept by the page every 5 s - or the frame's
+  middle the first time), assembles the window and hands its layers over (transferred). It stays: the page tells it
+  the player's tile every 300 ms (`{ where }`); within 96 tiles of the border of the region the window is centred on,
+  the regions the next window brings are fetched early; 16 tiles past it (no back and forth along a border), or
+  outside the window altogether (a teleport, a respawn), it assembles the next window from what it has and posts it
+  (`{ window, data, win }`). It keeps the regions' files as they came (gzipped, 35-260 KB each), the 24 most recently
+  used. `?wholeworld` asks for the whole v3 world as before.
+- **The page** (`client/main.js` `keepWindow`, `swapWorld`): swaps the new window in - what the page changed on the
+  window's items goes over (broken props, lit fires, open gates, smashed barriers; the server's broken list again);
+  the flora, the ground cache, the buildings layer, the router, the spectator (when not watching) are made again for
+  the new map, the weather keeps its state; the HUD's minimap paints the new window's part over what it had
+  (`hud.js` `setMap`: what was seen stays); **art v2 keeps running** (`host.js` `setMap`): its bake workers get the
+  new window (`pool.js` `reworld`, `worker.js` op `reworld`), the grids worked out from the map are dropped, the
+  chunks already baked stay (a chunk is the same art in both windows). The welcome's whole-map signature check is
+  skipped for a window (per-region signatures: part 8 item 5).
+
+**Tests:** `test/regionwindow.test.js` (today's world cut into 256-tile regions, 6 x 5, so a window is a part of it: the
+window's layers are windowOf's to the byte, every query the whole map's inside it, each regional list holds exactly
+the window's items at their world indices, solidProps re-keyed; today's own 3 x 3 regions: the window round any tile,
+a corner's too, is the whole map, as assembled whole; the keeper's moves - early fetches near a border, the
+hysteresis, the move with nothing waited for, back, a teleport, the frame's corner). `test/world3window.test.js` (the
+v3 world built once, cut as the server cuts it: a window round a hospital - 1512 x 1512 tiles, the tiles to the byte,
+its items only - and the moves across a border and to the corner).
+
+**The numbers** (this machine, node 22, two cores shared with two other helpers)
+
+| | |
+|---|---|
+| A window of the v3 world (r3-3 ... r5-5, round a hospital by the gulf) | **1512 x 1512 tiles; its per-tile layers 36.6 MB** (the whole world's 426.7 MB); props 20,520 of the world's 205,276 (the list's length stays the world's), POIs 460 of 713, buildings 825 of 1,179 - the cities are round the gulf |
+| Assembling it (node, from the files) | **0.19 s**; a move east 0.28 s (`test/world3window.test.js`) |
+| Getting it (node, from a local v3 server: the index and 9 regions downloaded, unzipped and assembled) | **0.72 s**; the JS heap after it 40 MB (and the layers' 37 MB outside it) |
+| The region files the server writes now | 81 files, 11.7 MB gzipped (the world has grown since 8.9: the main line, the biomes) |
+| **The page** (headless Chromium, `CLA_WORLD=v3`, `?world=v3`) | **in the city after 10.6-45 s** (45 s with the server's bake thread and two other helpers' jobs on the two cores); **the main thread's JS heap 177 MB with the frame drawing** (`performance.memory`, coarse: the same 177 after each move; 81-148 MB in runs where the frame or art v2 stopped early) - **468-497 MB with the whole world** (8.9) |
+| The swap on the page | art v2's `setMap` (the window cloned to its bake worker): **0.06-0.40 s** on the main thread - a hitch to take out (what's left, 5) |
+| The window's moves in the page | at joining (the frame's middle -> round the player, when they spawn outside it), across a region border (teleported 40 tiles short of the centre region's edge, then 40 past: r4-3 ... r6-5 -> r5-3 ... r7-5, the regions coming in fetched before) and a teleport 1,700 tiles west (-> r1-3 ... r3-5): no errors once the readers below were fixed (the walk-ins' doors stopped the frame drawing; art v2's resync stopped its start) |
+
+**What's left** (in order)
+1. **Per-region signatures** (part 8 item 5): the welcome's whole-map signature check is skipped for a window; each
+   region's own signature in the index, checked as each region comes in.
+2. **The first window** is round where the player was last (`cla.at3`) or the frame's middle the first time: a new
+   player usually spawns outside it, and the window moves at once after joining (one more assembly, about a second,
+   the player held by the window's walls meanwhile). The welcome could say where the player will be (World v3 only).
+3. **The phone's apps and the big map list only the window's places** (`pois` holds only the window's): a small global
+   list (name, kind, position) belongs in the index (8.1's note).
+4. **The railway's loops in a window** are the window's part of each loop, compacted (railAt searches by arc length):
+   the minimap draws no line across where a loop leaves the window; the art's stations and the trains near a window's
+   edge want a look.
+5. **The swap copies**: every bake worker gets a structured clone of the new window (0.21-0.26 s on the page's main
+   thread: a hitch at each border), and the page makes the flora, ground cache, buildings layer and router again. The
+   city worker could post the window to the bake workers itself (a MessageChannel), or only the regions coming in; the
+   router (the whole road graph) could be kept.
+8. **The art after a far teleport**: the hospital at joining is drawn in full after the window moved (picture:
+   `docs/world-v3-window.png`), and the gulf after crossing a border; 1,700 tiles west the minimap showed the land and
+   the art still the sea's stand-in 30 s later - 8.9's open item 4 (seen with the whole world too), or chunks baked by
+   the page's worker before the new window reached it: `setMap` now bakes again the chunks baked outside the old window
+   (not yet seen in a playtest). To look at in a real browser.
+6. **The minimap is a frame-sized canvas** (5040 x 4032, 81 MB of pixels): wants a coarser picture at v3 (8.2's note).
+7. **Regions aren't kept in the browser** (IndexedDB): each visit downloads the window (about 2 MB).

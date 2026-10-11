@@ -152,7 +152,7 @@ export function createPhone(ctx) {
       // the nearest cash machine (a bank counter does the same job)
       const me = ctx.pos();
       let best = null, bd = Infinity;
-      for (const p of ctx.map().pois) { if (p.kind !== 'atm' && p.kind !== 'bank') continue; const d = Math.hypot(p.x - me.x, p.y - me.y); if (d < bd) { bd = d; best = p; } }
+      for (const p of ctx.map().pois) { if (!p || (p.kind !== 'atm' && p.kind !== 'bank')) continue; const d = Math.hypot(p.x - me.x, p.y - me.y); if (d < bd) { bd = d; best = p; } }
       if (!best) { ctx.toast('No ATM anywhere near.', 'warn'); return; }
       ctx.setWaypoint({ x: best.x, y: best.y, label: best.kind === 'atm' ? 'Nearest ATM' : best.label, atm: true });
       ctx.toast(`Nearest ATM: ${m(bd)} away - follow the green $`, 'good');

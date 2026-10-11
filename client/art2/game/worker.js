@@ -227,9 +227,10 @@ async function handle(msg) {
     return;
   }
   if (op === 'world') { if (worldIn) { const f = worldIn; worldIn = null; f(args.M); } return; }   // (the city, when it wasn't kept)
+  if (op === 'reworld') { if (ready) await ready; const mods = await MODS; takeWorld(args.M, mods[2]); barrierAt.clear(); return; }   // (World v3's window moved: host.js setMap)
   if (ready) await ready; // (jobs that arrive while the providers load wait for them)
   if (op === 'patch') { // the world changed (props smashed or put back): no answer
-    if (M && args.reset) { for (const pr of M.props || []) delete pr.broken; for (const [i, pr] of dirty) { if (!isDirty(pr)) dirty.delete(i); } }
+    if (M && args.reset) { for (const pr of M.props || []) if (pr) delete pr.broken; for (const [i, pr] of dirty) { if (!isDirty(pr)) dirty.delete(i); } }
     if (M) for (const [i, br] of args.props || []) { const pr = M.props[i]; if (!pr) continue; if (br) pr.broken = br; else delete pr.broken; markDirty(i); }
     if (M) for (const [i, lit] of args.lit || []) { const pr = M.props[i]; if (!pr) continue; if (pr.lit0 === undefined) pr.lit0 = !!pr.lit; pr.lit = lit; markDirty(i); }   // (a campfire lit or put out)
     // highway barriers smashed through or put back ([key, on]; with reset, the whole list)

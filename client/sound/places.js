@@ -35,9 +35,10 @@ export class Places {
   }
   index(map) {
     this.map = map; this.clubs = [];
-    const poiById = new Map((map.pois || []).map((p) => [p.id, p]));
+    const poiById = new Map((map.pois || []).filter((p) => p).map((p) => [p.id, p]));   // (filter: World v3's window holds some of the POIs - a sparse list)
     for (const id of map.walkIns || []) {
       const b = map.buildings[id];
+      if (!b || !b.walkIn) continue;   // (World v3's window: a building it doesn't hold)
       for (const u of b.walkIn.units) {
         if (u.kind !== 'club') continue;
         const poi = poiById.get(u.poi);
