@@ -815,6 +815,7 @@ const YARDC = RP('#3a3d44 #4b4f56 #5d626b #6f747e #80858f #9096a0 #a0a6b0');
 const WOOD = RP('#2e2420 #40322a #544234 #68523e #7a624a #8c7256 #9e8466');
 const WOODG = RP('#3a3836 #4e4a46 #625c56 #766e66 #8a8076 #9c9286 #aea496');
 const SCREE = RP('#2a2c32 #3a3c42 #4c4e52 #5e6064 #727476 #868886 #9a9a98');
+const SNOWR = RP('#7c8ca6 #98a8c0 #b4c2d4 #ccd6e4 #dfe6ef #edf1f6 #f8fafc');
 const QUAR = RP('#575a5c #6b6e6f #7f8181 #939494 #a5a6a5 #b4b6b3 #c4c4c2');
 const GRAIN = RP('#5a4c2a #746236 #8e7842 #a68c4e #b89e5c #c8b06c #d6c080');
 const CORN = RP('#183026 #20402c #2a5232 #386438 #4a763e #608846 #789a50');
@@ -928,6 +929,12 @@ export const GSHADE = {
     GS.nx = GS.ny = 0;
     if (vnc(x, y, 11, s + 33) > 0.72) return at(G_ALP, 2 + (hh(x, y, s) > 0.5 ? 1 : 0));
     return sd(DIRT2, 0.28 + vnc(x, y, 9, s) * 0.22 + (hh(x, y, s) - 0.5) * 0.14, x, y, 0.6);
+  },
+  snowfield(x, y, s) {                                       // the summits' snowfields (World v3: Granite Peaks above the snow line): wind-packed snow, blue in its hollows, a rock through it here and there
+    const p = stone(x, y, 23, s + 41, 0.12);
+    if (p >= 0 && WC.h < 0.4) return sd(SCREE, p * 0.7 + 0.25, x, y, 0.35);
+    GS.nx = GS.ny = 0;
+    return sd(SNOWR, 0.7 + (vnc(x, y, 15, s + 43) - 0.5) * 0.34 + (vnc(x, y, 4, s + 45) - 0.5) * 0.12, x, y, 0.5);
   },
   quarryRock(x, y, s) {
     const bench = ((y + ((vnc(x, y, 40, s) * 10) | 0)) % 56);

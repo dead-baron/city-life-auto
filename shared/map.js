@@ -351,6 +351,7 @@ function buildCity(seed, opts = null, frame = null) {
   buildScenePaintings(m); unpin();
   buildGullIsles(m, rand);
   buildNatureSites(m, { addProp, terrainAt: (cls, cw, tx, ty) => wildBiome(m.dist[ty * m.w + tx], clsAt(cls, cw, tx, ty)), distStyle: DISTRICTS.map((d) => (d ? d.style : '')), place: PL ? { x: (x, y) => (y !== undefined && pin(x, y), Math.round(PX(x))), y: (y) => Math.round(PY(y)), s: PL.s, lx: LX, ly: LY } : null }); unpin();
+  if (OPTS?.dress) OPTS.dress(m, { addProp, farmstead: PREFABS.farmstead, farmhouse: (x, y) => placePrefab(m, { d: m.dist[y * m.w + x], x, y, w: PREFABS.farmstead.tw, h: PREFABS.farmstead.th, face: 'S' }, 'farmstead', x, null, mulberry32(seed ^ (x * 977 + y))) });   // (World v3: the mainland's biomes - shared/world3-biomes.js)
   buildWilds(m, rand);
   buildTownGreen(m);
   buildStreetProps(m);
@@ -390,6 +391,7 @@ function buildCity(seed, opts = null, frame = null) {
   if (hosp || !OPTS?.island) m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 };   // (an island build may have neither: the world's are elsewhere)
   if (pd || !OPTS?.island) m.spawns.police = { x: pd.x, y: pd.y + 44 };
   m.spawns.default = m.spawns.hospital;
+  if (OPTS?.done) OPTS.done(m);   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js)
   mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)
   m.softEdge = true; // (from here on the sea runs on past the edge: tileAt)
   return m;
@@ -1211,7 +1213,7 @@ function rampGores(m) {
 
 // Keep the land along every shore free for promenades, beaches and quays.
 const BUILT_ZONES = new Set([Z.CITY, Z.SOUTH, Z.WEST, Z.NORTH, Z.ISLE, Z.KEY, Z.GULL]);
-const builtAt = (m, i) => BUILT_ZONES.has(m.zone[i]) && !!STYLE[DISTRICTS[m.dist[i]].style];
+const builtAt = (m, i) => BUILT_ZONES.has(m.zone[i]) && !!STYLE[DISTRICTS[m.dist[i]].style] && !OPTS?.unbuilt?.has(m.dist[i]);   // (unbuilt: World v3's beach towns, until their streets are laid)
 function waterfrontStrip(m) {
   const W = m.w, H = m.h;
   for (let i = 0; i < W * H; i++) {
@@ -4442,7 +4444,7 @@ function buildWilds(m, rand) {
     const tx = gx + 2 + Math.floor(hash2(LX(gx), LY(gy), 91) * (RCELL - 4)), ty = gy + 2 + Math.floor(hash2(LX(gx), LY(gy), 92) * (RCELL - 4));
     if (tx < 4 || ty < 4 || tx >= W - 4 || ty >= H - 4) continue;
     const i = ty * W + tx;
-    if (!wild(i) || (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT)) continue;
+    if (!wild(i) || (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT) || OPTS?.dressed?.(m.dist[i])) continue;
     const c = seaIsle(m.dist[i], clsAt(cls, cw, tx, ty));
     if (hash2(LX(gx), LY(gy), 93) >= (c === 4 ? 0.4 : c === 3 ? 0.25 : c === 2 ? 0.1 : 0.06)) continue;
     if (inField(tx, ty, 96) || !clear(tx, ty, 4)) continue;
@@ -4461,7 +4463,7 @@ function buildWilds(m, rand) {
   for (let gy = 2 + gridOff(PL?.dy, CELL); gy < H - 3; gy += CELL) for (let gx = 2 + gridOff(PL?.dx, CELL); gx < W - 3; gx += CELL) {
     const fx = gx + hash2(LX(gx), LY(gy), 3) * CELL, fy = gy + hash2(LX(gx), LY(gy), 4) * CELL, tx = Math.floor(fx), ty = Math.floor(fy);
     const i = ty * W + tx;
-    if (!wild(i) || m.dist[i] === 29) continue;   // (Highland Woods: redwoodGroves below)
+    if (!wild(i) || RWD(m.dist[i]) || OPTS?.dressed?.(m.dist[i])) continue;   // (Highland Woods: redwoodGroves below; World v3's biomes: world3-biomes.js)
     const t = m.tiles[i];
     if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) continue;
     const c = seaIsle(m.dist[i], clsAt(cls, cw, tx, ty)), h = hash2(LX(gx), LY(gy), 61);
@@ -4500,11 +4502,12 @@ function buildWilds(m, rand) {
 // prop type ('redwood': no car knocks one over); everything keeps three tiles off roads and buildings. The fern beds
 // and the sorrel are the renderer's (statics.js coverAt).
 export const REDWOOD_SIZES = REDWOOD_TRUNK;   // species -> trunk radius (solid)
+const RWD = (d) => d === 29 || d === 47;   // (Highland Woods, and World v3's: district 47)
 function redwoodGroves(m, wild, inField, clear, rocky) {
   const W = m.w, H = m.h, CG = 7, forage = (m.forage ||= []);   // (forage: shared/foraging.js)
   const okAt = (tx, ty, pad) => {
     const i = ty * W + tx, t = m.tiles[i];
-    return wild(i) && m.dist[i] === 29 && (t === T.GRASS || t === T.DIRT) && !rocky[i] && !m.lake[i] && !(m.noTree && m.noTree.has(i)) && !inField(tx, ty, 64) && clear(tx, ty, pad);
+    return wild(i) && RWD(m.dist[i]) && (t === T.GRASS || t === T.DIRT) && !rocky[i] && !m.lake[i] && !(m.noTree && m.noTree.has(i)) && !inField(tx, ty, 64) && clear(tx, ty, pad);
   };
   const nearWater = (tx, ty, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const t = m.tileAt(tx + dx, ty + dy); if (t === T.WATER || t === T.DEEP) return true; } return false; };
   // (the giants by 256 px cell: room is looked for in the cells within reach of the biggest - the same answer as over
@@ -4519,7 +4522,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
   };
   for (let gy = 2 + gridOff(PL?.dy, CG); gy < H - 3; gy += CG) for (let gx = 2 + gridOff(PL?.dx, CG); gx < W - 3; gx += CG) {
     const tx = gx + Math.floor(hash2(LX(gx), LY(gy), 301) * CG), ty = gy + Math.floor(hash2(LX(gx), LY(gy), 302) * CG);
-    if (tx < 3 || ty < 3 || tx >= W - 3 || ty >= H - 3 || m.dist[ty * W + tx] !== 29) continue;
+    if (tx < 3 || ty < 3 || tx >= W - 3 || ty >= H - 3 || !RWD(m.dist[ty * W + tx]) || OPTS?.pine?.(tx, ty)) continue;   // (World v3: stands of pine - no giants)
     const g = 0.6 * vnoise2(LX(gx), LY(gy), 20, 303) + 0.4 * vnoise2(LX(gx), LY(gy), 8, 304), h = hash2(LX(gx), LY(gy), 305);   // (g: the groves; low g a clearing)
     if (h >= smooth01(0.26, 0.5, g) * 0.92) continue;
     if (!okAt(tx, ty, 3) || nearWater(tx, ty, 2)) continue;
@@ -4564,15 +4567,15 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
   const CU = 3;
   for (let gy = 2 + gridOff(PL?.dy, CU); gy < H - 3; gy += CU) for (let gx = 2 + gridOff(PL?.dx, CU); gx < W - 3; gx += CU) {
     const tx = gx + Math.floor(hash2(LX(gx), LY(gy), 321) * CU), ty = gy + Math.floor(hash2(LX(gx), LY(gy), 322) * CU);
-    if (tx < 3 || ty < 3 || tx >= W - 3 || ty >= H - 3 || m.dist[ty * W + tx] !== 29) continue;
-    const h = hash2(LX(gx), LY(gy), 323), wet = nearWater(tx, ty, 4);
-    if (h >= (wet ? 0.3 : 0.11) || !okAt(tx, ty, 2)) continue;
+    if (tx < 3 || ty < 3 || tx >= W - 3 || ty >= H - 3 || !RWD(m.dist[ty * W + tx])) continue;
+    const h = hash2(LX(gx), LY(gy), 323), wet = nearWater(tx, ty, 4), pine = OPTS?.pine?.(tx, ty);
+    if (h >= (pine ? 0.4 : wet ? 0.3 : 0.11) || !okAt(tx, ty, 2)) continue;
     const x = Math.round((tx + hash2(LX(gx), LY(gy), 324)) * TILE), y = Math.round((ty + hash2(LX(gx), LY(gy), 325)) * TILE);
     if (!roomFor(x, y, 30)) continue;
     const u = hash2(LX(gx), LY(gy), 326);
-    const sp = wet ? (u < 0.7 ? 'maple' : 'mapleAutumn') : u < 0.45 ? 'fir' : u < 0.8 ? 'oak' : 'redwood2';
+    const sp = pine ? (u < 0.35 ? 'pondPine' : u < 0.65 ? 'fir' : u < 0.85 ? 'cedar' : 'spruce') : wet ? (u < 0.7 ? 'maple' : 'mapleAutumn') : u < 0.45 ? 'fir' : u < 0.8 ? 'oak' : 'redwood2';
     if (sp === 'redwood2') { addProp(m, 'redwood', x, y, REDWOOD_SIZES.redwood2, { sp, k: 1 }); gadd([x, y, 16]); continue; }
-    addProp(m, 'tree_a', x, y, 12, { sp, k: sp === 'fir' ? 1.7 + hash2(LX(gx), LY(gy), 327) * 0.3 : sp === 'oak' ? 1.0 + hash2(LX(gx), LY(gy), 327) * 0.2 : 1.3 });
+    addProp(m, 'tree_a', x, y, 12, { sp, k: pine ? 1.45 + hash2(LX(gx), LY(gy), 327) * 0.3 : sp === 'fir' ? 1.7 + hash2(LX(gx), LY(gy), 327) * 0.3 : sp === 'oak' ? 1.0 + hash2(LX(gx), LY(gy), 327) * 0.2 : 1.3 });
     gadd([x, y, 14]);
   }
 }

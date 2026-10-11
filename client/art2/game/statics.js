@@ -2865,7 +2865,7 @@ function coverAt(c, tx, ty, x, y) {
   }
   if (M.reserve[i] & 128) {   // a river's lush banks (Willow River): reed beds along the water, meadow grass and flowers further up
     const h = hash(tx, ty, 7141), pb = vnoise(x, y, 80, 7143), pa = vnoise(x, y, 160, 7147), h2 = vnoise(x, y, 60, 7145) * 0.7 + hash(tx, ty, 7149) * 0.3;
-    if (t === T.SAND) return h < 0.07 ? [pickW(NAT_SP.shore, h2), 1] : null;   // (a few on the gravel bars)
+    if (t === T.SAND) return h < 0.07 ? [pickW(M.dist[i] === 50 ? NAT_SP.desert : NAT_SP.shore, h2), 1] : null;   // (a few on the gravel bars; World v3's dry washes: desert scrub)
     const d = M.distRiver ? M.distRiver[i] : 99;
     if (d > 0 && d <= 6) return pb > 0.3 && h < 0.85 ? [pickW(NAT_SP.shore, h2), 1 + (h < 0.3 ? 0.15 : 0)] : null;
     if (pa > 0.6 && h < 0.34) return [pickW([NAT_SP.meadowA, NAT_SP.meadowB, NAT_SP.meadowD][Math.floor(vnoise(x, y, 400, 7151) * 3) % 3], h2), 1];
@@ -2878,15 +2878,17 @@ function coverAt(c, tx, ty, x, y) {
   }
   if (!WILDS.has(st) || st === 'airport') return null;
   const bio = c.biome(x, y), h = hash(tx, ty, 7101), h2 = vnoise(x, y, 70, 7103) * 0.75 + hash(tx, ty, 7103) * 0.25; // (h2: clumps of one plant)
+  if (bio === 9) return null;   // (World v3's snowfields: nothing grows on them)
   const pa = vnoise(x, y, 170, 7105), pb = vnoise(x, y, 90, 7107);   // patches: big drifts, smaller clumps
   // water's edge: reeds and cattails in clumps along lakes and rivers (not the sea)
   const nearFresh = (M.distRiver && M.distRiver[i] > 0 && M.distRiver[i] <= 8) || (M.lake && (M.lake[M.idx(tx - 1, ty)] || M.lake[M.idx(tx + 1, ty)] || M.lake[M.idx(tx, ty - 1)] || M.lake[M.idx(tx, ty + 1)]));
   if (nearFresh && t !== T.SAND) return pb > 0.42 && h < 0.75 ? [pickW(NAT_SP.shore, h2), 1] : null;
+  if (t === T.SAND && M.dist[i] === 50) return h < 0.04 ? [pickW(NAT_SP.desert, h2), 1] : null;   // (World v3's desert sand sheets: sparse dry scrub, no dune grass)
   if (t === T.SAND || bio === 5) {
     const back = M.distSea ? M.distSea[i] : 99;   // (quarter tiles) dune grass only behind the wet sand
     return back > 14 && pa > 0.45 && h < 0.35 ? [pickW(NAT_SP.dune, h2), 1] : null;
   }
-  if (bio === 2 && c.di(x, y) === 29) {   // the redwood floor: beds of big sword ferns (each a stride or two across), carpets of sorrel, the duff between
+  if (bio === 2 && (c.di(x, y) === 29 || c.di(x, y) === 47)) {   // (47: World v3's Highland Woods) the redwood floor: beds of big sword ferns (each a stride or two across), carpets of sorrel, the duff between
     const fp = vnoise(x, y, 150, 7163) * 0.7 + vnoise(x, y, 46, 7165) * 0.3;
     if (fp > 0.48 && h < 0.4) return [pickW(NAT_SP.redwood, h2), 1];
     if (vnoise(x, y, 120, 7161) > 0.55 && h < 0.62) return ['sorrel', 1];

@@ -121,6 +121,12 @@ export const DISTRICTS = [
   // between the Civic Center and the bay, the Metro Museum of Art and The Playhouse among them
   { id: 46, name: 'Arts District', isl: 'Metro City', style: 'arts', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.PLAZA, turf: false },
 ];
+// World v3's (docs/WORLD-V3.md 8.3, shared/world3-land.js DISTRICTS3): the mainland round today's places, Prison Island
+// and the Egret Rocks - only a v3 build paints them
+for (const [name, isl, style, tier, g] of [['Highland Woods', 0, 'wild', 'wild', 'G'], ['Granite Peaks', 0, 'wild', 'wild', 'D'], ['Willow Valley', 0, 'rural', 'rural', 'G'], ['Red Rock Desert', 0, 'desert', 'wild', 'D'], ['North Ridge', 0, 'rocky', 'wild', 'D'], ['Sandpiper Coast', 0, 'beach', 'mid', 'S'], ['Egret Coast', 0, 'wild', 'wild', 'G'], ['Northshore Beaches', 'Northshore', 'beach', 'mid', 'S'], ['Prison Island', 0, 'rocky', 'rough', 'D'], ['Egret Rocks', 'Egret Coast', 'rocky', 'wild', 'D']]) {
+  const b = style === 'beach';
+  DISTRICTS.push({ id: DISTRICTS.length, name, isl: isl || name, style, tier, walk: b ? 'brick' : 'concrete', plaza: b ? 'brick' : 'concrete', road: b ? 'asphalt' : 'asphalt_worn', ground: g === 'G' ? T.GRASS : g === 'S' ? T.SAND : T.DIRT, turf: false });
+}
 export const WATER_D = 13;   // (the open sea's district: the generator's too)
 // Districts nobody builds in: woods, hills, mountains, farmland, desert, airfields.
 export const WILD_STYLES = new Set(['wild', 'rural', 'desert', 'airport', 'water', 'rocky']);
