@@ -3633,6 +3633,176 @@ canyon); the Old Granite Mine and the Granite Quarry once Granite Peaks' places 
 `places.js` take the first mine and the first pit: they'll want a list); dirt bike trails; the jeep tracks on the
 road network (they are ground, not roads: the traffic doesn't use them).
 
+### 8.19 Today's wild land's places in the v3 world: Highland Woods', Granite Peaks' and Dry Creek's (2026-10-11, H44, in progress)
+
+8.6 sends whatever of today's world no piece builds off the frame - today's Highland Woods (district 29), Granite Peaks
+(33) and Dry Creek (9, 41, 42) - but part 1.5 moves their designed places into the new regions, and the owner split Dry
+Creek between Willow Valley and the Red Rock Desert (part 5). All of it in `shared/world3-wild.js` (one call from the
+world build's `lines` hook, `wildSites3`, and `wildDone` from its `done`; `movedAt` and `wildDist` handed to the
+generator through `world`); the page and the city worker never import it. The live world doesn't change (the world hash
+stays 6b6e16fdef9f; the city worker 34 files, 358 KB of 360).
+
+- **The country sites by rules** (`WILD_SITES`, the placement table: each of today's `shared/countryside.js` SITES of the
+  wild districts at a spot in its v3 region): placed after the skeleton's roads and the towns' streets are laid, as
+  today's are - a lot of open ground of the site's region within 60 tiles of its spot, clear of every road line (the
+  highways and ramps by 24 tiles), the skeleton's main line (18) and stations (30), the towns (their own districts),
+  the desert's places (8.18's boxes, 12 tiles round) and each other; its own access road to the nearest road it may join
+  within 90 tiles (rural or dirt, as today's - never a highway: they cross nothing at grade - nor a tunnel's stretch),
+  over dry land, across no highway and clear of the main line. `map.js` buildCountryside builds what stands on each lot
+  as today's. All fifteen are placed:
+  - Highland Woods: **the Highland roadside stop** (quick stop, diner, filling station) and **Pine Ridge Campground** either
+    side of Pine Lake on Timber Road, **the Highland Radio Mast** further east on it.
+  - Granite Peaks: **the Granite Quarry** off Falls Pass Road (the pit, its benches and crane, the ore round its faces),
+    **the Granite Peak Observatory** below Summit Road (its scopes: the stargazing), **Granite Cove Campground** above
+    Lookout Road, **Windy Point Wind Farm** at Lookout Road's west end, **North Ridge Mast** above Summit Road.
+  - The Red Rock Desert's west (Dry Creek's desert): **the Dry Creek Oil Field** north of Mine Road, **The Rusty Spur**
+    (the biker roadhouse, `m.roadhouse`) on Mine Road by the Desert Highway's crossing, west of the motel, **the Route
+    9 stop** at the skeleton's Route 9 point, **Sunfield Solar Farm** and **the Starlite Drive-In** on Route 9, **the Mesa
+    Radio Mast** and **the Dry Creek Wind Farm** on Mesa Road.
+- **The nature sites moved whole** (`MOVED`: a square of today's tiles round each site's anchor goes to its v3 spot at
+  scale 1): the world build's `pick` (`shared/world3-world.js`) asks `movedAt` for a position no piece builds, so the
+  generator's pins carry the site's anchor - and today's lake there (islands.js LAKES) - to the spot;
+  `shared/naturesites.js` takes the anchors through `PXs` / `PYs` and the district through `DS` (`H.place.d`, the world
+  build's `wildDist`: 29 -> 47, 33 -> 48, 9 and 42 -> 49, 41 -> 50; one-line hook in `map.js`). Moved: **Pine Lake** (its
+  lake, its camp and paths, between the stop and the campground as today's), **Summit Tarn** with its falls, creek and cabin meadow, **Granite Hot
+  Springs** above Summit Road (the road below it is its way in), **The Sentinel Stones** by the observatory's road;
+  Dry Creek's **boneyard** (the stored planes you strip for parts), **Old Mission Ruins** (the bells) and **the balloon
+  field** in the desert's west, between the Desert Highway and Canyon Road.
+- **Every pit, every mine** (8.18's list): `shared/underground.js` lays the ore veins round each quarry's faces (the
+  Granite Quarry's and Copper Gulch Mine's, each named), `server/systems/places.js` takes every mine's seams.
+
+Tests: `test/world3wild.test.js` (one world build: every wild country site in the table; each placed and built once, near
+its spot, on its region's ground, its road in laid, on the one network, reaching its gate and meeting no highway; every
+lot clear of the highways', the main line's and the stations' room; The Rusty Spur, two quarries with their veins; each
+moved nature site built once at its spot on its region's ground, its landmark clear of the highways and the main line,
+no road over Summit Tarn or Pine Lake), `test/world3.test.js`, `test/world3desert.test.js` (Copper Gulch's pit and
+its veins with the Granite Quarry's beside it), `test/world3roads.test.js`, `test/world3world.test.js`: all pass.
+
+Pictures (`tools/world3-world-map.mjs --towns --only pinelake,tarn,summit,drycreek`; `WILD_VIEWS`, also `quarry`,
+`route9`): `docs/world-v3-town-pinelake.png`, `-tarn.png`, `-summit.png`, `-drycreek.png`. What looks right: the stop's forecourt and
+diner on its spur off Timber Road with the lake and its trail north-west of it and the campground's tents by the road
+to the west, all in the dense redwoods; the hot springs' three pools, lanterns and fence on the slope above Summit Road
+with their path down to it; the observatory's dome on its lot at the end of its road; the tarn's dark water with the
+falls and the creek running south from it. What looks wrong:
+- **The main line runs close past Pine Lake** (outside its room, but its lake trail runs to within a few tiles of it).
+- **The Sentinel Stones and Summit Tarn stand in the snow** (the peaks' snow class above the snow line is painted over
+  their ground): they read as stones and a tarn on a snowfield; no trail reaches the stones (the observatory's road is
+  just beyond the 40 tiles they look for one in), no road or trail reaches the tarn's cabin.
+- The radio mast is hard to make out at 1/8; the campground is small at this scale.
+- **Dry Creek's desert** (`-drycreek.png`): the boneyard's twelve planes in their fenced rows read well, the balloon field
+  is a green circle with three balloons, the oil field's tanks and shed sit at the end of their road north of Mine Road,
+  The Rusty Spur on its lot north of Mine Road west of the Desert Highway. Wrong: **8.18's dry wash winds straight
+  through the boneyard** (its gravel under the plane rows: the wash wants to keep off the moved sites, or the boneyard
+  off the wash); **the moved sites have no road in** (the boneyard, the balloon field: today's stood by today's roads -
+  each wants a track to Mine Road or the highway's frontage); The Rusty Spur stands against **a strip of redwoods**
+  between the valley and the desert (8.8's biomes leave Highland Woods' ground in the gap between their polygons at
+  x 3640-3700); the oil field's pumpjacks don't read at 1/8.
+
+**What's left** (in order): the rest of the nature sites - most of `shared/naturesites.js`' wild ones are written in
+today's coordinates and districts and look for today's roads by name, so each wants its anchor through `PXs`, its
+district through `DS` and a spot in `MOVED`: Highland Woods' Redwood Creek and its falls and Giants Loop (both on
+today's Highland Road - they want the road they stand by named, or found), Fern Gorge (the Ridge Track), Redwood Cove
+(a cove on today's west shore: the woods have no shore now - a lake shore or the Egret Coast), the trapper's cabin
+(the beaver pond on Redwood Creek); Granite Peaks' Granite Cove (a bay of the sea), the Old Granite Mine (it scans a
+fixed box of today's for its spot; then the cave world takes a list of mines - one cave per mine), Ridge Fire Lookout
+and the Ridge Trail Hunting Camp (both on the Ridge Trail); Dry Creek's farmland into Willow Valley's east side (map.js
+`buildFarm`, `DRY_CREEK_ESTATES`, the fields, the Willow River's orchard and vineyard - skipped in the world build
+now), its desert's nature sites (Red Rock Wash, Canyon Oasis, Mirage Lake and its camp, the boneyard, the mission ruins,
+the Canyon Track hunting camp, Splash Canyon Water Park, Route 9's airstrip behind the stop); trails to the stones, the
+tarn, the boneyard, the ruins and the balloon field (they have none yet).
+
+### 8.20 The west coast: Egret Point, its light, the raceway and the marsh; Silver Thread Falls, North Cape Light, the coves (2026-10-11, H45)
+
+Part 1.5 R3 (the Egret Coast: concepts N7, NK1-D, NK1-O, E3e, NT1-F) and R2's coast (the Highland Woods': NT1-E, SC3-A,
+SC3-B, NR1-E, N8-B, NA1-A), in the whole-world build at the skeleton's TOWNS / LANDMARKS / STREAMS points, on the Redwood
+Coast Road (the skeleton's arterial down the coast to its end at Egret Point) and streets and tracks off it. All of it in
+`shared/world3-west.js` (one call each from `shared/world3-world.js`: `paintWest3`, `layWest3`, `buildWest`,
+`westDone`); the page and the city worker never import it. One district after Dusty Hollow's in `shared/mapcore.js`:
+**65 Egret Point** (`wild`, tier `low`: the generator builds nothing there, the village is built whole, as Dusty
+Hollow). It is painted on the land layer over the village, the raceway and the strips of Light Road and Raceway Road -
+so the marsh's tidal creeks (`world3-biomes.js` groundOf3 cuts them in the Egret Coast's own district, 53) don't cut
+them. The live world doesn't change (the world hash stays 6b6e16fdef9f).
+
+- **Egret Point** (the town point 850, 2700, where the Redwood Coast Road ends): **Wharf Street** along row 2630 from
+  just west of the arterial (it crosses its last stretch) east to the quay on the arm's sheltered east shore, facing the
+  cove under the airport. The **quay**: decking along the top of the beach, ten tiles deep; **four piers** three tiles
+  wide, 22 tiles out into the water, a lamp at each end, crates and drums on them; **the fleet** moored along both sides
+  of them (33 boats: dock motorboats and speedboats, `m.marina` - the boats you can take, as Gull Harbor's); **the charter
+  boat** at the end of the second pier (`charter: true`) and **Egret Point Charters** (`charter`) on the quay, its POI
+  knowing its boat (`boat`) - the desk sells today's deep-sea charter (`server/systems/economy.js`), not yet a run to the
+  outer islands. By the quay: **Egret Point Fish Market** (`fishmarket`), **The Gaff Hook** (the bar,
+  `club`), **Egret Point Bait & Tackle** (`tackle`). Along Wharf Street, **21 fishing shacks** either side (weathered
+  siding, tin roofs; widths, setbacks and gaps irregular) - homes for sale as today's shacks (`m.homes`, `shack`, $6,000, one car). Nets, pots, crates, fish
+  tables, rods and life rings on the quay. The buildings of ours have no `prefab`, so the shops serve at their doors
+  (no walk-in interiors: `buildInteriors` wants a prefab).
+- **Light Road** (a country lane, `rural`: no pavements) off Wharf Street south down the arm to the top of the beach at
+  the tip, a track on over the sand to **Egret Point Light** on the beach by the water (905, 3022, by the skeleton's
+  landmark 905, 3010), basalt rocks round its foot and boulders down to the waterline, the keeper's cottage and a bench
+  above it.
+- **The Westport Raceway's new spot** (882-944, 2466-2502, on the flat ground east of the Redwood Coast Road): a **dirt
+  oval** (the stadium shape of today's, its band dirt, not asphalt: the bake paints it as dirt, no kerbs), **the
+  grandstand's bleachers** along its north straight, the pit garages and the snack bar by the gate, a START banner by
+  the line, tyres on the infield; **Raceway Road** (a country lane) across the arterial to its gate and a drive in. It is the first
+  raceway with a start line, so `map.js` buildOffshore makes **today's race** there unchanged - the Westport Raceway,
+  three laps for anything with wheels, its start on the map (`race`) - with no change to map.js.
+- **The salt marsh** (N7, NK1-O): a **boardwalk** (decking two tiles wide) winding from Light Road west-north-west across
+  the reeds and over the tidal creeks to **Egret Marsh Bird Hide** (a hut with a spotting scope and a map board), and a
+  spur off Light Road out to a **platform over the big pond** (a rail, a bench); herons and ducks along its creeks; **three duck blinds** (reed-coloured huts) on the creek banks with decoys on the water and
+  a path to each; **three board ramps** over the dunes down to the west beach (the open sea side), posts at their heads.
+- **Silver Thread Falls** (the head of Silver Thread Creek, 1107, 681, by Falls Pass Road; SC3-A, NR1-E): a band of
+  rock across the creek's head (solid) faced with **basalt columns** (`cliffwall`), **the falls** over it in three streams
+  (`coastfall`, 40-72 px wide, a 140 px drop, mist), the **plunge pool** widened round its foot with mossy basalt boulders, the upper
+  creek above the band; **the viewing platform** (decking with a rail, a scope and a bench) on the west bank between the
+  road and the pool, a path and a map board from the road. The creek runs on to the bay as the land laid it (STREAMS).
+- **North Cape Light** (the skeleton's point 300, 900 is a hundred tiles inland: built on the cliff top west of it, at
+  210, 900): the light and its keeper's cottage on a dirt yard, a track east to the Redwood Coast Road; the **cliff
+  band** along the beach's inland edge (solid, basalt faces), stairs down through a gap; the beach widened below it with
+  **twelve tide pools** (shallow pools in the sand, a barnacled rock by each, starfish, urchins and anemones in them,
+  crabs) and **four sea stacks** in the surf, a gull on one.
+- **The coves down the Redwood Coast Road** (rows 1290, 1530, 1720): from a gravel pull-off with a picnic table by the
+  road, a track west through the redwoods to a **cove** - a bay bitten into the shore with its beach round it, basalt
+  points either side, sea stacks in its mouth, driftwood on the sand: Redwood Cove North, Sea Stack Cove, Driftwood
+  Cove.
+- Everything built is kept from the biomes' and the wilds' dressing (reserve 4).
+
+Tests: `test/world3west.test.js` (one world build: the district after Dusty Hollow's and no creek in it, the three
+streets laid and on the one network, the village's places, the shacks for sale, the quay, the piers and the boats on
+the water, the charter boat, the light at Light Road's end, the raceway - its oval, today's race starting on it with
+its checkpoints on the dirt, the bleachers - the boardwalk over the creeks, the hide, the blinds, the ramps; the falls,
+the basalt band, the platform, the creek wet all the way to the bay; North Cape Light, its tide pools and stacks; the
+coves; every building of ours whole and clear of the highways), `test/world3biomes.test.js` (66 districts).
+
+Pictures (`tools/world3-world-map.mjs --towns --only egret,egretlight,silverfalls,northcape`, and `--region 1,5` for
+the arm): `docs/world-v3-town-egret.png`, `-egretlight.png`, `-silverfalls.png`, `-northcape.png`,
+`docs/world-v3-world-r1-5.png`. What looks right: Wharf Street crossing the Redwood Coast Road to the quay, the shacks
+either side in weathered colours, the fish market and the bar by the quay, the four piers out into the cove's water; the
+dirt oval with its bleachers, the pits and the snack bar on Raceway Road; Light Road down the arm through the marsh to the
+light on the beach at the tip with its rocks (Light Road and Raceway Road narrow country lanes now); the boardwalk
+zigzagging over the creeks to the hide, the spur to the pond's platform; at the falls the pool under the band with the white streams and the
+platform by the road; North Cape Light and its cottage in a clearing, the track to the road, the tide pools along the
+waterline and the stacks offshore; the three coves bitten into the shore. What looks wrong:
+- **Egret Point is still a row:** the shacks staggered (irregular widths, setbacks and gaps) but in two lines along a
+  straight street ending in turnarounds - NT1-F's village is a cluster round the harbour, shacks on stilts at the water, nets and boats pulled up on the shore. The quay is a wide
+  brown deck on the beach with a strip of sand between it and the street's end; the fish market is the convenience
+  store's archetype (no awnings, no fish on ice). The fleet isn't in the bake (boats are vehicles: they show in the game).
+- **The Redwood Coast Road runs on past Wharf Street** to a stub with a turnaround (the arterial's end, 20 tiles on).
+- **The raceway is plain:** a dirt band on grass with no kerbs, no start line painted (the bake's chequer is the
+  asphalt track's), no fence round it, the bleachers small; today's 62 x 34 footprint.
+- **The marsh is one flat green:** thin creeks, the reeds as ground speckle, the boardwalk a thin brown line - N7 wants
+  open pools with lilies, willows, reed beds in clumps, the boardwalk on posts with landings; the hide and the duck blinds
+  are dots at 1/8.
+- **Silver Thread Falls reads as a weir:** the band of basalt columns is a low wall across the creek, no gorge, the
+  drop small - SC3-A/NR1-E want a tall cliff in a gorge, the falls dropping into a pool walled on three sides, stairs
+  down to the platform. The creek above it is a narrow channel on the peaks' scree.
+- **North Cape has no headland:** the coast there is a smooth curve, so the light stands in a square clearing (the kept
+  ground, bare of trees) behind a row of basalt faces on a flat beach; the cliff faces read as a fence at 1/8.
+
+**What's left:** a headland for North Cape Light (the land layer's coast, `shared/world3-land.js`) and a gorge for the
+falls (raised ground: the land has no heights yet); the village clustered round the harbour, stilted shacks, the fish
+market's own look (stalls, ice tables: `mstall`, `fishtable`); the charter's run to the outer islands; R2's inland places
+(a lake with a boathouse and islands, the beaver pond, the hunting camp - H44's wild places may bring some); crabbing and
+beachcombing as activities; the raceway's kerbs and fence.
+
 ### 8.21 The places on the water: Prison Island, the Long Reach, Kestrel Lake (2026-10-11, H46)
 
 Part 1.2's Prison Island (J1-J4), part 1.7's river channel (the Long Reach: the quays at Old Town and Willow Crossing,
@@ -3769,173 +3939,3 @@ lookout to Kestrel Road. What looks wrong:
 custody's transfer by the Prison Boat (above); the lock working (the gates closing, the water level, a boat waiting);
 the lift bridge at the mouth opening; Prison Island's ground (rock, the shore's cliffs) and its size; models for the
 prison's blocks, towers and walls, the weir and the lock gates; Lookout Hill's rise; the power lines round the lake.
-
-### 8.20 The west coast: Egret Point, its light, the raceway and the marsh; Silver Thread Falls, North Cape Light, the coves (2026-10-11, H45)
-
-Part 1.5 R3 (the Egret Coast: concepts N7, NK1-D, NK1-O, E3e, NT1-F) and R2's coast (the Highland Woods': NT1-E, SC3-A,
-SC3-B, NR1-E, N8-B, NA1-A), in the whole-world build at the skeleton's TOWNS / LANDMARKS / STREAMS points, on the Redwood
-Coast Road (the skeleton's arterial down the coast to its end at Egret Point) and streets and tracks off it. All of it in
-`shared/world3-west.js` (one call each from `shared/world3-world.js`: `paintWest3`, `layWest3`, `buildWest`,
-`westDone`); the page and the city worker never import it. One district after Dusty Hollow's in `shared/mapcore.js`:
-**65 Egret Point** (`wild`, tier `low`: the generator builds nothing there, the village is built whole, as Dusty
-Hollow). It is painted on the land layer over the village, the raceway and the strips of Light Road and Raceway Road -
-so the marsh's tidal creeks (`world3-biomes.js` groundOf3 cuts them in the Egret Coast's own district, 53) don't cut
-them. The live world doesn't change (the world hash stays 6b6e16fdef9f).
-
-- **Egret Point** (the town point 850, 2700, where the Redwood Coast Road ends): **Wharf Street** along row 2630 from
-  just west of the arterial (it crosses its last stretch) east to the quay on the arm's sheltered east shore, facing the
-  cove under the airport. The **quay**: decking along the top of the beach, ten tiles deep; **four piers** three tiles
-  wide, 22 tiles out into the water, a lamp at each end, crates and drums on them; **the fleet** moored along both sides
-  of them (33 boats: dock motorboats and speedboats, `m.marina` - the boats you can take, as Gull Harbor's); **the charter
-  boat** at the end of the second pier (`charter: true`) and **Egret Point Charters** (`charter`) on the quay, its POI
-  knowing its boat (`boat`) - the desk sells today's deep-sea charter (`server/systems/economy.js`), not yet a run to the
-  outer islands. By the quay: **Egret Point Fish Market** (`fishmarket`), **The Gaff Hook** (the bar,
-  `club`), **Egret Point Bait & Tackle** (`tackle`). Along Wharf Street, **21 fishing shacks** either side (weathered
-  siding, tin roofs; widths, setbacks and gaps irregular) - homes for sale as today's shacks (`m.homes`, `shack`, $6,000, one car). Nets, pots, crates, fish
-  tables, rods and life rings on the quay. The buildings of ours have no `prefab`, so the shops serve at their doors
-  (no walk-in interiors: `buildInteriors` wants a prefab).
-- **Light Road** (a country lane, `rural`: no pavements) off Wharf Street south down the arm to the top of the beach at
-  the tip, a track on over the sand to **Egret Point Light** on the beach by the water (905, 3022, by the skeleton's
-  landmark 905, 3010), basalt rocks round its foot and boulders down to the waterline, the keeper's cottage and a bench
-  above it.
-- **The Westport Raceway's new spot** (882-944, 2466-2502, on the flat ground east of the Redwood Coast Road): a **dirt
-  oval** (the stadium shape of today's, its band dirt, not asphalt: the bake paints it as dirt, no kerbs), **the
-  grandstand's bleachers** along its north straight, the pit garages and the snack bar by the gate, a START banner by
-  the line, tyres on the infield; **Raceway Road** (a country lane) across the arterial to its gate and a drive in. It is the first
-  raceway with a start line, so `map.js` buildOffshore makes **today's race** there unchanged - the Westport Raceway,
-  three laps for anything with wheels, its start on the map (`race`) - with no change to map.js.
-- **The salt marsh** (N7, NK1-O): a **boardwalk** (decking two tiles wide) winding from Light Road west-north-west across
-  the reeds and over the tidal creeks to **Egret Marsh Bird Hide** (a hut with a spotting scope and a map board), and a
-  spur off Light Road out to a **platform over the big pond** (a rail, a bench); herons and ducks along its creeks; **three duck blinds** (reed-coloured huts) on the creek banks with decoys on the water and
-  a path to each; **three board ramps** over the dunes down to the west beach (the open sea side), posts at their heads.
-- **Silver Thread Falls** (the head of Silver Thread Creek, 1107, 681, by Falls Pass Road; SC3-A, NR1-E): a band of
-  rock across the creek's head (solid) faced with **basalt columns** (`cliffwall`), **the falls** over it in three streams
-  (`coastfall`, 40-72 px wide, a 140 px drop, mist), the **plunge pool** widened round its foot with mossy basalt boulders, the upper
-  creek above the band; **the viewing platform** (decking with a rail, a scope and a bench) on the west bank between the
-  road and the pool, a path and a map board from the road. The creek runs on to the bay as the land laid it (STREAMS).
-- **North Cape Light** (the skeleton's point 300, 900 is a hundred tiles inland: built on the cliff top west of it, at
-  210, 900): the light and its keeper's cottage on a dirt yard, a track east to the Redwood Coast Road; the **cliff
-  band** along the beach's inland edge (solid, basalt faces), stairs down through a gap; the beach widened below it with
-  **twelve tide pools** (shallow pools in the sand, a barnacled rock by each, starfish, urchins and anemones in them,
-  crabs) and **four sea stacks** in the surf, a gull on one.
-- **The coves down the Redwood Coast Road** (rows 1290, 1530, 1720): from a gravel pull-off with a picnic table by the
-  road, a track west through the redwoods to a **cove** - a bay bitten into the shore with its beach round it, basalt
-  points either side, sea stacks in its mouth, driftwood on the sand: Redwood Cove North, Sea Stack Cove, Driftwood
-  Cove.
-- Everything built is kept from the biomes' and the wilds' dressing (reserve 4).
-
-Tests: `test/world3west.test.js` (one world build: the district after Dusty Hollow's and no creek in it, the three
-streets laid and on the one network, the village's places, the shacks for sale, the quay, the piers and the boats on
-the water, the charter boat, the light at Light Road's end, the raceway - its oval, today's race starting on it with
-its checkpoints on the dirt, the bleachers - the boardwalk over the creeks, the hide, the blinds, the ramps; the falls,
-the basalt band, the platform, the creek wet all the way to the bay; North Cape Light, its tide pools and stacks; the
-coves; every building of ours whole and clear of the highways), `test/world3biomes.test.js` (66 districts).
-
-Pictures (`tools/world3-world-map.mjs --towns --only egret,egretlight,silverfalls,northcape`, and `--region 1,5` for
-the arm): `docs/world-v3-town-egret.png`, `-egretlight.png`, `-silverfalls.png`, `-northcape.png`,
-`docs/world-v3-world-r1-5.png`. What looks right: Wharf Street crossing the Redwood Coast Road to the quay, the shacks
-either side in weathered colours, the fish market and the bar by the quay, the four piers out into the cove's water; the
-dirt oval with its bleachers, the pits and the snack bar on Raceway Road; Light Road down the arm through the marsh to the
-light on the beach at the tip with its rocks (Light Road and Raceway Road narrow country lanes now); the boardwalk
-zigzagging over the creeks to the hide, the spur to the pond's platform; at the falls the pool under the band with the white streams and the
-platform by the road; North Cape Light and its cottage in a clearing, the track to the road, the tide pools along the
-waterline and the stacks offshore; the three coves bitten into the shore. What looks wrong:
-- **Egret Point is still a row:** the shacks staggered (irregular widths, setbacks and gaps) but in two lines along a
-  straight street ending in turnarounds - NT1-F's village is a cluster round the harbour, shacks on stilts at the water, nets and boats pulled up on the shore. The quay is a wide
-  brown deck on the beach with a strip of sand between it and the street's end; the fish market is the convenience
-  store's archetype (no awnings, no fish on ice). The fleet isn't in the bake (boats are vehicles: they show in the game).
-- **The Redwood Coast Road runs on past Wharf Street** to a stub with a turnaround (the arterial's end, 20 tiles on).
-- **The raceway is plain:** a dirt band on grass with no kerbs, no start line painted (the bake's chequer is the
-  asphalt track's), no fence round it, the bleachers small; today's 62 x 34 footprint.
-- **The marsh is one flat green:** thin creeks, the reeds as ground speckle, the boardwalk a thin brown line - N7 wants
-  open pools with lilies, willows, reed beds in clumps, the boardwalk on posts with landings; the hide and the duck blinds
-  are dots at 1/8.
-- **Silver Thread Falls reads as a weir:** the band of basalt columns is a low wall across the creek, no gorge, the
-  drop small - SC3-A/NR1-E want a tall cliff in a gorge, the falls dropping into a pool walled on three sides, stairs
-  down to the platform. The creek above it is a narrow channel on the peaks' scree.
-- **North Cape has no headland:** the coast there is a smooth curve, so the light stands in a square clearing (the kept
-  ground, bare of trees) behind a row of basalt faces on a flat beach; the cliff faces read as a fence at 1/8.
-
-**What's left:** a headland for North Cape Light (the land layer's coast, `shared/world3-land.js`) and a gorge for the
-falls (raised ground: the land has no heights yet); the village clustered round the harbour, stilted shacks, the fish
-market's own look (stalls, ice tables: `mstall`, `fishtable`); the charter's run to the outer islands; R2's inland places
-(a lake with a boathouse and islands, the beaver pond, the hunting camp - H44's wild places may bring some); crabbing and
-beachcombing as activities; the raceway's kerbs and fence.
-
-### 8.19 Today's wild land's places in the v3 world: Highland Woods', Granite Peaks' and Dry Creek's (2026-10-11, H44, in progress)
-
-8.6 sends whatever of today's world no piece builds off the frame - today's Highland Woods (district 29), Granite Peaks
-(33) and Dry Creek (9, 41, 42) - but part 1.5 moves their designed places into the new regions, and the owner split Dry
-Creek between Willow Valley and the Red Rock Desert (part 5). All of it in `shared/world3-wild.js` (one call from the
-world build's `lines` hook, `wildSites3`, and `wildDone` from its `done`; `movedAt` and `wildDist` handed to the
-generator through `world`); the page and the city worker never import it. The live world doesn't change (the world hash
-stays 6b6e16fdef9f; the city worker 34 files, 358 KB of 360).
-
-- **The country sites by rules** (`WILD_SITES`, the placement table: each of today's `shared/countryside.js` SITES of the
-  wild districts at a spot in its v3 region): placed after the skeleton's roads and the towns' streets are laid, as
-  today's are - a lot of open ground of the site's region within 60 tiles of its spot, clear of every road line (the
-  highways and ramps by 24 tiles), the skeleton's main line (18) and stations (30), the towns (their own districts),
-  the desert's places (8.18's boxes, 12 tiles round) and each other; its own access road to the nearest road it may join
-  within 90 tiles (rural or dirt, as today's - never a highway: they cross nothing at grade - nor a tunnel's stretch),
-  over dry land, across no highway and clear of the main line. `map.js` buildCountryside builds what stands on each lot
-  as today's. All fifteen are placed:
-  - Highland Woods: **the Highland roadside stop** (quick stop, diner, filling station) and **Pine Ridge Campground** either
-    side of Pine Lake on Timber Road, **the Highland Radio Mast** further east on it.
-  - Granite Peaks: **the Granite Quarry** off Falls Pass Road (the pit, its benches and crane, the ore round its faces),
-    **the Granite Peak Observatory** below Summit Road (its scopes: the stargazing), **Granite Cove Campground** above
-    Lookout Road, **Windy Point Wind Farm** at Lookout Road's west end, **North Ridge Mast** above Summit Road.
-  - The Red Rock Desert's west (Dry Creek's desert): **the Dry Creek Oil Field** north of Mine Road, **The Rusty Spur**
-    (the biker roadhouse, `m.roadhouse`) on Mine Road by the Desert Highway's crossing, west of the motel, **the Route
-    9 stop** at the skeleton's Route 9 point, **Sunfield Solar Farm** and **the Starlite Drive-In** on Route 9, **the Mesa
-    Radio Mast** and **the Dry Creek Wind Farm** on Mesa Road.
-- **The nature sites moved whole** (`MOVED`: a square of today's tiles round each site's anchor goes to its v3 spot at
-  scale 1): the world build's `pick` (`shared/world3-world.js`) asks `movedAt` for a position no piece builds, so the
-  generator's pins carry the site's anchor - and today's lake there (islands.js LAKES) - to the spot;
-  `shared/naturesites.js` takes the anchors through `PXs` / `PYs` and the district through `DS` (`H.place.d`, the world
-  build's `wildDist`: 29 -> 47, 33 -> 48, 9 and 42 -> 49, 41 -> 50; one-line hook in `map.js`). Moved: **Pine Lake** (its
-  lake, its camp and paths, between the stop and the campground as today's), **Summit Tarn** with its falls, creek and cabin meadow, **Granite Hot
-  Springs** above Summit Road (the road below it is its way in), **The Sentinel Stones** by the observatory's road;
-  Dry Creek's **boneyard** (the stored planes you strip for parts), **Old Mission Ruins** (the bells) and **the balloon
-  field** in the desert's west, between the Desert Highway and Canyon Road.
-- **Every pit, every mine** (8.18's list): `shared/underground.js` lays the ore veins round each quarry's faces (the
-  Granite Quarry's and Copper Gulch Mine's, each named), `server/systems/places.js` takes every mine's seams.
-
-Tests: `test/world3wild.test.js` (one world build: every wild country site in the table; each placed and built once, near
-its spot, on its region's ground, its road in laid, on the one network, reaching its gate and meeting no highway; every
-lot clear of the highways', the main line's and the stations' room; The Rusty Spur, two quarries with their veins; each
-moved nature site built once at its spot on its region's ground, its landmark clear of the highways and the main line,
-no road over Summit Tarn or Pine Lake), `test/world3.test.js`, `test/world3desert.test.js` (Copper Gulch's pit and
-its veins with the Granite Quarry's beside it), `test/world3roads.test.js`, `test/world3world.test.js`: all pass.
-
-Pictures (`tools/world3-world-map.mjs --towns --only pinelake,tarn,summit,drycreek`; `WILD_VIEWS`, also `quarry`,
-`route9`): `docs/world-v3-town-pinelake.png`, `-tarn.png`, `-summit.png`, `-drycreek.png`. What looks right: the stop's forecourt and
-diner on its spur off Timber Road with the lake and its trail north-west of it and the campground's tents by the road
-to the west, all in the dense redwoods; the hot springs' three pools, lanterns and fence on the slope above Summit Road
-with their path down to it; the observatory's dome on its lot at the end of its road; the tarn's dark water with the
-falls and the creek running south from it. What looks wrong:
-- **The main line runs close past Pine Lake** (outside its room, but its lake trail runs to within a few tiles of it).
-- **The Sentinel Stones and Summit Tarn stand in the snow** (the peaks' snow class above the snow line is painted over
-  their ground): they read as stones and a tarn on a snowfield; no trail reaches the stones (the observatory's road is
-  just beyond the 40 tiles they look for one in), no road or trail reaches the tarn's cabin.
-- The radio mast is hard to make out at 1/8; the campground is small at this scale.
-- **Dry Creek's desert** (`-drycreek.png`): the boneyard's twelve planes in their fenced rows read well, the balloon field
-  is a green circle with three balloons, the oil field's tanks and shed sit at the end of their road north of Mine Road,
-  The Rusty Spur on its lot north of Mine Road west of the Desert Highway. Wrong: **8.18's dry wash winds straight
-  through the boneyard** (its gravel under the plane rows: the wash wants to keep off the moved sites, or the boneyard
-  off the wash); **the moved sites have no road in** (the boneyard, the balloon field: today's stood by today's roads -
-  each wants a track to Mine Road or the highway's frontage); The Rusty Spur stands against **a strip of redwoods**
-  between the valley and the desert (8.8's biomes leave Highland Woods' ground in the gap between their polygons at
-  x 3640-3700); the oil field's pumpjacks don't read at 1/8.
-
-**What's left** (in order): the rest of the nature sites - most of `shared/naturesites.js`' wild ones are written in
-today's coordinates and districts and look for today's roads by name, so each wants its anchor through `PXs`, its
-district through `DS` and a spot in `MOVED`: Highland Woods' Redwood Creek and its falls and Giants Loop (both on
-today's Highland Road - they want the road they stand by named, or found), Fern Gorge (the Ridge Track), Redwood Cove
-(a cove on today's west shore: the woods have no shore now - a lake shore or the Egret Coast), the trapper's cabin
-(the beaver pond on Redwood Creek); Granite Peaks' Granite Cove (a bay of the sea), the Old Granite Mine (it scans a
-fixed box of today's for its spot; then the cave world takes a list of mines - one cave per mine), Ridge Fire Lookout
-and the Ridge Trail Hunting Camp (both on the Ridge Trail); Dry Creek's farmland into Willow Valley's east side (map.js
-`buildFarm`, `DRY_CREEK_ESTATES`, the fields, the Willow River's orchard and vineyard - skipped in the world build
-now), its desert's nature sites (Red Rock Wash, Canyon Oasis, Mirage Lake and its camp, the boneyard, the mission ruins,
-the Canyon Track hunting camp, Splash Canyon Water Park, Route 9's airstrip behind the stop); trails to the stones, the
-tarn, the boneyard, the ruins and the balloon field (they have none yet).
