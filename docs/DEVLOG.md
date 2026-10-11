@@ -7340,7 +7340,8 @@ What it does (docs/WORLD-V3.md 8.11 has the details):
   track) - each a decision for the owner, listed in 8.11.
 - `tools/world3-world-map.mjs` draws the ramps (yellow) and logs each interchange.
 
-Not done: the towns (step 2 of the brief) - see the report; 8.11 lists what the towns' crossings want.
+Not done: the towns (step 2 of the brief, not started) - 8.11's "What's left" has what each town's site holds and
+what the generator needs for them.
 
 Files: shared/world3-roads.js, test/world3roads.test.js, test/world3interchanges.test.js (new), tools/world3-world-map.mjs, docs/world-v3-world.png,
 docs/world-v3-world-r4-0.png, docs/WORLD-V3.md 8.11.
