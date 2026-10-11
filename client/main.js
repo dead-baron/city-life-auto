@@ -227,9 +227,9 @@ function onText(m) {
       if (S.spec && S.spec.on) { if (S.map.seed !== (m.seed >>> 0)) exitSpectate(); else send({ t: 'dev', c: 'spectate', on: true }); } // back in after a reconnect
       if ((!S.map || S.map.seed !== (m.seed >>> 0)) && !cityIn(m.seed) && holdForGenerator(m)) break;   // (the page builds it: the generator first)
       if (!S.map || S.map.seed !== (m.seed >>> 0)) setupWorld(m.seed);
-      if (m.sig && (S.mapFrom === 'cache' || S.mapFrom === 'served') && m.sig !== mapSignature(S.map)) { if (holdForGenerator(m)) break; console.warn(`[city] the ${S.mapFrom === 'served' ? 'downloaded' : 'kept'} city is not the server's: building it again`); forgetCity(); setupWorld(m.seed, true); }
+      if (m.sig && !S.win && (S.mapFrom === 'cache' || S.mapFrom === 'served') && m.sig !== mapSignature(S.map)) { if (holdForGenerator(m)) break; console.warn(`[city] the ${S.mapFrom === 'served' ? 'downloaded' : 'kept'} city is not the server's: building it again`); forgetCity(); setupWorld(m.seed, true); }
       S.updating = noteServerBuild(m.build, m.built); // the server runs a newer build: this page reloads into it (client/update.js)
-      if (m.sig && m.sig !== mapSignature(S.map)) {
+      if (m.sig && !S.win && m.sig !== mapSignature(S.map)) {   // (World v3's window: a part of the world - its regions' own signatures are part 8 item 5, still to do)
         // the server runs a newer world than this page: reload into it (client/update.js does the rest) - unless both
         // are the same build, when a reload would build the same different world again (it used to, every 30 s, on
         // iPhones: shared/dmath.js): then play on, and tell the server so it shows up in its log
@@ -972,7 +972,7 @@ function setupWorld(seed, here = false) {
   if (!here && job && job.map && job.seed === (seed >>> 0)) {
     // built (or read back from this browser's copy) by client/worldgen.js while the page loaded
     S.map = job.map; job.map = null; job.taken = true; S.mapFrom = job.from;
-    if (S.mapFrom === 'cache' || S.mapFrom === 'served') { delete S.map._sig; mapSignature(S.map); }   // (its fingerprint worked out from what was read or downloaded: server/worldcdn.js)
+    if ((S.mapFrom === 'cache' || S.mapFrom === 'served') && !job.win) { delete S.map._sig; mapSignature(S.map); }   // (its fingerprint worked out from what was read or downloaded: server/worldcdn.js)
     loadSpan('city', job.ms);
   } else {
     if (!GEN) throw new Error('the city generator did not load');   // (loaded first: holdForGenerator)
