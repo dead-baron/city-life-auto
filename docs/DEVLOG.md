@@ -7935,3 +7935,28 @@ Tests: test/world3wild.test.js (one world build: each site placed and built once
 the one network and meeting no highway, clear of the skeleton's lines; both quarries' veins; the moved nature sites at
 their spots, no road over their water), test/world3.test.js, test/world3desert.test.js, test/world3roads.test.js,
 test/world3world.test.js.
+
+## 2026-10-11 · World v3: the land's relief - heights, cliff bands, the hillshade
+The v3 land was flat (WORLD-V3.md 8.20 and 8.21: "Silver Thread Falls reads as a weir ... the land has no heights yet",
+"Lookout Hill isn't a hill", "North Cape has no headland"; 8.18: "the lookout isn't on the mesa"; 8.8: "the mesas and
+buttes read as small red towers"). Now it has relief:
+- **A height field for the v3 frame** (`shared/world3-relief.js`, one call from the world build): the peaks high with
+  crags, the North Ridge a ridge, the woods' hills, the valley a basin, the desert a plateau; Lookout Hill a hill above
+  Kestrel Lake; the headlands (North Cape, Egret Point, Sandpiper Point, Toll Point) high ground ending in cliffs behind
+  the beach; the desert's mesas and buttes big raised tables with cliff sides (the lookout's mesa one of them, its jeep
+  track the ramp); the gorge under the Gorge Bridge; an escarpment and gorge at each falls (Silver Thread Falls, Summit
+  Tarn's). Deterministic: integer hashing, no Math.random.
+- **Roads keep their grade:** a road's height is the land's averaged along it; the land beside it comes back over 14
+  tiles - cuttings and embankments, never a cliff across a road.
+- **Cliff bands where it's steep:** open wild ground steeper than 2.2 m a tile is solid rock with its faces on the south
+  rims (granite in the desert and the peaks, basalt elsewhere).
+- **Drawn:** the art v2 ground bake shades the ground by the slope and the height (`M.relief`: a hillshade lit from the
+  north-west); a desert table's band is red rock. Nothing live changes: the world hash stays 6b6e16fdef9f (the art's
+  changes).
+
+Files: shared/world3-relief.js (new), shared/world3-world.js (the call), client/art2/game/groundbake.js (the hillshade
+phase, the desert band's ground), test/world3relief.test.js (new), docs/WORLD-V3.md 8.22, docs/world-v3-world-r8-1.png,
+docs/world-v3-town-hollow.png, docs/world-v3-town-silverfalls.png.
+
+Tests: test/world3relief.test.js (one world build: the field deterministic; the cliffs solid and off the roads, the roads
+on their grade; each landmark on its high ground; the tables, the falls, the peaks, the ridge, the gorge; Metro City flat).
