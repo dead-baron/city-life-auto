@@ -2502,8 +2502,8 @@ its items only - and the moves across a border and to the corner).
 | Assembling it (node, from the files) | **0.19 s**; a move east 0.28 s (`test/world3window.test.js`) |
 | Getting it (node, from a local v3 server: the index and 9 regions downloaded, unzipped and assembled) | **0.72 s**; the JS heap after it 40 MB (and the layers' 37 MB outside it) |
 | The region files the server writes now | 81 files, 11.7 MB gzipped (the world has grown since 8.9: the main line, the biomes) |
-| **The page** (headless Chromium, `CLA_WORLD=v3`, `?world=v3`) | **in the city after 10.6-12.7 s; the main thread's JS heap 81 MB (86 allocated) with art v2 drawing** (148 MB in a run where art v2 didn't start and the classic art loaded) - **468-497 MB with the whole world** (8.9); the same after each move |
-| The swap on the page | art v2's `setMap` (the window cloned to its bake worker): **0.21-0.26 s** on the main thread - a hitch to take out (what's left, 5) |
+| **The page** (headless Chromium, `CLA_WORLD=v3`, `?world=v3`) | **in the city after 10.6-45 s** (45 s with the server's bake thread and two other helpers' jobs on the two cores); **the main thread's JS heap 177 MB with the frame drawing** (`performance.memory`, coarse: the same 177 after each move; 81-148 MB in runs where the frame or art v2 stopped early) - **468-497 MB with the whole world** (8.9) |
+| The swap on the page | art v2's `setMap` (the window cloned to its bake worker): **0.06-0.40 s** on the main thread - a hitch to take out (what's left, 5) |
 | The window's moves in the page | at joining (the frame's middle -> round the player, when they spawn outside it), across a region border (teleported 40 tiles short of the centre region's edge, then 40 past: r4-3 ... r6-5 -> r5-3 ... r7-5, the regions coming in fetched before) and a teleport 1,700 tiles west (-> r1-3 ... r3-5): no errors once the readers below were fixed (the walk-ins' doors stopped the frame drawing; art v2's resync stopped its start) |
 
 **What's left** (in order)
@@ -2521,7 +2521,10 @@ its items only - and the moves across a border and to the corner).
    thread: a hitch at each border), and the page makes the flora, ground cache, buildings layer and router again. The
    city worker could post the window to the bake workers itself (a MessageChannel), or only the regions coming in; the
    router (the whole road graph) could be kept.
-8. **The art's look after a move** wants a check in a real browser: in the headless page art v2 ran and took the new
-   windows, but the frame stopped drawing on a walk-in reader before the last fix, so no screenshot of baked art yet.
+8. **The art after a far teleport**: the hospital at joining is drawn in full after the window moved (picture:
+   `docs/world-v3-window.png`), and the gulf after crossing a border; 1,700 tiles west the minimap showed the land and
+   the art still the sea's stand-in 30 s later - 8.9's open item 4 (seen with the whole world too), or chunks baked by
+   the page's worker before the new window reached it: `setMap` now bakes again the chunks baked outside the old window
+   (not yet seen in a playtest). To look at in a real browser.
 6. **The minimap is a frame-sized canvas** (5040 x 4032, 81 MB of pixels): wants a coarser picture at v3 (8.2's note).
 7. **Regions aren't kept in the browser** (IndexedDB): each visit downloads the window (about 2 MB).

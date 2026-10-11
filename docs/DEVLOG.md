@@ -7346,11 +7346,14 @@ Files: shared/regionpack.js, client/worldwindow.js (new), client/worldgen.js, cl
 client/hud.js, client/spectator.js, client/render/buildings.js, client/render/highway.js, client/render/lighting.js,
 client/art2/game/host.js, client/art2/game/pool.js, client/art2/game/worker.js, client/art2/game/statics.js,
 shared/mapcore.js, shared/bowling.js, shared/cinema.js, test/regionwindow.test.js (new), test/world3window.test.js
-(new), docs/WORLD-V3.md 8.12.
+(new), docs/WORLD-V3.md 8.12, docs/world-v3-window.png (new), client/sound/places.js, client/render/fireflies.js,
+client/render/flora/index.js, client/render/tiles.js, client/art2/game/groundbake.js, client/phone.js.
 
 Measured: a v3 window is 1512 x 1512 tiles, its layers 36.6 MB of the world's 426.7 MB, assembled in 0.19 s (a move
-0.28 s); **the page's JS heap 81 MB with a window and art v2 drawing** (headless Chromium; 468-497 MB with the whole
-world); the swap's art v2 hand-over 0.21-0.26 s on the main thread (to take out). docs/WORLD-V3.md 8.12 has the rest
+0.28 s); **the page's JS heap 177 MB with a window and the frame drawing** (headless Chromium; 468-497 MB with the whole
+world); the swap's art v2 hand-over 0.06-0.40 s on the main thread (to take out). The headless playtest: the hospital
+drawn after the window moved at joining (docs/world-v3-window.png), a border crossed and a far teleport, no errors;
+today's world in the same page as before (the whole map, no window, art v2 drawing, no errors). docs/WORLD-V3.md 8.12 has the rest
 and what's left (per-region signatures, the first window before the player's position is known, a global POI list
 for the phone and the big map, the railway's loops in a window, the swap's copies, the frame-sized minimap, regions
 kept in the browser).
