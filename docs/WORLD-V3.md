@@ -2119,3 +2119,10 @@ and granite outcrops, mountain pines and larches in stands below the tree line, 
 there: **the renderer's ground cover grew meadow plants on the snow** (statics.js `coverAt` fell through to its meadow
 branch for class 9) - fixed after the bake (nothing grows on snow), not re-baked; the snowfields' edges are blobby,
 and the scree reads more brown than grey.
+`--region 8,1` (tiles 4032-4535 x 504-1007, the Red Rock Desert by Mirage Lake, `docs/world-v3-world-r8-1.png`, 441
+chunks in 110 s): hardpan with sand sheets, dry washes of pale gravel winding across it with mesquite along them,
+sandstone buttes and outcrops, scrub and cacti - no repeating pattern. Wrong there: **the mesas and buttes read as
+small red towers** (4-7 tiles across, where WR2-B's are tens of metres: they want the canyon's raised mesas or far
+bigger outcrops); **some washes close on themselves** (they are a noise's contour lines: a wash should run down to the
+lake, the river or off the map); and **the sand sheets grow green dune grass** (the renderer's cover for sand comes
+before its desert branch) - in the desert they want sparse dry grass.
