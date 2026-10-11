@@ -39,7 +39,7 @@ test('Cedar Isle built at its gulf place, at scale 1, is the island build moved 
   const r = stepA('cedar');
   // (Paradise Cay, a scene island raised out of the open sea, isn't placed: it stays where today's is - 4.7)
   assert.ok(r.extraLand <= 150, `land placed off the island: ${r.extraLand}`);
-  check(r, { tiles: 0.995, roads: 0.97, buildings: 0.98, pois: 0.95, props: 0.83 });
+  check(r, { tiles: 0.995, roads: 0.97, buildings: 0.98, pois: 0.95, props: 0.87 });
 });
 
 test('the airport built at its gulf place, at scale 1, is the island build moved (the runway, terminal, hangars)', () => {
