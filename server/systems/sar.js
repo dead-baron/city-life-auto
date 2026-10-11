@@ -89,7 +89,7 @@ export function start(world, p, pad = null) {
   v.issuedTo = p.pid; v.workTruck = true; v.despawnable = false;   // (yours: not theft - safety.js / vehicles.js mineOf; kept for the shift)
   v.returnTo = { x: spot.x, y: spot.y, label: pad.name };
   p.job = { type: 'sar', stage: 'wait', truck: v.id, base: { x: pad.x, y: pad.y, name: pad.name }, nextAt: world.time + SAR.firstS, expires: world.time + SAR.shiftS, saved: 0, text: 'Search & rescue: on call - stand by for the first call' };
-  world.notify(p, `You're on call as a search & rescue pilot. Your rescue helicopter is by ${pad.name} (the green ring). Calls come over the phone: search the circle on your map, land for the hurt and the lost, hold Act over the stuck and the swimmers to lower the harness, and fly them to a hospital's roof pad.`, 'good');
+  world.notify(p, `You're on call as a search & rescue pilot. Your rescue helicopter is by ${pad.name} (the green ring). Calls come over the phone: search the circle on your map, land for the hurt and the lost, hold Act over the stuck and the swimmers to lower the harness, and fly them to a hospital - land on its roof (or the helipad in its yard).`, 'good');
   p.meDirty = true;
   store.touch();
   return null;
@@ -209,9 +209,9 @@ function board(world, p, j, c, v, vic) {
   if (!seatIn(world, p, c, v, vic)) return false;
   wave(vic, false);
   c.aboard = true; c.boardedAt = world.time; j.stage = 'deliver';
-  const pad = nearestPad(world.map, v.x, v.y, true) || nearestPad(world.map, v.x, v.y);
-  j.text = `Fly them to a hospital - land on the roof pad${pad ? ` (${pad.name})` : ''}`;
-  world.notify(p, c.hurt ? 'Patient aboard! Get them to a hospital fast - land on its roof pad. Gently does it.' : 'They\'re aboard, cold and tired but fine. Fly them to a hospital to be checked over.', 'good');
+  const pad = nearestPad(world.map, v.x, v.y, false) || nearestPad(world.map, v.x, v.y);
+  j.text = `Fly them to a hospital - land on its roof pad or its helipad${pad ? ` (${pad.name.replace(/ helipad$/, '')})` : ''}`;
+  world.notify(p, c.hurt ? 'Patient aboard! Get them to a hospital fast - land on its roof, or the helipad in its yard. Gently does it.' : 'They\'re aboard, cold and tired but fine. Fly them to a hospital to be checked over.', 'good');
   world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y });
   p.meDirty = true;
   return true;
@@ -257,7 +257,7 @@ function stepHoist(world, p, j, c, v, vic, flying, dt) {
 // aboard: to a hospital's pad (the roof's - or the yard's), landed: handed over and paid
 function stepAboard(world, p, j, c, v, vic) {
   if (vic.vehId !== v.id) { endCall(world, p, 'You lost your patient.', 'bad'); return; }
-  if (c.hurt) { const pct = Math.max(0, Math.round((c.life / c.lifeMax) * 100)); const t = `Patient aboard (${pct}%) - fly them to a hospital's roof pad`; if (t !== j.text) { j.text = t; p.meDirty = true; } }
+  if (c.hurt) { const pct = Math.max(0, Math.round((c.life / c.lifeMax) * 100)); const t = `Patient aboard (${pct}%) - land on a hospital's roof pad or helipad`; if (t !== j.text) { j.text = t; p.meDirty = true; } }
   if (!landed(world, v)) return;
   const pad = hospitalPads(world.map).find((q) => Math.hypot(q.x - v.x, q.y - v.y) <= FLY.PAD_R * 1.25 && Math.abs((v.alt || 0) - q.alt) < 10);
   if (!pad) return;
@@ -299,11 +299,11 @@ export function target(world, p, j) {
   const c = j.call, v = world.get(j.truck);
   if (!c) return { text: j.text, x: Math.round(j.base.x), y: Math.round(j.base.y), stage: 'wait' };
   if (c.aboard) {
-    const pad = v ? nearestPad(world.map, v.x, v.y, true) || nearestPad(world.map, v.x, v.y) : null;
+    const pad = v ? nearestPad(world.map, v.x, v.y, false) || nearestPad(world.map, v.x, v.y) : null;   // (the yard's pad: drawn in both renderers - art v2 doesn't show the roof's)
     return { text: j.text, x: Math.round(pad ? pad.x : j.base.x), y: Math.round(pad ? pad.y : j.base.y), stage: 'deliver' };
   }
   if (!c.found) return { text: j.text, x: c.cx, y: c.cy, stage: 'search', area: [c.cx, c.cy, SAR.circleR] };
-  const vic = world.get(c.vic), t = { text: j.text, x: Math.round(vic ? vic.x : c.x), y: Math.round(vic ? vic.y : c.y), stage: 'rescue', flare: [Math.round(c.x + 18), Math.round(c.y + 10)] };
+  const vic = world.get(c.vic), t = { text: j.text, x: Math.round(vic ? vic.x : c.x), y: Math.round(vic ? vic.y : c.y), stage: 'rescue', flare: [Math.round(c.x + 64), Math.round(c.y + 40)] };
   if (HARNESS[c.kind] && v && (c.cable > 0 || c.hooked)) t.hoist = [v.id, Math.round(c.cable), c.hooked ? 1 : 0, Math.round(c.x), Math.round(c.y)];
   return t;
 }
@@ -334,6 +334,7 @@ export function devSar(world, p, msg = {}) {
     if (!best) return `No ${kind} places on this map.`;
     const c = callAt(world, p, kind, best.x, best.y);
     if (msg.hover) put(best.x + 10, best.y, HARNESS[kind] ? 120 : 160);
+    if (msg.hooked && HARNESS[kind]) { const vic = world.get(c.vic); put(best.x + 10, best.y, 160); c.found = true; j.stage = 'rescue'; if (seatIn(world, p, c, v, vic)) { c.hooked = true; c.cable = 110; } }   // (msg.hooked: on the cable, halfway up)
     if (msg.roof) { c.found = true; const vic = world.get(c.vic); seatIn(world, p, c, v, vic); board(world, p, j, c, v, vic); }
   }
   if (msg.roof) { const pad = nearestPad(world.map, v.x, v.y, true); if (!pad) return 'No hospital roof pad.'; put(pad.x, pad.y + (j.call ? 0 : 40), pad.alt); }

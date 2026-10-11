@@ -181,8 +181,8 @@ function drawPads(g, F, S, v2) {
 function drawFlare(g, [x, y], now) {
   g.save();
   for (let i = 0; i < 14; i++) {
-    const ph = (now * 0.32 + i / 14) % 1, r = 6 + ph * 36;
-    g.globalAlpha = (1 - ph) * 0.5;
+    const ph = (now * 0.32 + i / 14) % 1, r = 8 + ph * 44;
+    g.globalAlpha = (1 - ph) * 0.72;
     g.fillStyle = i % 3 ? '#ff7a3c' : '#ffa060';
     g.beginPath(); g.arc(x + ph * 80 + Math.sin(now * 1.3 + i * 2.1) * 9 * ph, y - ph * 170, r, 0, Math.PI * 2); g.fill();
   }

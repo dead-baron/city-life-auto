@@ -8409,3 +8409,70 @@ test/firebow.test.js, test/perf.test.js.
   doesn't light you (the walker it had lit was left standing on the same spot, moving, and caught again now and then);
   new: a ground blast misses an aircraft high above and hits one just off the ground, and the gunship's own missiles
   never hurt it.
+
+## 2026-10-11 · H59: flying for a living - search and rescue pilot, charter pilot
+
+The owner: "Let's add more jobs for players trying to make an honest living. With helicopters and airplanes being added we
+should create citizen jobs you can do with helicopters. Like search and rescue helicopter pilot job: patrol around and
+respond to calls of missing or hurt hikers out in nature spots, and you get a general idea where they may be but you
+gotta go out and search for them and retrieve them. They're either injured and you have to land and pick them up and
+bring them back and fly them to the hospital, which you can land on top of, or you need to lower a harness down to
+hard-to-reach places, or find them in the water and lower a harness, or just locate a missing person and pick them up."
+And: "Private helicopter pilot for rich billionaire customers flying around the world from location to location."
+
+- **Search and rescue pilot** (`server/systems/sar.js`; `shared/rules.js` SAR): sign on at a hospital's yard helipad (Act
+  there) or from the phone (Jobs › Flying). A rescue helicopter - its own model, `rescueheli`, index 64 (the next free
+  aircraft index), red and white (the overlay's 'rescue' livery) - is issued to you like a work truck (`v.issuedTo`,
+  `v.workTruck`: the ring and the arrows until you're in it, not theft, Safety mode doesn't ask). A shift of calls, one
+  after another: someone hurt on open ground, someone hurt and stuck where nothing can land (among the trees and rocks),
+  someone in the water off the coast, or someone just lost - out in the wild, rural, park, rocky, beach and desert
+  districts or the water near the shore (`sitesOf`: a sweep of the built map, nothing added to it - the world's hash is
+  the same). The page gets a search circle (the job target's `area`: drawn on the minimap and, labelled, on the world map)
+  with the spot somewhere inside it, not the spot. Within 560 px they see you: they wave (the fist pump's arm up) and a
+  smoke flare goes up beside them (`flare`: an orange plume, drawn in both renderers by `client/render/aircraft.js`).
+  The hurt and the lost: land within 320 px and they come aboard (the hurt helped by the crew). The stuck and the
+  swimmer: hover low right over them and hold Act - the cable pays out (85 px/s) and, once it reaches them, winches
+  them up (110 px/s; let go and it holds); higher than 300 px above them, drifting faster than 120 px/s or not over them
+  and it can't reach. The cable is drawn on the overlay out of the side door (`hoist`), them hanging in the harness once
+  clipped on. A hurt patient's time runs down (260-380 s from the call; a hard landing with them aboard takes 40 s off
+  and is counted: `aircraft.js` remembers each touchdown's sink as `v.landSink` / `v.landAt`); if it runs out, they die
+  and the call pays nothing. Land on a hospital's roof pad - or the helipad in its yard - to hand them over: $260 + $90 a
+  km of the call's distance from the hospital, up to +60% for a quick rescue, less 25% a hard landing (down to 40%), and
+  6 Samaritan points. A call nobody reaches in 12 minutes goes to another crew; cancelling the job (the phone) sends the
+  helicopter back and whoever was out there is fetched by someone else.
+- **The hospitals' roofs are roofs now** (`shared/flight.js` tileTop): the hospitals are walk-in buildings, their insides
+  T.FLOOR, so the roof pad over the middle had no roof under it - a helicopter "landing" there sank to the ground inside.
+  A walk-in building's floor now counts as under its roof for flying (`floorAt`), so the roof pads work (and you can't
+  fly through a shop at roof height any more).
+- **Art v2 and the roof pad**: art v2 stands its buildings up, so the roof isn't over the footprint and the roof pad
+  isn't drawn there (as before). The server takes either pad, and the job's marker points at the yard's helipad (drawn in
+  both renderers); on the classic view the roof pad shows and works too. Drawing the roof pad at the roof's drawn height
+  in v2 (and lifting an aircraft on a roof with it) is left for later.
+- **Charter pilot** (`server/systems/charter.js`; `shared/rules.js` CHARTER): from the phone (Jobs › Flying) - the company's
+  Skylark is issued at the nearest helipad. Bookings one after another: a rich customer (invented names: Sterling
+  Vanderholt, Margaux Ellery-Price...) waits at one of the places a helicopter goes - the airport's helipad, the airport's
+  apron and the airstrips, a mansion's lawn in each rich district, a landing spot on each island (`placesOf`, from the
+  built map) - and wants flying at least 3 km to another, for a board meeting or lunch on the islands. Land within 320 px
+  and they board; land within 240 px of the destination and they step out: the fare ($180 + $70 a km) and a tip of up to
+  half of it - none after a hard landing, less the more the helicopter is knocked about or shot at on the way, more the
+  quicker the flight.
+- The phone's job list has a Flying section (`client/phone.js` flyJobs: the jobs marked `fly`); the dev menu's command
+  `sar` (`server/dev.js`) signs you on in your rescue helicopter, and with `k` starts a call of that kind at the nearest
+  such place (`hover`: hovering over them; `hooked`: them on the cable; `roof`: a patient aboard, down on the nearest
+  hospital's roof pad).
+- Not done: the coast guard (patrols by boat and helicopter after smugglers' boats, rescues on the water) - next.
+
+Files: server/systems/sar.js (new), server/systems/charter.js (new), shared/vehicles.js (rescueheli), shared/rules.js (SAR,
+CHARTER), shared/flight.js (a walk-in building's roof), server/systems/aircraft.js (the last touchdown), server/systems/npc.js
+(people a pilot's coming for stay put), server/systems/phone.js (the Flying jobs, their targets), server/systems/players.js
+(Act at a hospital's helipad, the harness), server/world.js, server/dev.js ('sar'), client/render/aircraft.js (the flare,
+the harness), client/hud.js (the search circle on the minimap), client/worldmap.js (on the world map), client/main.js (the
+overlay loads for a flare), client/phone.js (the Flying section), README.md (controls), test/sar.test.js (new).
+
+Tests: test/sar.test.js - signing on at the pad and on the phone, the issued helicopter (index 64, yours, marked); a call's
+search circle with them inside it and not the spot; cancelling clears it; spotted within sight: the wave and the flare;
+landing for the hurt, the hard landing counted, the hand-over on the roof pad and the pay (less for the hard landing); the
+harness over someone on rough ground - too high it runs out, let go it winches up, not over them nothing, low and steady it
+clips on and winches in; the harness in the water; a patient who runs out of time dies with no pay; the charter: the
+places (pads, lawns, islands), the booking, boarding, the fare and a tip for a smooth flight, no tip after a hard landing.
+test/flight.test.js, test/phones.test.js, test/honestliving.test.js, test/mapwindow.test.js, test/perf.test.js.
