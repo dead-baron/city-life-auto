@@ -38,6 +38,12 @@ const ACTION_HINT = `${KB.action} (${TOUCH.action} on touch)`;
 const COMMUTERS = ['casual', 'casual', 'executive', 'socialite', 'senior', 'athlete', 'construction', 'hustler'];
 
 const mod = (a, n) => ((a % n) + n) % n;
+// World v3's main line (map.rails: each service both ways, its own loop - shared/world3-rail.js): a train runs its
+// loop (t.r); the signals (below: `signals`) keep the loops' trains apart where they share track or cross. Today's
+// world has one loop (world.rails null): everything as it was.
+const railOf = (world, t) => (world.rails ? world.rails[t.r] : world.map.rail);
+const timingOf = (world, t) => (world.rails ? world.railTimings[t.r] : world.railTiming);
+const off0 = (t) => !!t.r;   // (a train off the first loop: what reads the first loop's stations and crossings skips it)
 const half = (c) => c.def.L / 2 - 12;
 // how far forward you can walk in a car: the front car's cab is closed off behind its bulkhead
 const fwdMax = (c) => (c.kind === 'loco' ? CAB_OX - 12 : half(c));
@@ -53,6 +59,8 @@ function anyCoach(t) {
 export function init(world) {
   world.trains = [];
   world.xing = [];
+  world.rails = null;
+  if (world.map.rails && world.map.rails.length > 1) { initLoops(world); return; }
   const rail = world.map.rail;
   if (!rail || !rail.stations || !rail.stations.length) return;   // (no railway: World v3's isn't laid yet)
   const sts = rail.stations;
@@ -88,6 +96,118 @@ export function init(world) {
     placeCars(world, t);
   }
   world.xing = rail.crossings.map(() => ({ down: false, eta: 99, closure: 0, broken: [0, 0] }));
+}
+
+// ---- World v3's main line: many loops, the signals -----------------------------------------------
+// Each loop (a service one way) gets LOOP_TRAINS trains, spread round it at its stations. The loops share track (two
+// services the same way along a segment) and cross at the junctions, so a train runs on the signals' word: the
+// track is cut into 32 px cells (a train's footprint: its track and 24 px either side, so the two tracks of a double
+// track, 96 px apart, never share a cell), and a train holds the cells under it and ahead of it as far as it could
+// need to stop. It moves only onto cells it holds, so no two trains are ever on the same cell: none runs into
+// another, none meets one head on. Where loops cross or part (a diamond, a turnout: cells another loop's track
+// passes on another heading - a junction's `box`), a train takes the whole box and a train's length of clear track
+// beyond it, or none of it: it never stops in a junction, so trains at a junction can't hold each other up for good.
+const LOOP_TRAINS = 2;
+function initLoops(world) {
+  const rails = world.map.rails.filter((r) => r.stations && r.stations.length);
+  if (!rails.length) return;
+  world.rails = rails;
+  world.railTimings = rails.map((r) => buildTiming(r));
+  world.railTiming = world.railTimings[0];
+  world.sig = { own: new Map(), cells: rails.map(cellsOfRail), box: null };
+  world.sig.box = boxesOf(rails, world.sig.cells);
+  let ti = 0;
+  rails.forEach((rail, r) => {
+    const sts = rail.stations, T = world.railTimings[r];
+    for (let k = 0; k < LOOP_TRAINS; k++) {
+      const cons = consistFor(ti);
+      const cars = [];
+      let off = 0;
+      for (const kind of cons) { const def = TRAIN_CARS[CAR_IDX[kind]]; cars.push({ kind, def, off: off + def.L / 2 }); off += def.L + GAP; }
+      const len = off - GAP;
+      // at a station of its own k/LOOP_TRAINS of the way round, or the next one free (another loop's train may stand there)
+      let placed = null;
+      for (let tries = 0; tries < sts.length && !placed; tries++) {
+        const si = (Math.floor(k * sts.length / LOOP_TRAINS) + tries) % sts.length;
+        const t = { i: ti, r, cars, len, s: mod(sts[si].s + len / 2, rail.len), v: 0, acc: 0, stop: si, dwellUntil: world.time + 1 + k * TRAIN_HEADWAY_S / 2 + r * 3,
+          riders: new Set(), boarding: new Set(), mail: cons.indexOf('mail'), boxReadyAt: 0, hornUntil: 0, hornedFor: -1, hadPlayer: false, held: null };
+        if (signals(world, t, true) !== null) placed = t;
+      }
+      if (!placed) continue;
+      cars.forEach((c, ci) => { const e = world.add({ id: world.newId(), kind: K.TRAIN, x: 0, y: 0, a: 0, vx: 0, vy: 0, train: ti, car: ci, carType: CAR_IDX[c.kind], sub: false, cx: -1, cy: -1 }); c.id = e.id; });
+      world.trains.push(placed);
+      placeCars(world, placed);
+      ti++;
+      void T;
+    }
+  });
+  world.railLap = world.railTimings[0].reduce((a, q) => a + q.total + TRAIN_DWELL_S, 0);
+  world.xing = rails[0].crossings.map(() => ({ down: false, eta: 99, closure: 0, broken: [0, 0] }));
+}
+const CELL = 32, FOOT = [-24, 0, 24];
+function cellsOfRail(rail) {
+  const P = rail.pts, n = P.length, out = new Int32Array(n * 3);
+  for (let k = 0; k < n; k++) {
+    const p = P[k], q = P[(k + 1) % n], dx = q.x - p.x, dy = q.y - p.y, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
+    for (let j = 0; j < 3; j++) out[k * 3 + j] = Math.floor((p.y + ny * FOOT[j]) / CELL) * 100000 + Math.floor((p.x + nx * FOOT[j]) / CELL);
+  }
+  return out;
+}
+// A loop's junction points: where another loop's track shares its cells on another heading or a few px aside (a
+// diamond, a turnout) - not where two loops run the same track the same way.
+function boxesOf(rails, cells) {
+  const byCell = new Map();
+  rails.forEach((rail, r) => { const C = cells[r]; for (let k = 0; k < rail.pts.length; k++) for (let j = 0; j < 3; j++) { const c = C[k * 3 + j]; let a = byCell.get(c); if (!a) byCell.set(c, a = []); a.push(r, k); } });
+  const dir = (P, k) => { const p = P[k], q = P[(k + 1) % P.length], l = Math.hypot(q.x - p.x, q.y - p.y) || 1; return [(q.x - p.x) / l, (q.y - p.y) / l]; };
+  return rails.map((rail, r) => {
+    const P = rail.pts, n = P.length, C = cells[r], box = new Uint8Array(n);
+    for (let k = 0; k < n; k++) {
+      const [ux, uy] = dir(P, k);
+      for (let j = 0; j < 3 && !box[k]; j++) {
+        const a = byCell.get(C[k * 3 + j]);
+        for (let m = 0; m < a.length && !box[k]; m += 2) {
+          if (a[m] === r) continue;
+          const Q = rails[a[m]].pts, q = Q[a[m + 1]], [vx, vy] = dir(Q, a[m + 1]);
+          const side = Math.abs((q.x - P[k].x) * -uy + (q.y - P[k].y) * ux);
+          if (ux * vx + uy * vy < 0.995 || side > 10) box[k] = 1;
+        }
+      }
+    }
+    return box;
+  });
+}
+// The signals for train t: take the cells it may run onto; returns the gap for drive() (Infinity: clear ahead).
+// At its placing (`place`): null if the cells under it are another train's.
+function signals(world, t, place = false) {
+  const rail = railOf(world, t), P = rail.pts, n = P.length, S = world.sig, own = S.own, C = S.cells[t.r], box = S.box[t.r];
+  const free = (k) => { for (let j = 0; j < 3; j++) { const o = own.get(C[k * 3 + j]); if (o !== undefined && o !== t.i) return false; } return true; };
+  const dist = (k) => mod(P[k].s - t.s, rail.len);
+  const want = [];
+  const iNose = railAt(rail, t.s).i;
+  for (let k = railAt(rail, t.s - t.len - 24).i, g = 0; g < n; k = (k + 1) % n, g++) { want.push(k); if (k === iNose) break; }
+  if (place && !want.every(free)) return null;
+  const horizon = t.v * t.v / (2 * TRAIN_BRAKE) + HEADWAY_PX + 160;
+  let gap = Infinity, k = (iNose + 1) % n;
+  for (let g = 0; g < n && dist(k) < horizon; g++) {
+    if (!box[k]) { if (!free(k)) { gap = dist(k); break; } want.push(k); k = (k + 1) % n; continue; }
+    // a junction: all of it and a train's length of clear track beyond, or none of it
+    const run = [];
+    let j = k, last = k;
+    for (let h = 0; h < n; h++, j = (j + 1) % n) {
+      run.push(j);
+      if (box[j]) last = j;
+      else if (mod(P[j].s - P[last].s, rail.len) >= t.len + 64) break;
+    }
+    if (!run.every(free)) { gap = dist(k); break; }
+    for (const q of run) want.push(q);
+    k = (j + 1) % n;
+  }
+  const hold = new Set();
+  for (const q of want) for (let j = 0; j < 3; j++) hold.add(C[q * 3 + j]);
+  if (t.held) for (const c of t.held) if (!hold.has(c) && own.get(c) === t.i) own.delete(c);
+  for (const c of hold) own.set(c, t.i);
+  t.held = hold;
+  return gap === Infinity ? Infinity : Math.max(0, gap - 64) + HEADWAY_PX;
 }
 
 // ---- driving ----------------------------------------------------------------------------------
@@ -154,7 +274,7 @@ export function update(world, dt) {
 }
 
 function stepTrain(world, t, dt) {
-  const rail = world.map.rail, sts = rail.stations, now = world.time;
+  const rail = railOf(world, t), sts = rail.stations, now = world.time;
   if (t.dwellUntil) {
     t.v = 0;
     if (now >= t.dwellUntil) { t.dwellUntil = 0; t.stop = (t.stop + 1) % sts.length; t.hornUntil = now + 0.9; departed(world, t); }
@@ -163,7 +283,8 @@ function stepTrain(world, t, dt) {
   const target = sts[t.stop].s + t.len / 2;
   const d = mod(target - t.s, rail.len);
   let gap = Infinity; // to the back of the nearest train ahead
-  for (const u of world.trains) if (u !== t) gap = Math.min(gap, mod(u.s - u.len - t.s, rail.len));
+  if (world.rails) gap = signals(world, t);   // (World v3: the signals - the track ahead that's clear)
+  else for (const u of world.trains) if (u !== t) gap = Math.min(gap, mod(u.s - u.len - t.s, rail.len));
   const step = drive(t, d, gap, dt);
   t.s = mod(t.s + step, rail.len);
   if (d - step < 1.5) { t.s = mod(target, rail.len); t.v = 0; t.acc = 0; t.braking = false; t.dwellUntil = now + TRAIN_DWELL_S; arrived(world, t); }
@@ -176,7 +297,7 @@ function carPose(rail, t, c) {
 }
 
 function placeCars(world, t) {
-  const rail = world.map.rail, now = world.time;
+  const rail = railOf(world, t), now = world.time;
   const lit = world.clock.dark > 0.3;
   for (const c of t.cars) {
     const e = world.get(c.id);
@@ -317,13 +438,13 @@ function doorPoint(world, t, ci, side, out) {
   const [x, y] = localToWorld(e.x, e.y, e.a, 0, side * (t.cars[ci].def.W / 2 + out)); // doors are mid-car
   return { x, y };
 }
-const stationAt = (world, t) => (t.dwellUntil ? world.map.rail.stations[t.stop] : null);
+const stationAt = (world, t) => (t.dwellUntil ? railOf(world, t).stations[t.stop] : null);
 // Standing anywhere along station st's platform (it follows the track, as long as a train).
-export function onPlatformOf(world, st, x, y) {
+export function onPlatformOf(world, st, x, y, rail = world.map.rail) {
   if (Math.abs(x - st.x) > st.half + 200 || Math.abs(y - st.y) > st.half + 200) return false;
   const mid = (st.inner + st.outer) / 2, reach = (st.outer - st.inner) / 2 + 40;
   for (let d = -st.half; d <= st.half; d += 24) {
-    const q = railAt(world.map.rail, st.s + d);
+    const q = railAt(rail, st.s + d);
     if (Math.hypot(q.x - Math.sin(q.a) * st.side * mid - x, q.y + Math.cos(q.a) * st.side * mid - y) < reach) return true;
   }
   return false;
@@ -445,7 +566,7 @@ function playerNear(world, x, y, r) { for (const p of world.players.values()) if
 function playerAboard(world, t) { for (const id of t.riders) { const q = world.get(id); if (q && q.player) return true; } return false; }
 
 function arrived(world, t) {
-  const st = world.map.rail.stations[t.stop];
+  const st = railOf(world, t).stations[t.stop];
   callWaiting(world, t, t.stop);
   const loco = world.get(t.cars[0].id);
   world.emit(loco.x, loco.y, { e: 'trainhorn', x: loco.x, y: loco.y, s: 1 });
@@ -510,7 +631,7 @@ function departed(world, t) {
   t.boarding.clear();
 }
 
-function pickDest(world, t) { const n = world.map.rail.stations.length; return (t.stop + 1 + Math.floor(rng() * (n - 1))) % n; }
+function pickDest(world, t) { const n = railOf(world, t).stations.length; return (t.stop + 1 + Math.floor(rng() * (n - 1))) % n; }
 
 // Commuters on the platform walk to the nearest door and step aboard.
 function stepBoarding(world, t, dt) {
@@ -617,6 +738,7 @@ function waitSpot(world, st, n = 0) {
 }
 // A train has pulled in at station si: whoever is waiting there gets on.
 function callWaiting(world, t, si) {
+  if (off0(t)) return;   // (the waiting crowds are the first loop's stations')
   const st = world.map.rail.stations[si];
   for (const id of (world.waiting && world.waiting.get(si)) || []) {
     const q = world.get(id);
@@ -668,7 +790,7 @@ function stepStairs(world, dt) {
         continue;
       }
       const t = world.trains[s.ride.t];
-      const st = t && t.dwellUntil ? world.map.rail.stations[t.stop] : null;
+      const st = t && t.dwellUntil ? railOf(world, t).stations[t.stop] : null;
       const spot = st && st.kiosk ? freeSpot(world, t, s.ride.c, true) : null;
       if (spot) { board(world, q, t, s.ride.c, spot.ox, spot.oy, 0); q.onTrain.seat = spot.seat; q.onTrain.dest = pickDest(world, t); }
       else despawnNpc(world, q); // missed it: down on the platform, waiting for the next
@@ -715,6 +837,7 @@ export function railThreat(world, x, y, lookS = 4.5, standing = false) {
   if (Math.abs(off) > DANGER_PX + 16) return null;
   const now = world.time;
   for (const t of world.trains) {
+    if (off0(t)) continue;
     const wait = t.dwellUntil ? t.dwellUntil - now : 0;
     const over = mod(t.s - p.s, rail.len) < t.len + 30;           // the train is (or is about to be) right here
     const ahead = mod(p.s - t.s, rail.len);
@@ -742,6 +865,7 @@ export function railBlocked(world, x1, y1, x2, y2) {
     prev = sg;
     if (!into) continue;
     for (const t of world.trains) {
+      if (off0(t)) continue;
       const wait = t.dwellUntil ? t.dwellUntil - now : 0;
       if (mod(t.s - p.s, rail.len) < t.len + 30 || (mod(p.s - t.s, rail.len) < Math.max(320, t.v * 4.5) && wait < 3)) return true;
     }
@@ -876,6 +1000,7 @@ function updateCrossings(world) {
     const st = world.xing[i];
     let down = false, eta = 99;
     for (const t of world.trains) {
+      if (off0(t)) continue;
       const ahead = mod(c.s - t.s, rail.len), behind = mod(t.s - c.s, rail.len);
       if (behind < t.len + 30) { down = true; eta = 0; continue; }
       if (ahead < CROSSING_WARN_PX) {
@@ -913,7 +1038,7 @@ function updateCrossings(world) {
 export function crossingStates(world) { return (world.xing || []).map((s) => ({ d: s.down ? 1 : 0, b: s.broken.map((b) => (b ? 1 : 0)) })); }
 
 function hornForCrossings(world, t) {
-  if (t.v < 80) return;
+  if (t.v < 80 || off0(t)) return;
   const rail = world.map.rail;
   rail.crossings.forEach((c, i) => {
     const ahead = mod(c.s - t.s, rail.len);
@@ -1028,7 +1153,7 @@ export function interaction(world, p) {
       continue;
     }
     // anywhere on the platform counts: you walk to the nearest open door
-    const onPlatform = onPlatformOf(world, st, ped.x, ped.y);
+    const onPlatform = onPlatformOf(world, st, ped.x, ped.y, railOf(world, t));
     let best = -1, bd = onPlatform ? Infinity : 140;
     for (let ci = 0; ci < t.cars.length; ci++) {
       if (ci === t.mail) continue;
@@ -1036,7 +1161,7 @@ export function interaction(world, p) {
       const dd = Math.hypot(ped.x - d.x, ped.y - d.y);
       if (dd < bd) { bd = dd; best = ci; }
     }
-    if (best >= 0) return { label: `Board the train - next stop ${world.map.rail.stations[(t.stop + 1) % world.map.rail.stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
+    if (best >= 0) return { label: `Board the train - next stop ${railOf(world, t).stations[(t.stop + 1) % railOf(world, t).stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
   }
   // at a subway entrance with no train in: the countdown, and where to wait
   const sts = world.map.rail.stations;
@@ -1086,7 +1211,7 @@ function boardAtStation(world, ped, t, ci) {
   if (!t.dwellUntil) return;
   const spot = freeSpot(world, t, ci, false) || { ox: 0, oy: 0 };
   board(world, ped, t, ci, spot.ox, spot.oy, 0);
-  if (ped.player) world.notify(ped.player, `All aboard! Next stop ${world.map.rail.stations[(t.stop + 1) % world.map.rail.stations.length].name}. Walk through the cars; F gets you off.`, 'good');
+  if (ped.player) world.notify(ped.player, `All aboard! Next stop ${railOf(world, t).stations[(t.stop + 1) % railOf(world, t).stations.length].name}. Walk through the cars; F gets you off.`, 'good');
 }
 
 export function getOff(world, p) {
@@ -1139,9 +1264,9 @@ function stepCracking(world) {
 }
 
 export function onRuralRun(world, t) {
-  const r = world.map.rail.rural;
+  const r = railOf(world, t).rural;
   if (!r) return false;
-  const mid = mod(t.s - t.len / 2, world.map.rail.len);
+  const mid = mod(t.s - t.len / 2, railOf(world, t).len);
   return mid > r.s0 && mid < r.s1;
 }
 
@@ -1222,7 +1347,7 @@ function updateJobs(world) {
 // ---- HUD + station boards -----------------------------------------------------------------------
 // Seconds until train t pulls in at station si (from the precomputed run times).
 function etaTo(world, t, si) {
-  const rail = world.map.rail, sts = rail.stations, n = sts.length, T = world.railTiming, now = world.time;
+  const rail = railOf(world, t), sts = rail.stations, n = sts.length, T = timingOf(world, t), now = world.time;
   if (t.dwellUntil && t.stop === si) return 0;
   let eta, k;
   if (t.dwellUntil) { eta = Math.max(0, t.dwellUntil - now) + T[t.stop].total; k = (t.stop + 1) % n; }
@@ -1245,7 +1370,7 @@ export function callTrain(world, x, y) {
   sts.forEach((st, i) => { const d = Math.hypot(st.platform.x - x, st.platform.y - y); if (d < bd) { bd = d; si = i; } });
   const st = sts[si];
   let t = null, best = Infinity;
-  for (const u of world.trains) { const d = mod(st.s + u.len / 2 - u.s, rail.len); if (d < best) { best = d; t = u; } }
+  for (const u of world.trains) { if (off0(u)) continue; const d = mod(st.s + u.len / 2 - u.s, rail.len); if (d < best) { best = d; t = u; } }
   if (!t) return null;
   t.s = mod(st.s + t.len / 2, rail.len); t.v = 0; t.acc = 0; t.braking = false; t.stop = si; t.dwellUntil = world.time + TRAIN_DWELL_S * 3;
   placeCars(world, t);
@@ -1256,7 +1381,7 @@ export function callTrain(world, x, y) {
 export function nextTrainIn(world, si) {
   if (!world.trains || !world.trains.length) return Infinity;
   let best = Infinity;
-  for (const t of world.trains) best = Math.min(best, etaTo(world, t, si));
+  for (const t of world.trains) if (!off0(t)) best = Math.min(best, etaTo(world, t, si));
   return best;
 }
 
@@ -1265,14 +1390,14 @@ export function timetable(world) {
   if (!world.trains || !world.trains.length) return [];
   return world.map.rail.stations.map((_, si) => {
     let best = Infinity;
-    for (const t of world.trains) best = Math.min(best, etaTo(world, t, si));
+    for (const t of world.trains) if (!off0(t)) best = Math.min(best, etaTo(world, t, si));
     return Math.round(best);
   });
 }
 
 export function stationBoard(world, poi) {
   const si = poi.station, sts = world.map.rail.stations;
-  const lines = world.trains.map((t) => {
+  const lines = world.trains.filter((t) => !off0(t)).map((t) => {
     const eta = etaTo(world, t, si);
     return { eta, text: `${t.mail >= 0 ? 'Mail train' : 'Commuter'}: ${eta < 1 ? 'AT THE PLATFORM - board now' : `${Math.round(eta)}s`}` };
   }).sort((a, b) => a.eta - b.eta).slice(0, 3).map((q) => q.text);
@@ -1283,7 +1408,7 @@ export function stationBoard(world, poi) {
 export function meInfo(world, p) {
   const ped = p.ped;
   if (!ped || !ped.onTrain) return null;
-  const t = trainOf(world, ped), sts = world.map.rail.stations;
+  const t = trainOf(world, ped), sts = railOf(world, t).stations;
   const e = world.get(t.cars[ped.onTrain.c].id);
   const next = t.dwellUntil ? sts[t.stop] : sts[t.stop];
   return {
