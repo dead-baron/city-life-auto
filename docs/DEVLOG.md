@@ -7553,3 +7553,39 @@ hook gets `removeProps`), client/art2/props-road.js (`stationHouse`, `lifeguardT
 Tests: test/world3beach.test.js (new; one world build: the beach towns' streets on the network, their buildings and
 density, the beach, promenade, car parks and lifeguard towers; no tree on a platform or over the track at a station;
 every station's house on open ground).
+
+## 2026-10-11 · World v3: the towns laid out as towns; Northshore's beach towns sparser
+
+The owner looked at the first mainland towns (8.13) and Northshore's beach towns (8.14) and found pieces of city: "a
+street grid, more asphalt than lots, dead ends, city buildings (brick shops, apartment blocks, car parks)" - make them
+towns: a main street along the arterial with a few side streets off it, lots fronting it, houses thinning into the
+countryside, few dead ends; Sandpiper Bay along its beach with a boardwalk and a pier; a style per town; the beach
+towns "less dense".
+- **The layout** (shared/world3-towns.js): each town's main street is the arterial through it, pulled straight east-west
+  across the town and eased back onto its course beyond (Timber Road, the Mine Road, Sandpiper Drive; Willow Road
+  straightened north-south through Willow Crossing's hub); behind the lots on each side a loop of lane off the main
+  street and back onto it, two rows of lots deep, a cross street or a lane closing onto the other arterial, and one
+  lane out into the country ending in a turnaround - one dead end a town (8-12 before). The town's ground is wide along
+  the main street and narrow along the lanes, so the houses thin out into the countryside.
+- **Sandpiper Bay on its beach:** moved down to the sand, a loop of lane along above the beach, the boardwalk (planks
+  along the top of the sand) and the pier, three planks wide, out over the bay.
+- **The towns' own styles** (`TOWN_STYLES`, handed to the generator as `opts.styles` by district - three small reads in
+  map.js, only the v3 build passes it): houses, cabins, workshops, the diner and the store, yards and gardens between,
+  no brick shop rows, apartment blocks or car parks; Northshore's beach towns (54) sparser: bigger lots, gardens, low
+  roofs - 307 buildings covering 15.2% (358, 16.7% before; Metro City 19.8%).
+- **The looks:** art v2 draws a town's houses and shop rows in wood siding - Timber Bend's dark timber, Willow
+  Crossing's white and cream clapboard, the beach towns' pastel boards - one or two storeys, shingled pitched roofs on
+  the small ones, false fronts on the wider shopfronts, the motel, clinic and sheriff two storeys at most; the classic
+  renderer paints their facades in the same woods.
+- Not done: the towns' own prefabs (the wooden shopfronts with porches, the sawmill and log yard, the lodge, the white
+  church, the grain elevator and silos, the feed store, the co-op's loading dock, the surf shop, cottages, beach houses
+  on stilts) - docs/WORLD-V3.md 8.13.1's "what's left". Nothing live changes: the world hash stays 6b6e16fdef9f; the
+  art hash changes.
+
+Files: shared/world3-towns.js (`TOWNS3` laid out again, `pull`, `townsFront`, `TOWN_STYLES`), shared/world3-world.js
+(the calls), shared/map.js (`OPTS.styles`), client/art2/game/statics.js (`TOWN_LOOK`), client/render/buildings.js
+(`TOWN_WALLS`), test/world3towns.test.js, docs/WORLD-V3.md 8.13.1, docs/world-v3-town-*.png, docs/world-v3-world-r5-3.png.
+
+Tests: test/world3towns.test.js (one world build: each town's side streets on the network, at most two dead ends, the
+main street straight across the town, lots fronting it, less road than building, the boardwalk and the pier; 8.13's
+basics and places), test/world3beach.test.js (the beach towns less dense than the city).

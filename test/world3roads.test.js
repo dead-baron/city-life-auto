@@ -9,6 +9,7 @@ import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { HIGHWAYS, ARTERIALS, INTERCHANGES, CLOSURES, RADIUS, linePath, pointAt, nearestOnPath } from '../shared/world3-skeleton.js';
 import { prepare } from '../tools/world3-build.mjs';
+import { pulledAt } from '../shared/world3-towns.js';
 
 test('World v3: the skeleton\'s roads - on the ground, the deck, a bridge or a tunnel; one network; the interchanges join; the closures closed', { timeout: 300000 }, () => {
   const prep = prepare();
@@ -46,7 +47,7 @@ test('World v3: the skeleton\'s roads - on the ground, the deck, a bridge or a t
   for (const A of ARTERIALS) {
     if (/^Canal /.test(A.name)) continue;
     const P = linePath(A, RADIUS.art);
-    for (let s = 0; s <= P.length; s += 4) { const [x, y] = pointAt(P, s); if (byBore(x, y) || airport(x, y)) continue; pts++; if (!onRoad(x, y)) miss.push(`${A.name} at ${Math.round(x)}, ${Math.round(y)}`); }
+    for (let s = 0; s <= P.length; s += 4) { const [x, y] = pointAt(P, s); if (byBore(x, y) || airport(x, y) || pulledAt(A.name, x, y)) continue; pts++; if (!onRoad(x, y)) miss.push(`${A.name} at ${Math.round(x)}, ${Math.round(y)}`); }   // (pulledAt: a town's main street, its own course - 8.13.1)
   }
   check(pts > 10000, `${pts} points checked`);
   check(!miss.length, `${miss.length} of ${pts} skeleton points off the road: ${miss.slice(0, 10).join('; ')}`);

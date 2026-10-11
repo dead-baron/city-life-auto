@@ -86,7 +86,7 @@ export const TOWN_SPECIALS = [
 // blocks and car parks; few plain roofs, yards and gardens between. Northshore's beach towns (54, 8.14) take the beach
 // town's, sparser still: bigger lots, gardens for the gaps, low roofs - "less dense" (the owner, 12:50).
 export const TOWN_STYLES = {
-  57: { minW: 12, minH: 12, gen: { house3: 2, house7: 2, house1: 1, diner: 0.7, repair: 1.2, quickstop: 1.2, conv: 0.8, liquor: 0.6, rest1: 0.6, warehouse: 0.5 }, filler: 'yard', roof: 0.15, roofKinds: ['metal', 'tar'] },
+  57: { minW: 12, minH: 12, gen: { house3: 3, house7: 3, house1: 1.5, diner: 0.6, repair: 0.9, quickstop: 0.7, conv: 0.5, liquor: 0.4, rest1: 0.5 }, filler: 'yard', roof: 0.1, roofKinds: ['metal', 'tar'] },
   58: { minW: 12, minH: 12, gen: { house1: 2, house3: 2, house8: 1.2, house7: 1, conv: 0.8, repair: 1, quickstop: 1, diner: 0.6, rest1: 0.6 }, filler: 'yard', roof: 0.12, roofKinds: ['metal', 'tile'] },
   59: { minW: 14, minH: 14, gen: { house1: 2, house2: 2, house5: 1, house9: 1.5, beachbar: 1, rest2: 1.2, diner: 0.5, conv: 0.4 }, filler: 'park', roof: 0.05, roofKinds: ['tile'] },
   54: { minW: 16, minH: 16, gen: { house1: 3, house2: 3, house5: 1.5, house9: 2, rest2: 0.7, beachbar: 0.7, conv: 0.3, diner: 0.3 }, filler: 'park', roof: 0.04, roofKinds: ['tile'] },
@@ -184,6 +184,17 @@ export function townsFront(m) {
     out.push({ key: t.key, boardwalk: walk, pier });
   }
   return out;
+}
+
+// Whether an arterial's skeleton point (tiles) is where a town pulls it off its course (its main street, its pulls and
+// their ramps): the roads test's check of the skeleton's course passes these by.
+export function pulledAt(name, x, y) {
+  for (const t of TOWNS3) for (const [n, axis, , a, b, ramp] of [[t.main.line, 'y', 0, t.main.a, t.main.b, t.main.ramp], ...t.pulls]) {
+    if (n !== name) continue;
+    const u = axis === 'y' ? x : y, [x0, y0, x1, y1] = t.box, r = ramp + 8;
+    if (u > a - ramp - 1 && u < b + ramp + 1 && x > x0 - r && x < x1 + r && y > y0 - r && y < y1 + r) return true;
+  }
+  return false;
 }
 
 // The streets: each town's main street (the arterial through it, pulled straight - the others through it too) and

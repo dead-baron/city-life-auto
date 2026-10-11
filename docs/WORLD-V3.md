@@ -2862,8 +2862,9 @@ wrong:
   a beachfront drive), its blocks facing the sea.
 
 **What's left** (in order):
-1. The towns' layout (above): a main street and side streets instead of a grid, laid on the arterial's axis; Sandpiper
-   Bay along its beach with the boardwalk and the pier.
+1. ~~The towns' layout (above): a main street and side streets instead of a grid, laid on the arterial's axis; Sandpiper
+   Bay along its beach with the boardwalk and the pier.~~ Done in 8.13.1 (the layout, the towns' styles and wood looks;
+   the new prefabs not yet).
 2. **The stations:** Timber Bend's main-line station is 125 tiles south of the town (8.10's, not joined to the town's
    streets: no road from the town to it was laid), Sandpiper Bay's 488 tiles away at the Sandpiper Interchange, Willow
    Crossing has none (for the owner, 8.11: a station in the town, or the town by the station).
@@ -2931,7 +2932,8 @@ station house and the lifeguard tower are new art).
 street, 14 ends carried on to a road; 358 buildings in the beach towns - 49 houses, 55 cafes, restaurants, diners and
 beach bars, 9 hotels, 9 corner stores, a small tower, the rest low roofs - covering 16.7% of the district's land (its
 beach included; Metro City's built districts 19.8%, Northshore's town 20.4% in this build: less dense, if not by much -
-wider spacing makes bigger blocks, which the generator fills as full); 3,439 tiles of promenade, 5 car parks, 6
+wider spacing makes bigger blocks, which the generator fills as full - 8.13.1 gives them a sparser style of their own:
+307 buildings, 15.2%); 3,439 tiles of promenade, 5 car parks, 6
 lifeguard towers. Along the main line 392 trees cleared, 5 props off platforms, 7 off station houses.
 
 **The pictures** (through the chunk bake): `docs/world-v3-world-r5-3.png` (`tools/world3-world-map.mjs --region 5,3`:
@@ -2958,3 +2960,97 @@ along; the station house with its canopy on Westport Junction's forecourt. What 
 some over the line) on the network with the Shore Road; their buildings (houses, cafes and bars), less dense than
 Northshore; the beach in front all along, the promenade, the car parks, the lifeguard towers on the sand; no tree on a
 platform or with its crown over the track at a station; every station's house on open ground; the art v2 models.
+
+### 8.13.1 The towns laid out as towns; Northshore's beach towns sparser (2026-10-11, H37)
+
+8.13's "what looks wrong": the first mainland towns and Northshore's beach towns (8.14) read as pieces of city - a
+street grid, more asphalt than lots, dead ends on every edge, the arterials cutting the grid on the slant, city
+buildings (brick shops, apartment blocks, car parks). The owner asked for towns: a main street along the arterial with a
+few side streets off it, lots fronting it, houses thinning into the countryside, few dead ends; Sandpiper Bay along its
+beach with a boardwalk and a pier; each town its own style; the beach towns less dense than the city. Nothing live
+changes: the world hash stays `6b6e16fdef9f`; the art hash changes (the towns' wood looks).
+
+**The layout** (`shared/world3-towns.js`, `TOWNS3`; the same calls from `shared/world3-world.js`):
+- **The main street is the arterial through the town, pulled straight** (`main`: `pull(line, axis, at, from, to, ramp)`
+  in `layTowns3`): its points across the town's stretch are set on one row, east-west, and eased back onto its own
+  course over the ramp each side (resampled a tile apart there); the other arterials through a town are straightened
+  onto its axes too (`pulls`: Willow Road and Valley Road North north-south through Willow Crossing's hub, Valley Road
+  onto its row). So nothing cuts a town's blocks on the slant, and the town's lots front its main street (Timber Road,
+  the Mine Road, Sandpiper Drive), the bus stops on it.
+- **Side streets as loops** (`streets`: tile polylines, `st`): a lane off the main street round the back of the lots
+  and back onto it, either side (Mill Street and Sawyer Street at Timber Bend, Grange Street and Church Street at Willow
+  Crossing, Shell Street and Pier Street at Sandpiper Bay), 30 tiles back - two rows of lots deep: the shops fronting the
+  main street, the houses behind on the lane; a cross street through the middle (Cedar Street) or one closing a loop
+  onto the other arterial (River Street onto Willow Road; Gull Lane). Their ends stop on the main street or another
+  street (roads.js snaps an end onto the line it stops on: a T junction), so there is no dead end but **one lane out
+  into the country** each (Logger Lane, Orchard Lane, Dune Street) ending in the generator's turnaround.
+- **The ground thins out** (`ground`: the union of tile boxes, painted by `paintTowns3`): wide along the main street
+  (the loops and a row beyond them), narrow along the lane out and Willow Road's south arm - houses along them into
+  the countryside, nothing built beyond; never the beach's sand (`TERRAIN3.SAND`).
+- **Sandpiper Bay on its beach:** its box moved south-east down to the sand; Pier Street's loop runs along above the
+  beach, its houses' backs to the sand; **the boardwalk** - three tiles of planks (`T.DOCK`) along the top of the sand
+  below the town in each column, following the diagonal shore - and **the pier**, three tiles wide, straight out from
+  the boardwalk over the sand and 34 tiles over the sea (`townsFront(m)`, from the `rails` hook as world3-beach.js
+  `beachFront`; reserved as the promenade is, so nothing is dressed on them; `m.world3.towns.front`).
+
+**The buildings** (`TOWN_STYLES`, the generator's `STYLE` form by district, handed in as `opts.styles` - map.js reads
+`OPTS.styles[d]` before `STYLE[style]` in three places: the block split, `fillRow`, `fillRowV2`; only the v3 build
+passes it): no brick shop rows, apartment blocks or car parks - Timber Bend (57) houses, cabins and workshops (house3,
+house7, repair, the quick stop, a liquor store, a diner), yards between, metal and tar roofs; Willow Crossing (58)
+farmhouses and the store, the repair shop, the diner, metal and tile roofs; Sandpiper Bay (59) beach houses, cafes and
+the beach bar with gardens between (`park` filler, not the plaza's paving), tile roofs; few plain roofs anywhere.
+**The art:** art v2 (`client/art2/game/statics.js`, `TOWN_LOOK` by district) draws a town's houses, shop rows and
+blocks in wood siding - the logging town's dark timber, the farm town's white and cream clapboard (a red barn board
+now and then), the beach towns' pastel boards - one or two storeys, a small one under a shingled gable or hip roof, a
+wider shopfront flat-roofed behind a false front (its parapet); the motel, the clinic and the sheriff two storeys at
+most. The classic renderer (`client/render/buildings.js`) paints the towns' facades in the same woods (`TOWN_WALLS`).
+
+**Northshore's beach towns less dense** (district 54, 8.14): the beach town's style, sparser still (`TOWN_STYLES[54]`:
+lots 16 tiles at least, houses three to one over cafes and bars, gardens for the gaps, almost no plain roofs).
+In the world build: 307 buildings in the beach towns (358 in 8.14's) - 50 houses, 26 cafes and restaurants, 11
+diners, 9 beach bars, 10 corner stores, a small tower - covering 15.2% of the district's land, its beach included
+(16.7% in 8.14's; Metro City's built districts 19.8%: `test/world3beach.test.js`). The region's picture:
+`docs/world-v3-world-r5-3.png` (`--region 5,3`).
+
+**What's built** (the world build, seed 1337; `test/world3towns.test.js`):
+
+| town | its ground | main street | side streets (dead ends) | buildings | fronting the main street | road / buildings (tiles) |
+|---|---|---|---|---|---|---|
+| Timber Bend | 10,422 tiles | Timber Road, row 1071 | 4 (1: Logger Lane) | 32 | 11 | 2,841 / 4,641 |
+| Willow Crossing | 14,160 tiles | the Mine Road, row 1270 | 4 (1: Orchard Lane) | 30 | 10 | 3,832 / 4,703 |
+| Sandpiper Bay | 19,912 tiles | Sandpiper Drive, row 2574 | 4 (1: Dune Street) | 45 | 20 | 3,815 / 4,177 |
+
+Sandpiper Bay's front: 480 tiles of boardwalk, 222 of pier. 8.13's grid had 7-10 lines of street and 8-12 dead ends a
+town; the basics and the planned places are all still there (the test).
+
+**The test** (`test/world3towns.test.js`, one world build): each town's side streets laid and on the one network, at
+most two dead ends; its main street (the arterial) straight on its row across the town; 16 buildings or more, 5 or more
+fronting the main street (the side toward it within 10 tiles of its row), less road than building; the boardwalk (200
+tiles or more), the pier (60 or more, 10 over the water); and 8.13's checks (the basics, the planned places, clear of
+the main line and the highways). `test/world3beach.test.js` as 8.14 (the beach towns less dense than the city);
+`test/world3roads.test.js` passes by an arterial's skeleton points where a town pulls it onto its main street
+(`pulledAt`: its own course there).
+
+**The pictures** (`node --expose-gc tools/world3-world-map.mjs --sample 0 --towns`): `docs/world-v3-town-timber.png`,
+`docs/world-v3-town-willow.png`, `docs/world-v3-town-sandpiper.png`. What looks right: each is a main street with its
+lots and two loops of lanes behind, the arterial straight through it and curving away beyond, the countryside close
+round; Sandpiper Bay's red-roofed beach houses in gardens, the boardwalk along the top of the beach and the pier out
+into the bay; Willow Crossing's shops along the Mine Road, the chapel's red roof in the north loop, the houses along
+Willow Road's south arm thinning into the fields. What looks wrong:
+- **Timber Bend still reads a little city:** its loop blocks hold the planned places, each one big flat-roofed building
+  (the clinic, the sheriff, the motel, the sawmill as the industrial prefab) in its paving; the rows at the town's ends
+  are flat roofs - from above the wood siding only shows on the south walls. The new prefabs are what's missing: the
+  wooden shopfronts with porches, the sawmill with its log yard, the lodge.
+- **Willow Crossing's corners are asphalt:** the generator's lots and the wide sidewalks where the loops meet the main
+  street; the grain elevator is the industrial prefab (no silos), the co-op the farmstead.
+- **Sandpiper Bay's boardwalk is a stair-step** on the diagonal shore (planks by columns), the pier plain planks (no
+  rails, no end); the beachfront row along Pier Street is two houses; the green between the loops and the sand east of
+  them is park (no street faces it).
+- The drives' ramps back onto their courses bend 20-25 degrees just outside the towns (Timber Road west of Timber
+  Bend, the Mine Road east of Willow Crossing).
+
+**What's left:** the towns' own prefabs (art v2 models and the classic renderer's drawing, `shared/prefab-data.js`) -
+the logging town's wooden shopfronts with porches, the sawmill and log yard, the lodge; the farm town's white church,
+grain elevator and silos, the feed store, the co-op with its loading dock; the beach town's surf shop, cottages, beach
+houses on stilts - and the planned places put in them (`TOWN_SPECIALS`); the boardwalk as a model of its own (rails,
+benches, the pier's end); the lots at the corners of Willow Crossing's loops.
