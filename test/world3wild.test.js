@@ -145,7 +145,7 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
   console.log('farm', JSON.stringify({ roads: Wd.farm, built: FB }));
   check(FB && FB.fields >= 5, `the farm's fields: ${FB?.fields}`);
   let fieldBad = 0;
-  for (let ty = fy0; ty < fy1; ty++) for (let tx = fx0; tx < fx1; tx++) {
+  for (const [rx, ry, rw, rh] of FB?.rects || []) for (let ty = ry; ty < ry + rh; ty++) for (let tx = rx; tx < rx + rw; tx++) {
     const i = ty * W + tx;
     if (m.tiles[i] !== T.FIELD) continue;
     if (!m.land[i] || m.river[i] || m.lake[i] || m.dist[i] !== FARM.region || rails.some((r) => nearestOnPath(r.path, tx, ty).d < WILD_ROOM.main - 1)) fieldBad++;

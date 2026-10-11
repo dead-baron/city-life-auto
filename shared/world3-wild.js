@@ -100,7 +100,7 @@ export const WILD_TRACKS = [
   { name: 'Mission Track', end: [4000, 878], d: D3.DESERT },
   // (H51) the ways down to the coves: from the nearest road to the top of each (the cove's own trail on down)
   { name: 'Redwood Cove Track', end: [334, 1170], d: D3.WOODS },
-  { name: 'Granite Cove Track', end: [2722, 427], d: D3.VALLEY },
+  { name: 'Granite Cove Track', end: [2722, 427], d: D3.VALLEY, reach: 420 },   // (from Kestrel Road: no road comes nearer the lake's north shore)
 ];
 // today's wild districts -> the v3 region they move to (Highland Woods, Granite Peaks; Dry Creek's farmland the valley,
 // its desert the Red Rock Desert)
@@ -297,7 +297,7 @@ function wildTracks3(lines, m, hwys, mains, hwyLines, tunnels) {
         const a = l.pts[k], b = l.pts[k + 1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / (2 * TILE)));
         for (let j = 0; j < n; j++) {
           const x = (a.x + (b.x - a.x) * (j / n)) / TILE, y = (a.y + (b.y - a.y) * (j / n)) / TILE, d = Math.hypot(x - ex, y - ey);
-          if (d > TR) continue;
+          if (d > (K.reach || TR)) continue;   // (H51: a track may reach further - reach, tiles)
           const tx = Math.floor(x), ty = Math.floor(y);
           if (tx < 0 || ty < 0 || tx >= W || ty >= H || !m.land[ty * W + tx] || m.river[ty * W + tx]) continue;
           if (hwys.some((h) => nearestOnPath(h.path, x, y).d < 14) || tunnels.some((t) => dPoly(t.pts, x, y) < 12)) continue;
@@ -377,7 +377,7 @@ function wildFarmRoads3(lines, m, hwys, mains, hwyLines, tunnels) {
 // or a town (their own districts); the co-op (the farm that takes harvests, its cargo pad), the drop site, the
 // farmhouses and cottages for sale by the County Road and the Farm Road, as today's.
 export function wildFarm3(m, rand, G) {
-  const W = m.w, out = { fields: 0, tiles: 0, coop: null, homes: [] };
+  const W = m.w, out = { fields: 0, tiles: 0, rects: [], coop: null, homes: [] };
   const mains = skeletonLines().filter((l) => l.kind === 'main');
   const nearRoad = (x, y, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const t = m.tiles[(y + dy) * W + x + dx]; if (t === T.ROAD || t === T.BRIDGE) return true; } return false; };
   for (const [fx0, fy0, fw, fh] of G.FARM_FIELDS) {
@@ -389,7 +389,7 @@ export function wildFarm3(m, rand, G) {
       if (nearRoad(x, y, 2) || mains.some((r) => nearestOnPath(r.path, x, y).d < WILD_ROOM.main)) continue;
       m.tiles[i] = T.FIELD; m.reserve[i] |= 4; n++;
     }
-    if (n > 200) { m.fields.push({ x: fx * TILE, y: fy * TILE, w: fw * TILE, h: fh * TILE }); out.fields++; }
+    if (n > 200) { m.fields.push({ x: fx * TILE, y: fy * TILE, w: fw * TILE, h: fh * TILE }); out.fields++; out.rects.push([fx, fy, fw, fh]); }
     out.tiles += n;
   }
   // the co-op beside the Farm Road, its yard to the west and its drive north to a road (today's, at the offset)
