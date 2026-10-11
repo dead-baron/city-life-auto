@@ -460,7 +460,14 @@ export class World2 {
   // the bake workers get it (each its own copy, as at the start), the grids worked out from the map are dropped; the
   // chunks baked stay (a chunk is the same art in both windows: a window keeps a region round the player)
   setMap(map) {
-    const t = performance.now();
+    const t = performance.now(), old = this.map;
+    // (a chunk baked here while the player was outside the old window - a teleport - was baked against its walls:
+    // baked again, as is one within a chunk of the old window's edge; the rest is the same art in both windows)
+    const n = CHUNK / TILE;
+    for (const k of this.chunkState.keys()) {
+      const cx = k % 1000, cy = Math.floor(k / 1000), x0 = (cx - 1) * n, y0 = (cy - 1) * n, x1 = (cx + 2) * n - 1, y1 = (cy + 2) * n - 1;
+      if (!(old && old.inside(x0, y0) && old.inside(x1, y1))) this.ver.set(k, (this.ver.get(k) || 0) + 1);
+    }
     this.map = map; this.grid = artGrid(map);
     this.lampGrid = null; this.lampG = null; this.poiG = null; this.seaK = null;
     if (this.E.setCanopy) { try { this.E.setCanopy(canopyGrid(map)); } catch (e) { console.warn('[art2] canopy', e); } }
