@@ -7008,8 +7008,7 @@ slab of warehouse roofs (the harbor style wall to wall). Now it is a container p
 (SC4-I) show it:
 
 - **The yard** (`buildContainerPort`, district 26's own pass, called where the quay is built; 216 blocks, 27 masts,
-  10 straddle carriers): the harbor style's
-  warehouse slabs in the port's rectangle are cleared - the Westport Freight row (the delivery stop and its neighbour)
+  10 straddle carriers): the harbor style's warehouse slabs in the port's rectangle are cleared - the Westport Freight row (the delivery stop and its neighbour)
   and the junkyard stay - and the ground behind the dock is paved. From the dock back: a 6-tile apron under the cranes'
   back reach, then pairs of 5 x 8-tile blocks of container stacks (three rows of 40 ft boxes, two to four high, every
   box its own colour, an invented line's pale mark on some doors) with a tile between the pair and a 4-tile truck lane
@@ -7033,10 +7032,10 @@ slab of warehouse roofs (the harbor style wall to wall). Now it is a container p
   isn't district 26's: the world hash stays `6b6e16fdef9f`).
 - **The picture** (`docs/world-v3-westport.png`): the port reads as a container terminal - the stacks in rows, the
   lanes, the red cranes along the quay, the ship alongside. What's still wrong: the quay is the dock's wooden planks (a
-  container quay is concrete), the ship is small beside a 344-tile quay (90 tiles; one berth of
-  several), the corner past the quay's curve at the north end is still the old district's grass; in the classic renderer, a boat south of a crane draws over its
-  boom (it sorts by where things stand), and a ground chunk baked before the port's module arrived lacks its rails and
-  fence until it is baked again (the module is asked for as soon as the city has a port).
+  container quay is concrete), the ship is small beside a 344-tile quay (90 tiles; one berth of several), the corner
+  past the quay's curve at the north end is still the old district's grass; in the classic renderer, a boat south of a
+  crane draws over its boom (it sorts by where things stand), and a ground chunk baked before the port's module arrived
+  lacks its rails and fence until it is baked again (the module is asked for as soon as the city has a port).
 
 The files: `shared/map.js` (`buildContainerPort`, `PORT`; one call in `buildQuays`), `client/art2/props-transit.js`,
 `client/art2/game/statics.js`, `client/render/portprops.js` (new), `client/render/tiles.js` (the port props drawn by it,
@@ -7045,7 +7044,7 @@ overhead), `client/main.js` (a prop's own `tall` keeps it in view), `test/world3
 
 Tests: `test/world3port.test.js` (new: Westport at its gulf place - the slabs gone; the blocks on the paving with a tile
 of yard round them, not overlapping, off every lane and the apron; the cranes' legs on the dock's edge and the apron,
-their booms over the water; the gate a pavement from a road with the gatehouse by it; the fence open at the gate; no solid on a road or a pavement;
-the ship on the water; Westport Freight still a delivery stop); the code budgets (`test/perf.test.js`, its first test)
+their booms over the water; the gate a pavement from a road with the gatehouse by it; the fence open at the gate; no
+solid on a road or a pavement; the ship on the water; Westport Freight still a delivery stop); the code budgets (`test/perf.test.js`, its first test)
 pass - the city's code (the generator, gzipped) is at 340.3 of its 340 KB (it rounds to 340): the next generator
 change needs the budget raised or code moved out.
