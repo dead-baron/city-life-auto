@@ -75,7 +75,7 @@ export const WILD_VIEWS = [
   { key: 'tarn', name: 'Summit Tarn, its falls and the cabin meadow', box: [850, 140, 960, 230] },
   { key: 'summit', name: 'Granite Hot Springs, The Sentinel Stones and the observatory on Summit Road', box: [470, 90, 760, 200] },
   { key: 'quarry', name: 'The Granite Quarry on Falls Pass Road', box: [1190, 390, 1320, 470] },
-  { key: 'drycreek', name: 'The oil field, The Rusty Spur and the motel on Mine Road', box: [3690, 1090, 4020, 1215] },
+  { key: 'drycreek', name: 'The oil field, The Rusty Spur, the boneyard and the balloon field by the Desert Highway', box: [3690, 1090, 4030, 1410] },
   { key: 'route9', name: 'The Route 9 stop, the solar farm and the drive-in on Route 9', box: [3760, 1420, 4230, 1590] },
 ];
 // the room kept round the skeleton's lines (tiles): the highways', the main line's and its stations' as the desert's

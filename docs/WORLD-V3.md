@@ -3678,8 +3678,8 @@ moved nature site built once at its spot on its region's ground, its landmark cl
 no road over Summit Tarn or Pine Lake), `test/world3.test.js`, `test/world3desert.test.js` (Copper Gulch's pit and
 its veins with the Granite Quarry's beside it), `test/world3roads.test.js`, `test/world3world.test.js`: all pass.
 
-Pictures (`tools/world3-world-map.mjs --towns --only pinelake,tarn,summit`; `WILD_VIEWS`, also `quarry`, `drycreek`,
-`route9`): `docs/world-v3-town-pinelake.png`, `-tarn.png`, `-summit.png`. What looks right: the stop's forecourt and
+Pictures (`tools/world3-world-map.mjs --towns --only pinelake,tarn,summit,drycreek`; `WILD_VIEWS`, also `quarry`,
+`route9`): `docs/world-v3-town-pinelake.png`, `-tarn.png`, `-summit.png`, `-drycreek.png`. What looks right: the stop's forecourt and
 diner on its spur off Timber Road with the lake and its trail north-west of it and the campground's tents by the road
 to the west, all in the dense redwoods; the hot springs' three pools, lanterns and fence on the slope above Summit Road
 with their path down to it; the observatory's dome on its lot at the end of its road; the tarn's dark water with the
@@ -3689,6 +3689,14 @@ falls and the creek running south from it. What looks wrong:
   their ground): they read as stones and a tarn on a snowfield; no trail reaches the stones (the observatory's road is
   just beyond the 40 tiles they look for one in), no road or trail reaches the tarn's cabin.
 - The radio mast is hard to make out at 1/8; the campground is small at this scale.
+- **Dry Creek's desert** (`-drycreek.png`): the boneyard's twelve planes in their fenced rows read well, the balloon field
+  is a green circle with three balloons, the oil field's tanks and shed sit at the end of their road north of Mine Road,
+  The Rusty Spur on its lot north of Mine Road west of the Desert Highway. Wrong: **8.18's dry wash winds straight
+  through the boneyard** (its gravel under the plane rows: the wash wants to keep off the moved sites, or the boneyard
+  off the wash); **the moved sites have no road in** (the boneyard, the balloon field: today's stood by today's roads -
+  each wants a track to Mine Road or the highway's frontage); The Rusty Spur stands against **a strip of redwoods**
+  between the valley and the desert (8.8's biomes leave Highland Woods' ground in the gap between their polygons at
+  x 3640-3700); the oil field's pumpjacks don't read at 1/8.
 
 **What's left** (in order): the rest of the nature sites - most of `shared/naturesites.js`' wild ones are written in
 today's coordinates and districts and look for today's roads by name, so each wants its anchor through `PXs`, its
