@@ -1734,8 +1734,8 @@ function openTutorial(chapter, then) {
 // first-time players see the tour before their first game (SKIP is always there)
 function firstPlay(go0) {
   return () => {
-    // a new player picks graphics first (the recommended preset for this device is highlighted)
-    const go = () => (gfxChosen() ? go0() : askGfx(go0));
+    // a new player plays on the device's pick (the title's graphics row shows it and changes it): kept silently
+    const go = () => { if (!gfxChosen()) applyPreset(gfx.preset === 'custom' ? getDevice().recommended : gfx.preset); go0(); };
     if (!TUTORIAL_ON || tutorialSeen()) { go(); return; }
     if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); // needs this tap's user gesture
     // ask in a popup (nothing on the title screen moves around)
@@ -1747,28 +1747,19 @@ function firstPlay(go0) {
 let tutAskGo = null;
 
 // ---- graphics: the first-run choice and the settings section ------------------------------------
-let gfxAskGo = null;
-function askGfx(go) {
-  const d = getDevice(), rec = d.recommended;
-  gfxAskGo = go;
-  $('gfx-ask-p').innerHTML = `We detected <b>${d.label}</b>${d.why.length > 1 ? ` (${d.why.slice(1).join(' · ')})` : ''} and picked <b>${PRESET_NAMES[rec]}</b> graphics as the best fit. Play with that, or choose another setting now.`;
-  const box = $('gfx-ask-opts');
-  box.innerHTML = '';
-  const DESC = { low: 'flat ground art, basic lighting - smoothest on older devices', medium: 'lighting, bloom and detailed still vegetation', high: 'living vegetation that sways and flattens, golden-hour glow, every shadow', ultra: 'high, with lusher vegetation and native sharpness - fast desktops' };
-  const order = [rec, ...['low', 'medium', 'high', 'ultra'].filter((k) => k !== rec)];
-  for (const k of order) {
-    const b = document.createElement('button');
-    b.className = 'opt' + (k === rec ? ' rec' : '');
-    b.innerHTML = k === rec ? `▶ ${PRESET_NAMES[k]} (recommended)<br><small>${DESC[k]}</small>` : `${PRESET_NAMES[k]}<br><small>${DESC[k]}</small>`;
-    b.onclick = () => { applyPreset(k); onGfxChange(); const g2 = gfxAskGo; gfxAskGo = null; closeOverlay('gfx-ask'); if (g2) g2(); };
-    box.appendChild(b);
+// (the owner, 2026-10-11: "I would just have the graphics settings below the play button in the main menu so you see what
+// graphics you're on and you can change if you want there") - the title's row under Play: the preset you're on, changed
+// right there (Custom: every effect, in Settings). A new player isn't asked at Join: the device's pick is kept silently.
+function syncTitleGfx() {
+  const s = $('t-gfxsel'), d = getDevice();
+  if (!s.options.length) {
+    for (const k of ['low', 'medium', 'high', 'ultra', 'custom']) s.add(new Option(k === 'custom' ? 'Custom…' : PRESET_NAMES[k] + (k === d.recommended ? ' (recommended)' : ''), k));
+    s.onchange = () => { if (s.value === 'custom') { s.value = gfx.preset; openOverlay('settings'); } else { applyPreset(s.value); onGfxChange(); } };
   }
-  const c = document.createElement('button');
-  c.className = 'opt'; c.textContent = '⚙ Customize each effect…';
-  c.onclick = () => { applyPreset(rec); onGfxChange(); const g2 = gfxAskGo; gfxAskGo = null; closeOverlay('gfx-ask'); openOverlay('settings'); S.afterSettings = g2; };
-  box.appendChild(c);
-  openOverlay('gfx-ask');
+  s.value = gfx.preset;
+  $('t-gfxwhy').textContent = gfxChosen() ? '' : `picked for ${d.label}`;
 }
+syncTitleGfx();
 // rebuild what depends on the graphics settings
 function onGfxChange() {
   onResize();
@@ -1807,6 +1798,7 @@ function buildGfxPanel() {
   }
 }
 function syncGfxPanel() {
+  syncTitleGfx();
   buildGfxPanel();
   $('s-preset').value = gfx.preset;
   const rr = $('s-renderer');
@@ -2550,8 +2542,16 @@ function drawEventArrows(g, list, z, now) {
     live.add(ev.id);
     if (!evSeen.has(ev.id)) evSeen.set(ev.id, tNow);
     const age = tNow - evSeen.get(ev.id);
-    const alpha = age < ARROW_SHOW_S - ARROW_FADE_S ? 1 : Math.max(0, (ARROW_SHOW_S - age) / ARROW_FADE_S);
+    const alpha = kind.stay || age < ARROW_SHOW_S - ARROW_FADE_S ? 1 : Math.max(0, (ARROW_SHOW_S - age) / ARROW_FADE_S);   // (stay: a lost pet's, till you have it or it's home)
     if (alpha <= 0) continue;
+    if (ev.w) {   // a lost pet's owner: "Lost my dog!" over them (server/systems/pets.js targetFor)
+      const o = S.ents.get(ev.e), on = o && o.rx !== undefined, t = `Lost my ${ev.w}!`, oy = (on ? o.ry : ev.y) - 36 + Math.sin(now * 4) * 2, ox = on ? o.rx : ev.x;
+      g.font = `700 ${12 / z}px Rubik, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      const tw = g.measureText(t).width + 12 / z;
+      g.fillStyle = 'rgba(255,255,255,.93)'; g.strokeStyle = kind.color; g.lineWidth = 2.5 / z;
+      g.beginPath(); g.rect(ox - tw / 2, oy - 10 / z, tw, 20 / z); g.fill(); g.stroke();
+      g.fillStyle = '#14202c'; g.fillText(t, ox, oy);
+    }
     const dx = ev.x - me.x, dy = ev.y - me.y, d = Math.hypot(dx, dy);
     g.save();
     g.globalAlpha = alpha;
@@ -2559,7 +2559,7 @@ function drawEventArrows(g, list, z, now) {
     const ph = (now * 1.4) % 1;
     g.strokeStyle = kind.color; g.lineWidth = 3 / z;
     g.beginPath(); g.arc(ev.x, ev.y, (18 + ph * 22) / Math.max(z, 0.5), 0, 6.28); g.stroke();
-    if (d > 150) {
+    if (d > 150 && !kind.noArrow) {
       const a = Math.atan2(dy, dx), r = (78 + slot * 6) / z;
       const ax = me.x + Math.cos(a) * r, ay = me.y + Math.sin(a) * r, s = 15 / z;
       g.translate(ax, ay);

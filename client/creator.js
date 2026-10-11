@@ -1,7 +1,7 @@
 // The character creator (concept sheets CC1, CC7-CC10): loaded the first time it opens (main.js openCreator).
 // Two screens in one overlay (#creator, built here):
-//   'start' - a new player's first join (CC9): twelve starting looks and Random, then "Play as they are" or
-//             "Make it yours";
+//   'start' - a new player's first join (CC9): twelve starting looks and Random; under the one picked "Play as <name>"
+//             and "Customize this character", and "New character" (a fresh one, in the creator);
 //   'edit'  - the creator (CC1 / CC8 / CC7): Body, Face, Hair (and facial hair), Outfit (style chips, slot tabs, the
 //             piece grid, main and trim colours, patterns, complete looks for the style), Extras (makeup, tattoos,
 //             piercings, scars) and Saved looks (CC10: save under a name, apply, rename, delete); Randomise, Undo,
@@ -48,7 +48,7 @@ export function init(hooks) {
     <div class="mhead"><h2 class="cc-title">CHARACTER</h2><button class="x" data-act="done" aria-label="Done">✕</button></div>
     <div class="cc-body">
       <div class="cc-left"><canvas class="cc-prev" width="168" height="216"></canvas>
-        <div class="cc-turn"><button data-act="turn" data-v="1" aria-label="Turn left">⟲</button><button class="cc-zoom" data-act="zoom" aria-label="Zoom">🔍</button><button data-act="turn" data-v="-1" aria-label="Turn right">⟳</button></div><span class="cc-pname"></span></div>
+        <div class="cc-turn"><button data-act="turn" data-v="1" aria-label="Turn left">⟲</button><button class="cc-zoom" data-act="zoom" aria-label="Zoom">🔍</button><button data-act="turn" data-v="-1" aria-label="Turn right">⟳</button></div><span class="cc-pname"></span><div class="cc-under"></div></div>
       <div class="cc-right"><div class="cc-tabs"></div><div class="cc-page"></div></div>
     </div>
     <div class="cc-foot"></div>
@@ -251,6 +251,10 @@ function drawPreview() {
   const zb = root.querySelector('[data-act="zoom"]'); if (zb) zb.classList.toggle('on', z);
   const pn = root.querySelector('.cc-pname');
   if (pn) pn.textContent = mode === 'start' ? (startPick < LK.STARTERS.length ? LK.STARTERS[startPick].name : 'Random') : mode === 'wheel' ? ((state.saved || [])[wheelSel] || {}).n || '' : ['Front', 'Front right', 'Right', 'Back right', 'Back', 'Back left', 'Left', 'Front left'][dir];
+  // the starting look (the owner, 2026-10-11: "an option that shows up below the highlighted character that says play as or
+  // customize this character"): under the one you've picked, play as them or make them yours ("New character" is below)
+  const un = root.querySelector('.cc-under'), uh = mode === 'start' ? `<button class="cc-btn gold" data-act="play-as">▶ Play as ${startPick < LK.STARTERS.length ? esc(LK.STARTERS[startPick].name) : 'this one'}</button><button class="cc-btn" data-act="make-yours">✎ Customize this character</button>` : '';
+  if (un && un.dataset.h !== uh) { un.innerHTML = uh; un.dataset.h = uh; }
 }
 // the idle: breathing (two frames), and now and then a look round (a turn to one side and back) while nothing changes
 let lastTouch = 0, glance = 0;
@@ -345,7 +349,7 @@ function render() {
 function renderFoot() {
   const money = () => `<span class="cc-money">Cash $${(state.cash || 0).toLocaleString()} · Bank $${(state.bank || 0).toLocaleString()}`;
   let h;
-  if (mode === 'start') h = `<button class="cc-btn" data-act="make-yours">Make it yours</button><button class="cc-btn gold" data-act="play-as">Play as they are</button>`;
+  if (mode === 'start') h = `<button class="cc-btn" data-act="new-char">＋ New character - start from scratch</button>`;   // (play as / customize: under the pick, drawPreview)
   else if (mode === 'wheel') h = `<button class="cc-btn" data-act="close">Close</button><button class="cc-btn" data-act="mirror">The mirror</button><button class="cc-btn gold" data-act="wh-apply" ${(state.saved || []).length ? '' : 'disabled'}>Apply</button>`;
   else if (mode === 'shop') {
     const total = basket().reduce((t, id) => t + WD.priceAt(shop.store, id), 0), changed = code() !== state.cur;
@@ -557,6 +561,7 @@ function act(a, v, el) {
     }
     case 'play-as': close(true); return;
     case 'make-yours': mode = 'edit'; tab = 'body'; render(); return;
+    case 'new-char': startPick = LK.STARTERS.length; look = LK.randomLook(newSeed()); mode = 'edit'; tab = 'body'; render(); return;   // (a fresh someone, in the creator)
     case 'start': {
       if (v === 'random') { startPick = LK.STARTERS.length; startRandomSeed = newSeed(); look = LK.randomLook(startRandomSeed); }
       else { startPick = Number(v); look = clone(LK.STARTERS[startPick].look); }

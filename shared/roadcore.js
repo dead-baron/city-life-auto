@@ -133,8 +133,17 @@ export function stampLine(pts, pad, fn) {
 // onto another crossing (two junctions close together, a short link between them, a skewed
 // corner) or lie across another street's asphalt. Decided once per map, busiest junctions first,
 // so the renderer never stacks stripes on stripes.
+// Never at a junction a highway or one of its ramps comes into (the owner, 2026-10-11: "the streets that touch the
+// highways have crosswalks out to the highway, should go all the way across it or not at all" - none across a highway,
+// so none leading out to one), and never two side by side (the owner: "some intersections with double crosswalks next to
+// each other in parallel just need one crosswalk"): of two parallel crossings on one street closer than XING_TWIN (the
+// two ends of a short link), the busier junction's is kept.
 const XING_STREETS = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
 const XING_HL = 11; // half the stripe length (along the road)
+const XING_TWIN = 200; // px between two parallel crossings' centres along the street, under which only one is kept
+const highwayArm = (m, n) => n.edges.some((id) => { const o = m.edges[id]; return o.kind === 'hwy' || o.kind === 'ramp' || o.lvl === 'ramp'; });
+const twins = (k, c) => k.node !== c.node && Math.abs(Math.sin(k.a - c.a)) < 0.26
+  && Math.abs((c.x - k.x) * Math.cos(k.a) + (c.y - k.y) * Math.sin(k.a)) < XING_TWIN && Math.abs((c.y - k.y) * Math.cos(k.a) - (c.x - k.x) * Math.sin(k.a)) < Math.max(k.hw, c.hw);
 
 function obbOverlap(a, b, pad) {
   const axes = [a.a, a.a + Math.PI / 2, b.a, b.a + Math.PI / 2];
@@ -157,7 +166,7 @@ export function zebraCrossings(m) {
     if (e.lvl !== 0 || !XING_STREETS.has(e.kind) || e.w < 5 * TILE || e.bridge) continue;
     for (const end of [e.a, e.b]) {
       const n = m.nodes[end];
-      if (n.lvl !== 0 || n.edges.length < 3 || n.island || !n.light) continue;
+      if (n.lvl !== 0 || n.edges.length < 3 || n.island || !n.light || highwayArm(m, n)) continue;
       const t = n.trim[e.id] || 0;
       if (t < 8) continue;
       const fwd = end === e.a;
@@ -208,7 +217,7 @@ export function zebraCrossings(m) {
   const kept = new Map();
   const list = [];
   for (const c of cands) {
-    if (list.some((k) => Math.hypot(k.x - c.x, k.y - c.y) < k.hw + c.hw + 40 && obbOverlap(k, c, 6))) continue;
+    if (list.some((k) => (Math.hypot(k.x - c.x, k.y - c.y) < k.hw + c.hw + 40 && obbOverlap(k, c, 6)) || twins(k, c))) continue;
     if (onOther(c)) continue;
     list.push(c);
     kept.set(c.key, c);

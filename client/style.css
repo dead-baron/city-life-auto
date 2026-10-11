@@ -186,6 +186,10 @@ body.dead #touch, body.dead #job { display: none !important; }   /* (nothing to 
 #t-resume.hidden { display: none; }
 #play:disabled { opacity: .45; cursor: wait; }
 #play:not(:disabled):hover, #practice:hover { transform: skewX(-10deg) translateY(-2px); }
+#t-gfx { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 14px; font-weight: 700; letter-spacing: 1px; color: var(--dim); margin-top: -2px; }   /* (the owner, 2026-10-11: graphics under Play) */
+#t-gfx select { font: inherit; letter-spacing: 0; color: #fff; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.3); padding: 4px 8px; cursor: pointer; }
+#t-gfx select option { color: #000; }
+#t-gfx small { font-weight: 400; letter-spacing: 0; opacity: .8; }
 #t-practice { font-size: 14px; color: var(--dim); max-width: 560px; line-height: 1.45; margin-top: -4px; }
 #t-tools { display: flex; gap: 10px; }
 #t-tools button { font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #fff; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25); padding: 6px 14px; cursor: pointer; }
@@ -909,6 +913,9 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #creator .cc-turn { display: flex; align-items: center; gap: 10px; font: 13px var(--pixel); color: var(--cream); }
 #creator .cc-turn button { width: 38px; height: 38px; border-radius: 50%; background: #0b1226; border: 2px solid rgba(226,189,87,.7); color: var(--cream); font-size: 18px; cursor: pointer; }
 #creator .cc-pname { min-width: 120px; text-align: center; font: 13px var(--pixel); color: var(--cream); }
+#creator .cc-under { display: flex; flex-direction: column; align-items: stretch; gap: 6px; max-width: 100%; }   /* the starting look's Play as / Customize, under the pick */
+#creator .cc-under:empty { display: none; }
+#creator .cc-under .cc-btn { font-size: 13px; padding: 7px 10px; }
 #creator .cc-turn .cc-zoom { font-size: 16px; }
 #creator .cc-turn .cc-zoom.on { background: linear-gradient(180deg, rgba(226,189,87,.55), rgba(226,189,87,.2)); border-color: var(--rim); }
 #creator .cc-right { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }

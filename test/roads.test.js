@@ -160,6 +160,45 @@ test('intersections: zebra crossings never overlap; span wires on poles only at 
   assert.ok(props.brokenList(w).includes(sg.pi));
 });
 
+// The owner, 2026-10-11: "the streets that touch the highways have crosswalks out to the highway, should go all the way
+// across it or not at all" and "some intersections with double crosswalks next to each other in parallel just need one
+// crosswalk" - on today's live map: no crossing at a junction a highway or a ramp comes into, none with any of its stripes
+// (the art's 48 px box, kerb to kerb) out on a highway's or a ramp's asphalt, and no two parallel ones side by side.
+test('crosswalks: none out onto a highway or at its junctions, and never two side by side', async () => {
+  const { zebraCrossings } = await import('../shared/roads.js');
+  const { closestOnSeg } = await import('../shared/geom.js');
+  const m = makeWorld().map;
+  const xs = [...zebraCrossings(m).values()];
+  const hwy = (o) => o.kind === 'hwy' || o.kind === 'ramp' || o.lvl === 'ramp';
+  const fast = m.edges.filter((o) => hwy(o) && o.lvl !== 1);
+  const on = (o, x, y) => {
+    for (let i = 0; i + 1 < o.pts.length; i++) {
+      const q = closestOnSeg({ x, y }, o.pts[i], o.pts[i + 1]);
+      if ((i === 0 && q.t <= 0) || (i + 2 === o.pts.length && q.t >= 1)) continue;   // (past its end)
+      if (Math.hypot(q.x - x, q.y - y) < o.hw) return true;
+    }
+    return false;
+  };
+  for (const c of xs) {
+    const n = m.nodes[c.node];
+    assert.ok(!n.edges.some((id) => hwy(m.edges[id])), `a crosswalk at a highway junction (${Math.round(c.x)}, ${Math.round(c.y)})`);
+    const ux = Math.cos(c.a), uy = Math.sin(c.a);
+    for (let u = -24; u <= 24; u += 8) for (let v = -c.hw; v <= c.hw; v += 8) {
+      const x = c.x + ux * u - uy * v, y = c.y + uy * u + ux * v;
+      for (const o of fast) assert.ok(!on(o, x, y), `a crosswalk out on the highway (${Math.round(c.x)}, ${Math.round(c.y)})`);
+    }
+  }
+  let pairs = 0;
+  for (let i = 0; i < xs.length; i++) for (let j = i + 1; j < xs.length; j++) {
+    const a = xs[i], b = xs[j];
+    if (a.node === b.node || Math.abs(Math.sin(a.a - b.a)) > 0.26 || Math.hypot(a.x - b.x, a.y - b.y) > 400) continue;   // (either side of one junction: fine)
+    const along = Math.abs((b.x - a.x) * Math.cos(a.a) + (b.y - a.y) * Math.sin(a.a)), across = Math.abs((b.y - a.y) * Math.cos(a.a) - (b.x - a.x) * Math.sin(a.a));
+    if (across < Math.max(a.hw, b.hw) && along < 200) pairs++;
+  }
+  assert.equal(pairs, 0, 'two crosswalks side by side');
+  assert.ok(xs.length > 1000, `still a crossing at the town's junctions (${xs.length})`);
+});
+
 test('no building stands on a road: nothing a road runs through (houses, farms, the mansion, hangars)', () => {
   // (the 2026-10-08 report: a whole house in the street round Dry Creek and the farms - the houses and set pieces laid
   // out at fixed spots for the first world, and World v2's roads ran through ten of them: the Desert Highway through the
