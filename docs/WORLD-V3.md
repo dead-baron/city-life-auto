@@ -3994,19 +3994,20 @@ foot and its rim a cliff band; Silver Thread Falls' land above the band 10 m ove
 the North Ridge's crest 40 m over its foot, the gorge's floor 15 m under its sides; Metro City flat.
 
 **The pictures** (`tools/world3-world-map.mjs --sample 0 --region 8,1 --towns --only hollow,silverfalls`;
-`docs/world-v3-world-r8-1.png`, `docs/world-v3-town-hollow.png`, `docs/world-v3-town-silverfalls.png` - baked before the
-last two fixes below). What looks right: the lookout's mesa is a table - the lookout and the arch on its top, the jeep
+`docs/world-v3-world-r8-1.png` - baked before the last two fixes below - `docs/world-v3-town-hollow.png`,
+`docs/world-v3-town-silverfalls.png`). What looks right: the lookout's mesa is a table - the lookout and the arch on its top, the jeep
 track climbing through a gap in its south rim, a talus slope in shade round its south-east foot; the butte west of it the
 same; the falls' escarpment either side of the pool with its basalt faces, Falls Pass Road through it on its grade. What
 looks wrong:
-- **The tables read as rings:** the band's ground was dark grey scree (red rock now, not re-baked), the faces are the
+- **The tables read as rings:** the band's ground is red rock (the region picture's dark grey scree is from before), the faces are the
   `cliff` model's granite (the desert wants a sandstone face), and only the south rims have faces: the north, east and
   west rims are their rubble and the hillshade. The tops are the plain's colour (a flat top is not shaded; it wants its
   own ground - bare rock, sparse scrub - or a rim's shadow).
 - **8.8's small red mesas still stand** across the desert and on the tables' tops (`dress3`): they want to go, or to
   become boulders, now that the tables are there.
-- **The old gorge line crossed Silver Thread Falls** (the broad dark bands across the view): it is moved east, clear of
-  the falls, since (not re-baked).
+- **The old gorge line crossed Silver Thread Falls** in the first bake (broad dark bands across the view): moved east,
+  clear of the falls; the falls' picture now shows the escarpment's slopes in shade and the band's faces. A thin line of
+  red rock west of the lookout's mesa (`-hollow.png`) is a one-tile band where a slope steepens by a track: to look at.
 - At 1/8 the hillshade hardly reads **under trees and crops**: North Cape's headland is under the redwoods' canopy (only
   the ground is shaded), Lookout Hill under the orchard's rows (`--only northcape,kestrel`; not kept in docs).
 
