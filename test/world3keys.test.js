@@ -163,6 +163,26 @@ test('World v3\'s region files kept between restarts: the same world key, format
   } finally { rmSync(dataDir, { recursive: true, force: true }); }
 });
 
+test('tools/bots.js --spread: the junctions of the world the server runs, from its index (waited for while it packs)', async () => {
+  const { junctions } = await import('../tools/junctions.mjs');
+  const { writePack } = await import('../shared/regionpack.js');
+  const { gzipSync } = await import('node:zlib');
+  const index = gzipSync(writePack({ root: { nodes: [{ x: 100, y: 200, half: 40 }, { x: 5, y: 6, half: 30, island: 'cedar' }, null, { x: 300, y: 400, half: 40 }] } }));
+  let packing = 2;
+  const asked = [];
+  const fetchFn = async (url) => {
+    asked.push(url);
+    if (url.endsWith('/stats')) return new Response(JSON.stringify({ world: { world: 'abcdef012345-v3', seed: 1337, state: packing-- > 0 ? 'packing' : 'ready' } }));
+    if (url === `http://h.test/world/abcdef012345-v3/1337/index.bin?v=${PACK_VERSION}`) return new Response(index);
+    return new Response(null, { status: 404 });
+  };
+  const t0 = Date.now();
+  const nodes = await junctions('http://h.test', { fetchFn, say: () => {} });
+  assert.deepEqual(nodes.map((n) => [n.x, n.y]), [[100, 200], [300, 400]], 'the mainland\'s junctions of the index (not the islands\')');
+  assert.equal(asked.filter((u) => u.endsWith('/stats')).length, 3, 'asked again while the server wrote its files');
+  assert.ok(Date.now() - t0 >= 3500);
+});
+
 test('today\'s world: cut at every start as before - its files never marked to be kept', async () => {
   const dataDir = mkdtempSync(join(tmpdir(), 'cla-kept0-'));
   const v = V();
