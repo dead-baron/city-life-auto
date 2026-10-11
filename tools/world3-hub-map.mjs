@@ -27,9 +27,15 @@ const cache = new SpriteCache(200e6), opt = { quality: 1, seed: 1337, lowMem: fa
 const CHP = CHUNK_TILES * TILE, S = 4, CS = CHP / S;
 const Lv = [-0.42, -0.5, 0.76], LN = Math.hypot(...Lv), LX = Lv[0] / LN, LY = Lv[1] / LN, LZ = Lv[2] / LN;
 for (const name of hubs) {
-  const h = (M.railHubs || []).find((q) => q.name === `${name} Station`);
+  let h = (M.railHubs || []).find((q) => q.name === `${name} Station`);
+  // (8.16: a subway stop - `--hub Downtown`, `--hub "Lakeview Subway"`: its kiosk on its plaza, its stops on both tracks)
+  const subSts = (M.rails || []).filter((r) => r.subway).flatMap((r) => r.stations.filter((st) => st.name === `${name} Station`).map((st) => [r, st]));
+  if (!h && subSts.length) {
+    const [r0, st0] = subSts[0], k = st0.kiosk;
+    h = { x: k ? k.x0 + k.w / 2 : st0.x, y: k ? k.y0 + k.h / 2 : st0.y, services: [r0.subway], calls: [], kiosk: k };
+  }
   if (!h) { log(`no station ${name}`); continue; }
-  const sts = h.calls.map(([ri, k]) => M.rails[ri].stations[k]);
+  const sts = h.kiosk !== undefined ? subSts.map(([, st]) => st) : h.calls.map(([ri, k]) => M.rails[ri].stations[k]);
   const cx0 = Math.floor((h.x - SPAN / 2) / CHP), cy0 = Math.floor((h.y - SPAN / 2) / CHP), cx1 = Math.floor((h.x + SPAN / 2) / CHP), cy1 = Math.floor((h.y + SPAN / 2) / CHP);
   const GW = (cx1 - cx0 + 1) * CS, GH = (cy1 - cy0 + 1) * CS, img = Buffer.alloc(GW * GH * 3);
   for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
@@ -52,6 +58,12 @@ for (const name of hubs) {
   const ox = cx0 * CHP, oy = cy0 * CHP, marks = [];
   marks.push([h.x, h.y, 255, 255, 255, 7]);
   for (const st of sts) marks.push([st.platform.x, st.platform.y, 255, 220, 0, 4]);
+  // (8.16: the subway lines below ground, dotted in their colours - Line 1 pink, Line 2 yellow - and their stops, pink rings)
+  for (const r of (M.rails || []).filter((q) => q.subway)) {
+    const [cr, cg, cb] = r.subway === 'Subway Line 1' ? [255, 105, 180] : [255, 230, 40];
+    r.pts.forEach((p, i) => { if (p.under && i % 6 < 3) marks.push([p.x, p.y, cr, cg, cb, 0.5]); });
+    if (h.kiosk !== undefined) for (const st of r.stations) marks.push([st.x, st.y, 255, 105, 180, 6]);
+  }
   for (const w of M.railSwitches || []) { if (w.kind === 'turnout') { marks.push([w.x, w.y, 0, 230, 255, 3]); marks.push([w.fx, w.fy, 255, 0, 255, 3]); } else marks.push([w.x, w.y, 255, 140, 0, 3]); }
   for (const [x, y, r, gg, b, rad] of marks) {
     const px = Math.round((x - ox) / S), py = Math.round((y - oy) / S);
@@ -59,7 +71,8 @@ for (const name of hubs) {
   }
   const OUT = join(ROOT, `docs/world-v3-hub-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`), tmp = OUT + '.rgb';
   writeFileSync(tmp, img);
-  const title = `World v3: ${name} Station through the chunk bake at 1/4 - ${h.services.join(', ')} (${sts.length} loops); white: the building, yellow: the platforms, cyan/magenta: a turnout's points/frog, orange: a diamond`;
+  const title = h.kiosk !== undefined ? `World v3: ${name} Station (${h.services.join(', ')}) through the chunk bake at 1/4; white: its kiosk, yellow: the stairs' mouth, pink rings: the stops below (both tracks), dotted: the subways below ground (Line 1 pink, Line 2 yellow)`
+    : `World v3: ${name} Station through the chunk bake at 1/4 - ${h.services.join(', ')} (${sts.length} loops); white: the building, yellow: the platforms, cyan/magenta: a turnout's points/frog, orange: a diamond`;
   const r = spawnSync('python3', ['-c', `
 from PIL import Image, ImageDraw
 im = Image.frombytes('RGB', (${GW}, ${GH}), open(${JSON.stringify(tmp)}, 'rb').read())

@@ -7795,3 +7795,32 @@ the arch, the motel, the billboards, the camp, the tracks, every building clear 
 test/world3biomes.test.js (65 districts; its per-district arrays room for more), test/world3mesa.test.js,
 test/world3towns.test.js, test/world3server.test.js, test/dmath.test.js; `node tools/perf.mjs --quick`: all within budget
 (the city worker 34 files, 357 KB of 360 - this module isn't in it).
+## 2026-10-11 · World v3: the subways, Line 1 and Line 2
+The owner's markup: "pink: inner-city subway line 1; yellow: subway line 2 ... A dotted stretch of any of them is a
+tunnel, or underground"; SU6: "for the most part I imagine it would be a single track in a lot of places".
+- The skeleton's two subway lines are laid in the v3 world build (`shared/world3-subway.js`, one call from the `rails`
+  hook): Line 1 from Northshore over the viaduct beside the Bay Bridge, under Metro City and the channel to Cedar Isle
+  and the loop under it; Line 2 from the airport over its strait, round the loop under Westport, under the channel,
+  Metro City and the canal to Southbank. Double track (one track each way, 96 px apart), each line one closed loop for
+  the trains - out on one track, round its loop, back on the other, round a turning loop below ground beyond each free
+  end. Below ground everywhere but on the viaducts (at grade 12 tiles either side of the water, decked over it).
+- Every station is a stop on both tracks (a terminal once), reached by a kiosk with stairs down on a plaza by the
+  street as today's subway (`shared/map.js` `reserveSubwayPlazas`, one kiosk and one map point for the two tracks); a
+  stop the main line has a station of the same name for is "... Subway". Three stations (Arts District, Lake District,
+  Falls Center) found no plaza and use today's fallback, the stairs from the pavement: 14 kiosks for 17 stations.
+- Their trains run on the main line's signals (`server/systems/trains.js`): two a line, the subway below ground a level
+  deeper (cells of its own: a subway train passes under a main line train), and a loop crossing itself (Line 2 at
+  Westport Center) has its diamonds. Five minutes of game time: every subway train runs and stops at its stations, no
+  train runs into another.
+- Not done: single track with passing places (double track throughout), the viaducts' portals, plazas over the
+  platforms, the underground view and the world map for the v3 subway, transfers to the main line. Nothing live
+  changes: the world hash stays 6b6e16fdef9f.
+
+Files: shared/world3-subway.js (new), shared/world3-world.js (the call), shared/world3-rail.js (`roundLoop`, `trackOf`
+exported), shared/map.js (the subway lines' plazas, kiosks and map points; no hubs or switches for them),
+server/systems/trains.js (`DEEP` cells, a loop's own diamonds), tools/world3-hub-map.mjs (`--hub` takes a subway stop),
+test/world3subway.test.js (new), test/world3rail.test.js and test/world3hubs.test.js (the main line's loops),
+docs/WORLD-V3.md 8.16, docs/world-v3-hub-downtown.png, docs/world-v3-hub-airport.png.
+
+Tests: test/world3subway.test.js (one world build: the lines, the stations with their kiosks on plazas, the trains for
+five minutes - running, stopping, no collisions), test/world3rail.test.js, test/world3hubs.test.js.

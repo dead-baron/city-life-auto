@@ -145,16 +145,20 @@ function initLoops(world) {
   world.xing = (world.map.railXings || rails[0].crossings).map(() => ({ down: false, eta: 99, closure: 0, broken: [0, 0] }));
 }
 const CELL = 32, FOOT = [-24, 0, 24];
+// (World v3's subway lines below ground - their points `subway` - run a level deeper than the main line and its tunnels:
+// cells of their own, so a subway train passes under a main line train, never into it - shared/world3-subway.js)
+const DEEP = 1000000000;
 function cellsOfRail(rail) {
   const P = rail.pts, n = P.length, out = new Int32Array(n * 3);
   for (let k = 0; k < n; k++) {
-    const p = P[k], q = P[(k + 1) % n], dx = q.x - p.x, dy = q.y - p.y, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l;
-    for (let j = 0; j < 3; j++) out[k * 3 + j] = Math.floor((p.y + ny * FOOT[j]) / CELL) * 100000 + Math.floor((p.x + nx * FOOT[j]) / CELL);
+    const p = P[k], q = P[(k + 1) % n], dx = q.x - p.x, dy = q.y - p.y, l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l, lv = rail.subway && p.subway ? DEEP : 0;
+    for (let j = 0; j < 3; j++) out[k * 3 + j] = lv + Math.floor((p.y + ny * FOOT[j]) / CELL) * 100000 + Math.floor((p.x + nx * FOOT[j]) / CELL);
   }
   return out;
 }
 // A loop's junction points: where another loop's track shares its cells on another heading or a few px aside (a
-// diamond, a turnout) - not where two loops run the same track the same way.
+// diamond, a turnout) - not where two loops run the same track the same way. A loop that crosses itself (a World v3
+// subway line round its loop in the middle: shared/world3-subway.js) has its own diamonds: its track far along it.
 function boxesOf(rails, cells) {
   const byCell = new Map();
   rails.forEach((rail, r) => { const C = cells[r]; for (let k = 0; k < rail.pts.length; k++) for (let j = 0; j < 3; j++) { const c = C[k * 3 + j]; let a = byCell.get(c); if (!a) byCell.set(c, a = []); a.push(r, k); } });
@@ -166,7 +170,7 @@ function boxesOf(rails, cells) {
       for (let j = 0; j < 3 && !box[k]; j++) {
         const a = byCell.get(C[k * 3 + j]);
         for (let m = 0; m < a.length && !box[k]; m += 2) {
-          if (a[m] === r) continue;
+          if (a[m] === r) { const d = Math.abs(a[m + 1] - k); if (Math.min(d, n - d) < 64) continue; }
           const Q = rails[a[m]].pts, q = Q[a[m + 1]], [vx, vy] = dir(Q, a[m + 1]);
           const side = Math.abs((q.x - P[k].x) * -uy + (q.y - P[k].y) * ux);
           if (ux * vx + uy * vy < 0.995 || side > 10) box[k] = 1;

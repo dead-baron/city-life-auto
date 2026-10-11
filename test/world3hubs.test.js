@@ -15,7 +15,7 @@ const { map: M } = await buildWorld3(1337, { log: () => {} });
 const plain = (n) => n.replace(/ Station$/, '');
 
 test('one station per name: every service that stops there calls at it, its platforms side by side, one map point', () => {
-  const R = M.rails, names = new Set(R.flatMap((r) => r.stations.map((st) => st.name)));
+  const R = M.rails.filter((r) => !r.subway), names = new Set(R.flatMap((r) => r.stations.map((st) => st.name)));   // (the subway lines' stops are their own: test/world3subway.test.js)
   assert.equal(M.railHubs.length, names.size, 'a station for each name');
   for (const name of names) {
     const pois = M.pois.filter((p) => p.kind === 'station' && p.label === name);

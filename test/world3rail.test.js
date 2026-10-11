@@ -19,7 +19,7 @@ const { map: M } = await buildWorld3(1337, { log: () => {} });
 const mod = (a, n) => ((a % n) + n) % n;
 
 test('the main line is laid: each service both ways, double track, its stations and crossings', () => {
-  const R = M.rails;
+  const R = M.rails.filter((r) => !r.subway);   // (the subway lines are loops of m.rails too: test/world3subway.test.js)
   assert.equal(R.length, SERVICES.length * 2, 'a loop per service each way');
   assert.equal(M.rail, R[0], 'm.rail is the first loop');
   for (const sv of SERVICES) {
@@ -90,7 +90,7 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
   const w = new World(M, { npcBudget: 0, throwErrors: true });
   const ts = w.trains;
   assert.ok(ts.length >= SERVICES.length * 2, `${ts.length} trains`);
-  const loops = new Set(ts.map((t) => t.r));
+  const loops = new Set(ts.filter((t) => !w.rails[t.r].subway).map((t) => t.r));   // (the subway lines' own: test/world3subway.test.js)
   assert.equal(loops.size, SERVICES.length * 2, 'trains on every loop');
   const run = ts.map(() => ({ dist: 0, stops: new Set(), last: null }));
   let hits = 0, steps = 0, firstHit = null;
@@ -109,10 +109,11 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
     if (k % 2) continue;
     // every pair of cars of different trains: their outlines never overlap
     const cars = [];
-    ts.forEach((t, i) => t.cars.forEach((c) => { const e = w.get(c.id); cars.push({ i, x: e.x, y: e.y, a: e.a, L: c.def.L, W: c.def.W }); }));
+    // (a subway car below ground runs a level deeper than the main line: shared/world3-subway.js)
+    ts.forEach((t, i) => t.cars.forEach((c) => { const e = w.get(c.id); cars.push({ i, x: e.x, y: e.y, a: e.a, L: c.def.L, W: c.def.W, deep: w.rails[t.r].subway && e.sub ? 1 : 0 }); }));
     for (let p = 0; p < cars.length; p++) for (let q = p + 1; q < cars.length; q++) {
       const A = cars[p], B = cars[q];
-      if (A.i === B.i || Math.abs(A.x - B.x) > 260 || Math.abs(A.y - B.y) > 260) continue;
+      if (A.i === B.i || A.deep !== B.deep || Math.abs(A.x - B.x) > 260 || Math.abs(A.y - B.y) > 260) continue;
       if (overlap(A, B, A.L, A.W, B.L, B.W)) { hits++; firstHit ??= { k, a: A.i, b: B.i, x: Math.round(A.x / TILE), y: Math.round(A.y / TILE) }; }
     }
   }

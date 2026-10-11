@@ -253,7 +253,7 @@ function buildCity(seed, opts = null, frame = null) {
   const railLines = OPTS?.rails ? OPTS.rails(m) : null;   // (World v3: the main line's loops, a list of lines - shared/world3-rail.js)
   if (railLines) for (const line of railLines) reserveRail(m, line.pts, line);
   buildStationLots(m);
-  reserveSubwayPlazas(m);
+  reserveSubwayPlazas(m, railLines);   // (World v3: the subway lines' stops too - shared/world3-subway.js)
   waterfrontStrip(m);
   paveMuseumSquare(m);   // (before the blocks: the museum's block fronts onto it)
   // Pelican Key's beach end (the bar, the charter dock, the court) stays open; the town is east of it
@@ -840,28 +840,37 @@ function layoutRoads(m, rand) {
 // plaza fronts a street on its south side where it can (the street at the bottom, like the rest
 // of the art), else on its north side.
 export const SUBWAY_PLAZA = { w: 8, h: 4 };
-function reserveSubwayPlazas(m) {
+function reserveSubwayPlazas(m, lines = null) {
   m.subwayPlazas = [];
   const pts = m.railPts, { w: PW, h: PH } = SUBWAY_PLAZA;
-  if (!pts.length) return;
   const free = (i) => m.land[i] && m.tiles[i] === T.GRASS && !m.reserve[i] && !m.deck[i];
-  for (const { name, i } of stationIndex(m, pts)) {
-    const q = pts[i];
+  const stops = pts.length ? stationIndex(m, pts).map(({ name, i }) => ({ name, q: pts[i] })) : [];
+  // (World v3's subway lines, shared/world3-subway.js: a stop on each track, one plaza for the two)
+  for (const line of lines || []) {
+    if (!line.subway) continue;
+    for (const { name, i } of stationIndex(m, line.pts, line)) if (!stops.some((o) => o.name === name)) stops.push({ name, q: line.pts[i], R: 48 });   // (further afield in the dense core)
+  }
+  // (a World v3 subway stop with no such plaza near - a park, a lot kept for later - takes grass kept for anything but
+  // the railway, another plaza or a deck)
+  const loose = (i) => m.land[i] && m.tiles[i] === T.GRASS && !(m.reserve[i] & (2 | 8 | 16)) && !m.deck[i];
+  for (const { name, q, R = 30 } of stops) {
     if (!q.under) continue;
     const cx = Math.floor(q.x / TILE), cy = Math.floor(q.y / TILE);
-    let best = null;
-    for (let ty = cy - 30; ty <= cy + 30; ty++) for (let tx = cx - 30; tx <= cx + 30; tx++) {
+    let best = null, found = false;
+    for (const ok0 of R > 30 ? [free, loose] : [free]) for (let ty = cy - R; ty <= cy + R && !(ok0 === loose && found); ty++) for (let tx = cx - R; tx <= cx + R; tx++) {
       let ok = true;
-      for (let y = 0; y < PH && ok; y++) for (let x = 0; x < PW; x++) if (!free((ty + y) * m.w + tx + x)) { ok = false; break; }
+      for (let y = 0; y < PH && ok; y++) for (let x = 0; x < PW; x++) if (!ok0((ty + y) * m.w + tx + x)) { ok = false; break; }
       if (!ok) continue;
-      let south = true, north = true;
+      let south = true, north = true, ns = 0, nn = 0;
       for (let x = 0; x < PW; x++) {
-        if (m.tileAt(tx + x, ty + PH) !== T.SIDEWALK) south = false;
-        if (m.tileAt(tx + x, ty - 1) !== T.SIDEWALK) north = false;
+        if (m.tileAt(tx + x, ty + PH) !== T.SIDEWALK) south = false; else ns++;
+        if (m.tileAt(tx + x, ty - 1) !== T.SIDEWALK) north = false; else nn++;
       }
+      if (ok0 === loose) { south = ns >= PW - 2; north = nn >= PW - 2; }   // (the loose pass: most of its edge on the pavement)
       if (!south && !north) continue;
       const d = Math.hypot((tx + PW / 2) * TILE - q.x, (ty + PH / 2) * TILE - q.y) + (south ? 0 : 2000); // the street below it whenever possible
       if (!best || d < best.d) best = { name, x: tx, y: ty, w: PW, h: PH, south, d };
+      if (ok0 === free) found = true;
     }
     if (!best) continue;
     for (let y = best.y; y < best.y + PH; y++) for (let x = best.x; x < best.x + PW; x++) { m.tiles[y * m.w + x] = T.PLAZA; m.reserve[y * m.w + x] |= 16; }
@@ -3081,7 +3090,7 @@ function hubPlan(m, calling, all, sx, sy) {
 // bridges [{ x, y, a, len }] (the footbridges across the tracks between platforms that face each other) }].
 function buildRailHubs(m) {
   const by = new Map();
-  m.rails.forEach((r, ri) => r.stations.forEach((st, si) => {
+  m.rails.forEach((r, ri) => !r.subway && r.stations.forEach((st, si) => {   // (the subway lines' stops are their own, not the main line's hubs)
     let h = by.get(st.name);
     if (!h) by.set(st.name, (h = { name: st.name, poi: st.poi, calls: [], services: [], bridges: [] }));
     h.calls.push([ri, si]); st.poi = h.poi;
@@ -3130,7 +3139,7 @@ function railSwitches(m) {
   m.rails.forEach((r, ri) => {
     const P = r.pts, n = P.length;
     m.rails.forEach((o, oi) => {
-      if (oi === ri) return;
+      if (oi === ri || r.subway || o.subway) return;   // (World v3's subway lines: below ground where they meet the main line, no switches)
       let prev = Infinity;
       for (let i = 0; i < n; i++) {
         if (P[i].under) { prev = Infinity; continue; }
@@ -3321,12 +3330,19 @@ function buildRailway(m, pts, line = null) {
       const st = { name: `${name} Station`, s: best.s, x: q.x, y: q.y, a: q.a, side: 1, half: PLATFORM_HALF, inner: PLATFORM_IN, outer: PLATFORM_OUT, under: true, clockD: 0 };
       st.platform = ent || { x: q.x, y: q.y };
       const plaza = (m.subwayPlazas || []).find((pl) => pl.name === name);
-      if (plaza) { st.kiosk = subwayKiosk(m, plaza, stations.length); st.platform = st.kiosk.out; }
+      if (plaza) {   // (a World v3 subway line stops at a station on each track: one kiosk on its plaza for the two)
+        let k = line && line.subway ? plazaKiosks.get(plaza) : null;
+        if (!k) { k = subwayKiosk(m, plaza, stations.length); if (line && line.subway) plazaKiosks.set(plaza, k); }
+        st.kiosk = k; st.platform = k.out;
+      }
       const hubPoi = line && line.hub && m.pois.find((o) => o.kind === 'station' && o.label === st.name && o.hub);
       if (hubPoi) { st.poi = hubPoi.id; st.shared = true; stations.push(st); continue; }   // (World v3: the station's one map point)
+      const subPoi = line && line.subway && m.pois.find((o) => o.kind === 'station' && o.label === st.name && o.sub === line.subway);
+      if (subPoi) { st.poi = subPoi.id; st.shared = true; stations.push(st); continue; }   // (the subway's other track: the station's one map point)
       st.poi = m.pois.length;
       m.pois.push({ id: m.pois.length, kind: 'station', label: st.name, x: st.platform.x, y: st.platform.y, r: 70, station: stations.length });
       if (line && line.hub) m.pois[st.poi].hub = 1;
+      if (line && line.subway) { m.pois[st.poi].sub = line.subway; m.pois[st.poi].services = [line.service]; }
       stations.push(st);
       continue;
     }
@@ -3371,7 +3387,7 @@ function buildRailway(m, pts, line = null) {
     if (!bestRun || cur.length > bestRun.length) bestRun = cur;
     rural = { s0: pts[bestRun[0]].s + 200, s1: pts[bestRun[bestRun.length - 1]].s - 100 };
   }
-  if (line) return { name: line.name, service: line.service, way: line.way, pts, len: total, stations, crossings, rural, ...(line.bores && line.bores.length ? { bores: line.bores } : {}) };
+  if (line) return { name: line.name, service: line.service, way: line.way, pts, len: total, stations, crossings, rural, ...(line.bores && line.bores.length ? { bores: line.bores } : {}), ...(line.subway ? { subway: line.subway, color: line.color } : {}) };
   m.rail = { pts, len: total, stations, crossings, rural };
 }
 
@@ -3382,6 +3398,7 @@ function buildRailway(m, pts, line = null) {
 // solid; the stairwell between them is walkable - people walk in at the mouth, down the steps,
 // and are gone below (the client sinks them into the stairwell as they go).
 export const SUBWAY_ART = { w: 128, h: 95, pit: [10, 43, 114, 81], rail: [36, 88], mouthY: 62, top: 16, deep: 96 };
+const plazaKiosks = new WeakMap();   // (World v3's subway lines: a plaza's kiosk, shared by the stops on its two tracks)
 function subwayKiosk(m, pl, k) {
   const A = SUBWAY_ART, flip = k % 2 === 1;
   const px0 = pl.x * TILE, py0 = pl.y * TILE, pw = pl.w * TILE;
