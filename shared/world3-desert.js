@@ -136,7 +136,7 @@ export function buildDesert(m, addProp) {
   const clearOf = (x, y, hw = 24, mn = 16) => hwys.every((h) => nearestOnPath(h.path, x, y).d >= hw) && rails.every((r) => nearestOnPath(r.path, x, y).d >= mn);
   const prop = (t, tx, ty, r, extra) => { if (!open(Math.floor(tx), Math.floor(ty))) return false; addProp(m, t, tx * TILE, ty * TILE, r, extra); out.props++; return true; };
   const fill = (x0, y0, x1, y1, t) => { for (let y = Math.max(0, y0); y < Math.min(HH, y1); y++) for (let x = Math.max(0, x0); x < Math.min(W, x1); x++) if (open(x, y)) { m.tiles[y * W + x] = t; m.reserve[y * W + x] |= 4; } };
-  // a jeep track: dirt along a polyline (tiles), hw tiles each side, over open ground only (a road it meets stays road)
+  // a jeep track: gravel along a polyline (tiles), hw tiles each side, over open ground only (a road it meets stays road)
   const tracked = new Set();
   const track = (name, pts, hw = 1.6) => {
     let n = 0;
@@ -150,7 +150,7 @@ export function buildDesert(m, addProp) {
           if (!open(x, y)) continue;
           const i = y * W + x;
           if (!tracked.has(i)) { tracked.add(i); n++; }
-          m.tiles[i] = T.DIRT; m.reserve[i] |= 4;
+          m.tiles[i] = T.SAND; m.reserve[i] |= 4 | 128;   // (gravel: the renderer's shingle, as the washes' bars - dirt doesn't show on the desert's ground)
         }
       }
     }
@@ -220,7 +220,7 @@ export function buildDesert(m, addProp) {
       for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
         const d = nearestOnPath(line.path, x + 0.5, y + 0.5).d;
         if (d < 12 || d > 30 || !open(x, y) || sideOf(x + 0.5, y + 0.5) !== town) continue;
-        m.tiles[y * W + x] = T.LOT; m.reserve[y * W + x] |= 4; out.freight++;
+        m.tiles[y * W + x] = T.SAND; m.reserve[y * W + x] |= 4 | 128; out.freight++;   // (a gravel pad)
       }
       // the ore cars: in a row along the line, 15 tiles off it on the town's side
       let cars = 0, mid = null;
@@ -232,12 +232,12 @@ export function buildDesert(m, addProp) {
         const dd = nearestOnPath(line.path, cx, cy).d;
         if (dd < 12 || dd > 20) continue;
         const t = m.tiles[Math.floor(cy) * W + Math.floor(cx)];
-        if (t !== T.LOT && !GROUND.has(t)) continue;
+        if (!GROUND.has(t)) continue;
         addProp(m, 'minecart', cx * TILE, cy * TILE, 12); out.props++; cars++; if (cars === 3) mid = [cx, cy];
       }
       out.oreCars = cars;
       if (mid) {
-        const yard = (t, dx, dy, r, ex) => { const x = mid[0] + nx * dx + ux * dy, y = mid[1] + ny * dx + uy * dy, tl = m.tiles[Math.floor(y) * W + Math.floor(x)]; if (tl === T.LOT || GROUND.has(tl)) { addProp(m, t, x * TILE, y * TILE, r, ex); out.props++; } };
+        const yard = (t, dx, dy, r, ex) => { const x = mid[0] + nx * dx + ux * dy, y = mid[1] + ny * dx + uy * dy, tl = m.tiles[Math.floor(y) * W + Math.floor(x)]; if (GROUND.has(tl)) { addProp(m, t, x * TILE, y * TILE, r, ex); out.props++; } };
         yard('silo', 6, 2, 20, { h: 70 }); yard('gravel', 8, 6, 0); yard('gravel', 9, 9, 0); yard('crates', 6, -4, 12);
         m.pois.push({ id: m.pois.length, kind: 'delivery', label: 'Copper Gulch Freight Yard', x: (mid[0] + 2) * TILE, y: (mid[1] + 4) * TILE, r: 48, fixed: true, ore: true });
       }
@@ -263,7 +263,7 @@ export function buildDesert(m, addProp) {
     let k = 0;
     for (const N of [true, false]) for (let x = 4210; x + 11 <= 4296; x += 15) {
       const name = names[k % names.length], y = N ? S - 13 : S + 4, h = 9;
-      const b = addBld(m, x, y, 11, h, 'shack', `${name} (abandoned)`, 'tar', { spec: k % 2 ? { floors: k % 3 === 1 ? 2 : 1, style: 'siding', wallColor: walls[k % walls.length], pitch: 'gable', roof: 'shingle', roofColor: '#5a4a3a', slope: 0.5 } : { floors: k % 3 === 1 ? 2 : 1, style: 'siding', wallColor: walls[k % walls.length], parapet: 14, roofMat: 'membrane', lip: 6 }, ghost: true });
+      const b = addBld(m, x, y, 11, h, 'shack', `${name} (abandoned)`, 'tar', { spec: { floors: k % 3 === 1 ? 2 : 1, style: 'siding', wallColor: walls[k % walls.length], pitch: 'gable', roof: 'shingle', roofColor: ['#5a4a3a', '#6a5440', '#4e4034', '#7a6650'][k % 4], slope: 0.45 + (k % 3) * 0.08 }, ghost: true });
       k++;
       if (!b) continue;
       out.hollow.push(b.name);
