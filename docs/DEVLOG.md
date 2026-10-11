@@ -8755,3 +8755,12 @@ the save point; the safe's cash and things through a death and a rejoin; the war
 garage; the hall table and selling from it; a friend knocking, let in, seen, going out); test/homes.test.js,
 test/wardrobe.test.js, test/world.test.js, test/core.test.js and the other tests with homes in them still pass. Headless playtest (art v2 1280x720, classic 844x390
 phone): the house, the apartment, the trailer, the garage with two cars, the safe's menu, asleep, the morning.
+
+## 2026-10-11 · Wave 26 merged: farming and gardening, going inside your home, flying on a phone and the sound
+
+H61 (farming and gardening), H62 (inside your own home) and H63 (flying on a phone, nothing on the ground touching an
+aircraft, the sound measured) merged together; their entries are above. At the merge: a tent smashed with a colour past
+the first three threw a page error in the classic view's smash effect (`main.js` smashFx: the newer camps' tents have
+more colours) - the colours now wrap. The earlier entry's claim that the rotor drove the mix into its soft ceiling was
+wrong (H63 measured the ceiling at 0% in every version); the prop-smash barrage under a flying aircraft (+6 dB of
+crashes) and an audio thread starved by the bakes on a phone are the likelier "blown out".

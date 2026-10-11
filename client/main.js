@@ -594,7 +594,7 @@ function smashFx(p, i, a) {
     sfx('crash', vol); sfx('clang', vol);
   } else if (t === 'tent') {
     throwIt(1, 6, 160);
-    fx.flutter(p.x, p.y, 10, [['#e07b20', '#f29a3e'], ['#3f8a3a', '#5fae52'], ['#2f6fc8', '#4f8fe8']][p.v || 0].concat(['#e8e4d4']), Math.random, 120, 120);
+    fx.flutter(p.x, p.y, 10, [['#e07b20', '#f29a3e'], ['#3f8a3a', '#5fae52'], ['#2f6fc8', '#4f8fe8']][(p.v || 0) % 3].concat(['#e8e4d4']), Math.random, 120, 120);   // (% 3: the camps' newer tents have more colours - a page error)
     sfx('hit', vol);
   } else if (t === 'upole') {
     fx.sparks(p.x, p.y - 46, 22);
