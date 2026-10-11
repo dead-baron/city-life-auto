@@ -19,6 +19,8 @@ import * as dance from './dance.js';
 import * as sar from './sar.js';
 import * as charter from './charter.js';
 import * as coastguard from './coastguard.js';
+import * as farming from './farming.js';
+import { FARM } from '../../shared/rules.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -168,6 +170,7 @@ export function boardFor(world, p) {
   if (base) list.push({ id: 'sar', kind: 'sar', fly: true, icon: '🚁', sub: 'rescue calls: the lost, the hurt, the stranded - a rescue helicopter is issued', pay: SAR.base + 2 * SAR.perKm, title: `Search & rescue pilot - a shift from ${base.name}`, x: base.x, y: base.y });
   list.push({ id: 'charter', kind: 'charter', fly: true, icon: '🛩', sub: 'fly rich customers between helipads, airfields, mansions and the islands - a tip for a smooth ride', pay: CHARTER.base + 4 * CHARTER.perKm, title: 'Charter pilot - VIP helicopter flights', x: 0, y: 0 });   // (charter.js)
   list.push({ id: 'coast', kind: 'coast', fly: true, icon: '⚓', sub: 'boat patrol: run down smugglers, board them and seize the cargo; pull people out of the water', pay: COAST.bust + 200, title: 'Coast guard - boat patrol', x: 0, y: 0 }, { id: 'coastair', kind: 'coast', fly: true, icon: '🚁', sub: 'air patrol: the same from a helicopter - hover over smugglers to stop them, the harness for people in the water', pay: COAST.bust + 200, title: 'Coast guard - air patrol', x: 0, y: 0 });   // (coastguard.js)
+  if (farm) list.push({ id: 'fieldwork', kind: 'farm', icon: '🚜', sub: 'drive the co-op tractor down the rows: plough, sow, harvest - paid by the row', pay: FARM.rows * FARM.pay.sow + FARM.bonus, title: 'Farm work at ' + farm.label, x: farm.x, y: farm.y });   // (farming.js)
   return { t: 'board', jobs: list, job: p.job ? { text: p.job.text, type: p.job.type } : null, saw: law.sawList(world, p) };
 }
 
@@ -217,6 +220,7 @@ function take(world, p, id) {
   if (id === 'sar') return sar.start(world, p, sar.baseFor(world, p));
   if (id === 'charter') return charter.start(world, p);
   if (id === 'coast' || id === 'coastair') return coastguard.start(world, p, id === 'coastair' ? 'air' : 'boat');
+  if (id === 'fieldwork') return farming.startWork(world, p, nearestFarm(world, p));
   const j = (world.jobBoard || []).find((q) => q.id === Number(id));
   if (!j) return 'That job was taken.';
   if (j.kind === 'patrol') {

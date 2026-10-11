@@ -281,6 +281,7 @@ function onText(m) {
     case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
     case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; if (!drawStarView) import('./stargaze.js').then((mod) => { drawStarView = mod.drawStarView; }).catch((e) => console.warn('[stargaze]', e)); break;   // (the observatory: the night sky through the eyepiece)
     case 'ug': S.ugLayer = m.ug || 0; S.ugVeins = m.veins || []; S.ugVeinsAt = performance.now(); break;   // down the sewers / in the cave (1 / 2), and the ore veins' state (server/systems/underground.js)
+    case 'garden': case 'fields': S[m.t] = m.t === 'garden' ? m.g : m.f; if (!S.farmArt && !S.farmP) S.farmP = import('./render/farmart.js').then((mod) => { S.farmArt = new mod.FarmArt(S); }).catch((e) => { S.farmP = null; console.warn('[farm]', e); }); break;   // (the garden plots and the fields' rows near you: gardening.js, farming.js)
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'board': phone.onBoard(m); break;
@@ -3053,6 +3054,7 @@ function drawWorldV1(F) {
     S.flora.drawLive(g, view, S.ground, sky);
     mark('flora');
   }
+  if (!sub && S.farmArt) S.farmArt.drawV1(g, view, now);   // (the garden plots near you, the fields' rows: render/farmart.js)
   // the elevated highway: its shadow and the ramps' feet lie on the ground
   const hv = sub ? { slabs: [], pillars: [] } : S.highway.visible(view);
   S.highway.drawShadows(g, hv.slabs, sky);
@@ -3989,7 +3991,7 @@ function drawVehicleEnt(v, now, dt) {
   }
   g.translate(-Math.sin(v.ra) * leanPx + Math.cos(v.ra) * dip, -lift + Math.sin(v.ra) * dip);
   vehTurn(g, v, def);
-  if (def.tracks) drawTank(v, def, !!(f & VF.WRECK)); else if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);
+  if (def.tracks) drawTank(v, def, !!(f & VF.WRECK)); else if ((def.id === 'tractor' || def.id === 'combine') && S.farmArt) S.farmArt.drawTractor(g, def, v.d.p | 0, !!(f & VF.WRECK)); else if (f & VF.WRECK) drawVehicleWreck(g, v.d, def); else drawVehicle(g, v.d, def, f);   // (the tractor: render/farmart.js)
   if (v.parent) S.boom.vdmgDraw(g, v, def);   // (its damage: render/vehdmg.js)
   const L = def.L, Wd = def.W;
   if (f & VF.BLOODY) { g.fillStyle = 'rgba(120,10,16,.85)'; for (let k = 0; k < 5; k++) { const h = ((v.id * 13 + k * 7) % 17) / 17; g.beginPath(); g.arc(L * 0.3 + h * L * 0.15, -Wd * 0.3 + ((k * 0.37 + h) % 1) * Wd * 0.6, 2 + h * 3, 0, 6.28); g.fill(); } }

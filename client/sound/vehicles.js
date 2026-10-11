@@ -59,6 +59,7 @@ export const ENGINE_CLASS = {
   heli: 'rotor', policeheli: 'rotor', gunship: 'rotor', plane: 'prop', rescueheli: 'rotor',
 
   tank: 'tank',
+  tractor: 'truck', combine: 'truck',   // (the farm's diesels: H61)
 };
 export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', rescueboat: 'ambulance', rescue4x4: 'ambulance', firetruck: 'fire' };
 const AIR_BRAKES = new Set(['truck', 'bus']);

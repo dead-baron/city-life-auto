@@ -51,9 +51,12 @@ function w2legend(world, e) {
 import { airfields } from '../shared/flight.js';
 import * as sar from './systems/sar.js';
 import * as coastguard from './systems/coastguard.js';
+import * as gardening from './systems/gardening.js';
+import * as farming from './systems/farming.js';
+import * as homes from './systems/homes.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -556,6 +559,8 @@ export function command(world, p, c, msg) {
     case 'burn': devBurn(world, p, ped, String(msg.k || 'me')); break;   // fire on people (H58): you ('me'), or people standing a little way ahead ('crowd')
     case 'sar': { const err = sar.devSar(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }
     case 'coast': { const err = coastguard.devCoast(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the coast guard (H59): msg.mode 'boat' | 'air', msg.k 'smuggle' | 'overboard', msg.near   // search and rescue (H59): msg.k a call's kind near you, msg.hover over them, msg.roof on a hospital's roof pad
+    case 'garden': { const err = gardening.devGarden(world, p, msg, homes.buy); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // a garden of your own at every stage (H61); msg.k 'ripe': all of it ripe
+    case 'farm': { const err = farming.devFarm(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // a tractor at the fields, the rows in every state (H61)
     default: world.notify(p, `[dev] unknown command ${c}. Try: ${DEV_COMMANDS.join(', ')}`, 'warn'); return;
   }
   world.loopTime %= DAY_LOOP_S;

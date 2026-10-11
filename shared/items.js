@@ -1,4 +1,4 @@
-import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS } from './rules.js';
+import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules.js';
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
@@ -458,3 +458,21 @@ SHOPS.assay = { title: 'Granite Quarry Assay Office', buy: PICK_OFFERS(['pickSto
   sellPrice: Object.fromEntries(ORE_ITEMS.concat(['nugget', 'quartz']).map((id) => [id, Math.round(ITEMS[id].sell * ASSAY_PAYS)])) };
 // The Grand Theatre's ticket and popcorn counter (shared/cinema.js; the prices are CINE's there)
 SHOPS.cinema = { title: 'The Grand Theatre - tickets & popcorn', buy: [{ kind: 'item', id: 'filmTicket', price: 12, qty: 1 }, { kind: 'item', id: 'popcorn', price: 5, qty: 1 }] };
+// ---- gardening (H61: server/systems/gardening.js; the numbers: shared/rules.js GARDEN, GARDEN_CROPS): a packet of seeds
+// for each crop (planted at an empty plot in your yard: seed_<crop>), what it grows (<crop>: eaten for a little health,
+// sold to the grocery or the co-op) and the prize ones now and then (prize_<crop>: worth GARDEN.prizeX times as much)
+export const GARDEN_CROP_NAMES = { tomato: 'Tomato', carrot: 'Carrot', lettuce: 'Lettuce', pumpkin: 'Pumpkin' };
+for (const [c, q] of Object.entries(GARDEN_CROPS)) {
+  ITEMS[`seed_${c}`] = { name: `${GARDEN_CROP_NAMES[c]} Seeds`, seed: c, sell: 0 };
+  ITEMS[c] = { name: `Garden ${GARDEN_CROP_NAMES[c]}`, food: true, heal: q.heal, sell: q.sell, crop: c };
+  ITEMS[`prize_${c}`] = { name: `Prize ${GARDEN_CROP_NAMES[c]}`, food: true, heal: q.heal * 3, sell: q.sell * GARDEN.prizeX, crop: c, prize: true };
+}
+export const GARDEN_PRODUCE = Object.keys(GARDEN_CROPS).flatMap((c) => [c, `prize_${c}`]);
+const SEED_OFFERS = Object.entries(GARDEN_CROPS).map(([c, q]) => ({ kind: 'item', id: `seed_${c}`, price: q.seeds, qty: 1 }));
+// the farm co-op's counter (Dry Creek's co-op, the Cedar Farms market: kind 'farm') sells seeds and buys what you grow;
+// so does the grocery; the hardware store and the Old Town market keep seeds too
+SHOPS.farm = { title: 'Farm Co-op', buy: SEED_OFFERS, sells: GARDEN_PRODUCE.slice() };
+SHOPS.grocery = { title: 'FreshHub Grocery', buy: [], sells: GARDEN_PRODUCE.slice() };
+SHOPS.hardware.buy.push(...SEED_OFFERS);
+SHOPS.market.buy.push(...SEED_OFFERS);
+SHOPS.market.sells.push(...GARDEN_PRODUCE);

@@ -68,6 +68,8 @@ import * as aircraft from './systems/aircraft.js';
 import * as sar from './systems/sar.js';
 import * as charter from './systems/charter.js';
 import * as coastguard from './systems/coastguard.js';
+import * as gardening from './systems/gardening.js';
+import * as farming from './systems/farming.js';
 import * as net from './net.js';
 import { warmGround } from './systems/offroad.js';
 
@@ -141,6 +143,8 @@ const SYSTEMS = [
   ['sar', sar.update],              // search and rescue pilots' shifts: the calls, the harness, the hand-over (H59)
   ['charter', charter.update],      // charter pilots' bookings: rich customers flown from place to place (H59)
   ['coastguard', coastguard.update], // the coast guard's patrols: smugglers run down and boarded, people pulled out of the water (H59)
+  ['gardening', gardening.update],  // the plots in owned homes' yards: growing, drying out, wilting; the plots near each player sent (H61)
+  ['farming', farming.update],      // the farms' fields: the rows growing, a tractor down a row ploughing, sowing, harvesting it (H61)
 ];
 
 export class World {

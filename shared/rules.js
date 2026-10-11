@@ -645,3 +645,25 @@ export const COAST = {
   run: [2500, 5000], top: 470, stopR: 240, stopHeliR: 320, stopAlt: 320, stopS: 4, boardR: 180, boardAlt: 220, loseR: 5000, loseS: 25, bust: 300, cut: 0.5,
   circleR: 500, seeR: 600, callS: 600, reachBoat: 120, ashoreR: 110, rescue: 280, fast: 0.5, parS: 150, samaritan: 10,
 };
+// ---- gardening (H61; the owner, 2026-10-11: "Have we added farm jobs and gardening mechanics yet?") - server/systems/
+// gardening.js. An owned home's yard has up to plots garden plots (found from the built map: the lot's open ground),
+// worked within reach px. Seeds from the farm co-op's counter, the market or the hardware store; plant one at an empty
+// plot, water it (or let the rain): a watering lasts waterDays in-game days (DAY_LOOP_S each) and a plant grows only
+// while it's wet - ripe after its crop's days of wet growing. Dry wiltDays it wilts (water perks it up, but the prize is
+// lost); dry dieDays it dies. Picked ripe: the crop's yield (eat one for its heal; the grocery and the co-op buy them at
+// sell each); now and then (prize: the chance, rolled at planting) a prize one, worth prizeX times a plain one.
+export const GARDEN = { plots: 4, reach: 34, waterDays: 0.5, wiltDays: 0.35, dieDays: 1.5, prize: 0.1, prizeX: 6 };
+export const GARDEN_CROPS = {
+  tomato: { seeds: 10, days: 1.5, yield: 3, sell: 6, heal: 8 },
+  carrot: { seeds: 8, days: 1.2, yield: 4, sell: 4, heal: 6 },
+  lettuce: { seeds: 8, days: 1, yield: 2, sell: 7, heal: 7 },
+  pumpkin: { seeds: 16, days: 2.5, yield: 1, sell: 34, heal: 20 },
+};
+// ---- farm work (H61) - server/systems/farming.js. The farms' fields in rows rowW px wide along their length, each
+// going round stubble -> ploughed -> sown -> growing (growDays in-game days) -> ripe -> harvested (stubble again).
+// Driving a tractor down a row does the job it needs - plough, sow or harvest - once cover of its length is done
+// (its length in segs pieces). On the farm-work contract (the co-op's counter, the phone) each row pays pay[job], rows
+// rows finish it (+bonus); it runs contractS s; the tractor's issued like a work truck (jobs.js workTruck). By hand at
+// harvest time: each stretch of a ripe row picked on foot, and every handPer of them fill a crate (a Produce Box worth
+// handBox at the farm stand or the grocery).
+export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough: 22, sow: 18, harvest: 30 }, rows: 8, bonus: 150, contractS: 1500, near: 1600, handPer: 3, handBox: 45 };
