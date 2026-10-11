@@ -1613,12 +1613,15 @@ the island in today's frame, then the place in the v3 frame - 9.0 s for the plac
 - **POIs:** every kind today's island has (3 hospitals, 2 police stations, 5 banks, 6 clubs, 6 stations, 5 gas
   stations, the courthouse, the marina...), more of the numbered ones (homes 46 / 37, convenience 26 / 15, delivery
   38 / 24, ATMs 50 / 47). Pelican Key's charter and rental stay with Pelican Key.
-- **The numbers** (placed / the island build): road edges 485 / 451, blocks 211 / 161, buildings 467 / 316, POIs
-  239 / 201, props 5,016 / 4,404.
-- **The canal** is crossed by 2 bridges, Bridge Avenue and Northbridge Avenue (3 edges): today's river bridges,
-  placed, happen to cross it. **The skeleton's six canal bridges (two of them footbridges) are not laid yet.**
-- **The streets join up:** 485 edges in 3 pieces of the graph (319 junctions, then 8 and 3: two short pieces cut off
-  by the canal).
+- **The numbers** (placed / the island build, after the canal fix below): road edges 486 / 451, blocks 212 / 161,
+  buildings 470 / 316, POIs 242 / 201, props 5,034 / 4,404.
+- **The canal:** today's river bridges, placed, happen to cross it. Before the canal fix both Bridge Avenue and
+  Northbridge Avenue crossed, and the graph was 3 pieces (319 junctions, then 8 and 3). After it, the picture shows
+  Bridge Avenue stopping at both shores of the inlet and Northbridge Avenue over the canal. The graph is now 4 pieces:
+  **Metro City 212 junctions and Southbank 106 apart**, then 8 and 3. Northbridge's crossing doesn't join them in the
+  graph - to look at first next time. **The skeleton's six canal bridges (two of them footbridges) are not laid yet.**
+- **The streets join up** on each landmass (one piece each, plus the two short pieces cut off by the canal); across the
+  canal, see above.
 - Left out (other landmasses' roads, the skeleton's): the North Bridge, the Harbor Bridge, the West Hills and Dry Creek
   station roads.
 
@@ -1633,12 +1636,15 @@ avenues, the Harbor, Pine Hills' drives, Southside's grid, the new east shore bu
 Southbank, crossed by Bridge and Northbridge Avenues.
 
 What looks wrong:
-- **The canal's west end shows as a band of river water against the sea:** between the Harbor and Pine Hills it runs
-  through a thin strip of the polygon's land (today's river mouth, which the land layer's flood made land) and eats
-  it whole. So its water (`m.river`, drawn as river) lies against the open sea (drawn as sea), with the canal's stepped
-  edge between them. A probe of the land: 2,278 canal tiles in that box beside 1,894 of open sea. Fix: the canal is
-  river only where the island's land is on both sides; its mouth is sea. (Today's river trace is skipped on the v3
-  land - `ownRiver`: the canal is the river - but that wasn't the band.)
+- **The canal's west end showed as a band of river water against the sea** (fixed, the third picture): between the
+  Harbor and Pine Hills it runs through a thin strip of the polygon's land (today's river mouth, which the land
+  layer's flood made land) and eats it whole. So its water (`m.river`, drawn as river) lay against the open sea
+  (drawn as sea), with the canal's stepped edge between them (a probe of the land: 2,278 canal tiles in that box beside
+  1,894 of open sea). Now the canal's water within 12 tiles of the open sea is the sea's: its mouths, and that strip.
+  The west half reads as today's inlet, and the canal proper is its east half. (Today's river trace is skipped on the
+  v3 land as well - `ownRiver` - but that wasn't the band.) The cost: Bridge Avenue no longer crosses (an avenue
+  bridges river water, not the sea), so of today's two river bridges only Northbridge Avenue crosses the canal. A
+  small wedge of river water is left on Pine Hills' north-west shore.
 - **The railway runs over the sea:** its loop is laid whole (4.7 item 4). It shows as the thin line east of the
   island and runs off south-west into the bay. The skeleton's main line replaces it.
 - **Cedar Avenue's bridge runs out to nowhere:** today it leads to Cedar Isle. In v3 Cedar Isle is east of Metro City,
@@ -1648,8 +1654,8 @@ What looks wrong:
 - **The new east shore is ruler-straight:** the polygon's east side, with one long strip of blocks along it. Bayside
   Heights and Southside run on to it with a parkway down its length. It wants the coast's wobble (8.3 item 5) and
   some depth.
-- **Only two crossings over the canal**, both on its west half: the skeleton's six canal bridges, two of them
-  footbridges, are still to come (item 3).
+- **One avenue crosses the canal** (Northbridge Avenue): the skeleton's six canal bridges, two of them footbridges,
+  are still to come (item 2), and the inlet's crossing with them.
 
 **What's left** (next steps, in order):
 1. **Inside metro.js at scale 1.15:** the street plan runs in today's coordinates and is placed after, so its pitches

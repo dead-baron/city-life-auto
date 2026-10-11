@@ -6688,14 +6688,16 @@ What it does (docs/WORLD-V3.md 8.4 has the numbers):
   end and the world-wide ATMs differ).
 - **Step B (1.15 on `buildLand3`'s land:** the polygon, the canal as river water, the land layer's districts and
   zones): it builds in 9 s in the v3 frame. 1.30x the land, every district with ground, streets and buildings, every
-  kind of POI, 485 road edges in 3 pieces (today's 451), 467 buildings (316). Two avenue bridges cross the canal; the
+  kind of POI, 486 road edges (today's 451), 470 buildings (316). Metro City's and Southbank's streets are one piece
+  each; across the canal the graph doesn't join them yet (to look at). Two avenue bridges cross the canal; the
   skeleton's six canal bridges aren't laid yet.
 - **The picture:** `docs/world-v3-metro.png` (`tools/world3-place-map.mjs`): today's Metro City from the world map
   beside the place in the v3 frame, baked with the game's chunk bake as the world map is. What looks wrong: the
   railway's loop runs over the sea, Cedar Avenue's bridge runs out to nowhere (its Cedar Isle is elsewhere now), the
-  new east shore is ruler-straight, only two avenues cross the canal, and the canal's west end shows as a band of
-  river water against the open sea: it eats a thin strip of the polygon's land there whole. Today's river trace is
-  skipped on the v3 land (the canal is the river there).
+  new east shore is ruler-straight, and only Northbridge Avenue crosses the canal. Fixed on the way: the canal's west
+  end showed as a band of river water against the open sea (it eats a thin strip of the polygon's land whole), so
+  the canal's water within 12 tiles of the open sea is the sea's now (the west half reads as today's inlet); and
+  today's river trace is skipped on the v3 land (the canal is the river there).
 - **Not done yet:** the street plan placed from inside `metro.js` (at 1.15 its pitches scale with the place), the
   canal's six bridges, the roads off the place cut at the shore.
 - The live world is unchanged: the world hash stays `6b6e16fdef9f`. The page's code grows 1.5 KB gzipped (the

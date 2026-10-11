@@ -71,6 +71,20 @@ export function islandOpts(key, asked = {}) {
       if (L.land[i] && Z3.includes(L.zone[i])) { land[i] = 1; mass[i] = 1; }
       else if (L.water[i] === 5) m.river[i] = 1;   // (WATER3.CANAL)
     }
+    // (the canal's water within 12 tiles of the open sea is the sea's: its mouths, and where it ate a thin strip of land
+    // and lies against the sea - drawn as river there, it showed as a band)
+    const dd = new Int16Array(N).fill(-1), q = [];
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const i = y * W + x;
+      if (!m.river[i]) continue;
+      for (const k of [i - 1, i + 1, i - W, i + W]) if (L.water[k] === 1 || L.water[k] === 2) { dd[i] = 0; q.push(i); break; }
+    }
+    for (let h = 0; h < q.length; h++) {
+      const i = q[h];
+      if (dd[i] >= 12) continue;
+      for (const k of [i - 1, i + 1, i - W, i + W]) if (m.river[k] && dd[k] < 0) { dd[k] = dd[i] + 1; q.push(k); }
+    }
+    for (const i of q) m.river[i] = 0;
     own = land;
     o.ownRiver = true;   // (the canal is the river: map.js's trace of today's river would mark the bay's water)
     o.zones = (mm) => { for (let i = 0; i < N; i++) if (land[i]) mm.zone[i] = L.zone[i]; };
