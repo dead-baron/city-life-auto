@@ -1225,7 +1225,7 @@ export function vehicleModel(type, o = {}) {
       m.box(8, tw, 3, L - 8, W - tw, 14, M.dark);                                     // the belly between the tracks
       m.box(4, 0, 14, L - 3, W, 18, M.body);                                          // the deck over the tracks (the fenders)
       m.fill((x, y, z) => (z < 24 - Math.max(0, x - (L - 30)) * 0.45 ? M.body : -1), 8, 6, 18, L - 4, W - 6, 24);   // the upper hull, the glacis sloping to the nose
-      m.box(8, 14, 24, 40, W - 14, 25, M.dark);                                       // the engine deck's grille
+      for (let k = 0; k < 5; k++) m.box(10 + k * 6, 20, 24, 13 + k * 6, W - 20, 25, M.dark);   // the engine deck's grille
       for (const y of [8, W - 14]) m.box(L - 6, y, 17, L - 2, y + 6, 21, M.trim);     // the headlamps
       m.box(2, W / 2 - 16, 16, 6, W / 2 - 4, 22, M.dark); m.box(2, W / 2 + 4, 16, 6, W / 2 + 16, 22, M.dark);   // the exhausts at the back
       break;
