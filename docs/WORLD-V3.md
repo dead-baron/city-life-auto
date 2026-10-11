@@ -2996,14 +2996,15 @@ changes: the world hash stays `6b6e16fdef9f`; the art hash changes (the towns' w
 **The buildings** (`TOWN_STYLES`, the generator's `STYLE` form by district, handed in as `opts.styles` - map.js reads
 `OPTS.styles[d]` before `STYLE[style]` in three places: the block split, `fillRow`, `fillRowV2`; only the v3 build
 passes it): no brick shop rows, apartment blocks or car parks - Timber Bend (57) houses, cabins and workshops (house3,
-house7, repair, the quick stop, a liquor store, a diner), yards between, metal and tar roofs; Willow Crossing (58)
+house7, repair, the quick stop, a liquor store, a diner), metal and tar roofs; Willow Crossing (58)
 farmhouses and the store, the repair shop, the diner, metal and tile roofs; Sandpiper Bay (59) beach houses, cafes and
-the beach bar with gardens between (`park` filler, not the plaza's paving), tile roofs; few plain roofs anywhere.
+the beach bar, tile roofs; gardens between in all three (the `park` filler: the `yard` one lays striped car parks, the
+beach style's `plaza` brown paving); few plain roofs anywhere.
 **The art:** art v2 (`client/art2/game/statics.js`, `TOWN_LOOK` by district) draws a town's houses, shop rows and
 blocks in wood siding - the logging town's dark timber, the farm town's white and cream clapboard (a red barn board
-now and then), the beach towns' pastel boards - one or two storeys, a small one under a shingled gable or hip roof, a
-wider shopfront flat-roofed behind a false front (its parapet); the motel, the clinic and the sheriff two storeys at
-most. The classic renderer (`client/render/buildings.js`) paints the towns' facades in the same woods (`TOWN_WALLS`).
+now and then), the beach towns' pastel boards - one or two storeys under a shingled gable or hip roof (a section up to
+16 tiles: the generator's buildings are cut into sections no bigger), a shopfront six times in ten flat-roofed behind a
+false front (its parapet); the motel, the clinic and the sheriff two storeys at most. The classic renderer (`client/render/buildings.js`) paints the towns' facades in the same woods (`TOWN_WALLS`).
 
 **Northshore's beach towns less dense** (district 54, 8.14): the beach town's style, sparser still (`TOWN_STYLES[54]`:
 lots 16 tiles at least, houses three to one over cafes and bars, gardens for the gaps, almost no plain roofs).
@@ -3016,8 +3017,8 @@ diners, 9 beach bars, 10 corner stores, a small tower - covering 15.2% of the di
 
 | town | its ground | main street | side streets (dead ends) | buildings | fronting the main street | road / buildings (tiles) |
 |---|---|---|---|---|---|---|
-| Timber Bend | 10,422 tiles | Timber Road, row 1071 | 4 (1: Logger Lane) | 32 | 11 | 2,841 / 4,641 |
-| Willow Crossing | 14,160 tiles | the Mine Road, row 1270 | 4 (1: Orchard Lane) | 30 | 10 | 3,832 / 4,703 |
+| Timber Bend | 10,422 tiles | Timber Road, row 1071 | 4 (1: Logger Lane) | 29 | 8 | 2,841 / 3,905 |
+| Willow Crossing | 14,160 tiles | the Mine Road, row 1270 | 4 (1: Orchard Lane) | 32 | 10 | 3,832 / 4,771 |
 | Sandpiper Bay | 19,912 tiles | Sandpiper Drive, row 2574 | 4 (1: Dune Street) | 45 | 20 | 3,815 / 4,177 |
 
 Sandpiper Bay's front: 480 tiles of boardwalk, 222 of pier. 8.13's grid had 7-10 lines of street and 8-12 dead ends a

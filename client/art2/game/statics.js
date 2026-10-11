@@ -1022,7 +1022,7 @@ function specOf(c, b, A, s, D) {
   const TL = TOWN_LOOK[TOWN_OF[D.id]];
   if (TL && TOWN_ARCH.has(A) && !s.frame && !s.vox && !b.art) {
     Object.assign(spec, { style: 'siding', wallColor: pick(TL.walls, rnd()), floors: Math.min(Math.max(1, spec.floors || 1), rnd() < TL.two ? 2 : 1), balconies: false, ivy: 0, graffiti: 0, grime: 0.12, fireEscape: false, boarded: 0 });
-    if (!pitched && s.tw <= 14 && s.th <= 14 && (!spec.shop || rnd() < 0.4)) { Object.assign(spec, { pitch: rnd() < TL.hip ? 'hip' : 'gable', roof: 'shingle', roofColor: pick(TL.roofs, rnd()), slope: 0.42 }); pitched = true; }
+    if (!pitched && s.tw <= 16 && s.th <= 16 && (!spec.shop || rnd() < 0.4)) { Object.assign(spec, { pitch: rnd() < TL.hip ? 'hip' : 'gable', roof: 'shingle', roofColor: pick(TL.roofs, rnd()), slope: 0.42 }); pitched = true; }
     else if (!pitched) spec.parapet = 10;   // (the false front)
   } else if (TL && (A === 'hotel' || A === 'hospital' || A === 'police' || A === 'civicblock' || A === 'office')) spec.floors = Math.min(spec.floors || 2, 2);   // (the motel, the clinic, the sheriff: two storeys at most)
   if (s.bay) {   // the bay's back wall: an open roller door into the lit booth, a sign over it
