@@ -1983,7 +1983,8 @@ the shore isn't designed). What the whole picture shows wrong:
   its five estates** (`buildFarm`, `DRY_CREEK_ESTATES`: houses at [1113-1190, 500-545] with their homes, in today's
   coordinates, so in Granite Peaks) - **skipped in the world build now** (Dry Creek is none of its places; its drop
   site too); still there: **a ride and a snack stand** at [1077-1089, 852-855] (a site in today's coordinates, in
-  Highland Woods), **a lighthouse and an ATM** at [1667, 1512] by Westport Junction (not yet traced).
+  Highland Woods), **a lighthouse and an ATM** at [1667, 1512] by Westport Junction and a patch of sand at about
+  [488, 676] on Granite Peaks' edge (neither traced yet).
   And Northshore's own south edge - the Northshore Loop, a delivery stop, a vending machine, an ATM at [2095-2265,
   1804-1846] - lies on land the land layer gives the beach towns (district 54, not one of Northshore's picture's): not
   strays, but Northshore's town running onto the beach strip. The unplaced passes are 8.4's list 4; each wants a
