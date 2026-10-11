@@ -7475,7 +7475,9 @@ client/art2/game/chunkgeom.js (new), client/art2/game/chunkbake.js, client/art2/
 Measured (today's world, headless Chromium 1280 x 720, one bake worker, two cores shared with other jobs; the dev
 teleport sent -> every chunk on screen drawn; the woods, the farms, downtown, the woods again): a fresh server (cold
 CDN) 30.2 / 23.8 / 34.2 / 7.6 s before, 24.9 / 23.6 / 25.7 / 8.4 s after the asking fixes; with the chunks baked on the
-server 21.0 / 15.7 / 17.3 / 7.4 s before, WARMAFTER s after all of it - JUMPLINE. In the headless page the rest is its
+server 21.0 / 15.7 / 17.3 / 7.4 s before, 16.8 / 13.4 / 15.7 / 10.5 s after all of it - of which 5.0-8.7 s (3-4
+frames) from the camera's jump to the screen drawn (`stats().jump`; the woods again were still resident: drawn at the
+jump, 10.5 s after the teleport was sent). In the headless page the rest is its
 frames (one every 1-2 s: the camera follows the teleport several seconds after it's sent).
 
 Tests: test/art2teleport.test.js (the order after a teleport: the chunk under the camera first, the looks before the
