@@ -4124,12 +4124,13 @@ function pedVisual(p, now) {
   if (p.burn) burnFx(p, !!L.upright && !lying);
   if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry - (L.upright ? 20 : 0) + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
 }
-// on fire (server burning.js): flames licking up the body (along it, lying down) and dark smoke rising - the pooled
+// on fire (server burning.js): flames licking up the body (thrown up from the feet: their height, not a step up the
+// screen, so art v2's depth keeps them in front of the body; along it, lying down) and dark smoke rising - the pooled
 // particles, which both renderers draw (and art v2 lights)
 function burnFx(p, up) {
-  const fx = S.fx, h = up ? 10 : 2, w = up ? 8 : 18, r = Math.random;
-  if (r() < 0.9) fx.spawn(3, p.rx + (r() - 0.5) * w, p.ry - h - r() * (up ? 16 : 5), (r() - 0.5) * 16, -24 - r() * 30, 0.28 + r() * 0.3, 4 + r() * 4, r() < 0.5 ? '#ff8a1a' : '#ffd23a', -7);
-  if (r() < 0.25) fx.smoke(p.rx, p.ry - h - 16, true);
+  const fx = S.fx, w = up ? 8 : 18, r = Math.random;
+  if (r() < 0.9) fx.spawn(3, p.rx + (r() - 0.5) * w, p.ry + 2 + (r() - 0.5) * (up ? 4 : 8), (r() - 0.5) * 16, (r() - 0.5) * 6, 0.28 + r() * 0.3, 4 + r() * 4, r() < 0.5 ? '#ff8a1a' : '#ffd23a', -7, up ? 150 + r() * 170 : 60 + r() * 70);
+  if (r() < 0.25) fx.smoke(p.rx, p.ry - (up ? 30 : 8), true);
 }
 function drawPed(p, now) {
   const f = p.flags;
