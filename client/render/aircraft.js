@@ -16,7 +16,7 @@ export function predict(s, inp, dt, map, def, engine) { flightStep(s, flightInpu
 export const zoomOut = (alt) => 1 + Math.min(1.3, Math.max(0, alt || 0) / 650);
 // Art v2 stands things up: something at a height is drawn that much up the screen. An aircraft is drawn lifted by its
 // altitude the same way (its shadow stays on the ground), so one down on a roof sits on the drawn roof - V2_LIFT: the
-// drawn height of a roof over its flying height (bldTop; measured on the hospitals' roofs). The camera follows half the
+// drawn height of a roof over its flying height (bldTop; measured on the hospitals' roofs). The camera follows two thirds of the
 // lift of your own (main.js), so you and the ground under you both stay on screen.
 export const V2_LIFT = 0.66;
 export const liftOf = (alt) => Math.max(0, alt || 0) * V2_LIFT;

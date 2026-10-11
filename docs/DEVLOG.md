@@ -8449,7 +8449,7 @@ And: "Private helicopter pilot for rich billionaire customers flying around the 
   up the screen - and now an aircraft is too, by its altitude times `V2_LIFT` (0.66: a roof's drawn height over its
   flying height, measured on the hospitals' roofs; `client/render/aircraft.js` liftOf), its shadow staying on the ground
   - or on the roof under it. So a helicopter down on a roof sits on the drawn roof, the roof pads are drawn up there (they
-  were hidden in v2), and the harness's cable hangs straight down the screen to the one below. The camera follows half
+  were hidden in v2), and the harness's cable hangs straight down the screen to the one below. The camera follows two thirds of
   the lift of your own aircraft (`main.js`), so you and the ground under you both stay on screen. The classic view is as
   it was. The job's marker points at the hospital's roof pad (the yard's helipad takes them too).
 - **Charter pilot** (`server/systems/charter.js`; `shared/rules.js` CHARTER): from the phone (Jobs › Flying) - the company's
