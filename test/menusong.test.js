@@ -78,7 +78,7 @@ test('the keys: D minor seven in bar A (a low D an octave over the bass, the cho
   for (const b of [0, 1]) for (const [s, n, len, v, late] of notes(b, 'mkeys')) {
     assert.ok(PC[b].includes(n % 12), `${'AB'[b]} ${s}: ${n} is in the chord`);
     assert.ok(s + late + len <= BAR, `${'AB'[b]} ${s}: let go within its bar`);
-    assert.ok(v > 0.01 && v < 0.15, `${'AB'[b]} ${s}: a level (${v})`);
+    assert.ok(v > 0.005 && v < 0.15, `${'AB'[b]} ${s}: a level (${v})`);
     assert.ok(n >= 50 && n <= 86, 'from D3 to D6');
   }
   const at = (b, s) => notes(b, 'mkeys').filter((x) => x[0] === s).map((x) => x[1]).sort((a, c) => a - c);

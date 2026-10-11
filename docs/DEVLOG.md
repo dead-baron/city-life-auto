@@ -5513,28 +5513,29 @@ played by the engine's own voices: no samples of them, only the beat's one-shots
   - **Bar A, D minor seven:** a low D an octave over the bass, held through half the bar (the octave the mix's low end
     shows); the chord - A, D, A, C round the lead's F - struck on 1 and 3 and let go after about an eighth, the C held
     longer the second time; a soft F-and-A stab just after each snare.
-  - **Bar B, A seven:** a low A and E with the chord on 1, then C♯ and A with G and G♯ over them struck again on the
-    and of 2 (with the bass's G) and the e of 4; G-and-G octave stabs after the second snare and on the and of 3 (with
-    a high D), a B and a G♯ between. The recording's keys ring a G♯ over the A seven as loud as its C♯: kept, as
-    measured.
+  - **Bar B, A seven:** a low A and E with the chord on 1, then C♯ and A with a G♯ over them struck again on the
+    and of 2 (with a G, over the bass's G) and the e of 4; G-and-G octave stabs after the second snare and on the and of 3 (with
+    a high D), quiet Bs and a G♯ between, an E to end. The recording's keys ring a G♯ over the A seven as loud as its
+    C♯: kept, as measured.
   - **The sound:** warm. The recording's 1.2-2.4 kHz sits 20 dB under its 600-1200 Hz, so each note is mostly
     fundamental: the octave 20 dB down, the twelfth 26, a trace above, nothing nasal. Struck in 6 ms, falling away
-    about 14 dB a second, let go quickly at the note's end into a short tail, as the recording's room leaves them.
-    Each note is a few cents off the next, as a real instrument's are.
+    about 14 dB a second, let go quickly at the note's end. The notes from about B4 up ring on in a short tail, as
+    the recording's room leaves them; the lower ones stop dead, as the recording's do. Each note is a few cents off
+    the next, as a real instrument's are.
 - **The lead** (`MENU_LEAD`, the 'mlead' voice): the top of the chord, sung over it - F on 1 and 3 of bar A, E on 1,
   the and of 2 and the e of 4 of bar B. Almost a sine (its octave 26 dB down), in over 15 ms, with a vibrato that
   comes in after a tenth of a second: 6.3 Hz and about 25 cents either way, measured on the held F.
 - **The duck:** both go through the song's ducked gain, as the bass does, dipping under the snares and kicks as the
   mix does.
 - **How close:**
-  - Each note's peak is within 0.7 dB of the recording's, and over its loud half steps within 1 dB (the median). The
-    bench's render sits 17 dB under the recording's scale, the same for the bass as for the keys, so the parts keep
-    the recording's balance.
+  - Each note's peak is within 0.7 dB of the recording's. Its envelope, tail included, is within about 4 dB on
+    average every half step (where either is within 20 dB of the peak). The bench's render sits 17 dB under the
+    recording's scale, the same for the bass as for the keys, so the parts keep the recording's balance.
   - The bass, keys and lead against the rest stem, band by band over the loop: within 2 dB from 70 Hz to 4.8 kHz,
     in both bars. Above that the stem carries some of the hats (pulses on the hats' 16ths, leaked from the drums),
     not the keys.
-  - The whole song against the master: within 2.6 dB band by band from 30 Hz to 9.6 kHz (the low end 2 dB over, the
-    top 3 dB under). At the same loudness, the engine's peaks are 4.5 dB higher than the master's: the beat's
+  - The whole song against the master: within 2.7 dB band by band from 30 Hz to 9.6 kHz (the low end 2 dB over, the
+    top 3-4 dB under). At the same loudness, the engine's peaks are 5 dB higher than the master's: the beat's
     one-shots aren't limited as the master is.
 - **The A/B files** (sent to the owner): the recording's rest stem; the engine's keys and lead alone; the engine's
   bass, keys and lead (like for like with the stem); the two swapping every 4 bars; and the full song - the recording,

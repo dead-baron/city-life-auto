@@ -115,17 +115,17 @@ export const MENU_BASS = {
 // an octave over the bass held through half the bar (the octave the mix's low end shows), and the chord - A, D, A, C
 // round the lead's F - struck on 1 and 3, and a soft F-and-A stab just after each snare. Bar B, A seven: a low A and
 // E, then C♯, G♯ and B over the lead's E, struck on 1, the and of 2 (with the bass's G) and the e of 4; G-and-G
-// octave stabs after the second snare and on the and of 3 (with a high D), a B and an E between.
+// octave stabs after the second snare and on the and of 3 (with a high D), quiet Bs and a G♯ between, an E to end.
 export const MENU_KEYS = {
   A: [[0, 50, 7.8, 0.126], [0, 69, 1, 0.037], [0, 74, 1.2, 0.072], [0, 81, 1.6, 0.045], [0, 84, 1.8, 0.035],
     [4, 65, 0.35, 0.018, 0.4], [4, 69, 0.35, 0.023, 0.4], [4, 81, 0.35, 0.018, 0.4],
     [8, 69, 1.4, 0.065], [8, 74, 1.8, 0.041], [8, 81, 1.8, 0.05], [8, 84, 3.8, 0.054],
     [12, 65, 0.35, 0.028, 0.4], [12, 69, 0.35, 0.026, 0.4], [12, 74, 0.35, 0.02, 0.4], [12, 81, 0.35, 0.022, 0.4]],
   B: [[0, 57, 1.7, 0.056], [0, 64, 1.8, 0.046], [0, 67, 1.2, 0.025], [0, 69, 1.8, 0.029], [0, 73, 1.8, 0.063], [0, 79, 1.8, 0.028], [0, 80, 1.8, 0.05], [0, 83, 1.8, 0.025],
-    [4, 67, 0.5, 0.045, 0.3], [4, 79, 0.5, 0.045, 0.1],
-    [6, 64, 1.3, 0.022], [6, 69, 3.8, 0.051], [6, 73, 3.6, 0.07], [6, 79, 1.8, 0.032], [6, 80, 1.8, 0.045],
+    [4, 67, 0.5, 0.045, 0.1], [4, 79, 0.5, 0.045, 0.1],
+    [6, 64, 1.3, 0.022], [6, 69, 3.8, 0.051], [6, 71, 2, 0.008], [6, 73, 3.6, 0.07], [6, 79, 1.8, 0.032], [6, 80, 1.8, 0.045], [6, 83, 0.8, 0.02],
     [8, 71, 1, 0.018, 0.5], [8, 80, 0.6, 0.02, 0.5], [10, 67, 0.6, 0.05, 0.15], [10, 79, 0.6, 0.073], [10, 86, 0.8, 0.032],
-    [12, 57, 1, 0.016], [12, 67, 0.5, 0.035, 0.3], [12, 79, 0.6, 0.035], [12, 86, 0.5, 0.014, 0.5],
+    [12, 57, 1, 0.016], [12, 67, 0.5, 0.035, 0.3], [12, 71, 0.6, 0.01], [12, 79, 0.6, 0.035], [12, 86, 0.5, 0.014, 0.5],
     [13, 69, 3, 0.051], [13, 73, 3, 0.045], [13, 80, 3, 0.05], [15, 64, 1, 0.022]],
 };
 // The lead: the top of the chord, sung over it - F in bar A (on 1 and 3), E in bar B (on 1, the and of 2, the e of 4) -
@@ -133,7 +133,7 @@ export const MENU_KEYS = {
 // measured on the held F): [step, note, length in 16ths, level, how late]
 export const MENU_LEAD = {
   A: [[0, 77, 1.8, 0.135], [8, 77, 3.6, 0.14]],
-  B: [[0, 76, 1.8, 0.122], [6, 76, 3.8, 0.122], [13, 76, 2.7, 0.105, 0.25]],
+  B: [[0, 76, 1.6, 0.122], [6, 76, 3.8, 0.122], [13, 76, 2.7, 0.105, 0.25]],
 };
 // a wave's peak against its fundamental (Web Audio normalises a periodic wave to its own peak)
 function wavePeak(h) { let m = 0; for (let i = 0; i < 512; i++) { let y = 0; for (let k = 1; k < h.length; k++) y += h[k] * Math.sin(k * i * Math.PI / 256); m = Math.max(m, Math.abs(y)); } return m; }
@@ -430,7 +430,8 @@ export class Music {
         o.setPeriodicWave(W.w); o.frequency.setValueAtTime(f, t); o.detune.setValueAtTime(lead ? 0 : (R() - 0.5) * 8, t);
         g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + (lead ? 0.015 : 0.006));
         g.gain.setTargetAtTime(0, t + 0.02, lead ? 0.8 : 0.6);
-        g.gain.setTargetAtTime(0, t + dur, lead ? 0.05 : 0.03); g.gain.setTargetAtTime(0, t + dur + (lead ? 0.05 : 0.035), lead ? 0.8 : 0.55);
+        // (the tail only above about B4: the recording's lower notes stop dead when let go, its room rings the upper)
+        g.gain.setTargetAtTime(0, t + dur, 0.03); g.gain.setTargetAtTime(0, t + dur + 0.035, lead ? 0.8 : f > 480 ? 0.55 : 0.04);
         g.gain.setTargetAtTime(0, end - 0.15, 0.03);   // (the tail's last whisper faded before it stops: no click)
         if (lead) {
           const lfo = c.createOscillator(), lg = c.createGain();
