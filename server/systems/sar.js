@@ -334,7 +334,7 @@ export function devSar(world, p, msg = {}) {
     if (!best) return `No ${kind} places on this map.`;
     const c = callAt(world, p, kind, best.x, best.y);
     if (msg.hover) put(best.x + 10, best.y, HARNESS[kind] ? 120 : 160);
-    if (msg.hooked && HARNESS[kind]) { const vic = world.get(c.vic); put(best.x + 10, best.y, 160); c.found = true; j.stage = 'rescue'; if (seatIn(world, p, c, v, vic)) { c.hooked = true; c.cable = 110; } }   // (msg.hooked: on the cable, halfway up)
+    if (msg.hooked && HARNESS[kind]) { const vic = world.get(c.vic); put(best.x + 10, best.y, 160); c.found = true; j.stage = 'rescue'; if (seatIn(world, p, c, v, vic)) { c.hooked = true; c.cable = 110; j.text = 'Clipped on - hold Act to winch them up'; } }   // (msg.hooked: on the cable, halfway up)
     if (msg.roof) { c.found = true; const vic = world.get(c.vic); seatIn(world, p, c, v, vic); board(world, p, j, c, v, vic); }
   }
   if (msg.roof) { const pad = nearestPad(world.map, v.x, v.y, true); if (!pad) return 'No hospital roof pad.'; put(pad.x, pad.y + (j.call ? 0 : 40), pad.alt); }

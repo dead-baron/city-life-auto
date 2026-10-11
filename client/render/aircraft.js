@@ -207,10 +207,14 @@ function drawHoist(g, h, list, dt, now) {
   g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 3; g.beginPath(); g.moveTo(dx + 6, dy + 8); g.lineTo(ex + 6 + len * 0.3, ey + 8 + len * 0.3); g.stroke();   // (its shadow)
   g.strokeStyle = '#202226'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(dx, dy); g.lineTo(ex, ey); g.stroke();
   g.fillStyle = '#3a3c40'; g.fillRect(dx - 4, dy - 4, 8, 8);   // (the winch arm over the door)
-  if (h[2]) {   // them, in the harness: an orange survival suit, arms up on the strop
-    g.fillStyle = '#ef7a1a'; g.beginPath(); g.ellipse(ex, ey + 4, 6, 9, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#e2b48c'; g.beginPath(); g.arc(ex, ey - 6, 4.5, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = '#ffd21f'; g.lineWidth = 2; g.beginPath(); g.arc(ex, ey + 2, 7, 0, Math.PI * 2); g.stroke();
+  if (h[2]) {   // them, in the harness: arms up on the strop, legs dangling, the yellow sling round them
+    g.strokeStyle = '#2c3440'; g.lineWidth = 4; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(ex - 4, ey + 14); g.lineTo(ex - 5, ey + 26 + Math.sin(now * 3) * 2); g.moveTo(ex + 4, ey + 14); g.lineTo(ex + 5, ey + 26 - Math.sin(now * 3) * 2); g.stroke();
+    g.strokeStyle = '#3d6fb5'; g.beginPath(); g.moveTo(ex - 7, ey + 2); g.lineTo(ex - 3, ey - 9); g.moveTo(ex + 7, ey + 2); g.lineTo(ex + 3, ey - 9); g.stroke();
+    g.lineCap = 'butt';
+    g.fillStyle = '#3d6fb5'; g.beginPath(); g.ellipse(ex, ey + 6, 8, 11, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#e2b48c'; g.beginPath(); g.arc(ex, ey - 6, 6, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#ffd21f'; g.lineWidth = 3; g.beginPath(); g.ellipse(ex, ey + 6, 10, 6, 0, 0, Math.PI * 2); g.stroke();
   } else { g.strokeStyle = '#ffd21f'; g.lineWidth = 3; g.beginPath(); g.arc(ex, ey, 6, 0, Math.PI * 2); g.stroke(); }
   g.restore();
 }
