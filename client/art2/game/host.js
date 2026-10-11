@@ -968,7 +968,7 @@ export class World2 {
     if (!list.length) return list;
     if (!this.lampGrid) {
       this.lampGrid = new Map();
-      for (const l of this.map.lamps || []) { const k = Math.floor(l.y / 256) * 1000 + Math.floor(l.x / 256); let a = this.lampGrid.get(k); if (!a) this.lampGrid.set(k, a = []); a.push(l); }
+      for (const l of this.map.lamps || []) { if (!l) continue; const k = Math.floor(l.y / 256) * 1000 + Math.floor(l.x / 256); let a = this.lampGrid.get(k); if (!a) this.lampGrid.set(k, a = []); a.push(l); }
     }
     for (const L of list) {
       if (L.kind !== 'lamp') continue;
@@ -2143,7 +2143,7 @@ export class World2 {
   // without the statics' lights: v1's street lamps, lit windows and shop doors (grid lookups, not scans)
   _grid(list, cell) {
     const m = new Map();
-    for (const o of list || []) { const k = Math.floor(o.y / cell) * 4096 + Math.floor(o.x / cell); let a = m.get(k); if (!a) m.set(k, a = []); a.push(o); }
+    for (const o of list || []) { if (!o) continue; const k = Math.floor(o.y / cell) * 4096 + Math.floor(o.x / cell); let a = m.get(k); if (!a) m.set(k, a = []); a.push(o); }
     return m;
   }
   _eachIn(grid, cell, fn) {
