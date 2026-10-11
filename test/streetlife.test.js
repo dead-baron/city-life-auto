@@ -206,6 +206,9 @@ test('an escorted armored truck: the squad car follows it, and turns on whoever 
   assert.equal(esc.ai.escort, van.id, 'still with it');
   assert.ok(!esc.sirenOn);
   teleport(w, p.ped, van.x + 200, van.y);
+  // (a player standing in the open beside the truck: its guards and the escort shoot them dead within the second about
+  // one run in three, and a dead player's heat is gone, so the escort stands down - this test is about the escort)
+  p.invincible = true;
   van.hp -= 120; van.lastAttacker = p.ped.id;
   run(w, 1);
   assert.equal(esc.ai.target, p.pid, 'after the attacker');
