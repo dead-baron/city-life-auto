@@ -88,7 +88,8 @@ for (const b of M.buildings) for (let y = b.ty; y < b.ty + b.th; y += S) for (le
 // the tunnels' bores dark red, a closed mouth's barrier black - so the network reads at 1 px = 2 tiles)
 const skel = new Set([...(M.world3?.roads?.arterials || []).map((a) => a.name)]);
 for (const e of M.edges) {
-  const c = e.kind === 'hwy' ? (e.lvl === 0 ? [236, 140, 40] : [250, 196, 110]) : skel.has(e.name) ? [240, 238, 228] : null;
+  // (8.11: the interchanges' ramps yellow)
+  const c = e.kind === 'hwy' ? (e.lvl === 0 ? [236, 140, 40] : [250, 196, 110]) : skel.has(e.name) ? [240, 238, 228] : e.kind === 'ramp' && M.world3?.roads?.interchanges ? [255, 236, 90] : null;
   if (!c) continue;
   for (let k = 0; k + 1 < e.pts.length; k++) {
     const a = e.pts[k], b = e.pts[k + 1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / (TILE * S)));
@@ -123,6 +124,7 @@ if (r.status !== 0) throw new Error('python3 + PIL could not write the PNG');
 log(OUT);
 // the biomes' ground and dressing (8.8: shared/world3-biomes.js)
 if (M.world3biomes) log(`biomes: ground ${JSON.stringify(M.world3biomes.ground)}, dressing ${JSON.stringify(M.world3biomes.dress)}`);
+for (const q of M.world3?.roads?.interchanges || []) log(`interchange ${q.name}: ${q.built ? `${q.U} on the deck over ${q.lowers.join(', ')}, ${q.ramps.length} ramps${q.stubs.length ? `, a stub (${q.stubs.join(', ')})` : ''}` : `at grade - ${q.why}`}`);   // (8.11)
 if (process.argv.includes('--quick')) process.exit(0);   // (the picture only: no chunk bake timing)
 
 // 2. the chunk bake: timed on a sample of chunks by kind of ground, then (--bake) every chunk

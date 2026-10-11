@@ -2504,3 +2504,111 @@ owner is deciding). Nothing live changes: the world hash stays `6b6e16fdef9f` (t
   point, the platforms on the straight, the two ways' platforms side by side; the switches at every junction and the
   bake through one; the bores under their cover, a train inside hidden from outside); `test/world3rail.test.js` (the
   Grand Loop's tunnels count its bores).
+
+### 8.11 Stage 3, step 4: the interchanges, grade-separated (2026-10-10, H31)
+
+8.7 laid the skeleton's interchanges as crossroads: the highways meeting there at grade, at one junction within 40
+tiles of the point. Now each is built with its through lanes grade-separated and ramps between the highways:
+`shared/world3-roads.js` `interchangeSites(paths, out)` (one call at the top of `layRoads`' highway pass: which
+interchanges, their ramps, and the deck each needs) and `layInterchanges(lines, sites, paths, out)` (one call after the
+arterials: the stubs and the ramps), with `rampLines(P, arms)` the ramps' geometry. Nothing live changes: the world hash
+stays `6b6e16fdef9f`; the module is only the world build's.
+
+**How an interchange is built:**
+- **The through highway** - the one whose control point the interchange is - goes up on the deck (lvl 1) over the
+  roads that end there, for the run its ramps need (plus 4 tiles), with 8.7's 24-tile climbs either side.
+- **The roads that end there** (the other highways - their ends are on the through highway's path, 8.7's `SNAP` - and
+  an arterial whose end is on a highway's control point) stay at grade and run on under the deck. Where two end there
+  from opposite sides (Northshore: the Valley Highway and the Bay Bridge; Kestrel Pass: the Highland and North
+  Highways) they join under it as one road; where one does (a T: a trumpet or a fork), it runs on under the deck as a
+  stub to the far side's ramps.
+- **The ramps:** each carriageway of the through highway gets an exit before the road below and an on-ramp after it,
+  on its own right, meeting the road below 12 tiles (`D_OFF`) out from the centre line - a diamond, laid out as the
+  Metro Ring's (`shared/citylayout.js` `diamondRamp`): 20 tiles along the deck (an 8-tile taper from the outer lane out
+  to the auxiliary lane), a 30-tile curve down (or up), 10 tiles of level run-out onto the road below. They are the
+  one-way `ramp` kind with their climb (`z0`, `z1`, `zr`); `shared/roads.js` joins their deck ends to the deck (a merge:
+  the highway runs straight through) and their feet to the road below (a junction). So every movement is there: off
+  either carriageway to either way of the road below, from either way of it up to either carriageway.
+- **The kinds:** the engine has two levels (the ground and the deck, `shared/levels.js`), so the skeleton's trumpets,
+  cloverleaf and four-level stack are all diamonds: the left turns are made at the ramps' feet, not on loops or
+  flyovers. For the owner: loops would add nothing a driver can do here; a real stack at Kestrel Pass wants a second
+  deck level.
+
+**What's built** (the world build, seed 1337: `m.world3.roads.interchanges`):
+
+| interchange | the skeleton's kind | on the deck | at grade under it | ramps |
+|---|---|---|---|---|
+| Westport Junction | trumpet | the Coast Highway | the Highland Highway (and its stub south) | 4 |
+| Northshore Interchange | cloverleaf | the Coast Highway | the Valley Highway and the Bay Bridge | 4 |
+| Dry Creek Interchange | trumpet | the Coast Highway | the Desert Highway (and its stub south) | 4 |
+| Kestrel Pass Interchange | four-level stack | the Valley Highway | the Highland and North Highways | 4 |
+
+**Left at grade (as in 8.7), and why** (`built: false` with `why`):
+- **Westport Interchange and the Sandpiper Interchange: the main line runs through them.** The rail's Westport
+  Junction (1640, 1700) is 10 tiles from the road interchange, and the Cedar Line passes through the Sandpiper
+  Interchange's point (4150, 2200): a diamond's ramps, 12 tiles out either side of the highway, would cross the track
+  at grade (the railway passes have no crossing for a ramp, and today's slip ramps keep clear of the line). A site
+  whose ramps come within 8 tiles of the main line's path (off its tunnels) is not built. For the owner: the rail
+  junction moved off the road interchange (or the interchange along the Coast Highway), or the line in a cutting under it.
+- **The North Mesa Interchange:** the Desert Highway enters its tunnel to the north portal at the interchange's point;
+  there is no room for its deck. For the owner: the North Highway over the Desert Highway instead, or the portal moved
+  north.
+- **The Gorge Junction:** the Summit Road runs through its point (from the peaks down to the Gorge), so the ramps'
+  low halves would cross it at grade (a ramp crosses nothing on the ground but the road it meets: within 7 tiles of
+  another road's path, off its tunnels, the site is not built). It was built at first (the Highland Highway over the
+  Granite Peaks Highway) and showed the Summit Road through the ramps. For the owner: the Summit Road joined to the
+  Granite Peaks Highway's stub (it would be the road below), or moved off the junction.
+- **The diamond onto Route 9** (an arterial's end on the Desert Highway's control point, 3720, 1600 - the same code
+  builds it): Coast East's track crosses its ramps.
+- Not sites: the Redwood Junction (the Coast Highway runs on into the Granite Peaks Highway; nothing crosses) and the
+  Metro Ring Interchange (Metro City's ring, the places' own).
+- **The towns' crossings** (the skeleton's town `interchange`s, "a diamond onto an arterial"): Timber Bend's (the Gorge
+  and Woods Roads cross the Highland Highway 17 tiles from their hub at 1170, 1070: no room for a diamond until the
+  town is laid out round it), Lucky Mesa's (Mesa Road and Route 9 end 13 tiles off the Desert Highway's curve: they meet
+  beside it, not across it), Westport Avenue and the Shore Road (the Bay Ring and the Bay Bridge: the places' own).
+
+**The test** (`test/world3roads.test.js` check 3, the same one build, about 30 s): at least four interchanges built;
+at each, the through highway on the deck at its point and no junction at grade with it there; for each road below, a
+ramp down from the through highway's deck to it and one up from it to the deck; an exit and an on-ramp each way; every
+ramp on the network; an interchange not built is so for a tunnel, the main line or a road through it, and its highways
+meet at a junction as in 8.7. The other checks hold as before (every laid point on a road tile, the deck or a bore; one network; no
+highway dead-ends but in a closure - the stubs end at their ramps). **`test/world3interchanges.test.js`** (no build,
+under a second) checks the plan from the skeleton alone (`interchangePlan()`): every skeleton interchange with a
+highway through it built or listed with its reason; Westport Junction, Northshore, Dry Creek and Kestrel Pass built;
+each deck run on its highway and clear of its bores; a road below each side, its ramps' foot 12 tiles out; four
+ramps, each joining the deck inside the run and the road below at its foot, its climb inside it; every ramp clear of
+the main line (off its tunnels) and its low half clear of every other arterial.
+
+**The pictures:** `docs/world-v3-world.png` (the ramps yellow over the tiles) and `docs/world-v3-world-r4-0.png` (region
+4, 0 through the chunk bake: Kestrel Pass). What looks right: each built interchange reads as a diamond - the through
+highway's deck (light orange) over the road below, a ramp each side of each carriageway peeling off the deck and coming
+down to the road below beside it, the stubs running under the deck to the far side's ramps. What looks wrong:
+- **The ramps hug the highway:** 12 tiles out, the ramps and their curves read as a thickening of the highway at 1 px =
+  2 tiles; the Metro Ring's are 10 tiles out on a ring of city streets, where the frontage roads carry them. Out in the
+  country a wider diamond (20-30 tiles) or real loops would read better.
+- **The stubs are short dead ends in spirit:** a T's stub runs 12-15 tiles under the deck to the far side's ramps and
+  stops there (its end is the ramps' junction, so nothing dead-ends on the network, but it reads as a road to nowhere).
+- **Four of the eight are still crossroads** (above), the busiest two among them (Westport's and Sandpiper's).
+- Not looked at in the game yet: driving the ramps (the deck's corridors and barriers come from `shared/levels.js` as
+  the Metro Ring's do; a playtest on the v3 world is the next check).
+
+**What's left** (in order):
+1. **The mainland's first towns** (this step's second half, not started): Timber Bend, Willow Crossing and Sandpiper
+   Bay as districts of their own (appended after 56 in `shared/mapcore.js` `DISTRICTS`), painted with a built zone on
+   the land layer round the skeleton's town point (the world build's `zones` and `dists` hooks), a street grid joined
+   to the arterials (the `lines` hook), so that today's generator builds their blocks and buildings by style
+   (`STYLE`: commercial along the main street, houses round it, beach at Sandpiper Bay) and their businesses from the
+   storefronts; the clinic and the sheriff as planned businesses with the town's district (gated to the v3 build, so
+   today's world doesn't move); bus stops come with an east-west arterial in a built zone (`buildBusStops`); the gas
+   stations want room in `buildCornerStores` (five at most, 3,500 px apart, all in the city now). What the skeleton
+   says about each: **Timber Bend** (1170, 1060) is the hub of four arterials, 19 tiles from the Highland Highway
+   (inside the highway's 22-tile room) and 105 tiles north of the main line (its station 125 tiles south at 1177,
+   1185): the town west of the highway, the hub its main crossroads, and its crossing of the highway (the Gorge and
+   Woods Roads, 17 tiles from the hub) a diamond once the hub has room; **Willow Crossing** (3360, 1290) is 21-36
+   tiles from Valley Road, Willow Road and the Mine Road's hub on the Long Reach's east bank, beside the River Water
+   Bus - the main line doesn't pass it (part 1.5's `station` for it: the nearest is Dry Creek's, 477 tiles off);
+   **Sandpiper Bay** (4480, 2540) is 37 tiles from Sandpiper Drive, and the main line's "Sandpiper Bay" station is at
+   the Sandpiper Interchange, 488 tiles away (for the owner: a station in the town, or the town by the station).
+2. The interchanges left at grade (above): Westport's and Sandpiper's against the main line, North Mesa's tunnel, the
+   Summit Road through the Gorge Junction.
+3. Wider diamonds in the country (the ramps 20-30 tiles out), and the towns' crossings as diamonds.

@@ -77,8 +77,33 @@ test('World v3: the skeleton\'s roads - on the ground, the deck, a bridge or a t
   }
   check(sizes[main] > 0.98 * m.nodes.length, `the network: ${sizes[main]} of ${m.nodes.length} junctions`);
 
-  // 3. the interchanges join: the highways laid there meet at one junction (at grade within 40 tiles of it)
+  // 3. the interchanges (8.11): the through highway up on the deck over the roads below, and its ramps join them both
+  //    ways - from each carriageway's deck down to each side's road below, and up again; no junction between them
+  const built = R.interchanges.filter((q) => q.built);
+  check(built.length >= 4, `interchanges built: ${built.map((q) => q.name).join(', ')}`);
+  for (const q of R.interchanges) if (!q.built) check(/tunnel|main line|runs through it/.test(q.why), `${q.name} not built: ${q.why}`);
+  for (const ic of built) {
+    const deckIdx = (x, y) => m.deck[m.idx(Math.floor(x), Math.floor(y))];
+    check(deckIdx(ic.at[0], ic.at[1]), `${ic.name}: ${ic.U} on the deck over the crossing`);
+    const near = (n) => Math.hypot(n.x / TILE - ic.at[0], n.y / TILE - ic.at[1]) < 120;
+    const ramps = m.edges.filter((e) => e.kind === 'ramp' && e.lvl === 'ramp' && near(m.nodes[e.a]) && near(m.nodes[e.b]));
+    const names = (n) => new Set(n.edges.map((id) => m.edges[id]).filter((e) => e.kind !== 'ramp').map((e) => e.name));
+    for (const lo of ic.lowers) {
+      // (a ramp is one-way, from its node a to b: down from the deck to the road below, up from it to the deck)
+      const down = ramps.filter((e) => m.nodes[e.a].lvl === 1 && names(m.nodes[e.a]).has(ic.U) && m.nodes[e.b].lvl === 0 && names(m.nodes[e.b]).has(lo));
+      const up = ramps.filter((e) => m.nodes[e.a].lvl === 0 && names(m.nodes[e.a]).has(lo) && m.nodes[e.b].lvl === 1 && names(m.nodes[e.b]).has(ic.U));
+      check(down.length >= 1 && up.length >= 1, `${ic.name}: ramps between ${ic.U} and ${lo} both ways (${down.length} down, ${up.length} up)`);
+    }
+    // both carriageways can leave and join: two exits and two on-ramps, each from (to) the deck
+    check(ramps.filter((e) => m.nodes[e.a].lvl === 1).length >= 2 && ramps.filter((e) => m.nodes[e.b].lvl === 1).length >= 2, `${ic.name}: an exit and an on-ramp each way (${ramps.length} ramps)`);
+    // no junction of the through highway with the roads below at the crossing (they are on two levels)
+    const cross = m.nodes.find((n) => n.lvl === 0 && Math.hypot(n.x / TILE - ic.at[0], n.y / TILE - ic.at[1]) < 8 && names(n).has(ic.U));
+    check(!cross, `${ic.name}: no junction at grade with ${ic.U}`);
+    for (const e of ramps) check(comp[e.a] === main && comp[e.b] === main, `${ic.name}: ${e.name} on the network`);
+  }
+  // the interchanges not built as such (North Mesa: the Desert Highway enters its tunnel there) join at a junction
   for (const ic of INTERCHANGES) {
+    if (built.some((q) => q.name === ic.name)) continue;
     const meet = HIGHWAYS.filter((H0) => {
       const P = linePath(H0, RADIUS.hwy), q = nearestOnPath(P, ic.at[0], ic.at[1]), r = R.highways.find((h) => h.name === H0.name);
       return q.d < 8 && r.kept.some(([a, b]) => q.s >= a - 2 && q.s <= b + 2);
