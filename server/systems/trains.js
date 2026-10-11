@@ -1432,6 +1432,7 @@ export function callTrain(world, x, y) {
   for (const u of world.trains) { if (off0(u)) continue; const d = mod(st.s + u.len / 2 - u.s, rail.len); if (d < best) { best = d; t = u; } }
   if (!t) return null;
   t.s = mod(st.s + t.len / 2, rail.len); t.v = 0; t.acc = 0; t.braking = false; t.stop = si; t.dwellUntil = world.time + TRAIN_DWELL_S * 3;
+  if (world.rails) signals(world, t);   // (World v3: the signals' cells where it stands now)
   placeCars(world, t);
   return { t, st };
 }
