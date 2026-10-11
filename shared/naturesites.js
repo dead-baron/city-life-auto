@@ -2811,8 +2811,8 @@ function graniteCove(m, H) {
   const CX = PXs(H, 555, 225), CY = PYs(H, 225);              // the bay's centre (tiles; placed: World v3's peaks' shore)
   const camp = (m.landmarks || []).find((l) => l.name === 'Granite Cove Campground');
   if (!camp || (!H.place && m.dist[CY * m.w + CX] !== 33)) return;   // (World v3: where world3-wild.js MOVED puts it)
-  const LK = H.place && m.lake[(CY + 12) * m.w + CX] ? 1 : 0;   // (World v3: a bay of a lake's is the lake's water)
-  const set = (tx, ty, t, extra = 0) => { const i = ty * m.w + tx; if (KEEP.has(m.tiles[i])) return; m.tiles[i] = t; m.reserve[i] |= RES | extra; if (t === T.WATER) { m.land[i] = 0; m.river[i] = 0; m.lake[i] = LK; } else m.land[i] = 1; };
+  const LJ = (CY + 12) * m.w + CX, LK = H.place ? m.lake[LJ] : 0, RV = H.place ? m.river[LJ] : 0;   // (World v3: a bay of a lake's is the lake's water - the v3 lakes are river water)
+  const set = (tx, ty, t, extra = 0) => { const i = ty * m.w + tx; if (KEEP.has(m.tiles[i])) return; m.tiles[i] = t; m.reserve[i] |= RES | extra; if (t === T.WATER) { m.land[i] = 0; m.river[i] = RV; m.lake[i] = LK; } else m.land[i] = 1; };
   const e = (tx, ty, cx, cy, rx, ry) => ((tx + 0.5 - cx) / rx) ** 2 + ((ty + 0.5 - cy) / ry) ** 2;
   // anything the map had put here goes (the wilds' trees come later and keep off reserved ground)
   m.props.forEach((p, i) => { if (p && p.t !== 'painted' && Math.abs(p.x / TILE - CX) < 16 && p.y / TILE > CY - 16 && p.y / TILE < CY + 10) dropProp(m, i); });

@@ -3860,8 +3860,10 @@ tracks flagged for the traffic look the same). What looks wrong:
   finds (today's stood on a bend) - a bay bitten into it as 8.20's coves are would make it one; the Redwood Cove Track
   is hidden under the redwoods' canopy at 1/8.
 - **Granite Cove's bay was a pond** (the first bake: its bay stopped two tiles short of the lake's real shore, which
-  lies further south than the skeleton's polygon): moved five tiles south (2720, 448) and checked by the test (water
-  all the way from the beach into the lake, the lake's water). Its track is a 351-tile straight line across the
+  lies further south than the skeleton's polygon): moved five tiles south (2720, 448) - the picture now shows the bay
+  open into the lake - and checked by the test (water all the way from the beach into the lake). The bay's water was
+  drawn paler than the lake's: it was flagged as neither lake nor river, and the v3 lakes are river water (8.6) - it
+  takes the lake's flags now. Its track is a 351-tile straight line across the
   valley's fields from Kestrel Road - a lane along the shore would serve it better.
 - The co-op is a plain house (the house2 prefab, as today's); the small things (the fruit stand, the pools' life, the
   driftwood) don't read at 1/8.
