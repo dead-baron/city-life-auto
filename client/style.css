@@ -994,6 +994,9 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
   #creator .cc-prev { width: auto; height: min(30vh, 236px); max-width: 70vw; }
   #creator .cc-turn { flex-direction: column; gap: 6px; }
   #creator .cc-pname { min-width: 0; max-width: 90px; font-size: 12px; }
+  #creator.cc-start .cc-left { flex-wrap: wrap; justify-content: center; }
+  #creator .cc-under { flex: 1 0 100%; flex-direction: row; justify-content: center; }
+  #creator .cc-under .cc-btn { padding: 7px 8px; font-size: 12px; letter-spacing: 0; }
   #creator .cc-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; touch-action: pan-x; padding: 5px 6px; }
   #creator .cc-tabs::-webkit-scrollbar { display: none; }
   #creator .cc-tab { flex: none; padding: 6px 9px; font-size: 13px; }

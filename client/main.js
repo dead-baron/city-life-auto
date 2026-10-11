@@ -2545,7 +2545,7 @@ function drawEventArrows(g, list, z, now) {
     const alpha = kind.stay || age < ARROW_SHOW_S - ARROW_FADE_S ? 1 : Math.max(0, (ARROW_SHOW_S - age) / ARROW_FADE_S);   // (stay: a lost pet's, till you have it or it's home)
     if (alpha <= 0) continue;
     if (ev.w) {   // a lost pet's owner: "Lost my dog!" over them (server/systems/pets.js targetFor)
-      const o = S.ents.get(ev.e), on = o && o.rx !== undefined, t = `Lost my ${ev.w}!`, oy = (on ? o.ry : ev.y) - 36 + Math.sin(now * 4) * 2, ox = on ? o.rx : ev.x;
+      const o = S.ents.get(ev.e), on = o && o.rx !== undefined, t = `Lost my ${ev.w}!`, oy = (on ? o.ry : ev.y) - 50 - 16 / z + Math.sin(now * 4) * 2 / z, ox = on ? o.rx : ev.x;   // (clear above the head: drawWorldLabels)
       g.font = `700 ${12 / z}px Rubik, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
       const tw = g.measureText(t).width + 12 / z;
       g.fillStyle = 'rgba(255,255,255,.93)'; g.strokeStyle = kind.color; g.lineWidth = 2.5 / z;
