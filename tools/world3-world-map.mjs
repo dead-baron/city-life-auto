@@ -8,7 +8,8 @@
 //   node --expose-gc tools/world3-world-map.mjs [--quick] [--bake] [--shrink 64] [--sample 60] [--region rx,ry] [--towns]
 // (--quick: the picture only, no chunk bake timing)
 // (--region: one region of 504 tiles baked and lit at 1/16, about 2 minutes: docs/world-v3-world-r<rx>-<ry>.png)
-// (--towns: the first mainland towns baked at 1/8, half a minute each: docs/world-v3-town-<key>.png; --sample 0 skips the timing)
+// (--towns: the first mainland towns baked at 1/8, half a minute each: docs/world-v3-town-<key>.png; --sample 0 skips the timing;
+//  --close with it: two of each town's own models up close at 1/2, docs/world-v3-town-<key>-<model>.png - 8.13.2)
 // (heavy: run it under `flock /tmp/cla-heavy.lock`)
 import { writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -227,6 +228,29 @@ if (process.argv.includes('--towns')) {
     r = spawnSync('python3', ['-c', py(tmp4, OUT4, GW3, GH3, `World v3: ${t.name} (tiles ${cx0 * CT}-${(cx1 + 1) * CT - 1}, ${cy0 * CT}-${(cy1 + 1) * CT - 1}), the game's chunk bake at 1/8`)], { stdio: 'inherit' });
     rmSync(tmp4, { force: true });
     log(`${OUT4} (${(cx1 - cx0 + 1) * (cy1 - cy0 + 1)} chunks in ${Math.round((performance.now() - tb) / 1000)} s)`);
+    // (--close, H40: the towns' own models up close - 2 x 2 chunks at 1/2 round one of each town's, 8.13.2:
+    // docs/world-v3-town-<key>-<model>.png)
+    if (!process.argv.includes('--close')) continue;
+    const SPOTS = { timber: ['loader', 'antlers'], willow: ['steeple', 'dock'], sandpiper: ['boards', 'shelter'] }, S2 = 2, CS2 = CHP / S2;
+    for (const k of SPOTS[t.key] || []) {
+      const it = (M.townKit || []).find((q) => q.k === k && q.x > (x0 - 60) * TILE && q.x < (x1 + 60) * TILE && q.y > (y0 - 60) * TILE && q.y < (y1 + 60) * TILE);
+      if (!it) continue;
+      const qx = Math.floor(it.x / CHP - 0.5), qy = Math.floor(it.y / CHP - 0.5), GW = 2 * CS2, img2 = Buffer.alloc(GW * GW * 3);
+      for (let cy = qy; cy <= qy + 1; cy++) for (let cx = qx; cx <= qx + 1; cx++) {
+        const col = bakeChunk(M, cx, cy, opt, cache, providers).g.col;
+        for (let by = 0; by < CS2; by++) for (let bx = 0; bx < CS2; bx++) {
+          let R = 0, G = 0, B = 0;
+          for (let y = by * S2; y < by * S2 + S2; y++) for (let x = bx * S2; x < bx * S2 + S2; x++) { const j = (y * CHP + x) * 4; R += col[j]; G += col[j + 1]; B += col[j + 2]; }
+          const o = (((cy - qy) * CS2 + by) * GW + (cx - qx) * CS2 + bx) * 3;
+          img2[o] = R / 4; img2[o + 1] = G / 4; img2[o + 2] = B / 4;
+        }
+      }
+      const OUT5 = join(ROOT, `docs/world-v3-town-${t.key}-${k}.png`), tmp5 = OUT5 + '.rgb';
+      writeFileSync(tmp5, img2);
+      r = spawnSync('python3', ['-c', py(tmp5, OUT5, GW, GW, `World v3: ${t.name} up close (tiles ${qx * CT}-${(qx + 2) * CT - 1}, ${qy * CT}-${(qy + 2) * CT - 1}), the chunk bake at 1/2`)], { stdio: 'inherit' });
+      rmSync(tmp5, { force: true });
+      log(OUT5);
+    }
   }
 }
 

@@ -7640,3 +7640,39 @@ docs/world-v3-window-places.png); the big map drew the coarse world and the whol
 and, with the districts' middles (a second run), every district's name - 50 (docs/world-v3-window-bigmap.png); a far
 teleport moved the window (assembled 0.76 s, swapped 0.12 s); the page loaded again in the same browser: the window from
 the browser, 10 files kept, 0 downloaded. Art v2's statics bake warned once about a window's railway loop (`railAt`: 8.12's item 4, not this).
+## 2026-10-11 · World v3: the towns' own models
+
+8.13.1 left the towns' looks as today's buildings recoloured: "Timber Bend still reads a little like a city: its loop
+blocks are taken by the planned places, each one big flat-roofed building (clinic, sheriff, motel, sawmill as the
+industrial building)"; Willow Crossing's grain elevator had no silos; Sandpiper Bay's boardwalk was plain planks. The
+owner asked for the towns' own building models after the concepts (WR2-A, WR2-C, D13, D13-B, D15-A/B, BE1, BE2, SR7),
+in art v2 and the classic renderer, with the planned places moved into them.
+- **Timber Bend:** wooden shopfronts - one storey of boards under a low gable, a false front standing up over a porch
+  along the street; the sawmill (an open shed with the saw line running into it, the log yard beside it: three stacks
+  of logs and a yellow log loader); the hunting lodge's row (the lodge in dark logs with antlers over its door); cabins
+  with porches; the clinic, the sheriff and the motel one storey of clapboard under a gable (the clinic on a store's
+  lot, not the hospital's block - Willow Crossing's too; Sandpiper Bay's keeps its lot, or the town has more road than
+  building).
+- **Willow Crossing:** the white church with its steeple (a clapboard tower with a slate spire and a gilt cross); the
+  grain elevator's tall head house with a row of silos; the co-op, a barn-red shed with its loading dock; the feed
+  store's sacks out front; white farmhouses with long porches.
+- **Sandpiper Bay:** the surf shop with its boards in a rack out front; cottages and beach houses on stilts (a raised
+  porch with steps down); the boardwalk railed along its sea side with benches and lamps, the pier railed out to a
+  shelter at its end; the lifeguard station's tower on the sand.
+- **How:** the world build gives each town building a look (`townModels`, shared/world3-towns.js; `TOWN_SPECIALS`
+  name each planned place's) and lists what stands round them (`m.townKit`); art v2 draws the looks from its
+  archetypes with the towns' wood (statics.js `LOOK_ARCH`, `townLook`) and the new voxel models (client/art2/
+  props-towns.js), the classic renderer the roofs and the kit from above (client/render/townart.js). Not new sheet
+  prefabs: `shared/prefab-data.js` is generated from the concept sheet. Nothing live changes: the world hash stays
+  6b6e16fdef9f; the art hash changes. The bake's code: 747 of 765 KB (740 before).
+- Not done: a look in the game (the details are a few pixels at the pictures' 1/8; the classic renderer unchecked);
+  the elevator by the track; the long plain-roof rows as separate shopfronts; houses lifted on piles - docs/WORLD-V3.md
+  8.13.2's "what looks wrong".
+
+Files: shared/world3-towns.js (`TOWN_SPECIALS`' looks, `townModels`), shared/world3-world.js (the call),
+client/art2/props-towns.js (new), client/art2/game/statics.js, client/render/townart.js (new), client/render/tiles.js,
+tools/world3-world-map.mjs (`--towns --close`: two of each town's models up close at 1/2), test/world3townmodels.test.js
+(new), docs/WORLD-V3.md 8.13.1 and 8.13.2, docs/world-v3-town-*.png (the towns at 1/8 and six close-ups).
+
+Tests: test/world3townmodels.test.js (one world build: each town's looks and models, the planned places in them, the
+yards inside their footprints, nothing solid on a road, the boardwalk's dressing on its planks), test/world3towns.test.js.

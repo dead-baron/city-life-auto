@@ -25,7 +25,7 @@ import { mainLineLoops, clearRailDressing, seatStationHouses } from './world3-ra
 import { beachStreets, beachFront, clearBeachFront } from './world3-beach.js';
 import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3, peakHeight, SNOW_LINE, SNOW_CLS } from './world3-biomes.js';
 import { terrainAt } from './mapcore.js';
-import { paintTowns3, layTowns3, townsDone, townsFront, TOWN_SPECIALS, TOWN_STYLES } from './world3-towns.js';
+import { paintTowns3, layTowns3, townsDone, townsFront, townModels, TOWN_SPECIALS, TOWN_STYLES } from './world3-towns.js';
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -172,6 +172,7 @@ export function worldOpts(asked) {
     dress(m, H2) { m.world3biomes.dress = dress3(m, L, keep, H2); },
     done(m, H3) {
       m.world3.towns.built = townsDone(m);   // (the towns' gas stations and bus stops: world3-towns.js, 8.13)
+      m.world3.towns.models = townModels(m);   // (H40, 8.13.2: the towns' own buildings, their yards, the boardwalk's rails, benches and lamps, the pier's end: world3-towns.js)
       const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
       m.world3.housesMoved = seatStationHouses(m);   // (8.14: each station's house on open ground)
       if (H3) { m.world3.railCleared = clearRailDressing(m, H3.removeProps); clearBeachFront(m, H3.removeProps); }   // (8.14: no tree over the main line or a platform; the promenade and car parks clear)

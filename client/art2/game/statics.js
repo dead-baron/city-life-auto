@@ -46,6 +46,7 @@ import * as WL from '../props-wild.js';
 import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
 import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and pole sign: task #366)
+import * as TN from '../props-towns.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
 import { nightFront, paintSigns } from '../neonsigns.js';   // (the night's big neon signs)
@@ -463,6 +464,7 @@ function archOf(c, b) {
   const D = c.dist((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE), st = D.style;
   const r = b.roof >= 0 ? c.M.roofs[b.roof] : null, rk = r ? r.kind : null;
   if (b.business === 'courthouse') return 'court';
+  if (b.look && LOOK_ARCH[b.look]) return LOOK_ARCH[b.look];   // (H40: World v3's towns' own buildings)
   if (b.kind === 'shop') { const n = (b.name || '').toUpperCase(); return /AUTO/.test(n) ? 'garage' : /FITNESS/.test(n) ? 'gym' : 'handshop'; }
   if (KIND_ARCH[b.kind]) return KIND_ARCH[b.kind];
   if (rk === 'glass') return st === 'towers' ? 'glass' : st === 'luxury' ? 'condo' : st === 'airport' ? 'terminal' : 'office';
@@ -500,7 +502,8 @@ function sectionsOf(c, b, A) {
     const ww = clamp(Math.round(b.tw * 0.32), 3, 5), doorL = b.door ? b.door.tx < b.tx + b.tw / 2 : rnd() < 0.5;
     if (doorL) xs.push([b.tx, b.tw - ww, 0], [b.tx + b.tw - ww, ww, 1, 'wing']);
     else xs.push([b.tx, ww, 1, 'wing'], [b.tx + ww, b.tw - ww, 0]);
-  } else if (b.tw > (GENERIC.has(A) ? 18 : 26)) {
+  } else if (b.lookW) xs.push([b.tx, b.lookW, 0]);   // (H40: a sawmill's shed, an elevator's head house - its yard, logs or silos, on the rest)
+  else if (b.tw > (GENERIC.has(A) ? 18 : 26)) {
     let x = b.tx, k = 0;
     while (x < b.tx + b.tw) { let w = GENERIC.has(A) ? 7 + Math.floor(rnd() * 7) : 16; if (b.tx + b.tw - x - w < 5) w = b.tx + b.tw - x; xs.push([x, w, k++]); x += w; }
   } else xs.push([b.tx, b.tw, 0]);
@@ -734,6 +737,48 @@ const TOWN_LOOK = {
   farm: { walls: ['#e8e4d8', '#f0ecdc', '#d8c8a0', '#c84a3a', '#e0d8c0'], roofs: ['#5a5c64', '#6a4a3a', '#7a7c84'], two: 0.35, hip: 0.3 },
   beach: { walls: ['#9ac8d0', '#e8d8b0', '#f0c8b0', '#b8d8b8', '#f4f0e4', '#d0b8d8'], roofs: ['#6a5040', '#8a8c90', '#5a6a7a'], two: 0.25, hip: 0.5 },
 };
+// (H40, 8.13.2) the towns' own buildings, by the look the world build gave each (shared/world3-towns.js townModels:
+// b.look): the archetype it is drawn from, then townLook's wood - a shopfront's false front over its porch (the porch,
+// the antlers, the yards' logs and silos, the steeple and the dock are m.townKit's models: townKit below); the cabins'
+// dark logs, the farmhouses' white clapboard; the clinic, the sheriff and the motel one storey of clapboard under a
+// gable; the church white with a slate roof; the sawmill's open shed, the elevator's tall head house, the co-op's
+// barn-red shed
+const LOOK_ARCH = { cabin: 'cabin', farmhouse: 'farmhouse', cottage: 'house', stilts: 'house', clinic: 'hospital', sheriff: 'police', motel: 'hotel', sawmill: 'shed', elevator: 'factory', coop: 'shed', church: 'church' };
+const FLATS = new Set(['shopfront', 'beachshop', 'lodgerow', 'surfrow', 'feedrow']);
+function townLook(spec, b, s, TL, rnd, w, pitched) {
+  const L = b.look, wood = (c) => Object.assign(spec, { style: 'siding', wallColor: c, balconies: false, ivy: 0, graffiti: 0, grime: 0.1, fireEscape: false, boarded: 0 });
+  const gable = (c, slope = 0.4) => { Object.assign(spec, { pitch: 'gable', ridge: 'ew', roof: 'shingle', roofColor: c, slope }); delete spec.parapet; return true; };
+  const label = (re, t) => { for (const p of spec.plaques || []) if (re.test(p.text)) p.text = t; };
+  if (FLATS.has(L)) {   // (one storey under a low gable; the false front stands in front of it, on the porch's model)
+    wood(L === 'lodgerow' && s.unit === 0 ? '#4e3424' : b.lookC || pick(TL.walls, rnd()));
+    spec.floors = 1; delete spec.height;
+    return gable(pick(TL.roofs, rnd()), 0.3);
+  }
+  switch (L) {
+    case 'cabin': wood(pick(['#6e4a30', '#7a5436', '#5e4030', '#8a6440'], rnd())); spec.roofColor = pick(['#3e6a5a', '#4a3a30', '#3e4448'], rnd()); return pitched;
+    case 'farmhouse': wood(pick(['#f0ecdc', '#ece8dc', '#f4f0e4'], rnd())); spec.roofColor = pick(['#5a5e6a', '#6a4a3a', '#4a4e58'], rnd()); return pitched;
+    case 'clinic': wood('#eeeae0'); spec.floors = 1; label(/HOSPITAL/, 'CLINIC'); return gable('#6a7280');
+    case 'sheriff': wood('#c8a878'); spec.floors = 1; label(/POLICE/, 'SHERIFF'); return gable('#4a3a30');
+    case 'motel': wood('#e8dcc0'); spec.floors = 1; return gable('#7a4a3a', 0.32);
+    case 'church': Object.assign(spec, { style: 'siding', wallColor: '#f2f0ea', roof: 'shingle', roofColor: '#4a4e58' }); return true;
+    case 'sawmill': wood('#7a6248'); Object.assign(spec, { height: 76, roof: 'metal', windows: [], doors: [{ x: 8, w: w - 16, kind: 'roller', open: true, h: 62 }] }); return false;
+    case 'elevator': Object.assign(spec, { style: 'corrugated', wallColor: '#b8b4aa', height: 176, roof: 'metal', windows: [], doors: [{ x: Math.round(w / 2 - 26), w: 52, kind: 'roller', open: true, h: 56 }] }); return false;
+    case 'coop': wood('#a8402e'); Object.assign(spec, { height: 70 }); return gable('#7a7c84', 0.32);
+  }
+  return pitched;
+}
+// (H40) what stands round the towns' buildings and along Sandpiper Bay's boardwalk and pier (m.townKit)
+const TKIT = { porch: 'tPorch', antlers: 'tAntlers', logs: 'tLogs', loader: 'tLoader', saw: 'tSaw', silos: 'tSilos', steeple: 'tSteeple', dock: 'tDock', sacks: 'tSacks', boards: 'tBoards', shelter: 'tShelter', rail: 'pierRail', bench: 'bench', lamp: 'lampPost' };
+function townKit(I, list) {
+  for (const k of list) {
+    const m = TKIT[k.k];
+    if (!m) continue;
+    const hd = qa(k.a || 0, k.k === 'rail' ? 32 : 4), K = k.k;
+    const a = K === 'porch' ? [k.len || 160, k.z || 0, k.ff || 0, k.c || '#7a5436'] : K === 'logs' || K === 'saw' || K === 'dock' || K === 'rail' ? [k.len || 160] : K === 'silos' ? [k.n || 4, k.len || 360] : K === 'boards' ? [k.n || 5] : K === 'lamp' ? ['cast', 1] : [];
+    put(I, vitem(`tk:${m}:${a.join(',')}:${hd.toFixed(3)}`, m, a, k.x, k.y, hd, null, K === 'antlers' ? { z0: k.z || 50 } : null));
+    if (K === 'lamp') lightAt(I, k.x, k.y, 80, 130, [1, 0.85, 0.6], 1.2, 'lamp');
+  }
+}
 
 // the makeBuilding spec, rooftop kit and lights of one section. lights: [dx, dy, z, r, col, k, kind] from the
 // section's south-west corner (dy south of the front wall)
@@ -1025,6 +1070,7 @@ function specOf(c, b, A, s, D) {
     if (!pitched && s.tw <= 16 && s.th <= 16 && (!spec.shop || rnd() < 0.4)) { Object.assign(spec, { pitch: rnd() < TL.hip ? 'hip' : 'gable', roof: 'shingle', roofColor: pick(TL.roofs, rnd()), slope: 0.42 }); pitched = true; }
     else if (!pitched) spec.parapet = 10;   // (the false front)
   } else if (TL && (A === 'hotel' || A === 'hospital' || A === 'police' || A === 'civicblock' || A === 'office')) spec.floors = Math.min(spec.floors || 2, 2);   // (the motel, the clinic, the sheriff: two storeys at most)
+  if (b.look && !b.art && !s.frame && !s.vox) pitched = townLook(spec, b, s, TL || TOWN_LOOK.log, rnd, w, pitched);   // (H40: the towns' own buildings)
   if (s.bay) {   // the bay's back wall: an open roller door into the lit booth, a sign over it
     delete spec.shop; delete spec.portico; delete spec.arches;
     Object.assign(spec, { blank: false, windows: [], doors: [{ x: 6, w: w - 12, kind: 'roller', open: true, h: 62 }], plaques: [{ text: 'PAINT', x: Math.max(4, Math.round(w / 2 - 26)), v: 66, sx: 2, bg: '#2a3a6a', fg: [250, 236, 200], lit: true }] });
@@ -1055,8 +1101,8 @@ function specOf(c, b, A, s, D) {
   let up = null;
   if (!pitched && !s.frame && !s.vox) {
     roofOf(A, D, rnd, spec);
-    up = ART ? null : upperOf(A, D, rnd, spec, w, d);
-    const K = ART && ART.kit ? { kit: ART.kit.filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null);
+    up = ART || b.look ? null : upperOf(A, D, rnd, spec, w, d);
+    const K = ART && ART.kit ? { kit: ART.kit.filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null);   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
     if (up) { const KU = kitFor(A, up.spec.w, up.spec.d, rnd, tier, up.spec); up.kit = KU.kit; if (KU.pads.length) up.spec.pads = KU.pads; }
     // the lit kit lights its roof: festoons, neon signs, skylights
@@ -1276,6 +1322,9 @@ function voxModel(m, a) {
     case 'lighthouse': return WL.lighthouse(a[0], a[1]); case 'pillar': return RD.pillar(a[0], a[1], a[2]); case 'canopy': return U.fuelCanopy(a[0], a[1], a[2], a[3]); case 'fuelPump': return U.fuelPump(a[0], a[1]);
     case 'platformCanopy': return RD.platformCanopy(a[0], a[1], a[2]); case 'stationEntrance': return RD.stationEntrance(a[0], a[1]); case 'stationHouse': return RD.stationHouse(a[0], a[1]); case 'lifeguardTower': return RD.lifeguardTower(); case 'crossingSignal': return RD.crossingSignal(a[0], a[1]);
     case 'subwayKiosk': return RD.subwayKiosk(a[0], a[1]);   // (SU5-B: a subway stop's street entrance on its kiosk's footprint)
+    case 'tPorch': return TN.porch(a[0], a[1], a[2], a[3]); case 'tAntlers': return TN.antlers(); case 'tLogs': return TN.logStack(a[0]); case 'tLoader': return TN.logLoader();   // (H40: World v3's towns' own models, props-towns.js)
+    case 'tSaw': return TN.sawLine(a[0]); case 'tSilos': return TN.silos(a[0], a[1]); case 'tSteeple': return TN.steeple(); case 'tDock': return TN.loadingDock(a[0]);
+    case 'tSacks': return TN.feedSacks(); case 'tBoards': return TN.boardRack(a[0]); case 'tShelter': return TN.pierShelter();
     case 'erCanopy': return RD.erCanopy(a[0]);   // (IN1-B: the hospital's ambulance bay)
     case 'controlTower': return RD.controlTower(a[0], a[1]); case 'fence': return D.fence(a[0], a[1], a[2] || {}); case 'fenceKind': return K.fenceKind(a[0], a[1]); case 'gatePillar': return D.gatePillar(a[0], a[1]);
     case 'compoundWall': return TW.compoundWall(a[0], a[1], a[2]); case 'guardTower': return TW.guardTower(a[0], a[1]); case 'hedge': return P.hedge(a[0], a[1]); case 'volleyNet': return P.volleyNet(a[0]);
@@ -1338,6 +1387,9 @@ function vdim(m, a) {
     case 'lighthouse': return [48, 48, (a[0] || 140) + 36]; case 'pillar': return [(a[1] || 30) + 4, a[2] || 90, a[0] || 90]; case 'canopy': return [a[0] || 150, a[1] || 80, (a[2] || 52) + 10]; case 'fuelPump': return [12, 10, 34];
     case 'platformCanopy': return [a[0] || 200, a[1] || 40, 62]; case 'stationEntrance': return [70, 44, 54]; case 'stationHouse': return [a[1] || 140, 92, 74]; case 'lifeguardTower': return [46, 70, 66]; case 'crossingSignal': return [24, 8, 70]; case 'controlTower': return [70, 70, (a[0] || 220) + 50];
     case 'subwayKiosk': return [128, 96, 64]; case 'erCanopy': return [120, 62, 60];
+    case 'tPorch': return [a[0] || 160, 34 + (a[1] ? 14 : 0), Math.max((a[1] || 0) + 56, (a[2] || 0) + 14)]; case 'tAntlers': return [36, 6, 26]; case 'tLogs': return [a[0] || 160, 42, 34]; case 'tLoader': return [84, 46, 52];
+    case 'tSaw': return [40, a[0] || 112, 48]; case 'tSilos': { const n = a[0] || 4, s = a[1] || 360, r = Math.min(48, Math.floor(s / n / 2) - 2); return [s, r * 2 + 4, 150 + Math.ceil(r * 0.45) + 14]; }
+    case 'tSteeple': return [44, 44, 214]; case 'tDock': return [a[0] || 240, 40, 30]; case 'tSacks': return [34, 28, 26]; case 'tBoards': return [(a[0] || 5) * 10 + 8, 16, 64]; case 'tShelter': return [84, 64, 62];
     case 'fence': return [a[1] || 60, 6, ({ picket: 16, wood: 30, chain: 32, iron: 28, stone: 12 }[a[0]] || 20) + 6]; case 'fenceKind': return [a[1] || 60, 6, 26]; case 'gatePillar': return [14, 14, (a[1] || 36) + 16];
     case 'compoundWall': return [a[0] || 80, 10, (a[1] || 40) + 8]; case 'guardTower': return [40, 40, (a[0] || 70) + 40]; case 'hedge': return [a[0] || 40, 10, (a[1] || 12) + 3]; case 'volleyNet': return [a[0] || 70, 4, 26];
     case 'soccerGoal': return [a[2] || 18, a[0] || 60, a[1] || 32]; case 'terrace': return [a[0] || 300, a[1] || 60, a[2] || 40]; case 'hayBale': return [24, 16, 16]; case 'scarecrow': return [30, 8, 56];
@@ -2349,6 +2401,7 @@ function addRail(c, I) {
   if (c.M.railXings) crossingSignals(I, c.M.railXings);   // (every loop's crossings, once each)
   if (c.M.railHubs) railHubs(I, c.M.railHubs);
   for (const t of c.M.lifeguards || []) put(I, vitem('lgt', 'lifeguardTower', [], t.x, t.y, 0));   // (H35: World v3's beach towns, shared/world3-beach.js)
+  if (c.M.townKit) townKit(I, c.M.townKit);   // (H40: World v3's towns' own models round their buildings, shared/world3-towns.js)
 }
 // (H33) World v3's stations, one per name: the station building on its forecourt (the map point), lit, with the station's
 // name over its door, and a footbridge over the tracks between each pair of platforms that face each other.
