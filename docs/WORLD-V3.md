@@ -3769,3 +3769,95 @@ lookout to Kestrel Road. What looks wrong:
 custody's transfer by the Prison Boat (above); the lock working (the gates closing, the water level, a boat waiting);
 the lift bridge at the mouth opening; Prison Island's ground (rock, the shore's cliffs) and its size; models for the
 prison's blocks, towers and walls, the weir and the lock gates; Lookout Hill's rise; the power lines round the lake.
+
+### 8.20 The west coast: Egret Point, its light, the raceway and the marsh; Silver Thread Falls, North Cape Light, the coves (2026-10-11, H45)
+
+Part 1.5 R3 (the Egret Coast: concepts N7, NK1-D, NK1-O, E3e, NT1-F) and R2's coast (the Highland Woods': NT1-E, SC3-A,
+SC3-B, NR1-E, N8-B, NA1-A), in the whole-world build at the skeleton's TOWNS / LANDMARKS / STREAMS points, on the Redwood
+Coast Road (the skeleton's arterial down the coast to its end at Egret Point) and streets and tracks off it. All of it in
+`shared/world3-west.js` (one call each from `shared/world3-world.js`: `paintWest3`, `layWest3`, `buildWest`,
+`westDone`); the page and the city worker never import it. One district after Dusty Hollow's in `shared/mapcore.js`:
+**65 Egret Point** (`wild`, tier `low`: the generator builds nothing there, the village is built whole, as Dusty
+Hollow). It is painted on the land layer over the village, the raceway and the strips of Light Road and Raceway Road -
+so the marsh's tidal creeks (`world3-biomes.js` groundOf3 cuts them in the Egret Coast's own district, 53) don't cut
+them. The live world doesn't change (the world hash stays 6b6e16fdef9f).
+
+- **Egret Point** (the town point 850, 2700, where the Redwood Coast Road ends): **Wharf Street** along row 2630 from
+  just west of the arterial (it crosses its last stretch) east to the quay on the arm's sheltered east shore, facing the
+  cove under the airport. The **quay**: decking along the top of the beach, ten tiles deep; **four piers** three tiles
+  wide, 22 tiles out into the water, a lamp at each end, crates and drums on them; **the fleet** moored along both sides
+  of them (33 boats: dock motorboats and speedboats, `m.marina` - the boats you can take, as Gull Harbor's); **the charter
+  boat** at the end of the second pier (`charter: true`) and **Egret Point Charters** (`charter`) on the quay, its POI
+  knowing its boat (`boat`) - the desk sells today's deep-sea charter (`server/systems/economy.js`), not yet a run to the
+  outer islands. By the quay: **Egret Point Fish Market** (`fishmarket`), **The Gaff Hook** (the bar,
+  `club`), **Egret Point Bait & Tackle** (`tackle`). Along Wharf Street, **21 fishing shacks** either side (weathered
+  siding, tin roofs; widths, setbacks and gaps irregular) - homes for sale as today's shacks (`m.homes`, `shack`, $6,000, one car). Nets, pots, crates, fish
+  tables, rods and life rings on the quay. The buildings of ours have no `prefab`, so the shops serve at their doors
+  (no walk-in interiors: `buildInteriors` wants a prefab).
+- **Light Road** (a country lane, `rural`: no pavements) off Wharf Street south down the arm to the top of the beach at
+  the tip, a track on over the sand to **Egret Point Light** on the beach by the water (905, 3022, by the skeleton's
+  landmark 905, 3010), basalt rocks round its foot and boulders down to the waterline, the keeper's cottage and a bench
+  above it.
+- **The Westport Raceway's new spot** (882-944, 2466-2502, on the flat ground east of the Redwood Coast Road): a **dirt
+  oval** (the stadium shape of today's, its band dirt, not asphalt: the bake paints it as dirt, no kerbs), **the
+  grandstand's bleachers** along its north straight, the pit garages and the snack bar by the gate, a START banner by
+  the line, tyres on the infield; **Raceway Road** (a country lane) across the arterial to its gate and a drive in. It is the first
+  raceway with a start line, so `map.js` buildOffshore makes **today's race** there unchanged - the Westport Raceway,
+  three laps for anything with wheels, its start on the map (`race`) - with no change to map.js.
+- **The salt marsh** (N7, NK1-O): a **boardwalk** (decking two tiles wide) winding from Light Road west-north-west across
+  the reeds and over the tidal creeks to **Egret Marsh Bird Hide** (a hut with a spotting scope and a map board), and a
+  spur off Light Road out to a **platform over the big pond** (a rail, a bench); herons and ducks along its creeks; **three duck blinds** (reed-coloured huts) on the creek banks with decoys on the water and
+  a path to each; **three board ramps** over the dunes down to the west beach (the open sea side), posts at their heads.
+- **Silver Thread Falls** (the head of Silver Thread Creek, 1107, 681, by Falls Pass Road; SC3-A, NR1-E): a band of
+  rock across the creek's head (solid) faced with **basalt columns** (`cliffwall`), **the falls** over it in three streams
+  (`coastfall`, 40-72 px wide, a 140 px drop, mist), the **plunge pool** widened round its foot with mossy basalt boulders, the upper
+  creek above the band; **the viewing platform** (decking with a rail, a scope and a bench) on the west bank between the
+  road and the pool, a path and a map board from the road. The creek runs on to the bay as the land laid it (STREAMS).
+- **North Cape Light** (the skeleton's point 300, 900 is a hundred tiles inland: built on the cliff top west of it, at
+  210, 900): the light and its keeper's cottage on a dirt yard, a track east to the Redwood Coast Road; the **cliff
+  band** along the beach's inland edge (solid, basalt faces), stairs down through a gap; the beach widened below it with
+  **twelve tide pools** (shallow pools in the sand, a barnacled rock by each, starfish, urchins and anemones in them,
+  crabs) and **four sea stacks** in the surf, a gull on one.
+- **The coves down the Redwood Coast Road** (rows 1290, 1530, 1720): from a gravel pull-off with a picnic table by the
+  road, a track west through the redwoods to a **cove** - a bay bitten into the shore with its beach round it, basalt
+  points either side, sea stacks in its mouth, driftwood on the sand: Redwood Cove North, Sea Stack Cove, Driftwood
+  Cove.
+- Everything built is kept from the biomes' and the wilds' dressing (reserve 4).
+
+Tests: `test/world3west.test.js` (one world build: the district after Dusty Hollow's and no creek in it, the three
+streets laid and on the one network, the village's places, the shacks for sale, the quay, the piers and the boats on
+the water, the charter boat, the light at Light Road's end, the raceway - its oval, today's race starting on it with
+its checkpoints on the dirt, the bleachers - the boardwalk over the creeks, the hide, the blinds, the ramps; the falls,
+the basalt band, the platform, the creek wet all the way to the bay; North Cape Light, its tide pools and stacks; the
+coves; every building of ours whole and clear of the highways), `test/world3biomes.test.js` (66 districts).
+
+Pictures (`tools/world3-world-map.mjs --towns --only egret,egretlight,silverfalls,northcape`, and `--region 1,5` for
+the arm): `docs/world-v3-town-egret.png`, `-egretlight.png`, `-silverfalls.png`, `-northcape.png`,
+`docs/world-v3-world-r1-5.png`. What looks right: Wharf Street crossing the Redwood Coast Road to the quay, the shacks
+either side in weathered colours, the fish market and the bar by the quay, the four piers out into the cove's water; the
+dirt oval with its bleachers, the pits and the snack bar on Raceway Road; Light Road down the arm through the marsh to the
+light on the beach at the tip with its rocks (Light Road and Raceway Road narrow country lanes now); the boardwalk
+zigzagging over the creeks to the hide, the spur to the pond's platform; at the falls the pool under the band with the white streams and the
+platform by the road; North Cape Light and its cottage in a clearing, the track to the road, the tide pools along the
+waterline and the stacks offshore; the three coves bitten into the shore. What looks wrong:
+- **Egret Point is still a row:** the shacks staggered (irregular widths, setbacks and gaps) but in two lines along a
+  straight street ending in turnarounds - NT1-F's village is a cluster round the harbour, shacks on stilts at the water, nets and boats pulled up on the shore. The quay is a wide
+  brown deck on the beach with a strip of sand between it and the street's end; the fish market is the convenience
+  store's archetype (no awnings, no fish on ice). The fleet isn't in the bake (boats are vehicles: they show in the game).
+- **The Redwood Coast Road runs on past Wharf Street** to a stub with a turnaround (the arterial's end, 20 tiles on).
+- **The raceway is plain:** a dirt band on grass with no kerbs, no start line painted (the bake's chequer is the
+  asphalt track's), no fence round it, the bleachers small; today's 62 x 34 footprint.
+- **The marsh is one flat green:** thin creeks, the reeds as ground speckle, the boardwalk a thin brown line - N7 wants
+  open pools with lilies, willows, reed beds in clumps, the boardwalk on posts with landings; the hide and the duck blinds
+  are dots at 1/8.
+- **Silver Thread Falls reads as a weir:** the band of basalt columns is a low wall across the creek, no gorge, the
+  drop small - SC3-A/NR1-E want a tall cliff in a gorge, the falls dropping into a pool walled on three sides, stairs
+  down to the platform. The creek above it is a narrow channel on the peaks' scree.
+- **North Cape has no headland:** the coast there is a smooth curve, so the light stands in a square clearing (the kept
+  ground, bare of trees) behind a row of basalt faces on a flat beach; the cliff faces read as a fence at 1/8.
+
+**What's left:** a headland for North Cape Light (the land layer's coast, `shared/world3-land.js`) and a gorge for the
+falls (raised ground: the land has no heights yet); the village clustered round the harbour, stilted shacks, the fish
+market's own look (stalls, ice tables: `mstall`, `fishtable`); the charter's run to the outer islands; R2's inland places
+(a lake with a boathouse and islands, the beaver pond, the hunting camp - H44's wild places may bring some); crabbing and
+beachcombing as activities; the raceway's kerbs and fence.

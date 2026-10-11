@@ -31,6 +31,7 @@ import { buildFerries3 } from './world3-ferries.js';
 import { paintDesert3, layDesert3, buildDesert, desertDone, DESERT_SPECIALS, DESERT_STYLES } from './world3-desert.js';
 import { subwayLoops } from './world3-subway.js';
 import { paintWater3, buildWater3, waterDone } from './world3-water.js';
+import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -63,6 +64,7 @@ export function worldOpts(asked) {
   const mesa = paintMesa3(L, W, H);   // (Lucky Mesa's districts on the land layer: shared/world3-mesa.js, 8.15)
   const desert = paintDesert3(L, W, H);   // (Copper Gulch's and Dusty Hollow's districts: shared/world3-desert.js, 8.18)
   const water = paintWater3(L, W, H);   // (H46, 8.21: Kestrel Lake's island - shared/world3-water.js)
+  const west = paintWest3(L, W, H);   // (Egret Point's district: shared/world3-west.js, 8.20)
   const pieces = worldPieces();
   const byDist = new Int16Array(256).fill(-1);
   for (const p of pieces) if (p.ids) for (const d of p.ids) byDist[d] = p.k;
@@ -177,12 +179,13 @@ export function worldOpts(asked) {
     dressed: dressedBy3,
     pine: pineAt3(L, W),
     unbuilt: new Set([52]),   // (the Sandpiper Coast: no streets yet; Northshore's beach towns (54) are built - world3-beach.js, 8.14)
-    dress(m, H2) { if (m.world3?.mesa) m.world3.mesa.built = buildMesa(m, H2.addProp); if (m.world3?.desert) m.world3.desert.built = buildDesert(m, H2.addProp); if (m.world3) m.world3.water = { painted: water, ...buildWater3(m, H2.addProp) }; m.world3biomes.dress = dress3(m, L, keep, H2); },   // (8.18: the mine, Dusty Hollow, the dam, the lookout, the motel, the camp - world3-desert.js)   // (Lucky Mesa's resorts and old casinos on their lots: world3-mesa.js, 8.15)
+    dress(m, H2) { if (m.world3?.west) m.world3.west.built = buildWest(m, H2.addProp); if (m.world3?.mesa) m.world3.mesa.built = buildMesa(m, H2.addProp); if (m.world3?.desert) m.world3.desert.built = buildDesert(m, H2.addProp); if (m.world3) m.world3.water = { painted: water, ...buildWater3(m, H2.addProp) }; m.world3biomes.dress = dress3(m, L, keep, H2); },   // (8.20: Egret Point, the lights, the falls - world3-west.js; 8.18: the mine, Dusty Hollow, the dam - world3-desert.js; 8.21: Prison Island, the lock, Kestrel Lake - world3-water.js; Lucky Mesa's resorts - world3-mesa.js, 8.15)
     done(m, H3) {
       m.world3.towns.built = townsDone(m);   // (the towns' gas stations and bus stops: world3-towns.js, 8.13)
       m.world3.towns.models = townModels(m);   // (H40, 8.13.2: the towns' own buildings, their yards, the boardwalk's rails, benches and lamps, the pier's end: world3-towns.js)
       if (m.world3.mesa) m.world3.mesa.done = mesaDone(m);   // (Lucky Mesa's gas station, bus stop and summary: world3-mesa.js, 8.15)
       if (m.world3.desert) m.world3.desert.done = desertDone(m);   // (8.18: the assay office's counter, the summary: world3-desert.js)
+      if (m.world3.west) m.world3.west.done = westDone(m);   // (8.20: Egret Point, the raceway's race, the summary: world3-west.js)
       const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
       m.world3.housesMoved = seatStationHouses(m);   // (8.14: each station's house on open ground)
       if (H3) { m.world3.railCleared = clearRailDressing(m, H3.removeProps); clearBeachFront(m, H3.removeProps); }   // (8.14: no tree over the main line or a platform; the promenade and car parks clear)
@@ -237,6 +240,7 @@ export function worldOpts(asked) {
       m.world3.beach = beachStreets(lines, m, L);   // (Northshore's beach towns' streets: shared/world3-beach.js, 8.14)
       m.world3.mesa = { painted: mesa, streets: layMesa3(lines, m) };   // (Lucky Mesa's Strip and side streets: shared/world3-mesa.js, 8.15)
       m.world3.desert = { painted: desert, streets: layDesert3(lines, m) };   // (Copper Gulch's main street and side streets: shared/world3-desert.js, 8.18)
+      m.world3.west = { painted: west, streets: layWest3(lines, m) };   // (Egret Point's Harbor Road, Light Road, Raceway Road: shared/world3-west.js, 8.20)
     },
   };
   return o;

@@ -141,6 +141,8 @@ for (const [name, style, tier, ground] of [['The Strip', 'nightlife', 'lux', T.P
 for (const [name, style, tier] of [['Copper Gulch', 'oldtown', 'low'], ['Dusty Hollow', 'desert', 'wild']]) {
   DISTRICTS.push({ id: DISTRICTS.length, name, isl: 'Red Rock Desert', style, tier, walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.DIRT, turf: false });
 }
+// 65: World v3's fishing village (8.20, shared/world3-west.js: built whole)
+DISTRICTS.push({ id: DISTRICTS.length, name: 'Egret Point', isl: 'Egret Coast', style: 'wild', tier: 'low', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false });
 export const WATER_D = 13;   // (the open sea's district: the generator's too)
 // Districts nobody builds in: woods, hills, mountains, farmland, desert, airfields.
 export const WILD_STYLES = new Set(['wild', 'rural', 'desert', 'airport', 'water', 'rocky']);
