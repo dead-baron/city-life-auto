@@ -72,6 +72,15 @@ export const VEHICLES = {
   trike:     { i: 42, name: 'Tribuck Trike',    kind: 'bike', L: 60,  W: 38, max: 560, accel: 330, brake: 680, rev: 80,  turn: 2.6, grip: 11,  drift: 3.4, mass: 0.9, hp: 160, seats: 2, slots: [[-26, 0]], price: 8600, rough: 1.1, seat: 4, stable: true, sprite: 'bike', moto: 'cruiser', blurb: 'three wheels: never throws you off' },
   ratbike:   { i: 43, name: 'Rustbucket',       kind: 'bike', L: 54,  W: 22, max: 600, accel: 420, brake: 640, rev: 70,  turn: 3.0, grip: 10,  drift: 3.4, mass: 0.6, hp: 140, seats: 1, slots: [[-20, 0]], price: 2200, rough: 0.8, seat: -3, sprite: 'bike', moto: 'cruiser', blurb: 'wire, rust and leather bags: goes anywhere' },
   bagger:    { i: 44, name: 'Saddlebag King',   kind: 'bike', L: 58,  W: 26, max: 640, accel: 370, brake: 700, rev: 70,  turn: 2.8, grip: 10.5, drift: 3.2, mass: 0.75, hp: 140, seats: 2, slots: [[-24, 0]], price: 8800, rough: 1.1, seat: -2, sprite: 'bike', moto: 'cruiser', blurb: 'batwing fairing, hard bags' },
+  // ---- aircraft (shared/flight.js, server/systems/aircraft.js; HE1 the helicopters): kind 'air', air 'heli' | 'plane'.
+  // climb / sink: px/s up and down at full stick; ceiling: the highest it goes (px); turn: a helicopter's yaw rate, a
+  // plane's turn rate per radian of bank; vr: a plane's lift-off speed, stall: below it the wing quits, bank: its
+  // steepest bank (rad); rotor: the main rotor's radius (px, the clients draw it), span: the wingspan (px, drawn - the
+  // box is narrower); livery: how it's painted (the clients). (indexes from 60: clear of the next ground vehicles)
+  heli:       { i: 60, name: 'Skylark Helicopter', kind: 'air', air: 'heli', L: 150, W: 54, max: 720, accel: 340, brake: 400, rev: 0, turn: 1.9, grip: 8, drift: 2, mass: 1.6, hp: 320, seats: 4, slots: [[-34, 0]], climb: 170, sink: 200, ceiling: 1000, rotor: 76, livery: 'news' },
+  policeheli: { i: 61, name: 'Police Air Unit',    kind: 'air', air: 'heli', L: 150, W: 54, max: 760, accel: 360, brake: 400, rev: 0, turn: 2.0, grip: 8, drift: 2, mass: 1.6, hp: 420, seats: 4, slots: [[-34, 0]], climb: 180, sink: 210, ceiling: 1000, rotor: 76, police: true, livery: 'police' },
+  plane:      { i: 62, name: 'Larkspur 172',       kind: 'air', air: 'plane', L: 128, W: 112, max: 1150, accel: 190, brake: 420, rev: 0, turn: 1.25, grip: 8, drift: 2, mass: 1.4, hp: 280, seats: 2, slots: [[-34, 0]], climb: 140, sink: 210, ceiling: 1000, vr: 520, stall: 400, bank: 0.75, span: 168, livery: 'plane' },
+  gunship:    { i: 63, name: 'Hornet Gunship',     kind: 'air', air: 'heli', L: 160, W: 50, max: 820, accel: 400, brake: 400, rev: 0, turn: 2.2, grip: 8, drift: 2, mass: 2.0, hp: 700, seats: 2, slots: [[-40, 0]], climb: 200, sink: 230, ceiling: 1000, rotor: 80, military: true, missiles: true, livery: 'army' },
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);

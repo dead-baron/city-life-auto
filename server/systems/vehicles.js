@@ -15,6 +15,7 @@ import * as cruiser from './cruiser.js';
 import * as traffic from './traffic.js';
 import * as explosions from './explosions.js';   // (task #363: the blast by the vehicle, the wreck blown into the air)
 import * as carhits from './carhits.js';         // (task #361: run over, onto the hood)
+import * as aircraft from './aircraft.js';       // (helicopters and planes: up in the air, nothing on the ground touches them)
 
 
 export function driverOf(world, v) { return v.seats[0] ? world.get(v.seats[0]) : null; }
@@ -24,6 +25,7 @@ export function speedOf(v) { return Math.hypot(v.vx, v.vy); }
 // the server receives - the same steps the driver's client predicted - so prediction and server
 // never drift apart (that drift was the "car vibrating back and forth" bug).
 export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHER.RAIN }) {
+  if (v.def.kind === 'air') { aircraft.step(world, v, dt); return; }   // (flying: shared/flight.js, aircraft.js)
   const moving = Math.abs(v.vx) + Math.abs(v.vy) > 0.5 || Math.abs(v.input.throttle) > 0.05;
   if (!moving) return;
   // pinned broadside to the nose of a train: carried along with it (tyres can't grip that) -
@@ -71,7 +73,7 @@ export function update(world, dt) {
       else stepVehicle(world, v, dt, env);
     }
     // land vehicles that end up in the water sink (not a car on a ferry's deck)
-    if (v.def.kind !== 'boat' && !v.onDeck) {
+    if (v.def.kind !== 'boat' && !v.onDeck && !aircraft.inAir(v)) {
       if (!v.sinkAt && (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
       if (v.sinkAt) {
         v.vx *= Math.exp(-2.5 * dt); v.vy *= Math.exp(-2.5 * dt);
@@ -98,12 +100,12 @@ export function update(world, dt) {
 
   // vehicle vs vehicle
   for (const a of vehs) {
-    if (a.removed || a.onDeck || a.fly) continue;   // (the cars on a ferry's deck are held in their places: ferries.js)
+    if (a.removed || a.onDeck || a.fly || aircraft.airborne(a)) continue;   // (the cars on a ferry's deck are held in their places: ferries.js)
     const sa = Math.abs(a.vx) + Math.abs(a.vy);
     if (sa < 2) continue;
     const near = world.query(a.x, a.y, a.def.L / 2 + 110, K.VEH);
     for (const b of near) {
-      if (b === a || b.removed || b.onDeck || b.fly) continue;
+      if (b === a || b.removed || b.onDeck || b.fly || aircraft.airborne(b)) continue;
       if ((a.def.kind === 'boat') !== (b.def.kind === 'boat') || !sameLevel(a.lz, b.lz)) continue;
       const sb = Math.abs(b.vx) + Math.abs(b.vy);
       if (sb >= 2 && b.id < a.id) continue; // pair handled once when both move
@@ -115,7 +117,7 @@ export function update(world, dt) {
 
   // vehicle vs pedestrians
   for (const v of vehs) {
-    if (v.removed || v.fly) continue;
+    if (v.removed || v.fly || aircraft.airborne(v)) continue;
     const spd = speedOf(v);
     const near = world.query(v.x, v.y, v.def.L / 2 + 16 + (v.cutQ ? PLASMA_CUT.slide : 0), K.PED);
     for (const ped of near) {
@@ -480,6 +482,7 @@ export function tryEnter(world, ped) {
   if (v.ferry) { if (p) world.notify(p, 'Board the ferry with interact while it\'s in at the pier.', 'info'); return false; }   // (ferries.js: never taken)
   if (v.wreckAt) { if (p) world.notify(p, 'That vehicle is wrecked.', 'bad'); return false; }
   if (v.sinkAt) return false;
+  if (aircraft.inAir(v)) return false;   // (up in the air: out of reach)
   if (v.forSale) { if (p) world.notify(p, `It's for sale: $${v.forSale.price.toLocaleString()}. Walk up to it and press interact to buy it.`, 'info'); return false; }
   if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
   if (ped.carrying) cargo.dropCrate(world, ped);
@@ -537,6 +540,7 @@ export function exitVehicle(world, ped) {
   if (!v) { ped.vehId = 0; ped.seat = -1; return; }
   if (v.onDeck && ferries.leaveDeckCar(world, ped, v)) return;   // (out of a car on a ferry's deck: up to a seat aboard)
   if (v.ferry) { const to = ferries.exitToward(world, v); if (to) { ejectPed(world, ped, false, to); return; } }   // (off at the pier)
+  if (aircraft.leaveInAir(world, ped, v)) return;   // (up in the air: press again to jump - aircraft.js)
   const spd = speedOf(v);
   if (v.def.kind === 'boat' && !findExitSpot(world, v, ped, 150) && ped.player) world.notify(ped.player, 'Over the side - swim for it!', 'info');
   // off a bus: out of the doors on the kerb side (the right of the way it faces), onto the pavement by the stop

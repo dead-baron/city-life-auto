@@ -18,6 +18,10 @@ export const IN = {
   BLOCK: 16384,  // guard: right mouse · LT on foot · touch aim stick (combat.js)
   DANCE: 32768,  // G / L3 / the phone's 💃 - dance where you stand, the next move each press (server dance.js)
   // 65536 and up: free - the input is 32 bits on the wire (protocol.js: a second word); keep below 2^31 (signed ops)
+  // at the controls of an aircraft (shared/flight.js): climb and descend - Space / Shift, RT / LT, touch ▲ / ▼ (bits 20, 21:
+  // clear of the next few others take)
+  CLIMB: 1048576,
+  DESCEND: 2097152,
 };
 
 // ---- the gamepad (client/input.js; tasks #301, #411) ----------------------------------------------------------------

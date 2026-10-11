@@ -3,6 +3,7 @@
 import { PF, FACTION, TILE, K } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
+import * as aircraft from './aircraft.js';   // (at the controls of an aircraft)
 import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION } from '../../shared/physics.js';
 import { PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { surfaceZ } from '../../shared/levels.js';
@@ -395,6 +396,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     const v = world.get(ped.vehId);
     if (!v) { ped.vehId = 0; ped.seat = -1; return; }
     if (ped.seat === 0) {
+      if (v.def.kind === 'air') aircraft.input(world, v, inp, ped);   // (flying: shared/flight.js)
       const di = driveInput(v, inp);
       v.input.throttle = di.throttle;
       v.input.steer = di.steer;
@@ -404,7 +406,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
       if (inp.bits & IN.HORN) v.hornUntil = world.time + 0.2;
       if ((pressed & IN.HORN) && v.def.police) v.sirenOn = !v.sirenOn;
     }
-    if ((inp.bits & IN.FIRE) && (inp.bits & IN.AIMING)) {
+    if ((inp.bits & IN.FIRE) && (inp.bits & IN.AIMING) && !(ped.seat === 0 && v.def.missiles)) {   // (the gunship's pilot fires its missiles instead: aircraft.js)
       const w = WEAPONS[ped.weapon];
       if (w && (w.type === 'gun')) combat.tryAttack(world, ped, inp.aim);
     }

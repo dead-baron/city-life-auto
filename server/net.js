@@ -3,7 +3,8 @@
 // things arrive before they scroll on screen. Entities are looked up through the chunk grid.
 // Each entity is encoded ONCE per tick; per client we copy only records that changed since
 // that client's previous snapshot (static entities refresh at 1 Hz).
-import { K, CHUNK_PX } from '../shared/constants.js';
+import { K, CHUNK_PX, VF } from '../shared/constants.js';
+import { altByte } from '../shared/flight.js';
 import { SnapshotWriter, CTRL, SNAP_ENTITY } from '../shared/protocol.js';
 import { WEAPONS } from '../shared/items.js';
 import { isSwimming, WATER_T } from '../shared/map.js';
@@ -60,7 +61,9 @@ function fields(world, e) {
     // still being winched up: tow.js; the clients draw it tilted)
     // (parent: the damage you can see - its stage, the sides it's dented on, bullet holes, the parts off, a plasma cut:
     // vehicles.js vehDamageWord, shared/vehicles.js packVehDamage - task #402)
-    case K.VEH: return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), vehicles.vehDamageWord(world, e), e.towedBy ? (e.towEnd === -1 ? 2 : 1) | (e.towFrom ? 4 : 0) : 0];
+    // (an aircraft: extra its altitude - shared/flight.js altByte; flags VF.ROTOR its engine turning)
+    case K.VEH: if (e.def.kind === 'air') return [vehicles.vehFlags(world, e) | ((e.spool || 0) > 0.05 ? VF.ROTOR : 0), Math.max(0, e.hp / e.def.hp), vehicles.vehDamageWord(world, e), altByte(e.alt)];
+      return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), vehicles.vehDamageWord(world, e), e.towedBy ? (e.towEnd === -1 ? 2 : 1) | (e.towFrom ? 4 : 0) : 0];
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
     case K.BAG: return [bagBlinks(world, e) ? 1 : 0, 1, 0, bagWireTier(e)];   // flags 1: about to vanish (it blinks)
     case K.PROJ: return [0, 1, 0, 0];
@@ -124,7 +127,7 @@ export function send(world) {
     else if (ped && !ped.dead && ped.hoodOf && !veh) { ctrl = CTRL.RIDER; ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, lz: ped.lz || 0 }; }   // (on a car's hood: carried - carhits.js)
     else if (ped && !ped.dead && ped.cuffed && !veh) { ctrl = CTRL.RIDER; ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, lz: ped.lz || 0 }; }   // (cuffed: custody.js walks them - no prediction)
     else if (ped && !ped.dead) {
-      if (veh) { ctrl = ped.seat === 0 && !veh.scripted && !veh.onDeck ? CTRL.DRIVER : CTRL.PASSENGER; /* easing out of a garage: just watch */ ctrlId = veh.id; self = { x: veh.x, y: veh.y, a: veh.a, vx: veh.vx, vy: veh.vy, av: veh.av, stamina: veh.slip || 0, rollT: veh.spin || 0, rdx: veh.launch || 0, lz: veh.lz || 0 }; sflags = veh.rev ? 32 : 0; } // (a vehicle's slide / burnout / launch state rides in the ped-only slots) // reverse-gear state keeps point-to-drive prediction exact
+      if (veh) { ctrl = ped.seat === 0 && !veh.scripted && !veh.onDeck ? CTRL.DRIVER : CTRL.PASSENGER; /* easing out of a garage: just watch */ ctrlId = veh.id; self = { x: veh.x, y: veh.y, a: veh.a, vx: veh.vx, vy: veh.vy, av: veh.av, stamina: veh.slip || 0, rollT: veh.spin || 0, rdx: veh.launch || 0, lz: veh.lz || 0 }; sflags = veh.rev ? 32 : 0; if (veh.def.kind === 'air') { self.stamina = veh.vz || 0; self.rollT = veh.spool || 0; self.rdx = veh.bank || 0; self.rdy = veh.alt || 0; } }   // (an aircraft: its climb rate, spool, bank and altitude in those slots - shared/flight.js) // (a vehicle's slide / burnout / launch state rides in the ped-only slots) // reverse-gear state keeps point-to-drive prediction exact
       else {
         ctrl = CTRL.PED; ctrlId = ped.id;
         const mods = players.pedMods(world, ped);

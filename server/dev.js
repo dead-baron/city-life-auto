@@ -47,6 +47,7 @@ function w2legend(world, e) {
   wildlife.spawnAnimal(world, e.wild.kind, e.x, e.y, e.wild.herd, { legend: true, lead: true });
 }
 
+import { airfields } from '../shared/flight.js';
 const { clearSpot } = cruiser;
 
 export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg'];
@@ -69,6 +70,9 @@ export const NEAR_KINDS = {
   cave: (m) => { const L = undergroundOf(m); return L ? L.caves.map((K) => ({ x: K.mouth.x, y: K.mouth.y + 4, name: L.caves.length > 1 ? `the cave's mouth (${K.name})` : 'the cave\'s mouth' })) : []; },   // (a cave per mine)
   vein: (m) => { const L = undergroundOf(m); return L ? L.veins.filter((v) => !v.ug).map((v) => ({ x: v.x, y: v.y, name: `a vein of ${v.ore} (${v.where})` })) : []; },
   stargaze: (m) => { const s = (m.countrySites || []).find((q) => q.type === 'observatory'); return s ? m.props.filter((q) => q && q.t === 'scope' && q.x >= s.x * 32 && q.x <= (s.x + s.w) * 32 && q.y >= s.y * 32 && q.y <= (s.y + s.h) * 32).map((q) => ({ x: q.x + 14, y: q.y + 24, name: 'the observatory telescope' })) : []; },
+  // flying (shared/flight.js): the foot of each runway (the far end ahead, the way to take off), the helipads
+  runway: (m) => (m.airports || []).map((A) => ({ x: A.runway.x + A.runway.w / 2, y: A.runway.y + A.runway.h - 120, name: `${A.name}'s runway` })),
+  helipad: (m) => airfields(m).pads.filter((p) => !p.roof).map((p) => ({ x: p.x + 90, y: p.y, name: p.name })),
 };
 export function nearTargets(m, k) {
   if (NEAR_KINDS[k]) return NEAR_KINDS[k](m);

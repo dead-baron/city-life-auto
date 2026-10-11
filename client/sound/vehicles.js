@@ -38,6 +38,10 @@ const P = {
   scooter: { f0: 60, f1: 190, gears: 1, wave: 'buzz', sub: 0.1, noise: 0.24, nf: 3600, lp0: 900, lp1: 3000, q: 2, am: 0.3, amr: 1, vol: 0.26, horn: [784, 988], hw: 'square' },
   twostroke: { f0: 48, f1: 260, gears: 4, wave: 'buzz', sub: 0.12, noise: 0.34, nf: 3000, lp0: 1000, lp1: 4600, q: 5, am: 0.5, amr: 1, vol: 0.34, horn: [698, 880], hw: 'square' },
   thumper: { f0: 30, f1: 150, gears: 5, wave: 'saw8', sub: 0.5, noise: 0.2, nf: 1400, lp0: 450, lp1: 2600, q: 2.5, am: 0.55, amr: 1, vol: 0.36, horn: [587, 740], hw: 'square' },
+  // the aircraft (shared/flight.js): a helicopter's rotor - a deep whop-whop (a big, slow wobble on a low note, lots of
+  // rush); a light plane's propeller - a buzzing drone that climbs with the throttle
+  rotor: { f0: 17, f1: 30, gears: 0, wave: 'saw8', sub: 0.9, noise: 0.38, nf: 520, lp0: 240, lp1: 640, q: 1.2, am: 0.92, amr: 0.25, vol: 0.5, boat: 1, horn: [440, 554], hw: 'square' },
+  prop: { f0: 28, f1: 104, gears: 0, wave: 'buzz', sub: 0.5, noise: 0.22, nf: 1300, lp0: 420, lp1: 2300, q: 1.8, am: 0.32, amr: 0.5, vol: 0.42, boat: 1, horn: [440, 554], hw: 'square' },
 };
 export const ENGINE_CLASS = {
   compact: 'small', sedan: 'sedan', taxi: 'sedan', sports: 'sports', pickup: 'muscle', flatbed: 'truck', van: 'van', bus: 'bus',
@@ -47,6 +51,7 @@ export const ENGINE_CLASS = {
   bicycle: 'pedal', cruiser: 'pedal', mtb: 'pedal', roadbike: 'pedal', bmx: 'pedal', cargobike: 'pedal',
   vtwin: 'vtwin', tourer: 'vtwin', chopper: 'vtwin', bobber: 'vtwin', bagger: 'vtwin', trike: 'vtwin', ratbike: 'vtwin',
   caferacer: 'thumper', dirtbike: 'twostroke', scooter: 'scooter',
+  heli: 'rotor', policeheli: 'rotor', gunship: 'rotor', plane: 'prop',
 };
 export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', rescueboat: 'ambulance', rescue4x4: 'ambulance', firetruck: 'fire' };
 const AIR_BRAKES = new Set(['truck', 'bus']);
