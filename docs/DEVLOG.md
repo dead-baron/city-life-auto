@@ -7034,8 +7034,9 @@ slab of warehouse roofs (the harbor style wall to wall). Now it is a container p
 - **The picture** (`docs/world-v3-westport.png`): the port reads as a container terminal - the stacks in rows, the
   lanes, the red cranes along the quay, the ship alongside. What's still wrong: the quay is the dock's wooden planks (a
   container quay is concrete), the ship is small beside a 344-tile quay (90 tiles; one berth of
-  several), the corner past the quay's curve at the north end is still the old district's grass, and the classic renderer's crane rails only show once its port module has
-  loaded (the ground they lie on is baked before).
+  several), the corner past the quay's curve at the north end is still the old district's grass; in the classic renderer, a boat south of a crane draws over its
+  boom (it sorts by where things stand), and a ground chunk baked before the port's module arrived lacks its rails and
+  fence until it is baked again (the module is asked for as soon as the city has a port).
 
 The files: `shared/map.js` (`buildContainerPort`, `PORT`; one call in `buildQuays`), `client/art2/props-transit.js`,
 `client/art2/game/statics.js`, `client/render/portprops.js` (new), `client/render/tiles.js` (the port props drawn by it,

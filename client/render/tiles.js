@@ -40,6 +40,7 @@ export class GroundCache {
     this.max = maxChunks;
     this.layers = { lots: true, props: true, ...(layers || {}) };
     this.cache = new Map();
+    if (map.props && map.props.some((p) => p.t === 'crail' || p.t === 'yfence')) drawPort(null, { t: '' });   // (the port's flat props are baked into the ground: their art loaded now)
     this.byChunk = (list, getRect) => {
       const out = new Map();
       for (const it of list) {
