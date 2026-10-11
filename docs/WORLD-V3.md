@@ -2379,7 +2379,9 @@ junction can't hold each other up for good. Today's world: one loop, no signals 
 (`test/trains.test.js`, 19 of 19).
 Measured over 20 minutes of game time: all twelve trains ran (12.5-17 km each), stopped at every one of their stations
 in order (a round of the Bay Loop about every 6-7 minutes, of the Grand Loop about every 13), held at a signal 1-19 s in all;
-no train stood still for good.
+no train stood still for good. The cost (this machine): the signals' setup 0.24 s when the World starts; the index of the
+tiles near the line for the NPCs' care, built the first time it's asked, 0.65 s and 38 MB (151,702 tiles: every
+loop's nearest point to each); a minute of game time with the twelve trains and no players 1.1 s.
 
 **The level crossings and the people at the line:** the loops' crossings are listed once each (`m.railXings`: two
 loops on one track cross a road at one crossing; `uses` gives each loop and where along it), and the gates go down for
