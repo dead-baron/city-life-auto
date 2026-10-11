@@ -13,6 +13,7 @@ import { decodeLook, lookToApp } from '../../shared/lookcore.js';
 
 const DT = 1 / TICK_HZ;
 const looks = new Map();   // a friend's look by name (sent now and then)
+const seen = new Map();    // a friend's last two spots by name: drawn between them (the server's 20 a second)
 const appOf = (a) => { if (a && a.lk && a.t === undefined) { const L = decodeLook(a.lk); return L ? lookToApp(L, a.lk) : {}; } return a || {}; };
 let cv = null, g = null, S = null, st = null, raf = 0, app = null, bake = null;
 
@@ -31,7 +32,12 @@ export function onMsg(state, m) {
   if (!st || st.id !== m.id || m.plan !== (st && st.plan)) st = { id: m.id, cars: [], name: '', garage: 0, sleepS: HOME_IN.sleepS, wakeH: HOME_IN.wakeH };
   Object.assign(st, m);
   st.at = performance.now();
-  for (const o of m.others || []) if (o.app) looks.set(o.n, appOf(o.app));
+  const t = performance.now();
+  for (const o of m.others || []) {
+    if (o.app) looks.set(o.n, appOf(o.app));
+    const q = seen.get(o.n), k = q ? Math.min(1, (t - q.t) / 50) : 1;
+    seen.set(o.n, { x0: q ? q.x0 + (q.x1 - q.x0) * k : o.x, y0: q ? q.y0 + (q.y1 - q.y0) * k : o.y, x1: o.x, y1: o.y, t });
+  }
   if (m.sleep && !st.sleepT0) { st.sleepT0 = performance.now(); st.sleepMin0 = m.min; }
   if (!m.sleep) st.sleepT0 = 0;
   const e = S.ents.get(S.myPedId);
@@ -276,7 +282,8 @@ function you(L, me, now) {
 }
 // a friend in there with you (server homeinside.js letIn): where the server last had them, their name over them
 function friend(L, o, now) {
-  let x = o.x, y = o.y, a = o.a;
+  const q = seen.get(o.n), k = q ? Math.min(1, (performance.now() - q.t) / 50) : 1;
+  let x = q ? q.x0 + (q.x1 - q.x0) * k : o.x, y = q ? q.y0 + (q.y1 - q.y0) * k : o.y, a = o.a;
   if (o.sl) { const bed = L.pieces.find((p) => p.ch === 'B'); if (bed) { x = bed.x + bed.w / 2 + 14; y = bed.y + 22; a = Math.PI / 2; } }
   const spr = pedSprite(looks.get(o.n) || {}, o.mv ? 'move1' : 'idle', o.mv ? Math.floor(now / 110) % 4 : 0, 0);
   g.save(); g.translate(x, y);
