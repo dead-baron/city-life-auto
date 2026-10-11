@@ -6955,3 +6955,47 @@ water off a bridge, no road ends in the water; the Bay Bridge and Cedar Avenue's
 no railway, listed; the skeleton's crossings listed; the canal one water; the block depths as today's, more streets
 and blocks. A todo: the spacing along a row as today's). Step A's test passes as before (scale 1 is today's plan,
 moved, with the plan run in the placed frame); `test/world3.test.js` passes (the live world's hash).
+
+## 2026-10-10 · World v3, stage 2, step 3: Cedar Isle, Westport and the airport built at their gulf places
+
+What was asked (the coordinator, from the owner's gulf plan, part 7: "cedar Isle and West point are much bigger and
+closer to metrocity ... making the Westport airport smaller nestled right off of the Westport island kind of tucked in
+but still it's own much smaller island", and "Maybe Westport actually stretches in and connects to the mainland"):
+build the other gulf places as Metro City + Southbank is built - each first at today's size (the proof), then at its
+gulf size on the gulf's land - with Port Westport's container quay, Westport Freight back in as a delivery stop, and an
+airport that fits an island 0.65 of today's.
+
+What it does (docs/WORLD-V3.md 8.5 has the numbers):
+- **Step A (scale 1):** each place at its v3 position is the island build moved. Westport to the prop (every tile but
+  45, all 303 road edges, 236 buildings, 127 POIs, 4,718 props); Cedar Isle 99.6% of its tiles, 236 of 241 road edges, 131 of 132 buildings, 124 of 127 POIs, 89% of the props (from 51%: the Lake
+  District's courts and the power poles still differ); the airport 99.4% of its tiles,
+  every road edge and building (its west beach still differs). Placed for it: Cedar Farms' fields and market, the
+  estates, the golf club's spot, the airports, the country sites (they were never found at an offset: `countryside.js`
+  looks for them in the place's frame now), the lakes' boat hire, the terrain classes the wild ground reads, and the
+  anchors and hashes of Heron Marsh, Cedar Creek, Cedar Point Lavender and Lakeview Park.
+- **Step B (the gulf's land):** each place picked from the land by its districts (Westport and the airport share a
+  zone). Cedar Isle at 1.15: x1.32 the ground, every district, POI kind and site it has today (South Port has no ground:
+  the skeleton's picture leaves it out - the owner's call). Westport at 1.15 with Port Westport: a straight quay on
+  the West Channel (dock tiles, crates, the cranes' spots), Westport Freight a delivery stop there again (the bowling
+  alley may not take a port's freight stop), and its roads onto the mainland cut at the seam and listed. The airport at
+  0.65: today's layout across, shorter along the runway (116 tiles, not 178), a shallower apron, the three hangars in a
+  row under it; the raceway has no room (it goes on the mainland).
+- **The pictures:** `docs/world-v3-westport.png`, `docs/world-v3-cedar.png`, `docs/world-v3-airport.png`
+  (`tools/world3-place-map.mjs --island <place>`). What looks wrong: Westport reads as an island (only its land is
+  built), Port Westport is one grey slab of roofs (no container yard, the cranes have no prop yet), roads and bridges
+  run out over the sea (Westport's Beltway over the cove, Cedar Isle's Loop across its south-west bay, the old bridges
+  and station roads), the railway's loop, Cedar Farms' fields smaller than their sections, the golf club at the other
+  end of Cedar Isle, the airport's apron at its north-east shore.
+- The live world is unchanged: the world hash stays `6b6e16fdef9f`.
+
+The files: `shared/map.js` (`PTX` / `PTY`, `clsAt`, `airportPlan`, `buildQuays`; the fields, farm stands, estates, scene
+spots, boat hire, wild ground and country sites placed), `shared/countryside.js` (`ctx.at`, a site's `hx` / `hy`),
+`shared/naturesites.js` (`H.place`: `PXs` / `PYs` / `LXs` / `LYs` in four sites), `shared/bowling.js` (`keep`),
+`shared/world3-islands.js` (`dists`, `seams` / `seamCut`, the specials of a picked place's districts, `quays`),
+`tools/world3-place.mjs` (`LAND_PICK`; the seams and quays in Step B's report), `tools/world3-place-map.mjs`
+(`--island`), `test/world3gulf.test.js`, `docs/WORLD-V3.md` 8.5.
+
+Tests: `test/world3gulf.test.js` (new: Westport, Cedar Isle and the airport at their gulf places at scale 1 are their
+island builds moved - the layers to the tile, the rest as measured); `test/world3place.test.js` and
+`test/world3.test.js` pass as before (today's world is still the stamped one); `test/bowling.test.js`,
+`test/nature.test.js` pass.

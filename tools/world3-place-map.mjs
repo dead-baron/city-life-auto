@@ -2,7 +2,8 @@
 // the v3 frame's land (shared/world3-land.js) - drawn as the world map draws (tools/build-worldmap2.mjs: the game's own
 // chunk bake, lit by an afternoon sun from the north-west with soft shadows, shrunk 16 times: a pixel is half a tile),
 // beside today's Metro City cut from the world map's own tiles (assets/map) at the same scale.
-//   node --expose-gc tools/world3-place-map.mjs [--out docs/world-v3-metro.png] [--scale 1.15]
+//   node --expose-gc tools/world3-place-map.mjs [--island metro] [--out docs/world-v3-<island>.png] [--scale <its own>]
+// (8.5: any gulf place - metro, cedar, westport, airport - on its land as tools/world3-place.mjs LAND_PICK picks it)
 // (heavy: today's world, the land, the place in the v3 frame, then every chunk of it baked on one thread - run it
 // under `flock /tmp/cla-heavy.lock`; python3 with PIL writes the PNG)
 import { writeFileSync, readFileSync, rmSync } from 'node:fs';
@@ -13,7 +14,8 @@ import { spawnSync } from 'node:child_process';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const imp = (f) => import(pathToFileURL(join(ROOT, f)).href);
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
-const OUT = join(ROOT, arg('--out', 'docs/world-v3-metro.png'));
+const KEY = arg('--island', 'metro');
+const OUT = join(ROOT, arg('--out', `docs/world-v3-${KEY}.png`));
 const S = 16, CH = 768, CS = CH / S, SEED = 1337;
 const gc = globalThis.gc || (() => {});
 const t0 = Date.now();
@@ -22,18 +24,20 @@ const log = (s) => console.log(`[${((Date.now() - t0) / 1000).toFixed(0)} s] ${s
 const { generateCity } = await imp('shared/map.js');
 await imp('shared/world3-islands.js');
 const { buildLand3 } = await imp('shared/world3-land.js');
-const { ISLANDS } = await imp('shared/world3-skeleton.js');
+const { ISLANDS, PIECES } = await imp('shared/world3-skeleton.js');
+const { LAND_PICK } = await imp('tools/world3-place.mjs');
 const { TILE } = await imp('shared/constants.js');
 const { bakeChunk, loadProviders, SpriteCache, providers } = await imp('client/art2/game/chunkbake.js');
 const { F_WATER } = await imp('client/art2/gbuf.js');
-const pic = ISLANDS.find((I) => I.key === 'metro').picture;
+const PLACE = ISLANDS.find((I) => I.key === KEY) || PIECES.find((I) => I.key === KEY), pic = PLACE.picture;
+const NAME = KEY === 'metro' ? 'Metro City' : PLACE.name.replace(/ \(.*$/, '');
 const scale = +arg('--scale', String(pic.scale));
 
 let world = generateCity(SEED);
 const L = buildLand3(world);
 world = null; gc(); gc();
 log('the land');
-const M = generateCity(SEED, { island: 'metro', frame: { w: L.w, h: L.h }, place: { at: pic.at, scale, from: pic.from }, land: L });
+const M = generateCity(SEED, { island: KEY, frame: { w: L.w, h: L.h }, place: { at: pic.at, scale, from: pic.from }, land: L, ...(LAND_PICK[KEY] || {}) });
 log(`the place built (${M.w} x ${M.h})`);
 // the place's rectangle: its land and a margin, in chunks of 24 tiles
 let x0 = M.w, y0 = M.h, x1 = 0, y1 = 0;
@@ -104,8 +108,8 @@ pad = 24
 out = Image.new('RGB', (w + W + 3 * pad, max(h, H) + 2 * pad + 20), (24, 26, 30))
 out.paste(today, (pad, pad + 20)); out.paste(im, (w + 2 * pad, pad + 20))
 dr = ImageDraw.Draw(out)
-dr.text((pad, 8), "Today's Metro City (the world map, 1/16)", fill=(235, 235, 235))
-dr.text((w + 2 * pad, 8), "Metro City + Southbank at its gulf place, scale ${scale} (the chunk bake, 1/16)", fill=(235, 235, 235))
+dr.text((pad, 8), "Today's ${NAME} (the world map, 1/16)", fill=(235, 235, 235))
+dr.text((w + 2 * pad, 8), "${KEY === 'metro' ? 'Metro City + Southbank' : NAME} at its gulf place, scale ${scale} (the chunk bake, 1/16)", fill=(235, 235, 235))
 out.save(${JSON.stringify(OUT)})
 print(out.size)
 `;

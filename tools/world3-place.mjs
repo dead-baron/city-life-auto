@@ -34,6 +34,10 @@ function build(opts) {
   return { m, ms: Math.round(performance.now() - t0) };
 }
 
+// (each place's land on the v3 land: its zones, or its districts - Westport and the airport share zone 7; Port
+// Westport, 26, is Westport's; South Port, 39, Cedar Isle's if the land gives it ground - docs/WORLD-V3.md 8.5)
+export const LAND_PICK = { metro: { zones: [1, 2] }, cedar: { dists: [35, 36, 37, 38, 39, 40] }, westport: { dists: [23, 24, 25, 26, 28, 30], seams: true, quays: [{ name: 'Port Westport', rect: [1189, 2056, 1262, 2400], faces: 'west', freight: 'Westport Freight' }] }, airport: { dists: [27] } };
+
 export function comparePlaced(R, S, dx, dy) {
   // R: the island built in today's frame; S: built at its place, offset dx, dy (tiles). On R's land.
   const W = R.w, H = R.h, D = dx * TILE, E = dy * TILE;
@@ -137,6 +141,8 @@ export function landReport(R, S, L) {
   };
   out.noRoom = S.islandBuild ? S.islandBuild.noRoom : [];
   out.leftOut = S.islandBuild ? S.islandBuild.leftOut.map((l) => `${l.name || '(unnamed)'} (${l.kind})`) : [];
+  out.seams = S.islandBuild && S.islandBuild.seams ? S.islandBuild.seams.map((l) => `${l.name || '(unnamed)'} (${l.kind})`) : [];
+  out.quays = (S.quays || []).map((q) => `${q.name}: ${q.length} tiles of quay, ${q.cranes.length} cranes`);
   return out;
 }
 
@@ -148,7 +154,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1] && pro
   world = null; gc(); gc();
   const ref = build({ island: KEY });
   const sc = +arg('--scale', String(pic.scale));
-  const placed = build({ island: KEY, frame: { w: L.w, h: L.h }, place: { at: pic.at, scale: sc, from: pic.from }, land: L });
+  const placed = build({ island: KEY, frame: { w: L.w, h: L.h }, place: { at: pic.at, scale: sc, from: pic.from }, land: L, ...(LAND_PICK[KEY] || {}) });
   const r = landReport(ref.m, placed.m, L.layers);
   if (JSON_OUT) console.log(JSON.stringify({ island: KEY, scale: sc, ms: placed.ms, ...r }));
   else {
@@ -161,6 +167,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1] && pro
     console.log(`road network: ${r.network.edges} edges in ${r.network.count} pieces (largest: ${r.network.pieces.join(', ')})`);
     console.log(`numbers [placed, today]: ${JSON.stringify(r.numbers)}`);
     console.log(`no lot for: ${r.noRoom.join(', ') || 'none'}; left out: ${r.leftOut.join(', ') || 'none'}`);
+    console.log(`cut at the seams (to the mainland): ${r.seams.join(', ') || 'none'}; quays: ${r.quays.join('; ') || 'none'}`);
   }
 } else if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const ref = build({ island: KEY });

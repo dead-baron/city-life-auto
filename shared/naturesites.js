@@ -104,6 +104,10 @@ function addCounter(m, kind, label, x, y, r = 44) {
 let PG = null;
 const nearProps = (m, x0, y0, x1, y1, fn) => (PG && PG.m === m ? PG.each(x0, y0, x1, y1, fn) : m.props.forEach(fn));
 const anyProp = (m, x0, y0, x1, y1, pred) => (PG && PG.m === m ? PG.any(x0, y0, x1, y1, pred) : m.props.some((q) => q && pred(q)));
+// (World v3's gulf places, H.place: a site's anchor of today's world placed, whole tiles - its sizes kept - and a
+// position hash's tile read back in today's coordinates, so a place built at scale 1 is today's, moved: map.js)
+const PXs = (H, x) => (H.place ? H.place.x(x) : x), PYs = (H, y) => (H.place ? H.place.y(y) : y);
+const LXs = (H, x) => (H.place ? H.place.lx(x) : x), LYs = (H, y) => (H.place ? H.place.ly(y) : y);
 export function buildNatureSites(m, H) {
   PG = propGrid(m);
   try { buildSites(m, H); } finally { PG = null; }
@@ -351,7 +355,7 @@ function waysideFinds(m, H) {
 // cut bunches and the farm's sign by the path in from the beach.
 function lavenderFields(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const X0 = 724, X1 = 750, Y0 = 1097, Y1 = 1123;
+  const X0 = PXs(H, 724), X1 = X0 + 26, Y0 = PYs(H, 1097), Y1 = Y0 + 26;
   const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !(m.reserve[i] & RES) && m.dist[i] === 38;
   let bad = 0; for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) if (!open(at(tx, ty))) bad++;
   if (bad > 12) return;
@@ -367,7 +371,7 @@ function lavenderFields(m, H) {
   }
   for (let ty = Y0 + 1.5; ty <= Y1 - 1; ty += 2) for (let tx = X0 + 0.6, j = 0; tx <= X1 + 0.4; tx += 0.95, j++) {
     if (!open(at(tx, ty)) && m.tiles[at(tx, ty)] !== T.DIRT) continue;
-    add('shrub_a', tx + (hash2(Math.round(tx * 4), Math.round(ty), 4001) - 0.5) * 0.2, ty, 0, { sp: 'lavender', k: 1.05 + hash2(Math.round(tx * 4), Math.round(ty), 4002) * 0.2 }); n++;
+    add('shrub_a', tx + (hash2(Math.round(LXs(H, tx) * 4), Math.round(LYs(H, ty)), 4001) - 0.5) * 0.2, ty, 0, { sp: 'lavender', k: 1.05 + hash2(Math.round(LXs(H, tx) * 4), Math.round(LYs(H, ty)), 4002) * 0.2 }); n++;
     if (j % 2 === 0) (m.pickables ||= []).push({ x: Math.round((tx + 0.45) * TILE), y: Math.round((ty + 0.55) * TILE), item: 'lavender', row: 1 });   // (cut from the path between the rows)
   }
   // the top: olive trees and a bench looking down the rows; beehives along the east side; the cart and the sign
@@ -1067,9 +1071,9 @@ function pineLake(m, H) {
 // park signs; reeds and cattails in the shallows, stepping stones, mossy rocks and logs on the banks.
 function cedarCreek(m, H) {
   const LUSH = 128, at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const AX = 600, AY = 950, BX = 592, BY = 1025;
+  const AX = PXs(H, 600), AY = PYs(H, 950), BX = PXs(H, 592), BY = PYs(H, 1025);
   if (!m.lake[at(AX, AY)] || !m.lake[at(BX, BY)] || m.dist[at(AX, AY)] !== 37) return;
-  const road = (m.roads || []).find((r) => r.name === 'Falls Road' && r.lvl === 0 && r.pts.some((q) => Math.abs(q.x / TILE - AX) < 30 && Math.abs(q.y / TILE - 988) < 8));
+  const road = (m.roads || []).find((r) => r.name === 'Falls Road' && r.lvl === 0 && r.pts.some((q) => Math.abs(q.x / TILE - AX) < 30 && Math.abs(q.y / TILE - PYs(H, 988)) < 8));
   if (!road) return;
   let ay = AY; while (m.lake[at(AX, ay + 1)]) ay++;              // the north pond's south shore (its last water row)
   let by = BY; while (m.lake[at(BX, by - 1)]) by--;              // the south pond's north shore
@@ -1937,7 +1941,8 @@ function northshoreGardens(m, H) {
 // pier with a lantern on the west shore, a canoe on the bank; willows round the edges; herons, swans and ducks.
 function heronMarsh(m, H) {
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
-  for (let ty = 970; ty < 1030; ty++) for (let tx = 660; tx < 710; tx++) if (m.lake[ty * m.w + tx]) { n++; x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty); }
+  const hx = PXs(H, 660), hy = PYs(H, 970);
+  for (let ty = hy; ty < hy + 60; ty++) for (let tx = hx; tx < hx + 50; tx++) if (m.lake[ty * m.w + tx]) { n++; x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty); }
   if (n < 100) return;
   const cyL = (y0 + y1) / 2, open = (i) => m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT;
   const setWater = (i) => { m.tiles[i] = T.WATER; m.lake[i] = 1; m.reserve[i] |= RES; };
@@ -1946,7 +1951,7 @@ function heronMarsh(m, H) {
   for (let ty = y0 + 2; ty <= y1 - 2; ty++) for (let tx = x1 - 3; tx <= x1 + 13; tx++) {
     const i = ty * m.w + tx;
     if (!open(i) || m.reserve[i]) continue;
-    const e = (tx - x1) / 13, v = 0.55 * hash2(tx >> 1, ty >> 1, 941) + 0.45 * hash2(tx >> 2, ty >> 2, 942);
+    const e = (tx - x1) / 13, lx = LXs(H, tx), ly = LYs(H, ty), v = 0.55 * hash2(lx >> 1, ly >> 1, 941) + 0.45 * hash2(lx >> 2, ly >> 2, 942);
     if (v < 0.62 - e * 0.25) { setWater(i); marsh.push(i); } else m.reserve[i] |= RES;
   }
   // the outflow: from the lake's south tip, a creek south-east, the beaver dam across its mouth
@@ -1982,9 +1987,9 @@ function heronMarsh(m, H) {
     const i = ty * m.w + tx;
     if (!open(i)) continue;
     const wet = [i - 1, i + 1, i - m.w, i + m.w].filter((j) => m.tiles[j] === T.WATER).length;
-    if (!wet || hash2(tx, ty, 947) < 0.25) continue;
-    const r = hash2(tx, ty, 948), sp = r < 0.45 ? 'cattails' : r < 0.85 ? 'reeds' : 'tallGrass';
-    H.addProp(m, 'shrub_a', (tx + 0.2 + hash2(tx, ty, 949) * 0.6) * TILE, (ty + 0.2 + hash2(tx, ty, 950) * 0.6) * TILE, 0, { sp, k: 1 });
+    if (!wet || hash2(LXs(H, tx), LYs(H, ty), 947) < 0.25) continue;
+    const r = hash2(LXs(H, tx), LYs(H, ty), 948), sp = r < 0.45 ? 'cattails' : r < 0.85 ? 'reeds' : 'tallGrass';
+    H.addProp(m, 'shrub_a', (tx + 0.2 + hash2(LXs(H, tx), LYs(H, ty), 949) * 0.6) * TILE, (ty + 0.2 + hash2(LXs(H, tx), LYs(H, ty), 950) * 0.6) * TILE, 0, { sp, k: 1 });
   }
   // willows round the edges, the waterfowl and the herons
   for (const [tx, ty] of [[x0 - 2, y0 + 4], [x0 - 3, cyL + 5], [x1 + 2, y0 - 1], [x1 + 15, cyL], [x0 + 4, y1 + 3], [x1 + 14, y1 - 2]]) {
@@ -2889,9 +2894,9 @@ function lakeviewPark(m, H) {
     if (m.tiles[i] !== T.GRASS) continue;
     const wet = [i - 1, i + 1, i - m.w, i + m.w].some((j) => m.tiles[j] === T.WATER || m.tiles[j] === T.DEEP);
     if (!wet) continue;
-    const h = hash2(tx, ty, 991);
-    if (h < 0.28) add('shrub_a', tx + hash2(tx, ty, 992) * 0.4 - 0.2, ty, 0, { sp: h < 0.14 ? 'cattails' : 'reeds', k: 1 });
-    else if (h > 0.72 && e++ < 26) add('boulder', tx + (hash2(tx, ty, 998) - 0.5) * 0.5, ty + (hash2(ty, tx, 998) - 0.5) * 0.5, 0, { s: 9 + Math.round((h - 0.72) * 30) });   // (stones set round the edge)
+    const h = hash2(LXs(H, tx), LYs(H, ty), 991);
+    if (h < 0.28) add('shrub_a', tx + hash2(LXs(H, tx), LYs(H, ty), 992) * 0.4 - 0.2, ty, 0, { sp: h < 0.14 ? 'cattails' : 'reeds', k: 1 });
+    else if (h > 0.72 && e++ < 26) add('boulder', tx + (hash2(LXs(H, tx), LYs(H, ty), 998) - 0.5) * 0.5, ty + (hash2(LYs(H, ty), LXs(H, tx), 998) - 0.5) * 0.5, 0, { s: 9 + Math.round((h - 0.72) * 30) });   // (stones set round the edge)
     else if (h > 0.5 && h < 0.58) add('shrub_a', tx, ty, 0, { sp: h < 0.54 ? 'hydrangea' : 'berryShrub', k: 0.9 });
   }
   for (const [lx, ly] of lobes) { for (let j = 0; j < 5; j++) add('lily', lx - 3 + j * 1.6, ly + (j % 2 ? 1.6 : -1.4), 0, { v: j % 4 }); add('duck', lx + 1, ly - 0.6, 0, { a: 0.4 }); add('duck', lx + 2.2, ly - 0.2, 0, { a: 0.6 }); }
@@ -2913,8 +2918,8 @@ function lakeviewPark(m, H) {
   const trees = [];
   const plant = (tx, ty, sp, k) => { if (!inPark(Math.floor(tx), Math.floor(ty)) || !treeOk(tx, ty) || trees.some(([x, y]) => Math.hypot(x - tx, y - ty) < 2.6)) return; trees.push([tx, ty]); add('tree_a', tx, ty, 12, { sp, k }); };
   for (const [gx, gy, sp] of groves) for (let k = 0; k < 7; k++) {
-    const tx = gx + (hash2(gx, k, 993) - 0.5) * 10, ty = gy + (hash2(gy, k, 994) - 0.5) * 5;
-    plant(tx, ty, k === 3 && sp !== 'cherry' ? 'flowerTree' : sp, 1.35 + hash2(gx, k, 995) * 0.25);
+    const tx = gx + (hash2(LXs(H, gx), k, 993) - 0.5) * 10, ty = gy + (hash2(LYs(H, gy), k, 994) - 0.5) * 5;
+    plant(tx, ty, k === 3 && sp !== 'cherry' ? 'flowerTree' : sp, 1.35 + hash2(LXs(H, gx), k, 995) * 0.25);
   }
   // and a ring of big trees just inside the railings, screening the streets (gaps where the paths come in)
   const RING = ['oak', 'maple', 'oak', 'redMaple', 'oak', 'birch'];
@@ -2933,13 +2938,13 @@ function lakeviewPark(m, H) {
     if (m.tiles[i] !== T.GRASS) continue;
     const nbr = [[1, 0], [-1, 0], [0, 1], [0, -1]].find(([dx, dy]) => m.tiles[i + dy * m.w + dx] === T.PLAZA);
     if (!nbr) continue;
-    const h = hash2(tx, ty, 996);
+    const h = hash2(LXs(H, tx), LYs(H, ty), 996);
     if (h < 0.05 && nb < 22 && nbr[1]) {   // (benches only beside the east-west runs: they face up or down the screen - seen side-on they read as posts)
       add('pbench', tx, ty, 0, { a: Math.atan2(-nbr[1], -nbr[0]) + Math.PI / 2 }); if (h < 0.012) add('trashcan', tx + 0.9, ty, 0); nb++;
     }
     else if (h > 0.955 && nl < 26) { add('lamp', tx + nbr[0] * 0.4, ty + nbr[1] * 0.4); nl++; }
-    else if (h > 0.6 && h < 0.69 && nf < 110) { add('shrub_a', tx, ty, 0, { sp: SP[Math.floor(hash2(tx >> 2, ty >> 2, 997) * SP.length)], k: 1 }); nf++; }
-    else if (h > 0.8 && h < 0.83 && !trees.some(([x, y]) => Math.hypot(x - tx, y - ty) < 1.6)) add('shrub_a', tx, ty, 0, { sp: ['hydrangea', 'berryShrub', 'salal', 'topBall'][Math.floor(hash2(tx >> 3, ty >> 3, 990) * 4)], k: 1.1 });   // (shrubs along the edges)
+    else if (h > 0.6 && h < 0.69 && nf < 110) { add('shrub_a', tx, ty, 0, { sp: SP[Math.floor(hash2(LXs(H, tx) >> 2, LYs(H, ty) >> 2, 997) * SP.length)], k: 1 }); nf++; }
+    else if (h > 0.8 && h < 0.83 && !trees.some(([x, y]) => Math.hypot(x - tx, y - ty) < 1.6)) add('shrub_a', tx, ty, 0, { sp: ['hydrangea', 'berryShrub', 'salal', 'topBall'][Math.floor(hash2(LXs(H, tx) >> 3, LYs(H, ty) >> 3, 990) * 4)], k: 1.1 });   // (shrubs along the edges)
   }
   for (const [tx, ty] of [[W + 1.5, cy - 2.6], [cx + 1.8, N + 1.4], [cx - 2.8, S - 1.4]]) add('parksign', tx, ty, 0);
   (m.landmarks ||= []).push({ name: 'Lakeview Park', type: 'park', x: ix * TILE, y: iy * TILE, w: iw * TILE, h: ih * TILE });

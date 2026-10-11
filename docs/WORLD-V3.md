@@ -1748,3 +1748,133 @@ core's blocks read as today's, more of them. What still looks wrong:
 5. **For the skeleton's roads to join the places:** `m.islandBuild.crossings` (and `leftOut`) is where the skeleton's
    arterials meet each place; the skeleton's lines are laid in the v3 frame, so they go into a placed build's `lines`
    as they are (no placement).
+
+### 8.5 Stage 2, step 3: Cedar Isle, Westport and the airport at their gulf places (2026-10-10)
+
+The other gulf places built as Metro City + Southbank is (8.4): Step A at scale 1 (today's land moved, compared with
+the island build of 4.7 as 8.4 compares them: `test/world3gulf.test.js`), Step B at the gulf size on `buildLand3`'s land
+(`node --expose-gc tools/world3-place.mjs --land --island <place>`). Nothing live changes: the world hash stays
+`6b6e16fdef9f`.
+
+**Each place's land on the v3 land** (`tools/world3-place.mjs` `LAND_PICK`, handed to the build): Metro City +
+Southbank by its zones (1, 2) as before; the others by their districts (`dists`, `shared/world3-islands.js`: Westport
+and the airport share zone 7): Cedar Isle 35-40, Westport 23, 24, 25, 28, 30 and Port Westport 26 (on
+`PORT_WESTPORT.rect`), the airport 27. A place picked by its districts keeps the planned businesses of every district
+it has (Westport Freight's district is Port Westport's new ground).
+
+**What is placed now** (8.4's list 3, for these places; `shared/map.js` unless named):
+- Cedar Farms' fields (`FIELDS`) and its market stand (`FARM_STANDS`, built only by the place it stands on), the
+  estates (`ISLAND_ESTATES`: the Cedar Farms farmhouses, the Cedar Hills cottage), the golf club's spot (`SCENE_SPOTS`
+  `near`, and its search grid's parity, `gridOff`; `naturesites.js` `golfClub` builds on the painting as before), the
+  lakes' boat hire (Cedar Lake, Lakeview Lake: `buildBoatDocks`' anchors through `QX` / `QY`). Spots are placed to
+  whole tiles (`PTX` / `PTY`); sizes don't scale.
+- **The country sites** (`countryside.js` `countrysideRoads(ctx)`, `ctx.at`): each site's spot is placed and the site
+  is looked for in the place's frame. Before, it ran in today's coordinates with its lookups placed, but it read the
+  river, the landmasses and the districts by today's index and its candidate roads were already placed: at an offset
+  no site was found (Cedar Isle had no campground and no wind farm). A site's hashes read its lot back (`hx`, `hy`).
+- **The wild ground's terrain class** (`clsAt`: the concept picture read back through the placement, as `terrain`
+  does): the outcrops and groves (`buildWilds`), the outposts' desert check, the nature sites' `terrainAt`. (Cedar
+  Isle's props went from 51% to 89% with this and the sites.)
+- **The nature sites** (`naturesites.js` `H.place`: `PXs` / `PYs` place an anchor, `LXs` / `LYs` read a position hash
+  back): Cedar Point Lavender, Cedar Creek, Heron Marsh (its trapper's cabin and the butcher follow it), Lakeview
+  Park's hashes. The other sites on these places anchor on what is placed already (the parks' blocks, roads by name,
+  the paintings, the farmsteads).
+- **The airports** (`airportPlan(A)`): placed, and built only by the place whose land the terminal stands on.
+
+**Step A** (scale 1, each in a frame that holds today's whole map moved - the other islands' land is what tells a
+bridge from a road, so a smaller frame keeps bridges the island build leaves out):
+
+| | Westport | Cedar Isle | the airport |
+|---|---|---|---|
+| at (offset) | [1150, 1950] (+1116, +1713) | [2670, 2210] (+2400, +1426) | [1250, 2480] (+1182, +1866) |
+| land, districts, zones, river, sea distance | every tile (153,740) | every tile (183,162) | every tile (50,701) |
+| tiles | 100.0% (45 differ) | 99.6% (670 differ: the Lake District 426, Cedar Hills 179) | 99.4% (313 differ: the west beach) |
+| road edges | 303 of 303 | 236 of 241 | 19 of 19 |
+| buildings | 236 of 236 | 131 of 132 | 5 of 5 |
+| POIs | 127 of 127 | 124 of 127 (a home, the trapper, the butcher) | 5 of 6 (the beach snack cart) |
+| props | 4,718 of 4,718 | 5,359 of 6,007 (89.2%; 51.4% before) | 330 of 380 (86.8%; 39.5% before) |
+
+Westport is today's to the prop. What still differs: on Cedar Isle the Lake District's drives (Lake Court and a short
+Cedar Falls road aren't laid in the placed build, Lake Drive and Lake Road are split at three more points: something in
+`islands.js`' courts reads the map unplaced), the props round them and the power lines' poles (`buildPowerLines`); on
+the airport its west beach (palms, towels, umbrellas, the lifeguard, the snack cart: a beach site still anchored in
+today's coordinates). Cedar Isle's land has 102 tiles off the island's: Paradise Cay, a scene island raised out of the
+open sea, isn't placed (8.4 list 3).
+
+**Step B** (each at its gulf size on the land, in the v3 frame: 7-8 s a place; the numbers are placed / the island
+build in today's frame):
+
+| | Westport (1.15) | Cedar Isle (1.15) | the airport (0.65) |
+|---|---|---|---|
+| land tiles | 216,792 / 153,740 (x1.41: Port Westport is 25,112 of it) | 241,727 / 183,162 (x1.32) | 21,126 / 50,701 (x0.42) |
+| road edges | 320 / 305 | 246 / 241 | 19 / 19 |
+| blocks | 228 / 191 | 165 / 144 | 0 / 0 |
+| buildings | 334 / 236 | 205 / 132 | 4 / 5 (the terminal, three hangars) |
+| POIs | 170 / 127 | 159 / 127 | 3 / 6 (the airport, two ATMs) |
+| props | 6,042 / 4,731 | 8,226 / 6,008 | 228 / 380 |
+| the street network | one piece | one piece | 3 pieces (its access road is left out) |
+
+- **Cedar Isle:** every district grows by the scale squared (Cedar Falls 64,289 tiles against 48,548, Falls Center
+  15,999 / 12,083, the Lake District 59,643 / 44,994, Cedar Farms 49,038 / 37,199, Cedar Hills 52,758 / 40,338), every
+  kind of POI it has today is there (the farm and the market stand, the golf club's clubhouse, the trapper and the
+  butcher, Cedar Lake's boat hire, the tackle shops), and so are its sites: Heron Marsh, Cedar Creek, Cedar Point
+  Lavender, the golf club, the farms' pastures, the Cedar Hills Campground and the Cedar Point Wind Farm; the six
+  fields; the lakes (3,158 tiles of lake). **South Port (39) has no ground:** the skeleton's picture leaves it out
+  (its ids are 35-38 and 40) and the land fills Cedar Isle's coast from its neighbours, so there is no harbour district
+  on the island. The owner's call: a harbour on the south shore (South Port in the picture's ids) or none.
+- **Westport:** its districts each grow by about the scale squared, the stadium and the Stadium Lido, Lakeview Park
+  and its lake are built, the West Hills too. **Port Westport** is district 26 on its rectangle: the harbor style's
+  warehouses, yards and a junkyard, and **a straight quay** along the West Channel (`buildQuays`: three tiles of dock
+  where the land meets the water, 344 tiles of it, stacks of crates behind it and a crane's spot every 48 tiles in
+  `m.quays`: 7). **Westport Freight is back as a delivery stop** there (a warehouse in Port Westport): the bowling alley,
+  which took its warehouse in today's world, may not take a port's freight stop (`bowling.js` `keep`). **Its joins
+  to the mainland are seams:** a road that runs on from Westport onto the mainland is cut where it meets it (the runs
+  of its points off the mainland's land; `world3-islands.js` `seamCut`, asked with `seams`) and listed in
+  `m.islandBuild.seams`: the Westport Beltway and the Strait Bridge (both highways). A road to another island's land is still left out: the Northern Causeway and the Cedar Falls Station Road.
+- **The airport (0.65):** a runway, a terminal and hangars can't simply shrink, and the island is 0.42 of today's
+  ground. What it does (`airportPlan`): today's layout across - the 14-tile runway, the 5-tile taxiway, the 96-tile
+  apron, the 52 x 16 terminal, the planes and the hangars at today's spacing from the runway's placed corner - and
+  shorter along the runway: **the runway 178 -> 116 tiles** (116 m: room for the light aircraft the game shows; nothing
+  in the game reads its length but the runway lights), the taxiway the same, **the apron 104 -> 68 deep** (as deep
+  as its three planes and the terminal need), **the hangars in a row 10 tiles under the apron, those that stand on
+  the land**: all three fit (today one of the three gives way to the access road). The Westport Raceway (a country
+  site past the airport) has no room on the small island, so its grandstand and pits, the race POI and the snack stand
+  are gone: in v3 the raceway goes on the mainland. The access road from the Beltway is left out (it comes from
+  Westport, another place: the skeleton's Airport Road and Runway Road, 8.3, join it later).
+
+**The pictures** (`node --expose-gc tools/world3-place-map.mjs --island <place>`, heavy: 2-3 minutes each):
+`docs/world-v3-westport.png`, `docs/world-v3-cedar.png`, `docs/world-v3-airport.png` - today's place from the world
+map beside the place at its gulf size, baked with the game's chunk bake. What looks wrong:
+- **Westport reads as an island:** only its own land is built, so the mainland round it (Highland Woods to the north
+  and west, the Egret Coast) is sea in the picture; its seams are its north edge.
+- **Port Westport is one grey slab:** the harbor style fills the 73-tile strip with wide warehouse roofs and yards
+  wall to wall; the quay is a thin band on its west edge, and there are no containers or cranes to see. A container
+  port wants open stacking yards (lots with container stacks), a few sheds and the cranes on the quay - the art has a
+  gantry crane and containers (`client/art2/props-transit.js`) but no prop draws them yet (`m.quays[].cranes` holds
+  their spots).
+- **Roads run out over the sea:** Westport's Beltway leaves its south-west corner over the cove towards the airport,
+  the Pelican Way and the Bay Bridge run east off the island (their islands are elsewhere now); on Cedar Isle the
+  Strait Bridge runs off the north-west, two station roads (Southside's and The Yards', today to Metro City) north,
+  and the Cedar Isle Loop crosses the south-west bay straight over the water where the v3 coast is deeper than
+  today's; on the airport two station roads run off north and east. (8.4's cut at the shore, which H21 is making for
+  Metro City, applies to these too.)
+- **The railway's loop crosses each place and runs off into the sea** (laid whole, 4.7 item 4).
+- **Cedar Farms' fields don't fill their sections:** the fields keep their size and the farm roads are placed at 1.15,
+  so each field has a margin of grass round it; the fields want to be as big as their sections (scaled), or more of
+  them.
+- **The golf club moved** from the island's south-west (today's) to its south-east: the clear stretch of Cedar Hills
+  nearest its placed spot is elsewhere at 1.15.
+- **The airport:** the apron's east end reaches the island's north-east shore (a stepped grey edge against the sea);
+  today's coastal road and its five cul-de-sacs (the airport district's west strip) keep their size and crowd the
+  west half; the long south point, where the raceway was, is empty grass.
+
+**What's left** (in order):
+1. The cranes' prop (the art's gantry crane on the quay's spots) and Port Westport as a container yard (open lots
+   with container stacks rather than the harbor style's roofs) - a style of its own for district 26.
+2. The roads off the places cut at the shore (8.4 item 2, H21) and the skeleton's crossings laid to them; Westport's
+   seams joined when the mainland is built.
+3. Cedar Isle: the Lake District's courts (`islands.js` `courts` reads something unplaced), the power poles; the
+   fields sized to their sections at 1.15; South Port (the owner's call above).
+4. The airport: its west beach site (still anchored in today's coordinates), the Westport Raceway on the mainland.
+5. As 8.4 item 1: the street plans (`islands.js`' rings and section roads) run in today's coordinates and are placed
+   after, so at 1.15 their pitches scale with the place.
