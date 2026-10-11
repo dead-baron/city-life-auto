@@ -30,7 +30,7 @@ import { paintMesa3, layMesa3, mesaLots, buildMesa, mesaDone, MESA_SPECIALS, MES
 import { buildFerries3 } from './world3-ferries.js';
 import { paintDesert3, layDesert3, buildDesert, desertDone, DESERT_SPECIALS, DESERT_STYLES } from './world3-desert.js';
 import { subwayLoops } from './world3-subway.js';
-import { wildSites3, wildDone } from './world3-wild.js';
+import { wildSites3, wildDone, movedAt, wildDist } from './world3-wild.js';
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -79,7 +79,8 @@ export function worldOpts(asked) {
     return NONE;
   };
   // (a position on today's water - a pier, a spot by the shore - takes the piece of the nearest land within 8 tiles)
-  const pick = (x, y) => {
+  const pick = (x, y) => { const p = pick0(x, y); return p === NONE ? movedAt(x, y) || NONE : p; };   // (H44, 8.19: the wild land's nature sites moved whole - world3-wild.js MOVED)
+  const pick0 = (x, y) => {
     const p = pieceAt(x, y);
     if (p) return p;
     for (let r = 1; r <= 8; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx += (Math.abs(dy) === r ? 1 : 2 * r)) { const q = pieceAt(x + dx, y + dy); if (q) return q; }
@@ -115,7 +116,7 @@ export function worldOpts(asked) {
   const box = [W, H, 0, 0];
   for (const [x, y] of metro.poly) { box[0] = Math.min(box[0], x - 40); box[1] = Math.min(box[1], y - 40); box[2] = Math.max(box[2], x + 40); box[3] = Math.max(box[3], y + 40); }
   const o = {
-    world: { pick, base, placeLine, cls, pieces },
+    world: { pick, base, placeLine, cls, pieces, dist: wildDist },   // (dist: today's wild districts' v3 regions, for the moved nature sites - 8.19)
     place: base,
     islandAt: [],
     noRail: true,     // (the railway is the skeleton's main line now)

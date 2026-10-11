@@ -23,9 +23,9 @@ import { stamp } from './world3-towns.js';
 // Dry Creek's desert places in the Red Rock Desert's west, off Mine Road, Route 9 and Mesa Road (the Route 9 stop at
 // the skeleton's Route 9 point, The Rusty Spur by the Desert Highway at Mine Road's crossing).
 export const WILD_SITES = [
-  { name: 'Pine Ridge Campground', d: D3.WOODS, near: [880, 1520] },
-  { name: 'Highland', d: D3.WOODS, near: [640, 1096] },
-  { name: 'Highland Radio Mast', d: D3.WOODS, near: [760, 1050] },
+  { name: 'Pine Ridge Campground', d: D3.WOODS, near: [644, 1090] },
+  { name: 'Highland', d: D3.WOODS, near: [760, 1078] },
+  { name: 'Highland Radio Mast', d: D3.WOODS, near: [900, 1040] },
   { name: 'Granite Quarry', d: D3.PEAKS, near: [1300, 440] },
   { name: 'Granite Peak Observatory', d: D3.PEAKS, near: [700, 175] },
   { name: 'Granite Cove Campground', d: D3.PEAKS, near: [560, 470] },
@@ -39,6 +39,31 @@ export const WILD_SITES = [
   { name: 'Dry Creek Wind Farm', d: D3.DESERT, near: [3700, 290] },
   { name: 'The Rusty Spur', d: D3.DESERT, near: [3740, 1150] },
 ];
+// The nature sites moved whole (shared/naturesites.js builds them round their anchor of today's world, placed: its
+// PXs / PYs, and its district through DS - the world build's `world.dist`): a square of today's tiles round each anchor
+// goes to its v3 spot at scale 1 (map.js pin: shared/world3-world.js `pick` asks movedAt for a position no piece builds).
+// Pine Lake between the Highland stop and Pine Ridge Campground as today's; Summit Tarn (its lake: islands.js LAKES),
+// its falls, creek and cabin meadow, Granite Hot Springs above Summit Road and The Sentinel Stones by the observatory's
+// road on the peaks.
+export const MOVED = [
+  { name: 'Pine Lake', anchor: [136, 216], to: [700, 1060], r: 40, d: D3.WOODS },
+  { name: 'Summit Tarn', anchor: [575, 82], to: [900, 180], r: 35, d: D3.PEAKS },
+  { name: 'Granite Hot Springs', anchor: [603, 125], to: [500, 113], r: 25, d: D3.PEAKS },
+  { name: 'The Sentinel Stones', anchor: [744, 31], to: [720, 140], r: 20, d: D3.PEAKS },
+];
+// today's wild districts -> the v3 region they move to (Highland Woods, Granite Peaks; Dry Creek's farmland the valley,
+// its desert the Red Rock Desert)
+const DIST3 = { 29: D3.WOODS, 33: D3.PEAKS, 9: D3.VALLEY, 42: D3.VALLEY, 41: D3.DESERT };
+export const wildDist = (d) => DIST3[d] ?? d;
+const MOVED_PIECES = MOVED.map((q, k) => {
+  const fx = q.anchor[0] - q.r, fy = q.anchor[1] - q.r, ax = q.to[0] - q.r, ay = q.to[1] - q.r;
+  return { key: `moved-${k}`, name: q.name, at: [ax, ay], from: [fx, fy], s: 1, dx: ax - fx, dy: ay - fy, ids: null, rect: [fx, fy, q.anchor[0] + q.r, q.anchor[1] + q.r], k: -2 - k };
+});
+// the moved piece holding today's position (x, y), or null
+export function movedAt(x, y) {
+  for (const p of MOVED_PIECES) if (x >= p.rect[0] && y >= p.rect[1] && x < p.rect[2] && y < p.rect[3]) return p;
+  return null;
+}
 // the room kept round the skeleton's lines (tiles): the highways', the main line's and its stations' as the desert's
 // places keep (world3-desert.js), a road's own few tiles
 export const WILD_ROOM = { hwy: 24, main: 18, station: 30, road: 4, place: 12 };

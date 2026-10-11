@@ -4,7 +4,8 @@
 // radio mast, the wind farm, The Rusty Spur) in the Red Rock Desert's west. Each one built once, on its region's ground,
 // joined by its own road to the one road network (never to a highway), clear of the skeleton's highways, main line and
 // stations; the Granite Quarry's pit and Copper Gulch Mine's both have their ore veins (shared/underground.js takes the
-// list). One world build.
+// list). The nature sites moved whole round their anchors (Pine Lake, Summit Tarn and its falls, Granite Hot
+// Springs, The Sentinel Stones), each built once at its spot. One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
@@ -12,7 +13,8 @@ import '../shared/world3-islands.js';
 import { TILE } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { skeletonLines, nearestOnPath, STATIONS } from '../shared/world3-skeleton.js';
-import { WILD_SITES, WILD_ROOM } from '../shared/world3-wild.js';
+import { WILD_SITES, WILD_ROOM, MOVED } from '../shared/world3-wild.js';
+import { T } from '../shared/constants.js';
 import { SITES } from '../shared/countryside.js';
 import { undergroundOf } from '../shared/underground.js';
 import { prepare } from '../tools/world3-build.mjs';
@@ -75,6 +77,24 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
   for (const pit of pits) {
     const n = U ? U.veins.filter((v) => v.ug === 0 && v.x >= pit.x - 60 && v.x <= pit.x + pit.w + 60 && v.y >= pit.y - 60 && v.y <= pit.y + pit.h + 60).length : 0;
     check(n >= 5, `${pit.name || 'the Granite Quarry'}'s veins: ${n}`);
+  }
+  // the nature sites moved whole (MOVED): each built once, at its spot, on its region's ground, clear of the skeleton's
+  // highways and main line; no road through Summit Tarn or Pine Lake
+  for (const q of MOVED) {
+    const ns = m.natureSites.filter((n) => n.name === q.name), lm = (m.landmarks || []).filter((l) => l.name === q.name || l.name === `${q.name} Falls`);
+    check(ns.length === 1 && lm.length === 1, `${q.name}: built ${ns.length} / ${lm.length} times`);
+    if (!ns[0] || !lm[0]) continue;
+    const x = ns[0].x / TILE, y = ns[0].y / TILE;
+    check(Math.hypot(x - q.to[0], y - q.to[1]) < 16, `${q.name} at ${x.toFixed(0)}, ${y.toFixed(0)}, not its spot ${q.to}`);
+    check(m.dist[Math.floor(y) * W + Math.floor(x)] === q.d, `${q.name} on its region's ground`);
+    const L = lm[0], x0 = L.x / TILE, y0 = L.y / TILE, x1 = (L.x + L.w) / TILE, y1 = (L.y + L.h) / TILE;
+    for (const [cx, cy] of [[x0, y0], [x1, y0], [x0, y1], [x1, y1], [(x0 + x1) / 2, (y0 + y1) / 2]]) {
+      for (const h of hwys) check(nearestOnPath(h.path, cx, cy).d >= WILD_ROOM.hwy - 2, `${q.name} in ${h.name}'s room`);
+      for (const r of rails) check(nearestOnPath(r.path, cx, cy).d >= WILD_ROOM.main - 2, `${q.name} on the main line's room`);
+    }
+    let lake = 0, roadOnLake = 0;
+    for (let ty = Math.floor(y0) - 10; ty < y1 + 10; ty++) for (let tx = Math.floor(x0) - 10; tx < x1 + 10; tx++) { const i = ty * W + tx; if (m.lake[i]) { lake++; if (m.tiles[i] === T.ROAD) roadOnLake++; } }
+    if (q.name === 'Summit Tarn' || q.name === 'Pine Lake') check(lake > 100 && roadOnLake === 0, `${q.name}'s water: ${lake} tiles, ${roadOnLake} of road`);
   }
   assert.deepEqual(bad, []);
 });
