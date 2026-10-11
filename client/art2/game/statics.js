@@ -375,6 +375,12 @@ export function makeStatic(r) {
       }
       return G;
     }
+    case 'crail': { // a crane rail along a container quay (World v3's Port Westport): a steel rail set in a concrete strip
+      const L = r.len || 256, G = new GBuf(8, L); G.ax = 4; G.ay = L / 2;
+      const C = ramp('#8e8c84', 6, 3), Rl = MAT.metal;
+      for (let y = 0; y < L; y++) for (let x = 0; x < 8; x++) { const st = x === 3 || x === 4; G.put(x, y, st ? Rl[x === 3 ? 4 : 2] : C[2 + (hash(x, y >> 2, 7) > 0.7 ? 1 : 0)], [0, 0, 1], st ? 2 : 1, null, F_GROUND); }
+      return G;
+    }
     case 'critter': { const fr = critterFrames(r.k); return (fr && fr[r.f || 0]) || EMPTY; }
     case 'lily': { const G = FL.lilyPads(r.s || 1, 7, 2); return G && G.render ? G.render(0) : G; }
     case 'steam': return GD.steam(r.w, r.h, r.s || 1);
@@ -1264,6 +1270,7 @@ function voxModel(m, a) {
     case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'spanPole': return spanPole(); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
     case 'bbframe': return TW.billboardFrame(a[0] || 132, a[1] || 54, a[2] || 36); case 'cctv': return P.cctvPole(a[0] || 64);
     case 'creekRail': return creekRail(a[0] || 200);
+    case 'stsCrane': return X.stsCrane(a[0]); case 'cstack': return X.containerStack(a[0]); case 'straddle': return X.straddleCarrier(); case 'shipSection': return X.shipSection(a[0], a[1]); case 'floodMast': return X.floodMast(a[0], a[1]);   // (World v3's container port)
     case 'roadSign': return U.roadSign(a[0] || 'arrow'); case 'fingerPost': return U.fingerPost(); case 'stand': return RD.produceStand(40);
     case 'minePortal': return WL.minePortal(80, 70); case 'mineCart': return WL.mineCart(true); case 'mBarrel': return WL.barrel('#8a5a34');
     case 'chest': return WL.chest(); case 'pickaxe': return WL.pickaxe();
@@ -1335,6 +1342,7 @@ function vdim(m, a) {
     case 'cottage': return [(a[0] || 84) + 4, (a[1] || 54) + 6, 64]; case 'seal': return [46, 22, 18]; case 'gull': return [16, 8, 14]; case 'crab': return [16, 14, 6]; case 'seaArch': return [a[0] || 150, a[1] || 56, (a[2] || 96) + 6]; case 'shipwreck': return [(a[0] || 220) + 8, (a[1] || 64) + 30, (a[2] || 40) + 40]; case 'driftwood': return [a[0] || 50, 16, 10];
     case 'mapBoard': return [40, 12, 50]; case 'lantern': return [12, 12, 40];
     case 'lumber': return [60, 24, 18]; case 'crates': return [32, 28, 30]; case 'cctv': return [22, 8, (a[0] || 64) + 2]; case 'signal': return [(a[0] || 70) + 10, 14, 92]; case 'spanPole': return [8, 8, SPAN_Z + 6]; case 'bbframe': return [a[0] || 132, 10, (a[1] || 54) + (a[2] || 36) + 6]; case 'cabbages': return [(a[0] || 3) * 18, (a[1] || 3) * 18, 14]; case 'cornRow': return [120, 60, 36]; case 'wheatRow': return [120, 50, 22]; case 'ropeLine': return [a[0] || 60, 6, 20]; case 'silo': return [44, 44, (a[0] || 90) + 22]; case 'craneTower': return [(a[1] || 120) + 40, 30, (a[0] || 200) + 16];
+    case 'stsCrane': return [470, 140, 320]; case 'cstack': return [160, 256, 234]; case 'straddle': return [64, 96, 128]; case 'shipSection': return [a[0] === 0 ? 320 : 256, 220, 240]; case 'floodMast': return [30, 12, (a[0] || 140) + 8];
     default: return [24, 24, 24];
   }
 }
@@ -1763,6 +1771,17 @@ function propItems(c, p, pi, I) {
     case 'spool': V('spl', 'cableSpool', []); return;
     case 'bikerack': V('bkr', 'bikeRack', [3]); return;
     case 'crates': V(`crt:${seed % 2}`, 'crates', [seed % 2]); return;
+    // World v3's container port (shared/map.js buildContainerPort): the stacks, the quay's gantry cranes (anchored between
+    // their legs, the boom out over the water; warning lights on top, floodlights under the boom), the ship's sections,
+    // straddle carriers, light masts, the gate's barrier, the yard's fence and the cranes' rails
+    case 'cstack': V(`cst:${(p.v || 0) % 6}`, 'cstack', [(p.v || 0) % 6]); return;
+    case 'gcrane': { const e = p.a ? -1 : 1; V(`gcr:${p.k ? 1 : 0}:${p.a ? 1 : 0}`, 'stsCrane', [p.k ? 1 : 0], p.a ? PI : 0, [351, 70]); lightAt(I, x, y, 322, 80, [1, 0.15, 0.1], 1.2, 'sign', 1); lightAt(I, x - e * 290, y, 220, 260, [1, 0.92, 0.75], 2.4, 'lamp'); return; }
+    case 'cship': V(`csh:${p.v || 0}:${(p.c || 0) % 4}`, 'shipSection', [p.v || 0, (p.c || 0) % 4], PI / 2); if (p.v === 2) lightAt(I, x, y - 40, 200, 160, [1, 0.85, 0.6], 1.4, 'window'); return;
+    case 'straddle': V('strd', 'straddle', []); return;
+    case 'ymast': V('ymast', 'floodMast', [150, 1]); lightAt(I, x, y, 150, 300, [1, 0.9, 0.7], 2.6, 'lamp'); return;
+    case 'ygate': V(`ygt:${p.a ? 1 : 0}`, 'barrierArm', [90, false], p.a || 0); return;
+    case 'yfence': fenceLine(I, 'chain', x, y, p.x1, p.y1); return;
+    case 'crail': put(I, { key: `crail:${p.len || 256}`, recipe: { t: 'crail', len: p.len || 256 }, x, y, ext: [10, (p.len || 256) / 2 + 10, 10, (p.len || 256) / 2 + 10], pi }); return;
     case 'foodcart': V('fc', 'hotdogCart', [1]); lightAt(I, x, y + 6, 40, 70, [1, 0.8, 0.5], 0.8, 'sign'); return;
     case 'tent': { const col = ['#e07b20', '#3f8a3a', '#2f6fc8', '#c8b88a'][p.v || 0]; V(`tent:${p.v || 0}`, 'tent', [col]); return; }   // (v 3: a hunting camp's canvas wall tent)
     case 'campfire': V(`cf:${p.lit ? 1 : 0}`, 'campfire', [p.lit ? 1 : 0]); if (p.lit) lightAt(I, x, y, 14, p.big ? 220 : 150, LIGHT.fire, p.big ? 3 : 2.2, 'fire', 0); return;

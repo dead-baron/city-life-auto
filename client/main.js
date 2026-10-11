@@ -3031,7 +3031,7 @@ function drawWorldV1(F) {
   const poles = [];
   if (!sub) for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
     for (const p of S.ground.overhead(cx, cy)) {
-      const tall = COUNTRY_TALL[p.t] || 0; // masts, turbines... stand up from their base: keep them while any of them shows
+      const tall = COUNTRY_TALL[p.t] || p.tall || 0; // masts, turbines, the port's cranes... stand up from their base: keep them while any of them shows
       if (p.x > view.x0 - 40 - tall * 0.5 && p.x < view.x1 + 40 + tall * 0.5 && p.y > view.y0 - 40 && p.y < view.y1 + 90 + tall) {
         items.push({ y: p.y + 8, o: p });
         if (p.t === 'upole') poles.push(p);

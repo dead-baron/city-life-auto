@@ -17,7 +17,11 @@ import { LOW_MEM, freeCanvas, capSet } from '../platform.js';
 import { flora, FLORA_PROPS } from './flora/index.js';
 
 export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole', 'atmw', 'busstop', 'phonebox', 'billboard',
-  'campfire', 'upole', 'radiotower', 'turbine', 'pumpjack', 'flare', 'dscreen', 'dome', 'marquee', 'otank']);
+  'campfire', 'upole', 'radiotower', 'turbine', 'pumpjack', 'flare', 'dscreen', 'dome', 'marquee', 'otank', 'cstack', 'gcrane', 'cship', 'straddle', 'ymast', 'ygate']);
+// World v3's container port (shared/map.js buildContainerPort): its props are drawn by a module loaded when the first is seen
+const PORT = new Set(['cstack', 'gcrane', 'cship', 'straddle', 'ymast', 'ygate', 'crail', 'yfence']);
+let portArt = null, portAsk = false;
+function drawPort(g, p, night) { if (portArt) portArt.drawPortProp(g, p, night); else if (!portAsk) { portAsk = true; import('./portprops.js').then((m) => { portArt = m; }).catch(() => { portAsk = false; }); } }
 
 const C = {
   grass: ['#4f8f3c', '#4a8838', '#559643', '#45812f'],
@@ -36,6 +40,7 @@ export class GroundCache {
     this.max = maxChunks;
     this.layers = { lots: true, props: true, ...(layers || {}) };
     this.cache = new Map();
+    if (map.props && map.props.some((p) => p.t === 'crail' || p.t === 'yfence')) drawPort(null, { t: '' });   // (the port's flat props are baked into the ground: their art loaded now)
     this.byChunk = (list, getRect) => {
       const out = new Map();
       for (const it of list) {
@@ -734,6 +739,7 @@ export function drawPrefabGlow(g, p) {
 
 export function drawProp(g, p) {
   if (p.t === 'painted' || p.t === 'plamp') return; // part of a painted block: the art already shows it
+  if (PORT.has(p.t)) { drawPort(g, p, false); return; }
   const fr = atlas.ready ? atlas.frames['prop_' + (p.t === 'billboard' ? 'billboard' + (p.ad || 0) : p.t === 'tent' ? 'tent' + (p.v || 0) : p.t)] : null;
   if (fr) {
     const s = PROP_SIZES[p.t];
@@ -824,6 +830,7 @@ export function drawOverheadProp(g, p, night) {
   if (p.t === 'atmw') { drawAtm(g, p, night); return; }
   if (p.t === 'lamp') { p.night = night; drawProp(g, p); return; }
   if (FLORA_PROPS.has(p.t) && flora()) { flora().drawTree(g, p); return; }
+  if (PORT.has(p.t)) { drawPort(g, p, night); return; }
   if (drawCountryProp(g, p, night)) return;
   drawProp(g, p);
 }

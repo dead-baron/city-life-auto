@@ -3859,7 +3859,181 @@ function buildQuays(m, quays) {
       if (k % 6 === 3 && open(m.tiles[i]) && !m.reserve[i]) addProp(m, 'crates', (bx + 0.5) * TILE, (y + 0.5) * TILE, 12);
     }
     m.quays.push({ name: q.name, x: x0 * TILE, y: y0 * TILE, w: (x1 - x0) * TILE, h: (y1 - y0) * TILE, length: edge.length, cranes });
+    buildContainerPort(m, q, edge, west, cranes);
   }
+}
+// World v3's container port (docs/WORLD-V3.md 8.5): the quay's district cleared and laid out as a container yard, the
+// quay's gantry cranes and a ship moored (m.port; tiles - the ship: stern, nine holds, bow)
+const PORT = { apron: 6, bw: 5, bl: 8, lane: 4, group: 4, ship: [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 10] };
+function buildContainerPort(m, q, edge, west, cranes) {
+  if (edge.length < 60) return;
+  const W = m.w, [rx0, ry0, rx1, ry1] = q.rect, dir = west ? 1 : -1, RW = rx1 - rx0, RH = ry1 - ry0;
+  const inRect = (x, y) => x >= rx0 && x < rx1 && y >= ry0 && y < ry1, li = (x, y) => (y - ry0) * RW + (x - rx0);
+  const mid = edge[edge.length >> 1], dd = m.dist[mid[1] * W + mid[0] + dir * 12];
+  const hv = (a, b) => (((a * 73856093) ^ (b * 19349663)) >>> 0) % 9973;
+  // (the freight stop's row and the junkyard stay)
+  const fr = m.buildings.find((b) => !b.gone && b.name === q.freight && inRect(b.tx, b.ty));
+  const keepB = new Set(m.buildings.filter((b) => !b.gone && inRect(b.tx, b.ty) && (b.kind === 'junkyard' || (fr && b.ty === fr.ty && b.th === fr.th))).map((b) => b.id));
+  for (const b of m.buildings) {
+    const cx = b.tx + (b.tw >> 1), cy = b.ty + (b.th >> 1);
+    if (!b.gone && !keepB.has(b.id) && inRect(cx, cy) && m.dist[cy * W + cx] === dd) clearArea(m, b.tx, b.ty, b.tw, b.th);
+  }
+  const keep = new Uint8Array(RW * RH), yard = new Uint8Array(RW * RH), sxOf = new Int32Array(RH).fill(-1);
+  for (const id of keepB) { const b = m.buildings[id]; for (let y = b.ty - 1; y <= b.ty + b.th; y++) for (let x = b.tx - 1; x <= b.tx + b.tw; x++) if (inRect(x, y)) keep[li(x, y)] = 1; }
+  for (const [sx, y] of edge) if (inRect(sx, y)) sxOf[y - ry0] = sx;
+  const cnt = new Map(); for (const [sx] of edge) cnt.set(sx, (cnt.get(sx) || 0) + 1);
+  const SX = [...cnt].sort((a, b) => b[1] - a[1])[0][0], X0 = SX + dir * (3 + PORT.apron);
+  const NOT = new Set([T.ROAD, T.SIDEWALK, T.BRIDGE, T.WATER, T.DEEP, T.DOCK, T.BUILDING]);
+  for (let y = ry0; y < ry1; y++) {
+    const sx = sxOf[y - ry0] >= 0 ? sxOf[y - ry0] : SX;
+    let run = -1;
+    for (let x = rx0; x <= rx1; x++) {
+      const ok = x < rx1 && (west ? x >= sx + 3 : x <= sx - 3) && m.dist[y * W + x] === dd && !NOT.has(m.tiles[y * W + x]) && !keep[li(x, y)];
+      if (ok) { yard[li(x, y)] = 1; if (run < 0) run = x; } else if (run >= 0) { clearArea(m, run, y, x - run, 1); run = -1; }
+    }
+  }
+  for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) if (yard[li(x, y)] || (keep[li(x, y)] && m.dist[y * W + x] === dd && m.tiles[y * W + x] === T.GRASS)) m.set(x, y, T.LOT);
+  // from the dock back: the apron, pairs of blocks and a lane; along the quay, groups of four blocks and a cross lane
+  const isYard = (x, y) => inRect(x, y) && yard[li(x, y)] === 1;
+  let QY0 = -1, QY1 = -1, Y0 = -1, Y1 = -1;
+  for (let y = ry0; y < ry1; y++) { if (sxOf[y - ry0] === SX) { if (QY0 < 0) QY0 = y; QY1 = y; } if (isYard(X0, y)) { if (Y0 < 0) Y0 = y; Y1 = y; } }
+  const blocks = [], lanes = [], solid = [], P = 2 * PORT.bw + 1 + PORT.lane, GP = PORT.group * (PORT.bl + 1) + PORT.lane - 1;
+  const fits = (bx, by) => { for (let y = by - 1; y <= by + PORT.bl; y++) for (let x = bx - 1; x <= bx + PORT.bw; x++) if (!isYard(x, y)) return false; return true; };
+  for (let k = 0; ; k++) {
+    const c0 = X0 + dir * k * P;
+    if (west ? c0 >= rx1 : c0 < rx0) break;
+    const cols = [0, PORT.bw + 1].map((o) => (west ? c0 + o : c0 - o - PORT.bw + 1));
+    lanes.push({ x: west ? c0 + 2 * PORT.bw + 1 : c0 - 2 * PORT.bw - PORT.lane, w: PORT.lane, ns: true });
+    for (let g = 0; Y0 + 1 + g * GP < Y1; g++) for (let r = 0; r < PORT.group; r++) {
+      const by = Y0 + 1 + g * GP + r * (PORT.bl + 1);
+      for (const [j, bx] of cols.entries()) if (fits(bx, by)) blocks.push({ x: bx, y: by, w: PORT.bw, h: PORT.bl, v: hv(bx, by) % 6, pair: j, g, r, k });
+    }
+  }
+  for (let g = 0; Y0 + 1 + g * GP < Y1; g++) lanes.push({ y: Y0 + 1 + g * GP + PORT.group * (PORT.bl + 1) - 1, h: PORT.lane, ew: true });
+  const solidAt = (x, y, r) => { m.addSolidProp(x, y, r); solid.push([x, y, r]); };
+  for (const b of blocks) {
+    addProp(m, 'cstack', (b.x + b.w / 2) * TILE, (b.y + b.h / 2) * TILE, 0, { v: b.v, tall: 240 });
+    for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) solidAt((x + 0.5) * TILE, (y + 0.5) * TILE, 18);
+  }
+  const at = new Set(blocks.map((b) => `${b.x},${b.y}`));
+  // masts between a pair, straddle carriers parked in a lane
+  for (const b of blocks) {
+    if (b.pair !== 0 || b.r !== 2) continue;
+    const ox = west ? b.x + PORT.bw : b.x - 1;
+    if (!at.has(`${b.x},${b.y - PORT.bl - 1}`) || !at.has(`${west ? b.x + PORT.bw + 1 : b.x - PORT.bw - 1},${b.y}`)) continue;
+    addProp(m, 'ymast', (ox + 0.5) * TILE, (b.y - 0.5) * TILE, 0, { tall: 160 });
+    solidAt((ox + 0.5) * TILE, (b.y - 0.5) * TILE, 6);
+  }
+  for (const b of blocks) {
+    if (b.pair !== 1 || b.r !== 1 || (b.g + b.k) % 3 !== 0) continue;
+    const lx = west ? b.x + PORT.bw + PORT.lane / 2 : b.x - PORT.lane / 2, ly = b.y + PORT.bl / 2;
+    let ok = true;
+    for (let y = Math.floor(ly - 2); y <= Math.floor(ly + 1); y++) for (let x = Math.floor(lx - 1); x <= Math.floor(lx); x++) if (!isYard(x, y)) ok = false;
+    if (!ok) continue;
+    addProp(m, 'straddle', lx * TILE, ly * TILE, 0, { a: Math.PI / 2, tall: 120 });
+    solidAt(lx * TILE, (ly - 0.7) * TILE, 18); solidAt(lx * TILE, (ly + 0.7) * TILE, 18);
+  }
+  // the gate: a lane, a pavement, then a road - nearest the stacks' middle; the gatehouse beside it
+  let gate = null, best = 1e18;
+  const mx = blocks.reduce((a, b) => a + b.x + b.w / 2, 0) / Math.max(1, blocks.length), my = blocks.reduce((a, b) => a + b.y + b.h / 2, 0) / Math.max(1, blocks.length);
+  const onLane = (y) => lanes.some((l) => l.ew && y >= l.y && y < l.y + l.h);
+  for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) {
+    if (!isYard(x, y)) continue;
+    for (const [dx, dy] of [[0, 1], [dir, 0], [0, -1]]) {
+      if (!isYard(x - dy, y - dx) || !isYard(x + dy, y + dx)) continue;
+      let n = 1;
+      while (n < 5 && m.tiles[(y + dy * n) * W + x + dx * n] === T.SIDEWALK) n++;
+      const sc = (x - mx) ** 2 + (y - my) ** 2 + (dx && onLane(y) && onLane(y - 1) && onLane(y + 1) ? 0 : 400);
+      if (n > 1 && n < 5 && m.tiles[(y + dy * n) * W + x + dx * n] === T.ROAD && sc < best) { best = sc; gate = { tx: x, ty: y, dx, dy, road: [x + dx * n, y + dy * n] }; }
+    }
+  }
+  let house = null;
+  if (gate) {
+    for (const s of [2, -3]) {
+      const hx = gate.dy ? gate.tx + s : gate.tx - gate.dx * 3, hy = gate.dy ? gate.ty - gate.dy * 2 - (gate.dy > 0 ? 1 : 0) : gate.ty + s;
+      let ok = true;
+      for (let y = hy - 1; y <= hy + 2; y++) for (let x = hx - 1; x <= hx + 2; x++) if (!isYard(x, y) || at.has(`${x},${y}`)) ok = false;
+      for (const b of blocks) if (hx + 2 > b.x - 1 && hx < b.x + b.w + 1 && hy + 2 > b.y - 1 && hy < b.y + b.h + 1) ok = false;
+      if (!ok) continue;
+      house = simpleBuilding(m, hx, hy, 2, 2, 'Gatehouse', 'hut', dd, 'tar');
+      break;
+    }
+    addProp(m, 'ygate', (gate.tx + 0.5) * TILE, (gate.ty + 0.5) * TILE, 0, { a: gate.dy ? 0 : Math.PI / 2 });
+  }
+  // the fence along the gate's part of the yard where it faces the street, open at the gate
+  const fences = [];
+  if (gate) {
+    const part = new Uint8Array(RW * RH), st = [[gate.tx, gate.ty]];
+    part[li(gate.tx, gate.ty)] = 1;
+    while (st.length) { const [x, y] = st.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (isYard(x + dx, y + dy) && !part[li(x + dx, y + dy)]) { part[li(x + dx, y + dy)] = 1; st.push([x + dx, y + dy]); } }
+    const street = (x, y) => { const t = m.tiles[y * W + x]; return t === T.SIDEWALK || t === T.ROAD; };
+    const open = (x, y) => Math.abs(x - gate.tx) <= 2 && Math.abs(y - gate.ty) <= 2;
+    const piece = (x0, y0, x1, y1) => {
+      const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (4 * TILE)));
+      for (let k = 0; k < n; k++) {
+        const ax = x0 + (x1 - x0) * k / n, ay = y0 + (y1 - y0) * k / n, bx = x0 + (x1 - x0) * (k + 1) / n, by = y0 + (y1 - y0) * (k + 1) / n;
+        addProp(m, 'yfence', ax, ay, 0, { x1: bx, y1: by });
+        fences.push([ax, ay, bx, by]);
+      }
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      for (let d = 8; d <= len - 8; d += 12) solidAt(x0 + (x1 - x0) * d / len, y0 + (y1 - y0) * d / len, 7);
+    };
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const outer = dx ? RW : RH, inner = dx ? RH : RW;
+      for (let a = 0; a < outer; a++) {
+        let run = -1;
+        for (let b = 0; b <= inner; b++) {
+          const x = rx0 + (dx ? a : b), y = ry0 + (dx ? b : a);
+          const ok = b < inner && part[li(x, y)] && street(x + dx, y + dy) && !open(x, y);
+          if (ok && run < 0) run = b;
+          if (!ok && run >= 0) {
+            if (dx) { const ex = dx > 0 ? (x + 1) * TILE - 10 : x * TILE + 10; piece(ex, (ry0 + run) * TILE + 4, ex, (ry0 + b) * TILE - 4); }
+            else { const ey = dy > 0 ? (y + 1) * TILE - 10 : y * TILE + 10; piece((rx0 + run) * TILE + 4, ey, (rx0 + b) * TILE - 4, ey); }
+            run = -1;
+          }
+        }
+      }
+    }
+  }
+  // the cranes on the quay's edge, the rails, the ship alongside
+  const rail = [(SX + (west ? 0.4 : 0.6)) * TILE, (SX + dir * 3.6 + (west ? 0 : 1)) * TILE];
+  const cr = [];
+  for (const [n, c] of cranes.entries()) {
+    const cx = (rail[0] + rail[1]) / 2;
+    let ok = true;
+    for (const dy of [-36, 36]) {
+      const ty = Math.floor((c.y + dy) / TILE), wx = Math.floor(rail[0] / TILE), w = m.tiles[ty * W + wx - dir];
+      if (m.tiles[ty * W + wx] !== T.DOCK || (w !== T.WATER && w !== T.DEEP) || m.tiles[ty * W + Math.floor(rail[1] / TILE)] !== T.LOT) ok = false;
+    }
+    if (!ok) continue;
+    addProp(m, 'gcrane', cx, c.y, 0, { a: west ? 0 : Math.PI, k: n % 2, tall: 720 });
+    for (const lx of rail) for (const dy of [-36, 36]) solidAt(lx, c.y + dy, 9);
+    cr.push({ x: cx, y: c.y });
+  }
+  for (const rx of rail) for (let y = QY0; y + 8 <= QY1 + 1; y += 8) {
+    let ok = true;
+    for (let k = 0; k < 8; k++) { const t = m.tiles[(y + k) * W + Math.floor(rx / TILE)]; if (t !== T.DOCK && t !== T.LOT) ok = false; }
+    if (ok) addProp(m, 'crail', rx, (y + 4) * TILE, 0, { len: 256 });
+  }
+  let ship = null;
+  const LS = PORT.ship.reduce((a, b) => a + b, 0), hx0 = west ? SX - 8 : SX + 2, sm = Math.floor((QY0 + QY1 - LS) / 2);
+  for (const off of [0, -20, 20, -40, 40, -60, 60]) {
+    const ys = sm + off;
+    let ok = ys > QY0 && ys + LS < QY1;
+    for (let y = ys - 1; y <= ys + LS && ok; y++) for (let x = hx0 - 1; x < hx0 + 8; x++) if (m.tiles[y * W + x] !== T.WATER && m.tiles[y * W + x] !== T.DEEP) { ok = false; break; }
+    if (!ok) continue;
+    const cxp = west ? SX * TILE - 120 : (SX + 1) * TILE + 120;
+    let y = ys * TILE;
+    for (const [n, len] of PORT.ship.entries()) {
+      addProp(m, 'cship', cxp, y + len * TILE / 2, 0, { v: n === 0 ? 2 : n === PORT.ship.length - 1 ? 0 : 1, c: hv(n, ys) % 4, a: Math.PI / 2, tall: 250 });
+      y += len * TILE;
+    }
+    for (let yy = ys * TILE + 16; yy < (ys + LS) * TILE; yy += 28) for (const ox of [-94, 94]) solidAt(cxp + ox, yy, 16);
+    ship = { x: cxp - 110, y: ys * TILE, w: 220, h: LS * TILE };
+    break;
+  }
+  m.port = { name: q.name, dist: dd, yard: [rx0, ry0, rx1, ry1], apron: { x: west ? SX + 3 : SX - 2 - PORT.apron, w: PORT.apron, y0: QY0, y1: QY1 }, blocks, lanes, solid, cranes: cr, rail, ship, freight: fr ? fr.id : -1,
+    gate: gate ? { x: (gate.tx + 0.5) * TILE, y: (gate.ty + 0.5) * TILE, road: gate.road } : null, gatehouse: house ? house.id : -1, fences };
 }
 function buildFarm(m, rand) {
   const W = m.w, H = m.h;

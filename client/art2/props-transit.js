@@ -134,3 +134,107 @@ export function lifebuoy() {
   m.fill((x, y, z) => (Math.abs(Math.hypot(x - 6, z - 22) - 4.5) < 1.6 && y > 2.5 && y < 4.5 ? ((Math.floor((Math.atan2(z - 22, x - 6) + 3.15) * 1.27) & 1) ? w : rd) : -1));
   return m;
 }
+
+// ---- World v3's container port (Port Westport, docs/WORLD-V3.md 8.5) ----------------------------------------------
+// a ship-to-shore gantry crane: two portal frames straddling the quay's rails (the legs at x = 300 and 402, the frames
+// at y = 0 and d - 10), the boom out over the water to x = 0 and a short back reach, the machinery house on the portal,
+// the A-frame and its stays, the trolley over the water with the spreader on its cables and, on some, a box hanging
+export function stsCrane(hook = 0) {
+  const W = 470, D = 140, H = 320, m = new Vox(W, D, H);
+  const red = m.mat({ ramp: R('#c4482e'), k: 3 }), dk = m.mat({ ramp: R('#8e3222'), k: 3 }), wh = m.mat({ ramp: R('#e8e4d8'), k: 3 }), gl = m.mat({ ramp: R('#3a4a5a'), k: 2, flag: F_GLASS });
+  const cable = m.mat({ ramp: MAT.metalDark, k: 2, flag: F_NOCAST }), yel = m.mat({ ramp: R('#e8c040'), k: 3 });
+  const LW = 300, LL = 402, BZ = 226;
+  for (const y of [0, D - 10]) {
+    for (const x of [LW, LL]) m.box(x - 6, y, 0, x + 6, y + 10, BZ, red);
+    m.box(LW - 8, y, 0, LL + 8, y + 10, 8, dk);
+    m.box(LW - 6, y, 140, LL + 6, y + 10, 150, red);
+    for (let k = 0; k < 24; k++) { const t = k / 24; m.box(LW + 6 + (LL - LW - 18) * t, y + 3, 150 + 70 * t, LW + 12 + (LL - LW - 18) * t, y + 7, 154 + 70 * t, dk); }
+  }
+  for (const x of [LW, LL]) m.box(x - 5, 0, 130, x + 5, D, 140, red);
+  m.box(0, 30, BZ, W, D - 30, BZ + 14, red); m.box(0, 36, BZ + 14, W, D - 36, BZ + 18, dk);
+  for (let x = 8; x < W; x += 24) m.box(x, 30, BZ - 6, x + 3, D - 30, BZ, dk);
+  m.box(LL - 40, 24, BZ + 18, W - 4, D - 24, BZ + 56, wh);
+  for (let x = LL - 34; x < W - 10; x += 14) m.box(x, D - 25, BZ + 38, x + 8, D - 24, BZ + 46, gl);
+  for (const y of [32, D - 38]) {
+    for (let z = BZ + 18; z < H - 4; z++) { const t = (z - BZ - 18) / (H - BZ - 22); m.box(LW - 4 + 40 * t, y, z, LW + 4 + 40 * t, y + 6, z + 1, red); m.box(LL + 30 - 32 * t, y, z, LL + 38 - 32 * t, y + 6, z + 1, red); }
+    for (let x = 10; x < LW + 36; x += 2) { const z = BZ + 18 + (H - BZ - 26) * (x - 10) / (LW + 26); m.box(x, y + 2, z, x + 2, y + 4, z + 2, dk); }
+  }
+  const tx = 70, cy = D / 2;
+  m.box(tx - 18, 32, BZ - 10, tx + 18, D - 32, BZ, dk); m.box(tx - 10, cy - 12, BZ - 34, tx + 10, cy + 12, BZ - 10, wh); m.box(tx - 10, cy + 11, BZ - 30, tx + 10, cy + 12, BZ - 18, gl);
+  const sz = hook ? 100 : 160;
+  for (const dy of [-14, 14]) m.box(tx - 1, cy + dy, sz + 6, tx + 1, cy + dy + 1, BZ - 34, cable);
+  m.box(tx - 28, cy - 20, sz, tx + 28, cy + 20, sz + 6, yel);
+  if (hook) { const col = CONTAINER_COLS[(hook * 3) % CONTAINER_COLS.length], c = m.mat({ ramp: R(col), k: 3, shade: (x, y) => (Math.round(y) % 4 === 0 ? -0.7 : 0) }); m.box(tx - 26, cy - 64, sz - 56, tx + 26, cy + 64, sz, c); }
+  return m;
+}
+// a block of container stacks in the yard: three rows of 40 ft boxes along y (doors to the south, +y), two to four
+// high by the variant, each its own colour; an invented line's mark (a pale panel) on some doors
+export function containerStack(v = 0) {
+  const CW = 53, CL = 254, CH = 58, hs = [[3, 4, 2], [2, 3, 3], [4, 4, 3], [2, 2, 3], [3, 2, 4], [2, 4, 2]][v % 6];
+  const m = new Vox(CW * 3 + 1, CL + 2, Math.max(...hs) * CH + 2);
+  const bar = m.mat({ ramp: MAT.metal, k: 2 }), mk = m.mat({ ramp: R('#ece8dc'), k: 3 });
+  for (let c = 0; c < 3; c++) for (let k = 0; k < hs[c]; k++) {
+    const col = CONTAINER_COLS[(v * 5 + c * 3 + k * 2) % CONTAINER_COLS.length];
+    const b = m.mat({ ramp: R(col), k: 3, shade: (x, y) => (Math.round(y) % 4 === 0 ? -0.7 : 0) + (hash(Math.round(x / 6), Math.round(y / 9), 5 + k) > 0.86 ? -0.8 : 0) }), f = m.mat({ ramp: R(col), k: 2 });
+    const x0 = c * CW + 1, z0 = k * CH;
+    m.box(x0, 1, z0, x0 + CW - 2, CL + 1, z0 + CH - 1, b);
+    m.box(x0, 1, z0 + CH - 4, x0 + CW - 2, CL + 1, z0 + CH - 1, f);
+    for (const y of [1, CL - 2]) m.box(x0, y, z0, x0 + CW - 2, y + 3, z0 + CH - 1, f);
+    for (const x of [x0 + 12, x0 + 20, x0 + 32, x0 + 40]) m.box(x, CL, z0 + 4, x + 1, CL + 2, z0 + CH - 5, bar);
+    if ((v + c + k) % 3 === 0) m.box(x0 + 8, CL, z0 + 30, x0 + 22, CL + 2, z0 + 44, mk);
+  }
+  return m;
+}
+// a straddle carrier, parked: legs either side on their wheels, the beams over, the spreader raised, the cab on top
+export function straddleCarrier() {
+  const m = new Vox(64, 96, 128);
+  const y = m.mat({ ramp: R('#e0a828'), k: 3 }), dk = m.mat({ ramp: R('#2a2c32'), k: 2 }), w = m.mat({ ramp: MAT.tyre, k: 1 }), wh = m.mat({ ramp: R('#e8e4d8'), k: 3 }), gl = m.mat({ ramp: R('#3a4a5a'), k: 2, flag: F_GLASS });
+  for (const x of [0, 54]) {
+    m.box(x, 0, 14, x + 10, 96, 24, y);
+    for (const yy of [6, 80]) m.box(x + 1, yy, 24, x + 9, yy + 10, 110, y);
+    m.box(x, 0, 104, x + 10, 96, 116, y);
+    for (const yy of [12, 36, 60, 84]) m.cyl('x', 0, yy, 9, 8.5, x, x + 10, w);
+  }
+  m.box(0, 4, 108, 64, 14, 118, y); m.box(0, 82, 108, 64, 92, 118, y);
+  m.box(42, 70, 116, 62, 94, 128, wh); m.box(44, 93, 119, 60, 94, 126, gl);
+  m.box(8, 30, 60, 56, 66, 66, dk);
+  return m;
+}
+// a container ship moored at the quay, in sections built along +x (the bow toward +x; render at heading PI/2 to run it
+// north-south): part 2 the stern (the accommodation block, the bridge and its wings, the funnel), 1 a hold (hatch
+// covers and a bay of boxes two to three high), 0 the bow (the forecastle, a breakwater, winches)
+export function shipSection(part = 1, c = 0) {
+  const L = part === 0 ? 320 : 256, B = 220, FB = 56, HT = part === 2 ? 240 : FB + 3 * 58 + 4;
+  const m = new Vox(L, B, HT);
+  const hull = m.mat({ ramp: R(['#2a3a5a', '#7a2a24', '#2a4a3a', '#3a3c44'][c % 4]), k: 3, shade: (x) => (Math.round(x) % 32 === 0 ? -0.5 : 0) }), boot = m.mat({ ramp: R('#a83a2e'), k: 3 });
+  const deck = m.mat({ ramp: R('#5a6a5a'), k: 3 }), rail = m.mat({ ramp: R('#e8e4d8'), k: 3, flag: F_THIN }), wh = m.mat({ ramp: R('#ece8de'), k: 3 }), gl = m.mat({ ramp: R('#2a3a4a'), k: 2, flag: F_GLASS }), dk = m.mat({ ramp: MAT.metalDark, k: 2 });
+  const half = (x) => (part === 0 ? (B / 2) * Math.min(1, Math.sqrt(Math.max(0, (L - x) / (L * 0.8)))) : B / 2);
+  m.fill((x, y, z) => (Math.abs(y - B / 2) <= half(x) - (z < 12 ? (12 - z) * 0.5 : 0) ? (z < 8 ? boot : hull) : -1), 0, 0, 0, L, B, FB);
+  m.fill((x, y) => (Math.abs(y - B / 2) <= half(x) - 5 ? deck : -1), 0, 0, FB - 3, L, B, FB);
+  m.fill((x, y) => { const h = half(x); return h > 6 && Math.abs(Math.abs(y - B / 2) - (h - 2)) < 1.4 ? rail : -1; }, 0, 0, FB, L, B, FB + 7);
+  const boxes = (xa, xb, tiers) => {
+    const n = Math.floor((xb - xa) / 127);
+    for (let j = 0; j < 4; j++) for (let s = 0; s < n; s++) for (let k = 0; k < tiers[j % tiers.length]; k++) {
+      const col = CONTAINER_COLS[(c * 3 + j * 5 + s * 2 + k) % CONTAINER_COLS.length], b = m.mat({ ramp: R(col), k: 3, shade: (x) => (Math.round(x) % 4 === 0 ? -0.7 : 0) });
+      m.box(xa + s * 127 + 1, 6 + j * 52, FB + k * 58, xa + s * 127 + 126, 6 + j * 52 + 51, FB + k * 58 + 57, b);
+    }
+  };
+  if (part === 1) {
+    m.box(2, 4, FB, L - 2, B - 4, FB + 4, dk);
+    boxes(1, L - 1, [[3, 2, 3, 2], [2, 3, 3, 3], [3, 3, 2, 3], [2, 2, 3, 2]][c % 4]);
+  } else if (part === 2) {
+    m.box(20, 30, FB, 120, B - 30, FB + 140, wh);
+    for (let z = FB + 16; z < FB + 136; z += 22) m.box(120, 40, z, 121, B - 40, z + 8, gl);
+    m.box(96, 0, FB + 140, 128, B, FB + 160, wh); m.box(127, 6, FB + 146, 128, B - 6, FB + 156, gl);
+    m.box(24, 20, FB + 160, 60, B - 20, FB + 164, dk);
+    m.box(2, 92, FB, 30, 128, FB + 176, m.mat({ ramp: R('#2a2c34'), k: 3 })); m.box(2, 92, FB + 140, 30, 128, FB + 156, m.mat({ ramp: R(['#d8b040', '#e8e4d8', '#c8402e', '#2f7a7a'][c % 4]), k: 3 }));
+    boxes(130, L - 2, [2, 2, 1, 2]);
+  } else {
+    m.fill((x, y) => (x > 200 && Math.abs(y - B / 2) <= half(x) - 4 ? deck : -1), 0, 0, FB, L, B, FB + 14);
+    m.fill((x, y) => (Math.abs(x - 186 + Math.abs(y - B / 2) * 0.3) < 3 && Math.abs(y - B / 2) < half(x) - 6 ? wh : -1), 0, 0, FB, L, B, FB + 40);
+    for (const y of [70, B - 70]) m.cyl('z', 240, y, 0, 10, FB + 14, FB + 26, dk);
+    m.box(272, B / 2 - 3, FB + 14, 278, B / 2 + 3, FB + 110, wh);
+    boxes(2, 170, [2, 3, 3, 2]);
+  }
+  return m;
+}

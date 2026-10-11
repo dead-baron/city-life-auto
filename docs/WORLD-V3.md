@@ -1847,7 +1847,7 @@ build in today's frame):
 map beside the place at its gulf size, baked with the game's chunk bake. What looks wrong:
 - **Westport reads as an island:** only its own land is built, so the mainland round it (Highland Woods to the north
   and west, the Egret Coast) is sea in the picture; its seams are its north edge.
-- **Port Westport is one grey slab:** the harbor style fills the 73-tile strip with wide warehouse roofs and yards
+- **Port Westport is one grey slab** (since fixed: a container port, What's left item 1)**:** the harbor style fills the 73-tile strip with wide warehouse roofs and yards
   wall to wall; the quay is a thin band on its west edge, and there are no containers or cranes to see. A container
   port wants open stacking yards (lots with container stacks), a few sheds and the cranes on the quay - the art has a
   gantry crane and containers (`client/art2/props-transit.js`) but no prop draws them yet (`m.quays[].cranes` holds
@@ -1869,8 +1869,21 @@ map beside the place at its gulf size, baked with the game's chunk bake. What lo
   west half; the long south point, where the raceway was, is empty grass.
 
 **What's left** (in order):
-1. The cranes' prop (the art's gantry crane on the quay's spots) and Port Westport as a container yard (open lots
-   with container stacks rather than the harbor style's roofs) - a style of its own for district 26.
+1. ~~The cranes' prop (the art's gantry crane on the quay's spots) and Port Westport as a container yard (open lots
+   with container stacks rather than the harbor style's roofs) - a style of its own for district 26.~~ Done (H25,
+   2026-10-10): **Port Westport is a container port** (`shared/map.js` `buildContainerPort`, district 26's own pass,
+   called from `buildQuays`): the harbor style's warehouse slabs cleared (the Westport Freight row and the junkyard
+   stay), the yard paved - an apron along the quay, pairs of 5 x 8-tile blocks of container stacks (three rows of
+   40 ft boxes, two to four high) with 4-tile truck lanes between them and a cross lane every four blocks, light masts,
+   straddle carriers parked in the lanes, the gate (a lane a pavement from the road nearest the stacks' middle) with
+   its barrier and a gatehouse, a chain-link fence along the main yard's street sides; the ship-to-shore gantry cranes on the quay's straight edge (legs on its rails, the
+   boom out over the water, a box on every other one's spreader: 5 of the 7 spots - one is on the curve at the north
+   end, one on Harbor Road's end) and a container ship (stern, nine holds, bow: 90 tiles) moored along the middle of
+   the quay. `m.port` holds the layout; `test/world3port.test.js`; the picture `docs/world-v3-westport.png`. Drawn by
+   art v2 (`client/art2/props-transit.js` `stsCrane`, `containerStack`, `straddleCarrier`, `shipSection`; statics.js)
+   and the classic renderer (`client/render/portprops.js`, loaded when the first port prop is drawn). What still looks
+   wrong: the quay is the dock's wooden planks (a container quay is concrete), the ship is
+   small beside the quay (90 tiles of 344), and the corner past the quay's curve at the north end is grass.
 2. The roads off the places cut at the shore (8.4 item 2, H21) and the skeleton's crossings laid to them; Westport's
    seams joined when the mainland is built.
 3. Cedar Isle: the Lake District's courts (`islands.js` `courts` reads something unplaced), the power poles; the
