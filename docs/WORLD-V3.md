@@ -3117,7 +3117,7 @@ import it); `shared/mapcore.js` `DISTRICTS` has three more entries (60-62).
 
 | district | its ground | buildings | what's in it |
 |---|---|---|---|
-| The Strip (60) | 26,595 tiles | 24 | the seven resorts' 22 buildings (660-912 tiles of building each), 8 pools, the lagoon's lake and its 6 fountains, 90 palms on the drives |
+| The Strip (60) | 26,595 tiles | 25 | the seven resorts' 23 buildings (786-912 tiles of building a resort), 8 pools, the lagoon's lake and its 6 fountains, 90 palms on the drives |
 | Old Downtown (61) | 13,500 tiles | 20 | the covered street (7 x 61 tiles, 30 strings of bulbs across it) and its six old casinos, the pawn strip, the supper club and the counting room, the bank, Club Neon Cactus, the motor inn and motels |
 | Mesa Flats (62) | 47,415 tiles | 110 | tract homes and trailers, the motels, the chapels, the gun shop's strip, the hospital, the police, the diner, a club, two gas stations |
 
