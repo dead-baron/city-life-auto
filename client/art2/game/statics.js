@@ -725,6 +725,16 @@ function upperOf(A, D, rnd, spec, w, d) {
 }
 const winXs = (w, avoid = [], gap = 36, m = 10) => { const out = []; for (let x = m; x + 16 <= w - m; x += gap) if (!avoid.some(([a, b]) => x + 16 > a - 5 && x < b + 5)) out.push(x); return out; };
 
+// the small towns' wood looks (World v3, 8.13.1): by district - Timber Bend, Willow Crossing, Sandpiper Bay and
+// Northshore's beach towns - for the generic archetypes (the town's houses, shop rows and blocks)
+const TOWN_OF = { 57: 'log', 58: 'farm', 59: 'beach', 54: 'beach' };
+const TOWN_ARCH = new Set(['mixed', 'oldrow', 'townhouse', 'beachblock', 'villa', 'house', 'handshop', 'rough', 'walkup']);
+const TOWN_LOOK = {
+  log: { walls: ['#6e4a30', '#7a5436', '#5e4030', '#8a6440', '#6a5a44'], roofs: ['#3e4448', '#4a3a30', '#5a4a3a'], two: 0.3, hip: 0.2 },
+  farm: { walls: ['#e8e4d8', '#f0ecdc', '#d8c8a0', '#c84a3a', '#e0d8c0'], roofs: ['#5a5c64', '#6a4a3a', '#7a7c84'], two: 0.35, hip: 0.3 },
+  beach: { walls: ['#9ac8d0', '#e8d8b0', '#f0c8b0', '#b8d8b8', '#f4f0e4', '#d0b8d8'], roofs: ['#6a5040', '#8a8c90', '#5a6a7a'], two: 0.25, hip: 0.5 },
+};
+
 // the makeBuilding spec, rooftop kit and lights of one section. lights: [dx, dy, z, r, col, k, kind] from the
 // section's south-west corner (dy south of the front wall)
 function specOf(c, b, A, s, D) {
@@ -1005,6 +1015,16 @@ function specOf(c, b, A, s, D) {
     Object.assign(spec.shop, { kind: 'lobby', awning: null, band: null, grille: false, openSign: null, people: 2 });
     Object.assign(spec.shop.sign, { bg: '#1e3a2e', fg: [236, 214, 150] });
   }
+  // ---- the small towns (World v3, docs/WORLD-V3.md 8.13.1, districts 57-59 and Northshore's beach towns, 54): wood
+  // siding of one or two storeys instead of the city's brick and stucco - the logging town's dark timber, the farm
+  // town's white and cream clapboard, the beach town's pastel boards; a house or a small shop under a shingled pitched
+  // roof, a wider shopfront flat-roofed behind its false front, nothing tall
+  const TL = TOWN_LOOK[TOWN_OF[D.id]];
+  if (TL && TOWN_ARCH.has(A) && !s.frame && !s.vox && !b.art) {
+    Object.assign(spec, { style: 'siding', wallColor: pick(TL.walls, rnd()), floors: Math.min(Math.max(1, spec.floors || 1), rnd() < TL.two ? 2 : 1), balconies: false, ivy: 0, graffiti: 0, grime: 0.12, fireEscape: false, boarded: 0 });
+    if (!pitched && s.tw <= 16 && s.th <= 16 && (!spec.shop || rnd() < 0.4)) { Object.assign(spec, { pitch: rnd() < TL.hip ? 'hip' : 'gable', roof: 'shingle', roofColor: pick(TL.roofs, rnd()), slope: 0.42 }); pitched = true; }
+    else if (!pitched) spec.parapet = 10;   // (the false front)
+  } else if (TL && (A === 'hotel' || A === 'hospital' || A === 'police' || A === 'civicblock' || A === 'office')) spec.floors = Math.min(spec.floors || 2, 2);   // (the motel, the clinic, the sheriff: two storeys at most)
   if (s.bay) {   // the bay's back wall: an open roller door into the lit booth, a sign over it
     delete spec.shop; delete spec.portico; delete spec.arches;
     Object.assign(spec, { blank: false, windows: [], doors: [{ x: 6, w: w - 12, kind: 'roller', open: true, h: 62 }], plaques: [{ text: 'PAINT', x: Math.max(4, Math.round(w / 2 - 26)), v: 66, sx: 2, bg: '#2a3a6a', fg: [250, 236, 200], lit: true }] });
@@ -1641,6 +1661,8 @@ function plantFor(c, p) {
     if (st === 'park') return [pick(c.M.lake && c.M.lake[c.M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))] ? ['willow'] : ['oak', 'maple', 'oak', 'willow', 'cherry', 'mapleAutumn', 'redMaple'], u), 1.4 + u2 * 0.2];
     if (st === 'beach' || coastal) return [pick(['coconut', 'royal', 'leaning', 'fanSkirt'], u), 1.25];
     if (st === 'luxury') return [t === 'tree_a' ? pick(['royal', 'royal', 'cypress', 'olive', 'magnolia'], u) : pick(['magnolia', 'flowerTree', 'cypress', 'olive'], u), 1.3];
+    if (di === 57) return [pick(['fir', 'cedar', 'spruce', 'fir', 'maple'], u), 1.35];   // (Timber Bend's gardens: its woods' trees; Willow Crossing's shade and orchard trees - 8.13.1)
+    if (di === 58) return [pick(['oak', 'maple', 'apple', 'oak'], u), 1.3];
     if (st === 'oldtown') return [pick(['cherry', 'olive', 'cypress', 'magnolia', 'flowerTree', 'street'], u), 1.3];
     if (st === 'arts') return [pick(['ginkgo', 'street', 'cherry', 'ginkgo', 'magnolia'], u), 1.3];
     if (st === 'houses' || st === 'rural') return [pick(t === 'tree_a' ? ['oak', 'maple', 'birch', 'mapleAutumn', 'flowerTree', 'apple'] : ['cherry', 'magnolia', 'maple', 'oak', 'redMaple'], u), 1.35];

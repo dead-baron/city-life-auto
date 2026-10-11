@@ -274,7 +274,7 @@ function buildCity(seed, opts = null, frame = null) {
   const clot = m.blocks.filter((b) => b.d === 10 && !b.mansion && b.w >= 16 && b.h >= 10).sort((a, b) => m.distSea[(a.y + (a.h >> 1)) * m.w + a.x] - m.distSea[(b.y + (b.h >> 1)) * m.w + b.x])[0];
   if (clot) clot.court = true;
   for (const b of m.blocks) {
-    const st = STYLE[DISTRICTS[b.d].style];
+    const st = OPTS?.styles?.[b.d] || STYLE[DISTRICTS[b.d].style];
     b.ix = b.x; b.iy = b.y; b.iw = b.w; b.ih = b.h;
     if (b.court) {
       m.fill(b.x, b.y, b.w, b.h, T.SAND);
@@ -1510,7 +1510,7 @@ function claimEstates(m, rows, out, rand) {
 // Fill a row with the district's buildings. Near a border the neighbour's style creeps in, so
 // wealth tiers blend into each other instead of changing at a line.
 function fillRow(m, row, rand) {
-  let st = STYLE[DISTRICTS[row.d].style];
+  let st = OPTS?.styles?.[row.d] || STYLE[DISTRICTS[row.d].style];
   const near = [];
   for (const [dx, dy] of [[-14, 0], [14 + row.w, 0], [row.w / 2, -12], [row.w / 2, row.h + 12], [-10, row.h / 2], [row.w + 10, row.h / 2]]) {
     const d = m.dist[Math.max(0, Math.min(m.h - 1, Math.floor(row.y + dy))) * m.w + Math.max(0, Math.min(m.w - 1, Math.floor(row.x + dx)))];
@@ -1927,7 +1927,7 @@ function plazaFill(m, b, rand) {
 // them walled yards or narrow passages; the neighbouring district's style creeps in near a border.
 function fillRowV2(m, row, rand) {
   const style = DISTRICTS[row.d].style;
-  const st = STYLE[style];
+  const st = OPTS?.styles?.[row.d] || STYLE[style];   // (World v3: a town's own style, world3-towns.js TOWN_STYLES)
   const near = [];
   for (const [dx, dy] of [[-14, 0], [14 + row.w, 0], [row.w / 2, -12], [row.w / 2, row.h + 12]]) {
     const d = m.dist[Math.max(0, Math.min(m.h - 1, Math.floor(row.y + dy))) * m.w + Math.max(0, Math.min(m.w - 1, Math.floor(row.x + dx)))];

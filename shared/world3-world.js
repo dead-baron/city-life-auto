@@ -25,7 +25,7 @@ import { mainLineLoops, clearRailDressing, seatStationHouses } from './world3-ra
 import { beachStreets, beachFront, clearBeachFront } from './world3-beach.js';
 import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3, peakHeight, SNOW_LINE, SNOW_CLS } from './world3-biomes.js';
 import { terrainAt } from './mapcore.js';
-import { paintTowns3, layTowns3, townsDone, TOWN_SPECIALS } from './world3-towns.js';
+import { paintTowns3, layTowns3, townsDone, townsFront, TOWN_SPECIALS, TOWN_STYLES } from './world3-towns.js';
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -179,8 +179,9 @@ export function worldOpts(asked) {
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground)
     special: (sp) => built.has(sp.d),
     specials: TOWN_SPECIALS,   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
+    styles: TOWN_STYLES,   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)
-    rails: (m) => { beachFront(m, L); return mainLineLoops(m); },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
+    rails: (m) => { beachFront(m, L); const tf = townsFront(m); if (m.world3?.towns) m.world3.towns.front = tf; return mainLineLoops(m); },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
     lines(lines, m) {
       const out = { split: 0, offFrame: 0 };
       const inF = (p) => p.x >= 0 && p.y >= 0 && p.x < W * TILE && p.y < H * TILE;
