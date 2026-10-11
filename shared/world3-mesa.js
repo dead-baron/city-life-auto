@@ -171,7 +171,7 @@ export function mesaLots(m) {
 // a building of the city's own (a roof record for the classic renderer, its look in `art` for art v2): solid tiles
 function addBld(m, x, y, w, h, kind, name, roofKind, look, art) {
   const W = m.w, bid = m.buildings.length;
-  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { const i = ty * W + tx; if (m.tiles[i] === T.ROAD || m.tiles[i] === T.SIDEWALK || m.bld[i] >= 0) return null; }
+  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { const i = ty * W + tx; if (m.tiles[i] !== T.PLAZA || !mine(m, i) || m.bld[i] >= 0) return null; }   // (only on the city's kept paving)
   m.roofs.push({ tx: x, ty: y, tw: w, th: h, kind: roofKind, seed: (Math.imul(x, 7919) ^ Math.imul(y, 104729)) >>> 0, d: m.dist[(y + (h >> 1)) * W + x + (w >> 1)], b: bid, resort: look });
   const b = { id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x, ty: y, tw: w, th: h, kind, name, business: null, signs: [], art };
   m.buildings.push(b);
@@ -194,41 +194,51 @@ export function buildMesa(m, addProp) {
     // a rect in the lot's own terms: fx across it from its west edge, fd back from its front (the Strip's side)
     const rect = (fx, fd, w, d) => [x0 + fx, S ? y1 - fd - d : y0 + fd, w, d];
     const blds = [];
-    const put = (fx, fd, w, d, name, look, spec, lights, kit) => { const [x, y] = rect(fx, fd, w, d); const b = addBld(m, x, y, w, d, 'hotel', name, look === 'pyramid' ? 'glass' : 'gravel', look, { spec, lights, kit: kit || [], noShop: true, resort: R.look }); if (b) blds.push(b); return b; };
+    // (on a flat roof: a tower's helipad and water tank, a podium's air handlers - art v2's roof kit, px from its north-west)
+    const roofKit = (w, d, spec) => (spec.pitch ? [] : spec.floors >= 8 ? [['heli', w * TILE / 2, d * TILE / 2 + 40], ['tank', w * TILE - 50, 60], ['ac', 50, 60]] : [['hvac', w * TILE / 2, d * TILE / 2], ['ac', 60, 70], ['ac', w * TILE - 70, 70], ['vent', w * TILE - 60, d * TILE - 50]]);
+    const put = (fx, fd, w, d, name, look, spec, lights, kit) => { const [x, y] = rect(fx, fd, w, d); const b = addBld(m, x, y, w, d, 'hotel', name, look === 'pyramid' ? 'glass' : 'gravel', look, { spec, lights, kit: kit || roofKit(w, d, spec), noShop: true, resort: R.look }); if (b) blds.push(b); return b; };
     const mid = LW >> 1;
     const st = (o) => ({ style: 'stone', parapet: 12, roofMat: 'membrane', lip: 8, rimW: 4, ...o });
+    // (each building at most 26 tiles wide - art v2 draws it whole; a wide front is two wings side by side)
     if (R.look === 'lotus') {
-      put(mid - 13, 10, 26, 12, R.name, 'lotus', st({ floors: 2, wallColor: '#e8d6a8' }), neon(26, 12, 120, C.gold));
-      put(6, 24, 14, 14, `${R.name} Tower`, 'lotus', { floors: 10, style: 'glass', wallColor: '#c8a050', parapet: 18, roofMat: 'membrane', lip: 10 }, [...neon(14, 14, 640, C.pink, 2), [7 * TILE, -7 * TILE, 700, 260, C.pink, 2, 'neon']]);
-      water(...poolAt(rect(24, 26, 14, 7)));
+      put(4, 8, 24, 14, R.name, 'lotus', st({ floors: 2, wallColor: '#e8d6a8' }), neon(24, 14, 120, C.gold));
+      put(28, 8, 21, 12, `${R.name} Wing`, 'lotus', st({ floors: 2, wallColor: '#e2cc98' }), neon(21, 12, 120, C.gold));
+      put(8, 24, 18, 18, `${R.name} Tower`, 'lotus', { floors: 12, style: 'glass', wallColor: '#c8a050', parapet: 18, roofMat: 'membrane', lip: 10 }, [...neon(18, 18, 760, C.pink, 2), [9 * TILE, -9 * TILE, 820, 300, C.pink, 2.2, 'neon']]);
+      water(...poolAt(rect(30, 26, 16, 8)));
     } else if (R.look === 'dome') {
-      put(mid - 13, 10, 26, 14, R.name, 'dome', st({ floors: 4, wallColor: '#efe6d2' }), neon(26, 14, 240, C.gold));
-      put(mid - 6, 26, 12, 12, `${R.name} Dome`, 'dome', { floors: 3, style: 'stone', wallColor: '#e6dcc4', pitch: 'hip', slope: 0.95, roof: 'shingle', roofColor: '#4f8f80' }, [[6 * TILE, -6 * TILE, 330, 220, C.gold, 1.6, 'neon']]);
-      water(...poolAt(rect(4, 28, 9, 7))); water(...poolAt(rect(LW - 13, 28, 9, 7)));
+      put(3, 8, 23, 14, R.name, 'dome', st({ floors: 4, wallColor: '#efe6d2' }), neon(23, 14, 240, C.gold));
+      put(26, 8, 23, 14, `${R.name} East Wing`, 'dome', st({ floors: 4, wallColor: '#efe6d2' }), neon(23, 14, 240, C.gold));
+      put(18, 24, 16, 16, `${R.name} Dome`, 'dome', { floors: 3, style: 'stone', wallColor: '#e6dcc4', pitch: 'hip', slope: 0.95, roof: 'shingle', roofColor: '#4f8f80' }, [[8 * TILE, -8 * TILE, 380, 240, C.gold, 1.6, 'neon']]);
+      water(...poolAt(rect(3, 26, 11, 8))); water(...poolAt(rect(38, 26, 11, 8)));
     } else if (R.look === 'pyramid') {
-      put(3, 10, 24, 24, R.name, 'pyramid', { floors: 1, style: 'stone', wallColor: '#2a2c34', pitch: 'hip', slope: 1.25, roof: 'shingle', roofColor: '#20232c' }, [[12 * TILE, -12 * TILE, 900, 420, C.white, 2.4, 'lamp'], ...neon(24, 24, 40, C.cyan, 2)]);
-      water(...poolAt(rect(31, 14, 11, 7)));
+      put(3, 8, 26, 26, R.name, 'pyramid', { floors: 1, style: 'stone', wallColor: '#2a2c34', pitch: 'hip', slope: 1.25, roof: 'shingle', roofColor: '#20232c' }, [[13 * TILE, -13 * TILE, 1000, 460, C.white, 2.4, 'lamp'], ...neon(26, 26, 40, C.cyan, 2)]);
+      put(31, 8, 18, 12, `${R.name} Hall`, 'pyramid', st({ floors: 2, style: 'glass', wallColor: '#24262e' }), neon(18, 12, 120, C.cyan));
+      water(...poolAt(rect(33, 24, 15, 8)));
     } else if (R.look === 'glass') {
-      put(mid - 13, 10, 26, 10, R.name, 'glass', st({ floors: 2, style: 'glass', wallColor: '#2c3c5c' }), neon(26, 10, 120, C.violet));
-      put(mid - 13, 22, 10, 12, `${R.name} East`, 'glass', { floors: 10, style: 'glass', wallColor: '#4a7ab0', parapet: 12, roofMat: 'membrane', lip: 8 }, neon(10, 12, 640, C.cyan, 2));
-      put(mid + 3, 22, 10, 12, `${R.name} West`, 'glass', { floors: 8, style: 'glass', wallColor: '#9a4a9a', parapet: 12, roofMat: 'membrane', lip: 8 }, neon(10, 12, 530, C.pink, 2));
-      water(...poolAt(rect(mid - 5, 37, 10, 6)));
+      put(3, 8, 24, 10, R.name, 'glass', st({ floors: 2, style: 'glass', wallColor: '#2c3c5c' }), neon(24, 10, 120, C.violet));
+      put(27, 8, 16, 10, `${R.name} Hall`, 'glass', st({ floors: 2, style: 'glass', wallColor: '#2c3c5c' }), neon(16, 10, 120, C.violet));
+      put(5, 20, 14, 16, `${R.name} East`, 'glass', { floors: 12, style: 'glass', wallColor: '#4a7ab0', parapet: 12, roofMat: 'membrane', lip: 8 }, neon(14, 16, 760, C.cyan, 2));
+      put(25, 20, 14, 14, `${R.name} West`, 'glass', { floors: 10, style: 'glass', wallColor: '#9a4a9a', parapet: 12, roofMat: 'membrane', lip: 8 }, neon(14, 14, 640, C.pink, 2));
+      water(...poolAt(rect(28, 38, 15, 7)));
     } else if (R.look === 'star') {
-      put(mid - 13, 10, 26, 12, R.name, 'star', st({ floors: 2, wallColor: '#e4e8ee' }), neon(26, 12, 120, C.cyan));
-      put(mid - 6, 24, 12, 12, `${R.name} Spire`, 'star', { floors: 10, style: 'glass', wallColor: '#dde4ee', parapet: 22, roofMat: 'membrane', lip: 10 }, [...neon(12, 12, 660, C.white, 2), [6 * TILE, -6 * TILE, 720, 300, C.cyan, 2.2, 'neon']]);
-      water(...poolAt(rect(4, 26, 9, 7)));
+      put(4, 8, 24, 12, R.name, 'star', st({ floors: 2, wallColor: '#e4e8ee' }), neon(24, 12, 120, C.cyan));
+      put(28, 8, 21, 12, `${R.name} Wing`, 'star', st({ floors: 2, wallColor: '#dde2ea' }), neon(21, 12, 120, C.cyan));
+      put(18, 22, 16, 16, `${R.name} Spire`, 'star', { floors: 12, style: 'glass', wallColor: '#dde4ee', parapet: 22, roofMat: 'membrane', lip: 10 }, [...neon(16, 16, 780, C.white, 2), [8 * TILE, -8 * TILE, 840, 320, C.cyan, 2.2, 'neon']]);
+      water(...poolAt(rect(4, 26, 12, 8)));
     } else if (R.look === 'lake') {
-      water(...poolAt(rect(4, 3, LW - 8, 12), true), true);
-      put(4, 19, 25, 14, R.name, 'lake', st({ floors: 6, wallColor: '#efe2c8' }), neon(25, 14, 360, C.gold));
-      put(29, 19, 25, 14, `${R.name} South`, 'lake', st({ floors: 5, wallColor: '#e8dac0' }), neon(25, 14, 300, C.gold));
-      water(...poolAt(rect(mid - 6, 38, 12, 7)));
-      const [lx, ly, lw, ld] = rect(4, 3, LW - 8, 12);
-      for (let k = 0; k < 5; k++) { addProp(m, 'fountain', (lx + lw * (k + 0.5) / 5) * TILE, (ly + ld / 2) * TILE, 0); out.lake++; }
+      water(...poolAt(rect(4, 3, LW - 8, 14), true), true);
+      put(4, 21, 22, 16, R.name, 'lake', st({ floors: 7, wallColor: '#efe2c8' }), neon(22, 16, 420, C.gold));
+      put(26, 21, 22, 16, `${R.name} Center`, 'lake', st({ floors: 6, wallColor: '#ece0c6' }), neon(22, 16, 360, C.gold));
+      put(48, 21, 13, 16, `${R.name} South`, 'lake', st({ floors: 5, wallColor: '#e8dac0' }), neon(13, 16, 300, C.gold));
+      water(...poolAt(rect(24, 42, 16, 8)));
+      const [lx, ly, lw, ld] = rect(4, 3, LW - 8, 14);
+      for (let k = 0; k < 6; k++) { addProp(m, 'fountain', (lx + lw * (k + 0.5) / 6) * TILE, (ly + ld / 2) * TILE, 0); out.lake++; }
     } else if (R.look === 'castle') {
-      put(mid - 12, 12, 24, 14, R.name, 'castle', st({ floors: 3, wallColor: '#f2f0ea', parapet: 16 }), neon(24, 14, 200, C.violet));
-      for (const [fx, col] of [[mid - 16, '#c83a3a'], [mid + 12, '#3a5ac8']]) put(fx, 14, 4, 4, `${R.name} Turret`, 'castle', { floors: 4, style: 'stone', wallColor: '#f2f0ea', pitch: 'hip', slope: 2.4, roof: 'shingle', roofColor: col }, []);
-      put(mid - 4, 28, 8, 8, `${R.name} Keep`, 'castle', { floors: 6, style: 'stone', wallColor: '#ecebe6', pitch: 'hip', slope: 2.0, roof: 'shingle', roofColor: '#3a5ac8' }, [[4 * TILE, -4 * TILE, 420, 200, C.violet, 1.6, 'neon']]);
-      water(...poolAt(rect(4, 30, 9, 7)));
+      put(14, 10, 24, 16, R.name, 'castle', st({ floors: 3, wallColor: '#f2f0ea', parapet: 16 }), neon(24, 16, 200, C.violet));
+      put(38, 10, 18, 14, `${R.name} Hall`, 'castle', st({ floors: 3, wallColor: '#eeece4', parapet: 16 }), neon(18, 14, 200, C.violet));
+      for (const [fx, col] of [[9, '#c83a3a'], [56, '#3a5ac8']]) put(fx, 12, 5, 5, `${R.name} Turret`, 'castle', { floors: 4, style: 'stone', wallColor: '#f2f0ea', pitch: 'hip', slope: 2.4, roof: 'shingle', roofColor: col }, []);
+      put(28, 28, 10, 10, `${R.name} Keep`, 'castle', { floors: 6, style: 'stone', wallColor: '#ecebe6', pitch: 'hip', slope: 2.0, roof: 'shingle', roofColor: '#3a5ac8' }, [[5 * TILE, -5 * TILE, 460, 220, C.violet, 1.6, 'neon']]);
+      water(...poolAt(rect(4, 30, 12, 8)));
     }
     // the casino's door on the podium's front (the first building), a named place for the gambling to come (GM3, GM4)
     const main = blds[0];
@@ -255,6 +265,9 @@ export function buildMesa(m, addProp) {
   // Old Downtown's covered street: lamps down its middle under the canopy, the old casinos either side fronting it
   const [cx0, cy0, cx1, cy1] = MESA.canopy;
   for (let x = cx0 + 3; x < cx1 - 2; x += 6) addProp(m, 'lamp', (x + 0.5) * TILE, (cy0 + cy1) / 2 * TILE, 5);
+  // the canopy of lights: strings of bulbs across the street every two tiles, high over the crowd, and two along it
+  for (let x = cx0 + 1; x < cx1; x += 2) { addProp(m, 'festoon', (x + 0.5) * TILE, cy0 * TILE + 4, 0, { tx: 0, ty: (cy1 - cy0) * TILE - 8, h: 110 }); out.lights = (out.lights || 0) + 1; }
+  for (const y of [cy0 + 0.2, cy1 - 0.2]) addProp(m, 'festoon', (cx0 + 0.5) * TILE, y * TILE, 0, { tx: (cx1 - cx0 - 1) * TILE, ty: 0, h: 112 });
   const warm = ['#d8b890', '#c89878', '#e0c8a0', '#b88868', '#d0a080', '#c8b098'];
   MESA.oldCasinos.forEach(([name, a, b, side], k) => {
     const N = side === 'N', y = N ? cy0 - 16 : cy1, w = b - a, d = 15;
