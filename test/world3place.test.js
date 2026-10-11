@@ -82,6 +82,20 @@ test('Metro City + Southbank on the v3 land: one road network, joined by the can
     while (st.length) { const j = st.pop(); for (const k of [j - 1, j + 1, j - W, j + W]) if (m.river[k] && !m.lake[k] && !seen[k]) { seen[k] = 1; st.push(k); } }
   }
   assert.equal(bodies, 1, `the canal's water is ${bodies} pieces`);
+  // the street plan at today's pitches (metro.js's anchors placed, its patterns' pitches as they are), more of its
+  // streets: the north-south pieces of its side streets between junctions - the block depths - against the island
+  // built in today's frame. (The east-west pieces - the spacing along a row - are still 1.4x today's: 32 tiles to 23;
+  // to find, WORLD-V3.md 8.4.)
+  const ref = generateCity(1337, { island: 'metro' });
+  const med = (v) => { const s = v.slice().sort((p, q) => p - q); return s[s.length >> 1]; };
+  const depths = (mm) => mm.edges.filter((e) => e.lvl === 0 && / Street$/.test(e.name || '') && e.kind !== 'alley').map((e) => {
+    const a = e.pts[0], b = e.pts[e.pts.length - 1], dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y);
+    return dy > 4 * dx ? dy / TILE : 0;
+  }).filter((v) => v > 0);
+  const A = depths(m), B = depths(ref), r = med(A) / med(B);
+  assert.ok(r > 0.87 && r < 1.13, `the median block depth is ${med(A)} tiles against today's ${med(B)} (x${r.toFixed(2)})`);
+  assert.ok(A.length > 1.15 * B.length, `${A.length} side-street pieces against today's ${B.length}`);
+  assert.ok(m.blocks.length > 1.25 * ref.blocks.length, `${m.blocks.length} blocks against today's ${ref.blocks.length}`);
 });
 
-test.todo('Metro City + Southbank on the v3 land: its blocks at today\'s size (metro.js\'s anchors placed, its pitches unscaled: WORLD-V3.md 8.4)');
+test.todo('Metro City + Southbank on the v3 land: the spacing of the side streets along a row as today\'s (32 tiles to 23: WORLD-V3.md 8.4)');

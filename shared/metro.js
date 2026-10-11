@@ -122,6 +122,24 @@ const NS_NAMES = ['Elm', 'Oak', 'Maple', 'Cedar', 'Pine', 'Walnut', 'Cherry', 'B
 // { aves: avenue lines (for the ramps), westEnd, northEnd(x), southEnd(x), plazas: [{ x0, y0, x1, y1 }] }.
 export function metroRoads(ctx) {
   const { m, Z, BAND, at, inPark, lines } = ctx;
+  // (ctx.tf: a place built at its gulf place, World v3 (docs/WORLD-V3.md 8.4) - the plan runs in the placed frame: its
+  // anchors (the avenues, Broadway, the through streets, AREAS, the hero corner) placed by tf.x / tf.y, on tile centres
+  // or edges as today's, its patterns' pitches as they are (today's block sizes, more of them at a bigger place), its
+  // hashes and names on today's coordinates read back by the offset (tf.lx / tf.ly: at scale 1, today's plan moved).
+  // Without tf every anchor is today's own.)
+  const tf = ctx.tf || null;
+  const px = tf ? (v) => (v % 1 ? Math.floor(tf.x(v)) + 0.5 : Math.round(tf.x(v))) : (v) => v;
+  const py = tf ? (v) => (v % 1 ? Math.floor(tf.y(v)) + 0.5 : Math.round(tf.y(v))) : (v) => v;
+  const hx = tf ? tf.lx : (v) => v, hy = tf ? tf.ly : (v) => v;
+  const AX = tf ? AVES_X.map((a) => ({ ...a, x: px(a.x), from: a.from && py(a.from) })) : AVES_X;
+  const AY = tf ? AVES_Y.map((a) => ({ ...a, y: py(a.y), from: a.from && px(a.from), bow: a.bow && { amp: a.bow.amp, x0: px(a.bow.x0), x1: px(a.bow.x1) } })) : AVES_Y;
+  const CV = tf ? new Map(AY.filter((a) => a.bow).map((a) => [a.y, (x) => aveY(a, x)])) : CURVED;
+  const TH = tf ? THROUGH.map((t) => ({ ...t, pts: t.pts.map(([x, y]) => [px(x), py(y)]) })) : THROUGH;
+  const NB = AY[AVES_Y.indexOf(NORTH_BLVD)];
+  const BW = tf ? [[px(748), py(580)], [px(774.5), py(556.5)], [px(868.5), aveY(NB, px(868.5))], [px(914), py(429)]] : BROADWAY;
+  const HR = tf ? { x: px(HERO.x), y: py(HERO.y) } : HERO;
+  const AR = tf ? AREAS.map((A) => ({ ...A, xs: A.xs.map(px), ys: A.ys.map(py) })) : AREAS;
+  const X1 = tf ? py(930) : 930, Y0 = tf ? px(520) : 520, Y1 = tf ? px(1060) : 1060, WEST_Y = tf ? py(556.5) : 556.5;
   const styleAt = (x, y) => { const i = at(x, y); return i < 0 ? null : ctx.styleOf(m.dist[i]); };
   // avenues: across the island, under the highway, over the river bridges
   const okAve = (vertical, bridge, beside) => (x, y) => {
@@ -154,8 +172,8 @@ export function metroRoads(ctx) {
   };
   const aves = [];
   const vEnds = new Map();
-  for (const a of AVES_X) {
-    for (const pts of clipLine([{ x: T(a.x), y: T(a.from || 200) }, { x: T(a.x), y: T(930) }], okAve(true, !!a.bridge), 8 * TILE)) {
+  for (const a of AX) {
+    for (const pts of clipLine([{ x: T(a.x), y: T(a.from || (tf ? py(200) : 200)) }, { x: T(a.x), y: T(X1) }], okAve(true, !!a.bridge), 8 * TILE)) {
       const l = { pts, kind: 'ave', lvl: 0, name: a.name, vx: a.x };
       lines.push(l); aves.push(l);
       if (!vEnds.has(a.x)) vEnds.set(a.x, []);
@@ -163,16 +181,16 @@ export function metroRoads(ctx) {
     }
   }
   let westEnd = null;
-  for (const a of AVES_Y) {
+  for (const a of AY) {
     const line = [];
-    for (let x = a.from || 520; x <= 1060; x += 4) line.push({ x: T(x), y: T(aveY(a, x)) });
+    for (let x = a.from || Y0; x <= Y1; x += 4) line.push({ x: T(x), y: T(aveY(a, x)) });
     for (const pts of clipLine(line, okAve(false, false, !!a.beside), 8 * TILE)) {
       const l = { pts, kind: a.kind || 'ave', lvl: 0, name: a.name, hy: a.y };
       lines.push(l); aves.push(l);
-      if (a.y === 556.5 && (!westEnd || pts[0].x < westEnd.x)) westEnd = pts[0];
+      if (a.y === WEST_Y && (!westEnd || pts[0].x < westEnd.x)) westEnd = pts[0];
     }
   }
-  for (const t of THROUGH) {
+  for (const t of TH) {
     const vertical = t.pts[0][0] === t.pts[1][0];
     for (const pts of clipLine(t.pts.map(([x, y]) => ({ x: T(x), y: T(y) })), okLocal(vertical), 8 * TILE)) {
       const l = { pts, kind: 'st', lvl: 0, name: t.name, vx: vertical ? t.pts[0][0] : undefined };
@@ -181,11 +199,11 @@ export function metroRoads(ctx) {
     }
   }
   // Broadway, between the frontage roads at either end
-  for (const p of clipLine(BROADWAY.map(([x, y]) => ({ x: T(x), y: T(y) })), (x, y) => { const i = at(x, y); return i >= 0 && !!m.land[i] && m.ringD[i] >= BAND - 1 && m.zone[i] === Z.CITY && !inPark(x, y); }, 8 * TILE, 8)) {
+  for (const p of clipLine(BW.map(([x, y]) => ({ x: T(x), y: T(y) })), (x, y) => { const i = at(x, y); return i >= 0 && !!m.land[i] && m.ringD[i] >= BAND - 1 && m.zone[i] === Z.CITY && !inPark(x, y); }, 8 * TILE, 8)) {
     const l = { pts: p, kind: 'blvd', lvl: 0, name: 'Broadway' };
     lines.push(l); aves.push(l);
   }
-  const bwY = (x) => { for (let k = 0; k + 1 < BROADWAY.length; k++) { const [x0, y0] = BROADWAY[k], [x1, y1] = BROADWAY[k + 1]; if (x >= x0 && x <= x1) return lerp(y0, y1, (x - x0) / (x1 - x0)); } return null; };
+  const bwY = (x) => { for (let k = 0; k + 1 < BW.length; k++) { const [x0, y0] = BW[k], [x1, y1] = BW[k + 1]; if (x >= x0 && x <= x1) return lerp(y0, y1, (x - x0) / (x1 - x0)); } return null; };
 
   // Junctions already laid along each street line - 'x<x>': the ys where streets meet the north-south
   // line x, 'y<y>': the xs where streets meet the east-west line y (an avenue's are shared by the cells
@@ -206,7 +224,7 @@ export function metroRoads(ctx) {
 
   const plazas = [];
   let nEW = 0, nNS = 0;
-  for (const A of AREAS) for (let ci = 0; ci + 1 < A.xs.length; ci++) for (let cj = 0; cj + 1 < A.ys.length; cj++) {
+  for (const A of AR) for (let ci = 0; ci + 1 < A.xs.length; ci++) for (let cj = 0; cj + 1 < A.ys.length; cj++) {
     const cell = { x0: A.xs[ci], x1: A.xs[ci + 1], y0: A.ys[cj], y1: A.ys[cj + 1], seed: ci * 31 + cj * 7 + A.name.length * 101 };
     const midX = (cell.x0 + cell.x1) / 2;
     const P = (x, y) => PATTERNS[styleAt(x, y)] || null;
@@ -215,7 +233,7 @@ export function metroRoads(ctx) {
     // the park keeps its square: no streets in the cell it fills
     if (inPark(midX, (cell.y0 + cell.y1) / 2) && inPark(cell.x0 + 10, (cell.y0 + cell.y1) / 2)) continue;
     const sides = ['x' + cell.x0, 'x' + cell.x1];
-    const curveY = (y, x) => { const f = CURVED.get(y); return f ? f(x) : y; };
+    const curveY = (y, x) => { const f = CV.get(y); return f ? f(x) : y; };
     // the cell's corners are junctions on its sides too (an avenue crossing, a through street's end)
     for (const x of [cell.x0, cell.x1]) for (const y of [cell.y0, cell.y1]) { endsOn('x' + x).push({ v: curveY(y, x) }); endsOn('y' + y).push({ v: x }); }
     // 1. east-west streets: block depths by the district's pattern; the last block takes what's left
@@ -224,13 +242,13 @@ export function metroRoads(ctx) {
     for (let y = cell.y0, k = 0; k < 12; k++) {
       const p = P(midX, y + 16) || P0;
       const lo = p.depth[0] * 0.72;
-      let want = y + Math.round(lerp(p.depth[0], p.depth[1], hash(midX, y, cell.seed + 11)));
-      if (HERO.x > cell.x0 && HERO.x < cell.x1 && HERO.y > y && HERO.y < cell.y1 && Math.abs(want - HERO.y) <= 12) want = HERO.y;   // (the hero corner's street)
+      let want = y + Math.round(lerp(p.depth[0], p.depth[1], hash(hx(midX), hy(y), cell.seed + 11)));
+      if (HR.x > cell.x0 && HR.x < cell.x1 && HR.y > y && HR.y < cell.y1 && Math.abs(want - HR.y) <= 12) want = HR.y;   // (the hero corner's street)
       if (cell.y1 - want < lo) break;
       const ny = settle(want, sides, bwSide, (v) => v - y >= lo && cell.y1 - v >= lo && bwSide.every((b) => Math.abs(b - v) >= BWSEP) && clearOf(sides, v));
       if (ny === null) break;
       // across an avenue from a street already there: the same street carries on
-      ewNames.push(named(endsOn(sides[0]), ny) || named(endsOn(sides[1]), ny) || `${EW_NAMES[(nEW++ + Math.floor(ny)) % EW_NAMES.length]} Street`);
+      ewNames.push(named(endsOn(sides[0]), ny) || named(endsOn(sides[1]), ny) || `${EW_NAMES[(nEW++ + Math.floor(hy(ny))) % EW_NAMES.length]} Street`);
       ys.push(ny); y = ny;
     }
     ys.push(cell.y1);
@@ -240,7 +258,7 @@ export function metroRoads(ctx) {
     // the streets across line up with them; a curving avenue along the cell's edge curves)
     const edgeY = (k, x) => curveY(ys[k], x);
     const settleIn = (x) => Math.max(0, Math.min(1, (x - cell.x0) / 8, (cell.x1 - x) / 8));
-    const ewY = (k, x) => (k === 0 || k === ys.length - 1 ? edgeY(k, x) : ys[k] + wob(ys[k] * 13 + cell.seed, x, (P(x, ys[k]) || P0).wobble || 0, 38) * settleIn(x));
+    const ewY = (k, x) => (k === 0 || k === ys.length - 1 ? edgeY(k, x) : ys[k] + wob(hy(ys[k]) * 13 + cell.seed, hx(x), (P(x, ys[k]) || P0).wobble || 0, 38) * settleIn(x));
     const ewKind = (k) => ((P(midX, ys[k]) || P0).lane || 'st');
     for (let k = 1; k + 1 < ys.length; k++) {
       const pts = [];
@@ -267,28 +285,28 @@ export function metroRoads(ctx) {
       // the streets that reach the row's north side from above (the row above, or across the avenue)
       const prev = endsOn(lns[0]).filter((e) => e.v > cell.x0 + 0.5 && e.v < cell.x1 - 0.5);
       const xsRow = [];
-      let hero = HERO.x > cell.x0 && HERO.x < cell.x1 && (Math.abs(ya - HERO.y) < 0.6 || Math.abs(yb - HERO.y) < 0.6);
+      let hero = HR.x > cell.x0 && HR.x < cell.x1 && (Math.abs(ya - HR.y) < 0.6 || Math.abs(yb - HR.y) < 0.6);
       for (let x = cell.x0, n = 0; n < 12; n++) {
         const p = P(x + 24, ym) || P0;
         const lo = p.len[0] * 0.6, hi = p.len[0] * 0.65;
-        const want = x + Math.round(lerp(p.len[0], p.len[1], hash(x, ya, cell.seed + 23)));
+        const want = x + Math.round(lerp(p.len[0], p.len[1], hash(hx(x), hy(ya), cell.seed + 23)));
         const fits = (v) => v - x >= lo && cell.x1 - v >= hi && bwRow.every((b) => Math.abs(b - v) >= BWSEP) && clearOf(lns, v);
         let nx = null;
         // the hero corner's north-south street, before the plan's own next one would crowd it or run past it
-        if (hero && HERO.x > x && want >= HERO.x - MINSEP && fits(HERO.x)) { nx = HERO.x; hero = false; }
+        if (hero && HR.x > x && want >= HR.x - MINSEP && fits(HR.x)) { nx = HR.x; hero = false; }
         // carry a street from above straight on (now and then with a real jog) when one is about here
         const cont = prev.find((q) => q.v > x + lo && Math.abs(q.v - want) < p.len[0] * 0.45);
-        if (nx === null && cont && hash(cont.v, ya, cell.seed + 29) < p.through) {
+        if (nx === null && cont && hash(hx(cont.v), hy(ya), cell.seed + 29) < p.through) {
           const tries = [cont.v];
-          if (hash(cont.v, ya, cell.seed + 31) < p.jog) {
-            const s = hash(cont.v, ya, cell.seed + 37) < 0.5 ? -1 : 1, j = MINSEP + Math.floor(hash(cont.v, ya, cell.seed + 41) * 7);
+          if (hash(hx(cont.v), hy(ya), cell.seed + 31) < p.jog) {
+            const s = hash(hx(cont.v), hy(ya), cell.seed + 37) < 0.5 ? -1 : 1, j = MINSEP + Math.floor(hash(hx(cont.v), hy(ya), cell.seed + 41) * 7);
             tries.unshift(cont.v + s * j, cont.v - s * j);
           }
           nx = tries.find(fits) ?? null;
         }
         if (nx === null) nx = settle(want, lns, bwRow, fits);
         if (nx === null) break;
-        const name = named(prev, nx) || `${NS_NAMES[(nNS++ + Math.floor(nx)) % NS_NAMES.length]} Street`;
+        const name = named(prev, nx) || `${NS_NAMES[(nNS++ + Math.floor(hx(nx))) % NS_NAMES.length]} Street`;
         xsRow.push({ x: nx, name });
         for (const key of lns) endsOn(key).push({ v: nx, name });
         x = nx;
@@ -299,7 +317,7 @@ export function metroRoads(ctx) {
         const y0 = ewY(k, s.x), y1 = ewY(k + 1, s.x);
         const pts = [];
         const n = Math.max(2, Math.ceil(Math.abs(y1 - y0) / 2));
-        for (let i = 0; i <= n; i++) { const t = i / n, y = lerp(y0, y1, t); pts.push({ x: T(s.x + wob(s.x * 7 + cell.seed, y, amp, 34) * Math.sin(Math.PI * t)), y: T(y) }); }
+        for (let i = 0; i <= n; i++) { const t = i / n, y = lerp(y0, y1, t); pts.push({ x: T(s.x + wob(hx(s.x) * 7 + cell.seed, hy(y), amp, 34) * Math.sin(Math.PI * t)), y: T(y) }); }
         for (const piece of clipLine(pts, okLocal(true), 6 * TILE, 12)) lines.push({ pts: piece, kind: p.lane || 'st', lvl: 0, name: s.name });
       }
       // 3. the blocks of this row: service alleys along the middle, passages, plazas
@@ -307,23 +325,23 @@ export function metroRoads(ctx) {
       for (let b = 0; b + 1 < bx.length; b++) {
         const x0 = bx[b], x1 = bx[b + 1], cx = (x0 + x1) / 2;
         const p = P(cx, ym) || P0;
-        const h = hash(cx, ym, cell.seed + 53);
-        if (hash(cx, ym, cell.seed + 59) < p.plaza && x1 - x0 < 80 && yb - ya < 70) { plazas.push({ x0, y0: ya, x1, y1: yb }); continue; }
+        const h = hash(hx(cx), hy(ym), cell.seed + 53);
+        if (hash(hx(cx), hy(ym), cell.seed + 59) < p.plaza && x1 - x0 < 80 && yb - ya < 70) { plazas.push({ x0, y0: ya, x1, y1: yb }); continue; }
         if (yb - ya >= p.alleyMin && h < p.alley) {
           // along the middle of the block (a straight alley on tile centres; parallel to a curving street)
-          const f = 0.48 + (hash(cx, ym, cell.seed + 61) - 0.5) * 0.12;
-          const curved = CURVED.has(ya) || CURVED.has(yb) || (P(cx, ya) || P0).wobble;
+          const f = 0.48 + (hash(hx(cx), hy(ym), cell.seed + 61) - 0.5) * 0.12;
+          const curved = CV.has(ya) || CV.has(yb) || (P(cx, ya) || P0).wobble;
           const pts = [];
           if (!curved) { const ay = Math.floor(ya + (yb - ya) * f) + 0.5; pts.push({ x: T(x0), y: T(ay) }, { x: T(x1), y: T(ay) }); }
           else for (let x = x0; x <= x1 + 0.01; x += 2) { const xx = Math.min(x, x1); pts.push({ x: T(xx), y: T(lerp(ewY(k, xx), ewY(k + 1, xx), f)) }); }
           for (const piece of clipLine(pts, okLocal(false), 6 * TILE, 12)) lines.push({ pts: piece, kind: 'alley', lvl: 0, name: 'Service Alley' });
         }
-        const ax = Math.floor(x0 + (x1 - x0) * (0.42 + hash(cx, ym, cell.seed + 71) * 0.16)) + 0.5;
+        const ax = Math.floor(x0 + (x1 - x0) * (0.42 + hash(hx(cx), hy(ym), cell.seed + 71) * 0.16)) + 0.5;
         // a passage through: never out right at a junction, nor across Broadway
         const by = bwY(ax);
         const passClear = lns.every((key) => endsOn(key).every((e) => Math.abs(e.v - ax) >= 6)) && bwRow.every((b) => Math.abs(b - ax) >= BWSEP)
           && (by === null || by < Math.min(ewY(k, ax), ewY(k + 1, ax)) - 8 || by > Math.max(ewY(k, ax), ewY(k + 1, ax)) + 8);
-        if (x1 - x0 >= p.passMin && passClear && hash(cx, ym, cell.seed + 67) < p.passage) {
+        if (x1 - x0 >= p.passMin && passClear && hash(hx(cx), hy(ym), cell.seed + 67) < p.passage) {
           const pts = [{ x: T(ax), y: T(ewY(k, ax)) }, { x: T(ax), y: T(ewY(k + 1, ax)) }];
           for (const piece of clipLine(pts, okLocal(true), 6 * TILE, 12)) lines.push({ pts: piece, kind: 'alley', lvl: 0, name: 'Back Alley' });
         }
@@ -333,7 +351,7 @@ export function metroRoads(ctx) {
   const end = (list, pick) => { if (!list || !list.length) return null; return pick(list); };
   return {
     aves, plazas, westEnd,
-    northEnd: (x) => end(vEnds.get(x) || vEnds.get(x + 0.5), (l) => l.slice().sort((p, q) => p.pts[0].y - q.pts[0].y)[0].pts[0]),
-    southEnd: (x) => end(vEnds.get(x) || vEnds.get(x + 0.5), (l) => { const s = l.slice().sort((p, q) => q.pts[q.pts.length - 1].y - p.pts[p.pts.length - 1].y)[0]; return s.pts[s.pts.length - 1]; }),
+    northEnd: (x) => end(vEnds.get(px(x)) || vEnds.get(px(x + 0.5)), (l) => l.slice().sort((p, q) => p.pts[0].y - q.pts[0].y)[0].pts[0]),
+    southEnd: (x) => end(vEnds.get(px(x)) || vEnds.get(px(x + 0.5)), (l) => { const s = l.slice().sort((p, q) => q.pts[q.pts.length - 1].y - p.pts[p.pts.length - 1].y)[0]; return s.pts[s.pts.length - 1]; }),
   };
 }

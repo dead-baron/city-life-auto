@@ -669,10 +669,11 @@ function layoutRoads(m, rand) {
 
   // the streets of Metro City (metro.js): the avenues across the island, Broadway, and each district's own
   // irregular blocks, service alleys and plazas between them
+  // (a placed build: the plan runs in the placed frame - its anchors placed, its pitches today's, its hashes on today's
+  // coordinates: metro.js tf - so its lines are placed already)
+  const metro = metroRoads({ m, Z, BAND, at, inPark: PL ? (x, y) => inPark(IX(x), IY(y)) : inPark, lines, ringH, styleOf: (d) => DISTRICTS[d].style, gridded: (d) => !OWN_PLAN.has(d), tf: PL ? { x: PX, y: PY, lx: LX, ly: LY } : null });
   mark();
-  const metro = metroRoads({ m, Z, BAND, at: placed(at), inPark, lines, ringH, styleOf: (d) => DISTRICTS[d].style, gridded: (d) => !OWN_PLAN.has(d) });
-  placeNew();
-  m.plazas = PL ? metro.plazas.map((q) => ({ ...q, x0: PX(q.x0), y0: PY(q.y0), x1: PX(q.x1), y1: PY(q.y1) })) : metro.plazas;
+  m.plazas = metro.plazas;
   // coast drives (around the city and Southbank, away from the ring) and river drives
   const coastOk = (x, y) => { const z = zoneOf(x, y); return (z === Z.CITY || z === Z.SOUTH) && rD(x, y) >= BAND + 1 && !inPark(IX(x), IY(y)); };
   for (const c of contours(m.distSea, W, H, 9 * 4, (x, y) => { const z = m.zone[y * W + x]; return z === Z.CITY || z === Z.SOUTH; }, Math.floor(PX(540)), Math.floor(PY(220)), Math.max(Math.ceil(PX(1060)), OPTS?.box?.[2] ?? 0), Math.max(Math.ceil(PY(920)), OPTS?.box?.[3] ?? 0))) {   // (OPTS.box: a place's land reaching past today's - Metro City's new east shore)
