@@ -423,7 +423,7 @@ export class Music {
       // cents off the next, as a real instrument's are. The lead almost a sine, sung: in over 15 ms, held, a vibrato
       // coming in after a tenth of a second, let go more slowly. ev.v: the fundamental's peak in the recording's units)
       case 'mkeys': case 'mlead': {
-        const c = this.ctx, lead = ev.p === 'mlead', f = hz(ev.n[0] + tn), dur = ev.len * sd, end = t + dur + (lead ? 1.2 : 0.9);
+        const c = this.ctx, lead = ev.p === 'mlead', f = hz(ev.n[0] + tn), dur = ev.len * sd, end = t + dur + (lead ? 1.2 : f > 480 ? 0.9 : 0.3);
         const key = lead ? 'leadW' : 'keyW', H = lead ? LEADW : KEYW;
         const W = this[key] || (this[key] = { w: c.createPeriodicWave(new Float32Array(H.length), Float32Array.from(H)), k: wavePeak(H) });
         const o = c.createOscillator(), g = c.createGain(), v = ev.v * W.k * (0.95 + R() * 0.1);

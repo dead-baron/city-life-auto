@@ -5527,6 +5527,8 @@ played by the engine's own voices: no samples of them, only the beat's one-shots
   comes in after a tenth of a second: 6.3 Hz and about 25 cents either way, measured on the held F.
 - **The duck:** both go through the song's ducked gain, as the bass does, dipping under the snares and kicks as the
   mix does.
+- **Its cost:** plain oscillators and gains, no filters: the bass, keys and lead keep at most 20 oscillators running
+  at once (12 on average). A low note stops soon after it's let go, as it falls silent.
 - **How close:**
   - Each note's peak is within 0.7 dB of the recording's. Its envelope, tail included, is within about 4 dB on
     average every half step (where either is within 20 dB of the peak). The bench's render sits 17 dB under the
