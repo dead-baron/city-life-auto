@@ -7576,7 +7576,8 @@ towns "less dense".
 - **The looks:** art v2 draws a town's houses and shop rows in wood siding - Timber Bend's dark timber, Willow
   Crossing's white and cream clapboard, the beach towns' pastel boards - one or two storeys, shingled pitched roofs,
   false fronts on most shopfronts, the motel, clinic and sheriff two storeys at most; gardens between (no striped car
-  parks); the classic renderer paints their facades in the same woods.
+  parks), with each town's trees (firs and cedars at Timber Bend, oaks and apple trees at Willow Crossing, palms at
+  Sandpiper Bay); the classic renderer paints their facades in the same woods.
 - Not done: the towns' own prefabs (the wooden shopfronts with porches, the sawmill and log yard, the lodge, the white
   church, the grain elevator and silos, the feed store, the co-op's loading dock, the surf shop, cottages, beach houses
   on stilts) - docs/WORLD-V3.md 8.13.1's "what's left". Nothing live changes: the world hash stays 6b6e16fdef9f; the

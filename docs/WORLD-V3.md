@@ -3004,7 +3004,9 @@ beach style's `plaza` brown paving); few plain roofs anywhere.
 blocks in wood siding - the logging town's dark timber, the farm town's white and cream clapboard (a red barn board
 now and then), the beach towns' pastel boards - one or two storeys under a shingled gable or hip roof (a section up to
 16 tiles: the generator's buildings are cut into sections no bigger), a shopfront six times in ten flat-roofed behind a
-false front (its parapet); the motel, the clinic and the sheriff two storeys at most. The classic renderer (`client/render/buildings.js`) paints the towns' facades in the same woods (`TOWN_WALLS`).
+false front (its parapet); the motel, the clinic and the sheriff two storeys at most; the gardens' trees by town -
+Timber Bend's firs, cedars and spruces, Willow Crossing's oaks, maples and apple trees (the oldtown style's cherries
+and magnolias were the city's), Sandpiper Bay's palms. The classic renderer (`client/render/buildings.js`) paints the towns' facades in the same woods (`TOWN_WALLS`).
 
 **Northshore's beach towns less dense** (district 54, 8.14): the beach town's style, sparser still (`TOWN_STYLES[54]`:
 lots 16 tiles at least, houses three to one over cafes and bars, gardens for the gaps, almost no plain roofs).
@@ -3042,8 +3044,10 @@ Willow Road's south arm thinning into the fields. What looks wrong:
   (the clinic, the sheriff, the motel, the sawmill as the industrial prefab) in its paving; the rows at the town's ends
   are flat roofs - from above the wood siding only shows on the south walls. The new prefabs are what's missing: the
   wooden shopfronts with porches, the sawmill with its log yard, the lodge.
-- **Willow Crossing's corners are asphalt:** the generator's lots and the wide sidewalks where the loops meet the main
-  street; the grain elevator is the industrial prefab (no silos), the co-op the farmstead.
+- **Willow Crossing's long grey roofs:** the rows along Willow Road's south arm and at the east end of the main street
+  are long plain buildings and a car park (the market strip's); the striped car parks the `yard` filler laid at every
+  corner are gardens now (the first pictures had them); the grain elevator is the industrial prefab (no silos), the
+  co-op the farmstead.
 - **Sandpiper Bay's boardwalk is a stair-step** on the diagonal shore (planks by columns), the pier plain planks (no
   rails, no end); the beachfront row along Pier Street is two houses; the green between the loops and the sand is park
   (no street faces it). A third loop along the top of the beach (Beach Street, 24 tiles below Pier Street) was tried:

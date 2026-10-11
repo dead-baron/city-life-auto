@@ -1661,6 +1661,8 @@ function plantFor(c, p) {
     if (st === 'park') return [pick(c.M.lake && c.M.lake[c.M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))] ? ['willow'] : ['oak', 'maple', 'oak', 'willow', 'cherry', 'mapleAutumn', 'redMaple'], u), 1.4 + u2 * 0.2];
     if (st === 'beach' || coastal) return [pick(['coconut', 'royal', 'leaning', 'fanSkirt'], u), 1.25];
     if (st === 'luxury') return [t === 'tree_a' ? pick(['royal', 'royal', 'cypress', 'olive', 'magnolia'], u) : pick(['magnolia', 'flowerTree', 'cypress', 'olive'], u), 1.3];
+    if (di === 57) return [pick(['fir', 'cedar', 'spruce', 'fir', 'maple'], u), 1.35];   // (Timber Bend's gardens: its woods' trees; Willow Crossing's shade and orchard trees - 8.13.1)
+    if (di === 58) return [pick(['oak', 'maple', 'apple', 'oak'], u), 1.3];
     if (st === 'oldtown') return [pick(['cherry', 'olive', 'cypress', 'magnolia', 'flowerTree', 'street'], u), 1.3];
     if (st === 'arts') return [pick(['ginkgo', 'street', 'cherry', 'ginkgo', 'magnolia'], u), 1.3];
     if (st === 'houses' || st === 'rural') return [pick(t === 'tree_a' ? ['oak', 'maple', 'birch', 'mapleAutumn', 'flowerTree', 'apple'] : ['cherry', 'magnolia', 'maple', 'oak', 'redMaple'], u), 1.35];
