@@ -3,19 +3,22 @@
 // town on the east arm), built by today's generator on new ground. For the whole-world build only (shared/world3-world.js
 // calls these, one call each; the page and the city worker never import this module):
 // - paintTowns3(L, W, H): each town's district (shared/mapcore.js DISTRICTS 57-59) and a built zone painted on the land
-//   layer round the skeleton's town point, before the build reads it - on land, off the highways' room (24 tiles of
-//   their line), the main line (18) and its stations (30). The biomes read the land layer's districts, so their ground
-//   and dressing make way (8.8: world3-biomes.js dress3 dresses 48-56, the generator's redwoodGroves Highland Woods' 47).
-// - layTowns3(lines, m): a street grid in each town, clipped to its ground, crossing the arterials that run through it
-//   (the generator joins lines where they cross); the main street an east-west arterial, so the town gets bus stops.
+//   layer in its ground (8.13.1: wide along the main street, narrow along the lanes out), before the build reads it -
+//   on land (not the beach's sand), off the highways' room (24 tiles of their line), the main line (18) and its
+//   stations (30). The biomes read the land layer's districts, so their ground and dressing make way (8.8:
+//   world3-biomes.js dress3 dresses 48-56, the generator's redwoodGroves Highland Woods' 47).
+// - layTowns3(lines, m) (8.13.1): the arterial through each town pulled straight east-west as its main street (and the
+//   others through it onto its axes), the loops of side streets off it and a lane out into the country; the main
+//   street an arterial, so the town gets bus stops. pulledAt: where a town takes an arterial off its skeleton course.
+// - townsFront(m) (8.13.1): the beach town's boardwalk along the top of its sand and its pier out over the sea.
 // - TOWN_SPECIALS: the planned businesses (the generator's SPECIALS form, handed in as opts.specials, so only the v3
 //   build places them): the clinic, the sheriff, a convenience store that becomes the gas station, the diner and each
 //   town's own places (part 1.5's table).
+// - TOWN_STYLES (8.13.1): the towns' own building styles (and Northshore's beach towns' sparser one), handed in as
+//   opts.styles by district: the generator's blocks and buildings by them in place of the district's style.
 // - townsDone(m): each town's planned store (a convenience store, so buildCornerStores' five gas stations stay in the
 //   city) turned into its gas station with pumps, a bus stop on the main street if buildBusStops left it none, and
 //   the summary in m.world3.towns.
-// The blocks and buildings are the generator's, by the district's style (STYLE): oldtown for the two country towns
-// (shops, houses, a diner, the corner store), beach for Sandpiper Bay (beach houses, a beach bar, a cafe).
 import { TILE, T } from './constants.js';
 import { skeletonLines, STATIONS } from './world3-skeleton.js';
 import { measure } from './geom.js';
