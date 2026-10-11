@@ -374,16 +374,16 @@ function veins(map, L) {
     }
   };
   // above ground: round the inside of the Granite Quarry's pit (its stepped faces), the outcrops by the mine
+  // (each pit: the v3 world has the Granite Quarry's and Copper Gulch Mine's - docs/WORLD-V3.md 8.19)
   const site = (map.countrySites || []).find((q) => q.type === 'quarry');
-  const pit = (map.quarries || [])[0];
-  if (pit) {
+  for (const pit of map.quarries || []) {
     const spots = [];
     for (let k = 0; k < 24; k++) {
       const t = (k + 0.5) / 24;
       spots.push({ x: pit.x + 30 + t * (pit.w - 60), y: pit.y + 34 }, { x: pit.x + 30 + t * (pit.w - 60), y: pit.y + pit.h - 30 });
       if (k < 12) { const u = (k + 0.5) / 12; spots.push({ x: pit.x + 30, y: pit.y + 40 + u * (pit.h - 80) }, { x: pit.x + pit.w - 30, y: pit.y + 40 + u * (pit.h - 80) }); }
     }
-    add(spots, 0, 0, 7, (site && site.name) || 'the quarry');
+    add(spots, 0, 0, 7, pit.name || (site && site.name) || 'the quarry');
   }
   if (L.cave) {
     const K = L.cave, X = K.X, f = K.face;

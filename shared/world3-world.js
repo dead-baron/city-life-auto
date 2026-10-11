@@ -32,6 +32,7 @@ import { paintDesert3, layDesert3, buildDesert, desertDone, DESERT_SPECIALS, DES
 import { subwayLoops } from './world3-subway.js';
 import { paintWater3, buildWater3, waterDone } from './world3-water.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
+import { wildSites3, wildDone, movedAt, wildDist } from './world3-wild.js';
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -82,7 +83,8 @@ export function worldOpts(asked) {
     return NONE;
   };
   // (a position on today's water - a pier, a spot by the shore - takes the piece of the nearest land within 8 tiles)
-  const pick = (x, y) => {
+  const pick = (x, y) => { const p = pick0(x, y); return p === NONE ? movedAt(x, y) || NONE : p; };   // (H44, 8.19: the wild land's nature sites moved whole - world3-wild.js MOVED)
+  const pick0 = (x, y) => {
     const p = pieceAt(x, y);
     if (p) return p;
     for (let r = 1; r <= 8; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx += (Math.abs(dy) === r ? 1 : 2 * r)) { const q = pieceAt(x + dx, y + dy); if (q) return q; }
@@ -118,7 +120,7 @@ export function worldOpts(asked) {
   const box = [W, H, 0, 0];
   for (const [x, y] of metro.poly) { box[0] = Math.min(box[0], x - 40); box[1] = Math.min(box[1], y - 40); box[2] = Math.max(box[2], x + 40); box[3] = Math.max(box[3], y + 40); }
   const o = {
-    world: { pick, base, placeLine, cls, pieces },
+    world: { pick, base, placeLine, cls, pieces, dist: wildDist },   // (dist: today's wild districts' v3 regions, for the moved nature sites - 8.19)
     place: base,
     islandAt: [],
     noRail: true,     // (the railway is the skeleton's main line now)
@@ -186,6 +188,7 @@ export function worldOpts(asked) {
       if (m.world3.mesa) m.world3.mesa.done = mesaDone(m);   // (Lucky Mesa's gas station, bus stop and summary: world3-mesa.js, 8.15)
       if (m.world3.desert) m.world3.desert.done = desertDone(m);   // (8.18: the assay office's counter, the summary: world3-desert.js)
       if (m.world3.west) m.world3.west.done = westDone(m);   // (8.20: Egret Point, the raceway's race, the summary: world3-west.js)
+      if (m.world3.wild) m.world3.wild = wildDone(m, m.world3.wild);   // (8.19: what was built on the wild land's lots: world3-wild.js)
       const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
       m.world3.housesMoved = seatStationHouses(m);   // (8.14: each station's house on open ground)
       if (H3) { m.world3.railCleared = clearRailDressing(m, H3.removeProps); clearBeachFront(m, H3.removeProps); }   // (8.14: no tree over the main line or a platform; the promenade and car parks clear)
@@ -241,6 +244,7 @@ export function worldOpts(asked) {
       m.world3.mesa = { painted: mesa, streets: layMesa3(lines, m) };   // (Lucky Mesa's Strip and side streets: shared/world3-mesa.js, 8.15)
       m.world3.desert = { painted: desert, streets: layDesert3(lines, m) };   // (Copper Gulch's main street and side streets: shared/world3-desert.js, 8.18)
       m.world3.west = { painted: west, streets: layWest3(lines, m) };   // (Egret Point's Harbor Road, Light Road, Raceway Road: shared/world3-west.js, 8.20)
+      m.world3.wild = wildSites3(lines, m);   // (H44, 8.19: today's wild land's country sites at their v3 spots, each with its road in: shared/world3-wild.js)
     },
   };
   return o;

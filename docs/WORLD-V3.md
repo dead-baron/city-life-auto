@@ -3861,3 +3861,81 @@ falls (raised ground: the land has no heights yet); the village clustered round 
 market's own look (stalls, ice tables: `mstall`, `fishtable`); the charter's run to the outer islands; R2's inland places
 (a lake with a boathouse and islands, the beaver pond, the hunting camp - H44's wild places may bring some); crabbing and
 beachcombing as activities; the raceway's kerbs and fence.
+
+### 8.19 Today's wild land's places in the v3 world: Highland Woods', Granite Peaks' and Dry Creek's (2026-10-11, H44, in progress)
+
+8.6 sends whatever of today's world no piece builds off the frame - today's Highland Woods (district 29), Granite Peaks
+(33) and Dry Creek (9, 41, 42) - but part 1.5 moves their designed places into the new regions, and the owner split Dry
+Creek between Willow Valley and the Red Rock Desert (part 5). All of it in `shared/world3-wild.js` (one call from the
+world build's `lines` hook, `wildSites3`, and `wildDone` from its `done`; `movedAt` and `wildDist` handed to the
+generator through `world`); the page and the city worker never import it. The live world doesn't change (the world hash
+stays 6b6e16fdef9f; the city worker 34 files, 358 KB of 360).
+
+- **The country sites by rules** (`WILD_SITES`, the placement table: each of today's `shared/countryside.js` SITES of the
+  wild districts at a spot in its v3 region): placed after the skeleton's roads and the towns' streets are laid, as
+  today's are - a lot of open ground of the site's region within 60 tiles of its spot, clear of every road line (the
+  highways and ramps by 24 tiles), the skeleton's main line (18) and stations (30), the towns (their own districts),
+  the desert's places (8.18's boxes, 12 tiles round) and each other; its own access road to the nearest road it may join
+  within 90 tiles (rural or dirt, as today's - never a highway: they cross nothing at grade - nor a tunnel's stretch),
+  over dry land, across no highway and clear of the main line. `map.js` buildCountryside builds what stands on each lot
+  as today's. All fifteen are placed:
+  - Highland Woods: **the Highland roadside stop** (quick stop, diner, filling station) and **Pine Ridge Campground** either
+    side of Pine Lake on Timber Road, **the Highland Radio Mast** further east on it.
+  - Granite Peaks: **the Granite Quarry** off Falls Pass Road (the pit, its benches and crane, the ore round its faces),
+    **the Granite Peak Observatory** below Summit Road (its scopes: the stargazing), **Granite Cove Campground** above
+    Lookout Road, **Windy Point Wind Farm** at Lookout Road's west end, **North Ridge Mast** above Summit Road.
+  - The Red Rock Desert's west (Dry Creek's desert): **the Dry Creek Oil Field** north of Mine Road, **The Rusty Spur**
+    (the biker roadhouse, `m.roadhouse`) on Mine Road by the Desert Highway's crossing, west of the motel, **the Route
+    9 stop** at the skeleton's Route 9 point, **Sunfield Solar Farm** and **the Starlite Drive-In** on Route 9, **the Mesa
+    Radio Mast** and **the Dry Creek Wind Farm** on Mesa Road.
+- **The nature sites moved whole** (`MOVED`: a square of today's tiles round each site's anchor goes to its v3 spot at
+  scale 1): the world build's `pick` (`shared/world3-world.js`) asks `movedAt` for a position no piece builds, so the
+  generator's pins carry the site's anchor - and today's lake there (islands.js LAKES) - to the spot;
+  `shared/naturesites.js` takes the anchors through `PXs` / `PYs` and the district through `DS` (`H.place.d`, the world
+  build's `wildDist`: 29 -> 47, 33 -> 48, 9 and 42 -> 49, 41 -> 50; one-line hook in `map.js`). Moved: **Pine Lake** (its
+  lake, its camp and paths, between the stop and the campground as today's), **Summit Tarn** with its falls, creek and cabin meadow, **Granite Hot
+  Springs** above Summit Road (the road below it is its way in), **The Sentinel Stones** by the observatory's road;
+  Dry Creek's **boneyard** (the stored planes you strip for parts), **Old Mission Ruins** (the bells) and **the balloon
+  field** in the desert's west, between the Desert Highway and Canyon Road.
+- **Every pit, every mine** (8.18's list): `shared/underground.js` lays the ore veins round each quarry's faces (the
+  Granite Quarry's and Copper Gulch Mine's, each named), `server/systems/places.js` takes every mine's seams.
+
+Tests: `test/world3wild.test.js` (one world build: every wild country site in the table; each placed and built once, near
+its spot, on its region's ground, its road in laid, on the one network, reaching its gate and meeting no highway; every
+lot clear of the highways', the main line's and the stations' room; The Rusty Spur, two quarries with their veins; each
+moved nature site built once at its spot on its region's ground, its landmark clear of the highways and the main line,
+no road over Summit Tarn or Pine Lake), `test/world3.test.js`, `test/world3desert.test.js` (Copper Gulch's pit and
+its veins with the Granite Quarry's beside it), `test/world3roads.test.js`, `test/world3world.test.js`: all pass.
+
+Pictures (`tools/world3-world-map.mjs --towns --only pinelake,tarn,summit,drycreek`; `WILD_VIEWS`, also `quarry`,
+`route9`): `docs/world-v3-town-pinelake.png`, `-tarn.png`, `-summit.png`, `-drycreek.png`. What looks right: the stop's forecourt and
+diner on its spur off Timber Road with the lake and its trail north-west of it and the campground's tents by the road
+to the west, all in the dense redwoods; the hot springs' three pools, lanterns and fence on the slope above Summit Road
+with their path down to it; the observatory's dome on its lot at the end of its road; the tarn's dark water with the
+falls and the creek running south from it. What looks wrong:
+- **The main line runs close past Pine Lake** (outside its room, but its lake trail runs to within a few tiles of it).
+- **The Sentinel Stones and Summit Tarn stand in the snow** (the peaks' snow class above the snow line is painted over
+  their ground): they read as stones and a tarn on a snowfield; no trail reaches the stones (the observatory's road is
+  just beyond the 40 tiles they look for one in), no road or trail reaches the tarn's cabin.
+- The radio mast is hard to make out at 1/8; the campground is small at this scale.
+- **Dry Creek's desert** (`-drycreek.png`): the boneyard's twelve planes in their fenced rows read well, the balloon field
+  is a green circle with three balloons, the oil field's tanks and shed sit at the end of their road north of Mine Road,
+  The Rusty Spur on its lot north of Mine Road west of the Desert Highway. Wrong: **8.18's dry wash winds straight
+  through the boneyard** (its gravel under the plane rows: the wash wants to keep off the moved sites, or the boneyard
+  off the wash); **the moved sites have no road in** (the boneyard, the balloon field: today's stood by today's roads -
+  each wants a track to Mine Road or the highway's frontage); The Rusty Spur stands against **a strip of redwoods**
+  between the valley and the desert (8.8's biomes leave Highland Woods' ground in the gap between their polygons at
+  x 3640-3700); the oil field's pumpjacks don't read at 1/8.
+
+**What's left** (in order): the rest of the nature sites - most of `shared/naturesites.js`' wild ones are written in
+today's coordinates and districts and look for today's roads by name, so each wants its anchor through `PXs`, its
+district through `DS` and a spot in `MOVED`: Highland Woods' Redwood Creek and its falls and Giants Loop (both on
+today's Highland Road - they want the road they stand by named, or found), Fern Gorge (the Ridge Track), Redwood Cove
+(a cove on today's west shore: the woods have no shore now - a lake shore or the Egret Coast), the trapper's cabin
+(the beaver pond on Redwood Creek); Granite Peaks' Granite Cove (a bay of the sea), the Old Granite Mine (it scans a
+fixed box of today's for its spot; then the cave world takes a list of mines - one cave per mine), Ridge Fire Lookout
+and the Ridge Trail Hunting Camp (both on the Ridge Trail); Dry Creek's farmland into Willow Valley's east side (map.js
+`buildFarm`, `DRY_CREEK_ESTATES`, the fields, the Willow River's orchard and vineyard - skipped in the world build
+now), its desert's nature sites (Red Rock Wash, Canyon Oasis, Mirage Lake and its camp, the boneyard, the mission ruins,
+the Canyon Track hunting camp, Splash Canyon Water Park, Route 9's airstrip behind the stop); trails to the stones, the
+tarn, the boneyard, the ruins and the balloon field (they have none yet).

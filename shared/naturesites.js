@@ -108,6 +108,7 @@ const anyProp = (m, x0, y0, x1, y1, pred) => (PG && PG.m === m ? PG.any(x0, y0, 
 // position hash's tile read back in today's coordinates, so a place built at scale 1 is today's, moved: map.js)
 const PXs = (H, x, y) => (H.place ? H.place.x(x, y) : x), PYs = (H, y) => (H.place ? H.place.y(y) : y);
 const LXs = (H, x) => (H.place ? H.place.lx(x) : x), LYs = (H, y) => (H.place ? H.place.ly(y) : y);
+const DS = (H, d) => (H.place?.d ? H.place.d(d) : d);   // (a site's district: the world build's v3 region for today's wild ones)
 export function buildNatureSites(m, H) {
   PG = propGrid(m);
   try { buildSites(m, H); } finally { PG = null; }
@@ -392,8 +393,8 @@ function lavenderFields(m, H) {
 // there; a gate from the airstrip's side with the yard's sign, oil drums about.
 function boneyard(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const X0 = 1248, X1 = 1279, Y0 = 632, Y1 = 704;
-  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 42 || m.dist[i] === 41);
+  const X0 = PXs(H, 1248, 632), X1 = X0 + 31, Y0 = PYs(H, 632), Y1 = Y0 + 72;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === DS(H, 42) || m.dist[i] === DS(H, 41));
   for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1 - 4; tx++) if (!open(at(tx, ty))) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= X0 * TILE && q.x < (X1 + 1) * TILE && q.y >= Y0 * TILE && q.y < (Y1 + 1) * TILE) dropProp(m, i); });
@@ -471,8 +472,8 @@ function marketSquare(m, H) {
 // it); heather and paintbrush round them, and a worn path up from the observatory road.
 function sentinelStones(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const CX = 744, CY = 31;
-  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !(m.reserve[i] & RES) && m.dist[i] === 33;
+  const CX = PXs(H, 744, 31), CY = PYs(H, 31), D = DS(H, 33);
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !(m.reserve[i] & RES) && m.dist[i] === D;
   for (let ty = CY - 4; ty <= CY + 4; ty++) for (let tx = CX - 5; tx <= CX + 5; tx++) if (!open(at(tx, ty))) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x / TILE - CX, q.y / TILE - CY + 3) < 9) dropProp(m, i); });
@@ -574,8 +575,8 @@ function fernGorge(m, H) {
 // cloister's arcade with two arches down, rubble everywhere; saguaros, prickly pear and boulders round it.
 function missionRuins(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const CX = 1190, CY = 405;
-  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 9 || m.dist[i] === 41);
+  const CX = PXs(H, 1190, 405), CY = PYs(H, 405);
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === DS(H, 9) || m.dist[i] === DS(H, 41));
   for (let ty = CY - 6; ty <= CY + 7; ty++) for (let tx = CX - 6; tx <= CX + 6; tx++) if (!open(at(tx, ty))) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && Math.abs(q.x / TILE - CX) < 7 && Math.abs(q.y / TILE - CY) < 7.5) dropProp(m, i); });
@@ -602,8 +603,8 @@ function missionRuins(m, H) {
 // its inflation fan, a windsock, and a sign for the rides at the track.
 function balloonField(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const X0 = 1150, X1 = 1178, Y0 = 463, Y1 = 486;
-  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === 9 || m.dist[i] === 41);
+  const X0 = PXs(H, 1150, 463), X1 = X0 + 28, Y0 = PYs(H, 463), Y1 = Y0 + 23;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && !(m.reserve[i] & RES) && (m.dist[i] === DS(H, 9) || m.dist[i] === DS(H, 41));
   for (let ty = Y0; ty <= Y1; ty++) for (let tx = X0; tx <= X1; tx++) if (!open(at(tx, ty))) return;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
   m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= X0 * TILE && q.x < (X1 + 1) * TILE && q.y >= Y0 * TILE && q.y < (Y1 + 1) * TILE) dropProp(m, i); });
@@ -954,7 +955,7 @@ function route9(m, H) {
 // bay, crossed by a timber footbridge on the trail up from the campground; a trailhead board and finger posts;
 // firs, pines and cedars round it all, thick on the north and west, mossy boulders, ferns, reeds, lily pads.
 function pineLake(m, H) {
-  const LX = 136, LY = 216, RX = 12, RY = 6.5, D = 29;
+  const LX = PXs(H, 136, 216), LY = PYs(H, 216), RX = 12, RY = 6.5, D = DS(H, 29);
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
   const land = (i) => m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND;
   const free = (tx, ty) => { const i = at(tx, ty); return land(i) && !m.reserve[i] && m.dist[i] === D; };
@@ -1275,9 +1276,9 @@ function bluffsMaze(m, H) {
 // baths with a bath pavilion (benches, buckets, a bamboo spout) on the lower pool, stone steps up from the road.
 // The water is hot spring water (m.springs: the ground bake's milky mineral blue-green); you can get in.
 function hotSprings(m, H) {
-  const D = 33, at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
+  const D = DS(H, 33), at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
   const open = (tx, ty) => { const i = at(tx, ty); return (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !m.reserve[i] && m.dist[i] === D; };
-  const CX = 603, CY = 125;
+  const CX = PXs(H, 603, 125), CY = PYs(H, 125);
   for (let ty = CY - 14; ty <= CY + 15; ty++) for (let tx = CX - 16; tx <= CX + 16; tx++) if (!open(tx, ty)) return;
   // the road below: the highway's north edge under the site
   let ry = CY + 15; while (ry < CY + 30 && m.tiles[at(CX, ry)] !== T.ROAD) ry++;
@@ -2009,7 +2010,8 @@ function heronMarsh(m, H) {
 function summitTarn(m, H) {
   // the tarn's tiles (Summit Tarn: islands.js LAKES)
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
-  for (let ty = 60; ty < 110; ty++) for (let tx = 545; tx < 610; tx++) if (m.lake[ty * m.w + tx]) { n++; x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty); }
+  const X0 = PXs(H, 545, 60), Y0 = PYs(H, 60);
+  for (let ty = Y0; ty < Y0 + 50; ty++) for (let tx = X0; tx < X0 + 65; tx++) if (m.lake[ty * m.w + tx]) { n++; x0 = Math.min(x0, tx); y0 = Math.min(y0, ty); x1 = Math.max(x1, tx); y1 = Math.max(y1, ty); }
   if (n < 40) return;
   const cxT = (x0 + x1 + 1) / 2 * TILE;
   // the outlet: the southernmost lake tile near the middle; the ledge stands just below it, facing south
