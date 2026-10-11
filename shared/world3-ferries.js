@@ -48,7 +48,7 @@ export const FERRY3 = [
     { pt: 3, name: 'Paradise Cay', kind: 'pontoon', ids: named('Paradise Cay') },
   ] },
   { name: 'Lighthouse Water Bus', model: 'waterbus', stops: [
-    { pt: 0, name: 'Westport West Quay', kind: 'pontoon', ids: WESTPORT },
+    { pt: 0, name: 'Westport South Quay', kind: 'pontoon', ids: WESTPORT },
     { pt: 6, name: 'Lighthouse Rock', kind: 'pontoon', ids: named('Lighthouse Rock') },
   ] },
   // custody only (the owner's list, 1.7): no arrests system takes prisoners to the island yet - built and listed

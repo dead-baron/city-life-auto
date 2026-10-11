@@ -7729,7 +7729,7 @@ the v3 world build (docs/WORLD-V3.md 8.17).
     and lamps, a gangway with bollards to the pier head where the boat lies stern-in.
   - **The car ferry's two ramps** (FE2): a marshalling lot by a street, a ticket booth, the slip down to the stern.
   - **Pontoons** for the water buses: Old Town Quay, Willow Crossing and Kestrel Lake on the river; Cedar Isle South,
-    Coral Cay and Paradise Cay; Westport's west quay and Lighthouse Rock; the Cedar Isle police dock and Prison Island.
+    Coral Cay and Paradise Cay; Westport's south quay and Lighthouse Rock; the Cedar Isle police dock and Prison Island.
 - **The routes on the v3 map without the whole-map flood:** today's planner floods the whole grid (8.9: 1.3 s at v3 and
   nothing found); at v3 it reads the listed stops and plans each leg inside the box round the skeleton's points between
   two stops (the route's line as the hint) - the water there, the distance to land, A* at the boat's clearance (nearer
@@ -7744,7 +7744,7 @@ the v3 world build (docs/WORLD-V3.md 8.17).
 Files: shared/world3-ferries.js (new), shared/world3-world.js (the one call: `buildFerries3` in `done`),
 server/systems/ferries.js (`routes3`, the legs, `ferryInfo3`; today's routes untouched), server/systems/transit.js (no
 bus terminal stop for the Prison Boat), tools/world3-ferry-map.mjs (new), test/world3ferries.test.js (new),
-docs/WORLD-V3.md 8.17, PICTURES.
+docs/WORLD-V3.md 8.17, docs/world-v3-ferry-*.png (seven stops through the chunk bake).
 
 Tests: test/world3ferries.test.js (one world build: every route's stops built - terminals, ramps, pontoons - each near
 its skeleton point; the routes planned per corridor in time, every way on the water; a boat on each route calling at
