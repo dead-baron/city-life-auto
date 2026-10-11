@@ -7602,7 +7602,8 @@ in art v2 and the classic renderer, with the planned places moved into them.
   along the street; the sawmill (an open shed with the saw line running into it, the log yard beside it: three stacks
   of logs and a yellow log loader); the hunting lodge's row (the lodge in dark logs with antlers over its door); cabins
   with porches; the clinic, the sheriff and the motel one storey of clapboard under a gable (the clinic on a store's
-  lot, not the hospital's block).
+  lot, not the hospital's block - Willow Crossing's too; Sandpiper Bay's keeps its lot, or the town has more road than
+  building).
 - **Willow Crossing:** the white church with its steeple (a clapboard tower with a slate spire and a gilt cross); the
   grain elevator's tall head house with a row of silos; the co-op, a barn-red shed with its loading dock; the feed
   store's sacks out front; white farmhouses with long porches.

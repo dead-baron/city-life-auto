@@ -79,7 +79,7 @@ export const TOWN_SPECIALS = [
   { d: 58, prefab: 'industrial', biz: ['delivery'], names: ['Willow Crossing Grain Elevator'], fixed: true, look: 'elevator' },
   { d: 58, prefab: 'diner', biz: ['delivery'], names: ['Crossroads Diner'], fixed: true, look: 'shopfront' },
   { d: 58, prefab: 'strip', biz: ['market', 'farmstand', 'fruitstand', 'delivery'], names: ["Willow Crossing Farmers' Market", 'Valley Farm Stand', 'Orchard Fruit Stand', 'Valley Feed & Seed'], fixed: true, look: 'feedrow' },
-  { d: 59, prefab: 'liquor', biz: ['hospital'], names: ['Sandpiper Bay Clinic'], fixed: true, look: 'clinic' },
+  { d: 59, prefab: 'hospital', biz: ['hospital'], names: ['Sandpiper Bay Clinic'], fixed: true, look: 'clinic' },   // (its lot as before: a store's lot leaves Sandpiper Bay more road than building)
   { d: 59, prefab: 'conv', biz: ['convenience'], names: ['Sandpiper Bay Fuel'], gas: true, fixed: true, look: 'beachshop' },
   { d: 59, prefab: 'strip', biz: ['sports', 'tackle', 'snack', 'delivery'], names: ['Sandpiper Surf Co.', 'Pier Tackle & Bait', 'Shorebird Snack Bar', 'Lifeguard Station'], fixed: true, look: 'surfrow' },
   { d: 59, prefab: 'beachbar', biz: ['delivery'], names: ['The Sandpiper'], fixed: true },

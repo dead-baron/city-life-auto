@@ -3084,9 +3084,12 @@ the prefab's city art, and what stands round it in `m.townKit` (`{ k, x, y, a, l
   `coop` (a barn-red shed under a metal gable with its loading dock), `feedrow` (the market's strip with the feed
   store's sacks out front), `farmhouse` (white clapboard, a long porch), its shopfronts; Sandpiper Bay - `surfrow` (the
   surf shop's strip, its boards in a rack out front), `beachshop`, `cottage` and `stilts` (a raised porch on posts with
-  steps down), its clinic. The clinic, the sheriff and the motel are one storey of clapboard under a gable (the clinic
-  on a store's lot now, `liquor`'s 15 x 8 tiles, not the hospital's 18 x 12; the co-op on `quickstop`'s with room in
-  front for its dock).
+  steps down), its clinic. The clinic, the sheriff and the motel are one storey of clapboard under a gable (Timber
+  Bend's and Willow Crossing's clinics on a store's lot now, `liquor`'s 15 x 8 tiles, not the hospital's 18 x 12 -
+  Sandpiper Bay's keeps the hospital's: on a store's lot the town came out with more road than building, 3,815 tiles to
+  3,601, and the towns test wants less; the co-op on `quickstop`'s with room in front for its dock). The shopfronts and
+  the shop rows: the false front is a boarded facade on the porch's model, standing up over the porch roof in front of
+  the low gable behind it (art v2's buildings draw a parapet round a flat roof only).
 - **The sawmill and the elevator** take part of their lot (`b.lookW`: the west 56% the mill's open shed - a wide open
   bay, the saw line out front; the west 32% the elevator's tall corrugated head house); the rest of the solid footprint
   is the yard - three log stacks and the log loader, or a row of silos with their gallery - so nothing new blocks a
@@ -3102,12 +3105,14 @@ the prefab's city art, and what stands round it in `m.townKit` (`{ k, x, y, a, l
   **The classic renderer** (`client/render/townart.js`, from `tiles.js`): the look's roof over the lot's painted art
   (gables, the false front's top, the mill's ribbed shed and dirt yard, the head house) and the kit from above.
 
-**What's built** (seed 1337, `m.world3.towns.models`): Timber Bend - the sawmill, the lodge row, the clinic, the
-sheriff, the motel, 5 shopfronts; 3 log stacks, the loader, the saw line, 6 porches, the antlers. Willow Crossing - the
-church and its steeple, the elevator and 4 silos, the co-op and its dock, the feed row and its sacks, the clinic, the
-sheriff, 7 shopfronts; 8 porches. Sandpiper Bay - the surf row and its boards, the clinic, 4 beach shops, 3 cottages, 4
-houses on stilts; 12 porches, 165 pieces of rail, 10 benches, 13 lamps, the pier's shelter, the tower. (The houses
-the generator built as plain roofs take the house looks too: their numbers are the test's.)
+**What's built** (seed 1337, `m.world3.towns.models`; the generator's plain-roof lots take the looks too - a small
+one a house's, a bigger one a shopfront's):
+
+| town | looks | round them |
+|---|---|---|
+| Timber Bend | 13 cabins, 11 shopfronts, the sawmill, the lodge row, the clinic, the sheriff, the motel | 25 porches, 3 log stacks, the loader, the saw line, the antlers |
+| Willow Crossing | 13 farmhouses, 13 shopfronts, the church, the elevator, the co-op, the feed row, the clinic, the sheriff | 27 porches, the steeple, 4 silos, the dock, the sacks |
+| Sandpiper Bay | 20 cottages, 9 houses on stilts, 9 beach shops, the surf row, the clinic | 39 porches, the boards, 165 pieces of rail, 10 benches, 13 lamps, the pier's shelter, the tower |
 
 **The test** (`test/world3townmodels.test.js`, one world build): each town has its looks and its kit; every planned
 place with a look is in it (the building, its lot, its POI); the sawmill's and the elevator's yards inside their
