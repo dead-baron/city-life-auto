@@ -109,6 +109,20 @@ const anyProp = (m, x0, y0, x1, y1, pred) => (PG && PG.m === m ? PG.any(x0, y0, 
 const PXs = (H, x, y) => (H.place ? H.place.x(x, y) : x), PYs = (H, y) => (H.place ? H.place.y(y) : y);
 const LXs = (H, x) => (H.place ? H.place.lx(x) : x), LYs = (H, y) => (H.place ? H.place.ly(y) : y);
 const DS = (H, d) => (H.place?.d ? H.place.d(d) : d);   // (a site's district: the world build's v3 region for today's wild ones)
+// (the world build, 8.19: a moved site's road found by where it is, not by today's name - the ground-level road nearest
+// (x, y) px within r px, no highway: its edge, the point on it nearest (x, y) and its heading there)
+function roadNear(m, x, y, r) {
+  let best = null;
+  for (const e of m.roads || []) {
+    if (e.lvl !== 0 || e.kind === 'hwy' || e.kind === 'ramp' || e.foot) continue;
+    for (let j = 1; j < e.pts.length; j++) {
+      const a = e.pts[j - 1], b = e.pts[j], dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy;
+      const t = L ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / L)) : 0, px = a.x + dx * t, py = a.y + dy * t, d = Math.hypot(px - x, py - y);
+      if (d < r && L > 0 && (!best || d < best.d)) best = { e, x: px, y: py, a: Math.atan2(dy, dx), d };
+    }
+  }
+  return best;
+}
 export function buildNatureSites(m, H) {
   PG = propGrid(m);
   try { buildSites(m, H); } finally { PG = null; }
@@ -512,28 +526,30 @@ function sentinelStones(m, H) {
 // stones to a reedy pond. Mossy boulders, a fallen log, firs and maples round the pools, a bench at the falls.
 function fernGorge(m, H) {
   const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const track = (m.edges || []).find((e) => e.name === 'Ridge Track' && e.lvl === 0);
+  const OX = PXs(H, 309, 172) - 309, OY = PYs(H, 172) - 172, D = DS(H, 29);   // (the world build: moved with its anchor, its track the road by it - 8.19)
+  const track = H.place?.d ? roadNear(m, (298 + OX) * TILE, (175 + OY) * TILE, 24 * TILE)?.e : (m.edges || []).find((e) => e.name === 'Ridge Track' && e.lvl === 0);
   if (!track) return;
-  const UP = [309, 171.6], LOW = [308.5, 180], POND = [300.5, 193], LEDGE = 174.4;
-  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !(m.reserve[i] & RES) && m.dist[i] === 29;
-  for (let ty = 164; ty <= 200; ty++) for (let tx = 296; tx <= 318; tx++) if (!open(at(tx, ty))) return;
+  const UP = [309 + OX, 171.6 + OY], LOW = [308.5 + OX, 180 + OY], POND = [300.5 + OX, 193 + OY], LEDGE = 174.4 + OY;
+  const open = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !(m.reserve[i] & RES) && m.dist[i] === D;
+  for (let ty = 164 + OY; ty <= 200 + OY; ty++) for (let tx = 296 + OX; tx <= 318 + OX; tx++) if (!open(at(tx, ty))) return;
   // the trailhead: the point on the track nearest the gorge's west side
   let th = null, bd = 1e9;
   for (let k = 1; k < track.pts.length; k++) {
-    const a = track.pts[k - 1], b = track.pts[k], dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy || 1, X = 298 * TILE, Y = 175 * TILE;
+    const a = track.pts[k - 1], b = track.pts[k], dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy || 1, X = (298 + OX) * TILE, Y = (175 + OY) * TILE;
     const t = Math.max(0, Math.min(1, ((X - a.x) * dx + (Y - a.y) * dy) / l2)), q = { x: a.x + dx * t, y: a.y + dy * t }, d = Math.hypot(q.x - X, q.y - Y) / TILE;
     if (d < bd) { bd = d; th = q; }
   }
   if (!th || bd > 24) return;
+  if (H.place?.d) th = { x: th.x, y: th.y + 3 * TILE };   // (the world build: its road an arterial, the pull-off off its far edge)
   { let ok = true; for (let ty = Math.floor(th.y / TILE) + 1; ty <= th.y / TILE + 4; ty++) for (let tx = Math.floor(th.x / TILE) - 3; tx <= th.x / TILE + 5; tx++) { const t = m.tiles[at(tx, ty)]; if (t !== T.GRASS && t !== T.DIRT) ok = false; } if (!ok) return; }   // (open ground for the pull-off)
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
-  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= 294 * TILE && q.x < 320 * TILE && q.y >= 162 * TILE && q.y < 202 * TILE) dropProp(m, i); });
-  for (let ty = 162; ty <= 201; ty++) for (let tx = 294; tx <= 319; tx++) { const i = at(tx, ty); if (open(i)) m.reserve[i] |= RES; }
+  m.props.forEach((q, i) => { if (q && q.t !== 'painted' && q.x >= (294 + OX) * TILE && q.x < (320 + OX) * TILE && q.y >= (162 + OY) * TILE && q.y < (202 + OY) * TILE) dropProp(m, i); });
+  for (let ty = 162 + OY; ty <= 201 + OY; ty++) for (let tx = 294 + OX; tx <= 319 + OX; tx++) { const i = at(tx, ty); if (open(i)) m.reserve[i] |= RES; }
   // the water: the spring pool above the ledge, the lily pool below, the outlet creek, the reedy pond
   const wet = new Set();
   const blob = (cx, cy, rx, ry, deep) => { for (let ty = Math.floor(cy - ry - 1); ty <= cy + ry + 1; ty++) for (let tx = Math.floor(cx - rx - 1); tx <= cx + rx + 1; tx++) { const dx = (tx + 0.5 - cx) / rx, dy = (ty + 0.5 - cy) / ry, a = Math.atan2(dy, dx), q = Math.hypot(dx, dy) / (1 + 0.1 * Math.sin(a * 3 + cx)); if (q > 1) continue; const i = at(tx, ty); m.tiles[i] = q < deep ? T.DEEP : T.WATER; m.lake[i] = 1; m.reserve[i] |= RES; wet.add(i); } };
   blob(UP[0], UP[1], 3.2, 2.2, 0.4); blob(LOW[0], LOW[1], 4.4, 3.0, 0.45); blob(POND[0], POND[1], 4.6, 3.2, 0.5);
-  const creek = spline([[LOW[0] - 1.5, LOW[1] + 2.4], [306, 185.5], [303.5, 188.5], [POND[0] + 1.6, POND[1] - 2.4]].map(([x, y]) => [x * TILE, y * TILE]), 10);
+  const creek = spline([[LOW[0] - 1.5, LOW[1] + 2.4], [306 + OX, 185.5 + OY], [303.5 + OX, 188.5 + OY], [POND[0] + 1.6, POND[1] - 2.4]].map(([x, y]) => [x * TILE, y * TILE]), 10);
   for (const [x, y] of creek) for (let ty = Math.floor(y / TILE - 1); ty <= y / TILE + 1; ty++) for (let tx = Math.floor(x / TILE - 1); tx <= x / TILE + 1; tx++) { if (Math.hypot((tx + 0.5) * TILE - x, (ty + 0.5) * TILE - y) > 22) continue; const i = at(tx, ty); if (!wet.has(i)) { m.tiles[i] = T.WATER; m.lake[i] = 1; m.reserve[i] |= RES; wet.add(i); } }
   if (m.distRiver) for (const i of wet) { m.distRiver[i] = 0; const tx = i % m.w, ty = Math.floor(i / m.w); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const j = (ty + dy) * m.w + tx + dx; if (wet.has(j)) continue; const d = Math.round(Math.hypot(dx, dy) * 4); if (!m.distRiver[j] || m.distRiver[j] > d) m.distRiver[j] = d; } }
   // the ledge between the pools: a mossy granite band (solid), the falls over it, mist
@@ -558,13 +574,13 @@ function fernGorge(m, H) {
   add('pbench', tx0 - 1.2, ty0 + 2, 8, { a: Math.PI / 2 }); add('trashcan', tx0 + 1.6, ty0 + 2, 6);
   add('creekrail', tx0, ty0 + 1.9, 0, { len: 150, a: 0 });
   // the trail: from the pull-off east through the ferns to the lily pool's west side, round to the falls
-  const tr = trail(m, [[(tx0 + 3) * TILE, (ty0 + 1) * TILE], [299 * TILE, 172 * TILE], [302.5 * TILE, 177.5 * TILE], [303.6 * TILE, 182.5 * TILE]]);
+  const tr = trail(m, [[(tx0 + 3) * TILE, (ty0 + 1) * TILE], [(299 + OX) * TILE, (172 + OY) * TILE], [(302.5 + OX) * TILE, (177.5 + OY) * TILE], [(303.6 + OX) * TILE, (182.5 + OY) * TILE]]);
   for (const [x, y] of tr) nearProps(m, x - 31, y - 31, x + 31, y + 31, (q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < 30) dropProp(m, i); });
-  add('pbench', 303.2, 177.2, 8, { a: 0 });
+  add('pbench', 303.2 + OX, 177.2 + OY, 8, { a: 0 });
   // firs and maples round the gorge, ferns thick on the banks
   for (const [dx, dy, sp] of [[-7, -5, 'mtnFir'], [7.5, -6, 'mapleAutumn'], [9, 2, 'mtnFir'], [-8, 6, 'maple'], [8, 9, 'mtnFir'], [-3, 13, 'maple'], [10, 14, 'mtnFir'], [-9, -12, 'mtnFir']]) { const x = LOW[0] + dx, y = LOW[1] + dy; if (!wet.has(at(x, y)) && m.tiles[at(x, y)] === T.GRASS) add('tree_a', x, y, 12, { sp, k: 1.35 }); }
   for (let j = 0; j < 26; j++) { const x = LOW[0] - 8 + hash2(j, 1, 3801) * 16, y = UP[1] - 3 + hash2(j, 2, 3801) * 26, i = at(x, y); if (!wet.has(i) && m.tiles[i] === T.GRASS && !tr.some(([px, py]) => Math.hypot(px - x * TILE, py - y * TILE) < 40)) add('shrub_a', x, y, 0, { sp: j % 4 ? 'fern' : 'salal', k: 1 }); }
-  (m.landmarks ||= []).push({ name: 'Fern Gorge', type: 'gorge', x: 296 * TILE, y: 164 * TILE, w: 22 * TILE, h: 34 * TILE });
+  (m.landmarks ||= []).push({ name: 'Fern Gorge', type: 'gorge', x: (296 + OX) * TILE, y: (164 + OY) * TILE, w: 22 * TILE, h: 34 * TILE });
   m.natureSites.push({ kind: 'gorge', name: 'Fern Gorge', x: Math.round(LOW[0] * TILE), y: Math.round(LOW[1] * TILE), trailhead: { x: Math.round(tx0 * TILE), y: Math.round(ty0 * TILE) }, falls: { x: Math.round(UP[0] * TILE), y: Math.round(LEDGE * TILE) }, pond: { x: Math.round(POND[0] * TILE), y: Math.round(POND[1] * TILE) } });
 }
 
@@ -1351,7 +1367,7 @@ function hotSprings(m, H) {
 // ground (sand, dirt or scrub) right beside the parkway's pavement.
 const WP_AT = [1054, 850];
 function splashBay(m, H) {
-  const [X0, Y0] = WP_AT, X1 = X0 + 43, Y1 = Y0 + 21;
+  const X0 = PXs(H, WP_AT[0], WP_AT[1]), Y0 = PYs(H, WP_AT[1]), X1 = X0 + 43, Y1 = Y0 + 21;   // (the world build: by Mine Road in the desert - 8.19)
   const ox = (x) => x - 118 + X0, oy = (y) => y - 963 + Y0;   // (positions in the park's own layout -> the map)
   const at = (tx, ty) => ty * m.w + tx;
   const open = (t) => t === T.GRASS || t === T.SAND || t === T.DIRT;
@@ -1830,16 +1846,17 @@ function stadiumLido(m, H) {
 // posts either side, crates, barrels and tools by the mouth, glowing crystals in the rock, tailings heaps; a dirt
 // track down to the nearest road.
 function oldMine(m, H) {
-  const ok = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !m.reserve[i] && m.dist[i] === 33;
+  const OX = PXs(H, 537, 106) - 537, OY = PYs(H, 106) - 106, D = DS(H, 33);   // (the world build: the box round its moved spot, in the v3 peaks - 8.19)
+  const ok = (i) => (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !m.reserve[i] && m.dist[i] === D;
   let best = null;
-  for (let ty = 30; ty < 200; ty += 2) for (let tx = 470; tx < 720; tx += 2) {
+  for (let ty = 30 + OY; ty < 200 + OY; ty += 2) for (let tx = 470 + OX; tx < 720 + OX; tx += 2) {
     let good = true;
     for (let dy = -6; dy <= 8 && good; dy++) for (let dx = -9; dx <= 9; dx++) if (!ok((ty + dy) * m.w + tx + dx)) { good = false; break; }
     if (!good) continue;
     let road = 0;
     for (let k = 9; k <= 20 && !road; k++) for (let dx = -4; dx <= 4; dx++) { const t = m.tiles[(ty + k) * m.w + tx + dx]; if (t === T.ROAD) { road = k; break; } }
     if (!road) continue;
-    const d = Math.hypot(tx * TILE - 17200, ty * TILE - 3400) + road * 20;
+    const d = Math.hypot(tx * TILE - 17200 - OX * TILE, ty * TILE - 3400 - OY * TILE) + road * 20;
     if (!best || d < best.d) best = { tx, ty, road, d };
   }
   if (!best) return;
@@ -1862,7 +1879,7 @@ function oldMine(m, H) {
   for (const [dx, dy, r] of [[-250, -40, 30], [256, -30, 26]]) H.addProp(m, 'outcrop', X + dx, face + dy, r, { w: 100, d: 64, h: 70, s: dx > 0 ? 5 : 6, style: 'granite' });
   for (const [dx, dy] of [[-200, 150], [180, 140]]) H.addProp(m, 'gravel', X + dx, face + dy, 0);
   (m.landmarks ||= []).push({ name: 'Old Granite Mine', type: 'mine', x: Math.round(X - 260), y: Math.round(face - 220), w: 520, h: 420 });
-  m.natureSites.push({ kind: 'mine', name: 'Old Granite Mine', x: Math.round(X), y: Math.round(face), seams });
+  m.natureSites.push({ kind: 'mine', name: 'Old Granite Mine', x: Math.round(X), y: Math.round(face), seams, ...(H.place?.d ? { cave: false } : null) });   // (the world build: the cave world stays under Copper Gulch Mine's adit - 8.18, 8.19)
 }
 
 // clear a map prop away (its picture and its solid footprint): for a designed place that replaces random dressing
@@ -2390,7 +2407,7 @@ function redwoodCove(m, H) {
 // up. On the map as "Giants Loop".
 function giantsLoop(m, H) {
   // the trailhead: the north-east side of Highland Road where it passes the grove (tiles)
-  const T0 = [173, 131];
+  const T0 = [PXs(H, 173, 131), PYs(H, 131)];   // (the world build: its moved spot by a road of the v3 woods - 8.19)
   let road = null;
   for (let r = 0; r < 8 && !road; r++) for (let dx = -r; dx <= r && !road; dx++) for (let dy = -r; dy <= r; dy++) if (m.tiles[(T0[1] + dy) * m.w + T0[0] + dx] === T.ROAD) { road = [T0[0] + dx, T0[1] + dy]; break; }
   if (!road) return;
@@ -2415,7 +2432,7 @@ function giantsLoop(m, H) {
   for (const f of [0.18, 0.5, 0.78]) { const [x, y] = along(f); H.addProp(m, 'fingerpost', Math.round(x + 34), Math.round(y + 6), 0); }
   for (const f of [0.34, 0.62]) { const [x, y] = along(f); H.addProp(m, 'pbench', Math.round(x - 40), Math.round(y + 18), 0); reserveRound(m, x - 40, y + 18, 30); }
   // the Highland Hunting Lodge: a log cabin across the lot from the trailhead (solid), its counter on the porch
-  const lodge = P(9, 4);
+  const lodge = H.place?.d ? P(-9, -7) : P(9, 4);   // (the world build: west of the lot, off Timber Road - 8.19)
   for (let ty = Math.floor((lodge[1] - 90) / TILE); ty <= Math.floor((lodge[1] + 70) / TILE); ty++) for (let tx = Math.floor((lodge[0] - 110) / TILE); tx <= Math.floor((lodge[0] + 110) / TILE); tx++) {
     const i = ty * m.w + tx;
     if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) { m.tiles[i] = T.DIRT; m.reserve[i] |= RES; noTree.add(i); }
@@ -2493,7 +2510,7 @@ function canyonWash(m, H) {
   }
   for (let k = 3; k < wash.length; k += 5) { const [x, y] = wash[k]; add('boulder', x + (hash2(k, 1, 2403) - 0.5) * 30, y + (hash2(k, 2, 2403) - 0.5) * 20, 0, { s: 9 + Math.round(hash2(k, 4, 2403) * 8) }); }   // (cobbles in the bed)
   // the track: from the desert road west of the canyon, between the mesas, to a turnaround by the oasis
-  const road = (m.roads || []).filter((r) => r.lvl === 0).map((r) => r.pts).flat().reduce((b, q) => { const d = Math.hypot(q.x - (pt.x - 6 * TILE), q.y - (pt.y + 16 * TILE)); return !b || d < b.d ? { x: q.x, y: q.y, d } : b; }, null);
+  const road = H.place?.d ? roadNear(m, pt.x - 6 * TILE, pt.y + 16 * TILE, 19 * TILE) : (m.roads || []).filter((r) => r.lvl === 0).map((r) => r.pts).flat().reduce((b, q) => { const d = Math.hypot(q.x - (pt.x - 6 * TILE), q.y - (pt.y + 16 * TILE)); return !b || d < b.d ? { x: q.x, y: q.y, d } : b; }, null);   // (the world build: the nearest road, the Canyon Track - 8.19)
   if (road && road.d < 20 * TILE) {
     const tp = spline([[road.x + 60, road.y], T0(-4, 15.6), T0(4, 15.2), T0(12, 14.6), T0(19, 13.2), [o.x - 150, o.y + 120]], 12);
     for (const [x, y] of tp) clearR(x, y, 34);
@@ -2512,10 +2529,11 @@ function canyonWash(m, H) {
 // ---- Redwood Creek ------------------------------------------------------------------------------------------
 function redwoodCreek(m, H) {
   // where Highland Road runs straight through the redwoods, north-north-west
-  const road = (m.roads || []).find((r) => r.kind === 'rural' && r.name === 'Highland Road' && r.pts.some((p) => Math.abs(p.x - 6714) < 200 && Math.abs(p.y - 6055) < 260));
+  const v3 = H.place?.d ? roadNear(m, PXs(H, 6714 / TILE, 6055 / TILE) * TILE, PYs(H, 6055 / TILE) * TILE, 12 * TILE) : null;   // (the world build: the road by its moved spot - 8.19)
+  const road = v3 ? v3.e : (m.roads || []).find((r) => r.kind === 'rural' && r.name === 'Highland Road' && r.pts.some((p) => Math.abs(p.x - 6714) < 200 && Math.abs(p.y - 6055) < 260));
   if (!road) return;
-  let C = null, best = 1e9;
-  for (let i = 1; i < road.pts.length; i++) {
+  let C = v3 ? { x: v3.x, y: v3.y, a: v3.a } : null, best = 1e9;
+  for (let i = 1; i < road.pts.length && !v3; i++) {
     const a = road.pts[i - 1], b = road.pts[i], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, d = Math.hypot(mx - 6714, my - 6055);
     if (d < best && Math.hypot(b.x - a.x, b.y - a.y) > 300) { best = d; C = { x: mx, y: my, a: Math.atan2(b.y - a.y, b.x - a.x) }; }
   }
@@ -2968,7 +2986,9 @@ function beaverPonds(m, H) {
   // Heron Marsh's outflow dam (heronMarsh put the dam and the lodge there)
   const dam0 = m.props.find((p) => p && p.t === 'beaverdam'), lodge0 = dam0 && m.props.find((p) => p && p.t === 'lodge' && Math.hypot(p.x - dam0.x, p.y - dam0.y) < 200);
   if (dam0) m.beaverPonds.push({ x: Math.round(dam0.x - 40), y: Math.round(dam0.y - 90), r: 300, dam: { x: dam0.x, y: dam0.y }, lodge: lodge0 ? { x: lodge0.x, y: lodge0.y } : { x: dam0.x - 60, y: dam0.y - 80 }, trees: gnawedTrees(m, H, dam0.x - 30, dam0.y - 60, 7) });
-  for (const [cx, cy, name] of BEAVER_CREEKS) {
+  for (const [cx0, cy0, name] of BEAVER_CREEKS) {
+    const cx = PXs(H, cx0, cy0), cy = PYs(H, cy0);   // (the world build: with its creek, moved - 8.19)
+    if (cx < 8 || cy < 10 || cx >= m.w - 8 || cy >= m.h - 10) continue;
     // the dam row: the narrowest, straightest run of the creek near (cx, cy) that flows north-south, banks both sides
     let best = null;
     for (let ty = cy - 8; ty <= cy + 8; ty++) for (let tx = cx - 6; tx <= cx + 6; tx++) {

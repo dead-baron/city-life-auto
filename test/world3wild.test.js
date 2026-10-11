@@ -5,7 +5,10 @@
 // joined by its own road to the one road network (never to a highway), clear of the skeleton's highways, main line and
 // stations; the Granite Quarry's pit and Copper Gulch Mine's both have their ore veins (shared/underground.js takes the
 // list). The nature sites moved whole round their anchors (Pine Lake, Summit Tarn and its falls, Granite Hot
-// Springs, The Sentinel Stones), each built once at its spot. One world build.
+// Springs, The Sentinel Stones; H47: Redwood Creek, Giants Loop, Fern Gorge, the Old Granite Mine, Red Rock Canyon's
+// oasis, Mirage Camp, Splash Canyon), each built once at its spot; the tracks they look for by name (the Ridge Trail,
+// the Canyon Track, the Mirage Track) on the one network, the lookout, the hunting camps and the trapper's cabin by
+// them; one cave, under Copper Gulch Mine. One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
@@ -13,7 +16,7 @@ import '../shared/world3-islands.js';
 import { TILE } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { skeletonLines, nearestOnPath, STATIONS } from '../shared/world3-skeleton.js';
-import { WILD_SITES, WILD_ROOM, MOVED } from '../shared/world3-wild.js';
+import { WILD_SITES, WILD_ROOM, MOVED, WILD_TRACKS } from '../shared/world3-wild.js';
 import { T } from '../shared/constants.js';
 import { SITES } from '../shared/countryside.js';
 import { undergroundOf } from '../shared/underground.js';
@@ -96,5 +99,32 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
     for (let ty = Math.floor(y0) - 10; ty < y1 + 10; ty++) for (let tx = Math.floor(x0) - 10; tx < x1 + 10; tx++) { const i = ty * W + tx; if (m.lake[i]) { lake++; if (m.tiles[i] === T.ROAD) roadOnLake++; } }
     if (q.name === 'Summit Tarn' || q.name === 'Pine Lake') check(lake > 100 && roadOnLake === 0, `${q.name}'s water: ${lake} tiles, ${roadOnLake} of road`);
   }
+  // (H47) the tracks the moved sites look for by name: each laid, on the one network, reaching its end, no highway on it
+  for (const K of WILD_TRACKS) {
+    const es = m.edges.filter((e) => e.name === K.name && e.lvl === 0);
+    check(es.length > 0 && es.some((e) => comp[e.a] === main && comp[e.b] === main), `${K.name} laid, on the one network`);
+    check(es.some((e) => e.pts.some((p) => Math.hypot(p.x / TILE - K.end[0], p.y / TILE - K.end[1]) < 4)), `${K.name} reaches its end`);
+    for (const e of es) for (const n of [m.nodes[e.a], m.nodes[e.b]]) for (const id of n.edges) check(m.edges[id].kind !== 'hwy', `${K.name} meets a highway`);
+  }
+  // what stands by them and the moved creek: the fire lookout, the hunting camps, the trapper's cabin on the beaver pond
+  const named = (n) => (m.natureSites || []).filter((q) => q.name === n);
+  check((m.landmarks || []).filter((l) => l.name === 'Ridge Fire Lookout').length === 1, 'Ridge Fire Lookout on the Ridge Trail');
+  for (const [n, d] of [['Ridge Trail Hunting Camp', 48], ['Canyon Track Hunting Camp', 50], ["Redwood Creek Trapper's Cabin", 47]]) {
+    const s = named(n);
+    check(s.length === 1 && m.dist[Math.floor(s[0].y / TILE) * W + Math.floor(s[0].x / TILE)] === d, `${n}: ${s.length}, in district ${d}`);
+  }
+  check((m.beaverPonds || []).some((b) => b.name === 'Redwood Creek'), 'the beaver pond on Redwood Creek');
+  // the Old Granite Mine's seams are worked; the cave world stays under Copper Gulch Mine's adit (one cave)
+  const ogm = named('Old Granite Mine')[0];
+  check(ogm && ogm.seams.length >= 3 && ogm.cave === false, 'the Old Granite Mine and its seams');
+  check(U && U.cave && U.cave.X === named('Copper Gulch Mine')[0]?.x, 'the cave world under Copper Gulch Mine');
+  // Red Rock Canyon (the painting) in the desert, its oasis and wash; the water park's slides
+  const pt = (m.paintings || []).find((p) => p.key === 'canyon');
+  console.log('moved', JSON.stringify({ canyon: pt && [pt.x / TILE, pt.y / TILE], sites: (m.natureSites || []).filter((q) => /Gorge|Creek|Loop|Granite Mine|Oasis|Mirage|Splash|Camp|Cabin/.test(q.name)).map((q) => [q.name, Math.round(q.x / TILE), Math.round(q.y / TILE)]) }));
+  check(pt && m.dist[Math.floor(pt.y / TILE + 18) * W + Math.floor(pt.x / TILE + 27)] === 50, 'Red Rock Canyon in the desert');
+  check((m.landmarks || []).filter((l) => l.name === 'Red Rock Wash').length === 1, 'Red Rock Wash');
+  check((m.tracks || []).some((t) => pt && Math.hypot(t.pts[0][0] / TILE - pt.x / TILE + 6, t.pts[0][1] / TILE - pt.y / TILE - 16) < 22), 'the oasis\'s track in from the Canyon Track');
+  const wp = named('Splash Canyon Water Park')[0];
+  check(wp && wp.slides && wp.slides.length > 0, 'the water park and its slides');
   assert.deepEqual(bad, []);
 });

@@ -3633,7 +3633,7 @@ canyon); the Old Granite Mine and the Granite Quarry once Granite Peaks' places 
 `places.js` take the first mine and the first pit: they'll want a list); dirt bike trails; the jeep tracks on the
 road network (they are ground, not roads: the traffic doesn't use them).
 
-### 8.19 Today's wild land's places in the v3 world: Highland Woods', Granite Peaks' and Dry Creek's (2026-10-11, H44, in progress)
+### 8.19 Today's wild land's places in the v3 world: Highland Woods', Granite Peaks' and Dry Creek's (2026-10-11, H44, H47, in progress)
 
 8.6 sends whatever of today's world no piece builds off the frame - today's Highland Woods (district 29), Granite Peaks
 (33) and Dry Creek (9, 41, 42) - but part 1.5 moves their designed places into the new regions, and the owner split Dry
@@ -3698,18 +3698,56 @@ falls and the creek running south from it. What looks wrong:
   between the valley and the desert (8.8's biomes leave Highland Woods' ground in the gap between their polygons at
   x 3640-3700); the oil field's pumpjacks don't read at 1/8.
 
-**What's left** (in order): the rest of the nature sites - most of `shared/naturesites.js`' wild ones are written in
-today's coordinates and districts and look for today's roads by name, so each wants its anchor through `PXs`, its
-district through `DS` and a spot in `MOVED`: Highland Woods' Redwood Creek and its falls and Giants Loop (both on
-today's Highland Road - they want the road they stand by named, or found), Fern Gorge (the Ridge Track), Redwood Cove
-(a cove on today's west shore: the woods have no shore now - a lake shore or the Egret Coast), the trapper's cabin
-(the beaver pond on Redwood Creek); Granite Peaks' Granite Cove (a bay of the sea), the Old Granite Mine (it scans a
-fixed box of today's for its spot; then the cave world takes a list of mines - one cave per mine), Ridge Fire Lookout
-and the Ridge Trail Hunting Camp (both on the Ridge Trail); Dry Creek's farmland into Willow Valley's east side (map.js
-`buildFarm`, `DRY_CREEK_ESTATES`, the fields, the Willow River's orchard and vineyard - skipped in the world build
-now), its desert's nature sites (Red Rock Wash, Canyon Oasis, Mirage Lake and its camp, the boneyard, the mission ruins,
-the Canyon Track hunting camp, Splash Canyon Water Park, Route 9's airstrip behind the stop); trails to the stones, the
-tarn, the boneyard, the ruins and the balloon field (they have none yet).
+**H47: the hard-wired nature sites, the rest of the desert** (H44's "What's left", in part). Same module, same calls
+(`wildSites3` lays the tracks too: `wildTracks3`); the live world doesn't change (the world hash stays 6b6e16fdef9f; the
+city worker 34 files, 359 KB of 360).
+
+- **Moved whole** (`MOVED`, each site's anchor through `PXs` / `PYs`, its district through `DS`):
+  - **Redwood Creek** where Timber Road crosses it (to 560, 1135): the falls, the pool, the camp, the picnic pull-off and
+    the bridge. `redwoodCreek` looked for today's Highland Road by name; in the world build it takes the ground-level
+    road nearest its moved spot (`roadNear`, no highway) and the point on it as the bridge. The beaver pond upstream
+    (`BEAVER_CREEKS` through `PXs`: the creek's anchor square carries it; Tarn Creek's comes with Summit Tarn's) and **the
+    Redwood Creek trapper's cabin** by it (`huntingCamps`, by the pond).
+  - **Giants Loop** further east on Timber Road (604, 1128): the trailhead lot north of the road, the loop through the
+    redwoods; **the Highland Hunting Lodge** west of the lot in the world build (east and south of it, as today's, it
+    would stand on the road).
+  - **Fern Gorge** south of Timber Road (693, 1136): `fernGorge` moved whole by its anchor's offset, its track the road
+    by it (`roadNear`); the pull-off 3 tiles further off the road (an arterial, not today's dirt track).
+  - **The Old Granite Mine** above Lookout Road (745, 452): its search box and target round its moved spot, the peaks'
+    district. **One cave**: `shared/underground.js` takes the first mine with a cave, and the world build marks this one
+    `cave: false` - the cave world stays under Copper Gulch Mine's adit (8.18); its seams are worked (`places.js`).
+  - **Red Rock Canyon** (the scene painting, `SCENE_SPOTS`' canyon: map.js's scene spots take their district through the
+    world build's `dist` - one line) south of Mesa Road (3850, 525), **Canyon Oasis** and **Red Rock Wash** in it as
+    today's (placed relative to the painting); the wash's track in from the nearest road (the Canyon Track's end).
+  - **Mirage Lake** (islands.js LAKES, pinned with its anchor) and **Mirage Camp** west of Canyon Road (3930, 760).
+  - **Splash Canyon Water Park** on Mine Road's south side (its corner at 4030, 1214) - it was being built at today's
+    coordinates in the v3 frame (`WP_AT` wasn't placed).
+  - Route 9's airstrip came with the Route 9 stop (H44).
+- **The tracks the sites look for by name** (`WILD_TRACKS`): each from the nearest point of a road a dirt track may join
+  (within 160 tiles, never a highway or within 14 tiles of one, nor a tunnel) straight to its end, over dry land, across
+  no highway, clear of the main line and of its keep-out box: **the Ridge Trail** from Summit Road up to Summit Tarn
+  (summitTarn's **Ridge Fire Lookout** on its high stretch, **the Ridge Trail Hunting Camp** by it - and the tarn's cabin
+  has a way in now), **the Canyon Track** from Mesa Road to the canyon's west side (the oasis's turnaround, **the
+  Canyon Track Hunting Camp**), **the Mirage Track** from Canyon Road down to the lake (the camp at its end).
+- **The desert's dry washes kept off the moved sites**: the biomes' gravel (reserve 128, painted first) is cleared to
+  plain ground in each moved desert site's box (`keep`): the boneyard's plane rows, the mission ruins, the balloon field,
+  the canyon, the lake, the water park.
+
+Tests: `test/world3wild.test.js` (one world build, as before and: each newly moved site built once at its spot on its
+region's ground, its landmark clear of the highways and the main line; the tracks on the one network, reaching their
+ends, meeting no highway; the lookout, the two hunting camps and the trapper's cabin in their regions, the beaver pond
+on Redwood Creek; the Old Granite Mine's seams and the one cave under Copper Gulch Mine; the canyon in the desert, the
+wash, the oasis's track; the water park's slides).
+
+PICTURES-H47
+
+**What's left** (in order): **Redwood Cove** (a cove on today's west shore: the woods have no shore now - a lake shore
+or the Egret Coast) and **Granite Cove** (a bay of the sea: the peaks have no sea - the Long Reach or Kestrel Lake);
+**Dry Creek's farmland into Willow Valley's east side** (map.js `buildFarm`, `DRY_CREEK_ESTATES` and its fields, the
+Willow River's orchard on today's Farm Road and the vineyard at fixed coordinates - skipped in the world build now:
+each wants its anchor placed and its fields blended with 8.8's); **a cave of its own for the Old Granite Mine** (the
+cave world is one - `undergroundOf(m).cave`, the server's `L.cave` - and it wants a list: one cave region per mine,
+entered by its own mouth); tracks to the Sentinel Stones, the boneyard, the mission ruins and the balloon field.
 
 ### 8.20 The west coast: Egret Point, its light, the raceway and the marsh; Silver Thread Falls, North Cape Light, the coves (2026-10-11, H45)
 

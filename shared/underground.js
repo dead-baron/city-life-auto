@@ -184,7 +184,7 @@ const CHAMBERS = [
 ];
 const PASSAGES = [['hall', 'grotto'], ['hall', 'river', [60, -470]], ['grotto', 'worms'], ['worms', 'crystal'], ['river', 'pool'], ['river', 'den', [1040, -900]], ['crystal', 'den', [300, -1380]]];
 function buildCave(map) {
-  const mine = (map.natureSites || []).find((q) => q.kind === 'mine');
+  const mine = (map.natureSites || []).find((q) => q.kind === 'mine' && q.cave !== false);   // (a mine without a cave of its own: the v3 world's Old Granite Mine - docs/WORLD-V3.md 8.19)
   if (!mine) return null;
   const X = mine.x, face = mine.y, rnd = mulberry32(((map.seed ?? 1337) ^ 0xca7e) >>> 0);
   const flip = face - 1500 < 3 * TILE ? -1 : 1;     // (no room north: the cave runs south under the road instead)
