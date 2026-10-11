@@ -3656,17 +3656,20 @@ function drawCrossings(view, now) {
 // Each platform's countdown to the next train (the server sends the timetable every second;
 // the boards tick down smoothly in between).
 function drawStationClocks(view, now) {
-  const sts = (S.map.rail && S.map.rail.stations) || [];
-  const tt = S.tt || { l: [], at: 0 };
+  const tt = S.tt || { l: [], at: 0 }, R = S.map.rails, by = new Map();
   const since = performance.now() / 1000 - tt.at;
-  sts.forEach((st, i) => {
+  // (World v3: every loop's platforms, tt.l a list per loop; a platform two loops share shows the sooner train)
+  (R || [S.map.rail]).forEach((rail, ri) => rail && rail.stations.forEach((st, i) => {
     const cx = st.under ? st.platform.x : st.x, cy = st.under ? st.platform.y : st.y;
     if (cx < view.x0 - 600 || cx > view.x1 + 600 || cy < view.y0 - 600 || cy > view.y1 + 600) return;
-    const v = tt.l[i];
-    const secs = v === undefined ? -1 : v === 0 ? 0 : Math.max(0.01, v - since);
-    if (secs === 0 && S.ctrlKind !== CTRL.RIDER) drawBoardingCue(g, S.map.rail, st, now); // a train is in: the platform lights up
-    drawStationClock(g, S.map.rail, st, secs, now);
-  });
+    const v = R ? (tt.l[ri] || [])[i] : tt.l[i];
+    const secs = v === undefined || v < 0 ? -1 : v === 0 ? 0 : Math.max(0.01, v - since), k = `${Math.round(cx / 8)},${Math.round(cy / 8)}`, o = by.get(k);
+    if (!o || (secs >= 0 && (o.secs < 0 || secs < o.secs))) by.set(k, { rail, st, secs });
+  }));
+  for (const { rail, st, secs } of by.values()) {
+    if (secs === 0 && S.ctrlKind !== CTRL.RIDER) drawBoardingCue(g, rail, st, now); // a train is in: the platform lights up
+    drawStationClock(g, rail, st, secs, now);
+  }
 }
 
 // ---- golf (shared/golf.js; the server: server/systems/golf.js) ------------------------------------------------------

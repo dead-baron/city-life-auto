@@ -12,10 +12,11 @@
 // the underpasses where it meets a highway at grade, and the stations - a platform on the outer side of each track
 // (so a double track has one each side). The skeleton's tunnels are `under` (the track below ground, as today's subway
 // stretch). Only + - * / and Math.sqrt: the same in every engine.
-import { TILE } from './constants.js';
+import { TILE, T } from './constants.js';
 import { MAIN_LINE, MAIN_JUNCTIONS, SERVICES, STATIONS, RADIUS } from './world3-skeleton.js';
 
 export const TRACK_OFF = 48;   // px from the main line's centre to each track's centre (the two 96 px apart: 3 tiles)
+export const HUB_R = 20;       // tiles: every corner at a junction (H33: the hub stations there stand on straight track)
 const SAMPLE = 8;              // px between a track's points (as today's railLine)
 const ARC_STEP = 6;            // tiles between the points of an arc
 
@@ -36,10 +37,11 @@ export function serviceRoute(service, way) {
     for (const [i, j] of seg.tunnels || []) { const a = idx(i), b = idx(j); tunnels.push(a < b ? [a, b] : [b, a]); }
     for (const [i, j] of seg.bridges || []) { const a = idx(i), b = idx(j); bridges.push(a < b ? [a, b] : [b, a]); }
     const r = radiusOf(seg);
-    if (P.length) R[P.length - 1] = Math.min(R[P.length - 1], r);   // the junction's corner: the tighter of the two
+    if (P.length) R[P.length - 1] = HUB_R;   // the junction's corner: tight, so the platforms either side stand on the straight
     for (let k = P.length ? 1 : 0; k < n; k++) { P.push(pts[k]); R.push(r); }
     segs.push({ name, way: d, from: base, to: base + n - 1 });
   }
+  R[0] = HUB_R;   // (the closing corner is a junction too)
   return { P, R, tunnels, bridges, segs };
 }
 
@@ -111,14 +113,35 @@ function trackOf(path) {
 // The main line's loops: each service both ways - { name, service, way, pts (the track, px), stations: [{ name, x, y }]
 // (its stops in px, in order), segs, side: 1 (its platforms on the right of the way it runs: the outer side) }.
 // `junctions`: the four, in px (where the trains' signals guard).
-export function mainLineLoops() {
+export function mainLineLoops(m = null) {
   const loops = [];
   for (const sv of SERVICES) for (const way of [1, -1]) {
     const route = serviceRoute(sv, way), path = roundLoop(route), pts = trackOf(path);
     const stops = way > 0 ? sv.stops : sv.stops.slice().reverse();
     const stations = stops.map((name) => { const st = STATIONS.find((q) => q.line === 'main' && q.name === name); return { name, x: st.at[0] * TILE, y: st.at[1] * TILE }; });
-    loops.push({ name: `${sv.name} (${way > 0 ? 'one way' : 'the other way'})`, service: sv.name, way, pts, stations, side: 1, segs: route.segs.map((g) => g.name + (g.way > 0 ? ' +' : ' -')) });
+    loops.push({ name: `${sv.name} (${way > 0 ? 'one way' : 'the other way'})`, service: sv.name, way, pts, stations, side: 1, segs: route.segs.map((g) => g.name + (g.way > 0 ? ' +' : ' -')), hub: true, bores: [] });
   }
+  for (const l of loops) l.all = loops;   // (a hub station's platforms are placed clear of every loop's track: shared/map.js hubIndex)
+  if (m) mountainBores(m, loops);
   return loops;
+}
+
+// The mountain tunnels (H33): a skeleton tunnel under dry, roadless ground is a bore through the hill - the track at
+// ground level under shared/tunnels.js' cover (the hill drawn over it, its portals, sight blocked, the hill fading for
+// whoever is inside: shared/map.js addRailBores); one under water or a town's streets stays below ground (`under`).
+function mountainBores(m, loops) {
+  const W = new Set([T.WATER, T.DEEP, T.BRIDGE, T.ROAD]);
+  for (const l of loops) {
+    const P = l.pts;
+    let i = 0;
+    while (i < P.length) {
+      if (!P[i].under) { i++; continue; }
+      let j = i; while (j + 1 < P.length && P[j + 1].under) j++;
+      let dry = j - i > 8;
+      for (let k = i; k <= j && dry; k += 2) for (const [dx, dy] of [[0, 0], [-40, 0], [40, 0], [0, -40], [0, 40]]) if (W.has(m.tileAtPx(P[k].x + dx, P[k].y + dy))) { dry = false; break; }
+      if (dry) { for (let k = i; k <= j; k++) { P[k].under = false; P[k].tunnel = false; P[k].bore = true; } l.bores.push({ s0: P[i].s, s1: P[j].s }); }
+      i = j + 1;
+    }
+  }
 }
 export const mainJunctions = () => MAIN_JUNCTIONS.map((j) => ({ name: j.name, x: j.at[0] * TILE, y: j.at[1] * TILE }));

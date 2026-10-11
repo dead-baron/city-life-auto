@@ -9,7 +9,7 @@ import { PREFABS, GROUND_TEX, PROP_SIZES } from '../../shared/prefab-data.js';
 import { BLOCK_ART } from '../../shared/block-data.js';
 import { INTERIOR_RECTS, INTERIOR_KINDS, SCENE_RECTS } from '../../shared/interior-art.js';
 import { atlas } from './sprites.js';
-import { railIndex, drawRailChunk, drawStation, drawPortals } from './trains.js';
+import { railIndex, drawRailChunk, drawStation, drawPortals, drawRailSwitches } from './trains.js';
 import { drawRoads, edgeRect, drawGores } from './roads.js';
 import { Shores } from './shore.js';
 import { drawCountryProp, drawQuarry, drawRaceway } from './country.js';
@@ -68,6 +68,7 @@ export class GroundCache {
     this.gores = this.byChunk(map.gores || [], (gr) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of gr.pts) { x0 = Math.min(x0, p.x, p.qx); y0 = Math.min(y0, p.y, p.qy); x1 = Math.max(x1, p.x, p.qx); y1 = Math.max(y1, p.y, p.qy); } const pad = gr.hw + gr.rhw + 8; return [x0 - pad, y0 - pad, x1 + pad, y1 + pad]; });
     this.culdesacs = this.byChunk(map.nodes.filter((n) => n.culdesac), (n) => [n.x - 200, n.y - 200, n.x + 200, n.y + 200]);
     this.rail = railIndex(map, (cx, cy) => this.key(cx, cy));
+    this.rails = map.rails ? map.rails.map((r) => railIndex(map, (cx, cy) => this.key(cx, cy), r)) : null;   // (World v3: every loop)
     this._shores = null;   // (the coast traced once, when the classic renderer first draws: get shores)
   }
   key(cx, cy) { return cy * 1000 + cx; }
@@ -121,7 +122,8 @@ export class GroundCache {
     for (const q of m.quarries || []) drawQuarry(g, q, cx, cy, CHUNK_PX);
     for (const r of m.raceways || []) drawRaceway(g, r, cx, cy, CHUNK_PX);
     for (const pt of m.paintings || []) drawPainting(g, pt, cx, cy);
-    drawRailChunk(g, m, this.rail.get(k));
+    if (this.rails) { for (const t of [false, true]) m.rails.forEach((r, ri) => drawRailChunk(g, m, this.rails[ri].get(k), r, t)); drawRailSwitches(g, m, cx, cy); }
+    else drawRailChunk(g, m, this.rail.get(k));
     for (const st of (m.rail && m.rail.stations) || []) drawStation(g, m, st, cx, cy);
     if (L.props) for (const s of this.stalls.get(k) || []) drawStall(g, s);
     for (const r of this.roofs.get(k) || []) drawBuildingBase(g, r); // the roof itself is lifted onto its walls (render/buildings.js)

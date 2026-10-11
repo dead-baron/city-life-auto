@@ -59,7 +59,7 @@ test('the main line is laid: each service both ways, double track, its stations 
   const bay = R.find((q) => q.service === 'Bay Loop' && q.way === 1);
   assert.ok(bay.pts.filter((p) => p.deck).length > 1000, 'the Bay Loop crosses the gulf on decks');
   // the skeleton's tunnels: the Grand Loop under the North Ridge, the Long Reach and the peaks
-  assert.ok(one.pts.filter((p) => p.under && !p.underpass).length * 8 / TILE > 1000, 'the Grand Loop has its tunnels');
+  assert.ok(one.pts.filter((p) => (p.under || p.bore) && !p.underpass).length * 8 / TILE > 1000, 'the Grand Loop has its tunnels (the mountain ones bores under the hill: H33)');
   // the roads it meets: gated level crossings (the arterials) and underpasses (the highways at grade)
   assert.ok(R.every((r) => r.crossings.length > 5), 'level crossings on every loop');
   assert.ok(one.pts.some((p) => p.underpass), 'the Grand Loop dips under the highways');

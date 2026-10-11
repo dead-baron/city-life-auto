@@ -2324,6 +2324,17 @@ function addRail(c, I) {
   const seen = new Set(), once = (x, y, k = '') => { const key = `${Math.round(x / 16)},${Math.round(y / 16)}${k}`; if (seen.has(key)) return false; seen.add(key); return true; };
   for (const R of c.M.rails || [c.M.rail]) addRailLoop(c, I, R, c.M.rails ? once : () => true);
   if (c.M.railXings) crossingSignals(I, c.M.railXings);   // (every loop's crossings, once each)
+  if (c.M.railHubs) railHubs(I, c.M.railHubs);
+}
+// (H33) World v3's stations, one per name: the station building on its forecourt (the map point), lit, with the station's
+// name over its door, and a footbridge over the tracks between each pair of platforms that face each other.
+function railHubs(I, hubs) {
+  for (const h of hubs) {
+    put(I, vitem('ent', 'stationEntrance', [1, '#f28c28'], h.x, h.y, 0));
+    lightAt(I, h.x, h.y + 10, 60, 140, [1, 0.85, 0.6], 1.5, 'sign');
+    put(I, { key: `stb:${h.name}`, recipe: { t: 'sign', text: h.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: 26, posts: true }, x: h.x, y: h.y - 40, ext: [80, 60, 80, 12] });
+    for (const f of h.bridges || []) { const fh = qa(f.a, 16); put(I, vitem(`fbr:${f.len}:${fh.toFixed(2)}`, 'footbridge', [f.len, 30, 6], f.x, f.y, fh)); }
+  }
 }
 function addRailLoop(c, I, R, once) {
   if (!R || !R.pts) return;

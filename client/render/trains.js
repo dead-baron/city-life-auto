@@ -10,10 +10,10 @@ import { atlas } from './sprites.js';
 const TIE_STEP = 18, RAIL_OFF = 12;
 
 // Index rail points by ground chunk (with a margin) so a chunk bake only walks its own track.
-export function railIndex(map, key) {
+export function railIndex(map, key, rail = map.rail) {
   const out = new Map();
-  if (!map.rail) return out;
-  map.rail.pts.forEach((p, i) => {
+  if (!rail) return out;
+  rail.pts.forEach((p, i) => {
     for (let cy = Math.floor((p.y - 48) / CHUNK_PX); cy <= Math.floor((p.y + 48) / CHUNK_PX); cy++)
       for (let cx = Math.floor((p.x - 48) / CHUNK_PX); cx <= Math.floor((p.x + 48) / CHUNK_PX); cx++) {
         const k = key(cx, cy);
@@ -27,10 +27,48 @@ export function railIndex(map, key) {
 const roadAt = (m, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), t = m.tileAt(tx, ty); return t === T.ROAD || (t === T.BRIDGE && !!m.roadAxis[m.idx(tx, ty)]); };
 const wetAt = (m, x, y) => { const t = m.tileAtPx(x, y); return t === T.WATER || t === T.DEEP || t === T.BRIDGE; };
 
-export function drawRailChunk(g, m, idx) {
-  if (!idx || !idx.length || !m.rail) return;
-  const pts = m.rail.pts, n = pts.length;
+export function drawRailChunk(g, m, idx, rail = m.rail, railsOnly = false) {
+  if (!idx || !idx.length || !rail) return;
+  const pts = rail.pts, n = pts.length;
   const seg = (i) => { const p = pts[i], q = pts[(i + 1) % n]; return { p, q, a: Math.atan2(q.y - p.y, q.x - p.x), len: Math.hypot(q.x - p.x, q.y - p.y) }; };
+  if (!railsOnly) railBed(g, m, idx, seg);
+  // the two rails
+  for (const [w, col] of [[4, '#2a2622'], [2, '#b8bcc4']]) {
+    g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'butt';
+    for (const side of [-1, 1]) {
+      g.beginPath();
+      for (const i of idx) {
+        const { p, q, a } = seg(i);
+        if (p.under || q.under) continue;
+        const nx = -Math.sin(a) * side * RAIL_OFF, ny = Math.cos(a) * side * RAIL_OFF;
+        g.moveTo(p.x + nx, p.y + ny); g.lineTo(q.x + nx, q.y + ny);
+      }
+      g.stroke();
+    }
+  }
+}
+// (H33: World v3's loops at their junctions - the bed and the ties of every loop are drawn before any rails, so where a
+// loop leaves or crosses another both tracks' rails show: the switch's points and frog, the diamond; and the marks of
+// the switches - a turnout's frog and point lever, a diamond's crossing timbers - from m.railSwitches)
+export function drawRailSwitches(g, m, cx, cy) {
+  const x0 = cx * CHUNK_PX - 120, y0 = cy * CHUNK_PX - 120, x1 = x0 + CHUNK_PX + 240, y1 = y0 + CHUNK_PX + 240;
+  for (const w of m.railSwitches || []) {
+    if (w.x < x0 || w.x > x1 || w.y < y0 || w.y > y1) continue;
+    g.save();
+    if (w.kind === 'turnout') {
+      g.translate(w.fx, w.fy); g.rotate(w.a);
+      g.fillStyle = '#6d7078'; g.beginPath(); g.moveTo(-14, 0); g.lineTo(10, -5); g.lineTo(10, 5); g.closePath(); g.fill();   // the frog
+      g.setTransform(g.getTransform().translate(0, 0)); g.restore(); g.save();
+      g.translate(w.x, w.y); g.rotate(w.a);
+      g.fillStyle = '#2e3a2e'; g.fillRect(-8, 28, 16, 10); g.fillStyle = '#d8c040'; g.fillRect(-2, 26, 4, 6);   // the point lever
+    } else {
+      g.translate(w.x, w.y); g.rotate(w.a);
+      g.strokeStyle = '#8c9098'; g.lineWidth = 2; g.beginPath(); g.moveTo(-18, 0); g.lineTo(0, -12); g.lineTo(18, 0); g.lineTo(0, 12); g.closePath(); g.stroke();   // the diamond's check rails
+    }
+    g.restore();
+  }
+}
+function railBed(g, m, idx, seg) {
   // over the water: the bridge's shadow and its deck, drawn smooth along the line
   for (const [dx, dy, w, col] of [[12, 16, 70, 'rgba(0,8,22,.42)'], [0, 5, 64, '#3a3f48'], [0, 0, 62, '#5b6068']]) {
     g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'butt'; g.beginPath();
@@ -72,20 +110,6 @@ export function drawRailChunk(g, m, idx) {
         if (p.under || q.under || !wetAt(m, p.x, p.y) || !wetAt(m, q.x, q.y) || roadAt(m, p.x, p.y)) continue;
         const nx = -Math.sin(a) * side * off, ny = Math.cos(a) * side * off;
         g.moveTo(p.x + nx + (off === 34 ? 4 : 0), p.y + ny + (off === 34 ? 5 : 0)); g.lineTo(q.x + nx + (off === 34 ? 4 : 0), q.y + ny + (off === 34 ? 5 : 0));
-      }
-      g.stroke();
-    }
-  }
-  // the two rails
-  for (const [w, col] of [[4, '#2a2622'], [2, '#b8bcc4']]) {
-    g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'butt';
-    for (const side of [-1, 1]) {
-      g.beginPath();
-      for (const i of idx) {
-        const { p, q, a } = seg(i);
-        if (p.under || q.under) continue;
-        const nx = -Math.sin(a) * side * RAIL_OFF, ny = Math.cos(a) * side * RAIL_OFF;
-        g.moveTo(p.x + nx, p.y + ny); g.lineTo(q.x + nx, q.y + ny);
       }
       g.stroke();
     }

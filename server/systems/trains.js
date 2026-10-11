@@ -1440,7 +1440,7 @@ export function callTrain(world, x, y) {
 // (World v3: a station's map point stands for every loop that stops there - each loop's station of that name near it)
 function loopStops(world, poi) {
   const out = [];
-  world.rails.forEach((rail, r) => rail.stations.forEach((st, si) => { if (st.name === poi.label && Math.hypot(st.platform.x - poi.x, st.platform.y - poi.y) < 700) out.push([r, si]); }));
+  world.rails.forEach((rail, r) => rail.stations.forEach((st, si) => { if (st.name === poi.label && (st.poi === poi.id || Math.hypot(st.platform.x - poi.x, st.platform.y - poi.y) < 700)) out.push([r, si]); }));
   return out;
 }
 // Seconds until the next train at station si (0: one is in now); on World v3's main line, at the station `poi` is.
@@ -1455,11 +1455,21 @@ export function nextTrainIn(world, si, poi = null) {
 // Every station's clock: seconds until the next train (0 = one is at the platform now).
 export function timetable(world) {
   if (!world.trains || !world.trains.length) return [];
+  if (world.rails) return loopTimetable(world);   // (World v3: every loop's platforms)
   return world.map.rail.stations.map((_, si) => {
     let best = Infinity;
     for (const t of world.trains) if (!off0(t)) best = Math.min(best, etaTo(world, t, si));
     return Math.round(best);
   });
+}
+
+// (H33: World v3 - every loop's platform clocks, a list per loop: the next train of that loop at each of its stations)
+function loopTimetable(world) {
+  return world.rails.map((rail, r) => rail.stations.map((_, si) => {
+    let best = Infinity;
+    for (const t of world.trains) if (t.r === r) best = Math.min(best, etaTo(world, t, si));
+    return best === Infinity ? -1 : Math.round(best);
+  }));
 }
 
 export function stationBoard(world, poi) {

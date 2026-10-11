@@ -7313,3 +7313,39 @@ to the NPCs, Northshore's boards; riding a Bay Loop or Harbor Line train), test/
 of 19), test/world3server.test.js (the v3 world's region files read back into the same city; the server's world runs
 on it), test/world3.test.js, test/world3world.test.js, test/world3roads.test.js, test/world3biomes.test.js,
 test/perf.test.js (all pass).
+
+## 2026-10-10 · World v3's main line: one station per name, the switches, the mountain bores
+
+The owner's brief for the main line (docs/WORLD-V3.md 8.10's wrongs): "One hub station at Northshore, and at every
+other station more than one loop calls at" - the platforms side by side, one building and concourse, every service
+calling there, the station board listing them all; turnouts drawn as switches and diamonds where tracks cross; the
+mountain tunnels under the hill's cover like the road tunnels; the platform clocks and the phone reading every loop.
+The junction's place and the Harbor Line through Metro City are left as they are (the owner is deciding).
+- **One station per name** (shared/map.js `hubIndex`/`hubPlan`, `buildRailHubs`): the station's place is planned once
+  for every loop calling there - on straight track, its platforms clear of the other loops' tracks and the streets,
+  loops on one track sharing one platform, the two tracks' platforms facing each other - with one map point (at the
+  station's building, on a paved forecourt; it lists the services) and a footbridge over the tracks between facing
+  platforms (`m.railHubs`). The junctions' corners are tight (`HUB_R`, 20 tiles), so the platforms stand on the
+  straights either side: Northshore's six loops stop at three platforms each side of the coast line's double track.
+- **The switches** (`m.railSwitches`): the chunk bake keeps a second track through a pixel (`railSecond`), so both
+  tracks' rails show where they part (the points, the frog) and cross (the diamond); the classic renderer draws every
+  loop (beds and ties first, then the rails) and the switches' marks (`drawRailSwitches`).
+- **The mountain bores** (`mountainBores`, `addRailBore`, `addRailBores`): a tunnel under dry, roadless ground is the
+  track at ground level under shared/tunnels.js' cover - the hill, the portals, sight blocked, the hill fading for
+  whoever is inside; under water or a town it stays below ground.
+- **Every loop's clocks and the phone:** the `tt` broadcast is a list per loop on World v3 (`loopTimetable`), the
+  client draws every loop's clocks; the phone lists one row per station with its services.
+- Nothing live changes: the world hash stays 6b6e16fdef9f (today's one loop as before).
+
+Files: shared/world3-rail.js (`HUB_R`, `mountainBores`), shared/world3-world.js (the `rails` hook hands in the map),
+shared/map.js (`hubIndex`, `hubPlan`, `buildRailHubs`, `railSwitches`, `addRailBores`), shared/tunnels.js
+(`addRailBore`), server/systems/trains.js (`loopTimetable`; a station's loops by its map point), client/main.js
+(every loop's clocks), client/phone.js (`railStations`), client/art2/game/groundbake.js (`railSecond`),
+client/art2/game/statics.js (`railHubs`: the building, the footbridges), client/render/trains.js and tiles.js (every
+loop, `drawRailSwitches`), tools/world3-hub-map.mjs (new: a station through the chunk bake), test/world3hubs.test.js
+(new), test/world3rail.test.js, docs/world-v3-hub-northshore.png, docs/world-v3-hub-dry-creek.png, docs/WORLD-V3.md
+8.10.1.
+
+Tests: test/world3hubs.test.js (one world build: one station per name with every service calling, one map point, the
+platforms on the straight and side by side; the switches at every junction, the bake through one; the bores under
+their cover, a train inside hidden from outside).
