@@ -8402,6 +8402,8 @@ test/firebow.test.js, test/perf.test.js.
   up on screen): now they're parked, the first time and again, only where nobody's looking (`aircraft.js` manage, view.js
   inAnyView).
 - In a vehicle the fire button drives the tank's cannon or the gunship's missiles before any drive-by (`players.js`).
+- A garage won't take an aircraft (`homes.js` storeVehicle): a helicopter landed on a driveway could be garaged - a
+  stolen police helicopter kept for good. Leave it on a helipad or an airfield (a pad at home could come later).
 - Tests: a new character has Safety mode on, so the flight test's theft of the parked helicopter presses F twice (the
   first press only warns); the burning test clears everyone away before checking that standing still beside a fire
   doesn't light you (the walker it had lit was left standing on the same spot, moving, and caught again now and then);

@@ -226,6 +226,7 @@ export function storeVehicle(world, p, v, home) {
   // a company's work truck (jobs.js workTruck): drive it, paint it, keep it out - but a garage won't keep it (the owner,
   // 2026-10-11: "you can't just park a work truck in your garage and keep it")
   if (v.workTruck) { world.notify(p, `That ${v.def.name} belongs to the company - your garage won't keep it. Bring it back where you got it for a bonus.`, 'warn'); return 'work truck'; }
+  if (v.def.kind === 'air') { world.notify(p, `A garage can't take the ${v.def.name} - leave it on a helipad or an airfield.`, 'warn'); return 'aircraft'; }   // (flying: shared/flight.js)
   if (v.owner !== p.pid && prof.vehicles.length >= garageCap(world, prof)) { world.notify(p, `Garage full (${prof.vehicles.length}/${garageCap(world, prof)}). Buy another home for more space.`, 'warn'); return; }
   if (v.seats.some((s, i) => i > 0 && s)) { world.notify(p, 'Passengers have to get out first.', 'warn'); return; }
   const boat = v.def.kind === 'boat';
