@@ -7676,3 +7676,41 @@ tools/world3-world-map.mjs (`--towns --close`: two of each town's models up clos
 
 Tests: test/world3townmodels.test.js (one world build: each town's looks and models, the planned places in them, the
 yards inside their footprints, nothing solid on a road, the boardwalk's dressing on its planks), test/world3towns.test.js.
+## 2026-10-11 · World v3: Lucky Mesa, the casino city
+
+The owner's plan (docs/WORLD-V3.md 1.3, 1.5 R6): "New city: Lucky Mesa, the casino city: the Strip of themed resorts
+with invented names and looks (a lotus-crowned tower, a domed palace, a pyramid with a beam, glass towers), the
+fountain show, wedding chapels, the old downtown's covered street of lights, motels and pawn shops on the side
+streets ... the syndicate's back rooms" - built in the v3 world build at the skeleton's Lucky Mesa town point, on the
+Desert Highway (docs/WORLD-V3.md 8.15).
+- **Three districts** after the towns' (60 The Strip, 61 Old Downtown, 62 Mesa Flats - the side streets and suburbs),
+  painted round the hub where Mesa Road and Route 9 meet the Desert Highway, off the highway's and the main line's room.
+- **The Strip:** Mesa Road pulled straight through the city and laid as a boulevard (two lanes each way, a median) for
+  308 tiles, the resorts end to end along both sides; side streets behind them and round Old Downtown and the flats, a
+  trailer park's loop, a lane out into the desert, and Station Road down to the main line's Lucky Mesa station.
+- **Seven resorts**, each its own invented look built from the art v2 building spec (the map sets each building's `art`,
+  as the hero corner does - no art code changed): a gold tower with pink neon (The Golden Lotus), a palace round a
+  copper-green dome (Palazzo Aurelio), a black glass pyramid with its beam (The Sunstone Pyramid), twin blue and violet
+  glass towers (The Prism), a white spire (Starfall Tower), cream wings behind a fountain lake with six fountains (The
+  Silver Lagoon), a white castle with red and blue coned turrets (Castillo Dorado); porte-cochere drives with palms and
+  lamps, pools with loungers, neon along the roofs at night. Each casino's door is a named place marked `casino`, for
+  the gambling to come (GM3, GM4).
+- **Old Downtown's covered street of lights:** a pedestrian street (paving) between two streets, lamps down it, six old
+  casinos fronting it with bulb-sign neon.
+- **The places:** pawn shops, a gun shop, clubs, a supper club with the syndicate's counting room (`gang`), a bank, ATMs,
+  motels, two wedding chapels, a diner, the hospital, the police, a gas station with its pumps, bus stops on the Strip.
+- `tools/world3-world-map.mjs --towns` pictures Lucky Mesa too; `--only <key>` one town, `--night` a night picture
+  (the albedo dimmed, the emissive map, the lights splashed on the ground).
+- Not done: pedestrian bridges over the Strip (the road network has no kind for people only - 8.4's footbridges are
+  narrow lanes), the canopy of lights as a model, the casinos as walk-ins, the airport, the welcome sign, the resorts'
+  drawing in the classic renderer (it draws them as hotels). Nothing live changes: the world hash stays 6b6e16fdef9f.
+
+Files: shared/world3-mesa.js (new), shared/world3-world.js (the calls), shared/world3-towns.js (`stamp` and `pull`
+exported; `pulledAt` knows the Strip), shared/mapcore.js (`DISTRICTS` 60-62), tools/world3-world-map.mjs (`--only`,
+`--night`, Lucky Mesa in `--towns`), test/world3mesa.test.js (new), test/world3biomes.test.js (63 districts),
+docs/WORLD-V3.md 8.15, docs/world-v3-town-mesa.png, docs/world-v3-town-mesa-night.png.
+
+Tests: test/world3mesa.test.js (one world build: the districts, the streets on the one network, the Strip straight as a
+boulevard, Station Road to the station, each resort's look, door, pool and palms, the covered street and its old
+casinos, every planned place, clear of the highway and the main line), test/world3biomes.test.js, test/world3roads.test.js,
+test/world3towns.test.js.

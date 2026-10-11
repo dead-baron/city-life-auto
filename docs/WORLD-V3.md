@@ -3253,3 +3253,106 @@ What looks wrong:
 - **The boardwalk still stair-steps** with the diagonal shore (planks by columns) and its rail with it.
 - **The classic renderer** is not checked in the game (its drawing is from above, compact - `townart.js`).
 - The houses on stilts are a raised porch on posts in front of an ordinary house, not a house lifted on piles.
+
+benches, the pier's end); the lots at the corners of Willow Crossing's loops.
+
+### 8.15 Lucky Mesa, the casino city (2026-10-11, H38)
+
+Part 1.3's three new districts and 1.5 R6: the Strip of themed resorts, the old downtown's covered street of lights, the
+side streets with motels, wedding chapels, pawn shops, a trailer park and tract homes, the syndicate's back rooms
+(concepts VG1, VG2; prompts VG3, VG4). Built by today's generator on new ground round the skeleton's town point
+(4600, 420), where Mesa Road and Route 9 meet the Desert Highway at grade. Nothing live changes: the world hash stays
+`6b6e16fdef9f`; the city's code is `shared/world3-mesa.js` (the world build's only: the page and the city worker never
+import it); `shared/mapcore.js` `DISTRICTS` has three more entries (60-62).
+
+**How it is built** (`shared/world3-mesa.js`, one call each from `shared/world3-world.js`, as the towns, 8.13):
+- **Its districts** (`DISTRICTS` 60-62, after the towns' 57-59, so no id moves): **The Strip** (`nightlife`, `lux`),
+  **Old Downtown** (`nightlife`, `low`) and **Mesa Flats**, the side streets and suburbs (`houses`, `suburb`), painted
+  with the mainland's built zone (8) on the land layer by `paintMesa3` (`MESA.ground`: boxes, a later district over an
+  earlier) off the Desert Highway's room (24 tiles), the main line's (18) and its station's (30); the desert's sand under
+  the city is made plain desert, so the build lays lots there, not a beach.
+- **Its streets** (`layMesa3`, the `lines` hook after the towns' and the beach towns'): **the Strip is Mesa Road pulled
+  straight** on row 392 from Gold Street to the hub (the towns' `pull`, 8.13.1; `pulledAt` knows it) and its straight
+  run laid as a boulevard (`blvd`: two lanes each way with a median, commercial pavements) - 308 tiles of it; the side
+  streets (`st`): Palm Row behind the north resorts, Chapel Street, Gold Street and Silver Street round Old Downtown (both
+  across the Strip), Lucky Street and Cactus Street, Mesa Flats Drive and the trailer park's loop (Trailer Lane), a lane
+  out into the desert (Chapel Lane, ending in a turnaround) and **Station Road** from Route 9 down to the main line's
+  Lucky Mesa station (8.10), ending beside its platforms.
+- **The lots** (`mesaLots`, the `rails` hook, before the blocks): the seven resorts' lots along the Strip, end to end,
+  and Old Downtown's covered street with its old casinos' lots, kept as paving (reserve 4, the promenade's: no block
+  takes them, nothing is dressed on them).
+- **The resorts** (`buildMesa`, the `dress` hook: the props have their pass), each a big footprint of its own invented
+  look, the casino's door on the Strip (a named place, `delivery`, fixed, marked `casino`: the gambling to come, GM3 and
+  GM4 - not walk-ins yet): **The Golden Lotus** (a gold glass tower behind a cream casino podium, pink neon at its top),
+  **Palazzo Aurelio** (a palace of two cream wings round a copper-green domed hall, a pool each side), **The Sunstone
+  Pyramid** (a black glass pyramid, 26 tiles square, with its beam of light and a black glass hall), **The Prism**
+  (twin glass towers, blue and violet, over a dark glass podium), **Starfall Tower** (a white glass spire over a white
+  podium), **The Silver Lagoon** (three cream wings behind the fountain lake, six fountains in it) and **Castillo Dorado**
+  (a white castle with red and blue coned turrets and a blue-roofed keep). Each has its porte-cochere drive along the
+  Strip (palms along it, lamps at the door), its pools with loungers and umbrellas, palms round them. Their looks are
+  the buildings' `art` (art v2's `statics.js` reads it, as the hero corner's: the spec - floors, walls, the pitched roofs
+  of the pyramid, the dome and the turrets - and the neon along their top edges at night); no art code changed. The
+  classic renderer draws them as hotels with their roofs (`resort` on the roof record says which look, for later).
+- **Old Downtown's covered street of lights** (`MESA.canopy`): a pedestrian street of paving seven tiles wide between
+  Gold and Silver streets, lamps down its middle, three old casinos either side fronting it - The Gilded Spur, The Dusty
+  Ace, The Prospector, Wagon Wheel Casino, Silver Mule Casino, Rattlesnake Ruby - with bulb-sign neon along their fronts.
+- **The planned places** (`MESA_SPECIALS`, handed in with the towns' as `opts.specials`; fixed): in Old Downtown
+  Second Roll Pawn and Blue Chip Pawn & Loan (a strip with a jeweller and a cash exchange), The Copper Room Supper Club
+  with **The Counting Room** (`gang`: the syndicate's back rooms, VG2), Mesa Savings & Trust (`bank`), Club Neon Cactus,
+  the Horseshoe Motor Inn; in Mesa Flats Mesa Sportsman Arms (`gunshop`) with Third Roll Pawn, the bridal shop and the
+  loans, the Desert Rose Wedding Chapel and the Chapel of the Lucky Heart, the Blue Mesa and Cactus Flower motels,
+  Lucky Mesa General (`hospital`), Lucky Mesa Police, the Jackpot Diner, Club Mojave Nights, and Lucky Mesa Fuel (a store
+  that becomes the gas station with its pumps, `mesaDone`). The districts' styles (`MESA_STYLES`, with the towns' as
+  `opts.styles`): the Strip's leftovers clubs and show rooms, Old Downtown low shops, motels, arcades, bars and tattoo
+  parlours with car parks, the flats tract homes and trailers (the shacks) with car parks. The generator's own passes
+  add ATMs (at the casinos' doors too), a gas station, homes for sale and bus stops on the Strip.
+
+**What's built** (the world build, seed 1337: `m.world3.mesa`; `test/world3mesa.test.js`):
+
+| district | its ground | buildings | what's in it |
+|---|---|---|---|
+| The Strip (60) | 26,595 tiles | 25 | the seven resorts' 23 buildings (786-912 tiles of building a resort), 8 pools, the lagoon's lake and its 6 fountains, 90 palms on the drives |
+| Old Downtown (61) | 13,500 tiles | 20 | the covered street (7 x 61 tiles, 30 strings of bulbs across it) and its six old casinos, the pawn strip, the supper club and the counting room, the bank, Club Neon Cactus, the motor inn and motels |
+| Mesa Flats (62) | 47,415 tiles | 110 | tract homes and trailers, the motels, the chapels, the gun shop's strip, the hospital, the police, the diner, a club, two gas stations |
+
+The streets: 308 tiles of the Strip (boulevard), 10 side streets (1,554 tiles); Station Road ends 23 tiles from the
+station's point, beside its platforms. 23,280 tiles of lots kept for the resorts and the covered street. 89 places in
+the city: 13 casinos (7 resorts, 6 old), 5 clubs, 3 pawn shops, a gun shop, the bank, 13 ATMs, the counting room, the
+hospital, the police, 2 gas stations, 26 homes for sale; 4 bus stops on the Strip.
+
+**The test** (`test/world3mesa.test.js`, one world build, about 40 s): the districts after the towns' (ids, names,
+styles); their ground; every street laid and on the one network; the Strip a boulevard straight on its row for 280
+tiles or more; Station Road ending within 32 tiles of the station; each resort on its lot with its look, 400 tiles of
+building or more, its casino door, its pool (the lagoon its lake), six palms or more; the covered street paved and its
+six old casinos fronting it; every planned place in the city with its kind, the pawn shops, the gun shop, the clubs,
+the bank, the counting room, the hospital, the police, the gas station and its pumps, two wedding chapels, three motels,
+a bus stop, an ATM; no building corner within 22 tiles of a highway's line or 14 of the main line's.
+`test/world3biomes.test.js` counts 63 districts now.
+
+**The pictures** (`node --expose-gc tools/world3-world-map.mjs --sample 0 --towns --only mesa --night`: the city's box
+and 24 tiles round it through the game's chunk bake at 1/8, 320 chunks, about two minutes; `--only` and `--night` are
+new: the night picture is the albedo under a dim blue sky, the bake's emissive map and the chunk's lights splashed on
+the ground): `docs/world-v3-town-mesa.png`, `docs/world-v3-town-mesa-night.png`. What looks right: the Strip reads as a
+casino boulevard - the black pyramid, the copper-green domed hall between the palace's wings, the castle's red and blue
+cones round its blue-roofed keep, the twin glass towers, the lagoon's long cream front behind its fountain lake, the gold
+tower and the white spire on their podiums - palms along every drive, pools beside the towers; Old Downtown's six old
+casinos face each other across the covered street; the motels' long rows south of the Strip in Old Downtown; the flats'
+houses along Chapel Street and Palm Row; Station Road down to the platforms east of the highway; by night the resorts'
+neon (violet, pink, cyan, gold) and their towers' lit windows. What looks wrong:
+- **Too much bare paving:** the south resorts' lots run 66 tiles back from the Strip and only their front two thirds are
+  built - the rest is paving with palms and the generator's lamps (it lays lamps over every paved lot, which also
+  crowds the night picture with their pools of light). The resorts want car parks and garages at the back, fewer lamps.
+- **The crowns don't read from above:** the towers' roofs are flat (a helipad, a tank, air handlers): the lotus crown,
+  the star on the spire and the pyramid's beam (a light) aren't shapes yet, and the dome is a hip roof in copper green,
+  not round - art v2 models of their own (a crown, a spire's top, a dome) are what's missing.
+- **Mesa Flats is green:** the tract homes' prefabs bring lawns and gardens (the `houses` look); a desert suburb wants
+  gravel yards, cactus and pools. The south-west corner is one big car park (the flats' `parking` filler on a big
+  leftover lot) and the trailer park is a few shacks on its loop: trailers want a prefab.
+- The night picture is the tool's approximation, not the game's lighting: each chunk's lights stop at its edge (the
+  square cut-offs).
+
+**What's left:** pedestrian bridges over the Strip (the road network has no kind for people only - 8.4's footbridges are
+narrow lanes - so none are laid); the canopy of lights as a model of its own (strings of bulbs across the street for
+now); the casinos as walk-ins with their games (GM3, GM4), the counting room and the boss's office as rooms (VG2); the
+resorts' crowns and the classic renderer's drawing of their looks (`resort` on the roof record); the airport, the welcome
+sign on the highway, the fountain show; the resorts' car parks; a desert look for the flats (yards, trailers).
