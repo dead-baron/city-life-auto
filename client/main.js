@@ -237,14 +237,14 @@ function onText(m) {
         if (!S.mismatchSaid) { S.mismatchSaid = true; console.warn('[map] this browser built a different city from the same build', mapSignature(S.map), 'vs', m.sig); send({ t: 'diag', what: `map signature ${mapSignature(S.map)} vs server ${m.sig} (${navigator.userAgent})` }); }
       }
       S.ents.clear(); S.pred = null; S.pending = [];
-      for (const p of S.map.props) if (p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
+      for (const p of S.map.props) if (p && p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
       S.confirmedBreaks.clear(); S.predBreaks.clear();
       S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;
-      S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) pr.off = false;
+      S.gateOpen = {}; S.gateAnim = {}; for (const gt of S.map.gates || []) for (const pr of gt.props) if (pr) pr.off = false;
       for (const i of m.gates || []) setGate(i, true);
       S.clubLive = m.clubs ? Object.fromEntries(m.clubs.map((i) => [i, true])) : null;
       S.forageGone = new Set(m.forage || []);
-      S.map.props.forEach((p, i) => { if (p.lit0 !== undefined && !!p.lit !== p.lit0) setFire(i, p.lit0, false); });
+      S.map.props.forEach((p, i) => { if (p && p.lit0 !== undefined && !!p.lit !== p.lit0) setFire(i, p.lit0, false); });
       for (const [i, lit] of m.fires || []) setFire(i, lit, false);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
       for (let k = 0; k + 1 < (m.felled || []).length; k += 2) setFelled(m.felled[k], m.felled[k + 1], true);   // ([index, angle code, ...])
@@ -998,6 +998,52 @@ function setupWorld(seed, here = false) {
   S.hud.onDown = (a) => downAct(a);
   loadSpan('setup', performance.now() - t);
   startArt2(S.map);
+  if (!here && job && job.win && S.mapFrom === 'served') keepWindow(job);   // (World v3's window: it moves with the player)
+}
+
+// ---- World v3's window (docs/WORLD-V3.md 8.12) -----------------------------------------------------------------
+// The page holds the 3 x 3 regions round the player, not the whole world: the city worker (client/worldgen.js,
+// client/worldwindow.js) is told where the player is a few times a second, fetches the regions coming in as they near
+// a region's border and hands over the next window once they're past it; the page swaps it in here. What the page
+// changed on the window's items (broken props, lit fires, open gates, smashed barriers) goes over to the new one.
+function keepWindow(job) {
+  S.win = job.win;
+  job.onWindow = (m) => {
+    if (m.windowError) { console.warn('[world] the next window:', m.windowError); return; }
+    if (!S.map || !m.data || (m.data.seed >>> 0) !== S.map.seed) return;
+    const t = performance.now();
+    swapWorld(cityFromData(m.data));
+    S.win = m.win;
+    console.info(`[world] the window moved to ${m.win.rect.join(', ')} (${m.win.keys.join(' ')}): assembled in ${m.ms.toFixed(0)} ms, swapped in ${(performance.now() - t).toFixed(0)} ms`);
+  };
+  let saved = 0;
+  clearInterval(S.winTimer);
+  S.winTimer = setInterval(() => {
+    if (!S.welcomed || !S.map || !S.win) return;
+    const me = selfPos();
+    if (!me || !Number.isFinite(me.x)) return;
+    const at = [Math.floor(me.x / TILE), Math.floor(me.y / TILE)];
+    try { job.worker.postMessage({ where: at }); } catch { /* gone */ }
+    if (performance.now() - saved > 5000) { saved = performance.now(); try { localStorage.setItem('cla.at3', JSON.stringify(at)); } catch { /* blocked */ } }
+  }, 300);
+}
+function swapWorld(m) {
+  const old = S.map;
+  old.props.forEach((p, i) => { const q = m.props[i]; if (!q) return; if (p.broken) q.broken = p.broken; if (p.lit0 !== undefined) { q.lit0 = p.lit0; q.lit = p.lit; } });
+  for (const [k, se] of old.propSolid) { const e = m.propSolid.get(k); if (e && se.off) e.off = true; }
+  if (old.levels && m.levels && old.levels.broken) m.levels.broken = old.levels.broken;
+  (old.gates || []).forEach((gt, i) => { const g2 = m.gates && m.gates[i]; if (g2) gt.props.forEach((pr, j) => { if (pr && g2.props[j]) g2.props[j].off = pr.off; }); });
+  S.map = m;
+  for (const i of S.confirmedBreaks) setPropBroken(i, 0, false);
+  S.flora = new Flora(m); S.flora.configure(gfx); if (atlas.ready) S.flora.registerAtlas(atlas);
+  S.ground = new GroundCache(m, LOW_MEM ? 12 : 24);
+  S.wx.map = m; S.wx.sites.clear(); S.wx.vents.clear();
+  S.poleAt = null; S._hw = null;
+  S.buildings = new BuildingLayer(m, S.ground);
+  if (!(S.spec && S.spec.on)) S.spec = createSpectator({ map: m, players: () => (S.plist && S.plist.l) || [], mobile: input.device === 'touch' });
+  S.hud.setMap(m);
+  S.router = createRouter(m);
+  if (S.art2 && S.art2.setMap) S.art2.setMap(m); else startArt2(m);
 }
 
 // ---- the classic (v1) art ------------------------------------------------------------------------------
@@ -3069,7 +3115,7 @@ function drawWorldV1(F) {
   if (S.flora && !sub) S.flora.drawFront(g, peds.filter((p) => !(p.flags & (PF.INVEH | PF.DEAD | PF.DOWN))));
   // the wires strung between the utility poles, over everything at ground level
   if (poles.length) {
-    if (!S.poleAt) { S.poleAt = new Map(); for (const p of S.map.props) if (p.t === 'upole') S.poleAt.set(`${Math.round(p.x)},${Math.round(p.y)}`, p); }
+    if (!S.poleAt) { S.poleAt = new Map(); for (const p of S.map.props) if (p && p.t === 'upole') S.poleAt.set(`${Math.round(p.x)},${Math.round(p.y)}`, p); }
     drawWires(g, poles, (x, y) => S.poleAt.get(`${Math.round(x)},${Math.round(y)}`));
   }
   // your own boat stays readable under a bridge: a faint outline through the deck
@@ -3784,7 +3830,7 @@ function rideCam(tx, ty) {
 function setGate(i, open) {
   S.gateOpen[i] = open;
   const gt = S.map.gates && S.map.gates[i];
-  if (gt) for (const pr of gt.props) pr.off = !!open;
+  if (gt) for (const pr of gt.props) if (pr) pr.off = !!open;
 }
 
 // Re-draw the baked bridge-deck tiles around a point (over a boat / swimmer beneath them).
@@ -4227,7 +4273,7 @@ function drawSignals(view) {
   }
   const nowMs = performance.now();
   for (const c of S.map.cameras) {
-    if (c.x < view.x0 - 60 || c.x > view.x1 + 60 || c.y < view.y0 - 60 || c.y > view.y1 + 60) continue;
+    if (!c || c.x < view.x0 - 60 || c.x > view.x1 + 60 || c.y < view.y0 - 60 || c.y > view.y1 + 60) continue;
     const alert = (S.camAlert.get(c.id) || 0) > nowMs;
     if (c.toll) { drawTollGantry(c, alert, nowMs); continue; }
     // pole on the corner, short arm reaching toward the junction, camera housing at the end
@@ -4532,7 +4578,7 @@ function collectLights(sky, view, vehs, peds, dt) {
     }
     // shop doors, ATMs and screens
     for (const p of S.map.pois) {
-      if (!inV(p.x, p.y, 120)) continue;
+      if (!p || !inV(p.x, p.y, 120)) continue;
       if (p.kind === 'atm') { L.add(p.x, p.y - 24, 60, LIGHT.cyan, 0.6 * night); L.glow(p.x, p.y - 26, 10, LIGHT.cyan, 0.55 * night); continue; }
       if (p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception' || p.kind === 'race') continue;   // (a race's start: out on the track or the water)
       L.add(p.x, p.y - 8, 120, LIGHT.warm, 0.55 * night);
@@ -4759,9 +4805,9 @@ function drawWetReflections(view, vehs, dark, now, dt) {
     if (v.flags & (VF.SIREN | VF.BEACON)) reflect(v.rx, v.ry + 8, 60, 14, Math.floor(S.loopClock * 6) % 2 ? '255,40,40' : '60,110,255', 0.45 * k);
   }
   if (dark > 0.05) {
-    for (const l of S.map.lamps) if (!l.broken && (l._lv || 0) > 0.05 && l.x > view.x0 && l.x < view.x1 && l.y > view.y0 - 40 && l.y < view.y1) { const h = lampHead(l); reflect(h.x, h.y + 10, 60, 11, '255,200,110', 0.4 * dark * l._lv); }
+    for (const l of S.map.lamps) if (l && !l.broken && (l._lv || 0) > 0.05 && l.x > view.x0 && l.x < view.x1 && l.y > view.y0 - 40 && l.y < view.y1) { const h = lampHead(l); reflect(h.x, h.y + 10, 60, 11, '255,200,110', 0.4 * dark * l._lv); }
     for (const h of S.sigHeads || []) if (h.rgb) reflect(h.x, h.y + 8, 46, 7, h.rgb.join(','), 0.45 * dark);
-    for (const p of S.map.pois) if (p.x > view.x0 && p.x < view.x1 && p.y > view.y0 - 40 && p.y < view.y1) reflect(p.x, p.y + 6, 50, 26, '255,190,100', 0.22 * dark);
+    for (const p of S.map.pois) if (p && p.x > view.x0 && p.x < view.x1 && p.y > view.y0 - 40 && p.y < view.y1) reflect(p.x, p.y + 6, 50, 26, '255,190,100', 0.22 * dark);
   }
   g.restore();
   void now; void dt;

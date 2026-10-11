@@ -158,7 +158,7 @@ export class Lighting {
       const zz = this.z / 2, cx = this.cam.x, cy = this.cam.y, hw = this.W / 4, hh = this.H / 4;
       lg.beginPath();
       for (const it of this.roofs) {
-        if (it.flat) continue;
+        if (!it || it.flat) continue;
         lg.rect((it.x0 - cx) * zz + hw, (it.y0 - it.H - cy) * zz + hh, it.w * zz, it.h * zz);
       }
       lg.fill();

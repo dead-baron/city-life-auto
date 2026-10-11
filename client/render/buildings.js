@@ -71,7 +71,7 @@ export class BuildingLayer {
     this.facades = new Map(); // id -> { cv, glow }
     this.roofCv = new Map();  // id -> the roof art (procedural, 1 px per world px)
     for (const b of map.buildings) {
-      if (b.gone || b.kind === 'motorpool') continue; // an open lot: nothing stands up off the ground
+      if (!b || b.gone || b.kind === 'motorpool') continue; // an open lot: nothing stands up off the ground
       const flat = !(b.roof >= 0 && map.roofs[b.roof]); // concept-art lots (fronts already in the art), the mansion
       const st = flat ? 'lot' : styleOf(map, b);
       if (!st) continue;

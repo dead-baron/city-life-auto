@@ -227,6 +227,7 @@ async function handle(msg) {
     return;
   }
   if (op === 'world') { if (worldIn) { const f = worldIn; worldIn = null; f(args.M); } return; }   // (the city, when it wasn't kept)
+  if (op === 'reworld') { if (ready) await ready; const mods = await MODS; takeWorld(args.M, mods[2]); barrierAt.clear(); return; }   // (World v3's window moved: host.js setMap)
   if (ready) await ready; // (jobs that arrive while the providers load wait for them)
   if (op === 'patch') { // the world changed (props smashed or put back): no answer
     if (M && args.reset) { for (const pr of M.props || []) delete pr.broken; for (const [i, pr] of dirty) { if (!isDirty(pr)) dirty.delete(i); } }

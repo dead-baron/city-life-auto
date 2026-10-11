@@ -109,14 +109,17 @@ function startWorld() {
     fail = rej;
     w.onmessage = (e) => {
       const m = e.data || {};
-      if (m.ok === true) { job.from = m.from; job.ms = m.ms; res(m.data); }
+      if (m.ok === true) { job.from = m.from; job.ms = m.ms; job.win = m.win || null; res(m.data); }   // (win: World v3's window - the worker stays, moving it: main.js)
       else if (m.ok === false) { rej(new Error(m.error || 'the city could not be built')); w.terminate(); }
       else if ('stored' in m) { job.stored = m.stored; w.terminate(); }
+      else if ((m.window || m.windowError) && job.onWindow) job.onWindow(m);
     };
     w.onerror = (e) => { rej(new Error((e && e.message) || 'the city worker failed')); w.terminate(); };
   });
   job.promise.catch(() => {});
-  const post = (base) => { try { w.postMessage({ seed, key, keep: BOOT.fresh && !v3, base }); } catch { fail(new Error('the city worker could not start')); w.terminate(); } };
+  let at = null;   // (World v3: the window round where this player was last - main.js keeps it)
+  try { at = v3 ? JSON.parse(lsGet('cla.at3') || 'null') : null; } catch { at = null; }
+  const post = (base) => { try { w.postMessage({ seed, key, keep: BOOT.fresh && !v3, base, at, window: !/[?&]wholeworld\b/.test(location.search) }); } catch { fail(new Error('the city worker could not start')); w.terminate(); } };
   if (!key || navigator.onLine === false || /[?&]worldcdn=0\b/.test(location.search)) post(null);
   else import('./config.js').then(({ serverUrl }) => { const u = new URL(serverUrl()); post(`${u.protocol === 'wss:' ? 'https:' : 'http:'}//${u.host}/world/`); }).catch(() => post(null));
   return job;

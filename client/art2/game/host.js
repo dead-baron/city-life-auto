@@ -456,6 +456,19 @@ export class World2 {
 
   resize(W, H, dpr) { this.W = W; this.H = H; this.dpr = dpr; if (this.E.resize) this.E.resize(W, H, dpr); }
 
+  // World v3's window moved (client/main.js swapWorld, docs/WORLD-V3.md 8.12): the same renderer on the new window -
+  // the bake workers get it (each its own copy, as at the start), the grids worked out from the map are dropped; the
+  // chunks baked stay (a chunk is the same art in both windows: a window keeps a region round the player)
+  setMap(map) {
+    const t = performance.now();
+    this.map = map; this.grid = artGrid(map);
+    this.lampGrid = null; this.lampG = null; this.poiG = null; this.seaK = null;
+    if (this.E.setCanopy) { try { this.E.setCanopy(canopyGrid(map)); } catch (e) { console.warn('[art2] canopy', e); } }
+    if (this.pool && this.pool.reworld) this.pool.reworld(worldData(map));
+    this.resync(false);
+    this.t.reworld = performance.now() - t;
+  }
+
   // engine.onContextLost: 'lost', 'restored' (everything must be uploaded again: has* answer false, and what
   // was waiting is dropped), 'failed' (the rebuild failed). Phones drop the graphics of a page in the
   // background (and sometimes when it comes back): that is not counted. Only losses while it is on screen,
