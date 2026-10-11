@@ -4358,7 +4358,12 @@ House #9) went with the old streets...").
   map over 4 M tiles (World v3's frame; `offroad.js` `warmGround`) - at the start, not in a tick.
 - **And the tiles near the line:** with 50 bots arriving at once the first ticks took up to 2.26 s. The trains'
   `loopTiles` (every point of every loop, the 7 x 7 tiles round each: what `railThreat` and `railBlocked` look up) was
-  made by the first person near a track, in their tick; now with the trains (`initLoops`).
+  made by the first person near a track, in their tick - **0.81 s** on its own (timed on the kept city; the traffic's
+  edge grid and the point grids are 1-5 ms) - now with the trains (`initLoops`).
+- **After** (the same harness, 6 players spread, 1,600 ticks with a CPU profile running): **the worst tick 56 ms**
+  (then 54, 51, 50, 44 - each spread over the usual systems: no one cause), the mean 12.8 ms. Before: 134-813 ms, ems.
+  What the start pays for it: the World made in **1.13 s** with the off-road tables (0.3 s without), and the rail
+  tiles' 0.8 s - about 1.6 s more before the server listens.
 - Not the heap or a periodic system: the collections in the runs were 339-372 pauses (scavenges), at most four over
   20 ms (one of 54 ms, on the busy machine), and the worst ticks fell on no system's period (`world.tick % 400` 100,
   13, 294).
