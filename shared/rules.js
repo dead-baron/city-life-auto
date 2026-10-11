@@ -645,3 +645,9 @@ export const COAST = {
   run: [2500, 5000], top: 470, stopR: 240, stopHeliR: 320, stopAlt: 320, stopS: 4, boardR: 180, boardAlt: 220, loseR: 5000, loseS: 25, bust: 300, cut: 0.5,
   circleR: 500, seeR: 600, callS: 600, reachBoat: 120, ashoreR: 110, rescue: 280, fast: 0.5, parS: 150, samaritan: 10,
 };
+// ---- inside your home (H62; the owner, 2026-10-11: "going inside your own house would be great to get going") -
+// server/systems/homeinside.js, the plans in shared/homelayout.js. walk: your pace in there (px/s); reach: how near a thing
+// (px) for the action button to use it; sleepS: a sleep (the screen goes dark while the night passes for you - and for the
+// whole city when everyone online is asleep at home: the clock jumps to wakeH o'clock); showerS: a shower; showerHeal: the
+// health it gives back (and it stops bleeding); eatS: between two bites at the fridge.
+export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6 };

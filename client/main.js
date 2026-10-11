@@ -292,6 +292,7 @@ function onText(m) {
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
     case 'wiped': freshDone(); break;   // Start fresh: the character is gone (server players.js wipeAccount)
+    case 'home': (S.homeP ||= import('./render/homeview.js')).then((mod) => mod.onMsg(S, m)).catch((e) => console.warn('[home]', e)); break;   // inside your home: its rooms (H62: server/systems/homeinside.js)
     default: break;
   }
 }

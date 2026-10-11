@@ -32,6 +32,7 @@ import * as hoops from './hoops.js';
 import * as bowling from './bowling.js';
 import * as cinema from './cinema.js';
 import * as homes from './homes.js';
+import * as homeinside from './homeinside.js';
 import * as rentals from './rentals.js';
 import * as pets from './pets.js';
 import * as happenings from './happenings.js';
@@ -381,6 +382,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     return;
   }
   if (pressed & IN.LIGHT) economy.toggleLight(world, p); // the flashlight (in the bag, no hand slot)
+  if (ped.hidden && ped.home && homeinside.input(world, p, ped, inp, pressed, dt)) return;   // (walking round your home: homeinside.js)
   if (ped.hidden) { // inside your home: E brings up the home menu (Leave is on it); on a ride: nothing to do but look
     if ((pressed & (IN.ACTION | IN.VEHICLE)) && !ped.ride) { if (ped.interior) station.openInterior(world, p); else homes.openInside(world, p); }
     return;
@@ -512,6 +514,7 @@ export function findInteraction(world, p) {
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
+  if (ped.hidden && ped.home) return homeinside.interaction(world, p);   // (the bed, the safe, the front door... homeinside.js)
   if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
   if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
   if (ped.onTrain) return trains.interaction(world, p);
@@ -598,6 +601,8 @@ export function findInteraction(world, p) {
   const below = underground.interaction(world, p);   // a manhole over the sewers, the cave's mouth, an ore vein
   if (below) return below;
 
+  const door = homeinside.doorInteraction(world, p);   // your own front door: in you go (homeinside.js)
+  if (door) return door;
   const poi = world.map.poiNear(ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
     const label = economy.poiLabel(world, p, poi);
