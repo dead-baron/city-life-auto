@@ -163,13 +163,15 @@ export function townsDone(m) {
       const b = m.buildings[g.b];
       g.kind = 'gasstation';
       if (b) {
-        // (in front of its door, as buildCornerStores puts them: the door's point 0.7 tiles out, the pumps 52 px on)
-        const south = !b.door || b.door.ty >= b.ty + b.th, fy = south ? (b.ty + b.th + 0.7) * TILE + 52 : (b.ty - 0.7) * TILE - 52, cx = (b.tx + b.tw / 2) * TILE;
-        for (const dx of [-48, 48]) {
-          const x = cx + dx, tl = m.tileAtPx(x, fy);
-          if (tl !== T.SIDEWALK && tl !== T.PLAZA && tl !== T.LOT && tl !== T.GRASS) continue;
-          m.pumps.push({ x, y: fy });
-          m.addSolidProp(x, fy, 9);
+        // (in front of its door, as buildCornerStores puts them - the door's point 0.7 tiles out, the pumps 52 px on -
+        // or nearer the front where the town's pavement is narrower than the city's: on open paving, never the road)
+        const south = !b.door || b.door.ty >= b.ty + b.th, cx = (b.tx + b.tw / 2) * TILE;
+        const open = (x, y) => { const tl = m.tileAtPx(x, y); return tl === T.SIDEWALK || tl === T.PLAZA || tl === T.LOT || tl === T.GRASS; };
+        for (const out of [0.7 * TILE + 52, 1.6 * TILE, TILE]) {
+          const fy = south ? (b.ty + b.th) * TILE + out : b.ty * TILE - out;
+          if (![-48, 48].every((dx) => open(cx + dx, fy))) continue;
+          for (const dx of [-48, 48]) { m.pumps.push({ x: cx + dx, y: fy }); m.addSolidProp(cx + dx, fy, 9); }
+          break;
         }
         for (const s of b.signs || []) if (s.text === g.label) s.text = "Gas 'n Go";
       }
