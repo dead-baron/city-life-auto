@@ -24,6 +24,7 @@ import * as campfires from './campfires.js';
 import * as dance from './dance.js';
 import * as burning from './burning.js';   // (fire on people: H58)
 import * as boomtest from './boomtest.js';   // (the explosion tester: H58)
+import { FLY } from '../../shared/flight.js';   // (an aircraft well up: a blast on the ground doesn't reach it)
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -371,9 +372,9 @@ function spray(world, ped, w, aim) {
 }
 
 // Returns the first ped or vehicle along the segment before any wall, or null.
-function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true) {
+function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true, walls = true) {
   const sub = !!shooter.sub; // down in the subway the city's walls don't apply, only the tunnel's own level
-  const tWall = sub ? 1 : world.map.rayTiles(x1, y1, x2, y2);
+  const tWall = sub || !walls ? 1 : world.map.rayTiles(x1, y1, x2, y2);   // (walls false: a missile from the air flies over them)
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
   const r = Math.hypot(x2 - x1, y2 - y1) / 2 + 80;
   let best = null, bestT = tWall;
@@ -532,7 +533,7 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
       if (e.dead || hurtable(world, e)) reactions.blasted(world, e, a, f, k);
       if (!e.dead) damage(world, e, dmg * f + 10, attacker, 'explosion', a);
       if (!e.dead) burning.blastCatch(world, e, f, attacker);   // (near its heart: set alight - burning.js)
-    } else if (e.kind === K.VEH && e.id !== excludeVehId && !e.wreckAt) {
+    } else if (e.kind === K.VEH && e.id !== excludeVehId && !e.wreckAt && !((e.alt || 0) > FLY.HIGH + r * 0.5)) {   // (an aircraft well above it: out of its reach)
       // fn: how close its near end is (whether it goes up, and when: explosions.js); f, its middle: how hard it's hit
       const fn = Math.max(f, 1 - explosions.bodyDist(e, x, y) / r);
       if (fn <= 0) continue;
@@ -678,11 +679,14 @@ function slideBody(world, e, dt, now) {
   world.place(e);
 }
 
+const AIR_ARM_PX = 140;
 function stepProjectile(world, p, dt) {
   const owner = world.get(p.owner);
   if (WEAPONS[p.weapon] && WEAPONS[p.weapon].type === 'bow') return stepArrow(world, p, dt, owner);   // (the hunting bow, the fire bow)
   const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
-  const hit = traceTarget(world, owner ? { ...owner, lz: p.lz || 0, id: owner.id, vehId: owner.vehId, npc: owner.npc, sub: owner.sub } : { id: -1, vehId: 0, lz: p.lz || 0 }, p.x, p.y, nx, ny, true);
+  // a missile from an aircraft up in the air (aircraft.js fireMissile: p.air) flies over the walls, and over whatever is
+  // right under the aircraft until it has gone AIR_ARM_PX - then down on the first thing in its path, or where it runs out
+  const hit = p.air && p.dist < AIR_ARM_PX ? { kind: 0, hitT: 1 } : traceTarget(world, owner ? { ...owner, lz: p.lz || 0, id: owner.id, vehId: owner.vehId, npc: owner.npc, sub: owner.sub } : { id: -1, vehId: 0, lz: p.lz || 0 }, p.x, p.y, nx, ny, true, !p.air);
   p.dist += Math.hypot(nx - p.x, ny - p.y);
   if ((hit.kind && hit.id !== p.owner) || hit.hitT < 1 || p.dist > p.maxDist) {
     const t = hit.hitT < 1 ? hit.hitT : 1;

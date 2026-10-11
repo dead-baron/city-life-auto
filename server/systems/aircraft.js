@@ -82,6 +82,7 @@ function fireMissile(world, v, ped, aim) {
   const sx = v.x + c * 30 - s * 22 * side, sy = v.y + s * 30 + c * 22 * side;
   const pr = world.spawnProjectile(ped ? ped.id : 0, sx, sy, aim, MISSILE.speed, MISSILE.range, 'rocket');
   pr.lz = v.lz || 0;
+  pr.air = true;   // (from up in the air: over the walls, and clear of what's under it - combat.js stepProjectile)
   world.emit(sx, sy, { e: 'shot', id: ped ? ped.id : 0, w: 'rocket', x: Math.round(sx), y: Math.round(sy), a: +aim.toFixed(2) });
 }
 

@@ -103,6 +103,8 @@ test('the server: parked aircraft at the pads and the apron; flying one, the alt
   let seq = 0;
   const send = (bits, mx = 0, my = 0, secs = 0.05) => { for (let t = 0; t < secs; t += 0.05) { p.inputQ.push({ seq: ++seq, bits, mx, my, aim: 0 }); w.step(); } };
   send(IN.VEHICLE); send(0);
+  assert.equal(p.ped.vehId, 0, 'Safety mode asks first: taking it is theft (safety.js - on for a new character)');
+  send(IN.VEHICLE); send(0);
   assert.equal(p.ped.vehId, v.id, 'in');
   assert.ok(v.stolenBy && v.stolenBy.has(p.pid), 'taken (a theft: vehicles.js tryEnter)');
   send(IN.CLIMB, 0, 0, 6);
@@ -137,4 +139,19 @@ test('the attack helicopter: its pilot fires missiles (the bazooka\'s rocket) fr
   for (let i = 0; i < 12; i++) { p.inputQ.push({ seq: ++seq, bits: IN.FIRE | IN.AIMING, mx: 0, my: 0, aim: 0 }); w.step(); }
   assert.ok(v.missileAt > first, 'and another once the pods have reloaded');
   assert.ok(v.alt > 900, 'still flying');
+  assert.equal(v.hp, v.def.hp, 'its own missiles never hurt it (they used to blow it up when they struck right under it)');
+});
+
+test('a blast on the ground doesn\'t reach an aircraft well above it, but one just off the ground is hit', async () => {
+  const combat = await import('../server/systems/combat.js');
+  const { WEAPONS } = await import('../shared/items.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const hi = w.spawnVehicle('heli', p.ped.x + 400, p.ped.y, 0, { npcOwned: false }); hi.alt = 600; hi.spool = 1;
+  const lo = w.spawnVehicle('heli', p.ped.x + 900, p.ped.y, 0, { npcOwned: false }); lo.alt = 10; lo.spool = 1;
+  const R = WEAPONS.rocket;
+  combat.blast(w, hi.x, hi.y, R.radius, R.dmg, null, 0, true, 0);
+  combat.blast(w, lo.x, lo.y, R.radius, R.dmg, null, 0, true, 0);
+  assert.equal(hi.hp, hi.def.hp, 'high up: untouched');
+  assert.ok(lo.wreckAt || lo.hp < lo.def.hp, 'just off the ground: hit');
 });

@@ -8385,3 +8385,21 @@ still, its angle on the wire; thirty rifle rounds a scratch; a shell flies and w
 car along; the Boom Tester's index, the reload stepping its kinds, a shot going up where it lands, every kind going off
 as it says), test/sound.test.js, test/gameplay.test.js, test/motorbikes.test.js, test/explosions.test.js,
 test/firebow.test.js, test/perf.test.js.
+
+## 2026-10-11 · Wave 24 merged: flying, the honest living, fire and the tank together
+
+- The tank is vehicle index 47 (the next free one after the fleet's); the aircraft keep 60-63.
+- The attack helicopter's missiles blew it up: a missile struck the first wall or car right under it (the rockets fly
+  in 2D) and the blast, which didn't know about height, destroyed the gunship and threw its pilot out. Now a blast on
+  the ground leaves alone an aircraft more than half its radius above the 24 px "high" mark (`combat.js` blast; one just
+  off the ground is still hit), and a missile from the air (`aircraft.js` fireMissile: `p.air`) flies over the walls and
+  over whatever is right under the aircraft for its first 140 px, then comes down on the first thing in its path or
+  where it runs out (`combat.js` stepProjectile, traceTarget's `walls`). It failed the flight test one run in four.
+- An aircraft up in the air is never "the nearest vehicle" (`vehicles.js` nearestVehicle): no Act prompt, no Safety
+  question for one passing overhead.
+- In a vehicle the fire button drives the tank's cannon or the gunship's missiles before any drive-by (`players.js`).
+- Tests: a new character has Safety mode on, so the flight test's theft of the parked helicopter presses F twice (the
+  first press only warns); the burning test clears everyone away before checking that standing still beside a fire
+  doesn't light you (the walker it had lit was left standing on the same spot, moving, and caught again now and then);
+  new: a ground blast misses an aircraft high above and hits one just off the ground, and the gunship's own missiles
+  never hurt it.

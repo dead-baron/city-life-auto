@@ -130,8 +130,10 @@ test('what sets people alight: a blast, their car blowing up with them in it, a 
   caught = false;
   for (let k = 0; k < 200 && !caught && camper; k++) { teleport(w, camper, c.x + 4, c.y); camper.vx = 60; w.tick++; w.time += 0.05; burning.update(w, 0.05); caught = burning.burning(camper); }
   assert.ok(caught, 'walking into a campfire');
-  // standing still beside a burning wreck: no
+  // standing still beside a burning wreck: no (everyone else out of the way first: the walker is still stood where it
+  // caught, moving - it'd catch again, and someone alight brushing past lights you)
   for (const b of [...w.burning]) burning.douse(w, b);
+  for (const q of [walker, camper, target, shooter, ...crowd]) if (q && !q.removed) w.remove(q);
   wreck.wreckAt = w.time;
   const still = spawnNpc(w, 'casual', 0, 0);
   for (let i = 0; i < 100; i++) { teleport(w, still, wreck.x + wreck.def.L / 2 + 4, wreck.y); still.vx = 0; still.vy = 0; w.tick++; w.time += 0.05; burning.update(w, 0.05); }
