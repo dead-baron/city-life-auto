@@ -8609,7 +8609,7 @@ The owner: "Have we added farm jobs and gardening mechanics yet?" - and wants bo
   wilts (water perks it up, but a prize is lost) and then dies (clear it and sow again). Picked ripe, its yield goes in
   your bag - eaten it heals, the grocery and the co-op buy it (SHOPS.grocery, SHOPS.farm) - and now and then (10%,
   rolled at planting) it's a prize one worth GARDEN.prizeX times as much. The plots live with the home in the profile
-  (prof.garden[homeId]: they go with it when it's sold) and grow while you're away (stepped with the server; what passed
+  (prof.garden[homeId]: a home sold, its garden is out of play - kept on the profile, back if you buy it again) and grow while you're away (stepped with the server; what passed
   while it was down is caught up from each garden's wall clock). Someone else can't work your plots; everyone sees them.
 - **Farm work** (server/systems/farming.js). The farms' fields (map.fields) are kept on the server in rows FARM.rowW px
   wide along each field's length, each going round stubble -> ploughed -> sown -> growing (FARM.growDays) -> ripe ->
