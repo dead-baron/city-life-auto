@@ -2087,7 +2087,8 @@ has no Strait Bridge).
 
 **The network:** one piece (1,010 of the build's 1,015 junctions in the first build; the other 5 are Coral Cay's
 lanes, an island only boats reach), every skeleton road's edges in it. No road point is over open water off a bridge,
-the deck or a bore.
+the deck or a bore. The build takes 17-19 s with the roads (15.2 s in 8.6; measured with the other helpers on the
+cores), about 1,500 road edges against 1,253.
 
 **The test** (`test/world3roads.test.js`, one world build, about 70 s; its checks are gathered so one build reports
 everything wrong): every point of a laid highway (what isn't the places' own) and of every arterial is on a road
