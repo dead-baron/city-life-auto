@@ -3743,7 +3743,8 @@ Tests: `test/world3wild.test.js` (one world build, as before and: each newly mov
 region's ground, its landmark clear of the highways and the main line; the tracks on the one network, reaching their
 ends, meeting no highway; the lookout, the two hunting camps and the trapper's cabin in their regions, the beaver pond
 on Redwood Creek; the Old Granite Mine's seams and the one cave under Copper Gulch Mine; the canyon in the desert, the
-wash, the oasis's track; the water park's slides).
+wash, the oasis's track; the water park's slides), `test/world3desert.test.js` (the cave still under Copper Gulch
+Mine's adit), `test/world3roads.test.js`, `test/world3world.test.js`: all pass.
 
 Pictures (`tools/world3-world-map.mjs --towns --only redwoods,ridge,oldmine,canyon,splash,drycreek`):
 `docs/world-v3-town-redwoods.png`, `-ridge.png`, `-oldmine.png`, `-canyon.png`, `-splash.png`, and `-drycreek.png`
@@ -3754,8 +3755,10 @@ above Lookout Road's end; the canyon south of Mesa Road with the Canyon Track do
 its south-east corner; Mirage Lake with its track in from Canyon Road; the water park whole on Mine Road's south side,
 its pool, island and slides; the boneyard's planes on plain ground now, the Boneyard Track to its gate. What looks
 wrong:
-- **Fern Gorge isn't in the redwoods picture** (taken with it at 681, where it wasn't built; it wants a picture at
-  693, 1140); Giants Loop's trail doesn't read at 1/8 (a thin path in the redwoods).
+- **Fern Gorge reads as three ponds in the redwoods** (the spring pool, the lily pool below the ledge, the reedy pond,
+  its trail up from the pull-off on Timber Road's south edge): the granite ledge and its falls are too small to read
+  at 1/8, and the redwoods crowd it - today's stood among firs and maples; Giants Loop's trail doesn't read at 1/8 (a
+  thin path in the redwoods).
 - **The canyon is a flat red rectangle**: the painting's own ground (red rock, its cliffs drawn) on the v3 desert's tan,
   with a hard edge - it wants the painting's edge blended into the ground or the canyon built of the desert's mesas; a
   biome wash runs into its north-east corner and out of its south-east one (kept off inside its box only).

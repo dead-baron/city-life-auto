@@ -7970,4 +7970,6 @@ line), test/world3wild.test.js, docs/WORLD-V3.md 8.19, docs/world-v3-town-redwoo
 Tests: test/world3wild.test.js (one world build: as before, and each newly moved site built once at its spot on its
 region's ground; the tracks on the one network, reaching their ends, meeting no highway; the lookout, the two hunting
 camps and the trapper's cabin in their regions, the beaver pond on Redwood Creek; the Old Granite Mine's seams and the
-one cave under Copper Gulch Mine; the canyon in the desert, the wash, the oasis's track; the water park's slides).
+one cave under Copper Gulch Mine; the canyon in the desert, the wash, the oasis's track; the water park's slides),
+test/world3desert.test.js, test/world3roads.test.js, test/world3world.test.js: all pass. `tools/perf.mjs`' code
+report: the city worker 34 files, 359 KB of 360.
