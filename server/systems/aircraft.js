@@ -35,6 +35,7 @@ export function step(world, v, dt) {
     world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: Math.min(1, o.hit / 400) });
   }
   if (o.sink > 0) {
+    v.landSink = o.sink; v.landAt = world.time;   // (the last touchdown: sar.js counts the hard ones with a patient aboard)
     const fwd = was;
     if (o.sink > FLY.CRASH_SINK) { crash(world, v, 'land'); return; }
     if (o.sink > FLY.HARD_SINK) { vehicles.damageVehicle(world, v, (o.sink - FLY.HARD_SINK) * 0.9, null, true); world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: 0.4 }); }

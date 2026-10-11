@@ -2860,7 +2860,7 @@ function prepFrame(dt) {
   S.camLead = S.camLead || { x: 0, y: 0 };
   S.camLead.x += (Math.max(-560, Math.min(560, lvx)) * 0.25 - S.camLead.x) * lk;
   S.camLead.y += (Math.max(-560, Math.min(560, lvy)) * 0.25 - S.camLead.y) * lk;
-  const tx = sp.x + S.camLead.x, ty = sp.y + S.camLead.y;
+  const tx = sp.x + S.camLead.x, ty = sp.y + S.camLead.y - (myAir && airDefOf(myAir) && S.art2 && S.art2.ready && S.airMod.liftOf ? S.airMod.liftOf(myAir.ralt ?? (myAir.extra | 0) * 4) * 0.66 : 0);   // (art v2 draws an aircraft up by its height: two thirds of the way up to it)
   // The camera is locked to the (already smoothed) character + a smoothed look-ahead: a
   // chasing camera with a frame-time-dependent lag made the car slide around on screen when
   // frame times vary (phones). Teleports / respawns still snap.
@@ -3236,6 +3236,7 @@ function drawOverlays(F, v2) {
   g.setTransform(...S.worldTf);
   if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
   else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (the helipads)
+  else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)
   drawBowling(F);
   drawCinema(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
@@ -3544,7 +3545,7 @@ function walkInAt(x, y) {
 function interiorTick(sp, art) {
   // (a balloon over a shop doesn't open it, nor a train under it; cuffed - custody.js walks you - it does)
   const cuffed = S.ctrlKind === CTRL.RIDER && !!S.ents.get(S.myPedId)?.d?.cf;
-  const b = S.playing && (S.ctrlKind !== CTRL.RIDER || cuffed) && !(S.me && S.me.ride) ? walkInAt(sp.x, sp.y) : null;
+  const b = S.playing && (S.ctrlKind !== CTRL.RIDER || cuffed) && !(S.me && S.me.ride) && !(S.pred && S.pred.air) ? walkInAt(sp.x, sp.y) : null;   // (nor a helicopter down on its roof: H59)
   S.roofFade ??= {};
   for (const id of S.map.walkIns || []) {
     const want = b && b.id === id ? 1 : 0;

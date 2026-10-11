@@ -8473,3 +8473,103 @@ wire for a player near them, not for one across town; with the collar, the owner
 no arrow to the pet at heel; home again, nothing marked), test/titlemenu.test.js (the title's graphics row under Play,
 no question at Join, the device's pick kept silently; the starting look's Play as / Customize under the pick and New
 character), test/perf.test.js.
+
+## 2026-10-11 · H59: flying for a living - search and rescue pilot, charter pilot
+
+The owner: "Let's add more jobs for players trying to make an honest living. With helicopters and airplanes being added we
+should create citizen jobs you can do with helicopters. Like search and rescue helicopter pilot job: patrol around and
+respond to calls of missing or hurt hikers out in nature spots, and you get a general idea where they may be but you
+gotta go out and search for them and retrieve them. They're either injured and you have to land and pick them up and
+bring them back and fly them to the hospital, which you can land on top of, or you need to lower a harness down to
+hard-to-reach places, or find them in the water and lower a harness, or just locate a missing person and pick them up."
+And: "Private helicopter pilot for rich billionaire customers flying around the world from location to location."
+
+- **Search and rescue pilot** (`server/systems/sar.js`; `shared/rules.js` SAR): sign on at a hospital's yard helipad (Act
+  there) or from the phone (Jobs › Flying). A rescue helicopter - its own model, `rescueheli`, index 64 (the next free
+  aircraft index), red and white (the overlay's 'rescue' livery) - is issued to you like a work truck (`v.issuedTo`,
+  `v.workTruck`: the ring and the arrows until you're in it, not theft, Safety mode doesn't ask). A shift of calls, one
+  after another: someone hurt on open ground, someone hurt and stuck where nothing can land (among the trees and rocks),
+  someone in the water off the coast, or someone just lost - out in the wild, rural, park, rocky, beach and desert
+  districts or the water near the shore (`sitesOf`: a sweep of the built map, nothing added to it - the world's hash is
+  the same). The page gets a search circle (the job target's `area`: drawn on the minimap and, labelled, on the world map)
+  with the spot somewhere inside it, not the spot. Within 560 px they see you: they wave (the fist pump's arm up) and a
+  smoke flare goes up beside them (`flare`: an orange plume, drawn in both renderers by `client/render/aircraft.js`).
+  The hurt and the lost: land within 320 px and they come aboard (the hurt helped by the crew). The stuck and the
+  swimmer: hover low right over them and hold Act - the cable pays out (85 px/s) and, once it reaches them, winches
+  them up (110 px/s; let go and it holds); higher than 300 px above them, drifting faster than 120 px/s or not over them
+  and it can't reach. The cable is drawn on the overlay out of the side door (`hoist`), them hanging in the harness once
+  clipped on. A hurt patient's time runs down (260-380 s from the call; a hard landing with them aboard takes 40 s off
+  and is counted: `aircraft.js` remembers each touchdown's sink as `v.landSink` / `v.landAt`); if it runs out, they die
+  and the call pays nothing. Land on a hospital's roof pad - or the helipad in its yard - to hand them over: $260 + $90 a
+  km of the call's distance from the hospital, up to +60% for a quick rescue, less 25% a hard landing (down to 40%), and
+  6 Samaritan points. A call nobody reaches in 12 minutes goes to another crew; cancelling the job (the phone) sends the
+  helicopter back and whoever was out there is fetched by someone else.
+- **The hospitals' roofs are roofs now** (`shared/flight.js` tileTop): the hospitals are walk-in buildings, their insides
+  T.FLOOR, so the roof pad over the middle had no roof under it - a helicopter "landing" there sank to the ground inside.
+  A walk-in building's floor now counts as under its roof for flying (`floorAt`), so the roof pads work (and you can't
+  fly through a shop at roof height any more).
+- **Art v2 draws aircraft at their height** (the owner's call, after the first playtest showed a helicopter "on" a
+  hospital's roof drawn down on its front wall): art v2 stands everything up - something at a height is drawn that much
+  up the screen - and now an aircraft is too, by its altitude times `V2_LIFT` (0.66: a roof's drawn height over its
+  flying height, measured on the hospitals' roofs; `client/render/aircraft.js` liftOf), its shadow staying on the ground
+  - or on the roof under it. So a helicopter down on a roof sits on the drawn roof, the roof pads are drawn up there (they
+  were hidden in v2), and the harness's cable hangs straight down the screen to the one below. The camera follows two thirds of
+  the lift of your own aircraft (`main.js`), so you and the ground under you both stay on screen. The classic view is as
+  it was. The job's marker points at the hospital's roof pad (the yard's helipad takes them too). Left: the gunship's
+  missiles are still drawn at ground level in v2, below the lifted gunship (a projectile carries no height on the wire).
+- **Charter pilot** (`server/systems/charter.js`; `shared/rules.js` CHARTER): from the phone (Jobs › Flying) - the company's
+  Skylark is issued at the nearest helipad. Bookings one after another: a rich customer (invented names: Sterling
+  Vanderholt, Margaux Ellery-Price...) waits at one of the places a helicopter goes - the airport's helipad, the airport's
+  apron and the airstrips, a mansion's lawn in each rich district, a landing spot on each island (`placesOf`, from the
+  built map) - and wants flying at least 3 km to another, for a board meeting or lunch on the islands. Land within 320 px
+  and they board; land within 240 px of the destination and they step out: the fare ($180 + $70 a km) and a tip of up to
+  half of it - none after a hard landing, less the more the helicopter is knocked about or shot at on the way, more the
+  quicker the flight.
+- The phone's job list has a Flying section (`client/phone.js` flyJobs: the jobs marked `fly`); the dev menu's command
+  `sar` (`server/dev.js`) signs you on in your rescue helicopter, and with `k` starts a call of that kind at the nearest
+  such place (`hover`: hovering over them; `hooked`: them on the cable; `roof`: a patient aboard, down on the nearest
+  hospital's roof pad).
+- **The coast guard** (`server/systems/coastguard.js`; `shared/rules.js` COAST; the owner: "Coastguard jobs: patrol in
+  boats and helicopters to hunt down criminal activity on the water, usually smugglers or traffickers. Do search and rescue
+  type missions too"): from the phone (Jobs › Flying), a boat patrol - the orange rescue boat (`rescueboat`, its coast
+  guard livery as it is) issued at the nearest harbour on the sea - or an air patrol - a rescue helicopter at the nearest
+  helipad. A shift of calls, two in three smugglers:
+  - **Smugglers**: a speedboat with two contraband crates aboard - out in the open on its deck, like any cargo - and two
+    Syndicate men runs 2.5-5 km along the coast toward Smuggler's Rock (`rescue.js` wayTo plans the way round the land,
+    `boats.js` boatSteer drives it). Stay alongside (within 240 px in a boat, or within 320 px across and below 320 px in
+    the helicopter) for 4 s and they heave to and put their hands up (shooting the one at the wheel works too). Then
+    board them - Act alongside in the boat, or low over them in the helicopter ("a crewman goes down the line"): the
+    crates are seized, the crew arrested and the boat impounded: $300 + half the cargo's value, 10 Samaritan points. Lose
+    them (5 km off for 25 s), let them make their drop or sink them with the cargo and the call's lost. Running them down
+    isn't reckless ramming for the coast guard (`law.js` vehicleRam).
+  - **Someone overboard**: a search circle (500 px) where they went in; within 600 px they're found (the flare). In the
+    boat, pull alongside, slow, and Act - hauled aboard; in the helicopter the harness, as the rescue pilot's (hold Act
+    over them; the page draws the cable). Then ashore - the boat run in slow by dry land, the helicopter landed on dry
+    ground - handed to the paramedics: $280, up to half again for a quick rescue.
+  - Only the sea: a flood from the open sea's points (m.offshore) over what boats can cross marks the water joined to it,
+    so the patrol boat, the smugglers and the calls are never on a lake inland (Lakeview's hire dock was the nearest
+    "harbour" in the first playtest). Neither the rescue calls nor the coast guard's are under the elevated highway any
+    more (`sar.js` sitesOf skips water and ground within two tiles of `m.deck` - a swimmer under the viaduct in the
+    playtest, with the helicopter hovering over the road deck).
+  - One-off costs: the sweep for rescue sites (`sitesOf`) takes about 90 ms the first time a call is made on today's map,
+    the sea's flood about 160 ms the first time the coast guard is used (a few times that on World v3's bigger map).
+  - The dev menu's command `coast`: `mode` 'boat' | 'air', `k` 'smuggle' | 'overboard', `near` (brought up close), `stop`
+    (they heave to at once).
+
+Files: server/systems/sar.js (new), server/systems/charter.js (new), server/systems/coastguard.js (new), server/systems/law.js
+(the coast guard's ramming), shared/vehicles.js (rescueheli), shared/rules.js (SAR, CHARTER, COAST), shared/flight.js (a walk-in building's roof), server/systems/aircraft.js (the last touchdown), server/systems/npc.js
+(people a pilot's coming for stay put), server/systems/phone.js (the Flying jobs, their targets), server/systems/players.js
+(Act at a hospital's helipad, the harness), server/world.js, server/dev.js ('sar'), client/render/aircraft.js (the flare,
+the harness), client/hud.js (the search circle on the minimap), client/worldmap.js (on the world map), client/main.js (the
+overlay loads for a flare), client/phone.js (the Flying section), README.md (controls), test/sar.test.js (new).
+
+Tests: test/sar.test.js - signing on at the pad and on the phone, the issued helicopter (index 64, yours, marked); a call's
+search circle with them inside it and not the spot; cancelling clears it; spotted within sight: the wave and the flare;
+landing for the hurt, the hard landing counted, the hand-over on the roof pad and the pay (less for the hard landing); the
+harness over someone on rough ground - too high it runs out, let go it winches up, not over them nothing, low and steady it
+clips on and winches in; the harness in the water; a patient who runs out of time dies with no pay; the charter: the
+places (pads, lawns, islands), the booking, boarding, the fare and a tip for a smooth flight, no tip after a hard landing;
+the coast guard: the issued patrol boat and helicopter, a smugglers' run with contraband crates aboard under way, made to
+heave to alongside (hands up), boarded and the crates seized for the reward, smugglers lost who get away, someone overboard
+found in the circle, hauled aboard the boat and run ashore for the pay, winched up by the helicopter and landed ashore; the air patrol: too high over smugglers they keep going, low over them they heave to, a crewman down the line seizes the cargo. test/crime.test.js (the ramming exemption).
+test/flight.test.js, test/phones.test.js, test/honestliving.test.js, test/mapwindow.test.js, test/perf.test.js.

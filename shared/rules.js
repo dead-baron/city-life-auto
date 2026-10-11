@@ -605,3 +605,43 @@ export const TANK = { turretRate: 2.4, reload: 1.8, speed: 900, range: 900, r: 1
 // while in game so we can test explosions as rapidly as we had before"): a dev-only launcher (shared/items.js boomtest)
 // whose shot sets off the kind picked (the reload key steps through them) where it lands - server/systems/boomtest.js
 export const BOOM_TEST_KINDS = ['small', 'medium', 'big', 'ultra', 'car', 'launch', 'pieces', 'wheel', 'tanker', 'truck', 'fire'];
+// ---- search and rescue pilot (H59; the owner, 2026-10-11: "search and rescue helicopter pilot job: patrol around and
+// respond to calls of missing or hurt hikers out in nature spots, and you get a general idea where they may be but you
+// gotta go out and search for them and retrieve them") - server/systems/sar.js. A shift of calls, one after another:
+// firstS after signing on, then gapS after each; a call nobody answers in callS is dropped (the next one comes). Calls
+// come from dist px away; the search circle is circleR px across the middle of it (the spot somewhere inside); within
+// seeR px they see you - they wave and a smoke flare goes up. Landed within landR px of them they're helped aboard
+// (boardS); the harness: hovering within reach px of them across, the cable pays out (payout px/s, while you hold Act)
+// up to maxLen px - higher than that above them, or drifting faster than drift px/s, and it can't reach; clipped on,
+// it winches in (winch px/s). A hurt patient has life s from the call (aboard it keeps running down; a hard landing
+// takes hardLife s off it); lost or found dead the call pays nothing. Paid at a hospital's pad (the roof's or the
+// yard's): base + perKm a km (1000 px) of the call's distance from the hospital, up to +fast (a fraction) for a quick
+// rescue (the time against parS + a second per perKmS px), less hardCut a hard landing with someone aboard (down to
+// minPay of it); samaritan points a rescue.
+export const SAR = {
+  firstS: 8, gapS: [25, 50], callS: 720, shiftS: 3600, dist: [1400, 9000], circleR: 900, seeR: 560, landR: 320, boardS: 3,
+  hoist: { reach: 80, maxLen: 300, payout: 85, winch: 110, drift: 120 },
+  life: [260, 380], hardLife: 40, base: 260, perKm: 90, fast: 0.6, parS: 120, perKmS: 70, hardCut: 0.25, minPay: 0.4, samaritan: 6,
+};
+// ---- charter pilot (H59; the owner: "Private helicopter pilot for rich billionaire customers flying around the world from
+// location to location") - server/systems/charter.js. Bookings one after another (firstS after signing on, gapS after
+// each; a customer waits waitS, picked up within pickupMax px of you if there's one, going at least minTrip px); land
+// within landR px and they board (boardS); landed within destR px of the destination they step out. The fare: base +
+// perKm a km (1000 px); the tip up to tip of the fare: none after a hard landing, less the more health the helicopter
+// loses on the way (none at hurtHp), and the quicker the better (par: parS + a second per perKmS px).
+export const CHARTER = { firstS: 8, gapS: 20, shiftS: 3600, waitS: 600, pickupMax: 6000, minTrip: 3000, landR: 320, boardS: 3, destR: 240, base: 180, perKm: 70, tip: 0.5, hurtHp: 60, parS: 60, perKmS: 300 };
+// ---- the coast guard (H59; the owner: "Coastguard jobs: patrol in boats and helicopters to hunt down criminal activity on
+// the water, usually smugglers or traffickers. Do search and rescue type missions too") - server/systems/coastguard.js.
+// Calls firstS after signing on, gapS after each, from dist px off; smuggle: the share that are smugglers (the rest:
+// someone overboard). Smugglers run run px along the coast at top px/s; within stopR px of them in a boat (a helicopter:
+// stopHeliR px across, below stopAlt px) for stopS s and they heave to; board them from a boat within boardR px (a
+// helicopter below boardAlt px, within boardR px); further than loseR px for loseS s and they're gone. The bust pays bust +
+// cut of the cargo's value. Overboard: a search circle of circleR px, found within seeR px, a call nobody reaches in callS
+// s goes to another boat; hauled aboard from a boat within reachBoat px; ashore (the boat slow within ashoreR px of dry
+// land, the helicopter landed on dry ground) pays rescue, up to fast more for a quick one (par parS s). samaritan: points
+// a call.
+export const COAST = {
+  firstS: 8, gapS: [20, 40], shiftS: 3600, dist: [1200, 4000], smuggle: 0.65,
+  run: [2500, 5000], top: 470, stopR: 240, stopHeliR: 320, stopAlt: 320, stopS: 4, boardR: 180, boardAlt: 220, loseR: 5000, loseS: 25, bust: 300, cut: 0.5,
+  circleR: 500, seeR: 600, callS: 600, reachBoat: 120, ashoreR: 110, rescue: 280, fast: 0.5, parS: 150, samaritan: 10,
+};

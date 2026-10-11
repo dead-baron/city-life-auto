@@ -454,6 +454,7 @@ export function vehicleRam(world, attacker, victimV, impact) {
   if (!attacker.player) return;
   const victim = victimV.seats[0] ? world.get(victimV.seats[0]) : null;
   if (!victim) return;
+  if (victimV.ai && victimV.ai.kind === 'smuggle' && attacker.player.job && attacker.player.job.type === 'coast') return;   // (the coast guard running smugglers down: coastguard.js)
   const now = world.time;
   if (now - (attacker.lastRam || -99) < 4) return;
   attacker.lastRam = now;

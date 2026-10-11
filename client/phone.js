@@ -34,6 +34,8 @@ const KIND_NOTE = {
 
 const FEED_ICON = { snatch: '👜', drop: '📦', shootout: '💥', robbery: '🚨', arrest: '🚓', bounty: '🎯', wanted: '★', pet: '🐾', fight: '👊', faint: '🚑', wallet: '👛', streetrace: '🏁', copchase: '🚓', armored: '🚚' };
 
+// the flying jobs (server sar.js / charter.js): icon, title, a line about it, the pay
+const flyJobs = (list, job) => (list.length ? '<h3>Flying</h3>' + list.map((j) => `<button class="ph-row job" data-take="${j.id}"${job ? ' disabled' : ''}><span class="ic tier">${j.icon}</span><span class="nm">${esc(j.title)}<small>${esc(j.sub)}</small></span><span class="d">$${j.pay}+</span></button>`).join('') : '');
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
   let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null;
@@ -90,7 +92,8 @@ export function createPhone(ctx) {
       el.innerHTML = (job ? `<div class="ph-card job">On a job: <b>${esc(job.text)}</b><button data-act="cancel">Cancel job</button></div>` : '<p class="ph-hint">One job at a time. Take one and it\'s marked on your map. You can also walk up to the warehouse or farm.</p>')
         + (ctx.isCop() ? '<h3>Patrol calls</h3>' + (rows('patrol').map(jobRow).join('') || '<p class="ph-empty">Quiet right now.</p>') : '')
         + '<h3>Deliveries</h3><p class="ph-hint">$ nearby · $$ across town · $$$ island to island</p>' + rows('delivery').map(jobRow).join('')
-        + '<h3>Farm</h3>' + rows('farm').map(jobRow).join('');
+        + '<h3>Farm</h3>' + rows('farm').map(jobRow).join('')
+        + flyJobs(board.jobs.filter((j) => j.fly), job);   // (flying for a living: search & rescue, charters - server sar.js)
     }
     wire(el);
     ctx.refocus();

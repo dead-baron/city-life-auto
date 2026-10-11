@@ -440,6 +440,7 @@ export class HUD {
           g.restore();
         } else { g.beginPath(); g.arc(x, y, big ? 7 : 4.5, 0, 6.28); g.fill(); g.stroke(); }
       };
+      if (me.job && me.job.area) { const [x, y] = toR(me.job.area[0], me.job.area[1]); g.fillStyle = 'rgba(255,170,40,.16)'; g.strokeStyle = '#ffae2a'; g.lineWidth = 1.5; g.setLineDash([4, 3]); g.beginPath(); g.arc(x, y, Math.max(6, me.job.area[2] * scale), 0, 6.28); g.fill(); g.stroke(); g.setLineDash([]); }   // (a rescue call's search circle: sar.js)
       if (me.job) target(me.job.x, me.job.y, '#ffd400');
       if (me.job && me.job.dest) target(me.job.dest[0], me.job.dest[1], '#ff9a2e');   // (picking up: where it goes after)
       if (me.job && me.job.veh) target(me.job.veh[0], me.job.veh[1], '#3cff8a');   // (the job's truck, until you're in it)

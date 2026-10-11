@@ -7,13 +7,19 @@
 // white with its light bar, the army's olive gunship), the light plane white with a red stripe.
 import { VEHICLE_BY_INDEX } from '../../shared/vehicles.js';
 import { VF } from '../../shared/constants.js';
-import { flightStep, flightInput, altOfByte, airfields, isPlane, FLY } from '../../shared/flight.js';
+import { flightStep, flightInput, altOfByte, airfields, isPlane, FLY, floorAt } from '../../shared/flight.js';
 
 export { airfields };
 // the pilot's own aircraft, predicted exactly as the server steps it (players.js -> aircraft.js)
 export function predict(s, inp, dt, map, def, engine) { flightStep(s, flightInput(s, inp, def), dt, map, def, engine); }
 // how far the camera pulls back at an altitude (the page's zoom is divided by it)
 export const zoomOut = (alt) => 1 + Math.min(1.3, Math.max(0, alt || 0) / 650);
+// Art v2 stands things up: something at a height is drawn that much up the screen. An aircraft is drawn lifted by its
+// altitude the same way (its shadow stays on the ground), so one down on a roof sits on the drawn roof - V2_LIFT: the
+// drawn height of a roof over its flying height (bldTop; measured on the hospitals' roofs). The camera follows two thirds of the
+// lift of your own (main.js), so you and the ground under you both stay on screen.
+export const V2_LIFT = 0.66;
+export const liftOf = (alt) => Math.max(0, alt || 0) * V2_LIFT;
 
 const LIVERY = {
   news: { body: '#e9edf2', trim: '#2c55b8', dark: '#1d2a4a', glass: '#3a5f86' },
@@ -37,19 +43,21 @@ export function drawAir(g, F, S, dt, v2 = false) {
   const sky = F.sky, sun = sky && sky.sunDir ? sky.sunDir : { x: 0.55, y: 0.83 };
   const now = F.now;
   drawPads(g, F, S, v2);
+  const job = S.me && S.me.job;
+  if (job && job.flare) drawFlare(g, job.flare, now);   // (a rescue call: they're found - server sar.js)
   for (const v of list) {
     const def = VEHICLE_BY_INDEX[v.d.m];
     if (!def) continue;
     v._own = S.pred && S.pred.air && v.id === S.ctrlId;
-    const alt = altOf(v, dt), f = v.flags | 0;
+    const alt = altOf(v, dt), f = v.flags | 0, lift = (v._lift = v2 ? liftOf(alt) : 0);
     const on = !!(f & VF.ROTOR) && !(f & VF.WRECK);
     v._spin = Math.max(0, Math.min(1, (v._spin || 0) + (on ? dt / 3 : -dt / 6)));
     if (v._own && S.pred.s.spool !== undefined) v._spin = S.pred.s.spool;
     v._ph = ((v._ph || 0) + dt * (2 + 26 * v._spin)) % (Math.PI * 2);
-    // the shadow: on the ground, away from the sun by the altitude, fainter and softer higher up
-    const so = 3 + alt * 0.42, fade = Math.max(0.25, 1 - alt / 1400);
+    // the shadow: on the ground (or the roof under it), away from the sun by the height above it, fainter and softer higher up
+    const fl = floorAt(S.map, v.rx, v.ry), above = Math.max(0, alt - fl), so = 3 + above * 0.42, fade = Math.max(0.25, 1 - above / 1400);
     g.save();
-    g.translate(v.rx + sun.x * so, v.ry + sun.y * so);
+    g.translate(v.rx + sun.x * so, v.ry + sun.y * so - (v2 ? liftOf(fl) : 0));
     g.rotate(v.ra);
     g.globalAlpha = 0.32 * fade;
     g.fillStyle = '#000';
@@ -59,7 +67,7 @@ export function drawAir(g, F, S, dt, v2 = false) {
     // the aircraft: nearer the camera the higher it is
     const k = 1 + Math.min(0.5, alt / 1600);
     g.save();
-    g.translate(v.rx, v.ry);
+    g.translate(v.rx, v.ry - lift);   // (art v2: up the screen by its height)
     g.rotate(v.ra);
     g.scale(k, k);
     if (f & VF.WRECK) g.filter = 'brightness(0.35)';
@@ -68,6 +76,7 @@ export function drawAir(g, F, S, dt, v2 = false) {
     g.filter = 'none';
     g.restore();
   }
+  if (job && job.hoist) drawHoist(g, job.hoist, list, dt, now, v2);
 }
 
 function silhouette(g, def, v) {
@@ -159,10 +168,10 @@ function drawPlane(g, def, v, alt, now) {
 function drawPads(g, F, S, v2) {
   const view = F.view, af = airfields(S.map);
   for (const p of af.pads) {
-    if (p.roof && v2) continue;   // (art v2 stands its buildings up: the roof isn't over the footprint - its own roof kit, later)
-    if (p.x < view.x0 - 100 || p.x > view.x1 + 100 || p.y < view.y0 - 100 || p.y > view.y1 + 100) continue;
+    const py = p.roof && v2 ? p.y - liftOf(p.alt) : p.y;   // (art v2 stands its buildings up: a roof pad up on the drawn roof)
+    if (p.x < view.x0 - 100 || p.x > view.x1 + 100 || py < view.y0 - 100 || py > view.y1 + 100) continue;
     const r = FLY.PAD_R * 0.8;
-    g.save(); g.translate(p.x, p.y);
+    g.save(); g.translate(p.x, py);
     g.globalAlpha = 0.85;
     g.fillStyle = 'rgba(60,62,66,0.85)'; g.beginPath(); g.arc(0, 0, r + 6, 0, Math.PI * 2); g.fill();
     g.strokeStyle = '#e8b52a'; g.lineWidth = 5; g.beginPath(); g.arc(0, 0, r - 4, 0, Math.PI * 2); g.stroke();
@@ -171,4 +180,47 @@ function drawPads(g, F, S, v2) {
     if (p.kind === 'hospital') { g.fillStyle = '#d8382e'; g.fillRect(r - 22, -r + 10, 12, 4); g.fillRect(r - 18, -r + 6, 4, 12); }
     g.restore();
   }
+}
+
+// ---- search and rescue (server sar.js; the job target's flare and hoist) ------------------------------------------------
+// The smoke flare by someone found out in the wild: a red glow on the ground and orange smoke rising, drifting off.
+function drawFlare(g, [x, y], now) {
+  g.save();
+  for (let i = 0; i < 14; i++) {
+    const ph = (now * 0.32 + i / 14) % 1, r = 8 + ph * 44;
+    g.globalAlpha = (1 - ph) * 0.72;
+    g.fillStyle = i % 3 ? '#ff7a3c' : '#ffa060';
+    g.beginPath(); g.arc(x + ph * 80 + Math.sin(now * 1.3 + i * 2.1) * 9 * ph, y - ph * 170, r, 0, Math.PI * 2); g.fill();
+  }
+  g.globalAlpha = 0.25; g.fillStyle = '#ff3020'; g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.fill();
+  g.globalAlpha = 0.7 + 0.3 * Math.sin(now * 23); g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+// The harness: [the helicopter's id, the cable paid out (px), clipped on, where they are]. Seen from above, the cable
+// hangs out of the side door, its drawn length growing as it pays out (reaching for them when they're beside it); its
+// yellow harness ring at the end - them hanging in it, swaying, once they're clipped on and winched up.
+function drawHoist(g, h, list, dt, now, v2 = false) {
+  const v = list.find((q) => q.id === h[0]), def = v && VEHICLE_BY_INDEX[v.d.m];
+  if (!def) return;
+  const alt = altOf(v, 0), k = 1 + Math.min(0.5, alt / 1600), c = Math.cos(v.ra), s = Math.sin(v.ra);
+  const dx = v.rx + (c * def.L * 0.1 - s * def.W * 0.5) * k, dy = v.ry - (v._lift || 0) + (s * def.L * 0.1 + c * def.W * 0.5) * k;
+  v._cable = v._cable === undefined ? h[1] : v._cable + (h[1] - v._cable) * Math.min(1, dt * 8);
+  const len = v2 ? 6 + liftOf(alt) - liftOf(alt - v._cable) : 8 + v._cable * 0.4;   // (art v2: straight down the screen, as far as it's come down)
+  let ax = v2 ? 0 : -s, ay = v2 ? 1 : c;
+  if (!h[2] && !v2) { const tx = h[3] - dx, ty = h[4] - dy, d = Math.hypot(tx, ty); if (d > 1 && d < len * 1.6) { ax = tx / d; ay = ty / d; } }
+  const sw = Math.sin(now * 2.3) * (h[2] ? 0.18 : 0.08) * (v2 ? 0.3 : 1), ex = dx + (ax * Math.cos(sw) - ay * Math.sin(sw)) * len, ey = dy + (ay * Math.cos(sw) + ax * Math.sin(sw)) * len;
+  g.save();
+  g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 3; g.beginPath(); g.moveTo(dx + 6, dy + 8); g.lineTo(ex + 6 + len * 0.3, ey + 8 + len * 0.3); g.stroke();   // (its shadow)
+  g.strokeStyle = '#202226'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(dx, dy); g.lineTo(ex, ey); g.stroke();
+  g.fillStyle = '#3a3c40'; g.fillRect(dx - 4, dy - 4, 8, 8);   // (the winch arm over the door)
+  if (h[2]) {   // them, in the harness: arms up on the strop, legs dangling, the yellow sling round them
+    g.strokeStyle = '#2c3440'; g.lineWidth = 4; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(ex - 4, ey + 14); g.lineTo(ex - 5, ey + 26 + Math.sin(now * 3) * 2); g.moveTo(ex + 4, ey + 14); g.lineTo(ex + 5, ey + 26 - Math.sin(now * 3) * 2); g.stroke();
+    g.strokeStyle = '#3d6fb5'; g.beginPath(); g.moveTo(ex - 7, ey + 2); g.lineTo(ex - 3, ey - 9); g.moveTo(ex + 7, ey + 2); g.lineTo(ex + 3, ey - 9); g.stroke();
+    g.lineCap = 'butt';
+    g.fillStyle = '#3d6fb5'; g.beginPath(); g.ellipse(ex, ey + 6, 8, 11, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#e2b48c'; g.beginPath(); g.arc(ex, ey - 6, 6, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#ffd21f'; g.lineWidth = 3; g.beginPath(); g.ellipse(ex, ey + 6, 10, 6, 0, 0, Math.PI * 2); g.stroke();
+  } else { g.strokeStyle = '#ffd21f'; g.lineWidth = 3; g.beginPath(); g.arc(ex, ey, 6, 0, Math.PI * 2); g.stroke(); }
+  g.restore();
 }

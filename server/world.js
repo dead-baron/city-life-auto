@@ -65,6 +65,9 @@ import * as tank from './systems/tank.js';
 import * as bowling from './systems/bowling.js';
 import * as cinema from './systems/cinema.js';
 import * as aircraft from './systems/aircraft.js';
+import * as sar from './systems/sar.js';
+import * as charter from './systems/charter.js';
+import * as coastguard from './systems/coastguard.js';
 import * as net from './net.js';
 import { warmGround } from './systems/offroad.js';
 
@@ -135,6 +138,9 @@ const SYSTEMS = [
   ['aircraft', aircraft.update],    // helicopters and planes: the parked ones at their pads and stands, mid-air collisions (aircraft.js)
   ['burning', burning.update],      // people on fire: burning down, going out, catching it from fire (H58)
   ['tank', tank.update],            // the tanks' turrets turning to their drivers' aim (H58)
+  ['sar', sar.update],              // search and rescue pilots' shifts: the calls, the harness, the hand-over (H59)
+  ['charter', charter.update],      // charter pilots' bookings: rich customers flown from place to place (H59)
+  ['coastguard', coastguard.update], // the coast guard's patrols: smugglers run down and boarded, people pulled out of the water (H59)
 ];
 
 export class World {
