@@ -122,3 +122,19 @@ test('the server: parked aircraft at the pads and the apron; flying one, the alt
   run(w, 8);
   assert.ok(v.wreckAt || v.removed, 'crashed');
 });
+
+test('the attack helicopter: its pilot fires missiles (the bazooka\'s rocket) from the pods, one every so often', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const v = w.spawnVehicle('gunship', p.ped.x + 200, p.ped.y, 0, { npcOwned: false });
+  v.alt = 950; v.spool = 1;   // (above every roof)
+  v.seats[0] = p.ped.id; p.ped.vehId = v.id; p.ped.seat = 0;
+  let seq = 0;
+  const rockets = () => [...w.entities.values()].filter((e) => e.kind === K.PROJ && e.weapon === 'rocket').length;
+  for (let i = 0; i < 4; i++) { p.inputQ.push({ seq: ++seq, bits: IN.FIRE | IN.AIMING, mx: 0, my: 0, aim: 0 }); w.step(); }
+  assert.ok(v.pod === 1 && rockets() <= 1, 'one missile away (then the pods reload)');   // (it may already have struck something)
+  const first = v.missileAt;
+  for (let i = 0; i < 12; i++) { p.inputQ.push({ seq: ++seq, bits: IN.FIRE | IN.AIMING, mx: 0, my: 0, aim: 0 }); w.step(); }
+  assert.ok(v.missileAt > first, 'and another once the pods have reloaded');
+  assert.ok(v.alt > 900, 'still flying');
+});
