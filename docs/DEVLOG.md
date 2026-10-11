@@ -7350,4 +7350,5 @@ highway on the deck at its point and no junction at grade with it, a ramp down f
 one up, an exit and an on-ramp each way, every ramp on the network; those not built are so for a tunnel, the main line
 or a road through them, and meet at a junction as before), test/world3interchanges.test.js (new, no build: the plan
 from the skeleton alone - which are built, their deck runs clear of the bores, four ramps each joining the deck and the
-road below, clear of the main line and the other roads), test/world3.test.js (the live world's hash unchanged).
+road below, clear of the main line and the other roads), test/world3.test.js (the live world's hash unchanged),
+test/world3world.test.js, test/world3rail.test.js, test/world3server.test.js (all pass).
