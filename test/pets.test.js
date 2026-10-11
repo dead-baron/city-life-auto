@@ -101,7 +101,7 @@ test('a lost pet: its arrow lasts, and its owner is marked on the wire - for eve
   const events = await import('../server/systems/events.js');
   const { EVENT_KINDS, EVENT_RANGE } = await import('../shared/worldevents.js');
   assert.ok(EVENT_KINDS.pet.stay && EVENT_KINDS.petret.stay, 'the arrows to the pet and to its owner don\'t fade');
-  assert.ok(EVENT_KINDS.petown && EVENT_KINDS.petown.noArrow, 'the owner is marked for others without an arrow of its own');
+  assert.ok(EVENT_KINDS.petown && EVENT_KINDS.petown.noArrow && EVENT_KINDS.petown.stay, 'the owner is marked for others, lasting, without an arrow of its own');
   pets.setRng(mulberry32(4));
   const w = makeWorld();
   const shop = w.map.pois.find((q) => q.kind === 'coffee');

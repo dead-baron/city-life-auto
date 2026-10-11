@@ -18,7 +18,7 @@ export const EVENT_KINDS = {
   streetrace: { color: '#ff2fd0', label: 'Street race', hint: 'Racers flat out - get out of the way' },      // (streetlife.js)
   copchase: { color: '#4d8dff', label: 'Police chase', hint: 'A getaway car with the police behind it' },
   armored: { color: '#e6c34a', label: 'Armored truck', hint: 'Valuables on the move - guarded' },
-  petown: { color: '#7fd8ff', label: 'Lost pet\'s owner', hint: 'Out looking for their pet', noArrow: 1 },   // (pets.js targetFor: "Lost my dog!" over them)
+  petown: { color: '#7fd8ff', label: 'Lost pet\'s owner', hint: 'Out looking for their pet', noArrow: 1, stay: 1 },   // (pets.js targetFor: "Lost my dog!" over them)
 };
 export const EVENT_RANGE = 1300;    // events further away than this aren't popped up on screen (the phone's city feed has them all)
 export const FEED_MAX = 40;         // the city feed keeps this many recent items
