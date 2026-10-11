@@ -145,7 +145,8 @@ function drawArt(L, me, u, now) {
   if (!art || art.L !== L || art.ap !== ap) art = new artMod.HomeArt(L, ap);
   art.relight(daylight());
   if (!art.work(art.ready ? 4 : 10)) return false;   // (made and lit a little at a time: never a stall on the way in)
-  const f = art.floor;
+  const f = art.floor, yd = art.yard;
+  g.drawImage(yd.cv, yd.x, yd.y, yd.G.w * ap, yd.G.h * ap);
   g.drawImage(f.cv, 0, 0, f.G.w * ap, f.G.h * ap);
   const list = [];
   for (const it of art.items) list.push({ b: it.base, it });

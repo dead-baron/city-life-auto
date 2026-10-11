@@ -17,6 +17,7 @@ import { VEHICLES } from '../../shared/vehicles.js';
 
 const T = TILE_IN;
 export const HF = 46, HC = 14;   // the walls' heights (world px): the back wall full, the rest cut low
+export const YARD = 72;          // the ground drawn round the place (world px)
 const UP = [0, 0, 1], SOUTH = [0, 1, 0];
 const WALLISH = new Set(['#', '=', 'D', 'R']);
 const FLOORISH = new Set(['.', 'c', 't', 'g', '+']);
@@ -107,6 +108,8 @@ export class HomeArt {
     this.ready = false; this.job = this.build(); this.lightJob = null;
   }
   *build() {
+    this.buildYard();
+    yield;
     yield* this.buildFloor();
     yield* this.buildWalls();
     yield* this.buildFurniture();
@@ -119,7 +122,7 @@ export class HomeArt {
       if (!j) break;
       if (j.next().done) { if (this.job) this.job = null; else this.lightJob = null; }
     }
-    this.ready = !this.job && !!(this.floor && this.floor.cv) && this.items.every((it) => it.cv);
+    this.ready = !this.job && !!(this.floor && this.floor.cv && this.yard.cv) && this.items.every((it) => it.cv);
     return this.ready;
   }
   floorKind(tx, ty) {
@@ -130,6 +133,28 @@ export class HomeArt {
     if (r && (r.kind === 'bath')) return 't';
     if (r && r.kind === 'bed' && this.tier >= 2 && !r.tiles.some(([x, y]) => L4K(this.L, x, y))) return 'c';   // (a bedroom carpeted - not a great room with the kitchen in it)
     return '.';
+  }
+  // the ground round the place (the concepts show a home cut away in its lot): a lawn - a yard of paving round an
+  // apartment - the path from the front door, the drive from the garage, a few flowers along the front of a good one
+  buildYard() {
+    const L = this.L, ap = this.ap, M = YARD, G = new GBuf(Math.ceil((L.w + 2 * M) / ap), Math.ceil((L.h + 2 * M) / ap));
+    const paved = L.key === 'apartment', grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
+    let r0 = L.cols, r1 = -1;
+    for (let tx = 0; tx < L.cols; tx++) if (L.cell(tx, L.rows - 1) === 'R') { r0 = Math.min(r0, tx); r1 = Math.max(r1, tx); }
+    for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
+      const wx = x * ap - M, wy = y * ap - M;
+      if (wx >= 0 && wy >= 0 && wx < L.w && wy < L.h) continue;
+      let c;
+      const path = L.door && wy >= L.h && Math.abs(wx - L.door.x) < 18, drive = r1 >= 0 && wy >= L.h && wx >= r0 * T && wx < (r1 + 1) * T;
+      if (drive) c = step(conc, 0.5 + (vnoise(wx, wy, 20, 7) - 0.5) * 0.2 + (wy % 48 < 1 ? -0.2 : 0), x, y, 0.4);
+      else if (path || paved) c = step(pave, 0.55 + ((((wx % 16) + 16) % 16 < 1 || (((wy % 16) + 16) % 16) < 1) ? -0.3 : (hash(wx >> 4, wy >> 4, 3) - 0.5) * 0.2), x, y, 0.3);
+      else {
+        c = step(grass, 0.5 + (vnoise(wx, wy, 14, 2) - 0.5) * 0.3 + (hash(x, y, 5) - 0.5) * 0.25, x, y, 0.6);
+        if (this.tier >= 1 && wy >= L.h && wy < L.h + 12 && hash(wx >> 2, wy >> 2, 8) > 0.8) c = [[220, 70, 80], [240, 200, 70], [180, 120, 220]][Math.floor(hash(wx >> 2, 1, 9) * 3)];   // flowers along the front
+      }
+      G.put(x, y, c, UP, 0);
+    }
+    this.yard = { G, x: -M, y: -M };
   }
   *buildFloor() {
     const L = this.L, ap = this.ap, G = new GBuf(Math.ceil(L.w / ap), Math.ceil(L.h / ap));
@@ -371,6 +396,9 @@ export class HomeArt {
     const ap = this.ap;
     const cv = this.shade(this.floor.G, 0, 0, ap, E, this.floor.cv2);
     this.floor.cv2 = this.floor.cv; this.floor.cv = cv;   // (two canvases: the one on screen is never half lit)
+    yield;
+    const yv = this.shade(this.yard.G, this.yard.x, this.yard.y, ap, { ...E, lights: [] }, this.yard.cv2);   // (outdoors: the sky's light only)
+    this.yard.cv2 = this.yard.cv; this.yard.cv = yv;
     yield;
     for (const it of this.items) {
       if (it.remake && it.on !== E.on) { it.on = E.on; it.G = it.remake(E.on); }
