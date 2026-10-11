@@ -2387,6 +2387,9 @@ any train of those loops (`updateCrossings`); the drivers stop at every loop's (
 arms by that list (`host.js`). The NPCs keep off every loop's track (`railThreat`, `railBlocked`: each tile near the
 line knows the nearest point of every loop near it).
 
+**Riding** is today's on every loop (`test/world3rail.test.js`: board a Bay Loop or Harbor Line train at its platform,
+ride to the next stop, get off onto its platform).
+
 **The art:** the chunk bake draws every loop (`client/art2/game/groundbake.js` `railLoop`: a later loop takes a pixel
 only where it is clearly the nearer track, so a track two loops share is drawn once and its sleepers keep their
 spacing; `statics.js` `addRailLoop`: a platform, a tunnel mouth or a crossing's signals that two loops share are put
@@ -2423,8 +2426,8 @@ wrong:
 
 **What's left** (in order):
 1. **What still reads only the first loop** (`off0`): the waiting crowds and the commuters walking to a platform
-   (`gatherCommuters`, `callWaiting`), the station boards and the platform clocks (`timetable`, `stationBoard`: a
-   station POI is the first loop's that made it) - a station's boards want every service that stops there. A double
+   (`gatherCommuters`, `callWaiting`) and the platform clocks (`timetable`, the `tt` broadcast). The station boards
+   and the map point's "next train" list every service that stops there (`loopBoard`, `nextTrainIn` by the POI). A double
    track's road crossing is two crossings (each track its gates, the arms between the tracks crossing): one crossing
    with its arms outside both tracks wants an arm offset per crossing (`CROSSING_ARM` is one constant now).
 2. The junctions designed (above), the towns' crossings as bridges or cuttings, the tunnels' mouths and cover.

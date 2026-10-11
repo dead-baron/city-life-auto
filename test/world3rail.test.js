@@ -124,6 +124,11 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
   // the NPCs see a train coming on any loop: right in front of a moving train on a loop other than the first
   const t = ts.find((q) => q.r > 0 && q.v > 100 && !w.rails[q.r].pts[Math.floor(q.s / 8) % w.rails[q.r].pts.length].under);
   if (t) { const q = railAt(w.rails[t.r], t.s + 200); assert.ok(trains.railThreat(w, q.x, q.y), 'a train coming on its loop is a threat'); }
+  // the station boards: Northshore's lists the services that stop there, each with its next stop and its time
+  const ns = M.pois.filter((p) => p.kind === 'station' && p.label === 'Northshore Station');
+  const services = new Set(ns.flatMap((poi) => trains.stationBoard(w, poi).sub.match(/(Grand Loop|Bay Loop|Harbor Line) to/g) || []));
+  assert.ok(services.size >= 2, `Northshore's boards: ${[...services].join(', ')}`);
+  assert.ok(ns.every((poi) => trains.nextTrainIn(w, poi.station, poi) < 900), 'a next train at every Northshore platform');
   ts.forEach((t, i) => {
     const r = w.rails[t.r];
     assert.ok(run[i].dist > 8000, `${r.name} train ${t.i}: ran ${Math.round(run[i].dist)} px`);

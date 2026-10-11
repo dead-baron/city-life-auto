@@ -1428,10 +1428,17 @@ export function callTrain(world, x, y) {
   return { t, st };
 }
 
-// Seconds until the next train at station si (0: one is in now).
-export function nextTrainIn(world, si) {
+// (World v3: a station's map point stands for every loop that stops there - each loop's station of that name near it)
+function loopStops(world, poi) {
+  const out = [];
+  world.rails.forEach((rail, r) => rail.stations.forEach((st, si) => { if (st.name === poi.label && Math.hypot(st.platform.x - poi.x, st.platform.y - poi.y) < 700) out.push([r, si]); }));
+  return out;
+}
+// Seconds until the next train at station si (0: one is in now); on World v3's main line, at the station `poi` is.
+export function nextTrainIn(world, si, poi = null) {
   if (!world.trains || !world.trains.length) return Infinity;
   let best = Infinity;
+  if (world.rails && poi) { for (const [r, sj] of loopStops(world, poi)) for (const t of world.trains) if (t.r === r) best = Math.min(best, etaTo(world, t, sj)); return best; }
   for (const t of world.trains) if (!off0(t)) best = Math.min(best, etaTo(world, t, si));
   return best;
 }
@@ -1447,6 +1454,7 @@ export function timetable(world) {
 }
 
 export function stationBoard(world, poi) {
+  if (world.rails) return loopBoard(world, poi);
   const si = poi.station, sts = world.map.rail.stations;
   const lines = world.trains.filter((t) => !off0(t)).map((t) => {
     const eta = etaTo(world, t, si);
@@ -1454,6 +1462,21 @@ export function stationBoard(world, poi) {
   }).sort((a, b) => a.eta - b.eta).slice(0, 3).map((q) => q.text);
   if (sts[si].under) return { title: sts[si].name, sub: `Subway - when a train is in, take the stairs down: press ${ACTION_HINT} at the entrance. ${lines.join(' · ')}` };
   return { title: sts[si].name, sub: `Wait on the platform - when a train pulls in, walk up to its doors and press ${ACTION_HINT} to board. ${lines.join(' · ')}` };
+}
+
+// (World v3: the board lists every service stopping here, each way - the next three trains, where they're going)
+function loopBoard(world, poi) {
+  const lines = [];
+  for (const [r, sj] of loopStops(world, poi)) {
+    const rail = world.rails[r], to = rail.stations[(sj + 1) % rail.stations.length].name.replace(/ Station$/, '');
+    for (const t of world.trains) {
+      if (t.r !== r) continue;
+      const eta = etaTo(world, t, sj);
+      lines.push({ eta, text: `${rail.service || 'Train'} to ${to}: ${eta < 1 ? 'AT THE PLATFORM - board now' : `${Math.round(eta)}s`}` });
+    }
+  }
+  const sub = lines.sort((a, b) => a.eta - b.eta).slice(0, 3).map((q) => q.text);
+  return { title: poi.label, sub: `Wait on the platform for your service - when it pulls in, walk up to its doors and press ${ACTION_HINT} to board. ${sub.join(' · ')}` };
 }
 
 export function meInfo(world, p) {
