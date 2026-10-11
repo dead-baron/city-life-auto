@@ -2883,6 +2883,7 @@ function coverAt(c, tx, ty, x, y) {
   // water's edge: reeds and cattails in clumps along lakes and rivers (not the sea)
   const nearFresh = (M.distRiver && M.distRiver[i] > 0 && M.distRiver[i] <= 8) || (M.lake && (M.lake[M.idx(tx - 1, ty)] || M.lake[M.idx(tx + 1, ty)] || M.lake[M.idx(tx, ty - 1)] || M.lake[M.idx(tx, ty + 1)]));
   if (nearFresh && t !== T.SAND) return pb > 0.42 && h < 0.75 ? [pickW(NAT_SP.shore, h2), 1] : null;
+  if (t === T.SAND && M.dist[i] === 50) return h < 0.04 ? [pickW(NAT_SP.desert, h2), 1] : null;   // (World v3's desert sand sheets: sparse dry scrub, no dune grass)
   if (t === T.SAND || bio === 5) {
     const back = M.distSea ? M.distSea[i] : 99;   // (quarter tiles) dune grass only behind the wet sand
     return back > 14 && pa > 0.45 && h < 0.35 ? [pickW(NAT_SP.dune, h2), 1] : null;

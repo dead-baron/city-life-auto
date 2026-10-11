@@ -2125,4 +2125,4 @@ sandstone buttes and outcrops, scrub and cacti - no repeating pattern. Wrong the
 small red towers** (4-7 tiles across, where WR2-B's are tens of metres: they want the canyon's raised mesas or far
 bigger outcrops); **some washes close on themselves** (they are a noise's contour lines: a wash should run down to the
 lake, the river or off the map); and **the sand sheets grow green dune grass** (the renderer's cover for sand comes
-before its desert branch) - in the desert they want sparse dry grass.
+before its desert branch) - fixed after the bake (sparse desert scrub on the Red Rock Desert's sand), not re-baked.
