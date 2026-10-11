@@ -7147,7 +7147,8 @@ tried locally and in tests. Without the setting nothing changes (the world hash 
   remembers it (`cla.world`) and loads again (`client/main.js` `worldChanged`; `?world=v3` asks for it from the start).
   The worker (`client/worldgen.js`) downloads a v3 world (2 minutes' wait, asking again while the server is still
   writing its files - a 404 'packing'), never builds one (the generator would build today's), doesn't keep it
-  (hundreds of MB) and hands its layers to the page without a copy.
+  (hundreds of MB) and hands its layers to the page without a copy; when it can't, the title screen says so
+  (`holdForCity`) instead of the page building today's.
   **In the headless page: the city served in 9-12 s** (81 files downloaded, unzipped and assembled), **the page's JS
   heap 468-497 MB** (527 MB allocated). The game starts in the v3 world (a hospital by the gulf), the minimap and the
   dev menu's teleports work (Midtown, Port Westport, Highland Woods), the server's world runs round the player (people,
@@ -7167,8 +7168,9 @@ welcome's `world`), `server/worldcdn.js` (`variant`), `server/systems/trains.js`
 `client/worldgen.js`, `test/world3server.test.js` (new), `test/regions.test.js`, `docs/WORLD-V3.md` 8.9,
 `docs/world-v3-server-metro.png` (new).
 
-Tests: `test/world3server.test.js` (new: the v3 world built as the server builds it, about 23 s; the server's world on
-it for 8 s with players at Metro City, Westport's container port, Cedar Isle and the mainland - no errors, people and
+Tests: `test/world3server.test.js` (new, about 34 s: the v3 world built as the server builds it; its region files cut
+as the server cuts them - the index and 10 x 8 regions - and read back into the same city; the server's world on it
+for 8 s with players at Metro City, Westport's container port, Cedar Isle and the mainland - no errors, people and
 traffic round the towns), `test/regions.test.js` (a v3 world served under its own id, the worker waiting while it's
 packed and never building it; the railway's points and the levels' segments cut into the regions; today's files still
 the city to the bit), `test/trains.test.js` pass.

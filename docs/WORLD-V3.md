@@ -2029,9 +2029,10 @@ world: see "The page" below.
 
 **What runs**
 - The server starts and runs: the World on the 5040 x 4032 map, its systems round the players (people, traffic), the
-  art CDN baking round them, the region files served. `test/world3server.test.js`: the v3 world
-  built as the server builds it, the server's world run for 8 s with players at Metro City, Westport's container port,
-  Cedar Isle and the mainland's woods - no errors, people and traffic round the three towns.
+  art CDN baking round them, the region files served. `test/world3server.test.js` (about 34 s): the v3 world built as
+  the server builds it; its region files cut as the server cuts them and read back into the same city (the map's
+  signature); the server's world run for 8 s with players at Metro City, Westport's container port, Cedar Isle and the
+  mainland's woods - no errors, people and traffic round the three towns.
 - The page (a desktop browser) downloads the whole world - the index and all 80 regions - in its city worker,
   assembles it and starts the game in it: the spawn (a hospital by the gulf), the minimap, the dev menu's teleport
   (Midtown, Port Westport, Highland Woods), the art v2 chunks baked for the v3 map by the server's CDN and the page's
@@ -2079,8 +2080,10 @@ world: see "The page" below.
    and props, ATMs and POIs are at the same spot) and the shared objects straddling borders are its open questions.
 2. **The index still has whole lists** a window may not need: the port's lanes and stacks (into the regions), the road
    graph (whole for the GPS, or coarse for the phone: 945 KB of JSON of the index's 2 MB).
-3. **A page that can't download the v3 world** (the worker's error after 2 minutes) falls back as for today's world:
-   it builds today's on the page and plays on the wrong map, with the signature's warning. It should say so and stop.
+3. **A page that can't download the v3 world** (the worker's error after 2 minutes) says so on the title screen and
+   stops (`client/main.js` `holdForCity`: the welcome says `world: 'v3'`) - it used to fall back as for today's world
+   and build today's. Done, but only when the welcome comes before the worker gives up (it waits 2 minutes, so it
+   does); a worker that failed first still lets the page build.
 4. **The art after a teleport is slow, or doesn't come:** in the headless page Midtown was half drawn after 15 s and
    whole after 45 s, but Port Westport and Highland Woods were still the sea's stand-in after 40 s - though the
    server's CDN had baked the 5 x 5 chunks round each (`.playtest-data/8229/art/.../q2a2/`), the minimap drew them and

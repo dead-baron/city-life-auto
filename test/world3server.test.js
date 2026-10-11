@@ -11,6 +11,9 @@ import { buildWorld3 } from '../server/world3.js';
 import { T, TILE, K } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { cityData } from '../shared/map.js';
+import { cityFromData, mapSignature } from '../shared/mapcore.js';
+import { cutWorld } from '../server/worldcdn.js';
+import { assembleCity, readIndex } from '../shared/regionpack.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 
@@ -30,7 +33,22 @@ test('the v3 world as the server builds it: the frame, its places', () => {
   assert.equal(M.w, FRAME_W); assert.equal(M.h, FRAME_H);
   assert.deepEqual({ ...M.frame }, { w: FRAME_W, h: FRAME_H });
   assert.ok(M.edges.length > 1000 && M.buildings.length > 1000 && M.pois.length > 500, `${M.edges.length} edges, ${M.buildings.length} buildings, ${M.pois.length} POIs`);
-  assert.ok(!('world' in cityData(M)) || true);
+  assert.ok(!('frame' in cityData(M)), 'the frame is not a field of the city as data');
+});
+
+test('its region files, as the server cuts them: the index and 10 x 8 regions, read back into the same city', () => {
+  let cut = cutWorld(M, { seed: 1337, world: 'v3' });   // (before the World runs: it changes the map)
+  const X = readIndex(cut.pack.index);
+  assert.deepEqual(X.frame.slice(3), [10, 8]);
+  assert.equal(cut.pack.regions.length, 80);
+  assert.deepEqual(X.meta, { seed: 1337, world: 'v3' });
+  assert.ok(cut.pack.index.length < 4e6, `the index ${(cut.pack.index.length / 1e6).toFixed(2)} MB raw`);
+  let back = cityFromData(assembleCity(cut.pack.index, cut.pack.regions.map((r) => r.bytes)));
+  cut = null;
+  delete back._sig;
+  assert.equal(mapSignature(back), mapSignature(M), 'the same city');
+  assert.deepEqual([back.w, back.h, back.edges.length, back.buildings.length, back.pois.length, back.props.length, back.levels.segs.length], [M.w, M.h, M.edges.length, M.buildings.length, M.pois.length, M.props.length, M.levels.segs.length]);
+  back = null;
 });
 
 test('the server\'s world on the v3 map: players at Metro City, Westport\'s port, Cedar Isle and the mainland - no errors, life round the towns', () => {

@@ -915,7 +915,7 @@ function holdForCity(m) {
   if (!job.waiting) {
     job.waiting = true;
     job.promise.then((data) => { job.map = cityFromData(data); }, (e) => { console.warn('[city] the worker could not build it - building it here', e); job.failed = true; })
-      .then(releaseHeld);
+      .then(() => { if (job.failed && m.world === 'v3') $('t-status').textContent = 'The World v3 city could not be downloaded from the game server - reload to try again.'; else releaseHeld(); });   // (the server runs World v3's city: never built here - the page would build today's)
   }
   return true;
 }
