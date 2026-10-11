@@ -3039,7 +3039,7 @@ function hubPlan(m, calling, all, sx, sy) {
     const ok = [];
     let nearest = cand.length ? cand[0][1] : 0;
     for (const [d, c] of cand) {
-      if (ok.length >= 160) break;
+      if (ok.length >= 640) break;
       if (turn(head(c - half), head(c)) > 0.05 || turn(head(c), head(c + half)) > 0.05) continue;
       let fine = true, roads = 0;
       for (let k = -half; k <= half && fine; k++) { const p = pts[(c + k + n) % n]; if (p.under || p.bore) fine = false; else if (!(k & 3)) roads += road(p); }

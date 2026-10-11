@@ -2476,8 +2476,23 @@ owner is deciding). Nothing live changes: the world hash stays `6b6e16fdef9f` (t
 - **Every loop's clocks and the phone:** the `tt` broadcast is a list per loop on World v3 (`loopTimetable`), the
   client draws every loop's platform clocks (a platform two loops share shows the sooner train); the phone's railway
   list is one row per station (its map point) with the services calling.
-- **The pictures:** `docs/world-v3-hub-northshore.png` and `docs/world-v3-hub-dry-creek.png` (`tools/world3-hub-map.mjs`:
-  the chunk bake at 1/4 round a station, the building, the platforms and the switches marked).
+- **The pictures:** `docs/world-v3-hub-northshore.png`, `docs/world-v3-hub-westport-junction.png` and
+  `docs/world-v3-hub-old-town.png` (`tools/world3-hub-map.mjs`: the chunk bake at 1/4 round a station, the building, the
+  platforms and the switches marked). The numbers (seed 1337): every station one, its loops' platforms within about
+  330 px of its building (Northshore's six loops at the platforms either side of the junction; Metro Central's 3 km
+  apart: the Harbor Line through Metro City is the owner's to decide); 8 turnouts and 4 diamonds listed; two bores (the
+  Grand Loop's 277-tile one through the mountains, a track each way). What looks right: Northshore's junction compact -
+  the stem's double track rising into the coast line through its turnouts (the switch rails and frogs drawn) and two
+  diamonds, the platforms side by side with a footbridge over the tracks; Westport Junction's one station, its two
+  platforms facing, the building on its forecourt. What looks wrong:
+  - **Northshore's junction is still in the town** (its place is the owner's): the Northshore Loop's road runs down the
+    stem beside the west track and across the coast line at grade at the junction itself;
+  - **the redwoods stand over Westport Junction's platforms** (the forest's trees aren't cleared off a platform's far
+    edge, their crowns hang over the track);
+  - **a junction under a highway** (Westport Junction, in the underpass under the Coast Highway) has its switches below
+    ground: none drawn, none listed;
+  - the station building is placeholder art (the subway's entrance kiosk) and the concourse just the forecourt and
+    the footbridges.
 - **The tests:** `test/world3hubs.test.js` (one world build: one station per name, every service calling, its one map
   point, the platforms on the straight, the two ways' platforms side by side; the switches at every junction and the
   bake through one; the bores under their cover, a train inside hidden from outside); `test/world3rail.test.js` (the

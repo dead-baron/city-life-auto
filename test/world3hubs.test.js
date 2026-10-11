@@ -59,8 +59,16 @@ test('the switches: turnouts where a loop leaves another\'s track, diamonds wher
   assert.ok(dm.length >= 2, `${dm.length} diamonds`);
   // every junction has its switches
   // the junctions have their switches (where the tracks meet at ground level: under ground - a tunnel, an underpass - none are listed)
-  const at = [[2440, 1700], [3950, 1420], [2250, 2330], [1640, 1700]].filter(([x, y]) => sw.some((w) => Math.hypot(w.x - x * TILE, w.y - y * TILE) < 60 * TILE));
-  assert.ok(at.length >= 3, `switches at ${at.length} of the four junctions`);
+  for (const [x, y] of [[2440, 1700], [3950, 1420], [2250, 2330], [1640, 1700]]) {
+    if (sw.some((w) => Math.hypot(w.x - x * TILE, w.y - y * TILE) < 60 * TILE)) continue;
+    // none listed: the tracks meet below ground there (Metro Junction in the tunnel under the core, Westport Junction
+    // in the underpass under the Coast Highway) - each loop's point nearest the junction is under
+    for (const r of M.rails) {
+      let best = null, bd = Infinity;
+      for (const p of r.pts) { const d = Math.hypot(p.x - x * TILE, p.y - y * TILE); if (d < bd) { bd = d; best = p; } }
+      if (bd < 10 * TILE) assert.ok(best.under, `the junction ${x}, ${y}: no switches listed, yet ${r.name}'s track there is at ground level`);
+    }
+  }
   assert.ok(sw.some((w) => Math.hypot(w.x - 2440 * TILE, w.y - 1700 * TILE) < 40 * TILE), 'switches at Northshore Junction');
   // the bake at a turnout: two tracks through the same pixels - the second track's rails are drawn (the bake's second field)
   const { bakeChunk, loadProviders, SpriteCache, providers } = await import('../client/art2/game/chunkbake.js');

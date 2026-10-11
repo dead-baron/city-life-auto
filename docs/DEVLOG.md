@@ -7343,8 +7343,8 @@ shared/map.js (`hubIndex`, `hubPlan`, `buildRailHubs`, `railSwitches`, `addRailB
 (every loop's clocks), client/phone.js (`railStations`), client/art2/game/groundbake.js (`railSecond`),
 client/art2/game/statics.js (`railHubs`: the building, the footbridges), client/render/trains.js and tiles.js (every
 loop, `drawRailSwitches`), tools/world3-hub-map.mjs (new: a station through the chunk bake), test/world3hubs.test.js
-(new), test/world3rail.test.js, docs/world-v3-hub-northshore.png, docs/world-v3-hub-dry-creek.png, docs/WORLD-V3.md
-8.10.1.
+(new), test/world3rail.test.js, docs/world-v3-hub-northshore.png, docs/world-v3-hub-westport-junction.png,
+docs/world-v3-hub-old-town.png, docs/WORLD-V3.md 8.10.1.
 
 Tests: test/world3hubs.test.js (one world build: one station per name with every service calling, one map point, the
 platforms on the straight and side by side; the switches at every junction, the bake through one; the bores under
