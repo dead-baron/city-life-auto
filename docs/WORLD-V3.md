@@ -2677,13 +2677,15 @@ its items only - and the moves across a border and to the corner).
 | The window's moves in the page | at joining (the frame's middle -> round the player, when they spawn outside it), across a region border (teleported 40 tiles short of the centre region's edge, then 40 past: r4-3 ... r6-5 -> r5-3 ... r7-5, the regions coming in fetched before) and a teleport 1,700 tiles west (-> r1-3 ... r3-5): no errors once the readers below were fixed (the walk-ins' doors stopped the frame drawing; art v2's resync stopped its start) |
 
 **What's left** (in order)
-1. **Per-region signatures** (part 8 item 5): the welcome's whole-map signature check is skipped for a window; each
-   region's own signature in the index, checked as each region comes in.
+1. ~~**Per-region signatures** (part 8 item 5): the welcome's whole-map signature check is skipped for a window; each
+   region's own signature in the index, checked as each region comes in.~~ **Done (8.12.2):** the index carries each
+   region's signature and the world's; each region is checked as it's assembled, the world's against the welcome.
 2. **The first window** is round where the player was last (`cla.at3`) or the frame's middle the first time: a new
    player usually spawns outside it, and the window moves at once after joining (one more assembly, about a second,
    the player held by the window's walls meanwhile). The welcome could say where the player will be (World v3 only).
-3. **The phone's apps and the big map list only the window's places** (`pois` holds only the window's): a small global
-   list (name, kind, position) belongs in the index (8.1's note).
+3. ~~**The phone's apps and the big map list only the window's places** (`pois` holds only the window's): a small global
+   list (name, kind, position) belongs in the index (8.1's note).~~ **Done (8.12.2):** `places` in the index, read by
+   the phone's apps, the big map's icons and its panel.
 4. **The railway's loops in a window** are the window's part of each loop, compacted (railAt searches by arc length):
    the minimap draws no line across where a loop leaves the window; the art's stations and the trains near a window's
    edge want a look.
@@ -2696,8 +2698,10 @@ its items only - and the moves across a border and to the corner).
    the art still the sea's stand-in 30 s later - 8.9's open item 4 (seen with the whole world too), or chunks baked by
    the page's worker before the new window reached it: `setMap` now bakes again the chunks baked outside the old window
    (not yet seen in a playtest). To look at in a real browser.
-6. **The minimap is a frame-sized canvas** (5040 x 4032, 81 MB of pixels): wants a coarser picture at v3 (8.2's note).
-7. **Regions aren't kept in the browser** (IndexedDB): each visit downloads the window (about 2 MB).
+6. ~~**The minimap is a frame-sized canvas** (5040 x 4032, 81 MB of pixels): wants a coarser picture at v3 (8.2's
+   note).~~ **Done (8.12.2):** a coarse picture of the frame from the index (5.1 MB of pixels) and the window's own.
+7. ~~**Regions aren't kept in the browser** (IndexedDB): each visit downloads the window (about 2 MB).~~ **Done
+   (8.12.2):** kept under the world, a return visit downloads nothing it has.
 
 ### 8.12.1 The art after a far teleport, and the renderer's room (2026-10-10, H36)
 
@@ -2780,6 +2784,93 @@ asked; the etas).
 - On a fresh server the page and the server may bake the same chunk at once (the page bakes when the server's eta is
   over 6 s): on two cores they share the CPU. A real desktop (three bake workers, 60 frames a second) and the live
   server (warm) should take a second or two: to measure there with `__S.art2.stats().jump`.
+
+### 8.12.2 The window's follow-ups: the signatures, the world's places, the kept regions, the minimap (2026-10-11, H39)
+
+8.12's "what's left" items 1, 3, 6 and 7, and part 8 item 5. Only a windowed world (World v3's, `CLA_WORLD=v3`) reads
+any of it: today's world keeps its path - the kept city, the download of the whole, the whole-map signature check
+(nothing in it changed; its index carries the new lists too, a few KB, unread); the world hash stays `6b6e16fdef9f`.
+
+**The signatures** (part 8 item 5; `shared/regionpack.js`)
+- The index carries `sigs` - each region's signature, `regionSig`: a 32-bit hash of the region's file as written (raw,
+  before gzip; about 5 ms a region at v3) - and `sig`, the world's: the map's signature (`mapSignature`) as the server
+  cut it (`server/worldcdn.js cutWorld`), what the welcome says.
+- **Each region is checked as it's assembled** (`client/worldwindow.js` `region`): a file whose signature isn't the
+  index's, or that doesn't open (a bad gzip), is dropped - from the keeper's memory and from the browser's store - and
+  fetched again past every cache (`cache: 'reload'`); refused again, the window isn't assembled and the error names the
+  region: at the start the title screen says so (8.9's `holdForCity`), on a move the page toasts it and the worker
+  waits 10 s before asking again. Nothing is ever built in its place (a v3 world is never built on the page).
+- **The world's** (`client/main.js` `windowNotServers`): the welcome's signature against the index's. Another build:
+  the page reloads into it (as for today's world); the same build: the kept files go and the page reloads once, then
+  plays on and tells the server (`diag`).
+- An index without them (a server from before) is read as before: nothing checked.
+
+**The world's places** (8.1's note)
+- The index carries `places`: every POI as `[id, kind, label, x, y, district, home]` (the district: the dist layer's at
+  its tile, at the cut). A window's city gets `places` - an array by the POI's world index (`places[i].id === i`, the
+  same index the server sends) of `{ id, kind, label, x, y, d, home }` - while `pois` still holds only the window's.
+- Read by the phone's Places app (the list, the district under each place, the waypoint on a tap), its nearest
+  courthouse and ATM, the big map's icons (`client/worldmap.js` `placesByRank`), its panel's lists
+  (`client/mapwaypoints.js`) and the icons' merging (`client/hud.js` `iconSkip`): `map.places || map.pois`. The
+  waypoint's route is the router's, on the whole road graph (still whole in the index). The minimap's icons round the
+  player read the window's POIs (always inside it).
+- At v3: 860 places, 339 of them outside the window round the gulf's hospital (the mainland's towns, Westport, the
+  airport...).
+
+**The regions kept in the browser** (`client/regionstore.js`, new; IndexedDB `cla-regions`)
+- The city worker (`client/worldgen.js` `fetchWindow`) looks in the store first for the index and each region, and
+  downloads only what it hasn't kept (each file kept as it came, gzipped, keyed by name under `${world}:${seed}`: the
+  first file a new world keeps clears the old world's). A kept index that doesn't read is dropped and downloaded again;
+  a kept region that doesn't match its signature likewise (above).
+- The page's window says what came from where (`S.win.kept`, `.fetched`; the console's "[world] the window ...").
+- All of the v3 world kept would be 81 files, about 12 MB: kept as visited, nothing evicted (a new world clears it).
+
+**The minimap at v3** (`client/hud.js`; 8.2's note)
+- The index carries a coarse picture of a big frame (`picture`: a tile every 4 - the middle of each 4 x 4 block - only
+  when the frame is over 4 M tiles: World v3's, 1260 x 1008, 1.27 MB raw). The minimap at v3 is that picture (a pixel
+  every 4 tiles: **5.1 MB of pixels, not 81**) with the window's own picture over it, a pixel a tile (1512 x 1512,
+  9.1 MB), and the railway and the elevated roads drawn into both as windows come. Without a picture (an older
+  index) the coarse canvas is painted from each window as it comes.
+- `drawMini` draws a part of it (the radar, and the big map when it has no baked picture: `client/worldmap.js`): the
+  coarse picture scaled, the window's over it. Today's world: one canvas, a pixel a tile, as before.
+
+**Tests**
+- `test/regionwindow.test.js` (today's world in 256-tile regions): the index's signatures - every file's its own, the
+  world's the map's, a bit off or another region's file refused, no signatures nothing checked; a corrupted region
+  dropped (here and in the store) and fetched again fresh, refused again (and a file that doesn't open) no window and
+  the region named; the whole world's places in a window - every POI with its district and home, those outside the
+  window too, today's whole assembly unchanged (no places, no picture); the kept regions - the first visit downloads
+  10 files and keeps them, the return visit downloads none (the same tiles), a move downloads the 3 regions it hadn't
+  kept, a spoiled kept region is downloaded again past the HTTP cache and the good one kept, a kept index that doesn't
+  read downloaded again.
+- `test/world3window.test.js` (the v3 world built once): every region's signature and the world's; a window round the
+  gulf's hospital lists all 860 places, the 339 outside it as the world has them; the picture 1260 x 1008, its tiles
+  the world's.
+
+**The numbers** (this machine, node 22, two cores shared with two other helpers)
+
+| | |
+|---|---|
+| The v3 index | 5.22 MB raw, **0.95 MB gzipped** with the signatures, the places and the picture (the world has grown since 8.12's 0.71: the towns, the main line) |
+| The signatures | 81 x 7 characters; checking a region about 5 ms (a 4.4 MB region; 45 ms for 9) |
+| The minimap at v3 | **5.1 MB** (the coarse picture) + **9.1 MB** (the window's) of pixels, against 81.3 MB |
+| The places | 860 at v3 (339 outside the window round the gulf's hospital) |
+| **The page** (headless Chromium, `CLA_WORLD=v3`, `?world=v3`, a fresh browser) | the window (the index and 9 regions) downloaded and the Play button live **1.9 s** after opening; in the city after 28 s; the window moved at once to round the spawn (r1-1 ... r3-3, Timber Bend): assembled in 1.1 s, swapped in 0.14 s; the minimap 1260 x 1008 (k 4) + the window's 1512 x 1512 |
+| The phone's Places app (hospitals and police), at Timber Bend | 17 places, **15 of them outside the window** - Westport PD and Westport General (Westport Center), Northshore Medical and Sheriff, the city's clinics and Metro City PD (Midtown, Northgate, Downtown, Civic Center) - with their districts and distances (`docs/world-v3-window-places.png`) |
+| The big map, at Timber Bend | the coarse picture of the whole frame, the whole world's places' icons (Metro City's, Westport's, the airport's) beyond the window (`docs/world-v3-window-bigmap.png`) |
+| **A return visit** (the page loaded again, the same browser) | the window round where the player was: **10 files from the browser, 0 downloaded**, ready 3.0 s after the reload |
+
+**What's left**
+- The district names on the big map are the window's (`districtCentroids` reads the window's dist layer): the world's
+  districts' middles belong in the index too.
+- The kept regions are never evicted (the whole v3 world is about 12 MB) and a stale world's are cleared only when a
+  new world keeps its first file.
+- 8.12's items 2, 4, 5 and 8 stand (the first window round where the player was last, the railway's loops in a window,
+  the swap's copies, the art after a far teleport). Item 4 showed in the playtest: art v2's statics bake warned
+  `railAt ... reading 's'` (`statics.js` `addRailLoop` on a window's compacted loop) - the bake fell back, the game ran on.
+- The stock `tools/playtest.py` hung at its Play click on the v3 page (the page busy past the click's 30 s; its failure
+  screenshot timed out and left the servers up): the look above was taken with a short script of the same launch
+  against the same server (in the city after 28 s). The tool could wait for the page with its own timeout.
 
 ### 8.13 Stage 3, step 5: the first mainland towns (2026-10-10, H34)
 

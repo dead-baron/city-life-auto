@@ -253,3 +253,18 @@ test("the regions kept in the browser: a return visit's window comes from the st
   assert.deepEqual(asked, [['index.bin', 'reload']]);
   assert.equal(fourth.win.fetched, 1);
 });
+
+test("the districts' middles in a window: every district of the world (the big map's names), not the window's", () => {
+  const m = CITY(), pack = PACK(256);
+  const { map: w } = windowAt(pack, 700, 600);
+  const acc = new Map();
+  for (let ty = 0; ty < m.h; ty += 3) for (let tx = 0; tx < m.w; tx += 3) { const d = m.dist[m.idx(tx, ty)]; if (d === 13) continue; const a = acc.get(d) || acc.set(d, [0, 0, 0]).get(d); a[0] += tx; a[1] += ty; a[2]++; }
+  assert.equal(w.mids.length, acc.size);
+  for (const [d, x, y, here] of w.mids) {
+    const [sx, sy, n] = acc.get(d);
+    assert.ok(Math.abs(x - sx / n) < 1e-9 && Math.abs(y - sy / n) < 1e-9, `district ${d}`);
+    assert.equal(here, m.dist[m.idx(Math.round(sx / n), Math.round(sy / n))] === d ? 1 : 0);
+  }
+  const inWindow = new Set(); for (let ty = w.y0; ty < w.y0 + w.h; ty += 3) for (let tx = w.x0; tx < w.x0 + w.w; tx += 3) inWindow.add(w.dist[w.idx(tx, ty)]);
+  assert.ok(w.mids.some(([d]) => !inWindow.has(d)), 'districts outside the window named too');
+});

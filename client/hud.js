@@ -490,7 +490,13 @@ export const mapFrameOf = (map) => { const F = map.frame; return [24 * TILE, 10 
 export const MAP_FRAME = [24 * TILE, 10 * TILE, 1304 * TILE, 1170 * TILE];   // (today's world's: mapFrameOf(map) for the world the server runs)
 
 let centroids = null;
+const MIDS = new WeakMap();
 export function districtCentroids(map) {
+  // (World v3's window: every district's middle, from the index - not the window's, and not kept from the first window)
+  if (map.mids) {
+    if (!MIDS.has(map)) MIDS.set(map, map.mids.filter(([d, , , here]) => DISTRICTS[d] && (here || DISTRICTS[d].tier !== 'wild')).map(([d, x, y]) => ({ name: DISTRICTS[d].name, turf: DISTRICTS[d].turf, x: (x + 0.5) * TILE, y: (y + 0.5) * TILE })));
+    return MIDS.get(map);
+  }
   if (centroids) return centroids;
   const acc = new Map();
   for (let ty = Math.ceil(map.y0 / 3) * 3; ty < map.y0 + map.h; ty += 3) for (let tx = Math.ceil(map.x0 / 3) * 3; tx < map.x0 + map.w; tx += 3) {

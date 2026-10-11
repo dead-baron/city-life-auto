@@ -239,7 +239,7 @@ export function packRegions(city, opts = {}) {
   const index = writePack({
     frame: [g.W, g.H, g.R, g.nx, g.ny], win, order, omit, layers: layers.map((k) => [k, city[k].constructor.name]), regional, propSolid,
     regions: regions.map((r) => r.key), root, refs: keepRefs, fix, meta: opts.meta || null,
-    sigs, sig, places: placesOf(city, win), picture: pictureOf(city, win, W, H, blobs),
+    sigs, sig, places: placesOf(city, win), picture: pictureOf(city, win, W, H, blobs), mids: midsOf(city, win),
   }, blobs);
   return { index, regions: files };
 }
@@ -254,6 +254,22 @@ function placesOf(city, win) {
     out.push(p.home !== undefined ? [i, p.kind, p.label, p.x, p.y, d, p.home] : [i, p.kind, p.label, p.x, p.y, d]);
   });
   return out;
+}
+// each district's middle (client/hud.js districtCentroids' way: every third tile, the sea's 13 left out): [d, x, y
+// (tiles), 1 when the district is there itself (0: a district of islets, its middle out at sea)]
+function midsOf(city, win) {
+  if (!ArrayBuffer.isView(city.dist)) return null;
+  const acc = new Map(), [x0, y0, w, h] = win;
+  for (let ty = Math.ceil(y0 / 3) * 3; ty < y0 + h; ty += 3) for (let tx = Math.ceil(x0 / 3) * 3; tx < x0 + w; tx += 3) {
+    const d = city.dist[(ty - y0) * w + (tx - x0)];
+    if (d === 13) continue;
+    const a = acc.get(d) || acc.set(d, [0, 0, 0]).get(d);
+    a[0] += tx; a[1] += ty; a[2]++;
+  }
+  return [...acc].map(([d, [x, y, n]]) => {
+    const cx = Math.round(x / n), cy = Math.round(y / n), at = cx >= x0 && cy >= y0 && cx < x0 + w && cy < y0 + h && city.dist[(cy - y0) * w + (cx - x0)] === d;
+    return [d, x / n, y / n, at ? 1 : 0];
+  });
 }
 // the whole frame's tiles, a tile every k (the middle of each k x k block): [k, w, h, blob]
 function pictureOf(city, win, W, H, blobs) {
@@ -405,6 +421,7 @@ export function assembleCity(indexBytes, regionBytes, opts = {}) {
     out.x0 = win[0]; out.y0 = win[1]; out.w = win[2]; out.h = win[3]; out.frame = { w: X.frame[0], h: X.frame[1] };
     // (the whole world's places - the phone's apps, the big map - and its coarse picture - the minimap - from the index)
     if (Array.isArray(X.places)) { const pl = []; for (const [id, kind, label, x, y, d, home] of X.places) pl[id] = home === undefined ? { id, kind, label, x, y, d } : { id, kind, label, x, y, d, home }; out.places = pl; }
+    if (Array.isArray(X.mids)) out.mids = X.mids;   // (the districts' middles: the big map's names, world-wide)
     if (Array.isArray(X.picture) && blobs[X.picture[3]]) out.picture = { k: X.picture[0], w: X.picture[1], h: X.picture[2], tiles: blobs[X.picture[3]] };
   }
   return out;
