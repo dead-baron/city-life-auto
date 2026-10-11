@@ -181,7 +181,7 @@ export function plant(w = 32, d = 32, tier = 1) {
 export function hallTable(w = 32, d = 32, tier = 1, on = 0) {
   const P = L4(tier), m = new Vox(w, d, 48);
   const t = m.mat({ ramp: R(P.wood), k: 3 }), lg = m.mat({ ramp: R(P.dark), k: 3 }), base = m.mat({ ramp: R(P.accent), k: 3 });
-  const shade = m.mat({ ramp: R('#f0dca8', 5, 3), k: 3, emi: [255, 210, 140, 30 + on * 200], flag: F_NOCAST }), dish = m.mat({ ramp: R('#c8ccd2'), k: 3 });
+  const shade = m.mat({ ramp: R('#e8c890', 5, 3), k: 2, emi: [255, 196, 120, 20 + on * 90], flag: F_NOCAST }), dish = m.mat({ ramp: R('#c8ccd2'), k: 3 });
   m.box(2, 10, 24, w - 2, d - 6, 27, t);
   for (const x of [3, w - 5]) for (const y of [11, d - 8]) m.box(x, y, 0, x + 2, y + 2, 24, lg);
   m.box(4, 12, 10, w - 4, d - 8, 12, lg);
