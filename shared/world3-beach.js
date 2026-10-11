@@ -50,6 +50,7 @@ export function beachBox(L, W, H) {
 export function beachStreets(lines, m, L) {
   const W = m.w, H = m.h, box = beachBox(L, W, H), out = { rows: 0, cols: 0, crossing: 0, joined: 0, length: 0, names: [] };
   if (!box) return out;
+  const first = lines.length;   // (this call's streets: lines.slice(first) - see 4.)
   const P = 30, bx = box[0] - P, by = box[1] - P, BW = box[2] - box[0] + 1 + 2 * P, BH = box[3] - box[1] + 1 + 2 * P;
   const inB = (x, y) => x >= bx && y >= by && x < bx + BW && y < by + BH;
   const near = new Uint8Array(BW * BH), on = new Uint8Array(BW * BH), rail = new Uint8Array(BW * BH);
@@ -164,9 +165,48 @@ export function beachStreets(lines, m, L) {
     out.cols++;
     out.north = (out.north || 0) + 1;
   }
+  // 4. no street left on its own: a short row whose ends reached no road and that no cross street came to cut (and so
+  // anything only it met) would be a loose piece of road off the network - left out, until every one left meets another
+  // road or ends on one (the merged world build of 8.13 + 8.14 had two: Surf Street and Gull Street, 25 tiles each)
+  out.dropped = dropLoose(lines, first);
   out.length = Math.round(out.length);
   m.beachTowns = { box, ...out };
   return out;
+}
+
+// the beach streets (lines from `first` on) that touch no other road - no crossing, and neither end within 2 tiles of
+// one - taken out of `lines`, again while taking one out leaves another on its own; -> how many
+function dropLoose(lines, first) {
+  const NEAR = 2 * TILE, segX = (a, b, c, d) => {
+    const d1 = (d.x - c.x) * (a.y - c.y) - (d.y - c.y) * (a.x - c.x), d2 = (d.x - c.x) * (b.y - c.y) - (d.y - c.y) * (b.x - c.x);
+    const d3 = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x), d4 = (b.x - a.x) * (d.y - a.y) - (b.y - a.y) * (d.x - a.x);
+    return (d1 > 0) !== (d2 > 0) && (d3 > 0) !== (d4 > 0);
+  };
+  const near = (p, q) => { for (let k = 0; k + 1 < q.length; k++) if (segDist(p.x, p.y, [q[k].x, q[k].y], [q[k + 1].x, q[k + 1].y]) < NEAR) return true; return false; };
+  const boxes = new Map(), boxOf = (L) => {
+    let bx = boxes.get(L);
+    if (!bx) { bx = [Infinity, Infinity, -Infinity, -Infinity]; for (const p of L.pts) { if (p.x < bx[0]) bx[0] = p.x; if (p.y < bx[1]) bx[1] = p.y; if (p.x > bx[2]) bx[2] = p.x; if (p.y > bx[3]) bx[3] = p.y; } boxes.set(L, bx); }
+    return bx;
+  };
+  const touches = (A, B) => {
+    const p = boxOf(A), q = boxOf(B);
+    if (p[0] > q[2] + NEAR || q[0] > p[2] + NEAR || p[1] > q[3] + NEAR || q[1] > p[3] + NEAR) return false;
+    const a = A.pts, b = B.pts;
+    if (near(a[0], b) || near(a[a.length - 1], b) || near(b[0], a) || near(b[b.length - 1], a)) return true;
+    for (let i = 0; i + 1 < a.length; i++) for (let j = 0; j + 1 < b.length; j++) if (segX(a[i], a[i + 1], b[j], b[j + 1])) return true;
+    return false;
+  };
+  let dropped = 0;
+  for (let again = true; again;) {
+    again = false;
+    for (let i = lines.length - 1; i >= first; i--) {
+      const A = lines[i];
+      let ok = false;
+      for (let j = 0; j < lines.length && !ok; j++) if (j !== i) ok = touches(A, lines[j]);
+      if (!ok) { lines.splice(i, 1); dropped++; again = true; }
+    }
+  }
+  return dropped;
 }
 
 const segDist = (x, y, [ax, ay], [bx, by]) => { const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1; let t = ((x - ax) * dx + (y - ay) * dy) / l2; t = t < 0 ? 0 : t > 1 ? 1 : t; return Math.hypot(ax + dx * t - x, ay + dy * t - y); };
