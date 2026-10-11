@@ -388,6 +388,7 @@ function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true, wal
       if (shooter.vehId === e.id) continue;
       if (shooter.npc && (shooter.npc.coverCar === e.id || shooter.npc.unit === e.id)) continue; // cops fire over their own cruiser
       t = segObb(x1, y1, x2, y2, e.x, e.y, e.a, e.def.L / 2, e.def.W / 2);
+      if (t < 0 && (e.alt || 0) > FLY.HIGH) t = segObb(x1, y1, x2, y2, e.x, e.y - e.alt * FLY.LIFT, e.a, e.def.L / 2, e.def.W / 2);   // (an aircraft up in the air: hit where art v2 draws it, too - H66)
     }
     if (t >= 0 && t < bestT) { bestT = t; best = e; }
   }

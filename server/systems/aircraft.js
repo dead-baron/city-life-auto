@@ -25,7 +25,7 @@ export function input(world, v, inp, ped) {
 export function step(world, v, dt) {
   const drv = vehicles.driverOf(world, v);
   const engine = !!drv && !drv.dead && !v.dead && !v.wreckAt && !v.sinkAt;
-  const fi = engine && drv.player ? v.fin || IDLE : IDLE;
+  const fi = engine && (drv.player || v.autopilot) ? v.fin || IDLE : IDLE;   // (v.autopilot: an NPC pilot's stick - policeair.js, airtraffic.js)
   const was = Math.hypot(v.vx, v.vy);
   const o = flightStep(v, fi, dt, world.map, v.def, engine);
   if (v.wreckAt) { if (o.sink > 0) world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: 1 }); return; }   // (a wreck falling out of the sky: down it comes)

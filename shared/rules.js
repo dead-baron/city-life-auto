@@ -674,3 +674,9 @@ export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough
 // whole city when everyone online is asleep at home: the clock jumps to wakeH o'clock); showerS: a shower; showerHeal: the
 // health it gives back (and it stops bleeding); eatS: between two bites at the fridge.
 export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6 };
+
+// ---- the police air unit (H66) - server/systems/policeair.js. At stars a police helicopter takes off from headquarters'
+// pad and follows the suspect overhead: alt px up (or clear px over the roofs round it, if they're taller), circling them
+// at orbitR px; its crew see them within sightPx (out in the open) and radio where they are to the cars. Unseen for lostS
+// s (or the stars gone) it flies home and lands; brought down (or gone home), another isn't sent for againS s.
+export const POLICE_AIR = { stars: 3, alt: 300, clear: 70, sightPx: 1100, orbitR: 200, lostS: 25, againS: 90 };

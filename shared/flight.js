@@ -40,6 +40,7 @@ export const FLY = {
   ALT_Q: 4,            // px per step of the altitude on the wire (a vehicle record's extra byte: 0..1020 px)
   PROP_TOP: 110,       // px - a tree or another solid prop stands this tall
   PAD_R: 72,           // px - a helipad's radius
+  LIFT: 0.66,          // art v2 draws an aircraft this many px up the screen per px of altitude (client/render/aircraft.js V2_LIFT)
 };
 
 // How tall a building stands (px, its roof above the ground), by the district it's in and what it is - the art's
