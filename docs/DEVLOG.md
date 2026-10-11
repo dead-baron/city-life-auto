@@ -7291,18 +7291,25 @@ What it does (docs/WORLD-V3.md 8.10 has the numbers):
   a junction (a diamond or a turnout) is taken whole with a train's length clear beyond it, or not at all, so trains
   never wait inside one and can't lock each other out. Twenty minutes of game time: all twelve run and call at every
   station, held at signals 1-19 s.
+- **Around the line:** the level crossings of all the loops once each (`m.railXings`): the gates come down for any of
+  their loops' trains, drivers stop at every one, the client draws their arms; the NPCs keep off every loop's track;
+  a station's board lists every service stopping there, each way. Riding is today's on every loop.
 - **The art:** the chunk bake draws every loop (a track two loops share once).
 - **The region files** cut each loop's points into the regions (today's files unchanged).
-- **Left** (8.10): the crowds, the crossing gates, the NPCs' care at the line and the station boards still read the
-  first loop only; Northshore Junction lies across the Northshore Loop's houses; the line crosses Metro City's grid
-  at grade; the tunnels want their mouths and cover.
+- **Left** (8.10): the waiting crowds and the platform clocks read the first loop only; Northshore Junction lies
+  across the Northshore Loop's houses, its platforms scattered on the curves; the line crosses Metro City's grid at
+  grade; a double track's road crossing is two sets of gates.
 
 Files: shared/world3-rail.js (new), shared/world3-world.js (the `rails` hook), shared/map.js (the railway passes by
-line), server/systems/trains.js (the loops, the signals), shared/regionpack.js (the loops' points by region),
-client/art2/game/groundbake.js, client/art2/game/statics.js (every loop), tools/world3-world-map.mjs (the main line
+line, `railXings`), server/systems/trains.js (the loops, the signals, the crossings, the NPCs' care, the boards),
+server/systems/economy.js (a station's next train by its map point), shared/regionpack.js (the loops' points by
+region), client/art2/game/groundbake.js, client/art2/game/statics.js, client/art2/game/host.js (every loop), tools/world3-world-map.mjs (the main line
 drawn), test/world3rail.test.js (new), docs/world-v3-world.png, docs/world-v3-world-r4-3.png, docs/WORLD-V3.md 8.10.
 
 Tests: test/world3rail.test.js (one world build: the loops and their stops, the double track, the bed, the decks, the
 tunnels, the crossings and underpasses, the junctions, the station map points; five minutes of the trains: each runs
-and stops, no two cars of different trains ever overlap), test/trains.test.js (today's one loop, 19 of 19),
-test/world3server.test.js (the v3 world's region files read back into the same city; the server's world runs on it).
+and stops, no two cars of different trains ever overlap, the gates close for every loop, a train coming is a threat
+to the NPCs, Northshore's boards; riding a Bay Loop or Harbor Line train), test/trains.test.js (today's one loop, 19
+of 19), test/world3server.test.js (the v3 world's region files read back into the same city; the server's world runs
+on it), test/world3.test.js, test/world3world.test.js, test/world3roads.test.js, test/world3biomes.test.js,
+test/perf.test.js (all pass).

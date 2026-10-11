@@ -2422,7 +2422,11 @@ wrong:
   mountains are flat ground, so the line just vanishes and comes back - the bores want `shared/tunnels.js`' cover and
   portals, as the roads' have (8.7).
 - **The Northshore station** stands at a different spot for each loop (2449, 1702 for the Grand Loop; 2402-2478,
-  1718-1739 for the others' curves), on the curves.
+  1718-1739 for the others' curves): in the bake, short platforms with canopies scattered on the junction's curves and
+  one on the coast line - the hub wants one station.
+- **The turnouts are drawn as tracks overlapping:** where a curve joins the Bay Bridge Line the two tracks run over
+  each other for a few hundred px (the bake draws each loop's track; a switch - points, a frog - isn't drawn).
+- **A double track's road crossing is two crossings,** each track with its own gates (the arms between the tracks).
 
 **What's left** (in order):
 1. **What still reads only the first loop** (`off0`): the waiting crowds and the commuters walking to a platform
