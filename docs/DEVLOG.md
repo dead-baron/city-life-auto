@@ -8409,3 +8409,67 @@ test/firebow.test.js, test/perf.test.js.
   doesn't light you (the walker it had lit was left standing on the same spot, moving, and caught again now and then);
   new: a ground blast misses an aircraft high above and hits one just off the ground, and the gunship's own missiles
   never hurt it.
+
+## 2026-10-11 · Map and menu notes: a north-south bridge's shadow, crosswalks by the highway and side by side, graphics under Play, the starting look's buttons, the lost pet's arrow and its owner (H60)
+
+The owner: "Bridge shadow is bugged heading north." - "Crosswalks out onto highway: the streets that touch the highways
+have crosswalks out to the highway, should go all the way across it or not at all." - "Some intersections with double
+crosswalks next to each other in parallel just need one crosswalk." - "Starting fresh and hit join has you choose
+graphics which is kind of confusing. I would just have the graphics settings below the play button in the main menu so
+you see what graphics you're on and you can change if you want there." - "Better button for customize new character or
+choose character or customize this character? Like maybe an option that shows up below the highlighted character that
+says play as or customize this character." - "Lost dog arrow disappears too soon, also owner should have an indicator
+that they lost the dog."
+
+- **A bridge's shadow** (art v2, `client/art2/game/groundbake.js`): the water's shading looked only straight north for
+  what stands over it - a deck's face (its slab and girders, the side the camera sees) and the shade under it. An
+  east-west bridge got both; a bridge running north-south (driving north over one, the avenues over Liberty
+  Bay) had nothing north of the water beside it but more water, so the bake gave it no shade at all - only the
+  engine's thin sun shadow at its edge (about 7 px): a flat strip floating on the water. Now open water with a raised deck just west of it is in its lee (the light is from the north-west, as the
+  classic renderer's offset shadow has it): darkened like the strip under an east-west one, deepest against the deck
+  (DECK_LEE 14 px). The classic renderer (`client/render/roads.js` drawDecks) already offsets its shadow south-east
+  for any heading. The art's hash changes (stamped); the world's doesn't. (Nothing else heading-dependent showed in the
+  headless playtests - driving north over the avenue bridges at noon; if the owner sees something else, a screenshot
+  will tell.)
+- **Crosswalks** (`shared/roadcore.js` zebraCrossings - the runtime both renderers paint them from, the classic
+  `client/render/roads.js` and the art v2 bake `groundbake.js`; the map itself paints none): never at a junction a
+  highway or one of its ramps comes into (none across a highway, so none leading out onto one - they ran across the
+  street right at the highway's edge, out to the carriageway, or across the avenue at a ramp's foot), and never two
+  side by side: of two parallel crossings on one street closer than XING_TWIN (200 px between centres - the two ends of
+  a short link, often 80-160 px apart), the busier junction's is kept (crossings either side of one junction are not a
+  pair). The classic renderer's zebra across a ramp's mouth (`drawGores`) is gone too. On today's world: 1156
+  crossings before, 1122 after - 16 at highway or ramp junctions (Neon Strip 4, Northgate 2, Sunset Beach 2, Midtown 2,
+  one each in Cedar Falls, Dry Creek Desert, West Hills, North Point, Lake District and Dry Creek Airstrip) and 18 the
+  second of a side-by-side pair (Northshore 4, West Hills 3, Cedar Falls 2, The Yards 2, North Point 2, Lake District
+  2, Westport International, The Pink Mile, Neon Strip); none added; the 14 ramp-mouth zebras of the classic renderer.
+  The world's hash is unchanged (the crossings are paint, decided at run time).
+- **The title's graphics** (`index.html` #t-gfx, `client/main.js` syncTitleGfx, `client/style.css`): under the Play
+  buttons, GRAPHICS and the preset you're on (Low / Medium / High / Ultra, the device's recommended one marked; Custom…
+  opens Settings for each effect), "picked for a desktop computer" while it's the device's pick. Changing it there is
+  the same as in Settings (the two follow each other). Join no longer asks: a new player keeps the device's pick,
+  silently (the first-run question, `askGfx` and its overlay, are gone - the page is a little smaller for it).
+- **The starting look** (`client/creator.js` 'start', `client/style.css`): under the highlighted character (the big
+  preview with its name), "▶ Play as <name>" and "✎ Customize this character"; the footer's one button is "＋ New
+  character - start from scratch" (the creator, on a fresh random someone). "Make it yours" / "Play as they are" are
+  gone. On a phone (portrait) the two go on a row of their own under the preview. (`[data-act=play-as]` still closes
+  it in a playtest.)
+- **The lost pet** (`server/systems/pets.js` targetFor, `server/systems/events.js`, `shared/worldevents.js`,
+  `client/main.js` drawEventArrows): the arrow to a lost pet, and to its owner once you have its collar, no longer
+  fades after ARROW_SHOW_S - it stays till you have it or it's home (EVENT_KINDS `stay`); the pet at your heel no
+  longer gets an arrow of its own (`lead` on its happening). Its owner is marked: "Lost my dog!" (cat, puppy) over
+  them - for the one leading the pet ('petret': the owner's id and what they lost on the wire, a lasting arrow and the
+  minimap blip, anywhere in town) and, while it's still lost, for everyone within EVENT_RANGE of them ('petown': the
+  marker, lasting, and a minimap blip, no arrow - the arrow is the pet's). The marker sits clear above the head, like
+  the other labels over people (drawWorldLabels).
+
+Files: shared/roadcore.js, client/render/roads.js, client/art2/game/groundbake.js, index.html, client/main.js,
+client/style.css, client/creator.js, server/systems/pets.js, server/systems/events.js, shared/worldevents.js,
+test/roads.test.js, test/pets.test.js, test/titlemenu.test.js (new).
+
+Tests: test/roads.test.js (new: on today's map no crosswalk at a junction a highway or a ramp comes into, none with a
+stripe of its art's 48 px box out on a highway's or a ramp's asphalt, no two parallel ones side by side; the old one -
+none overlap - still passes), test/pets.test.js (new: the pet's and the owner's arrows `stay`; the owner marked on the
+wire for a player near them, not for one across town; with the collar, the owner is your arrow home from anywhere and
+no arrow to the pet at heel; home again, nothing marked), test/titlemenu.test.js (the title's graphics row under Play,
+no question at Join, the device's pick kept silently; the starting look's Play as / Customize under the pick and New
+character), test/perf.test.js.

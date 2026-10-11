@@ -222,17 +222,7 @@ export function drawGores(g, m, gores) {
     g.restore();
     g.strokeStyle = 'rgba(236,234,226,.85)'; g.lineWidth = 2.5;
     for (const L of [roadEdge, rampNear]) { g.beginPath(); g.moveTo(L[0].x, L[0].y); for (let i = 1; i < n; i++) g.lineTo(L[i].x, L[i].y); g.stroke(); }
-    // a zebra crossing where the pavement crosses the ramp's mouth
-    for (let i = 1; i < n; i++) {
-      if (P[i].d < gr.rhw + 1.3 * TILE) continue;
-      const dx = P[i].x - P[i - 1].x, dy = P[i].y - P[i - 1].y, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
-      g.fillStyle = 'rgba(236,234,226,.85)';
-      for (let k = -gr.hw + 5; k < gr.hw - 4; k += 9) {
-        const cx = P[i].x - uy * k, cy = P[i].y + ux * k;
-        g.save(); g.translate(cx, cy); g.rotate(Math.atan2(uy, ux)); g.fillRect(-12, -2.5, 24, 5); g.restore();
-      }
-      break;
-    }
+    // (no zebra across the ramp's mouth: none across a highway or its ramps - shared/roadcore.js zebraCrossings)
     // kerb on the ramp's outer edge (while it's still down on the ground)
     g.strokeStyle = '#cfcdc4'; g.lineWidth = 4;
     g.beginPath();

@@ -92,3 +92,61 @@ test('a pet whose owner is gone before it gets to them goes too, once nobody see
   run(w, 0.5);
   assert.ok(!w.get(pet.id), 'gone once out of sight');
 });
+
+// The owner, 2026-10-11: "Lost dog arrow disappears too soon, also owner should have an indicator that they lost the dog."
+// The arrow to a lost pet (and, with its collar, to its owner) stays till you have it or it's home (EVENT_KINDS stay: the
+// page doesn't fade it); its owner is marked for everyone about - "Lost my dog!" over them (e: who, w: what) - and the one
+// leading the pet gets the owner as a lasting arrow and minimap blip wherever they are, and no arrow to the pet at heel.
+test('a lost pet: its arrow lasts, and its owner is marked on the wire - for everyone near, and as the way home once you have it', async () => {
+  const events = await import('../server/systems/events.js');
+  const { EVENT_KINDS, EVENT_RANGE } = await import('../shared/worldevents.js');
+  assert.ok(EVENT_KINDS.pet.stay && EVENT_KINDS.petret.stay, 'the arrows to the pet and to its owner don\'t fade');
+  assert.ok(EVENT_KINDS.petown && EVENT_KINDS.petown.noArrow && EVENT_KINDS.petown.stay, 'the owner is marked for others, lasting, without an arrow of its own');
+  pets.setRng(mulberry32(4));
+  const w = makeWorld();
+  const shop = w.map.pois.find((q) => q.kind === 'coffee');
+  const a = joinPlayer(w, { cash: 0 }), b = joinPlayer(w, { cash: 0 });
+  teleport(w, a.p.ped, shop.x, shop.y + 40);
+  let pet = null;
+  for (let k = 0; k < 20 && !pet; k++) pet = pets.spawnLost(w, a.p);
+  assert.ok(pet, 'a pet went missing');
+  const owner = w.get(pet.pet.owner);
+  const list = (p) => events.forPlayer(w, p) || [];
+  // someone near the owner sees them looking for it
+  teleport(w, b.p.ped, owner.x + 300, owner.y);
+  run(w, 0.3);
+  const seen = list(b.p).find((e) => e.k === 'petown');
+  assert.ok(seen, 'the owner is marked for a player near them');
+  assert.equal(seen.e, owner.id, 'over the owner themselves');
+  assert.equal(seen.w, pet.pet.kind, `"Lost my ${pet.pet.kind}!"`);
+  // far from everything: nothing of theirs
+  teleport(w, b.p.ped, owner.x + EVENT_RANGE + 2000, owner.y);
+  run(w, 0.3);
+  assert.ok(!list(b.p).some((e) => e.k === 'petown' || e.k === 'petret'), 'not marked for someone across town');
+  // a takes the collar
+  teleport(w, a.p.ped, pet.x + 20, pet.y);
+  run(w, 0.1);
+  const act = players.findInteraction(w, a.p);
+  assert.ok(act && /collar/.test(act.label), act && act.label);
+  act.run();
+  run(w, 0.5);
+  const mine = list(a.p);
+  const ret = mine.find((e) => e.k === 'petret');
+  assert.ok(ret && ret.e === owner.id && ret.w === pet.pet.kind, 'the owner is your arrow home, marked over them');
+  assert.ok(!mine.some((e) => e.k === 'pet'), 'no arrow to the pet at your heel');
+  assert.ok(!mine.some((e) => e.k === 'petown'), 'and not marked twice');
+  // still yours anywhere in town (the owner is a good walk away)
+  teleport(w, a.p.ped, owner.x + EVENT_RANGE + 400, owner.y);
+  teleport(w, pet, owner.x + EVENT_RANGE + 420, owner.y);
+  run(w, 0.3);
+  assert.ok(list(a.p).some((e) => e.k === 'petret' && e.e === owner.id), 'the way home, from across town');
+  // home again: nothing left to mark
+  teleport(w, a.p.ped, owner.x + 60, owner.y);
+  teleport(w, pet, owner.x + 90, owner.y);
+  run(w, 0.3);
+  players.findInteraction(w, a.p).run();
+  run(w, 0.3);
+  teleport(w, b.p.ped, owner.x + 200, owner.y);
+  run(w, 0.3);
+  for (const p of [a.p, b.p]) assert.ok(!list(p).some((e) => e.k === 'pet' || e.k === 'petret' || e.k === 'petown'), 'home: no marker, no arrow');
+});

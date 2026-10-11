@@ -6,8 +6,8 @@ export const EVENT_KINDS = {
   ret: { color: '#3ddc84', label: 'Return the purse', hint: 'Take it back to its owner' },
   shootout: { color: '#ff3b3b', label: 'Gang shootout', hint: 'Syndicate vs police' },
   robbery: { color: '#ffd400', label: 'Store robbery', hint: 'Alarm tripped - police responding' },
-  pet: { color: '#7fd8ff', label: 'Lost pet', hint: 'Find it and walk it home' },
-  petret: { color: '#3ddc84', label: 'Pet\'s owner', hint: 'Walk the pet home' },
+  pet: { color: '#7fd8ff', label: 'Lost pet', hint: 'Find it and walk it home', stay: 1 },          // (stay: its arrow doesn't fade -
+  petret: { color: '#3ddc84', label: 'Pet\'s owner', hint: 'Walk the pet home', stay: 1 },           //  the owner, 2026-10-11)
   revive: { color: '#ff4d6d', label: 'Player down', hint: 'Revive them' },
   amb: { color: '#ffffff', label: 'Ambulance', hint: 'On its way to you' },
   fight: { color: '#ff7a3d', label: 'Street fight', hint: 'Break it up' },
@@ -18,6 +18,7 @@ export const EVENT_KINDS = {
   streetrace: { color: '#ff2fd0', label: 'Street race', hint: 'Racers flat out - get out of the way' },      // (streetlife.js)
   copchase: { color: '#4d8dff', label: 'Police chase', hint: 'A getaway car with the police behind it' },
   armored: { color: '#e6c34a', label: 'Armored truck', hint: 'Valuables on the move - guarded' },
+  petown: { color: '#7fd8ff', label: 'Lost pet\'s owner', hint: 'Out looking for their pet', noArrow: 1, stay: 1 },   // (pets.js targetFor: "Lost my dog!" over them)
 };
 export const EVENT_RANGE = 1300;    // events further away than this aren't popped up on screen (the phone's city feed has them all)
 export const FEED_MAX = 40;         // the city feed keeps this many recent items

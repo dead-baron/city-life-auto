@@ -66,6 +66,7 @@ export function forPlayer(world, p) {
   const out = [];
   for (const e of world.happenings || []) {
     if (e.kind === 'revive' && e.pid === p.pid) continue; // your own call for help
+    if (e.lead && e.lead === ped.id) continue; // the lost pet at your heel (its owner is your arrow now)
     if (Math.hypot(e.x - ped.x, e.y - ped.y) > (e.kind === 'revive' ? HELP_PING_PX : EVENT_RANGE)) continue;
     out.push({ id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y) });
   }
@@ -73,7 +74,7 @@ export function forPlayer(world, p) {
   const amb = p.amb && world.get(p.amb.vehId);
   if (amb) out.push({ id: 'amb', k: 'amb', x: Math.round(amb.x), y: Math.round(amb.y) });
   const home = petTarget(world, p);
-  if (home) out.push(home);
+  if (home) out.push(...[].concat(home));   // (pets.js: the owner you're leading a pet to; lost pets' owners about)
   const owner = walletTarget(world, p);
   if (owner) out.push(owner);
   if ((p.profile.inventory.purse || 0) > 0) {

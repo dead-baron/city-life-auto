@@ -12,6 +12,7 @@ import { APOSE } from '../../shared/fauna.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { pedStep } from '../../shared/physics.js';
 import { PET_EVERY_S, PET_OWNER_PX, PET_REWARD, PET_SAMARITAN } from '../../shared/rules.js';
+import { EVENT_RANGE } from '../../shared/worldevents.js';
 import { store } from '../store.js';
 import { inAnyView } from '../view.js';
 import { spawnNpc, seek } from './npc.js';
@@ -196,15 +197,18 @@ function homeStep(world, pet, dt) {
 
 events.setPetTarget((world, p) => targetFor(world, p));
 
-// Where the pet you're leading should go (the owner), for the guide arrow.
+// Where the pet you're leading should go (the owner), for the guide arrow - and (the owner, 2026-10-11: "owner should have
+// an indicator that they lost the dog") every lost pet's owner near you, looking for it: e the owner (the page puts "Lost my
+// dog!" over them), w what they lost. Yours ('petret') is marked wherever you are, the others ('petown') within EVENT_RANGE.
 export function targetFor(world, p) {
   if (!p.ped) return null;
+  const out = [];
   for (const pet of lostPets(world)) {
-    if (pet.pet.follow !== p.ped.id) continue;
-    const owner = world.get(pet.pet.owner);
-    if (owner) return { id: 'pet' + pet.id, k: 'petret', x: Math.round(owner.x), y: Math.round(owner.y) };
+    const owner = world.get(pet.pet.owner), mine = pet.pet.follow === p.ped.id;
+    if (!owner || owner.dead || owner.removed || (!mine && Math.hypot(owner.x - p.ped.x, owner.y - p.ped.y) > EVENT_RANGE)) continue;
+    out.push({ id: (mine ? 'pet' : 'po') + pet.id, k: mine ? 'petret' : 'petown', x: Math.round(owner.x), y: Math.round(owner.y), e: owner.id, w: pet.pet.kind });
   }
-  return null;
+  return out.length ? out : null;
 }
 
 export function update(world, dt) {
@@ -258,7 +262,7 @@ export function update(world, dt) {
     world.place(pet);
     // the event blip follows the pet
     const ev = world.happenings && world.happenings.find((e) => e.id === pp.ev);
-    if (ev) { ev.x = pet.x; ev.y = pet.y; }
+    if (ev) { ev.x = pet.x; ev.y = pet.y; ev.lead = pp.follow; }   // (lead: who has its collar - no arrow to it for them)
     // the owner stays put near home, calling for it
     if (owner.npc) { owner.npc.state = 'idle'; owner.vx = 0; owner.vy = 0; }
   }

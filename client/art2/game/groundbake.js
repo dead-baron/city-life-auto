@@ -55,6 +55,7 @@ export const CHUNK = 768;
 const PAD = 48, WN = CHUNK + PAD * 2, WA = WN * WN, TP = 4, TN = WN / TILE + TP * 2 + 1;
 const DECK_LIFT = 88;                                  // shared/levels.js: px per deck level (ramp heights)
 const DECK_FACE = 13, DECK_SHADE = 9;                  // a bridge's face over the water (slab and girders), the shade under it
+const DECK_LEE = 14;                                    // the shade east of a deck that runs north-south (the light is from the north-west)
 const CITY = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
 const TREES = new Set(['tree_a', 'tree_b']), PALMS = new Set(['palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s']);
 
@@ -1376,10 +1377,12 @@ function edges(C, G) {
     } else if (k === 3 || k === 2) {
       // the face of a raised edge just north of this pixel, facing the camera: kerbs over roads, quay walls, pier
       // and deck sides and earth banks over the water (scan up through this pixel's own kind of low ground)
+      let open = k === 2;   // (open water straight north of it: the lee of a bridge running north-south is looked for below)
       for (let r = 1; r <= DECK_FACE + DECK_SHADE; r++) {
         if (py - r < 0) break;
         const up = M[i - r * WN];
         if (k === 2 ? isWater(up) : roadLike(up)) continue;
+        open = false;
         const deck = up === M_.DECK || up === M_.DECKF || up === M_.RAILDECK || up === M_.DECKWALK, dock = up === M_.DOCK || up === M_.DOCKX;
         const bank = k === 2 && isSoft(up) && up !== M_.BEACH && up !== M_.DUNE && up !== M_.WETSAND;
         const quay = k === 2 && !isSoft(up) && !deck && !dock;
@@ -1404,6 +1407,15 @@ function edges(C, G) {
         else c = sd(MAT.curb, 0.24 - (r - 1) * 0.06, X, Y, 0.3);
         if (quay && (X + 7) % 210 < 9) c = ((X + 7) % 210) % 7 < 2 || r % 3 === 0 ? MAT.metalDark[r % 3 === 0 ? 3 : 2] : c;   // ladders
         setC(G, gi, c); putN(G, gi, 0, 2.2); G.z[gi] = Math.max(0, H - r + 1); G.flag[gi] = F_GROUND | F_WET;
+        break;
+      }
+      // (the owner, 2026-10-11: "Bridge shadow is bugged heading north") - a bridge running north-south shows no face to
+      // the camera, and only water lay north of the water beside it, so it cast no shadow at all: the light is from the
+      // north-west, so the water in its lee - just east of the deck - is darkened like the strip under an east-west one
+      if (open) for (let r = 1; r <= DECK_LEE; r++) {
+        const lf = M[i - r];
+        if (isWater(lf)) continue;
+        if ((lf === M_.DECK || lf === M_.DECKF || lf === M_.RAILDECK || lf === M_.DECKWALK) && Z[i - r] >= C.deckZ - 1) darken(G, gi, 0.6 + r / DECK_LEE * 0.32);
         break;
       }
       if (m === M_.TRACK) {                                     // red-and-white kerbs along a race track's edges; the chequered start line
