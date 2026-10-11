@@ -27,7 +27,8 @@ const ASK_MAX = 400;                              // chunks asked for and waitin
 const FOCUS_R = 4;                                // chunks round each player baked first after the asks (a 9 x 9 square)
 const FOCUS_Q_MS = 10 * 60000;                    // a quality pages asked for in the last ten minutes is baked round players too
 
-export function createArtCdn({ map, root, dataDir, seed, threads = defaultThreads(), prewarm = defaultPrewarm(), log = console.log, onBytes = null } = {}) {
+// world: 'v3' when the server runs World v3's world (CLA_WORLD=v3): the bake threads build that world, not today's
+export function createArtCdn({ map, root, dataDir, seed, world = null, threads = defaultThreads(), prewarm = defaultPrewarm(), log = console.log, onBytes = null } = {}) {
   const { CX, CY } = artChunks(map);   // (the art CDN's chunk grid over the world's frame: the map's m.frame)
   const S = {
     art: null, dir: null, prev: null, prevDir: null, workers: [], idle: [], asked: [], askedSet: new Set(), pre: [], preAt: 0, inflight: new Map(),
@@ -74,9 +75,12 @@ export function createArtCdn({ map, root, dataDir, seed, threads = defaultThread
     log(`[art] serving chunks of art ${S.art} from ${S.dir} (${threads} bake thread${threads === 1 ? '' : 's'}; background: quality ${prewarm.join(', ')})`);
   }
   function spawn() {
-    const w = new Worker(new URL('./artbake.js', import.meta.url), { workerData: { root, seed } });
+    const w = new Worker(new URL('./artbake.js', import.meta.url), { workerData: { root, seed, world } });
     const slot = { w, ready: false, job: null, art: S.art };
     w.on('message', (m) => {
+      // (a thread whose city isn't the server's - another world, another build - would bake the wrong art: it goes, and
+      // nothing more is baked; the pages bake their own as without the server's art)
+      if (m.ready && m.sig && map._sig && m.sig !== map._sig) { log(`[art] the bake thread's city (${m.sig}) is not the server's (${map._sig}): no art from the server`); S.stopped = true; w.terminate(); return; }
       if (m.ready) { slot.ready = true; S.idle.push(slot); pump(); return; }
       const job = slot.job; slot.job = null;
       if (job) S.inflight.delete(job.key);

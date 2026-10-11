@@ -3939,3 +3939,164 @@ lookout to Kestrel Road. What looks wrong:
 custody's transfer by the Prison Boat (above); the lock working (the gates closing, the water level, a boat waiting);
 the lift bridge at the mouth opening; Prison Island's ground (rock, the shore's cliffs) and its size; models for the
 prison's blocks, towers and walls, the weir and the lock gates; Lookout Hill's rise; the power lines round the lake.
+
+### 8.23 The switch: the server and the deploy carry World v3 - measured, the cheap wins, the runbook (2026-10-11, H49)
+
+The owner's brief: "Before the owner can switch, the server and the deploy must carry it. Measure, fix the cheap wins,
+and write down the rest" - the server with `CLA_WORLD=v3` (its start, its memory, the tick with players spread over
+the world, the systems that still scan the whole world each tick, the art CDN's background bake), the city worker's
+code budget, and the switch itself as a runbook. **No switch is made**; the live game is unchanged (below: what changed
+and why it's safe).
+
+**The numbers** (this machine, node 22, two cores shared with two other helpers. In process: a script that builds the
+world as the server does, cuts it, makes the World and runs it 30 s with 6 players at the world's POIs picked farthest
+apart - Old Town Station, Mesa Flats, Granite Peak Observatory, Sandpiper Bay, an ATM in the south-west, a farmstead;
+today's world the same way. The server: `CLA_WORLD=v3 node server/index.js`, twice)
+
+| | |
+|---|---|
+| The build | **42.6-45.3 s** (today's 4.9-5.1, the land 0.9-1.2, the world 36.6-39.2) - 8.9's 19-22 s: the world has grown since (the main line, the biomes, the towns and their models, Lucky Mesa, the desert, the wild places, the west coast, the places on the water) |
+| The server's start | **50.1-53.3 s to listening** (the build 44-45, the cut 4.4-6.9, the ferry planner 0.45 - nine routes now) - 8.9's 25-28 s |
+| The server's memory | peak 1.42-1.49 GB in the build; **1.84-1.85 GB when it starts listening** (the cut's 384 MB raw held until it's gzipped); in process, once the cut is let go, 1.40-1.48 GB. The server process **2.19 GB** steady with its art thread as it was (it built today's world: below); with the art thread building World v3 (the fix below) **3.6 GB** while the thread builds, **3.2 GB** after |
+| The region files | **81 files, 13.2 MB gzipped** (384 MB raw), gzipped in 3.9-4.0 s on libuv's threads, written in 13-96 ms |
+| The tick, 6 players spread | **World v3: 11.4-12.3 ms** a tick on average (p50 10.0-10.2, p95 19.6-22.0, the worst 162-165 - once in 600 ticks, in both runs); **today's world: 7.3-7.6 ms** (p95 14.0-14.6, the worst 29-32); 470-480 entities against 400-410 |
+| ... by system (ms a tick, v3 / today's) | vehicles 2.2 / 1.8, traffic 1.8-1.9 / 1.0, npc 1.5-1.7 / 1.3-1.4, net 1.5-1.6 / 1.1-1.2, **trains 1.0-1.2 / 0.2-0.3**, **wildlife 0.9-1.1 / 0.2-0.3**, props 0.5-0.6 / 0.3, **ems 0.3-0.4 / under 0.03**, combat 0.3 / 0.1-0.2 |
+| The server idle (nobody on) | 3.0 ms a tick (`/stats`): **the trains 1.6 ms of it** - every train on every loop runs, players or not |
+| The art CDN's chunks | **35,280 a quality** (210 x 168 chunks of 768 px) - today's 2,750 (55 x 50): 12.8 times |
+
+**What scanned the whole world, fixed** (each now looks at what's near the player through a spatial index; the picks
+are the whole lists' picks, in the same order - `test/world3passes.test.js` - so today's game does just what it did)
+- **The traffic** (`server/systems/traffic.js` `manage`, every 15 ticks for each player): every parking spot of the
+  world (a hash each before the distance test), every bike rack, and every road edge (a box test each, for where a car
+  comes in) - now the spots and racks through `server/pointgrid.js` (`near`: the indices in the cells round the
+  player, ascending) and the edges through `edgesNear` (a grid of the edges' boxes, 2048 px cells, made once per map).
+- **The ambulances** (`server/systems/ems.js` `starts`, every second for each body waiting and not yet reached - one
+  off any street was looked for again every second): every junction of the world - now `pointGrid(m.nodes).within`.
+- In the tick these don't show above this machine's noise (each system moves 10-15% between runs): the per-player
+  scans were a small part of those systems' time; the rest is per entity. They grow with the world's lists, though,
+  and a v3 world with 50-100 players would have paid them 50-100 times every 15 ticks.
+
+**What grows at v3 and isn't a whole-world scan** (next, in order)
+1. **The trains: 1.0-1.6 ms a tick with nobody on.** Every train on every loop (the main line's services, the subways)
+   steps, signals, places its cars and looks for riders every tick. A train no player is near could step coarsely (its
+   place along its loop is all the timetable needs) and place its cars only when someone is near.
+2. **The worst tick, 160 ms once in 600** (both runs, before and after these changes; today's world 30 ms): to find -
+   a collection of the v3 heap, or a system's first look at something big.
+3. **wildlife, vehicles, npc, net** grow with what's round the players - more of the world's players out in the open
+   country means more animals; that's the game, not a scan.
+4. **The start: 50-53 s.** The deploy's health check (`deploy/auto-update.sh` `healthy`) waits 90 s for `/health`
+   before it rolls a version back: on the VM's cores the margin may be thin (the runbook's step 3). Writing the region
+   files region by region (the cut's raw 384 MB never whole) and keeping them between restarts while the world's
+   signature is the same (8.9's item 5) would take 5-7 s and 0.4 GB off; not done here.
+
+**The art CDN at v3**
+- **It baked today's world** (found here, fixed): the bake thread (`server/artbake.js`) built its city from the seed -
+  `generateCity(seed)`, today's world - and baked it at the v3 map's chunks: today's art in the frame's north-west
+  corner (chunks 0-54 x 0-49), **the sea everywhere else**. That's 8.9's item 4 and 8.12's item 8 (Port Westport and
+  Highland Woods "still the sea's stand-in after 40 s - though the server's CDN had baked the 5 x 5 chunks round each"):
+  it had baked them, as sea. Now the thread builds the world the server runs (`createArtCdn({ world: 'v3' })` ->
+  `server/world3.js` `buildWorld3`), and **the CDN checks the thread's city against its own** before it bakes anything
+  (`mapSignature`, posted with `ready`): a thread with another city is stopped - no art from the server, the pages bake
+  their own. Today's world: the thread builds it as before (the same signature; `test/artcdn.test.js` passes).
+- **Its cost at v3:** the thread builds the world itself - another 45 s and more of a core at the lowest priority
+  (longer while the game and the first players take the CPU), and the memory above while it builds. Measured: the thread's city checked (the same signature), its first chunks out about a minute after the server listened, then 131 in a minute and a half - 0.82 s each, the busiest first, on this shared machine; Old Town Station's chunk (101, 86) served at 206 KB, a city's (before: the sea's).
+- **The order:** a page's asks first (the latest look first, 8.12.1), then round the players online (focus), then the
+  background: the busiest chunks first (each POI 40, each road point 1, the land), the open sea last.
+- **The time a quality:** today's map takes about 40 minutes a quality on one Ampere core (`docs/DEPLOY.md`), about
+  0.9 s a chunk; at v3's 35,280 chunks that is **about 8-9 hours a quality** on the VM's one bake thread
+  (`CLA_ART_THREADS` is 1 on two cores; the sea's chunks are quicker, the towns' slower). Medium is the background's
+  default; High (`CLA_ART_PREWARM=1,2`) as long again.
+- **The disk:** about 0.6 GB a quality today; at v3 **about 5-8 GB a quality** (the land's chunks as today's, the sea's
+  small), kept for this build and the build before.
+- **What players see meanwhile:** the chunk on their screen is asked for first and baked next (the 404 says when: its
+  eta); the page bakes it itself when the eta is over 6 s (a phone: slowly); the build before's chunks stand in (marked
+  stale, never kept) - which at the switch would be today's world's: the runbook's step 4.
+
+**The city worker's code** (`tools/perf.mjs` `city`: the worker's own 5 files, and the generator it loads when the
+server can't serve the city - only today's world is ever built there: a v3 world is never built on the page)
+- **358 -> 349 KB of its 360** (34 of 34 files): what only v3 builds reach moved out of `shared/map.js` verbatim into
+  **`shared/world3-passes.js`** (new) - Port Westport's container quays and container port (8.5: `buildQuays`,
+  `buildContainerPort`), the main line's loops as one (each its own rail, their level crossings once each, the stations'
+  hubs, the switches: 8.10, 8.10.1 - `rails`, `hubIndex`, `hubPlan`, `buildRailHubs`, `railSwitches`) and its bores
+  (`addRailBore(s)`). It registers them with map.js (`setWorld3Passes`; map.js hands it `addProp`, `clearArea`,
+  `simpleBuilding`, `buildRailway`, `markUnderpasses` and the platforms' measures) when it's imported, and
+  `shared/world3-islands.js` imports it - as it registers the island builds with `setIslandBuilds` - so every v3 build
+  (they all import world3-islands.js) has them and the worker never loads them. A v3 build without them throws
+  ("import shared/world3-islands.js first").
+- **The same worlds to the bit:** today's world hash stays `6b6e16fdef9f` (stamped), the v3 world's signature stays
+  `gjhk97` (built before and after the move). The budget stays 360 KB, its comment says why: World v3's next passes go
+  into world3-passes.js (or a module of their own), not into map.js.
+
+**The switch, a runbook** (nothing here is done; what must be built first is step 0)
+0. **Before the switch, to build:**
+   a. **The art key per world.** The page keeps baked chunks (IndexedDB) and asks the server's CDN under version.json's
+      `art` - the same hash for both worlds today. A browser that played the v3 test server keeps v3 chunks under the
+      live art hash and draws them in the live game at the same chunk (and the other way round). Today that's only the
+      testers' browsers: **play the v3 test server in its own browser profile, or clear the site's data after**. For
+      the switch: the art (and world) hash must change with it (b), and the test server's art served and kept under
+      `<art>-v3` as its region files are (`-v3`, 8.9).
+   b. **version.json's `world` for v3.** `tools/stamp-version.mjs` hashes today's world (`generateCity(seed)`): with v3
+      live it must hash the v3 world - a 45 s build at every stamp, too slow for every commit - or the v3 build's code
+      (the generator's modules and `shared/world3-*.js`), so that the browsers' kept regions and chunks go when the v3
+      world changes. Today the v3 world's files keep their URL while today's world's hash does (8.12.2).
+   c. **A playtest on the test server with the art fix:** the CDN's chunks round Port Westport and Highland Woods
+      drawn (8.9's item 4 should be gone), `__S.art2.stats().jump` after a far teleport.
+   d. **The world's home list for the note:** `server/systems/legacy-homes.js` `LEGACY_HOMES[9]` - today's homes'
+      prices and names, generated from today's map before the switch (the refund itself comes from the deeds).
+1. **The bump:** `shared/constants.js` `WORLD_VERSION` 9 -> 10, with its line in the list ("10 World v3: the whole
+   world - the mainland, the gulf, the main line..."). Every profile saved in world 9 goes through `homes.checkWorld` on
+   its next join - **World v2's way, as it was released then** (tested since): its homes released and bought back at
+   what was paid for them (the deeds) into the bank, the spawn home and the saved position cleared (they wake at a
+   hospital), the note shown once. **Kept:** money, bank, items, weapons, EXP, the cars (`prof.vehicles`: models and
+   paint, no places - the garage opens again with a new home) and the stash (likewise), **bounties** (they're on
+   players, not places).
+   - Also holding today's places, to clear in `checkWorld` with the bump: `lastSpawn` (`h:<i>` is a hospital by its
+     index - another hospital at v3; `home:<id>` goes with the homes), `hotAt` (where hot money was stolen), a
+     bounty's last-seen spot. They're px of today's frame: in v3's they're somewhere else, or sea.
+   - **Moving the homes with their places instead** (not recommended for the switch): World v3 builds today's
+     districts at their placements (8.4: a place built at scale 1 is today's, moved), but the homes' ids, names and
+     numbers are the whole world's (v3's house #95 isn't today's #95). A tool could map each of today's homes to the
+     v3 home nearest its placed spot (same kind, within a few tiles), run once into a table `checkWorld` reads,
+     buying back only what it can't map. Releasing is what World v2 did, refunds what was paid, and is tested.
+2. **Stamp** with the v3 world (0b): the world and art hashes change - every browser's kept city and chunks go; the
+   pages reload into the new build (`client/update.js`).
+3. **The server:** `Environment=CLA_WORLD=v3` in `deploy/city-life-auto.service` (re-run `deploy/setup-oracle.sh`, or
+   edit the unit and `sudo systemctl daemon-reload`). `CLA_FRESH_ON_UPDATE=spawn` (the default) brings everyone in at
+   a spawn point anyway.
+   - **The health check:** the server listens 50-53 s after it starts here (the build); `deploy/auto-update.sh`
+     `healthy` waits 90 s and then rolls the version back. Time the start on the VM first (`journalctl -u
+     city-life-auto`: "World v3 up in ... s"); if it's over about 70 s, raise `healthy`'s wait (e.g. 180) in the same
+     push, before the switch.
+   - **Memory:** 1.85 GB at listening, 3.6 GB while the art thread builds the world, 3.2 GB after: the 12 GB VM
+     holds it.
+   - Players see "Server restarting" for about a minute (the build).
+4. **Warm before the switch:**
+   - **The art:** run the switch's commit (stamped: its art hash is the switch's) on the VM beside the live server -
+     `CLA_WORLD=v3 PORT=8090 CLA_DATA_DIR=~/cla-data-v3 node server/index.js` - for the 8-9 hours a quality takes
+     (its bake thread at the lowest priority; the live game's tick comes first); then, at the switch, move
+     `~/cla-data-v3/art/<art hash>` into `~/cla-data/art/`: the live server finds the chunks on disk and serves them
+     at once.
+   - **The stand-ins:** at the switch the build before's art is today's world's, and the CDN stands it in for chunks
+     not baked yet - the wrong places, stale but drawn. Move today's art directory aside at the switch (`mv
+     ~/cla-data/art/<today's art hash> ~/cla-art-today/`: kept for the rollback) - or teach the CDN to stand in only a
+     build of the same world (a world marker in each art directory: not done).
+   - **The region files:** written within about 10 s of listening, every start (nothing to warm; 8.9's item 5 would
+     keep them).
+5. **The rollback:** unset `CLA_WORLD` (the unit), revert the bump and stamp (today's world and art hashes come back:
+   the browsers reload and download today's city again), move today's art directory back. **Profiles that joined v3
+   are world 10:** `checkWorld` tests `wv !== WORLD_VERSION`, so going back to 9 releases what they bought at v3 (the
+   deeds again) - a second world change for everyone who played it; the homes they had before the switch were bought
+   back at the switch and stay so. **Take a backup of the profiles at the switch** (`~/cla-backups/` is nightly; take
+   one by hand): restoring it is the full rollback - everyone as they were before the switch, losing what they did at
+   v3 - the owner's choice.
+
+**Nothing live changes** (measured): today's world hash `6b6e16fdef9f` and art hash `cdd307a65f3a` are unchanged; the
+traffic's and the ambulances' lookups pick what they picked (the test); the art thread builds today's world as before
+when the server runs it, and posts its signature (the same: `test/artcdn.test.js`); `shared/map.js` builds today's
+world from the same code, the v3-only passes out of it.
+
+**Tests:** `test/world3passes.test.js` (new: the worker's code without the passes, map.js without their functions,
+world3-islands.js importing them; the parking spots' and racks' grid indices every spot in reach in the list's order;
+the spawn edges by the grid the whole list's filter, in order; the ambulances' junctions within lo-hi the whole list's,
+in order), `test/artcdn.test.js` (unchanged, passes: the thread's ready now carries the signature), `test/ems.test.js`,
+`test/bikes.test.js`, `test/worldframe.test.js`.
