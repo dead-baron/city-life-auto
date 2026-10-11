@@ -171,14 +171,19 @@ test('courier jobs come with a company flatbed you can take without stealing', (
 test('idle pedestrians look around and then walk off; stranded drivers walk away', () => {
   const w = makeWorld();
   const { p } = joinPlayer(w);
-  // somewhere with pavement all round (a random spot can be a dead end between buildings)
-  let spot = { x: p.ped.x + 200, y: p.ped.y };
-  outer: for (let r = 160; r < 900; r += 32) for (let k = 0; k < 24; k++) {
-    const x = p.ped.x + Math.cos(k / 24 * 6.283) * r, y = p.ped.y + Math.sin(k / 24 * 6.283) * r;
-    let ok = true;
-    for (let dy = -2; dy <= 2 && ok; dy++) for (let dx = -2; dx <= 2 && ok; dx++) if (![T.SIDEWALK, T.PLAZA, T.GRASS].includes(w.map.tileAtPx(x + dx * 32, y + dy * 32))) ok = false;
-    if (ok) { spot = { x, y }; break outer; }
+  // somewhere with pavement all round (a random spot can be a dead end between buildings): the nearest tile, 5 tiles
+  // or more from the player, whose 5 x 5 tiles round it are all pavement or grass - searched tile by tile (a coarse
+  // ring of points found none now and then, and the fallback beside the player could be inside a building's wall, where
+  // nobody can walk off: about one run in a hundred)
+  const ptx = Math.floor(p.ped.x / 32), pty = Math.floor(p.ped.y / 32), open = (tx, ty) => {
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (![T.SIDEWALK, T.PLAZA, T.GRASS].includes(w.map.tileAt(tx + dx, ty + dy))) return false;
+    return true;
+  };
+  let spot = null;
+  for (let r = 5; r < 60 && !spot; r++) for (let dy = -r; dy <= r && !spot; dy++) for (let dx = -r; dx <= r && !spot; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) === r && open(ptx + dx, pty + dy)) spot = { x: (ptx + dx + 0.5) * 32, y: (pty + dy + 0.5) * 32 };
   }
+  assert.ok(spot, 'open pavement near the player');
   const ped = spawnNpc(w, 'casual', spot.x, spot.y, 'civ');
   ped.npc.state = 'idle'; ped.npc.until = w.time + 3; ped.npc.lookAt = w.time;
   const a0 = ped.a, x0 = ped.x, y0 = ped.y;
