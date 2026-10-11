@@ -25,6 +25,7 @@ import * as combat from './combat.js';
 import * as campfires from './campfires.js';
 import * as explosions from './explosions.js';
 import * as npc from './npc.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 export const burning = (ped) => (ped.burnT || 0) > 0;
 const span = (world, [a, b]) => a + (b - a) * world.rand();
@@ -116,7 +117,7 @@ const moving = (q) => Math.abs(q.vx) + Math.abs(q.vy) > 30;
 function contacts(world, dt) {
   const now = world.time, p = BURN.touch * dt;
   for (const v of world.entities.values()) {
-    if (v.kind !== K.VEH || v.def.pedal || !(v.burnUntil > now || (v.wreckAt && now - v.wreckAt < 20))) continue;
+    if (v.kind !== K.VEH || v.def.pedal || (v.alt || 0) > FLY.HIGH || !(v.burnUntil > now || (v.wreckAt && now - v.wreckAt < 20))) continue;
     for (const q of world.query(v.x, v.y, v.def.L / 2 + BURN.vehPx + 12, K.PED)) {
       if (!burning(q) && !q.vehId && moving(q) && explosions.bodyDist(v, q.x, q.y) < BURN.vehPx && world.rand() < p) ignite(world, q, null);
     }

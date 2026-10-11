@@ -5,6 +5,7 @@
 import { K, T } from '../../shared/constants.js';
 import { SPIKE_STRIP_S } from '../../shared/rules.js';
 import { segDist } from '../../shared/geom.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const HALF = 64;          // half the strip's length (px)
 const AHEAD = 70;         // thrown this far in front of you
@@ -41,7 +42,7 @@ export function update(world) {
     const ax = s.x - Math.cos(s.a) * HALF, ay = s.y - Math.sin(s.a) * HALF;
     const bx = s.x + Math.cos(s.a) * HALF, by = s.y + Math.sin(s.a) * HALF;
     for (const v of world.query(s.x, s.y, HALF + 70, K.VEH)) {
-      if (v.flat || v.wreckAt || v.def.kind === 'boat' || (v.lz || 0) > 0.3 || Math.hypot(v.vx, v.vy) < 40) continue;
+      if (v.flat || v.wreckAt || v.def.kind === 'boat' || (v.lz || 0) > 0.3 || (v.alt || 0) > FLY.HIGH || Math.hypot(v.vx, v.vy) < 40) continue;
       if (segDist({ x: v.x, y: v.y }, { x: ax, y: ay }, { x: bx, y: by }) > v.def.W / 2 + 6) continue;
       v.flat = true;
       world.emit(v.x, v.y, { e: 'pop', x: v.x, y: v.y });

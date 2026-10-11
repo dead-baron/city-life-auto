@@ -8573,3 +8573,22 @@ the coast guard: the issued patrol boat and helicopter, a smugglers' run with co
 heave to alongside (hands up), boarded and the crates seized for the reward, smugglers lost who get away, someone overboard
 found in the circle, hauled aboard the boat and run ashore for the pay, winched up by the helicopter and landed ashore; the air patrol: too high over smugglers they keep going, low over them they heave to, a crewman down the line seizes the cargo. test/crime.test.js (the ramming exemption).
 test/flight.test.js, test/phones.test.js, test/honestliving.test.js, test/mapwindow.test.js, test/perf.test.js.
+
+## 2026-10-11 · Flying on a phone, flying over things, the aircraft's sound (the owner's first flights)
+
+The owner, flying the helicopter: "it definitely struggles on mobile and loading art fast enough. I think it's also
+hitting things on the ground as I fly by even though I'm up in the air. The sound appears blown out now too."
+- Hitting things: the server smashed the street furniture under a flying aircraft - lamp posts, hydrants, fences,
+  benches - every tick (players.js ran props.smashFor for whatever you drive), denting it and sounding the crash, while
+  the page predicted nothing of the sort for an aircraft (corrections). An aircraft never smashes props now (the flight
+  model's own collisions - buildings by height, trees and solid props below 110 px - are the same on both sides). Up in
+  the air (FLY.HIGH) an aircraft is also out of reach of the trains on the line under it (trains.js), the spike strips
+  (spikes.js), the traffic braking for it (traffic.js), the people diving out of its way (npc.js), a wreck landing
+  (explosions.js) and of setting people alight as it burns (burning.js).
+- The phone: the camera pulled back for the height (up to 2.3x) on top of the pull-back at speed (1.5x) - 3.4x, twelve
+  times the ground to bake and draw. Now the larger of the two, not their product; at most 1.45x on a phone, a tablet or
+  a console and 2x elsewhere; and while chunks on screen are still stand-ins it eases in (down to 1.1x) like the speed's
+  pull-back does, coming back slowly once the art keeps up (main.js).
+- The sound: the rotor (vol 0.5, a deep sub at 0.9) drove the mix into its soft ceiling right under you. The rotor,
+  the propeller and the tank are now level with a truck (sound/vehicles.js); the rescue helicopter has the rotor's sound
+  (it had a car's).

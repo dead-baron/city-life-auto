@@ -24,6 +24,7 @@ import { isBlocked, unjam, goRound } from './reroute.js';   // (drivers who find
 import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384)
 import { loadExplosives } from './cargo.js';
 import { homeLotSpots } from './homes.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const rng = mulberry32(4242);
 // a flatbed out of the yards, the docks, off the highway or on the country roads (to the quarry, the mine) carries a
@@ -307,6 +308,7 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
     if (e === v || (ignore && ignore.has(e.id))) continue;
     if (e.kind === K.PED) { if (e.vehId || e.dead) continue; }
     else if (e.kind !== K.VEH) continue;
+    else if ((e.alt || 0) > FLY.HIGH) continue;   // (an aircraft overhead: drive on under it)
     if (!sameLevel(e.lz, v.lz)) continue; // traffic up on the deck doesn't brake for the street below
     const dx = e.x - v.x, dy = e.y - v.y;
     const lx = dx * c + dy * s, ly = -dx * s + dy * c;

@@ -40,11 +40,13 @@ const P = {
   thumper: { f0: 30, f1: 150, gears: 5, wave: 'saw8', sub: 0.5, noise: 0.2, nf: 1400, lp0: 450, lp1: 2600, q: 2.5, am: 0.55, amr: 1, vol: 0.36, horn: [587, 740], hw: 'square' },
   // the aircraft (shared/flight.js): a helicopter's rotor - a deep whop-whop (a big, slow wobble on a low note, lots of
   // rush); a light plane's propeller - a buzzing drone that climbs with the throttle
-  rotor: { f0: 17, f1: 30, gears: 0, wave: 'saw8', sub: 0.9, noise: 0.38, nf: 520, lp0: 240, lp1: 640, q: 1.2, am: 0.92, amr: 0.25, vol: 0.5, boat: 1, horn: [440, 554], hw: 'square' },
-  prop: { f0: 28, f1: 104, gears: 0, wave: 'buzz', sub: 0.5, noise: 0.22, nf: 1300, lp0: 420, lp1: 2300, q: 1.8, am: 0.32, amr: 0.5, vol: 0.42, boat: 1, horn: [440, 554], hw: 'square' },
+  // (quieter than they were - the owner: "the sound appears blown out": the rotor at 0.5 with its deep sub drove the mix
+  // into the soft ceiling right under you; now level with a truck's)
+  rotor: { f0: 17, f1: 30, gears: 0, wave: 'saw8', sub: 0.55, noise: 0.3, nf: 520, lp0: 240, lp1: 640, q: 1.2, am: 0.8, amr: 0.25, vol: 0.32, boat: 1, horn: [440, 554], hw: 'square' },
+  prop: { f0: 28, f1: 104, gears: 0, wave: 'buzz', sub: 0.35, noise: 0.2, nf: 1300, lp0: 420, lp1: 2300, q: 1.8, am: 0.32, amr: 0.5, vol: 0.32, boat: 1, horn: [440, 554], hw: 'square' },
 
   // the tank (H58): a big slow diesel under the clank and squeal of its tracks (the rasp, beating hard)
-  tank: { f0: 12, f1: 52, gears: 3, wave: 'saw8', sub: 1, noise: 0.5, nf: 1100, lp0: 160, lp1: 900, q: 1.6, am: 0.9, amr: 1, vol: 0.55, horn: [98, 123], hw: 'saw8' },
+  tank: { f0: 12, f1: 52, gears: 3, wave: 'saw8', sub: 0.7, noise: 0.4, nf: 1100, lp0: 160, lp1: 900, q: 1.6, am: 0.85, amr: 1, vol: 0.4, horn: [98, 123], hw: 'saw8' },
 };
 export const ENGINE_CLASS = {
   compact: 'small', sedan: 'sedan', taxi: 'sedan', sports: 'sports', pickup: 'muscle', flatbed: 'truck', van: 'van', bus: 'bus',
@@ -54,7 +56,7 @@ export const ENGINE_CLASS = {
   bicycle: 'pedal', cruiser: 'pedal', mtb: 'pedal', roadbike: 'pedal', bmx: 'pedal', cargobike: 'pedal',
   vtwin: 'vtwin', tourer: 'vtwin', chopper: 'vtwin', bobber: 'vtwin', bagger: 'vtwin', trike: 'vtwin', ratbike: 'vtwin',
   caferacer: 'thumper', dirtbike: 'twostroke', scooter: 'scooter',
-  heli: 'rotor', policeheli: 'rotor', gunship: 'rotor', plane: 'prop',
+  heli: 'rotor', policeheli: 'rotor', gunship: 'rotor', plane: 'prop', rescueheli: 'rotor',
 
   tank: 'tank',
 };

@@ -23,6 +23,7 @@ import * as law from './law.js';
 import * as safety from './safety.js';
 import * as cargo from './cargo.js';
 import { spawnNpc, despawnNpc } from './npc.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const rng = mulberry32(8080);
 const GAP = CAR_GAP;
@@ -1005,7 +1006,7 @@ function collide(world, t, dt) {
     const hl = c.def.L / 2, hw = c.def.W / 2;
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     for (const v of world.query(e.x, e.y, hl + 80, K.VEH)) {
-      if ((v.lz || 0) > 0.3) continue; // up on the highway deck, over the line
+      if ((v.lz || 0) > 0.3 || (v.alt || 0) > FLY.HIGH) continue; // up on the highway deck, over the line (or flying over it)
       if (v.removed || v.def.kind === 'boat' || v.sinkAt) continue;
       const lx = (v.x - e.x) * ca + (v.y - e.y) * sa, ly = -(v.x - e.x) * sa + (v.y - e.y) * ca;
       const rel = v.a - e.a, ext = Math.abs(Math.cos(rel)) * v.def.L / 2 + Math.abs(Math.sin(rel)) * v.def.W / 2;
@@ -1105,7 +1106,7 @@ function updateCrossings(world) {
     if (down) {
       const rx = -Math.sin(c.a), ry = Math.cos(c.a), tx = Math.cos(c.a), ty = Math.sin(c.a);
       for (const v of world.query(c.x, c.y, c.hw + 140, K.VEH)) {
-        if ((v.lz || 0) > 0.3) continue;
+        if ((v.lz || 0) > 0.3 || (v.alt || 0) > FLY.HIGH) continue;
         if (Math.abs(v.vx) + Math.abs(v.vy) < 40 || v.def.kind === 'boat') continue;
         const along = (v.x - c.x) * rx + (v.y - c.y) * ry, across = (v.x - c.x) * tx + (v.y - c.y) * ty;
         if (Math.abs(across) > c.hw + 6) continue;

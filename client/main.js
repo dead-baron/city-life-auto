@@ -2848,8 +2848,14 @@ function prepFrame(dt) {
   if (S.art2 && S.art2.lateNow && speed > 300 && S.art2.lateNow()) S.zoMax = Math.max(0.25, (S.zoMax ?? 0.5) - 0.12 * dt);
   else if ((S.zoMax ?? 0.5) < 0.5) S.zoMax = Math.min(0.5, S.zoMax + 0.015 * dt);
   const myAir = S.airMod && (S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) ? S.ents.get(S.ctrlId) : null;
-  const airPull = myAir && airDefOf(myAir) ? S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4) : 1;   // (flying: the higher, the more you see)
-  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, 1 + Math.min(S.zoMax ?? 0.5, speed / 1300)) / airPull;
+  // flying: the higher, the more you see - instead of the pull-back at speed, not on top of it (both made 3.4x), and no
+  // wider than the art keeps up with: a phone, a tablet or a console 1.45x at most, and while chunks on screen are still
+  // stand-ins it eases in like the speed's (the owner, 2026-10-11: "it definitely struggles on mobile and loading art")
+  const airCap = /phone|tablet|console/.test(getDevice().kind) ? 1.45 : 2;
+  if (myAir && S.art2 && S.art2.lateNow && S.art2.lateNow()) S.airMax = Math.max(1.1, Math.min(airCap, S.airMax ?? airCap) - 0.2 * dt);
+  else S.airMax = Math.min(airCap, (S.airMax ?? airCap) + 0.02 * dt);
+  const airPull = myAir && airDefOf(myAir) ? Math.min(S.airMax, S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4)) : 1;
+  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, 1 + Math.min(S.zoMax ?? 0.5, speed / 1300), airPull);
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles

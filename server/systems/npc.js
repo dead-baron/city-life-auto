@@ -24,6 +24,7 @@ import * as personas from './personas.js';
 import * as activities from './activities.js';
 import * as burning from './burning.js';
 import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME } from '../../shared/rules.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
 const PREFERRED = new Set([T.SIDEWALK, T.PLAZA]);
@@ -379,7 +380,7 @@ function checkDive(world, ped, now) {
   if (ped.rollT > 0 || now < n.diveCooldown || (world.tick + ped.id) % 2) return;
   for (const v of world.query(ped.x, ped.y, 260, K.VEH)) {
     const sp = Math.hypot(v.vx, v.vy);
-    if (sp < 170) continue;
+    if (sp < 170 || (v.alt || 0) > FLY.HIGH) continue;   // (an aircraft going over: nothing to dive from)
     const c = Math.cos(v.a), s = Math.sin(v.a);
     const sign = (v.vx * c + v.vy * s) >= 0 ? 1 : -1;
     const dx = ped.x - v.x, dy = ped.y - v.y;

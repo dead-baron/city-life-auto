@@ -17,6 +17,7 @@ import { obbVsObb } from '../../shared/math.js';
 import { CHAIN_K, CHAIN_DELAY_S, CHAIN_GAP_S, CHAIN_GENS, CHAIN_MAX, ARMORED_VEHICLES } from '../../shared/rules.js';
 import * as combat from './combat.js';
 import * as vehicles from './vehicles.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 export function newSeed(world) { return 1 + Math.floor(world.rand() * 2147483646); }
 
@@ -103,7 +104,7 @@ function land(world, v) {
   combat.blast(world, v.x, v.y, v.def.L / 2 + 50, 26, by, v.id, false, v.lz || 0, L);
   // a car it lands on (or right beside) goes up too: a chain reaction - the next link of its own chain, a beat later
   for (const o of world.query(v.x, v.y, v.def.L / 2 + 120, K.VEH)) {
-    if (o === v || o.wreckAt || o.ferry || o.def.kind === 'boat' || o.def.pedal || o.chain || !room(L)) continue;
+    if (o === v || o.wreckAt || o.ferry || o.def.kind === 'boat' || o.def.pedal || o.chain || (o.alt || 0) > FLY.HIGH || !room(L)) continue;
     if (obbVsObb(v.x, v.y, v.a, v.def.L / 2 + 8, v.def.W / 2 + 8, o.x, o.y, o.a, o.def.L / 2, o.def.W / 2)) setOff(world, o, L, 1, by);
   }
 }

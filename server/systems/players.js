@@ -362,7 +362,7 @@ export function processInputs(world, dt) {
       p.prevBits = inp.bits;
       applyInput(world, p, ped, inp, pressed, dt);
       const v = ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
-      if (v && !v.wreckAt && !v.scripted && !v.onDeck && !v.ferry) { v.ownStepTick = world.tick; vehicles.stepVehicle(world, v, dt); props.smashFor(world, v); }   // (a car on a ferry's deck is held there)
+      if (v && !v.wreckAt && !v.scripted && !v.onDeck && !v.ferry) { v.ownStepTick = world.tick; vehicles.stepVehicle(world, v, dt); if (v.def.kind !== 'air') props.smashFor(world, v); }   // (an aircraft never smashes the street furniture: it flies over it, and the page predicts none for it)   // (a car on a ferry's deck is held there)
     }
   }
 }
