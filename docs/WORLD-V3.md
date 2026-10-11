@@ -3711,8 +3711,10 @@ city worker 34 files, 359 KB of 360).
   - **Giants Loop** further east on Timber Road (604, 1128): the trailhead lot north of the road, the loop through the
     redwoods; **the Highland Hunting Lodge** west of the lot in the world build (east and south of it, as today's, it
     would stand on the road).
-  - **Fern Gorge** south of Timber Road (693, 1136): `fernGorge` moved whole by its anchor's offset, its track the road
-    by it (`roadNear`); the pull-off 3 tiles further off the road (an arterial, not today's dirt track).
+  - **Fern Gorge** south of Timber Road (693, 1144; west of where the main line meets the road, outside its room):
+    `fernGorge` moved whole by its anchor's offset, its track the road by it (`roadNear`); the pull-off off the road's
+    far edge (an arterial, not today's dirt track). At 681 its box wasn't all open ground and it wasn't built - the
+    search is today's (the whole box open or nothing).
   - **The Old Granite Mine** above Lookout Road (745, 452): its search box and target round its moved spot, the peaks'
     district. **One cave**: `shared/underground.js` takes the first mine with a cave, and the world build marks this one
     `cave: false` - the cave world stays under Copper Gulch Mine's adit (8.18); its seams are worked (`places.js`).
@@ -3742,7 +3744,26 @@ ends, meeting no highway; the lookout, the two hunting camps and the trapper's c
 on Redwood Creek; the Old Granite Mine's seams and the one cave under Copper Gulch Mine; the canyon in the desert, the
 wash, the oasis's track; the water park's slides).
 
-PICTURES-H47
+Pictures (`tools/world3-world-map.mjs --towns --only redwoods,ridge,oldmine,canyon,splash,drycreek`):
+`docs/world-v3-town-redwoods.png`, `-ridge.png`, `-oldmine.png`, `-canyon.png`, `-splash.png`, and `-drycreek.png`
+again. What looks right: Redwood Creek's falls, pool and camp north of Timber Road in the redwoods, the creek under the
+road and on south-west; the hunting lodge's cabin in its clearing west of Giants Loop's lot; the Ridge Trail from
+Summit Road down to Summit Tarn's meadow with the fire lookout beside it; the Old Granite Mine's cliff and portal just
+above Lookout Road's end; the canyon south of Mesa Road with the Canyon Track down its west side and the wash out of
+its south-east corner; Mirage Lake with its track in from Canyon Road; the water park whole on Mine Road's south side,
+its pool, island and slides; the boneyard's planes on plain ground now, the Boneyard Track to its gate. What looks
+wrong:
+- **Fern Gorge isn't in the redwoods picture** (taken with it at 681, where it wasn't built; the test's last run has it
+  at 693, 1144 - it wants its own picture); Giants Loop's trail doesn't read at 1/8 (a thin path in the redwoods).
+- **The canyon is a flat red rectangle**: the painting's own ground (red rock, its cliffs drawn) on the v3 desert's tan,
+  with a hard edge - it wants the painting's edge blended into the ground or the canyon built of the desert's mesas; a
+  biome wash runs into its north-east corner and out of its south-east one (kept off inside its box only).
+- **The tracks are dead straight** (the Ridge Trail across the snowfield, the Canyon Track, the Mirage Track): a
+  mountain trail wants switchbacks, a desert track a wander; the Ridge Trail and the lookout stand in the snow.
+- **The Old Granite Mine is a lone cliff on an open slope** (a short band of rock with a door in it) - it wants the
+  mountain behind it: the peaks' relief (H48's) or a bigger band.
+- The water park sits against the road with no car park, a biome wash skirting its fence; the dry washes stop at the
+  boneyard's and the water park's boxes (they read as running under them).
 
 **What's left** (in order): **Redwood Cove** (a cove on today's west shore: the woods have no shore now - a lake shore
 or the Egret Coast) and **Granite Cove** (a bay of the sea: the peaks have no sea - the Long Reach or Kestrel Lake);

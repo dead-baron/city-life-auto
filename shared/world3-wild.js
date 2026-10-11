@@ -64,7 +64,7 @@ export const MOVED = [
   // Water Park on Mine Road (its top-left corner)
   { name: 'Redwood Creek', anchor: [210, 189], to: [560, 1135], r: 30, d: D3.WOODS },
   { name: 'Giants Loop', anchor: [173, 131], to: [604, 1128], r: 3, d: D3.WOODS },
-  { name: 'Fern Gorge', anchor: [309, 172], to: [681, 1136], r: 3, d: D3.WOODS },   // (south of Timber Road, its trailhead on it; west of the main line's crossing)
+  { name: 'Fern Gorge', anchor: [309, 172], to: [693, 1144], r: 3, d: D3.WOODS },   // (south of Timber Road, its trailhead on it; clear of the main line's room)
   { name: 'Old Granite Mine', anchor: [537, 106], to: [745, 452], r: 3, d: D3.PEAKS },
   { name: 'Canyon Oasis', anchor: [1190, 800], to: [3850, 525], r: 3, d: D3.DESERT, keep: [-31, -22, 31, 22] },
   { name: 'Mirage Camp', anchor: [1092, 782], to: [3930, 760], r: 12, d: D3.DESERT, keep: [-16, -36, 16, 20] },
