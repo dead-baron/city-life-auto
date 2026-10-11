@@ -7622,7 +7622,8 @@ in art v2 and the classic renderer, with the planned places moved into them.
 
 Files: shared/world3-towns.js (`TOWN_SPECIALS`' looks, `townModels`), shared/world3-world.js (the call),
 client/art2/props-towns.js (new), client/art2/game/statics.js, client/render/townart.js (new), client/render/tiles.js,
-test/world3townmodels.test.js (new), docs/WORLD-V3.md 8.13.1 and 8.13.2, docs/world-v3-town-*.png.
+tools/world3-world-map.mjs (`--towns --close`: two of each town's models up close at 1/2), test/world3townmodels.test.js
+(new), docs/WORLD-V3.md 8.13.1 and 8.13.2, docs/world-v3-town-*.png (the towns at 1/8 and six close-ups).
 
 Tests: test/world3townmodels.test.js (one world build: each town's looks and models, the planned places in them, the
 yards inside their footprints, nothing solid on a road, the boardwalk's dressing on its planks), test/world3towns.test.js.

@@ -3110,9 +3110,12 @@ one a house's, a bigger one a shopfront's):
 
 | town | looks | round them |
 |---|---|---|
-| Timber Bend | 13 cabins, 11 shopfronts, the sawmill, the lodge row, the clinic, the sheriff, the motel | 25 porches, 3 log stacks, the loader, the saw line, the antlers |
-| Willow Crossing | 13 farmhouses, 13 shopfronts, the church, the elevator, the co-op, the feed row, the clinic, the sheriff | 27 porches, the steeple, 4 silos, the dock, the sacks |
-| Sandpiper Bay | 20 cottages, 9 houses on stilts, 9 beach shops, the surf row, the clinic | 39 porches, the boards, 165 pieces of rail, 10 benches, 13 lamps, the pier's shelter, the tower |
+| Timber Bend | 13 cabins, 11 shopfronts, the sawmill, the lodge row, the clinic, the sheriff, the motel | 19 porches, 3 log stacks, the loader, the saw line, the antlers |
+| Willow Crossing | 13 farmhouses, 13 shopfronts, the church, the elevator, the co-op, the feed row, the clinic, the sheriff | 20 porches, the steeple, 4 silos, the dock, the sacks |
+| Sandpiper Bay | 20 cottages, 10 houses on stilts, 11 beach shops, the surf row, the clinic | 31 porches, the boards, 165 pieces of rail, 10 benches, 13 lamps, the pier's shelter, the tower |
+
+(Plain roofs with no street on either side get no porch.) The towns test passes as before (8.13.1's numbers, less
+road than building in each town).
 
 **The test** (`test/world3townmodels.test.js`, one world build): each town has its looks and its kit; every planned
 place with a look is in it (the building, its lot, its POI); the sawmill's and the elevator's yards inside their
