@@ -8424,11 +8424,13 @@ that they lost the dog."
 - **A bridge's shadow** (art v2, `client/art2/game/groundbake.js`): the water's shading looked only straight north for
   what stands over it - a deck's face (its slab and girders, the side the camera sees) and the shade under it. An
   east-west bridge got both; a bridge running north-south (driving north over one, the avenues over Liberty
-  Bay) had nothing north of the water beside it but more water, so it cast no shadow at all: a flat strip floating on
-  the water. Now open water with a raised deck just west of it is in its lee (the light is from the north-west, as the
+  Bay) had nothing north of the water beside it but more water, so the bake gave it no shade at all - only the
+  engine's thin sun shadow at its edge (about 7 px): a flat strip floating on the water. Now open water with a raised deck just west of it is in its lee (the light is from the north-west, as the
   classic renderer's offset shadow has it): darkened like the strip under an east-west one, deepest against the deck
   (DECK_LEE 14 px). The classic renderer (`client/render/roads.js` drawDecks) already offsets its shadow south-east
-  for any heading. The art's hash changes (stamped); the world's doesn't.
+  for any heading. The art's hash changes (stamped); the world's doesn't. (Nothing else heading-dependent showed in the
+  headless playtests - driving north over the avenue bridges at noon; if the owner sees something else, a screenshot
+  will tell.)
 - **Crosswalks** (`shared/roadcore.js` zebraCrossings - the runtime both renderers paint them from, the classic
   `client/render/roads.js` and the art v2 bake `groundbake.js`; the map itself paints none): never at a junction a
   highway or one of its ramps comes into (none across a highway, so none leading out onto one - they ran across the
@@ -8449,14 +8451,16 @@ that they lost the dog."
 - **The starting look** (`client/creator.js` 'start', `client/style.css`): under the highlighted character (the big
   preview with its name), "▶ Play as <name>" and "✎ Customize this character"; the footer's one button is "＋ New
   character - start from scratch" (the creator, on a fresh random someone). "Make it yours" / "Play as they are" are
-  gone. (`[data-act=play-as]` still closes it in a playtest.)
+  gone. On a phone (portrait) the two go on a row of their own under the preview. (`[data-act=play-as]` still closes
+  it in a playtest.)
 - **The lost pet** (`server/systems/pets.js` targetFor, `server/systems/events.js`, `shared/worldevents.js`,
   `client/main.js` drawEventArrows): the arrow to a lost pet, and to its owner once you have its collar, no longer
   fades after ARROW_SHOW_S - it stays till you have it or it's home (EVENT_KINDS `stay`); the pet at your heel no
   longer gets an arrow of its own (`lead` on its happening). Its owner is marked: "Lost my dog!" (cat, puppy) over
   them - for the one leading the pet ('petret': the owner's id and what they lost on the wire, a lasting arrow and the
   minimap blip, anywhere in town) and, while it's still lost, for everyone within EVENT_RANGE of them ('petown': the
-  marker and a minimap blip, no arrow - the arrow is the pet's).
+  marker, lasting, and a minimap blip, no arrow - the arrow is the pet's). The marker sits clear above the head, like
+  the other labels over people (drawWorldLabels).
 
 Files: shared/roadcore.js, client/render/roads.js, client/art2/game/groundbake.js, index.html, client/main.js,
 client/style.css, client/creator.js, server/systems/pets.js, server/systems/events.js, shared/worldevents.js,
