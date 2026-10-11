@@ -16,6 +16,8 @@ import { ISLAND_SEEDS } from './islands.js';
 import { ARTS } from './metro.js';
 import { setIslandBuilds, ISLAND_AT } from './map.js';
 import { islandMask } from './world3.js';
+import { joinPlace } from './world3-crossings.js';
+import { ISLANDS as SK_ISLANDS } from './world3-skeleton.js';
 
 // A placement (docs/WORLD-V3.md 8.4): the piece built at its place in another frame - today's position p (tiles) goes to
 // at + (p - from) * scale (`from`: today's [x0, y0, ...], the picture's; shared/world3-skeleton.js ISLANDS' `picture`).
@@ -61,8 +63,13 @@ export function islandOpts(key, asked = {}) {
     const L = land3.layers, N = m.w * m.h;
     if (land3.w !== m.w || land3.h !== m.h) throw new Error(`island build on the v3 land: the frame must be the land's (${land3.w} x ${land3.h})`);
     W = m.w; H = m.h;
-    const pic = asked.place, x0 = Math.max(0, pic.at[0] - 40), y0 = Math.max(0, pic.at[1] - 40);
-    const x1 = Math.min(W, Math.ceil(pic.at[0] + (pic.from[2] - pic.from[0]) * (pic.scale ?? 1)) + 40), y1 = Math.min(H, Math.ceil(pic.at[1] + (pic.from[3] - pic.from[1]) * (pic.scale ?? 1)) + 40);
+    const pic = asked.place;
+    let x0 = Math.max(0, pic.at[0] - 40), y0 = Math.max(0, pic.at[1] - 40);
+    let x1 = Math.min(W, Math.ceil(pic.at[0] + (pic.from[2] - pic.from[0]) * (pic.scale ?? 1)) + 40), y1 = Math.min(H, Math.ceil(pic.at[1] + (pic.from[3] - pic.from[1]) * (pic.scale ?? 1)) + 40);
+    // (and the island's polygon, which can reach past the picture: Metro City's new east shore, beyond today's cut at
+    // Dry Creek - the rectangle cut it ruler-straight at the picture's edge - H21)
+    const isl = SK_ISLANDS.find((I) => I.key === key);
+    if (isl && isl.poly) for (const [x, y] of isl.poly) { x0 = Math.max(0, Math.min(x0, x - 40)); y0 = Math.max(0, Math.min(y0, y - 40)); x1 = Math.min(W, Math.max(x1, x + 40)); y1 = Math.min(H, Math.max(y1, y + 40)); }
     land.fill(0);
     today = new Uint8Array(N); mass = new Uint8Array(N);
     for (let i = 0; i < N; i++) if (L.land[i]) today[i] = 1;
@@ -85,6 +92,21 @@ export function islandOpts(key, asked = {}) {
       for (const k of [i - 1, i + 1, i - W, i + W]) if (m.river[k] && dd[k] < 0) { dd[k] = dd[i] + 1; q.push(k); }
     }
     for (const i of q) m.river[i] = 0;
+    // (what that leaves of the canal apart from its body - a wedge cut off on Pine Hills' north-west shore - is the
+    // sea's too: the canal is one water)
+    const comp = new Int32Array(N).fill(-1), sizes = [];
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const s0 = y * W + x;
+      if (!m.river[s0] || comp[s0] >= 0) continue;
+      const c = sizes.length, st = [s0];
+      comp[s0] = c; let n = 0;
+      while (st.length) { const i = st.pop(); n++; for (const k of [i - 1, i + 1, i - W, i + W]) if (m.river[k] && comp[k] < 0) { comp[k] = c; st.push(k); } }
+      sizes.push(n);
+    }
+    const body = sizes.indexOf(Math.max(...sizes, 0));
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = y * W + x; if (m.river[i] && comp[i] !== body) m.river[i] = 0; }
+    o.box = [x0, y0, x1, y1];   // (the land's rectangle: map.js's coast drives reach the new east shore)
+    o.noRail = true;   // (the railway isn't the island's: the skeleton's main line replaces it - listed in leftOut)
     own = land;
     o.ownRiver = true;   // (the canal is the river: map.js's trace of today's river would mark the bay's water)
     o.zones = (mm) => { for (let i = 0; i < N; i++) if (land[i]) mm.zone[i] = L.zone[i]; };
@@ -161,6 +183,12 @@ export function islandOpts(key, asked = {}) {
         lines.splice(k, 1);
       }
       m.islandBuild = { island: key, leftOut: leftOut.reverse(), overSeam: overSeam.reverse(), otherLines: others, noRoom: [] };
+      // (on the v3 land: the canal's bridges, the roads off the place cut at the shore, the railway left out - H21,
+      // shared/world3-crossings.js)
+      if (land3) {
+        m.islandBuild.crossings = joinPlace(lines, m, own, !!SK_ISLANDS.find((I) => I.key === key)?.canal);
+        m.islandBuild.leftOut.push({ name: 'The railway', kind: 'rail', on: [] });
+      }
     },
   };
   return o;

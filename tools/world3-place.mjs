@@ -118,8 +118,16 @@ export function landReport(R, S, L) {
     if (!par.has(ka)) par.set(ka, ka); if (!par.has(kb)) par.set(kb, kb);
     par.set(f(ka), f(kb));
   }
-  const comp = new Map(); for (const k of par.keys()) { const r = f(k); comp.set(r, (comp.get(r) || 0) + 1); }
-  out.network = { edges, pieces: [...comp.values()].sort((a, b) => b - a).slice(0, 8), count: comp.size };
+  // (the pieces: the game's own graph - its junctions joined by its edges, the bridges' middles over the inlet's sea
+  // too, which the union-find above leaves out - H21)
+  const cn = new Int32Array(S.nodes.length).fill(-1), sizes = [];
+  for (const n of S.nodes) {
+    if (cn[n.id] >= 0) continue;
+    const st = [n.id]; cn[n.id] = sizes.length; let k = 0;
+    while (st.length) { const a = st.pop(); k++; for (const id of S.nodes[a].edges) for (const b of [S.edges[id].a, S.edges[id].b]) if (cn[b] < 0) { cn[b] = sizes.length; st.push(b); } }
+    sizes.push(k);
+  }
+  out.network = { edges, pieces: sizes.sort((a, b) => b - a).slice(0, 8), count: sizes.length };
   const rEdges = R.edges.filter((e) => onR(Math.floor(e.pts[0].x / TILE), Math.floor(e.pts[0].y / TILE))).length;
   out.numbers = {
     roadEdges: [edges, rEdges], blocks: [S.blocks.filter((b) => onS(b.x, b.y)).length, R.blocks.filter((b) => onR(b.x, b.y)).length],

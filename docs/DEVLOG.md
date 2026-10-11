@@ -6886,3 +6886,72 @@ whole list's scans),
 `test/mapwindow.test.js` (the guards), `test/border.test.js`, `ferries.test.js`, `water.test.js`, `art2.test.js`,
 `artcdn.test.js`, `worldmap.test.js`, `regions.test.js`, `underground.test.js`, `mining.test.js`, `dmath.test.js`,
 `perf.test.js`, `gameplay.test.js`, `police.test.js`, `view.test.js`, `npcpeople.test.js`, `hudlayers.test.js`.
+
+## 2026-10-10 · World v3, stage 2, step 2: Metro City + Southbank's crossings - one road network over the canal
+
+What was asked (the coordinator, from 8.4's list of what looks wrong): "Metro City (212 junctions) and Southbank (106)
+aren't joined in the road graph, though the picture shows Northbridge Avenue crossing - find out why and fix it. Then lay
+the skeleton's six canal bridges ... as road bridges over the canal, joined to the streets on both sides, so the
+island's streets are one network. Bridge Avenue stops at both shores of the inlet: give it its bridge back." Then the
+roads that run off the place over the sea, the railway, metro.js's anchors at today's pitches, a designed east shore,
+and the wedge of river water on Pine Hills' north-west shore.
+
+Why Northbridge Avenue didn't join them: today the water between Metro City and Southbank is the river, and an avenue
+that bridges (`metro.js` AVES_X `bridge`) may cross river water only, and keeps 8 tiles off the sea. On the v3 land
+that water is the gulf's: the inlet (today's river mouth, sea in the land layer) and the canal's water within 12 tiles
+of it (made the sea's so it doesn't draw as a band of river). So Northbridge Avenue stopped 8 tiles short of the inlet
+on the north side, and its piece over the canal began in the water on the south side - a dead end at each end, 87
+tiles apart, which the picture drew as one avenue. Bridge Avenue the same over the inlet's west end.
+
+What it does (docs/WORLD-V3.md 8.4, "Step B, the crossings"):
+- **The avenues' bridges back:** an avenue that bridges today and stops at both shores of the place's water gets its
+  pieces joined over it (Bridge Avenue over the inlet, Northbridge Avenue over the inlet, the strip between and the
+  canal). The deck is the generator's own: a road over water is a bridge.
+- **The skeleton's canal bridges** (`world3-skeleton.js` ARTERIALS 'Canal ...'): laid as road bridges ('art'; the two
+  footbridges as narrow lanes - the network has no kind for people only), each end carried on along its line to the
+  first street it meets (or the nearest within 30 tiles). Two are the avenues' (their middles within 30 tiles of an
+  avenue's crossing): Canal Footbridge 2 is Bridge Avenue's, Canal Bridge 3 Northbridge Avenue's. Canal Bridge 6 lies
+  along the canal's east mouth, where the smoothed land leaves only water: it moves 6 tiles along the canal.
+- **The roads off the place over the sea:** cut where the land is deep enough for a turnaround (6 tiles from the sea),
+  or dropped when nothing of them is on the land: the Bay Bridge and Cedar Avenue's bridge are dropped (Cedar Avenue
+  ends in a turnaround at the Harbor's shore), the Desert Highway (into today's desert) cut and made an avenue that ends
+  in one. The skeleton's crossings to the other places that meet this one are listed (`m.islandBuild.crossings`): the
+  Union Bridge (where the Bay Bridge was), the Harbor Footbridge, the Northshore Lift Bridge, the Harbor Tunnel, the
+  Eastgate Bridge, the Southbank Walk, Southbank Avenue, the Pelican Walk - the next builds lay them.
+- **The railway isn't the island's:** a place on the v3 land is built without it (`OPTS.noRail`; the generator's rail
+  passes take an empty line), listed in `leftOut`. The skeleton's main line replaces it.
+- **The canal is one water:** what the 12-tile rule left of the canal apart from its body (the wedge on Pine Hills'
+  north-west shore) is the sea's.
+- **The place's land is its whole polygon:** the land was the polygon inside the picture's rectangle (+40 tiles), and
+  the polygon reaches past it in the east - the rectangle cut Metro City ruler-straight at x = 2449, 40-80 m short of
+  the polygon's (slanted, smoothed) east side, and left the canal's east mouth in the sea. The rectangle takes in the
+  island's polygon now, and the coast drives' box reaches it (`OPTS.box`): Coast Drive and the waterfront strip
+  (promenade, palms, lamps) run along the new east shore.
+
+- **The street plan at today's pitches:** `metro.js` `metroRoads` takes a transform (`ctx.tf`: the generator's `PX`,
+  `PY`, `LX`, `LY`) and runs in the placed frame - its anchors (the avenues, Broadway, the through streets, `AREAS`, the
+  hero corner) placed onto tile centres or edges as today's, its patterns' pitches as they are, its hashes, wobbles and
+  street names on today's coordinates read back. At scale 1 it is today's plan moved (Step A's test unchanged); at 1.15
+  the block depths are today's (18 tiles, today's 19) with more streets (130 side-street pieces, today's 99) - but the
+  spacing along a row is still wider (32 tiles, today's 23): the cells between the placed avenues are 15% wider but
+  hold the same number of streets (most are under two of their pattern's lengths), so the extra goes into each row's
+  last block - the row's walk wants to divide a placed cell into today's block lengths (8.4).
+
+Not done (time): the spacing along a row (above), and the east shore's designed waterfront (item 4: a park, piers, a
+marina - it has the polygon's shore, the coast drive and the promenade strip now, an unplanned strip between them).
+WORLD-V3.md 8.4 has what still looks wrong in the redrawn picture, and the plan.
+
+The live world is unchanged: the world hash stays `6b6e16fdef9f`. Nothing of this is in the page (the generator isn't).
+
+The files: `shared/world3-crossings.js` (new: `joinPlace` - the avenues' bridges, the canal bridges, the cut roads, the
+crossings list), `shared/world3-islands.js` (the land's rectangle takes in the island's polygon; the canal one water;
+`noRail`, `box`; the `lines` hook calls `joinPlace` on the v3 land), `shared/map.js` (`OPTS.noRail`: the rail passes
+take an empty line; `OPTS.box`: the coast drives' contour box; the street plan called with `tf`, its lines not placed
+after it), `shared/metro.js` (`ctx.tf`), `test/world3place.test.js`, `docs/WORLD-V3.md` 8.4, `docs/world-v3-metro.png`.
+
+Tests: `test/world3place.test.js` (new: on the v3 land the road graph is one network; Bridge Avenue, Northbridge Avenue,
+Canal Bridges 1, 4 and 6 and Canal Footbridge 5 cross the canal, and the avenues carry the other two; no road over the
+water off a bridge, no road ends in the water; the Bay Bridge and Cedar Avenue's bridge gone, no highway on the ground;
+no railway, listed; the skeleton's crossings listed; the canal one water; the block depths as today's, more streets
+and blocks. A todo: the spacing along a row as today's). Step A's test passes as before (scale 1 is today's plan,
+moved, with the plan run in the placed frame); `test/world3.test.js` passes (the live world's hash).

@@ -1667,18 +1667,84 @@ What looks wrong:
 - **One avenue crosses the canal** (Northbridge Avenue): the skeleton's six canal bridges, two of them footbridges,
   are still to come (item 2), and the inlet's crossing with them.
 
+**Step C - the crossings, the plan at today's pitches (H21, 2026-10-10)** (`shared/world3-crossings.js` `joinPlace`,
+called from the island build's `lines` hook on the v3 land; `test/world3place.test.js`' second test, about 25 s):
+- **Why Northbridge Avenue didn't join Metro City and Southbank:** today the water between them is the river, and an
+  avenue that bridges (`metro.js` AVES_X `bridge`) may cross river water only and keeps 8 tiles off the sea. On the v3
+  land it is the gulf's: the inlet (today's river mouth: sea in the land layer, between Metro City and a strip of
+  Southbank's land) and the canal's water within 12 tiles of it (the sea's, above). Northbridge Avenue stopped 8 tiles
+  short of the inlet on the north side (y 2374) and its piece over the canal began in the water (y 2461): a dead end
+  at each end, 87 tiles apart, which the picture drew as one avenue. Bridge Avenue the same at the inlet's west end.
+- **The avenues' bridges back:** an avenue that bridges today and stops at both shores of the place's water is joined
+  over it (Bridge Avenue y 2444-2518, Northbridge Avenue y 2374-2461: the inlet, the strip, the canal). A road over
+  water is a bridge deck (the generator's own rule).
+- **The skeleton's canal bridges** (ARTERIALS 'Canal ...'): laid as road bridges ('art'; the two footbridges as narrow
+  lanes, 'minor', marked `foot` - the network has no kind for people only: **for the owner**), each end carried on along
+  its line to the first street it crosses (60 tiles), else the nearest street within 30. Two are the avenues' (a middle
+  within 30 tiles of an avenue's crossing): Canal Footbridge 2 is Bridge Avenue's, Canal Bridge 3 Northbridge Avenue's.
+  Canal Bridge 6 lay along the canal's east mouth, all water: it moves 6 tiles along the canal. Laid: Canal Bridges 1,
+  4 and 6 and Canal Footbridge 5.
+- **The roads off the place over the sea** are cut where the land is 6 tiles from the sea (room for the turnaround a
+  town street's dead end gets), or dropped when none of them is on the land: the Bay Bridge and Cedar Avenue's bridge
+  dropped (Cedar Avenue ends in a turnaround at the Harbor's shore), the Desert Highway (which ran on into today's
+  desert) cut and made an avenue. The skeleton's crossings to the places around meet this one at (`m.islandBuild
+  .crossings`): the Union Bridge (where the Bay Bridge was), the Harbor Footbridge, the Northshore Lift Bridge, the
+  Harbor Tunnel, the Eastgate Bridge, the Southbank Walk, Southbank Avenue, the Pelican Walk - the next builds lay them.
+- **The railway isn't the island's:** a place on the v3 land is built without it (`OPTS.noRail`: the rail passes take
+  an empty line), listed in `leftOut`. Its six stations go with it (the subway's are the skeleton's).
+- **The canal is one water:** what the 12-tile rule left of it apart from its body (the wedge on Pine Hills' north-west
+  shore) is the sea's.
+- **The place's land is its whole polygon:** the land was the polygon inside the picture's rectangle (+40 tiles), and
+  the polygon reaches past it in the east: the rectangle cut Metro City ruler-straight at x = 2449, 40-80 tiles short of
+  the polygon's slanted, smoothed east side, and left the canal's east mouth in the sea. The rectangle takes in the
+  island's polygon now (`world3-islands.js`: `ISLANDS` 'metro' `poly`; **H22's places get it too**), and the coast
+  drives' contour box reaches it (`OPTS.box`, `map.js`): Coast Drive and the waterfront strip run along the new shore.
+- **The street plan at today's pitches:** `metro.js` `metroRoads(ctx)` takes `ctx.tf` (`{ x, y, lx, ly }`: `PX`, `PY`,
+  `LX`, `LY`) and runs in the placed frame: its anchors (the avenues, their bows' ends, Broadway, the through streets,
+  `AREAS`, the hero corner, the west end and the north and south ends islands.js asks for) placed, on tile centres or
+  edges as today's; its patterns' pitches as they are; its hashes, wobbles and street names on today's coordinates read
+  back (`lx`, `ly`). Its lines aren't placed after it (map.js marks them). At scale 1 it is today's plan, moved (Step
+  A's test, unchanged). At 1.15 the block depths are today's (the north-south pieces of the side streets between
+  junctions: median 18 tiles, today's 19) and there are more streets (130 side-street pieces, today's 99). **Not yet
+  today's: the spacing along a row** (the east-west pieces: median 32 tiles, today's 23). The likely cause (from the
+  plan's numbers, not yet measured row by row): the cells between the placed avenues are 15% wider, and most hold only
+  1.5-2 of their pattern's lengths (the inner cells are 90-94 tiles today, `len` 44-80), so they take the same number
+  of north-south streets and the extra width goes into the last block of each row (today's 62 + 32 becomes 62 + 46)
+  rather than into another street. The fix wants the row's walk to divide a cell into blocks of today's mean length
+  when placed (`tf` only: scale 1 must stay today's), or a through street where a placed gap grows by a pitch.
+- **The numbers** (placed / the island build): land 256,920 tiles / 187,926 (x1.37), road edges 546 / 451, blocks
+  219 / 161, buildings 484 / 316, POIs 228 / 201 (no stations: the railway), props 5,816 / 4,404; one road network.
+
+**The picture, redrawn** (`docs/world-v3-metro.png`, with all of the above). What looks right: one network over the
+canal - Northbridge Avenue over the inlet, the strip and the canal; Bridge Avenue over the inlet's west end; Canal
+Bridges 1 and 4 and Canal Footbridge 5 across, Canal Bridge 6 at the east mouth; no railway over the sea, no bridge
+running out to nowhere; the east shore is the polygon's curve with Coast Drive and a promenade of palms along it; the
+core's blocks read as today's, more of them. What still looks wrong:
+- **The canal's west end:** where the 12-tile rule makes the canal's water the sea's, the two blues meet in a straight
+  line across the water (a vertical and a diagonal edge east of Northbridge Avenue).
+- **The east shore isn't designed:** between the Eastern Parkway (today's cut at Dry Creek) and the new Coast Drive lies
+  a strip 40-80 m wide of unplanned ground - trees, a few houses, a dirt patch - with no streets of the plan, no
+  piers, no marina. It reads as leftover land, not a waterfront.
+- **Canal Bridge 6** lies along the canal's mouth, beside the shore: it reads as part of the coast road, not as a
+  bridge across the canal.
+- **The side streets along a row** are spaced wider than today's (above), so the blocks are longer east-west.
+
 **What's left** (next steps, in order):
-1. **Inside metro.js at scale 1.15:** the street plan runs in today's coordinates and is placed after, so its pitches
-   scale with the place (more blocks, as the numbers show, but each a little bigger, x1.15). The right form: the plan's
-   anchors (the avenues, Broadway, `AREAS`, `THROUGH`, the hero corner) placed, its patterns not, its hashes on `LX` /
-   `LY`. The same for `islands.js`' roads and the countryside's when their places are built.
-2. **The canal's bridges:** the skeleton's six (its arterials and footbridges over the canal), laid as lines on the
-   place; and the roads that run off the place over the sea (Cedar Avenue's bridge, the railway) cut at the shore.
-3. **The sources not placed yet** (grep found them; the Metro City build doesn't reach them): Dry Creek's farm
+1. **The spacing along a row at today's** (above): the east-west pieces of the side streets are 1.4x today's - the
+   row's walk to divide a placed cell into today's block lengths.
+2. **The east shore's waterfront:** the land is the polygon's now, with the coast drive and the waterfront strip
+   (promenade, palms, lamps) along it, but the plan doesn't reach it (today's `AREAS` stop at today's cut at Dry Creek)
+   and nothing is designed: a waterfront park, the promenade, piers, a small marina - generated the way the districts
+   do their coasts (`waterfrontStrip`, `buildWaterfronts`, the Harbor's piers, the marina) - and `AREAS` cells for the
+   strip between the Eastern Parkway and the shore. The shore itself is polygon-straight (8.3 item 5: a wobble).
+3. **The canal's west end:** the 12-tile rule's edge between the inlet's sea and the canal's river water is a straight
+   line across the water (two blues meeting).
+4. **The sources not placed yet** (grep found them; the Metro City build doesn't reach them): Dry Creek's farm
    (`FARM_FIELDS`, the barn, the drop site, the farmhouses), the Gull Isles' harbours (`buildGullIsles`), the airports
    (`AIRPORTS`), `ISLAND_ESTATES`, `FARM_STANDS`, `VILLAGES`, `naturesites.js`' sites, `countryside.js`' `SITES`, the
    scene islands, the offshore sampling grid. Each place's build will need its own: grep the generator for today's
-   coordinates. The Step A test of each place is the check.
-4. **For the skeleton's roads to join the places:** each place's `leftOut` (its bridges and station roads) is where the
-   skeleton's arterials meet it; the skeleton's lines are laid in the v3 frame, so they go into a placed build's
-   `lines` as they are (no placement).
+   coordinates. The Step A test of each place is the check. `islands.js`' roads and the countryside's want the
+   street plan's treatment (anchors placed, pitches today's) when their places are built.
+5. **For the skeleton's roads to join the places:** `m.islandBuild.crossings` (and `leftOut`) is where the skeleton's
+   arterials meet each place; the skeleton's lines are laid in the v3 frame, so they go into a placed build's `lines`
+   as they are (no placement).
