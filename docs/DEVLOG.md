@@ -7824,3 +7824,36 @@ docs/WORLD-V3.md 8.16, docs/world-v3-hub-downtown.png, docs/world-v3-hub-airport
 
 Tests: test/world3subway.test.js (one world build: the lines, the stations with their kiosks on plazas, the trains for
 five minutes - running, stopping, no collisions), test/world3rail.test.js, test/world3hubs.test.js.
+## 2026-10-11 · World v3: Prison Island, the Long Reach's weir, lock and quays, Kestrel Lake
+WORLD-V3.md's inventory: "Prison Island (J1-J4: walls, guard towers, cells, the yard, the pier) ... out at sea
+south-east of the bay mouth, reached by the prison boat only"; the Long Reach "quays at Old Town and Willow Crossing";
+Willow Crossing's "weir"; Kestrel Lake: "a lookout on Lookout Hill (WR3's binoculars), a lakeside campground, a
+boathouse and rentals, fishing docks, an island".
+- **Prison Island:** the Kestrel Bay Penitentiary in the whole-world build - walls all round, a guard tower on each
+  corner, three cell blocks round the exercise yard with a basketball court in it (bleachers, benches, a chain-link
+  fence, floodlights), the kitchen block and the gatehouse by the gate; the gate opens for officers only (the motor
+  pools' rule), so nobody walks in uninvited - the only other way in is over the wall; the warden's house, the
+  lighthouse on the east point; the harbour where the Prison Boat's route ends (a stone pier beside its pontoon, the
+  harbour office, the path up to the gate). No road reaches the island. The guards' 14 posts are listed (`m.prison`),
+  not spawned yet; sending prisoners there is written up in WORLD-V3.md 8.21, not wired.
+- **The Long Reach:** the weir across the river at Willow Crossing beside a lock along the east bank (a 10-tile channel
+  between stone walls, gate posts at both ends, the lock keeper's house) - the River Water Bus goes up through the lock
+  to Kestrel Lake; the stone quays at the River Water Bus's Old Town and Willow Crossing stops (bollards, lamps, cafe
+  tables, The Lock Keeper's Cafe); reeds and willows along both banks; three farm docks with canoes.
+- **Kestrel Lake:** a wooded island with a landing; the viewing platform on Lookout Hill with three coin binoculars and
+  trails to the shore and Kestrel Road; the campground on the west shore (tents round a fire, string lights); the
+  boathouse on the south shore with its pier and today's boat rental; three fishing docks; a green belt of reeds and
+  willows round the shore (the fields stop short of the water).
+- Nothing live changes: the world hash stays 6b6e16fdef9f; `shared/map.js` unchanged, the page and the city worker
+  don't import the new module.
+
+Files: shared/world3-water.js (new), shared/world3-world.js (three calls), tools/world3-world-map.mjs (`WATER_VIEWS` in
+`--towns`), test/world3water.test.js (new), docs/WORLD-V3.md 8.21, docs/world-v3-town-prison.png, -lock.png,
+-kestrel.png, -oldquay.png.
+
+Tests: test/world3water.test.js (one world build: the prison's walls whole but for the gate, its towers, blocks,
+kitchen, gatehouse, warden's house, lighthouse, the yard and its court, the police-only gate, nobody into the yard but
+through the gate, no road on the island, the harbour at the Prison Boat's last stop and the way from its pier to the
+gate; the weir, the lock's channel open, the River Water Bus through the lock; the quays, the banks, the farm docks; the
+lake's island, lookout, campground, fishing docks, boathouse and rental), test/world3ferries.test.js (unchanged: every
+route, the River Water Bus's boat to Kestrel Lake through the lock and back).
