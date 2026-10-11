@@ -10,10 +10,9 @@
 // draws the names, grid and players over it). Further out than the new renderer can hold in memory, and
 // in the schematic view, the world is drawn here as flat colour-coded shapes, one cell per tile. No old
 // art anywhere.
-import { T, TILE, MAP_W, MAP_H } from '../shared/constants.js';
+import { T, TILE } from '../shared/constants.js';
 import { teleportPlaces } from './devtp.js';
 
-const WORLD_W = MAP_W * TILE, WORLD_H = MAP_H * TILE;   // (the world's whole frame: the spectator's camera and picture span it)
 export const SPEC_LAYERS = [
   ['labels', 'Names (districts, streets, places)'], ['grid', 'Tile grid'], ['schematic', 'Schematic: flat shapes'],
 ];
@@ -40,6 +39,8 @@ function buildingCol(b) {
 }
 
 export function createSpectator({ map, players, mobile }) {
+  // (the world's frame - the map's m.frame, a window's too: the spectator's camera and picture span it)
+  const FW = map.frame.w, FH = map.frame.h, FWX = FW * TILE, FHX = FH * TILE;
   const S = {
     on: false, x: 0, y: 0, z: 0.25,
     layers: { labels: true, grid: false, schematic: false },
@@ -50,9 +51,9 @@ export function createSpectator({ map, players, mobile }) {
   // the schematic: one pixel per tile, buildings coloured by what they are (built once)
   function buildSchematic() {
     const cv = document.createElement('canvas');
-    cv.width = MAP_W; cv.height = MAP_H;   // (the world's whole frame: the picture is the world's, the map paints its part)
+    cv.width = FW; cv.height = FH;   // (the world's frame: the picture is the world's, the map paints its part)
     const g = cv.getContext('2d');
-    const img = g.createImageData(MAP_W, MAP_H);
+    const img = g.createImageData(FW, FH);
     const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
     const tc = {};
     for (const [t, c] of Object.entries(TILE_COL)) tc[t] = hex(c);
@@ -72,7 +73,7 @@ export function createSpectator({ map, players, mobile }) {
   }
 
   // ---- drawing --------------------------------------------------------------------------------------
-  function minZoom(W, H) { return Math.min(W / WORLD_W, H / WORLD_H) * 0.95; }
+  function minZoom(W, H) { return Math.min(W / FWX, H / FHX) * 0.95; }
 
   // the flat view: cam { x, y, z } (the live camera, or a scaled copy for a hi-res snapshot); live: also
   // move the camera and draw the players
@@ -85,7 +86,7 @@ export function createSpectator({ map, players, mobile }) {
     g.fillStyle = '#0b1830'; g.fillRect(0, 0, W, H);
     schematic ||= buildSchematic();
     g.imageSmoothingEnabled = false;
-    g.drawImage(schematic, ox, oy, WORLD_W * z, WORLD_H * z);
+    g.drawImage(schematic, ox, oy, FWX * z, FHX * z);
     if (z * TILE >= 3) outlineBuildings(g, view, z, ox, oy);
     if (S.layers.grid) drawGrid(g, view, z, ox, oy);
     if (S.layers.labels) drawLabels(g, view, z, ox, oy);
@@ -252,8 +253,8 @@ export function createSpectator({ map, players, mobile }) {
   function clamp(W, H) {
     S.z = Math.max(minZoom(W, H), Math.min(2, S.z));
     const edge = (half, world) => { const f = Math.max(0, Math.min(1, half * 4 / world - 1)); return Math.min(world / 2, half * 0.6 + f * Math.max(0, world / 2 - half * 0.6)); };
-    const lx = edge(W / 2 / S.z, WORLD_W), ly = edge(H / 2 / S.z, WORLD_H);
-    S.x = Math.max(lx, Math.min(WORLD_W - lx, S.x)); S.y = Math.max(ly, Math.min(WORLD_H - ly, S.y));
+    const lx = edge(W / 2 / S.z, FWX), ly = edge(H / 2 / S.z, FHX);
+    S.x = Math.max(lx, Math.min(FWX - lx, S.x)); S.y = Math.max(ly, Math.min(FHX - ly, S.y));
   }
   // zoom by k about a screen point (CSS px)
   function zoomBy(k, sx, sy, W, H) {

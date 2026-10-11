@@ -1,7 +1,7 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, fishing cue, shop menus, death screen, radar + big map.
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
-import { T, TILE, MAP_W, MAP_H, gameClock, WEATHER } from '../shared/constants.js';
+import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
 import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
@@ -481,8 +481,11 @@ export function packIcon(g, x, y, r, k) {
   g.fillStyle = T.col; g.fillRect(x - w, y - h + 2 * k, w * 2, h * 2 - 2 * k); g.fillRect(x - w + 1.5 * k, y - h, w * 2 - 3 * k, 2 * k);
   g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(x - w + 1.5 * k, y + 1 * k, w * 2 - 3 * k, 3 * k);
 }
-// The part of the world the city map shows (px): every island, trimmed of open sea at the edges.
-export const MAP_FRAME = [24 * TILE, 10 * TILE, 1304 * TILE, 1170 * TILE];
+// The part of the world the city map shows (px): every island, trimmed of open sea at the edges - the world's frame
+// (the map's m.frame) less today's margins of open sea. Today's world: MAP_FRAME (tools/build-worldmap2.mjs bakes the
+// big map's picture over it).
+export const mapFrameOf = (map) => { const F = map.frame; return [24 * TILE, 10 * TILE, (F.w - 8) * TILE, (F.h - 30) * TILE]; };
+export const MAP_FRAME = [24 * TILE, 10 * TILE, 1304 * TILE, 1170 * TILE];   // (today's world's: mapFrameOf(map) for the world the server runs)
 
 let centroids = null;
 export function districtCentroids(map) {
@@ -527,9 +530,9 @@ export function iconSkip(map) {
 
 function buildMinimap(map) {
   const c = document.createElement('canvas');
-  c.width = MAP_W; c.height = MAP_H;   // (the world's picture: the map paints its part)
+  c.width = map.frame.w; c.height = map.frame.h;   // (the world's picture, one pixel a tile: the map paints its part)
   const g = c.getContext('2d');
-  const img = g.createImageData(MAP_W, MAP_H);
+  const img = g.createImageData(c.width, c.height);
   const col = {
     [T.ROAD]: [70, 70, 78], [T.BRIDGE]: [90, 90, 98], [T.SIDEWALK]: [150, 150, 145], [T.PLAZA]: [140, 110, 95], [T.LOT]: [80, 80, 86],
     [T.GRASS]: [50, 105, 45], [T.BUILDING]: [190, 160, 120], [T.WATER]: [35, 85, 165], [T.DEEP]: [25, 60, 130], [T.SAND]: [215, 195, 140],

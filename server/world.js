@@ -1,5 +1,5 @@
 // Authoritative world: entity registry, spatial chunk grid, clock/weather, tick order.
-import { CHUNK_PX, CHUNKS_X, CHUNKS_Y, DT, K, DAY_LOOP_S, gameClock } from '../shared/constants.js';
+import { CHUNK_PX, CHUNK_TILES, DT, K, DAY_LOOP_S, gameClock } from '../shared/constants.js';
 import { createPed, createVehicle, createCrate, createBag, createProjectile } from './entities.js';
 import * as players from './systems/players.js';
 import * as vehicles from './systems/vehicles.js';
@@ -133,6 +133,8 @@ const SYSTEMS = [
 export class World {
   constructor(map, opts = {}) {
     this.map = map;
+    // the net-culling chunks' grid over the world's frame (the map's m.frame: the world the server runs)
+    this.chunksX = Math.ceil(map.frame.w / CHUNK_TILES); this.chunksY = Math.ceil(map.frame.h / CHUNK_TILES);
     this.opts = opts;
     this.entities = new Map();
     this.nextId = 1;
@@ -184,31 +186,36 @@ export class World {
   remove(e) {
     if (!this.entities.has(e.id)) return;
     this.entities.delete(e.id);
-    const set = this.chunks.get(e.cy * CHUNKS_X + e.cx);
+    const set = this.chunks.get(e.cy * this.chunksX + e.cx);
     if (set) set.delete(e);
     e.removed = true;
   }
   place(e) {
     if (e.hidden) { // inside a home: out of the spatial grid, so nobody can see, hit or query it
-      if (e.cx >= 0) { const old = this.chunks.get(e.cy * CHUNKS_X + e.cx); if (old) old.delete(e); }
+      if (e.cx >= 0) { const old = this.chunks.get(e.cy * this.chunksX + e.cx); if (old) old.delete(e); }
       e.cx = -1; e.cy = -1;
       return;
     }
     let cx = Math.floor(e.x / CHUNK_PX), cy = Math.floor(e.y / CHUNK_PX);
-    if (cx < 0) cx = 0; else if (cx >= CHUNKS_X) cx = CHUNKS_X - 1;
-    if (cy < 0) cy = 0; else if (cy >= CHUNKS_Y) cy = CHUNKS_Y - 1;
+    if (cx < 0) cx = 0; else if (cx >= this.chunksX) cx = this.chunksX - 1;
+    if (cy < 0) cy = 0; else if (cy >= this.chunksY) cy = this.chunksY - 1;
     if (cx === e.cx && cy === e.cy) return;
-    if (e.cx >= 0) { const old = this.chunks.get(e.cy * CHUNKS_X + e.cx); if (old) old.delete(e); }
+    if (e.cx >= 0) { const old = this.chunks.get(e.cy * this.chunksX + e.cx); if (old) old.delete(e); }
     e.cx = cx; e.cy = cy;
-    const k = cy * CHUNKS_X + cx;
+    const k = cy * this.chunksX + cx;
     let set = this.chunks.get(k);
     if (!set) { set = new Set(); this.chunks.set(k, set); }
     set.add(e);
   }
   *inChunks(cx0, cy0, cx1, cy1) {
-    for (let cy = Math.max(0, cy0); cy <= Math.min(CHUNKS_Y - 1, cy1); cy++)
-      for (let cx = Math.max(0, cx0); cx <= Math.min(CHUNKS_X - 1, cx1); cx++) {
-        const set = this.chunks.get(cy * CHUNKS_X + cx);
+    // (both ends into the grid: what's out past the world's edge is kept in the edge's chunks - place() - so a look
+    // from out there finds it)
+    const X = this.chunksX - 1, Y = this.chunksY - 1;
+    cx0 = cx0 < 0 ? 0 : cx0 > X ? X : cx0; cx1 = cx1 < 0 ? 0 : cx1 > X ? X : cx1;
+    cy0 = cy0 < 0 ? 0 : cy0 > Y ? Y : cy0; cy1 = cy1 < 0 ? 0 : cy1 > Y ? Y : cy1;
+    for (let cy = cy0; cy <= cy1; cy++)
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const set = this.chunks.get(cy * this.chunksX + cx);
         if (set) yield* set;
       }
   }

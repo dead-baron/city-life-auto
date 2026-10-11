@@ -14,7 +14,7 @@
 // At the far side the cars are driven off onto the landing behind the pier; foot passengers get off with the vehicle key
 // (on the way over that's over the side, into the water). Getting out of a car on the deck puts you in a seat aboard.
 // The boats can't be taken, hurt or pushed about.
-import { K, T, TILE, MAP_W, MAP_H } from '../../shared/constants.js';
+import { K, T, TILE } from '../../shared/constants.js';
 import { DISTRICTS } from '../../shared/map.js';
 import { nearestEdge } from '../../shared/roads.js';
 import { FERRY_DWELL_S } from '../../shared/rules.js';
@@ -53,21 +53,21 @@ const SLIP = new Set([T.ROAD, T.LOT, T.PLAZA]);   // a car ferry can lie at a st
 // ---- the routes ----------------------------------------------------------------------------------------------------
 // the land masses (4-connected land tiles) and, for every water tile, how far it is from land (tiles, at most 60: the
 // most tiles across or down to the nearest land tile - never more than the real distance)
-// (The world's whole frame: the server holds the whole world (docs/WORLD-V3.md part 8, item 6) and plans the ferries'
-// routes over all of it, so these grids - the land masses, the distance to land, the A* cells - are the frame's, indexed
-// y * MAP_W + x, and the map they read is the whole one (m.w === MAP_W). A window map would need them cut to its extent.)
+// (The server holds the whole world (docs/WORLD-V3.md part 8, item 6) and plans the ferries' routes over all of it:
+// these grids - the land masses, the distance to land, the A* cells - span the map's own extent (m.w x m.h: the world's
+// frame on the server), indexed as its layers are (i = m.idx(tx, ty): a tile's x is m.x0 + i % m.w).)
 function geography(m) {
-  const N = MAP_W * MAP_H, comp = new Int32Array(N).fill(-1), sizes = [];
+  const W = m.w, H = m.h, N = W * H, comp = new Int32Array(N).fill(-1), sizes = [];
   for (let i = 0; i < N; i++) {
     if (comp[i] >= 0 || isWaterT(m.tiles[i])) continue;
     const id = sizes.length, st = [i]; comp[i] = id; let n = 0;
     while (st.length) {
       const j = st.pop(); n++;
-      const x = j % MAP_W;
+      const x = j % W;
       if (x > 0 && comp[j - 1] < 0 && !isWaterT(m.tiles[j - 1])) { comp[j - 1] = id; st.push(j - 1); }
-      if (x < MAP_W - 1 && comp[j + 1] < 0 && !isWaterT(m.tiles[j + 1])) { comp[j + 1] = id; st.push(j + 1); }
-      if (j >= MAP_W && comp[j - MAP_W] < 0 && !isWaterT(m.tiles[j - MAP_W])) { comp[j - MAP_W] = id; st.push(j - MAP_W); }
-      if (j < N - MAP_W && comp[j + MAP_W] < 0 && !isWaterT(m.tiles[j + MAP_W])) { comp[j + MAP_W] = id; st.push(j + MAP_W); }
+      if (x < W - 1 && comp[j + 1] < 0 && !isWaterT(m.tiles[j + 1])) { comp[j + 1] = id; st.push(j + 1); }
+      if (j >= W && comp[j - W] < 0 && !isWaterT(m.tiles[j - W])) { comp[j - W] = id; st.push(j - W); }
+      if (j < N - W && comp[j + W] < 0 && !isWaterT(m.tiles[j + W])) { comp[j + W] = id; st.push(j + W); }
     }
     sizes.push(n);
   }
@@ -77,26 +77,27 @@ function geography(m) {
   while (qh < qt) {
     const j = q[qh++], d = dist[j];
     if (d >= 60) continue;
-    const x = j % MAP_W, y = (j / MAP_W) | 0;
+    const x = j % W, y = (j / W) | 0;   // (in the map's extent)
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
       const nx = x + dx, ny = y + dy;
-      if ((!dx && !dy) || nx < 0 || ny < 0 || nx >= MAP_W || ny >= MAP_H) continue;
-      const k = ny * MAP_W + nx;
+      if ((!dx && !dy) || nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+      const k = ny * W + nx;
       if (dist[k] > d + 1) { dist[k] = d + 1; q[qt++] = k; }
     }
   }
   let main = 0;
   for (let i = 1; i < sizes.length; i++) if (sizes[i] > sizes[main]) main = i;
-  return { comp, dist, main };
+  return { comp, dist, main, m };
 }
-const tileOf = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H ? -1 : ty * MAP_W + tx; };
+// the index of the tile at (x, y) px in the map's layers (and the grids above), -1 off the map
+const tileOf = (m, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return m.inside(tx, ty) ? m.idx(tx, ty) : -1; };
 
 // A pier a boat can lie at: the dock tile i, the boat's stern against it, bow to open water - or null
 function berthAt(m, G, i, dims, car) {
-  const tx = i % MAP_W, ty = Math.floor(i / MAP_W);
+  const tx = m.x0 + i % m.w, ty = m.y0 + Math.floor(i / m.w);
   let ox = 0, oy = 0;
   for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
-    const j = tileOf((tx + dx + 0.5) * TILE, (ty + dy + 0.5) * TILE);
+    const j = tileOf(m, (tx + dx + 0.5) * TILE, (ty + dy + 0.5) * TILE);
     if (j >= 0 && isWaterT(m.tiles[j])) { const l = Math.hypot(dx, dy) || 1; ox += dx / l; oy += dy / l; }
   }
   const ol = Math.hypot(ox, oy);
@@ -109,13 +110,13 @@ function berthAt(m, G, i, dims, car) {
   // in), with room either side; the turning point the first place out that way with room to turn round (out of a
   // narrow inlet, the boat backs in the whole way)
   const rx = -oy, ry = ox, hw = dims.W / 2 + 8, rs = hw / Math.ceil(hw / 20);
-  const clearAt = (f) => { for (let r = -hw; r <= hw + 0.01; r += rs) { const j = tileOf(bx + ox * f + rx * r, by + oy * f + ry * r); if (j < 0 || !isWaterT(m.tiles[j]) || G.dist[j] < 1) return false; } return true; };
+  const clearAt = (f) => { for (let r = -hw; r <= hw + 0.01; r += rs) { const j = tileOf(m, bx + ox * f + rx * r, by + oy * f + ry * r); if (j < 0 || !isWaterT(m.tiles[j]) || G.dist[j] < 1) return false; } return true; };
   let f = -dims.L / 2 + 30, out = -1;
   for (const o0 = dims.L + 220; f <= o0 + TURN_OUT + dims.L / 2; f += 22) {
     if (!clearAt(f)) break;
     // far enough out to turn: the hull ahead clear too, and room all round
     const ft = f - dims.L / 2;
-    if (ft >= o0) { const j = tileOf(bx + ox * ft, by + oy * ft); if (j >= 0 && G.dist[j] >= dims.turn) { out = ft; break; } }
+    if (ft >= o0) { const j = tileOf(m, bx + ox * ft, by + oy * ft); if (j >= 0 && G.dist[j] >= dims.turn) { out = ft; break; } }
   }
   if (out < 0) return null;
   const turn = { x: bx + ox * out, y: by + oy * out };
@@ -123,7 +124,7 @@ function berthAt(m, G, i, dims, car) {
   let land = null;
   if (car) {
     for (let d = 40; d <= 420 && !land; d += 16) {
-      const lx = sx - ox * d, ly = sy - oy * d, j = tileOf(lx, ly);
+      const lx = sx - ox * d, ly = sy - oy * d, j = tileOf(m, lx, ly);
       if (j < 0 || !LAND_DRIVE.has(m.tiles[j])) continue;
       const ne = nearestEdge(m.net, lx, ly, (e) => e.lvl === 0 && e.kind !== 'alley');
       if (ne && ne.d < 300) land = { x: lx, y: ly };
@@ -137,29 +138,31 @@ function berthAt(m, G, i, dims, car) {
 // the way across by water from a to b (px), at least `clear` tiles from any shore: a straightened polyline, or null.
 // A* over cells of 2 x 2 tiles (a cell is open water when all four of its tiles are), a little greedy (the heuristic
 // weighed 1.4: the way is straightened after anyway), with its arrays made once and kept.
-const CELL = 2, CW = Math.ceil(MAP_W / CELL), CH = Math.ceil(MAP_H / CELL);
+// (the cells span the map's extent: G.m.w x G.m.h tiles from its origin)
+const CELL = 2, cellsOf = (G) => [Math.ceil(G.m.w / CELL), Math.ceil(G.m.h / CELL)];
 let AS = null;
 // the cells that are open water `clear` tiles from any shore (all four of their tiles), worked out once per clearance
 function openCells(G, clear) {
   G.open ??= new Map();
   let o = G.open.get(clear);
   if (o) return o;
+  const [CW, CH] = cellsOf(G), W = G.m.w, H = G.m.h;
   o = new Uint8Array(CW * CH);
   for (let cy = 0; cy < CH; cy++) for (let cx = 0; cx < CW; cx++) {
     let ok = 1;
-    for (let dy = 0; dy < CELL && ok; dy++) for (let dx = 0; dx < CELL; dx++) { const tx = cx * CELL + dx, ty = cy * CELL + dy; if (tx >= MAP_W || ty >= MAP_H || G.dist[ty * MAP_W + tx] < clear) { ok = 0; break; } }
+    for (let dy = 0; dy < CELL && ok; dy++) for (let dx = 0; dx < CELL; dx++) { const tx = cx * CELL + dx, ty = cy * CELL + dy; if (tx >= W || ty >= H || G.dist[ty * W + tx] < clear) { ok = 0; break; } }   // (in the map's extent)
     o[cy * CW + cx] = ok;
   }
   G.open.set(clear, o);
   return o;
 }
 function waterWay(G, a, b, clear) {
-  const NC = CW * CH;
-  if (!AS) AS = { cost: new Float32Array(NC), from: new Int32Array(NC), seen: new Uint32Array(NC), stamp: 0, hf: new Float32Array(1 << 20), hi: new Int32Array(1 << 20) };
+  const [CW, CH] = cellsOf(G), NC = CW * CH, X0 = G.m.x0, Y0 = G.m.y0;
+  if (!AS || AS.cost.length !== NC) AS = { cost: new Float32Array(NC), from: new Int32Array(NC), seen: new Uint32Array(NC), stamp: 0, hf: new Float32Array(1 << 20), hi: new Int32Array(1 << 20) };
   const A = AS, openC = openCells(G, clear);
   A.stamp++;
   const open = (c) => openC[c] === 1;
-  const cellOf = (p) => Math.floor(p.y / TILE / CELL) * CW + Math.floor(p.x / TILE / CELL);
+  const cellOf = (p) => Math.floor((p.y / TILE - Y0) / CELL) * CW + Math.floor((p.x / TILE - X0) / CELL);
   const s = cellOf(a), g = cellOf(b);
   if (s < 0 || g < 0 || s >= NC || g >= NC) return null;
   const gx = g % CW, gy = Math.floor(g / CW);
@@ -188,10 +191,10 @@ function waterWay(G, a, b, clear) {
   if (!found) return null;
   const cells = [];
   for (let c = g; c >= 0; c = A.from[c]) { cells.unshift(c); if (c === s) break; }
-  const pts = cells.map((c) => ({ x: ((c % CW) + 0.5) * CELL * TILE, y: (Math.floor(c / CW) + 0.5) * CELL * TILE }));
+  const pts = cells.map((c) => ({ x: (X0 + ((c % CW) + 0.5) * CELL) * TILE, y: (Y0 + (Math.floor(c / CW) + 0.5) * CELL) * TILE }));
   pts[0] = { x: a.x, y: a.y }; pts[pts.length - 1] = { x: b.x, y: b.y };
   // straightened: from each kept point, on to the farthest one in a clear line
-  const clearLine = (p, q) => { const L = Math.hypot(q.x - p.x, q.y - p.y), n2 = Math.ceil(L / 24); for (let k = 1; k < n2; k++) { const j = tileOf(p.x + (q.x - p.x) * k / n2, p.y + (q.y - p.y) * k / n2); if (j < 0 || G.dist[j] < clear) return false; } return true; };
+  const clearLine = (p, q) => { const L = Math.hypot(q.x - p.x, q.y - p.y), n2 = Math.ceil(L / 24); for (let k = 1; k < n2; k++) { const j = tileOf(G.m, p.x + (q.x - p.x) * k / n2, p.y + (q.y - p.y) * k / n2); if (j < 0 || G.dist[j] < clear) return false; } return true; };
   const out = [pts[0]];
   let at = 0;
   while (at < pts.length - 1) {
@@ -218,7 +221,7 @@ export function ferryRoutes(world) {
   if (!m.tiles || !m.net) return routes;
   const G = geography(m);
   // one pass over the map: each land mass's dock tiles, and how much of each route's island district is on which
-  const N = MAP_W * MAP_H, slot = new Int8Array(256).fill(-1), counts = ROUTES.map(() => new Map()), docks = new Map(), slips = new Map();
+  const W = m.w, N = W * m.h, slot = new Int8Array(256).fill(-1), counts = ROUTES.map(() => new Map()), docks = new Map(), slips = new Map();
   ROUTES.forEach((R, k) => { const d = DISTRICTS.findIndex((q) => q.name === R.island); if (d >= 0 && d < 256) slot[d] = k; });
   for (let i = 0; i < N; i++) {
     const c = G.comp[i];
@@ -226,8 +229,8 @@ export function ferryRoutes(world) {
     if (m.tiles[i] === T.DOCK) { let l = docks.get(c); if (!l) docks.set(c, (l = [])); l.push(i); }
     else if (SLIP.has(m.tiles[i]) && G.dist[i] === 0) {
       // a street or a lot at the water's edge: a slipway a car ferry can put its stern to
-      const x = i % MAP_W;
-      if ((x > 0 && isWaterT(m.tiles[i - 1])) || (x < MAP_W - 1 && isWaterT(m.tiles[i + 1])) || (i >= MAP_W && isWaterT(m.tiles[i - MAP_W])) || (i < N - MAP_W && isWaterT(m.tiles[i + MAP_W]))) { let l = slips.get(c); if (!l) slips.set(c, (l = [])); l.push(i); }
+      const x = i % W;
+      if ((x > 0 && isWaterT(m.tiles[i - 1])) || (x < W - 1 && isWaterT(m.tiles[i + 1])) || (i >= W && isWaterT(m.tiles[i - W])) || (i < N - W && isWaterT(m.tiles[i + W]))) { let l = slips.get(c); if (!l) slips.set(c, (l = [])); l.push(i); }
     }
     const k = slot[m.dist[i] & 255];
     if (k >= 0) counts[k].set(c, (counts[k].get(c) || 0) + 1);
@@ -265,7 +268,7 @@ export function ferryRoutes(world) {
     if (!pick) continue;
     // the mainland pier's name: the district of the land behind it (the docks belong to the bay)
     let mainName = '';
-    for (let d = 40; d <= 900 && !mainName; d += 32) { const x = pick.a.sx - pick.a.ox * d, y = pick.a.sy - pick.a.oy * d, j = tileOf(x, y); if (j >= 0 && !isWaterT(m.tiles[j]) && m.tiles[j] !== T.DOCK) mainName = m.districtAt(x, y).name; }
+    for (let d = 40; d <= 900 && !mainName; d += 32) { const x = pick.a.sx - pick.a.ox * d, y = pick.a.sy - pick.a.oy * d, j = tileOf(m, x, y); if (j >= 0 && !isWaterT(m.tiles[j]) && m.tiles[j] !== T.DOCK) mainName = m.districtAt(x, y).name; }
     // the way over each way (from the mainland, from the island), which way it sets off, how long the swing onto it takes
     const ways = [pick.way, measure(pick.way.slice().reverse().map((p) => ({ x: p.x, y: p.y })))], ends = [pick.a, pick.b];
     const heads = ways.map((w) => headAt(w, 0)), swings = heads.map((h, k) => Math.max(1, Math.abs(wrapA(h - ends[k].a)) / SWING_RATE));
@@ -380,7 +383,7 @@ function driveOff(world, car, R, end, there) {
     for (const r of [0, 70, -70, 140, -140]) {
       const x = e.land.x + fx * f + rx * r, y = e.land.y + fy * f + ry * r;
       let ok = true;
-      for (const [cf, cr] of [[0, 0], [car.def.L / 2, 0], [-car.def.L / 2, 0], [0, car.def.W / 2], [0, -car.def.W / 2]]) { const j = tileOf(x + fx * cf + rx * cr, y + fy * cf + ry * cr); if (j < 0 || !LAND_DRIVE.has(world.map.tiles[j])) { ok = false; break; } }
+      for (const [cf, cr] of [[0, 0], [car.def.L / 2, 0], [-car.def.L / 2, 0], [0, car.def.W / 2], [0, -car.def.W / 2]]) { const j = tileOf(world.map, x + fx * cf + rx * cr, y + fy * cf + ry * cr); if (j < 0 || !LAND_DRIVE.has(world.map.tiles[j])) { ok = false; break; } }
       if (ok && world.query(x, y, 60, K.VEH).some((o) => o !== car && !o.onDeck && o.def.kind !== 'boat')) ok = false;
       if (ok) { spot = { x, y }; break; }
     }

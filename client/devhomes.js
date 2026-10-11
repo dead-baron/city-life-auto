@@ -3,8 +3,8 @@
 // kind (mansions, houses, apartments, shacks) with its district name and price. Tap one to go to its door (the server's
 // dev command 'home', op 'go': server/dev.js devHome). Loaded only when the debug menu's "Every home" is pressed; it
 // opens (or closes again) under the Homes section's buttons.
-import { T, TILE, MAP_W, MAP_H } from '../shared/constants.js';
-import { MAP_FRAME } from './hud.js';
+import { T, TILE } from '../shared/constants.js';
+import { mapFrameOf } from './hud.js';
 
 // (the town's kinds first; the estates - farmhouses, cottages, beach houses... - after, whatever kinds the map has)
 const KINDS = [['mansion', 'Mansions', '#ff7de9'], ['house', 'Houses', '#f2c21b'], ['apartment', 'Apartments', '#7de0ff'], ['shack', 'Shacks', '#c8a070']];
@@ -15,7 +15,7 @@ let land = null;   // the land as a little picture (one pixel per 4 tiles), draw
 
 function landOf(map) {
   if (land && land.map === map) return land.cv;
-  const s = 4, w = Math.ceil(MAP_W / s), h = Math.ceil(MAP_H / s), cv = document.createElement('canvas');   // (the world's whole frame: the picture is the world's)
+  const s = 4, w = Math.ceil(map.frame.w / s), h = Math.ceil(map.frame.h / s), cv = document.createElement('canvas');   // (the world's frame: the picture is the world's)
   cv.width = w; cv.height = h;
   const g = cv.getContext('2d'), img = g.createImageData(w, h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -40,13 +40,13 @@ export function showHomes(map, go) {
   head.textContent = `${homes.length} homes · tap one to go to its door`;
   box.appendChild(head);
   // the map
-  const [fx0, fy0, fx1, fy1] = MAP_FRAME;
+  const [fx0, fy0, fx1, fy1] = mapFrameOf(map);
   const cv = document.createElement('canvas'); cv.className = 'dev-tp-map';
   box.appendChild(cv);
   const draw = (hover) => {
     const w = Math.min(720, box.clientWidth || 360), h = Math.round(w * (fy1 - fy0) / (fx1 - fx0)), dpr = Math.min(2, devicePixelRatio || 1);
     cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px';
-    const g = cv.getContext('2d'), sc = w / (fx1 - fx0), L = landOf(map), k = L.width / (MAP_W * TILE);
+    const g = cv.getContext('2d'), sc = w / (fx1 - fx0), L = landOf(map), k = L.width / (map.frame.w * TILE);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.imageSmoothingEnabled = false;
     g.drawImage(L, fx0 * k, fy0 * k, (fx1 - fx0) * k, (fy1 - fy0) * k, 0, 0, w, h);

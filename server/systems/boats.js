@@ -7,6 +7,7 @@ import { vehForwardSpeed } from '../../shared/physics.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { inAnyView } from '../view.js';
+import { pointGrid } from '../pointgrid.js';
 import * as combat from './combat.js';
 
 const rng = mulberry32(6060);
@@ -47,20 +48,19 @@ function pickModel() {
   return 'dinghy';
 }
 
+// (the sea's points through their spatial index, server/pointgrid.js: at World v3's frame there are 190,000)
+const seaGrid = (world) => pointGrid(world.map.seaPoints || []);
 function nextPoint(world, v, minD = 500, maxD = 1500) {
-  const pts = world.map.seaPoints || [];
-  for (let k = 0; k < 20; k++) {
+  const pts = seaGrid(world).within(v.x, v.y, minD, maxD * 1.6);
+  for (let k = 0; k < 20 && pts.length; k++) {
     const p = pts[Math.floor(rng() * pts.length)];
-    if (!p) return null;
-    const d = Math.hypot(p.x - v.x, p.y - v.y);
-    if (d < minD || d > maxD * 1.6) continue;
     if (clearLine(world, v.x, v.y, p.x, p.y)) return p;
   }
-  return pts.reduce((b, p) => { const d = Math.hypot(p.x - v.x, p.y - v.y); return d > 300 && (!b || d < Math.hypot(b.x - v.x, b.y - v.y)) ? p : b; }, null);
+  return seaGrid(world).nearest(v.x, v.y, 300);
 }
 
 function spawnPoint(world, a) {
-  const pts = (world.map.seaPoints || []).filter((p) => { const d = Math.hypot(p.x - a.x, p.y - a.y); return d > 750 && d < 1400; });
+  const pts = seaGrid(world).within(a.x, a.y, 750, 1400).filter((p) => { const d = Math.hypot(p.x - a.x, p.y - a.y); return d > 750 && d < 1400; });
   for (let k = 0; k < 8 && pts.length; k++) {
     const p = pts[Math.floor(rng() * pts.length)];
     if ([...world.players.values()].every((q) => !q.ped || Math.hypot(q.ped.x - p.x, q.ped.y - p.y) > 500) && !inAnyView(world, p.x, p.y, 120) && !world.query(p.x, p.y, 120, K.VEH).length) return p;
@@ -68,7 +68,7 @@ function spawnPoint(world, a) {
   return null;
 }
 
-const byWater = (world, x, y) => (world.map.seaPoints || []).some((p) => Math.abs(p.x - x) < NEAR_SEA_PX && Math.abs(p.y - y) < NEAR_SEA_PX && Math.hypot(p.x - x, p.y - y) < NEAR_SEA_PX);
+const byWater = (world, x, y) => seaGrid(world).any(x, y, NEAR_SEA_PX);
 
 function manage(world) {
   const anchors = [...world.players.values()].filter((p) => p.ped && !p.ped.dead).map((p) => p.ped);

@@ -6827,3 +6827,62 @@ comparison; `--land`: Step B's report), `tools/world3-place-map.mjs` (the pictur
 Tests: `test/world3place.test.js` (new: Metro City at its gulf place at scale 1 is the island build moved - its layers
 to the tile, every road edge, buildings 97%+, POIs 95%+, props 90%+); `test/world3.test.js` passes as before (today's
 world is still the stamped one).
+## 2026-10-10 · World v3: what means "the whole world" follows the world the server runs (m.frame)
+
+What was asked (the coordinator, for World v3's 5040 x 4032 world, docs/WORLD-V3.md part 8): the generator builds any
+frame now, but the pieces that mean "the whole world" still used today's frame constants (MAP_W, MAP_H, WORLD_W,
+WORLD_H, CHUNKS_X, CHUNKS_Y) - the open sea past the edge and the border, the camera's bounds, the art's chunk grid,
+the ground chunks, the map pictures, the router's grid, the underground, the server's net chunks and the ferry
+planner: "make each follow the world the server runs instead", with the frame something the map carries, a window
+too. And give the boats' and the charters' scans of the sea's points (190,000 each at v3) a spatial index.
+
+What it does:
+- **The map carries the world's frame:** `m.frame = { w, h }` (tiles, origin 0, 0). A whole map's is its own extent
+  (worked out on the prototype the first time it's asked and kept on the map unlisted, so the city as data - what the
+  browser keeps, what the world hash covers - has no new field); a window (`shared/mapwindow.js` `windowOf`) carries
+  the world's.
+- **What follows it:** `tileAt`'s soft edge (the open sea past the world's edge, then the wall); `shared/border.js`
+  (`edgeInfo(x, y, out, frame)`, `edgeBrake(s, frame)` - the physics pass the map's frame, the law's radar too) and
+  its new `clampCam(cam, frame)` (the camera's bounds, from `client/main.js`); the ground chunks' grid and the sea
+  painted past the edge (main.js); the art's chunk grid (`client/art2/game/host.js` `artGrid(map)`, which `planBake`
+  takes; `standin.js`; `server/artcdn.js` `artChunks(map)`); the map pictures (the HUD's minimap; the big map's
+  framing, `client/hud.js` `mapFrameOf(map)`: the world's frame less today's margins of sea, today's world's
+  `MAP_FRAME` as it was; the spectator's schematic and camera; the dev teleport and homes pictures); the router's grid (`client/route.js`); the
+  underground's regions and physics map (`shared/underground.js`); the server's net chunks (`server/world.js`
+  `chunksX` / `chunksY`); the ferry planner's grids (`server/systems/ferries.js`: the map's own extent, indexed as its
+  layers are). The page's served regions (`client/worldgen.js`) are the index's: today's frame's are asked for along
+  with it as before (no wait), the rest it lists once it's read.
+- **The sea's points through a spatial index:** `server/pointgrid.js` (a grid of 1024 px buckets over a list, made
+  once per list): the boats' next waypoint, spawn ring and "by the water" test (`server/systems/boats.js`) and the
+  deep-sea charter's spot (`jobs.js`) look only at the cells near them. The spawn ring and the charter's spot are
+  the whole list's filter to the point (list order kept); a boater's next waypoint is drawn from the points in its
+  ring instead of from the whole list (the same odds among them, fewer misses).
+- **A fix on the way:** the chunk lookups (`World.inChunks`, so `query` and the net's culling) clamp both ends into the
+  grid: what's out past the world's edge is kept in the edge's chunks, and a look from out there finds it now (before,
+  a query from past the east or south edge - or the west or north - found nothing).
+- **The guard** (`test/mapwindow.test.js`): the whole-frame allow-list is down to one entry (`shared/constants.js`,
+  where today's frame is defined), and a new guard checks that outside the generator nothing names today's frame's
+  constants but four listed uses, each with its reason (the constants; a build's default frame; the border without a
+  frame given; the page asking for today's regions before the index says the world's).
+- Today's game is unchanged: the world hash stays `6b6e16fdef9f`.
+
+The files: `shared/mapcore.js`, `shared/mapwindow.js`, `shared/border.js`, `shared/physics.js`, `shared/underground.js`,
+`server/world.js`, `server/pointgrid.js` (new), `server/systems/boats.js`, `jobs.js`, `ferries.js`, `law.js`,
+`server/artcdn.js`, `client/main.js`, `client/hud.js`, `client/spectator.js`, `client/devtp.js`, `client/devhomes.js`,
+`client/route.js`, `client/worldgen.js`, `client/worldmap.js`, `client/art2/game/host.js`, `standin.js`,
+`docs/WORLD-V3.md` (part 8).
+
+Still today's by nature or for later: the big map's prebuilt picture (`assets/map`, `assets/worldmap.webp`: today's
+world's, checked against the map signature - another world's map shows the tile map); at v3 the HUD's and the
+spectator's one-pixel-a-tile pictures are 5040 x 4032 (81 MB of pixels) and want a coarser picture.
+
+Tests: `test/worldframe.test.js` (new: today's world built in a frame of MAP_W + 240 x MAP_H + 240 - the map's and a
+window's frame, the edge past the new one, the border slowing and stopping a swimmer at the new edge and not the old;
+the server's world run 45 s with players on a street by the old edge, swimming on past it and out past the new edge -
+traffic and people, the harbour patrol out past the old edge, the net chunks past the old grid, the ferries planned on
+the bigger frame; the underground under the frame; the art's chunk grids, `planBake` past the old grid and not past
+the new edge, the big map's frame, the router on the map and on a window of it; the sea's point index against the
+whole list's scans),
+`test/mapwindow.test.js` (the guards), `test/border.test.js`, `ferries.test.js`, `water.test.js`, `art2.test.js`,
+`artcdn.test.js`, `worldmap.test.js`, `regions.test.js`, `underground.test.js`, `mining.test.js`, `dmath.test.js`,
+`perf.test.js`, `gameplay.test.js`, `police.test.js`, `view.test.js`, `npcpeople.test.js`, `hudlayers.test.js`.

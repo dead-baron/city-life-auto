@@ -179,7 +179,11 @@ export class CityMap {
   // stops you at its end), then a wall. While the world is being built, a wall right at the edge, as it always was.
   // Outside a window, inside the world: a wall.
   tileAt(tx, ty) {
-    if (!this.inside(tx, ty)) return this.softEdge && (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) && tx >= -EDGE_T && ty >= -EDGE_T && tx < MAP_W + EDGE_T && ty < MAP_H + EDGE_T ? T.DEEP : T.WALL;   // (the world's frame)
+    if (!this.inside(tx, ty)) {
+      if (!this.softEdge) return T.WALL;
+      const F = this.frame;   // (the world's frame, which a window carries: past its edge, the open sea)
+      return (tx < 0 || ty < 0 || tx >= F.w || ty >= F.h) && tx >= -EDGE_T && ty >= -EDGE_T && tx < F.w + EDGE_T && ty < F.h + EDGE_T ? T.DEEP : T.WALL;
+    }
     return this.tiles[this.idx(tx, ty)];
   }
   tileAtPx(x, y) { return this.tileAt(Math.floor(x / TILE), Math.floor(y / TILE)); }
@@ -263,6 +267,14 @@ export class CityMap {
 // (on the prototype: the whole map's data - the world hash, the kept city - has no new fields; a window has its own)
 CityMap.prototype.x0 = 0;
 CityMap.prototype.y0 = 0;
+// The world's frame { w, h } (tiles, origin 0, 0): what "the whole world" means - its edge (the open sea past it,
+// border.js), the camera's bounds, the chunk grids, the map pictures. A whole map's frame is its own extent (kept on
+// it, unlisted, once asked: the city as data has no new field); a window (mapwindow.js) carries the world's.
+Object.defineProperty(CityMap.prototype, 'frame', {
+  get() { const f = { w: this.x0 + this.w, h: this.y0 + this.h }; Object.defineProperty(this, 'frame', { value: f, writable: true, configurable: true, enumerable: false }); return f; },
+  set(f) { Object.defineProperty(this, 'frame', { value: f, writable: true, configurable: true, enumerable: true }); },
+  configurable: true,
+});
 
 // Swimming: in open water, or under a bridge deck having swum in. Up on the highway deck you
 // are never swimming, whatever is below.

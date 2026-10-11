@@ -20,15 +20,15 @@ import { Worker } from 'node:worker_threads';
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, createReadStream, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cpus } from 'node:os';
-import { MAP_W, MAP_H, TILE } from '../shared/constants.js';
+import { TILE } from '../shared/constants.js';
 
 const CHUNK = 768;                                // (client/art2/game/chunkbake.js CHUNK: the art's chunks, not the net's)
-const CX = Math.ceil((MAP_W * TILE) / CHUNK), CY = Math.ceil((MAP_H * TILE) / CHUNK);   // (the world's whole frame: the art CDN's chunk grid)
 const ASK_MAX = 400;                              // chunks asked for and waiting, at most (the oldest go)
 const FOCUS_R = 4;                                // chunks round each player baked first after the asks (a 9 x 9 square)
 const FOCUS_Q_MS = 10 * 60000;                    // a quality pages asked for in the last ten minutes is baked round players too
 
 export function createArtCdn({ map, root, dataDir, seed, threads = defaultThreads(), prewarm = defaultPrewarm(), log = console.log, onBytes = null } = {}) {
+  const { CX, CY } = artChunks(map);   // (the art CDN's chunk grid over the world's frame: the map's m.frame)
   const S = {
     art: null, dir: null, prev: null, prevDir: null, workers: [], idle: [], asked: [], askedSet: new Set(), pre: [], preAt: 0, inflight: new Map(),
     done: new Set(), focus: [], qSeen: new Map(),
@@ -237,4 +237,5 @@ function defaultThreads() {
   const n = cpus().length;
   return n >= 4 ? 2 : n >= 2 ? 1 : 0;
 }
-export const ART_CHUNKS = { CX, CY, CHUNK };
+// the art's chunk grid over the world the server runs (the map's frame, m.frame: tiles)
+export const artChunks = (map) => ({ CX: Math.ceil((map.frame.w * TILE) / CHUNK), CY: Math.ceil((map.frame.h * TILE) / CHUNK), CHUNK });

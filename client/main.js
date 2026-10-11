@@ -1,7 +1,7 @@
 // City Life Auto browser client: a "dumb window" that sends input vectors, predicts only
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
-import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, MAP_W, MAP_H, PED_RADIUS, DAY_LOOP_S } from '../shared/constants.js';
+import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_LOOP_S } from '../shared/constants.js';
 import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
@@ -11,7 +11,7 @@ import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/proto
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb } from '../shared/items.js';
-import { edgeInfo, EDGE_SLOW, EDGE_OUT } from '../shared/border.js';
+import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { buildTeleport } from './devtp.js';
@@ -2791,13 +2791,9 @@ function prepFrame(dt) {
     const mine = S.me && S.me.ride && S.me.ride.k === 'balloon' ? S.rides.get(S.me.ride.id) : null;
     if (mine) { const t = nowS - mine.at; if (t > (mine.burn ?? 9) && t < mine.d - 14) { sfx('burner', 0.6); mine.burn = t + 11 + Math.random() * 8; } }
   }
-  {
-    // keep the camera over the world: the sea runs on past the map's edge as far as you can go (shared/border.js),
-    // so it follows you out there; never past where nothing can go
-    const WW = MAP_W * TILE, WH = MAP_H * TILE;   // (the world's frame, as below)
-    S.cam.x = Math.max(-EDGE_OUT, Math.min(WW + EDGE_OUT, S.cam.x));
-    S.cam.y = Math.max(-EDGE_OUT, Math.min(WH + EDGE_OUT, S.cam.y));
-  }
+  // keep the camera over the world: the sea runs on past the map's edge as far as you can go (shared/border.js),
+  // so it follows you out there; never past where nothing can go (the world's frame: the map's m.frame, a window's too)
+  if (S.map) clampCam(S.cam, S.map.frame);
   if (S.specArt) { const st = S.spec.state; S.cam.x = st.x; S.cam.y = st.y; S.cam.zoom = st.z; S.cam.shake = 0; } // (the spectator's camera)
   S.cam.shake *= Math.exp(-6 * dt);
   const shx = (Math.random() - 0.5) * S.cam.shake, shy = (Math.random() - 0.5) * S.cam.shake;
@@ -2938,10 +2934,11 @@ function drawWorldV1(F) {
   g.setTransform(...S.worldTf);
 
   // past the map's edge: open sea (shared/border.js)
-  if (!sub && (view.x0 < 0 || view.y0 < 0 || view.x1 > MAP_W * TILE || view.y1 > MAP_H * TILE)) { g.fillStyle = '#1d5a86'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
+  const WF = S.map.frame;   // (the world's frame: its edge, the ground chunks' grid)
+  if (!sub && (view.x0 < 0 || view.y0 < 0 || view.x1 > WF.w * TILE || view.y1 > WF.h * TILE)) { g.fillStyle = '#1d5a86'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
   // ground chunks
-  for (let cy = Math.max(0, cy0); cy <= Math.min(Math.ceil(MAP_H * TILE / CHUNK_PX) - 1, cy1); cy++)
-    for (let cx = Math.max(0, cx0); cx <= Math.min(Math.ceil(MAP_W * TILE / CHUNK_PX) - 1, cx1); cx++)
+  for (let cy = Math.max(0, cy0); cy <= Math.min(Math.ceil(WF.h * TILE / CHUNK_PX) - 1, cy1); cy++)
+    for (let cx = Math.max(0, cx0); cx <= Math.min(Math.ceil(WF.w * TILE / CHUNK_PX) - 1, cx1); cx++)
       g.drawImage(S.ground.get(cx, cy), cx * CHUNK_PX, cy * CHUNK_PX, CHUNK_PX + 0.5, CHUNK_PX + 0.5);
   g.imageSmoothingEnabled = true;
 
@@ -3169,7 +3166,7 @@ function drawOverlays(F, v2) {
   // name tags + public flares + rumor marker
   drawWorldLabels(F.peds, F.vehs, now, z);
   // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
-  const edge = S.playing && S.me && !S.me.dead ? edgeInfo(sp.x, sp.y, EDGE_I) : null;
+  const edge = S.playing && S.me && !S.me.dead ? edgeInfo(sp.x, sp.y, EDGE_I, S.map && S.map.frame) : null;
   if (edge && edge.d > 0) drawEdgeArrow(sp, edge, now);
   edgeWarn(edge && edge.d > 0 ? (edge.d > EDGE_SLOW ? 2 : 1) : 0);
 

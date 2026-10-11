@@ -121,7 +121,7 @@ export function pedStep(s, inp, dt, map, mods) {
     s.dropping = true;
   } else if (s.dropping) s.dropping = false;
   s.x += s.vx * dt; s.y += s.vy * dt;
-  edgeBrake(s);   // (out past the map's edge: slowed, and stopped at the world's end - border.js)
+  edgeBrake(s, map.frame);   // (out past the world's edge: slowed, and stopped at its end - border.js)
   collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : PED_BLOCK);
   if (map.levels && levelStep(map, s, PED_RADIUS) >= LAND_IMPACT) s.hardLanding = true; // dropped off the deck
 }
@@ -310,7 +310,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   s.vx = c * fwd - sn * lat;
   s.vy = sn * fwd + c * lat;
   s.x += s.vx * dt; s.y += s.vy * dt;
-  edgeBrake(s);   // (out past the map's edge: slowed, and stopped at the world's end - border.js)
+  edgeBrake(s, map.frame);   // (out past the world's edge: slowed, and stopped at its end - border.js)
   const hit = collideVehicleTiles(s, def, map, isBoat ? BOAT_BLOCK : CAR_BLOCK);
   if (!map.levels || isBoat) return hit;
   return Math.max(hit, levelStep(map, s, def.W / 2, true));

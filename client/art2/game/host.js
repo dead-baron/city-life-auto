@@ -33,7 +33,7 @@ import { WorkerPool, takeWarmPool, isPhone } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
-import { MAP_W, MAP_H, TILE, K, PF, VF, DAY_LOOP_S } from '../../../shared/constants.js';
+import { TILE, K, PF, VF, DAY_LOOP_S } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
@@ -54,7 +54,8 @@ const PLASMA_I = WEAPONS.plasma.i;   // (the plasma blade: its light in the hand
 
 export { DECK_Z };
 const TAU = Math.PI * 2;
-const CX = Math.ceil(MAP_W * TILE / CHUNK), CY = Math.ceil(MAP_H * TILE / CHUNK);   // (the world's whole frame: the art's chunk grid)
+// the art's chunk grid over the world's frame (the map's m.frame, a window's too): [chunks across, chunks down]
+export const artGrid = (M) => [Math.ceil(M.frame.w * TILE / CHUNK), Math.ceil(M.frame.h * TILE / CHUNK)];
 // per quality tier (Low/Xbox, Medium, High, Ultra): chunk cache, lights, vehicle headings, uploads a frame
 // syncMs: how long a frame may spend making sprites on this thread (people and small things)
 // results: bakes back from the workers that may wait for an upload (2.3 MB each), so the road ahead keeps baking while
@@ -132,8 +133,9 @@ const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 // Returns the chunks coming into view within 1.5 s that aren't on screen yet, soonest first (their placeholders
 // are drawn ahead).
 const SWEEP_MAX = 6, SOON_S = 1.5, MARGIN_S = 1.2;
-export function planBake(need, bake, view, vx, vy, reach, out = []) {
+export function planBake(need, bake, view, vx, vy, reach, out = [], grid = [Infinity, Infinity]) {   // grid: artGrid(map)
   out.length = 0;
+  const [CX, CY] = grid;
   const camX = view.cx, camY = view.cy, gx = view.gx || 0, gy = view.gy || 0;
   const span = (a0, a1, b0, b1, v) => (v > 1e-3 ? [(a0 - b1) / v, (a1 - b0) / v] : v < -1e-3 ? [(a1 - b0) / v, (a0 - b1) / v] : a1 > b0 && a0 < b1 ? [-Infinity, Infinity] : null);
   // reach: the scene's margins round the view [left, top, right, bottom] (the shadow reach is on the sun's side
@@ -343,7 +345,7 @@ export class World2 {
   }
 
   constructor(o, engine, L, q) {
-    this.S = o.S; this.map = o.map; this.gfx = o.gfx; this.lowMem = !!o.lowMem; this.api = o.api; this.onFail = o.onFail || (() => {});
+    this.S = o.S; this.map = o.map; this.grid = artGrid(o.map); this.gfx = o.gfx; this.lowMem = !!o.lowMem; this.api = o.api; this.onFail = o.onFail || (() => {});
     this.worldKey = o.worldKey || null;            // the city is in this browser's copy under this key: the workers read it
     this.artKey = o.artKey || null;                // baked chunks are kept in the browser under this build of the art (chunkstore.js)
     this.cdn = o.artCdn || null;                   // the art from the server: where its baked chunks are (server/artcdn.js; worker.js)
@@ -541,7 +543,7 @@ export class World2 {
     const v = this._camVel(F);
     // the view the camera is easing toward (it zooms out with speed): the sweep uses the larger of the two
     const zt = Math.min(F.z, (S.cam && S.cam.tz) || F.z), grow = Math.max(0, (this.W / 2 / zt) - (this.W / 2 / F.z)), growY = Math.max(0, (this.H / 2 / zt) - (this.H / 2 / F.z));
-    const soon = planBake(need, bake, { x0: this.vx0, y0: this.vy0, x1: this.vx1, y1: this.vy1, cx: this.camX, cy: this.camY, gx: grow, gy: growY }, v.x, v.y, E.margins || [36, 200, 300, 300][this.q], this.soonKeys || (this.soonKeys = []));
+    const soon = planBake(need, bake, { x0: this.vx0, y0: this.vy0, x1: this.vx1, y1: this.vy1, cx: this.camX, cy: this.camY, gx: grow, gy: growY }, v.x, v.y, E.margins || [36, 200, 300, 300][this.q], this.soonKeys || (this.soonKeys = []), this.grid);
     // the chunks coming into view within 1.5 s get their placeholder drawn ahead (one a frame), so a bake that is
     // late shows the simple version at once
     for (const k of soon) {
@@ -756,7 +758,7 @@ export class World2 {
   _prebakeList() {
     const phone = isPhone(), RING = phone ? 3 : 4, ROAD = phone ? 4800 : 7500, AHEAD_S = 12, MAXN = phone ? 64 : 120;
     const out = new Map(), add = (cx, cy, p) => {
-      if (cx < 0 || cy < 0 || cx >= CX || cy >= CY) return;
+      if (cx < 0 || cy < 0 || cx >= this.grid[0] || cy >= this.grid[1]) return;
       const k = cy * 1000 + cx, c = out.get(k);
       if (c === undefined || p < c) out.set(k, p);
     };
@@ -825,7 +827,7 @@ export class World2 {
     want.clear();
     let n = 0;
     for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
-      if (cx >= 0 && cy >= 0 && cx < CX && cy < CY) continue;
+      if (cx >= 0 && cy >= 0 && cx < this.grid[0] && cy < this.grid[1]) continue;
       n++;
       if (E.hasChunk(cx, cy)) continue;
       if (!E.hasFallback(cx, cy)) E.setChunkFallback(cx, cy, this._seaStandIn(), F_GROUND | F_WATER);
