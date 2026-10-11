@@ -6999,3 +6999,51 @@ Tests: `test/world3gulf.test.js` (new: Westport, Cedar Isle and the airport at t
 island builds moved - the layers to the tile, the rest as measured); `test/world3place.test.js` and
 `test/world3.test.js` pass as before (today's world is still the stamped one); `test/bowling.test.js`,
 `test/nature.test.js` pass.
+
+## 2026-10-10 · World v3: Port Westport built as a container port
+
+The owner's plan for the bay (docs/WORLD-V3.md 1.2) has "WR3's container port with cranes". Port Westport (district
+26) was built at its gulf place with a straight quay on the West Channel and seven crane spots, but it drew as one grey
+slab of warehouse roofs (the harbor style wall to wall). Now it is a container port, as WR3 and the docks concept
+(SC4-I) show it:
+
+- **The yard** (`buildContainerPort`, district 26's own pass, called where the quay is built; 216 blocks, 27 masts,
+  10 straddle carriers): the harbor style's
+  warehouse slabs in the port's rectangle are cleared - the Westport Freight row (the delivery stop and its neighbour)
+  and the junkyard stay - and the ground behind the dock is paved. From the dock back: a 6-tile apron under the cranes'
+  back reach, then pairs of 5 x 8-tile blocks of container stacks (three rows of 40 ft boxes, two to four high, every
+  box its own colour, an invented line's pale mark on some doors) with a tile between the pair and a 4-tile truck lane
+  after it; along the quay, groups of four blocks and a 4-tile cross lane. A block needs a tile of yard all round it,
+  so no stack touches a road, a pavement, a building or the water. Light masts stand in the tile between a pair (lit at
+  night), straddle carriers are parked in the lanes, and the gate is where a lane meets the pavement with a road just
+  past it (the one nearest the stacks' middle: halfway along the yard's east side, onto the avenue there) - a barrier
+  across it and a gatehouse beside it.
+- **The quay:** ship-to-shore gantry cranes on its straight edge - the legs on two crane rails (the dock's outer tile
+  and the apron's first), the boom out over the water with the trolley and the spreader on its cables, a box hanging
+  from every other one - on five of the seven spots (one is on the curve at the north end, one on Harbor Road's end);
+  a container ship (the stern with its bridge and funnel, nine holds of boxes, the bow: 90 tiles) moored along the
+  middle of the quay; the dock's bollards as before. The cranes are tall props drawn over what's beneath them (the
+  boom over the ship and the water), as the elevated road and the tall props are.
+- **Solid:** the stacks (a ring of circles per tile), the cranes' legs, the masts, the straddle carriers and the ship's
+  sides; nothing solid on a road or a pavement (the test checks every one).
+- **The art:** art v2 draws them as voxel models (`client/art2/props-transit.js`: `stsCrane`, `containerStack`,
+  `straddleCarrier`, `shipSection`; the flood mast and the barrier arm it had) through `statics.js`, plus the cranes'
+  rails as flat strips; the classic renderer draws them in code (`client/render/portprops.js`), loaded the first time
+  one is drawn so the page's startup code doesn't carry it. The art hash changes; the live world doesn't (its ground
+  isn't district 26's: the world hash stays `6b6e16fdef9f`).
+- **The picture** (`docs/world-v3-westport.png`): the port reads as a container terminal - the stacks in rows, the
+  lanes, the red cranes along the quay, the ship alongside. What's still wrong: the quay is the dock's wooden planks (a
+  container quay is concrete), the yard has no fence, the ship is small beside a 344-tile quay (90 tiles; one berth of
+  several), the corner past the quay's curve at the north end is still the old district's grass, and the classic renderer's crane rails only show once its port module has
+  loaded (the ground they lie on is baked before).
+
+The files: `shared/map.js` (`buildContainerPort`, `PORT`; one call in `buildQuays`), `client/art2/props-transit.js`,
+`client/art2/game/statics.js`, `client/render/portprops.js` (new), `client/render/tiles.js` (the port props drawn by it,
+overhead), `client/main.js` (a prop's own `tall` keeps it in view), `test/world3port.test.js` (new),
+`docs/world-v3-westport.png`, `docs/WORLD-V3.md` 8.5.
+
+Tests: `test/world3port.test.js` (new: Westport at its gulf place - the slabs gone; the blocks on the paving with a tile
+of yard round them, not overlapping, off every lane and the apron; the cranes' legs on the dock's edge and the apron,
+their booms over the water; the gate a pavement from a road with the gatehouse by it; no solid on a road or a pavement;
+the ship on the water; Westport Freight still a delivery stop); the page's code budget (`test/perf.test.js`, its first
+test) passes.

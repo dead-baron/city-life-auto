@@ -167,10 +167,10 @@ export function stsCrane(hook = 0) {
   if (hook) { const col = CONTAINER_COLS[(hook * 3) % CONTAINER_COLS.length], c = m.mat({ ramp: R(col), k: 3, shade: (x, y) => (Math.round(y) % 4 === 0 ? -0.7 : 0) }); m.box(tx - 26, cy - 64, sz - 56, tx + 26, cy + 64, sz, c); }
   return m;
 }
-// a block of container stacks in the yard: three rows of 40 ft boxes along y (doors to the south, +y), one to four
+// a block of container stacks in the yard: three rows of 40 ft boxes along y (doors to the south, +y), two to four
 // high by the variant, each its own colour; an invented line's mark (a pale panel) on some doors
 export function containerStack(v = 0) {
-  const CW = 53, CL = 254, CH = 58, hs = [[3, 4, 2], [2, 3, 3], [4, 4, 3], [1, 2, 2], [3, 2, 4], [2, 4, 1]][v % 6];
+  const CW = 53, CL = 254, CH = 58, hs = [[3, 4, 2], [2, 3, 3], [4, 4, 3], [2, 2, 3], [3, 2, 4], [2, 4, 2]][v % 6];
   const m = new Vox(CW * 3 + 1, CL + 2, Math.max(...hs) * CH + 2);
   const bar = m.mat({ ramp: MAT.metal, k: 2 }), mk = m.mat({ ramp: R('#ece8dc'), k: 3 });
   for (let c = 0; c < 3; c++) for (let k = 0; k < hs[c]; k++) {

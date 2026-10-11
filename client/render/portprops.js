@@ -4,7 +4,7 @@
 // them is drawn (client/render/tiles.js), so the page's startup code doesn't carry it. Drawn in code in the 3/4 view:
 // a thing's height rises up the screen from its base.
 const COLS = ['#a8402e', '#2f5a8a', '#3e6a4a', '#c88a30', '#7a7e84', '#6a3a5a', '#2f7a7a'];
-const HS = [[3, 4, 2], [2, 3, 3], [4, 4, 3], [1, 2, 2], [3, 2, 4], [2, 4, 1]];
+const HS = [[3, 4, 2], [2, 3, 3], [4, 4, 3], [2, 2, 3], [3, 2, 4], [2, 4, 2]];
 const LINE = '#14161c';
 const shade = (hex, k) => {
   const n = parseInt(hex.slice(1), 16), f = (v) => Math.max(0, Math.min(255, Math.round(v * k)));

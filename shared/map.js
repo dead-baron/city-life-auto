@@ -3868,7 +3868,7 @@ function buildQuays(m, quays) {
 // reach, pairs of container-stack blocks with truck lanes between them and a cross lane every four blocks, light
 // masts, a few straddle carriers parked, a gatehouse at the gate onto the road - and the quay's ship-to-shore gantry
 // cranes (props on its rails) and a container ship moored along it. m.port: the yard, its blocks, lanes and gate.
-const PORT = { apron: 6, bw: 5, bl: 8, lane: 4, group: 4, ship: [8, 8, 8, 8, 8, 8, 10] };   // (tiles; the ship: stern, five holds, bow)
+const PORT = { apron: 6, bw: 5, bl: 8, lane: 4, group: 4, ship: [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 10] };   // (tiles; the ship: stern, nine holds, bow)
 function buildContainerPort(m, q, edge, west, cranes) {
   if (edge.length < 60) return;
   const W = m.w, [rx0, ry0, rx1, ry1] = q.rect, dir = west ? 1 : -1, RW = rx1 - rx0, RH = ry1 - ry0;
@@ -3901,8 +3901,10 @@ function buildContainerPort(m, q, edge, west, cranes) {
   for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) if (yard[li(x, y)] || (keep[li(x, y)] && m.dist[y * W + x] === dd && m.tiles[y * W + x] === T.GRASS)) m.set(x, y, T.LOT);
   // the grid: from the dock back, the apron, then pairs of blocks (a tile between them) and a lane; along the quay,
   // groups of four blocks (a tile between them) and a cross lane
-  let Y0 = -1, Y1 = -1; for (let y = ry0; y < ry1; y++) if (sxOf[y - ry0] === SX) { if (Y0 < 0) Y0 = y; Y1 = y; }
   const isYard = (x, y) => inRect(x, y) && yard[li(x, y)] === 1;
+  // (the straight quay's rows, QY0..QY1: the ship and the rails; the yard's rows at the grid's first column, Y0..Y1)
+  let QY0 = -1, QY1 = -1, Y0 = -1, Y1 = -1;
+  for (let y = ry0; y < ry1; y++) { if (sxOf[y - ry0] === SX) { if (QY0 < 0) QY0 = y; QY1 = y; } if (isYard(X0, y)) { if (Y0 < 0) Y0 = y; Y1 = y; } }
   const blocks = [], lanes = [], solid = [], P = 2 * PORT.bw + 1 + PORT.lane, GP = PORT.group * (PORT.bl + 1) + PORT.lane - 1;
   const fits = (bx, by) => { for (let y = by - 1; y <= by + PORT.bl; y++) for (let x = bx - 1; x <= bx + PORT.bw; x++) if (!isYard(x, y)) return false; return true; };
   for (let k = 0; ; k++) {
@@ -3984,16 +3986,16 @@ function buildContainerPort(m, q, edge, west, cranes) {
     for (const lx of rail) for (const dy of [-36, 36]) solidAt(lx, c.y + dy, 9);
     cr.push({ x: cx, y: c.y });
   }
-  for (const rx of rail) for (let y = Y0; y + 8 <= Y1 + 1; y += 8) {
+  for (const rx of rail) for (let y = QY0; y + 8 <= QY1 + 1; y += 8) {
     let ok = true;
     for (let k = 0; k < 8; k++) { const t = m.tiles[(y + k) * W + Math.floor(rx / TILE)]; if (t !== T.DOCK && t !== T.LOT) ok = false; }
     if (ok) addProp(m, 'crail', rx, (y + 4) * TILE, 0, { len: 256 });
   }
   let ship = null;
-  const LS = PORT.ship.reduce((a, b) => a + b, 0), hx0 = west ? SX - 8 : SX + 2, sm = Math.floor((Y0 + Y1 - LS) / 2);
+  const LS = PORT.ship.reduce((a, b) => a + b, 0), hx0 = west ? SX - 8 : SX + 2, sm = Math.floor((QY0 + QY1 - LS) / 2);
   for (const off of [0, -20, 20, -40, 40, -60, 60]) {
     const ys = sm + off;
-    let ok = ys > Y0 && ys + LS < Y1;
+    let ok = ys > QY0 && ys + LS < QY1;
     for (let y = ys - 1; y <= ys + LS && ok; y++) for (let x = hx0 - 1; x < hx0 + 8; x++) if (m.tiles[y * W + x] !== T.WATER && m.tiles[y * W + x] !== T.DEEP) { ok = false; break; }
     if (!ok) continue;
     const cxp = west ? SX * TILE - 120 : (SX + 1) * TILE + 120;
@@ -4006,7 +4008,7 @@ function buildContainerPort(m, q, edge, west, cranes) {
     ship = { x: cxp - 110, y: ys * TILE, w: 220, h: LS * TILE };
     break;
   }
-  m.port = { name: q.name, dist: dd, yard: [rx0, ry0, rx1, ry1], apron: { x: west ? SX + 3 : SX - 2 - PORT.apron, w: PORT.apron, y0: Y0, y1: Y1 }, blocks, lanes, solid, cranes: cr, rail, ship, freight: fr ? fr.id : -1,
+  m.port = { name: q.name, dist: dd, yard: [rx0, ry0, rx1, ry1], apron: { x: west ? SX + 3 : SX - 2 - PORT.apron, w: PORT.apron, y0: QY0, y1: QY1 }, blocks, lanes, solid, cranes: cr, rail, ship, freight: fr ? fr.id : -1,
     gate: gate ? { x: (gate.tx + 0.5) * TILE, y: (gate.ty + 0.5) * TILE, road: gate.road } : null, gatehouse: house ? house.id : -1 };
 }
 function buildFarm(m, rand) {

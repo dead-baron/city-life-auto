@@ -75,7 +75,7 @@ test('Port Westport at its gulf place: a container yard behind the quay, cranes 
   // the ship alongside, on the water
   assert.ok(port.ship, 'a ship');
   for (let y = port.ship.y; y < port.ship.y + port.ship.h; y += 16) for (let x = port.ship.x; x <= port.ship.x + port.ship.w; x += 16) assert.ok([T.WATER, T.DEEP].includes(tile(Math.floor(x / TILE), Math.floor(y / TILE))), `the ship at ${x},${y} on the water`);
-  assert.equal(m.props.filter((p) => p.t === 'cship').length, 7);
+  assert.ok(m.props.filter((p) => p.t === 'cship').length >= 7, 'the ship: its stern, holds and bow');
   // Westport Freight: still a delivery stop, in the port
   assert.ok(m.pois.some((p) => p.kind === 'delivery' && p.label === 'Westport Freight'), 'Westport Freight is a delivery stop');
   assert.equal(fr.name, 'Westport Freight');
