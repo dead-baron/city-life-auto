@@ -9,8 +9,11 @@ import { HOME_IN } from '../../shared/rules.js';
 import { TICK_HZ } from '../../shared/constants.js';
 import { PAINTS, VEHICLES } from '../../shared/vehicles.js';
 import { pedSprite, PED_BOX } from './sprites.js';
+import { decodeLook, lookToApp } from '../../shared/lookcore.js';
 
 const DT = 1 / TICK_HZ;
+const looks = new Map();   // a friend's look by name (sent now and then)
+const appOf = (a) => { if (a && a.lk && a.t === undefined) { const L = decodeLook(a.lk); return L ? lookToApp(L, a.lk) : {}; } return a || {}; };
 let cv = null, g = null, S = null, st = null, raf = 0, app = null, bake = null;
 
 // the palettes by how well the place is furnished (0 a shack .. 3 a mansion)
@@ -27,6 +30,7 @@ export function onMsg(state, m) {
   if (!st || st.id !== m.id || m.plan !== (st && st.plan)) st = { id: m.id, cars: [], name: '', garage: 0, sleepS: HOME_IN.sleepS, wakeH: HOME_IN.wakeH };
   Object.assign(st, m);
   st.at = performance.now();
+  for (const o of m.others || []) if (o.app) looks.set(o.n, appOf(o.app));
   if (m.sleep && !st.sleepT0) { st.sleepT0 = performance.now(); st.sleepMin0 = m.min; }
   if (!m.sleep) st.sleepT0 = 0;
   const e = S.ents.get(S.myPedId);
@@ -99,6 +103,7 @@ function frame(now) {
     g.strokeStyle = `rgba(255,214,90,${0.55 + 0.35 * Math.sin(now / 220)})`; g.lineWidth = 2;
     g.strokeRect(u.x + 1, u.y + 1, u.w - 2, u.h - 2);
   }
+  for (const o of st.others || []) friend(L, o, now);
   you(L, me, now);
   if (v2) lights(L, now);
   g.setTransform(1, 0, 0, 1, 0, 0);
@@ -267,6 +272,20 @@ function you(L, me, now) {
     g.fillStyle = 'rgba(235,245,255,.35)';
     for (let k = 0; k < 5; k++) { const t = (now / 900 + k / 5) % 1; g.beginPath(); g.arc(x - 10 + k * 5, y - 6 - t * 26, 5 + t * 8, 0, 6.28); g.fill(); }
   }
+}
+// a friend in there with you (server homeinside.js letIn): where the server last had them, their name over them
+function friend(L, o, now) {
+  let x = o.x, y = o.y, a = o.a;
+  if (o.sl) { const bed = L.pieces.find((p) => p.ch === 'B'); if (bed) { x = bed.x + bed.w / 2 + 14; y = bed.y + 22; a = Math.PI / 2; } }
+  const spr = pedSprite(looks.get(o.n) || {}, o.mv ? 'move1' : 'idle', o.mv ? Math.floor(now / 110) % 4 : 0, 0);
+  g.save(); g.translate(x, y);
+  g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(2, 3, 12, 8, 0, 0, 6.28); g.fill();
+  g.rotate(a); g.imageSmoothingEnabled = false;
+  g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX);
+  g.restore();
+  g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(o.n, x + 1, y - 21);
+  g.fillStyle = '#bfe3ff'; g.fillText(o.n, x, y - 22);
 }
 function lights(L, now) {   // art v2: warm pools of light round the lamps at night
   const d = daylight();

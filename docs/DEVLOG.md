@@ -8623,11 +8623,17 @@ inside to walk round.
   loaded the first time you go in (one line in main.js): nothing added to the page's start-up code.
 - Numbers in shared/rules.js HOME_IN (pace, reach, the sleep, the shower). Dev: `homein` ({ kind | id, cars, at }) -
   any home yours and you inside it, standing by the bed, the safe...
-- Not done: inviting a friend or a crewmate in; the bays' cars aren't solid (you walk through them).
+- A friend: at someone else's door while they're in, the action button knocks (they hear it, with your name); the owner
+  lets you in from the hall table, where who's knocking is listed. You see each other in there (each with a name over
+  them; asleep, beside you in the bed), the things are the owner's (the prompt says so), and a guest goes out by the
+  front door - or is put out if the place is sold.
+- Not done: the cars in the garage's bays aren't solid (you walk through them); a crew of your own to let in without a
+  knock (there's no crew in the game yet).
 Files: shared/homelayout.js, server/systems/homeinside.js, client/render/homeview.js (new); hooks in homes.js (goInside
 puts you in the rooms), players.js (the input and the prompt inside, the front door), economy.js (the things' menus),
 world.js (the system), dev.js, main.js (the lazy load). Tests: test/homeinside.test.js (every plan walkable to all its
 things; in by the door, the walls hold, out by the door, nobody sees you; wanted at the door; sleeping to the morning and
 the save point; the safe's cash and things through a death and a rejoin; the wardrobe, the fridge, the shower; the
-garage); test/homes.test.js and test/wardrobe.test.js still pass. Headless playtest (art v2 1280x720, classic 844x390
+garage; the hall table and selling from it; a friend knocking, let in, seen, going out); test/homes.test.js,
+test/wardrobe.test.js, test/world.test.js, test/core.test.js and the other tests with homes in them still pass. Headless playtest (art v2 1280x720, classic 844x390
 phone): the house, the apartment, the trailer, the garage with two cars, the safe's menu, asleep, the morning.

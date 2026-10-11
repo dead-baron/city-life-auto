@@ -13,11 +13,15 @@
 //   the garage's key board (a house's or a mansion's garage, through the door from the hall): your cars - pick one and
 //     you drive it out (homes.driveOut)
 //   the front door: back out into the street (a couple of seconds' protection, as ever)
+// Friends: at someone else's door while they're in, the action button knocks; the owner lets them in from the hall table
+// (who's knocking is listed there). A guest walks round with you - you see each other in there - and goes out by the
+// front door; the things in the place are the owner's.
 // Nobody can see or hurt you inside (you're out of the world's grid: world.place), and the police can't follow you in.
 // The server walks you round (input), says what the action button does where you stand (interaction), and sends you
 // where you are every tick ({ t: 'home' }); the page only draws it (client/render/homeview.js, loaded when you go in).
 //   ped.home: { id, x, y, a (px, in the plan), mv (walking), sleep / shower (when it ends, world.time; 0 none), eatAt }
-//   p.homeMenu: the menu of the thing you're using ('wardrobe' | 'safe' | 'fridge' | 'garage'), null for the home menu
+//   ped.home.guest: a guest's host (pid); p.knock: { home, at } someone at a door, knocking
+//   p.homeMenu: the menu of the thing you're using ('wardrobe' | 'safe' | 'fridge' | 'garage' | 'hall'), null for none
 import { DAY_PART_S } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { HOME_IN } from '../../shared/rules.js';
@@ -47,9 +51,45 @@ export function doorInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.carrying || ped.entering || ped.ug) return null;
   const poi = world.map.poiNear(ped.x, ped.y);
-  if (!poi || poi.kind !== 'home' || world.homeOwner.get(poi.home) !== p.pid) return null;
+  if (!poi || poi.kind !== 'home' || !world.homeOwner.has(poi.home)) return null;
   const h = world.map.homes[poi.home];
-  return { label: `Go inside ${h.name}`, run: () => goIn(world, p, h) };
+  if (world.homeOwner.get(h.id) === p.pid) return { label: `Go inside ${h.name}`, run: () => goIn(world, p, h) };
+  const host = hostIn(world, h);   // (someone else's: if they're in, knock)
+  if (!host) return null;
+  if (p.knock && p.knock.home === h.id && world.time - p.knock.at < 20) return { label: `Waiting for ${host.name} to open the door...`, passive: true, run: () => {} };
+  return { label: `Knock on the door (${host.name} is in)`, run: () => knock(world, p, h, host) };
+}
+// the owner of h, online and inside it (null: not in)
+function hostIn(world, h) {
+  const q = world.players.get(world.homeOwner.get(h.id));
+  return q && q.ped && q.ped.home && q.ped.home.id === h.id && !q.ped.home.guest && q.ped.hidden ? q : null;
+}
+function knock(world, p, h, host) {
+  p.knock = { home: h.id, at: world.time };
+  world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
+  world.notify(p, `You knock on ${host.name}'s door...`, 'info');
+  world.notify(host, `${p.name} is knocking at your door - let them in from the hall table.`, 'info');
+}
+// at h's front door, knocking, and fit to come in
+function knocking(world, q, h) {
+  const ped = q.ped;
+  return !!(q.knock && q.knock.home === h.id && world.time - q.knock.at < 90 && ped && !ped.dead && !ped.hidden && !ped.vehId && !ped.carrying && Math.hypot(ped.x - h.x, ped.y - h.y) < 120);
+}
+// a guest in: just inside the front door, beside the host's way in
+function letIn(world, q, h, host) {
+  const ped = q.ped, L = planFor(h);
+  if (q.wanted > 0 && world.time - (q.seenAt || -99) < 1.5) return `Not with the police watching ${q.name}!`;
+  q.knock = null;
+  ped.entering = null; ped.inside = h.id; ped.hidden = true; ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.fishing = null;
+  ped.x = h.x; ped.y = h.y;
+  world.place(ped);
+  ped.home = { id: h.id, x: L.spawn.x, y: L.spawn.y, a: -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, guest: host.pid };
+  q.homeMenu = null; q.meDirty = true;
+  world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
+  world.notify(q, `${host.name} lets you in. Nobody outside can see or hurt you in here.`, 'good');
+  world.notify(host, `${q.name} is in.`, 'good');
+  send(world, q, true); send(world, host, true);
+  return null;
 }
 export function goIn(world, p, h) {
   const err = homes.beginEnter(world, p, h);
@@ -96,6 +136,7 @@ export function interaction(world, p) {
   if (s.shower) return { label: 'In the shower...', passive: true, run: () => {} };
   const u = useAt(planFor(h), s.x, s.y, HOME_IN.reach);
   if (!u) return { label: `${h.name} - walk up to something to use it`, passive: true, run: () => {} };
+  if (s.guest && u.use !== 'door') { const host = world.players.get(s.guest); return { label: `The ${u.use === 'hall' ? 'hall table' : u.use === 'garage' ? 'garage' : u.use} - ${host ? `${host.name}'s` : 'not yours'}`, passive: true, run: () => {} }; }
   return { label: LABEL[u.use](world, p, h), run: () => use(world, p, h, u.use) };
 }
 
@@ -134,6 +175,7 @@ function menuOf(world, p, h, what) {
   } else if (what === 'hall') {   // the home menu itself, and selling the place (you step out to hand the keys over)
     title = base.title; sub = base.sub;
     opts.push(...all.filter((o) => o.id !== 'close'));
+    for (const q of world.players.values()) if (q !== p && knocking(world, q, h)) opts.unshift({ id: `hi:let:${q.pid}`, label: `Let ${q.name} in`, note: 'at your door' });
     opts.push({ id: 'hi:sell', label: `Sell this place (+${money(h.price * 0.6)} to the bank)`, note: 'you step outside' });
   } else if (what === 'garage') {
     title = 'Your garage';
@@ -191,6 +233,11 @@ function own(world, p, h, parts) {
       world.notify(p, `Ate ${/^[aeiou]/i.test(it.name) ? 'an' : 'a'} ${it.name}. +${it.heal} health.`, 'good');
       return null;
     }
+    case 'let': {
+      const q = world.players.get(parts.slice(2).join(':'));
+      if (!q || !knocking(world, q, h)) return 'Nobody at the door now.';
+      return letIn(world, q, h, p);
+    }
     case 'sell': {
       p.homeMenu = null;
       leave(world, p);
@@ -215,7 +262,8 @@ export function update(world) {
     if (!s) continue;
     const h = world.map.homes[s.id];
     // out some other way (the home menu's Step outside, the garage, the boathouse, dead, a dev command): gone from here
-    if (!h || !ped.hidden || ped.dead || ped.removed || ped.inside !== s.id || world.homeOwner.get(s.id) !== p.pid) {
+    if (!h || !ped.hidden || ped.dead || ped.removed || ped.inside !== s.id || world.homeOwner.get(s.id) !== (s.guest || p.pid)) {
+      if (h && !ped.dead && !ped.removed && ped.hidden && ped.inside === s.id) homes.leaveHome(world, p);   // (sold under a guest: out they go)
       ped.home = null; p.homeMenu = null;
       if (p.conn) p.conn.sendJSON({ t: 'home', off: 1 });
       continue;
@@ -260,6 +308,12 @@ export function send(world, p, full) {
     mv: s.mv ? 1 : 0, ack: p.ack, min: Math.round(world.clock.minutes),
     sleep: s.sleep ? Math.max(0, Math.round((s.sleep - world.time) * 10) / 10) : 0, shower: s.shower ? 1 : 0,
   };
+  const others = [];
+  for (const q of world.players.values()) {
+    const o = q !== p && q.ped && q.ped.home && q.ped.hidden && q.ped.home.id === s.id ? q.ped.home : null;
+    if (o) others.push({ n: q.name, x: Math.round(o.x), y: Math.round(o.y), a: Math.round(o.a * 100) / 100, mv: o.mv ? 1 : 0, sl: o.sleep ? 1 : 0, ...(full || world.tick % 20 === 0 ? { app: q.ped.app || null } : null) });
+  }
+  m.others = others;   // (their looks now and then: the page keeps them)
   if (full) {
     m.name = h.name; m.garage = h.garage ? 1 : 0; m.sleepS = HOME_IN.sleepS; m.wakeH = HOME_IN.wakeH;
     m.cars = p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air').slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));

@@ -247,3 +247,42 @@ test('the hall table: the home menu (respawn point, the bank) and selling the pl
   assert.ok(!w.homeOwner.has(h.id) && !p.ped.hidden && !p.ped.home, 'sold, and outside');
   assert.equal(prof.bank, bank + Math.round(h.price * 0.6));
 });
+
+test('a friend: knocks at your door, you let them in from the hall table, you see each other, they go out by the door', () => {
+  const w = makeWorld();
+  const { p, conn } = joinPlayer(w, { bank: 1e6 });
+  const { p: q, conn: qc } = joinPlayer(w, { bank: 1e6, safety: false });
+  const h = ownHome(w, p);
+  teleport(w, p.ped, h.x, h.y);
+  homeinside.goIn(w, p, h);
+  // at the door: knock
+  teleport(w, q.ped, h.x + 6, h.y + 4);
+  const a = players.findInteraction(w, q);
+  assert.match(a.label, /Knock/);
+  a.run();
+  assert.match(players.findInteraction(w, q).label, /Waiting/);
+  // the host lets them in from the hall table
+  standAt(w, p, 'hall');
+  act(w, p);
+  const hm = lastMenu(conn);
+  const let_ = hm.opts.find((o) => o.id === `hi:let:${q.pid}`);
+  assert.ok(let_, 'who is knocking is on the hall table');
+  economy.handleMenu(w, p, hm.poi, let_.id);
+  assert.ok(q.ped.hidden && q.ped.home && q.ped.home.guest === p.pid, 'the friend is in');
+  assert.ok(!w.query(h.x, h.y, 300, K.PED).includes(q.ped), 'out of sight of the street');
+  w.step();
+  const mine = [...conn.sent].reverse().find((m) => m && m.t === 'home');
+  assert.equal(mine.others.length, 1, 'the host sees the friend');
+  assert.equal(mine.others[0].n, q.name);
+  const theirs = [...qc.sent].reverse().find((m) => m && m.t === 'home');
+  assert.equal(theirs.others[0].n, p.name, 'and the friend the host');
+  // the things are the host's
+  standAt(w, q, 'safe');
+  assert.ok(players.findInteraction(w, q).passive, 'not their safe');
+  // out by the front door
+  q.ped.home.x = homeinside.planFor(h).spawn.x; q.ped.home.y = homeinside.planFor(h).spawn.y;
+  assert.match(act(w, q), /Step outside/);
+  assert.ok(!q.ped.hidden && !q.ped.home);
+  w.step();
+  assert.equal([...conn.sent].reverse().find((m) => m && m.t === 'home').others.length, 0, 'gone');
+});
