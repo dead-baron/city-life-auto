@@ -2201,7 +2201,7 @@ export class World2 {
   // after a reconnect: the server's list of what is broken replaces the workers' and everything rebakes
   resync(rebake = true) {
     const list = [], lit = [], props = this.map.props || [];
-    for (let i = 0; i < props.length; i++) { if (props[i].broken) list.push([i, { a: props[i].broken.a || 0, ...(props[i].broken.f ? { f: 1 } : null) }]); if (props[i].t === 'campfire') lit.push([i, props[i].lit ? 1 : 0]); }
+    for (let i = 0; i < props.length; i++) { if (!props[i]) continue; if (props[i].broken) list.push([i, { a: props[i].broken.a || 0, ...(props[i].broken.f ? { f: 1 } : null) }]); if (props[i].t === 'campfire') lit.push([i, props[i].lit ? 1 : 0]); }
     const L = this.map.levels, barriers = L && L.broken ? [...L.broken.keys()].map((k) => [k, 1]) : [];
     if (this.pool && !this.pool.dead) this.pool.broadcast('patch', { props: list, lit, barriers, reset: true });
     if (rebake) for (const k of this.chunkState.keys()) this.ver.set(k, (this.ver.get(k) || 0) + 1);

@@ -4553,6 +4553,7 @@ function collectLights(sky, view, vehs, peds, dt) {
   const lamps = S.map.lamps;
   for (let i = 0; i < lamps.length; i++) {
     const l = lamps[i];
+    if (!l) continue;   // (World v3's window: a lamp it doesn't hold)
     if (l.broken || night <= 0.05) { l._lv = 0; continue; }
     if (!inV(l.x, l.y, 220)) continue;
     const lv = lampLevel(i, t, night, l);
