@@ -22,6 +22,7 @@
 import { TILE, T } from './constants.js';
 import { skeletonLines, STATIONS } from './world3-skeleton.js';
 import { measure } from './geom.js';
+import { MESA } from './world3-mesa.js';   // (Lucky Mesa's Strip is Mesa Road pulled straight: pulledAt)
 
 const SAND = 5;   // (world3-land.js TERRAIN3.SAND: the beach stays a beach)
 
@@ -97,7 +98,7 @@ export const TOWN_STYLES = {
 };
 
 // the room a line keeps, stamped into a town's box: within r of its path's points (segments)
-function stamp(mask, box, path, r) {
+export function stamp(mask, box, path, r) {
   const [x0, y0, x1, y1] = box, BW = x1 - x0;
   const P = path.pts;
   for (let j = 1; j < P.length; j++) {
@@ -138,7 +139,7 @@ export function paintTowns3(L, W, H) {
 // An arterial pulled straight through a town: its points within the town's box (and the ramp round it) along `axis`
 // ('y': an east-west run at row v from column a to b; 'x': a north-south one), eased back onto its own course over
 // `ramp` tiles each side (resampled a tile apart there, so the ease is smooth).
-function pull(l, axis, v, a, b, ramp, box) {
+export function pull(l, axis, v, a, b, ramp, box) {
   const U = axis === 'y' ? 'x' : 'y', Q = axis;   // (U: along the run, Q: the coordinate pulled)
   const A = a * TILE, B = b * TILE, R = Math.max(1, ramp * TILE), V = (v + 0.5) * TILE;
   const bx0 = (box[0] - ramp - 8) * TILE, by0 = (box[1] - ramp - 8) * TILE, bx1 = (box[2] + ramp + 8) * TILE, by1 = (box[3] + ramp + 8) * TILE;
@@ -193,7 +194,7 @@ export function townsFront(m) {
 // Whether an arterial's skeleton point (tiles) is where a town pulls it off its course (its main street, its pulls and
 // their ramps): the roads test's check of the skeleton's course passes these by.
 export function pulledAt(name, x, y) {
-  for (const t of TOWNS3) for (const [n, axis, , a, b, ramp] of [[t.main.line, 'y', 0, t.main.a, t.main.b, t.main.ramp], ...t.pulls]) {
+  for (const t of [...TOWNS3, MESA]) for (const [n, axis, , a, b, ramp] of [[t.main.line, 'y', 0, t.main.a, t.main.b, t.main.ramp], ...t.pulls]) {
     if (n !== name) continue;
     const u = axis === 'y' ? x : y, [x0, y0, x1, y1] = t.box, r = ramp + 8;
     if (u > a - ramp - 1 && u < b + ramp + 1 && x > x0 - r && x < x1 + r && y > y0 - r && y < y1 + r) return true;

@@ -203,30 +203,60 @@ if (REGION) {
   log(`${OUT3} (${n} chunks baked in ${Math.round((performance.now() - tb) / 1000)} s)`);
 }
 
-// (--towns: each of the first mainland towns - shared/world3-towns.js TOWNS3, 8.13 - through the chunk bake at 1/8,
-// its box and 24 tiles round it: docs/world-v3-town-<key>.png)
+// (--towns: each of the first mainland towns - shared/world3-towns.js TOWNS3, 8.13 - and Lucky Mesa (shared/world3-mesa.js,
+// 8.15) through the chunk bake at 1/8, its box and 24 tiles round it: docs/world-v3-town-<key>.png; --only <key> just
+// that one; --night also a night picture, docs/world-v3-town-<key>-night.png: the albedo under a dim blue sky, the
+// emissive map (lit windows, neon) and the chunk's lights splashed on the ground round them)
 if (process.argv.includes('--towns')) {
   const { TOWNS3 } = await imp('shared/world3-towns.js');
+  const { MESA } = await imp('shared/world3-mesa.js');
+  const ONLY = arg('--only', null), NIGHT = process.argv.includes('--night');
   const S8 = 8, CHP = CT * TILE, CS8 = CHP / S8;
-  for (const t of TOWNS3) {
+  for (const t of [...TOWNS3, MESA]) {
+    if (ONLY && t.key !== ONLY) continue;
     const [x0, y0, x1, y1] = t.box;
     const cx0 = Math.floor((x0 - 24) / CT), cy0 = Math.floor((y0 - 24) / CT), cx1 = Math.floor((x1 + 24) / CT), cy1 = Math.floor((y1 + 24) / CT);
-    const GW3 = (cx1 - cx0 + 1) * CS8, GH3 = (cy1 - cy0 + 1) * CS8, img = Buffer.alloc(GW3 * GH3 * 3);
+    const GW3 = (cx1 - cx0 + 1) * CS8, GH3 = (cy1 - cy0 + 1) * CS8, img = Buffer.alloc(GW3 * GH3 * 3), nimg = NIGHT ? Buffer.alloc(GW3 * GH3 * 3) : null;
     const tb = performance.now();
+    const lit = NIGHT ? new Float32Array(CS8 * CS8 * 3) : null;
     for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
-      const col = bakeChunk(M, cx, cy, opt, cache, providers).g.col;
+      const bk = bakeChunk(M, cx, cy, opt, cache, providers), col = bk.g.col, emi = bk.g.emi;
+      if (NIGHT) {
+        // (the lights on the ground: each lamp's, window's or tube's colour over its radius, falling off squared)
+        lit.fill(0);
+        const ox = cx * CHP, oy = cy * CHP;
+        for (const l of bk.lights || []) {
+          if (!l || !l.col) continue;
+          const R = Math.max(8, l.r), bx0 = Math.max(0, Math.floor((l.x - ox - R) / S8)), bx1 = Math.min(CS8 - 1, Math.floor((l.x - ox + R) / S8));
+          const by0 = Math.max(0, Math.floor((l.y - oy - R) / S8)), by1 = Math.min(CS8 - 1, Math.floor((l.y - oy + R) / S8));
+          for (let by = by0; by <= by1; by++) for (let bx = bx0; bx <= bx1; bx++) {
+            const d = Math.hypot((bx + 0.5) * S8 + ox - l.x, (by + 0.5) * S8 + oy - l.y) / R;
+            if (d >= 1) continue;
+            const f = (1 - d) * (1 - d) * (l.k || 1), o = (by * CS8 + bx) * 3;
+            lit[o] += l.col[0] * f; lit[o + 1] += l.col[1] * f; lit[o + 2] += l.col[2] * f;
+          }
+        }
+      }
       for (let by = 0; by < CS8; by++) for (let bx = 0; bx < CS8; bx++) {
-        let R = 0, G = 0, B = 0;
-        for (let y = by * S8; y < by * S8 + S8; y++) for (let x = bx * S8; x < bx * S8 + S8; x++) { const j = (y * CHP + x) * 4; R += col[j]; G += col[j + 1]; B += col[j + 2]; }
+        let R = 0, G = 0, B = 0, ER = 0, EG = 0, EB = 0;
+        for (let y = by * S8; y < by * S8 + S8; y++) for (let x = bx * S8; x < bx * S8 + S8; x++) { const j = (y * CHP + x) * 4; R += col[j]; G += col[j + 1]; B += col[j + 2]; if (emi) { ER += emi[j]; EG += emi[j + 1]; EB += emi[j + 2]; } }
         const o = (((cy - cy0) * CS8 + by) * GW3 + (cx - cx0) * CS8 + bx) * 3, q = S8 * S8;
         img[o] = R / q; img[o + 1] = G / q; img[o + 2] = B / q;
+        if (NIGHT) {
+          const k = (by * CS8 + bx) * 3;
+          nimg[o] = Math.min(255, R / q * (0.1 + 0.9 * Math.min(1.2, lit[k])) + ER / q * 1.4);
+          nimg[o + 1] = Math.min(255, G / q * (0.12 + 0.9 * Math.min(1.2, lit[k + 1])) + EG / q * 1.4);
+          nimg[o + 2] = Math.min(255, B / q * (0.2 + 0.9 * Math.min(1.2, lit[k + 2])) + EB / q * 1.4);
+        }
       }
     }
-    const OUT4 = join(ROOT, `docs/world-v3-town-${t.key}.png`), tmp4 = OUT4 + '.rgb';
-    writeFileSync(tmp4, img);
-    r = spawnSync('python3', ['-c', py(tmp4, OUT4, GW3, GH3, `World v3: ${t.name} (tiles ${cx0 * CT}-${(cx1 + 1) * CT - 1}, ${cy0 * CT}-${(cy1 + 1) * CT - 1}), the game's chunk bake at 1/8`)], { stdio: 'inherit' });
-    rmSync(tmp4, { force: true });
-    log(`${OUT4} (${(cx1 - cx0 + 1) * (cy1 - cy0 + 1)} chunks in ${Math.round((performance.now() - tb) / 1000)} s)`);
+    for (const [buf, sfx, what] of [[img, '', ''], ...(NIGHT ? [[nimg, '-night', ', by night (its emissive map and lights)']] : [])]) {
+      const OUT4 = join(ROOT, `docs/world-v3-town-${t.key}${sfx}.png`), tmp4 = OUT4 + '.rgb';
+      writeFileSync(tmp4, buf);
+      r = spawnSync('python3', ['-c', py(tmp4, OUT4, GW3, GH3, `World v3: ${t.name} (tiles ${cx0 * CT}-${(cx1 + 1) * CT - 1}, ${cy0 * CT}-${(cy1 + 1) * CT - 1}), the game's chunk bake at 1/8${what}`)], { stdio: 'inherit' });
+      rmSync(tmp4, { force: true });
+      log(`${OUT4} (${(cx1 - cx0 + 1) * (cy1 - cy0 + 1)} chunks in ${Math.round((performance.now() - tb) / 1000)} s)`);
+    }
   }
 }
 

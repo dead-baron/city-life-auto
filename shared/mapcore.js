@@ -132,6 +132,10 @@ for (const [name, isl, style, tier] of [['Timber Bend', 'Highland Woods', 'oldto
   const b = style === 'beach';
   DISTRICTS.push({ id: DISTRICTS.length, name, isl, style, tier, walk: b ? 'brick' : 'concrete', plaza: b ? 'brick' : 'concrete', road: b ? 'asphalt' : 'asphalt_worn', ground: b ? T.SAND : T.GRASS, turf: false });
 }
+// World v3's casino city, Lucky Mesa (docs/WORLD-V3.md 8.15, shared/world3-mesa.js): 60-62, only a v3 build paints them
+for (const [name, style, tier, ground] of [['The Strip', 'nightlife', 'lux', T.PLAZA], ['Old Downtown', 'nightlife', 'low', T.PLAZA], ['Mesa Flats', 'houses', 'suburb', T.DIRT]]) {
+  DISTRICTS.push({ id: DISTRICTS.length, name, isl: 'Red Rock Desert', style, tier, walk: 'concrete', plaza: 'concrete', road: 'asphalt', ground, turf: false });
+}
 export const WATER_D = 13;   // (the open sea's district: the generator's too)
 // Districts nobody builds in: woods, hills, mountains, farmland, desert, airfields.
 export const WILD_STYLES = new Set(['wild', 'rural', 'desert', 'airport', 'water', 'rocky']);
