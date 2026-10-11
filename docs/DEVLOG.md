@@ -8763,4 +8763,7 @@ aircraft, the sound measured) merged together; their entries are above. At the m
 the first three threw a page error in the classic view's smash effect (`main.js` smashFx: the newer camps' tents have
 more colours) - the colours now wrap. The earlier entry's claim that the rotor drove the mix into its soft ceiling was
 wrong (H63 measured the ceiling at 0% in every version); the prop-smash barrage under a flying aircraft (+6 dB of
-crashes) and an audio thread starved by the bakes on a phone are the likelier "blown out".
+crashes) and an audio thread starved by the bakes on a phone are the likelier "blown out". And an import cycle the new
+home code made (homes.js -> homeinside.js -> economy.js, which hands homes.js its menu builder as it loads) crashed any
+test that loaded homes.js first, on a `let` not yet initialised: the builder is kept on its setter function now
+(homes.js, and station.js the same way); the server itself booted either way.

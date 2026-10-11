@@ -352,8 +352,11 @@ export function openInside(world, p) {
   const poi = homePoi(world, h);
   if (poi) { p.menu = { poi: poi.id }; p.conn.sendJSON({ ...menuBuilder(world, p, poi), inside: true }); }
 }
-let menuBuilder = () => ({ t: 'menu', opts: [] });
-export function setMenuBuilder(fn) { menuBuilder = fn; }
+// (economy.js hands its builder over as it loads - in an import cycle that can come before this module's own body has
+// run (homes.js -> homeinside.js -> economy.js), when a `let` here would still be uninitialised: so it's kept on the
+// function, whose binding is ready from the start)
+export function setMenuBuilder(fn) { setMenuBuilder.fn = fn; }
+const menuBuilder = (world, p, poi) => (setMenuBuilder.fn ? setMenuBuilder.fn(world, p, poi) : { t: 'menu', opts: [] });
 
 export function leaveHome(world, p) {
   const ped = p.ped;
