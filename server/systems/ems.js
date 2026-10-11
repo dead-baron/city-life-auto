@@ -36,6 +36,7 @@ import * as players from './players.js';
 import * as vehicles from './vehicles.js';
 import * as revive from './revive.js';
 import * as rescue from './rescue.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const HARD_DESPAWN = 45;
 const REVIVE_TIME = 3;
@@ -444,7 +445,7 @@ function standOk(world, v, x, y, a, others) {
     if (props) for (const p of props) if (!p.off && circleVsObb(p.x, p.y, p.r, x, y, a, hl, hw)) return false;
   }
   // (a car going by is no reason not to stop there: one standing there is)
-  for (const q of world.query(x, y, hl + 80, K.VEH)) if (q !== v && !q.removed && sameLevel(q.lz, v.lz) && Math.hypot(q.vx, q.vy) < 40 && obbVsObb(x, y, a, hl + 4, hw + 4, q.x, q.y, q.a, q.def.L / 2, q.def.W / 2)) return false;
+  for (const q of world.query(x, y, hl + 80, K.VEH)) if (q !== v && !q.removed && sameLevel(q.lz, v.lz) && !((q.alt || 0) > FLY.HIGH) && Math.hypot(q.vx, q.vy) < 40 && obbVsObb(x, y, a, hl + 4, hw + 4, q.x, q.y, q.a, q.def.L / 2, q.def.W / 2)) return false;
   return true;
 }
 

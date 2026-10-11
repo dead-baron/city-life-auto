@@ -57,6 +57,8 @@ export const COMP = Object.freeze({ threshold: -10, knee: 8, ratio: 2.5, attack:
 // the first few milliseconds of a kick. The ceiling sits a little under full scale: the shaper's oversampling filter
 // can ring a touch past the curve on a peak it rounded off.
 export const CLIP_KNEE = 0.72, CLIP_CEIL = 0.95;
+// the master's high-pass: what's under it isn't heard (createMixer)
+export const SUB_HZ = 25;
 export function softClipCurve(n = 2049, range = 4) {
   const c = new Float32Array(n), k = CLIP_KNEE, w = CLIP_CEIL - k;
   for (let i = 0; i < n; i++) {
@@ -71,13 +73,17 @@ export function createMixer(ctx, prefs) {
   const gain = (v, to) => { const g = ctx.createGain(); g.gain.value = v; if (to) g.connect(to); return g; };
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = COMP.threshold; comp.knee.value = COMP.knee; comp.ratio.value = COMP.ratio; comp.attack.value = COMP.attack; comp.release.value = COMP.release;
+  // (below SUB_HZ nobody hears anything - a phone's speaker plays nothing there at all - but the level of it was still
+  // in the mix: the rotor's sub-octave at 8-15 Hz, the tank's, a blast's rumble, eating the headroom, working the
+  // compressor and pushing a little speaker's cone about. The owner, 2026-10-11, flying: "the sound appears blown out")
+  const hp = krate(ctx.createBiquadFilter()); hp.type = 'highpass'; hp.frequency.value = SUB_HZ; hp.Q.value = 0.7; hp.connect(comp);
   // (the soft ceiling: a wave shaper reads its curve over an input of -1..1, so the signal goes in at a quarter and
   // the curve is drawn over +-4 - the curve's output is the signal itself, ceiling and all)
   const ceil = ctx.createWaveShaper(); ceil.curve = softClipCurve(); ceil.oversample = '2x';
   const pre = gain(0.25, ceil); ceil.connect(ctx.destination);
   const post = gain(Math.pow(10, -COMP.makeupDb / 20), pre);
   comp.connect(post);
-  const master = gain(0, comp);
+  const master = gain(0, hp);
   const sfx = gain(1, master), amb = gain(1, master), mus = gain(1, master);
   // the ambience is muffled when you're indoors (ambience.js sets it)
   const ambLp = krate(ctx.createBiquadFilter()); ambLp.type = 'lowpass'; ambLp.frequency.value = 18000; ambLp.Q.value = 0.5; ambLp.connect(amb);
@@ -86,7 +92,7 @@ export function createMixer(ctx, prefs) {
   delay.delayTime.value = 0.21; dark.type = 'lowpass'; dark.frequency.value = 2400;
   echo.connect(delay); delay.connect(dark); dark.connect(fb); fb.connect(delay);
   const echoOut = gain(0.5, sfx); dark.connect(echoOut);
-  const mix = { ctx, master, comp, post, ceil, sfx, amb, ambIn: ambLp, ambLp, mus, echo, prefs: soundPrefs({ sound: prefs }) };
+  const mix = { ctx, master, hp, comp, post, ceil, sfx, amb, ambIn: ambLp, ambLp, mus, echo, prefs: soundPrefs({ sound: prefs }) };
   mix.apply = (p) => {
     mix.prefs = soundPrefs({ sound: p });
     const g = busGains(mix.prefs), t = ctx.currentTime;

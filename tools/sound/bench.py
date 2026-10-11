@@ -124,6 +124,10 @@ def main():
                     best['baselineWallMs'] = base['wallMs']
                     best['cpuPct'] = round(100 * best['renderMs'] / (best['seconds'] * 1000), 1)
                     rep['scene_' + ('phone' if mobile else 'computer')] = best
+            if 'air' in only:   # (flying: your own rotor, aircraft passing, a fire, the Boom Tester - runAir)
+                rep['air'] = pg.evaluate('window.bench.runAir({ mobile: true })')
+                rep['air_plane'] = pg.evaluate("window.bench.runAir({ mobile: true, model: 'plane' })")
+                rep['air_barrage'] = pg.evaluate('window.bench.runAir({ mobile: true, barrage: true })')   # (before 2f3ba8a: the street furniture smashed under you)
             if 'beds' in only:
                 rep['beds'] = pg.evaluate('window.bench.runBeds()')
             if 'songs' in only:
@@ -145,6 +149,14 @@ def main():
 
 
 def report(rep):
+    for k in ('air', 'air_plane', 'air_barrage'):
+        a = rep.get(k)
+        if not a:
+            continue
+        print(f"== {k} ({a['model']}, phone): render {a['wallMs']} ms")
+        for part in ('own', 'passing', 'fire', 'whole'):
+            p = a[part]
+            print(f"   {part:8s} out peak {p['out']['peak']:6.1f} dBFS rms {p['out']['rmsA']:6.1f} dBA loudest 400ms {p['out']['max400']:6.1f} | before the compressor peak {p['preComp']['peak']:6.1f} | compressor max {p['comp']['maxReduction']} dB, >3 dB {p['comp']['over3dB']}% | soft ceiling driven {p['ceiling']['overPct']}% of samples, in-peak {p['ceiling']['inPeak']} dBFS | under 40 Hz peak {p.get('sub40')} dBFS, {p.get('subPct')}% of the energy under 25 Hz")
     for k in ('scene_phone', 'scene_computer'):
         s = rep.get(k)
         if not s:

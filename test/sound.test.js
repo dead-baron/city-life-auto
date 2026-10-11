@@ -323,3 +323,15 @@ test('the tyres screech sliding sideways or in a burnout, never on a hard start 
 test('the surf on the waterline sits in the mix, not over it (#397)', () => {
   assert.ok(SURF_LEVEL > 0.1 && SURF_LEVEL <= 0.4, `the surf's level ${SURF_LEVEL} (was 0.8: the loudest thing on the shore)`);
 });
+
+// The owner, flying (2026-10-11): "The sound appears blown out now too". The rotor's note (17-30 Hz) and its sub-octave
+// (8-15 Hz) put much of its energy where nobody hears anything (tools/sound/bench.py --only air: 41% of it under 25 Hz
+// in its first version) - headroom spent, the compressor worked and a phone's speaker cone pushed about for nothing.
+// The master runs through a high-pass there, before the compressor.
+test('the master runs through a high-pass under what anyone hears, before the compressor', async () => {
+  const { SUB_HZ } = await import('../client/sound/mixer.js');
+  assert.ok(SUB_HZ >= 20 && SUB_HZ <= 30, `${SUB_HZ} Hz: under the music's bass, over the rotor's sub-octave`);
+  const src = readFileSync(join(ROOT, 'client/sound/mixer.js'), 'utf8');
+  assert.match(src, /const master = gain\(0, hp\)/, 'the master into the high-pass');
+  assert.match(src, /hp\.type = 'highpass'; hp\.frequency\.value = SUB_HZ;[^\n]*hp\.connect\(comp\)/, 'and the high-pass into the compressor');
+});

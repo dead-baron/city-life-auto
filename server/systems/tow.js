@@ -28,6 +28,7 @@ import { kerbFor, planTo, follow, halt, exitNode, sinceProgress } from './kerbdr
 import { trimBehind } from './custody.js';
 import { planRoute } from './traffic.js';
 import { store } from '../store.js';
+import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const MAX_TRUCKS = 2;
 const HOOK_S = 3.2;            // working the winch
@@ -196,7 +197,7 @@ function stripOk(world, v, x, y, ux, uy, off, a, b, w) {
   }
   const cx = x + ux * (a + b) / 2 + nx * off, cy = y + uy * (a + b) / 2 + ny * off, hl = (b - a) / 2;
   for (const e of world.query(cx, cy, hl + w + 60)) {
-    if (e === v || !sameLevel(e.lz, v.lz) || (e.kind !== K.VEH && !(e.kind === K.PED && !e.vehId && !e.dead && !e.hidden))) continue;
+    if (e === v || !sameLevel(e.lz, v.lz) || (e.kind !== K.VEH && !(e.kind === K.PED && !e.vehId && !e.dead && !e.hidden)) || (e.alt || 0) > FLY.HIGH) continue;   // (an aircraft overhead: not in the way)
     const dx = e.x - cx, dy = e.y - cy, la = dx * ux + dy * uy, lo = dx * nx + dy * ny;
     const r = e.kind === K.VEH ? Math.max(e.def.L, e.def.W) / 2 : 12;
     if (Math.abs(la) < hl + r && Math.abs(lo) < w / 2 + r) return false;

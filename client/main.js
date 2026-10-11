@@ -2854,8 +2854,9 @@ function prepFrame(dt) {
   const airCap = /phone|tablet|console/.test(getDevice().kind) ? 1.45 : 2;
   if (myAir && S.art2 && S.art2.lateNow && S.art2.lateNow()) S.airMax = Math.max(1.1, Math.min(airCap, S.airMax ?? airCap) - 0.2 * dt);
   else S.airMax = Math.min(airCap, (S.airMax ?? airCap) + 0.02 * dt);
-  const airPull = myAir && airDefOf(myAir) ? Math.min(S.airMax, S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4)) : 1;
-  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, 1 + Math.min(S.zoMax ?? 0.5, speed / 1300), airPull);
+  const flying = !!(myAir && airDefOf(myAir)), airPull = flying ? Math.min(S.airMax, S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4)) : 1;
+  const spdPull = 1 + Math.min(S.zoMax ?? 0.5, speed / 1300);   // (flying, the speed's pull-back is held to the same cap: a helicopter flat out is 1.5x of it)
+  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull);
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
@@ -2979,7 +2980,7 @@ function tickVisuals(F) {
   }
   if (F.rain || S.wx.wet > 0.2) tyreSpray(F.vehs, dt);
   // rockets trail fire and smoke, fire arrows (30) burn, hunting arrows (24) don't; smashed hydrants gush
-  for (const pr of F.projs) { const w = pr.d && pr.d.w; if (w === 24) continue; if (w === 30) { fx.fire(pr.rx + Math.cos(pr.ra) * 8, pr.ry + Math.sin(pr.ra) * 8); continue; } fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10); fx.smoke(pr.rx, pr.ry, false); }
+  for (const pr of F.projs) { const w = pr.d && pr.d.w; if (w === 24) continue; if (w === 30) { fx.fire(pr.rx + Math.cos(pr.ra) * 8, pr.ry + Math.sin(pr.ra) * 8); continue; } const up = S.art2 && S.art2.ready ? (pr.extra | 0) * 2.64 : 0; fx.fire(pr.rx - Math.cos(pr.ra) * 10, pr.ry - Math.sin(pr.ra) * 10 - up); fx.smoke(pr.rx, pr.ry - up, false); }   // (up: a missile's trail at its height in art v2)
   S.geysers = S.geysers.filter((gy) => gy.until > F.nowMs);
   for (const gy of S.geysers) fx.geyser(gy.x, gy.y);
   // street furniture that moves (none of it down in the subway)

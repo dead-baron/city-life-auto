@@ -143,3 +143,24 @@ test('the ride and star sprites draw with the art the workers hand in; the page\
   const worker = readFileSync(new URL('../client/art2/game/worker.js', import.meta.url), 'utf8');
   assert.match(worker, /useArt\(\{ ferrisCab: [^}]*hotAirBalloon: [^}]*starfish: /, 'the workers hand the art in');
 });
+
+// Flying (the owner, 2026-10-11, a helicopter on a phone: "it definitely struggles on mobile and loading art fast
+// enough"): what's baked and downloaded ahead (host.js _prebakeList) is a band as wide as the view along the way you fly,
+// and nothing along the roads (an aircraft goes straight over the blocks); driving, the roads from here as before.
+test('bake ahead: flying, a band as wide as the view along the way you fly and not the roads; driving, the roads', async () => {
+  const { World2 } = await import('../client/art2/game/host.js');
+  const C = 768, X = 5300, Y = 15000;
+  // a road running east from the camera; the camera going north at a helicopter's top speed, a phone's view 2071 x 957
+  const net = { nodes: [{ id: 0, x: X, y: Y, edges: [0] }, { id: 1, x: X + 7400, y: Y, edges: [0] }], edges: [{ a: 0, b: 1, pts: [{ x: X, y: Y }, { x: X + 7400, y: Y }], len: 7400 }] };
+  const list = (air) => {
+    const h = Object.create(World2.prototype);
+    Object.assign(h, { map: { net, frame: { w: 1000, h: 1000 } }, grid: [40, 40], S: { pred: { kind: 'veh', ...(air ? { air: true } : null) } }, camV: { out: { x: 0, y: -720 } }, camX: X, camY: Y, vx0: X - 1035, vx1: X + 1035, vy0: Y - 478, vy1: Y + 478 });
+    return h._prebakeList().map((k) => [k % 1000, Math.floor(k / 1000)]);
+  };
+  const fly = list(true), drive = list(false);
+  const ahead = (l, cx) => l.some(([x, y]) => x === cx && y <= Math.floor((Y - 6000) / C));   // (8 s on, well past the ring round you)
+  for (let cx = Math.floor((X - 1035) / C); cx <= Math.floor((X + 1035) / C); cx++) assert.ok(ahead(fly, cx), `flying: the view's whole width ahead (column ${cx})`);
+  assert.ok(!ahead(drive, Math.floor((X + 1035) / C)), 'driving: the band is three chunks wide (it was for flying too)');
+  const roadFar = (l) => l.some(([x, y]) => y === Math.floor(Y / C) && x > Math.floor(X / C) + 5);
+  assert.ok(roadFar(drive) && !roadFar(fly), 'the road east: baked ahead driving, not flying');
+});

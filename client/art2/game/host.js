@@ -765,14 +765,17 @@ export class World2 {
       if (c === undefined || p < c) out.set(k, p);
     };
     const x0 = this.camX, y0 = this.camY;
-    // 1. the way you're heading, past the stretch _chunks bakes: a band three chunks wide, up to AHEAD_S s on
-    const v = this.camV ? this.camV.out : null, sp = v ? Math.hypot(v.x, v.y) : 0;
+    // 1. the way you're heading, past the stretch _chunks bakes: a band three chunks wide, up to AHEAD_S s on. Flying
+    // (an aircraft goes straight over the blocks, the roads don't lead it): the band as wide as the view and nothing
+    // along the roads - the owner, 2026-10-11, flying a helicopter on a phone: "it definitely struggles on mobile and
+    // loading art fast enough"
+    const v = this.camV ? this.camV.out : null, sp = v ? Math.hypot(v.x, v.y) : 0, air = !!(this.S.pred && this.S.pred.air);
     if (sp > 120) {
-      const ux = v.x / sp, uy = v.y / sp, L = Math.min(sp * AHEAD_S, 14000);
-      for (let d = 0; d <= L; d += CHUNK / 2) for (let o = -1; o <= 1; o++) add(Math.floor((x0 + ux * d - uy * o * CHUNK) / CHUNK), Math.floor((y0 + uy * d + ux * o * CHUNK) / CHUNK), d * 0.5 + Math.abs(o) * 300);
+      const ux = v.x / sp, uy = v.y / sp, L = Math.min(sp * AHEAD_S, 14000), w = air ? Math.min(3, Math.ceil((Math.abs(uy) * (this.vx1 - this.vx0) + Math.abs(ux) * (this.vy1 - this.vy0)) / 2 / CHUNK + 0.5)) : 1;   // (w: the chunks either side of the line - the view's half-width across the way you fly)
+      for (let d = 0; d <= L; d += CHUNK / 2) for (let o = -w; o <= w; o++) add(Math.floor((x0 + ux * d - uy * o * CHUNK) / CHUNK), Math.floor((y0 + uy * d + ux * o * CHUNK) / CHUNK), d * 0.5 + Math.abs(o) * (air ? 150 : 300));
     }
     // 2. along the roads from here, by the distance along them (the ground level: a deck's chunks are its ground's)
-    const net = this.map.net;
+    const net = air ? null : this.map.net;
     if (net && net.nodes && net.nodes.length) {
       const dist = new Map(), open = [];
       for (const nd of net.nodes) { const d = Math.hypot(nd.x - x0, nd.y - y0); if (d < 700) { dist.set(nd.id, d); open.push(nd.id); } }
@@ -1532,7 +1535,7 @@ export class World2 {
       for (const pr of F.projs) {
         const N = 32, hi = quant(pr.ra, N), w = pr.d.w | 0;
         if (!this.projWarm.has(w)) { this.projWarm.add(w); for (let h = 0; h < N; h++) this.warmQ.unshift(['actors', 'proj', A.projKey(w, h, N), [w, h, N], -1]); }
-        this._small('proj', A.projKey(w, hi, N), [w, hi, N], pr, pr.rx, pr.ry, 14 + ((pr.rz || 0) > 0.01 ? DECK_Z * pr.rz : 0));
+        this._small('proj', A.projKey(w, hi, N), [w, hi, N], pr, pr.rx, pr.ry, 14 + ((pr.rz || 0) > 0.01 ? DECK_Z * pr.rz : 0) + (pr.extra | 0) * 2.64);   // (a gunship's missile at its height: altitude steps of 4 px, drawn 0.66 up as the aircraft are - render/aircraft.js V2_LIFT)
       }
       // your arrows lying where they came down (me.arrows: walk over one to pick it up), on the ground
       const ma = S.me && S.me.arrows;

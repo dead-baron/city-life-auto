@@ -8592,3 +8592,62 @@ hitting things on the ground as I fly by even though I'm up in the air. The soun
 - The sound: the rotor (vol 0.5, a deep sub at 0.9) drove the mix into its soft ceiling right under you. The rotor,
   the propeller and the tank are now level with a truck (sound/vehicles.js); the rescue helicopter has the rotor's sound
   (it had a car's).
+
+## 2026-10-11 · Flying, measured: nothing on the ground touches an aircraft, the art ahead of a flight, the sound (H63)
+
+The owner, after flying the helicopter on their phone: "it definitely struggles on mobile and loading art fast enough. I
+think it's also hitting things on the ground as I fly by even though I'm up in the air. The sound appears blown out now
+too, not sure if that was specific to the helicopter sounds or if the sound got messed up with a recent push." The
+entry above changed the first round of it; this one measures all three and fixes what was left.
+- Nothing on the ground touches an aircraft up in the air (every server system that touches vehicles, checked): no
+  aircraft smashes the street furniture or is dragged by a hydrant's spray at all, flown by anyone (shared/smash.js,
+  props.js - one flown by nobody or by an NPC pilot still smashed what it passed over; the page predicts none for any);
+  above FLY.HIGH it's out of reach of a swing (combat.js meleeVehicle), of the police dragging the pilot out
+  (police.js pullOut; hovering up there isn't "stopped" for them either - no door to walk up to, the shooters shoot)
+  and of angry drivers doing the same (npc.js), doesn't shove the crates under it (cargo.js), and
+  traffic at junctions (traffic.js), cars going round a block or turning in the street (reroute.js, roadends.js), tow
+  trucks (tow.js), ambulances parking (ems.js) and animals (wildlife.js) don't treat one overhead as in their way.
+  Measured with the old path put back (scratch: flying at 60 px along the line of a street's 9 lamp posts and
+  hydrants for 6 s): 2.5 props broken, 1.7 crashes and 0.7 geysers a second, 49 hp lost and 1820 px flown; now none,
+  no damage, 3412 px. Corrections: the page's prediction (flightStep) is the server's step for step flying low over a
+  street with a parked car, someone in the road and a crate under it (test/flight.test.js: worst 0.000 px).
+- Flying on a phone: the headless playtest at a phone's settings (Android UA, touch, 844x390, the phone's preset)
+  can't measure frames here - the software WebGL draws 0.3-0.5 frames a second, every run alike (helicopter low and
+  high, the plane, a sports car) - so the art's demand was measured on the real map instead (the renderer's own
+  _prebakeList, a phone's view and the camera's pull-back, a straight run from downtown over the suburbs):
+  chunks coming on screen a second - helicopter flat out (720 px/s) 4.0, the plane (1150 px/s) 6.1, a sports car flat
+  out 4.3 - and how far ahead each was first put on the list the downloads and the bakes ahead work through. That list
+  was a car's: a band three chunks wide along the way you go and the roads from here, which a helicopter crossing the
+  blocks doesn't follow. Flying, it's now a band as wide as the view along the way you fly and no roads (host.js
+  _prebakeList): chunks listed 2 s or more before they show 76% -> 88% (helicopter), 71% -> 93% (plane), 88% -> 93%
+  (flying north), none never listed (was 2-5%), median lead 6.0 -> 8.1 s. And the speed's pull-back (1.5x flat out) is
+  held to the flying cap like the height's (1.45x on a phone, easing to 1.1x while chunks on screen are stand-ins; the
+  speed's eased only to 1.25x): 4.0 -> 3.9 chunks a second flat out, 3.5 -> 3.2 while late (main.js). Budgets
+  unchanged (page 479 of 485 KB, renderer 357 of 363).
+- The sound (tools/sound/bench.py --only air, new: at the controls of your own helicopter flying round, then another
+  helicopter and a plane passing close, then three people alight - the crackle, their screams - with the Boom Tester's
+  four blasts and a police siren; and the same with the old street-furniture barrage under you):
+  - the soft ceiling is never driven (0% of the samples over its knee) and the compressor barely (3.6 dB at most, in
+    0.1% of the blocks) - the rotor's first version (20b632e), 2f3ba8a's quieter one, and now; the rotor right under
+    you peaks at -17 dBFS (first) / -20 (2f3ba8a) - so the entry above's "drove the mix into its soft ceiling" didn't
+    hold up on the bench;
+  - the city scene (traffic, a siren, gunfire, an explosion) is the same as before the last two waves (6e002e7: peak
+    -5.3 dBFS, -37.2 dBA, the compressor over 3 dB in 3.7% of the blocks; now -6.1, -37.2, 3%) - no recent push
+    changed the mix;
+  - what was wrong: the rotor's energy was mostly where nobody hears anything - its note at 17-30 Hz and its sub-octave
+    at 8-15 Hz: 41% of what came out under 25 Hz (2f3ba8a 28%), which a phone's speaker can't play but still gets
+    pushed about by; and the street furniture smashed under you (+6 dB, a crash every 0.6 s). The master now runs
+    through a high-pass at 25 Hz before the compressor (mixer.js SUB_HZ: 15% of the rotor's output under 25 Hz, the
+    city scene unchanged); and on a phone the audio runs with a roomier buffer (audio.js latencyHint 'balanced':
+    flying, the art's bakes take every core, and an audio thread that misses its moment crackles - not measurable
+    here, the likeliest other half of "blown out").
+- The gunship's missiles at their height in art v2: a projectile's record carries its height in its extra byte (the
+  altitude's steps, net.js - a missile from an aircraft glides down from the aircraft's height to where it lands:
+  aircraft.js alt0), drawn up by it as the aircraft are (host.js) with its flame and smoke trail up there too
+  (main.js).
+- Not done: art v2 block models for the aircraft after HE1 (task 4) - they're still the 2D drawing, lifted.
+Tests: test/flight.test.js (flying low over a street: the page's prediction matches step for step, nothing touched;
+out of reach of a swing and the police up there; nothing smashed under one flown by nobody; a missile's height on the
+wire), test/art2.test.js (the
+flight band, no roads), test/sound.test.js (the high-pass), test/perf.test.js; the bench's air scene
+(tools/sound/bench.py --only air).

@@ -52,7 +52,9 @@ export function initAudio() {
   if (noAudio) return;
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) { noAudio = true; return; }
-  try { ctx = new AC(); } catch (e) { ctx = null; lastErr = String((e && e.message) || e).slice(0, 80); failed++; return; }
+  // (a phone: a roomier buffer - flying, the art's bakes take every core, and an audio thread that misses its moment
+  // crackles: the owner's "blown out", 2026-10-11)
+  try { ctx = new AC(/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ? { latencyHint: 'balanced' } : undefined); } catch (e) { ctx = null; lastErr = String((e && e.message) || e).slice(0, 80); failed++; return; }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
   window.addEventListener('pageshow', wake);
   window.addEventListener('focus', wake);

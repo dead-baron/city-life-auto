@@ -177,7 +177,7 @@ export function meleeVehicle(world, ped, w, aim) {
   const reach = w.range + 8;
   let hit = null, bestT = 2, hx = 0, hy = 0;
   for (const v of world.query(ped.x, ped.y, reach + 110, K.VEH)) {
-    if (v.removed || v.wreckAt || v.ferry || v.fly || !!v.sub !== !!ped.sub || !sameLevel(v.lz, ped.lz)) continue;
+    if (v.removed || v.wreckAt || v.ferry || v.fly || !!v.sub !== !!ped.sub || !sameLevel(v.lz, ped.lz) || (v.alt || 0) > FLY.HIGH) continue;   // (an aircraft overhead: out of a swing's reach)
     for (const da of [0, -w.arc / 4, w.arc / 4]) {
       const a = aim + (w.arc ? da : 0), x2 = ped.x + Math.cos(a) * reach, y2 = ped.y + Math.sin(a) * reach;
       const t = segObb(ped.x, ped.y, x2, y2, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
