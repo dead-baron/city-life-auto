@@ -497,6 +497,7 @@ export class World2 {
     mk('begin');
     this._uploadSprites(); mk('upload');
     this._decals(F); this._wakeTrail(F); mk('decals');
+    if (S.farmArt) S.farmArt.drawV2(this, F, gbuf, put);   // (the garden plots near you, the fields' rows: render/farmart.js)
     this._entities(F); mk('entities');
     this._prefetch(F); mk('prefetch');
     this._furniture(F); mk('furniture');
