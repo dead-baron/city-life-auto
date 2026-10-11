@@ -3396,6 +3396,8 @@ it. What is built (tiles out from the shore tile):
   smaller lot (8 x 5) with no street needed (Gull Harbor's).
 - **A water bus stop:** a patch of boards ashore, a gangway (3 across, 3 out) to a pontoon (5 across, 2 out), a lamp, a
   bollard, mooring posts.
+- **The way ashore** (a terminal, a pontoon): boards 3 across straight back over the beach or the grass to the street,
+  the promenade or a path, when one is within 30 tiles.
 
 Each stop is listed in `m.world3.ferries` (`[{ name, model, car, loop, custody, stops: [{ name, kind, x, y, ox, oy,
 shore, land, building, pt }], hint }]`; `x, y` the pier's end where the boat's stern lies, `ox, oy` the way out,
@@ -3460,12 +3462,14 @@ Gull Harbor a lot off the island's ring road. What's wrong:
   booth window aren't drawn) and the booth reads as a small house.
 - **Metro City Harbor's deck is close under the bridges:** its south edge 2-3 tiles from the road bridge's deck - the
   nearest shore to the skeleton's point with room; a few tiles north would read better.
-- **Northshore Pier stands on the beach**, 20-odd tiles of sand from the street: no path or boardwalk leads to it.
+- **Northshore Pier stood on the beach**, 20-odd tiles of sand from the street with no way to it: a terminal or a
+  pontoon now gets boards (3 across) straight back over the sand or the grass to the street, the promenade or a path
+  when one is within 30 tiles (`-northshore-pier.png` and `-metro-city-harbor.png` are drawn with them).
 - **The boats aren't in the bake** (they are vehicles): the white outline is where the boat lies.
 - **Gull Harbor's lot** sits beside the ring road's sidewalk with no drive of its own (the relaxed spec: no street
   needed within reach); cars cross the kerb to it.
 
-**What's left:** the terminal and ramp models (FE1, FE2); a boardwalk from the street to Northshore Pier; the Prison
+**What's left:** the terminal and ramp models (FE1, FE2); the Prison
 Boat as the arrests system's transport, once prisoners go to the island; the lift bridges opening for tall boats (the
 boats pass under every deck today). The Transit app (`client/phone.js`) lists every stop of a route of many by its
 own name with its time (`ferryInfo`'s `stops`, `piers`, `leaves`) and leaves the Prison Boat out.
