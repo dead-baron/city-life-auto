@@ -150,7 +150,7 @@ test('World v3: the skeleton\'s roads - on the ground, the deck, a bridge or a t
 
   // 5. the tunnels: the skeleton's (the highways', the Summit Road's, the Harbor Tunnel under the north channel) and the
   //    closures - each highway running off the frame ends in a tunnel whose mouth at the edge is closed (wall across)
-  const tn = (name) => m.tunnels.filter((t) => m.edges[t.edge].name === name);
+  const tn = (name) => m.tunnels.filter((t) => m.edges[t.edge] && m.edges[t.edge].name === name);   // (the main line's bores have no road edge: 8.10.1)
   for (const name of ['Granite Peaks Highway', 'North Highway', 'Summit Road', 'Harbor Tunnel']) check(tn(name).length, `${name} has its tunnel`);
   check(tn('Harbor Tunnel').reduce((s, t) => s + t.len, 0) > 300 * TILE, 'the Harbor Tunnel runs under the channel');
   for (const c of CLOSURES) {
