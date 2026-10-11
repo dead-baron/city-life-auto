@@ -7104,3 +7104,13 @@ picture, the chunk bake's timing, `--bake`, `--region`), `test/world3world.test.
 
 Tests: `test/world3world.test.js` (new: one whole-world build, about 25 s), `test/world3.test.js` (today's world still
 the stamped one), `test/mapwindow.test.js`, `test/dmath.test.js`, `test/nature.test.js` pass.
+
+## 2026-10-10 · The city worker's code budget: 340 -> 360 KB
+
+Merging wave 12 (the whole v3 world in one build, Port Westport's container yard) put the city worker's code at
+341 KB against 340 (`node tools/perf.mjs`). That budget measures the worst case: `client/worldgen.js` together with the
+city generator it imports only when it must build the city itself - since this afternoon the page downloads the city
+from the server or reads its kept copy, and then the worker loads 5 files, 16 KB. What grew is World v3's: the
+placement hooks in the generator's passes (`PL`, `pin` / `unpin`) and the container yard's pass (`buildContainerPort`),
+reached only by v3 builds. The budget goes to 360 KB. When the v3 world replaces today's, the v3 code is the
+generator, and today's island-at-a-time machinery can go.
