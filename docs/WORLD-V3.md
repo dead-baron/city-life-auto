@@ -3940,6 +3940,83 @@ custody's transfer by the Prison Boat (above); the lock working (the gates closi
 the lift bridge at the mouth opening; Prison Island's ground (rock, the shore's cliffs) and its size; models for the
 prison's blocks, towers and walls, the weir and the lock gates; Lookout Hill's rise; the power lines round the lake.
 
+### 8.22 The land's relief: heights, cliff bands, the hillshade (2026-10-11, H48)
+
+The v3 land was flat: Silver Thread Falls read as a low weir (8.20), Lookout Hill as an orchard (8.21), North Cape had no
+headland, 8.18's lookout stood beside its mesa, 8.8's mesas were 4-7 tile towers. Now the frame has a height field and
+the game draws it. All of it in `shared/world3-relief.js` (one call from the world build's dress hook, before the biomes'
+dressing: `buildRelief3`); the page and the city worker never import it; `shared/map.js` is unchanged. The live world
+doesn't change (the world hash stays 6b6e16fdef9f); the art hash does (the ground bake).
+
+**The height field** (metres; a tile is a metre), from the skeleton's BIOMES and LANDMARKS plus a little noise:
+- **The biomes**, on an 8-tile grid: each biome's level blurred wide (its borders become long slopes: Willow Valley a
+  basin, the woods rising to the peaks) plus its own shape blurred a little - Granite Peaks 70 + 175 x `peakHeight` (the
+  snow's field, so the snow lies on the summits: up to about 245 m) with **crags** in patches above the tree line
+  (stepped bands: each step's rise in its last seventh, steep enough to be a cliff); the **North Ridge** a ridge (its
+  crest along the polygon's middle, 30-110 m); Highland Woods' rolling hills; the Red Rock Desert a plateau (26-40 m);
+  the coasts low and the gulf's islands flat (today's places stay as they are). The land comes down to the sea over 60
+  tiles - but at a headland.
+- **Lookout Hill** (34 m round its point above Kestrel Lake) and **the headlands** (`HIGH_SPOTS`: North Cape, Egret
+  Point, Sandpiper Point, Toll Point): high ground that meets the sea in cliffs behind the beach (the beach stays at the
+  sea, the knoll at the point stays up).
+- **The desert's mesas and buttes**: tables on a jittered 230-tile grid over the desert where nothing is built, kept or
+  wet (a road may cross one: a cutting) - a mesa 50-110 tiles across before it shrinks to fit, a butte 32-64, 26-50 m
+  high: a flat top inside a ragged superellipse rim, a cliff three tiles wide, an 11-tile talus apron. **The lookout's
+  mesa** (`LOOKOUT_MESA`, by Dusty Hollow) is one: the lookout and the arch on its top, the jeep track from Dusty Hollow
+  the ramp through its south rim.
+- **The gorge under the Gorge Bridge** (the Highland Highway's bridge): 46 m deep, its floor 10-13 tiles either side of
+  its line, walls up to the land 16-25 tiles out.
+- **Each falls** (`fallsOf3`: Silver Thread Falls, and every nature site with `falls` - Summit Tarn's today, Redwood Creek
+  Falls when it moves): the land north of the lip raised 22 m (the band a real cliff across the creek, 70 tiles either
+  side, fading by 120) and its gorge below, walls either side of the pool and the creek, open to the south over 90 tiles.
+
+**Roads keep their grade:** a road's height is the land's averaged along it (the road tiles' heights in 4-tile cells,
+averaged 24 tiles round), and the land beside it comes back to its own over 14 tiles (`GRADE_R`): cuttings through the
+tables and the hills, embankments over the hollows. A road's ground is the street and what's built along it, rails and
+gravel tracks; a bridge isn't (its deck spans the relief: the gorge stays under the Gorge Bridge).
+
+**The cliff bands:** open wild ground (no road, no place, no water, a wild district) more than 15 tiles from a road and
+steeper than 2.2 m a tile (`CLIFF_SLOPE`) is solid rock (`T.WALL`, reserve 32: the bake's rubble under it, red rock in the
+desert); lone tiles are dropped. Each run (2-8 tiles) of band over lower open ground to its south gets its face: `cliff`
+(granite) in the desert, the peaks and the rocky districts, `cliffwall` (basalt columns) elsewhere, 50-160 px high by its
+drop. `m.relief`: one byte a tile (metres, ordered-dithered so a 4 x 4 box averages back to the decimetres).
+
+**The hillshade** (`client/art2/game/groundbake.js`, a last phase `relief`): each tile's slope from 4 x 4 boxes of
+`M.relief` three tiles either side, lit from the north-west (the light the region pictures use), exaggerated 1.4x, a
+touch lighter the higher it stands (0.55-1.3); bilinear per pixel over everything on the ground but the water. A map
+without `relief` (today's) bakes as before.
+
+**The test** (`test/world3relief.test.js`, one world build, about 50 s): the field built twice from the same map and land
+is the same; the cliff bands are solid, none within a tile of a road, lot, pavement, bridge or rail and no road edge over
+one; next to each other two road tiles never differ by a cliff's step; each high spot stands above the land round it;
+the lookout above Dusty Hollow; eight tables or more, four of them mesas over 80 tiles across, each top well above its
+foot and its rim a cliff band; Silver Thread Falls' land above the band 10 m over the pool's; the peaks' top over 180 m,
+the North Ridge's crest 40 m over its foot, the gorge's floor 15 m under its sides; Metro City flat.
+
+**The pictures** (`tools/world3-world-map.mjs --sample 0 --region 8,1 --towns --only hollow,silverfalls`;
+`docs/world-v3-world-r8-1.png` - baked before the last two fixes below - `docs/world-v3-town-hollow.png`,
+`docs/world-v3-town-silverfalls.png`). What looks right: the lookout's mesa is a table - the lookout and the arch on its top, the jeep
+track climbing through a gap in its south rim, a talus slope in shade round its south-east foot; the butte west of it the
+same; the falls' escarpment either side of the pool with its basalt faces, Falls Pass Road through it on its grade. What
+looks wrong:
+- **The tables read as rings:** the band's ground is red rock (the region picture's dark grey scree is from before), the faces are the
+  `cliff` model's granite (the desert wants a sandstone face), and only the south rims have faces: the north, east and
+  west rims are their rubble and the hillshade. The tops are the plain's colour (a flat top is not shaded; it wants its
+  own ground - bare rock, sparse scrub - or a rim's shadow).
+- **8.8's small red mesas still stand** across the desert and on the tables' tops (`dress3`): they want to go, or to
+  become boulders, now that the tables are there.
+- **The old gorge line crossed Silver Thread Falls** in the first bake (broad dark bands across the view): moved east,
+  clear of the falls; the falls' picture now shows the escarpment's slopes in shade and the band's faces. A thin line of
+  red rock west of the lookout's mesa (`-hollow.png`) is a one-tile band where a slope steepens by a track: to look at.
+- At 1/8 the hillshade hardly reads **under trees and crops**: North Cape's headland is under the redwoods' canopy (only
+  the ground is shaded), Lookout Hill under the orchard's rows (`--only northcape,kestrel`; not kept in docs).
+
+**What's left:** the cliff bands are solid both ways - `shared/ledges.js` could make them one-way drops as the falls'
+(the city worker's code is full: it would have to be the world build that marks them); the faces on the other rims;
+`m.relief` is a per-tile layer, so the region files carry it (shared/regionpack.js cuts every layer) - the page's window
+(`shared/mapwindow.js`) is to be checked for it, and nothing moves in height (`groundHeight`, the physics: the relief is
+drawn, not felt); Redwood Creek Falls gets its escarpment when H47 moves it (any nature site with `falls` does).
+
 ### 8.23 The switch: the server and the deploy carry World v3 - measured, the cheap wins, the runbook (2026-10-11, H49)
 
 The owner's brief: "Before the owner can switch, the server and the deploy must carry it. Measure, fix the cheap wins,
