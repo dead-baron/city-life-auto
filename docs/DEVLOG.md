@@ -8451,7 +8451,8 @@ And: "Private helicopter pilot for rich billionaire customers flying around the 
   - or on the roof under it. So a helicopter down on a roof sits on the drawn roof, the roof pads are drawn up there (they
   were hidden in v2), and the harness's cable hangs straight down the screen to the one below. The camera follows two thirds of
   the lift of your own aircraft (`main.js`), so you and the ground under you both stay on screen. The classic view is as
-  it was. The job's marker points at the hospital's roof pad (the yard's helipad takes them too).
+  it was. The job's marker points at the hospital's roof pad (the yard's helipad takes them too). Left: the gunship's
+  missiles are still drawn at ground level in v2, below the lifted gunship (a projectile carries no height on the wire).
 - **Charter pilot** (`server/systems/charter.js`; `shared/rules.js` CHARTER): from the phone (Jobs › Flying) - the company's
   Skylark is issued at the nearest helipad. Bookings one after another: a rich customer (invented names: Sterling
   Vanderholt, Margaux Ellery-Price...) waits at one of the places a helicopter goes - the airport's helipad, the airport's
