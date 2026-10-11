@@ -3759,8 +3759,11 @@ lookout to Kestrel Road. What looks wrong:
   It wants a rise (the peaks' height field reaches only Granite Peaks) or a rocky knoll drawn round the deck.
 - **The power lines cross the lake** (thin grey lines over the water: `buildPowerLines`, not this module's) - they
   should go round it.
-- At 1/8 the small things don't read: the tents, the binoculars, the bollards, the cafe tables are specks; the reeds a
-  green fringe.
+- **Old Town Quay is the promenade as it was:** the curving paved walk along Old Town's east shore with the pontoon off
+  it; the bollards, lamps and tables are specks at 1/8 and nothing says quay (no stone edge, no steps down, no cafe -
+  the city comes down to the walk). A quay edge model (stone coping, mooring rings) would make both quays read.
+- At 1/8 the small things don't read: the tents, the binoculars, the bollards, the cafe tables are specks; the reeds and
+  willows round the lake a green fringe (the orchards' rows still come close to it on the east shore).
 
 **What's left:** the prison's guards (a server system as the Rock's), its cells (interiors and `m.cellBlocks`) and
 custody's transfer by the Prison Boat (above); the lock working (the gates closing, the water level, a boat waiting);
