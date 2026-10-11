@@ -2740,13 +2740,17 @@ every chunk on screen drawn - the woods (6500, 6500), the farms (25000, 31100), 
 | A fresh server (its CDN cold), before | 30.2 s | 23.8 s | 34.2 s | 7.6 s |
 | A fresh server, after (1-3, 5) | 24.9 s | 23.6 s | 25.7 s | 8.4 s |
 | The CDN warm (the chunks baked on the server), before | 21.0 s | 15.7 s | 17.3 s | 7.4 s |
+| The CDN warm, before, again (timed from the camera's jump too) | 18.7 s | 17.9 s | 16.4 s | 11.0 s |
+| ... of which from the camera's jump: in the page / drawn | 8.8 / 11.0 s, 5 frames | 6.2 / 10.1 s, 4 frames | 5.6 / 8.5 s, 4 frames | 0 (still resident) |
 | The CDN warm, after (1-3, 5) | 19.3 s | 16.4 s | 18.1 s | 10.0 s |
 | The CDN warm, after (all) | 16.8 s | 13.4 s | 15.7 s | 10.5 s |
-| ... of which from the camera's jump to all drawn (`stats().jump`) | 8.7 s, 4 frames | 5.0 s, 3 frames | 5.8 s, 3 frames | 0 (still resident) |
+| ... of which from the camera's jump: in the page / drawn (`stats().jump`) | 8.7 / 8.7 s, 4 frames | 5.0 / 5.0 s, 3 frames | 5.8 / 5.8 s, 3 frames | 0 (still resident) |
 
 In the headless page most of what's left is frames: the camera follows the teleport a few seconds after it's sent, and
 then every chunk on screen was in the page 5.0-8.7 s after the camera's jump, in 3-4 frames (`stats().jump`), and
-drawn in the same frame it was in (the uploads after a jump, 4). The woods again: drawn at the jump (the chunks still
+drawn in the same frame it was in (the uploads after a jump, 4) - before, 2.2-3.9 s and a frame or two later. With the
+CDN warm the chunks come in as fast as before (the server has them all: 1-3 don't matter there); on a fresh server
+(1-3) the screen was drawn up to 8.5 s sooner. The woods again: drawn at the jump (the chunks still
 resident), and still 10.5 s after the teleport was sent - in this page that much is the teleport reaching the camera. On a cold server the
 screen's 7 chunks are baked between the server's bake thread and the page's one worker on two shared cores.
 
