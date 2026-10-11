@@ -23,6 +23,8 @@ import * as rentals from './rentals.js';
 import * as hotmoney from './hotmoney.js';
 import * as farming from './farming.js';
 
+import * as homeinside from './homeinside.js';
+
 import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
@@ -389,6 +391,7 @@ export function openMenu(world, p, poi) {
 }
 
 export function handleMenu(world, p, poiId, optId) {
+  if (homeinside.onMenu(world, p, poiId, String(optId || ''), execute)) return;   // (the bed, the safe, the fridge... at home: homeinside.js)
   const poi = world.map.pois[poiId];
   const ped = p.ped;
   if (!poi || !ped || ped.dead || ped.vehId) return;

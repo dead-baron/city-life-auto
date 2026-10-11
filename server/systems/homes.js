@@ -6,6 +6,7 @@ import { PED_BLOCK } from '../../shared/map.js';
 import { HIDE_TIME_S, SPAWN_PROTECT_S } from '../../shared/rules.js';
 import { store } from '../store.js';
 import { LEGACY_HOMES } from './legacy-homes.js';
+import * as homeinside from './homeinside.js';
 
 const BASE_GARAGE = 2;
 const FALLBACK_PRICE = 25000; // a home of an old world with no deed and no record: bought back at a house's price
@@ -330,7 +331,7 @@ export function beginEnter(world, p, h) {
   return null;
 }
 
-function goInside(world, p, h) {
+export function goInside(world, p, h) {
   const ped = p.ped;
   ped.entering = null;
   ped.inside = h.id; ped.hidden = true;
@@ -341,7 +342,7 @@ function goInside(world, p, h) {
   world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
   world.notify(p, `You're inside ${h.name}. Nobody can see or hurt you in here.`, 'good');
   p.meDirty = true;
-  openInside(world, p);
+  homeinside.enter(world, p, h);   // (the rooms to walk round: homeinside.js)
 }
 
 export function openInside(world, p) {

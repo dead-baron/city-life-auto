@@ -8710,3 +8710,48 @@ The owner: "Have we added farm jobs and gardening mechanics yet?" - and wants bo
   FARM.handPer stretches fill a Produce Box (FARM.handBox, $45) set down by you - the farm stand (any co-op counter) buys it
   (jobs.js deliveryZoneFor), so does the grocery; picked clean (FARM.cover of it) the row's harvested.
 - Not done: the fields' state isn't saved across a server restart (it starts again in its mix); no NPC farm hands.
+
+## 2026-10-11 · Inside your own home: walk in, the rooms, the bed, the wardrobe, the safe, the fridge, the shower, the garage (H62)
+
+The owner: "after the honest jobs are in can we get more of the owning a house features up? Like going inside your own
+house would be great to get going." Going inside was standing still at the door, then hidden there behind a menu - no
+inside to walk round.
+- How: the inside is a little level of its own (shared/homelayout.js), not a cut-away of the building on the map - a plan
+  for each kind of home (a trailer for a shack; an apartment; a house - farmhouses, cottages and beach houses too - with
+  its garage; a mansion with the great room, the den and a three-car garage), furnished by the home's price (the shack's
+  bare floor to the mansion's rugs and plants; four tiers). Why: World v3 will move and reshape the homes, and a plan
+  keyed by the kind and the price goes wherever a home ends up; the map isn't touched, so today's world hash doesn't
+  change (World v3's code hash `world3` moves, as for any edit of shared/rules.js it imports).
+- At your own front door the action button opens it and you're in (wanted but out of sight, the key takes its moment as
+  before; seen by the police, no way in). Walls and furniture you can't walk through, doorways between the rooms; the
+  server walks you round (server/systems/homeinside.js), the page predicts your steps with the same function, so it
+  answers at once. Nobody sees or hurts you in there (you're out of the world's grid, as before).
+- Things to use, each an Act prompt where it stands (the thing in reach is outlined): the bed (sleep: the screen goes
+  dark and a clock runs on to the morning; you wake rested - full health, no bleeding - and it's your wake-up spot from
+  now on, saved; when everyone online is asleep at home the city's night really passes: the clock jumps to 07:00), the
+  wardrobe (a new outfit from your wardrobe, the quick change, the mirror), the safe (your stash: things and guns as
+  before, and now cash - kept at home through a death or an arrest), the fridge (food from your bag goes in; eat it from
+  there), the shower (stops the bleeding, puts out a burn, a little health), the hall table (the home menu: respawn
+  point, the bank, the garage list), the garage's key board (a house or a mansion: through the door from the hall, your
+  cars parked in the bays - pick one and you drive it out, the door rolling up), and the front door back out (a couple of
+  seconds' protection, as ever). The game doesn't track blood or grime on people, so the shower doesn't clean any.
+- Drawn on a canvas of its own over the city view - the same over art v2 and the classic renderer (art v2 adds soft
+  shadows under the furniture and lamp light at night); the camera frames the whole place when it fits and follows you
+  round a big one; the windows show the time of day (and the light falling in by day). client/render/homeview.js is
+  loaded the first time you go in (one line in main.js): nothing added to the page's start-up code.
+- Numbers in shared/rules.js HOME_IN (pace, reach, the sleep, the shower). Dev: `homein` ({ kind | id, cars, at }) -
+  any home yours and you inside it, standing by the bed, the safe...
+- A friend: at someone else's door while they're in, the action button knocks (they hear it, with your name); the owner
+  lets you in from the hall table, where who's knocking is listed. You see each other in there (each with a name over
+  them; asleep, beside you in the bed), the things are the owner's (the prompt says so), and a guest goes out by the
+  front door - or is put out if the place is sold.
+- Not done: the cars in the garage's bays aren't solid (you walk through them); a crew of your own to let in without a
+  knock (there's no crew in the game yet).
+Files: shared/homelayout.js, server/systems/homeinside.js, client/render/homeview.js (new); hooks in homes.js (goInside
+puts you in the rooms), players.js (the input and the prompt inside, the front door), economy.js (the things' menus),
+world.js (the system), dev.js, main.js (the lazy load). Tests: test/homeinside.test.js (every plan walkable to all its
+things; in by the door, the walls hold, out by the door, nobody sees you; wanted at the door; sleeping to the morning and
+the save point; the safe's cash and things through a death and a rejoin; the wardrobe, the fridge, the shower; the
+garage; the hall table and selling from it; a friend knocking, let in, seen, going out); test/homes.test.js,
+test/wardrobe.test.js, test/world.test.js, test/core.test.js and the other tests with homes in them still pass. Headless playtest (art v2 1280x720, classic 844x390
+phone): the house, the apartment, the trailer, the garage with two cars, the safe's menu, asleep, the morning.

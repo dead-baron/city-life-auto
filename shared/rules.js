@@ -667,3 +667,10 @@ export const GARDEN_CROPS = {
 // harvest time: each stretch of a ripe row picked on foot, and every handPer of them fill a crate (a Produce Box worth
 // handBox at the farm stand or the grocery).
 export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough: 22, sow: 18, harvest: 30 }, rows: 8, bonus: 150, contractS: 1500, near: 1600, handPer: 3, handBox: 45 };
+
+// ---- inside your home (H62; the owner, 2026-10-11: "going inside your own house would be great to get going") -
+// server/systems/homeinside.js, the plans in shared/homelayout.js. walk: your pace in there (px/s); reach: how near a thing
+// (px) for the action button to use it; sleepS: a sleep (the screen goes dark while the night passes for you - and for the
+// whole city when everyone online is asleep at home: the clock jumps to wakeH o'clock); showerS: a shower; showerHeal: the
+// health it gives back (and it stops bleeding); eatS: between two bites at the fridge.
+export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6 };

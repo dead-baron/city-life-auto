@@ -121,6 +121,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Harvest with the combine (a co-op's counter, while something's ripe): its header takes two ripe rows at once as you drive down them, paid by the row · Pick a ripe row by hand: walk along it pressing Act; every few stretches fill a crate - carry it to the farm stand or the grocery | WASD · E | Left stick · B | Left stick · ACT |
 | Dev: gardening and farm work (debug menu → 🌱 Gardening & farm work): a garden of your own at every stage, everything in it ripe, a tractor or a combine at the fields with the rows in every state | ` → 🌱 | Start → 🐞 → 🌱 | ☰ → 🐞 → 🌱 |
 
+| Your home (H62): at your own front door, in you go (wanted and out of sight, the key takes a moment; seen, no way in) - walk round the rooms: the bed (sleep: the night passes, you wake rested in the morning, and you'll wake up here after a death) · the wardrobe (a new outfit, the quick change, the mirror) · the safe (cash, things and guns kept at home through a death or an arrest) · the fridge (put food in, eat it) · the shower (stops the bleeding) · the hall table (the home menu: respawn point, the bank, selling, letting in a friend who knocks) · the garage's key board in a house or a mansion (drive one of your cars out) · the front door: back outside · at a friend's door while they're in: knock | E at the door · WASD inside · E by a thing | B at the door · left stick · B by a thing | ACT at the door · the joystick · ACT by a thing |
+
 ## Project layout
 
 ```
