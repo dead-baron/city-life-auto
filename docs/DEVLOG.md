@@ -7949,7 +7949,10 @@ owner can switch, the server and the deploy must carry it. Measure, fix the chea
   Westport and Highland Woods). The thread now builds the world the server runs, and the CDN checks the thread's map
   signature against its own before it bakes anything (another city: no art from the server, the pages bake their own).
   At v3 that costs the thread's own build (45 s of the second core at the lowest priority) and memory: 3.6 GB while it
-  builds, 3.2 GB after. 35,280 chunks a quality: about 8-9 hours a quality on the VM's one bake thread.
+  builds, 3.2 GB after. 35,280 chunks a quality: about 8-9 hours a quality on the VM's one bake thread. And each art
+  directory now says which world it's of (`world.txt`): the build before stands in only when it's the same world's (at
+  the switch today's chunks won't stand in for v3's places), and a directory of the shared art hash holding the other
+  world's chunks is baked afresh.
 - **The whole-world scans:** the traffic's parking spots, bike racks and spawn edges near each player, and the
   ambulances' start junctions, through spatial indexes (`server/pointgrid.js` `near`, `traffic.js` `edgesNear`) -
   the same picks in the same order.
@@ -7971,6 +7974,6 @@ server/pointgrid.js (`near`), server/systems/traffic.js, server/systems/ems.js, 
 comment), test/world3passes.test.js (new), docs/WORLD-V3.md 8.23.
 
 Tests: test/world3passes.test.js (the worker's code without the passes, map.js without them, world3-islands.js importing
-them; the grids' picks the whole lists' picks, in order), test/artcdn.test.js, test/ems.test.js, test/bikes.test.js,
+them; the grids' picks the whole lists' picks, in order), test/artcdn.test.js (new: art of another world), test/ems.test.js, test/bikes.test.js,
 test/worldframe.test.js; the v3 world built before and after the move: the same signature (gjhk97); today's stamped:
 the same world hash.

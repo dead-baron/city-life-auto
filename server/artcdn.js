@@ -17,7 +17,7 @@
 // every chunk of the map for the qualities in PREWARM, the busiest first (towns before the country, the country before
 // open sea). What pages ask for goes to the front of the queue. CLA_ART_THREADS bake threads (0: off).
 import { Worker } from 'node:worker_threads';
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync, createReadStream, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync, createReadStream, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cpus } from 'node:os';
 import { TILE } from '../shared/constants.js';
@@ -61,12 +61,18 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     if (!S.art || !threads) return;
     S.dir = join(dataDir, 'art', S.art);
     mkdirSync(S.dir, { recursive: true });
+    // which world an art directory's chunks are of (world.txt: 'v3' or 'today'; none - from before 2026-10-11 - is
+    // today's): both worlds' builds share one art hash (docs/WORLD-V3.md 8.23), so this build's directory holding the
+    // other world's chunks starts afresh, and the build before stands in only when it's the same world's
+    const mine = world || 'today', worldOf = (dir) => { try { return readFileSync(join(dir, 'world.txt'), 'utf8').trim() || 'today'; } catch { return 'today'; } };
+    if (readdirSync(S.dir).some((d) => d !== 'world.txt') && worldOf(S.dir) !== mine) { log(`[art] ${S.dir} held ${worldOf(S.dir)}'s chunks: baked afresh for ${mine}`); for (const d of readdirSync(S.dir)) rmSync(join(S.dir, d), { recursive: true, force: true }); }
+    try { writeFileSync(join(S.dir, 'world.txt'), mine + '\n'); } catch { /* best effort */ }
     // The build before this one is kept (the newest of the others): its chunks go to the pages still on it, and to
     // everyone as stand-ins while this build's are baked (handle). Older builds' art goes.
-    S.prev = null; S.prevDir = null;
+    S.prev = null; S.prevDir = null; S.prevStands = false;
     try {
       const others = readdirSync(join(dataDir, 'art')).filter((d) => d !== S.art).map((d) => { let t = 0; try { t = statSync(join(dataDir, 'art', d)).mtimeMs; } catch { /* gone */ } return [d, t]; }).sort((a, b) => b[1] - a[1]);
-      if (others.length) { S.prev = others[0][0]; S.prevDir = join(dataDir, 'art', S.prev); }
+      if (others.length) { S.prev = others[0][0]; S.prevDir = join(dataDir, 'art', S.prev); S.prevStands = worldOf(S.prevDir) === mine; }
       for (const [d] of others.slice(1)) rmSync(join(dataDir, 'art', d), { recursive: true, force: true });
     } catch { /* best effort */ }
     S.pre = [];
@@ -198,7 +204,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     const eta = etaOf(key), etaH = eta > 0 ? { 'x-art-eta': String(eta) } : null;
     // meanwhile the build before this one's chunk stands in (marked stale: the page shows it, keeps nothing, and its own
     // bake or this build's download replaces it) - not for a look ahead
-    if (!pre && S.prevDir) {
+    if (!pre && S.prevDir && S.prevStands) {   // (not another world's: start)
       const pf = fileOf(q, ap, cx, cy, S.prevDir), ps = statOf(pf);
       if (ps) { S.stats.stale++; return serve(ps, pf, { 'cache-control': 'no-store', 'x-art-stale': '1', 'access-control-expose-headers': 'x-art-eta, x-art-stale', ...etaH }); }
     }

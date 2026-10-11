@@ -191,3 +191,33 @@ test('the server bakes round the players online first, nearest first, after what
     assert.ok(!cdn._next().focus);
   } finally { cdn.stop(); rmSync(dataDir, { recursive: true, force: true }); }
 });
+
+// (docs/WORLD-V3.md 8.23) Both worlds' builds share one art hash: each art directory says which world its chunks are of
+// (world.txt; none is today's). The build before stands in only when it's the same world's - at a switch of worlds its
+// chunks are of other places - and this build's directory holding the other world's chunks starts afresh.
+test('art of another world: the build before doesn\'t stand in, this build\'s directory of the other world starts afresh', async () => {
+  const map = generateCity(1337);
+  const dataDir = mkdtempSync(join(tmpdir(), 'cla-art-'));
+  const art = JSON.parse(readFileSync(join(ROOT, 'version.json'), 'utf8')).art;
+  const old = 'aaaaaaaaaaaa';
+  mkdirSync(join(dataDir, 'art', old, 'q1a2'), { recursive: true });
+  writeFileSync(join(dataDir, 'art', old, 'q1a2', '28_23.bin'), Buffer.from('previous build, World v3'));
+  writeFileSync(join(dataDir, 'art', old, 'world.txt'), 'v3\n');
+  mkdirSync(join(dataDir, 'art', art, 'q1a2'), { recursive: true });
+  writeFileSync(join(dataDir, 'art', art, 'q1a2', '30_23.bin'), Buffer.from('this build, World v3'));
+  writeFileSync(join(dataDir, 'art', art, 'world.txt'), 'v3\n');
+  utimesSync(join(dataDir, 'art', old), new Date(Date.now() - 60000), new Date(Date.now() - 60000));
+  const cdn = createArtCdn({ map, root: ROOT, dataDir, seed: 1337, threads: 1, prewarm: [], log: () => {} });   // (today's world)
+  try {
+    assert.equal(cdn._state.prev, old, 'the build before is kept (for pages still on it)');
+    assert.equal(readFileSync(join(dataDir, 'art', art, 'world.txt'), 'utf8').trim(), 'today', 'this build\'s directory is today\'s now');
+    assert.ok(!existsSync(join(dataDir, 'art', art, 'q1a2', '30_23.bin')), 'World v3\'s chunks in it are gone');
+    let res = fakeRes();
+    cdn.handle(`/art/${art}/1/2/28/23`, {}, res);
+    assert.equal(res.status, 404, 'no stand-in from another world');
+    assert.ok(Number(res.headers['x-art-eta']) > 0 && cdn._state.askedSet.has('1/2/28/23'), 'its own is asked for');
+    res = fakeRes(); cdn.handle(`/art/${old}/1/2/28/23`, {}, res);
+    assert.equal(res.status, 200, 'a page still on the build before: its own chunk');
+    await res.finished;
+  } finally { cdn.stop(); rmSync(dataDir, { recursive: true, force: true }); }
+});

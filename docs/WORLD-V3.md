@@ -3983,7 +3983,8 @@ are the whole lists' picks, in the same order - `test/world3passes.test.js` - so
 2. **The worst tick, 160 ms once in 600** (both runs, before and after these changes; today's world 30 ms): to find -
    a collection of the v3 heap, or a system's first look at something big.
 3. **wildlife, vehicles, npc, net** grow with what's round the players - more of the world's players out in the open
-   country means more animals; that's the game, not a scan.
+   country means more animals; that's the game, not a scan. The ferries (0.04 ms a tick: nine routes) and the people's
+   density (npc 1.5-1.7 ms against 1.3-1.4, for 206-212 people against 219-226) aren't scans of the world either.
 4. **The start: 50-53 s.** The deploy's health check (`deploy/auto-update.sh` `healthy`) waits 90 s for `/health`
    before it rolls a version back: on the VM's cores the margin may be thin (the runbook's step 3). Writing the region
    files region by region (the cut's raw 384 MB never whole) and keeping them between restarts while the world's
@@ -4010,7 +4011,9 @@ are the whole lists' picks, in the same order - `test/world3passes.test.js` - so
   small), kept for this build and the build before.
 - **What players see meanwhile:** the chunk on their screen is asked for first and baked next (the 404 says when: its
   eta); the page bakes it itself when the eta is over 6 s (a phone: slowly); the build before's chunks stand in (marked
-  stale, never kept) - which at the switch would be today's world's: the runbook's step 4.
+  stale, never kept) - only the same world's now: each art directory says which world it's of (`world.txt`), so at
+  the switch today's chunks don't stand in for v3's places, and a directory of the shared art hash holding the other
+  world's chunks is baked afresh (`test/artcdn.test.js`).
 
 **The city worker's code** (`tools/perf.mjs` `city`: the worker's own 5 files, and the generator it loads when the
 server can't serve the city - only today's world is ever built there: a v3 world is never built on the page)
@@ -4076,10 +4079,12 @@ server can't serve the city - only today's world is ever built there: a v3 world
      (its bake thread at the lowest priority; the live game's tick comes first); then, at the switch, move
      `~/cla-data-v3/art/<art hash>` into `~/cla-data/art/`: the live server finds the chunks on disk and serves them
      at once.
-   - **The stand-ins:** at the switch the build before's art is today's world's, and the CDN stands it in for chunks
-     not baked yet - the wrong places, stale but drawn. Move today's art directory aside at the switch (`mv
-     ~/cla-data/art/<today's art hash> ~/cla-art-today/`: kept for the rollback) - or teach the CDN to stand in only a
-     build of the same world (a world marker in each art directory: not done).
+   - **The stand-ins:** at the switch the build before's art is today's world's. The CDN now marks each art directory
+     with its world (`world.txt`: `today` or `v3`; none - the directories from before - is today's) and stands in only
+     the build before of the same world; a directory of this build's hash holding the other world's chunks (the two
+     worlds share an art hash until 0a) is emptied and baked afresh (`server/artcdn.js` `start`; the live server, on
+     today's world, stands in as before). Keep today's art directory for the rollback (it's the build before: kept
+     until the next build).
    - **The region files:** written within about 10 s of listening, every start (nothing to warm; 8.9's item 5 would
      keep them).
 5. **The rollback:** unset `CLA_WORLD` (the unit), revert the bump and stamp (today's world and art hashes come back:
@@ -4092,11 +4097,14 @@ server can't serve the city - only today's world is ever built there: a v3 world
 
 **Nothing live changes** (measured): today's world hash `6b6e16fdef9f` and art hash `cdd307a65f3a` are unchanged; the
 traffic's and the ambulances' lookups pick what they picked (the test); the art thread builds today's world as before
-when the server runs it, and posts its signature (the same: `test/artcdn.test.js`); `shared/map.js` builds today's
-world from the same code, the v3-only passes out of it.
+when the server runs it, and posts its signature (the same: `test/artcdn.test.js`); the live art directory gets a
+`world.txt` saying `today`, and its build before (no marker: today's) stands in as before; `shared/map.js` builds
+today's world from the same code, the v3-only passes out of it.
 
 **Tests:** `test/world3passes.test.js` (new: the worker's code without the passes, map.js without their functions,
 world3-islands.js importing them; the parking spots' and racks' grid indices every spot in reach in the list's order;
 the spawn edges by the grid the whole list's filter, in order; the ambulances' junctions within lo-hi the whole list's,
-in order), `test/artcdn.test.js` (unchanged, passes: the thread's ready now carries the signature), `test/ems.test.js`,
+in order), `test/artcdn.test.js` (the thread's ready carries the signature; new: art of another world - the build
+before marked `v3` doesn't stand in for today's, this build's directory marked `v3` is emptied, a page on the build
+before still gets its own chunk), `test/ems.test.js`,
 `test/bikes.test.js`, `test/worldframe.test.js`.
