@@ -4379,7 +4379,11 @@ House #9) went with the old streets...").
   48-171 ms after the first 30 s, **2.26 s in the first** (the 50 arriving at once - a first look at something big,
   below). The machine's two cores carry the server, the 50 bots' snapshots (1,000 a second decoded) and two other
   helpers' work: on the VM's Ampere core with the bots elsewhere it is less (docs/DEPLOY.md's 100 spread on today's
-  world: 19 ms). Not measured here: today's world the same way on this machine, and 100 bots.
+  world: 19 ms). (This ran before the two warm-ups above: the 2.26 s was the rail tiles.)
+- **Today's world the same way, on the same machine, 20 minutes later:** the tick 24-39 ms, the worst 105-175 ms,
+  1,046-1,215 entities, 7.6-8.3 KB/s a bot - **World v3 costs the server about what today's world does** with the same
+  players spread (fewer things round each of them out in the open country: 7.9 entities a snapshot against 10.1). Not
+  measured: 100 bots.
 
 **What's left** (in order)
 1. **Step 0 c, the playtest** on the test server with the art fix (8.23's runbook): not done here.
