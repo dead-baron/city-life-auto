@@ -4381,6 +4381,18 @@ House #9) went with the old streets...").
   helpers' work: on the VM's Ampere core with the bots elsewhere it is less (docs/DEPLOY.md's 100 spread on today's
   world: 19 ms). Not measured here: today's world the same way on this machine, and 100 bots.
 
+**What's left** (in order)
+1. **Step 0 c, the playtest** on the test server with the art fix (8.23's runbook): not done here.
+2. **The v3 art at every change of the generator's code:** `art3` follows `world3`, a hash of the code - a change
+   that leaves the world as it was still re-keys the art, and the server bakes all of it again (8-9 hours a quality on
+   the VM, 8.23). Once the server has built the world it could hash the world itself (`canonicalHash` of the city, a
+   second or two) and, when that's the same as the art directory's of the key before, carry the chunks over to the new
+   key (a rename) instead of baking them again.
+3. **The signals:** 0.25 ms a tick with 16 trains, nobody on - each moving train's cells held again every tick; hold
+   them by what changed (the points coming in at its head, going at its tail).
+4. **The first start after a change** still cuts (5.4 s, 0.6 GB at listening): cutting region by region, freeing each.
+5. **The capacity on the VM**, and with 100 bots (here: 50, on two shared cores with the bots' own process).
+
 **Tests:** `test/world3keys.test.js` (new: version.json's `world3` and `art3` are the stamp's; `world3` moves with the
 v3 build's modules, the cut and today's world, not with the page or the server's systems; the server's keys - today's
 as they were, v3's `-v3`; the page's keys in boot.js; the art CDN at v3 in its own directory, today's chunks never
@@ -4388,4 +4400,5 @@ standing in; the region files kept between restarts and every way they're not; t
 junctions from the server's index), `test/regions.test.js` (the v3 world under `world3`), `test/homes.test.js`
 (`LEGACY_HOMES[9]` is this world's homes), `test/ems.test.js` (`routeTo` is `planRoute`'s answer), `test/trains.test.js`
 (today's trains unchanged), `test/world3rail.test.js` and `test/world3subway.test.js` (the cars' places from the train:
-a far train's aren't placed; new: a far train's cars unplaced, placed the tick someone is near).
+a far train's aren't placed; new: a far train's cars unplaced, placed the tick someone is near). All pass, with
+`test/world3server.test.js` and `test/artcdn.test.js` (the World v3 ones and the art CDN's under the heavy lock).
