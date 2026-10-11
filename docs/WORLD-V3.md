@@ -2501,6 +2501,8 @@ its items only - and the moves across a border and to the corner).
 | A window of the v3 world (round the frame's middle: r4-3 ... r6-5) | **1512 x 1512 tiles; its per-tile layers 36.6 MB** (the whole frame's 407 MB); props 20,079 of the world's 205,276 (the list's length stays the world's), POIs 459 of 713 |
 | Getting it (node, from a local v3 server: the index and 9 regions downloaded, unzipped and assembled) | **0.72 s**; the JS heap after it 40 MB (and the layers' 37 MB outside it) |
 | The region files the server writes now | 81 files, 11.7 MB gzipped (the world has grown since 8.9: the main line, the biomes) |
+| **The page** (headless Chromium, `CLA_WORLD=v3`, `?world=v3`) | **in the city after 12.7 s; the main thread's JS heap 148 MB** with a window (**468-497 MB** with the whole world, 8.9), the same after each move |
+| The window's moves in the page | at joining (the frame's middle -> round the player: r3-3 ... r5-5), across a region border (teleported 40 tiles short of it, then 40 past: -> r4-3 ... r6-5, the regions coming in fetched before), and a teleport 1,700 tiles east (-> r6-3 ... r8-5); the v3 test: a move assembled in 0.28 s in node |
 
 **What's left** (in order)
 1. **Per-region signatures** (part 8 item 5): the welcome's whole-map signature check is skipped for a window; each
