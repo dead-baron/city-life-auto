@@ -7,6 +7,8 @@
 //     it is the pick the whole list's filter gave)
 //   grid.any(x, y, r) -> is any point within r (d < r)
 //   grid.nearest(x, y, minD) -> the nearest point further than minD (the first in the list's order of equals), or null
+//   grid.near(x, y, r) -> the indices of the points in the cells the square (x +- r, y +- r) touches, ascending: every
+//     point within r and some beyond - for a loop over the list by index that skips what's further (systems/traffic.js)
 const CELL = 1024;
 const GRIDS = new WeakMap();
 
@@ -30,6 +32,7 @@ function build(list) {
   g.within = (x, y, rMin, rMax) => within(g, x, y, rMin, rMax);
   g.any = (x, y, r) => any(g, x, y, r);
   g.nearest = (x, y, minD) => nearest(g, x, y, minD);
+  g.near = (x, y, r) => gather(g, x, y, r, []).sort((p, q) => p - q);
   return g;
 }
 const key = (cx, cy) => (cy + 32768) * 65536 + (cx + 32768);

@@ -28,6 +28,7 @@ import { pointAt, project } from '../../shared/geom.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc, seek, footWay, sidestep } from './npc.js';
 import { inAnyView } from '../view.js';
+import { pointGrid } from '../pointgrid.js';
 import { kerbFor, planTo, follow, halt, exitNode, sinceProgress, waterGuard } from './kerbdrive.js';
 import { groundPath, clearWalk } from './offroad.js';
 import { trimBehind } from './custody.js';
@@ -81,12 +82,13 @@ function quiet(world, x, y, now) {
 
 // Junctions an ambulance can start from for a patient at (x, y): ground level, lo-hi px away, out of everyone's view,
 // on the same island as the street it'll pull up on (it has to drive there), nearest first.
+// (the junctions lo-hi px away through their spatial index, server/pointgrid.js, in the list's order: the same as the
+// whole list's filter - at World v3's frame the list is the world's, and a body far from any street was looked for
+// again every second over all of it)
 function starts(world, k, lo, hi, avoidPlayers = 0) {
   const m = world.map, zone = m.zoneAt(k.x, k.y);
-  const out = m.nodes.filter((n) => {
+  const out = pointGrid(m.nodes).within(k.x, k.y, lo, hi).filter((n) => {
     if (n.lvl !== 0 || m.zoneAt(n.x, n.y) !== zone) return false;
-    const d = Math.hypot(n.x - k.x, n.y - k.y);
-    if (d < lo || d > hi) return false;
     if (avoidPlayers) for (const p of world.players.values()) if (p.ped && Math.hypot(p.ped.x - n.x, p.ped.y - n.y) < avoidPlayers) return false;
     return !inAnyView(world, n.x, n.y, 140);
   });

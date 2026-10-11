@@ -17,6 +17,7 @@ import { spawnNpc, despawnNpc } from './npc.js';
 import { wildStyle } from './wildlife.js';
 import { crossingLimit } from './trains.js';
 import { inAnyView } from '../view.js';
+import { pointGrid } from '../pointgrid.js';
 import { HIGHWAY_SPEED } from '../../shared/rules.js';
 import { routeSteps, haltsOn, haltCap, haltAt, rejoin } from './transit.js';
 import { isBlocked, unjam, goRound } from './reroute.js';   // (drivers who find another way round a backup: task #315)
@@ -655,8 +656,9 @@ function manage(world) {
   const spots = world.map.parking;
   world.parked ??= new Map();
   for (const [i, vid] of world.parked) { if (!world.get(vid)) world.parked.delete(i); }
+  const spotGrid = pointGrid(spots);   // (the spots near each player through their spatial index, in the list's order: at World v3's frame the list is the world's)
   for (const a of anchors) {
-    for (let i = 0; i < spots.length; i++) {
+    for (const i of spotGrid.near(a.x, a.y, 1150)) {
       const sp = spots[i];
       if (world.parked.has(i)) continue;
       if (hash2(i, 7, world.map.seed) > (sp.sparse ? 0.3 : sp.drive ? 0.5 : 0.7)) continue; // a home's driveway: often a car, often not
@@ -682,7 +684,7 @@ function manage(world) {
     // bikes locked up at the street bike racks: one or two at most of them (anyone's to take - it's theft)
     world.rackParked ??= new Map();
     const racks = rackSpots(world.map);
-    for (let i = 0; i < racks.length; i++) {
+    for (const i of pointGrid(racks).near(a.x, a.y, 1100)) {
       const sp = racks[i];
       if (world.rackParked.has(i) && world.get(world.rackParked.get(i))) continue;
       if (hash2(i, 11, world.map.seed) > 0.55 || (sp.x - a.x) ** 2 + (sp.y - a.y) ** 2 > 1100 * 1100) continue;
@@ -707,7 +709,7 @@ function manage(world) {
     let count = 0;
     for (const v of world.query(a.x, a.y, wild ? 1800 : 1400, K.VEH)) if (v.ai && v.ai.kind === 'traffic') count++;
     if (count >= target || world.npcCount + world.trafficCount > world.npcBudget) continue;
-    const cands = net.edges.filter((e) => {
+    const cands = edgesNear(net, a.x, a.y, 1600).filter((e) => {
       const bb = e.bb || (e.bb = bboxOf(e.pts));
       return e.kind !== 'alley' && bb.x1 > a.x - 1600 && bb.x0 < a.x + 1600 && bb.y1 > a.y - 1600 && bb.y0 < a.y + 1600 && e.len > 200;
     });
@@ -748,6 +750,32 @@ function manage(world) {
       break;
     }
   }
+}
+// The road edges whose boxes touch the square (x +- r, y +- r), in the list's order (what the whole list's filter by box
+// gives): the edges by the cells of a grid their boxes touch, worked out once per map - at World v3's frame the list is
+// the world's, looked through for every player short of traffic every 15 ticks
+const EDGE_CELL = 2048, EDGE_GRIDS = new WeakMap();
+export function edgesNear(net, x, y, r) {   // (exported for the tests)
+  let g = EDGE_GRIDS.get(net);
+  if (!g || g.n !== net.edges.length) {
+    g = { n: net.edges.length, cells: new Map() };
+    net.edges.forEach((e, i) => {
+      const bb = e.bb || (e.bb = bboxOf(e.pts));
+      for (let cy = Math.floor(bb.y0 / EDGE_CELL); cy <= Math.floor(bb.y1 / EDGE_CELL); cy++) for (let cx = Math.floor(bb.x0 / EDGE_CELL); cx <= Math.floor(bb.x1 / EDGE_CELL); cx++) {
+        const k = cy * 65536 + cx;
+        let l = g.cells.get(k);
+        if (!l) g.cells.set(k, (l = []));
+        l.push(i);
+      }
+    });
+    EDGE_GRIDS.set(net, g);
+  }
+  const seen = new Set();
+  for (let cy = Math.floor((y - r) / EDGE_CELL); cy <= Math.floor((y + r) / EDGE_CELL); cy++) for (let cx = Math.floor((x - r) / EDGE_CELL); cx <= Math.floor((x + r) / EDGE_CELL); cx++) {
+    const l = g.cells.get(cy * 65536 + cx);
+    if (l) for (const i of l) seen.add(i);
+  }
+  return [...seen].sort((p, q) => p - q).map((i) => net.edges[i]);
 }
 // Where bikes stand at the street racks (map props 'bikerack': three hoops in a row east-west): beside the hoops at
 // either end, front wheel to the rack, on whichever side of it is pavement. Worked out once per map.

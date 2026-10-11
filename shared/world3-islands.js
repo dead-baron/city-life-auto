@@ -16,6 +16,7 @@ import { SEEDS } from './citylayout.js';
 import { ISLAND_SEEDS } from './islands.js';
 import { ARTS } from './metro.js';
 import { setIslandBuilds, ISLAND_AT } from './map.js';
+import './world3-passes.js';   // (registers World v3's passes with map.js: the container port, the main line's loops, hubs, switches and bores)
 import { islandMask } from './world3.js';
 import { joinPlace } from './world3-crossings.js';
 import { ISLANDS as SK_ISLANDS } from './world3-skeleton.js';

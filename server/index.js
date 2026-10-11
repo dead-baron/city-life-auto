@@ -47,7 +47,7 @@ console.log(`[server] build ${bootBuild ? bootBuild.v : '(no version.json)'} · 
 { const t0 = Date.now(), fr = ferryRoutes(world); console.log(`[server] ferries: ${fr.map((r) => `${r.name} (${r.mainland} - ${r.island}, ${Math.round(r.len / 32)} m)`).join(', ') || 'none'} in ${Date.now() - t0} ms`); }
 // the art from the server: the world's chunks baked here and downloaded by the pages (server/artcdn.js)
 let artCdn = null;
-try { artCdn = createArtCdn({ map, root: config.root, dataDir: config.dataDir, seed: config.seed, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[art] not serving chunks:', e); }
+try { artCdn = createArtCdn({ map, root: config.root, dataDir: config.dataDir, seed: config.seed, world: WORLD3 ? 'v3' : null, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[art] not serving chunks:', e); }
 // the city from the server: the region files gzipped and written in the background, then served (server/worldcdn.js)
 let worldCdn = null;
 if (worldCut) { try { worldCdn = createWorldCdn({ cut: worldCut, root: config.root, dataDir: config.dataDir, seed: config.seed, variant: WORLD3 ? 'v3' : '', delayMs: 3000, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[world] not serving the city:', e); } }

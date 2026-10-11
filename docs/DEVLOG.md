@@ -7935,3 +7935,45 @@ Tests: test/world3wild.test.js (one world build: each site placed and built once
 the one network and meeting no highway, clear of the skeleton's lines; both quarries' veins; the moved nature sites at
 their spots, no road over their water), test/world3.test.js, test/world3desert.test.js, test/world3roads.test.js,
 test/world3world.test.js.
+
+## 2026-10-11 · World v3 on the server and the deploy: measured, the art thread's world, the worker's room, the switch's runbook
+The owner's brief: "the live server runs today's world; World v3 runs on a test server with CLA_WORLD=v3 ... Before the
+owner can switch, the server and the deploy must carry it. Measure, fix the cheap wins, and write down the rest" - and
+"the switch itself, written as a runbook ... No switch is made." All of it in docs/WORLD-V3.md 8.23.
+- **Measured** (this machine, two shared cores): the v3 server listens after **50-53 s** (the build 44-45 s - twice
+  8.9's, the world has grown), **1.85 GB** at listening (the cut's 384 MB raw held till gzipped); 81 region files,
+  13.2 MB gzipped. The tick with 6 players spread over the world: **11.4-12.3 ms** (today's world 7.3-7.6), the
+  trains 1.0-1.6 ms of it even with nobody on, wildlife, traffic and EMS the others that grow.
+- **The art CDN baked today's world at v3** (found and fixed): its bake thread built its city from the seed - today's
+  world - so on a v3 server it baked the sea at nearly every v3 chunk (that was 8.9's "the sea's stand-in" round Port
+  Westport and Highland Woods). The thread now builds the world the server runs, and the CDN checks the thread's map
+  signature against its own before it bakes anything (another city: no art from the server, the pages bake their own).
+  At v3 that costs the thread's own build (45 s of the second core at the lowest priority) and memory: 3.6 GB while it
+  builds, 3.2 GB after. 35,280 chunks a quality: about 8-9 hours a quality on the VM's one bake thread. And each art
+  directory now says which world it's of (`world.txt`): the build before stands in only when it's the same world's (at
+  the switch today's chunks won't stand in for v3's places), and a directory of the shared art hash holding the other
+  world's chunks is baked afresh.
+- **The whole-world scans:** the traffic's parking spots, bike racks and spawn edges near each player, and the
+  ambulances' start junctions, through spatial indexes (`server/pointgrid.js` `near`, `traffic.js` `edgesNear`) -
+  the same picks in the same order.
+- **The city worker's room:** 358 -> 349 KB of its 360: what only v3 builds reach (Port Westport's container port, the
+  main line's loops as one, its hubs, switches and bores) moved verbatim out of `shared/map.js` into
+  `shared/world3-passes.js`, registered like the island builds when `shared/world3-islands.js` is imported.
+- **The runbook** (8.23): what to build first (the art key per world - the page keeps chunks under one art hash for
+  both worlds: play the v3 test server in its own browser profile; version.json's world hash for v3; `LEGACY_HOMES[9]`),
+  the `WORLD_VERSION` bump (homes, garages, stashes and bounties: released as World v2 did - the homes bought back at
+  their deeds, the cars and stash kept, bounties kept), the art and the region files warmed, the health check's 90 s
+  against a 50 s start, and the rollback (profiles that played v3 are world 10: take a backup at the switch).
+- **Nothing live changes:** today's world hash `6b6e16fdef9f` and art hash `cdd307a65f3a` unchanged; the indexed
+  lookups pick what the loops picked; the art thread builds today's world as before (and posts its signature, the
+  same).
+
+Files: shared/world3-passes.js (new), shared/map.js (the passes out, `setWorld3Passes`), shared/world3-islands.js (one
+import), server/artbake.js, server/artcdn.js, server/index.js (the art thread's world, the signature check),
+server/pointgrid.js (`near`), server/systems/traffic.js, server/systems/ems.js, tools/perf.mjs (the city budget's
+comment), test/world3passes.test.js (new), docs/WORLD-V3.md 8.23.
+
+Tests: test/world3passes.test.js (the worker's code without the passes, map.js without them, world3-islands.js importing
+them; the grids' picks the whole lists' picks, in order), test/artcdn.test.js (new: art of another world), test/ems.test.js, test/bikes.test.js,
+test/worldframe.test.js; the v3 world built before and after the move: the same signature (gjhk97); today's stamped:
+the same world hash.

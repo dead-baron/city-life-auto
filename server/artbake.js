@@ -12,19 +12,24 @@ import { dirname, join } from 'node:path';
 import { setPriority } from 'node:os';
 import { pathToFileURL } from 'node:url';
 
-const { root, seed } = workerData;
+const { root, seed, world = null } = workerData;   // (world: 'v3' when the server runs World v3's world - CLA_WORLD=v3)
 try { setPriority(19); } catch { /* not allowed: carry on at the normal priority */ }   // (Linux: this thread only)
 const imp = (f) => import(pathToFileURL(join(root, f)).href);
 const { generateCity, cityData, cityFromData } = await imp('shared/map.js');
+const { mapSignature } = await imp('shared/mapcore.js');
 const { bakeChunk, loadProviders, SpriteCache, providers } = await imp('client/art2/game/chunkbake.js');
 const GB = await imp('client/art2/gbuf.js');
 const { packChunk } = await imp('client/art2/game/chunkstore.js');
 const { packPlanes } = await imp('client/art2/game/chunkpack.js');
 await loadProviders();
-// the world as a bake worker has it: the city's data (a structured clone) with its methods back
-const map = generateCity(seed);
+// the world as a bake worker has it: the city's data (a structured clone) with its methods back - the world the server
+// runs: World v3's built as the server builds it (server/world3.js; before, the thread built today's world from the seed
+// and baked it at the v3 map's chunks - the sea beyond today's frame: docs/WORLD-V3.md 8.23), today's from the seed
+let map = world === 'v3' ? (await (await imp('server/world3.js')).buildWorld3(seed, { log: () => {} })).map : generateCity(seed);
 const M = structuredClone(cityData(map));
 if (cityFromData) cityFromData(M); else Object.setPrototypeOf(M, Object.getPrototypeOf(map));
+const sig = mapSignature(map);   // (the server checks it against its own map's before it bakes anything: artcdn.js)
+if (world === 'v3') map = null;   // (the clone is what's baked: the v3 map's own copy goes - a GB)
 const cache = new SpriteCache(160e6);
 
 // a G-buffer to the engine's planes at art resolution: the page's own packing (client/art2/game/chunkpack.js)
@@ -53,4 +58,4 @@ parentPort.on('message', ({ cx, cy, q, ap, file }) => {
     parentPort.postMessage({ ok: false, cx, cy, q, ap, error: String((e && e.stack) || e).slice(0, 400) });
   }
 });
-parentPort.postMessage({ ready: true });
+parentPort.postMessage({ ready: true, sig });
