@@ -349,7 +349,8 @@ export function buildWest(m, addProp) {
       for (let x = x0; x < x1; x += 6) addProp(m, 'cliffwall', (x + 3) * TILE, (cy - 2.4) * TILE, 0, { len: 6 * TILE, h: 120 + (x % 3) * 10, d: 64, s: x }), out.props++;
       // the upper creek: a narrow channel north over the cliff top, from the peaks
       for (let y = top - 40; y < top; y++) { const x = Math.round(cx + 2 + 4 * Math.sin((y - top) / 9)); for (let dx = -2; dx <= 2; dx++) { if (!open(x + dx, y)) continue; const i = y * W + x + dx; m.land[i] = 0; m.river[i] = 1; m.tiles[i] = T.WATER; m.reserve[i] |= 4; } }
-      addProp(m, 'coastfall', (cx + 2) * TILE, (cy - 1.6) * TILE, 0, { w: 64, drop: 130, s: 17, kind: 'cliff', mist: 0.9 }); out.props++;
+      // the falls: three streams side by side over the band (SC3-A), the middle one the broadest
+      for (const [dx, w, sd] of [[-4, 48, 17], [3, 72, 19], [10, 40, 23]]) { addProp(m, 'coastfall', (cx + dx) * TILE, (cy - 1.6) * TILE, 0, { w, drop: 140, s: sd, kind: 'cliff', mist: 0.9 }); out.props++; }
       for (const [dx, dy, r] of [[-7, 3, 14], [10, 4, 12], [-9, 9, 10], [12, 11, 14], [3, 13, 9]]) wet('boulder', cx + 2 + dx, cy + dy, r, { s: r * 2 + 4, style: 'basalt', moss: 1 });
       // the viewing platform: decking on the west bank, a rail and a scope, a bench; the trail from the road
       let px = null, east = false;

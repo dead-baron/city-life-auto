@@ -7824,3 +7824,43 @@ docs/WORLD-V3.md 8.16, docs/world-v3-hub-downtown.png, docs/world-v3-hub-airport
 
 Tests: test/world3subway.test.js (one world build: the lines, the stations with their kiosks on plazas, the trains for
 five minutes - running, stopping, no collisions), test/world3rail.test.js, test/world3hubs.test.js.
+
+## 2026-10-11 · World v3: the west coast - Egret Point, its light, the raceway, the marsh; Silver Thread Falls, North Cape Light, the coves
+
+The owner's plan (docs/WORLD-V3.md 1.5 R3): "New: Egret Point fishing village at the arm's tip (piers, a fish market,
+the fishing fleet, a charter boat to the outer islands), Egret Point Light, a salt marsh with boardwalks (NK1-O), dunes
+with board ramps down to the beach (EL1), duck blinds, the Westport Raceway's new spot (open flat ground)"; and R2's coast:
+"Silver Thread Falls (WR3's big waterfall, SC3-A/NR1-E basalt columns, a viewing platform), North Cape Light (a lighthouse
+on the headland, N8-B tidepools below), the coves and sea stacks of the west coast" - built in the v3 world build at the
+skeleton's points, on the Redwood Coast Road and streets and tracks off it (docs/WORLD-V3.md 8.20).
+- **One district** after Dusty Hollow's: 65 Egret Point (wild: the village is built whole), painted over the village,
+  the raceway and its streets' strips so the marsh's tidal creeks don't cut them.
+- **Egret Point:** Wharf Street from the Redwood Coast Road's end to the quay on the arm's sheltered east shore; four
+  piers with the fleet moored along them (33 boats you can take), the charter boat and Egret Point Charters, the fish
+  market, The Gaff Hook (the bar), the bait and tackle shop; 23 fishing shacks along the street, for sale as today's
+  shacks. Light Road on down the arm to **Egret Point Light** at the tip.
+- **The Westport Raceway's new spot:** a dirt oval on the flat ground by the Redwood Coast Road, the grandstand's
+  bleachers, the pits and the snack bar, Raceway Road to its gate; today's race (three laps for anything with wheels)
+  starts there unchanged - map.js makes it from the first raceway with a start line.
+- **The marsh:** a boardwalk across the reeds and over the creeks to the bird hide, three duck blinds with decoys on the
+  creeks, three board ramps over the dunes down to the west beach.
+- **Silver Thread Falls** at the head of Silver Thread Creek: the basalt band, the falls into a plunge pool, the creek
+  above, the viewing platform between Falls Pass Road and the pool. **North Cape Light** on the cliff top above a widened
+  beach with twelve tide pools (starfish, urchins, anemones, crabs) and sea stacks. **Three coves** down the Redwood Coast
+  Road: a pull-off, a track through the redwoods, a bay with its beach between basalt points, sea stacks, driftwood.
+- `tools/world3-world-map.mjs --towns` pictures them (`--only egret,egretlight,silverfalls,northcape`).
+- Not done: walk-in interiors for the village's shops (our buildings have no prefab: they serve at the door); the
+  charter's route to the outer islands (the POI knows its boat; what a charter does is today's); a lake with a boathouse,
+  the beaver pond and the hunting camp (R2's inland places); crabbing and beachcombing as activities. Nothing live
+  changes: the world hash stays 6b6e16fdef9f.
+
+Files: shared/world3-west.js (new), shared/world3-world.js (the calls), shared/mapcore.js (`DISTRICTS` 65),
+tools/world3-world-map.mjs (the west coast's views in `--towns`), test/world3west.test.js (new), test/world3biomes.test.js
+(66 districts), docs/WORLD-V3.md 8.20, docs/world-v3-town-egret.png, -egretlight.png, -silverfalls.png, -northcape.png,
+docs/world-v3-world-r1-5.png.
+
+Tests: test/world3west.test.js (one world build: the district and no creek in it, the streets on the one network, the
+village's places, shacks, quay, piers and boats, the light at Light Road's end, the raceway and today's race on it, the
+boardwalk over the creeks, the hide, the blinds, the ramps, the falls and the platform, the creek wet to the bay, North
+Cape Light, its tide pools and stacks, the coves, our buildings whole and clear of the highways), test/world3biomes.test.js,
+test/dmath.test.js.

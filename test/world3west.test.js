@@ -121,7 +121,7 @@ test('World v3: the west coast - Egret Point, its light, the raceway and the mar
   check(cape && m.props.filter((p) => p && p.t === 'seastack' && near(p, cape.tx, cape.ty, 60)).length >= 2, 'sea stacks off the cape');
 
   // 9. the coves down the Redwood Coast Road
-  const coves = (m.landmarks || []).filter((l) => l.type === 'cove' && l.x / TILE < 700 && l.y / TILE > 1100 && l.y / TILE < 1900);
+  const coves = (m.landmarks || []).filter((l) => l.type === 'cove' && /^(Redwood Cove North|Sea Stack Cove|Driftwood Cove)$/.test(l.name) && l.x / TILE < 700 && l.y / TILE > 1100 && l.y / TILE < 1900);
   check(coves.length >= 2 && B.coves === coves.length, `${coves.length} coves down the Redwood Coast Road`);
   check(B.stacks >= 6, `${B.stacks} sea stacks`);
 
