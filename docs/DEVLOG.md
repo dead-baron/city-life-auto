@@ -7744,7 +7744,8 @@ Rock's water buses, the Prison Boat (custody only) - now built and run in the v3
 
 Files: shared/world3-ferries.js (new), shared/world3-world.js (the one call: `buildFerries3` in `done`),
 server/systems/ferries.js (`routes3`, the legs, `ferryInfo3`; today's routes untouched), server/systems/transit.js (no
-bus terminal stop for the Prison Boat), tools/world3-ferry-map.mjs (new), test/world3ferries.test.js (new),
+bus terminal stop for the Prison Boat), client/phone.js (the Transit app names every stop of a route of many; no
+Prison Boat), tools/world3-ferry-map.mjs (new), test/world3ferries.test.js (new),
 docs/WORLD-V3.md 8.17, docs/world-v3-ferry-*.png (seven stops through the chunk bake).
 
 Tests: test/world3ferries.test.js (one world build: every route's stops built - terminals, ramps, pontoons - each near

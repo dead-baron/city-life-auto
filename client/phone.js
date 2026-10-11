@@ -194,13 +194,13 @@ export function createPhone(ctx) {
     }
     if (!transit.lines.length) h += '<p class="ph-empty">No bus lines in this city.</p>';
     // the ferries to the islands: each route's two piers, when its boat next leaves each (tap one for a waypoint)
-    const fr = transit.ferries || [];
+    const fr = (transit.ferries || []).filter((R) => !R.custody);   // (World v3's Prison Boat: no passengers)
     if (fr.length) {
       h += `<h3>⛴ Ferries</h3><p class="ph-hint">Walk aboard at the pier while the boat is in. On the car ferry, drive up to its stern and interact to take your car across. Free. Tap a pier for a waypoint.</p>`;
       const when = (s, inHere) => (inHere ? `in now · leaves in ${s}s` : s < 90 ? `next boat leaves in ${s}s` : `next boat leaves in ${Math.round(s / 60)} min`);
       for (const R of fr) {
         h += `<h3>${esc(R.name)} <small>${R.car ? 'cars and foot passengers' : 'foot passengers'} · ${m(R.len)}</small></h3>`;
-        h += R.piers.map((pr, k) => `<button class="ph-row" data-pier="${R.id}:${k}"><span class="ic">⚓</span><span class="nm">${esc(k ? R.island : R.mainland)} pier<small>${R.leaves ? when(R.leaves[k], R.boat && R.boat.in === k) : 'no boat running'}</small></span><span class="d">${m(dist(pr))}</span></button>`).join('');
+        h += R.piers.map((pr, k) => `<button class="ph-row" data-pier="${R.id}:${k}"><span class="ic">⚓</span><span class="nm">${esc(R.stops ? R.stops[k] : `${k ? R.island : R.mainland} pier`)}<small>${R.leaves ? when(R.leaves[k], R.boat && R.boat.in === k) : 'no boat running'}</small></span><span class="d">${m(dist(pr))}</span></button>`).join('');
       }
     }
     const rail = ctx.map().rail;

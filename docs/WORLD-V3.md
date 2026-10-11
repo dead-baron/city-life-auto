@@ -3466,7 +3466,6 @@ Gull Harbor a lot off the island's ring road. What's wrong:
   needed within reach); cars cross the kerb to it.
 
 **What's left:** the terminal and ramp models (FE1, FE2); a boardwalk from the street to Northshore Pier; the Prison
-Boat as the arrests system's transport, once prisoners go to the island; the Transit app's page for routes of many
-stops (`ferryInfo` carries every stop, its name and its time - `stops`, `piers`, `leaves` - and `client/phone.js` lists
-every pier, but names them `k ? R.island : R.mainland`: every stop after the first by the last one's name); the
-lift bridges opening for tall boats (the boats pass under every deck today).
+Boat as the arrests system's transport, once prisoners go to the island; the lift bridges opening for tall boats (the
+boats pass under every deck today). The Transit app (`client/phone.js`) lists every stop of a route of many by its
+own name with its time (`ferryInfo`'s `stops`, `piers`, `leaves`) and leaves the Prison Boat out.
