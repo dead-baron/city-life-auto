@@ -1876,13 +1876,13 @@ map beside the place at its gulf size, baked with the game's chunk bake. What lo
    stay), the yard paved - an apron along the quay, pairs of 5 x 8-tile blocks of container stacks (three rows of
    40 ft boxes, two to four high) with 4-tile truck lanes between them and a cross lane every four blocks, light masts,
    straddle carriers parked in the lanes, the gate (a lane a pavement from the road nearest the stacks' middle) with
-   its barrier and a gatehouse; the ship-to-shore gantry cranes on the quay's straight edge (legs on its rails, the
+   its barrier and a gatehouse, a chain-link fence along the main yard's street sides; the ship-to-shore gantry cranes on the quay's straight edge (legs on its rails, the
    boom out over the water, a box on every other one's spreader: 5 of the 7 spots - one is on the curve at the north
    end, one on Harbor Road's end) and a container ship (stern, nine holds, bow: 90 tiles) moored along the middle of
    the quay. `m.port` holds the layout; `test/world3port.test.js`; the picture `docs/world-v3-westport.png`. Drawn by
    art v2 (`client/art2/props-transit.js` `stsCrane`, `containerStack`, `straddleCarrier`, `shipSection`; statics.js)
    and the classic renderer (`client/render/portprops.js`, loaded when the first port prop is drawn). What still looks
-   wrong: the quay is the dock's wooden planks (a container quay is concrete), the yard has no fence, the ship is
+   wrong: the quay is the dock's wooden planks (a container quay is concrete), the ship is
    small beside the quay (90 tiles of 344), and the corner past the quay's curve at the north end is grass.
 2. The roads off the places cut at the shore (8.4 item 2, H21) and the skeleton's crossings laid to them; Westport's
    seams joined when the mainland is built.

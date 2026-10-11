@@ -7017,15 +7017,15 @@ slab of warehouse roofs (the harbor style wall to wall). Now it is a container p
   so no stack touches a road, a pavement, a building or the water. Light masts stand in the tile between a pair (lit at
   night), straddle carriers are parked in the lanes, and the gate is where a lane meets the pavement with a road just
   past it (the one nearest the stacks' middle: halfway along the yard's east side, onto the avenue there) - a barrier
-  across it and a gatehouse beside it.
+  across it and a gatehouse beside it - and a chain-link fence runs round the main yard's street sides, open at the gate.
 - **The quay:** ship-to-shore gantry cranes on its straight edge - the legs on two crane rails (the dock's outer tile
   and the apron's first), the boom out over the water with the trolley and the spreader on its cables, a box hanging
   from every other one - on five of the seven spots (one is on the curve at the north end, one on Harbor Road's end);
   a container ship (the stern with its bridge and funnel, nine holds of boxes, the bow: 90 tiles) moored along the
   middle of the quay; the dock's bollards as before. The cranes are tall props drawn over what's beneath them (the
   boom over the ship and the water), as the elevated road and the tall props are.
-- **Solid:** the stacks (a ring of circles per tile), the cranes' legs, the masts, the straddle carriers and the ship's
-  sides; nothing solid on a road or a pavement (the test checks every one).
+- **Solid:** the stacks (a circle per tile), the cranes' legs, the masts, the straddle carriers, the fence and the
+  ship's sides; nothing solid on a road or a pavement (the test checks every one).
 - **The art:** art v2 draws them as voxel models (`client/art2/props-transit.js`: `stsCrane`, `containerStack`,
   `straddleCarrier`, `shipSection`; the flood mast and the barrier arm it had) through `statics.js`, plus the cranes'
   rails as flat strips; the classic renderer draws them in code (`client/render/portprops.js`), loaded the first time
@@ -7033,7 +7033,7 @@ slab of warehouse roofs (the harbor style wall to wall). Now it is a container p
   isn't district 26's: the world hash stays `6b6e16fdef9f`).
 - **The picture** (`docs/world-v3-westport.png`): the port reads as a container terminal - the stacks in rows, the
   lanes, the red cranes along the quay, the ship alongside. What's still wrong: the quay is the dock's wooden planks (a
-  container quay is concrete), the yard has no fence, the ship is small beside a 344-tile quay (90 tiles; one berth of
+  container quay is concrete), the ship is small beside a 344-tile quay (90 tiles; one berth of
   several), the corner past the quay's curve at the north end is still the old district's grass, and the classic renderer's crane rails only show once its port module has
   loaded (the ground they lie on is baked before).
 
@@ -7044,6 +7044,6 @@ overhead), `client/main.js` (a prop's own `tall` keeps it in view), `test/world3
 
 Tests: `test/world3port.test.js` (new: Westport at its gulf place - the slabs gone; the blocks on the paving with a tile
 of yard round them, not overlapping, off every lane and the apron; the cranes' legs on the dock's edge and the apron,
-their booms over the water; the gate a pavement from a road with the gatehouse by it; no solid on a road or a pavement;
+their booms over the water; the gate a pavement from a road with the gatehouse by it; the fence open at the gate; no solid on a road or a pavement;
 the ship on the water; Westport Freight still a delivery stop); the page's code budget (`test/perf.test.js`, its first
 test) passes.

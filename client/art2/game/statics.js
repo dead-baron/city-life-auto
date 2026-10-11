@@ -1773,13 +1773,14 @@ function propItems(c, p, pi, I) {
     case 'crates': V(`crt:${seed % 2}`, 'crates', [seed % 2]); return;
     // World v3's container port (shared/map.js buildContainerPort): the stacks, the quay's gantry cranes (anchored between
     // their legs, the boom out over the water; warning lights on top, floodlights under the boom), the ship's sections,
-    // straddle carriers, light masts, the gate's barrier and the cranes' rails
+    // straddle carriers, light masts, the gate's barrier, the yard's fence and the cranes' rails
     case 'cstack': V(`cst:${(p.v || 0) % 6}`, 'cstack', [(p.v || 0) % 6]); return;
     case 'gcrane': { const e = p.a ? -1 : 1; V(`gcr:${p.k ? 1 : 0}:${p.a ? 1 : 0}`, 'stsCrane', [p.k ? 1 : 0], p.a ? PI : 0, [351, 70]); lightAt(I, x, y, 322, 80, [1, 0.15, 0.1], 1.2, 'sign', 1); lightAt(I, x - e * 290, y, 220, 260, [1, 0.92, 0.75], 2.4, 'lamp'); return; }
     case 'cship': V(`csh:${p.v || 0}:${(p.c || 0) % 4}`, 'shipSection', [p.v || 0, (p.c || 0) % 4], PI / 2); if (p.v === 2) lightAt(I, x, y - 40, 200, 160, [1, 0.85, 0.6], 1.4, 'window'); return;
     case 'straddle': V('strd', 'straddle', []); return;
     case 'ymast': V('ymast', 'floodMast', [150, 1]); lightAt(I, x, y, 150, 300, [1, 0.9, 0.7], 2.6, 'lamp'); return;
     case 'ygate': V(`ygt:${p.a ? 1 : 0}`, 'barrierArm', [90, false], p.a || 0); return;
+    case 'yfence': fenceLine(I, 'chain', x, y, p.x1, p.y1); return;
     case 'crail': put(I, { key: `crail:${p.len || 256}`, recipe: { t: 'crail', len: p.len || 256 }, x, y, ext: [10, (p.len || 256) / 2 + 10, 10, (p.len || 256) / 2 + 10], pi }); return;
     case 'foodcart': V('fc', 'hotdogCart', [1]); lightAt(I, x, y + 6, 40, 70, [1, 0.8, 0.5], 0.8, 'sign'); return;
     case 'tent': { const col = ['#e07b20', '#3f8a3a', '#2f6fc8', '#c8b88a'][p.v || 0]; V(`tent:${p.v || 0}`, 'tent', [col]); return; }   // (v 3: a hunting camp's canvas wall tent)

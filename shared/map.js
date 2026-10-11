@@ -3970,6 +3970,42 @@ function buildContainerPort(m, q, edge, west, cranes) {
     }
     addProp(m, 'ygate', (gate.tx + 0.5) * TILE, (gate.ty + 0.5) * TILE, 0, { a: gate.dy ? 0 : Math.PI / 2 });
   }
+  // the fence: round the part of the yard the gate opens from, along its sides that face a pavement or a road (a
+  // chain-link run 10 px in from the edge, in pieces of up to four tiles), open at the gate
+  const fences = [];
+  if (gate) {
+    const part = new Uint8Array(RW * RH), st = [[gate.tx, gate.ty]];
+    part[li(gate.tx, gate.ty)] = 1;
+    while (st.length) { const [x, y] = st.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (isYard(x + dx, y + dy) && !part[li(x + dx, y + dy)]) { part[li(x + dx, y + dy)] = 1; st.push([x + dx, y + dy]); } }
+    const street = (x, y) => { const t = m.tiles[y * W + x]; return t === T.SIDEWALK || t === T.ROAD; };
+    const open = (x, y) => Math.abs(x - gate.tx) <= 2 && Math.abs(y - gate.ty) <= 2;   // (the gate's lane, and the corners beside it)
+    const piece = (x0, y0, x1, y1) => {
+      const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (4 * TILE)));
+      for (let k = 0; k < n; k++) {
+        const ax = x0 + (x1 - x0) * k / n, ay = y0 + (y1 - y0) * k / n, bx = x0 + (x1 - x0) * (k + 1) / n, by = y0 + (y1 - y0) * (k + 1) / n;
+        addProp(m, 'yfence', ax, ay, 0, { x1: bx, y1: by });
+        fences.push([ax, ay, bx, by]);
+      }
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      for (let d = 8; d <= len - 8; d += 12) solidAt(x0 + (x1 - x0) * d / len, y0 + (y1 - y0) * d / len, 7);   // (inside the run's ends: off the pavement round a corner)
+    };
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const outer = dx ? RW : RH, inner = dx ? RH : RW;
+      for (let a = 0; a < outer; a++) {
+        let run = -1;
+        for (let b = 0; b <= inner; b++) {
+          const x = rx0 + (dx ? a : b), y = ry0 + (dx ? b : a);
+          const ok = b < inner && part[li(x, y)] && street(x + dx, y + dy) && !open(x, y);
+          if (ok && run < 0) run = b;
+          if (!ok && run >= 0) {
+            if (dx) { const ex = dx > 0 ? (x + 1) * TILE - 10 : x * TILE + 10; piece(ex, (ry0 + run) * TILE + 4, ex, (ry0 + b) * TILE - 4); }
+            else { const ey = dy > 0 ? (y + 1) * TILE - 10 : y * TILE + 10; piece((rx0 + run) * TILE + 4, ey, (rx0 + b) * TILE - 4, ey); }
+            run = -1;
+          }
+        }
+      }
+    }
+  }
   // the cranes on the quay's rails (legs on the dock's outer tile and on the apron's first: off any road), every
   // other one with a box on its spreader; the ship alongside, on the water off the middle of the quay
   const rail = [(SX + (west ? 0.4 : 0.6)) * TILE, (SX + dir * 3.6 + (west ? 0 : 1)) * TILE];
@@ -4009,7 +4045,7 @@ function buildContainerPort(m, q, edge, west, cranes) {
     break;
   }
   m.port = { name: q.name, dist: dd, yard: [rx0, ry0, rx1, ry1], apron: { x: west ? SX + 3 : SX - 2 - PORT.apron, w: PORT.apron, y0: QY0, y1: QY1 }, blocks, lanes, solid, cranes: cr, rail, ship, freight: fr ? fr.id : -1,
-    gate: gate ? { x: (gate.tx + 0.5) * TILE, y: (gate.ty + 0.5) * TILE, road: gate.road } : null, gatehouse: house ? house.id : -1 };
+    gate: gate ? { x: (gate.tx + 0.5) * TILE, y: (gate.ty + 0.5) * TILE, road: gate.road } : null, gatehouse: house ? house.id : -1, fences };
 }
 function buildFarm(m, rand) {
   const W = m.w, H = m.h;

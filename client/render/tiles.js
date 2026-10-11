@@ -19,7 +19,7 @@ import { flora, FLORA_PROPS } from './flora/index.js';
 export const OVERHEAD = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'umbrella_y', 'lamp', 'sigpole', 'atmw', 'busstop', 'phonebox', 'billboard',
   'campfire', 'upole', 'radiotower', 'turbine', 'pumpjack', 'flare', 'dscreen', 'dome', 'marquee', 'otank', 'cstack', 'gcrane', 'cship', 'straddle', 'ymast', 'ygate']);
 // World v3's container port (shared/map.js buildContainerPort): its props are drawn by a module loaded when the first is seen
-const PORT = new Set(['cstack', 'gcrane', 'cship', 'straddle', 'ymast', 'ygate', 'crail']);
+const PORT = new Set(['cstack', 'gcrane', 'cship', 'straddle', 'ymast', 'ygate', 'crail', 'yfence']);
 let portArt = null, portAsk = false;
 function drawPort(g, p, night) { if (portArt) portArt.drawPortProp(g, p, night); else if (!portAsk) { portAsk = true; import('./portprops.js').then((m) => { portArt = m; }).catch(() => { portAsk = false; }); } }
 

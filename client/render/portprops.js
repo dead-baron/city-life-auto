@@ -1,6 +1,6 @@
 // The classic renderer's World v3 container port (shared/map.js buildContainerPort; art v2 draws the same props as
 // voxel models, client/art2/game/statics.js): the container stacks, the quay's ship-to-shore gantry cranes, the moored
-// ship's sections, straddle carriers, light masts, the gate's barrier and the cranes' rails. Loaded when the first of
+// ship's sections, straddle carriers, light masts, the gate's barrier, the yard's fence and the cranes' rails. Loaded when the first of
 // them is drawn (client/render/tiles.js), so the page's startup code doesn't carry it. Drawn in code in the 3/4 view:
 // a thing's height rises up the screen from its base.
 const COLS = ['#a8402e', '#2f5a8a', '#3e6a4a', '#c88a30', '#7a7e84', '#6a3a5a', '#2f7a7a'];
@@ -76,6 +76,11 @@ function gate(g, p) {
   rect(g, LINE, p.x - (v ? 3 : 46), p.y - (v ? 46 : 18), v ? 6 : 92, v ? 92 : 6);
   for (let k = 0; k < 90; k += 10) rect(g, (k / 10) % 2 ? '#f0eee8' : '#d8402e', v ? p.x - 2 : p.x - 45 + k, v ? p.y - 45 + k : p.y - 17, v ? 4 : 10, v ? 10 : 4);
 }
+function fence(g, p) {
+  const len = Math.hypot(p.x1 - p.x, p.y1 - p.y) || 1, ux = (p.x1 - p.x) / len, uy = (p.y1 - p.y) / len;
+  g.strokeStyle = 'rgba(170,176,182,0.85)'; g.lineWidth = 2; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x1, p.y1); g.stroke();
+  for (let d = 0; d <= len; d += 32) rect(g, '#3a3c44', p.x + ux * d - 1.5, p.y + uy * d - 1.5, 3, 3);
+}
 function rail(g, p) { const L = p.len || 256; rect(g, '#8e8c84', p.x - 4, p.y - L / 2, 8, L); rect(g, '#5a5c62', p.x - 1, p.y - L / 2, 2, L); }
 
 export function drawPortProp(g, p, night) {
@@ -87,5 +92,6 @@ export function drawPortProp(g, p, night) {
     case 'ymast': mast(g, p, night); break;
     case 'ygate': gate(g, p); break;
     case 'crail': rail(g, p); break;
+    case 'yfence': fence(g, p); break;
   }
 }

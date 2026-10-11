@@ -66,7 +66,14 @@ test('Port Westport at its gulf place: a container yard behind the quay, cranes 
   assert.ok(gh && !gh.gone && gh.kind === 'hut', 'a gatehouse');
   assert.ok(Math.abs(gh.tx + 1 - gx) + Math.abs(gh.ty + 1 - gy) <= 7, 'the gatehouse by the gate');
   for (let y = gh.ty; y < gh.ty + gh.th; y++) for (let x = gh.tx; x < gh.tx + gh.tw; x++) assert.equal(tile(x, y), T.BUILDING);
-  // nothing solid on a road or a pavement: the port's solids (the stacks, the cranes' legs, masts, straddle carriers, the ship)
+  // the fence along the yard's street sides, open at the gate
+  assert.ok(port.fences.length > 20, `${port.fences.length} pieces of fence`);
+  for (const [ax, ay, bx, by] of port.fences) {
+    const L2 = (bx - ax) ** 2 + (by - ay) ** 2, t = Math.max(0, Math.min(1, ((port.gate.x - ax) * (bx - ax) + (port.gate.y - ay) * (by - ay)) / (L2 || 1)));
+    assert.ok(Math.hypot(ax + (bx - ax) * t - port.gate.x, ay + (by - ay) * t - port.gate.y) > 64, `the fence is open at the gate (${ax},${ay} - ${bx},${by}; the gate ${port.gate.x},${port.gate.y}; around it: ${[-3, -2, -1, 0, 1, 2, 3].map((d) => Array.from({ length: 9 }, (_, k) => tile(Math.floor(port.gate.x / TILE) - 4 + k, Math.floor(port.gate.y / TILE) + d)).join('.')).join(' / ')})`);
+  }
+  // nothing solid on a road or a pavement: the port's solids (the stacks, the cranes' legs, masts, straddle carriers, the
+  // fence, the ship)
   assert.ok(port.solid.length > 1000);
   for (const [x, y, r] of port.solid) for (const [dx, dy] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]]) {
     const t = tile(Math.floor((x + dx) / TILE), Math.floor((y + dy) / TILE));
