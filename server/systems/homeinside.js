@@ -27,7 +27,7 @@ import { IN } from '../../shared/input.js';
 import { HOME_IN } from '../../shared/rules.js';
 import { ITEMS } from '../../shared/items.js';
 import { VEHICLES } from '../../shared/vehicles.js';
-import { layout, planOf, tierOf, stepInside, useAt } from '../../shared/homelayout.js';
+import { layout, planOf, tierOf, stepInside, useAt, blocked } from '../../shared/homelayout.js';
 import { store } from '../store.js';
 import * as homes from './homes.js';
 import * as economy from './economy.js';
@@ -86,7 +86,8 @@ function letIn(world, q, h, host) {
   ped.entering = null; ped.inside = h.id; ped.hidden = true; ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.fishing = null;
   ped.x = h.x; ped.y = h.y;
   world.place(ped);
-  ped.home = { id: h.id, x: L.spawn.x, y: L.spawn.y, a: -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, guest: host.pid };
+  const gx = [L.spawn.x + 20, L.spawn.x - 20, L.spawn.x].find((x) => !blocked(L, x, L.spawn.y));   // (beside the way in, not on the host)
+  ped.home = { id: h.id, x: gx, y: L.spawn.y, a: -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, guest: host.pid };
   q.homeMenu = null; q.meDirty = true;
   world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
   world.notify(q, `${host.name} lets you in. Nobody outside can see or hurt you in here.`, 'good');
