@@ -40,6 +40,11 @@ function propMask(m) {
   return k;
 }
 
+// The tables above (and the drops: shared/ledges.js), made now rather than at the first ambulance that arrives or goes
+// off the road - World v3's (a 5040 x 4032 mask, every solid prop of the world) took that tick 0.4-0.6 s
+// (docs/WORLD-V3.md 8.23.1: the server's worst tick). server/world.js makes them when it's given a map that big.
+export function warmGround(m) { propMask(m); dropsOf(m); }
+
 // can a person stand on tile (tx, ty)? can an ambulance's middle pass over it?
 function footOk(m, tx, ty, near, drops) {
   if (!m.inside(tx, ty)) return false;

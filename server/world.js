@@ -63,6 +63,7 @@ import * as activities from './systems/activities.js';
 import * as bowling from './systems/bowling.js';
 import * as cinema from './systems/cinema.js';
 import * as net from './net.js';
+import { warmGround } from './systems/offroad.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
 const SYSTEMS = [
@@ -176,6 +177,9 @@ export class World {
     jobs.init(this);
     trains.init(this);
     barriers.init(this);
+    // (World v3's frame, over 4 M tiles: the off-road tables made now, not in the tick of the first ambulance that needs
+    // them - 0.4-0.6 s there: systems/offroad.js warmGround)
+    if (map.w * map.h > 4e6) warmGround(map);
   }
 
   get clock() { return gameClock(this.loopTime); }
