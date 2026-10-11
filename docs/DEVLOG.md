@@ -8782,7 +8782,9 @@ furniture and decor, HO3 life at home, HO4 decorating).
   block in the garage, wood panelling in a trailer), skirting and doorway casings; the front wall's outside along the
   bottom (tin, brick, siding or stone) with the front door shut in it and a mat inside, the garage's roller door. Floors
   by room: planks, tiles (checks in a cheap one, marble in a mansion), a carpeted bedroom in a house, the garage's
-  concrete with its bays painted; rugs by the price (in front of the couch, by the bed, under a good table).
+  concrete with its bays painted; rugs by the price (in front of the couch, by the bed, under a good table). Round the
+  place the ground of its lot (the concepts show a home cut away where it stands): a lawn - a paved yard round an
+  apartment - with the path from the front door, the drive from the garage and flowers along a good one's front.
 - The furniture as voxel models (client/art2/props-home.js, new - in neither the page nor the chunk bake): beds (a bare
   mattress in a trailer to a four-poster in a mansion), the wardrobe (a steel locker in a trailer), the safe, kitchen
   counters with the hob and oven, the sink and the wall cupboards over them, the fridge, the dining table and its chairs
@@ -8794,7 +8796,9 @@ furniture and decor, HO3 life at home, HO4 decorating).
   walls and the bed's foot. The thing in reach is outlined round its shape, pulsing.
 - The light: lit on the CPU once for each step of the day (eight), no WebGL of its own - the day through the windows,
   at night each room's ceiling light, the lamps and the wall lamps on and the TV's flicker; in bands with a dither, the
-  street's hand-shaded look. A home builds in 0.1-0.3 s in node, its light in 10-60 ms.
+  street's hand-shaded look. A home builds in 0.1-0.5 s in node, its light in 10-60 ms - made and lit a little each
+  frame (10 ms of it, 4 once it's up), the classic drawing showing until it's ready: the first headless playtest froze
+  seven seconds building a house in one go on the way in.
 - The camera: the street's scale (main.js baseZoom), the whole place framed when it fits, else following you.
 - The classic view keeps the plan's sprites, cleaner: the walls raised with their faces showing, the windows on the back
   wall's face, the camera at the street's scale.

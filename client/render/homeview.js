@@ -83,6 +83,7 @@ function hide() {
   if (raf) { cancelAnimationFrame(raf); raf = 0; }
   if (S) S.homeIn = false;
   document.body.classList.remove('home-in');
+  art = null;   // (its buffers - a few MB - let go: made again, a little a frame, the next time you're in)
 }
 export const inside = () => !!st;
 
