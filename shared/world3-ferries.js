@@ -93,7 +93,7 @@ function findShore(m, st, tx0, ty0, K) {
   const tile = (x, y) => { const i = at(x, y); return i < 0 ? -1 : m.tiles[i]; };
   // (not on the container port's quay - its cranes' apron - nor where its ship lies alongside: m.port)
   const avoid = [];
-  if (m.port && m.port.apron) avoid.push([m.port.apron.x - 1, m.port.apron.y0 - 3, m.port.apron.x + m.port.apron.w + 1, m.port.apron.y1 + 3]);
+  if (m.port && m.port.apron) avoid.push([m.port.apron.x - 8, m.port.apron.y0 - 3, m.port.apron.x + m.port.apron.w + 8, m.port.apron.y1 + 3]);   // (the quay's edge, the cranes' rails and the apron)
   if (m.port && m.port.ship) { const sh = m.port.ship; avoid.push([Math.floor(sh.x / TILE) - 3, Math.floor(sh.y / TILE) - 3, Math.ceil((sh.x + sh.w) / TILE) + 3, Math.ceil((sh.y + sh.h) / TILE) + 3]); }
   const clash = (x, y) => avoid.some((r) => x >= r[0] && y >= r[1] && x < r[2] && y < r[3]);
   let best = null;
