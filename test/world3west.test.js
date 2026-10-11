@@ -72,7 +72,7 @@ test('World v3: the west coast - Egret Point, its light, the raceway and the mar
   const light = m.buildings.find((b) => b && b.kind === 'lighthouse' && b.name === 'Egret Point Light');
   check(light && Math.hypot(light.tx - WEST.light[0], light.ty - WEST.light[1]) < 14, 'Egret Point Light at the tip');
   const lr = EGRET.streets.find((s) => s[0] === 'Light Road')[1], lend = lr[lr.length - 1];
-  check(light && Math.hypot(light.tx - lend[0], light.ty - lend[1]) < 30, 'Light Road ends by the light');
+  check(light && Math.hypot(light.tx - lend[0], light.ty - lend[1]) < 40, 'Light Road ends by the light (a track on over the sand)');
 
   // 5. the raceway: the dirt oval, the grandstand, today's race starting there
   const [rx0, ry0, rx1, ry1] = WEST.raceway;

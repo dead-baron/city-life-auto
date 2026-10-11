@@ -26,16 +26,17 @@ export const EGRET = {
   road: 2630,
   streets: [
     ['Wharf Street', [[838, 2630], [1070, 2630]]],
-    ['Light Road', [[968, 2630], [968, 2760], [944, 2890], [914, 2972]]],
+    ['Light Road', [[968, 2630], [968, 2760], [944, 2890], [912, 2990]]],
     ['Raceway Road', [[796, 2512], [912, 2512]]],
   ],
 };
 // the set pieces (tiles)
 export const WEST = {
   raceway: [882, 2466, 944, 2502],         // the raceway's ground (the oval, the grandstand along its north side)
-  light: [905, 2990],                      // Egret Point Light, on the tip's last grass above the beach
+  light: [905, 3022],                      // Egret Point Light, on the tip's beach by the water, rocks round it
   hide: [700, 2560],                       // the bird hide at the boardwalk's west end
-  boardwalk: [[968, 2700], [900, 2690], [820, 2640], [760, 2600], [700, 2566]],   // (off Light Road, west across the marsh)
+  boardwalk: [[968, 2700], [936, 2712], [904, 2694], [872, 2704], [846, 2676], [812, 2664], [786, 2630], [752, 2618], [726, 2588], [700, 2566]],   // (off Light Road, winding west across the marsh)
+  pond: [[962, 2846], [932, 2856], [906, 2848], [884, 2858]],                       // (a spur off Light Road out to the pond's platform)
   blinds: [[880, 2760], [790, 2700], [740, 2820]],                                 // the duck blinds, by the creeks
   ramps: [2500, 2600, 2700],              // the dunes' board ramps down to the west beach, at these rows
   falls: [1110, 690],                      // Silver Thread Falls: the head of Silver Thread Creek (STREAMS)
@@ -74,7 +75,7 @@ export function paintWest3(L, W, H) {
 export function layWest3(lines, m) {
   const out = { streets: 0, len: 0 };
   for (const [name, P] of EGRET.streets) {
-    lines.push({ pts: P.map(([x, y]) => ({ x: (x + 0.5) * TILE, y: (y + 0.5) * TILE })), kind: 'st', lvl: 0, name, town: EGRET.key });
+    lines.push({ pts: P.map(([x, y]) => ({ x: (x + 0.5) * TILE, y: (y + 0.5) * TILE })), kind: name === 'Wharf Street' ? 'st' : 'rural', lvl: 0, name, town: EGRET.key });   // (the lanes to the light and the raceway: country roads)
     out.streets++;
     for (let j = 1; j < P.length; j++) out.len += Math.round(Math.hypot(P[j][0] - P[j - 1][0], P[j][1] - P[j - 1][1]));
   }
@@ -242,12 +243,15 @@ export function buildWest(m, addProp) {
     const at = spot(WEST.light[0] - 2, WEST.light[1] - 2, 5, 5, 10);
     if (at) {
       const lx = at[0] + 2, ly = at[1] + 2;
-      for (let y = ly - 6; y < ly + 6; y++) for (let x = lx - 7; x < lx + 8; x++) if (open(x, y)) { m.tiles[y * W + x] = T.DIRT; m.reserve[y * W + x] |= 4; }
+      for (let y = ly - 6; y < ly + 6; y++) for (let x = lx - 7; x < lx + 8; x++) if (open(x, y) && m.tiles[y * W + x] !== T.SAND) { m.tiles[y * W + x] = T.DIRT; m.reserve[y * W + x] |= 4; }
       const b = addBld(m, lx - 2, ly - 2, 5, 5, 'lighthouse', 'Egret Point Light', 'tile', null, { x: (lx + 0.5) * TILE, y: (ly + 3.4) * TILE, text: 'Egret Point Light' });
       if (b) out.light = [lx, ly];
-      prop('cottage', lx - 8, ly + 1, 12, { w: 84, d: 54 });
-      prop('pbench', lx + 6, ly + 3, 0, { a: Math.PI / 2 });
-      track([[914, 2974], [lx + 2, ly - 4]], 1.8);
+      prop('cottage', lx - 9, ly - 6, 12, { w: 84, d: 54 });
+      prop('pbench', lx + 6, ly - 3, 0, { a: Math.PI / 2 });
+      // the rocks of the point round its foot and out into the surf (basalt, barnacled at the waterline)
+      for (const [dx, dy, w, d, h] of [[-5, 3, 64, 40, 40], [4, 4, 80, 48, 46], [0, 7, 96, 56, 36], [-8, 6, 48, 32, 30], [8, 8, 56, 36, 30]]) { addProp(m, 'outcrop', (lx + dx) * TILE, (ly + dy) * TILE, 0, { w, d, h, style: 'basalt', s: dx + dy }); m.addSolidProp((lx + dx) * TILE, (ly + dy) * TILE, Math.round(d * 0.42)); out.props++; }
+      for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI + 0.2, x = lx + Math.cos(a) * 11, y = ly + 4 + Math.sin(a) * 7; if (!wet('boulder', x, y, 12, { s: 18 + k * 2, style: 'basalt', barn: 1 })) prop('boulder', x, y, 12, { s: 18 + k * 2, style: 'basalt', barn: 1 }); }
+      track([[912, 2991], [lx + 1, ly - 3]], 1.8);
       keep(lx - 12, ly - 16, lx + 12, ly + 8);
       landmark('Egret Point Light', 'lighthouse', lx - 8, ly - 8, lx + 9, ly + 8);
     }
@@ -291,7 +295,13 @@ export function buildWest(m, addProp) {
   // 4. The salt marsh: a boardwalk from Light Road west across the reeds and the creeks to the bird hide; the duck
   // blinds by the creeks with decoys on the water; the dunes' board ramps down to the west beach
   {
-    out.boardwalk = deck(WEST.boardwalk);
+    out.boardwalk = deck(WEST.boardwalk) + deck(WEST.pond);
+    // the pond's platform: decking 7 x 5 at the spur's end, out over the water, a rail and a bench
+    {
+      const [px, py] = WEST.pond[WEST.pond.length - 1];
+      for (let y = py - 2; y <= py + 2; y++) for (let x = px - 6; x <= px; x++) { if (!inF(x, y)) continue; const i = y * W + x, t = m.tiles[i]; if (m.bld[i] < 0 && (GROUND.has(t) || (t === T.WATER && m.river[i]))) { m.tiles[i] = T.DOCK; m.reserve[i] |= 4 | 16; out.boardwalk++; } }
+      addProp(m, 'pierrail', (px - 3) * TILE, (py + 2.8) * TILE, 0, { len: 7 * TILE, a: 0 }); addProp(m, 'pbench', (px - 3) * TILE, (py - 1.5) * TILE, 0, { a: Math.PI / 2 }); out.props += 2;
+    }
     const hs = spot(WEST.hide[0] - 4, WEST.hide[1] - 7, 8, 4, 16) || [WEST.hide[0] - 4, WEST.hide[1] - 7];
     const hx = hs[0] + 4, hy = hs[1] + 7;
     const hide = addBld(m, hx - 4, hy - 7, 8, 4, 'hut', 'Egret Marsh Bird Hide', 'tar', { spec: { floors: 1, style: 'siding', wallColor: '#6a5a40', pitch: 'gable', roof: 'shingle', roofColor: '#4e4434', slope: 0.3 } });
