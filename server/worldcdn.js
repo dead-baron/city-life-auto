@@ -30,8 +30,11 @@ export function cutWorld(city, meta) {
 
 // cut: what cutWorld returned; world: version.json's world hash (read from root when not given); delayMs: the gzip and
 // the writing wait this long (the server's first ticks and the players reconnecting after a restart go first)
-export function createWorldCdn({ cut, root, dataDir, seed, world = null, delayMs = 0, log = console.log, onBytes = null } = {}) {
-  const S = { world: world || readWorld(root), seed: seed >>> 0, dir: null, state: 'packing', files: new Map(), ms: { cut: cut ? cut.ms : 0, gzip: 0, write: 0 }, bytes: 0, served: 0, servedBytes: 0, missed: 0, error: null };
+// variant: 'v3' when the server runs World v3's world (CLA_WORLD=v3, server/world3.js): its files are another world's,
+// served (and kept by the pages) under the world's hash with '-v3' after it
+export function createWorldCdn({ cut, root, dataDir, seed, world = null, variant = '', delayMs = 0, log = console.log, onBytes = null } = {}) {
+  const base = world || readWorld(root);
+  const S = { world: base && variant ? `${base}-${variant}` : base, seed: seed >>> 0, dir: null, state: 'packing', files: new Map(), ms: { cut: cut ? cut.ms : 0, gzip: 0, write: 0 }, bytes: 0, served: 0, servedBytes: 0, missed: 0, error: null };
   const ready = (async () => {
     if (!S.world || !cut) { S.state = 'off'; return; }
     if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs).unref());
@@ -64,7 +67,7 @@ export function createWorldCdn({ cut, root, dataDir, seed, world = null, delayMs
     if (!path.startsWith('/world/')) return false;
     const qi = path.indexOf('?'), v = qi >= 0 ? /[?&]v=([^&]*)/.exec(path.slice(qi)) : null;
     if (qi >= 0) path = path.slice(0, qi);
-    const m = /^\/world\/([0-9a-f]{6,40})\/(\d{1,10})\/([^/]+)$/.exec(path);
+    const m = /^\/world\/([0-9a-f]{6,40}(?:-v3)?)\/(\d{1,10})\/([^/]+)$/.exec(path);
     const miss = (why) => { S.missed++; res.writeHead(404, { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-world-miss', 'cache-control': 'no-store', 'x-world-miss': why }); res.end(); return true; };
     if (!m || !FILE.test(m[3])) return miss('file');
     if (m[1] !== S.world) return miss('hash');

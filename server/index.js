@@ -31,10 +31,13 @@ const MIME = {
 const STATIC_ROOTS = ['client/', 'shared/', 'assets/', 'server/'];
 
 useStore(new FileStore());
-const map = generateCity(config.seed);
+const WORLD3 = config.world === 'v3';   // (CLA_WORLD=v3: World v3's whole world in place of today's - never live: server/world3.js)
+const bootT0 = performance.now();
+const map = WORLD3 ? (await (await import('./world3.js')).buildWorld3(config.seed)).map : generateCity(config.seed);
 // the city as region files for the pages (server/worldcdn.js): cut now, as generated - the World changes the map once it runs
 let worldCut = null;
-try { worldCut = cutWorld(map, { seed: config.seed >>> 0 }); } catch (e) { console.error('[world] could not cut the city into region files:', e); }
+try { worldCut = cutWorld(map, WORLD3 ? { seed: config.seed >>> 0, world: 'v3' } : { seed: config.seed >>> 0 }); } catch (e) { console.error('[world] could not cut the city into region files:', e); }
+if (WORLD3 && worldCut) console.log(`[world] World v3: cut into ${worldCut.pack.regions.length} region files in ${worldCut.ms} ms`);
 // the build we run (version.json): players coming back from an older one start fresh (CLA_FRESH_ON_UPDATE)
 const BUILD_FILE = join(config.root, 'version.json');
 const bootBuild = readBuild(BUILD_FILE);
@@ -47,7 +50,7 @@ let artCdn = null;
 try { artCdn = createArtCdn({ map, root: config.root, dataDir: config.dataDir, seed: config.seed, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[art] not serving chunks:', e); }
 // the city from the server: the region files gzipped and written in the background, then served (server/worldcdn.js)
 let worldCdn = null;
-if (worldCut) { try { worldCdn = createWorldCdn({ cut: worldCut, root: config.root, dataDir: config.dataDir, seed: config.seed, delayMs: 3000, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[world] not serving the city:', e); } }
+if (worldCut) { try { worldCdn = createWorldCdn({ cut: worldCut, root: config.root, dataDir: config.dataDir, seed: config.seed, variant: WORLD3 ? 'v3' : '', delayMs: 3000, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[world] not serving the city:', e); } }
 worldCut = null;
 // Client-only updates arrive without a restart (deploy/auto-update.sh pulls them): look at version.json
 // every 20 s and tell every page about a new build, so they reload into it (client/update.js).
@@ -119,7 +122,7 @@ attachWebSocketServer(server, {
     const ip = clientIp(req, config.trustProxy);
     if (limits) { limits.track(ip); conn.on('close', () => limits.untrack(ip)); }
     const session = createSession(world, conn, {
-      seed: config.seed, dev: config.dev, maxPlayers: config.maxPlayers, label: 'City Life Auto 0.8',
+      seed: config.seed, dev: config.dev, world: WORLD3 ? 'v3' : undefined, maxPlayers: config.maxPlayers, label: 'City Life Auto 0.8',
       closedReason: () => (limits && limits.state() !== 'ok' ? QUOTA_MSG : null),
       login(token) {
         const v = verifyToken(token);
@@ -225,6 +228,7 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 server.listen(config.port, config.host, () => {
   console.log(`[server] City Life Auto listening on http://${config.host}:${config.port}  (dev=${config.dev}, seed=${config.seed})`);
+  if (WORLD3) console.log(`[server] World v3 up in ${((performance.now() - bootT0) / 1000).toFixed(1)} s; memory ${Math.round(process.memoryUsage().rss / 1048576)} MB (peak ${Math.round(process.resourceUsage().maxRSS / 1024)} MB)`);
   loop();
 });
 

@@ -65,7 +65,7 @@ test('the split: a region holds its rectangle of every layer and the items whose
       assert.equal(bad, -1, `${r.key} ${k}: the map's rectangle`);
     });
     for (const [f, { i, d: items }] of Object.entries(d.lists)) {
-      const idx = blobs[i], src = f === 'solidProps' ? [...m.solidProps.keys()] : m[f];
+      const idx = blobs[i], src = f === 'solidProps' ? [...m.solidProps.keys()] : f.split('.').reduce((o, k) => o[k], m);   // ('levels.segs': a list inside a field)
       for (let j = 0; j < idx.length; j++) {
         const it = src[idx[j]], [tx, ty] = itemTile(REGIONAL[f], it, WIN);
         assert.equal(regionOf(g, tx, ty), ri, `${f}[${idx[j]}] is in ${r.key}`);
@@ -74,8 +74,9 @@ test('the split: a region holds its rectangle of every layer and the items whose
       if (f === 'props') for (let j = 0; j < idx.length; j += 97) assert.deepEqual([items[j].t, items[j].x, items[j].y], [m.props[idx[j]].t, m.props[idx[j]].x, m.props[idx[j]].y], `props[${idx[j]}] as it is`);
     }
   }
-  for (const f of Object.keys(REGIONAL)) if (seen[f]) assert.equal(seen[f].size, f === 'solidProps' ? m.solidProps.size : m[f].length, `${f}: every item once`);
+  for (const f of Object.keys(REGIONAL)) if (seen[f]) assert.equal(seen[f].size, f === 'solidProps' ? m.solidProps.size : f.split('.').reduce((o, k) => o[k], m).length, `${f}: every item once`);
   assert.ok(seen.props && seen.pois && seen.buildings && seen.lamps && seen.parking && seen.solidProps, 'the big lists are cut');
+  assert.ok(seen.railPts && seen['levels.segs'] && X.root.railPts === null && X.root.levels.segs === null && X.root.levels.grid, "the railway's points and the levels' segments too (the levels' grid stays whole)");
 });
 
 test("a World v3 frame splits 10 x 8, and a map that is a window onto it travels with its origin", () => {
@@ -195,4 +196,38 @@ test('the load report says the city was downloaded from the server', async () =>
   const { reportLine, cleanReport } = await import('../server/perfreports.js');
   const r = cleanReport({ kind: 'phone', ua: 'Mozilla/5.0 (Linux; Android 14; Pixel 7 Pro) Chrome/128.0.0.0 Mobile', preset: 'low', w: 892, h: 412, dpr: 2, scale: 1, at: { city: 1000, screen: 3000 }, ms: { city: 500 }, city: 'served', fps: 58, p50: 16, p95: 20 });
   assert.match(reportLine(r), /city 1\.0 \(downloaded from the server, 0\.5 s\)/);
+});
+
+test("World v3's world (CLA_WORLD=v3): its files under the world's hash + '-v3'; the page's worker asks again while they're being written, and never builds it", async () => {
+  const dataDir = mkdtempSync(join(tmpdir(), 'cla-world3-'));
+  const world = JSON.parse(readFileSync(join(ROOT, 'version.json'), 'utf8')).world;
+  const cdn = createWorldCdn({ cut: cutWorld(CITY(), { seed: 1337 }), root: ROOT, dataDir, seed: 1337, variant: 'v3', log: () => {} });
+  try {
+    await cdn.ready;
+    assert.equal(cdn.world, `${world}-v3`);
+    let res = fakeRes();
+    cdn.handle(`/world/${world}-v3/1337/index.bin?v=${PACK_VERSION}`, {}, res); await res.finished;
+    assert.equal(res.status, 200, "the v3 world's index");
+    res = fakeRes(); cdn.handle(`/world/${world}/1337/index.bin?v=${PACK_VERSION}`, {}, res);
+    assert.equal(res.status, 404); assert.equal(res.headers['x-world-miss'], 'hash', "today's world isn't what it serves");
+  } finally { rmSync(dataDir, { recursive: true, force: true }); }
+  const pack = PACK(), id = 'abcdef123456-v3', key = `${id}:1337`, base = 'http://cdn.test/world/';
+  const files = {};
+  for (const [name, bytes] of [['index.bin', pack.index], ...pack.regions.map((r) => [`${r.key}.bin`, r.bytes])]) files[name] = gzipSync(bytes, { level: 1 });
+  let packing = 2, built = 0;
+  const fetchFn = async (url) => {
+    assert.ok(url.startsWith(`${base}${id}/1337/`), url);
+    if (packing > 0) { packing--; return new Response(null, { status: 404, headers: { 'x-world-miss': 'packing' } }); }
+    return new Response(files[url.slice(`${base}${id}/1337/`.length, url.indexOf('?'))]);
+  };
+  const build = async () => { built++; return { built: true }; };
+  const r = await cityFor({ seed: 1337, key, base }, { read: async () => null, fetchFn, build });
+  assert.equal(r.from, 'served', 'asked again while the server was writing its files');
+  const c = cityFromData(r.data); delete c._sig;
+  assert.equal(mapSignature(c), CITY()._sig);
+  const warn = console.warn; console.warn = () => {};
+  try {
+    await assert.rejects(cityFor({ seed: 1337, key, base }, { read: async () => null, fetchFn: async () => new Response(null, { status: 404 }), build }), /World v3/, "not downloaded: an error, not today's world built");
+  } finally { console.warn = warn; }
+  assert.equal(built, 0);
 });

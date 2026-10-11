@@ -1386,7 +1386,8 @@ For the window (the next steps):
   regions loaded a reference into a missing region can't be pointed at again - the window will need each region's
   shared objects kept in it (or copied), and items that straddle a border drawn by both.
 - The index holds the whole road graph and railway (0.68 MB today): at v3 it would be several MB, so the railway's
-  points and the levels' segments should move into the regions, and the phone's GPS keep a coarse graph.
+  points and the levels' segments should move into the regions, and the phone's GPS keep a coarse graph. **(Moved,
+  2026-10-10, 8.9: the index is 0.35 MB today, 0.71 MB at v3; the road graph is still whole.)**
 - POIs are cut into regions today; the phone's apps and the big map list places world-wide, so a small global list
   (name, kind, position) belongs in the index.
 - The join check is still the whole map's signature; per-region signatures come with the window (part 8 item 5).
@@ -1438,6 +1439,7 @@ For the next steps:
   today's world's. At v3 the HUD's and the spectator's map pictures (one pixel a tile, 5040 x 4032: 81 MB of pixels)
   want a coarser picture, and the art CDN's background order scores 35,280 chunks (fine on the server, to watch).
 - The region files (8.1) at the v3 frame: 10 x 8 regions (tested); the index's whole lists need the changes 8.1 lists.
+  **(Done, 8.9: the server packs the v3 world it runs - 8.63 MB, the index 0.71 MB.)**
 ### 8.3 Stage 2, step 1: the land of the v3 frame (2026-10-10)
 
 The first piece of stage 2 ("the generator at the v3 frame, building today's places at their gulf positions and
@@ -2016,3 +2018,81 @@ the shore isn't designed). What the whole picture shows wrong:
    `buildGullIsles` first (Gull Harbor is built, its harbour isn't placed: it runs in today's coordinates, where the
    mainland is now).
 5. The chunk bake of the whole frame (`--bake`, an hour and three quarters on one thread) or by region.
+
+### 8.9 The server runs the v3 world: `CLA_WORLD=v3` (2026-10-10, H29)
+
+A setting the live deploy never sets (`server/config.js` `world`; without it nothing changes - the world hash stays
+`6b6e16fdef9f`): `CLA_WORLD=v3 node server/index.js` builds the whole v3 world (8.6) in place of today's and runs it as
+it runs today's - the World, the art CDN, the region files (8.1), the pages. `server/world3.js` `buildWorld3`: today's
+world, the land (8.3), the world build; the v3 generator modules are imported only then. The page follows the server's
+world: see "The page" below.
+
+**What runs**
+- The server starts and runs: the World on the 5040 x 4032 map, its systems round the players (people, traffic), the
+  art CDN baking round them, the region files served. `test/world3server.test.js` (about 34 s): the v3 world built as
+  the server builds it; its region files cut as the server cuts them and read back into the same city (the map's
+  signature); the server's world run for 8 s with players at Metro City, Westport's container port, Cedar Isle and the
+  mainland's woods - no errors, people and traffic round the three towns.
+- The page (a desktop browser) downloads the whole world - the index and all 80 regions - in its city worker,
+  assembles it and starts the game in it: the spawn (a hospital by the gulf), the minimap, the dev menu's teleport
+  (Midtown, Port Westport, Highland Woods), the art v2 chunks baked for the v3 map by the server's CDN and the page's
+  own bake worker. `docs/world-v3-server-metro.png`: Midtown at its gulf place 45 s after the teleport (brick blocks, a
+  grocery row, cars) in the headless page.
+
+**What broke, fixed**
+1. **The trains** (`server/systems/trains.js`): the v3 build lays no railway yet (`noRail`), and the trains' setup took
+   the first station of an empty list. No railway, no trains.
+2. **The page asked for today's world:** a browser keeps its city under the world's hash, the same for both worlds (one
+   build, one generator). The v3 world is served and kept under the hash + `-v3` (`server/worldcdn.js` `variant`); the
+   welcome says `world: 'v3'` (absent for today's: the live welcome is unchanged); a page whose city worker asked for the
+   other world remembers the server's (`cla.world`) and loads again (`client/main.js` `worldChanged`); `?world=v3` asks
+   for it from the start (a playtest: no reload).
+3. **The worker built today's world when the v3 files weren't written yet** (the server listens before its 80 files
+   are gzipped: a 404 'packing') - and the page then joined with the wrong map. The worker never builds a v3 world (the
+   generator would build today's): it asks again every 2 s while the server is packing, waits up to 2 minutes, and fails
+   with an error otherwise. It doesn't keep the v3 city (hundreds of MB in IndexedDB) and hands its layers to the page
+   without a copy (transferred).
+4. **The index was 1.26 MB gzipped** (5.97 MB raw), **0.71 MB now** (2.06 MB raw; `shared/regionpack.js`, the format's
+   version 2; the files still the city to the bit, less what only the generator reads):
+   - 3.4 MB of it (raw) were references - 81,745 offshore points that are sea points, 2,796 lamps that are props, 104
+     ATMs that are POIs, each a path pair: said in the item's region now (a region's `refs`).
+   - The railway's points (`railPts`: none at v3, 14,127 in today's world) and the levels' deck segments
+     (`levels.segs`, 282 KB of JSON at v3, by their middle: a list inside a field, by its path) are cut into the
+     regions; the levels' grid (cell -> segment indices) stays whole.
+   - `leftover` (the lots' scraps' tiles, 283 KB of JSON) is the generator's alone: left out (OMIT).
+   - Today's world: the index 0.68 -> 0.35 MB, the whole 2.04 -> 2.01 MB.
+
+**The numbers** (this machine, node 22, two cores shared with other jobs)
+
+| | |
+|---|---|
+| The server's start | **25-28 s** to listening: the build 19-22 s (today's 4.3-4.6, the land 0.9-1.1, the world 14-16), the cut into region files 2.9-4.8 s, the ferry planner 1.3 s (no ferries: none planned at v3) |
+| The server's memory | 850-870 MB after the build (peak 920-960); **1.56-1.66 GB when it starts listening** (the World's state, and the cut's raw copy, 358 MB, held until it's gzipped); **1.16 GB** once the files are written. The Ampere VM (up to 12 GB) holds it. |
+| The region files | **81 files, 8.63 MB gzipped** (358 MB raw), gzipped in 4.0-9.1 s on libuv's threads in the background. **The index 0.71 MB** (2.06 MB raw; 1.26 MB before). Regions 34-260 KB, median 63 KB; the 9 largest together 2.03 MB - **a 3 x 3 window is at most about 2 MB plus the index** |
+| What's left whole in the index (raw JSON) | the road graph - `roads` 660 KB, `nodes` 285 KB (the GPS's); Port Westport's `port` 181 KB; `gores` 55, `homes` 42, the levels' grid 29. The railway is empty (not laid) |
+| The page (headless Chromium, SwiftShader) | **the city served in 9.0-12.1 s** (81 downloads, unzipping and assembling in the worker); **the main thread's JS heap 468-497 MB** (527 MB allocated) with the whole v3 map; the art's bake worker gets its own copy (`worldData`: a structured clone, 1.4 s to post); Midtown's screen drawn after about 45 s (bakes 1.5-6.5 s each on the page's one worker, the server's CDN on one thread); frames in the headless page 0.1-9 s (the bake, the server and SwiftShader on two cores) |
+
+**What breaks or is missing, not fixed** (in order)
+1. **The page holds the whole world:** 470-500 MB of heap, and every bake worker a copy of it. A phone can't: the
+   window (8.1's notes, part 8 item 4) - the worker fetching the index and the 9 regions round the player and moving them
+   - is the next step. The region files are ready for it (a window of 9 is about 2 MB); the regional references
+   (`refs` of a region pointing at another region's items: none cross a border today - offshore and sea points, lamps
+   and props, ATMs and POIs are at the same spot) and the shared objects straddling borders are its open questions.
+2. **The index still has whole lists** a window may not need: the port's lanes and stacks (into the regions), the road
+   graph (whole for the GPS, or coarse for the phone: 945 KB of JSON of the index's 2 MB).
+3. **A page that can't download the v3 world** (the worker's error after 2 minutes) says so on the title screen and
+   stops (`client/main.js` `holdForCity`: the welcome says `world: 'v3'`) - it used to fall back as for today's world
+   and build today's. Done, but only when the welcome comes before the worker gives up (it waits 2 minutes, so it
+   does); a worker that failed first still lets the page build.
+4. **The art after a teleport is slow, or doesn't come:** in the headless page Midtown was half drawn after 15 s and
+   whole after 45 s, but Port Westport and Highland Woods were still the sea's stand-in after 40 s - though the
+   server's CDN had baked the 5 x 5 chunks round each (`.playtest-data/8229/art/.../q2a2/`), the minimap drew them and
+   the player stood on land. Frames of up to 5-9 s (SwiftShader, the page's bake worker, the server and its bake
+   thread on two shared cores) may be all of it, or the page may not be asking for (or not taking) those chunks: to
+   look at in a real desktop browser first (`?world=v3`, `__S.art2.stats()`).
+5. **The server starts in 25-28 s and holds 1.6 GB while it packs:** pack before the World starts (or write the files
+   region by region, freeing each), and keep the files between restarts (they're the same world while the hash is).
+6. **The kept city:** a v3 city isn't kept in the browser (hundreds of MB); with the window, regions are kept one by
+   one.
+7. **What the world itself lacks** (8.6's list): the railway (no trains, no stations), the roads off the islands, the
+   mainland's districts; no ferries are planned at v3 (the ferry planner finds no routes).
