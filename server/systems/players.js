@@ -13,6 +13,7 @@ import { store, defaultProfile } from '../store.js';
 import * as vehicles from './vehicles.js';
 import * as carhits from './carhits.js';
 import * as combat from './combat.js';
+import * as tank from './tank.js';   // (H58)
 import * as cargo from './cargo.js';
 const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); return out; };   // + the backpack you dropped when you died
 import * as law from './law.js';
@@ -406,8 +407,9 @@ function applyInput(world, p, ped, inp, pressed, dt) {
       v.input.drv = di.drv;
       if (inp.bits & IN.HORN) v.hornUntil = world.time + 0.2;
       if ((pressed & IN.HORN) && v.def.police) v.sirenOn = !v.sirenOn;
+      if (v.def.turret && (inp.bits & IN.FIRE)) tank.fire(world, v, ped);   // (the tank's cannon - tank.js)
     }
-    if ((inp.bits & IN.FIRE) && (inp.bits & IN.AIMING) && !(ped.seat === 0 && v.def.missiles)) {   // (the gunship's pilot fires its missiles instead: aircraft.js)
+    if ((inp.bits & IN.FIRE) && (inp.bits & IN.AIMING) && !v.def.turret && !(ped.seat === 0 && v.def.missiles)) {   // (a tank's cannon: tank.js; the gunship's pilot fires its missiles instead: aircraft.js)
       const w = WEAPONS[ped.weapon];
       if (w && (w.type === 'gun')) combat.tryAttack(world, ped, inp.aim);
     }

@@ -12,6 +12,7 @@ import { ugMapOf } from '../shared/underground.js';
 import * as wildlife from './systems/wildlife.js';
 import * as players from './systems/players.js';
 import * as vehicles from './systems/vehicles.js';
+import * as tank from './systems/tank.js';
 import { blinkState } from './systems/homes.js';
 import { bagWireTier, bagBlinks } from './systems/cargo.js';
 import { netRect, NET_KEEP } from './view.js';
@@ -51,19 +52,19 @@ function fields(world, e) {
   switch (e.kind) {
     // extra: bits 0-4 weapon, 5-6 blink (1 slow, 2 fast, 3 hidden indoors), bit 7 in the water (incl. under a bridge) -
     // or, in a vehicle, sat in one of its back seats (2 on: where an open boat shows them - shared/vehicles.js crew)
-    // parent: the vehicle you're in, or the train car you're riding
+    // parent: the vehicle you're in, or the train car you're riding; its top bit: on fire (burning.js - the clients strip it)
     // (an animal: extra bits 0-4 what it's doing - fauna.js APOSE - and bit 7 in the water; a pet: its mood - APOSE.happy
     // home with its owner, pets.js)
     case K.PED: if (e.wild) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, (wildlife.poseOf(e) & 31) | (WATER_T[(e.ug ? ugMapOf(world.map) : world.map).tileAtPx(e.x, e.y)] === 1 ? 128 : 0)];
       if (e.pet) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, ((e.pet.mood || 0) & 31) | (isSwimming(world.map, e) ? 128 : 0)];
-      return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0), (e.cuffed ? 0 : WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(e.ug ? ugMapOf(world.map) : world.map, e) ? 128 : 0) | (e.vehId && e.seat > 1 ? 128 : 0)];
+      return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), (e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0)) + (e.burnT > 0 ? 0x80000000 : 0), (e.cuffed ? 0 : WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(e.ug ? ugMapOf(world.map) : world.map, e) ? 128 : 0) | (e.vehId && e.seat > 1 ? 128 : 0)];
     // (a vehicle on a tow truck's hook: extra bits 0-1 the end up on the wheel lift - 1 its nose, 2 its tail - and bit 2
     // still being winched up: tow.js; the clients draw it tilted)
     // (parent: the damage you can see - its stage, the sides it's dented on, bullet holes, the parts off, a plasma cut:
-    // vehicles.js vehDamageWord, shared/vehicles.js packVehDamage - task #402)
+    // vehicles.js vehDamageWord, shared/vehicles.js packVehDamage - task #402; a tank's top byte: its turret's angle from the hull, tank.js)
     // (an aircraft: extra its altitude - shared/flight.js altByte; flags VF.ROTOR its engine turning)
     case K.VEH: if (e.def.kind === 'air') return [vehicles.vehFlags(world, e) | ((e.spool || 0) > 0.05 ? VF.ROTOR : 0), Math.max(0, e.hp / e.def.hp), vehicles.vehDamageWord(world, e), altByte(e.alt)];
-      return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), vehicles.vehDamageWord(world, e), e.towedBy ? (e.towEnd === -1 ? 2 : 1) | (e.towFrom ? 4 : 0) : 0];
+      return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), (vehicles.vehDamageWord(world, e) | (e.def.turret ? tank.turretByte(e) << 24 : 0)) >>> 0, e.towedBy ? (e.towEnd === -1 ? 2 : 1) | (e.towFrom ? 4 : 0) : 0];
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
     case K.BAG: return [bagBlinks(world, e) ? 1 : 0, 1, 0, bagWireTier(e)];   // flags 1: about to vanish (it blinks)
     case K.PROJ: return [0, 1, 0, 0];

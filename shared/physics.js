@@ -217,16 +217,17 @@ export function vehStep(s, inp, dt, map, def, env) {
   let lat = -s.vx * sn + s.vy * c;
   const speed = Math.hypot(fwd, lat);
   const steering = Math.abs(steer) > 0.2;
-  const brakeSlide = !isBoat && fwd > 160 && steering && !!inp.slide;
-  const burnout = !isBoat && !!inp.hb && t > 0.5 && !steering && Math.abs(fwd) < 70;
-  const donut = !isBoat && !!inp.hb && t > 0.5 && steering && speed < 240;
+  const tracked = !!def.tracks;   // (a tank: it turns on the spot, its tracks never slide - H58)
+  const brakeSlide = !isBoat && !tracked && fwd > 160 && steering && !!inp.slide;
+  const burnout = !isBoat && !tracked && !!inp.hb && t > 0.5 && !steering && Math.abs(fwd) < 70;
+  const donut = !isBoat && !tracked && !!inp.hb && t > 0.5 && steering && speed < 240;
   const braking = t < -0.05 && fwd > 15;
   const powering = t > 0.6 && fwd > 40;
   // power oversteer: a person flooring it through a tight turn at a decent lick lights up the rear
   const powerOver = human && t > 0.85 && Math.abs(steer) > 0.7 && fwd > def.max * 0.3;
   // -- the drift state (0 gripping .. 1 fully sideways) --
   let drift = s.slip || 0;
-  if (!isBoat) {
+  if (!isBoat && !tracked) {
     const loose = (inp.hb && speed > 110) || brakeSlide || powerOver || (human && Math.abs(lat) > DRIFT_ENTER && speed > 180);
     if (loose) drift = Math.min(1, drift + 5 * dt);
     else if (Math.abs(lat) < DRIFT_EXIT || speed < 90) drift = Math.max(0, drift - 4 * dt);
@@ -242,6 +243,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   let turnTarget;
   if (donut) turnTarget = Math.sign(steer) * def.turn * 1.45;
   else if (burnout) turnTarget = 0;
+  else if (tracked) turnTarget = def.turn * steer * (1 - 0.3 * clamp(speed / def.max, 0, 1));   // (one track forward, one back: round on the spot)
   else {
     const bite = braking ? 1.12 : powering ? 0.93 : 1;                     // weight on the nose / on the tail
     const turnMul = inp.hb ? (isBoat ? 1.3 : 1.6) : brakeSlide ? 1.5 : 1;

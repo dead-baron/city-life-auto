@@ -81,6 +81,13 @@ export const VEHICLES = {
   policeheli: { i: 61, name: 'Police Air Unit',    kind: 'air', air: 'heli', L: 150, W: 54, max: 760, accel: 360, brake: 400, rev: 0, turn: 2.0, grip: 8, drift: 2, mass: 1.6, hp: 420, seats: 4, slots: [[-34, 0]], climb: 180, sink: 210, ceiling: 1000, rotor: 76, police: true, livery: 'police' },
   plane:      { i: 62, name: 'Larkspur 172',       kind: 'air', air: 'plane', L: 128, W: 112, max: 1150, accel: 190, brake: 420, rev: 0, turn: 1.25, grip: 8, drift: 2, mass: 1.4, hp: 280, seats: 2, slots: [[-34, 0]], climb: 140, sink: 210, ceiling: 1000, vr: 520, stall: 400, bank: 0.75, span: 168, livery: 'plane' },
   gunship:    { i: 63, name: 'Hornet Gunship',     kind: 'air', air: 'heli', L: 160, W: 50, max: 820, accel: 400, brake: 400, rev: 0, turn: 2.2, grip: 8, drift: 2, mass: 2.0, hp: 700, seats: 2, slots: [[-40, 0]], climb: 200, sink: 230, ceiling: 1000, rotor: 80, military: true, missiles: true, livery: 'army' },
+
+  // ---- the tank (H58; the owner: "Add a tank you can drive and shoot and blow things up with, can spawn in debug"): on
+  // tracks (it turns on the spot and never slides: shared/physics.js), heavy enough to shove cars aside, a turret that
+  // turns to the driver's aim and fires shells that go up where they land (server tank.js; shared/rules.js TANK). Small
+  // arms barely scratch it (armor: their damage multiplied by it); rockets: a rocket or a shell takes 1/rockets of it.
+  // Debug only for now - nobody sells one. (i 47: the next free index after the fleet's; 60-63 are the aircraft.)
+  tank:      { i: 47, name: 'Ironclad Battle Tank', kind: 'car', L: 150, W: 80, max: 270, accel: 150, brake: 700, rev: 170, turn: 1.25, grip: 16, drift: 14, mass: 14, hp: 3000, seats: 1, slots: [[-62, 0]], tracks: true, turret: true, armor: 0.06, rockets: 6, rough: 0.15 },
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);

@@ -18,6 +18,7 @@ import * as vehicles from './systems/vehicles.js';
 import * as explosions from './systems/explosions.js';
 import * as cargo from './systems/cargo.js';
 import * as npc from './systems/npc.js';
+import * as burning from './systems/burning.js';
 import * as gangwar from './systems/gangwar.js';
 import * as cruiser from './systems/cruiser.js';
 import * as trains from './systems/trains.js';
@@ -50,7 +51,7 @@ function w2legend(world, e) {
 import { airfields } from '../shared/flight.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -550,12 +551,28 @@ export function command(world, p, c, msg) {
     case 'goto': devmode.goTo(world, p, msg.pid); break;     // teleport to an online player
     case 'bring': devmode.bring(world, p, msg.pid); break;   // fetch an online player to you
     case 'grant': devmode.grant(world, p, msg.pid); break;   // give someone Dev Debug Mode (their progress stops saving too)
+    case 'burn': devBurn(world, p, ped, String(msg.k || 'me')); break;   // fire on people (H58): you ('me'), or people standing a little way ahead ('crowd')
     default: world.notify(p, `[dev] unknown command ${c}. Try: ${DEV_COMMANDS.join(', ')}`, 'warn'); return;
   }
   world.loopTime %= DAY_LOOP_S;
   if (world.loopTime < lt0 - DAY_LOOP_S / 2) world.day = (world.day || 0) + 1;   // (the clock set back past 06:00: a new day, as the clients count it)
   p.meDirty = true;
   store.touch();
+}
+
+// Fire on people (H58, burning.js): set yourself alight (k 'me': try putting it out - a dive roll, running, the water),
+// or a few people standing a little way ahead of you, alight ('crowd': watch them run, roll, fall or make for the water)
+function devBurn(world, p, ped, k) {
+  if (!ped || ped.dead || ped.vehId) { world.notify(p, '[dev] On your feet first.', 'warn'); return; }
+  if (k === 'me') { if (!burning.ignite(world, ped, null)) world.notify(p, '[dev] You can\'t catch fire here (in the water?).', 'warn'); return; }
+  let n = 0;
+  for (let i = 0; i < 6; i++) {
+    const a = ped.a + (i - 2.5) * 0.35, d = 150 + (i % 2) * 40, x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d;
+    if (PED_BLOCK[world.map.tileAtPx(x, y)] || world.map.isWater(x, y)) continue;
+    const q = npc.spawnNpc(world, 'casual', x, y);
+    if (q && burning.ignite(world, q, null)) n++;
+  }
+  world.notify(p, n ? `[dev] ${n} people on fire ahead of you.` : '[dev] No room for anyone here.', n ? 'info' : 'warn');
 }
 
 // Rescue anywhere (tasks #409, #420): at 'water' you go down in open water off the nearest dock and call for help (the

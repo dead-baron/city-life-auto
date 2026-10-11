@@ -213,7 +213,7 @@ const WORK = new Set(['flatbed', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'ga
 const CABS = ['#e6e2d8', '#e6e2d8', '#c0402c', '#2f5a9a', '#e0b030', '#3f7a46', '#e6e2d8', '#8a8e96', '#e6e2d8', '#2c2e36'];
 export const vehDef = (d) => VEHICLE_BY_INDEX[d && d.m] || VEHICLE_BY_INDEX[1];
 // the art2 model for a game model (every game model has its own art2 model of the same id)
-export const vehType = (d) => { const id = vehDef(d).id; return VEHICLE_DIMS[id] ? id : 'sedan'; };
+export const vehType = (d) => { if (d && d.tt) return 'tankturret'; const id = vehDef(d).id; return VEHICLE_DIMS[id] ? id : 'sedan'; };   // (tt: a tank's turret, drawn on its own - H58)
 // st from the wire flags (shared/constants.js VF): the host may also pass its own object
 // dmg: the damage stage 0-4 (task #402: scuffed, dented, crumpled, the engine dead - a door hanging; the burnt shell is
 // the wreck) from the server's damage word dw (a vehicle record's parent field: shared/vehicles.js packVehDamage), with

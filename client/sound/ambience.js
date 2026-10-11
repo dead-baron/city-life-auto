@@ -131,6 +131,7 @@ export class Ambience {
       if (d < bd) { bd = d; best = p; }
     }
     for (const v of F.vehs) if (v.flags & VF.BURN) { const d = Math.hypot(v.rx - L.x, v.ry - L.y); if (d < bd) { bd = d; best = v; } }
+    for (const p of F.peds) if (p.burn) { const d = Math.hypot(p.rx - L.x, p.ry - L.y); if (d < bd) { bd = d; best = p; } }   // (someone on fire: server burning.js)
     if (!best) { this.fire = null; return; }
     this.fire = this.fire || { x: 0, y: 0, d: 0 };
     this.fire.x = best.x ?? best.rx; this.fire.y = best.y ?? best.ry; this.fire.d = bd;

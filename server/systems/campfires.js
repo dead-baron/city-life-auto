@@ -10,7 +10,7 @@ import { FIRE_REACH, FIRE_HEAL, FIRE_AFTER_HIT_S, FIRE_BURN_S } from '../../shar
 const SIT_MOVE_PX = 6;   // a step this far gets you up
 
 // every campfire prop's index (made once)
-function fireIdx(map) {
+export function fireIdx(map) {
   if (map._campfires) return map._campfires;
   const out = [];
   map.props.forEach((p, i) => { if (p && p.t === 'campfire') out.push(i); });

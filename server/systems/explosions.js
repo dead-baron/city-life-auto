@@ -157,7 +157,7 @@ export function blastVehicle(world, v, f, dmg, by, L, big) {
   const hurt = dmg / vehicles.toughOf(v.def);
   if (by) v.lastAttacker = by.id;
   const goes = v.dead || hurt >= v.hp || (f > 0.5 && blastOf(world, v).big > 2)
-    || ((big > 2 || L.c.hot) && !ARMORED_VEHICLES.includes(v.def.id) && world.rand() < f * CHAIN_K);
+    || ((big > 2 || L.c.hot) && !ARMORED_VEHICLES.includes(v.def.id) && !v.def.tracks && world.rand() < f * CHAIN_K);   // (nor a tank: H58)
   if (goes && room(L)) setOff(world, v, L, f, by);
   else if (!v.dead) v.hp = goes ? Math.max(Math.min(v.hp, v.def.hp * CAPPED_LEFT), v.hp - hurt) : v.hp - hurt;   // (not going: hurt < hp)
 }

@@ -48,6 +48,9 @@ export const VEHICLE_DIMS = {
   rescueboat: [96, 48],
   // the off-road ambulance (ems.js; RS1): a white and orange 4x4
   rescue4x4: [104, 50],
+  // the tank (H58: server tank.js): the hull on its tracks, and the turret drawn over it at its own angle - a model of its
+  // own, its pivot in the middle (the barrel reaching forward, the bustle back), sat up at the hull's deck height
+  tank: [150, 80], tankturret: [190, 64],
 };
 // height of the body (roof) in world px
 export const VEHICLE_TALL = {
@@ -59,6 +62,7 @@ export const VEHICLE_TALL = {
   fbi: 42, army: 52,
   vtwin: 25, tourer: 31, chopper: 35, bobber: 24, caferacer: 25, dirtbike: 28, scooter: 25, trike: 28, ratbike: 26, bagger: 29,
   rescueboat: 30, rescue4x4: 46,
+  tank: 24, tankturret: 40,
 };
 const DEFAULT_PAINT = {
   rescueboat: '#e8601e', rescue4x4: '#ecebe4',
@@ -69,6 +73,7 @@ const DEFAULT_PAINT = {
   cruiser: '#5ab0a8', mtb: '#d8682a', roadbike: '#c8302c', bmx: '#3a7ad0', cargobike: '#2f5a7a',
   vtwin: '#26282e', tourer: '#b8302a', chopper: '#2a2a2e', bobber: '#26282e', caferacer: '#e6e2d8', dirtbike: '#2f56b0', scooter: '#7ac0a0', trike: '#22357a', ratbike: '#4e5a34', bagger: '#22357a',
   jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', fbi: '#17181d', army: '#4f5a36', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', waterbus: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
+  tank: '#5a6440', tankturret: '#5a6440',
 };
 const DEFAULT_CAB = { flatbed: '#e6e2d8', boxtruck: '#e6e2d8', dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#e6e2d8', towtruck: '#e6e2d8' };
 
@@ -1212,6 +1217,28 @@ export function vehicleModel(type, o = {}) {
       m.box(2, cy - 22, 18, 14, cy + 22, 20, M.body); m.box(2, cy - 1, 18, 14, cy + 1, 36, M.body); m.box(2, cy - 1, 30, 10, cy + 1, 36, M.stripeRed);
       m.box(L - 2, cy - 12, 12, L, cy + 12, 24, M.trim);
       for (const [x, y] of [[L * 0.62, cy - 14], [L * 0.62, cy + 12], [L * 0.86, cy - 1]]) { m.box(x, y, 3, x + 2, y + 2, 10, M.trim); m.cyl('y', x + 1, 0, 3, 3, y - 1, y + 3, M.tyre); }
+      break;
+    }
+    case 'tank': {   // (H58) the hull: two tracks (treads, the drive sprockets at the ends), the hull between and over them
+      const tw = 18;
+      for (const y of [1, W - 1 - tw]) m.fill((x, yy, z) => (z < 15 - Math.max(0, Math.abs(x - L / 2) - (L / 2 - 14)) * 0.9 && x > 1 && x < L - 1 ? (Math.round(x) % 5 === 0 ? M.dark : M.tyre) : -1), 0, y, 0, L, y + tw, 15);
+      m.box(8, tw, 3, L - 8, W - tw, 14, M.dark);                                     // the belly between the tracks
+      m.box(4, 0, 14, L - 3, W, 18, M.body);                                          // the deck over the tracks (the fenders)
+      m.fill((x, y, z) => (z < 24 - Math.max(0, x - (L - 30)) * 0.45 ? M.body : -1), 8, 6, 18, L - 4, W - 6, 24);   // the upper hull, the glacis sloping to the nose
+      for (let k = 0; k < 5; k++) m.box(10 + k * 6, 20, 24, 13 + k * 6, W - 20, 25, M.dark);   // the engine deck's grille
+      for (const y of [8, W - 14]) m.box(L - 6, y, 17, L - 2, y + 6, 21, M.trim);     // the headlamps
+      m.box(2, W / 2 - 16, 16, 6, W / 2 - 4, 22, M.dark); m.box(2, W / 2 + 4, 16, 6, W / 2 + 16, 22, M.dark);   // the exhausts at the back
+      break;
+    }
+    case 'tankturret': {   // (H58) the turret about its pivot (the model's middle): the cast body, the bustle, the hatch, the gun
+      const cx = L / 2, cy = W / 2, z0 = 24;
+      shell(m, { x0: cx - 34, x1: cx + 30, y0: cy - 27, y1: cy + 27, z0, z1: z0 + 13, r: 10, rz: 4, mat: M.body });
+      m.box(cx - 44, cy - 18, z0 + 2, cx - 33, cy + 18, z0 + 11, M.body);                    // the bustle
+      m.box(cx - 16, cy - 16, z0 + 13, cx - 4, cy - 4, z0 + 16, M.dark);                    // the commander's hatch
+      m.box(cx + 26, cy - 5, z0 + 4, cx + 34, cy + 5, z0 + 11, M.dark);                     // the mantlet
+      m.box(cx + 34, cy - 2.5, z0 + 5.5, cx + 82, cy + 2.5, z0 + 9.5, M.trim);              // the barrel
+      m.box(cx + 82, cy - 4, z0 + 4, cx + 90, cy + 4, z0 + 11, M.dark);                     // the muzzle brake
+      m.box(cx - 30, cy + 12, z0 + 13, cx - 26, cy + 14, z0 + 22, M.trim);                  // the radio aerial
       break;
     }
     case 'excavator': {
