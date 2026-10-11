@@ -3632,3 +3632,140 @@ station or diner yet); the underground river MI4 under the mine (the cave world'
 canyon); the Old Granite Mine and the Granite Quarry once Granite Peaks' places move in (then `underground.js` and
 `places.js` take the first mine and the first pit: they'll want a list); dirt bike trails; the jeep tracks on the
 road network (they are ground, not roads: the traffic doesn't use them).
+
+### 8.21 The places on the water: Prison Island, the Long Reach, Kestrel Lake (2026-10-11, H46)
+
+Part 1.2's Prison Island (J1-J4), part 1.7's river channel (the Long Reach: the quays at Old Town and Willow Crossing,
+the weir and the lock at Willow Crossing) and part 1.5 R5's Kestrel Lake (the lookout on Lookout Hill, the lakeside
+campground, the boathouse and its rentals, the fishing docks, the island), in the whole-world build. Concepts J1, J4,
+W1, NK1-E, NK1-N. All of it in `shared/world3-water.js`, three calls from `shared/world3-world.js`: `paintWater3(L, W,
+H)` (with the other paints, at the start), `buildWater3(m, addProp)` (the dress hook, before the biomes' dressing: what
+it builds is reserved, bit 4, so the fields and the trees keep off it) and `waterDone(m, H3)` (the done hook, after
+`buildFerries3`: the things that stand by the ferries' piers or go in `m.rentals`, which `buildBoatDocks` makes after
+the dress hook). No new districts (Prison Island is 55, the lake and the river Willow Valley's 49). The page and the
+city worker never import the module; `shared/map.js` is unchanged; the live world doesn't change (the world hash stays
+6b6e16fdef9f).
+
+**Prison Island** (`PRISON`): the Kestrel Bay Penitentiary, a walled compound of 100 x 76 tiles in the middle of the
+island (4280-4380, 3262-3338), as J1 lays it out:
+- **The walls:** two tiles of `T.WALL` all round (632 tiles), a **guard tower** on each corner (7 x 7, four storeys,
+  each a guard's post), **the gate** in the south wall (four tiles) - a sliding gate in `m.gates` with the motor pools'
+  rule, `police`: `server/systems/gates.js` opens it for an officer (a badge, a police car) and lets anyone inside back
+  out; nobody else gets in (the test floods the island with the gate shut: the yard isn't reached).
+- **Inside:** concrete throughout; **Cell Block A** along the north wall (68 x 14, four storeys), **B** and **C** down
+  the west and east sides (14 x 38), round **the exercise yard** (56 x 34): **the sports court** in its middle (a
+  basketball court, 26 x 14, hoops at its ends), bleachers along it, benches, the chain-link fence round the yard,
+  floodlights at its corners; **the kitchen block** and **the gatehouse** along the south wall either side of the gate.
+- **Outside:** the path from the gate south and round to the harbour (stone, three across), **the warden's house** in its
+  garden east of the walls with its own path to the gate, **Prison Island Light** on the island's east point (a
+  `lighthouse` building, art v2's lighthouse model). A cleared band 12 tiles round the walls (no trees, no rocks).
+- **The harbour** (`waterDone`, round the Prison Boat's island stop, 8.17's pontoon at [4115, 3305] on the west shore): a
+  **stone pier** (5 x 18, paving over the water) beside the pontoon, bollards along both its edges, a lamp at its head;
+  **the harbour office** ashore; the path up to the gate (688 tiles: a walk of about 230 m). The Prison Boat's route
+  (`shared/world3-skeleton.js` FERRIES, planned by `server/systems/ferries.js` `routes3`) ends there: its last stop is
+  the harbour's pontoon, the pier beside its berth.
+- **The guards** (`m.prison`: `{ name, x, y, compound, gate, guards, yard, dock }`): 14 posts - the four towers, the gate
+  outside and in, the yard's corners and its middle, the cell blocks' doors, two at the harbour. **Listed, not wired:** no
+  server system spawns guards there yet. The pattern is the Syndicate's on Smuggler's Rock (`server/systems/gang.js`:
+  spawn at the posts when a player comes within reach, warn an outsider seen on the island, then open fire); the
+  prison's would spawn officers (`police` NPCs), warn anyone without a badge who lands, and arrest or fight. No road
+  reaches the island (the test: no junction on district 55): the Prison Boat, and boats of your own, are the way there.
+- **Prisoners there (not wired: it would change today's game).** Today `server/systems/custody.js` takes an arrested
+  player to the nearest station's cells (`shared/cells.js`, the block found by the station's police POI: `blockOf(world,
+  poi)`), bail or `JAIL_S`, and out of the front door. To send prisoners to the island: build cells inside the cell
+  blocks as the stations' are (a `prison` POI and `m.cellBlocks` entries for its blocks: bars, benches, toilets -
+  `cells.js` `cellBlock` takes a walk-in's unit, so the blocks would need walk-in interiors first), and in custody, for
+  a long sentence (high stars, a repeat offender), a stage after the station: a police car to the Cedar Isle Police
+  Dock, aboard the Prison Boat (8.17: planned, `custody: true`, no boat runs - it would sail on demand with the prisoner
+  and an officer aboard), walked from the harbour through the gate to a cell; released at the harbour, the boat back.
+  A breakout (J4, the night escape) would be custody's "on the way it can go wrong" made a mission: over the wall, a
+  boat waiting.
+
+**The Long Reach** (`REACH`):
+- **The weir beside the lock at Willow Crossing**, 70 tiles upriver of Valley Road's bridge (centre [3283, 1200]): **the
+  weir's crest** across the river (`T.WALL`, three tiles thick, 167 tiles) from the west bank to the lock, the white
+  water below it (the falls' curtain); **the lock** along the east bank: its channel 10 tiles wide and 48 long between
+  stone walls (the wall between it and the weir, three across; the east side a stone quay four across), gate posts at
+  both ends, bollards along its quay, lamps on its wall; **the lock keeper's house** on the bank. **The boats go
+  through:** the River Water Bus's way from Willow Crossing up to Kestrel Lake passes through the lock's channel (the
+  planner's clearance holds in it; `test/world3ferries.test.js` sails the boat to every stop and back). The gates are
+  drawn open (posts, no gate model) and nothing stops a boat at them: a lock that fills and empties (the boat waiting
+  for the gates) is a later step (`m.locks`: the lock's place, its channel, `open: true`).
+- **The quays** (`waterDone`, at the River Water Bus's stops, either side of the pontoon's gangway, 20 tiles each way):
+  **Willow Crossing Quay** on the east bank below the bridge - stone three tiles deep along the bank (60 tiles laid),
+  bollards on its edge, lamps, the cafe's tables and umbrellas, and **The Lock Keeper's Cafe** (7 x 5, brick, a tiled
+  roof) by the bridge; **Old Town Quay** on Metro City's east shore - the promenade's paving is already there (77 tiles):
+  bollards along its edge, lamps, seven cafe tables with umbrellas; its cafe found no room behind (the street and the
+  buildings come down to the promenade): a terrace only.
+- **The banks:** reeds and cattails at the water's edge every 9 tiles of the river (255), a willow a few tiles back from
+  every third (80), from the lake down to the Coast Highway (not round the mouth: Northshore's beach towns).
+- **The farm docks:** Hollins Farm Dock, Brightwater Farm Dock (below Willow Crossing) and Mill Farm Dock (above it),
+  each a wooden jetty (3 x 8) out from the farmland's west bank, a canoe tied up, a mooring post, crates, a dirt track
+  back to the fields.
+- Not done: the lift bridge at the mouth that opens (the Coast Highway's Long Reach Bridge and Shore Road's are fixed
+  decks; the boats pass under every deck, 8.17).
+
+**Kestrel Lake** (`KESTREL`):
+- **The island** (`paintWater3`: the lake's water in an ellipse of 28 x 19 tiles round [2470, 610] made Willow Valley's
+  land on the land layer before the build: 1,672 tiles), its own dressing (oaks, birches, willows round a clearing with
+  a picnic table and a fire ring, reeds round its shore), a landing jetty on its east side. Away from the River Water
+  Bus's lake stop, so the ferries' pier stays on the mainland's shore.
+- **The lookout on Lookout Hill** ([2600, 410], the skeleton's point north of the lake): a viewing platform of boards
+  (11 x 7), three coin binoculars along its lake side (`scope`, art v2's viewer), a rail, a bench, a map board, a lamp;
+  a trail down to the north shore's fishing dock and one east to Kestrel Road (about 470 m).
+- **The lakeside campground** on the west shore (36 x 38 tiles of dirt): six tents, the campfire, picnic tables, a
+  cooler, string lights, a woodpile, a lantern; a track to Lake Road. (The skeleton's "Lakeside campground" point at
+  [2050, 520] is 330 tiles west of the lake on dry land: this one is on the shore, facing the island.)
+- **The boathouse** on the south shore: the building (11 x 7, timber, a shingle roof) by the water, its pier (3 x 10)
+  out into the lake with the boathouse's slip beside it and canoes tied up, a track down to Lake Road; **the boat
+  rental** (`waterDone`: today's kind - a `rental` POI, `m.rentals` with six spots along the pier, `lake: true`, as the
+  Cedar Lake and Lakeview Lake hires: `server/systems/rentals.js` hires its boats).
+- **The fishing docks:** East Shore, North Shore and Reed Bay Fishing Docks, each a jetty (3 x 7) with rod holders, a
+  fish table, a life ring and a bench.
+- **A green belt round the lake:** the shore's six tiles kept from the biomes' fields and orchards (7,888 tiles), reeds
+  and cattails along the water's edge (510), willows four tiles back (92).
+
+**Tests** (`test/world3water.test.js`, one world build, about 45 s): the walls whole but for the gate, the four towers,
+the blocks, the kitchen, the gatehouse, the warden's house, the lighthouse and the harbour office on Prison Island's
+ground; the yard concrete, its court and hoops, its fence; the gate police-only round the compound; the guards' posts;
+the yard shut in but for the gate (a flood with the gate shut doesn't reach it, with it open does); no road on the
+island; the harbour at the Prison Boat's last stop, its pier beside the boat's berth, the pier to the gate on foot;
+the weir's crest across the river, the lock's channel open from end to end, the lock keeper's house, the River Water
+Bus's way through the lock; the two quays' stone and bollards, Willow Crossing's cafe; the banks' reeds and willows;
+the three farm docks' boards over the water; the island's land with water all round it; the lookout's deck and three
+binoculars; the campground's tents round a fire; the three fishing docks with their rods; the rental at the boathouse,
+its boats' spots on the water; the places on the map (`m.landmarks`). `test/world3ferries.test.js` (unchanged) passes:
+every route's way on the water, the River Water Bus's boat calling at Kestrel Lake through the lock and back.
+
+**Pictures** (`node --expose-gc tools/world3-world-map.mjs --towns --only prison,lock,kestrel,oldquay`; `WATER_VIEWS`):
+`docs/world-v3-town-prison.png`, `-lock.png`, `-kestrel.png`, `-oldquay.png`. What looks right: the compound reads as a
+prison - the grey walls with the gap of the gate, the three blocks round the yard with the court's orange and white in
+its middle, the kitchen and the gatehouse along the south wall, the corner towers; the stone pier beside the pontoon
+on the west shore and the path up to the gate; the warden's house east of the walls. The weir across the river with
+its white water, the lock's long channel between its stone wall and the quay along the east bank, the lock keeper's
+house; the quay south of Willow Crossing's pontoon, the cafe by the bridge. The lake: the wooded island with its
+landing, the jetties round the shore, the boathouse's pier and its track down to Lake Road, the long trail from the
+lookout to Kestrel Road. What looks wrong:
+- **Prison Island is too big for its prison:** the island is 460 x 310 tiles of grass and dirt (the skeleton's
+  polygon); the compound fills a fifth of it. J1 is a prison that fills a rocky island - the island wants shrinking to
+  about 160 x 120, or the rest of it rock and scrub, cliffs and boulders round the shore.
+- **The blocks are houses:** a building of kind `prison` has no model of its own: art v2 draws it as rows of pitched
+  dark roofs (the spec's flat roof isn't honoured), not J1's flat concrete blocks with their rooftop units; the towers
+  are small houses, not tall towers with lamps; no razor wire on the walls, no searchlights. A prison model set
+  (blocks, towers, the wall with its walkway) is what's missing.
+- **The weir is a dark bar:** `T.WALL` across the water reads as a stone bar with the falls' curtain below; W1's weir
+  is a stepped stone sill with water pouring over its whole length. The lock's gates aren't drawn (posts only).
+- **Lookout Hill isn't a hill:** the land layer has no height there; the platform stands in an orchard on flat ground.
+  It wants a rise (the peaks' height field reaches only Granite Peaks) or a rocky knoll drawn round the deck.
+- **The power lines cross the lake** (thin grey lines over the water: `buildPowerLines`, not this module's) - they
+  should go round it.
+- **Old Town Quay is the promenade as it was:** the curving paved walk along Old Town's east shore with the pontoon off
+  it; the bollards, lamps and tables are specks at 1/8 and nothing says quay (no stone edge, no steps down, no cafe -
+  the city comes down to the walk). A quay edge model (stone coping, mooring rings) would make both quays read.
+- At 1/8 the small things don't read: the tents, the binoculars, the bollards, the cafe tables are specks; the reeds and
+  willows round the lake a green fringe (the orchards' rows still come close to it on the east shore).
+
+**What's left:** the prison's guards (a server system as the Rock's), its cells (interiors and `m.cellBlocks`) and
+custody's transfer by the Prison Boat (above); the lock working (the gates closing, the water level, a boat waiting);
+the lift bridge at the mouth opening; Prison Island's ground (rock, the shore's cliffs) and its size; models for the
+prison's blocks, towers and walls, the weir and the lock gates; Lookout Hill's rise; the power lines round the lake.
