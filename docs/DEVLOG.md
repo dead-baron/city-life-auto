@@ -8506,5 +8506,5 @@ clips on and winches in; the harness in the water; a patient who runs out of tim
 places (pads, lawns, islands), the booking, boarding, the fare and a tip for a smooth flight, no tip after a hard landing;
 the coast guard: the issued patrol boat and helicopter, a smugglers' run with contraband crates aboard under way, made to
 heave to alongside (hands up), boarded and the crates seized for the reward, smugglers lost who get away, someone overboard
-found in the circle, hauled aboard the boat and run ashore for the pay, winched up by the helicopter and landed ashore.
+found in the circle, hauled aboard the boat and run ashore for the pay, winched up by the helicopter and landed ashore; the air patrol: too high over smugglers they keep going, low over them they heave to, a crewman down the line seizes the cargo. test/crime.test.js (the ramming exemption).
 test/flight.test.js, test/phones.test.js, test/honestliving.test.js, test/mapwindow.test.js, test/perf.test.js.
