@@ -46,6 +46,9 @@ export const REGIONAL = {
   brickWalls: 'tile', marina: 'px', wayside: 'px', restSpots: 'px',
   // (format 2: the railway's points; a list inside a field, by its path - the levels' deck segments, by their middle)
   railPts: 'px', 'levels.segs': 'seg',
+  // (World v3's main line: each loop's points - m.rail is the first loop, the others are m.rails'; today's rail.pts is
+  // railPts, a reference, so nothing here moves for today's world)
+  'rail.pts': 'px', 'rails.1.pts': 'px', 'rails.2.pts': 'px', 'rails.3.pts': 'px', 'rails.4.pts': 'px', 'rails.5.pts': 'px', 'rails.6.pts': 'px', 'rails.7.pts': 'px',
 };
 // prop index -> its solid entry, as the generator keeps propSolid (shared/map.js: m.propSolid.set(e.pi, e))
 function solidIndex(sp) { const by = new Map(); for (const arr of sp.values()) for (const e of arr) if (e && e.pi >= 0) by.set(e.pi, e); return by; }

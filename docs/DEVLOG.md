@@ -7263,3 +7263,46 @@ test/world3biomes.test.js (new), docs/world-v3-world.png.
 Tests: test/world3biomes.test.js (one world build: districts, ground, densities, room on the skeleton's lines, no
 repeat in the desert, Northshore at its beach), test/world3.test.js (the live world's hash unchanged),
 test/world3land.test.js, test/world3world.test.js.
+
+## 2026-10-10 · World v3, stage 3, step 3: the main line and its trains
+
+Asked (the owner, part 5 of docs/WORLD-V3.md: "I want the main train system to loop around the entire world and cover
+a large stretch. Maybe the main train has two tracks in areas so you can catch it going either way, and it does kind
+of loop into itself so not sure how that might work with the trains not crashing into each other ... should be scenic
+the entire way"; ruling 4: double track everywhere, one track each way, junctions guarded by signals, three services
+each both ways): lay the skeleton's main line in the whole-world build - double track, the junctions, its bridges and
+tunnels, the level crossings and underpasses, the stations with a platform each side - with the railway code taking a
+list of lines (today's world the one-loop case, unchanged); run its trains, each service on its own track, signals
+holding a train at a junction; tests; the pictures.
+
+What it does (docs/WORLD-V3.md 8.10 has the numbers):
+- **The loops** (shared/world3-rail.js): each service both ways is a loop - its segments joined end to end, every
+  corner and junction turned on an arc (300 m, 200 m in the gulf), offset 48 px to the right of the way it runs, so
+  each way has its own track 96 px from the other's; services the same way along a segment share its track; where
+  one turns off it curves away (a turnout), where it crosses the other way's track it crosses at grade (a diamond).
+  The skeleton's tunnels are the track below ground.
+- **The generator** (shared/map.js): `reserveRail` and `buildRailway` take a line (`OPTS.rails`: the world build's
+  hook) - the bed, the decks over water, the gated level crossings, the underpasses under the highways, the stations
+  (a platform on each loop's outer side: one each side of the double track; one map point a station place) - into
+  `m.rails`, `m.rail` the first. Today's world: as it was (the world hash 6b6e16fdef9f).
+- **The trains** (server/systems/trains.js): two a loop (twelve), each running its own loop and stopping at its
+  stations, riding as today. **The signals:** a train holds the 32 px cells under it and ahead as far as it could need
+  to stop, and moves only onto its own, so no two trains share a cell - none runs into another or meets one head on;
+  a junction (a diamond or a turnout) is taken whole with a train's length clear beyond it, or not at all, so trains
+  never wait inside one and can't lock each other out. Twenty minutes of game time: all twelve run and call at every
+  station, held at signals 1-19 s.
+- **The art:** the chunk bake draws every loop (a track two loops share once).
+- **The region files** cut each loop's points into the regions (today's files unchanged).
+- **Left** (8.10): the crowds, the crossing gates, the NPCs' care at the line and the station boards still read the
+  first loop only; Northshore Junction lies across the Northshore Loop's houses; the line crosses Metro City's grid
+  at grade; the tunnels want their mouths and cover.
+
+Files: shared/world3-rail.js (new), shared/world3-world.js (the `rails` hook), shared/map.js (the railway passes by
+line), server/systems/trains.js (the loops, the signals), shared/regionpack.js (the loops' points by region),
+client/art2/game/groundbake.js, client/art2/game/statics.js (every loop), tools/world3-world-map.mjs (the main line
+drawn), test/world3rail.test.js (new), docs/world-v3-world.png, docs/world-v3-world-r4-3.png, docs/WORLD-V3.md 8.10.
+
+Tests: test/world3rail.test.js (one world build: the loops and their stops, the double track, the bed, the decks, the
+tunnels, the crossings and underpasses, the junctions, the station map points; five minutes of the trains: each runs
+and stops, no two cars of different trains ever overlap), test/trains.test.js (today's one loop, 19 of 19),
+test/world3server.test.js (the v3 world's region files read back into the same city; the server's world runs on it).

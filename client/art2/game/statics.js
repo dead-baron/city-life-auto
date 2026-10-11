@@ -2319,9 +2319,15 @@ function zw(G, x, y, c, n, z, f) {
 // railway: stations, portals, crossings
 // ================================================================================================
 function addRail(c, I) {
-  const R = c.M.rail;
+  // (World v3's main line is a list of loops, M.rails: what two loops share - a platform, a tunnel mouth, a crossing's
+  // signals at the same spot - is put once)
+  const seen = new Set(), once = (x, y, k = '') => { const key = `${Math.round(x / 16)},${Math.round(y / 16)}${k}`; if (seen.has(key)) return false; seen.add(key); return true; };
+  for (const R of c.M.rails || [c.M.rail]) addRailLoop(c, I, R, c.M.rails ? once : () => true);
+}
+function addRailLoop(c, I, R, once) {
   if (!R || !R.pts) return;
   for (const st of R.stations || []) {
+    if (!once(st.x, st.y, st.side)) continue;
     if (st.under) {
       const k = st.kiosk;
       if (k) {   // (SU5-B: the stairs down inside green iron railings, globe lamps and the lit train sign along the back)
@@ -2352,12 +2358,13 @@ function addRail(c, I) {
   const pts = R.pts, n = pts.length;
   for (let i = 0; i < n; i++) {
     const p = pts[i], q = pts[(i + 1) % n];
-    if (!!p.under === !!q.under) continue;
+    if (!!p.under === !!q.under || !once(p.x, p.y, 'p')) continue;
     const a = Math.atan2(q.y - p.y, q.x - p.x) + (p.under ? PI : 0), hd = qa(a, 32);
     put(I, vitem(`ptl:${hd.toFixed(3)}`, 'portal', [100], p.x, p.y, hd, [67, 52]));
   }
   // level crossings: the signal posts (the barrier arms are live: items carry `xing`)
   for (const x of R.crossings || []) {
+    if (!once(x.x, x.y, 'x')) continue;
     const ta = x.a ?? 0, ux = Math.cos(ta), uy = Math.sin(ta), nx = -uy, ny = ux, off = (x.hw || 80) + 24;
     for (const sg of [-1, 1]) {
       const px = x.x + ux * sg * off + nx * sg * 46, py = x.y + uy * sg * off + ny * sg * 46, hd = qa(ta + (sg < 0 ? PI : 0), 16);

@@ -99,6 +99,12 @@ if (M.cover) for (let y = 0; y < M.h; y += S) for (let x = 0; x < M.w; x += S) {
   const i = y * M.w + x;
   if (M.cover[i]) dot((x + 0.5) * TILE, (y + 0.5) * TILE, M.tiles[i] === T.WALL ? [0, 0, 0] : [150, 50, 40], 1);
 }
+// (8.10: the main line - each loop's track green, in its tunnels dark green, on its bridge decks pale green, under a
+// highway (the underpasses) dark; its stations white bars)
+for (const R of M.rails || []) {
+  for (let k = 0; k < R.pts.length; k += 2) { const p = R.pts[k]; dot(p.x, p.y, p.underpass ? [40, 70, 50] : p.under ? [30, 100, 50] : p.deck ? [160, 230, 160] : [70, 210, 90], 1); }
+  for (const st of R.stations) for (let d = -3; d <= 3; d++) { const a = R.pts[Math.floor(st.s / 8) % R.pts.length]; dot(st.platform ? st.platform.x + d * 24 * Math.cos(st.a) : a.x, st.platform ? st.platform.y + d * 24 * Math.sin(st.a) : a.y, [255, 255, 255], 1); }
+}
 const OUT = join(ROOT, 'docs/world-v3-world.png');
 const tmp = OUT + '.rgb';
 writeFileSync(tmp, img);
