@@ -15,7 +15,7 @@ import { SoundEngine } from '../../client/sound/engine.js';
 import { Ambience } from '../../client/sound/ambience.js';
 import { Music } from '../../client/sound/music.js';
 import { INSTR } from '../../client/sound/instruments.js';
-import { SOUND_DEFAULTS, createMixer } from '../../client/sound/mixer.js';
+import { SOUND_DEFAULTS, createMixer, CLIP_KNEE } from '../../client/sound/mixer.js';
 import { TRACKS } from '../../client/sound/tracks.js';
 import { loopPoints } from '../../client/sound/track.js';
 import { T, VF, PF } from '../../shared/constants.js';
@@ -188,7 +188,7 @@ export async function runScene({ mobile = true, seconds = 30, silent = false, kr
   if (sys) {
     const mg = ctx.createChannelMerger(10);
     const tap = (node, ch) => { const sp = ctx.createChannelSplitter(2); node.connect(sp); sp.connect(mg, 0, ch); sp.connect(mg, 1, ch + 1); };
-    tap(sys.mix.master, 2); tap(sys.mix.sfx, 4); tap(sys.mix.amb, 6); tap(sys.mix.mus, 8);
+    tap(sys.mix.hp || sys.mix.master, 2); tap(sys.mix.sfx, 4); tap(sys.mix.amb, 6); tap(sys.mix.mus, 8);   // (the compressor's input: after the master's high-pass, mixer.js SUB_HZ)
     mg.connect(ctx.destination);
   }
   const me = { id: 1, kind: 1, rx: CX, ry: CY, phase: 0, as: 0, flags: 0, d: {} };
@@ -282,6 +282,100 @@ export async function runScene({ mobile = true, seconds = 30, silent = false, kr
     if (sys.E.stats) out.engineStats = sys.E.stats;
   }
   return out;
+}
+
+// ---- flying (the owner, 2026-10-11: "The sound appears blown out now too, not sure if that was specific to the
+// helicopter sounds"): 0-8 s at the controls of your own helicopter, flying round; 8-16 s hovering while another
+// helicopter and then a plane pass close by; 16-24 s still up there over a fire - three people alight (the crackle,
+// their screams: server burning.js) - the Boom Tester's blasts and a police car's siren. Each part measured on its
+// own: the master before the compressor, how hard the compressor works and how often the soft ceiling is driven (the
+// signal over CLIP_KNEE as it goes in), what comes out.
+// barrage: the street furniture the server smashed under an aircraft before 2f3ba8a (players.js ran props.smashFor for
+// it), as measured flying low along a row of lamp posts: a prop broken every 0.4 s, a crash every 0.6 s, a hydrant's
+// geyser every 1.5 s - played over your own rotor (0-8 s)
+export async function runAir({ mobile = true, seconds = 24, model = 'heli', barrage = false } = {}) {
+  const ctx = new OfflineAudioContext(10, SR * seconds, SR);
+  const si = window.setInterval; let pulseFn = null;
+  window.setInterval = (fn) => { pulseFn = fn; return 0; };
+  let sys;
+  try { sys = createSound(ctx, { ...SOUND_DEFAULTS }, { mobile, timer: false }); } finally { window.setInterval = si; }
+  const mg = ctx.createChannelMerger(10);
+  const tap = (node, ch) => { const sp = ctx.createChannelSplitter(2); node.connect(sp); sp.connect(mg, 0, ch); sp.connect(mg, 1, ch + 1); };
+  tap(sys.mix.hp || sys.mix.master, 2); tap(sys.mix.post, 4); tap(sys.mix.sfx, 6); tap(sys.mix.master, 8);
+  mg.connect(ctx.destination);
+  const V = (id) => VEHICLES[id].i;
+  const me = { id: 1, kind: 1, rx: CX, ry: CY, phase: 0, as: 0, flags: 0, d: {} };
+  const mine = { id: 500, rx: CX, ry: CY, d: { m: V(model) }, flags: VF.DRIVER };
+  const other = { id: 501, rx: CX + 120, ry: CY - 1400, d: { m: V('heli') }, flags: VF.DRIVER };
+  const plane = { id: 502, rx: CX - 200, ry: CY - 2200, d: { m: V('plane') }, flags: VF.DRIVER };
+  const cop = { id: 503, rx: CX + 300, ry: CY - 2000, d: { m: V('police') }, flags: VF.DRIVER | VF.SIREN };
+  const burning = [0, 1, 2].map((i) => ({ id: 600 + i, kind: 1, rx: CX - 160 + i * 140, ry: CY + 180, phase: 0, as: 0, flags: 0, d: {}, burn: true }));
+  const ents = new Map([[1, me], [500, mine]]);
+  const map = sceneMap();
+  map.props = [{ t: 'lamp', x: CX, y: CY }, { t: 'hydrant', x: CX, y: CY }];
+  const S = { map, ents, myPedId: 1, me: { cash: 100, wanted: 0, dead: false, reloading: false, weapon: 0 }, rainK: 0, cam: { x: CX, y: CY }, pred: { kind: 'veh' }, ctrlId: 500, ctrlKind: 1, gateOpen: {}, xing: null, loopClock: 0 };
+  const F = { vehs: [mine], peds: [me], cars: [], clock: { dark: 0, isNight: false }, sub: 0, ug: 0 };
+  const evs = [];
+  const rnd = RNG(777);
+  evs.push([16.2, { e: 'ignite', x: burning[0].rx, y: burning[0].ry, id: 600 }]);
+  for (const b of burning) for (let t = 16.5 + rnd(); t < seconds; t += 1.2 + rnd() * 1.2) evs.push([t, { e: 'scream', x: b.rx, y: b.ry, id: b.id }]);
+  // the Boom Tester (server boomtest.js): one of each kind, close by
+  [['pieces', 160], ['launch', 160], ['fireball', 200], ['small', 90]].forEach(([k, r], i) => evs.push([17.5 + i * 1.6, { e: 'explode', x: CX + 220 - i * 90, y: CY - 160, r, k }]));
+  evs.sort((a, b) => a[0] - b[0]);
+  let ei = 0;
+  const FRAME = Q * 13;
+  sys.pulse();
+  const frame = (t) => {
+    S.loopClock = t;
+    if (t < 8) { const a = t * 1.3; mine.rx = CX + Math.cos(a) * 200; mine.ry = CY + Math.sin(a) * 200; mine.ra = a + Math.PI / 2; }   // (flying round at 260 px/s)
+    S.cam.x = mine.rx; S.cam.y = mine.ry; me.rx = mine.rx; me.ry = mine.ry;
+    const vs = [mine];
+    if (t >= 8 && t < 13) { other.ry = CY - 1400 + (t - 8) * 560; vs.push(other); }
+    if (t >= 11.5 && t < 16) { plane.ry = CY - 2200 + (t - 11.5) * 980; vs.push(plane); }
+    if (t >= 16) { cop.ry = CY - 2000 + (t - 16) * 500; vs.push(cop); }
+    F.vehs = vs;
+    F.peds = t >= 16 ? [me, ...burning] : [me];
+    sys.frame(F, S);
+    while (ei < evs.length && evs[ei][0] <= t) sys.event(evs[ei++][1], S);
+    if (barrage && t > 0.5 && t < 8) {
+      const B = S.bar || (S.bar = { p: 0.6, c: 0.9, g: 1.2, i: 0 });
+      for (const q of map.props) { q.x = mine.rx + 20; q.y = mine.ry; }
+      if (t >= B.p) { B.p = t + 0.4; sys.event({ e: 'propbreak', i: B.i++ % 2, a: 0, x: mine.rx, y: mine.ry }, S); }
+      if (t >= B.c) { B.c = t + 0.6; sys.event({ e: 'crash', x: mine.rx, y: mine.ry, p: 0.6 }, S); }
+      if (t >= B.g) { B.g = t + 1.5; sys.event({ e: 'geyser', x: mine.rx, y: mine.ry, d: 6 }, S); }
+    }
+    if (Math.round(t / FRAME) % 3 === 0) { if (pulseFn) pulseFn(); else sys.pulse(); }
+  };
+  for (let i = 1; i * FRAME < seconds - 0.05; i++) { const t = i * FRAME; ctx.suspend(t).then(() => { frame(ctx.currentTime); ctx.resume(); }); }
+  const t0 = performance.now();
+  const buf = await ctx.startRendering();
+  const ch = (i) => buf.getChannelData(i);
+  // the soft ceiling's drive: what goes into it (after the compressor and its fixed gain), over CLIP_KNEE
+  const ceiling = (a, b) => {
+    let over = 0, peak = 0, n = 0;
+    for (const c of [ch(4), ch(5)]) for (let i = a; i < b; i++) { const v = Math.abs(c[i]); n++; if (v > CLIP_KNEE) over++; if (v > peak) peak = v; }
+    return { overPct: Math.round(10000 * over / n) / 100, inPeak: r1(db(peak)) };
+  };
+  // what of it is below 40 Hz (a phone's speaker plays nothing down there, but the level of it still eats the
+  // headroom, drives the compressor and pushes the little speaker cone around): the peak of a 40 Hz low-pass of it
+  const sub40 = (a, b) => {
+    const k = 1 - Math.exp(-2 * Math.PI * 40 / SR);
+    let peak = 0;
+    for (const c of [ch(0), ch(1)]) { let y1 = 0, y2 = 0; for (let i = a; i < b; i++) { y1 += k * (c[i] - y1); y2 += k * (y1 - y2); const v = Math.abs(y2); if (v > peak) peak = v; } }
+    return r1(db(peak));
+  };
+  // the share of what comes out that's under 25 Hz (heard by nobody): the energy of a 25 Hz low-pass of it over its whole energy
+  const subShare = (a, b) => {
+    const k = 1 - Math.exp(-2 * Math.PI * 25 / SR);
+    let lo = 0, all = 0;
+    for (const c of [ch(0), ch(1)]) { let y1 = 0, y2 = 0; for (let i = a; i < b; i++) { y1 += k * (c[i] - y1); y2 += k * (y1 - y2); lo += y2 * y2; all += c[i] * c[i]; } }
+    return all > 0 ? Math.round(100 * lo / all) : 0;
+  };
+  const part = (s0, s1) => {
+    const a = Math.round(s0 * SR), b = Math.round(s1 * SR), sl = (i) => ch(i).subarray(a, b);
+    return { out: measure([sl(0), sl(1)]), preComp: measure([sl(2), sl(3)]), sfx: measure([sl(6), sl(7)]), comp: compWork([sl(2), sl(3)], [sl(4), sl(5)], 0), ceiling: ceiling(a, b), sub40: sub40(a, b), subPct: subShare(a, b) };
+  };
+  return { model, barrage, mobile, wallMs: Math.round(performance.now() - t0), own: part(0.5, 8), passing: part(8, 16), fire: part(16, seconds), whole: part(0, seconds) };
 }
 
 // ---- the ambience beds, each alone at gain 1 ----
@@ -510,4 +604,4 @@ export async function renderTrack({ name = 'title', fmt = 'opus', seconds = 100 
   return { sr: SR, b64: b64(new Uint8Array(pcm.buffer)) };
 }
 
-window.bench = { renderSong, renderTrack, runTracks, runScene, runBeds, runSongs, runInstruments, runYardstick, runChain, liveImport, runLive, runTyres };
+window.bench = { renderSong, renderTrack, runTracks, runScene, runAir, runBeds, runSongs, runInstruments, runYardstick, runChain, liveImport, runLive, runTyres };
