@@ -20,7 +20,7 @@ import { ISLANDS, PIECES, ARTERIALS, PORT_WESTPORT } from './world3-skeleton.js'
 import { PLACEMENTS } from './world3.js';
 import { WATER3, TERRAIN3 } from './world3-land.js';
 import { joinPlace } from './world3-crossings.js';
-import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3 } from './world3-biomes.js';
+import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3, peakHeight, SNOW_LINE, SNOW_CLS } from './world3-biomes.js';
 import { terrainAt } from './mapcore.js';
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
@@ -165,7 +165,7 @@ export function worldOpts(asked) {
     pine: pineAt3(L, W),
     unbuilt: new Set([52, 54]),   // (the Sandpiper Coast and Northshore's beach towns: no streets yet - the next step)
     dress(m, H2) { m.world3biomes.dress = dress3(m, L, keep, H2); },
-    done(m) { const old = m.terrainCls; terrain3(m, (tx, ty) => cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y))); },
+    done(m) { const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; }); },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground)
     special: (sp) => built.has(sp.d),
     lines(lines, m) {

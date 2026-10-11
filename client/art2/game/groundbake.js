@@ -82,6 +82,7 @@ mat('DRIVE', 'slabDrive', 4); mat('APRONG', 'apron', 3); mat('ISLAND', 'slabConc
 mat('FOUND', 'foundation', 1); mat('WALL', 'foundation', 1); mat('FLOOR', 'floorTile', 1); mat('FLOORW', 'floorWood', 1); mat('COUNTER', 'counterTop', 1);
 mat('BALLAST', 'ballastStone', 1); mat('PLATFORM', 'slabPlaza', 1); mat('RAILDECK', 'planksX', 1);
 mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); mat('POOL', '', 2); mat('SPRING', '', 2);
+mat('SNOW', 'snowfield', 0);   // (World v3's summits: terrain class 9, shared/world3-biomes.js)
 const NM = MATS.length;
 const KIND = new Uint8Array(NM), SHADER = [];
 for (let i = 0; i < NM; i++) { KIND[i] = MATS[i][1]; SHADER[i] = GSHADE[MATS[i][0]] || null; }
@@ -246,6 +247,7 @@ function tileFacts(C) {
       else if (b.tdeck[k]) m = M_.UNDERDECK;
       else if (b.tres[k] & 2) m = M_.GRAVEL;
       else if (!wild) m = (D.tier === 'industrial' || D.tier === 'rough') ? M_.GRAVEL : M_.DIRT;
+      else if (bio === 9) m = M_.SNOW;
       else if (bio === 3 || st === 'desert') m = M_.DESERT;
       else if (bio === 4) m = b.tz[k] === Z.EAST && st !== 'rural' ? M_.REDROCK : st === 'rural' ? M_.DIRT : M_.SCREE;
       else if (bio === 2) m = (b.tres[k] & 32) ? M_.DIRT : M_.FORESTDIRT;   // (32: a designed place's trails and clearings - packed earth, paler than the duff round them)

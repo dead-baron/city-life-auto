@@ -60,6 +60,8 @@ export function skeletonRoom(W, H) {
 // The peaks' height (0..1, for the snow line, the tree line and the meadows): big and middling noise, higher to the north.
 export const peakHeight = (x, y) => 0.42 * vn(x, y, 260, 4801) + 0.26 * vn(x, y, 90, 4802) + 0.08 * vn(x, y, 24, 4803) + 0.3 * (1 - Math.min(1, y / 760));
 export const SNOW_LINE = 0.68, TREE_LINE = 0.56;
+// the terrain class of the snowfields (after today's 0-5; the renderer's ground bake draws it as snow: groundbake.js)
+export const SNOW_CLS = 9;
 // The desert's sand: sheets and dunes where several noises add up (no band, no repeat); the dry washes: thin winding
 // lines where a big noise crosses its middle.
 const sandAt = (x, y) => 0.5 * vn(x, y, 120, 5001) + 0.32 * vn(x, y, 37, 5002) + 0.18 * vn(x, y, 9, 5003) > 0.63;
@@ -84,7 +86,7 @@ export function groundOf3(m, L, keep) {
       if (h < TREE_LINE - 0.04 && vn(x, y, 70, 4810) > 0.52) { m.tiles[i] = T.GRASS; out.meadow++; }   // (an alpine meadow)
       else m.tiles[i] = T.DIRT;
     } else if (d === D3.RIDGE || d === D3.PRISON || d === D3.ROCKS) {
-      m.tiles[i] = vn(x, y, 40, 5101 + d) > 0.55 ? T.GRASS : T.DIRT;
+      m.tiles[i] = vn(x, y, d === D3.RIDGE ? 40 : 12, 5101 + d) > (d === D3.PRISON ? 0.4 : 0.55) ? T.GRASS : T.DIRT;   // (Prison Island: grass worn to dirt in small patches)
     } else if (d === D3.EGRET) {
       if (creekAt(x, y) && !keep[i] && m.distSea[i] < 4 * 260) { m.land[i] = 0; m.river[i] = 1; m.tiles[i] = T.WATER; out.creek++; }
       else m.tiles[i] = T.GRASS;

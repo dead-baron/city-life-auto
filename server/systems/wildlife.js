@@ -123,8 +123,8 @@ export function habitatAt(map, x, y) {
   const cls = map.terrainCls && map.terrainCls.at ? wildBiome(d, map.terrainCls.at(tx, ty)) : 0;
   if (style === 'desert' || cls === 3) tags.desert = 1;
   else if (style === 'rural') tags.farm = 1;
-  if (d === 33 || cls === 4) tags.mountain = 1;
-  if (cls === 2) { tags.forest = 1; if (d === 29) tags.redwood = 1; }
+  if (d === 33 || cls === 4 || cls === 9) tags.mountain = 1;   // (9: World v3's snowfields)
+  if (cls === 2) { tags.forest = 1; if (d === 29 || d === 47) tags.redwood = 1; }   // (47: World v3's Highland Woods)
   else if (cls === 0 && style === 'wild') tags.meadow = 1;
   if (cls === 1) tags.scrub = 1;
   // water and rock round about (every other tile out to 8)

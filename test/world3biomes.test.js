@@ -37,8 +37,8 @@ test('World v3: the mainland\'s biomes - their districts, ground and dressing; N
   // the terrain classes at the v3 frame (the renderer's ground and the wildlife read them)
   const { cls, cw } = m.terrainCls;
   assert.equal(cw, Math.floor(W / 4));
-  const clsOf = (d) => { const c = new Float64Array(9); let n = 0; for (let y = 2; y < m.h; y += 16) for (let x = 2; x < W; x += 16) { const i = y * W + x; if (m.land[i] && m.dist[i] === d && L.terrain[i] !== 5) { c[cls[(y >> 2) * cw + (x >> 2)]]++; n++; } } return Array.from(c, (v) => v / n); };
-  assert.ok(clsOf(47)[2] > 0.9, 'Highland Woods reads as forest'); assert.ok(clsOf(48)[4] > 0.9, 'Granite Peaks as mountain'); assert.ok(clsOf(50)[3] > 0.9, 'the desert as desert');
+  const clsOf = (d) => { const c = new Float64Array(10); let n = 0; for (let y = 2; y < m.h; y += 16) for (let x = 2; x < W; x += 16) { const i = y * W + x; if (m.land[i] && m.dist[i] === d && L.terrain[i] !== 5) { c[cls[(y >> 2) * cw + (x >> 2)]]++; n++; } } return Array.from(c, (v) => v / n); };
+  assert.ok(clsOf(47)[2] > 0.9, 'Highland Woods reads as forest'); const pk = clsOf(48); assert.ok(pk[4] + pk[9] > 0.9 && pk[9] > 0.05 && pk[9] < 0.5, `Granite Peaks as mountain, snow on the summits (${pk[9].toFixed(2)})`); assert.ok(clsOf(50)[3] > 0.9, 'the desert as desert');
 
   // the dressing, per km² of the district's land (a tile is a square metre)
   const per = new Map(), bump = (d, k) => { const o = per.get(d) || {}; o[k] = (o[k] || 0) + 1; per.set(d, o); };

@@ -44,7 +44,6 @@ const COL = {
   [T.DIRT]: [160, 132, 96], [T.FIELD]: [176, 168, 84], [T.BRIDGE]: [120, 120, 126], [T.LOT]: [110, 110, 112], [T.FLOOR]: [160, 140, 120], [T.COUNTER]: [160, 140, 120],
 };
 const { DISTRICTS, terrainAt, wildBiome } = await imp('shared/mapcore.js');
-const { peakHeight, SNOW_LINE } = await imp('shared/world3-biomes.js');
 const TC = M.terrainCls;
 const bioAt = (x, y) => wildBiome(M.dist[y * M.w + x], terrainAt(TC.cls, TC.cw, x, y));
 const CROPS = [[214, 190, 100], [150, 172, 70], [112, 150, 82], [196, 176, 112], [128, 98, 70]];
@@ -53,7 +52,7 @@ const groundCol = (t, x, y) => {
   const i = y * M.w + x, st = (DISTRICTS[M.dist[i]] || DISTRICTS[13]).style, wild = ['wild', 'rural', 'desert', 'rocky', 'airport'].includes(st);
   if (t === T.FIELD) return fieldCol(x, y);
   if (!wild || (t !== T.GRASS && t !== T.DIRT && t !== T.SAND)) return COL[t];
-  const b = bioAt(x, y), snow = M.dist[i] === 48 && peakHeight(x, y) >= SNOW_LINE;
+  const b = bioAt(x, y), snow = b === 9;   // (the snowfields: world3-biomes.js SNOW_CLS, the game's snow ground)
   if (snow && t !== T.GRASS) return [236, 240, 244];
   if (t === T.SAND) return (M.reserve[i] & 128) ? [204, 194, 170] : b === 3 || st === 'desert' ? [226, 196, 140] : COL[t];
   if (t === T.DIRT) return st === 'desert' || b === 3 ? [196, 142, 98] : b === 4 ? [138, 132, 124] : b === 2 ? [104, 88, 62] : COL[t];
