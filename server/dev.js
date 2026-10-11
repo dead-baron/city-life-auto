@@ -379,6 +379,10 @@ export function command(world, p, c, msg) {
       const v = world.spawnVehicle(model, sp.x, sp.y, sp.a, { npcOwned: false });
       v.issuedTo = p.pid;
       v.lz = ped.lz || 0; // up on the highway with you
+      // an aircraft already up (msg.alt px, flying: testing - shared/flight.js), and (msg.in) you at its controls
+      if (VEHICLES[model].kind === 'air' && Number(msg.alt) > 0) { v.alt = Math.min(VEHICLES[model].ceiling, Number(msg.alt)); v.spool = 1; const sp0 = VEHICLES[model].air === 'plane' ? VEHICLES[model].stall * 1.6 : 0; v.vx = Math.cos(sp.a) * sp0; v.vy = Math.sin(sp.a) * sp0; }
+      if (msg.in && ped.vehId) { const ov = world.get(ped.vehId), k = ov ? ov.seats.indexOf(ped.id) : -1; if (k >= 0) ov.seats[k] = 0; ped.vehId = 0; ped.seat = -1; }   // (out of whatever you were in)
+      if (msg.in && !ped.dead) { v.seats[0] = ped.id; ped.vehId = v.id; ped.seat = 0; ped.x = v.x; ped.y = v.y; p.lastVehicle = v.id; p.meDirty = true; }
       break;
     }
     case 'boom': { // a vehicle (msg.m, a sedan) blown up a little way off: msg.k 'launch' | 'pieces' | 'plain' picks how (task #363); msg.wh: a burning wheel comes off (task #412)

@@ -8166,3 +8166,72 @@ before, and each track laid along the land and none over a table's top, most wan
 Trail at most half on the snow, the fire lookout off it, no dry wash by a moved site's box), test/dmath.test.js,
 test/mapwindow.test.js: the relief test passes; the wild test's last run failed only its two snow checks as they were
 then (the trail 53 of 125 points on the snow against 35%, the camp in it) - eased to the above, not run again.
+
+## 2026-10-11 · Flying: helicopters and light planes (H56)
+
+The owner (2026-10-11): "When will we add the flying mechanic in for helicopters and airplanes? I'd like to see those
+come together soon." Later waves build on this: search-and-rescue, coast guard and private-pilot jobs with helicopters
+(a harness lowered to people; landing on hospital roofs) and "an attack helicopter you can fly and shoot missiles from,
+can spawn in debug".
+
+- **Flight on the server, predicted on the page** (`shared/flight.js` `flightStep`, `flightInput`): an aircraft is a
+  vehicle of kind `air` with an altitude (`alt`, px), a climb rate, its engine's spool and (planes) a bank. A
+  **helicopter** spools up (3.2 s), lifts off straight up, hovers with nothing pressed, tilts to move - the way the
+  stick points, or W/S along the nose with A/D yawing it on a keyboard - and eases its descent near the ground (a flare:
+  a full descend still touches down softly). Without power it falls - a crash. A **light plane** taxis on its wheels (the
+  nose wheel steers), needs a take-off roll on hard ground to reach its rotate speed (`vr` 520 px/s: a runway, the
+  apron, an airstrip's dirt, a long straight road - grass, sand and fields hold it below that), climbs when you pull up
+  at flying speed, banks to turn, holds its speed with the stick let go, stalls below 400 px/s (the nose drops, it
+  sinks), and rolls out on its wheels. Low down it hits what stands taller than it is: buildings by their height
+  (`bldTop`: by district style and size, hospitals 240 px, towers to ~880), walls, trees and solid props below 110 px;
+  high enough it flies over them and it can set down on a flat roof.
+- **Consequences** (`server/systems/aircraft.js`): a bump hurts it; flying into something faster than 240 px/s, a
+  touch-down faster than 330 px/s or ditching at speed is a crash - it blows up where it is (`vehicles.explode`, so
+  `explosions.js` and the people thrown clear); between 150 and 330 px/s a hard landing hurts it, and a plane put down
+  off the hard ground at speed digs in. Down gently in the water it floats and sinks like a car (everyone swims). Two
+  aircraft close in height that touch both come down. Up in the air, ground traffic and people pass under it
+  (`airborne`: over 24 px); nobody boards one in the air; getting out: on the ground only - in the air the first press
+  warns, the second jumps (hurt by the height, much less into water); not off a roof.
+- **Where they are** (`airfields(m)`: computed from the built map - the airports' runways and stands, the Route 9 /
+  Dry Creek airstrip, the police HQ, the hospitals - so the generator and the world's hash are unchanged): helipads at
+  the airport, the police headquarters and every hospital's yard, and one on each hospital's roof (data for the next
+  wave's landings; drawn in the classic renderer only - art v2 stands its buildings up), all kept off the runways and
+  taxiways. Parked: a police helicopter at HQ (officers take it freely; anyone else, it's stealing a police vehicle), a
+  helicopter at the airport's pad and the first hospital's yard, a light plane by each of the apron's planes and at the
+  airstrip; taking one is vehicle theft as for cars; one taken or wrecked comes back to its spot 4 minutes later once
+  nobody's about.
+- **The attack helicopter** (stretch, `gunship`: the Hornet, olive, stub wings and missile pods): fire sends a missile
+  (the bazooka's rocket: `combat.js`, its blast) the way you aim, the pods taking turns, one every 0.55 s.
+- **Controls** (`IN.CLIMB` 2^20, `IN.DESCEND` 2^21 - clear of the next few bits others take): Space climbs and Shift
+  descends at the controls of an aircraft (the handbrake and sprint keys); a pad's left stick points the way, RT climbs,
+  LT descends, R3 fires; touch the drive thumb and ▲ / ▼ buttons. README controls table updated.
+- **Seen and heard** (`client/render/aircraft.js`, loaded the first time one is near): drawn over everything in both
+  renderers (the overlay canvas), the shadow on the ground offset away from the sun by the altitude and fainter higher
+  up, the aircraft a little bigger the higher it is; the rotor's blades turning while it spools and a blurred disc once
+  up to speed (the tips' ring), the police one's light bar, the plane's wings foreshortened and shaded as it banks
+  (others' bank from their turning), the propeller a blur; liveries after HE1 (news blue and white, police black and
+  white, the army's olive), the plane white with a red stripe; the helipads' yellow ring and H. The camera pulls back as
+  you climb (up to 2.3x). Sound: a rotor engine class (a deep whop-whop) and a propeller's drone (`client/sound`);
+  others see the altitude (a vehicle record's extra byte, 4 px a step) and the rotor turning (`VF.ROTOR`).
+- **Debug menu** (🚁 Aircraft, at the end): a helicopter, a light plane, the attack helicopter, a police helicopter
+  beside you; a light plane / a helicopter already in the air with you flying it; a runway, a helipad, the airstrip.
+
+Not done yet (next): art v2 block models after HE1 (today both renderers use the simple drawing on the overlay, unlit
+at night), the roof landings' getting out, NPC pilots, the police helicopter joining chases.
+
+Files: shared/flight.js (new), server/systems/aircraft.js (new), client/render/aircraft.js (new), shared/vehicles.js
+(heli, policeheli, plane, gunship at the end), shared/input.js (CLIMB, DESCEND), shared/constants.js (VF.ROTOR),
+server/systems/vehicles.js (stepVehicle hands aircraft over; airborne ones skip the ground's collisions and sinking;
+tryEnter, exitVehicle), server/systems/players.js (the pilot's input; the gunship's fire), server/net.js (the altitude,
+the rotor, the pilot's flight state in the self record's spare slots), server/world.js (the system), server/dev.js
+(the 'car' command's alt / in, the runway and helipad destinations), client/main.js (the prediction, F.air, the
+overlay, the camera), client/input.js, index.html, client/style.css (the touch buttons), client/art2/game/host.js
+(leaves aircraft to the overlay), client/devcats.js, client/sound/vehicles.js, client/sound/events.js (touchdown).
+
+Tests: test/flight.test.js (new: a helicopter spools, lifts off, hovers, flies where the stick points, lands softly;
+without power it crashes; a plane takes off from a runway and not from grass, banks, stalls; buildings by height and
+landing on a roof; the server's parked aircraft, a flight, the altitude on the wire, jumping out, a crash),
+test/gameplay.test.js, test/motorbikes.test.js, test/sound.test.js, test/inputword.test.js, test/gamepad.test.js,
+test/kbdrive.test.js, test/perf.test.js (the page's budget holds: the flight module is lazy), test/mapwindow.test.js,
+test/dmath.test.js - all pass.
+

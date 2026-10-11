@@ -32,11 +32,11 @@ function altOf(v, dt) {
   return v._alt;
 }
 
-export function drawAir(g, F, S, dt) {
+export function drawAir(g, F, S, dt, v2 = false) {
   const list = F.air;
   const sky = F.sky, sun = sky && sky.sunDir ? sky.sunDir : { x: 0.55, y: 0.83 };
   const now = F.now;
-  drawPads(g, F, S);
+  drawPads(g, F, S, v2);
   for (const v of list) {
     const def = VEHICLE_BY_INDEX[v.d.m];
     if (!def) continue;
@@ -156,9 +156,10 @@ function drawPlane(g, def, v, alt, now) {
 }
 
 // the helipads' H on the ground (and on the hospitals' roofs) - the yellow ring, the white H
-function drawPads(g, F, S) {
+function drawPads(g, F, S, v2) {
   const view = F.view, af = airfields(S.map);
   for (const p of af.pads) {
+    if (p.roof && v2) continue;   // (art v2 stands its buildings up: the roof isn't over the footprint - its own roof kit, later)
     if (p.x < view.x0 - 100 || p.x > view.x1 + 100 || p.y < view.y0 - 100 || p.y > view.y1 + 100) continue;
     const r = FLY.PAD_R * 0.8;
     g.save(); g.translate(p.x, p.y);

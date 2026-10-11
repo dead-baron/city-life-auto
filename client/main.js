@@ -3230,8 +3230,8 @@ function drawOverlays(F, v2) {
     else if (gfx.particles && F.sky && F.sky.night > 0.3 && !S.fliesAsk) { S.fliesAsk = 1; import('./render/fireflies.js').then((m) => { S.flies = new m.Fireflies(S); }).catch((e) => console.warn('[fireflies]', e)); }
   }
   g.setTransform(...S.worldTf);
-  if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
-  else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt);   // (the helipads)
+  if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
+  else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (the helipads)
   drawBowling(F);
   drawCinema(F);
   // aim sight for sticks / touch (the mouse has its own cursor)

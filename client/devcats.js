@@ -126,6 +126,6 @@ export const DEV_SECTIONS = [
   // flying (shared/flight.js, server/systems/aircraft.js): an aircraft beside you; the airport's runway and the airstrip
   { id: 'air', title: '🚁 Aircraft', items: [
     ['🚁 Helicopter', 'car', { m: 'heli' }], ['✈ Light plane', 'car', { m: 'plane' }], ['🚁 Attack helicopter (missiles)', 'car', { m: 'gunship' }],
-    ['🚔 Police helicopter', 'car', { m: 'policeheli' }], ['🛫 A runway (take off from it)', 'near', { k: 'runway' }], ['🅷 A helipad', 'near', { k: 'helipad' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }],
+    ['🚔 Police helicopter', 'car', { m: 'policeheli' }], ['🛫 A light plane in the air, you flying it', 'car', { m: 'plane', alt: 500, in: 1 }], ['🚁 A helicopter in the air, you flying it', 'car', { m: 'heli', alt: 400, in: 1 }], ['🛫 A runway (take off from it)', 'near', { k: 'runway' }], ['🅷 A helipad', 'near', { k: 'helipad' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }],
   ] },
 ];

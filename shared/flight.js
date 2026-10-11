@@ -249,7 +249,8 @@ export function collideAir(s, def, map) {
 // added to the generator, so the world's hash is the same). -> { pads: [{ x, y, kind, name, roof, alt, b }], strips:
 // [{ name, x, y, w, h, a }], aprons: [{ x, y, a, name }] } (px; strips' a: the way along them), cached on the map.
 const PAD_OK = new Set([T.PLAZA, T.LOT, T.GRASS, T.SIDEWALK, T.DIRT, T.SAND, T.FIELD]);
-function clearPad(m, x, y, r) {
+function clearPad(m, x, y, r, avoid) {
+  if (avoid) for (const a of avoid) if (x + r > a.x && x - r < a.x + a.w && y + r > a.y && y - r < a.y + a.h) return false;   // (never on a runway)
   const t0x = Math.floor((x - r) / TILE), t1x = Math.floor((x + r) / TILE), t0y = Math.floor((y - r) / TILE), t1y = Math.floor((y + r) / TILE);
   for (let ty = t0y; ty <= t1y; ty++) for (let tx = t0x; tx <= t1x; tx++) {
     if (!m.inside(tx, ty) || !PAD_OK.has(m.tileAt(tx, ty))) return false;
@@ -259,13 +260,13 @@ function clearPad(m, x, y, r) {
   return true;
 }
 // the nearest clear spot (a circle r px across nothing solid, no road, no water) within maxR px of (x, y), or null
-export function findPadSpot(m, x, y, r = FLY.PAD_R, maxR = 640) {
-  if (clearPad(m, x, y, r)) return { x, y };
+export function findPadSpot(m, x, y, r = FLY.PAD_R, maxR = 640, avoid = null) {
+  if (clearPad(m, x, y, r, avoid)) return { x, y };
   for (let d = TILE; d <= maxR; d += TILE) {
     const n = Math.max(8, Math.round(d / 12));
     for (let k = 0; k < n; k++) {
       const ang = (k / n) * Math.PI * 2, px = Math.round(x + Math.cos(ang) * d), py = Math.round(y + Math.sin(ang) * d);
-      if (clearPad(m, px, py, r)) return { x: px, y: py };
+      if (clearPad(m, px, py, r, avoid)) return { x: px, y: py };
     }
   }
   return null;
@@ -276,16 +277,20 @@ export function airfields(m) {
   for (const A of m.airports || []) {
     const r = A.runway, along = r.h >= r.w;
     strips.push({ name: A.name, x: r.x, y: r.y, w: r.w, h: r.h, a: along ? -Math.PI / 2 : 0 });
+    if (A.taxi) strips.push({ name: `${A.name} taxiway`, x: A.taxi.x, y: A.taxi.y, w: A.taxi.w, h: A.taxi.h, a: along ? -Math.PI / 2 : 0, taxi: true });
+  }
+  for (const s of m.natureSites || []) if (s.kind === 'airstrip') strips.push({ name: s.name, x: s.x - 6 * TILE, y: s.y, w: 12 * TILE, h: 40 * TILE, a: -Math.PI / 2, approx: true });
+  for (const A of m.airports || []) {
     // the planes' stands on the apron (beside the parked prop planes, the airport's own)
-    for (const pl of A.planes || []) { const sp = findPadSpot(m, pl.x, pl.y + 150, 70, 400); if (sp) aprons.push({ x: sp.x, y: sp.y, a: -Math.PI / 2, name: A.name }); }
+    for (const pl of A.planes || []) { const sp = findPadSpot(m, pl.x, pl.y + 150, 70, 400, strips); if (sp) aprons.push({ x: sp.x, y: sp.y, a: -Math.PI / 2, name: A.name }); }
     // a helipad by the terminal, off the apron's side
-    const t = A.taxi, sp = findPadSpot(m, t.x + t.w + 260, t.y + 200, FLY.PAD_R, 700);
+    const t = A.taxi, sp = findPadSpot(m, t.x + t.w + 260, t.y + 200, FLY.PAD_R, 700, strips);
     if (sp) pads.push({ x: sp.x, y: sp.y, kind: 'airport', name: `${A.name} helipad`, roof: false, alt: 0 });
   }
   for (const s of m.natureSites || []) {
-    if (s.kind !== 'airstrip') continue;
-    strips.push({ name: s.name, x: s.x - 6 * TILE, y: s.y, w: 12 * TILE, h: 40 * TILE, a: -Math.PI / 2, approx: true });
-    if (s.plane) { const sp = findPadSpot(m, s.plane.x + 120, s.plane.y, 70, 400); if (sp) aprons.push({ x: sp.x, y: sp.y, a: -Math.PI / 2, name: s.name }); }
+    if (s.kind !== 'airstrip' || !s.plane) continue;
+    const sp = findPadSpot(m, s.plane.x + 120, s.plane.y, 70, 400, strips);
+    if (sp) aprons.push({ x: sp.x, y: sp.y, a: -Math.PI / 2, name: s.name });
   }
   // the police headquarters (the first station) - a pad in its yard
   const pd = (m.pois || []).find((p) => p.kind === 'police');
@@ -302,7 +307,7 @@ export function airfields(m) {
 }
 // on a runway or an airstrip?
 export function onStrip(m, x, y) {
-  for (const s of airfields(m).strips) if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) return s;
+  for (const s of airfields(m).strips) if (!s.taxi && x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) return s;
   return null;
 }
 
