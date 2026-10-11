@@ -11,11 +11,18 @@ const R = (h, n = 6, k) => ramp(h, n, k);
 const grain = (x, y, z) => (hash(Math.round(x / 3), Math.round(y), Math.round(z)) > 0.7 ? -0.6 : 0);
 
 // a covered porch along a shopfront or a house (a raised one on stilts at the beach): a plank deck, posts with a rail
-// between them (open in the middle for the steps), a shed roof sloping down from the wall
-export function porch(len = 160, raise = 0) {
-  const D = 34, m = new Vox(len, D + (raise ? 14 : 0), raise + 56);
+// between them (open in the middle for the steps), a shed roof sloping down from the wall; a shopfront's false front
+// (ff: its top, col: its boards) - the boarded facade standing up over the porch roof and the gable behind, a stepped top
+export function porch(len = 160, raise = 0, ff = 0, col = '#7a5436') {
+  const D = 34, m = new Vox(len, D + (raise ? 14 : 0), Math.max(raise + 56, ff + 14));
   const deck = m.mat({ ramp: MAT.woodDock, k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -0.6 : 0) }), post = m.mat({ ramp: R('#e8e0cc'), k: 3 });
   const roof = m.mat({ ramp: R('#5a4a3e'), k: 3, shade: (x) => (Math.round(x) % 5 === 0 ? -0.5 : 0) });
+  if (ff) {
+    const bd = m.mat({ ramp: R(col), k: 3, shade: (x, y, z) => (Math.round(z) % 4 === 0 ? -0.5 : 0) });
+    m.box(0, 0, 40, len, 3, ff, bd);
+    m.box(len / 3, 0, ff, (len * 2) / 3, 3, ff + 10, bd);
+    m.box(0, 0, ff - 3, len, 4, ff, post); m.box(len / 3 - 2, 0, ff + 8, (len * 2) / 3 + 2, 4, ff + 12, post);
+  }
   m.box(0, 0, raise, len, D, raise + 3, deck);
   if (raise) {
     for (let x = 2; x < len - 2; x += 24) for (const y of [2, D - 4]) m.box(x, y, 0, x + 3, y + 3, raise, post);

@@ -17,10 +17,9 @@ function gable(g, x, y, w, h, c, ns) {
 // over a lot drawn from the prefab sheet (tiles.js drawPrefab): the building's footprint (sol: the prefab's solid)
 export function drawTownLook(g, p, sol) {
   const L = p.look, x = (p.tx + sol[0]) * TILE, y = (p.ty + sol[1]) * TILE, w = (sol[2] - sol[0]) * TILE, h = (sol[3] - sol[1]) * TILE;
-  if (FLAT.has(L)) {
-    g.fillStyle = '#4e4844'; g.fillRect(x, y, w, h);
-    g.fillStyle = 'rgba(0,0,0,.18)'; for (let k = 8; k < h; k += 8) g.fillRect(x, y + k, w, 1);
-    g.fillStyle = L === 'beachshop' || L === 'surfrow' ? '#d8c8a8' : '#7a5a3e'; g.fillRect(x, y + h - 7, w, 7);   // the false front's top
+  if (FLAT.has(L)) {   // (a low gable behind the false front's top along the street)
+    gable(g, x, y, w, h, L === 'beachshop' || L === 'surfrow' ? '#6a5a50' : '#4e4844', false);
+    g.fillStyle = L === 'beachshop' || L === 'surfrow' ? '#d8c8a8' : '#7a5a3e'; g.fillRect(x, y + h - 7, w, 7);
     return;
   }
   if (L === 'sawmill' || L === 'elevator') {

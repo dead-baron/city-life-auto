@@ -749,11 +749,10 @@ function townLook(spec, b, s, TL, rnd, w, pitched) {
   const L = b.look, wood = (c) => Object.assign(spec, { style: 'siding', wallColor: c, balconies: false, ivy: 0, graffiti: 0, grime: 0.1, fireEscape: false, boarded: 0 });
   const gable = (c, slope = 0.4) => { Object.assign(spec, { pitch: 'gable', ridge: 'ew', roof: 'shingle', roofColor: c, slope }); delete spec.parapet; return true; };
   const label = (re, t) => { for (const p of spec.plaques || []) if (re.test(p.text)) p.text = t; };
-  if (FLATS.has(L)) {
-    wood(L === 'lodgerow' && s.unit === 0 ? '#4e3424' : pick(TL.walls, rnd()));
-    Object.assign(spec, { floors: rnd() < 0.35 ? 2 : 1, roof: 'flat', parapet: 16 });
-    delete spec.pitch;
-    return false;
+  if (FLATS.has(L)) {   // (one storey under a low gable; the false front stands in front of it, on the porch's model)
+    wood(L === 'lodgerow' && s.unit === 0 ? '#4e3424' : b.lookC || pick(TL.walls, rnd()));
+    spec.floors = 1; delete spec.height;
+    return gable(pick(TL.roofs, rnd()), 0.3);
   }
   switch (L) {
     case 'cabin': wood(pick(['#6e4a30', '#7a5436', '#5e4030', '#8a6440'], rnd())); spec.roofColor = pick(['#3e6a5a', '#4a3a30', '#3e4448'], rnd()); return pitched;
@@ -775,7 +774,7 @@ function townKit(I, list) {
     const m = TKIT[k.k];
     if (!m) continue;
     const hd = qa(k.a || 0, k.k === 'rail' ? 32 : 4), K = k.k;
-    const a = K === 'porch' ? [k.len || 160, k.z || 0] : K === 'logs' || K === 'saw' || K === 'dock' || K === 'rail' ? [k.len || 160] : K === 'silos' ? [k.n || 4, k.len || 360] : K === 'boards' ? [k.n || 5] : K === 'lamp' ? ['cast', 1] : [];
+    const a = K === 'porch' ? [k.len || 160, k.z || 0, k.ff || 0, k.c || '#7a5436'] : K === 'logs' || K === 'saw' || K === 'dock' || K === 'rail' ? [k.len || 160] : K === 'silos' ? [k.n || 4, k.len || 360] : K === 'boards' ? [k.n || 5] : K === 'lamp' ? ['cast', 1] : [];
     put(I, vitem(`tk:${m}:${a.join(',')}:${hd.toFixed(3)}`, m, a, k.x, k.y, hd, null, K === 'antlers' ? { z0: k.z || 50 } : null));
     if (K === 'lamp') lightAt(I, k.x, k.y, 80, 130, [1, 0.85, 0.6], 1.2, 'lamp');
   }
@@ -1323,7 +1322,7 @@ function voxModel(m, a) {
     case 'lighthouse': return WL.lighthouse(a[0], a[1]); case 'pillar': return RD.pillar(a[0], a[1], a[2]); case 'canopy': return U.fuelCanopy(a[0], a[1], a[2], a[3]); case 'fuelPump': return U.fuelPump(a[0], a[1]);
     case 'platformCanopy': return RD.platformCanopy(a[0], a[1], a[2]); case 'stationEntrance': return RD.stationEntrance(a[0], a[1]); case 'stationHouse': return RD.stationHouse(a[0], a[1]); case 'lifeguardTower': return RD.lifeguardTower(); case 'crossingSignal': return RD.crossingSignal(a[0], a[1]);
     case 'subwayKiosk': return RD.subwayKiosk(a[0], a[1]);   // (SU5-B: a subway stop's street entrance on its kiosk's footprint)
-    case 'tPorch': return TN.porch(a[0], a[1]); case 'tAntlers': return TN.antlers(); case 'tLogs': return TN.logStack(a[0]); case 'tLoader': return TN.logLoader();   // (H40: World v3's towns' own models, props-towns.js)
+    case 'tPorch': return TN.porch(a[0], a[1], a[2], a[3]); case 'tAntlers': return TN.antlers(); case 'tLogs': return TN.logStack(a[0]); case 'tLoader': return TN.logLoader();   // (H40: World v3's towns' own models, props-towns.js)
     case 'tSaw': return TN.sawLine(a[0]); case 'tSilos': return TN.silos(a[0], a[1]); case 'tSteeple': return TN.steeple(); case 'tDock': return TN.loadingDock(a[0]);
     case 'tSacks': return TN.feedSacks(); case 'tBoards': return TN.boardRack(a[0]); case 'tShelter': return TN.pierShelter();
     case 'erCanopy': return RD.erCanopy(a[0]);   // (IN1-B: the hospital's ambulance bay)
@@ -1388,7 +1387,7 @@ function vdim(m, a) {
     case 'lighthouse': return [48, 48, (a[0] || 140) + 36]; case 'pillar': return [(a[1] || 30) + 4, a[2] || 90, a[0] || 90]; case 'canopy': return [a[0] || 150, a[1] || 80, (a[2] || 52) + 10]; case 'fuelPump': return [12, 10, 34];
     case 'platformCanopy': return [a[0] || 200, a[1] || 40, 62]; case 'stationEntrance': return [70, 44, 54]; case 'stationHouse': return [a[1] || 140, 92, 74]; case 'lifeguardTower': return [46, 70, 66]; case 'crossingSignal': return [24, 8, 70]; case 'controlTower': return [70, 70, (a[0] || 220) + 50];
     case 'subwayKiosk': return [128, 96, 64]; case 'erCanopy': return [120, 62, 60];
-    case 'tPorch': return [a[0] || 160, 34 + (a[1] ? 14 : 0), (a[1] || 0) + 56]; case 'tAntlers': return [36, 6, 26]; case 'tLogs': return [a[0] || 160, 42, 34]; case 'tLoader': return [84, 46, 52];
+    case 'tPorch': return [a[0] || 160, 34 + (a[1] ? 14 : 0), Math.max((a[1] || 0) + 56, (a[2] || 0) + 14)]; case 'tAntlers': return [36, 6, 26]; case 'tLogs': return [a[0] || 160, 42, 34]; case 'tLoader': return [84, 46, 52];
     case 'tSaw': return [40, a[0] || 112, 48]; case 'tSilos': { const n = a[0] || 4, s = a[1] || 360, r = Math.min(48, Math.floor(s / n / 2) - 2); return [s, r * 2 + 4, 150 + Math.ceil(r * 0.45) + 14]; }
     case 'tSteeple': return [44, 44, 214]; case 'tDock': return [a[0] || 240, 40, 30]; case 'tSacks': return [34, 28, 26]; case 'tBoards': return [(a[0] || 5) * 10 + 8, 16, 64]; case 'tShelter': return [84, 64, 62];
     case 'fence': return [a[1] || 60, 6, ({ picket: 16, wood: 30, chain: 32, iron: 28, stone: 12 }[a[0]] || 20) + 6]; case 'fenceKind': return [a[1] || 60, 6, 26]; case 'gatePillar': return [14, 14, (a[1] || 36) + 16];

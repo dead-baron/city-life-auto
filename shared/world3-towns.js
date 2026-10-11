@@ -298,6 +298,7 @@ export function townsDone(m) {
 const HOUSE_LOOK = { 57: 'cabin', 58: 'farmhouse', 59: 'cottage' }, SHOP_LOOK = { 57: 'shopfront', 58: 'shopfront', 59: 'beachshop' };
 const SHOP_KINDS = new Set(['diner', 'rest1', 'rest2', 'conv', 'quickstop', 'liquor', 'repair', 'strip', 'shops1', 'shops2', 'boutique']);
 const PART = { sawmill: 0.56, elevator: 0.32 };
+const WOODS = { 57: ['#6e4a30', '#7a5436', '#8a6440', '#6a5a44', '#5e4030'], 58: ['#e8e4d8', '#f0ecdc', '#d8c8a0', '#c84a3a', '#e0d8c0'], 59: ['#9ac8d0', '#e8d8b0', '#f0c8b0', '#b8d8b8', '#f4f0e4', '#d0b8d8'] };
 export function townModels(m) {
   const W = m.w, kit = (m.townKit ||= []), named = new Map(TOWN_SPECIALS.filter((s) => s.look).map((s) => [s.names[0], s.look]));
   const open = (x, y) => { const tl = m.tileAtPx(x, y); return tl !== T.ROAD && tl !== T.BRIDGE && tl !== T.WATER && tl !== T.DEEP && tl !== T.BUILDING; };
@@ -314,14 +315,18 @@ export function townModels(m) {
       if (!look) continue;
       b.look = look; if (p) p.look = look;
       looks[look] = (looks[look] || 0) + 1;
-      const x0 = b.tx * TILE, y0 = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE, south = !b.door || b.door.ty >= b.ty + b.th;
+      // (its front: the door's side; a plain roof's, the side a street's sidewalk is on - the south when both or neither)
+      const street = (ty) => { for (let k = 0; k < 3; k++) { const tl = m.tileAt(b.tx + (b.tw >> 1), ty + k * (ty < b.ty ? -1 : 1)); if (tl === T.SIDEWALK || tl === T.ROAD) return true; } return false; };
+      const x0 = b.tx * TILE, y0 = b.ty * TILE, w = b.tw * TILE, h = b.th * TILE, south = b.door ? b.door.ty >= b.ty + b.th : street(b.ty + b.th) || !street(b.ty - 1);
       const fy = south ? y0 + h : y0, o = south ? 1 : -1, a = south ? 0 : Math.PI;   // (the front wall's line, outward, the front's heading)
       const doorX = b.door ? (b.door.tx + 0.5) * TILE : x0 + w / 2;
       const sign = (re) => (b.signs || []).find((s) => re.test(s.text));
       if (PART[look]) b.lookW = Math.max(4, Math.round(b.tw * PART[look]));
       switch (look) {
         case 'shopfront': case 'beachshop': case 'lodgerow': case 'surfrow': case 'feedrow':
-          add('porch', x0 + w / 2, fy + o * 17, { len: Math.max(48, w - 8), a }); break;
+          // (one storey under a low gable, its false front on the porch: the same boards - b.lookC)
+          b.lookC = WOODS[t.d][b.id % WOODS[t.d].length];
+          add('porch', x0 + w / 2, fy + o * 17, { len: Math.max(48, w - 8), a, ff: south ? 104 : 0, c: look === 'lodgerow' ? '#4e3424' : b.lookC }); break;
         case 'cabin': case 'farmhouse': case 'cottage':
           add('porch', Math.max(x0 + 60, Math.min(x0 + w - 60, doorX)), fy + o * 17, { len: Math.min(w - 16, look === 'farmhouse' ? 200 : 120), a }); break;
         case 'stilts': add('porch', Math.max(x0 + 56, Math.min(x0 + w - 56, doorX)), fy + o * 17, { len: Math.min(w - 16, 112), a, z: 16 }); break;

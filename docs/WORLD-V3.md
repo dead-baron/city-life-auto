@@ -3056,8 +3056,77 @@ Willow Road's south arm thinning into the fields. What looks wrong:
 - The drives' ramps back onto their courses bend 20-25 degrees just outside the towns (Timber Road west of Timber
   Bend, the Mine Road east of Willow Crossing).
 
-**What's left:** the towns' own prefabs (art v2 models and the classic renderer's drawing, `shared/prefab-data.js`) -
+**What's left:** ~~the towns' own prefabs (art v2 models and the classic renderer's drawing, `shared/prefab-data.js`) -
 the logging town's wooden shopfronts with porches, the sawmill and log yard, the lodge; the farm town's white church,
 grain elevator and silos, the feed store, the co-op with its loading dock; the beach town's surf shop, cottages, beach
 houses on stilts - and the planned places put in them (`TOWN_SPECIALS`); the boardwalk as a model of its own (rails,
-benches, the pier's end); the lots at the corners of Willow Crossing's loops.
+benches, the pier's end)~~ (done in 8.13.2, as looks and models over the generator's lots - not new sheet prefabs); the
+lots at the corners of Willow Crossing's loops.
+
+### 8.13.2 The towns' own models (2026-10-11, H40)
+
+8.13.1's "what looks wrong": Timber Bend still read a little like a city (its loop blocks taken by the planned places,
+each one big flat-roofed building - the clinic, the sheriff, the motel, the sawmill as the industrial prefab), Willow
+Crossing's grain elevator had no silos, Sandpiper Bay's boardwalk was plain planks. The towns' own buildings, in art v2
+and the classic renderer, after the concepts (WR2-A, WR2-C, D13, D13-B, D15-A/B, BE1, BE2, SR7). Nothing live changes:
+the world hash stays `6b6e16fdef9f`; the art hash changes.
+
+**How:** not new prefabs on the concept sheet (`shared/prefab-data.js` is generated from it, and a new key would need
+the classic renderer's sheet art and the generator's lot tables) but **looks over the generator's lots**: the build
+gives each town building a look (`townModels(m)` in `shared/world3-towns.js`, one call from `shared/world3-world.js`'s
+`done` hook after `townsDone`): `b.look` and its lot's (`m.prefabs[i].look`), which both renderers draw in place of
+the prefab's city art, and what stands round it in `m.townKit` (`{ k, x, y, a, len, n, z, ff, c, s }`, px).
+- **The looks:** Timber Bend - `shopfront` (the diner, the store, the generator's shops and the big plain-roof rows:
+  one storey of boards under a low gable, a false front and a porch along the street), `lodgerow` (the hunting lodge's
+  strip: the lodge's unit in dark logs with antlers over its door, the butcher, the hardware store and the tackle shop
+  beside it), `sawmill`, `clinic`, `sheriff`, `motel`, `cabin` (the houses: dark log siding, a green or tar gable, a
+  porch); Willow Crossing - `church` (white clapboard under slate, the steeple standing out from its front), `elevator`,
+  `coop` (a barn-red shed under a metal gable with its loading dock), `feedrow` (the market's strip with the feed
+  store's sacks out front), `farmhouse` (white clapboard, a long porch), its shopfronts; Sandpiper Bay - `surfrow` (the
+  surf shop's strip, its boards in a rack out front), `beachshop`, `cottage` and `stilts` (a raised porch on posts with
+  steps down), its clinic. The clinic, the sheriff and the motel are one storey of clapboard under a gable (the clinic
+  on a store's lot now, `liquor`'s 15 x 8 tiles, not the hospital's 18 x 12; the co-op on `quickstop`'s with room in
+  front for its dock).
+- **The sawmill and the elevator** take part of their lot (`b.lookW`: the west 56% the mill's open shed - a wide open
+  bay, the saw line out front; the west 32% the elevator's tall corrugated head house); the rest of the solid footprint
+  is the yard - three log stacks and the log loader, or a row of silos with their gallery - so nothing new blocks a
+  street (only the saw line is solid, on the lot's apron).
+- **The boardwalk and the pier** (Sandpiper Bay, `t.front`): a rail along the boardwalk's sea side, stepping with its
+  planks down the diagonal shore and open where the pier leaves it; benches facing the sea and lamps along its land
+  side; rails down both sides of the pier and across its end, a shelter at the end; the lifeguard station's tower on
+  the sand east of the pier (`m.lifeguards`, solid, drawn as the beach towns' are).
+- **Art v2** (`client/art2/props-towns.js`, voxel models: `porch` with its false front, `antlers`, `logStack`,
+  `logLoader`, `sawLine`, `silos`, `steeple`, `loadingDock`, `feedSacks`, `boardRack`, `pierShelter`; the rails,
+  benches and lamps are today's `pierRail`, `bench` and `lampPost`; `client/art2/game/statics.js`: `LOOK_ARCH` - the
+  archetype each look is drawn from - `townLook` - its wood, roof and doors - and `townKit`, which puts `m.townKit`).
+  **The classic renderer** (`client/render/townart.js`, from `tiles.js`): the look's roof over the lot's painted art
+  (gables, the false front's top, the mill's ribbed shed and dirt yard, the head house) and the kit from above.
+
+**What's built** (seed 1337, `m.world3.towns.models`): Timber Bend - the sawmill, the lodge row, the clinic, the
+sheriff, the motel, 5 shopfronts; 3 log stacks, the loader, the saw line, 6 porches, the antlers. Willow Crossing - the
+church and its steeple, the elevator and 4 silos, the co-op and its dock, the feed row and its sacks, the clinic, the
+sheriff, 7 shopfronts; 8 porches. Sandpiper Bay - the surf row and its boards, the clinic, 4 beach shops, 3 cottages, 4
+houses on stilts; 12 porches, 165 pieces of rail, 10 benches, 13 lamps, the pier's shelter, the tower. (The houses
+the generator built as plain roofs take the house looks too: their numbers are the test's.)
+
+**The test** (`test/world3townmodels.test.js`, one world build): each town has its looks and its kit; every planned
+place with a look is in it (the building, its lot, its POI); the sawmill's and the elevator's yards inside their
+footprints; nothing solid on a road (the saw line; the tower on the sand); no model on a road; the boardwalk's rails,
+benches and the shelter on the planks.
+
+**The pictures** (`node --expose-gc tools/world3-world-map.mjs --sample 0 --towns`): `docs/world-v3-town-timber.png`,
+`docs/world-v3-town-willow.png`, `docs/world-v3-town-sandpiper.png`. What looks right: the sawmill reads as a mill from
+above - a ribbed shed with its log yard and the yellow loader beside it; Willow Crossing's white church with its dark
+steeple in the north loop, the row of white silos in the south loop by the elevator's head house; the beach town's
+boardwalk railed along its sea side and the pier railed out to its shelter, the lifeguard tower on the sand. What
+looks wrong:
+- **At 1/8 the porches, false fronts, antlers, sacks and boards are a few pixels:** they want a look in the game (a
+  playtest on the v3 world, `CLA_WORLD=v3`) - not done.
+- **The big plain-roof rows** (the generator's lots it had no prefab for, at the towns' ends and along Willow Road's
+  south arm) are one long shopfront each: one porch and one false front the length of the row, cut into sections of
+  7-13 tiles by art v2 - a row of separate shopfronts each with its own front would read better.
+- **The elevator is not by the track:** the generator puts the planned places in the town's blocks; Willow Crossing has
+  no station and the main line passes outside the town (8.13's item 2) - the elevator with its siding wants the line.
+- **The boardwalk still stair-steps** with the diagonal shore (planks by columns) and its rail with it.
+- **The classic renderer** is not checked in the game (its drawing is from above, compact - `townart.js`).
+- The houses on stilts are a raised porch on posts in front of an ordinary house, not a house lifted on piles.
