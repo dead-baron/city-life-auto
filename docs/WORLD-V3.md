@@ -1530,3 +1530,145 @@ capsules of their width.
    with `dsin`) would make them ragged. The shallows are today's 3 m: a v3 decision whether boats want more.
 6. **Per region:** a region's share of these layers (`cutRegion` / `regionpack.js`) is what a region build reads; the
    server holds the 122 MB whole.
+
+### 8.4 Stage 2, step 2: Metro City + Southbank built at its gulf place (2026-10-10, in progress)
+
+The generator builds a place of today's world at its v3 position and size. Nothing live changes: the world hash stays
+`6b6e16fdef9f` (`test/world3.test.js`); everything new is behind the island-build options.
+
+**The placement:** `generateCity(seed, { island: 'metro', frame: { w, h }, place: { at, scale, from } })`, with `at`,
+`scale` and `from` from the skeleton's picture (`ISLANDS` 'metro': `at` [1850, 2050], `scale` 1.15, `from`
+[559, 301, ...]).
+- `shared/world3-islands.js` `placement(place)` adds `dx`, `dy`: the offset `at - from`, whole tiles. `islandOpts` moves
+  the island's land, today's land and its landmasses (the seams) to the place. At scale 1 that is the offset; otherwise
+  each tile takes today's tile at `from + (p - at) / scale`.
+- **In the generator** (`shared/map.js`, the generator's passes only): `PL` is the placement, null for the live world.
+  - Every position taken from today's world goes through `PX` / `PY` (tiles) or `QX` / `QY` (px):
+    `at + (p - from) * scale`. Sizes don't scale: road widths, lots, a block's pitch, a lake's radii, the river's
+    "under 60 tiles" all stay as they are.
+  - Position seeds and hashes read today's coordinates back through `LX` / `LY` (`LQX` / `LQY` in px): the tile less
+    the offset. Examples: `mulberry32(seed ^ (b.x * 97 + b.y * 13))`, `hash2(tx, ty, k)`, the wobble of the district
+    borders, the parity tests (`(tx + ty) % 3`), the wild ground's sampling grids (their origin moves with the place:
+    `gridOff`). That is what makes a place built at scale 1 today's, moved. At another scale they are local
+    coordinates: deterministic and unique, just not today's.
+  - `IX` / `IY` are the true inverse, used where today's grids are read: the concept picture's terrain classes.
+- **The sources placed so far:**
+  - terrain: the main landmass's point (800, 500), the river's trace (772..1016 x 560..760), the zone line x = 1045,
+    `ISLAND_AT`, the lighthouse rock;
+  - districts: `SEEDS` and `ISLAND_SEEDS`, Greenfield Park, the Arts District, the lakes;
+  - roads: the Metro Ring (citylayout.js `ringLine(tf)`), the coast and river drives' boxes, Pine Hills' collectors,
+    the County and Farm roads, the Eastern Parkway, the railway's route and its stations' points;
+  - the parts that lay their lines in today's coordinates - `metro.js` (the avenues, Broadway, the hero corner's
+    street, each district's streets and their hashes), `islands.js`' roads and the countryside's - run unchanged in
+    today's coordinates. Their map lookups go to the placed tile, and what they laid is placed after them, each point
+    once;
+  - the planned businesses' spots and homes (`seedOf`), the parks (`ALL_PARKS`), the hero corner, the Arts District's
+    split, Museum Square, the Sunset Beach pier and court searches.
+- **On the v3 land** (`land: buildLand3(today)`, the frame the land's): the build's land is the land of its zones
+  (Metro City 1, Southbank 2) in the picture's rectangle: the polygon, less the canal. The canal is the generator's
+  river (boatable; bridged where an avenue crosses it). The districts and zones are the land layer's (hooks
+  `opts.zones`, `opts.dists`, after the generator's own).
+
+**Step A - scale 1, the proof** (`test/world3place.test.js`, about 7 s in a 2500 x 2800 frame; `node --expose-gc
+tools/world3-place.mjs` in the v3 frame). Metro City + Southbank (with Pelican Key: the island build of 4.7) at
+[1850, 2050], compared with the island built in today's frame, moved by the offset (+1291, +1749), on its land:
+
+| | as today's, moved |
+|---|---|
+| land, districts, zones, river, sea distance, road rank | every tile (187,926) |
+| tiles | 99.8% (322 differ: Pelican Key's beach end 228, The Yards 47, Harbor 47) |
+| road edges (kind, ends, level) | 451 of 451 |
+| buildings (kind and lot) | 312 of 316 |
+| POIs (kind and place) | 196 of 201 (2 ATMs, a delivery firm, a charter, a rental) |
+| props | 4,070 of 4,403 (92.4%: Pelican Key's palms and shrubs, the odd lamp) |
+
+What still differs is Pelican Key's beach end and what is spaced or drawn world-wide (4.6 item 5: the ATMs, the
+shared random stream). The build takes 3.8-4.1 s in the 2500 x 2800 frame and 8.1 s in the v3 frame (5040 x 4032,
+the same numbers); the island build alone 2.1-2.3 s.
+
+**Step B - scale 1.15 on the gulf's land** (`node --expose-gc tools/world3-place.mjs --land`: today's world, the land,
+the island in today's frame, then the place in the v3 frame - 9.0 s for the place). It builds:
+- **Area:** 244,894 land tiles against the island build's 187,926 (x1.30; Pelican Key is its own island in v3 and isn't
+  in it, so Metro City + Southbank alone grow x1.38: the new east shore, 8.3).
+- **Every district has ground, streets and buildings** (tiles / road tiles / buildings, today's buildings):
+
+  | district | tiles | road tiles | buildings (today's) |
+  |---|---|---|---|
+  | Pine Hills | 23,340 | 5,781 | 29 (25) |
+  | Midtown | 18,086 | 6,397 | 55 (47) |
+  | Northgate | 18,195 | 5,180 | 23 (11) |
+  | The Yards | 13,665 | 4,110 | 19 (15) |
+  | Downtown | 13,092 | 4,662 | 37 (25) |
+  | Civic Center | 6,431 | 1,654 | 10 (8) |
+  | Southside | 42,574 | 13,824 | 104 (83) |
+  | Neon Strip | 16,209 | 4,830 | 21 (15) |
+  | Harbor | 5,894 | 1,410 | 7 (1) |
+  | Sunset Beach | 10,193 | 3,377 | 14 (10) |
+  | Greenfield Park | 3,720 | 426 | 0 (0) |
+  | Bayside Heights | 23,214 | 5,833 | 17 (3) |
+  | The Pink Mile | 10,744 | 3,062 | 20 (11) |
+  | Old Town | 32,568 | 10,286 | 89 (39) |
+  | Arts District | 6,969 | 1,752 | 22 (19) |
+
+- **POIs:** every kind today's island has (3 hospitals, 2 police stations, 5 banks, 6 clubs, 6 stations, 5 gas
+  stations, the courthouse, the marina...), more of the numbered ones (homes 46 / 37, convenience 26 / 15, delivery
+  38 / 24, ATMs 50 / 47). Pelican Key's charter and rental stay with Pelican Key.
+- **The numbers** (placed / the island build, after the canal fix below): road edges 486 / 451, blocks 212 / 161,
+  buildings 470 / 316, POIs 242 / 201, props 5,034 / 4,404.
+- **The canal:** today's river bridges, placed, happen to cross it. Before the canal fix both Bridge Avenue and
+  Northbridge Avenue crossed, and the graph was 3 pieces (319 junctions, then 8 and 3). After it, the picture shows
+  Bridge Avenue stopping at both shores of the inlet and Northbridge Avenue over the canal. The graph is now 4 pieces:
+  **Metro City 212 junctions and Southbank 106 apart**, then 8 and 3. Northbridge's crossing doesn't join them in the
+  graph - to look at first next time. **The skeleton's six canal bridges (two of them footbridges) are not laid yet.**
+- **The streets join up** on each landmass (one piece each, plus the two short pieces cut off by the canal); across the
+  canal, see above.
+- Left out (other landmasses' roads, the skeleton's): the North Bridge, the Harbor Bridge, the West Hills and Dry Creek
+  station roads.
+
+**The picture:** `docs/world-v3-metro.png` (`node --expose-gc tools/world3-place-map.mjs`, heavy: about 3.5 minutes).
+On the left, today's Metro City cut from the world map's own tiles. On the right, the place built in the v3 frame and
+baked chunk by chunk with the game's chunk bake, lit and shrunk as `tools/build-worldmap2.mjs` does (1/16: a pixel is
+half a tile). The bake works on a v3-frame map as it is (it reads the map through its own index); 537 chunks, the
+open sea baked once.
+
+What looks right: the Metro Ring 1.15x larger round the core, Broadway's diagonal, Greenfield Park with its pond, the
+avenues, the Harbor, Pine Hills' drives, Southside's grid, the new east shore built up, and the canal splitting off
+Southbank, crossed by Bridge and Northbridge Avenues.
+
+What looks wrong:
+- **The canal's west end showed as a band of river water against the sea** (fixed, the third picture): between the
+  Harbor and Pine Hills it runs through a thin strip of the polygon's land (today's river mouth, which the land
+  layer's flood made land) and eats it whole. So its water (`m.river`, drawn as river) lay against the open sea
+  (drawn as sea), with the canal's stepped edge between them (a probe of the land: 2,278 canal tiles in that box beside
+  1,894 of open sea). Now the canal's water within 12 tiles of the open sea is the sea's: its mouths, and that strip.
+  The west half reads as today's inlet, and the canal proper is its east half. (Today's river trace is skipped on the
+  v3 land as well - `ownRiver` - but that wasn't the band.) The cost: Bridge Avenue no longer crosses (an avenue
+  bridges river water, not the sea), so of today's two river bridges only Northbridge Avenue crosses the canal. A
+  small wedge of river water is left on Pine Hills' north-west shore.
+- **The railway runs over the sea:** its loop is laid whole (4.7 item 4). It shows as the thin line east of the
+  island and runs off south-west into the bay. The skeleton's main line replaces it.
+- **Cedar Avenue's bridge runs out to nowhere:** today it leads to Cedar Isle. In v3 Cedar Isle is east of Metro City,
+  so the placed bridge ends in the sea south-west of the Harbor. It isn't left out because no other land is under it.
+  The roads off a place need the skeleton's crossings (item 3 below), and a road that ends over the sea should be
+  cut at the shore.
+- **The new east shore is ruler-straight:** the polygon's east side, with one long strip of blocks along it. Bayside
+  Heights and Southside run on to it with a parkway down its length. It wants the coast's wobble (8.3 item 5) and
+  some depth.
+- **One avenue crosses the canal** (Northbridge Avenue): the skeleton's six canal bridges, two of them footbridges,
+  are still to come (item 2), and the inlet's crossing with them.
+
+**What's left** (next steps, in order):
+1. **Inside metro.js at scale 1.15:** the street plan runs in today's coordinates and is placed after, so its pitches
+   scale with the place (more blocks, as the numbers show, but each a little bigger, x1.15). The right form: the plan's
+   anchors (the avenues, Broadway, `AREAS`, `THROUGH`, the hero corner) placed, its patterns not, its hashes on `LX` /
+   `LY`. The same for `islands.js`' roads and the countryside's when their places are built.
+2. **The canal's bridges:** the skeleton's six (its arterials and footbridges over the canal), laid as lines on the
+   place; and the roads that run off the place over the sea (Cedar Avenue's bridge, the railway) cut at the shore.
+3. **The sources not placed yet** (grep found them; the Metro City build doesn't reach them): Dry Creek's farm
+   (`FARM_FIELDS`, the barn, the drop site, the farmhouses), the Gull Isles' harbours (`buildGullIsles`), the airports
+   (`AIRPORTS`), `ISLAND_ESTATES`, `FARM_STANDS`, `VILLAGES`, `naturesites.js`' sites, `countryside.js`' `SITES`, the
+   scene islands, the offshore sampling grid. Each place's build will need its own: grep the generator for today's
+   coordinates. The Step A test of each place is the check.
+4. **For the skeleton's roads to join the places:** each place's `leftOut` (its bridges and station roads) is where the
+   skeleton's arterials meet it; the skeleton's lines are laid in the v3 frame, so they go into a placed build's
+   `lines` as they are (no placement).

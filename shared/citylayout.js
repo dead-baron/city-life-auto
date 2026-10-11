@@ -73,8 +73,8 @@ export function smoothLine(pts, tol = 20) {
 
 // --------------------------------------------------------------------------------------------
 // The ring highway (px, closed, clockwise) and its frontage roads.
-export function ringLine() {
-  const pts = rounded(RING.map(([x, y]) => P(x, y)), RING_R * TILE, true, 12);
+export function ringLine(tf = null) {   // (tf: World v3's placed builds - today's corner (tiles) to the frame's)
+  const pts = rounded(RING.map(([x, y]) => (tf ? P(...tf(x, y)) : P(x, y))), RING_R * TILE, true, 12);
   measure(pts);
   return pts;
 }

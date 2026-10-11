@@ -6783,3 +6783,47 @@ is unchanged (its hash too) - browsers re-bake the art chunks once (the art hash
   place's cut-away builds and carries its fit-out; each hospital one HOSPITAL plaque and no lamp under its canopy; the
   classic renderer draws every food place, hospital and police lobby), `test/activities.test.js` (the debug menu's 12
   kinds), `test/cells.test.js`, `test/perf.test.js`.
+## 2026-10-10 · World v3, stage 2, step 2: Metro City + Southbank built at its gulf place
+
+What was asked (the coordinator, from the owner's gulf plan, part 7: "making the urban city islands like metro city and
+Southbank much larger ... with a narrower yet still boatable waterway that splits the large island up in two"): build
+Metro City + Southbank in the v3 frame at its gulf place - first at today's size (the proof that everything the build
+takes from today's world goes through the placement), then at 1.15 on the gulf's land, with the canal through it.
+
+What it does (docs/WORLD-V3.md 8.4 has the numbers):
+- **A placement for an island build:** `generateCity(seed, { island: 'metro', frame, place: { at, scale, from } })`.
+  Every position the build takes from today's world goes through `at + (p - from) * scale`. That covers the district
+  seeds, the river's trace and the zone line, the Metro Ring, the railway and its stations, the parks and lakes, the
+  planned businesses' spots, the hero corner, the Arts District and Museum Square. Sizes don't scale. The street plan
+  (`metro.js`), `islands.js`' and the countryside's roads run in today's coordinates, and what they lay is placed.
+  Position seeds and hashes read today's coordinates back (the offset taken off), so at scale 1 the place is today's,
+  moved.
+- **Step A (scale 1):** Metro City at [1850, 2050] is the island build moved: every land, district, zone, river and
+  sea-distance tile, all 451 road edges, 312 of 316 buildings, 196 of 201 POIs, 92% of the props (Pelican Key's beach
+  end and the world-wide ATMs differ).
+- **Step B (1.15 on `buildLand3`'s land:** the polygon, the canal as river water, the land layer's districts and
+  zones): it builds in 9 s in the v3 frame. 1.30x the land, every district with ground, streets and buildings, every
+  kind of POI, 486 road edges (today's 451), 470 buildings (316). Metro City's and Southbank's streets are one piece
+  each; across the canal the graph doesn't join them yet (to look at). Two avenue bridges cross the canal; the
+  skeleton's six canal bridges aren't laid yet.
+- **The picture:** `docs/world-v3-metro.png` (`tools/world3-place-map.mjs`): today's Metro City from the world map
+  beside the place in the v3 frame, baked with the game's chunk bake as the world map is. What looks wrong: the
+  railway's loop runs over the sea, Cedar Avenue's bridge runs out to nowhere (its Cedar Isle is elsewhere now), the
+  new east shore is ruler-straight, and only Northbridge Avenue crosses the canal. Fixed on the way: the canal's west
+  end showed as a band of river water against the open sea (it eats a thin strip of the polygon's land whole), so
+  the canal's water within 12 tiles of the open sea is the sea's now (the west half reads as today's inlet); and
+  today's river trace is skipped on the v3 land (the canal is the river there).
+- **Not done yet:** the street plan placed from inside `metro.js` (at 1.15 its pitches scale with the place), the
+  canal's six bridges, the roads off the place cut at the shore.
+- The live world is unchanged: the world hash stays `6b6e16fdef9f`. The page's code grows 1.5 KB gzipped (the
+  placement's helpers in `shared/map.js`): 722 KB, at its budget, until the generator leaves the page.
+
+The files: `shared/world3-islands.js` (`placement`, the land moved or taken from the v3 land, the zones and districts
+hooks), `shared/map.js` (the placement's helpers `PX` / `PY` / `QX` / `QY` / `LX` / `LY` / `IX` / `IY` / `gridOff` and
+their uses in the generator's passes), `shared/citylayout.js` (`ringLine(tf)`), `tools/world3-place.mjs` (Step A's
+comparison; `--land`: Step B's report), `tools/world3-place-map.mjs` (the picture), `test/world3place.test.js`,
+`docs/WORLD-V3.md` 8.4.
+
+Tests: `test/world3place.test.js` (new: Metro City at its gulf place at scale 1 is the island build moved - its layers
+to the tile, every road edge, buildings 97%+, POIs 95%+, props 90%+); `test/world3.test.js` passes as before (today's
+world is still the stamped one).
