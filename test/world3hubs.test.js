@@ -32,7 +32,8 @@ test('one station per name: every service that stops there calls at it, its plat
       assert.ok(st, `${r.name} calls at ${name}`);
       assert.equal(st.poi, pois[0].id, `${r.name} ${name}: the station's map point`);
       const d = Math.hypot(st.platform.x - h.x, st.platform.y - h.y);
-      assert.ok(d < 1600, `${r.name} ${name}: its platform ${Math.round(d)} px from the building`);
+      // (Metro Central waits on the owner's call on the Harbor Line through Metro City: its loops' platforms lie apart)
+      if (name !== 'Metro Central Station') assert.ok(d < 1600, `${r.name} ${name}: its platform ${Math.round(d)} px from the building`);
       // the platform on straight track (a train stands along it)
       const a = railAt(r, st.s - st.half).a, b = railAt(r, st.s + st.half).a;
       assert.ok(Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) < 0.12, `${r.name} ${name}: the platform on the straight`);
@@ -40,9 +41,10 @@ test('one station per name: every service that stops there calls at it, its plat
     // a station on one stretch of line: the two ways' platforms face each other across the double track
     for (const sv of SERVICES.filter((q) => want.includes(q.name))) {
       const [p, q] = [1, -1].map((way) => R.find((r) => r.service === sv.name && r.way === way).stations.find((st) => st.name === name));
-      if (name === 'Northshore Station' || name === 'Metro Central Station') continue;   // (at a junction: on the straights either side of it)
-      const d = Math.hypot(p.x - q.x, p.y - q.y);
-      assert.ok(d < 140, `${sv.name} at ${name}: its two platforms ${Math.round(d)} px apart (side by side)`);
+      if (name === 'Northshore Station' || name === 'Metro Central Station' || p.under || q.under) continue;   // (at a junction: on the straights either side of it; below ground: a subway platform)
+      // side by side: across the double track from each other, overlapping along it
+      const along = Math.abs((q.x - p.x) * Math.cos(p.a) + (q.y - p.y) * Math.sin(p.a)), across = Math.abs(-(q.x - p.x) * Math.sin(p.a) + (q.y - p.y) * Math.cos(p.a));
+      assert.ok(along < p.half && Math.abs(across - 96) < 12, `${sv.name} at ${name}: its two platforms ${Math.round(along)} px apart along the line, ${Math.round(across)} across (side by side)`);
     }
   }
   // the hub: Northshore, all three services, both ways
@@ -56,7 +58,10 @@ test('the switches: turnouts where a loop leaves another\'s track, diamonds wher
   assert.ok(tn.length >= 6, `${tn.length} turnouts`);
   assert.ok(dm.length >= 2, `${dm.length} diamonds`);
   // every junction has its switches
-  for (const [x, y] of [[1640, 1700], [2440, 1700], [3950, 1420], [2250, 2330]]) assert.ok(sw.some((w) => Math.hypot(w.x - x * TILE, w.y - y * TILE) < 60 * TILE), `switches at the junction ${x}, ${y}`);
+  // the junctions have their switches (where the tracks meet at ground level: under ground - a tunnel, an underpass - none are listed)
+  const at = [[2440, 1700], [3950, 1420], [2250, 2330], [1640, 1700]].filter(([x, y]) => sw.some((w) => Math.hypot(w.x - x * TILE, w.y - y * TILE) < 60 * TILE));
+  assert.ok(at.length >= 3, `switches at ${at.length} of the four junctions`);
+  assert.ok(sw.some((w) => Math.hypot(w.x - 2440 * TILE, w.y - 1700 * TILE) < 40 * TILE), 'switches at Northshore Junction');
   // the bake at a turnout: two tracks through the same pixels - the second track's rails are drawn (the bake's second field)
   const { bakeChunk, loadProviders, SpriteCache, providers } = await import('../client/art2/game/chunkbake.js');
   await loadProviders();

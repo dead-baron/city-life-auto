@@ -3008,11 +3008,15 @@ function stationIndex(m, pts, line = null) {
 // (H33) A station's place on one of World v3's loops: worked out once per station for every loop calling there
 // (hubPlan), so loops on one track stop at one platform and the two tracks' platforms stand side by side.
 const hubPlans = new WeakMap();   // (the list of loops -> station name -> loop -> its point)
+const underpassed = new WeakSet();   // (the loops whose underpasses are marked)
 function hubIndex(m, line, name, sx, sy) {
   const all = line.all || [line];
   let plans = hubPlans.get(all);
   if (!plans) hubPlans.set(all, (plans = new Map()));
-  if (!plans.has(name)) plans.set(name, hubPlan(m, all.filter((l) => l.stations.some((st) => st.name === name)), all, sx, sy));
+  if (!plans.has(name)) {
+    for (const l of all) if (!underpassed.has(l)) { markUnderpasses(m, l.pts); underpassed.add(l); }   // (every loop's underpasses known first)
+    plans.set(name, hubPlan(m, all.filter((l) => l.stations.some((st) => st.name === name)), all, sx, sy));
+  }
   return plans.get(name).get(line);
 }
 // Each calling loop's candidates: its points near the station's spot (the skeleton's) where a whole platform stands on
@@ -3229,7 +3233,7 @@ function markUnderpasses(m, pts) {
 }
 function reserveRail(m, pts, line = null) {
   if (!pts.length) return;   // (no railway: OPTS.noRail)
-  markUnderpasses(m, pts);
+  if (!line || !underpassed.has(line)) { markUnderpasses(m, pts); if (line) underpassed.add(line); }
   for (const p of pts) {
     if (p.under) continue;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {

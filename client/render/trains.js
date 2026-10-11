@@ -58,7 +58,7 @@ export function drawRailSwitches(g, m, cx, cy) {
     if (w.kind === 'turnout') {
       g.translate(w.fx, w.fy); g.rotate(w.a);
       g.fillStyle = '#6d7078'; g.beginPath(); g.moveTo(-14, 0); g.lineTo(10, -5); g.lineTo(10, 5); g.closePath(); g.fill();   // the frog
-      g.setTransform(g.getTransform().translate(0, 0)); g.restore(); g.save();
+      g.restore(); g.save();
       g.translate(w.x, w.y); g.rotate(w.a);
       g.fillStyle = '#2e3a2e'; g.fillRect(-8, 28, 16, 10); g.fillStyle = '#d8c040'; g.fillRect(-2, 26, 4, 6);   // the point lever
     } else {
