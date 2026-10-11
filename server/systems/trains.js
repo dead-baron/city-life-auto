@@ -143,6 +143,9 @@ function initLoops(world) {
   });
   world.railLap = world.railTimings[0].reduce((a, q) => a + q.total + TRAIN_DWELL_S, 0);
   world.xing = (world.map.railXings || rails[0].crossings).map(() => ({ down: false, eta: 99, closure: 0, broken: [0, 0] }));
+  // the tiles near the line, made now: every point of every loop - made by the first person near a track, in their
+  // tick, it froze the server's first ticks with players spread over World v3 for a second or two (8.23.1)
+  loopTiles(world);
 }
 const CELL = 32, FOOT = [-24, 0, 24];
 // (World v3's subway lines below ground - their points `subway` - run a level deeper than the main line and its tunnels:
