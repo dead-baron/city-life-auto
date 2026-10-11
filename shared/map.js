@@ -3859,24 +3859,19 @@ function buildQuays(m, quays) {
       if (k % 6 === 3 && open(m.tiles[i]) && !m.reserve[i]) addProp(m, 'crates', (bx + 0.5) * TILE, (y + 0.5) * TILE, 12);
     }
     m.quays.push({ name: q.name, x: x0 * TILE, y: y0 * TILE, w: (x1 - x0) * TILE, h: (y1 - y0) * TILE, length: edge.length, cranes });
-    buildContainerPort(m, q, edge, west, cranes);   // (the quay's district as a container port: its own pass)
+    buildContainerPort(m, q, edge, west, cranes);
   }
 }
-// World v3's container port (docs/WORLD-V3.md 8.5; the owner's plan, 1.2: "WR3's container port with cranes"): the
-// quay's district behind the dock, cleared of the harbor style's warehouse slabs (the freight stop's row of warehouses
-// and the junkyard stay), paved and laid out as a container yard - an apron along the quay under the cranes' back
-// reach, pairs of container-stack blocks with truck lanes between them and a cross lane every four blocks, light
-// masts, a few straddle carriers parked, a gatehouse at the gate onto the road - and the quay's ship-to-shore gantry
-// cranes (props on its rails) and a container ship moored along it. m.port: the yard, its blocks, lanes and gate.
-const PORT = { apron: 6, bw: 5, bl: 8, lane: 4, group: 4, ship: [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 10] };   // (tiles; the ship: stern, nine holds, bow)
+// World v3's container port (docs/WORLD-V3.md 8.5): the quay's district cleared and laid out as a container yard, the
+// quay's gantry cranes and a ship moored (m.port; tiles - the ship: stern, nine holds, bow)
+const PORT = { apron: 6, bw: 5, bl: 8, lane: 4, group: 4, ship: [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 10] };
 function buildContainerPort(m, q, edge, west, cranes) {
   if (edge.length < 60) return;
   const W = m.w, [rx0, ry0, rx1, ry1] = q.rect, dir = west ? 1 : -1, RW = rx1 - rx0, RH = ry1 - ry0;
   const inRect = (x, y) => x >= rx0 && x < rx1 && y >= ry0 && y < ry1, li = (x, y) => (y - ry0) * RW + (x - rx0);
   const mid = edge[edge.length >> 1], dd = m.dist[mid[1] * W + mid[0] + dir * 12];
   const hv = (a, b) => (((a * 73856093) ^ (b * 19349663)) >>> 0) % 9973;
-  // what stays: the freight stop's row of warehouses, the junkyard; the rest of the district's buildings in the
-  // rectangle are cleared (and the props on the ground that becomes the yard)
+  // (the freight stop's row and the junkyard stay)
   const fr = m.buildings.find((b) => !b.gone && b.name === q.freight && inRect(b.tx, b.ty));
   const keepB = new Set(m.buildings.filter((b) => !b.gone && inRect(b.tx, b.ty) && (b.kind === 'junkyard' || (fr && b.ty === fr.ty && b.th === fr.th))).map((b) => b.id));
   for (const b of m.buildings) {
@@ -3887,22 +3882,19 @@ function buildContainerPort(m, q, edge, west, cranes) {
   for (const id of keepB) { const b = m.buildings[id]; for (let y = b.ty - 1; y <= b.ty + b.th; y++) for (let x = b.tx - 1; x <= b.tx + b.tw; x++) if (inRect(x, y)) keep[li(x, y)] = 1; }
   for (const [sx, y] of edge) if (inRect(sx, y)) sxOf[y - ry0] = sx;
   const cnt = new Map(); for (const [sx] of edge) cnt.set(sx, (cnt.get(sx) || 0) + 1);
-  const SX = [...cnt].sort((a, b) => b[1] - a[1])[0][0], X0 = SX + dir * (3 + PORT.apron);   // (the straight quay's shore)
+  const SX = [...cnt].sort((a, b) => b[1] - a[1])[0][0], X0 = SX + dir * (3 + PORT.apron);
   const NOT = new Set([T.ROAD, T.SIDEWALK, T.BRIDGE, T.WATER, T.DEEP, T.DOCK, T.BUILDING]);
   for (let y = ry0; y < ry1; y++) {
-    const sx = sxOf[y - ry0] >= 0 ? sxOf[y - ry0] : SX;   // (past the quay's ends: as far out as the quay)
+    const sx = sxOf[y - ry0] >= 0 ? sxOf[y - ry0] : SX;
     let run = -1;
     for (let x = rx0; x <= rx1; x++) {
       const ok = x < rx1 && (west ? x >= sx + 3 : x <= sx - 3) && m.dist[y * W + x] === dd && !NOT.has(m.tiles[y * W + x]) && !keep[li(x, y)];
       if (ok) { yard[li(x, y)] = 1; if (run < 0) run = x; } else if (run >= 0) { clearArea(m, run, y, x - run, 1); run = -1; }
     }
   }
-  // (paved: the yard, and the cleared ground round the buildings that stay)
   for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) if (yard[li(x, y)] || (keep[li(x, y)] && m.dist[y * W + x] === dd && m.tiles[y * W + x] === T.GRASS)) m.set(x, y, T.LOT);
-  // the grid: from the dock back, the apron, then pairs of blocks (a tile between them) and a lane; along the quay,
-  // groups of four blocks (a tile between them) and a cross lane
+  // from the dock back: the apron, pairs of blocks and a lane; along the quay, groups of four blocks and a cross lane
   const isYard = (x, y) => inRect(x, y) && yard[li(x, y)] === 1;
-  // (the straight quay's rows, QY0..QY1: the ship and the rails; the yard's rows at the grid's first column, Y0..Y1)
   let QY0 = -1, QY1 = -1, Y0 = -1, Y1 = -1;
   for (let y = ry0; y < ry1; y++) { if (sxOf[y - ry0] === SX) { if (QY0 < 0) QY0 = y; QY1 = y; } if (isYard(X0, y)) { if (Y0 < 0) Y0 = y; Y1 = y; } }
   const blocks = [], lanes = [], solid = [], P = 2 * PORT.bw + 1 + PORT.lane, GP = PORT.group * (PORT.bl + 1) + PORT.lane - 1;
@@ -3924,8 +3916,7 @@ function buildContainerPort(m, q, edge, west, cranes) {
     for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) solidAt((x + 0.5) * TILE, (y + 0.5) * TILE, 18);
   }
   const at = new Set(blocks.map((b) => `${b.x},${b.y}`));
-  // light masts in the tile between a pair, between a group's second and third blocks; straddle carriers parked in a
-  // lane beside every third group
+  // masts between a pair, straddle carriers parked in a lane
   for (const b of blocks) {
     if (b.pair !== 0 || b.r !== 2) continue;
     const ox = west ? b.x + PORT.bw : b.x - 1;
@@ -3942,15 +3933,14 @@ function buildContainerPort(m, q, edge, west, cranes) {
     addProp(m, 'straddle', lx * TILE, ly * TILE, 0, { a: Math.PI / 2, tall: 120 });
     solidAt(lx * TILE, (ly - 0.7) * TILE, 18); solidAt(lx * TILE, (ly + 0.7) * TILE, 18);
   }
-  // the gate: where a lane meets the pavement with a road just past it - the gatehouse beside it, inside the yard
-  // (the way out nearest the middle of the stacks: on a cross lane if one reaches the road)
+  // the gate: a lane, a pavement, then a road - nearest the stacks' middle; the gatehouse beside it
   let gate = null, best = 1e18;
   const mx = blocks.reduce((a, b) => a + b.x + b.w / 2, 0) / Math.max(1, blocks.length), my = blocks.reduce((a, b) => a + b.y + b.h / 2, 0) / Math.max(1, blocks.length);
   const onLane = (y) => lanes.some((l) => l.ew && y >= l.y && y < l.y + l.h);
   for (let y = ry0; y < ry1; y++) for (let x = rx0; x < rx1; x++) {
     if (!isYard(x, y)) continue;
     for (const [dx, dy] of [[0, 1], [dir, 0], [0, -1]]) {
-      if (!isYard(x - dy, y - dx) || !isYard(x + dy, y + dx)) continue;   // (a lane at least three wide across the way out)
+      if (!isYard(x - dy, y - dx) || !isYard(x + dy, y + dx)) continue;
       let n = 1;
       while (n < 5 && m.tiles[(y + dy * n) * W + x + dx * n] === T.SIDEWALK) n++;
       const sc = (x - mx) ** 2 + (y - my) ** 2 + (dx && onLane(y) && onLane(y - 1) && onLane(y + 1) ? 0 : 400);
@@ -3970,15 +3960,14 @@ function buildContainerPort(m, q, edge, west, cranes) {
     }
     addProp(m, 'ygate', (gate.tx + 0.5) * TILE, (gate.ty + 0.5) * TILE, 0, { a: gate.dy ? 0 : Math.PI / 2 });
   }
-  // the fence: round the part of the yard the gate opens from, along its sides that face a pavement or a road (a
-  // chain-link run 10 px in from the edge, in pieces of up to four tiles), open at the gate
+  // the fence along the gate's part of the yard where it faces the street, open at the gate
   const fences = [];
   if (gate) {
     const part = new Uint8Array(RW * RH), st = [[gate.tx, gate.ty]];
     part[li(gate.tx, gate.ty)] = 1;
     while (st.length) { const [x, y] = st.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (isYard(x + dx, y + dy) && !part[li(x + dx, y + dy)]) { part[li(x + dx, y + dy)] = 1; st.push([x + dx, y + dy]); } }
     const street = (x, y) => { const t = m.tiles[y * W + x]; return t === T.SIDEWALK || t === T.ROAD; };
-    const open = (x, y) => Math.abs(x - gate.tx) <= 2 && Math.abs(y - gate.ty) <= 2;   // (the gate's lane, and the corners beside it)
+    const open = (x, y) => Math.abs(x - gate.tx) <= 2 && Math.abs(y - gate.ty) <= 2;
     const piece = (x0, y0, x1, y1) => {
       const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / (4 * TILE)));
       for (let k = 0; k < n; k++) {
@@ -3987,7 +3976,7 @@ function buildContainerPort(m, q, edge, west, cranes) {
         fences.push([ax, ay, bx, by]);
       }
       const len = Math.hypot(x1 - x0, y1 - y0);
-      for (let d = 8; d <= len - 8; d += 12) solidAt(x0 + (x1 - x0) * d / len, y0 + (y1 - y0) * d / len, 7);   // (inside the run's ends: off the pavement round a corner)
+      for (let d = 8; d <= len - 8; d += 12) solidAt(x0 + (x1 - x0) * d / len, y0 + (y1 - y0) * d / len, 7);
     };
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const outer = dx ? RW : RH, inner = dx ? RH : RW;
@@ -4006,8 +3995,7 @@ function buildContainerPort(m, q, edge, west, cranes) {
       }
     }
   }
-  // the cranes on the quay's rails (legs on the dock's outer tile and on the apron's first: off any road), every
-  // other one with a box on its spreader; the ship alongside, on the water off the middle of the quay
+  // the cranes on the quay's edge, the rails, the ship alongside
   const rail = [(SX + (west ? 0.4 : 0.6)) * TILE, (SX + dir * 3.6 + (west ? 0 : 1)) * TILE];
   const cr = [];
   for (const [n, c] of cranes.entries()) {
@@ -4015,10 +4003,10 @@ function buildContainerPort(m, q, edge, west, cranes) {
     let ok = true;
     for (const dy of [-36, 36]) {
       const ty = Math.floor((c.y + dy) / TILE), wx = Math.floor(rail[0] / TILE), w = m.tiles[ty * W + wx - dir];
-      if (m.tiles[ty * W + wx] !== T.DOCK || (w !== T.WATER && w !== T.DEEP) || m.tiles[ty * W + Math.floor(rail[1] / TILE)] !== T.LOT) ok = false;   // (on the straight quay's edge)
+      if (m.tiles[ty * W + wx] !== T.DOCK || (w !== T.WATER && w !== T.DEEP) || m.tiles[ty * W + Math.floor(rail[1] / TILE)] !== T.LOT) ok = false;
     }
     if (!ok) continue;
-    addProp(m, 'gcrane', cx, c.y, 0, { a: west ? 0 : Math.PI, k: n % 2, tall: 720 });   // (tall: the classic renderer keeps it while its boom shows)
+    addProp(m, 'gcrane', cx, c.y, 0, { a: west ? 0 : Math.PI, k: n % 2, tall: 720 });
     for (const lx of rail) for (const dy of [-36, 36]) solidAt(lx, c.y + dy, 9);
     cr.push({ x: cx, y: c.y });
   }

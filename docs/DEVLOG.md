@@ -7045,5 +7045,6 @@ overhead), `client/main.js` (a prop's own `tall` keeps it in view), `test/world3
 Tests: `test/world3port.test.js` (new: Westport at its gulf place - the slabs gone; the blocks on the paving with a tile
 of yard round them, not overlapping, off every lane and the apron; the cranes' legs on the dock's edge and the apron,
 their booms over the water; the gate a pavement from a road with the gatehouse by it; the fence open at the gate; no solid on a road or a pavement;
-the ship on the water; Westport Freight still a delivery stop); the page's code budget (`test/perf.test.js`, its first
-test) passes.
+the ship on the water; Westport Freight still a delivery stop); the code budgets (`test/perf.test.js`, its first test)
+pass - the city's code (the generator, gzipped) is at 340.3 of its 340 KB (it rounds to 340): the next generator
+change needs the budget raised or code moved out.
