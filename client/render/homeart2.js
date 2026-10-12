@@ -55,6 +55,7 @@ const WOOD = ['#8c7458', '#9a6c44', '#a8784a', '#c49464'].map((c) => ramp(c, 6, 
 const CARPET = ['#6e6a5c', '#5a6a86', '#7a4e48', '#4a3a5e'].map((c) => ramp(c, 6, 3));
 const TILE = [['#c8c6b6', '#a8a696'], ['#dcdcd2', '#7a9ab0'], ['#e6e4da', '#c8d0d6'], ['#f2f0ea', '#dedad0']].map((p) => p.map((c) => ramp(c, 5, 2)));
 const CONC = ramp('#8e8c88', 6, 3);
+const RUNNER = ramp('#8a2e2a', 6, 3);   // (H71: a lobby's landing)
 const PAPER = { living: ['#b8a888', '#c8b48e', '#d8c49a', '#3e4a5a'], bed: ['#a8a090', '#8aa0b4', '#9ab08e', '#6a2e36'], kitchen: ['#d0ccb8', '#e0dcc8', '#e8e4d4', '#e8e6de'], bath: ['#c8ccc4', '#d8e4ea', '#d8e4ea', '#e8eef0'] };
 const OUTSIDE = ['#8a929a', '#8e4a3c', '#b8a07a', '#d8d0c0'];   // the front wall's outside: tin, brick, siding, stone
 const CAP = ramp('#3a3440', 5, 2), RIM = ramp('#8a8070', 5, 2);
@@ -68,6 +69,7 @@ function floorPx(kind, tier, wx, wy, x, y) {
     if (tier >= 3 && Math.abs(Math.sin((wx + wy * 0.6) * 0.09 + vnoise(wx, wy, 14, 2) * 4)) < 0.06) t -= 0.25;   // the marble's veins
     return step(P[ch ? 1 : 0], t, x, y, 0.4);
   }
+  if (kind === 'u') { const e = Math.min(wy - 36, 156 - wy); return step(RUNNER, e < 8 ? (e < 2 ? 0.25 : 0.62) : 0.45 + (vnoise(wx, wy, 6, 4) - 0.5) * 0.2 + ((Math.floor(wx / 8) + Math.floor(wy / 8)) & 1 ? 0.06 : 0), x, y, 0.5); }   // (H71: a lobby's runner, its border)
   if (kind === 'c') return step(CARPET[tier], 0.5 + (vnoise(wx, wy, 6, 4) - 0.5) * 0.3 + (hash(wx, wy, 7) - 0.5) * 0.12, x, y, 0.6);
   if (kind === 'g') {
     let t = 0.52 + (vnoise(wx, wy, 26, 5) - 0.5) * 0.22 + (hash(wx >> 1, wy >> 1, 6) - 0.5) * 0.08;
@@ -155,6 +157,7 @@ export class HomeArt {
     const f = this.L.floorAt && this.L.floorAt(tx, ty);   // (H67: a new floor laid in the room - shared/homedecor.js)
     if (f) return f[1] === '.' ? '.' : f[1];
     const ch = this.L.cell(tx, ty);
+    if (ch === 'c' && /^lobby/.test(this.L.key)) return 'u';   // (H71: a lobby's landing - the red runner)
     if (ch === 't' || ch === 'g' || ch === 'c') return ch;
     const r = this.R.at(tx, ty);
     if (r && r.kind === 'garage') return 'g';
@@ -166,7 +169,7 @@ export class HomeArt {
   // apartment - the path from the front door, the drive from the garage, a few flowers along the front of a good one
   buildYard() {
     const L = this.L, ap = this.ap, M = YARD, G = new GBuf(Math.ceil((L.w + 2 * M) / ap), Math.ceil((L.h + 2 * M) / ap));
-    const paved = L.key === 'apartment' || /^lobby/.test(L.key), grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
+    const paved = /^(apartment|studio|penthouse|lobby)/.test(L.key), grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
     let r0 = L.cols, r1 = -1;
     for (let tx = 0; tx < L.cols; tx++) if (L.cell(tx, L.rows - 1) === 'R') { r0 = Math.min(r0, tx); r1 = Math.max(r1, tx); }
     for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {

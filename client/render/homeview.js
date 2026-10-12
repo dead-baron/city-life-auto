@@ -269,9 +269,9 @@ function petAt(pt) {   // (eased toward where the server has it: 20 steps a seco
 // its bed: a round cushion in a padded ring, dimmed after dark
 function petBedDraw(x, y) {
   const k = 0.55 + 0.45 * daylight();
-  g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(x + 1, y + 3, 14, 8, 0, 0, 6.28); g.fill();
-  g.fillStyle = `rgb(${Math.round(150 * k)},${Math.round(70 * k)},${Math.round(58 * k)})`; g.beginPath(); g.ellipse(x, y, 13, 8, 0, 0, 6.28); g.fill();
-  g.fillStyle = `rgb(${Math.round(222 * k)},${Math.round(200 * k)},${Math.round(160 * k)})`; g.beginPath(); g.ellipse(x, y + 1, 9, 5, 0, 0, 6.28); g.fill();
+  g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(x + 1, y + 4, 17, 10, 0, 0, 6.28); g.fill();
+  g.fillStyle = `rgb(${Math.round(150 * k)},${Math.round(70 * k)},${Math.round(58 * k)})`; g.beginPath(); g.ellipse(x, y + 2, 16, 10, 0, 0, 6.28); g.fill();
+  g.fillStyle = `rgb(${Math.round(222 * k)},${Math.round(200 * k)},${Math.round(160 * k)})`; g.beginPath(); g.ellipse(x, y + 3, 11, 6, 0, 0, 6.28); g.fill();
 }
 // the classic view's pet: a little top-down dog or cat, its tail going
 function petV1(now) {

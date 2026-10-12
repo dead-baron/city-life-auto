@@ -755,7 +755,7 @@ export function petBed(L) {
   let best = null, bd = Infinity;
   for (let ty = 1; ty < L.rows - 1; ty++) for (let tx = 1; tx < L.cols - 1; tx++) {
     if (!'.ct'.includes(L.cell(tx, ty)) || L.solid(tx, ty) || (Math.abs(tx - sx) <= 1 && ty >= sy - 1)) continue;
-    if (!L.solid(tx, ty - 1) && !L.solid(tx - 1, ty) && !L.solid(tx + 1, ty)) continue;
+    if ((!L.solid(tx, ty - 1) && !L.solid(tx - 1, ty) && !L.solid(tx + 1, ty)) || L.solid(tx, ty + 1)) continue;   // (against something, and nothing in front of it to hide it)
     const x = (tx + 0.5) * TILE_IN, y = (ty + 0.5) * TILE_IN, d = Math.hypot(x - near.x - near.w / 2, y - near.y - near.h / 2);
     if (d < bd) { bd = d; best = { x, y }; }
   }
