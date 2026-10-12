@@ -45,7 +45,7 @@ export function draw(g, F, S) {
   if (fires) {
     const s = fires.s || [], f = fires.f || [];
     // the scorched ground: dark (one shade, no seams between tiles), blotched darker, flecked with ash
-    g.fillStyle = 'rgba(30,22,14,0.55)';
+    g.fillStyle = 'rgba(30,22,14,0.64)';
     for (let i = 0; i < s.length; i += 2) { const x = s[i] * TILE, y = s[i + 1] * TILE; if (inV(x, y, 40)) g.fillRect(x, y, TILE, TILE); }
     for (let i = 0; i < s.length; i += 2) {
       const x = s[i] * TILE, y = s[i + 1] * TILE;

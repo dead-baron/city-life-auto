@@ -422,7 +422,11 @@ export function target(world, p, j) {
   if (!c) { const v = world.get(j.truck), at = v || j.station; return { text: j.text, x: Math.round(at.x), y: Math.round(at.y), stage: 'wait' }; }
   let x = c.x, y = c.y;
   if (c.k === 'person') { const q = world.get(c.victim); if (q) { x = q.x; y = q.y; } }
-  else if (c.k === 'grass') { const L = burningTiles(world, c.id); if (L.length) { x = 0; y = 0; for (const f of L) { x += f.tx * TILE + 16; y += f.ty * TILE + 16; } x /= L.length; y /= L.length; } }
+  else if (c.k === 'grass') {   // (the front nearest you: the middle of a grass fire is already burned out)
+    const at = p.ped || c, L = burningTiles(world, c.id);
+    let bd = Infinity;
+    for (const f of L) { const fx = f.tx * TILE + 16, fy = f.ty * TILE + 16, d = Math.hypot(fx - at.x, fy - at.y); if (d < bd) { bd = d; x = fx; y = fy; } }
+  }
   return { text: j.text, x: Math.round(x), y: Math.round(y), stage: j.stage };
 }
 
