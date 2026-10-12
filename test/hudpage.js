@@ -55,7 +55,7 @@ if (sc.st === 'police') b.classList.add('can-call');
 $('hud').classList.remove('hidden');
 if (sc.dev === 'touch') $('touch').classList.remove('hidden');
 const glyph = sc.dev === 'touch' ? '<span class="g-touch">ACT</span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
-const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + T.prompt + '</span>'; pr.classList.remove('hidden');
+const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + T.prompt + '</span>'; pr.classList.remove('hidden'); pr.classList.add('felony');
 for (const [i, n] of T.notes.entries()) { const el = document.createElement('div'); el.className = 'toast ' + ['info', 'warn', 'bad', 'good'][i]; el.textContent = n; $('toasts').appendChild(el); }
 $('job').textContent = T.job; $('job').classList.remove('hidden');
 if (sc.st === 'police') { $('cruiser-hint').textContent = T.cruiser; $('cruiser-hint').classList.remove('hidden'); }

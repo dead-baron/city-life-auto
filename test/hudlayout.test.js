@@ -17,3 +17,35 @@ test('the prompt, the notes, the job line and the cruiser hint are readable and 
   assert.ok(all.every((r) => r.read.some((b) => b.name === 'prompt')), 'the prompt shows everywhere');
   assert.deepEqual(bad, [], bad.slice(0, 30).join('\n'));
 });
+
+// the prompt's colour (hud.js: #helpbox.crime amber, .felony red): the server says what Act would be
+test('the prompt says when what Act would do is a crime, and when a felony', async () => {
+  const { makeWorld, joinPlayer, run, teleport } = await import('./helpers.js');
+  const players = await import('../server/systems/players.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  // somewhere with nothing else to Act on (the start can be a hospital's doors)
+  const x0 = p.ped.x, y0 = p.ped.y, far = (x, y) => Math.min(...w.map.pois.map((q) => Math.hypot(q.x - x, q.y - y)));
+  let best = null;
+  for (let dy = -1600; dy <= 1600; dy += 400) for (let dx = -1600; dx <= 1600; dx += 400) {
+    const x = x0 + dx, y = y0 + dy;
+    if (w.map.isWater(x, y) || (best && far(x, y) <= best.d)) continue;
+    teleport(w, p.ped, x, y);
+    if (!players.findInteraction(w, p)) best = { x, y, d: far(x, y) };
+  }
+  teleport(w, p.ped, best.x, best.y);
+  assert.equal(players.findInteraction(w, p), null, 'a quiet spot');
+  const near = (model, o = {}) => Object.assign(w.spawnVehicle(model, p.ped.x + 30, p.ped.y, 0, { npcOwned: true }), o);
+  const car = near('sedan');
+  run(w, 0.5);
+  assert.match(p.prompt, /Steal the Sedan - Vehicle theft/);
+  assert.equal(players.buildMe(w, p).pcr, 1, 'a crime: amber');
+  w.remove(car);
+  const cop = near('police');
+  run(w, 0.5);
+  assert.match(p.prompt, /\(felony\)/);
+  assert.equal(players.buildMe(w, p).pcr, 2, 'a felony: red');
+  Object.assign(cop, { owner: p.pid, npcOwned: false });
+  run(w, 0.5);
+  assert.equal(players.buildMe(w, p).pcr, 0, 'your own car: no crime');
+});

@@ -200,3 +200,12 @@ test('drawn in art v2: every shop piece as a model, a decorated house by day and
   const { closure } = await import('../tools/perf.mjs');
   assert.ok(!closure(['client/boot.js', 'client/main.js']).includes('shared/homedecor.js'), 'the decor code is not in the page\'s start-up code');
 });
+
+test('a piece that would cut most of the home off from the front door says so, not the first thing it would block (H70)', () => {
+  const none = { it: [] };
+  // a sofa across the house's hall: the rooms beyond it all cut off (it said "the shower")
+  assert.match(canPlace(layout('house', 2), none, { k: 'couch', tx: 4, ty: 5, r: 0 }), /cut the rest of the home off from the front door/);
+  assert.match(canPlace(layout('studio', 0), none, { k: 'couch', tx: 3, ty: 3, r: 0 }), /cut the rest of the home off/);
+  // a lamp at the trailer's bedroom door still names the bed it keeps you from (a room, not the home)
+  assert.match(canPlace(layout('trailer', 0), none, { k: 'lamp', tx: 8, ty: 3, r: 0 }), /bed|wardrobe|safe|shower/);
+});
