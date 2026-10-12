@@ -99,3 +99,31 @@ test('the news helicopter comes to circle a chase, then flies off', () => {
   for (let i = 0; i < 3 * 20; i++) w.step();
   assert.equal(f.mode, 'leave', 'the chase over: off it goes');
 });
+
+test('the news helicopter keeps its height clear of the police helicopter over a chase downtown - they never collide (H69)', async () => {
+  const policeair = await import('../server/systems/policeair.js');
+  const { POLICE_AIR } = await import('../shared/rules.js');
+  const w2 = makeWorld();
+  run(w2, 0.2);
+  const A2 = (w2.airTraffic ||= { flights: new Map(), nextAt: 1e9, newsAt: 1e9 });
+  const pad = policeair.hqPad(w2.map);
+  const { p } = joinPlayer(w2);
+  p.ped.x = pad.x + 1500; p.ped.y = pad.y + 300; w2.place(p.ped);   // (downtown: the roofs push both up to the same height)
+  const noCars = () => {
+    for (const vid of [...(w2.police || [])]) { const v = w2.get(vid); if (v) { for (const id of v.seats) { const c = id && w2.get(id); if (c) w2.remove(c); } w2.remove(v); } w2.police.delete(vid); }
+    for (const e of [...w2.entities.values()]) if (e.npc && e.npc.role === 'cop' && !e.npc.air) w2.remove(e);
+    if (w2.stops) w2.stops.clear();
+  };
+  law.addHeat(w2, p, STAR_HEAT[3] - p.heat + 1, p.ped.x, p.ped.y);
+  for (let i = 0; i < 30; i++) { noCars(); w2.step(); }
+  const u = w2.policeAir.get(p.pid), pv = w2.get(u.vid);
+  const nv = airtraffic.news(w2, A2, p);
+  let closest = Infinity;
+  for (let i = 0; i < 40 * 20; i++) {
+    noCars(); p.seenAt = w2.time; w2.step();
+    if (Math.hypot(pv.x - nv.x, pv.y - nv.y) < 300 && (pv.alt || 0) > FLY.HIGH) closest = Math.min(closest, Math.abs(pv.alt - nv.alt));
+  }
+  assert.ok(!pv.wreckAt && !nv.wreckAt, 'neither came down');
+  assert.ok(closest > 50, `never near each other at one height (${closest === Infinity ? 'never near' : Math.round(closest)} px apart when close)`);
+  assert.ok(nv.alt >= pv.alt + POLICE_AIR.sep - 40, `the news one above the police one (${Math.round(nv.alt)} vs ${Math.round(pv.alt)})`);
+});
