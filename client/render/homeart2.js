@@ -214,12 +214,13 @@ export class HomeArt {
     }
     this.yard = { G, x: -M, y: -M };
   }
-  // (H77) the yard's furniture: where it stands round each kind of home - [kind, x, y, w, d] (px; y the back of it)
+  // (H77) the yard's furniture: where it stands round each kind of home - [kind, x, y, w, d] (px; y the back of it); the
+  // raised beds at the back, where a home's garden plots are on its lot (H61: server/systems/gardening.js)
   yardThings() {
     const L = this.L, W = L.w, H = L.h, M = YARD, k = L.key;
     if (k === 'house') return [['patio', 30, -M + 14, 64, 56], ['mower', 160, -M + 26, 32, 32], ['bed', W - 220, -M + 22, 64, 32], ['bed', W - 140, -M + 22, 64, 32]];
-    if (k === 'trailer') return [['chair', W - 60, -M + 22, 32, 32], ['bed', 20, -M + 24, 64, 32]];
-    if (k === 'mansion') return [['patio', 120, -M + 10, 64, 56], ['chair', 260, -M + 24, 32, 32], ['chair', 300, -M + 24, 32, 32], ['chair', W - 200, -M + 24, 32, 32]];
+    if (k === 'trailer') return [['chair', W - 60, -M + 22, 32, 32]];   // (a shack has no garden plots: H61)
+    if (k === 'mansion') return [['patio', 120, -M + 10, 64, 56], ['chair', 260, -M + 24, 32, 32], ['chair', 300, -M + 24, 32, 32], ['bed', W - 330, -M + 22, 64, 32], ['bed', W - 250, -M + 22, 64, 32], ['chair', W - 150, -M + 24, 32, 32]];
     void H;
     return [];
   }
