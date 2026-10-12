@@ -693,3 +693,8 @@ export const POLICE_AIR = { stars: 3, alt: 300, clear: 70, sightPx: 1100, orbitR
 // rolling out and stopping). A news helicopter over a chase at newsStars or more: circling newsR px out at newsAlt for
 // newsS s, then away; another not before newsEveryS s.
 export const AIR_TRAFFIC = { firstS: 60, everyS: 150, nearPx: 3200, approachPx: 2600, approachV: 470, glide: 0.11, cruise: 420, newsStars: 3, newsR: 520, newsAlt: 420, newsS: 90, newsEveryS: 240 };
+
+// ---- decorating your home (H67; shared/homedecor.js has the pieces): the furniture's prices at the hardware store's
+// counter, a placed piece sold back for sellBack of its price, a room's walls painted (paint) or a new floor (floor), at
+// most max pieces placed in a home
+export const DECOR = { sellBack: 0.5, paint: 80, floor: 150, max: 40, price: { couch: 350, armchair: 220, table: 260, bedside: 90, lamp: 70, bookshelf: 180, plant: 45, tv: 400, walltv: 650, art: 120, rug: 150, washer: 480, workbench: 300 } };

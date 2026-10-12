@@ -25,6 +25,7 @@ import * as farming from './farming.js';
 
 import * as homeinside from './homeinside.js';
 import * as mortgage from './mortgage.js';
+import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
 import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
@@ -152,6 +153,7 @@ export function buildMenu(world, p, poi) {
   const kind = poi.kind;
   const opts = [];
   let title = poi.label, sub = '', interior = null;
+  if (kind === 'hardware' && p.furnShop === poi.id) return furnitureMenu(p, poi);   // (H67: the furniture counter)
   const shopKey = kind === 'vending' ? 'vending' : kind;
   const shop = kind === 'smuggler' && !gang.isMember(p) ? null : SHOPS[shopKey];
   if (shop && kind !== 'dealer' && kind !== 'marina' && kind !== 'garage' && kind !== 'clothing') {
@@ -189,6 +191,7 @@ export function buildMenu(world, p, poi) {
       }
     }
   }
+  if (kind === 'hardware') opts.unshift({ id: 'furn', label: 'Furniture & decor for your home', note: 'sofas, lamps, rugs, a wall TV...' });   // (H67)
   switch (kind) {
     case 'bank': case 'atm':
       title = kind === 'bank' ? 'First Pixel Bank' : 'ATM';
@@ -421,9 +424,23 @@ function myVehicleNear(world, p, poi) {
   return v;
 }
 
+// (H67) the hardware store's furniture counter: the pieces for your home (shared/homedecor.js; prices in shared/rules.js
+// DECOR), each delivered to your homes' storage (profile.furn) to place from the hall table's Decorate
+function furnitureMenu(p, poi) {
+  const prof = p.profile, furn = prof.furn || {}, none = !(prof.homes || []).length, opts = [];
+  for (const k of DECOR_KINDS) {
+    const P = DECOR_PIECES[k];
+    opts.push({ id: `fb:${k}`, label: P.name, price: decorPrice(k), dis: none, note: `${P.cat}${P.w * P.h > 1 ? ` · ${P.w}x${P.h}` : ''}${furn[k] ? ` · ${furn[k]} in storage` : ''}` });
+  }
+  opts.push({ id: 'fback', label: 'Back to the hardware' });
+  opts.push({ id: 'close', label: 'Close' });
+  return { t: 'menu', poi: poi.id, title: 'Furniture & decor', sub: none ? 'Style your life - once you have a home to put it in.' : 'Style your life. Delivered to your home: place it from the hall table (Decorate).', opts, cash: prof.cash, bank: prof.bank };
+}
+
 export function openMenu(world, p, poi) {
   if (!p.conn) return;
   p.menu = { poi: poi.id };
+  p.furnShop = null;
   p.conn.sendJSON(buildMenu(world, p, poi));
 }
 
@@ -435,6 +452,7 @@ export function handleMenu(world, p, poiId, optId) {
   if (Math.hypot(ped.x - poi.x, ped.y - poi.y) > poi.r + 40) { world.notify(p, 'You walked away from the counter.', 'warn'); return; }
   const err = execute(world, p, poi, String(optId || ''));
   if (err) world.notify(p, err, 'bad');
+  if (optId === 'close') p.furnShop = null;
   p.meDirty = true;
   if (!['close', 'hhide', 'hleave', 'armexit', 'sleave', 'htour'].includes(optId) && !optId.startsWith('hcargo') && !/^hu:(in|tour):/.test(optId) && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
 }
@@ -448,6 +466,19 @@ function execute(world, p, poi, opt) {
   if (valid.dis) return 'Not available.';
   switch (parts[0]) {
     case 'close': return null;
+    case 'furn': p.furnShop = poi.id; return null;   // (H67: the furniture counter - furnitureMenu)
+    case 'fback': p.furnShop = null; return null;
+    case 'fb': {
+      const k = parts[1], P = DECOR_PIECES[k];
+      if (!P) return 'Not sold here.';
+      if (!(prof.homes || []).length) return 'You need a home to put it in - buy one first.';
+      if (!pay(p, decorPrice(k))) return 'Not enough money.';
+      prof.furn ||= {};
+      prof.furn[k] = (prof.furn[k] || 0) + 1;
+      store.touch();
+      world.notify(p, `Bought ${/^[aeiou]/i.test(P.name) ? 'an' : 'a'} ${P.name.toLowerCase()} - delivered to your home's storage. Place it from the hall table: Decorate.`, 'good');
+      return null;
+    }
     case 'hot': return hotmoney.execute(world, p, poi, parts[1]);
     case 'trainjob': return trains.startTrainJob(world, p);
     case 'w': {

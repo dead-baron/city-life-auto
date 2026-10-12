@@ -109,6 +109,7 @@ export function checkWorld(world, prof) {
   prof.homes = [];
   prof.deeds = {};
   if (prof.loans) prof.loans = {};   // (a mortgage's home gone with the old streets: the refund is what was paid - H65)
+  for (const id of Object.keys(prof.decor || {})) stowDecor(prof, id);   // (H67: the furniture back in storage)
   prof.spawnHome = null;
   prof.pos = null; // the streets moved: wake up at a hospital, not inside whatever stands there now
   prof.wv = WORLD_VERSION;
@@ -149,7 +150,16 @@ export function release(world, prof, home) {
   prof.homes = (prof.homes || []).filter((id) => id !== home.id);
   if (prof.deeds) delete prof.deeds[home.id];
   if (prof.spawnHome === home.id) prof.spawnHome = prof.homes.length ? prof.homes[0] : null;
+  stowDecor(prof, home.id);
   store.touch();
+}
+// (H67) a home's furniture back into storage (it's sold, or taken back): placed in your next home
+export function stowDecor(prof, id) {
+  const d = prof.decor && prof.decor[id];
+  if (!d) return;
+  prof.furn ||= {};
+  for (const q of d.it || []) prof.furn[q.k] = (prof.furn[q.k] || 0) + 1;
+  delete prof.decor[id];
 }
 // the home is yours (paid: what you've paid for it - the price, or a mortgage's deposit; mortgage.js)
 export function claim(world, p, home, paid) {
@@ -172,6 +182,7 @@ export function sell(world, p, home) {
   if (prof.spawnHome === home.id) prof.spawnHome = prof.homes.length ? prof.homes[0] : null;
   const loan = prof.loans && prof.loans[home.id], owed = loan ? loan.owed : 0;   // (a mortgage: what's owed comes out of the sale first - H65)
   if (loan) delete prof.loans[home.id];
+  stowDecor(prof, home.id);
   const back = Math.max(0, Math.round(home.price * 0.6) - owed);
   prof.bank += back;
   while (prof.vehicles.length > garageCap(world, prof)) prof.vehicles.pop();

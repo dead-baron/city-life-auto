@@ -24,16 +24,25 @@
 //   p.homeMenu: the menu of the thing you're using ('wardrobe' | 'safe' | 'fridge' | 'garage' | 'hall'), null for none
 import { DAY_PART_S } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
-import { HOME_IN } from '../../shared/rules.js';
+import { HOME_IN, DECOR } from '../../shared/rules.js';
 import { ITEMS } from '../../shared/items.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { layout, planOf, tierOf, stepInside, useAt, blocked, TILE_IN } from '../../shared/homelayout.js';
+import { decorate, canPlace, targetOf, facingYou, pieceAt, roomsOf, PIECES, KINDS, WALLS, FLOORS, priceOf, backOf, faceName } from '../../shared/homedecor.js';
 import { store } from '../store.js';
 import * as homes from './homes.js';
 import * as economy from './economy.js';
 import * as mortgage from './mortgage.js';
 
 export const planFor = (h) => layout(planOf(h), tierOf(h));
+// (H67) a home's decor - its owner's (profile.decor[home id]: shared/homedecor.js) - and its plan with the decor laid over
+export function decorOf(world, h) {
+  const pid = h && world.homeOwner.get(h.id);
+  if (!pid) return null;
+  const q = world.players.get(pid), prof = q ? q.profile : store.get(pid);
+  return (prof && prof.decor && prof.decor[h.id]) || null;
+}
+export const planIn = (world, h) => decorate(planFor(h), decorOf(world, h));
 const homeOf = (world, ped) => (ped && ped.home ? homes.homeById(world, ped.home.id) : null);
 const money = (n) => `$${Math.round(n).toLocaleString()}`;
 
@@ -92,7 +101,7 @@ function knocking(world, q, h) {
 }
 // a guest in: just inside the front door, beside the host's way in
 function letIn(world, q, h, host) {
-  const ped = q.ped, L = planFor(h);
+  const ped = q.ped, L = planIn(world, h);
   if (q.wanted > 0 && world.time - (q.seenAt || -99) < 1.5) return `Not with the police watching ${q.name}!`;
   q.knock = null;
   ped.entering = null; ped.inside = h.id; ped.hidden = true; ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.fishing = null;
@@ -154,7 +163,7 @@ export function input(world, p, ped, inp, pressed, dt) {
   const s = ped.home, h = homeOf(world, ped);
   if (!s || !h) return false;
   if (s.sleep || s.shower) { s.mv = false; return true; }   // (asleep, in the shower: nothing to do but wait)
-  s.mv = stepInside(planFor(h), s, inp.mx || 0, inp.my || 0, dt, HOME_IN.walk);
+  s.mv = stepInside(planIn(world, h), s, inp.mx || 0, inp.my || 0, dt, HOME_IN.walk);
   if (pressed & (IN.ACTION | IN.VEHICLE)) { const act = interaction(world, p); if (act && !act.passive) act.run(); }
   return true;
 }
@@ -175,6 +184,7 @@ export function interaction(world, p) {
   if (!s || !h) return null;
   if (s.sleep) return { label: 'Asleep... the night is passing', passive: true, run: () => {} };
   if (s.shower) return { label: 'In the shower...', passive: true, run: () => {} };
+  if (s.edit) return editPrompt(world, p, h);   // (H67: decorating - the action button is the menu for the spot in front of you)
   const u = useAt(planFor(h), s.x, s.y, HOME_IN.reach);
   if (s.tour) {   // a visitor: the door is the way out (or the sale), the rest is to look at - the door first when it's in reach
     const L = planFor(h), D = L.door, dd = Math.hypot(Math.max(D.x - TILE_IN / 2 - s.x, 0, s.x - D.x - TILE_IN / 2), Math.max(D.y - TILE_IN / 2 - s.y, 0, s.y - D.y - TILE_IN / 2));
@@ -209,6 +219,7 @@ function menuOf(world, p, h, what) {
     const sub = `For sale: ${money(h.price)}. ${h.what ? `A ${h.what}` : `A ${h.kind === 'shack' ? 'shack' : h.kind}`}${h.floor > 1 ? ` on floor ${h.floor}` : ''}, ${beds} bedroom${beds === 1 ? '' : 's'}, room for ${h.slots} vehicle${h.slots === 1 ? '' : 's'}${h.dock ? ', a boathouse' : ''}. Yours: a respawn point, a safe, a bed, a garage you reach from any home you own.`;
     return { t: 'menu', poi: homes.homePoi(world, h).id, title: `${h.name} - for sale`, sub, opts, cash: prof.cash, bank: prof.bank, inside: true };
   }
+  if (what === 'deco' || what === 'paint') return decoMenu(world, p, h, what);   // (H67)
   const base = economy.buildMenu(world, p, homes.homePoi(world, h)), all = base.opts;   // (the home menu's options: wardrobe and stash)
   const pick = (pre) => all.filter((o) => o.id === pre || o.id.startsWith(pre + ':'));
   const opts = [];
@@ -233,6 +244,7 @@ function menuOf(world, p, h, what) {
     title = base.title; sub = base.sub;
     opts.push(...all.filter((o) => o.id !== 'close'));
     for (const q of world.players.values()) if (q !== p && knocking(world, q, h)) opts.unshift({ id: `hi:let:${q.pid}`, label: `Let ${q.name} in`, note: 'at your door' });
+    if (!ped.home.guest && !ped.home.tour) opts.push({ id: 'hi:deco', label: 'Decorate - place, move, turn and sell your furniture; paint the walls, new floors', note: furnNote(prof) });   // (H67)
     opts.push({ id: 'hi:sell', label: `Sell this place (+${money(h.price * 0.6)} to the bank)`, note: 'you step outside' });
   } else if (what === 'garage') {
     title = 'Your garage';
@@ -319,6 +331,9 @@ function own(world, p, h, parts) {
       return null;
     }
     case 'tout': p.homeMenu = null; leave(world, p); return null;
+    case 'deco': case 'dpick': case 'dmove': case 'dturn': case 'dput': case 'dstay': case 'dstore': case 'dspin': case 'dsell': case 'dstow':
+    case 'dpaint': case 'dwall': case 'dfloor': case 'dback': case 'dend':
+      return decoOp(world, p, h, parts);
     case 'car': {
       const i = Number(parts[2]);
       p.homeMenu = null;
@@ -326,6 +341,164 @@ function own(world, p, h, parts) {
       const err = homes.driveOut(world, p, h, i);
       if (!err) { ped.home = null; if (p.conn) p.conn.sendJSON({ t: 'home', off: 1 }); }
       return err;
+    }
+    default: return 'Unknown option.';
+  }
+}
+
+// ---- decorating (H67) -------------------------------------------------------------------------------------------------
+// From the hall table, Decorate: ped.home.edit { k: a piece from storage in your hands, mv: the placed piece you're moving
+// (its index in decor.it; -1 none), r: the way it faces }. The action button opens the menu for the spot in front of you:
+// what's there (move it, turn it, sell it back, put it in storage), your stored pieces to place, this room's paint and
+// floor; holding a piece, put it down (where shared/homedecor.js canPlace allows), turn it, put it away.
+// The pieces are bought at the hardware store's furniture counter (economy.js) and wait in profile.furn.
+const furnNote = (prof) => { const n = Object.values(prof.furn || {}).reduce((a, b) => a + (b > 0 ? b : 0), 0); return n ? `${n} piece${n === 1 ? '' : 's'} in storage` : 'furniture from the hardware store'; };
+const an = (s) => (/^[aeiou]/i.test(s) ? 'an' : 'a');
+function heldKind(world, h, s) {
+  const e = s.edit;
+  if (!e) return null;
+  if (e.mv >= 0) { const d = decorOf(world, h), q = d && d.it && d.it[e.mv]; return q ? q.k : null; }
+  return e.k || null;
+}
+// the people standing in a home (a piece can't land on anyone)
+function bodiesIn(world, h) {
+  const out = [];
+  for (const q of world.players.values()) if (q.ped && q.ped.home && q.ped.home.id === h.id && q.ped.hidden) out.push({ x: q.ped.home.x, y: q.ped.home.y });
+  return out;
+}
+// where what you hold would go, and whether it can: { q, err }
+function heldSpot(world, p, h) {
+  const s = p.ped.home, k = heldKind(world, h, s);
+  if (!k) return null;
+  const L0 = planFor(h), t = targetOf(L0, s.x, s.y, s.a, k, s.edit.r), q = { k, tx: t.tx, ty: t.ty, r: s.edit.r };
+  return { q, err: canPlace(L0, decorOf(world, h), q, s.edit.mv, bodiesIn(world, h)) };
+}
+function editPrompt(world, p, h) {
+  const s = p.ped.home, run = () => openMenu(world, p, 'deco');
+  const hs = heldSpot(world, p, h);
+  if (hs) return { label: `The ${PIECES[hs.q.k].name.toLowerCase()} in your hands: ${hs.err || 'it fits here'} - put it down, turn it...`, run };
+  const d = decorOf(world, h), t = targetOf(planFor(h), s.x, s.y, s.a, null, 0), i = pieceAt(d, t.tx, t.ty);
+  return { label: `Decorating${i >= 0 ? ` - the ${PIECES[d.it[i].k].name.toLowerCase()} in front of you` : ''}: what to do here`, run };
+}
+function decoMenu(world, p, h, what) {
+  const prof = p.profile, s = p.ped.home, e = s.edit, d = decorOf(world, h) || {}, L0 = planFor(h);
+  const opts = [];
+  let title = 'Decorating', sub = '';
+  const room = roomsOf(L0).at(Math.floor(s.x / TILE_IN), Math.floor(s.y / TILE_IN));
+  if (what === 'paint') {
+    title = 'This room';
+    const wl = (d.wall || {})[room], fl = (d.floor || {})[room];
+    sub = `The walls ${wl != null ? WALLS[wl][0].toLowerCase() : 'as they came'}, the floor ${fl != null ? FLOORS[fl][0].toLowerCase() : 'as it came'}. Wallet ${money(prof.cash)} · bank ${money(prof.bank)}.`;
+    WALLS.forEach(([n], i) => opts.push({ id: `hi:dwall:${i}`, label: `Paint the walls ${n.toLowerCase()}`, price: DECOR.paint, dis: wl === i, note: wl === i ? 'they are' : '' }));
+    FLOORS.forEach(([n], i) => opts.push({ id: `hi:dfloor:${i}`, label: `Lay a new floor: ${n.toLowerCase()}`, price: DECOR.floor, dis: fl === i, note: fl === i ? 'it is' : '' }));
+    opts.push({ id: 'hi:dback', label: 'Back' });
+    return { t: 'menu', poi: homes.homePoi(world, h).id, title, sub, opts, cash: prof.cash, bank: prof.bank, inside: true };
+  }
+  const hs = e && heldSpot(world, p, h);
+  if (hs) {
+    title = PIECES[hs.q.k].name;
+    sub = `Facing ${faceName(e.r)}. ${hs.err || 'It fits here - the green tiles.'}`;
+    opts.push({ id: 'hi:dput', label: 'Put it down here', dis: !!hs.err, note: hs.err || '' });
+    opts.push({ id: 'hi:dturn', label: 'Turn it', note: `facing ${faceName(e.r)}` });
+    if (e.mv >= 0) opts.push({ id: 'hi:dstay', label: 'Leave it where it was' });
+    opts.push({ id: 'hi:dstore', label: e.mv >= 0 ? 'Put it in storage' : 'Back into storage' });
+  } else if (e) {
+    const t = targetOf(L0, s.x, s.y, s.a, null, 0), i = pieceAt(d, t.tx, t.ty);
+    sub = 'Walk up to a spot, face it and press Act. Your things stand where you put them; the bed, the safe and the doors stay clear.';
+    if (i >= 0) {
+      const q = d.it[i], nm = PIECES[q.k].name.toLowerCase();
+      opts.push({ id: `hi:dmove:${i}`, label: `Move the ${nm}` });
+      opts.push({ id: `hi:dspin:${i}`, label: `Turn the ${nm}`, note: `facing ${faceName(q.r)}` });
+      opts.push({ id: `hi:dsell:${i}`, label: `Sell the ${nm} back`, note: `+${money(backOf(q.k))}` });
+      opts.push({ id: `hi:dstow:${i}`, label: `Put the ${nm} in storage` });
+    }
+    for (const k of KINDS) if ((prof.furn || {})[k] > 0) opts.push({ id: `hi:dpick:${k}`, label: `Place ${an(PIECES[k].name)} ${PIECES[k].name.toLowerCase()}`, note: `${prof.furn[k]} in storage` });
+    if (!KINDS.some((k) => (prof.furn || {})[k] > 0)) opts.push({ id: 'hi:dnone', label: 'Nothing in storage - the hardware store sells furniture', dis: true });
+    opts.push({ id: 'hi:dpaint', label: 'Paint this room, lay a new floor', dis: room < 0, note: room < 0 ? 'stand in a room' : '' });
+    opts.push({ id: 'hi:dend', label: 'Done decorating' });
+  }
+  opts.push({ id: 'close', label: 'Close' });
+  return { t: 'menu', poi: homes.homePoi(world, h).id, title, sub, opts, cash: prof.cash, bank: prof.bank, inside: true };
+}
+// the home's decor replaced (a new object: shared/homedecor.js keeps each one's layout) - saved, and everyone in there sees it
+function setDecor(world, p, h, d) {
+  (p.profile.decor ||= {})[h.id] = d;
+  store.touch();
+  for (const q of world.players.values()) if (q.ped && q.ped.home && q.ped.home.id === h.id) send(world, q, true);
+}
+const copyDecor = (d) => ({ it: ((d && d.it) || []).map((q) => ({ ...q })), wall: { ...((d && d.wall) || {}) }, floor: { ...((d && d.floor) || {}) } });
+function decoOp(world, p, h, parts) {
+  const prof = p.profile, s = p.ped.home, op = parts[1];
+  if (s.guest || s.tour || world.homeOwner.get(h.id) !== p.pid) return 'It\'s not yours to decorate.';
+  const furn = (prof.furn ||= {}), d0 = decorOf(world, h), L0 = planFor(h);
+  if (op === 'deco') {
+    s.edit = { k: null, mv: -1, r: 0 };
+    p.homeMenu = null;
+    world.notify(p, 'Decorating: face a spot and press Act - place your things, move them, turn them; paint the room you\'re in.', 'info');
+    send(world, p, true);
+    return null;
+  }
+  const e = s.edit;
+  if (!e) return 'Start decorating from the hall table.';
+  const i = Number(parts[2]), q0 = d0 && d0.it ? d0.it[i] : null;
+  switch (op) {
+    case 'dend': s.edit = null; p.homeMenu = null; world.notify(p, 'All done.', 'good'); send(world, p, true); return null;
+    case 'dpick': {
+      const k = parts[2];
+      if (!PIECES[k] || !(furn[k] > 0)) return 'None of those in storage.';
+      e.k = k; e.mv = -1; e.r = facingYou(s.a);
+      p.homeMenu = null;
+      send(world, p, true);
+      return null;
+    }
+    case 'dmove': if (!q0) return 'Nothing there.'; e.k = null; e.mv = i; e.r = q0.r; p.homeMenu = null; send(world, p, true); return null;
+    case 'dturn': e.r = (e.r + 1) & 3; send(world, p, true); return null;   // (the menu comes back: turn again or put it down)
+    case 'dstay': e.mv = -1; e.k = null; p.homeMenu = null; send(world, p, true); return null;
+    case 'dstore': {
+      const q = e.mv >= 0 && d0 && d0.it ? d0.it[e.mv] : null;
+      if (q) { const d = copyDecor(d0); d.it.splice(e.mv, 1); furn[q.k] = (furn[q.k] || 0) + 1; e.mv = -1; setDecor(world, p, h, d); }
+      e.k = null; e.mv = -1; p.homeMenu = null; send(world, p, true);
+      return null;
+    }
+    case 'dput': {
+      const hs = heldSpot(world, p, h);
+      if (!hs) return 'You\'re not holding anything.';
+      if (hs.err) return hs.err;
+      const d = copyDecor(d0);
+      if (e.mv >= 0) d.it[e.mv] = hs.q;
+      else { if (!(furn[hs.q.k] > 0)) return 'None of those in storage.'; furn[hs.q.k]--; d.it.push(hs.q); }
+      e.k = null; e.mv = -1; p.homeMenu = null;
+      setDecor(world, p, h, d);
+      return null;
+    }
+    case 'dspin': {
+      if (!q0) return 'Nothing there.';
+      const q = { ...q0, r: (q0.r + 1) & 3 }, err = canPlace(L0, d0, q, i, bodiesIn(world, h));
+      if (err) return `It won't turn there: ${err[0].toLowerCase()}${err.slice(1)}`;
+      const d = copyDecor(d0); d.it[i] = q;
+      setDecor(world, p, h, d);
+      return null;
+    }
+    case 'dsell': case 'dstow': {
+      if (!q0) return 'Nothing there.';
+      const d = copyDecor(d0); d.it.splice(i, 1);
+      if (op === 'dsell') { prof.cash += backOf(q0.k); world.notify(p, `Sold the ${PIECES[q0.k].name.toLowerCase()} back: +${money(backOf(q0.k))}.`, 'good'); }
+      else furn[q0.k] = (furn[q0.k] || 0) + 1;
+      setDecor(world, p, h, d);
+      return null;
+    }
+    case 'dpaint': openMenu(world, p, 'paint'); return null;
+    case 'dback': openMenu(world, p, 'deco'); return null;
+    case 'dwall': case 'dfloor': {
+      const n = Number(parts[2]), list = op === 'dwall' ? WALLS : FLOORS, room = roomsOf(L0).at(Math.floor(s.x / TILE_IN), Math.floor(s.y / TILE_IN));
+      if (!list[n] || room < 0) return 'Not here.';
+      const cost = op === 'dwall' ? DECOR.paint : DECOR.floor;
+      if (!economy.payFrom(p, cost)) return `You need ${money(cost)}.`;
+      const d = copyDecor(d0);
+      d[op === 'dwall' ? 'wall' : 'floor'][room] = n;
+      setDecor(world, p, h, d);
+      world.notify(p, op === 'dwall' ? `The walls painted ${list[n][0].toLowerCase()}.` : `A new floor: ${list[n][0].toLowerCase()}.`, 'good');
+      return null;
     }
     default: return 'Unknown option.';
   }
@@ -394,6 +567,8 @@ export function send(world, p, full) {
   if (full) {
     m.name = s.tour ? `${h.name} - for sale, ${money(h.price)}` : h.name; m.garage = h.garage ? 1 : 0; m.sleepS = HOME_IN.sleepS; m.wakeH = HOME_IN.wakeH;
     if (s.tour) m.tour = h.price;   // (a visitor: the price - the page may show it; the garage's bays empty)
+    m.decor = decorOf(world, h);   // (H67: the owner's things placed, the walls' paint, the floors - shared/homedecor.js decorate)
+    m.edit = s.edit ? { k: heldKind(world, h, s), r: s.edit.r, mv: s.edit.mv } : null;   // (decorating: what you hold - the page shows where it'd go)
     m.cars = s.tour ? [] : p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air').slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
     s.nc = m.cars.length;   // (the cars parked in the bays are solid: shared/homelayout.js stepInside - the page counts the same ones)
   }
