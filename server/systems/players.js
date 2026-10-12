@@ -68,6 +68,7 @@ import * as sar from './sar.js';
 import * as coastguard from './coastguard.js';
 import * as gardening from './gardening.js';
 import * as farming from './farming.js';
+import * as firefighter from './firefighter.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -412,7 +413,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
       v.input.slide = di.slide;
       v.input.drv = di.drv;
       if (inp.bits & IN.HORN) v.hornUntil = world.time + 0.2;
-      if ((pressed & IN.HORN) && v.def.police) v.sirenOn = !v.sirenOn;
+      if ((pressed & IN.HORN) && (v.def.police || v.def.siren)) v.sirenOn = !v.sirenOn;   // (def.siren: a fire engine, an ambulance - H68)
       if (v.def.turret && (inp.bits & IN.FIRE)) tank.fire(world, v, ped);   // (the tank's cannon - tank.js)
     }
     if ((inp.bits & IN.FIRE) && (inp.bits & IN.AIMING) && !v.def.turret && !(ped.seat === 0 && v.def.missiles)) {   // (a tank's cannon: tank.js; the gunship's pilot fires its missiles instead: aircraft.js)
@@ -446,7 +447,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (wasDropping && !ped.dropping) world.emit(ped.x, ped.y, isSwimming(world.map, ped) ? { e: 'splash', x: ped.x, y: ped.y, n: 16 } : { e: 'thud', x: ped.x, y: ped.y });
   if (tumbling) tumbleImpact(world, ped, v0, dt, fr);
   if (ped.rollT > 0 && (p.badge || p.hunter)) tackle(world, ped);
-  const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || bowling.input(world, p, ped, inp, pressed, dt);   // (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
+  const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || bowling.input(world, p, ped, inp, pressed, dt) || firefighter.hose(world, p, ped, inp, pressed, dt);   // (the hose by your fire engine: firefighter.js) (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
   const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
   if ((inp.bits & IN.FIRE) && !kicked && !swung && !guard) {   // (guarding: no striking)
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
@@ -639,6 +640,8 @@ export function findInteraction(world, p) {
   if (plot) return plot;
   const rowWork = farming.handInteraction(world, p);   // a ripe row on foot: pick it by hand into crates (farming.js)
   if (rowWork) return rowWork;
+  const crew = firefighter.interaction(world, p);   // a fire station: sign on as a firefighter (firefighter.js)
+  if (crew) return crew;
 
   if (p.profile.weapons.rod !== undefined) {
     const spot = jobs.fishingSpot(world, ped);
