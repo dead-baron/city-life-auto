@@ -376,7 +376,7 @@ function heldSpot(world, p, h) {
 function editPrompt(world, p, h) {
   const s = p.ped.home, run = () => openMenu(world, p, 'deco');
   const hs = heldSpot(world, p, h);
-  if (hs) return { label: `The ${PIECES[hs.q.k].name.toLowerCase()} in your hands: ${hs.err || 'it fits here'} - put it down, turn it...`, run };
+  if (hs) return { label: hs.err ? `${PIECES[hs.q.k].name} - ${hs.err[0].toLowerCase()}${hs.err.slice(1, -1)}` : `${PIECES[hs.q.k].name} - it fits here: put it down, turn it`, run };
   const d = decorOf(world, h), t = targetOf(planFor(h), s.x, s.y, s.a, null, 0), i = pieceAt(d, t.tx, t.ty);
   return { label: `Decorating${i >= 0 ? ` - the ${PIECES[d.it[i].k].name.toLowerCase()} in front of you` : ''}: what to do here`, run };
 }
@@ -402,6 +402,7 @@ function decoMenu(world, p, h, what) {
     opts.push({ id: 'hi:dturn', label: 'Turn it', note: `facing ${faceName(e.r)}` });
     if (e.mv >= 0) opts.push({ id: 'hi:dstay', label: 'Leave it where it was' });
     opts.push({ id: 'hi:dstore', label: e.mv >= 0 ? 'Put it in storage' : 'Back into storage' });
+    opts.push({ id: 'hi:dend', label: 'Done decorating', note: e.mv >= 0 ? 'it stays where it was' : 'it stays in storage' });
   } else if (e) {
     const t = targetOf(L0, s.x, s.y, s.a, null, 0), i = pieceAt(d, t.tx, t.ty);
     sub = 'Walk up to a spot, face it and press Act. Your things stand where you put them; the bed, the safe and the doors stay clear.';
@@ -502,6 +503,27 @@ function decoOp(world, p, h, parts) {
     }
     default: return 'Unknown option.';
   }
+}
+
+// The dev command 'decor' (server/dev.js; inside a home of yours): msg.furn n of every piece into storage; msg.demo a
+// house's living room and hall furnished (whatever fits of a set - the playtests' decorated room); msg.wall / msg.floor
+// { room: choice } the paint and the floors; msg.edit: decorating, holding msg.edit (a kind from storage)
+export function devDecor(world, p, msg) {
+  const ped = p.ped, s = ped && ped.home, h = homeOf(world, ped);
+  if (!s || !h || world.homeOwner.get(h.id) !== p.pid) return 'Go inside a home of yours first (dev homein).';
+  const prof = p.profile, furn = (prof.furn ||= {});
+  if (msg.furn) for (const k of KINDS) furn[k] = (furn[k] || 0) + Math.max(1, msg.furn | 0);
+  const d = copyDecor(decorOf(world, h)), L0 = planFor(h);
+  if (msg.demo) {
+    const set = [['rug', 2, 5, 0], ['lamp', 4, 5, 0], ['bedside', 13, 2, 0], ['art', 13, 2, 1], ['walltv', 8, 5, 0], ['art', 10, 5, 0], ['couch', 8, 7, 2], ['washer', 9, 3, 2], ['plant', 7, 5, 0], ['rug', 11, 6, 0], ['armchair', 12, 5, 0], ['bookshelf', 13, 7, 0], ['workbench', 15, 6, 3]];
+    for (const [k, tx, ty, r] of set) { const q = { k, tx, ty, r }; if (!canPlace(L0, d, q, -1, bodiesIn(world, h))) d.it.push(q); }
+  }
+  if (msg.wall) Object.assign(d.wall, msg.wall);
+  if (msg.floor) Object.assign(d.floor, msg.floor);
+  setDecor(world, p, h, d);
+  if (Array.isArray(msg.at)) { s.x = (msg.at[0] + 0.5) * TILE_IN; s.y = (msg.at[1] + 0.5) * TILE_IN; s.a = +msg.at[2] || 0; }   // (stand on a tile, facing a way)
+  if (msg.edit !== undefined) { s.edit = { k: PIECES[msg.edit] ? msg.edit : null, mv: -1, r: facingYou(s.a) }; send(world, p, true); }
+  return null;
 }
 
 // ---- every tick ------------------------------------------------------------------------------------------------------
