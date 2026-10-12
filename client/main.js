@@ -4086,7 +4086,7 @@ function burnFx(p, up, now, L) {
   if (roll) { if (!(now - (p.rollSeen ?? -9) < 0.5)) p.rollOn = now; p.rollSeen = now; }
   const k = grow * (roll ? Math.max(0.3, 1 - (now - p.rollOn) / 2.6) : lie ? (f & PF.DEAD ? 0.45 : 0.6) : 1);
   const sp = up && (p.as || 0) > 60 ? Math.min(p.as, 260) * 0.45 : 0, bx = -Math.cos(p.ra || 0) * sp, by = -Math.sin(p.ra || 0) * sp, w = up ? 8 : 18;
-  for (let n = k > 0.7 ? 2 : 1; n--;) if (r() < 0.1 + 0.85 * k) fx.spawn(3, p.rx + (r() - 0.5) * w, p.ry + 2 + (r() - 0.5) * (up ? 4 : 8), (r() - 0.5) * 16 + bx, (r() - 0.5) * 6 + by, 0.28 + r() * 0.3, (4 + r() * 4) * (0.5 + 0.5 * k), r() < 0.5 ? '#ff8a1a' : '#ffd23a', -7, up ? 60 + r() * 150 * grow : 40 + r() * 70 * k).z = up ? r() * 120 * grow : 0;   // (from anywhere up the body, as high as it has climbed)
+  for (let n = k > 0.7 ? 2 : 1; n--;) if (r() < 0.1 + 0.85 * k) fx.spawn(3, p.rx + (r() - 0.5) * w, p.ry + 2 + (r() - 0.5) * (up ? 4 : 8), (r() - 0.5) * 16 + bx, (r() - 0.5) * 6 + by, 0.28 + r() * 0.3, (5 + r() * 5) * (0.55 + 0.45 * k), r() < 0.35 ? '#ff6a14' : r() < 0.6 ? '#ff9a1a' : '#ffd23a', -7, up ? 60 + r() * 150 * grow : 40 + r() * 70 * k).z = up ? r() * 120 * grow : 0;   // (from anywhere up the body, as high as it has climbed)
   if (r() < (lie ? 0.4 : 0.25 + sp / 600)) fx.smoke(p.rx + bx * 0.5, p.ry - (up ? 46 : 10) + by * 0.5, true);
   if (S.weather === WEATHER.RAIN && r() < 0.18) fx.spawn(2, p.rx + (r() - 0.5) * 12, p.ry - (up ? 20 : 4), (r() - 0.5) * 10, -16, 0.8 + r() * 0.6, 4 + r() * 3, 'rgba(225,232,240,', 10);   // (the rain hissing off it)
 }
