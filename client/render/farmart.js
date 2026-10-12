@@ -125,12 +125,12 @@ export function rowPixel(look, a, b) {
   return ridge === 4 ? RIPE[1] : (a + ridge) % 4 === 0 ? RIPE[2] : RIPE[0];                                                // ripe wheat
 }
 // a round bale left on the stubble (art px, BALE x BALE): the straw roll's face, its spiral, its shadow side
-export const BALE = 9;
+export const BALE = 15;
 export function balePixels(set) {
   for (let y = 0; y < BALE; y++) for (let x = 0; x < BALE; x++) {
-    const dx = x - 4, dy = y - 4, d = dx * dx + dy * dy;
-    if (d > 17) continue;
-    set(x, y, d > 12 ? (dx + dy > 0 ? [150, 118, 56] : [196, 162, 84]) : (Math.round(Math.sqrt(d)) & 1) ? [212, 180, 98] : [230, 202, 124]);
+    const dx = x - 7, dy = y - 7, d = dx * dx + dy * dy;
+    if (d > 50) continue;
+    set(x, y, d > 40 ? (dx + dy > 0 ? [150, 118, 56] : [196, 162, 84]) : (Math.round(Math.sqrt(d)) & 1) ? [212, 180, 98] : [230, 202, 124]);
   }
 }
 const baleAt = (r, k) => hsh(r, k, 13) < 0.3;

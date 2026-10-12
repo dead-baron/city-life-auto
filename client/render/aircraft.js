@@ -4,7 +4,7 @@
 // the aircraft above it a little bigger the higher it is (nearer the camera), the rotor a blurred disc once it's up to
 // speed (its blades seen turning while it spools), the plane's wings foreshortened as it banks, the propeller a blur;
 // the helipads' H on the ground. Liveries after HE1 (the news / tour helicopter blue and white, the police one black and
-// white with its light bar, the army's olive gunship), the light plane white with a red stripe.
+// white with its light bar, the army's grey gunship - MV1), the light plane white with a red stripe.
 import { VEHICLE_BY_INDEX } from '../../shared/vehicles.js';
 import { VF } from '../../shared/constants.js';
 import { flightStep, flightInput, altOfByte, airfields, isPlane, FLY, floorAt } from '../../shared/flight.js';
@@ -24,7 +24,7 @@ export const liftOf = (alt) => Math.max(0, alt || 0) * V2_LIFT;
 const LIVERY = {
   news: { body: '#e9edf2', trim: '#2c55b8', dark: '#1d2a4a', glass: '#3a5f86', tip: 'rgba(255,200,50,0.5)', cam: true },
   police: { body: '#1d1f24', trim: '#eef0f3', dark: '#0d0e10', glass: '#36506e', bar: true, tip: 'rgba(240,70,50,0.5)', lamp: true },
-  army: { body: '#4f5d33', trim: '#6b7a44', dark: '#2f381e', glass: '#2c3a2a', tip: 'rgba(255,200,50,0.5)' },
+  army: { body: '#646a70', trim: '#80868c', dark: '#3a3e44', glass: '#2c3440', tip: 'rgba(255,200,50,0.5)' },   // (grey: the owner's MV1, H78)
   rescue: { body: '#d8382e', trim: '#f2f2f2', dark: '#7a1a14', glass: '#3a5f86', tip: 'rgba(245,245,245,0.55)', cross: true },
   plane: { body: '#f1f2f0', trim: '#c4302b', dark: '#9aa2a8', glass: '#3a5f86' },
 };
