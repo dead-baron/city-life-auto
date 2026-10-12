@@ -794,3 +794,38 @@ function petStep(world, p, s, h) {
   else if (q.st === 'bed') { q.po = 'walk'; if (!toward(q.bx, q.by, MAIL.petWalk, 2) || now - q.t > 12) { q.st = 'lie'; q.x = q.bx; q.y = q.by; q.a = Math.PI / 2; } }
   else q.po = 'lie';
 }
+
+// The dev command 'lobby' (server/dev.js; H71): into an apartment block's lobby - msg.block (its home id; else the first
+// with all its flats for sale and room for 6 or more), msg.own: unit n yours, msg.other: unit n someone else's, msg.mail:
+// a bill, a letter and a coupon in your mailbox, msg.pet: a pet of your own ('dog_golden', 'cat_ginger'...; true a dog),
+// msg.at: stand at 'mail' or a unit's number, msg.home: then go into your own flat
+export function devLobby(world, p, msg) {
+  const ped = p.ped;
+  if (!ped || ped.dead || ped.vehId) return 'Not right now.';
+  const ok = (b) => b && !b.gone && world.unitsOf.has(b.id);
+  let base = msg.block != null ? world.map.homes[msg.block | 0] : null;
+  if (!ok(base)) base = world.map.homes.find((b) => ok(b) && world.unitsOf.get(b.id).length >= 6 && world.unitsOf.get(b.id).every((id) => !world.homeOwner.has(id) || world.homeOwner.get(id) === p.pid || world.homeOwner.get(id) === 'dev-neighbour')) || world.map.homes.find(ok);
+  if (!base) return 'No apartment blocks.';
+  const ids = world.unitsOf.get(base.id), prof = p.profile;
+  const own = msg.own ? homes.homeById(world, ids[(msg.own | 0) - 1]) : null;
+  if (own && !world.homeOwner.has(own.id)) { (prof.homes ||= []).push(own.id); world.homeOwner.set(own.id, p.pid); }
+  const other = msg.other ? ids[(msg.other | 0) - 1] : null;
+  if (other != null && !world.homeOwner.has(other)) world.homeOwner.set(other, 'dev-neighbour');
+  if (msg.mail) { mail.post(p, 'bill', 'Utilities for the week - water, power, gas.', MAIL.util); mail.post(p, 'letter', 'The residents\' newsletter: the block party is on Saturday, bring a dish.'); prof.coupon = MAIL.off; mail.post(p, 'coupon', `A coupon from Nail & Gear Hardware: ${MAIL.off}% off your next piece of furniture at the counter.`); }
+  if (msg.pet) prof.pet = { n: msg.petName || 'Biscuit', art: typeof msg.pet === 'string' ? msg.pet : 'dog_golden', k: /^cat/.test(String(msg.pet)) ? 'cat' : 'dog' };
+  store.touch();
+  if (ped.home) { ped.home = null; p.homeMenu = null; }
+  if (ped.hidden) homes.leaveHome(world, p);
+  ped.x = base.x; ped.y = base.y; world.place(ped);
+  const lob = homes.lobbyOf(world, base.id);
+  homes.goInside(world, p, lob);
+  if (msg.home && own) { homes.goInside(world, p, own); return null; }
+  if (msg.at != null) {
+    const L = planFor(lob), s = ped.home;
+    if (msg.at === 'mail') { const m = L.pieces.find((q) => q.use === 'mail'); s.x = m.x + m.w / 2; s.y = m.y + m.h + TILE_IN / 2; }
+    else { const d = L.doors[(msg.at | 0) - 1]; if (d) { s.x = d.x; s.y = d.y + TILE_IN; } }
+    s.a = -Math.PI / 2;
+    send(world, p, true);
+  }
+  return null;
+}

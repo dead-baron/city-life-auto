@@ -305,3 +305,50 @@ test('old profiles load as before: no mail, no pet, no coupon', () => {
   assert.ok(store.get(a.prof.pid), 'saved');
   void saved;
 });
+
+test('drawn in art v2: every lobby by day and night with its doors, the mailboxes and the stairs; your pet; a decor change remakes only what changed', async () => {
+  const { decorate } = await import('../shared/homedecor.js');
+  const prev = globalThis.document;
+  globalThis.document = { createElement: () => { const c = { width: 0, height: 0, px: null }; c.getContext = () => ({ createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), putImageData: (id) => { c.px = id; } }); return c; } };
+  const lit = (cv) => { let n = 0; const p = cv.px.data; for (let i = 3; i < p.length; i += 4) if (p[i]) n++; return n; };
+  const done = (A, d) => { A.relight(d); let n = 0; while (!A.work(1) || A.lightJob) assert.ok(++n < 1e5, 'never done'); };
+  try {
+    const { HomeArt } = await import('../client/render/homeart2.js');
+    for (let n = 4; n <= 8; n += 2) for (const tier of [0, 2]) {
+      const L = layout(lobbyKey(n), tier), A = new HomeArt(L, 2);
+      A.work(1e9);
+      for (const d of [1, 0]) {
+        done(A, d);
+        assert.ok(lit(A.floor.cv) > (L.w * L.h) / 16, `lobby${n}: the floor`);
+        for (const it of A.items) assert.ok(lit(it.cv) > 0, `lobby${n}: an empty sprite`);
+      }
+      assert.ok(A.items.some((it) => it.piece && it.piece.ch === 'M' && it.ol), 'the mailboxes, outlined in reach');
+      assert.ok(A.items.some((it) => it.piece && it.piece.ch === 'Z'), 'the stairs');
+    }
+    // your pet, art v2's own dog and cat
+    const L = layout('house', 2), A = new HomeArt(L, 2);
+    A.work(1e9); done(A, 1);
+    for (const art of ['dog_golden', 'cat_ginger']) for (const po of ['run', 'idle', 'sit', 'lie']) {
+      const c = A.pet(art, po, 2, 1, L.spawn.x, L.spawn.y);
+      assert.ok(c && c.cv.px.width > 4 && c.h > 6, `${art} ${po}`);
+    }
+    // a decor change: the yard, the walls, the bare floor and the unchanged models kept; much quicker than from nothing
+    const d1 = { it: [{ k: 'couch', tx: 8, ty: 7, r: 2 }, { k: 'lamp', tx: 4, ty: 5, r: 0 }] }, d2 = { it: [{ k: 'couch', tx: 8, ty: 7, r: 2 }, { k: 'lamp', tx: 4, ty: 6, r: 0 }] };
+    const A1 = new HomeArt(decorate(L, d1), 2); A1.work(1e9); done(A1, 1);
+    let t = performance.now();
+    const A0 = new HomeArt(decorate(L, d2), 2); A0.work(1e9); done(A0, 1);
+    const fresh = performance.now() - t;
+    t = performance.now();
+    const A2 = new HomeArt(decorate(L, d2), 2, A1); A2.work(1e9); done(A2, 1);
+    const again = performance.now() - t;
+    assert.equal(A2.yard.G, A1.yard.G, 'the yard kept');
+    assert.equal(A2.floorBase, A1.floorBase, 'the bare floor kept');
+    assert.equal(A2.wallItems, A1.wallItems, 'the walls kept');
+    assert.ok(again < fresh * 0.6, `remade in ${again.toFixed(0)} ms, ${fresh.toFixed(0)} ms from nothing`);
+    for (const it of A2.items) assert.ok(lit(it.cv) > 0, 'all of it drawn');
+    // the paint changed: the walls made again
+    const A3 = new HomeArt(decorate(L, { ...d2, wall: { 0: 1 } }), 2, A2); A3.work(1e9); done(A3, 1);
+    assert.notEqual(A3.wallItems, A2.wallItems, 'new paint: new walls');
+    assert.equal(A3.floorBase, A2.floorBase, 'the floor kept');
+  } finally { globalThis.document = prev; }
+});

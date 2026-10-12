@@ -12,6 +12,7 @@ import { TICK_HZ } from '../../shared/constants.js';
 import { PAINTS, VEHICLES } from '../../shared/vehicles.js';
 import { pedSprite, PED_BOX } from './sprites.js';
 import { decodeLook, lookToApp } from '../../shared/lookcore.js';
+import { sfx } from '../audio.js';
 
 const DT = 1 / TICK_HZ;
 const looks = new Map();   // a friend's look by name (sent now and then)
@@ -40,8 +41,12 @@ export function onMsg(state, m) {
   S = state;
   if (m.pre) { loadArt(); return; }   // (at your door: loaded ahead of going in - art v2's drawing too)
   if (m.off) { hide(); return; }
+  if (m.bell) { ding(); return; }   // (H71: someone at your door rings the doorbell - heard inside)
   if (!st || st.id !== m.id || m.plan !== (st && st.plan)) st = { id: m.id, cars: [], name: '', garage: 0, sleepS: HOME_IN.sleepS, wakeH: HOME_IN.wakeH };
   Object.assign(st, m);
+  st.pet = m.pet || null;   // (H71: your pet - its name, look and bed come now and then, where it is every time)
+  if (m.pet && m.pet.art) st.petI = { n: m.pet.n, art: m.pet.art, bx: m.pet.bx, by: m.pet.by };
+  if (!m.pet) st.petI = null;
   st.at = performance.now();
   const t = performance.now();
   for (const o of m.others || []) {
@@ -90,6 +95,11 @@ function hide() {
   art = null;   // (its buffers - a few MB - let go: made again, a little a frame, the next time you're in)
 }
 export const inside = () => !!st;
+// (H71) the doorbell: ding... dong
+function ding() {
+  sfx('doorbell', 1, { f: 1320 });
+  setTimeout(() => sfx('doorbell', 1, { f: 990 }), 380);
+}
 
 // where you are: the server's spot, your inputs it hasn't seen yet replayed on it (the same steps it takes), between the
 // last two steps by the time since
@@ -132,6 +142,7 @@ function frame(now) {
     g.drawImage(bake.cv, -16, -24, L.w + 32, L.h + 40);
     windows(L, now);
     cars(L);
+    petV1(now);
     if (u) {   // the thing in reach: outlined
       g.strokeStyle = `rgba(255,214,90,${0.55 + 0.35 * Math.sin(now / 220)})`; g.lineWidth = 2;
       g.strokeRect(u.x + 1, u.y + 1, u.w - 2, u.h - 2);
@@ -140,6 +151,7 @@ function frame(now) {
     you(L, me, now);
     nightV1(L);
   }
+  if (st.doors) lobbyMarks(L, v2 && art && art.ready, now);   // (H71: a lobby's door numbers, yours lit)
   if (st.edit) editMarks(L, me, now);
   g.setTransform(1, 0, 0, 1, 0, 0);
   hudText(W, H, dpr, now);
@@ -149,13 +161,26 @@ function frame(now) {
 const dir8Of = (a) => ((Math.round(a / (Math.PI / 4)) % 8) + 8 + 6) % 8;   // (v1 order: 0 S, 2 W, 4 N, 6 E)
 function drawArt(L, me, u, now) {
   const ap = Math.max(1, Math.min(2, (S.art2 && S.art2.E && S.art2.E.ap) || 2));
-  if (!art || art.L !== L || art.ap !== ap) art = new artMod.HomeArt(L, ap);
+  // (H71) a change of decor: the new drawing made from the old one - the yard, the walls and the floor kept unless their
+  // paint or floor changed, the furniture's models kept - while the old one stays on screen until it's ready
+  if (!art || art.ap !== ap || (art.L !== L && !(art.next && art.next.L === L))) {
+    const same = !!art && art.ap === ap && (art.L.base || art.L) === (L.base || L);
+    const nx = new artMod.HomeArt(L, ap, same ? art : null);
+    if (same && art.ready) art.next = nx; else art = nx;
+  }
+  if (art.next) { const nx = art.next; nx.relight(daylight()); if (nx.work(6)) { art = nx; } }
   art.relight(daylight());
   if (!art.work(art.ready ? 4 : 10)) return false;   // (made and lit a little at a time: never a stall on the way in)
   const f = art.floor, yd = art.yard;
   g.drawImage(yd.cv, yd.x, yd.y, yd.G.w * ap, yd.G.h * ap);
   g.drawImage(f.cv, 0, 0, f.G.w * ap, f.G.h * ap);
   const list = [];
+  const pt = st.pet, pi = st.petI;
+  if (pt && pi) {   // (H71) your pet: its bed on the floor, and it - art v2's own dog or cat, as in the street
+    petBedDraw(pi.bx, pi.by);
+    const pd = petAt(pt), po = pt.po === 'happy' ? 'idle' : pt.po, hop = pt.po === 'happy' ? Math.abs(Math.sin(now / 110)) * 5 : 0;
+    list.push({ b: pd.y, pet: { x: pd.x, y: pd.y - hop, po, d8: dir8Of(pt.a), fr: Math.floor(now / (po === 'run' ? 70 : pt.po === 'happy' ? 60 : 150)) } });
+  }
   for (const it of art.items) list.push({ b: it.base, it });
   (st.cars || []).forEach((c, i) => { const s = art.car(c, i); if (s) list.push({ b: s.base, car: s }); });
   // you, and anyone in here with you: art v2's people, at the street's size
@@ -178,7 +203,11 @@ function drawArt(L, me, u, now) {
       g.drawImage(it.cv, it.x, it.y, it.G.w * ap, it.G.h * ap);
       if (u && it.piece === u && it.ol) { g.globalAlpha = pulse; g.drawImage(it.ol, it.x - ap, it.y - ap, it.ol.width * ap, it.ol.height * ap); g.globalAlpha = 1; }
     } else if (e.car) g.drawImage(e.car.cv, e.car.x, e.car.y, e.car.w, e.car.h);
-    else {
+    else if (e.pet) {
+      let c = null;
+      try { c = art.pet(pi.art, e.pet.po, e.pet.d8, e.pet.fr, e.pet.x, e.pet.y); } catch (err) { if (!art.petErr) { art.petErr = 1; console.warn('[home art] pet', err); } }
+      if (c) { g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(e.pet.x, e.b, 8, 3, 0, 0, 6.28); g.fill(); g.drawImage(c.cv, Math.round(e.pet.x - c.ax), Math.round(e.pet.y - c.ay), c.w, c.h); }
+    } else {
       const p = e.p;
       let c = null;
       try { c = art.person(p.look, p.pose, p.d8, p.fr, p.x, p.y); } catch (err) { if (!art.pedErr) { art.pedErr = 1; console.warn('[home art] person', err); } }
@@ -208,7 +237,7 @@ function nightV1(L) {
   g.fillStyle = `rgba(8,12,36,${0.5 * k})`; g.fillRect(-16, -24, L.w + 32, L.h + 40);
   g.save(); g.globalCompositeOperation = 'lighter';
   for (const p of L.pieces) {
-    if (!'ABVTKHlbv'.includes(p.ch)) continue;
+    if (!'ABVTKHlbvMZ'.includes(p.ch)) continue;   // (M, Z: a lobby's lights by the mailboxes and the stairs - H71)
     const x = p.x + p.w / 2, y = p.y + p.h / 2, r = p.ch === 'A' || p.ch === 'l' ? 80 : p.ch === 'V' || p.ch === 'v' ? 50 : 64;
     const grd = g.createRadialGradient(x, y, 4, x, y, r);
     grd.addColorStop(0, p.ch === 'V' || p.ch === 'v' ? `rgba(90,130,255,${0.16 * k})` : `rgba(255,180,100,${0.2 * k})`); grd.addColorStop(1, 'rgba(255,180,100,0)');
@@ -230,6 +259,59 @@ function tvGlow(L, now) {
   g.restore();
 }
 
+// ---- your pet at home (H71: server/systems/homeinside.js walks it) --------------------------------------------------
+let petD = null;
+function petAt(pt) {   // (eased toward where the server has it: 20 steps a second)
+  if (!petD || Math.hypot(pt.x - petD.x, pt.y - petD.y) > 60) petD = { x: pt.x, y: pt.y };
+  petD.x += (pt.x - petD.x) * 0.3; petD.y += (pt.y - petD.y) * 0.3;
+  return petD;
+}
+// its bed: a round cushion in a padded ring, dimmed after dark
+function petBedDraw(x, y) {
+  const k = 0.55 + 0.45 * daylight();
+  g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(x + 1, y + 3, 14, 8, 0, 0, 6.28); g.fill();
+  g.fillStyle = `rgb(${Math.round(150 * k)},${Math.round(70 * k)},${Math.round(58 * k)})`; g.beginPath(); g.ellipse(x, y, 13, 8, 0, 0, 6.28); g.fill();
+  g.fillStyle = `rgb(${Math.round(222 * k)},${Math.round(200 * k)},${Math.round(160 * k)})`; g.beginPath(); g.ellipse(x, y + 1, 9, 5, 0, 0, 6.28); g.fill();
+}
+// the classic view's pet: a little top-down dog or cat, its tail going
+function petV1(now) {
+  const pt = st.pet, pi = st.petI;
+  if (!pt || !pi) return;
+  petBedDraw(pi.bx, pi.by);
+  const pd = petAt(pt), cat = /^cat/.test(pi.art), col = /golden|ginger/.test(pi.art) ? '#c8903e' : /black/.test(pi.art) ? '#2a2a2e' : /grey/.test(pi.art) ? '#8a8a90' : '#9a6a3a';
+  const hop = pt.po === 'happy' ? Math.abs(Math.sin(now / 110)) * 3 : 0, wag = Math.sin(now / (pt.po === 'happy' ? 50 : 160)) * 0.6;
+  g.save(); g.translate(pd.x, pd.y - hop); g.rotate(pt.a);
+  g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(1, 2 + hop, 10, 6, 0, 0, 6.28); g.fill();
+  g.fillStyle = col;
+  g.beginPath(); g.ellipse(-1, 0, pt.po === 'lie' ? 8 : 9, cat ? 4 : 5, 0, 0, 6.28); g.fill();   // the body
+  g.beginPath(); g.arc(8, 0, cat ? 3.5 : 4, 0, 6.28); g.fill();                                     // the head
+  g.fillRect(cat ? 9 : 10, -4, 2, 2); g.fillRect(cat ? 9 : 10, 2, 2, 2);                         // the ears
+  g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); g.moveTo(-9, 0); g.lineTo(-9 - Math.cos(wag) * (cat ? 8 : 6), Math.sin(wag) * (cat ? 8 : 6)); g.stroke();   // the tail
+  g.restore();
+}
+
+// ---- an apartment block's lobby (H71): each flat's number over its door; yours lit, someone in with a light under it,
+// one for sale with its sign
+function lobbyMarks(L, v2, now) {
+  if (!L.doors || !L.doors.length) return;
+  const ny = v2 ? -8 : 9;
+  g.save(); g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (const d of L.doors) {
+    const s = st.doors[d.n - 1] | 0, x = d.x;
+    if (s === 2) {   // yours: the lamp over the door on, its light on the landing
+      const grd = g.createRadialGradient(x, 26, 2, x, 26, 46);
+      grd.addColorStop(0, `rgba(255,206,120,${0.42 + 0.05 * Math.sin(now / 400)})`); grd.addColorStop(1, 'rgba(255,206,120,0)');
+      g.fillStyle = grd; g.fillRect(x - 46, -20, 92, 92);
+      g.fillStyle = '#ffe0a0'; g.fillRect(x - 3, ny - 10, 6, 3);
+    }
+    if (s === 3) { g.fillStyle = 'rgba(255,214,140,.8)'; g.fillRect(x - 9, 31, 18, 2); }   // someone's in: light under the door
+    g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(x - 7, ny - 5, 14, 10);
+    g.font = 'bold 8px monospace'; g.fillStyle = s === 2 ? '#ffd27a' : '#e8e2d0'; g.fillText(String(d.n), x, ny + 0.5);
+    if (s === 0) { g.fillStyle = '#b8382a'; g.fillRect(x - 11, 17, 22, 7); g.fillStyle = '#fff'; g.font = 'bold 5px monospace'; g.fillText('FOR SALE', x, 20.8); }
+  }
+  g.restore();
+}
+
 // ---- the rooms, baked once per plan --------------------------------------------------------------------------------
 function bakeRooms(L) {
   const PX = 2, c = document.createElement('canvas');
@@ -241,7 +323,7 @@ function bakeRooms(L) {
   // floors (under the furniture too: the floor next to it)
   for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
     let ch = L.cell(tx, ty);
-    if (/[A-Z#=]/.test(ch)) { const n = [L.cell(tx - 1, ty), L.cell(tx + 1, ty), L.cell(tx, ty + 1), L.cell(tx, ty - 1)].find((q) => /[.ctg+]/.test(q)); if (!n || /[#=DR]/.test(ch)) continue; ch = n; }
+    if (/[A-Z#=]/.test(ch)) { const n = [L.cell(tx - 1, ty), L.cell(tx + 1, ty), L.cell(tx, ty + 1), L.cell(tx, ty - 1)].find((q) => /[.ctg+]/.test(q)); if (!n || /[#=DRUE]/.test(ch)) continue; ch = n; }
     const lay = L.floorAt && L.floorAt(tx, ty);   // (H67: a new floor laid in the room)
     if (lay && ch !== '+') ch = lay[1];
     const f = lay ? floorOf.call(null, ch, PAL[lay[2]]) : floorOf(ch), x = tx * T, y = ty * T;
@@ -265,7 +347,7 @@ function bakeRooms(L) {
   for (const p of L.pieces) { b.fillStyle = 'rgba(0,0,0,.2)'; b.fillRect(p.x + 3, p.y + 4, p.w, p.h); piece(b, p, P, L); }
   // the walls standing up (H64): each wall's top raised by its height, the face below it showing where the floor is in
   // front (the back wall taller, the rest cut low so you see in); the front door, the garage door
-  const wallish = (ch) => ch === '#' || ch === '=' || ch === 'D' || ch === 'R';
+  const wallish = (ch) => ch === '#' || ch === '=' || ch === 'D' || ch === 'R' || ch === 'U' || ch === 'E';   // (U a flat's door, E the lift: a lobby's - H71)
   for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
     const ch = L.cell(tx, ty), x = tx * T, y = ty * T, h = ty === 0 ? 16 : 7;
     if (!wallish(ch)) continue;
@@ -275,6 +357,8 @@ function bakeRooms(L) {
       b.fillStyle = 'rgba(0,0,0,.22)'; b.fillRect(x, y + T - 2, T, 2);
       if (ch === 'R') { b.fillStyle = '#7a7c80'; for (let j = 1; j < h; j += 3) b.fillRect(x, y + T - h + j, T, 1); }
       b.fillStyle = 'rgba(0,0,0,.18)'; if (/[.ctg+]/.test(L.cell(tx, ty + 1))) b.fillRect(x, y + T, T, 5);
+      if (ch === 'U') { b.fillStyle = '#e8e0cc'; b.fillRect(x + 4, y + T - h, T - 8, h); b.fillStyle = ['#6a5038', '#3e5a4a', '#7a3a2a', '#4a2a1c'][L.tier] || '#6a5038'; b.fillRect(x + 6, y + T - h + 1, T - 12, h - 1); b.fillStyle = '#e0b040'; b.fillRect(x + T - 11, y + T - h / 2, 2, 2); }   // (H71) a flat's door
+      if (ch === 'E') { const l = L.cell(tx - 1, ty) === 'E'; b.fillStyle = '#a8b0b8'; b.fillRect(x + (l ? 0 : 3), y + T - h, T - 3, h); b.fillStyle = '#5a6068'; b.fillRect(l ? x : x + T - 1, y + T - h, 1, h); }   // the lift
     }
     if (ch === 'D') {   // the door: a gap in the cut wall, the door shut in it, the mat inside
       b.fillStyle = '#7a4a26'; b.fillRect(x + 3, y + T - h - 2, T - 6, h + 2);
@@ -343,6 +427,9 @@ function piece(b, p, P, L) {
     case 'r': box(P.cloth, x + 3, y + 3, w - 6, h - 6); b.strokeStyle = P.accent; b.lineWidth = 2; b.strokeRect(x + 7, y + 7, w - 14, h - 14); break;
     case 'w': box('#eceae4', x + 4, y + 4, w - 8, h - 8); b.fillStyle = '#5a7a8a'; b.beginPath(); b.arc(x + 16, y + 18, 7, 0, 6.28); b.fill(); box('#3a3e46', x + 8, y + 6, 6, 2); break;
     case 'k': box('#4a5a6a', x + 2, y + 6, w - 4, h - 10); box('#b08a5a', x + 3, y + 7, w - 6, h - 14); box('#b8342e', x + 10, y + 10, 12, 7); box('#c8ccd2', x + w - 14, y + h - 10, 8, 4); break;
+    // (H71) a lobby's: the mailboxes on the back wall, the stairs climbing to it
+    case 'M': box('#5a6068', x + 2, y + 2, w - 4, h - 12); for (let j = 0; j < 2; j++) for (let i = 0; i < Math.floor((w - 8) / 10); i++) { box('#a8aeb4', x + 5 + i * 10, y + 4 + j * 9, 8, 7); box('#22262c', x + 7 + i * 10, y + 6 + j * 9, 4, 1); } break;
+    case 'Z': for (let k = 0; k < 8; k++) { box(k & 1 ? '#8a8680' : '#9a968e', x + 2, y + h - (k + 1) * 8, w - 10, 8); box('rgba(0,0,0,.18)', x + 2, y + h - (k + 1) * 8, w - 10, 1); } box('#5a3c22', x + w - 8, y, 4, h); break;
     default: box('#6a6a6a', x + 2, y + 2, w - 4, h - 4);
   }
   void L;

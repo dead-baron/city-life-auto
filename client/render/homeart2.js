@@ -11,7 +11,7 @@ import { GBuf, hash, vnoise, step, bayer, F_GLASS } from '../art2/gbuf.js';
 import { ramp } from '../art2/palette.js';
 import { MAKERS, LOOK } from '../art2/props-home.js';
 import { pedSprite } from '../art2/game/peds.js';
-import { vehicleSprite } from '../art2/game/actors.js';
+import { vehicleSprite, animalSprite } from '../art2/game/actors.js';
 import { TILE_IN, CAR_IN } from '../../shared/homelayout.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 
@@ -101,18 +101,44 @@ function rug(G, ap, rx, ry, rw, rh, tier, seed) {
 export class HomeArt {
   // Built a little at a time (work(ms) each frame: a phone never stalls on the way in - homeview.js draws the classic
   // view until it's ready), then lit the same way for each step of the day
-  constructor(L, ap = 2) {
-    this.L = L; this.ap = ap; this.tier = L.tier; this.R = rooms(L);
+  // (H71) prev: the drawing of the same home before a change of decor - its yard, walls, floor and furniture models are
+  // kept where the change didn't touch them (a piece placed, moved or turned: only the furniture and the floor's shadows
+  // and rugs are made again; the paint: the walls; a new floor: the floor), so a change is a moment, not seconds
+  constructor(L, ap = 2, prev = null) {
+    this.L = L; this.ap = ap; this.tier = L.tier; this.R = prev && prev.R && (prev.L.base || prev.L) === (L.base || L) ? prev.R : rooms(L);
     this.items = []; this.lamps = []; this.windows = []; this.floor = null;
     this.envKey = ''; this.people = new Map(); this.cars = new Map(); this.figs = new Map();
+    this.prev = prev; this.models = new Map();
     this.ready = false; this.job = this.build(); this.lightJob = null;
   }
   *build() {
-    this.buildYard();
+    const P = this.prev, same = !!P && P.ap === this.ap && (P.L.base || P.L) === (this.L.base || this.L) && !P.job;
+    this.prev = null;
+    const d = this.L.decor || {}, d0 = (same && P.L.decor) || {}, eq = (a, b) => JSON.stringify(a || {}) === JSON.stringify(b || {});
+    if (same) { this.models = P.models; this.figs = P.figs; this.yard = { G: P.yard.G, x: P.yard.x, y: P.yard.y }; } else this.buildYard();
     yield;
+    if (same && P.floorBase && eq(d.floor, d0.floor)) this.floorBase = P.floorBase;
     yield* this.buildFloor();
-    yield* this.buildWalls();
+    if (same && P.wallItems && eq(d.wall, d0.wall)) {
+      this.wallItems = P.wallItems;
+      for (const it of P.wallItems) this.items.push({ G: it.G, x: it.x, y: it.y, base: it.base, wall: it.wall });
+      this.lamps.push(...P.lamps.filter((l) => l.kind === 'sconce'));
+    } else yield* this.buildWalls();
     yield* this.buildFurniture();
+  }
+  // (H71) your pet's lit sprite: art v2's own dog or cat (as in the street), shaded where it stands
+  pet(art, pose, d8, fr, x, y) {
+    const key = `pet|${art}|${pose}|${d8}|${fr}`, pk = `${key}|${Math.round(x / 16)}|${Math.round(y / 16)}`;
+    let c = this.people.get(pk);
+    if (!c) {
+      if (this.people.size > 160) this.people.clear();
+      let G = this.figs.get(key);
+      if (!G) { if (this.figs.size > 120) this.figs.clear(); G = animalSprite('pet:' + art, pose, d8, fr); this.figs.set(key, G); }
+      const s = G.ap || 1;
+      c = { cv: this.shade(G, x - G.ax * s, y - G.ay * s, s, this.E), ax: G.ax * s, ay: G.ay * s, w: G.w * s, h: G.h * s };
+      this.people.set(pk, c);
+    }
+    return c;
   }
   // do the building and the lighting for up to ms; ready once it's all built and lit
   work(ms) {
@@ -159,25 +185,29 @@ export class HomeArt {
     this.yard = { G, x: -M, y: -M };
   }
   *buildFloor() {
-    const L = this.L, ap = this.ap, G = new GBuf(Math.ceil(L.w / ap), Math.ceil(L.h / ap));
-    for (let y = 0; y < G.h; y++) {
-      for (let x = 0; x < G.w; x++) {
-        const wx = x * ap, wy = y * ap, tx = Math.floor(wx / T), ty = Math.floor(wy / T);
-        if (WALLISH.has(L.cell(tx, ty)) && L.cell(tx, ty) !== 'D') continue;
-        const f = this.L.floorAt && this.L.floorAt(tx, ty);
-        G.put(x, y, floorPx(this.floorKind(tx, ty), f ? f[2] : this.tier, wx, wy, x, y), UP, 0);
+    const L = this.L, ap = this.ap;
+    const G = this.floorBase ? cloneG(this.floorBase) : new GBuf(Math.ceil(L.w / ap), Math.ceil(L.h / ap));   // (H71: the bare floor kept from before a change of decor)
+    if (!this.floorBase) {
+      for (let y = 0; y < G.h; y++) {
+        for (let x = 0; x < G.w; x++) {
+          const wx = x * ap, wy = y * ap, tx = Math.floor(wx / T), ty = Math.floor(wy / T);
+          if (WALLISH.has(L.cell(tx, ty)) && L.cell(tx, ty) !== 'D') continue;
+          const f = this.L.floorAt && this.L.floorAt(tx, ty);
+          G.put(x, y, floorPx(this.floorKind(tx, ty), f ? f[2] : this.tier, wx, wy, x, y), UP, 0);
+        }
+        if (y % 24 === 23) yield;
       }
-      if (y % 24 === 23) yield;
-    }
-    // a threshold across each doorway, along the wall it's in
-    const sill = ramp(this.tier >= 2 ? '#c8b89a' : '#6a5038', 4, 2);
-    for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
-      if (L.cell(tx, ty) !== '+') continue;
-      const across = WALLISH.has(L.cell(tx - 1, ty)) || WALLISH.has(L.cell(tx + 1, ty));   // (in a wall running east-west)
-      for (let y = Math.floor(ty * T / ap); y < (ty + 1) * T / ap; y++) for (let x = Math.floor(tx * T / ap); x < (tx + 1) * T / ap; x++) {
-        const u = x * ap - tx * T, v = y * ap - ty * T, k = across ? v : u;
-        if (k >= 11 && k < 21) G.put(x, y, step(sill, k === 11 || k === 20 ? 0.2 : 0.6, x, y, 0.3), UP, 0);
+      // a threshold across each doorway, along the wall it's in
+      const sill = ramp(this.tier >= 2 ? '#c8b89a' : '#6a5038', 4, 2);
+      for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
+        if (L.cell(tx, ty) !== '+') continue;
+        const across = WALLISH.has(L.cell(tx - 1, ty)) || WALLISH.has(L.cell(tx + 1, ty));   // (in a wall running east-west)
+        for (let y = Math.floor(ty * T / ap); y < (ty + 1) * T / ap; y++) for (let x = Math.floor(tx * T / ap); x < (tx + 1) * T / ap; x++) {
+          const u = x * ap - tx * T, v = y * ap - ty * T, k = across ? v : u;
+          if (k >= 11 && k < 21) G.put(x, y, step(sill, k === 11 || k === 20 ? 0.2 : 0.6, x, y, 0.3), UP, 0);
+        }
       }
+      this.floorBase = cloneG(G);
     }
     // a soft shadow along the foot of every wall's face (the walls stand up)
     for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
@@ -214,7 +244,7 @@ export class HomeArt {
   }
   // the walls: a sprite for each run along a row (sorted by where it stands), its cap and - where it shows - its face
   *buildWalls() {
-    const L = this.L, ap = this.ap, t = this.tier, R = this.R;
+    const L = this.L, ap = this.ap, t = this.tier, R = this.R, n0 = this.items.length;
     const hOf = (tx, ty) => (WALLISH.has(L.cell(tx, ty)) ? (ty === 0 ? HF : HC) : 0);
     const last = L.rows - 1;
     for (let ty = 0; ty < L.rows; ty++) {
@@ -256,6 +286,8 @@ export class HomeArt {
       }
       this.items.push({ G, x: wx0, y: wy0, base: (L.door.ty + 1) * T + 1 });
     }
+    this.wallItems = this.items.slice(n0);   // (H71: kept for the next drawing after a change of decor)
+    void R;
   }
   inGlass(tx, ty, wx, v) { const u = wx - tx * T; return v >= 14 && v < 38 && u >= (L4ch(this.L, tx - 1, ty) ? 0 : 4) && u < (L4ch(this.L, tx + 1, ty) ? T : T - 4); }
   facePx(ch, tx, ty, wx, v, h, x, y) {
@@ -337,8 +369,9 @@ export class HomeArt {
       else if (p.ch !== 'T' && p.ch !== 'P' && p.ch !== 'B') face = wall(p.tx, p.ty - 1) ? 's' : wall(p.tx, p.ty + p.th) ? 'n' : wall(p.tx - 1, p.ty) ? 'e' : wall(p.tx + p.tw, p.ty) ? 'w' : 's';
       const side = face === 'e' || face === 'w', mw = side ? p.h : p.w, md = side ? p.w : p.h;
       const head = { s: 0, n: Math.PI, e: -Math.PI / 2, w: Math.PI / 2 }[face];
-      const m = make(mw, md, this.tier, p.ch === 'a' ? p.tx * 3 + p.ty + p.dec : 0);
-      const G = m.render(head, { px: ap, dither: 0.35 });
+      const seed = p.ch === 'a' ? p.tx * 3 + p.ty + p.dec : 0, mk = `${p.ch}|${mw}|${md}|${this.tier}|${seed}|${face}`;
+      let G = this.models.get(mk);   // (H71: a model made once - a change of decor makes only the new pieces)
+      if (!G) { G = make(mw, md, this.tier, seed).render(head, { px: ap, dither: 0.35 }); this.models.set(mk, G); }
       const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
       const it = { G, x: cx - G.ax * ap, y: cy - G.ay * ap, base: p.y + p.h, piece: p };
       if ('VAblv'.includes(p.ch)) it.remake = (on) => make(mw, md, this.tier, on).render(head, { px: ap, dither: 0.35 });
@@ -462,6 +495,12 @@ export class HomeArt {
     }
     return s;
   }
+}
+// (H71) a copy of a buffer (the bare floor, kept to lay the next decor's shadows and rugs on)
+function cloneG(G) {
+  const C = new GBuf(G.w, G.h);
+  C.col.set(G.col); C.nrm.set(G.nrm); C.z.set(G.z); C.emi.set(G.emi); C.flag.set(G.flag);
+  return C;
 }
 const L4ch = (L, tx, ty) => L.cell(tx, ty) === '=';
 const L4K = (L, tx, ty) => L.cell(tx, ty) === 'K' || L.cell(tx, ty) === 'T';
