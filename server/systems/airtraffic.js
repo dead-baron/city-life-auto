@@ -61,7 +61,7 @@ export function planeFlight(world, A, opts = {}) {
   if (!rws.length) return null;
   const r = rws[Math.floor(world.rand() * rws.length)];
   const landing = opts.mode ? opts.mode === 'land' : world.rand() < 0.5;
-  for (const s of world.rand() < 0.5 ? [1, -1] : [-1, 1]) {
+  for (const s of opts.dir ? [opts.dir] : world.rand() < 0.5 ? [1, -1] : [-1, 1]) {   // (opts.dir: which way along it, 1 or -1 - the dev menu's)
     const ux = r.ux * s, uy = r.uy * s, half = r.len / 2;
     // the end it starts its roll from / touches down at: a quarter in from the end it comes from
     const tx = r.x - ux * half * 0.75, ty = r.y - uy * half * 0.75;
@@ -112,6 +112,18 @@ export function news(world, A, p) {
   return start(world, A, v, { kind: 'news', mode: 'circle', pid: p.pid, th: a, x: p.ped.x, y: p.ped.y });
 }
 
+// anyone (on foot, or another vehicle) on the runway's line from where it touches down to where it would stop
+function blocked(world, f, v) {
+  for (let d = -100; d <= 700; d += 200) {
+    const x = f.tx + f.ux * d, y = f.ty + f.uy * d;
+    for (const e of world.query(x, y, 150)) {
+      if (e === v || e.removed || (e.kind === K.PED && (e.dead || e.vehId)) || (e.kind !== K.PED && e.kind !== K.VEH)) continue;
+      if (e.kind === K.VEH && (e.alt || 0) > FLY.HIGH) continue;
+      return true;
+    }
+  }
+  return false;
+}
 function done(world, A, f, v) {
   A.flights.delete(f.vid);
   if (!v) return;
@@ -155,11 +167,13 @@ function run(world, A, f, dt) {
     fi.climb = clamp((wantAlt - (v.alt || 0)) / 60, -0.5, 0.4);
     if ((v.alt || 0) <= 0.5 && togo < 400) f.mode = 'rollout';
     if (togo < -1200) f.mode = 'climb';   // (overshot: go round - off it flies)
+    // someone - a person, a car - on the runway where it touches down and rolls out: it goes round (full power, climbing away)
+    if (togo < 1100 && togo > -200 && (v.alt || 0) > 4 && blocked(world, f, v)) { f.mode = 'climb'; f.round = true; }
   } else if (f.mode === 'rollout') {   // down: braking to a stop on the runway; once nobody's looking it's gone (taxied off)
-    fi.fwd = fwd > 5 ? -1 : 0; fi.hb = true; fi.turn = clamp(wrap(want - v.a) * 2, -1, 1); fi.climb = 0;
-    if (fwd < 5) { f.mode = 'stopped'; f.stopAt = now; }
+    fi.fwd = fwd > 20 ? -1 : 0; fi.turn = clamp(wrap(want - v.a) * 2, -1, 1); fi.climb = 0;   // (no brake held once stopped: that backs it up)
+    if (fwd < 3) { f.mode = 'stopped'; f.stopAt = now; }
   } else if (f.mode === 'stopped') {
-    fi.fwd = 0; fi.hb = true; fi.turn = 0; fi.climb = 0;
+    fi.fwd = 0; fi.turn = 0; fi.climb = 0;
     if (now - f.stopAt > 8 && !inAnyView(world, v.x, v.y, 200)) done(world, A, f, v);
   }
   if (now - f.since > 300 && !inAnyView(world, v.x, v.y, 300)) done(world, A, f, v);   // (a flight that's gone on too long)

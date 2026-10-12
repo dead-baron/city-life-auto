@@ -49,14 +49,16 @@ test('headquarters has a helipad; below the stars no helicopter, at three one ta
   // following them overhead: up, over to them, circling at its height
   go(25);
   assert.equal(u.mode, 'chase');
-  const d = Math.hypot(v.x - p.ped.x, v.y - p.ped.y);
+  // (circling them - its circle's middle south of them by its drawn height, so art v2 shows it over them: policeair.js)
+  const off = (q) => Math.hypot(v.x - q.x, v.y - (q.y + v.alt * FLY.LIFT * 0.8));
+  const d = off(p.ped);
   assert.ok(d < POLICE_AIR.orbitR * 2.2, `over the suspect (${Math.round(d)} px off)`);
   assert.ok(v.alt >= POLICE_AIR.alt - 40, `up at its height (${Math.round(v.alt)} px)`);
   assert.ok(v.alt > FLY.HIGH, 'out of reach of the ground');
   // they move off: it follows
   p.ped.x += 700; w.place(p.ped);
   go(6);
-  assert.ok(Math.hypot(v.x - p.ped.x, v.y - p.ped.y) < POLICE_AIR.orbitR * 2.2, 'it follows them');
+  assert.ok(off(p.ped) < POLICE_AIR.orbitR * 2.2, 'it follows them');
   w._t1 = { p, u, v };
 });
 
@@ -86,9 +88,9 @@ test('at night its searchlight is on them - on the wire in the damage word\'s to
   const parent = net._fields(w, v)[2] >>> 0, b = parent >>> 24;
   assert.equal(b, v.lightB, 'sent in the record');
   // the page's decoding (render/aircraft.js): the way and the distance
-  const a = (b & 31) / 32 * Math.PI * 2, dist = ((b >> 5) & 3) * 110;
+  const a = (b & 31) / 32 * Math.PI * 2, dist = ((b >> 5) & 3) * 170;
   const ex = v.x + Math.cos(a) * dist, ey = v.y + Math.sin(a) * dist;
-  assert.ok(Math.hypot(ex - p.ped.x, ey - p.ped.y) < 110, 'decoded near them');
+  assert.ok(Math.hypot(ex - p.ped.x, ey - p.ped.y) < 150, `decoded near them (${Math.round(Math.hypot(ex - p.ped.x, ey - p.ped.y))} px)`);
   w.loopTime = day;
   go(0.2);
   assert.ok(!(v.lightB & 128), 'off by day');

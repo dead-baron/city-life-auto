@@ -72,7 +72,16 @@ export function drawAir(g, F, S, dt, v2 = false) {
       if (!isPlane(def) && v._spin > 0.55) { g.globalAlpha = 0.1 * fade; g.beginPath(); g.arc(def.L * 0.06, 0, def.rotor, 0, Math.PI * 2); g.fill(); }
       g.restore();
     }
-    if (modeled) continue;
+    if (modeled) {
+      // (the rotor's blurred disc stays here, over the model's mast: a canvas blends it, the renderer can only dither)
+      if (!isPlane(def) && v._spin > 0.55 && !(f & VF.WRECK)) {
+        const k = 1 + Math.min(0.5, alt / 1600);
+        g.save(); g.translate(v.rx + Math.cos(v.ra) * def.L * 0.06, v.ry + Math.sin(v.ra) * def.L * 0.06 - lift - 50); g.rotate(v.ra); g.scale(k, k);
+        rotorDisc(g, def, LIVERY[def.livery] || LIVERY.news, v, 0);
+        g.restore();
+      }
+      continue;
+    }
     // the aircraft: nearer the camera the higher it is
     const k = 1 + Math.min(0.5, alt / 1600);
     g.save();
@@ -140,13 +149,7 @@ function drawHeli(g, def, v, alt, now) {
   // the mast and the main rotor: blades turning while it spools, a blurred disc once it's up to speed
   const hx = L * 0.06, R = def.rotor, s = v._spin || 0;
   g.fillStyle = '#3a3c40'; g.beginPath(); g.arc(hx, 0, 6, 0, Math.PI * 2); g.fill();
-  if (s > 0.55) {
-    g.fillStyle = `rgba(200,205,212,${(0.16 + 0.1 * s).toFixed(3)})`;
-    g.beginPath(); g.arc(hx, 0, R, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = 'rgba(235,238,242,0.35)'; g.lineWidth = 2;
-    for (let i = 0; i < 4; i++) { const a = v._ph * 0.5 + i * Math.PI / 2; g.beginPath(); g.arc(hx, 0, R * (0.55 + 0.1 * i), a, a + 0.5); g.stroke(); }
-    g.strokeStyle = C.tip || 'rgba(255,190,60,0.45)'; g.lineWidth = 3; g.beginPath(); g.arc(hx, 0, R - 3, 0, Math.PI * 2); g.stroke();   // (the tips' paint, a ring)
-  }
+  if (s > 0.55) rotorDisc(g, def, C, v, hx);
   if (s < 0.9) {
     g.globalAlpha *= 1 - Math.max(0, (s - 0.55) / 0.35);
     g.strokeStyle = '#4a4d52'; g.lineWidth = 5; g.lineCap = 'round';
@@ -156,6 +159,15 @@ function drawHeli(g, def, v, alt, now) {
   void alt;
 }
 
+// the main rotor up to speed: a blurred disc, streaks of the blades going round, the tips' paint a ring
+function rotorDisc(g, def, C, v, hx) {
+  const R = def.rotor, s = v._spin || 0;
+  g.fillStyle = `rgba(200,205,212,${(0.16 + 0.1 * s).toFixed(3)})`;
+  g.beginPath(); g.arc(hx, 0, R, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(235,238,242,0.35)'; g.lineWidth = 2;
+  for (let i = 0; i < 4; i++) { const a = v._ph * 0.5 + i * Math.PI / 2; g.beginPath(); g.arc(hx, 0, R * (0.55 + 0.1 * i), a, a + 0.5); g.stroke(); }
+  g.strokeStyle = C.tip || 'rgba(255,190,60,0.45)'; g.lineWidth = 3; g.beginPath(); g.arc(hx, 0, R - 3, 0, Math.PI * 2); g.stroke();   // (the tips' paint, a ring)
+}
 // the plane's bank (yours from the prediction; others' from their turning): v._bank
 function bankOf(v) {
   const own = v._own ? v.rbank : null;
@@ -194,11 +206,11 @@ function drawPlane(g, def, v, alt, now) {
 }
 
 // The police air unit's searchlight (server policeair.js: the vehicle record's damage word's top byte - bit 7 on, bits 0-4
-// the way it points, 32 steps, bits 5-6 how far from under it: 0, 110, 220, 330 px), eased; null when it's off
+// the way it points, 32 steps, bits 5-6 how far from under it: 0, 170, 340, 510 px), eased; null when it's off
 export function spotOf(v, dt = 0.05) {
   const b = ((v.parent >>> 0) >>> 24) & 255;
   if (!(b & 128)) { v._spot = null; return null; }
-  const a = (b & 31) / 32 * Math.PI * 2, d = ((b >> 5) & 3) * 110, x = v.rx + Math.cos(a) * d, y = v.ry + Math.sin(a) * d;
+  const a = (b & 31) / 32 * Math.PI * 2, d = ((b >> 5) & 3) * 170, x = v.rx + Math.cos(a) * d, y = v.ry + Math.sin(a) * d;
   const q = v._spot || (v._spot = { x, y });
   const k = 1 - Math.exp(-5 * dt);
   q.x += (x - q.x) * k; q.y += (y - q.y) * k;
@@ -228,6 +240,8 @@ function drawPads(g, F, S, v2) {
   for (const p of af.pads) {
     const py = p.roof && v2 ? p.y - liftOf(p.alt) : p.y;   // (art v2 stands its buildings up: a roof pad up on the drawn roof)
     if (p.x < view.x0 - 100 || p.x > view.x1 + 100 || py < view.y0 - 100 || py > view.y1 + 100) continue;
+    // (art v2: an aircraft's block model standing on it is under this canvas - the pad's paint would cover it: H66)
+    if (v2 && F.air.some((v) => performance.now() - (v._v2at || 0) < 1500 && Math.abs(v.rx - p.x) < FLY.PAD_R && Math.abs(v.ry - p.y) < FLY.PAD_R && (v._alt || 0) - (p.alt || 0) < 60)) continue;
     const r = FLY.PAD_R * 0.8;
     g.save(); g.translate(p.x, py);
     g.globalAlpha = 0.85;

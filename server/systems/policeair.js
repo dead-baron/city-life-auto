@@ -143,7 +143,10 @@ function run(world, u, dt) {
     u.th += dt * (see ? 0.35 : 0.6);
     const lead = tv ? 0.8 : 0.5, svx = see ? (tv ? tv.vx : t.vx) || 0 : 0, svy = see ? (tv ? tv.vy : t.vy) || 0 : 0;
     const r = see ? POLICE_AIR.orbitR : POLICE_AIR.orbitR * 2;
-    const gx = ox + Math.cos(u.th) * r + svx * lead, gy = oy + Math.sin(u.th) * r + svy * lead;
+    // (its circle's middle a little south of them by its height: art v2 draws it up the screen by its height - FLY.LIFT -
+    // so it's seen circling over them, not off the top of their screen - the playtest)
+    const sy = (v.alt || 0) * FLY.LIFT * 0.8;
+    const gx = ox + Math.cos(u.th) * r + svx * lead, gy = oy + sy + Math.sin(u.th) * r + svy * lead;
     steer(world, v, gx, gy, v.def.max * 0.95, ox, oy, POLICE_AIR.alt);
     if (u.mode === 'up' && (v.spool || 0) < FLY.LIFT_AT) { v.fin.dx = 0; v.fin.dy = 0; v.fin.turn = 0; }
     if (night) {
@@ -153,14 +156,14 @@ function run(world, u, dt) {
     }
   }
   // the searchlight on the wire: the vehicle record's damage word's top byte (net.js) - bit 7 on, bits 0-4 the way it
-  // points (32 steps), bits 5-6 how far from under the helicopter (0, 110, 220, 330 px)
+  // points (32 steps), bits 5-6 how far from under the helicopter (0, 170, 340, 510 px)
   v.searchX = lit ? lx : null; v.searchY = lit ? ly : null;
   v.lightB = lit ? lightByte(lx - v.x, ly - v.y) : 0;
 }
 
 export function lightByte(dx, dy) {
   const d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
-  const ai = ((Math.round(a / (Math.PI * 2) * 32) % 32) + 32) % 32, di = Math.min(3, Math.round(d / 110));
+  const ai = ((Math.round(a / (Math.PI * 2) * 32) % 32) + 32) % 32, di = Math.min(3, Math.round(d / 170));
   return 128 | (di << 5) | ai;
 }
 

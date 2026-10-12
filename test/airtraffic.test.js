@@ -52,6 +52,25 @@ test('a light plane comes in, glides down the runway\'s line and lands softly, r
   assert.ok(onStrip(w.map, v.x, v.y), 'on the runway');
   assert.ok(sink < FLY.HARD_SINK, `a soft touchdown (${Math.round(sink)} px/s)`);
   assert.ok(v.hp > v.def.hp * 0.95, 'unhurt');
+  const x1 = v.x, y1 = v.y;
+  for (let i = 0; i < 3 * 20; i++) w.step();
+  assert.ok(Math.hypot(v.x - x1, v.y - y1) < 6, 'stopped, it stays put (no creeping back)');
+});
+
+test('someone on the runway: it goes round instead of landing on them; stopped, it stays put', () => {
+  const r = rws.find((q) => !q.strip) || rws[0];
+  for (const f0 of [...A.flights.values()]) { const q = w.get(f0.vid); A.flights.delete(f0.vid); if (q) { for (const id of q.seats) { const c = id && w.get(id); if (c) w.remove(c); } w.remove(q); } }
+  const { p } = joinPlayer(w);
+  const v = airtraffic.planeFlight(w, A, { rw: r, mode: 'land', force: true, dir: 1 });
+  const f = flightOf(v);
+  p.ped.x = f.tx + f.ux * 250; p.ped.y = f.ty + f.uy * 250; w.place(p.ped);
+  const hp0 = p.ped.hp;
+  for (let i = 0; i < 20 * 20 && f.mode === 'approach'; i++) w.step();
+  assert.equal(f.mode, 'climb', 'gone round');
+  assert.ok(f.round, '(for them)');
+  for (let i = 0; i < 4 * 20; i++) w.step();
+  assert.equal(p.ped.hp, hp0, 'unhurt');
+  assert.ok(!v.wreckAt, 'no crash');
 });
 
 test('the news helicopter comes to circle a chase, then flies off', () => {

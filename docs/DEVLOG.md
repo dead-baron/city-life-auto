@@ -8767,3 +8767,80 @@ crashes) and an audio thread starved by the bakes on a phone are the likelier "b
 home code made (homes.js -> homeinside.js -> economy.js, which hands homes.js its menu builder as it loads) crashed any
 test that loaded homes.js first, on a `let` not yet initialised: the builder is kept on its setter function now
 (homes.js, and station.js the same way); the server itself booted either way.
+
+## 2026-10-11 · Aircraft that look like the game, and aircraft about the world: the block models, the police air unit, planes in and out, the news helicopter (H66)
+
+The owner wanted helicopters and planes "to come together soon"; they flew (H56, H59, H63) but were still the simple 2D
+drawing on the overlay in both views, and nobody flew but players. This wave: the aircraft as art v2 block models after
+HE1, the police helicopter in chases, and NPC flights.
+- **Block models** (`client/art2/aircraft.js`, new; after `docs/art-v2/targets/HE1_helicopters.png`, I5-A, SC2-C, SC4-B):
+  voxel models like the tank's - the Skylark (news blue and white, the camera ball under the nose), the police air unit
+  (black, the white doors, the red / blue light bar, the searchlight under the nose), the rescue helicopter (red, the white
+  band and the roof's cross), the Hornet gunship (olive, the narrow tandem canopy, the stub wings and the red-tipped
+  rocket pods, the chin gun) - each a rounded cabin with its glazed nose and side windows, the engine housing and
+  exhausts, the tapering boom, the fin, the tailplane, the tail rotor, the skids on their struts; and the Larkspur light
+  plane (white, the red stripe, the high wing and its struts, the tailplane and fin, the cowling and propeller, the
+  wheels, the wing tips' lights) built at five banks (the wings tilting with it: one tip up, the other down). The main
+  rotor is its own sprite over the mast: the four blades turning (the tips painted) while it spools, fading as it comes up
+  to speed into a blurred disc with the tips' paint a ring round it - the disc drawn over the model's mast on the overlay
+  (a canvas blends it; the renderer can only dither, which the first playtest showed as a white mesh hiding the
+  helicopter under it). Drawn by the art v2 host
+  (`game/host.js` `_air`) up the screen by the altitude (render/aircraft.js V2_LIFT, as before), lit and shadowed like
+  everything else low down; up off the ground the overlay draws the shadow on the ground under it (fading in from 30 px:
+  the engine's own shadow can't reach that far), and its lamps after dark are the renderer's lights (the light bar
+  flashing red and blue, the beacons, the plane's wing tips). The code budget: the module is loaded the first time an
+  aircraft is near (the page 482 of 485 KB and the renderer's are full - `host.js` imports it dynamically, and it makes
+  its sprites on the page a heading at a time from the host's generated-sprite budget, the models at half resolution:
+  the live game draws 2 world px a pixel anyway); the art's hash is unchanged (nothing the chunk baker reads), so nobody's
+  kept chunks are baked again. Until a heading's sprite is made, the overlay's drawing stands in.
+- The helipads' paint (the overlay's yellow ring and H) is left off a pad an aircraft's model stands on in art v2 (the
+  playtest: the police helicopter parked at headquarters was hidden under its pad's H, the overlay being over the
+  renderer).
+- **The classic view** to match (`client/render/aircraft.js`): the cabin shaded (the far side darker, a highlight), the
+  side windows, the engine housing and exhausts, the skids' struts, the police one's white doors and its searchlight's
+  lamp, the news camera, the rescue cross, the rotor tips' paint in each livery's colour (HE1: red on the police and rescue
+  ones, yellow on the news and army ones); the plane's fuselage shaded, the cowling, the fin's red top.
+- **The police air unit** (`server/systems/policeair.js`, new; `shared/rules.js` POLICE_AIR): at three stars a police
+  helicopter takes off from headquarters' helipad (the one parked there when it's free, else one brought out onto the pad)
+  with a pilot and an observer, flies to the suspect and follows them overhead - circling them 200 px out, leading a
+  moving suspect, its nose on them, at 300 px or 70 px over whatever stands taller round it and along the way it's going
+  (looking further ahead the faster it flies: it climbs first and crawls forward where the roofs ahead are higher than it
+  is, so it never flies into a tower). While its crew can see them (out in the open: not inside, not underground, within
+  1100 px) it radios their position to the cars on the ground - the law's "seen" (`p.seenAt`, the last known place, the
+  search circle tight on them: police.js drives the cars straight at them). At night its searchlight is on them (sweeping
+  round where they were last seen when it's lost sight of them): on the wire in the vehicle record's damage word's top
+  byte (bit 7 on, the way it points in 32 steps and how far, 0-510 px - the aircraft have no turret there), drawn in both
+  views - the beam from the lamp under its nose down to the spot, and the pool of light on the ground (art v2: a light
+  in the renderer; classic: a light in main.js's lighting). It can be shot at and brought down: it's a vehicle with its
+  hp (420), and a shot at it up in the air hits it where art v2 draws it too, up the screen by its height (`combat.js`
+  traceTarget, FLY.LIFT) - shooting the police one is assaulting the police, as for their cars. It goes home and lands on
+  its pad when the suspect is lost (unseen 25 s, the stars gone or them cuffed), the crew climb out and it's parked there
+  again; brought down (or home), another isn't sent for 90 s. Flown by its NPC pilot: aircraft.js steps any aircraft with
+  `v.autopilot` on the stick its system sets (`v.fin`), flightStep as a player's.
+- **Aircraft about the world** (`server/systems/airtraffic.js`, new; `shared/rules.js` AIR_TRAFFIC): every two and a half
+  minutes or so, at a runway or an airstrip with someone within 3.2 km, a light plane either takes off - rolled out onto
+  the runway where nobody's looking, the take-off roll on its line, rotating at its speed, climbing out and away, gone once
+  out of sight 3 km off - or comes in from 2.6 km out on the runway's line, gliding down it (0.11 px a px) at 470 px/s,
+  touching down softly on the runway, rolling out and stopping (gone once nobody's looking). Only the way along the
+  runway that's clear of what stands taller than the climb out or the glide in. And a news helicopter (the Skylark in its
+  news colours) comes in from out of sight to circle a chase at three stars or more, 520 px out and 420 px up, for 90
+  s, then flies off (one at a time, four minutes apart).
+- Dev menu commands (server/dev.js): `policeair` (three stars and the unit sent after you; `near`: already up and close
+  by) and `airtraffic` (`k` 'land' | 'takeoff' at the runway nearest you - `dir` which way along it - or 'news' over you).
+
+Files: client/art2/aircraft.js (new), client/art2/game/host.js (the aircraft drawn by their model, their lights),
+client/render/aircraft.js (modelled aircraft left to the renderer, the shadow up high, the searchlight's beam and spot,
+the classic drawings), client/main.js (the searchlight's pool in the classic lighting: one line), server/systems/policeair.js
+(new), server/systems/airtraffic.js (new), server/systems/aircraft.js (an NPC pilot's stick), server/net.js (the
+searchlight's byte), server/systems/combat.js (shot where it's drawn), shared/flight.js (FLY.LIFT), shared/rules.js
+(POLICE_AIR, AIR_TRAFFIC), server/world.js, server/dev.js.
+
+Tests: test/policeair.test.js (new: none below three stars; at three it takes off from headquarters' pad with its crew,
+flown by its NPC pilot; up at its height and over the suspect, following them; their position radioed - the law sees
+them, the search circle tight; not indoors; the searchlight on them at night, on the wire, decoded near them, off by
+day; shot where art v2 draws it and brought down, another not sent at once; lost: home, landed on its pad, the crew out,
+parked; the dev command), test/airtraffic.test.js (new: the runways; a light plane's take-off roll and climb away; one
+gliding in and landing softly on the runway, stopped; the news helicopter circling a chase and leaving when it's over),
+test/aircraftart.test.js (new: the models build - the plane banked right has its right wing down - and render at a
+heading, the rotor's blades and disc; the searchlight's spot from the wire; loaded lazily, out of the page and the
+renderer), test/flight.test.js, test/dmath.test.js, test/mapwindow.test.js, test/perf.test.js - all pass.

@@ -574,7 +574,7 @@ export function command(world, p, c, msg) {
       let best = null, bd = 1e12;
       for (const r of airtraffic.runways(world.map)) { const d = Math.hypot(r.x - ped.x, r.y - ped.y); if (d < bd) { bd = d; best = r; } }
       if (!best) break;
-      const v = airtraffic.planeFlight(world, A, { rw: best, mode: msg.k === 'takeoff' ? 'out' : 'land', force: true, seen: !!msg.seen });
+      const v = airtraffic.planeFlight(world, A, { rw: best, mode: msg.k === 'takeoff' ? 'out' : 'land', force: true, seen: !!msg.seen, dir: msg.dir === -1 || msg.dir === 1 ? msg.dir : 0 });
       if (!v) world.notify(p, '[dev] no way in or out clear at that runway', 'warn');
       break;
     }

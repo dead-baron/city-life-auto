@@ -156,7 +156,8 @@ export function rotorModel(R, disc, tip) {
   } else {
     for (let i = 0; i < 4; i++) {
       const a = i * Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a);
-      m.fill((x, y, z) => { const u = (x - c) * ca + (y - c) * sa, w = -(x - c) * sa + (y - c) * ca; return z >= 1 && z < 3 && u > 3 && u < R && Math.abs(w) < 2.6 ? (u > R - 9 ? tipM : blade) : -1; });
+      const ex = c + ca * R, ey = c + sa * R;
+      m.fill((x, y, z) => { const u = (x - c) * ca + (y - c) * sa, w = -(x - c) * sa + (y - c) * ca; return z >= 1 && z < 3 && u > 3 && u < R && Math.abs(w) < 2.6 ? (u > R - 9 ? tipM : blade) : -1; }, Math.floor(Math.min(c, ex) - 3), Math.floor(Math.min(c, ey) - 3), 0, Math.ceil(Math.max(c, ex) + 3), Math.ceil(Math.max(c, ey) + 3), 4);
     }
   }
   m.cyl('z', c, c, 0, 4, 0, 4, hub);
@@ -178,7 +179,7 @@ export function bodySprite(type, hi, N, bi, px) {
   return trimSprite(renderCompact(C, hi * TAU / N, { dither: 0.35, px }));
 }
 export function rotorSprite(R, disc, tip, hi, N, px) {
-  const C = compact(`rotor|${R}|${disc ? 1 : 0}|${tip}`, () => rotorModel(R, disc, tip), false);
+  const C = compact(`rotor|${R}|${disc ? 1 : 0}|${tip}`, () => rotorModel(R, disc, tip), true);
   return trimSprite(renderCompact(C, hi * TAU / N, { dither: disc ? 0.2 : 0.35, px }));
 }
 
@@ -205,10 +206,8 @@ export function drawAir(H, v, now, me) {
   if (!T.plane && !(f & VF.WRECK)) {
     const R = def.rotor || 76, s = v._spin || 0, c = Math.cos(v.ra), sn = Math.sin(v.ra), mx = v.rx + c * def.L * MAST, my = v.ry + sn * def.L * MAST;
     o.shadow = alt < 40; o.xray = false; o.tint = null;
-    if (s > 0.55) {
-      const dk = H._conv(`air|disc|${R}|${T.tip}`, () => rotorSprite(R, true, T.tip, 0, N, px), true);
-      if (dk) { o.alpha = Math.min(0.85, 0.25 + 0.45 * s); o.shadow = false; E.drawSprite(dk, mx, my, z0 + MAST_Z, o); }
-    }
+    // (up to speed, the blurred disc is the overlay's - render/aircraft.js rotorDisc: a canvas blends, the renderer only
+    // dithers - and here only the blades while they're still to be seen)
     if (s < 0.9) {
       const bh = quant((v._ph || 0) % (Math.PI / 2), N), bk = H._conv(`air|blades|${R}|${T.tip}|${bh}|${N}`, () => rotorSprite(R, false, T.tip, bh, N, px), true) || H._near((h) => `air|blades|${R}|${T.tip}|${h}|${N}`, bh, N);
       if (bk) { o.alpha = 1 - Math.max(0, (s - 0.55) / 0.35); E.drawSprite(bk, mx, my, z0 + MAST_Z, o); }
