@@ -9510,20 +9510,38 @@ diving into water in a burst of steam, falling to lie still blackened and smokin
 - **The machines**: the tractor keeps its red and pulls a **plough** behind it (a red frame and five steel discs on the
   drawbar: art v2 a ground decal behind each tractor, the classic view in drawTractor); the **combine is green** (art v2's
   model, the classic drawing). No grain trailer: there's no such vehicle yet. MV1: the **tank leaves tread marks** (a
-  cleat across each track every 7 px it moves, the skid decals) and diesel smoke; its cannon's **muzzle flash** lights
-  the ground and the shell streaks off; the **gunship is grey** with two rocket pods a wing (`client/art2/aircraft.js`;
+  cleat across each track every 9 px it moves, the skid decals - two at a time, so the pool's 700 last a long drive and
+  keep the blood) and diesel smoke; its cannon's **muzzle flash** lights the ground and the shell streaks off; the
+  **gunship is grey** with two rocket pods a wing (art v2 `client/art2/aircraft.js`, the classic `render/aircraft.js`;
   the rockets already trail fire and smoke).
 
 Files: server/systems/combat.js, server/net.js, shared/rules.js (GARDEN_CROPS +3), shared/items.js (their names),
 client/main.js (the charred bit, the fire poses, burnFx, the steam, the tread marks, the muzzle flash),
 client/art2/game/host.js (the charred and singed tints), client/render/farmart.js (the beds, the crops, the rows, the
-bales, the plough, the green combine), client/art2/vehicles.js (the combine's paint), client/art2/aircraft.js (the
-gunship), client/inventory.js (the icons). The world's hash is unchanged; `world3` re-keys (it hashes the code World v3's
+bales, the plough, the green combine), client/art2/vehicles.js (the combine's paint), client/art2/aircraft.js and
+client/render/aircraft.js (the gunship), client/inventory.js (the icons). The world's hash is unchanged; `world3` re-keys (it hashes the code World v3's
 build imports, shared/rules.js among it).
 
 Tests: test/burning.test.js (new: the burning states on the wire - catching on their feet, rolling: burning, down and
 moving; put out and still down; the faller lying burning and still; burned to death: the charred bit, only on a body;
 into the water: swimming, out, the douse; killed any other way: never charred), test/gardening.test.js (new: corn,
 strawberries and sunflowers - the first four keep their wire indexes, seeds at the co-op, the crop and the prize one,
-corn grown and picked; every crop at every stage and flag drawn inside its sprite; every row look), farming, tank and
-aircraftart tests pass.
+corn grown and picked; every crop at every stage and flag drawn inside its sprite; every row look; the plough and a
+bale), test/burning.test.js (new: the fire frames' poses build in art v2 - stagger, walk3, roll, down, downF, swim,
+dead - and the combine, the tractor, the tank and the grey gunship), farming, tank and aircraftart tests pass.
+test/perf.test.js: the code budgets pass (the page, the renderer, the bake, the city worker); its timing budgets (the
+city's build and the chunk bakes as multiples of the CPU yardstick) failed at 48x and 96x with two other helpers'
+playtests on the machine - nothing here touches the generator or the bake.
+
+Seen (scratchpad/h78; the concept beside ours in the cmp-*.png): node-rendered sheets - fire-sheet.png (FI1's frames as
+art v2 draws them: the people.js figures with the host's tints and the page's flames and smoke run through the real
+particle pool), garden-sheet.png (every crop x stage, wilted and dry or the prize pumpkin, and the seven row looks),
+machines.png (the tractor and its plough, the combine, the tank, the gunship as art v2 makes them); headless playtests -
+the classic view (b1-*.png: the grid of beds on the street, people on fire and a body burned to death, the fields with
+the tractor and its plough) and art v2 (v2-*.png, b2-*.png). What still differs: the concepts' beds are deeper and their
+plants twice the detail (ours are 28 x 14 art px: a plot's size in the world); FI1's flames are tongues of fire round the
+body, ours the pooled particles (squares in the classic view, the fx sprites in art v2) and no new poses (clutching the
+head getting up, crawling out of the water: the bake budget); in art v2 the plough hides under the tractor's cab when it
+faces down the screen (the 3/4 view); FA4's grain trailer isn't there (no such vehicle); the headless page is too slow
+(about 1 frame in 5 s in art v2) for the crowd's new faces to be drawn while they still burn, and a stamp mid-run makes
+the page update itself (the runs that showed the title screen).
