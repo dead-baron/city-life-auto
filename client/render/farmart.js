@@ -58,26 +58,26 @@ function crop(c, st, fl, set) {
   if (st === 1) { for (const x of c === 2 || c === 3 ? [14] : c === 6 ? [9, 19] : [7, 14, 21]) sprout(x); return; }
   const big = st >= 3, ripe = st === 4 && !dead;
   if (c === 0) {   // tomatoes: bushes on a stake, yellow flowers, then the fruit
-    if (big) for (let y = -4; y <= B; y++) at(14, y, [150, 112, 70]);
-    for (const x of [7, 14, 21]) blob(x, big ? 5 : 7, big ? 3 : 2, big ? 3 : 2, x);
-    if (st === 3 && !dead) for (const [x, y] of [[6, 4], [15, 3], [21, 6], [9, 6]]) at(x, y, [248, 220, 70]);
-    if (ripe) for (const [x, y] of [[5, 5], [8, 3], [12, 6], [16, 4], [19, 6], [22, 3]]) dot(x, y, F);
+    if (big) for (let y = -7; y <= B; y++) at(14, y, [150, 112, 70]);
+    for (const x of [7, 14, 21]) blob(x, big ? 4 : 7, big ? 4 : 2, big ? 4 : 2, x);
+    if (st === 3 && !dead) for (const [x, y] of [[6, 2], [15, 1], [21, 4], [9, 5], [18, 6]]) at(x, y, [248, 220, 70]);
+    if (ripe) for (const [x, y] of [[4, 4], [8, 1], [11, 5], [16, 2], [19, 6], [22, 2], [7, 6], [24, 5]]) dot(x, y, F);
   } else if (c === 1) {   // carrots: feathery tops, the orange shoulders showing
     for (const x of [6, 11, 16, 21]) {
-      const h = st === 2 ? 3 : st === 3 ? 5 : 6;
+      const h = st === 2 ? 4 : st === 3 ? 7 : 9;
       for (let y = 0; y < h; y++) { at(x, B - 1 - y, G[y & 1]); if (y > 0 && (y & 1)) { at(x - 1, B - 1 - y, G[2]); at(x + 1, B - y, G[0]); } if (y === h - 1) { at(x - 1, B - 1 - y, G[0]); at(x + 1, B - 1 - y, G[2]); } }
       if (big && !dead) { at(x, B, F[0]); if (ripe) { at(x - 1, B, F[2]); at(x + 1, B, F[1]); at(x, B + 1, F[1]); } }
     }
   } else if (c === 2) {   // lettuce: one head, a paler heart
-    const r = st === 2 ? 3 : st === 3 ? 4 : 5;
-    blob(14, 6, r + 1, r - 1, 7);
+    const r = st === 2 ? 3 : st === 3 ? 5 : 6;
+    blob(14, 5, r + 2, r - 1, 7);
     if (!dead) for (let dy = -1; dy <= 1; dy++) for (let dx = -2; dx <= 2; dx++) if ((r > 3 || dx * dx < 2) && (dx + dy) & 1) at(14 + dx, 6 + dy, wilt ? G[2] : [176, 222, 120]);
     if (!dead) for (let dx = -r; dx <= r; dx += 2) at(14 + dx, 6 + (dx & 2 ? 1 : -1) * (r > 3 ? 2 : 1), G[1]);   // (the leaves' ruffled edges)
   } else if (c === 3) {   // pumpkins: the vine and its big leaves, then the pumpkin (the prize one bigger, ribboned)
     for (let x = 4; x < 25; x++) at(x, 8 + (((x >> 2) & 1) ? 0 : 1), G[1]);
     for (const [x, y] of big ? [[5, 6], [10, 4], [19, 4], [23, 7], [8, 8]] : [[7, 7], [14, 5], [21, 7]]) blob(x, y, 2, 2, x);
     if (big && !dead) {
-      const R = ripe ? (prize ? 6 : 5) : 3, Q = ripe ? (prize ? 4 : 3) : 2, cx = 14, cy = 6, P = st === 3 ? [[178, 160, 60], [130, 120, 40], [206, 190, 90]] : F;
+      const R = ripe ? (prize ? 7 : 6) : 3, Q = ripe ? (prize ? 5 : 4) : 2, cx = 14, cy = 5, P = st === 3 ? [[178, 160, 60], [130, 120, 40], [206, 190, 90]] : F;
       for (let dy = -Q; dy <= Q; dy++) for (let dx = -R; dx <= R; dx++) if ((dx * dx) / (R * R + 0.5) + (dy * dy) / (Q * Q + 0.5) <= 1) at(cx + dx, cy + dy, dx < -R / 2 || dy > Q / 2 ? P[1] : dx === 0 || Math.abs(dx) === Math.ceil(R / 2) ? P[1] : dy < 0 && dx < 0 ? P[2] : P[0]);
       at(cx, cy - Q - 1, [86, 110, 40]); at(cx + 1, cy - Q - 2, [70, 92, 34]);
       if (prize && ripe) { const bx = cx + R - 1, by = cy + 1; for (const [x, y] of [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [2, 1], [0, -1], [1, 2]]) at(bx + x, by + y, x === 0 && y === 0 ? [200, 220, 255] : [40, 80, 200]); at(bx, by + 3, [30, 60, 170]); at(bx + 1, by + 3, [30, 60, 170]); at(bx, by + 4, [30, 60, 170]); }   // the blue ribbon
@@ -89,7 +89,7 @@ function crop(c, st, fl, set) {
       if (ripe || (st === 4 && wilt)) { at(x, B - h, F[0]); at(x - 1, B - h + 1, F[1]); at(x + 1, B - h + 1, F[0]); dot(x + 1, B - 7, F); at(x + 1, B - 5, G[0]); }
     }
   } else if (c === 5) {   // strawberries: low leafy clumps, white flowers, red berries
-    for (const x of [7, 14, 21]) blob(x, 7, big ? 3 : 2, 2, x + 3);
+    for (const x of [7, 14, 21]) blob(x, 6, big ? 4 : 2, big ? 3 : 2, x + 3);
     if (st === 3 && !dead) for (const [x, y] of [[6, 5], [13, 6], [20, 5], [16, 8]]) { at(x, y, [250, 250, 244]); at(x + 1, y, [250, 250, 244]); at(x, y + 1, [250, 250, 244]); at(x + 1, y + 1, [240, 200, 60]); }
     if (ripe) for (const [x, y] of [[4, 8], [9, 7], [12, 8], [17, 7], [20, 8], [23, 7]]) dot(x, y, F);
   } else {   // sunflowers: two tall stalks, a green bud, then the big yellow heads (brown and hanging, wilted)
