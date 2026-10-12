@@ -162,7 +162,7 @@ test('at home: decorate from the hall table - place, move, turn, sell back; the 
   assert.ok(homeinside.planIn(w, h).paintAt(2, 5), 'the walls by the living room painted');
 });
 
-test('a sold home\'s furniture goes back into storage; a guest can\'t decorate', () => {
+test('a sold home\'s furniture goes back into storage', () => {
   const w = makeWorld();
   const { p, conn, prof } = joinPlayer(w, { bank: 1e6 });
   const h = ownHome(w, p);
@@ -175,4 +175,28 @@ test('a sold home\'s furniture goes back into storage; a guest can\'t decorate',
   assert.ok(!w.homeOwner.has(h.id));
   assert.equal(prof.furn.lamp, 1, 'the lamp back in storage');
   assert.ok(!prof.decor[h.id]);
+});
+
+test('drawn in art v2: every shop piece as a model, a decorated house by day and night (paint, floors, rugs, lamps); none of it in the page', async () => {
+  const { MAKERS } = await import('../client/art2/props-home.js');
+  for (const k of KINDS) if (!PIECES[k].flat) assert.ok(MAKERS[PIECES[k].ch], `${k}: no model`);   // (a rug's drawn on the floor)
+  const prev = globalThis.document;
+  globalThis.document = { createElement: () => { const c = { width: 0, height: 0, px: null }; c.getContext = () => ({ createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), putImageData: (id) => { c.px = id; } }); return c; } };
+  try {
+    const { HomeArt } = await import('../client/render/homeart2.js');
+    const L0 = layout('house', 2);
+    const d = { it: [{ k: 'rug', tx: 2, ty: 5, r: 0 }, { k: 'lamp', tx: 4, ty: 5, r: 0 }, { k: 'walltv', tx: 1, ty: 2, r: 3 }, { k: 'art', tx: 13, ty: 2, r: 1 }, { k: 'washer', tx: 7, ty: 7, r: 0 }, { k: 'workbench', tx: 15, ty: 6, r: 3 }, { k: 'bedside', tx: 13, ty: 6, r: 0 }], wall: { 0: 1 }, floor: { 0: 6 } };
+    for (const q of d.it) assert.equal(canPlace(L0, { it: d.it.filter((o) => o !== q) }, q), null, `${q.k} fits`);
+    const L = decorate(L0, d), A = new HomeArt(L, 2);
+    A.work(1e9);
+    assert.equal(A.items.filter((it) => it.piece && it.piece.dec !== undefined).length, d.it.length - 1, 'every piece but the rug standing');
+    for (const night of [1, 0]) {
+      A.relight(night);
+      let n = 0; while (!A.work(1) || A.lightJob) assert.ok(++n < 1e4, 'never done lighting');
+      for (const it of A.items) assert.ok(it.cv && it.cv.px, 'drawn');
+    }
+    assert.ok(A.lamps.filter((l) => l.kind === 'lamp').length >= 3, 'the floor lamp and the bedside lamp light up');
+  } finally { globalThis.document = prev; }
+  const { closure } = await import('../tools/perf.mjs');
+  assert.ok(!closure(['client/boot.js', 'client/main.js']).includes('shared/homedecor.js'), 'the decor code is not in the page\'s start-up code');
 });

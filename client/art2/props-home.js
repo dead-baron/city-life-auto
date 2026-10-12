@@ -239,5 +239,73 @@ export function basin(w = 32, d = 32, tier = 1) {
   return m;
 }
 
-// every piece of a plan by its letter (shared/homelayout.js), and whether it faces the room or its own way
-export const MAKERS = { B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant };
+// ---- the furniture shop's pieces (H67: shared/homedecor.js; HO2 / HO4) ------------------------------------------------
+// a bedside table: two drawers, a little lamp and a book on top (the lamp lit at night)
+export function bedside(w = 32, d = 32, tier = 1, on = 0) {
+  const P = L4(tier), m = new Vox(w, d, 40);
+  const b = m.mat({ ramp: R(P.wood), k: 3, shade: (x, y, z) => (y > d - 9 && (Math.round(z) === 9 || Math.round(z) === 16) ? -1.2 : grain(0.3)(x, y, z)) });
+  const knob = m.mat({ ramp: R(P.handle), k: 4 }), base = m.mat({ ramp: R(P.accent), k: 3 }), book = m.mat({ ramp: R('#3a5a8a'), k: 3 });
+  const shade = m.mat({ ramp: R('#f0d8a0', 5, 3), k: 2, emi: [255, 200, 120, 20 + on * 110], flag: F_NOCAST });
+  m.box(6, 9, 0, w - 6, d - 8, 22, b); m.box(5, 8, 22, w - 5, d - 7, 24, b);
+  m.box(w / 2 - 1, d - 8, 12, w / 2 + 1, d - 7, 14, knob); m.box(w / 2 - 1, d - 8, 18, w / 2 + 1, d - 7, 20, knob);
+  m.cyl('z', w / 2 - 4, 15, 0, 2, 24, 30, base); m.cyl('z', w / 2 - 4, 15, 0, 5, 30, 38, shade);
+  m.box(w / 2 + 3, 13, 24, w / 2 + 10, 20, 26, book);
+  return m;
+}
+// a floor lamp: a weighted base, the pole, a drum shade (lit at night)
+export function lamp(w = 32, d = 32, tier = 1, on = 0) {
+  const P = L4(tier), m = new Vox(w, d, 62);
+  const pole = m.mat({ ramp: R(tier >= 2 ? '#c8a050' : '#3a3a40'), k: 4 }), base = m.mat({ ramp: R(P.dark), k: 3 });
+  const shade = m.mat({ ramp: R(tier >= 3 ? '#f4ecd8' : '#e8d4a0', 5, 3), k: 2, emi: [255, 204, 130, 30 + on * 150], flag: F_NOCAST });
+  m.cyl('z', w / 2, d / 2, 0, 6, 0, 3, base); m.cyl('z', w / 2, d / 2, 0, 1.2, 3, 50, pole);
+  m.cyl('z', w / 2, d / 2, 0, 8, 46, 60, shade);
+  return m;
+}
+// a TV on the wall: the flat screen hung on its bracket over nothing (you walk under it); a little shelf with a box under it
+export function walltv(w = 32, d = 32, tier = 1, on = 0) {
+  const m = new Vox(w, d, 46);
+  const blk = m.mat({ ramp: R('#18181e'), k: 2 }), scr = m.mat({ ramp: R('#2a4a6a'), k: 2, emi: [120, 170, 255, 40 + on * 130], flag: F_NOCAST }), sh = m.mat({ ramp: R(L4(tier).dark), k: 3 });
+  m.box(1, 0, 22, w - 1, 3, 42, blk); m.box(2, 3, 23, w - 2, 4, 41, scr);
+  m.box(4, 0, 12, w - 4, 6, 14, sh); m.box(9, 1, 14, w - 9, 5, 17, blk);
+  return m;
+}
+// a painting on the wall: a gilt or plain frame, a landscape (hills, the sky, a sun) - its colours by where it hangs
+export function art(w = 32, d = 32, tier = 1, seed = 0) {
+  const m = new Vox(w, d, 46);
+  const fr = m.mat({ ramp: R(tier >= 2 ? '#d8b050' : '#6a4a2a'), k: 3 });
+  const sky = m.mat({ ramp: R(['#7ab0d8', '#e8a060', '#5a7ab0'][seed % 3]), k: 3 }), hill = m.mat({ ramp: R(['#5a8a4a', '#8a5a3a', '#3a5a4a'][seed % 3]), k: 3 }), sun = m.mat({ ramp: R('#f8e8a0'), k: 3 });
+  m.box(4, 0, 20, w - 4, 2, 42, fr);
+  m.box(6, 2, 22, w - 6, 3, 40, sky);
+  m.fill((x, y, z) => (z < 28 + 4 * Math.sin(x * 0.35 + seed) ? hill : -1), 6, 2, 22, w - 6, 3, 34);
+  m.ell(w - 11, 2.5, 35, 2.5, 0.6, 2.5, sun);
+  return m;
+}
+// a washing machine: white, the round door's glass, the dial
+export function washer(w = 32, d = 32, tier = 1) {
+  const m = new Vox(w, d, 36);
+  const b = m.mat({ ramp: R('#eceae4'), k: 4, shade: (x, y, z) => (y > d - 3 && Math.round(z) === 26 ? -0.9 : 0) }), gl = m.mat({ ramp: R('#5a7a8a'), k: 3, flag: F_GLASS }), rim = m.mat({ ramp: R('#b8bcc2'), k: 4 }), dial = m.mat({ ramp: R('#3a3e46'), k: 3 });
+  m.box(4, 6, 0, w - 4, d - 2, 32, b);
+  m.cyl('y', w / 2, d - 2, 13, 8, d - 2, d - 1, rim); m.cyl('y', w / 2, d - 2, 13, 6, d - 2, d, gl);
+  m.box(w - 11, d - 2, 27, w - 7, d - 1, 30, dial); m.box(7, d - 2, 28, 15, d - 1, 30, dial);
+  void tier;
+  return m;
+}
+// a workbench: a thick wooden top on a steel frame, a vice, a pegboard of tools on the wall behind it
+export function workbench(w = 64, d = 32, tier = 1) {
+  const m = new Vox(w, d, 58);
+  const top = m.mat({ ramp: R('#b08a5a'), k: 3, shade: grain(0.4) }), fr = m.mat({ ramp: R('#4a5a6a'), k: 3 }), pb = m.mat({ ramp: R('#a88a5a'), k: 3, shade: (x, y, z) => (Math.round(x) % 4 === 0 && Math.round(z) % 4 === 0 ? -1 : 0) });
+  const tool = m.mat({ ramp: R('#c8ccd2'), k: 4 }), red = m.mat({ ramp: R('#b8342e'), k: 3 });
+  m.box(2, 8, 20, w - 2, d - 2, 24, top);
+  for (const x of [3, w - 6]) for (const y of [9, d - 5]) m.box(x, y, 0, x + 3, y + 3, 20, fr);
+  m.box(4, 10, 6, w - 4, d - 4, 8, fr);
+  m.box(w - 16, d - 6, 24, w - 6, d - 2, 29, fr); m.box(w - 13, d - 3, 26, w - 9, d, 27, tool);   // the vice
+  m.box(2, 0, 28, w - 2, 3, 56, pb);
+  for (let k = 0; k < 6; k++) { const x = 6 + k * ((w - 12) / 6); m.box(x, 3, 40, x + 2, 5, 52, k % 3 === 1 ? red : tool); }
+  m.box(10, 12, 24, 22, 18, 27, red);   // a toolbox on the top
+  void tier;
+  return m;
+}
+
+// every piece of a plan by its letter (shared/homelayout.js), and whether it faces the room or its own way; the shop's
+// pieces by theirs (shared/homedecor.js PIECES: b bedside table, l floor lamp, v wall TV, a painting, w washer, k workbench)
+export const MAKERS = { B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench };

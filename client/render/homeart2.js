@@ -126,6 +126,8 @@ export class HomeArt {
     return this.ready;
   }
   floorKind(tx, ty) {
+    const f = this.L.floorAt && this.L.floorAt(tx, ty);   // (H67: a new floor laid in the room - shared/homedecor.js)
+    if (f) return f[1] === '.' ? '.' : f[1];
     const ch = this.L.cell(tx, ty);
     if (ch === 't' || ch === 'g' || ch === 'c') return ch;
     const r = this.R.at(tx, ty);
@@ -162,7 +164,8 @@ export class HomeArt {
       for (let x = 0; x < G.w; x++) {
         const wx = x * ap, wy = y * ap, tx = Math.floor(wx / T), ty = Math.floor(wy / T);
         if (WALLISH.has(L.cell(tx, ty)) && L.cell(tx, ty) !== 'D') continue;
-        G.put(x, y, floorPx(this.floorKind(tx, ty), this.tier, wx, wy, x, y), UP, 0);
+        const f = this.L.floorAt && this.L.floorAt(tx, ty);
+        G.put(x, y, floorPx(this.floorKind(tx, ty), f ? f[2] : this.tier, wx, wy, x, y), UP, 0);
       }
       if (y % 24 === 23) yield;
     }
@@ -186,6 +189,7 @@ export class HomeArt {
     }
     // a soft shadow under each piece of furniture, a little to the south-east (the light's from the windows behind)
     for (const p0 of L.pieces) {
+      if (p0.flat || p0.wall) continue;   // (H67: a rug, a picture or a TV on the wall)
       const p = p0.ch === 'P' ? { x: p0.x + 8, y: p0.y + 12, w: p0.w - 16, h: p0.h - 14 } : p0;   // (a plant's pot: a small one)
       for (let y = Math.floor((p.y + 3) / ap); y < (p.y + p.h + 5) / ap; y++) for (let x = Math.floor((p.x + 2) / ap); x < (p.x + p.w + 4) / ap; x++) {
         if (!G.inside(x, y)) continue;
@@ -205,6 +209,7 @@ export class HomeArt {
       if (r) rug(G, ap, r.x, r.y, r.w, r.h, t, p.tx * 7 + p.ty);
     }
     if (L.door) rug(G, ap, L.door.x - 20, L.door.y - T / 2 - 18, 40, 16, Math.min(1, t), 5);
+    for (const p of L.pieces) if (p.flat) rug(G, ap, p.x + 3, p.y + 3, p.w - 6, p.h - 6, Math.max(1, t), p.tx * 5 + p.ty * 3 + p.dec);   // (H67: the rugs you've put down)
     this.floor = { G, x: 0, y: 0 };
   }
   // the walls: a sprite for each run along a row (sorted by where it stands), its cap and - where it shows - its face
@@ -271,6 +276,8 @@ export class HomeArt {
       if (frame) return step(ramp(t >= 2 ? '#f0ece4' : '#a08a6a', 4, 2), v < 14 ? 0.3 : 0.6, x, y, 0.2);
       if (t >= 1 && v >= 12 && v < 44 && (u < 4 || u >= T - 4) && !L4ch(L, tx + (u < 4 ? -1 : 1), ty)) return step(ramp(LOOK[t].cover, 5, 2), 0.5 + (wx % 3 === 0 ? -0.2 : 0), x, y, 0.3);   // the curtains
     }
+    const paint = L.paintAt && L.paintAt(tx, ty);   // (H67: the room's walls painted - shared/homedecor.js)
+    if (paint) return step(ramp(paint, 6, 3), 0.55 + (t >= 1 && (wx % 10 < 1) ? -0.06 : 0) + (vnoise(wx, v, 12, 3) - 0.5) * 0.08, x, y, 0.4);
     if (kind === 'garage') return step(ramp('#9a9a96', 6, 3), 0.55 + (v % 8 === 0 || (wx + (Math.floor(v / 8) & 1) * 8) % 16 === 0 ? -0.25 : 0), x, y, 0.3);
     if (L.key === 'trailer') return step(ramp('#9a7a56', 6, 3), 0.5 + (wx % 8 < 1 ? -0.3 : 0) + (hash(wx >> 3, 1, 3) - 0.5) * 0.2, x, y, 0.4);   // wood panelling
     const base = PAPER[kind][t] || PAPER.living[t];
@@ -309,17 +316,23 @@ export class HomeArt {
     for (const p of L.pieces) {
       const make = MAKERS[p.ch];
       if (!make) continue;
+      if (p.flat) continue;   // (H67: a rug - drawn on the floor)
       let face = 's';
-      if (p.ch === 'C' || p.ch === 'O') face = p.h > p.w ? (wall(p.tx - 1, p.ty) ? 'e' : 'w') : wall(p.tx, p.ty + p.th) ? 'n' : 's';
+      if (p.face) face = p.face;   // (H67: the shop's pieces face the way you turned them)
+      else if (p.ch === 'C' || p.ch === 'O') face = p.h > p.w ? (wall(p.tx - 1, p.ty) ? 'e' : 'w') : wall(p.tx, p.ty + p.th) ? 'n' : 's';
       else if (p.ch === 'V') { const c = L.pieces.find((q) => q.ch === 'C'); face = c && c.y + c.h <= p.y && Math.abs(c.x + c.w / 2 - p.x - p.w / 2) < c.y - p.y ? 'n' : 's'; }   // (seen from the side a set is a sliver: it faces the camera unless the couch is north of it)
       else if (p.ch !== 'T' && p.ch !== 'P' && p.ch !== 'B') face = wall(p.tx, p.ty - 1) ? 's' : wall(p.tx, p.ty + p.th) ? 'n' : wall(p.tx - 1, p.ty) ? 'e' : wall(p.tx + p.tw, p.ty) ? 'w' : 's';
       const side = face === 'e' || face === 'w', mw = side ? p.h : p.w, md = side ? p.w : p.h;
       const head = { s: 0, n: Math.PI, e: -Math.PI / 2, w: Math.PI / 2 }[face];
-      const m = make(mw, md, this.tier, 0);
+      const m = make(mw, md, this.tier, p.ch === 'a' ? p.tx * 3 + p.ty + p.dec : 0);
       const G = m.render(head, { px: ap, dither: 0.35 });
       const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
       const it = { G, x: cx - G.ax * ap, y: cy - G.ay * ap, base: p.y + p.h, piece: p };
-      if (p.ch === 'V' || p.ch === 'A') it.remake = (on) => make(mw, md, this.tier, on).render(head, { px: ap, dither: 0.35 });
+      if ('VAblv'.includes(p.ch)) it.remake = (on) => make(mw, md, this.tier, on).render(head, { px: ap, dither: 0.35 });
+      if (p.wall) { it.base = p.face === 's' ? p.y + 2 : p.y + p.h; }   // (H67: hung on the wall: sorted with the wall behind it)
+      if (p.ch === 'l') this.lamps.push({ x: cx, y: cy, z: 54, kind: 'lamp' });
+      if (p.ch === 'b') this.lamps.push({ x: cx - 4, y: cy - 1, z: 34, kind: 'lamp' });
+      if (p.ch === 'v') this.lamps.push({ x: cx, y: cy, z: 30, kind: 'tv' });
       this.items.push(it);
       if (p.ch === 'A') this.lamps.push({ x: p.x + 9, y: p.y + 18, z: 44, kind: 'lamp' });
       if (p.ch === 'V') this.lamps.push({ x: cx, y: cy, z: 24, kind: 'tv' });

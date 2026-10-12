@@ -6,6 +6,7 @@
 // reach outlined, your cars in the garage, the windows showing the time of day, the night passing while you sleep.
 // Loaded when you first go in (main.js 'home' message) - nothing of it is in the page until then.
 import { layout, stepInside, useAt, TILE_IN, CAR_IN } from '../../shared/homelayout.js';
+import { decorate, targetOf, canPlace, pieceAt, PIECES } from '../../shared/homedecor.js';
 import { HOME_IN } from '../../shared/rules.js';
 import { TICK_HZ } from '../../shared/constants.js';
 import { PAINTS, VEHICLES } from '../../shared/vehicles.js';
@@ -113,7 +114,7 @@ function frame(now) {
   const dpr = Math.min(2, devicePixelRatio || 1);
   const W = Math.round(innerWidth * dpr), H = Math.round(innerHeight * dpr);
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
-  const L = layout(st.plan, st.tier);
+  const L = decorate(layout(st.plan, st.tier), st.decor);   // (H67: your things placed, the paint, the floors)
   const v2 = !!S.art2 && !!artMod;
   const me = predicted(L);
   // the camera: the street's scale (you're your usual size), the whole place framed when it fits, else following you
@@ -127,7 +128,7 @@ function frame(now) {
   g.imageSmoothingEnabled = false;
   const u = !st.sleep && !st.shower ? useAt(L, me.x, me.y, HOME_IN.reach) : null;
   if (!(v2 && drawArt(L, me, u, now))) {   // (the classic drawing while art v2's is still being made)
-    if (!bake || bake.key !== `${st.plan}:${st.tier}`) bake = { key: `${st.plan}:${st.tier}`, cv: bakeRooms(L) };
+    if (!bake || bake.L !== L) bake = { L, cv: bakeRooms(L) };
     g.drawImage(bake.cv, -16, -24, L.w + 32, L.h + 40);
     windows(L, now);
     cars(L);
@@ -139,6 +140,7 @@ function frame(now) {
     you(L, me, now);
     nightV1(L);
   }
+  if (st.edit) editMarks(L, me, now);
   g.setTransform(1, 0, 0, 1, 0, 0);
   hudText(W, H, dpr, now);
 }
@@ -206,10 +208,10 @@ function nightV1(L) {
   g.fillStyle = `rgba(8,12,36,${0.5 * k})`; g.fillRect(-16, -24, L.w + 32, L.h + 40);
   g.save(); g.globalCompositeOperation = 'lighter';
   for (const p of L.pieces) {
-    if (!'ABVTKH'.includes(p.ch)) continue;
-    const x = p.x + p.w / 2, y = p.y + p.h / 2, r = p.ch === 'A' ? 80 : p.ch === 'V' ? 50 : 64;
+    if (!'ABVTKHlbv'.includes(p.ch)) continue;
+    const x = p.x + p.w / 2, y = p.y + p.h / 2, r = p.ch === 'A' || p.ch === 'l' ? 80 : p.ch === 'V' || p.ch === 'v' ? 50 : 64;
     const grd = g.createRadialGradient(x, y, 4, x, y, r);
-    grd.addColorStop(0, p.ch === 'V' ? `rgba(90,130,255,${0.16 * k})` : `rgba(255,180,100,${0.2 * k})`); grd.addColorStop(1, 'rgba(255,180,100,0)');
+    grd.addColorStop(0, p.ch === 'V' || p.ch === 'v' ? `rgba(90,130,255,${0.16 * k})` : `rgba(255,180,100,${0.2 * k})`); grd.addColorStop(1, 'rgba(255,180,100,0)');
     g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
   }
   g.restore();
@@ -235,12 +237,14 @@ function bakeRooms(L) {
   const b = c.getContext('2d');
   b.scale(PX, PX); b.translate(16, 24);
   const P = PAL[L.tier] || PAL[0], T = TILE_IN;
-  const floorOf = (ch) => (ch === 't' ? P.tile : ch === 'c' ? P.carpet : ch === 'g' ? ['#6c6d70', '#66676a'] : P.wood);
+  const floorOf = (ch, Q = P) => (ch === 't' ? Q.tile : ch === 'c' ? Q.carpet : ch === 'g' ? ['#6c6d70', '#66676a'] : Q.wood);
   // floors (under the furniture too: the floor next to it)
   for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
     let ch = L.cell(tx, ty);
     if (/[A-Z#=]/.test(ch)) { const n = [L.cell(tx - 1, ty), L.cell(tx + 1, ty), L.cell(tx, ty + 1), L.cell(tx, ty - 1)].find((q) => /[.ctg+]/.test(q)); if (!n || /[#=DR]/.test(ch)) continue; ch = n; }
-    const f = floorOf(ch), x = tx * T, y = ty * T;
+    const lay = L.floorAt && L.floorAt(tx, ty);   // (H67: a new floor laid in the room)
+    if (lay && ch !== '+') ch = lay[1];
+    const f = lay ? floorOf.call(null, ch, PAL[lay[2]]) : floorOf(ch), x = tx * T, y = ty * T;
     if (ch === 't') { for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { b.fillStyle = f[(i + j) & 1]; b.fillRect(x + i * 16, y + j * 16, 16, 16); } }
     else if (ch === 'g') { b.fillStyle = f[(tx + ty) & 1]; b.fillRect(x, y, T, T); b.fillStyle = 'rgba(0,0,0,.08)'; b.fillRect(x + ((tx * 7) % 20), y + ((ty * 11) % 22), 6, 4); }
     else { for (let j = 0; j < 4; j++) { b.fillStyle = f[(j + tx) & 1]; b.fillRect(x, y + j * 8, T, 8); } b.fillStyle = 'rgba(0,0,0,.12)'; b.fillRect(x + ((tx * 13 + ty * 5) % 24), y, 1, T); }
@@ -267,7 +271,7 @@ function bakeRooms(L) {
     if (!wallish(ch)) continue;
     const open = !wallish(L.cell(tx, ty + 1)) || ty === L.rows - 1 || (ty === 0 && L.rows > 1);
     if (open) {   // the face: the wallpaper inside, the outside along the front, a skirting at its foot
-      b.fillStyle = ty === L.rows - 1 ? (ch === 'R' ? '#9a9ca0' : '#7a6a5a') : P.face; b.fillRect(x, y + T - h, T, h);
+      b.fillStyle = ty === L.rows - 1 ? (ch === 'R' ? '#9a9ca0' : '#7a6a5a') : (L.paintAt && L.paintAt(tx, ty)) || P.face; b.fillRect(x, y + T - h, T, h);
       b.fillStyle = 'rgba(0,0,0,.22)'; b.fillRect(x, y + T - 2, T, 2);
       if (ch === 'R') { b.fillStyle = '#7a7c80'; for (let j = 1; j < h; j += 3) b.fillRect(x, y + T - h + j, T, 1); }
       b.fillStyle = 'rgba(0,0,0,.18)'; if (/[.ctg+]/.test(L.cell(tx, ty + 1))) b.fillRect(x, y + T, T, 5);
@@ -327,9 +331,49 @@ function piece(b, p, P, L) {
     case 'O': box(P.cloth, x + 4, y + 4, w - 8, h - 8); box('rgba(0,0,0,.25)', x + 4, y + 4, w - 8, 7); break;
     case 'Q': box('#5a3c22', x + 2, y + 2, w - 4, h - 4); for (let k = 0; k < 6; k++) box(['#8a2a2a', '#2a5a8a', '#c8a050', '#3a6a3a', '#6a3a7a', '#d0d0c0'][k], x + 4 + k * 4, y + 5, 3, h - 10); break;
     case 'P': box('#7a4a2a', x + 10, y + 16, 12, 12); b.fillStyle = '#2f7a2a'; b.beginPath(); b.arc(x + 16, y + 14, 10, 0, 6.28); b.fill(); b.fillStyle = '#4a9a3a'; b.beginPath(); b.arc(x + 13, y + 11, 5, 0, 6.28); b.fill(); break;
+    // (H67) the shop's pieces: a bedside table, a floor lamp, a TV and a painting on the wall, a rug, a washer, a workbench
+    case 'b': box('#6a4a2c', x + 6, y + 8, w - 12, h - 14); box('#c8a050', x + w / 2 - 1, y + h - 9, 3, 2); b.fillStyle = '#f2e0a0'; b.beginPath(); b.arc(x + 12, y + 13, 4, 0, 6.28); b.fill(); break;
+    case 'l': b.fillStyle = '#3a3a40'; b.beginPath(); b.arc(x + 16, y + 20, 5, 0, 6.28); b.fill(); b.fillStyle = '#f2dca0'; b.beginPath(); b.arc(x + 16, y + 14, 8, 0, 6.28); b.fill(); box('rgba(0,0,0,.15)', x + 8, y + 14, 16, 2); break;
+    case 'v': case 'a': {   // hung on the wall behind it
+      const r = p.r || 0, ww = r & 1 ? 5 : w - 6, hh = r & 1 ? h - 6 : 5, xx = r === 1 ? x + w - 6 : r === 3 ? x + 1 : x + 3, yy = r === 0 ? y + 1 : y + 3;
+      box(p.ch === 'v' ? '#18181e' : '#c8a050', xx, yy, ww, hh);
+      box(p.ch === 'v' ? '#2a4a6a' : ['#7ab0d8', '#e8a060', '#5a8a4a'][(p.tx + p.ty) % 3], xx + 1, yy + 1, ww - 2, hh - 2);
+      break;
+    }
+    case 'r': box(P.cloth, x + 3, y + 3, w - 6, h - 6); b.strokeStyle = P.accent; b.lineWidth = 2; b.strokeRect(x + 7, y + 7, w - 14, h - 14); break;
+    case 'w': box('#eceae4', x + 4, y + 4, w - 8, h - 8); b.fillStyle = '#5a7a8a'; b.beginPath(); b.arc(x + 16, y + 18, 7, 0, 6.28); b.fill(); box('#3a3e46', x + 8, y + 6, 6, 2); break;
+    case 'k': box('#4a5a6a', x + 2, y + 6, w - 4, h - 10); box('#b08a5a', x + 3, y + 7, w - 6, h - 14); box('#b8342e', x + 10, y + 10, 12, 7); box('#c8ccd2', x + w - 14, y + h - 10, 8, 4); break;
     default: box('#6a6a6a', x + 2, y + 2, w - 4, h - 4);
   }
   void L;
+}
+
+// ---- decorating (H67): where the piece in your hands would go - green where it fits, red where it can't - or the spot
+// in front of you (and the piece of yours on it) outlined; the server says the same (shared/homedecor.js canPlace)
+function editMarks(L, me, now) {
+  const e = st.edit, base = L.base || L, T = TILE_IN;
+  const t = targetOf(base, me.x, me.y, me.a, e.k, e.r);
+  const pulse = 0.55 + 0.25 * Math.sin(now / 200);
+  g.save();
+  if (e.k) {
+    const err = canPlace(base, st.decor, { k: e.k, tx: t.tx, ty: t.ty, r: e.r }, e.mv, [me]);
+    g.fillStyle = err ? `rgba(230,60,50,${0.35 * pulse})` : `rgba(70,220,90,${0.35 * pulse})`;
+    g.strokeStyle = err ? 'rgba(255,90,80,.95)' : 'rgba(110,255,130,.95)'; g.lineWidth = 1.5;
+    for (let j = 0; j < t.h; j++) for (let i = 0; i < t.w; i++) { g.fillRect((t.tx + i) * T + 1, (t.ty + j) * T + 1, T - 2, T - 2); g.strokeRect((t.tx + i) * T + 1.5, (t.ty + j) * T + 1.5, T - 3, T - 3); }
+    // which way it faces: an arrow on its front edge
+    const cx = (t.tx + t.w / 2) * T, cy = (t.ty + t.h / 2) * T, a = [Math.PI / 2, Math.PI, -Math.PI / 2, 0][e.r & 3];
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath();
+    g.moveTo(cx + Math.cos(a) * 12, cy + Math.sin(a) * 12); g.lineTo(cx + Math.cos(a + 2.5) * 7, cy + Math.sin(a + 2.5) * 7); g.lineTo(cx + Math.cos(a - 2.5) * 7, cy + Math.sin(a - 2.5) * 7); g.fill();
+    g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    g.fillStyle = 'rgba(0,0,0,.7)'; g.fillText(PIECES[e.k].name, cx + 1, t.ty * T - 2 + 1);
+    g.fillStyle = '#fff'; g.fillText(PIECES[e.k].name, cx, t.ty * T - 2);
+  } else {
+    const i = pieceAt(st.decor, t.tx, t.ty), q = i >= 0 ? st.decor.it[i] : null;
+    g.strokeStyle = `rgba(255,214,90,${pulse + 0.2})`; g.lineWidth = 2; g.setLineDash([4, 3]);
+    if (q) { const p = L.pieces.find((o) => o.dec === i); if (p) g.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2); }
+    else g.strokeRect(t.tx * T + 2, t.ty * T + 2, T - 4, T - 4);
+  }
+  g.restore();
 }
 
 // ---- what changes: the windows' light, the cars, you ---------------------------------------------------------------
