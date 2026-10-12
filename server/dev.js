@@ -59,9 +59,12 @@ import * as policeair from './systems/policeair.js';
 import * as airtraffic from './systems/airtraffic.js';
 import * as firefighter from './systems/firefighter.js';
 import * as paramedic from './systems/paramedic.js';
+import * as taxijob from './systems/taxijob.js';
+import * as busjob from './systems/busjob.js';
+import * as towjob from './systems/towjob.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'cabjob', 'busjob', 'towjob'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -580,6 +583,11 @@ export function command(world, p, c, msg) {
       if (!best) break;
       const v = airtraffic.planeFlight(world, A, { rw: best, mode: msg.k === 'takeoff' ? 'out' : 'land', force: true, seen: !!msg.seen, dir: msg.dir === -1 || msg.dir === 1 ? msg.dir : 0 });
       if (!v) world.notify(p, '[dev] no way in or out clear at that runway', 'warn');
+      break;
+    }
+    case 'cabjob': case 'busjob': case 'towjob': {   // driving for a living (H72): on the rota - a fare hailing beside you, the bus on its line, a car to tow
+      const err = (c === 'cabjob' ? taxijob.devCab : c === 'busjob' ? busjob.devBus : towjob.devTow)(world, p);
+      if (err) world.notify(p, `[dev] ${err}`, 'warn');
       break;
     }
     case 'medicjob': { const err = paramedic.devMedic(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the paramedic (H68): on the rota, a patient (msg.k 'minor' | 'serious') beside you

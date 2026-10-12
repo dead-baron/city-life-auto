@@ -80,6 +80,9 @@ import * as net from './net.js';
 import { warmGround } from './systems/offroad.js';
 import * as firefighter from './systems/firefighter.js';
 import * as paramedic from './systems/paramedic.js';
+import * as taxijob from './systems/taxijob.js';
+import * as busjob from './systems/busjob.js';
+import * as towjob from './systems/towjob.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
 const SYSTEMS = [
@@ -159,6 +162,9 @@ const SYSTEMS = [
   ['airtraffic', airtraffic.update], // light planes in and out of the runways and airstrips, the news helicopter over a chase (H66)
   ['firefighter', firefighter.update], // the fires in the grass, the dumpsters, the kitchens; firefighters' calls, the hose (H68)
   ['paramedic', paramedic.update],  // paramedics' calls: treating the hurt on the spot, the badly hurt to a hospital, players down (H68)
+  ['taxijob', taxijob.update],      // taxi drivers' fares: hailing, aboard, the meter, the tip (H72)
+  ['busjob', busjob.update],        // bus drivers' lines: the stops, the passengers on and off, the timetable (H72)
+  ['towjob', towjob.update],        // tow truck drivers' calls: backed up to, hooked, towed to the impound (H72)
 ];
 
 export class World {

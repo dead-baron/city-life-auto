@@ -739,3 +739,8 @@ export const MEDIC = {
 // counter, a placed piece sold back for sellBack of its price, a room's walls painted (paint) or a new floor (floor), at
 // most max pieces placed in a home
 export const DECOR = { sellBack: 0.5, paint: 80, floor: 150, max: 40, price: { couch: 350, armchair: 220, table: 260, bedside: 90, lamp: 70, bookshelf: 180, plant: 45, tv: 400, walltv: 650, art: 120, rug: 150, washer: 480, workbench: 300 } };
+// ---- driving for a living (H72): taxijob.js (fares: flag + perKm a 1000 px, tip for quick and smooth; bail after bail
+// scares), busjob.js (perStop on time - late s grace - and perPax), towjob.js (pay + perKm to the yard)
+export const CAB = { firstS: 5, gapS: 12, shiftS: 1800, waitS: 300, flag: 25, perKm: 50, tip: 0.4, parS: 30, kmS: 450, boardR: 150, dropR: 240, trip: [1500, 6000], hail: [350, 1500], bump: 140, bail: 3 };
+export const BUSJOB = { perStop: 40, perPax: 12, late: 25, haltR: 170, dwellS: 4, wait: [1, 4], speed: 140 };
+export const TOWJOB = { firstS: 8, gapS: 20, shiftS: 1800, pay: 150, perKm: 60, touch: 16, hookS: 3, yardR: 340 };

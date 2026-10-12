@@ -143,4 +143,8 @@ export const DEV_SECTIONS = [
     ['🏡 A garden of my own (the nearest house, plants at every stage, seeds)', 'garden'], ['🍅 Everything in my gardens ripe', 'garden', { k: 'ripe' }],
     ['🚜 A tractor at the fields (the rows in every state)', 'farm'], ['🌾 A combine at the fields (it harvests two ripe rows at once)', 'farm', { k: 'combine' }], ['🌧 Rain (it waters the gardens)', 'rain'],
   ] },
+  // driving for a living (H72: server taxijob.js, busjob.js, towjob.js)
+  { id: 'drive', title: '🚕 Taxi, bus & tow truck', items: [
+    ['🚕 Taxi driver: a cab, a fare hailing beside me', 'cabjob'], ['🚌 Bus driver: the nearest line', 'busjob'], ['🛻 Tow truck: a car to tow', 'towjob'],
+  ] },
 ];

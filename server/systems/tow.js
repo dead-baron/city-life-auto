@@ -216,7 +216,7 @@ function planBack(world, t, B) {
   return trimBehind(r, t);
 }
 // The gap (px) between the truck's back bumper and v's body
-function tailGap(t, v) {
+export function tailGap(t, v) {
   const c = Math.cos(t.a), s = Math.sin(t.a), rx = t.x - c * t.def.L / 2, ry = t.y - s * t.def.L / 2;
   const vc = Math.cos(v.a), vs = Math.sin(v.a), hl = v.def.L / 2, hw = v.def.W / 2;
   let g = Infinity;
@@ -336,7 +336,7 @@ function runTruck(world, t, dt, now) {
 // the towed vehicle hangs behind the truck's boom, the end it was hooked by up on the wheel lift: its nose (the same way
 // round as the truck) or its tail (the other way round)
 const WINCH_S = 1.2;
-function carry(t, v, now = 0) {
+export function carry(t, v, now = 0) {
   const c = Math.cos(t.a), s = Math.sin(t.a), off = t.def.L / 2 + v.def.L / 2 + 4;
   let x = t.x - c * off, y = t.y - s * off, a = v.towEnd === -1 ? t.a + Math.PI : t.a;
   const f = v.towFrom, k = f ? Math.min(1, (now - f.at) / WINCH_S) : 1;
