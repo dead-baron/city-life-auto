@@ -16,9 +16,11 @@
 //   rankFor(world, p)          the rank nearest p
 //   fareAt(world, p, k, a, b)  a fare of kind k waiting at a ({ x, y }) for b ({ x, y, name }) (tests, the dev menu)
 import { CAB } from '../../shared/rules.js';
+import { HEAVY_PROPS } from '../../shared/mapcore.js';
 import { store } from '../store.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { openNear } from './firefighter.js';
+import { kerbFor } from './kerbdrive.js';
 import * as jobs from './jobs.js';
 
 const NAMES = ['a nurse off shift', 'a tourist', 'a banker', 'a student', 'a chef', 'a salesman', 'a night owl', 'a musician', 'a pensioner', 'a lawyer', 'a builder', 'a bride-to-be'];
@@ -73,8 +75,10 @@ function newFare(world, p) {
 }
 // a fare of kind k ('hail' | 'call') waiting by a for b -> the fare | null
 export function fareAt(world, p, k, a, b) {
-  const j = p.job, now = world.time;
-  const at = openNear(world.map, a.x, a.y);
+  const j = p.job, now = world.time, m = world.map;
+  let at = null;   // (on open ground, not under a tree or against a lamp post: in sight)
+  for (const [ox, oy] of [[0, 0], [40, 0], [-40, 0], [0, 40], [0, -40], [80, 0], [-80, 0], [0, 80], [0, -80]]) { const q = openNear(m, a.x + ox, a.y + oy); if (q && !heavyNear(m, q.x, q.y)) { at = q; break; } }
+  at = at || openNear(m, a.x, a.y);
   if (!at) return null;
   const q = spawnNpc(world, 'casual', at.x, at.y, 'civ');
   q.npc.sar = p.pid; q.npc.keep = true; q.vx = 0; q.vy = 0;
@@ -87,6 +91,17 @@ export function fareAt(world, p, k, a, b) {
   world.notify(p, k === 'hail' ? `Fare! ${f.who[0].toUpperCase()}${f.who.slice(1)} is flagging down a cab nearby - pull up beside them.` : `Dispatch: ${f.who} rang for a cab${where ? ` in ${where.name}` : ''} - it's marked.`, 'good');
   p.meDirty = true;
   return f;
+}
+// a tree, a lamp post, a hydrant... (shared/mapcore.js HEAVY_PROPS) within r px of (x, y)
+function heavyNear(m, x, y, r = 44) {
+  let g = m._heavyGrid;
+  if (!g) {
+    g = new Map();
+    for (const q of m.props) if (HEAVY_PROPS.has(q.t)) { const k = `${Math.floor(q.x / 64)},${Math.floor(q.y / 64)}`; (g.get(k) || g.set(k, []).get(k)).push(q); }
+    Object.defineProperty(m, '_heavyGrid', { value: g, enumerable: false });
+  }
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const q of g.get(`${Math.floor(x / 64) + dx},${Math.floor(y / 64) + dy}`) || []) if (Math.hypot(q.x - x, q.y - y) < r) return true;
+  return false;
 }
 const fareOf = (f) => Math.round((CAB.flag + (Math.min(f.meter, f.direct * 1.6 + 200) / 1000) * CAB.perKm) / 5) * 5;
 function endFare(world, p, msg, tone) {
@@ -209,7 +224,7 @@ export function target(world, p, j) {
   return { text: j.text, x: Math.round(f.to.x), y: Math.round(f.to.y), stage: 'go' };
 }
 
-// ---- dev ('cabjob'): on the rota, your cab beside you, a fare hailing just up the street
+// ---- dev ('cabjob'): on the rota, your cab beside you (get in: the fare's close enough to climb in), a fare hailing
 export function devCab(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return 'On your feet first.';
@@ -218,9 +233,15 @@ export function devCab(world, p) {
   const j = p.job;
   if (j.fare) endFare(world, p);
   const b = pick(world, placesOf(world.map), ped.x, ped.y, CAB.trip[0], CAB.trip[1]) || { x: ped.x + 2000, y: ped.y, label: 'downtown' };
-  if (!fareAt(world, p, 'hail', { x: ped.x + 160, y: ped.y }, { x: b.x, y: b.y, name: b.label })) return 'no room for a fare here';
-  const v = world.get(j.truck), sp = openNear(world.map, ped.x - 110, ped.y);
-  if (v && sp && !ped.vehId) { v.x = sp.x; v.y = sp.y; v.vx = 0; v.vy = 0; world.place(v); }
+  // the cab at the kerb by you, you at its door, the fare on the pavement a cab's length on
+  const v = world.get(j.truck), k = kerbFor(world, ped.x, ped.y);
+  const c = Math.cos(k.a || 0), s = Math.sin(k.a || 0), side = (ped.x - k.x) * -s + (ped.y - k.y) * c >= 0 ? 1 : -1;
+  if (v && k.e && !ped.vehId) {
+    v.x = k.x; v.y = k.y; v.a = k.a || 0; v.vx = 0; v.vy = 0; world.place(v);
+    ped.x = k.x - s * side * (v.def.W / 2 + 14); ped.y = k.y + c * side * (v.def.W / 2 + 14); p.teleportAt = world.time; world.place(ped);
+  }
+  const fx = k.x + c * 110 - s * side * (v ? v.def.W / 2 + 40 : 60), fy = k.y + s * 110 + c * side * (v ? v.def.W / 2 + 40 : 60);
+  if (!fareAt(world, p, 'hail', { x: fx, y: fy }, { x: b.x, y: b.y, name: b.label })) return 'no room for a fare here';
   j.nextAt = world.time + CAB.gapS;
   return null;
 }

@@ -9173,6 +9173,59 @@ the patient gone),
 test/sound.test.js, test/perf.test.js, test/activities.test.js, test/gameplay.test.js, test/honestliving.test.js,
 test/sar.test.js, test/burning.test.js, test/rescue.test.js.
 
+## 2026-10-11 · Driving for a living: the taxi driver, the bus driver, the tow truck driver (H72)
+
+The owner: "Let's add more jobs for players trying to make an honest living." The brief: a taxi driver, a bus driver
+and, time allowing, a tow truck driver - each built on what the city already has (its taxis, its bus lines, its tow
+service), all of it on the server, the page only drawing.
+- **The taxi driver** (`server/systems/taxijob.js`): sign on at a taxi rank - the rail stations and the airports
+  (`ranksOf`, from the built map) - with Act by it, or from the phone's job list (the new 🚕 row under **Driving**): a
+  Checker Taxi is issued like a work truck (`jobs.workTruck` - yours, the ring and the arrows, the return bonus after the
+  shift). A shift (`CAB.shiftS`, longer with each fare) of fares, one after another: someone at the kerb near you
+  hailing a cab (`CAB.hail` px off; drawn with an arm up - the person's prop `pp: 'hail'`, a new pose in art v2's
+  people.js) or someone further off who rang for one (on the phone at their ear, `pp: 'call'`); both are marked (the
+  job tracker's pick-up stage, with where they're going on the minimap). Stop by them and they walk over and get in
+  the back; the meter runs while they're aboard (the tracker reads "meter $N", once a second) and the tracker points
+  to where they want to go - a place from the map (`GOES`: shops, banks, clubs, stations, homes...) `CAB.trip` px
+  off. Stop at the kerb by it and they get out and pay: the flag fall and the distance (the meter, at most 1.6x the
+  straight line - no driving round the block for more), and a tip (`CAB.tip` of the fare at best) for a quick ride
+  (the par time by the distance) and a smooth one: each crash (a hard hit - `v.hardHit` over `CAB.bump`) costs half
+  of it, anyone hit (the car-hit events: run over, on the hood, flung near the cab) all of it, and the police after you
+  (wanted while they're aboard) all of it. Each of those scares them too ("Whoa - easy!"); `CAB.bail` scares and they
+  want out - at the next stop they get out and storm off without paying.
+- **The bus driver** (`server/systems/busjob.js`): sign on at any stop of a line (Act by its shelter) or from the
+  phone (the line nearest you): a City Bus in the line's livery is issued on the line's street just before that stop.
+  Drive the loop (`transit.js busLines` - its stops in order; the tracker points to the next stop and says when it's
+  due and how many are aboard). People wait at the next stop's shelter (`BUSJOB.wait` of them, each going one to three
+  stops on). Pull up at the stop (stopped within `haltR`) and the doors open: whoever's for this stop gets off at the
+  shelter, the ones waiting walk to the door on the kerb side and board (each pays the fare, `perPax`; held up getting
+  there, they squeeze on after a while), and after `dwellS` with everyone aboard the stop's done: on time (by the
+  timetable - the leg at `BUSJOB.speed`, the dwell, `late` s grace) it pays `perStop`, late nothing for the stop. Once
+  round the loop the shift's done; cancelled or lost, everyone gets off.
+- **The tow truck driver** (`server/systems/towjob.js`): sign on at a police station (its impound lot) or from the
+  phone: a Tow Truck is issued. Calls: a wreck or a car broken down in the street that the city's tow service would
+  come for (`tow.js towReason` - the city's own trucks leave it to you: `v.towCall`), or with none about a car broken
+  down at a kerb somewhere near (smoking, 20% health). Back up to it - stopped, your tail touching either end of it
+  (`TOWJOB.touch`, `tow.js tailGap`, exported) - and the winch works `hookS`; it goes up on the wheel lift by that end
+  (`v.towedBy`, `v.towEnd`, `v.towFrom`: the same wire byte as the NPC trucks', so the page draws it tilted on the
+  hook, winched round) and rides behind the boom (`tow.js carry`, exported; after the physics each tick). Stop within
+  `yardR` of the nearest impound and it's paid: `pay` and `perKm` for the distance towed.
+- Rules (`shared/rules.js`, kept short - the city worker loads it): `CAB`, `BUSJOB`, `TOWJOB`.
+- Hooks, each at the end of its list: `world.js` SYSTEMS (taxijob, busjob, towjob), `players.js` interaction (after
+  the paramedic), `phone.js` (the job list's Driving rows, take, the tracker's target), `client/phone.js` (the Driving
+  heading), `dev.js` / `client/devcats.js` (a new dev section, 🚕 Taxi, bus & tow truck: a fare hailing by your cab at
+  the kerb; you at the wheel of the bus at its next stop; a broken-down car with your truck backed up to it).
+- The page: one line in `client/phone.js`, the hail pose in `client/art2/people.js` and `game/peds.js` (a few hundred
+  bytes; people.js is in the chunk bake, so the art hash changes and baked chunks are made again once).
+
+Tests: test/drivejobs.test.js (new, 7 tests: the taxi on the job list and at a rank, the cab issued and marked; a fare
+hailing with an arm up, picked up, the meter running on the tracker, dropped at the kerb and paid by the distance with
+a tip; a crash costs part of the tip and the police all of it; three scares and the fare bails out without paying; the
+bus issued in the line's livery, the waiting passengers boarding and paying, the ones for a stop getting off there, a
+stop on time paid and a late one not, everyone off when the shift's cancelled; the tow truck backed up to a car, hooked
+by its nose, riding on the hook to the impound, paid; the dev menu's three scenes), test/phones.test.js,
+test/honestliving.test.js, test/paramedic.test.js, test/transit.test.js, test/tow.test.js, test/lazypage.test.js.
+
 ## 2026-10-11 · Decorating your home: a furniture counter, place / move / turn / sell back, the walls' paint and the floors (H67)
 
 The owner asked for "more of the owning a house features"; the brief, after the HO4 concept ("Decorate home - make it

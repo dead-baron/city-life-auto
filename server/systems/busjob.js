@@ -195,11 +195,16 @@ export function target(world, p, j) {
   return { text: j.text, x: Math.round(st ? st.x : 0), y: Math.round(st ? st.y : 0), stage: 'go' };
 }
 
-// ---- dev ('busjob'): on the nearest line, the bus pulled up at its stop with you at the wheel
+// ---- dev ('busjob'): on the nearest line, the bus pulled up at its next stop with you at the wheel
 export function devBus(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return 'On your feet first.';
   if (p.job && p.job.type !== 'bus') jobs.failJob(world, p, '[dev] job dropped');
   if (!p.job) { const err = start(world, p); if (err) return err; }
+  const j = p.job, v = world.get(j.truck), L = busLines(world)[j.line];
+  if (!v || !L || ped.vehId) return null;
+  const at = stopPose(world, L, j.k);
+  v.x = at.x; v.y = at.y; v.a = at.a; v.vx = 0; v.vy = 0; world.place(v);
+  if (!v.seats[0]) { v.seats[0] = ped.id; ped.vehId = v.id; ped.seat = 0; ped.x = v.x; ped.y = v.y; p.teleportAt = world.time; world.place(ped); p.meDirty = true; }
   return null;
 }

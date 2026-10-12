@@ -18,6 +18,7 @@ import { store } from '../store.js';
 import { despawnNpc } from './npc.js';
 import { towReason, tailGap, carry } from './tow.js';
 import { sitesOf } from './firefighter.js';
+import { kerbFor } from './kerbdrive.js';
 import * as jobs from './jobs.js';
 
 export const yardsOf = (m) => m.pois.filter((q) => q.kind === 'police').map((q) => ({ x: q.x, y: q.y, name: `the impound at ${q.label}` }));
@@ -159,13 +160,20 @@ export function target(world, p, j) {
   return { text: j.text, x: Math.round(v ? v.x : 0), y: Math.round(v ? v.y : 0), stage: 'pickup' };
 }
 
-// ---- dev ('towjob'): on the rota, a broken-down car a little way up the street from your truck
+// ---- dev ('towjob'): on the rota, a broken-down car in the street by you, your truck backed up to it, you at the wheel
 export function devTow(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return 'On your feet first.';
   if (p.job && p.job.type !== 'towjob') jobs.failJob(world, p, '[dev] job dropped');
   if (!p.job) { const err = start(world, p); if (err) return err; }
   if (p.job.call) endCall(world, p);
-  newCall(world, p);
+  const t = world.get(p.job.truck), k = kerbFor(world, ped.x, ped.y);
+  if (!t || !k.e || ped.vehId) { newCall(world, p); return null; }
+  const car = world.spawnVehicle('sedan', k.x, k.y, k.a || 0, { npcOwned: true });
+  car.hp = car.def.hp * 0.2; car.brokeDown = true;
+  const off = car.def.L / 2 + t.def.L / 2 + 6, c = Math.cos(car.a), s = Math.sin(car.a);
+  t.x = car.x + c * off; t.y = car.y + s * off; t.a = car.a; t.vx = 0; t.vy = 0; world.place(t);
+  if (!t.seats[0]) { t.seats[0] = ped.id; ped.vehId = t.id; ped.seat = 0; ped.x = t.x; ped.y = t.y; p.teleportAt = world.time; world.place(ped); p.meDirty = true; }
+  callAt(world, p, car);
   return null;
 }

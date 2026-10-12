@@ -226,3 +226,28 @@ test('tow truck: backed up to a broken-down car it is hooked, towed to the impou
   assert.equal(p.job.done, 1);
   phone.handle(w, p, { a: 'cancel' });
 });
+
+test('the dev menu: each job set up by you (a fare hailing by your cab, the bus at its stop, a car to tow behind your truck)', async () => {
+  const dev = await import('../server/dev.js');
+  const { p } = joinPlayer(w);
+  const r = cab.ranksOf(w.map)[0], at = openNear(w.map, r.x + 200, r.y + 200) || r;
+  put(p.ped, at.x, at.y);
+  dev.command(w, p, 'cabjob', {});
+  assert.equal(p.job.type, 'cab');
+  assert.ok(p.job.fare && w.get(p.job.fare.cust).pp === 'hail', 'a fare hailing');
+  dev.command(w, p, 'busjob', {});
+  assert.equal(p.job.type, 'bus');
+  assert.equal(p.ped.vehId, p.job.truck, 'at the wheel of the bus');
+  steps(3);
+  assert.ok(p.job.atStop >= 0, 'at its stop');
+  phone.handle(w, p, { a: 'cancel' });
+  run(w, 0.5);
+  const v = w.get(p.ped.vehId);
+  if (v) { v.seats[0] = 0; p.ped.vehId = 0; p.ped.seat = -1; }
+  put(p.ped, at.x, at.y);
+  dev.command(w, p, 'towjob', {});
+  assert.equal(p.job.type, 'towjob');
+  for (let i = 0; i < 100 && !p.job.call.hooked; i++) { const t = w.get(p.job.truck); t.vx = 0; t.vy = 0; w.step(); }
+  assert.ok(p.job.call.hooked, 'backed up to it: hooked');
+  phone.handle(w, p, { a: 'cancel' });
+});
