@@ -8801,7 +8801,8 @@ furniture and decor, HO3 life at home, HO4 decorating).
   seven seconds building a house in one go on the way in.
 - The camera: the street's scale (main.js baseZoom), the whole place framed when it fits, else following you.
 - The classic view keeps the plan's sprites, cleaner: the walls raised with their faces showing, the windows on the back
-  wall's face, the camera at the street's scale.
+  wall's face, the place dimmed after dark with warm light round the lamps, the bed, the table and the kitchen (blue by
+  the TV), the camera at the street's scale.
 - H62's list: the city isn't drawn under the inside any more (main.js render: `S.homeIn`, set by homeview.js - the HUD,
   the radar and the clock still run); no FIRE / ROLL / CAR / THROW / RELOAD buttons, aim stick or district card in there
   (a style homeview.js adds - nothing in style.css); the cars parked in the garage are solid (shared/homelayout.js
@@ -8818,7 +8819,9 @@ garage full, walking into a car stops at it; every furniture model builds at eve
 lights by day and night, you and a car drawn; none of it in the page's code or the bake's); test/homeinside.test.js,
 test/homes.test.js and test/wardrobe.test.js still pass; test/perf.test.js's code budgets hold (the page 482 of 485 KB,
 the renderer 357 of 363, the bake 758 of 765 - none moved). Headless playtests - art v2 at 1280x720 and on a phone
-(844x390, touch), the classic view on a phone - every kind of home by day and by night: inside, the headless page draws
+(844x390, touch), the classic view on a phone - every kind of home by day and by night (a playtest's guest keeps the
+one mansion through the next runs on the same port, and a stamp while one runs makes the server tell the page to
+reload: clear .playtest-data/<port>/profiles.json, stamp between runs): inside, the headless page draws
 at 60 fps (16.9 ms a frame on average, p95 16.8: the city isn't drawn under it), the HUD's clock runs on, FIRE / CAR /
 ROLL and the aim stick are gone (ACT stays). Still unlike the concepts: the walls are a whole tile thick (the plans'
 grid), so their tops read as heavy dark bands where the concepts' walls are thin - thinner walls would mean thinner

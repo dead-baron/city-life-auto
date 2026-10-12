@@ -137,6 +137,7 @@ function frame(now) {
     }
     for (const o of st.others || []) friend(L, o, now);
     you(L, me, now);
+    nightV1(L);
   }
   g.setTransform(1, 0, 0, 1, 0, 0);
   hudText(W, H, dpr, now);
@@ -196,6 +197,22 @@ function drawArt(L, me, u, now) {
   }
   tvGlow(L, now);
   return true;
+}
+// the classic view after dark: the place dimmed, warm light round the lamps, the bed, the table and the kitchen
+function nightV1(L) {
+  const d = daylight();
+  if (d > 0.85) return;
+  const k = 1 - d;
+  g.fillStyle = `rgba(8,12,36,${0.5 * k})`; g.fillRect(-16, -24, L.w + 32, L.h + 40);
+  g.save(); g.globalCompositeOperation = 'lighter';
+  for (const p of L.pieces) {
+    if (!'ABVTKH'.includes(p.ch)) continue;
+    const x = p.x + p.w / 2, y = p.y + p.h / 2, r = p.ch === 'A' ? 80 : p.ch === 'V' ? 50 : 64;
+    const grd = g.createRadialGradient(x, y, 4, x, y, r);
+    grd.addColorStop(0, p.ch === 'V' ? `rgba(90,130,255,${0.16 * k})` : `rgba(255,180,100,${0.2 * k})`); grd.addColorStop(1, 'rgba(255,180,100,0)');
+    g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  g.restore();
 }
 // the TV's light flickering on the room at night (over the baked light)
 function tvGlow(L, now) {
