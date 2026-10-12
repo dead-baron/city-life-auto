@@ -17,6 +17,11 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   assert.ok(all.every((r) => r.sc.st === 'custody' || r.read.some((b) => b.name === 'prompt')), 'the prompt shows everywhere');
   assert.ok(all.every((r) => !['rob', 'custody'].includes(r.sc.st) || r.read.some((b) => b.name === (r.sc.st === 'rob' ? 'rob' : 'trainbar'))), 'the robbery and custody bars show');
   assert.deepEqual(bad, [], bad.slice(0, 30).join('\n'));
+  // and you, in the middle of the screen: never under the prompt, the notes, the bars or the job line on a phone
+  // (844x390 on its side: one note at a time while there's a prompt; upright), a tablet or a desktop - not yet on a
+  // 740x360 phone (the newest note can reach your head) nor with four long notes stacked on a keyboard's 1024x768
+  const you = all.filter((r) => !/^740x360|^844x390 (kbm|pad)|^1024x768 (kbm|pad)/.test(`${r.sc.w}x${r.sc.h} ${r.sc.dev}`)).flatMap((r) => problems(r, { you: true }));
+  assert.deepEqual(you, [], you.join('\n'));
 });
 
 // the prompt's colour (hud.js: #helpbox.crime amber, .felony red): the server says what Act would be

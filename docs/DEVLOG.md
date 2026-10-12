@@ -9263,7 +9263,9 @@ flying / as the police); after: none.
   prompt that runs to three, so it stays on the left where it can wrap.
 - **Phones on their side** (`@media (max-height: 430px)`): the faction (CITIZEN, POLICE · SERGEANT) gets a row of its own
   under the stars, so the cash and the stars take less width and the prompt has room beside them; the job line 13 px.
-  Under 380 px tall (740x360, an iPhone in Safari) one note at a time and a 13 px prompt. At 740 px wide the round
+  While there's a prompt (or a bar), the newest note only, so the column ends above you in the middle of the screen
+  (the first try ran a three-line prompt and two notes down to your feet). Under 380 px tall (740x360, an iPhone in
+  Safari) one note at a time always and a 13 px prompt. At 740 px wide the round
   buttons are 30 px (they ran under the weapon plate) and the police's COP CAR button sits under the minimap (it lay over
   the menu button).
 - **A keyboard or a pad on a short screen** (a phone with a keyboard, a short window; the touch controls go when a key
@@ -9291,16 +9293,19 @@ in a headless Chromium (the playwright one in /opt/pw-browsers or `CLA_CHROME`; 
 an iframe per case at its size (`chrome --dump-dom`, ~4 s for 96 cases): every prompt, note, job line, hint and bar
 inside the screen, not cut off, clear of the round buttons, the minimap and its bars, the weapon, cash, stars, clock and
 faction, every touch button and stick, and each other; the round buttons clear of the touch buttons, the minimap and the
-cash. Cases: 1280x720, 1920x1080, 844x390, 740x360, 1024x768 with a keyboard, a pad and touch; 390x844 with touch (the
+cash; and you, a box in the middle of the screen, uncovered (but on a 740x360 phone, and with a keyboard or a pad at
+844x390 and 1024x768). Cases: 1280x720, 1920x1080, 844x390, 740x360, 1024x768 with a keyboard, a pad and touch; 390x844 with touch (the
 keyboard's HUD wants a window wider than ~450 px: its minimap and weapon plate alone fill 390). On foot (armed, more
 than one weapon, a flashlight, carrying), driving, flying, as the police, robbing a shop (its prompt the shop's),
 held in custody (no prompt). And the prompt's crime / felony from the server.
 
 What's still not right (screenshots `scratchpad/h70/shots/before-*.png` and `after-*.png` at every size, and the game
 itself: `game-phone-fire.png`, `game-phone-coast.png`, `game-desk-fire.png`):
-- On a phone the notes column covers the scene up and to the left of you (on 844x390 down to y ~175; you stand at 195):
-  in the fire job the engine's green ring is half under two notes. They go in seconds; a translucent note, or the notes
-  at the bottom over the job line, are options.
+- On a phone the notes column covers the scene up and to the left of you (on 844x390 down to y ~160 with a prompt; you
+  stand at 195): in the fire job the engine's green ring was half under two notes (`game-phone-fire.png`, before the
+  one-note rule). They go in seconds; a translucent note, or the notes at the bottom over the job line, are options. On
+  a 740x360 phone the newest note under a long prompt reaches your head; on a keyboard's 1024x768 four long notes
+  stacked reach the middle (the test checks you're clear everywhere else: a box in the middle of the screen).
 - At 740x360, a prompt of ~100 characters (the train's "next train in 1:20 - wait in line...") with a note showing puts
   the note's last line over the corner of the WPN ⇄ button (only with more than one weapon). The longest crime prompt
   (80 characters) fits.

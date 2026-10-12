@@ -340,8 +340,9 @@ body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
 }
 /* (an iPhone SE on its side, 667 px: the round buttons start beside the ITEMS button, clear of the weapon) */
 @media (max-width: 700px) and (orientation: landscape) { .touch #hud-btns { left: calc(max(10px, env(safe-area-inset-left)) + 182px); transform: none; gap: 2px; } }
-/* phones on their side with a robbery, a train ride's or custody's bar over the prompt: the newest note only */
-@media (max-height: 430px) { .touch #hud-msg:has(> #rob:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #trainbar:not(.hidden)) .toast:nth-last-child(n+2) { display: none; } }
+/* phones on their side with a prompt or a robbery, a train ride's or custody's bar over the notes: the newest note only,
+   so the column ends above you (you're in the middle of the screen) */
+@media (max-height: 430px) { .touch #hud-msg:has(> #helpbox:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #rob:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #trainbar:not(.hidden)) .toast:nth-last-child(n+2) { display: none; } }
 /* ...and on a narrow, tall one (a desktop window made narrow): the prompt and the notes under the minimap */
 body.portrait:not(.touch) #hud-msg { left: max(16px, env(safe-area-inset-left)); top: 236px; width: calc(100vw - 32px); }
 body.portrait:not(.touch) #hud-sub { max-width: 90vw; }

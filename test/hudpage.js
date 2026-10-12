@@ -79,6 +79,8 @@ function measure() {
   document.querySelectorAll('#toasts .toast').forEach((el, i) => { if (shown(el)) read.push(box(el, 'note' + i)); });
   for (const id of ['job', 'cruiser-hint', 'rob', 'trainbar']) if (shown($(id))) read.push(box($(id), id));
   keep.push(box($('radar'), 'minimap'));
+  // you: the camera keeps you in the middle of the screen (on foot; your character about 24x32 px on a phone)
+  keep.push({ name: 'you', x0: Math.round(sc.w / 2 - 12), y0: Math.round(sc.h / 2 - 20), x1: Math.round(sc.w / 2 + 12), y1: Math.round(sc.h / 2 + 12) });
   for (const id of ['vitals', 'status', 'rclock']) if (shown($(id))) keep.push(box($(id), id));
   for (const id of ['weapon', 'money', 'bank', 'stars', 'clock', 'faction']) if (shown($(id))) keep.push(box($(id), id));
   document.querySelectorAll('#hud-btns button').forEach((el) => { if (shown(el)) keep.push(box(el, el.id)); });
@@ -125,18 +127,19 @@ export function serve(port = 0) {
 
 // what overlaps what: every box to read against everything it mustn't sit under and against each other, and kept
 // inside the screen
-export function problems(r) {
+// (you - the middle of the screen - only when asked: the notes may cover you on a small screen for their few seconds)
+export function problems(r, { you = false } = {}) {
   const out = [], { sc } = r, tag = `${sc.w}x${sc.h} ${sc.dev} ${sc.st}`;
   const over = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
   for (const [i, a] of r.read.entries()) {
     if (a.x0 < 0 || a.y0 < 0 || a.x1 > sc.w || a.y1 > sc.h) out.push(`${tag}: ${a.name} off the screen ${JSON.stringify(a)}`);
     if (a.clip) out.push(`${tag}: ${a.name} cut off (wider than its box)`);
-    for (const k of r.keep) if (over(a, k)) out.push(`${tag}: ${a.name} under ${k.name} (${a.x0},${a.y0}-${a.x1},${a.y1} vs ${k.x0},${k.y0}-${k.x1},${k.y1})`);
+    for (const k of r.keep) if ((you || k.name !== 'you') && over(a, k)) out.push(`${tag}: ${a.name} under ${k.name} (${a.x0},${a.y0}-${a.x1},${a.y1} vs ${k.x0},${k.y0}-${k.x1},${k.y1})`);
     for (const b of r.read.slice(i + 1)) if (over(a, b)) out.push(`${tag}: ${a.name} overlaps ${b.name} (${a.x0},${a.y0}-${a.x1},${a.y1} vs ${b.x0},${b.y0}-${b.x1},${b.y1})`);
   }
   // and the round buttons (menu, phone, bag...) clear of the touch buttons, the minimap and the cash
   for (const a of r.keep.filter((k) => k.name.startsWith('b-'))) {
-    for (const k of r.keep) if (!k.name.startsWith('b-') && over(a, k)) out.push(`${tag}: ${a.name} under ${k.name} (${a.x0},${a.y0}-${a.x1},${a.y1} vs ${k.x0},${k.y0}-${k.x1},${k.y1})`);
+    for (const k of r.keep) if (!k.name.startsWith('b-') && k.name !== 'you' && over(a, k)) out.push(`${tag}: ${a.name} under ${k.name} (${a.x0},${a.y0}-${a.x1},${a.y1} vs ${k.x0},${k.y0}-${k.x1},${k.y1})`);
   }
   return out;
 }
