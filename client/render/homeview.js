@@ -37,7 +37,7 @@ const PAL = [
 
 export function onMsg(state, m) {
   S = state;
-  if (m.pre) return;   // (at your door: loaded ahead of going in)
+  if (m.pre) { loadArt(); return; }   // (at your door: loaded ahead of going in - art v2's drawing too)
   if (m.off) { hide(); return; }
   if (!st || st.id !== m.id || m.plan !== (st && st.plan)) st = { id: m.id, cars: [], name: '', garage: 0, sleepS: HOME_IN.sleepS, wakeH: HOME_IN.wakeH };
   Object.assign(st, m);
@@ -75,7 +75,10 @@ function show() {
     document.head.appendChild(css);
   }
   document.body.classList.add('home-in');
-  if (S.art2 && !artMod && !artP) artP = import('./homeart2.js').then((m) => { artMod = m; }).catch((e) => console.warn('[home art]', e)).finally(() => { artP = null; });
+  loadArt();
+}
+function loadArt() {
+  if (S && S.art2 && !artMod && !artP) artP = import('./homeart2.js').then((m) => { artMod = m; }).catch((e) => console.warn('[home art]', e)).finally(() => { artP = null; });
 }
 function hide() {
   st = null;
