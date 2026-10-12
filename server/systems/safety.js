@@ -17,7 +17,8 @@ export function confirm(world, p, type, key) {
   if (a && a.key === key && now <= a.until) { p.safetyArm = null; return true; }
   p.safetyArm = { key, until: now + SAFETY_CONFIRM_S };
   const c = CRIMES[type];
-  world.notify(p, `Safety mode: that's ${c.label}${c.felony ? ' - a felony' : ' - a crime'}. Press again to do it anyway (Safety mode: Settings).`, 'warn');
+  // (U17: the page draws it as the shield plate, "Safety mode · Settings" under the words - client/style.css .toast.safety)
+  world.notify(p, `That's ${c.label[0].toLowerCase() + c.label.slice(1)}${c.felony ? ' (a felony)' : ''} - press again to do it anyway`, 'safety');
   p.meDirty = true;
   return false;
 }

@@ -39,6 +39,42 @@ const code = (L = look) => LK.encodeLook(L);
 const clone = (L) => LK.decodeLook(LK.encodeLook(L));
 const newSeed = () => ((Date.now() & 0xfffff) * 4099 + (seedN++) * 7919) >>> 0;
 
+// The starting look as U18 draws it: the row of round stages (the picked one lit from above, its name on a plate), the
+// dashed "+ New character" card at its end, and under it the big gold-edged "Play as" and "Customize this character"
+const SHIRT = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-1 -1 14 13' shape-rendering='crispEdges'%3E%3Cpath d='M3 0h2v1h2V0h2l3 3-2 2-1-1v7H3V4L2 5 0 3z' fill='%23e8eef8' stroke='%23070b16' stroke-width='1'/%3E%3Cpath d='M5 1h2v1H5z' fill='%237f8db0'/%3E%3C/svg%3E")`;
+const START_CSS = `#creator.cc-start .cc-left, #creator.cc-start .cc-foot, #creator.cc-start .cc-tabs { display: none; }
+#creator.cc-start .cc-panel { height: auto; max-height: 100%; }
+#creator.cc-start .cc-page { display: flex; flex-direction: column; gap: 12px; touch-action: auto; }
+#creator .cc-stages { display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 8px 6px 10px; scroll-snap-type: x proximity; background: radial-gradient(ellipse at 50% 0, rgba(60,84,150,.35), transparent 70%), linear-gradient(180deg, #0c1428, #121d3a 62%, #0a1122); border: 2px solid rgba(226,189,87,.4); border-radius: 6px; box-shadow: inset 0 0 0 2px #070b16; }
+#creator .cc-stage { position: relative; flex: 0 0 164px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; padding: 16px 4px 8px; min-height: 300px; background: linear-gradient(180deg, rgba(40,56,100,.3), rgba(13,22,45,.15)); border: 2px solid rgba(201,214,238,.12); border-radius: 4px; color: #c9d0e4; font: 11px var(--pixel); cursor: pointer; scroll-snap-align: center; touch-action: manipulation; overflow: hidden; }
+#creator .cc-stage .cc-th { position: relative; width: 150px; height: 230px; border-radius: 0; }
+#creator .cc-stage:not(.on) .cc-th { filter: brightness(.6) saturate(.8); }
+#creator .cc-stage.on { border-color: var(--rim); background: linear-gradient(180deg, rgba(255,226,140,.2), rgba(255,226,140,.04) 70%, rgba(13,22,45,.3)); box-shadow: 0 0 0 2px var(--ink), 0 0 14px rgba(255,207,64,.35); color: #fff; }
+#creator .cc-stage.on::before { content: ''; position: absolute; left: 50%; top: -4px; width: 130%; height: 84%; transform: translateX(-50%); background: linear-gradient(180deg, rgba(255,236,170,.4), rgba(255,236,170,.05)); clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%); pointer-events: none; }
+#creator .cc-plate { position: relative; font: 700 12px var(--pixel); color: #c9d0e4; white-space: nowrap; }
+#creator .cc-stage.on .cc-plate { margin-top: -10px; padding: 3px 10px; background: #0d162d; border: 2px solid var(--rim); border-radius: 3px; box-shadow: 0 0 0 2px var(--ink); color: #fff; }
+#creator .cc-stage .cc-q { font: 700 64px var(--pixel); color: #ffd34a; margin: auto 0; text-shadow: 0 3px 0 #070b16; }
+#creator .cc-new { position: sticky; right: 0; z-index: 1; border: 2px dashed rgba(201,214,238,.45); background: #0f1830; box-shadow: -10px 0 12px rgba(7,11,22,.7); justify-content: center; gap: 10px; color: var(--cream); font: 700 14px var(--pixel); }
+#creator .cc-new b { font: 700 64px/1 var(--pixel); color: #ffd34a; text-shadow: 0 3px 0 #070b16; }
+#creator .cc-pick { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+#creator .cc-pick .cc-btn { width: min(520px, 100%); display: flex; align-items: center; justify-content: center; gap: 14px; }
+#creator .cc-pick .cc-big { padding: 10px 16px; font: 700 20px var(--pixel); color: #fff; background: linear-gradient(180deg, #262a33, #12151d); border: 3px solid #ffd34a; box-shadow: 0 0 0 2px #070b16, inset 0 0 0 2px rgba(255,211,74,.25), 0 0 16px rgba(255,207,64,.3); }
+#creator .cc-tri { width: 0; height: 0; border-left: 17px solid #ffd34a; border-top: 11px solid transparent; border-bottom: 11px solid transparent; filter: drop-shadow(0 2px 0 #070b16); }
+#creator .cc-pick .cc-cust { padding: 7px 14px; font: 700 15px var(--pixel); color: #e8eef8; background: linear-gradient(180deg, #1b2a52, #0f1830); border: 2px solid #c9d6ee; }
+#creator .cc-shirt { width: 26px; height: 24px; border: 2px solid #c9d6ee; border-radius: 3px; background: ${SHIRT} no-repeat 50% 50% / 18px 17px, #22325e; }
+@media (max-height: 520px) {
+  #creator .cc-stage { flex-basis: 104px; min-height: 0; padding: 6px 2px 5px; gap: 2px; }
+  #creator .cc-stage .cc-th { width: 90px; height: 138px; }
+  #creator .cc-stage .cc-sub { display: none; }
+  #creator .cc-plate { font-size: 10px; } #creator .cc-stage.on .cc-plate { padding: 2px 5px; margin-top: -6px; }
+  #creator .cc-stage .cc-q, #creator .cc-new b { font-size: 44px; }
+  #creator .cc-new { font-size: 12px; }
+  #creator.cc-start .cc-note { display: none; }
+  #creator .cc-pick { flex-direction: row; justify-content: center; }
+  #creator .cc-pick .cc-big { font-size: 15px; padding: 7px 10px; gap: 10px; }
+  #creator .cc-pick .cc-cust { font-size: 12px; padding: 6px 8px; gap: 8px; }
+}`;
+
 export function init(hooks) {
   C = hooks;
   root = document.createElement('div');
@@ -55,6 +91,7 @@ export function init(hooks) {
   </div>`;
   const host = document.getElementById('pause')?.parentNode || document.body;
   host.appendChild(root);
+  const css = document.createElement('style'); css.textContent = START_CSS; document.head.appendChild(css);   // (the starting look's, U18: only here)
   root.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]');
     if (!b || !root.contains(b)) return;
@@ -251,10 +288,9 @@ function drawPreview() {
   const zb = root.querySelector('[data-act="zoom"]'); if (zb) zb.classList.toggle('on', z);
   const pn = root.querySelector('.cc-pname');
   if (pn) pn.textContent = mode === 'start' ? (startPick < LK.STARTERS.length ? LK.STARTERS[startPick].name : 'Random') : mode === 'wheel' ? ((state.saved || [])[wheelSel] || {}).n || '' : ['Front', 'Front right', 'Right', 'Back right', 'Back', 'Back left', 'Left', 'Front left'][dir];
-  // the starting look (the owner, 2026-10-11: "an option that shows up below the highlighted character that says play as or
-  // customize this character"): under the one you've picked, play as them or make them yours ("New character" is below)
-  const un = root.querySelector('.cc-under'), uh = mode === 'start' ? `<button class="cc-btn gold" data-act="play-as">▶ Play as ${startPick < LK.STARTERS.length ? esc(LK.STARTERS[startPick].name) : 'this one'}</button><button class="cc-btn" data-act="make-yours">✎ Customize this character</button>` : '';
-  if (un && un.dataset.h !== uh) { un.innerHTML = uh; un.dataset.h = uh; }
+  // (the starting look's "Play as" / "Customize this character" sit under its row of stages: renderPage, U18)
+  const un = root.querySelector('.cc-under');
+  if (un && un.innerHTML) un.innerHTML = '';
 }
 // the idle: breathing (two frames), and now and then a look round (a turn to one side and back) while nothing changes
 let lastTouch = 0, glance = 0;
@@ -275,7 +311,7 @@ function loop() {
 // thumbnails: cast a few each frame (about 6 ms' worth, the ones on screen first), cached (bounded); until then the
 // card shows a soft placeholder. In the game's pixels too: a figure at 3 CSS px per art pixel on its shadow, a head (the
 // hair, hats, glasses, facial hair) and a face at the most that fits, up to 6 and 8.
-const SIZES = { full: [80, 110, 3, null], mini: [40, 75, 2, null], head: [60, 66, 6, 'head'], face: [64, 44, 8, 'face'] };   // CSS w, h, art px (CSS px, at most), region
+const SIZES = { full: [80, 110, 3, null], mini: [40, 75, 2, null], head: [60, 66, 6, 'head'], face: [64, 44, 8, 'face'], stage: [150, 230, 5, null], stageon: [150, 230, 5, null] };   // CSS w, h, art px (CSS px, at most), region (stage: on its round stone stage, U18 - stageon: the picked one's, ringed in gold)
 // (a figure keeps its 3 px however tall its hair or wide its hat: one a little too big for its tile is cut at the edge, never
 // shrunk, so every tile shows the figures at the same size)
 const THUMB = new Map(), want = [];
@@ -288,14 +324,22 @@ function thumbFor(L, crop) {
   cv.width = Math.round(tw * r); cv.height = Math.round(tht * r);
   const S = sprite(L, 0, 0, region), c2 = cv.getContext('2d'), W = cv.width, H = cv.height;
   c2.imageSmoothingEnabled = false;
-  const foot = region ? 0 : Math.round(H * 0.1);
+  const stg = crop === 'stage' || crop === 'stageon', foot = region ? 0 : Math.round(H * (stg ? 0.2 : 0.1));
   let s = Math.max(1, Math.round(px * r));
   while (s > 1 && (S.w * s > W * (region ? 1 : 1.25) || S.h * s > (H - foot) * (region ? 1 : 1.12))) s--;
   if (!region) {
     // the figure's shadow, in art pixels
     const fy = H - foot, sx = Math.max(3, Math.round(S.w * 0.38)), cx = Math.round(W / 2);
     c2.fillStyle = 'rgba(0,0,0,.34)';
-    for (let j = -1; j <= 1; j++) for (let i = -sx; i < sx; i++) { const u = (i + 0.5) / sx, v = j / 1.5; if (u * u + v * v <= 1) c2.fillRect(cx + i * s, fy + j * s, s, s); }
+    if (stg) {
+      const wa = Math.max(16, Math.round(S.w * 1.45)), rx = wa / 2, ry = Math.max(3, Math.round(wa * 0.24));
+      plinth(c2, cx, fy, s, wa);
+      if (crop === 'stageon') {   // (a gold ring round its top, in art pixels)
+        c2.fillStyle = '#ffd34a';
+        for (let j = -ry; j < ry; j++) for (let i = -Math.ceil(rx); i < Math.ceil(rx); i++) { const u = (i + 0.5) / rx, v = (j + 0.5) / ry, d = u * u + v * v; if (d <= 1 && d > 0.6) c2.fillRect(cx + i * s, fy + j * s, s, s); }
+      }
+    }
+    else for (let j = -1; j <= 1; j++) for (let i = -sx; i < sx; i++) { const u = (i + 0.5) / sx, v = j / 1.5; if (u * u + v * v <= 1) c2.fillRect(cx + i * s, fy + j * s, s, s); }
     c2.drawImage(S.cv, 0, 0, S.w, S.h, cx - S.ax * s, fy - S.ay * s, S.w * s, S.h * s);
   } else c2.drawImage(S.cv, 0, 0, S.w, S.h, Math.round((W - S.w * s) / 2), region === 'head' ? H - S.h * s : Math.round((H - S.h * s) / 2), S.w * s, S.h * s);
   THUMB.set(k, cv);
@@ -349,7 +393,7 @@ function render() {
 function renderFoot() {
   const money = () => `<span class="cc-money">Cash $${(state.cash || 0).toLocaleString()} · Bank $${(state.bank || 0).toLocaleString()}`;
   let h;
-  if (mode === 'start') h = `<button class="cc-btn" data-act="new-char">＋ New character - start from scratch</button>`;   // (play as / customize: under the pick, drawPreview)
+  if (mode === 'start') h = '';   // (play as / customize under the row, New character at its end: renderPage)
   else if (mode === 'wheel') h = `<button class="cc-btn" data-act="close">Close</button><button class="cc-btn" data-act="mirror">The mirror</button><button class="cc-btn gold" data-act="wh-apply" ${(state.saved || []).length ? '' : 'disabled'}>Apply</button>`;
   else if (mode === 'shop') {
     const total = basket().reduce((t, id) => t + WD.priceAt(shop.store, id), 0), changed = code() !== state.cur;
@@ -441,9 +485,14 @@ function renderPage() {
     else h = heads((hairTab === 'beard' ? WD.BEARDS : WD.MOUSTACHES).map((i) => [i ? LK.FACIAL_HAIR[i][0] : 'Clean shaven', i, (V) => { V.hair.facial = i; V.outfit.glasses = null; }, L.hair.facial === i, cur.hair.facial === i]), 'hb-fac');
     h = `<p class="cc-note">${k === 'salon' ? 'Cuts and colour' : 'Cuts, colour, beards and moustaches'}: see it on you, then Confirm to pay.</p>` + h;
   } else if (mode === 'start') {
-    h = `<p class="cc-note">Pick who you'll be. You can change everything later from the pause menu (Appearance).</p><div class="cc-grid big">`
-      + LK.STARTERS.map((s, i) => `<button class="cc-card ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look)}<span>${esc(s.name)}</span><small class="cc-sub">${esc(s.sub || '')}</small></button>`).join('')
-      + `<button class="cc-card ${startPick === LK.STARTERS.length ? 'on' : ''}" data-act="start" data-v="random"><span class="cc-q">?</span><span>Random</span><small class="cc-sub">Surprise me</small></button></div>`;
+    // (U18: the looks standing on round stages side by side, the picked one under a spotlight with its name on a plate,
+    // "+ New character" at the end of the row; under it "Play as <name>" and "Customize this character")
+    const n = LK.STARTERS.length, rnd = startPick === n, nm = rnd ? 'this one' : esc(LK.STARTERS[startPick].name);
+    h = `<p class="cc-note">Pick who you'll be. You can change everything later from the pause menu (Appearance).</p><div class="cc-stages">`
+      + LK.STARTERS.map((s, i) => `<button class="cc-stage ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look, i === startPick ? 'stageon' : 'stage')}<span class="cc-plate">${esc(s.name)}</span><small class="cc-sub">${esc(s.sub || '')}</small></button>`).join('')
+      + `<button class="cc-stage ${rnd ? 'on' : ''}" data-act="start" data-v="random">${rnd ? th(look, 'stageon') : '<span class="cc-q">?</span>'}<span class="cc-plate">Random</span><small class="cc-sub">Surprise me</small></button>`
+      + `<button class="cc-stage cc-new" data-act="new-char"><b>+</b><span>New character</span></button></div>`
+      + `<div class="cc-pick"><button class="cc-btn gold cc-big" data-act="play-as"><i class="cc-tri"></i>Play as ${nm}</button><button class="cc-btn cc-cust" data-act="make-yours"><i class="cc-shirt"></i>Customize this character</button></div>`;
   } else if (mode === 'wheel') {
     const sv = state.saved || [], n = sv.length;
     h = n ? `<div class="cc-ring">` + sv.map((s, i) => {
@@ -517,7 +566,10 @@ function renderPage() {
       }).join('') + '</div>';
   }
   if (lockedHere) h = here(tab === 'hair' ? '✂ Try any style here: cuts, colour and beards are done at a barbershop or a hair salon.' : '🪞 Try anything here: these change at the mirror at home.') + h;
+  const row0 = pg.querySelector('.cc-stages'), sl = row0 ? row0.scrollLeft : -1;
   pg.innerHTML = h;
+  const row = pg.querySelector('.cc-stages');   // (the row keeps its place; opened, the picked one is brought into view)
+  if (row) { if (sl >= 0) row.scrollLeft = sl; else { const on = row.querySelector('.on'); if (on) row.scrollLeft = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2; } }
   want.length = 0;
   for (const el of pg.querySelectorAll('canvas[data-th]')) { const [TL, crop] = TH[Number(el.dataset.th)], Z = SIZES[crop] || SIZES.full; el.width = Math.round(Z[0] * dpr()); el.height = Math.round(Z[1] * dpr()); want.push([el, TL, crop]); }
   pumpThumbs();

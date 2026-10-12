@@ -143,7 +143,8 @@ test('Safety mode: on for new characters; the first press of a crime only warns,
   const v = w.spawnVehicle('sedan', p.ped.x + 300, p.ped.y, 0, {});
   beside(w, p.ped, v);
   assert.equal(vehicles.playerEnter(w, p.ped), false, 'first press: a question');
-  assert.ok(!p.ped.vehId && told(p, /Safety mode: that's Vehicle theft/));
+  assert.ok(!p.ped.vehId && told(p, /^That's vehicle theft - press again to do it anyway$/));
+  assert.equal(p.toasts.find((t) => /^That's vehicle theft/.test(t.text)).tone, 'safety', 'the shield plate (U17)');
   run(w, SAFETY_CONFIRM_S + 1);
   assert.equal(vehicles.playerEnter(w, p.ped), false, 'too long after: asked again');
   // the F key goes through it too (players.applyInput)

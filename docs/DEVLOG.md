@@ -9474,3 +9474,62 @@ landing is one floor - every flat's door along it, whatever its floor (the stair
 lies by its bed rather than curled on it in art v2 (no curled-up pose), and in a small flat its bed sits close to the
 couch; the prompt box sits under the top icon bar on a phone (as before - H70's HUD work). The old lobby menu's code
 (economy.js lobbyOpts) stays for its tests but the door no longer opens it.
+
+## 2026-10-11 · The HUD's new pieces and the title to U17 and U18: the prompt's key chip, Safety mode's shield, the markers, the minimap's icons, PLAY and the graphics control, the starting look on stages (H76)
+
+The owner made concepts for what was built today and asked that the game be brought in line with them:
+`docs/art-v2/targets/U17_prompts-warnings-markers.png` and `U18_title-menu-picker.png`. Within H70's layout for every
+screen (the prompt and notes column, `#hud-msg`) - restyled, not moved. The game's name and logo stay as they are (the
+concept's "ONLINE" sign isn't ours).
+- **The Act prompt** (`client/style.css` #helpbox): a dark navy plate with a light edge and white words for an ordinary
+  act; the key a light square chip ("F") and a colon, then the words; a crime's edge and words amber, a felony's red
+  (`me.pcr`, H70). On touch the chip says the button (ACT / CAR); a pad keeps its coloured face button.
+- **Safety mode's warning** (`server/systems/safety.js`, tone `safety`): "That's vehicle theft - press again to do it
+  anyway" ("(a felony)" after a felony's name) on U17's plate - a pixel shield with "!" at the left, the words amber,
+  an amber edge, and "Safety mode · Settings" small under it (gone on a phone, where notes are three lines at most).
+- **The lost pet's owner** (`client/main.js` drawEventArrows): "Lost my dog!" (cat, puppy) is a speech bubble - the navy
+  plate, a light edge, its tail down to them - with a gold paw at its left (tagPlate, shared with the truck's label).
+- **The rescue flare** (`client/render/aircraft.js` flarePin, loaded once a call's out): a round pin over the smoke -
+  a dark disc in a red ring with a lit flare in it, its point down to the flare - a constant size on screen.
+- **The job's vehicle** (`client/main.js` drawJobTruck): the pulsing green ring is two dashed ellipses (cyan-white
+  outside, gold inside, marching slowly), turned with the vehicle and sized to it (the one standing at the mark), and
+  "YOUR TRUCK" on a label plate above them; the arrow at the screen's edge as before.
+- **The minimap** (`client/hud.js` mapIcon): your home a house (orange), the job a green $, the job's vehicle a blue
+  car, the waypoint a pink dot; out of range, the rim arrows take the icons' colours. (The big map is unchanged.)
+- **The title** (`index.html`, `client/style.css`, `client/main.js` syncTitleGfx): PLAY is a big gold-edged plate with
+  the play triangle (PRACTICE OFFLINE and RESUME navy / gold plates beside it); the graphics under it a segmented
+  control - Low, Medium, High, Ultra, Custom - the one you're on gold with a check over it, a small "recommended" tag
+  under the device's pick; Custom opens Settings as before; "picked for ..." under it while it's the device's pick.
+- **The starting look** (`client/creator.js` 'start', its CSS in the module - only the picker loads it): the looks
+  stand on round stone stages side by side in a row (the preview's own stage, drawn into each thumbnail: SIZES.stage),
+  the picked one lit by a spotlight, its stage ringed in gold and its name on a gold-edged plate, the others dimmed;
+  Random, then a dashed "+ New character" card at the end of the row (it stays in sight at the row's right edge while
+  the row scrolls); under it the big gold-edged "▶ Play as <name>" and "Customize this
+  character" with a shirt icon. The row scrolls sideways (twelve looks), keeps its place when you pick, and opens on
+  the picked one. The separate turning preview and the footer are gone in this screen (the creator keeps them).
+  On a phone on its side the two buttons share a row under the stages.
+
+Files: index.html, client/style.css, client/main.js, client/hud.js, client/creator.js, client/render/aircraft.js,
+server/systems/safety.js; test/titlemenu.test.js, test/honestliving.test.js.
+
+Tests: test/hudlayout.test.js (H70's layout at every size - passes with the new plates), test/titlemenu.test.js (now:
+PLAY's triangle, the segmented control's five, the check and "recommended", Custom to Settings; the stages, the plate,
+New character the last card, Play as / Customize under the row), test/honestliving.test.js (the warning's words and its
+`safety` tone), test/pets.test.js, test/sar.test.js, test/perf.test.js (the code budgets: the page 469 of 485 KB; the
+title's assets 268 of 290 KB).
+
+Screenshots (scratchpad `h76/shots`): the running game with the state put in on the page (`h76/pt2.sh`: the prompt
+plain / crime / felony, the warning, the bubble on a passer-by, the truck's ellipses round a parked vehicle, the flare
+beside you, the minimap's four) - `game-desk-a/b/c.png`, `game-phone-a/b/c.png`; the title and the picker
+(`after-title-*.png`, `after-picker-*.png`, before: `before-*.png`); each piece next to its concept: `cmp-*.png`.
+What still differs from the concepts:
+- The prompt plates follow H70's column (380 px wide): the felony's long prompt wraps to two lines where the concept's
+  runs on one, and the Safety warning wraps; the concept's plates and words are bigger.
+- The bubble, the flare's pin and the truck's plate are smaller than the concept draws them (13 px words, a 15 px pin)
+  and have no glow; the truck's ellipses are flatter and glow in the concept.
+- The minimap has no gold dashed ring round you as the concept's does, and its icons are small (10 px).
+- The title has no city behind it (the concept's street scene): it's the page's purple backdrop over a dark screen;
+  PRACTICE OFFLINE sits beside PLAY; while connecting PLAY is dimmed.
+- The picker: the concept's three figures are big portraits; ours are the game's own sprites at 5 px an art pixel
+  (twelve of them, so the row scrolls - "+ New character" held at its right edge over the looks behind it); the
+  starting look no longer turns or breathes (the turning preview is the creator's).
