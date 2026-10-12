@@ -9502,8 +9502,9 @@ concept's "ONLINE" sign isn't ours).
   under the device's pick; Custom opens Settings as before; "picked for ..." under it while it's the device's pick.
 - **The starting look** (`client/creator.js` 'start', its CSS in the module - only the picker loads it): the looks
   stand on round stone stages side by side in a row (the preview's own stage, drawn into each thumbnail: SIZES.stage),
-  the picked one lit by a spotlight with its name on a gold-edged plate, the others dimmed; Random, then a dashed
-  "+ New character" card at the end of the row; under it the big gold-edged "▶ Play as <name>" and "Customize this
+  the picked one lit by a spotlight, its stage ringed in gold and its name on a gold-edged plate, the others dimmed;
+  Random, then a dashed "+ New character" card at the end of the row (it stays in sight at the row's right edge while
+  the row scrolls); under it the big gold-edged "▶ Play as <name>" and "Customize this
   character" with a shirt icon. The row scrolls sideways (twelve looks), keeps its place when you pick, and opens on
   the picked one. The separate turning preview and the footer are gone in this screen (the creator keeps them).
   On a phone on its side the two buttons share a row under the stages.
@@ -9530,5 +9531,5 @@ What still differs from the concepts:
 - The title has no city behind it (the concept's street scene): it's the page's purple backdrop over a dark screen;
   PRACTICE OFFLINE sits beside PLAY; while connecting PLAY is dimmed.
 - The picker: the concept's three figures are big portraits; ours are the game's own sprites at 5 px an art pixel
-  (twelve of them, so the row scrolls and "+ New character" is at its end, out of sight until you scroll); the picked
-  stage isn't ringed in gold; the starting look no longer turns or breathes (the turning preview is the creator's).
+  (twelve of them, so the row scrolls - "+ New character" held at its right edge over the looks behind it); the
+  starting look no longer turns or breathes (the turning preview is the creator's).

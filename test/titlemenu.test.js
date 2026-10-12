@@ -29,11 +29,11 @@ test('the starting look (U18): the looks on stages side by side, "Play as <name>
   const cr = read('client/creator.js');
   const page = cr.slice(cr.indexOf("} else if (mode === 'start') {"), cr.indexOf("} else if (mode === 'wheel') {"));
   assert.match(page, /<div class="cc-stages">/, 'a row of stages');
-  assert.match(page, /class="cc-stage \$\{i === startPick \? 'on' : ''\}" data-act="start" data-v="\$\{i\}">\$\{th\(s\.look, 'stage'\)\}<span class="cc-plate">/, 'each look on its stage, its name on a plate');
+  assert.match(page, /class="cc-stage \$\{i === startPick \? 'on' : ''\}" data-act="start" data-v="\$\{i\}">\$\{th\(s\.look, i === startPick \? 'stageon' : 'stage'\)\}<span class="cc-plate">/, 'each look on its stage (the picked one ringed in gold), its name on a plate');
   assert.match(page, /<button class="cc-stage cc-new" data-act="new-char"><b>\+<\/b><span>New character<\/span><\/button><\/div>/, 'New character, the last card in the row');
   assert.match(page, /data-act="play-as"><i class="cc-tri"><\/i>Play as \$\{nm\}/, 'play as them, by name');
   assert.match(page, /data-act="make-yours"><i class="cc-shirt"><\/i>Customize this character/, 'customize them');
-  assert.match(cr, /if \(crop === 'stage'\) plinth\(/, 'the stage: the round stone stage of the big preview');
+  assert.match(cr, /plinth\(c2, cx, fy, s, wa\);\s*if \(crop === 'stageon'\)/, 'the stage: the round stone stage of the big preview');
   assert.match(cr, /#creator\.cc-start \.cc-left, #creator\.cc-start \.cc-foot/, 'no separate preview or footer: the row is the picker');
   assert.match(cr, /case 'new-char': .*mode = 'edit'/, 'which opens the creator on a fresh someone');
   assert.ok(!cr.includes('Play as they are') && !cr.includes('>Make it yours<'), 'the old buttons are gone');

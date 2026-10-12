@@ -54,7 +54,7 @@ const START_CSS = `#creator.cc-start .cc-left, #creator.cc-start .cc-foot, #crea
 #creator .cc-plate { position: relative; font: 700 12px var(--pixel); color: #c9d0e4; white-space: nowrap; }
 #creator .cc-stage.on .cc-plate { margin-top: -10px; padding: 3px 10px; background: #0d162d; border: 2px solid var(--rim); border-radius: 3px; box-shadow: 0 0 0 2px var(--ink); color: #fff; }
 #creator .cc-stage .cc-q { font: 700 64px var(--pixel); color: #ffd34a; margin: auto 0; text-shadow: 0 3px 0 #070b16; }
-#creator .cc-new { border: 2px dashed rgba(201,214,238,.45); background: rgba(13,22,45,.5); justify-content: center; gap: 10px; color: var(--cream); font: 700 14px var(--pixel); }
+#creator .cc-new { position: sticky; right: 0; z-index: 1; border: 2px dashed rgba(201,214,238,.45); background: #0f1830; box-shadow: -10px 0 12px rgba(7,11,22,.7); justify-content: center; gap: 10px; color: var(--cream); font: 700 14px var(--pixel); }
 #creator .cc-new b { font: 700 64px/1 var(--pixel); color: #ffd34a; text-shadow: 0 3px 0 #070b16; }
 #creator .cc-pick { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 #creator .cc-pick .cc-btn { width: min(520px, 100%); display: flex; align-items: center; justify-content: center; gap: 14px; }
@@ -311,7 +311,7 @@ function loop() {
 // thumbnails: cast a few each frame (about 6 ms' worth, the ones on screen first), cached (bounded); until then the
 // card shows a soft placeholder. In the game's pixels too: a figure at 3 CSS px per art pixel on its shadow, a head (the
 // hair, hats, glasses, facial hair) and a face at the most that fits, up to 6 and 8.
-const SIZES = { full: [80, 110, 3, null], mini: [40, 75, 2, null], head: [60, 66, 6, 'head'], face: [64, 44, 8, 'face'], stage: [150, 230, 5, null] };   // CSS w, h, art px (CSS px, at most), region (stage: on its round stone stage, U18)
+const SIZES = { full: [80, 110, 3, null], mini: [40, 75, 2, null], head: [60, 66, 6, 'head'], face: [64, 44, 8, 'face'], stage: [150, 230, 5, null], stageon: [150, 230, 5, null] };   // CSS w, h, art px (CSS px, at most), region (stage: on its round stone stage, U18 - stageon: the picked one's, ringed in gold)
 // (a figure keeps its 3 px however tall its hair or wide its hat: one a little too big for its tile is cut at the edge, never
 // shrunk, so every tile shows the figures at the same size)
 const THUMB = new Map(), want = [];
@@ -324,14 +324,21 @@ function thumbFor(L, crop) {
   cv.width = Math.round(tw * r); cv.height = Math.round(tht * r);
   const S = sprite(L, 0, 0, region), c2 = cv.getContext('2d'), W = cv.width, H = cv.height;
   c2.imageSmoothingEnabled = false;
-  const foot = region ? 0 : Math.round(H * (crop === 'stage' ? 0.2 : 0.1));
+  const stg = crop === 'stage' || crop === 'stageon', foot = region ? 0 : Math.round(H * (stg ? 0.2 : 0.1));
   let s = Math.max(1, Math.round(px * r));
   while (s > 1 && (S.w * s > W * (region ? 1 : 1.25) || S.h * s > (H - foot) * (region ? 1 : 1.12))) s--;
   if (!region) {
     // the figure's shadow, in art pixels
     const fy = H - foot, sx = Math.max(3, Math.round(S.w * 0.38)), cx = Math.round(W / 2);
     c2.fillStyle = 'rgba(0,0,0,.34)';
-    if (crop === 'stage') plinth(c2, cx, fy, s, Math.max(16, Math.round(S.w * 1.45)));
+    if (stg) {
+      const wa = Math.max(16, Math.round(S.w * 1.45)), rx = wa / 2, ry = Math.max(3, Math.round(wa * 0.24));
+      plinth(c2, cx, fy, s, wa);
+      if (crop === 'stageon') {   // (a gold ring round its top, in art pixels)
+        c2.fillStyle = '#ffd34a';
+        for (let j = -ry; j < ry; j++) for (let i = -Math.ceil(rx); i < Math.ceil(rx); i++) { const u = (i + 0.5) / rx, v = (j + 0.5) / ry, d = u * u + v * v; if (d <= 1 && d > 0.6) c2.fillRect(cx + i * s, fy + j * s, s, s); }
+      }
+    }
     else for (let j = -1; j <= 1; j++) for (let i = -sx; i < sx; i++) { const u = (i + 0.5) / sx, v = j / 1.5; if (u * u + v * v <= 1) c2.fillRect(cx + i * s, fy + j * s, s, s); }
     c2.drawImage(S.cv, 0, 0, S.w, S.h, cx - S.ax * s, fy - S.ay * s, S.w * s, S.h * s);
   } else c2.drawImage(S.cv, 0, 0, S.w, S.h, Math.round((W - S.w * s) / 2), region === 'head' ? H - S.h * s : Math.round((H - S.h * s) / 2), S.w * s, S.h * s);
@@ -482,8 +489,8 @@ function renderPage() {
     // "+ New character" at the end of the row; under it "Play as <name>" and "Customize this character")
     const n = LK.STARTERS.length, rnd = startPick === n, nm = rnd ? 'this one' : esc(LK.STARTERS[startPick].name);
     h = `<p class="cc-note">Pick who you'll be. You can change everything later from the pause menu (Appearance).</p><div class="cc-stages">`
-      + LK.STARTERS.map((s, i) => `<button class="cc-stage ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look, 'stage')}<span class="cc-plate">${esc(s.name)}</span><small class="cc-sub">${esc(s.sub || '')}</small></button>`).join('')
-      + `<button class="cc-stage ${rnd ? 'on' : ''}" data-act="start" data-v="random">${rnd ? th(look, 'stage') : '<span class="cc-q">?</span>'}<span class="cc-plate">Random</span><small class="cc-sub">Surprise me</small></button>`
+      + LK.STARTERS.map((s, i) => `<button class="cc-stage ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look, i === startPick ? 'stageon' : 'stage')}<span class="cc-plate">${esc(s.name)}</span><small class="cc-sub">${esc(s.sub || '')}</small></button>`).join('')
+      + `<button class="cc-stage ${rnd ? 'on' : ''}" data-act="start" data-v="random">${rnd ? th(look, 'stageon') : '<span class="cc-q">?</span>'}<span class="cc-plate">Random</span><small class="cc-sub">Surprise me</small></button>`
       + `<button class="cc-stage cc-new" data-act="new-char"><b>+</b><span>New character</span></button></div>`
       + `<div class="cc-pick"><button class="cc-btn gold cc-big" data-act="play-as"><i class="cc-tri"></i>Play as ${nm}</button><button class="cc-btn cc-cust" data-act="make-yours"><i class="cc-shirt"></i>Customize this character</button></div>`;
   } else if (mode === 'wheel') {
