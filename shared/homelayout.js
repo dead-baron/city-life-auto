@@ -13,25 +13,34 @@
 //   (H71, an apartment block's lobby) M the mailboxes (use) Z the stairs up - U a flat's door and E the lift's doors (in
 //   the back wall, solid like it)
 export const TILE_IN = 32;
+// (H77) the concept's new pieces, lower case in a plan: x a pool table  j an arcade cabinet  i a row of cinema seats  n a
+// kitchen island and its stools  s a sectional sofa (its long side)  b a bedside table and its lamp  l a floor lamp  w a
+// washing machine  k a workbench  e an exercise bike  h a bathtub - furniture like the rest (solid, a run one piece)
+const PLAN_LOWER = 'xjinsblwkh';
 export const BODY_IN = 10;   // half the size of you, for the walls (px)
+// (H77, the owner's HO6 concept: thin walls) a wall is a thin line, not its whole tile: WALL_IN px thick, along the middle
+// of a wall tile inside the home and along the inner edge of the outside walls - the rest of the tile is the room's
+// floor (or the yard, outside). The tiles stay as they are (the decor, the rooms and the lobby read them); only the
+// walking (blocked) sees the line.
+export const WALL_IN = 10;
 
 const PLANS = {
   // a single-wide trailer / shack: the kitchen and the living room in one, the bedroom with the shower in its corner
   trailer: [
-    '#####==#####',
-    '#KKF...#BBW#',
+    '###==###=###',
+    '#KKF..V#BBW#',
     '#......#BB.#',
     '#TT..1.+...#',
-    '#......#..S#',
-    '#A...CC#HL.#',
+    '#1.....#..S#',
+    '#A..OCC#HL.#',
     '###D########',
   ],
   // an apartment: the living room and the kitchen, a bedroom, a bathroom off it
   apartment: [
-    '#####==#######',
-    '#KKKF1#WW...S#',
+    '#####==###==##',
+    '#KKKF1#WW..lS#',
     '#.....#......#',
-    '#TT...+..BB..#',
+    '#TT...+.bBBb.#',
     '#TT...#..BB..#',
     '#.....##+#####',
     '#C...V#ttttLN#',
@@ -51,18 +60,23 @@ const PLANS = {
     '#C...A#.......#gggY#',
     '###D###########RRRR#',
   ],
-  // a mansion: the big kitchen and dining room, the great room, the master bedroom and its bathroom, a den, the garage
+  // a mansion (H77, the owner's HO6 concept): along the back the master bedroom (bedside lamps), the walk-in wardrobe
+  // with the safe, the bathroom (the bath, the shower) and the home cinema (the big screen, two rows of red seats); the
+  // great room - the kitchen, the island and its stools, the dining table, the sectional facing the TV - and the games
+  // room (the pool table, two arcade cabinets); the three-car garage through the games room
   mansion: [
-    '##########==##########==######',
-    '#KKKKF.1#HHtt#WWW...S#ggggggg#',
-    '#.......#tttt+.......#ggggggg#',
-    '#TTTT...#LNtt#..BBB..#ggggggg#',
-    '#TTTT...######..BBB..#ggggggg#',
-    '#.......+.....2......+ggggggg#',
-    '#Q..........#.......Q#ggggggg#',
-    '#OCCC..V....#.3...3..#ggggggg#',
-    '#..A....2...+.......P#ggggggY#',
-    '#####D################RRRRRR##',
+    '#' + '##==##' + '#' + '###' + '#' + '#==#' + '#' + '#####' + '#' + '######' + '#',
+    '#' + 'lbBBb.' + '#' + 'WWW' + '#' + 'HH.L' + '#' + '.VVV.' + '#' + 'gggggg' + '#',
+    '#' + '..BB..' + '#' + '...' + '#' + '...N' + '#' + '.....' + '#' + 'gggggg' + '#',
+    '#' + '......' + '+' + '..S' + '#' + 'hh..' + '#' + 'iiii.' + '#' + 'gggggg' + '#',
+    '#' + '3.....' + '#' + 'WW.' + '#' + '...P' + '#' + 'iiii.' + '#' + 'gggggg' + '#',
+    '#' + '#####+' + '#' + '###' + '#' + '##+#' + '#' + '####+' + '#' + 'gggggg' + '#',
+    '#' + 'KKKKF..2...VV.l' + '#' + 'j.j.Q' + '#' + 'gggggg' + '#',
+    '=' + '...............' + '+' + '.....' + '#' + 'gggggg' + '#',
+    '=' + '.nnn...TTT.....' + '#' + '.xxx.' + '+' + 'gggggg' + '#',
+    '#' + '.nnn...TTT.ssss' + '#' + '.xxx.' + '#' + 'gggggg' + '#',
+    '#' + '3.....A....ssss' + '#' + 'P...O' + '#' + 'gggggY' + '#',
+    '#' + '##==###D##==###' + '#' + '#####' + '#' + 'RRRRRR' + '#',
   ],
   // (H65) an apartment block's units (server/systems/homes.js unitOf): the studio - one room and the bed in its corner,
   // the shower, the basin and the toilet along its far wall
@@ -106,7 +120,8 @@ for (let n = 4; n <= 8; n++) {
   ];
 }
 
-const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZ']);
+const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZ', ...PLAN_LOWER]);
+const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);
 const FLOORS = new Set(['.', 'c', 't', 'g', '+']);
 export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail' };
 
@@ -135,7 +150,7 @@ export function layout(key, tier = 0) {
   const seen = new Set(), pieces = [];
   for (let ty = 0; ty < R; ty++) for (let tx = 0; tx < C; tx++) {
     const ch = at(tx, ty);
-    if (!/[A-Z]/.test(ch) || ch === 'D' || ch === 'R' || ch === 'U' || ch === 'E' || seen.has(tx + ',' + ty)) continue;
+    if (!(/[A-Z]/.test(ch) || PLAN_LOWER.includes(ch)) || ch === 'D' || ch === 'R' || ch === 'U' || ch === 'E' || seen.has(tx + ',' + ty)) continue;
     let w = 1, h = 1;
     while (at(tx + w, ty) === ch && !seen.has(tx + w + ',' + ty)) w++;
     while ([...Array(w).keys()].every((i) => at(tx + i, ty + h) === ch)) h++;
@@ -158,8 +173,24 @@ export function layout(key, tier = 0) {
     const gw = (gx1 - gx0 + 1) * TILE_IN;
     bays = bays.map((_, i) => ({ x: gx0 * TILE_IN + gw * (i + 0.5) / bays.length, y: gy0 * TILE_IN + 4 + CAR_IN.l / 2 }));
   }
+  // (H77) the walls' thin lines: per wall tile, its rects [x0, y0, x1, y1] (px, in the tile) - a line along the middle (the
+  // inner edge on the outside walls) toward each wall beside it, out to the tile's edge where a doorway or a wall goes on
+  const T = TILE_IN, mid0 = (T - WALL_IN) / 2;
+  const isW = (tx, ty) => tx >= 0 && ty >= 0 && tx < C && ty < R && WALLISH.has(at(tx, ty));
+  const goes = (tx, ty) => isW(tx, ty) || (tx >= 0 && ty >= 0 && tx < C && ty < R && at(tx, ty) === '+');
+  const walls = new Array(C * R).fill(null), wallRects = [];
+  for (let ty = 0; ty < R; ty++) for (let tx = 0; tx < C; tx++) {
+    if (!isW(tx, ty)) continue;
+    const bx = tx === 0 ? T - WALL_IN : tx === C - 1 ? 0 : mid0, by = ty === 0 ? T - WALL_IN : ty === R - 1 ? 0 : mid0;
+    const l = goes(tx - 1, ty), r = goes(tx + 1, ty), u = goes(tx, ty - 1), d = goes(tx, ty + 1);
+    const rs = [];
+    if (l || r || !(u || d)) rs.push([l ? 0 : bx, by, r ? T : bx + WALL_IN, by + WALL_IN]);
+    if (u || d) rs.push([bx, u ? 0 : by, bx + WALL_IN, d ? T : by + WALL_IN]);
+    walls[ty * C + tx] = rs;
+    for (const q of rs) wallRects.push({ tx, ty, ch: at(tx, ty), x: tx * T + q[0], y: ty * T + q[1], w: q[2] - q[0], h: q[3] - q[1] });
+  }
   const L = {
-    key, tier, cols: C, rows: R, w: C * TILE_IN, h: R * TILE_IN, grid: rows, pieces, door, bays, doors,
+    key, tier, cols: C, rows: R, w: C * TILE_IN, h: R * TILE_IN, grid: rows, pieces, door, bays, doors, walls, wallRects,
     spawn: { x: door.x, y: door.y - TILE_IN },
     cell: at,
     solid: (tx, ty) => SOLID.has(at(tx, ty)),
@@ -179,7 +210,13 @@ export function carRects(L, n) {
 export function blocked(L, x, y, r = BODY_IN, nc = 0) {
   const x0 = Math.floor((x - r) / TILE_IN), x1 = Math.floor((x + r - 0.001) / TILE_IN);
   const y0 = Math.floor((y - r) / TILE_IN), y1 = Math.floor((y + r - 0.001) / TILE_IN);
-  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) if (L.solid(tx, ty)) return true;
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+    const wr = tx >= 0 && ty >= 0 && tx < L.cols && ty < L.rows ? L.walls[ty * L.cols + tx] : null;
+    if (wr) {   // (H77: a wall tile - only its thin line is solid)
+      const lx = x - tx * TILE_IN, ly = y - ty * TILE_IN;
+      for (const q of wr) if (lx + r > q[0] && lx - r < q[2] && ly + r > q[1] && ly - r < q[3]) return true;
+    } else if (L.solid(tx, ty)) return true;
+  }
   if (nc > 0) for (const c of carRects(L, nc)) if (x + r > c.x && x - r < c.x + c.w && y + r > c.y && y - r < c.y + c.h) return true;
   return false;
 }

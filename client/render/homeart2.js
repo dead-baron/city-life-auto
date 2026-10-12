@@ -9,15 +9,15 @@
 // only with art v2 on - its imports (the renderer's people and cars) are in the page already by then.
 import { GBuf, hash, vnoise, step, bayer, F_GLASS } from '../art2/gbuf.js';
 import { ramp } from '../art2/palette.js';
-import { MAKERS, LOOK } from '../art2/props-home.js';
+import { MAKERS, LOOK, YARD_MAKERS } from '../art2/props-home.js';
 import { pedSprite } from '../art2/game/peds.js';
 import { vehicleSprite, animalSprite } from '../art2/game/actors.js';
-import { TILE_IN, CAR_IN } from '../../shared/homelayout.js';
+import { TILE_IN, CAR_IN, WALL_IN } from '../../shared/homelayout.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 
 const T = TILE_IN;
-export const HF = 46, HC = 14;   // the walls' heights (world px): the back wall full, the rest cut low
-export const YARD = 72;          // the ground drawn round the place (world px)
+export const HF = 46, HC = 10;   // the walls' heights (world px): a lobby's back wall full, every other wall cut low (H77: a home's every wall - HO6)
+export const YARD = 88;          // the ground drawn round the place (world px)
 const UP = [0, 0, 1], SOUTH = [0, 1, 0];
 const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);   // (U a flat's door, E the lift: a lobby's back wall - H71)
 const FLOORISH = new Set(['.', 'c', 't', 'g', '+']);
@@ -165,27 +165,63 @@ export class HomeArt {
     if (r && r.kind === 'bed' && this.tier >= 2 && !r.tiles.some(([x, y]) => L4K(this.L, x, y))) return 'c';   // (a bedroom carpeted - not a great room with the kitchen in it)
     return '.';
   }
-  // the ground round the place (the concepts show a home cut away in its lot): a lawn - a yard of paving round an
-  // apartment - the path from the front door, the drive from the garage, a few flowers along the front of a good one
+  // the ground round the place (H77, the HO6 concept: a home cut away in its lot): a lawn - mown in stripes round a good
+  // house - with the path from the front door and the drive from the garage, flower beds along the front; a house's
+  // white picket fence across the front and a wooden one round the back, its patio; a trailer's deck by its door and a
+  // fenced patch of grass; a mansion's stone terrace behind it, a hedge along the front and the sea off its east side;
+  // a yard of paving round an apartment (the furniture out there - the patio set, the mower, the raised beds, the lawn
+  // chairs - is buildFurniture's: yardThings)
   buildYard() {
     const L = this.L, ap = this.ap, M = YARD, G = new GBuf(Math.ceil((L.w + 2 * M) / ap), Math.ceil((L.h + 2 * M) / ap));
-    const paved = /^(apartment|studio|penthouse|lobby)/.test(L.key), grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
+    const key = L.key, paved = /^(apartment|studio|penthouse|lobby)/.test(key), house = key === 'house', trailer = key === 'trailer', mansion = key === 'mansion';
+    const grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
+    const stone = ramp('#d8ceb8', 6, 3), plank = ramp('#9a6c44', 6, 3), board = ramp('#7a5034', 6, 3), white = ramp('#eeeae0', 5, 2), soil = ramp('#5a3e2a', 5, 2);
+    const hedge = ramp('#3e6a2e', 6, 3), sea = ramp('#2e6a9a', 6, 3), rock = ramp('#7a7068', 6, 3);
+    const E = T - WALL_IN, H = L.h, W = L.w, front = H - E;
     let r0 = L.cols, r1 = -1;
     for (let tx = 0; tx < L.cols; tx++) if (L.cell(tx, L.rows - 1) === 'R') { r0 = Math.min(r0, tx); r1 = Math.max(r1, tx); }
+    const dx0 = r0 * T, dx1 = (r1 + 1) * T, door = L.door;
     for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
       const wx = x * ap - M, wy = y * ap - M;
-      if (wx >= 0 && wy >= 0 && wx < L.w && wy < L.h) continue;
+      if (wx >= E && wy >= E && wx < W - E && wy < front) continue;   // (the floor's)
+      const pathX = door && Math.abs(wx - door.x) < 16, path = pathX && wy >= front, drive = r1 >= 0 && wy >= front && wx >= dx0 && wx < dx1;
+      const gr = () => step(grass, 0.5 + (vnoise(wx, wy, 14, 2) - 0.5) * 0.3 + (hash(x, y, 5) - 0.5) * 0.25 + (this.tier >= 2 && !paved ? ((Math.floor((wx + 400) / 24) & 1) ? 0.07 : -0.05) : 0), x, y, 0.6);
+      const pavers = (P, s = 16) => step(P, 0.55 + ((((wx % s) + s) % s < 1 || (((wy % s) + s) % s) < 1) ? -0.3 : (hash(Math.floor(wx / s), Math.floor(wy / s), 3) - 0.5) * 0.2), x, y, 0.3);
       let c;
-      const path = L.door && wy >= L.h && Math.abs(wx - L.door.x) < 18, drive = r1 >= 0 && wy >= L.h && wx >= r0 * T && wx < (r1 + 1) * T;
-      if (drive) c = step(conc, 0.5 + (vnoise(wx, wy, 20, 7) - 0.5) * 0.2 + (wy % 48 < 1 ? -0.2 : 0), x, y, 0.4);
-      else if (path || paved) c = step(pave, 0.55 + ((((wx % 16) + 16) % 16 < 1 || (((wy % 16) + 16) % 16) < 1) ? -0.3 : (hash(wx >> 4, wy >> 4, 3) - 0.5) * 0.2), x, y, 0.3);
-      else {
-        c = step(grass, 0.5 + (vnoise(wx, wy, 14, 2) - 0.5) * 0.3 + (hash(x, y, 5) - 0.5) * 0.25, x, y, 0.6);
-        if (this.tier >= 1 && wy >= L.h && wy < L.h + 12 && hash(wx >> 2, wy >> 2, 8) > 0.8) c = [[220, 70, 80], [240, 200, 70], [180, 120, 220]][Math.floor(hash(wx >> 2, 1, 9) * 3)];   // flowers along the front
-      }
+      if (mansion && wx >= W + M - 30) {   // the sea off the east side, the rocks along its edge
+        const e = wx - (W + M - 30) + Math.sin(wy * 0.08) * 4;
+        c = e < 8 ? step(rock, 0.45 + (hash(wx >> 2, wy >> 2, 6) - 0.5) * 0.6, x, y, 0.4) : step(sea, 0.5 + Math.sin(wy * 0.2 + wx * 0.1) * 0.12 + (hash(wx >> 1, wy >> 1, 2) > 0.94 ? 0.5 : 0), x, y, 0.4);
+      } else if (drive) c = step(conc, 0.5 + (vnoise(wx, wy, 20, 7) - 0.5) * 0.2 + (wy % 48 < 1 ? -0.2 : 0), x, y, 0.4);
+      else if (paved) c = pavers(pave);
+      else if (mansion && wy < E) c = pavers(stone, 24);   // the terrace behind it
+      else if (mansion && wy >= front && wy < front + 30) c = pavers(stone, 24);   // the forecourt
+      else if (mansion && wy >= H + M - 14) c = step(hedge, 0.5 + (vnoise(wx, wy, 6, 3) - 0.5) * 0.6 + (wy >= H + M - 4 ? -0.3 : 0), x, y, 0.5);   // the hedge along the front
+      else if (trailer && wy >= front && wy < front + 30 && door && Math.abs(wx - door.x) < 34) c = step(plank, 0.55 + (wx % 8 < 1 ? -0.35 : 0) + (hash(Math.floor(wx / 8), 1, 4) - 0.5) * 0.2, x, y, 0.3);   // the deck
+      else if (path) c = pavers(pave);
+      else if (house && wy >= H + M - 16 && wy < H + M - 8 && !pathX) {   // the picket fence across the front
+        const u = ((wx % 6) + 6) % 6;
+        c = wy === H + M - 12 || wy === H + M - 13 ? step(white, 0.5, x, y, 0.2) : u < 3 ? step(white, wy < H + M - 14 ? 0.8 : 0.55, x, y, 0.2) : gr();
+      } else if (house && wy >= H + M - 8 && wy < H + M - 6 && !pathX) c = step(grass, 0.1, x, y, 0.3);   // its shadow
+      else if ((house || trailer) && (wy < -M + 10 || wx < -M + 8 || wx >= W + M - 8) && !(wy >= H + M - 16)) {   // a wooden fence round the back and the sides
+        const along = wy < -M + 10 ? wx : wy;
+        c = step(board, 0.5 + (((along % 10) + 10) % 10 < 1 ? -0.4 : 0) + (wy < -M + 3 || wx < -M + 2 || wx >= W + M - 2 ? 0.25 : 0), x, y, 0.3);
+      } else if (house && wx >= 6 && wx < 128 && wy >= -M + 16 && wy < -4) c = pavers(stone);   // the patio behind it
+      else if (this.tier >= 1 && wy >= front && wy < front + 14 && !path && !(trailer && door && Math.abs(wx - door.x) < 34)) {   // a flower bed along the front
+        c = step(soil, 0.5 + (hash(wx >> 1, wy >> 1, 4) - 0.5) * 0.4, x, y, 0.3);
+        if (hash(wx >> 2, wy >> 2, 8) > 0.55) c = hash(wx >> 2, wy >> 2, 2) > 0.5 ? step(hedge, 0.6, x, y, 0.3) : [[220, 70, 80], [240, 200, 70], [180, 120, 220], [240, 240, 230]][Math.floor(hash(wx >> 2, 1, 9) * 4)];
+      } else c = gr();
       G.put(x, y, c, UP, 0);
     }
     this.yard = { G, x: -M, y: -M };
+  }
+  // (H77) the yard's furniture: where it stands round each kind of home - [kind, x, y, w, d] (px; y the back of it)
+  yardThings() {
+    const L = this.L, W = L.w, H = L.h, M = YARD, k = L.key;
+    if (k === 'house') return [['patio', 30, -M + 14, 64, 56], ['mower', 160, -M + 26, 32, 32], ['bed', W - 220, -M + 22, 64, 32], ['bed', W - 140, -M + 22, 64, 32]];
+    if (k === 'trailer') return [['chair', W - 60, -M + 22, 32, 32], ['bed', 20, -M + 24, 64, 32]];
+    if (k === 'mansion') return [['patio', 120, -M + 10, 64, 56], ['chair', 260, -M + 24, 32, 32], ['chair', 300, -M + 24, 32, 32], ['chair', W - 200, -M + 24, 32, 32]];
+    void H;
+    return [];
   }
   *buildFloor() {
     const L = this.L, ap = this.ap;
@@ -193,8 +229,13 @@ export class HomeArt {
     if (!this.floorBase) {
       for (let y = 0; y < G.h; y++) {
         for (let x = 0; x < G.w; x++) {
-          const wx = x * ap, wy = y * ap, tx = Math.floor(wx / T), ty = Math.floor(wy / T);
-          if (WALLISH.has(L.cell(tx, ty)) && L.cell(tx, ty) !== 'D') continue;
+          const wx = x * ap, wy = y * ap;
+          let tx = Math.floor(wx / T), ty = Math.floor(wy / T);
+          if (WALLISH.has(L.cell(tx, ty))) {   // (H77: a thin wall - the rest of its tile is the floor of the room beside it, or outside)
+            const o = this.besideWall(tx, ty, wx - tx * T, wy - ty * T);
+            if (!o) continue;
+            tx = o[0]; ty = o[1];
+          }
           const f = this.L.floorAt && this.L.floorAt(tx, ty);
           G.put(x, y, floorPx(this.floorKind(tx, ty), f ? f[2] : this.tier, wx, wy, x, y), UP, 0);
         }
@@ -212,12 +253,13 @@ export class HomeArt {
       }
       this.floorBase = cloneG(G);
     }
-    // a soft shadow along the foot of every wall's face (the walls stand up)
+    // a soft shadow along the foot of every wall's face (the walls stand up - H77: their thin lines)
+    const WM = this.wallMask();
     for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
-      const wy = y * ap, tx = Math.floor(x * ap / T), ty = Math.floor(wy / T), above = L.cell(tx, ty - 1);
-      if (!WALLISH.has(above) || WALLISH.has(L.cell(tx, ty))) continue;
-      const k = wy - ty * T; if (k > 8) continue;
-      const j = (y * G.w + x) * 4, m = 0.6 + k * 0.05;
+      if (WM.on(x, y)) continue;
+      let k = 1; while (k <= 4 && !WM.on(x, y - k)) k++;
+      if (k > 4) continue;
+      const j = (y * G.w + x) * 4, m = 0.55 + k * 0.08;
       G.col[j] *= m; G.col[j + 1] *= m; G.col[j + 2] *= m;
     }
     // a soft shadow under each piece of furniture, a little to the south-east (the light's from the windows behind)
@@ -245,52 +287,64 @@ export class HomeArt {
     for (const p of L.pieces) if (p.flat) rug(G, ap, p.x + 3, p.y + 3, p.w - 6, p.h - 6, Math.max(1, t), p.tx * 5 + p.ty * 3 + p.dec);   // (H67: the rugs you've put down)
     this.floor = { G, x: 0, y: 0 };
   }
-  // the walls: a sprite for each run along a row (sorted by where it stands), its cap and - where it shows - its face
+  // (H77) which tile's floor shows at (u, v) in wall tile tx, ty, beside its thin line: the room on that side (null: outside)
+  besideWall(tx, ty, u, v) {
+    const L = this.L, W = WALL_IN, m0 = (T - W) / 2;
+    const bx = tx === 0 ? T - W : tx === L.cols - 1 ? 0 : m0, by = ty === 0 ? T - W : ty === L.rows - 1 ? 0 : m0;
+    const sx = u < bx ? -1 : u >= bx + W ? 1 : 0, sy = v < by ? -1 : v >= by + W ? 1 : 0;
+    const ok = (x, y) => x >= 0 && y >= 0 && x < L.cols && y < L.rows && !WALLISH.has(L.cell(x, y));
+    for (const [dx, dy] of [[sx, 0], [0, sy], [sx, sy]]) if ((dx || dy) && ok(tx + dx, ty + dy)) return [tx + dx, ty + dy];
+    return null;
+  }
+  // (H77) the walls' lines as a mask at the drawing's grain
+  wallMask() {
+    if (this.WM) return this.WM;
+    const L = this.L, ap = this.ap, MW = Math.ceil(L.w / ap), MH = Math.ceil(L.h / ap), m = new Uint8Array(MW * MH);
+    for (const r of L.wallRects) for (let y = Math.floor(r.y / ap); y < Math.ceil((r.y + r.h) / ap); y++) for (let x = Math.floor(r.x / ap); x < Math.ceil((r.x + r.w) / ap); x++) m[y * MW + x] = 1;
+    this.WM = { MW, MH, on: (x, y) => x >= 0 && y >= 0 && x < MW && y < MH && m[y * MW + x] === 1 };
+    return this.WM;
+  }
+  // the walls (H77, the HO6 concept: thin dark lines with a lit top edge, cut low so you see in - a lobby's back wall
+  // still full height with the flats' doors in it): a sprite for each row's lines that end at the same foot (sorted by
+  // where they stand), the line's top and, where it ends going south, its face
   *buildWalls() {
-    const L = this.L, ap = this.ap, t = this.tier, R = this.R, n0 = this.items.length;
-    const hOf = (tx, ty) => (WALLISH.has(L.cell(tx, ty)) ? (ty === 0 ? HF : HC) : 0);
-    const last = L.rows - 1;
-    for (let ty = 0; ty < L.rows; ty++) {
-      let tx = 0;
-      while (tx < L.cols) {
-        if (!WALLISH.has(L.cell(tx, ty)) || L.cell(tx, ty) === 'D') { tx++; continue; }
-        let tx1 = tx; while (tx1 + 1 < L.cols && WALLISH.has(L.cell(tx1 + 1, ty)) && L.cell(tx1 + 1, ty) !== 'D') tx1++;
-        const h = hOf(tx, ty), wx0 = tx * T, wy0 = ty * T - h, W = (tx1 - tx + 1) * T;
-        const G = new GBuf(Math.ceil(W / ap), Math.ceil((T + h) / ap));
-        for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
-          const wx = wx0 + x * ap, wy = wy0 + y * ap, ctx = Math.floor(wx / T), ch = L.cell(ctx, ty);
-          const below = ty < last ? hOf(ctx, ty + 1) : 0, faceTop = (ty + 1) * T - h;
-          if (wy < faceTop) {   // the cap
-            const u = wy - wy0, edge = (u < ap && !WALLISH.has(L.cell(ctx, ty - 1))) || (u >= T - ap && !WALLISH.has(L.cell(ctx, ty + 1))) || (wx - wx0 < ap && !WALLISH.has(L.cell(ctx - 1, ty))) || (wx0 + W - wx <= ap && !WALLISH.has(L.cell(ctx + 1, ty)));
-            G.put(x, y, edge ? step(RIM, 0.5, x, y, 0.3) : step(CAP, 0.45 + (hash(x >> 2, y >> 2, 4) - 0.5) * 0.1, x, y, 0.3), UP, h);
-            continue;
-          }
-          if (below >= h) continue;   // (the wall goes on south: the next row's cap covers this)
-          const v = (ty + 1) * T - wy;   // height up the face
-          G.put(x, y, this.facePx(ch, ctx, ty, wx, v, h, x, y), SOUTH, v);
+    const L = this.L, ap = this.ap, t = this.tier, n0 = this.items.length, last = L.rows - 1, lobby = /^lobby/.test(L.key);
+    const WM = this.wallMask(), groups = new Map();
+    for (const r of L.wallRects) { const k = r.ty + '|' + (r.y + r.h); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); }
+    const dr = ramp(t >= 3 ? '#4a2a1c' : t >= 2 ? '#7a3a2a' : '#6a5038', 5, 2), steel = ramp('#a8acb2', 5, 2);
+    for (const rs of groups.values()) {
+      const ty = rs[0].ty, h = lobby && ty === 0 ? HF : HC, hp = Math.round(h / ap);
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const r of rs) { x0 = Math.min(x0, r.x); x1 = Math.max(x1, r.x + r.w); y0 = Math.min(y0, r.y); y1 = Math.max(y1, r.y + r.h); }
+      const gx0 = Math.floor(x0 / ap), gy0 = Math.floor(y0 / ap), gx1 = Math.ceil(x1 / ap), gy1 = Math.ceil(y1 / ap);
+      const G = new GBuf(gx1 - gx0, gy1 - gy0 + hp), wx0 = gx0 * ap, wy0 = (gy0 - hp) * ap;
+      for (const r of rs) for (let my = Math.floor(r.y / ap); my < Math.ceil((r.y + r.h) / ap); my++) for (let mx = Math.floor(r.x / ap); mx < Math.ceil((r.x + r.w) / ap); mx++) {
+        const x = mx - gx0, wx = mx * ap, ctx = Math.floor(wx / T), ch = r.ch;
+        if (!WM.on(mx, my + 1)) for (let k = 1; k <= hp; k++) {   // the face, south, where the line ends
+          const y = my + 1 - gy0 + hp - k, v = (k - 1) * ap;
+          let c;
+          if (ch === 'D') c = step(dr, 0.45 + (v >= 4 && v < 6 && (wx - r.x) % 16 > 10 ? 0.5 : 0), x, y, 0.3);   // (the front door, its handle)
+          else c = this.facePx(ch, ctx, ty, wx, v, h, x, y);
+          G.put(x, y, c, SOUTH, v);
           if (ch === '=' && this.inGlass(ctx, ty, wx, v)) G.flag[y * G.w + x] |= F_GLASS;
         }
-        // pictures and a wall lamp along the back wall's face, by the price
-        if (ty === 0 && t >= 1) this.decorateBack(G, wx0, wy0, tx, tx1, h);
-        this.items.push({ G, x: wx0, y: wy0, base: (ty + 1) * T + (ty === last ? 1 : 0), wall: true });
-        tx = tx1 + 1;
+        // the top: a dark line, its edges lit (the north and west brighter); a window's glass, the front door, the roller door
+        const y = my - gy0, nN = WM.on(mx, my - 1), nS = WM.on(mx, my + 1), nW = WM.on(mx - 1, my), nE = WM.on(mx + 1, my);
+        let c, glass = false;
+        if (ch === '=' && nN && nS) { c = [150, 196, 226]; glass = true; }
+        else if (ch === 'D' && nN && nS) c = step(dr, 0.5 + ((wx - r.x) % 16 < 2 ? -0.3 : 0), x, y, 0.3);
+        else if (ch === 'R' && nN && nS) c = step(steel, 0.55 + (mx % 2 ? -0.2 : 0), x, y, 0.2);
+        else if (!nN || !nW) c = step(RIM, 0.78, x, y, 0.2);
+        else if (!nS || !nE) c = step(RIM, 0.3, x, y, 0.2);
+        else c = step(CAP, 0.42 + (hash(mx >> 1, my >> 1, 4) - 0.5) * 0.1, x, y, 0.3);
+        G.put(x, y, c, UP, h);
+        if (glass) G.flag[y * G.w + x] |= F_GLASS;
       }
+      if (lobby && ty === 0 && t >= 1) this.decorateBack(G, wx0, wy0, Math.floor(x0 / T), Math.floor((x1 - 1) / T), h);
+      this.items.push({ G, x: wx0, y: wy0, base: y1 + (ty === last ? 1 : 0), wall: true });
       yield;
     }
-    // the front door: a gap in the cut front wall, the door shut in it, the step outside
-    if (L.door) {
-      const ap2 = this.ap, G = new GBuf(Math.ceil(T / ap2), Math.ceil((T + HC) / ap2)), wx0 = L.door.tx * T, wy0 = L.door.ty * T - HC;
-      const dr = ramp(t >= 3 ? '#4a2a1c' : t >= 2 ? '#7a3a2a' : '#6a5038', 5, 2);
-      for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
-        const wx = wx0 + x * ap2, wy = wy0 + y * ap2, u = wx - wx0;
-        if (u < 3 || u >= T - 3) { const v = (L.door.ty + 1) * T - wy; if (wy < (L.door.ty + 1) * T - HC) G.put(x, y, step(RIM, 0.4, x, y, 0.3), UP, HC); else G.put(x, y, step(CAP, 0.6, x, y, 0.3), SOUTH, v); continue; }
-        const v = (L.door.ty + 1) * T - wy;
-        if (v >= 0 && v < HC && wy > L.door.ty * T + 4) G.put(x, y, step(dr, 0.45 + (Math.abs(u - T / 2) < 1 ? -0.3 : 0) + (u === T - 9 && v > 5 && v < 9 ? 0.6 : 0), x, y, 0.3), SOUTH, v);
-      }
-      this.items.push({ G, x: wx0, y: wy0, base: (L.door.ty + 1) * T + 1 });
-    }
     this.wallItems = this.items.slice(n0);   // (H71: kept for the next drawing after a change of decor)
-    void R;
   }
   inGlass(tx, ty, wx, v) { const u = wx - tx * T; return v >= 14 && v < 38 && u >= (L4ch(this.L, tx - 1, ty) ? 0 : 4) && u < (L4ch(this.L, tx + 1, ty) ? T : T - 4); }
   facePx(ch, tx, ty, wx, v, h, x, y) {
@@ -377,7 +431,7 @@ export class HomeArt {
       if (!G) { G = make(mw, md, this.tier, seed).render(head, { px: ap, dither: 0.35 }); this.models.set(mk, G); }
       const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
       const it = { G, x: cx - G.ax * ap, y: cy - G.ay * ap, base: p.y + p.h, piece: p };
-      if ('VAblv'.includes(p.ch)) it.remake = (on) => make(mw, md, this.tier, on).render(head, { px: ap, dither: 0.35 });
+      if ('VAblvj'.includes(p.ch)) it.remake = (on) => make(mw, md, this.tier, on).render(head, { px: ap, dither: 0.35 });
       if (p.wall) { it.base = p.face === 's' ? p.y + 2 : p.y + p.h; }   // (H67: hung on the wall: sorted with the wall behind it)
       if (p.ch === 'l') this.lamps.push({ x: cx, y: cy, z: 54, kind: 'lamp' });
       if (p.ch === 'b') this.lamps.push({ x: cx - 4, y: cy - 1, z: 34, kind: 'lamp' });
@@ -385,7 +439,14 @@ export class HomeArt {
       this.items.push(it);
       if (p.ch === 'A') this.lamps.push({ x: p.x + 9, y: p.y + 18, z: 44, kind: 'lamp' });
       if (p.ch === 'V') this.lamps.push({ x: cx, y: cy, z: 24, kind: 'tv' });
+      if (p.ch === 'j') this.lamps.push({ x: cx, y: cy + 8, z: 36, kind: 'tv' });   // (H77: an arcade cabinet's screen)
       yield;
+    }
+    for (const [k, x, y, w, d] of this.yardThings()) {   // (H77) out in the yard
+      const mk = `yard|${k}|${w}|${d}|${this.tier}|${x}`;
+      let G = this.models.get(mk);
+      if (!G) { G = YARD_MAKERS[k](w, d, this.tier, Math.abs(x) % 3).render(0, { px: ap, dither: 0.35 }); this.models.set(mk, G); }
+      this.items.push({ G, x: x + w / 2 - G.ax * ap, y: y + d / 2 - G.ay * ap, base: y + d });
     }
   }
 
@@ -395,10 +456,12 @@ export class HomeArt {
     const L = this.L, night = 1 - d, dusk = Math.max(0, 1 - Math.abs(d - 0.5) * 3);
     const amb = [0.2 + 0.58 * d + 0.08 * dusk, 0.21 + 0.53 * d, 0.3 + 0.42 * d - 0.06 * dusk];
     const lights = [];
-    for (let tx = 0; tx < L.cols; tx++) if (L.cell(tx, 0) === '=' && !L4ch(L, tx - 1, 0)) {
-      let n = 1; while (L.cell(tx + n, 0) === '=') n++;
-      if (d > 0.05) lights.push({ x: (tx + n / 2) * T, y: T + 6, z: 30, r: 150 + n * 20, c: dusk > 0.3 ? [1.1, 0.7, 0.4] : [0.95, 0.92, 0.82], k: 0.75 * d });
-      else lights.push({ x: (tx + n / 2) * T, y: T + 6, z: 30, r: 90, c: [0.35, 0.45, 0.8], k: 0.25 });   // (the moon and the city's glow)
+    for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) if (L.cell(tx, ty) === '=' && !L4ch(L, tx - 1, ty) && !L4ch(L, tx, ty - 1)) {
+      // (H77: a window in any outside wall - the light comes in on the room's side of it)
+      let n = 1, down = 0; if (L.cell(tx + 1, ty) === '=') { while (L.cell(tx + n, ty) === '=') n++; } else while (L.cell(tx, ty + down + 1) === '=') down++;
+      const x = tx === 0 ? T + 6 : tx === L.cols - 1 ? tx * T - 6 : (tx + n / 2) * T, y = ty === 0 ? T + 6 : ty === L.rows - 1 ? ty * T - 6 : (ty + (down + 1) / 2) * T;
+      if (d > 0.05) lights.push({ x, y, z: 30, r: 150 + (n + down) * 20, c: dusk > 0.3 ? [1.1, 0.7, 0.4] : [0.95, 0.92, 0.82], k: 0.75 * d });
+      else lights.push({ x, y, z: 30, r: 90, c: [0.35, 0.45, 0.8], k: 0.25 });   // (the moon and the city's glow)
     }
     if (night > 0.25) {
       for (const r of this.R.list) {
@@ -508,7 +571,9 @@ function cloneG(G) {
 }
 const L4ch = (L, tx, ty) => L.cell(tx, ty) === '=';
 const L4K = (L, tx, ty) => L.cell(tx, ty) === 'K' || L.cell(tx, ty) === 'T';
-// a 1 px ring round a sprite's shape, for the thing in reach (drawn pulsing over it)
+// a ring round a sprite's shape, for the thing in reach (drawn pulsing over it) - H77, the HO6 concept: a soft cyan glow,
+// bright against the shape and fading out a pixel beyond (the canvas is a pixel bigger all round: drawn at -ap, -ap)
+export const GLOW = [120, 236, 255];
 function outline(G, cv) {
   const w = G.w + 2, h = G.h + 2;
   if (!cv) cv = document.createElement('canvas');
@@ -516,8 +581,13 @@ function outline(G, cv) {
   const g = cv.getContext('2d'), id = g.createImageData(w, h), o = id.data;
   const on = (x, y) => x >= 0 && y >= 0 && x < G.w && y < G.h && G.col[(y * G.w + x) * 4 + 3] > 0;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    if (on(x - 1, y - 1)) continue;
-    if (on(x - 2, y - 1) || on(x, y - 1) || on(x - 1, y - 2) || on(x - 1, y)) { const j = (y * w + x) * 4; o[j] = 255; o[j + 1] = 214; o[j + 2] = 90; o[j + 3] = 255; }
+    const j = (y * w + x) * 4;
+    if (on(x - 1, y - 1)) {   // (just inside the edge: a faint cyan wash)
+      if (!on(x - 2, y - 1) || !on(x, y - 1) || !on(x - 1, y - 2) || !on(x - 1, y)) { o[j] = GLOW[0]; o[j + 1] = GLOW[1]; o[j + 2] = GLOW[2]; o[j + 3] = 110; }
+      continue;
+    }
+    if (on(x - 2, y - 1) || on(x, y - 1) || on(x - 1, y - 2) || on(x - 1, y)) { o[j] = 200; o[j + 1] = 250; o[j + 2] = 255; o[j + 3] = 255; }
+    else if (on(x - 2, y - 2) || on(x, y) || on(x, y - 2) || on(x - 2, y)) { o[j] = GLOW[0]; o[j + 1] = GLOW[1]; o[j + 2] = GLOW[2]; o[j + 3] = 150; }
   }
   g.putImageData(id, 0, 0);
   return cv;
