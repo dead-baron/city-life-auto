@@ -110,16 +110,24 @@ export function callAt(world, p, k, site) {
     c.patient = q.id; c.who = NAMES[Math.floor(world.rand() * NAMES.length)]; c.x = q.x; c.y = q.y;
   }
   j.call = c; j.stage = 'go';
+  (world.medicCalls ||= new Map()).set(c.id, { pid: p.pid, c });
   const where = k === 'player' ? site.name : site.name ? `outside ${site.name}` : placeIn(world, c.x, c.y);
   j.text = `Medical call: ${SAY[k](where)}`;
   world.notify(p, `Medical call! ${SAY[k](where)[0].toUpperCase()}${SAY[k](where).slice(1)}. Siren on (H).`, 'good');
   p.meDirty = true;
   return c;
 }
+function letGo(world, c) {   // a job given up, a player gone: the patient isn't the call's any more
+  if (world.medicCalls) world.medicCalls.delete(c.id);
+  if (c.pid && world.medicFor) world.medicFor.delete(c.pid);
+  const q = c.k !== 'player' && world.get(c.patient);
+  if (q && !q.removed) { if (q.vehId) { const v = world.get(q.vehId); if (v) { const i = v.seats.indexOf(q.id); if (i >= 0) v.seats[i] = 0; } q.vehId = 0; q.seat = -1; } despawnNpc(world, q); }
+}
 function endCall(world, p, ok, msg, extra = 0) {
   const j = p.job, c = j && j.call;
   if (!c) return;
   const now = world.time;
+  if (world.medicCalls) world.medicCalls.delete(c.id);
   if (c.pid && world.medicFor) world.medicFor.delete(c.pid);
   if (c.k !== 'player') {
     const q = world.get(c.patient);
@@ -210,6 +218,10 @@ function step(world, p, dt) {
 // ---- every tick --------------------------------------------------------------------------------------------------------
 export function update(world, dt) {
   for (const p of world.players.values()) if (p.job && p.job.type === 'medic') step(world, p, dt);
+  if (world.medicCalls && world.tick % 20 === 7) for (const { pid, c } of [...world.medicCalls.values()]) {
+    const p = world.players.get(pid);
+    if (!p || !p.job || p.job.type !== 'medic' || p.job.call !== c) letGo(world, c);
+  }
 }
 
 // ---- the page's view of it (phone.js jobTarget) ------------------------------------------------------------------------

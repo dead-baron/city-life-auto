@@ -110,3 +110,12 @@ test('a player down nearby is a call; getting them back on their feet pays', () 
   assert.ok(prof.cash > cash0, 'paid');
   phone.handle(w, p, { a: 'cancel' });
 });
+
+test('a job given up mid-call: the patient is gone', () => {
+  const { p } = onShift();
+  const c = pm.callAt(w, p, 'serious', S.shops[44]);
+  const q = w.get(c.patient);
+  phone.handle(w, p, { a: 'cancel' });
+  run(w, 1.1);
+  assert.ok(q.removed, 'gone');
+});

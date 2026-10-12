@@ -9015,8 +9015,10 @@ engine with a siren.
   holds a dying car off while it's on it and puts it out after `FIRE.car.douseS` (4 s: the boom and the fire called off
   for good - "saved"), puts out a burning wreck (5 s) or a fire arrow's flames, takes the tile fires' heat down (a grass
   tile 0.6 s, a dumpster 3.5, a kitchen 7 - more once they've grown) and wets the grass where it lands (`wetS`: a wet
-  tile won't catch, so a line of water stops the front). Out of reach of the engine, it says so. Nothing up in the air
-  above FLY.HIGH is touched.
+  tile won't catch, so a line of water stops the front). Just out of reach of the engine, it says so (and no punch
+  comes out); well away from it, the fire button is your weapon as ever. Nothing up in the air above FLY.HIGH is touched.
+  A job given up or a player gone mid-call: the call's car goes back to the traffic's books, someone waiting for the
+  crew is gone (`letGo`, every second; the paramedic's patient too).
 - **The pay** (`endCall`; `FIRE.pay`): the call's base by kind ($150-280), up to +50% for a fire out quickly (against
   a par of 60 s plus a second per 600 px of the drive), +$150 for a car saved from blowing up, +$200 for a life saved;
   a grass fire $4 less a tile it burned (down to a third); a Samaritan point a call. A car that blew, someone who died,
@@ -9064,16 +9066,18 @@ server/dev.js ('firejob', 'medicjob'), shared/rules.js (FIRE, MEDIC), server/sys
 the 'hose' event, the draw call), client/sound/events.js (hose), client/devcats.js, README.md, test/firefighter.test.js
 (new).
 
-Tests: test/firefighter.test.js (new, 8 tests: signing on at a station or from the phone - the engine issued, marked, the
+Tests: test/firefighter.test.js (new, 9 tests: signing on at a station or from the phone - the engine issued, marked, the
 siren on H; a car on fire left alone blows, unpaid, and the hose on another puts it out before it blows - saved, paid
 with the bonus, and it never blows; someone on fire catches as the crew pulls up, the hose puts them out alive - a life
 saved - and someone left burning dies, unpaid; a grass fire spreads, leaves scorched ground, is sent to the page nearby,
 the hose puts it all out and the pay is less what burned, the water leaves wet ground; the rain: out in less than half
 the time, far less burned; a burning wreck, a dumpster and a kitchen fire each put out and paid, a kitchen left alone
 grows; the hose only within its length of the engine, the hose event, a quick call pays more; a grass fire stops at a
-wet line, a burning wreck left alone lights what's beside it), test/paramedic.test.js (new, 4 tests: signing on at a
+wet line, a burning wreck left alone lights what's beside it; a job given up lets its call's car and victim go),
+test/paramedic.test.js (new, 5 tests: signing on at a
 hospital or from the phone - the ambulance, marked, its siren; a minor call treated by holding Act, paid, up again; a
 serious one stabilised, aboard when the ambulance pulls up, handed over at the hospital the tracker points to and paid
-with the drive, and one left alone dies unpaid; a player down nearby is the call and reviving them pays),
+with the drive, and one left alone dies unpaid; a player down nearby is the call and reviving them pays; a job given up:
+the patient gone),
 test/sound.test.js, test/perf.test.js, test/activities.test.js, test/gameplay.test.js, test/honestliving.test.js,
 test/sar.test.js, test/burning.test.js, test/rescue.test.js.

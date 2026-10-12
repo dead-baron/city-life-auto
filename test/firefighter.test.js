@@ -279,3 +279,21 @@ test('left alone: a grass fire stops at a wet line (the water\'s work); a burnin
   assert.ok(ff.burningTiles(w).length > 0 || car.dead, 'the grass beside it or the car beside it caught');
   phone.handle(w, p, { a: 'cancel' });
 });
+
+test('a job given up mid-call lets its fire go: the car is the traffic\'s again, the one waiting is gone', () => {
+  const { p } = onShift();
+  const kerb = S.kerb[200];
+  clearRound(kerb.x, kerb.y, 400);
+  const c = ff.callAt(w, p, 'car', kerb);
+  const car = w.get(c.veh);
+  assert.ok(!car.despawnable, 'kept while it\'s the call');
+  phone.handle(w, p, { a: 'cancel' });
+  run(w, 1.1);
+  assert.ok(car.despawnable && !car.fireCall, 'let go');
+  const { p: p2 } = onShift();
+  const c2 = ff.callAt(w, p2, 'person', S.shops[40]);
+  const q = w.get(c2.victim);
+  w.players.delete(p2.pid);   // (gone)
+  run(w, 1.1);
+  assert.ok(q.removed, 'the one waiting for the crew is gone');
+});

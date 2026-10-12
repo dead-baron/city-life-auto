@@ -198,9 +198,11 @@ export function hose(world, p, ped, inp, pressed, dt) {
   if (!j || j.type !== 'fire' || !(inp.bits & IN.FIRE) || ped.carrying || ped.vehId || ped.dead) return false;
   const v = world.get(j.truck);
   if (!v || v.removed || v.wreckAt) return false;
-  if (Math.hypot(v.x - ped.x, v.y - ped.y) > FIRE.hose.len) {
+  const far = Math.hypot(v.x - ped.x, v.y - ped.y);
+  if (far > FIRE.hose.len) {
+    if (far > FIRE.hose.len * 2) return false;   // (well away from the engine: your own weapon, as ever)
     if ((pressed & IN.FIRE) && world.time >= (j.farAt || 0)) { j.farAt = world.time + 6; world.notify(p, 'The hose doesn\'t reach that far - stay near the engine (the hose runs from it).', 'warn'); }
-    return true;   // (no swinging at the air with a hose in your hands)
+    return true;   // (just out of its reach: no swinging at the air with a hose in your hands)
   }
   const a = (inp.bits & IN.AIMING) ? inp.aim : ped.a;
   ped.a = a; ped.aimUntil = world.time + 0.3;
@@ -271,6 +273,7 @@ export function callAt(world, p, k, site) {
   const j = p.job, now = world.time, m = world.map;
   const c = { id: callSeq++, k, x: site.x, y: site.y, name: site.name, at: now, d: p.ped ? Math.hypot(site.x - p.ped.x, site.y - p.ped.y) : 0, veh: 0, victim: 0, lit: false, burned: 0, spread: false, saved: false };
   j.call = c;   // (before lighting: light() counts the call's tiles)
+  (world.fireCalls ||= new Map()).set(c.id, { pid: p.pid, c });
   if (k === 'car' || k === 'wreck') {
     let spot = null;
     for (let r = 0; r <= 160 && !spot; r += 40) for (let a = 0; a < 6 && !spot; a++) {
@@ -307,10 +310,16 @@ export function callAt(world, p, k, site) {
   p.meDirty = true;
   return c;
 }
+function letGo(world, c) {   // the call's car and the one alight: no longer the call's
+  if (world.fireCalls) world.fireCalls.delete(c.id);
+  if (c.victim) { const q = world.get(c.victim); if (q && !q.removed && q.npc) { if (!c.lit) despawnNpc(world, q); else { q.npc.sar = 0; q.npc.keep = false; q.npc.state = 'wander'; } } }
+  if (c.veh) { const v = world.get(c.veh); if (v && !v.removed) { v.despawnable = true; v.fireCall = 0; } }
+}
 function endCall(world, p, ok, msg) {
   const j = p.job, c = j && j.call;
   if (!c) return;
   const now = world.time;
+  if (world.fireCalls) world.fireCalls.delete(c.id);
   if (c.victim) {
     const q = world.get(c.victim);
     if (q && !q.removed) { if (q.npc) { q.npc.sar = 0; q.npc.keep = false; q.npc.state = 'wander'; } if (!q.dead && burning.burning(q)) { /* (still burning: their own now) */ } }
@@ -397,6 +406,10 @@ export function update(world, dt) {
   while (F.acc >= FIRE.grass.stepS) { F.acc -= FIRE.grass.stepS; if (F.on.size || F.scorch.size || F.wet.size) stepFires(world, FIRE.grass.stepS); }
   for (const p of world.players.values()) if (p.job && p.job.type === 'fire') step(world, p);
   if (world.tick % 10 === 0) for (const p of world.players.values()) sendNear(world, p);
+  if (world.fireCalls && world.tick % 20 === 5) for (const { pid, c } of [...world.fireCalls.values()]) {   // (a job given up, a player gone)
+    const p = world.players.get(pid);
+    if (!p || !p.job || p.job.type !== 'fire' || p.job.call !== c) letGo(world, c);
+  }
 }
 
 // { t: 'fires', f: [tx, ty, kind, heat 1-9, ...], s: [tx, ty, ...] (scorched) } - the tile fires within FIRE.near of
