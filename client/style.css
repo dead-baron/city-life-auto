@@ -62,23 +62,26 @@ body:not(.kbm) .kbm-only, body:not(.pad) .pad-only, body:not(.touch) .touch-only
 body.practice #faction::after { content: ' · PRACTICE'; color: var(--warn); }
 
 /* GTA help box (context prompt) */
-/* (to the right of the minimap, which sits top-left on every device) */
+/* (to the right of the minimap, which sits top-left on every device, under the round buttons; the notes under it in the
+   same column (#hud-msg), so a prompt that wraps pushes them down rather than running under them - H70) */
 #hud, #touch, #helpbox { transition: opacity .2s; }
 #helpbox.calm { opacity: 0; transition: opacity 1.5s; }
 body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
-#helpbox { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 14px; max-width: min(380px, 44vw); background: rgba(0,0,0,.8); border-radius: 3px; padding: 10px 14px; font-size: 18px; font-weight: 600; line-height: 1.35; display: flex; align-items: center; gap: 10px; animation: hin .18s ease-out; }
+#hud-msg { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 50px; width: min(380px, 44vw); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+#helpbox { position: relative; max-width: 100%; background: rgba(0,0,0,.8); border-radius: 3px; padding: 10px 14px; font-size: 18px; font-weight: 600; line-height: 1.35; display: flex; align-items: center; gap: 10px; animation: hin .18s ease-out; }
 @keyframes hin { from { opacity: 0; transform: translateY(-6px); } }
-#toasts { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 76px; width: min(380px, 44vw); display: flex; flex-direction: column; gap: 5px; z-index: 7; }   /* (over the district's title card, z 6: its letters ran through the notes; under the robbery and train bars) */
+#toasts { position: relative; width: 100%; display: flex; flex-direction: column; gap: 5px; z-index: 7; }   /* (over the district's title card, z 6: its letters ran through the notes; under the robbery and train bars) */
 .toast { background: rgba(0,0,0,.72); border-left: 4px solid #888; padding: 7px 11px; font-size: 15px; font-weight: 600; line-height: 1.25; animation: tin .2s ease-out; }
 .toast.good { border-color: var(--good); } .toast.bad { border-color: var(--bad); } .toast.warn { border-color: var(--warn); } .toast.info { border-color: #6aa6ff; }
 @keyframes tin { from { transform: translateX(-20px); opacity: 0; } }
 
-/* mission line = bottom subtitle */
-#job { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: 700; text-align: center; max-width: 56vw; color: #fff; text-shadow: var(--outline-s), 0 0 8px #000; }
+/* mission line = bottom subtitle; the police cruiser's hint over it, in the same column (#hud-sub) so a job line that
+   wraps pushes it up */
+#hud-sub { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: max-content; max-width: 56vw; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+#job { font-size: 20px; font-weight: 700; text-align: center; color: #fff; text-shadow: var(--outline-s), 0 0 8px #000; }
 #job::first-letter { color: var(--warn); }
-#cruiser-hint { position: absolute; bottom: 62px; left: 50%; transform: translateX(-50%); font-size: 17px; font-weight: 700; text-align: center; max-width: 60vw; color: #9fbaff; text-shadow: var(--outline-s), 0 0 8px #000; pointer-events: none; }
-.touch #cruiser-hint { bottom: auto; top: 76px; font-size: 13px; max-width: 40vw; }
-body.portrait.touch #cruiser-hint { top: auto; bottom: 330px; max-width: 86vw; }
+#cruiser-hint { font-size: 17px; font-weight: 700; text-align: center; color: #9fbaff; text-shadow: var(--outline-s), 0 0 8px #000; pointer-events: none; }
+.touch #cruiser-hint { font-size: 13px; }
 
 /* radar + vitals (top left, on every device) */
 #radar-wrap { position: absolute; left: max(16px, env(safe-area-inset-left)); top: 14px; width: 170px; pointer-events: auto; }
@@ -243,7 +246,6 @@ body.touch.multi-wpn #weapon::after { content: '⇄'; margin-left: 6px; font-siz
 #wpick .wp-w small { display: block; color: #aaa; font-size: 10px; }
 #tbtns .heal { left: calc(max(10px, env(safe-area-inset-left)) + 124px); top: 10px; width: 52px; height: 30px; border-radius: 15px; font-size: 11px; }
 body.touch #weapon { pointer-events: auto; cursor: pointer; }
-.touch #helpbox, .touch #toasts { margin-left: 58px; }
 #tbtns .map { display: none; }
 #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 182px); top: 10px; width: 84px; height: 30px; border-radius: 15px; font-size: 11px; background: rgba(40,70,190,.75); }
 #tbtns .cruiser.cooling { background: rgba(0,0,0,.5); color: #aab; }
@@ -264,8 +266,12 @@ body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
 .touch #radar-wrap { top: 10px; bottom: auto; left: max(10px, env(safe-area-inset-left)); width: 112px; }
 .touch #radar { width: 112px; height: 112px; border-width: 3px; }
 .touch #status { font-size: 10px; }
-.touch #helpbox { left: calc(max(10px, env(safe-area-inset-left)) + 124px); top: 10px; font-size: 15px; padding: 7px 10px; max-width: 38vw; }
-.touch #toasts { left: calc(max(10px, env(safe-area-inset-left)) + 124px); top: 58px; width: min(40vw, 360px); }
+/* the prompt and the notes right of the ITEMS / flashlight buttons, under the round buttons, clear of the cash and the
+   stars on the right; the job line at the bottom between the sticks (H70: on a phone the prompt sat under the round
+   buttons, its first word or two showing, and the notes over the job line) */
+.touch #hud-msg { left: calc(max(10px, env(safe-area-inset-left)) + 182px); top: 48px; width: min(380px, calc(100vw - 482px)); }
+.touch #helpbox { font-size: 15px; padding: 7px 10px; }
+.touch #hud-sub { bottom: max(8px, env(safe-area-inset-bottom)); left: calc(max(20px, env(safe-area-inset-left)) + 140px); right: calc(max(22px, env(safe-area-inset-right)) + 316px); width: fit-content; max-width: none; margin: 0 auto; transform: none; }
 .touch .toast { font-size: 13px; padding: 5px 8px; }
 .touch #toasts .toast:nth-last-child(n+3) { display: none; }
 .touch #hud-tr { top: 6px; }
@@ -277,7 +283,7 @@ body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
 .touch #stars { font-size: 21px; min-height: 22px; }
 .touch #clock { font-size: 13px; }
 .touch #faction { font-size: 11px; }
-.touch #job { bottom: auto; top: 50px; font-size: 15px; max-width: 40vw; }
+.touch #job { font-size: 15px; }
 .touch #district { font-size: 34px; top: 30%; }
 .touch #district small { font-size: 13px; letter-spacing: 5px; }
 .touch #fishbar { bottom: auto; top: 35%; }
@@ -299,23 +305,48 @@ body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
   .touch #bank { grid-column: 3; grid-row: 2; font-size: 10px; }
   .touch #stars { grid-column: 1; grid-row: 3; font-size: 14px; min-height: 0; margin-top: 0; }
   .touch #clock { grid-column: 2; grid-row: 3; font-size: 11px; margin-top: 0; }
-  .touch #faction { grid-column: 3; grid-row: 3; font-size: 9px; letter-spacing: 1px; margin-top: 0; }
+  .touch #faction { grid-column: 1 / 4; grid-row: 4; font-size: 9px; letter-spacing: 1px; margin-top: 2px; }   /* (a row of its own: the column narrower, so the prompt beside it has room - H70) */
 }
+/* phones on their side with little height (740x360, an iPhone in Safari): the newest note only, under the prompt */
+@media (max-height: 380px) { .touch #toasts .toast:nth-last-child(n+2) { display: none; } .touch #helpbox { font-size: 13px; padding: 6px 9px; } }
+/* a keyboard or a pad on a short screen (a phone with a keyboard, a short window): the notes column clear of the cash
+   and the weapon on the right, two notes at a time, smaller */
+@media (max-height: 430px) {
+  body:not(.touch) #hud-msg { width: min(380px, 44vw, calc(100vw - 494px)); }
+  body:not(.touch) #toasts .toast:nth-last-child(n+3) { display: none; }
+  body:not(.touch) .toast { font-size: 12px; padding: 4px 8px; }
+  body:not(.touch) #helpbox { font-size: 14px; padding: 6px 10px; }
+  body:not(.touch) #job { font-size: 14px; }
+  body:not(.touch) #hud-sub { bottom: 8px; }
+  body:not(.touch) #hud-btns { left: calc(max(16px, env(safe-area-inset-left)) + 188px); transform: none; gap: 4px; }   /* (beside the minimap, clear of the weapon) */
+  body:not(.touch) #hud-btns button { width: 30px; height: 30px; font-size: 15px; }
+  .touch #job { font-size: 13px; padding: 4px 10px; }
+}
+/* a narrow phone on its side (740 px): the round buttons smaller, between the ITEMS button and the weapon, and the
+   police's COP CAR button under the minimap (it lay over the menu button) */
+@media (max-width: 800px) and (orientation: landscape) {
+  .touch #hud-btns { gap: 4px; }
+  .touch #hud-btns button { width: 30px; height: 30px; font-size: 15px; }
+  .touch #tbtns .cruiser { left: max(10px, env(safe-area-inset-left)); top: 158px; }
+}
+/* ...and on a narrow, tall one (a desktop window made narrow): the prompt and the notes under the minimap */
+body.portrait:not(.touch) #hud-msg { left: max(16px, env(safe-area-inset-left)); top: 236px; width: calc(100vw - 32px); }
+body.portrait:not(.touch) #hud-sub { max-width: 90vw; }
 /* portrait phones: controls hug the bottom, HUD compacts */
 body.portrait.touch #hud-tr { max-width: 46vw; }
 body.portrait.touch #money { font-size: 24px; }
 body.portrait.touch #weapon { display: none; }
-body.portrait.touch #helpbox, body.portrait.touch #toasts { left: max(10px, env(safe-area-inset-left)); top: calc(282px + var(--corner-top)); max-width: 80vw; width: auto; }
+body.portrait.touch #hud-msg { display: contents; }
+body.portrait.touch #helpbox, body.portrait.touch #toasts { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(282px + var(--corner-top)); max-width: 80vw; width: auto; }
 /* the notes on a phone held upright: one at a time, tucked in at the top beside the minimap, clear of the buttons on the
    right (the user, 2026-10-08: they covered too much of the screen) */
-body.portrait.touch #toasts { top: calc(104px + var(--corner-top)); left: calc(max(10px, env(safe-area-inset-left)) + 120px); right: 54px; width: auto; max-width: none; }
+body.portrait.touch #toasts { top: calc(114px + var(--corner-top)); left: calc(max(10px, env(safe-area-inset-left)) + 120px); right: 54px; width: auto; max-width: none; }
 body.portrait.touch #toasts .toast:nth-last-child(n+2) { display: none; }
-body.portrait.touch #job { top: auto; bottom: 300px; max-width: 86vw; }
+body.portrait.touch #hud-sub { bottom: 300px; left: 50%; right: auto; margin: 0; transform: translateX(-50%); width: max-content; max-width: 86vw; }
 body.portrait.touch #tbtns .horn, body.portrait.touch #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 246px; }
 body.portrait.touch #tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 154px); bottom: 172px; }   /* (just above FIRE) */
 body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: calc(206px + var(--corner-top)); }
 body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 60px); top: calc(206px + var(--corner-top)); }
-body.portrait.touch #helpbox, body.portrait.touch #toasts { margin-left: 0; }
 /* a phone held upright (the user, 2026-10-08): the minimap top-left with the time and the weather on its plate; the cash,
    the bank and the stars top-right; the round buttons (menu, phone, bag...) down the right edge under them. Nothing at
    the top centre, where phones like the Pixel 7 Pro have the camera in the screen. */
@@ -560,8 +591,9 @@ body.portrait #phone { justify-content: center; padding: 0; }
 }
 
 /* ---- spectator (debug menu): a free camera over the whole world ---- */
-body.spectating #hud > :not(#toasts), body.spectating #touch, body.spectating #interior, body.spectating #wheel, body.spectating #death, body.spectating #menu { display: none !important; }
-body.spectating #toasts { left: auto !important; right: 12px; top: auto !important; bottom: 12px; margin: 0 !important; width: min(360px, 60vw) !important; z-index: 16; }
+body.spectating #hud > :not(#hud-msg), body.spectating #helpbox, body.spectating #touch, body.spectating #interior, body.spectating #wheel, body.spectating #death, body.spectating #menu { display: none !important; }
+body.spectating #hud-msg { display: contents; }
+body.spectating #toasts { position: absolute; left: auto !important; right: 12px; top: auto !important; bottom: 12px; margin: 0 !important; width: min(360px, 60vw) !important; z-index: 16; }
 body.spectating #view { filter: none !important; cursor: grab; }
 #spec-pad { position: absolute; inset: 0; z-index: 10; touch-action: none; cursor: grab; }
 #spec-pad.drag { cursor: grabbing; }
