@@ -143,11 +143,16 @@ function run(world, u, dt) {
     u.th += dt * (see ? 0.35 : 0.6);
     const lead = tv ? 0.8 : 0.5, svx = see ? (tv ? tv.vx : t.vx) || 0 : 0, svy = see ? (tv ? tv.vy : t.vy) || 0 : 0;
     const r = see ? POLICE_AIR.orbitR : POLICE_AIR.orbitR * 2;
-    // (its circle's middle a little south of them by its height: art v2 draws it up the screen by its height - FLY.LIFT -
-    // so it's seen circling over them, not off the top of their screen - the playtest)
-    const sy = (v.alt || 0) * FLY.LIFT * 0.8;
+    // a suspect up in an aircraft: it keeps POLICE_AIR.sep above them (below them near its ceiling) - two aircraft close
+    // in height that touch both come down (aircraft.js), and its circle passed right over them (H69: fleeing in a
+    // helicopter at its height, the police one flew into you on its first lap)
+    const tAlt = tv && (tv.alt || 0) > FLY.HIGH ? tv.alt : 0;
+    const want = !tAlt ? POLICE_AIR.alt : tAlt + POLICE_AIR.sep <= v.def.ceiling ? Math.max(POLICE_AIR.alt, tAlt + POLICE_AIR.sep) : tAlt - POLICE_AIR.sep;
+    // (its circle's middle a little south of them by its height above them: art v2 draws it up the screen by its height
+    // - FLY.LIFT - so it's seen circling over them, not off the top of their screen - the playtest)
+    const sy = Math.max(0, (v.alt || 0) - tAlt) * FLY.LIFT * 0.8;
     const gx = ox + Math.cos(u.th) * r + svx * lead, gy = oy + sy + Math.sin(u.th) * r + svy * lead;
-    steer(world, v, gx, gy, v.def.max * 0.95, ox, oy, POLICE_AIR.alt);
+    steer(world, v, gx, gy, v.def.max * 0.95, ox, oy, want);
     if (u.mode === 'up' && (v.spool || 0) < FLY.LIFT_AT) { v.fin.dx = 0; v.fin.dy = 0; v.fin.turn = 0; }
     if (night) {
       lit = true;

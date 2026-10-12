@@ -686,7 +686,7 @@ export const MORTGAGE = { deposit: 0.2, rate: 0.1, days: 10, miss: 2, max: 3 };
 // pad and follows the suspect overhead: alt px up (or clear px over the roofs round it, if they're taller), circling them
 // at orbitR px; its crew see them within sightPx (out in the open) and radio where they are to the cars. Unseen for lostS
 // s (or the stars gone) it flies home and lands; brought down (or gone home), another isn't sent for againS s.
-export const POLICE_AIR = { stars: 3, alt: 300, clear: 70, sightPx: 1100, orbitR: 200, lostS: 25, againS: 90 };
+export const POLICE_AIR = { stars: 3, alt: 300, clear: 70, sightPx: 1100, orbitR: 200, lostS: 25, againS: 90, sep: 120 };   // (sep: the height it keeps from a suspect up in an aircraft - H69)
 // ---- aircraft about the world (H66) - server/systems/airtraffic.js. Every everyS s or so (the first after firstS) a light
 // plane at a runway or an airstrip with someone within nearPx: out (the take-off roll, a climb out to cruise px and away)
 // or in (from approachPx out on the runway's line, at approachV px/s, gliding down glide px a px to the touch-down point,
