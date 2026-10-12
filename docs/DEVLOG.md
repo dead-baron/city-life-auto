@@ -8815,5 +8815,15 @@ bays, the parked cars), server/systems/homeinside.js (the count of parked cars; 
 a car), client/main.js (no city under the inside). Tests: test/homeart.test.js (new: the garage's cars solid, inside the
 garage, not on each other, the door from the hall and the key board clear, every plan walkable to everything with the
 garage full, walking into a car stops at it; every furniture model builds at every tier; every kind of home builds and
-lights by day and night, you and a car drawn; none of it in the page's code or the bake's); test/homeinside.test.js
-still passes.
+lights by day and night, you and a car drawn; none of it in the page's code or the bake's); test/homeinside.test.js,
+test/homes.test.js and test/wardrobe.test.js still pass; test/perf.test.js's code budgets hold (the page 482 of 485 KB,
+the renderer 357 of 363, the bake 758 of 765 - none moved). Headless playtests - art v2 at 1280x720 and on a phone
+(844x390, touch), the classic view on a phone - every kind of home by day and by night: inside, the headless page draws
+at 60 fps (16.9 ms a frame on average, p95 16.8: the city isn't drawn under it), the HUD's clock runs on, FIRE / CAR /
+ROLL and the aim stick are gone (ACT stays). Still unlike the concepts: the walls are a whole tile thick (the plans'
+grid), so their tops read as heavy dark bands where the concepts' walls are thin - thinner walls would mean thinner
+solid walls in the plans (the server's walking), the owner's call; no bedside tables and lamps, washing machine, garage
+workbench or wall-hung TV (the plans have no tiles for them); the voxel furniture is plainer than the painted sheets
+(HO2); at the street's scale a trailer is small in the middle of a desktop screen; an apartment stands in a paved yard,
+not a building's corridor; you lie on the bed asleep, not under the covers (the screen's dark then anyway); the first
+time in, the classic drawing shows for a moment while the art is made.
