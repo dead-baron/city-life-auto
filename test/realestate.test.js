@@ -159,7 +159,7 @@ test('an apartment block: one player buys a unit, a second another in the same b
   const ids = w.unitsOf.get(base.id);
   const lobby = menuAt(w, a.p, a.conn, base);
   assert.match(lobby.title, /lobby/);
-  assert.equal(lobby.opts.filter((o) => /^Buy Unit/.test(o.label)).length, ids.length, 'every unit for sale');
+  assert.equal(lobby.opts.filter((o) => /^Unit \d+ for sale/.test(o.label)).length, ids.length, 'every unit for sale, one row each (H67)');
   // A: unit 3; B: the last (the penthouse)
   const u3 = homes.homeById(w, ids[2]), top = homes.homeById(w, ids[ids.length - 1]);
   economy.handleMenu(w, a.p, lobby.poi, `hu:buy:${u3.id}`);
@@ -281,4 +281,24 @@ test('a mortgage: a deposit down, a payment each in-game day from the bank, paid
   homes.sell(w, p, h2);
   assert.equal(prof.bank, b1 + Math.max(0, Math.round(h2.price * 0.6) - owed));
   assert.ok(!prof.loans[h2.id]);
+});
+
+test('(H67) the lobby: one row a flat for sale, its own menu - a look round or buy, back to the lobby', () => {
+  const w = makeWorld();
+  const a = joinPlayer(w, { bank: 1e6 });
+  const base = w.map.homes.find((h) => h && h.kind === 'apartment' && w.unitsOf.get(h.id) && w.unitsOf.get(h.id).every((id) => !w.homeOwner.has(id)));
+  const ids = w.unitsOf.get(base.id), u2 = homes.homeById(w, ids[1]);
+  const lobby = menuAt(w, a.p, a.conn, base);
+  assert.equal(lobby.opts.filter((o) => /^hu:unit:/.test(o.id)).length, ids.length, 'a row a flat');
+  assert.ok(!lobby.opts.some((o) => /^(htour|hbuy|hu:(tour|buy):)/.test(o.id)), 'no look and buy rows of their own');
+  economy.handleMenu(w, a.p, lobby.poi, `hu:unit:${u2.id}`);
+  const um = lastMenu(a.conn);
+  assert.match(um.title, new RegExp(`Unit ${u2.unit}`));
+  assert.deepEqual(um.opts.map((o) => o.id), [`hu:tour:${u2.id}`, `hu:buy:${u2.id}`, 'hu:back:0']);
+  economy.handleMenu(w, a.p, um.poi, 'hu:back:0');
+  assert.match(lastMenu(a.conn).title, /lobby/);
+  economy.handleMenu(w, a.p, um.poi, `hu:unit:${u2.id}`);
+  economy.handleMenu(w, a.p, um.poi, `hu:buy:${u2.id}`);
+  assert.equal(w.homeOwner.get(u2.id), a.p.pid);
+  assert.ok(lastMenu(a.conn).opts.some((o) => o.id === `hu:in:${u2.id}`), 'bought: back to the lobby, yours to go in');
 });

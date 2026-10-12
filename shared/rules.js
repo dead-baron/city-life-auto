@@ -733,3 +733,9 @@ export const MEDIC = {
   treatS: 3, treatR: 60, lifeS: { minor: 240, serious: 150 }, rideS: 180, hospitalR: 460,
   pay: { minor: 140, serious: 220, player: 200, perKm: 60, fast: 0.5, parS: 60, kmS: 600, samaritan: 2 },
 };
+
+
+// ---- decorating your home (H67; shared/homedecor.js has the pieces): the furniture's prices at the hardware store's
+// counter, a placed piece sold back for sellBack of its price, a room's walls painted (paint) or a new floor (floor), at
+// most max pieces placed in a home
+export const DECOR = { sellBack: 0.5, paint: 80, floor: 150, max: 40, price: { couch: 350, armchair: 220, table: 260, bedside: 90, lamp: 70, bookshelf: 180, plant: 45, tv: 400, walltv: 650, art: 120, rug: 150, washer: 480, workbench: 300 } };

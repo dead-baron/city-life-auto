@@ -25,6 +25,7 @@ import * as farming from './farming.js';
 
 import * as homeinside from './homeinside.js';
 import * as mortgage from './mortgage.js';
+import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
 import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
@@ -152,6 +153,7 @@ export function buildMenu(world, p, poi) {
   const kind = poi.kind;
   const opts = [];
   let title = poi.label, sub = '', interior = null;
+  if (kind === 'hardware' && p.furnShop === poi.id) return furnitureMenu(p, poi);   // (H67: the furniture counter)
   const shopKey = kind === 'vending' ? 'vending' : kind;
   const shop = kind === 'smuggler' && !gang.isMember(p) ? null : SHOPS[shopKey];
   if (shop && kind !== 'dealer' && kind !== 'marina' && kind !== 'garage' && kind !== 'clothing') {
@@ -189,6 +191,7 @@ export function buildMenu(world, p, poi) {
       }
     }
   }
+  if (kind === 'hardware') opts.unshift({ id: 'furn', label: 'Furniture & decor for your home', note: 'sofas, lamps, rugs, a wall TV...' });   // (H67)
   switch (kind) {
     case 'bank': case 'atm':
       title = kind === 'bank' ? 'First Pixel Bank' : 'ATM';
@@ -263,6 +266,13 @@ export function buildMenu(world, p, poi) {
       const inside = !!(ped() && ped().hidden && ped().inside === h.id);
       const us = homes.unitsAt(world, poi);
       if (us && !inside) {   // an apartment block's lobby: its homes, floor by floor
+        const pick = p.lobbyUnit != null && us.includes(p.lobbyUnit) ? homes.homeById(world, p.lobbyUnit) : null;
+        if (pick && !world.homeOwner.has(pick.id)) {   // (H67) a flat for sale picked from the lobby's list: look round or buy
+          title = `${poi.label} - Unit ${pick.unit || 1}`;
+          sub = `For sale: ${unitWhat(pick)}.`;
+          opts.push(...unitSaleOpts(pick), { id: 'hu:back:0', label: 'Back to the lobby' });
+          break;
+        }
         title = `${poi.label} - the lobby`;
         sub = `${us.length} homes in this building, three doors a landing. Yours to go in; for sale to look round or buy (each a respawn point with a safe, a bed and parking out front); someone else's to knock at while they're in.`;
         lobbyOpts(world, p, us, opts);
@@ -383,20 +393,24 @@ function lobbyOpts(world, p, us, opts) {
   for (const id of us) {
     const u = homes.homeById(world, id), o = world.homeOwner.get(id);
     if (!u) continue;
-    const nm = `Unit ${u.unit || 1}`, beds = homeinside.bedsIn(u);
-    const what = `${u.what || 'apartment'}, ${(u.floor || 1) > 1 ? `floor ${u.floor}` : 'ground floor'} · ${beds} bed${beds === 1 ? '' : 's'} · parks ${u.slots}`;
+    const nm = `Unit ${u.unit || 1}`, what = unitWhat(u);
     if (o === p.pid) opts.push({ id: `hu:in:${id}`, label: `${nm} - yours: go in`, note: what });
     else if (o) {
       const prof = store.get(o), inNow = homeinside.someoneIn(world, u);
       opts.push({ id: `hu:knock:${id}`, label: `${nm} - ${prof && prof.name ? `${prof.name}'s` : 'taken'}${inNow ? ': knock' : ''}`, note: inNow ? 'they\'re in' : 'nobody in', dis: !inNow });
     } else {
-      const one = u.lobby == null;   // (unit 1, the map's own home: its options keep their old names)
-      opts.push({ id: one ? 'htour' : `hu:tour:${id}`, label: `${nm} for sale - take a look inside`, note: what });
-      opts.push({ id: one ? 'hbuy' : `hu:buy:${id}`, label: `Buy ${nm} (${u.what || 'apartment'})`, price: u.price });
+      opts.push({ id: `hu:unit:${id}`, label: `${nm} for sale - look round or buy`, price: u.price, note: what });   // (H67: one row a flat - its own menu)
     }
   }
   // a home of yours in here: your cars come out at the building's parking out front
   if (us.some((id) => world.homeOwner.get(id) === p.pid)) p.profile.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat' && d.kind !== 'air') opts.push({ id: `hcar:${i}`, label: `Take out ${d.name}`, note: 'parking out front' }); });
+}
+// (H67) a flat in a block: what it is; for sale, its look round and its purchase (unit 1, the map's own home, keeps the
+// options' old names) - the unit's own menu from the lobby's row, and still taken straight from the lobby
+function unitWhat(u) { const beds = homeinside.bedsIn(u); return `${u.what || 'apartment'}, ${(u.floor || 1) > 1 ? `floor ${u.floor}` : 'ground floor'} · ${beds} bed${beds === 1 ? '' : 's'} · parks ${u.slots}`; }
+function unitSaleOpts(u) {
+  const one = u.lobby == null, nm = `Unit ${u.unit || 1}`;
+  return [{ id: one ? 'htour' : `hu:tour:${u.id}`, label: `${nm} - take a look inside`, note: 'walk round it first' }, { id: one ? 'hbuy' : `hu:buy:${u.id}`, label: `Buy ${nm} (${u.what || 'apartment'})`, price: u.price }];
 }
 const NO_STASH = new Set(['fists', 'taser', 'baton', 'service']);
 
@@ -421,9 +435,23 @@ function myVehicleNear(world, p, poi) {
   return v;
 }
 
+// (H67) the hardware store's furniture counter: the pieces for your home (shared/homedecor.js; prices in shared/rules.js
+// DECOR), each delivered to your homes' storage (profile.furn) to place from the hall table's Decorate
+function furnitureMenu(p, poi) {
+  const prof = p.profile, furn = prof.furn || {}, none = !(prof.homes || []).length, opts = [];
+  for (const k of DECOR_KINDS) {
+    const P = DECOR_PIECES[k];
+    opts.push({ id: `fb:${k}`, label: P.name, price: decorPrice(k), dis: none, note: `${P.cat}${P.w * P.h > 1 ? ` · ${P.w}x${P.h}` : ''}${furn[k] ? ` · ${furn[k]} in storage` : ''}` });
+  }
+  opts.push({ id: 'fback', label: 'Back to the hardware' });
+  opts.push({ id: 'close', label: 'Close' });
+  return { t: 'menu', poi: poi.id, title: 'Furniture & decor', sub: none ? 'Style your life - once you have a home to put it in.' : 'Style your life. Delivered to your home: place it from the hall table (Decorate).', opts, cash: prof.cash, bank: prof.bank };
+}
+
 export function openMenu(world, p, poi) {
   if (!p.conn) return;
   p.menu = { poi: poi.id };
+  p.furnShop = null; p.lobbyUnit = null;
   p.conn.sendJSON(buildMenu(world, p, poi));
 }
 
@@ -435,6 +463,7 @@ export function handleMenu(world, p, poiId, optId) {
   if (Math.hypot(ped.x - poi.x, ped.y - poi.y) > poi.r + 40) { world.notify(p, 'You walked away from the counter.', 'warn'); return; }
   const err = execute(world, p, poi, String(optId || ''));
   if (err) world.notify(p, err, 'bad');
+  if (optId === 'close') { p.furnShop = null; p.lobbyUnit = null; }
   p.meDirty = true;
   if (!['close', 'hhide', 'hleave', 'armexit', 'sleave', 'htour'].includes(optId) && !optId.startsWith('hcargo') && !/^hu:(in|tour):/.test(optId) && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
 }
@@ -443,11 +472,27 @@ function execute(world, p, poi, opt) {
   const prof = p.profile;
   const ped = p.ped;
   const parts = opt.split(':');
-  const valid = buildMenu(world, p, poi).opts.find((o) => o.id === opt);
+  let valid = buildMenu(world, p, poi).opts.find((o) => o.id === opt);
+  if (!valid && poi.kind === 'home' && /^(htour|hbuy|hu:(tour|buy):)/.test(opt)) {   // (H67: a flat's look round or purchase, straight from its lobby)
+    for (const id of homes.unitsAt(world, poi) || []) { const u = homes.homeById(world, id); if (u && !world.homeOwner.has(id)) valid = unitSaleOpts(u).find((o) => o.id === opt) || valid; }
+  }
   if (!valid) return 'That option is not available here.';
   if (valid.dis) return 'Not available.';
   switch (parts[0]) {
     case 'close': return null;
+    case 'furn': p.furnShop = poi.id; return null;   // (H67: the furniture counter - furnitureMenu)
+    case 'fback': p.furnShop = null; return null;
+    case 'fb': {
+      const k = parts[1], P = DECOR_PIECES[k];
+      if (!P) return 'Not sold here.';
+      if (!(prof.homes || []).length) return 'You need a home to put it in - buy one first.';
+      if (!pay(p, decorPrice(k))) return 'Not enough money.';
+      prof.furn ||= {};
+      prof.furn[k] = (prof.furn[k] || 0) + 1;
+      store.touch();
+      world.notify(p, `Bought ${/^[aeiou]/i.test(P.name) ? 'an' : 'a'} ${P.name.toLowerCase()} - delivered to your home's storage. Place it from the hall table: Decorate.`, 'good');
+      return null;
+    }
     case 'hot': return hotmoney.execute(world, p, poi, parts[1]);
     case 'trainjob': return trains.startTrainJob(world, p);
     case 'w': {
@@ -621,7 +666,9 @@ function execute(world, p, poi, opt) {
     case 'htour': return homeinside.tour(world, p, homes.homeFor(world, p, poi));   // a look round before you buy (H65: homeinside.js)
     case 'hmort': return mortgage.buyWith(world, p, homes.homeFor(world, p, poi), pay);   // a deposit down, the rest paid a day at a time (H65)
     case 'hu': {   // an apartment block's lobby: a unit - yours to go in, for sale to look round or buy, someone's to knock at
+      if (parts[1] === 'back') { p.lobbyUnit = null; return null; }
       const us = homes.unitsAt(world, poi), u = homes.homeById(world, parts[2]);
+      if (parts[1] === 'unit') { if (!us || !u || !us.includes(u.id)) return 'No such home in this building.'; p.lobbyUnit = u.id; return null; }   // (H67: its own menu)
       if (!us || !u || !us.includes(u.id)) return 'No such home in this building.';
       if (parts[1] === 'in') { homeinside.goIn(world, p, u); return null; }   // (goIn says why not itself)
       if (parts[1] === 'tour') return homeinside.tour(world, p, u);

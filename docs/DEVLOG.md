@@ -9172,3 +9172,74 @@ with the drive, and one left alone dies unpaid; a player down nearby is the call
 the patient gone),
 test/sound.test.js, test/perf.test.js, test/activities.test.js, test/gameplay.test.js, test/honestliving.test.js,
 test/sar.test.js, test/burning.test.js, test/rescue.test.js.
+
+## 2026-10-11 · Decorating your home: a furniture counter, place / move / turn / sell back, the walls' paint and the floors (H67)
+
+The owner asked for "more of the owning a house features"; the brief, after the HO4 concept ("Decorate home - make it
+yours"): a furniture shop, an edit mode at home, the paint and the floors per room, kept per home. Until now a home's
+furniture was its plan's, fixed by the kind and the price.
+- **The furniture counter**: the hardware store (Nail & Gear Hardware - a store the map already has, so the world's hash
+  doesn't move) has "Furniture & decor for your home" at the top of its menu: a sofa, an armchair, a dining table, a
+  bedside table, a floor lamp, a bookshelf, a potted plant, a TV on a stand, a wall TV, a painting, a rug, a washing
+  machine, a workbench (prices in shared/rules.js DECOR). You need a home to buy one; it waits in your homes' storage
+  (profile.furn) until you place it.
+- **Decorate** (the hall table's menu): face a spot and press Act - the spot's menu: place a piece from storage (it
+  comes into your hands facing you), and at a piece of yours: move it, turn it, sell it back (DECOR.sellBack: half its
+  price, to the wallet), put it in storage; "Paint this room, lay a new floor" (the room you stand in: six wall colours,
+  seven floors - planks light / oak / dark, tiles, marble, carpet, plum carpet; DECOR.paint / DECOR.floor each); Done
+  decorating. With a piece in your hands the tiles in front of you show where it would go - green where it fits, red
+  where it can't, an arrow for the way it faces - and Act's menu puts it down, turns it, puts it back, or ends.
+- **The house rules** (shared/homedecor.js canPlace - the server's word, the page shows the same): a standing piece only
+  on open floor (not a doorway, a wall, the tile inside the front door, a garage bay); never cutting off a spot you
+  could walk to before, the front door or anything you use (the bed, the wardrobe, the safe, the fridge, the shower,
+  the hall table, the garage's key board) - "That would block the bed" etc.; never on someone standing there. A rug
+  lies on the floor (furniture stands on it); a painting or a wall TV hangs on a plain wall behind it (not a window, not
+  the cut front walls). At most DECOR.max pieces in a home.
+- **Kept per home**: profile.decor[home id] { it: placed pieces { k, tx, ty, r }, wall: { room: colour }, floor: { room:
+  floor } } (absent on older profiles: they load as before). Sold or taken back by the bank, or the world rebuilt under
+  it: the pieces go back into storage for the next home. A guest sees the owner's decor. The rooms are the plan's open
+  tiles between the walls, numbered as client/render/homeart2.js numbers them, so the paint goes where it's drawn.
+- How: a plan stays as it was (shared/homelayout.js); shared/homedecor.js `decorate(plan, decor)` lays a home's things over
+  it - the same layout with your pieces in its list and solid where they stand - and the server walks you round it
+  (homeinside.js planIn), the page predicts your steps on the same one. A change replaces the decor object, so the page's
+  drawing is made again (art v2: a little a frame, the classic drawing meanwhile).
+- **Drawn in both views**: art v2 - the shop's new pieces as voxel models (client/art2/props-home.js: a bedside table with
+  its lamp, a floor lamp, a wall TV, a painting, a washing machine, a workbench with its pegboard; the sofa, armchair,
+  table, bookshelf, plant and TV are the plans' own models), each turned the way you set it, the lamps and the wall TV
+  lit at night, the rugs woven into the floor, the painted walls and the new floors; the classic view - flat sprites for
+  the new pieces, the walls' faces painted, the floors by the room's choice, the lamps glowing at night. The page's
+  start-up code only gains a line in hud.js (the menu closes as you pick a piece up or put it down); everything else
+  is in the lazily loaded home code (homeview.js, homeart2.js, props-home.js, shared/homedecor.js) and DECOR in rules.js
+  (the prices only: a line, but rules.js is in every part - the page stays 483 of 485 KB, the city worker 357 of 360
+  and the bake 759 of 765, each up 1 KB or less).
+- Dev: `decor` (inside a home of yours): { furn: n of every piece into storage, demo: a house's rooms furnished, wall /
+  floor: { room: choice }, edit: a kind in your hands (false: done), at: [tx, ty, a] stand there }.
+Files: shared/homedecor.js (new); shared/rules.js (DECOR at the end), server/systems/homeinside.js (Decorate, the
+menus, planIn, the decor in the home message, devDecor), economy.js (the furniture counter), homes.js (stowDecor on a
+sale, a repossession, a world rebuild), dev.js, client/render/homeview.js (the decorated plan, the classic pieces,
+paint and floors, the green / red tiles), client/render/homeart2.js (paint, floors, rugs, facing, lamps),
+client/art2/props-home.js (six new models), client/hud.js. Tests: test/homedecor.test.js (new: every piece priced and
+sized; the rules - a sofa in the hall, not on the way in, not in a doorway or a wall, the trailer's bed kept in reach,
+a rug and a painting; the counter needs a home, buys into storage; at home: Decorate from the hall table, a sofa
+placed, solid, walking into it stops you, moved, turned (two deep), a lamp refused on the way in from the front door
+and back into storage, the sofa sold back for half; a room painted and floored, paid, kept through a rejoin; a sold
+home's furniture back in storage; a decorated house built and lit in art v2 by day and night, the lamps lit; none of it
+in the page's start-up code); homeinside, realestate, homes, homeart and perf (the page's budget) still pass.
+Playtest (headless, scratchpad/h67): art v2 1280x720 - a decorated house by day (pt-decor-day.png) and night
+(pt-decor-night.png), a TV in your hands on a green tile (pt-edit-holding.png) and its menu (pt-edit-menu.png), the
+hardware store's menu with the counter's row (pt-shop.png); the classic view on a phone 844x390 - a sofa refused on red
+tiles ("would block the garage's key board", pt2-phone-edit.png), at night (pt2-phone-night.png), the furniture list
+(pt2-shop.png). What's wrong: a change of decor rebuilds the whole art v2 room - several seconds headless (the classic
+drawing shows meanwhile; the first day shot caught it), a moment on a phone; a wall TV or a painting on a side wall
+shows edge-on in the 3/4 view (a sliver) and hangs higher than the cut side walls - the back walls are where they
+read; a refusal names the first thing it would block (a piece that cuts the whole house off from the door says "the
+fridge"); the prompt box sits under the top icon bar on a phone (as before); there's no picking a piece's colour
+(HO4's swatches) and no "home upgrades" (HO4's right panel).
+- **The apartment blocks' lobby, one row a flat** (economy.js lobbyOpts): H65's lobby listed a look and a buy row for
+  each flat for sale (16 rows for an 8-flat block); now one row each - "Unit 3 for sale - look round or buy", its price
+  and what it is - which opens the flat's own menu (take a look inside, buy it, back to the lobby). The old option ids
+  still work straight from the lobby (a flat's look round or purchase), so nothing else changed. Test:
+  test/realestate.test.js (a row a flat, its menu, back, bought from it and back to the lobby's "go in"). Playtest: a
+  6-flat block's lobby (scratchpad/h67/pt3-lobby.png) and a flat's menu (pt3-unit.png).
+  Not done this wave (out of time): the walk-in lobby (HO5: mailboxes, the stairs and the lift, the units' doors along
+  a landing - a plan of its own, drawn like the homes), and the doorbell, the mail and a pet bed.

@@ -61,7 +61,7 @@ import * as firefighter from './systems/firefighter.js';
 import * as paramedic from './systems/paramedic.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -568,7 +568,8 @@ export function command(world, p, c, msg) {
     case 'garden': { const err = gardening.devGarden(world, p, msg, homes.buy); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // a garden of your own at every stage (H61); msg.k 'ripe': all of it ripe
     case 'farm': { const err = farming.devFarm(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // a tractor at the fields, the rows in every state (H61)
 
-    case 'homein': { const err = homeinside.devIn(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // inside a home (H62): msg.id | msg.kind - yours, and in; msg.at: by the bed, the safe...
+    case 'homein': { const err = homeinside.devIn(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }
+    case 'decor': { const err = homeinside.devDecor(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // decorating (H67): msg.furn, msg.demo, msg.wall / msg.floor, msg.edit   // inside a home (H62): msg.id | msg.kind - yours, and in; msg.at: by the bed, the safe...
     case 'airtraffic': {   // aircraft about the world (H66): msg.k 'land' | 'takeoff' at the runway nearest you (msg.seen: even in view), 'news' over you
       if (!ped) break;
       const A = (world.airTraffic ||= { flights: new Map(), nextAt: world.time + 60, newsAt: 0 });
