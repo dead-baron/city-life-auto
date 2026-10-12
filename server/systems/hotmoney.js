@@ -67,8 +67,9 @@ export function menuOpts(world, p, poi, opts) {
     const why = refusal(world, p, ped.x, ped.y);
     opts.push({ id: 'hot:bank', label: `Deposit the hot money (${money(n)})`, note: why ? (p.wanted > 0 ? 'lose the police first' : 'too hot here') : 'goes in clean' });
   } else if (k === 'home') {
+    const us = world.unitsOf && world.unitsOf.get(poi.home);   // (an apartment block's lobby: any of its homes yours - H65)
     const h = world.map.homes[poi.home];
-    if (h && world.homeOwner.get(h.id) === p.pid) opts.push({ id: 'hot:stash', label: `Stash the hot money (${money(n)})`, note: 'comes out clean' });
+    if ((h && world.homeOwner.get(h.id) === p.pid) || (us && us.some((id) => world.homeOwner.get(id) === p.pid))) opts.push({ id: 'hot:stash', label: `Stash the hot money (${money(n)})`, note: 'comes out clean' });
   } else if (k === 'fence' || k === 'pawn') {
     const cut = cutAt(poi);
     opts.push({ id: 'hot:fence', label: `${k === 'fence' ? 'Fence' : 'Pawn'} the hot money (${money(n)})`, price: -Math.round(n * (1 - cut)), note: `${Math.round(cut * 100)}% cut` });

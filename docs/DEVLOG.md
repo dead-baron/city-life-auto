@@ -8767,3 +8767,57 @@ crashes) and an audio thread starved by the bakes on a phone are the likelier "b
 home code made (homes.js -> homeinside.js -> economy.js, which hands homes.js its menu builder as it loads) crashed any
 test that loaded homes.js first, on a `let` not yet initialised: the builder is kept on its setter function now
 (homes.js, and station.js the same way); the server itself booted either way.
+
+## 2026-10-11 · Owning a home: the real-estate app, a look round before you buy, apartment blocks of homes, a mortgage (H65)
+
+The owner: "can we get more of the owning a house features up?" There was buying and selling at the door, the garage,
+waking at home, the home menu and (H62) walking round the inside of your own. Now, in the order asked:
+- **The real-estate app on the phone** (🏠 Homes; server/systems/realestate.js works the list out, client/realestate.js
+  draws it - loaded when the app opens, the page's start-up code only gains its button and one message line). The homes
+  for sale, nearest / cheapest / priciest, all / apartments / houses / big / under $15k (30 at a time): each with a picture
+  of its plan (the rooms from above, made from shared/homelayout.js), its district and how well-to-do that is (upscale,
+  middling, modest, rough end), the kind (studio, apartment, penthouse, house, cottage...), the unit and floor in a block,
+  bedrooms, parking or garage spaces, the yard's garden plots (H61), a boathouse, the price and a mortgage's deposit; tap
+  one for a waypoint. Your own homes above them with what they're worth, what selling brings and what's owed.
+- **A look round before you buy** (homeinside.js tour): at a home for sale its menu (or a block's lobby) has "Take a look
+  inside" - you walk its rooms as a visitor (the things are to look at: "The bed comes with the place"), the price under
+  the view, and at the front door a menu: buy it, buy it with a mortgage, step outside, keep looking. Bought from inside,
+  it's yours where you stand (the bed, the safe... work at once). Not while wanted; someone else buys it while you're
+  looking and you're shown out. A visitor's Act just inside the door is the door, not the hall table beside it.
+- **Apartment blocks with several homes** (homes.js buildUnits; HO5): each of the city's apartment blocks (a map home of
+  kind 'apartment') is a building of 4 to 8 homes by its footprint, three doors a landing: the map's own home is unit 1
+  (the ground floor - whoever owns it keeps it), units 2.. are homes of their own found from the built map when the
+  server starts - nothing is added to the map, so the world's hash and signature don't change, and each unit is keyed by
+  its building's home (id UNIT0 + the building's home id x 16 + its number), never by where it stands, so World v3 can
+  move the buildings. A unit is a home like any other (profile.homes and deeds, the respawn point, garage space, the
+  inside, the bed, the safe), its plan by its place in the building: a studio (new plan), an apartment a floor up, the
+  penthouse at the top (new plan: two bedrooms and a den), each furnished by its price. The lobby door lists them: yours
+  to go in, for sale to look round or buy, someone else's to knock at while they're in; your cars come out at the parking
+  out front. Several players own homes in one building, each going into their own. On today's world: 25 blocks, 127 new
+  homes (166 on the map: 293 homes in all).
+- **A mortgage** (mortgage.js; shared/rules.js MORTGAGE): buy for a 20% deposit and the bank lends the rest plus 10%,
+  paid back in 10 payments from your bank account, one each in-game day you're in the city (a day away isn't charged).
+  A payment the bank can't cover is missed (you're told how many more before...); a third in a row and the bank takes
+  the home back (what you paid stays with the bank; your cars and stash are yours). Selling a mortgaged home pays off
+  what's owed first. At most 3 at once. profile.loans (absent on older profiles - they load as before; store.js's new
+  profiles start with it empty); a world rebuild clears it and buys the home back at what was paid (the deed counts
+  the deposit and each payment).
+- Files: server/systems/realestate.js, mortgage.js, client/realestate.js (new); homes.js (the units, homeById, homeFor,
+  claim / release, a sale paying off a loan), homeinside.js (the tour, a unit's menus from its lobby, knocking from the
+  lobby), economy.js (the lobby's list, the tour and mortgage options, the menu's home through homeFor), phone.js (the
+  app), shared/homelayout.js (the studio and the penthouse at the end of the plans), shared/rules.js (MORTGAGE at the
+  end), world.js (the system), store.js, client/phone.js + main.js (the button, the message), client/hud.js (the menu
+  closes as you go in for a look or into your flat). H64 draws the insides: the new plans use only the plans' letters.
+- Tests: test/realestate.test.js (the blocks and their units, ids by building, the new plans; the app's listings, sorted
+  and filtered, yours with their worth; a look round in and out, bought from inside, not while wanted, shown out when
+  someone else buys; a unit bought by one player and another by a second in one building, each going into their own,
+  sleeping there, the hall table's sale, a third looking round, knocking from the lobby; an old profile and a unit's
+  owner across a restart; the mortgage paid off, missed and taken back, paid off by a sale). homes, homeinside, phones,
+  gardening, wardrobe, honestliving, world, startfresh, perf (the page's budget), mapwindow and dmath tests pass.
+- Playtest (headless, 1280x720; scratchpad/h65): the app (the list with its plan pictures, the apartments filter), a
+  block's lobby list, the penthouse looked round, a house's for-sale menu, its inside as a visitor and its front door's
+  menu. What's wrong: the lobby's list is long (a look and a buy row for each flat for sale: 16 rows for an 8-flat
+  block, it scrolls); the units all open off the one lobby door - no landing, stairs or lift drawn (HO5's lobby is still
+  art to do); the houses' plan pictures in the app all look alike (every house shares one plan, only the furnishing
+  differs); the mortgage's days are the 20-minute game days, so paying one off takes ten sessions of play for someone
+  who plays 20 minutes a day; the prompt box sits under the top icon bar (as before).
