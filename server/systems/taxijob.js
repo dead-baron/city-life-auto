@@ -233,15 +233,10 @@ export function devCab(world, p) {
   const j = p.job;
   if (j.fare) endFare(world, p);
   const b = pick(world, placesOf(world.map), ped.x, ped.y, CAB.trip[0], CAB.trip[1]) || { x: ped.x + 2000, y: ped.y, label: 'downtown' };
-  // the cab at the kerb by you, you at its door, the fare on the pavement a cab's length on
-  const v = world.get(j.truck), k = kerbFor(world, ped.x, ped.y);
-  const c = Math.cos(k.a || 0), s = Math.sin(k.a || 0), side = (ped.x - k.x) * -s + (ped.y - k.y) * c >= 0 ? 1 : -1;
-  if (v && k.e && !ped.vehId) {
-    v.x = k.x; v.y = k.y; v.a = k.a || 0; v.vx = 0; v.vy = 0; world.place(v);
-    ped.x = k.x - s * side * (v.def.W / 2 + 14); ped.y = k.y + c * side * (v.def.W / 2 + 14); p.teleportAt = world.time; world.place(ped);
-  }
-  const fx = k.x + c * 110 - s * side * (v ? v.def.W / 2 + 40 : 60), fy = k.y + s * 110 + c * side * (v ? v.def.W / 2 + 40 : 60);
-  if (!fareAt(world, p, 'hail', { x: fx, y: fy }, { x: b.x, y: b.y, name: b.label })) return 'no room for a fare here';
+  // the cab pulled up on the pavement beside you, along the street (out of the traffic's way), the fare a little on
+  const v = world.get(j.truck), k = kerbFor(world, ped.x, ped.y), c = Math.cos(k.a || 0), s = Math.sin(k.a || 0);
+  if (v && !ped.vehId) { v.x = ped.x - c * 72; v.y = ped.y - s * 72; v.a = k.a || 0; v.vx = 0; v.vy = 0; world.place(v); }
+  if (!fareAt(world, p, 'hail', { x: ped.x + c * 45, y: ped.y + s * 45 }, { x: b.x, y: b.y, name: b.label })) return 'no room for a fare here';
   j.nextAt = world.time + CAB.gapS;
   return null;
 }
