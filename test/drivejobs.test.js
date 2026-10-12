@@ -158,7 +158,8 @@ test('bus: a bus on the line, its passengers board at the stop and pay, the stop
   seat(p, v);
   let served = 0, alighted = 0, cash = prof.cash;
   for (let n = 0; n < 4; n++) {
-    const k = j.k, st = L.stops[k], due = j.due, n0 = j.wait.length, forHere = j.pax.filter((x) => x.to === k).map((x) => x.id);
+    const k = j.k, st = L.stops[k], due = j.due, forHere = j.pax.filter((x) => x.to === k).map((x) => x.id);
+    const n0 = Math.min(j.wait.length, v.seats.filter((q, i) => i > 0 && !q).length + forHere.length);   // (as many as there are seats once those for here are off: the rest wait for the next bus)
     const at = bus.stopPose(w, L, k);
     put(v, at.x, at.y, at.a);
     for (const s of v.seats) { const q = s && w.get(s); if (q) { q.x = v.x; q.y = v.y; } }
@@ -176,7 +177,7 @@ test('bus: a bus on the line, its passengers board at the stop and pay, the stop
   // late: nothing for the stop
   const st = L.stops[j.k];
   j.due = w.time - 200;
-  const n0 = j.wait.length, c0 = prof.cash, k0 = j.k, at = bus.stopPose(w, L, k0);
+  const k0 = j.k, n0 = Math.min(j.wait.length, v.seats.filter((q, i) => i > 0 && !q).length + j.pax.filter((x) => x.to === k0).length), c0 = prof.cash, at = bus.stopPose(w, L, k0);
   put(v, at.x, at.y, at.a);
   for (let i = 0; i < 400 && j.k === k0 && p.job === j; i++) { v.vx = 0; v.vy = 0; w.step(); }
   assert.equal(prof.cash - c0, n0 * BUSJOB.perPax, 'late: just the fares');
