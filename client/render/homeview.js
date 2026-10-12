@@ -512,13 +512,13 @@ function sleepMinutes() {   // the clock running on from bedtime to the morning 
 function windows(L, now) {
   const d = daylight(), T = TILE_IN;
   const glass = d > 0.5 ? `rgb(${150 + 60 * d},${200 + 30 * d},${235})` : d > 0 ? '#e09a5a' : '#1a2440';
-  for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
-    if (L.cell(tx, ty) !== '=') continue;
-    const x = tx * T, y = ty * T;
-    g.fillStyle = '#e8e4da'; g.fillRect(x + 2, y + T - 15, T - 4, 12);
-    g.fillStyle = glass; g.fillRect(x + 4, y + T - 13, T - 8, 8);
-    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x + 6, y + T - 12, 6, 2);
-    if (d > 0.2 && !L.solid(tx, ty + 1)) {   // the light falling in across the floor below it
+  for (const r of L.wallRects) {   // (H77: the glass in the wall's thin line, raised with it)
+    if (r.ch !== '=') continue;
+    const { tx, ty } = r, x = tx * T, y = ty * T, h = /^lobby/.test(L.key) && ty === 0 ? 16 : 6;
+    g.fillStyle = '#e8e4da'; g.fillRect(r.x, r.y - h, r.w, r.h);
+    g.fillStyle = glass; g.fillRect(r.x + (r.w > r.h ? 0 : 2), r.y - h + (r.w > r.h ? 2 : 0), r.w - (r.w > r.h ? 0 : 4), r.h - (r.w > r.h ? 4 : 0));
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(r.x + 4, r.y - h + 3, 4, 2);
+    if (ty === 0 && d > 0.2 && !L.solid(tx, ty + 1)) {   // the light falling in across the floor below it
       g.fillStyle = `rgba(255,236,180,${0.09 * d})`;
       g.beginPath(); g.moveTo(x + 2, y + T); g.lineTo(x + T - 2, y + T); g.lineTo(x + T + 8, y + T * 1.9); g.lineTo(x + 8, y + T * 1.9); g.closePath(); g.fill();
     }
