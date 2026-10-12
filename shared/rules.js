@@ -721,3 +721,15 @@ export const FIRE = {
   pay: { car: 200, wreck: 170, person: 220, grass: 280, dumpster: 150, kitchen: 240, fast: 0.5, parS: 60, kmS: 600, saved: 150, life: 200, perTile: 4, samaritan: 1 },
   near: 1600,
 };
+// ---- the paramedic (H68) - server/systems/paramedic.js. Sign on at a hospital or from the phone: an ambulance is
+// issued. Calls: firstS after signing on, gapS after each, from minD to maxD px away (a player down within maxD first).
+// Treat: hold Act within treatR px of the patient for treatS s (letting go loses it at half the rate). A minor patient
+// untreated lifeS.minor s gives up; a serious one dies at lifeS.serious s; treated, they're aboard when the ambulance
+// stops within 160 px, and must reach a hospital (stopped within hospitalR px of its doors) within rideS s. pay: by kind,
+// up to + fast x it for a quick call (against parS s + a second per kmS px of the drive), + perKm a km from the scene to
+// the hospital; samaritan points a call.
+export const MEDIC = {
+  firstS: 12, gapS: 25, shiftS: 1800, minD: 600, maxD: 4500, callS: 240,
+  treatS: 3, treatR: 60, lifeS: { minor: 240, serious: 150 }, rideS: 180, hospitalR: 460,
+  pay: { minor: 140, serious: 220, player: 200, perKm: 60, fast: 0.5, parS: 60, kmS: 600, samaritan: 2 },
+};

@@ -136,6 +136,7 @@ export const DEV_SECTIONS = [
     ['🌧 Rain (fires go out faster)', 'rain'],
     ['🚒 Firefighter: a grass fire', 'firejob', { k: 'grass' }], ['🚒 Firefighter: a car on fire', 'firejob', { k: 'car' }], ['🚒 Firefighter: a burning wreck', 'firejob', { k: 'wreck' }],
     ['🚒 Firefighter: someone on fire', 'firejob', { k: 'person' }], ['🚒 Firefighter: a dumpster fire', 'firejob', { k: 'dumpster' }], ['🚒 Firefighter: a kitchen fire', 'firejob', { k: 'kitchen' }],
+    ['🚑 Paramedic: someone who fell (treat them)', 'medicjob', { k: 'minor' }], ['🚑 Paramedic: someone badly hurt (to a hospital)', 'medicjob', { k: 'serious' }],
   ] },
   // gardening and farm work (H61: server gardening.js, farming.js)
   { id: 'farm', title: '🌱 Gardening & farm work', items: [

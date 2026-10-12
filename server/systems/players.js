@@ -69,6 +69,7 @@ import * as coastguard from './coastguard.js';
 import * as gardening from './gardening.js';
 import * as farming from './farming.js';
 import * as firefighter from './firefighter.js';
+import * as paramedic from './paramedic.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -642,6 +643,8 @@ export function findInteraction(world, p) {
   if (rowWork) return rowWork;
   const crew = firefighter.interaction(world, p);   // a fire station: sign on as a firefighter (firefighter.js)
   if (crew) return crew;
+  const medic = paramedic.interaction(world, p);   // a hospital's doors: sign on as a paramedic; a patient: treat them (paramedic.js)
+  if (medic) return medic;
 
   if (p.profile.weapons.rod !== undefined) {
     const spot = jobs.fishingSpot(world, ped);
