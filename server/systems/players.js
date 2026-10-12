@@ -722,7 +722,8 @@ export function update(world, dt) {
     if ((world.tick + (ped.id & 3)) % 4 === 0 && p.conn) {
       const act = findInteraction(world, p);
       const label = act ? (act.passive ? act.label : `${act.key || 'E'}: ${act.label}`) : '';   // (passive: just a note, no button - on a ride)
-      if (label !== p.prompt) { p.prompt = label; p.meDirty = true; }
+      const pcr = act && act.crime ? (law.CRIMES[act.crime] && law.CRIMES[act.crime].felony ? 2 : 1) : 0;   // (a crime: the prompt in amber, a felony red - hud.js)
+      if (label !== p.prompt || pcr !== (p.promptCrime || 0)) { p.prompt = label; p.promptCrime = pcr; p.meDirty = true; }
     }
   }
 }
@@ -770,7 +771,7 @@ export function buildMe(world, p) {
     blade: prof.blade | 0,   // the plasma blade's colour (shared/items.js BLADE_COLORS; looks.js setBlade)
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
+    prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,

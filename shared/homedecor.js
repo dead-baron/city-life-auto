@@ -196,6 +196,13 @@ export function canPlace(L, d, q, skip = -1, bodies = []) {
   const before = decorate(L, { it }), after = decorate(L, { it: [...it, q] });
   const s0 = reachable(before), s1 = reachable(after), C = L.cols;
   if (L.door && !inReach(after, s1, L.door.x - TILE_IN / 2, L.door.y - TILE_IN / 2, TILE_IN, TILE_IN)) return 'That would block the front door.';
+  // most of the place cut off from the way in: say so, not just the first thing in there it would block (H70)
+  let open = 0, lost = 0;
+  for (let y = 0; y < L.rows; y++) for (let x = 0; x < C; x++) {
+    if (!s0[y * C + x] || (x >= q.tx && x < q.tx + w && y >= q.ty && y < q.ty + h)) continue;
+    open++; if (!s1[y * C + x]) lost++;
+  }
+  if (lost * 2 > open) return 'That would cut the rest of the home off from the front door - leave a way through.';
   for (const p of L.pieces) if (p.use && inReach(before, s0, p.x, p.y, p.w, p.h) && !inReach(after, s1, p.x, p.y, p.w, p.h)) return `That would block the ${p.use === 'hall' ? 'hall table' : p.use === 'garage' ? 'garage\'s key board' : p.use}.`;
   for (let y = 0; y < L.rows; y++) for (let x = 0; x < C; x++) {
     if (!s0[y * C + x] || s1[y * C + x]) continue;

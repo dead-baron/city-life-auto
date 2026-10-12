@@ -9243,3 +9243,83 @@ fridge"); the prompt box sits under the top icon bar on a phone (as before); the
   6-flat block's lobby (scratchpad/h67/pt3-lobby.png) and a flat's menu (pt3-unit.png).
   Not done this wave (out of time): the walk-in lobby (HO5: mailboxes, the stairs and the lift, the units' doors along
   a landing - a plan of its own, drawn like the homes), and the doorbell, the mail and a pet bed.
+
+## 2026-10-11 · The HUD on every screen: the prompt, the notes and the job line never under a button (H70)
+
+The owner's brief: "the HUD on every screen - nothing important hidden". H69's QA sweep found the Act prompt (which
+now says what you're about to do - "Steal the Sedan - Vehicle theft", "Get in the Fire Engine - issued to you for the
+job") under the round buttons on a phone held sideways (844x390: its first word or two showing), the same on a desktop
+at 1280x720 with a long prompt (H68's `hose-grass-v2town.png`), and the notes over the job line on a phone (H69's
+`p1-coast.png`). Measured before: 623 overlaps over 72 cases (six sizes, keyboard / pad / touch, on foot / driving /
+flying / as the police); after: none.
+- **Two columns** (`index.html`, `client/style.css`): the prompt and the notes now share one, `#hud-msg`, right of the
+  minimap and under the round buttons (top 50 / 48 px): a prompt that wraps pushes the notes down instead of running
+  under them, and nothing in it reaches the round buttons. The job line and the police cruiser's hint share another,
+  `#hud-sub`, at the bottom centre (the hint over the job line, pushed up when the job line wraps).
+- **On touch** the job line sits at the bottom between the sticks (left of the horn / descend / brake buttons, right of
+  the left stick - `right: +316px` from the safe area); the prompt and notes column runs from the ITEMS / flashlight
+  buttons to just short of the cash (`min(380px, 100vw - 482px)`). H69's idea - the prompt on the right under the cash,
+  just above ACT - measured short: under the cash there's 62 px above CAR at 844x390 and 37 px at 740x360, one line of a
+  prompt that runs to three, so it stays on the left where it can wrap.
+- **Phones on their side** (`@media (max-height: 430px)`): the faction (CITIZEN, POLICE · SERGEANT) gets a row of its own
+  under the stars, so the cash and the stars take less width and the prompt has room beside them; the job line 13 px.
+  While there's a prompt (or a bar), the newest note only, so the column ends above you in the middle of the screen
+  (the first try ran a three-line prompt and two notes down to your feet). Under 380 px tall (740x360, an iPhone in
+  Safari) one note at a time always and a 13 px prompt. At 740 px wide the round
+  buttons are 30 px (they ran under the weapon plate) and the police's COP CAR button sits under the minimap (it lay over
+  the menu button).
+- **A keyboard or a pad on a short screen** (a phone with a keyboard, a short window; the touch controls go when a key
+  is pressed): the round buttons beside the minimap, the column clear of the weapon, two notes at a time, the job line
+  lower. Upright with a keyboard (a narrow desktop window) the column goes under the minimap.
+- **The prompt's colour for a crime**: there was none yet - now what Act would do as a crime puts the prompt's plate
+  edge and words in amber, a felony in red (`server/systems/players.js`: the act's `crime` goes to the page as `me.pcr`,
+  1 or 2; `client/hud.js` `.crime` / `.felony`).
+- **The robbery, train and custody bars** (`#rob`, `#trainbar`) head the same column, over the prompt (they sat at top
+  118 centred, across the prompt and the notes on every screen but 1920; the custody bar low down over a wrapped job
+  line and, on a phone, over FIRE and RELOAD). A phone upright keeps them in the middle as before. On a phone on its side
+  with a bar showing, the newest note only; at 740 px the robbery bar drops its ROBBERY label (the gold edge says it) to
+  stay on one line.
+- **The spectator's notes** still show alone, bottom right (the column is let go of while spectating).
+- **Menus**: a row whose label and note run long puts the note on a line of its own (`hud.js` `.opt.two`) - the
+  lobby's "Unit 1 for sale - look round or buy" wrapped "buy" into the start of "apartment, ground floor · 1 bed".
+- **Decorating**: a piece that would cut most of the home off from the front door now says "That would cut the rest of
+  the home off from the front door - leave a way through" instead of naming the first thing in there it would block
+  (H67's sofa across the hall said "the shower") - when more than half of where you could walk is lost
+  (`shared/homedecor.js` canPlace). A piece that shuts one room still names what's in it (the trailer's bed).
+
+**The test** (`test/hudlayout.test.js`, `test/hudpage.js`): index.html's HUD and touch controls with the stylesheet, no
+game code, filled with the longest prompt, four long notes, a long job line and the cruiser's hint, big cash and bank,
+in a headless Chromium (the playwright one in /opt/pw-browsers or `CLA_CHROME`; skipped if there's none) - one page,
+an iframe per case at its size (`chrome --dump-dom`, ~4 s for 96 cases): every prompt, note, job line, hint and bar
+inside the screen, not cut off, clear of the round buttons, the minimap and its bars, the weapon, cash, stars, clock and
+faction, every touch button and stick, and each other; the round buttons clear of the touch buttons, the minimap and the
+cash; and you, a box in the middle of the screen, uncovered (but on a 740x360 phone, and with a keyboard or a pad at
+844x390 and 1024x768). Cases: 1280x720, 1920x1080, 844x390, 740x360, 1024x768 with a keyboard, a pad and touch; 390x844 with touch (the
+keyboard's HUD wants a window wider than ~450 px: its minimap and weapon plate alone fill 390). On foot (armed, more
+than one weapon, a flashlight, carrying), driving, flying, as the police, robbing a shop (its prompt the shop's),
+held in custody (no prompt). And the prompt's crime / felony from the server.
+
+What's still not right (screenshots `scratchpad/h70/shots/before-*.png` and `after-*.png` at every size, and the game
+itself: `game-phone-fire.png`, `game-phone-coast.png`, `game-desk-fire.png`):
+- On a phone the notes column covers the scene up and to the left of you (on 844x390 down to y ~160 with a prompt; you
+  stand at 195): in the fire job the engine's green ring was half under two notes (`game-phone-fire.png`, before the
+  one-note rule). They go in seconds; a translucent note, or the notes at the bottom over the job line, are options. On
+  a 740x360 phone the newest note under a long prompt reaches your head; on a keyboard's 1024x768 four long notes
+  stacked reach the middle (the test checks you're clear everywhere else: a box in the middle of the screen).
+- At 740x360, a prompt of ~100 characters (the train's "next train in 1:20 - wait in line...") with a note showing puts
+  the note's last line over the corner of the WPN ⇄ button (only with more than one weapon). The longest crime prompt
+  (80 characters) fits.
+- The keyboard's HUD in a window under ~450 px wide isn't laid out (the minimap and the weapon plate overlap).
+- Sizes beyond the brief's, measured once (scratchpad `h70/extra.mjs`): 1366x768, 1440x900, 800x600, 932x430 and a
+  768x1024 tablet upright are clean (800x600 after the column learnt to stop short of the weapon: `100vw - 494px`). An
+  iPhone SE (667x375 / 375x667) isn't: on its side, a long prompt and a note reach the WPN ⇄ button and, with a keyboard,
+  the round buttons touch the weapon plate; upright (667 tall), the prompt (at 282) and the job line (300 up from the
+  bottom) overlap - the upright layout wants the space of a taller phone. A 360x740 phone upright: the police's cruiser
+  hint touches the prompt. The job line upright now keeps clear of the round buttons down the right edge.
+- Two touch buttons share a place by design (the horn and reload, in a vehicle with a gun) - not checked.
+
+Files: index.html, client/style.css, client/hud.js, server/systems/players.js, shared/homedecor.js;
+test/hudlayout.test.js, test/hudpage.js (new), test/homedecor.test.js.
+
+Tests: test/hudlayout.test.js (new: the layout at every size; the crime / felony prompt), test/homedecor.test.js (the
+cut-off refusal), test/hudlayers.test.js, test/touchair.test.js, test/honestliving.test.js, test/perf.test.js.

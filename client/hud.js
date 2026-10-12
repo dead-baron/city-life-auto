@@ -95,6 +95,7 @@ export class HUD {
         if (fp.action) document.querySelector(`#tbtns [data-b="${fp.action}"]`)?.classList.add('pulse');
       }
       pr.classList.remove('hidden');
+      pr.classList.toggle('crime', me.pcr === 1); pr.classList.toggle('felony', me.pcr === 2);   // (what Act would do is a crime: amber; a felony: red)
     } else if (!pr.classList.contains('hidden')) {
       pr.classList.add('hidden'); pr.dataset.sig = '';
       document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse'));
@@ -313,6 +314,7 @@ export class HUD {
       const pic = o.wpn !== undefined ? `<img class="wpn" alt="" src="${weaponThumb(o.wpn)}">` : '';
       const bars = o.stats ? `<span class="stats">${[['PWR', o.stats.pow], ['RNG', o.stats.rng], ['ACC', o.stats.acc]].map(([k, v]) => `<i>${k}<b style="width:${v * 8}px"></b></i>`).join('')}</span>` : '';
       if (pic) b.classList.add('has-wpn');
+      if (o.note && o.label.length + o.note.length > 40) b.classList.add('two');   // (a long row: its note on a line of its own, not run on from a label that wraps)
       b.innerHTML = `${pic}<span>${esc(o.label)}${o.note ? `<span class="note">${esc(o.note)}</span>` : ''}${bars}</span>${price}`;
       b.onclick = () => this.choose(i);
       box.appendChild(b);
