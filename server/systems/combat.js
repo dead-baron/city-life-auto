@@ -495,6 +495,7 @@ export function kill(world, ped, attacker, cause, dir = 0) {
   ped.deadAt = world.time;
   ped.hp = 0;
   ped.bleeding = false;
+  ped.charred = cause === 'fire';   // (burned to death: the body lies blackened - the wire's charred bit, net.js)
   if (ped.vehId) { vehicles.ejectPed(world, ped, true); ped.vx *= 0.3; ped.vy *= 0.3; }
   if (ped.carrying) cargo.dropCrate(world, ped);
   reactions.died(world, ped, cause, dir); // the fall (a slide, a roll, knocked back, a crumple) and the death event: how they lie

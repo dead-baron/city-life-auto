@@ -322,7 +322,7 @@ function onBinary(buf) {
     e.buf.push({ t: s.tick, x: it.x, y: it.y, a: it.a, z: it.lz });
     if (e.buf.length > 5) e.buf.shift();
     e.flags = it.flags; e.hp = it.hp; e.parent = it.parent;
-    if (it.kind === K.PED) { e.burn = it.parent >= 0x80000000; if (e.burn) e.parent = it.parent - 0x80000000; e.extra = it.extra & 31; e.blink = (it.extra >> 5) & 3; const b7 = (it.extra & 128) !== 0, iv = (it.flags & PF.INVEH) !== 0; e.swim = b7 && !iv; e.back = b7 && iv; } // weapon | blink | in water (in a vehicle: a back seat)
+    if (it.kind === K.PED) { const pb = it.parent, was = !!e.burn; e.burn = pb >= 0x80000000; e.char = (pb & 0x40000000) !== 0; if (pb >= 0x40000000) e.parent = pb & 0x3fffffff; if (e.burn !== was && e.seen !== undefined) e[e.burn ? 'burnOn' : 'burnOff'] = S.loopClock; e.extra = it.extra & 31; e.blink = (it.extra >> 5) & 3; const b7 = (it.extra & 128) !== 0, iv = (it.flags & PF.INVEH) !== 0; e.swim = b7 && !iv; e.back = b7 && iv; } // weapon | blink | in water (in a vehicle: a back seat)
     else e.extra = it.extra;
     e.seen = s.tick;
   }
@@ -864,6 +864,7 @@ function onEvent(ev) {
       } else if (ev.x !== undefined) fx.ring(ev.x, ev.y, 24, 'rgba(255,255,255,');
       break;
     case 'scream': fx.floatText(ev.x, ev.y - 18, 'AAAAH!', '#fff'); break;
+    case 'douse': fx.splash(ev.x, ev.y, 14); for (let k = 0; k < 9; k++) fx.spawn(2, ev.x + (Math.random() - 0.5) * 18, ev.y - 4, (Math.random() - 0.5) * 30, -20 - Math.random() * 20, 1.2 + Math.random(), 6 + Math.random() * 5, 'rgba(232,238,244,', 14); break;   // (into the water on fire: a burst of steam - burning.js)
     case 'say': fx.say(ev.id, ev.x, ev.y, ev.text); sfx('alert', distVol(ev.x, ev.y) * 0.5); break;
     case 'yelp': fx.floatText(ev.x, ev.y - 18, 'WHOA!', '#ffd36b'); break;
     case 'thanks': fx.floatText(ev.x, ev.y - 18, 'Thank you!', '#3ddc84'); break;
@@ -4015,6 +4016,14 @@ function pedLook(p, now) {
   if (run && pose === 'down') pose = p.runK === 'F' ? 'downF' : 'downB';
   else if (pose === 'down' && p.tripUntil > now && !(f & PF.DEAD)) pose = 'roll';   // tripped by an officer's tackle: a tumble, and up
   if (p.hoodV && !(f & PF.DEAD)) pose = 'hood';   // up on a car's hood, clinging on (render/boom.js)
+  // on fire (server burning.js; the owner's FI1): catching, the arms flail a moment; down and moving, rolling it out;
+  // just put out and still down, pushing up to get up (the burn bit's on / off times: the record's decoding)
+  let fire = 0;
+  if (!(f & PF.DEAD) && !flying) {
+    if (p.burn && (f & PF.DOWN) && (p.as || 0) > 25) pose = 'roll';
+    else if (p.burn && pose === 'idle' && now - (p.burnOn ?? -9) < 1.3) { pose = 'stagger'; fire = 1; }
+    else if (!p.burn && (f & PF.DOWN) && now - (p.burnOff ?? -9) < 1.2) { pose = 'downF'; fire = 2; }
+  }
   // a hit: a stagger back on the heels (or forward, hit from behind); hurt and walking: a limp
   const rT = p.reactAt !== undefined ? now - p.reactAt : 99, stag = seqFr < 0 && rT < (p.reactD || 0) && STAGGER_FROM.has(pose);
   if (stag) pose = 'stagger';
@@ -4029,6 +4038,7 @@ function pedLook(p, now) {
   if (pose === 'downF' && p.d && p.d.cf) fr = 0;   // (held flat, not pushing up)
   if (fight) fr = pose === 'crawl' ? Math.floor(now * 9 + p.id) % 4 : 1;
   if (run && (pose === 'downF' || pose === 'downB')) fr = now - p.runAt > p.runD - 0.8 ? 1 : 0;   // (flat, then pushing up)
+  if (fire) fr = fire === 1 ? Math.floor(now * 7 + p.id) % 4 : 1;   // (flailing; pushing up)
   const L = p._look || (p._look = {});
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;
   L.lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
@@ -4052,16 +4062,28 @@ function pedVisual(p, now) {
   // lying still (the drawn body on the ground) doesn't drip; standing, the sparks fly round the head
   const lying = !L.upright && LYING.has(L.pose) && !L.flying && !L.swimming && (!!S.art2 || !!lyingSprite(p.d.app, L.pose.startsWith('dead') ? 1 : 0));
   if (!lying && (f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
-  if (p.burn) burnFx(p, !!L.upright && !lying);
+  if (p.burn || p.burnOff !== undefined || p.char) burnFx(p, !!L.upright && !lying, now, L);
   if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry - (L.upright ? 20 : 0) + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
 }
 // on fire (server burning.js): flames licking up the body (thrown up from the feet: their height, not a step up the
 // screen, so art v2's depth keeps them in front of the body; along it, lying down) and dark smoke rising - the pooled
-// particles, which both renderers draw (and art v2 lights)
-function burnFx(p, up) {
-  const fx = S.fx, w = up ? 8 : 18, r = Math.random;
-  if (r() < 0.9) fx.spawn(3, p.rx + (r() - 0.5) * w, p.ry + 2 + (r() - 0.5) * (up ? 4 : 8), (r() - 0.5) * 16, (r() - 0.5) * 6, 0.28 + r() * 0.3, 4 + r() * 4, r() < 0.5 ? '#ff8a1a' : '#ffd23a', -7, up ? 150 + r() * 170 : 60 + r() * 70);
-  if (r() < 0.25) fx.smoke(p.rx, p.ry - (up ? 30 : 8), true);
+// particles, which both renderers draw (and art v2 lights). The owner's FI1: catching, they climb from the legs up;
+// running, they stream out behind with the smoke; rolling, smaller each turn; lying, a low smoulder under more smoke;
+// in the rain, steam hissing off. Put out: wisps of smoke a few seconds (singed); burned to death: the body smokes on.
+function burnFx(p, up, now, L) {
+  const fx = S.fx, r = Math.random, f = p.flags;
+  if (!p.burn) {
+    const t = now - p.burnOff;
+    if (p.char && (f & PF.DEAD) ? r() < 0.08 : t < 7 && r() < 0.14 * (1 - t / 7)) fx.spawn(2, p.rx + (r() - 0.5) * 8, p.ry - (up ? 24 : 4), (r() - 0.5) * 6, -12, 1.5 + r(), 3 + r() * 2, 'rgba(150,150,150,', 7);
+    return;
+  }
+  const grow = Math.min(1, 0.2 + (now - (p.burnOn ?? -9)) / 1.2), roll = L.pose === 'roll', lie = !up && !roll;
+  if (roll) { if (!(now - (p.rollSeen ?? -9) < 0.5)) p.rollOn = now; p.rollSeen = now; }
+  const k = grow * (roll ? Math.max(0.3, 1 - (now - p.rollOn) / 2.6) : lie ? (f & PF.DEAD ? 0.45 : 0.6) : 1);
+  const sp = up && (p.as || 0) > 60 ? (p.as || 0) * 0.45 : 0, bx = -Math.cos(p.ra || 0) * sp, by = -Math.sin(p.ra || 0) * sp, w = up ? 8 : 18;
+  if (r() < 0.1 + 0.85 * k) fx.spawn(3, p.rx + (r() - 0.5) * w, p.ry + 2 + (r() - 0.5) * (up ? 4 : 8), (r() - 0.5) * 16 + bx, (r() - 0.5) * 6 + by, 0.28 + r() * 0.3, (4 + r() * 4) * (0.5 + 0.5 * k), r() < 0.5 ? '#ff8a1a' : '#ffd23a', -7, up ? (60 + 110 * grow + r() * 170 * grow) : 40 + r() * 70 * k);
+  if (r() < (lie ? 0.4 : 0.25 + sp / 600)) fx.smoke(p.rx + bx * 0.25, p.ry - (up ? 30 : 8) + by * 0.25, true);
+  if (S.weather === WEATHER.RAIN && r() < 0.18) fx.spawn(2, p.rx + (r() - 0.5) * 12, p.ry - (up ? 20 : 4), (r() - 0.5) * 10, -16, 0.8 + r() * 0.6, 4 + r() * 3, 'rgba(225,232,240,', 10);   // (the rain hissing off it)
 }
 function drawPed(p, now) {
   const f = p.flags;
@@ -4086,6 +4108,7 @@ function drawPed(p, now) {
       const sc = 1.25;
       g.imageSmoothingEnabled = false;
       if (f & PF.GHOST) g.globalAlpha = 0.45;
+      if (p.char && (f & PF.DEAD)) g.filter = 'brightness(0.3)';   // (burned to death: blackened - FI1)
       g.drawImage(ly, -LW * sc / 2, -LH * sc / 2, LW * sc, LH * sc);
       if (hitK > 0.4) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = hitK - 0.4; g.drawImage(ly, -LW * sc / 2, -LH * sc / 2, LW * sc, LH * sc); g.globalCompositeOperation = 'source-over'; }
       g.imageSmoothingEnabled = true;

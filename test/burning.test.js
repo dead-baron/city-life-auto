@@ -173,3 +173,55 @@ test('burning NPCs: some run, some stop, drop and roll (and live), some fall and
   for (let i = 0; i < 20; i++) { const q = spawnNpc(w, 'casual', land.x, land.y); if (!q) continue; n++; burning.ignite(w, q, null); if (q.npc.burn && q.npc.burn.k === 'water') toWater++; }
   assert.ok(toWater >= n * 0.4, `near water many run for it (${toWater} of ${n})`);
 });
+
+// H78 (the owner's FI1 concept: catching, running, stop-drop-and-roll, lying smouldering, up singed, into the water, burned
+// to death): the page picks the frame from what the record already carries - the burn bit, DOWN, MOVING, DEAD, the swim
+// bit - plus the charred bit (the parent field's next bit) on someone burned to death.
+test('the burning states on the wire: rolling, lying, getting up, in the water, burned to death (charred)', async () => {
+  const { PF } = await import('../shared/constants.js');
+  const combat = await import('../server/systems/combat.js');
+  const { w, road } = scene();
+  const rec = (q) => { const f = net._fields(w, q); return { fl: f[0], burn: f[2] >= 0x80000000, char: (f[2] & 0x40000000) !== 0, swim: (f[3] & 128) !== 0 }; };
+  const pick = (k) => {
+    for (let i = 0; i < 40; i++) {
+      const q = spawnNpc(w, 'casual', road.x + 200 + i * 30, road.y);
+      if (!q) continue;
+      q.hp = q.maxHp = 100; burning.ignite(w, q, null);
+      if (q.npc.burn && q.npc.burn.k === k) return q;
+      burning.douse(w, q); w.remove(q);
+    }
+    return null;
+  };
+  const roller = pick('roll'), faller = pick('fall');
+  assert.ok(roller && faller, 'a roller and a faller');
+  const r0 = rec(roller);
+  assert.ok(r0.burn && !(r0.fl & PF.DOWN) && !r0.char, 'catching: alight, on their feet');
+  let sawRoll = false, sawLie = false, sawUp = false, sawChar = false;
+  for (let i = 0; i < 400; i++) {
+    w.time += 0.05; w.tick++; burning.update(w, 0.05);
+    const a = rec(roller), b = rec(faller);
+    if (a.burn && (a.fl & PF.DOWN) && (a.fl & PF.MOVING)) sawRoll = true;                       // rolling it out
+    if (!a.burn && sawRoll && (a.fl & PF.DOWN) && !(a.fl & PF.DEAD)) sawUp = true;               // out, still down: getting up
+    if (b.burn && (b.fl & PF.DOWN) && !(b.fl & PF.MOVING) && !(b.fl & PF.DEAD)) sawLie = true;   // lying, burning
+    if (b.char) { sawChar = true; assert.ok(b.fl & PF.DEAD, 'only a body is charred'); }
+  }
+  assert.ok(sawRoll, 'rolling: burning, down and moving');
+  assert.ok(sawUp, 'put out and still down a moment: getting up');
+  assert.ok(sawLie, 'the faller lies burning, still');
+  assert.ok(sawChar && faller.dead, 'burned to death: the charred bit');
+  assert.ok(!rec(roller).char && !rec(roller).burn, 'the roller lives, not charred');
+  // into the water: the swim bit, the burn bit gone, a 'douse' to hiss and steam
+  const wat = burning.waterNear(w.map, road.x, road.y, 8000);
+  const s = spawnNpc(w, 'casual', road.x + 40, road.y);
+  burning.ignite(w, s, null);
+  teleport(w, s, wat.x, wat.y);
+  w.seen.length = 0;
+  w.tick++; burning.update(w, 0.05);
+  const c = rec(s);
+  assert.ok(c.swim && !c.burn && !c.char, 'in the water: swimming, out');
+  assert.ok(w.seen.some((e) => e.e === 'douse'), 'the douse (the steam)');
+  // killed some other way: never charred
+  const z = spawnNpc(w, 'casual', road.x + 80, road.y);
+  combat.kill(w, z, null, 'vehicle');
+  assert.ok(!rec(z).char, 'not charred by anything but fire');
+});

@@ -73,6 +73,7 @@ const JUMP_UP = 4;          // chunks uploaded a frame just after a jump, until 
 const TOWN = new Set(['towers', 'commercial', 'civic', 'nightlife', 'redlight', 'industrial', 'factory', 'harbor', 'apartments', 'southside', 'oldtown', 'arts']);
 const BAG_TINT = [0.86, 0.92, 1.0];  // a plastic bag: a paper sheet tinted cool
 const CHAR_TINT = [0.32, 0.27, 0.25]; // a fire arrow burnt out (a deflected one dropped: _arrowDrop)
+const CHAR_PED = [0.2, 0.18, 0.17], SINGED = [0.72, 0.66, 0.62];   // (someone burned to death; just put out: _ped)
 const GRAZERS = new Set(['deer', 'rabbit', 'cow', 'sheep', 'horse', 'goat']); // animals.js kinds that graze when still
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // people flat on the ground (main.js pedLook)
 const WILD_IDLE = new Set(['coyote', 'raccoon', 'pig']);                     // ...and wild ones that just stand (a pet sits)
@@ -1204,6 +1205,10 @@ export class World2 {
     p._v2k = sk;
     const o = this.opts;
     o.alpha = 1; o.flash = L.hitK > 0.4 ? L.hitK - 0.4 : 0; o.xray = !!me; o.flipX = false; o.shadow = true; o.tint = null;
+    // burned to death: blackened (the record's charred bit, server combat.js kill); just put out: singed a while (FI1)
+    const sg = now - (p.burnOff ?? -99);
+    if (p.char && (f & PF.DEAD)) o.tint = CHAR_PED;
+    else if (sg < 14) { const t = p._sg || (p._sg = [1, 1, 1]), u = sg / 14; for (let i = 0; i < 3; i++) t[i] = SINGED[i] + (1 - SINGED[i]) * u * u; o.tint = t; }
     if (f & PF.GHOST) o.alpha = 0.45 + 0.2 * Math.sin(now * 8);
     if (p.blink) o.alpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
     const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
