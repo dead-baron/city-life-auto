@@ -45,3 +45,14 @@ test('loaded lazily: neither the page nor the renderer imports it statically', (
   assert.ok(!/^import[^;]*art2\/aircraft\.js/m.test(main) && !/^import[^;]*\.\.\/aircraft\.js/m.test(host), 'no static import');
   assert.ok(/import\('\.\.\/aircraft\.js'\)/.test(host), 'the host loads it when an aircraft is near');
 });
+
+test('in the game a model is made over frames, a stage a frame - the overlay stands in until it is ready (H69: the first one\'s hitch)', async () => {
+  const frame = () => new Promise((r) => setTimeout(r, 30));
+  const got = [];
+  for (let i = 0; i < 6 && !got.at(-1); i++) { got.push(AM.bodySprite('rescueheli', 5, 32, 2, 2, true)); got.push(AM.bodySprite('rescueheli', 5, 32, 2, 2, true)); await frame(); }
+  const firstAt = got.findIndex((g) => g);
+  assert.ok(firstAt >= 4, `not at once: three stages first (ready at call ${firstAt})`);
+  for (let i = 1; i < firstAt; i += 2) assert.equal(got[i], null, 'one stage a frame: the second call in a frame waits');
+  assert.ok(got[firstAt].w > 10 && got[firstAt].h > 10, 'then the sprite');
+  assert.ok(AM.bodySprite('rescueheli', 9, 32, 2, 2, true), 'its other headings straight away (the model is kept)');
+});

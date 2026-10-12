@@ -8979,3 +8979,94 @@ made on the page the first time one of its kind is near - 60-250 ms once (the pl
 hitch when the first helicopter comes into view (the bake workers' code budget has no room for it; building the models
 at half size directly, or in a worker once there's room, would take it off the page); the police cars arrive within
 seconds at three stars, so the searchlight playtest needed the dev command's `near` and a quick screenshot.
+
+## 2026-10-11 · A new player's evening on a phone, through everything added today; room in the page's start-up code (H69)
+
+The owner asked for a QA sweep after a day of new features landing in a few hours: "a new player's evening, on a phone,
+through everything added today, fixing what's broken; and room in the page's start-up code" (the page at 483 of its 485
+KB, so the next features had nowhere to go). Played headless on a phone (844x390, touch, a phone's user agent, Medium,
+art v2) and on a desktop in the classic view: the starting-look picker, the jobs (courier and its truck, harvest, field
+work, search and rescue, charter, the coast guard by boat and by air), a garden, homes through the app (bought outright
+after a look round, and on a mortgage; an apartment unit), inside (the bed, the safe, the wardrobe, the garage, the
+door), flying low and high, three stars and the police helicopter, set alight and rolling, the tank, the Boom Tester,
+the lost pet, air traffic - and the same evening on the server in node with the world throwing on any error
+(scripts in a local `.playtest-data/`, not kept: every job taken, worked and cancelled, both purchases, the unit's
+sale paying its mortgage off, Safety mode's two presses). No page errors in six runs; the server's log clean.
+
+**Found and fixed** (each its own commit, each with its test):
+- **The police helicopter flew into a suspect fleeing in an aircraft.** Its circle's middle sits south of the suspect by
+  its drawn height (so art v2 shows it over them), which put every lap right over them - and a suspect hovering at its
+  300 px, the two touched and both came down (the phone playtest: three stars in a helicopter, dead in ten seconds). A
+  suspect up in an aircraft now has it keep `POLICE_AIR.sep` (120 px) above them - below near its ceiling - and the
+  circle is shifted by its height above them only (`server/systems/policeair.js`; test/policeair.test.js).
+- **The news helicopter flew into the police helicopter over a chase downtown.** Among tall buildings the roofs push
+  both up to the same height (steer: what stands taller round it plus its clearance - 730-830 px there, over their 300
+  and 420), and the police one's circle, its middle south of the suspect by its height (420 px at 800 up), crossed the
+  news one's 520 px circle: they touched and both came down. This was policeair.test.js failing one run in three ("it
+  follows them": the police helicopter already a wreck - traced with a script stepping that test's world). The news
+  helicopter now keeps `POLICE_AIR.sep` above any police helicopter within 1200 px (`airtraffic.js` clearOfPolice;
+  test/airtraffic.test.js fails without it; policeair.test.js passed five runs of five after).
+- **On a phone in the air, the ▲ climb button lay under FIRE's lower half** (right +150, bottom 74 vs FIRE's +146, bottom
+  84, 78 px): a tap just above ▲ fired. It sits over ▼ now, in the horn's place; the horn and reload are put away while
+  you fly (`client/style.css`; test/touchair.test.js measures the buttons' boxes).
+- **police.js threw when it was the first module loaded** ("Cannot access 'carArrest' before initialization"): the
+  import cycle through streetlife.js, which hands police.js its car-arrest hook as it loads - the trap homes.js's menu
+  builder fell into at wave 26's merge. Found by loading every server and shared module first, alone
+  (a loop over `node -e "await import('./<module>')"`: only this one, and artbake.js, which is a worker); the hook is kept on its setter
+  now. The server boots in an order that worked, so nothing live broke (test/loadorder.test.js loads the cycle's
+  modules each first).
+- The dev menu's garden moved you to your yard while you sat in a vehicle (the body moved, the tractor and the camera
+  stayed at the farm), and its vehicles with you at the controls seated you from inside a home: both say what to do
+  first now (`gardening.js` devGarden, `dev.js` 'car'; tests in gardening.test.js and homeinside.test.js).
+
+**Room in the page's start-up code: 483 -> 465 KB (81 -> 77 files) of its 485.** The debug menu - its builder, its
+sections (`client/devcats.js`), the give panels (`devgive.js`) and the teleport map (`devtp.js`) - moved to
+`client/devmenu.js`, loaded the first time Dev Debug Mode or the playtest server's cheats are on (so nobody else's page
+carries it); the free camera (`client/spectator.js`) loads the first time it's used. main.js keeps the button and calls
+`setupDev` / `renderDevPlayers` as before. Nothing the player sees changes (the menu, its 24 sections, the quick give and
+the spectator checked in the playtest). test/lazypage.test.js keeps them out of the page.
+
+**The two left from today's list:**
+- The farms' fields are kept across a restart: the rows' state, growth and the stretches of their job done go into
+  `store.kept.fields` (new: the world's own state the store keeps with the profiles in profiles.json) when a row is
+  worked and once a minute, and come back when the fields are built, unless the world's fields are laid out otherwise
+  (`server/systems/farming.js`, `server/store.js`, `server/file-store.js`; test/helpers.js makeWorld starts each test world
+  with nothing kept; tests in farming.test.js).
+- An aircraft's art v2 model is made over three frames - the model, halved, packed with its first heading - not all in
+  one (`client/art2/aircraft.js` compact, staged; the overlay's drawing stands in meanwhile; test in aircraftart.test.js).
+  Measured in node, each stage is 10-200 ms on this busy machine (the model 10-150, halving it 20-590 when the machine is
+  loaded, packing a few): the hitch is cut into three, not gone - building at half size directly, or in a worker once
+  the bake workers have room, would take it off the page.
+
+**Found and not fixed** (for the owner to decide - layout):
+- On a phone held sideways (844 px) the Act prompt sits under the round buttons (menu, phone, bag, map, settings,
+  fullscreen, debug: 274 px wide, centred, top 8-42): the prompt (left 192, top 10, up to 38vw) shows its first word or
+  two and the rest is behind the buttons - today's crime labels ("Steal the Sedan - Vehicle theft") can't be read. Reproduce: a
+  phone, landscape, stand by a car or a home's door (screenshots `scratchpad/h69/p4-home.png`, `p4-safe.png`). And the
+  notes (`#toasts`, left 192, top 58) and the job's line (`#job`, centred, top 50) overlap each other there
+  (`p1-coast.png`). Both from the touch layout of 2026-10-03, the round buttons having grown since. Room there is short:
+  the prompt could go on the right under the cash and stars (just over ACT, y 88-150 is free), or bottom-centre over the
+  controls; the notes under the job's line.
+- A key pressed on a touch device switches the HUD to the keyboard's (the touch controls go): as meant (a phone with a
+  keyboard), noted only because a playtest's key presses do it.
+- Once, with the starting-look picker left open over the game (the playtest's click came before it opened), a player
+  hovering high in the rescue helicopter was no longer at its controls 12 s after three stars (still in a vehicle, not
+  the driver); with the picker closed (another run) and in node it stayed at the controls, at its height. Not reproduced.
+- A page reloads into a new build within a minute of version.json changing (client/update.js): a playtest that runs
+  while its checkout is stamped reloads mid-run - stamp after.
+
+Files: client/devmenu.js (new), client/main.js, client/style.css, client/art2/aircraft.js, server/systems/policeair.js,
+server/systems/airtraffic.js, server/systems/police.js, server/systems/farming.js, server/systems/gardening.js, server/store.js, server/file-store.js,
+server/dev.js, shared/rules.js (POLICE_AIR.sep).
+
+Tests: test/lazypage.test.js, test/touchair.test.js, test/loadorder.test.js (new); test/policeair.test.js,
+test/airtraffic.test.js, test/farming.test.js, test/aircraftart.test.js, test/gardening.test.js, test/homeinside.test.js, test/startfresh.test.js
+(the debug menu's start-fresh button is in devmenu.js now), test/helpers.js; and test/streetlife, core, gameplay,
+activities, sound, titlemenu, perf, dmath, mapwindow, police, arrests, flight - all pass.
+
+Playtested headless (scratchpad h69: p1-p7): the phone with art v2 (the picker, search and rescue, the coast guard, the
+farm, a garden, inside a home and asleep, the Homes app, the tank, a helicopter low and high with the touch ▲ / ▼, three
+stars and the police helicopter overhead) and the desktop in the classic view (the title menu's graphics row, field work,
+a garden, inside a home - the bed, the safe, the wardrobe, the door -, set alight and rolling, the crowd alight, the tank,
+the Boom Tester, the police helicopter by night, the plane banking, the gunship, search and rescue, the lost pet): no
+page errors, the server's log clean.

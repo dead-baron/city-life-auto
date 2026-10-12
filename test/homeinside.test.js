@@ -286,3 +286,16 @@ test('a friend: knocks at your door, you let them in from the hall table, you se
   w.step();
   assert.equal([...conn.sent].reverse().find((m) => m && m.t === 'home').others.length, 0, 'gone');
 });
+
+test('the dev menu\'s vehicle with you at the wheel waits until you\'re outside (H69: it seated you in there at the controls out here)', async () => {
+  const dev = await import('../server/dev.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  dev.command(w, p, 'homein', { kind: 'house' });
+  assert.ok(p.ped.home, 'inside');
+  dev.command(w, p, 'car', { m: 'heli', in: 1, alt: 200 });
+  assert.equal(p.ped.vehId, 0, 'not at the controls of anything from in there');
+  homeinside.leave(w, p);
+  dev.command(w, p, 'car', { m: 'sedan', in: 1 });
+  assert.ok(p.ped.vehId, 'outside: at the wheel');
+});

@@ -11,12 +11,14 @@ const FILE = join(config.dataDir, 'profiles.json');
 export class FileStore {
   constructor() {
     this.profiles = new Map();
+    this.kept = {};   // the world's own state that outlives a restart (store.kept: the farms' fields - farming.js)
     this.dirty = false;
     this.writing = false;
     if (existsSync(FILE)) {
       try {
         const data = JSON.parse(readFileSync(FILE, 'utf8'));
         for (const p of data.profiles || []) this.profiles.set(p.pid, p);
+        if (data.kept && typeof data.kept === 'object') this.kept = data.kept;
       } catch (e) {
         console.error('[store] profiles.json unreadable, backing up and starting fresh:', e.message);
         copyFileSync(FILE, FILE + '.corrupt-' + Date.now());
@@ -33,7 +35,7 @@ export class FileStore {
   // a profile gone for good (Start fresh: players.js wipeAccount): the next save leaves it out
   remove(pid) { this.dirty = true; return this.profiles.delete(pid); }
   touch() { this.dirty = true; }
-  serialize() { return JSON.stringify({ version: 1, saved: Date.now(), profiles: [...this.profiles.values()] }); }
+  serialize() { return JSON.stringify({ version: 1, saved: Date.now(), profiles: [...this.profiles.values()], kept: this.kept }); }
   async flush() {
     if (!this.dirty || this.writing) return;
     this.dirty = false;

@@ -167,20 +167,32 @@ export function rotorModel(R, disc, tip) {
 export function bodyModel(type, o = {}) { const T = TYPES[type] || TYPES.heli; return T.plane ? planeModel(T, o.bank || 0) : heliModel(type, T); }
 
 // ---- made on the page: the models kept packed (compact), each heading rendered the first time it's wanted -----------------
-const MODELS = new Map();
-function compact(key, make, half) {
+const MODELS = new Map(), MADE = new Map();
+// staged (the live game, drawAir): a model is made over three frames - the full-size model, then halved, then packed and
+// its first heading drawn - not all in one (a 60-250 ms hitch when the first one came into view: H69); null until it's
+// ready (the overlay's drawing stands in meanwhile)
+let stageAt = -1e9;
+const STAGE_GAP_MS = 24;   // (a stage a frame at most)
+function compact(key, make, half, staged = false) {
   let C = MODELS.get(key);
-  if (!C) { const m = make(); C = compactVox(half ? halveVox(m, 2) : m); MODELS.set(key, C); }
-  return C;
+  if (C) return C;
+  if (!staged) { const m = make(); C = compactVox(half ? halveVox(m, 2) : m); MODELS.set(key, C); return C; }
+  if (performance.now() - stageAt < STAGE_GAP_MS) return null;
+  const was = MADE.get(key);
+  if (!was) MADE.set(key, { m: make(), h: null });
+  else if (half && !was.h) was.h = halveVox(was.m, 2);
+  else { C = compactVox(half ? was.h : was.m); MODELS.set(key, C); MADE.delete(key); }
+  stageAt = performance.now();
+  return C || null;
 }
 const BANKS = [-0.6, -0.3, 0, 0.3, 0.6];
-export function bodySprite(type, hi, N, bi, px) {
-  const C = compact(`${type}|${bi}`, () => bodyModel(type, { bank: BANKS[bi] ?? 0 }), true);
-  return trimSprite(renderCompact(C, hi * TAU / N, { dither: 0.35, px }));
+export function bodySprite(type, hi, N, bi, px, staged = false) {
+  const C = compact(`${type}|${bi}`, () => bodyModel(type, { bank: BANKS[bi] ?? 0 }), true, staged);
+  return C && trimSprite(renderCompact(C, hi * TAU / N, { dither: 0.35, px }));
 }
-export function rotorSprite(R, disc, tip, hi, N, px) {
-  const C = compact(`rotor|${R}|${disc ? 1 : 0}|${tip}`, () => rotorModel(R, disc, tip), true);
-  return trimSprite(renderCompact(C, hi * TAU / N, { dither: disc ? 0.2 : 0.35, px }));
+export function rotorSprite(R, disc, tip, hi, N, px, staged = false) {
+  const C = compact(`rotor|${R}|${disc ? 1 : 0}|${tip}`, () => rotorModel(R, disc, tip), true, staged);
+  return C && trimSprite(renderCompact(C, hi * TAU / N, { dither: disc ? 0.2 : 0.35, px }));
 }
 
 const MAST = 0.06, MAST_Z = 50;   // (the rotor's hub: along the body from its middle, and up)
@@ -194,7 +206,7 @@ export function drawAir(H, v, now, me) {
   // the plane's bank: yours from the prediction, the others' from their turning (render/aircraft.js keeps v._bank)
   const bank = isPlane(def) ? (v._own ? v.rbank : v._bank) || 0 : 0, bi = Math.max(0, Math.min(4, Math.round(bank / 0.3) + 2));
   const key = `air|${type}|${bi}|${hi}|${N}`;
-  let k = H._conv(key, () => bodySprite(type, hi, N, bi, px), true);
+  let k = H._conv(key, () => bodySprite(type, hi, N, bi, px, true), true);
   if (!k) k = H._near((h) => `air|${type}|${bi}|${h}|${N}`, hi, N) || H._near((h) => `air|${type}|2|${h}|${N}`, hi, N);
   if (!k) return false;
   const o = H.opts, z0 = lift + (alt < 1 ? H._z0(v, false) : 0) - (T.plane ? zoffOf(BANKS[bi]) : 0);
@@ -209,7 +221,7 @@ export function drawAir(H, v, now, me) {
     // (up to speed, the blurred disc is the overlay's - render/aircraft.js rotorDisc: a canvas blends, the renderer only
     // dithers - and here only the blades while they're still to be seen)
     if (s < 0.9) {
-      const bh = quant((v._ph || 0) % (Math.PI / 2), N), bk = H._conv(`air|blades|${R}|${T.tip}|${bh}|${N}`, () => rotorSprite(R, false, T.tip, bh, N, px), true) || H._near((h) => `air|blades|${R}|${T.tip}|${h}|${N}`, bh, N);
+      const bh = quant((v._ph || 0) % (Math.PI / 2), N), bk = H._conv(`air|blades|${R}|${T.tip}|${bh}|${N}`, () => rotorSprite(R, false, T.tip, bh, N, px, true), true) || H._near((h) => `air|blades|${R}|${T.tip}|${h}|${N}`, bh, N);
       if (bk) { o.alpha = 1 - Math.max(0, (s - 0.55) / 0.35); E.drawSprite(bk, mx, my, z0 + MAST_Z, o); }
     }
     o.alpha = 1;

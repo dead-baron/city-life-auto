@@ -162,3 +162,16 @@ test('the garden is kept with the home in the profile across a rejoin, and grew 
   run(w, 2.1);
   assert.ok(q.g > g1 + 0.05, `caught up (${g1.toFixed(2)} -> ${q.g.toFixed(2)})`);
 });
+
+test('the dev garden won\'t move you out from under your vehicle: on foot first (H69)', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const v = w.spawnVehicle('sedan', p.ped.x + 60, p.ped.y, 0, { npcOwned: false });
+  v.seats[0] = p.ped.id; p.ped.vehId = v.id; p.ped.seat = 0;
+  const x = p.ped.x, y = p.ped.y;
+  const err = gardening.devGarden(w, p, {}, homes.buy);
+  assert.match(String(err), /vehicle/, 'it says why');
+  assert.equal(p.ped.x, x); assert.equal(p.ped.y, y);
+  p.ped.vehId = 0; v.seats[0] = 0;
+  assert.equal(gardening.devGarden(w, p, {}, homes.buy), null, 'on foot: the garden, and you at it');
+});

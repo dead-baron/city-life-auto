@@ -266,6 +266,7 @@ export function devGarden(world, p, msg, buy) {
     p.gardenSig = null;
     return null;
   }
+  if (ped.vehId || ped.hidden) return 'Get out of the vehicle first (and outside).';   // (it takes you to the plots: a seated body moved without its vehicle - H69)
   let h = ownedHomes(world, prof).find((q) => plotSpots(world.map, q).length >= 3 && Math.hypot(q.x - ped.x, q.y - ped.y) < 3000);
   if (!h) {
     h = world.map.homes.filter((q) => q && !q.gone && !world.homeOwner.has(q.id) && plotSpots(world.map, q).length >= 3).sort((a, b) => Math.hypot(a.x - ped.x, a.y - ped.y) - Math.hypot(b.x - ped.x, b.y - ped.y))[0];

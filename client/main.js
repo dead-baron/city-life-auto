@@ -14,9 +14,7 @@ import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb } from '../s
 import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
-import { buildTeleport } from './devtp.js';
 import { createInventory, createWheel, createWeaponPicker, createWeaponWheel } from './inventory.js';
-import { createSpectator, SPEC_LAYERS, SCHEMATIC_KEY } from './spectator.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
@@ -49,8 +47,6 @@ const markTutorialSeen = () => { if (TUT) TUT.markTutorialSeen(); };
 import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild } from './update.js';
-import { buildGive, buildQuickGive } from './devgive.js';
-import { DEV_SECTIONS } from './devcats.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
@@ -996,10 +992,7 @@ function setupWorld(seed, here = false) {
   S.light ||= new Lighting();
   S._hw = null;
   S.buildings = new BuildingLayer(S.map, S.ground);
-  S.spec = createSpectator({
-    map: S.map,
-    players: () => (S.plist && S.plist.l) || [], mobile: input.device === 'touch',
-  });
+  S.spec = newSpectator(S.map);   // (the free camera: made the first time it's used - client/spectator.js loads then)
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
   S.router = createRouter(S.map);   // the GPS route to your waypoint (client/route.js)
@@ -1061,7 +1054,7 @@ function swapWorld(m) {
   S.wx.map = m; S.wx.sites.clear(); S.wx.vents.clear();
   S.poleAt = null; S._hw = null;
   S.buildings = new BuildingLayer(m, S.ground);
-  if (!(S.spec && S.spec.on)) S.spec = createSpectator({ map: m, players: () => (S.plist && S.plist.l) || [], mobile: input.device === 'touch' });
+  if (!(S.spec && S.spec.on)) S.spec = newSpectator(m);
   S.hud.setMap(m);
   S.router = createRouter(m);
   if (S.art2 && S.art2.setMap) S.art2.setMap(m); else startArt2(m);
@@ -1217,30 +1210,6 @@ function startPlaying() {
   if (S.looks && !S.looks.picked && topOverlay() !== 'creator') openCreator('start');
 }
 
-// The debug menu: give weapons first, teleport anywhere second, the free camera third, then a section per
-// feature (client/devcats.js: weather and time, me, the law, vehicles, trains, jobs, crime, events, shops, homes,
-// nature) that spawns the thing or takes you to the nearest place it happens - one section open at a time, so
-// it stays short on a pad. Everyone online sits in the right-hand column (left / right on a pad jumps across).
-// Every button presses in, clicks, and pops a note saying what it did.
-function devPress(b, label, run) {
-  b.onclick = () => {
-    b.classList.remove('pressed'); void b.offsetWidth; b.classList.add('pressed');
-    clearTimeout(b._pt); b._pt = setTimeout(() => b.classList.remove('pressed'), 380);   // (lit while it presses in, then back)
-    if (input.device !== 'gamepad') b.blur();
-    sfx('click', 0.8);
-    S.hud.toast(`🛠 ${label.replace(/^[^A-Za-z0-9+$]+/, '')}`, 'info');
-    run();
-  };
-}
-// commands that only change your own screen
-function devLocal(c, extra) {
-  if (c === '@bolt') { if (S.wx) S.wx.strike((extra && extra.kind) || 'strike'); }   // (a strike near you, a bolt in the distance, a flash in the clouds)
-  else if (c === '@storm') { if (S.wx) S.wx.stormForce = extra ? extra.mood : null; }   // (while it rains: render/lightning.js stormSpell's moods)
-  else if (c === '@fog') S.fogForce = extra ? { k: extra.k, spread: extra.spread } : null;
-  else if (c === '@bio') S.bioForce = extra ? [extra.k, 0.5] : null;   // (the sea's sparkle whatever the night: art2 host.js)
-  else if (c === '@wardrobe') { closeOverlay('dev'); openCreator('dev'); }   // (the debug wardrobe: client/creator.js)
-  else if (c === '@homes' && S.map) import('./devhomes.js').then((m) => m.showHomes(S.map, (id) => { send({ t: 'dev', c: 'home', op: 'go', id }); closeOverlay('dev'); }));   // (every home: client/devhomes.js)
-}
 // Open the debug menu straight away, switching Dev Debug Mode on first if it's off (no password while the team
 // and friends are testing; if the server asks for one after all, its prompt opens).
 function openDebug() {
@@ -1252,98 +1221,18 @@ function openDebug() {
 }
 // the debug menu's sound line (client/audio.js soundStatus): on, off, loading, asleep or unavailable, and why
 setInterval(() => { const el = document.getElementById('dev-sound'); if (el && el.offsetParent) el.textContent = soundStatus(); }, 1000);
+// The debug menu: built by client/devmenu.js (with its sections, the give panels and the teleport map), loaded the
+// first time it's on - the page itself only shows or hides its button.
+let devMenu = null, devMenuP = null;
 function setupDev() {
-  const box = $('dev');
   const on = S.dev || S.devMode;
   $('b-dev').classList.toggle('on', !!on);
   $('b-dev').title = on ? 'Debug menu' : 'Debug menu (switches Dev Debug Mode on)';
-  if (!on) { box.classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
-  box.innerHTML = `<div class="dev-head"><b>🐞 ${S.devMode ? 'DEBUG · your progress is kept' : 'DEBUG · PLAYTEST CHEATS'}</b><button class="dev-x" title="Close">✕</button></div><div id="dev-sound" class="dev-sound">${soundStatus()}</div><div class="dev-cols"><div class="dev-cmds"></div><div id="dev-players"></div></div>`;
-  box.querySelector('.dev-x').onclick = () => closeOverlay('dev');
-  const cmds = box.querySelector('.dev-cmds');
-  const add = (label, cls, run) => { const b = document.createElement('button'); b.textContent = label; if (cls) b.className = cls; if (run) devPress(b, label, run); cmds.appendChild(b); return b; };
-  // 1. weapons and tools, one press; anything else to anyone from the give panel under it
-  add('🔫 Give every weapon + tools', 'dev-top', () => send({ t: 'dev', c: 'guns' }));
-  // ...or just one: pick a weapon or tool and who gets it (you, or anyone online)
-  const qgBox = document.createElement('div'); qgBox.id = 'dev-qg'; cmds.appendChild(qgBox);
-  S.devQuickGive = buildQuickGive(qgBox, { send, press: devPress, players: () => (S.plist && S.plist.l) || [] });
-  const giveBtn = add('🎁 Give anything to me or a player…', 'dev-give-toggle');
-  const giveBox = document.createElement('div'); giveBox.id = 'dev-give'; giveBox.className = 'hidden'; cmds.appendChild(giveBox);
-  S.devGive = buildGive(giveBox, { send, press: devPress, players: () => (S.plist && S.plist.l) || [] });
-  giveBtn.onclick = () => {
-    const open = giveBox.classList.toggle('hidden') === false;
-    giveBtn.textContent = open ? '🎁 Give ▲ (hide)' : '🎁 Give anything to me or a player…';
-    if (open) { requestPlayers(); S.devGive.refreshTargets(); }
-  };
-  // 2. teleport anywhere: a map of every district, station and landmark (built the first time it's opened)
-  const tpBtn = add('📍 Teleport anywhere…', 'dev-tp-toggle');
-  const tpBox = document.createElement('div'); tpBox.id = 'dev-tp'; tpBox.className = 'hidden'; cmds.appendChild(tpBox);
-  tpBtn.onclick = () => {
-    const open = tpBox.classList.toggle('hidden') === false;
-    tpBtn.textContent = open ? '📍 Teleport ▲ (hide)' : '📍 Teleport anywhere…';
-    if (open && !tpBox.childElementCount && S.map) buildTeleport(tpBox, S.map, (pl) => {
-      sfx('click', 0.8);
-      send({ t: 'dev', c: 'tp', x: Math.round(pl.x), y: Math.round(pl.y) });
-      S.hud.toast(`🛠 Teleported to ${pl.name}`, 'info');
-      closeOverlay('dev');
-    });
-  };
-  // 3. the free camera
-  add('🎥 Spectate (free camera)', 'dev-spec', () => enterSpectate());
-  // then a section per feature, one open at a time
-  const bodies = [];
-  for (const sec of DEV_SECTIONS) {
-    const head = add(`${sec.title}`, 'dev-sec');
-    const body = document.createElement('div'); body.className = 'dev-sec-body hidden'; cmds.appendChild(body);
-    bodies.push([sec.id, head, body]);
-    for (const [label, c, extra] of sec.items) {
-      const b = document.createElement('button'); b.textContent = label;
-      if (c === 'god') { b.id = 'dev-god'; b.classList.toggle('on', !!(S.me && S.me.god)); }
-      const goes = c === 'near' || c === 'train' || c === 'home';
-      devPress(b, label, () => { if (c[0] === '@') devLocal(c, extra); else send({ t: 'dev', c, ...(extra || {}) }); if (goes) closeOverlay('dev'); });
-      body.appendChild(b);
-    }
-    head.onclick = () => {
-      const open = body.classList.contains('hidden');
-      for (const [, h, bd] of bodies) { bd.classList.add('hidden'); h.classList.remove('open'); }
-      if (open) { body.classList.remove('hidden'); head.classList.add('open'); }
-      S.devOpenSec = open ? sec.id : null;
-      sfx('click', 0.5);
-      if (input.device !== 'gamepad') head.blur();
-    };
-    if (S.devOpenSec === sec.id) { body.classList.remove('hidden'); head.classList.add('open'); }
-  }
-  if (S.devMode) add('⏏ Leave dev mode (keep my progress)', 'dev-leave', () => { send({ t: 'devmode', leave: true }); closeOverlay('dev'); });
-  // erase this character and go through the first-time flow again (task #413: press twice; also in Settings)
-  const fb = add('⟲ Start fresh: erase my character…', 'dev-fresh'), fm = document.createElement('p');
-  fm.className = 'dev-none'; cmds.appendChild(fm);
-  fb.onclick = () => freshPress(fb, (t) => { fm.textContent = t; });
-  renderDevPlayers();
-  box.classList.add('hidden');
-  $('dev-btn').classList.remove('hidden');
-  if (S.playing && S.dev) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Tap 🐞 (or press `) for the cheats panel.' : 'Dev mode: tap 🐞 or press ` (backtick) for the playtest panel.', 'info');
+  if (!on) { $('dev').classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
+  devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });
+  devMenuP.then(() => { if (devMenu && (S.dev || S.devMode)) devMenu.setupDev(); });
 }
-function renderDevPlayers() {
-  if (S.devGive) S.devGive.refreshTargets(); // the give menu's "give to" list
-  if (S.devQuickGive) S.devQuickGive.refreshTargets();
-  const el = $('dev-players');
-  if (!el) return;
-  const all = (S.plist && S.plist.l) || [];
-  const ps = all.filter((q) => !q.me);
-  el.innerHTML = `<b>PLAYERS ONLINE (${all.length || 1})</b>` + (ps.length ? '' : '<p class="dev-none">Just you right now.</p>');
-  for (const q of ps) {
-    const row = document.createElement('div'); row.className = 'dev-pl';
-    row.innerHTML = `<span>${esc(q.n)}${q.dm ? ' <i>dev</i>' : ''}${q.god ? ' 🛡' : ''}<small>${esc(q.d || '')}${q.dead ? ' · down' : ''}</small></span>`;
-    const acts = [['goto', '📍 Go to'], ['bring', '🧲 Bring'], ['gunsp', '🔫 Weapons + tools'], ['healp', '❤ Heal'], ['godp', q.god ? '🛡 Invincible: ON' : '🛡 Invincible: off'], ...(q.dm ? [] : [['grant', '🛠 Give dev']])];
-    for (const [c, label] of acts) {
-      const b = document.createElement('button'); b.textContent = label;
-      if (c === 'godp' && q.god) b.classList.add('on');
-      devPress(b, `${label} - ${q.n}`, () => { send({ t: 'dev', c, pid: q.id }); if (c === 'goto' || c === 'bring') closeOverlay('dev'); setTimeout(requestPlayers, 300); });
-      row.appendChild(b);
-    }
-    el.appendChild(row);
-  }
-}
+function renderDevPlayers() { if (devMenu) devMenu.renderDevPlayers(); }
 // Players online (options menu). Devs get teleport / fetch / grant buttons on each row.
 function renderPlayers() {
   const el = $('pl-list');
@@ -1520,7 +1409,11 @@ function specArtMinZoom() {
   for (const z of [0.4, 0.5, 0.6, 0.75, 0.9, 1.1]) if ((W / z / 768 + 2) * (H / z / 768 + 2) <= (LOW_MEM ? 16 : 28)) return z;
   return 1.3;
 }
+// the free camera's code (client/spectator.js) loads the first time it's used: a dev's tool, not the page's
+let SPECM = null, specP = null;
+function newSpectator(m) { return SPECM && m ? SPECM.createSpectator({ map: m, players: () => (S.plist && S.plist.l) || [], mobile: input.device === 'touch' }) : null; }
 function enterSpectate() {
+  if (!S.spec && S.map && S.playing) { (specP ||= import('./spectator.js').then((m) => { SPECM = m; }).catch((e) => { specP = null; console.warn('[spectator]', e); })).then(() => { if (SPECM && !S.spec && S.map) { S.spec = newSpectator(S.map); enterSpectate(); } }); return; }
   if (!S.spec || !S.playing) return;
   if (topOverlay()) closeOverlay(topOverlay());
   if (S.bigmap) toggleMap(false);
@@ -1609,10 +1502,10 @@ function buildSpecPanel() {
   el.innerHTML = `<button class="sp-mini">🎥 Spectator ▾</button><h2>🎥 SPECTATOR</h2><div class="sp-read"></div>
     <div class="sp-layers"></div>
     <div class="sp-btns"><button class="sp-me">⌖ Find me</button><button class="sp-png">📸 Save PNG</button><button class="sp-hi">🖼 Hi-res PNG</button><button class="sp-hide">▴ Hide panel</button><button class="sp-exit" style="grid-column: span 2">✕ Exit spectator</button></div>
-    <div class="sp-legend hidden"><b>Schematic key</b><div class="sp-key">${SCHEMATIC_KEY.map(([c, n]) => `<span><i style="background:${c}"></i>${n}</span>`).join('')}</div><p class="sp-hint">Black outlines: buildings. White dashes: painted lots (one concept image each).</p></div>
+    <div class="sp-legend hidden"><b>Schematic key</b><div class="sp-key">${SPECM.SCHEMATIC_KEY.map(([c, n]) => `<span><i style="background:${c}"></i>${n}</span>`).join('')}</div><p class="sp-hint">Black outlines: buildings. White dashes: painted lots (one concept image each).</p></div>
     <p class="sp-hint">${touch ? 'Drag to fly, pinch to zoom.' : pad ? 'Left stick flies, RT / LT zoom, X saves a PNG, Y hides this panel, B exits.' : 'WASD / arrows fly (Shift faster), E / Q or wheel zoom, drag to pan. C finds you, P saves a PNG, H hides this panel, Esc exits.'} The file name carries the tile coordinates on screen, so a drawing over it can be matched back to the map.</p>`;
   const lay = el.querySelector('.sp-layers');
-  for (const [id, label] of SPEC_LAYERS) {
+  for (const [id, label] of SPECM.SPEC_LAYERS) {
     const l = document.createElement('label');
     l.innerHTML = `<input type="checkbox" data-l="${id}"> ${label}`;
     l.querySelector('input').onchange = (e) => { S.spec.setLayer(id, e.target.checked); syncSpecPanel(); };

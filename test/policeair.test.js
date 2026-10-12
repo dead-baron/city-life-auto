@@ -151,3 +151,24 @@ test('the dev command sends it after you', async () => {
   const v = w.get(u.vid);
   assert.ok(Math.hypot(v.x - p.ped.x, v.y - p.ped.y) < 400 && v.alt >= 300, 'already in the air close by (near)');
 });
+
+test('a suspect fleeing in a helicopter at its height: it keeps its height clear of theirs, and never flies into them (H69)', () => {
+  const { p } = joinPlayer(w);
+  const x = pad.x + 2600, y = pad.y + 900;
+  p.ped.x = x; p.ped.y = y; w.place(p.ped);
+  const mine = w.spawnVehicle('heli', x, y, 0, { npcOwned: false });
+  mine.alt = POLICE_AIR.alt; mine.spool = 1; mine.seats[0] = p.ped.id; p.ped.vehId = mine.id; p.ped.seat = 0;
+  stars(p, POLICE_AIR.stars);
+  let u = null, v = null, closest = Infinity;
+  go(45, () => {
+    mine.alt = POLICE_AIR.alt; mine.vx = 0; mine.vy = 0; mine.x = x; mine.y = y;   // (hovering where they are)
+    u ||= w.policeAir && w.policeAir.get(p.pid); v = u && w.get(u.vid);
+    if (v && v.alt > FLY.HIGH && Math.hypot(v.x - x, v.y - y) < 260) closest = Math.min(closest, Math.abs(v.alt - mine.alt));
+  });
+  assert.ok(u && v, 'the air unit is up');
+  assert.ok(!mine.wreckAt && !v.wreckAt, 'nobody came down');
+  assert.equal(u.mode, 'chase', 'still on them');
+  assert.ok(Math.abs(v.alt - mine.alt) >= POLICE_AIR.sep - 30, `its height clear of theirs (${Math.round(v.alt)} vs ${Math.round(mine.alt)})`);
+  assert.ok(closest > 50, `close by, never within reach of their height (${closest === Infinity ? 'never close' : Math.round(closest)})`);
+  p.ped.vehId = 0; mine.seats[0] = 0; w.remove(mine);
+});

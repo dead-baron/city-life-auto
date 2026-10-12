@@ -36,7 +36,7 @@ export function defaultProfile(pid) {
 }
 
 export class MemoryStore {
-  constructor() { this.profiles = new Map(); this.dirty = false; }
+  constructor() { this.profiles = new Map(); this.kept = {}; this.dirty = false; }
   get(pid) { return this.profiles.get(pid) || null; }
   create(pid) { const p = defaultProfile(pid); this.profiles.set(pid, p); return p; }
   remove(pid) { this.dirty = true; return this.profiles.delete(pid); }   // (Start fresh: players.js wipeAccount)
@@ -58,4 +58,5 @@ export const store = {
   flushSync: () => impl.flushSync(),
   all: () => impl.all(),
   get count() { return impl.count; },
+  get kept() { return (impl.kept ||= {}); },   // the world's own state kept with the profiles across a restart (the farms' fields)
 };

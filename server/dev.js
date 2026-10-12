@@ -378,6 +378,7 @@ export function command(world, p, c, msg) {
     case 'samaritan': prof.samaritan += 50; world.notify(p, '[dev] +50 Samaritan', 'info'); break;
     case 'car': {
       if (!ped) break;
+      if (msg.in && (ped.home || ped.hidden)) { world.notify(p, '[dev] Step outside first.', 'warn'); break; }   // (from inside a home it seated the body in there at the controls out here - H69)
       const model = VEHICLES[msg.m] ? msg.m : 'pickup';
       let sp = clearSpot(world, ped, VEHICLES[model]);
       if ((ped.lz || 0) > 0.5) { // up on the deck: somewhere on the deck beside you

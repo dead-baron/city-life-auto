@@ -254,9 +254,10 @@ body.in-veh #tbtns .dive .foot { display: none; } body.in-veh #tbtns .dive .veh 
 body:not(.in-veh) #tbtns .horn, body:not(.carrying) #tbtns .throw, body:not(.armed) #tbtns .reload { display: none; }
 /* at the controls of an aircraft (shared/flight.js): climb and descend */
 #tbtns .climb, #tbtns .descend { display: none; width: 66px; height: 54px; border-radius: 27px; font-size: 20px; background: rgba(40,120,200,.7); }
-#tbtns .climb { right: calc(max(22px, env(safe-area-inset-right)) + 150px); bottom: 74px; }
+#tbtns .climb { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: 74px; }   /* (over the descend button, clear of FIRE: it sat under FIRE's lower half - H69; the horn's place, and the horn's no use up there) */
 #tbtns .descend { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: 10px; }
 body.in-air #tbtns .climb, body.in-air #tbtns .descend { display: block; }
+body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
 
 /* touch HUD arrangement: radar moves top-left (the left thumb owns the bottom-left) */
 .touch #net, .touch #w-carry { display: none; }

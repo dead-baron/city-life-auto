@@ -7,7 +7,7 @@
 // stands taller than they fly.
 import { K, TILE } from '../../shared/constants.js';
 import { airfields, FLY, tileTop } from '../../shared/flight.js';
-import { AIR_TRAFFIC } from '../../shared/rules.js';
+import { AIR_TRAFFIC, POLICE_AIR } from '../../shared/rules.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { inAnyView } from '../view.js';
 import { steer } from './policeair.js';
@@ -132,6 +132,17 @@ function done(world, A, f, v) {
   world.remove(v);
 }
 
+// the news helicopter's height: clear of a police helicopter near it by POLICE_AIR.sep - over a chase downtown the roofs
+// pushed both up to the same height (steer: what stands taller round it, plus its clearance), and the police one's circle
+// (its middle south of the suspect by its height) crossed the news one's: they flew into each other and both came down
+// (H69: policeair.test.js failed one run in three on it)
+function clearOfPolice(world, v, want) {
+  if (world.policeAir) for (const u of world.policeAir.values()) {
+    const pv = world.get(u.vid);
+    if (pv && !pv.wreckAt && !pv.removed && Math.hypot(pv.x - v.x, pv.y - v.y) < 1200) want = Math.max(want, (pv.alt || 0) + POLICE_AIR.sep);
+  }
+  return want;
+}
 function run(world, A, f, dt) {
   const v = world.get(f.vid), now = world.time;
   if (!v || v.removed || v.wreckAt || v.dead) { A.flights.delete(f.vid); return; }   // (shot down, crashed: what's left is the wreck's)
@@ -142,8 +153,8 @@ function run(world, A, f, dt) {
     const p = world.players.get(f.pid), t = p && p.ped && !p.ped.dead ? p.ped : null;
     if (t && (p.wanted | 0) > 0 && f.mode === 'circle') { f.x = t.x; f.y = t.y; }
     if (f.mode === 'circle' && (now - f.since > AIR_TRAFFIC.newsS || !t || (p.wanted | 0) < 1)) { f.mode = 'leave'; f.lx = v.x + (v.x - f.x) * 6; f.ly = v.y + (v.y - f.y) * 6; }
-    if (f.mode === 'circle') { f.th += dt * 0.22; steer(world, v, f.x + Math.cos(f.th) * AIR_TRAFFIC.newsR, f.y + Math.sin(f.th) * AIR_TRAFFIC.newsR, v.def.max * 0.7, f.x, f.y, AIR_TRAFFIC.newsAlt); }
-    else { steer(world, v, f.lx, f.ly, v.def.max * 0.9, f.lx, f.ly, AIR_TRAFFIC.newsAlt + 100); if (now - f.since > AIR_TRAFFIC.newsS + 12 && !inAnyView(world, v.x, v.y, 300)) done(world, A, f, v); }
+    if (f.mode === 'circle') { f.th += dt * 0.22; steer(world, v, f.x + Math.cos(f.th) * AIR_TRAFFIC.newsR, f.y + Math.sin(f.th) * AIR_TRAFFIC.newsR, v.def.max * 0.7, f.x, f.y, clearOfPolice(world, v, AIR_TRAFFIC.newsAlt)); }
+    else { steer(world, v, f.lx, f.ly, v.def.max * 0.9, f.lx, f.ly, clearOfPolice(world, v, AIR_TRAFFIC.newsAlt + 100)); if (now - f.since > AIR_TRAFFIC.newsS + 12 && !inAnyView(world, v.x, v.y, 300)) done(world, A, f, v); }
     if (now - f.since > AIR_TRAFFIC.newsS + 120 && !inAnyView(world, v.x, v.y, 300)) done(world, A, f, v);
     return;
   }

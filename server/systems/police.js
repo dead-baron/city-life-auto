@@ -390,8 +390,11 @@ function runNpcUnit(world, v, crew, dt) {
 // stopped (crashed, boxed in, wrecked), the crew out on foot: the driver dragged out of the car, tackled and cuffed
 // (law.arrest: the cells). It gives up when the car has been out of sight a while (it got away) or after CAR_CHASE_S.
 const CAR_CHASE_S = 150, CAR_LOST_S = 18, CAR_SEE_PX = 820;
-let carArrest = () => {};   // (streetlife.js: told when one of its drivers is taken in - law.arrest takes them off the street)
-export function setCarArrest(fn) { carArrest = fn; }
+// (streetlife.js: told when one of its drivers is taken in - law.arrest takes them off the street. Kept on the setter
+// function, not a let: streetlife sets it as it loads, which can be before this module's lets are - the import cycle
+// police.js -> ... -> streetlife.js threw when police.js was loaded first (H69; homes.js's menu builder the same way)
+export function setCarArrest(fn) { setCarArrest.fn = fn; }
+const carArrest = (world, k, v) => { if (setCarArrest.fn) setCarArrest.fn(world, k, v); };
 export function carUnitAt(world, x, y, a, target) {
   const v = world.spawnVehicle('police', x, y, a, {});
   v.despawnable = false; v.sirenOn = true;

@@ -40,7 +40,28 @@ export function fieldsOf(world) {
     out.push({ i: fi, f, v, n, len, rows });
   });
   world.fields = out;
+  restore(out);
   return out;
+}
+// The fields are kept with the profiles (store.kept.fields) so a restart doesn't put every row back to its first state
+// (H69): each row's state, growth and the stretches of its job done, under the fields' layout - a changed world
+// (other fields, other rows) starts them afresh.
+const layoutOf = (F) => F.map((fd) => `${fd.f.x},${fd.f.y},${fd.f.w},${fd.f.h},${fd.n}`).join(';');
+function restore(F) {
+  const k = store.kept.fields;
+  if (!k || k.sig !== layoutOf(F) || !Array.isArray(k.rows)) return;
+  F.forEach((fd, i) => (k.rows[i] || []).forEach((q, r) => {
+    const row = fd.rows[r];
+    if (!row || !Array.isArray(q)) return;
+    const [s, g, m] = q;
+    if (s >= ROW.STUBBLE && s <= ROW.RIPE) { row.s = s; row.g = Math.max(0, Math.min(1, (g | 0) / 1000)); row.m = (m | 0) & row.ok; }
+  }));
+}
+export function keep(world) {
+  const F = world.fields;
+  if (!F || !F.length) return;
+  store.kept.fields = { sig: layoutOf(F), rows: F.map((fd) => fd.rows.map((row) => [row.s, Math.round(row.g * 1000), row.m])) };
+  store.touch();
 }
 function segCentre(f, v, r, k) {
   const a = (r + 0.5) * FARM.rowW, b = ((k + 0.5) / FARM.segs) * (v ? f.h : f.w);
@@ -75,6 +96,7 @@ export function update(world) {
     const dt = world.time - (world.fieldsAt ?? world.time);
     world.fieldsAt = world.time;
     if (dt > 0) for (const fd of F) for (const row of fd.rows) if (row.s === ROW.SOWN) { row.g = Math.min(1, row.g + dt / (FARM.growDays * DAY)); if (row.g >= 1) { row.s = ROW.RIPE; row.g = 0; row.m = 0; fd.dirty = true; } }
+    if (world.tick % 1200 === 13) keep(world);   // (kept a minute at a time: the growing, the stretches worked)
   }
   for (const p of world.players.values()) {
     const ped = p.ped;
@@ -125,7 +147,7 @@ function finishRow(world, p, F, r, job) {
     } else world.notify(p, `Row ${VERB[job]}: +$${pay} (${j.done}/${j.rows}).`, 'good');
   } else world.notify(p, `Row ${VERB[job]}. (Take the farm-work contract at the co-op to be paid by the row.)`, 'info');
   p.meDirty = true;
-  store.touch();
+  keep(world);
   return job;
 }
 

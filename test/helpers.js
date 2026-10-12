@@ -14,6 +14,7 @@ const players = await import('../server/systems/players.js');
 let cachedMap = null;
 export function makeWorld(opts = {}) {
   cachedMap ||= generateCity(1337);
+  if (!opts.keepKept) for (const k of Object.keys(store.kept)) delete store.kept[k];   // (a new world is a new server: nothing kept from the last one - opts.keepKept: a restart)
   return new World(cachedMap, { npcBudget: 0, throwErrors: true, ...opts });
 }
 
