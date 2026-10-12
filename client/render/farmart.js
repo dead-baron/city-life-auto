@@ -7,7 +7,7 @@
 // with it, so the rows' live state goes on top of it near you). Small and cheap: a plot is one sprite (its soil and its
 // three plants at their stage), a row a sprite per stretch of it (its look: stubble, ploughed, sown, growing, ripe);
 // made once each, at the art's pixel (2 world px).
-import { PAINTS } from '../../shared/vehicles.js';
+import { PAINTS, VEHICLE_BY_INDEX } from '../../shared/vehicles.js';
 
 const P = 2;   // world px per art pixel
 const hsh = (x, y, s) => { let h = (x * 374761393 + y * 668265263 + s * 974711) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
@@ -135,10 +135,29 @@ export function balePixels(set) {
 }
 const baleAt = (r, k) => hsh(r, k, 13) < 0.3;
 
+// The plough behind the tractor (the owner's FA4: a red frame across the back and its row of steel discs on the
+// drawbar): art px, facing +x (the drawbar toward the tractor) - art v2 draws it as a ground decal behind each tractor
+// (drawV2), the classic view in drawTractor
+export const PLOUGH_A = 14, PLOUGH_B = 27;
+export function ploughPixels(set) {
+  for (let y = 11; y <= 15; y++) for (let x = 7; x < PLOUGH_A; x++) if (y === 12 || y === 14 || x === PLOUGH_A - 1) set(x, y, [56, 56, 60]);   // the drawbar
+  for (let y = 1; y < PLOUGH_B - 1; y++) { set(6, y, [168, 44, 34]); set(7, y, [120, 30, 24]); }                                                 // the frame
+  for (let k = 0; k < 5; k++) {
+    const cy = 3 + k * 5, cx = 3 + (k & 1);
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const d = dx * dx + dy * dy; if (d <= 5) set(cx + dx, cy + dy, d >= 4 ? [70, 70, 74] : dx + dy < 0 ? [214, 214, 218] : [168, 168, 174]); }   // a disc
+    set(cx + 2, cy, [56, 56, 60]); set(cx + 3, cy, [56, 56, 60]);
+  }
+}
+
 // The tractor in the classic view (art v2 has its own model; the classic atlas has none): seen from above, facing +x -
 // the big rear wheels under the cab at the back, the small front ones by the hood, the exhaust stack, the cab's roof.
 export function drawTractor(g, L, W, paint, wreck) {
   const body = wreck ? '#3b302b' : paint, dark = '#1b1a18';
+  if (!wreck) {   // the plough behind (FA4)
+    g.fillStyle = '#38383c'; g.fillRect(-L / 2 - 14, -3, 16, 6);
+    g.fillStyle = '#a82c22'; g.fillRect(-L / 2 - 18, -W / 2 + 2, 4, W - 4);
+    for (let k = 0; k < 5; k++) { g.fillStyle = '#46464a'; g.beginPath(); g.arc(-L / 2 - 24 - (k & 1) * 2, -W / 2 + 6 + k * (W - 12) / 4, 5, 0, 6.283); g.fill(); g.fillStyle = '#c8c8cc'; g.beginPath(); g.arc(-L / 2 - 25 - (k & 1) * 2, -W / 2 + 5 + k * (W - 12) / 4, 3, 0, 6.283); g.fill(); }
+  }
   g.fillStyle = dark;
   g.fillRect(-L / 2 + 2, -W / 2, 32, 13); g.fillRect(-L / 2 + 2, W / 2 - 13, 32, 13);          // the rear tyres
   g.fillRect(L / 2 - 24, -W / 2 + 5, 17, 9); g.fillRect(L / 2 - 24, W / 2 - 14, 17, 9);       // the front tyres
@@ -182,9 +201,10 @@ export function drawCombine(g, L, W, paint, wreck) {
   g.fillRect(L / 2 - 30, -12, 3, 24);                                                            // its windscreen
 }
 
+const COMBINE_GREEN = '#3f9a2c';
 export class FarmArt {
   constructor(S) { this.S = S; this.cv = new Map(); }
-  drawTractor(g, def, p, wreck) { (def.id === 'combine' ? drawCombine : drawTractor)(g, def.L, def.W, PAINTS[p % PAINTS.length] || '#c8262b', wreck); }
+  drawTractor(g, def, p, wreck) { const c = def.id === 'combine'; (c ? drawCombine : drawTractor)(g, def.L, def.W, c && !p ? COMBINE_GREEN : PAINTS[p % PAINTS.length] || '#c8262b', wreck); }   // (the combine green: FA4)
   // ---- the classic view: canvases made once, drawn in the world pass ----
   _canvas(key, w, h, fill) {
     let c = this.cv.get(key);
@@ -254,6 +274,13 @@ export class FarmArt {
           }
         }
       }
+    }
+    for (const v of F.vehs || []) {   // the plough behind each tractor (FA4)
+      const def = v.d && VEHICLE_BY_INDEX[v.d.m];
+      if (!def || def.id !== 'tractor' || (v.flags & 16)) continue;   // (not a wreck: VF.WRECK)
+      const key = host._conv('farm|plough', () => { const G = gbuf(PLOUGH_A, PLOUGH_B, PLOUGH_A >> 1, PLOUGH_B >> 1); G.ap = P; ploughPixels((px, py, rgb) => put(G, px, py, rgb, 0, N, GROUND)); return G; }, true);
+      const a = v.ra || 0, d = def.L / 2 + PLOUGH_A;
+      if (key) E.drawDecal(key, v.rx - Math.cos(a) * d, v.ry - Math.sin(a) * d, a, 1, 0);
     }
     for (const q of S.garden || []) {
       const [x, y, c, st, fl] = q;

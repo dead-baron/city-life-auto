@@ -743,7 +743,7 @@ function onEvent(ev) {
     }
     case 'crash': fx.sparks(ev.x, ev.y, 4 + Math.round(ev.p * 8)); sfx('crash', distVol(ev.x, ev.y) * (0.4 + ev.p)); if (distVol(ev.x, ev.y) > 0.8) S.cam.shake = Math.max(S.cam.shake, ev.p * 6); break;
     case 'explode': S.boom.explode(ev, now, distVol(ev.x, ev.y)); sfx('explode', distVol(ev.x, ev.y)); break;   // (render/boom.js: the layered blast from its seed)
-    case 'tankfire': { for (let k = 0; k < 7; k++) fx.fire(ev.x + Math.cos(ev.a) * k * 4, ev.y + Math.sin(ev.a) * k * 4); for (let k = 0; k < 4; k++) fx.smoke(ev.x, ev.y, false); fx.ring(ev.x, ev.y, 26, 'rgba(255,210,120,'); break; }   // (the tank's cannon: H58)
+    case 'tankfire': { for (let k = 0; k < 7; k++) fx.fire(ev.x + Math.cos(ev.a) * k * 4, ev.y + Math.sin(ev.a) * k * 4); for (let k = 0; k < 4; k++) fx.smoke(ev.x, ev.y, false); fx.ring(ev.x, ev.y, 26, 'rgba(255,210,120,'); S.flashes.push({ x: ev.x, y: ev.y, t: 0.12, a: ev.a, r: 300 }); fx.tracer(ev.x, ev.y, ev.x + Math.cos(ev.a) * 90, ev.y + Math.sin(ev.a) * 90); break; }   // (the tank's cannon: H58; the muzzle flash lights the ground and the shell streaks off - MV1)
     case 'wreckland': S.boom.land(ev, now); break;   // a wreck blown up into the air comes down
     case 'vcut': case 'vpart': case 'arrowdrop': S.boom.vdmg(ev, now); break;   // (a vehicle cut in two, a part off it: render/vehdmg.js)
     case 'runover': {   // under a car (server carhits.js): lying face down or on the back a few seconds; the car jolts
@@ -3837,6 +3837,11 @@ function vehVisual(v, now, dt) {
       S.fx.decal(4, x, y, v.ra, 1, '#111', S.loopClock, 0.5);
     }
     if (Math.random() < 0.4) S.fx.smoke(v.rx - fwdX * def.L * 0.4, v.ry - fwdY * def.L * 0.4, false);
+  }
+  if (def.tracks && spd > 8 && !(f & VF.WRECK) && (v.treadD = (v.treadD || 0) + spd * dt) > 7) {   // the tank's tread marks (MV1): a cleat across each track, and the diesel's exhaust
+    v.treadD = 0;
+    for (const o of [-0.44, -0.34, 0.34, 0.44]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.4, o * def.W); S.fx.decal(4, x, y, v.ra + 1.571, 1, '#2b251d', S.loopClock, 0.4); }
+    if (Math.random() < 0.3) S.fx.smoke(v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, true);
   }
   if (def.kind === 'boat' && v.buf.length > 1) {
     const b = v.buf; const sp = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y);
