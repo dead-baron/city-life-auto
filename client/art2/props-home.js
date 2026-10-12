@@ -308,4 +308,26 @@ export function workbench(w = 64, d = 32, tier = 1) {
 
 // every piece of a plan by its letter (shared/homelayout.js), and whether it faces the room or its own way; the shop's
 // pieces by theirs (shared/homedecor.js PIECES: b bedside table, l floor lamp, v wall TV, a painting, w washer, k workbench)
-export const MAKERS = { B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench };
+// ---- an apartment block's lobby (H71; HO5) ----------------------------------------------------------------------------
+// the mailboxes: a bank of little brass-fronted boxes on the back wall, one for each flat, a slot in each
+export function mailboxes(w = 64, d = 32, tier = 1) {
+  const m = new Vox(w, d, 44);
+  const cab = m.mat({ ramp: R(tier >= 2 ? '#6a4a2e' : '#5a6068'), k: 3 }), door = m.mat({ ramp: R(tier >= 2 ? '#c8a050' : '#a8aeb4'), k: 3, shade: (x, y, z) => ((Math.round(z) % 9 < 1 || Math.round(x) % 10 < 1) ? -1 : 0) });
+  const slot = m.mat({ ramp: R('#22262c'), k: 2 });
+  m.box(2, 4, 8, w - 2, 14, 42, cab);
+  m.box(4, 14, 10, w - 4, 15, 40, door);
+  for (let z = 14; z < 40; z += 9) for (let x = 6; x < w - 8; x += 10) m.box(x, 15, z, x + 6, 16, z + 1, slot);
+  return m;
+}
+// the stairs up: a flight of steps climbing away to the back wall, a handrail along its open side
+export function stairs(w = 64, d = 64, tier = 1) {
+  const P = L4(tier), m = new Vox(w, d, 58);
+  const tread = m.mat({ ramp: R(tier >= 2 ? '#8a3a32' : '#8a8680'), k: 3, shade: (x, y) => (Math.round(y) % 8 < 1 ? -0.9 : 0) }), side = m.mat({ ramp: R(P.dark), k: 3 }), rail = m.mat({ ramp: R(P.wood), k: 3 });
+  for (let i = 0; i < 8; i++) m.box(0, d - (i + 1) * 8, 0, w - 6, d - i * 8, (i + 1) * 6, tread);
+  m.box(w - 6, 0, 0, w - 3, d, 10, side);
+  for (let i = 0; i < 8; i++) m.box(w - 5, d - (i + 1) * 8, 10, w - 3, d - (i + 1) * 8 + 2, (i + 1) * 6 + 12, rail);
+  m.box(w - 6, 0, 52, w - 2, d, 55, rail);
+  return m;
+}
+
+export const MAKERS = { M: mailboxes, Z: stairs, B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench };

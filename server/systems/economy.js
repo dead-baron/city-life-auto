@@ -25,6 +25,7 @@ import * as farming from './farming.js';
 
 import * as homeinside from './homeinside.js';
 import * as mortgage from './mortgage.js';
+import * as mail from './mail.js';
 import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
 import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
@@ -486,9 +487,12 @@ function execute(world, p, poi, opt) {
       const k = parts[1], P = DECOR_PIECES[k];
       if (!P) return 'Not sold here.';
       if (!(prof.homes || []).length) return 'You need a home to put it in - buy one first.';
-      if (!pay(p, decorPrice(k))) return 'Not enough money.';
+      const cost = prof.coupon ? Math.round(decorPrice(k) * (1 - prof.coupon / 100)) : decorPrice(k);   // (H71: a coupon from the mail)
+      if (!pay(p, cost)) return 'Not enough money.';
+      if (prof.coupon) { world.notify(p, `Your coupon from the mail: ${prof.coupon}% off.`, 'good'); prof.coupon = 0; }
       prof.furn ||= {};
       prof.furn[k] = (prof.furn[k] || 0) + 1;
+      mail.post(p, 'pkg', `Delivered from Nail & Gear Hardware: ${/^[aeiou]/i.test(P.name) ? 'an' : 'a'} ${P.name.toLowerCase()}, in your home's storage.`);   // (H71: the package's note in your mailbox)
       store.touch();
       world.notify(p, `Bought ${/^[aeiou]/i.test(P.name) ? 'an' : 'a'} ${P.name.toLowerCase()} - delivered to your home's storage. Place it from the hall table: Decorate.`, 'good');
       return null;

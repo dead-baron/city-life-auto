@@ -43,7 +43,7 @@ export const FACE = ['s', 'w', 'n', 'e'];
 const FACE_NAME = ['south', 'west', 'north', 'east'];
 export const faceName = (r) => FACE_NAME[r & 3];
 
-const WALLISH = new Set(['#', '=', 'D', 'R']);
+const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);
 const PLACEABLE = new Set(['.', 'c', 't', 'g']);
 
 // a piece's footprint, turned (an odd turn swaps it)

@@ -101,6 +101,10 @@ export function homePets(world) {
 // Interaction on foot: take a lost pet's collar, or hand it back to its owner.
 export function interaction(world, p) {
   const ped = p.ped;
+  for (const pet of homePets(world)) {   // (H71: offered to you by its owner - adopt it)
+    const o = pet.pet.offer;
+    if (o && o.pid === p.pid && world.time <= o.until && !p.profile.pet && Math.hypot(pet.x - ped.x, pet.y - ped.y) < 70) return { label: `Adopt ${pet.pet.name} - it'll wait for you at home`, run: () => { const err = adopt(world, p, pet); if (err) world.notify(p, err, 'bad'); } };
+  }
   for (const pet of lostPets(world)) {
     const pp = pet.pet;
     if (pp.follow === ped.id) {
@@ -129,6 +133,27 @@ export function giveBack(world, p, pet) {
   world.notify(p, `"${pet.pet.name}! Oh thank you!" +$${PET_REWARD}, +${PET_SAMARITAN} Samaritan.`, 'good');
   events.feed(world, { kind: 'pet', text: `${p.name} brought ${pet.pet.name} the ${pet.pet.kind} home`, x: pet.x, y: pet.y });
   reunite(world, pet);
+  // (H71) a home of your own and no pet yet: the owner, moving somewhere that won't take pets, offers it to you
+  const prof = p.profile, homed = (prof.homes || []).some((id) => world.homeOwner.get(id) === p.pid);
+  if (homed && !prof.pet && !pet.removed && pet.pet.home) {
+    pet.pet.offer = { pid: p.pid, until: world.time + 45 };
+    world.notify(p, `"${pet.pet.name} has really taken to you... we're moving somewhere that won't take pets. Would you give ${pet.pet.name} a home?" - Act by ${pet.pet.name} to adopt.`, 'info');
+  }
+}
+
+// (H71) adopt a pet you brought home, offered by its owner: yours - it goes on ahead and waits for you at home, on its bed
+// (server/systems/homeinside.js: it greets you at the door). profile.pet { n, art, k } - absent on older profiles.
+export function adopt(world, p, pet) {
+  const pp = pet.pet, prof = p.profile;
+  if (!pp.offer || pp.offer.pid !== p.pid || world.time > pp.offer.until || prof.pet) return 'Not now.';
+  prof.pet = { n: pp.name, art: pp.art, k: pp.kind };
+  store.touch();
+  const owner = world.get(pp.owner);
+  if (owner && owner.npc) { owner.npc.petHome = 0; owner.npc.keep = false; owner.npc.state = 'wander'; }
+  world.remove(pet);
+  world.notify(p, `${pp.name} is yours! It's gone on ahead - it'll be waiting for you at home, on its bed.`, 'good');
+  p.meDirty = true;
+  return null;
 }
 
 // Off the collar and back with its owner: no longer lost (off the radar, nobody's to lead), it runs to them

@@ -9323,3 +9323,92 @@ test/hudlayout.test.js, test/hudpage.js (new), test/homedecor.test.js.
 
 Tests: test/hudlayout.test.js (new: the layout at every size; the crime / felony prompt), test/homedecor.test.js (the
 cut-off refusal), test/hudlayers.test.js, test/touchair.test.js, test/honestliving.test.js, test/perf.test.js.
+
+## 2026-10-11 · Owning a home, the small things: the lobby you walk into, the mail, the doorbell, a pet at home, a quicker redraw (H71)
+
+The owner asked for "more of the owning a house features"; the brief, after the HO5 (apartment buildings) and HO3 (life
+at home) concepts: the apartment block's lobby you walk into, the mail and the doorbell, a pet at home - and a change of
+decor that doesn't redraw the whole room (H67 saw several seconds).
+- **The lobby** (shared/homelayout.js lobby4 .. lobby8, by the block's number of flats; server/systems/homeinside.js):
+  an apartment block's front door opens into its lobby - anyone may walk in, a shared, safe place out of the world like a
+  home (nobody sees or hurts you in there; the police can't follow you in while they see you, and wanted but out of
+  sight the door takes its moment, as a home's). The tiled hall: the mailboxes on the back wall, the lift beside them,
+  the stairs up in the corner, a plant by the door; the landing's red runner along the back wall with a numbered door
+  for each flat (unit 1 first). At a door: yours - go in; one for sale - its menu: look round, buy it, buy it with a
+  mortgage (bought, you're in); someone else's - ring their doorbell while they're in (nobody in: it says whose). Out of
+  a flat's front door - yours, a look round, a friend's - you're back on the landing outside it; the lobby's own door
+  is the street. Two players in the lobby see each other. Nothing is added to the map: the lobby is a place of its own
+  keyed by its building (homes.js world.lobbies, id unit 0's), so the world's hash doesn't move. Your cars still come
+  out at the parking out front - from your flat's hall table (its garage list), as before.
+- Drawn like the homes, in both views: art v2 (homeart2.js) - the doors set in the back wall with their casings and
+  number plates, the lift's steel doors with the floor lamp over them, the mailboxes and the stairs as voxel models
+  (client/art2/props-home.js), the hall's tiles, the runner, pictures between the doors, the paved yard round it; the
+  classic view (homeview.js) - the same as flat sprites. Over both, each door's number; yours lit (a lamp over it, its
+  light on the landing), light under the door of one whose owner is in, a FOR SALE sign on one for sale (in art v2
+  drawn with the back wall, behind anyone standing at the door); an envelope bobbing over the mailboxes when there's new
+  mail in yours. At night the hall and the landing have their ceiling lights on (in node: the yard's light falls from
+  112 to 34, the floor's only from 79 to 63; lit in 12-58 ms).
+- **The mail** (server/systems/mail.js, new): your mailbox - in your block's lobby (only the flats' owners open one), or
+  for a house picked up on the way in ("You pick up the mail on the way in: 2 new") and read at the hall table (The
+  mail) - holds: the utilities bill each in-game week for the homes you own (MAIL.util a home; pay it from the mailbox;
+  still unpaid when the next comes, it's taken from your bank with MAIL.late), the mortgage's statement with each payment
+  or missed one (mortgage.js), a letter or a coupon now and then (MAIL.odds of the days; the coupon: MAIL.off % off your
+  next piece at the furniture counter), and the furniture counter's delivery note for each piece (economy.js). Days are
+  counted while you're in the city, as the mortgage's are. Numbers in shared/rules.js MAIL (one line: the city worker is
+  near its budget). profile.mail / mailDay / billDay / coupon - absent on older profiles, which load as before.
+- **The doorbell**: at a friend's door while they're in - a house's in the street, or a flat's on the landing - "Ring the
+  doorbell" replaces the knock; it rings inside (the host's page plays a ding-dong: { t: 'home', bell }) and the host is
+  told "Ding-dong! Bo is at your door - let them in from the hall table". Letting in from the landing works as from
+  the street.
+- **A pet at home** (pets.js, homeinside.js): bring a lost pet back to its owner while you own a home and have no pet,
+  and the owner (moving somewhere that won't take pets) asks if you'd give it a home - Act by it within 45 s: Adopt.
+  It goes on ahead (profile.pet { n, art, k } - absent on old profiles); in your home it waits on its bed (a spot of open
+  floor against a wall near the couch, nothing in front of it), jumps off it and runs to meet you at the door, bounces
+  round you with its tail going, follows you about a while, then goes back to its bed and lies down (and when you go to
+  bed). The server walks it (the same steps as yours, round the walls and the furniture); a guest sees it too. Drawn as
+  art v2's own dog or cat (the street's animalSprite, lit where it stands), a little top-down one in the classic view,
+  its bed a cushion in a padded ring.
+- **A cheaper redraw** (homeart2.js): a change of decor makes the new drawing from the old one - the yard, the walls
+  (unless the paint changed), the bare floor (unless a new floor was laid) and every furniture model kept; only the
+  floor's shadows and rugs, the new pieces and the light are made again - and the old drawing stays on screen until the
+  new one is ready (no flash of the classic view). In node: a house 490 ms from nothing, 37 ms after a piece is moved;
+  a mansion 523 ms / 29 ms.
+- Dev: `lobby` ({ own: unit n yours, other: unit n someone else's, mail: a bill, a letter and a coupon, pet: 'dog_golden'
+  | 'cat_ginger'..., at: 'mail' | n stand there, home: into your own flat }).
+- Budgets: the page 467 of 485 KB (unchanged: all of it in the lazily loaded home code; homeview.js plays the bell with
+  the page's own sfx), the city worker 358 of 360 (MAIL's one line), the renderer 357, the bake 760; the world's hash
+  and the art's don't move (world3 / art3 do, as for any edit of shared/rules.js). test/perf.test.js's code budgets
+  pass; its CPU budget for building the city failed at 52x (40x) with two other helpers' playtests on the machine's two
+  cores - nothing here touches the generator.
+Files: server/systems/mail.js (new); shared/homelayout.js (the lobby plans, the doors, useAt's 'unit'), shared/homedecor.js
+(the doors and the lift are walls), shared/rules.js (MAIL at the end), server/systems/homes.js (world.lobbies, blockOf,
+lobbyOf, homePoi), homeinside.js (the lobby, its doors' menus, the landing out of a flat, the doorbell, the mail's menus,
+the pet, devLobby), mortgage.js (the statement), economy.js (the delivery note, the coupon), pets.js (the offer, adopt),
+world.js (the system), dev.js; client/render/homeview.js (the lobby in the classic view, the door marks, the pet, the
+bell, keeping the old drawing up), client/render/homeart2.js (the doors, the lift, the runner, the pet, the reuse),
+client/art2/props-home.js (the mailboxes, the stairs). Tests: test/lobby.test.js (new: the lobby plans - every door, the
+mailboxes and the way out reached on foot; into the lobby from the street, safe, two players see each other, out again,
+kept out while seen and in after the moment when not; a door for sale - its menu, a look round and back on the landing
+outside it, bought and in; your own door; a second player's flat - nobody in, the doorbell heard inside and its
+message, let in from the hall table; a house's doorbell; the mail - counted from the first day, the mortgage's
+statement, the week's bill read at the lobby's mailbox and paid, not someone else's mailbox, an unpaid one taken with
+the late fee, a coupon used and the delivery note; a house's mail picked up and read at the hall table; a pet offered,
+adopted, on its bed at home, running to you, back to its bed, seen by a guest; old profiles; every lobby built and lit
+in art v2 by day and night, the pet's sprites, a decor change keeping the yard, walls, floor and models and remade in
+under 0.6 of the time); test/homeinside.test.js (the knock is the doorbell now); homeinside, realestate, homes,
+homedecor, homeart and happenings tests pass.
+Playtest (headless; scratchpad/h71): art v2 1280x720 - the lobby by day (pt2-lobby-day.png) and night
+(pt2-lobby-night.png, pt-lobby-night.png), the mailbox's menu (pt-mailbox.png), the dog greeting you in your flat
+(pt-pet-greet.png) and later (pt2-pet-bed.png); the classic view on a phone 844x390 - the lobby by day
+(pt3-phone-lobby-day.png) and night (pt3-phone-lobby-night.png), the cat at home (pt3-phone-pet.png); after the fixes
+(the plates behind you, the envelope over the mailboxes, the ceiling lights) pt4-lobby-day.png. What's wrong: the
+first time in, the home code takes a few seconds to load on the slow headless page (the city shows meanwhile -
+pt-lobby-day.png); with the machine loaded (three helpers' playtests and tests on two cores) the later night
+screenshots timed out or caught the lobby before it was lit for the night (pt4-lobby-night.png is still lit by day),
+so the ceiling lights are checked in node only; a playtest server left running by a timed-out run served the old
+server code to the next runs on its port until stopped; your door's lamp is faint; the stairs read as a grey block and the
+mailboxes as a filing cabinet in art v2 (plain voxel models); the lift's doors barely show in the classic view; the
+landing is one floor - every flat's door along it, whatever its floor (the stairs and the lift go nowhere); the pet
+lies by its bed rather than curled on it in art v2 (no curled-up pose), and in a small flat its bed sits close to the
+couch; the prompt box sits under the top icon bar on a phone (as before - H70's HUD work). The old lobby menu's code
+(economy.js lobbyOpts) stays for its tests but the door no longer opens it.

@@ -4,6 +4,7 @@ import { K, WORLD_VERSION } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { HIDE_TIME_S, SPAWN_PROTECT_S } from '../../shared/rules.js';
+import { lobbyKey } from '../../shared/homelayout.js';
 import { store } from '../store.js';
 import { LEGACY_HOMES } from './legacy-homes.js';
 import * as homeinside from './homeinside.js';
@@ -39,7 +40,7 @@ export const isUnit = (id) => Number(id) >= UNIT0;
 export function homeById(world, id) {
   if (id == null) return null;
   const n = Number(id);
-  if (n >= UNIT0) return (world.units && world.units.get(n)) || null;
+  if (n >= UNIT0) return (world.units && world.units.get(n)) || (world.lobbies && world.lobbies.get(n)) || null;   // (a block's lobby: H71)
   return (world.map.homes && world.map.homes[n]) || null;
 }
 // how many homes an apartment block holds: by its footprint (an 8x11 walk-up: 6), 4 to 8
@@ -63,6 +64,7 @@ export function unitOf(base, n, count) {
 function buildUnits(world) {
   world.units = new Map();
   world.unitsOf = new Map();   // the building's home id -> its homes' ids, unit 1 (the map's) first
+  world.lobbies = new Map();   // (H71) the building's lobby, a place of its own to walk into (id: unit 0's)
   for (const h of world.map.homes || []) {
     if (!h || h.gone || h.kind !== 'apartment') continue;
     const n = unitCount(world.map, h);
@@ -70,8 +72,13 @@ function buildUnits(world) {
     const ids = [h.id];
     for (let k = 2; k <= n; k++) { const u = unitOf(h, k, n); world.units.set(u.id, u); ids.push(u.id); }
     world.unitsOf.set(h.id, ids);
+    const lob = { id: unitId(h.id, 0), isLobby: 1, block: h.id, kind: 'lobby', plan: lobbyKey(n), name: `${h.name} - the lobby`, price: h.price, x: h.x, y: h.y, slots: 0 };
+    world.lobbies.set(lob.id, lob);
   }
 }
+// (H71) the building a home stands in (its lobby's block id; null: a home of its own), and a building's lobby
+export function blockOf(world, h) { const b = h ? (h.isLobby ? h.block : h.lobby ?? h.id) : null; return b != null && world.unitsOf && world.unitsOf.has(b) ? b : null; }
+export const lobbyOf = (world, blockId) => (world.lobbies ? world.lobbies.get(unitId(blockId, 0)) || null : null);
 // the homes in the building whose lobby door is poi (null: a home of its own)
 export const unitsAt = (world, poi) => (poi && poi.kind === 'home' && world.unitsOf ? world.unitsOf.get(poi.home) || null : null);
 // The home a menu at poi (a home's door) is about: the one you're inside (a unit of that building, or the place you're
@@ -409,7 +416,7 @@ export function protect(world, ped, s = SPAWN_PROTECT_S) { ped.protectUntil = wo
 export const isProtected = (world, ped) => !!ped && (!!ped.hidden || world.time < (ped.protectUntil || 0));
 
 // ---- going inside -----------------------------------------------------------------------
-export const homePoi = (world, h) => world.map.pois.find((q) => q.kind === 'home' && q.home === (h.lobby ?? h.id));   // (a unit's: its building's lobby door)
+export const homePoi = (world, h) => world.map.pois.find((q) => q.kind === 'home' && q.home === (h.isLobby ? h.block : h.lobby ?? h.id));   // (a unit's, the lobby's: its building's front door)
 
 export function beginEnter(world, p, h) {
   const ped = p.ped;

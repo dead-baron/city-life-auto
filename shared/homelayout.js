@@ -10,6 +10,8 @@
 //   table  Y the garage's key board (those you can use) - K kitchen counter  T table  C couch  V TV  L toilet  N basin
 //   O armchair  Q bookshelf  P plant
 //   1 2 3: a plant in a home of that price tier or better (shared/homelayout.js tierOf), bare floor below it
+//   (H71, an apartment block's lobby) M the mailboxes (use) Z the stairs up - U a flat's door and E the lift's doors (in
+//   the back wall, solid like it)
 export const TILE_IN = 32;
 export const BODY_IN = 10;   // half the size of you, for the walls (px)
 
@@ -88,10 +90,25 @@ const PLANS = {
   ],
 };
 export const PLAN_KEYS = Object.keys(PLANS);
+// (H71) an apartment block's lobby (HO5), lobby4 .. lobby8 by its number of flats: in by the front door, the tiled hall -
+// the mailboxes on the back wall, the lift beside them, the stairs up in the corner, a plant by the door - and the
+// landing's carpet runner along the back wall with the flats' doors, unit 1 first (U, numbered in order), each one's
+// spot to stand in front of it
+export const lobbyKey = (n) => `lobby${Math.max(4, Math.min(8, n | 0))}`;
+for (let n = 4; n <= 8; n++) {
+  PLANS[lobbyKey(n)] = [
+    '###EE#=##' + '#U'.repeat(n) + '##',
+    '#MM' + 't'.repeat(6) + 'c'.repeat(2 * n) + 'c#',
+    '#' + 't'.repeat(8) + 'c'.repeat(2 * n) + 'c#',
+    '#ZZ' + 't'.repeat(6) + 'c'.repeat(2 * n) + 'P#',
+    '#ZZ' + 't'.repeat(5) + '1' + 'c'.repeat(2 * n) + 'c#',
+    '####D####' + '##'.repeat(n) + '##',
+  ];
+}
 
-const SOLID = new Set(['#', '=', 'D', 'R', ...'BWSFHAYKTCVLNOQP']);
+const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZ']);
 const FLOORS = new Set(['.', 'c', 't', 'g', '+']);
-export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage' };
+export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail' };
 
 // The plan for a home: its kind (a trailer, an apartment, a house, a mansion) and how well it's furnished (0 a shack's
 // odds and ends .. 3 a mansion's)
@@ -118,7 +135,7 @@ export function layout(key, tier = 0) {
   const seen = new Set(), pieces = [];
   for (let ty = 0; ty < R; ty++) for (let tx = 0; tx < C; tx++) {
     const ch = at(tx, ty);
-    if (!/[A-Z]/.test(ch) || ch === 'D' || ch === 'R' || seen.has(tx + ',' + ty)) continue;
+    if (!/[A-Z]/.test(ch) || ch === 'D' || ch === 'R' || ch === 'U' || ch === 'E' || seen.has(tx + ',' + ty)) continue;
     let w = 1, h = 1;
     while (at(tx + w, ty) === ch && !seen.has(tx + w + ',' + ty)) w++;
     while ([...Array(w).keys()].every((i) => at(tx + i, ty + h) === ch)) h++;
@@ -126,8 +143,10 @@ export function layout(key, tier = 0) {
     pieces.push({ ch, use: USES[ch] || null, tx, ty, tw: w, th: h, x: tx * TILE_IN, y: ty * TILE_IN, w: w * TILE_IN, h: h * TILE_IN });
   }
   let door = null, bays = [];
+  const doors = [];   // (H71: a lobby's flats' doors, unit 1 first)
   for (let ty = 0; ty < R; ty++) for (let tx = 0; tx < C; tx++) {
     if (at(tx, ty) === 'D' && !door) door = { tx, ty, x: (tx + 0.5) * TILE_IN, y: (ty + 0.5) * TILE_IN };
+    if (at(tx, ty) === 'U') doors.push({ n: doors.length + 1, tx, ty, x: (tx + 0.5) * TILE_IN, y: (ty + 0.5) * TILE_IN });
     if (at(tx, ty) === 'R' && at(tx, ty - 1) === 'g' && tx % 2 === 1) bays.push({ x: (tx + 0.5) * TILE_IN, y: (ty - 2) * TILE_IN });
   }
   bays = bays.slice(0, 4);
@@ -140,7 +159,7 @@ export function layout(key, tier = 0) {
     bays = bays.map((_, i) => ({ x: gx0 * TILE_IN + gw * (i + 0.5) / bays.length, y: gy0 * TILE_IN + 4 + CAR_IN.l / 2 }));
   }
   const L = {
-    key, tier, cols: C, rows: R, w: C * TILE_IN, h: R * TILE_IN, grid: rows, pieces, door, bays,
+    key, tier, cols: C, rows: R, w: C * TILE_IN, h: R * TILE_IN, grid: rows, pieces, door, bays, doors,
     spawn: { x: door.x, y: door.y - TILE_IN },
     cell: at,
     solid: (tx, ty) => SOLID.has(at(tx, ty)),
@@ -194,6 +213,10 @@ export function useAt(L, x, y, reach) {
     if (!p.use) continue;
     const d = near(p.x, p.y, p.w, p.h);
     if (d <= reach + 2 && d < bd) { bd = d; best = p; }
+  }
+  for (const d of L.doors || []) {   // (H71: a flat's door along a lobby's landing)
+    const e = near(d.x - TILE_IN / 2, d.y - TILE_IN / 2, TILE_IN, TILE_IN);
+    if (e <= reach + 2 && e < bd) { bd = e; best = { use: 'unit', n: d.n, x: d.x - TILE_IN / 2, y: d.y - TILE_IN / 2, w: TILE_IN, h: TILE_IN }; }
   }
   const dd = near(L.door.x - TILE_IN / 2, L.door.y - TILE_IN / 2, TILE_IN, TILE_IN);
   if (dd <= reach + 2 && dd < bd) best = { use: 'door', x: L.door.x - TILE_IN / 2, y: L.door.y - TILE_IN / 2, w: TILE_IN, h: TILE_IN };
