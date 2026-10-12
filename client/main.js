@@ -287,6 +287,7 @@ function onText(m) {
     case 'board': phone.onBoard(m); break;
     case 'feed': phone.onFeed(m); break;
     case 'bounties': phone.onBounties(m); break;
+    case 'homes': phone.onHomes(m); break;   // the real-estate app (H65)
     case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.onTransit(m); if (S.bigmap) mapwp.refreshLegend(); break;
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;

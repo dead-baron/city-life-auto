@@ -21,6 +21,7 @@ import * as charter from './charter.js';
 import * as coastguard from './coastguard.js';
 import * as farming from './farming.js';
 import { FARM } from '../../shared/rules.js';
+import * as realestate from './realestate.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -210,6 +211,7 @@ export function handle(world, p, msg) {
   if (a === 'bounties') return bounties.boardFor(world, p);
   if (a === 'btake') { const err = bounties.take(world, p, msg.id); return { ...bounties.boardFor(world, p), err: err || null }; }
   if (a === 'bplace') { const err = bounties.place(world, p, String(msg.pid || ''), Number(msg.amt)); return { ...bounties.boardFor(world, p), err: err || null, ok: !err }; }
+  if (a === 'homes') return realestate.listings(world, p, { sort: String(msg.sort || ''), kind: String(msg.kind || '') });   // the real-estate app (H65: realestate.js)
   return null;
 }
 

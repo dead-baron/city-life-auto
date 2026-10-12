@@ -24,6 +24,7 @@ import * as hotmoney from './hotmoney.js';
 import * as farming from './farming.js';
 
 import * as homeinside from './homeinside.js';
+import * as mortgage from './mortgage.js';
 
 import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
@@ -38,6 +39,11 @@ export function poiLabel(world, p, poi) {
     case 'charter': return 'Charter desk (deep-sea fishing)';
     case 'station': { const eta = trains.nextTrainIn(world, poi.station, poi); return eta < 1 ? `${poi.label} - train in! Walk up to the doors` : `${poi.label} - next train ${Math.round(eta)}s (timetable)`; }
     case 'home': {
+      const us = homes.unitsAt(world, poi);   // (an apartment block: its lobby - H65)
+      if (us) {
+        const mine = us.filter((id) => world.homeOwner.get(id) === p.pid).length, free = us.filter((id) => !world.homeOwner.has(id)).length;
+        return `${poi.label} - the lobby: ${mine ? `your home${mine > 1 ? 's' : ''}, ` : ''}${free} of ${us.length} for sale`;
+      }
       const h = world.map.homes[poi.home];
       const owner = world.homeOwner.get(h.id);
       if (owner === p.pid) return `Your ${h.kind} (rest, garage, spawn)`;
@@ -252,13 +258,22 @@ export function buildMenu(world, p, poi) {
       break;
     }
     case 'home': {
-      const h = world.map.homes[poi.home];
+      const h = homes.homeFor(world, p, poi);   // (inside an apartment block's unit: that unit - H65)
       const mine = world.homeOwner.get(h.id) === p.pid;
       const inside = !!(ped() && ped().hidden && ped().inside === h.id);
+      const us = homes.unitsAt(world, poi);
+      if (us && !inside) {   // an apartment block's lobby: its homes, floor by floor
+        title = `${poi.label} - the lobby`;
+        sub = `${us.length} homes in this building, three doors a landing. Yours to go in; for sale to look round or buy (each a respawn point with a safe, a bed and parking out front); someone else's to knock at while they're in.`;
+        lobbyOpts(world, p, us, opts);
+        break;
+      }
       title = inside ? `${h.name} - inside` : h.name;
       if (!mine) {
         sub = `A ${h.dock ? 'waterfront ' : ''}${KIND_NAME[h.kind] || h.kind} with a ${h.slots}-car garage${h.dock ? ' and its own boat dock and boathouse' : ''}. Own as many homes as you like: each one is a respawn point, a safe place to hide and stash things, and adds garage space you can reach from any of your homes.`;
+        opts.push({ id: 'htour', label: 'Take a look inside', note: 'walk round it first' });   // (H65: homeinside.js tour)
         opts.push({ id: 'hbuy', label: `Buy this ${KIND_NAME[h.kind] || h.kind}`, price: h.price });
+        { const t = mortgage.terms(h); opts.push({ id: 'hmort', label: `Buy with a mortgage: ${t.days} payments of $${t.pay.toLocaleString()} a day`, price: t.deposit, note: 'deposit' }); }   // (H65: mortgage.js)
       } else {
         const st = prof.stash || {};
         const stashed = Object.entries(st.items || {}).filter(([, n]) => n > 0).length + Object.keys(st.weapons || {}).length;
@@ -361,6 +376,28 @@ export function buildMenu(world, p, poi) {
 }
 
 const KIND_NAME = { farmhouse: 'farmhouse', cottage: 'coastal cottage', beach: 'beach house', mansion: 'mansion', house: 'house', apartment: 'apartment', shack: 'shack' };
+
+// An apartment block's lobby (H65; server/systems/homes.js buildUnits): a row for each of its homes - yours (go in), for
+// sale (look round, buy), someone else's (knock while they're in)
+function lobbyOpts(world, p, us, opts) {
+  for (const id of us) {
+    const u = homes.homeById(world, id), o = world.homeOwner.get(id);
+    if (!u) continue;
+    const nm = `Unit ${u.unit || 1}`, beds = homeinside.bedsIn(u);
+    const what = `${u.what || 'apartment'}, ${(u.floor || 1) > 1 ? `floor ${u.floor}` : 'ground floor'} · ${beds} bed${beds === 1 ? '' : 's'} · parks ${u.slots}`;
+    if (o === p.pid) opts.push({ id: `hu:in:${id}`, label: `${nm} - yours: go in`, note: what });
+    else if (o) {
+      const prof = store.get(o), inNow = homeinside.someoneIn(world, u);
+      opts.push({ id: `hu:knock:${id}`, label: `${nm} - ${prof && prof.name ? `${prof.name}'s` : 'taken'}${inNow ? ': knock' : ''}`, note: inNow ? 'they\'re in' : 'nobody in', dis: !inNow });
+    } else {
+      const one = u.lobby == null;   // (unit 1, the map's own home: its options keep their old names)
+      opts.push({ id: one ? 'htour' : `hu:tour:${id}`, label: `${nm} for sale - take a look inside`, note: what });
+      opts.push({ id: one ? 'hbuy' : `hu:buy:${id}`, label: `Buy ${nm} (${u.what || 'apartment'})`, price: u.price });
+    }
+  }
+  // a home of yours in here: your cars come out at the building's parking out front
+  if (us.some((id) => world.homeOwner.get(id) === p.pid)) p.profile.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat' && d.kind !== 'air') opts.push({ id: `hcar:${i}`, label: `Take out ${d.name}`, note: 'parking out front' }); });
+}
 const NO_STASH = new Set(['fists', 'taser', 'baton', 'service']);
 
 function ownedVehicleOpts(prof, opts, boats) {
@@ -399,7 +436,7 @@ export function handleMenu(world, p, poiId, optId) {
   const err = execute(world, p, poi, String(optId || ''));
   if (err) world.notify(p, err, 'bad');
   p.meDirty = true;
-  if (!['close', 'hhide', 'hleave', 'armexit', 'sleave'].includes(optId) && !optId.startsWith('hcargo') && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
+  if (!['close', 'hhide', 'hleave', 'armexit', 'sleave', 'htour'].includes(optId) && !optId.startsWith('hcargo') && !/^hu:(in|tour):/.test(optId) && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
 }
 
 function execute(world, p, poi, opt) {
@@ -576,15 +613,26 @@ function execute(world, p, poi, opt) {
     case 'rent': return rentals.rent(world, p, poi, parts[1], pay);
     case 'rentback': return rentals.giveBack(world, p);
     case 'hboat': {
-      const h = world.map.homes[poi.home];
+      const h = homes.homeFor(world, p, poi);
       if (!h.dock) return 'This place has no boat dock.';
       return homes.boatOut(world, p, h, Number(parts[1]));
     }
-    case 'hbuy': return homes.buy(world, p, world.map.homes[poi.home], pay);
-    case 'hsell': return homes.sell(world, p, world.map.homes[poi.home]);
-    case 'hspawn': { prof.spawnHome = poi.home; prof.lastSpawn = `home:${poi.home}`; store.touch(); world.notify(p, 'You will wake up here after you die.', 'good'); return null; }
+    case 'hbuy': return homes.buy(world, p, homes.homeFor(world, p, poi), pay);
+    case 'htour': return homeinside.tour(world, p, homes.homeFor(world, p, poi));   // a look round before you buy (H65: homeinside.js)
+    case 'hmort': return mortgage.buyWith(world, p, homes.homeFor(world, p, poi), pay);   // a deposit down, the rest paid a day at a time (H65)
+    case 'hu': {   // an apartment block's lobby: a unit - yours to go in, for sale to look round or buy, someone's to knock at
+      const us = homes.unitsAt(world, poi), u = homes.homeById(world, parts[2]);
+      if (!us || !u || !us.includes(u.id)) return 'No such home in this building.';
+      if (parts[1] === 'in') { homeinside.goIn(world, p, u); return null; }   // (goIn says why not itself)
+      if (parts[1] === 'tour') return homeinside.tour(world, p, u);
+      if (parts[1] === 'buy') return homes.buy(world, p, u, pay);
+      if (parts[1] === 'knock') return homeinside.knockAt(world, p, u);
+      return 'Unknown option.';
+    }
+    case 'hsell': return homes.sell(world, p, homes.homeFor(world, p, poi));
+    case 'hspawn': { const hid = homes.homeFor(world, p, poi).id; prof.spawnHome = hid; prof.lastSpawn = `home:${hid}`; store.touch(); world.notify(p, 'You will wake up here after you die.', 'good'); return null; }
     case 'hrest': { ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = 100; world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up. Full health.', 'good'); return null; }
-    case 'hhide': return homes.beginEnter(world, p, world.map.homes[poi.home]);
+    case 'hhide': return homes.beginEnter(world, p, homes.homeFor(world, p, poi));
     case 'hleave': homes.leaveHome(world, p); return null;
     case 'hst': case 'htk': {
       const id = parts[1];
@@ -624,7 +672,7 @@ function execute(world, p, poi, opt) {
     }
     case 'hcarno': p.pendingCar = null; return null;
     case 'hcargo': {
-      const h = world.map.homes[poi.home];
+      const h = homes.homeFor(world, p, poi);
       const idx = Number(parts[1]);
       p.pendingCar = null;
       if (!ped.hidden || !h.garage) return 'Not right now.';
@@ -644,7 +692,7 @@ function execute(world, p, poi, opt) {
       return null;
     }
     case 'hcar': {
-      const h = world.map.homes[poi.home];
+      const h = homes.homeFor(world, p, poi);
       if (!h.garage) return 'This place has no garage.';
       if (ped.hidden) { p.pendingCar = Number(parts[1]); return null; } // inside: confirm first
       const e = homes.spawnOwnedAt(world, p, Number(parts[1]), { ...h.garage, home: h.id });

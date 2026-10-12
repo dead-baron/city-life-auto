@@ -26,6 +26,7 @@ export function defaultProfile(pid) {
     vehicles: [],
     homes: [],
     deeds: {},       // home id -> what was paid for it (bought back at that when the world changes)
+    loans: {},       // home id -> a mortgage on it { owed, pay, day, missed } (server/systems/mortgage.js; absent on older profiles)
     spawnHome: null,
     lastSpawn: null, // the death screen's wake-up spot you last woke at ('h:<i>' | 'home:<id>'): the next one's default
     pos: null,

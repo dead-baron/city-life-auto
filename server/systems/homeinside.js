@@ -27,13 +27,14 @@ import { IN } from '../../shared/input.js';
 import { HOME_IN } from '../../shared/rules.js';
 import { ITEMS } from '../../shared/items.js';
 import { VEHICLES } from '../../shared/vehicles.js';
-import { layout, planOf, tierOf, stepInside, useAt, blocked } from '../../shared/homelayout.js';
+import { layout, planOf, tierOf, stepInside, useAt, blocked, TILE_IN } from '../../shared/homelayout.js';
 import { store } from '../store.js';
 import * as homes from './homes.js';
 import * as economy from './economy.js';
+import * as mortgage from './mortgage.js';
 
 export const planFor = (h) => layout(planOf(h), tierOf(h));
-const homeOf = (world, ped) => (ped && ped.home ? world.map.homes[ped.home.id] : null);
+const homeOf = (world, ped) => (ped && ped.home ? homes.homeById(world, ped.home.id) : null);
 const money = (n) => `$${Math.round(n).toLocaleString()}`;
 
 // ---- in and out -------------------------------------------------------------------------------------------------------
@@ -51,7 +52,7 @@ export function doorInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.carrying || ped.entering || ped.ug) return null;
   const poi = world.map.poiNear(ped.x, ped.y);
-  if (!poi || poi.kind !== 'home' || !world.homeOwner.has(poi.home)) return null;
+  if (!poi || poi.kind !== 'home' || !world.homeOwner.has(poi.home) || homes.unitsAt(world, poi)) return null;   // (an apartment block's lobby: its list of units, economy.js)
   const h = world.map.homes[poi.home];
   if (world.homeOwner.get(h.id) === p.pid) {
     if (!p.homePre && p.conn) { p.homePre = 1; p.conn.sendJSON({ t: 'home', pre: 1 }); }   // (the page fetches the rooms' drawing now, so they're there the moment you're in)
@@ -67,6 +68,17 @@ function hostIn(world, h) {
   const q = world.players.get(world.homeOwner.get(h.id));
   return q && q.ped && q.ped.home && q.ped.home.id === h.id && !q.ped.home.guest && q.ped.hidden ? q : null;
 }
+// (H65) the owner of h at home just now (an apartment block's lobby: who to knock at); a knock from the lobby list
+export const someoneIn = (world, h) => !!hostIn(world, h);
+export function knockAt(world, p, h) {
+  const host = hostIn(world, h);
+  if (!host) return 'Nobody\'s in.';
+  if (host === p) return null;
+  knock(world, p, h, host);
+  return null;
+}
+// the bedrooms in a home's plan (the real-estate app, the lobby)
+export const bedsIn = (h) => planFor(h).pieces.filter((q) => q.use === 'bed').length;
 function knock(world, p, h, host) {
   p.knock = { home: h.id, at: world.time };
   world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
@@ -101,6 +113,31 @@ export function goIn(world, p, h) {
   if (!(p.wanted > 0)) homes.goInside(world, p, h);   // (not wanted: the door's open and you're in)
   return null;
 }
+
+// ---- a look round a home for sale (H65) -------------------------------------------------------------------------------
+// At a home for sale (its door's menu, an apartment block's lobby, the real-estate app's waypoint) "Take a look inside":
+// you walk its rooms as a visitor - nothing to use, no safe - and at the front door, its price and Buy (or step out).
+// Bought from inside, it's yours where you stand. Someone else buys it while you're looking: you're shown out.
+// ped.home.tour: 1 while you're a visitor.
+export function tour(world, p, h) {
+  const ped = p.ped;
+  if (!ped || ped.dead || ped.vehId || ped.hidden || ped.ug) return 'Not right now.';
+  if (!h || h.gone) return 'No such place.';
+  if (world.homeOwner.has(h.id)) return world.homeOwner.get(h.id) === p.pid ? 'It\'s yours - just go in.' : 'That place is sold.';
+  if (p.wanted > 0) return 'Not while the police are after you.';
+  if (ped.carrying) return 'Set the crate down first.';
+  const L = planFor(h);
+  ped.entering = null; ped.inside = h.id; ped.hidden = true; ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.fishing = null;
+  ped.x = h.x; ped.y = h.y;
+  world.place(ped);
+  ped.home = { id: h.id, x: L.spawn.x, y: L.spawn.y, a: -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, tour: 1 };
+  p.homeMenu = null; p.knock = null; p.meDirty = true;
+  world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
+  world.notify(p, `Having a look round ${h.name} - ${money(h.price)}. To buy it, the front door.`, 'info');
+  send(world, p, true);
+  return null;
+}
+const THING = { bed: 'The bed', wardrobe: 'The wardrobe', safe: 'The safe', fridge: 'The fridge', shower: 'The shower', hall: 'The hall table', garage: 'The garage' };
 
 // Out through the front door
 export function leave(world, p) {
@@ -139,6 +176,11 @@ export function interaction(world, p) {
   if (s.sleep) return { label: 'Asleep... the night is passing', passive: true, run: () => {} };
   if (s.shower) return { label: 'In the shower...', passive: true, run: () => {} };
   const u = useAt(planFor(h), s.x, s.y, HOME_IN.reach);
+  if (s.tour) {   // a visitor: the door is the way out (or the sale), the rest is to look at - the door first when it's in reach
+    const L = planFor(h), D = L.door, dd = Math.hypot(Math.max(D.x - TILE_IN / 2 - s.x, 0, s.x - D.x - TILE_IN / 2), Math.max(D.y - TILE_IN / 2 - s.y, 0, s.y - D.y - TILE_IN / 2));
+    if ((u && u.use === 'door') || dd <= HOME_IN.reach + 2) return { label: `The front door - buy ${h.name} (${money(h.price)}) or step outside`, run: () => openMenu(world, p, 'tour') };
+    return { label: `${u ? `${THING[u.use] || 'That'} comes with the place - ` : 'Having a look round - '}${h.name}, ${money(h.price)}`, passive: true, run: () => {} };
+  }
   if (!u) return { label: `${h.name} - walk up to something to use it`, passive: true, run: () => {} };
   if (s.guest && u.use !== 'door') { const host = world.players.get(s.guest); return { label: `The ${u.use === 'hall' ? 'hall table' : u.use === 'garage' ? 'garage' : u.use} - ${host ? `${host.name}'s` : 'not yours'}`, passive: true, run: () => {} }; }
   return { label: LABEL[u.use](world, p, h), run: () => use(world, p, h, u.use) };
@@ -156,6 +198,17 @@ export function use(world, p, h, what) {
 // ---- the menus of the things you use ---------------------------------------------------------------------------------
 function menuOf(world, p, h, what) {
   const prof = p.profile, st = prof.stash || {}, ped = p.ped;
+  if (what === 'tour') {   // a visitor at the front door: the price and Buy, or out
+    const L = planFor(h), beds = L.pieces.filter((q) => q.use === 'bed').length;
+    const opts = [
+      { id: 'hi:tbuy', label: `Buy ${h.name}`, price: h.price, note: `wallet ${money(prof.cash)} · bank ${money(prof.bank)}` },
+      { id: 'hi:tmort', label: `Buy it with a mortgage: ${mortgage.terms(h).days} payments of ${money(mortgage.terms(h).pay)} a day`, price: mortgage.terms(h).deposit, note: 'deposit' },
+      { id: 'hi:tout', label: 'Step outside' },
+      { id: 'close', label: 'Keep looking' },
+    ];
+    const sub = `For sale: ${money(h.price)}. ${h.what ? `A ${h.what}` : `A ${h.kind === 'shack' ? 'shack' : h.kind}`}${h.floor > 1 ? ` on floor ${h.floor}` : ''}, ${beds} bedroom${beds === 1 ? '' : 's'}, room for ${h.slots} vehicle${h.slots === 1 ? '' : 's'}${h.dock ? ', a boathouse' : ''}. Yours: a respawn point, a safe, a bed, a garage you reach from any home you own.`;
+    return { t: 'menu', poi: homes.homePoi(world, h).id, title: `${h.name} - for sale`, sub, opts, cash: prof.cash, bank: prof.bank, inside: true };
+  }
   const base = economy.buildMenu(world, p, homes.homePoi(world, h)), all = base.opts;   // (the home menu's options: wardrobe and stash)
   const pick = (pre) => all.filter((o) => o.id === pre || o.id.startsWith(pre + ':'));
   const opts = [];
@@ -205,7 +258,7 @@ export function onMenu(world, p, poiId, optId, execute) {
   const ped = p.ped, h = homeOf(world, ped);
   if (!p.homeMenu || !h || !ped.hidden) { p.homeMenu = null; return false; }
   const poi = world.map.pois[poiId];
-  if (!poi || poi.kind !== 'home' || poi.home !== h.id) return false;
+  if (!poi || poi.kind !== 'home' || poi.home !== (h.lobby ?? h.id)) return false;   // (a unit's menus come from its building's lobby door)
   if (optId === 'close') { p.homeMenu = null; return true; }
   const what = p.homeMenu;
   const valid = menuOf(world, p, h, what).opts.find((o) => o.id === optId);
@@ -247,6 +300,25 @@ function own(world, p, h, parts) {
       leave(world, p);
       return homes.sell(world, p, h);
     }
+    case 'tbuy': {   // bought on a look round: yours, and you're in it
+      if (!ped.home || !ped.home.tour) return 'Not on a look round.';
+      const err = homes.buy(world, p, h, economy.payFrom);
+      if (err) return err;
+      ped.home.tour = 0;
+      p.homeMenu = null;
+      send(world, p, true);
+      return null;
+    }
+    case 'tmort': {   // on a mortgage (mortgage.js)
+      if (!ped.home || !ped.home.tour) return 'Not on a look round.';
+      const err = mortgage.buyWith(world, p, h, economy.payFrom);
+      if (err) return err;
+      ped.home.tour = 0;
+      p.homeMenu = null;
+      send(world, p, true);
+      return null;
+    }
+    case 'tout': p.homeMenu = null; leave(world, p); return null;
     case 'car': {
       const i = Number(parts[2]);
       p.homeMenu = null;
@@ -264,10 +336,11 @@ export function update(world) {
   for (const p of world.players.values()) {
     const ped = p.ped, s = ped && ped.home;
     if (!s) continue;
-    const h = world.map.homes[s.id];
+    const h = homes.homeById(world, s.id);
     // out some other way (the home menu's Step outside, the garage, the boathouse, dead, a dev command): gone from here
-    if (!h || !ped.hidden || ped.dead || ped.removed || ped.inside !== s.id || world.homeOwner.get(s.id) !== (s.guest || p.pid)) {
-      if (h && !ped.dead && !ped.removed && ped.hidden && ped.inside === s.id) homes.leaveHome(world, p);   // (sold under a guest: out they go)
+    const ok = s.tour ? !world.homeOwner.has(s.id) : world.homeOwner.get(s.id) === (s.guest || p.pid);   // (a look round: while it's still for sale)
+    if (!h || !ped.hidden || ped.dead || ped.removed || ped.inside !== s.id || !ok) {
+      if (h && !ped.dead && !ped.removed && ped.hidden && ped.inside === s.id) { homes.leaveHome(world, p); if (s.tour) world.notify(p, `${h.name} has just been sold - you're shown out.`, 'warn'); }   // (sold under a guest or a visitor: out they go)
       ped.home = null; p.homeMenu = null;
       if (p.conn) p.conn.sendJSON({ t: 'home', off: 1 });
       continue;
@@ -306,7 +379,7 @@ function wake(world, p, h) {
 export function send(world, p, full) {
   const ped = p.ped, s = ped && ped.home;
   if (!s || !p.conn) return;
-  const h = world.map.homes[s.id], L = planFor(h);
+  const h = homes.homeById(world, s.id), L = planFor(h);
   const m = {
     t: 'home', id: h.id, plan: L.key, tier: L.tier, x: Math.round(s.x * 10) / 10, y: Math.round(s.y * 10) / 10, a: Math.round(s.a * 100) / 100,
     mv: s.mv ? 1 : 0, ack: p.ack, min: Math.round(world.clock.minutes),
@@ -319,8 +392,9 @@ export function send(world, p, full) {
   }
   m.others = others;   // (their looks now and then: the page keeps them)
   if (full) {
-    m.name = h.name; m.garage = h.garage ? 1 : 0; m.sleepS = HOME_IN.sleepS; m.wakeH = HOME_IN.wakeH;
-    m.cars = p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air').slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
+    m.name = s.tour ? `${h.name} - for sale, ${money(h.price)}` : h.name; m.garage = h.garage ? 1 : 0; m.sleepS = HOME_IN.sleepS; m.wakeH = HOME_IN.wakeH;
+    if (s.tour) m.tour = h.price;   // (a visitor: the price - the page may show it; the garage's bays empty)
+    m.cars = s.tour ? [] : p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air').slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
     s.nc = m.cars.length;   // (the cars parked in the bays are solid: shared/homelayout.js stepInside - the page counts the same ones)
   }
   p.conn.sendJSON(m);
@@ -336,7 +410,7 @@ export function devIn(world, p, msg) {
   if (!ped || ped.dead) return 'Not while you\'re down.';
   let h = homeOf(world, ped);
   if (msg.id != null || msg.kind) {
-    const want = msg.id != null ? world.map.homes[Math.floor(Number(msg.id))] : world.map.homes.find((q) => q.kind === msg.kind && (!world.homeOwner.has(q.id) || world.homeOwner.get(q.id) === p.pid));
+    const want = msg.id != null ? homes.homeById(world, Math.floor(Number(msg.id))) : world.map.homes.find((q) => q.kind === msg.kind && (!world.homeOwner.has(q.id) || world.homeOwner.get(q.id) === p.pid));
     if (!want) return 'No such home.';
     if (ped.vehId) return 'Get out of the vehicle first.';
     if (!world.homeOwner.has(want.id)) { (p.profile.homes ||= []).push(want.id); world.homeOwner.set(want.id, p.pid); store.touch(); }

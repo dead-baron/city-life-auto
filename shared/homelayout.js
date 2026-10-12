@@ -62,6 +62,30 @@ const PLANS = {
     '#..A....2...+.......P#ggggggY#',
     '#####D################RRRRRR##',
   ],
+  // (H65) an apartment block's units (server/systems/homes.js unitOf): the studio - one room and the bed in its corner,
+  // the shower, the basin and the toilet along its far wall
+  studio: [
+    '#####==###',
+    '#KKF.#BBW#',
+    '#....#BB.#',
+    '#TT..+...#',
+    '#.1..#..S#',
+    '#CA..#HLN#',
+    '###D######',
+  ],
+  // the penthouse at the top of the building: the apartment's rooms and, through the bedroom, a second bedroom and a
+  // den with the city out of its windows
+  penthouse: [
+    '#####==#######==####',
+    '#KKKF1#WW...S#.BB.P#',
+    '#.....#......#.BB..#',
+    '#TT...+..BB..+.....#',
+    '#TT...#..BB..#Q.2.W#',
+    '#.....##+#####..3..#',
+    '#C...V#ttttLN#O....#',
+    '#C..A.#HHtttt#P...3#',
+    '###D################',
+  ],
 };
 export const PLAN_KEYS = Object.keys(PLANS);
 
@@ -72,6 +96,7 @@ export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'showe
 // The plan for a home: its kind (a trailer, an apartment, a house, a mansion) and how well it's furnished (0 a shack's
 // odds and ends .. 3 a mansion's)
 export function planOf(home) {
+  if (home && home.plan && PLANS[home.plan]) return home.plan;   // (an apartment block's unit: its own - H65)
   const k = home && home.kind;
   return k === 'shack' ? 'trailer' : k === 'apartment' ? 'apartment' : k === 'mansion' ? 'mansion' : 'house';
 }
