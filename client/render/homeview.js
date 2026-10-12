@@ -143,9 +143,10 @@ function frame(now) {
     windows(L, now);
     cars(L);
     petV1(now);
-    if (u) {   // the thing in reach: outlined
-      g.strokeStyle = `rgba(255,214,90,${0.55 + 0.35 * Math.sin(now / 220)})`; g.lineWidth = 2;
-      g.strokeRect(u.x + 1, u.y + 1, u.w - 2, u.h - 2);
+    if (u) {   // the thing in reach: outlined in a soft cyan glow (H77, the HO6 concept)
+      g.save(); g.shadowColor = 'rgba(120,236,255,.9)'; g.shadowBlur = 6;
+      g.strokeStyle = `rgba(150,240,255,${0.6 + 0.3 * Math.sin(now / 220)})`; g.lineWidth = 2;
+      g.strokeRect(u.x + 1, u.y + 1, u.w - 2, u.h - 2); g.restore();
     }
     for (const o of st.others || []) friend(L, o, now);
     you(L, me, now);
@@ -224,7 +225,7 @@ function drawArt(L, me, u, now) {
       }
     }
   }
-  if (u && u.use === 'door') { g.strokeStyle = `rgba(255,214,90,${pulse})`; g.lineWidth = 2; g.strokeRect(u.x + 1, u.y - 12, u.w - 2, u.h + 10); }
+  if (u && u.use === 'door') { g.save(); g.shadowColor = 'rgba(120,236,255,.9)'; g.shadowBlur = 6; g.strokeStyle = `rgba(150,240,255,${pulse})`; g.lineWidth = 2; g.strokeRect(u.x + 1, u.y - 12, u.w - 2, 24); g.restore(); }
   if (st.shower) {   // steam
     g.fillStyle = 'rgba(235,245,255,.3)';
     for (let k = 0; k < 5; k++) { const t = (now / 900 + k / 5) % 1; g.beginPath(); g.arc(me.x - 10 + k * 5, me.y - 30 - t * 26, 5 + t * 8, 0, 6.28); g.fill(); }
@@ -349,6 +350,18 @@ function bakeRooms(L) {
     else { for (let j = 0; j < 4; j++) { b.fillStyle = f[(j + tx) & 1]; b.fillRect(x, y + j * 8, T, 8); } b.fillStyle = 'rgba(0,0,0,.12)'; b.fillRect(x + ((tx * 13 + ty * 5) % 24), y, 1, T); }
     if (ch === '+') { b.fillStyle = '#5a4630'; if (L.solid(tx, ty - 1)) b.fillRect(x + 13, y + 2, 6, T - 4); else b.fillRect(x + 2, y + 13, T - 4, 6); }   // (the threshold, along the wall it's in)
   }
+  // (H77: the walls are thin lines - the rest of a wall tile is the floor of the room beside it)
+  const flat = (tx, ty) => { let ch = L.cell(tx, ty); if (/[#=DRUE]/.test(ch) || tx < 0 || ty < 0 || tx >= L.cols || ty >= L.rows) return null; if (!/[.ctg+]/.test(ch)) ch = [L.cell(tx - 1, ty), L.cell(tx + 1, ty), L.cell(tx, ty + 1), L.cell(tx, ty - 1)].find((q) => /[.ctg]/.test(q)) || '.'; const lay = L.floorAt && L.floorAt(tx, ty); return (lay ? floorOf(lay[1], PAL[lay[2]]) : floorOf(ch === '+' ? '.' : ch))[0]; };
+  for (const [i, wr] of L.walls.entries()) {
+    if (!wr) continue;
+    const tx = i % L.cols, ty = (i / L.cols) | 0, x = tx * T, y = ty * T, q = wr[0];
+    const bx0 = Math.min(...wr.map((r) => r[0])), bx1 = Math.max(...wr.map((r) => r[2])), by0 = Math.min(...wr.map((r) => r[1])), by1 = Math.max(...wr.map((r) => r[3]));
+    for (const [dx, dy, rx, ry, rw, rh] of [[-1, 0, 0, 0, bx0, T], [1, 0, bx1, 0, T - bx1, T], [0, -1, 0, 0, T, by0], [0, 1, 0, by1, T, T - by1]]) {
+      const f = flat(tx + dx, ty + dy);
+      if (f && rw > 0 && rh > 0) { b.fillStyle = f; b.fillRect(x + rx, y + ry, rw, rh); }
+    }
+    void q;
+  }
   // the garage's bays: painted lines either side, an oil stain
   for (const bay of L.bays) {
     b.fillStyle = 'rgba(240,230,170,.55)'; b.fillRect(bay.x - 31, bay.y - 52, 2, 104); b.fillRect(bay.x + 29, bay.y - 52, 2, 104);
@@ -362,29 +375,26 @@ function bakeRooms(L) {
   }
   // the furniture, its shadow
   for (const p of L.pieces) { b.fillStyle = 'rgba(0,0,0,.2)'; b.fillRect(p.x + 3, p.y + 4, p.w, p.h); piece(b, p, P, L); }
-  // the walls standing up (H64): each wall's top raised by its height, the face below it showing where the floor is in
-  // front (the back wall taller, the rest cut low so you see in); the front door, the garage door
+  // the walls standing up (H64; H77, the HO6 concept: thin dark lines with a lit top edge): each line's top raised by its
+  // height, its face below where it ends going south (the outside along the front); the front door, the garage's door
   const wallish = (ch) => ch === '#' || ch === '=' || ch === 'D' || ch === 'R' || ch === 'U' || ch === 'E';   // (U a flat's door, E the lift: a lobby's - H71)
-  for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
-    const ch = L.cell(tx, ty), x = tx * T, y = ty * T, h = ty === 0 ? 16 : 7;
-    if (!wallish(ch)) continue;
-    const open = !wallish(L.cell(tx, ty + 1)) || ty === L.rows - 1 || (ty === 0 && L.rows > 1);
-    if (open) {   // the face: the wallpaper inside, the outside along the front, a skirting at its foot
-      b.fillStyle = ty === L.rows - 1 ? (ch === 'R' ? '#9a9ca0' : '#7a6a5a') : (L.paintAt && L.paintAt(tx, ty)) || P.face; b.fillRect(x, y + T - h, T, h);
-      b.fillStyle = 'rgba(0,0,0,.22)'; b.fillRect(x, y + T - 2, T, 2);
-      if (ch === 'R') { b.fillStyle = '#7a7c80'; for (let j = 1; j < h; j += 3) b.fillRect(x, y + T - h + j, T, 1); }
-      b.fillStyle = 'rgba(0,0,0,.18)'; if (/[.ctg+]/.test(L.cell(tx, ty + 1))) b.fillRect(x, y + T, T, 5);
-      if (ch === 'U') { b.fillStyle = '#e8e0cc'; b.fillRect(x + 4, y + T - h, T - 8, h); b.fillStyle = ['#6a5038', '#3e5a4a', '#7a3a2a', '#4a2a1c'][L.tier] || '#6a5038'; b.fillRect(x + 6, y + T - h + 1, T - 12, h - 1); b.fillStyle = '#e0b040'; b.fillRect(x + T - 11, y + T - h / 2, 2, 2); }   // (H71) a flat's door
-      if (ch === 'E') { const l = L.cell(tx - 1, ty) === 'E'; b.fillStyle = '#a8b0b8'; b.fillRect(x + (l ? 0 : 3), y + T - h, T - 3, h); b.fillStyle = '#5a6068'; b.fillRect(l ? x : x + T - 1, y + T - h, 1, h); }   // the lift
+  const lobby = /^lobby/.test(L.key);
+  for (const r of L.wallRects) {
+    const { tx, ty, ch } = r, h = lobby && ty === 0 ? 16 : 6, last = ty === L.rows - 1;
+    const ends = (r.y + r.h) % T !== 0 || !wallish(L.cell(tx, ty + 1)) || last;
+    if (ends) {   // the face: the room's paint inside, the outside along the front, the door in it
+      b.fillStyle = last ? (ch === 'R' ? '#9a9ca0' : ch === 'D' ? '#7a4a26' : '#7a6a5a') : (L.paintAt && L.paintAt(tx, ty)) || P.face; b.fillRect(r.x, r.y + r.h - h, r.w, h);
+      if (ch === 'R') { b.fillStyle = '#7a7c80'; for (let j = 1; j < h; j += 2) b.fillRect(r.x, r.y + r.h - h + j, r.w, 1); }
+      if (ch === 'D') { b.fillStyle = '#e0b040'; b.fillRect(r.x + r.w - 9, r.y + r.h - h + 2, 2, 2); }
+      if (ch === 'U') { b.fillStyle = ['#6a5038', '#3e5a4a', '#7a3a2a', '#4a2a1c'][L.tier] || '#6a5038'; b.fillRect(r.x + 4, r.y + r.h - h + 1, r.w - 8, h - 1); b.fillStyle = '#e0b040'; b.fillRect(r.x + r.w - 9, r.y + r.h - h / 2, 2, 2); }   // (H71) a flat's door
+      if (ch === 'E') { b.fillStyle = '#a8b0b8'; b.fillRect(r.x, r.y + r.h - h, r.w, h); }   // the lift
+      b.fillStyle = 'rgba(0,0,0,.2)'; if (!last) b.fillRect(r.x, r.y + r.h, r.w, 4);
     }
-    if (ch === 'D') {   // the door: a gap in the cut wall, the door shut in it, the mat inside
-      b.fillStyle = '#7a4a26'; b.fillRect(x + 3, y + T - h - 2, T - 6, h + 2);
-      b.fillStyle = '#e0b040'; b.fillRect(x + T - 10, y + T - h + 2, 3, 3);
-      b.fillStyle = '#6a3a2a'; b.fillRect(x + 4, y - 12, T - 8, 9);
-      continue;
-    }
-    b.fillStyle = P.wall; b.fillRect(x, y - h, T, T);
-    b.fillStyle = P.top; b.fillRect(x, y - h, T, 2); b.fillRect(x, y - h + T - 2, T, 2);
+    // the top: dark, its north edge lit; a window's glass, the door, the roller door
+    const top = r.y - h;
+    b.fillStyle = ch === '=' ? '#8ab8d8' : ch === 'D' ? '#6a3a20' : ch === 'R' ? '#8a8c90' : P.wall; b.fillRect(r.x, top, r.w, r.h);
+    b.fillStyle = ch === '=' ? '#d8eef8' : P.top; b.fillRect(r.x, top, r.w, 2);
+    if (r.h > r.w) { b.fillRect(r.x, top, 2, r.h); }
   }
   return c;
 }
@@ -447,6 +457,13 @@ function piece(b, p, P, L) {
     // (H71) a lobby's: the mailboxes on the back wall, the stairs climbing to it
     case 'M': box('#5a6068', x + 2, y + 2, w - 4, h - 12); for (let j = 0; j < 2; j++) for (let i = 0; i < Math.floor((w - 8) / 10); i++) { box('#a8aeb4', x + 5 + i * 10, y + 4 + j * 9, 8, 7); box('#22262c', x + 7 + i * 10, y + 6 + j * 9, 4, 1); } break;
     case 'Z': for (let k = 0; k < 8; k++) { box(k & 1 ? '#8a8680' : '#9a968e', x + 2, y + h - (k + 1) * 8, w - 10, 8); box('rgba(0,0,0,.18)', x + 2, y + h - (k + 1) * 8, w - 10, 1); } box('#5a3c22', x + w - 8, y, 4, h); break;
+    // (H77, HO6) the concept's new pieces: a pool table, an arcade cabinet, cinema seats, a kitchen island, a sectional, a bath
+    case 'x': box('#5a3a22', x + 3, y + 4, w - 6, h - 8); box('#2e7a46', x + 8, y + 9, w - 16, h - 18); for (const [dx, dy] of [[8, 9], [w / 2 - 2, 7], [w - 12, 9], [8, h - 13], [w / 2 - 2, h - 11], [w - 12, h - 13]]) box('#141414', x + dx, y + dy, 4, 4); box('#f4f0e4', x + w * 0.3, y + h / 2, 3, 3); box('#c83a2a', x + w * 0.62, y + h / 2 - 3, 3, 3); box('#e8c030', x + w * 0.66, y + h / 2 + 1, 3, 3); break;
+    case 'j': box('#2a2e5a', x + 6, y + 4, w - 12, h - 8); box('#3ad0e8', x + 9, y + 8, w - 18, 10); box('#e85a9a', x + 8, y + 4, w - 16, 3); box('#141418', x + 7, y + h - 10, w - 14, 4); break;
+    case 'i': for (let j = 0; j < p.th; j++) for (let i = 0; i < p.tw; i++) { const xx = x + i * TILE_IN, yy = y + j * TILE_IN; box('#2a1a1e', xx + 1, yy + 4, TILE_IN - 2, TILE_IN - 6); box('#a01e26', xx + 5, yy + 4, TILE_IN - 10, TILE_IN - 8); box('#7a141a', xx + 5, yy + 4, TILE_IN - 10, 7); } break;
+    case 'n': box(P.fab, x + 2, y + 2, w - 4, h * 0.55); box('#f2f0ec', x, y + 2, w, h * 0.55 - 2); box('#9aa4ac', x + w * 0.2, y + 8, 16, 8); for (let i = 0; i < Math.round(w / 32); i++) { b.fillStyle = '#3a2a24'; b.beginPath(); b.arc(x + (i + 0.5) * w / Math.round(w / 32), y + h * 0.55 + 9, 5, 0, 6.28); b.fill(); } break;
+    case 's': box(P.fab, x + 1, y + 2, w - 2, 28); box(P.fab, x + w - 30, y + 2, 29, h - 4); box('rgba(0,0,0,.25)', x + 1, y + h - 8, w - 2, 6); box('rgba(255,255,255,.12)', x + 4, y + 10, w - 36, 16); break;
+    case 'h': box('#f2f2ee', x + 2, y + 3, w - 4, h - 6); box('#9ac8de', x + 6, y + 7, w - 12, h - 14); box('#c8ccd2', x + w - 6, y + h / 2 - 1, 3, 3); break;
     default: box('#6a6a6a', x + 2, y + 2, w - 4, h - 4);
   }
   void L;
@@ -495,13 +512,13 @@ function sleepMinutes() {   // the clock running on from bedtime to the morning 
 function windows(L, now) {
   const d = daylight(), T = TILE_IN;
   const glass = d > 0.5 ? `rgb(${150 + 60 * d},${200 + 30 * d},${235})` : d > 0 ? '#e09a5a' : '#1a2440';
-  for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
-    if (L.cell(tx, ty) !== '=') continue;
-    const x = tx * T, y = ty * T;
-    g.fillStyle = '#e8e4da'; g.fillRect(x + 2, y + T - 15, T - 4, 12);
-    g.fillStyle = glass; g.fillRect(x + 4, y + T - 13, T - 8, 8);
-    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x + 6, y + T - 12, 6, 2);
-    if (d > 0.2 && !L.solid(tx, ty + 1)) {   // the light falling in across the floor below it
+  for (const r of L.wallRects) {   // (H77: the glass in the wall's thin line, raised with it)
+    if (r.ch !== '=') continue;
+    const { tx, ty } = r, x = tx * T, y = ty * T, h = /^lobby/.test(L.key) && ty === 0 ? 16 : 6;
+    g.fillStyle = '#e8e4da'; g.fillRect(r.x, r.y - h, r.w, r.h);
+    g.fillStyle = glass; g.fillRect(r.x + (r.w > r.h ? 0 : 2), r.y - h + (r.w > r.h ? 2 : 0), r.w - (r.w > r.h ? 0 : 4), r.h - (r.w > r.h ? 4 : 0));
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(r.x + 4, r.y - h + 3, 4, 2);
+    if (ty === 0 && d > 0.2 && !L.solid(tx, ty + 1)) {   // the light falling in across the floor below it
       g.fillStyle = `rgba(255,236,180,${0.09 * d})`;
       g.beginPath(); g.moveTo(x + 2, y + T); g.lineTo(x + T - 2, y + T); g.lineTo(x + T + 8, y + T * 1.9); g.lineTo(x + 8, y + T * 1.9); g.closePath(); g.fill();
     }

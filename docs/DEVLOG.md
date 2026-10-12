@@ -9604,3 +9604,62 @@ head getting up, crawling out of the water: the bake budget); in art v2 the plou
 faces down the screen (the 3/4 view); FA4's grain trailer isn't there (no such vehicle); the headless page is too slow
 (about 1 frame in 5 s in art v2) for the crowd's new faces to be drawn while they still burn, and a stamp mid-run makes
 the page update itself (the runs that showed the title screen).
+
+## 2026-10-11 · Inside your home, the owner's HO6 concept: thin walls, the mansion's games room and cinema, the yard round every home, a cyan glow (H77)
+
+The owner's new concept, HO6 "inside your home": four homes cut away from above in the game's look - a trailer, an
+apartment over a shop, a house with its garage and garden, a hillside mansion over the sea - their walls thin dark lines
+with a lit top edge, the rooms lamp-lit, the things you can use glowing with a soft cyan outline, plants and rugs
+everywhere. H64 had said the walls could only get thinner if the plans' solid walls did (the server's walking).
+- **Thin walls** (shared/homelayout.js): a wall is a line WALL_IN (10 px) thick - along the middle of a plan's wall
+  tile inside the home, along the inner edge of the outside walls - out to the tile's edge where a wall or a doorway
+  goes on. `blocked` (the server's walking, and the page's prediction of it) sees only the line in a wall tile
+  (`L.walls`, per tile; `L.wallRects` for drawing), so you walk right up to a wall and the rooms are a tile wider; the
+  plans' tiles are as they were, so the decor (a wall tile still takes no furniture; shared/homedecor.js), the rooms and
+  their paint, the lobby's doors, the garage's bays and the parked cars' rects work unchanged.
+- **Drawn as the concept draws them**, both views: art v2 (client/render/homeart2.js) - every wall of a home cut low
+  (HC 10 px), a dark line with its north and west edges lit, a short face where a line ends going south (the room's
+  paint, tiles or panelling; the outside along the front), the windows glass in the line (the sky's colour in them),
+  the front door and the roller door in it; the rest of a wall tile is the floor of the room beside it (or the yard,
+  outside); the shadow at a wall's foot follows the line; a lobby keeps its tall back wall with the flats' doors. The
+  daylight comes in at a window in any outside wall. The classic view (homeview.js): the same lines, raised, lit along
+  the top, with their faces, and the floors run under them.
+- **The rooms** (the plans): the mansion as the concept lays it out - along the back the master bedroom (a bedside
+  lamp either side of the bed, a floor lamp), the walk-in wardrobe with the safe, the bathroom (a bath, the shower) and
+  the home cinema (the big screen, two rows of red seats); the great room - the kitchen, an island with its stools, the
+  dining table, a sectional facing the TV - and the games room (a pool table, two arcade cabinets, a bookshelf, an
+  armchair); the three-car garage through the games room; windows along the front and the side. The trailer gets its
+  TV, an armchair and windows over the bedroom; the apartment and the penthouse bedside tables either side of the
+  bed, a floor lamp, more windows. New pieces (client/art2/props-home.js; flat ones in the classic view): the pool
+  table, the arcade cabinet (its screen lit, brighter at night - a light of its own), cinema seats, the kitchen island
+  with stools, the sectional, the bath; plan letters x j i n s h, and b l w k (the shop's bedside table, floor lamp,
+  washer, workbench) usable in a plan too.
+- **The yard round it** (homeart2.js buildYard, yardThings): a lawn mown in stripes round a good house, the path from
+  the door, the drive from the garage, flower beds along the front; a house's white picket fence across the front
+  (gaps for the path and the drive) and a wooden fence round the back and sides, a patio behind it with a patio set
+  under its umbrella, a mower on the back lawn and two raised beds at the back where the lot's garden plots are (H61);
+  a trailer's deck at its door, a wooden fence round its patch of grass and a lawn chair; a mansion's stone terrace
+  behind it (the patio set, lawn chairs, raised beds), a forecourt and a hedge along the front, rocks and the sea off its
+  east side; paving round an apartment. The yard's things are voxel models drawn with the furniture (YARD_MAKERS: a
+  patio set, a mower, a lawn chair, a raised bed).
+- **The thing in reach glows cyan**: art v2 - a soft ring round its shape, bright at the edge, fading out a pixel
+  beyond, a faint wash just inside; the classic view and the front door - a cyan stroke with a blur (was gold).
+- Budgets: all of it in the lazily loaded home code (homeview.js, homeart2.js, props-home.js) and shared/homelayout.js
+  (the server's and the home code's - not in the page's start-up code or the bake); the world's and the art's hashes
+  don't move (the plans aren't the map).
+Files: shared/homelayout.js, client/render/homeart2.js, client/render/homeview.js, client/art2/props-home.js. Tests:
+test/homewalls.test.js (new: every plan at every tier walkable on a 4 px grid from the way in to everything you use
+with the garage full, never out through a wall, the parked cars solid; a wall is a line - you stand right up to it,
+walking into it stops you at it - and every doorway in every plan lets you through; the mansion's new rooms and three
+bays, the new models build, the decor rules on the thin walls); test/homeinside.test.js, homedecor.test.js,
+homeart.test.js, lobby.test.js, realestate.test.js, homes.test.js and gardening.test.js pass unchanged (no test moved:
+the plans' tiles are the same - the house's, which the decor tests pin, unchanged but for its look). Screenshots (the
+helper's scratchpad, h77/): headless playtests in art v2 at 1280x720 - pt-mansion-night.png, pt-house-day.png,
+pt-house-night.png, pt-trailer-day.png, pt-trailer-night.png, pt-apartment-day.png, pt-apartment-night.png (the mansion
+by day: m3d.png, drawn in node by the same code); node drawings of every kind by day and night (render.mjs). Still unlike
+the concept: the house keeps one bedroom (its plan is pinned by the decor tests; the concept has two and a laundry);
+the apartment stands in a paved yard, not up an outside stair over a shop; the kitchen's wall cupboards, the wardrobes
+and the shower stand up over the cut back wall (the concept is more top-down); the trailer is a room with a yard, not a
+trailer's tin body on wheels; the mansion's garage is inside the plan, not a carport below the house; the yard is
+drawn, not walked in (you go out by the front door, as before), and its raised beds don't show what's growing in your
+plots; the lights at night don't spill out into the yard.
