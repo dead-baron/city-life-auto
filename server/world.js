@@ -73,6 +73,9 @@ import * as farming from './systems/farming.js';
 
 import * as homeinside from './systems/homeinside.js';
 import * as mortgage from './systems/mortgage.js';
+
+import * as policeair from './systems/policeair.js';
+import * as airtraffic from './systems/airtraffic.js';
 import * as net from './net.js';
 import { warmGround } from './systems/offroad.js';
 
@@ -150,6 +153,8 @@ const SYSTEMS = [
   ['farming', farming.update],      // the farms' fields: the rows growing, a tractor down a row ploughing, sowing, harvesting it (H61)
   ['homeinside', homeinside.update], // inside your home: sleeping, the shower, where you are in there to your page (H62)
   ['mortgage', mortgage.update],    // mortgages: a payment each in-game day from the bank, the home taken back after too many missed (H65)
+  ['policeair', policeair.update],  // the police air unit: up from headquarters at a high wanted level, following the suspect overhead (H66)
+  ['airtraffic', airtraffic.update], // light planes in and out of the runways and airstrips, the news helicopter over a chase (H66)
 ];
 
 export class World {

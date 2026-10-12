@@ -63,7 +63,7 @@ function fields(world, e) {
     // (parent: the damage you can see - its stage, the sides it's dented on, bullet holes, the parts off, a plasma cut:
     // vehicles.js vehDamageWord, shared/vehicles.js packVehDamage - task #402; a tank's top byte: its turret's angle from the hull, tank.js)
     // (an aircraft: extra its altitude - shared/flight.js altByte; flags VF.ROTOR its engine turning)
-    case K.VEH: if (e.def.kind === 'air') return [vehicles.vehFlags(world, e) | ((e.spool || 0) > 0.05 ? VF.ROTOR : 0), Math.max(0, e.hp / e.def.hp), vehicles.vehDamageWord(world, e), altByte(e.alt)];
+    case K.VEH: if (e.def.kind === 'air') return [vehicles.vehFlags(world, e) | ((e.spool || 0) > 0.05 ? VF.ROTOR : 0), Math.max(0, e.hp / e.def.hp), (vehicles.vehDamageWord(world, e) | ((e.lightB | 0) << 24)) >>> 0, altByte(e.alt)];   // (the top byte: the police unit's searchlight - policeair.js lightByte)
       return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), (vehicles.vehDamageWord(world, e) | (e.def.turret ? tank.turretByte(e) << 24 : 0)) >>> 0, e.towedBy ? (e.towEnd === -1 ? 2 : 1) | (e.towFrom ? 4 : 0) : 0];
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
     case K.BAG: return [bagBlinks(world, e) ? 1 : 0, 1, 0, bagWireTier(e)];   // flags 1: about to vanish (it blinks)

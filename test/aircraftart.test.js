@@ -1,0 +1,47 @@
+// Art v2 aircraft (client/art2/aircraft.js, H66): the block models build - the four helicopters and the light plane at
+// each bank, the rotor's blades and its blurred disc - and render to sprites at a heading; the searchlight's spot decodes
+// from the wire; the module stays out of the page's and the renderer's code (loaded the first time an aircraft is near).
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const AM = await import('../client/art2/aircraft.js');
+const { lightByte } = await import('../server/systems/policeair.js');
+
+const solid = (m) => { let n = 0; for (let i = 0; i < m.v.length; i++) if (m.v[i]) n++; return n; };
+
+test('the helicopters and the plane build as block models, the plane banking', () => {
+  for (const t of ['heli', 'policeheli', 'rescueheli', 'gunship']) {
+    const m = AM.bodyModel(t);
+    assert.ok(solid(m) > 20000, `${t}: a body (${solid(m)} voxels)`);
+  }
+  const level = AM.bodyModel('plane', { bank: 0 }), banked = AM.bodyModel('plane', { bank: 0.6 });
+  assert.ok(solid(level) > 10000, 'the plane');
+  // banked right: the right wing tip (+y) lower than the left
+  const top = (m, y) => { for (let z = m.h - 1; z >= 0; z--) for (let x = 0; x < m.w; x++) if (m.get(x, y, z)) return z; return -1; };
+  assert.equal(top(level, 6), top(level, level.d - 7), 'level: the tips at one height');
+  assert.ok(top(banked, 6) > top(banked, banked.d - 7) + 20, 'banked right: the right wing down, the left up');
+});
+
+test('they render to sprites at a heading; the rotor\'s blades and its disc', () => {
+  const g = AM.bodySprite('policeheli', 3, 32, 2, 2);
+  assert.ok(g.w > 20 && g.h > 20, `a sprite (${g.w}x${g.h})`);
+  let lit = 0; for (let i = 3; i < g.col.length; i += 4) if (g.col[i]) lit++;
+  assert.ok(lit > 300, `drawn (${lit} px)`);
+  const b = AM.rotorSprite(76, false, '#e8402e', 2, 32, 2), d = AM.rotorSprite(76, true, '#e8402e', 0, 32, 2);
+  assert.ok(b.w >= 60 && d.w >= 70, `the rotor across its span (${b.w}, ${d.w}: 76 px a blade, 2 px a pixel)`);
+  const p = AM.bodySprite('plane', 0, 32, 4, 2);
+  assert.ok(p.w > 40, 'the plane');
+});
+
+test('the searchlight\'s spot from the wire', () => {
+  const v = { rx: 1000, ry: 500, parent: (lightByte(150, -110) << 24) >>> 0 };
+  const q = AM.spotOf(v, 10);
+  assert.ok(Math.hypot(q.x - 1150, q.y - 390) < 60, `near the suspect (${Math.round(q.x)}, ${Math.round(q.y)})`);
+  assert.equal(AM.spotOf({ rx: 0, ry: 0, parent: 5 }), null, 'off');
+});
+
+test('loaded lazily: neither the page nor the renderer imports it statically', () => {
+  const host = readFileSync(new URL('../client/art2/game/host.js', import.meta.url), 'utf8'), main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
+  assert.ok(!/^import[^;]*art2\/aircraft\.js/m.test(main) && !/^import[^;]*\.\.\/aircraft\.js/m.test(host), 'no static import');
+  assert.ok(/import\('\.\.\/aircraft\.js'\)/.test(host), 'the host loads it when an aircraft is near');
+});
