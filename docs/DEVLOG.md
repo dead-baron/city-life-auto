@@ -9264,7 +9264,10 @@ decor that doesn't redraw the whole room (H67 saw several seconds).
   number plates, the lift's steel doors with the floor lamp over them, the mailboxes and the stairs as voxel models
   (client/art2/props-home.js), the hall's tiles, the runner, pictures between the doors, the paved yard round it; the
   classic view (homeview.js) - the same as flat sprites. Over both, each door's number; yours lit (a lamp over it, its
-  light on the landing), light under the door of one whose owner is in, a FOR SALE sign on one for sale.
+  light on the landing), light under the door of one whose owner is in, a FOR SALE sign on one for sale (in art v2
+  drawn with the back wall, behind anyone standing at the door); an envelope bobbing over the mailboxes when there's new
+  mail in yours. At night the hall and the landing have their ceiling lights on (in node: the yard's light falls from
+  112 to 34, the floor's only from 79 to 63; lit in 12-58 ms).
 - **The mail** (server/systems/mail.js, new): your mailbox - in your block's lobby (only the flats' owners open one), or
   for a house picked up on the way in ("You pick up the mail on the way in: 2 new") and read at the hall table (The
   mail) - holds: the utilities bill each in-game week for the homes you own (MAIL.util a home; pay it from the mailbox;
@@ -9317,9 +9320,13 @@ homedecor, homeart and happenings tests pass.
 Playtest (headless; scratchpad/h71): art v2 1280x720 - the lobby by day (pt2-lobby-day.png) and night
 (pt2-lobby-night.png, pt-lobby-night.png), the mailbox's menu (pt-mailbox.png), the dog greeting you in your flat
 (pt-pet-greet.png) and later (pt2-pet-bed.png); the classic view on a phone 844x390 - the lobby by day
-(pt3-phone-lobby-day.png) and night (pt3-phone-lobby-night.png), the cat at home (pt3-phone-pet.png). What's wrong: the
+(pt3-phone-lobby-day.png) and night (pt3-phone-lobby-night.png), the cat at home (pt3-phone-pet.png); after the fixes
+(the plates behind you, the envelope over the mailboxes, the ceiling lights) pt4-lobby-day.png. What's wrong: the
 first time in, the home code takes a few seconds to load on the slow headless page (the city shows meanwhile -
-pt-lobby-day.png); at night the lobby is dim and your door's light is faint; the stairs read as a grey block and the
+pt-lobby-day.png); with the machine loaded (three helpers' playtests and tests on two cores) the later night
+screenshots timed out or caught the lobby before it was lit for the night (pt4-lobby-night.png is still lit by day),
+so the ceiling lights are checked in node only; a playtest server left running by a timed-out run served the old
+server code to the next runs on its port until stopped; your door's lamp is faint; the stairs read as a grey block and the
 mailboxes as a filing cabinet in art v2 (plain voxel models); the lift's doors barely show in the classic view; the
 landing is one floor - every flat's door along it, whatever its floor (the stairs and the lift go nowhere); the pet
 lies by its bed rather than curled on it in art v2 (no curled-up pose), and in a small flat its bed sits close to the
