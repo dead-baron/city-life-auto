@@ -658,6 +658,9 @@ export const GARDEN_CROPS = {
   carrot: { seeds: 8, days: 1.2, yield: 4, sell: 4, heal: 6 },
   lettuce: { seeds: 8, days: 1, yield: 2, sell: 7, heal: 7 },
   pumpkin: { seeds: 16, days: 2.5, yield: 1, sell: 34, heal: 20 },
+  corn: { seeds: 9, days: 1.8, yield: 3, sell: 6, heal: 7 },   // (H78: the FA5 concept's other three)
+  strawberry: { seeds: 12, days: 1.4, yield: 5, sell: 4, heal: 5 },
+  sunflower: { seeds: 7, days: 2, yield: 2, sell: 12, heal: 3 },
 };
 // ---- farm work (H61) - server/systems/farming.js. The farms' fields in rows rowW px wide along their length, each
 // going round stubble -> ploughed -> sown -> growing (growDays in-game days) -> ripe -> harvested (stubble again).

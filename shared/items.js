@@ -461,7 +461,7 @@ SHOPS.cinema = { title: 'The Grand Theatre - tickets & popcorn', buy: [{ kind: '
 // ---- gardening (H61: server/systems/gardening.js; the numbers: shared/rules.js GARDEN, GARDEN_CROPS): a packet of seeds
 // for each crop (planted at an empty plot in your yard: seed_<crop>), what it grows (<crop>: eaten for a little health,
 // sold to the grocery or the co-op) and the prize ones now and then (prize_<crop>: worth GARDEN.prizeX times as much)
-export const GARDEN_CROP_NAMES = { tomato: 'Tomato', carrot: 'Carrot', lettuce: 'Lettuce', pumpkin: 'Pumpkin' };
+export const GARDEN_CROP_NAMES = { tomato: 'Tomato', carrot: 'Carrot', lettuce: 'Lettuce', pumpkin: 'Pumpkin', corn: 'Corn', strawberry: 'Strawberry', sunflower: 'Sunflower' };
 for (const [c, q] of Object.entries(GARDEN_CROPS)) {
   ITEMS[`seed_${c}`] = { name: `${GARDEN_CROP_NAMES[c]} Seeds`, seed: c, sell: 0 };
   ITEMS[c] = { name: `Garden ${GARDEN_CROP_NAMES[c]}`, food: true, heal: q.heal, sell: q.sell, crop: c };

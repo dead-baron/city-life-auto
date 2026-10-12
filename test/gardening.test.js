@@ -175,3 +175,32 @@ test('the dev garden won\'t move you out from under your vehicle: on foot first 
   p.ped.vehId = 0; v.seats[0] = 0;
   assert.equal(gardening.devGarden(w, p, {}, homes.buy), null, 'on foot: the garden, and you at it');
 });
+
+// H78 (the owner's FA5 concept): corn, strawberries and sunflowers after the first four - sold where seeds are sold,
+// grown and picked like the rest; and the page's raised bed draws every crop at every stage (render/farmart.js)
+test('the concept\'s other crops: corn, strawberries, sunflowers - seeds on the counters, grown and picked; every crop drawn at every stage', async () => {
+  const { w, p, prof, h } = scene();
+  assert.deepEqual(gardening.CROP_IDS.slice(0, 4), ['tomato', 'carrot', 'lettuce', 'pumpkin'], 'the first four keep their wire indexes');
+  const coop = w.map.pois.find((q) => q.kind === 'farm');
+  const menu = economy.buildMenu(w, p, coop);
+  for (const c of ['corn', 'strawberry', 'sunflower']) {
+    assert.ok(GARDEN_CROPS[c] && gardening.CROP_IDS.includes(c), c);
+    assert.ok(menu.opts.some((o) => o.id.startsWith(`i:seed_${c}:`)), `${c} seeds at the co-op`);
+    assert.ok(ITEMS[c] && ITEMS[`prize_${c}`] && ITEMS[`seed_${c}`], `${c}: the seeds, the crop, the prize one`);
+  }
+  prof.inventory.seed_corn = 1;
+  gardening.plant(w, p, 'corn');
+  const q = prof.garden[h.id].plots[0];
+  assert.equal(q.c, 'corn');
+  for (let k = 0; k < 14 && q.g < 1; k++) { gardening.water(w, p); gardening.advance(w, GARDEN.waterDays * DAY * 0.9); }
+  assert.equal(q.g, 1, 'ripe');
+  gardening.harvest(w, p);
+  assert.ok((prof.inventory.corn || 0) + (prof.inventory.prize_corn || 0) > 0, 'corn picked');
+  const F = await import('../client/render/farmart.js');
+  for (let c = -1; c < gardening.CROP_IDS.length; c++) for (let st = 0; st <= 4; st++) for (const fl of [0, 1, 2, 4, 8]) {
+    let n = 0, off = 0;
+    F.plotPixels(c, st, fl, (x, y, rgb) => { n++; if (x < 0 || y < 0 || x >= F.PLOT_W || y >= F.PLOT_H || rgb.some((v) => !(v >= 0 && v <= 255))) off++; });
+    assert.ok(n > 300 && off === 0, `crop ${c} stage ${st} flags ${fl}: ${n} px, ${off} off the sprite`);
+  }
+  for (let look = 0; look <= 6; look++) for (let b = 0; b < 32; b++) assert.ok(F.rowPixel(look, 5, b).length === 3);
+});
