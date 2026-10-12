@@ -9533,3 +9533,74 @@ What still differs from the concepts:
 - The picker: the concept's three figures are big portraits; ours are the game's own sprites at 5 px an art pixel
   (twelve of them, so the row scrolls - "+ New character" held at its right edge over the looks behind it); the
   starting look no longer turns or breathes (the turning preview is the creator's).
+
+## 2026-10-11 · People on fire, the garden, the fields and the machines to the owner's new concepts (H78)
+
+The brief: make people on fire, the garden, the fields and (time allowing) the tank and the gunship look like the
+owner's new concepts - FI1 (people on fire: catching from the legs up, running with the flames streaming behind and
+smoke trailing, stop, drop and roll with the flames smaller each turn, lying smouldering, up singed with wisps of smoke,
+diving into water in a burst of steam, falling to lie still blackened and smoking; the rain hissing a fire out), FI2
+(after the blast), FA5 (garden plots by stage), FA4 (tractors and the fields), MV1 (the tank and the attack helicopter).
+
+- **People on fire** (FI1, FI2). The page picks the frame from what the record already carries (the burn bit, DOWN,
+  MOVING, DEAD, the swim bit) plus one new bit: **burned to death** (`server/systems/combat.js` kill sets `ped.charred`
+  when the cause is fire; `server/net.js` sends it as the parent field's next bit, 0x40000000, under the burn bit;
+  `client/main.js` strips both and notes when the burn bit comes on and goes off). `main.js` pedLook: catching (the
+  first 1.3 s, standing) the arms flail (the stagger pose cycling); down, burning and moving: rolling it out (the roll
+  pose); put out but still down: pushing up to get up (downF). burnFx: the flames start at the legs and climb the body
+  as the fire takes (spawned anywhere up it, as high as it has climbed), twice as many once it's ablaze; running, they
+  stream out behind with the smoke; rolling, smaller each turn (by 2.6 s); lying, a low smoulder under more smoke; in
+  the rain, white steam hissing off; once out, wisps of smoke for 7 s (singed); a body burned to death smokes on. The
+  'douse' event (into the water) bursts into steam and a splash. Art v2 (`client/art2/game/host.js` _ped) tints a body
+  burned to death near black and someone just put out singed (fading back over 14 s); the classic view darkens the
+  burned body (a canvas filter). No new poses: the bake budget (people.js) is untouched.
+- **The garden** (FA5; `client/render/farmart.js`, lazy, both views): a raised bed - a wooden frame with corner posts,
+  the front plank's face showing, dark soil (paler and dusty when dry, dark and rich watered) - with 10 art px of
+  headroom over it for tall crops, each crop at five stages (seeds in the soil, a sprout, growing, grown and in flower,
+  ready) and wilted (yellowing, a sunflower's head hanging) or dead (brown and bare): tomatoes on a stake, carrots'
+  feathery tops and orange shoulders, a head of lettuce, the pumpkin vine and its pumpkin (the prize one bigger with a
+  **blue ribbon**), and the concept's other three, added as crops at the END of `shared/rules.js` GARDEN_CROPS - **corn**
+  (tall stalks, tassels, ears), **strawberries** (low clumps, white flowers, red berries), **sunflowers** (two tall
+  stalks, a green bud, the big yellow heads); their seeds are sold wherever seeds are (`shared/items.js`: the co-op, the
+  hardware store, the market), their produce bought at the co-op, the grocery and the market, icons in the bag.
+- **The fields** (FA4; farmart.js rowPixel, calm - H61's were busy and speckled): four crop lines to a row - ploughed
+  ridges and furrows, the seed drills, the green shoots, the leafy rows, the tall crop, ripe golden wheat, pale stubble
+  with **round bales** on some stretches of it. Every pattern repeats in 32 art px (the classic view's tiles meet).
+- **The machines**: the tractor keeps its red and pulls a **plough** behind it (a red frame and five steel discs on the
+  drawbar: art v2 a ground decal behind each tractor, the classic view in drawTractor); the **combine is green** (art v2's
+  model, the classic drawing). No grain trailer: there's no such vehicle yet. MV1: the **tank leaves tread marks** (a
+  cleat across each track every 9 px it moves, the skid decals - two at a time, so the pool's 700 last a long drive and
+  keep the blood) and diesel smoke; its cannon's **muzzle flash** lights the ground and the shell streaks off; the
+  **gunship is grey** with two rocket pods a wing (art v2 `client/art2/aircraft.js`, the classic `render/aircraft.js`;
+  the rockets already trail fire and smoke).
+
+Files: server/systems/combat.js, server/net.js, shared/rules.js (GARDEN_CROPS +3), shared/items.js (their names),
+client/main.js (the charred bit, the fire poses, burnFx, the steam, the tread marks, the muzzle flash),
+client/art2/game/host.js (the charred and singed tints), client/render/farmart.js (the beds, the crops, the rows, the
+bales, the plough, the green combine), client/art2/vehicles.js (the combine's paint), client/art2/aircraft.js and
+client/render/aircraft.js (the gunship), client/inventory.js (the icons). The world's hash is unchanged; `world3` re-keys (it hashes the code World v3's
+build imports, shared/rules.js among it).
+
+Tests: test/burning.test.js (new: the burning states on the wire - catching on their feet, rolling: burning, down and
+moving; put out and still down; the faller lying burning and still; burned to death: the charred bit, only on a body;
+into the water: swimming, out, the douse; killed any other way: never charred), test/gardening.test.js (new: corn,
+strawberries and sunflowers - the first four keep their wire indexes, seeds at the co-op, the crop and the prize one,
+corn grown and picked; every crop at every stage and flag drawn inside its sprite; every row look; the plough and a
+bale), test/burning.test.js (new: the fire frames' poses build in art v2 - stagger, walk3, roll, down, downF, swim,
+dead - and the combine, the tractor, the tank and the grey gunship), farming, tank and aircraftart tests pass.
+test/perf.test.js: the code budgets pass (the page, the renderer, the bake, the city worker); its timing budgets (the
+city's build and the chunk bakes as multiples of the CPU yardstick) failed at 48x and 96x with two other helpers'
+playtests on the machine - nothing here touches the generator or the bake.
+
+Seen (scratchpad/h78; the concept beside ours in the cmp-*.png): node-rendered sheets - fire-sheet.png (FI1's frames as
+art v2 draws them: the people.js figures with the host's tints and the page's flames and smoke run through the real
+particle pool), garden-sheet.png (every crop x stage, wilted and dry or the prize pumpkin, and the seven row looks),
+machines.png (the tractor and its plough, the combine, the tank, the gunship as art v2 makes them); headless playtests -
+the classic view (b1-*.png: the grid of beds on the street, people on fire and a body burned to death, the fields with
+the tractor and its plough) and art v2 (v2-*.png, b2-*.png). What still differs: the concepts' beds are deeper and their
+plants twice the detail (ours are 28 x 14 art px: a plot's size in the world); FI1's flames are tongues of fire round the
+body, ours the pooled particles (squares in the classic view, the fx sprites in art v2) and no new poses (clutching the
+head getting up, crawling out of the water: the bake budget); in art v2 the plough hides under the tractor's cab when it
+faces down the screen (the 3/4 view); FA4's grain trailer isn't there (no such vehicle); the headless page is too slow
+(about 1 frame in 5 s in art v2) for the crowd's new faces to be drawn while they still burn, and a stamp mid-run makes
+the page update itself (the runs that showed the title screen).

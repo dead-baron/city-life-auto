@@ -72,7 +72,7 @@ const DEFAULT_PAINT = {
   bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a',
   cruiser: '#5ab0a8', mtb: '#d8682a', roadbike: '#c8302c', bmx: '#3a7ad0', cargobike: '#2f5a7a',
   vtwin: '#26282e', tourer: '#b8302a', chopper: '#2a2a2e', bobber: '#26282e', caferacer: '#e6e2d8', dirtbike: '#2f56b0', scooter: '#7ac0a0', trike: '#22357a', ratbike: '#4e5a34', bagger: '#22357a',
-  jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', fbi: '#17181d', army: '#4f5a36', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', waterbus: '#f0eee6', tractor: '#b83a2e', combine: '#b83a2e', plane: '#ecebe4', excavator: '#e0b030',
+  jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', fbi: '#17181d', army: '#4f5a36', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', waterbus: '#f0eee6', tractor: '#b83a2e', combine: '#3f9a2c', plane: '#ecebe4', excavator: '#e0b030',
   tank: '#5a6440', tankturret: '#5a6440',
 };
 const DEFAULT_CAB = { flatbed: '#e6e2d8', boxtruck: '#e6e2d8', dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#e6e2d8', towtruck: '#e6e2d8' };

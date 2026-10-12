@@ -26,6 +26,7 @@ export const ITEM_ICON = {
   venison: '🥩', rabbitMeat: '🥩', venisonSteak: '🍖', rabbitRoast: '🍗', deerHide: '🟫', antlers: '🦌', rabbitPelt: '🐇', coyotePelt: '🐺', raccoonPelt: '🦝',
   filmTicket: '🎟', popcorn: '🍿',   // (The Grand Theatre's counter)
   seed_tomato: '🌱', seed_carrot: '🌱', seed_lettuce: '🌱', seed_pumpkin: '🌱', tomato: '🍅', carrot: '🥕', lettuce: '🥬', pumpkin: '🎃', prize_tomato: '🍅', prize_carrot: '🥕', prize_lettuce: '🥬', prize_pumpkin: '🎃',   // (gardening: H61)
+  seed_corn: '🌱', seed_strawberry: '🌱', seed_sunflower: '🌱', corn: '🌽', strawberry: '🍓', sunflower: '🌻', prize_corn: '🌽', prize_strawberry: '🍓', prize_sunflower: '🌻',   // (H78)
 };
 const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light)); // (the flashlight: switched on / off)
 const SLOTS = 4;

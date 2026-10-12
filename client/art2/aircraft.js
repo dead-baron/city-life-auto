@@ -1,7 +1,7 @@
 // Art v2 aircraft (H66, after the owner's concept docs/art-v2/targets/HE1_helicopters.png, I5-A_airport.png,
 // SC2-C_police-hq-helipad.png, SC4-B_heli-chase-neon-rain.png): block models of the helicopters - the Skylark (news blue and
 // white), the police air unit (black and white, its light bar, the searchlight under the nose), the rescue helicopter
-// (red and white), the Hornet gunship (olive, a narrow tandem cabin, stub wings and missile pods) - and the Larkspur light
+// (red and white), the Hornet gunship (grey - MV1, a narrow tandem cabin, stub wings and missile pods) - and the Larkspur light
 // plane (white, a red stripe, its wings banking). Each drawn by the art v2 host (game/host.js _air) up the screen by its
 // height as render/aircraft.js lifts it (V2_LIFT), its main rotor its own sprite over the mast: the blades turning while
 // it spools, a blurred disc at speed (the tips' paint a ring). Loaded the first time an aircraft is near (the renderer's
@@ -26,7 +26,7 @@ export const TYPES = {
   heli: { body: '#e9edf2', trim: '#2c55b8', lower: '#e9edf2', tip: '#f2c230', cam: true },
   policeheli: { body: '#1d1f24', trim: '#eef0f3', lower: '#1d1f24', tip: '#e8402e', bar: true, light: true },
   rescueheli: { body: '#d8382e', trim: '#f2f2f2', lower: '#d8382e', tip: '#f2f2f2', cross: true },
-  gunship: { body: '#4f5d33', trim: '#6b7a44', lower: '#3f4a28', tip: '#f2c230', gun: true },
+  gunship: { body: '#646a70', trim: '#80868c', lower: '#4c5157', tip: '#f2c230', gun: true },   // (grey: the owner's MV1, H78)
   plane: { body: '#f1f2f0', trim: '#c4302b', plane: true },
 };
 export const LIFT = 0.66;   // (render/aircraft.js V2_LIFT: px up the screen per px of altitude)
@@ -97,10 +97,10 @@ function heliModel(type, T) {
   // the gunship: stub wings, the rocket pods under them (red-tipped), the chin gun
   if (T.gun) {
     m.box(L * 0.5, cy - 46, 20, L * 0.6, cy + 46, 23, M.lower);
-    for (const s of [-1, 1]) {
-      const y = cy + s * 38;
-      m.cyl('x', 0, y, 16, 5, L * 0.44, L * 0.66, M.dark);
-      m.cyl('x', 0, y, 16, 4, L * 0.66, L * 0.69, M.red);
+    for (const s of [-1, 1]) for (const [d, r] of [[38, 5], [27, 4]]) {   // (two pods a wing: MV1)
+      const y = cy + s * d;
+      m.cyl('x', 0, y, 16, r, L * 0.44, L * 0.66, M.dark);
+      m.cyl('x', 0, y, 16, r - 1, L * 0.66, L * 0.69, M.red);
     }
     m.box(L * 0.86, cy - 2, 10, L * 0.95, cy + 2, 13, M.dark);
   }
