@@ -1,10 +1,11 @@
 // Inside your home (H62; server/systems/homeinside.js walks you round, shared/homelayout.js has the plans): the rooms
-// drawn top-down over the city view (the same over art v2 and the classic renderer - with art v2 the light from the
-// windows and the lamps and the shadows under the furniture are softer), the camera framing the inside, you walking
-// round it (predicted from your own inputs, as out in the street, so it answers at once), the thing in reach outlined,
-// your cars in the garage, the windows showing the time of day, the night passing while you sleep. Loaded when you
-// first go in (main.js 'home' message) - nothing of it is in the page until then.
-import { layout, stepInside, useAt, TILE_IN } from '../../shared/homelayout.js';
+// drawn on a canvas of their own instead of the city (main.js draws no city while S.homeIn) - with art v2 in the game's
+// 3/4 view, the walls standing, the furniture voxel models and you as in the street (render/homeart2.js, H64); in the
+// classic view the plan's flat sprites with the walls raised - the camera at the street's scale, framing the inside,
+// you walking round it (predicted from your own inputs, as out in the street, so it answers at once), the thing in
+// reach outlined, your cars in the garage, the windows showing the time of day, the night passing while you sleep.
+// Loaded when you first go in (main.js 'home' message) - nothing of it is in the page until then.
+import { layout, stepInside, useAt, TILE_IN, CAR_IN } from '../../shared/homelayout.js';
 import { HOME_IN } from '../../shared/rules.js';
 import { TICK_HZ } from '../../shared/constants.js';
 import { PAINTS, VEHICLES } from '../../shared/vehicles.js';
@@ -16,25 +17,34 @@ const looks = new Map();   // a friend's look by name (sent now and then)
 const seen = new Map();    // a friend's last two spots by name: drawn between them (the server's 20 a second)
 const appOf = (a) => { if (a && a.lk && a.t === undefined) { const L = decodeLook(a.lk); return L ? lookToApp(L, a.lk) : {}; } return a || {}; };
 let cv = null, g = null, S = null, st = null, raf = 0, app = null, bake = null;
+// art v2 (H64): render/homeart2.js - the rooms in the game's 3/4 view, the furniture as voxel models, you as in the
+// street - loaded the first time you go in with art v2 on (its imports are the renderer's own, in the page by then)
+let artMod = null, artP = null, art = null;
+const raw = new Map();     // a friend's look as the server sends it (art v2's people adapt it themselves)
+// the street camera's scale (main.js baseZoom): CSS px per world px - you're your usual size in here
+function streetZoom() {
+  const long = Math.max(innerWidth, innerHeight), viewH = 660 * (1 + 0.3 * Math.max(0, Math.min(1, (long - 960) / 960)));
+  return long / (viewH * 16 / 9) * ((S && S.camScale) || 1);
+}
 
 // the palettes by how well the place is furnished (0 a shack .. 3 a mansion)
 const PAL = [
-  { wood: ['#8a6a48', '#7f6142'], carpet: ['#6f6a5e', '#676256'], tile: ['#b9b6a8', '#aeab9c'], wall: '#4a4440', top: '#6a625a', cloth: '#5a7a5a', accent: '#a0583a', fab: '#6a6458' },
-  { wood: ['#9a7350', '#8f6a48'], carpet: ['#7a5e52', '#71564a'], tile: ['#d2d0c4', '#c6c4b6'], wall: '#3e3a44', top: '#625c6a', cloth: '#3e6a8a', accent: '#c8873a', fab: '#5a6a7a' },
-  { wood: ['#a87c52', '#9c724a'], carpet: ['#8a4a40', '#80443a'], tile: ['#e2e0d6', '#d6d4c8'], wall: '#36323a', top: '#5c5462', cloth: '#7a3a3a', accent: '#d9a84a', fab: '#3a5a4a' },
-  { wood: ['#c8b89a', '#bfae8e'], carpet: ['#4a3a6a', '#443462'], tile: ['#f0eee8', '#e6e3da'], wall: '#2a2a30', top: '#5a5662', cloth: '#7a1d24', accent: '#f2c21b', fab: '#26303e' },
+  { wood: ['#8a6a48', '#7f6142'], carpet: ['#6f6a5e', '#676256'], tile: ['#b9b6a8', '#aeab9c'], wall: '#4a4440', top: '#6a625a', cloth: '#5a7a5a', accent: '#a0583a', fab: '#6a6458', face: '#9a7a56' },
+  { wood: ['#9a7350', '#8f6a48'], carpet: ['#7a5e52', '#71564a'], tile: ['#d2d0c4', '#c6c4b6'], wall: '#3e3a44', top: '#625c6a', cloth: '#3e6a8a', accent: '#c8873a', fab: '#5a6a7a', face: '#c8b48e' },
+  { wood: ['#a87c52', '#9c724a'], carpet: ['#8a4a40', '#80443a'], tile: ['#e2e0d6', '#d6d4c8'], wall: '#36323a', top: '#5c5462', cloth: '#7a3a3a', accent: '#d9a84a', fab: '#3a5a4a', face: '#9ab08e' },
+  { wood: ['#c8b89a', '#bfae8e'], carpet: ['#4a3a6a', '#443462'], tile: ['#f0eee8', '#e6e3da'], wall: '#2a2a30', top: '#5a5662', cloth: '#7a1d24', accent: '#f2c21b', fab: '#26303e', face: '#6a2e36' },
 ];
 
 export function onMsg(state, m) {
   S = state;
-  if (m.pre) return;   // (at your door: loaded ahead of going in)
+  if (m.pre) { loadArt(); return; }   // (at your door: loaded ahead of going in - art v2's drawing too)
   if (m.off) { hide(); return; }
   if (!st || st.id !== m.id || m.plan !== (st && st.plan)) st = { id: m.id, cars: [], name: '', garage: 0, sleepS: HOME_IN.sleepS, wakeH: HOME_IN.wakeH };
   Object.assign(st, m);
   st.at = performance.now();
   const t = performance.now();
   for (const o of m.others || []) {
-    if (o.app) looks.set(o.n, appOf(o.app));
+    if (o.app) { looks.set(o.n, appOf(o.app)); raw.set(o.n, o.app); }
     const q = seen.get(o.n), k = q ? Math.min(1, (t - q.t) / 50) : 1;
     seen.set(o.n, { x0: q ? q.x0 + (q.x1 - q.x0) * k : o.x, y0: q ? q.y0 + (q.y1 - q.y0) * k : o.y, x1: o.x, y1: o.y, t });
   }
@@ -56,18 +66,34 @@ function show() {
   }
   cv.style.display = '';
   if (!raf) raf = requestAnimationFrame(frame);
+  // (H64) the city isn't drawn under the inside (main.js render: a phone's frame rate); no FIRE / ROLL / CAR, no aim
+  // stick and no district card in here
+  S.homeIn = true;
+  if (!document.getElementById('home-css')) {
+    const css = document.createElement('style'); css.id = 'home-css';
+    css.textContent = 'body.home-in #tbtns [data-b=fire],body.home-in #tbtns [data-b=vehicle],body.home-in #tbtns [data-b=dive],body.home-in #tbtns [data-b=throw],body.home-in #tbtns [data-b=reload],body.home-in #stick-r,body.home-in #firetog,body.home-in #district{display:none!important}';
+    document.head.appendChild(css);
+  }
+  document.body.classList.add('home-in');
+  loadArt();
+}
+function loadArt() {
+  if (S && S.art2 && !artMod && !artP) artP = import('./homeart2.js').then((m) => { artMod = m; }).catch((e) => console.warn('[home art]', e)).finally(() => { artP = null; });
 }
 function hide() {
   st = null;
   if (cv) cv.style.display = 'none';
   if (raf) { cancelAnimationFrame(raf); raf = 0; }
+  if (S) S.homeIn = false;
+  document.body.classList.remove('home-in');
+  art = null;   // (its buffers - a few MB - let go: made again, a little a frame, the next time you're in)
 }
 export const inside = () => !!st;
 
 // where you are: the server's spot, your inputs it hasn't seen yet replayed on it (the same steps it takes), between the
 // last two steps by the time since
 function predicted(L) {
-  const s = { x: st.x, y: st.y, a: st.a }, prev = { ...s };
+  const s = { x: st.x, y: st.y, a: st.a, nc: (st.cars || []).length }, prev = { ...s };   // (nc: the parked cars are solid)
   let mv = !!st.mv;
   if (!st.sleep && !st.shower && S.pending) {
     for (const q of S.pending) {
@@ -88,41 +114,126 @@ function frame(now) {
   const W = Math.round(innerWidth * dpr), H = Math.round(innerHeight * dpr);
   if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
   const L = layout(st.plan, st.tier);
-  const v2 = !!S.art2;
+  const v2 = !!S.art2 && !!artMod;
   const me = predicted(L);
-  // the camera: the whole place when it fits big enough, else following you round it
-  const kMin = Math.min(W, H) / (14 * TILE_IN), kFit = Math.min(W / (L.w + 48), H / (L.h + 120));
-  const k = Math.max(kMin, Math.min(kFit, 3.2 * dpr));
+  // the camera: the street's scale (you're your usual size), the whole place framed when it fits, else following you
+  const k = streetZoom() * dpr, top = v2 ? artMod.HF - TILE_IN : 16;
   const vw = W / k, vh = H / k;
-  const cx = L.w <= vw ? L.w / 2 : Math.max(vw / 2, Math.min(L.w - vw / 2, me.x));
-  const cy = L.h <= vh - 60 ? L.h / 2 + 10 : Math.max(vh / 2 - 30, Math.min(L.h - vh / 2 + 40, me.y));
+  const cx = L.w + 40 <= vw ? L.w / 2 : Math.max(vw / 2 - 20, Math.min(L.w - vw / 2 + 20, me.x));
+  const cy = L.h + top + 60 <= vh ? (L.h - top) / 2 + 8 : Math.max(vh / 2 - top - 30, Math.min(L.h - vh / 2 + 40, me.y));
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.fillStyle = '#07080b'; g.fillRect(0, 0, W, H);
-  g.setTransform(k, 0, 0, k, W / 2 - cx * k, H / 2 - cy * k);
-  if (!bake || bake.key !== `${st.plan}:${st.tier}:${v2}`) bake = { key: `${st.plan}:${st.tier}:${v2}`, cv: bakeRooms(L, v2) };
+  g.setTransform(k, 0, 0, k, Math.round(W / 2 - cx * k), Math.round(H / 2 - cy * k));
   g.imageSmoothingEnabled = false;
-  g.drawImage(bake.cv, -16, -16, L.w + 32, L.h + 32);
-  windows(L, v2, now);
-  cars(L);
-  // the thing in reach: outlined
   const u = !st.sleep && !st.shower ? useAt(L, me.x, me.y, HOME_IN.reach) : null;
-  if (u) {
-    g.strokeStyle = `rgba(255,214,90,${0.55 + 0.35 * Math.sin(now / 220)})`; g.lineWidth = 2;
-    g.strokeRect(u.x + 1, u.y + 1, u.w - 2, u.h - 2);
+  if (!(v2 && drawArt(L, me, u, now))) {   // (the classic drawing while art v2's is still being made)
+    if (!bake || bake.key !== `${st.plan}:${st.tier}`) bake = { key: `${st.plan}:${st.tier}`, cv: bakeRooms(L) };
+    g.drawImage(bake.cv, -16, -24, L.w + 32, L.h + 40);
+    windows(L, now);
+    cars(L);
+    if (u) {   // the thing in reach: outlined
+      g.strokeStyle = `rgba(255,214,90,${0.55 + 0.35 * Math.sin(now / 220)})`; g.lineWidth = 2;
+      g.strokeRect(u.x + 1, u.y + 1, u.w - 2, u.h - 2);
+    }
+    for (const o of st.others || []) friend(L, o, now);
+    you(L, me, now);
+    nightV1(L);
   }
-  for (const o of st.others || []) friend(L, o, now);
-  you(L, me, now);
-  if (v2) lights(L, now);
   g.setTransform(1, 0, 0, 1, 0, 0);
   hudText(W, H, dpr, now);
 }
 
+// ---- art v2: the rooms in the game's 3/4 view (render/homeart2.js), everything standing sorted by where it stands -----
+const dir8Of = (a) => ((Math.round(a / (Math.PI / 4)) % 8) + 8 + 6) % 8;   // (v1 order: 0 S, 2 W, 4 N, 6 E)
+function drawArt(L, me, u, now) {
+  const ap = Math.max(1, Math.min(2, (S.art2 && S.art2.E && S.art2.E.ap) || 2));
+  if (!art || art.L !== L || art.ap !== ap) art = new artMod.HomeArt(L, ap);
+  art.relight(daylight());
+  if (!art.work(art.ready ? 4 : 10)) return false;   // (made and lit a little at a time: never a stall on the way in)
+  const f = art.floor, yd = art.yard;
+  g.drawImage(yd.cv, yd.x, yd.y, yd.G.w * ap, yd.G.h * ap);
+  g.drawImage(f.cv, 0, 0, f.G.w * ap, f.G.h * ap);
+  const list = [];
+  for (const it of art.items) list.push({ b: it.base, it });
+  (st.cars || []).forEach((c, i) => { const s = art.car(c, i); if (s) list.push({ b: s.base, car: s }); });
+  // you, and anyone in here with you: art v2's people, at the street's size
+  const person = (look, x, y, a, mv, sl, sh, nm) => {
+    let pose = mv ? 'move1' : 'idle', fr = mv ? Math.floor(now / 110) % 6 : 0, d8 = dir8Of(a), b = y;
+    if (sl) { const bed = L.pieces.find((p) => p.ch === 'B'); if (bed) { x = bed.x + bed.w / 2 + (nm ? 14 : -6); y = bed.y + 26; b = bed.y + bed.h + 1; pose = 'down'; fr = 0; d8 = 4; } }
+    if (sh) { const s2 = L.pieces.find((p) => p.ch === 'H'); if (s2) { x = s2.x + s2.w / 2; y = s2.y + s2.h / 2 + 4; b = s2.y + s2.h - 1; d8 = 0; } }
+    list.push({ b, p: { look, x, y, pose, fr, d8, nm } });
+  };
+  for (const o of st.others || []) {
+    const q = seen.get(o.n), kk = q ? Math.min(1, (performance.now() - q.t) / 50) : 1;
+    person(raw.get(o.n) || {}, q ? q.x0 + (q.x1 - q.x0) * kk : o.x, q ? q.y0 + (q.y1 - q.y0) * kk : o.y, o.a, o.mv, o.sl, false, o.n);
+  }
+  person(app || {}, me.x, me.y, me.a, me.mv, st.sleep, st.shower, null);
+  list.sort((a, b) => a.b - b.b);
+  const pulse = 0.7 + 0.3 * Math.sin(now / 220);   // (never faint: the thing in reach always shows)
+  for (const e of list) {
+    if (e.it) {
+      const it = e.it;
+      g.drawImage(it.cv, it.x, it.y, it.G.w * ap, it.G.h * ap);
+      if (u && it.piece === u && it.ol) { g.globalAlpha = pulse; g.drawImage(it.ol, it.x - ap, it.y - ap, it.ol.width * ap, it.ol.height * ap); g.globalAlpha = 1; }
+    } else if (e.car) g.drawImage(e.car.cv, e.car.x, e.car.y, e.car.w, e.car.h);
+    else {
+      const p = e.p;
+      let c = null;
+      try { c = art.person(p.look, p.pose, p.d8, p.fr, p.x, p.y); } catch (err) { if (!art.pedErr) { art.pedErr = 1; console.warn('[home art] person', err); } }
+      if (!c) continue;
+      if (p.pose !== 'down' && !st.shower) { g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.x, p.y, 9, 4, 0, 0, 6.28); g.fill(); }
+      g.drawImage(c.cv, Math.round(p.x - c.ax), Math.round(p.y - c.ay));
+      if (p.nm) {
+        g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+        g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.nm, p.x + 1, p.y - c.ay - 3);
+        g.fillStyle = '#bfe3ff'; g.fillText(p.nm, p.x, p.y - c.ay - 4);
+      }
+    }
+  }
+  if (u && u.use === 'door') { g.strokeStyle = `rgba(255,214,90,${pulse})`; g.lineWidth = 2; g.strokeRect(u.x + 1, u.y - 12, u.w - 2, u.h + 10); }
+  if (st.shower) {   // steam
+    g.fillStyle = 'rgba(235,245,255,.3)';
+    for (let k = 0; k < 5; k++) { const t = (now / 900 + k / 5) % 1; g.beginPath(); g.arc(me.x - 10 + k * 5, me.y - 30 - t * 26, 5 + t * 8, 0, 6.28); g.fill(); }
+  }
+  tvGlow(L, now);
+  return true;
+}
+// the classic view after dark: the place dimmed, warm light round the lamps, the bed, the table and the kitchen
+function nightV1(L) {
+  const d = daylight();
+  if (d > 0.85) return;
+  const k = 1 - d;
+  g.fillStyle = `rgba(8,12,36,${0.5 * k})`; g.fillRect(-16, -24, L.w + 32, L.h + 40);
+  g.save(); g.globalCompositeOperation = 'lighter';
+  for (const p of L.pieces) {
+    if (!'ABVTKH'.includes(p.ch)) continue;
+    const x = p.x + p.w / 2, y = p.y + p.h / 2, r = p.ch === 'A' ? 80 : p.ch === 'V' ? 50 : 64;
+    const grd = g.createRadialGradient(x, y, 4, x, y, r);
+    grd.addColorStop(0, p.ch === 'V' ? `rgba(90,130,255,${0.16 * k})` : `rgba(255,180,100,${0.2 * k})`); grd.addColorStop(1, 'rgba(255,180,100,0)');
+    g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  g.restore();
+}
+// the TV's light flickering on the room at night (over the baked light)
+function tvGlow(L, now) {
+  const d = daylight();
+  if (d > 0.7) return;
+  const tv = L.pieces.find((p) => p.ch === 'V');
+  if (!tv) return;
+  const x = tv.x + tv.w / 2, y = tv.y + tv.h / 2, r = 70;
+  g.save(); g.globalCompositeOperation = 'lighter';
+  const grd = g.createRadialGradient(x, y, 4, x, y, r);
+  grd.addColorStop(0, `rgba(110,150,255,${(0.1 + 0.06 * Math.sin(now / 130) + 0.04 * Math.sin(now / 47)) * (1 - d)})`); grd.addColorStop(1, 'rgba(110,150,255,0)');
+  g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
+  g.restore();
+}
+
 // ---- the rooms, baked once per plan --------------------------------------------------------------------------------
-function bakeRooms(L, v2) {
+function bakeRooms(L) {
   const PX = 2, c = document.createElement('canvas');
-  c.width = (L.w + 32) * PX; c.height = (L.h + 32) * PX;
+  c.width = (L.w + 32) * PX; c.height = (L.h + 40) * PX;
   const b = c.getContext('2d');
-  b.scale(PX, PX); b.translate(16, 16);
+  b.scale(PX, PX); b.translate(16, 24);
   const P = PAL[L.tier] || PAL[0], T = TILE_IN;
   const floorOf = (ch) => (ch === 't' ? P.tile : ch === 'c' ? P.carpet : ch === 'g' ? ['#6c6d70', '#66676a'] : P.wood);
   // floors (under the furniture too: the floor next to it)
@@ -146,27 +257,29 @@ function bakeRooms(L, v2) {
     b.fillStyle = P.cloth; b.fillRect(r.x, r.y, r.w, r.h);
     b.strokeStyle = P.accent; b.lineWidth = 2; b.strokeRect(r.x + 4, r.y + 4, r.w - 8, r.h - 8);
   }
-  // the furniture
-  for (const p of L.pieces) {
-    if (v2) { b.fillStyle = 'rgba(0,0,0,.22)'; b.fillRect(p.x + 3, p.y + 4, p.w, p.h); }
-    piece(b, p, P, L);
-  }
-  // the walls: a thick dark line with a lighter top edge; the front door, the garage door
+  // the furniture, its shadow
+  for (const p of L.pieces) { b.fillStyle = 'rgba(0,0,0,.2)'; b.fillRect(p.x + 3, p.y + 4, p.w, p.h); piece(b, p, P, L); }
+  // the walls standing up (H64): each wall's top raised by its height, the face below it showing where the floor is in
+  // front (the back wall taller, the rest cut low so you see in); the front door, the garage door
+  const wallish = (ch) => ch === '#' || ch === '=' || ch === 'D' || ch === 'R';
   for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
-    const ch = L.cell(tx, ty), x = tx * T, y = ty * T;
-    if (ch === '#' || ch === '=') {
-      b.fillStyle = P.wall; b.fillRect(x, y, T, T);
-      b.fillStyle = P.top; b.fillRect(x, y, T, 4);
-      if (v2) { b.fillStyle = 'rgba(0,0,0,.25)'; if (/[.ctg+]/.test(L.cell(tx, ty + 1))) b.fillRect(x, y + T, T, 6); }
-    } else if (ch === 'D') {
-      b.fillStyle = P.wall; b.fillRect(x, y, T, T);
-      b.fillStyle = '#7a4a26'; b.fillRect(x + 3, y + 6, T - 6, T - 12);
-      b.fillStyle = '#e0b040'; b.fillRect(x + T - 10, y + T / 2 - 2, 4, 4);
-      b.fillStyle = '#6a3a2a'; b.fillRect(x + 2, y - 10, T - 4, 9);   // the mat
-    } else if (ch === 'R') {
-      b.fillStyle = '#9a9ca0'; b.fillRect(x, y, T, T);
-      b.fillStyle = '#7a7c80'; for (let j = 2; j < T; j += 5) b.fillRect(x, y + j, T, 2);
+    const ch = L.cell(tx, ty), x = tx * T, y = ty * T, h = ty === 0 ? 16 : 7;
+    if (!wallish(ch)) continue;
+    const open = !wallish(L.cell(tx, ty + 1)) || ty === L.rows - 1 || (ty === 0 && L.rows > 1);
+    if (open) {   // the face: the wallpaper inside, the outside along the front, a skirting at its foot
+      b.fillStyle = ty === L.rows - 1 ? (ch === 'R' ? '#9a9ca0' : '#7a6a5a') : P.face; b.fillRect(x, y + T - h, T, h);
+      b.fillStyle = 'rgba(0,0,0,.22)'; b.fillRect(x, y + T - 2, T, 2);
+      if (ch === 'R') { b.fillStyle = '#7a7c80'; for (let j = 1; j < h; j += 3) b.fillRect(x, y + T - h + j, T, 1); }
+      b.fillStyle = 'rgba(0,0,0,.18)'; if (/[.ctg+]/.test(L.cell(tx, ty + 1))) b.fillRect(x, y + T, T, 5);
     }
+    if (ch === 'D') {   // the door: a gap in the cut wall, the door shut in it, the mat inside
+      b.fillStyle = '#7a4a26'; b.fillRect(x + 3, y + T - h - 2, T - 6, h + 2);
+      b.fillStyle = '#e0b040'; b.fillRect(x + T - 10, y + T - h + 2, 3, 3);
+      b.fillStyle = '#6a3a2a'; b.fillRect(x + 4, y - 12, T - 8, 9);
+      continue;
+    }
+    b.fillStyle = P.wall; b.fillRect(x, y - h, T, T);
+    b.fillStyle = P.top; b.fillRect(x, y - h, T, 2); b.fillRect(x, y - h + T - 2, T, 2);
   }
   return c;
 }
@@ -231,16 +344,17 @@ function sleepMinutes() {   // the clock running on from bedtime to the morning 
   if (to < st.sleepMin0) to += 1440;
   return (st.sleepMin0 + (to - st.sleepMin0) * k * k) % 1440;
 }
-function windows(L, v2, now) {
+function windows(L, now) {
   const d = daylight(), T = TILE_IN;
   const glass = d > 0.5 ? `rgb(${150 + 60 * d},${200 + 30 * d},${235})` : d > 0 ? '#e09a5a' : '#1a2440';
   for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
     if (L.cell(tx, ty) !== '=') continue;
     const x = tx * T, y = ty * T;
-    g.fillStyle = glass; g.fillRect(x + 3, y + 10, T - 6, 10);
-    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x + 5, y + 11, 6, 3);
+    g.fillStyle = '#e8e4da'; g.fillRect(x + 2, y + T - 15, T - 4, 12);
+    g.fillStyle = glass; g.fillRect(x + 4, y + T - 13, T - 8, 8);
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x + 6, y + T - 12, 6, 2);
     if (d > 0.2 && !L.solid(tx, ty + 1)) {   // the light falling in across the floor below it
-      g.fillStyle = `rgba(255,236,180,${(v2 ? 0.14 : 0.09) * d})`;
+      g.fillStyle = `rgba(255,236,180,${0.09 * d})`;
       g.beginPath(); g.moveTo(x + 2, y + T); g.lineTo(x + T - 2, y + T); g.lineTo(x + T + 8, y + T * 1.9); g.lineTo(x + 8, y + T * 1.9); g.closePath(); g.fill();
     }
   }
@@ -251,7 +365,7 @@ function cars(L) {
   st.cars.forEach((c, i) => {
     const bay = L.bays[i], d = VEHICLES[c.m];
     if (!bay || !d) return;
-    const len = Math.min(d.L, 104), wid = Math.min(d.W, 52);
+    const len = Math.min(d.L, CAR_IN.l), wid = Math.min(d.W, CAR_IN.w);
     g.save(); g.translate(bay.x, bay.y);
     g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(-wid / 2 + 3, -len / 2 + 4, wid, len);
     g.fillStyle = PAINTS[c.p % PAINTS.length]; g.fillRect(-wid / 2, -len / 2, wid, len);
@@ -295,22 +409,6 @@ function friend(L, o, now) {
   g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(o.n, x + 1, y - 21);
   g.fillStyle = '#bfe3ff'; g.fillText(o.n, x, y - 22);
 }
-function lights(L, now) {   // art v2: warm pools of light round the lamps at night
-  const d = daylight();
-  if (d > 0.8) return;
-  g.save(); g.beginPath(); g.rect(TILE_IN, TILE_IN, L.w - TILE_IN * 2, L.h - TILE_IN * 2); g.clip();   // (the light stays indoors)
-  g.globalCompositeOperation = 'lighter';
-  for (const p of L.pieces) {
-    if (p.ch !== 'A' && p.ch !== 'B' && p.ch !== 'V') continue;
-    const x = p.x + p.w / 2, y = p.y + p.h / 2, r = p.ch === 'V' ? 40 : 70;
-    const grd = g.createRadialGradient(x, y, 4, x, y, r);
-    grd.addColorStop(0, `rgba(255,190,110,${0.16 * (1 - d) * (p.ch === 'V' ? 0.6 + 0.4 * Math.sin(now / 160) : 1)})`); grd.addColorStop(1, 'rgba(255,190,110,0)');
-    g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
-  }
-  g.globalCompositeOperation = 'source-over';
-  g.restore();
-}
-
 // the place's name, and the night passing while you sleep
 function hudText(W, H, dpr, now) {
   const fs = Math.round(15 * dpr), ny = H - Math.round(30 * dpr);   // (the name along the bottom: the prompt and the buttons are up top)
