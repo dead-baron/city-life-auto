@@ -8990,7 +8990,7 @@ work, search and rescue, charter, the coast guard by boat and by air), a garden,
 after a look round, and on a mortgage; an apartment unit), inside (the bed, the safe, the wardrobe, the garage, the
 door), flying low and high, three stars and the police helicopter, set alight and rolling, the tank, the Boom Tester,
 the lost pet, air traffic - and the same evening on the server in node with the world throwing on any error
-(`.playtest-data/h69-evening.mjs`, `h69-evening2.mjs`: every job taken, worked and cancelled, both purchases, the unit's
+(scripts in a local `.playtest-data/`, not kept: every job taken, worked and cancelled, both purchases, the unit's
 sale paying its mortgage off, Safety mode's two presses). No page errors in six runs; the server's log clean.
 
 **Found and fixed** (each its own commit, each with its test):
@@ -9003,7 +9003,7 @@ sale paying its mortgage off, Safety mode's two presses). No page errors in six 
   both up to the same height (steer: what stands taller round it plus its clearance - 730-830 px there, over their 300
   and 420), and the police one's circle, its middle south of the suspect by its height (420 px at 800 up), crossed the
   news one's 520 px circle: they touched and both came down. This was policeair.test.js failing one run in three ("it
-  follows them": the police helicopter already a wreck - traced with `.playtest-data/h69-paflake.mjs`). The news
+  follows them": the police helicopter already a wreck - traced with a script stepping that test's world). The news
   helicopter now keeps `POLICE_AIR.sep` above any police helicopter within 1200 px (`airtraffic.js` clearOfPolice;
   test/airtraffic.test.js fails without it; policeair.test.js passed five runs of five after).
 - **On a phone in the air, the ▲ climb button lay under FIRE's lower half** (right +150, bottom 74 vs FIRE's +146, bottom
@@ -9012,7 +9012,7 @@ sale paying its mortgage off, Safety mode's two presses). No page errors in six 
 - **police.js threw when it was the first module loaded** ("Cannot access 'carArrest' before initialization"): the
   import cycle through streetlife.js, which hands police.js its car-arrest hook as it loads - the trap homes.js's menu
   builder fell into at wave 26's merge. Found by loading every server and shared module first, alone
-  (`.playtest-data/h69-loadeach.sh`: only this one, and artbake.js, which is a worker); the hook is kept on its setter
+  (a loop over `node -e "await import('./<module>')"`: only this one, and artbake.js, which is a worker); the hook is kept on its setter
   now. The server boots in an order that worked, so nothing live broke (test/loadorder.test.js loads the cycle's
   modules each first).
 - The dev menu's garden moved you to your yard while you sat in a vehicle (the body moved, the tractor and the camera
