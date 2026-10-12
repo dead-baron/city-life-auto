@@ -9272,6 +9272,11 @@ flying / as the police); after: none.
 - **The prompt's colour for a crime**: there was none yet - now what Act would do as a crime puts the prompt's plate
   edge and words in amber, a felony in red (`server/systems/players.js`: the act's `crime` goes to the page as `me.pcr`,
   1 or 2; `client/hud.js` `.crime` / `.felony`).
+- **The robbery, train and custody bars** (`#rob`, `#trainbar`) head the same column, over the prompt (they sat at top
+  118 centred, across the prompt and the notes on every screen but 1920; the custody bar low down over a wrapped job
+  line and, on a phone, over FIRE and RELOAD). A phone upright keeps them in the middle as before. On a phone on its side
+  with a bar showing, the newest note only; at 740 px the robbery bar drops its ROBBERY label (the gold edge says it) to
+  stay on one line.
 - **The spectator's notes** still show alone, bottom right (the column is let go of while spectating).
 - **Menus**: a row whose label and note run long puts the note on a line of its own (`hud.js` `.opt.two`) - the
   lobby's "Unit 1 for sale - look round or buy" wrapped "buy" into the start of "apartment, ground floor · 1 bed".
@@ -9283,13 +9288,13 @@ flying / as the police); after: none.
 **The test** (`test/hudlayout.test.js`, `test/hudpage.js`): index.html's HUD and touch controls with the stylesheet, no
 game code, filled with the longest prompt, four long notes, a long job line and the cruiser's hint, big cash and bank,
 in a headless Chromium (the playwright one in /opt/pw-browsers or `CLA_CHROME`; skipped if there's none) - one page,
-an iframe per case at its size (`chrome --dump-dom`, ~3 s for 64 cases): every prompt, note, job line and hint inside
-the screen, not cut off, clear of the round buttons, the minimap and its bars, the weapon, cash, stars, clock and
+an iframe per case at its size (`chrome --dump-dom`, ~4 s for 96 cases): every prompt, note, job line, hint and bar
+inside the screen, not cut off, clear of the round buttons, the minimap and its bars, the weapon, cash, stars, clock and
 faction, every touch button and stick, and each other; the round buttons clear of the touch buttons, the minimap and the
 cash. Cases: 1280x720, 1920x1080, 844x390, 740x360, 1024x768 with a keyboard, a pad and touch; 390x844 with touch (the
 keyboard's HUD wants a window wider than ~450 px: its minimap and weapon plate alone fill 390). On foot (armed, more
-than one weapon, a flashlight, carrying), driving, flying, as the police. And the prompt's crime / felony from the
-server.
+than one weapon, a flashlight, carrying), driving, flying, as the police, robbing a shop (its prompt the shop's),
+held in custody (no prompt). And the prompt's crime / felony from the server.
 
 What's still not right (screenshots `scratchpad/h70/shots/before-*.png` and `after-*.png` at every size, and the game
 itself: `game-phone-fire.png`, `game-phone-coast.png`, `game-desk-fire.png`):
