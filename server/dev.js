@@ -569,7 +569,7 @@ export function command(world, p, c, msg) {
     case 'airtraffic': {   // aircraft about the world (H66): msg.k 'land' | 'takeoff' at the runway nearest you (msg.seen: even in view), 'news' over you
       if (!ped) break;
       const A = (world.airTraffic ||= { flights: new Map(), nextAt: world.time + 60, newsAt: 0 });
-      for (const f of A.flights.values()) if (f.kind === (msg.k === 'news' ? 'news' : 'plane')) { const ov = world.get(f.vid); A.flights.delete(f.vid); if (ov) { for (const id of ov.seats) { const c = id && world.get(id); if (c && !c.player) world.remove(c); } world.remove(ov); } }
+      for (const f of A.flights.values()) if (f.kind === (msg.k === 'news' ? 'news' : 'plane')) { const ov = world.get(f.vid); A.flights.delete(f.vid); if (ov) { for (const id of ov.seats) { const c = id && world.get(id); if (c && !c.player) npc.despawnNpc(world, c); } world.remove(ov); } }
       if (msg.k === 'news') { airtraffic.news(world, A, p); break; }
       let best = null, bd = 1e12;
       for (const r of airtraffic.runways(world.map)) { const d = Math.hypot(r.x - ped.x, r.y - ped.y); if (d < bd) { bd = d; best = r; } }
@@ -582,7 +582,7 @@ export function command(world, p, c, msg) {
       if (!ped) break;
       if ((p.wanted | 0) < 3) law.addHeat(world, p, STAR_HEAT[3] - p.heat + 1, ped.x, ped.y);
       const old = world.policeAir && world.policeAir.get(p.pid);
-      if (old) { const ov = world.get(old.vid); world.policeAir.delete(p.pid); if (ov) { for (const id of ov.seats) { const c = id && world.get(id); if (c) world.remove(c); } world.remove(ov); } }
+      if (old) { const ov = world.get(old.vid); world.policeAir.delete(p.pid); if (ov) { for (const id of ov.seats) { const c = id && world.get(id); if (c && !c.player) npc.despawnNpc(world, c); } world.remove(ov); } }
       p.airNextAt = 0;
       const v = policeair.launch(world, p);
       if (!v) { world.notify(p, '[dev] no police headquarters helipad on this map', 'warn'); break; }

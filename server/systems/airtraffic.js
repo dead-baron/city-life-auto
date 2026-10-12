@@ -114,9 +114,10 @@ export function news(world, A, p) {
 
 // anyone (on foot, or another vehicle) on the runway's line from where it touches down to where it would stop
 function blocked(world, f, v) {
-  for (let d = -100; d <= 700; d += 200) {
+  // (on its line - the wheels' track and the wings over it - not anyone at the runway's edges: the airport's ground crew)
+  for (let d = -100; d <= 700; d += 100) {
     const x = f.tx + f.ux * d, y = f.ty + f.uy * d;
-    for (const e of world.query(x, y, 150)) {
+    for (const e of world.query(x, y, 70)) {
       if (e === v || e.removed || (e.kind === K.PED && (e.dead || e.vehId)) || (e.kind !== K.PED && e.kind !== K.VEH)) continue;
       if (e.kind === K.VEH && (e.alt || 0) > FLY.HIGH) continue;
       return true;

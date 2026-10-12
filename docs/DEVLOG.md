@@ -8840,7 +8840,25 @@ flown by its NPC pilot; up at its height and over the suspect, following them; t
 them, the search circle tight; not indoors; the searchlight on them at night, on the wire, decoded near them, off by
 day; shot where art v2 draws it and brought down, another not sent at once; lost: home, landed on its pad, the crew out,
 parked; the dev command), test/airtraffic.test.js (new: the runways; a light plane's take-off roll and climb away; one
-gliding in and landing softly on the runway, stopped; the news helicopter circling a chase and leaving when it's over),
-test/aircraftart.test.js (new: the models build - the plane banked right has its right wing down - and render at a
-heading, the rotor's blades and disc; the searchlight's spot from the wire; loaded lazily, out of the page and the
-renderer), test/flight.test.js, test/dmath.test.js, test/mapwindow.test.js, test/perf.test.js - all pass.
+gliding in and landing softly on the runway, stopped and staying put; someone on its line: it goes round; the news
+helicopter circling a chase and leaving when it's over), test/aircraftart.test.js (new: the models build - the plane
+banked right has its right wing down - and render at a heading, the rotor's blades and disc; the searchlight's spot from
+the wire; loaded lazily, out of the page and the renderer), test/flight.test.js, test/sar.test.js, test/police.test.js,
+test/arrests.test.js, test/crime.test.js, test/dmath.test.js, test/mapwindow.test.js, test/perf.test.js (budgets
+unchanged: the page 482 of 485 KB - one line in main.js; the renderer's a few lines in host.js; the art's hash the same)
+- all pass.
+
+Playtested headless (art v2, five runs): the five aircraft parked at headquarters by day - the block models lit and
+shadowed, the blades' shadows long on the ground; a helicopter flying (the blurred discs with their tips' rings over the
+models, the police light bar glowing at night); the police unit's searchlight at night - the beam down from it and the
+pool of light on the suspect; a Larkspur landed and stopped on Westport's runway. What the playtests showed and was
+fixed: the rotor's disc drawn by the renderer was a white dithered mesh hiding the helicopter (now the overlay's); the
+police helicopter parked at headquarters was hidden under its pad's paint; the police unit circled off the top of the
+suspect's screen (art v2 draws it 200 px up: its circle's middle is now south of them by that); a landing plane ran over
+someone standing on the runway, and once stopped crept backwards (the brake held at a standstill backs a plane up) - it
+goes round now for anyone on its line, and stops without the brake; the pedestrians who wander onto Westport's runway
+sent every arrival round (the check now looks only along its line, not the runway's edges). Left as it is: a model is
+made on the page the first time one of its kind is near - 60-250 ms once (the plane again for each of its banks), a
+hitch when the first helicopter comes into view (the bake workers' code budget has no room for it; building the models
+at half size directly, or in a worker once there's room, would take it off the page); the police cars arrive within
+seconds at three stars, so the searchlight playtest needed the dev command's `near` and a quick screenshot.
