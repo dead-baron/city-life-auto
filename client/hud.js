@@ -19,6 +19,25 @@ export function calmState(sitAt, activeAt, now) {
 const thumbs = new Map();
 function weaponThumb(i) { if (!thumbs.has(i)) thumbs.set(i, weaponIcon(i).toDataURL()); return thumbs.get(i); }
 const WEAPON_BY_ID = WEAPONS;
+// the minimap's own marks (U17): your home a house, the job a $, your vehicle a car, the waypoint a pink dot
+function mapIcon(g, k, x, y, big) {
+  g.save(); g.translate(Math.round(x), Math.round(y)); if (big) g.scale(1.6, 1.6);
+  g.lineWidth = 1.5; g.strokeStyle = '#070b16'; g.lineJoin = 'round';
+  if (k === 'home') {
+    g.fillStyle = '#ffb43c'; g.beginPath(); g.moveTo(0, -7); g.lineTo(7, -0.5); g.lineTo(5, -0.5); g.lineTo(5, 6); g.lineTo(-5, 6); g.lineTo(-5, -0.5); g.lineTo(-7, -0.5); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#5a2e08'; g.fillRect(-1.5, 1.5, 3, 4.5);
+  } else if (k === 'job') {
+    g.font = 'bold 15px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3;
+    g.strokeText('$', 0, 1); g.fillStyle = '#3ddc5a'; g.fillText('$', 0, 1);
+  } else if (k === 'car') {
+    g.fillStyle = '#45b8ff'; g.beginPath(); g.moveTo(-7, 4); g.lineTo(-7, 0); g.lineTo(-5, -1); g.lineTo(-3.5, -5); g.lineTo(3.5, -5); g.lineTo(5, -1); g.lineTo(7, 0); g.lineTo(7, 4); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#d8f0ff'; g.fillRect(-2.8, -4, 5.6, 2.6); g.fillStyle = '#070b16'; g.fillRect(-6, 4, 3, 2); g.fillRect(3, 4, 3, 2);
+  } else {
+    g.fillStyle = '#ff4fa8'; g.beginPath(); g.arc(0, 0, 4.5, 0, 6.28); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(255,190,225,.7)'; g.lineWidth = 1; g.beginPath(); g.arc(0, 0, 6.5, 0, 6.28); g.stroke();
+  }
+  g.restore();
+}
 
 export class HUD {
   constructor(map, sendMenu, closeMenu) {
@@ -372,11 +391,7 @@ export class HUD {
       g.fillStyle = icon[1]; g.fillText(icon[0], x, y + 1);
     }
     if (me) {
-      for (const h of me.homes || []) {
-        const [x, y] = toR(h.x, h.y);
-        g.fillStyle = '#000'; g.fillRect(x - (big ? 8 : 5), y - (big ? 8 : 5), big ? 16 : 10, big ? 16 : 10);
-        g.fillStyle = '#3ddc84'; g.fillText('⌂', x, y + 1);
-      }
+      for (const h of me.homes || []) { const [x, y] = toR(h.x, h.y); mapIcon(g, 'home', x, y, big); }
       // rumor + radar pings
       if (me.rumor) { const [x, y] = toR(me.rumor.x, me.rumor.y); g.strokeStyle = me.rumor.t === 4 ? '#ffd36b' : '#c07aff'; g.lineWidth = 2; g.setLineDash([4, 3]); g.beginPath(); g.arc(x, y, me.rumor.r * scale, 0, 6.28); g.stroke(); g.setLineDash([]); }
       for (const r of me.radar || []) {
@@ -430,7 +445,8 @@ export class HUD {
       }
       // job target (yellow) and phone waypoint (cyan): a blip when in range, an arrow on the rim
       // pointing the way when not
-      const target = (tx, ty, col) => {
+      // (U17's icons: $ the job, a car your vehicle, a pink dot the waypoint - mapIcon)
+      const target = (tx, ty, col, icon) => {
         let [x, y] = toR(tx, ty);
         const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 9;
         g.fillStyle = col; g.strokeStyle = '#000'; g.lineWidth = 1.5;
@@ -440,13 +456,14 @@ export class HUD {
           g.save(); g.translate(x, y); g.rotate(a);
           g.beginPath(); g.moveTo(6, 0); g.lineTo(-4, -5); g.lineTo(-2, 0); g.lineTo(-4, 5); g.closePath(); g.fill(); g.stroke();
           g.restore();
-        } else { g.beginPath(); g.arc(x, y, big ? 7 : 4.5, 0, 6.28); g.fill(); g.stroke(); }
+        } else if (icon) mapIcon(g, icon, x, y, big);
+        else { g.beginPath(); g.arc(x, y, big ? 7 : 4.5, 0, 6.28); g.fill(); g.stroke(); }
       };
       if (me.job && me.job.area) { const [x, y] = toR(me.job.area[0], me.job.area[1]); g.fillStyle = 'rgba(255,170,40,.16)'; g.strokeStyle = '#ffae2a'; g.lineWidth = 1.5; g.setLineDash([4, 3]); g.beginPath(); g.arc(x, y, Math.max(6, me.job.area[2] * scale), 0, 6.28); g.fill(); g.stroke(); g.setLineDash([]); }   // (a rescue call's search circle: sar.js)
-      if (me.job) target(me.job.x, me.job.y, '#ffd400');
+      if (me.job) target(me.job.x, me.job.y, '#3ddc5a', 'job');
       if (me.job && me.job.dest) target(me.job.dest[0], me.job.dest[1], '#ff9a2e');   // (picking up: where it goes after)
-      if (me.job && me.job.veh) target(me.job.veh[0], me.job.veh[1], '#3cff8a');   // (the job's truck, until you're in it)
-      if (this.waypoint) target(this.waypoint.x, this.waypoint.y, '#4fd6ff');
+      if (me.job && me.job.veh) target(me.job.veh[0], me.job.veh[1], '#45b8ff', 'car');   // (the job's truck, until you're in it)
+      if (this.waypoint) target(this.waypoint.x, this.waypoint.y, '#ff4fa8', 'wp');
     }
     // player arrow
     g.translate(size / 2, size / 2); g.rotate(heading);

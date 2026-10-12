@@ -190,17 +190,27 @@ body.dead #touch, body.dead #job { display: none !important; }   /* (nothing to 
 #logo { width: min(440px, 70vw, 46vh); filter: drop-shadow(0 10px 24px #000); }
 #t-status { color: var(--dim); font-size: 16px; font-weight: 600; line-height: 1.35; min-height: 2.7em; display: flex; align-items: center; justify-content: center; } /* fixed height: status changes never shift the menu */
 #t-buttons { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
-#play, #practice, #t-resume { font-family: var(--display); font-size: 26px; letter-spacing: 1.5px; color: #fff; border: none; padding: 12px 34px; cursor: pointer; transform: skewX(-10deg); box-shadow: 6px 6px 0 #000; }
-#play { background: linear-gradient(120deg, var(--accent), #ff7a3e); }
-#practice { background: #2b2f45; font-size: 22px; }
-#t-resume { background: #ffd400; color: #111; }
+/* (U18, H76: PLAY a big gold-edged plate with the play triangle; the others navy plates on a gold rim) */
+#t-buttons { align-items: center; }
+#play, #practice, #t-resume { cursor: pointer; font: 700 20px var(--pixel); letter-spacing: 2px; color: #fff; padding: 10px 22px; border: 2px solid var(--rim); border-radius: 4px; background: linear-gradient(180deg, #15223f, #0d162d); box-shadow: 0 0 0 2px #070b16, 0 6px 14px rgba(0,0,0,.45); text-shadow: 0 2px 0 #070b16; }
+#play { display: inline-flex; align-items: center; justify-content: center; gap: 22px; min-width: min(400px, 86vw); font-size: 46px; letter-spacing: 5px; color: #fff4d6; padding: 12px 40px; background: linear-gradient(180deg, #2b2b24, #111310); border: 3px solid #ffd34a; box-shadow: 0 0 0 3px #070b16, inset 0 0 0 2px rgba(255,211,74,.28), 0 0 24px rgba(255,207,64,.28), 0 8px 18px rgba(0,0,0,.5); }
+#play .t-tri { width: 0; height: 0; border-left: 30px solid #ffd34a; border-top: 19px solid transparent; border-bottom: 19px solid transparent; filter: drop-shadow(0 3px 0 #070b16); }
+#t-resume { background: linear-gradient(#ffe066, #e8b81f); color: #111; text-shadow: none; border-color: #fff1b0; }
 #t-resume.hidden { display: none; }
 #play:disabled { opacity: .45; cursor: wait; }
-#play:not(:disabled):hover, #practice:hover { transform: skewX(-10deg) translateY(-2px); }
-#t-gfx { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; font-size: 14px; font-weight: 700; letter-spacing: 1px; color: var(--dim); margin-top: -2px; }   /* (the owner, 2026-10-11: graphics under Play) */
-#t-gfx select { font: inherit; letter-spacing: 0; color: #fff; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.3); padding: 4px 8px; cursor: pointer; }
-#t-gfx select option { color: #000; }
-#t-gfx small { font-weight: 400; letter-spacing: 0; opacity: .8; }
+#play:not(:disabled):hover, #practice:hover, #t-resume:hover { transform: translateY(-2px); filter: brightness(1.12); }
+/* the graphics under Play (the owner, 2026-10-11) as U18's segmented control: a check on the one you're on, "recommended"
+   under the device's pick */
+#t-gfx { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 5px 10px 13px; background: rgba(13,22,45,.92); border: 2px solid var(--rim); border-radius: 5px; box-shadow: 0 0 0 2px #070b16; color: var(--cream); }
+#t-gfx .t-gl { font: 700 13px var(--pixel); color: #c9d6ee; }
+#t-gfxseg { display: flex; gap: 6px; }
+#t-gfxseg button { position: relative; min-width: 76px; padding: 12px 10px 8px; font: 700 15px var(--pixel); color: #c9d6ee; background: linear-gradient(180deg, #1b2a52, #0f1830); border: 2px solid rgba(201,214,238,.5); border-radius: 4px; cursor: pointer; }
+#t-gfxseg button i { position: absolute; left: 50%; top: 0; transform: translateX(-50%); font: 700 11px var(--ui); font-style: normal; color: #ffd34a; visibility: hidden; }
+#t-gfxseg button.on { color: #fff; border-color: #ffd34a; background: linear-gradient(180deg, #4a4020, #2a2410); box-shadow: 0 0 10px rgba(255,207,64,.35); }
+#t-gfxseg button.on i { visibility: visible; }
+#t-gfxseg button small { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); white-space: nowrap; padding: 0 4px; font: 700 9px var(--pixel); letter-spacing: .3px; color: #1a1406; background: #ffd34a; border: 1px solid #070b16; border-radius: 2px; }
+#t-gfx > small { align-self: center; margin-top: 6px; font: 10px var(--pixel); color: var(--dim); }
+#t-gfx > small:empty { display: none; }
 #t-practice { font-size: 14px; color: var(--dim); max-width: 560px; line-height: 1.45; margin-top: -4px; }
 #t-tools { display: flex; gap: 10px; }
 #t-tools button { font-size: 15px; font-weight: 700; letter-spacing: 1px; color: #fff; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25); padding: 6px 14px; cursor: pointer; }
@@ -301,7 +311,11 @@ body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
 /* short landscape phones */
 @media (max-height: 430px) {
   #title { gap: 8px; } #logo { width: min(240px, 34vh * 1.4); } #t-note { display: none; }
-  #play, #practice { font-size: 20px; padding: 9px 24px; }
+  #play, #practice, #t-resume { font-size: 14px; padding: 7px 14px; }
+  #play { font-size: 28px; min-width: 0; padding: 3px 26px; gap: 14px; } #play .t-tri { border-left-width: 18px; border-top-width: 12px; border-bottom-width: 12px; }
+  #t-gfx { flex-direction: row; align-items: center; padding: 3px 8px 9px; gap: 8px; } #t-gfxseg { gap: 4px; } #t-gfx > small { display: none; }
+  #t-gfxseg button { min-width: 0; padding: 8px 7px 4px; font-size: 12px; }
+  #t-practice { font-size: 12px; line-height: 1.3; }
   .touch #stick-r, #tbtns button { transform: scale(.9); }
   /* the top-right column packs into three short rows (weapon; cash and bank; stars, clock and status), so the
      CAR / ACT / THROW buttons above the right stick don't sit on it (an iPhone in Safari: 340 px tall) */
@@ -860,10 +874,18 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 #stars .on { color: #ffd34a; -webkit-text-stroke: 2px #070b16; text-shadow: 0 0 8px rgba(255,211,74,.55); }
 #clock { font-family: var(--pixel); font-weight: 700; font-size: 14px; color: var(--cream); text-shadow: 0 2px 0 #070b16, 1px 0 0 #070b16, -1px 0 0 #070b16; }
 #faction { font-family: var(--pixel); font-weight: 700; font-size: 11px; letter-spacing: 2px; background: rgba(13,22,45,.85); border: 1px solid rgba(226,189,87,.6); border-radius: 4px; padding: 3px 8px; margin-top: 5px; text-shadow: none; }
-#helpbox { background: linear-gradient(180deg, rgba(21,34,63,.95), rgba(13,22,45,.95)); border: 2px solid rgba(226,189,87,.8); border-radius: 6px; box-shadow: 0 0 0 2px #070b16; font-family: var(--pixel); font-weight: 400; font-size: 16px; color: var(--cream); }
+/* (U17, H76: an ordinary act's plate has a light edge and white words; the key a light chip and a colon - on touch the
+   button's name, ACT / CAR; a pad keeps its coloured button) */
+#helpbox { background: linear-gradient(180deg, rgba(21,34,63,.95), rgba(13,22,45,.95)); border: 2px solid #c9d6ee; border-radius: 6px; box-shadow: 0 0 0 2px #070b16, inset 0 0 0 2px #0a1226, inset 0 0 0 3px rgba(201,214,238,.2); font-family: var(--pixel); font-weight: 400; font-size: 16px; color: #fff; gap: 8px; }
+#helpbox > .g-key, #helpbox > .g-touch { min-width: 26px; height: 26px; padding: 0 5px; border-radius: 3px; background: linear-gradient(#f6f9ff, #cbd6ea); color: #10203f; border: 2px solid #070b16; box-shadow: inset 0 -3px 0 #8d9bb8; font: 700 15px var(--pixel); letter-spacing: 0; }
+#helpbox > :is(.g-key, .g-touch, .g-pad) + span::before { content: ':'; color: #e8eef8; margin-right: .55em; }
 /* what Act would do is a crime (server players.js: me.pcr): the plate's edge and words amber, a felony's red */
-#helpbox.crime { border-color: #ffb03a; } #helpbox.crime > span:last-child { color: #ffc966; }
-#helpbox.felony { border-color: #ff4a4a; } #helpbox.felony > span:last-child { color: #ff8a80; }
+#helpbox.crime { border-color: #ffb03a; } #helpbox.crime > span:last-child { color: #ffcf4a; }
+#helpbox.felony { border-color: #ff4a4a; } #helpbox.felony > span:last-child { color: #ff5a52; }
+/* Safety mode's warning (server safety.js, tone 'safety'): a shield with "!" at the left, the words amber */
+.toast.safety { border: 2px solid #ffc23d; color: #ffcf4a; padding-left: 42px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 15' shape-rendering='crispEdges'%3E%3Cpath d='M5 0h3v1h2v1h3v6h-1v3h-1v1h-1v1H9v1H8v1H5v-1H4v-1H3v-1H2v-1H1V8H0V2h3V1h2z' fill='%23070b16'/%3E%3Cpath d='M5 1h3v1h2v1h2v5h-1v3h-1v1H9v1H8v1H5v-1H4v-1H3v-1H2V8H1V3h2V2h2z' fill='%235d9cf0'/%3E%3Cpath d='M5 2h1v1H4v1H2v4h1v3h1v1h2V2z' fill='%23d6e8ff'/%3E%3Cpath d='M6 4h1v4H6zM6 9h1v1H6z' fill='%23070b16'/%3E%3C/svg%3E") no-repeat 8px 50% / 26px 30px, rgba(13,22,45,.94); }
+.toast.safety::after { content: 'Safety mode · Settings'; display: block; font-size: 10px; color: #9aa7c4; }
 .toast { background: rgba(13,22,45,.9); border: 1px solid rgba(226,189,87,.35); border-left-width: 4px; border-radius: 4px; font-family: var(--pixel); font-weight: 400; font-size: 14px; color: #eef1f8; }
 .toast.good { border-left-color: #6cff8a; } .toast.bad { border-left-color: #ff5a5a; } .toast.warn { border-left-color: #ffd34a; } .toast.info { border-left-color: #7ec8ff; }
 #job { background: linear-gradient(180deg, rgba(21,34,63,.92), rgba(13,22,45,.92)); border: 2px solid rgba(226,189,87,.8); border-radius: 6px; box-shadow: 0 0 0 2px #070b16; padding: 6px 14px; font-family: var(--pixel); font-weight: 400; font-size: 16px; text-shadow: none; color: var(--cream); }
@@ -879,6 +901,8 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 .touch .toast { font-size: 12px; }
 /* phones: smaller notes, three lines at most */
 .touch .toast { font-size: 11px; line-height: 1.25; padding: 4px 7px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.touch .toast.safety { padding-left: 30px; background-position: 6px 50%; background-size: 18px 21px; } .touch .toast.safety::after { content: none; }
+.touch #helpbox > .g-touch { height: 22px; font-size: 12px; }
 .touch #toasts { gap: 3px; }
 
 /* down / wasted (U11, task #403): red at the edges round the scene; the title alone first, then a compact panel docked at

@@ -44,7 +44,7 @@ export function drawAir(g, F, S, dt, v2 = false) {
   const now = F.now;
   drawPads(g, F, S, v2);
   const job = S.me && S.me.job;
-  if (job && job.flare) drawFlare(g, job.flare, now);   // (a rescue call: they're found - server sar.js)
+  if (job && job.flare) { drawFlare(g, job.flare, now); flarePin(g, job.flare, now, (F.view.x1 - F.view.x0 - 128) / innerWidth); }   // (a rescue call: they're found - server sar.js)
   for (const v of list) {
     const def = VEHICLE_BY_INDEX[v.d.m];
     if (!def) continue;
@@ -266,6 +266,20 @@ function drawFlare(g, [x, y], now) {
   }
   g.globalAlpha = 0.25; g.fillStyle = '#ff3020'; g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2); g.fill();
   g.globalAlpha = 0.7 + 0.3 * Math.sin(now * 23); g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill();
+  g.restore();
+}
+// Its marker (U17): a round pin over it - the dark disc in a red ring, a lit flare inside, the point down to it; u = 1 / zoom
+function flarePin(g, [x, y], now, u) {
+  const r = 15 * u, cy = y - 46 * u - r + Math.sin(now * 3) * 2 * u;
+  g.save();
+  g.fillStyle = '#070b16'; g.beginPath(); g.arc(x, cy, r + 2.5 * u, 0, Math.PI * 2); g.moveTo(x - 9 * u, cy + r * 0.7); g.lineTo(x, cy + r + 12 * u); g.lineTo(x + 9 * u, cy + r * 0.7); g.fill();
+  g.fillStyle = '#ff4a3a'; g.beginPath(); g.arc(x, cy, r, 0, Math.PI * 2); g.moveTo(x - 7 * u, cy + r * 0.7); g.lineTo(x, cy + r + 9 * u); g.lineTo(x + 7 * u, cy + r * 0.7); g.fill();
+  g.fillStyle = '#1a1420'; g.beginPath(); g.arc(x, cy, r - 3 * u, 0, Math.PI * 2); g.fill();
+  g.translate(x, cy); g.rotate(0.6);   // (the flare: a red stick, its cap, a flame off the top)
+  g.fillStyle = '#e8302a'; g.fillRect(-2.2 * u, -4 * u, 4.4 * u, 12 * u); g.fillStyle = '#5a0f12'; g.fillRect(-2.2 * u, 5 * u, 4.4 * u, 3 * u);
+  const fl = 1 + 0.15 * Math.sin(now * 19);
+  g.fillStyle = '#ff9a2e'; g.beginPath(); g.ellipse(0, -7 * u, 3.6 * u, 4.6 * u * fl, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#fff2a0'; g.beginPath(); g.ellipse(0, -6.5 * u, 1.8 * u, 2.6 * u * fl, 0, 0, Math.PI * 2); g.fill();
   g.restore();
 }
 // The harness: [the helicopter's id, the cable paid out (px), clipped on, where they are]. Seen from above, the cable

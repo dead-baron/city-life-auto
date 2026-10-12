@@ -1648,13 +1648,18 @@ let tutAskGo = null;
 // (the owner, 2026-10-11: "I would just have the graphics settings below the play button in the main menu so you see what
 // graphics you're on and you can change if you want there") - the title's row under Play: the preset you're on, changed
 // right there (Custom: every effect, in Settings). A new player isn't asked at Join: the device's pick is kept silently.
+// (U18: a segmented control - a check on the one you're on, "recommended" under the device's pick; Custom opens Settings)
 function syncTitleGfx() {
-  const s = $('t-gfxsel'), d = getDevice();
-  if (!s.options.length) {
-    for (const k of ['low', 'medium', 'high', 'ultra', 'custom']) s.add(new Option(k === 'custom' ? 'Custom…' : PRESET_NAMES[k] + (k === d.recommended ? ' (recommended)' : ''), k));
-    s.onchange = () => { if (s.value === 'custom') { s.value = gfx.preset; openOverlay('settings'); } else { applyPreset(s.value); onGfxChange(); } };
+  const s = $('t-gfxseg'), d = getDevice();
+  if (!s.children.length) {
+    for (const k of ['low', 'medium', 'high', 'ultra', 'custom']) {
+      const b = document.createElement('button'); b.dataset.p = k; b.setAttribute('role', 'radio');
+      b.innerHTML = `<i>✓</i>${PRESET_NAMES[k]}${k === d.recommended ? '<small>recommended</small>' : ''}`;
+      b.onclick = () => { if (k === 'custom') openOverlay('settings'); else { applyPreset(k); onGfxChange(); } };
+      s.appendChild(b);
+    }
   }
-  s.value = gfx.preset;
+  for (const b of s.children) { const on = b.dataset.p === gfx.preset; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); }
   $('t-gfxwhy').textContent = gfxChosen() ? '' : `picked for ${d.label}`;
 }
 syncTitleGfx();
@@ -2443,12 +2448,15 @@ function drawEventArrows(g, list, z, now) {
     const alpha = kind.stay || age < ARROW_SHOW_S - ARROW_FADE_S ? 1 : Math.max(0, (ARROW_SHOW_S - age) / ARROW_FADE_S);   // (stay: a lost pet's, till you have it or it's home)
     if (alpha <= 0) continue;
     if (ev.w) {   // a lost pet's owner: "Lost my dog!" over them (server/systems/pets.js targetFor)
-      const o = S.ents.get(ev.e), on = o && o.rx !== undefined, t = `Lost my ${ev.w}!`, oy = (on ? o.ry : ev.y) - 50 - 16 / z + Math.sin(now * 4) * 2 / z, ox = on ? o.rx : ev.x;   // (clear above the head: drawWorldLabels)
-      g.font = `700 ${12 / z}px Rubik, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-      const tw = g.measureText(t).width + 12 / z;
-      g.fillStyle = 'rgba(255,255,255,.93)'; g.strokeStyle = kind.color; g.lineWidth = 2.5 / z;
-      g.beginPath(); g.rect(ox - tw / 2, oy - 10 / z, tw, 20 / z); g.fill(); g.stroke();
-      g.fillStyle = '#14202c'; g.fillText(t, ox, oy);
+      // (U17: a speech bubble - the navy plate, a light edge, its tail down to them - with a paw at its left)
+      const o = S.ents.get(ev.e), on = o && o.rx !== undefined, t = `Lost my ${ev.w}!`, oy = (on ? o.ry : ev.y) - 50 - 24 / z + Math.sin(now * 4) * 2 / z, ox = on ? o.rx : ev.x, u = 1 / z;   // (clear above the head: drawWorldLabels)
+      g.font = `700 ${13 * u}px "CLA Pixel", Rubik, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
+      const tw = g.measureText(t).width + 34 * u, bx = ox - tw / 2;
+      tagPlate(ox, oy, tw, u);
+      g.fillStyle = '#ffb43c'; g.beginPath(); g.ellipse(bx + 14 * u, oy + 3 * u, 4.2 * u, 3.4 * u, 0, 0, 6.28);   // (the paw: its pad and four toes)
+      for (const [px, py] of [[-5.2, -1.6], [-2, -5.2], [2, -5.2], [5.2, -1.6]]) { g.moveTo(bx + (14 + px + 1.7) * u, oy + py * u); g.arc(bx + (14 + px) * u, oy + py * u, 1.7 * u, 0, 6.28); }
+      g.fill();
+      g.fillStyle = '#fff'; g.fillText(t, bx + 25 * u, oy + u); g.textAlign = 'center';
     }
     const dx = ev.x - me.x, dy = ev.y - me.y, d = Math.hypot(dx, dy);
     g.save();
@@ -3166,7 +3174,7 @@ function drawOverlays(F, v2) {
   tunnelsTop(F);   // the hills over the tunnels, their portals, the inside of the one you're in (client/tunnels.js)
   // name tags + public flares + rumor marker
   drawWorldLabels(F.peds, F.vehs, now, z);
-  if (S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z);
+  if (S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z, F.vehs);
   // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
   const edge = S.playing && S.me && !S.me.dead ? edgeInfo(sp.x, sp.y, EDGE_I, S.map && S.map.frame) : null;
   if (edge && edge.d > 0) drawEdgeArrow(sp, edge, now);
@@ -4428,12 +4436,34 @@ function drawSkull(x, y, z, now) {
 
 // The job's company truck, until you're in it (server phone.jobTarget veh; the owner, 2026-10-11): a pulsing ring on it
 // and, off screen, an arrow at the screen's edge pointing to it.
-function drawJobTruck([x, y], view, now, z) {
-  const ph = (now * 1.2) % 1, col = '#3cff8a', m = 64 + 30 / z, x0 = view.x0 + m, x1 = view.x1 - m, y0 = view.y0 + m, y1 = view.y1 - m;
-  g.save(); g.strokeStyle = col; g.lineWidth = 3 / z;
-  g.globalAlpha = 1 - ph; g.beginPath(); g.arc(x, y, 82 + ph * 36, 0, 6.28); g.stroke();   // (round a flatbed, 150 px long)
-  g.globalAlpha = 0.9; g.beginPath(); g.arc(x, y, 82, 0, 6.28); g.stroke();
-  g.font = `bold ${12 / z}px monospace`; g.textAlign = 'center'; g.fillStyle = col; g.fillText('YOUR TRUCK', x, y - 90);
+// U17's label plate over something in the world (the lost pet's owner, the job's truck): navy, a light edge, its tail
+// down to x; centred on (x, cy), tw wide, u = 1 / zoom
+function tagPlate(x, cy, tw, u) {
+  const bx = x - tw / 2, by = cy - 11 * u, bb = by + 22 * u;
+  g.fillStyle = '#0d162d'; g.strokeStyle = '#070b16'; g.lineWidth = 5 * u;
+  g.beginPath(); g.rect(bx, by, tw, 22 * u); g.moveTo(x - 6 * u, bb); g.lineTo(x, bb + 7 * u); g.lineTo(x + 6 * u, bb); g.stroke(); g.fill();
+  g.strokeStyle = '#c9d6ee'; g.lineWidth = 2 * u; g.beginPath(); g.moveTo(x - 6 * u, bb); g.lineTo(bx, bb); g.lineTo(bx, by); g.lineTo(bx + tw, by); g.lineTo(bx + tw, bb); g.lineTo(x + 6 * u, bb); g.lineTo(x, bb + 6 * u); g.closePath(); g.stroke();
+}
+// (U17: two dashed ellipses round it, turned with it, and a "YOUR TRUCK" plate above)
+function drawJobTruck([x, y], view, now, z, vehs) {
+  const col = '#45b8ff', m = 64 + 30 / z, x0 = view.x0 + m, x1 = view.x1 - m, y0 = view.y0 + m, y1 = view.y1 - m, u = 1 / z;
+  let v = null;
+  for (const q of vehs || []) if (Math.abs(q.rx - x) < 60 && Math.abs(q.ry - y) < 60) { v = q; break; }
+  const def = v ? VEHICLE_BY_INDEX[v.d.m] : null, L = def ? def.L : 150, W = def ? def.W : 60, ra = v ? v.ra : 0;
+  if (v) { x = v.rx; y = v.ry; }
+  g.save(); g.lineWidth = 3 * u; g.setLineDash([12 * u, 7 * u]); g.lineDashOffset = -now * 24 * u;
+  let hh = 0;
+  for (const [k, c] of [[1, '#9feaff'], [0, '#ffd34a']]) {
+    const a = L / 2 + 16 + k * 18, b = W / 2 + 18 + k * 16;
+    hh = Math.max(hh, Math.sqrt((a * Math.sin(ra)) ** 2 + (b * Math.cos(ra)) ** 2));
+    g.strokeStyle = '#070b16'; g.globalAlpha = 0.5; g.lineWidth = 5 * u; g.beginPath(); g.ellipse(x, y, a, b, ra, 0, 6.28); g.stroke();
+    g.strokeStyle = c; g.globalAlpha = 0.95; g.lineWidth = 2.5 * u; g.stroke();
+  }
+  g.setLineDash([]); g.globalAlpha = 1;
+  g.font = `700 ${13 * u}px "CLA Pixel", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const ty = y - hh - 26 * u;
+  tagPlate(x, ty, g.measureText('YOUR TRUCK').width + 20 * u, u);
+  g.fillStyle = '#fff'; g.fillText('YOUR TRUCK', x, ty + u);
   if (x < x0 || x > x1 || y < y0 || y > y1) {
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, dx = x - cx, dy = y - cy, k = Math.min((x1 - cx) / (Math.abs(dx) || 1e-6), (y1 - cy) / (Math.abs(dy) || 1e-6)), s = 18 / z;
     g.translate(cx + dx * k, cy + dy * k); g.rotate(Math.atan2(dy, dx)); g.globalAlpha = 0.8 + 0.2 * Math.sin(now * 6);
