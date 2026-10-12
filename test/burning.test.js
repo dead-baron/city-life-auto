@@ -225,3 +225,22 @@ test('the burning states on the wire: rolling, lying, getting up, in the water, 
   combat.kill(w, z, null, 'vehicle');
   assert.ok(!rec(z).char, 'not charred by anything but fire');
 });
+
+// H78: the frames the page draws someone on fire with (client/main.js pedLook: flailing, running, rolling, lying, pushing
+// up, swimming, dead) build in art v2 (client/art2/game/peds.js), and the machines the concepts redrew (the green combine,
+// the tractor, the tank, the grey gunship) still build
+test('the fire frames\' poses and the redrawn machines build in art v2', async () => {
+  const Pd = await import('../client/art2/game/peds.js');
+  const { vehicleModel } = await import('../client/art2/vehicles.js');
+  const AM = await import('../client/art2/aircraft.js');
+  const app = Pd.adaptApp({ s: 2, h: 1, hc: '#2a1a10', t: 1, tc: '#3f5a2a', tc2: '#dddddd', l: '#1d2a5a', sh: '#e8e8e8', ht: 1, htc: '#c8262b', bd: 1 }, 'casual');
+  for (const pose of ['stagger', 'walk3', 'roll', 'down', 'downF', 'swim', 'dead']) {
+    const G = Pd.pedSprite(app, pose, 2, Pd.pedFrame(pose, 1), 0, {});
+    let n = 0;
+    for (let i = 3; i < G.col.length; i += 4) if (G.col[i] > 128) n++;
+    assert.ok(n > 60, `${pose}: ${n} px`);
+  }
+  for (const t of ['combine', 'tractor', 'tank']) assert.ok(vehicleModel(t).anchors, t);
+  assert.ok(AM.bodyModel('gunship'), 'the gunship');
+  assert.equal(AM.TYPES.gunship.body, '#646a70', 'grey (MV1)');
+});

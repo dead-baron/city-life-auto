@@ -203,4 +203,8 @@ test('the concept\'s other crops: corn, strawberries, sunflowers - seeds on the 
     assert.ok(n > 300 && off === 0, `crop ${c} stage ${st} flags ${fl}: ${n} px, ${off} off the sprite`);
   }
   for (let look = 0; look <= 6; look++) for (let b = 0; b < 32; b++) assert.ok(F.rowPixel(look, 5, b).length === 3);
+  let pl = 0, ba = 0;
+  F.ploughPixels((x, y) => { if (x >= 0 && y >= 0 && x < F.PLOUGH_A && y < F.PLOUGH_B) pl++; });
+  F.balePixels((x, y) => { if (x >= 0 && y >= 0 && x < F.BALE && y < F.BALE) ba++; });
+  assert.ok(pl > 80 && ba > 40, `the plough (${pl} px) and a bale (${ba} px)`);
 });
