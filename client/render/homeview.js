@@ -195,7 +195,7 @@ function drawArt(L, me, u, now) {
     person(raw.get(o.n) || {}, q ? q.x0 + (q.x1 - q.x0) * kk : o.x, q ? q.y0 + (q.y1 - q.y0) * kk : o.y, o.a, o.mv, o.sl, false, o.n);
   }
   person(app || {}, me.x, me.y, me.a, me.mv, st.sleep, st.shower, null);
-  if (st.doors) list.push({ b: TILE_IN + 0.5, marks: 1 });   // (H71: the lobby's door plates on the back wall's face, in front of it, behind anyone standing there)
+  if (st.doors) list.push({ b: TILE_IN + 0.5, marks: 1 }, { b: 2 * TILE_IN + 0.5, mailflag: 1 });   // (H71: the lobby's door plates on the back wall's face, in front of it, behind anyone standing there; new mail's envelope over the mailboxes)
   list.sort((a, b) => a.b - b.b);
   const pulse = 0.7 + 0.3 * Math.sin(now / 220);   // (never faint: the thing in reach always shows)
   for (const e of list) {
@@ -204,6 +204,7 @@ function drawArt(L, me, u, now) {
       g.drawImage(it.cv, it.x, it.y, it.G.w * ap, it.G.h * ap);
       if (u && it.piece === u && it.ol) { g.globalAlpha = pulse; g.drawImage(it.ol, it.x - ap, it.y - ap, it.ol.width * ap, it.ol.height * ap); g.globalAlpha = 1; }
     } else if (e.marks) lobbyMarks(L, true, now);
+    else if (e.mailflag) mailFlag(L, true, now);
     else if (e.car) g.drawImage(e.car.cv, e.car.x, e.car.y, e.car.w, e.car.h);
     else if (e.pet) {
       let c = null;
@@ -310,6 +311,20 @@ function lobbyMarks(L, v2, now) {
     g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(x - 7, ny - 5, 14, 10);
     g.font = 'bold 8px monospace'; g.fillStyle = s === 2 ? '#ffd27a' : '#e8e2d0'; g.fillText(String(d.n), x, ny + 0.5);
     if (s === 0) { g.fillStyle = '#b8382a'; g.fillRect(x - 11, 17, 22, 7); g.fillStyle = '#fff'; g.font = 'bold 5px monospace'; g.fillText('FOR SALE', x, 20.8); }
+  }
+  g.restore();
+  if (!v2) mailFlag(L, false, now);
+}
+// new mail in your box: an envelope over the mailboxes, bobbing (art v2: drawn after them - homeview drawArt)
+function mailFlag(L, v2, now) {
+  const mb = st.mail > 0 && L.pieces.find((q) => q.use === 'mail');
+  g.save();
+  if (mb) {
+    const x = mb.x + mb.w / 2, y = (v2 ? 2 : 28) + Math.sin(now / 300) * 1.5;
+    g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(x - 8, y - 4, 17, 11);
+    g.fillStyle = '#f4f0e4'; g.fillRect(x - 7, y - 5, 15, 10);
+    g.strokeStyle = '#8a8070'; g.lineWidth = 1; g.beginPath(); g.moveTo(x - 7, y - 5); g.lineTo(x + 0.5, y + 1); g.lineTo(x + 8, y - 5); g.stroke();
+    g.fillStyle = '#d83a2a'; g.beginPath(); g.arc(x + 8, y - 5, 3, 0, 6.28); g.fill();
   }
   g.restore();
 }

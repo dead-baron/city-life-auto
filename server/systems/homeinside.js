@@ -113,7 +113,7 @@ function lobbyInteraction(world, p, h, s) {
   if (u.use === 'mail') {
     if (!ownsIn(world, p, h.block)) return { label: 'The mailboxes - one for each flat', passive: true, run: none };
     const n = mail.unread(p.profile);
-    return { label: `Your mailbox${n ? ` - ${n} new` : ''}`, run: () => openMenu(world, p, 'mail') };
+    return { label: `Your mailbox${n ? ` - ${n} new` : ''}`, run: () => { openMenu(world, p, 'mail'); send(world, p, true); } };
   }
   if (u.use !== 'unit') return { label: `${base.name} - the lobby`, passive: true, run: none };
   const f = flatOf(world, h, u.n);
@@ -697,6 +697,7 @@ export function send(world, p, full) {
     m.decor = decorOf(world, h);   // (H67: the owner's things placed, the walls' paint, the floors - shared/homedecor.js decorate)
     m.edit = s.edit ? { k: heldKind(world, h, s), r: s.edit.r, mv: s.edit.mv } : null;   // (decorating: what you hold - the page shows where it'd go)
     if (s.lobby) m.doors = (world.unitsOf.get(h.block) || []).map((id) => { const o = world.homeOwner.get(id); return o === p.pid ? 2 : o ? (someoneIn(world, homes.homeById(world, id)) ? 3 : 1) : 0; });   // (H71: each flat's door - 0 for sale, 1 taken, 2 yours, 3 someone's in)
+    if (s.lobby) m.mail = ownsIn(world, p, h.block) ? mail.unread(p.profile) : 0;   // (H71: new mail in your box - the page flags it)
     m.cars = s.tour || s.lobby ? [] : p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air').slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
     s.nc = m.cars.length;   // (the cars parked in the bays are solid: shared/homelayout.js stepInside - the page counts the same ones)
   }

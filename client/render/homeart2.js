@@ -408,6 +408,7 @@ export class HomeArt {
       for (const l of this.lamps) if (l.kind !== 'tv') lights.push({ x: l.x, y: l.y, z: l.z, r: l.kind === 'lamp' ? 110 : 80, c: [1.25, 0.85, 0.5], k: 0.9 * night });
     }
     for (const l of this.lamps) if (l.kind === 'tv' && night > 0.25) lights.push({ x: l.x, y: l.y + 10, z: l.z, r: 90, c: [0.45, 0.6, 1.1], k: 0.45 * night });
+    if (/^lobby/.test(L.key) && night > 0.25) for (let tx = 2; tx < L.cols - 1; tx += 4) lights.push({ x: (tx + 0.5) * T, y: 2.5 * T, z: 64, r: 150, c: [1.2, 0.88, 0.58], k: 0.75 * night });   // (H71: a lobby's ceiling lights along the hall and the landing)
     for (const l of lights) l.r2 = l.r * l.r;
     const sky = d > 0.6 ? [150 + 60 * d, 196 + 30 * d, 238] : d > 0.05 ? [236, 150 + 40 * d, 90 + 60 * d] : [26, 36, 70];
     return { d, amb, lights, sky, emiK: 0.35 + 0.9 * night, on: night > 0.25 ? 1 : 0 };
