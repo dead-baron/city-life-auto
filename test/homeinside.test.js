@@ -258,7 +258,7 @@ test('a friend: knocks at your door, you let them in from the hall table, you se
   // at the door: knock
   teleport(w, q.ped, h.x + 6, h.y + 4);
   const a = players.findInteraction(w, q);
-  assert.match(a.label, /Knock/);
+  assert.match(a.label, /Ring the doorbell/);   // (H71: the doorbell replaces the knock)
   a.run();
   assert.match(players.findInteraction(w, q).label, /Waiting/);
   // the host lets them in from the hall table

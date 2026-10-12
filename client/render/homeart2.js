@@ -19,7 +19,7 @@ const T = TILE_IN;
 export const HF = 46, HC = 14;   // the walls' heights (world px): the back wall full, the rest cut low
 export const YARD = 72;          // the ground drawn round the place (world px)
 const UP = [0, 0, 1], SOUTH = [0, 1, 0];
-const WALLISH = new Set(['#', '=', 'D', 'R']);
+const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);   // (U a flat's door, E the lift: a lobby's back wall - H71)
 const FLOORISH = new Set(['.', 'c', 't', 'g', '+']);
 
 // the rooms: the plan's open tiles flooded between the walls (a doorway joins none), each with its kind
@@ -140,7 +140,7 @@ export class HomeArt {
   // apartment - the path from the front door, the drive from the garage, a few flowers along the front of a good one
   buildYard() {
     const L = this.L, ap = this.ap, M = YARD, G = new GBuf(Math.ceil((L.w + 2 * M) / ap), Math.ceil((L.h + 2 * M) / ap));
-    const paved = L.key === 'apartment', grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
+    const paved = L.key === 'apartment' || /^lobby/.test(L.key), grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
     let r0 = L.cols, r1 = -1;
     for (let tx = 0; tx < L.cols; tx++) if (L.cell(tx, L.rows - 1) === 'R') { r0 = Math.min(r0, tx); r1 = Math.max(r1, tx); }
     for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
@@ -262,10 +262,22 @@ export class HomeArt {
     const L = this.L, t = this.tier, last = L.rows - 1;
     if (ty === last) {   // the outside of the front wall (the roller door in it)
       if (ch === 'R') return step(ramp('#a8acb2', 5, 2), 0.5 + (v % 3 === 0 ? -0.35 : 0.1), x, y, 0.2);
-      const kind = L.key === 'trailer' ? 0 : L.key === 'apartment' ? 1 : L.key === 'mansion' ? 3 : 2;
+      const kind = L.key === 'trailer' ? 0 : L.key === 'apartment' || /^lobby/.test(L.key) ? 1 : L.key === 'mansion' ? 3 : 2;
       return step(ramp(OUTSIDE[kind], 5, 2), 0.5 + (kind === 0 ? (wx % 6 < 1 ? -0.3 : 0) : kind === 1 ? ((v % 4 === 0 || (wx + (Math.floor(v / 4) & 1) * 4) % 9 === 0) ? -0.35 : 0) : kind === 2 ? (v % 4 === 0 ? -0.25 : 0) : (v % 7 === 0 || wx % 14 === 0 ? -0.2 : 0)), x, y, 0.3);
     }
     const u = wx - tx * T;
+    if (ch === 'U' || ch === 'E') {   // (H71) a flat's door along a lobby's landing, its brass number plate; the lift's steel doors
+      const lt = L.cell(tx - 1, ty) === ch, rt = L.cell(tx + 1, ty) === ch;
+      if (ch === 'E') {
+        if (!lt && v >= 38 && v < 42 && u >= T - 6) return [240, 190, 80];   // (the floor lamp over it)
+        if (v < 37 && (u >= 3 || lt) && (u < T - 3 || rt)) return step(ramp('#a8b0b8', 5, 2), 0.6 + ((u === T - 1 && rt) || (u === 0 && lt) ? -0.6 : 0) + (u % 7 === 0 ? -0.1 : 0), x, y, 0.2);
+        if (v < 39) return step(ramp('#5a6068', 4, 2), 0.5, x, y, 0.2);
+      } else {
+        const dr = ramp(t >= 3 ? '#4a2a1c' : t >= 2 ? '#7a3a2a' : t >= 1 ? '#3e5a4a' : '#6a5038', 5, 2);
+        if (v < 35 && u >= 5 && u < T - 5) return step(dr, 0.5 + ((v === 18 || u === 9 || u === T - 10) ? -0.25 : 0) + (u === T - 9 && v >= 15 && v < 18 ? 0.7 : 0) + (v >= 28 && v < 32 && u >= 13 && u < 19 ? 0.6 : 0), x, y, 0.3);
+        if (v < 37 && u >= 3 && u < T - 3) return step(ramp(t >= 2 ? '#f0ece0' : '#5a4636', 4, 2), 0.55, x, y, 0.2);
+      }
+    }
     if ((u < 3 && L.cell(tx - 1, ty) === '+') || (u >= T - 3 && L.cell(tx + 1, ty) === '+')) return step(ramp(t >= 2 ? '#f0ece0' : LOOK[t].wood, 4, 2), u === 1 || u === T - 2 ? 0.75 : 0.4, x, y, 0.2);   // a doorway's casing
     if (v < 3) return step(ramp(t >= 2 ? '#f0ece0' : '#5a4636', 4, 2), 0.5, x, y, 0.2);   // the skirting
     const r = this.R.at(tx, ty + 1) || this.R.at(tx, ty + 2);
@@ -319,6 +331,7 @@ export class HomeArt {
       if (p.flat) continue;   // (H67: a rug - drawn on the floor)
       let face = 's';
       if (p.face) face = p.face;   // (H67: the shop's pieces face the way you turned them)
+      else if (p.ch === 'Z' || p.ch === 'M') face = 's';   // (H71: a lobby's stairs climb away to the back wall; the mailboxes on it)
       else if (p.ch === 'C' || p.ch === 'O') face = p.h > p.w ? (wall(p.tx - 1, p.ty) ? 'e' : 'w') : wall(p.tx, p.ty + p.th) ? 'n' : 's';
       else if (p.ch === 'V') { const c = L.pieces.find((q) => q.ch === 'C'); face = c && c.y + c.h <= p.y && Math.abs(c.x + c.w / 2 - p.x - p.w / 2) < c.y - p.y ? 'n' : 's'; }   // (seen from the side a set is a sliver: it faces the camera unless the couch is north of it)
       else if (p.ch !== 'T' && p.ch !== 'P' && p.ch !== 'B') face = wall(p.tx, p.ty - 1) ? 's' : wall(p.tx, p.ty + p.th) ? 'n' : wall(p.tx - 1, p.ty) ? 'e' : wall(p.tx + p.tw, p.ty) ? 'w' : 's';

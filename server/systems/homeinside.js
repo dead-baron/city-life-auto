@@ -22,9 +22,9 @@
 //   ped.home: { id, x, y, a (px, in the plan), mv (walking), sleep / shower (when it ends, world.time; 0 none), eatAt }
 //   ped.home.guest: a guest's host (pid); p.knock: { home, at } someone at a door, knocking
 //   p.homeMenu: the menu of the thing you're using ('wardrobe' | 'safe' | 'fridge' | 'garage' | 'hall'), null for none
-import { DAY_PART_S } from '../../shared/constants.js';
+import { DAY_PART_S, TICK_HZ } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
-import { HOME_IN, DECOR } from '../../shared/rules.js';
+import { HOME_IN, DECOR, MAIL } from '../../shared/rules.js';
 import { ITEMS } from '../../shared/items.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { layout, planOf, tierOf, stepInside, useAt, blocked, TILE_IN } from '../../shared/homelayout.js';
@@ -33,6 +33,7 @@ import { store } from '../store.js';
 import * as homes from './homes.js';
 import * as economy from './economy.js';
 import * as mortgage from './mortgage.js';
+import * as mail from './mail.js';
 
 export const planFor = (h) => layout(planOf(h), tierOf(h));
 // (H67) a home's decor - its owner's (profile.decor[home id]: shared/homedecor.js) - and its plan with the decor laid over
@@ -48,11 +49,16 @@ const money = (n) => `$${Math.round(n).toLocaleString()}`;
 
 // ---- in and out -------------------------------------------------------------------------------------------------------
 // You're in (homes.goInside): just inside the front door
-export function enter(world, p, h) {
+export function enter(world, p, h, at) {
   const ped = p.ped;
-  const L = planFor(h);
-  ped.home = { id: h.id, x: L.spawn.x, y: L.spawn.y, a: -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9 };
+  const L = planFor(h), sp = at || L.spawn;   // (at: out of a flat's door into its lobby - H71)
+  ped.home = { id: h.id, x: sp.x, y: sp.y, a: at ? Math.PI / 2 : -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, ...(h.isLobby ? { lobby: 1 } : null) };
   p.homeMenu = null;
+  if (!h.isLobby && world.homeOwner.get(h.id) === p.pid) {   // (H71) your pet comes to meet you; the mail by a house's door comes in with you
+    petIn(world, p, h);
+    const n = homes.blockOf(world, h) == null ? mail.unread(p.profile) : 0;
+    if (n) world.notify(p, `You pick up the mail on the way in: ${n} new - read it at the hall table.`, 'info');
+  }
   send(world, p, true);
 }
 
@@ -61,7 +67,9 @@ export function doorInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.carrying || ped.entering || ped.ug) return null;
   const poi = world.map.poiNear(ped.x, ped.y);
-  if (!poi || poi.kind !== 'home' || !world.homeOwner.has(poi.home) || homes.unitsAt(world, poi)) return null;   // (an apartment block's lobby: its list of units, economy.js)
+  if (!poi || poi.kind !== 'home') return null;
+  if (homes.unitsAt(world, poi)) return lobbyDoor(world, p, poi);   // (H71: an apartment block - into its lobby, open to anyone)
+  if (!world.homeOwner.has(poi.home)) return null;
   const h = world.map.homes[poi.home];
   if (world.homeOwner.get(h.id) === p.pid) {
     if (!p.homePre && p.conn) { p.homePre = 1; p.conn.sendJSON({ t: 'home', pre: 1 }); }   // (the page fetches the rooms' drawing now, so they're there the moment you're in)
@@ -70,7 +78,60 @@ export function doorInteraction(world, p) {
   const host = hostIn(world, h);   // (someone else's: if they're in, knock)
   if (!host) return null;
   if (p.knock && p.knock.home === h.id && world.time - p.knock.at < 20) return { label: `Waiting for ${host.name} to open the door...`, passive: true, run: () => {} };
-  return { label: `Knock on the door (${host.name} is in)`, run: () => knock(world, p, h, host) };
+  return { label: `Ring the doorbell (${host.name} is in)`, run: () => knock(world, p, h, host) };
+}
+
+// ---- an apartment block's lobby (H71; HO5) --------------------------------------------------------------------------
+// The building's front door opens into its lobby (shared/homelayout.js lobby4 .. lobby8): anyone may walk in - a shared,
+// safe place, out of the world like a home (nobody sees or hurts you there; the police can't follow you in while they
+// can see you, and wanted, the door takes its moment) - the mailboxes, the lift and the stairs, and the flats' doors along
+// the landing, one a unit, numbered: yours to go in, one for sale to look round or buy, someone else's to ring the
+// doorbell at. Out of a flat's front door you're back on the landing outside it. ped.home.lobby: 1 in a lobby.
+function lobbyDoor(world, p, poi) {
+  const lob = homes.lobbyOf(world, poi.home), base = world.map.homes[poi.home];
+  if (!lob || !base) return null;
+  if (!p.homePre && p.conn) { p.homePre = 1; p.conn.sendJSON({ t: 'home', pre: 1 }); }
+  const mine = (world.unitsOf.get(poi.home) || []).filter((id) => world.homeOwner.get(id) === p.pid).length;
+  return { label: `Into ${base.name}'s lobby${mine ? ' - your home is in here' : ''}`, run: () => intoLobby(world, p, lob) };
+}
+export function intoLobby(world, p, lob) {
+  const ped = p.ped;
+  const err = !ped || ped.dead || ped.vehId || ped.hidden ? 'Not right now.' : ped.carrying ? 'Set the crate down first.' : p.wanted > 0 && world.time - (p.seenAt || -99) < 1.5 ? 'Not with the police watching you!' : null;
+  if (err) { world.notify(p, err, 'bad'); return err; }
+  if (p.wanted > 0) { ped.entering = { home: lob.id, at: world.time, x: ped.x, y: ped.y }; ped.vx = 0; ped.vy = 0; world.notify(p, 'Slipping in through the lobby door... (stand still)', 'info'); return null; }   // (homes.update: in after the moment)
+  homes.goInside(world, p, lob);
+  return null;
+}
+// a flat in the block whose lobby you're in: unit n (1 the map's own)
+const flatOf = (world, lob, n) => homes.homeById(world, (world.unitsOf.get(lob.block) || [])[n - 1]);
+const ownsIn = (world, p, block) => (world.unitsOf.get(block) || []).some((id) => world.homeOwner.get(id) === p.pid);
+const nameOf = (world, pid) => { const q = world.players.get(pid), prof = q ? q.profile : store.get(pid); return (q && q.name) || (prof && prof.name) || 'someone'; };
+function lobbyInteraction(world, p, h, s) {
+  const L = planFor(h), u = useAt(L, s.x, s.y, HOME_IN.reach), base = world.map.homes[h.block], none = () => {};
+  if (!u) return { label: `${base.name} - the lobby: the flats' doors along the landing, the mailboxes`, passive: true, run: none };
+  if (u.use === 'door') return { label: 'Out to the street', run: () => leave(world, p) };
+  if (u.use === 'mail') {
+    if (!ownsIn(world, p, h.block)) return { label: 'The mailboxes - one for each flat', passive: true, run: none };
+    const n = mail.unread(p.profile);
+    return { label: `Your mailbox${n ? ` - ${n} new` : ''}`, run: () => openMenu(world, p, 'mail') };
+  }
+  if (u.use !== 'unit') return { label: `${base.name} - the lobby`, passive: true, run: none };
+  const f = flatOf(world, h, u.n);
+  if (!f) return { label: `Unit ${u.n}`, passive: true, run: none };
+  const o = world.homeOwner.get(f.id), nm = `Unit ${u.n}`;
+  if (o === p.pid) return { label: `${nm} - your door: go in`, run: () => homes.goInside(world, p, f) };
+  if (!o) return { label: `${nm} - for sale, ${money(f.price)}: look round or buy`, run: () => { p.lobbyPick = f.id; openMenu(world, p, 'unit'); } };
+  const host = hostIn(world, f);
+  if (!host) return { label: `${nm} - ${nameOf(world, o)}'s (nobody's in)`, passive: true, run: none };
+  if (p.knock && p.knock.home === f.id && world.time - p.knock.at < 20) return { label: `Waiting for ${host.name} to open the door...`, passive: true, run: none };
+  return { label: `${nm} - ring ${host.name}'s doorbell`, run: () => knock(world, p, f, host) };
+}
+// out of a flat's front door: onto the landing outside it
+function toLobby(world, p, lob, from) {
+  const ped = p.ped, d = planFor(lob).doors[(from.unit || 1) - 1];
+  ped.inside = lob.id; ped.x = lob.x; ped.y = lob.y;
+  p.meDirty = true;
+  enter(world, p, lob, d ? { x: d.x, y: d.y + TILE_IN } : null);
 }
 // the owner of h, online and inside it (null: not in)
 function hostIn(world, h) {
@@ -88,16 +149,20 @@ export function knockAt(world, p, h) {
 }
 // the bedrooms in a home's plan (the real-estate app, the lobby)
 export const bedsIn = (h) => planFor(h).pieces.filter((q) => q.use === 'bed').length;
+// (H71) the doorbell: it rings inside - the host's page plays it ({ t: 'home', bell }) - and says who's there
 function knock(world, p, h, host) {
   p.knock = { home: h.id, at: world.time };
-  world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
-  world.notify(p, `You knock on ${host.name}'s door...`, 'info');
-  world.notify(host, `${p.name} is knocking at your door - let them in from the hall table.`, 'info');
+  world.notify(p, `You ring ${host.name}'s doorbell...`, 'info');
+  world.notify(host, `Ding-dong! ${p.name} is at your door - let them in from the hall table.`, 'info');
+  host.bellAt = world.time;
+  if (host.conn) host.conn.sendJSON({ t: 'home', bell: p.name });
 }
-// at h's front door, knocking, and fit to come in
+// at h's front door, knocking, and fit to come in (out in the street, or on its block's landing - H71)
 function knocking(world, q, h) {
   const ped = q.ped;
-  return !!(q.knock && q.knock.home === h.id && world.time - q.knock.at < 90 && ped && !ped.dead && !ped.hidden && !ped.vehId && !ped.carrying && Math.hypot(ped.x - h.x, ped.y - h.y) < 120);
+  if (!(q.knock && q.knock.home === h.id && world.time - q.knock.at < 90 && ped && !ped.dead && !ped.vehId && !ped.carrying)) return false;
+  if (ped.hidden) { const lh = ped.home && ped.home.lobby ? homes.homeById(world, ped.home.id) : null; return !!lh && lh.block === homes.blockOf(world, h); }
+  return Math.hypot(ped.x - h.x, ped.y - h.y) < 120;
 }
 // a guest in: just inside the front door, beside the host's way in
 function letIn(world, q, h, host) {
@@ -130,7 +195,7 @@ export function goIn(world, p, h) {
 // ped.home.tour: 1 while you're a visitor.
 export function tour(world, p, h) {
   const ped = p.ped;
-  if (!ped || ped.dead || ped.vehId || ped.hidden || ped.ug) return 'Not right now.';
+  if (!ped || ped.dead || ped.vehId || (ped.hidden && !(ped.home && ped.home.lobby)) || ped.ug) return 'Not right now.';   // (from the street, or a block's landing - H71)
   if (!h || h.gone) return 'No such place.';
   if (world.homeOwner.has(h.id)) return world.homeOwner.get(h.id) === p.pid ? 'It\'s yours - just go in.' : 'That place is sold.';
   if (p.wanted > 0) return 'Not while the police are after you.';
@@ -152,7 +217,9 @@ const THING = { bed: 'The bed', wardrobe: 'The wardrobe', safe: 'The safe', frid
 export function leave(world, p) {
   const ped = p.ped;
   if (!ped || !ped.home) return;
+  const h = homeOf(world, ped), b = h && !h.isLobby ? homes.blockOf(world, h) : null, lob = b != null ? homes.lobbyOf(world, b) : null;
   ped.home = null; p.homeMenu = null;
+  if (lob && ped.hidden && !ped.dead) { toLobby(world, p, lob, h); return; }   // (H71: a flat's door opens onto its landing)
   homes.leaveHome(world, p);
   if (p.conn) p.conn.sendJSON({ t: 'home', off: 1 });
 }
@@ -184,6 +251,7 @@ export function interaction(world, p) {
   if (!s || !h) return null;
   if (s.sleep) return { label: 'Asleep... the night is passing', passive: true, run: () => {} };
   if (s.shower) return { label: 'In the shower...', passive: true, run: () => {} };
+  if (s.lobby) return lobbyInteraction(world, p, h, s);   // (H71: a block's lobby)
   if (s.edit) return editPrompt(world, p, h);   // (H67: decorating - the action button is the menu for the spot in front of you)
   const u = useAt(planFor(h), s.x, s.y, HOME_IN.reach);
   if (s.tour) {   // a visitor: the door is the way out (or the sale), the rest is to look at - the door first when it's in reach
@@ -220,6 +288,24 @@ function menuOf(world, p, h, what) {
     return { t: 'menu', poi: homes.homePoi(world, h).id, title: `${h.name} - for sale`, sub, opts, cash: prof.cash, bank: prof.bank, inside: true };
   }
   if (what === 'deco' || what === 'paint') return decoMenu(world, p, h, what);   // (H67)
+  if (what === 'unit' || what === 'mail') {   // (H71) a flat for sale along a lobby's landing; your mail
+    const opts = [];
+    let title = 'Your mail', sub = '';
+    if (what === 'unit') {
+      const f = homes.homeById(world, p.lobbyPick);
+      if (!f || world.homeOwner.has(f.id)) { title = 'Sold'; sub = 'Someone has just bought it.'; }
+      else {
+        const t = mortgage.terms(f), beds = bedsIn(f);
+        title = `${f.name} - for sale`;
+        sub = `A ${f.what || 'flat'}${(f.floor || 1) > 1 ? ` on floor ${f.floor}` : ' on the ground floor'}, ${beds} bedroom${beds === 1 ? '' : 's'}, parking out front for ${f.slots}. Wallet ${money(prof.cash)} · bank ${money(prof.bank)}.`;
+        opts.push({ id: 'hi:ltour', label: 'Take a look inside', note: 'walk round it first' });
+        opts.push({ id: 'hi:lbuy', label: `Buy unit ${f.unit || 1}`, price: f.price });
+        opts.push({ id: 'hi:lmort', label: `Buy it with a mortgage: ${t.days} payments of ${money(t.pay)} a day`, price: t.deposit, note: 'deposit' });
+      }
+    } else sub = mail.menuOpts(world, p, opts);
+    opts.push({ id: 'close', label: 'Done' });
+    return { t: 'menu', poi: homes.homePoi(world, h).id, title, sub, opts, cash: prof.cash, bank: prof.bank, inside: true };
+  }
   const base = economy.buildMenu(world, p, homes.homePoi(world, h)), all = base.opts;   // (the home menu's options: wardrobe and stash)
   const pick = (pre) => all.filter((o) => o.id === pre || o.id.startsWith(pre + ':'));
   const opts = [];
@@ -244,6 +330,7 @@ function menuOf(world, p, h, what) {
     title = base.title; sub = base.sub;
     opts.push(...all.filter((o) => o.id !== 'close'));
     for (const q of world.players.values()) if (q !== p && knocking(world, q, h)) opts.unshift({ id: `hi:let:${q.pid}`, label: `Let ${q.name} in`, note: 'at your door' });
+    if (!ped.home.guest && !ped.home.tour) { const n = mail.unread(prof); opts.push({ id: 'hi:mail', label: `The mail${n ? ` - ${n} new` : ''}`, note: 'from your mailbox' }); }   // (H71)
     if (!ped.home.guest && !ped.home.tour) opts.push({ id: 'hi:deco', label: 'Decorate - place, move, turn and sell your furniture; paint the walls, new floors', note: furnNote(prof) });   // (H67)
     opts.push({ id: 'hi:sell', label: `Sell this place (+${money(h.price * 0.6)} to the bank)`, note: 'you step outside' });
   } else if (what === 'garage') {
@@ -270,7 +357,7 @@ export function onMenu(world, p, poiId, optId, execute) {
   const ped = p.ped, h = homeOf(world, ped);
   if (!p.homeMenu || !h || !ped.hidden) { p.homeMenu = null; return false; }
   const poi = world.map.pois[poiId];
-  if (!poi || poi.kind !== 'home' || poi.home !== (h.lobby ?? h.id)) return false;   // (a unit's menus come from its building's lobby door)
+  if (!poi || poi.kind !== 'home' || poi.home !== (h.isLobby ? h.block : h.lobby ?? h.id)) return false;   // (a unit's menus, a lobby's, come from its building's front door)
   if (optId === 'close') { p.homeMenu = null; return true; }
   const what = p.homeMenu;
   const valid = menuOf(world, p, h, what).opts.find((o) => o.id === optId);
@@ -331,6 +418,20 @@ function own(world, p, h, parts) {
       return null;
     }
     case 'tout': p.homeMenu = null; leave(world, p); return null;
+    case 'ltour': case 'lbuy': case 'lmort': {   // (H71) a flat for sale on a lobby's landing: a look round, or bought - and you're in
+      const f = homes.homeById(world, p.lobbyPick);
+      if (!ped.home || !ped.home.lobby || !f || homes.blockOf(world, f) !== h.block) return 'Not here.';
+      p.homeMenu = null;
+      if (parts[1] === 'ltour') return tour(world, p, f);
+      const err = parts[1] === 'lbuy' ? homes.buy(world, p, f, economy.payFrom) : mortgage.buyWith(world, p, f, economy.payFrom);
+      if (err) return err;
+      homes.goInside(world, p, f);
+      return null;
+    }
+    case 'mail': openMenu(world, p, 'mail'); return null;   // (H71: from the hall table)
+    case 'mread': return null;
+    case 'mpay': return mail.pay(world, p, Number(parts[2]), economy.payFrom);
+    case 'mclear': mail.clear(prof); return null;
     case 'deco': case 'dpick': case 'dmove': case 'dturn': case 'dput': case 'dstay': case 'dstore': case 'dspin': case 'dsell': case 'dstow':
     case 'dpaint': case 'dwall': case 'dfloor': case 'dback': case 'dend':
       return decoOp(world, p, h, parts);
@@ -534,13 +635,14 @@ export function update(world) {
     if (!s) continue;
     const h = homes.homeById(world, s.id);
     // out some other way (the home menu's Step outside, the garage, the boathouse, dead, a dev command): gone from here
-    const ok = s.tour ? !world.homeOwner.has(s.id) : world.homeOwner.get(s.id) === (s.guest || p.pid);   // (a look round: while it's still for sale)
+    const ok = s.lobby ? !!h : s.tour ? !world.homeOwner.has(s.id) : world.homeOwner.get(s.id) === (s.guest || p.pid);   // (a look round: while it's still for sale; a lobby: anyone's)
     if (!h || !ped.hidden || ped.dead || ped.removed || ped.inside !== s.id || !ok) {
       if (h && !ped.dead && !ped.removed && ped.hidden && ped.inside === s.id) { homes.leaveHome(world, p); if (s.tour) world.notify(p, `${h.name} has just been sold - you're shown out.`, 'warn'); }   // (sold under a guest or a visitor: out they go)
       ped.home = null; p.homeMenu = null;
       if (p.conn) p.conn.sendJSON({ t: 'home', off: 1 });
       continue;
     }
+    if (s.pet) petStep(world, p, s, h);   // (H71: your pet at home)
     if (s.sleep && world.time >= s.sleep) wake(world, p, h);
     if (s.shower && world.time >= s.shower) {
       s.shower = 0;
@@ -587,12 +689,15 @@ export function send(world, p, full) {
     if (o) others.push({ n: q.name, x: Math.round(o.x), y: Math.round(o.y), a: Math.round(o.a * 100) / 100, mv: o.mv ? 1 : 0, sl: o.sleep ? 1 : 0, ...(full || world.tick % 20 === 0 ? { app: q.ped.app || null } : null) });
   }
   m.others = others;   // (their looks now and then: the page keeps them)
+  const pt = petOf(world, h);   // (H71: the owner's pet - you see it as their guest too)
+  if (pt) m.pet = { x: Math.round(pt.x), y: Math.round(pt.y), a: Math.round(pt.a * 100) / 100, po: pt.po, ...(full ? { n: pt.n, art: pt.art, bx: pt.bx, by: pt.by } : null) };
   if (full) {
     m.name = s.tour ? `${h.name} - for sale, ${money(h.price)}` : h.name; m.garage = h.garage ? 1 : 0; m.sleepS = HOME_IN.sleepS; m.wakeH = HOME_IN.wakeH;
     if (s.tour) m.tour = h.price;   // (a visitor: the price - the page may show it; the garage's bays empty)
     m.decor = decorOf(world, h);   // (H67: the owner's things placed, the walls' paint, the floors - shared/homedecor.js decorate)
     m.edit = s.edit ? { k: heldKind(world, h, s), r: s.edit.r, mv: s.edit.mv } : null;   // (decorating: what you hold - the page shows where it'd go)
-    m.cars = s.tour ? [] : p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air').slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
+    if (s.lobby) m.doors = (world.unitsOf.get(h.block) || []).map((id) => { const o = world.homeOwner.get(id); return o === p.pid ? 2 : o ? (someoneIn(world, homes.homeById(world, id)) ? 3 : 1) : 0; });   // (H71: each flat's door - 0 for sale, 1 taken, 2 yours, 3 someone's in)
+    m.cars = s.tour || s.lobby ? [] : p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air').slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
     s.nc = m.cars.length;   // (the cars parked in the bays are solid: shared/homelayout.js stepInside - the page counts the same ones)
   }
   p.conn.sendJSON(m);
@@ -634,4 +739,58 @@ export function devIn(world, p, msg) {
     return `No ${msg.at} in here.`;
   }
   return null;
+}
+
+// ---- your pet at home (H71) -----------------------------------------------------------------------------------------
+// A lost pet you brought back can be yours (pets.js adopt: profile.pet { n, art, k }): it waits at home on its bed, comes
+// running to meet you at the door, bounces round you with its tail going, follows you about a while, then goes back to
+// its bed and lies down (and when you go to bed). Kept on the owner's ped.home.pet while they're in: { n, art, x, y, a,
+// po (its pose for the page), st, t (since when), bx, by (its bed) }; a guest sees it too (send).
+const petBeds = new WeakMap();
+// its bed: a spot of open floor against a wall or a piece, nearest the couch (else the hall table), clear of the way in
+export function petBed(L) {
+  if (petBeds.has(L)) return petBeds.get(L);
+  const near = L.pieces.find((q) => q.ch === 'C') || L.pieces.find((q) => q.use === 'hall') || { x: L.spawn.x, y: L.spawn.y, w: 0, h: 0 };
+  const sx = Math.floor(L.spawn.x / TILE_IN), sy = Math.floor(L.spawn.y / TILE_IN);
+  let best = null, bd = Infinity;
+  for (let ty = 1; ty < L.rows - 1; ty++) for (let tx = 1; tx < L.cols - 1; tx++) {
+    if (!'.ct'.includes(L.cell(tx, ty)) || L.solid(tx, ty) || (Math.abs(tx - sx) <= 1 && ty >= sy - 1)) continue;
+    if (!L.solid(tx, ty - 1) && !L.solid(tx - 1, ty) && !L.solid(tx + 1, ty)) continue;
+    const x = (tx + 0.5) * TILE_IN, y = (ty + 0.5) * TILE_IN, d = Math.hypot(x - near.x - near.w / 2, y - near.y - near.h / 2);
+    if (d < bd) { bd = d; best = { x, y }; }
+  }
+  const b = best || { x: L.spawn.x, y: L.spawn.y - TILE_IN };
+  petBeds.set(L, b);
+  return b;
+}
+function petIn(world, p, h) {
+  const pp = p.profile.pet, s = p.ped.home;
+  if (!pp || !s) return;
+  const b = petBed(planIn(world, h));
+  s.pet = { n: pp.n, art: pp.art, x: b.x, y: b.y, a: Math.PI / 2, po: 'run', st: 'greet', t: world.time, bx: b.x, by: b.y };
+  world.notify(p, `${pp.n} jumps off its bed and runs to meet you!`, 'good');
+}
+// the owner's pet in h, while they're in (null: none)
+function petOf(world, h) {
+  const q = h && !h.isLobby ? world.players.get(world.homeOwner.get(h.id)) : null, s = q && q.ped && q.ped.home;
+  return s && s.id === h.id && !s.guest && !s.tour ? s.pet || null : null;
+}
+const PET_HAPPY_S = 2.5, PET_FOLLOW_S = 14;
+function petStep(world, p, s, h) {
+  const q = s.pet, now = world.time;
+  const toward = (tx, ty, sp, stop) => {
+    const dx = tx - q.x, dy = ty - q.y, d = Math.hypot(dx, dy);
+    if (d <= stop) return false;
+    const o = { x: q.x, y: q.y, a: q.a, nc: s.nc };
+    stepInside(planIn(world, h), o, dx / d, dy / d, 1 / TICK_HZ, Math.min(sp, d * TICK_HZ));
+    const moved = Math.hypot(o.x - q.x, o.y - q.y) > 0.2;
+    q.x = o.x; q.y = o.y; q.a = o.a;
+    return moved;
+  };
+  if (s.sleep && q.st !== 'lie') q.st = 'bed';
+  if (q.st === 'greet') { q.po = 'run'; if (!toward(s.x, s.y, MAIL.petWalk * 1.6, 26) || now - q.t > 6) { q.st = 'happy'; q.t = now; } }
+  else if (q.st === 'happy') { q.po = 'happy'; q.a = Math.atan2(s.y - q.y, s.x - q.x); if (now - q.t > PET_HAPPY_S) { q.st = 'follow'; q.t = now; } }
+  else if (q.st === 'follow') { q.po = toward(s.x, s.y, MAIL.petWalk, 36) ? 'walk' : 'sit'; if (q.po === 'sit') q.a = Math.atan2(s.y - q.y, s.x - q.x); if (now - q.t > PET_FOLLOW_S) { q.st = 'bed'; q.t = now; } }
+  else if (q.st === 'bed') { q.po = 'walk'; if (!toward(q.bx, q.by, MAIL.petWalk, 2) || now - q.t > 12) { q.st = 'lie'; q.x = q.bx; q.y = q.by; q.a = Math.PI / 2; } }
+  else q.po = 'lie';
 }

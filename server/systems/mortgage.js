@@ -7,6 +7,7 @@
 import { MORTGAGE } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as homes from './homes.js';
+import * as mail from './mail.js';
 
 const money = (n) => `$${Math.round(n).toLocaleString()}`;
 
@@ -57,8 +58,10 @@ export function payDay(world, p, hid, loan) {
     (prof.deeds ||= {})[hid] = (prof.deeds[hid] || 0) + amt;   // (what you've paid for it: bought back at that if the world is rebuilt)
     if (loan.owed <= 0) { delete prof.loans[hid]; world.notify(p, `${h ? h.name : 'Your home'} is paid off - it's all yours.`, 'good'); }
     else world.notify(p, `Mortgage: ${money(amt)} paid from your bank for ${h ? h.name : 'your home'} (${money(loan.owed)} still owed).`, 'info');
+    mail.post(p, 'stmt', loan.owed <= 0 ? `The bank: your mortgage on ${h ? h.name : 'your home'} is paid off.` : `Mortgage statement, ${h ? h.name : 'your home'}: ${money(amt)} paid, ${money(loan.owed)} still owed.`);   // (H71: the statement in your mailbox)
   } else {
     loan.missed++;
+    mail.post(p, 'stmt', `Mortgage statement, ${h ? h.name : 'your home'}: the payment of ${money(amt)} was missed.`);   // (H71)
     if (loan.missed > MORTGAGE.miss && h) { repossess(world, p, h); }
     else world.notify(p, `Mortgage payment missed: ${money(amt)} for ${h ? h.name : 'your home'} - not enough in your bank. ${MORTGAGE.miss + 1 - loan.missed} more missed and the bank takes it back.`, 'bad');
   }
