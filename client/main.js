@@ -291,6 +291,7 @@ function onText(m) {
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
     case 'wiped': freshDone(); break;   // Start fresh: the character is gone (server players.js wipeAccount)
     case 'home': (S.homeP ||= import('./render/homeview.js')).then((mod) => mod.onMsg(S, m)).catch((e) => console.warn('[home]', e)); break;   // inside your home: its rooms (H62: server/systems/homeinside.js)
+    case 'fires': S.fires = m; fireJob(); break;   // the fires on the ground near you: grass, a dumpster, a kitchen (H68: firefighter.js)
     default: break;
   }
 }
@@ -877,6 +878,7 @@ function onEvent(ev) {
     case 'arrowstick': sfx('thwack', distVol(ev.x, ev.y) * 0.5); if (ev.wall) fx.sparks(ev.x, ev.y, 2); if (ev.f) for (let k = 0; k < 6; k++) fx.fire(ev.x, ev.y); break;
     case 'roar': sfx(ev.k === 'cougar' || ev.k === 'bobcat' ? 'screech' : ev.k === 'goose' ? 'honk' : 'growl', distVol(ev.x, ev.y)); if (distVol(ev.x, ev.y) > 0.75 && (ev.k === 'grizzly' || ev.k === 'moose')) S.cam.shake = Math.max(S.cam.shake, 3); break;
     case 'maul': { const t = S.ents.get(ev.t); if (t) { t.hitAt = S.loopClock; t.hitA = ev.a; t.barUntil = S.loopClock + 4; } sfx('hit', distVol(ev.x, ev.y) * 1.4); if (ev.t === S.myPedId) S.cam.shake = Math.max(S.cam.shake, 8); break; }
+    case 'hose': (S.hoses ||= new Map()).set(ev.id, { ...ev, at: performance.now() }); fireJob(); break;   // a firefighter's hose (H68)
     case 'flush': sfx('flutter', distVol(ev.x, ev.y)); fx.flutter(ev.x, ev.y, 5, ['#8a6a4a', '#c8b48a', '#4a3a2a'], Math.random, 70, 70); break;
     default: break;
   }
@@ -3142,6 +3144,7 @@ function drawOverlays(F, v2) {
   if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
   else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (the helipads)
   else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)
+  if (S.fireMod && !F.sub) S.fireMod.draw(g, F, S);   // (the fires on the ground, the hoses: render/firejob.js)
   drawBowling(F);
   drawCinema(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
@@ -3691,6 +3694,7 @@ function drawBowling(F) {
   if (S.bowlView) { S.bowlView.draw(g, F, { walkInAt, DPR, W, H }); g.setTransform(...S.worldTf); }
   else if (!S.bowlAsk && Math.hypot(F.sp.x - A.counter.x, F.sp.y - A.counter.y) < 1600) { S.bowlAsk = 1; import('./bowling.js').then((m) => { S.bowlView = new m.BowlingView(S); }).catch((e) => console.warn('[bowling]', e)); }
 }
+const fireJob = () => (S.fireP ||= import('./render/firejob.js').then((m) => { S.fireMod = m; }).catch((e) => { S.fireP = null; console.warn('[fire]', e); }));
 // The Grand Theatre (client/cinema.js, loaded near it): the screen rooms dark, the film on the screen and its light
 function drawCinema(F) {
   const C = S.map && S.map.cinema;

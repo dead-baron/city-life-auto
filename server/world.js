@@ -78,6 +78,8 @@ import * as policeair from './systems/policeair.js';
 import * as airtraffic from './systems/airtraffic.js';
 import * as net from './net.js';
 import { warmGround } from './systems/offroad.js';
+import * as firefighter from './systems/firefighter.js';
+import * as paramedic from './systems/paramedic.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
 const SYSTEMS = [
@@ -155,6 +157,8 @@ const SYSTEMS = [
   ['mortgage', mortgage.update],    // mortgages: a payment each in-game day from the bank, the home taken back after too many missed (H65)
   ['policeair', policeair.update],  // the police air unit: up from headquarters at a high wanted level, following the suspect overhead (H66)
   ['airtraffic', airtraffic.update], // light planes in and out of the runways and airstrips, the news helicopter over a chase (H66)
+  ['firefighter', firefighter.update], // the fires in the grass, the dumpsters, the kitchens; firefighters' calls, the hose (H68)
+  ['paramedic', paramedic.update],  // paramedics' calls: treating the hurt on the spot, the badly hurt to a hospital, players down (H68)
 ];
 
 export class World {

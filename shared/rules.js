@@ -693,3 +693,43 @@ export const POLICE_AIR = { stars: 3, alt: 300, clear: 70, sightPx: 1100, orbitR
 // rolling out and stopping). A news helicopter over a chase at newsStars or more: circling newsR px out at newsAlt for
 // newsS s, then away; another not before newsEveryS s.
 export const AIR_TRAFFIC = { firstS: 60, everyS: 150, nearPx: 3200, approachPx: 2600, approachV: 470, glide: 0.11, cruise: 420, newsStars: 3, newsR: 520, newsAlt: 420, newsS: 90, newsEveryS: 240 };
+// ---- the firefighter (H68; the owner, 2026-10-11: "more jobs for players trying to make an honest living") -
+// server/systems/firefighter.js. Sign on at a fire station (Act there) or from the phone's job list: a fire engine is
+// issued (a work truck: jobs.js). Calls, one after another: firstS after signing on, gapS after each, from minD to maxD
+// px away; a call left callS s is over (the fire did its worst). The hose: on foot within hose.len px of your engine,
+// hold fire - the stream reaches hose.range px (w px either side) and takes hose.rate of a fire's heat a second.
+// car: a car alight blows boomS s after the call unless the water's on it douseS s (each second of water holds it
+// off a few more). wreck: a wreck burning burnS s; douseS s of water puts it out; after spreadS s left alone it lights
+// what's beside it (the grass, a car). person: someone catches fire as you come within nearR px and lives lifeS s
+// burning (douse them with the hose). grass: a fire in dry grass, tile to tile - every stepS s each burning tile lights
+// a neighbour with chance spread a second (diagonals 0.6 of it; x rain in the rain), burns burnS s (/ rainOut in the
+// rain) and leaves it scorched scorchS s (no fire there again); water leaves a tile wet wetS s (the front stops there);
+// heat each tile (the water to put it out), start tiles lit, never more than max burning at once nor further than
+// maxR tiles from where it started. spot: a dumpster's or a kitchen's heat; it grows grow a second up to max x where
+// it started, and over spreadAt x it lights the grass beside it. pay: the call's base by kind; up to + fast x it for
+// a fire out quickly (against parS s + a second per kmS px of the drive); + saved for a car saved from blowing up,
+// + life for a person saved; a grass fire less perTile a tile it burned (down to a third); samaritan points a call.
+// near: tile fires within this many px of you are sent to your page.
+export const FIRE = {
+  firstS: 15, gapS: 30, shiftS: 1800, minD: 700, maxD: 5000, callS: 300,
+  hose: { len: 420, range: 190, w: 24, rate: 1 },
+  car: { boomS: 80, douseS: 4, hold: 3 },
+  wreck: { burnS: 160, douseS: 5, spreadS: 70 },
+  person: { nearR: 520, lifeS: 20 },
+  grass: { stepS: 0.5, spread: 0.1, burnS: 11, scorchS: 900, wetS: 150, rain: 0.05, rainOut: 4, heat: 0.6, start: 4, max: 200, maxR: 14 },
+  spot: { dumpster: 3.5, kitchen: 7, grow: 0.03, max: 1.6, spreadAt: 1.4 },
+  pay: { car: 200, wreck: 170, person: 220, grass: 280, dumpster: 150, kitchen: 240, fast: 0.5, parS: 60, kmS: 600, saved: 150, life: 200, perTile: 4, samaritan: 1 },
+  near: 1600,
+};
+// ---- the paramedic (H68) - server/systems/paramedic.js. Sign on at a hospital or from the phone: an ambulance is
+// issued. Calls: firstS after signing on, gapS after each, from minD to maxD px away (a player down within maxD first).
+// Treat: hold Act within treatR px of the patient for treatS s (letting go loses it at half the rate). A minor patient
+// untreated lifeS.minor s gives up; a serious one dies at lifeS.serious s; treated, they're aboard when the ambulance
+// stops within 160 px, and must reach a hospital (stopped within hospitalR px of its doors) within rideS s. pay: by kind,
+// up to + fast x it for a quick call (against parS s + a second per kmS px of the drive), + perKm a km from the scene to
+// the hospital; samaritan points a call.
+export const MEDIC = {
+  firstS: 12, gapS: 25, shiftS: 1800, minD: 600, maxD: 4500, callS: 240,
+  treatS: 3, treatR: 60, lifeS: { minor: 240, serious: 150 }, rideS: 180, hospitalR: 460,
+  pay: { minor: 140, serious: 220, player: 200, perKm: 60, fast: 0.5, parS: 60, kmS: 600, samaritan: 2 },
+};

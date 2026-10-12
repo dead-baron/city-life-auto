@@ -9070,3 +9070,105 @@ stars and the police helicopter overhead) and the desktop in the classic view (t
 a garden, inside a home - the bed, the safe, the wardrobe, the door -, set alight and rolling, the crowd alight, the tank,
 the Boom Tester, the police helicopter by night, the plane banking, the gunship, search and rescue, the lost pet): no
 page errors, the server's log clean.
+
+## 2026-10-11 · The firefighter and the paramedic: the fire engine, the calls, the hose, grass fires that spread; the ambulance, treating the hurt (H68)
+
+The owner wants "more jobs for players trying to make an honest living" - the brief: the firefighter (and the paramedic
+if time allows), now that the game has fire (burning cars and wrecks, people on fire, campfires, explosions) and a fire
+engine with a siren.
+- **Signing on** (`server/systems/firefighter.js` start, interaction; `phone.js` the job list's 🚒 Firefighter row, take,
+  the tracker): Act at a fire station (the map's `Fire Station N` places, found from the built map) or take it from the
+  phone: a fire engine is issued like a work truck (`jobs.workTruck` - yours, kept while the job's on, the green ring and
+  the arrows, the return bonus after the shift). The H key now works the siren of anything with one (`players.js`:
+  `def.siren` as well as `def.police` - the fire engine, the ambulance), so traffic pulls over for it as for the police.
+  A shift (`FIRE.shiftS`, 30 minutes, longer with each call answered) of calls, one after another (`FIRE.gapS`).
+- **The calls** (`newCall`, `callAt`; places from the built map: `sitesOf` - never coordinates): from `FIRE.minD` to
+  `FIRE.maxD` px away -
+  - a car on fire at the kerb (a parking spot in town: `v.dead` with its fire lit, `deadBoomAt` 80 s off) - left alone
+    it blows (the vehicle's own explosion);
+  - a wreck burning after a crash (kept from being tidied away while it burns, `FIRE.wreck.burnS`) - left alone for
+    `spreadS` it lights what's beside it: the grass, or a parked car (whose engine dies and catches - another fire);
+  - someone on fire outside a shop or at a cookout in a park - they catch as the crew comes within `FIRE.person.nearR`
+    (burning.js ignite: they fall and burn) and live `lifeS` s burning;
+  - a grass fire in a park or the countryside (open grass in a park / rural / wild district with a road near, not the
+    roadless islands);
+  - a dumpster on fire behind a shop (the nearest dumpster prop) or a kitchen fire in a cafe, a diner, a store - they
+    grow while nobody's at them and, hot enough, light the grass beside them.
+- **The tile fires** (`world.tfire`: `light`, `stepFires`; `shared/rules.js FIRE.grass`, `FIRE.spot`): a new kind of
+  fire, all on the server and cheap - a map of burning tiles stepped twice a second. A grass tile burns `burnS` (11 s)
+  and leaves scorched ground for 15 minutes (no fire there again); each second each burning tile lights a neighbour
+  in dry grass (T.GRASS, T.FIELD) with chance `spread` (diagonals less), never more than `max` (200) burning at once
+  nor further than `maxR` (14 tiles) from where it started. In the rain it hardly spreads (x0.05) and each tile burns a
+  quarter as long - it dies. Walking through it sets you alight (burning.js). Anyone's wreck by the grass can start one.
+- **The hose** (`hose`, `spray`, `cool`): on foot within `FIRE.hose.len` (420 px) of your own engine, the fire button is
+  the hose, not your weapon (`players.js`: the end of the golf / hoops / bowling list). The water reaches `range` (190
+  px; a wall stops it), `w` px either side: it douses anyone on fire (burning.js douse 'water' - a call's victim saved),
+  holds a dying car off while it's on it and puts it out after `FIRE.car.douseS` (4 s: the boom and the fire called off
+  for good - "saved"), puts out a burning wreck (5 s) or a fire arrow's flames, takes the tile fires' heat down (a grass
+  tile 0.6 s, a dumpster 3.5, a kitchen 7 - more once they've grown) and wets the grass where it lands (`wetS`: a wet
+  tile won't catch, so a line of water stops the front). Just out of reach of the engine, it says so (and no punch
+  comes out); well away from it, the fire button is your weapon as ever. Nothing up in the air above FLY.HIGH is touched.
+  A job given up or a player gone mid-call: the call's car goes back to the traffic's books, someone waiting for the
+  crew is gone (`letGo`, every second; the paramedic's patient too).
+- **The pay** (`endCall`; `FIRE.pay`): the call's base by kind ($150-280), up to +50% for a fire out quickly (against
+  a par of 60 s plus a second per 600 px of the drive), +$150 for a car saved from blowing up, +$200 for a life saved;
+  a grass fire $4 less a tile it burned (down to a third); a Samaritan point a call. A car that blew, someone who died,
+  a call left `callS` (5 minutes): unpaid. The engine lost: off the crew.
+- **Seen and heard** (`client/render/firejob.js`, new, lazy: loaded the first time a fire or a hose is near you): the
+  server sends `{ t: 'fires', f: [tx, ty, kind, heat...], s: [scorched tiles] }` within `FIRE.near` of you when it
+  changes, and a `hose` event (who, where, the angle, the reach, the engine) every other tick while one sprays. Drawn on
+  the overlay both renderers share (main.js drawOverlays: over the classic world, on the layer over art v2's) so it's
+  the same in both: the scorched grass (dark, blotched, ash-flecked), the flames (pre-drawn tongues, four frames,
+  flickering; a dumpster's or a kitchen's taller) over a glow, smoke rising (the pooled particles), the red hose from the
+  engine to the firefighter, the water's stream (three layers, wavering) and its spray where it lands. The hose sounds
+  ('gush'). main.js grew by the two message lines and the draw call (the page 484 KB of 485).
+- The debug menu's 🔥 section (`client/devcats.js`, its end; `dev.js` 'firejob'): a call of each kind beside you, on the
+  crew with your engine parked behind you.
+- **The paramedic** (`server/systems/paramedic.js`, new; `shared/rules.js MEDIC`): Act at a hospital's doors (its
+  `hospital` place on the map) or take it from the phone (🚑 Paramedic): an ambulance is issued (`jobs.workTruck`, its
+  siren on H). Calls, one after another, from `MEDIC.minD` to `maxD` px away, by the shops or in the parks
+  (firefighter.js `sitesOf` / `openNear`: open ground outdoors): someone who's had a fall (minor - hold Act by them
+  `treatS` s and they're up and on their way) or someone badly hurt (serious - treat them to stabilise them; pull the
+  ambulance up alongside, stopped, and they're helped aboard; stop by a hospital's doors, within `hospitalR`, and
+  they're handed over). The patient lies there (`downUntil`: the down pose; `npc.sar`: npc.js leaves them be). Letting go
+  of Act loses the treatment at half the rate. Untreated, a minor patient gives up (`lifeS.minor`), a serious one dies
+  (`lifeS.serious`, 150 s); aboard they have `rideS` (180 s) to reach a hospital. A player down within `maxD` comes
+  first: revive them (revive.js's own hold-Act revive; `p.giveTo` says it was you). The pay: by kind ($140 / $220 /
+  $200), up to +50% for a quick call, + $60 a km from the scene to the hospital; 2 Samaritan points. No new drawing:
+  the patient is an NPC lying down, the tracker points at them, then at the nearest hospital. The debug menu: 🚑 a
+  patient beside you (`dev.js` 'medicjob').
+
+Playtest (headless, both views; screenshots in the helper's scratchpad `h68/`): the engine at a burning car in Downtown,
+the hose on it (the stream from the firefighter to the car, the hose line back to the engine; saved, +$450); a grass fire
+in Greenfield Park with its scorched middle and its front, the hose on it; the same in art v2 in Highland Woods. What's
+wrong / left: the flames are drawn on the overlay, so in art v2 they show over a tree's canopy where the grass under it
+burns (no depth); the classic view's own burning-car flames are small next to the grass fire's; a dumpster behind a
+shop sits under the roof's 3/4 overhang in the classic view, so its flames show on the roof; a kitchen fire is inside
+the shop (walk in with the hose - the stream stops at walls); someone on fire outside a shop may stand behind it (the
+nearest open ground to the shop's spot). The paramedic (classic view): the patient lies hunched in the down pose by the
+ambulance; holding E treats them ("a tourist is stable - bring the ambulance alongside").
+The phone's Jobs app lists them under Emergency services (`client/phone.js`: the flying list's rows, with their own
+heading). The page's code: 485 KB of 485 (rounded; the test passes) - main.js's two message lines and draw call and
+the phone's rows; H69 is making room.
+
+Files: server/systems/firefighter.js (new), server/systems/players.js (the hose in the fire button's list, the Act at a
+station, the siren for def.siren), server/systems/phone.js (the job list, take, the tracker), server/world.js (SYSTEMS),
+server/dev.js ('firejob', 'medicjob'), shared/rules.js (FIRE, MEDIC), server/systems/paramedic.js (new), client/render/firejob.js (new), client/phone.js (the Jobs app's Emergency services rows), client/main.js (the 'fires' message,
+the 'hose' event, the draw call), client/sound/events.js (hose), client/devcats.js, README.md, test/firefighter.test.js
+(new).
+
+Tests: test/firefighter.test.js (new, 9 tests: signing on at a station or from the phone - the engine issued, marked, the
+siren on H; a car on fire left alone blows, unpaid, and the hose on another puts it out before it blows - saved, paid
+with the bonus, and it never blows; someone on fire catches as the crew pulls up, the hose puts them out alive - a life
+saved - and someone left burning dies, unpaid; a grass fire spreads, leaves scorched ground, is sent to the page nearby,
+the hose puts it all out and the pay is less what burned, the water leaves wet ground; the rain: out in less than half
+the time, far less burned; a burning wreck, a dumpster and a kitchen fire each put out and paid, a kitchen left alone
+grows; the hose only within its length of the engine, the hose event, a quick call pays more; a grass fire stops at a
+wet line, a burning wreck left alone lights what's beside it; a job given up lets its call's car and victim go),
+test/paramedic.test.js (new, 5 tests: signing on at a
+hospital or from the phone - the ambulance, marked, its siren; a minor call treated by holding Act, paid, up again; a
+serious one stabilised, aboard when the ambulance pulls up, handed over at the hospital the tracker points to and paid
+with the drive, and one left alone dies unpaid; a player down nearby is the call and reviving them pays; a job given up:
+the patient gone),
+test/sound.test.js, test/perf.test.js, test/activities.test.js, test/gameplay.test.js, test/honestliving.test.js,
+test/sar.test.js, test/burning.test.js, test/rescue.test.js.
