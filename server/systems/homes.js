@@ -108,6 +108,7 @@ export function checkWorld(world, prof) {
   prof.bank = (prof.bank || 0) + refund;
   prof.homes = [];
   prof.deeds = {};
+  if (prof.loans) prof.loans = {};   // (a mortgage's home gone with the old streets: the refund is what was paid - H65)
   prof.spawnHome = null;
   prof.pos = null; // the streets moved: wake up at a hospital, not inside whatever stands there now
   prof.wv = WORLD_VERSION;
@@ -136,11 +137,25 @@ export function garageCap(world, prof) {
 }
 
 export function buy(world, p, home, pay) {
-  const prof = p.profile;
   if (world.homeOwner.has(home.id)) return 'Someone already owns this place.';
   if (!pay(p, home.price)) return `You need $${home.price.toLocaleString()} (cash + bank).`;
+  claim(world, p, home, home.price);
+  return null;
+}
+// (H65) a home released: back on the market (the bank taking it back - mortgage.js)
+export function release(world, prof, home) {
+  if (world.homeOwner.get(home.id) !== prof.pid) return;
+  world.homeOwner.delete(home.id);
+  prof.homes = (prof.homes || []).filter((id) => id !== home.id);
+  if (prof.deeds) delete prof.deeds[home.id];
+  if (prof.spawnHome === home.id) prof.spawnHome = prof.homes.length ? prof.homes[0] : null;
+  store.touch();
+}
+// the home is yours (paid: what you've paid for it - the price, or a mortgage's deposit; mortgage.js)
+export function claim(world, p, home, paid) {
+  const prof = p.profile;
   (prof.homes ||= []).push(home.id);
-  (prof.deeds ||= {})[home.id] = home.price; // what it cost: bought back at that if the world is ever rebuilt under it
+  (prof.deeds ||= {})[home.id] = paid; // what it cost: bought back at that if the world is ever rebuilt under it
   world.homeOwner.set(home.id, prof.pid);
   if (prof.spawnHome == null) { prof.spawnHome = home.id; prof.lastSpawn = `home:${home.id}`; }   // (your first home: where you wake up from now on)
   store.touch();
@@ -155,11 +170,13 @@ export function sell(world, p, home) {
   prof.homes = prof.homes.filter((id) => id !== home.id);
   if (prof.deeds) delete prof.deeds[home.id];
   if (prof.spawnHome === home.id) prof.spawnHome = prof.homes.length ? prof.homes[0] : null;
-  const back = Math.round(home.price * 0.6);
+  const loan = prof.loans && prof.loans[home.id], owed = loan ? loan.owed : 0;   // (a mortgage: what's owed comes out of the sale first - H65)
+  if (loan) delete prof.loans[home.id];
+  const back = Math.max(0, Math.round(home.price * 0.6) - owed);
   prof.bank += back;
   while (prof.vehicles.length > garageCap(world, prof)) prof.vehicles.pop();
   store.touch();
-  world.notify(p, `Sold ${home.name} for $${back.toLocaleString()} (paid into your bank).`, 'info');
+  world.notify(p, `Sold ${home.name} for $${back.toLocaleString()} (paid into your bank${owed ? ` - the mortgage's $${owed.toLocaleString()} paid off first` : ''}).`, 'info');
   return null;
 }
 

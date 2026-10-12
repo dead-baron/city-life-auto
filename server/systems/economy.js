@@ -24,6 +24,7 @@ import * as hotmoney from './hotmoney.js';
 import * as farming from './farming.js';
 
 import * as homeinside from './homeinside.js';
+import * as mortgage from './mortgage.js';
 
 import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
@@ -272,6 +273,7 @@ export function buildMenu(world, p, poi) {
         sub = `A ${h.dock ? 'waterfront ' : ''}${KIND_NAME[h.kind] || h.kind} with a ${h.slots}-car garage${h.dock ? ' and its own boat dock and boathouse' : ''}. Own as many homes as you like: each one is a respawn point, a safe place to hide and stash things, and adds garage space you can reach from any of your homes.`;
         opts.push({ id: 'htour', label: 'Take a look inside', note: 'walk round it first' });   // (H65: homeinside.js tour)
         opts.push({ id: 'hbuy', label: `Buy this ${KIND_NAME[h.kind] || h.kind}`, price: h.price });
+        { const t = mortgage.terms(h); opts.push({ id: 'hmort', label: `Buy with a mortgage: ${t.days} payments of $${t.pay.toLocaleString()} a day`, price: t.deposit, note: 'deposit' }); }   // (H65: mortgage.js)
       } else {
         const st = prof.stash || {};
         const stashed = Object.entries(st.items || {}).filter(([, n]) => n > 0).length + Object.keys(st.weapons || {}).length;
@@ -617,6 +619,7 @@ function execute(world, p, poi, opt) {
     }
     case 'hbuy': return homes.buy(world, p, homes.homeFor(world, p, poi), pay);
     case 'htour': return homeinside.tour(world, p, homes.homeFor(world, p, poi));   // a look round before you buy (H65: homeinside.js)
+    case 'hmort': return mortgage.buyWith(world, p, homes.homeFor(world, p, poi), pay);   // a deposit down, the rest paid a day at a time (H65)
     case 'hu': {   // an apartment block's lobby: a unit - yours to go in, for sale to look round or buy, someone's to knock at
       const us = homes.unitsAt(world, poi), u = homes.homeById(world, parts[2]);
       if (!us || !u || !us.includes(u.id)) return 'No such home in this building.';

@@ -8,11 +8,12 @@
 //   row: { id, n (name), k (kind), w (what: studio / apartment / penthouse / house...), pl (plan), tr (how well it's
 //     furnished, 0-3), p (price), beds, g (garage spaces), yard (plots), dock, x, y (the door), d (district), dt (its
 //     tier: lux / mid / low / rough), u (unit, in a block), fl (floor), worth / back (yours: what it's worth, what selling
-//     brings) }
+//     brings; owed / pay / missed: its mortgage), dep (for sale: a mortgage's deposit) }
 import { DISTRICTS } from '../../shared/map.js';
 import { TILE } from '../../shared/constants.js';
 import { planOf, tierOf } from '../../shared/homelayout.js';
 import * as homes from './homes.js';
+import * as mortgage from './mortgage.js';
 import { plotSpots } from './gardening.js';
 import { bedsIn } from './homeinside.js';
 
@@ -61,7 +62,8 @@ export function listings(world, p, msg = {}) {
   const pick = forSale.filter(KINDS[kind]);
   const dist = (h) => (me ? Math.hypot(h.x - me.x, h.y - me.y) : 0);
   pick.sort(sort === 'cheap' ? (a, b) => a.price - b.price || dist(a) - dist(b) : sort === 'dear' ? (a, b) => b.price - a.price || dist(a) - dist(b) : (a, b) => dist(a) - dist(b) || a.price - b.price);
-  const sale = pick.slice(0, SHOW).map((h) => row(world, h));
-  const mine = homes.ownedHomes(world, prof).filter(Boolean).map((h) => ({ ...row(world, h), worth: h.price, back: Math.round(h.price * SELL_BACK), spawn: prof.spawnHome === h.id ? 1 : 0 }));
+  const sale = pick.slice(0, SHOW).map((h) => ({ ...row(world, h), dep: mortgage.terms(h).deposit }));   // (dep: a mortgage's deposit)
+  const loans = prof.loans || {};
+  const mine = homes.ownedHomes(world, prof).filter(Boolean).map((h) => ({ ...row(world, h), worth: h.price, back: Math.max(0, Math.round(h.price * SELL_BACK) - (loans[h.id] ? loans[h.id].owed : 0)), spawn: prof.spawnHome === h.id ? 1 : 0, ...(loans[h.id] ? { owed: loans[h.id].owed, pay: loans[h.id].pay, missed: loans[h.id].missed } : null) }));
   return { t: 'homes', sale, mine, total: forSale.length, matching: pick.length, homes: all.length, sort, kind, cash: prof.cash, bank: prof.bank };
 }

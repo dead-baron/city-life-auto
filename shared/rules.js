@@ -674,3 +674,10 @@ export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough
 // whole city when everyone online is asleep at home: the clock jumps to wakeH o'clock); showerS: a shower; showerHeal: the
 // health it gives back (and it stops bleeding); eatS: between two bites at the fridge.
 export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6 };
+
+// A mortgage (H65; server/systems/mortgage.js): buy a home for a deposit (that share of its price) and the bank lends the
+// rest, plus `rate` on top, paid back from your bank account in `days` equal payments - one each in-game day (DAY_LOOP_S)
+// you're in the city. A payment your bank can't cover is missed; more than `miss` in a row and the bank takes the home
+// back (what you paid is kept by the bank; your cars and your stash are yours). Selling a mortgaged home pays off what's
+// owed first. `max`: homes on a mortgage at once.
+export const MORTGAGE = { deposit: 0.2, rate: 0.1, days: 10, miss: 2, max: 3 };

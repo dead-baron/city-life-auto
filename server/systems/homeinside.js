@@ -31,6 +31,7 @@ import { layout, planOf, tierOf, stepInside, useAt, blocked, TILE_IN } from '../
 import { store } from '../store.js';
 import * as homes from './homes.js';
 import * as economy from './economy.js';
+import * as mortgage from './mortgage.js';
 
 export const planFor = (h) => layout(planOf(h), tierOf(h));
 const homeOf = (world, ped) => (ped && ped.home ? homes.homeById(world, ped.home.id) : null);
@@ -201,6 +202,7 @@ function menuOf(world, p, h, what) {
     const L = planFor(h), beds = L.pieces.filter((q) => q.use === 'bed').length;
     const opts = [
       { id: 'hi:tbuy', label: `Buy ${h.name}`, price: h.price, note: `wallet ${money(prof.cash)} · bank ${money(prof.bank)}` },
+      { id: 'hi:tmort', label: `Buy it with a mortgage: ${mortgage.terms(h).days} payments of ${money(mortgage.terms(h).pay)} a day`, price: mortgage.terms(h).deposit, note: 'deposit' },
       { id: 'hi:tout', label: 'Step outside' },
       { id: 'close', label: 'Keep looking' },
     ];
@@ -301,6 +303,15 @@ function own(world, p, h, parts) {
     case 'tbuy': {   // bought on a look round: yours, and you're in it
       if (!ped.home || !ped.home.tour) return 'Not on a look round.';
       const err = homes.buy(world, p, h, economy.payFrom);
+      if (err) return err;
+      ped.home.tour = 0;
+      p.homeMenu = null;
+      send(world, p, true);
+      return null;
+    }
+    case 'tmort': {   // on a mortgage (mortgage.js)
+      if (!ped.home || !ped.home.tour) return 'Not on a look round.';
+      const err = mortgage.buyWith(world, p, h, economy.payFrom);
       if (err) return err;
       ped.home.tour = 0;
       p.homeMenu = null;

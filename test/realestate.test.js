@@ -230,3 +230,55 @@ test('profiles: an old one (no units) loads with its home; a unit is kept across
   assert.deepEqual(homes.ownedHomes(w, neu).map((h) => h.id), [uid]);
   assert.equal(homes.resolveSpawn(w, j, null).x, base.x, 'wakes at the unit');
 });
+
+test('a mortgage: a deposit down, a payment each in-game day from the bank, paid off; missed payments and it\'s taken back; a sale pays it off', async () => {
+  const { MORTGAGE } = await import('../shared/rules.js');
+  const mortgage = await import('../server/systems/mortgage.js');
+  const w = makeWorld();
+  const { p, prof, conn } = joinPlayer(w, { bank: 1e6, cash: 0 });
+  const [h1, h2] = w.map.homes.filter((q) => q && q.kind === 'house' && !w.homeOwner.has(q.id)).slice(0, 2);
+  const t = mortgage.terms(h1);
+  assert.ok(t.deposit > 0 && t.deposit < h1.price && t.owed > h1.price - t.deposit);
+  const day = () => { w.day++; for (let i = 0; i < 41; i++) w.step(); };
+  const m = menuAt(w, p, conn, h1);
+  assert.ok(m.opts.some((o) => o.id === 'hmort' && o.price === t.deposit), 'offered in the for-sale menu');
+  const bank0 = prof.bank;
+  economy.handleMenu(w, p, m.poi, 'hmort');
+  assert.equal(w.homeOwner.get(h1.id), p.pid, 'yours on a mortgage');
+  assert.equal(prof.bank, bank0 - t.deposit);
+  assert.equal(prof.loans[h1.id].owed, t.owed);
+  for (let i = 0; i < 41; i++) w.step();
+  assert.equal(prof.loans[h1.id].owed, t.owed, 'nothing the same day');
+  day();
+  assert.equal(prof.loans[h1.id].owed, t.owed - t.pay, 'a payment a day');
+  assert.equal(prof.bank, bank0 - t.deposit - t.pay);
+  const app = realestate.listings(w, p);
+  assert.equal(app.mine.find((q) => q.id === h1.id).owed, t.owed - t.pay, 'the app shows what\'s owed');
+  for (let d = 1; d < MORTGAGE.days; d++) day();
+  assert.ok(!prof.loans[h1.id], 'paid off');
+  assert.equal(w.homeOwner.get(h1.id), p.pid);
+  assert.equal(prof.deeds[h1.id], t.deposit + t.owed, 'the deed: everything paid for it');
+  // on a mortgage from a look round's front door, then broke: payments missed, and the bank takes it back
+  teleport(w, p.ped, h2.x, h2.y);
+  economy.handleMenu(w, p, poiOf(w, h2).id, 'htour');
+  standAt(w, p, 'door');
+  players.findInteraction(w, p).run();
+  economy.handleMenu(w, p, lastMenu(conn).poi, 'hi:tmort');
+  assert.equal(w.homeOwner.get(h2.id), p.pid, 'bought on a mortgage from inside');
+  assert.ok(p.ped.home && !p.ped.home.tour);
+  homeinside.leave(w, p);
+  prof.bank = 0;
+  for (let d = 0; d < MORTGAGE.miss; d++) day();
+  assert.equal(w.homeOwner.get(h2.id), p.pid, 'missed payments: still yours, for now');
+  assert.equal(prof.loans[h2.id].missed, MORTGAGE.miss);
+  day();
+  assert.ok(!w.homeOwner.has(h2.id) && !prof.homes.includes(h2.id) && !prof.loans[h2.id], 'taken back');
+  assert.equal(w.homeOwner.get(h1.id), p.pid, 'the paid-off one is still yours');
+  // a sale pays off what's owed first
+  prof.bank = 1e6;
+  economy.handleMenu(w, p, menuAt(w, p, conn, h2).poi, 'hmort');
+  const owed = prof.loans[h2.id].owed, b1 = prof.bank;
+  homes.sell(w, p, h2);
+  assert.equal(prof.bank, b1 + Math.max(0, Math.round(h2.price * 0.6) - owed));
+  assert.ok(!prof.loans[h2.id]);
+});
