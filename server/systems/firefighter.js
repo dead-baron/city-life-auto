@@ -58,9 +58,9 @@ export function sitesOf(m) {
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (grassy(m, tx + dx, ty + dy)) n++;
     if (n < 22) continue;   // (open grass round about: room for it to spread)
     const x = tx * TILE + TILE / 2, y = ty * TILE + TILE / 2;
-    S.grass.push({ x, y, name: d.style === 'park' ? `the grass in ${d.name}` : `the dry grass out by ${d.name}` });
+    S.grass.push({ x, y, name: d.style === 'park' ? d.name : `the dry grass out by ${d.name}`, cook: d.style === 'park' ? `at a cookout in ${d.name}` : `at a campsite out by ${d.name}` });
   }
-  for (const q of m.parking) S.kerb.push({ x: q.x, y: q.y, a: q.a || 0, name: where(q.x, q.y) });
+  for (const q of m.parking) { const d = m.districtAt(q.x, q.y); if (d && d.style !== 'wild' && d.style !== 'rocky') S.kerb.push({ x: q.x, y: q.y, a: q.a || 0, name: where(q.x, q.y) }); }   // (in town and along the roads, not a trailhead under the trees)
   const dumps = m.props.filter((q) => q.t === 'dump_b' || q.t === 'dump_g');
   for (const q of m.pois) {
     if (/^Fire Station/.test(q.label || '')) S.stations.push({ x: q.x, y: q.y, name: q.label });
@@ -300,7 +300,7 @@ export function callAt(world, p, k, site) {
     if (!burningTiles(world, c.id).length) { j.call = null; return null; }
     c.lit = true;
   }
-  const where = k === 'person' ? (/^the |out by/.test(site.name) ? `at a cookout in ${site.name.replace(/^the grass in |^the dry grass out by /, '')}` : `outside ${site.name}`) : site.name;
+  const where = k === 'person' ? site.cook || `outside ${site.name}` : site.name;
   j.stage = 'go';
   j.text = `Fire call: ${SAY[k](where)}`;
   world.notify(p, `Fire call! ${SAY[k](where)[0].toUpperCase()}${SAY[k](where).slice(1)}. Siren on (H).`, 'good');
@@ -424,4 +424,38 @@ export function target(world, p, j) {
   if (c.k === 'person') { const q = world.get(c.victim); if (q) { x = q.x; y = q.y; } }
   else if (c.k === 'grass') { const L = burningTiles(world, c.id); if (L.length) { x = 0; y = 0; for (const f of L) { x += f.tx * TILE + 16; y += f.ty * TILE + 16; } x /= L.length; y /= L.length; } }
   return { text: j.text, x: Math.round(x), y: Math.round(y), stage: j.stage };
+}
+
+// ---- dev ('firejob'): on the crew, your engine beside you, a call of kind msg.k (KINDS; 'grass' by default) at the
+// nearest place it can be - you're taken there, the engine parked beside you
+export function devFire(world, p, msg) {
+  const ped = p.ped;
+  if (!ped || ped.dead) return 'On your feet first.';
+  if (ped.vehId) vehicles.exitVehicle(world, ped);
+  const k = KINDS.includes(msg.k) ? msg.k : 'grass';
+  if (p.job && p.job.type !== 'fire') jobs.failJob(world, p, '[dev] job dropped');
+  if (!p.job) { const err = start(world, p); if (err) return err; }
+  const j = p.job;
+  if (j.call) endCall(world, p, false, '[dev] call dropped');
+  const S = sitesOf(world.map), list = k === 'car' || k === 'wreck' ? S.kerb : k === 'grass' ? S.grass : k === 'kitchen' ? S.food : S.shops;
+  let site = null, bd = Infinity;
+  for (const q of list) { const d = Math.hypot(q.x - ped.x, q.y - ped.y); if (d < bd && d > 200) { bd = d; site = q; } }
+  if (!site) return `no place for a ${k} fire`;
+  const at = openNear(world.map, site.x - 150, site.y + 60) || openNear(world.map, site.x, site.y);
+  if (at) { ped.x = at.x; ped.y = at.y; ped.vx = 0; ped.vy = 0; world.place(ped); }
+  const v = world.get(j.truck);
+  if (v) {
+    const spot = openNear(world.map, ped.x - 110, ped.y) || { x: ped.x - 110, y: ped.y };
+    v.x = spot.x; v.y = spot.y; v.vx = 0; v.vy = 0; v.a = 0; world.place(v);
+  }
+  j.nextAt = world.time + 1e6;
+  const c = callAt(world, p, k, site);
+  if (!c) return `the ${k} call didn't start there`;
+  j.nextAt = world.time + FIRE.gapS;
+  const by = openNear(world.map, c.x - 130, c.y + 20);   // (you a hose's reach from it, the engine behind you)
+  if (by && !(c.k === 'person' && Math.hypot(by.x - c.x, by.y - c.y) < 60)) {
+    ped.x = by.x; ped.y = by.y; world.place(ped);
+    if (v) { const sp = openNear(world.map, by.x - 120, by.y) || by; v.x = sp.x; v.y = sp.y; world.place(v); }
+  }
+  return null;
 }

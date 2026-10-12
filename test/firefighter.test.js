@@ -249,3 +249,33 @@ test('the hose: only within its length of the engine; drawn for everyone (the ho
   assert.ok(pays[0] > pays[1], `a quick call pays more ($${pays[0]} vs $${pays[1]})`);
   phone.handle(w, p, { a: 'cancel' });
 });
+
+test('left alone: a grass fire stops at a wet line (the water\'s work); a burning wreck lights what\'s beside it', () => {
+  w.weather = WEATHER.CLEAR; w.nextWeatherRoll = w.time + 1e6;
+  const F = w.tfire;
+  F.on.clear(); F.scorch.clear(); F.wet.clear();
+  const site = S.grass[3];
+  const tx = Math.floor(site.x / TILE), ty = Math.floor(site.y / TILE);
+  for (let y = ty - 18; y <= ty + 18; y++) F.wet.set(w.map.idx(tx + 2, y), w.time + 1e6);   // (a wet line two tiles east)
+  for (let n = 0; n < 4; n++) ff.light(w, tx - (n % 2), ty + (n >> 1), 0, 0);
+  let west = 0, east = 0;
+  for (let t = 0; t < 40; t++) {
+    run(w, 1);
+    for (const f of F.on.values()) { if (f.tx > tx + 2) east++; else west++; }
+  }
+  assert.ok(west > 20, `it spread west of the line (${west})`);
+  assert.equal(east, 0, 'never past the wet line');
+  F.on.clear(); F.scorch.clear(); F.wet.clear();
+  // the wreck, a parked car beside it
+  const { p } = onShift();
+  const kerb = S.kerb[150];
+  clearRound(kerb.x, kerb.y, 400);
+  const c = ff.callAt(w, p, 'wreck', kerb);
+  const wr = w.get(c.veh);
+  const car = w.spawnVehicle('sedan', wr.x + 110, wr.y, 0, { npcOwned: true });
+  car.despawnable = false;
+  run(w, FIRE.wreck.spreadS + 2);
+  assert.ok(c.spread, 'it spread');
+  assert.ok(ff.burningTiles(w).length > 0 || car.dead, 'the grass beside it or the car beside it caught');
+  phone.handle(w, p, { a: 'cancel' });
+});

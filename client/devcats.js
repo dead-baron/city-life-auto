@@ -134,6 +134,8 @@ export const DEV_SECTIONS = [
     ['🪖 A tank (drive; the turret follows your aim; fire the cannon)', 'car', { m: 'tank' }],
     ['🔥 Set me on fire (roll, run or find water)', 'burn', { k: 'me' }], ['🔥 People on fire ahead of me', 'burn', { k: 'crowd' }],
     ['🌧 Rain (fires go out faster)', 'rain'],
+    ['🚒 Firefighter: a grass fire', 'firejob', { k: 'grass' }], ['🚒 Firefighter: a car on fire', 'firejob', { k: 'car' }], ['🚒 Firefighter: a burning wreck', 'firejob', { k: 'wreck' }],
+    ['🚒 Firefighter: someone on fire', 'firejob', { k: 'person' }], ['🚒 Firefighter: a dumpster fire', 'firejob', { k: 'dumpster' }], ['🚒 Firefighter: a kitchen fire', 'firejob', { k: 'kitchen' }],
   ] },
   // gardening and farm work (H61: server gardening.js, farming.js)
   { id: 'farm', title: '🌱 Gardening & farm work', items: [

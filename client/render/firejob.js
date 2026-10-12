@@ -44,14 +44,16 @@ export function draw(g, F, S) {
   const fires = S.fires;
   if (fires) {
     const s = fires.s || [], f = fires.f || [];
-    // the scorched ground: dark, ragged, flecked with ash
+    // the scorched ground: dark (one shade, no seams between tiles), blotched darker, flecked with ash
+    g.fillStyle = 'rgba(30,22,14,0.55)';
+    for (let i = 0; i < s.length; i += 2) { const x = s[i] * TILE, y = s[i + 1] * TILE; if (inV(x, y, 40)) g.fillRect(x, y, TILE, TILE); }
     for (let i = 0; i < s.length; i += 2) {
       const x = s[i] * TILE, y = s[i + 1] * TILE;
       if (!inV(x, y, 40)) continue;
       const h = hash(s[i], s[i + 1]);
-      g.fillStyle = 'rgba(30,22,14,0.58)';
-      g.fillRect(x - 2 + h * 3, y - 2 + h * 2, TILE + 4 - h * 4, TILE + 4 - h * 3);
-      g.fillStyle = 'rgba(96,90,82,0.55)';
+      g.fillStyle = 'rgba(14,10,6,0.35)';
+      g.beginPath(); g.arc(x + 8 + h * 16, y + 10 + hash(s[i + 1], s[i]) * 12, 6 + h * 7, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(110,104,96,0.6)';
       g.fillRect(x + 5 + h * 14, y + 7 + h * 9, 3, 2);
       g.fillRect(x + 20 - h * 9, y + 21 - h * 6, 2, 2);
     }

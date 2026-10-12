@@ -716,7 +716,7 @@ export const FIRE = {
   car: { boomS: 80, douseS: 4, hold: 3 },
   wreck: { burnS: 160, douseS: 5, spreadS: 70 },
   person: { nearR: 520, lifeS: 20 },
-  grass: { stepS: 0.5, spread: 0.2, burnS: 11, scorchS: 900, wetS: 150, rain: 0.05, rainOut: 4, heat: 0.6, start: 4, max: 200, maxR: 14 },
+  grass: { stepS: 0.5, spread: 0.1, burnS: 11, scorchS: 900, wetS: 150, rain: 0.05, rainOut: 4, heat: 0.6, start: 4, max: 200, maxR: 14 },
   spot: { dumpster: 3.5, kitchen: 7, grow: 0.03, max: 1.6, spreadAt: 1.4 },
   pay: { car: 200, wreck: 170, person: 220, grass: 280, dumpster: 150, kitchen: 240, fast: 0.5, parS: 60, kmS: 600, saved: 150, life: 200, perTile: 4, samaritan: 1 },
   near: 1600,
