@@ -68,6 +68,13 @@ body.practice #faction::after { content: ' · PRACTICE'; color: var(--warn); }
 #helpbox.calm { opacity: 0; transition: opacity 1.5s; }
 body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
 #hud-msg { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 50px; width: min(380px, 44vw); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+/* (the robbery, train and custody bars at the column's head, over the prompt: they lay across the prompt and the notes,
+   and low down the custody bar over the job line and a phone's FIRE button - H70; a phone upright keeps them in the
+   middle) */
+#hud-msg > #rob, #hud-msg > #trainbar { position: static; transform: none; max-width: 100%; flex-wrap: wrap; }
+body.portrait.touch #hud-msg > #rob, body.portrait.touch #hud-msg > #trainbar { position: absolute; top: calc(186px + var(--corner-top)); left: 50%; transform: translateX(-50%); }
+body.portrait.touch #hud-msg > #trainbar.custody { bottom: auto; }
+.touch #hud-msg > #rob, .touch #hud-msg > #trainbar { padding: 5px 10px; gap: 6px 8px; } .touch #rob .rob-bar { width: 80px; } .touch #rob span { min-width: 0; font-size: 13px; }
 #helpbox { position: relative; max-width: 100%; background: rgba(0,0,0,.8); border-radius: 3px; padding: 10px 14px; font-size: 18px; font-weight: 600; line-height: 1.35; display: flex; align-items: center; gap: 10px; animation: hin .18s ease-out; }
 @keyframes hin { from { opacity: 0; transform: translateY(-6px); } }
 #toasts { position: relative; width: 100%; display: flex; flex-direction: column; gap: 5px; z-index: 7; }   /* (over the district's title card, z 6: its letters ran through the notes; under the robbery and train bars) */
@@ -309,7 +316,7 @@ body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
   .touch #faction { grid-column: 1 / 4; grid-row: 4; font-size: 9px; letter-spacing: 1px; margin-top: 2px; }   /* (a row of its own: the column narrower, so the prompt beside it has room - H70) */
 }
 /* phones on their side with little height (740x360, an iPhone in Safari): the newest note only, under the prompt */
-@media (max-height: 380px) { .touch #toasts .toast:nth-last-child(n+2) { display: none; } .touch #helpbox { font-size: 13px; padding: 6px 9px; } }
+@media (max-height: 380px) { #toasts .toast:nth-last-child(n+2) { display: none; } .touch #helpbox { font-size: 13px; padding: 6px 9px; } }
 /* a keyboard or a pad on a short screen (a phone with a keyboard, a short window): the notes column clear of the cash
    and the weapon on the right, two notes at a time, smaller */
 @media (max-height: 430px) {
@@ -329,7 +336,10 @@ body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
   .touch #hud-btns { gap: 4px; }
   .touch #hud-btns button { width: 30px; height: 30px; font-size: 15px; }
   .touch #tbtns .cruiser { left: max(10px, env(safe-area-inset-left)); top: 158px; }
+  .touch #rob > b { display: none; }   /* (the bar's gold edge says robbery: the bar and the takings on one line) */
 }
+/* phones on their side with a robbery, a train ride's or custody's bar over the prompt: the newest note only */
+@media (max-height: 430px) { .touch #hud-msg:has(> #rob:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #trainbar:not(.hidden)) .toast:nth-last-child(n+2) { display: none; } }
 /* ...and on a narrow, tall one (a desktop window made narrow): the prompt and the notes under the minimap */
 body.portrait:not(.touch) #hud-msg { left: max(16px, env(safe-area-inset-left)); top: 236px; width: calc(100vw - 32px); }
 body.portrait:not(.touch) #hud-sub { max-width: 90vw; }
@@ -592,7 +602,7 @@ body.portrait #phone { justify-content: center; padding: 0; }
 }
 
 /* ---- spectator (debug menu): a free camera over the whole world ---- */
-body.spectating #hud > :not(#hud-msg), body.spectating #helpbox, body.spectating #touch, body.spectating #interior, body.spectating #wheel, body.spectating #death, body.spectating #menu { display: none !important; }
+body.spectating #hud > :not(#hud-msg), body.spectating #hud-msg > :not(#toasts), body.spectating #touch, body.spectating #interior, body.spectating #wheel, body.spectating #death, body.spectating #menu { display: none !important; }
 body.spectating #hud-msg { display: contents; }
 body.spectating #toasts { position: absolute; left: auto !important; right: 12px; top: auto !important; bottom: 12px; margin: 0 !important; width: min(360px, 60vw) !important; z-index: 16; }
 body.spectating #view { filter: none !important; cursor: grab; }

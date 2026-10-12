@@ -17,7 +17,7 @@ const TOUCH = cut('<div id="touch"', '<div id="interior"');
 // the sizes asked for (H70): desktops, phones on their side and upright, a tablet; each with the devices it plays with
 export const SIZES = [[1280, 720], [1920, 1080], [844, 390], [740, 360], [390, 844], [1024, 768]];
 export const DEVICES = ['kbm', 'touch', 'pad'];
-export const STATES = ['foot', 'veh', 'air', 'police'];
+export const STATES = ['foot', 'veh', 'air', 'police', 'rob', 'custody'];   // (on foot armed with a flashlight and a crate; driving; flying; the police with the cruiser's hint; robbing a shop; arrested)
 export function scenarios() {
   const out = [];
   // (upright, the touch controls only: the keyboard's HUD wants a window wider than ~450 px - its minimap and weapon
@@ -29,6 +29,7 @@ export function scenarios() {
 // the longest of each (from the server's own words)
 export const TEXT = {
   prompt: 'Pull the driver out of the Police Cruiser - Carjacking a police vehicle (felony)',
+  shop: 'Shop at Corner Mart #12',   // (in the middle of a robbery you're in the shop: its menu's the prompt)
   notes: [
     'Coast guard: your patrol boat is waiting at the Liberty Bay docks (the green ring). Calls come over the radio - smugglers running contraband along the coast, people in the water.',
     'Snatch-and-grab! A mugger grabbed a purse - stop them (no penalty).',
@@ -55,9 +56,12 @@ if (sc.st === 'police') b.classList.add('can-call');
 $('hud').classList.remove('hidden');
 if (sc.dev === 'touch') $('touch').classList.remove('hidden');
 const glyph = sc.dev === 'touch' ? '<span class="g-touch">ACT</span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
-const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + T.prompt + '</span>'; pr.classList.remove('hidden'); pr.classList.add('felony');
+const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + (sc.st === 'rob' ? T.shop : T.prompt) + '</span>'; pr.classList.remove('hidden'); if (sc.st !== 'rob') pr.classList.add('felony');
+if (sc.st === 'custody') pr.classList.add('hidden');   // (held: nothing to Act on)
 for (const [i, n] of T.notes.entries()) { const el = document.createElement('div'); el.className = 'toast ' + ['info', 'warn', 'bad', 'good'][i]; el.textContent = n; $('toasts').appendChild(el); }
 $('job').textContent = T.job; $('job').classList.remove('hidden');
+if (sc.st === 'rob') { $('rob').classList.remove('hidden'); $('rob-take').textContent = 'HOT $1,250 · till $800'; $('rob-fill').style.width = '40%'; }
+if (sc.st === 'custody') { $('trainbar').classList.remove('hidden'); $('trainbar').classList.add('custody'); $('tb-where').textContent = 'IN CUSTODY'; $('tb-next').textContent = 'Held on the ground - a patrol car is on its way'; }
 if (sc.st === 'police') { $('cruiser-hint').textContent = T.cruiser; $('cruiser-hint').classList.remove('hidden'); }
 $('w-icon').innerHTML = '<canvas width="96" height="48"></canvas>';
 $('w-name').textContent = 'Assault rifle'; $('w-ammo').textContent = '30 | 120';
@@ -67,13 +71,13 @@ $('clock').textContent = '13:24 ☀'; $('faction').className = 'criminal'; $('fa
 $('status').textContent = 'EXP 1,250 · SAM 40';
 $('rc-time').textContent = '13:24';
 for (const el of document.querySelectorAll('#hud *, #touch *')) el.style.animation = 'none';
-const shown = (el) => { if (!el) return false; const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && !!el.offsetParent; };
+const shown = (el) => { if (!el) return false; const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
 const box = (el, name) => { const r = el.getBoundingClientRect(); return { name, x0: Math.round(r.left), y0: Math.round(r.top), x1: Math.round(r.right), y1: Math.round(r.bottom), clip: el.scrollWidth > el.clientWidth + 1 }; };
 function measure() {
   const read = [], keep = [];
   if (shown(pr)) read.push(box(pr, 'prompt'));
   document.querySelectorAll('#toasts .toast').forEach((el, i) => { if (shown(el)) read.push(box(el, 'note' + i)); });
-  for (const id of ['job', 'cruiser-hint']) if (shown($(id))) read.push(box($(id), id));
+  for (const id of ['job', 'cruiser-hint', 'rob', 'trainbar']) if (shown($(id))) read.push(box($(id), id));
   keep.push(box($('radar'), 'minimap'));
   for (const id of ['vitals', 'status', 'rclock']) if (shown($(id))) keep.push(box($(id), id));
   for (const id of ['weapon', 'money', 'bank', 'stars', 'clock', 'faction']) if (shown($(id))) keep.push(box($(id), id));
