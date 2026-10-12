@@ -9217,6 +9217,15 @@ service), all of it on the server, the page only drawing.
   the kerb; you at the wheel of the bus at its next stop; a broken-down car with your truck backed up to it).
 - The page: one line in `client/phone.js`, the hail pose in `client/art2/people.js` and `game/peds.js` (a few hundred
   bytes; people.js is in the chunk bake, so the art hash changes and baked chunks are made again once).
+- Playtest (headless, the dev menu's scenes): a fare hailing by Downtown Station, marked, gets in - the tracker reads
+  "Taxi: a student to First Pixel Bank - Northgate - meter $25" and counts up as you drive; driven like a maniac
+  (the headless key held far too long) the fare complains ("Are you trying to kill us?") and wants out, and the hit
+  pedestrian brings the police. The Metro Loop bus at Midtown: four waiting got on and paid, the stop on time, the
+  tracker on to Downtown 2 with "4 aboard". The tow truck backed up to a broken-down Sedan: hooked, the car up on the
+  lift behind the boom, the tracker pointing to the impound. Seen wrong: the headless page draws a vehicle or a person
+  that's just been put somewhere many seconds late (the ring with no cab in it); an NPC bus pulling in to the stop by
+  the station shoved a car parked at the pavement's edge hundreds of px along (the game's physics, not the jobs - the
+  dev scene now parks the cab further from the road); the fare with an arm up is small at the game's zoom.
 
 Tests: test/drivejobs.test.js (new, 7 tests: the taxi on the job list and at a rank, the cab issued and marked; a fare
 hailing with an arm up, picked up, the meter running on the tracker, dropped at the kerb and paid by the distance with
