@@ -410,7 +410,7 @@ function lobbyOpts(world, p, us, opts) {
 function unitWhat(u) { const beds = homeinside.bedsIn(u); return `${u.what || 'apartment'}, ${(u.floor || 1) > 1 ? `floor ${u.floor}` : 'ground floor'} · ${beds} bed${beds === 1 ? '' : 's'} · parks ${u.slots}`; }
 function unitSaleOpts(u) {
   const one = u.lobby == null, nm = `Unit ${u.unit || 1}`;
-  return [{ id: one ? 'htour' : `hu:tour:${u.id}`, label: `${nm} - take a look inside`, note: unitWhat(u) }, { id: one ? 'hbuy' : `hu:buy:${u.id}`, label: `Buy ${nm} (${u.what || 'apartment'})`, price: u.price }];
+  return [{ id: one ? 'htour' : `hu:tour:${u.id}`, label: `${nm} - take a look inside`, note: 'walk round it first' }, { id: one ? 'hbuy' : `hu:buy:${u.id}`, label: `Buy ${nm} (${u.what || 'apartment'})`, price: u.price }];
 }
 const NO_STASH = new Set(['fists', 'taser', 'baton', 'service']);
 

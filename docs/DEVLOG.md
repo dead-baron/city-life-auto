@@ -9046,6 +9046,7 @@ fridge"); the prompt box sits under the top icon bar on a phone (as before); the
   each flat for sale (16 rows for an 8-flat block); now one row each - "Unit 3 for sale - look round or buy", its price
   and what it is - which opens the flat's own menu (take a look inside, buy it, back to the lobby). The old option ids
   still work straight from the lobby (a flat's look round or purchase), so nothing else changed. Test:
-  test/realestate.test.js (a row a flat, its menu, back, bought from it and back to the lobby's "go in").
+  test/realestate.test.js (a row a flat, its menu, back, bought from it and back to the lobby's "go in"). Playtest: a
+  6-flat block's lobby (scratchpad/h67/pt3-lobby.png) and a flat's menu (pt3-unit.png).
   Not done this wave (out of time): the walk-in lobby (HO5: mailboxes, the stairs and the lift, the units' doors along
   a landing - a plan of its own, drawn like the homes), and the doorbell, the mail and a pet bed.
