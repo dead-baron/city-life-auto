@@ -67,7 +67,7 @@ body.practice #faction::after { content: ' · PRACTICE'; color: var(--warn); }
 #hud, #touch, #helpbox { transition: opacity .2s; }
 #helpbox.calm { opacity: 0; transition: opacity 1.5s; }
 body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
-#hud-msg { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 50px; width: min(380px, 44vw); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+#hud-msg { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 50px; width: min(380px, 44vw, calc(100vw - 494px)); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 /* (the robbery, train and custody bars at the column's head, over the prompt: they lay across the prompt and the notes,
    and low down the custody bar over the job line and a phone's FIRE button - H70; a phone upright keeps them in the
    middle) */
@@ -338,6 +338,8 @@ body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
   .touch #tbtns .cruiser { left: max(10px, env(safe-area-inset-left)); top: 158px; }
   .touch #rob > b { display: none; }   /* (the bar's gold edge says robbery: the bar and the takings on one line) */
 }
+/* (an iPhone SE on its side, 667 px: the round buttons start beside the ITEMS button, clear of the weapon) */
+@media (max-width: 700px) and (orientation: landscape) { .touch #hud-btns { left: calc(max(10px, env(safe-area-inset-left)) + 182px); transform: none; gap: 2px; } }
 /* phones on their side with a robbery, a train ride's or custody's bar over the prompt: the newest note only */
 @media (max-height: 430px) { .touch #hud-msg:has(> #rob:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #trainbar:not(.hidden)) .toast:nth-last-child(n+2) { display: none; } }
 /* ...and on a narrow, tall one (a desktop window made narrow): the prompt and the notes under the minimap */
@@ -353,7 +355,7 @@ body.portrait.touch #helpbox, body.portrait.touch #toasts { position: absolute; 
    right (the user, 2026-10-08: they covered too much of the screen) */
 body.portrait.touch #toasts { top: calc(114px + var(--corner-top)); left: calc(max(10px, env(safe-area-inset-left)) + 120px); right: 54px; width: auto; max-width: none; }
 body.portrait.touch #toasts .toast:nth-last-child(n+2) { display: none; }
-body.portrait.touch #hud-sub { bottom: 300px; left: 50%; right: auto; margin: 0; transform: translateX(-50%); width: max-content; max-width: 86vw; }
+body.portrait.touch #hud-sub { bottom: 300px; left: max(10px, env(safe-area-inset-left)); right: 54px; margin: 0 auto; transform: none; width: fit-content; max-width: none; }   /* (clear of the round buttons down the right) */
 body.portrait.touch #tbtns .horn, body.portrait.touch #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 246px; }
 body.portrait.touch #tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 154px); bottom: 172px; }   /* (just above FIRE) */
 body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: calc(206px + var(--corner-top)); }

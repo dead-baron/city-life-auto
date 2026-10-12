@@ -9305,6 +9305,12 @@ itself: `game-phone-fire.png`, `game-phone-coast.png`, `game-desk-fire.png`):
   the note's last line over the corner of the WPN ⇄ button (only with more than one weapon). The longest crime prompt
   (80 characters) fits.
 - The keyboard's HUD in a window under ~450 px wide isn't laid out (the minimap and the weapon plate overlap).
+- Sizes beyond the brief's, measured once (scratchpad `h70/extra.mjs`): 1366x768, 1440x900, 800x600, 932x430 and a
+  768x1024 tablet upright are clean (800x600 after the column learnt to stop short of the weapon: `100vw - 494px`). An
+  iPhone SE (667x375 / 375x667) isn't: on its side, a long prompt and a note reach the WPN ⇄ button and, with a keyboard,
+  the round buttons touch the weapon plate; upright (667 tall), the prompt (at 282) and the job line (300 up from the
+  bottom) overlap - the upright layout wants the space of a taller phone. A 360x740 phone upright: the police's cruiser
+  hint touches the prompt. The job line upright now keeps clear of the round buttons down the right edge.
 - Two touch buttons share a place by design (the horn and reload, in a vehicle with a gun) - not checked.
 
 Files: index.html, client/style.css, client/hud.js, server/systems/players.js, shared/homedecor.js;
