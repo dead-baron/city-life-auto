@@ -3838,9 +3838,9 @@ function vehVisual(v, now, dt) {
     }
     if (Math.random() < 0.4) S.fx.smoke(v.rx - fwdX * def.L * 0.4, v.ry - fwdY * def.L * 0.4, false);
   }
-  if (def.tracks && spd > 8 && !(f & VF.WRECK) && (v.treadD = (v.treadD || 0) + spd * dt) > 7) {   // the tank's tread marks (MV1): a cleat across each track, and the diesel's exhaust
+  if (def.tracks && spd > 8 && !(f & VF.WRECK) && (v.treadD = (v.treadD || 0) + spd * dt) > 9) {   // the tank's tread marks (MV1): a cleat across each track, and the diesel's exhaust (two decals every 9 px: the pool's 700 last a long drive)
     v.treadD = 0;
-    for (const o of [-0.44, -0.34, 0.34, 0.44]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.4, o * def.W); S.fx.decal(4, x, y, v.ra + 1.571, 1, '#2b251d', S.loopClock, 0.4); }
+    for (const o of [-0.39, 0.39]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.4, o * def.W); S.fx.decal(4, x, y, v.ra + 1.571, 1, '#2b251d', S.loopClock, 0.4); }
     if (Math.random() < 0.3) S.fx.smoke(v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, true);
   }
   if (def.kind === 'boat' && v.buf.length > 1) {
