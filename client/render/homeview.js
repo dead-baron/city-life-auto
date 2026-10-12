@@ -151,7 +151,7 @@ function frame(now) {
     you(L, me, now);
     nightV1(L);
   }
-  if (st.doors) lobbyMarks(L, v2 && art && art.ready, now);   // (H71: a lobby's door numbers, yours lit)
+  if (st.doors && !(v2 && art && art.ready)) lobbyMarks(L, false, now);   // (H71: a lobby's door numbers, yours lit - art v2 draws them with the back wall, under the people)
   if (st.edit) editMarks(L, me, now);
   g.setTransform(1, 0, 0, 1, 0, 0);
   hudText(W, H, dpr, now);
@@ -195,6 +195,7 @@ function drawArt(L, me, u, now) {
     person(raw.get(o.n) || {}, q ? q.x0 + (q.x1 - q.x0) * kk : o.x, q ? q.y0 + (q.y1 - q.y0) * kk : o.y, o.a, o.mv, o.sl, false, o.n);
   }
   person(app || {}, me.x, me.y, me.a, me.mv, st.sleep, st.shower, null);
+  if (st.doors) list.push({ b: TILE_IN + 0.5, marks: 1 });   // (H71: the lobby's door plates on the back wall's face, in front of it, behind anyone standing there)
   list.sort((a, b) => a.b - b.b);
   const pulse = 0.7 + 0.3 * Math.sin(now / 220);   // (never faint: the thing in reach always shows)
   for (const e of list) {
@@ -202,7 +203,8 @@ function drawArt(L, me, u, now) {
       const it = e.it;
       g.drawImage(it.cv, it.x, it.y, it.G.w * ap, it.G.h * ap);
       if (u && it.piece === u && it.ol) { g.globalAlpha = pulse; g.drawImage(it.ol, it.x - ap, it.y - ap, it.ol.width * ap, it.ol.height * ap); g.globalAlpha = 1; }
-    } else if (e.car) g.drawImage(e.car.cv, e.car.x, e.car.y, e.car.w, e.car.h);
+    } else if (e.marks) lobbyMarks(L, true, now);
+    else if (e.car) g.drawImage(e.car.cv, e.car.x, e.car.y, e.car.w, e.car.h);
     else if (e.pet) {
       let c = null;
       try { c = art.pet(pi.art, e.pet.po, e.pet.d8, e.pet.fr, e.pet.x, e.pet.y); } catch (err) { if (!art.petErr) { art.petErr = 1; console.warn('[home art] pet', err); } }
