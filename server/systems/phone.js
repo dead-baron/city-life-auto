@@ -25,6 +25,10 @@ import * as paramedic from './paramedic.js';
 import { FARM } from '../../shared/rules.js';
 import { FIRE, MEDIC } from '../../shared/rules.js';
 import * as realestate from './realestate.js';
+import * as taxijob from './taxijob.js';
+import * as busjob from './busjob.js';
+import * as towjob from './towjob.js';
+import { CAB, BUSJOB, TOWJOB } from '../../shared/rules.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -179,7 +183,15 @@ export function boardFor(world, p) {
   if (fst) list.push({ id: 'fire', kind: 'fire', icon: '🚒', sub: 'fire calls: cars, wrecks, people, grass, dumpsters, kitchens - a fire engine and its hose are issued', pay: FIRE.pay.grass, title: `Firefighter - a shift from ${fst.name}`, x: fst.x, y: fst.y });
   const hosp = paramedic.hospitalFor(world, p);   // paramedic: a shift of medical calls from the nearest hospital (paramedic.js)
   if (hosp) list.push({ id: 'medic', kind: 'medic', icon: '🚑', sub: 'medical calls: treat the hurt on the spot, get the badly hurt to a hospital, revive players down - an ambulance is issued', pay: MEDIC.pay.serious, title: `Paramedic - a shift from ${hosp.label}`, x: hosp.x, y: hosp.y });
+  drivingJobs(world, p, list);   // the taxi, the bus, the tow truck (H72)
   return { t: 'board', jobs: list, job: p.job ? { text: p.job.text, type: p.job.type } : null, saw: law.sawList(world, p) };
+}
+
+function drivingJobs(world, p, list) {
+  const rank = taxijob.rankFor(world, p), bus = busjob.lineFor(world, p), yard = p.ped ? towjob.yardFor(world, p.ped.x, p.ped.y) : null;
+  if (rank) list.push({ id: 'cab', kind: 'drive', icon: '🚕', sub: 'fares hail you or ring in: pick them up, the meter runs, drop them at the kerb - a tip for a quick, smooth ride', pay: CAB.flag + 3 * CAB.perKm, title: `Taxi driver - a cab from ${rank.name}`, x: rank.x, y: rank.y });
+  if (bus) list.push({ id: 'bus', kind: 'drive', icon: '🚌', sub: 'drive the line round its stops: people off and on, keep to the timetable - paid per stop on time and per passenger', pay: bus.L.stops.length * BUSJOB.perStop, title: `Bus driver - the ${bus.L.name}`, x: bus.L.stops[bus.k].x, y: bus.L.stops[bus.k].y });
+  if (yard) list.push({ id: 'towjob', kind: 'drive', icon: '🛻', sub: 'wrecks and broken-down cars: back up to them, hook them, tow them to the impound - paid per tow', pay: TOWJOB.pay, title: `Tow truck driver - out of ${yard.name.replace(/^the impound at /, '')}`, x: yard.x, y: yard.y });
 }
 
 // Your phone in your hand while its menu is open, for everyone to see (the descriptor's ph: net.js; drawn held,
@@ -232,6 +244,9 @@ function take(world, p, id) {
   if (id === 'fieldwork') return farming.startWork(world, p, nearestFarm(world, p));
   if (id === 'fire') return firefighter.start(world, p, firefighter.stationFor(world, p));
   if (id === 'medic') return paramedic.start(world, p, paramedic.hospitalFor(world, p));
+  if (id === 'cab') return taxijob.start(world, p);
+  if (id === 'bus') return busjob.start(world, p);
+  if (id === 'towjob') return towjob.start(world, p);
   const j = (world.jobBoard || []).find((q) => q.id === Number(id));
   if (!j) return 'That job was taken.';
   if (j.kind === 'patrol') {
@@ -265,6 +280,9 @@ function target(world, p, j) {
   if (j.type === 'coast') return coastguard.target(world, p, j);   // (the smugglers, the one in the water, ashore: coastguard.js)
   if (j.type === 'fire') return firefighter.target(world, p, j);   // (the fire, the one alight, the grass fire's middle: firefighter.js)
   if (j.type === 'medic') return paramedic.target(world, p, j);   // (the patient, then the nearest hospital: paramedic.js)
+  if (j.type === 'cab') return taxijob.target(world, p, j);   // (the fare, then where they're going: taxijob.js)
+  if (j.type === 'bus') return busjob.target(world, p, j);   // (the next stop: busjob.js)
+  if (j.type === 'towjob') return towjob.target(world, p, j);   // (the car, then the impound: towjob.js)
   if ((j.type === 'courier' || j.type === 'farm') && j.crates && j.crates.length) {
     const waiting = j.crates.map((id) => world.get(id)).filter((c) => c && c.kind === K.CRATE && c.state === 'ground' && !c.touched);
     if (waiting.length === j.crates.length) {

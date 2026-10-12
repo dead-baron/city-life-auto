@@ -70,6 +70,9 @@ import * as gardening from './gardening.js';
 import * as farming from './farming.js';
 import * as firefighter from './firefighter.js';
 import * as paramedic from './paramedic.js';
+import * as taxijob from './taxijob.js';
+import * as busjob from './busjob.js';
+import * as towjob from './towjob.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -645,6 +648,8 @@ export function findInteraction(world, p) {
   if (crew) return crew;
   const medic = paramedic.interaction(world, p);   // a hospital's doors: sign on as a paramedic; a patient: treat them (paramedic.js)
   if (medic) return medic;
+  const drive = taxijob.interaction(world, p) || towjob.interaction(world, p) || busjob.interaction(world, p);   // a taxi rank, an impound lot, a bus stop: sign on to drive (H72)
+  if (drive) return drive;
 
   if (p.profile.weapons.rod !== undefined) {
     const spot = jobs.fishingSpot(world, ped);

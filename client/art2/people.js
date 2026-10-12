@@ -2020,6 +2020,7 @@ function accHands2(D, P, S, acc) {
   if (acc === 'sponge') { P.hR = [2.0 + P.breath * 5, 13.4, 23 + P.breath * 3]; P.elR = [1, -0.3, -0.4]; P.lean = 0.16; return true; }   // (wiping the car's side)
   if (acc === 'easel') { P.hR = [2.6 + P.breath * 3, 12.2, 31 + P.breath * 4]; P.elR = [1, -0.4, -0.5]; P.hL = vadd(S.shL, [-2.6, 4.4, -r * 0.62]); P.elL = [-1, -0.3, -0.5]; P.headPitch += 0.08; return true; }   // (a dab of the brush, the palette low in the other hand)
   if (acc === 'cueup') { P.hR = vadd(S.shR, [1.8, 2.6, -r * 0.45]); P.elR = [1, -0.2, -0.7]; return true; }   // (the cue stood up beside him, waiting his turn)
+  if (acc === 'hail') { P.hR = vadd(S.shR, [2.2, 1.4, r * 0.92]); P.elR = [1, 0.1, 0.3]; P.openR = 1; return true; }   // (an arm up for a cab: server taxijob.js, H72)
   return false;
 }
 // what the props and walks add to the figure (buildFigure)
@@ -2109,6 +2110,8 @@ const ACT_PROPS = {
 // stretcherPt (the patient lying on it: on their back under a blanket, the head on the pillow)
 const STRETCHERS = new Set(['stretcher', 'stretcherPt']);
 CARRY.push('stretcher', 'stretcherPt');
+CARRY.push('hail');   // (a fare flagging down a cab, the right arm up: server taxijob.js, H72)
+Object.assign(ACC_HANDS, { hail: 1 });
 Object.assign(ACC_HANDS, { stretcher: 2, stretcherPt: 2 });
 const MST = { frame: MAT('#c8ccd4', 0.55), pad: MAT('#e2662c', 0.2), sheet: MAT('#eef0f2'), blanket: MAT('#3a6ab0'), skin: MAT('#c48a64'), hair: MAT('#2e241c'), rubber: MAT('#26262a') };
 const STR_Z = 22, STR_Y0 = 13, STR_Y1 = 47, STR_X = 5.6;

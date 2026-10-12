@@ -742,3 +742,9 @@ export const DECOR = { sellBack: 0.5, paint: 80, floor: 150, max: 40, price: { c
 // (H71) the mail: utilities billed per home each `week` in-game days (late: added if unpaid by the next), a letter or a
 // coupon (`off` % at the furniture counter) on `odds` of the days, at most `keep` kept; a pet's pace at home
 export const MAIL = { util: 45, week: 7, late: 15, odds: 0.35, off: 20, keep: 12, petWalk: 110 };
+
+// ---- driving for a living (H72): taxijob.js (fares: flag + perKm a 1000 px, tip for quick and smooth; bail after bail
+// scares), busjob.js (perStop on time - late s grace - and perPax), towjob.js (pay + perKm to the yard)
+export const CAB = { firstS: 5, gapS: 12, shiftS: 1800, waitS: 300, flag: 25, perKm: 50, tip: 0.4, parS: 30, kmS: 450, boardR: 150, dropR: 240, trip: [1500, 6000], hail: [350, 1500], bump: 140, bail: 3 };
+export const BUSJOB = { perStop: 40, perPax: 12, late: 25, haltR: 170, dwellS: 4, wait: [1, 4], speed: 140 };
+export const TOWJOB = { firstS: 8, gapS: 20, shiftS: 1800, pay: 150, perKm: 60, touch: 16, hookS: 3, yardR: 340 };

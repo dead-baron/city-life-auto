@@ -99,7 +99,8 @@ export function createPhone(ctx) {
         + '<h3>Deliveries</h3><p class="ph-hint">$ nearby · $$ across town · $$$ island to island</p>' + rows('delivery').map(jobRow).join('')
         + '<h3>Farm</h3>' + rows('farm').map(jobRow).join('')
         + flyJobs(board.jobs.filter((j) => j.fly), job)   // (flying for a living: search & rescue, charters - server sar.js)
-        + flyJobs(board.jobs.filter((j) => j.kind === 'fire' || j.kind === 'medic'), job, 'Emergency services');   // (the firefighter, the paramedic: firefighter.js, paramedic.js)
+        + flyJobs(board.jobs.filter((j) => j.kind === 'fire' || j.kind === 'medic'), job, 'Emergency services')
+        + flyJobs(board.jobs.filter((j) => j.kind === 'drive'), job, 'Driving');   // (the taxi, the bus, the tow truck: taxijob.js, busjob.js, towjob.js)   // (the firefighter, the paramedic: firefighter.js, paramedic.js)
     }
     wire(el);
     ctx.refocus();
