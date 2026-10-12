@@ -197,3 +197,28 @@ test('the combine (vehicle 49): its header harvests the two ripe rows under it a
   assert.equal(p.job && p.job.only, 'harvest');
   assert.equal(w.get(p.job.truck).model, 'combine', 'the co-op\'s combine issued');
 });
+
+test('the fields are kept across a restart (H69): the rows as they were, a changed layout starts afresh', async () => {
+  const w = makeWorld(), F = farming.fieldsOf(w);
+  assert.ok(F.length && F[0].rows.length > 2);
+  const row = F[0].rows[1], was = row.s;
+  row.s = was === ROW.SOWN ? ROW.RIPE : ROW.SOWN; row.g = row.s === ROW.SOWN ? 0.42 : 0; row.m = row.ok & 3;
+  farming.keep(w);
+  const w2 = makeWorld({ keepKept: true }), r2 = farming.fieldsOf(w2)[0].rows[1];
+  assert.equal(r2.s, row.s, 'the row\'s state');
+  assert.ok(Math.abs(r2.g - row.g) < 0.002, 'its growth');
+  assert.equal(r2.m, row.m, 'the stretches of its job done');
+  const { store } = await import('../server/store.js');
+  store.kept.fields.sig += ';0,0,64,64,1';                              // a world whose fields are laid out otherwise
+  assert.equal(farming.fieldsOf(makeWorld({ keepKept: true }))[0].rows[1].s, was, 'a changed layout: afresh');
+  const fresh = farming.fieldsOf(makeWorld())[0];                       // a new server: as the world starts them
+  assert.equal(fresh.rows[1].s, was);
+});
+
+test('the file store keeps the world\'s kept state with the profiles (H69: the fields)', async () => {
+  const { FileStore } = await import('../server/file-store.js');
+  const f = new FileStore();
+  f.kept.fields = { sig: 'x', rows: [[[1, 500, 3]]] };
+  f.touch(); f.flushSync();
+  assert.deepEqual(new FileStore().kept.fields, { sig: 'x', rows: [[[1, 500, 3]]] }, 'read back after a restart');
+});
