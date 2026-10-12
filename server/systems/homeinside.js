@@ -507,7 +507,8 @@ function decoOp(world, p, h, parts) {
 
 // The dev command 'decor' (server/dev.js; inside a home of yours): msg.furn n of every piece into storage; msg.demo a
 // house's living room and hall furnished (whatever fits of a set - the playtests' decorated room); msg.wall / msg.floor
-// { room: choice } the paint and the floors; msg.edit: decorating, holding msg.edit (a kind from storage)
+// { room: choice } the paint and the floors; msg.edit: decorating, holding msg.edit (a kind from storage; false: done); msg.at
+// [tx, ty, a]: stand there
 export function devDecor(world, p, msg) {
   const ped = p.ped, s = ped && ped.home, h = homeOf(world, ped);
   if (!s || !h || world.homeOwner.get(h.id) !== p.pid) return 'Go inside a home of yours first (dev homein).';
@@ -522,7 +523,7 @@ export function devDecor(world, p, msg) {
   if (msg.floor) Object.assign(d.floor, msg.floor);
   setDecor(world, p, h, d);
   if (Array.isArray(msg.at)) { s.x = (msg.at[0] + 0.5) * TILE_IN; s.y = (msg.at[1] + 0.5) * TILE_IN; s.a = +msg.at[2] || 0; }   // (stand on a tile, facing a way)
-  if (msg.edit !== undefined) { s.edit = { k: PIECES[msg.edit] ? msg.edit : null, mv: -1, r: facingYou(s.a) }; send(world, p, true); }
+  if (msg.edit === false) { s.edit = null; send(world, p, true); } else if (msg.edit !== undefined) { s.edit = { k: PIECES[msg.edit] ? msg.edit : null, mv: -1, r: facingYou(s.a) }; send(world, p, true); }
   return null;
 }
 
