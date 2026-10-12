@@ -9054,10 +9054,13 @@ shop sits under the roof's 3/4 overhang in the classic view, so its flames show 
 the shop (walk in with the hose - the stream stops at walls); someone on fire outside a shop may stand behind it (the
 nearest open ground to the shop's spot). The paramedic (classic view): the patient lies hunched in the down pose by the
 ambulance; holding E treats them ("a tourist is stable - bring the ambulance alongside").
+The phone's Jobs app lists them under Emergency services (`client/phone.js`: the flying list's rows, with their own
+heading). The page's code: 485 KB of 485 (rounded; the test passes) - main.js's two message lines and draw call and
+the phone's rows; H69 is making room.
 
 Files: server/systems/firefighter.js (new), server/systems/players.js (the hose in the fire button's list, the Act at a
 station, the siren for def.siren), server/systems/phone.js (the job list, take, the tracker), server/world.js (SYSTEMS),
-server/dev.js ('firejob', 'medicjob'), shared/rules.js (FIRE, MEDIC), server/systems/paramedic.js (new), client/render/firejob.js (new), client/main.js (the 'fires' message,
+server/dev.js ('firejob', 'medicjob'), shared/rules.js (FIRE, MEDIC), server/systems/paramedic.js (new), client/render/firejob.js (new), client/phone.js (the Jobs app's Emergency services rows), client/main.js (the 'fires' message,
 the 'hose' event, the draw call), client/sound/events.js (hose), client/devcats.js, README.md, test/firefighter.test.js
 (new).
 
