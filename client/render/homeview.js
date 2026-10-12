@@ -168,7 +168,7 @@ function drawArt(L, me, u, now) {
   }
   person(app || {}, me.x, me.y, me.a, me.mv, st.sleep, st.shower, null);
   list.sort((a, b) => a.b - b.b);
-  const pulse = 0.55 + 0.4 * Math.sin(now / 220);
+  const pulse = 0.7 + 0.3 * Math.sin(now / 220);   // (never faint: the thing in reach always shows)
   for (const e of list) {
     if (e.it) {
       const it = e.it;
