@@ -202,6 +202,30 @@ test('flying low over a street: nothing on the ground touches it, and the page p
   assert.ok(Math.hypot(crate.x - crateAt.x, crate.y - crateAt.y) < 1, 'the crate not shoved');
 });
 
+test('an aircraft never leaves tyre marks (the owner, 2026-10-13), sliding or speeding up; a car sliding still does', async () => {
+  const { VF } = await import('../shared/constants.js');
+  const { straightRoad } = await import('./helpers.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  p.profile.safety = false;
+  const r = straightRoad(w.map, 1400);
+  const v = w.spawnVehicle('heli', r.x + 120, r.y, 0, { npcOwned: false });
+  v.alt = 60; v.spool = 1;
+  v.seats[0] = p.ped.id; p.ped.vehId = v.id; p.ped.seat = 0; p.ped.x = v.x; p.ped.y = v.y; w.place(p.ped);
+  let seq = 0, flagged = 0;
+  for (let i = 0; i < 60; i++) {
+    p.inputQ.push({ seq: ++seq, bits: 0, mx: i < 30 ? 1 : 0, my: i < 30 ? 0 : 1, aim: 0 });   // (east, then hard south: it slides)
+    w.step();
+    if (vehicles.vehFlags(w, v) & VF.DRIFT) flagged++;
+  }
+  assert.ok(Math.hypot(v.vx, v.vy) > 150, `it flew (${Math.round(Math.hypot(v.vx, v.vy))} px/s)`);
+  assert.equal(flagged, 0, 'no tyre smoke or marks from the helicopter');
+  const car = w.spawnVehicle('sedan', r.x + 1200, r.y, 0, { npcOwned: true });
+  car.vy = 400;   // (sliding sideways)
+  w.step();
+  assert.ok(vehicles.vehFlags(w, car) & VF.DRIFT, 'a car sliding sideways still marks the road');
+});
+
 test('up in the air: out of reach of a swing, of the police dragging the pilot out; nothing smashed under one flown by nobody', async () => {
   const combat = await import('../server/systems/combat.js');
   const police = await import('../server/systems/police.js');

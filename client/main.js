@@ -3839,7 +3839,7 @@ function vehVisual(v, now, dt) {
   const fwdX = Math.cos(v.ra), fwdY = Math.sin(v.ra);
   if ((f & VF.SMOKE) && Math.random() < ((f & VF.DEAD) ? 0.75 : 0.3)) S.fx.smoke(v.rx + fwdX * def.L * 0.35, v.ry + fwdY * def.L * 0.35, !!(f & (VF.WRECK | VF.DEAD))); // (a dying engine pours black smoke)
   if ((f & VF.BURN) && Math.random() < 0.7) S.fx.fire(v.rx + fwdX * def.L * 0.2, v.ry + fwdY * def.L * 0.2);
-  if (f & VF.DRIFT && def.kind !== 'boat') {
+  if (f & VF.DRIFT && def.kind !== 'boat' && def.kind !== 'air') {   // (an aircraft leaves no tyre marks: the server never flags one either)
     for (const sgn of [-1, 1]) {
       const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.35, sgn * def.W * 0.38);
       S.fx.decal(4, x, y, v.ra, 1, '#111', S.loopClock, 0.5);

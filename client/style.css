@@ -896,6 +896,10 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 #district { font-family: var(--pixel); font-weight: 700; font-size: 44px; letter-spacing: 4px; text-shadow: 0 4px 0 #070b16, 3px 0 0 #070b16, -3px 0 0 #070b16, 0 -3px 0 #070b16, 0 0 24px rgba(0,0,0,.6); }
 #district small { font-family: var(--pixel); font-weight: 700; font-size: 14px; letter-spacing: 6px; color: #ffd34a; }
 .touch #district { font-size: 30px; }
+/* the district's name and the edge warning never wider than the screen (the owner, 2026-10-13: "Westport International"
+   ran off both sides of a portrait phone): as wide as their words up to the screen's width less a margin, wrapping into
+   two balanced lines past it, and a little smaller on a narrow screen */
+#district, #edgewarn { width: max-content; max-width: calc(100vw - 24px); white-space: normal; text-wrap: balance; line-height: 1.08; }
 .touch #money { font-size: 22px; }
 .touch #helpbox { font-size: 14px; }
 .touch .toast { font-size: 12px; }
@@ -1114,3 +1118,17 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #jail small { flex-basis: 100%; font-size: 11px; }
 @media (min-aspect-ratio: 6/5) { #jail { left: 50%; top: calc(max(8px, env(safe-area-inset-top)) + 52px); transform: translateX(-50%); width: auto; } }
 @media (max-height: 480px) and (orientation: landscape) { #jail small { display: none; } }
+/* narrow screens (a portrait phone): last in the file, so they win over the rules above */
+@media (max-width: 520px) {
+  .touch #district, #district { font-size: clamp(20px, 7.4vw, 30px); letter-spacing: 2px; }
+  #district small { font-size: 12px; letter-spacing: 4px; }
+  #edgewarn { font-size: clamp(20px, 7vw, 34px); }
+  #edgewarn small { letter-spacing: 1px; }
+  /* settings: a long choice drops under its label instead of being cut short */
+  .srow { flex-wrap: wrap; row-gap: 6px; }
+  .srow select { max-width: 100%; }
+  /* the death screen: the wake-up spot's whole name and the whole timer line, on two lines if they need them */
+  .d-pick { max-width: 58vw; white-space: normal; }
+  #d-head { white-space: normal; }
+  #d-timer { overflow: visible; text-overflow: clip; }
+}

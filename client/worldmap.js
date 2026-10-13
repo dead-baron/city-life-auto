@@ -210,12 +210,24 @@ class WorldMap {
     const isFree = (b) => !cellsOf(b[0] + 2, b[1] + 2, b[2] - 2, b[3] - 2, (k) => occ.has(k));
     const claim = (b) => { cellsOf(b[0], b[1], b[2], b[3], (k) => { occ.add(k); return false; }); };
     const free = (x, y, tw, th) => { const b = [x - tw / 2 - 3, y - th / 2 - 2, x + tw / 2 + 3, y + th / 2 + 2]; if (!isFree(b)) return false; claim(b); return true; };
-    // district names, on dark plates (gang turf in red)
-    const fs = Math.round(Math.max(11, Math.min(16, cw / 80)));
+    // what the page lays over the map (the cash and the stars on a portrait phone) keeps its corner clear of names
+    const cr = c.getBoundingClientRect();
+    for (const id of ['hud-tr']) {
+      const el = document.getElementById(id), r = el && el.offsetParent ? el.getBoundingClientRect() : null;
+      if (r && r.right > cr.left && r.left < cr.right && r.bottom > cr.top && r.top < cr.bottom) claim([r.left - cr.left, r.top - cr.top, r.right - cr.left, r.bottom - cr.top]);
+    }
+    // district names, on dark plates (gang turf in red): only those whose middle is on the map, each kept whole inside
+    // it, and none over another (the owner, 2026-10-13: on a portrait phone they ran off the edges and piled up)
+    const fs = Math.round(Math.max(cw < 480 ? 10 : 11, Math.min(16, cw / 80)));
+    g.font = `${fs}px ${PIXEL}`;
     for (const d of districtCentroids(this.map)) {
-      const [x, y] = P(d.x, d.y);
-      if (x < -100 || y < -30 || x > cw + 100 || y > ch + 30) continue;
-      claim(plateText(g, x, y, d.name.toUpperCase(), fs, d.turf ? '#ff9c8c' : '#f6ecd0', true));
+      let [x, y] = P(d.x, d.y);
+      if (x < 0 || y < 0 || x > cw || y > ch) continue;
+      const lab = d.name.toUpperCase(), w = Math.ceil(g.measureText(lab).width) + 12, h = fs + 9;
+      x = Math.max(w / 2 + 2, Math.min(cw - w / 2 - 2, x)); y = Math.max(h / 2 + 2, Math.min(ch - h / 2 - 2, y));
+      if (!isFree([x - w / 2, y - h / 2, x + w / 2, y + h / 2])) continue;
+      claim(plateText(g, x, y, lab, fs, d.turf ? '#ff9c8c' : '#f6ecd0', true));
+      g.font = `${fs}px ${PIXEL}`;
     }
     // the landmarks' names, once zoomed in
     if (V.z >= 2) {
@@ -224,8 +236,11 @@ class WorldMap {
       const named = new Set();
       for (const pt of (this.map.paintings || []).concat(this.map.landmarks || [])) {
         if (!pt.name || named.has(pt.name)) continue;
-        const [x, y] = P(pt.x + pt.w / 2, pt.y + pt.h + 40), lab = pt.name;
-        if (x < -150 || y < -30 || x > cw + 150 || y > ch + 30 || !free(x, y, g.measureText(lab).width, lfs)) continue;
+        let [x, y] = P(pt.x + pt.w / 2, pt.y + pt.h + 40);
+        const lab = pt.name, tw = g.measureText(lab).width;
+        if (x < 0 || y < 0 || x > cw || y > ch) continue;
+        x = Math.max(tw / 2 + 4, Math.min(cw - tw / 2 - 4, x));   // (kept whole inside the map)
+        if (!free(x, y, tw, lfs)) continue;
         named.add(pt.name);
         outlined(g, x, y, lab, '#cfeeff');
       }

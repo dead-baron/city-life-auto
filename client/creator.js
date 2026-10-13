@@ -568,8 +568,10 @@ function renderPage() {
   if (lockedHere) h = here(tab === 'hair' ? '✂ Try any style here: cuts, colour and beards are done at a barbershop or a hair salon.' : '🪞 Try anything here: these change at the mirror at home.') + h;
   const row0 = pg.querySelector('.cc-stages'), sl = row0 ? row0.scrollLeft : -1;
   pg.innerHTML = h;
-  const row = pg.querySelector('.cc-stages');   // (the row keeps its place; opened, the picked one is brought into view)
-  if (row) { if (sl >= 0) row.scrollLeft = sl; else { const on = row.querySelector('.on'); if (on) row.scrollLeft = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2; } }
+  // (the row keeps its place; opened, the picked one is brought into view. Not called `row`: that shadowed the row()
+  // helper for the whole function, so every page that builds rows - Customize's tabs, the shops - threw before it drew)
+  const stages = pg.querySelector('.cc-stages');
+  if (stages) { if (sl >= 0) stages.scrollLeft = sl; else { const on = stages.querySelector('.on'); if (on) stages.scrollLeft = on.offsetLeft - (stages.clientWidth - on.offsetWidth) / 2; } }
   want.length = 0;
   for (const el of pg.querySelectorAll('canvas[data-th]')) { const [TL, crop] = TH[Number(el.dataset.th)], Z = SIZES[crop] || SIZES.full; el.width = Math.round(Z[0] * dpr()); el.height = Math.round(Z[1] * dpr()); want.push([el, TL, crop]); }
   pumpThumbs();

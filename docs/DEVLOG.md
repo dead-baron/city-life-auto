@@ -9663,3 +9663,31 @@ and the shower stand up over the cut back wall (the concept is more top-down); t
 trailer's tin body on wheels; the mansion's garage is inside the plan, not a carport below the house; the yard is
 drawn, not walked in (you go out by the front door, as before), and its raised beds don't show what's growing in your
 plots; the lights at night don't spill out into the yard.
+
+## 2026-10-13 · No tyre marks from aircraft; names and panels inside a portrait phone's screen; Customize fixed
+
+The owner's notes: "The helicopter leaves tire marks on the ground while flying" and "Some of the UI and location names on
+mobile portrait are wider than screen and a little cut off."
+- **Aircraft leave no tyre marks** (server/systems/vehicles.js): the slide flag (`VF.DRIFT`, which draws the tyre marks
+  and the smoke and plays the screech) was worked out for every vehicle, aircraft too - a helicopter sliding sideways or
+  speeding up from a hover set it. It's never set for an aircraft now; the page (client/main.js vehVisual) also leaves
+  no marks for one, whatever the server says.
+- **The district's name and the edge warning** (client/style.css): they were one unbroken line ("WESTPORT INTERNATIONAL"
+  ran 70 px off both sides at 390 px). Now as wide as their words up to the screen less 24 px, wrapping into two
+  balanced lines past it, a little smaller on a narrow screen.
+- **The map's place names** (client/worldmap.js): each district's name is drawn only when its middle is on the map, kept
+  whole inside the map's edges, and not over another name or over the cash and stars the page lays over a portrait
+  phone's map (they ran off the edges and piled up). The landmarks' names are kept inside the edges too. A name that
+  would land on another waits for a closer zoom.
+- **Settings and the death screen on a narrow screen**: a long choice drops under its label at full width instead of
+  being cut short; the wake-up spot's name and the "you can still be revived" line take two lines rather than "...".
+- **Found on the way: the character creator's Customize pages threw** ("Cannot access 'row' before initialization"):
+  last night's starting-look change (U18) declared a local `row` in renderPage, which shadowed the `row()` helper for the
+  whole function, so every page that builds rows - Customize's tabs, the clothes shops, the barber - failed before it
+  drew. Renamed. test/shadowing.test.js (new) finds that pattern anywhere in client/, server/ and shared/ (a function
+  that calls a module-level helper and later declares a local of the same name).
+Checked in headless playtests at 390x844 (touch): a scan of every laid-out element for boxes past the screen's edges
+finds none on the HUD, the district card, the edge warning, a long shop menu, the job line, the phone, the bag, the map,
+settings, the pause menu or the death screen (it found the district card before); 844x390 and 1280x720 unchanged.
+Tests: test/flight.test.js (new: a helicopter flown along a street and turned hard never carries the slide flag; a car
+sliding still does), test/shadowing.test.js (new).

@@ -85,8 +85,9 @@ export function update(world, dt) {
     const fwd = vehForwardSpeed(v);
     v.brake = v.input.throttle < -0.1 && fwd > 20;
     v.reverse = fwd < -10;
-    // tyre smoke + skid marks: sliding, e-braking, donuts, or a full-throttle launch (burnout)
-    v.drift = Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player);
+    // tyre smoke + skid marks: sliding, e-braking, donuts, or a full-throttle launch (burnout) - never an aircraft (the owner,
+    // 2026-10-13: a helicopter left tyre marks on the ground as it flew)
+    v.drift = v.def.kind !== 'air' && (Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player));
     v.lights = (night && !!driver) || ((v.def.police || v.def.siren) && v.sirenOn);   // (def.siren: an ambulance, a fire engine)
     v.siren = !!((v.def.police || v.def.siren) && v.sirenOn && driver);
     v.beacon = !v.siren && !!((v.def.police || v.def.siren) && v.beaconOn);   // (the lights flashing with nobody at the wheel: an ambulance at a scene, a tow truck at work - no siren)
