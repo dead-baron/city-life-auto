@@ -13,48 +13,35 @@
 // - a water bus stop (the river, the cays, the lighthouse, the prison): a small pontoon at the end of a short gangway.
 // Each stop is listed in m.world3.ferries with its pier's end (where the boat's stern lies) and the way out.
 import { TILE, T } from './constants.js';
-import { FERRIES, ISLANDS, PIECES } from './world3-skeleton.js';
+import { FERRIES } from './world3-skeleton.js';
 import { DISTRICTS } from './mapcore.js';
 
-const ids = (key) => (ISLANDS.find((I) => I.key === key) || PIECES.find((P) => P.key === key)).picture.ids;
 const named = (...names) => names.map((n) => DISTRICTS.findIndex((d) => d && d.name === n)).filter((d) => d >= 0);
-const METRO = ids('metro'), WESTPORT = [...ids('westport'), ...named('Port Westport')], CEDAR = ids('cedar');
-// (Northshore's waterfront is its beach towns' now: 8.14)
-const NORTHSHORE = [...ids('northshore'), ...named('Northshore Beaches')];
 const MAINLAND = 'mainland';   // (any of the mainland's districts: 47 and up)
+const ANY = 'any';             // (any land: World v3b's city islands and shores are meadow until the city generator paints them)
 
-// The routes as built: `pt` the skeleton point of the route (FERRIES[k].pts) it calls at, `ids` whose land the pier
-// stands on, `kind` what is built. A loop runs round its stops; the others run out and back.
+// The routes as built (World v3b, FERRIES3): `pt` the skeleton point of the route (FERRIES[k].pts) it calls at, `ids`
+// whose land the pier stands on, `kind` what is built. A loop runs round its stops; the others run out and back.
 export const FERRY3 = [
-  { name: 'Bay Ferry', model: 'waterbus', loop: true, stops: [
-    { pt: 0, name: 'Metro City Harbor', kind: 'terminal', ids: METRO },
-    { pt: 1, name: 'Westport', kind: 'terminal', ids: WESTPORT },
-    { pt: 3, name: 'Northshore Pier', kind: 'terminal', ids: NORTHSHORE },
-    { pt: 6, name: 'Cedar Isle', kind: 'terminal', ids: CEDAR },
-    { pt: 7, name: 'Southbank', kind: 'terminal', ids: METRO },
-  ] },
-  { name: 'River Water Bus', model: 'waterbus', stops: [
-    { pt: 0, name: 'Old Town Quay', kind: 'pontoon', ids: named('Old Town') },
-    { pt: 5, name: 'Willow Crossing', kind: 'pontoon', ids: MAINLAND, river: true },
-    { pt: 10, name: 'Kestrel Lake', kind: 'pontoon', ids: MAINLAND, river: true },
-  ] },
   { name: 'Gull Harbor Car Ferry', model: 'ferry', car: true, stops: [
-    { pt: 0, name: 'Port Westport', kind: 'ramp', ids: WESTPORT },
-    { pt: 3, name: 'Gull Harbor', kind: 'ramp', ids: named('Gull Harbor') },
-  ] },
-  { name: 'Cay Water Bus', model: 'waterbus', stops: [
-    { pt: 0, name: 'Cedar Isle South', kind: 'pontoon', ids: CEDAR },
-    { pt: 2, name: 'Coral Cay', kind: 'pontoon', ids: named('Coral Cay') },
-    { pt: 3, name: 'Paradise Cay', kind: 'pontoon', ids: named('Paradise Cay') },
-  ] },
-  { name: 'Lighthouse Water Bus', model: 'waterbus', stops: [
-    { pt: 0, name: 'Westport South Quay', kind: 'pontoon', ids: WESTPORT },
-    { pt: 6, name: 'Lighthouse Rock', kind: 'pontoon', ids: named('Lighthouse Rock') },
+    { pt: 0, name: 'Westport Ferry Terminal', kind: 'ramp', ids: ANY },
+    { pt: 3, name: 'Gull Harbor', kind: 'ramp', ids: ANY },
   ] },
   // custody only (the owner's list, 1.7): no arrests system takes prisoners to the island yet - built and listed
   { name: 'Prison Boat', model: 'waterbus', custody: true, stops: [
-    { pt: 0, name: 'Cedar Isle Police Dock', kind: 'pontoon', ids: CEDAR },
+    { pt: 0, name: 'Sandpiper Bay Police Dock', kind: 'pontoon', ids: ANY },
     { pt: 2, name: 'Prison Island', kind: 'pontoon', ids: named('Prison Island') },
+  ] },
+  { name: 'Gulf Water Bus', model: 'waterbus', loop: true, stops: [
+    { pt: 0, name: 'Harbor', kind: 'terminal', ids: ANY },
+    { pt: 2, name: 'Arts District', kind: 'terminal', ids: ANY },
+    { pt: 3, name: 'Port Westport', kind: 'terminal', ids: ANY },
+    { pt: 5, name: 'Sunset Beach', kind: 'terminal', ids: ANY },
+    { pt: 7, name: 'Lake District', kind: 'terminal', ids: ANY },
+  ] },
+  { name: 'Key Water Bus', model: 'waterbus', stops: [
+    { pt: 0, name: 'Pelican Key', kind: 'pontoon', ids: ANY },
+    { pt: 2, name: 'Coral Cay', kind: 'pontoon', ids: ANY },
   ] },
 ];
 
@@ -88,7 +75,7 @@ const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 // the stop's place: the pier's shore tile (sx, sy), the way out (dx, dy) - or null
 function findShore(m, st, tx0, ty0, K) {
   const W = m.w, H = m.h;
-  const ok = st.ids === MAINLAND ? (d) => d >= 47 : ((s) => (d) => s.has(d))(new Set(st.ids));
+  const ok = st.ids === ANY ? () => true : st.ids === MAINLAND ? (d) => d >= 47 : ((s) => (d) => s.has(d))(new Set(st.ids));
   const at = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? y * W + x : -1);
   const tile = (x, y) => { const i = at(x, y); return i < 0 ? -1 : m.tiles[i]; };
   // (not on the container port's quay - its cranes' apron - nor where its ship lies alongside: m.port)

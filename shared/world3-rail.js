@@ -29,7 +29,7 @@ const radiusOf = (seg) => seg.r || RADIUS.main;
 // service's run as written (+1), the other the run reversed.
 export function serviceRoute(service, way) {
   const run = way > 0 ? service.run : service.run.slice().reverse().map(([n, d]) => [n, -d]);
-  const P = [], R = [], tunnels = [], bridges = [], segs = [];
+  const P = [], R = [], tunnels = [], bridges = [], elevated = [], segs = [];
   for (const [name, d] of run) {
     const seg = segByName(name), n = seg.pts.length;
     const pts = d > 0 ? seg.pts : seg.pts.slice().reverse();
@@ -37,13 +37,14 @@ export function serviceRoute(service, way) {
     const idx = (i) => base + (d > 0 ? i : n - 1 - i);
     for (const [i, j] of seg.tunnels || []) { const a = idx(i), b = idx(j); tunnels.push(a < b ? [a, b] : [b, a]); }
     for (const [i, j] of seg.bridges || []) { const a = idx(i), b = idx(j); bridges.push(a < b ? [a, b] : [b, a]); }
+    for (const [i, j] of seg.elevated || []) { const a = idx(i), b = idx(j); elevated.push(a < b ? [a, b] : [b, a]); }
     const r = radiusOf(seg);
     if (P.length) R[P.length - 1] = HUB_R;   // the junction's corner: tight, so the platforms either side stand on the straight
     for (let k = P.length ? 1 : 0; k < n; k++) { P.push(pts[k]); R.push(r); }
     segs.push({ name, way: d, from: base, to: base + n - 1 });
   }
   R[0] = HUB_R;   // (the closing corner is a junction too)
-  return { P, R, tunnels, bridges, segs };
+  return { P, R, tunnels, bridges, elevated, segs };
 }
 
 // A closed loop of control points (the first and the last the same junction) rounded at every corner, the closing
@@ -88,7 +89,7 @@ export function roundLoop(route) {
   // control point k of the route at atS[k] (k >= 1), P0 at atS[n - 1]
   const ctl = (k) => (k === 0 ? atS[n - 1] : atS[k]);
   const ranges = (list) => list.map(([a, b]) => (a === 0 ? [0, ctl(b)] : [ctl(a), b === n - 1 ? atS[n - 1] : ctl(b)]));
-  return { pts: out, s, length: s[s.length - 1], tunnels: ranges(route.tunnels), bridges: ranges(route.bridges), ctl };
+  return { pts: out, s, length: s[s.length - 1], tunnels: ranges(route.tunnels), bridges: ranges(route.bridges), elevated: ranges(route.elevated || []), ctl };
 }
 
 // One loop's track: points every SAMPLE px, offset TRACK_OFF to the right of the way it runs, in px; each with its
@@ -103,8 +104,10 @@ export function trackOf(path) {
     const a = P[j - 1], b = P[j], L = S[j] - S[j - 1] || 1, w = (s - S[j - 1]) / L;
     const dx = (b[0] - a[0]) / L, dy = (b[1] - a[1]) / L;
     const x = (a[0] + (b[0] - a[0]) * w) * TILE - dy * TRACK_OFF, y = (a[1] + (b[1] - a[1]) * w) * TILE + dx * TRACK_OFF;
-    const under = inR(path.tunnels, s);
-    out.push({ x, y, under, subway: false, tunnel: under });
+    // (World v3b's elevated stretch - the main line over Midtown's streets on a viaduct - is laid below ground, flagged
+    // `elevated`, until the generator builds a rail viaduct over streets: so no street crosses it at grade)
+    const elev = inR(path.elevated || [], s), under = inR(path.tunnels, s) || elev;
+    out.push(elev ? { x, y, under, subway: false, tunnel: under, elevated: true } : { x, y, under, subway: false, tunnel: under });
   }
   let s = 0;
   for (let i = 0; i < out.length; i++) { if (i) s += Math.sqrt((out[i].x - out[i - 1].x) ** 2 + (out[i].y - out[i - 1].y) ** 2); out[i].s = s; }

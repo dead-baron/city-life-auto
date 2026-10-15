@@ -398,8 +398,11 @@ function buildCity(seed, opts = null, frame = null) {
   const hosp = m.pois.find((p) => p.kind === 'hospital' && m.zoneAt(p.x, p.y) === Z.CITY) || m.pois.find((p) => p.kind === 'hospital');
   const pd = m.pois.find((p) => p.kind === 'police');
   m.hospitals = m.pois.filter((p) => p.kind === 'hospital').map((p) => ({ id: p.id, name: p.label, x: p.x, y: p.y + 44 }));
-  if (hosp || !OPTS?.island) m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 };   // (an island build may have neither: the world's are elsewhere)
-  if (pd || !OPTS?.island) m.spawns.police = { x: pd.x, y: pd.y + 44 };
+  // (an island build may have neither: the world's are elsewhere; World v3b's build has none until its city is laid -
+  // its world hook's `spawn`, tiles)
+  const fb = !hosp || !pd ? WD?.spawn && { x: WD.spawn[0] * TILE, y: WD.spawn[1] * TILE } : null;
+  if (hosp || !(OPTS?.island || fb)) m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 }; else if (fb) m.spawns.hospital = fb;
+  if (pd || !(OPTS?.island || fb)) m.spawns.police = { x: pd.x, y: pd.y + 44 }; else if (fb) m.spawns.police = fb;
   m.spawns.default = m.spawns.hospital;
   if (OPTS?.done) OPTS.done(m, { removeProps });   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js; the main line's dressing cleared)
   mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)

@@ -55,7 +55,7 @@ export function joinPlace(lines, m, own, canal = false) {   // (canal: the place
   }
   // 2. the canal's bridges
   const streets = () => lines.filter((l) => l.lvl === 0 && l.pts.length >= 2 && !['hwy', 'ramp'].includes(l.kind));
-  for (const A of canal ? ARTERIALS.filter((q) => /^Canal /.test(q.name)) : []) {
+  for (const A of canal && CANAL ? ARTERIALS.filter((q) => /^Canal /.test(q.name)) : []) {   // (World v3b: no canal)
     let P = A.pts.map(([x, y]) => ({ x: x * TILE, y: y * TILE }));
     // (one whose ends aren't both on the land - Canal Bridge 6 lies along the canal's east mouth, where the land
     // layer's smoothed corners leave only water - moves along the canal, towards its middle, until they are: SLIDE)

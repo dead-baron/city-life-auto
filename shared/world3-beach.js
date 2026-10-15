@@ -29,7 +29,7 @@ const ROW_NAMES = ['Surf Street', 'Dune Street', 'Seagrass Street', 'Breakers St
 const COL_NAMES = ['Pier Avenue', 'Coral Street', 'Driftwood Lane', 'Shell Street', 'Tide Street', 'Kelp Street', 'Sand Dollar Lane', 'Anchor Street', 'Starfish Lane', 'Boardwalk Street', 'Conch Street', 'Lantern Lane', 'Harbor View Street', 'Marlin Street', 'Pelican Street', 'Sunset Street', 'Cove Street', 'Riptide Lane', 'Seashell Street', 'Bay Street', 'Clam Street', 'Ocean View Street', 'Saltwater Lane', 'Wave Street', 'Sailfish Street', 'Beacon Street', 'Jetty Street'];
 
 // the Shore Road's middle at column x (tiles): the skeleton's polyline
-const SHORE = ARTERIALS.find((A) => A.name === 'Shore Road').pts;
+const SHORE = (ARTERIALS.find((A) => A.name === 'Shore Road') || { pts: [[0, 0], [1, 0]] }).pts;   // (World v3b: no Shore Road until the regional modules are re-anchored)
 export function shoreY(x) {
   if (x <= SHORE[0][0]) return SHORE[0][1];
   for (let k = 1; k < SHORE.length; k++) {

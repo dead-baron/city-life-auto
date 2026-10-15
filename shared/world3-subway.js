@@ -89,6 +89,7 @@ export function subwayRoute(sw) {
 export function subwayLoops(m = null) {
   const out = [];
   for (const sw of SUBWAYS) {
+    if (sw.loop) { out.push(...closedLoops(sw, m)); continue; }   // (World v3b: the lines are closed loops)
     if (sw.loopOf) continue;
     const route = subwayRoute(sw), path = roundLoop(route), nP = route.P.length;
     // the viaducts' stretches (along the centre line, tiles): the legs flagged, from corner to corner
@@ -137,6 +138,40 @@ export function subwayLoops(m = null) {
     }
     defs.sort((a, b) => a.i - b.i);
     out.push({ name: sw.name, service: sw.name, way: 1, subway: sw.name, color: sw.color, pts, stations: defs.map(({ name, x, y }) => ({ name, x, y })), side: 1, hub: false, bores: [] });
+  }
+  return out;
+}
+
+// World v3b's subway lines are closed loops (SUBWAYS' `loop`): double track as the main line's - each way its own loop
+// of the trains, the track offset to the right of the way it runs, so the two ways are the line's two tracks. Below
+// ground but within RAMP tiles of the water it crosses (on its viaducts and bridges there, the generator's decks); with
+// no map, below ground everywhere. Each station a stop on both tracks, once each way round.
+function closedLoops(sw, m) {
+  const out = [];
+  for (const way of [1, -1]) {
+    const P = way > 0 ? sw.pts : sw.pts.slice().reverse();
+    const path = roundLoop({ P, R: P.map(() => sw.r || RADIUS.sub), tunnels: [], bridges: [] });
+    const pts = trackOf(path);
+    const N = pts.length, K = Math.ceil(RAMP * TILE / 8);
+    if (m) {
+      const wet = new Uint8Array(N);
+      for (let i = 0; i < N; i++) { const t = m.tileAtPx(pts[i].x, pts[i].y); wet[i] = t === T.WATER || t === T.DEEP ? 1 : 0; }
+      // (the distance in track points to the nearest wet one, round the loop)
+      const near = new Int32Array(N).fill(1 << 30);
+      for (let pass = 0; pass < 2; pass++) for (let k = 0, last = -(1 << 30); k < 2 * N; k++) { const i = k % N; if (wet[i]) last = k; near[i] = Math.min(near[i], k - last); }
+      for (let pass = 0; pass < 2; pass++) for (let k = 2 * N - 1, last = 1 << 30; k >= 0; k--) { const i = k % N; if (wet[i]) last = k; near[i] = Math.min(near[i], last - k); }
+      for (let i = 0; i < N; i++) pts[i].under = near[i] > K;
+    } else for (const p of pts) p.under = true;
+    for (const p of pts) { p.tunnel = p.under; p.subway = p.under; }
+    const defs = [];
+    for (const s of STATIONS.filter((q) => q.line === sw.name)) {
+      const X = s.at[0] * TILE, Y = s.at[1] * TILE;
+      let best = -1, bd = NEAR;
+      for (let i = 0; i < N; i++) { const d = Math.hypot(pts[i].x - X, pts[i].y - Y); if (d < bd) { bd = d; best = i; } }
+      if (best >= 0) defs.push({ name: subwayName(s.name), x: pts[best].x, y: pts[best].y, i: best });
+    }
+    defs.sort((a, b) => a.i - b.i);
+    out.push({ name: `${sw.name} (${way > 0 ? 'one way' : 'the other way'})`, service: sw.name, way, subway: sw.name, color: sw.color, pts, stations: defs.map(({ name, x, y }) => ({ name, x, y })), side: 1, hub: false, bores: [] });
   }
   return out;
 }
