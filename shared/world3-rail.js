@@ -179,13 +179,33 @@ export function seatStationHouses(m) {
   // (the 16 px cells within about 70 px of a track: a house's corner may not stand in one)
   const S = 16, close = new Set(), sk = (x, y) => (Math.floor(x / S) + 32768) * 65536 + Math.floor(y / S) + 32768;
   for (const r of m.rails) for (let j = 0; j < r.pts.length; j += 2) { const p = r.pts[j]; if (p.under) continue; for (let dy = -80; dy <= 80; dy += S) for (let dx = -80; dx <= 80; dx += S) if (dx * dx + dy * dy <= 80 * 80) close.add(sk(p.x + dx, p.y + dy)); }
+  // (World v3b's dense city: a plain building - no business, no home in it - may be cleared for the house: the third try)
+  const busy = new Set();
+  for (const p of m.pois) if (p.b !== undefined && p.b >= 0) busy.add(p.b);
+  for (const hm of m.homes || []) if (hm && hm.b !== undefined) busy.add(hm.b);
+  const clearable = (px, py) => { const tx = Math.floor(px / TILE), ty = Math.floor(py / TILE); if (!m.inside(tx, ty) || m.tiles[m.idx(tx, ty)] !== T.BUILDING) return false; const b = m.buildings[m.bld[m.idx(tx, ty)]]; return !!b && !b.gone && !busy.has(b.id); };
+  let clearing = false;
   const fits = (x, y, a, us = [-74, -37, 0, 37, 74]) => {
     const ux = Math.cos(a - Math.PI / 2), uy = Math.sin(a - Math.PI / 2), vx = Math.cos(a), vy = Math.sin(a);
     for (const u of us) for (const v of [-50, -2, 46]) {
       const px = x + ux * u + vx * v, py = y + uy * u + vy * v;
-      if (!HOUSE_OK.has(m.tileAtPx(px, py)) || close.has(sk(px, py))) return false;
+      if ((!HOUSE_OK.has(m.tileAtPx(px, py)) && !(clearing && clearable(px, py))) || close.has(sk(px, py))) return false;
     }
     return true;
+  };
+  // clear the plain buildings under a house's footprint (gone, their ground a plaza)
+  const clearUnder = (x, y, a) => {
+    const ux = Math.cos(a - Math.PI / 2), uy = Math.sin(a - Math.PI / 2), vx = Math.cos(a), vy = Math.sin(a);
+    for (let u = -80; u <= 80; u += 8) for (let v = -56; v <= 52; v += 8) {
+      const px = x + ux * u + vx * v, py = y + uy * u + vy * v, tx = Math.floor(px / TILE), ty = Math.floor(py / TILE);
+      if (!m.inside(tx, ty) || m.tiles[m.idx(tx, ty)] !== T.BUILDING) continue;
+      const b = m.buildings[m.bld[m.idx(tx, ty)]];
+      if (!b || b.gone || busy.has(b.id)) continue;
+      b.gone = true;
+      if (b.roof >= 0 && m.roofs[b.roof]) m.roofs[b.roof].gone = true;
+      if (b.prefab >= 0 && m.prefabs[b.prefab]) m.prefabs[b.prefab] = { ...m.prefabs[b.prefab], gone: true, tw: 0, th: 0 };
+      for (let yy = b.ty; yy < b.ty + b.th; yy++) for (let xx = b.tx; xx < b.tx + b.tw; xx++) { m.set(xx, yy, T.PLAZA); m.bld[m.idx(xx, yy)] = -1; }
+    }
   };
   let moved = 0;
   for (const h of m.railHubs) {
@@ -194,17 +214,20 @@ export function seatStationHouses(m) {
     // (the whole house; failing that - a dense block - its middle at least on open ground; every platform within 560 px)
     const plats = h.calls.map(([ri, si]) => m.rails[ri].stations[si].platform).filter(Boolean);
     let best = null;
-    for (const us of [undefined, [0]]) for (let r = 60; r <= 900 && !best; r += 20) for (let k = 0; k < 64 && !best; k++) {
+    for (const [us, clr] of [[undefined, false], [[0], false], [undefined, true]]) for (let r = clr ? 0 : 60; r <= 900 && !best; r += 20) for (let k = 0; k < 64 && !best; k++) {
+      clearing = clr;
       const x = h.x + Math.cos(k / 64 * Math.PI * 2) * r, y = h.y + Math.sin(k / 64 * Math.PI * 2) * r;
-      if (!HOUSE_OK.has(m.tileAtPx(x, y)) || close.has(sk(x, y))) continue;
+      if ((!HOUSE_OK.has(m.tileAtPx(x, y)) && !(clr && clearable(x, y))) || close.has(sk(x, y))) continue;
       const [d, q] = nearest(x, y);
       if (!q || d > 500) continue;
       const a = Math.atan2(y - q.y, x - q.x);
       const hx = x - Math.cos(a) * 18, hy = y - Math.sin(a) * 18;
       if (plats.some((p) => Math.hypot(p.x - hx, p.y - hy) > 560)) continue;
-      if (fits(x, y, a, us)) best = { x: hx, y: hy, a };
+      if (fits(x, y, a, us)) best = { x: hx, y: hy, a, clr, cx: x, cy: y };
     }
+    clearing = false;
     if (!best) continue;
+    if (best.clr) clearUnder(best.cx, best.cy, best.a);
     h.x = Math.round(best.x); h.y = Math.round(best.y); h.a = best.a; h.moved = true; moved++;
     const poi = m.pois[h.poi];
     if (poi) { poi.x = h.x; poi.y = h.y; }
