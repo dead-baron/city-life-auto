@@ -28,6 +28,7 @@ import { BIOMES, LANDMARKS, HIGHWAYS } from './world3-skeleton.js';
 import { WATER3 } from './world3-land.js';
 import { peakHeight, TREE_LINE } from './world3-biomes.js';
 import { DISTRICTS } from './mapcore.js';
+import { GROUND3 } from './world3-layout.js';
 
 export const RELIEF_CELL = 8;      // the coarse grid of the biomes' ground (tiles)
 export const CLIFF_SLOPE = 2.2;    // m per tile: steeper (on open wild ground) is a cliff band
@@ -38,13 +39,26 @@ const LM = (name) => LANDMARKS.find((l) => l.name === name)?.at;
 // the places on high ground (the tests check each): [name, at, radius (tiles) round which it stands highest]
 export const HIGH_SPOTS = [
   ['Lookout Hill', LM('Lookout Hill'), 110, 34, false],
-  ['North Cape', [210, 900], 95, 22, true],
+  ['North Cape', [470, 830], 95, 22, true],
   ['Egret Point', LM('Egret Point Light'), 80, 20, true],
   ['Sandpiper Point', LM('Sandpiper Point Light'), 85, 18, true],
-  ['Toll Point', [3880, 2520], 70, 12, true],
 ];
-export const LOOKOUT_MESA = { at: [4342, 860], rx: 50, ry: 34, h: 32 };   // (the track from Dusty Hollow climbs its south rim)   // (8.18's lookout stands on it)
-const GORGE = [[1250, 690], [1330, 770], [1450, 870], [1530, 945]];      // across the Gorge Bridge (the Highland Highway's [1230, 900]-[1430, 640]), clear of Silver Thread Falls
+export const LOOKOUT_MESA = { at: [5456, 1674], rx: 50, ry: 34, h: 32 };   // (the track from Dusty Hollow climbs its south rim)   // (8.18's lookout stands on it)
+// (v3b) the gorge below the woods' big falls: the creek's cut from the falls' lake south-east (world3-layout.js STREAMS3)
+const GORGE = [[1850, 1140], [1900, 1215], [1990, 1228], [2070, 1250]];
+// (v3b, docs/WORLD-V3.md part 9) the owner's mountains (world3-layout.js GROUND3.mount): each raises the coarse ground
+// towards its middle (MOUNT_H metres at MOUNT_IN tiles in from its edge and beyond), so the hillshade, the crags and
+// the snow follow the sketch's grey masses whatever biome the land layer gives them
+export const MOUNT_H = 150, MOUNT_IN = 90;
+let MOUNTS = null;
+const mounts = () => (MOUNTS ||= GROUND3.mount.map((poly) => { const b = [1e9, 1e9, -1e9, -1e9]; for (const [x, y] of poly) { b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], y); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], y); } return { poly, b }; }));
+const inPoly = (poly, x, y) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c; } return c; };
+// how far (tiles) the point is inside a mountain, 0 outside
+export function mountDepth(x, y) {
+  let d = 0;
+  for (const M of mounts()) if (x >= M.b[0] && y >= M.b[1] && x <= M.b[2] && y <= M.b[3] && inPoly(M.poly, x, y)) d = Math.max(d, polyEdgeDist(M.poly, x, y));
+  return d;
+}
 
 // ---- noise: integer hashing, value noise -----------------------------------------------------------------------
 const hash = (x, y, s) => { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1442695041) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
@@ -103,6 +117,7 @@ function coarse3(W, H, L) {
     const tx = Math.min(W - 1, cx * C), ty = Math.min(H - 1, cy * C), i = ty * W + tx, w = L.water[i], k = cy * gw + cx;
     if (w === WATER3.SEA || w === WATER3.DEEP) { g[k] = -2; sea[k] = 1; continue; }
     g[k] = biomeBase(L.biome[i], tx, ty) - (w ? 4 : 0); g2[k] = biomeShape(L.biome[i], tx, ty);
+    if (!w) { const md = mountDepth(tx, ty); if (md > 0) g2[k] += MOUNT_H * sstep(0, MOUNT_IN, md) * (0.75 + 0.5 * peakHeight(tx, ty)); }   // (v3b: the sketch's mountains)
   }
   for (let p = 0; p < 4; p++) blur(g, gw, gh, 5);
   for (let p = 0; p < 2; p++) blur(g2, gw, gh, 2);
@@ -176,17 +191,16 @@ export function reliefOf3(m, L) {
 // full size, before what's built decides (H50: the wild tracks, laid before the tables, keep round these)
 export function tableSpots3(W, H) {
   const out = [{ ...LOOKOUT_MESA, x: LOOKOUT_MESA.at[0], y: LOOKOUT_MESA.at[1], mesa: true, s: 1, lookout: true }];
-  const P = BIOMES[BIO.desert - 1].poly, S = 230;
-  let x0 = W, y0 = H, x1 = 0, y1 = 0;
-  for (const [x, y] of P) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
-  for (let gy = Math.floor(y0 / S); gy * S < y1; gy++) for (let gx = Math.floor(x0 / S); gx * S < x1; gx++) {
-    const u = hash(gx, gy, 7201);
-    if (u < 0.12) continue;
-    const mesa = u > 0.5, cx = Math.round((gx + 0.22 + 0.56 * hash(gx, gy, 7202)) * S), cy = Math.round((gy + 0.22 + 0.56 * hash(gx, gy, 7203)) * S);
-    const rx = mesa ? 50 + 60 * hash(gx, gy, 7204) : 16 + 16 * hash(gx, gy, 7204), ry = mesa ? rx * (0.55 + 0.3 * hash(gx, gy, 7205)) : rx * (0.8 + 0.3 * hash(gx, gy, 7205));
-    const h = mesa ? 30 + 20 * hash(gx, gy, 7206) : 26 + 18 * hash(gx, gy, 7206);
-    out.push({ x: cx, y: cy, rx, ry, h, mesa, s: gx * 31 + gy });
-  }
+  // (v3b, docs/WORLD-V3.md part 9) the owner's mesas and buttes (world3-layout.js GROUND3.mesa: the sketch's red
+  // tables): each an ellipse in its outline's box, a mesa when it is wide, a butte when small
+  GROUND3.mesa.forEach((poly, k) => {
+    let x0 = W, y0 = H, x1 = 0, y1 = 0;
+    for (const [x, y] of poly) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    const rx = (x1 - x0) / 2, ry = (y1 - y0) / 2, mesa = Math.max(rx, ry) > 45, cx = Math.round((x0 + x1) / 2), cy = Math.round((y0 + y1) / 2);
+    if (cx < 0 || cy < 0 || cx >= W || cy >= H) return;
+    const h = mesa ? 30 + 20 * hash(k, 3, 7206) : 26 + 18 * hash(k, 3, 7206);
+    out.push({ x: cx, y: cy, rx, ry, h, mesa, s: 2 + k });
+  });
   return out;
 }
 function tablesOf3(m, L, z) {

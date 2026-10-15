@@ -372,26 +372,30 @@ export const STATIONS = [
   { name: 'Southside', line: 'Subway Line 2', at: [2315, 2660] },
 ];
 
-// Towns (points; today's places where they went, and the new ones) and landmarks.
+// Towns (points; today's places where they went, and the new ones) and landmarks - World v3b (docs/WORLD-V3.md part
+// 9): at their spots on the owner's map (frame tiles; the regional modules build them: world3-towns.js, world3-mesa.js,
+// world3-desert.js, world3-west.js, world3-water.js, world3-wild.js).
 export const TOWNS = [
-  { name: 'Metro City', at: [2150, 2300], today: true }, { name: 'Westport', at: [1420, 2200], today: true },
-  { name: 'Northshore', at: [2300, 1720], today: true }, { name: 'Cedar Falls', at: [3150, 2450], today: true },
-  { name: 'Southbank', at: [2300, 2620], today: true },
-  { name: 'Dry Creek', at: [3700, 1620], today: true }, { name: 'Gull Harbor', at: [1040, 3200], today: true },
-  { name: 'Timber Bend', at: [1170, 1060] }, { name: 'Willow Crossing', at: [3360, 1290] },
-  { name: 'Lucky Mesa', at: [4600, 420] }, { name: 'Copper Gulch', at: [4560, 1230] },
-  { name: 'Dusty Hollow', at: [4250, 1000], note: 'ghost town' }, { name: 'Sandpiper Bay', at: [4480, 2540] },
-  { name: 'Route 9', at: [3800, 1520] }, { name: 'Egret Point', at: [850, 2700] },
+  { name: 'Metro City', at: [3060, 2540], today: true }, { name: 'Westport', at: [1800, 2300], today: true },
+  { name: 'Northshore', at: [3460, 560], today: true }, { name: 'Cedar Falls', at: [4150, 2480], today: true },
+  { name: 'Gull Harbor', at: [1700, 3520], today: true }, { name: 'Coral Cay', at: [4260, 3440], today: true },
+  { name: 'Timber Bend', at: [1793, 1423] }, { name: 'Willow Crossing', at: [3750, 1018] },
+  { name: 'Lucky Mesa', at: [5404, 612] }, { name: 'Copper Gulch', at: [4790, 1625] },
+  { name: 'Dusty Hollow', at: [5364, 1818], note: 'ghost town' }, { name: 'Sandpiper Bay', at: [5393, 2804] },
+  { name: 'Route 9', at: [5960, 1100] }, { name: 'Egret Point', at: [1220, 3230] },
 ];
 export const LANDMARKS = [
-  { name: 'North Cape Light', kind: 'light', at: [300, 900] }, { name: 'Egret Point Light', kind: 'light', at: [905, 3010] },
-  { name: 'Sandpiper Point Light', kind: 'light', at: [4440, 2700] }, { name: 'Silver Thread Falls', kind: 'falls', at: [1110, 690] },
-  { name: 'Lookout Hill', kind: 'lookout', at: [2600, 410] }, { name: 'Granite Lookout', kind: 'lookout', at: [820, 440] },
-  { name: 'Copper Gulch Mine', kind: 'mine', at: [4690, 1180] }, { name: 'Red Rock Dam', kind: 'dam', at: [4130, 610] },
-  { name: 'Granite Peaks', kind: 'peak', at: [760, 140] }, { name: 'Redwood campgrounds', kind: 'camp', at: [900, 1500] },
-  { name: 'Lakeside campground', kind: 'camp', at: [2050, 520] }, { name: 'Mesa camp', kind: 'camp', at: [4800, 1700] },
-  { name: 'Toll plaza and marina (Toll Point)', kind: 'place', at: [3820, 2470] }, { name: 'Westport International', kind: 'airport', at: [1350, 2580] },
-  { name: 'Prison', kind: 'prison', at: [4330, 3300] },
+  { name: 'North Cape Light', kind: 'light', at: [480, 835] }, { name: 'Egret Point Light', kind: 'light', at: [982, 3410] },
+  { name: 'Sandpiper Point Light', kind: 'light', at: [5720, 2770] }, { name: 'Silver Thread Falls', kind: 'falls', at: [1745, 1030] },
+  { name: 'Lookout Hill', kind: 'lookout', at: [3430, 860] }, { name: 'Granite Lookout', kind: 'lookout', at: [1250, 700] },
+  { name: 'Copper Gulch Mine', kind: 'mine', at: [4920, 1600] }, { name: 'Red Rock Dam', kind: 'dam', at: [5245, 2160] },
+  { name: 'Granite Peaks', kind: 'peak', at: [900, 380] }, { name: 'Redwood campgrounds', kind: 'camp', at: [1110, 1690] },
+  { name: 'Lakeside campground', kind: 'camp', at: [3218, 949] }, { name: 'Mesa camp', kind: 'camp', at: [5700, 1554] },
+  { name: 'Westport International', kind: 'airport', at: [1700, 2760] }, { name: 'Prison', kind: 'prison', at: [5745, 3610] },
+  { name: 'Lighthouse Rock', kind: 'light', at: [2328, 690] }, { name: 'The Islets', kind: 'islets', at: [4860, 360] },
+  { name: 'Egret Rocks', kind: 'rocks', at: [560, 2930] },
+  { name: 'Lucky Mesa Airstrip', kind: 'airstrip', at: [5760, 840] },
+  { name: 'Willow Valley Airstrip', kind: 'airstrip', at: [4090, 1189] }, { name: 'Brightwater Airstrip', kind: 'airstrip', at: [3380, 1469] },
 ];
 
 // ---------------------------------------------------------------------------------------------------------------------

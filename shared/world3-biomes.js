@@ -58,7 +58,9 @@ export function skeletonRoom(W, H) {
 }
 
 // The peaks' height (0..1, for the snow line, the tree line and the meadows): big and middling noise, higher to the north.
-export const peakHeight = (x, y) => 0.42 * vn(x, y, 260, 4801) + 0.26 * vn(x, y, 90, 4802) + 0.08 * vn(x, y, 24, 4803) + 0.3 * (1 - Math.min(1, y / 760));
+// (v3b, docs/WORLD-V3.md part 9: the owner's mountains run along the north-west and the west, from the north coast at
+// y ~250 down to y ~1450 - the snow's bias falls off over that span, not the old frame's top 760 rows)
+export const peakHeight = (x, y) => 0.42 * vn(x, y, 260, 4801) + 0.26 * vn(x, y, 90, 4802) + 0.08 * vn(x, y, 24, 4803) + 0.3 * (1 - Math.min(1, Math.max(0, y - 250) / 1200));
 export const SNOW_LINE = 0.68, TREE_LINE = 0.56;
 // the terrain class of the snowfields (after today's 0-5; the renderer's ground bake draws it as snow: groundbake.js)
 export const SNOW_CLS = 9;

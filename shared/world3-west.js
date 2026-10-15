@@ -19,36 +19,39 @@ import { TILE, T } from './constants.js';
 
 export const WEST_IDS = { egret: 65 };
 const Z = 65;
-// Egret Point (tiles): the village along Wharf Street (row 2630) from the Redwood Coast Road (it crosses its last
-// stretch at about x 853) east to the quay on the arm's sheltered east shore; Light Road south from it to the tip.
+// Egret Point (tiles; v3b, docs/WORLD-V3.md part 9: the owner's marsh peninsula, its south-east coast): the village
+// along Wharf Street (row 3230) from the Redwood Coast Road's end (world3-towns.js TOWN_ROADS3) east to the quay on the
+// peninsula's east shore, facing the bay; Light Road south-west from it to the light on the rocky south tip; Raceway
+// Road off the coast road to the raceway up the west side.
 export const EGRET = {
-  key: 'egret', name: 'Egret Point', d: Z, at: [850, 2700], box: [836, 2598, 1094, 2666],
-  road: 2630,
+  key: 'egret', name: 'Egret Point', d: Z, at: [1220, 3230], box: [1098, 3198, 1356, 3266],
+  road: 3230,
   streets: [
-    ['Wharf Street', [[838, 2630], [1070, 2630]]],
-    ['Light Road', [[968, 2630], [968, 2760], [944, 2890], [912, 2990]]],
-    ['Raceway Road', [[796, 2512], [912, 2512]]],
+    ['Wharf Street', [[1100, 3230], [1332, 3230]]],
+    ['Light Road', [[1230, 3230], [1230, 3290], [1120, 3350], [990, 3396]]],
+    ['Raceway Road', [[740, 2606], [830, 2606]]],
   ],
 };
 // the set pieces (tiles)
 export const WEST = {
-  raceway: [882, 2466, 944, 2502],         // the raceway's ground (the oval, the grandstand along its north side)
-  light: [905, 3022],                      // Egret Point Light, on the tip's beach by the water, rocks round it
+  raceway: [800, 2560, 862, 2596],         // the raceway's ground (the oval, the grandstand along its north side)
+  light: [982, 3410],                      // Egret Point Light, on the south tip by the water, rocks round it
   hide: [700, 2560],                       // the bird hide at the boardwalk's west end
   boardwalk: [[968, 2700], [936, 2712], [904, 2694], [872, 2704], [846, 2676], [812, 2664], [786, 2630], [752, 2618], [726, 2588], [700, 2566]],   // (off Light Road, winding west across the marsh)
   pond: [[962, 2846], [932, 2856], [906, 2848], [884, 2858]],                       // (a spur off Light Road out to the pond's platform)
   blinds: [[880, 2760], [790, 2700], [740, 2820]],                                 // the duck blinds, by the creeks
   ramps: [2500, 2600, 2700],              // the dunes' board ramps down to the west beach, at these rows
-  falls: [1110, 690],                      // Silver Thread Falls: the head of Silver Thread Creek (STREAMS)
-  cape: [300, 900],                        // North Cape Light (LANDMARKS): built on the cliff west of here
-  coves: [1290, 1530, 1720],               // the coves down the Redwood Coast Road, at these rows
+  falls: [1745, 1030],                     // Silver Thread Falls: the sketch's big falls into the woods' lake (STREAMS3)
+  cape: [560, 830],                        // North Cape Light (LANDMARKS): built on the north-west headland's cliff west of here
+  coves: [2250, 2400, 2850],               // the coves down the Redwood Coast Road (the marsh's west coast), at these rows
 };
 // the pictures' views (tools/world3-world-map.mjs --towns: docs/world-v3-town-<key>.png)
 export const WEST_VIEWS = [
-  { key: 'egret', name: 'Egret Point: the village, the quay and piers, the raceway', box: [780, 2450, 1110, 2680] },
-  { key: 'egretlight', name: 'Egret Point Light, Light Road and the marsh boardwalk', box: [680, 2540, 1000, 3040] },
-  { key: 'silverfalls', name: 'Silver Thread Falls and its viewing platform', box: [1050, 620, 1170, 760] },
-  { key: 'northcape', name: 'North Cape Light and its tide pools', box: [150, 840, 380, 960] },
+  { key: 'egret', name: 'Egret Point: the village, the quay and piers', box: [1060, 3150, 1400, 3300] },
+  { key: 'egretlight', name: 'Egret Point Light, Light Road and the marsh boardwalk', box: [680, 2540, 1300, 3440] },
+  { key: 'raceway', name: 'The Westport Raceway by the Redwood Coast Road', box: [720, 2520, 900, 2640] },
+  { key: 'silverfalls', name: 'Silver Thread Falls and its viewing platform', box: [1680, 960, 1810, 1100] },
+  { key: 'northcape', name: 'North Cape Light and its tide pools', box: [400, 770, 640, 890] },
 ];
 
 const ROOM = 5;   // (Light Road's and Raceway Road's strips: this many tiles either side)
@@ -170,7 +173,7 @@ export function buildWest(m, addProp) {
   {
     const R = EGRET.road, quay = [];
     for (let y = R - 26; y <= R + 30; y++) {
-      const s = shore(1056, y, 1, 0, 60);
+      const s = shore(1318, y, 1, 0, 60);
       if (!s) continue;
       for (let x = s[0] - 10; x < s[0]; x++) { if (!open(x, y) && tile(x, y) !== T.ROAD) continue; if (tile(x, y) === T.ROAD) continue; m.tiles[y * W + x] = T.DOCK; m.reserve[y * W + x] |= 4 | 16; quay.push([x, y]); out.quay++; }
     }
@@ -178,7 +181,7 @@ export function buildWest(m, addProp) {
     const boats = [];
     let charter = null;
     for (const [k, py] of [R - 20, R - 8, R + 8, R + 20].entries()) {
-      const s = shore(1056, py, 1, 0, 60);
+      const s = shore(1318, py, 1, 0, 60);
       if (!s) continue;
       const [sx] = s;
       let laid = 0;
@@ -210,18 +213,18 @@ export function buildWest(m, addProp) {
       if (poiKind) poi(poiKind, name, x + w / 2, sideN ? y + h + 1 : y - 1, { b: b.id, ...extra });
       return b;
     };
-    named(1036, R - 15, 14, 8, 'market', 'Egret Point Fish Market', true, 'fishmarket');
-    named(1018, R - 13, 12, 7, 'club', 'The Gaff Hook', true, 'club');
-    named(1040, R + 6, 9, 6, 'tackle2', 'Egret Point Bait & Tackle', false, 'tackle');
-    const ch = named(1026, R + 6, 8, 5, 'charter', 'Egret Point Charters', false, 'charter');
+    named(1298, R - 15, 14, 8, 'market', 'Egret Point Fish Market', true, 'fishmarket');
+    named(1280, R - 13, 12, 7, 'club', 'The Gaff Hook', true, 'club');
+    named(1302, R + 6, 9, 6, 'tackle2', 'Egret Point Bait & Tackle', false, 'tackle');
+    const ch = named(1288, R + 6, 8, 5, 'charter', 'Egret Point Charters', false, 'charter');
     if (ch && charter) { const p = m.pois[m.pois.length - 1]; p.boat = { x: Math.round(charter[0] * TILE), y: Math.round(charter[1] * TILE) }; }
     // the fishing shacks: weathered siding, tin roofs, either side of the road; homes as today's shacks
     const walls = ['#8a9aa0', '#a08a70', '#7a8a7a', '#b0a088', '#6e7e88', '#9a7a62'];
     let k = 0;
     // (irregular: widths 6-8, set back 0-2 tiles, gaps of 3-7 - a village's row, not a suburb's)
-    for (const N of [true, false]) for (let x = 866, w = 7; x + 8 <= 1012; x += w + 3 + Math.floor(hash(x, N ? 6 : 7, 85) * 5)) {
+    for (const N of [true, false]) for (let x = 1128, w = 7; x + 8 <= 1274; x += w + 3 + Math.floor(hash(x, N ? 6 : 7, 85) * 5)) {
       w = 6 + Math.floor(hash(x, N ? 1 : 2, 82) * 3);
-      if (!N && x + w >= 960 && x <= 976) continue;   // (Light Road's mouth)
+      if (!N && x + w >= 1222 && x <= 1238) continue;   // (Light Road's mouth)
       const h = 5 + Math.floor(hash(x, N ? 3 : 4, 84) * 2), back = Math.floor(hash(x, N ? 5 : 8, 83) * 3);
       const y = N ? R - 5 - h - back : R + 6 + back;
       const b = addBld(m, x, y, w, h, 'shack', `Fishing Shack`, 'metal', { spec: { floors: 1, style: 'siding', wallColor: walls[k % walls.length], pitch: 'gable', roof: 'metal', roofColor: ['#7a8288', '#8a6a50', '#6a7076'][k % 3], slope: 0.4 + (k % 3) * 0.08 } });
@@ -236,7 +239,7 @@ export function buildWest(m, addProp) {
       if (k % 3 === 0) prop('crates', x - 1.2, N ? y + 2 : y + 4, 10);
       if (k % 4 === 1) prop('drum', x + 8, N ? y + 3 : y + 2, 6);
     }
-    for (let j = 0; j < 4; j++) addProp(m, 'lamp', (880 + j * 44) * TILE, (R - 3.2) * TILE), out.props++;
+    for (let j = 0; j < 4; j++) addProp(m, 'lamp', (1142 + j * 44) * TILE, (R - 3.2) * TILE), out.props++;
     keep(EGRET.box[0], EGRET.box[1], EGRET.box[2], EGRET.box[3]);
     landmark('Egret Point', 'harbor', EGRET.box[0], EGRET.box[1], EGRET.box[2], EGRET.box[3]);
   }
@@ -254,7 +257,7 @@ export function buildWest(m, addProp) {
       // the rocks of the point round its foot and out into the surf (basalt, barnacled at the waterline)
       for (const [dx, dy, w, d, h] of [[-5, 3, 64, 40, 40], [4, 4, 80, 48, 46], [0, 7, 96, 56, 36], [-8, 6, 48, 32, 30], [8, 8, 56, 36, 30]]) { addProp(m, 'outcrop', (lx + dx) * TILE, (ly + dy) * TILE, 0, { w, d, h, style: 'basalt', s: dx + dy }); m.addSolidProp((lx + dx) * TILE, (ly + dy) * TILE, Math.round(d * 0.42)); out.props++; }
       for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI + 0.2, x = lx + Math.cos(a) * 11, y = ly + 4 + Math.sin(a) * 7; if (!wet('boulder', x, y, 12, { s: 18 + k * 2, style: 'basalt', barn: 1 })) prop('boulder', x, y, 12, { s: 18 + k * 2, style: 'basalt', barn: 1 }); }
-      track([[912, 2991], [lx + 1, ly - 3]], 1.8);
+      track([[990, 3396], [lx + 1, ly - 3]], 1.8);   // (from Light Road's end)
       keep(lx - 12, ly - 16, lx + 12, ly + 8);
       landmark('Egret Point Light', 'lighthouse', lx - 8, ly - 8, lx + 9, ly + 8);
     }
@@ -309,7 +312,7 @@ export function buildWest(m, addProp) {
     const hx = hs[0] + 4, hy = hs[1] + 7;
     const hide = addBld(m, hx - 4, hy - 7, 8, 4, 'hut', 'Egret Marsh Bird Hide', 'tar', { spec: { floors: 1, style: 'siding', wallColor: '#6a5a40', pitch: 'gable', roof: 'shingle', roofColor: '#4e4434', slope: 0.3 } });
     if (hide) { out.hide = [hx, hy]; prop('scope', hx + 5, hy - 3, 6); prop('mapboard', hx + 4, hy - 1, 8); }
-    landmark('Egret Marsh', 'marsh', 600, 2420, 1060, 2960);
+    landmark('Egret Marsh', 'marsh', 640, 2200, 1200, 3000);
     // herons and egrets along the boardwalk's creeks, ducks on the water
     for (let k = 0; k < WEST.boardwalk.length - 1; k++) {
       const [ax, ay] = WEST.boardwalk[k], [bx, by] = WEST.boardwalk[k + 1];
