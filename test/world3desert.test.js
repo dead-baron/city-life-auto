@@ -1,6 +1,6 @@
 // World v3 (docs/WORLD-V3.md 8.18): the Red Rock Desert's places besides Lucky Mesa, in the whole-world build - Copper
 // Gulch's and Dusty Hollow's districts (after Lucky Mesa's: no id moves), Copper Gulch's main street (Mine Road pulled
-// straight) and side streets on the one road network, Depot Road up to its station, its planned places (the assay
+// straight) and side streets on the one road network, Depot Road up to the freight yard, its planned places (the assay
 // office, the saloon, the general store, the sheriff); Copper Gulch Mine (the open pit a quarry as today's, the adit
 // with its seams, as the Old Granite Mine's), the freight yard's ore cars by the main line; Dusty Hollow's empty
 // buildings, its hideout and smuggler's drop; Red Rock Dam on the reservoir's shore and the dry wash below; the lookout,
@@ -12,7 +12,7 @@ import { generateCity, DISTRICTS } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
-import { skeletonLines, nearestOnPath, STATIONS } from '../shared/world3-skeleton.js';
+import { skeletonLines, nearestOnPath } from '../shared/world3-skeleton.js';
 import { GULCH, HOLLOW, DESERT, DESERT_SPECIALS, DESERT_IDS } from '../shared/world3-desert.js';
 import { undergroundOf, UG, caveOf } from '../shared/underground.js';
 import { prepare } from '../tools/world3-build.mjs';
@@ -54,9 +54,11 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
   let onRow = 0;
   for (const e of m.edges.filter((q) => q.name === GULCH.main.line && q.lvl === 0)) for (let j = 1; j < e.pts.length; j++) { const a = e.pts[j - 1], b = e.pts[j]; if (Math.abs(a.y - row) < 2 && Math.abs(b.y - row) < 2 && a.x >= GULCH.main.a * TILE && b.x <= GULCH.main.b * TILE + TILE) onRow += Math.abs(b.x - a.x); }
   check(onRow >= 120 * TILE, `the main street: ${(onRow / TILE).toFixed(0)} tiles straight on its row`);
-  const stn = STATIONS.find((s) => s.name === 'Copper Gulch' && s.line === 'main');
-  const near = Math.min(...m.edges.filter((e) => e.name === 'Depot Road').flatMap((e) => e.pts.map((p) => Math.hypot(p.x / TILE - stn.at[0], p.y / TILE - stn.at[1]))));
-  check(near <= 32, `Depot Road ends ${near.toFixed(0)} tiles from the station`);
+  // (v3b: Depot Road goes up to the freight yard north of the town - the main line's nearest station, Red Rock, is out
+  // east on Hollow Road's way: world3-desert.js GULCH)
+  const [fx0, fy0, fx1, fy1] = DESERT.freight;
+  const near = Math.min(...m.edges.filter((e) => e.name === 'Depot Road').flatMap((e) => e.pts.map((p) => Math.hypot(Math.max(fx0 - p.x / TILE, 0, p.x / TILE - fx1), Math.max(fy0 - p.y / TILE, 0, p.y / TILE - fy1)))));
+  check(near <= 12, `Depot Road ends ${near.toFixed(0)} tiles from the freight yard`);
 
   // 3. the town's places
   const pois = m.pois.filter((p) => p && distAt(p.x, p.y) === 63);
@@ -93,7 +95,8 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
   check(hp.every((p) => p.kind === 'gang' || p.kind === 'smuggler'), 'nothing else open in Dusty Hollow');
 
   // 6. the dam, the wash, the lookout, the arch, the motel, the billboards, the camp
-  check(D.built.dam >= 100, `the dam: ${D.built.dam} tiles of wall`);
+  // (v3b: the wall stands across the desert river's channel at DESERT.dam's columns - its width, not WR3's long shore)
+  check(D.built.dam >= 0.7 * (DESERT.dam[1] - DESERT.dam[0]), `the dam: ${D.built.dam} tiles of wall`);
   check(D.built.wash >= 200, `the dry wash: ${D.built.wash} tiles`);
   check(m.props.some((p) => p && p.t === 'lookout' && Math.hypot(p.x / TILE - DESERT.lookout[0], p.y / TILE - DESERT.lookout[1]) < 12), 'the lookout on its mesa');
   check(m.props.some((p) => p && p.t === 'seaarch' && Math.hypot(p.x / TILE - DESERT.arch[0], p.y / TILE - DESERT.arch[1]) < 2) && (D.built.hoodoos || 0) >= 3, 'the arch and the hoodoos');

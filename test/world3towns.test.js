@@ -67,7 +67,11 @@ test('World v3: the first mainland towns - districts, streets on the network, bu
     // (a lot along the main street: the building's side toward it within 10 tiles of its row, inside the town's stretch of it)
     const fronting = blds.filter((b) => b.tx + b.tw > t.main.a && b.tx < t.main.b && ((b.ty + b.th <= t.main.y && b.ty + b.th >= t.main.y - 10) || (b.ty > t.main.y && b.ty <= t.main.y + 10)));
     check(fronting.length >= 5, `${t.name}: ${fronting.length} buildings fronting ${t.main.line}`);
-    check(road < built, `${t.name}: ${road} tiles of road, ${built} of buildings`);
+    // (less asphalt than buildings: the town's own streets - v3b's arterials are wide, and Timber Road crosses the whole
+    // of a small town - so the main street's own rows don't count)
+    let mainRoad = 0;
+    for (let y = t.main.y - 6; y <= t.main.y + 6; y++) for (let x = t.box[0]; x < t.box[2]; x++) { const i = y * W + x; if (m.dist[i] === t.d && m.tiles[i] === T.ROAD) mainRoad++; }
+    check(road - mainRoad < built, `${t.name}: ${road} tiles of road (${mainRoad} the main street's), ${built} of buildings`);
     console.log(t.name, JSON.stringify({ tiles, road, built, buildings: blds.length, fronting: fronting.length, ends: ends.size, edges: edges.length, onRow, offRow }));
     // 4. its basics and its own places
     const pois = m.pois.filter((p) => p && distAt(p.x, p.y) === t.d);

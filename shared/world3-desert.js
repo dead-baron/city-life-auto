@@ -51,7 +51,7 @@ export const DESERT = {
   adit: [4982, 1610],                            // the canyon adit's mouth (MI1): its cliff north of it
   dam: [5222, 5270],                             // Red Rock Dam: across the desert river in its canyon, these columns
   damRows: [2090, 2160],                         // (the rows the reservoir's water is looked for in, above the wall)
-  lookout: [5444, 1694], arch: [5486, 1660],     // the lookout on its mesa (world3-relief.js LOOKOUT_MESA), the arch and the hoodoos
+  lookout: [5402, 1652], arch: [5444, 1618],     // the lookout on its mesa (world3-relief.js LOOKOUT_MESA), the arch and the hoodoos (v3b: moved with the mesa off Route 9, which ran over both)
   motel: [4640, 1100, 4674, 1128],               // the motel's lot, north of the Casino Highway's bend
   camp: [5700, 1554],                            // the desert camp (the skeleton's Mesa camp), off Route 9
   campRoad: 1500,                                // (the row Route 9 passes the camp's column on)
@@ -216,7 +216,23 @@ export function buildDesert(m, addProp) {
   {
     const [x0, y0, x1, y1] = DESERT.freight, mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
     const line = rails.slice().sort((a, b) => nearestOnPath(a.path, mx, my).d - nearestOnPath(b.path, mx, my).d)[0];
-    if (line) {
+    if (!line || nearestOnPath(line.path, mx, my).d > 40) {
+      // (v3b: the main line runs 300 tiles east of the town - the yard is a gravel pad at Depot Road's end, where the ore
+      // is loaded onto the trucks: the pad over the box's open ground, the ore cars in a row along its middle)
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (open(x, y)) { m.tiles[y * W + x] = T.SAND; m.reserve[y * W + x] |= 4 | 128; out.freight++; }
+      let cars = 0, mid = null;
+      for (let k = 0; x0 + 8 + k * 3.2 < x1 - 8 && cars < 10; k++) {
+        const cx = x0 + 8 + k * 3.2, cy = my;
+        if (!GROUND.has(m.tiles[Math.floor(cy) * W + Math.floor(cx)])) continue;
+        addProp(m, 'minecart', cx * TILE, cy * TILE, 12); out.props++; cars++; if (cars === 3) mid = [cx, cy];
+      }
+      out.oreCars = cars;
+      if (mid) {
+        const yard = (t, dx, dy, r, ex) => { const x = mid[0] + dy, y = mid[1] - dx, tl = m.tiles[Math.floor(y) * W + Math.floor(x)]; if (GROUND.has(tl)) { addProp(m, t, x * TILE, y * TILE, r, ex); out.props++; } };
+        yard('silo', 6, 2, 20, { h: 70 }); yard('gravel', 8, 6, 0); yard('gravel', 9, 9, 0); yard('crates', 6, -4, 12);
+        m.pois.push({ id: m.pois.length, kind: 'delivery', label: 'Copper Gulch Freight Yard', x: (mid[0] + 2) * TILE, y: (mid[1] + 4) * TILE, r: 48, fixed: true, ore: true });
+      }
+    } else if (line) {
       // (the town's side of the line: the side its middle is on, by the line's run through the box)
       const P = line.path.pts.filter(([x, y]) => x >= x0 - 20 && x <= x1 + 20 && y >= y0 - 20 && y <= y1 + 20);
       const [ax0, ay0] = P[0] || [x0, y1], [bx0, by0] = P[P.length - 1] || [x1, y0];
@@ -248,8 +264,8 @@ export function buildDesert(m, addProp) {
       }
     }
     // the town's water tower, on a free spot by the main street's east end
-    for (let k = 0; k < 40 && !out.waterTower; k++) {
-      const x = 4866 - (k % 10) * 3, y = 1612 - Math.floor(k / 10) * 3;
+    for (let k = 0; k < 600 && !out.waterTower; k++) {   // (v3b: every column of the town's east end - its gaps are narrow)
+      const x = 4866 - (k % 60), y = 1612 - Math.floor(k / 60) * 3;
       let free = true;
       for (let dy = -2; dy <= 2 && free; dy++) for (let dx = -2; dx <= 2; dx++) { const i = (y + dy) * W + x + dx; const t = m.tiles[i]; if (m.bld[i] >= 0 || !(t === T.GRASS || t === T.DIRT || t === T.LOT || t === T.PLAZA)) { free = false; break; } }
       if (!free) continue;
@@ -300,6 +316,9 @@ export function buildDesert(m, addProp) {
       // the wall: 4 tiles deep under the shore's lowest water, in straight 24-tile pieces (art v2 draws a building whole)
       const yd = Math.max(...shore.map((s) => s[1])) + 1, x0 = shore[0][0], x1 = shore[shore.length - 1][0] + 1;
       for (let y = yd - 6; y < yd; y++) for (let x = x0; x < x1; x++) { const i = y * W + x; if (m.land[i] && GROUND.has(m.tiles[i])) { m.tiles[i] = T.WATER; m.river[i] = 1; } }   // (the reservoir up to the wall)
+      // (v3b: the reservoir is the desert river's channel running on through the canyon - the wall stands across it, its
+      // rows made ground first, so the river below is the spillway's)
+      for (let y = yd; y < yd + 4; y++) for (let x = x0; x < x1; x++) { const i = y * W + x; if (inF(x, y) && m.bld[i] < 0 && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP) && m.river[i]) { m.land[i] = 1; m.river[i] = 0; m.tiles[i] = T.DIRT; } }
       for (let x = x0; x < x1; x += 24) {
         const w = Math.min(24, x1 - x);
         const b = addBld(m, x, yd, w, 4, 'industrial', 'Red Rock Dam', 'gravel', { spec: { floors: 3, style: 'stone', wallColor: '#b8b0a2', parapet: 10, roofMat: 'membrane', lip: 6 }, lights: [[w * TILE * 0.25, -2, 200, 120, [1, 0.9, 0.7], 1, 'lamp'], [w * TILE * 0.75, -2, 200, 120, [1, 0.9, 0.7], 1, 'lamp']] });

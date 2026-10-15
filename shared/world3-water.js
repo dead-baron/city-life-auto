@@ -31,8 +31,10 @@ export const PRISON = {
 // and the lock (on the river between these two of its points - a downstream, b upstream - at this row; the town's
 // bank north-east of it), the farm docks on its south-west bank (a point in the river and the way to the bank)
 export const REACH = {
-  lock: { a: [3736, 1300], b: [3646, 1230], y: 1265 },
-  docks: [['Hollins Farm Dock', [3755, 1308], -1], ['Brightwater Farm Dock', [3700, 1272], -1], ['Mill Farm Dock', [3620, 1205], -1]],
+  // (v3b: the lock on the outlet's upper stretch - at 1265 Lake Road's bridge crossed its channel and Willow Road's ran
+  // along its quay - the Mill Farm Dock up by the lake's outlet beyond it)
+  lock: { a: [3646, 1230], b: [3592, 1178], y: 1205 },
+  docks: [['Hollins Farm Dock', [3755, 1308], -1], ['Brightwater Farm Dock', [3700, 1272], -1], ['Mill Farm Dock', [3598, 1184], -1]],
 };
 // Kestrel Lake (tiles; v3b: the farm valley's lake, world3-layout.js LAKES3[0], with the island the owner's concept
 // draws in it; the lookout on the hill over its north-east shore, the campground on its west shore by Lakeshore Road,
@@ -41,7 +43,8 @@ export const KESTREL = {
   island: { at: [3390, 1050], rx: 28, ry: 19 },
   lookout: [3430, 860], camp: [3200, 930, 3236, 968], boathouse: [3350, 1192], rentName: 'Kestrel Lake Boat Hire',
   belt: [3100, 700, 3660, 1230],   // (the lake's green belt: the box it's looked for in; its outlet, the Long Reach, below it)
-  fishing: [['East Shore Fishing Dock', [3626, 1080], [-1, 0]], ['North Shore Fishing Dock', [3450, 950], [0, 1]], ['Reed Bay Fishing Dock', [3250, 1192], [0, -1]]],
+  // (v3b: the east shore's dock north of where Lakeshore Drive runs along the shore)
+  fishing: [['East Shore Fishing Dock', [3600, 1046], [-1, 0]], ['North Shore Fishing Dock', [3450, 950], [0, 1]], ['Reed Bay Fishing Dock', [3250, 1192], [0, -1]]],
   roads: { lookout: [3722, 860], lake: 1250, camp: [3170, 950] },   // (where the tracks out meet the roads: Willow Road, Lake Road's row, Lakeshore Road)
 };
 // the pictures' views (tools/world3-world-map.mjs --towns: docs/world-v3-town-<key>.png)

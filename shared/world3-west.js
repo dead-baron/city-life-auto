@@ -29,12 +29,12 @@ export const EGRET = {
   streets: [
     ['Wharf Street', [[1100, 3230], [1332, 3230]]],
     ['Light Road', [[1230, 3230], [1230, 3290], [1120, 3350], [990, 3396]]],
-    ['Raceway Road', [[740, 2606], [830, 2606]]],
+    ['Raceway Road', [[740, 2606], [896, 2606]]],   // (v3b: on across the Egret Coast Road to the raceway's gate)
   ],
 };
 // the set pieces (tiles)
 export const WEST = {
-  raceway: [800, 2560, 862, 2596],         // the raceway's ground (the oval, the grandstand along its north side)
+  raceway: [858, 2560, 920, 2596],         // the raceway's ground (the oval, the grandstand along its north side; v3b: east of the Egret Coast Road, which crossed it at 800-862)
   light: [982, 3410],                      // Egret Point Light, on the south tip by the water, rocks round it
   hide: [700, 2560],                       // the bird hide at the boardwalk's west end
   boardwalk: [[968, 2700], [936, 2712], [904, 2694], [872, 2704], [846, 2676], [812, 2664], [786, 2630], [752, 2618], [726, 2588], [700, 2566]],   // (off Light Road, winding west across the marsh)
@@ -43,13 +43,13 @@ export const WEST = {
   ramps: [2500, 2600, 2700],              // the dunes' board ramps down to the west beach, at these rows
   falls: [1745, 1030],                     // Silver Thread Falls: the sketch's big falls into the woods' lake (STREAMS3)
   cape: [560, 830],                        // North Cape Light (LANDMARKS): built on the north-west headland's cliff west of here
-  coves: [2250, 2400, 2850],               // the coves down the Redwood Coast Road (the marsh's west coast), at these rows
+  coves: [2480, 2560, 2660],               // the coves down the Redwood Coast Road (the marsh's west coast), at these rows (v3b: on its 2464-2712 stretch, the coast 95-120 tiles off)
 };
 // the pictures' views (tools/world3-world-map.mjs --towns: docs/world-v3-town-<key>.png)
 export const WEST_VIEWS = [
   { key: 'egret', name: 'Egret Point: the village, the quay and piers', box: [1060, 3150, 1400, 3300] },
   { key: 'egretlight', name: 'Egret Point Light, Light Road and the marsh boardwalk', box: [680, 2540, 1300, 3440] },
-  { key: 'raceway', name: 'The Westport Raceway by the Redwood Coast Road', box: [720, 2520, 900, 2640] },
+  { key: 'raceway', name: 'The Westport Raceway by the Redwood Coast Road', box: [720, 2520, 960, 2640] },
   { key: 'silverfalls', name: 'Silver Thread Falls and its viewing platform', box: [1680, 960, 1810, 1100] },
   { key: 'northcape', name: 'North Cape Light and its tide pools', box: [400, 770, 640, 890] },
 ];
@@ -347,6 +347,9 @@ export function buildWest(m, addProp) {
     const [fx, fy] = WEST.falls;
     // the stream's head: the northmost water of the creek near the point
     let head = null;
+    // (v3b: the falls stand on the woods' river above its lake - the point itself is the river's: the head is there)
+    const wide = inF(fx, fy) && m.river[fy * W + fx] && m.tiles[fy * W + fx] === T.WATER;
+    if (wide) head = [fx, fy];
     for (let y = fy - 20; y < fy + 30 && !head; y++) for (let x = fx - 20; x < fx + 20; x++) if (inF(x, y) && m.river[y * W + x] && m.tiles[y * W + x] === T.WATER) { head = [x, y]; break; }
     if (head) {
       const [cx] = head, cy = head[1];
@@ -359,8 +362,17 @@ export function buildWest(m, addProp) {
         if (m.tiles[i] === T.ROAD || m.tiles[i] === T.BRIDGE || m.tiles[i] === T.SIDEWALK) continue;
         m.land[i] = 0; m.river[i] = 1; m.tiles[i] = T.WATER; m.reserve[i] |= 4;
       }
-      const top = cy - 5, x0 = cx - 10, x1 = cx + 20;
+      const top = cy - 5;
+      let x0 = cx - 10, x1 = cx + 20;
       let cliff = 0;
+      if (wide) {
+        // (the band across the whole river: its water on these rows the basalt lip, ground of the woods - 47 - the
+        // river falling over it into the pool)
+        const rw = (x, y) => inF(x, y) && m.river[y * W + x] && m.tiles[y * W + x] === T.WATER;
+        while (rw(x0 - 1, cy - 3)) x0--;
+        while (rw(x1 + 1, cy - 3)) x1++;
+        for (let y = top; y < cy - 2; y++) for (let x = x0; x <= x1; x++) if (rw(x, y)) { const i = y * W + x; m.land[i] = 1; m.river[i] = 0; m.dist[i] = 47; m.tiles[i] = T.WALL; m.reserve[i] |= 4; cliff++; }
+      }
       for (let y = top; y < cy - 2; y++) for (let x = x0; x <= x1; x++) { if (!open(x, y)) continue; m.tiles[y * W + x] = T.WALL; m.reserve[y * W + x] |= 4; cliff++; }
       for (let x = x0; x < x1; x += 6) addProp(m, 'cliffwall', (x + 3) * TILE, (cy - 2.4) * TILE, 0, { len: 6 * TILE, h: 120 + (x % 3) * 10, d: 64, s: x }), out.props++;
       // the upper creek: a narrow channel north over the cliff top, from the peaks

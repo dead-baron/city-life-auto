@@ -54,7 +54,7 @@ export const MESA = {
     ['Mesa Flats Drive', [[5256, 690], [5454, 690]]],                      // the flats' street
     ['Trailer Lane', [[5300, 690], [5300, 728], [5410, 728], [5410, 690]]],   // the trailer park's loop
     ['Chapel Lane', [[5444, 500], [5444, 466]]],                           // the lane out into the desert (a turnaround)
-    ['Station Road', [[5612, 620], [5612, 736]]],                          // Route 9 down to the main line's station
+    ['Station Road', [[5612, 620], [5612, 884], [5532, 940]]],             // Route 9 down to the main line's station (v3b: 190 tiles south of the town, past the line's bend - STATIONS 'Lucky Mesa')
   ],
   // the resorts (a lot [x0, y0, x1, y1), the side it fronts the Strip on, its look): north of the Strip they front south
   resorts: [
@@ -69,10 +69,11 @@ export const MESA = {
   ],
   // Old Downtown's covered street of lights: a pedestrian street (plaza) under its canopy, the old casinos either side
   // fronting it (x from, x to; north side's fronts south, south side's north)
-  canopy: [5263, 572, 5324, 579],
+  // (v3b: the skeleton's Mesa Flats Road comes down to the Strip at x 5317 - the street and its old casinos end short of it)
+  canopy: [5263, 572, 5309, 579],
   oldCasinos: [
-    ['The Gilded Spur', 5264, 5282, 'N'], ['The Dusty Ace', 5284, 5302, 'N'], ['The Prospector', 5304, 5323, 'N'],
-    ['Wagon Wheel Casino', 5264, 5282, 'S'], ['Silver Mule Casino', 5284, 5302, 'S'], ['Rattlesnake Ruby', 5304, 5323, 'S'],
+    ['The Gilded Spur', 5264, 5278, 'N'], ['The Dusty Ace', 5279, 5293, 'N'], ['The Prospector', 5294, 5309, 'N'],
+    ['Wagon Wheel Casino', 5264, 5278, 'S'], ['Silver Mule Casino', 5279, 5293, 'S'], ['Rattlesnake Ruby', 5294, 5309, 'S'],
   ],
 };
 

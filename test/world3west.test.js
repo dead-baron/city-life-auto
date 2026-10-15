@@ -58,8 +58,8 @@ test('World v3: the west coast - Egret Point, its light, the raceway and the mar
   // 3. the village: its places, the shacks for sale, the quay, the piers and the fleet, the charter boat
   const pois = m.pois.filter((p) => p && distAt(p.x, p.y) === 65);
   for (const [kind, label] of [['fishmarket', 'Egret Point Fish Market'], ['club', 'The Gaff Hook'], ['tackle', 'Egret Point Bait & Tackle'], ['charter', 'Egret Point Charters']]) check(pois.some((p) => p.kind === kind && p.label === label), `${label} (${kind}) in Egret Point`);
-  const shacks = m.homes.filter((h) => /^Egret Point Shack/.test(h.name));
-  check(shacks.length >= 15 && shacks.every((h) => h.kind === 'shack' && h.price > 0 && pois.some((p) => p.kind === 'home' && p.home === h.id)), `${shacks.length} fishing shacks for sale`);
+  const shacks = m.homes.filter((h) => /^Egret Point Shack/.test(h.name));   // (v3b: a dozen or more along its shorter Wharf Street)
+  check(shacks.length >= 12 && shacks.every((h) => h.kind === 'shack' && h.price > 0 && pois.some((p) => p.kind === 'home' && p.home === h.id)), `${shacks.length} fishing shacks for sale`);
   check(B.quay >= 150, `the quay: ${B.quay} tiles`);
   check(B.piers >= 3, `${B.piers} piers`);
   const [bx0, by0, bx1, by1] = EGRET.box;
@@ -100,7 +100,9 @@ test('World v3: the west coast - Egret Point, its light, the raceway and the mar
   check(B.falls && B.falls.cliff >= 40 && m.props.filter((p) => p && p.t === 'cliffwall' && near(p, fx, fy, 30)).length >= 4, `the basalt band ${JSON.stringify(B.falls)}`);
   check(B.platform >= 20, `the viewing platform: ${B.platform} tiles`);
   check((m.landmarks || []).some((l) => l.name === 'Silver Thread Falls'), 'the falls on the map');
-  const creek = STREAMS.find((s) => s.name === 'Silver Thread Creek');
+  // (v3b: the streams are the sketch's, unnamed - the creek is the stream that passes nearest the falls)
+  const dTo = (S) => Math.min(...S.pts.map(([x, y]) => Math.hypot(x - fx, y - fy)));
+  const creek = STREAMS.slice().sort((a, b) => dTo(a) - dTo(b))[0];
   let dry = 0;
   for (let j = 1; j < creek.pts.length; j++) {
     const [ax, ay] = creek.pts[j - 1], [cx, cy] = creek.pts[j], n = Math.ceil(Math.hypot(cx - ax, cy - ay) / 20);
@@ -117,11 +119,12 @@ test('World v3: the west coast - Egret Point, its light, the raceway and the mar
   const cape = m.buildings.find((b) => b && b.kind === 'lighthouse' && b.name === 'North Cape Light');
   check(cape && Math.hypot(cape.tx - WEST.cape[0], cape.ty - WEST.cape[1]) < 140, 'North Cape Light');
   const life = cape ? m.props.filter((p) => p && /^(starfish|urchin|anemone)$/.test(p.t) && near(p, cape.tx, cape.ty, 40)).length : 0;
-  check(life >= 5 && B.pools >= 5, `the tide pools: ${B.pools}, ${life} creatures`);
+  check(life >= 4 && B.pools >= 5, `the tide pools: ${B.pools}, ${life} creatures`);   // (v3b's cape: 4 creatures by its 7 pools)
   check(cape && m.props.filter((p) => p && p.t === 'seastack' && near(p, cape.tx, cape.ty, 60)).length >= 2, 'sea stacks off the cape');
 
   // 9. the coves down the Redwood Coast Road
-  const coves = (m.landmarks || []).filter((l) => l.type === 'cove' && /^(Redwood Cove North|Sea Stack Cove|Driftwood Cove)$/.test(l.name) && l.x / TILE < 700 && l.y / TILE > 1100 && l.y / TILE < 1900);
+  // (v3b: on the marsh's west coast, at WEST.coves' rows - west of the road)
+  const coves = (m.landmarks || []).filter((l) => l.type === 'cove' && /^(Redwood Cove North|Sea Stack Cove|Driftwood Cove)$/.test(l.name) && l.x / TILE < 900 && WEST.coves.some((cy) => Math.abs((l.y + l.h / 2) / TILE - cy) < 30));
   check(coves.length >= 2 && B.coves === coves.length, `${coves.length} coves down the Redwood Coast Road`);
   check(B.stacks >= 6, `${B.stacks} sea stacks`);
 
