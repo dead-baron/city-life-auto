@@ -7,8 +7,10 @@ import assert from 'node:assert/strict';
 import { World } from '../server/world.js';
 import { buildWorld3 } from '../server/world3.js';
 import { T, TILE, TICK_HZ } from '../shared/constants.js';
-import { railAt } from '../shared/mapcore.js';
-import { SERVICES, MAIN_JUNCTIONS, MAIN_LINE, RADIUS, linePath, wetRanges } from '../shared/world3-skeleton.js';
+import { railAt, crossingGate, CROSSING_ARM } from '../shared/mapcore.js';
+import { SERVICES, MAIN_JUNCTIONS, MAIN_LINE, RADIUS, STATIONS, linePath, wetRanges } from '../shared/world3-skeleton.js';
+import { segDist } from '../shared/geom.js';
+import { deadWays } from '../server/systems/roadends.js';
 import { TRACK_OFF } from '../shared/world3-rail.js';
 import * as trains from '../server/systems/trains.js';
 import * as players from '../server/systems/players.js';
@@ -94,6 +96,46 @@ function overlap(a, b, la, wa, lb, wb) {
   }
   return true;
 }
+
+// (2026-10-15, the owner's playtest: "Train stations should have streets and parking lots connected to them ... so that
+// cars can make a turn out of the parking lot and back out"; "train tracks should cross streets almost perpendicular so
+// the crossing guard cross the street" - shared/world3-stations.js, shared/mapcore.js crossingGate)
+test('every main-line station has a street to its front and a car park on a loop; every level crossing meets its road square on, its gates across the road', () => {
+  const net = M.net, dead = deadWays(net);
+  const plans = M.world3.stations;
+  assert.equal(plans.length, STATIONS.filter((q) => q.line === 'main').length, 'a plan per station');
+  for (const h of M.railHubs) {
+    const plan = plans.find((q) => `${q.name} Station` === h.name);
+    assert.ok(plan && plan.how !== 'none', `${h.name}: planned`);
+    // a street (not a highway) within 12 tiles of its front door
+    const fx = h.x + Math.cos(h.a) * 80, fy = h.y + Math.sin(h.a) * 80;
+    let d = Infinity;
+    for (const e of net.edges) if (e.lvl === 0 && e.kind !== 'hwy' && e.kind !== 'ramp') for (let k = 0; k + 1 < e.pts.length; k++) d = Math.min(d, segDist({ x: fx, y: fy }, e.pts[k], e.pts[k + 1]));
+    assert.ok(d < 12 * TILE, `${h.name}: a street ${Math.round(d / TILE)} tiles from its front`);
+    // its own roads: none leads only to a road's end (a loop through the car park, or past it)
+    const mine = net.edges.filter((e) => e.name === `${h.name} Road`);
+    assert.ok(mine.length, `${h.name}: its station road`);
+    for (const e of mine) assert.ok(!dead.has(e.id * 2) && !dead.has(e.id * 2 + 1), `${h.name}: its road ${e.id} is no dead end`);
+    // the car park: paved, with spaces
+    let lot = 0;
+    for (let ty = Math.floor(h.y / TILE) - 40; ty <= Math.floor(h.y / TILE) + 40; ty++) for (let tx = Math.floor(h.x / TILE) - 40; tx <= Math.floor(h.x / TILE) + 40; tx++) if (M.inside(tx, ty) && M.tiles[M.idx(tx, ty)] === T.LOT) lot++;
+    assert.ok(lot >= 60 && plan.spaces >= 6, `${h.name}: a car park (${lot} tiles, ${plan.spaces} spaces)`);
+  }
+  // the level crossings: the road and the tracks at 75 degrees or more; the arms across the road, either side
+  assert.ok(M.railXings.length > 10, `${M.railXings.length} level crossings`);
+  for (const c of M.railXings) {
+    assert.ok(c.ra !== undefined && c.rw > 0, `crossing at ${Math.round(c.x / TILE)},${Math.round(c.y / TILE)}: its road`);
+    const ang = Math.acos(Math.min(1, Math.abs(Math.cos(c.ra - c.a)))) * 180 / Math.PI;
+    assert.ok(ang >= 75, `crossing at ${Math.round(c.x / TILE)},${Math.round(c.y / TILE)}: ${ang.toFixed(1)} degrees`);
+    for (const sg of [1, -1]) {
+      const g = crossingGate(c, sg);
+      assert.ok(Math.abs(g.dx * Math.cos(c.ra) + g.dy * Math.sin(c.ra)) < 1e-9, 'the arm across the road');
+      const off = (g.x - c.x) * -Math.sin(c.a) + (g.y - c.y) * Math.cos(c.a);
+      assert.ok(Math.abs(off - sg * (c.arm || CROSSING_ARM)) < 1, 'its gate the arm\'s distance off the tracks, on its side');
+      assert.ok(Math.abs(Math.hypot(g.px - g.x, g.py - g.y) - (c.rw + 6)) < 1e-6, 'pivoting at the road\'s edge');
+    }
+  }
+});
 
 test('the trains on the v3 main line, five minutes: every service runs, stops at its stations, and no train runs into another', () => {
   const w = new World(M, { npcBudget: 0, throwErrors: true });

@@ -67,7 +67,7 @@ const BLAZES = ['#2a62c8', '#c8342a', '#e8c030', '#f2f0e8'];
 import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
 import { foodLayout } from '../../../shared/foodrooms.js';   // (IN8: the diner, the fast-food place, the restaurant)
-import { DISTRICTS, terrainAt, railAt, routeBoardAt, SEA_ISLES, wildBiome } from '../../../shared/mapcore.js';
+import { DISTRICTS, terrainAt, railAt, routeBoardAt, SEA_ISLES, wildBiome, crossingGate } from '../../../shared/mapcore.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
 import { DECK_LIFT, BARRIER_PIECE } from '../../../shared/levels.js';
 
@@ -2838,7 +2838,9 @@ function crossingSignals(I, list) {
   for (const x of list) {
     const ta = x.a ?? 0, ux = Math.cos(ta), uy = Math.sin(ta), nx = -uy, ny = ux, off = (x.hw || 80) + 24, out = x.arm ? x.arm - 20 : 46;
     for (const sg of [-1, 1]) {
-      const px = x.x + ux * sg * off + nx * sg * out, py = x.y + uy * sg * off + ny * sg * 46, hd = qa(ta + (sg < 0 ? PI : 0), 16);
+      let px = x.x + ux * sg * off + nx * sg * out, py = x.y + uy * sg * off + ny * sg * 46, hd = qa(ta + (sg < 0 ? PI : 0), 16);
+      // (World v3's crossings know their road: the signal beside its gate's pivot, across the road - mapcore.js crossingGate)
+      if (x.ra !== undefined) { const g = crossingGate(x, sg); px = g.px - g.dx * 18 - g.ux * sg * 20; py = g.py - g.dy * 18 - g.uy * sg * 20; hd = qa(Math.atan2(-g.dy, -g.dx), 16); }
       put(I, vitem(`xs:${hd.toFixed(2)}`, 'crossingSignal', [0, 0], px, py, hd, [12, 4], { xing: { x: x.x, y: x.y, a: ta, hw: x.hw, side: sg } }));
       lightAt(I, px, py, 40, 60, [1, 0.2, 0.15], 0.6, 'sign', 1);
     }

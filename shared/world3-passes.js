@@ -33,8 +33,33 @@ function rails(m, railLines) {
     if (xi < 0) { xi = m.railXings.length; m.railXings.push({ x: c.x, y: c.y, x0: c.x, y0: c.y, a: c.a, hw: c.hw, s: c.s, uses: [] }); }
     m.railXings[xi].uses.push([ri, c.s]); c.xi = xi;
   }));
+  roadOfCrossings(m);   // (2026-10-15: the road each crosses - its gates go across it)
   buildRailHubs(m);   // (H33: one station per name - its building, its one map point, the services calling)
   railSwitches(m);    // (H33: the turnouts and the diamonds where the loops' tracks part and cross)
+}
+// (2026-10-15, the owner: "the crossing guards come down almost parallel to the street instead of across it") Each level
+// crossing's road: `ra` its heading where it crosses (the way that leads from the gates on the tracks' left, -r, to
+// those on their right, +r: r = (-sin a, cos a)) and `rw` its half width (px). The gates stand across the road, one each
+// side of the tracks `arm` px off their middle (mapcore.js crossingGates: the server's and both renderers' geometry).
+function roadOfCrossings(m) {
+  for (const c of m.railXings) {
+    const rx = -Math.sin(c.a), ry = Math.cos(c.a);
+    let bd = Infinity, best = null;
+    for (const e of m.edges) {
+      if (e.lvl !== 0 || e.kind === 'hwy' || e.kind === 'ramp') continue;
+      const P = e.pts;
+      if (Math.abs(P[0].x - c.x) > e.len + 200 && Math.abs(P[P.length - 1].x - c.x) > e.len + 200) continue;
+      for (let k = 0; k + 1 < P.length; k++) {
+        const a = P[k], b = P[k + 1], dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+        if (!l2) continue;
+        const t = Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.y - a.y) * dy) / l2)), d = Math.hypot(a.x + dx * t - c.x, a.y + dy * t - c.y);
+        if (d < bd) { bd = d; const l = Math.sqrt(l2); best = { e, ux: dx / l, uy: dy / l }; }
+      }
+    }
+    if (!best || bd > 160) continue;
+    const sg = best.ux * rx + best.uy * ry < 0 ? -1 : 1;
+    c.ra = Math.atan2(best.uy * sg, best.ux * sg); c.rw = best.e.hw;
+  }
 }
 // (H33) A station's place on one of World v3's loops: worked out once per station for every loop calling there
 // (hubPlan), so loops on one track stop at one platform and the two tracks' platforms stand side by side.
@@ -147,6 +172,10 @@ function buildRailHubs(m) {
       const d = Math.hypot(x - mx, y - my) + off + (t === T.ROAD || t === T.BUILDING || t === T.WALL || t === T.WATER || t === T.DEEP || t === T.BRIDGE || t === T.DOCK ? 5000 : 0);
       if (d < pd) { pd = d; pick = { x, y, a: Math.atan2(ny, nx) }; }
     }
+    // (2026-10-15) the station's planned spot - facing its street and car park (shared/world3-stations.js) - when it is by
+    // the platforms
+    const plan = m.world3 && m.world3.stations && m.world3.stations.find((q) => `${q.name} Station` === h.name && q.house);
+    if (plan && Math.hypot(plan.house.x - mx, plan.house.y - my) < 700) pick = { x: plan.house.x, y: plan.house.y, a: plan.house.a };
     h.x = Math.round(pick.x); h.y = Math.round(pick.y); h.a = pick.a;
     // its forecourt (turned with the house where the track runs at an angle: stationForecourt)
     for (const [tx, ty] of stationForecourt(h, 3, 2)) {

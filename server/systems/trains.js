@@ -12,7 +12,7 @@
 import { inAnyView } from '../view.js';
 import { K, T } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
-import { railAt, routeBoardAt, CONSIST, CAR_GAP, TRAIN_CARS, COACH_SEATS, COACH_STAND, LOCO_SEATS, LOCO_STAND, CAB_OX, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming } from '../../shared/map.js';
+import { railAt, routeBoardAt, CONSIST, CAR_GAP, TRAIN_CARS, COACH_SEATS, COACH_STAND, LOCO_SEATS, LOCO_STAND, CAB_OX, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming, crossingGate } from '../../shared/map.js';
 import { obbVsObb, circleVsObb, localToWorld, clamp } from '../../shared/math.js';
 import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAIN_HEADWAY_S, TRAIN_LOOP_HEADWAY_S, TRAIN_LOOP_MAX, TRAIN_HOLD_MAX_S, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, GUARD_DRAW_S, BAIL_SPEED } from '../../shared/rules.js';
 import { STAR_HEAT } from '../../shared/constants.js';
@@ -1230,18 +1230,16 @@ function updateCrossings(world) {
     if (down && !st.down) st.closure++;
     st.down = down; st.eta = eta;
     if (down) {
-      const rx = -Math.sin(c.a), ry = Math.cos(c.a), tx = Math.cos(c.a), ty = Math.sin(c.a);
-      for (const v of world.query(c.x, c.y, c.hw + 140, K.VEH)) {
+      // (each gate across the road, one each side of the tracks: mapcore.js crossingGate)
+      for (const v of world.query(c.x, c.y, Math.max(c.hw, c.rw || 0) + 200, K.VEH)) {
         if ((v.lz || 0) > 0.3 || (v.alt || 0) > FLY.HIGH) continue;
         if (Math.abs(v.vx) + Math.abs(v.vy) < 40 || v.def.kind === 'boat') continue;
-        const along = (v.x - c.x) * rx + (v.y - c.y) * ry, across = (v.x - c.x) * tx + (v.y - c.y) * ty;
-        if (Math.abs(across) > c.hw + 6) continue;
         for (const side of [0, 1]) {
-          const sg = side ? -1 : 1;
-          if (st.broken[side] || Math.abs(along - sg * (c.arm || CROSSING_ARM)) > v.def.L / 2 + 4) continue;
+          const sg = side ? -1 : 1, g = crossingGate(c, sg);
+          const along = (v.x - g.x) * g.ux + (v.y - g.y) * g.uy, across = (v.x - g.x) * g.dx + (v.y - g.y) * g.dy;
+          if (st.broken[side] || Math.abs(across) > g.hw + 6 || Math.abs(along) > v.def.L / 2 + 4) continue;
           st.broken[side] = now; changed = true;
-          const bx = c.x + rx * sg * (c.arm || CROSSING_ARM), by = c.y + ry * sg * (c.arm || CROSSING_ARM);
-          world.emit(bx, by, { e: 'gatebreak', x: bx, y: by, a: Math.atan2(v.vy, v.vx) });
+          world.emit(g.x, g.y, { e: 'gatebreak', x: g.x, y: g.y, a: Math.atan2(v.vy, v.vx) });
         }
       }
     } else if ((st.broken[0] && now - st.broken[0] > 40) || (st.broken[1] && now - st.broken[1] > 40)) {
