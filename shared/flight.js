@@ -282,7 +282,11 @@ export function airfields(m) {
     strips.push({ name: A.name, x: r.x, y: r.y, w: r.w, h: r.h, a: along ? -Math.PI / 2 : 0 });
     if (A.taxi) strips.push({ name: `${A.name} taxiway`, x: A.taxi.x, y: A.taxi.y, w: A.taxi.w, h: A.taxi.h, a: along ? -Math.PI / 2 : 0, taxi: true });
   }
-  for (const s of m.natureSites || []) if (s.kind === 'airstrip') strips.push({ name: s.name, x: s.x - 6 * TILE, y: s.y, w: 12 * TILE, h: 40 * TILE, a: -Math.PI / 2, approx: true });
+  for (const s of m.natureSites || []) {
+    if (s.kind !== 'airstrip') continue;
+    if (s.strip) strips.push({ name: s.name, ...s.strip, a: s.strip.w >= s.strip.h ? 0 : -Math.PI / 2, duster: !!s.duster });   // (World v3b's strips: their own rectangle and heading - world3-airstrips.js)
+    else strips.push({ name: s.name, x: s.x - 6 * TILE, y: s.y, w: 12 * TILE, h: 40 * TILE, a: -Math.PI / 2, approx: true });
+  }
   for (const A of m.airports || []) {
     // the planes' stands on the apron (beside the parked prop planes, the airport's own)
     for (const pl of A.planes || []) { const sp = findPadSpot(m, pl.x, pl.y + 150, 70, 400, strips); if (sp) aprons.push({ x: sp.x, y: sp.y, a: -Math.PI / 2, name: A.name }); }

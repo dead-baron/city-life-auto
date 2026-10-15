@@ -359,7 +359,7 @@ function buildCity(seed, opts = null, frame = null) {
   buildScenePaintings(m); unpin();
   buildGullIsles(m, rand);
   buildNatureSites(m, { addProp, terrainAt: (cls, cw, tx, ty) => wildBiome(m.dist[ty * m.w + tx], clsAt(cls, cw, tx, ty)), distStyle: DISTRICTS.map((d) => (d ? d.style : '')), place: PL ? { x: (x, y) => (y !== undefined && pin(x, y), Math.round(PX(x))), y: (y) => Math.round(PY(y)), s: PL.s, lx: LX, ly: LY, d: WD?.dist } : null }); unpin();
-  if (OPTS?.dress) OPTS.dress(m, { addProp, farmstead: PREFABS.farmstead, farmhouse: (x, y) => placePrefab(m, { d: m.dist[y * m.w + x], x, y, w: PREFABS.farmstead.tw, h: PREFABS.farmstead.th, face: 'S' }, 'farmstead', x, null, mulberry32(seed ^ (x * 977 + y))) });   // (World v3: the mainland's biomes - shared/world3-biomes.js)
+  if (OPTS?.dress) OPTS.dress(m, { addProp, simpleBuilding, removeProps, farmstead: PREFABS.farmstead, farmhouse: (x, y) => placePrefab(m, { d: m.dist[y * m.w + x], x, y, w: PREFABS.farmstead.tw, h: PREFABS.farmstead.th, face: 'S' }, 'farmstead', x, null, mulberry32(seed ^ (x * 977 + y))) });   // (World v3: the mainland's biomes - shared/world3-biomes.js)
   buildWilds(m, rand);
   buildTownGreen(m);
   buildStreetProps(m);
