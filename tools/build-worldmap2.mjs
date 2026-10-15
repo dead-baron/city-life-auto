@@ -12,6 +12,10 @@
 // The client (client/worldmap.js) uses it only when the signature is the running world's - rebake after any change to
 // the world (a WORLD_VERSION bump):  node tools/build-worldmap2.mjs [threads]   (about ten minutes on two cores)
 //   --area cx0,cy0,cx1,cy1 --out x.png   bake only those art chunks into a PNG (for trying the look)
+//   --world v3   World v3's world (server/world3.js buildWorld3 - here and in each bake thread, as the server's art thread
+//                builds it), its whole frame; the map at 1/32 (--scale) with the overview at 1/64 (heavy: about 2 GB a
+//                thread - run it under the heavy lock, with 2 threads at most on a 7 GB machine)
+//   --scale k    a map pixel is k x k px of the world (16 today's map; with --area 2-8 for a close look at a place)
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { cpus } from 'node:os';
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
@@ -21,8 +25,11 @@ import { spawnSync } from 'node:child_process';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const imp = (f) => import(pathToFileURL(join(ROOT, f)).href);
-const SEED = 1337, S = 16, CH = 768, CS = CH / S;   // CS: a chunk's size on the map
-const FRAME = [24 * 32, 10 * 32, 1304 * 32, 1170 * 32];   // client/hud.js MAP_FRAME, world px
+const argv = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
+const V3 = argv('--world') === 'v3';
+const SEED = 1337, CH = 768;
+const S = isMainThread ? Number(argv('--scale')) || (V3 ? 32 : 16) : workerData.S, CS = CH / S;   // CS: a chunk's size on the map
+let FRAME = [24 * 32, 10 * 32, 1304 * 32, 1170 * 32];   // client/hud.js MAP_FRAME (mapFrameOf), world px
 
 if (isMainThread) await main(); else await worker();
 
@@ -30,9 +37,10 @@ async function main() {
   const t0 = Date.now();
   const { generateCity, mapSignature } = await imp('shared/map.js');
   const { T } = await imp('shared/constants.js');
-  const map = generateCity(SEED);
+  let map = V3 ? (await (await imp('server/world3.js')).buildWorld3(SEED)).map : generateCity(SEED);
   const sig = mapSignature(map);
-  const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
+  if (V3) FRAME = [24 * 32, 10 * 32, (map.frame.w - 8) * 32, (map.frame.h - 30) * 32];   // (client/hud.js mapFrameOf)
+  const arg = argv;
   const area = arg('--area') && arg('--area').split(',').map(Number);
   const [cx0, cy0, cx1, cy1] = area || [Math.floor(FRAME[0] / CH), Math.floor(FRAME[1] / CH), Math.ceil(FRAME[2] / CH), Math.ceil(FRAME[3] / CH)];
   const GW = (cx1 - cx0) * CS, GH = (cy1 - cy0) * CS;
@@ -44,6 +52,8 @@ async function main() {
   };
   const jobs = [], sea = [];
   for (let cy = cy0; cy < cy1; cy++) for (let cx = cx0; cx < cx1; cx++) (deep(cx, cy) ? sea : jobs).push([cx, cy]);
+  map = null;   // (the bake threads build their own: this one's memory goes before theirs comes - World v3's is ~1.5 GB)
+  if (globalThis.gc) globalThis.gc();
   // the open sea's look: one deep chunk baked (the first), copied to the rest
   if (sea.length) jobs.unshift(sea[0]);
   console.log(`[map] ${jobs.length} chunks to bake, ${sea.length} of open sea; world ${sig}`);
@@ -56,7 +66,7 @@ async function main() {
   await new Promise((resolve, reject) => {
     let live = n;
     for (let k = 0; k < n; k++) {
-      const w = new Worker(fileURLToPath(import.meta.url), { workerData: { seed: SEED } });
+      const w = new Worker(fileURLToPath(import.meta.url), { workerData: { seed: SEED, S, v3: V3 } });
       const feed = () => { if (next < jobs.length) { const [cx, cy] = jobs[next++]; w.postMessage({ cx, cy }); } else { w.terminate(); if (--live === 0) resolve(); } };
       w.on('message', (m) => {
         if (m.ready) return feed();
@@ -113,9 +123,13 @@ async function worker() {
   const { bakeChunk, loadProviders, SpriteCache, providers } = await imp('client/art2/game/chunkbake.js');
   const { F_WATER } = await imp('client/art2/gbuf.js');
   await loadProviders();
-  const map = generateCity(workerData.seed);
-  const M = structuredClone(cityData(map));
-  if (cityFromData) cityFromData(M); else Object.setPrototypeOf(M, Object.getPrototypeOf(map));
+  let M;
+  if (workerData.v3) M = (await (await imp('server/world3.js')).buildWorld3(workerData.seed, { log: () => {} })).map;   // (as the server's art thread)
+  else {
+    const map = generateCity(workerData.seed);
+    M = structuredClone(cityData(map));
+    if (cityFromData) cityFromData(M); else Object.setPrototypeOf(M, Object.getPrototypeOf(map));
+  }
   const cache = new SpriteCache(200e6);
   // the light: an afternoon sun from the north-west, a little warm; what stands taller than the sun's line from a
   // point up and to the left of it on the screen shades it
