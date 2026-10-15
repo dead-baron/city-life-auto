@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { LIVE_WORLD } from '../shared/liveworld.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = process.env.CLA_DATA_DIR || join(ROOT, 'data');
@@ -38,9 +39,10 @@ export const config = {
   allowedOrigins: (process.env.CLA_ORIGINS || '*').split(',').map((s) => s.trim()).filter(Boolean),
   saveIntervalMs: 5000,
   npcBudget: Number(process.env.CLA_NPC_BUDGET || 700),
-  // The world the server runs: today's (default - the live deploy never sets it) or 'v3', World v3's whole world built
-  // here (server/world3.js: about 25 s and 1 GB more at start; docs/WORLD-V3.md 8.9) - for trying it locally and in tests.
-  world: process.env.CLA_WORLD === 'v3' ? 'v3' : 'today',
+  // The world the server runs: today's or 'v3', World v3's whole world built here (server/world3.js: about a minute and
+  // 1-2 GB more at start; docs/WORLD-V3.md 8.23). CLA_WORLD says which; without it the deployed server
+  // (NODE_ENV=production) runs the live world (shared/liveworld.js) and everything else - tests, local runs - today's.
+  world: (process.env.CLA_WORLD || (process.env.NODE_ENV === 'production' ? LIVE_WORLD : 'today')) === 'v3' ? 'v3' : 'today',
   // What happens to a player the first time they come back after an update (a new build: version.json,
   // stamped on every commit): 'spawn' (default) - a fresh start at a spawn point (their home if they
   // picked one, else a hospital): on foot, not wanted, nothing carried, full health, progress kept;

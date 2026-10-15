@@ -5,6 +5,7 @@ import { writeFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from './config.js';
 import { defaultProfile } from './store.js';
+import { WORLD_VERSION } from '../shared/constants.js';
 
 const FILE = join(config.dataDir, 'profiles.json');
 
@@ -23,6 +24,15 @@ export class FileStore {
         console.error('[store] profiles.json unreadable, backing up and starting fresh:', e.message);
         copyFileSync(FILE, FILE + '.corrupt-' + Date.now());
       }
+      // A new world (WORLD_VERSION bumped): keep the profiles as they were before anyone's homes are released
+      // (homes.checkWorld, on each join) - restoring this file is the full rollback (WORLD-V3.md 8.23, step 5).
+      const before = join(config.dataDir, `profiles-before-world${WORLD_VERSION}.json`);
+      try {
+        if ([...this.profiles.values()].some((p) => (p.wv ?? 1) !== WORLD_VERSION) && !existsSync(before)) {
+          copyFileSync(FILE, before);
+          console.log(`[store] world ${WORLD_VERSION}: the profiles as they were are kept in ${before}`);
+        }
+      } catch (e) { console.error('[store] could not keep the profiles before the new world:', e.message); }
     }
   }
   get(pid) { return this.profiles.get(pid) || null; }

@@ -119,6 +119,11 @@ export function checkWorld(world, prof) {
   for (const id of Object.keys(prof.decor || {})) stowDecor(prof, id);   // (H67: the furniture back in storage)
   prof.spawnHome = null;
   prof.pos = null; // the streets moved: wake up at a hospital, not inside whatever stands there now
+  // ...and the other places kept in the old world's pixels (WORLD-V3.md 8.23, step 1): the last wake-up spot (a hospital
+  // by its index - another one now), where hot money was stolen, where a wanted player was last seen
+  prof.lastSpawn = null;
+  if (prof.hotAt) prof.hotAt = null;
+  if (prof.bountySeen) prof.bountySeen = null;
   prof.wv = WORLD_VERSION;
   const note = { from: wv, homes: n, refund, names: names.slice(0, 4) };
   prof.worldNote = note;

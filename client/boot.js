@@ -21,10 +21,13 @@ const isArt = (f) => (/\.(png|webp|woff)$/.test(f) ? 1 : 0);
 const PAGE = new Set(['index.html', 'client/boot.js', 'client/style.css', 'manifest.webmanifest']);   // (a change here needs a reload)
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode, full */ } };
-// World v3's world: the server ran it last time (CLA_WORLD=v3, never live: main.js worldChanged) or ?world=v3 says it does.
-// Its city and its art are keyed apart from today's (docs/WORLD-V3.md 8.23, step 0 a and b): version.json's world3 and
-// art3 with '-v3' after them, as the server serves them (server/worldcdn.js worldKey, server/artcdn.js artKey)
-const V3 = lsGet('cla.world') === 'v3' || /[?&]world=v3\b/.test(location.search);
+// World v3's world: the server ran it last time ('cla.world': main.js worldChanged keeps 'v3' or 'today'), ?world=v3
+// says it does, or - not told yet (a first visit, or the first since the server changed worlds) - version.json's `live`
+// says it's the live world (shared/liveworld.js). Its city and its art are keyed apart from today's (docs/WORLD-V3.md
+// 8.23, step 0 a and b): version.json's world3 and art3 with '-v3' after them, as the server serves them
+// (server/worldcdn.js worldKey, server/artcdn.js artKey)
+const WORLD_TOLD = lsGet('cla.world');
+let V3 = WORLD_TOLD === 'v3' || /[?&]world=v3\b/.test(location.search);
 const v3Key = (a, b) => `${a || b}-v3`;
 
 async function readMeta() {
@@ -138,6 +141,8 @@ if (await freshen()) {
   location.replace(u.href);
 } else {
   BOOT.done = performance.now();
+  if (!V3 && WORLD_TOLD !== 'today' && META && META.live === 'v3') V3 = true;
+  BOOT.v3 = V3;   // (the world this page builds: main.js worldChanged compares the server's with it)
   window.CLA_WORLD = /[?&]cityonpage\b/.test(location.search) ? null : startWorld();   // (?cityonpage: build it on the page, as before)
   // baked chunks are kept under this build of the art (art2/game/chunkstore.js) - only when the modules are that build's
   window.CLA_ART_KEY = BOOT.fresh && META && META.art && !/[?&]nokeep\b/.test(location.search) ? (V3 ? v3Key(META.art3, META.art) : META.art) : null;

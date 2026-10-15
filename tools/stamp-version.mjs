@@ -13,6 +13,7 @@ import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from '
 import { join, relative, dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import { LIVE_WORLD } from '../shared/liveworld.js';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 // a hash of a module and everything it imports, however deep (but the files in skip)
@@ -122,6 +123,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const version = h.digest('hex').slice(0, 12);
   const world = (await worldHash()).hash, art = (await artHash(ROOT, world)).hash;
   const world3 = world3Hash(ROOT, world).hash, art3 = (await artHash(ROOT, world3)).hash;
-  writeFileSync(join(ROOT, 'version.json'), JSON.stringify({ version, built: new Date().toISOString(), world, art, world3, art3, files, hashes }, null, 0) + '\n');
+  writeFileSync(join(ROOT, 'version.json'), JSON.stringify({ version, built: new Date().toISOString(), world, art, world3, art3, live: LIVE_WORLD, files, hashes }, null, 0) + '\n');
   console.log('version', version, files.length, 'files', 'world', world, 'art', art, 'world3', world3, 'art3', art3);
 }

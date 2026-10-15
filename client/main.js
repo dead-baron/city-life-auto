@@ -930,11 +930,19 @@ function holdForCity(m) {
 // isn't the one boot.js asked the city worker for (it reads 'cla.world' back): remember it and load the page again.
 function worldChanged(m) {
   if (/[?&]world=v3\b/.test(location.search)) return false;   // (?world=v3: asked for from the start - a playtest, no reload)
-  const want = m.world === 'v3' ? 'v3' : '';
-  let had;
-  try { had = localStorage.getItem('cla.world') || ''; } catch { return false; }
-  if (want === had) return false;
-  try { if (want) localStorage.setItem('cla.world', want); else localStorage.removeItem('cla.world'); } catch { return false; }
+  const want = m.world === 'v3' ? 'v3' : 'today';
+  // what boot.js built: told before ('cla.world'), or version.json's live world (BOOT.v3)
+  const boot = window.CLA_BOOT;
+  let asked;
+  try { asked = boot && 'v3' in boot ? (boot.v3 ? 'v3' : 'today') : localStorage.getItem('cla.world') === 'v3' ? 'v3' : 'today'; } catch { asked = 'today'; }
+  try { if (localStorage.getItem('cla.world') !== want) localStorage.setItem('cla.world', want); } catch {
+    // (no storage - a private window, storage blocked: the address says it instead)
+    if (want === asked) return false;
+    if (want !== 'v3') return false;
+    location.search = (location.search ? location.search + '&' : '?') + 'world=v3';
+    return true;
+  }
+  if (want === asked) return false;
   location.reload();
   return true;
 }
