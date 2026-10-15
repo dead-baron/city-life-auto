@@ -1,6 +1,7 @@
 // World v3, stage 3, step 2 (docs/WORLD-V3.md 8.8): the mainland's biomes in the whole-world build - each new district
 // (47-56) in the generator with its ground, each biome's dressing as dense as designed (trees in the woods, fields in
-// the valley, rocks in the desert), the desert's ground without a repeating pattern. (v3b: no North Ridge, Northshore not painted yet.)
+// the valley, rocks in the desert), the desert's ground without a repeating pattern, Northshore's towns down at the sea.
+// (v3b: no North Ridge.)
 // One world build (about 25 s here, with today's world and the land before it).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -102,7 +103,25 @@ test('World v3: the mainland\'s biomes - their districts, ground and dressing', 
   console.log('desert sand repeat (worst P(sand there | sand here))', worst.toFixed(3), 'its share', base.toFixed(3));
   check(worst < Math.max(0.4, base + 0.15), `the desert repeats (${worst.toFixed(2)} against its share ${base.toFixed(2)})`);
 
-  // (Northshore at its beach: dropped for v3b - Northshore 31, North Point 32 and The Bluffs 34 aren't painted yet,
-  // docs/WORLD-V3.md 9.4; the north coast is the Northshore Beaches' only: test/world3beach.test.js)
+  // Northshore at its beach (v3b, docs/WORLD-V3.md 9.6): the north coast's towns - Northshore (31) on the lobe west of
+  // the inlet and round the station, North Point (32) and The Bluffs (34) on the peninsula - are painted and built, and
+  // run down to the water: along the columns of their land north of the Shore Road, from the town's northmost built
+  // tile (a street, a building, a pavement, a plaza, a car park) the sea is within 40 tiles (the beach in front, 54's
+  // sand, or North Point's waterfront and piers)
+  const TOWN = [31, 32, 34], BUILT = new Set([T.ROAD, T.BUILDING, T.SIDEWALK, T.PLAZA, T.LOT]);
+  const nb = {};
+  for (const b of m.buildings) if (b && !b.gone && TOWN.includes(m.dist[m.idx(b.tx, b.ty)])) nb[m.dist[m.idx(b.tx, b.ty)]] = (nb[m.dist[m.idx(b.tx, b.ty)]] || 0) + 1;
+  let meets = 0, cols = 0, widest = 0;
+  for (let x = 3100; x < 3860; x += 4) {
+    let top = -1;
+    for (let y = 330; y < 704; y++) { const i = m.idx(x, y); if (m.land[i] && TOWN.includes(m.dist[i]) && BUILT.has(m.tiles[i])) { top = y; break; } }
+    if (top < 0) continue;
+    let y = top;
+    while (y > top - 200 && m.land[m.idx(x, y)]) y--;
+    cols++; if (top - y <= 40) meets++; widest = Math.max(widest, top - y);
+  }
+  console.log('Northshore', JSON.stringify({ land: TOWN.map((d) => land[d]), buildings: nb }), meets, 'of', cols, 'columns meet the sea; widest gap', widest);
+  for (const d of TOWN) check(land[d] > 20000 && (nb[d] || 0) >= 40, `${DISTRICTS[d].name}: ${land[d]} land tiles, ${nb[d] || 0} buildings`);
+  check(cols > 100 && meets / cols > 0.6, `the north coast's towns meet the sea along ${meets} of ${cols} columns`);
   assert.deepEqual(problems, []);
 });

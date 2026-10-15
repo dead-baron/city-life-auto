@@ -9759,3 +9759,21 @@ test/world3b.test.js (new); the WR3-only tests removed (world3gulf, world3place,
   sand sheets under a top are plain ground (cap rock); dress3's sandstone blocks keep to the flats between the tables.
 Tests: test/world3relief.test.js (the tables: 90+, 25+ mesas, 15+ small; each top over its own foot, the ground just
 past its talus), test/world3biomes.test.js (the relief's buttes count with dress3's big blocks).
+## 2026-10-15 · World v3b: the north coast - Northshore, North Point and its harbour, The Bluffs, the beachfront
+
+The north coast was the Northshore Beaches' only (a few streets at its west end, an empty meadow on the peninsula, the
+Shore Road 20-60 tiles inland of the sand). Now (docs/WORLD-V3.md 9.6, after the owner's concepts 1 and 2):
+- **Northshore** (31) round the main line's Northshore station: shops, the medical centre, the sheriff and the fire
+  station on the lobe west of the farm lake's mouth and round Station Avenue south of the line.
+- **North Point** (32), the harbour village on the peninsula's inlet shore (its own village style: cottages, fish
+  restaurants, a diner, a beach bar), with the sketch's **finger piers** out over the inlet (the trace had made them
+  land: smoothed back), the fleet moored along them, the charter boat, the **North Point Fish Shack** (a fish market:
+  rods, the catch sold), North Point Charters, and **North Point Light** on the peninsula's tip with the keeper's
+  cottage, basalt round its foot and a track up from Lighthouse Avenue (shared/world3-north.js, new).
+- **The Bluffs** (34): villas on the headland above the peninsula's east beach, basalt along its foot.
+- **The beachfront**: the Shore Road along the back of the west beach (its pavement on the sand): the promenade now runs
+  its length (803 -> 1,724 tiles), 4 lifeguard towers; straight along the towns' south edge, over the lake's mouth.
+- The north coast's country roads are the towns' edges: a town street doesn't run along one and ends on it, met
+  (shared/world3-city.js planCity3).
+- Fixed on the way: a station whose track is below ground all round it (Midtown's) kept its house on a building.
+Tests: test/world3beach.test.js, test/world3biomes.test.js (Northshore at its beach again), test/world3city.test.js.

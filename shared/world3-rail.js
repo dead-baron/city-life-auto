@@ -213,13 +213,16 @@ export function seatStationHouses(m) {
     if (fits(cx, cy, h.a)) continue;
     // (the whole house; failing that - a dense block - its middle at least on open ground; every platform within 560 px)
     const plats = h.calls.map(([ri, si]) => m.rails[ri].stations[si].platform).filter(Boolean);
+    // (a station whose track is below ground all round it - Midtown's, on the elevated stretch laid below ground - has no
+    // surface track to face away from: its house faces away from the station's own place)
+    const [d0, q0] = nearest(h.x, h.y), sunk = !q0 || d0 > 500;
     let best = null;
     for (const [us, clr] of [[undefined, false], [[0], false], [undefined, true]]) for (let r = clr ? 0 : 60; r <= 900 && !best; r += 20) for (let k = 0; k < 64 && !best; k++) {
       clearing = clr;
       const x = h.x + Math.cos(k / 64 * Math.PI * 2) * r, y = h.y + Math.sin(k / 64 * Math.PI * 2) * r;
       if ((!HOUSE_OK.has(m.tileAtPx(x, y)) && !(clr && clearable(x, y))) || close.has(sk(x, y))) continue;
-      const [d, q] = nearest(x, y);
-      if (!q || d > 500) continue;
+      const [d, q1] = nearest(x, y), q = q1 && d <= 500 ? q1 : sunk ? h : null;
+      if (!q) continue;
       const a = Math.atan2(y - q.y, x - q.x);
       const hx = x - Math.cos(a) * 18, hy = y - Math.sin(a) * 18;
       if (plats.some((p) => Math.hypot(p.x - hx, p.y - hy) > 560)) continue;

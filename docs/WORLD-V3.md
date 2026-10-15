@@ -4654,8 +4654,8 @@ placement's off-frame corner (a 100,000-tile square) once no piece places Metro 
 ~50, the rest on country roads; the city's streets cross it only where it is below ground (planCity3).
 Numbers (tools/world3b/check.mjs): 10,850 buildings, 1,980 homes, 5,100 POIs, 212,000 props; 13 main-line stations;
 the Pink Line 10 stations, the Yellow 11.
-Left: the rail viaduct over Midtown's streets; Northshore (31), North Point (32) and The Bluffs (34) not yet painted
-(the north coast is the Northshore Beaches' only); the in-game map's picture (tools/build-worldmap2.mjs --world v3).
+Left: the rail viaduct over Midtown's streets; the in-game map's picture (tools/build-worldmap2.mjs --world v3).
+(Northshore, North Point and The Bluffs: 9.6.)
 
 ### 9.5 The switch for World v3b (ready, not made)
 Everything but the switch itself is on `world-v3b` (8.23's step 0 and these): the deploy's health wait is five minutes
@@ -4671,3 +4671,42 @@ other places are cleared. The switch is one commit on `world-v3b`, then `world-v
    bake what the server hasn't yet.
 4. Rollback: revert the switch commit on `main` and push (homes bought at v3 are bought back once more by the bump
    back); or restore `profiles-before-world10.json` on the VM for everyone as they were.
+
+### 9.6 The north coast (2026-10-15)
+The north coast (x ~2450-4250, y ~330-900) was the Northshore Beaches' only, its streets at the west end, the peninsula
+north of the farm lake's mouth an empty meadow, the traced Shore Road 20-60 tiles inland of the sand. Now, after the
+concepts (concept 1: the peninsula's finger piers and the light on its tip; concept 2: the harbour town and its boats):
+- **The land** (world3-layout.js MAINLAND3): the sketch's finger piers on the inlet - the peninsula's west shore and the
+  lobe west of the lake's mouth - had been traced as land fingers: smoothed back to the shore; they are piers now.
+- **The towns** (world3-city.js CITY3, zone NORTH): **Northshore** (31, commercial) on the lobe west of the inlet and
+  round Station Avenue south of the line by the main line's Northshore station (its medical centre, sheriff, fire
+  station, shops - map.js's specials); **North Point** (32) on the peninsula's inlet shore, built in its own harbour
+  village style (world3-north.js NORTH_STYLES: cottages, fish restaurants, a diner, a beach bar; Lighthouse Avenue up
+  its middle); **The Bluffs** (34, luxury) on the headland above its east beach (Bluffs Avenue). A `shore` district
+  leaves the beach (the land layer's sand) to the beach district under it: the sand stays the Northshore Beaches' in
+  front of the towns. The main line between stays up (the scenic route, the station open): the towns lie north of the
+  Shore Road / south of the North Coast Road, not across the line.
+- **The country roads through the towns** (world3-city.js avoidOf / planCity3): the arterials north of row 1000 (the
+  Shore Road, the North Coast Road, Cedar Farms Road) are the towns' edges - a town street doesn't run along one (the
+  road serves) and a street that ends on one is met there, not trimmed as a dead end. The Shore Road runs straight
+  along the towns' south edge (row 706), over the lake's mouth on its bridge, and their streets end on it.
+- **The beachfront** (world3-layout.js TOWN_ROADS3 'Shore Road'): along the west beach the road runs 2 tiles in from
+  the sand's edge (its pavement on the sand, the promenade in front): the promenade 803 -> 1,724 tiles, the lifeguard
+  towers 2 -> 4, the beach in front along 154 of 231 columns. (world3-beach.js: a cross street starts once its width
+  is clear of the aslant road - the west beach's had all failed at their first step.)
+- **The harbour** (shared/world3-north.js, new; from the dress hook): North Point's finger piers out over the inlet
+  (4 laid of the sketch's 5, 459 tiles of decking) with the fleet moored along them (35 boats) and the charter boat;
+  the fish shack at their root (a fish market: rods, the catch sold) and North Point Charters; Northshore's pier off
+  the lobe; **North Point Light** on the peninsula's tip (the beach's: the town stops short of it) with the keeper's
+  cottage, basalt round its foot and a track up from Lighthouse Avenue; basalt along the foot of The Bluffs.
+- Numbers: Northshore 106 buildings, North Point 184, The Bluffs 86, the beach towns 28 (the land round the inlet and
+  the peninsula went to the towns; the north coast's 404 in all).
+- (world3-rail.js seatStationHouses) a station whose track is below ground all round it (Midtown's, on the elevated
+  stretch laid below ground) faced nothing: its house never moved off the building it stood on - it faces away from the
+  station's own place now.
+Tests: test/world3beach.test.js (the north coast's harbour: piers, boats, the fish shack, the light by the sea; the
+beach towns' counts with the coast as a whole), test/world3biomes.test.js (Northshore at its beach again: 31/32/34
+painted and built, their northmost built tile within 40 tiles of the sea along 65% of their columns),
+test/world3city.test.js (31/32/34 are the city's).
+Left: the east beach (x 3860-4300) is still Willow Valley's fields down to a 6-tile beach; the peninsula has no relief
+of its own (world3-relief.js HIGH_SPOTS: the Bluffs as a headland would be one line there).

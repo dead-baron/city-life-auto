@@ -18,7 +18,7 @@ import { MAIN_LOOP3 } from './world3-layout.js';
 import { TOWN_ROADS3 } from './world3-towns.js';
 
 export const BEACH_D = 54;
-const TOWN = new Set([31, 32, 34]);   // (Northshore's own: today's picture)
+const TOWN = new Set([31, 32, 34]);   // (the north coast's towns: Northshore, North Point, The Bluffs - world3-city.js CITY3, WORLD-V3.md 9.6)
 const ROW = 46;        // tiles between the streets parallel to the shore (less dense than the city's 24-30)
 const COL = 76;        // tiles between the cross streets
 const CROSS = 3;       // every third cross street crosses the main line
@@ -137,7 +137,9 @@ export function beachStreets(lines, m, L) {
     const over = c % CROSS === 1, y0 = shoreY(x);
     // from the Shore Road's middle up to where the land stops being the beach towns' (or the line's bed, or a road)
     let y = Math.floor(y0) + IN, n = 0;
-    while (inY(y) && !okAt(x, y, over) && n < REACH) { y += IN; n++; }   // (across the Shore Road's pavement)
+    // (across the Shore Road's pavement: till the street's width is clear of it - v3b's Shore Road runs aslant along the
+    // back of the beach, so a column clear at x may not be at x +- 3 yet)
+    while (inY(y) && !(okAt(x, y, over) && okAt(x - 3, y, over) && okAt(x + 3, y, over)) && n < REACH) { y += IN; n++; }
     if (!okAt(x, y, over) || !okAt(x - 3, y, over) || !okAt(x + 3, y, over)) continue;
     const ys = y;
     while (inY(y) && okAt(x, y + IN, over) && okAt(x - 3, y + IN, over) && okAt(x + 3, y + IN, over)) y += IN;
