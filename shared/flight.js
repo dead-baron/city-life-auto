@@ -297,7 +297,7 @@ export function airfields(m) {
   for (const s of m.natureSites || []) {
     if (s.kind !== 'airstrip' || !s.plane) continue;
     const sp = findPadSpot(m, s.plane.x + 120, s.plane.y, 70, 400, strips);
-    if (sp) aprons.push({ x: sp.x, y: sp.y, a: -Math.PI / 2, name: s.name });
+    if (sp) aprons.push({ x: sp.x, y: sp.y, a: -Math.PI / 2, name: s.name, ...(s.duster ? { duster: true } : null) });
   }
   // the police headquarters (the first station) - a pad in its yard
   const pd = (m.pois || []).find((p) => p.kind === 'police');

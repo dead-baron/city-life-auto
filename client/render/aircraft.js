@@ -27,6 +27,7 @@ const LIVERY = {
   army: { body: '#646a70', trim: '#80868c', dark: '#3a3e44', glass: '#2c3440', tip: 'rgba(255,200,50,0.5)' },   // (grey: the owner's MV1, H78)
   rescue: { body: '#d8382e', trim: '#f2f2f2', dark: '#7a1a14', glass: '#3a5f86', tip: 'rgba(245,245,245,0.55)', cross: true },
   plane: { body: '#f1f2f0', trim: '#c4302b', dark: '#9aa2a8', glass: '#3a5f86' },
+  duster: { body: '#f2c230', trim: '#2f7a3c', dark: '#8a6a14', glass: '#3a5f86', boom: true },   // (the crop duster)
 };
 
 // the altitude each aircraft is drawn at: yours from the prediction (e.ralt, set by main.js), the others' eased toward
@@ -175,7 +176,7 @@ function bankOf(v) {
   return own ?? v._bank ?? 0;
 }
 function drawPlane(g, def, v, alt, now) {
-  const L = def.L, span = def.span || def.W, C = LIVERY.plane;
+  const L = def.L, span = def.span || def.W, C = LIVERY[def.livery] || LIVERY.plane;
   // the bank: the wings foreshortened, the low wing darker
   const bank = v._own && v.rbank !== undefined && v.rbank !== null ? v.rbank : v._bank ?? 0, c = Math.cos(bank);
   // the tailplane and the fin
@@ -186,6 +187,7 @@ function drawPlane(g, def, v, alt, now) {
   g.fillStyle = bank > 0 ? '#c9ccce' : C.body; g.fillRect(-4, -half, 28, half);
   g.fillStyle = bank < 0 ? '#c9ccce' : C.body; g.fillRect(-4, 0, 28, half);
   g.fillStyle = C.trim; g.fillRect(-4, -half, 28, 6); g.fillRect(-4, half - 6, 28, 6);
+  if (C.boom) { g.fillStyle = '#3a3a36'; g.fillRect(-7, -half + 4, 3, half * 2 - 8); }   // (the crop duster's spray boom along the trailing edge)
   // the fuselage (shaded), the cabin's glass, the stripe, the cowling, the fin's red top
   g.fillStyle = C.body; g.beginPath(); g.ellipse(4, 0, L / 2 - 2, 10, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = 'rgba(0,0,0,0.16)'; g.beginPath(); g.ellipse(4, 3, L / 2 - 4, 7, 0, 0, Math.PI); g.fill();

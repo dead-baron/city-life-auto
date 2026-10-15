@@ -56,7 +56,7 @@ export const ENGINE_CLASS = {
   bicycle: 'pedal', cruiser: 'pedal', mtb: 'pedal', roadbike: 'pedal', bmx: 'pedal', cargobike: 'pedal',
   vtwin: 'vtwin', tourer: 'vtwin', chopper: 'vtwin', bobber: 'vtwin', bagger: 'vtwin', trike: 'vtwin', ratbike: 'vtwin',
   caferacer: 'thumper', dirtbike: 'twostroke', scooter: 'scooter',
-  heli: 'rotor', policeheli: 'rotor', gunship: 'rotor', plane: 'prop', rescueheli: 'rotor',
+  heli: 'rotor', policeheli: 'rotor', gunship: 'rotor', plane: 'prop', duster: 'prop', rescueheli: 'rotor',
 
   tank: 'tank',
   tractor: 'truck', combine: 'truck',   // (the farm's diesels: H61)

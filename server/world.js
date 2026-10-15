@@ -67,6 +67,7 @@ import * as cinema from './systems/cinema.js';
 import * as aircraft from './systems/aircraft.js';
 import * as sar from './systems/sar.js';
 import * as charter from './systems/charter.js';
+import * as dusting from './systems/dusting.js';
 import * as coastguard from './systems/coastguard.js';
 import * as gardening from './systems/gardening.js';
 import * as farming from './systems/farming.js';
@@ -154,6 +155,7 @@ const SYSTEMS = [
   ['tank', tank.update],            // the tanks' turrets turning to their drivers' aim (H58)
   ['sar', sar.update],              // search and rescue pilots' shifts: the calls, the harness, the hand-over (H59)
   ['charter', charter.update],      // charter pilots' bookings: rich customers flown from place to place (H59)
+  ['dusting', dusting.update],      // crop dusters' contracts: the farm fields sprayed from the air (dusting.js)
   ['coastguard', coastguard.update], // the coast guard's patrols: smugglers run down and boarded, people pulled out of the water (H59)
   ['gardening', gardening.update],  // the plots in owned homes' yards: growing, drying out, wilting; the plots near each player sent (H61)
   ['farming', farming.update],      // the farms' fields: the rows growing, a tractor down a row ploughing, sowing, harvesting it (H61)
@@ -217,7 +219,7 @@ export class World {
     barriers.init(this);
     // (World v3's frame, over 4 M tiles: the off-road tables made now, not in the tick of the first ambulance that needs
     // them - 0.4-0.6 s there: systems/offroad.js warmGround)
-    if (map.w * map.h > 4e6) warmGround(map);
+    if (map.w * map.h > 4e6) { warmGround(map); dusting.patchesOf(map); }   // (and the crop patches the crop dusters spray: dusting.js)
   }
 
   get clock() { return gameClock(this.loopTime); }

@@ -28,6 +28,7 @@ export const TYPES = {
   rescueheli: { body: '#d8382e', trim: '#f2f2f2', lower: '#d8382e', tip: '#f2f2f2', cross: true },
   gunship: { body: '#646a70', trim: '#80868c', lower: '#4c5157', tip: '#f2c230', gun: true },   // (grey: the owner's MV1, H78)
   plane: { body: '#f1f2f0', trim: '#c4302b', plane: true },
+  duster: { body: '#f2c230', trim: '#2f7a3c', lower: '#e0a81e', plane: true, boom: true },   // (the crop duster: yellow, a green stripe, the spray boom)
 };
 export const LIFT = 0.66;   // (render/aircraft.js V2_LIFT: px up the screen per px of altitude)
 const R6 = (h, n = 6, k = 3, o) => ramp(h, n, k, o);
@@ -141,6 +142,10 @@ function planeModel(T, bank) {
   for (const s of [-1, 1]) { m.cyl('y', L * 0.58, 0, zo + 5, 5, cy + s * 16 - 2, cy + s * 16 + 2, M.dark); for (let z = zo + 5; z < zb; z++) m.box(L * 0.58 - 1, cy + s * (16 - (z - zo - 5) * 0.5) - 1, z, L * 0.58 + 1, cy + s * (16 - (z - zo - 5) * 0.5) + 1, z + 1, M.metal); }
   m.cyl('y', L * 0.88, 0, zo + 4, 4, cy - 1.5, cy + 1.5, M.dark); m.box(L * 0.88 - 1, cy - 1, zo + 4, L * 0.88 + 1, cy + 1, zb, M.metal);
   m.box(L * 0.3, cy - 1, zb + 11, L * 0.34, cy + 1, zb + 13, M.red);   // (the beacon on the back)
+  if (T.boom) {   // (the crop duster: the spray boom under the wing's trailing edge, its nozzles; the hopper's lid ahead of the cabin)
+    for (let y = 8; y < W - 8; y++) { const z = zb + 12 + dz(y); m.box(L * 0.5, y, z, L * 0.52, y + 1, z + 1, M.dark); if (y % 9 === 0) m.box(L * 0.5, y, z - 2, L * 0.51, y + 1, z, M.metal); }
+    m.box(L * 0.75, cy - 6, zb + 12, L * 0.83, cy + 6, zb + 14, M.trim);
+  }
   return m;
 }
 

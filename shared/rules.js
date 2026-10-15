@@ -630,6 +630,14 @@ export const SAR = {
 // perKm a km (1000 px); the tip up to tip of the fare: none after a hard landing, less the more health the helicopter
 // loses on the way (none at hurtHp), and the quicker the better (par: parS + a second per perKmS px).
 export const CHARTER = { firstS: 8, gapS: 20, shiftS: 3600, waitS: 600, pickupMax: 6000, minTrip: 3000, landR: 320, boardS: 3, destR: 240, base: 180, perKm: 70, tip: 0.5, hurtHp: 60, parS: 60, perKmS: 300 };
+// ---- crop dusting (the owner, 2026-10-14: "the farm should have a small farm runway or two for crop dusters for the crop
+// duster missions") - server/systems/dusting.js. The co-op's crop duster issued at the nearest farm strip; a contract is
+// fields of the crop patches within range px of the strip (a patch: a cell of cell x cell tiles at least minCrop crops,
+// looked at as subs x subs pieces). Airborne and no higher than alt px over the ground, at minSpd px/s or more, the spray
+// goes down under the wing (swath: the share of the wingspan it covers); a patch is done when cover of its crop pieces
+// have been sprayed - pay each, bonus for the lot. A field row of the farms' (farming.js) sprayed while sown grows boost
+// of the way at once. contractS: the time for it; hurtHp: the plane's health you can lose and keep the bonus.
+export const DUST = { fields: 3, range: 38000, cell: 24, subs: 4, minCrop: 0.45, alt: 150, minSpd: 300, swath: 0.85, cover: 0.75, pay: 140, bonus: 220, boost: 0.25, contractS: 1500, hurtHp: 60, spread: 3 };
 // ---- the coast guard (H59; the owner: "Coastguard jobs: patrol in boats and helicopters to hunt down criminal activity on
 // the water, usually smugglers or traffickers. Do search and rescue type missions too") - server/systems/coastguard.js.
 // Calls firstS after signing on, gapS after each, from dist px off; smuggle: the share that are smugglers (the rest:

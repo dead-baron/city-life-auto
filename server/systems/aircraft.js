@@ -101,7 +101,7 @@ function spots(world) {
     if (p.kind === 'hospital' && hosp++ > 0) continue;
     out.push({ m: p.kind === 'police' ? 'policeheli' : 'heli', x: p.x, y: p.y, a: -Math.PI / 2, police: p.kind === 'police' });
   }
-  for (const a of af.aprons) out.push({ m: 'plane', x: a.x, y: a.y, a: a.a });
+  for (const a of af.aprons) out.push({ m: a.duster ? 'duster' : 'plane', x: a.x, y: a.y, a: a.a });   // (a farm strip's: a crop duster - world3-airstrips.js)
   return out;
 }
 function park(world, sp) {

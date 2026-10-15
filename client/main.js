@@ -3847,6 +3847,13 @@ function vehVisual(v, now, dt) {
   const fwdX = Math.cos(v.ra), fwdY = Math.sin(v.ra);
   if ((f & VF.SMOKE) && Math.random() < ((f & VF.DEAD) ? 0.75 : 0.3)) S.fx.smoke(v.rx + fwdX * def.L * 0.35, v.ry + fwdY * def.L * 0.35, !!(f & (VF.WRECK | VF.DEAD))); // (a dying engine pours black smoke)
   if ((f & VF.BURN) && Math.random() < 0.7) S.fx.fire(v.rx + fwdX * def.L * 0.2, v.ry + fwdY * def.L * 0.2);
+  if (def.spray && (((v.parent >>> 0) >>> 24) & 64)) {   // (the crop duster spraying - server dusting.js: the damage word's top byte, bit 6; the searchlight's is bit 7)
+    for (let k = 0; k < 2; k++) {
+      const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.15 - Math.random() * 40, (Math.random() - 0.5) * (def.span || def.W) * 0.9);
+      const q = S.fx.spawn(2, x, y, -fwdX * 40 + (Math.random() - 0.5) * 24, -fwdY * 40 + (Math.random() - 0.5) * 24, 1.6 + Math.random() * 0.8, 8 + Math.random() * 6, 'rgba(226,238,214,', 18);
+      q.veil = 0.75;
+    }
+  }
   if (f & VF.DRIFT && def.kind !== 'boat' && def.kind !== 'air') {   // (an aircraft leaves no tyre marks: the server never flags one either)
     for (const sgn of [-1, 1]) {
       const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.35, sgn * def.W * 0.38);

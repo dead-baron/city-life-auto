@@ -90,6 +90,11 @@ export const VEHICLES = {
   tank:      { i: 47, name: 'Ironclad Battle Tank', kind: 'car', L: 150, W: 80, max: 270, accel: 150, brake: 700, rev: 170, turn: 1.25, grip: 16, drift: 14, mass: 14, hp: 3000, seats: 1, slots: [[-62, 0]], tracks: true, turret: true, armor: 0.06, rockets: 6, rough: 0.15 },
   // ---- the search-and-rescue helicopter (H59: server/systems/sar.js issues one to a rescue pilot): red and white, a
   // winch and its harness by the side door (hoist: the clients draw the cable). (i 64: the next free aircraft index)
+  // ---- the crop duster (the owner, 2026-10-14: "the farm should have a small farm runway or two for crop dusters"): a
+  // single-seat ag plane, yellow with a green stripe, the spray boom along its wing's trailing edge - issued on the
+  // crop-dusting contract at a farm strip (server/systems/dusting.js; spray: the clients draw the mist while it sprays).
+  // Slower than the Larkspur, quicker to turn and happy slower before the wing quits. (i 65: the next free aircraft index)
+  duster:     { i: 65, name: 'Hopper Ag-Wing',     kind: 'air', air: 'plane', L: 128, W: 112, max: 950, accel: 210, brake: 440, rev: 0, turn: 1.55, grip: 8, drift: 2, mass: 1.2, hp: 240, seats: 1, slots: [[-30, 0]], climb: 150, sink: 220, ceiling: 800, vr: 440, stall: 340, bank: 0.85, span: 168, livery: 'duster', spray: true },
   rescueheli: { i: 64, name: 'Lifeline Rescue Helicopter', kind: 'air', air: 'heli', L: 156, W: 56, max: 740, accel: 350, brake: 400, rev: 0, turn: 2.0, grip: 8, drift: 2, mass: 1.7, hp: 420, seats: 4, slots: [[-36, 0]], climb: 175, sink: 205, ceiling: 1000, rotor: 78, hoist: true, livery: 'rescue' },
   // ---- the farm tractor (H61: server/systems/farming.js; issued on the co-op's farm-work contract like a work truck):
   // slow, tough, at home on rough ground (rough: hardly slowed by dirt, grass or the fields). Driven down a field's row it
