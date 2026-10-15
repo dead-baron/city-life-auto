@@ -1,4 +1,5 @@
-import { RESPAWN_SECONDS, GHOST_SECONDS, AWAY_SECONDS } from '../shared/rules.js';
+import { RESPAWN_SECONDS, GHOST_SECONDS } from '../shared/rules.js';
+import { AWAY_SECONDS } from '../server/systems/players.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players, straightRoad } from './helpers.js';

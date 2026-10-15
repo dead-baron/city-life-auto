@@ -52,7 +52,13 @@ import * as trains from './trains.js';
 import * as transit from './transit.js';
 import * as ferries from './ferries.js';
 
-import { GHOST_SECONDS, AWAY_SECONDS, AWAY_HURT_S, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE, GUARD, NPC_GUARD } from '../../shared/rules.js';
+import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE, GUARD, NPC_GUARD } from '../../shared/rules.js';
+// A disconnected player with nothing after them (not wanted, not hurt in the last AWAY_HURT_S, no cargo: a phone switching
+// apps) waits AWAY_SECONDS rather than GHOST_SECONDS and logs out without dropping anything. (Here, not in shared/rules.js:
+// a change there re-keys World v3's world and art - tools/stamp-version.mjs world3Hash - and every browser and the server
+// would fetch and bake them all again for two server-only numbers. They move there with the next change to the world.)
+export const AWAY_SECONDS = 300;
+export const AWAY_HURT_S = 60;
 import * as felling from './felling.js';
 import * as lights from './lights.js';
 import * as revive from './revive.js';
