@@ -191,7 +191,7 @@ export function buildMenu(world, p, poi) {
   const shopKey = kind === 'vending' ? 'vending' : kind;
   const shop = kind === 'smuggler' && !gang.isMember(p) ? null : SHOPS[shopKey];
   if (shop && kind !== 'dealer' && kind !== 'marina' && kind !== 'garage' && kind !== 'clothing') {
-    title = kind === 'gunshop' || kind === 'coffee' ? poi.label : shop.title;   // (the gun shops and the cafes round the world: each its own name)
+    title = kind === 'gunshop' || kind === 'coffee' || poi.own ? poi.label : shop.title;   // (the gun shops and the cafes round the world, and World v3's new shops: each its own name - shared/world3-shops.js)
     if (kind === 'coffee' && poi.food) opts.push({ id: 'i:hotdog:7:1', label: 'A plate of the day', price: 7, note: prof.inventory.hotdog ? `have ${prof.inventory.hotdog}` : '' }, { id: 'i:bread:4:1', label: ITEMS.bread.name, price: 4, note: '' });
     for (const o of shop.buy) {
       if (o.kind === 'weapon') opts.push(weaponOffer(o, prof));

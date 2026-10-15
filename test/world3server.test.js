@@ -18,6 +18,10 @@ import { cityData } from '../shared/map.js';
 import { cityFromData, mapSignature } from '../shared/mapcore.js';
 import { cutWorld } from '../server/worldcdn.js';
 import { assembleCity, readIndex } from '../shared/regionpack.js';
+import { shopCoverage, homesList } from '../tools/world3b/shops.mjs';
+import { placeKind3, SHOP_REACH, NEED_KEYS, WILD_SHOPS3 } from '../shared/world3-shops.js';
+import { clutterOn } from '../shared/world3-clutter.js';
+import * as economy from '../server/systems/economy.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 
@@ -38,6 +42,42 @@ test('the v3 world as the server builds it: the frame, its places', () => {
   assert.deepEqual({ ...M.frame }, { w: FRAME_W, h: FRAME_H });
   assert.ok(M.edges.length > 1000 && M.buildings.length > 1000 && M.pois.length > 500, `${M.edges.length} edges, ${M.buildings.length} buildings, ${M.pois.length} POIs`);
   assert.ok(!('frame' in cityData(M)), 'the frame is not a field of the city as data');
+});
+
+// (World v3b, 2026-10-15: shared/world3-shops.js) every built-up district - the city's, the towns, the beach towns, the
+// villages - has each need (weapons, equipment, food and everyday items, cash) within reach of every bit of its streets
+// and a place of each of its own (the park and the airfield: food and cash within reach); the wild land its few themed
+// places. (The measure is tools/world3b/shops.mjs': the exact distance from every street tile.)
+test('shops where you need them: every built-up district has each need within reach, and of its own; the wild land a few themed places', () => {
+  const cov = shopCoverage(M), bad = [];
+  const OPEN = new Set([12, 27]), SLACK = 8;   // (the pass samples every third tile: a few tiles over at the worst)
+  for (const r of cov.districts) {
+    if (placeKind3(r.d) === 'wild') continue;
+    for (const k of NEED_KEYS) {
+      if (OPEN.has(r.d) && (k === 'weapons' || k === 'equipment')) continue;
+      if (r.worst[k] > SHOP_REACH[k] + SLACK) bad.push(`${r.name} ${k}: ${r.worst[k]} tiles at the worst`);
+      if (!OPEN.has(r.d) && !r.count[k]) bad.push(`${r.name}: no ${k} of its own`);
+    }
+  }
+  assert.deepEqual(bad, []);
+  const mine = M.pois.filter((p) => p.own);
+  assert.ok(mine.length >= 100, `${mine.length} new places`);
+  for (const S of WILD_SHOPS3) for (const [, name] of S.units) assert.ok(mine.some((p) => p.label === name), `${name} in the wild`);
+  // every new place: its door on open ground in front of its building (or a cart on the pavement), nothing solid on it
+  for (const p of mine) {
+    const t = M.tileAtPx(p.x, p.y);
+    assert.ok(t === T.SIDEWALK || t === T.PLAZA || t === T.LOT || t === T.GRASS || t === T.DIRT || t === T.SAND, `${p.label}: its door on open ground (${t})`);
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const e of M.solidProps.get(M.idx(tx + dx, ty + dy)) || []) assert.ok(Math.hypot(e.x - p.x, e.y - p.y) > e.r + 6, `${p.label}: nothing solid on its door`);
+  }
+  // the homes: as many as before the shops (no home became a shop)
+  assert.ok(homesList(M).every(([, b]) => b < 0 || !M.buildings[b].shop3), 'no home is a shop');
+});
+
+test('nothing blocking on a street, a pavement, the track or a door (shared/world3-clutter.js)', () => {
+  const left = clutterOn(M);
+  assert.deepEqual(left.slice(0, 12), [], `${left.length} props where they may not stand`);
+  assert.ok(M.world3.clutter && Object.keys(M.world3.clutter.dropped).length, 'the guard ran');
 });
 
 test(`its region files, as the server cuts them: the index and ${REGIONS_X} x ${REGIONS_Y} regions, read back into the same city`, () => {
@@ -89,4 +129,29 @@ test('the server\'s world on the v3 map: players downtown, at Port Westport, in 
     assert.ok(npcs + cars > 0, `${k}: life round the player (${npcs} people, ${cars} cars)`);
   }
   assert.ok(w.trafficCount > 0, `traffic (${w.trafficCount})`);
+  // a buy at the new shops (shared/world3-shops.js): a pistol at a gun shop, a flashlight at a hardware store, an energy
+  // drink at a corner store, a deposit at an ATM by one of them - each where its door is
+  const [, buyer] = ps[0];
+  buyer.profile.cash = 5000; buyer.profile.bank = 0;
+  const shop = (kind) => M.pois.find((q) => q.own && q.kind === kind && M.buildings[q.b] && M.buildings[q.b].shop3);
+  const at = (q) => { teleport(w, buyer.ped, q.x, q.y); w.step(); };
+  const gun = shop('gunshop'), hw = shop('hardware'), mart = shop('convenience');
+  assert.ok(gun && hw && mart, 'new shops of each kind');
+  at(gun);
+  assert.equal(economy.buildMenu(w, buyer, gun).title, gun.label, 'the gun shop\'s own name over the counter');
+  economy.handleMenu(w, buyer, gun.id, 'w:pistol:450');
+  assert.ok(buyer.profile.weapons.pistol !== undefined && buyer.profile.cash === 4550, `bought a pistol (${buyer.profile.cash})`);
+  at(hw);
+  const fl = economy.buildMenu(w, buyer, hw).opts.find((o) => o.id.startsWith('i:flashlight:'));
+  economy.handleMenu(w, buyer, hw.id, fl.id);
+  assert.ok((buyer.profile.inventory.flashlight || 0) > 0, 'bought a flashlight');
+  at(mart);
+  const en = economy.buildMenu(w, buyer, mart).opts.find((o) => o.id.startsWith('i:energy:'));
+  economy.handleMenu(w, buyer, mart.id, en.id);
+  assert.ok((buyer.profile.inventory.energy || 0) > 0, 'bought an energy drink');
+  const atm = M.pois.filter((q) => q.kind === 'atm').sort((a, b) => Math.hypot(a.x - mart.x, a.y - mart.y) - Math.hypot(b.x - mart.x, b.y - mart.y))[0];
+  at(atm);
+  const cash = buyer.profile.cash;
+  economy.handleMenu(w, buyer, atm.id, 'dep:100');
+  assert.deepEqual([buyer.profile.cash, buyer.profile.bank], [cash - 100, 100], 'a deposit at the ATM');
 });

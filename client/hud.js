@@ -596,6 +596,7 @@ const POI_ICON = {
   fruitstand: ['🍎', '#ff6a5a'], farmstand: ['🍯', '#e0b040'], snack: ['🌭', '#ffb060'], salvage: ['⚙', '#c0c8d0'], barber: ['✂', '#f0b0d8'], ride: ['🎡', '#ff9ad0'], race: ['🏁', '#f0f0f0'],
   bowling: ['🎳', '#ff7ad0'],
   cinema: ['🎬', '#ffd27a'],
+  lodge: ['⛺', '#d8a860'], huntcamp: ['⛺', '#d8a860'],   // (the hunting lodges and the outfitters: World v3b's marsh outfitters among them)
 };
 // one icon for a place with more than one counter (the market's rows of stalls): the same kind within this of
 // another is left off the maps
