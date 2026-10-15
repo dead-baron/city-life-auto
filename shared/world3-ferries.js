@@ -40,7 +40,10 @@ export const FERRY3 = [
     { pt: 7, name: 'Lake District', kind: 'terminal', ids: ANY },
   ] },
   { name: 'Key Water Bus', model: 'waterbus', stops: [
-    { pt: 0, name: 'Pelican Key', kind: 'pontoon', ids: ANY },
+    // (on Pelican Key's own beach, the island's south shore facing the key, round the route's middle point: from any land
+    // round its first point - inland - the nearest shore is the channel on the island's north side, which the boat can't
+    // leave within its corridor: no way to plan)
+    { pt: 1, name: 'Pelican Key', kind: 'pontoon', ids: named('Pelican Key') },
     { pt: 2, name: 'Coral Cay', kind: 'pontoon', ids: ANY },
   ] },
 ];

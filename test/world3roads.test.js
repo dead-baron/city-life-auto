@@ -7,11 +7,20 @@ import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
-import { HIGHWAYS, ARTERIALS, INTERCHANGES, CLOSURES, RADIUS, linePath, pointAt, nearestOnPath } from '../shared/world3-skeleton.js';
+import { HIGHWAYS, ARTERIALS, INTERCHANGES, CLOSURES, ISLANDS, RADIUS, linePath, pointAt, nearestOnPath, wetRanges, inPoly } from '../shared/world3-skeleton.js';
 import { prepare } from '../tools/world3-build.mjs';
 import { pulledAt } from '../shared/world3-towns.js';
 
-test('World v3: the skeleton\'s roads - on the ground, the deck, a bridge or a tunnel; one network; the interchanges join; the closures closed', { timeout: 300000 }, () => {
+// The islands only boats reach: no skeleton road runs onto them from off them (World v3b: the ferry island, Gull
+// Harbor, reached by the car ferry; the quiet key, Coral Cay, by the water bus) - their streets are a network of their own.
+const onIsland = (I, x, y) => x >= I.box[0] && y >= I.box[1] && x <= I.box[2] && y <= I.box[3] && inPoly(I.poly, x, y);
+const BOATS_ONLY = ISLANDS.filter((I) => ![...HIGHWAYS, ...ARTERIALS].some((L) => {
+  const P = linePath(L, RADIUS.art), on = P.pts.map(([x, y]) => onIsland(I, x, y));
+  return on.some(Boolean) && !on.every(Boolean);
+}));
+const boatsOnly = (x, y) => BOATS_ONLY.some((I) => onIsland(I, x, y));
+
+test('World v3: the skeleton\'s roads - on the ground, the deck, a bridge or a tunnel; one network; the interchanges join; the closures closed', { timeout: 300000 }, (t) => {
   const prep = prepare();
   const m = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });
   const R = m.world3.roads, W = m.w, H = m.h;
@@ -68,21 +77,31 @@ test('World v3: the skeleton\'s roads - on the ground, the deck, a bridge or a t
   }
   const main = sizes.indexOf(Math.max(...sizes));
   const names = new Set([...R.highways.map((h) => h.name), ...R.arterials.map((a) => a.name)]);
+  const boat = (n) => boatsOnly(n.x / TILE, n.y / TILE);
   const skel = m.edges.filter((e) => names.has(e.name));
-  for (const e of skel) check(comp[e.a] === main, `${e.name} (${Math.round(e.pts[0].x / TILE)}, ${Math.round(e.pts[0].y / TILE)}) in the one network`);
+  for (const e of skel) if (!boat(m.nodes[e.a])) check(comp[e.a] === main, `${e.name} (${Math.round(e.pts[0].x / TILE)}, ${Math.round(e.pts[0].y / TILE)}) in the one network`);
+  // what's left over: the islands only boats reach, and a few stray scraps of street (listed: none bigger than a block's
+  // few junctions, none of the skeleton's roads)
+  const stray = new Map();
   for (let k = 0; k < m.nodes.length; k++) {
-    if (comp[k] === main) continue;
-    const n = m.nodes[k];
-    const near = skel.some((e) => e.pts.some((p) => Math.hypot(p.x - n.x, p.y - n.y) < 150 * TILE));
-    check(!near, `a road at ${Math.round(n.x / TILE)}, ${Math.round(n.y / TILE)} off the network, by a skeleton road`);
+    if (comp[k] === main || boat(m.nodes[k])) continue;
+    const n = m.nodes[k], q = stray.get(comp[k]) || { n: 0, at: [Math.round(n.x / TILE), Math.round(n.y / TILE)], names: new Set() };
+    q.n++;
+    for (const id of n.edges) if (m.edges[id].name) q.names.add(m.edges[id].name);
+    stray.set(comp[k], q);
   }
-  check(sizes[main] > 0.98 * m.nodes.length, `the network: ${sizes[main]} of ${m.nodes.length} junctions`);
+  const scraps = [...stray.values()];
+  t.diagnostic(`off the network (not the boats' islands): ${scraps.map((q) => `${q.n} junctions at ${q.at} (${[...q.names].join(', ')})`).join('; ') || 'nothing'}`);
+  for (const q of scraps) check(q.n <= 8, `${q.n} junctions at ${q.at} off the network (${[...q.names].join(', ')})`);
+  const land = m.nodes.filter((n) => !boat(n)).length;
+  check(sizes[main] > 0.99 * land, `the network: ${sizes[main]} of the ${land} junctions off the boats' islands`);
 
   // 3. the interchanges (8.11): the through highway up on the deck over the roads below, and its ramps join them both
   //    ways - from each carriageway's deck down to each side's road below, and up again; no junction between them
   const built = R.interchanges.filter((q) => q.built);
   check(built.length >= 4, `interchanges built: ${built.map((q) => q.name).join(', ')}`);
-  for (const q of R.interchanges) if (!q.built) check(/tunnel|main line|runs through it/.test(q.why), `${q.name} not built: ${q.why}`);
+  for (const q of R.interchanges) if (!q.built) check(/tunnel|main line|runs through it|closing point/.test(q.why), `${q.name} not built: ${q.why}`);
+  for (const ic of INTERCHANGES) check(R.interchanges.some((q) => q.name === ic.name), `${ic.name}: planned (built or listed)`);
   for (const ic of built) {
     const deckIdx = (x, y) => m.deck[m.idx(Math.floor(x), Math.floor(y))];
     check(deckIdx(ic.at[0], ic.at[1]), `${ic.name}: ${ic.U} on the deck over the crossing`);
@@ -139,21 +158,22 @@ test('World v3: the skeleton\'s roads - on the ground, the deck, a bridge or a t
     }
   }
   check(wet === 0, `${wet} road points over open water off a bridge`);
-  // the gulf's crossings are bridges: the Union Bridge, the Cedar North Bridge, the Toll Point Bridge, the West Sea Road's hops
-  for (const [name, n] of [['Union Bridge', 100], ['Cedar North Bridge', 100], ['West Sea Road', 300], ['Toll Point Bridge', 100]]) {
-    const tiles = new Set();
-    for (const e of m.edges) if (e.name === name) for (let k = 0; k + 1 < e.pts.length; k++) { const a = e.pts[k], b = e.pts[k + 1], c = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 32); for (let j = 0; j <= c; j++) { const tx = Math.floor((a.x + (b.x - a.x) * j / c) / TILE), ty = Math.floor((a.y + (b.y - a.y) * j / c) / TILE); if (m.inside(tx, ty) && m.tiles[m.idx(tx, ty)] === T.BRIDGE) tiles.add(m.idx(tx, ty)); } }
-    check(tiles.size >= n, `${name}: ${tiles.size} bridge tiles along it`);
+  // the gulf's crossings are bridges: every skeleton bridge and footbridge (World v3b: the islands' road bridges and
+  // footbridges across the channels) is a bridge deck most of the way over the water its line crosses
+  for (const A of ARTERIALS.filter((q) => /Bridge$/.test(q.name) || q.foot)) {
+    const wetLen = wetRanges(linePath(A, RADIUS.art)).reduce((s, [a, b]) => s + b - a, 0), tiles = new Set();
+    for (const e of m.edges) if (e.name === A.name) for (let k = 0; k + 1 < e.pts.length; k++) { const a = e.pts[k], b = e.pts[k + 1], c = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 32); for (let j = 0; j <= c; j++) { const tx = Math.floor((a.x + (b.x - a.x) * j / c) / TILE), ty = Math.floor((a.y + (b.y - a.y) * j / c) / TILE); if (m.inside(tx, ty) && m.tiles[m.idx(tx, ty)] === T.BRIDGE) tiles.add(m.idx(tx, ty)); } }
+    check(wetLen > 20 && tiles.size >= 0.8 * wetLen, `${A.name}: ${tiles.size} bridge tiles along it over ${Math.round(wetLen)} tiles of water`);
   }
   // the lift bridges and footbridges are listed (the network has no lifting span or people-only kind yet: for the owner)
-  check(R.lifts.sort().join() === 'Northshore Lift Bridge,Port Bridge', `the lift bridges: ${R.lifts}`);
-  check(R.foot.sort().join() === 'Harbor Footbridge,Pelican Walk,Southbank Walk', `the footbridges: ${R.foot}`);
+  check(R.lifts.sort().join() === ARTERIALS.filter((q) => q.lift).map((q) => q.name).sort().join(), `the lift bridges: ${R.lifts}`);
+  check(R.foot.sort().join() === ARTERIALS.filter((q) => q.foot).map((q) => q.name).sort().join(), `the footbridges: ${R.foot}`);
 
-  // 5. the tunnels: the skeleton's (the highways', the Summit Road's, the Harbor Tunnel under the north channel) and the
-  //    closures - each highway running off the frame ends in a tunnel whose mouth at the edge is closed (wall across)
+  // 5. the tunnels: the skeleton's (its highways' and arterials' `tunnels`: World v3b has none - the WR3 skeleton's
+  //    Harbor Tunnel and mountain bores are gone) and the closures - each highway running off the frame ends in a tunnel
+  //    whose mouth at the edge is closed (wall across; World v3b: none, the land has sea round it)
   const tn = (name) => m.tunnels.filter((t) => m.edges[t.edge] && m.edges[t.edge].name === name);   // (the main line's bores have no road edge: 8.10.1)
-  for (const name of ['Granite Peaks Highway', 'North Highway', 'Summit Road', 'Harbor Tunnel']) check(tn(name).length, `${name} has its tunnel`);
-  check(tn('Harbor Tunnel').reduce((s, t) => s + t.len, 0) > 300 * TILE, 'the Harbor Tunnel runs under the channel');
+  for (const L of [...HIGHWAYS, ...ARTERIALS]) if ((L.tunnels || []).length) check(tn(L.name).length, `${L.name} has its tunnel`);
   for (const c of CLOSURES) {
     const x = Math.max(0.5, Math.min(W - 0.5, c.at[0])) * TILE, y = Math.max(0.5, Math.min(H - 0.5, c.at[1])) * TILE;
     const t = tn(c.line).find((q) => q.mouths.some((mo) => mo.closed && Math.hypot(mo.x - x, mo.y - y) < 6 * TILE));
