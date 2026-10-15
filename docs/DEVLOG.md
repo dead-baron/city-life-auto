@@ -9741,3 +9741,21 @@ start testing". The old World v3 (WR3) is kept on the branch `world-v3-wr3`.
   learns the world from its address; tools/build-worldmap2.mjs bakes World v3's map (`--world v3`) and close looks.
 Tests: test/dusting.test.js (new), test/world3city.test.js (new), test/world3regions.test.js (new),
 test/world3b.test.js (new); the WR3-only tests removed (world3gulf, world3place, world3port, world3land).
+
+## 2026-10-15 · World v3b: the Red Rock Desert's mesas and buttes carved out of the owner's red areas
+- **The tables** (shared/world3-relief.js carveTables3): the sketch's red areas (world3-layout.js GROUND3.mesa) were
+  each fitted with one ellipse, too big to stand clear of the roads, towns and water - 5 of 24 stood. Now each area is
+  filled with tables sized by the room there: on a 2-tile grid the room at each cell is the radius of the free disc
+  round it (kept 19 tiles off every road, rail, jeep track, place, town and the Lucky Mesa strip - the rim's cliff band
+  out of the roads' grade - 4 off the water and the desert's edge, no more than 12 past the area); the roomiest cell
+  takes the biggest squarish table that fits (stretched east-west or north-south up to 2.4 to 1 where the room runs
+  that way), a big one takes up to three lobes standing out from its rim at its top's level (the concepts' ragged
+  outlines), and the rim plus a 7-18 tile wash is taken from the room, until no 9-tile butte fits. **121 tables: 30
+  mesas (26 over 80 tiles across), the rest buttes, lobes and spires (23 under 18 tiles)** - along the north coast
+  round Lucky Mesa, the east coast, the middle country between Route 9, Mine Road and the Casino Highway, and the
+  south-east coast down to Sandpiper Bay.
+- A table's top is level now (h metres over the ground at its middle, its cliff and talus down to the ground round
+  it - a butte on the coast's fall to the sea no longer tilts); where two aprons meet the higher holds. The washes and
+  sand sheets under a top are plain ground (cap rock); dress3's sandstone blocks keep to the flats between the tables.
+Tests: test/world3relief.test.js (the tables: 90+, 25+ mesas, 15+ small; each top over its own foot, the ground just
+past its talus), test/world3biomes.test.js (the relief's buttes count with dress3's big blocks).

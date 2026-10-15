@@ -133,7 +133,7 @@ export function dress3(m, L, keep, H) {
     if (!okTile(i, T.DIRT, T.GRASS, T.SAND) || !clear(tx, ty, 8)) continue;
     if (d === D3.DESERT) {
       const r = vn(tx, ty, 300, 5504);   // (the rock country: the mesas stand in groups, with open flats between)
-      if (u >= sm(0.45, 0.75, r) * (tabs.length ? 0.3 : 0.7) || onTable(tx, ty, 30) || (nearTable(tx, ty, 40, 2) && u >= 0.08)) continue;
+      if (u >= sm(0.45, 0.75, r) * (tabs.length ? 0.3 : 0.7) || onTable(tx, ty, 30) || (nearTable(tx, ty, 30, 1.3) && u >= 0.08)) continue;   // (v3b: the tables stand close in the mesa country - the blocks on the flats between)
       if (hash2(gx, gy, 5505) < (tabs.length ? 0.12 : 0.45)) {   // a mesa: two to four flat-topped blocks in a row, the tallest in the middle
         const parts = 2 + Math.floor(hash2(gx, gy, 5506) * 3), a = hash2(gx, gy, 5507) < 0.5 ? 1 : 0;
         for (let k = 0; k < parts; k++) {

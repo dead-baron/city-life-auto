@@ -64,7 +64,10 @@ test('World v3: the mainland\'s biomes - their districts, ground and dressing', 
   check(km(48, 'rocks') > 600 && km(48, 'trees') > 1000, 'Granite Peaks: granite, and pines below the tree line');
   check(((per.get(48) || {}).snowTrees || 0) === 0, 'no tree above the snow line');
   check(km(50, 'rocks') > 150 && km(50, 'cacti') > 300 && km(50, 'plants') > 500, 'the desert: rocks, cacti, scrub');
-  check(km(50, 'big') > 5 && (m.tables || []).length >= 5, `the desert: mesas (the relief's tables: ${(m.tables || []).length}) and a few buttes (${Math.round(km(50, 'big'))} per km²)`);   // (H50: the tables are the mesas - world3-relief.js; dress3's blocks thinned to buttes)
+  // (v3b: the relief's buttes - its tables under 30 tiles across their long radius - count with dress3's big blocks: the
+  // tables fill the mesa country, dress3's blocks stand on the flats between)
+  const buttes = (m.tables || []).filter((t) => Math.max(t.rx, t.ry) < 30).length / (land[50] / 1e6);
+  check(km(50, 'big') + buttes > 10 && km(50, 'big') > 2 && (m.tables || []).length >= 90, `the desert: mesas (the relief's tables: ${(m.tables || []).length}) and buttes (${Math.round(buttes)} of the relief's, ${Math.round(km(50, 'big'))} big blocks per km²)`);   // (H50: the tables are the mesas - world3-relief.js; dress3's blocks thinned to buttes)
   check(km(53, 'plants') > 5000, 'the Egret Coast: reeds');
   // Willow Valley: fields, orchards, farmsteads
   const inD = (r, d) => m.dist[Math.floor((r.y + r.h / 2) / TILE) * W + Math.floor((r.x + r.w / 2) / TILE)] === d;

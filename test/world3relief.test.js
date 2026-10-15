@@ -8,7 +8,7 @@ import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
-import { reliefOf3, reliefCliffs, HIGH_SPOTS, LOOKOUT_MESA, CLIFF_SLOPE, tableEdge, tableSpots3, GORGE } from '../shared/world3-relief.js';
+import { reliefOf3, reliefCliffs, HIGH_SPOTS, LOOKOUT_MESA, CLIFF_SLOPE, tableEdge, GORGE } from '../shared/world3-relief.js';
 import { DESERT, HOLLOW } from '../shared/world3-desert.js';
 import { TOWNS } from '../shared/world3-skeleton.js';
 import { tableEdge as bakeEdge } from '../client/art2/game/groundbake.js';
@@ -66,14 +66,17 @@ test('World v3: the land\'s relief - heights, cliff bands off the roads, the lan
   // the lookout's mesa: the lookout on top, above Dusty Hollow
   const lk = box(DESERT.lookout[0], DESERT.lookout[1], 1), hollow = box(HOLLOW.at[0], HOLLOW.at[1], 3);
   check(lk >= hollow + LOOKOUT_MESA.h * 0.6, `the lookout at ${lk.toFixed(1)} m, Dusty Hollow ${hollow.toFixed(1)}`);
-  // the desert's tables: at least eight, four of them mesas over 80 tiles across, each top well above its foot, its
-  // rim a cliff band
-  // (v3b: the tables are the sketch's red areas, world3-layout.js GROUND3.mesa - most too big to stand clear of the
-  // roads, towns and water, so tableSpots3's spots shrink and give up: five stand, the lookout's and four mesas)
-  check(sum.tables >= 5 && sum.tableList.filter((t) => t.mesa && t.rx * 2 > 80).length >= 4, `tables ${sum.tables} of ${tableSpots3(W, H).length} planned, mesas ${sum.mesas}`);
+  // the desert's tables: many, twenty of them mesas over 80 tiles across, each top well above its foot, its rim a
+  // cliff band
+  // (v3b: carved out of the sketch's red areas, world3-layout.js GROUND3.mesa - big tables, buttes, spires and the
+  // lobes of the big ones' ragged outlines, clear of the roads, towns and water: about 120 stand, 30 of them mesas)
+  check(sum.tables >= 90 && sum.mesas >= 25 && sum.tableList.filter((t) => t.mesa && t.rx * 2 > 80).length >= 20 && sum.tableList.filter((t) => Math.max(t.rx, t.ry) < 18).length >= 15, `tables ${sum.tables}, mesas ${sum.mesas}`);
+  // (its foot: the ground just past its talus, the lower third of it - the tables stand close, a wash between, and on
+  // the coast the land falls away under them)
+  const foot = (t) => { const v = [], [ex, ey] = [t.rx * 1.6 + 40, t.ry * 1.6 + 40]; for (let y = Math.floor(t.y - ey); y <= t.y + ey; y += 2) for (let x = Math.floor(t.x - ex); x <= t.x + ex; x += 2) { if (x < 0 || y < 0 || x >= W || y >= H || !m.land[y * W + x]) continue; const e = tableEdge(t, x, y); if (e >= 15 && e <= 25) v.push(R[y * W + x]); } v.sort((a, b) => a - b); return v.length ? v[Math.floor(v.length * 0.3)] : 0; };
   for (const t of sum.tableList) {
-    const top = box(t.x, t.y, 3), foot = ring(t.x, t.y, Math.max(t.rx, t.ry) + 20, Math.max(t.rx, t.ry) + 40);
-    check(top >= foot + t.h * 0.6, `the table at ${t.x}, ${t.y}: ${top.toFixed(1)} m on a ${foot.toFixed(1)} m foot`);
+    const top = box(t.x, t.y, 3), ft = foot(t);
+    check(top >= ft + t.h * 0.6, `the table at ${t.x}, ${t.y}: ${top.toFixed(1)} m on a ${ft.toFixed(1)} m foot`);
     let rim = 0;
     for (let y = t.y - t.ry - 6; y <= t.y + t.ry + 6; y++) for (let x = t.x - t.rx - 6; x <= t.x + t.rx + 6; x++) if (x >= 0 && y >= 0 && x < W && y < H && cliffAt[y * W + x]) rim++;
     check(rim >= (t.rx + t.ry) * 1.2, `the table at ${t.x}, ${t.y}: ${rim} tiles of cliff round it`);

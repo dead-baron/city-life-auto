@@ -29,6 +29,7 @@ import { WATER3 } from './world3-land.js';
 import { peakHeight, TREE_LINE } from './world3-biomes.js';
 import { DISTRICTS } from './mapcore.js';
 import { GROUND3 } from './world3-layout.js';
+import { AIRSTRIPS3 } from './world3-wild.js';   // (the tables keep off Lucky Mesa's strip: used in the build only - the two modules import each other)
 
 export const RELIEF_CELL = 8;      // the coarse grid of the biomes' ground (tiles)
 export const CLIFF_SLOPE = 2.2;    // m per tile: steeper (on open wild ground) is a cliff band
@@ -179,7 +180,7 @@ export function reliefOf3(m, L) {
   }
   // 4. the desert's mesas and buttes, the gorge, the falls' escarpments
   const tables = tablesOf3(m, L, z);
-  for (const t of tables) table(z, W, H, t);
+  tablesOn(z, W, H, tables);
   canyonCut(m, z, W);
   gorge(m, z, W, H);
   for (const f of fallsOf3(m)) escarpment(m, z, W, H, f);
@@ -203,24 +204,115 @@ export function tableSpots3(W, H) {
   });
   return out;
 }
-function tablesOf3(m, L, z) {
-  const W = m.w, H = m.h, [look, ...spots] = tableSpots3(W, H), out = [look];
-  const graded = (i) => GRADED(m, i);
-  for (const sp of spots) {
-    const { x: cx, y: cy, mesa, s } = sp;
-    let { rx, ry } = sp;
-    // (shrunk once, then given up, if it would cover anything built, reserved or wet - or leave the desert)
-    for (let tries = 0; tries < 3; tries++, rx *= 0.72, ry *= 0.72) {
-      let bad = 0, n = 0;
-      for (let y = Math.floor(cy - ry - 16); y <= cy + ry + 16; y += 3) for (let x = Math.floor(cx - rx - 16); x <= cx + rx + 16; x += 3) {
-        if (x < 0 || y < 0 || x >= W || y >= H) { bad += 99; continue; }
-        const i = y * W + x; n++;
-        const t = m.tiles[i];   // (a road may cross it - a cutting - but nothing built, kept or wet may stand on it)
-        if (L.biome[i] !== BIO.desert || L.water[i] || (graded(i) && t !== T.ROAD && !(m.reserve[i] & 2)) || (m.reserve[i] & ~2) || t === T.WATER) bad++;
-      }
-      if (bad <= n * 0.01 && !out.some((o) => Math.abs(o.x - cx) < o.rx + rx + 30 && Math.abs(o.y - cy) < o.ry + ry + 30)) { out.push({ x: cx, y: cy, rx: Math.round(rx), ry: Math.round(ry), h: Math.round(sp.h), mesa, s }); break; }
-    }
+// (v3b) The owner's mesas and buttes carved out of the sketch's red areas (world3-layout.js GROUND3.mesa): the areas
+// are too big to stand clear of the roads, the towns and the water as one table each, so each is filled with tables of
+// the size the room there allows - big tables where it is wide, buttes in the corners, a spire in a gap - each kept
+// TABLES.hard tiles off every road, rail, track and place (its cliff band out of the roads' grade: GRADE_R), a few
+// tiles off the water and the desert's edge, and a wash (TABLES.gap tiles, by hash) off its neighbours. Greedy on a
+// 2-tile grid: the room at each cell is the radius of the free disc round it; the roomiest cell inside a mesa area
+// takes the biggest squarish table that fits there (stretched east-west or north-south when the room runs that way),
+// its rim and wash then taken from the room, until no butte fits. Deterministic (integer hashing, sqrt).
+export const TABLES = { cell: 2, hard: 19, soft: 4, poly: 12, gap: [7, 18], rMin: 9, rMax: 84, rag: 1.13, max: 140 };
+const SQ = 1.19;   // (a superellipse of TABLES' shape: its corner 1.19 radii out - the disc a table of radius r needs)
+// the chamfer distance (cells) from the set cells of `src` (gw x gh): two passes
+function chamfer(src, gw, gh, cap = 1e4) {
+  const d = new Float32Array(gw * gh);
+  for (let k = 0; k < d.length; k++) d[k] = src[k] ? 0 : cap;
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { const k = y * gw + x; let v = d[k]; if (!v) continue; if (x) v = Math.min(v, d[k - 1] + 1); if (y) { v = Math.min(v, d[k - gw] + 1); if (x) v = Math.min(v, d[k - gw - 1] + 1.414); if (x < gw - 1) v = Math.min(v, d[k - gw + 1] + 1.414); } d[k] = v; }
+  for (let y = gh; y--;) for (let x = gw; x--;) { const k = y * gw + x; let v = d[k]; if (!v) continue; if (x < gw - 1) v = Math.min(v, d[k + 1] + 1); if (y < gh - 1) { v = Math.min(v, d[k + gw] + 1); if (x < gw - 1) v = Math.min(v, d[k + gw + 1] + 1.414); if (x) v = Math.min(v, d[k + gw - 1] + 1.414); } d[k] = v; }
+  return d;
+}
+function carveTables3(m, L, out, z) {
+  const W = m.w, H = m.h, C = TABLES.cell, K = TABLES.rag;
+  let X0 = W, Y0 = H, X1 = 0, Y1 = 0;
+  for (const poly of GROUND3.mesa) for (const [x, y] of poly) { X0 = Math.min(X0, x); Y0 = Math.min(Y0, y); X1 = Math.max(X1, x); Y1 = Math.max(Y1, y); }
+  X0 = Math.max(0, X0 - 60); Y0 = Math.max(0, Y0 - 60); X1 = Math.min(W, X1 + 60); Y1 = Math.min(H, Y1 + 60);
+  if (X1 <= X0 || Y1 <= Y0) return;
+  const gw = Math.ceil((X1 - X0) / C), gh = Math.ceil((Y1 - Y0) / C), N = gw * gh;
+  const cellOf = (x, y) => (x < X0 || y < Y0 || x >= X1 || y >= Y1 ? -1 : (((y - Y0) / C) | 0) * gw + (((x - X0) / C) | 0));
+  // what a table keeps off: `hard` (roads, rails, tracks, what's built or kept, the towns, the places: TABLES.hard
+  // tiles), `soft` (the water, the land past the desert: TABLES.soft tiles), `inP` the mesa areas (a table's rim no
+  // more than TABLES.poly tiles past one)
+  const hard = new Uint8Array(N), soft = new Uint8Array(N), inP = new Uint8Array(N);
+  for (let y = Y0; y < Y1; y++) for (let x = X0; x < X1; x++) {
+    const i = y * W + x, c = cellOf(x, y), t = m.tiles[i], d = m.dist[i];
+    if (!m.land[i] || L.water[i] || t === T.WATER || t === T.DEEP || L.biome[i] !== BIO.desert) { soft[c] = 1; continue; }
+    if (d < 47 || d === 64 || !WILD.has((DISTRICTS[d] || {}).style) || GRADED(m, i) || m.bld[i] >= 0 || (m.reserve[i] & ~128) || !(t === T.GRASS || t === T.DIRT || t === T.SAND)) hard[c] = 1;
   }
+  const mark = (x0, y0, x1, y1) => { for (let y = Math.max(Y0, Math.floor(y0)); y < Math.min(Y1, Math.ceil(y1)); y += C) for (let x = Math.max(X0, Math.floor(x0)); x < Math.min(X1, Math.ceil(x1)); x += C) hard[cellOf(x, y)] = 1; };
+  for (const e of m.edges || []) if (!(e.lvl < 0)) for (let k = 1; k < e.pts.length; k++) {   // (the road graph: a dirt track has no road tiles)
+    const a = e.pts[k - 1], b = e.pts[k], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / TILE));
+    for (let j = 0; j <= n; j++) { const c = cellOf(Math.floor((a.x + (b.x - a.x) * j / n) / TILE), Math.floor((a.y + (b.y - a.y) * j / n) / TILE)); if (c >= 0) hard[c] = 1; }
+  }
+  for (const p of m.pois || []) if (p) mark(p.x / TILE - 4, p.y / TILE - 4, p.x / TILE + 4, p.y / TILE + 4);
+  for (const s of m.natureSites || []) if (s && Number.isFinite(s.x)) mark(s.x / TILE - 4, s.y / TILE - 4, s.x / TILE + 4, s.y / TILE + 4);
+  for (const r of [...(m.landmarks || []), ...(m.paintings || []), ...(m.quarries || [])]) if (r && Number.isFinite(r.w)) mark(r.x / TILE, r.y / TILE, (r.x + r.w) / TILE, (r.y + r.h) / TILE);
+  for (const A of AIRSTRIPS3) { const [a0, b0, a1, b1] = A.runway, [hx, hy, hw, hh] = A.hangar; mark(a0 - 6, b0 - 6, a1 + 6, b1 + 6); mark(hx - 6, hy - 6, hx + hw + 8, hy + hh + 8); }
+  const P = GROUND3.mesa.map((poly) => { const b = [1e9, 1e9, -1e9, -1e9]; for (const [x, y] of poly) { b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], y); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], y); } return { poly, b }; });
+  for (let cy = 0; cy < gh; cy++) for (let cx = 0; cx < gw; cx++) {
+    const x = X0 + cx * C + C / 2, y = Y0 + cy * C + C / 2;
+    for (const p of P) if (x >= p.b[0] && y >= p.b[1] && x <= p.b[2] && y <= p.b[3] && inPoly(p.poly, x, y)) { inP[cy * gw + cx] = 1; break; }
+  }
+  // the room (tiles): the radius of the free disc round each cell
+  const dH = chamfer(hard, gw, gh), dS = chamfer(soft, gw, gh), dQ = chamfer(inP, gw, gh), far = new Uint8Array(N);
+  for (let k = 0; k < N; k++) far[k] = dQ[k] * C > TABLES.poly ? 1 : 0;
+  const dF = chamfer(far, gw, gh), room = new Float32Array(N);
+  for (let k = 0; k < N; k++) room[k] = Math.min(dH[k] * C - TABLES.hard, dS[k] * C - TABLES.soft, dF[k] * C);
+  // a table of rim radii (rx, ry) at the cell (cx, cy): its rim (ragged out by TABLES.rag at most) all on room
+  const fits = (cx, cy, rx, ry) => {
+    const fx = rx * K / C, fy = ry * K / C, x0 = Math.floor(cx - fx), x1 = Math.ceil(cx + fx), y0 = Math.floor(cy - fy), y1 = Math.ceil(cy + fy);
+    if (x0 < 0 || y0 < 0 || x1 >= gw || y1 >= gh) return false;
+    for (let y = y0; y <= y1; y++) { const b = (y - cy) / fy, b4 = b * b * b * b; if (b4 > 1) continue; for (let x = x0; x <= x1; x++) { const a = (x - cx) / fx; if (a * a * a * a + b4 <= 1 && room[y * gw + x] < 0) return false; } }
+    return true;
+  };
+  // a placed table: its rim and its wash taken from the room round it (the distance to its rim, a local chamfer)
+  const take = (t, gap) => {
+    const fx = t.rx * K / C, fy = t.ry * K / C, cx = (t.x - X0) / C, cy = (t.y - Y0) / C, R = Math.ceil((TABLES.rMax * SQ * K + TABLES.gap[1]) / C) + 2;
+    const bx0 = Math.max(0, Math.floor(cx - fx) - R), bx1 = Math.min(gw - 1, Math.ceil(cx + fx) + R), by0 = Math.max(0, Math.floor(cy - fy) - R), by1 = Math.min(gh - 1, Math.ceil(cy + fy) + R), bw = bx1 - bx0 + 1, bh = by1 - by0 + 1;
+    const src = new Uint8Array(bw * bh);
+    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) { const a = (x - cx) / fx, b = (y - cy) / fy; if (a * a * a * a + b * b * b * b <= 1) src[(y - by0) * bw + x - bx0] = 1; }
+    const d = chamfer(src, bw, bh);
+    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) { const k = y * gw + x; room[k] = Math.min(room[k], d[(y - by0) * bw + x - bx0] * C - gap); }
+  };
+  for (const t of out) take(t, TABLES.gap[1]);   // (the lookout's mesa, placed by hand)
+  for (let n = 0; n < TABLES.max; n++) {
+    // the roomiest cell inside a mesa area (ties to the hash)
+    let best = -1, bv = -1;
+    for (let k = 0; k < N; k++) if (inP[k] && room[k] > bv + 1e-6) { bv = room[k]; best = k; }
+    if (best < 0 || bv < TABLES.rMin * SQ * K) break;
+    const cx = best % gw, cy = (best / gw) | 0, s = 2 + out.length + 40;
+    // the shape: squarish, or stretched up to 2.4 times its width along a row or a column, as big as fits
+    let pick = null;
+    for (const a of [1, 1.35, 1.8, 2.4]) for (const along of a === 1 ? [0] : [0, 1]) {
+      let lo = 0, hi = TABLES.rMax / a;
+      for (let it = 0; it < 9; it++) { const mid = (lo + hi) / 2; if (fits(cx, cy, along ? mid : mid * a, along ? mid * a : mid)) lo = mid; else hi = mid; }
+      if (lo < TABLES.rMin) continue;
+      const rx = along ? lo : lo * a, ry = along ? lo * a : lo, area = rx * ry * (1 + 0.15 * hash(cx * 3 + along, cy, 7207));
+      if (!pick || area > pick.area) pick = { rx, ry, area };
+    }
+    if (!pick) { room[best] = -1; n--; continue; }   // (this cell's disc was round but no table fits it: try the next)
+    const x = X0 + cx * C + C / 2, y = Y0 + cy * C + C / 2, r = Math.max(pick.rx, pick.ry), u = hash(x, y, 7206);
+    const mesa = r > 45, h = Math.round(mesa ? 34 + 18 * u : r > 18 ? 26 + 16 * u : 22 + 14 * u);
+    const t = { x, y, rx: Math.floor(pick.rx), ry: Math.floor(pick.ry), h, mesa, s }, top = z[y * W + x] + h;
+    // its lobes: smaller tables standing out from its rim, their tops at its top - one table of a ragged outline, as
+    // the concepts' mesas (up to three, in eight directions by hash, where the room is)
+    const own = [t], nl = r >= 24 ? 1 + Math.floor(hash(x, y, 7209) * 3) : 0;
+    for (let j = 0, d0 = Math.floor(hash(x, y, 7210) * 8); j < nl; j++) {
+      const [ux, uy] = DIRS8[(d0 + j * 3) % 8], q = Math.sqrt(Math.sqrt((ux / t.rx) ** 2 * (ux / t.rx) ** 2 + (uy / t.ry) ** 2 * (uy / t.ry) ** 2)), at = 0.9 / q;
+      const lr = Math.min(t.rx, t.ry) * (0.35 + 0.25 * hash(x + j, y, 7211)), st = hash(x, y + j, 7212), lx = Math.round(x + ux * at), ly = Math.round(y + uy * at);
+      const lrx = Math.max(12, Math.round(st < 0.33 ? lr * 1.4 : lr)), lry = Math.max(12, Math.round(st > 0.66 ? lr * 1.4 : lr));
+      if (lx < X0 || ly < Y0 || lx >= X1 || ly >= Y1 || top - z[ly * W + lx] < h * 0.7 || !fits((lx - X0) / C, (ly - Y0) / C, lrx, lry)) continue;   // (not up a slope: its cliff as tall as the table's)
+      own.push({ x: lx, y: ly, rx: lrx, ry: lry, h: Math.round((top - z[ly * W + lx]) * 10) / 10, mesa: false, s: s + 50 * (j + 1), lobe: out.length });
+    }
+    for (const o of own) out.push(o);
+    const gap = TABLES.gap[0] + Math.round(hash(x, y, 7208) * (TABLES.gap[1] - TABLES.gap[0]));
+    for (const o of own) take(o, gap);
+  }
+}
+const DIRS8 = [[1, 0], [0.7071, 0.7071], [0, 1], [-0.7071, 0.7071], [-1, 0], [-0.7071, -0.7071], [0, -1], [0.7071, -0.7071]];
+function tablesOf3(m, L, z) {
+  const [look] = tableSpots3(m.w, m.h), out = [look];
+  carveTables3(m, L, out, z);
   return out;
 }
 // how far (tiles) outside a table's rim a tile lies (negative: on its top) - a ragged superellipse. The bake has a copy
@@ -229,19 +321,30 @@ export function tableEdge(t, x, y) {
   const ax = (x - t.x) / t.rx, ay = (y - t.y) / t.ry, a2 = ax * ax, b2 = ay * ay;
   return (Math.sqrt(Math.sqrt(a2 * a2 + b2 * b2)) * (1 + 0.16 * (vn(x, y, 21, 7301 + t.s) - 0.5) + 0.06 * (vn(x, y, 7, 7302 + t.s) - 0.5)) - 1) * Math.min(t.rx, t.ry);
 }
+// how far (tiles, x and y) from its middle a table reaches out to e tiles past its rim (tableEdge: e runs on the short
+// radius, the rim ragged out by an eighth at most)
+export const tableReach = (t, e) => { const f = (1 + e / Math.min(t.rx, t.ry)) * 1.13; return [t.rx * f + 1, t.ry * f + 1]; };
 // a table: a flat top inside a ragged superellipse rim, a cliff 3 tiles wide down to its talus, the apron 11 more
-function table(z, W, H, t) {
-  const pad = 16;
-  for (let y = Math.max(0, Math.floor(t.y - t.ry - pad)); y <= Math.min(H - 1, t.y + t.ry + pad); y++) for (let x = Math.max(0, Math.floor(t.x - t.rx - pad)); x <= Math.min(W - 1, t.x + t.rx + pad); x++) {
-    const e = tableEdge(t, x, y);
-    let add;
-    if (e <= 0) add = t.h + 2 * vn(x, y, 40, 7303 + t.s);
-    else if (e <= 3) add = t.h * (1 - 0.7 * e / 3);
-    else if (e <= 14) { const f = 1 - (e - 3) / 11; add = t.h * 0.3 * f * f; }
+// (v3b: the tables stand close, a wash between - where two aprons meet the higher holds, they don't add up; a top is
+// level, h metres over the ground at its middle, whatever the land does under it - the coast's fall to the sea - and
+// its cliff and talus drop from there to the ground round it)
+function tablesOn(z, W, H, tables) {
+  let X0 = W, Y0 = H, X1 = 0, Y1 = 0;
+  for (const t of tables) { const [ex, ey] = tableReach(t, 15); X0 = Math.min(X0, Math.floor(t.x - ex)); Y0 = Math.min(Y0, Math.floor(t.y - ey)); X1 = Math.max(X1, Math.ceil(t.x + ex)); Y1 = Math.max(Y1, Math.ceil(t.y + ey)); }
+  X0 = Math.max(0, X0); Y0 = Math.max(0, Y0); X1 = Math.min(W - 1, X1); Y1 = Math.min(H - 1, Y1);
+  if (X1 < X0 || Y1 < Y0) return;
+  const bw = X1 - X0 + 1, add = new Float32Array(bw * (Y1 - Y0 + 1));
+  for (const t of tables) { const [ex, ey] = tableReach(t, 15), top = z[t.y * W + t.x] + t.h; for (let y = Math.max(Y0, Math.floor(t.y - ey)); y <= Math.min(Y1, t.y + ey); y++) for (let x = Math.max(X0, Math.floor(t.x - ex)); x <= Math.min(X1, t.x + ex); x++) {
+    const e = tableEdge(t, x, y), i = y * W + x, rise = Math.max(0, top - z[i]);
+    let a;
+    if (e <= 0) a = rise + 2 * vn(x, y, 40, 7303 + t.s);
+    else if (e <= 3) a = rise * (1 - 0.7 * e / 3);
+    else if (e <= 14) { const f = 1 - (e - 3) / 11; a = rise * 0.3 * f * f; }
     else continue;
-    const i = y * W + x;
-    if (z[i] > 0) z[i] += add;
-  }
+    const k = (y - Y0) * bw + x - X0;
+    if (a > add[k]) add[k] = a;
+  } }
+  for (let y = Y0; y <= Y1; y++) for (let x = X0; x <= X1; x++) { const i = y * W + x, a = add[(y - Y0) * bw + x - X0]; if (a > 0 && z[i] > 0) z[i] += a; }
 }
 // Red Rock Canyon (the scene painting's box, 8.19) cut into the plateau: its floor 7 m down, rising to its walls (the
 // painting's rock) and its box's edge over 7 tiles - the hillshade draws its sides (H50)
@@ -320,6 +423,15 @@ export { vn as reliefNoise };
 export function buildRelief3(m, L, addProp) {
   const W = m.w, H = m.h, N = W * H;
   const { z, tables } = reliefOf3(m, L);
+  // (v3b) a table's top and its cliff are rock: the desert's washes and sand sheets there made plain ground (the washes
+  // run on between the tables)
+  for (const t of tables) {
+    const [ex, ey] = tableReach(t, 3);
+    for (let y = Math.max(0, Math.floor(t.y - ey)); y <= Math.min(H - 1, t.y + ey); y++) for (let x = Math.max(0, Math.floor(t.x - ex)); x <= Math.min(W - 1, t.x + ex); x++) {
+      const i = y * W + x;
+      if (m.tiles[i] === T.SAND && !(m.reserve[i] & ~128) && tableEdge(t, x, y) <= 3) { m.tiles[i] = T.DIRT; m.reserve[i] &= ~128; }
+    }
+  }
   // the roads' grade: their tiles' heights averaged round each (GRADE_CELL cells, GRADE_AVG round), and each tile's
   // distance to the nearest road tile (chessboard, capped)
   const gc = GRADE_CELL, cw = Math.ceil(W / gc) + 1, chh = Math.ceil(H / gc) + 1, S = new Float32Array(cw * chh), Cn = new Float32Array(cw * chh);
@@ -370,7 +482,7 @@ export function buildRelief3(m, L, addProp) {
   let faces = 0;
   const own = new Uint8Array(N);
   for (const t of tables) {
-    const B = 6, bx0 = Math.max(1, Math.floor(t.x - t.rx - 8)), by0 = Math.max(1, Math.floor(t.y - t.ry - 8)), bx1 = Math.min(W - 2, Math.ceil(t.x + t.rx + 8)), by1 = Math.min(H - 2, Math.ceil(t.y + t.ry + 8));
+    const B = 6, [ex, ey] = tableReach(t, 5), bx0 = Math.max(1, Math.floor(t.x - ex)), by0 = Math.max(1, Math.floor(t.y - ey)), bx1 = Math.min(W - 2, Math.ceil(t.x + ex)), by1 = Math.min(H - 2, Math.ceil(t.y + ey));
     for (let gy = by0; gy <= by1; gy += B) for (let gx = bx0; gx <= bx1; gx += B) {
       let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, n = 0, sx = 0, sy = 0;
       for (let y = gy; y < Math.min(by1 + 1, gy + B); y++) for (let x = gx; x < Math.min(bx1 + 1, gx + B); x++) {
@@ -408,5 +520,5 @@ export function buildRelief3(m, L, addProp) {
   let top = 0;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x, h = z[i]; if (h > top) top = h; rel[i] = clamp(Math.floor(h + BAYER[(y & 3) * 4 + (x & 3)]), 0, 255); }
   m.relief = rel;
-  return { cell: RELIEF_CELL, top: Math.round(top), tables: tables.length, mesas: tables.filter((t) => t.mesa).length, tableList: tables.map((t) => ({ x: t.x, y: t.y, rx: t.rx, ry: t.ry, h: t.h, mesa: t.mesa })), cliffs, faces, cut, fill, falls: fallsOf3(m).map((f) => f.name) };
+  return { cell: RELIEF_CELL, top: Math.round(top), tables: tables.length, mesas: tables.filter((t) => t.mesa).length, tableList: tables.map((t) => ({ x: t.x, y: t.y, rx: t.rx, ry: t.ry, h: t.h, mesa: t.mesa, s: t.s })), cliffs, faces, cut, fill, falls: fallsOf3(m).map((f) => f.name) };
 }
