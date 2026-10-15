@@ -25,6 +25,9 @@ import { TILE } from './constants.js';
 import { DISTRICTS } from './mapcore.js';
 import { ISLANDS3, MAINLAND3, HIGHWAYS3, MAIN_LOOP3 } from './world3-layout.js';
 
+// the v3b frame the plan is drawn on (WORLD-V3.md 9.1: 13 x 8 regions of 504 tiles); the build lays the city only there
+export const CITY_FRAME = [6552, 4032];
+
 // zones (shared/layoutcore.js Z): the city's, Southbank's, the key's, Westport's, Cedar Isle's, the villages'
 const ZC = 1, ZS = 2, ZK = 5, ZW = 7, ZI = 9, ZG = 10;
 

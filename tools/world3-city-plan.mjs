@@ -6,10 +6,10 @@
 //   python3 tools/world3b/cityplan.py out.json docs/world-v3b/city-plan.png
 import { writeFileSync } from 'node:fs';
 import { MAINLAND3, ISLANDS3, LAKES3, STREAMS3, HIGHWAYS3, MAIN_LOOP3, SUBWAYS3, FERRIES3, MAIN_STATIONS3 } from '../shared/world3-layout.js';
-import { paintCity3, planCity3, avoidOf, CITY3, CITY_PARKS, CITY_AIRPORT, CITY_SPOTS, AVE_X, AVE_Y } from '../shared/world3-city.js';
+import { paintCity3, planCity3, avoidOf, CITY_FRAME, CITY3, CITY_PARKS, CITY_AIRPORT, CITY_SPOTS, AVE_X, AVE_Y } from '../shared/world3-city.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 
-export const FRAME = [6552, 4032];
+export const FRAME = CITY_FRAME;
 
 // the land layer of the new frame: 1 on land, the lakes and the streams cut (L.land), dist 255 where nothing painted
 export function testLand() {

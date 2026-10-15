@@ -33,7 +33,9 @@ import { subwayLoops } from './world3-subway.js';
 import { paintWater3, buildWater3, waterDone } from './world3-water.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
 import { wildSites3, wildDone, movedAt, wildDist, wildFarm3 } from './world3-wild.js';
-import { buildRelief3 } from './world3-relief.js';   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
+import { buildRelief3 } from './world3-relief.js';
+// (v3b, WORLD-V3.md 9.3: the city - its districts, its streets and its places; on the v3b frame only)
+import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS } from './world3-city.js';   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -67,6 +69,7 @@ export function worldOpts(asked) {
   const desert = paintDesert3(L, W, H);   // (Copper Gulch's and Dusty Hollow's districts: shared/world3-desert.js, 8.18)
   const water = paintWater3(L, W, H);   // (H46, 8.21: Kestrel Lake's island - shared/world3-water.js)
   const west = paintWest3(L, W, H);   // (Egret Point's district: shared/world3-west.js, 8.20)
+  const city = W === CITY_FRAME[0] && H === CITY_FRAME[1] ? paintCity3(L, W, H, { 26: [PORT_WESTPORT.rect] }) : null;   // (v3b: the city's districts - world3-city.js; Port Westport takes the container quays' rect)
   const pieces = worldPieces();
   const byDist = new Int16Array(256).fill(-1);
   for (const p of pieces) if (p.ids) for (const d of p.ids) byDist[d] = p.k;
@@ -121,6 +124,7 @@ export function worldOpts(asked) {
   const box = [W, H, 0, 0];
   for (const [x, y] of metro.poly) { box[0] = Math.min(box[0], x - 40); box[1] = Math.min(box[1], y - 40); box[2] = Math.max(box[2], x + 40); box[3] = Math.max(box[3], y + 40); }
   const o = {
+    ...(city ? { parks: CITY_PARKS, airports: [CITY_AIRPORT], seedOf: (d) => CITY_SEEDS[d] } : {}),   // (v3b: the park, the stadium and the airport at their v3b spots; each district's heart - world3-city.js)
     world: { pick, base, placeLine, cls, pieces, dist: wildDist, farm: (m, rand, G) => { if (m.world3?.wild) m.world3.wild.farmBuilt = wildFarm3(m, rand, G); } },   // (H51: Dry Creek's farm - map.js buildFarm's hook)   // (dist: today's wild districts' v3 regions, for the moved nature sites - 8.19)
     place: base,
     islandAt: [],
@@ -240,6 +244,7 @@ export function worldOpts(asked) {
       }
       m.world3 = { pieces: pieces.map((p) => ({ key: p.key, at: p.at, s: p.s })), split: out.split, offFrame: out.offFrame, cut: j.cut, dropped: j.dropped, bridged: j.bridged, canal: j.canal, crossings };
       m.world3.roads = layRoads(lines, m, L);   // (the skeleton's highways and arterials: shared/world3-roads.js, 8.7)
+      if (city) m.world3.city = { painted: city, streets: layCity3(lines, m) };   // (v3b: the city's avenues, streets and alleys, the bridges met - world3-city.js)
       m.world3.towns = { painted: towns, streets: layTowns3(lines, m) };   // (the towns' street grids: world3-towns.js, 8.13)
       m.world3.beach = beachStreets(lines, m, L);   // (Northshore's beach towns' streets: shared/world3-beach.js, 8.14)
       m.world3.mesa = { painted: mesa, streets: layMesa3(lines, m) };   // (Lucky Mesa's Strip and side streets: shared/world3-mesa.js, 8.15)
