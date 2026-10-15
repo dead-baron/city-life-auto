@@ -30,47 +30,49 @@ const SAND = 5, DESERT = 3;   // (world3-land.js TERRAIN3: sand under the city b
 const Z_TOWN = 8;             // (the mainland's built zone, as the towns': map.js BUILT_ZONES, buildBusStops)
 export const MESA_IDS = { strip: 60, old: 61, flats: 62 };
 
-// The city (tiles). The Strip is Mesa Road pulled straight on row 392 (`main`, as a town's main street: pulledAt) and
-// laid as a boulevard from Gold Street to the hub; the resorts face it from both sides, Old Downtown at its west end,
-// the flats behind (north) and south-west of it, down to the Desert Highway's room.
+// The city (tiles; World v3b, docs/WORLD-V3.md part 9: the owner's top-right corner, the Casino Highway arriving from
+// the south-west, the main line along its south side, its airstrip just east). The Strip is Mesa Road pulled straight
+// on row 612 (`main`, as a town's main street: pulledAt) and laid as a boulevard from Gold Street to the hub; the
+// resorts face it from both sides, Old Downtown at its west end, the flats behind (north) and south-west of it, down to
+// the main line's room.
 export const MESA = {
-  key: 'mesa', name: 'Lucky Mesa', at: [4600, 420], box: [4236, 228, 4640, 532],
-  main: { line: 'Mesa Road', y: 392, a: 4250, b: 4558, ramp: 40 }, pulls: [],
+  key: 'mesa', name: 'Lucky Mesa', at: [5600, 640], box: [5236, 448, 5640, 752],
+  main: { line: 'Mesa Road', y: 612, a: 5250, b: 5558, ramp: 40 }, pulls: [],
   // the districts' ground (tile boxes, painted in this order: a later one over an earlier)
   ground: [
-    [62, [[4240, 232, 4574, 334], [4240, 470, 4336, 528], [4336, 456, 4480, 528]]],
-    [60, [[4330, 332, 4552, 456]]],
-    [61, [[4240, 320, 4330, 470]]],
+    [62, [[5240, 452, 5574, 554], [5240, 690, 5336, 748], [5336, 676, 5480, 748]]],
+    [60, [[5330, 552, 5552, 676]]],
+    [61, [[5240, 540, 5330, 690]]],
   ],
   streets: [
-    ['Palm Row', [[4256, 328], [4542, 328]]],                              // behind the north resorts
-    ['Chapel Street', [[4330, 280], [4542, 280]]],                         // the motels and the wedding chapels
-    ['Gold Street', [[4256, 470], [4256, 328]]],                           // Old Downtown's west street, across the Strip
-    ['Silver Street', [[4330, 470], [4330, 280]]],                         // the Strip's west end, up to Chapel Street
-    ['Lucky Street', [[4542, 392], [4542, 280]]],                          // the Strip's east end, up to Chapel Street
-    ['Cactus Street', [[4454, 392], [4454, 470]]],                         // between the south resorts
-    ['Mesa Flats Drive', [[4256, 470], [4454, 470]]],                      // the flats' street
-    ['Trailer Lane', [[4300, 470], [4300, 508], [4410, 508], [4410, 470]]],   // the trailer park's loop
-    ['Chapel Lane', [[4444, 280], [4444, 246]]],                           // the lane out into the desert (a turnaround)
-    ['Station Road', [[4612, 400], [4612, 516]]],                          // Route 9 down to the main line's station
+    ['Palm Row', [[5256, 548], [5542, 548]]],                              // behind the north resorts
+    ['Chapel Street', [[5330, 500], [5542, 500]]],                         // the motels and the wedding chapels
+    ['Gold Street', [[5256, 690], [5256, 548]]],                           // Old Downtown's west street, across the Strip
+    ['Silver Street', [[5330, 690], [5330, 500]]],                         // the Strip's west end, up to Chapel Street
+    ['Lucky Street', [[5542, 612], [5542, 500]]],                          // the Strip's east end, up to Chapel Street
+    ['Cactus Street', [[5454, 612], [5454, 690]]],                         // between the south resorts
+    ['Mesa Flats Drive', [[5256, 690], [5454, 690]]],                      // the flats' street
+    ['Trailer Lane', [[5300, 690], [5300, 728], [5410, 728], [5410, 690]]],   // the trailer park's loop
+    ['Chapel Lane', [[5444, 500], [5444, 466]]],                           // the lane out into the desert (a turnaround)
+    ['Station Road', [[5612, 620], [5612, 736]]],                          // Route 9 down to the main line's station
   ],
   // the resorts (a lot [x0, y0, x1, y1), the side it fronts the Strip on, its look): north of the Strip they front south
   resorts: [
-    { name: 'The Golden Lotus', look: 'lotus', lot: [4334, 334, 4387, 385], face: 'S' },
-    { name: 'Palazzo Aurelio', look: 'dome', lot: [4387, 334, 4439, 385], face: 'S' },
-    { name: 'The Sunstone Pyramid', look: 'pyramid', lot: [4439, 334, 4491, 385], face: 'S' },
-    { name: 'The Prism', look: 'glass', lot: [4491, 334, 4540, 385], face: 'S' },
+    { name: 'The Golden Lotus', look: 'lotus', lot: [5334, 554, 5387, 605], face: 'S' },
+    { name: 'Palazzo Aurelio', look: 'dome', lot: [5387, 554, 5439, 605], face: 'S' },
+    { name: 'The Sunstone Pyramid', look: 'pyramid', lot: [5439, 554, 5491, 605], face: 'S' },
+    { name: 'The Prism', look: 'glass', lot: [5491, 554, 5540, 605], face: 'S' },
     // south of it they front north; their lots run back to the flats' street (the resorts' car parks and pools)
-    { name: 'Starfall Tower', look: 'star', lot: [4334, 400, 4387, 466], face: 'N' },
-    { name: 'The Silver Lagoon', look: 'lake', lot: [4387, 400, 4452, 466], face: 'N' },
-    { name: 'Castillo Dorado', look: 'castle', lot: [4458, 400, 4532, 466], face: 'N' },
+    { name: 'Starfall Tower', look: 'star', lot: [5334, 620, 5387, 686], face: 'N' },
+    { name: 'The Silver Lagoon', look: 'lake', lot: [5387, 620, 5452, 686], face: 'N' },
+    { name: 'Castillo Dorado', look: 'castle', lot: [5458, 620, 5532, 686], face: 'N' },
   ],
   // Old Downtown's covered street of lights: a pedestrian street (plaza) under its canopy, the old casinos either side
   // fronting it (x from, x to; north side's fronts south, south side's north)
-  canopy: [4263, 352, 4324, 359],
+  canopy: [5263, 572, 5324, 579],
   oldCasinos: [
-    ['The Gilded Spur', 4264, 4282, 'N'], ['The Dusty Ace', 4284, 4302, 'N'], ['The Prospector', 4304, 4323, 'N'],
-    ['Wagon Wheel Casino', 4264, 4282, 'S'], ['Silver Mule Casino', 4284, 4302, 'S'], ['Rattlesnake Ruby', 4304, 4323, 'S'],
+    ['The Gilded Spur', 5264, 5282, 'N'], ['The Dusty Ace', 5284, 5302, 'N'], ['The Prospector', 5304, 5323, 'N'],
+    ['Wagon Wheel Casino', 5264, 5282, 'S'], ['Silver Mule Casino', 5284, 5302, 'S'], ['Rattlesnake Ruby', 5304, 5323, 'S'],
   ],
 };
 
