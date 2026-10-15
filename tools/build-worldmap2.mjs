@@ -17,9 +17,11 @@
 //                thread - run it under the heavy lock, with 2 threads at most on a 7 GB machine)
 //   --scale k    a map pixel is k x k px of the world (16 today's map; with --area 2-8 for a close look at a place)
 //   --areas 'name:cx0,cy0,cx1,cy1;...' --outdir dir   several close looks in one run (one world build): dir/<name>.png
+//   --cache dir [--max-s N]   keep each baked chunk in dir/<world signature>/ and skip those already there; stop
+//                feeding the threads after N s (the whole v3 map takes ~2.5 h on two cores: run it again to go on)
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { cpus } from 'node:os';
-import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -60,6 +62,15 @@ async function main() {
   if (globalThis.gc) globalThis.gc();
   // the open sea's look: one deep chunk baked (the first), copied to the rest
   if (sea.length) jobs.unshift(sea[0]);
+  // (a cache of baked chunks: those already there aren't baked again)
+  const CACHE = arg('--cache') ? join(arg('--cache'), sig) : null, MAX_S = Number(arg('--max-s')) || Infinity;
+  const cfile = (cx, cy) => join(CACHE, `${cx}_${cy}.rgb`);
+  const cached = [];
+  if (CACHE) {
+    mkdirSync(CACHE, { recursive: true });
+    for (let k = jobs.length - 1; k >= 0; k--) { const [cx, cy] = jobs[k]; if (existsSync(cfile(cx, cy))) { cached.push(jobs[k]); jobs.splice(k, 1); } }
+    console.log(`[map] ${cached.length} chunks from the cache`);
+  }
   console.log(`[map] ${jobs.length} chunks to bake, ${sea.length} of open sea; world ${sig}`);
   const n = Math.max(1, Math.min(Number(process.argv[2]) || cpus().length, 8, jobs.length));
   let next = 0, done = 0, seaPix = null;
@@ -72,11 +83,12 @@ async function main() {
     let live = n;
     for (let k = 0; k < n; k++) {
       const w = new Worker(fileURLToPath(import.meta.url), { workerData: { seed: SEED, S, v3: V3 } });
-      const feed = () => { if (next < jobs.length) { const [cx, cy] = jobs[next++]; w.postMessage({ cx, cy }); } else { w.terminate(); if (--live === 0) resolve(); } };
+      const feed = () => { if (next < jobs.length && (Date.now() - t0) / 1000 < MAX_S) { const [cx, cy] = jobs[next++]; w.postMessage({ cx, cy }); } else { w.terminate(); if (--live === 0) resolve(); } };
       w.on('message', (m) => {
         if (m.ready) return feed();
         if (m.error) return reject(new Error(`chunk ${m.cx},${m.cy}: ${m.error}`));
         const px = Buffer.from(m.px);
+        if (CACHE) writeFileSync(cfile(m.cx, m.cy), px);
         put(m.cx, m.cy, px);
         if (sea.length && m.cx === sea[0][0] && m.cy === sea[0][1]) seaPix = px;
         if (++done % 50 === 0) console.log(`[map] ${done}/${jobs.length} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
@@ -85,6 +97,10 @@ async function main() {
       w.on('error', reject);
     }
   });
+  if (CACHE) {
+    if (next < jobs.length) { console.log(`[map] stopped after ${MAX_S} s: ${jobs.length - next} chunks left - run it again`); return; }
+    for (const [cx, cy] of cached) { const px = readFileSync(cfile(cx, cy)); put(cx, cy, px); if (sea.length && cx === sea[0][0] && cy === sea[0][1]) seaPix = px; }
+  }
   for (const [cx, cy] of sea) if (seaPix) put(cx, cy, seaPix);
   if (AREAS) {
     const dir = arg('--outdir') || '.';
