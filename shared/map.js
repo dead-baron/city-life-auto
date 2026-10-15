@@ -810,7 +810,7 @@ function layoutRoads(m, rand) {
   placeNew();
   stationAccess(m, lines, isLand, seaD);
   // campgrounds, roadside stops, masts, wind farms... out in the wild, each with its own road in
-  const avoid = AIRPORTS.map((A) => airportPlan(A)).flatMap((A) => [A.runway, A.apron, A.taxi, A.terminal, ...A.hangars].map(([x, y, w, h]) => [x - 5, y - 5, w + 10, h + 10])).concat(FIELDS.map(([x, y, w, h]) => (pin(x, y), [PTX(x) - 2, PTY(y) - 2, w + 4, h + 4])), FARM_FIELDS.map(([x, y, w, h]) => [PTX(x) - 2, PTY(y) - 2, w + 4, h + 4]));
+  const avoid = (OPTS?.airports || AIRPORTS).map((A) => airportPlan(A)).flatMap((A) => [A.runway, A.apron, A.taxi, A.terminal, ...A.hangars].map(([x, y, w, h]) => [x - 5, y - 5, w + 10, h + 10])).concat(FIELDS.map(([x, y, w, h]) => (pin(x, y), [PTX(x) - 2, PTY(y) - 2, w + 4, h + 4])), FARM_FIELDS.map(([x, y, w, h]) => [PTX(x) - 2, PTY(y) - 2, w + 4, h + 4]));
   unpin();
   // (a placed build: the sites are looked for round their spots placed, in the place's frame - countryside.js `at`; the
   // lots keep their size)
@@ -1256,8 +1256,8 @@ function waterfrontStrip(m) {
 // corners left over become pocket parks, plazas or yards.
 function findBlocks(m) {
   const W = m.w, H = m.h;
-  ALL_PARKS = [{ ...PARK, pond: true, pitch: true }, ...PARKS.map((q) => ({ ...q, pond: !q.lake && !q.pitch }))];
-  if (PL) ALL_PARKS = ALL_PARKS.map((q) => (pin(q.x0, q.y0), { ...q, x0: PX(q.x0), y0: PY(q.y0), x1: PX(q.x1), y1: PY(q.y1) }));
+  ALL_PARKS = OPTS?.parks ? OPTS.parks.map((q) => ({ ...q })) : [{ ...PARK, pond: true, pitch: true }, ...PARKS.map((q) => ({ ...q, pond: !q.lake && !q.pitch }))];   // (opts.parks: World v3b's, frame tiles - shared/world3-city.js)
+  if (PL && !OPTS?.parks) ALL_PARKS = ALL_PARKS.map((q) => (pin(q.x0, q.y0), { ...q, x0: PX(q.x0), y0: PY(q.y0), x1: PX(q.x1), y1: PY(q.y1) }));
   unpin();   // (a placed build)
   const free = new Uint8Array(W * H);
   for (let i = 0; i < W * H; i++) {
@@ -1463,7 +1463,8 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
 // the rows round the hero corner are rebuilt by buildHeroCorner: no special business (the only dealership, a
 // hospital...) is put where it would be cleared away
 const nearHero = (row, iv) => row.y < PY(HERO.y) + 20 && row.y + row.h > PY(HERO.y) - 20 && iv[0] < PX(HERO.x) + 30 && iv[1] > PX(HERO.x) - 30;
-function seedOf(d) { const [x, y] = seedOf0(d); pin(x / TILE, y / TILE); const r = [QX(x), QY(y)]; unpin(); return r; }   // (placed: PL)
+function seedOf(d) { const o = OPTS?.seedOf?.(d); if (o) return [(o[0] + 0.5) * TILE, (o[1] + 0.5) * TILE];   // (opts.seedOf: World v3b's district hearts, frame tiles - shared/world3-city.js)
+  const [x, y] = seedOf0(d); pin(x / TILE, y / TILE); const r = [QX(x), QY(y)]; unpin(); return r; }   // (placed: PL)
 function seedOf0(d) {
   const s = SEEDS.filter((q) => q[0] === d);
   if (d === 46) return [(ARTS.x0 + ARTS.x1) / 2 * TILE, (ARTS.y0 + ARTS.y1) / 2 * TILE];   // (laid out by a rectangle, not seeds)
@@ -3869,7 +3870,7 @@ const clsAt = (cls, cw, tx, ty) => (WD ? WD.cls(tx, ty, (x, y) => terrainAt(cls,
 // shorter along the runway: the runway and the taxiway by the scale, the apron as deep as its planes need, the hangars
 // in a row under it (buildAirports keeps those that stand on the land)
 function airportPlan(A) {
-  if (!PL) return A;
+  if (!PL || OPTS?.airports) return A;   // (opts.airports: placed already)
   pin(A.runway[0], A.runway[1]);   // (the world build: the airport's piece - callers unpin)
   if (PL.s >= 1) {
     const P = ([x, y, w, h]) => [PTX(x), PTY(y), w, h];
@@ -4207,7 +4208,7 @@ function buildScenePaintings(m) {
 function buildAirports(m) {
   m.airports = [];
   const onLand = (x, y, w, h) => { for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) if (!m.inside(tx, ty) || !m.land[ty * m.w + tx]) return false; return true; };
-  for (const A0 of AIRPORTS) {
+  for (const A0 of OPTS?.airports || AIRPORTS) {   // (World v3b: the airport at its v3b spot, frame tiles - shared/world3-city.js)
     const A = airportPlan(A0);
     if (PL && !onLand(A.terminal[0], A.terminal[1], 1, 1)) continue;   // (placed: an airport is built by the place it stands on)
     if (PL && PL.s < 1) A.hangars = A.hangars.filter(([x, y, w, h]) => onLand(x, y, w, h));
