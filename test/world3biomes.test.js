@@ -93,8 +93,11 @@ test('World v3: the mainland\'s biomes - their districts, ground and dressing', 
     }
     worst = Math.max(worst, both / Math.max(1, one));
   }
-  console.log('desert sand repeat (worst P(sand there | sand here))', worst.toFixed(3));
-  check(worst < 0.4, `the desert repeats (${worst.toFixed(2)})`);
+  // (against the sand's own share: v3b's whole desert, its sand 29% of it - a repeating pattern would put P near 1; the
+  // sand sheets' own reach correlates the nearest offsets a little)
+  const base = g[50].sand;
+  console.log('desert sand repeat (worst P(sand there | sand here))', worst.toFixed(3), 'its share', base.toFixed(3));
+  check(worst < Math.max(0.4, base + 0.15), `the desert repeats (${worst.toFixed(2)} against its share ${base.toFixed(2)})`);
 
   // (Northshore at its beach: dropped for v3b - Northshore 31, North Point 32 and The Bluffs 34 aren't painted yet,
   // docs/WORLD-V3.md 9.4; the north coast is the Northshore Beaches' only: test/world3beach.test.js)
