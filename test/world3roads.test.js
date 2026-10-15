@@ -53,11 +53,47 @@ test('World v3: the skeleton\'s roads - on the ground, the deck, a bridge or a t
     const atIc = (x, y) => INTERCHANGES.some((ic) => Math.hypot(ic.at[0] - x, ic.at[1] - y) < 26);
     for (const [a, b] of r.kept) for (let s = a; s <= b; s += 4) { const [x, y] = pointAt(P, s); if ((s < 30 || s > P.length - 30) && atIc(x, y)) continue; pts++; if (!onRoad(x, y)) miss.push(`${H0.name} at ${Math.round(x)}, ${Math.round(y)}`); }
   }
+  // (a stretch of one skeleton road between two places it crosses another that runs alongside it is the network's one road
+  // there: buildNetwork keeps one edge of a kind between two junctions - World v3b's Route 9 beside the Red Rock Road, the
+  // Redwood Coast Road beside the Egret Coast Road; listed. Such a stretch is excused when the other's edge joins the
+  // junctions at its two ends - within 40 tiles of where its points leave the road and meet it again: the two close in on
+  // each other there - or when every point of it is within 12 tiles of the other's road)
+  const skelNames = new Set([...HIGHWAYS, ...ARTERIALS].map((L) => L.name)), alongside = [];
+  const near = (p, q) => Math.hypot(p.x / TILE - q[0], p.y / TILE - q[1]) < 40;
+  const twin = (name, a, b) => m.edges.find((e) => {
+    if (e.name === name || !skelNames.has(e.name) || e.lvl !== 0) return false;
+    const A = m.nodes[e.a], B = m.nodes[e.b];
+    return Math.hypot(A.x - B.x, A.y - B.y) / TILE > 0.5 * Math.hypot(a[0] - b[0], a[1] - b[1]) && ((near(A, a) && near(B, b)) || (near(A, b) && near(B, a)));
+  });
+  const CB = 16 * TILE, cellsB = new Map(), kb = (x, y) => Math.floor(x / CB) * 65536 + Math.floor(y / CB);
+  for (const e of m.edges) if (skelNames.has(e.name) && e.lvl === 0) for (let j = 0; j + 1 < e.pts.length; j++) {
+    const a = e.pts[j], b = e.pts[j + 1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / (2 * TILE)));
+    for (let q = 0; q <= n; q++) { const p = { x: a.x + (b.x - a.x) * q / n, y: a.y + (b.y - a.y) * q / n, name: e.name }, k = kb(p.x, p.y); if (!cellsB.has(k)) cellsB.set(k, []); cellsB.get(k).push(p); }
+  }
+  const beside = (name, x, y) => { for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (const p of cellsB.get(kb(x * TILE + dx * CB, y * TILE + dy * CB)) || []) if (p.name !== name && Math.hypot(p.x / TILE - x, p.y / TILE - y) < 12) return p.name; return null; };
   for (const A of ARTERIALS) {
     if (/^Canal /.test(A.name)) continue;
     const P = linePath(A, RADIUS.art);
-    for (let s = 0; s <= P.length; s += 4) { const [x, y] = pointAt(P, s); if (byBore(x, y) || airport(x, y) || pulledAt(A.name, x, y)) continue; pts++; if (!onRoad(x, y)) miss.push(`${A.name} at ${Math.round(x)}, ${Math.round(y)}`); }   // (pulledAt: a town's main street, its own course - 8.13.1)
+    let run = null;
+    const close = (after) => {
+      if (!run) return;
+      const e = after && run.before && twin(A.name, run.before, after), by = !e && run.at.every(([x, y]) => beside(A.name, x, y)) && beside(A.name, ...run.at[0]);
+      if (e || by) alongside.push(`${A.name} ${run.at[0].map(Math.round)} - ${run.at[run.at.length - 1].map(Math.round)} (${e ? e.name : by})`);
+      else miss.push(...run.at.map(([x, y]) => `${A.name} at ${Math.round(x)}, ${Math.round(y)}`));
+      run = null;
+    };
+    let last = null;
+    for (let s = 0; s <= P.length; s += 4) {
+      const [x, y] = pointAt(P, s);
+      if (byBore(x, y) || airport(x, y) || pulledAt(A.name, x, y)) { close(null); last = null; continue; }   // (pulledAt: a town's main street, its own course - 8.13.1)
+      pts++;
+      if (onRoad(x, y)) { close([x, y]); last = [x, y]; continue; }
+      run ??= { before: last, at: [] };
+      run.at.push([x, y]);
+    }
+    close(null);
   }
+  if (alongside.length) t.diagnostic(`skeleton roads that are another's road there (one edge between two junctions): ${alongside.join('; ')}`);
   check(pts > 10000, `${pts} points checked`);
   check(!miss.length, `${miss.length} of ${pts} skeleton points off the road: ${miss.slice(0, 10).join('; ')}`);
   // every highway runs two lanes each way; the deck where it passes over an arterial in the country
