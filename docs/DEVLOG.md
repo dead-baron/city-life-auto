@@ -9777,3 +9777,13 @@ Shore Road 20-60 tiles inland of the sand). Now (docs/WORLD-V3.md 9.6, after the
   (shared/world3-city.js planCity3).
 - Fixed on the way: a station whose track is below ground all round it (Midtown's) kept its house on a building.
 Tests: test/world3beach.test.js, test/world3biomes.test.js (Northshore at its beach again), test/world3city.test.js.
+
+## 2026-10-15 · World v3 goes live (the owner: "Go", 04:14)
+- `shared/liveworld.js` LIVE_WORLD 'v3': the deployed server builds and runs World v3b (no unit-file change), and
+  version.json's `live` tells new pages to build it from the start.
+- `shared/constants.js` WORLD_VERSION 9 -> 10: every profile of world 9 has its homes bought back at what was paid for
+  them on its next join (homes.checkWorld, LEGACY_HOMES[9]) and wakes at a hospital; money, bank, items, weapons, EXP,
+  cars and the stash are kept. The server keeps the profiles as they were in `<data>/profiles-before-world10.json` the
+  first time it starts (restoring it is the full rollback).
+- The deploy: the server restarts with a minute's build (about 70 s here) inside the five-minute health wait; the art
+  is baked on the server in the background, the pages bake what isn't there yet.

@@ -25,7 +25,10 @@ export const WORLD_H = MAP_H * TILE;
 //      counter moved forward for it (shared/cells.js)
 //   9  mining: the Granite Quarry's assay office (buys ore, sells pickaxes) and its loading track (countryside.js
 //      quarryOre); the sewers and the cave lie under the world (shared/underground.js)
-export const WORLD_VERSION = 9;
+//  10  World v3: the whole world on the owner's layout (World v3b, docs/WORLD-V3.md part 9) - the gulf city's islands,
+//      the forest, the farm valley, the desert and the casino, the north coast, the main line round it all, the
+//      subways and the ferries; today's homes bought back at what was paid for them (homes.checkWorld, LEGACY_HOMES[9])
+export const WORLD_VERSION = 10;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px
 export const CHUNKS_X = Math.ceil(MAP_W / CHUNK_TILES);
