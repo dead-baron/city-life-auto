@@ -253,3 +253,21 @@ test('art of another world: the build before doesn\'t stand in, this build\'s di
     await res.finished;
   } finally { cdn.stop(); rmSync(dataDir, { recursive: true, force: true }); }
 });
+
+// The bake threads by default (CLA_ART_THREADS unset): one on a one-core server (the live one was, and baked nothing with
+// none), two on two cores with the memory for both (the live server's 2 OCPUs / 12 GB since 2026-10-15), one on an 8 GB
+// development machine, none under 4.5 GB.
+test('the bake threads: one on one core, two on two cores with room for both, none where memory is short', async () => {
+  const { defaultThreads } = await import('../server/artcdn.js');
+  const env = process.env.CLA_ART_THREADS;
+  delete process.env.CLA_ART_THREADS;
+  try {
+    assert.equal(defaultThreads(1, 6.4e9), 1);
+    assert.equal(defaultThreads(2, 12.6e9), 2);
+    assert.equal(defaultThreads(2, 8.4e9), 1);
+    assert.equal(defaultThreads(4, 24e9), 2);
+    assert.equal(defaultThreads(2, 4e9), 0);
+    process.env.CLA_ART_THREADS = '0';
+    assert.equal(defaultThreads(4, 24e9), 0, 'the setting wins');
+  } finally { if (env === undefined) delete process.env.CLA_ART_THREADS; else process.env.CLA_ART_THREADS = env; }
+});

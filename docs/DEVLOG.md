@@ -9857,3 +9857,11 @@ Tests: test/core.test.js, test/bounties.test.js, test/honestliving.test.js, test
   the walk-in you stand in with `ty * map.w + tx`, but a page's World v3 map is a window onto the world (its x0, y0 not
   0), so away from the window's corner it found no building: the roof never lifted, anywhere but there. Now m.idx
   (client/main.js walkInAt). test/mapwindow.test.js's guard now also catches `* map.w +` indexing in the page's code.
+
+## 2026-10-15 · Two cores on the live server: two art bake threads; the machine in /stats
+The owner moved the server to Oracle's free 2 OCPUs / 12 GB (from 1 / 6). On one core the bake thread got what the tick
+left and baked World v3 at 0.79 s a chunk (2,636 in its first 35 minutes: the whole map would take ten hours). Now, with
+two cores and room for both (11+ GB), server/artcdn.js defaultThreads starts two, each at the lowest priority - about
+five hours for all 45,864 chunks, the railway and the highways first; an 8 GB development machine keeps one, a one-core
+server one, under 4.5 GB none. /stats has a `host` block: cores, load averages, the server's memory and the machine's
+free memory, to see the threads leave the tick enough. Test: test/artcdn.test.js.

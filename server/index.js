@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import { reportsText, errorsText } from './perfreports.js';
 import { readFile, stat } from 'node:fs/promises';
 import { readFileSync, existsSync, unlinkSync } from 'node:fs';
+import { cpus, loadavg, freemem, totalmem } from 'node:os';
 import { join, normalize, extname } from 'node:path';
 import { config } from './config.js';
 import { attachWebSocketServer, wsStats } from './ws.js';
@@ -171,7 +172,14 @@ function statsSnapshot() {
     traffic: limits ? limits.summary() : null,
     art: artCdn ? artCdn.summary() : null,
     world: worldCdn ? worldCdn.summary() : null,
+    // the machine: its cores, load and memory (the owner moved the server to 2 OCPUs / 12 GB on 2026-10-15 - the art's bake
+    // threads take what the tick leaves; this is where to see they leave enough)
+    host: hostSnapshot(),
   };
+}
+function hostSnapshot() {
+  const mu = process.memoryUsage(), la = loadavg();
+  return { cores: cpus().length, load: la.map((v) => +v.toFixed(2)), rssMB: Math.round(mu.rss / 1048576), heapMB: Math.round(mu.heapUsed / 1048576), freeMB: Math.round(freemem() / 1048576), totalMB: Math.round(totalmem() / 1048576) };
 }
 
 // fixed-step loop with catch-up (max 3 steps per wake)

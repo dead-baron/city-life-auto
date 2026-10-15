@@ -247,15 +247,17 @@ function defaultPrewarm() {
   const qs = (env === undefined ? '1' : env).split(',').map((s) => Number(s.trim())).filter((q) => q >= 0 && q <= 3 && Number.isInteger(q));
   return [...new Set(qs)];
 }
-// One bake thread, two on four cores or more. The thread runs at the lowest priority (artbake.js setPriority(19)), so on a
-// one-core server it only gets the time the game's tick leaves - the live server is one core, and with none there it
-// never baked a chunk: every page baked all of its own art (the owner, 2026-10-15, on a phone: "the graphics don't load
-// fast enough"). None where memory is short: the thread builds the world too (World v3's, about 1.5 GB at its peak).
+// The bake threads: each at the lowest priority (artbake.js setPriority(19)), so they only get the time the game's tick
+// leaves - one on a one-core server (the live one was, and with none there it never baked a chunk: every page baked all
+// of its own art - the owner, 2026-10-15, on a phone: "the graphics don't load fast enough"); two on two cores or more
+// with room for both (each builds the world too: World v3's, about 1.5 GB at its peak, beside the server's 2.2 GB - the
+// live server since 2026-10-15, 2 OCPUs and 12 GB: World v3's 45,864 chunks in about five hours instead of ten; an 8 GB
+// development machine keeps one); none where memory is short.
 export function defaultThreads(n = cpus().length, mem = totalmem()) {
   const env = process.env.CLA_ART_THREADS;
   if (env !== undefined && env !== '') return Math.max(0, Number(env) || 0);
   if (mem < 4.5e9) return 0;
-  return n >= 4 ? 2 : 1;
+  return n >= 2 && mem >= 11e9 ? 2 : 1;
 }
 // The order the asks are baked in (docs/WORLD-V3.md 8.12.1). A page asks for what its screen needs nearest first (the
 // pool sends its looks in that order), a few at a time as the answers come back - one look is a burst of asks over a

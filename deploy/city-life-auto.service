@@ -22,7 +22,7 @@ Environment=HOST=127.0.0.1
 Environment=CLA_DATA_DIR=/home/ubuntu/cla-data
 Environment=CLA_ORIGINS=https://deadbaron.com,https://www.deadbaron.com,https://play.deadbaron.com
 Environment=CLA_MAX_PLAYERS=120
-# The art from the server: bake threads (default 1 at the lowest priority, 2 on 4+ cores; 0 = off) and the qualities baked in the background
+# The art from the server: bake threads (default 2 on 2+ cores with 11+ GB, else 1, at the lowest priority; 0 = off) and the qualities baked in the background
 # (default 1 = Medium; e.g. 1,2 adds High). See docs/DEPLOY.md.
 #Environment=CLA_ART_THREADS=1
 #Environment=CLA_ART_PREWARM=1
