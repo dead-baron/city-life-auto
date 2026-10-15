@@ -12,7 +12,7 @@
 // the river, the main line's room or a town), the co-op, the farmhouses for sale, its roads on the network, the
 // orchard and the vineyard; Redwood Cove and Granite Cove on their shores with their tracks; a cave per mine (two:
 // the Old Granite Mine's and Copper Gulch Mine's, each its own region and mouth); the tracks' edges flagged for the
-// traffic to keep off (notraffic) and nothing else; Route 9's airstrip. One world build.
+// traffic to keep off (notraffic) and nothing else; (v3b) the airstrips. One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
@@ -20,7 +20,7 @@ import '../shared/world3-islands.js';
 import { TILE } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { skeletonLines, nearestOnPath, STATIONS } from '../shared/world3-skeleton.js';
-import { WILD_SITES, WILD_ROOM, MOVED, WILD_TRACKS, FARM } from '../shared/world3-wild.js';
+import { WILD_SITES, WILD_ROOM, MOVED, WILD_TRACKS, FARM, AIRSTRIPS3 } from '../shared/world3-wild.js';
 import { T } from '../shared/constants.js';
 import { SITES } from '../shared/countryside.js';
 import { undergroundOf, caveOf, UG } from '../shared/underground.js';
@@ -146,9 +146,12 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
     for (let ty = cy + 2; ty <= cy + 16; ty++) { const i = ty * W + cx; if (!m.land[i]) wet++; if (!m.land[i] && m.lake[i] === m.lake[j0] && m.river[i] === m.river[j0]) same++; }
     check(!m.land[j0] && wet === 15 && same === 15, `Granite Cove's bay open to the lake: ${wet} of 15 tiles south of the beach water, ${same} as the lake's`);
   }
-  // (H51) Route 9's airstrip in the desert
-  const strip = named('Route 9 Airstrip')[0];
-  check(strip && m.dist[Math.floor(strip.y / TILE) * W + Math.floor(strip.x / TILE)] === 50, 'Route 9\'s airstrip in the desert');
+  // (v3b: the airstrips are world3-wild.js AIRSTRIPS3's - the valley's two grass strips and Lucky Mesa's - each built once,
+  // on its region's ground; WR3's Route 9 strip is gone)
+  for (const A of AIRSTRIPS3) {
+    const ss = named(A.name), s0 = ss[0];
+    check(ss.length === 1 && m.dist[Math.floor(s0.y / TILE) * W + Math.floor(s0.x / TILE)] === A.d, `${A.name}: built ${ss.length} times, in district ${s0 && m.dist[Math.floor(s0.y / TILE) * W + Math.floor(s0.x / TILE)]}`);
+  }
   // (H51) Dry Creek's farm in the valley's east side: its fields on the valley's open ground - none over a road, the river,
   // a lake, the main line's room or a town; the co-op that takes harvests; the farmhouses and cottages for sale; the
   // Farm Road, the County Road and the Winery Road on the one network

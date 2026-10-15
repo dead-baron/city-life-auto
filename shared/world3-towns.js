@@ -158,7 +158,8 @@ export function pull(l, axis, v, a, b, ramp, box) {
   const P = l.pts, pts = [];
   for (let j = 0; j < P.length; j++) {
     const p = P[j], q = P[j - 1];
-    if (q && (inBox(p) || inBox(q))) {
+    // (v3b: or a segment passing through the box with both its ends outside - Timber Road is one straight run)
+    if (q && (inBox(p) || inBox(q) || (Math.max(p.x, q.x) >= bx0 && Math.min(p.x, q.x) <= bx1 && Math.max(p.y, q.y) >= by0 && Math.min(p.y, q.y) <= by1))) {
       const n = Math.ceil(Math.hypot(p.x - q.x, p.y - q.y) / TILE);
       for (let k = 1; k < n; k++) pts.push({ ...q, x: q.x + (p.x - q.x) * k / n, y: q.y + (p.y - q.y) * k / n, s: undefined });
     }
@@ -217,8 +218,12 @@ export function pulledAt(name, x, y) {
 export function layTowns3(lines, m) {
   const out = [];
   for (const t of TOWNS3) {
-    const main = lines.find((l) => l.name === t.main.line && l.kind === 'art');
-    if (main) { pull(main, 'y', t.main.y, t.main.a, t.main.b, t.main.ramp, t.box); main.townMain = t.key; }
+    // (v3b: an arterial may come in pieces - every piece of it through the town's box is pulled, not just the first)
+    const [bx0, by0, bx1, by1] = t.box, R = (t.main.ramp + 8) * TILE;
+    const through = (l) => l.pts.some((p, j) => j && Math.max(p.x, l.pts[j - 1].x) >= bx0 * TILE - R && Math.min(p.x, l.pts[j - 1].x) <= bx1 * TILE + R && Math.max(p.y, l.pts[j - 1].y) >= by0 * TILE - R && Math.min(p.y, l.pts[j - 1].y) <= by1 * TILE + R);
+    const mains = lines.filter((l) => l.name === t.main.line && l.kind === 'art' && through(l));
+    for (const l of mains) { pull(l, 'y', t.main.y, t.main.a, t.main.b, t.main.ramp, t.box); l.townMain = t.key; }
+    const main = mains[0];
     for (const [name, axis, v, a, b, ramp] of t.pulls) for (const l of lines) if (l.name === name && l.kind === 'art') pull(l, axis, v, a, b, ramp, t.box);
     let len = 0;
     for (const [name, P] of t.streets) {
@@ -383,7 +388,9 @@ export function townModels(m) {
         else {
           const prev = cols[i - 1];
           flush();
-          if (prev && prev[0] === x - 1 && !pierCol(prev[0]) && prev[2] !== yb) add('rail', x * TILE, (Math.min(prev[2], yb) + Math.max(prev[2], yb)) / 2 * TILE - 3, { len: Math.abs(prev[2] - yb) * TILE, a: Math.PI / 2 });
+          // (a step only where the two columns' planks meet: a bigger jump - the shore's sand reaching up between the
+          // town's streets - leaves the boardwalk open there, no rail across the land or a street)
+          if (prev && prev[0] === x - 1 && !pierCol(prev[0]) && prev[2] !== yb && Math.abs(prev[2] - yb) <= f.walk) add('rail', x * TILE, (Math.min(prev[2], yb) + Math.max(prev[2], yb)) / 2 * TILE - 3, { len: Math.abs(prev[2] - yb) * TILE, a: Math.PI / 2 });
           run = [x, x, yb];
         }
         const k = x - f.x0;

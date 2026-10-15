@@ -2,8 +2,8 @@
 // four guard towers, the three cell blocks round the exercise yard and its sports court, the kitchen block, the
 // gatehouse and its gate for officers only, the warden's house, the lighthouse, the harbour with its stone pier where
 // the Prison Boat's route ends, the guards' posts; nobody gets in but through the gate, no road reaches the island);
-// the Long Reach (the weir beside the lock at Willow Crossing - the River Water Bus goes up through the lock - the
-// quays at Old Town and Willow Crossing, the banks' willows and reeds, the farm docks); Kestrel Lake (the lookout on
+// the Long Reach (the weir beside the lock below Willow Crossing - v3b has no River Water Bus, so no quays - the
+// banks' willows and reeds, the farm docks); Kestrel Lake (the lookout on
 // Lookout Hill, the campground, the boathouse and its boat rental, the fishing docks, the island). One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,7 +13,6 @@ import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { PRISON, KESTREL } from '../shared/world3-water.js';
 import { prepare } from '../tools/world3-build.mjs';
-import * as ferries from '../server/systems/ferries.js';
 
 test('World v3: the places on the water - Prison Island, the Long Reach, Kestrel Lake', { timeout: 300000 }, () => {
   const prep = prepare();
@@ -99,26 +98,12 @@ test('World v3: the places on the water - Prison Island, the Long Reach, Kestrel
   check(crest > 0.9 * across, `the weir's crest across the river (${crest} of ${across})`);
   for (let u = -26; u <= 26; u += 2) { const [x, y] = tileAt(u, (lk.channel[0] + lk.channel[1]) / 2); check(wet(x, y), `the lock's channel open at ${u}: ${x},${y}`); }
   check(bld("Lock Keeper's House").length === 1, "the lock keeper's house");
-  const routes = ferries.ferryRoutes({ map: m }), RW = routes.find((R) => R.name === 'River Water Bus');
-  check(RW && RW.legs.length === 2, 'the River Water Bus planned');
-  if (RW) {
-    // the leg from Willow Crossing up to Kestrel Lake goes through the lock (some of its way inside the channel)
-    let through = 0;
-    for (const L of RW.legs) for (let i = 1; i < L.way.length; i++) {
-      const a = L.way[i - 1], b = L.way[i], n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 16);
-      for (let k = 0; k <= n; k++) {
-        const x = (a.x + (b.x - a.x) * k / n) / TILE - cx, y = (a.y + (b.y - a.y) * k / n) / TILE - cy, u = x * ux + y * uy, v = x * nx + y * ny;
-        if (Math.abs(u) < 20 && v >= lk.channel[0] && v <= lk.channel[1]) through++;
-      }
-    }
-    check(through > 0, 'the River Water Bus goes through the lock');
-  }
-  // the quays at the River Water Bus's Old Town and Willow Crossing stops: stone, bollards; Willow Crossing's cafe
-  const Q = Object.fromEntries((V.quays || []).map((q) => [q.name, q]));
-  check(Q['Old Town Quay'] && Q['Old Town Quay'].tiles >= 40 && Q['Old Town Quay'].bollards >= 4, `Old Town's quay (${JSON.stringify(Q['Old Town Quay'])})`);
-  check(Q['Willow Crossing Quay'] && Q['Willow Crossing Quay'].tiles >= 40 && Q['Willow Crossing Quay'].bollards >= 4 && Q['Willow Crossing Quay'].cafe >= 0, `Willow Crossing's quay and its cafe (${JSON.stringify(Q['Willow Crossing Quay'])})`);
+  // (v3b: no River Water Bus - world3-layout.js FERRIES3 has the car ferry, the Prison Boat and the two water buses on
+  // the gulf - and so no quays at its Old Town and Willow Crossing stops: what went through the lock is dropped)
+  check(!(V.quays || []).length || V.quays.every((q) => q.tiles >= 40 && q.bollards >= 4), `the quays (${JSON.stringify(V.quays)})`);
   // the banks: reeds at the water's edge, willows behind; the farm docks out over the water
-  check(V.banks.reeds >= 150 && V.banks.willows >= 50, `the banks' reeds and willows (${JSON.stringify(V.banks)})`);
+  // (v3b: the Long Reach is the farm lake's short outlet, about 230 tiles - a reed each side every 9 tiles at most)
+  check(V.banks.reeds >= 24 && V.banks.willows >= 6, `the banks' reeds and willows (${JSON.stringify(V.banks)})`);
   check(V.docks.length === 3, `three farm docks (${V.docks.map((d) => d.name)})`);
   for (const d of V.docks) check(m.tiles[at(d.end[0], d.end[1])] === T.DOCK && !m.land[at(d.end[0], d.end[1])], `${d.name}: its boards out over the water`);
 

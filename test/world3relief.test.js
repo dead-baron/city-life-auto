@@ -8,7 +8,9 @@ import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
-import { reliefOf3, reliefCliffs, HIGH_SPOTS, LOOKOUT_MESA, CLIFF_SLOPE, tableEdge } from '../shared/world3-relief.js';
+import { reliefOf3, reliefCliffs, HIGH_SPOTS, LOOKOUT_MESA, CLIFF_SLOPE, tableEdge, tableSpots3, GORGE } from '../shared/world3-relief.js';
+import { DESERT, HOLLOW } from '../shared/world3-desert.js';
+import { TOWNS } from '../shared/world3-skeleton.js';
 import { tableEdge as bakeEdge } from '../client/art2/game/groundbake.js';
 import { bakeChunk, loadProviders, providers } from '../client/art2/game/chunkbake.js';
 import { prepare } from '../tools/world3-build.mjs';
@@ -62,11 +64,13 @@ test('World v3: the land\'s relief - heights, cliff bands off the roads, the lan
     check(top >= round + h * 0.45, `${name}: ${top.toFixed(1)} m against ${round.toFixed(1)} round it`);
   }
   // the lookout's mesa: the lookout on top, above Dusty Hollow
-  const lk = box(4336, 882, 1), hollow = box(4250, 1004, 3);
+  const lk = box(DESERT.lookout[0], DESERT.lookout[1], 1), hollow = box(HOLLOW.at[0], HOLLOW.at[1], 3);
   check(lk >= hollow + LOOKOUT_MESA.h * 0.6, `the lookout at ${lk.toFixed(1)} m, Dusty Hollow ${hollow.toFixed(1)}`);
   // the desert's tables: at least eight, four of them mesas over 80 tiles across, each top well above its foot, its
   // rim a cliff band
-  check(sum.tables >= 8 && sum.tableList.filter((t) => t.mesa && t.rx * 2 > 80).length >= 4, `tables ${sum.tables}, mesas ${sum.mesas}`);
+  // (v3b: the tables are the sketch's red areas, world3-layout.js GROUND3.mesa - most too big to stand clear of the
+  // roads, towns and water, so tableSpots3's spots shrink and give up: five stand, the lookout's and four mesas)
+  check(sum.tables >= 5 && sum.tableList.filter((t) => t.mesa && t.rx * 2 > 80).length >= 4, `tables ${sum.tables} of ${tableSpots3(W, H).length} planned, mesas ${sum.mesas}`);
   for (const t of sum.tableList) {
     const top = box(t.x, t.y, 3), foot = ring(t.x, t.y, Math.max(t.rx, t.ry) + 20, Math.max(t.rx, t.ry) + 40);
     check(top >= foot + t.h * 0.6, `the table at ${t.x}, ${t.y}: ${top.toFixed(1)} m on a ${foot.toFixed(1)} m foot`);
@@ -77,15 +81,28 @@ test('World v3: the land\'s relief - heights, cliff bands off the roads, the lan
   // the falls drop over a real band: the land above the lip well above the pool's
   check(sum.falls.includes('Silver Thread Falls'), `the falls: ${sum.falls.join(', ')}`);
   const head = m.world3.west?.built?.falls?.head;
-  if (head) { const up = box(head[0] - 30, head[1] - 14, 2), down = box(head[0] - 30, head[1] + 24, 2); check(up >= down + 10, `Silver Thread Falls: ${up.toFixed(1)} m above the band, ${down.toFixed(1)} below`); }
+  // (beside the falls: 30 tiles west of the head, or - v3b's falls span a wide river - the first land west of it)
+  if (head) {
+    let sx = head[0] - 30;
+    while (sx > head[0] - 120 && !m.land[(head[1] - 14) * W + sx]) sx--;
+    const up = box(sx - 3, head[1] - 14, 2), down = box(sx - 3, head[1] + 24, 2);
+    check(up >= down + 10, `Silver Thread Falls: ${up.toFixed(1)} m above the band, ${down.toFixed(1)} below`);
+  }
   // the peaks high, the ridge a ridge, the gorge cut under the Gorge Bridge
   let peak = 0;
   for (let y = 0; y < 760; y += 4) for (let x = 0; x < 2300; x += 4) peak = Math.max(peak, R[y * W + x]);
   check(peak >= 180, `the peaks' top ${peak} m`);
-  check(box(3200, 40, 3) >= box(3200, 220, 3) + 40, `the North Ridge: ${box(3200, 40, 3)} m on its crest, ${box(3200, 220, 3)} below`);
-  check(box(1362, 794, 3) <= Math.min(box(1332, 834, 3), box(1392, 754, 3)) - 15, `the gorge: ${box(1362, 794, 3)} m on its floor, ${box(1332, 834, 3)} and ${box(1392, 754, 3)} either side`);
+  // (the North Ridge: dropped - v3b has none, world3-skeleton.js)
+  // (the gorge: v3b's below the woods' big falls - its floor at the middle of GORGE's middle stretch, the land 50 tiles
+  // either side of it)
+  {
+    const [[ax, ay], [bx, by]] = [GORGE[1], GORGE[2]], l = Math.hypot(bx - ax, by - ay), nx = -(by - ay) / l, ny = (bx - ax) / l;
+    const fx = Math.round((ax + bx) / 2), fy = Math.round((ay + by) / 2), sa = [Math.round(fx + nx * 50), Math.round(fy + ny * 50)], sb = [Math.round(fx - nx * 50), Math.round(fy - ny * 50)];
+    check(box(fx, fy, 3) <= Math.min(box(...sa, 3), box(...sb, 3)) - 15, `the gorge: ${box(fx, fy, 3)} m on its floor, ${box(...sa, 3)} and ${box(...sb, 3)} either side`);
+  }
   // the gulf's islands stay flat (today's places)
-  check(box(2300, 2500, 4) < 6, `Metro City ${box(2300, 2500, 4)} m`);
+  const metro = TOWNS.find((t) => t.name === 'Metro City').at;
+  check(box(metro[0], metro[1], 4) < 6, `Metro City ${box(metro[0], metro[1], 4)} m`);
 
   // (H50) the tables' looks: m.tables for the bake, its rim the same as the relief's; red sandstone faces all round each
   // rim (the south, and the north, east and west too); no small mesa of 8.8's on a table, its talus or by its foot; no

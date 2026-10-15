@@ -43,9 +43,9 @@ export const HIGH_SPOTS = [
   ['Egret Point', LM('Egret Point Light'), 80, 20, true],
   ['Sandpiper Point', LM('Sandpiper Point Light'), 85, 18, true],
 ];
-export const LOOKOUT_MESA = { at: [5456, 1674], rx: 50, ry: 34, h: 32 };   // (the track from Dusty Hollow climbs its south rim)   // (8.18's lookout stands on it)
+export const LOOKOUT_MESA = { at: [5414, 1632], rx: 50, ry: 34, h: 32 };   // (v3b: south-west of Route 9, which ran over its top at 5456, 1674)   // (the track from Dusty Hollow climbs its south rim)   // (8.18's lookout stands on it)
 // (v3b) the gorge below the woods' big falls: the creek's cut from the falls' lake south-east (world3-layout.js STREAMS3)
-const GORGE = [[1850, 1140], [1900, 1215], [1990, 1228], [2070, 1250]];
+export const GORGE = [[1850, 1140], [1900, 1215], [1990, 1228], [2070, 1250]];
 // (v3b, docs/WORLD-V3.md part 9) the owner's mountains (world3-layout.js GROUND3.mount): each raises the coarse ground
 // towards its middle (MOUNT_H metres at MOUNT_IN tiles in from its edge and beyond), so the hillshade, the crags and
 // the snow follow the sketch's grey masses whatever biome the land layer gives them
