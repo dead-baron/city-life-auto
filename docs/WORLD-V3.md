@@ -4656,3 +4656,18 @@ Numbers (tools/world3b/check.mjs): 10,850 buildings, 1,980 homes, 5,100 POIs, 21
 the Pink Line 10 stations, the Yellow 11.
 Left: the rail viaduct over Midtown's streets; Northshore (31), North Point (32) and The Bluffs (34) not yet painted
 (the north coast is the Northshore Beaches' only); the in-game map's picture (tools/build-worldmap2.mjs --world v3).
+
+### 9.5 The switch for World v3b (ready, not made)
+Everything but the switch itself is on `world-v3b` (8.23's step 0 and these): the deploy's health wait is five minutes
+(live since 2026-10-15); the deployed server runs `shared/liveworld.js` LIVE_WORLD (no unit-file edit needed); pages
+build the live world from the start (version.json `live`); the profiles are kept as they were the first time a new
+WORLD_VERSION starts (`<data>/profiles-before-world10.json` - restoring it is the full rollback); a released home's
+other places are cleared. The switch is one commit on `world-v3b`, then `world-v3b` merged into `main` and pushed:
+1. `shared/constants.js` WORLD_VERSION 9 -> 10 (and its line in the list); `shared/liveworld.js` LIVE_WORLD 'v3'.
+2. `node tools/stamp-version.mjs`; `npm test`; commit; `git checkout main && git merge world-v3b && git push`.
+3. The VM pulls within 2 minutes (after GitHub Pages publishes the build); the server restarts with World v3 (about a
+   minute's build on the Ampere core, then the region files); `deploy/auto-update.sh` rolls it back if `/health` doesn't
+   answer within five minutes. The art: the server bakes v3's chunks in the background (many hours a quality); pages
+   bake what the server hasn't yet.
+4. Rollback: revert the switch commit on `main` and push (homes bought at v3 are bought back once more by the bump
+   back); or restore `profiles-before-world10.json` on the VM for everyone as they were.
