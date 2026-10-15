@@ -204,7 +204,9 @@ export const FERRIES = FERRIES3.map((f) => ({ name: f.name, loop: !!f.loop, pts:
 // ---------------------------------------------------------------------------------------------------------------------
 // Stations (named): `line` is 'main' or a subway's name. The main line's on straight track near the layout's station
 // marks (MAIN_STATIONS3); the subways' every 350-600 m along each loop at the districts they serve (part 9.3), with
-// Union Square the two lines' interchange.
+// Union Square the two lines' interchange. A subway station stands 30 tiles or more along its line from the water it
+// crosses (its platform, 10 tiles each way, and the 12-tile climb to the viaduct: shared/world3-subway.js RAMP), so it is
+// below ground with its kiosk: the Stadium District's, The Yards' and Pine Hills' were moved 19-25 tiles back from it.
 export const STATIONS = [
   { name: 'Northshore', line: 'main', at: [3020, 732] },
   { name: 'Lucky Mesa', line: 'main', at: [5507, 927] },
@@ -219,8 +221,8 @@ export const STATIONS = [
   { name: 'Midtown', line: 'main', at: [3248, 1667] },
   { name: 'Northgate', line: 'main', at: [4188, 1668] },
   { name: 'Willow Valley', line: 'main', at: [2876, 1380] },
-  { name: 'Stadium District', line: 'Pink Line', at: [3997, 1637] },
-  { name: 'The Yards', line: 'Pink Line', at: [4112, 2051] },
+  { name: 'Stadium District', line: 'Pink Line', at: [4014, 1646] },
+  { name: 'The Yards', line: 'Pink Line', at: [4114, 2028] },
   { name: 'Lake District', line: 'Pink Line', at: [4104, 2571] },
   { name: 'Southside', line: 'Pink Line', at: [3968, 2980] },
   { name: 'Pelican Key', line: 'Pink Line', at: [3547, 3188] },
@@ -236,7 +238,7 @@ export const STATIONS = [
   { name: 'Union Square', line: 'Yellow Line', at: [3124, 1881] },
   { name: 'The Pink Mile', line: 'Yellow Line', at: [2948, 2257] },
   { name: 'Arts District', line: 'Yellow Line', at: [2555, 2478] },
-  { name: 'Pine Hills', line: 'Yellow Line', at: [2821, 2942] },
+  { name: 'Pine Hills', line: 'Yellow Line', at: [2820, 2967] },
   { name: 'Pine Hills North', line: 'Yellow Line', at: [2511, 2971] },
   { name: 'Port Westport', line: 'Yellow Line', at: [2086, 2749] },
   { name: 'Westport International', line: 'Yellow Line', at: [1634, 2630] },

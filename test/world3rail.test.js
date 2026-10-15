@@ -8,7 +8,7 @@ import { World } from '../server/world.js';
 import { buildWorld3 } from '../server/world3.js';
 import { T, TILE, TICK_HZ } from '../shared/constants.js';
 import { railAt } from '../shared/mapcore.js';
-import { SERVICES, MAIN_JUNCTIONS } from '../shared/world3-skeleton.js';
+import { SERVICES, MAIN_JUNCTIONS, MAIN_LINE, RADIUS, linePath, wetRanges } from '../shared/world3-skeleton.js';
 import { TRACK_OFF } from '../shared/world3-rail.js';
 import * as trains from '../server/systems/trains.js';
 import * as players from '../server/systems/players.js';
@@ -38,10 +38,12 @@ test('the main line is laid: each service both ways, double track, its stations 
       }
     }
   }
-  // double track: on Coast West's straight (Westport Junction - Northshore Junction) the two ways run 96 px apart
-  const one = R.find((q) => q.service === 'Grand Loop' && q.way === 1), other = R.find((q) => q.service === 'Grand Loop' && q.way === -1);
-  const mid = one.pts.find((p) => Math.abs(p.x / TILE - 2000) < 1 && Math.abs(p.y / TILE - 1700) < 4);
-  assert.ok(mid, 'Coast West');
+  // double track: half way along the main line's longest straight the two ways run 96 px apart
+  const one = R.find((q) => q.service === SERVICES[0].name && q.way === 1), other = R.find((q) => q.service === SERVICES[0].name && q.way === -1);
+  const legs = MAIN_LINE.flatMap((L) => L.pts.slice(1).map((b, k) => [L.pts[k], b])), long = legs.reduce((a, l) => (Math.hypot(l[1][0] - l[0][0], l[1][1] - l[0][1]) > Math.hypot(a[1][0] - a[0][0], a[1][1] - a[0][1]) ? l : a));
+  const [cx, cy] = [(long[0][0] + long[1][0]) / 2, (long[0][1] + long[1][1]) / 2];
+  const mid = one.pts.reduce((a, p) => (Math.hypot(p.x / TILE - cx, p.y / TILE - cy) < Math.hypot(a.x / TILE - cx, a.y / TILE - cy) ? p : a));
+  assert.ok(Math.hypot(mid.x / TILE - cx, mid.y / TILE - cy) < 4, `the track half way along the straight ${long.join(' - ')}`);
   let bd = Infinity;
   for (const p of other.pts) bd = Math.min(bd, Math.hypot(p.x - mid.x, p.y - mid.y));
   assert.ok(Math.abs(bd - 2 * TRACK_OFF) < 2, `the two tracks ${bd.toFixed(1)} px apart`);
@@ -55,11 +57,13 @@ test('the main line is laid: each service both ways, double track, its stations 
   }
   assert.equal(wet, 0, 'no track over open water off a bridge');
   assert.ok(bad < 40, `${bad} track points off the bed`);
-  // over the gulf: the Bay Bridge Line, the Harbor Line and the Cedar Line cross on bridge decks
-  const bay = R.find((q) => q.service === 'Bay Loop' && q.way === 1);
-  assert.ok(bay.pts.filter((p) => p.deck).length > 1000, 'the Bay Loop crosses the gulf on decks');
-  // the skeleton's tunnels: the Grand Loop under the North Ridge, the Long Reach and the peaks
-  assert.ok(one.pts.filter((p) => (p.under || p.bore) && !p.underpass).length * 8 / TILE > 1000, 'the Grand Loop has its tunnels (the mountain ones bores under the hill: H33)');
+  // over the water (the skeleton's line leaves the land: the gulf's channels, the rivers) on bridge decks where it is
+  // at ground level - every loop
+  const wetLen = MAIN_LINE.reduce((n, L) => n + wetRanges(linePath(L, L.r || RADIUS.main)).reduce((s, [a, b]) => s + b - a, 0), 0);
+  assert.ok(wetLen > 100, `the main line crosses ${Math.round(wetLen)} tiles of water`);
+  for (const r of R) assert.ok(r.pts.filter((p) => p.deck).length * 8 / TILE > 0.25 * wetLen, `${r.name} crosses the water on decks (${Math.round(r.pts.filter((p) => p.deck).length * 8 / TILE)} tiles)`);
+  // the skeleton's tunnels (World v3b: under the city) and below ground through the city's districts and the towns
+  assert.ok(one.pts.filter((p) => (p.under || p.bore) && !p.underpass).length * 8 / TILE > 1000, `${one.name} has its tunnels (the mountain ones bores under the hill: H33)`);
   // the roads it meets: gated level crossings (the arterials) and underpasses (the highways at grade)
   assert.ok(R.every((r) => r.crossings.length > 5), 'level crossings on every loop');
   assert.ok(one.pts.some((p) => p.underpass), 'the Grand Loop dips under the highways');
@@ -68,8 +72,8 @@ test('the main line is laid: each service both ways, double track, its stations 
     const near = R.filter((r) => r.pts.some((p) => Math.hypot(p.x / TILE - j.at[0], p.y / TILE - j.at[1]) < 60));
     assert.ok(near.length >= 2, `${j.name}: ${near.length} loops`);
   }
-  // one map point per station place
-  const pois = M.pois.filter((p) => p.kind === 'station');
+  // one map point per station place (the subway stops' are their own: test/world3subway.test.js)
+  const pois = M.pois.filter((p) => p.kind === 'station' && !p.sub);
   const names = new Set(R.flatMap((r) => r.stations.map((st) => st.name)));
   assert.ok(pois.length >= names.size && pois.length <= names.size * 2 + 4, `${pois.length} station map points for ${names.size} stations`);
 });
@@ -94,7 +98,7 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
   assert.equal(loops.size, SERVICES.length * 2, 'trains on every loop');
   const run = ts.map(() => ({ dist: 0, stops: new Set(), last: null }));
   let hits = 0, steps = 0, firstHit = null;
-  const downs = new Set();   // (the level crossings whose gates came down)
+  const downs = new Set(), closedFor = new Set();   // (the level crossings whose gates came down; the loops they came down for)
   const N = TICK_HZ * 60 * 5;   // (five minutes of game time: each train through several stations and junctions)
   for (let k = 0; k < N; k++) {
     const before = ts.map((t) => t.s);
@@ -105,7 +109,12 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
       run[i].dist += mod(t.s - before[i], len);
       if (t.dwellUntil) run[i].stops.add(t.stop);
     });
-    w.xing.forEach((x, i) => { if (x.down) downs.add(i); });
+    w.xing.forEach((x, i) => {
+      if (!x.down) return;
+      downs.add(i);
+      // (whose train is coming up to it - within 2000 px before it along a loop crossing there - while its gates are down)
+      for (const [ri, s] of M.railXings[i].uses) if (ts.some((q) => q.r === ri && mod(s - q.s, w.rails[ri].len) < 2000)) closedFor.add(ri);
+    });
     if (k % 2) continue;
     // every pair of cars of different trains: their outlines never overlap
     const cars = [];
@@ -119,18 +128,24 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
     }
   }
   assert.equal(hits, 0, `trains ran into each other: ${JSON.stringify(firstHit)}`);
-  // the gates: every loop's crossings, once each - they came down for the trains of the loops other than the first too
+  // the gates: every loop's crossings, once each (a double track's two crossings of a road one, its gates outside both) -
+  // they came down for the trains of every main-line loop, not only the first's
   assert.equal(w.xing.length, M.railXings.length);
-  const others = [...downs].filter((i) => !M.railXings[i].uses.some((u) => u[0] === 0));
-  assert.ok(downs.size > 20 && others.length > 5, `${downs.size} crossings closed, ${others.length} of them off the first loop`);
+  assert.ok(downs.size > 20, `${downs.size} crossings closed`);
+  for (const ri of loops) assert.ok(closedFor.has(ri), `the gates came down for ${w.rails[ri].name}'s trains`);
   // the NPCs see a train coming on any loop: right in front of a moving train on a loop other than the first
   const t = ts.find((q) => q.r > 0 && q.v > 100 && !w.rails[q.r].pts[Math.floor(q.s / 8) % w.rails[q.r].pts.length].under);
   if (t) { const q = railAt(w.rails[t.r], t.s + 200); assert.ok(trains.railThreat(w, q.x, q.y), 'a train coming on its loop is a threat'); }
-  // the station boards: Northshore's lists the services that stop there, each with its next stop and its time
-  const ns = M.pois.filter((p) => p.kind === 'station' && p.label === 'Northshore Station');
-  const services = new Set(ns.flatMap((poi) => trains.stationBoard(w, poi).sub.match(/(Grand Loop|Bay Loop|Harbor Line) to/g) || []));
-  assert.ok(services.size >= 2, `Northshore's boards: ${[...services].join(', ')}`);
-  assert.ok(ns.every((poi) => trains.nextTrainIn(w, poi.station, poi) < 900), 'a next train at every Northshore platform');
+  // the station boards: every main-line station's lists the services that stop there, each with its next stop (one
+  // the service calls at next, one way or the other) and its time; a next train at every platform
+  const re = new RegExp(`(${SERVICES.map((sv) => sv.name).join('|')}) to ([^:·]+):`, 'g');
+  for (const name of new Set(w.rails.filter((r) => !r.subway).flatMap((r) => r.stations.map((st) => st.name)))) {
+    const at = M.pois.filter((p) => p.kind === 'station' && p.label === name);
+    const next = new Set(w.rails.filter((r) => !r.subway).flatMap((r) => r.stations.map((st, j) => (st.name === name ? `${r.service} to ${r.stations[(j + 1) % r.stations.length].name.replace(/ Station$/, '')}` : null)).filter(Boolean)));
+    const listed = at.flatMap((poi) => [...trains.stationBoard(w, poi).sub.matchAll(re)].map((q) => `${q[1]} to ${q[2].trim()}`));
+    assert.ok(listed.length && listed.every((q) => next.has(q)), `${name}'s board: ${listed.join(', ')} (its next stops: ${[...next].join(', ')})`);
+    assert.ok(at.every((poi) => trains.nextTrainIn(w, poi.station, poi) < 900), `a next train at every ${name} platform`);
+  }
   ts.forEach((t, i) => {
     const r = w.rails[t.r];
     assert.ok(run[i].dist > 8000, `${r.name} train ${t.i}: ran ${Math.round(run[i].dist)} px`);
@@ -159,11 +174,11 @@ test('a train nobody is near runs on with its cars unplaced; the tick someone is
   assert.ok(far, 'trains far from the player stay unplaced');
 });
 
-test('riding the v3 main line as today: board a Bay Loop or Harbor Line train at its platform, ride, get off at the next stop', () => {
+test('riding the v3 main line as today: board a train at its platform, ride, get off at the next stop', () => {
   const w = new World(M, { npcBudget: 0, throwErrors: true });
   const { p } = joinPlayer(w);
-  // a train of a loop other than the first, standing at an open-air platform (they start at their stations)
-  const t = w.trains.find((q) => q.r > 1 && q.dwellUntil && !w.rails[q.r].stations[q.stop].under);
+  // a main-line train of a loop other than the first, standing at an open-air platform (they start at their stations)
+  const t = w.trains.find((q) => q.r > 0 && !w.rails[q.r].subway && q.dwellUntil && !w.rails[q.r].stations[q.stop].under);
   assert.ok(t, 'a train in at a platform');
   t.dwellUntil = w.time + 8;
   const rail = w.rails[t.r], st = rail.stations[t.stop];

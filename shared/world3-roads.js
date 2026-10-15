@@ -367,8 +367,12 @@ function interchangeSites(paths, out) {
   for (const U of HIGHWAYS) {
     if (U.existing) continue;
     const P = paths.get(U.name);
-    for (let i = 1; i + 1 < U.pts.length; i++) {
-      const C0 = U.pts[i], ic = INTERCHANGES.find((c) => near(c.at, C0));
+    // (where it can pass through one: its inner control points, and - World v3b - an interchange on its path that isn't
+    // one of them, where another highway ends on its straight or at a loop's closing point)
+    const C0s = U.pts.slice(1, -1);
+    for (const c of INTERCHANGES) if (!C0s.some((p) => near(p, c.at)) && (U.loop || (!near(U.pts[0], c.at) && !near(U.pts[U.pts.length - 1], c.at))) && nearestOnPath(P, c.at[0], c.at[1]).d < 2) C0s.push(c.at);
+    for (const C0 of C0s) {
+      const ic = INTERCHANGES.find((c) => near(c.at, C0));
       if (ic && ic.kind === 'ramps') continue;
       const q = nearestOnPath(P, C0[0], C0[1]), s = q.s, C = pointAt(P, s);
       // the roads that end there: the highways (their ends are put on this one's path: SNAP) and the arterials whose
@@ -401,7 +405,8 @@ function interchangeSites(paths, out) {
       const sS = arms.map((a) => nearestOnPath(P, a.S[0], a.S[1]).s);
       const d0 = Math.min(...sS) - EXT - 4, d1 = Math.max(...sS) + EXT + 4;
       const tun = stretchRanges(P, U.tunnels);
-      if (d0 - RAMP < 4 || d1 + RAMP > P.length - 4 || tun.some(([a, b]) => b > d0 - RAMP - 8 && a < d1 + RAMP + 8)) { out.interchanges.push({ name, U: U.name, built: false, why: 'the through highway is in its tunnel there (no room for the deck)' }); continue; }
+      if (d0 - RAMP < 4 || d1 + RAMP > P.length - 4) { out.interchanges.push({ name, U: U.name, built: false, why: 'at the end of the through highway\'s path (a loop\'s closing point: no room for the deck)' }); continue; }
+      if (tun.some(([a, b]) => b > d0 - RAMP - 8 && a < d1 + RAMP + 8)) { out.interchanges.push({ name, U: U.name, built: false, why: 'the through highway is in its tunnel there (no room for the deck)' }); continue; }
       // (the main line keeps clear of the ramps: where it runs through an interchange - Westport's, Sandpiper's - its
       // track would cross them at grade, so that one is left at grade for now)
       const ramps = rampLines(P, arms);

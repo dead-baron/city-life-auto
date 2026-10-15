@@ -1,7 +1,7 @@
 // World v3's ferries (docs/WORLD-V3.md 8.17, H42): the piers, terminals, ramps and pontoons the world build lays where
 // each route of the skeleton calls (shared/world3-ferries.js), the routes planned per corridor on the v3 map within the
-// planner's time, a boat on each route calling at every stop on its timetable, riders carried (on foot round the Bay
-// Ferry's loop; a car on the Gull Harbor car ferry). One world build (about 30-40 s here, today's world and the land
+// planner's time, a boat on each route calling at every stop on its timetable, riders carried (on foot round the walk-on
+// loop - World v3b's Gulf Water Bus; a car on the car ferry). One world build (about 30-40 s here, today's world and the land
 // before it); the World runs on it with the ferries asked for.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -55,8 +55,8 @@ test('World v3 ferries: every route\'s stops built - the terminals, the car ferr
     }
   }
   const terminals = list.flatMap((F) => F.stops).filter((s) => s.kind === 'terminal').map((s) => s.name);
-  assert.deepEqual(terminals, ['Metro City Harbor', 'Westport', 'Northshore Pier', 'Cedar Isle', 'Southbank']);
-  assert.equal(list.find((F) => F.name === 'Gull Harbor Car Ferry').stops.filter((s) => s.kind === 'ramp').length, 2);
+  assert.deepEqual(terminals, FERRY3.flatMap((R) => R.stops).filter((s) => s.kind === 'terminal').map((s) => s.name), 'the walk-on terminals');
+  for (const R of FERRY3.filter((q) => q.car)) assert.equal(list.find((F) => F.name === R.name).stops.filter((s) => s.kind === 'ramp').length, 2, `${R.name}: a ramp each end`);
 });
 
 test('World v3 ferries: the routes planned per corridor on the v3 map, in time, every way on water', { timeout: 300000 }, () => {
@@ -132,33 +132,34 @@ test('World v3 ferries: a boat on each route calling at every stop; riders carri
     console.log(`${R.name}: ${seen.join(' > ')}`);
     assert.deepEqual(seen, want, `${R.name} calls at every stop in turn`);
   }
-  // on foot round the Bay Ferry: aboard at Metro City Harbor, past Westport, off at Northshore Pier
+  // on foot round the walk-on loop (World v3b's Gulf Water Bus): aboard at its first stop, past the second, off at the third
+  const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   {
-    const R = routes.find((q) => q.name === 'Bay Ferry'), F = world.ferries[R.id], v = world.get(F.v);
-    skipToStop(world, R, F, 'Metro City Harbor');
+    const R = routes.find((q) => q.loop && !q.car && !q.custody && q.stops.length >= 3), F = world.ferries[R.id], v = world.get(F.v);
+    const [e0, e1, e2] = R.stops;
+    skipToStop(world, R, F, e0.name);
     F.t0 = world.time;   // (the whole dwell to walk aboard)
     const { p } = joinPlayer(world);
-    const e0 = R.stops[0];
     teleport(world, p.ped, e0.sx - e0.ox * 30, e0.sy - e0.oy * 30);
     const act = findInteraction(world, p);
-    assert.match(act && act.label, /Board the Bay Ferry to Westport/);
+    assert.match(act && act.label, new RegExp(`Board the ${esc(R.name)} to ${esc(e1.name)}`));
     act.run();
     assert.equal(p.ped.vehId, v.id);
-    skipToStop(world, R, F, 'Westport');
-    assert.match(ferries.rideInfo(world, p).at, /Westport/);
-    assert.equal(p.ped.vehId, v.id, 'stays aboard past Westport');
-    skipToStop(world, R, F, 'Northshore Pier');
-    assert.match(ferries.rideInfo(world, p).at, /Northshore Pier/);
+    skipToStop(world, R, F, e1.name);
+    assert.match(ferries.rideInfo(world, p).at, new RegExp(esc(e1.name)));
+    assert.equal(p.ped.vehId, v.id, `stays aboard past ${e1.name}`);
+    skipToStop(world, R, F, e2.name);
+    assert.match(ferries.rideInfo(world, p).at, new RegExp(esc(e2.name)));
     vehicles.exitVehicle(world, p.ped);
     assert.equal(p.ped.vehId, 0);
-    const e2 = R.stops[2], t = m.tileAtPx(p.ped.x, p.ped.y);
+    const t = m.tileAtPx(p.ped.x, p.ped.y);
     assert.ok(t !== T.WATER && t !== T.DEEP, 'off onto the pier, not into the water');
-    assert.ok(Math.hypot(p.ped.x - e2.sx, p.ped.y - e2.sy) < 120, 'at Northshore Pier');
+    assert.ok(Math.hypot(p.ped.x - e2.sx, p.ped.y - e2.sy) < 120, `at ${e2.name}`);
   }
-  // a car over to Gull Harbor and off onto its lot
+  // a car over on the car ferry and off onto the far side's lot
   {
     const R = routes.find((q) => q.car), F = world.ferries[R.id], v = world.get(F.v);
-    skipToStop(world, R, F, 'Port Westport');
+    skipToStop(world, R, F, R.stops[0].name);
     F.t0 = world.time;
     const { p } = joinPlayer(world);
     const e0 = R.stops[0];
@@ -168,13 +169,13 @@ test('World v3 ferries: a boat on each route calling at every stop; riders carri
     run(world, 1);
     car.x = e0.sx - e0.ox * 120; car.y = e0.sy - e0.oy * 120; world.place(car);
     const act = findInteraction(world, p);
-    assert.match(act && act.label, /Drive aboard the Gull Harbor Car Ferry to Gull Harbor/);
+    const e1 = R.stops[1];
+    assert.match(act && act.label, new RegExp(`Drive aboard the ${esc(R.name)} to ${esc(e1.name)}`));
     act.run();
     assert.ok(car.onDeck && car.onDeck.f === v.id, 'on the deck');
-    skipToStop(world, R, F, 'Gull Harbor');
-    const e1 = R.stops[1];
-    assert.equal(car.onDeck, null, 'driven off at Gull Harbor');
-    assert.ok(Math.hypot(car.x - e1.land.x, car.y - e1.land.y) < 400 && car.lz === 0, 'on Gull Harbor\'s lot');
+    skipToStop(world, R, F, e1.name);
+    assert.equal(car.onDeck, null, `driven off at ${e1.name}`);
+    assert.ok(Math.hypot(car.x - e1.land.x, car.y - e1.land.y) < 400 && car.lz === 0, `on ${e1.name}'s lot`);
     assert.equal(p.ped.vehId, car.id);
   }
 });

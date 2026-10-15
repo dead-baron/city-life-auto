@@ -394,11 +394,13 @@ export function layCity3(lines, m) {
     out.len += r.b - r.a;
   }
   for (const r of plan.alleys) { push([{ x: C(r.c), y: C(r.a) }, { x: C(r.c), y: C(r.b) }], 'alley', 'Alley'); out.alleys++; }
-  // the bridges: an arterial whose points cross the water and whose end is on a city district - a stub, east-west or
-  // north-south, from its end to the nearest of the city's streets within 60 tiles (none: the generator's repair)
+  // the bridges: an arterial (or a footbridge: its narrow lane) whose points cross the water and whose end is on a city
+  // district - a stub, east-west or north-south, from its end to the nearest of the city's streets within 60 tiles (none:
+  // the generator's repair; a footbridge's lane reaches only 22 tiles, so one landing mid-block - the Gulf Footbridge -
+  // was left off the network without its stub)
   const wet = (x, y) => { const tx = Math.floor(x), ty = Math.floor(y); return !(tx >= 0 && ty >= 0 && tx < W && ty < Hh) || !m.land[ty * W + tx]; };
   for (const l of lines) {
-    if (l.kind !== 'art' || l.city) continue;
+    if ((l.kind !== 'art' && !l.foot) || l.city) continue;
     let over = false;   // (over the water somewhere along it: sampled a tile apart between its points)
     for (let j = 1; j < l.pts.length && !over; j++) {
       const p = l.pts[j - 1], q = l.pts[j], n = Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / TILE);
@@ -412,7 +414,8 @@ export function layCity3(lines, m) {
       for (const r of plan.h) if (ex >= r.a && ex <= r.b && Math.abs(ey - r.c) < 60 && (!best || Math.abs(ey - r.c) < best.d)) best = { d: Math.abs(ey - r.c), to: { x: e.x, y: C(r.c) } };
       for (const r of plan.v) if (ey >= r.a && ey <= r.b && Math.abs(ex - r.c) < 60 && (!best || Math.abs(ex - r.c) < best.d)) best = { d: Math.abs(ex - r.c), to: { x: C(r.c), y: e.y } };
       if (!best || best.d < 1) { out.bridges.push({ name: l.name, met: !!best }); continue; }
-      push([{ x: e.x, y: e.y }, best.to], 'ave', l.name);
+      if (l.foot) lines.push({ pts: [{ x: e.x, y: e.y }, best.to], kind: l.kind, lvl: 0, name: l.name, city: true, foot: true });
+      else push([{ x: e.x, y: e.y }, best.to], 'ave', l.name);
       out.bridges.push({ name: l.name, met: true, stub: Math.round(best.d) });
     }
   }

@@ -17,50 +17,56 @@ const { map: M } = await buildWorld3(1337, { log: () => {} });
 const mod = (a, n) => ((a % n) + n) % n;
 const LINES = SUBWAYS.filter((l) => !l.loopOf);
 
-test('the subways are laid: each line one loop of double track, below ground but on its viaducts, every station a stop', () => {
+// (World v3b: each line a closed loop, run both ways - a loop of the trains each way, the line's two tracks)
+test('the subways are laid: each line a closed loop of double track, below ground but on its viaducts, every station a stop', () => {
   const subs = M.rails.filter((r) => r.subway);
-  assert.equal(subs.length, LINES.length, 'a loop per subway line');
+  assert.equal(subs.length, LINES.length * 2, 'a loop each way per subway line');
   for (const sw of LINES) {
-    const r = subs.find((q) => q.subway === sw.name);
-    assert.ok(r, sw.name);
-    // every station of the line (and of its loop) is a stop; a terminal once, the rest on both tracks
+    const loops = subs.filter((q) => q.subway === sw.name);
+    assert.deepEqual(loops.map((r) => r.way).sort(), [-1, 1], `${sw.name}: both ways`);
     const want = STATIONS.filter((s) => s.line === sw.name).map((s) => `${subwayName(s.name)} Station`);
-    const got = r.stations.map((st) => st.name);
-    for (const name of want) assert.ok(got.includes(name), `${sw.name}: ${name} a stop`);
-    assert.ok(got.length >= want.length + 3, `${sw.name}: ${got.length} stops (both tracks)`);
-    // below ground: the track is `under` but on the viaducts, where it crosses the water on a deck
-    const under = r.pts.filter((p) => p.under).length / r.pts.length;
-    assert.ok(under > 0.7 && under < 0.995, `${sw.name}: ${(under * 100).toFixed(0)}% below ground`);
-    const decks = r.pts.filter((p) => !p.under && p.deck).length;
-    assert.ok(decks * 8 / TILE > 150, `${sw.name}: ${Math.round(decks * 8 / TILE)} tiles of viaduct over the water`);
-    let wet = 0;
-    for (const p of r.pts) { if (p.under) continue; const t = M.tileAtPx(p.x, p.y); if (t === T.WATER || t === T.DEEP) wet++; }
-    assert.equal(wet, 0, `${sw.name}: no track over open water off its deck`);
-    // double track: the other way's track 96 px off, beside each stop's (the stops on a line's stretch come in pairs)
-    const pair = r.stations.filter((st) => r.stations.filter((q) => q.name === st.name).length === 2);
-    assert.ok(pair.length >= 8, `${sw.name}: ${pair.length} stops on both tracks`);
-    for (const st of pair) {
-      const o = r.stations.find((q) => q.name === st.name && q !== st);
+    for (const r of loops) {
+      // every station of the line a stop each way round, once
+      assert.deepEqual(r.stations.map((st) => st.name).sort(), [...want].sort(), `${r.name}: its stops`);
+      // below ground: the track is `under` but on the viaducts, where it crosses the water on a deck
+      const under = r.pts.filter((p) => p.under).length / r.pts.length;
+      assert.ok(under > 0.7 && under < 0.995, `${r.name}: ${(under * 100).toFixed(0)}% below ground`);
+      const decks = r.pts.filter((p) => !p.under && p.deck).length;
+      assert.ok(decks * 8 / TILE > 150, `${r.name}: ${Math.round(decks * 8 / TILE)} tiles of viaduct over the water`);
+      let wet = 0;
+      for (const p of r.pts) { if (p.under) continue; const t = M.tileAtPx(p.x, p.y); if (t === T.WATER || t === T.DEEP) wet++; }
+      assert.equal(wet, 0, `${r.name}: no track over open water off its deck`);
+      // up at grade only to cross the water: every stretch out of the ground has its viaduct
+      const n = r.pts.length, start = r.pts.findIndex((p) => p.under);
+      for (let k = 0, run = null; k <= n; k++) {
+        const p = r.pts[(start + k) % n];
+        if (k < n && !p.under) { run ??= { at: p, deck: false }; run.deck ||= !!p.deck; continue; }
+        if (run) assert.ok(run.deck, `${r.name}: up at grade at ${Math.round(run.at.x / TILE)}, ${Math.round(run.at.y / TILE)} with no water to cross`);
+        run = null;
+      }
+    }
+    // double track: each stop's other way 96 px off, across the line (its stop on the other track)
+    const [a, b] = [1, -1].map((way) => loops.find((r) => r.way === way));
+    for (const st of a.stations) {
+      const o = b.stations.find((q) => q.name === st.name);
       const d = Math.hypot(o.x - st.x, o.y - st.y);
       assert.ok(d > 2 * TRACK_OFF - 30 && d < 2 * TRACK_OFF + 260, `${sw.name} ${st.name}: the two tracks' stops ${Math.round(d)} px apart`);
     }
   }
-  // Line 1 beside the Bay Bridge, Line 2 over the airport's strait: at grade there
-  const l1 = subs.find((q) => q.subway === 'Subway Line 1'), l2 = subs.find((q) => q.subway === 'Subway Line 2');
-  assert.ok(l1.pts.some((p) => !p.under && Math.abs(p.x / TILE - 2380) < 8 && p.y / TILE > 1880 && p.y / TILE < 2040), 'Line 1 on its viaduct beside the Bay Bridge');
-  assert.ok(l2.pts.some((p) => !p.under && Math.hypot(p.x / TILE - 1362, p.y / TILE - 2480) < 60), 'Line 2 on its viaduct over the airport\'s strait');
 });
 
 test('the subway stations: a kiosk on a plaza with stairs down, one map point a station', (t) => {
   const subs = M.rails.filter((r) => r.subway);
   let kiosks = 0, all = 0;
   const none = [];
-  for (const r of subs) {
+  // (each line's stops on both its tracks - its loops each way - together)
+  for (const line of new Set(subs.map((q) => q.subway))) {
+    const loops = subs.filter((q) => q.subway === line), r = { name: line, service: loops[0].service, stations: loops.flatMap((q) => q.stations) };
     const names = new Set(r.stations.map((st) => st.name));
     for (const name of names) {
       all++;
       const sts = r.stations.filter((st) => st.name === name);
-      for (const st of sts) assert.ok(st.under, `${r.name} ${name}: below ground`);
+      for (const st of sts) assert.ok(st.under, `${r.name} ${name}: below ground (at ${Math.round(st.x / TILE)}, ${Math.round(st.y / TILE)})`);
       // (no plaza near: the stairs down from the nearest pavement, as today's subway's fallback - 8.16 lists them)
       const k = sts[0].kiosk;
       if (!k) { none.push(name); assert.ok(sts[0].platform, `${name}: its way down`); continue; }
@@ -75,8 +81,8 @@ test('the subway stations: a kiosk on a plaza with stairs down, one map point a 
       for (let y = pl.y; y < pl.y + pl.h; y++) for (let x = pl.x; x < pl.x + pl.w; x++) if (!BLOCK.has(M.tileAt(x, y))) paved++;
       assert.ok(paved >= pl.w * pl.h * 0.75, `${name}: the plaza paved (${paved})`);
       assert.ok(k.x0 >= pl.x * TILE - 8 && k.x0 + k.w <= (pl.x + pl.w) * TILE + 8, `${name}: the kiosk on its plaza`);
-      // its one map point: the subway line calling there
-      const pois = M.pois.filter((p) => p.kind === 'station' && p.label === name);
+      // its one map point: the subway line calling there (an interchange - Union Square - has one a line)
+      const pois = M.pois.filter((p) => p.kind === 'station' && p.label === name && p.sub === line);
       assert.equal(pois.length, 1, `${name}: one map point`);
       assert.deepEqual(pois[0].services, [r.service], `${name}: ${r.service} calls`);
       for (const st of sts) assert.equal(st.poi, pois[0].id);
@@ -105,7 +111,8 @@ test('the subway trains, five minutes with the main line\'s: each runs, stops at
   const ts = w.trains, subR = new Set(w.rails.map((r, i) => (r.subway ? i : -1)).filter((i) => i >= 0));
   const subT = ts.filter((t) => subR.has(t.r));
   assert.ok(subT.length >= LINES.length * 2, `${subT.length} subway trains`);
-  assert.equal(new Set(subT.map((t) => t.r)).size, LINES.length, 'trains on every subway line');
+  assert.equal(new Set(subT.map((t) => t.r)).size, subR.size, 'trains on every subway loop');
+  assert.equal(new Set(subT.map((t) => w.rails[t.r].subway)).size, LINES.length, 'trains on every subway line');
   const run = ts.map(() => ({ dist: 0, stops: new Set() }));
   let hits = 0, firstHit = null;
   for (let k = 0; k < TICK_HZ * 60 * 5; k++) {
@@ -130,8 +137,10 @@ test('the subway trains, five minutes with the main line\'s: each runs, stops at
     assert.ok(run[i].dist > 20000, `${r.name} train ${t.i}: ran ${Math.round(run[i].dist)} px`);
     assert.ok(run[i].stops.size >= 4, `${r.name} train ${t.i}: stopped at ${run[i].stops.size} stations`);
   });
-  // the platform boards: a subway stop's lists its line
-  const poi = M.pois.find((p) => p.kind === 'station' && p.sub === 'Subway Line 1');
-  const b = trains.stationBoard(w, poi);
-  assert.ok(b && /Subway Line 1/.test(b.sub || ''), `the board at ${poi.label}: ${b && b.sub}`);
+  // the platform boards: every subway stop's lists its line, to a stop of that line
+  for (const poi of M.pois.filter((p) => p.kind === 'station' && p.sub)) {
+    const b = trains.stationBoard(w, poi), stops = new Set(STATIONS.filter((s) => s.line === poi.sub).map((s) => subwayName(s.name)));
+    const to = [...(b.sub || '').matchAll(new RegExp(`${poi.sub} to ([^:·]+):`, 'g'))].map((q) => q[1].trim());
+    assert.ok(to.length && to.every((n) => stops.has(n)), `the board at ${poi.label}: ${b && b.sub}`);
+  }
 });
