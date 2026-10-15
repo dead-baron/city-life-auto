@@ -9865,3 +9865,18 @@ two cores and room for both (11+ GB), server/artcdn.js defaultThreads starts two
 five hours for all 45,864 chunks, the railway and the highways first; an 8 GB development machine keeps one, a one-core
 server one, under 4.5 GB none. /stats has a `host` block: cores, load averages, the server's memory and the machine's
 free memory, to see the threads leave the tick enough. Test: test/artcdn.test.js.
+
+## 2026-10-15 · Six look-and-feel fixes from the owner's playtest
+- The Act prompt's crime warning is just the key now: red with a "!" when what you'd do is a crime (a felony ringed
+  too), and on a phone the Act button pulses red, or green when it's fine. Safety mode's "press again" no longer pops up
+  a note: the key blinks and a small PRESS AGAIN tab sits on the prompt (client/hud.js).
+- Water doesn't change where you are: rivers, lakes and the sea near land keep the district's name; Liberty Bay only
+  comes up well out at sea, and never on a train (client/areaname.js).
+- The loud, nonstop countryside hiss was the leaves' rustle, as loud as heavy rain and playing on every field: it now
+  plays only in the woods, softer. Rivers and lakes no longer sound like the ocean, and a train creeping into a station
+  no longer rumbles like it's at full speed on phones (client/sound/ambience.js, vehicles.js).
+- Pigeons and gulls fly in from off screen, land, and fly off out of view (client/birds.js, pooled).
+- The person on a paramedic's stretcher is the actual NPC or player, lying on it (server/systems/ems.js; the PED
+  descriptor's `pa: { app, ar }` while a medic carries someone; client/art2/litter.js).
+- Cave mouths let the daylight in, moonlight at night, so the way out shows from inside (client/underground/view.js).
+Tests: test/areaname, birds, ambience, stretcher, cavelight (new); ems, hudlayout, honestliving.
