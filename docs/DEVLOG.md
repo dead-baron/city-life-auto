@@ -9691,3 +9691,11 @@ finds none on the HUD, the district card, the edge warning, a long shop menu, th
 settings, the pause menu or the death screen (it found the district card before); 844x390 and 1280x720 unchanged.
 Tests: test/flight.test.js (new: a helicopter flown along a street and turned hard never carries the slide flag; a car
 sliding still does), test/shadowing.test.js (new).
+
+## 2026-10-15 · The deploy waits longer for a restarted server
+
+- `deploy/auto-update.sh` gives a restarted server five minutes (was 90 s) to answer `/health` before it rolls the
+  update back (`CLA_HEALTH_WAIT` seconds to change it). Today's world starts in about 20 s, so nothing changes for it;
+  World v3 builds its whole, bigger world at start - a minute or two on the 2-core Ampere - and would have been rolled
+  back. This goes out on its own, ahead of the world: the timer runs the script from the repo, so the new wait is in
+  force from the run after this one.
