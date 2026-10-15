@@ -9880,3 +9880,16 @@ free memory, to see the threads leave the tick enough. Test: test/artcdn.test.js
   descriptor's `pa: { app, ar }` while a medic carries someone; client/art2/litter.js).
 - Cave mouths let the daylight in, moonlight at night, so the way out shows from inside (client/underground/view.js).
 Tests: test/areaname, birds, ambience, stretcher, cavelight (new); ems, hudlayout, honestliving.
+
+## 2026-10-15 · Traffic out of dead ends; no cars left in the road or driving into buildings
+The owner, at Copper Gulch Clinic: "NPC vehicles ... are all trying to drive through the corner of this building instead
+of on the street". A headless run there: cars reached a junction with no way on and were left in the road with nobody
+steering (`ai` null - never cleared up with a player watching); the cars behind shoved them onto the pavement, and the
+waypoint guard, counting their spinning in the jam as circling, skipped them past the corner - so they steered straight
+at the street's far end, through the clinic (server/systems/traffic.js, roadends.js):
+- a queue at a road's end turns round after 8 s, the last car first, one at a time, and the road is avoided for a while;
+- a car with no way on at a junction takes any way out or goes back, or else pulls up as a breakdown the clean-up takes;
+- the circling guard only counts turning while the car is driving; a car with a building or wall between it and its next
+  waypoint goes back onto its lane and on along the street.
+Tests: test/roadends.test.js (3 new). The station streets and car parks and the square level crossings (the same
+helper's world work) wait for tomorrow.
