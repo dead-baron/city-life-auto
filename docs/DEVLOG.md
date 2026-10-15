@@ -9853,3 +9853,7 @@ Tests: test/core.test.js, test/bounties.test.js, test/honestliving.test.js, test
   the holes filled with nothing (client/render/aircraft.js pageAirfields), again as more regions come in. (The shared
   code gets its own guard with the next change to the world: shared/flight.js is part of World v3's key, and changing it
   now would send every browser and the server's art bake back to the start.) Test: test/flight.test.js.
+- **Shop and building interiors in World v3** (the owner: Copper Gulch Clinic's "interior isn't loading"): the page found
+  the walk-in you stand in with `ty * map.w + tx`, but a page's World v3 map is a window onto the world (its x0, y0 not
+  0), so away from the window's corner it found no building: the roof never lifted, anywhere but there. Now m.idx
+  (client/main.js walkInAt). test/mapwindow.test.js's guard now also catches `* map.w +` indexing in the page's code.

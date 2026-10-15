@@ -188,6 +188,9 @@ const WHOLE_FRAME = {
 };
 const INDEX = /\*\s*MAP_[WH]\b|\bMAP_[WH]\s*\*/;
 const BOUNDS = /[<>]=?\s*MAP_[WH]\b|\bMAP_[WH]\s*[-+]\s*\d/;
+// (the page's own map is a window, its w the window's: `ty * S.map.w + tx` found nobody inside a shop away from the
+// window's corner - the owner's Copper Gulch Clinic, 2026-10-15)
+const PAGE_INDEX = /\*\s*(S\.map|this\.map|map|M|m)\.w\s*\+/;
 function jsFiles(dir) {
   const out = [];
   for (const f of readdirSync(join(ROOT, dir))) {
@@ -203,7 +206,7 @@ test('the guard: no `* MAP_W` index arithmetic and no MAP_W / MAP_H bounds check
     if (PAUSED.has(f)) continue;
     const src = readFileSync(join(ROOT, f), 'utf8');
     src.split('\n').forEach((line, i) => {
-      if (!INDEX.test(line) && !BOUNDS.test(line)) return;
+      if (!INDEX.test(line) && !BOUNDS.test(line) && !(f.startsWith('client/') && PAGE_INDEX.test(line))) return;
       if (WHOLE_FRAME[f]) { used.add(f); return; }
       bad.push(`${f}:${i + 1}: ${line.trim().slice(0, 120)}`);
     });

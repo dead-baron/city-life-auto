@@ -3537,7 +3537,7 @@ function walkInAt(x, y) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
   const t = S.map.tileAt(tx, ty);
   if (t !== T.FLOOR && t !== T.COUNTER) return null;
-  const b = S.map.buildings[S.map.bld[ty * S.map.w + tx]];
+  const b = S.map.buildings[S.map.bld[S.map.idx(tx, ty)]];   // (m.idx: the map is a window onto World v3's - ty * w + tx found nobody inside a shop away from the window's corner, the owner's Copper Gulch Clinic, 2026-10-15)
   return b && b.walkIn ? b : null;
 }
 // The walk-in you're standing in (riding the subway under a shop doesn't open it), easing every
