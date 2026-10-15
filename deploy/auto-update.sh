@@ -47,8 +47,10 @@ if ! echo "$CHANGED" | grep -qE '^(server/|shared/|package\.json)'; then
   exit 0
 fi
 
+# How long a restarted server gets to answer /health. Today's world starts in ~20 s; World v3's whole world is
+# built at start (a minute or two on the 2-core Ampere), so give it five minutes before calling it broken.
 healthy() {
-  for _ in $(seq 1 90); do
+  for _ in $(seq 1 "${CLA_HEALTH_WAIT:-300}"); do
     sleep 1
     curl -sf -m 2 http://127.0.0.1:8080/health >/dev/null && return 0
   done
