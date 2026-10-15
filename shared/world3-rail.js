@@ -15,6 +15,20 @@
 import { TILE, T } from './constants.js';
 import { MAIN_LINE, MAIN_JUNCTIONS, SERVICES, STATIONS, RADIUS } from './world3-skeleton.js';
 import { treeSize } from './felling.js';
+import { cityRailUnder, STATION_OPEN } from './world3-city.js';
+import { TOWNS3 } from './world3-towns.js';
+import { MESA } from './world3-mesa.js';
+import { GULCH, HOLLOW } from './world3-desert.js';
+
+// ...and under the towns it passes through (Lucky Mesa, the towns' boxes; part 5's ruling: no level crossings in the
+// towns), their stations' stretches but (STATION_OPEN). (The north coast's beach towns keep theirs: the train along
+// their backs is the scenic route.)
+const TOWN_BOXES = [...TOWNS3.map((t) => t.box), MESA.box, GULCH.box, HOLLOW.box].filter(Boolean);
+const MAIN_AT = STATIONS.filter((q) => q.line === 'main').map((q) => q.at);
+function townRailUnder(x, y) {
+  if (!TOWN_BOXES.some(([x0, y0, x1, y1]) => x >= x0 - 6 && y >= y0 - 6 && x < x1 + 6 && y < y1 + 6)) return false;
+  return !MAIN_AT.some(([sx, sy]) => (x - sx) * (x - sx) + (y - sy) * (y - sy) < STATION_OPEN * STATION_OPEN);
+}
 
 export const TRACK_OFF = 48;   // px from the main line's centre to each track's centre (the two 96 px apart: 3 tiles)
 export const HUB_R = 20;       // tiles: every corner at a junction (H33: the hub stations there stand on straight track)
@@ -106,7 +120,9 @@ export function trackOf(path) {
     const x = (a[0] + (b[0] - a[0]) * w) * TILE - dy * TRACK_OFF, y = (a[1] + (b[1] - a[1]) * w) * TILE + dx * TRACK_OFF;
     // (World v3b's elevated stretch - the main line over Midtown's streets on a viaduct - is laid below ground, flagged
     // `elevated`, until the generator builds a rail viaduct over streets: so no street crosses it at grade)
-    const elev = inR(path.elevated || [], s), under = inR(path.tunnels, s) || elev;
+    const elev = inR(path.elevated || [], s), mx = a[0] + (b[0] - a[0]) * w, my = a[1] + (b[1] - a[1]) * w;
+    // (and below ground through the city's districts but round the stations - world3-city.js cityRailUnder; a bridge stays one)
+    const under = inR(path.tunnels, s) || elev || (!inR(path.bridges, s) && (cityRailUnder(mx, my) || townRailUnder(mx, my)));
     out.push(elev ? { x, y, under, subway: false, tunnel: under, elevated: true } : { x, y, under, subway: false, tunnel: under });
   }
   let s = 0;
@@ -141,7 +157,7 @@ function mountainBores(m, loops) {
     while (i < P.length) {
       if (!P[i].under) { i++; continue; }
       let j = i; while (j + 1 < P.length && P[j + 1].under) j++;
-      let dry = j - i > 8;
+      let dry = j - i > 8 && !cityRailUnder(P[(i + j) >> 1].x / TILE, P[(i + j) >> 1].y / TILE);   // (under the city it stays below ground: no hill over it)
       for (let k = i; k <= j && dry; k += 2) for (const [dx, dy] of [[0, 0], [-40, 0], [40, 0], [0, -40], [0, 40]]) if (W.has(m.tileAtPx(P[k].x + dx, P[k].y + dy))) { dry = false; break; }
       if (dry) { for (let k = i; k <= j; k++) { P[k].under = false; P[k].tunnel = false; P[k].bore = true; } l.bores.push({ s0: P[i].s, s1: P[j].s }); }
       i = j + 1;

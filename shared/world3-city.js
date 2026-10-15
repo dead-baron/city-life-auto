@@ -24,6 +24,7 @@
 import { TILE } from './constants.js';
 import { DISTRICTS } from './mapcore.js';
 import { ISLANDS3, MAINLAND3, HIGHWAYS3, MAIN_LOOP3 } from './world3-layout.js';
+import { STATIONS } from './world3-skeleton.js';
 
 // the v3b frame the plan is drawn on (WORLD-V3.md 9.1: 13 x 8 regions of 504 tiles); the build lays the city only there
 export const CITY_FRAME = [6552, 4032];
@@ -199,6 +200,19 @@ const HALF = { st: 7, ave: 9, blvd: 9, alley: 3 };   // tiles from a street's ce
 const ROOM_HWY = 18, ROOM_RAIL = 14;                    // a street this near a highway / the main line, running along it, isn't laid
 const nameOf = (A, at) => { for (const [a, b, n] of A[3] || []) if (at >= a && at < b) return n; return A[2]; };
 
+// The main line under the city (the owner, 2026-10-14: "some of the main train going underground in parts of the
+// city"; part 5's ruling: no level crossings in the towns): inside the city's districts the line runs below ground,
+// coming up only round its stations (STATION_OPEN tiles each way - the platforms and the ramps either side). A street
+// may cross it only where it is below ground (planCity3); world3-rail.js trackOf lays it so.
+export const STATION_OPEN = 60;
+const MAIN_STOPS = STATIONS.filter((q) => q.line === 'main').map((q) => q.at);
+const inCityRects = (x, y) => CITY3.some((c) => c.rects.some(([x0, y0, x1, y1]) => x >= x0 && y >= y0 && x < x1 && y < y1));
+export function cityRailUnder(x, y) {
+  if (!inCityRects(x, y)) return false;
+  for (const [sx, sy] of MAIN_STOPS) if ((x - sx) * (x - sx) + (y - sy) * (y - sy) < STATION_OPEN * STATION_OPEN) return false;
+  return true;
+}
+
 // the distance from (x, y) to a polyline's nearest segment, and that segment's direction (unit)
 function nearSeg(P, x, y) {
   let best = Infinity, ux = 0, uy = 0;
@@ -275,6 +289,8 @@ export function planCity3(land, dist, avoid) {
     let by = 0;
     for (const [x, y] of pts) if (horiz ? mine(x, y - side) || mine(x, y + side) || mine(x, y) : mine(x - side, y) || mine(x + side, y) || mine(x, y)) by++;
     if (by < pts.length * 0.6) return false;
+    // (crossing the main line only where it runs below ground: cityRailUnder)
+    for (const [x, y] of pts) if (nearSeg(MAIN_LOOP3.pts, x, y).d < 4 && !cityRailUnder(x, y)) return false;
     return !along(pts);
   };
   const kept = { h: new Map(), v: new Map() };

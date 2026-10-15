@@ -19,15 +19,34 @@ export function buildAirstrips3(m, H, strips = AIRSTRIPS3) {
   const inFrame = (tx, ty) => tx >= 0 && ty >= 0 && tx < m.w && ty < m.h;
   const idx = (tx, ty) => ty * m.w + tx;
   const add = (t, tx, ty, r = 0, extra = null) => H.addProp(m, t, Math.round(tx * TILE), Math.round(ty * TILE), r, extra);
-  for (const A of strips) {
+  for (const A0 of strips) {
+    // the strip where the plan has it, else the nearest spot round it where the strip, its margin and the hangar's
+    // yard stand on open ground - no road, no building, no water across it (the city and the farm roads grew round
+    // the plan's spots); everything of the strip's moves with it
+    const fits = (dx, dy) => {
+      const [a0, b0, a1, b1] = A0.runway, [hx0, hy0, hw0, hh0] = A0.hangar;
+      for (const [x0, y0, x1, y1] of [[a0 - 3, b0 - 3, a1 + 3, b1 + 3], [hx0 - 4, hy0 - 4, hx0 + hw0 + 6, hy0 + hh0 + 6]]) {
+        for (let ty = y0 + dy; ty < y1 + dy; ty++) for (let tx = x0 + dx; tx < x1 + dx; tx++) if (!inFrame(tx, ty) || !OPEN.has(m.tiles[idx(tx, ty)])) return false;
+      }
+      return true;
+    };
+    let shift = null;
+    for (let r = 0; r <= 260 && !shift; r += 4) {
+      for (let dy = -r; dy <= r && !shift; dy += 4) for (let dx = -r; dx <= r; dx += (Math.abs(dy) === r ? 4 : 2 * r || 4)) if (fits(dx, dy)) { shift = [dx, dy]; break; }
+    }
+    if (!shift) continue;
+    const [sdx, sdy] = shift, mv = (p) => [p[0] + sdx, p[1] + sdy];
+    const A = { ...A0, runway: [A0.runway[0] + sdx, A0.runway[1] + sdy, A0.runway[2] + sdx, A0.runway[3] + sdy], hangar: [A0.hangar[0] + sdx, A0.hangar[1] + sdy, A0.hangar[2], A0.hangar[3]], windsock: mv(A0.windsock), tank: mv(A0.tank), track: null };
     const [x0, y0, x1, y1] = A.runway;
-    if (!inFrame(x0, y0) || !inFrame(x1 - 1, y1 - 1)) continue;
-    // the strip must stand on open ground (a few tiles of road or lot it crosses are fine; water or buildings are not)
-    let bad = 0, n = 0;
-    for (let ty = y0; ty < y1; ty++) for (let tx = x0; tx < x1; tx++) { n++; const t = m.tiles[idx(tx, ty)]; if (!OPEN.has(t) && t !== T.ROAD && t !== T.LOT) bad++; }
-    if (bad > n * 0.04) continue;
     const ew = x1 - x0 >= y1 - y0;
     const [hx, hy, hw, hh] = A.hangar;
+    // the track: from the hangar's yard straight out to the nearest road (along a row, then a column), within 200 tiles
+    {
+      const cx = hx + (hw >> 1), cy = hy + hh + 4;
+      let best = null;
+      for (let r = 2; r <= 200 && !best; r += 2) for (const [ex, ey] of [[cx + r, cy], [cx - r, cy], [cx, cy + r], [cx, cy - r]]) if (inFrame(ex, ey) && m.tiles[idx(ex, ey)] === T.ROAD) { best = [ex, ey]; break; }
+      A.track = best ? [[cx, cy], best] : [];
+    }
     // clear what the dressing put there - the strip and a margin round it, the hangar's yard, the track
     const M = 3, box = [x0 - M, y0 - M, x1 + M, y1 + M], yard = [hx - 4, hy - 4, hx + hw + 6, hy + hh + 6];
     const inBox = (B, px, py) => px >= B[0] * TILE && px < B[2] * TILE && py >= B[1] * TILE && py < B[3] * TILE;

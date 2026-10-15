@@ -43,6 +43,14 @@ const xd = {};
 for (const c of xs) xd[c.d] = (xd[c.d] || 0) + 1;
 out.levelCrossingsByDistrict = xd;
 out.stations = (m.railHubs || []).map((h) => h.name);
+// diagnostics: the airstrips' ground, a district's buildings' spots, the clubs by district
+const { AIRSTRIPS3 } = await import(join(ROOT, 'shared/world3-wild.js'));
+out.stripGround = AIRSTRIPS3.map((A) => { const [x0, y0, x1, y1] = A.runway, c = {}; for (let ty = y0; ty < y1; ty++) for (let tx = x0; tx < x1; tx++) { const t = m.tiles[m.idx(tx, ty)]; c[t] = (c[t] || 0) + 1; } return { name: A.name, tiles: c }; });
+const spotsOf = (name) => m.buildings.filter((b) => b && DISTRICTS[m.dist[m.idx(b.tx, b.ty)]]?.name === name).slice(0, 6).map((b) => [b.tx, b.ty, b.name || b.kind]);
+out.liberty = spotsOf('Liberty Bay');
+const clubs = {};
+for (const p of m.pois) if (p.kind === 'club') { const n = DISTRICTS[m.dist[m.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))]]?.name; clubs[n] = (clubs[n] || 0) + 1; }
+out.clubsByDistrict = clubs;
 writeFileSync(join(OUT, 'check.json'), JSON.stringify({ ...out, crossings: xs }, null, 1));
 console.log(JSON.stringify(out, null, 1).slice(0, 4000));
 // the picture: a tile's colour, most telling tile of each 2 x 2

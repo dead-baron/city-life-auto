@@ -109,13 +109,12 @@ export const WILD_TRACKS = [
 ];
 // (v3b, the owner 2026-10-14) the crop dusters' grass airstrips in the farm valley's open fields, and Lucky Mesa's
 // desert strip east of the town (the sketch's): runway [x0, y0, x1, y1) (mown grass in the valley, packed dirt in the
-// desert; the valley's run east-west, about 300 x 18), the hangar [x, y, w, h], the windsock and the fuel tank (tiles),
-// the dirt track to the road (Mine Road, Willow Road, Route 9 - world3-towns.js TOWN_ROADS3). Data for the integration
-// to build with the Route 9 Airstrip's pieces (shared/naturesites.js route9) and list in m.natureSites (kind
-// 'airstrip'; shared/flight.js reads those as north-south strips today - an east-west one needs its heading there).
+// desert; the valley's run east-west, 200 x 18), the hangar [x, y, w, h], the windsock and the fuel tank (tiles), the
+// dirt track to the road. Built by shared/world3-airstrips.js (on open ground round the planned spot; the track to the
+// nearest road) and listed in m.natureSites (kind 'airstrip', with the strip's rectangle: shared/flight.js).
 export const AIRSTRIPS3 = [
-  { name: 'Willow Valley Airstrip', d: D3.VALLEY, surface: 'grass', runway: [3940, 1180, 4240, 1198], hangar: [3922, 1202, 14, 10], windsock: [3934, 1175], tank: [3940, 1208], track: [[4240, 1189], [4250, 1189], [4250, 1112]] },
-  { name: 'Brightwater Airstrip', d: D3.VALLEY, surface: 'grass', runway: [3230, 1460, 3530, 1478], hangar: [3212, 1482, 14, 10], windsock: [3224, 1455], tank: [3230, 1488], track: [[3530, 1469], [3720, 1469]] },
+  { name: 'Willow Valley Airstrip', d: D3.VALLEY, surface: 'grass', runway: [3990, 1180, 4190, 1198], hangar: [3972, 1202, 14, 10], windsock: [3984, 1175], tank: [3990, 1208], track: [[4240, 1189], [4250, 1189], [4250, 1112]] },
+  { name: 'Brightwater Airstrip', d: D3.VALLEY, surface: 'grass', runway: [3280, 1460, 3480, 1478], hangar: [3262, 1482, 14, 10], windsock: [3274, 1455], tank: [3280, 1488], track: [[3530, 1469], [3720, 1469]] },
   { name: 'Lucky Mesa Airstrip', d: D3.DESERT, surface: 'dirt', runway: [5751, 740, 5769, 900], hangar: [5774, 800, 14, 10], windsock: [5774, 745], tank: [5776, 815], track: [[5774, 900], [5740, 936]] },
 ];
 // today's wild districts -> the v3 region they move to (Highland Woods, Granite Peaks; Dry Creek's farmland the valley,
