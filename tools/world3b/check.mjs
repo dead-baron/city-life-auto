@@ -51,6 +51,16 @@ out.liberty = spotsOf('Liberty Bay');
 const clubs = {};
 for (const p of m.pois) if (p.kind === 'club') { const n = DISTRICTS[m.dist[m.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))]]?.name; clubs[n] = (clubs[n] || 0) + 1; }
 out.clubsByDistrict = clubs;
+// the road network's parts (union of the edges' ends): the biggest, and every other with its size and a named road in it
+{
+  const N = m.nodes.length, par = Array.from({ length: N }, (_, i) => i);
+  const find = (i) => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+  for (const e of m.edges) if (e && e.a != null && e.b != null) { const a = find(e.a), b = find(e.b); if (a !== b) par[a] = b; }
+  const parts = new Map();
+  for (const e of m.edges) { if (!e) continue; const r = find(e.a); const P = parts.get(r) || { edges: 0, names: new Set(), x: Math.round(m.nodes[e.a].x / TILE), y: Math.round(m.nodes[e.a].y / TILE) }; P.edges++; if (e.name && P.names.size < 3) P.names.add(e.name); parts.set(r, P); }
+  const L = [...parts.values()].sort((a, b) => b.edges - a.edges);
+  out.roadParts = { count: L.length, biggest: L[0] ? L[0].edges : 0, others: L.slice(1, 40).map((P) => ({ edges: P.edges, at: [P.x, P.y], names: [...P.names] })) };
+}
 writeFileSync(join(OUT, 'check.json'), JSON.stringify({ ...out, crossings: xs }, null, 1));
 console.log(JSON.stringify(out, null, 1).slice(0, 4000));
 // the picture: a tile's colour, most telling tile of each 2 x 2
