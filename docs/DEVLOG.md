@@ -9699,3 +9699,45 @@ sliding still does), test/shadowing.test.js (new).
   World v3 builds its whole, bigger world at start - a minute or two on the 2-core Ampere - and would have been rolled
   back. This goes out on its own, ahead of the world: the timer runs the script from the repo, so the new wait is in
   force from the run after this one.
+
+## 2026-10-15 · World v3b: the owner's layout built; crop dusting; the switch's pieces
+
+The owner, 2026-10-14 (a sketch and four concepts): "make the best call for the different districts and biomes and
+points of interest and all the world details and locations ... streets and city layout and grid system, those you
+really don't need to take precisely ... make it as gorgeous as we can ... let's push this live as soon as its ready to
+start testing". The old World v3 (WR3) is kept on the branch `world-v3-wr3`.
+- **The frame** (shared/world3.js): 13 x 8 regions of 504 tiles, 6552 x 4032 m, ocean all round; the land, islands,
+  lakes, rivers, ground classes, highways, main loop, subways and ferries traced from the sketch
+  (shared/world3-layout.js, tools/world3b/); nothing of today's world is placed whole any more (no pieces).
+- **The city** (shared/world3-city.js, new): the 27 city districts of WORLD-V3.md 9.3 laid on one avenue grid across the
+  gulf - every street east-west or north-south, blocks long east-west and shallow north-south (every building faces
+  south), stepped at the coasts; the round Greenfield Park downtown, the stadium, the airport with its north-south
+  runway, the container port, the ferry terminal; the bridges' ends met by the grid's avenues.
+- **The regions** (world3-towns/mesa/desert/west/water/wild/beach/relief): Timber Bend in the forest, Willow Crossing on
+  the farm lake, Lucky Mesa in the north-east, Copper Gulch and its mine, Dusty Hollow, the dam, Sandpiper Bay, Egret
+  Point on the marsh, Prison Island, Kestrel Lake, the north coast's beach towns, the wild places - at their sketch
+  spots; their roads laid with the skeleton's (world3-layout.js TOWN_ROADS3).
+- **Transport** (world3-skeleton.js, world3-rail.js, world3-subway.js, world3-ferries.js): the Gulf Loop, the West Loop,
+  the East Island Link, the East and Casino Highways, the North Spur; ~60 country roads and the island bridges; the
+  Grand Loop main line (16 km, 13 stations) - below ground through the city and the towns but round its stations
+  (world3-city.js cityRailUnder: part 5's "no level crossings in the towns"; 207 level crossings -> ~50, the rest out
+  in the country); the Pink and Yellow subways; four ferries (the Gull Harbor car ferry, the prison boat, two water
+  buses).
+- **The airstrips** (shared/world3-airstrips.js, new): two grass strips in the farm valley for the crop dusters and
+  Lucky Mesa's dirt strip - the strip, its markers, a windsock, a hangar, the fuel, a parked plane, the track to the
+  road; each finds open ground near its planned spot. shared/flight.js takes a strip's own rectangle and heading.
+- **The build's time** (shared/map.js layoutRoads): 230 s -> 55 s. With no Metro City placed, today's coast and river
+  drives were traced over a 100,000-tile square off the frame (the placement's "nowhere" corner): not traced now.
+- **Crop dusting** (server/systems/dusting.js, new; shared/rules.js DUST; shared/vehicles.js duster): the phone's
+  Flying list offers it where crops are in reach of a strip; the co-op's crop duster (the Hopper Ag-Wing: yellow, a
+  green stripe, the spray boom - both renderers) is issued at the nearest farm strip with a contract of crop patches
+  (found from the built map's crop tiles); low and fast over them the spray goes down (the mist drawn on the page: the
+  damage word's top byte, bit 6), paid by the field and a bonus for the lot; a sown farm row sprayed grows on at once.
+  A farm strip's apron parks a duster.
+- **The switch's pieces** (no switch yet): shared/liveworld.js (the world the deployed server runs: config.js, and
+  version.json's `live` so a page builds the right city from the start); the profiles kept as they were the first time
+  a new WORLD_VERSION starts (`<data>/profiles-before-world<N>.json`); a released home's other places cleared
+  (the last wake-up spot, where hot money was stolen, where a wanted player was last seen); a page without storage
+  learns the world from its address; tools/build-worldmap2.mjs bakes World v3's map (`--world v3`) and close looks.
+Tests: test/dusting.test.js (new), test/world3city.test.js (new), test/world3regions.test.js (new),
+test/world3b.test.js (new); the WR3-only tests removed (world3gulf, world3place, world3port, world3land).
