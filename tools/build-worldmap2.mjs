@@ -16,6 +16,7 @@
 //                builds it), its whole frame; the map at 1/32 (--scale) with the overview at 1/64 (heavy: about 2 GB a
 //                thread - run it under the heavy lock, with 2 threads at most on a 7 GB machine)
 //   --scale k    a map pixel is k x k px of the world (16 today's map; with --area 2-8 for a close look at a place)
+//   --areas 'name:cx0,cy0,cx1,cy1;...' --outdir dir   several close looks in one run (one world build): dir/<name>.png
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { cpus } from 'node:os';
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
@@ -41,17 +42,20 @@ async function main() {
   const sig = mapSignature(map);
   if (V3) FRAME = [24 * 32, 10 * 32, (map.frame.w - 8) * 32, (map.frame.h - 30) * 32];   // (client/hud.js mapFrameOf)
   const arg = argv;
-  const area = arg('--area') && arg('--area').split(',').map(Number);
+  const AREAS = arg('--areas') ? arg('--areas').split(';').filter(Boolean).map((q) => { const [name, b] = q.split(':'); return { name, box: b.split(',').map(Number) }; }) : null;
+  const area = AREAS ? AREAS[0].box : arg('--area') && arg('--area').split(',').map(Number);
   const [cx0, cy0, cx1, cy1] = area || [Math.floor(FRAME[0] / CH), Math.floor(FRAME[1] / CH), Math.ceil(FRAME[2] / CH), Math.ceil(FRAME[3] / CH)];
   const GW = (cx1 - cx0) * CS, GH = (cy1 - cy0) * CS;
-  const img = Buffer.alloc(GW * GH * 3);
+  const img = Buffer.alloc(AREAS ? 3 : GW * GH * 3);
+  const kept = AREAS ? new Map() : null;   // (several areas: each chunk's pixels kept, the areas drawn from them at the end)
   // open sea: every tile of the chunk and two round it deep water, and nothing standing on it
   const deep = (cx, cy) => {
     for (let ty = cy * 24 - 2; ty < cy * 24 + 26; ty++) for (let tx = cx * 24 - 2; tx < cx * 24 + 26; tx++) if (map.tileAt(tx, ty) !== T.DEEP) return false;
     return true;
   };
   const jobs = [], sea = [];
-  for (let cy = cy0; cy < cy1; cy++) for (let cx = cx0; cx < cx1; cx++) (deep(cx, cy) ? sea : jobs).push([cx, cy]);
+  if (AREAS) { const seen = new Set(); for (const A of AREAS) { const [a0, b0, a1, b1] = A.box; for (let cy = b0; cy < b1; cy++) for (let cx = a0; cx < a1; cx++) { const k = cx * 100000 + cy; if (seen.has(k)) continue; seen.add(k); (deep(cx, cy) ? sea : jobs).push([cx, cy]); } } }
+  else for (let cy = cy0; cy < cy1; cy++) for (let cx = cx0; cx < cx1; cx++) (deep(cx, cy) ? sea : jobs).push([cx, cy]);
   map = null;   // (the bake threads build their own: this one's memory goes before theirs comes - World v3's is ~1.5 GB)
   if (globalThis.gc) globalThis.gc();
   // the open sea's look: one deep chunk baked (the first), copied to the rest
@@ -60,6 +64,7 @@ async function main() {
   const n = Math.max(1, Math.min(Number(process.argv[2]) || cpus().length, 8, jobs.length));
   let next = 0, done = 0, seaPix = null;
   const put = (cx, cy, px) => {
+    if (kept) { kept.set(cx * 100000 + cy, px); return; }
     const ox = (cx - cx0) * CS, oy = (cy - cy0) * CS;
     for (let y = 0; y < CS; y++) px.copy(img, ((oy + y) * GW + ox) * 3, y * CS * 3, (y + 1) * CS * 3);
   };
@@ -81,6 +86,25 @@ async function main() {
     }
   });
   for (const [cx, cy] of sea) if (seaPix) put(cx, cy, seaPix);
+  if (AREAS) {
+    const dir = arg('--outdir') || '.';
+    mkdirSync(dir, { recursive: true });
+    for (const A of AREAS) {
+      const [a0, b0, a1, b1] = A.box, AW = (a1 - a0) * CS, AH = (b1 - b0) * CS, im = Buffer.alloc(AW * AH * 3);
+      for (let cy = b0; cy < b1; cy++) for (let cx = a0; cx < a1; cx++) {
+        const px = kept.get(cx * 100000 + cy) || seaPix;
+        if (!px) continue;
+        const ox = (cx - a0) * CS, oy = (cy - b0) * CS;
+        for (let y = 0; y < CS; y++) px.copy(im, ((oy + y) * AW + ox) * 3, y * CS * 3, (y + 1) * CS * 3);
+      }
+      const f = join(dir, `${A.name}.png`), tmp = f + '.rgb';
+      writeFileSync(tmp, im);
+      spawnSync('python3', ['-c', `from PIL import Image, ImageEnhance\nim = Image.frombytes('RGB', (${AW}, ${AH}), open(${JSON.stringify(tmp)}, 'rb').read())\nim = ImageEnhance.Color(im).enhance(1.12)\nImageEnhance.Contrast(im).enhance(1.04).save(${JSON.stringify(f)})`], { stdio: 'inherit' });
+      rmSync(tmp, { force: true });
+      console.log(`[map] ${f}: ${AW} x ${AH}`);
+    }
+    return;
+  }
   if (area) {
     const f = arg('--out') || 'map-area.png', tmp = f + '.rgb';
     writeFileSync(tmp, img);
