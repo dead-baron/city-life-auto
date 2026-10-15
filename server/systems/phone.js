@@ -42,17 +42,17 @@ function tierFor(d) {
   return 0;
 }
 
+// every district's middle (its walkable tiles' mean, every third tile each way), all in one pass over the map the
+// first time one is asked for (World v3's frame: one pass, not one per district - a 5 s tick at the start); each
+// district's sums are added in the same tile order as a pass of its own, so the middles are the same to the bit
 function districtCentre(map, di) {
-  map._dcentre ??= new Map();
-  if (map._dcentre.has(di)) return map._dcentre.get(di);
-  const c = districtCentre0(map, di);
-  map._dcentre.set(di, c);
-  return c;
-}
-function districtCentre0(map, di) {
-  let sx = 0, sy = 0, n = 0;
-  for (let ty = map.y0; ty < map.y0 + map.h; ty += 3) { const r = map.row(ty); for (let tx = map.x0; tx < map.x0 + map.w; tx += 3) if (map.dist[r + map.col(tx)] === di && !PED_BLOCK[map.tileAt(tx, ty)]) { sx += tx; sy += ty; n++; } }
-  return n ? { x: (sx / n + 0.5) * 32, y: (sy / n + 0.5) * 32 } : null;
+  if (!map._dcentre) {
+    const sx = new Float64Array(256), sy = new Float64Array(256), n = new Float64Array(256);
+    for (let ty = map.y0; ty < map.y0 + map.h; ty += 3) { const r = map.row(ty); for (let tx = map.x0; tx < map.x0 + map.w; tx += 3) { const d = map.dist[r + map.col(tx)]; if (!PED_BLOCK[map.tileAt(tx, ty)]) { sx[d] += tx; sy[d] += ty; n[d]++; } } }
+    map._dcentre = new Map();
+    for (let d = 0; d < 256; d++) map._dcentre.set(d, n[d] ? { x: (sx[d] / n[d] + 0.5) * 32, y: (sy[d] / n[d] + 0.5) * 32 } : null);
+  }
+  return map._dcentre.get(di) ?? null;
 }
 
 // Where a delivery's crate waits: the storefront's cargo pad (same spot jobs.startCourier uses).
