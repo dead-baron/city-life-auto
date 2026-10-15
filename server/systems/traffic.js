@@ -6,10 +6,10 @@
 import { K, T } from '../../shared/constants.js';
 import { lanePath, turnPath, exitsFrom, edgeZ, nearestEdge } from '../../shared/roads.js';
 import { signalFor } from '../../shared/signals.js';
-import { pointAt, measure } from '../../shared/geom.js';
+import { pointAt, measure, project } from '../../shared/geom.js';
 import { angleDiff, clamp } from '../../shared/math.js';
 import { TRAFFIC_MIX, PARKED_MIX, RACK_MIX, TRUCK_MODELS, VEHICLES, motoMix } from '../../shared/vehicles.js';
-import { PED_BLOCK } from '../../shared/map.js';
+import { PED_BLOCK, CAR_BLOCK } from '../../shared/map.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
@@ -21,7 +21,7 @@ import { pointGrid } from '../pointgrid.js';
 import { HIGHWAY_SPEED } from '../../shared/rules.js';
 import { routeSteps, haltsOn, haltCap, haltAt, rejoin } from './transit.js';
 import { isBlocked, unjam, goRound } from './reroute.js';   // (drivers who find another way round a backup: task #315)
-import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384)
+import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind, giveUpEnd } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384; giving one up: giveUpEnd)
 import { loadExplosives } from './cargo.js';
 import { homeLotSpots } from './homes.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
@@ -59,8 +59,9 @@ const NO_BIKES = new Set(['hwy', 'ramp']);
 function chooseExit(world, n, inEdge, def = null, goal = null) {
   const net = world.map.net;
   let opts = exitsFrom(net, n, inEdge);
-  if (def && (def.pedal || def.moto === 'scooter')) {   // (nor a 50cc scooter)
-    opts = opts.filter((o) => !NO_BIKES.has(net.edges[o.edge].kind) && net.edges[o.edge].lvl === 0);
+  if (def && (def.pedal || def.moto === 'scooter')) {   // (nor a 50cc scooter - unless there's no other way on)
+    const ok = opts.filter((o) => !NO_BIKES.has(net.edges[o.edge].kind) && net.edges[o.edge].lvl === 0);
+    if (ok.length) opts = ok;
     if (def.rough > 1) { const paved = opts.filter((o) => net.edges[o.edge].kind !== 'dirt'); if (paved.length) opts = paved; }
   }
   if (!opts.length) return null;
@@ -118,6 +119,20 @@ export function leaveBy(world, v, n, inEdge) {
   ai.cameBy = inEdge;
   return nx;
 }
+
+// Any way out of junction n having come in by inEdge, the sharpest turns too (the gentlest first), else back the way it
+// came (where that's a two-way road): crossJunction's last resort. Null only for a one-way road into a corner.
+function anyExit(net, n, inEdge) {
+  const inDir = n.dirs[inEdge] + Math.PI;
+  let best = null;
+  for (const [id, to] of Object.entries(n.links)) {
+    if (+id === inEdge) continue;
+    const turn = wrapA(n.dirs[+id] - inDir);
+    if (!best || Math.abs(turn) < Math.abs(best.turn)) best = { edge: +id, to, turn };
+  }
+  return best || (n.links[inEdge] !== undefined ? { edge: inEdge, to: n.links[inEdge], turn: Math.PI } : null);
+}
+const wrapA = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
 
 // Lane for a road we are about to enter, given the turn into it (right turns from the kerb lane,
 // left turns from the inside lane, straight on keeps its lane).
@@ -187,8 +202,12 @@ function crossJunction(world, v) {
   const ai = v.ai;
   const e = net.edges[ai.edge];
   const to = e.a === ai.from ? e.b : e.a;
-  const nx = ai.next || chooseExit(world, net.nodes[to], ai.edge, v.def, ai.goal);
-  if (!nx) { v.ai = null; v.despawnable = true; return; }
+  // (no way on that a driver would take from here - a one-way street into a corner, a bike at a junction of highways:
+  // any way out, the sharpest turn too, else back the way it came; failing all that it pulls up where it is - a breakdown,
+  // for the clean-up and the tow trucks - rather than being left in the road with nobody steering it: the owner's
+  // Copper Gulch jam, 2026-10-15)
+  const nx = ai.next || chooseExit(world, net.nodes[to], ai.edge, v.def, ai.goal) || anyExit(net, net.nodes[to], ai.edge);
+  if (!nx) { parkIt(v); return; }
   const ne = net.edges[nx.edge];
   // a vehicle on a route (a bus's line, a taxi's way) takes its next step; past the end of a route it's traffic again
   if (ai.route && !ai.route.loop && ai.route.i + 1 >= routeSteps(world, ai.route).length) delete ai.route;
@@ -397,7 +416,9 @@ function steerTraffic(world, v, t) {
   while (da > Math.PI) da -= Math.PI * 2;
   while (da < -Math.PI) da += Math.PI * 2;
   ai.lastA = v.a;
-  ai.turned = (ai.turned || 0) + Math.abs(da);
+  // (only while it drives: a car shoved about in a jam, or rocking to get free, isn't going round a waypoint - counted, it
+  // used to skip a street's corner and steer straight at the far end of the street, through the block: Copper Gulch)
+  if (Math.abs(vehForwardSpeed(v)) > 30) ai.turned = (ai.turned || 0) + Math.abs(da);
   const beside = d < 50 && Math.abs(angleDiff(v.a, Math.atan2(wp.y - v.y, wp.x - v.x))) > 1.25;
   if (ai.turned > Math.PI * 3.6) { replanFromHere(world, v); ai.turned = 0; return; }
   if (d < 30 || passed(v, wp) || beside || ai.turned > Math.PI * 1.9) {
@@ -407,6 +428,15 @@ function steerTraffic(world, v, t) {
     if (wp.stop) { crossJunction(world, v); if (!v.ai) return; ai.replans = 0; }
     if (!ai.pts.length && !ai.turn) { crossJunction(world, v); if (!v.ai) return; }
     if (ai.turn) { stepTurn(world, v); return; }   // (at a road's end: turning round)
+    wp = ai.pts[0];
+  }
+  // knocked off its lane (bumped up onto the pavement, shoved about in a jam) with a building or a wall between it and
+  // its next waypoint: back onto its lane where it is, on along the road - not straight at the waypoint through the
+  // corner of a block (the owner, 2026-10-15, Copper Gulch: "they are all trying to drive through the corner of this
+  // building instead of on the street")
+  if ((world.tick + v.id) % 10 === 0 && !panic && blockedTo(world.map, v, wp)) {
+    rejoinLane(world, v);
+    if (!v.ai || !ai.pts || !ai.pts.length) return;
     wp = ai.pts[0];
   }
   // (reckless: a street racer, a getaway driver - flat out, through the lights, never pulling over: streetlife.js)
@@ -480,6 +510,9 @@ function steerTraffic(world, v, t) {
     driveToward(world, v, room && !busy ? tx : wp.x, room && !busy ? ty : wp.y, Math.min(desired, 40), {});
     return;
   }
+  // on the way up a road's end, stopped there a while - held short of the turning circle, or in the queue behind: it
+  // gives the end up, turns round where it is and drives back out (roadends.js giveUpEnd)
+  if (!panic && !reckless && giveUpEnd(world, v, holding)) { stepTurn(world, v); return; }
   // a ring of cars each stopped for the next: one of them backs up to make room (breakRing)
   if (!panic && (world.tick + v.id) % 10 === 0) breakRing(world, v);
   // stopped behind a backup: another lane, or another way (reroute.js)
@@ -585,6 +618,27 @@ function sirenBehind(world, v) {
     if (ahead > 0 && ahead < 380 + sp * 0.4 && lateral < 90) return true;
   }
   return false;
+}
+
+// Is there a building or a wall on the straight line from v to waypoint wp (its first 640 px)?
+function blockedTo(m, v, wp) {
+  const dx = wp.x - v.x, dy = wp.y - v.y, L = Math.hypot(dx, dy);
+  if (L < 40) return false;
+  for (let s = 24; s < Math.min(L, 640); s += 16) if (CAR_BLOCK[m.tileAtPx(v.x + dx * s / L, v.y + dy * s / L)]) return true;
+  return false;
+}
+// Back onto its lane of the road it's on, from the lane's point nearest it on (a bus or a taxi back onto its route)
+function rejoinLane(world, v) {
+  const ai = v.ai, net = world.map.net, e = net.edges[ai.edge];
+  if (!e || (v.lz || 0) > 0.3) return;
+  const lane = Math.min(ai.lane || 0, e.nl - 1), lp = lanePath(net, e, ai.from, lane), pr = project(lp, v);
+  if (!pr) return;
+  const nx = ai.next;
+  if (ai.route) { if (rejoin(world, v, e, ai.from, pr.s + 40)) return; delete ai.route; }
+  enterEdge(world, v, e.id, ai.from, lane, pr.s + 40);
+  if (nx && !ai.route) { ai.next = nx; ai.turning = Math.abs(nx.turn) > 0.5; }   // (the way on it had chosen)
+  ai.turned = 0;
+  world.rejoins = (world.rejoins || 0) + 1;
 }
 
 // Rejoin the network on the nearest lane of our level, going the way the car faces (how a lost

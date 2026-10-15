@@ -18,13 +18,20 @@
 //    same manoeuvre turns a car round in the street when it gives up on a blocked road (reroute.js).
 //  * A turn that gets nowhere for a while is put off for a few seconds and tried again; meanwhile the car is the
 //    clean-up's (traffic.js manage: gone as soon as nobody can see it).
+//  * (2026-10-15, the owner: "traffic jams leading up to the parking lots of train stations") A queue up a road's end
+//    used to wait for ever on a car that couldn't get round there: the next car held short of the turning circle, and
+//    every car behind it waited on that one (none of them counted as held up by a breakdown, so none looked for another
+//    way). Now a car on a road that leads only to road ends, stopped there for END_WAIT_S - held short, or in the queue
+//    behind - gives up on the end: the last car in the queue first, it turns round where it is and drives back out, and
+//    the road is remembered as blocked a while (reroute.js) so nobody else turns into it meanwhile (giveUpEnd).
 import { K, T } from '../../shared/constants.js';
 import { lanePath } from '../../shared/roads.js';
 import { project, pointAt } from '../../shared/geom.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { CAR_BLOCK } from '../../shared/map.js';
-import { leaveBy } from './traffic.js';
+import { leaveBy, enterEdge } from './traffic.js';
+import { markBlocked } from './reroute.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const TAU = Math.PI * 2;
@@ -221,6 +228,45 @@ export function endTurn(world, v, round) {
   ai.turned = 0; ai.lastA = v.a; ai.stuck = 0; ai.reverseUntil = 0; ai.jam = false; ai.jamT = 0;
   const c = Math.cos(v.a), s = Math.sin(v.a);
   while (ai.pts && ai.pts.length > 1 && !ai.pts[0].stop && ((ai.pts[0].x - v.x) * c + (ai.pts[0].y - v.y) * s < 30)) ai.pts.shift();
+}
+
+// ---- giving up on a road's end --------------------------------------------------------------------------------------
+export const END_WAIT_S = 8;   // stopped this long on the way to a road's end (s): give up on it
+const LAST_WAIT_S = 2 * END_WAIT_S;   // (one with a car stopped right behind it lets that one go first - until this long)
+// Every tick for a traffic car (traffic.js steerTraffic, `holding`: held short of a junction or of a road's end where
+// another car is turning): true when it gave up on the road's end ahead and started turning round.
+export function giveUpEnd(world, v, holding) {
+  const ai = v.ai, net = world.map.net, e = net.edges[ai.edge];
+  if (!e || ai.route || ai.turn || ai.parkIt || v.bus || v.taxi || e.oneway || (v.lz || 0) > 0.3) { ai.endWait = 0; return false; }
+  const toEnd = deadWay(net, e.id, ai.from) || !!(ai.next && ai.next.edge === e.id);
+  const b = v._blk ? world.get(v._blk) : null;
+  const stopped = Math.abs(vehForwardSpeed(v)) < 15 && (holding || (b && b.kind === K.VEH && Math.hypot(b.vx, b.vy) < 25));
+  if (!toEnd || !stopped) { ai.endWait = 0; return false; }
+  ai.endWait = (ai.endWait || 0) + 0.05;
+  if (ai.endWait < END_WAIT_S) return false;
+  // the last car in the queue goes first (it has the room behind it), one at a time; the one in front of it once it's gone
+  if (ai.endWait < LAST_WAIT_S && queuedBehind(world, v)) return false;
+  ai.endWait = 0;
+  markBlocked(world, e.id);
+  const pr = project(lanePath(net, e, ai.from, ai.lane || 0), v);
+  const other = e.a === ai.from ? e.b : e.a, s2 = Math.max(0, e.len - (pr ? pr.s : 0));
+  enterEdge(world, v, e.id, other, 0, s2);
+  ai.passBlk = 0; ai.passUntil = 0; ai.howOut = 'end';
+  startTurn(world, v, e.id, other, -1);
+  world.endsGivenUp = (world.endsGivenUp || 0) + 1;
+  return true;
+}
+// a vehicle right behind v (on its level), stopped there or turning round itself - or one turning round alongside it:
+// the queue goes on behind it, and one car manoeuvres at a time
+function queuedBehind(world, v) {
+  const c = Math.cos(v.a), s = Math.sin(v.a), R = v.def.L * 2 + 60;
+  for (const o of world.query(v.x, v.y, R, K.VEH)) {
+    if (o === v || !sameLevel(o.lz, v.lz) || (o.alt || 0) > FLY.HIGH) continue;
+    const dx = o.x - v.x, dy = o.y - v.y, ahead = dx * c + dy * s, side = Math.abs(-dx * s + dy * c);
+    if (o.ai && o.ai.turn && !(o.ai.turn.pausedUntil > world.time) && ahead < v.def.L / 2 && Math.hypot(dx, dy) < R) return true;
+    if (Math.hypot(o.vx, o.vy) < 25 && ahead < 0 && -ahead < v.def.L / 2 + o.def.L / 2 + 70 && side < v.def.W) return true;
+  }
+  return false;
 }
 
 // Room to back up straight (px, up to `look`): nothing behind it - a wall, the water, a vehicle, a person (traffic.js:
