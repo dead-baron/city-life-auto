@@ -141,6 +141,14 @@ export const ARTERIALS = [
   { name: 'Highland Road', pts: [[1060, 1690], [940, 1560], [960, 1300], [1010, 1150], [1130, 1100], [1300, 1180], [1460, 1250], [1700, 1410]] },
   { name: 'Timber Trail', pts: [[1010, 1150], [900, 950], [890, 770], [1000, 660], [1200, 610], [1400, 650], [1560, 720]] },
   { name: 'Lookout Road', pts: [[1830, 1200], [1890, 1000], [1960, 830], [2060, 760], [2160, 830]] },
+  // the wild places' country roads (the concepts' mountain roads, world3-wild.js): Summit Road winding up from Timber
+  // Trail into the north-west peaks - under Granite Hot Springs, round the shoulder, past The Sentinel Stones and the
+  // observatory to the ridge below Summit Tarn (the Ridge Trail on up); Windy Point Road west from Timber Trail along the
+  // foot of the west headland (its campground and wind farm above it) to the coast north of Redwood Cove; North Ridge
+  // Road up from Lookout Road to the mast on the north-east peaks. Each ends in the wild (a dead end).
+  { name: 'Summit Road', pts: [[960, 700], [880, 630], [790, 618], [730, 560], [790, 500], [900, 500], [1000, 452], [1135, 450]] },
+  { name: 'Windy Point Road', pts: [[896, 880], [800, 905], [690, 905], [600, 925], [545, 975]] },
+  { name: 'North Ridge Road', pts: [[2001, 801], [1985, 690], [1950, 620], [1945, 570]] },
   // the islands' road bridges (the sketch's light grey across the channels: several per channel)
   { name: 'Westport Bridge', pts: [[2547, 2321], [2129, 2319]] },
   { name: 'Old Town Bridge', pts: [[2415, 1891], [2645, 1887]] },
