@@ -239,8 +239,14 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 #tbtns { position: absolute; inset: 0; pointer-events: none; }
 #tbtns button { position: absolute; pointer-events: auto; touch-action: none; width: 56px; height: 56px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); background: rgba(0,0,0,.5); color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .5px; text-shadow: var(--outline-s); }
 #tbtns button.on { background: rgba(255,255,255,.85); color: #111; text-shadow: none; }
-#tbtns button.pulse { border-color: #fff; background: var(--accent); animation: pulse 1s ease-in-out infinite; }
-@keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(255,62,138,.35); } }
+#tbtns button.pulse { border-color: #fff; background: rgba(36,150,78,.88); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(70,210,120,.35); } }
+/* (what it would do is a crime: red, the "!" badge on its corner - the prompt chip's, below - a felony a ring as well;
+   Safety mode holding it back: a quick double beat - hud.js) */
+#tbtns button.pulse.crime { background: rgba(206,30,40,.92); border-color: #ffd6d0; animation-name: pulsebad; }
+@keyframes pulsebad { 50% { box-shadow: 0 0 0 7px rgba(255,70,70,.38); } }
+#tbtns button.pulse.felony { outline: 2px solid #ff5a52; outline-offset: 3px; }
+#tbtns button.pulse.armed { animation-duration: .4s; }
 #tbtns .fire { width: 78px; height: 78px; right: calc(max(22px, env(safe-area-inset-right)) + 146px); bottom: 84px; background: rgba(200,22,30,.7); font-size: 16px; }
 #tbtns .dive { right: calc(max(22px, env(safe-area-inset-right)) + 150px); bottom: 10px; width: 66px; height: 54px; border-radius: 27px; }
 #tbtns .act { right: calc(max(22px, env(safe-area-inset-right)) + 8px); bottom: 166px; }
@@ -879,13 +885,22 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 #helpbox { background: linear-gradient(180deg, rgba(21,34,63,.95), rgba(13,22,45,.95)); border: 2px solid #c9d6ee; border-radius: 6px; box-shadow: 0 0 0 2px #070b16, inset 0 0 0 2px #0a1226, inset 0 0 0 3px rgba(201,214,238,.2); font-family: var(--pixel); font-weight: 400; font-size: 16px; color: #fff; gap: 8px; }
 #helpbox > .g-key, #helpbox > .g-touch { min-width: 26px; height: 26px; padding: 0 5px; border-radius: 3px; background: linear-gradient(#f6f9ff, #cbd6ea); color: #10203f; border: 2px solid #070b16; box-shadow: inset 0 -3px 0 #8d9bb8; font: 700 15px var(--pixel); letter-spacing: 0; }
 #helpbox > :is(.g-key, .g-touch, .g-pad) + span::before { content: ':'; color: #e8eef8; margin-right: .55em; }
-/* what Act would do is a crime (server players.js: me.pcr): the plate's edge and words amber, a felony's red */
-#helpbox.crime { border-color: #ffb03a; } #helpbox.crime > span:last-child { color: #ffcf4a; }
-#helpbox.felony { border-color: #ff4a4a; } #helpbox.felony > span:last-child { color: #ff5a52; }
-/* Safety mode's warning (server safety.js, tone 'safety'): a shield with "!" at the left, the words amber */
-.toast.safety { border: 2px solid #ffc23d; color: #ffcf4a; padding-left: 42px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 13 15' shape-rendering='crispEdges'%3E%3Cpath d='M5 0h3v1h2v1h3v6h-1v3h-1v1h-1v1H9v1H8v1H5v-1H4v-1H3v-1H2v-1H1V8H0V2h3V1h2z' fill='%23070b16'/%3E%3Cpath d='M5 1h3v1h2v1h2v5h-1v3h-1v1H9v1H8v1H5v-1H4v-1H3v-1H2V8H1V3h2V2h2z' fill='%235d9cf0'/%3E%3Cpath d='M5 2h1v1H4v1H2v4h1v3h1v1h2V2z' fill='%23d6e8ff'/%3E%3Cpath d='M6 4h1v4H6zM6 9h1v1H6z' fill='%23070b16'/%3E%3C/svg%3E") no-repeat 8px 50% / 26px 30px, rgba(13,22,45,.94); }
-.toast.safety::after { content: 'Safety mode · Settings'; display: block; font-size: 10px; color: #9aa7c4; }
+/* what Act would do is a crime (server players.js: me.pcr; hud.js crimeMarks), the owner, 2026-10-15: "not a big popup,
+   just have the Act button change color - red if it's a crime, green if it's not". The plate stays as it is; only its key
+   chip turns red with a "!" badge on its corner (a felony: a red ring round it too) - the colour, a mark and a ring, so it
+   reads without the colour. Nothing grows: the badge and the ring sit over the plate's padding. */
+#helpbox.crime > :is(.g-key, .g-touch, .g-pad) { position: relative; }
+#helpbox.crime > :is(.g-key, .g-touch) { background: linear-gradient(#ff7466, #d3242c); color: #fff; box-shadow: inset 0 -3px 0 #8a1016; text-shadow: 0 1px 0 #5a0a0e; }
+#helpbox.crime > .g-pad { box-shadow: 0 0 0 2px #070b16, 0 0 0 4px #ff5a52; }
+#helpbox.crime > :is(.g-key, .g-touch, .g-pad)::after, #tbtns button.pulse.crime::after { content: '!'; position: absolute; top: -7px; right: -7px; width: 13px; height: 13px; border-radius: 50%; background: #ffd34a; color: #1a0a0a; border: 1.5px solid #070b16; font: 700 10px/13px var(--ui); text-align: center; text-shadow: none; letter-spacing: 0; }
+#tbtns button.pulse.crime::after { top: -3px; right: -3px; width: 17px; height: 17px; font-size: 12px; line-height: 17px; }
+#helpbox.felony > :is(.g-key, .g-touch) { outline: 2px solid #ff5a52; outline-offset: 1px; }
+/* Safety mode held it back (server safety.js; hud.js safetyNudge): the key blinks and a small tab on the plate's top
+   edge says the next press does it - for as long as that press counts (SAFETY_CONFIRM_S) */
+#helpbox.armed::before { content: 'PRESS AGAIN'; position: absolute; right: 8px; top: -9px; padding: 1px 5px; border-radius: 3px; background: #d3242c; color: #fff; border: 1px solid #070b16; font: 700 9px/12px var(--ui); letter-spacing: .5px; pointer-events: none; }
+.touch #helpbox.armed::before { content: 'TAP AGAIN'; }
+#helpbox.armed > :is(.g-key, .g-touch, .g-pad) { animation: armblink .5s steps(2, jump-none) infinite; }
+@keyframes armblink { 50% { filter: brightness(1.6); } }
 .toast { background: rgba(13,22,45,.9); border: 1px solid rgba(226,189,87,.35); border-left-width: 4px; border-radius: 4px; font-family: var(--pixel); font-weight: 400; font-size: 14px; color: #eef1f8; }
 .toast.good { border-left-color: #6cff8a; } .toast.bad { border-left-color: #ff5a5a; } .toast.warn { border-left-color: #ffd34a; } .toast.info { border-left-color: #7ec8ff; }
 #job { background: linear-gradient(180deg, rgba(21,34,63,.92), rgba(13,22,45,.92)); border: 2px solid rgba(226,189,87,.8); border-radius: 6px; box-shadow: 0 0 0 2px #070b16; padding: 6px 14px; font-family: var(--pixel); font-weight: 400; font-size: 16px; text-shadow: none; color: var(--cream); }
@@ -905,7 +920,6 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 .touch .toast { font-size: 12px; }
 /* phones: smaller notes, three lines at most */
 .touch .toast { font-size: 11px; line-height: 1.25; padding: 4px 7px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
-.touch .toast.safety { padding-left: 30px; background-position: 6px 50%; background-size: 18px 21px; } .touch .toast.safety::after { content: none; }
 .touch #helpbox > .g-touch { height: 22px; font-size: 12px; }
 .touch #toasts { gap: 3px; }
 

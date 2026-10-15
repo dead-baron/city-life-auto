@@ -357,7 +357,10 @@ export class VehicleSounds {
       const d = Math.hypot(c.rx - L.x, c.ry - L.y);
       if (d < bd) { bd = d; best = c; }
     }
-    if (best) spd = Math.hypot(best.fdx || 0, best.fdy || 0) / Math.max(dt, 1e-3);
+    // (its speed: how far it moved this frame over the frame's own time - main.js's fdx; over the audio clock's step it
+    // was up to 16 times too fast on a phone, whose audio clock moves in big steps or not at all from one frame to the
+    // next: a train creeping into a station rumbled as if at full speed)
+    if (best) spd = Math.hypot(best.fdx || 0, best.fdy || 0) / Math.max(F.dt > 0 ? F.dt : dt, 1e-3);
     const sub = !!F.sub, heard = best && spd > 15;
     const lvl = sub ? 0.5 + Math.min(0.4, spd / 900) : heard ? Math.pow(Math.max(0, 1 - bd / 1400), 1.6) * Math.min(0.55, 0.15 + spd / 900) : 0;
     if (lvl > 0.005 && !this.train) this.train = this.makeTrain();   // (made while a train is heard, let go after)

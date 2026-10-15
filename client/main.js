@@ -23,6 +23,8 @@ import { FX } from './render/fx.js';
 import { Booms } from './render/boom.js';          // explosions, run over, onto the hood (tasks #363, #361)
 import { Campfires } from './render/campfx.js';     // the campfires' embers, flares and glow (task #360)
 import { HUD } from './hud.js';
+import { AreaTracker } from './areaname.js';   // (the title card's place name: water keeps it)
+import { Flock } from './birds.js';   // (the pigeons and gulls: in from off screen)
 import { createPhone } from './phone.js';
 import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
 import { createRouter } from './route.js';
@@ -3273,11 +3275,10 @@ function drawOverlays(F, v2) {
   }
 
   // HUD bits
-  const dist = S.map.districtAt(sp.x, sp.y);
-  if (dist.name !== S.district) {
-    if (S.distCand === dist.name) { if (performance.now() - S.distCandAt > 600) { S.district = dist.name; S.hud.showDistrict(dist.name, dist.isl); } }
-    else { S.distCand = dist.name; S.distCandAt = performance.now(); }
-  }
+  // (where you are: the water doesn't change it - a river, a lake, the sea near land keep the name - client/areaname.js)
+  { const me = F.meEnt, cv = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER ? S.ents.get(S.ctrlId) : null, cd = cv && cv.d && VEHICLE_BY_INDEX[cv.d.m];
+    const area = (S.area ||= new AreaTracker()).update(S.map, sp.x, sp.y, performance.now() / 1000, { train: !!(F.myCar && F.myCar.kind === K.TRAIN), afloat: !!(me && me.swim) || !!(cd && cd.kind === 'boat') || !!(S.me && S.me.bus && S.me.bus.k === 'ferry') });
+    if (area) { S.district = area.name; S.hud.showDistrict(area.name, area.isl); } }
   S.hud.setClock(S.loopTime, S.weather);
   { const mp = S.ents.get(S.myPedId); S.hud.calm(!!(S.playing && mp && mp.d && mp.d.st && S.me && !S.me.dead), performance.now()); }   // (#375)
   // the GPS route to your waypoint along the roads, on the radar and the map (client/route.js; worked out again only
@@ -3300,33 +3301,17 @@ function drawOverlays(F, v2) {
   if ((F.nowMs | 0) % 500 < 20) S.hud.setNet(`${S.practice ? 'OFFLINE PRACTICE · ' : ''}${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);
 }
 
-// Urban wildlife (GDD §10): client-side pigeons/gulls that scatter from cars and runners.
-const birds = [];
-function birdsTick(dt, view, vehs, peds) {
-  const m = S.map;
-  if (birds.length < 14 && Math.random() < 0.15) {
-    const x = view.x0 + Math.random() * (view.x1 - view.x0), y = view.y0 + Math.random() * (view.y1 - view.y0);
-    const t = m.tileAtPx(x, y);
-    const near = Math.hypot(x - S.cam.x, y - S.cam.y) > 260;
-    if (near && (t === 2 || t === 4 || t === 3 || t === 8 || t === 9)) birds.push({ x, y, a: Math.random() * 6.28, fly: 0, vx: 0, vy: 0, gull: t === 8 || t === 9, peck: Math.random() * 3 });
-  }
-  for (let i = birds.length - 1; i >= 0; i--) {
-    const b = birds[i];
-    if (b.x < view.x0 - 300 || b.x > view.x1 + 300 || b.y < view.y0 - 300 || b.y > view.y1 + 300) { birds.splice(i, 1); continue; }
-    if (!b.fly) {
-      b.peck += dt;
-      for (const v of vehs) if (Math.hypot(v.rx - b.x, v.ry - b.y) < 110) { b.fly = 1; break; }
-      if (!b.fly) for (const p of peds) if ((p.flags & PF.MOVING) && Math.hypot(p.rx - b.x, p.ry - b.y) < 45) { b.fly = 1; break; }
-      if (b.fly) { const a = Math.random() * 6.28; b.vx = Math.cos(a) * 230; b.vy = Math.sin(a) * 230; b.a = a; }
-    } else { b.x += b.vx * dt; b.y += b.vy * dt; b.fly += dt; if (b.fly > 4) { birds.splice(i, 1); continue; } }
-  }
-}
+// Urban wildlife (GDD §10): client-side pigeons/gulls that fly in from off screen, land, and scatter from cars and
+// runners (client/birds.js; the art v2 renderer draws flock.list too - host.js)
+const flock = new Flock();
+const birds = flock.list;
+function birdsTick(dt, view, vehs, peds) { flock.tick(dt, view, S.cam, S.map, vehs, peds); }
 function drawBirds() {
   for (let i = birds.length - 1; i >= 0; i--) {
     const b = birds[i];
-    g.save(); g.translate(b.x, b.y); g.rotate(b.a);
+    if (b.fly) { g.fillStyle = 'rgba(0,0,0,.22)'; g.fillRect(b.x - 3 + b.z * 0.25, b.y + 2 + b.z * 0.15, 6, 3); }   // (its shadow, away on the ground)
+    g.save(); g.translate(b.x, b.y - b.z * 0.6); g.rotate(b.a);
     const s = b.fly ? 1.4 : 1;
-    g.fillStyle = 'rgba(0,0,0,.25)'; if (b.fly) g.fillRect(-3 + b.fly * 6, 4 + b.fly * 6, 6, 3);
     g.fillStyle = b.gull ? '#f2f2f2' : '#8a8f9a';
     g.beginPath(); g.ellipse(0, 0, 4 * s, 2.6 * s, 0, 0, 6.28); g.fill();
     if (b.fly) { const w = Math.sin(b.fly * 30) * 5; g.fillRect(-2, -2.5 - 4 - w * 0.4, 4, 4 + w * 0.4); g.fillRect(-2, 2.5, 4, 4 + w * 0.4); }

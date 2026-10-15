@@ -6,7 +6,8 @@
 // it drives. Bodies that can't be reached within the 45-second hard memory window are silently dissolved.
 //
 // The stretcher is drawn as the pushing medic's prop (the descriptor's pp: 'stretcher', or 'stretcherPt' with the
-// patient lying on it - client/art2/people.js), pushed with the 'push' walk (gt).
+// patient lying on it - client/art2/people.js), pushed with the 'push' walk (gt). The patient on it is who it is: the
+// descriptor's pa (their look and archetype - net.js) has the page draw that very person lying there (art2/game/host.js).
 //
 // Anyone lying on the ground - a body, a downed player - is kept clear of (task #435): the ambulance pulls up short of
 // its patient and over to one side, CLEAR px off them and everyone else lying there (parkSpot), it has stopped before
@@ -164,11 +165,13 @@ export function recall(world, vehId) {
 }
 
 const live = (world, id) => { const e = id && world.get(id); return e && !e.dead && !e.removed ? e : null; };
-// the stretcher in a medic's hands (or the patient on it), or put away
-function stretcher(c, kind) {
+// the stretcher in a medic's hands (or the patient on it: who they are - their look and archetype, net.js sends it as the
+// descriptor's pa so the page lays that very person on it, client/art2/game/host.js), or put away
+function stretcher(c, kind, patient = null) {
   const pp = kind || undefined;
   if (c.pp === pp) return;
   c.pp = pp; c.gt = kind ? 'push' : undefined;
+  c.ppPt = kind === 'stretcherPt' && patient && patient.app ? { app: patient.app, ar: patient.archetype || 'casual' } : undefined;
   c.appVer = (c.appVer || 0) + 1;   // (net.js sends the descriptor again)
 }
 // a medic on foot heading for (x, y): through a shop's door when it's in the way, along the way round what's between
@@ -565,11 +568,12 @@ function scene(world, v, ai, body, crew, dt, now) {
     for (const c of [T, P]) { c.vx = 0; c.vy = 0; if (body) c.a = Math.atan2(body.y - c.y, body.x - c.x); }
     T.kneelUntil = now + 0.3;
     if (now - ai.stepAt < LIFT_S) return;
+    const who = body && !body.removed ? body : null;
     if (body && !body.removed) {
       world.bodies.delete(body);
       if (body.npc) despawnNpc(world, body); else world.remove(body);
     }
-    stretcher(P, 'stretcherPt');
+    stretcher(P, 'stretcherPt', who);
     ai.loaded = true; ai.step = 'back'; ai.stepAt = now;
     return;
   }

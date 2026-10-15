@@ -24,7 +24,8 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   assert.deepEqual(you, [], you.join('\n'));
 });
 
-// the prompt's colour (hud.js: #helpbox.crime amber, .felony red): the server says what Act would be
+// the prompt's crime marks (hud.js crimeMarks: the key chip red with a "!", a felony ringed; the touch button red - no
+// warning plate): the server says what Act would be
 test('the prompt says when what Act would do is a crime, and when a felony', async () => {
   const { makeWorld, joinPlayer, run, teleport } = await import('./helpers.js');
   const players = await import('../server/systems/players.js');
@@ -45,12 +46,12 @@ test('the prompt says when what Act would do is a crime, and when a felony', asy
   const car = near('sedan');
   run(w, 0.5);
   assert.match(p.prompt, /Steal the Sedan - Vehicle theft/);
-  assert.equal(players.buildMe(w, p).pcr, 1, 'a crime: amber');
+  assert.equal(players.buildMe(w, p).pcr, 1, 'a crime: the key red');
   w.remove(car);
   const cop = near('police');
   run(w, 0.5);
   assert.match(p.prompt, /\(felony\)/);
-  assert.equal(players.buildMe(w, p).pcr, 2, 'a felony: red');
+  assert.equal(players.buildMe(w, p).pcr, 2, 'a felony: the key red and ringed');
   Object.assign(cop, { owner: p.pid, npcOwned: false });
   run(w, 0.5);
   assert.equal(players.buildMe(w, p).pcr, 0, 'your own car: no crime');

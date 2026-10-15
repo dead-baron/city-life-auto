@@ -8,9 +8,11 @@ import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
 import { iconURL } from './pixicons.js';
-import { CALM_PROMPT_S, CALM_HUD_S } from '../shared/rules.js';
+import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S } from '../shared/rules.js';
 
 const $ = (id) => document.getElementById(id);
+// what Act would do is a crime (1) or a felony (2), on the prompt's plate and on the touch button it pulses (style.css)
+export function crimeMarks(el, pcr) { el.classList.toggle('crime', pcr > 0); el.classList.toggle('felony', pcr === 2); }
 // what's faded by a campfire (#375), from when you sat down and last did anything (ms): { prompt, hud }
 export function calmState(sitAt, activeAt, now) {
   const idle = sitAt ? (now - Math.max(sitAt, activeAt || 0)) / 1000 : 0;
@@ -110,14 +112,19 @@ export class HUD {
         pr.dataset.sig = sig;
         const fp = formatPrompt(me.prompt);
         pr.innerHTML = fp.html;
-        document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse'));
-        if (fp.action) document.querySelector(`#tbtns [data-b="${fp.action}"]`)?.classList.add('pulse');
+        this.unarm();
+        document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
+        this.actBtn = fp.action ? document.querySelector(`#tbtns [data-b="${fp.action}"]`) : null;
+        this.actBtn?.classList.add('pulse');
       }
       pr.classList.remove('hidden');
-      pr.classList.toggle('crime', me.pcr === 1); pr.classList.toggle('felony', me.pcr === 2);   // (what Act would do is a crime: amber; a felony: red)
+      // what it would do is a crime (server players.js: me.pcr 1, a felony 2): no warning plate, only the key - the
+      // prompt's chip red with a "!" on it, the touch button it pulses red with the "!" (green when it's no crime)
+      crimeMarks(pr, me.pcr | 0); if (this.actBtn) crimeMarks(this.actBtn, me.pcr | 0);
     } else if (!pr.classList.contains('hidden')) {
-      pr.classList.add('hidden'); pr.dataset.sig = '';
-      document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse'));
+      pr.classList.add('hidden'); pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm();
+      document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
+      this.actBtn = null;
     }
     document.body.classList.toggle('carrying', !!me.carrying);
     // job
@@ -283,7 +290,25 @@ export class HUD {
     $('rclock').title = `${c.isNight ? 'Night' : 'Day'} · ${rain ? 'rain' : 'clear'}`;
   }
 
+  // Safety mode held back a crime (server safety.js, tone 'safety': "That's vehicle theft - press again to do it anyway"):
+  // with the prompt up, no note - the prompt's key and the touch button blink and a small "PRESS AGAIN" sits on the plate's
+  // edge for as long as the second press would count. False when there's no prompt to mark (a plain note then).
+  safetyNudge() {
+    const pr = $('helpbox');
+    if (!pr || pr.classList.contains('hidden')) return false;
+    this.unarm();
+    pr.classList.add('armed'); this.actBtn?.classList.add('armed');
+    this.armT = setTimeout(() => this.unarm(), SAFETY_CONFIRM_S * 1000);
+    return true;
+  }
+  unarm() {
+    if (this.armT) { clearTimeout(this.armT); this.armT = 0; }
+    $('helpbox')?.classList.remove('armed');
+    document.querySelectorAll('#tbtns .armed').forEach((b) => b.classList.remove('armed'));
+  }
+
   toast(text, tone = 'info') {
+    if (tone === 'safety') { if (!$('hud').classList.contains('hidden') && this.safetyNudge()) return; tone = 'warn'; }
     // still on the title screen (you sign in there, before PLAY): held back and shown once you're in, if
     // it's still fresh - so the welcome (or "fresh start after an update") isn't missed
     if ($('hud').classList.contains('hidden')) {

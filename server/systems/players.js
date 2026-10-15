@@ -757,7 +757,7 @@ export function update(world, dt) {
     if ((world.tick + (ped.id & 3)) % 4 === 0 && p.conn) {
       const act = findInteraction(world, p);
       const label = act ? (act.passive ? act.label : `${act.key || 'E'}: ${act.label}`) : '';   // (passive: just a note, no button - on a ride)
-      const pcr = act && act.crime ? (law.CRIMES[act.crime] && law.CRIMES[act.crime].felony ? 2 : 1) : 0;   // (a crime: the prompt in amber, a felony red - hud.js)
+      const pcr = act && act.crime ? (law.CRIMES[act.crime] && law.CRIMES[act.crime].felony ? 2 : 1) : 0;   // (a crime: the prompt's key and the touch button red, a felony ringed too - hud.js crimeMarks)
       if (label !== p.prompt || pcr !== (p.promptCrime || 0)) { p.prompt = label; p.promptCrime = pcr; p.meDirty = true; }
     }
   }

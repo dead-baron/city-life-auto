@@ -1219,6 +1219,14 @@ export class World2 {
     if (!v) { v = this.Pd.withProp(A, pp); m.set(pp, v); this.propped.set(A, m); }
     return v;
   }
+  // someone lying on a paramedic's stretcher (the descriptor's pa: { app, ar } - server ems.js, net.js): their own look in
+  // the litter pose at the medic's heading (peds.js litterApp / art2/litter.js), its sprite asked for; its key once made
+  _patient(pa, d8) {
+    const Pd = this.Pd, m = this.litters || (this.litters = new WeakMap());
+    let A = m.get(pa);
+    if (!A) { A = Pd.litterApp(this._app(pa.app || {}, pa.ar)); m.set(pa, A); }
+    return this._spr('peds', 'ped', Pd.pedKey(A, 'litter', d8, 0, 0), [A, 'litter', d8, 0, 0]);
+  }
   // ...with a lamp on the forehead (lights to carry: the descriptor's hh - the hard hat, its lamp - or fl 2, the headlamp)
   _lamped(A, hard) {
     const m = (this.lamped ||= new WeakMap()).get(A) || [];
@@ -1247,7 +1255,10 @@ export class World2 {
     let ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
     let lift = 0;
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
-    const A1 = this._app(p.d.app || {}, p.d.ar), A0 = p.d.mb && A1 ? this._bagged(A1) : A1, A3 = p.d.pp && A0 && Pd.withProp ? this._propped(A0, p.d.pp) : A0;
+    // (a paramedic wheeling someone on the stretcher - the descriptor's pa, server ems.js: that very person lies on it, drawn
+    // after them; the stretcher empty under them - or with the blanket figure till their sprite is ready)
+    const ptk = p.d.pp === 'stretcherPt' && p.d.pa && Pd.litterApp && L.upright ? this._patient(p.d.pa, d8) : null;
+    const A1 = this._app(p.d.app || {}, p.d.ar), A0 = p.d.mb && A1 ? this._bagged(A1) : A1, A3 = p.d.pp && A0 && Pd.withProp ? this._propped(A0, ptk ? 'stretcher' : p.d.pp) : A0;
     const A2 = (p.d.hh || p.d.fl === 2) && A3 ? this._lamped(A3, p.d.hh ? 1 : 0) : A3;   // (a hard hat, a headlamp: lights to carry)
     let pf = Pd.pedFrame(ppose, L.fr);
     if (lying && (f & PF.DEAD) && p.deadK === 'halved' && this._halves(p, A2, ppose, d8, pf)) return;   // (cut in two by the plasma blade)
@@ -1285,6 +1296,12 @@ export class World2 {
     E.drawSprite(sk, p.rx + hx, p.ry + hy, z0, o);
     o.under = 0;
     this.n.drawn++;
+    if (ptk) {   // (the patient, on the stretcher's pad in front: art2/litter.js)
+      const at = Pd.litterAt(d8, this._ltAt || (this._ltAt = [0, 0]));
+      o.xray = false; o.flash = 0;
+      E.drawSprite(ptk, p.rx + hx + at[0], p.ry + hy + at[1], z0 + Pd.LITTER.z, o);
+      this.n.drawn++;
+    }
     if (f & PF.UMBRELLA) {
       // (the canopy: their own look, liveart.js umbrellaStyle; its rim drop px below the shaft's top - or, the
       // umbrella not in hand, centred over them at that height)
@@ -1639,7 +1656,7 @@ export class World2 {
       // flying: well up in the air (its shadow, when the sun reaches that far, falls well away from it) and no
       // mirror image in wet streets or water
       const o = this.opts; o.alpha = 1; o.xray = false; o.flash = 0; o.shadow = true; o.tint = null; o.flipX = false; o.air = !!b.fly;
-      this.E.drawSprite(k, b.x, b.y, b.fly ? Math.min(140, 10 + b.fly * 55) : 0, o);
+      this.E.drawSprite(k, b.x, b.y, b.fly ? b.z ?? Math.min(140, 10 + b.fly * 55) : 0, o);   // (b.z: gliding in to land, climbing away - client/birds.js)
     }
     this.opts.air = false;
     // muzzle flashes (S.flashes, lit in _lights): the providers' flash sprite along the shot
