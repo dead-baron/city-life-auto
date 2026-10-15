@@ -4574,3 +4574,62 @@ junctions from the server's index), `test/regions.test.js` (the v3 world under `
 (today's trains unchanged), `test/world3rail.test.js` and `test/world3subway.test.js` (the cars' places from the train:
 a far train's aren't placed; new: a far train's cars unplaced, placed the tick someone is near). All pass, with
 `test/world3server.test.js` and `test/artcdn.test.js` (the World v3 ones and the art CDN's under the heavy lock).
+
+## Part 9 - World v3b: the owner's layout (2026-10-14)
+
+The owner (2026-10-14, 23:40), with his sketch (`docs/world-v3b/sketch-2026-10-14.png`, on the 14 x 9 grid) and four
+concepts made from it (`docs/world-v3b/concept1-detailed.jpg` ... `concept4-clean-stations.jpg`): "can you make the best
+call for the different districts and biomes and points of interest and all the world details and locations we've
+discussed? Can you use the concepts that I gave you for visual direction ... carry it through the area/biome/district
+and blend it together nicely? ... the streets and city layout and grid system, those you really don't need to take
+precisely ... make it as gorgeous as we can". The WR3 layout (parts 1-8) is kept on the branch `world-v3-wr3`.
+
+### 9.1 The frame and the land
+- **13 x 8 regions of 504 tiles: 6552 x 4032** (the plan's 14 x 9 trimmed to the land with 240-440 m of sea round it).
+  Frame tile = 2 x sketch px - (21, 227).
+- `shared/world3-layout.js` (traced by `tools/world3b/`: `seg2.py` classes, `land.py` outlines, `lines.py` the lines):
+  MAINLAND3 (rivers filled), ISLANDS3 (the four city islands in the gulf, the ferry island, the quiet key, the prison,
+  rocks and islets), LAKES3, STREAMS3 (rivers with widths), GROUND3 (the sketch's forest, fields, desert, canyon floors,
+  mesas, mountains and built areas), HIGHWAYS3, MAIN_LOOP3 (+ MAIN_STATIONS3), SUBWAYS3, FERRIES3.
+- Reference pictures in frame tiles: `docs/world-v3b/frame-grid-all.png` (4 tiles a pixel, grid every 500) and the
+  quarters `frame-grid-nw/ne/sw/se.png` (grid every 100); `traced-land.png`, `traced-classes.png`.
+
+### 9.2 Which concept for what
+- The sketch: where everything goes. Concept 4 (clean, white station dots): the main line's stops, the ferry routes.
+- Concept 1 (detailed): the look and dressing of the mountains and forest (mine portals, waterfalls, lookout towers),
+  the farm valley (windmills, red barns, crop rows, the lake's island), the desert (mesas, water towers, small towns),
+  downtown's glass towers round the central park and its fountain, the port's cranes and containers, the prison fortress.
+- Concept 2 (detailed): the coasts and the sea (lighthouses on the points, harbours, boats, ferry lanes), the north
+  coast's harbour town, the casino strip's neon, the south-east surf town.
+- Concept 3 (clean): which places get a map icon (campgrounds, mines, harbours, lighthouses).
+- The text: the prompt pack's per-district prompts (TD-V1 ... TD-V56) say what is in each district.
+
+### 9.3 The districts (today's ids and styles, laid out anew on the grid: every street east-west or north-south, every
+front facing south)
+- **The Gulf Island** (the big island, 2316-3816 x 2086-3002): Downtown (4) round the central park (Greenfield Park, 12,
+  with its pond) inside the ring road; the Civic Center (5) north-east of the park; the Neon Strip (7) along an
+  east-west boulevard on the north shore facing the mainland, The Pink Mile (17) behind it to the west; the Arts
+  District (46) west of downtown; Bayside Heights (16) on the south (ocean) side: mansions on big lots, the Hilltop
+  Mansion.
+- **The mainland city** (north shore of the gulf, about 2650-4240 x 1450-2110): Midtown (1) at the bridgeheads in the
+  middle; Harbor (8) along the waterfront with the piers, the fish market and the ferry terminal; Old Town (18) at the
+  west end by the river mouth; Northgate (2, apartments) along the north; the Stadium District (25) in the east with the
+  stadium and the ponds; The Yards (3, the rough rail-side district) east of the river channel.
+- **The western city** (1150-2400 x 1880-2960): Westport Center (23, towers) at its core, Port Westport (26, the
+  container port) on the gulf shore with the piers, the Old Quarter (30) and West Hills (28, suburbs meeting the forest
+  and the marsh), Westport International (27) in the south: the runway running north-south, the terminal.
+- **The east island** (3820-4522 x 2222-2772): the Lake District (37) round its ponds, Falls Center (36), Cedar Falls (35).
+- **The south-west island** (2408-3238 x 2848-3270): Sunset Beach (10) along its south shore, Pine Hills (0) behind.
+- **The south-east island** (3268-4278 x 2828-3414): Southside (6, rough), Pelican Key's (14) beach along the south.
+- **The quiet key** (4004-4526 x 3296-3576): Coral Cay (44). **The ferry island** (1274-2202 x 3284-3796): Gull Harbor
+  (43), reached only by the car ferry. **Prison Island** (55): far out in the south-east, alone (5586-5904 x 3522-3740).
+- **The north coast** (2560-3600 x 400-1000): Northshore (31), North Point (32), The Bluffs (34), the Northshore
+  Beaches (54).
+- **The farm valley** (Willow Valley, 49, north of the mainland city, round the lake with its island): Willow Crossing
+  (58), Cedar Farms (38) by the lake, two grass airstrips for crop dusters (the owner, 2026-10-14).
+- **The north-west**: Highland Woods (47) with Timber Bend (57) and the forest's small towns, Granite Peaks (48) along
+  the north-west, the waterfalls and the mountain lakes; Lighthouse Rock (19), The Islets (20) off the coast.
+- **The south-west**: the Egret Coast (53) marsh with Egret Point (65), its light and its raceway; Egret Rocks (56).
+- **The east**: the Red Rock Desert (50) with Copper Gulch (63), Dusty Hollow (64) and the Route 9 places; Lucky Mesa
+  (The Strip 60, Old Downtown 61, Mesa Flats 62) in the top-right corner with its airstrip; the Sandpiper Coast (52) and
+  Sandpiper Bay (59), the south-east town, where the desert meets the sea.
