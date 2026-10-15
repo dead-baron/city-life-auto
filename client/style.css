@@ -1131,4 +1131,15 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
   .d-pick { max-width: 58vw; white-space: normal; }
   #d-head { white-space: normal; }
   #d-timer { overflow: visible; text-overflow: clip; }
+  /* the title's graphics bar (the owner, 2026-10-15: cut off on both sides on a phone held upright): the five buttons
+     share the width instead of each keeping 76 px, the text a size smaller */
+  #t-gfx { align-self: stretch; max-width: 100%; box-sizing: border-box; padding: 5px 6px 13px; }
+  #t-gfxseg { width: 100%; gap: 4px; }
+  #t-gfxseg button { flex: 1 1 0; min-width: 0; padding: 12px 1px 8px; font-size: clamp(10px, 3vw, 13px); }
+  #t-gfxseg button small { font-size: 7px; letter-spacing: 0; padding: 0 2px; }
 }
+
+/* a connection lost mid-game (main.js scheduleReconnect): a small note at the top while it's made again, the game left as it was */
+#reconn { position: fixed; z-index: 60; left: 50%; top: calc(max(8px, env(safe-area-inset-top)) + 4px); transform: translateX(-50%); padding: 5px 14px; border-radius: 14px; background: rgba(10,12,20,.82); border: 1px solid rgba(255,211,74,.6); color: #ffe9a8; font: 700 13px var(--pixel); letter-spacing: 1px; pointer-events: none; animation: reconn 1.4s ease-in-out infinite; }
+#reconn.hidden { display: none; }
+@keyframes reconn { 50% { opacity: .55; } }

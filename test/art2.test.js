@@ -164,3 +164,34 @@ test('bake ahead: flying, a band as wide as the view along the way you fly and n
   const roadFar = (l) => l.some(([x, y]) => y === Math.floor(Y / C) && x > Math.floor(X / C) + 5);
   assert.ok(roadFar(drive) && !roadFar(fly), 'the road east: baked ahead driving, not flying');
 });
+
+// Riding a train (the owner, 2026-10-15, on the main line on a phone: "I'm going faster than the art is loading"): what's
+// baked and downloaded ahead follows the line the train runs on round its bends, ~20 s of it, and not the roads.
+test('bake ahead: riding a train, along the line round its bend and not the roads', async () => {
+  const { World2 } = await import('../client/art2/game/host.js');
+  const C = 768, X = 5300, Y = 15000;
+  // the line: east from the camera for 3000 px, then a quarter turn south for 9000 px (points every 8 px)
+  const pts = [];
+  for (let x = 0; x <= 3000; x += 8) pts.push({ x: X + x, y: Y, s: x });
+  for (let y = 8; y <= 9000; y += 8) pts.push({ x: X + 3000, y: Y + y, s: 3000 + y });
+  const net = { nodes: [{ id: 0, x: X, y: Y, edges: [0] }, { id: 1, x: X - 7400, y: Y, edges: [0] }], edges: [{ a: 0, b: 1, pts: [{ x: X, y: Y }, { x: X - 7400, y: Y }], len: 7400 }] };
+  const h = Object.create(World2.prototype);
+  Object.assign(h, { map: { net, rails: [{ pts, len: 12000 }], frame: { w: 1000, h: 1000 } }, grid: [40, 40], S: { rideTrain: true }, camV: { out: { x: 560, y: 0 } }, camX: X, camY: Y, vx0: X - 1035, vx1: X + 1035, vy0: Y - 478, vy1: Y + 478 });
+  const list = h._prebakeList().map((k) => [k % 1000, Math.floor(k / 1000)]);
+  const south = Math.floor((Y + 7000) / C), col = Math.floor((X + 3000) / C);
+  assert.ok(list.some(([x, y]) => x === col && y === south), 'the line after its bend, 7000 px south of it');
+  assert.ok(!list.some(([x, y]) => y === Math.floor(Y / C) && x < Math.floor(X / C) - 4), 'not the road west');
+  h.S.rideTrain = false;
+  const off = h._prebakeList().map((k) => [k % 1000, Math.floor(k / 1000)]);
+  assert.ok(!off.some(([x, y]) => x === col && y === south), 'not on a train: the straight band, not the line');
+});
+
+// Riding through a tunnel the classic view draws the dark, the walls and the lamps of every line's underground stretch -
+// World v3's main line too, not only the first rail (the owner, 2026-10-15: the screen went dark under Lucky Mesa).
+test('the tunnel view: every line\'s underground stretches', async () => {
+  const { tunnelSegments } = await import('../client/render/trains.js');
+  const line = (x0, under) => ({ pts: [0, 1, 2, 3].map((k) => ({ x: x0 + k * 100, y: 50, s: k * 100, under })) });
+  const segs = [...tunnelSegments({ rail: line(0, false), rails: [line(0, false), line(5000, true)] }).values()].flat();
+  assert.equal(segs.length, 3, 'the second line\'s three underground segments');
+  assert.ok(segs.every((s) => s.x1 >= 5000), 'and none of the open first line');
+});

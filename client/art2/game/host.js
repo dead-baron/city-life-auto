@@ -458,9 +458,31 @@ export class World2 {
     this.chunkState.clear(); this.results.clear(); this.upQ.clear(); this.phs.clear(); this.fades.clear();
   }
 
+  // ---- while another view draws the frame (riding through a tunnel: main.js v1Draws) -----------------------------
+  // Nothing is drawn or uploaded, but the way ahead keeps coming: the server's chunks downloaded and the rest baked into the
+  // browser's store (_fetchAhead, _prebake), along the line the train runs on (_prebakeList), so the town is there when
+  // the train comes up - before, the renderer stood still in the dark and came out to stand-ins (the owner, 2026-10-15).
+  stream(F) {
+    if (this.failed || this.q === undefined) return;
+    if (this.pool && this.pool.dead && !this._revivePool()) return;
+    const S = this.S, z = F.z || 1;
+    this.F = F;
+    this.camX = S.cam.x; this.camY = S.cam.y;
+    const hw = this.W / 2 / z, hh = this.H / 2 / z;
+    this.vx0 = this.camX - hw; this.vx1 = this.camX + hw; this.vy0 = this.camY - hh; this.vy1 = this.camY + hh;
+    this._camVel(F);
+    if (!this.streaming) {   // (the bakes the screen wanted on the way in are for a view no one sees now)
+      this.streaming = true;
+      this.wantChunks.clear();
+      if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && jk[1] !== 'B');
+    }
+    this._fetchAhead(F); this._prebake(F);
+  }
+
   // ---- the frame ---------------------------------------------------------------------------------------------
   frame(F) {
     if (this.failed) return;
+    this.streaming = false;
     if (this.pool && this.pool.dead && !this._revivePool()) { this._noWorkers(); return; }
     const t0 = performance.now();
     const E = this.E, S = this.S, z = F.z;
@@ -772,12 +794,19 @@ export class World2 {
     // along the roads - the owner, 2026-10-11, flying a helicopter on a phone: "it definitely struggles on mobile and
     // loading art fast enough"
     const v = this.camV ? this.camV.out : null, sp = v ? Math.hypot(v.x, v.y) : 0, air = !!(this.S.pred && this.S.pred.air);
-    if (sp > 120) {
+    // 1a. riding a train: along the line ahead, which bends where a straight band doesn't (the owner, 2026-10-15, on the
+    // main line on a phone: "I'm going faster than the art is loading"), ~20 s of it, as wide as the view; no roads
+    const rail = this.S.rideTrain && sp > 60 ? this._railAhead(x0, y0, v.x, v.y, Math.min(sp * 20, 16000)) : null;
+    if (rail) {
+      const w = Math.max(1, Math.min(2, Math.round(Math.max(this.vx1 - this.vx0, this.vy1 - this.vy0) / 2 / CHUNK + 0.25)));
+      for (const [px, py, d] of rail) for (let oy = -w; oy <= w; oy++) for (let ox = -w; ox <= w; ox++) add(Math.floor(px / CHUNK) + ox, Math.floor(py / CHUNK) + oy, d * 0.5 + Math.max(Math.abs(ox), Math.abs(oy)) * 200);
+    }
+    if (sp > 120 && !rail) {
       const ux = v.x / sp, uy = v.y / sp, L = Math.min(sp * AHEAD_S, 14000), w = air ? Math.min(3, Math.ceil((Math.abs(uy) * (this.vx1 - this.vx0) + Math.abs(ux) * (this.vy1 - this.vy0)) / 2 / CHUNK + 0.5)) : 1;   // (w: the chunks either side of the line - the view's half-width across the way you fly)
       for (let d = 0; d <= L; d += CHUNK / 2) for (let o = -w; o <= w; o++) add(Math.floor((x0 + ux * d - uy * o * CHUNK) / CHUNK), Math.floor((y0 + uy * d + ux * o * CHUNK) / CHUNK), d * 0.5 + Math.abs(o) * (air ? 150 : 300));
     }
     // 2. along the roads from here, by the distance along them (the ground level: a deck's chunks are its ground's)
-    const net = air ? null : this.map.net;
+    const net = air || rail ? null : this.map.net;
     if (net && net.nodes && net.nodes.length) {
       const dist = new Map(), open = [];
       for (const nd of net.nodes) { const d = Math.hypot(nd.x - x0, nd.y - y0); if (d < 700) { dist.set(nd.id, d); open.push(nd.id); } }
@@ -808,6 +837,45 @@ export class World2 {
     const pcx = Math.floor(x0 / CHUNK), pcy = Math.floor(y0 / CHUNK);
     for (let dy = -RING; dy <= RING; dy++) for (let dx = -RING; dx <= RING; dx++) add(pcx + dx, pcy + dy, 2500 + Math.hypot(dx, dy) * CHUNK);
     return [...out].sort((a, b) => a[1] - b[1]).slice(0, MAXN).map((e) => e[0]);
+  }
+  // The line a train you ride runs on, ahead of (x, y) heading (vx, vy): points every ~400 px along it for L px, each with its
+  // distance along - [[x, y, d], ...] - or null (no line within reach). The lines' points are kept by 512 px cell once.
+  _railAhead(x, y, vx, vy, L) {
+    const rails = this.map.rails || (this.map.rail ? [this.map.rail] : []);
+    if (!rails.length) return null;
+    let idx = this.railIdx;
+    if (!idx) {
+      idx = this.railIdx = new Map();
+      rails.forEach((r, ri) => { const P = r.pts || []; for (let i = 0; i < P.length; i += 4) { const k = Math.floor(P[i].x / 512) * 4096 + Math.floor(P[i].y / 512); let a = idx.get(k); if (!a) idx.set(k, (a = [])); a.push(ri, i); } });
+    }
+    let best = null, bd = 160 * 160;
+    const cx = Math.floor(x / 512), cy = Math.floor(y / 512);
+    for (let gy = cy - 1; gy <= cy + 1; gy++) for (let gx = cx - 1; gx <= cx + 1; gx++) {
+      const a = idx.get(gx * 4096 + gy);
+      if (!a) continue;
+      for (let j = 0; j < a.length; j += 2) {
+        const P = rails[a[j]].pts, i = a[j + 1], P0 = P[i], d = (P0.x - x) ** 2 + (P0.y - y) ** 2;
+        if (d >= bd) continue;
+        const Q = P[Math.min(P.length - 1, i + 1)], R0 = P[Math.max(0, i - 1)], tx = Q.x - R0.x, ty = Q.y - R0.y;
+        const along = tx * vx + ty * vy, tl = Math.hypot(tx, ty) * Math.hypot(vx, vy) || 1;
+        if (Math.abs(along) / tl < 0.7) continue;   // (a crossing line, not the one you ride)
+        bd = d; best = [a[j], i, along > 0 ? 1 : -1];
+      }
+    }
+    if (!best) return null;
+    const [ri, i0, dir] = best, P = rails[ri].pts, n = P.length;
+    const loop = n > 2 && Math.hypot(P[n - 1].x - P[0].x, P[n - 1].y - P[0].y) < 64;
+    const out = [];
+    let d = 0, i = i0, last = P[i0], acc = 1e9;
+    while (d < L) {
+      let j = i + dir;
+      if (j < 0 || j >= n) { if (!loop) break; j = (j + n) % n; }
+      const q = P[j], s = Math.hypot(q.x - last.x, q.y - last.y);
+      d += s; acc += s; last = q; i = j;
+      if (acc >= 400) { acc = 0; out.push([q.x, q.y, d]); }
+      if (j === i0) break;
+    }
+    return out.length ? out : null;
   }
   // Where the camera is heading (world px/s): the driven vehicle's own velocity (no lag), else the camera's
   // smoothed motion (riding a train, a bus or a taxi, spectating); a jump (teleport, respawn) resets it.

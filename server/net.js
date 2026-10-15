@@ -110,6 +110,7 @@ export function send(world) {
   for (const p of world.players.values()) {
     const conn = p.conn;
     if (!conn || !conn.open) continue;
+    if (p.away) continue;   // (the page is in the background: players.js setAway)
     if (conn.buffered > MAX_BUFFERED) { world.stats.dropped = (world.stats.dropped || 0) + 1; continue; }
     const ped = p.ped;
     const veh = ped && ped.vehId ? world.get(ped.vehId) : null;

@@ -71,8 +71,10 @@ export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die',
 // closest one to the player and puts them on open ground beside it (inside, at the desk, for walk-ins).
 export const NEAR_KINDS = {
   bikerack: (m) => m.props.filter((q) => q.t === 'bikerack').map((q) => ({ x: q.x, y: q.y + 40, name: 'a bike rack' })),
-  subway: (m) => m.rail.stations.filter((s) => s.under && s.kiosk).map((s) => ({ x: s.kiosk.out.x, y: s.kiosk.out.y, name: s.name })),
-  platform: (m) => m.rail.stations.filter((s) => !s.under).map((s) => ({ x: s.platform.x, y: s.platform.y, name: s.name })),
+  // (every line's stops: World v3 runs a rail per loop - m.rail is only the first, the main line - the owner, 2026-10-15:
+  // "find nearest subway station ... says there is no subway station on this map")
+  subway: (m) => railStops(m, (s, r) => s.under && (s.kiosk || r.subway)).map((s) => (s.kiosk ? { x: s.kiosk.out.x, y: s.kiosk.out.y, name: s.name } : { x: s.platform.x, y: s.platform.y, name: s.name })),
+  platform: (m) => railStops(m, (s) => !s.under).map((s) => ({ x: s.platform.x, y: s.platform.y, name: s.name })),
   race: (m) => (m.races || []).filter((r) => r.start).map((r) => ({ x: r.start.x, y: r.start.y, name: r.name || 'Race start', craft: r.kind === 'jetski' ? 'jetski' : r.kind === 'boat' ? 'speedboat' : null })),
   venue: (m) => (m.venues || []).filter((v) => v.rect).map((v) => ({ x: v.rect.x + v.rect.w / 2, y: v.rect.y + v.rect.h + 24, name: v.name || v.kind })),
   nature: (m) => (m.natureSites || []).map((q) => ({ x: q.x, y: q.y, name: q.name || q.kind })),
@@ -88,6 +90,16 @@ export const NEAR_KINDS = {
   runway: (m) => (m.airports || []).map((A) => ({ x: A.runway.x + A.runway.w / 2, y: A.runway.y + A.runway.h - 120, name: `${A.name}'s runway` })),
   helipad: (m) => airfields(m).pads.filter((p) => !p.roof).map((p) => ({ x: p.x + 90, y: p.y, name: p.name })),
 };
+// the stops of every line on the map (one each: a hub's stop is shared by the loops through it), those keep(stop, rail) takes
+function railStops(m, keep) {
+  const out = [], seen = new Set();
+  for (const r of m.rails || (m.rail ? [m.rail] : [])) for (const s of r.stations || []) {
+    const k = `${s.name}|${Math.round(s.x / 400)}|${Math.round(s.y / 400)}`;
+    if (seen.has(k) || !keep(s, r)) continue;
+    seen.add(k); out.push(s);
+  }
+  return out;
+}
 export function nearTargets(m, k) {
   if (NEAR_KINDS[k]) return NEAR_KINDS[k](m);
   const pois = m.pois.filter((q) => q.kind === k).map((q) => ({ x: q.x, y: q.y, name: q.label || q.name || k }));   // (walk-ins: at the desk inside)
@@ -532,7 +544,10 @@ export function command(world, p, c, msg) {
       if (!ped || ped.dead || !world.trains.length) break;
       if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
       let t = world.trains[Number(msg.n)] || null;
-      if (!t) { let bd = Infinity; for (const q of world.trains) { const e = world.get(q.cars[0].id); const d = Math.hypot(e.x - ped.x, e.y - ped.y); if (d < bd) { bd = d; t = q; } } }
+      // (msg.sub: the nearest subway train - World v3's Pink and Yellow Lines - not the main line's)
+      const isSub = (q) => !!(world.rails && world.rails[q.r] && world.rails[q.r].subway);
+      if (!t) { let bd = Infinity; for (const q of world.trains) { if (msg.sub && !isSub(q)) continue; const e = world.get(q.cars[0].id); if (!e) continue; const d = Math.hypot(e.x - ped.x, e.y - ped.y); if (d < bd) { bd = d; t = q; } } }
+      if (!t) { world.notify(p, msg.sub ? '[dev] There is no subway train running on this map.' : '[dev] No train found.', 'warn'); break; }
       const ci = Math.max(1, Math.min(t.cars.length - 1, Number(msg.car) || 1));
       trains.board(world, ped, t, ci, 0, 0, 0);
       world.notify(p, `[dev] Aboard train ${t.i}, car ${ci}.`, 'info');

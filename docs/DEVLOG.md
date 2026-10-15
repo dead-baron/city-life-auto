@@ -9804,3 +9804,32 @@ rescue jobs a home like a search and rescue hq".
   hospitals' roof pads).
 - **WORLD_VERSION 10 -> 11**: the homes' list moved with the cleared bands, so the homes bought since the switch are
   bought back at what was paid (homes.checkWorld) and their owners wake at a hospital.
+
+## 2026-10-15 · Riding through the tunnels, the art ahead of a train, tabbing out on a phone, the title on a phone upright
+The owner, playing on a Pixel 7 Pro (08:31-08:41): the main line going under Lucky Mesa "the game wouldn't load graphics
+anymore and I couldn't get off the train"; "on the train I'm going faster than the art is loading"; "tabbing out of the
+game for a second on mobile boots you out"; the debug menu's nearest subway "says there is no subway station on this
+map"; the graphics bar on the title screen cut off with the phone upright.
+- **The tunnel view** (client/render/trains.js drawTunnel): it drew only m.rail's tunnels - in World v3 the first of the
+  rails, not the line you ride - so under a town the screen went black. It now draws every line's underground stretches
+  (cut into segments once per map, kept by 1024 px cell). The classic view under ground no longer bakes and draws the
+  classic ground it paints over, and loads only the people's body sheets, not the ~250 MB sprite atlas (main.js
+  v1Draws). Meanwhile the new renderer keeps fetching and baking the way ahead (art2/game/host.js stream), so the town is
+  there when the train comes up. (The doors stay shut in a tunnel, as before.)
+- **The art ahead of a train**: riding one, what's downloaded from the server and baked ahead (host.js _prebakeList,
+  _railAhead) follows the line round its bends, ~20 s of it, as wide as the view, and not the roads. The server bakes the
+  railway's chunks and those either side first, then the highways', then the busiest places (server/artcdn.js order),
+  and round each player it bakes the stretch ahead of their train or fast car too (server/index.js, trains.js aheadOf;
+  a point ahead gets its own chunk and the ring round it). Each world change still starts the server's bake afresh.
+- **Tabbing out on a phone**: the page in the background tells the server it's away ({ t: 'away' }: nothing is sent to
+  it meanwhile and its keys are let go - players.js setAway, net.js); a connection lost mid-game keeps you in the game
+  with a small "Reconnecting..." and you're straight back in when it answers (for a minute; then the title as before);
+  coming back to the page reconnects at once; a page the phone threw away in the background comes back into the game
+  when it reloads (main.js resumeWanted). With nothing after you - not wanted, not hurt in the last minute, not down,
+  no crate carried or loaded - the body waits AWAY_SECONDS (5 min) and then goes without dropping anything
+  (players.js safeToIdle); trouble meanwhile brings back the drop rule's 30 s.
+- **The debug menu**: Nearest subway entrance / Nearest platform look at every line (World v3's are a rail per loop), and
+  a new "Hop on the nearest subway" (dev 'train' with sub).
+- **The title on a phone upright**: the graphics bar's five buttons share the width (client/style.css, max-width 520 px).
+Tests: test/art2.test.js (the train's bake-ahead, the tunnel's lines), test/artcdn.test.js (the railway first, the
+points ahead), test/core.test.js (leaving idle, away).

@@ -320,6 +320,18 @@ function stepTrain(world, t, dt) {
   if (d - step < 1.5) { t.s = mod(target, rail.len); t.v = 0; t.acc = 0; t.braking = false; t.dwellUntil = now + TRAIN_DWELL_S; arrived(world, t); }
 }
 
+// Where the train someone rides will be in the next stretch (the art from the server bakes those chunks first - server/
+// artcdn.js focus): points every `step` px along its line ahead of it, up to L px. [] when not on a train.
+export function aheadOf(world, ped, L = 9000, step = 768) {
+  if (!ped || !ped.onTrain) return [];
+  const t = world.trains[ped.onTrain.t];
+  if (!t) return [];
+  const rail = railOf(world, t), out = [];
+  if (!rail || !rail.len) return out;
+  for (let d = step; d <= L; d += step) { const q = railAt(rail, t.s + d); out.push({ x: q.x, y: q.y }); }
+  return out;
+}
+
 function carPose(rail, t, c) {
   const sc = t.s - c.off, h = c.def.L * 0.4;
   const f = railAt(rail, sc + h), b = railAt(rail, sc - h), m = railAt(rail, sc);

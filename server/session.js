@@ -66,6 +66,7 @@ export function createSession(world, conn, opts) {
       if (!player) return;
       if (msg.t === 'view') { setView(player, msg.hw, msg.hh); return; } // how much world the screen shows
       if (msg.t === 'ping') { conn.sendJSON({ t: 'pong', ts: msg.ts }); return; }
+      if (msg.t === 'away') { players.setAway(world, player, !!msg.on); return; }   // (the page in the background, or back)
       // a client noticing something wrong on its side (it built a different map from the same build): logged, once a connection
       if (msg.t === 'diag') { if (!conn.diagSaid && typeof msg.what === 'string') { conn.diagSaid = true; console.warn(`[diag] ${player.name}: ${msg.what.slice(0, 300)}`); } return; }
       // how this device loaded and runs the game (once a connection: server/perfreports.js, listed at /perf)

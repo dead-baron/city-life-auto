@@ -40,9 +40,15 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
   const onDisk = (key, file) => { if (S.done.has(key)) return true; if (existsSync(file)) { S.done.add(key); return true; } return false; };
   const readArt = () => { try { return artKey(JSON.parse(readFileSync(join(root, 'version.json'), 'utf8')), world); } catch { return null; } };
 
-  // the order the background bakes go in: the busiest chunks first (places, then roads, then land), open sea last
+  // the order the background bakes go in: the railway and the highways first (the fastest rides: a train outruns a phone's
+  // bakes - the owner, 2026-10-15), then the busiest chunks (places, then roads, then land), open sea last
   const order = (() => {
     const score = new Float64Array(CX * CY);
+    const lane = new Uint8Array(CX * CY);   // (1: by a line's track, 2: by a highway - each counted once per chunk, with the chunks either side: the view is wider than the line)
+    const mark = (x, y, bit) => { const cx0 = Math.floor(x / CHUNK), cy0 = Math.floor(y / CHUNK); for (let cy = cy0 - 1; cy <= cy0 + 1; cy++) for (let cx = cx0 - 1; cx <= cx0 + 1; cx++) if (cx >= 0 && cy >= 0 && cx < CX && cy < CY) lane[cy * CX + cx] |= bit; };
+    for (const r of map.rails || (map.rail ? [map.rail] : [])) { const P = r.pts || []; for (let i = 0; i < P.length; i += 16) mark(P[i].x, P[i].y, 1); }
+    for (const e of map.edges || []) if (e && (e.kind === 'hwy' || e.kind === 'ramp')) for (const pt of e.pts || []) mark(pt.x, pt.y, 2);
+    for (let i = 0; i < CX * CY; i++) score[i] += (lane[i] & 1 ? 400 : 0) + (lane[i] & 2 ? 200 : 0);
     for (const p of map.pois || []) { const cx = Math.floor(p.x / CHUNK), cy = Math.floor(p.y / CHUNK); if (cx >= 0 && cy >= 0 && cx < CX && cy < CY) score[cy * CX + cx] += 40; }
     for (const e of map.edges || []) for (const pt of e.pts || []) { const cx = Math.floor(pt.x / CHUNK), cy = Math.floor(pt.y / CHUNK); if (cx >= 0 && cy >= 0 && cx < CX && cy < CY) score[cy * CX + cx] += 1; }
     for (let cy = 0; cy < CY; cy++) for (let cx = 0; cx < CX; cx++) {
@@ -121,6 +127,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     const now = Date.now(), qs = new Set(prewarm);
     for (const [q, t] of S.qSeen) if (now - t < FOCUS_Q_MS) qs.add(q);
     for (let r = 0; r <= FOCUS_R; r++) for (const p of S.focus) {
+      if (r > (p.r ?? FOCUS_R)) continue;   // (a point on the way ahead of someone: only its own chunks and those round it)
       const pcx = Math.floor(p.x / CHUNK), pcy = Math.floor(p.y / CHUNK);
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
@@ -136,9 +143,10 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     }
     return null;
   }
-  // where the players are now (server/index.js, every few seconds): world px
+  // where the players are now, and where their trains and fast cars will be in the next few seconds (server/index.js,
+  // every few seconds; r: how many rings round a point, FOCUS_R when not said): world px
   function focus(points) {
-    S.focus = (points || []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y)).slice(0, 48);
+    S.focus = (points || []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y)).slice(0, 240);
     if (S.focus.length) pump();
   }
   function pump() {
@@ -230,7 +238,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
   function stop() { S.stopped = true; for (const s of S.workers) { try { s.w.terminate(); } catch { /* gone */ } } S.workers = []; }
 
   start();
-  return { handle, rebuild, summary, stop, focus, get art() { return S.art; }, _state: S, _next: next };
+  return { handle, rebuild, summary, stop, focus, get art() { return S.art; }, _state: S, _next: next, _order: order };
 }
 
 // The qualities baked in the background (CLA_ART_PREWARM, e.g. "1,2": Medium then High); the rest only when asked for

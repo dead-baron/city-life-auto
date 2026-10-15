@@ -563,33 +563,63 @@ function lampGlow() {
   c.fillStyle = gr; c.fillRect(0, 0, 80, 80);
   return glowCv;
 }
+// Every line's underground stretches (World v3: the main line runs below the city and the towns too, not only the subway
+// loop that today's m.rail is - the owner, 2026-10-15, riding the main line out of Lucky Mesa: the screen went dark),
+// cut into segments once per map and kept by 1024 px cell, so a frame only walks what is near the view.
+const TUN_CELL = 1024;
+const tunnelCache = new WeakMap();
+export function tunnelSegments(map) {
+  let c = tunnelCache.get(map);
+  if (c) return c;
+  c = new Map();
+  const add = (x1, y1, x2, y2, lamp) => {
+    const k = Math.floor((x1 + x2) / 2 / TUN_CELL) * 100000 + Math.floor((y1 + y2) / 2 / TUN_CELL);
+    let a = c.get(k); if (!a) c.set(k, (a = []));
+    const L = Math.hypot(x2 - x1, y2 - y1) || 1;
+    a.push({ x1, y1, x2, y2, nx: -(y2 - y1) / L, ny: (x2 - x1) / L, lamp });
+  };
+  for (const r of map.rails || (map.rail ? [map.rail] : [])) {
+    const pts = r.pts || [], n = pts.length;
+    if (n < 2) continue;
+    const closed = Math.hypot(pts[n - 1].x - pts[0].x, pts[n - 1].y - pts[0].y) < 64;
+    for (let i = 0; i < (closed ? n : n - 1); i++) {
+      const p = pts[i], q = pts[(i + 1) % n];
+      if (!p.under || !q.under) continue;
+      add(p.x, p.y, q.x, q.y, Math.round(p.s || 0) % 150 < 8);   // (wall lamps every ~150 px)
+    }
+  }
+  tunnelCache.set(map, c);
+  return c;
+}
 export function drawTunnel(g, map, view, now) {
   g.fillStyle = '#050608'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0);
-  if (!map.rail) return;
-  const pts = map.rail.pts, n = pts.length;
-  const inView = (p) => p.x > view.x0 - 200 && p.x < view.x1 + 200 && p.y > view.y0 - 200 && p.y < view.y1 + 200;
+  const cells = tunnelSegments(map);
+  const segs = [];
+  const x0 = view.x0 - 200, x1 = view.x1 + 200, y0 = view.y0 - 200, y1 = view.y1 + 200;
+  for (let cy = Math.floor(y0 / TUN_CELL) - 1; cy <= Math.floor(y1 / TUN_CELL) + 1; cy++)
+    for (let cx = Math.floor(x0 / TUN_CELL) - 1; cx <= Math.floor(x1 / TUN_CELL) + 1; cx++) {
+      const a = cells.get(cx * 100000 + cy);
+      if (a) for (const s of a) if (Math.max(s.x1, s.x2) > x0 && Math.min(s.x1, s.x2) < x1 && Math.max(s.y1, s.y2) > y0 && Math.min(s.y1, s.y2) < y1) segs.push(s);
+    }
+  if (!segs.length) return;
   const pass = (w, col) => {
     g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.beginPath();
-    for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; if (!p.under || !q.under || !inView(p)) continue; g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); }
+    for (const s of segs) { g.moveTo(s.x1, s.y1); g.lineTo(s.x2, s.y2); }
     g.stroke();
   };
   pass(96, '#1e2026'); pass(78, '#14151a'); pass(60, '#24262c');
-  for (let i = 0; i < n; i++) { // wall lamps every ~150 px
-    const p = pts[i];
-    if (!p.under || !inView(p) || Math.round(p.s) % 150 >= 8) continue;
-    const q = pts[(i + 1) % n], a = Math.atan2(q.y - p.y, q.x - p.x), nx = -Math.sin(a), ny = Math.cos(a);
+  for (const s of segs) {
+    if (!s.lamp) continue;
     for (const sd of [-1, 1]) {
-      const lx = p.x + nx * sd * 44, ly = p.y + ny * sd * 44;
+      const lx = s.x1 + s.nx * sd * 44, ly = s.y1 + s.ny * sd * 44;
       g.drawImage(lampGlow(), lx - 40, ly - 40, 80, 80);
       g.fillStyle = '#ffe2a0'; g.fillRect(lx - 3, ly - 2, 6, 4);
     }
   }
   // rails underfoot
-  for (const side of [-1, 1]) {
-    g.strokeStyle = '#5a5e66'; g.lineWidth = 2; g.beginPath();
-    for (let i = 0; i < n; i++) { const p = pts[i], q = pts[(i + 1) % n]; if (!p.under || !q.under || !inView(p)) continue; const a = Math.atan2(q.y - p.y, q.x - p.x), nx = -Math.sin(a) * side * RAIL_OFF, ny = Math.cos(a) * side * RAIL_OFF; g.moveTo(p.x + nx, p.y + ny); g.lineTo(q.x + nx, q.y + ny); }
-    g.stroke();
-  }
+  g.strokeStyle = '#5a5e66'; g.lineWidth = 2; g.beginPath();
+  for (const side of [-1, 1]) for (const s of segs) { const ox = s.nx * side * RAIL_OFF, oy = s.ny * side * RAIL_OFF; g.moveTo(s.x1 + ox, s.y1 + oy); g.lineTo(s.x2 + ox, s.y2 + oy); }
+  g.stroke();
   void now;
 }
 

@@ -176,24 +176,61 @@ function connect() {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     onText(m);
   };
-  ws.onclose = () => { if (S.ws === ws) scheduleReconnect('Connection lost'); };
+  ws.onclose = (ev) => { if (S.ws === ws) scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
   ws.onerror = () => {};
 }
 
-function scheduleReconnect(why) {
+// A connection lost mid-game keeps you in the game (the owner, 2026-10-15: "tabbing out of the game for a second on mobile
+// boots you out"): a small "Reconnecting..." over the city and straight back in when the server answers; only after a
+// minute of trying does it go back to the title screen.
+const RECONNECT_IN_GAME_MS = 60000;
+function scheduleReconnect(why, toTitle = false) {
   if (S.practice) return;
   S.welcomed = false;
   S.ws = null;
   S.connectFailed = true;
-  $('title').classList.remove('hidden');
-  $('hud').classList.add('hidden');
-  $('t-resume').classList.add('hidden');
-  $('play').disabled = true;
-  $('t-status').textContent = S.everConnected
-    ? `${why}. Retrying in ${Math.round(S.reconnectIn / 1000)}s... (if you were mid-fight you have 30s before your ghost drops loot)`
-    : `The online city isn't reachable right now (retrying every few seconds). Try PRACTICE OFFLINE below.`;
-  setTimeout(connect, S.reconnectIn);
+  if (S.playing && S.everConnected && !S.lostAt) S.lostAt = performance.now();
+  if (!toTitle && S.playing && S.everConnected && performance.now() - S.lostAt < RECONNECT_IN_GAME_MS) reconnecting(true);
+  else {
+    reconnecting(false);
+    $('title').classList.remove('hidden');
+    $('hud').classList.add('hidden');
+    $('t-resume').classList.add('hidden');
+    $('play').disabled = true;
+    $('t-status').textContent = S.everConnected
+      ? `${why}. Retrying in ${Math.round(S.reconnectIn / 1000)}s... (if you were mid-fight you have 30s before your ghost drops loot)`
+      : `The online city isn't reachable right now (retrying every few seconds). Try PRACTICE OFFLINE below.`;
+  }
+  clearTimeout(S.reconnectT);
+  S.reconnectT = setTimeout(connect, document.hidden ? Math.max(S.reconnectIn, 5000) : S.reconnectIn);
   S.reconnectIn = Math.min(15000, S.reconnectIn * 1.6);
+}
+function reconnecting(on) {
+  let el = document.getElementById('reconn');
+  if (!on) { if (el) el.classList.add('hidden'); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'reconn'; el.setAttribute('role', 'status'); el.textContent = 'Reconnecting...'; document.body.appendChild(el); }
+  el.classList.remove('hidden');
+}
+// The page going into the background (a phone switching apps, another tab): the server is told it's away - it sends
+// nothing meanwhile and the character stands idle (server/systems/players.js setAway) - and back, that it's here again; a
+// connection lost meanwhile is made again at once rather than when the retry timer says. A page the phone threw away in
+// the background and reloads comes back into the game, not to the title (resumeWanted, onText welcome).
+const RESUME_KEY = 'cla.resume', RESUME_MS = 10 * 60000;
+document.addEventListener('visibilitychange', () => {
+  if (S.practice) return;
+  if (document.hidden) {
+    if (S.playing) { try { sessionStorage.setItem(RESUME_KEY, String(Date.now())); } catch { /* storage blocked */ } }
+    send({ t: 'away', on: true });
+    return;
+  }
+  try { sessionStorage.removeItem(RESUME_KEY); } catch { /* storage blocked */ }
+  send({ t: 'away', on: false });
+  if (!S.ws && S.connectFailed && S.everConnected) { clearTimeout(S.reconnectT); S.reconnectIn = 1000; connect(); }
+});
+function resumeWanted() {
+  let t = 0;
+  try { t = Number(sessionStorage.getItem(RESUME_KEY)) || 0; sessionStorage.removeItem(RESUME_KEY); } catch { /* storage blocked */ }
+  return t > 0 && Date.now() - t < RESUME_MS;
 }
 
 function send(obj) { if (S.ws && S.ws.readyState === 1) S.ws.send(typeof obj === 'string' || obj instanceof ArrayBuffer ? obj : JSON.stringify(obj)); }
@@ -255,6 +292,8 @@ function onText(m) {
       S.ground.clear();
       $('t-status').textContent = m.practice ? 'Offline practice city ready' : S.updating ? 'Updating to the latest version...' : `Signed in as ${m.name}`;
       $('play').disabled = false;
+      S.lostAt = 0; reconnecting(false);
+      if (!S.playing && !m.practice && !S.updating && resumeWanted()) S.playing = true;   // (put away mid-game and reloaded since: back in)
       if (S.playing) startPlaying();
       setupDev();
       sendView();
@@ -1089,9 +1128,14 @@ function ensureV1Art() {
 }
 // The classic renderer draws the frame only with ?art=1, or while you ride the subway (the tunnel view
 // is still classic art). While the new renderer starts (or restarts) the world stays dark instead.
+// The tunnel view needs only the people's body sheets (the dark, the walls, the lamps and the cars are drawn by hand): not
+// the ~250 MB sprite atlas, which on a phone stalled the page for seconds as the main line went under a town (the owner,
+// 2026-10-15). Meanwhile the new renderer keeps fetching and baking the way ahead (S.art2.stream), so the town is there
+// when the train comes up.
 function v1Draws(F) {
   const on = !ART2_WANTED || !!F.sub;
-  if (on) ensureV1Art();
+  if (on) { if (ART2_WANTED) loadBodies('assets/'); else ensureV1Art(); }
+  if (F.sub && S.art2 && S.art2.ready && S.art2.stream) S.art2.stream(F);
   return on;
 }
 
@@ -2842,6 +2886,7 @@ function prepFrame(dt) {
   const meEnt = S.ents.get(S.myPedId);
   const myCar = S.ctrlKind === CTRL.RIDER && meEnt && meEnt.parent ? S.ents.get(meEnt.parent) : null;
   const myTrain = myCar && myCar.kind === K.TRAIN && myCar.d ? myCar.d.tr : -1;
+  S.rideTrain = myTrain >= 0;   // (the art ahead follows the line: art2/game/host.js _prebakeList)
   const ug = S.ugLayer || 0;   // down the sewers or in the cave (shared/underground.js): the underground view draws the frame
   const sub = !!ug || !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1)); // riding through the subway: only the tunnel
   // who is on screen, by kind
@@ -2949,19 +2994,24 @@ function drawWorldV1(F) {
   // past the map's edge: open sea (shared/border.js)
   const WF = S.map.frame;   // (the world's frame: its edge, the ground chunks' grid)
   if (!sub && (view.x0 < 0 || view.y0 < 0 || view.x1 > WF.w * TILE || view.y1 > WF.h * TILE)) { g.fillStyle = '#1d5a86'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
-  // ground chunks
-  for (let cy = Math.max(0, cy0); cy <= Math.min(Math.ceil(WF.h * TILE / CHUNK_PX) - 1, cy1); cy++)
-    for (let cx = Math.max(0, cx0); cx <= Math.min(Math.ceil(WF.w * TILE / CHUNK_PX) - 1, cx1); cx++)
-      g.drawImage(S.ground.get(cx, cy), cx * CHUNK_PX, cy * CHUNK_PX, CHUNK_PX + 0.5, CHUNK_PX + 0.5);
+  // ground chunks (none in the tunnel: its dark covers the whole view - baking the classic ground there was a phone's
+  // whole frame, the owner's 2026-10-15 ride under Lucky Mesa)
+  if (!sub) {
+    for (let cy = Math.max(0, cy0); cy <= Math.min(Math.ceil(WF.h * TILE / CHUNK_PX) - 1, cy1); cy++)
+      for (let cx = Math.max(0, cx0); cx <= Math.min(Math.ceil(WF.w * TILE / CHUNK_PX) - 1, cx1); cx++)
+        g.drawImage(S.ground.get(cx, cy), cx * CHUNK_PX, cy * CHUNK_PX, CHUNK_PX + 0.5, CHUNK_PX + 0.5);
+  }
   g.imageSmoothingEnabled = true;
 
   // animated water glints
-  drawWaterGlints(view, now);
-  S.ground.shores.animate(g, view, now);
-  const wetK = Math.max(S.rainK, S.wx.wet * 0.8);
-  if (wetK > 0.01) { g.fillStyle = `rgba(30,50,80,${(0.17 * wetK).toFixed(3)})`; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
+  if (!sub) {
+    drawWaterGlints(view, now);
+    S.ground.shores.animate(g, view, now);
+    const wetK = Math.max(S.rainK, S.wx.wet * 0.8);
+    if (wetK > 0.01) { g.fillStyle = `rgba(30,50,80,${(0.17 * wetK).toFixed(3)})`; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0); }
+  }
   mark('ground');
-  S.wx.drawWaterSheen(g, view, sky, now);
+  if (!sub) S.wx.drawWaterSheen(g, view, sky, now);
   if (sub) drawTunnel(g, S.map, view, now);
   else fx.drawDecals(g, view, now, rain);
   // grass, crops, bushes and flower beds: sway, part round people, lie flat where cars went (render/flora)

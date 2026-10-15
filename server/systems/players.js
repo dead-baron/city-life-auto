@@ -52,7 +52,7 @@ import * as trains from './trains.js';
 import * as transit from './transit.js';
 import * as ferries from './ferries.js';
 
-import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE, GUARD, NPC_GUARD } from '../../shared/rules.js';
+import { GHOST_SECONDS, AWAY_SECONDS, AWAY_HURT_S, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE, GUARD, NPC_GUARD } from '../../shared/rules.js';
 import * as felling from './felling.js';
 import * as lights from './lights.js';
 import * as revive from './revive.js';
@@ -93,7 +93,7 @@ export function join(world, conn, profile, opts = {}) {
     // reconnect: within the ghost window (or replacing another tab)
     if (p.conn && p.conn !== conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Signed in from another tab' }); p.conn.close(4000, 'replaced'); } catch { /* gone */ } }
     p.conn = conn;
-    p.ghostUntil = 0;
+    p.ghostUntil = 0; p.ghostSafe = false; p.away = 0;
     p.known = new Map();
     p.inputQ = [];
     // a new connection numbers its inputs afresh (a reloaded page from 1): an input is only taken when it's numbered
@@ -271,10 +271,32 @@ export function leave(world, p) {
   // reloading to update (the server runs a newer build than this session or page): no ghost body and no
   // drop rule - they're straight back on the new build
   if (p.ped && !p.ped.dead && !updating(world, p)) {
-    p.ghostUntil = world.time + GHOST_SECONDS;
+    // nothing after them: the body waits longer and goes without dropping anything (a phone switching apps - the owner,
+    // 2026-10-15: "tabbing out of the game for a second on mobile boots you out"); otherwise the drop rule's 30 s
+    p.ghostSafe = safeToIdle(world, p);
+    p.ghostUntil = world.time + (p.ghostSafe ? AWAY_SECONDS : GHOST_SECONDS);
   } else {
     finalizeLogout(world, p, false);
   }
+}
+
+// Safe to stand idle with nobody at the keys: not wanted, not hurt lately, not down, not in custody, carrying no crate and
+// driving none.
+export function safeToIdle(world, p) {
+  const ped = p.ped;
+  if (!ped || ped.dead || p.wanted > 0 || p.heat >= 1 || p.custody || ped.cuffed || ped.carrying) return false;
+  if (world.time < (ped.downUntil || 0) || world.time - (ped.lastHitAt ?? -1e9) < AWAY_HURT_S) return false;
+  const v = ped.vehId ? world.get(ped.vehId) : null;
+  if (v && v.cargo && v.cargo.some((c) => c)) return false;
+  return true;
+}
+// The page went into the background ({ t: 'away' }: a phone switching apps, a hidden tab - main.js): nothing is sent to
+// it meanwhile (net.js: a page in the background reads nothing, and what piled up was what got it dropped) and its keys
+// are let go, so the character stands idle; back, the snapshots go on where they left off.
+export function setAway(world, p, on) {
+  p.away = on ? world.time || 1e-6 : 0;
+  if (on) p.lastInput = { seq: p.lastInput.seq, bits: 0, mx: 0, my: 0, aim: p.lastInput.aim };
+  else p.meDirty = true;
 }
 
 // Called when the ghost timer expires (drop rule) or when leaving while dead.
@@ -700,10 +722,12 @@ export function update(world, dt) {
   for (const p of [...world.players.values()]) {
     const ped = p.ped;
     if (ped) economy.syncLight(world, p); // the flashlight goes out when you go down or lose it
+    // (left idle and then trouble came - hurt, wanted: the drop rule's 30 s from now)
+    if (p.ghostUntil && p.ghostSafe && !safeToIdle(world, p)) { p.ghostSafe = false; p.ghostUntil = Math.min(p.ghostUntil, now + GHOST_SECONDS); }
     if (p.ghostUntil && now >= p.ghostUntil) {
       // GDD §9 drop rule: timer expired -> body despawns, everything on them jettisoned (not when an
       // update came out meanwhile: they come back fresh on it instead)
-      finalizeLogout(world, p, !updating(world, p));
+      finalizeLogout(world, p, !updating(world, p) && !p.ghostSafe);
       continue;
     }
     if (ped && ped.dead && p.respawnAt && now >= p.respawnAt) {

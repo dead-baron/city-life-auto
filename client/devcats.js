@@ -52,7 +52,7 @@ export const DEV_SECTIONS = [
     ['🚓 Police tourer', 'car', { m: 'policebike' }], ['🦴 Rustbucket rat bike', 'car', { m: 'ratbike' }], ['💼 Saddlebag bagger', 'car', { m: 'bagger' }],
   ] },
   { id: 'rail', title: '🚆 Trains', items: [
-    ['🚉 Call a train to this station', 'calltrain'], ['🚆 Hop on the nearest train', 'train'],
+    ['🚉 Call a train to this station', 'calltrain'], ['🚆 Hop on the nearest train', 'train'], ['🚇 Hop on the nearest subway', 'train', { sub: 1 }],
     ['🚏 Nearest platform', 'near', { k: 'platform' }], ['🚇 Nearest subway entrance', 'near', { k: 'subway' }],
   ] },
   { id: 'jobs', title: '💼 Jobs', items: [

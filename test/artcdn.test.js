@@ -186,9 +186,41 @@ test('the server bakes round the players online first, nearest first, after what
     const qs = new Set();
     for (let i = 0; i < 20; i++) { const n = cdn._next(); if (!n || !n.focus) break; qs.add(n.q); S.inflight.set(n.key, n); }
     assert.ok(qs.has(1) && qs.has(2), `both qualities (${[...qs]})`);
+    // a point on the way ahead of someone (r: 1 - their train's line, their car's way): its chunk and the ring round it, no wider
+    S.inflight.clear(); S.qSeen.clear();
+    cdn.focus([{ x: 20.5 * 768, y: 10.5 * 768, r: 1 }]);
+    const near = [];
+    for (let i = 0; i < 40; i++) { const n = cdn._next(); if (!n || !n.focus) break; near.push([n.cx, n.cy]); S.inflight.set(n.key, n); }
+    assert.equal(near.length, 9, `the 3 x 3 round it (${near.length})`);
+    assert.ok(near.every(([x, y]) => Math.abs(x - 20) <= 1 && Math.abs(y - 10) <= 1));
     // nobody online: the background order
     cdn.focus([]);
     assert.ok(!cdn._next().focus);
+  } finally { cdn.stop(); rmSync(dataDir, { recursive: true, force: true }); }
+});
+
+// The background order (the owner, 2026-10-15: on the train a phone's art couldn't keep up): the railway's chunks and
+// those either side come first, then the highways', then the busiest places.
+test('the background bakes: along the railway first', () => {
+  const map = generateCity(1337);
+  const dataDir = mkdtempSync(join(tmpdir(), 'cla-art-'));
+  const cdn = createArtCdn({ map, root: ROOT, dataDir, seed: 1337, threads: 0, prewarm: [1], log: () => {} });
+  try {
+    cdn.stop();
+    const S = cdn._state;
+    S.pre = [];
+    const { CX } = (() => ({ CX: Math.ceil((map.frame.w * 32) / 768) }))();
+    // (threads: 0 leaves the queue unbuilt: build it as start() would, from the order the cdn keeps)
+    assert.ok(typeof cdn._order === 'function' || Array.isArray(cdn._order), 'the order is exposed for this test');
+    const order = typeof cdn._order === 'function' ? cdn._order() : cdn._order;
+    const railChunks = new Set(), band = new Set();
+    const near = (x, y) => { const cx = Math.floor(x / 768), cy = Math.floor(y / 768); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) band.add((cy + dy) * CX + cx + dx); };
+    for (const p of map.rail.pts) { railChunks.add(Math.floor(p.y / 768) * CX + Math.floor(p.x / 768)); near(p.x, p.y); }
+    for (const e of map.edges) if (e && (e.kind === 'hwy' || e.kind === 'ramp')) for (const p of e.pts) near(p.x, p.y);
+    const firstN = new Set(order.slice(0, band.size));
+    const hit = [...railChunks].filter((i) => firstN.has(i)).length;
+    assert.ok(hit / railChunks.size > 0.95, `the line's own chunks are among the railway's and the highways' bands, baked first (${hit} of ${railChunks.size})`);
+    assert.ok(band.size < order.length / 2, 'and those bands are not the whole map');
   } finally { cdn.stop(); rmSync(dataDir, { recursive: true, force: true }); }
 });
 

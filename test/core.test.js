@@ -1,4 +1,4 @@
-import { RESPAWN_SECONDS } from '../shared/rules.js';
+import { RESPAWN_SECONDS, GHOST_SECONDS, AWAY_SECONDS } from '../shared/rules.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players, straightRoad } from './helpers.js';
@@ -63,6 +63,7 @@ test('ghost state: disconnect keeps body 30s, then drops your backpack and cash 
   const { p, prof } = joinPlayer(w, { cash: 750 });
   prof.weapons = { fists: 0, pistol: 12 };
   const ped = p.ped;
+  ped.lastHitAt = w.time;   // (in a fight: the drop rule - leaving idle when nothing is after you is the next test)
   players.leave(w, p);
   run(w, 10);
   assert.ok(w.entities.has(ped.id), 'ghost body still in world after 10s');
@@ -74,6 +75,48 @@ test('ghost state: disconnect keeps body 30s, then drops your backpack and cash 
   assert.equal(bags.find((b) => b.cashOnly).cash, 750);
   const pack = bags.find((b) => b.pack);
   assert.ok(pack.weapons.pistol && pack.cash === 0);
+});
+
+// A phone switching apps (the owner, 2026-10-15: "tabbing out of the game for a second on mobile boots you out"): with
+// nothing after you the body waits AWAY_SECONDS and then goes without dropping anything; trouble meanwhile (hurt, wanted)
+// brings back the drop rule's 30 s.
+test('ghost state: leaving with nothing after you - the body waits minutes, then goes without dropping anything', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w, { cash: 750 });
+  const ped = p.ped;
+  players.leave(w, p);
+  run(w, GHOST_SECONDS + 5);
+  assert.ok(w.entities.has(ped.id), 'still standing there past the 30 s');
+  run(w, AWAY_SECONDS - GHOST_SECONDS);
+  assert.ok(!w.entities.has(ped.id), 'gone after AWAY_SECONDS');
+  assert.equal(prof.cash, 750, 'the cash kept');
+  assert.equal([...w.entities.values()].filter((e) => e.kind === K.BAG).length, 0, 'nothing dropped');
+  // left idle, then hurt: 30 s from then, and the drop rule
+  const w2 = makeWorld();
+  const j2 = joinPlayer(w2, { cash: 400 });
+  players.leave(w2, j2.p);
+  run(w2, 40);
+  j2.p.ped.lastHitAt = w2.time;
+  run(w2, GHOST_SECONDS + 2);
+  assert.ok(!w2.entities.has(j2.p.ped.id), 'hurt while away: gone 30 s later');
+  assert.equal(j2.prof.cash, 0, 'and the drop rule');
+});
+
+test('away: a page in the background gets no snapshots and its keys are let go; back, they go on', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  let sent = 0;
+  p.conn.sendBinary = () => { sent++; };
+  p.lastInput = { seq: 5, bits: 1, mx: 1, my: 0, aim: 0 };
+  players.setAway(w, p, true);
+  assert.equal(p.lastInput.bits, 0, 'keys let go');
+  assert.equal(p.lastInput.mx, 0);
+  const before = sent;
+  run(w, 2);
+  assert.equal(sent, before, 'nothing sent while away');
+  players.setAway(w, p, false);
+  run(w, 1);
+  assert.ok(sent > before, 'snapshots again once back');
 });
 
 test('ghost state: reconnecting inside the window resumes the same body', () => {

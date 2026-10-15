@@ -21,6 +21,7 @@ import { cutWorld, createWorldCdn, keptWorld } from './worldcdn.js';
 import { generateCity } from '../shared/map.js';
 import { mapSignature } from '../shared/mapcore.js';
 import { ferryRoutes } from './systems/ferries.js';
+import { aheadOf as trainAhead } from './systems/trains.js';
 import { TICK_MS } from '../shared/constants.js';
 
 const MIME = {
@@ -184,7 +185,19 @@ function loop() {
 
 setInterval(() => store.flush(), config.saveIntervalMs).unref();
 // the art from the server bakes round the players online first (server/artcdn.js focus)
-if (artCdn) setInterval(() => { const pts = []; for (const p of world.players.values()) if (p.conn && p.ped) pts.push({ x: p.ped.x, y: p.ped.y }); artCdn.focus(pts); }, 4000).unref();
+// and ahead of them: along the line of the train they ride, along the way their car is going at speed (the next ~15 s)
+if (artCdn) setInterval(() => {
+  const pts = [], ahead = [];
+  for (const p of world.players.values()) {
+    if (!p.conn || !p.ped) continue;
+    const ped = p.ped;
+    pts.push({ x: ped.x, y: ped.y });
+    if (ped.onTrain) { for (const q of trainAhead(world, ped, 9000, 768)) ahead.push({ x: q.x, y: q.y, r: 1 }); continue; }
+    const v = ped.vehId ? world.get(ped.vehId) : null, sp = v ? Math.hypot(v.vx || 0, v.vy || 0) : 0;
+    if (sp > 300) for (let d = 768; d <= Math.min(sp * 15, 9000); d += 768) ahead.push({ x: v.x + (v.vx / sp) * d, y: v.y + (v.vy / sp) * d, r: 1 });
+  }
+  artCdn.focus([...pts, ...ahead]);
+}, 4000).unref();
 
 // Update warning: deploy/auto-update.sh writes the restart time (epoch ms) to <data>/update-at
 // a minute before it restarts the server with a new version; everyone online gets a countdown.
