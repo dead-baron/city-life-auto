@@ -291,7 +291,7 @@ export function leave(world, p) {
 export function safeToIdle(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || p.wanted > 0 || p.heat >= 1 || p.custody || ped.cuffed || ped.carrying) return false;
-  if (world.time < (ped.downUntil || 0) || world.time - (ped.lastHitAt ?? -1e9) < AWAY_HURT_S) return false;
+  if (world.time < (ped.downUntil || 0) || world.time - (ped.lastHitAt || -1e9) < AWAY_HURT_S) return false;
   const v = ped.vehId ? world.get(ped.vehId) : null;
   if (v && v.cargo && v.cargo.some((c) => c)) return false;
   return true;
