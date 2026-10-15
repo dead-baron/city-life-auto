@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { generateCity, cityFromData, CityMap, mapSignature } from '../shared/map.js';
 import { packRegions, assembleCity, readPack, regionGrid, regionKeys, regionKey, regionOf, itemTile, REGIONAL, OMIT, PACK_VERSION } from '../shared/regionpack.js';
-import { REGION_TILES, REGIONS_X, REGIONS_Y, FRAME_W, FRAME_H } from '../shared/world3.js';
+import { REGION_TILES, REGIONS_X, REGIONS_Y, REGION_COUNT, FRAME_W, FRAME_H } from '../shared/world3.js';
 import { MAP_W, MAP_H, TILE } from '../shared/constants.js';
 import { cutWorld, createWorldCdn } from '../server/worldcdn.js';
 import { cityFor, fetchCity } from '../client/worldgen.js';
@@ -79,7 +79,7 @@ test('the split: a region holds its rectangle of every layer and the items whose
   assert.ok(seen.railPts && seen['levels.segs'] && X.root.railPts === null && X.root.levels.segs === null && X.root.levels.grid, "the railway's points and the levels' segments too (the levels' grid stays whole)");
 });
 
-test("a World v3 frame splits 10 x 8, and a map that is a window onto it travels with its origin", () => {
+test("a World v3 frame splits 13 x 8, and a map that is a window onto it travels with its origin", () => {
   const g = regionGrid(FRAME_W, FRAME_H);
   assert.deepEqual([g.nx, g.ny], [REGIONS_X, REGIONS_Y]);
   const x0 = 600, y0 = 500, w = 700, h = 600;
@@ -89,7 +89,7 @@ test("a World v3 frame splits 10 x 8, and a map that is a window onto it travels
   const c = { seed: 7, x0, y0, w, h, tiles, bld, props: [{ t: 'a', x: (x0 + 10) * TILE, y: (y0 + 10) * TILE }, { t: 'b', x: (x0 + 690) * TILE, y: (y0 + 590) * TILE, k: undefined, z: -0 }],
     solidProps: new Map([[5 * w + 5, [e]]]), propSolid: new Map([[1, e]]), spawns: { a: { x: 1, y: NaN } }, noTree: new Set([3, 4]) };
   const p = packRegions(c, { frame: [FRAME_W, FRAME_H] });
-  assert.equal(p.regions.length, 80);
+  assert.equal(p.regions.length, REGION_COUNT);
   const back = assembleCity(p.index, p.regions.map((r) => r.bytes));
   assert.deepEqual(Object.keys(back), Object.keys(c));
   assert.deepEqual([back.x0, back.y0, back.w, back.h], [x0, y0, w, h], 'the window travels in the index');

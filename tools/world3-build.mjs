@@ -14,7 +14,7 @@ await imp('shared/world3-islands.js');   // (lets generateCity take { world3 })
 const { TILE, T } = await imp('shared/constants.js');
 const { FRAME_W, FRAME_H } = await imp('shared/world3.js');
 const { buildLand3 } = await imp('shared/world3-land.js');
-const { worldPieces } = await imp('shared/world3-world.js');
+const { BIOMES } = await imp('shared/world3-skeleton.js');
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i >= 0 ? process.argv[i + 1] : d; };
 const JSON_OUT = process.argv.includes('--json');
@@ -37,25 +37,14 @@ export function prepare() {
   return { land, today: td, todayMs, landMs };
 }
 
-// the frame's tiles by place: each gulf piece's districts (Port Westport's 26 is Westport's), the small islands by their
-// placed rectangle, the rest of the land the mainland
+// the frame's tiles by place (World v3b: no pieces of today's world): each biome of the mainland, the islands, the sea
 export function placeOf(land) {
   const L = land.layers, W = land.w, H = land.h, N = W * H;
-  const pieces = worldPieces(), keys = pieces.map((p) => p.key).concat(['mainland', 'sea']);
-  const MAIN = pieces.length, SEA = MAIN + 1;
-  const byDist = new Int16Array(256).fill(-1);
-  for (const p of pieces) if (p.ids) for (const d of p.ids) byDist[d] = p.k;
-  byDist[26] = pieces.find((p) => p.key === 'westport').k;
-  const small = pieces.filter((p) => !p.ids);
+  const keys = [...BIOMES.map((b) => b.key), 'islands', 'sea'], ISL = BIOMES.length, SEA = ISL + 1;
   const at = new Uint8Array(N);
   for (let i = 0; i < N; i++) {
-    if (!L.land[i] && !L.water[i]) { at[i] = SEA; continue; }
-    if (!L.land[i] && (L.water[i] === 1 || L.water[i] === 2)) { at[i] = SEA; continue; }
-    const d = L.dist[i], k = byDist[d];
-    if (k >= 0) { at[i] = k; continue; }
-    const x = i % W, y = (i / W) | 0;
-    const p = d < 47 ? small.find((q) => x >= q.rect[0] + q.dx && y >= q.rect[1] + q.dy && x < q.rect[2] + q.dx && y < q.rect[3] + q.dy) : null;
-    at[i] = p ? p.k : MAIN;
+    if (!L.land[i] && (L.water[i] === 1 || L.water[i] === 2 || !L.water[i])) { at[i] = SEA; continue; }
+    at[i] = L.biome[i] ? L.biome[i] - 1 : ISL;
   }
   return { at, keys };
 }
@@ -94,5 +83,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     for (const r of out.places) console.log(`${r.key.padEnd(11)} land ${String(r.land).padStart(8)}  road tiles ${String(r.roadTiles).padStart(7)}  edges ${String(r.edges).padStart(5)}  buildings ${String(r.buildings).padStart(4)}  POIs ${String(r.pois).padStart(4)}  props ${String(r.props).padStart(6)}`);
     console.log('split', m.world3?.split, 'offFrame', m.world3?.offFrame, 'cut', JSON.stringify(m.world3?.cut), 'dropped', JSON.stringify(m.world3?.dropped));
     console.log('crossings', JSON.stringify((m.world3?.crossings || []).map((c) => `${c.name} (${c.len} m${c.foot ? ', foot' : ''})`)));
+    const R = m.world3?.roads || {};
+    console.log('roads', JSON.stringify(Object.fromEntries(Object.entries(R).map(([k, v]) => [k, Array.isArray(v) ? v.length : v]))));
+    const km = (pts) => { let s = 0; for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); return (s / TILE / 1000).toFixed(2); };
+    for (const r of m.rails || []) console.log(`rail ${r.name}: ${km(r.pts)} km, ${r.stations?.length ?? 0} stations, under ${r.pts.filter((p) => p.under).length}/${r.pts.length} points`);
+    let br = 0; for (let i = 0; i < m.tiles.length; i++) if (m.tiles[i] === T.BRIDGE) br++;
+    console.log('bridge tiles', br, 'tunnels', (m.tunnels || []).length, 'rail hubs', (m.railHubs || []).length, 'level crossings', (m.rails || []).reduce((s, r) => s + (r.crossings?.length || 0), 0));
+    console.log('ferries', JSON.stringify((m.world3?.ferries || []).map((f) => `${f.name}: ${(f.stops || []).map((s) => s.name + (s.built === false ? ' (not built)' : '')).join(', ')}`)));
   }
 }

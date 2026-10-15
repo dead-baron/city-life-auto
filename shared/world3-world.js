@@ -17,7 +17,6 @@
 import { TILE, T } from './constants.js';
 import { measure } from './geom.js';
 import { ISLANDS, PIECES, ARTERIALS, PORT_WESTPORT } from './world3-skeleton.js';
-import { PLACEMENTS } from './world3.js';
 import { WATER3, TERRAIN3 } from './world3-land.js';
 import { joinPlace } from './world3-crossings.js';
 import { layRoads, roadTunnels } from './world3-roads.js';
@@ -35,25 +34,30 @@ import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
 import { wildSites3, wildDone, movedAt, wildDist, wildFarm3 } from './world3-wild.js';
 import { buildRelief3 } from './world3-relief.js';
 // (v3b, WORLD-V3.md 9.3: the city - its districts, its streets and its places; on the v3b frame only)
-import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS } from './world3-city.js';   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
+import { buildAirstrips3 } from './world3-airstrips.js';   // (v3b: the crop dusters' strips and Lucky Mesa's)
+import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
 const CLS = [0, 1, 2, 3, 4, 5, 1, 1, 4];
 const NONE = { key: 'none', at: [-1e5, -1e5], from: [0, 0], s: 1, dx: 0, dy: 0, k: -1 };
+// The container yard on PORT_WESTPORT's rectangle (shared/world3-passes.js quays), in Port Westport's district (the city
+// generator paints the rectangle as Port Westport: shared/world3-city.js)
+export const QUAYS = true;
+// The regional modules (the towns, Lucky Mesa, the desert towns, the water's places, Egret Point, the wild land's moved
+// sites, the beach towns, the relief), re-anchored on World v3b's layout. (Off: the build lays the land, the skeleton's
+// roads and rail, the biomes' ground and dressing and the ferries only.)
+export const REGIONAL = true;
 
-// The pieces: the gulf's (their pictures) and the small islands placed whole (PLACEMENTS: scale 1, by their rectangle).
+// The pieces: the places of today's world built at their place in the frame (WR3's islands' and PIECES' pictures).
+// World v3b has none (part 9: the city generator lays the districts anew) - the list is empty and every position of
+// today's world goes off the frame (NONE).
 export function worldPieces() {
   const out = [];
   for (const I of [...ISLANDS, ...PIECES]) {
     if (!I.picture) continue;
     const { at, from, scale, ids } = I.picture;
     out.push({ key: I.key, name: I.name, at: [at[0], at[1]], from: [from[0], from[1]], s: scale, dx: at[0] - from[0], dy: at[1] - from[1], ids, rect: from });
-  }
-  for (const I of ISLANDS) {
-    if (!I.placement) continue;
-    const Q = PLACEMENTS[I.placement];
-    out.push({ key: I.key, name: I.name, at: [Q.from[0] + Q.offset[0], Q.from[1] + Q.offset[1]], from: [Q.from[0], Q.from[1]], s: 1, dx: Q.offset[0], dy: Q.offset[1], ids: null, rect: Q.from });
   }
   out.forEach((p, k) => { p.k = k; });
   return out;
@@ -64,11 +68,11 @@ export function worldOpts(asked) {
   if (!land3 || !today) throw new Error('world3: pass land (world3-land.js buildLand3(today)) and today (today\'s world: w, h, dist, land)');
   const L = land3.layers, W = land3.w, H = land3.h, N = W * H;
   const W0 = today.w, H0 = today.h, tDist = today.dist, tLand = today.land;
-  const towns = paintTowns3(L, W, H);   // (the first mainland towns' ground on the land layer: shared/world3-towns.js, 8.13)
-  const mesa = paintMesa3(L, W, H);   // (Lucky Mesa's districts on the land layer: shared/world3-mesa.js, 8.15)
-  const desert = paintDesert3(L, W, H);   // (Copper Gulch's and Dusty Hollow's districts: shared/world3-desert.js, 8.18)
-  const water = paintWater3(L, W, H);   // (H46, 8.21: Kestrel Lake's island - shared/world3-water.js)
-  const west = paintWest3(L, W, H);   // (Egret Point's district: shared/world3-west.js, 8.20)
+  const towns = REGIONAL ? paintTowns3(L, W, H) : null;   // (the first mainland towns' ground on the land layer: shared/world3-towns.js, 8.13)
+  const mesa = REGIONAL ? paintMesa3(L, W, H) : null;   // (Lucky Mesa's districts on the land layer: shared/world3-mesa.js, 8.15)
+  const desert = REGIONAL ? paintDesert3(L, W, H) : null;   // (Copper Gulch's and Dusty Hollow's districts: shared/world3-desert.js, 8.18)
+  const water = REGIONAL ? paintWater3(L, W, H) : null;   // (H46, 8.21: Kestrel Lake's island - shared/world3-water.js)
+  const west = REGIONAL ? paintWest3(L, W, H) : null;   // (Egret Point's district: shared/world3-west.js, 8.20)
   const city = W === CITY_FRAME[0] && H === CITY_FRAME[1] ? paintCity3(L, W, H, { 26: [PORT_WESTPORT.rect] }) : null;   // (v3b: the city's districts - world3-city.js; Port Westport takes the container quays' rect)
   const pieces = worldPieces();
   const byDist = new Int16Array(256).fill(-1);
@@ -87,7 +91,7 @@ export function worldOpts(asked) {
     return NONE;
   };
   // (a position on today's water - a pier, a spot by the shore - takes the piece of the nearest land within 8 tiles)
-  const pick = (x, y) => { const p = pick0(x, y); return p === NONE ? movedAt(x, y) || NONE : p; };   // (H44, 8.19: the wild land's nature sites moved whole - world3-wild.js MOVED)
+  const pick = (x, y) => { const p = pick0(x, y); return p === NONE ? (REGIONAL && movedAt(x, y)) || NONE : p; };   // (H44, 8.19: the wild land's nature sites moved whole - world3-wild.js MOVED)
   const pick0 = (x, y) => {
     const p = pieceAt(x, y);
     if (p) return p;
@@ -117,21 +121,21 @@ export function worldOpts(asked) {
     if (p) return f(Math.floor(p.from[0] + (tx - p.at[0]) / p.s), Math.floor(p.from[1] + (ty - p.at[1]) / p.s));
     return CLS[L.terrain[i]] ?? 1;
   };
-  const base = pieces.find((p) => p.key === 'metro');
+  const base = pieces.find((p) => p.key === 'metro') || NONE;   // (World v3b: no pieces - today's world goes off the frame)
   const built = new Set();
   let keep = null;   // (the room along the skeleton's lines: world3-biomes.js skeletonRoom)
-  const metro = ISLANDS.find((I) => I.key === 'metro');
+  const metro = ISLANDS.find((I) => I.key === 'metro') || ISLANDS.find((I) => I.key === 'big');   // (World v3b: the big Gulf Island)
   const box = [W, H, 0, 0];
   for (const [x, y] of metro.poly) { box[0] = Math.min(box[0], x - 40); box[1] = Math.min(box[1], y - 40); box[2] = Math.max(box[2], x + 40); box[3] = Math.max(box[3], y + 40); }
   const o = {
-    ...(city ? { parks: CITY_PARKS, airports: [CITY_AIRPORT], seedOf: (d) => CITY_SEEDS[d] } : {}),   // (v3b: the park, the stadium and the airport at their v3b spots; each district's heart - world3-city.js)
-    world: { pick, base, placeLine, cls, pieces, dist: wildDist, farm: (m, rand, G) => { if (m.world3?.wild) m.world3.wild.farmBuilt = wildFarm3(m, rand, G); } },   // (H51: Dry Creek's farm - map.js buildFarm's hook)   // (dist: today's wild districts' v3 regions, for the moved nature sites - 8.19)
+    ...(city ? { parks: CITY_PARKS, airports: [CITY_AIRPORT], seedOf: (d) => CITY_SEEDS[d], spotOf: (sp) => ({ 'Metro Museum of Art': CITY_SPOTS.museum, 'The Playhouse': CITY_SPOTS.playhouse })[sp.names && sp.names[0]] || null } : {}),   // (v3b: the park, the stadium and the airport at their v3b spots; each district's heart - world3-city.js)
+    world: { spawn: [3248, 1600], pick, base, placeLine, cls, pieces, dist: REGIONAL ? wildDist : (d) => d, farm: (m, rand, G) => { if (REGIONAL && m.world3?.wild) m.world3.wild.farmBuilt = wildFarm3(m, rand, G); } },   // (H51: Dry Creek's farm - map.js buildFarm's hook)   // (dist: today's wild districts' v3 regions, for the moved nature sites - 8.19)
     place: base,
     islandAt: [],
     noRail: true,     // (the railway is the skeleton's main line now)
     ownRiver: true,   // (the inland water is the land's)
     box,              // (map.js's coast drives reach Metro City's new east shore)
-    quays: [{ name: 'Port Westport', rect: PORT_WESTPORT.rect, faces: PORT_WESTPORT.faces, freight: 'Westport Freight' }],
+    quays: QUAYS ? [{ name: 'Port Westport', rect: PORT_WESTPORT.rect, faces: PORT_WESTPORT.faces, freight: 'Westport Freight' }] : [],   // (World v3b: the city generator lays the port - QUAYS off until it does)
     land(land, m) {
       if (m.w !== W || m.h !== H) throw new Error(`world3: the frame must be the land's (${W} x ${H})`);
       for (let i = 0; i < N; i++) { land[i] = L.land[i]; if (L.land[i]) built.add(L.dist[i]); }
@@ -186,8 +190,16 @@ export function worldOpts(asked) {
     dressed: dressedBy3,
     pine: pineAt3(L, W),
     unbuilt: new Set([52]),   // (the Sandpiper Coast: no streets yet; Northshore's beach towns (54) are built - world3-beach.js, 8.14)
-    dress(m, H2) { if (m.world3?.west) m.world3.west.built = buildWest(m, H2.addProp); if (m.world3?.mesa) m.world3.mesa.built = buildMesa(m, H2.addProp); if (m.world3?.desert) m.world3.desert.built = buildDesert(m, H2.addProp); if (m.world3) m.world3.water = { painted: water, ...buildWater3(m, H2.addProp) }; if (m.world3) m.world3.relief = buildRelief3(m, L, H2.addProp); m.world3biomes.dress = dress3(m, L, keep, H2); },   // (8.20: Egret Point, the lights, the falls - world3-west.js; 8.18: the mine, Dusty Hollow, the dam - world3-desert.js; 8.21: Prison Island, the lock, Kestrel Lake - world3-water.js; Lucky Mesa's resorts - world3-mesa.js, 8.15)
+    dress(m, H2) { const strips = () => { if (W === CITY_FRAME[0] && H === CITY_FRAME[1]) m.world3.airstrips = buildAirstrips3(m, H2); };   // (v3b's airstrips: after the biomes' dressing, which they clear off their ground)
+      if (!REGIONAL) { m.world3biomes.dress = dress3(m, L, keep, H2); strips(); return; } if (m.world3?.west) m.world3.west.built = buildWest(m, H2.addProp); if (m.world3?.mesa) m.world3.mesa.built = buildMesa(m, H2.addProp); if (m.world3?.desert) m.world3.desert.built = buildDesert(m, H2.addProp); if (m.world3) m.world3.water = { painted: water, ...buildWater3(m, H2.addProp) }; if (m.world3) m.world3.relief = buildRelief3(m, L, H2.addProp); m.world3biomes.dress = dress3(m, L, keep, H2); strips(); },   // (8.20: Egret Point, the lights, the falls - world3-west.js; 8.18: the mine, Dusty Hollow, the dam - world3-desert.js; 8.21: Prison Island, the lock, Kestrel Lake - world3-water.js; Lucky Mesa's resorts - world3-mesa.js, 8.15)
     done(m, H3) {
+      if (!REGIONAL) {
+        const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
+        m.world3.housesMoved = seatStationHouses(m);
+        if (H3) m.world3.railCleared = clearRailDressing(m, H3.removeProps);
+        m.world3.ferries = buildFerries3(m, H3);
+        return;
+      }
       m.world3.towns.built = townsDone(m);   // (the towns' gas stations and bus stops: world3-towns.js, 8.13)
       m.world3.towns.models = townModels(m);   // (H40, 8.13.2: the towns' own buildings, their yards, the boardwalk's rails, benches and lamps, the pier's end: world3-towns.js)
       if (m.world3.mesa) m.world3.mesa.done = mesaDone(m);   // (Lucky Mesa's gas station, bus stop and summary: world3-mesa.js, 8.15)
@@ -202,10 +214,10 @@ export function worldOpts(asked) {
     },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground)
     special: (sp) => built.has(sp.d),
-    specials: [...TOWN_SPECIALS, ...MESA_SPECIALS, ...DESERT_SPECIALS],   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
-    styles: { ...TOWN_STYLES, ...MESA_STYLES, ...DESERT_STYLES },   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
+    specials: REGIONAL ? [...TOWN_SPECIALS, ...MESA_SPECIALS, ...DESERT_SPECIALS] : [],   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
+    styles: REGIONAL ? { ...TOWN_STYLES, ...MESA_STYLES, ...DESERT_STYLES } : {},   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)
-    rails: (m) => { beachFront(m, L); const tf = townsFront(m); if (m.world3?.towns) m.world3.towns.front = tf; if (m.world3?.mesa) m.world3.mesa.lots = mesaLots(m); return [...mainLineLoops(m), ...subwayLoops(m)]; },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
+    rails: (m) => { if (!REGIONAL) return [...mainLineLoops(m), ...subwayLoops(m)]; beachFront(m, L); const tf = townsFront(m); if (m.world3?.towns) m.world3.towns.front = tf; if (m.world3?.mesa) m.world3.mesa.lots = mesaLots(m); return [...mainLineLoops(m), ...subwayLoops(m)]; },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
     lines(lines, m) {
       const out = { split: 0, offFrame: 0 };
       const inF = (p) => p.x >= 0 && p.y >= 0 && p.x < W * TILE && p.y < H * TILE;
@@ -231,7 +243,7 @@ export function worldOpts(asked) {
       const sea = (x, y) => { const tx = Math.round(x), ty = Math.round(y); if (!(tx >= 0 && ty >= 0 && tx < W && ty < H)) return false; const w = L.water[ty * W + tx]; return w === WATER3.SEA || w === WATER3.DEEP; };
       const crossings = [];
       for (const A of ARTERIALS) {
-        if (/^Canal /.test(A.name)) continue;
+        if (/^Canal /.test(A.name)) continue;   // (WR3's canal bridges: none in World v3b)
         const a = A.pts[0], b = A.pts[A.pts.length - 1];
         if (!isLand(a[0], a[1]) || !isLand(b[0], b[1])) continue;
         let wet = 0, len = 0;
@@ -245,6 +257,7 @@ export function worldOpts(asked) {
       m.world3 = { pieces: pieces.map((p) => ({ key: p.key, at: p.at, s: p.s })), split: out.split, offFrame: out.offFrame, cut: j.cut, dropped: j.dropped, bridged: j.bridged, canal: j.canal, crossings };
       m.world3.roads = layRoads(lines, m, L);   // (the skeleton's highways and arterials: shared/world3-roads.js, 8.7)
       if (city) m.world3.city = { painted: city, streets: layCity3(lines, m) };   // (v3b: the city's avenues, streets and alleys, the bridges met - world3-city.js)
+      if (!REGIONAL) return;
       m.world3.towns = { painted: towns, streets: layTowns3(lines, m) };   // (the towns' street grids: world3-towns.js, 8.13)
       m.world3.beach = beachStreets(lines, m, L);   // (Northshore's beach towns' streets: shared/world3-beach.js, 8.14)
       m.world3.mesa = { painted: mesa, streets: layMesa3(lines, m) };   // (Lucky Mesa's Strip and side streets: shared/world3-mesa.js, 8.15)

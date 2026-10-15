@@ -56,47 +56,16 @@ export const TOWNS3 = [
     // Sandpiper Drive (TOWN_ROADS3) is its main street, the sand and the sea south of it; the boardwalk along the top
     // of the sand in front of the town (columns x0-x1, `walk` tiles deep) and the pier out from it
     main: { line: 'Sandpiper Drive', y: 2804, a: 5320, b: 5466, ramp: 50 }, pulls: [],
-    front: { x0: 5340, x1: 5500, walk: 3, pier: { x: 5426, w: 3, out: 34 } },
+    front: { x0: 5340, x1: 5476, walk: 3, pier: { x: 5426, w: 3, out: 34 } },
     streets: [['Shell Street', [[5344, 2804], [5344, 2774], [5436, 2774], [5436, 2804]]], ['Dune Street', [[5390, 2774], [5390, 2748]]],
       ['Pier Street', [[5370, 2804], [5370, 2834], [5452, 2834], [5452, 2804]]], ['Gull Lane', [[5344, 2804], [5344, 2834], [5370, 2834]]]],
     ground: [[5320, 2758, 5500, 2880], [5374, 2734, 5406, 2758]] },
 ];
 export const TOWN_IDS = new Set(TOWNS3.map((t) => t.d));
 
-// (v3b, docs/WORLD-V3.md part 9) The country arterials the regional places are laid on, by the names their modules
-// look them up by (a town's main street is the arterial through it, pulled straight; the desert's, the west coast's
-// and the beach towns' set pieces find theirs by name): control points in frame tiles, the skeleton's ARTERIALS form
-// (shared/world3-skeleton.js). The integration merges them into ARTERIALS (where the transport skeleton lays a road
-// of its own along the same course, its line takes the name instead).
-export const TOWN_ROADS3 = [
-  // Highland Woods: through Timber Bend (its main street on row 1423), west past the hamlet by the western falls'
-  // creek, east out of the woods to the main line's valley stretch
-  { name: 'Timber Road', pts: [[1300, 1600], [1560, 1423], [2150, 1423], [2300, 1450]] },
-  // Willow Valley: from the lake's east shore through Willow Crossing (its main street on row 1018), east across the
-  // valley's fields and the desert's edge, round the mesas to Copper Gulch (its main street on row 1625) and the mine
-  { name: 'Mine Road', pts: [[3640, 1018], [4060, 1018], [4380, 1180], [4560, 1460], [4660, 1625], [4924, 1625]] },
-  { name: 'Willow Road', pts: [[3722, 745], [3722, 1500]] },   // (from the main line's north valley stretch across its south one to Brightwater Airstrip)
-  // Kestrel Lake's roads (world3-water.js): Lake Road along its south shore from the North Spur to Willow Road (the
-  // boathouse's track comes down to it), Lakeshore Road up its west shore to the campground
-  { name: 'Lake Road', pts: [[3030, 1250], [3722, 1250]] },
-  { name: 'Lakeshore Road', pts: [[3170, 1250], [3170, 950]] },
-  // the Sandpiper Coast: from the East Highway's end down to Sandpiper Bay (its main street on row 2804)
-  { name: 'Sandpiper Drive', pts: [[4975, 2509], [5060, 2650], [5240, 2804], [5520, 2804]] },
-  // the Red Rock Desert: Mesa Road from the desert's west edge along the north to Lucky Mesa (the Strip on row 612);
-  // Route 9 from the Strip's east end round the east of the mesas, down the canyons to Dusty Hollow; Hollow Road from
-  // Copper Gulch's east end across the main line to Dusty Hollow; Canyon Road from it down to Red Rock Dam on the
-  // desert river
-  { name: 'Mesa Road', pts: [[4440, 650], [4700, 600], [5000, 600], [5150, 612], [5640, 612]] },
-  { name: 'Route 9', pts: [[5640, 612], [5640, 752], [5700, 930], [5980, 980], [5990, 1220], [5900, 1380], [5760, 1460], [5560, 1580], [5440, 1700], [5420, 1790]] },   // (west of Lucky Mesa's airstrip, round the north of the big mesa)
-  { name: 'Hollow Road', pts: [[4924, 1625], [5000, 1700], [5150, 1830], [5314, 1854]] },
-  { name: 'Canyon Road', pts: [[5150, 1830], [5190, 1990], [5205, 2150]] },
-  // the Egret Coast: the coast road round the marsh peninsula's west side, from the woods down to Egret Point's
-  // Wharf Street (row 3230)
-  { name: 'Redwood Coast Road', pts: [[1150, 1960], [900, 2000], [790, 2150], [780, 2900], [850, 3150], [1000, 3222], [1100, 3230]] },
-  // the north coast: the beachfront road of the beach towns (world3-beach.js: the sea north of it)
-  // (the main line's north stretch on row ~732 runs behind it; over the farm lake's mouth on a bridge at x ~3320)
-  { name: 'Shore Road', pts: [[2500, 690], [2640, 680], [2900, 680], [2960, 708], [3080, 708], [3140, 680], [3270, 684], [3380, 684], [3600, 672], [3800, 660], [4040, 680]] },
-];
+// (v3b) The country arterials the regional places are laid on: shared/world3-layout.js TOWN_ROADS3 (the skeleton lays
+// them with its own arterials: world3-skeleton.js ARTERIALS)
+export { TOWN_ROADS3 } from './world3-layout.js';
 const ROOM = { hwy: 24, main: 18, station: 30 };
 
 // the planned businesses (map.js SPECIALS' form; biz 'delivery' is a named place; fixed: the generator's later passes

@@ -398,8 +398,11 @@ function buildCity(seed, opts = null, frame = null) {
   const hosp = m.pois.find((p) => p.kind === 'hospital' && m.zoneAt(p.x, p.y) === Z.CITY) || m.pois.find((p) => p.kind === 'hospital');
   const pd = m.pois.find((p) => p.kind === 'police');
   m.hospitals = m.pois.filter((p) => p.kind === 'hospital').map((p) => ({ id: p.id, name: p.label, x: p.x, y: p.y + 44 }));
-  if (hosp || !OPTS?.island) m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 };   // (an island build may have neither: the world's are elsewhere)
-  if (pd || !OPTS?.island) m.spawns.police = { x: pd.x, y: pd.y + 44 };
+  // (an island build may have neither: the world's are elsewhere; World v3b's build has none until its city is laid -
+  // its world hook's `spawn`, tiles)
+  const fb = !hosp || !pd ? WD?.spawn && { x: WD.spawn[0] * TILE, y: WD.spawn[1] * TILE } : null;
+  if (hosp || !(OPTS?.island || fb)) m.spawns.hospital = { x: hosp.x, y: hosp.y + 44 }; else if (fb) m.spawns.hospital = fb;
+  if (pd || !(OPTS?.island || fb)) m.spawns.police = { x: pd.x, y: pd.y + 44 }; else if (fb) m.spawns.police = fb;
   m.spawns.default = m.spawns.hospital;
   if (OPTS?.done) OPTS.done(m, { removeProps });   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js; the main line's dressing cleared)
   mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)
@@ -693,10 +696,11 @@ function layoutRoads(m, rand) {
   m.plazas = metro.plazas;
   // coast drives (around the city and Southbank, away from the ring) and river drives
   const coastOk = (x, y) => { const z = zoneOf(x, y); return (z === Z.CITY || z === Z.SOUTH) && rD(x, y) >= BAND + 1 && !inPark(IX(x), IY(y)); };
-  for (const c of contours(m.distSea, W, H, 9 * 4, (x, y) => { const z = m.zone[y * W + x]; return z === Z.CITY || z === Z.SOUTH; }, Math.floor(PX(540)), Math.floor(PY(220)), Math.max(Math.ceil(PX(1060)), OPTS?.box?.[2] ?? 0), Math.max(Math.ceil(PY(920)), OPTS?.box?.[3] ?? 0))) {   // (OPTS.box: a place's land reaching past today's - Metro City's new east shore)
+  const noCity = !!(PL && PL.key === 'none');   // (World v3b: today's Metro City isn't placed - its coast and river drives would be traced over nothing, off the frame)
+  if (!noCity) for (const c of contours(m.distSea, W, H, 9 * 4, (x, y) => { const z = m.zone[y * W + x]; return z === Z.CITY || z === Z.SOUTH; }, Math.floor(PX(540)), Math.floor(PY(220)), Math.max(Math.ceil(PX(1060)), OPTS?.box?.[2] ?? 0), Math.max(Math.ceil(PY(920)), OPTS?.box?.[3] ?? 0))) {   // (OPTS.box: a place's land reaching past today's - Metro City's new east shore)
     for (const p of clipLine(smoothLine(c, 40), coastOk, 14 * TILE, 12)) lines.push({ pts: p, kind: 'drive', lvl: 0, name: 'Coast Drive' });
   }
-  for (const c of contours(m.distRiver, W, H, 8 * 4, (x, y) => { const z = m.zone[y * W + x]; return (z === Z.CITY || z === Z.SOUTH) && m.distSea[y * W + x] > 10 * 4; }, Math.floor(PX(700)), Math.floor(PY(540)), Math.ceil(PX(1060)), Math.ceil(PY(800)))) {
+  if (!noCity) for (const c of contours(m.distRiver, W, H, 8 * 4, (x, y) => { const z = m.zone[y * W + x]; return (z === Z.CITY || z === Z.SOUTH) && m.distSea[y * W + x] > 10 * 4; }, Math.floor(PX(700)), Math.floor(PY(540)), Math.ceil(PX(1060)), Math.ceil(PY(800)))) {
     for (const p of clipLine(smoothLine(c, 40), coastOk, 14 * TILE, 12)) lines.push({ pts: p, kind: 'drive', lvl: 0, name: 'Riverside Drive' });
   }
   // Pine Hills: winding collectors with cul-de-sacs off them
@@ -1444,7 +1448,8 @@ function placeSpecial(m, rows, rand, sp, passes, shrink = 1) {
   if (!cands.length) return false;
   if (seaSide) { const near = cands.filter(([row]) => nearSea(row)); if (near.length) cands = near; const home = cands.filter(([row]) => row.d === sp.d); if (home.length) cands = home; }
   // prefer lots near the heart of the district (or right at the spot a special was planned for: at, tiles)
-  const [sx, sy] = sp.at ? (pin(sp.at[0], sp.at[1]), [QX(sp.at[0] * TILE), QY(sp.at[1] * TILE)]) : seedOf(sp.d);
+  const own = sp.at && OPTS?.spotOf ? OPTS.spotOf(sp) : null;   // (World v3b: a fixed spot at its v3b place, frame tiles - world3-city.js CITY_SPOTS)
+  const [sx, sy] = own ? [own[0] * TILE, own[1] * TILE] : sp.at ? (pin(sp.at[0], sp.at[1]), [QX(sp.at[0] * TILE), QY(sp.at[1] * TILE)]) : seedOf(sp.d);
   unpin();
   const mid = (c) => [(c[0].iv[c[1]][0] + c[0].iv[c[1]][1]) / 2 * TILE, (c[0].y + c[0].h / 2) * TILE];
   cands.sort((a, b) => (sp.at ? Math.hypot(mid(a)[0] - sx, mid(a)[1] - sy) - Math.hypot(mid(b)[0] - sx, mid(b)[1] - sy) : Math.hypot(a[0].x * TILE - sx, a[0].y * TILE - sy) - Math.hypot(b[0].x * TILE - sx, b[0].y * TILE - sy)));

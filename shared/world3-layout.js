@@ -287,3 +287,37 @@ export const FERRIES3 = [
   { name: 'Gulf Water Bus', loop: true, pts: [[3300, 2060], [3100, 2140], [2420, 2480], [2250, 2600], [2500, 2850], [2950, 2900], [3700, 2960], [3850, 2650], [3800, 2200], [3600, 2080], [3300, 2060]] },
   { name: 'Key Water Bus', pts: [[3700, 3100], [3900, 3250], [4100, 3330]] },
 ];
+
+// (v3b, docs/WORLD-V3.md part 9) The country arterials the regional places are laid on, by the names their modules
+// look them up by (a town's main street is the arterial through it, pulled straight; the desert's, the west coast's
+// and the beach towns' set pieces find theirs by name): control points in frame tiles, the skeleton's ARTERIALS form
+// (shared/world3-skeleton.js). The skeleton lays them with its own (world3-skeleton.js ARTERIALS).
+export const TOWN_ROADS3 = [
+  // Highland Woods: through Timber Bend (its main street on row 1423), west past the hamlet by the western falls'
+  // creek, east out of the woods to the main line's valley stretch
+  { name: 'Timber Road', pts: [[1300, 1600], [1560, 1423], [2150, 1423], [2300, 1450]] },
+  // Willow Valley: from the lake's east shore through Willow Crossing (its main street on row 1018), east across the
+  // valley's fields and the desert's edge, round the mesas to Copper Gulch (its main street on row 1625) and the mine
+  { name: 'Mine Road', pts: [[3640, 1018], [4060, 1018], [4380, 1180], [4560, 1460], [4660, 1625], [4924, 1625]] },
+  { name: 'Willow Road', pts: [[3722, 745], [3722, 1500]] },   // (from the main line's north valley stretch across its south one to Brightwater Airstrip)
+  // Kestrel Lake's roads (world3-water.js): Lake Road along its south shore from the North Spur to Willow Road (the
+  // boathouse's track comes down to it), Lakeshore Road up its west shore to the campground
+  { name: 'Lake Road', pts: [[3030, 1250], [3722, 1250]] },
+  { name: 'Lakeshore Road', pts: [[3170, 1250], [3170, 950]] },
+  // the Sandpiper Coast: from the East Highway's end down to Sandpiper Bay (its main street on row 2804)
+  { name: 'Sandpiper Drive', pts: [[4975, 2509], [5060, 2650], [5240, 2804], [5476, 2804]] },
+  // the Red Rock Desert: Mesa Road from the desert's west edge along the north to Lucky Mesa (the Strip on row 612);
+  // Route 9 from the Strip's east end round the east of the mesas, down the canyons to Dusty Hollow; Hollow Road from
+  // Copper Gulch's east end across the main line to Dusty Hollow; Canyon Road from it down to Red Rock Dam on the
+  // desert river
+  { name: 'Mesa Road', pts: [[4440, 650], [4700, 600], [5000, 600], [5150, 612], [5640, 612]] },
+  { name: 'Route 9', pts: [[5640, 612], [5640, 752], [5700, 930], [5980, 980], [5990, 1220], [5900, 1380], [5760, 1460], [5560, 1580], [5440, 1700], [5420, 1790]] },   // (west of Lucky Mesa's airstrip, round the north of the big mesa)
+  { name: 'Hollow Road', pts: [[4924, 1625], [5000, 1700], [5150, 1830], [5314, 1854]] },
+  { name: 'Canyon Road', pts: [[5150, 1830], [5190, 1990], [5205, 2150]] },
+  // the Egret Coast: the coast road round the marsh peninsula's west side, from the woods down to Egret Point's
+  // Wharf Street (row 3230)
+  { name: 'Redwood Coast Road', pts: [[1150, 1960], [900, 2000], [790, 2150], [780, 2900], [850, 3150], [1000, 3222], [1100, 3230]] },
+  // the north coast: the beachfront road of the beach towns (world3-beach.js: the sea north of it)
+  // (the main line's north stretch on row ~732 runs behind it; over the farm lake's mouth on a bridge at x ~3320)
+  { name: 'Shore Road', pts: [[2500, 690], [2640, 680], [2900, 680], [2960, 708], [3080, 708], [3140, 680], [3270, 684], [3380, 684], [3600, 672], [3800, 660], [4040, 680]] },
+];

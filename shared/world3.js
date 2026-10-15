@@ -4,17 +4,17 @@
 // arithmetic, so every JS engine gets the same answers (CLAUDE.md: shared code is deterministic).
 import { CHUNK_TILES } from './constants.js';
 
-// The frame: 5040 x 4032 tiles (1 tile = 1 m), 10 x 8 regions of 504 x 504 tiles, each 21 x 21 net chunks of 24 tiles
+// The frame: 6552 x 4032 tiles (1 tile = 1 m), 13 x 8 regions of 504 x 504 tiles, each 21 x 21 net chunks of 24 tiles
 // (the art v2 bake chunk is the same 24 tiles, 768 px). A 3 x 3 window of regions (1.5 km square) is about today's
-// whole map.
+// whole map. (World v3b, docs/WORLD-V3.md 9.1: the owner's layout of 2026-10-14 is 13 regions wide - WR3's was 10.)
 export const REGION_CHUNKS = 21;
 export const REGION_TILES = REGION_CHUNKS * CHUNK_TILES;   // 504
-export const REGIONS_X = 10;
+export const REGIONS_X = 13;
 export const REGIONS_Y = 8;
-export const REGION_COUNT = REGIONS_X * REGIONS_Y;          // 80
-export const FRAME_W = REGIONS_X * REGION_TILES;            // 5040 tiles
+export const REGION_COUNT = REGIONS_X * REGIONS_Y;          // 104
+export const FRAME_W = REGIONS_X * REGION_TILES;            // 6552 tiles
 export const FRAME_H = REGIONS_Y * REGION_TILES;            // 4032 tiles
-export const FRAME_CHUNKS_X = REGIONS_X * REGION_CHUNKS;    // 210
+export const FRAME_CHUNKS_X = REGIONS_X * REGION_CHUNKS;    // 273
 export const FRAME_CHUNKS_Y = REGIONS_Y * REGION_CHUNKS;    // 168
 
 export const inFrame = (tx, ty) => tx >= 0 && ty >= 0 && tx < FRAME_W && ty < FRAME_H;
@@ -75,24 +75,10 @@ export function regionSeed(worldSeed, ri) {
   return (h >>> 0) || 0x9e3779b1;
 }
 
-// Where today's islands go in the frame (part 2's table: v3 tile = today's tile + offset). `from` is the island's
-// rectangle in today's map, [x0, y0, x1, y1) in tiles. A draft for the owner to OK: nothing reads it yet but the spike
-// (tools/world3-spike.mjs) and the tests.
-export const PLACEMENTS = {
-  metro: { name: 'Metro City + Southbank + Pelican Key', from: [542, 301, 1046, 948], offset: [1591, 1729] },
-  westport: { name: 'Westport', from: [34, 237, 498, 779], offset: [1400, 1800] },
-  airport: { name: 'Westport International', from: [68, 614, 391, 918], offset: [1950, 2140] },
-  cedar: { name: 'Cedar Isle', from: [270, 784, 992, 1159], offset: [2580, 2066] },
-  northshore: { name: 'Northshore, North Point, The Bluffs', from: [748, 29, 1208, 280], offset: [1510, 1560] },
-  highland: { name: 'Highland Woods', from: [31, 71, 405, 335], offset: [300, 1000] },
-  granite: { name: 'Granite Peaks', from: [459, 17, 819, 288], offset: [600, 150] },
-  drycreek: { name: 'Dry Creek', from: [1045, 251, 1298, 960], offset: [2555, 649] },
-  gull: { name: 'Gull Harbor', from: [40, 939, 210, 1101], offset: [920, 2181] },
-  coral: { name: 'Coral Cay', from: [1040, 997, 1198, 1143], offset: [520, 2423] },
-  paradise: { name: 'Paradise Cay', from: [465, 660, 521, 702], offset: [865, 2670] },
-  lighthouse: { name: 'Lighthouse Rock', from: [274, 41, 342, 99], offset: [-74, 1639] },
-  smuggler: { name: "Smuggler's Rock", from: [1205, 953, 1260, 1005], offset: [2355, 2337] },
-};
+// Where today's islands went in WR3's frame (part 2's table: v3 tile = today's tile + offset; `from` today's rectangle
+// [x0, y0, x1, y1)). World v3b (part 9) places nothing of today's map whole - the city generator builds the districts
+// anew on the owner's layout - so the table is empty; the functions below stay for the island builds' tools.
+export const PLACEMENTS = {};
 // A placement's rectangle in the frame, and the regions it touches.
 export function placedRect(p) {
   const [x0, y0, x1, y1] = p.from, [ox, oy] = p.offset;
@@ -140,20 +126,7 @@ export function cutRegion(layer, srcW, srcH, p, ri, fill = 0, keep = null, Out =
 // where Dry Creek's fields begin, today's zone line; in v3 a designed shore); `districts` - on a landmass it shares with
 // other pieces, the tiles whose nearest district seed (SEEDS + ISLAND_SEEDS, as map.js paints districts, without the
 // wobble) is one of these. Dry Creek isn't one: in v3 it is split between the valley and the desert and rebuilt.
-export const ISLAND_BUILDS = {
-  metro: { at: [[800, 500], [600, 360]], cutX: 1045 },
-  westport: { at: [[300, 500]], districts: [23, 24, 25, 26, 28, 30] },
-  airport: { at: [[300, 500]], districts: [27] },
-  cedar: { at: [[620, 1000]] },
-  northshore: { at: [[800, 150]], districts: [31, 32, 34] },
-  highland: { at: [[300, 500]], districts: [29] },
-  granite: { at: [[800, 150]], districts: [33] },
-  gull: { at: [[120, 1020]] },
-  coral: { at: [[1120, 1070]] },
-  paradise: {},
-  lighthouse: {},
-  smuggler: { at: [[1230, 978]] },
-};
+export const ISLAND_BUILDS = {};   // (World v3b: none - PLACEMENTS is empty)
 
 // The land of one island build, from today's land (a W x H byte grid, 1 = land, the scene islands already raised):
 // 1 on the tiles the build keeps. `seeds` are the district seeds [district, x, y]. Integer arithmetic only.

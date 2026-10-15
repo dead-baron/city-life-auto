@@ -1,18 +1,18 @@
-// Draws World v3's land (shared/world3-land.js buildLand3) to docs/world-v3-land.png: 1 px = 2 m (2520 x 2016), the
+// Draws World v3's land (shared/world3-land.js buildLand3) to docs/world-v3b/land.png: 1 px = 2 m (3276 x 2016), the
 // water in its shades, the biomes' ground, today's places in their district colours (district borders darker), and the
 // skeleton's lines over it (highways orange, arterials cream, the main line green, the subways pink and yellow, the
 // ferries pale; dashed in tunnels, cased white on bridges), the stations, towns and landmarks as dots.
 // Prints the build's time and memory and the numbers docs/WORLD-V3.md 8.2 quotes.
-//   node tools/world3-land.mjs [out.png]      (builds today's world first: a few seconds)
+//   node tools/world3-land.mjs [out.png]      (World v3b's land reads nothing of today's world)
 import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 import { generateCity, DISTRICTS, WILD_DISTRICTS } from '../shared/map.js';
 import { buildLand3, WATER3, TERRAIN3 } from '../shared/world3-land.js';
 import { skeletonLines, STATIONS, TOWNS, LANDMARKS, BIOMES } from '../shared/world3-skeleton.js';
 
-const out = process.argv[2] || 'docs/world-v3-land.png';
+const out = process.argv[2] || 'docs/world-v3b/land.png';
 let t = performance.now();
-const today = generateCity(1337);
+const today = null;   // (World v3b: the land copies nothing of today's world)
 const tToday = performance.now() - t;
 const m0 = process.memoryUsage().rss;
 t = performance.now();
