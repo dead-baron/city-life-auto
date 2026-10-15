@@ -23,22 +23,27 @@ import { stamp } from './world3-towns.js';
 // lot is looked for within 60 tiles of it). (v3b, docs/WORLD-V3.md part 9: re-anchored on the owner's map - the woods'
 // hamlets on the sketch's small grey patches (Pine Ridge by the western falls' creek, the Highland stop by the woods'
 // south edge), the peaks' places in the north-west mountains (GROUND3.mount), the desert's along its west and north
-// edges off Mine Road, Mesa Road and the Casino Highway, the Route 9 stop on the desert's east side.) Highland Woods' in the woods off Timber Road and Woods Road (the skeleton's
-// "Redwood campgrounds" by Woods Road); Granite Peaks' up on the peaks off Summit Road, Falls Pass Road and Lookout Road;
-// Dry Creek's desert places in the Red Rock Desert's west, off Mine Road, Route 9 and Mesa Road (the Route 9 stop at
-// the skeleton's Route 9 point, The Rusty Spur by the Desert Highway at Mine Road's crossing).
+// edges off Mine Road, Mesa Road and the Casino Highway, the Route 9 stop on the desert's east side.) Highland Woods'
+// in the woods: Pine Ridge Campground by Highland Road's south end (the skeleton's "Redwood campgrounds"), the Highland
+// stop on the woods' south edge above the western city, the radio mast on the rise by Highland Road; Granite Peaks' up
+// in the north-west mountains (GROUND3.mount) on the wild places' country roads (world3-skeleton.js ARTERIALS): the
+// quarry off Timber Trail, the observatory at the top of Summit Road, the campground and the wind farm on the west
+// headland above Windy Point Road (North Cape Light at its tip), the mast on the north-east peaks at the end of North
+// Ridge Road; Dry Creek's desert places in the Red Rock Desert's west, off Mine Road, the North Coast Road, Copper Road
+// and Route 9 (the Route 9 stop at the skeleton's Route 9 point, The Rusty Spur by the Casino Highway at Mine Road's
+// crossing, the drive-in by Copper Gulch).
 export const WILD_SITES = [
   { name: 'Pine Ridge Campground', d: D3.WOODS, near: [1110, 1690] },
-  { name: 'Highland', d: D3.WOODS, near: [1940, 1690] },
-  { name: 'Highland Radio Mast', d: D3.WOODS, near: [1460, 1000] },
+  { name: 'Highland', d: D3.WOODS, near: [1939, 1619] },
+  { name: 'Highland Radio Mast', d: D3.WOODS, near: [1349, 1125] },
   { name: 'Granite Quarry', d: D3.PEAKS, near: [1200, 560] },
   { name: 'Granite Peak Observatory', d: D3.PEAKS, near: [960, 400] },
-  { name: 'Granite Cove Campground', d: D3.PEAKS, near: [700, 760] },
+  { name: 'Granite Cove Campground', d: D3.PEAKS, near: [690, 850] },
   { name: 'Windy Point Wind Farm', d: D3.PEAKS, near: [560, 860] },
-  { name: 'North Ridge Mast', d: D3.PEAKS, near: [1900, 470] },
-  { name: 'Dry Creek Oil Field', d: D3.DESERT, near: [4420, 980] },
+  { name: 'North Ridge Mast', d: D3.PEAKS, near: [1920, 500] },
+  { name: 'Dry Creek Oil Field', d: D3.DESERT, near: [4420, 1027] },
   { name: 'Sunfield Solar Farm', d: D3.DESERT, near: [4420, 1300] },
-  { name: 'Starlite Drive-In', d: D3.DESERT, near: [4500, 1540] },
+  { name: 'Starlite Drive-In', d: D3.DESERT, near: [4596, 1595] },
   { name: 'Route 9', d: D3.DESERT, near: [5960, 1100] },
   { name: 'Mesa Radio Mast', d: D3.DESERT, near: [4560, 760] },
   { name: 'Dry Creek Wind Farm', d: D3.DESERT, near: [4640, 720] },
@@ -55,57 +60,65 @@ const farmAt = (x, y) => [x + FARM.d[0], y + FARM.d[1]];
 // PXs / PYs, and its district through DS - the world build's `world.dist`): a square of today's tiles round each anchor
 // goes to its v3 spot at scale 1 (map.js pin: shared/world3-world.js `pick` asks movedAt for a position no piece builds).
 // Pine Lake between the Highland stop and Pine Ridge Campground as today's; Summit Tarn (its lake: islands.js LAKES),
-// its falls, creek and cabin meadow, Granite Hot Springs above Summit Road and The Sentinel Stones by the observatory's
-// road on the peaks; Dry Creek's boneyard, mission ruins and balloon field in the desert's west.
+// its falls, creek and cabin meadow, Granite Hot Springs above Summit Road's first bend (the road 24 tiles below its
+// middle, its pools clear of the road's edge: naturesites.js looks for it straight down) and The Sentinel Stones above
+// its ridge stretch on the peaks; Dry
+// Creek's boneyard, mission ruins (above the North Coast Road) and balloon field (south-east of the Casino Highway, its
+// track from Copper Road) in the desert's west.
 export const MOVED = [
   { name: 'Pine Lake', anchor: [136, 216], to: [1300, 1500], r: 40, d: D3.WOODS },
   { name: 'Summit Tarn', anchor: [575, 82], to: [1150, 400], r: 35, d: D3.PEAKS },
-  { name: 'Granite Hot Springs', anchor: [603, 125], to: [760, 600], r: 25, d: D3.PEAKS },
+  { name: 'Granite Hot Springs', anchor: [603, 125], to: [818, 594], r: 25, d: D3.PEAKS },
   { name: 'The Sentinel Stones', anchor: [744, 31], to: [900, 450], r: 20, d: D3.PEAKS },
   // Dry Creek's desert places in the Red Rock Desert's west, between the Desert Highway and Canyon Road (r: just the
   // anchor - nothing else of today's round it moves)
   // (keep: the box round `to`, tiles, the desert's dry washes are kept out of - world3-biomes.js paints them first)
   { name: 'Dry Creek Boneyard', anchor: [1248, 632], to: [4440, 1120], r: 4, d: D3.DESERT, keep: [-4, -4, 36, 76] },
-  { name: 'Old Mission Ruins', anchor: [1190, 405], to: [4700, 820], r: 4, d: D3.DESERT, keep: [-24, -24, 24, 24] },
-  { name: 'Dry Creek Balloon Field', anchor: [1150, 463], to: [4600, 1160], r: 4, d: D3.DESERT, keep: [-4, -4, 32, 27] },
-  // (H47) Highland Woods' Redwood Creek - its falls, pool, camp and the trapper's beaver pond upstream - where Timber Road
-  // crosses it (naturesites.js finds the road by the moved spot: today's Highland Road isn't in the v3 world), Giants
-  // Loop and the hunting lodge by Timber Road further east; Granite Peaks' Old Granite Mine above Lookout Road (its
-  // seams mined as today's: the cave world stays under Copper Gulch Mine's adit); the desert's Red Rock Canyon (the
-  // painting, its oasis and wash) south of Mesa Road, Mirage Lake and its camp west of Canyon Road, Splash Canyon
-  // Water Park on Mine Road (its top-left corner)
-  { name: 'Redwood Creek', anchor: [210, 189], to: [1600, 1250], r: 30, d: D3.WOODS },
-  { name: 'Giants Loop', anchor: [173, 131], to: [1650, 1300], r: 3, d: D3.WOODS },
-  { name: 'Fern Gorge', anchor: [309, 172], to: [2000, 1500], r: 3, d: D3.WOODS },   // (south of Timber Road, its trailhead on it; clear of the main line's room)
+  { name: 'Old Mission Ruins', anchor: [1190, 405], to: [4700, 806], r: 4, d: D3.DESERT, keep: [-24, -24, 24, 24] },
+  { name: 'Dry Creek Balloon Field', anchor: [1150, 463], to: [4630, 1212], r: 4, d: D3.DESERT, keep: [-4, -4, 32, 27] },
+  // (H47) Highland Woods' Redwood Creek - its falls, pool, camp and the trapper's beaver pond upstream - where Highland
+  // Road runs straight through the redwoods (naturesites.js finds the road by the moved spot: within 12 tiles of it),
+  // Giants Loop and the hunting lodge on Timber Road's north side west of Timber Bend (a road within 8 tiles of the
+  // spot), Fern Gorge south of Timber Road east of the town (its trailhead on it: within 24 tiles of the gorge's west
+  // side); Granite Peaks' Old Granite Mine above Timber Trail (its seams mined as today's: the cave world stays under
+  // Copper Gulch Mine's adit); the desert's Red Rock Canyon (the painting, its oasis and wash) off Copper Gulch Road,
+  // Mirage Lake and its camp in the open desert south of the North Coast Road (its track from it), Splash Canyon Water
+  // Park by Mine Road where it enters the desert (its top-left corner; on the desert's ground, east of the valley's)
+  { name: 'Redwood Creek', anchor: [210, 189], to: [1560, 1317], r: 30, d: D3.WOODS },
+  { name: 'Giants Loop', anchor: [173, 131], to: [1610, 1420], r: 3, d: D3.WOODS },
+  { name: 'Fern Gorge', anchor: [309, 172], to: [2000, 1440], r: 3, d: D3.WOODS },   // (south of Timber Road, its trailhead on it; clear of the main line's room)
   { name: 'Old Granite Mine', anchor: [537, 106], to: [1040, 620], r: 3, d: D3.PEAKS },
   { name: 'Canyon Oasis', anchor: [1190, 800], to: [5300, 980], r: 3, d: D3.DESERT, keep: [-31, -22, 31, 22] },
-  { name: 'Mirage Camp', anchor: [1092, 782], to: [4960, 1040], r: 12, d: D3.DESERT, keep: [-16, -36, 16, 20] },
-  { name: 'Splash Canyon Water Park', anchor: [1054, 850], to: [4180, 1110], r: 3, d: D3.DESERT, keep: [-3, -3, 47, 25] },
+  { name: 'Mirage Camp', anchor: [1092, 782], to: [4470, 915], r: 12, d: D3.DESERT, keep: [-16, -36, 16, 20] },
+  { name: 'Splash Canyon Water Park', anchor: [1054, 850], to: [4314, 1096], r: 3, d: D3.DESERT, keep: [-3, -3, 47, 25] },
   // (H51) the farm's orchard and vineyard by its offset (FARM); Redwood Cove on the Redwood Coast (the woods' west
-  // coast: a sandy beach of the woods' own, north of 8.20's three coves), Granite Cove on Kestrel Lake's north shore
+  // coast: a sandy beach of the woods' own, north of 8.20's three coves), Granite Cove on Kestrel Lake's north-east
+  // shore (v3b: the lake's shore 8 tiles below the beach, its bay open south to the lake)
   { name: 'Willow River Orchard', anchor: [1100, 438], to: farmAt(1100, 438), r: 3, d: D3.VALLEY },
   { name: 'Willow River Vineyard', anchor: [1121, 369], to: farmAt(1121, 369), r: 3, d: D3.VALLEY },
   { name: 'Redwood Cove', anchor: [58, 283], to: [520, 1100], r: 3, d: D3.WOODS },
-  { name: 'Granite Cove', anchor: [555, 225], to: [3125, 1060], r: 3, d: D3.VALLEY },   // (the peaks reach no sea: Kestrel Lake's north shore, the bay open south to the lake)
+  { name: 'Granite Cove', anchor: [555, 225], to: [3450, 962], r: 3, d: D3.VALLEY },   // (the peaks reach no sea: Kestrel Lake's north-east shore, the bay open south to the lake)
 ];
 // The tracks today's nature sites look for by name (H47), laid to their moved places from the nearest road they may
-// join: the Ridge Trail up to Summit Tarn from Summit Road (the fire lookout on its high stretch, the hunting camp by
-// it), the Canyon Track into Red Rock Canyon from Mesa Road (the oasis's turnaround at its end, the hunting camp),
-// the Mirage Track down to Mirage Lake (the camp at its end). end: the track's far end (tiles); avoid: a box it keeps
-// out of (the canyon painting's, placed after the roads).
+// join: the Ridge Trail up to Summit Tarn from Summit Road's end (the fire lookout on its high stretch, the hunting
+// camp by it), the Canyon Track into Red Rock Canyon from Copper Gulch Road (the oasis's turnaround at its end, the
+// hunting camp), the Mirage Track down to Mirage Lake from the North Coast Road (the camp at its end). end: the track's
+// far end (tiles); avoid: a box it keeps out of (the canyon painting's, the mission's: placed after the roads).
 export const WILD_TRACKS = [
   { name: 'Ridge Trail', end: [1180, 440], d: D3.PEAKS },
-  { name: 'Canyon Track', end: [5265, 980], d: D3.DESERT, avoid: [5269, 958, 5331, 1002] },
-  { name: 'Mirage Track', end: [4966, 1018], d: D3.DESERT },
+  { name: 'Canyon Track', end: [5238, 972], d: D3.DESERT, avoid: [5250, 940, 5314, 1004] },   // (v3b: from Copper Gulch Road round the painting's spot - west of the road - to its west side, where the oasis's own track leaves it)
+  { name: 'Mirage Track', end: [4476, 893], d: D3.DESERT },
   // the ways in to the moved sites that had none: the stones (from Summit Road), the boneyard (from Mine Road), the
-  // balloon field and the mission ruins
-  { name: 'Sentinel Trail', end: [894, 438], d: D3.PEAKS },
+  // balloon field (from Copper Road, to its south side) and the mission ruins (from the North Coast Road round the
+  // ruins to their north side)
+  { name: 'Sentinel Trail', end: [894, 438], d: D3.PEAKS, avoid: [894, 445, 906, 455] },   // (round the ring - its stones' open ground - to the point)
   { name: 'Boneyard Track', end: [4455, 1117], d: D3.DESERT },
-  { name: 'Balloon Field Track', end: [4614, 1186], d: D3.DESERT },
-  { name: 'Mission Track', end: [4700, 798], d: D3.DESERT },
-  // (H51) the ways down to the coves: from the nearest road to the top of each (the cove's own trail on down)
+  { name: 'Balloon Field Track', end: [4644, 1238], d: D3.DESERT },
+  { name: 'Mission Track', end: [4700, 788], d: D3.DESERT, avoid: [4692, 798, 4708, 815] },
+  // (H51) the ways down to the coves: from the nearest road to the top of each (the cove's own trail on down; Redwood
+  // Cove's from Windy Point Road's end)
   { name: 'Redwood Cove Track', end: [534, 1090], d: D3.WOODS },
-  { name: 'Granite Cove Track', end: [3127, 1044], d: D3.VALLEY, reach: 420 },   // (from Kestrel Road: no road comes nearer the lake's north shore)
+  { name: 'Granite Cove Track', end: [3452, 946], d: D3.VALLEY, reach: 420 },   // (from Cedar Farms Road, north of the lake)
 ];
 // (v3b, the owner 2026-10-14) the crop dusters' grass airstrips in the farm valley's open fields, and Lucky Mesa's
 // desert strip east of the town (the sketch's): runway [x0, y0, x1, y1) (mown grass in the valley, packed dirt in the
@@ -132,22 +145,26 @@ export function movedAt(x, y) {
 }
 // the pictures' views (tools/world3-world-map.mjs --towns --only <keys>: docs/world-v3-town-<key>.png)
 export const WILD_VIEWS = [
-  { key: 'pinelake', name: 'Pine Lake, the Highland stop, Pine Ridge Campground and the radio mast', box: [1050, 1440, 1990, 1760] },
+  { key: 'pinelake', name: 'Pine Lake, the Highland stop, Pine Ridge Campground and the radio mast', box: [1050, 1080, 1990, 1760] },
   { key: 'tarn', name: 'Summit Tarn, its falls and the cabin meadow', box: [1100, 360, 1210, 450] },
-  { key: 'summit', name: 'Granite Hot Springs, The Sentinel Stones and the observatory on Summit Road', box: [700, 380, 1000, 650] },
-  { key: 'quarry', name: 'The Granite Quarry on Falls Pass Road', box: [1130, 510, 1270, 610] },
-  { key: 'drycreek', name: 'The oil field, The Rusty Spur, the boneyard and the balloon field by the Desert Highway', box: [4380, 940, 4660, 1420] },
-  { key: 'route9', name: 'The Route 9 stop, the solar farm and the drive-in on Route 9', box: [4440, 1060, 6000, 1580] },
+  { key: 'summit', name: 'Granite Hot Springs, The Sentinel Stones and the observatory on Summit Road', box: [700, 370, 1100, 710] },
+  { key: 'quarry', name: 'The Granite Quarry off Timber Trail', box: [1130, 470, 1270, 620] },
+  { key: 'windypoint', name: 'Granite Cove Campground and Windy Point Wind Farm above Windy Point Road; Redwood Cove\'s track', box: [480, 820, 910, 1100] },
+  { key: 'northridge', name: 'North Ridge Mast at the end of North Ridge Road', box: [1880, 470, 2020, 810] },
+  { key: 'drycreek', name: 'The oil field, The Rusty Spur, the boneyard and the balloon field by the Casino Highway', box: [4360, 980, 4680, 1420] },
+  { key: 'mission', name: 'The Old Mission Ruins, the Dry Creek Wind Farm and the Mesa Radio Mast by the North Coast Road', box: [4540, 730, 4770, 850] },
+  { key: 'route9', name: 'The Route 9 stop, the solar farm and the drive-in on Route 9', box: [4400, 1060, 6000, 1620] },
   // (H47)
   { key: 'redwoods', name: 'Redwood Creek, its falls and the beaver pond; Giants Loop, the hunting lodge and Fern Gorge on Timber Road', box: [1540, 1200, 2060, 1540] },
   { key: 'ridge', name: 'The Ridge Trail up to Summit Tarn: the fire lookout, the hunting camp', box: [1100, 340, 1260, 500] },   // (H50: east to its start on Summit Road)
-  { key: 'oldmine', name: 'The Old Granite Mine above Lookout Road', box: [980, 570, 1110, 680] },
-  { key: 'canyon', name: 'Red Rock Canyon and its oasis off Mesa Road; Mirage Lake and its camp', box: [4900, 940, 5340, 1080] },
-  { key: 'splash', name: 'Splash Canyon Water Park on Mine Road', box: [4150, 1080, 4260, 1160] },
+  { key: 'oldmine', name: 'The Old Granite Mine above Timber Trail', box: [980, 570, 1110, 680] },
+  { key: 'canyon', name: 'Red Rock Canyon and its oasis off Copper Gulch Road', box: [5220, 930, 5340, 1030] },
+  { key: 'mirage', name: 'Mirage Lake and its camp at the end of the Mirage Track', box: [4430, 800, 4530, 950] },
+  { key: 'splash', name: 'Splash Canyon Water Park on Mine Road', box: [4290, 1080, 4380, 1170] },
   // (H51)
   { key: 'farm', name: 'Dry Creek\'s farm in Willow Valley: the fields, the co-op, the farmhouses, the orchard and the vineyard', box: [...farmAt(1030, 350), ...farmAt(1206, 700)] },
   { key: 'redwoodcove', name: 'Redwood Cove on the Redwood Coast', box: [470, 1060, 570, 1140] },
-  { key: 'granitecove', name: 'Granite Cove on Kestrel Lake\'s north shore', box: [3080, 1010, 3170, 1080] },
+  { key: 'granitecove', name: 'Granite Cove on Kestrel Lake\'s north-east shore', box: [3400, 870, 3500, 1000] },
   // (H50) the land's looks: the hillshade under Lookout Hill's orchard
   { key: 'lookouthill', name: 'Lookout Hill above Kestrel Lake: the hillshade under its orchard', box: [3300, 440, 3440, 560] },
 ];
