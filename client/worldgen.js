@@ -52,7 +52,7 @@ export async function fetchCity(base, key, seed, { fetchFn = globalThis.fetch, m
 const buildCity = async (seed) => { const { generateCity, cityData } = await import('../shared/map.js'); return cityData(generateCity(seed)); };
 
 // World v3's world (a server run with CLA_WORLD=v3: server/world3.js; its key is the world's hash with '-v3'): only
-// ever downloaded - 80 region files, so a longer wait - never built here (the generator would build today's)
+// ever downloaded - 104 region files, so a longer wait - never built here (the generator would build today's)
 const isV3 = (key) => /^[0-9a-f]{6,40}-v3:/.test(String(key || ''));
 
 // which city: { data, from }

@@ -1,6 +1,6 @@
 // World v3's whole world on the server (CLA_WORLD=v3: server/config.js; docs/WORLD-V3.md 8.6 and 8.9): today's world
 // first (the v3 build reads its districts and coast), then the land of the v3 frame (shared/world3-land.js), then the
-// world build - generateCity(seed, { world3: true, frame, land, today }) - one CityMap of the 5040 x 4032 frame. The
+// world build - generateCity(seed, { world3: true, frame, land, today }) - one CityMap of the 6552 x 4032 frame. The
 // generator's v3 modules are loaded only here, so a server running today's world never loads them.
 import { performance } from 'node:perf_hooks';
 

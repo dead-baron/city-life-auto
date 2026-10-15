@@ -192,7 +192,7 @@ export const SERVICES = [
 // Pink Line's stretch beside the Yellow Line under the mainland city is moved 30 tiles east (x 3161), so the two lines'
 // tracks run apart there; they meet at Union Square, the interchange.
 const PINK_PTS = [[3589, 1645], [3763, 1645], [3867, 1621], [4021, 1635], [4049, 1697], [4049, 1915], [4131, 2005], [3999, 2373], [4023, 2433], [4105, 2499], [4101, 2929], [4077, 2973], [3883, 2985], [3737, 3193], [3549, 3191], [3431, 3145], [3389, 3097], [3369, 2781], [3309, 2719], [2919, 2707], [2889, 2689], [2865, 2639], [2875, 2379], [2917, 2353], [3101, 2353], [3161, 2327], [3161, 1779], [3151, 1649], [3589, 1645]];
-export const SUBWAYS = SUBWAYS3.map((s) => ({ name: s.name, color: s.color, loop: true, r: 60, pts: s.name === 'Pink Line' ? PINK_PTS : s.pts }));
+export const SUBWAYS = SUBWAYS3.map((s) => ({ name: s.name, color: s.color, loop: true, pts: s.name === 'Pink Line' ? PINK_PTS : s.pts }));
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Ferries (FERRIES3; shared/world3-ferries.js finds the routes between the piers, so these are where the piers go):
@@ -442,7 +442,7 @@ const nearTown = (x, y, d) => TOWNS.some((t) => (t.at[0] - x) ** 2 + (t.at[1] - 
 const RAIL = { main: 1, sub: 1 };
 export function crossingKind(ka, kb, x, y) {
   const [a, b] = [ka, kb].sort((p, q) => ORDER[p] - ORDER[q]);
-  const town = nearTown(x, y, 260);
+  const town = nearTown(x, y, 260) || GROUND3.city.some((p) => inPoly(p, x, y));   // (World v3b: in the city areas the rail crosses streets by bridge)
   if (a === 'hwy' && b === 'hwy') return INTERCHANGES.some((ic) => Math.abs(ic.at[0] - x) + Math.abs(ic.at[1] - y) < 40) ? 'interchange' : 'flyover';
   if (a === 'hwy' && b === 'art') return town ? 'interchange' : 'overpass';
   if (a === 'hwy' && RAIL[b]) return 'bridge';

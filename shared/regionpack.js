@@ -1,6 +1,6 @@
 // The city as region files (World v3 part 8, stage 1: docs/WORLD-V3.md). The server builds the city once and cuts it
 // into shared/world3.js's regions (REGION_TILES squares over the world's frame: today's 1312 x 1200 is 3 x 3, the
-// right and bottom ones partial; v3's 5040 x 4032 is 10 x 8) plus an index; server/worldcdn.js serves them and
+// right and bottom ones partial; v3's 6552 x 4032 is 13 x 8) plus an index; server/worldcdn.js serves them and
 // client/worldgen.js fetches and assembles them instead of running the generator. Plain functions for node, a page
 // and a worker; no dependencies.
 //
@@ -75,7 +75,7 @@ export function regionSig(bytes) {
 }
 // does a region's file (raw) match the index's signature for it? (an index without signatures: nothing to check)
 export function regionMatches(sigs, key, raw) { return !sigs || (Object.hasOwn(sigs, key) && regionSig(raw) === sigs[key]); }
-// the coarse picture's step (tiles per pixel): only for a big frame (World v3's 5040 x 4032: 1260 x 1008 pixels)
+// the coarse picture's step (tiles per pixel): only for a big frame (World v3's 6552 x 4032: 1638 x 1008 pixels)
 export const PICTURE_K = 4;
 const pictureK = (W, H) => (W * H > 4e6 ? PICTURE_K : 0);
 
