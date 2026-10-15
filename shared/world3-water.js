@@ -19,30 +19,36 @@ import { TILE, T } from './constants.js';
 import { WATER3, TERRAIN3 } from './world3-land.js';
 
 const D = { valley: 49, prison: 55 };   // (shared/mapcore.js DISTRICTS: Willow Valley, Prison Island)
-// Prison Island (tiles): the walled compound round the exercise yard, its gate in the south wall
+// Prison Island (tiles; v3b, docs/WORLD-V3.md part 9: the owner's island far out in the south-east, world3-layout.js
+// ISLANDS3 'prison'): the walled compound round the exercise yard on the island's middle, its gate in the south wall,
+// the warden's house east of it, the light on the east point
 export const PRISON = {
   name: 'Kestrel Bay Penitentiary', island: 'Prison Island',
-  box: [4280, 3262, 4380, 3338], gate: [4326, 4330],   // the gate: these columns of the south wall
-  warden: [4402, 3282, 12, 9], light: [4512, 3294, 6, 6],
+  box: [5695, 3572, 5795, 3648], gate: [5741, 5745],   // the gate: these columns of the south wall
+  warden: [5814, 3594, 12, 9], light: [5876, 3612, 6, 6],
 };
-// the Long Reach (tiles): the weir and the lock at Willow Crossing (on the river between these two of its points, at
-// this row), the farm docks (a point in the river and the way to the bank)
+// the Long Reach (tiles; v3b: the farm valley lake's outlet below Willow Crossing, out to the sea's inlet): the weir
+// and the lock (on the river between these two of its points - a downstream, b upstream - at this row; the town's
+// bank north-east of it), the farm docks on its south-west bank (a point in the river and the way to the bank)
 export const REACH = {
-  lock: { a: [3320, 1300], b: [3250, 1110], y: 1200 },
-  docks: [['Hollins Farm Dock', [3330, 1560], -1], ['Brightwater Farm Dock', [3318, 1420], -1], ['Mill Farm Dock', [3040, 900], -1]],
+  lock: { a: [3736, 1300], b: [3646, 1230], y: 1265 },
+  docks: [['Hollins Farm Dock', [3755, 1308], -1], ['Brightwater Farm Dock', [3700, 1272], -1], ['Mill Farm Dock', [3620, 1205], -1]],
 };
-// Kestrel Lake (tiles)
+// Kestrel Lake (tiles; v3b: the farm valley's lake, world3-layout.js LAKES3[0], with the island the owner's concept
+// draws in it; the lookout on the hill over its north-east shore, the campground on its west shore by Lakeshore Road,
+// the boathouse on its south shore by Lake Road - world3-towns.js TOWN_ROADS3)
 export const KESTREL = {
-  island: { at: [2470, 610], rx: 28, ry: 19 },
-  lookout: [2600, 410], camp: [2366, 622, 2402, 660], boathouse: [2600, 800], rentName: 'Kestrel Lake Boat Hire',
-  belt: [2340, 400, 2940, 790],   // (the lake's green belt: the box it's looked for in; the Long Reach's mouth into the lake below it)
-  fishing: [['East Shore Fishing Dock', [2930, 600], [-1, 0]], ['North Shore Fishing Dock', [2700, 400], [0, 1]], ['Reed Bay Fishing Dock', [2520, 790], [0, -1]]],
+  island: { at: [3390, 1050], rx: 28, ry: 19 },
+  lookout: [3430, 860], camp: [3200, 930, 3236, 968], boathouse: [3350, 1192], rentName: 'Kestrel Lake Boat Hire',
+  belt: [3100, 700, 3660, 1230],   // (the lake's green belt: the box it's looked for in; its outlet, the Long Reach, below it)
+  fishing: [['East Shore Fishing Dock', [3626, 1080], [-1, 0]], ['North Shore Fishing Dock', [3450, 950], [0, 1]], ['Reed Bay Fishing Dock', [3250, 1192], [0, -1]]],
+  roads: { lookout: [3722, 860], lake: 1250, camp: [3170, 950] },   // (where the tracks out meet the roads: Willow Road, Lake Road's row, Lakeshore Road)
 };
 // the pictures' views (tools/world3-world-map.mjs --towns: docs/world-v3-town-<key>.png)
 export const WATER_VIEWS = [
-  { key: 'prison', name: 'Prison Island', box: [4090, 3130, 4570, 3460] },
-  { key: 'lock', name: 'Willow Crossing: the weir, the lock and the quay', box: [3200, 1140, 3440, 1330] },
-  { key: 'kestrel', name: 'Kestrel Lake: the lookout, the campground, the boathouse, the island', box: [2350, 380, 2920, 820] },
+  { key: 'prison', name: 'Prison Island', box: [5560, 3500, 5930, 3760] },
+  { key: 'lock', name: 'Willow Crossing: the weir, the lock and the quay', box: [3580, 1150, 3820, 1340] },
+  { key: 'kestrel', name: 'Kestrel Lake: the lookout, the campground, the boathouse, the island', box: [3100, 700, 3660, 1260] },
   { key: 'oldquay', name: "Old Town's quay", box: [2380, 2040, 2520, 2180] },   // (round the River Water Bus's Old Town stop: shared/world3-ferries.js)
 ];
 
@@ -234,7 +240,7 @@ function buildLock(m, K, out) {
 }
 
 // ---- the Long Reach: the banks' willows and reeds, the farm docks ------------------------------------------------------
-const RIVER_PTS = [[3375, 1890], [3360, 1700], [3300, 1500], [3320, 1300], [3250, 1110], [3120, 960], [2960, 840], [2800, 720]];
+const RIVER_PTS = [[3770, 1316], [3736, 1300], [3646, 1230], [3592, 1178]];   // (v3b: the lake's outlet, from the sea's inlet up)
 function buildReach(m, K, out) {
   const W = m.w;
   let step = 0;
@@ -242,7 +248,7 @@ function buildReach(m, K, out) {
     const [ax, ay] = RIVER_PTS[j - 1], [bx, by] = RIVER_PTS[j], len = Math.hypot(bx - ax, by - ay), tx = (bx - ax) / len, ty = (by - ay) / len, nx = -ty, ny = tx;
     for (let s = 0; s < len; s += 9, step++) {
       const cx = ax + tx * s, cy = ay + ty * s;
-      if (cy > 1840) continue;   // (the mouth: Northshore's beach towns and the bridges)
+      if (cy > 1400) continue;   // (the mouth: the sea's inlet)
       for (const side of [-1, 1]) {
         // the bank: out from the water's middle to the first land
         let bank = null;
@@ -299,8 +305,8 @@ function buildLake(m, K, out) {
     K.prop('pierrail', hx + 0.5, hy + 3.9, 0, { len: 11 * TILE, a: 0 });
     K.landmark('Lookout Hill', 'lookout', hx - 6, hy - 5, hx + 7, hy + 5);
     L.lookout = { deck, at: [hx, hy] };
-    K.track([[hx + 6, hy], [2760, 425], [2900, 440], [3072, 452]], T.DIRT, 1.1);
-    K.track([[hx, hy + 4], [hx + 40, 425], [2700, 432]], T.DIRT, 1.1);
+    K.track([[hx + 6, hy], [hx + 130, hy], [KESTREL.roads.lookout[0], KESTREL.roads.lookout[1]]], T.DIRT, 1.1);   // (east to Willow Road)
+    K.track([[hx, hy + 4], [hx + 10, hy + 60], [KESTREL.fishing[1][1][0], KESTREL.fishing[1][1][1] - 4]], T.DIRT, 1.1);   // (down to the north shore's dock)
   }
   // the island: its trees round a clearing with a picnic table and a landing on its east side
   const c = KESTREL.island;
@@ -327,7 +333,7 @@ function buildLake(m, K, out) {
   const fx = (qx0 + qx1) / 2, fy = (qy0 + qy1) / 2;
   K.prop('campfire', fx, fy, 0); K.prop('picnic', fx + 5, fy - 3, 0); K.prop('picnic', fx - 6, fy + 4, 0); K.prop('cooler', fx + 2, fy + 3, 0);
   K.prop('festoon', fx - 8, fy - 6, 0, { tx: 16 * TILE, ty: 0, h: 90 }); K.prop('woodpile', qx0 + 2, fy, 0); K.prop('lantern', fx + 3, fy - 1, 4);
-  K.track([[qx0 - 1, fy], [2352, 702]], T.DIRT, 1.3);
+  K.track([[qx0 - 1, fy], KESTREL.roads.camp], T.DIRT, 1.3);
   K.landmark('Kestrel Lake Campground', 'camp', qx0, qy0, qx1, qy1);
   L.camp = pitches;
   // the fishing docks: a short jetty, rod holders, a fish table, a life ring
@@ -377,7 +383,7 @@ function buildLake(m, K, out) {
     if (end) {
       K.prop('boathouse', sx + 4.5, sy - 3, 0); K.prop('lamp', end[0] + 0.5, end[1], 0);
       for (let k = 0; k < 3; k++) K.prop('canoe', sx - 2.2, sy - 3 - k * 2.4, 0, { a: -Math.PI / 2, c: k });
-      K.track([[sx, sy + 2], [sx, sy + 12], [sx, 796]], T.DIRT, 1.3);
+      K.track([[sx, sy + 2], [sx, sy + 12], [sx, KESTREL.roads.lake]], T.DIRT, 1.3);
       L.boathouse = { building: bh ? bh.id : -1, shore: [sx, sy], end };
       K.landmark('Kestrel Lake Boathouse', 'marina', sx - 16, sy - 12, sx + 8, sy + 12);
     }

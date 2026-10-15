@@ -1,6 +1,7 @@
-// World v3 (docs/WORLD-V3.md 8.14, H35): Northshore's beach towns - district 54 (Northshore Beaches), the gulf's north
-// shore either side of today's Northshore between the Coast Highway and the beach (part 7: "Northshore ... runs on along
-// the coast as beach towns"; the owner, 12:50: "less dense"). Generator-only: shared/world3-world.js calls each once.
+// World v3 (docs/WORLD-V3.md 8.14, H35): Northshore's beach towns - district 54 (Northshore Beaches); in v3b (part 9)
+// the north coast's (x 2500-4040, between the sea and the main line's north stretch, the owner's sketch's harbour towns
+// with their piers), the sea north of the Shore Road (IN, SEA below; the owner, 12:50: "less dense").
+// Generator-only: shared/world3-world.js calls each once.
 // - beachStreets (its `lines` hook, after the skeleton's roads): a loose grid of streets on the beach towns' land -
 //   streets parallel to the Shore Road (the beachfront road) every ROW tiles inland, cross streets every COL tiles from
 //   the Shore Road up; kept clear of the highways (the Coast Highway's room), the main line's bed and Northshore's own
@@ -11,8 +12,10 @@
 //   the lifeguard towers on the sand (m.lifeguards: drawn by the renderers) - the rest of the land between the streets
 //   is the generator's blocks, in the beach style (beach houses, small apartment blocks, cafes, bars, a hotel).
 import { TILE, T } from './constants.js';
-import { ARTERIALS, MAIN_LINE } from './world3-skeleton.js';
+import { linePath } from './world3-skeleton.js';
 import { TERRAIN3 } from './world3-land.js';
+import { MAIN_LOOP3 } from './world3-layout.js';
+import { TOWN_ROADS3 } from './world3-towns.js';
 
 export const BEACH_D = 54;
 const TOWN = new Set([31, 32, 34]);   // (Northshore's own: today's picture)
@@ -22,14 +25,21 @@ const CROSS = 3;       // every third cross street crosses the main line
 const RAIL_CLEAR = 18; // tiles either side of the main line's polyline (the double track's bed and its platforms)
 const TOWN_CLEAR = 5;  // tiles off Northshore's own blocks
 const REACH = 14;      // tiles a street's end is carried on to meet a road
+// (v3b, docs/WORLD-V3.md part 9) the beach towns are the north coast's now: the sea north of the Shore Road, inland
+// south of it (on the gulf's north shore the sea was south: IN was -1). IN: the inland step in y; SEA: the sea's.
+const IN = 1, SEA = -IN;
+// the main line's bed the streets keep off (its path, the loop of shared/world3-layout.js MAIN_LOOP3; once)
+let RAIL = null;
+const railLines = () => (RAIL ||= [{ pts: linePath(MAIN_LOOP3).pts }]);
 // tiles either side of a road's middle that a new street keeps clear of (its pavement and a lot's depth), by kind
 const CLEAR = { hwy: 26, ramp: 16, ave: 12, blvd: 12, art: 11, front: 10, st: 9, drive: 9, minor: 8, rural: 8, dirt: 6, alley: 5 };
 const ON = { hwy: 0, ramp: 0, ave: 4.5, blvd: 4.5, art: 3.5, front: 3, st: 3, drive: 2.5, minor: 2, rural: 2, dirt: 2, alley: 1.5 };
 const ROW_NAMES = ['Surf Street', 'Dune Street', 'Seagrass Street', 'Breakers Street', 'Gull Street', 'Sea Breeze Street'];
 const COL_NAMES = ['Pier Avenue', 'Coral Street', 'Driftwood Lane', 'Shell Street', 'Tide Street', 'Kelp Street', 'Sand Dollar Lane', 'Anchor Street', 'Starfish Lane', 'Boardwalk Street', 'Conch Street', 'Lantern Lane', 'Harbor View Street', 'Marlin Street', 'Pelican Street', 'Sunset Street', 'Cove Street', 'Riptide Lane', 'Seashell Street', 'Bay Street', 'Clam Street', 'Ocean View Street', 'Saltwater Lane', 'Wave Street', 'Sailfish Street', 'Beacon Street', 'Jetty Street'];
 
-// the Shore Road's middle at column x (tiles): the skeleton's polyline
-const SHORE = ARTERIALS.find((A) => A.name === 'Shore Road').pts;
+// the Shore Road's middle at column x (tiles): its polyline (world3-towns.js TOWN_ROADS3, merged into the skeleton's
+// arterials)
+const SHORE = TOWN_ROADS3.find((A) => A.name === 'Shore Road').pts;
 export function shoreY(x) {
   if (x <= SHORE[0][0]) return SHORE[0][1];
   for (let k = 1; k < SHORE.length; k++) {
@@ -74,7 +84,7 @@ export function beachStreets(lines, m, L) {
     stampLine(pts, CLEAR[l.kind] ?? 9, near);
     if (lv === 0 && ON[l.kind] && !l.foot) stampLine(pts, ON[l.kind], on);
   }
-  for (const S of MAIN_LINE) stampLine(S.pts, RAIL_CLEAR, rail);
+  for (const S of railLines()) stampLine(S.pts, RAIL_CLEAR, rail);
   // the land a street may run on: the beach towns' (not their beach), off Northshore's own blocks
   const town = new Uint8Array(BW * BH);
   for (let y = by; y < by + BH; y++) for (let x = bx; x < bx + BW; x++) {
@@ -96,6 +106,7 @@ export function beachStreets(lines, m, L) {
     if (!out.names.includes(name)) out.names.push(name);
   };
   // carry a run's end on (dir: the step) up to REACH tiles to the road it meets; null if none
+  const inY = (y) => y > box[1] && y < box[3];   // (a street's run stays in the beach towns' rows)
   const carry = (x, y, dx, dy) => { for (let k = 1; k <= REACH; k++) { const tx = x + dx * k, ty = y + dy * k; if (onAt(Math.round(tx), Math.round(ty))) { out.joined++; return [tx, ty]; } } return null; };
 
   // 1. the streets parallel to the shore: ROW, 2 ROW, ... tiles inland of the Shore Road
@@ -107,15 +118,15 @@ export function beachStreets(lines, m, L) {
         for (let j = 0; j < run.length; j += 6) pts.push(run[j]);
         if (pts[pts.length - 1] !== run[run.length - 1]) pts.push(run[run.length - 1]);
         const a = carry(run[0][0], run[0][1], -1, 0), b = carry(run[run.length - 1][0], run[run.length - 1][1], 1, 0);
-        if (a) pts.unshift([a[0], shoreY(a[0]) - k * ROW]);
-        if (b) pts.push([b[0], shoreY(b[0]) - k * ROW]);
+        if (a) pts.unshift([a[0], shoreY(a[0]) + IN * k * ROW]);
+        if (b) pts.push([b[0], shoreY(b[0]) + IN * k * ROW]);
         emit(pts.map(([x, y]) => [x + 0.5, y + 0.5]), ROW_NAMES[(k - 1) % ROW_NAMES.length]);
         out.rows++;
       }
       run = [];
     };
     for (let x = box[0]; x <= box[2]; x++) {
-      const y = Math.round(shoreY(x) - k * ROW);
+      const y = Math.round(shoreY(x) + IN * k * ROW);
       if (okAt(x, y, false) && okAt(x, y - 4, false) && okAt(x, y + 4, false)) run.push([x, y]); else flush();
     }
     flush();
@@ -125,16 +136,16 @@ export function beachStreets(lines, m, L) {
   for (let x = box[0] + (COL >> 1); x <= box[2]; x += COL, c++) {
     const over = c % CROSS === 1, y0 = shoreY(x);
     // from the Shore Road's middle up to where the land stops being the beach towns' (or the line's bed, or a road)
-    let y = Math.floor(y0) - 1, n = 0;
-    while (y > box[1] && !okAt(x, y, over) && n < REACH) { y--; n++; }   // (across the Shore Road's pavement)
+    let y = Math.floor(y0) + IN, n = 0;
+    while (inY(y) && !okAt(x, y, over) && n < REACH) { y += IN; n++; }   // (across the Shore Road's pavement)
     if (!okAt(x, y, over) || !okAt(x - 3, y, over) || !okAt(x + 3, y, over)) continue;
     const ys = y;
-    while (y > box[1] && okAt(x, y - 1, over) && okAt(x - 3, y - 1, over) && okAt(x + 3, y - 1, over)) y--;
-    if (ys - y < 16) continue;
+    while (inY(y) && okAt(x, y + IN, over) && okAt(x - 3, y + IN, over) && okAt(x + 3, y + IN, over)) y += IN;
+    if (Math.abs(ys - y) < 16) continue;
     const pts = [[x + 0.5, y0]];
-    for (let yy = ys - 8; yy > y; yy -= 8) pts.push([x + 0.5, yy + 0.5]);
+    for (let yy = ys + 8 * IN; (yy - y) * IN < 0; yy += 8 * IN) pts.push([x + 0.5, yy + 0.5]);
     pts.push([x + 0.5, y + 0.5]);
-    const top = carry(x, y, 0, -1);
+    const top = carry(x, y, 0, IN);
     if (top) pts.push([x + 0.5, top[1] + 0.5]);
     emit(pts, COL_NAMES[c % COL_NAMES.length]);
     out.cols++;
@@ -146,20 +157,20 @@ export function beachStreets(lines, m, L) {
   const railAt = (x, y) => inB(x, y) && !!rail[(y - by) * BW + x - bx];
   for (let x = box[0] + (COL >> 1); x <= box[2]; x += COL, c++) {
     if (c % CROSS !== 0) continue;   // (every third: less dense up there - the owner's "less dense")
-    let y = Math.floor(shoreY(x)) - 1;
-    while (y > box[1] && !railAt(x, y)) y--;   // (up to the line's room)
-    if (y <= box[1]) continue;
-    while (y > box[1] && railAt(x, y)) y--;    // (across it)
+    let y = Math.floor(shoreY(x)) + IN;
+    while (inY(y) && !railAt(x, y)) y += IN;   // (inland to the line's room)
+    if (!inY(y)) continue;
+    while (inY(y) && railAt(x, y)) y += IN;    // (across it)
     let n = 0;
-    while (y > box[1] && !(okAt(x, y, false) && okAt(x - 3, y, false) && okAt(x + 3, y, false)) && n < REACH) { y--; n++; }
+    while (inY(y) && !(okAt(x, y, false) && okAt(x - 3, y, false) && okAt(x + 3, y, false)) && n < REACH) { y += IN; n++; }
     if (n >= REACH) continue;
     const ys = y;
-    while (y > box[1] && okAt(x, y - 1, false) && okAt(x - 3, y - 1, false) && okAt(x + 3, y - 1, false)) y--;
-    if (ys - y < 16) continue;
+    while (inY(y) && okAt(x, y + IN, false) && okAt(x - 3, y + IN, false) && okAt(x + 3, y + IN, false)) y += IN;
+    if (Math.abs(ys - y) < 16) continue;
     const pts = [];
-    for (let yy = ys; yy > y; yy -= 8) pts.push([x + 0.5, yy + 0.5]);
+    for (let yy = ys; (yy - y) * IN < 0; yy += 8 * IN) pts.push([x + 0.5, yy + 0.5]);
     pts.push([x + 0.5, y + 0.5]);
-    const top = carry(x, y, 0, -1);
+    const top = carry(x, y, 0, IN);
     if (top) pts.push([x + 0.5, top[1] + 0.5]);
     emit(pts, COL_NAMES[c % COL_NAMES.length]);
     out.cols++;
@@ -222,22 +233,22 @@ export function beachFront(m, L) {
   for (let x = box[0]; x <= box[2]; x++) {
     let y = Math.round(shoreY(x));
     let n = 0;
-    while (n < 12 && is54(x, y) && (tile(x, y) === T.ROAD || tile(x, y) === T.SIDEWALK)) { y++; n++; }
+    while (n < 12 && is54(x, y) && (tile(x, y) === T.ROAD || tile(x, y) === T.SIDEWALK)) { y += SEA; n++; }
     if (n === 0 || n >= 12) continue;   // (no road here: the Shore Road's bridge, a junction)
     let k = 0;
-    for (; k < 3 && is54(x, y + k) && tile(x, y + k) === T.SAND; k++) { m.tiles[(y + k) * W + x] = T.PLAZA; m.reserve[(y + k) * W + x] |= 4; out.promenade++; }
-    if (k === 3) prom[x - box[0]] = y + 3;   // (the sand starts here)
+    for (; k < 3 && is54(x, y + SEA * k) && tile(x, y + SEA * k) === T.SAND; k++) { m.tiles[(y + SEA * k) * W + x] = T.PLAZA; m.reserve[(y + SEA * k) * W + x] |= 4; out.promenade++; }
+    if (k === 3) prom[x - box[0]] = y + 3 * SEA;   // (the sand starts here)
   }
   // car parks on the land side of the Shore Road between the cross streets, steps down to the sand opposite them, and a
   // lifeguard tower on the sand in front of every other one
   const PW = 14, PH = 8;
-  // (the land side of the Shore Road at column x: the first tile north of its pavement, or -1)
+  // (the land side of the Shore Road at column x: the first tile inland of its pavement, or -1)
   const landSide = (x) => {
-    let y = Math.round(shoreY(x)) + 5, n = 0;
-    while (n < 12 && tile(x, y) !== T.ROAD) { y--; n++; }
+    let y = Math.round(shoreY(x)) + 5 * SEA, n = 0;
+    while (n < 12 && tile(x, y) !== T.ROAD) { y += IN; n++; }
     if (n >= 12) return -1;
     n = 0;
-    while (n < 14 && (tile(x, y) === T.ROAD || tile(x, y) === T.SIDEWALK)) { y--; n++; }
+    while (n < 14 && (tile(x, y) === T.ROAD || tile(x, y) === T.SIDEWALK)) { y += IN; n++; }
     return n >= 14 ? -1 : y;
   };
   for (let x0 = box[0] + 70; x0 + PW < box[2] - 10; x0 += 150) {
@@ -245,10 +256,10 @@ export function beachFront(m, L) {
     for (const dx of [0, -14, 14, -28, 28, -42, 42]) {
       const xx0 = x0 + dx, yl = landSide(xx0 + (PW >> 1));
       if (yl < 0) continue;
-      const ty0 = yl - PH + 1;
-      let ok = !MAIN_LINE.some((S) => S.pts.some(([px, py], j) => j && segDist(xx0 + PW / 2, ty0 + PH / 2, S.pts[j - 1], [px, py]) < 26));
-      for (let yy = ty0; yy <= yl && ok; yy++) for (let xx = xx0; xx < xx0 + PW; xx++) { const i = yy * W + xx; if (!is54(xx, yy) || m.tiles[i] !== T.GRASS) { ok = false; break; } }
-      if (ok) { x = xx0; y = yl; ty = ty0; break; }
+      const ty0 = IN < 0 ? yl - PH + 1 : yl, ty1 = ty0 + PH - 1;   // (the park's rows, inland of the pavement)
+      let ok = !railLines().some((S) => S.pts.some(([px, py], j) => j && segDist(xx0 + PW / 2, ty0 + PH / 2, S.pts[j - 1], [px, py]) < 26));
+      for (let yy = ty0; yy <= ty1 && ok; yy++) for (let xx = xx0; xx < xx0 + PW; xx++) { const i = yy * W + xx; if (!is54(xx, yy) || m.tiles[i] !== T.GRASS) { ok = false; break; } }
+      if (ok) { x = xx0; y = ty1; ty = ty0; break; }
     }
     if (x < 0) continue;
     for (let yy = ty; yy <= y; yy++) for (let xx = x; xx < x + PW; xx++) { const i = yy * W + xx; m.tiles[i] = T.LOT; m.reserve[i] |= 16; }
@@ -257,8 +268,8 @@ export function beachFront(m, L) {
     // the steps: from the promenade down onto the sand (a paved flight, 2 tiles wide, 3 long)
     const sx = x + (PW >> 1) - 1, s0 = prom[sx - box[0]];
     if (s0 > 0) {
-      for (let yy = s0; yy < s0 + 3; yy++) for (let xx = sx; xx < sx + 2; xx++) if (is54(xx, yy) && tile(xx, yy) === T.SAND) { m.tiles[yy * W + xx] = T.PLAZA; m.reserve[yy * W + xx] |= 4; }
-      park.steps = { x: (sx + 1) * TILE, y: (s0 + 1.5) * TILE };
+      for (let j = 0; j < 3; j++) for (let xx = sx, yy = s0 + SEA * j; xx < sx + 2; xx++) if (is54(xx, yy) && tile(xx, yy) === T.SAND) { m.tiles[yy * W + xx] = T.PLAZA; m.reserve[yy * W + xx] |= 4; }
+      park.steps = { x: (sx + 1) * TILE, y: (SEA > 0 ? s0 + 1.5 : s0 - 0.5) * TILE };
     }
   }
   // the lifeguard towers: every 120 tiles or so along the beach, two thirds of the way down the sand to the water
@@ -268,9 +279,9 @@ export function beachFront(m, L) {
       const s0 = prom[x + dx - box[0]];
       if (!(s0 > 0)) continue;
       let wy = s0;
-      while (wy < s0 + 60 && is54(x + dx, wy) && tile(x + dx, wy) === T.SAND) wy++;
-      const depth = wy - s0;
-      if (depth >= 10 && tile(x + dx, wy) !== T.SAND) best = { x: (x + dx + 0.5) * TILE, y: Math.round((s0 + depth * 0.62) * TILE), a: Math.PI / 2 };
+      while (Math.abs(wy - s0) < 60 && is54(x + dx, wy) && tile(x + dx, wy) === T.SAND) wy += SEA;
+      const depth = Math.abs(wy - s0);
+      if (depth >= 10 && tile(x + dx, wy) !== T.SAND) best = { x: (x + dx + 0.5) * TILE, y: Math.round((SEA > 0 ? s0 + depth * 0.62 : s0 + 1 - depth * 0.62) * TILE), a: SEA * Math.PI / 2 };
     }
     if (best) { out.towers.push(best); m.addSolidProp(best.x, best.y, 18); }   // (its stilts and ramp block the way)
   }

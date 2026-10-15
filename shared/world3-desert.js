@@ -27,38 +27,43 @@ const SAND = 5, DRY = 3;   // (world3-land.js TERRAIN3: sand under the town beco
 const Z_TOWN = 8;             // (the mainland's built zone, as the towns')
 export const DESERT_IDS = { gulch: 63, hollow: 64 };
 
-// Copper Gulch (tiles): Mine Road pulled straight on row 1205 as its main street, the company houses' loops north and
-// south of it, Depot Road up to the main line's station; the mine at Mine Road's east end.
+// (v3b, docs/WORLD-V3.md part 9: the owner's desert, its small towns on the canyon floors) Copper Gulch (tiles): Mine
+// Road pulled straight on row 1625 as its main street, the company houses' loops north and south of it, Depot Road up
+// to the freight yard (the main line's Red Rock station is 300 tiles east, on Hollow Road's way); the mine at Mine
+// Road's east end.
 export const GULCH = {
-  key: 'gulch', name: 'Copper Gulch', d: 63, at: [4560, 1230], box: [4470, 1150, 4652, 1262],
-  main: { line: 'Mine Road', y: 1205, a: 4478, b: 4644, ramp: 40 },
+  key: 'gulch', name: 'Copper Gulch', d: 63, at: [4790, 1650], box: [4700, 1570, 4882, 1682],
+  main: { line: 'Mine Road', y: 1625, a: 4708, b: 4874, ramp: 40 },
   streets: [
-    ['Assay Street', [[4498, 1205], [4498, 1180], [4626, 1180], [4626, 1205]]],
-    ['Company Row', [[4498, 1205], [4498, 1232], [4626, 1232], [4626, 1205]]],
-    ['Depot Road', [[4562, 1232], [4562, 1128]]],   // (across the main street and Assay Street, up to the station)
-    ['Tailings Lane', [[4530, 1232], [4530, 1254]]],
+    ['Assay Street', [[4728, 1625], [4728, 1600], [4856, 1600], [4856, 1625]]],
+    ['Company Row', [[4728, 1625], [4728, 1652], [4856, 1652], [4856, 1625]]],
+    ['Depot Road', [[4792, 1652], [4792, 1548]]],   // (across the main street and Assay Street, up to the freight yard)
+    ['Tailings Lane', [[4760, 1652], [4760, 1674]]],
   ],
-  ground: [[4478, 1160, 4646, 1250], [4520, 1250, 4540, 1262]],
+  ground: [[4708, 1580, 4876, 1670], [4750, 1670, 4770, 1682]],
 };
-// Dusty Hollow (tiles): its one dirt street off Hollow Road's end, the empty buildings either side of it
-export const HOLLOW = { key: 'hollow', name: 'Dusty Hollow', d: 64, at: [4250, 1000], box: [4196, 976, 4302, 1030], street: 1004 };
+// Dusty Hollow (tiles): its one dirt street off Hollow Road's end, the empty buildings either side of it (v3b: the
+// sketch's lone grey patch out in the canyons, east of the main line)
+export const HOLLOW = { key: 'hollow', name: 'Dusty Hollow', d: 64, at: [5364, 1814], box: [5310, 1790, 5416, 1844], street: 1818 };
 // the set pieces (tiles)
 export const DESERT = {
-  pit: [4684, 1084, 4796, 1160],                 // Copper Gulch Mine's open pit (MI6)
-  adit: [4752, 1190],                            // the canyon adit's mouth (MI1): its cliff north of it
-  dam: [4086, 4214],                             // Red Rock Dam: across the reservoir's south shore, these columns
-  lookout: [4330, 880], arch: [4372, 846],       // the lookout on its mesa, the natural arch and the hoodoos by it
-  motel: [3846, 1160, 3880, 1188],               // the motel's lot, north of Mine Road by the Desert Highway
-  camp: [4800, 1700],                            // the desert camp (the skeleton's Mesa camp), off Route 9
-  freight: [4570, 1056, 4640, 1120],             // the freight yard's box, by the main line north of the town
+  pit: [4914, 1504, 5026, 1580],                 // Copper Gulch Mine's open pit (MI6), east of the town
+  adit: [4982, 1610],                            // the canyon adit's mouth (MI1): its cliff north of it
+  dam: [5222, 5270],                             // Red Rock Dam: across the desert river in its canyon, these columns
+  damRows: [2090, 2160],                         // (the rows the reservoir's water is looked for in, above the wall)
+  lookout: [5444, 1694], arch: [5486, 1660],     // the lookout on its mesa (world3-relief.js LOOKOUT_MESA), the arch and the hoodoos
+  motel: [4640, 1100, 4674, 1128],               // the motel's lot, north of the Casino Highway's bend
+  camp: [5700, 1554],                            // the desert camp (the skeleton's Mesa camp), off Route 9
+  campRoad: 1500,                                // (the row Route 9 passes the camp's column on)
+  freight: [4800, 1476, 4870, 1540],             // the freight yard's box, north of the town at Depot Road's end
 };
 // the pictures' views (tools/world3-world-map.mjs --towns: docs/world-v3-town-<key>.png)
 export const DESERT_VIEWS = [
-  { key: 'gulch', name: 'Copper Gulch and Copper Gulch Mine', box: [4470, 1050, 4810, 1262] },
-  { key: 'hollow', name: 'Dusty Hollow, the lookout and the arch', box: HOLLOW.box.map((v, k) => (k === 1 ? 830 : k === 2 ? 4400 : v)) },
-  { key: 'dam', name: 'Red Rock Dam, the reservoir and the dry wash', box: [4040, 540, 4250, 700] },
-  { key: 'motel', name: 'The Sundowner Motel and the billboards on the Desert Highway', box: [3760, 1100, 3900, 1260] },
-  { key: 'camp', name: 'Mesa Camp', box: [4770, 1640, 4830, 1720] },
+  { key: 'gulch', name: 'Copper Gulch and Copper Gulch Mine', box: [4700, 1470, 5040, 1682] },
+  { key: 'hollow', name: 'Dusty Hollow, the lookout and the arch', box: HOLLOW.box.map((v, k) => (k === 1 ? 1640 : k === 2 ? 5530 : v)) },
+  { key: 'dam', name: 'Red Rock Dam, the reservoir and the dry wash', box: [5150, 2040, 5340, 2260] },
+  { key: 'motel', name: 'The Sundowner Motel and the billboards on the Casino Highway', box: [4560, 1040, 4760, 1240] },
+  { key: 'camp', name: 'Mesa Camp', box: [5670, 1494, 5730, 1574] },
 ];
 
 export const DESERT_SPECIALS = [
@@ -171,7 +176,7 @@ export function buildDesert(m, addProp) {
     const pit = { x: (x0 + 2) * TILE, y: (y0 + 2) * TILE, w: (x1 - x0 - 4) * TILE, h: (y1 - y0 - 6) * TILE, name: 'Copper Gulch Mine' };
     (m.quarries ||= []).push(pit);
     out.pit = { x0, y0, x1, y1 };
-    track('haul', [[4690, 1182], [4696, 1166], [4706, 1160], [4740, 1158]], 2.2);   // (the haul road: Mine Road's end up onto the rim)
+    track('haul', [[4920, 1602], [4926, 1586], [4936, 1580], [4970, 1578]], 2.2);   // (the haul road: Mine Road's end up onto the rim)
     const cr = addBld(m, x0 - 14, y0 + 40, 9, 7, 'industrial', 'Copper Gulch Crusher', 'metal', { spec: { floors: 2, style: 'siding', wallColor: '#8a6a4a', pitch: 'gable', roof: 'metal', roofColor: '#6a5a4a', slope: 0.5 } });
     if (cr) {
       out.crusher = cr.id;
@@ -202,7 +207,7 @@ export function buildDesert(m, addProp) {
       for (const [dx, dy] of [[-200, 150], [190, 140]]) addProp(m, 'gravel', X + dx, face + dy, 0);
       (m.natureSites ||= []).push({ kind: 'mine', name: 'Copper Gulch Mine', x: Math.round(X), y: Math.round(face), seams });
       out.adit = { x: Math.round(X), y: Math.round(face) }; out.seams = seams.length;
-      track('adit', [[4690, 1184], [4716, 1197], [tx, ty + 7]], 1.8);
+      track('adit', [[4920, 1604], [4946, 1617], [tx, ty + 7]], 1.8);
     }
   }
 
@@ -244,7 +249,7 @@ export function buildDesert(m, addProp) {
     }
     // the town's water tower, on a free spot by the main street's east end
     for (let k = 0; k < 40 && !out.waterTower; k++) {
-      const x = 4636 - (k % 10) * 3, y = 1192 - Math.floor(k / 10) * 3;
+      const x = 4866 - (k % 10) * 3, y = 1612 - Math.floor(k / 10) * 3;
       let free = true;
       for (let dy = -2; dy <= 2 && free; dy++) for (let dx = -2; dx <= 2; dx++) { const i = (y + dy) * W + x + dx; const t = m.tiles[i]; if (m.bld[i] >= 0 || !(t === T.GRASS || t === T.DIRT || t === T.LOT || t === T.PLAZA)) { free = false; break; } }
       if (!free) continue;
@@ -257,11 +262,11 @@ export function buildDesert(m, addProp) {
   // in the ruins; the boarding house the hideout (`gang`), the livery the smuggler's drop
   {
     const S = HOLLOW.street;
-    track('hollow', [[4200, 1040], [4204, 1022], [4206, S], [4298, S]], 2.2);
+    track('hollow', [[5314, 1854], [5318, 1836], [5320, S], [5412, S]], 2.2);
     const names = ['Hollow Saloon', 'Livery Stable', 'Dry Goods', 'Hollow Bank', 'Grand Hotel', 'Jailhouse', 'Chapel', 'Smithy', 'Boarding House', 'Telegraph Office', 'Barber', 'Undertaker'];
     const walls = ['#8a7058', '#7a6450', '#9a8068', '#6e5a48', '#8c7a62', '#76604c'];
     let k = 0;
-    for (const N of [true, false]) for (let x = 4210; x + 11 <= 4296; x += 15) {
+    for (const N of [true, false]) for (let x = 5324; x + 11 <= 5410; x += 15) {
       const name = names[k % names.length], y = N ? S - 13 : S + 4, h = 9;
       const b = addBld(m, x, y, 11, h, 'shack', `${name} (abandoned)`, 'tar', { spec: { floors: k % 3 === 1 ? 2 : 1, style: 'siding', wallColor: walls[k % walls.length], pitch: 'gable', roof: 'shingle', roofColor: ['#5a4a3a', '#6a5440', '#4e4034', '#7a6650'][k % 4], slope: 0.45 + (k % 3) * 0.08 }, ghost: true });
       k++;
@@ -276,7 +281,7 @@ export function buildDesert(m, addProp) {
       if (name === 'Livery Stable') m.pois.push({ id: m.pois.length, kind: 'smuggler', label: "Hollow Smuggler's Drop", x: door.x, y: door.y, r: 46, b: b.id, fixed: true });
     }
     // loot in the ruins: chests behind the buildings (searched later: the ghost town's loot, 8.18's next step)
-    for (const [x, y] of [[4216, S - 16], [4262, S + 16], [4290, S - 16]]) prop('chest', x, y, 10);
+    for (const [x, y] of [[5330, S - 16], [5376, S + 16], [5404, S - 16]]) prop('chest', x, y, 10);
     keep(HOLLOW.box[0], HOLLOW.box[1], HOLLOW.box[2], HOLLOW.box[3]);
     landmark('Dusty Hollow', 'ghost', HOLLOW.box[0], HOLLOW.box[1], HOLLOW.box[2], HOLLOW.box[3]);
   }
@@ -288,7 +293,7 @@ export function buildDesert(m, addProp) {
     const shore = [];
     for (let x = xa; x <= xb; x++) {
       let yl = -1;
-      for (let y = 560; y < 660; y++) { const i = y * W + x; if (inF(x, y) && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP) && m.river[i]) yl = y; }
+      for (let y = DESERT.damRows[0]; y < DESERT.damRows[1]; y++) { const i = y * W + x; if (inF(x, y) && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP) && m.river[i]) yl = y; }
       if (yl >= 0) shore.push([x, yl]);
     }
     if (shore.length > 20) {
@@ -323,7 +328,7 @@ export function buildDesert(m, addProp) {
   // Hollow), the natural arch and the hoodoos by it
   {
     const [lx, ly] = DESERT.lookout, [ax, ay] = DESERT.arch;
-    track('lookout', [[4298, HOLLOW.street], [4312, 960], [4322, 920], [lx, ly + 8]], 1.6);
+    track('lookout', [[5412, HOLLOW.street], [5426, 1774], [5436, 1734], [lx, ly + 8]], 1.6);
     keep(lx - 20, ly - 20, lx + 20, ly + 14);
     addProp(m, 'outcrop', (lx - 9) * TILE, (ly - 4) * TILE, 60, { w: 320, d: 200, h: 150, s: 51, style: 'sandstone' });
     if (prop('lookout', lx + 6, ly + 2, 0)) { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) m.addSolidProp((lx + 6 + dx) * TILE, (ly + 1 + dy) * TILE, 10); out.lookout = [lx + 6, ly + 2]; }
@@ -355,14 +360,15 @@ export function buildDesert(m, addProp) {
       for (let k = 0; k < 4; k++) m.parking.push({ x: (x0 + 12 + k * 3) * TILE, y: (y0 + 9.5) * TILE, a: Math.PI / 2 });
       landmark('Sundowner Motel', 'motel', x0, y0, x1, y1);
     }
-    // the billboards: 16 tiles off the Desert Highway's line, on open ground, about every 40 tiles of it near the exit
-    const hw = hwys.find((h) => h.name === 'Desert Highway');
+    // the billboards: 16 tiles off the Casino Highway's line (v3b: the desert's highway), on open ground, about every 40
+    // tiles of it near the motel
+    const hw = hwys.find((h) => h.name === 'Casino Highway' || h.name === 'Desert Highway');
     if (hw) {
       const P = hw.path.pts;
       let last = null;
       for (let j = 1; j < P.length && out.billboards < 4; j++) {
         const [ax2, ay2] = P[j - 1], [bx, by] = P[j];
-        if (ay2 < 880 || ay2 > 1500) continue;
+        if (ay2 < 980 || ay2 > 1500) continue;
         if (last && Math.hypot(ax2 - last[0], ay2 - last[1]) < 30) continue;
         const l = Math.hypot(bx - ax2, by - ay2) || 1, nx = -(by - ay2) / l, ny = (bx - ax2) / l;
         for (const s of [1, -1]) {
@@ -379,7 +385,7 @@ export function buildDesert(m, addProp) {
   // a jeep track down from the road
   {
     const [cx, cy] = DESERT.camp;
-    track('camp', [[cx, 1646], [cx, cy - 6]], 1.6);
+    track('camp', [[cx, DESERT.campRoad], [cx, cy - 6]], 1.6);
     keep(cx - 14, cy - 10, cx + 14, cy + 12);
     // (tents by colour - v 0 orange, 1 green, 2 blue, 3 canvas; the fire lit)
     const items = [['campfire', 0, 0, 10, { lit: 1 }], ['tent', -6, -3, 12, { v: 0 }], ['tent', 6, -3, 12, { v: 2 }], ['tent', -7, 4, 12, { v: 3 }], ['picnic', 5, 4, 8], ['cooler', 2.5, 3, 4, { v: 1 }], ['burnbarrel', -3, 6, 6]];

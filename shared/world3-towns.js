@@ -35,30 +35,68 @@ export const TOWNS3 = [
   // lane out into the country ending in a turnaround; its ground (`ground`: tile boxes, the union) wide along the main
   // street and narrow along the lanes, so the houses thin out into the countryside. (`pulls`: the other arterials
   // through it straightened onto its axes - [line, axis, at, from, to, ramp] - so nothing cuts its blocks on the slant)
-  { key: 'timber', name: 'Timber Bend', d: 57, at: [1170, 1060], box: [1036, 1008, 1150, 1126],
-    // west of Redwood Creek (the highway's room east of it): Timber Road is its main street, on over the creek to the hub
-    main: { line: 'Timber Road', y: 1071, a: 1036, b: 1150, ramp: 40 }, pulls: [],
-    streets: [['Mill Street', [[1060, 1071], [1060, 1040], [1124, 1040], [1124, 1071]]], ['Sawyer Street', [[1066, 1071], [1066, 1101], [1118, 1101], [1118, 1071]]],
-      ['Cedar Street', [[1092, 1040], [1092, 1101]]], ['Logger Lane', [[1092, 1040], [1092, 1016]]]],
-    ground: [[1036, 1026, 1150, 1113], [1078, 1008, 1106, 1026]] },
-  { key: 'willow', name: 'Willow Crossing', d: 58, at: [3360, 1290], box: [3348, 1212, 3486, 1352],
-    // the Long Reach's east bank round the hub: Valley Road in from the west, the Mine Road out east (its main street),
-    // Willow Road across it north-south
-    main: { line: 'Mine Road', y: 1270, a: 3390, b: 3486, ramp: 44 },
-    pulls: [['Valley Road', 'y', 1270, 3330, 3390, 0], ['Willow Road', 'x', 3390, 1226, 1352, 40], ['Valley Road North', 'x', 3390, 1226, 1270, 40]],
-    streets: [['Grange Street', [[3412, 1270], [3412, 1240], [3468, 1240], [3468, 1270]]], ['Church Street', [[3412, 1270], [3412, 1300], [3468, 1300], [3468, 1270]]],
-      ['River Street', [[3362, 1270], [3362, 1300], [3390, 1300]]], ['Orchard Lane', [[3440, 1300], [3440, 1326]]]],
-    ground: [[3348, 1226, 3486, 1314], [3372, 1314, 3408, 1350], [3426, 1314, 3456, 1338]] },
-  { key: 'sandpiper', name: 'Sandpiper Bay', d: 59, at: [4480, 2540], box: [4410, 2500, 4600, 2660],
-    // on the bay's beach: Sandpiper Drive is its main street, the sand and the sea south-east of it; the boardwalk
-    // along the top of the sand in front of the town (columns x0-x1, `walk` tiles deep) and the pier out from it
-    main: { line: 'Sandpiper Drive', y: 2574, a: 4420, b: 4566, ramp: 50 }, pulls: [],
-    front: { x0: 4440, x1: 4600, walk: 3, pier: { x: 4526, w: 3, out: 34 } },
-    streets: [['Shell Street', [[4444, 2574], [4444, 2544], [4536, 2544], [4536, 2574]]], ['Dune Street', [[4490, 2544], [4490, 2518]]],
-      ['Pier Street', [[4470, 2574], [4470, 2604], [4552, 2604], [4552, 2574]]], ['Gull Lane', [[4444, 2574], [4444, 2604], [4470, 2604]]]],
-    ground: [[4420, 2528, 4600, 2650], [4474, 2504, 4506, 2528]] },
+  { key: 'timber', name: 'Timber Bend', d: 57, at: [1870, 1412], box: [1736, 1360, 1850, 1478],
+    // (v3b) the sketch's forest town in the middle of Highland Woods, south of the falls' lake: Timber Road (TOWN_ROADS3)
+    // is its main street, west to the forest's hamlets and east to the farm valley
+    main: { line: 'Timber Road', y: 1423, a: 1736, b: 1850, ramp: 40 }, pulls: [],
+    streets: [['Mill Street', [[1760, 1423], [1760, 1392], [1824, 1392], [1824, 1423]]], ['Sawyer Street', [[1766, 1423], [1766, 1453], [1818, 1453], [1818, 1423]]],
+      ['Cedar Street', [[1792, 1392], [1792, 1453]]], ['Logger Lane', [[1792, 1392], [1792, 1368]]]],
+    ground: [[1736, 1378, 1850, 1465], [1778, 1360, 1806, 1378]] },
+  { key: 'willow', name: 'Willow Crossing', d: 58, at: [3692, 1038], box: [3680, 960, 3818, 1100],
+    // (v3b) the sketch's town on the farm valley's lake, east of its shore: Mine Road (TOWN_ROADS3) in from the lake
+    // and out east across the valley to the desert (its main street), Willow Road across it north-south between the
+    // main line's two valley stretches
+    main: { line: 'Mine Road', y: 1018, a: 3722, b: 3818, ramp: 44 },
+    pulls: [['Willow Road', 'x', 3722, 974, 1100, 40]],
+    streets: [['Grange Street', [[3744, 1018], [3744, 988], [3800, 988], [3800, 1018]]], ['Church Street', [[3744, 1018], [3744, 1048], [3800, 1048], [3800, 1018]]],
+      ['River Street', [[3694, 1018], [3694, 1048], [3722, 1048]]], ['Orchard Lane', [[3772, 1048], [3772, 1074]]]],
+    ground: [[3680, 974, 3818, 1062], [3704, 1062, 3740, 1098], [3758, 1062, 3788, 1086]] },
+  { key: 'sandpiper', name: 'Sandpiper Bay', d: 59, at: [5380, 2770], box: [5310, 2730, 5500, 2890],
+    // (v3b) the sketch's surf town where the desert meets the sea, below the main line's Sandpiper Bay station:
+    // Sandpiper Drive (TOWN_ROADS3) is its main street, the sand and the sea south of it; the boardwalk along the top
+    // of the sand in front of the town (columns x0-x1, `walk` tiles deep) and the pier out from it
+    main: { line: 'Sandpiper Drive', y: 2804, a: 5320, b: 5466, ramp: 50 }, pulls: [],
+    front: { x0: 5340, x1: 5500, walk: 3, pier: { x: 5426, w: 3, out: 34 } },
+    streets: [['Shell Street', [[5344, 2804], [5344, 2774], [5436, 2774], [5436, 2804]]], ['Dune Street', [[5390, 2774], [5390, 2748]]],
+      ['Pier Street', [[5370, 2804], [5370, 2834], [5452, 2834], [5452, 2804]]], ['Gull Lane', [[5344, 2804], [5344, 2834], [5370, 2834]]]],
+    ground: [[5320, 2758, 5500, 2880], [5374, 2734, 5406, 2758]] },
 ];
 export const TOWN_IDS = new Set(TOWNS3.map((t) => t.d));
+
+// (v3b, docs/WORLD-V3.md part 9) The country arterials the regional places are laid on, by the names their modules
+// look them up by (a town's main street is the arterial through it, pulled straight; the desert's, the west coast's
+// and the beach towns' set pieces find theirs by name): control points in frame tiles, the skeleton's ARTERIALS form
+// (shared/world3-skeleton.js). The integration merges them into ARTERIALS (where the transport skeleton lays a road
+// of its own along the same course, its line takes the name instead).
+export const TOWN_ROADS3 = [
+  // Highland Woods: through Timber Bend (its main street on row 1423), west past the hamlet by the western falls'
+  // creek, east out of the woods to the main line's valley stretch
+  { name: 'Timber Road', pts: [[1300, 1600], [1560, 1423], [2150, 1423], [2300, 1450]] },
+  // Willow Valley: from the lake's east shore through Willow Crossing (its main street on row 1018), east across the
+  // valley's fields and the desert's edge, round the mesas to Copper Gulch (its main street on row 1625) and the mine
+  { name: 'Mine Road', pts: [[3640, 1018], [4060, 1018], [4380, 1180], [4560, 1460], [4660, 1625], [4924, 1625]] },
+  { name: 'Willow Road', pts: [[3722, 745], [3722, 1500]] },   // (from the main line's north valley stretch across its south one to Brightwater Airstrip)
+  // Kestrel Lake's roads (world3-water.js): Lake Road along its south shore from the North Spur to Willow Road (the
+  // boathouse's track comes down to it), Lakeshore Road up its west shore to the campground
+  { name: 'Lake Road', pts: [[3030, 1250], [3722, 1250]] },
+  { name: 'Lakeshore Road', pts: [[3170, 1250], [3170, 950]] },
+  // the Sandpiper Coast: from the East Highway's end down to Sandpiper Bay (its main street on row 2804)
+  { name: 'Sandpiper Drive', pts: [[4975, 2509], [5060, 2650], [5240, 2804], [5520, 2804]] },
+  // the Red Rock Desert: Mesa Road from the desert's west edge along the north to Lucky Mesa (the Strip on row 612);
+  // Route 9 from the Strip's east end round the east of the mesas, down the canyons to Dusty Hollow; Hollow Road from
+  // Copper Gulch's east end across the main line to Dusty Hollow; Canyon Road from it down to Red Rock Dam on the
+  // desert river
+  { name: 'Mesa Road', pts: [[4440, 650], [4700, 600], [5000, 600], [5150, 612], [5640, 612]] },
+  { name: 'Route 9', pts: [[5640, 612], [5640, 752], [5700, 930], [5980, 980], [5990, 1220], [5900, 1380], [5760, 1460], [5560, 1580], [5440, 1700], [5420, 1790]] },   // (west of Lucky Mesa's airstrip, round the north of the big mesa)
+  { name: 'Hollow Road', pts: [[4924, 1625], [5000, 1700], [5150, 1830], [5314, 1854]] },
+  { name: 'Canyon Road', pts: [[5150, 1830], [5190, 1990], [5205, 2150]] },
+  // the Egret Coast: the coast road round the marsh peninsula's west side, from the woods down to Egret Point's
+  // Wharf Street (row 3230)
+  { name: 'Redwood Coast Road', pts: [[1150, 1960], [900, 2000], [790, 2150], [780, 2900], [850, 3150], [1000, 3222], [1100, 3230]] },
+  // the north coast: the beachfront road of the beach towns (world3-beach.js: the sea north of it)
+  // (the main line's north stretch on row ~732 runs behind it; over the farm lake's mouth on a bridge at x ~3320)
+  { name: 'Shore Road', pts: [[2500, 690], [2640, 680], [2900, 680], [2960, 708], [3080, 708], [3140, 680], [3270, 684], [3380, 684], [3600, 672], [3800, 660], [4040, 680]] },
+];
 const ROOM = { hwy: 24, main: 18, station: 30 };
 
 // the planned businesses (map.js SPECIALS' form; biz 'delivery' is a named place; fixed: the generator's later passes
