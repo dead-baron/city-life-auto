@@ -11,6 +11,7 @@ import { PARK } from '../shared/citylayout.js';
 import * as combat from '../server/systems/combat.js';
 import * as revive from '../server/systems/revive.js';
 import * as ems from '../server/systems/ems.js';
+import { descriptor } from '../server/net.js';
 import { spawnNpc } from '../server/systems/npc.js';
 import { kerbFor } from '../server/systems/kerbdrive.js';
 import { mulberry32 } from '../shared/rng.js';
@@ -79,7 +80,7 @@ test('the stretcher: out of the back, treat, onto the stretcher, wheeled to the 
   const npc = spawnNpc(w, 'executive', cafe.x + 60, cafe.y + 50, 'civ');
   combat.kill(w, npc, null, 'melee', 0);
   assert.ok(npc.dead && w.bodies.has(npc), 'down on the pavement');
-  let amb = null, steps = [], props = new Set(), lit = false, kneel = false;
+  let amb = null, steps = [], props = new Set(), lit = false, kneel = false, patient = null;
   for (let t = 0; t < 100 * 20; t++) {
     w.step();
     if (!amb) { for (const id of w.ambulances || []) amb = w.get(id); continue; }
@@ -88,7 +89,14 @@ test('the stretcher: out of the back, treat, onto the stretcher, wheeled to the 
     if (!ai) break;
     const st = ai.mode + (ai.mode === 'scene' ? ':' + ai.step : '');
     if (steps[steps.length - 1] !== st) steps.push(st);
-    for (const id of ai.crew) { const c = w.get(id); if (c && c.pp) props.add(c.pp); if (c && c.kneelUntil > w.time) kneel = true; }
+    for (const id of ai.crew) {
+      const c = w.get(id);
+      if (c && c.pp) props.add(c.pp);
+      if (c && c.kneelUntil > w.time) kneel = true;
+      // (who's on the stretcher goes to the page with the medic: the descriptor's pa, their own look - the owner,
+      // 2026-10-15: "it should be the actual character of the NPC or player")
+      if (c && c.pp) { const d = descriptor(c); if (c.pp === 'stretcherPt') { patient = d.pa; } else assert.equal(d.pa, undefined, 'an empty stretcher: nobody on it'); }
+    }
     if (amb.beacon) lit = true;
     if (ai.mode === 'leave') { teleport(w, a.p.ped, cafe.x + 6000, cafe.y); }   // (walk off: it goes once out of sight)
   }
@@ -97,6 +105,9 @@ test('the stretcher: out of the back, treat, onto the stretcher, wheeled to the 
   for (const s of steps) if (s === order[i]) i++; else if (order.indexOf(s) < i - 1) assert.fail(`out of order: ${steps}`);
   assert.equal(i, order.length, `every step in turn: ${steps}`);
   assert.ok(props.has('stretcher') && props.has('stretcherPt'), 'the stretcher wheeled out empty and back with the patient on it');
+  assert.ok(patient, 'who is on it is sent');
+  assert.deepEqual(patient.app, npc.app.lk ? { lk: npc.app.lk } : npc.app, 'their own look (by its code, as a ped\'s own descriptor sends it)');
+  assert.equal(patient.ar, 'executive', 'and archetype (the outfit family the page dresses them in)');
   assert.ok(kneel, 'a paramedic knelt to treat them');
   assert.ok(lit, 'the lights flashing while they worked');
   assert.ok(npc.removed || !w.get(npc.id), 'the patient was taken away');

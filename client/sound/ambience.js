@@ -8,15 +8,25 @@
 // Only the beds you can hear run: a bed's noise source is connected while it's heard (and a source nobody hears is
 // stopped), its filters at k-rate - a bed that's off costs the audio thread nothing.
 import { T, TILE, VF } from '../../shared/constants.js';
+import { TERRAIN_CELL } from '../../shared/worldmask-dims.js';
 import { setp, krate } from './engine.js';
 
 const R = Math.random, rr = (a, b) => a + R() * (b - a);
 const URBAN = new Set([T.ROAD, T.SIDEWALK, T.PLAZA, T.LOT, T.BUILDING, T.WALL, T.BRIDGE]);
 const GREEN = new Set([T.GRASS, T.FIELD, T.DIRT]);
 const WILD = { wild: 1, rural: 0.7, desert: 0.9, rocky: 0.8, park: 0.5, water: 0.6 };
+const FOREST = 2;   // (the map's terrain class of the woods: shared/map.js decodeTerrain W G F D R S, m.terrainCls)
 // the surf's level on the waterline: a crash peaks near the town's and the rain's beds (tools/sound/bench.py beds), not
 // 15 dB over them (#397)
 export const SURF_LEVEL = 0.32;
+// Each bed alone at gain 1, A-weighted (dBA: `python3 tools/sound/bench.py --only beds`, 2026-10-15), and the most each
+// one is ever turned up to (levels below; test/ambience.test.js checks the mix never goes past them). The rustle of the
+// leaves is as loud at gain 1 as the rain: at 0.35 it peaked over heavy rain (-28.3 dBA) and ran on every patch of grass
+// in the country - the "loud nonstop ocean or wind" the owner heard at Willow Valley station (2026-10-15). Now it's
+// the woods' own (the map's forest cells round you) and peaks under the city's hum (-32.8 by day): -34.3 in a full gust.
+export const BED_DBA = Object.freeze({ city: -25.3, wind: -21.3, leaves: -16.6, sea: -24.3, surf: -28.5, rain: -15, sub: -30.9, fire: -26.6, flow: -19.7, cave: -35 });
+export const BED_MAX = Object.freeze({ city: 0.42, wind: 0.4, leaves: 0.13, sea: 0.5, surf: SURF_LEVEL, rain: 0.22, sub: 0.6, fire: 0.35, flow: 0.3, cave: 0.28 });
+const LEAVES_LEVEL = BED_MAX.leaves, RIVER_LEVEL = 0.07, LAKE_K = 0.3;   // (a river running by: a quiet babble; a lake laps)
 
 export class Ambience {
   constructor(E) {
@@ -54,7 +64,7 @@ export class Ambience {
     this.gust = 0.7; this.swellPh = R() * 6.28;
     this.next = { ugdrip: 0, rat: 0, flap: 0, scan: 0, bird: 0, cricket: 0, owl: rr(20, 60), dog: rr(20, 60), siren: rr(40, 120), horn: rr(8, 30), gull: rr(5, 15), drop: 0, crackle: 0, surf: 0 };
     this.crickets = [[0, 0], [0, 0], [0, 0]];
-    this.k = { water: 0, sand: 0, green: 0, urban: 0, shore: 0, wx: 0, wild: 0, style: '' };
+    this.k = { water: 0, sand: 0, green: 0, urban: 0, shore: 0, wx: 0, wild: 0, woods: 0, river: 0, style: '' };
     this.fires = null;
     this.fire = null;   // the nearest fire (a lit campfire, a burning vehicle): { x, y, d }
   }
@@ -66,24 +76,41 @@ export class Ambience {
     this.fires = { map, list };
     return list;
   }
-  // what's around: the tiles near and far, the district
+  // what's around: the tiles near and far, the district. The sea's water (k.water, k.shore: the swell, the surf, the
+  // gulls) apart from a river's or a lake's (the map's river layer, lakes in it too: k.river - a lake only laps a little
+  // in the swell); the woods (k.woods: green ground in the map's forest cells, a park's lawns half as much) apart from
+  // the open grass and fields (k.green)
   scan(map, L) {
     const k = this.k, tx0 = Math.floor(L.x / TILE), ty0 = Math.floor(L.y / TILE);
-    let w = 0, s = 0, g = 0, u = 0, n = 0, wx = 0, wi = 0, li = 0, ni = 0, gi = 0;
-    for (let dy = -24; dy <= 24; dy += 6) for (let dx = -24; dx <= 24; dx += 6) {
-      const t = map.tileAt(tx0 + dx, ty0 + dy); n++;
-      if (t === T.WATER || t === T.DEEP || t === undefined) { w++; wx += dx; } else if (t === T.SAND) s++; else if (GREEN.has(t)) g++; else if (URBAN.has(t)) u++;
-    }
-    for (let dy = -6; dy <= 6; dy += 2) for (let dx = -6; dx <= 6; dx += 2) {
-      const t = map.tileAt(tx0 + dx, ty0 + dy); ni++;
-      if (t === T.WATER || t === T.DEEP || t === undefined) wi++; else { li++; if (GREEN.has(t)) gi++; }
-    }
-    k.water = w / n; k.sand = s / n; k.green = Math.max(g / n, gi / ni); k.urban = u / n;
-    k.shore = wi && li ? Math.min(1, (Math.min(wi, li) / ni) * 3.5) : 0;
-    k.wx = w ? wx / w / 24 : 0;
     const D = map.districtAt(L.x, L.y);
     k.style = D ? D.style : '';
     k.wild = WILD[k.style] || 0;
+    const riv = map.river || null, lake = map.lake || null, TC = map.terrainCls, cls = TC && TC.cls, cw = TC && TC.cw;
+    // (0 dry land, 1 the sea, 2 a river, 3 a lake)
+    const wet = (tx, ty, t) => {
+      if (t !== T.WATER && t !== T.DEEP) return 0;
+      if (!riv || !map.inside(tx, ty)) return 1;
+      const i = map.idx(tx, ty);
+      return riv[i] ? (lake && lake[i] ? 3 : 2) : 1;
+    };
+    let w = 0, s = 0, g = 0, u = 0, n = 0, wx = 0, wi = 0, li = 0, ni = 0, gi = 0, wo = 0, rv = 0, rn = 0;
+    for (let dy = -24; dy <= 24; dy += 6) for (let dx = -24; dx <= 24; dx += 6) {
+      const tx = tx0 + dx, ty = ty0 + dy, t = map.tileAt(tx, ty), q = wet(tx, ty, t); n++;
+      if (q === 1 || q === 3) { const kq = q === 1 ? 1 : LAKE_K; w += kq; wx += dx * kq; }
+      else if (q === 2) rv++;
+      else if (t === T.SAND) s++;
+      else if (GREEN.has(t)) { g++; if (cls && cls[Math.floor(ty / TERRAIN_CELL) * cw + Math.floor(tx / TERRAIN_CELL)] === FOREST) wo++; }
+      else if (URBAN.has(t)) u++;
+    }
+    for (let dy = -6; dy <= 6; dy += 2) for (let dx = -6; dx <= 6; dx += 2) {
+      const tx = tx0 + dx, ty = ty0 + dy, t = map.tileAt(tx, ty), q = wet(tx, ty, t); ni++;
+      if (q === 1) wi++; else if (q) rn++; else { li++; if (GREEN.has(t)) gi++; }
+    }
+    k.water = w / n; k.sand = s / n; k.green = Math.max(g / n, gi / ni); k.urban = u / n;
+    k.woods = Math.min(1, wo / n * 1.25 + (k.style === 'park' ? k.green * 0.5 : 0));
+    k.river = Math.min(1, Math.max(rv / n, rn / ni) * 3);
+    k.shore = wi && li ? Math.min(1, (Math.min(wi, li) / ni) * 3.5) : 0;
+    k.wx = w ? wx / w / 24 : 0;
   }
   // somewhere around you for a critter: d px away in a random direction
   around(L, d0, d1) { const a = R() * 6.283, d = rr(d0, d1); return [L.x + Math.cos(a) * d, L.y + Math.sin(a) * d]; }
@@ -144,18 +171,18 @@ export class Ambience {
     this.swellPh += 0.25 * 6.283 / rr(7.5, 10);
     const swell = 0.65 + 0.35 * Math.sin(this.swellPh);
     const roof = inside ? 0.35 : 1, open = sub ? 0 : 1;
-    const want = {
-      city: open * roof * Math.min(1, k.urban * 1.4) * (1 - k.wild * 0.7) * (night > 0.5 ? 0.6 : 1) * 0.42,
-      wind: open * roof * (0.05 + 0.26 * k.wild * (1 - k.urban) + 0.1 * rain + 0.15 * Math.max(0, k.water - 0.6)) * this.gust,
-      leaves: open * roof * k.green * Math.min(1, k.wild * 1.6) * 0.35 * this.gust * this.gust,
-      sea: open * roof * Math.pow(k.water, 0.8) * 0.5 * swell,
-      surf: open * roof * k.shore * SURF_LEVEL,
-      rain: (sub ? 0 : rain * (inside ? 0.09 : 0.22) * (0.85 + 0.15 * this.gust)),   // (heard through the roof indoors; it swells a little with the gusts)
-      sub: sub && !F.ug ? 0.6 : 0,
-      flow: F.ug === 1 ? 0.3 : 0,
-      cave: F.ug === 2 ? 0.28 : 0,
-      fire: this.fire && !sub ? Math.pow(Math.max(0, 1 - this.fire.d / 520), 2) * 0.35 : 0,
-    };
+    const want = this.want || (this.want = {});
+    want.city = open * roof * Math.min(1, k.urban * 1.4) * (1 - k.wild * 0.7) * (night > 0.5 ? 0.6 : 1) * BED_MAX.city;
+    // (the open country's breeze: under the city's hum, gusting - it was 0.05 + 0.26 wild, the leaves on top of it)
+    want.wind = open * roof * (0.04 + 0.2 * k.wild * (1 - k.urban) + 0.1 * rain + 0.15 * Math.max(0, k.water - 0.6)) * this.gust;
+    want.leaves = open * roof * k.woods * LEAVES_LEVEL * this.gust * this.gust;   // (the woods' rustle, in the gusts)
+    want.sea = open * roof * Math.pow(k.water, 0.8) * BED_MAX.sea * swell;
+    want.surf = open * roof * k.shore * SURF_LEVEL;
+    want.rain = sub ? 0 : rain * (inside ? 0.09 : BED_MAX.rain) * (0.85 + 0.15 * this.gust);   // (the server's weather: heard through the roof indoors; it swells a little with the gusts)
+    want.sub = sub && !F.ug ? BED_MAX.sub : 0;
+    want.flow = F.ug === 1 ? BED_MAX.flow : F.ug ? 0 : open * roof * k.river * RIVER_LEVEL;   // (the sewer's stream; up top, a river running by)
+    want.cave = F.ug === 2 ? BED_MAX.cave : 0;
+    want.fire = this.fire && !sub ? Math.pow(Math.max(0, 1 - this.fire.d / 520), 2) * BED_MAX.fire : 0;
     for (const name in want) {
       const b = B[name], w = want[name] * this.level;
       if (w > 0.002 && !b.on) this.bedOn(name, b);

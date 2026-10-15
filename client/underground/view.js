@@ -20,6 +20,19 @@ const SKIN = ['#e8bf98', '#c99872', '#a8774f', '#7a5236', '#f0cfae'];
 
 export function createUgView(S, api) { return new UgView(S, api); }
 
+// The light in at a cave's mouth (UgView.mouthSpots): n spots from just outside the mouth (`out` px) along the passage,
+// `reach` of the way to the entrance hall's middle; their radius r0 at the mouth to r1, their strength k0 there to nothing
+export const MOUTH = Object.freeze({ n: 7, reach: 0.95, r0: 130, r1: 52, k0: 1, out: 14 });
+// how much light comes in (0..1 of the darkness lifted at the mouth): the day's, a little moonlight at night
+export function mouthLevel(sky) { const day = sky ? 1 - Math.max(0, Math.min(1, sky.night || 0)) : 1; return 0.22 + 0.73 * day; }
+// its colour: the sky's ambient light at its own hue, at full brightness ([r, g, b, alpha] - the wash fainter at night)
+export function mouthTint(sky, out = [0, 0, 0, 0]) {
+  const a = (sky && sky.amb) || [1, 1, 1], m = Math.max(a[0], a[1], a[2], 0.001), day = sky ? 1 - Math.max(0, Math.min(1, sky.night || 0)) : 1;
+  for (let i = 0; i < 3; i++) out[i] = Math.round(Math.max(0, Math.min(1, a[i] / m)) * 255);
+  out[3] = Math.round((0.08 + 0.2 * day) * 1000) / 1000;
+  return out;
+}
+
 class UgView {
   constructor(S, api) {
     this.S = S; this.api = api || {};
@@ -168,7 +181,7 @@ class UgView {
     for (const p of peds) this.ped(g, p, now);
     this.effects(g, now, dt);
     this.darkness(g, F, W, H, DPR, now);
-    this.glows(g, view, now);
+    this.glows(g, view, now, F);
   }
 
   water(g, view, now) {
@@ -444,6 +457,8 @@ class UgView {
     if (ug === UG.SEWER) for (const gr of L.grates || []) hole(gr.x, gr.y, 90, 0.18 + 0.55 * day);
     // the glowing things
     if (ug === UG.CAVE) for (const K2 of L.caves || []) for (const gl of K2.glow) hole(gl.x, gl.y, gl.r, gl.k * (0.85 + 0.15 * Math.sin(now * 1.3 + gl.x * 0.01)));
+    // the light in at a cave's mouth: day's, or a little moonlight
+    if (ug === UG.CAVE) { const lk = mouthLevel(F.sky); for (const s of this.mouthSpots()) if (s.x > F.view.x0 - s.r && s.x < F.view.x1 + s.r && s.y > F.view.y0 - s.r && s.y < F.view.y1 + s.r) hole(s.x, s.y, s.r, s.k * lk); }
     // just enough to make yourself out by
     const me = F.meEnt;
     if (me) hole(me.rx, me.ry, 64, ug === UG.SEWER ? 0.3 : 0.18);
@@ -452,12 +467,37 @@ class UgView {
     g.drawImage(cv, 0, 0);
     g.setTransform(...S.worldTf);
   }
-  // the glowing things' own colour, added over the dark (soft blue-green halos)
-  glows(g, view, now) {
+  // The daylight coming in at each cave's mouth (the owner, 2026-10-15: "have the entrance of the cave lit up with light
+  // coming in from the entrance so it's easier to find"): a bright pool at the mouth, fading in along the passage up to
+  // the entrance hall - worked out once per cave (MOUTH: spots along the way, each smaller and fainter than the last);
+  // each frame the darkness is cut round them like any other light, as strong as the light outside (mouthLevel: the
+  // day's, a little moonlight at night), and a wash of the sky's own colour laid over the first of them (warm by day,
+  // gold at dusk, blue under the moon) - so from inside, the way out shows.
+  mouthSpots() {
+    if (this._mouth) return this._mouth;
+    const out = [];
+    for (const K2 of this.L.caves || []) {
+      const ax = K2.mouth.x, ay = K2.mouth.y + MOUTH.out * K2.flip, bx = K2.ch.hall.x, by = K2.ch.hall.y;
+      for (let i = 0; i < MOUTH.n; i++) {
+        const t = i / (MOUTH.n - 1), u = 1 - t;
+        out.push({ x: ax + (bx - ax) * t * MOUTH.reach, y: ay + (by - ay) * t * MOUTH.reach, r: MOUTH.r0 + (MOUTH.r1 - MOUTH.r0) * t, k: u * u * u * (MOUTH.k0 - 0.15) + 0.15 * u, t });
+      }
+    }
+    return (this._mouth = out);
+  }
+  // the glowing things' own colour, added over the dark (soft blue-green halos); the light in at the caves' mouths
+  glows(g, view, now, F) {
     const L = this.L, S = this.S;
     if ((S.ugLayer || 0) !== UG.CAVE || !L.caves || !L.caves.length) return;
     g.save();
     g.globalCompositeOperation = 'lighter';
+    const sky = F && F.sky, tint = mouthTint(sky, this._tint || (this._tint = [0, 0, 0, 0]));
+    for (const s of this.mouthSpots()) {
+      if (s.t > 0.5 || s.x < view.x0 - s.r || s.x > view.x1 + s.r || s.y < view.y0 - s.r || s.y > view.y1 + s.r) continue;
+      const gr = g.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
+      gr.addColorStop(0, `rgba(${tint[0]},${tint[1]},${tint[2]},${tint[3] * s.k})`); gr.addColorStop(1, `rgba(${tint[0]},${tint[1]},${tint[2]},0)`);
+      g.fillStyle = gr; g.beginPath(); g.arc(s.x, s.y, s.r, 0, 6.283); g.fill();
+    }
     for (const K2 of L.caves) for (const gl of K2.glow) {
       if (gl.x < view.x0 - gl.r || gl.x > view.x1 + gl.r || gl.y < view.y0 - gl.r || gl.y > view.y1 + gl.r) continue;
       const pulse = 0.8 + 0.2 * Math.sin(now * 1.3 + gl.x * 0.01), col = gl.kind === 'crystal' ? '150,110,255' : gl.kind === 'worms' ? '90,200,255' : '60,230,200';

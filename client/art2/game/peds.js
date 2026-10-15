@@ -28,6 +28,8 @@ import { decodeLook, lookArt } from '../../../shared/lookcore.js';   // (the cor
 import { CLUBS } from '../../../shared/clubs.js';
 import { DANCE_MOVES, danceFrame, danceDir } from '../../../shared/dance.js';
 import '../dances.js';   // (the dance moves' poses: registered in people.js's POSES, out of the chunk bake's reach)
+import { litterApp, litterAt, LITTER } from '../litter.js';   // (the pose of someone on a paramedic's stretcher, and how they lie there: host.js)
+export { litterApp, litterAt, LITTER };
 
 // Dancing (task #394): the descriptor's dm (shared/dance.js) -> people.js's pose for the move; the frame each moment and
 // the heading it's drawn at (the spin goes round) - host.js

@@ -17,7 +17,8 @@ export function confirm(world, p, type, key) {
   if (a && a.key === key && now <= a.until) { p.safetyArm = null; return true; }
   p.safetyArm = { key, until: now + SAFETY_CONFIRM_S };
   const c = CRIMES[type];
-  // (U17: the page draws it as the shield plate, "Safety mode · Settings" under the words - client/style.css .toast.safety)
+  // (the page shows no note for it while the prompt is up - the prompt's key and the touch button blink, "PRESS AGAIN" on
+  // the plate's edge: client/hud.js safetyNudge, the owner 2026-10-15 - and a plain note when there's no prompt)
   world.notify(p, `That's ${c.label[0].toLowerCase() + c.label.slice(1)}${c.felony ? ' (a felony)' : ''} - press again to do it anyway`, 'safety');
   p.meDirty = true;
   return false;
