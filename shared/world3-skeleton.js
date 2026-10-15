@@ -385,7 +385,7 @@ export const TOWNS = [
   { name: 'Route 9', at: [5960, 1100] }, { name: 'Egret Point', at: [1220, 3230] },
 ];
 export const LANDMARKS = [
-  { name: 'North Cape Light', kind: 'light', at: [480, 835] }, { name: 'Egret Point Light', kind: 'light', at: [982, 3410] },
+  { name: 'North Cape Light', kind: 'light', at: [520, 830] }, { name: 'Egret Point Light', kind: 'light', at: [982, 3410] },
   { name: 'Sandpiper Point Light', kind: 'light', at: [5720, 2770] }, { name: 'Silver Thread Falls', kind: 'falls', at: [1745, 1030] },
   { name: 'Lookout Hill', kind: 'lookout', at: [3430, 860] }, { name: 'Granite Lookout', kind: 'lookout', at: [1250, 700] },
   { name: 'Copper Gulch Mine', kind: 'mine', at: [4920, 1600] }, { name: 'Red Rock Dam', kind: 'dam', at: [5245, 2160] },

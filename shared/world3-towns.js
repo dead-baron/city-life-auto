@@ -75,7 +75,7 @@ export const TOWN_ROADS3 = [
   // Willow Valley: from the lake's east shore through Willow Crossing (its main street on row 1018), east across the
   // valley's fields and the desert's edge, round the mesas to Copper Gulch (its main street on row 1625) and the mine
   { name: 'Mine Road', pts: [[3640, 1018], [4060, 1018], [4380, 1180], [4560, 1460], [4660, 1625], [4924, 1625]] },
-  { name: 'Willow Road', pts: [[3722, 745], [3722, 1376]] },   // (between the main line's north and south valley stretches)
+  { name: 'Willow Road', pts: [[3722, 745], [3722, 1500]] },   // (from the main line's north valley stretch across its south one to Brightwater Airstrip)
   // Kestrel Lake's roads (world3-water.js): Lake Road along its south shore from the North Spur to Willow Road (the
   // boathouse's track comes down to it), Lakeshore Road up its west shore to the campground
   { name: 'Lake Road', pts: [[3030, 1250], [3722, 1250]] },
@@ -87,7 +87,7 @@ export const TOWN_ROADS3 = [
   // Copper Gulch's east end across the main line to Dusty Hollow; Canyon Road from it down to Red Rock Dam on the
   // desert river
   { name: 'Mesa Road', pts: [[4440, 650], [4700, 600], [5000, 600], [5150, 612], [5640, 612]] },
-  { name: 'Route 9', pts: [[5640, 612], [5640, 752], [5800, 840], [5980, 960], [5990, 1220], [5900, 1380], [5760, 1460], [5560, 1580], [5440, 1700], [5420, 1790]] },
+  { name: 'Route 9', pts: [[5640, 612], [5640, 752], [5700, 930], [5980, 980], [5990, 1220], [5900, 1380], [5760, 1460], [5560, 1580], [5440, 1700], [5420, 1790]] },   // (west of Lucky Mesa's airstrip, round the north of the big mesa)
   { name: 'Hollow Road', pts: [[4924, 1625], [5000, 1700], [5150, 1830], [5314, 1854]] },
   { name: 'Canyon Road', pts: [[5150, 1830], [5190, 1990], [5205, 2150]] },
   // the Egret Coast: the coast road round the marsh peninsula's west side, from the woods down to Egret Point's

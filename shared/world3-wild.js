@@ -41,7 +41,7 @@ export const WILD_SITES = [
   { name: 'Starlite Drive-In', d: D3.DESERT, near: [4500, 1540] },
   { name: 'Route 9', d: D3.DESERT, near: [5960, 1100] },
   { name: 'Mesa Radio Mast', d: D3.DESERT, near: [4560, 760] },
-  { name: 'Dry Creek Wind Farm', d: D3.DESERT, near: [4700, 560] },
+  { name: 'Dry Creek Wind Farm', d: D3.DESERT, near: [4640, 720] },
   { name: 'The Rusty Spur', d: D3.DESERT, near: [4420, 1360] },
 ];
 // (H51) Dry Creek's farmland in Willow Valley's east side (part 5: the owner split Dry Creek between the valley and the
@@ -106,6 +106,17 @@ export const WILD_TRACKS = [
   // (H51) the ways down to the coves: from the nearest road to the top of each (the cove's own trail on down)
   { name: 'Redwood Cove Track', end: [534, 1090], d: D3.WOODS },
   { name: 'Granite Cove Track', end: [3127, 1044], d: D3.VALLEY, reach: 420 },   // (from Kestrel Road: no road comes nearer the lake's north shore)
+];
+// (v3b, the owner 2026-10-14) the crop dusters' grass airstrips in the farm valley's open fields, and Lucky Mesa's
+// desert strip east of the town (the sketch's): runway [x0, y0, x1, y1) (mown grass in the valley, packed dirt in the
+// desert; the valley's run east-west, about 300 x 18), the hangar [x, y, w, h], the windsock and the fuel tank (tiles),
+// the dirt track to the road (Mine Road, Willow Road, Route 9 - world3-towns.js TOWN_ROADS3). Data for the integration
+// to build with the Route 9 Airstrip's pieces (shared/naturesites.js route9) and list in m.natureSites (kind
+// 'airstrip'; shared/flight.js reads those as north-south strips today - an east-west one needs its heading there).
+export const AIRSTRIPS3 = [
+  { name: 'Willow Valley Airstrip', d: D3.VALLEY, surface: 'grass', runway: [3940, 1180, 4240, 1198], hangar: [3922, 1202, 14, 10], windsock: [3934, 1175], tank: [3940, 1208], track: [[4240, 1189], [4250, 1189], [4250, 1112]] },
+  { name: 'Brightwater Airstrip', d: D3.VALLEY, surface: 'grass', runway: [3230, 1460, 3530, 1478], hangar: [3212, 1482, 14, 10], windsock: [3224, 1455], tank: [3230, 1488], track: [[3530, 1469], [3720, 1469]] },
+  { name: 'Lucky Mesa Airstrip', d: D3.DESERT, surface: 'dirt', runway: [5751, 740, 5769, 900], hangar: [5774, 800, 14, 10], windsock: [5774, 745], tank: [5776, 815], track: [[5774, 900], [5740, 936]] },
 ];
 // today's wild districts -> the v3 region they move to (Highland Woods, Granite Peaks; Dry Creek's farmland the valley,
 // its desert the Red Rock Desert)

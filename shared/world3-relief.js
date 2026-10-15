@@ -39,7 +39,7 @@ const LM = (name) => LANDMARKS.find((l) => l.name === name)?.at;
 // the places on high ground (the tests check each): [name, at, radius (tiles) round which it stands highest]
 export const HIGH_SPOTS = [
   ['Lookout Hill', LM('Lookout Hill'), 110, 34, false],
-  ['North Cape', [470, 830], 95, 22, true],
+  ['North Cape', [520, 830], 95, 22, true],
   ['Egret Point', LM('Egret Point Light'), 80, 20, true],
   ['Sandpiper Point', LM('Sandpiper Point Light'), 85, 18, true],
 ];
