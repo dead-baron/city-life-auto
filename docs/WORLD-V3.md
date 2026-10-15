@@ -4633,3 +4633,26 @@ front facing south)
 - **The east**: the Red Rock Desert (50) with Copper Gulch (63), Dusty Hollow (64) and the Route 9 places; Lucky Mesa
   (The Strip 60, Old Downtown 61, Mesa Flats 62) in the top-right corner with its airstrip; the Sandpiper Coast (52) and
   Sandpiper Bay (59), the south-east town, where the desert meets the sea.
+
+### 9.4 The build (2026-10-15, overnight)
+Three parallel changes, merged on `world-v3b`:
+- **The frame, the land and the transport skeleton** (world3.js 13 x 8 regions; world3-skeleton.js rebuilt from
+  world3-layout.js - no pieces, no pictures; world3-land.js paints GROUND3 over the biomes; the main loop as one segment
+  with its tunnels, its elevated stretch laid below ground and flagged until the generator has a rail viaduct over
+  streets; the subways as closed loops, below ground but by the water; the four ferries; the bridges derived from the
+  land). The skeleton's arterials are the sketch's traced roads (31), the island bridges (14), four footbridges and the
+  regional places' own roads (world3-layout.js TOWN_ROADS3: their names are the towns' main streets).
+- **The city** (world3-city.js: CITY3 the districts as rectangles, PITCH the block sizes by style, AVE_X / AVE_Y one
+  avenue grid across the gulf, paintCity3, planCity3 / layCity3; the park, the stadium, the airport and the fixed spots
+  handed to map.js through opts.parks / airports / seedOf / spotOf).
+- **The regions** re-anchored (world3-towns/mesa/desert/west/water/wild/beach/relief) and the airstrips
+  (world3-airstrips.js).
+Found on the way: **the build took 230 s** - today's coast and river drives (map.js layoutRoads) were traced over the
+placement's off-frame corner (a 100,000-tile square) once no piece places Metro City; skipped, **55 s**, peak 1.55 GB.
+**The main line below ground** through the city's districts and the towns it passes but round its stations
+(world3-city.js cityRailUnder, world3-rail.js townRailUnder; STATION_OPEN 60 tiles each way): 207 level crossings ->
+~50, the rest on country roads; the city's streets cross it only where it is below ground (planCity3).
+Numbers (tools/world3b/check.mjs): 10,850 buildings, 1,980 homes, 5,100 POIs, 212,000 props; 13 main-line stations;
+the Pink Line 10 stations, the Yellow 11.
+Left: the rail viaduct over Midtown's streets; Northshore (31), North Point (32) and The Bluffs (34) not yet painted
+(the north coast is the Northshore Beaches' only); the in-game map's picture (tools/build-worldmap2.mjs --world v3).
