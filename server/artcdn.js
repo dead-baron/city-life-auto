@@ -19,7 +19,7 @@
 import { Worker } from 'node:worker_threads';
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, createReadStream, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { cpus } from 'node:os';
+import { cpus, totalmem } from 'node:os';
 import { TILE } from '../shared/constants.js';
 
 const CHUNK = 768;                                // (client/art2/game/chunkbake.js CHUNK: the art's chunks, not the net's)
@@ -247,12 +247,15 @@ function defaultPrewarm() {
   const qs = (env === undefined ? '1' : env).split(',').map((s) => Number(s.trim())).filter((q) => q >= 0 && q <= 3 && Number.isInteger(q));
   return [...new Set(qs)];
 }
-// One bake thread on a small server (the game's tick has the other core), two on four cores or more, none on one.
-function defaultThreads() {
+// One bake thread, two on four cores or more. The thread runs at the lowest priority (artbake.js setPriority(19)), so on a
+// one-core server it only gets the time the game's tick leaves - the live server is one core, and with none there it
+// never baked a chunk: every page baked all of its own art (the owner, 2026-10-15, on a phone: "the graphics don't load
+// fast enough"). None where memory is short: the thread builds the world too (World v3's, about 1.5 GB at its peak).
+export function defaultThreads(n = cpus().length, mem = totalmem()) {
   const env = process.env.CLA_ART_THREADS;
   if (env !== undefined && env !== '') return Math.max(0, Number(env) || 0);
-  const n = cpus().length;
-  return n >= 4 ? 2 : n >= 2 ? 1 : 0;
+  if (mem < 4.5e9) return 0;
+  return n >= 4 ? 2 : 1;
 }
 // The order the asks are baked in (docs/WORLD-V3.md 8.12.1). A page asks for what its screen needs nearest first (the
 // pool sends its looks in that order), a few at a time as the answers come back - one look is a burst of asks over a

@@ -2636,7 +2636,14 @@ function pedPose(e) {
 }
 
 let last = performance.now(), fpsAcc = 0, fpsN = 0, pingAt = 0;
+// A frame that throws no longer ends the game (the owner, 2026-10-15: "Spawning a helicopter turned the screen black and
+// froze the game" - the next frame was only asked for at the end of this one): the next frame is always asked for, and
+// the error goes to the server once (reportError: /clienterrors).
 function frame(nowMs) {
+  try { frameBody(nowMs); } catch (e) { reportError('frame', e); }
+  requestAnimationFrame(frame);
+}
+function frameBody(nowMs) {
   diagFrame(nowMs - last);
   if (nowMs - last < 250) frameRecord(nowMs - last);   // (not the gap after the tab was hidden)
   govern(nowMs); perfReport(nowMs);
@@ -2668,8 +2675,26 @@ function frame(nowMs) {
     // title screen before the city connects: the pad still drives the menus
     if (pollPadForMenus() && !overlayPad()) titlePad();
   }
-  requestAnimationFrame(frame);
 }
+// What went wrong in this page, once each (message and where): to the server (server/perfreports.js addClientError, listed
+// at /clienterrors) with a short note of what the player was doing; a broken frame says so once on screen.
+const ERR_SEEN = new Set();
+function errNote() {
+  try {
+    const me = S.ents.get(S.myPedId), car = me && me.parent ? S.ents.get(me.parent) : null, def = car && car.d && car.kind === K.VEH ? VEHICLE_BY_INDEX[car.d.m] : null;
+    return `${S.practice ? 'practice' : 'online'} · ${def ? 'in a ' + def.name : car && car.kind === K.TRAIN ? 'on a train' : 'on foot'} · renderer ${S.art2 ? (S.art2.ready ? 'v2' : 'v2 starting') : S.art2Off ? 'basic (' + S.art2Off + ')' : 'none'} · ${Math.round(S.cam ? S.cam.x : 0)},${Math.round(S.cam ? S.cam.y : 0)}`;
+  } catch { return ''; }
+}
+function reportError(where, e) {
+  const msg = String((e && e.message) || e || 'unknown').slice(0, 300), key = where + '|' + msg;
+  if (ERR_SEEN.has(key) || ERR_SEEN.size > 40) return;
+  ERR_SEEN.add(key);
+  console.error(`[${where}]`, e);
+  try { send({ t: 'cerr', where, msg, stack: String((e && e.stack) || '').slice(0, 1500), build: myBuild().v, ua: navigator.userAgent.slice(0, 160), ctx: errNote() }); } catch { /* not connected */ }
+  if (where === 'frame' && S.hud) S.hud.toast('Something went wrong drawing the game. It was reported; the game carries on.', 'warn');
+}
+addEventListener('error', (ev) => reportError('page', ev.error || ev.message));
+addEventListener('unhandledrejection', (ev) => { const r = ev.reason; if (r && /^(NotAllowedError|AbortError)$/.test(r.name || '')) return; reportError('promise', r); });   // (not a sound the browser won't start yet, nor a fetch called off)
 
 // ---- the frame ------------------------------------------------------------------------------------------
 // A frame is four steps:

@@ -213,7 +213,7 @@ test('a job truck whose driver has left the game is let go: the company collects
   const v = w.get(p.job.truck);
   assert.ok(!v.despawnable);
   players.leave(w, p);
-  for (let i = 0; i < 8 && w.players.has(p.pid); i++) run(w, 10);
+  for (let i = 0; i < 40 && w.players.has(p.pid); i++) run(w, 10);   // (nothing after them: the body waits AWAY_SECONDS - players.js safeToIdle)
   assert.ok(!w.players.has(p.pid), 'gone');
   run(w, 10);
   assert.ok(v.despawnable || v.removed, 'no longer kept');

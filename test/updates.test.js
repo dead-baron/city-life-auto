@@ -132,7 +132,7 @@ test('an update while you play: every page is told; reloading for it leaves no g
   const c = login(w, { build: 'b3', pos: { x: at.x, y: at.y }, cash: 90 }, null, { clientBuild: 'b3' });
   players.leave(w, c.p);
   players.announceBuild(w, { v: 'b4', at: 4000 });
-  run(w, 31);
+  for (let i = 0; i < 40 && w.players.has(c.p.pid); i++) run(w, 10);   // (30 s, or AWAY_SECONDS with nothing after them: players.js safeToIdle)
   assert.ok(!w.players.has(c.p.pid), 'logged out');
   assert.equal(c.prof.cash, 90, 'nothing dropped');
 });

@@ -75,6 +75,7 @@ export function createSession(world, conn, opts) {
         if (!conn[said] && !opts.practice) { conn[said] = true; perf.addReport(world, msg.r); }
         return;
       }
+      if (msg.t === 'cerr') { perf.addClientError(world, conn, msg); return; }   // (an error in the page: /clienterrors)
       if (msg.t === 'menu') { economy.handleMenu(world, player, Number(msg.poi), String(msg.opt || '')); return; }
       if (msg.t === 'weapon' && player.ped && !player.ped.dead) { combat.selectWeapon(world, player.ped, String(msg.id)); return; }
       // the bag: use an item, or put one in a quick-wheel slot (null clears it)

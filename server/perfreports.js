@@ -72,3 +72,27 @@ export function reportsText(world) {
   const head = `City Life Auto - how devices loaded and ran the game, newest first (the last ${MAX} since the server started; ${list.length} so far)\n`;
   return head + '\n' + list.map((r) => `${new Date(r.when).toISOString().slice(0, 16).replace('T', ' ')} UTC  ${reportLine(r)}`).join('\n\n') + '\n';
 }
+
+// Errors in players' pages (client/main.js reportError: a frame that threw, an uncaught error or rejection), each once a
+// page, the latest kept in memory and listed at /clienterrors - nothing personal: the message, where, the stack, the
+// build, the device, what the player was doing (the page's own short note: on foot or in which vehicle, the renderer).
+// The owner, 2026-10-15: "Spawning a helicopter turned the screen black and froze the game" - a frame that threw stopped
+// the page's loop for good, and nothing of it reached anyone.
+const ERR_MAX = 80, ERR_PER_CONN = 12;
+export function addClientError(world, conn, e) {
+  if (!e || typeof e !== 'object') return false;
+  conn.cerrs = (conn.cerrs || 0) + 1;
+  if (conn.cerrs > ERR_PER_CONN) return false;
+  const c = { t: new Date().toISOString(), where: str(e.where, 20), msg: str(e.msg, 300), stack: str(String(e.stack || '').replace(/\n/g, ' | '), 1500), build: str(e.build, 20), ua: str(e.ua, 160), ctx: str(e.ctx, 200), n: 1 };
+  const list = (world.clientErrors ||= []);
+  const same = list.find((q) => q.msg === c.msg && q.where === c.where && q.build === c.build);
+  if (same) { same.n++; same.t = c.t; return true; }
+  list.unshift(c);
+  if (list.length > ERR_MAX) list.length = ERR_MAX;
+  return true;
+}
+export function errorsText(world) {
+  const list = world.clientErrors || [];
+  if (!list.length) return 'No errors reported by pages since the server started.\n';
+  return list.map((c) => `${c.t}  x${c.n}  [${c.where}] ${c.msg}\n  build ${c.build} · ${deviceName({ ua: c.ua })} · ${c.ctx}\n  ${c.stack}\n`).join('\n');
+}

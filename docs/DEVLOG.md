@@ -9833,3 +9833,17 @@ map"; the graphics bar on the title screen cut off with the phone upright.
 - **The title on a phone upright**: the graphics bar's five buttons share the width (client/style.css, max-width 520 px).
 Tests: test/art2.test.js (the train's bake-ahead, the tunnel's lines), test/artcdn.test.js (the railway first, the
 points ahead), test/core.test.js (leaving idle, away).
+
+## 2026-10-15 · The server bakes art on one core too; errors in players' pages reach the server
+- **The art from the server never baked on the live server** (/stats: `art.threads` 0, 0 of 45,864 chunks): it's a
+  one-core machine (the owner has since moved it to Oracle's free 2 OCPU / 12 GB), and server/artcdn.js started a bake
+  thread only from two cores up. Every phone baked all its own art - most of the "graphics don't load fast enough". Now
+  one thread by default whatever the cores (two from four), at the lowest priority (artbake.js setPriority(19): it only
+  gets what the game's tick leaves - about 90% of a core at today's 4.7 ms ticks), none under 4.5 GB of memory;
+  `CLA_ART_THREADS` still overrides. The railway and the highways are baked first (the entry above).
+- **A frame that threw ended the game** (the owner: "Spawning a helicopter turned the screen black and froze the game"):
+  main.js asked for the next frame only at the end of each. The loop now always goes on, and the error - with uncaught
+  errors and rejections - goes to the server once a page (`{ t: 'cerr' }`; server/perfreports.js addClientError, 12 a
+  connection, the latest 80 kept), listed at **/clienterrors** with the build, the device and what the player was doing.
+- Leaving idle (the entry above): a bounty on your head counts as something after you (the 30 s drop rule).
+Tests: test/core.test.js, test/bounties.test.js, test/honestliving.test.js, test/updates.test.js (the longer wait).
