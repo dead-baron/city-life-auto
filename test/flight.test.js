@@ -252,3 +252,22 @@ test('up in the air: out of reach of a swing, of the police dragging the pilot o
   props.update(w, 0.05);
   assert.equal((w.brokenProps || new Map()).size, before, 'the lamp post under it stands');
 });
+
+// A page's World v3 window holds the world a region at a time: the places of regions not in yet are holes in map.pois.
+// The helipads were worked out over every place and threw on the first hole - the frame died and the screen went black
+// (the owner, 2026-10-15: "Spawning a helicopter turned the screen black and froze the game").
+test('the page\'s airfields: holes in the places are passed over, and worked out again as more come in', async () => {
+  const { pageAirfields } = await import('../client/render/aircraft.js');
+  const { generateCity } = await import('../shared/map.js');
+  const m = generateCity(1337);
+  const full = airfields(m).pads.length;
+  const page = Object.create(Object.getPrototypeOf(m));
+  Object.assign(page, m);
+  page._airfields = null;
+  page.pois = m.pois.slice();
+  for (let i = 0; i < page.pois.length; i += 3) delete page.pois[i];   // (holes, as a window's)
+  const some = pageAirfields(page);
+  assert.ok(Array.isArray(some.pads), 'no throw on the holes');
+  page.pois = m.pois.slice();
+  assert.equal(pageAirfields(page).pads.length, full, 'all the pads once every region is in');
+});

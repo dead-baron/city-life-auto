@@ -236,9 +236,27 @@ function drawBeam(g, v, def, q, lift, now) {
   g.restore();
 }
 
+// The airfields as this page knows them. In World v3 the page holds the world a region at a time, so the places of regions
+// not in yet are holes in map.pois - shared/flight.js airfields read every one (the Search & Rescue HQ's pad) and threw on
+// the first hole: the frame died, the screen went black (the owner, 2026-10-15: "Spawning a helicopter turned the screen
+// black and froze the game"). It's worked out from a copy without the holes, again as more regions come in.
+const NOWHERE = Object.freeze({ kind: '', x: 0, y: 0 });
+export function pageAirfields(m) {
+  const P = m.pois || [];
+  let n = 0;
+  for (let i = 0; i < P.length; i++) if (P[i]) n++;
+  if (m._afPois === n && m._airfields) return m._airfields;
+  const mm = Object.create(m);
+  mm.pois = Array.from(P, (q) => q || NOWHERE);   // (holes as nothing in particular: the indexes stay the same)
+  mm._airfields = null;
+  m._airfields = airfields(mm);
+  m._afPois = n;
+  return m._airfields;
+}
+
 // the helipads' H on the ground (and on the hospitals' roofs) - the yellow ring, the white H
 function drawPads(g, F, S, v2) {
-  const view = F.view, af = airfields(S.map);
+  const view = F.view, af = pageAirfields(S.map);
   for (const p of af.pads) {
     const py = p.roof && v2 ? p.y - liftOf(p.alt) : p.y;   // (art v2 stands its buildings up: a roof pad up on the drawn roof)
     if (p.x < view.x0 - 100 || p.x > view.x1 + 100 || py < view.y0 - 100 || py > view.y1 + 100) continue;

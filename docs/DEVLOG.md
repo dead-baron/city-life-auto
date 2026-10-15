@@ -9847,3 +9847,9 @@ points ahead), test/core.test.js (leaving idle, away).
   connection, the latest 80 kept), listed at **/clienterrors** with the build, the device and what the player was doing.
 - Leaving idle (the entry above): a bounty on your head counts as something after you (the 30 s drop rule).
 Tests: test/core.test.js, test/bounties.test.js, test/honestliving.test.js, test/updates.test.js (the longer wait).
+- **The helicopter's black screen, found** (a local World v3 page, the new error report): the helipads are worked out over
+  every place (shared/flight.js airfields - this morning's Search & Rescue HQ pad), and a page's World v3 window has holes
+  in map.pois for the regions not in yet: the first hole threw, every frame. The page now works them out from a copy with
+  the holes filled with nothing (client/render/aircraft.js pageAirfields), again as more regions come in. (The shared
+  code gets its own guard with the next change to the world: shared/flight.js is part of World v3's key, and changing it
+  now would send every browser and the server's art bake back to the start.) Test: test/flight.test.js.
