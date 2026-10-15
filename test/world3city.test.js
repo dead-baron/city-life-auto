@@ -17,10 +17,11 @@ const at = (x, y) => (x >= 0 && y >= 0 && x < W && y < H ? y * W + x : -1);
 const landAt = (x, y) => at(x, y) >= 0 && !!L.land[at(x, y)];
 
 test('World v3b city: the plan is 9.3\'s districts, each painted on its own island and given streets', () => {
-  const want = [4, 12, 5, 7, 17, 46, 16, 1, 8, 18, 2, 25, 3, 23, 26, 30, 28, 27, 37, 36, 35, 10, 0, 6, 14, 44, 43];
+  // (and the north coast's towns: Northshore, North Point, The Bluffs - WORLD-V3.md 9.6)
+  const want = [4, 12, 5, 7, 17, 46, 16, 1, 8, 18, 2, 25, 3, 23, 26, 30, 28, 27, 37, 36, 35, 10, 0, 6, 14, 31, 32, 34, 44, 43];
   assert.deepEqual([...CITY_IDS].sort((a, b) => a - b), want.slice().sort((a, b) => a - b));
-  // not the other helpers' (Lakeview, Northshore, North Point, The Bluffs)
-  for (const d of [24, 31, 32, 34]) assert.ok(!CITY_IDS.has(d), `district ${d} is not the city's`);
+  // not the other helpers' (Lakeview)
+  for (const d of [24]) assert.ok(!CITY_IDS.has(d), `district ${d} is not the city's`);
   for (const c of CITY3) {
     assert.ok(DISTRICTS[c.d], `district ${c.d} exists`);
     const st = DISTRICTS[c.d].style;

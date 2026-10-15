@@ -25,12 +25,13 @@ import { TILE } from './constants.js';
 import { DISTRICTS } from './mapcore.js';
 import { ISLANDS3, MAINLAND3, HIGHWAYS3, MAIN_LOOP3 } from './world3-layout.js';
 import { STATIONS } from './world3-skeleton.js';
+import { TERRAIN3 } from './world3-land.js';
 
 // the v3b frame the plan is drawn on (WORLD-V3.md 9.1: 13 x 8 regions of 504 tiles); the build lays the city only there
 export const CITY_FRAME = [6552, 4032];
 
-// zones (shared/layoutcore.js Z): the city's, Southbank's, the key's, Westport's, Cedar Isle's, the villages'
-const ZC = 1, ZS = 2, ZK = 5, ZW = 7, ZI = 9, ZG = 10;
+// zones (shared/layoutcore.js Z): the city's, Southbank's, the key's, Westport's, Northshore's, Cedar Isle's, the villages'
+const ZC = 1, ZS = 2, ZK = 5, ZW = 7, ZN = 8, ZI = 9, ZG = 10;
 
 // The street spacing by district style, in tiles between centre lines: [north-south streets apart (a block's width
 // east-west plus a street), east-west streets apart (one row of fronts plus its backs, plus a street)]. A street with
@@ -71,10 +72,10 @@ export const AVE_X = [
   [2560, 'ave', 'Gallery Avenue', [[2800, 3400, 'Sunset Avenue']]],
   [2860, 'ave', 'Westside Avenue'],
   [2988, 'ave', 'Park West Avenue', [[1400, 2050, 'Bridge Avenue']]],
-  [3184, 'ave', 'Park East Avenue', [[1400, 2050, 'Main Avenue']]],
+  [3184, 'ave', 'Park East Avenue', [[1400, 2050, 'Main Avenue'], [300, 1000, 'Station Avenue']]],
   [3320, 'ave', 'Civic Avenue'],
-  [3480, 'ave', 'Harborview Avenue', [[2950, 3500, 'Breaker Avenue']]],
-  [3680, 'ave', 'Marina Avenue', [[1400, 2050, 'Stadium Avenue']]],
+  [3480, 'ave', 'Harborview Avenue', [[2950, 3500, 'Breaker Avenue'], [300, 1000, 'Lighthouse Avenue']]],
+  [3680, 'ave', 'Marina Avenue', [[1400, 2050, 'Stadium Avenue'], [300, 1000, 'Bluffs Avenue']]],
   [3940, 'ave', 'Southside Drive'],
   [4100, 'ave', 'Lake Avenue', [[1400, 2100, 'Yards Avenue']]],
   [4300, 'ave', 'Pinecrest Avenue'],
@@ -114,6 +115,14 @@ export const CITY3 = [
   // --- the south-east island ---
   { d: 14, on: 'southeast', zone: ZK, rects: [[3260, 3260, 4120, 3430]], look: 'Pelican Key\'s beach along the south shore: the beach bar, the charter dock' },
   { d: 6, on: 'southeast', zone: ZS, rects: [[3260, 2960, 4120, 3260], [3840, 2820, 4280, 2960]], look: 'Southside: the rough side - pawn shops, laundromats, gang turf' },
+  // --- the north coast (WORLD-V3.md 9.6): round the main line's Northshore station, the farm lake's mouth (the inlet)
+  // and the peninsula east of it; the Shore Road (world3-layout.js TOWN_ROADS3) runs straight along their south edge
+  // (row 706) and the North Coast Road / Cedar Farms Road along the station quarter's - their streets end on those
+  // roads (planCity3: the country roads' room); the main line between stays up (the scenic route). `shore`: the beach
+  // (the land layer's sand) stays the Northshore Beaches' (54: sand, the promenade) in front of the town ---
+  { d: 31, on: 'main', zone: ZN, shore: true, rects: [[3100, 560, 3300, 706], [3030, 752, 3230, 880]], look: 'Northshore: the station town - shops, the medical centre and the sheriff on the lobe west of the inlet and round Station Avenue south of the line' },
+  { d: 32, on: 'main', zone: ZN, rects: [[3380, 380, 3620, 706]], look: 'North Point: the harbour village on the peninsula\'s inlet shore - the finger piers and the fleet, the fish shack, North Point Light on the tip (world3-north.js)' },
+  { d: 34, on: 'main', zone: ZN, shore: true, rects: [[3620, 400, 3860, 706]], look: 'The Bluffs: villas on big lots on the peninsula\'s headland above its east beach' },
   // --- the quiet key and the ferry island ---
   { d: 44, on: 'key', zone: ZG, rects: [[4100, 3320, 4320, 3500]], look: 'Coral Cay: a few streets of beach houses round the cove' },
   { d: 43, on: 'ferry', zone: ZG, rects: [[1560, 3400, 1940, 3580]], look: 'Gull Harbor: the fishing village, the fish shack, the general store, the Anchor' },
@@ -170,7 +179,8 @@ function spans(poly, y) {
 }
 
 // The districts on the land layer: each district's rectangles, in order (the first to hold a tile wins it), on its
-// island's land (L.land: the rivers and lakes are already cut), its id on `dist` and its zone on `zone`. extra: rects
+// island's land (L.land: the rivers and lakes are already cut; a `shore` district leaves the beach - L.terrain's sand -
+// to the beach district under it), its id on `dist` and its zone on `zone`. extra: rects
 // handed in at run time by district (the container port's quay rect from the skeleton: Port Westport takes it).
 export function paintCity3(L, W, H, extra = null) {
   const done = new Uint8Array(W * H);
@@ -183,7 +193,7 @@ export function paintCity3(L, W, H, extra = null) {
         for (const [a, b] of spans(poly, y)) {
           for (let x = Math.max(a, x0, 0); x <= Math.min(b, x1 - 1, W - 1); x++) {
             const i = y * W + x;
-            if (done[i] || !L.land[i]) continue;
+            if (done[i] || !L.land[i] || (c.shore && L.terrain && L.terrain[i] === TERRAIN3.SAND)) continue;
             done[i] = 1; L.dist[i] = c.d; L.zone[i] = c.zone; n++;
           }
         }
@@ -198,6 +208,10 @@ export function paintCity3(L, W, H, extra = null) {
 // The streets.
 const HALF = { st: 7, ave: 9, blvd: 9, alley: 3 };   // tiles from a street's centre line to the back of its pavement
 const ROOM_HWY = 18, ROOM_RAIL = 14;                    // a street this near a highway / the main line, running along it, isn't laid
+// (the north coast's country roads - the arterials north of row COUNTRY_Y: the Shore Road, the North Coast Road, Cedar
+// Farms Road - run through or along its towns: a town street this near one, running along it, isn't laid - the road
+// serves - and a street that ends on one (within ON_ROAD tiles of its middle) is met there, not a dead end)
+const ROOM_ROAD = 14, COUNTRY_Y = 1000, ON_ROAD = 3;
 const nameOf = (A, at) => { for (const [a, b, n] of A[3] || []) if (at >= a && at < b) return n; return A[2]; };
 
 // The main line under the city (the owner, 2026-10-14: "some of the main train going underground in parts of the
@@ -273,6 +287,7 @@ export function planCity3(land, dist, avoid) {
     for (const [x, y, ux, uy] of pts) {
       n++;
       for (const A of avoid) {
+        if (A.box && (x < A.box[0] - A.r || y < A.box[1] - A.r || x > A.box[2] + A.r || y > A.box[3] + A.r)) continue;
         const s = nearSeg(A.pts, x, y);
         if (s.d < A.r && Math.abs(s.ux * ux + s.uy * uy) > 0.7) { near++; break; }
       }
@@ -294,6 +309,8 @@ export function planCity3(land, dist, avoid) {
     return !along(pts);
   };
   const kept = { h: new Map(), v: new Map() };
+  const roads = avoid.filter((A) => A.road);
+  const onRoad = (x, y) => roads.some((A) => nearSeg(A.pts, x, y).d <= ON_ROAD);
   const crossings = (M, c, a, b) => { const out = []; for (const [k, S] of M) if (k > a && k < b && S.some(([p, q]) => c >= p && c <= q)) out.push(k); return out.sort((p, q) => p - q); };
   for (const [horiz, M, O, out, aves] of [[true, H, V, kept.h, isAveY], [false, V, H, kept.v, isAveX]]) {
     for (const [c, S] of M) {
@@ -314,6 +331,8 @@ export function planCity3(land, dist, avoid) {
     // a node's degree: every stretch end there, and a stretch passing straight through counts twice
     for (const [y, L] of kept.h) for (const [a, b] of L.segs) { bump(a, y); bump(b, y); }
     for (const [x, L] of kept.v) for (const [a, b] of L.segs) { bump(x, a); bump(x, b); }
+    // (an end on a country road is met by it)
+    for (const k of [...deg.keys()]) { const x = Math.floor(k / 100000), y = k - x * 100000; if (y < COUNTRY_Y + ON_ROAD && onRoad(x, y)) deg.set(k, deg.get(k) + 1); }
     let cut = 0;
     for (const [horiz, M] of [[true, kept.h], [false, kept.v]]) for (const [c, L] of M) {
       L.segs = L.segs.filter(([a, b]) => {
@@ -367,6 +386,11 @@ export function avoidOf(lines) {
   if (hw.length) for (const l of hw) out.push({ pts: l.pts.map((p) => [p.x / TILE, p.y / TILE]), r: ROOM_HWY });
   else for (const h of HIGHWAYS3) out.push({ pts: h.pts, r: ROOM_HWY });
   out.push({ pts: MAIN_LOOP3.pts, r: ROOM_RAIL });
+  for (const l of lines || []) if (l.kind === 'art' && !l.city && !l.foot && l.pts.every((p) => p.y / TILE < COUNTRY_Y)) {
+    const pts = l.pts.map((p) => [p.x / TILE, p.y / TILE]), box = [Infinity, Infinity, -Infinity, -Infinity];
+    for (const [x, y] of pts) { box[0] = Math.min(box[0], x); box[1] = Math.min(box[1], y); box[2] = Math.max(box[2], x); box[3] = Math.max(box[3], y); }
+    out.push({ pts, r: ROOM_ROAD, road: true, box });
+  }
   return out;
 }
 

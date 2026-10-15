@@ -35,6 +35,7 @@ import { wildSites3, wildDone, movedAt, wildDist, wildFarm3 } from './world3-wil
 import { buildRelief3 } from './world3-relief.js';
 // (v3b, WORLD-V3.md 9.3: the city - its districts, its streets and its places; on the v3b frame only)
 import { buildAirstrips3 } from './world3-airstrips.js';   // (v3b: the crop dusters' strips and Lucky Mesa's)
+import { buildNorth, NORTH_STYLES } from './world3-north.js';   // (v3b, WORLD-V3.md 9.6: the north coast's piers, the fish shack, North Point Light)
 import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
@@ -191,7 +192,7 @@ export function worldOpts(asked) {
     pine: pineAt3(L, W),
     unbuilt: new Set([52]),   // (the Sandpiper Coast: no streets yet; Northshore's beach towns (54) are built - world3-beach.js, 8.14)
     dress(m, H2) { const strips = () => { if (W === CITY_FRAME[0] && H === CITY_FRAME[1]) m.world3.airstrips = buildAirstrips3(m, H2); };   // (v3b's airstrips: after the biomes' dressing, which they clear off their ground)
-      if (!REGIONAL) { m.world3biomes.dress = dress3(m, L, keep, H2); strips(); return; } if (m.world3?.west) m.world3.west.built = buildWest(m, H2.addProp); if (m.world3?.mesa) m.world3.mesa.built = buildMesa(m, H2.addProp); if (m.world3?.desert) m.world3.desert.built = buildDesert(m, H2.addProp); if (m.world3) m.world3.water = { painted: water, ...buildWater3(m, H2.addProp) }; if (m.world3) m.world3.relief = buildRelief3(m, L, H2.addProp); m.world3biomes.dress = dress3(m, L, keep, H2); strips(); },   // (8.20: Egret Point, the lights, the falls - world3-west.js; 8.18: the mine, Dusty Hollow, the dam - world3-desert.js; 8.21: Prison Island, the lock, Kestrel Lake - world3-water.js; Lucky Mesa's resorts - world3-mesa.js, 8.15)
+      if (!REGIONAL) { m.world3biomes.dress = dress3(m, L, keep, H2); strips(); return; } if (m.world3?.west) m.world3.west.built = buildWest(m, H2.addProp); if (m.world3 && W === CITY_FRAME[0] && H === CITY_FRAME[1]) m.world3.north = buildNorth(m, H2.addProp); if (m.world3?.mesa) m.world3.mesa.built = buildMesa(m, H2.addProp); if (m.world3?.desert) m.world3.desert.built = buildDesert(m, H2.addProp); if (m.world3) m.world3.water = { painted: water, ...buildWater3(m, H2.addProp) }; if (m.world3) m.world3.relief = buildRelief3(m, L, H2.addProp); m.world3biomes.dress = dress3(m, L, keep, H2); strips(); },   // (8.20: Egret Point, the lights, the falls - world3-west.js; 8.18: the mine, Dusty Hollow, the dam - world3-desert.js; 8.21: Prison Island, the lock, Kestrel Lake - world3-water.js; Lucky Mesa's resorts - world3-mesa.js, 8.15)
     done(m, H3) {
       if (!REGIONAL) {
         const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
@@ -215,7 +216,7 @@ export function worldOpts(asked) {
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground)
     special: (sp) => built.has(sp.d),
     specials: REGIONAL ? [...TOWN_SPECIALS, ...MESA_SPECIALS, ...DESERT_SPECIALS] : [],   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
-    styles: REGIONAL ? { ...TOWN_STYLES, ...MESA_STYLES, ...DESERT_STYLES } : {},   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
+    styles: REGIONAL ? { ...TOWN_STYLES, ...MESA_STYLES, ...DESERT_STYLES, ...(city ? NORTH_STYLES : {}) } : {},   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)
     rails: (m) => { if (!REGIONAL) return [...mainLineLoops(m), ...subwayLoops(m)]; beachFront(m, L); const tf = townsFront(m); if (m.world3?.towns) m.world3.towns.front = tf; if (m.world3?.mesa) m.world3.mesa.lots = mesaLots(m); return [...mainLineLoops(m), ...subwayLoops(m)]; },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
     lines(lines, m) {

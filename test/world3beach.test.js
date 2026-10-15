@@ -21,8 +21,10 @@ test('World v3: Northshore\'s beach towns built; the stations clear of trees, ea
   console.log('beach towns', JSON.stringify(B), JSON.stringify(m.beachTowns.front), 'rail cleared', JSON.stringify(m.world3.railCleared));
   const bad = [], check = (ok, msg) => { if (!ok) bad.push(msg); };
   // the streets: a loose grid, a few over the main line, on the network (one piece with the Shore Road and the rest)
-  // (v3b: the north coast's strip between the Shore Road and the main line is ~200 tiles deep - rows every 46 tiles: 4-5)
-  check(B.rows >= 4 && B.cols >= 10 && B.crossing >= 2, `streets: ${B.rows} along the shore, ${B.cols} cross streets (${B.crossing} over the line)`);
+  // (v3b: the north coast's strip between the Shore Road and the main line is ~200 tiles deep - rows every 46 tiles: 4-5;
+  // 9.6: the land round the inlet and the peninsula is the towns' - Northshore, North Point, The Bluffs - and the beach
+  // towns are the west beach's, behind the Shore Road along the back of the sand, and their lanes south of the line: 9)
+  check(B.rows >= 4 && B.cols >= 8 && B.crossing >= 2, `streets: ${B.rows} along the shore, ${B.cols} cross streets (${B.crossing} over the line)`);
   const names = new Set(B.names);
   const ours = m.edges.filter((e) => names.has(e.name));
   check(ours.length >= 20, `${ours.length} edges of the beach towns' streets`);   // (v3b: 24 - the north coast's shallower strip)
@@ -44,10 +46,14 @@ test('World v3: Northshore\'s beach towns built; the stations clear of trees, ea
   for (let i = 0; i < N; i++) if (m.land[i]) { area[m.dist[i]]++; if (m.tiles[i] === T.BUILDING) built[m.dist[i]]++; }
   const kinds = {};
   let n54 = 0;
+  // (9.6: and the north coast's as a whole - the beach towns, North Point's harbour village, Northshore, The Bluffs: the
+  // houses and the cafes, bars and restaurants by the beach are the beach towns' and North Point's)
+  let coast = 0;
   for (const b of m.buildings) if (!b.gone && m.dist[b.ty * W + b.tx] === BEACH_D) n54++;
-  for (const p of m.prefabs) if (!p.gone && p.tw && m.dist[p.ty * W + p.tx] === BEACH_D) kinds[p.key] = (kinds[p.key] || 0) + 1;
-  console.log('buildings', n54, JSON.stringify(kinds), 'cover', (built[54] / area[54]).toFixed(3), 'Northshore', (built[31] / area[31]).toFixed(3));
-  check(n54 >= 100, `${n54} buildings in the beach towns`);   // (v3b: 107)
+  for (const b of m.buildings) if (!b.gone && [BEACH_D, 31, 32, 34].includes(m.dist[b.ty * W + b.tx])) coast++;
+  for (const p of m.prefabs) if (!p.gone && p.tw && [BEACH_D, 32].includes(m.dist[p.ty * W + p.tx])) kinds[p.key] = (kinds[p.key] || 0) + 1;
+  console.log('buildings', n54, 'the coast', coast, JSON.stringify(kinds), 'cover', (built[54] / area[54]).toFixed(3), 'Northshore', (built[31] / area[31]).toFixed(3));
+  check(n54 >= 20 && coast >= 300, `${n54} buildings in the beach towns, ${coast} on the north coast`);   // (v3b: 107; 9.6: 28, the coast's 410)
   check((kinds.house1 || 0) + (kinds.house2 || 0) + (kinds.house5 || 0) + (kinds.house9 || 0) >= 8, 'beach houses');   // (v3b: 10)
   check((kinds.rest1 || 0) + (kinds.rest2 || 0) + (kinds.beachbar || 0) + (kinds.diner || 0) >= 12, 'cafes, bars and restaurants');
   // ("less dense than a city": Metro City's built districts, as a whole)
@@ -67,12 +73,23 @@ test('World v3: Northshore\'s beach towns built; the stations clear of trees, ea
     s = Math.max(s, n);
     if (s >= 8) sandy++;
   }
-  // (v3b: the traced Shore Road runs 20-60 tiles inland of the sand for much of its length - x 3380-3740 has none within
-  // 60 tiles - so the beach is in front of it along about 60% of the columns, the promenade only where it meets the sand)
-  check(cols > 150 && sandy / cols > 0.5, `the beach in front of the towns: ${sandy} of ${cols} columns`);
+  console.log('the beach in front', sandy, 'of', cols, 'columns');
+  // (v3b: the traced Shore Road ran 20-60 tiles inland of the sand for much of its length; 9.6: it runs along the back
+  // of the beach now, 2 tiles in from the sand's edge, so the promenade runs the west beach's length; round the inlet
+  // and the peninsula the towns are in front of it)
+  check(cols > 100 && sandy / cols > 0.5, `the beach in front of the towns: ${sandy} of ${cols} columns`);
   const F = m.beachTowns.front;
-  check(F.promenade > 600 && F.parks >= 4 && F.towers >= 2, `promenade ${F.promenade} tiles, ${F.parks} car parks, ${F.towers} lifeguard towers`);
+  check(F.promenade > 1500 && F.parks >= 2 && F.towers >= 4, `promenade ${F.promenade} tiles, ${F.parks} car parks, ${F.towers} lifeguard towers`);   // (9.6: 1724, 2, 4; v3b: 803, 7, 2)
   for (const t of m.lifeguards) check(m.tileAtPx(t.x, t.y) === T.SAND, `a lifeguard tower off the sand at ${Math.round(t.x / TILE)}, ${Math.round(t.y / TILE)}`);
+  // (v3b, docs/WORLD-V3.md 9.6) the north coast's harbour (shared/world3-north.js): North Point's finger piers out over
+  // the inlet with the fleet moored along them, the fish shack (a fish market), North Point Light on the peninsula's tip
+  const NB = m.world3.north;
+  console.log('north coast', JSON.stringify(NB));
+  check(NB && NB.piers >= 4 && NB.boats >= 20 && NB.decking > 300, `North Point's piers: ${JSON.stringify(NB)}`);
+  check(NB && NB.shack && m.pois.some((p) => p.kind === 'fishmarket' && p.label === 'North Point Fish Shack'), 'the fish shack');
+  const light = m.buildings.find((b) => b && b.kind === 'lighthouse' && b.name === 'North Point Light');
+  check(light && (m.landmarks || []).some((l) => l.name === 'North Point Light'), 'North Point Light');
+  for (const P of [NB?.light]) if (P) { let sea = false; for (let dy = -24; dy <= 24; dy += 2) for (let dx = -24; dx <= 24; dx += 2) if (!m.land[m.idx(P[0] + dx, P[1] + dy)]) sea = true; check(sea, 'the light by the sea'); }
   // the stations: no tree on a platform, none whose crown reaches the track beside one
   let onPlat = 0, over = 0;
   const sts = m.rails.flatMap((r) => r.stations.filter((st) => !st.under).map((st) => ({ st, r })));
