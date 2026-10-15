@@ -72,6 +72,10 @@ export function sitesOf(m) {
 
 // the hospitals' pads: the roof pad (the one meant for it) and the yard's
 const hospitalPads = (m) => airfields(m).pads.filter((q) => q.kind === 'hospital');
+// where a shift starts: the Search & Rescue HQ's pad (World v3: shared/world3-sarhq.js) - else, a world without one, a
+// hospital's ground pad as before
+const basePads = (m) => { const hq = airfields(m).pads.filter((q) => q.kind === 'sar'); return hq.length ? hq : hospitalPads(m).filter((q) => !q.roof); };
+const nearestBase = (m, x, y) => { let best = null, bd = Infinity; for (const q of basePads(m)) { const d = Math.hypot(q.x - x, q.y - y); if (d < bd) { bd = d; best = q; } } return best; };
 const nearestPad = (m, x, y, roof = null) => { let best = null, bd = Infinity; for (const q of hospitalPads(m)) { if (roof !== null && q.roof !== roof) continue; const d = Math.hypot(q.x - x, q.y - y); if (d < bd) { bd = d; best = q; } } return best; };
 const placeName = (m, x, y) => { const d = m.districtAt(x, y); return d ? d.name : 'the wilds'; };
 
@@ -80,7 +84,7 @@ export function start(world, p, pad = null) {
   if (!p.ped || p.ped.dead) return 'Not right now.';
   if (p.job) return 'You already have a job - cancel it first.';
   const m = world.map;
-  pad ||= nearestPad(m, p.ped.x, p.ped.y, false);
+  pad ||= nearestBase(m, p.ped.x, p.ped.y);
   if (!pad) return 'No rescue base here.';
   // the helicopter: on clear ground by the pad, out of the way of anything parked there
   const avoid = world.query(pad.x, pad.y, 900, K.VEH).map((q) => ({ x: q.x - 110, y: q.y - 110, w: 220, h: 220 }));
@@ -288,13 +292,13 @@ export function interaction(world, p) {
     return { label: j.call.hooked ? 'Hold: winch them up' : 'Hold: lower the harness', run: () => {} };
   }
   if (p.job) return null;
-  const pad = hospitalPads(world.map).find((q) => !q.roof && Math.hypot(q.x - ped.x, q.y - ped.y) < FLY.PAD_R + 30);
+  const pad = basePads(world.map).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < FLY.PAD_R + 30);
   if (!pad) return null;
   return { label: 'Sign on as a search & rescue pilot (a rescue helicopter is issued)', run: () => { const err = start(world, p, pad); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // the hospital yard pad a shift starts from: the nearest to p (the phone's job list)
-export function baseFor(world, p) { return p.ped ? nearestPad(world.map, p.ped.x, p.ped.y, false) : hospitalPads(world.map).find((q) => !q.roof) || null; }
+export function baseFor(world, p) { return p.ped ? nearestBase(world.map, p.ped.x, p.ped.y) : basePads(world.map)[0] || null; }
 
 // ---- the page's view of it (phone.js jobTarget) --------------------------------------------------------------------------------
 export function target(world, p, j) {

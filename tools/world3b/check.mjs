@@ -33,6 +33,7 @@ for (const b of m.buildings) {
   perDist[n] = (perDist[n] || 0) + 1;
 }
 out.buildingsByDistrict = perDist;
+out.sarHq = m.world3?.sarHq ? { at: m.world3.sarHq.at, pad: m.world3.sarHq.pad, poi: m.world3.sarHq.poi.label } : null;
 out.natureSites = (m.natureSites || []).filter((s) => s.kind === 'airstrip').map((s) => ({ name: s.name, strip: s.strip, duster: !!s.duster }));
 out.ferries = (m.world3?.ferries || []).map((f) => `${f.name}: ${(f.stops || []).map((s) => s.name + (s.built === false ? ' (not built)' : '')).join(', ')}`);
 out.roads = m.world3?.roads ? { loose: m.world3.roads.loose, carried: (m.world3.roads.carried || []).length } : null;

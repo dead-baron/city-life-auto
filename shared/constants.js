@@ -28,7 +28,10 @@ export const WORLD_H = MAP_H * TILE;
 //  10  World v3: the whole world on the owner's layout (World v3b, docs/WORLD-V3.md part 9) - the gulf city's islands,
 //      the forest, the farm valley, the desert and the casino, the north coast, the main line round it all, the
 //      subways and the ferries; today's homes bought back at what was paid for them (homes.checkWorld, LEGACY_HOMES[9])
-export const WORLD_VERSION = 10;
+//  11  World v3b's first fixes (the owner, 2026-10-15): the highways' bands kept clear of buildings (they ran through some)
+//      and the Search & Rescue HQ on the airport's field - the homes' list moved, so the homes bought since the switch are
+//      bought back at what was paid for them
+export const WORLD_VERSION = 11;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px
 export const CHUNKS_X = Math.ceil(MAP_W / CHUNK_TILES);

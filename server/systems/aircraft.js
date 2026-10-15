@@ -99,7 +99,7 @@ function spots(world) {
   for (const p of af.pads) {
     if (p.roof) continue;
     if (p.kind === 'hospital' && hosp++ > 0) continue;
-    out.push({ m: p.kind === 'police' ? 'policeheli' : 'heli', x: p.x, y: p.y, a: -Math.PI / 2, police: p.kind === 'police' });
+    out.push({ m: p.kind === 'police' ? 'policeheli' : p.kind === 'sar' ? 'rescueheli' : 'heli', x: p.x, y: p.y, a: -Math.PI / 2, police: p.kind === 'police' });   // (the Search & Rescue HQ's: its rescue helicopter)
   }
   for (const a of af.aprons) out.push({ m: a.duster ? 'duster' : 'plane', x: a.x, y: a.y, a: a.a });   // (a farm strip's: a crop duster - world3-airstrips.js)
   return out;

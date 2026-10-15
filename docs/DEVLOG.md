@@ -9787,3 +9787,20 @@ Tests: test/world3beach.test.js, test/world3biomes.test.js (Northshore at its be
   first time it starts (restoring it is the full rollback).
 - The deploy: the server restarts with a minute's build (about 70 s here) inside the five-minute health wait; the art
   is baked on the server in the background, the pages bake what isn't there yet.
+
+## 2026-10-15 · World v3b's first fixes: highways clear of buildings; the Search & Rescue HQ
+The owner, playing it (07:56): "I'm seeing highways are going through some buildings. Also let's give the search and
+rescue jobs a home like a search and rescue hq".
+- **The highways' bands** (shared/map.js rasterRoads, World v3 only): v3's highways cross the city with no frontage roads
+  round them (today's ring has its band between them), so the city's blocks were filled right up to - and under - the
+  decks: 646 buildings under a deck, 32 on a highway at grade (tools/world3b/hwycheck.mjs). The highway's width and two
+  tiles each side are now kept clear of buildings, a paved lot under the deck: 0 at grade, 1 under (a water-bus stop's
+  hut on the water under the Gulf Loop's bridge).
+- **The Search & Rescue HQ** (shared/world3-sarhq.js, new): on Westport International's field east of the apron - the HQ
+  (its door a place: kind 'sar', on the map with the Jobs), the Rescue Hangar, a helipad on the apron in front
+  (shared/flight.js SAR_PAD: the pad from the place, so the page draws it too) with a rescue helicopter parked on it,
+  the windsock, fuel, floodlights and a paved drive to the road. Rescue shifts start there (server/systems/sar.js
+  basePads: the HQ's pad, else - a world without one - a hospital's ground pad as before; the patients still go to the
+  hospitals' roof pads).
+- **WORLD_VERSION 10 -> 11**: the homes' list moved with the cleared bands, so the homes bought since the switch are
+  bought back at what was paid (homes.checkWorld) and their owners wake at a hospital.

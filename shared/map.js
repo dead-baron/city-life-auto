@@ -1195,6 +1195,20 @@ function rasterRoads(m) {
       });
     }
   }
+  // (World v3: its highways cross the city on their own - no frontage roads round them as round today's ring: the
+  // band under the deck and along it at grade, the highway's width and two tiles each side, kept clear of buildings as
+  // the ring's band is; under the deck a paved lot - the owner, 2026-10-15: "highways are going through some buildings")
+  if (WD) for (const e of m.edges) {
+    if (e.kind !== 'hwy' && e.kind !== 'ramp') continue;
+    stampEdge(e, e.hw + 2 * TILE, (tx, ty) => {
+      const i = at(tx, ty);
+      if (i < 0 || !m.land[i]) return;
+      const t = m.tiles[i];
+      if (t === T.ROAD || t === T.BRIDGE || t === T.SIDEWALK || isWet(t)) return;
+      m.reserve[i] |= 1;
+      if (m.deck[i] && (t === T.GRASS || t === T.PLAZA)) m.tiles[i] = T.LOT;
+    });
+  }
 }
 
 // Where a slip ramp comes down beside the frontage road (or leaves it), the two run side by side for a

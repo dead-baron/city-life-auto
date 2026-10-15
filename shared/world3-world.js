@@ -34,7 +34,8 @@ import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
 import { wildSites3, wildDone, movedAt, wildDist, wildFarm3 } from './world3-wild.js';
 import { buildRelief3 } from './world3-relief.js';
 // (v3b, WORLD-V3.md 9.3: the city - its districts, its streets and its places; on the v3b frame only)
-import { buildAirstrips3 } from './world3-airstrips.js';   // (v3b: the crop dusters' strips and Lucky Mesa's)
+import { buildAirstrips3 } from './world3-airstrips.js';
+import { buildSarHq3 } from './world3-sarhq.js';   // (v3b: the rescue pilots' base)   // (v3b: the crop dusters' strips and Lucky Mesa's)
 import { buildNorth, NORTH_STYLES } from './world3-north.js';   // (v3b, WORLD-V3.md 9.6: the north coast's piers, the fish shack, North Point Light)
 import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 
@@ -191,7 +192,7 @@ export function worldOpts(asked) {
     dressed: dressedBy3,
     pine: pineAt3(L, W),
     unbuilt: new Set([52]),   // (the Sandpiper Coast: no streets yet; Northshore's beach towns (54) are built - world3-beach.js, 8.14)
-    dress(m, H2) { const strips = () => { if (W === CITY_FRAME[0] && H === CITY_FRAME[1]) m.world3.airstrips = buildAirstrips3(m, H2); };   // (v3b's airstrips: after the biomes' dressing, which they clear off their ground)
+    dress(m, H2) { const strips = () => { if (W === CITY_FRAME[0] && H === CITY_FRAME[1]) { m.world3.airstrips = buildAirstrips3(m, H2); m.world3.sarHq = buildSarHq3(m, H2); } };   // (and the Search & Rescue HQ on the airport's field: world3-sarhq.js)   // (v3b's airstrips: after the biomes' dressing, which they clear off their ground)
       if (!REGIONAL) { m.world3biomes.dress = dress3(m, L, keep, H2); strips(); return; } if (m.world3?.west) m.world3.west.built = buildWest(m, H2.addProp); if (m.world3 && W === CITY_FRAME[0] && H === CITY_FRAME[1]) m.world3.north = buildNorth(m, H2.addProp); if (m.world3?.mesa) m.world3.mesa.built = buildMesa(m, H2.addProp); if (m.world3?.desert) m.world3.desert.built = buildDesert(m, H2.addProp); if (m.world3) m.world3.water = { painted: water, ...buildWater3(m, H2.addProp) }; if (m.world3) m.world3.relief = buildRelief3(m, L, H2.addProp); m.world3biomes.dress = dress3(m, L, keep, H2); strips(); },   // (8.20: Egret Point, the lights, the falls - world3-west.js; 8.18: the mine, Dusty Hollow, the dam - world3-desert.js; 8.21: Prison Island, the lock, Kestrel Lake - world3-water.js; Lucky Mesa's resorts - world3-mesa.js, 8.15)
     done(m, H3) {
       if (!REGIONAL) {

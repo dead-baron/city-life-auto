@@ -274,6 +274,8 @@ export function findPadSpot(m, x, y, r = FLY.PAD_R, maxR = 640, avoid = null) {
   }
   return null;
 }
+// a Search & Rescue HQ's helipad: this far (px) from its place (the HQ's door; shared/world3-sarhq.js lays it there)
+export const SAR_PAD = [0, 7 * TILE];
 export function airfields(m) {
   if (m._airfields) return m._airfields;
   const pads = [], strips = [], aprons = [];
@@ -299,6 +301,8 @@ export function airfields(m) {
     const sp = findPadSpot(m, s.plane.x + 120, s.plane.y, 70, 400, strips);
     if (sp) aprons.push({ x: sp.x, y: sp.y, a: -Math.PI / 2, name: s.name, ...(s.duster ? { duster: true } : null) });
   }
+  // the Search & Rescue HQs (World v3: shared/world3-sarhq.js) - the pad on the apron in front of the door
+  for (const p of m.pois || []) if (p.kind === 'sar') pads.push({ x: p.x + SAR_PAD[0], y: p.y + SAR_PAD[1], kind: 'sar', name: p.label, roof: false, alt: 0 });
   // the police headquarters (the first station) - a pad in its yard
   const pd = (m.pois || []).find((p) => p.kind === 'police');
   if (pd) { const sp = findPadSpot(m, pd.x, pd.y + 120, FLY.PAD_R, 700); if (sp) pads.push({ x: sp.x, y: sp.y, kind: 'police', name: `${pd.label || 'Police HQ'} helipad`, roof: false, alt: 0 }); }
