@@ -76,6 +76,10 @@ export const TOWN_ROADS3 = [
   // valley's fields and the desert's edge, round the mesas to Copper Gulch (its main street on row 1625) and the mine
   { name: 'Mine Road', pts: [[3640, 1018], [4060, 1018], [4380, 1180], [4560, 1460], [4660, 1625], [4924, 1625]] },
   { name: 'Willow Road', pts: [[3722, 745], [3722, 1376]] },   // (between the main line's north and south valley stretches)
+  // Kestrel Lake's roads (world3-water.js): Lake Road along its south shore from the North Spur to Willow Road (the
+  // boathouse's track comes down to it), Lakeshore Road up its west shore to the campground
+  { name: 'Lake Road', pts: [[3030, 1250], [3722, 1250]] },
+  { name: 'Lakeshore Road', pts: [[3170, 1250], [3170, 950]] },
   // the Sandpiper Coast: from the East Highway's end down to Sandpiper Bay (its main street on row 2804)
   { name: 'Sandpiper Drive', pts: [[4975, 2509], [5060, 2650], [5240, 2804], [5520, 2804]] },
   // the Red Rock Desert: Mesa Road from the desert's west edge along the north to Lucky Mesa (the Strip on row 612);
