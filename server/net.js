@@ -5,7 +5,7 @@
 // that client's previous snapshot (static entities refresh at 1 Hz).
 import { K, CHUNK_PX, VF } from '../shared/constants.js';
 import { altByte } from '../shared/flight.js';
-import { SnapshotWriter, CTRL, SNAP_ENTITY } from '../shared/protocol.js';
+import { SnapshotWriter, CTRL, SNAP_ENTITY, LZ_SCALE } from '../shared/protocol.js';
 import { WEAPONS } from '../shared/items.js';
 import { isSwimming, WATER_T } from '../shared/map.js';
 import { ugMapOf } from '../shared/underground.js';
@@ -96,7 +96,7 @@ function encodeAll(world) {
     recDv.setUint8(o + 17, Math.max(0, Math.min(255, Math.round(hp * 255))));
     recDv.setUint32(o + 18, (parent || 0) >>> 0, true);
     recDv.setUint8(o + 22, extra & 0xff);
-    const lz = e.kind === K.PED || e.kind === K.VEH || e.kind === K.PROJ || e.kind === K.TRAIN ? Math.max(0, Math.min(255, Math.round((e.lz || 0) * 255))) : 0;
+    const lz = e.kind === K.PED || e.kind === K.VEH || e.kind === K.PROJ || e.kind === K.TRAIN ? Math.max(0, Math.min(255, Math.round((e.lz || 0) * LZ_SCALE))) : 0;
     recDv.setUint8(o + 23, lz);
     // change detection on the quantized record
     const sig = (Math.round(e.x * 4) * 73856093) ^ (Math.round(e.y * 4) * 19349663) ^ (recDv.getUint16(o + 15, true) * 83492791) ^ (flags * 2654435761) ^ (recBuf[o + 17] << 3) ^ ((parent || 0) * 97) ^ (extra << 11) ^ (lz << 19);

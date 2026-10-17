@@ -10176,3 +10176,21 @@ streets(); a review of every concept for it found WC243, MT2, D4, NB1, WC069, D1
 - **Debug teleport** (client/devtp.js): a "World v3 · <district>" group for each handcrafted district - the places its
   plan names (squares, parks, markets, the crescent, the station) - and a "buildings" group of its set pieces and key
   businesses (map.world3hand: each plan's district and area now).
+
+## 2026-10-17 · Midtown Station: walk up the stairs to the platform
+The owner's 10-17 ask: the train platform as somewhere you walk up the stairs to. Midtown Station on the El (World v3's
+main line over Trestle Street) now works like a real elevated station:
+- **The stairs and the platforms are walkable** (shared/world3-rail.js elFurniture: m.el.foot; shared/levels.js): each
+  stair tower's flight rises from its foot on the pavement to the deck, a landing crosses to the platform, and each
+  side's platform runs the length of the station's deck - corridors of the levels system, at the El's height (EL_LZ:
+  its 128 px over a deck level's 88). People on foot only: a car never climbs them, nor an NPC milling past the foot.
+  The El's columns keep off the stair flights; the station's wide deck reaches the stair towers' tops (the art's
+  EL_STA_LEN 360 -> 400).
+- **Boarding and getting off** (server/systems/trains.js): up on the platform with a train in, the action boards it at
+  the nearest door; with none in, it tells you when the next one is due; at a stair tower's foot it says the way up.
+  Getting off at the El puts you on the platform; the people off the train walk down the stairs and away; commuters
+  come in at a stair tower's foot and walk up to wait along the platform before a train is due.
+- **The wire**: an entity's level height is a byte of 0-2 levels now (shared/protocol.js LZ_SCALE), so someone up on
+  the El's platform is drawn up there on everyone's screen.
+- test/elplatform.test.js: up, along and down; the edge holds; a car stays below; board from the platform and off
+  onto it; people off a train walk down.

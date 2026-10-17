@@ -13,6 +13,7 @@
 // (so a double track has one each side). The skeleton's tunnels are `under` (the track below ground, as today's subway
 // stretch). Only + - * / and Math.sqrt: the same in every engine.
 import { TILE, T } from './constants.js';
+import { buildLevels } from './levels.js';
 import { MAIN_LINE, MAIN_JUNCTIONS, SERVICES, STATIONS, RADIUS } from './world3-skeleton.js';
 import { treeSize } from './felling.js';
 import { cityRailUnder, STATION_OPEN } from './world3-city.js';
@@ -43,6 +44,12 @@ export function elAt(x, y) {
   return 1;
 }
 export const TRACK_OFF = 48;   // px from the main line's centre to each track's centre (the two 96 px apart: 3 tiles)
+// The El's stations you walk up to (the owner's 10-17 ask): the deck's height in level units (shared/levels.js: the art's
+// EL_Z, 128 px, over a deck level's DECK_LIFT, 88 px), each platform's middle off the deck's centre line and its half
+// width (px: between the track's edge, TRACK_OFF + a car's half width, and the station deck's edge, the art's
+// EL_STA_HW 168), how far it runs either side of the station (the art's EL_STA_LEN), a stair flight's length (the
+// art's elStairs: from 10 px past its foot)
+export const EL_LZ = 128 / 88, EL_PLAT = 136, EL_PLAT_HW = 28, EL_STA_LEN = 400, EL_STAIR = 150;
 export const HUB_R = 20;       // tiles: every corner at a junction (H33: the hub stations there stand on straight track)
 const SAMPLE = 8;              // px between a track's points (as today's railLine)
 const ARC_STEP = 6;            // tiles between the points of an arc
@@ -194,15 +201,6 @@ export function elFurniture(m, removeProps = null) {
   if (!m.rails) return null;
   const T0 = TILE, yc = (EL.y + 0.5) * T0;   // (the street's centre line; the deck's - the tracks' - is EL.y * TILE)
   const el = { y: EL.y * T0, py: yc, x0: EL.x0 * T0, x1: EL.x1 * T0, x2: EL.x2 * T0, x3: EL.x3 * T0, span: PIER_SPAN, piers: [], stairs: [] };
-  // the piers: every PIER_GAP px, moved off any roadway crossing beneath (a column on the pavement, never in a lane)
-  const lane = (x) => { for (const dy of [-PIER_SPAN / 2, PIER_SPAN / 2]) { const t = m.tileAtPx(x, yc + dy); if (t === T.ROAD) return true; } return false; };
-  for (let x = el.x1 + 40; x < el.x2 - 20; x += PIER_GAP) {
-    let px = x;
-    for (let k = 0; k < 12 && lane(px); k++) px += 16;
-    if (lane(px)) continue;
-    el.piers.push(Math.round(px));
-    for (const dy of [-PIER_SPAN / 2, PIER_SPAN / 2]) m.addSolidProp(px, yc + dy, 12);
-  }
   // the stations up on it: the stair towers on the pavements either side, at the station's cross street
   const done = new Set();
   for (const r of m.rails) for (const st of r.stations || []) {
@@ -217,6 +215,33 @@ export function elFurniture(m, removeProps = null) {
     st.platform = foot;
     if (!done.has(key)) { done.add(key); el.stairs.push({ x: foot.x, y: foot.y, dir: south ? 1 : -1, station: st.name }); }
   }
+  // the piers: every PIER_GAP px, moved off any roadway crossing beneath (a column on the pavement, never in a lane) and
+  // off a stair tower's flight (its columns stand on the pavement's middle, where the stairs climb)
+  const lane = (x) => { for (const dy of [-PIER_SPAN / 2, PIER_SPAN / 2]) { const t = m.tileAtPx(x, yc + dy); if (t === T.ROAD) return true; } return false; };
+  const onStairs = (x) => el.stairs.some((q) => x > Math.min(q.x, q.x + q.dir * (EL_STAIR + 10)) - 30 && x < Math.max(q.x, q.x + q.dir * (EL_STAIR + 10)) + 30);
+  for (let x = el.x1 + 40; x < el.x2 - 20; x += PIER_GAP) {
+    let px = x;
+    for (let k = 0; k < 16 && (lane(px) || onStairs(px)); k++) px += 16;
+    if (lane(px) || onStairs(px)) continue;
+    el.piers.push(Math.round(px));
+    for (const dy of [-PIER_SPAN / 2, PIER_SPAN / 2]) m.addSolidProp(px, yc + dy, 12);
+  }
+  // the platforms up on the deck and the ways up to them, for the levels (people only: shared/levels.js foot) - each
+  // station's platform along its side of the deck, each stair tower's flight rising from its foot to the deck's
+  // height and the landing across from its top to the platform
+  el.foot = []; el.lz = EL_LZ;
+  for (const r of m.rails) for (const st of r.stations || []) {
+    if (!st.el || st.deck) continue;
+    const side = st.platform.y > yc ? 1 : -1, sx = Math.round(st.x / T0) * T0;
+    st.deck = { x0: sx - EL_STA_LEN + 16, x1: sx + EL_STA_LEN - 16, y: yc + side * EL_PLAT, side };
+    if (!el.foot.some((f) => f.kind === 'platform' && f.ay === st.deck.y && Math.abs(f.ax - st.deck.x0) < 64)) el.foot.push({ kind: 'platform', ax: st.deck.x0, ay: st.deck.y, bx: st.deck.x1, by: st.deck.y, hw: EL_PLAT_HW, za: EL_LZ, zb: EL_LZ });
+  }
+  for (const s of el.stairs) {
+    const side = s.y > yc ? 1 : -1, tx = s.x + s.dir * (EL_STAIR + 10), py = yc + side * EL_PLAT;
+    s.top = { x: tx, y: s.y }; s.deckY = py;
+    el.foot.push({ kind: 'stairs', ax: s.x + s.dir * 6, ay: s.y, bx: tx, by: s.y, hw: 20, za: 0, zb: EL_LZ, ramp: true });
+    el.foot.push({ kind: 'landing', ax: tx, ay: s.y, bx: tx, by: py, hw: 22, za: EL_LZ, zb: EL_LZ });
+  }
   for (const h of m.railHubs || []) {
     if (elAt(h.x / T0, h.y / T0) < 1 && Math.abs(h.y - yc) > 400) continue;
     if (h.x < el.x1 || h.x > el.x2) continue;
@@ -229,7 +254,9 @@ export function elFurniture(m, removeProps = null) {
   // nothing tall under the deck: the trees and lamps the streets were dressed with along its line go
   if (removeProps) removeProps(m, (x, y) => x > el.x0 - 32 && x < el.x3 + 32 && Math.abs(y - el.y) < 150 && m.props.some((p) => p.x === x && p.y === y && /^(tree|palm|lamp)/.test(p.t)));
   m.el = el;
-  return { piers: el.piers.length, stairs: el.stairs.length };
+  // (the levels again, now with the El's corridors - the generator built them before the El was furnished)
+  if (m.levels) { const L = buildLevels(m); L.broken = m.levels.broken; m.levels = L; }
+  return { piers: el.piers.length, stairs: el.stairs.length, foot: el.foot.length };
 }
 
 // (H35, 8.14) Each station's house on open ground: the house (140 x 92 px, its canopy toward the tracks, drawn by the

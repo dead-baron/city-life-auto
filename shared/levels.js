@@ -49,6 +49,13 @@ export function buildLevels(m) {
       });
     }
   }
+  // (World v3's El: its stations' platforms, stair flights and landings - people only: a vehicle never climbs them, nor
+  // a passer-by who didn't mean to (levelStep); m.el.foot: shared/world3-rail.js elFurniture)
+  for (const f of (m.el && m.el.foot) || []) {
+    const len = Math.hypot(f.bx - f.ax, f.by - f.ay);
+    if (len < 0.5) continue;
+    segs.push({ ax: f.ax, ay: f.ay, bx: f.bx, by: f.by, len, ux: (f.bx - f.ax) / len, uy: (f.by - f.ay) / len, hw: f.hw, za: f.za, zb: f.zb, ramp: !!f.ramp, edge: -1, s0: 0, foot: true });
+  }
   const grid = new Map();
   segs.forEach((s, i) => {
     const pad = s.hw + 48;
@@ -118,7 +125,7 @@ export function levelStep(m, s, r, breaker = false) {
     let nz = 0;
     for (const i of near) {
       const sg = L.segs[i];
-      if (!sg.ramp) continue;
+      if (!sg.ramp || (sg.foot && (breaker || (s.npc && !s.npc.climb)))) continue;   // (the El's stairs: people on foot - not the NPCs milling past)
       const p = probe(sg, s.x, s.y);
       if (p.d <= sg.hw - 2 && p.z <= GROUND_Z + 0.08 && p.z > nz && (z > 0.02 || p.z < 0.2)) nz = p.z;
     }
@@ -129,6 +136,7 @@ export function levelStep(m, s, r, breaker = false) {
   let best = null;
   for (const i of near) {
     const sg = L.segs[i];
+    if (sg.foot && breaker) continue;
     const p = probe(sg, s.x, s.y);
     if (Math.abs(p.z - z) > 0.3) continue;
     const score = p.d - sg.hw;

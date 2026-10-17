@@ -2536,7 +2536,7 @@ function crossingSignals(I, list) {
 // edges - up on steel bents; the inclines at either end on concrete retaining walls down to the portals; at a station
 // the platforms out over the pavements under their canopies, the stair towers down to the street
 // ================================================================================================
-const EL_PIECE = 128, EL_HW = 104, EL_STA_HW = 168, EL_STA_LEN = 360;   // (the platforms: a train's length either side of the station's middle)
+const EL_PIECE = 128, EL_HW = 104, EL_STA_HW = 168, EL_STA_LEN = 400;   // (the platforms: a train's length either side of the station's middle, out to the stair towers' tops - shared/world3-rail.js EL_STA_LEN)
 function addEl(c, I) {
   const E = c.M.el;
   if (!E) return;

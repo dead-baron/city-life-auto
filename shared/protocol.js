@@ -34,8 +34,10 @@ export function decodeInput(dv) {
 
 // ---- Server -> client snapshot ---------------------------------------------
 export const SNAP_HEADER = 1 + 4 + 4 + 4 + 1 + 1 + 4 + 12 * 4 + 1 + 2 + 2;
-// entity: id, kind, flags, x, y, angle, hp, parent, extra, level height (0 ground .. 255 up on the highway deck)
+// entity: id, kind, flags, x, y, angle, hp, parent, extra, level height (a byte: LZ_SCALE a level - 0 the ground, 1 the
+// highway deck, 1.45 the El's platforms - World v3's main line over Midtown)
 export const SNAP_ENTITY = 4 + 1 + 2 + 4 + 4 + 2 + 1 + 4 + 1 + 1;
+export const LZ_SCALE = 127.5;
 
 export class SnapshotWriter {
   constructor(maxEntities = 1500) {
@@ -85,7 +87,7 @@ export class SnapshotWriter {
     dv.setUint8(o + 17, Math.max(0, Math.min(255, Math.round(hpPct * 255))));
     dv.setUint32(o + 18, (parent || 0) >>> 0, true);
     dv.setUint8(o + 22, extra & 0xff);
-    dv.setUint8(o + 23, Math.max(0, Math.min(255, Math.round(lz * 255))));
+    dv.setUint8(o + 23, Math.max(0, Math.min(255, Math.round(lz * LZ_SCALE))));
     this.count++;
   }
   // Copy a pre-encoded SNAP_ENTITY-byte record (see server/net.js encodeAll).
@@ -131,7 +133,7 @@ export function decodeSnapshot(dv) {
       hp: dv.getUint8(b + 17) / 255,
       parent: dv.getUint32(b + 18, true),
       extra: dv.getUint8(b + 22),
-      lz: dv.getUint8(b + 23) / 255,
+      lz: dv.getUint8(b + 23) / LZ_SCALE,
     };
   }
   snap.ents = ents;

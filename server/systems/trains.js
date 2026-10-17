@@ -44,6 +44,29 @@ const mod = (a, n) => ((a % n) + n) % n;
 // loop (t.r); the signals (below: `signals`) keep the loops' trains apart where they share track or cross. Today's
 // world has one loop (world.rails null): everything as it was.
 const railOf = (world, t) => (world.rails ? world.rails[t.r] : world.map.rail);
+// World v3's El (shared/world3-rail.js elFurniture): a station up on the deck has its platform (st.deck: x0, x1, y, side)
+// and stair towers (m.el.stairs: foot, top) - you walk up and board from the platform, and get off onto it
+const elLz = (world) => (world.map.el && world.map.el.lz) || 128 / 88;
+const onDeck = (st, ped) => !!st.deck && (ped.lz || 0) > 1 && Math.abs(ped.y - st.deck.y) < 48 && ped.x > st.deck.x0 - 40 && ped.x < st.deck.x1 + 40;
+function elStairsOf(world, st, x) {
+  const E = world.map.el;
+  let best = null, bd = Infinity;
+  for (const s of (E && E.stairs) || []) {
+    if (!s.top || s.station !== st.name || Math.sign(s.y - E.py) !== st.deck.side) continue;
+    const d = Math.abs(s.top.x - x);
+    if (d < bd) { bd = d; best = s; }
+  }
+  return best;
+}
+// the way up from a stair tower's foot to a spot on the platform, and down from one (each point at its level: stepStairs
+// walks the height with them)
+function waysUp(world, st, s, to) { const z = elLz(world); return [{ x: s.x + s.dir * 6, y: s.y, z: 0 }, { x: s.top.x, y: s.top.y, z }, { x: s.top.x, y: st.deck.y, z }, { x: to.x, y: to.y, z }]; }
+function waysDown(world, st, x) {
+  const s = elStairsOf(world, st, x);
+  if (!s) return null;
+  const z = elLz(world);
+  return [{ x: s.top.x, y: st.deck.y, z }, { x: s.top.x, y: s.top.y, z }, { x: s.x + s.dir * 6, y: s.y, z: 0 }, { x: s.x - s.dir * (60 + rng() * 60), y: s.y + (rng() - 0.5) * 30, z: 0 }];
+}
 const timingOf = (world, t) => (world.rails ? world.railTimings[t.r] : world.railTiming);
 const off0 = (t) => !!t.r;   // (a train off the first loop: what reads the first loop's stations and crossings skips it)
 const half = (c) => c.def.L / 2 - 12;
@@ -472,7 +495,7 @@ export function alight(world, ped, x, y) {
 function doorSide(world, t, ci, st) {
   const e = world.get(t.cars[ci].id);
   const nx = -Math.sin(e.a), ny = Math.cos(e.a);
-  if (st && !st.under) return Math.sign((st.platform.x - e.x) * nx + (st.platform.y - e.y) * ny) || 1;
+  if (st && (!st.under || st.deck)) return Math.sign((st.platform.x - e.x) * nx + (st.platform.y - e.y) * ny) || 1;
   for (const sd of [1, -1]) { const x = e.x + nx * sd * 56, y = e.y + ny * sd * 56; if (!PED_BLOCK[world.map.tileAtPx(x, y)]) return sd; }
   return 1;
 }
@@ -497,6 +520,18 @@ export function onPlatformOf(world, st, x, y, rail = world.map.rail) {
 export function alightAtStation(world, t, ped) {
   const st = stationAt(world, t);
   if (!st) return false;
+  if (st.deck) {   // (the El: out of the door onto the platform, up on the deck - the people off it walk down the stairs)
+    const e = world.get(t.cars[ped.onTrain.c].id);
+    const x = clamp(e.x + (rng() - 0.5) * 50, st.deck.x0 + 24, st.deck.x1 - 24), y = st.deck.y + (rng() - 0.5) * 18;
+    alight(world, ped, x, y);
+    ped.lz = elLz(world);
+    if (ped.npc) {
+      const wp = waysDown(world, st, x);
+      if (wp) walkStairs(world, ped, wp, null, 0.2 + rng() * 0.8);
+      else { ped.npc.state = 'wander'; ped.npc.until = 0; ped.npc.wx = x; ped.npc.wy = y; }
+    }
+    return true;
+  }
   if (st.under && st.kiosk && ped.npc) { // up the stairs and out onto the street
     const k = st.kiosk;
     alight(world, ped, k.deep.x, k.deep.y + (rng() - 0.5) * 10);
@@ -748,7 +783,18 @@ function fillRiders(world, t) {
 // waiting by the edge (or by the subway stairs); when it pulls in they walk to the doors and get
 // on. They arrive from out of sight.
 const WAIT_LEAD_S = 35;
+const EL_WAIT_SPREAD = 260;   // px either side of an El station's middle its commuters wait along the platform
 function gatherCommuters(world) {
+  // (an El platform's people who stopped waiting walk back down the stairs)
+  for (const id of world.elUp || []) {
+    const q = world.get(id);
+    if (!q || q.removed || q.dead || !q.npc || q.onTrain || (q.lz || 0) < 0.3) { world.elUp.delete(id); continue; }
+    if (q.npc.stairs || q.npc.waitTrain !== undefined) continue;
+    let st = null;
+    for (const rail of world.rails || [world.map.rail]) for (const s2 of rail.stations) if (!st && onDeck(s2, q)) st = s2;
+    const wp = st && waysDown(world, st, q.x);
+    if (wp) walkStairs(world, q, wp, null); else world.elUp.delete(id);
+  }
   if (world.rails) { world.rails.forEach((rail, r) => gatherAt(world, rail, r)); return; }   // (World v3: every loop's platforms)
   gatherAt(world, world.map.rail, -1);
 }
@@ -767,6 +813,17 @@ function gatherAt(world, rail, r) {
     else for (const t of world.trains) if (t.r === r) eta = Math.min(eta, etaTo(world, t, si));
     if (eta > WAIT_LEAD_S || list.length >= (st.kiosk ? 5 : 4) || world.npcCount + world.trafficCount > world.npcBudget) return;
     if (rng() > 0.35) return;
+    if (st.deck) {
+      // (the El: in at a stair tower's foot - out of sight - and up the stairs to a spot along the platform)
+      const s = elStairsOf(world, st, st.x + (rng() - 0.5) * 400);
+      if (!s || inAnyView(world, s.x, s.y)) return;
+      const spot = { x: clamp(st.x + (rng() - 0.5) * 2 * (EL_WAIT_SPREAD), st.deck.x0 + 30, st.deck.x1 - 30), y: st.deck.y + (rng() - 0.5) * 16 };
+      const q = spawnNpc(world, COMMUTERS[Math.floor(rng() * COMMUTERS.length)], s.x + s.dir * 6, s.y, 'civ');
+      walkStairs(world, q, waysUp(world, st, s, spot), null, rng() * 2, { waitTrain: key, waitX: spot.x, waitY: spot.y, waitGiveUp: now + 150 });
+      list.push(q.id);
+      (world.elUp ??= new Set()).add(q.id);
+      return;
+    }
     // a spot to wait at, and somewhere out of sight to walk in from
     const spot = waitSpot(world, st, list.length, rail);
     let from = null;
@@ -808,9 +865,10 @@ function callWaiting(world, t, si) {
 // step, bottom of the stairs) straight through the railings' opening. Going down, at the bottom
 // they step onto the train if it's still in - else they're gone below to wait for the next one.
 // Coming up, they walk out onto the street and go about their day.
-function walkStairs(world, q, wp, ride, delay = 0) {
-  q.npc.stairs = { wp, k: 0, ride, wait: world.time + delay };
-  q.npc.waitTrain = undefined; q.npc.keep = !!ride;
+function walkStairs(world, q, wp, ride, delay = 0, then = null) {
+  q.npc.stairs = { wp, k: 0, ride, wait: world.time + delay, from: { x: q.x, y: q.y, z: q.lz || 0 }, then };
+  q.npc.waitTrain = then ? then.waitTrain : undefined; q.npc.keep = !!ride || !!then;
+  if (then) { q.npc.waitX = then.waitX; q.npc.waitY = then.waitY; q.npc.waitGiveUp = then.waitGiveUp; }
   world.stairWalkers ??= new Set();
   world.stairWalkers.add(q.id);
 }
@@ -831,9 +889,12 @@ function stepStairs(world, dt) {
     if (world.time < s.wait) { q.vx = 0; q.vy = 0; continue; }
     const p = s.wp[s.k], dx = p.x - q.x, dy = p.y - q.y, d = Math.hypot(dx, dy);
     if (d < 6) {
+      if (p.z !== undefined) q.lz = p.z;
+      s.from = { x: q.x, y: q.y, z: q.lz || 0 };
       if (++s.k < s.wp.length) continue;
       world.stairWalkers.delete(id);
       q.npc.stairs = null;
+      if (s.then) { q.npc.state = 'wander'; q.npc.until = 0; q.npc.wx = q.x; q.npc.wy = q.y; continue; }   // (up on the El's platform: waiting there)
       if (!s.ride) {
         // out on the street: walk on away from the entrance (not straight back down into the stairwell)
         const a = s.wp[s.wp.length - 2] || s.wp[0], b = s.wp[s.wp.length - 1];
@@ -851,6 +912,8 @@ function stepStairs(world, dt) {
     q.vx = dx / d * sp; q.vy = dy / d * sp; q.a = Math.atan2(dy, dx);
     const step = Math.min(sp * dt, d) / d; // (never past the waypoint: a quick walker would step back and forth over it)
     q.x += dx * step; q.y += dy * step;
+    // (an El stair's flight: the height walked with the steps, from the last point's level to this one's)
+    if (p.z !== undefined && s.from) { const L = Math.hypot(p.x - s.from.x, p.y - s.from.y) || 1, g = 1 - Math.hypot(p.x - q.x, p.y - q.y) / L; q.lz = s.from.z + (p.z - s.from.z) * Math.max(0, Math.min(1, g)); }
     world.place(q);
   }
 }
@@ -1251,6 +1314,18 @@ export function interaction(world, p) {
   for (const t of world.trains) {
     const st = stationAt(world, t);
     if (!st) continue;
+    if (st.deck) {
+      // (the El: up on its platform, the nearest open door)
+      if (!onDeck(st, ped)) continue;
+      let best = -1, bd = Infinity;
+      for (let ci = 0; ci < t.cars.length; ci++) {
+        if (ci === t.mail) continue;
+        const d = doorPoint(world, t, ci, doorSide(world, t, ci, st), 14), dd = Math.hypot(ped.x - d.x, ped.y - d.y);
+        if (dd < bd) { bd = dd; best = ci; }
+      }
+      if (best >= 0) return { label: `Board the train - next stop ${railOf(world, t).stations[(t.stop + 1) % railOf(world, t).stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
+      continue;
+    }
     if (st.under) {
       if (atEntrance(st, ped)) return { label: `Down the stairs - board the train at ${st.name}`, run: () => boardAtStation(world, ped, t, anyCoach(t)) };
       continue;
@@ -1266,6 +1341,18 @@ export function interaction(world, p) {
     }
     if (best >= 0) return { label: `Board the train - next stop ${railOf(world, t).stations[(t.stop + 1) % railOf(world, t).stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
   }
+  // up on an El platform with no train in: when the next one is due; at a stair tower's foot: the way up
+  const rails = world.rails || [world.map.rail];
+  for (let r = 0; r < rails.length; r++) for (let si = 0; si < rails[r].stations.length; si++) {
+    const st = rails[r].stations[si];
+    if (!st.deck || !onDeck(st, ped)) continue;
+    let eta = Infinity;
+    if (world.rails) { for (const t of world.trains) if (t.r === r) eta = Math.min(eta, etaTo(world, t, si)); } else eta = nextTrainIn(world, si);
+    if (eta === Infinity) continue;
+    const s = Math.max(1, Math.round(eta)), to = rails[r].stations[(si + 1) % rails[r].stations.length].name.replace(/ Station$/, '');
+    return { label: `${st.name}: next train in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} (to ${to}) - board at the doors when it's in`, run: () => {} };
+  }
+  if ((ped.lz || 0) < 0.3) for (const s of (world.map.el && world.map.el.stairs) || []) if (s.top && Math.hypot(ped.x - s.x, ped.y - s.y) < 46) return { label: `Up the stairs to the platform - ${s.station}`, run: () => {} };
   // at a subway entrance with no train in: the countdown, and where to wait
   const sts = world.map.rail.stations;
   for (let si = 0; si < sts.length; si++) {
