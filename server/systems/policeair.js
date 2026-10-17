@@ -100,6 +100,16 @@ export function steer(world, v, tx, ty, speed, ax, ay, want) {
   fi.dx = vx / def.max; fi.dy = vy / def.max; fi.m = 1;
   fi.turn = Math.hypot(ax - v.x, ay - v.y) > 20 ? clamp(wrap(a - v.a) * 1.6, -1, 1) : 0;
   fi.climb = climb;
+  // another aircraft close by at nearly its height (two that touch both come down - aircraft.js): the lower one stops
+  // climbing into it, the upper one climbs away (the roofs pushed a police helicopter up under the news one circling
+  // the same chase faster than the news one rose: airtraffic.test.js failed one run in four on it)
+  if (want !== null) for (const e of world.query(v.x, v.y, 320)) {
+    if (e === v || e.kind !== K.VEH || e.removed || e.wreckAt || (e.alt || 0) < FLY.HIGH || Math.hypot(e.x - v.x, e.y - v.y) > 320) continue;
+    const dz = (e.alt || 0) - alt;
+    if (Math.abs(dz) >= POLICE_AIR.sep) continue;
+    if (dz >= 0) fi.climb = alt < need - 10 ? Math.min(fi.climb, 0) : Math.min(fi.climb, -0.4);
+    else fi.climb = Math.max(fi.climb, 0.6);
+  }
   return d;
 }
 

@@ -106,6 +106,7 @@ test('the news helicopter keeps its height clear of the police helicopter over a
   const w2 = makeWorld();
   run(w2, 0.2);
   const A2 = (w2.airTraffic ||= { flights: new Map(), nextAt: 1e9, newsAt: 1e9 });
+  A2.nextAt = 1e9; A2.newsAt = 1e9;   // (only this test's news flight: no light plane crossing the chase at its height)
   const pad = policeair.hqPad(w2.map);
   const { p } = joinPlayer(w2);
   p.ped.x = pad.x + 1500; p.ped.y = pad.y + 300; w2.place(p.ped);   // (downtown: the roofs push both up to the same height)

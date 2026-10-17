@@ -10194,3 +10194,12 @@ main line over Trestle Street) now works like a real elevated station:
   the El's platform is drawn up there on everyone's screen.
 - test/elplatform.test.js: up, along and down; the edge holds; a car stays below; board from the platform and off
   onto it; people off a train walk down.
+
+## 2026-10-17 · Two helicopters at a chase no longer fly into each other (H69, the rest of it)
+test/airtraffic.test.js failed about one run in four: over a chase downtown the roofs pushed the police helicopter
+up under the news one faster than the news one rose to keep its distance, and they touched (both came down); and a
+light plane's flight, started by the test world's own air traffic, now and then crossed the chase at the news
+helicopter's height. Now any helicopter flown by steer() (server/systems/policeair.js: the police unit's and the news
+one's) watches the aircraft round it: within 320 px and closer than POLICE_AIR.sep in height, the lower one stops
+climbing (or eases down, roofs allowing) and the upper one climbs away. The test keeps the world's other flights
+from starting.
