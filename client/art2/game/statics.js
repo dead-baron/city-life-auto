@@ -47,7 +47,6 @@ import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
 import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and pole sign: task #366)
 import * as TN from '../props-towns.js';
-import * as ELV from '../props-el.js';   // (2026-10-17: the El over Midtown's Trestle Street - its bents and stair towers)
 import { EL_Z } from './chunkgeom.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
@@ -1312,7 +1311,7 @@ const step2 = (R, t, x, y) => R[clamp(Math.round(t * (R.length - 1) + (((x & 3) 
 // ================================================================================================
 function voxModel(m, a) {
   switch (m) {
-    case 'elPier': return ELV.elPier(a[0], a[1]); case 'elStairs': return ELV.elStairs(a[0], a[1], a[2] ?? 1);
+    case 'elPier': return RD.elPier(a[0], a[1]); case 'elStairs': return RD.elStairs(a[0], a[1], a[2] ?? 1);   // (2026-10-17: the El over Midtown's Trestle Street - its bents and stair towers)
     case 'hydrant': return P.hydrant(); case 'bin': return P.bin(a[0] ?? true); case 'wireBin': return P.wireBin(); case 'newsBox': return P.newsBox(a[0]);
     case 'bench': return P.bench(); case 'bollard': return P.bollard(a[0] || 12); case 'acUnit': return P.acUnit(); case 'planter': return P.planter(a[0] ?? true);
     case 'pottedPalm': return P.pottedPalm(); case 'umbrella': return P.umbrella(a[0], a[1]); case 'dumpster': return dumpster(a[0]); case 'crate': return P.crate(a[0] || 1);

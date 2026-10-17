@@ -9919,7 +9919,7 @@ look-alike strip blocks with the main line hidden underground; now:
   Midtown's mix is red, deep red, brown, chocolate, buff, tan, cream and painted brick (green, navy, oxblood, mustard,
   sage) with stucco, stone and peach; a neighbour repeats the one before it now and then (a run of one colour along a row
   is fine). Roofs mostly pale membrane and gravel, some tar, pavers, a green roof now and then.
-- **The El** (shared/world3-rail.js EL, elFurniture; client/art2/props-el.js, statics.js addEl): the main line runs
+- **The El** (shared/world3-rail.js EL, elFurniture; client/art2/props-road.js elPier and elStairs, statics.js addEl): the main line runs
   straight along Trestle Street on a steel viaduct 128 px up, its inclines down to portals east of Garden Street and
   east of Mercer Street; steel bents on the pavements; Midtown Station up on the deck with its platforms, canopies and
   name boards, a stair tower down to each pavement (boarding at the stair foot). A train up there is out of the
@@ -9927,3 +9927,6 @@ look-alike strip blocks with the main line hidden underground; now:
   at the deck's height with its riders (the wire carries a train's lz; flag 32).
 - WORLD_VERSION 12: the homes' list moved - homes bought are bought back at what was paid.
 Tools: tools/area-shot.mjs (any rectangle of the world through the chunk bake, for checking a place as it's built).
+Budgets: the bake code 765 -> 770 KB (tools/perf.mjs): the El's deck, inclines, bents, platforms and stair towers are
+drawn by the chunk bake (767 KB; their models joined props-road.js, so the files hold at 73). The hand plans' building
+maker lives in shared/world3-hand.js, not map.js, so the page's generator code stays within its 360 KB.

@@ -79,7 +79,8 @@ test('World v3b city: every street east-west or north-south, on land with its pa
   for (const l of lines) {
     assert.equal(l.pts.length, 2);
     const [a, b] = l.pts;
-    assert.ok(a.x === b.x || a.y === b.y, `${l.name}: axis-aligned`);
+    // (a handcrafted district's streets - shared/world3-hand.js - may run at an angle: Midtown's Crosstown Way)
+    assert.ok(a.x === b.x || a.y === b.y || l.hand, `${l.name}: axis-aligned`);
     assert.ok(['st', 'ave', 'blvd', 'alley'].includes(l.kind), `${l.name}: a kind the generator knows (${l.kind})`);
     assert.equal(l.lvl, 0);
   }

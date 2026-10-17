@@ -7,6 +7,8 @@
 // The generator side only (shared/world3-world.js wires it in): the page never imports this.
 // Deterministic: integer data, hash2 / mulberry32 draws, no Math.random, no trigonometry.
 import { TILE, T } from './constants.js';
+import { DISTRICTS } from './mapcore.js';
+import { hash2 } from './rng.js';
 import { MIDTOWN } from './world3-midtown.js';
 
 export const HAND_PLANS = [MIDTOWN];
@@ -27,7 +29,8 @@ export function handStreets(lines) {
 }
 
 // Every plan built (the generator's `hand` hook: after the roads, the rail and the plazas are laid, before the blocks).
-export function buildHand(m, api) {
+export function buildHand(m, api0) {
+  const api = { ...api0, hash2, handBuilding };
   const out = {};
   for (const P of HAND_PLANS) {
     const kit = makeKit(m, api, P);
@@ -155,4 +158,63 @@ function makeKit(m, api, P) {
     },
   };
   return K;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// One building placed whole (the generator's own lots are shared/map.js placePrefab's): its tiles, its lot record (the
+// old renderer's), its business or home.
+//   handBuilding(m, o): o = { x, y, w, h (tiles: the footprint), d (district; default the one under its middle), key
+//   (the lot's kind as the old renderer knows it: 'apt1', 'conv', 'rest2'...; default 'apt1'), arch, art, name, back
+//   (its front faces away from the camera: a plain back wall to the south), whole (drawn as one section), roof ('tar'...:
+//   a plain roofed building with no lot of its own), door (tile x of its front door, on the south side), poi ({ kind,
+//   label, fixed }: its business; label defaults to the name), home ({ kind: 'apartment' | 'house' | 'shack', price,
+//   slots }: one home behind its door), signs (extra sign texts along its front: [{ x (tile), text }]) } -> the building
+function handBuilding(m, o) {
+  const { x, y, w, h } = o, bid = m.buildings.length;
+  const d = o.d ?? m.dist[(y + (h >> 1)) * m.w + x + (w >> 1)];
+  const b = { id: bid, prefab: -1, tx: x, ty: y, tw: w, th: h, kind: o.roof ? 'roof' : o.key || 'apt1', name: o.name || 'Building', business: null, signs: [], hand: true };
+  if (o.arch) b.arch = o.arch;
+  if (o.art) b.art = o.art;
+  if (o.back) b.back = true;
+  if (o.whole) b.whole = true;
+  if (o.look) b.handLook = o.look;
+  if (o.trade) b.trade = o.trade;   // (what the shop is - books, records, laundry, diner: its walk-in, later)
+  if (o.roof) { m.roofs.push({ tx: x, ty: y, tw: w, th: h, kind: o.roof, seed: Math.floor(hash2(x, y, 977) * 1e9), d, b: bid }); b.roof = m.roofs.length - 1; }
+  else { b.prefab = m.prefabs.length; m.prefabs.push({ key: b.kind, tx: x, ty: y, tw: w, th: h, rot: 0, d, solid: [0, 0, w, h], hand: true }); }
+  m.buildings.push(b);
+  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * m.w + tx] = bid; }
+  // (face 'N': its front and door on the north side, onto a street there - drawn from the camera's side as its back)
+  const north = o.face === 'N';
+  if (north) b.back = true;
+  if ((o.back && !north) || o.door === null) return b;
+  const dtx = Math.max(x, Math.min(x + w - 1, o.door ?? x + (w >> 1)));
+  b.door = { tx: dtx, ty: north ? y - 1 : y + h };
+  const px = (dtx + 0.5) * TILE, py = north ? (y - 0.7) * TILE : (y + h + 0.7) * TILE;
+  if (o.units) {
+    // a strip of shop units side by side (units: [[poi kind, label], ...]): a door, a sign and a business each, evenly
+    // along its front (buildInteriors makes a walk-in unit of each walk-in kind)
+    const n = o.units.length;
+    o.units.forEach(([kind, label], k) => {
+      const ux = Math.min(x + w - 1, x + Math.floor((k + 0.5) * w / n)), ux0 = (ux + 0.5) * TILE;
+      m.pois.push({ id: m.pois.length, kind, label, x: ux0, y: py, r: 48, b: bid, fixed: true });
+      b.signs.push({ x: ux0, y: (y + h - 0.6) * TILE, text: label });
+    });
+    b.business = o.units[0][0];
+  } else if (o.poi) {
+    const label = o.poi.label || b.name;
+    b.business = o.poi.kind;
+    m.pois.push({ id: m.pois.length, kind: o.poi.kind, label, x: px, y: py, r: o.poi.kind === 'delivery' ? 40 : 48, b: bid, fixed: o.poi.fixed !== false });
+    b.signs.push({ x: px, y: (y + h - 0.6) * TILE, text: label });
+    if (o.poi.kind === 'coffee' || o.poi.kind === 'pharmacy') { const vx = px + 56, vy = py + 12; if (vx < (x + w) * TILE - 8) { m.props.push({ t: 'vend_cola', x: vx, y: vy }); m.pois.push({ id: m.pois.length, kind: 'vending', label: 'Vending Machine', x: vx, y: vy + 18, r: 32 }); } }
+  } else if (o.home) {
+    const H = o.home, dist = DISTRICTS[d], id = m.homes.length;
+    const kind = H.kind || 'apartment', apt = kind === 'apartment', shack = kind === 'shack';
+    const price = H.price ?? (shack ? 6000 : apt ? (dist.tier === 'lux' ? 30000 : dist.tier === 'low' || dist.tier === 'rough' ? 11000 : 15000) : (dist.turf ? 12000 : dist.tier === 'lux' ? 60000 : 25000));
+    const home = { id, kind, name: H.name || `${dist.name} ${apt ? 'Apt' : shack ? 'Shack' : 'House'} #${id + 1}`, price, slots: H.slots ?? (apt ? 2 : shack ? 1 : 3), x: px, y: py, garage: H.garage || { x: (x + w * 0.5) * TILE, y: (y + h + 2.5) * TILE, a: 0 }, b: bid };
+    m.homes.push(home);
+    m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: px, y: py, r: 40, b: bid });
+    b.home = id;
+  } else if (o.poi !== false && o.name) m.pois.push({ id: m.pois.length, kind: 'delivery', label: b.name, x: px, y: py, r: 40, b: bid, fixed: true });
+  for (const s of o.signs || []) b.signs.push({ x: (s.x + 0.5) * TILE, y: (y + h - 0.6) * TILE, text: s.text });
+  return b;
 }
