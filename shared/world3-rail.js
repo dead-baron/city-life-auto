@@ -120,7 +120,7 @@ export function roundLoop(route) {
 
 // One loop's track: points every SAMPLE px, offset TRACK_OFF to the right of the way it runs, in px; each with its
 // distance along (s) and `under` in the skeleton's tunnels.
-export function trackOf(path) {
+export function trackOf(path, main = false) {   // (main: the main line's - only it climbs onto the El)
   const P = path.pts, S = path.s, total = path.length * TILE, out = [];
   const inR = (list, s) => list.some(([a, b]) => s >= a && s <= b);
   let j = 1;
@@ -132,7 +132,7 @@ export function trackOf(path) {
     const x = (a[0] + (b[0] - a[0]) * w) * TILE - dy * TRACK_OFF, y = (a[1] + (b[1] - a[1]) * w) * TILE + dx * TRACK_OFF;
     // (World v3b's elevated stretch - the main line over Midtown's streets on a viaduct - is laid below ground, flagged
     // `elevated`, until the generator builds a rail viaduct over streets: so no street crosses it at grade)
-    const mx = a[0] + (b[0] - a[0]) * w, my = a[1] + (b[1] - a[1]) * w, ez = elAt(mx, my);
+    const mx = a[0] + (b[0] - a[0]) * w, my = a[1] + (b[1] - a[1]) * w, ez = main ? elAt(mx, my) : 0;
     // (the El: up on its viaduct - `under` to the generator - or on an incline at ground level; the rest of the skeleton's
     // `elevated` stretch, past the portals, is tunnel)
     if (ez >= 1) { out.push({ x, y, under: true, subway: false, tunnel: false, elevated: true, ez: 1 }); continue; }
@@ -152,7 +152,7 @@ export function trackOf(path) {
 export function mainLineLoops(m = null) {
   const loops = [];
   for (const sv of SERVICES) for (const way of [1, -1]) {
-    const route = serviceRoute(sv, way), path = roundLoop(route), pts = trackOf(path);
+    const route = serviceRoute(sv, way), path = roundLoop(route), pts = trackOf(path, true);
     const stops = way > 0 ? sv.stops : sv.stops.slice().reverse();
     const stations = stops.map((name) => { const st = STATIONS.find((q) => q.line === 'main' && q.name === name); return { name, x: st.at[0] * TILE, y: st.at[1] * TILE }; });
     loops.push({ name: `${sv.name} (${way > 0 ? 'one way' : 'the other way'})`, service: sv.name, way, pts, stations, side: 1, segs: route.segs.map((g) => g.name + (g.way > 0 ? ' +' : ' -')), hub: true, bores: [] });

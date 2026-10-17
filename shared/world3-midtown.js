@@ -670,9 +670,12 @@ function dealership(K, x, y, w, h, out) {
   K.prop('textsign', x + sw + 8, y + h - 3, 0, { text: 'MOTOR ROW', bg: '#1e3a5e', fg: [250, 236, 160], z: 54 });
   void out;
 }
+// a subway entrance's plaza (shared/map.js reserveSubwayPlazas) within r tiles of (x, y): kept clear and paved
+function onSubwayPlaza(m, x, y, r = 0) { return (m.subwayPlazas || []).some((q) => x >= q.x - r && x < q.x + q.w + r && y >= q.y - r && y < q.y + q.h + r); }
 // none of the tiles within r of (x, y) reserved (the subway's stairs, a plaza kept) or built
 function clearOf(K, x, y, r) {
   const m = K.m;
+  if (onSubwayPlaza(m, x, y, r + 1)) return false;
   for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const i = Math.floor(y + dy) * m.w + Math.floor(x + dx); if ((m.reserve[i] & ~16) || m.tiles[i] === T.BUILDING || m.tiles[i] === T.ROAD) return false; }
   return true;
 }
@@ -686,7 +689,7 @@ function unionSquare(K, x, y, w, h, out) {
   const cx = Math.round(x + w / 2), cy = Math.round(y + h / 2), gw = Math.floor(w / 2) - 7, gh = Math.floor(h / 2) - 5;
   for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
     const gx = sx < 0 ? cx - 4 - gw : cx + 4, gy = sy < 0 ? cy - 3 - gh : cy + 3;
-    for (let yy = gy; yy < gy + gh; yy++) for (let xx = gx; xx < gx + gw; xx++) { const i = yy * K.m.w + xx; if (!(K.m.reserve[i] & ~16)) K.m.tiles[i] = T.GRASS; }
+    for (let yy = gy; yy < gy + gh; yy++) for (let xx = gx; xx < gx + gw; xx++) { const i = yy * K.m.w + xx; if (!(K.m.reserve[i] & ~16) && !onSubwayPlaza(K.m, xx, yy, 1) && K.m.tiles[i] === T.PLAZA) K.m.tiles[i] = T.GRASS; }
     // the plane trees round each lawn, a flower bed in it
     for (let tx = gx + 2; tx < gx + gw - 1; tx += 7) for (const ty of [gy + 1.5, gy + gh - 1.5]) if (clearOf(K, tx, ty, 2)) prop('tree_b', tx, ty, 12, { sp: 'streetPl', k: 1.2 });
     if (clearOf(K, gx + gw / 2, gy + gh / 2, 2)) prop('flowers_big', gx + gw / 2, gy + gh / 2, 0);
