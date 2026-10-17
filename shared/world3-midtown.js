@@ -327,7 +327,7 @@ function build(m, api, K) {
   }
   {
     const [x0, x1] = span(MX.bridge, 'ave', MX.carroll, 'st');
-    railRow(x0, x1, [{ kind: 'walkup', w: 10 }, { kind: 'shop', w: 7, name: 'The Trestle Tap', store: 'bar', awning: null, people: 3 }]);
+    railRow(x0, x1, [{ kind: 'walkup', w: 10 }, { kind: 'shop', w: 7, name: 'The Trestle Tap', store: 'bar', awning: null, people: 3 }, { gap: 13, kind: 'park' }]);
   }
   {
     const [x0, x1] = span(MX.carroll, 'st', MX.main, 'ave');
@@ -348,7 +348,7 @@ function build(m, api, K) {
   for (const [a, ka, b, kb] of [[MX.civic, 'ave', MX.fulton, 'st'], [MX.fulton, 'st', MX.harborview, 'ave'], [MX.harborview, 'ave', MX.mercer, 'st']]) {
     const [x0, x1] = span(a, ka, b, kb);
     if (a === MX.fulton) skateSpot(K, x0 + 14, ay0, 26, ay1 - ay0 + 1, out);   // (the skate spot by the El, the row built round it)
-    railRow(x0, x1, [], { gardens: false });
+    railRow(x0, x1, a === MX.civic ? [{ kind: 'walkup', w: 11 }, { gap: 12, kind: 'park' }] : [], { gardens: false });
   }
   {
     // the east end, rougher: by the projects
@@ -375,7 +375,8 @@ function build(m, api, K) {
     backRow(x2, x3, b1y0, alleyB1 - 2);
     mainRow(x2, x3, alleyB1 + 2, b1y1, [{ kind: 'walkup', w: 10 }, { kind: 'shop', ...pickShop('cafe', 7) }]);
     backRow(x2, x3, b2y0, alleyB2 - 2);
-    mainRow(x2, x3, alleyB2 + 2, b2y1, [{ kind: 'shop', ...pickShop('food', 8) }]);
+    // (Marlow & Finch, the department store on the boulevard: shared/map.js CLOTHES_SHOPS takes it by name)
+    mainRow(x2, x3, alleyB2 + 2, b2y1, [{ kind: 'raw', w: 26, lot: deptStore() }, { kind: 'shop', ...pickShop('food', 8) }]);
   }
   // --- Bridge Avenue to Linden Street
   {
@@ -479,11 +480,13 @@ function build(m, api, K) {
   {
     // the west: Westside Avenue to Garden Street, Garden Street to Bridge Avenue
     for (const [a, ka, b, kb] of [[MX.westside, 'ave', MX.garden, 'st'], [MX.garden, 'st', MX.bridge, 'ave']]) {
-      const [x0, x1] = span(a, ka, b, kb);
+      const [x0, x1] = span(a, ka, b, kb), west = a === MX.westside;
       backRow(x0, x1, c1y0, c1y0 + 15);
-      mainRow(x0, x1, c1y0 + 16, c1y1, []);
+      // (the Pier Street Market, the old market hall: its glazed roof, the food counters inside)
+      mainRow(x0, x1, c1y0 + 16, c1y1, west ? [] : [{ kind: 'walkup', w: 9 }, { kind: 'raw', w: 26, lot: marketHall(), depth: 16 }]);
       backRow(x0, x1, c2y0, alleyC2 - 2);
-      mainRow(x0, x1, alleyC2 + 2, c2y1, []);
+      // (a tower going up on Harbor Avenue: the frame, the crane, the site fence - statics.js 'construction')
+      mainRow(x0, x1, alleyC2 + 2, c2y1, west ? [{ kind: 'shop', ...pickShop('food', 9) }, { kind: 'raw', w: 24, lot: { key: 'construction', name: 'Harbor Tower site', poi: false, whole: true }, depth: 15 }] : []);
     }
   }
   {
@@ -519,7 +522,8 @@ function build(m, api, K) {
       // (Midtown's precinct on Pier Street at Civic Avenue, its motor pool next door)
       mainRow(x0, x1, c1y0 + 15, c1y1, a === MX.civic ? [{ kind: 'raw', w: 26, lot: precinctLot(), depth: 19 }, { kind: 'raw', w: 15, lot: { roof: 'tar', name: 'Motor Pool', poi: false }, depth: 15 }] : []);
       backRow(x0, x1, c2y0, c2y0 + 14);
-      mainRow(x0, x1, c2y0 + 15, c2y1, []);
+      // (The Holloway, a small hotel on Harbor Avenue; The Foundry Lofts, a brick works turned flats over a cafe)
+      mainRow(x0, x1, c2y0 + 15, c2y1, a === MX.civic ? [{ kind: 'walkup', w: 10 }, { kind: 'raw', w: 14, lot: hotelLot() }] : [{ kind: 'raw', w: 30, lot: loftLot(), depth: 17 }]);
     }
   }
   {
@@ -716,6 +720,36 @@ function groceryLot() {
 // buildMotorPools: the fenced lot, the cruisers and bikes inside, the gate onto Pier Street)
 function precinctLot() {
   return { arch: 'police', key: 'police', name: 'Midtown Precinct', poi: { kind: 'police', label: 'Midtown 9th Precinct' }, front: 3, whole: true };
+}
+// Marlow & Finch, the department store: stone, tall windows under a dentil cornice, the long shopfront
+function deptStore() {
+  return { arch: 'mixed', name: 'Marlow & Finch', poi: { kind: 'clothing', label: 'Marlow & Finch' }, whole: true,
+    art: { spec: { floors: 3, style: 'stone', wallColor: '#d8ccb4', win: 'tall', cornice: 'dentil', parapet: 12, grime: 0.08, roofMat: 'gravel', lip: 10, rimW: 5 },
+      shop: { kind: 'clothes', door: 'left', open: true, people: 4, awning: ['#1e2a3a', '#1e2a3a'], sign: { text: 'MARLOW & FINCH', bg: '#1e2a3a', fg: [236, 214, 150], lit: true } } } };
+}
+// The Pier Street Market: the old market hall, round-headed windows, its glazed roof ridge (rows of skylights), food
+// counters inside (a counter with a queue: the key's)
+function marketHall() {
+  const kit = [];
+  for (let ry = 70; ry <= 380; ry += 52) for (let rx = 40; rx <= 780; rx += 34) kit.push(['sky', rx, ry]);
+  kit.push(['hvac', 60, 470], ['vent', 400, 470], ['vent', 700, 470]);
+  return { arch: 'strip', key: 'rest2', name: 'Pier Street Market', poi: { kind: 'coffee', label: 'Pier Street Market', food: true }, whole: true,
+    art: { spec: { floors: 2, style: 'stone', wallColor: '#c8b898', win: 'arch', cornice: 'step', date: '1898', parapet: 14, grime: 0.15, roofMat: 'metal', lip: 10, rimW: 5 },
+      shop: { kind: 'diner', door: 'left', open: true, people: 6, awning: ['#2f6a4e', '#2f6a4e'], sign: { text: 'MARKET HALL', bg: '#2f6a4e', fg: [250, 240, 200], lit: true } }, kit } };
+}
+// The Holloway, a small hotel: brick, an oriel up the middle, the HOTEL blade, the lobby under its awning
+function hotelLot() {
+  return { arch: 'mixed', name: 'The Holloway Hotel', poi: { kind: 'delivery', label: 'The Holloway Hotel' }, whole: true,
+    art: { spec: { floors: 4, style: 'brick', brickTone: '#4a5a6a', win: 'bay', cornice: 'bracket', parapet: 10, grime: 0.1, roofMat: 'tar', lip: 10, rimW: 4, blades: [{ text: 'HOTEL', x: 10, v: 80, col: [255, 90, 80] }] },
+      shop: { kind: 'lobby', door: 'right', open: true, people: 2, awning: ['#7a2e2e', '#7a2e2e'], sign: { text: 'THE HOLLOWAY', bg: '#7a2e2e', fg: [250, 230, 190], lit: true } } } };
+}
+// The Foundry Lofts: a brick works turned flats - steel-framed loft windows, the stepped parapet with its date, a water
+// tower; a cafe on the ground floor
+function loftLot() {
+  return { arch: 'mixed', key: 'greenbistro', name: 'The Foundry Lofts', poi: { kind: 'coffee', label: 'Foundry Coffee' }, home: { kind: 'apartment', price: 26000 }, whole: true,
+    art: { spec: { floors: 4, style: 'brick', brickTone: '#7a3a2e', win: 'loft', cornice: 'step', date: '1907', parapet: 12, grime: 0.28, roofMat: 'tar', lip: 10, rimW: 4 },
+      shop: { kind: 'cafe', door: 'left', open: true, people: 3, awning: ['#3a3a44', '#e8e4dc'], sign: { text: 'FOUNDRY COFFEE', bg: '#2a2c38', fg: [236, 206, 120], lit: true } },
+      kit: [['tank', 120, 90], ['hut', 640, 70], ['acs', 300, 120], ['acs', 340, 120], ['vent', 500, 200], ['sky', 260, 300], ['sky', 300, 300], ['sky', 340, 300], ['plant', 700, 420], ['umb', 760, 400], ['table', 720, 380]] } };
 }
 function garageLot() {
   return { arch: 'garage', key: 'repair', name: 'Fresh Coat Garage', poi: { kind: 'garage', label: 'Fresh Coat Garage' }, whole: true };

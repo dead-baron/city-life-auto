@@ -10092,3 +10092,19 @@ by its height, so the rows were hiding their alleys and, on the south side of ev
   traffic shoved the parked cars along. At nine tiles a minute of Holly Street's traffic leaves them where they are.)
 - The city code's budget 360 -> 380 KB (tools/perf.mjs): World v3's handcrafted districts, Midtown's plan and the
   Neon Strip's to come.
+
+## 2026-10-17 · Midtown's blocks, each its own: the department store, the market hall, a hotel, lofts, a site, pocket parks
+The owner, 10-17: Midtown "really repetitive". Seen whole, nearly every block was the same - a row facing each street,
+an alley and yards between. Now blocks break that with buildings of their own (shared/world3-midtown.js):
+- **Marlow & Finch**, the department store on Midtown Boulevard (Garden Street to Bridge Avenue): stone, tall windows
+  under a dentil cornice, the long shopfront - the city's department store (shared/map.js CLOTHES_SHOPS takes it by
+  name: it was Downtown's).
+- **The Pier Street Market**, the old market hall (1898): round-headed windows, a glazed roof of skylight rows, food
+  counters inside.
+- **Harbor Tower site** on Harbor Avenue: a building going up - the frame, the crane, the site fence.
+- **The Holloway**, a small hotel on Harbor Avenue: brick, an oriel up the middle, the HOTEL blade.
+- **The Foundry Lofts** on Pier Street: a brick works turned flats (1907) - loft windows, the stepped parapet, a water
+  tower, Foundry Coffee on the ground floor.
+- **Pocket parks** in the rows by the El (shared/world3-hand.js gap 'park'): lawns either side of a path in from the
+  street, two trees, benches, a chess table (the old men's game: activities.js 'chess'), flower beds, an iron fence and
+  its gate, a lamp.
