@@ -101,7 +101,7 @@ const SPECIALS = [
   { d: 8, alt: [3, 6], prefab: 'warehouse', biz: ['warehouse'], names: ['Portside Logistics'] },
   { d: 8, prefab: 'rest1', biz: ['fishmarket'], names: ['Dockside Fish Market'] },
   { d: 8, prefab: 'conv', biz: ['marina'], names: ['Harbor Marina (boats)'] },
-  { d: 2, prefab: 'school', biz: ['delivery'], names: ['Northgate High'] },
+  { d: 2, prefab: 'bank', biz: ['delivery'], names: ['Northgate Public Library'] },   // (World v3: no schools - the owner, 10-16; the high school's lot a library)
   { d: 2, prefab: 'fire', biz: ['delivery'], names: ['Fire Station 7'] },
   { d: 5, prefab: 'church', biz: ['delivery'], names: ['St. Pixel Chapel'] },
   { d: 7, prefab: 'clubnova', biz: ['delivery'], names: ['Club Ultraviolet'] },
@@ -135,7 +135,7 @@ const SPECIALS = [
   { d: 30, prefab: 'strip', biz: ['delivery', 'delivery', 'delivery', 'delivery'], names: ['Old Quarter Books', 'Salt & Pepper Diner', 'Harborview Tattoo', 'Corner Laundry'] },
   { d: 30, prefab: 'church', biz: ['delivery'], names: ['St. Brine Chapel'] },
   { d: 26, prefab: 'warehouse', biz: ['delivery'], names: ['Westport Freight'] },
-  { d: 28, prefab: 'school', biz: ['delivery'], names: ['West Hills Academy'] },
+  { d: 28, prefab: 'hotel', biz: ['delivery'], names: ['West Hills Athletic Club'] },   // (no schools: the academy's lot an athletic club)
   // Northshore
   { d: 31, prefab: 'hospital', biz: ['hospital'], names: ['Northshore Medical'] },
   { d: 31, prefab: 'police3', biz: ['police'], names: ['Northshore Sheriff'] },
@@ -145,7 +145,7 @@ const SPECIALS = [
   { d: 36, prefab: 'hospital', biz: ['hospital'], names: ['Cedar Falls Clinic'] },
   { d: 36, prefab: 'police3', biz: ['police'], names: ['Cedar Falls Police'] },
   { d: 36, prefab: 'strip', biz: ['delivery', 'delivery', 'delivery', 'delivery'], names: ['Falls Hardware', 'Main Street Diner', 'Cedar Books', 'Pine & Petal Florist'] },
-  { d: 35, prefab: 'school', biz: ['delivery'], names: ['Cedar Falls High'] },
+  { d: 35, prefab: 'theatre', biz: ['delivery'], names: ['Cedar Falls Playhouse'] },   // (no schools: the high school's lot the town's playhouse)
   { d: 39, prefab: 'warehouse', biz: ['delivery'], names: ['South Port Cannery'] },
   { d: 37, prefab: 'tackle2', biz: ['tackle'], names: ['Lakeside Bait & Tackle'] },
   { d: 24, prefab: 'pool', biz: ['delivery'], names: ['Lakeview Community Pool'] },
@@ -253,6 +253,9 @@ function buildCity(seed, opts = null, frame = null) {
   m.net = net; m.nodes = net.nodes; m.edges = net.edges; m.roads = net.edges;
   for (const n of m.nodes) if (n.light && m.zone[Math.floor(n.y / TILE) * m.w + Math.floor(n.x / TILE)] === Z.GULL) n.light = false;   // (no traffic lights in the island villages)
   rasterRoads(m);
+  // (World v3 step 1: a junction out in the country, where no road has a pavement, has no traffic lights - and so no
+  // zebra crossings either, shared/roadcore.js)
+  for (const n of m.nodes) if (n.light && n.lvl === 0 && (n.edges.every((id) => !m.edges[id].walk) || !sidewalkPx('st', DISTRICTS[m.dist[Math.floor(n.y / TILE) * m.w + Math.floor(n.x / TILE)]].style))) n.light = false;
   rampGores(m);
   const railPts = m.railPts;
   reserveRail(m, railPts);
@@ -1094,6 +1097,9 @@ function edgeWalk(m, e) {
   }
   let best = sidewalkPx(e.kind, 'houses'), bn = 0;
   for (const [w, n] of votes) if (n > bn || (n === bn && w > best)) { best = w; bn = n; }
+  // (a road out in the country has none - roads.js SIDEWALK_CLASS; one running through a town on its way has the
+  // town's, laid only where the town is: rasterRoads)
+  if (best === 0) { let pn = 0; for (const [w, n] of votes) if (w > 0 && n > pn) { best = w; pn = n; } }
   return best;
 }
 function rasterRoads(m) {
@@ -1102,12 +1108,15 @@ function rasterRoads(m) {
   const isWet = (t) => t === T.WATER || t === T.DEEP;
   const ground = m.edges.filter((e) => e.lvl === 0);
   for (const e of m.edges) e.walk = e.lvl === 0 ? edgeWalk(m, e) : 0;
-  // sidewalks first (roads win where they overlap)
+  // sidewalks first (roads win where they overlap); none out in the country (a road on its way through a town has its
+  // pavement there only)
   for (const e of ground) {
     if (!CITY_KINDS.has(e.kind) || !e.walk) continue;
+    const district = ROAD_KINDS[e.kind] && ROAD_KINDS[e.kind].walk === 'district';
     stampEdge(e, e.hw + e.walk + 4, (tx, ty, d) => {
       const i = at(tx, ty);
       if (i < 0 || d <= e.hw) return;
+      if (district && !sidewalkPx(e.kind, DISTRICTS[m.dist[i]].style)) return;
       const t = m.tiles[i];
       if (isWet(t) || t === T.ROAD || t === T.BRIDGE) return;
       m.tiles[i] = T.SIDEWALK;

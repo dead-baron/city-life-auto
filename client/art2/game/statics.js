@@ -2324,10 +2324,16 @@ function makeDeck(r) {
   // (a segment's surface height runs on past its ends along its own slope: round the bend where the next piece of a
   // sloping ramp takes over, the two meet at the same height instead of stepping - no rings across the ramp)
   const zOf = (s, tt) => Math.max(0, (s.za + (s.zb - s.za) * tt / s.len) * LIFT);
+  // (a segment's rounded end only fills where no other segment's running surface is - the outside of a bend, a dead
+  // end: where a deck's end lay over the ramp carrying on from it, its rim drew a ring of parapet across the road -
+  // World v3 step 1, the highway circle)
   const at = (X, Y) => {
     bs = null;
+    let body = false;
+    for (const s of cand) { const tt = (X - s.ax) * s.ux + (Y - s.ay) * s.uy; if (tt >= 0 && tt <= s.len && Math.abs((X - s.ax) * s.uy - (Y - s.ay) * s.ux) <= s.hw) { body = true; break; } }
     for (const s of cand) {
       const tt = (X - s.ax) * s.ux + (Y - s.ay) * s.uy, t = tt < 0 ? 0 : tt > s.len ? s.len : tt;
+      if (body && t !== tt) continue;
       const dx = X - s.ax - s.ux * t, dy = Y - s.ay - s.uy * t, d = Math.sqrt(dx * dx + dy * dy);
       if (d > s.hw) continue;
       const z = zOf(s, tt);

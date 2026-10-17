@@ -43,8 +43,11 @@ export const ROAD_KINDS = {
 // Pavement widths (World v2 cross-sections, docs/WORLD-V2.md): 112 px downtown, 96 px in commercial
 // districts (shopping streets, nightlife, the civic quarter, the beachfront), 64 px everywhere else
 // people live or work (homes, apartments, old town's narrow streets, industry, the port, parks).
-export const SIDEWALK = { downtown: 112, commercial: 96, residential: 64 };
-const SIDEWALK_CLASS = { towers: 'downtown', commercial: 'commercial', civic: 'commercial', nightlife: 'commercial', redlight: 'commercial', beach: 'commercial', arts: 'commercial' };
+// Out in the country - the farm valley, the desert, the woods and the peaks, the rocks and the water - a road has no
+// pavement and no street lamps, whatever its class (World v3 step 1: the county roads between the towns were paved
+// like city streets); a town's own streets keep theirs (its district's class).
+export const SIDEWALK = { downtown: 112, commercial: 96, residential: 64, none: 0 };
+const SIDEWALK_CLASS = { towers: 'downtown', commercial: 'commercial', civic: 'commercial', nightlife: 'commercial', redlight: 'commercial', beach: 'commercial', arts: 'commercial', rural: 'none', desert: 'none', wild: 'none', rocky: 'none', water: 'none' };
 // The pavement (px) beside a road of this kind running through a district of this style.
 export function sidewalkPx(kind, style) {
   const w = (ROAD_KINDS[kind] || ROAD_KINDS.st).walk;

@@ -538,6 +538,7 @@ function fillets(C) {
       if (e1 === e2) continue;
       let th = n.dirs[e2.id] - n.dirs[e1.id]; if (a === ids.length - 1) th += Math.PI * 2;
       if (th < 0.35 || th > 2.75) continue;
+      if (e1.kind === 'dirt' || e2.kind === 'dirt') continue;   // (a dirt track meets a road square: no wedge of asphalt into it - World v3 step 1)
       const kind = (e) => (e.kind === 'alley' ? 14 : e.kind === 'dirt' ? 18 : CITY.has(e.kind) ? 44 : 30);
       const r = Math.min(Math.min(kind(e1), kind(e2)), 46 * Math.tan(th / 2));   // acute corners get tight returns (no slivers)
       const a1 = n.dirs[e1.id], a2 = n.dirs[e2.id], u1 = [Math.cos(a1), Math.sin(a1)], u2 = [Math.cos(a2), Math.sin(a2)];

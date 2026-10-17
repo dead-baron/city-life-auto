@@ -96,7 +96,7 @@ export const CITY3 = [
   // --- the mainland city on the gulf's north shore ---
   { d: 3, on: 'main', zone: ZC, rects: [[3940, 1440, 4260, 2100]], look: 'The Yards east of the river channel: rail sidings, warehouses, scrap, the rough side' },
   { d: 25, on: 'main', zone: ZC, rects: [[3680, 1440, 3940, 1900]], keep: [[3680, 1750, 3800, 1860]], look: 'the Stadium District: the stadium, its car parks, the megastore, the ponds' },
-  { d: 2, on: 'main', zone: ZC, rects: [[2700, 1440, 3680, 1660]], look: 'Northgate: apartment blocks along the north, the high school, Fire Station 7' },
+  { d: 2, on: 'main', zone: ZC, rects: [[2700, 1440, 3680, 1660]], look: 'Northgate: apartment blocks along the north, the public library, Fire Station 7' },
   { d: 8, on: 'main', zone: ZC, rects: [[2860, 1900, 3800, 2120]], look: 'the Harbor along the waterfront: piers, the fish market, the ferry terminal, the marina' },
   { d: 18, on: 'main', zone: ZC, rects: [[2600, 1660, 2860, 2120]], look: 'Old Town at the river mouth: narrow brick streets, the infirmary, the Rusty Anchor' },
   { d: 1, on: 'main', zone: ZC, rects: [[2860, 1660, 3680, 1900]], hand: 'midtown', look: 'Midtown at the bridgeheads, handcrafted (shared/world3-midtown.js): the train over Trestle Street, Holly Street\'s main street, the boulevard, the diagonal to The Yards' },
@@ -109,7 +109,7 @@ export const CITY3 = [
   // --- the east island ---
   { d: 36, on: 'east', zone: ZI, rects: [[3980, 2230, 4200, 2500]], look: 'Falls Center: the island\'s main street, the clinic and the police' },
   { d: 37, on: 'east', zone: ZI, rects: [[4200, 2230, 4480, 2500], [3820, 2230, 3980, 2740]], keep: [[4300, 2340, 4420, 2440]], look: 'the Lake District: villas round the lake park' },
-  { d: 35, on: 'east', zone: ZI, rects: [[3980, 2500, 4480, 2780]], look: 'Cedar Falls: family houses, the high school, FuelMax' },
+  { d: 35, on: 'east', zone: ZI, rects: [[3980, 2500, 4480, 2780]], look: 'Cedar Falls: family houses, the playhouse, FuelMax' },
   // --- the south-west island ---
   { d: 10, on: 'southwest', zone: ZS, rects: [[2400, 3110, 3240, 3290]], look: 'Sunset Beach along the south shore: Sunset Boulevard, the boardwalk, the volleyball, surf shops' },
   { d: 0, on: 'southwest', zone: ZS, rects: [[2400, 2840, 3240, 3110]], look: 'Pine Hills behind the beach: houses under pines, Southbank Medical, the precinct' },

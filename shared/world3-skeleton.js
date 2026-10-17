@@ -119,7 +119,7 @@ export const ARTERIALS = [
   { name: 'North Coast Road', pts: [[2317, 905], [2627, 907], [2825, 771], [2997, 751], [4373, 759], [4525, 819], [4669, 837], [4755, 823], [4899, 743], [5007, 713], [5227, 699], [5401, 717], [5487, 749], [5513, 801]] },
   { name: 'Valley West Road', pts: [[2625, 909], [2617, 1377]] },
   { name: 'Barn Road', pts: [[2993, 1209], [2647, 1209]] },
-  { name: 'Pinewood Road', pts: [[2993, 1413], [2615, 1417], [2379, 1463], [2165, 1465], [2119, 1417], [1993, 1405]] },
+  { name: 'Pinewood Road', pts: [[2993, 1413], [2615, 1417], [2379, 1463], [2165, 1465], [2150, 1423]] },   // (carries on from Timber Road's end: it ran on west beside it to a stub - World v3 step 1, the odd road north of Fern Gorge)
   { name: 'Lakeshore Drive', pts: [[3481, 1367], [3487, 1179], [3537, 1177], [3615, 1125], [3619, 795]] },
   { name: 'Valley Parkway', pts: [[3031, 1415], [4131, 1417]] },
   { name: 'Cedar Farms Road', pts: [[3769, 881], [3023, 881]] },

@@ -10015,3 +10015,18 @@ new interiors - a laundromat, a record shop, a bookshop and a diner.
 - **The projects**: the residents' murals on the two slabs facing the yard (the wave, the flowers), more tags; a block
   party on the court after dark (activities.js `party`: four to seven dancing round the boombox, a couple watching;
   `map.partySpots`).
+
+## 2026-10-17 · World v3 step 1, first fixes: no schools, country roads, the highway circle, the odd road by Fern Gorge
+- **No schools** (the owner, 10-16: in line with the no-kids rule): Northgate High's lot is the Northgate Public Library,
+  West Hills Academy's the West Hills Athletic Club, Cedar Falls High's the Cedar Falls Playhouse (shared/map.js
+  SPECIALS). No playgrounds were left in World v3.
+- **Country roads** (shared/roads.js SIDEWALK_CLASS, map.js edgeWalk / rasterRoads): out in the farm valley, the desert,
+  the woods, the peaks and on the rocks a road has no pavement and so no street lamps - the county roads between the
+  towns were paved like city streets (430 of them). A road on its way through a town has its pavement where the town is.
+  A junction out in the country has no traffic lights, and so no zebra crossings.
+- **Dirt tracks** meet a road square: no wedge of asphalt from the kerb return into the track (groundbake.js fillets).
+- **The highway circle** (statics.js makeDeck): where a deck's end lay over the ramp carrying on from it, its rounded
+  end's rim drew a ring of parapet across the carriageway; a segment's rounded end now only fills where no other
+  segment's running surface is.
+- **The odd road north of Fern Gorge**: Pinewood Road ran on west beside Timber Road to a stub; it now carries on from
+  Timber Road's end (world3-skeleton.js).
