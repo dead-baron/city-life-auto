@@ -50,7 +50,7 @@ import * as TN from '../props-towns.js';
 import { EL_Z } from './chunkgeom.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
-import { nightFront, paintSigns, handNeon } from '../neonsigns.js';   // (the night's big neon signs)
+import { nightFront, paintSigns, handNeon, picSize } from '../neonsigns.js';   // (the night's big neon signs)
 import { streetGrit } from '../streetgrit.js';              // (grit on the town's streets)
 import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
@@ -1893,6 +1893,7 @@ function propItems(c, p, pi, I) {
     // the Rusty Spur (task #366): the burn barrel always burning, the bull skull sign lit up after dark
     case 'burnbarrel': V('bbl:1', 'burnBarrel', [1]); lightAt(I, x, y, 30, 170, LIGHT.fire, 2.4, 'fire', 0); return;
     case 'skullsign': V('sks:1', 'skullSign', [1]); lightAt(I, x, y + 6, 66, 150, [1, 0.36, 0.2], 1.6, 'neon'); return;
+    case 'picboard': { const [pw, ph] = picSize(p.pic || 'lucy', 2), z = p.z || 40; put(I, { key: `pb:${p.pic}:${z}`, recipe: { t: 'sign', k: 'pic', pic: p.pic || 'lucy', z, col: p.col || null }, x, y, ext: [pw / 2 + 10, ph + z + 20, pw / 2 + 10, 10], pi }); lightAt(I, x, y + 10, z + ph / 2, 260, (p.col || [255, 80, 200]).map((q) => q / 255), 2.2, 'neon'); return; }
     case 'billboard': put(I, { key: `bb:${(p.ad || 0) % ADS.length}`, recipe: { t: 'grp', parts: [[{ t: 'v', m: 'bbframe', a: [] }, 0, 0, 0], [{ t: 'sign', k: 'ad', ad: (p.ad || 0) % ADS.length, w: 132, h: 54, z: 36 }, 0, 2, 0]] }, x, y, ext: [82, 170, 82, 76], pi }); lightAt(I, x, y + 8, 110, 140, [1, 0.96, 0.85], 1.2, 'sign'); return;
     case 'pipes': V(`pip:${seed % 2}`, 'pipes', [seed % 2], qa(u * PI, 2)); return;
     case 'lumber': case 'planks': V(`lum:${t}:${seed % 3}`, 'lumber', [seed % 3, t === 'planks' ? 1 : 0], qa(u * PI, 2)); return;
@@ -2007,9 +2008,10 @@ function propItems(c, p, pi, I) {
     case 'balloonlaid': V(`blaid:${(p.v || 0) % 4}:${qa(p.a || 0, 8).toFixed(2)}`, 'balloonLaid', [(p.v || 0) % 4], qa(p.a || 0, 8)); return;
     case 'fan': V(`ifan:${qa(p.a || 0, 8).toFixed(2)}`, 'inflationFan', [], qa(p.a || 0, 8)); return;
     case 'mission': V('mission', 'missionRuins', []); return;
+    case 'container': { const col = ['#a8402e', '#2f5a8a', '#3a7a4a', '#c8a040', '#6a3a8a'][(p.c || 0) % 5], hd = qa(p.a || 0, 2); V(`cont:${col}:${hd.toFixed(2)}`, 'container', [col, 130], hd); return; }   // (a shipping container on its own: the Neon Strip's docks and container bar)
     case 'boxoffice': V('cont:office', 'container', ['#c8a040', 110]); lightAt(I, x, y + 30, 24, 80, [1, 0.85, 0.6], 0.9, 'window'); return;
     case 'storedplane': { const col = ['#c83a30', '#2a5aa8', '#2a8a6a', '#e8a030', '#7a3a8a'][(p.c || 0) % 5], st = (p.v || 0) % 6 + 1, hd = qa(p.a || 0, 16); V(`spl:${col}:${st}:${hd.toFixed(2)}`, 'airliner', [300, 270, col, st], hd); return; }
-    case 'mstall': { const k = (p.v || 0) % 4, col = ['#c8343a', '#2f7a5c', '#2f6ab0', '#e8a030'][(p.c || 0) % 4], hd = qa(p.a || 0, 4); V(`mstall:${k}:${col}:${hd.toFixed(2)}`, 'marketStall', [k, col], hd); return; }
+    case 'mstall': { const k = (p.v || 0) % 4, col = ['#c8343a', '#2f7a5c', '#2f6ab0', '#e8a030'][(p.c || 0) % 4], hd = qa(p.a || 0, 4); V(`mstall:${k}:${col}:${hd.toFixed(2)}`, 'marketStall', [k, col], hd); lightAt(I, x, y, 34, 110, [1, 0.78, 0.48], 1.1, 'lamp'); return; }   // (the bulb under its canopy, after dark)
     case 'seaarch': V(`sarch:${p.w || 150}:${qa(p.a || 0, 8).toFixed(2)}`, 'seaArch', [p.w || 150, p.d || 56, p.h || 96, 3], qa(p.a || 0, 8)); return;
     case 'mstone': { const w = p.w || 16, d = p.d || 9, h = p.h || 48, sd = (p.v || 0) % 8 + 1, ln = Math.round((p.lean || 0) * 20) / 20; V(`mst:${w}:${d}:${h}:${sd}:${ln}:${qa(p.a || 0, 8).toFixed(2)}`, 'standingStone', [w, d, h, sd, ln], qa(p.a || 0, 8)); return; }
     case 'ferris': V('ferris:0', 'ferrisWheel', [0.7, 0], 0, null, { z0: p.z ?? 4 });   // (its gondolas go round: client/art2/game/host.js _rides) lightAt(I, x, y + 10, 136, 230, [1, 0.85, 0.6], 2.2, 'lamp'); lightAt(I, x, y + 20, 30, 140, [1, 0.8, 0.55], 1.4, 'lamp'); return;
@@ -2266,6 +2268,15 @@ function makeFlat(r) {
 // upright boards: billboard adverts, station name boards, price signs
 function makeSignBoard(r) {
   if (r.k === 'ad') return upright(adFace(r.w, r.h, ADS[r.ad % ADS.length], r.ad), r.z || 0);
+  if (r.k === 'pic') {   // a picture billboard (the Neon Strip's: the eye-patch woman, the tigers - neonsigns.js), on two posts
+    const [pw, ph] = picSize(r.pic, 2), w = pw + 8, h = ph + 8, F = new GBuf(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) F.put(x, y, (x < 2 || y < 2 || x >= w - 2 || y >= h - 2) ? MAT.metalDark[2] : [14, 12, 22], [0, 1, 0.1], 0, null, 0);
+    F.ax = 4; F.ay = h - 4;
+    paintSigns(F, { neonSigns: [{ pic: r.pic, x: 0, v: 0, s: 2, col: r.col || [255, 80, 200] }] });
+    const S = upright(F, r.z || 0);
+    const pole = memo('signpost:' + (r.z || 0), () => { const m = new Vox(4, 4, (r.z || 0) + 2), p = m.mat({ ramp: MAT.metalDark, k: 2 }); m.box(1, 1, 0, 3, 3, (r.z || 0) + 2, p); return voxSprite(m); });
+    return group([[S, 0, 0, 0], [pole, -Math.round(w * 0.3), -1, 0], [pole, Math.round(w * 0.3), -1, 0]]);
+  }
   const t = clean(r.text, 24), sx = r.sx || 1, w = r.w || textWidth(t, { sx, gap: 1 }) + 12, h = 5 * sx + 8, F = new GBuf(w, h), bg = ramp(r.bg || '#1c2a44', 5, 2), fg = r.fg || [236, 240, 248];
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const e = x === 0 || y === 0 || x === w - 1 || y === h - 1; F.put(x, y, e ? MAT.metalDark[2] : bg[y < 2 ? 3 : 2], [0, 1, 0.1], 0, r.lit && !e ? [...bg[3], 40] : null, 0); }
   drawText((px, py) => F.put(px, py, fg, [0, 1, 0.1], 0, r.lit ? [...fg, 140] : null, 0), t, Math.floor((w - textWidth(t, { sx, gap: 1 })) / 2), 4, { sx, sy: sx, gap: 1 });

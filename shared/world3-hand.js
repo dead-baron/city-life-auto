@@ -10,8 +10,9 @@ import { TILE, T } from './constants.js';
 import { DISTRICTS } from './mapcore.js';
 import { hash2 } from './rng.js';
 import { MIDTOWN } from './world3-midtown.js';
+import { NEON } from './world3-neon.js';
 
-export const HAND_PLANS = [MIDTOWN];
+export const HAND_PLANS = [MIDTOWN, NEON];
 const M_IN = 2;   // (a street within this many tiles of a plan's edge is the edge's - the grid planner's)
 export const handPlanAt = (x, y) => HAND_PLANS.find((p) => x > p.rect[0] + M_IN && y > p.rect[1] + M_IN && x < p.rect[2] - M_IN && y < p.rect[3] - M_IN) || null;
 export const handDistricts = () => new Set(HAND_PLANS.map((p) => p.d));

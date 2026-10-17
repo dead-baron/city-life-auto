@@ -10,6 +10,7 @@ import { DISTRICTS } from '../shared/mapcore.js';
 import { ISLANDS3 } from '../shared/world3-layout.js';
 import { CITY3, CITY_IDS, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, PITCH, layCity3, avoidOf } from '../shared/world3-city.js';
 import { buildPlan } from '../tools/world3-city-plan.mjs';
+import { HAND_PLANS } from '../shared/world3-hand.js';
 
 const P = buildPlan();
 const { W, H, L, painted, plan } = P;
@@ -91,11 +92,19 @@ test('World v3b city: every street east-west or north-south, on land with its pa
 
 test('World v3b city: the avenues reach the islands\' shores (the bridges land on them); a bridge\'s end is met', () => {
   // an avenue run whose end has water within 40 tiles beyond it, in its own direction
+  // (with the handcrafted districts' own avenues - shared/world3-hand.js: the grid planner lays none inside them)
+  const hand = { h: [], v: [] };
+  for (const P of HAND_PLANS) for (const q of P.streets()) {
+    if ((q.kind !== 'ave' && q.kind !== 'blvd') || q.pts.length !== 2) continue;
+    const [[ax, ay], [bx, by]] = q.pts;
+    if (ay === by) hand.h.push({ c: ay, a: Math.min(ax, bx), b: Math.max(ax, bx), kind: q.kind });
+    else if (ax === bx) hand.v.push({ c: ax, a: Math.min(ay, by), b: Math.max(ay, by), kind: q.kind });
+  }
   const shoreEnds = (key, side) => {
     const I = ISLANDS3.find((q) => q.key === key);
     const [bx0, by0, bx1, by1] = I.box;
     let n = 0;
-    for (const [horiz, R] of [[true, plan.h], [false, plan.v]]) for (const r of R) {
+    for (const [horiz, R] of [[true, [...plan.h, ...hand.h]], [false, [...plan.v, ...hand.v]]]) for (const r of R) {
       if (r.kind === 'st') continue;
       for (const [e, dir] of [[r.a, -1], [r.b, 1]]) {
         const x = horiz ? e : r.c, y = horiz ? r.c : e;
@@ -122,7 +131,9 @@ test('World v3b city: the avenues reach the islands\' shores (the bridges land o
   // a bridge (an arterial over the water) from the mainland's Harbor to the Gulf Island: each end met by a stub
   const m = { w: W, h: H, land: L.land, dist: L.dist, river: null };
   const shore = (x, y0, dir) => { let y = y0; while (landAt(x, y)) y += dir; return y - dir; };
-  const x = 3100, a = shore(x, 1950, 1), b = shore(x, 2200, -1);
+  // (west of the Neon Strip: a handcrafted district lays its own streets - shared/world3-hand.js - so the grid's stubs
+  // meet a bridge only outside one)
+  const x = 2700, a = shore(x, 1950, 1), b = shore(x, 2200, -1);
   const lines = [{ kind: 'art', lvl: 0, name: 'Test Bridge', pts: [{ x: (x + 0.5) * TILE, y: (a - 3 + 0.5) * TILE }, { x: (x + 0.5) * TILE, y: (b + 3 + 0.5) * TILE }] }];
   const out = layCity3(lines, m);
   assert.equal(out.bridges.length, 2);

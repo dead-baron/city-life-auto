@@ -113,7 +113,7 @@ const SPECIALS = [
   { d: 4, prefab: 'vellori', biz: ['delivery'], names: ['Vellori'] },
   { d: 16, prefab: 'monarch', biz: ['delivery'], names: ['Monarch'] },
   { d: 16, prefab: 'diamond', biz: ['delivery'], names: ['Diamond & Co.'] },
-  { d: 7, prefab: 'club', biz: ['delivery'], names: ['The Velvet Room'] },
+  { d: 7, prefab: 'club', biz: ['delivery'], names: ['The Violet Room'] },
   { d: 7, prefab: 'hotel', biz: ['delivery'], names: ['Neon Palms Hotel'] },
   { d: 17, prefab: 'club', biz: ['delivery'], names: ['The Pink Pussycat Lounge'] },
   { d: 17, prefab: 'hotel', biz: ['delivery'], names: ['Hourly Hearts Motel'] },

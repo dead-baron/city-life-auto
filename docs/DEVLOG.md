@@ -10116,3 +10116,30 @@ an alley and yards between. Now blocks break that with buildings of their own (s
 - **A road crew** (server/systems/activities.js 'roadcrew', map.crewSpots): a hole in Linden Street's pavement inside
   its cones, the broken paving and the boards; by day one swinging a pick at it, one down on a knee, the foreman stood
   watching; their van in the nearest bay.
+
+## 2026-10-17 · The Neon Strip, handcrafted: first pass (NE1, NE2, the tigers and the eye-patch woman)
+The owner's target for the district: NE1 at street level, NE2 the whole of it - a near-cyberpunk night district on
+the Gulf Island's north shore, facing the mainland (shared/world3-neon.js, a hand plan beside Midtown's).
+- **Neon Boulevard** along the shore, every front on its north side lit: Club Ultraviolet (its CROWN blade), Afterglow
+  the streetwear shop under the **striding tiger**, Moon Burger 24, Nite Mart 24/7, the Pixel Arcade, Luna Lounge,
+  Night Owl Ramen, Volt, Stardust...; royal palms in grates along the pavement with lights strung between them.
+- **The headland between the bridges**: **Blossom Plaza** - the fountain under a ring of cherry trees, the food carts,
+  strings of lights in over it and the **eye-patch woman's billboard** (a picture board: client/art2/game/statics.js
+  'picboard'); **Lantern Lane**, the night market, across the headland - two rows of stalls facing each other, each lit
+  under its canopy after dark, lanterns strung across, a gate at each end and the NIGHT MARKET sign; its north side
+  the karaoke bar, the Lucky Cat, Tiger Ink (the **roaring tiger head**), The Midnight (another), the record shop;
+  Harbor Walk, the waterfront promenade behind (a timber boardwalk along the water, palms and lights), the marina's
+  three jetties with the boats tied up and **the party boat** at the end of the longest.
+- **The towers**, where only the beach and the water are behind them: the **Neon Palms Hotel** on the west point (ten
+  floors, black glass, the HOTEL blade) over Glow Beach (sand, rocks, coconut palms, loungers, the Tiki Glow bar);
+  **The Violet Room** at the crossroads (seven floors, her portrait down its face), the Bayview Lounge and the
+  Seaglass Grill on the water behind it.
+- **The crossroads** of the boulevard and Park East Avenue (D8): the 24/7 mart and its car park, vending machines.
+- **South of the boulevard**: Lantern Street's lit row (names composed, never twice), the backs on the boulevard low
+  with signs standing on their roofs over it; The Starlight picture house; Hotel Halo on the west shore.
+- **Harbor Lights**, the festival ground where the boulevard meets the water: the big wheel, the stage and its screen,
+  a lawn, stalls, a bandstand, a beach, a pier; **The Docks** by the Gulf Loop: Dock 9 (a club in a warehouse), the
+  Box Bar among containers.
+- The picture signs (neonsigns.js handNeon, b.art.neon): the facade's name in tubes, a picture sign where the face has
+  the room, a blade sign down the side, the cornice tube. The Velvet Room is The Violet Room now (shared/map.js).
+- tools/area-shot.mjs --night: a picture after dark (a moonlit ambient, the lamps' and the signs' light, what glows).
