@@ -186,6 +186,7 @@ export function worldOpts(asked) {
         if (d >= 47 && L.terrain[i] === TERRAIN3.SAND) m.tiles[i] = T.SAND;   // (the mainland's beaches)
       }
       keep = skeletonRoom(W, H);
+      Object.defineProperty(m, '_keep3', { value: keep, configurable: true });   // (for the nature sites: naturesites.js; not sent)
       m.world3biomes = { ground: groundOf3(m, L, keep) };   // (the biomes' ground: world3-biomes.js)
     },
     // the biomes' dressing (world3-biomes.js; buildWilds leaves those districts to it, Highland Woods' pines are its

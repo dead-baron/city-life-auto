@@ -2089,7 +2089,10 @@ function summitTarn(m, H) {
     for (let dy = -30; dy <= 30; dy += 15) for (let dx = -30; dx <= 30; dx += 15) m.addSolidProp(L[0] + dx, L[1] + dy - 10, 10);
     H.addProp(m, 'lookout', Math.round(L[0]), Math.round(L[1] + 20), 0);
     H.addProp(m, 'solar', Math.round(L[0] + 70), Math.round(L[1] + 30), 0);
-    H.addProp(m, 'outcrop', Math.round(L[0] - 90), Math.round(L[1] + 60), 30, { w: 96, d: 60, h: 54, s: 21, style: 'granite' });
+    // (the knob keeps off the room along World v3's skeleton lines - world3-biomes.js skeletonRoom, m._keep3: to the
+    // lookout's other side when the west one would stand on it, or left out)
+    const K3 = m._keep3, KY = Math.round(L[1] + 60), KX = [L[0] - 90, L[0] + 160].map(Math.round).find((x) => !K3 || !K3[Math.floor(KY / TILE) * m.w + Math.floor(x / TILE)]);
+    if (KX !== undefined) H.addProp(m, 'outcrop', KX, KY, 30, { w: 96, d: 60, h: 54, s: 21, style: 'granite' });
     // a footpath from the trail to its stairs
     for (let k = 0; k <= 170; k += 14) { const i = at(m, p.x + nx * k * Math.sign((L[0] - p.x) * nx + (L[1] - p.y) * ny), p.y + ny * k * Math.sign((L[0] - p.x) * nx + (L[1] - p.y) * ny)); if (m.tiles[i] === T.GRASS) m.tiles[i] = T.DIRT; }
     (m.landmarks ||= []).push({ name: 'Ridge Fire Lookout', type: 'lookout', x: Math.round(L[0] - 150), y: Math.round(L[1] - 150), w: 300, h: 260 });

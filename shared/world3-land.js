@@ -82,6 +82,28 @@ export function chaikin(pts, closed, it) {
 }
 // A polygon smoothed, but its stretches along the frame's edges kept straight (the world's edge is not a coast): the
 // chains between its vertices on the edge are smoothed as open lines.
+// A biome's outline wavers (World v3 step 1: the peaks' long straight edge across the forest ran as a straight line of
+// cliff and a straight edge of trees): every edge cut into short pieces, each point pushed out or in along the edge's
+// normal by a smooth noise of where it is (so two biomes sharing an edge waver the same way); the frame's edge stays.
+const wh = (x, y, s) => { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1442695041) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+function wn(x, y, sc, s) {
+  const fx = x / sc, fy = y / sc, ix = Math.floor(fx), iy = Math.floor(fy), u = fx - ix, v = fy - iy, U = u * u * (3 - 2 * u), V = v * v * (3 - 2 * v);
+  const a = wh(ix, iy, s), b = wh(ix + 1, iy, s), c = wh(ix, iy + 1, s), d = wh(ix + 1, iy + 1, s);
+  return (a + (b - a) * U) * (1 - V) + (c + (d - c) * U) * V;
+}
+export function wobblePoly(poly, amp = 14, step = 10, W = FRAME_W, H = FRAME_H) {
+  const onEdge = (p) => p[0] <= 1 || p[1] <= 1 || p[0] >= W - 2 || p[1] >= H - 2, out = [], n = poly.length;
+  for (let k = 0; k < n; k++) {
+    const a = poly[k], b = poly[(k + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.sqrt(dx * dx + dy * dy) || 1, nx = -dy / L, ny = dx / L, m = Math.max(1, Math.round(L / step));
+    for (let j = 0; j < m; j++) {
+      const t = j / m, x = a[0] + dx * t, y = a[1] + dy * t;
+      if (onEdge([x, y]) || (onEdge(a) && onEdge(b))) { out.push([x, y]); continue; }
+      const o = (wn(x, y, 60, 3301) - 0.5) * 2 * amp + (wn(x, y, 17, 3302) - 0.5) * amp * 0.5;
+      out.push([Math.round((x + nx * o) * 4) / 4, Math.round((y + ny * o) * 4) / 4]);
+    }
+  }
+  return out;
+}
 export function smoothPoly(poly, it, W = FRAME_W, H = FRAME_H) {
   const onEdge = (p) => p[0] <= 0 || p[1] <= 0 || p[0] >= W - 1 || p[1] >= H - 1;
   const n = poly.length, k0 = poly.findIndex(onEdge);
@@ -191,7 +213,10 @@ export function buildLand3(today = null) {
   const mainland = smoothPoly(MAINLAND, SMOOTH.mainland);
   scanPoly(mainland, W, H, (y, a, b) => main.fill(1, y * W + a, y * W + b));
   BIOMES.forEach((B, k) => {
-    for (const poly of B.polys || [B.poly]) scanPoly(poly === MAINLAND ? mainland : smoothPoly(poly, SMOOTH.biome), W, H, (y, a, b) => { for (let i = y * W + a, e = y * W + b; i < e; i++) if (main[i]) biome[i] = k + 1; });
+    // (the forest's and the peaks' outlines waver - their long straight edges ran across the woods; the coasts', the
+    // valley's and the desert's stay as planned, the towns and the beaches laid along them)
+    const wob = B.key === 'woods' || B.key === 'peaks';
+    for (const poly of B.polys || [B.poly]) scanPoly(poly === MAINLAND ? mainland : wob ? wobblePoly(smoothPoly(poly, SMOOTH.biome)) : smoothPoly(poly, SMOOTH.biome), W, H, (y, a, b) => { for (let i = y * W + a, e = y * W + b; i < e; i++) if (main[i]) biome[i] = k + 1; });
   });
   const byBiome = BIOMES.map((B) => BIOME3[B.key]);
   for (let i = 0; i < N; i++) {

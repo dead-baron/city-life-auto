@@ -462,6 +462,8 @@ export function markBrawl(world, ped, until) { if (ped && ped.npc) ped.npc.brawl
 export function onAttacked(world, ped, attacker) {
   if (!ped.npc || ped.dead || !attacker || attacker === ped) return;
   const n = ped.npc;
+  // (an armored truck's guards caught by each other's fire: they keep after whoever they're fighting, not each other)
+  if (n.armored && attacker.npc && attacker.npc.armored === n.armored) return;
   // a passer-by who lays into someone who never hit them started it (a street fight's are marked by happenings.js)
   const a = attacker.npc;
   if (a && a.role === 'civ' && !a.happening && !a.exCop && !a.desk && n.role !== 'cop' && !(world.time - (attacker.aggressors.get(ped.id) ?? -99) < 60)) markBrawl(world, attacker, world.time + BRAWL_AFTER_S);

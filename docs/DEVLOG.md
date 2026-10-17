@@ -10030,3 +10030,23 @@ new interiors - a laundromat, a record shop, a bookshop and a diner.
   segment's running surface is.
 - **The odd road north of Fern Gorge**: Pinewood Road ran on west beside Timber Road to a stub; it now carries on from
   Timber Road's end (world3-skeleton.js).
+
+## 2026-10-17 · World v3 step 1: the forest's cliff lines, wavier woods and peaks, no snow, no fences over driveways
+- **No more straight cliff lines through the forest** (shared/world3-relief.js): the relief's cliff runs inside Highland
+  Woods became scattered granite outcrops (one now and then per 11-tile cell, more up the slopes); the Granite Peaks
+  keep their cliffs only above the tree line, where they belong. The long straight run near y 470 came from the peaks'
+  polygon edge: the peaks' height now falls off over 80 tiles from a wobbled outline instead of stopping at a ruled line.
+- **Wavy biome edges** (shared/world3-land.js `wobblePoly`): the woods' and the peaks' outlines wander (two noises, up to
+  14 tiles) instead of running as the plan's straight polygon sides; the trees are thinned again after it so the beaches
+  and the relief's spacing rules still hold.
+- **No snow** (the owner's rule): the summits' snowfields are drawn as scree and quarry rock (groundbake.js).
+- The Ridge Fire Lookout's granite knob moves to the lookout's other side when it would stand on Summit Road's line
+  (naturesites.js, via the skeleton's room - kept on the map unsent).
+- **No fences across driveways** (the owner, 10-17): a house's front fence or hedge now opens at every driveway - its
+  garage doors, the home's own parking spot, the lot's car spots - as well as at the path to the door
+  (client/art2/game/statics.js addLots). Before, it ran the whole width of the lot but the path.
+- Two fixes the full test run turned up after the step-1 changes: a signal on a span wire whose corner pole stands on a
+  tight quarter round (the wire slanting in over the junction box, short of the stop line) gets mast arms instead
+  (shared/map.js spanSignal); an armored truck's guards caught in each other's fire keep after the attacker, not each
+  other (server/systems/npc.js onAttacked) - and the test of it gives the attacker the health to see it through. The
+  world map's picture rebaked (tools/build-worldmap2.mjs).

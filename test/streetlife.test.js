@@ -189,6 +189,7 @@ test('attacked, it stops and the guards get out and fight; the attacker is wante
   const { w, p, ev, van } = armored(23);
   run(w, 1);
   teleport(w, p.ped, van.x + 200, van.y);
+  p.ped.hp = 1e4;   // (what's measured is the guards' reaction, not how quickly their fire brings the attacker down)
   van.hp -= 120; van.lastAttacker = p.ped.id;
   run(w, 1);
   assert.ok(ev.attackedAt, 'attacked');

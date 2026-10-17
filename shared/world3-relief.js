@@ -90,7 +90,14 @@ function biomeBase(b, tx, ty) {
   return 2;   // (the gulf's islands, today's places: flat)
 }
 function biomeShape(b, tx, ty) {
-  if (b === BIO.peaks) return 175 * peakHeight(tx, ty);
+  if (b === BIO.peaks) {
+    // (the peaks rise from their outline over a few hundred metres, the forest's own swell at their foot - not a step
+    // at the edge: a cliff band ran along it, straight as the edge - World v3 step 1)
+    let d = 0;
+    for (const P of BIOMES[BIO.peaks - 1].polys) if (inPoly(P, tx, ty)) d = Math.max(d, polyEdgeDist(P, tx, ty));
+    const k = sstep(0, 80, d - 6 + 30 * vn(tx, ty, 70, 7109));
+    return 175 * peakHeight(tx, ty) * k + (26 * vn(tx, ty, 320, 7101) + 10 * vn(tx, ty, 110, 7102)) * (1 - k);
+  }
   if (b === BIO.woods) return 26 * vn(tx, ty, 320, 7101) + 10 * vn(tx, ty, 110, 7102);
   if (b === BIO.valley) return 6 * vn(tx, ty, 260, 7103);
   if (b === BIO.desert) return 10 * vn(tx, ty, 420, 7104) + 4 * vn(tx, ty, 90, 7105);
@@ -475,6 +482,30 @@ export function buildRelief3(m, L, addProp) {
   const keepB = new Uint8Array(N);
   for (let y = 1; y < H - 2; y++) for (let x = 1; x < W - 2; x++) { const i = y * W + x; if (thick(i)) keepB[i] = keepB[i + 1] = keepB[i + W] = keepB[i + W + 1] = 1; }
   for (let i = 0; i < N; i++) if (cliff[i] && !keepB[i]) { cliff[i] = 0; cliffs--; }
+  // (the forest's steep slopes - the woods, the wild coasts, the islands: not the peaks, the desert or the rocks - are no
+  // band of bare cliff with a straight face along it (the owner: "the forest's straight black cliff lines"): the ground
+  // stays the forest's, walkable, and a granite outcrop breaks out of the slope here and there - World v3 step 1)
+  let outcrops = 0;
+  const cell = new Set();   // (one outcrop - a boulder or two - at most in each 11-tile square, at a random spot of the band in it)
+  for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) {
+    const i = y * W + x;
+    if (!cliff[i]) continue;
+    const d = m.dist[i], st = (DISTRICTS[d] || {}).style;
+    // (the peaks keep their cliffs above the tree line - below it they're the forest's slopes)
+    if (st !== 'wild' || ((d === 48 || d === 33) && peakHeight(x, y) >= TREE_LINE)) continue;
+    cliff[i] = 0; cliffs--;
+    const g = ((x * 73856093) ^ (y * 19349663)) >>> 0, ck = Math.floor(x / 11) * 4096 + Math.floor(y / 11);
+    if (cell.has(ck) || (g % 100) >= 9) continue;
+    cell.add(ck);
+    if (((g >> 7) % 100) >= 45) continue;
+    const n = 1 + ((g >> 4) % 3 === 0 ? 1 : 0);
+    for (let k = 0; k < n; k++) addProp(m, 'boulder', (x + 0.5 + k * 1.3) * TILE, (y + 0.5 + ((g >> (9 + k)) % 3) - 1) * TILE, 16, { s: 26 + ((g >> (2 + k)) % 19), style: 'granite', moss: (g >> 3) % 3 === 0 ? 1 : 0 });
+    outcrops++;
+  }
+  // (what's left of a band where the forest's part of it went: thinner than two tiles, dropped as before)
+  keepB.fill(0);
+  for (let y = 1; y < H - 2; y++) for (let x = 1; x < W - 2; x++) { const i = y * W + x; if (thick(i)) keepB[i] = keepB[i + 1] = keepB[i + W] = keepB[i + W + 1] = 1; }
+  for (let i = 0; i < N; i++) if (cliff[i] && !keepB[i]) { cliff[i] = 0; cliffs--; }
   for (let i = 0; i < N; i++) if (cliff[i]) { m.tiles[i] = T.WALL; m.reserve[i] |= 32; }
   CLIFFS.set(m, cliff);
   // the desert's tables (H50): red sandstone all round each rim - its band in blocks (a 6-tile grid), each block's face
@@ -520,5 +551,5 @@ export function buildRelief3(m, L, addProp) {
   let top = 0;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x, h = z[i]; if (h > top) top = h; rel[i] = clamp(Math.floor(h + BAYER[(y & 3) * 4 + (x & 3)]), 0, 255); }
   m.relief = rel;
-  return { cell: RELIEF_CELL, top: Math.round(top), tables: tables.length, mesas: tables.filter((t) => t.mesa).length, tableList: tables.map((t) => ({ x: t.x, y: t.y, rx: t.rx, ry: t.ry, h: t.h, mesa: t.mesa, s: t.s })), cliffs, faces, cut, fill, falls: fallsOf3(m).map((f) => f.name) };
+  return { cell: RELIEF_CELL, top: Math.round(top), tables: tables.length, mesas: tables.filter((t) => t.mesa).length, tableList: tables.map((t) => ({ x: t.x, y: t.y, rx: t.rx, ry: t.ry, h: t.h, mesa: t.mesa, s: t.s })), cliffs, faces, outcrops, cut, fill, falls: fallsOf3(m).map((f) => f.name) };
 }

@@ -2890,11 +2890,21 @@ function addLots(c, I) {
     const key = p.key;
     if (/^house/.test(key)) {
       // a front fence or hedge with a gap at the path, a mailbox, a tree in the yard, beds by the house
-      const fy = y0 + h - 6, gapX = bx0 + (M.buildings.find((b) => b && b.prefab === pi)?.door?.tx - p.tx - sx0 + 0.5 || (sx1 - sx0) / 2) * TILE;
+      const bl = M.buildings.find((b) => b && b.prefab === pi), fy = y0 + h - 6, gapX = bx0 + (bl?.door?.tx - p.tx - sx0 + 0.5 || (sx1 - sx0) / 2) * TILE;
       const kind = D.style === 'luxury' ? 'iron' : rnd() < 0.5 ? 'picket' : 'hedge';
       if (front >= 64) {
-        if (kind === 'hedge') { fenceLine(I, 'hedge', x0 + 8, fy, gapX - 26, fy, { h: 12 }); fenceLine(I, 'hedge', gapX + 26, fy, x0 + w - 8, fy, { h: 12 }); }
-        else { fenceLine(I, kind, x0 + 8, fy, gapX - 26, fy); fenceLine(I, kind, gapX + 26, fy, x0 + w - 8, fy); }
+        // (open at the path to the door and across every driveway: the garage doors' (addBuildings), the home's own
+        // parking spot, the painted lot's car spots - the fence never runs across where a car comes out)
+        const gaps = [[gapX - 26, gapX + 26]];
+        for (const [a, b] of (bl && I.garages.get(bl.id)) || []) gaps.push([a - 8, b + 8]);
+        const hm = bl && bl.home !== undefined ? M.homes[bl.home] : null;
+        if (hm && hm.garage && hm.garage.x > x0 && hm.garage.x < x0 + w) gaps.push([hm.garage.x - 44, hm.garage.x + 44]);
+        for (const [fx] of pf.cars || []) gaps.push([x0 + fx * w - 40, x0 + fx * w + 40]);
+        gaps.sort((a, b) => a[0] - b[0]);
+        let gx0 = x0 + 8;
+        const run = (a, b) => { if (b - a < 24) return; if (kind === 'hedge') fenceLine(I, 'hedge', a, fy, b, fy, { h: 12 }); else fenceLine(I, kind, a, fy, b, fy); };
+        for (const [a, b] of gaps) { run(gx0, Math.min(a, x0 + w - 8)); gx0 = Math.max(gx0, b); }
+        run(gx0, x0 + w - 8);
         put(I, vitem(`mb:${pi % 3}`, 'mailbox', [pick(['#2c3a66', '#3a3a40', '#8a2a2e'], rnd())], gapX + 34, fy + 2));
         tree(x0 + (rnd() < 0.5 ? 40 : w - 40), by1 + front * 0.55);
       }

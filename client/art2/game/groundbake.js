@@ -268,7 +268,7 @@ function tileFacts(C) {
       else if (b.tdeck[k]) m = M_.UNDERDECK;
       else if (b.tres[k] & 2) m = M_.GRAVEL;
       else if (!wild) m = (D.tier === 'industrial' || D.tier === 'rough') ? M_.GRAVEL : M_.DIRT;
-      else if (bio === 9) m = M_.SNOW;
+      else if (bio === 9) m = vnc(tx, ty, 9, 9101) > 0.58 ? M_.QUARRY : M_.SCREE;   // (the summits: bare granite and scree, no snow - the owner, 10-16)
       else if (bio === 3 || st === 'desert') m = nearCanyon(X, Y) ? canyonRock(tx, ty, M_.DESERT) : tabs && tabs.length ? tabMat(tx, ty, M_.DESERT) : M_.DESERT;
       else if (bio === 4) m = b.tz[k] === Z.EAST && st !== 'rural' ? M_.REDROCK : st === 'rural' ? M_.DIRT : M_.SCREE;
       else if (bio === 2) m = (b.tres[k] & 32) ? M_.DIRT : M_.FORESTDIRT;   // (32: a designed place's trails and clearings - packed earth, paler than the duff round them)

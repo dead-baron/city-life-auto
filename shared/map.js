@@ -4809,7 +4809,11 @@ function spanSignal(m, n, ins) {
     const oa = (A[0] - n.x) * rx + (A[1] - n.y) * ry, ob = (B[0] - n.x) * rx + (B[1] - n.y) * ry, w = wires.push([use(ri), use(li)]) - 1;
     for (const off of laneOffs(m.edges[id])) {
       const t = Math.max(0.05, Math.min(0.95, (oa - off) / (oa - ob)));
-      heads.push({ edge: id, x: Math.round(A[0] + (B[0] - A[0]) * t), y: Math.round(A[1] + (B[1] - A[1]) * t), a: +a.toFixed(3), w });
+      const hx = Math.round(A[0] + (B[0] - A[0]) * t), hy = Math.round(A[1] + (B[1] - A[1]) * t);
+      // (a wire slanting in toward the middle - a corner pole on a tight quarter round - would hang the head over the
+      // junction box, short of the stop line: mast arms there instead)
+      if ((hx - n.x) * Math.cos(a) + (hy - n.y) * Math.sin(a) < (n.trim[id] || 0) - 8) return null;
+      heads.push({ edge: id, x: hx, y: hy, a: +a.toFixed(3), w });
     }
   }
   return { node: n.id, wire: true, x: n.x, y: n.y, poles, wires, heads };
