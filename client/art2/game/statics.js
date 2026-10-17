@@ -637,6 +637,9 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null) {
   if (w < 64 || d < 56) return { kit: [], pads: [] };
   const area = w * d - (avoid ? avoid[2] * avoid[3] : 0), n = clamp(Math.round(area / 15000), 1, 6), r = rnd, big = area > 40000, rough = tier === 'rough';
   const L = layout(w, d, r, (spec.rimW || 4) + 6, avoid ? [avoid] : []);
+  // (spec.garden - World v3's handcrafted districts: a roof garden - planters along the parapets, a table under an
+  // umbrella, a lounger, festoon lights; laid first so the rest keeps clear of it)
+  if (spec.garden) { L.edge('plant', 3 + (r() * 3 | 0)); L.free('umb', 1); L.free('table', 1 + (r() < 0.5 ? 1 : 0)); if (r() < 0.6) L.free('string', 1, false, 0.5); if (r() < 0.4) L.free('lounge', 1, false, 0.5); if (r() < 0.4) L.free('palm', 1); }
   switch (A) {
     case 'glass': case 'office': case 'hotel': case 'terminal':
       if (area > 70000 && A !== 'hotel' && r() < 0.3) L.free('heli', 1);

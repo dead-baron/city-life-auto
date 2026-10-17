@@ -9957,3 +9957,23 @@ maker lives in shared/world3-hand.js, not map.js, so the page's generator code s
 Budgets: the bake code 770 -> 775 KB (771 KB: the skate models and the shop windows - tools/perf.mjs). The page's
 generator code is at its 360 KB with the Midtown plan; the next handcrafted district will need room there (the
 generator is the fallback: a served or kept city loads the worker's 5 files, 16 KB).
+
+## 2026-10-17 · Midtown, crafted pass: the facades and the yards, not the roofs; roof gardens, murals, the pavements' life
+The owner: Midtown looked like a basic layout - make it crafted and immersive (MT2, RW1, R1-A, MU1). From the game's
+camera a block is its roofs and its south faces, so:
+- **Proportions**: the main rows' buildings are 11-12 tiles deep (were 14-21): less roof, the facade a bigger share.
+  The back rows (fronting the street to their north) stand against it now (shared/world3-hand.js `row` opt.north) and
+  the alleys moved behind the main rows (AL), so the strip between - the back yards - is what the camera sees.
+- **Back yards** (`rearYards`): a patio by the back door (a table under an umbrella and two chairs, or a bench; pots,
+  festoon lights, a bike), then a lawn with a tree, shrubs and a shed, or a vegetable garden in raised beds, or a paved
+  yard; board and picket fences (a hedge now and then), a fence along the alley with the gate's gap, the bins by it;
+  chain-link, tyres and pallets in a rough one.
+- **Roofs**: the art lays each roof's kit out by its look (statics.js kitFor - water towers, stair huts, chimneys, AC
+  rows with walkway pads) instead of the plan's sparse hand list; a fifth of Midtown's roofs are roof gardens
+  (`spec.garden`: planters along the parapets, a table under an umbrella, a lounger, a palm, festoon lights) on pavers,
+  sedum or a small wooden deck; more roof materials (pavers, rubber, sedum, wood).
+- **Murals** (client/art2/buildings.js mural `kind`): sunset, a breaking wave, big flowers, chevrons, a tiger, a dusk
+  skyline, koi - on back walls over the yards and on the rough east end, never two side by side.
+- **The pavements** (`streetDressing`): a cafe's or a diner's tables out under umbrellas, a florist's buckets, a
+  grocer's crates and news box, planters either side of a door, bike racks; at the corners a hydrant, news boxes, bins,
+  a mailbox; street trees in grates along both sides of the main streets and the avenues, clear of doors and corners.

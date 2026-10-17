@@ -103,9 +103,11 @@ function makeKit(m, api, P) {
         for (let xx = x; xx < x + w; xx++) { const c = col(xx); if (!c) { front = -1; break; } front = Math.min(front, c[0]); back = Math.max(back, c[1]); }
         if (front < 0) { x += w; continue; }
         const depth = Math.min(L.depth || 99, front - back + 1);
-        const y = front - depth + 1;
+        // (opt.north: the lots stand against the band's north edge - a row facing a street to the north, its yards
+        // behind it to the south, where the camera sees them: the caller dresses them)
+        const y = opt.north ? back : front - depth + 1;
         // the strip in front where the lot stepped back from the street (a diagonal's wedges): paved, a planter now and then
-        for (let xx = x; xx < x + w; xx++) { const c = K.column(xx, front + 1, y1, mk); if (c) { fill(xx, front + 1, 1, c[0] - front, T.PLAZA); if (c[0] - front >= 2 && rnd(xx, front, 3) < 0.18) prop(pick(['planter_g', 'planter_sq', 'potted', 'bench_m', 'flowers_a'], rnd(xx, front, 4)), xx + 0.5, front + 1.5, 10); } }
+        if (!opt.north) for (let xx = x; xx < x + w; xx++) { const c = K.column(xx, front + 1, y1, mk); if (c) { fill(xx, front + 1, 1, c[0] - front, T.PLAZA); if (c[0] - front >= 2 && rnd(xx, front, 3) < 0.18) prop(pick(['planter_g', 'planter_sq', 'potted', 'bench_m', 'flowers_a'], rnd(xx, front, 4)), xx + 0.5, front + 1.5, 10); } }
         if (L.gap) { K.gap(L.kind || 'passage', x, y, w, depth, opt); made.push({ gap: L.kind, x, y, w, h: depth }); x += w; continue; }
         if (depth < (L.minDepth || 6)) { K.gap('plaza', x, y, w, depth, opt); x += w; continue; }
         const b = K.building({ ...L, x, y, w, h: depth });

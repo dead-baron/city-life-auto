@@ -712,16 +712,56 @@ function ivy(G, w, d, H, k, seed) {
 }
 // a painted mural: a sunset with palms (x, w on the facade, h tall, standing on the pavement)
 function mural(G, m, yGround, seed) {
-  const { x: x0, w, h } = m;
+  const { x: x0, w, h } = m, k = m.kind || 'sunset';
+  const cl = (c) => c.map((v) => Math.max(0, Math.min(255, v | 0)));
+  // (MU1's kinds, invented: a sunset over palms, a breaking wave, big flowers, bold chevrons, a tiger, a night skyline,
+  // koi in a pond - painted on the wall, edge to edge)
+  const fl = [[230, 70, 90], [250, 190, 60], [240, 240, 236], [190, 90, 210], [250, 130, 50]], geo = [[226, 176, 60], [40, 140, 140], [230, 110, 90], [36, 50, 90], [240, 230, 210]];
+  const blooms = [], fish = [], blds = [];
+  if (k === 'flowers') for (let i = 0; i < Math.max(3, Math.floor(w / 46)); i++) blooms.push([12 + hash(i, 1, seed) * (w - 24), 12 + hash(i, 2, seed) * (h - 24), 9 + hash(i, 3, seed) * 9, fl[i % fl.length]]);
+  if (k === 'koi') for (let i = 0; i < Math.max(2, Math.floor(w / 60)); i++) fish.push([20 + hash(i, 4, seed) * (w - 40), 14 + hash(i, 5, seed) * (h - 28), hash(i, 6, seed) * 6.28, i % 3]);
+  if (k === 'skyline') for (let x = 0; x < w;) { const bw = 10 + Math.floor(hash(x, 7, seed) * 18); blds.push([x, bw, h * (0.3 + hash(x, 8, seed) * 0.45)]); x += bw + 1; }
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const X = x0 + x, Y = yGround - h + y, t = y / h;
-    let c = t < 0.6 ? [255 - t * 120, 120 + t * 80, 140 - t * 60] : [70, 50 + t * 40, 110];
-    const sun = Math.hypot(x - w * 0.6, y - h * 0.58);
-    if (sun < h * 0.22 && t < 0.62) c = [255, 210 - sun, 90];
-    if (t > 0.6 && t < 0.63) c = [255, 170, 90];
-    for (const px of [w * 0.2, w * 0.82]) { if (Math.abs(x - px - (h - y) * 0.08) < 1.5 && t > 0.3) c = [30, 24, 40]; if (Math.abs(y - h * 0.3) < 4 - Math.abs(x - px) * 0.25 && Math.abs(x - px) < 14) c = [30, 24, 40]; }
+    let c;
+    if (k === 'waves') {
+      const v = y + Math.sin(x * 0.07 + seed) * h * 0.12 + Math.sin(x * 0.19) * 3, band = Math.floor(v / (h / 6)), f = (v % (h / 6)) / (h / 6);
+      c = [[24, 50, 110], [30, 80, 150], [40, 110, 180], [60, 150, 200], [30, 80, 150], [20, 40, 90], [20, 40, 90]][Math.max(0, Math.min(6, band))];
+      if (f < 0.14 && band > 0) c = [236, 242, 246];
+      if (t < 0.18) c = [240, 220, 180];
+    } else if (k === 'flowers') {
+      c = (x + y) % 9 < 2 ? [40, 90, 60] : [30, 70, 50];
+      for (const [bx, by, r, col] of blooms) { const dx = x - bx, dy = y - by, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx); if (d < r * (0.62 + 0.38 * Math.abs(Math.cos(a * 2.5)))) c = d < r * 0.28 ? [250, 210, 60] : col.map((v) => v * (0.8 + 0.2 * (1 - d / r))); }
+    } else if (k === 'geo') {
+      const v = Math.floor((x + Math.abs((y % 40) - 20) * 1.4) / 18);
+      c = geo[((v % 5) + 5) % 5];
+      if (((x + Math.abs((y % 40) - 20) * 1.4) % 18) < 2) c = [30, 26, 34];
+    } else if (k === 'tiger') {
+      c = [232, 128, 40];
+      const st = Math.sin(x * 0.23 + Math.sin(y * 0.11 + seed) * 2.2);
+      if (st > 0.72 && Math.abs(x - w / 2) > w * 0.08) c = [26, 20, 22];
+      if (Math.abs(x - w / 2) < w * 0.12 && t > 0.45) c = [244, 236, 220];
+      for (const ex of [w / 2 - w * 0.13, w / 2 + w * 0.13]) { const d = Math.hypot((x - ex) / 1.6, y - h * 0.34); if (d < 5) c = d < 2.2 ? [20, 20, 20] : [200, 230, 70]; }
+      if (Math.hypot(x - w / 2, (y - h * 0.62) * 1.4) < 4) c = [190, 80, 90];
+    } else if (k === 'skyline') {
+      c = [70 + t * 170, 50 + t * 80, 120 - t * 40];
+      if (hash(x, y, seed) > 0.992 && t < 0.5) c = [250, 246, 220];
+      if (Math.hypot(x - w * 0.78, y - h * 0.22) < 8) c = [250, 240, 200];
+      for (const [bx, bw, bh] of blds) if (x >= bx && x < bx + bw && y > h - bh) c = (x - bx) % 4 === 1 && (y % 6) === 2 && hash(x, y, seed + 3) > 0.35 ? [250, 210, 110] : [40, 30, 62];
+    } else if (k === 'koi') {
+      c = [40, 120 + Math.sin((x + y) * 0.2) * 12, 130];
+      if (Math.sin(Math.hypot(x - w * 0.3, y - h * 0.4) * 0.5) > 0.94) c = [90, 170, 170];
+      if (Math.hypot(x - w * 0.82, y - h * 0.7) < 9 || Math.hypot(x - w * 0.12, y - h * 0.25) < 7) c = [60, 140, 60];
+      for (const [fx, fy, a, v] of fish) { const dx = (x - fx) * Math.cos(a) + (y - fy) * Math.sin(a), dy = -(x - fx) * Math.sin(a) + (y - fy) * Math.cos(a); if ((dx / 11) ** 2 + (dy / 4.5) ** 2 < 1 || (dx < -9 && dx > -15 && Math.abs(dy) < (-9 - dx) * 0.8)) c = v === 1 || (v === 2 && dx > 2) ? [244, 240, 232] : [240, 110, 40]; }
+    } else {
+      c = t < 0.6 ? [255 - t * 120, 120 + t * 80, 140 - t * 60] : [70, 50 + t * 40, 110];
+      const sun = Math.hypot(x - w * 0.6, y - h * 0.58);
+      if (sun < h * 0.22 && t < 0.62) c = [255, 210 - sun, 90];
+      if (t > 0.6 && t < 0.63) c = [255, 170, 90];
+      for (const px of [w * 0.2, w * 0.82]) { if (Math.abs(x - px - (h - y) * 0.08) < 1.5 && t > 0.3) c = [30, 24, 40]; if (Math.abs(y - h * 0.3) < 4 - Math.abs(x - px) * 0.25 && Math.abs(x - px) < 14) c = [30, 24, 40]; }
+    }
     if (m.text && t > 0.72) c = [44, 30, 70];
-    setC(G, X, Y, c.map((v) => Math.max(0, Math.min(255, v | 0))));
+    setC(G, X, Y, cl(c));
   }
   if (m.text) drawText((px, py) => setC(G, px, py, [250, 236, 210]), m.text, x0 + 6, yGround - Math.round(h * 0.24), { sx: 2, sy: 2, gap: 1 });
 }
