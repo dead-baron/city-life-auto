@@ -2,7 +2,7 @@
 // online from a player in Dev Debug Mode (devmode.js - nothing they do there is saved).
 import { surfaceZ } from '../shared/levels.js';
 import { PED_BLOCK, CAR_SPAWN_BLOCK } from '../shared/map.js';
-import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT, T, K, WEATHER } from '../shared/constants.js';
+import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT, T, K, WEATHER, TILE } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { blastSize } from '../shared/explosions.js';
 import { collideVehicleTiles } from '../shared/physics.js';
@@ -107,6 +107,24 @@ export function nearTargets(m, k) {
   const lm = (m.landmarks || []).filter((l) => l.type === k).map((l) => ({ x: l.x + (l.w || 0) / 2, y: l.y + (l.h || 0) / 2, name: l.name || k }));
   if (lm.length) return lm;
   return (m.natureSites || []).filter((q) => q.kind === k).map((q) => ({ x: q.x, y: q.y, name: q.name || k }));
+}
+// The debug teleport's landing (client/devtp.js sends msg.snap: the page holds only its window of World v3's world, so
+// it can't look at the far place's tiles - the server, which has the whole map, picks the spot): the open pavement
+// nearest (x, y), else open ground, never on a deck, in a building or the water; within 160 tiles, else (x, y) itself.
+const TP_PAVED = new Set([T.SIDEWALK, T.PLAZA]), TP_OPEN = new Set([T.LOT, T.GRASS, T.SAND, T.DIRT, T.DOCK, T.FIELD]);
+export function tpSpot(m, x, y) {
+  const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);
+  let best = null, bd = Infinity;
+  for (let r = 0; r < 160 && !best; r += 4) {
+    for (let ty = cy - r; ty <= cy + r; ty++) for (let tx = cx - r; tx <= cx + r; tx++) {
+      if (Math.max(Math.abs(tx - cx), Math.abs(ty - cy)) < r - 4 || !m.inside(tx, ty)) continue;
+      const i = m.idx(tx, ty), t = m.tiles[i];
+      if ((m.deck && m.deck[i]) || !(TP_PAVED.has(t) || TP_OPEN.has(t))) continue;
+      const d = Math.hypot(tx - cx, ty - cy) + (TP_PAVED.has(t) ? 0 : 12);
+      if (d < bd) { bd = d; best = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }; }
+    }
+  }
+  return best || { x, y };
 }
 // open ground you can stand on (or, water: open water), as close to (x, y) as there is within reach
 function standAt(world, x, y, reach = 320, water = false) {
@@ -560,7 +578,11 @@ export function command(world, p, c, msg) {
       break;
     }
     case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y); if (ped) { ped.sub = false; ped.ug = 0; }
-      if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) { ped.x = msg.x; ped.y = msg.y; ped.lz = msg.lz === 1 && surfaceZ(world.map, msg.x, msg.y, 1) !== null ? 1 : 0; p.teleportAt = world.time; } break; // lz: 1 = up on the highway deck
+      if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) {
+        const at = msg.snap ? tpSpot(world.map, msg.x, msg.y) : { x: msg.x, y: msg.y };   // (snap: the debug teleport's places - the server finds the ground)
+        ped.x = at.x; ped.y = at.y; ped.lz = !msg.snap && msg.lz === 1 && surfaceZ(world.map, at.x, at.y, 1) !== null ? 1 : 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;
+      } else if (ped && ped.vehId) world.notify(p, '[dev] Get out of the vehicle first.', 'warn');
+      break; // lz: 1 = up on the highway deck
     case 'god': devmode.setInvincible(world, p, null); break;              // invincible (toggle)
     case 'spectate':                                                        // free camera: your character stays put, safe
       if (msg.on && !p.spectating) { p.spectating = true; p.specWasGod = !!p.invincible; p.invincible = true; if (ped) { ped.hp = ped.maxHp; ped.bleeding = false; } }

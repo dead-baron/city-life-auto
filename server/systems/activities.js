@@ -106,6 +106,16 @@ function waterward(map, x, y) {
   return null;
 }
 
+// a table chess is played at: one a handcrafted district marked for it (p.chess), else one in town that isn't on a
+// street's pavement (a cafe's out front) or in a handcrafted district (its back yards' and its shop fronts' tables)
+function chessTable(map, p) {
+  if (p.chess) return true;
+  const t = map.tileAtPx(p.x, p.y);
+  if (t === T.SIDEWALK || t === T.ROAD) return false;
+  for (const H of Object.values(map.world3hand || {})) if (H && H.rect && p.x >= H.rect[0] * TILE && p.y >= H.rect[1] * TILE && p.x < H.rect[2] * TILE && p.y < H.rect[3] * TILE) return false;
+  return true;
+}
+
 // ---- the spots, by rules from the map (made once per map) ------------------------------------------------------------------
 // { id, k, x, y, a (the way the activity faces: the water, the landmark), wild (out in the country) }; .cells: by 1024 px cell
 const SPOTS = new WeakMap();
@@ -129,9 +139,14 @@ export function spotsOf(map) {
         if (walkable(map, sx, sy)) s = { x, y, a: wa };
       }
       if (s && !clear(s.x, s.y, 120)) s = null;
-    } else if (k === 'chess') {   // a table in town (a park, a plaza, a cafe's): seats either side of it
+    } else if (k === 'chess') {   // a table in a park or a square (or a cafe's on a plaza): seats either side of it
       if (wild) { if (walkable(map, p.x - 16, p.y) && walkable(map, p.x + 16, p.y) && clear(p.x, p.y, 200)) list.push({ k: 'picnic', x: p.x, y: p.y, a: 0, wild, table: true }), taken.push({ x: p.x, y: p.y }); continue; }
-      if (walkable(map, p.x - 16, p.y) && walkable(map, p.x + 16, p.y) && walkable(map, p.x, p.y + 28) && clear(p.x, p.y, 160)) s = { x: p.x, y: p.y, a: 0 };
+      // (not a pavement's table out front of a cafe on the street, nor a back yard's: the owner, 10-17 - "they're spawning
+      // on sidewalks in the city but it would be better if they were in the park or at cafes". A handcrafted district
+      // says which of its tables are for chess - p.chess: its pocket parks', the Commons', Union Square's)
+      if (!chessTable(map, p)) continue;
+      const sd = p.chess ? (p.seat || 22) : 15;
+      if (walkable(map, p.x - sd, p.y) && walkable(map, p.x + sd, p.y) && walkable(map, p.x, p.y - 26) && clear(p.x, p.y, 160)) s = { x: p.x, y: p.y, a: 0, seat: sd };
     } else if (k === 'picnic') {   // on the blanket
       if (clear(p.x, p.y, 120)) s = { x: p.x, y: p.y, a: 0 };
     } else if (k === 'painter') {   // a little way off the landmark, on open ground, facing it
@@ -143,7 +158,7 @@ export function spotsOf(map) {
       if (s && !clear(s.x, s.y, 300)) s = null;
     }
     if (!s) continue;
-    list.push({ k, x: s.x, y: s.y, a: s.a, wild });
+    list.push({ k, x: s.x, y: s.y, a: s.a, wild, ...(s.seat ? { seat: s.seat } : null) });
     taken.push({ x: s.x, y: s.y });
   }
   // washing the car in the driveway (a home's driveway parking spot: when a car's parked there)
@@ -255,10 +270,14 @@ function members(s) {
     out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: 'fisher', fish: true, pp: 'cooler' });
     out.push({ x: s.x - sn * 18, y: s.y + c * 18, a: s.a, arche: 'casual', look: 'fisher', fish: true });
   } else if (s.k === 'chess') {   // across the table (west and east of it), the board between them; one or two watching
-    out.push({ x: s.x - 15, y: s.y, a: 0, arche: rng() < 0.5 ? 'senior' : 'casual', gt: 'sit', pp: 'chess' });
-    out.push({ x: s.x + 15, y: s.y, a: Math.PI, arche: rng() < 0.6 ? 'senior' : 'casual', gt: 'sit' });
-    const w = 1 + (rng() < 0.5 ? 1 : 0);
-    for (let i = 0; i < w; i++) { const x = s.x + (i ? 12 : -8), y = s.y + 26 + i * 4; out.push({ x, y, a: Math.atan2(s.y - y, s.x - x), arche: rng() < 0.5 ? 'senior' : 'casual', watch: true }); }
+    // (cv: whose move - the two in turn, a long think, a lean in to move a piece, back - and this game's own clock, so
+    // the games round the park don't all move at once: client/art2/game/peds.js actSitFrame)
+    const sd = s.seat || 15, cs = Math.floor(hsh(s.x, s.y, 5) * 36);
+    out.push({ x: s.x - sd, y: s.y, a: 0, arche: rng() < 0.5 ? 'senior' : 'casual', gt: 'sit', pp: 'chess', cv: cs * 2 });
+    out.push({ x: s.x + sd, y: s.y, a: Math.PI, arche: rng() < 0.6 ? 'senior' : 'casual', gt: 'sit', cv: cs * 2 + 1 });
+    // (the watchers stand behind the board, north of it, a little to either side: never between the camera and the game)
+    const w = 1;
+    for (let i = 0; i < w; i++) { const x = s.x + (rng() < 0.5 ? -10 : 10), y = s.y - 24; out.push({ x, y, a: Math.atan2(s.y - y, s.x - x), arche: rng() < 0.5 ? 'senior' : 'casual', watch: true }); }
   } else if (s.k === 'picnic') {
     if (s.table) {   // round a picnic table out in the country, eating
       out.push({ x: s.x - 16, y: s.y, a: 0, arche: 'casual', gt: 'sit' });
@@ -381,7 +400,7 @@ export function fill(world, s, opts = {}) {
     dressAs(world, ped, m.look);
     ped.a = m.a; ped.vx = ped.vy = 0;
     const n = ped.npc;
-    n.act = { g: s.id, k: s.k, x: m.ride ? s.x : m.x, y: m.ride ? s.y : m.y, a: m.a, ride: m.ride || null, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1 };
+    n.act = { g: s.id, k: s.k, x: m.ride ? s.x : m.x, y: m.ride ? s.y : m.y, a: m.a, ride: m.ride || null, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1, cv: m.cv ?? null };
     n.state = 'idle'; n.until = world.time + 9999; n.sway = false; n.umbrellaType = false;
     pose(ped, true);
     g.ids.push(ped.id);
@@ -460,8 +479,8 @@ function stepPool(world, g) {
 }
 // hold the activity's pose and prop (on: at the spot; off: away from it - walking back, gone off)
 function pose(ped, on) {
-  const a = ped.npc.act, gt = on ? a.gt : null, pp = on ? a.pp : null;
-  if ((ped.gt || null) !== gt || (ped.pp || null) !== pp) { ped.gt = gt; ped.pp = pp; ped.appVer = (ped.appVer || 0) + 1; }
+  const a = ped.npc.act, gt = on ? a.gt : null, pp = on ? a.pp : null, cv = on ? a.cv ?? null : null;
+  if ((ped.gt || null) !== gt || (ped.pp || null) !== pp || (ped.cv ?? null) !== cv) { ped.gt = gt; ped.pp = pp; ped.cv = cv; ped.appVer = (ped.appVer || 0) + 1; }
   if (a.fish) ped.fishing = on ? (ped.fishing || { npc: true }) : null;
   if (a.chop && !!ped.chop !== on) { ped.chop = on ? { tool: 'pickaxe', npc: true } : null; ped.appVer = (ped.appVer || 0) + 1; }   // (the swing: net.js ch)
 }
@@ -532,7 +551,7 @@ function fillRound(world) {
     g.ids = g.ids.filter((i) => { const e = world.get(i); return e && !e.removed && !e.dead && ((e.npc && e.npc.act) || (e.pet && e.pet.walked)); });
     const near = anchors.some((p) => Math.hypot(p.x - g.x, p.y - g.y) < ACT_DROP) || inAnyView(world, g.x, g.y, 64);
     if (g.ids.length && near) continue;
-    if (!near) for (const i of g.ids) { const e = world.get(i); if (e && e.pet) { if (!inAnyView(world, e.x, e.y, 32)) world.remove(e); } else if (e && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e); else if (e) { e.npc.act = null; e.gt = e.pp = null; e.fishing = null; e.chop = null; e.appVer = (e.appVer || 0) + 1; } }
+    if (!near) for (const i of g.ids) { const e = world.get(i); if (e && e.pet) { if (!inAnyView(world, e.x, e.y, 32)) world.remove(e); } else if (e && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e); else if (e) { e.npc.act = null; e.gt = e.pp = null; e.cv = null; e.fishing = null; e.chop = null; e.appVer = (e.appVer || 0) + 1; } }
     if (g.ball) { const b = world.get(g.ball); if (b && !b.removed) world.remove(b); }   // (the pickup game's ball)
     A.delete(id);
     (world.actRest ||= new Map()).set(id, now + (g.ids.length ? 30 : 240));   // (emptied by a scare: a good while before it's on again)

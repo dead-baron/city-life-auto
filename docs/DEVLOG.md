@@ -10203,3 +10203,27 @@ helicopter's height. Now any helicopter flown by steer() (server/systems/policea
 one's) watches the aircraft round it: within 320 px and closer than POLICE_AIR.sep in height, the lower one stops
 climbing (or eases down, roofs allowing) and the upper one climbs away. The test keeps the world's other flights
 from starting.
+
+## 2026-10-17 · The debug menu in pages; the teleport lists the whole world; chess in the parks, slower sitting
+
+**The teleport was empty (the owner, 13:02: "I don't see the teleport options in the debug menu").** World v3's page holds only the window of the world round you, and the teleport worked its list out from the window's own tiles: the districts round you and nothing of World v3's places. It now builds the list from what the page holds of the whole world: the districts' middles (the index's `mids`), every rail loop's stations (not only the first line's), the landmarks and paintings, and each handcrafted district's places and sights. Its set pieces and key businesses are recorded at build time (`shared/world3-hand.js` buildHand: `sights`). The server picks the open pavement where you land (`server/dev.js` tpSpot, `tp` with `snap`). The map under the dots is the minimap's picture of the world. `test/devtp.test.js`.
+
+**The debug menu, in pages (the owner: "easier to get through, for mobile and for desktop, with any controller ... detect what control scheme and what device and orientation").** `client/devmenu.js`:
+- **Home page:** the quick presses (every weapon and tool, invincible, heal, spectate), then a tile per category (Teleport, Give, Players online and each test section), then leave dev mode and start fresh.
+- **Category pages:** a category opens as its own page, with ◀ back and the neighbouring categories at its foot.
+- **Find:** the box at the top searches every command and every place at once.
+- **Teleport:** its groups as chips, the world map with the shown places' dots, and the places as buttons. Find filters them.
+- **Layout by device and orientation:** `#dev` gets `dv-touch` / `dv-pad` / `dv-kb` from what you hold, and `dv-port` / `dv-land` / `dv-short` from the screen.
+  - Touch: big buttons. In portrait, the whole screen with two across. In landscape, the whole height with a slim header, and the map beside the list.
+  - Controller: the D-pad or stick moves between the buttons as they sit on screen (not through one long list). A presses, B goes back a page then closes, LB / RB step to the previous / next category (in Teleport, the groups), Start closes. A hints line says so.
+  - Keyboard: the arrows or WASD move, Enter / Space / E press, Esc back, [ ] or Page Up / Down the categories, / or F to Find.
+- **Wiring:** main.js hands the menu its keys and pad (`S.devNav`). `input.menuTab` is a tap of LB / RB.
+
+**Chess and the diners (the owner: the chess players "lean back and forth at each other ... spawning on sidewalks ... it would be better if they were in the park or at cafes", "slower and thoughtful"; the diners "leaning back and forth repeatedly").**
+- **Why they leaned:** the activity sit was the 2-frame sit pose stepping every frame. Seated activities now take `actSitFrame` (`client/art2/game/peds.js`).
+- **Chess:** a 22-second turn clock per game (`cv`: the game's offset and the player's side, on the wire). One player thinks while the other's turn runs, leans in for the last 1.8 s to move a piece, then sits back, and the two take turns.
+- **Diners:** a diner leans in to the plate for a bite every 6-10 seconds.
+- **Where chess is played:** only at a table off the pavements - a park's, a square's, a cafe's on a plaza. In a handcrafted district, only at the tables it marks for it (`chess: 1`): its pocket parks', the Commons' fountain plaza, and two new chess tables in Union Square.
+- **The watcher:** now stands behind the board, never between the camera and the game.
+
+The Neon Strip's boulevard gets Midtown Boulevard's section too: four lanes either side of a planted median of royal palms with lights strung between them. The owner's concepts of the day are filed: WC324-WC352, the Midtown set, and WC353-WC356, Downtown (`docs/art-v2/world-concepts/CATALOGUE.md`, batches 5 and 6).

@@ -308,6 +308,22 @@ export function sitFrame(d, id, now) {
   return ways[((Math.imul(s + 1, 0x9e3779b1) >>> 7) + id) % ways.length] * 2 + ((Math.imul(t + 7, 0x85ebca6b) >>> 13) & 1);
 }
 
+// Sat at an activity's table (server activities.js gt 'sit': chess, the diners at a restaurant's tables, a picnic table):
+// sat back most of the time and leaning in now and then - not the 2-frame sit's lean every step (the owner, 2026-10-17:
+// "they just kind of lean back and forth at each other ... sitting at a table in a restaurant ... leaning back and forth
+// repeatedly"). A chess player (d.cv: this game's clock * 2 + which side) thinks a long while, leans in to move a piece,
+// sits back again - the two across the board in turn, a game's moves its own; a diner leans in to the plate for a bite
+// every few seconds, each on their own time.
+const CHESS_T = 22;   // s: a move each - one thinks while the other's turn runs
+export function actSitFrame(d, id, now) {
+  if (d && d.cv !== undefined && d.cv !== null) {
+    const t = (((now + (d.cv >> 1) + ((d.cv & 1) ? CHESS_T / 2 : 0)) % CHESS_T) + CHESS_T) % CHESS_T;
+    return t >= CHESS_T / 2 - 1.8 && t < CHESS_T / 2 ? 1 : 0;   // (the lean in: the last 1.8 s of a think)
+  }
+  const span = 6 + (id % 5), t = ((now + id * 2.3) % span + span) % span;
+  return t < 1.3 ? 1 : 0;
+}
+
 // ---- the city's people (server personas.js): a persona's walk (the descriptor's gt) and prop (pp), a seat on a bench (sb)
 const STRIDES = new Set(['hunch', 'strut', 'skate', 'blade', 'push']);
 const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'leads', guitar: 'guitar', call: 'call', phone: 'phone', board: 'board', map: 'map', stretcher: 'stretcher', stretcherPt: 'stretcherPt' , easel: 'easel', cooler: 'cooler', chess: 'chess', sponge: 'sponge', crate: 'crate', rifle: 'rifle', fence: 'fence', cueup: 'cueup', hail: 'hail' };   // (easel, cooler, chess: people at their activities - server activities.js)   // (stretcher: the paramedics', ems.js)

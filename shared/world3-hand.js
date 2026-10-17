@@ -34,14 +34,27 @@ export function buildHand(m, api0) {
   const api = { ...api0, hash2, handBuilding };
   const out = {};
   for (const P of HAND_PLANS) {
-    const kit = makeKit(m, api, P);
+    const kit = makeKit(m, api, P), b0 = m.buildings.length;
     out[P.key] = P.build(m, api, kit);
     kit.seal();   // (what the plan left open in its area: paved or planted, so the block filler doesn't build over it)
     out[P.key].buildings = kit.count();
     out[P.key].d = P.d; out[P.key].rect = P.rect;   // (which district, where: client/devtp.js lists its places to teleport to)
+    // its sights: the set pieces and the key businesses, each at its door (px) - the debug teleport's buttons (the page
+    // holds only a window of the world's buildings: this list is the whole plan's)
+    const sights = [], seen = new Set();
+    for (let i = b0; i < m.buildings.length; i++) {
+      const b = m.buildings[i];
+      if (!b || !b.hand || !b.door || !b.name || seen.has(b.name) || !(SIGHT_KINDS.has(b.kind) || SIGHT_BIZ.has(b.business))) continue;
+      seen.add(b.name);
+      sights.push({ name: b.name, x: Math.round((b.door.tx + 0.5) * TILE), y: Math.round((b.door.ty + 0.5) * TILE) });
+    }
+    out[P.key].sights = sights;
   }
   return out;
 }
+// (a building worth a teleport button: its lot's kind - the set pieces - or its business)
+const SIGHT_KINDS = new Set(['theatre', 'construction', 'strip', 'dealer', 'repair', 'church', 'police', 'motorpool', 'club', 'clubeclipse', 'clubnova', 'arcade', 'hotel', 'bank', 'hospital', 'cinema', 'bowling', 'stadium', 'museum', 'market', 'lighthouse', 'warehouse']);
+const SIGHT_BIZ = new Set(['police', 'bank', 'hospital', 'grocery', 'pharmacy', 'dealer', 'garage', 'gunshop', 'clothing', 'fishmarket', 'marina', 'warehouse']);
 
 // ---------------------------------------------------------------------------------------------------------------
 // The kit: the composers a plan builds its blocks with. All in tiles; a row's front is its south edge.
@@ -146,7 +159,7 @@ function makeKit(m, api, P) {
         fill(x + 1, y + 2, w - 2, 2, T.PLAZA);
         for (const tx of [x + 2.5, x + w - 2.5]) prop(pick(['tree_b', 'tree_a'], rnd(tx, y, 22)), tx, y + Math.min(h - 3, 6), 12, { sp: pick(['streetPl', 'maple', 'magnolia', 'cherry'], rnd(tx, y, 23)), k: 1.2 });
         prop('bench_m', mx - 2.6, y + h - 3.2, 0); prop('bench_m', mx + 2.4, y + h - 3.2, 0);
-        prop('cafetable', x + 3, y + 3, 0); prop('chair', x + 2.2, y + 3.1, 0, { v: 1, a: 0 }); prop('chair', x + 3.8, y + 3.1, 0, { v: 1, a: 3.1416 });
+        prop('cafetable', x + 3, y + 3, 0, { chess: 1, seat: 25 }); prop('chair', x + 2.2, y + 3.1, 0, { v: 1, a: 0 }); prop('chair', x + 3.8, y + 3.1, 0, { v: 1, a: 3.1416 });   // (chess: server activities.js plays there)
         for (const fx of [x + 1.4, x + w - 1.6]) prop('flowers_big', fx, y + h - 1.6, 0);
         if (h >= 10) prop('flowers_a', mx, y + 1.2, 0);
         prop('fenceline', x + 0.2, y + h - 0.3, 0, { kind: 'iron', tx: (mx - 1.6 - x) * TILE, ty: 0 });

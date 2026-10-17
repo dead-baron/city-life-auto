@@ -1157,3 +1157,69 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #reconn { position: fixed; z-index: 60; left: 50%; top: calc(max(8px, env(safe-area-inset-top)) + 4px); transform: translateX(-50%); padding: 5px 14px; border-radius: 14px; background: rgba(10,12,20,.82); border: 1px solid rgba(255,211,74,.6); color: #ffe9a8; font: 700 13px var(--pixel); letter-spacing: 1px; pointer-events: none; animation: reconn 1.4s ease-in-out infinite; }
 #reconn.hidden { display: none; }
 @keyframes reconn { 50% { opacity: .55; } }
+
+/* ---- the debug menu as pages (client/devmenu.js, 2026-10-17): laid out by what you hold (dv-touch, dv-pad, dv-kb)
+   and how the screen is turned (dv-port, dv-land; dv-short: a phone on its side) ---- */
+#dev.as-overlay { display: flex; flex-direction: column; width: min(900px, 96vw); height: min(86vh, 780px); max-height: none; overflow: hidden; padding: 0; border-radius: 10px; background: rgba(10, 10, 14, .95); }
+#dev.as-overlay.hidden { display: none; }
+#dev .dv-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #333; flex: 0 0 auto; }
+#dev .dv-head .dv-back, #dev .dv-head .dev-x { width: auto; margin: 0; padding: 6px 14px; flex: 0 0 auto; font-size: 15px; }
+#dev .dv-title { display: flex; flex-direction: column; min-width: 0; flex: 0 1 auto; }
+#dev .dv-title b { font-size: 12px; color: var(--warn); }
+#dev .dv-title span { font: 700 15px Rubik, sans-serif; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#dev .dv-find { flex: 1 1 140px; min-width: 0; background: #16161c; color: #fff; border: 1px solid #555; border-radius: 6px; padding: 7px 10px; font: 600 14px Rubik, sans-serif; }
+#dev .dv-find.pfocus, #dev .dv-find:focus { outline: 2px solid #f2c21b; }
+#dev .dv-hint { flex: 0 0 auto; font: 600 11px Rubik, sans-serif; color: #9aa; padding: 4px 10px 0; }
+#dev .dv-hint:empty { display: none; }
+#dev .dv-body { flex: 1 1 auto; overflow-y: auto; padding: 6px 10px 14px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+#dev .dv-body .dev-sound { margin: 2px 0 4px; }
+#dev .dv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; margin: 4px 0; }
+#dev .dv-grid > button { margin: 0 !important; text-align: left; border-radius: 6px; }
+#dev .dv-label { color: var(--warn); font: 700 12px Rubik, sans-serif; margin: 12px 0 2px; text-transform: uppercase; letter-spacing: .04em; }
+#dev .dv-tiles { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+#dev .dv-tile { display: flex !important; align-items: center; gap: 10px; min-height: 54px; background: #22222a !important; border-color: #444 !important; border-radius: 8px !important; font-size: 14px !important; }
+#dev .dv-tile i { font-style: normal; font-size: 22px; flex: 0 0 auto; line-height: 1; }
+#dev .dv-tile span { min-width: 0; line-height: 1.15; }
+#dev .dv-tile.dv-t-tp { background: #1d3a5c !important; border-color: #4f8fd6 !important; }
+#dev .dv-tile.dv-t-give { background: #3a2a5c !important; border-color: #9a7ae0 !important; }
+#dev .dv-tile.dv-t-pl { background: #1f3a2c !important; border-color: #3ddc84 !important; }
+#dev .dv-chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: thin; }
+#dev .dv-chip { flex: 0 0 auto; width: auto !important; margin: 0 !important; border-radius: 16px; padding: 5px 12px !important; font-size: 12px !important; white-space: nowrap; }
+#dev .dv-chip.on { background: #f2c21b !important; color: #111 !important; border-color: #f2c21b !important; }
+#dev .dv-tp { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+#dev.dv-land .dv-tp { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+#dev.dv-land .dv-tp-map { position: sticky; top: 0; }
+#dev .dv-tp-map canvas { display: block; border: 2px solid #000; border-radius: 4px; cursor: pointer; touch-action: manipulation; max-width: 100%; }
+#dev .dv-tp-list .dv-label:first-child { margin-top: 0; }
+#dev .dv-places { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+#dev .dv-places button { font-size: 13px !important; padding: 6px 8px !important; }
+#dev .dv-nav { margin-top: 14px; grid-template-columns: 1fr 1fr; }
+#dev .dv-step { background: #1a1a20 !important; color: #bbb !important; font-size: 12px !important; }
+#dev .dv-foot { margin-top: 16px; }
+#dev .dv-body #dev-players { border: 0; padding: 0; max-height: none; overflow: visible; }
+#dev .dev-pl .dv-grid { flex: 1 0 100%; }
+#dev .dev-pl .dv-grid button { font-size: 13px; }
+#dev button.pfocus, #dev select.pfocus { outline: 3px solid #f2c21b; outline-offset: 1px; }
+#dev button.pfocus { background: #f2f2f2 !important; color: #111 !important; }
+/* a finger: big targets */
+#dev.dv-touch button { min-height: 46px; font-size: 15px !important; }
+#dev.dv-touch .dv-places button { min-height: 42px; }
+#dev.dv-touch .dv-chip { min-height: 38px; font-size: 13px !important; }
+#dev.dv-touch select { min-height: 40px; font-size: 15px !important; }
+#dev.dv-touch .dv-find { font-size: 16px; padding: 9px 10px; }   /* (16px: no zoom-in on focus on a phone) */
+/* a controller: roomier buttons, the hints line */
+#dev.dv-pad button { min-height: 42px; }
+/* portrait: the whole screen, two across */
+#dev.as-overlay.dv-port { width: 100vw; height: 100%; left: 0; top: 0; transform: none; border-radius: 0; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+#dev.dv-port .dv-grid, #dev.dv-port .dv-tiles, #dev.dv-port .dv-places { grid-template-columns: 1fr 1fr; }
+#dev.dv-port .dv-head { flex-wrap: wrap; }
+#dev.dv-port .dv-find { flex-basis: 100%; order: 5; }
+/* short screens (a phone on its side): the whole height, a slim header */
+#dev.as-overlay.dv-short { height: 100%; top: 0; transform: translate(-50%, 0); width: min(1000px, 100vw); border-radius: 0; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+#dev.as-overlay.dv-short.dv-port { transform: none; }
+#dev.dv-short .dv-head { padding: 4px 8px; }
+#dev.dv-short .dv-title b, #dev.dv-short .dv-hint { display: none; }
+#dev.dv-short.dv-land .dv-grid, #dev.dv-short.dv-land .dv-tiles { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+#dev.dv-short .dv-tile { min-height: 46px; }
+#dev .dv-head .dev-x { margin-left: auto !important; }
+#dev.as-overlay.dv-port, #dev.as-overlay.dv-short { background: rgba(10, 10, 14, .985); }

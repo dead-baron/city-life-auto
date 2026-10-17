@@ -1344,6 +1344,7 @@ initInput(canvas, {
     if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
     if (topOverlay() === 'creator' && S.creator && S.creator.key(k)) return;
+    if (topOverlay() === 'dev' && S.devNav && S.devNav.key(k)) return;   // (the debug menu's own keys: client/devmenu.js)
     if (inCell() && !topOverlay() && (k === 'KeyB' || k === 'Enter')) { payBail(); return; }
     const deathUp = S.playing && S.me && S.me.dead && !topOverlay();   // (the choices only take keys once they're showing)
     if (deathUp && k === 'Escape' && !S.hud.menuOpen && S.hud.deathBack()) return;   // (folds them away to watch, and back)
@@ -1967,6 +1968,7 @@ function openOverlay(id) {
   if (id === 'bigmap') S.bigmap = true;
   if (id === 'phone' && S.welcomed) send({ t: 'phone', a: 'out', on: true });   // (your phone in your hand for everyone: server phone.js)
   ovFocus = startFocus(); focusOverlay();
+  if (id === 'dev' && S.devNav) S.devNav.opened();   // (its home page, laid out for what you hold: client/devmenu.js)
 }
 // where a pad's focus starts in a screen: its first menu line or panel button, not the hub's tabs along the top
 function startFocus() { const i = focusables().findIndex((el) => !el.closest('.hub')); return i >= 0 ? i : 0; }
@@ -2022,6 +2024,7 @@ function focusOverlay() {
 function overlayPad() {
   if (!topOverlay()) return false;
   if (topOverlay() === 'creator' && S.creator) return S.creator.pad(input);
+  if (topOverlay() === 'dev' && S.devNav) return S.devNav.pad(input);   // (the debug menu moves between its buttons as they sit: client/devmenu.js)
   const f = focusables();
   const el = f[ovFocus];
   if (topOverlay() === 'phone' && input.menuBack && phone.screen !== 'home') { phone.back(); return true; }
@@ -2030,12 +2033,6 @@ function overlayPad() {
   if (topOverlay() === 'bigmap' && input.menuLR && el && (el.classList.contains('bm-catname') || el.classList.contains('bm-check'))) { const id = el.dataset.group || el.dataset.toggle; mapwp.toggle(id); return true; }
   if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
   if (input.menuNav) { ovFocus += input.menuNav; focusOverlay(); }
-  if (topOverlay() === 'dev' && el && el.tagName === 'BUTTON' && input.menuLR) { // the debug menu: across to the players and back
-    const other = el.closest('#dev-players') ? $('dev').querySelector('.dev-cmds') : $('dev-players');
-    const to = other && f.find((b) => other.contains(b));
-    if (to) { ovFocus = f.indexOf(to); focusOverlay(); }
-    return true;
-  }
   if (el && input.menuLR) {
     if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + input.menuLR + el.options.length) % el.options.length; el.dispatchEvent(new Event('change')); }
     else if (el.type === 'checkbox') { el.checked = input.menuLR > 0; el.dispatchEvent(new Event('change')); }

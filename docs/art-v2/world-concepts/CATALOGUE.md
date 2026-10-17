@@ -1,17 +1,17 @@
-# World concepts WC001-WC323: the catalogue
+# World concepts WC001-WC356: the catalogue
 
-The owner's 323 world-design concepts of 2026-10-17 (made from the World Building Prompt Pack, mostly zoomed-out planning views of about 2 x 1.2 km), filed here as `WCnnn.jpg`. Original file names: see the index at the end. Each entry: what it shows, where it goes in World v3b, what it feeds in the World v3 Handcraft Plan, and what the rules leave out when it's built (children, schools, colleges, playgrounds, school buses, real brands, flags and place names, copies of real landmarks).
+The owner's 356 world-design concepts of 2026-10-17 (WC324-WC352: the Midtown set; WC353-WC356: Downtown) (made from the World Building Prompt Pack, mostly zoomed-out planning views of about 2 x 1.2 km), filed here as `WCnnn.jpg`. Original file names: see the index at the end. Each entry: what it shows, where it goes in World v3b, what it feeds in the World v3 Handcraft Plan, and what the rules leave out when it's built (children, schools, colleges, playgrounds, school buses, real brands, flags and place names, copies of real landmarks).
 
 ## By place
 
-- **Downtown:** WC011, WC013, WC023, WC054, WC055, WC074, WC083, WC084, WC215, WC228, WC243, WC244, WC253, WC258, WC274, WC283, WC284, WC291, WC321, WC323
+- **Downtown:** WC011, WC013, WC023, WC054, WC055, WC074, WC083, WC084, WC215, WC228, WC243, WC244, WC253, WC258, WC274, WC283, WC284, WC291, WC321, WC323, WC353-WC356
 - **Civic Center:** WC071, WC242, WC253, WC284, WC323
 - **Neon Strip:** WC011, WC012, WC157, WC238, WC283
 - **Pink Mile:** WC046, WC047, WC237
 - **Arts District:** WC070, WC110, WC239, WC292, WC315
 - **Bayside Heights:** WC005, WC006, WC076, WC082, WC085, WC113, WC235, WC307
-- **Midtown:** WC066, WC073, WC086, WC087, WC151, WC157, WC159, WC241
-- **Harbor:** WC003, WC004, WC040, WC045, WC057, WC059, WC072, WC086, WC087, WC093, WC150, WC158, WC159, WC204, WC219, WC232, WC277, WC278, WC316
+- **Midtown:** WC066, WC073, WC086, WC087, WC151, WC157, WC159, WC241, WC324-WC352
+- **Harbor:** WC003, WC004, WC040, WC045, WC057, WC059, WC072, WC086, WC087, WC093, WC150, WC158, WC159, WC204, WC219, WC232, WC277, WC278, WC316, WC328, WC333, WC334, WC340, WC344-WC352
 - **Old Town:** WC014, WC025, WC056, WC158, WC222, WC224, WC240, WC278, WC289, WC290
 - **Northgate:** WC002, WC069, WC089, WC292, WC298, WC315
 - **Stadium District:** WC067, WC167, WC226, WC254, WC313, WC318
@@ -1852,6 +1852,194 @@ Runners-up: WC277 (Prison Island with ferry lanes), WC309 (airport with rental l
 **Recurring themes:** lighthouses on almost every coast; red suspension bridges (avoid the famous-bridge look); waterfalls into lakes with a wooded island and a lodge; fire lookouts; logging and mining towns with ore/log trains; dirt ovals and raceways by marshes; farm grids with lavender/sunflower/pumpkin patches and grain elevators by the line; neon motels with pools and diners on desert highways; many images carry map icons/labels (useful for choosing map icons). **Rule issues recur:** school buses and school-like campuses with sports fields (WC287, 288, 289, 290, 298, 308, 313, 318), playgrounds (288, 315, 321), US flags (301, 304, 307, 311, 323), "Route 66" (300, 304, 305), real rental brands (309), resort-copy landmarks on the Strip (258, 274, 291), invented sign names (Pinecrest, Riverton, Riverdale) to replace with the game's.
 
 
+# World concepts WC324-WC352 (batch 5: Midtown)
+
+The owner's Midtown concepts of 2026-10-17 (several variations of each piece, made from the District Layout Concept Prompts), close views of the pieces of the re-planned Midtown (1) and the waterfront below it in the Harbor (8). Sign names in them are placeholders to replace with the game's own.
+
+- **WC324** · Boulevard row with cinema, church and a statue-fountain corner
+  - **Shows:** The north side of a gently curving boulevard: a stone department store with arched windows, banners and a glass dome, a cinema with a lit marquee and a tall red vertical blade, a brick block, a Gothic church with a spire and rose window. A round fountain with a bronze statue on a raised corner plaza where a side street meets the boulevard, with blossom trees. Bus shelters on the kerb, and a flower-bed and tree median with lamps.
+  - **Goes to:** Midtown, the north side of Midtown Boulevard between Bridge and Main Avenue (Marlow & Finch, The Palace), with the corner plaza at a T.
+  - **Feeds:** the boulevard row, the median's flower beds, corner plazas.
+  - **Rule flags:** none.
+- **WC325** · Boulevard row, straight (variant)
+  - **Shows:** The same row, straight-on: the department store with an awning and a glass porch, the cinema (marquee, CINEMA blade), a pharmacy with a green sign, the Gothic church. Bus shelters at both ends; the median is a hedge with flowers, a big tree every few cars and lamps between. Small flat-roofed brick blocks with rooftop terraces south of the boulevard.
+  - **Goes to:** as WC324.
+  - **Feeds:** as WC324.
+  - **Rule flags:** "Riverdale Pharmacy" (a placeholder) - use the game's own pharmacy.
+- **WC326** · Midtown Station: the island platform from the corner
+  - **Shows:** The El station as a long glass-roofed island platform with green iron columns and arched spans. Two glass stair-and-lift towers stand at its ends, with open stairs down to street level. Under the deck: a paved plaza with planters, benches, newspaper boxes, bikes and a hot-dog cart, where the street splits round the station. A clock hangs at mid-platform.
+  - **Goes to:** Midtown Station on Trestle Street.
+  - **Feeds:** the El station (statics), the plaza under the El.
+  - **Rule flags:** none.
+- **WC327** · Midtown Station, straight (variant)
+  - **Shows:** The same station straight-on: towers with pyramid glass roofs at each end, a straight stair on each side, the train in the platform, the clock. Under it a paved strip with planters, a cart, bike racks and newspaper boxes, and lamp-lined streets either side.
+  - **Goes to:** as WC326.
+  - **Feeds:** as WC326.
+  - **Rule flags:** none.
+- **WC328** · Madison Court on the water
+  - **Shows:** Three pastel four-storey apartment blocks (cream, green, peach) with balconies, each behind its own gated front lawn with a central stair, palms and blossom. A car park runs behind them along a back lane, with a small guard booth at the corner. In front: the street, then a palm-lined seawall promenade with benches and lamps, a jetty and boats.
+  - **Goes to:** Madison Court (Midtown's Harbor Avenue) and the Harbor's promenade in front of it.
+  - **Feeds:** apartments with gated lawns, the seawall promenade.
+  - **Rule flags:** none.
+- **WC329** · The long block: shop row with a court behind
+  - **Shows:** A block-long row of small shops (books, cafe, burger bar, jeweller, records, laundromat, barber, hardware, grocer on the corner) with awnings and cafe tables. Behind the row a fenced basketball court with bleachers and blossom trees, then the back alley with bins and fire escapes.
+  - **Goes to:** the long block north of Holly Street (Linden Courts).
+  - **Feeds:** shop rows, the court behind a row.
+  - **Rule flags:** none.
+- **WC330** · Boulevard row with a flower median (variant)
+  - **Shows:** As WC325 from a little higher: the department store, the cinema, the pharmacy and the church above a wide boulevard. Buses, a median of round trees between flower beds, and lamps on both kerbs.
+  - **Goes to:** as WC324.
+  - **Feeds:** as WC324.
+  - **Rule flags:** "Riverdale Pharmacy" (a placeholder).
+- **WC331** · Holly Mews: a cobbled loop round a tree island
+  - **Shows:** Gabled rowhouses with stoops and front gardens round a cobbled loop. A big tree stands in a round planted island in its middle, and cars park round it. Beside it a courtyard apartment block with a basketball court in its yard, ivy and a cafe on the corner. Palms on the street in front.
+  - **Goes to:** Holly Mews (Midtown's west zone, by Garden Court).
+  - **Feeds:** the mews loop (cul-de-sac with an island), courtyard blocks.
+  - **Rule flags:** none.
+- **WC332** · Holly Mews and the courtyard block (variant)
+  - **Shows:** The mews loop with its tree roundabout beside a brick courtyard block. The block has a court in the yard, laundry lines across it and a corner shop with a green awning. Rowhouses with front gardens and stoops on the left, and a gated entrance to the loop.
+  - **Goes to:** as WC331.
+  - **Feeds:** as WC331.
+  - **Rule flags:** none.
+- **WC333** · Madison Court on the water (variant)
+  - **Shows:** As WC328, three pastel blocks with gated lawns, the car park behind with a booth, the promenade and seawall, a jetty with a sailboat.
+  - **Goes to:** as WC328.
+  - **Feeds:** as WC328.
+  - **Rule flags:** none.
+- **WC334** · Midtown and its waterfront by night
+  - **Shows:** The whole district at night: the El with the glass station across the top, a curving boulevard lined with brick blocks and a neon wedge building, a park with a waterfall pond and a bandstand, a fish-market shed on a pier with trucks, a seafood restaurant pier, a marina, a lighthouse, stone bridge towers at both ends.
+  - **Goes to:** Midtown and the Harbor in front of it.
+  - **Feeds:** the district plan, the waterfront.
+  - **Rule flags:** none.
+- **WC335** · The long block: shop row (named)
+  - **Shows:** The shop row with named fronts: a bookshop, a cafe, a diner with a striped awning, a pawn shop, a record shop, a laundromat, a barber and a corner grocer. A court behind with bleachers and cafe tables, and a lane with roller doors at the top.
+  - **Goes to:** as WC329.
+  - **Feeds:** as WC329.
+  - **Rule flags:** the shop names (Riverstone Books, The Daily Bean, Maple Diner, Second Chance Pawn, Spin City Records, Clean & Spin, Fresh Cuts, Corner Mart) are placeholders - use the game's own.
+- **WC336** · The Commons
+  - **Shows:** A walled park block: a pond with lilies, swans and a wooden jetty, a pergola, a great lawn with a green bandstand, a fountain at the crossing of the paths, a pavilion cafe with umbrellas. Two fenced basketball courts, a dog run on sand, market stalls round a second fountain at a subway entrance, and gates in the railings.
+  - **Goes to:** the Commons (Midtown, south of the boulevard).
+  - **Feeds:** the Commons.
+  - **Rule flags:** none.
+- **WC337** · The long block by night (variant)
+  - **Shows:** The shop row by night: lit fronts, the court behind with lamps, cafe umbrellas either side of it, tall brick walk-ups behind.
+  - **Goes to:** as WC329.
+  - **Feeds:** as WC329.
+  - **Rule flags:** none.
+- **WC338** · Garden Crescent
+  - **Shows:** A curved terrace of cream mansard houses with dormers round a half-oval street. Inside the oval a railed garden with a fountain in a round bed, a green gazebo, blossom trees and flower borders. Small back gardens behind the terrace, and brick blocks across the street.
+  - **Goes to:** Garden Crescent (Midtown's west, by Harbor Avenue).
+  - **Feeds:** the crescent, its garden.
+  - **Rule flags:** none.
+- **WC339** · The long block: court plaza and service lane (variant)
+  - **Shows:** The shop row with the court set in a paved plaza behind it, cafe umbrellas on both sides, and trees. Behind it a service lane with roller doors, bins and a van.
+  - **Goes to:** as WC329.
+  - **Feeds:** as WC329.
+  - **Rule flags:** none.
+- **WC340** · The waterfront from the bridge (night)
+  - **Shows:** Night view along the shore: the El and its station at the top, a pink neon corner building at the bridgehead, a lighthouse on a rock point with a little park, a marina with finger piers and yachts, a green-roofed seafood restaurant on a pier, the boulevard bending down to the water past a raised plaza with a fountain.
+  - **Goes to:** the Harbor's west waterfront.
+  - **Feeds:** the lighthouse point, the marina, the seafood pier.
+  - **Rule flags:** none.
+- **WC341** · Garden Crescent (variant)
+  - **Shows:** As WC338: the crescent of cream mansards, the oval garden with its fountain and a gazebo, blossom trees, the railings and gates.
+  - **Goes to:** as WC338.
+  - **Feeds:** as WC338.
+  - **Rule flags:** none.
+- **WC342** · The Commons (variant)
+  - **Shows:** As WC336: the pond with willows, an arched footbridge, swans and a jetty, the bandstand on the lawn, the pavilion cafe, two courts with bleachers, a dog run with agility gear, market stalls and a fountain by the subway entrance, the rails and gates.
+  - **Goes to:** as WC336.
+  - **Feeds:** as WC336.
+  - **Rule flags:** none.
+- **WC343** · The Commons (variant)
+  - **Shows:** As WC342, a little tighter: the pergola by the pond, a pavilion cafe on the north path, the two courts, the dog run, the stalls and the subway stair.
+  - **Goes to:** as WC336.
+  - **Feeds:** as WC336.
+  - **Rule flags:** none.
+- **WC344** · Midtown's south half on the water
+  - **Shows:** The El and the station across the top, a curving palm boulevard, a corner hotel with a fountain court at the west bridgehead. A park with a pond, a stone footbridge, a fountain and a bandstand meets a seawall promenade. Also a marina with a yacht, a seafood pier with two pavilions, a boat yard with a crane and a red tug at the east end, a civic hall with a clock tower by a fountain plaza, and twin-towered stone bridges at both ends.
+  - **Goes to:** Midtown's Rows C and the Harbor's waterfront.
+  - **Feeds:** the district-to-water layout, the boat yard, the seafood pier.
+  - **Rule flags:** none.
+- **WC345** · Crescent, Commons and the seawall (straight)
+  - **Shows:** Straight-on: the station's two glass towers, the rows with a court, the boulevard with a tree median, Garden Crescent round its statue garden at the west, the park with a fountain, a pond and a bandstand. A brick civic hall with a cupola, a courtyard block with graffiti and a car park, a small cul-de-sac with a tree island at the east. A riprap seawall promenade runs the whole width, with a jetty and stairs down to the water, and a ferry.
+  - **Goes to:** Midtown's Rows C and the Harbor's waterfront.
+  - **Feeds:** the promenade, the jetty, the district edge on the water.
+  - **Rule flags:** none.
+- **WC346** · Crescent, Commons and the marina (variant)
+  - **Shows:** As WC345 with a palm-and-flower median, a statue-fountain plaza at the east bridgehead, a footbridge over the pond, and a marina with a seafood pavilion on the water. A courtyard block with graffiti and a car park sits in the south-east.
+  - **Goes to:** as WC345.
+  - **Feeds:** as WC345.
+  - **Rule flags:** none.
+- **WC347** · The waterfront with a fish market and a cascade pond
+  - **Shows:** The boulevard swinging down to the shore. A fish-market shed on a pier with lorries and crates at the west, a park with a rock cascade into a pond and a bandstand. A seafood restaurant pier with yachts, a pastel mural building and a fountain island on a side street.
+  - **Goes to:** the Harbor's waterfront.
+  - **Feeds:** the fish market, the seafood pier.
+  - **Rule flags:** none.
+- **WC348** · The lighthouse point and the terraced shore
+  - **Shows:** A lighthouse on a riprap point with a palm park, terraced gardens with stairs stepping down from the boulevard to the promenade, a fountain on a raised stone terrace, the marina with finger piers, the seafood restaurant pier with umbrellas and a red fishing boat.
+  - **Goes to:** the Harbor's west waterfront, below Garden Crescent.
+  - **Feeds:** the lighthouse point, terraced stairs, the marina.
+  - **Rule flags:** none.
+- **WC349** · Crescent, Commons and the seawall by night
+  - **Shows:** WC345 by night: lit windows, string lights in the park, the ferry's lights, a neon corner bar at the east bridgehead.
+  - **Goes to:** as WC345.
+  - **Feeds:** night lighting.
+  - **Rule flags:** none.
+- **WC350** · Crescent, Commons and the marina by night
+  - **Shows:** WC346 by night: a pink neon wedge on the boulevard, lamps along the promenade, the marina and the seafood pavilion lit.
+  - **Goes to:** as WC346.
+  - **Feeds:** night lighting.
+  - **Rule flags:** none.
+- **WC351** · Midtown's south half by night
+  - **Shows:** WC344 by night.
+  - **Goes to:** as WC344.
+  - **Feeds:** night lighting.
+  - **Rule flags:** none.
+- **WC352** · The lighthouse, the cove and the seafood pier
+  - **Shows:** The boulevard bending to the shore, a red-and-white lighthouse on a little island park by the marina, the green-roofed seafood restaurant on a deck with tables, a sailing yacht. Terraced stairs and a stone retaining wall down to the promenade, and a small sand cove among rocks at the east end by the bridge.
+  - **Goes to:** the Harbor's waterfront.
+  - **Feeds:** the lighthouse island, the cove beach, terraced stairs.
+  - **Rule flags:** none.
+
+## Near-duplicates in this batch
+- WC324 ~ WC325 ~ WC330 (the boulevard row); WC326 ~ WC327 (the station); WC328 ~ WC333 (Madison Court).
+- WC329 ~ WC335 ~ WC337 ~ WC339 (the long block); WC331 ~ WC332 (Holly Mews); WC338 ~ WC341 (Garden Crescent).
+- WC336 ~ WC342 ~ WC343 (the Commons); WC345 ~ WC349 and WC346 ~ WC350 (the south half, day and night); WC344 ~ WC351.
+
+## Batch highlights
+1. **WC345** (the south half straight-on): the whole of Rows C plus the shore in one plan - the crescent, the Commons, the civic hall, the courtyard block and the seawall promenade with its jetty.
+2. **WC342** (the Commons): every piece of the park - willows, footbridge, jetty, bandstand, pavilion, courts, dog agility, stalls at the subway.
+3. **WC325** (the boulevard row): the department store, cinema, pharmacy and church facing a flower median.
+4. **WC332** (Holly Mews): the cobbled loop with its tree island beside the courtyard block.
+5. **WC348 / WC352** (the lighthouse point, the terraced shore, the cove): the Harbor's west waterfront.
+
+
+# World concepts WC353-WC356 (batch 6: Downtown)
+
+The owner's Downtown concepts of 2026-10-17 (close views and the district plan). Sign names in them are placeholders.
+
+- **WC353** · The bank plaza between two glass towers
+  - **Shows:** Two blue glass towers on stone podiums with roof gardens, and a raised plaza between them: a long pool with three jets, wide stairs up from the street, cafe tables under umbrellas on the podium terraces. Below it, a domed stone bank with columns and a cash-van bay behind gates (two armoured vans), and a curved-corner jeweller with a diamond sign and its own cafe. A palm-and-flower median boulevard with a statue fountain island where it splits, a red bus lane, and a road dipping into an underpass under a stone deck at the east.
+  - **Goes to:** Downtown, the towers' block by the boulevard (the bank, the jeweller: heist targets).
+  - **Feeds:** tower podiums, raised plazas, the bank and its vans' bay, a jeweller, underpasses.
+  - **Rule flags:** none.
+- **WC354** · The bank plaza (variant)
+  - **Shows:** As WC353 straight-on: the green-roofed stone bank with the armoured vans in its yard, the stairs up to the fountain plaza between the towers, the jeweller with a roof terrace, the median boulevard with palms below and red bus lanes on the avenues either side.
+  - **Goes to:** as WC353.
+  - **Feeds:** as WC353.
+  - **Rule flags:** none.
+- **WC355** · Downtown's park on the water
+  - **Shows:** A central park with a lake, a fountain and two pavilions, ringed by a curving road with a red bus lane; a grand axis from a domed tower's plaza (two fountains, stairs) down through the park past a statue and a long pool to the seawall. Glass towers all round, a round tower with a helipad, a spiral-ramp car park, plazas with fountains on the corners, a marina and waterfront restaurants on the promenade, a bridge at the east.
+  - **Goes to:** Downtown round its park (the city's central park, CITY_PARKS) and the waterfront.
+  - **Feeds:** the park's lake and axis, the ring road, corner plazas, the car park, the helipad tower.
+  - **Rule flags:** none.
+- **WC356** · The circus: a round park with avenues meeting it
+  - **Shows:** A round park (lake, fountain, statue, pavilion, rings of paths and trees) inside a ring road; avenues with red bus lanes meeting it at four points, bus stops round it. Towers with crowns and big names, a hotel with a fountain drive, the police headquarters with its fenced car park, a spiral-ramp car park and an office block on the seawall promenade, food trucks, a bridge out south.
+  - **Goes to:** Downtown or the Civic Center (the police HQ: the city's).
+  - **Feeds:** a circus (roundabout park), the police HQ lot, the car park, bus lanes.
+  - **Rule flags:** "Riverdale Police HQ" and the tower names (Velora, Lynx, Arden, Maris) are placeholders - use the game's own.
+
 ## Original file names
 
 - WC001: ChatGPT Image Oct 17, 2026, 12_59_09 AM.png (1619x971)
@@ -2177,3 +2365,36 @@ Runners-up: WC277 (Prison Island with ferry lanes), WC309 (airport with rental l
 - WC321: ChatGPT Image Oct 17, 2026, 01_26_07 AM.png (1619x971)
 - WC322: ChatGPT Image Oct 17, 2026, 01_26_10 AM.png (1619x971)
 - WC323: ChatGPT Image Oct 17, 2026, 01_26_40 AM.png (1448x1086)
+- WC324: 6fec7afe-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC325: 0f10fe07-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC326: 614fad34-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC327: f68eab86-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC328: efa1f11a-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC329: b1fd8f7f-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC330: 5450aaa8-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC331: a71d881b-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC332: cf94d447-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC333: 5ab548c2-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC334: 3268ed78-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC335: bf54fcf6-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC336: 14474826-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC337: c85f56a6-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC338: 6f2f1171-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC339: 72a1713e-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC340: 8eec681f-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC341: ccd97f9b-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC342: afbe9a41-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC343: f7686ff8-image.png (upload of 2026-10-17 12:40) (1672x941)
+- WC344: e246f8af-image.png (upload of 2026-10-17 12:41) (1672x941)
+- WC345: d1f46389-image.png (upload of 2026-10-17 12:41) (1672x941)
+- WC346: 53161eaa-image.png (upload of 2026-10-17 12:41) (1672x941)
+- WC347: 1d7c8b38-image.png (upload of 2026-10-17 12:41) (1672x941)
+- WC348: daae8d2b-image.png (upload of 2026-10-17 12:41) (1672x941)
+- WC349: ca9e024a-image.png (upload of 2026-10-17 12:41) (1672x941)
+- WC350: 842658ad-image.png (upload of 2026-10-17 12:41) (1672x941)
+- WC351: bff9193b-image.png (upload of 2026-10-17 12:41) (1672x941)
+- WC352: 56e4818b-image.png (upload of 2026-10-17 12:41) (1672x941)
+- WC353: 88bb5b16-image.png (upload of 2026-10-17 13:32) (1672x941)
+- WC354: 17bcfce9-image.png (upload of 2026-10-17 13:32) (1672x941)
+- WC355: 10c2f631-image.png (upload of 2026-10-17 13:32) (1672x941)
+- WC356: ab681896-image.png (upload of 2026-10-17 13:32) (1672x941)

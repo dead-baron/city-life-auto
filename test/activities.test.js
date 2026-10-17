@@ -40,6 +40,9 @@ test('a spot fills with people doing the activity: placed, posed, their props on
   assert.equal(a.gt, 'sit'); assert.equal(b.gt, 'sit'); assert.equal(a.pp, 'chess', 'the board');
   assert.ok(Math.abs(Math.cos(a.a) + Math.cos(b.a)) < 0.01, 'sat facing each other');
   for (const e of watch) assert.ok(!e.gt, 'the watchers stand');
+  for (const e of watch) assert.ok(e.y < a.y - 10, 'behind the board (north of it): never between the camera and the game');
+  assert.ok(Number.isInteger(a.cv) && b.cv === a.cv + 1 && (a.cv & 1) === 0, 'their turns: one game clock, a side each');
+  assert.equal(_descriptor(a).cv, a.cv, 'whose move on the wire');
   assert.equal(_descriptor(a).gt, 'sit'); assert.equal(_descriptor(a).pp, 'chess');
   const an = fill(w, of('anglers')[0], { seen: true });
   assert.ok(an && an.ids.length === 2, 'two anglers');

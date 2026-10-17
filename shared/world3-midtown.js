@@ -1074,6 +1074,9 @@ function unionSquare(K, x, y, w, h, out) {
   if (clearOf(K, x + 4, y + h - 3, 1)) prop('foodcart', x + 4, y + h - 3, 10);
   if (clearOf(K, x + w - 4, y + h - 3, 1)) prop('news_b', x + w - 4, y + h - 3, 0);
   for (let k = 0; k < 3; k++) { const sx = x + 10 + k * 8; if (clearOf(K, sx, y + 2, 2)) prop('mstall', sx, y + 2, 0, { v: k }); }
+  // the chess tables under the plane trees on the square's west side (server/systems/activities.js 'chess': the old
+  // men's games, a watcher behind the board)
+  for (const [tx, ty] of [[x + 4, cy - 1], [x + 4, cy + 5]]) if (clearOf(K, tx, ty, 2)) { prop('cafetable', tx, ty, 0, { chess: 1, seat: 27 }); prop('chair', tx - 0.9, ty + 0.1, 0, { v: 2, a: 0 }); prop('chair', tx + 0.9, ty + 0.1, 0, { v: 2, a: 3.1416 }); }
   (out.places ||= []).push({ name: 'Union Square', x0: x, y0: y, x1: x + w, y1: y + h });
   K.m.squares ||= [];
   K.m.squares.push({ x, y, w, h, name: 'Union Square' });
@@ -1271,7 +1274,7 @@ function commons(K, x, y, w, h, out) {
   prop('fountain', F[0], F[1], 36);
   for (const [dx, dy] of [[-5, -3], [5, -3], [-5.5, 3.2], [5.5, 3.2]]) prop('pbench', F[0] + dx, F[1] + dy, 0);
   for (const [dx, dy] of [[-8, 0], [8, 0], [0, 6.2]]) prop('flowers_big', F[0] + dx, F[1] + dy, 0);
-  for (const dx of [-13, -16, 13]) { prop('cafetable', F[0] + dx, F[1] + 5, 0); prop('chair', F[0] + dx - 0.9, F[1] + 5.1, 0, { v: 1, a: 0 }); prop('chair', F[0] + dx + 0.9, F[1] + 5.1, 0, { v: 1, a: 3.1416 }); }
+  for (const dx of [-13, -16, 13]) { prop('cafetable', F[0] + dx, F[1] + 5, 0, { chess: 1, seat: 27 }); prop('chair', F[0] + dx - 0.9, F[1] + 5.1, 0, { v: 1, a: 0 }); prop('chair', F[0] + dx + 0.9, F[1] + 5.1, 0, { v: 1, a: 3.1416 }); }
   K.m.squares ||= []; K.m.squares.push({ x: Math.round(F[0]) - 6, y: F[1] - 5, w: 12, h: 10, name: 'Commons Fountain' });
   // --- the pavilion cafe on the lawn's north side, the bandstand on the lawn, festoon lights between them
   for (const dx of [-6, -3, 3, 6]) { prop('cafetable', lawn.cx + dx, y + 10.5, 0); prop(pick(['umbrella_g', 'umbrella_y'], rnd(dx, y, 900)), lawn.cx + dx, y + 10.4, 0); }

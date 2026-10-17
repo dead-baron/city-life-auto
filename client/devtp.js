@@ -1,157 +1,93 @@
-// Debug teleport: every district (grouped by island) and the landmarks - the stations, the scene
-// paintings - on a little city map and as a list. Tap a dot or a name to go there. Each place gets
-// a spot you can stand on, worked out once from the map: the open pavement nearest the middle of
-// the district (or open ground where it has no streets).
-import { T, TILE } from '../shared/constants.js';
-import { DISTRICTS, ISLANDS } from '../shared/mapcore.js';
-import { mapFrameOf } from './hud.js';
+// Debug teleport: every district (grouped by island), every station of every line, the landmarks and scene paintings,
+// and World v3's handcrafted districts' own places and sights - as a list and as dots on a little map of the world.
+// Press one to go there: the server picks the open pavement nearest it (server/dev.js tpSpot - the page holds only a
+// window of World v3's world, so it can't look at a far place's ground itself).
+// Everything here comes from what the page holds of the whole world (the index's lists: shared/regionpack.js): the
+// districts' middles (map.mids), the rail loops, the landmarks, the plans' records (map.world3hand) - never the window's
+// tiles or buildings, which only cover where you are (the bug the owner hit, 2026-10-17: only the nearby districts
+// listed, and none of World v3's places).
+import { TILE } from '../shared/constants.js';
+import { DISTRICTS } from '../shared/mapcore.js';
+import { mapFrameOf, districtCentroids, drawMini } from './hud.js';
 
-const PAVED = new Set([T.SIDEWALK, T.PLAZA]);
-const OPEN = new Set([T.LOT, T.GRASS, T.SAND, T.DIRT, T.DOCK, T.FIELD]);
-// (a handcrafted district's buildings worth a button: its set pieces - by the lot's kind - and the key businesses)
-const SET_PIECE = new Set(['theatre', 'construction', 'strip', 'dealer', 'repair', 'church', 'police', 'motorpool', 'club', 'clubeclipse', 'clubnova', 'arcade', 'hotel', 'bank', 'hospital', 'cinema', 'bowling', 'stadium', 'museum', 'market']);
-const NOTABLE = new Set(['police', 'bank', 'hospital', 'grocery', 'pharmacy', 'dealer', 'garage', 'gunshop', 'clothing']);
 let cache = null;
-
-function zoneName(map, x, y) {
-  const z = map.zone[map.idx(Math.floor(x / TILE), Math.floor(y / TILE))];
-  for (const I of Object.values(ISLANDS)) if (I.zone === z) return I.name;
-  return 'Outer islands & the wild';
-}
-
-// The standable spot nearest (x, y) among tiles where ok(tile index) holds: paved first, then open ground.
-function spotNear(map, x, y, ok) {
-  let best = null, bd = Infinity;
-  const cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);
-  for (let r = 0; r < 160 && !best; r += 4) {
-    for (let ty = cy - r; ty <= cy + r; ty++) for (let tx = cx - r; tx <= cx + r; tx++) {
-      if (Math.max(Math.abs(tx - cx), Math.abs(ty - cy)) < r - 4 || !map.inside(tx, ty)) continue;
-      const i = map.idx(tx, ty), t = map.tiles[i];
-      if (!ok(i) || map.deck[i] || !(PAVED.has(t) || OPEN.has(t))) continue;
-      const d = Math.hypot(tx - cx, ty - cy) + (PAVED.has(t) ? 0 : 12);
-      if (d < bd) { bd = d; best = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }; }
-    }
-  }
-  return best;
-}
+const OUTER = 'Outer islands & the wild';
 
 export function teleportPlaces(map) {
   if (cache && cache.map === map) return cache.list;
-  // district centroids (sampled every 3rd tile), merging districts that share a name
-  const acc = new Map();
-  for (let ty = Math.ceil(map.y0 / 3) * 3; ty < map.y0 + map.h; ty += 3) for (let tx = Math.ceil(map.x0 / 3) * 3; tx < map.x0 + map.w; tx += 3) {
-    const t = map.tiles[map.idx(tx, ty)];
-    if (t === T.WATER || t === T.DEEP) continue;
-    const d = map.dist[map.idx(tx, ty)];
-    const name = DISTRICTS[d] && DISTRICTS[d].name;
-    if (!name) continue;
-    const a = acc.get(name) || acc.set(name, { ids: new Set(), x: 0, y: 0, n: 0 }).get(name);
-    a.ids.add(d); a.x += tx; a.y += ty; a.n++;
+  const list = [], have = new Set();
+  const add = (name, group, x, y, kind) => {
+    if (!name || !Number.isFinite(x) || !Number.isFinite(y)) return;
+    const k = `${group}|${name}`;
+    if (have.has(k)) return;
+    have.add(k); list.push({ name, group, x, y, kind });
+  };
+  // the districts: their middles (merged where districts share a name), grouped by island
+  const by = new Map();
+  for (const c of districtCentroids(map)) {
+    const a = by.get(c.name) || by.set(c.name, { x: 0, y: 0, n: 0 }).get(c.name);
+    a.x += c.x; a.y += c.y; a.n++;
   }
-  const list = [];
-  for (const [name, a] of acc) {
-    if (a.n < 6) continue;
-    const cx = (a.x / a.n + 0.5) * TILE, cy = (a.y / a.n + 0.5) * TILE;
-    const at = spotNear(map, cx, cy, (i) => a.ids.has(map.dist[i]));
-    if (!at) continue;
-    list.push({ name, group: zoneName(map, at.x, at.y), x: at.x, y: at.y, kind: 'district' });
+  for (const [name, a] of by) {
+    const D = DISTRICTS.find((q) => q && q.name === name);
+    add(name, D && D.isl ? D.isl : OUTER, a.x / a.n, a.y / a.n, 'district');
   }
-  for (const st of (map.rail && map.rail.stations) || []) {
-    const p = st.kiosk ? { x: st.kiosk.out.x, y: st.kiosk.out.y + 40 } : spotNear(map, st.platform.x, st.platform.y, () => true);
-    if (p) list.push({ name: st.name, group: 'Stations', x: p.x, y: p.y, kind: 'station' });
+  // the stations: every line's (World v3 runs a loop per line - map.rail is only the first)
+  for (const r of map.rails || (map.rail ? [map.rail] : [])) for (const st of (r && r.stations) || []) {
+    const p = st.kiosk && st.kiosk.out ? { x: st.kiosk.out.x, y: st.kiosk.out.y + 40 } : st.platform ? st.platform : st;
+    add(st.name, 'Stations', p.x, p.y, 'station');
   }
-  for (const pt of (map.paintings || []).concat(map.landmarks || [])) {
-    if (!pt.name) continue;
-    const p = spotNear(map, pt.x + pt.w / 2, pt.y + pt.h / 2, () => true);
-    if (p) list.push({ name: pt.name, group: 'Landmarks', x: p.x, y: p.y, kind: 'landmark' });
-  }
-  // World v3's handcrafted districts (shared/world3-hand.js: map.world3hand, a record per plan): the places each plan
-  // named - its squares, parks, markets - then its stations, and its set-piece buildings and key businesses
+  for (const pt of (map.paintings || []).concat(map.landmarks || [])) if (pt && pt.name) add(pt.name, 'Landmarks', pt.x + (pt.w || 0) / 2, pt.y + (pt.h || 0) / 2, 'landmark');
+  // World v3's handcrafted districts (shared/world3-hand.js buildHand: map.world3hand, a record per plan): the places each
+  // plan named - its squares, parks, markets - then its sights (the set pieces and the key businesses, at their doors)
   const v3 = [];
   for (const H of Object.values(map.world3hand || {})) {
     if (!H || !H.rect || !DISTRICTS[H.d]) continue;
-    const dn = DISTRICTS[H.d].name, g = `World v3 · ${dn}`, gs = `World v3 · ${dn} buildings`;
+    const dn = DISTRICTS[H.d].name, g = `${dn} · places`, gs = `${dn} · buildings`;
     v3.push(g, gs);
-    const [X0, Y0, X1, Y1] = H.rect, inRect = (x, y) => x >= X0 * TILE && y >= Y0 * TILE && x < X1 * TILE && y < Y1 * TILE;
-    const seen = new Set();
-    for (const pl of H.places || []) {
-      if (seen.has(pl.name)) continue;
-      const p = spotNear(map, ((pl.x0 + pl.x1) / 2) * TILE, ((pl.y0 + pl.y1) / 2) * TILE, () => true);
-      if (p) { seen.add(pl.name); list.push({ name: pl.name, group: g, x: p.x, y: p.y, kind: 'v3' }); }
-    }
-    for (const st of (map.rail && map.rail.stations) || []) {
-      const sx = st.kiosk ? st.kiosk.out.x : st.platform.x, sy = st.kiosk ? st.kiosk.out.y + 40 : st.platform.y;
-      if (!inRect(sx, sy) || seen.has(st.name)) continue;
-      const p = st.kiosk ? { x: sx, y: sy } : spotNear(map, sx, sy, () => true);
-      if (p) { seen.add(st.name); list.push({ name: st.name, group: g, x: p.x, y: p.y, kind: 'v3' }); }
-    }
-    for (const b of map.buildings || []) {
-      if (!b.hand || !b.door || !b.name || seen.has(b.name) || !(SET_PIECE.has(b.kind) || NOTABLE.has(b.business))) continue;
-      const x = (b.door.tx + 0.5) * TILE, y = (b.door.ty + 0.5) * TILE;
-      if (!inRect(x, y)) continue;
-      const p = spotNear(map, x, y, () => true);
-      if (p) { seen.add(b.name); list.push({ name: b.name, group: gs, x: p.x, y: p.y, kind: 'v3shop' }); }
-    }
+    for (const pl of H.places || []) add(pl.name, g, ((pl.x0 + pl.x1) / 2) * TILE, ((pl.y0 + pl.y1) / 2) * TILE, 'v3');
+    for (const s of H.sights || []) add(s.name, gs, s.x, s.y, 'v3shop');
   }
-  const order = [...v3, ...Object.values(ISLANDS).map((I) => I.name), 'Outer islands & the wild', 'Stations', 'Landmarks'];
+  const isles = [...new Set(list.filter((p) => p.kind === 'district').map((p) => p.group))].filter((g) => g !== OUTER).sort();
+  const order = [...v3, ...isles, OUTER, 'Stations', 'Landmarks'];
   list.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.name.localeCompare(b.name));
-  cache = { map, list };
+  cache = { map, list, groups: order.filter((g) => list.some((p) => p.group === g)) };
   return list;
 }
+export function teleportGroups(map) { teleportPlaces(map); return cache.groups; }
 
-// Fill `box` with the picker: a map with a dot per place, then the places grouped as buttons.
-export function buildTeleport(box, map, go) {
-  const list = teleportPlaces(map);
-  box.innerHTML = '';
+// a little map of the world with a dot per place (the minimap's picture under it when the HUD has one): tap a dot to
+// go there; `only` the places to dot (the list shown), `hot` the one to ring
+export function teleportMap(cv, map, places, { mini = null, go, width = 360 } = {}) {
   const [fx0, fy0, fx1, fy1] = mapFrameOf(map);
-  const cv = document.createElement('canvas');
-  cv.className = 'dev-tp-map';
-  box.appendChild(cv);
-  const draw = (img, hover) => {
-    const w = Math.min(720, box.clientWidth || 360), h = Math.round(w * (fy1 - fy0) / (fx1 - fx0));
-    const dpr = Math.min(2, devicePixelRatio || 1);
+  let hover = null;
+  const draw = () => {
+    const w = Math.max(160, Math.round(width)), h = Math.round(w * (fy1 - fy0) / (fx1 - fx0)), dpr = Math.min(2, devicePixelRatio || 1);
     cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px';
     const g = cv.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.fillStyle = '#0b1830'; g.fillRect(0, 0, w, h);
+    if (mini) { g.imageSmoothingEnabled = false; drawMini(g, mini, fx0 / TILE, fy0 / TILE, (fx1 - fx0) / TILE, (fy1 - fy0) / TILE, 0, 0, w, h); g.fillStyle = 'rgba(6,12,24,.35)'; g.fillRect(0, 0, w, h); }
     const sc = w / (fx1 - fx0);
-    if (img) { const kx = img.width / (map.frame.w * TILE), ky = img.height / (map.frame.h * TILE);   // (the world map picture: the world's frame)
-      g.drawImage(img, fx0 * kx, fy0 * ky, (fx1 - fx0) * kx, (fy1 - fy0) * ky, 0, 0, w, h); }
-    g.font = '600 9px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
-    for (const p of list) {
+    g.font = '600 10px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    for (const p of places) {
       const x = (p.x - fx0) * sc, y = (p.y - fy0) * sc, hot = p === hover;
-      if (p.kind === 'v3shop' && !hot) continue;   // (a district's businesses: in the list, too many to dot the map with)
       g.fillStyle = p.kind === 'district' ? '#f2c21b' : p.kind === 'station' ? '#f28c28' : p.kind === 'v3' || p.kind === 'v3shop' ? '#ff6ad5' : '#7de0ff';
       g.strokeStyle = '#000'; g.lineWidth = 1.5;
-      g.beginPath(); g.arc(x, y, hot ? 6 : 4, 0, 6.283); g.fill(); g.stroke();
-      if (hot || p.kind === 'district') { g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(p.name, x, y - 5); g.fillStyle = hot ? '#fff' : '#ffeaa0'; g.fillText(p.name, x, y - 5); }
+      g.beginPath(); g.arc(x, y, hot ? 6 : 3.5, 0, 6.283); g.fill(); g.stroke();
+      if (hot || (p.kind === 'district' && places.length < 80)) { g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(p.name, x, y - 5); g.fillStyle = hot ? '#fff' : '#ffeaa0'; g.fillText(p.name, x, y - 5); }
     }
-    return sc;
   };
-  const img = new Image();
-  img.onload = () => draw(img);
-  // (assets/worldmap.webp is the old world: the teleport map is drawn from the map data until World v2 has its own image)
-  requestAnimationFrame(() => draw(img.complete && img.naturalWidth ? img : null));
   const pick = (e) => {
     const r = cv.getBoundingClientRect(), sc = r.width / (fx1 - fx0);
     const wx = fx0 + (e.clientX - r.left) / sc, wy = fy0 + (e.clientY - r.top) / sc;
-    let best = null, bd = 22 / sc;
-    for (const p of list) { const d = Math.hypot(p.x - wx, p.y - wy); if (d < bd) { bd = d; best = p; } }
+    let best = null, bd = 24 / sc;
+    for (const p of places) { const d = Math.hypot(p.x - wx, p.y - wy); if (d < bd) { bd = d; best = p; } }
     return best;
   };
-  cv.onpointermove = (e) => draw(img.complete && img.naturalWidth ? img : null, pick(e));
+  cv.onpointermove = (e) => { const p = pick(e); if (p !== hover) { hover = p; draw(); } };
+  cv.onpointerleave = () => { if (hover) { hover = null; draw(); } };
   cv.onclick = (e) => { const p = pick(e); if (p) go(p); };
-  // the list, island by island
-  let group = null, row = null;
-  for (const p of list) {
-    if (p.group !== group) {
-      group = p.group;
-      const h = document.createElement('div'); h.className = 'dev-tp-group'; h.textContent = group; box.appendChild(h);
-      row = document.createElement('div'); row.className = 'dev-tp-row'; box.appendChild(row);
-    }
-    const b = document.createElement('button');
-    b.textContent = p.name;
-    b.onclick = () => go(p);
-    row.appendChild(b);
-  }
+  draw();
+  return { ring(p) { hover = p; draw(); } };
 }

@@ -652,7 +652,7 @@ export function leaveBuilding(world, ped, from = null, secs = 40) {
   n.desk = null; n.guard = null; n.dancer = false; n.target = 0;
   n.state = 'leave'; n.until = world.time + secs; n.out = null;
   if (from) { n.fx = from.x; n.fy = from.y; } else { n.fx = undefined; n.fy = undefined; }
-  if (ped.gt) { ped.gt = null; ped.dm = undefined; ped.appVer = (ped.appVer || 0) + 1; }
+  if (ped.gt) { ped.gt = null; ped.dm = undefined; ped.cv = null; ped.appVer = (ped.appVer || 0) + 1; }
 }
 const LEAVE_WALK = [110, 230];   // px on from the door
 const LEAVE_TURN = [0.3, -0.4, 0.9, -1.0, 1.45, -1.5, 1.9, -2.0];   // (which way: about straight on first, then along the street)

@@ -132,7 +132,7 @@ test('start fresh: two presses, a clear warning, then this browser forgets only 
   const main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(html, /id="s-repair"[^\n]*\n\s*<button id="s-fresh"/, 'under Repair install in Settings (the title screen\'s Settings too)');
-  assert.match(readFileSync(new URL('../client/devmenu.js', import.meta.url), 'utf8'), /add\('⟲ Start fresh: erase my character…'/, 'and in the debug menu (client/devmenu.js)');
+  assert.match(readFileSync(new URL('../client/devmenu.js', import.meta.url), 'utf8'), /'⟲ Start fresh: erase my character…'/, 'and in the debug menu (client/devmenu.js)');
   const press = main.slice(main.indexOf('function freshPress('), main.indexOf('function freshDisarm('));
   assert.match(press, /FRESH_ARM_MS/, 'the first press arms it for a few seconds');
   assert.match(press, /can\\?'t be undone/i, 'with a clear warning');

@@ -367,6 +367,7 @@ export function sample(view) {
   const bump = p ? bumpers.step(p.lb, p.rb, performance.now()) : { tap: 0, hold: 0, release: 0 };
   input.wheelHold = bump.hold; input.wheelRelease = bump.release; input.wheelHeld = p ? bumpers.held : 0;
   input.padLB = bump.tap < 0 || bump.hold < 0;   // (LB pressed, a tap or held: the death screen's cancel)
+  input.menuTab = bump.tap || 0;   // (a tap of LB / RB: a menu's previous / next page - the debug menu's categories)
   input.padAxes = p ? { lx: p.lx, ly: p.ly, rx: p.rx, ry: p.ry, lt: p.lt, rt: p.rt } : null; // the raw sticks and triggers (the city map zooms and pans with them)
   input.padX = !!(p && p.xEdge); input.padY = !!(p && p.yEdge); input.padRight = !!(p && p.dRightEdge); input.padView = !!(p && p.back); input.padViewEdge = !!(p && p.viewEdge);
   if (p) {

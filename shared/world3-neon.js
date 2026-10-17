@@ -24,14 +24,17 @@ const D = 7;   // the Neon Strip's district id (shared/mapcore.js DISTRICTS)
 // skeleton's Midtown Bridge and Civic Bridge: shared/world3-skeleton.js ARTERIALS)
 export const NY = { walk: 2111, lane: 2150, blvd: 2200, lantern: 2250, cross: 2300 };
 export const NX = { westside: 2860, parkW: 2988, parkE: 3184, civic: 3320, harborview: 3480, bridgeW: 2975, bridgeE: 3161 };
-const EXT = { ave: 7, blvd: 7, st: 6, art: 7, alley: 1 };
+// (Neon Boulevard: 13 tiles, four lanes either side of a 3-tile median of royal palms - WC238, SC4-B; Midtown Boulevard's
+// section)
+const BLVD_W = 13, MEDIAN = 96;
+const EXT = { ave: 7, blvd: (BLVD_W - 1) / 2 + 3, st: 6, art: 7, alley: 1 };
 const AL = { a: 2226, b: 2275 };   // the service alleys behind the rows south of the boulevard
 const LANE = [2141, 2160];         // Lantern Lane, the night market (pedestrian: rows - two rows of stalls facing each other)
 const PLAZA = [3046, 3092];        // Blossom Plaza (columns)
 
 function streets() {
   const S = [];
-  const ew = (name, kind, y, x0, x1) => S.push({ name, kind, pts: [[x0, y], [x1, y]] });
+  const ew = (name, kind, y, x0, x1) => S.push({ name, kind, pts: [[x0, y], [x1, y]], ...(kind === 'blvd' ? { w: BLVD_W, median: MEDIAN } : {}) });
   const ns = (name, kind, x, y0, y1) => S.push({ name, kind, pts: [[x, y0], [x, y1]] });
   ew('Neon Boulevard', 'blvd', NY.blvd, NX.westside, 3420);
   ew('Lantern Street', 'st', NY.lantern, NX.westside, NX.harborview);
@@ -549,6 +552,15 @@ function dressing(K, out, poi0) {
     prop('palm_a', x + 0.5, yN, 10, { sp: 'royal', k: 1.15 });
     if (last !== null) prop('festoon', last + 0.5, yN - 0.6, 0, { tx: Math.round((x - last) * TILE), ty: 0, h: 64 });
     last = x;
+  }
+  // the median: royal palms down it with lights strung between them, clear of the junctions (where it stops for the
+  // turns)
+  let lastM = null;
+  for (let x = NX.westside + 14; x < 3408; x += 9) {
+    if ([NX.parkW, NX.parkE, NX.civic, NX.bridgeW, NX.bridgeE].some((c) => Math.abs(x - c) < 14)) { lastM = null; continue; }
+    prop('palm_a', x + 0.5, NY.blvd + 0.5, 10, { sp: 'royal', k: 1.2 });
+    if (lastM !== null) prop('festoon', lastM + 0.5, NY.blvd - 0.1, 0, { tx: Math.round((x - lastM) * TILE), ty: 0, h: 70 });
+    lastM = x;
   }
   for (let i = poi0; i < m.pois.length; i++) {
     const p = m.pois[i];
