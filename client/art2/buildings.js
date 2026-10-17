@@ -9,7 +9,8 @@
 // Roofs are flat membranes with a parapet (the rooftop kit is placed separately), or terracotta tile.
 // With spec.roofMat a flat roof is a deck sunk below its parapet (the north parapet's inner face shows, the
 // coping matches the walls): 'tar' | 'gravel' | 'membrane' | 'metal' (standing seams) | 'paver' | 'deck'
-// (planks) | 'green' (sedum) | 'rubber', with seams, patches, drains and ponding stains.
+// (planks) | 'green' (a roof garden's paving: slabs, decking or brick, a gravel strip along the parapets - statics.js
+// lays the beds on it) | 'sedum' (trays of it in a grid) | 'rubber', with seams, patches, drains and ponding stains.
 //
 // makeBuilding(spec) -> GBuf, with .ax/.ay = the footprint's south-west corner on the ground.
 //   spec: { w, d, floors, style, seed, night 0..1, roof: 'flat'|'tile'|'terrace',
@@ -374,9 +375,10 @@ export function makeBuilding(spec) {
 
 // ---- flat roof decks (spec.roofMat) ------------------------------------------------------------------
 const DECK = { tar: ramp('#615c5c', 6, 3), gravel: ramp('#7c756c', 6, 3), membrane: ramp('#a29f99', 6, 3), metal: ramp('#7a838c', 6, 3),
-  paver: ramp('#908376', 6, 3), deck: MAT.woodDock, green: ramp('#5a7a3c', 6, 3), rubber: ramp('#4c494c', 6, 3) };
+  paver: ramp('#908376', 6, 3), deck: MAT.woodDock, green: ramp('#aca392', 6, 3), sedum: ramp('#4a4846', 6, 3), rubber: ramp('#4c494c', 6, 3) };
 const RUST = ramp('#8a5a3a', 6, 3), PAD = ramp('#b6b0a4', 6, 3);
 const SEDUM = [ramp('#6e8e3a', 6, 3), ramp('#8e6c3a', 6, 3), ramp('#4a6e3c', 6, 3), ramp('#9a5c4c', 6, 3)];
+const GPAVE = [ramp('#8e7258', 6, 3), ramp('#9a705c', 6, 3), ramp('#d870a0', 5, 2), ramp('#e8c848', 5, 2)];   // (a garden's decking, its clay pavers; sedum in flower)
 // the parapet's coping: stone on brick and stone, metal on glass and sheds, the wall's own colour on render
 function coping(style) {
   if (style === 'glass' || style === 'corrugated') return MAT.metal;
@@ -406,8 +408,9 @@ function roofDeck(G, spec, w, d, H, seed, style) {
   const mat = spec.roofMat, L = Math.max(0, spec.lip ?? 6), rw = Math.max(2, spec.rimW ?? 4), zD = H - L, C = coping(style);
   const rn = (i, k) => hash(i, k, seed + 313), iw = w - 2 * rw, id = d - 2 * rw;
   if (iw > 0 && id > 0) {
-    // per deck pixel: a shade (T) and which ramp (RI: 0 the material, 1 rust, 2 walkway pads, 3 gravel, 4-7 sedum)
-    const RS = [DECK[mat] || DECK.tar, RUST, PAD, DECK.gravel, SEDUM[0], SEDUM[1], SEDUM[2], SEDUM[3]], DI = [mat === 'gravel' || mat === 'paver' ? 0.3 : 0.5, 0.5, 0.5, 0.3, 0.6, 0.6, 0.6, 0.6];
+    // per deck pixel: a shade (T) and which ramp (RI: 0 the material, 1 rust, 2 walkway pads, 3 gravel, 4-7 sedum, 8 decking,
+    // 9 clay pavers, 10-11 sedum flowers, 12 membrane)
+    const RS = [DECK[mat] || DECK.tar, RUST, PAD, DECK.gravel, SEDUM[0], SEDUM[1], SEDUM[2], SEDUM[3], ...GPAVE, DECK.membrane], DI = [mat === 'gravel' || mat === 'paver' || mat === 'green' ? 0.3 : 0.5, 0.5, 0.5, 0.3, 0.6, 0.6, 0.6, 0.6, 0.5, 0.35, 0.3, 0.3, 0.5];
     const T = new Float32Array(iw * id), RI = new Uint8Array(iw * id), F = (sx, sy, s) => noiseField(w, d, sx, sy, s);
     const each = (fn) => { for (let v = 0, i = 0; v < id; v++) for (let u = 0; u < iw; u++, i++) fn(u, v, i, u + rw, v + rw); };
     switch (mat) {
@@ -420,13 +423,39 @@ function roofDeck(G, spec, w, d, H, seed, style) {
       }
       case 'paver': each((u, v, i) => { const px = u % 20, py = v % 20; T[i] = px === 0 || py === 0 ? 0.24 : 0.5 + (hash(Math.floor(u / 20), Math.floor(v / 20), seed) - 0.5) * 0.24 + (px === 1 || py === 1 ? 0.06 : 0); }); break;
       case 'deck': each((u, v, i) => { const pl = v % 6; T[i] = 0.55 + (hash(Math.floor(u / 48 + (Math.floor(v / 6) & 1) * 0.5), Math.floor(v / 6), seed) - 0.5) * 0.25 + (pl === 0 ? -0.3 : pl === 1 ? 0.08 : 0); }); break;
-      case 'green': {                                                          // a sedum mat, a gravel margin and one service path
-        const A = F(9, 9, seed + 8), B = F(4, 4, seed + 7);
+      case 'green': {                                                          // a roof garden's paving, a gravel strip along the parapets and its edging
+        // (spec.gzone [x0, y0, x1, y1]: a big roof's garden is a terrace on part of it - the rest is membrane)
+        const f = hash(seed, 3, 41), A = F(30, 30, seed + 4), Z = spec.gzone;
         each((u, v, i, x, y) => {
           const h1 = hash(x, y, seed + 2);
-          if (Math.min(u, v, iw - 1 - u, id - 1 - v) < 7 || Math.abs(u - (iw >> 1)) < 4) { RI[i] = 3; T[i] = 0.5 + (h1 > 0.8 ? 0.2 : h1 < 0.15 ? -0.2 : 0); return; }
-          const j = y * w + x, pv = A[j], tuft = hash(x >> 1, y >> 1, seed + 6);
-          RI[i] = h1 > 0.985 ? 7 : pv > 0.72 ? 6 : pv < 0.2 && tuft > 0.5 ? 5 : 4; T[i] = h1 > 0.985 ? 0.75 : 0.42 + (tuft - 0.5) * 0.3 + (B[j] - 0.5) * 0.2;
+          if (Z && (x < Z[0] || y < Z[1] || x >= Z[2] || y >= Z[3])) { const s = u % 46; RI[i] = 12; T[i] = 0.56 + (A[y * w + x] - 0.5) * 0.12 + (h1 > 0.97 ? 0.08 : 0) + (s === 0 ? 0.12 : s === 1 ? -0.08 : 0); return; }
+          const e = Z ? Math.min(u, v, iw - 1 - u, id - 1 - v, x - Z[0], y - Z[1], Z[2] - 1 - x, Z[3] - 1 - y) : Math.min(u, v, iw - 1 - u, id - 1 - v), p = u - 8, q = v - 8;
+          if (e < 6) { RI[i] = 3; T[i] = 0.5 + (h1 > 0.8 ? 0.2 : h1 < 0.15 ? -0.2 : 0); return; }
+          if (e < 8) { RI[i] = 2; T[i] = e === 6 ? 0.66 : 0.38; return; }
+          if (f < 0.55) {                                                      // big slabs in a stretcher bond
+            const row = Math.floor(q / 24), sx = p + (row & 1) * 12, a = sx % 24, b = q % 24;
+            T[i] = a < 2 || b < 2 ? 0.2 : 0.55 + (hash(Math.floor(sx / 24), row, seed) - 0.5) * 0.22 + (a === 2 || b === 2 ? 0.08 : 0) + (A[y * w + x] - 0.5) * 0.1;
+          } else if (f < 0.85) {                                               // decking, the butt joints staggered
+            const b = Math.floor(q / 6), pl = q % 6, sx = p + (b & 3) * 37;
+            RI[i] = 8; T[i] = 0.55 + (hash(Math.floor(sx / 54), b, seed) - 0.5) * 0.24 + (pl === 0 ? -0.3 : pl === 1 ? 0.08 : 0) + (sx % 54 === 0 ? -0.25 : 0);
+          } else {                                                             // clay pavers in a basket weave
+            const cx = Math.floor(p / 12), cy = Math.floor(q / 12), hz = (cx + cy) & 1, a = hz ? q % 12 : p % 12, b = hz ? p % 12 : q % 12;
+            RI[i] = 9; T[i] = a % 4 === 0 || b === 0 ? 0.36 : 0.54 + (hash(cx * 3 + Math.floor(a / 4), cy, seed) - 0.5) * 0.16 + (A[y * w + x] - 0.5) * 0.12;
+          }
+        });
+        break;
+      }
+      case 'sedum': {                                                          // a sedum roof: trays of it in a grid, a gravel margin, a path of pads
+        const B = F(4, 4, seed + 7), alongX = iw >= id;
+        each((u, v, i, x, y) => {
+          const e = Math.min(u, v, iw - 1 - u, id - 1 - v), h1 = hash(x, y, seed + 2), pc = Math.abs(alongX ? v - (id >> 1) : u - (iw >> 1));
+          if (e < 9) { RI[i] = 3; T[i] = 0.5 + (h1 > 0.8 ? 0.2 : h1 < 0.15 ? -0.2 : 0); return; }
+          if (pc < 7) { const a = (alongX ? u : v) % 14; RI[i] = 2; T[i] = a > 11 || pc === 6 ? 0.22 : 0.55; return; }
+          const p = u - 9, q = v - 9, tx = Math.floor(p / 26), ty = Math.floor(q / 26), a = p % 26, b = q % 26;
+          if ((a < 2 || b < 2) && hash(x >> 1, y >> 1, seed + 12) > 0.3) { T[i] = a === 1 || b === 1 ? 0.48 : 0.26; return; }   // the trays' rims (the sedum spilling over them here and there)
+          const th = hash(tx, ty, seed + 11), pv = vnoise(tx, ty, 3, seed + 3) + (th - 0.5) * 0.3;   // (greens mostly, ochre and red in patches across trays)
+          RI[i] = pv < 0.5 ? 4 : pv < 0.66 ? 6 : pv < 0.8 ? 5 : 7; T[i] = 0.42 + (hash(x >> 1, y >> 1, seed + 6) - 0.5) * 0.34 + (B[y * w + x] - 0.5) * 0.2 - (a === 2 || b === 2 ? 0.14 : 0);
+          if (th > 0.78 && hash(x >> 1, y >> 1, seed + 9) > 0.88) { RI[i] = 10 + ((tx + ty) & 1); T[i] = 0.6; }       // (in flower)
         });
         break;
       }
@@ -442,7 +471,7 @@ function roofDeck(G, spec, w, d, H, seed, style) {
       const pu = 6 + rn(k, 3) * (iw - 12 - pw) | 0, pv = 6 + rn(k, 4) * (id - 12 - ph) | 0;
       for (let v = pv; v < pv + ph; v++) for (let u = pu; u < pu + pw; u++) T[v * iw + u] += u === pu || v === pv ? 0.14 : -0.06;
     }
-    const nd = mat === 'green' || mat === 'deck' || iw < 40 || id < 40 ? 0 : 1 + Math.round(w * d / 40000);
+    const nd = mat === 'green' || mat === 'sedum' || mat === 'deck' || iw < 40 || id < 40 ? 0 : 1 + Math.round(w * d / 40000);
     for (let k = 0; k < nd; k++) {
       const du = 12 + rn(k, 5) * (iw - 24) | 0, dv = 12 + rn(k, 6) * (id - 24) | 0;
       for (let v = Math.max(0, dv - 13); v <= Math.min(id - 1, dv + 13); v++) for (let u = Math.max(0, du - 13); u <= Math.min(iw - 1, du + 13); u++) { const dd = Math.sqrt((u - du) * (u - du) + (v - dv) * (v - dv)); if (dd < 14) T[v * iw + u] -= dd < 2.5 ? 0.45 : (1 - dd / 14) * 0.14; }
