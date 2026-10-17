@@ -1,0 +1,2179 @@
+# World concepts WC001-WC323: the catalogue
+
+The owner's 323 world-design concepts of 2026-10-17 (made from the World Building Prompt Pack, mostly zoomed-out planning views of about 2 x 1.2 km), filed here as `WCnnn.jpg`. Original file names: see the index at the end. Each entry: what it shows, where it goes in World v3b, what it feeds in the World v3 Handcraft Plan, and what the rules leave out when it's built (children, schools, colleges, playgrounds, school buses, real brands, flags and place names, copies of real landmarks).
+
+## By place
+
+- **Downtown:** WC011, WC013, WC023, WC054, WC055, WC074, WC083, WC084, WC215, WC228, WC243, WC244, WC253, WC258, WC274, WC283, WC284, WC291, WC321, WC323
+- **Civic Center:** WC071, WC242, WC253, WC284, WC323
+- **Neon Strip:** WC011, WC012, WC157, WC238, WC283
+- **Pink Mile:** WC046, WC047, WC237
+- **Arts District:** WC070, WC110, WC239, WC292, WC315
+- **Bayside Heights:** WC005, WC006, WC076, WC082, WC085, WC113, WC235, WC307
+- **Midtown:** WC066, WC073, WC086, WC087, WC151, WC157, WC159, WC241
+- **Harbor:** WC003, WC004, WC040, WC045, WC057, WC059, WC072, WC086, WC087, WC093, WC150, WC158, WC159, WC204, WC219, WC232, WC277, WC278, WC316
+- **Old Town:** WC014, WC025, WC056, WC158, WC222, WC224, WC240, WC278, WC289, WC290
+- **Northgate:** WC002, WC069, WC089, WC292, WC298, WC315
+- **Stadium District:** WC067, WC167, WC226, WC254, WC313, WC318
+- **The Yards:** WC001, WC003, WC009, WC010, WC051, WC088, WC152, WC154, WC233, WC289, WC290
+- **Westport Center:** WC065, WC281, WC282
+- **Port Westport:** WC004, WC042, WC043, WC044, WC219, WC230, WC231, WC254, WC281, WC282
+- **Old Quarter:** WC155
+- **West Hills:** WC008, WC089, WC168, WC288
+- **Westport International:** WC041, WC168, WC225, WC309, WC310
+- **Lake District:** WC080, WC091, WC223, WC252, WC314
+- **Falls Center:** WC064, WC252
+- **Cedar Falls:** WC007, WC008, WC075, WC234, WC288
+- **Sunset Beach:** WC063, WC209, WC221, WC227, WC279, WC298
+- **Pine Hills:** WC078, WC279
+- **Southside:** WC010, WC050
+- **Pelican Key:** WC060, WC180, WC205, WC249
+- **Coral Cay:** WC034, WC058, WC156, WC178, WC180, WC203, WC249
+- **Gull Harbor:** WC040, WC059, WC204, WC277, WC316
+- **Prison Island:** WC048, WC108, WC248
+- **Northshore:** WC061, WC090, WC133, WC176, WC192, WC220, WC256, WC287, WC308
+- **North Point:** WC140, WC222, WC287
+- **The Bluffs:** WC029, WC306
+- **Willow Valley:** WC039, WC091, WC096, WC111, WC115, WC120, WC142, WC148, WC185, WC188, WC189, WC190, WC191, WC256, WC259, WC276, WC286, WC295, WC317
+- **Willow Crossing:** WC037, WC090, WC095, WC096, WC111, WC149, WC175, WC187, WC202, WC217, WC267, WC276, WC295, WC320
+- **Kestrel Lake:** WC039, WC093, WC185, WC189, WC259
+- **Long Reach:** WC187, WC217, WC267
+- **Highland Woods:** WC028, WC094, WC106, WC126, WC130, WC131, WC132, WC134, WC135, WC138, WC139, WC143, WC145, WC153, WC160, WC165, WC169, WC186, WC194, WC197, WC199, WC201, WC247, WC285, WC301, WC311, WC312
+- **Timber Bend:** WC038, WC109, WC126, WC199, WC202, WC218, WC257, WC268, WC272, WC297, WC301, WC311
+- **Granite Peaks:** WC027, WC032, WC094, WC104, WC124, WC125, WC128, WC141, WC147, WC153, WC160, WC161, WC165, WC172, WC195, WC196, WC245, WC260, WC261, WC271, WC273, WC285, WC296
+- **Egret:** WC031, WC036, WC049, WC052, WC112, WC171, WC193, WC207, WC250, WC263, WC270, WC293
+- **Red Rock:** WC026, WC117, WC118, WC120, WC121, WC122, WC163, WC173, WC174, WC181, WC182, WC183, WC184, WC255, WC275, WC300, WC305, WC322
+- **Copper Gulch:** WC053, WC123, WC164, WC206, WC211, WC255, WC266, WC275, WC294, WC300, WC304
+- **Dusty Hollow:** WC033, WC095, WC117, WC119, WC174, WC210, WC214, WC262, WC265
+- **Route 9:** WC026, WC118, WC121, WC184, WC262, WC305, WC322
+- **Lucky Mesa:** WC054, WC055, WC074, WC079, WC114, WC116, WC212, WC213, WC215, WC216, WC258, WC274, WC291, WC299
+- **Sandpiper:** WC062, WC068, WC099, WC101, WC103, WC170, WC177, WC246, WC251, WC264, WC269, WC318, WC319
+- **Lighthouse Rock:** WC028, WC035, WC036, WC102, WC245
+- **Islets:** WC034, WC049, WC058, WC107, WC179
+- **Kits, near-duplicates and general references:** WC015, WC016, WC017, WC018, WC019, WC020, WC021, WC022, WC024, WC030, WC077, WC081, WC092, WC097, WC098, WC100, WC105, WC127, WC129, WC136, WC137, WC144, WC146, WC162, WC166, WC198, WC200, WC208, WC229, WC236, WC280, WC302, WC303
+
+## Batch, batch 1: WC001-WC081
+
+Note on the batch: WC001-WC025 come as **wide + close-up pairs** (a district view, then a street-level close-up of the
+same district), and many close-ups are repeated. Duplicates are flagged in each entry and listed at the end.
+
+- **WC001** · Night rail-and-port district under a freeway
+  - **Shows:** A grid of brick walk-ups cut diagonally by a curving elevated freeway; a small square with a fountain and a basketball court; a shop row with a bus; an elevated rail line along the east side with a covered station and a train; a container quay with stacks and two moored freighters at the bottom right; a civic building with a tennis court on the top edge.
+  - **Goes to:** The Yards (3) (rail-side, waterfront); fallback Harbor (8) back blocks.
+  - **Feeds:** city layout (diagonal freeway over a grid), rail viaduct with station (missing), port edge, neighbourhood type (walk-ups).
+  - **Rule flags:** a national flag on the civic building - make it generic or leave it off.
+- **WC002** · Street close-up: laundromat, grocer, coffee shop
+  - **Shows:** Street-level close-up of WC001's walk-ups: brownstone stoops, a laundromat with a washer sign, a fruit-and-veg grocer with crates out front, a neon coffee shop, a glass bus shelter, a bike rack, delivery scooters, a bus; rooftops below with a water tank, a roof garden with string lights and a satellite dish.
+  - **Goes to:** general kit/reference (dense residential street); used in The Yards (3) / Northgate (2).
+  - **Feeds:** laundromat exterior (missing), corner grocer, bus stop, rooftop dressing, NPC life (deliveries).
+  - **Rule flags:** none (the figure at the bus stop should read as an adult). **Pair of WC001; near-duplicate of WC015.**
+- **WC003** · Foggy fish-dock rail yard
+  - **Shows:** A waterfront freight yard at night in fog: long timber quays with fishing trawlers, two blue fish-processing sheds (fish signs), container stacks, a gantry crane, fuel tanks, a freight train with locomotive running along the yard's middle, sidings, a fenced truck depot; a road on a viaduct curves over the top-right to a town block.
+  - **Goes to:** Harbor (8) industrial end / The Yards (3) where the freight spur meets the water; fallback Port Westport (26).
+  - **Feeds:** rail yard with sidings (missing), freight spur, fish sheds, fog weather mood.
+  - **Rule flags:** none.
+- **WC004** · Close-up: fish warehouse, gate, freight train
+  - **Shows:** Close-up of WC003: a fish warehouse loading bay (crates of ice and fish, a worker hosing down, forklift), a reefer truck in a dock door, a guard hut with a barrier gate, a freight train (locomotive, boxcar, tank car) crossing the yard, corrugated rusted roofs and containers in front, gulls.
+  - **Goes to:** general kit/reference (port/fish-dock pieces) for Harbor (8) / Port Westport (26).
+  - **Feeds:** fish-market back-of-house, port gate (missing), freight train at street level, crate/cargo props.
+  - **Rule flags:** none. **Pair of WC003; near-duplicates WC016, WC018.**
+- **WC005** · Luxury clifftop palm boulevard with villas
+  - **Shows:** A Mediterranean luxury quarter: a curving palm-median boulevard along a clifftop, gated villas with pools and fountain courtyards, a grand hotel with a café terrace and a drop-off, a domed gazebo on the cliff edge, a stone-railed seaside promenade with stairs down to a small sandy cove, a tennis court.
+  - **Goes to:** Bayside Heights (16) (the clifftop overlook promenade, estate crescents); fallback The Bluffs (34).
+  - **Feeds:** luxury neighbourhood type, clifftop promenade, hidden cove, mansions/homes, hotel drop-off.
+  - **Rule flags:** none.
+- **WC006** · Close-up: gated villa and hotel drop-off
+  - **Shows:** Close-up of WC005: a curving palm-median road, a gated villa with a guard booth and gardener, a hotel door with a doorman, a limousine and valet, a café terrace, a convertible and sports car, red-tile roofs with a rooftop pool below.
+  - **Goes to:** general kit/reference for Bayside Heights (16).
+  - **Feeds:** gated estate entrance, hotel drop-off, rich NPC life (valet, gardener, jogger).
+  - **Rule flags:** none. **Pair of WC005; near-duplicates WC017, WC019.**
+- **WC007** · Suburb of crescents, creek and shopping strip
+  - **Shows:** Curving crescents and a cul-de-sac with houses and backyard pools; a wooded creek with a footbridge; a small park with a gazebo and play equipment; a strip of shops on a car park; a brick building with a sports field and parked yellow buses; a busy avenue of brick blocks on the east edge.
+  - **Goes to:** Cedar Falls (35); fallback West Hills (28).
+  - **Feeds:** suburb neighbourhood type (crescents, cul-de-sacs), creek greenway, strip mall, homes.
+  - **Rule flags:** **playground**, **school with school buses and playing fields** - leave out (make the park a plain park; the building something else).
+- **WC008** · Close-up: suburban street with yard sale
+  - **Shows:** Close-up of WC007: front lawns and porches, a garage yard sale, a man mowing, a sprinkler, a mail van and a carrier at a row of mailboxes, a for-sale sign, wheelie bins, a cyclist, a dog walker, solar panels and a basketball hoop on the roofs below.
+  - **Goes to:** general kit/reference (suburban street) for Cedar Falls (35) / West Hills (28).
+  - **Feeds:** suburban NPC life (yard sale, mail, mowing), homes, street props.
+  - **Rule flags:** **children** (two walking, a cyclist, a tire swing) - leave out; the mail van copies a **real postal service's livery** and a **national flag** hangs on a porch - make generic. **Pair of WC007; near-duplicate WC020.**
+- **WC009** · Rough rail-side district by the docks
+  - **Shows:** A grid of brick tenements and wooden houses between a freight railway (top right, a train on a curve, sidings, warehouses, a water tower, tanks) and a timber quay with a tug and a container crane; vacant rubble lots and a fenced trailer/shack yard; a red-brick church; a small park with a gazebo and a court; bus on a wide avenue.
+  - **Goes to:** The Yards (3) (rail sidings, trailer park, waterfront); fallback Southside (6).
+  - **Feeds:** rough neighbourhood type, rail yard/sidings, vacant lots, trailer park by the tracks, quay.
+  - **Rule flags:** none.
+- **WC010** · Close-up: rough street, liquor, boarded café
+  - **Shows:** Close-up of WC009: cracked potholed street, a liquor store with a bottle neon, a pawn/cash shop, a boarded-up café with graffiti, a barber, a storefront church, a vacant lot behind a chain-link fence with a mattress and shopping cart, a police car, a bus shelter, sagging power lines, weedy rooftops.
+  - **Goes to:** general kit/reference (rough street) for Southside (6) / The Yards (3).
+  - **Feeds:** rough street dressing (potholes, boarded fronts, overhead wires), NPC life, police patrols.
+  - **Rule flags:** none. **Pair of WC009; near-duplicate WC021.**
+- **WC011** · Whole coastal metro: towers, canals, port, pier
+  - **Shows:** An overview of a whole city: glass towers round a park with a lake; a canal grid running down to a port of red cranes; a neon nightlife strip; a beach pier with a Ferris wheel and a lighthouse on a breakwater; hillside suburbs with a domed observatory and a tunnel; vineyards and a mountain highway on the west edge; a coastal freeway on viaducts.
+  - **Goes to:** general reference for the Gulf Island + mainland city as a whole (Downtown 4, Port Westport 26, Neon Strip 7, Sunset Beach 10); the observatory suits West Hills (28) or the hills above Bayside Heights.
+  - **Feeds:** city layout (how districts blend), canals, pier with Ferris wheel, observatory landmark, port.
+  - **Rule flags:** the observatory and pier closely echo real landmarks - keep generic.
+- **WC012** · Close-up: rain-soaked neon nightlife street
+  - **Shows:** A wet night street of neon fronts: Club Nova with a velvet-rope queue and bouncers, Moon Burger, Ink & Roses tattoo, Pixel Palace arcade, Karaoke Lily; a hot-dog cart, three taxis, a purple lowrider, a cop on foot; rooftops with a pink flamingo neon and a water tower.
+  - **Goes to:** Neon Strip (7) (the four-corner nightlife crossroads); fallback The Pink Mile (17).
+  - **Feeds:** nightclub exterior (missing), arcade, karaoke, NPC night life, taxis, sign names.
+  - **Rule flags:** none (names invented). **Pair of WC011 (by order); near-duplicate WC022.**
+- **WC013** · Downtown towers, fountain plaza, waterfront
+  - **Shows:** A downtown core: glass and stone towers, a grand hotel with a drop-off loop facing a fountain plaza across a wide palm-median boulevard, a domed copper-roofed bank, roof gardens, a car-park ramp into a building, a waterfront promenade on a canal/harbour with a bridge and a moored yacht.
+  - **Goes to:** Downtown (4) (round Greenfield Park, the Grand Neon Hotel's drop-off, the corner bank); fallback Westport Center (23).
+  - **Feeds:** downtown block type, hotel drop-off, bank (heist target), garage ramps, waterfront edge.
+  - **Rule flags:** none.
+- **WC014** · Old brick quarter: cobbles, church, quay
+  - **Shows:** A night old town of brick walk-ups on cobbled streets: a stone church with a green spire, a statue on a small round plaza, pubs and shops with awnings, a timber quay with fishing boats and a jetty on the west, back lanes with parking yards, a bus.
+  - **Goes to:** Old Town (18) (the river-mouth quay, the piazza with church and statue); fallback Old Quarter (30).
+  - **Feeds:** cobbled lanes, church square, river-mouth quay (missing), old pub, neighbourhood type.
+  - **Rule flags:** none.
+- **WC015** · Near-duplicate of WC002 (laundromat street)
+  - **Shows:** Same street as WC002: laundromat, grocer, noodle bar, stoop, bus, delivery scooter, roof garden with a water tank.
+  - **Goes to:** as WC002.
+  - **Feeds:** as WC002.
+  - **Rule flags:** none. **Near-duplicate of WC002.**
+- **WC016** · Near-duplicate of WC004 (fish warehouse)
+  - **Shows:** Same fish warehouse, guard gate and freight train as WC004, with a flagman and a truck at the gate.
+  - **Goes to:** as WC004.
+  - **Feeds:** as WC004.
+  - **Rule flags:** none. **Near-duplicate of WC004.**
+- **WC017** · Near-duplicate of WC006 (villa and hotel)
+  - **Shows:** Same palm-median road, gated villa with guard and gardener, hotel with doorman and limo as WC006.
+  - **Goes to:** as WC006.
+  - **Feeds:** as WC006.
+  - **Rule flags:** none. **Near-duplicate of WC006.**
+- **WC018** · Near-duplicate of WC004 (fish warehouse, level crossing)
+  - **Shows:** The fish warehouse and anchor-sign shed with a forklift and reefer truck; adds a level-crossing signal on the yard track and stacked containers with a yellow crane.
+  - **Goes to:** as WC004.
+  - **Feeds:** as WC004, plus level crossing in a port yard.
+  - **Rule flags:** none. **Near-duplicate of WC004/WC016.**
+- **WC019** · Near-duplicate of WC006 (villa and hotel)
+  - **Shows:** Same scene as WC006/WC017; adds a rooftop pool deck with loungers and a pergola.
+  - **Goes to:** as WC006.
+  - **Feeds:** as WC006.
+  - **Rule flags:** none. **Near-duplicate of WC006.**
+- **WC020** · Near-duplicate of WC008 (suburban yard sale)
+  - **Shows:** Same suburban street: yard sale, car wash on a drive, mowing, mail van and carrier, for-sale sign, solar roof, basketball hoop.
+  - **Goes to:** as WC008.
+  - **Feeds:** as WC008.
+  - **Rule flags:** as WC008 (**children**, real postal livery, national flag). **Near-duplicate of WC008.**
+- **WC021** · Near-duplicate of WC010 (rough street)
+  - **Shows:** Same rough street: Liquor, Checks Cashed, a boarded Diner, Barber, New Hope Church, a vacant lot, a battered bus, shoes hanging on the power line.
+  - **Goes to:** as WC010.
+  - **Feeds:** as WC010 (adds sign names).
+  - **Rule flags:** none. **Near-duplicate of WC010.**
+- **WC022** · Near-duplicate of WC012 (neon street)
+  - **Shows:** Same wet neon street: crown club with a queue, burger bar, skull-and-roses tattoo, arcade, karaoke mic, hot-dog cart, taxis, lowrider, flamingo and palm neon on the roofs.
+  - **Goes to:** as WC012.
+  - **Feeds:** as WC012.
+  - **Rule flags:** none. **Near-duplicate of WC012.**
+- **WC023** · Close-up: downtown bank, hotel, armored truck
+  - **Shows:** Street-level downtown: a columned bank with guards and an armored truck loading, a grand hotel with a doorman and luggage cart, a jeweller, a café terrace, a newsstand, a busker, a fountain, a bus shelter; a planted median; a car-park entrance ramp in the buildings below.
+  - **Goes to:** Downtown (4) (the corner bank with the armored-truck yard, the jeweller); pairs with WC013.
+  - **Feeds:** bank heist set-up, armored truck route, hotel, jeweller, garage ramp, NPC life.
+  - **Rule flags:** none.
+- **WC024** · Near-duplicate of WC023 (downtown bank street)
+  - **Shows:** Same downtown street as WC023 with a palm median, the armored truck parked, the fountain and garage ramp on the right.
+  - **Goes to:** as WC023.
+  - **Feeds:** as WC023.
+  - **Rule flags:** none. **Near-duplicate of WC023.**
+- **WC025** · Close-up: rainy old-town street, pawn and pub
+  - **Shows:** A wet cobbled street at night: a pub with a beer-mug neon, a bakery, a laundromat, a locksmith (key sign), a pawn shop behind a folding gate, an alley with a fire escape and dumpster; a taxi, a delivery van and scooter; rooftops with a water tank.
+  - **Goes to:** Old Town (18); pairs with WC014.
+  - **Feeds:** old pub exterior (missing), laundromat, pawn shop, rain weather mood, alley.
+  - **Rule flags:** two small figures outside the pub - draw as adults.
+- **WC026** · Red-rock desert: dam, arch, boneyard, drive-in
+  - **Shows:** A red-rock canyon country crossed by a highway on a bridge over a river gorge: a concrete dam holding a reservoir at the top, a natural rock arch over the river, oil pump jacks and a water tower, a roadside motel with a pool, a neon diner and gas stop with a truck, a water park, an aircraft boneyard with hangars and old airliners, a drive-in cinema with its screen, a small airstrip with a control tower and light planes.
+  - **Goes to:** Red Rock Desert (50) along Route 9 (the dam 5245, 2160); fallback Dusty Hollow (64) outskirts.
+  - **Feeds:** desert region layout, the dam, rivers/canyons, venues (drive-in, water park, boneyard), airstrip, roadside stops.
+  - **Rule flags:** none.
+- **WC027** · Granite mountains: falls, viaduct, mine, hot springs
+  - **Shows:** A granite mountain gorge: a lake spilling over a tall waterfall into a rocky river, the railway crossing the gorge on a stone viaduct between two tunnel portals, a switchback road with a stone bridge, a granite quarry with cut blocks and an excavator, a mine portal with ore carts and a spoil heap, a domed observatory, three wind turbines, a fire lookout tower, hot springs pools with a bathhouse, a campground with tents and a fire, standing stones.
+  - **Goes to:** Granite Peaks (48) (the waterfalls and mountain lakes, the R1 chain); fallback Highland Woods (47).
+  - **Feeds:** mountains, waterfalls, rivers, train ride (viaduct + tunnels), mine, quarry, hot springs, campground, lookout tower, observatory.
+  - **Rule flags:** none.
+- **WC028** · Redwood coast highway: falls, lighthouse, lake camp
+  - **Shows:** A two-lane coast road snakes along a rocky sea-stack coast through giant redwoods; it crosses a gorge on a stone bridge just below a two-step waterfall that runs on down a rocky ravine to the sea. Above: a lake with a cabin lodge, boat dock, campfire and tents; a radio mast; a lighthouse with keeper's house on the headland; a roadside gas station + store; a big log lodge with a car park. Below the road the main line runs on a trestle with a small wooden halt and a train.
+  - **Goes to:** Highland Woods (47) where it meets the north-west coast (North Cape / Lighthouse Rock 19 side); fallback Granite Peaks (48) coastal edge.
+  - **Feeds:** coast road, waterfalls/rivers to the sea, forest (redwoods), campgrounds, lake lodge, train ride (scenic halt), lighthouse.
+  - **Rule flags:** none.
+- **WC029** · Autumn headland: golf links, cliffs, wind farm, bridge
+  - **Shows:** A headland in autumn colours ringed by sea cliffs and stacks: a winding coast road with a lodge and campground, a clifftop golf course with a creek and clubhouse car park, a small farm with crop plots and a cabin cluster, a logging clearing with stacked timber, three wind turbines on the far point, and a long road bridge on piers leaving east over the sea. A waterfall drops off the cliff straight into the sea; small beaches in coves.
+  - **Goes to:** The Bluffs (34) / North coast headlands (4.9: North Cape, Windy Point); fallback Highland Woods coast.
+  - **Feeds:** coast/headland, golf course venue, wind turbines (Windy Point), sea-cliff waterfall, coves, bridge to an island.
+  - **Rule flags:** none.
+- **WC030** · Near-duplicate of WC029 (same headland)
+  - **Shows:** Same scene as WC029 with small differences (a few more cabins on the south-west shore, slightly different crop). Use WC029/030 together.
+  - **Goes to:** as WC029.
+  - **Feeds:** as WC029.
+  - **Rule flags:** none. **Near-duplicate of WC029.**
+- **WC031** · Marsh causeway road with stilt shacks
+  - **Shows:** A single narrow road runs straight across a tidal marsh on a causeway with short bridges over the channels; reed islands, braided tidal creeks, palms and pines. Stilt fishing shacks with tin roofs sit on piers with rowboats; a long boardwalk crosses the reeds; a birdwatching platform on the rock headland; egrets; pickups parked at a dirt turnout.
+  - **Goes to:** Egret Coast (53) marsh, the road out to Egret Point (65).
+  - **Feeds:** marsh/water, causeway road, fishing places, birdwatching, shacks on docks.
+  - **Rule flags:** none.
+- **WC032** · Sea-cliff camp trail along granite bluffs
+  - **Shows:** A dirt trail runs along a terraced line of grey granite cliffs over a stack-studded sea; two wild campsites (tent, fire ring, crates, log seat) on the clifftops; stone pines and scrub. No buildings or roads.
+  - **Goes to:** North coast headlands (North Cape) or Granite Peaks' coastal edge; fallback Egret Rocks (56).
+  - **Feeds:** trails / dirt bike tracks, wild camping, cliff terrain kit.
+  - **Rule flags:** none.
+- **WC033** · Desert ghost-town main street
+  - **Shows:** A dirt main street lined by weathered timber false-front shacks with rusted tin roofs, some roofless; a saloon with a cow-skull sign, a lean-to market, a windmill pump, a water tower, a lone gas pump, a rusted abandoned car, a red pickup, cacti, tumbleweeds, a few drifters.
+  - **Goes to:** Dusty Hollow (64), the ghost town; fallback Copper Gulch edge.
+  - **Feeds:** the missing ghost-town street (boarded false fronts), desert town, NPC life (drifters), loot spots.
+  - **Rule flags:** none.
+- **WC034** · Tiny palm atoll in a reef ring
+  - **Shows:** A small sand island with a palm grove in the middle, driftwood, boulders, ringed by shallow turquoise reef with coral heads and a deep-blue drop-off.
+  - **Goes to:** The Islets (20) / a reef islet near Coral Cay (44); general kit for small islands.
+  - **Feeds:** islands, reef shallows, water colours.
+  - **Rule flags:** none.
+- **WC035** · Island-hopping causeway to a lighthouse
+  - **Shows:** A narrow winding road hops across three granite islets on low stone bridges and a causeway to a lighthouse with a red-roofed keeper's house and a boat landing; small coves with beaches, pines, rocky shallows; a small red day-marker beacon on an outer rock.
+  - **Goes to:** Lighthouse Rock (19) reached from the coast; fallback North Point Light approach / Sandpiper Point Light.
+  - **Feeds:** islands, bridges, lighthouse set piece, coast road, scenic drive.
+  - **Rule flags:** none.
+- **WC036** · Bare granite seabird islet
+  - **Shows:** A rocky islet of slab granite with a few wind-bent pines, a sheltered tide pool, a driftwood log, gulls on the rocks; kelp-dark shallows round it.
+  - **Goes to:** The Islets (20) / Egret Rocks (56) / Lighthouse Rock outliers.
+  - **Feeds:** islands (rocks and islets), seabirds, tide pools.
+  - **Rule flags:** none.
+- **WC037** · Farm-town crossroads main street
+  - **Shows:** A crossroads farm town: grain silos and elevator with a grain truck, a farmers' market of tented stalls, a feed store, two gas stations, a strip of shops (grocery, hardware, clothes, café) on a car park, a café/pizza/burger row, sheriff, clinic, a white steepled church with a graveyard, cattle pastures and red barns at the edges.
+  - **Goes to:** Willow Crossing (58); fallback Cedar Farms (38).
+  - **Feeds:** the missing farm-town main street, grain elevator, farmers' market, church, NPC life.
+  - **Rule flags:** none (a US-style flag on the sheriff - draw a generic one; generic logos only).
+- **WC038** · Logging-town main street with sawmill
+  - **Shows:** A forest town on a grid of two streets: a sawmill with log decks and a log truck at the top, a diner with neon coffee cup, a log lodge with an antler sign, a gas station, a two-storey motel, a hardware/outfitter, bait-and-tackle (fish sign), a hunting store (deer sign), a clinic, a sheriff, a shop row (grocery, liquor); a bridge over a rocky river at the bottom; stumps and log piles in the woods.
+  - **Goes to:** Timber Bend (57).
+  - **Feeds:** the missing logging-town main street, sawmill, river crossing, NPC life.
+  - **Rule flags:** a US flag on the sheriff - make it generic.
+- **WC039** · River valley farms with lock, weir and station
+  - **Shows:** A river valley: a canal lock with a lock-keeper's house and a weir/waterfall beside it; a farm road along the river; red barn and silo, vineyard rows with a stone winery, lavender, sunflower and vegetable plots, hay bales; a lake with a wooded island campground and a marina; an RV park; a country station with a train on the main line; a highway down the left with a bridge over the river.
+  - **Goes to:** Willow Valley (49) along the Long Reach (R4), near Kestrel Lake; fallback Cedar Farms (38).
+  - **Feeds:** rivers (lock and weir, navigable channel), farm fields, vineyard/winery, lake island, train ride (country station), RV park.
+  - **Rule flags:** none.
+- **WC040** · Farm island with level crossing and bridge
+  - **Shows:** A small island farmland cut by one straight road: a level crossing on the main line with a train and a halt, a farmhouse, a big red barn farm shop with produce stalls and pickups, a silo, cows in a paddock, lavender, wheat and vegetable rows, a farmhouse café; a road bridge crosses the lower island; a fishing jetty and small beacon on the south tip; a dock with a boat at the top.
+  - **Goes to:** The ferry island Gull Harbor (43) farmland; fallback Willow Valley.
+  - **Feeds:** islands ("unique communities"), farm shop, level crossing, train ride.
+  - **Rule flags:** none.
+- **WC041** · Island airport on a seawall platform
+  - **Shows:** An airport on a reclaimed platform with a rock-armoured seawall: one runway along the east side, apron with three hangars and four small airliners, a control tower and terminal with a taxi rank and car park, a rail spur with a station along the west seawall, approach lights and windsocks; a causeway bridge (road plus rail) leaving south.
+  - **Goes to:** Westport International (27) (its terminal, apron and rail link); fallback Lucky Mesa airstrip (larger).
+  - **Feeds:** airport venue, rail link station, seawall.
+  - **Rule flags:** none.
+- **WC042** · Container quay with cranes, scrapyard, biker bar
+  - **Shows:** A container ship at a quay with four red gantry cranes and straddle carriers; a truck road beside the quay; container stacks, a warehouse, a gated port office, a scrapyard with a crane, a bowling alley (pin sign), a skull-signed biker clubhouse with motorbikes; a road bridge along the bottom.
+  - **Goes to:** Port Westport (26); fallback Harbor (8) / The Yards (3).
+  - **Feeds:** port layout, scrapyard, bowling venue, gang hideout (biker club), port gate.
+  - **Rule flags:** none.
+- **WC043** · Container port edge under an elevated road
+  - **Shows:** The same port theme as WC042 drawn tighter: cranes over the ship, container stacks numbered on the apron, a port gate with barrier under an elevated highway on pillars, an anchor-sign warehouse, a scrapyard, a bowling alley with neon pins, a skull-mural biker bar, tugboats moored at the quay.
+  - **Goes to:** Port Westport (26).
+  - **Feeds:** port, port gate/customs set piece (missing), elevated road over the port, tugs.
+  - **Rule flags:** none. **Near-duplicate theme of WC042/WC044 (same prompt, different crop).**
+- **WC044** · Container quay strip, portrait crop
+  - **Shows:** Portrait version of WC042: ship and four cranes along the quay, truck road with gated entry at the bottom, warehouses, scrapyard, bowling alley with star neon, biker compound, the road bridge at the bottom.
+  - **Goes to:** Port Westport (26).
+  - **Feeds:** as WC042.
+  - **Rule flags:** none. **Near-duplicate of WC042.**
+- **WC045** · Fish market quay with seafood restaurant
+  - **Shows:** A quay corner: a big teal-roofed fish market hall (fish sign) with crates and forklifts, a smaller shed, a corner deli, a crab-sign seafood restaurant with umbrella terrace on the quay; fishing trawlers moored at timber piers with stairs down; a curved road and ramp along the top.
+  - **Goes to:** Harbor (8) - the fish market on the quay; fallback North Point (32).
+  - **Feeds:** the missing fish-market exterior, seafood restaurant, piers, NPC life (fishermen).
+  - **Rule flags:** none.
+- **WC046** · Neon red-light waterfront under the overpass
+  - **Shows:** A tight grid of brick blocks on a waterfront promenade under a curving elevated highway: neon strip clubs (pin-up dancer signs), a motel, a lingerie/dress shop, a tattoo/rose sign, a dragon-sign shop, a ramen bar, a fish bar, a small plaza with a tree and string lights, a statue on the promenade.
+  - **Goes to:** The Pink Mile (17); fallback Neon Strip (7).
+  - **Feeds:** red-light/lounge storefront set (missing), motel, promenade, NPC life at night.
+  - **Rule flags:** adult signage (dancer silhouettes) - keep it suggestive at most; none otherwise.
+- **WC047** · Near-duplicate of WC046 (Pink Mile waterfront)
+  - **Shows:** Same block from a slightly different angle: strip clubs with dancer signs, motel, lingerie, suit shop, dragon tattoo, ramen terrace, fish bar, fountain plaza, boats at a jetty under the overpass.
+  - **Goes to:** The Pink Mile (17).
+  - **Feeds:** as WC046.
+  - **Rule flags:** as WC046. **Near-duplicate of WC046.**
+- **WC048** · Prison island fortress with ferry pier
+  - **Shows:** A walled prison: four guard towers on the corners, six cell blocks in two rows with yards and a basketball court, a single gate with a sally port; outside: the warden's house in a walled garden, a staff building, a ferry pier with the prison boat and a patrol boat, a striped lighthouse with keeper's cottage on the point; rocks all round.
+  - **Goes to:** Prison Island (55).
+  - **Feeds:** prison set piece, ferry/boat landing, lighthouse.
+  - **Rule flags:** none.
+- **WC049** · Smugglers' boathouse on a rock islet
+  - **Shows:** A small rocky islet with a single boathouse over a slip holding a boat, a timber jetty with a winch, tarp-covered crates, barrels, a rowboat on the beach, two men; steps up the rocks.
+  - **Goes to:** The Islets (20) or Egret Rocks (56); a hidden spot near the quiet key Coral Cay.
+  - **Feeds:** smuggling/loot spot (extraction), islets, boathouse.
+  - **Rule flags:** none.
+- **WC050** · Rough waterfront district with palm boulevard
+  - **Shows:** A dense grid of low brick blocks and shacks on a point between a canal/basin (top) and the sea: a palm-median boulevard runs down the middle to a waterfront park with a statue; a police station, a hospital, a strip mall (grocery, pawn/barber), a bank, a subway entrance, pawn and gun shops, laundry lines, a fenced basketball court with graffiti, tin-roof shanties along a pier at the tip.
+  - **Goes to:** Southside (6); fallback The Yards (3).
+  - **Feeds:** rough neighbourhood type, shanty/projects, palm boulevard, gang turf, subway kiosk.
+  - **Rule flags:** none.
+- **WC051** · Dockside warehouse pier with club and building site
+  - **Shows:** A rectangular pier block surrounded by water: rail sidings with box cars along the top, warehouses, a strip of shops (gun, outdoor, hardware, clothes), a neon music club, a walled gang compound with graffiti, a construction site with a tower crane, a shanty yard; moored tug and barge; a gantry crane on the north-west jetty.
+  - **Goes to:** The Yards (3) waterfront; fallback Harbor (8) back blocks.
+  - **Feeds:** rail yard/sidings, construction site (missing), gang hideout, nightclub, warehouses.
+  - **Rule flags:** none.
+- **WC052** · Marsh fishing village with dirt raceway
+  - **Shows:** A fishing village on stilts at the edge of a marsh: colourful tin-roof shacks, a bait shop with fish sign, a pub (beer sign), timber piers with trawlers and a crane, a boardwalk across the reeds to a striped lighthouse on rocks; behind the village a dirt oval raceway with grandstands, pit garage and trucks; a curving road with pickups and palms.
+  - **Goes to:** Egret Point (65) - village, Egret Point Light and its raceway.
+  - **Feeds:** fishing-village street (missing), raceway venue, lighthouse, marsh boardwalk, piers.
+  - **Rule flags:** none.
+- **WC053** · Desert mining town with mine portal
+  - **Shows:** A copper-mining town on a dirt grid in red canyon land: a mine road climbing past an ore chute and a timber mine portal with dump trucks; a stone assay office/bank, a saloon, a gun shop (rifle sign), a general store, sheriff, clinic, a 50s diner, a garage, liquor stores, a windmill and water tower, shacks with laundry lines.
+  - **Goes to:** Copper Gulch (63).
+  - **Feeds:** the missing mining-town main street / company row, mine portal, NPC life.
+  - **Rule flags:** none.
+- **WC054** · Old Downtown casino pedestrian street
+  - **Shows:** A pedestrian street of neon casinos (horseshoe, cactus, crown-and-dice signs), a supper club, a theatre with masks, a jeweller, pawn, cash exchange, an arcade, a tattoo parlour, a classic bank with columns, motels with flamingo and palm neon; string lights over the street, palms in planters.
+  - **Goes to:** Lucky Mesa: Old Downtown (61).
+  - **Feeds:** covered/pedestrian street of lights, casino venues, bank/jeweller (heist targets), NPC life.
+  - **Rule flags:** none (generic signs).
+- **WC055** · Near-duplicate of WC054 (Old Downtown)
+  - **Shows:** The same pedestrian casino street with a gateway at its foot, a cactus fountain in the middle, a guitar-sign music bar, a theatre marquee, a game arcade, a $ bank, cactus-neon motels.
+  - **Goes to:** Lucky Mesa: Old Downtown (61).
+  - **Feeds:** as WC054 (adds the gateway arch and fountain).
+  - **Rule flags:** none. **Near-duplicate of WC054.**
+- **WC056** · Hillside brick terraces with church and stairs
+  - **Shows:** An old brick neighbourhood stepping up a hill beside a coastal viaduct highway: four-storey brick walk-ups with fire escapes and water tanks, ground-floor shops and cafés, stone retaining walls and public stairways between terraces, a Gothic brick church at the top, a construction site with a tower crane, a waterfront promenade at the bottom.
+  - **Goes to:** Old Town (18); fallback Old Quarter (30).
+  - **Feeds:** neighbourhood type (hillside walk-ups), stairs/retaining walls, church, construction site.
+  - **Rule flags:** none.
+- **WC057** · Harbour quarter with piazza and tunnel portal
+  - **Shows:** Brick mid-rise blocks with shops round a small piazza with a fountain and a gazebo, a bank, a pagoda-roofed restaurant, a bistro terrace; fishing boats moored along the quay above; a waterfront road on a seawall with a tunnel portal into the hill at the right.
+  - **Goes to:** Harbor (8); fallback Old Town (18).
+  - **Feeds:** harbour-front blocks, piazza, tunnel portal, seawall road.
+  - **Rule flags:** none.
+- **WC058** · Desert-island palm interior with campfire
+  - **Shows:** A larger sand island with palm-thicket interior cut by sandy footpaths, a campfire ring with log seats on the west beach, boulders, driftwood; reef shallows round it.
+  - **Goes to:** The Islets (20) or a castaway islet off Coral Cay (44).
+  - **Feeds:** islands, trails, hidden camp/loot spot.
+  - **Rule flags:** none.
+- **WC059** · Island harbour village with lighthouse
+  - **Shows:** A small island with a stone-breakwater harbour and red beacon, fishing boats inside; a village of red-roofed houses and a café terrace round the harbour; stairs up to a white lighthouse and keeper's house on the rocky hill; jetties on the outer beaches, rock islets around, a boat speeding off.
+  - **Goes to:** Gull Harbor (43) on the ferry island; fallback Coral Cay (44).
+  - **Feeds:** islands (unique communities), harbour breakwater, ferry landing, lighthouse.
+  - **Rule flags:** none.
+- **WC060** · Beach-island crossroads with crab shack
+  - **Shows:** A small sandy point with one crossroads: a thatched tiki bar, a crab-sign seafood shack, a surf/jet-ski rental shop, a small bank/office, beach volleyball court with players, parasols and loungers, a lifeguard chair, a marina with jet skis and a cabin cruiser.
+  - **Goes to:** Pelican Key (14) beach; fallback Coral Cay (44) or Sunset Beach (10).
+  - **Feeds:** beach venues (tiki bar, volleyball, jet-ski rental), charter dock, NPC beach life.
+  - **Rule flags:** none.
+- **WC061** · Dune beach with boardwalks and coast-line halt
+  - **Shows:** A beach backed by grassy dunes crossed by fenced timber boardwalks and stairs down from three small dune car parks; a two-lane coast road behind; above it the main line with a small red-roofed halt on a platform, stairs down to the road. Rocks at the point, a few beachgoers.
+  - **Goes to:** Northshore Beaches (54) (the scenic stretch where the main line runs along the coast); fallback Sandpiper Coast (52).
+  - **Feeds:** beach/dunes, beach access car parks, train ride (seaside halt), coast road.
+  - **Rule flags:** none.
+- **WC062** · Surf-town beachfront with fishing pier
+  - **Shows:** A beach town's front: a promenade behind the sand with a surf shop (wave sign), a 50s diner with neon coffee cup, a thatched tiki bar, a terrace restaurant, a Spanish-style motel with pool; a gas station, clinic with ambulance and cottages on the grid behind; on the beach a lifeguard tower, surfboard racks, volleyball net, a beach buggy; a timber fishing pier with a fish shack and a moored boat; surfers in the water.
+  - **Goes to:** Sandpiper Bay (59) (surf town); fallback Sunset Beach (10).
+  - **Feeds:** beachfront strip, surf shop, fishing pier, motel round a pool, NPC beach life.
+  - **Rule flags:** none.
+- **WC063** · Beach promenade with tiki bars and seawall
+  - **Shows:** A straight palm boulevard behind a stone seawall with stairs down to a wide beach: two thatched tiki bars on decks, two lifeguard towers with flags, umbrellas, swim-zone buoys; behind, a block of cottages, a terrace restaurant, a gas station, a teal beach house; a highway along the top.
+  - **Goes to:** Sunset Beach (10) - the boardwalk/beachfront; fallback Northshore (31) beachfront.
+  - **Feeds:** beach boardwalk set as a whole street (missing), seawall with stairs, beach venues.
+  - **Rule flags:** none.
+- **WC064** · Island main street with named shops
+  - **Shows:** A small town's two-street grid down to a waterfront plaza with a fountain and a pier: a police station, three office blocks (Sunridge Financial, Harborview Legal, Island Insurance), a shop row with car parks in front (Hammer & Nail hardware, Maple Diner, Paperbacks books, Petals florist, Seaside Clinic, Rocco's Pizza, Wellspring Pharmacy), and below (Pixel Palace arcade, Lucky Bowl noodles, Dry Creek feed & western wear, Iron Ridge gun depot, Ivy & Co. and Luna boutiques); cottages along the seafront.
+  - **Goes to:** Falls Center (36) (the east island's main street); fallback Northshore (31) Station Avenue.
+  - **Feeds:** main-street shop row with ready sign names, bookstore front (missing), offices, waterfront plaza, NPC life.
+  - **Rule flags:** none (all names invented; a flag on the police roof - generic).
+- **WC065** · Downtown edge: courtyard blocks, towers, old mansion
+  - **Shows:** A grid by a freeway with exit ramps and a gantry sign: brick perimeter blocks with parking in their courtyards, three glass office towers round a fountain plaza, a Tudor-style red-roofed mansion/hall on its own block in the middle, a neon hotel, a diner, a gun shop, a tattoo shop.
+  - **Goes to:** Westport Center (23); fallback Midtown (1) or Downtown (4) fringe.
+  - **Feeds:** perimeter block type (courtyard parking), tower plaza, freeway ramps meeting a grid, landmark old house.
+  - **Rule flags:** none.
+- **WC066** · Bridgehead waterfront: conservatory park, drawbridge
+  - **Shows:** A waterfront: a twin-towered drawbridge leaves south over the water; beside it a marina with sailboats and a seafood shed, and a sandy beach with a lifeguard tower; behind the shore road a shop row (books, burgers, electronics, coffee, games, barber, music, skull), a park with a glass palm-house conservatory, a fountain and a gazebo, a car dealership lot, a hospital with a helipad, a fire station, a domed Spanish-style hotel and a glass tower; an elevated road curves in at the top-left.
+  - **Goes to:** Midtown (1) at the bridgeheads (the Gulf Island bridge); fallback the Neon Strip (7) shore.
+  - **Feeds:** bridgehead layout, drawbridge landmark, conservatory park, marina, beach in the city.
+  - **Rule flags:** none.
+- **WC067** · Stadium district with tailgate lots and waterfront
+  - **Shows:** A football stadium on a superblock ringed by big car parks, a freeway with an exit on the left, sports bars (beer sign), a cocktail bar, a burger diner, a gun shop, a megastore with a cart sign and its car park, an electronics store, a game shop; a palm promenade along a rock-armoured waterfront with finger piers and a lighthouse on a breakwater.
+  - **Goes to:** Stadium District (25).
+  - **Feeds:** stadium venue, tailgate/event car-park dressing (missing), freeway exit, megastore.
+  - **Rule flags:** none (team crest generic).
+- **WC068** · Seaside corner by an arched stone bridge
+  - **Shows:** A beach town corner: an arched stone road bridge over a creek mouth, a thatched tiki bar and surf shop on the sand, lifeguard towers and volleyball, a crab-sign seafood restaurant with terrace, a small bank with $ sign, a fish shop, an ice-cream shop, a Victorian beach house with a porch.
+  - **Goes to:** Sandpiper Bay (59); fallback Sunset Beach (10).
+  - **Feeds:** beach venues, bank (heist target), creek-mouth bridge, NPC beach life.
+  - **Rule flags:** none.
+- **WC069** · Pocket park with football pitch and pond
+  - **Shows:** One city block made a park: a fenced five-a-side football pitch with goals and bleachers, a lily pond with rocks and a railing, curving paths, benches, flower beds, a dog walker, lamp posts and railings; brick walk-ups and rooftops all round.
+  - **Goes to:** Northgate (2) (apartments); also any dense district's pocket park.
+  - **Feeds:** park kit, neighbourhood type (pocket park), NPC life.
+  - **Rule flags:** players look small - draw them as adults.
+- **WC070** · Arts quarter: museum plaza, murals, theatre
+  - **Shows:** Brick blocks under an elevated road: a museum with banners and two sculptures on its forecourt, a records shop, a theatre (masks sign), a noodle bar, a café terrace, a columned bank, a clothes boutique, loft studios with big arched windows, a string-lit alley with stairs, big murals on blank walls.
+  - **Goes to:** Arts District (46).
+  - **Feeds:** museum/gallery exterior and theatre front (both missing), murals, records shop.
+  - **Rule flags:** none.
+- **WC071** · Civic forum: domed hall, courthouse, hospital
+  - **Shows:** A domed city hall with a statue square in front, a columned courthouse, a Gothic church, a hospital with a helipad and ambulances, a fountain plaza, a small round park with a monument; a palm-median boulevard running south from the square; a gas station; a freeway with ramps along the east.
+  - **Goes to:** Civic Center (5).
+  - **Feeds:** civic forum (city hall, courthouse, statue plaza), hospital drop-off, palm boulevard.
+  - **Rule flags:** none.
+- **WC072** · Seawall quarter under a curving viaduct
+  - **Shows:** A waterfront point under a curved elevated road on piers: brick walk-ups round shared courtyards, a fire station with engines, a fenced basketball court, a clinic, a columned bank/library, a subway entrance, a bus stop with a bus, a seawall promenade with benches, a pier and a moored ferry/tug.
+  - **Goes to:** Harbor (8); fallback Old Town (18).
+  - **Feeds:** seawall promenade, courtyard walk-ups, fire station, subway kiosk, viaduct over a waterfront.
+  - **Rule flags:** none.
+- **WC073** · Midtown dense commercial grid
+  - **Shows:** A square of four busy blocks: two car dealerships with bunting, a clinic and pharmacy with an ambulance, a tall hotel/office tower, brick walk-ups with fire escapes, a coffee shop, a sneaker store, a game shop, a skull and a rose tattoo shop, a gas station, a burger diner with terrace, bus stops and a bus; heavy traffic at signalled crossings.
+  - **Goes to:** Midtown (1) (around the hero corner).
+  - **Feeds:** the hero corner's surroundings, dealership, NPC traffic and crowds.
+  - **Rule flags:** none.
+- **WC074** · Desert town grid round an empty block
+  - **Shows:** A desert grid of nine blocks around a vacant dirt square: a clinic and a police station, two gas stations, a diner, a motel round a pool with a palm neon, a cocktail bar and a dancer-sign club, a gun shop, a pawn/$ shop, a white chapel and a heart wedding chapel with a bridal shop, a music club; bungalows with pools and shacks on the outer blocks, cacti and palms.
+  - **Goes to:** Lucky Mesa: Mesa Flats (62) / the Old Downtown edge (61) (wedding chapels); fallback Sandpiper Bay's inland edge.
+  - **Feeds:** desert town grid, wedding chapel, motel, vacant lot (meet-up/loot spot).
+  - **Rule flags:** dancer neon - keep suggestive at most.
+- **WC075** · Coastal suburb with sports ground and bridge
+  - **Shows:** A grid suburb on a rocky shore: a suspension bridge leaves west; a school-like building with a running track, football field and a yellow bus; gas station, shop row, restaurants; houses with pools and gardens; an elevated highway along the south.
+  - **Goes to:** Cedar Falls (35); fallback West Hills (28).
+  - **Feeds:** suburb neighbourhood type, bridgehead, shop row.
+  - **Rule flags:** **school with track and a yellow school bus** - leave out (make it a public sports ground, no bus).
+- **WC076** · Mediterranean hillside town above a coast viaduct
+  - **Shows:** A terraced hillside of red-roof villas with pools on winding switchback streets and public stairs, a chapel, mid-rise brick blocks, a shop row on the main road, a campus with a running track at the top; along the coast a highway on a curving viaduct, the rail line with a red-roofed station and a metro entrance below, rocky coves.
+  - **Goes to:** Bayside Heights (16) (winding hillside estate streets - missing); fallback Pine Hills (0).
+  - **Feeds:** hillside estate street (missing), terraces and stairs, coast viaduct, station.
+  - **Rule flags:** the building with a sports track reads as a **school** - leave out.
+- **WC077** · Near-duplicate of WC076 with marina
+  - **Shows:** The same hillside town; adds a small marina with a breakwater lighthouse, a clock-tower station with a train, and an airport-direction sign on the bridge.
+  - **Goes to:** as WC076.
+  - **Feeds:** as WC076 plus marina (missing for Bayside Heights).
+  - **Rule flags:** as WC076 (school-like campus). **Near-duplicate of WC076.**
+- **WC078** · Pine peninsula suburb of looping drives
+  - **Shows:** A rocky wooded peninsula: looping residential drives with big houses on large lots under pines, two small sandy coves with docks and rowboats, coast trails and stairs; a bridge comes in at the top right beside a tunnel portal.
+  - **Goes to:** Pine Hills (0) (winding drives and courts under pines).
+  - **Feeds:** winding suburb neighbourhood type, coves, tunnel portal, homes.
+  - **Rule flags:** none.
+- **WC079** · The Strip: themed resort superblocks
+  - **Shows:** A palm-median boulevard with resort superblocks on both sides: a black glass pyramid with a sphinx statue and obelisks, an Italian palazzo with a fountain-show pool, a red pagoda casino, a blue glass tower, a gold tower with a star, a curved hotel round a big pool, a red-roofed castle/Moorish resort; drop-off loops and car parks; desert round.
+  - **Goes to:** Lucky Mesa: The Strip (60).
+  - **Feeds:** resort superblocks, the black pyramid, fountain show, drop-off loops.
+  - **Rule flags:** the resorts echo real casinos (pyramid + sphinx, fountain palazzo, castle) - keep them generic and unnamed; no real names/logos.
+- **WC080** · Lake-district waterway with villas and rail bridge
+  - **Shows:** A winding lake/river with rocky wooded shores in autumn colour: lakeside villas with pools, boathouses and docks, a marina with a lakeside restaurant, a rail line crossing on a long bridge with a tunnel portal on the west, a station, a reed-marsh island with a cabin, a small waterfall, an arched road bridge, islets at the mouth.
+  - **Goes to:** Lake District (37); fallback Cedar Falls (35) lakeside.
+  - **Feeds:** lakes/water as authored bodies, lakeside villa street (missing), boathouses, rail bridge, train ride, waterfall.
+  - **Rule flags:** none.
+- **WC081** · Near-duplicate of WC080
+  - **Shows:** The same waterway, very slightly different (more marsh channels, sunlit at the top).
+  - **Goes to:** as WC080.
+  - **Feeds:** as WC080.
+  - **Rule flags:** none. **Near-duplicate of WC080.**
+
+## Near-duplicates in this batch
+- **Wide + close-up pairs** (same district, two scales): WC001/002, WC003/004, WC005/006, WC007/008, WC009/010, WC011/012 (by order; 012 is a street, not the 011 metro), WC013/023, WC014/025.
+- **Same scene repeated:** WC002 = WC015 · WC004 = WC016 = WC018 · WC006 = WC017 = WC019 · WC008 = WC020 · WC010 = WC021 · WC012 = WC022 · WC023 = WC024 · WC029 = WC030 · WC042 = WC044 (WC043 same port, tighter crop) · WC046 = WC047 · WC054 = WC055 · WC076 = WC077 · WC080 = WC081.
+- So 81 images give about **60 distinct scenes**. Of those, **12 are street-level close-ups** (WC002/004/006/008/010/012/023/025 and their repeats), not zoomed-out maps: they are frontage and NPC-life kits.
+
+## Batch highlights (the 10 most useful)
+1. **WC027 Granite Peaks gorge**: one picture holds the whole mountain set (waterfall from a lake, a rail viaduct between tunnels, switchbacks, a mine and a quarry, hot springs, a lookout tower, a campground). It is the build sheet for the R1 waterfall chain and the train ride through the peaks.
+2. **WC026 Red Rock Desert / Route 9**: the dam and reservoir, a rock arch, the boneyard, the drive-in, a water park, an airstrip and roadside stops, all in one layout. It gives Route 9 its places and the dam its look.
+3. **WC038 Timber Bend**, **WC037 Willow Crossing**, **WC053 Copper Gulch**, **WC033 Dusty Hollow**: the four "missing main street" concepts (logging, farm, mining and ghost town) from city.md's missing list (item 10). Each one is ready to build from, with its signature building (sawmill, grain elevator, mine portal, false-front saloon).
+4. **WC052 Egret Point**: the fishing village on stilts, the boardwalk to the light and the dirt raceway behind it. Together with WC031 (the marsh causeway with its stilt shacks) it covers the whole Egret Coast.
+5. **WC048 Prison Island**: a complete fortress plan (towers, cell blocks, yards, sally port, warden's house, ferry pier, lighthouse).
+6. **WC079 The Strip** + **WC054 Old Downtown**: Lucky Mesa's resort superblocks along a palm median, and the casino pedestrian street.
+7. **WC064 island main street**: a shop row with invented sign names ready to use (Hammer & Nail, Paperbacks, Rocco's Pizza and others), a police station, offices and a pier plaza. Ideal for Falls Center or Northshore.
+8. **WC045 fish market** + **WC003/004 fish-dock yard**: the missing fish-market exterior, plus the freight spur and port gate behind it.
+9. **WC070 Arts District** + **WC071 Civic Center**: the missing museum, theatre and murals exteriors, and the civic forum (domed hall, courthouse, statue square, hospital with helipad).
+10. **WC080 Lake District waterway** and **WC076 hillside town**: lakeside villas, boathouses and a rail bridge; and the missing winding hillside estate street with terraces and stairs (Bayside Heights).
+Also strong: WC028 (redwood coast road, waterfall to the sea, seaside halt), WC035 (island-hopping causeway to a lighthouse), WC051 (rail sidings and a construction site in The Yards), WC009/010 (The Yards and Southside's rough grain), WC067 (stadium tailgate lots).
+
+## Recurring themes
+- **Water edges everywhere**: seawall promenades with stairs, timber finger piers with moored boats, lighthouses on breakwaters (in about 12 images), rocky coves with small beaches.
+- **Elevated roads and rail over the city**: curving freeway viaducts over grids and waterfronts (WC001, 046, 065, 072, 076), and the rail viaduct/halt the plan still lacks (WC001, 027, 028, 061, 080).
+- **Small-town kit**: each town has the same core of sheriff, clinic, gas, diner, motel and church, plus one signature industry.
+- **Heist and loot set-ups**: banks with armored trucks, jewellers, pawn shops, a smugglers' boathouse (WC049), a gang/biker compound (WC042, 051).
+- **Night neon and rain moods** for the Neon Strip, the Pink Mile and Old Town; fog for the docks.
+- **Rule flags to watch**: schools, school buses and playgrounds (WC007, 075, 076/077); children in the suburban close-ups (WC008/020); a real postal livery and national flags (WC001, 008/020, 037, 038, 064); real-casino echoes on the Strip (WC079); adult neon in the Pink Mile (WC046/047, 074), which should stay suggestive at most.
+
+
+# World concepts WC082-WC162 (catalogue batch 2)
+
+Place names from WORLD-V3.md part 9 (v3b). "Kit" = a sheet of separate vignettes, not one place.
+
+- **WC082** · Clifftop villa loop above a coastal station
+  - **Shows:** A hairpin estate road winding round terraced plots of terracotta-roof villas with pools, palms and walled gardens on a headland. Below a rock cliff, switchback stone stairs drop to a sandy cove with umbrellas and a lifeguard tower; at the cliff foot a long arcaded station with green-roofed platforms runs beside a multi-track line, and a stone-arch road/rail viaduct crosses an inlet at left. Low pastel townhouses fill the flat below.
+  - **Goes to:** Bayside Heights (16) (the hillside estate street + overlook); fallback The Bluffs (34).
+  - **Feeds:** hillside winding estate street (missing #9), cliff stairs to a cove, station by the sea, homes (luxury).
+  - **Rule flags:** none.
+- **WC083** · Park pond with stone bridge and boathouse
+  - **Shows:** A city block-sized park: a pond split by a balustraded stone road bridge, rowboats at a small boathouse dock, ducks, willows, curving lamp-lit paths and flowerbeds. Round it a ring of streets with brick apartment blocks, gated mansions, a hotel pool deck, a columned bank, striped-awning shops and a small car-repair garage.
+  - **Goes to:** Greenfield Park (12) in Downtown (4); fallback Falls Lake Park (Lake District 37).
+  - **Feeds:** central park and its pond, boat rental, park-edge frontage, city layout.
+  - **Rule flags:** none.
+- **WC084** · Downtown grid with terminal and hospital
+  - **Shows:** A dense rectangular grid of glass towers and brick mid-rises with tree-lined pocket plazas and fountains, a small domed civic building on a square. Left edge: a big rail terminal with long arched train sheds and a classical head house on a station plaza; right edge: an elevated multi-lane freeway with ramps; a hospital with two rooftop helipads and an ambulance bay, a fire-station tower.
+  - **Goes to:** Downtown (4); fallback Westport Center (23) (terminal could anchor Midtown's main-line station).
+  - **Feeds:** city layout (block size, plaza cells), main-line station, hospital (St. Neon General), freeway edge.
+  - **Rule flags:** none.
+- **WC085** · Riviera harbour with grand hotel and station
+  - **Shows:** A grand domed hotel with a palm fountain drop-off and pool terrace below a curving elevated coast road; beneath it a palm plaza with a subway/station kiosk and café terraces, a long arcaded rail station with a train on the tracks at the bottom. To the right a yacht marina of finger piers with superyachts and sailboats along a lamp-lit promenade, rocks at the point; gated villas with pools on the hill at left.
+  - **Goes to:** Bayside Heights (16) marina terrace (D17 SW); fallback Sunset Beach (10).
+  - **Feeds:** marina (missing I4), hotel set piece, coastal station plaza, promenade, luxury homes.
+  - **Rule flags:** none.
+- **WC086** · Coastal downtown, marina, beach and port
+  - **Shows:** A palm-boulevard downtown with a red-domed theatre/capitol, columned courthouse with fountain, towers with helipads; south a marina of finger piers, a sand beach with a pier boardwalk and a lighthouse on a rock breakwater. North-east a container quay with red cranes, warehouses and a rail yard; west a river/canal with bridges into red-roof suburbs.
+  - **Goes to:** the mainland city: Harbor (8) + Midtown (1); fallback Westport Center (23) / Port Westport (26).
+  - **Feeds:** city layout (downtown meeting port and beach), marina, lighthouse on breakwater, port, civic landmarks.
+  - **Rule flags:** none. Near-duplicate of WC087.
+- **WC087** · Coastal downtown with port, marina, beach (variant)
+  - **Shows:** Same scene as WC086 re-drawn: green-domed civic hall, towers, palm avenues, a marina basin, a beach with a long pier, container port with cranes and stacked boxes at bottom-left, a freight train along the shore, a red truss bridge over a river and an elevated freeway with a curving ramp at top-right; a white church among cottages at top-left.
+  - **Goes to:** Harbor (8) / Midtown (1) / Old Town (18) at the river; fallback Port Westport (26).
+  - **Feeds:** as WC086, plus river-mouth bridge and freeway ramp.
+  - **Rule flags:** none. Near-duplicate of WC086.
+- **WC088** · Industrial sites kit (six lots)
+  - **Shows:** Six fenced lots: a gravel quarry/aggregate plant with conveyors, silos and stockpiles; a scrap yard with stacked wrecks and a grab crane; a lumber yard with log piles, sheds and a log truck; a water treatment plant with round clarifiers; an electrical substation with transformers and gantries; a guyed radio mast with hut.
+  - **Goes to:** general kit/reference (scrap yard -> The Yards (3); lumber yard -> Timber Bend (57); quarry -> Granite Peaks / Copper Gulch (63)).
+  - **Feeds:** industrial set pieces, scrap yard (missing), utility props.
+  - **Rule flags:** none.
+- **WC089** · Park facilities kit (six pieces)
+  - **Shows:** A playground with slide, swings and climbing frame; a fenced basketball court; a skate bowl park; twin tennis courts; a floodlit football pitch with a stand; a dog park with agility kit.
+  - **Goes to:** general kit/reference (Northgate's skate park, Cedar Falls, West Hills).
+  - **Feeds:** parks, venues, NPC life.
+  - **Rule flags:** playground (leave out; the other five are fine).
+- **WC090** · Small-town civic buildings kit
+  - **Shows:** Six lots: a white clapboard church with a walled graveyard; a brick school with yellow bus, ball field and playground; a sheriff/police station with secure yard and cruisers; a clinic with an ambulance bay; a brick fire station with engine; a general store with post office.
+  - **Goes to:** general kit/reference for the towns (Timber Bend, Willow Crossing, Copper Gulch, Northshore).
+  - **Feeds:** town main streets (missing #10), civic services, church/graveyard.
+  - **Rule flags:** school, school bus, playground, national flags on the poles - leave out.
+- **WC091** · Rural homes kit (six settings)
+  - **Shows:** A log cabin with fire pit in pines; a lakeside cottage with its own boat dock; a stilted beach house with deck and kayak; a farmhouse with red barn and vegetable beds; a desert adobe with pool and cacti; a forest trailer/cabin with string lights and campfire.
+  - **Goes to:** general kit/reference (homes for Highland Woods, Lake District, Sandpiper Bay, Willow Valley, Red Rock Desert).
+  - **Feeds:** homes (buyable rural homes by biome).
+  - **Rule flags:** none.
+- **WC092** · River crossings kit
+  - **Shows:** A concrete road bridge over a rocky creek; a red steel truss rail bridge; a timber footbridge; a red covered bridge; a dirt-road ford through shallows; a box culvert under a road with a little fall.
+  - **Goes to:** general kit/reference (rivers and country roads).
+  - **Feeds:** rivers, roads and trails, train ride (truss bridge).
+  - **Rule flags:** none.
+- **WC093** · Waterfront access kit
+  - **Shows:** A boat ramp with trailer parking; a fishing pier with gulls; a red bait shop on a dock; a roped swim beach with lifeguard tower and swim platform; a kayak launch with rack; a small marina with fuel dock and office.
+  - **Goes to:** general kit/reference (lakes, Harbor, Kestrel Lake, Sandpiper Bay).
+  - **Feeds:** water, fishing places, marina, beaches.
+  - **Rule flags:** national flag on the marina office.
+- **WC094** · Hiking trail features kit
+  - **Shows:** A trailhead car park with toilet block and map board; a footbridge over a boulder creek; a fenced cliff-top viewpoint deck; a summit cairn with bench; a log lean-to shelter with fire ring; rock-step trail with rails.
+  - **Goes to:** general kit/reference (Highland Woods 47, Granite Peaks 48).
+  - **Feeds:** trails, forest, viewpoints, campsites.
+  - **Rule flags:** none.
+- **WC095** · Roadside highway stops kit
+  - **Shows:** A diner + gas station with coffee-cup neon; a Spanish-tile motel round a pool with palm sign; a truck stop with semis and diesel canopy; a fruit stand; a roadhouse biker bar with antler neon and rows of bikes; a car wash and tyre shop.
+  - **Goes to:** general kit/reference (Route 9, Dusty Hollow 64, Willow Crossing truck stop, Mesa Flats).
+  - **Feeds:** venues, highway stops, NPC life.
+  - **Rule flags:** national flag at the roadhouse.
+- **WC096** · Farms and ranches kit
+  - **Shows:** A red-barn farm with silos and tractor; a dairy with milking shed, cow pens and slurry tank; a horse ranch with round pen and jump arena; an orchard with packing shed; a grain elevator with truck scale; a desert ranch with windmill, water tank and corral.
+  - **Goes to:** general kit/reference (Willow Valley 49, Cedar Farms 38, Willow Crossing 58; desert ranch -> Red Rock Desert 50).
+  - **Feeds:** farm valley, grain elevator (missing), homes.
+  - **Rule flags:** none. Near-duplicate of WC097.
+- **WC097** · Farms and ranches kit (2x3 variant)
+  - **Shows:** The same six farm vignettes as WC096 at larger size (barn farm, dairy, horse ranch, orchard, grain elevator, desert ranch).
+  - **Goes to:** as WC096.
+  - **Feeds:** as WC096 (better resolution of the two).
+  - **Rule flags:** none. Near-duplicate of WC096.
+- **WC098** · Campsite types kit
+  - **Shows:** A redwood tent camp with hammock; a driftwood beach bonfire; a desert tailgate camp between two pickups; a granite lakeshore camp with canoe; an autumn wall-tent hunting camp with an antler skull; a river gravel-bar camp with kayak.
+  - **Goes to:** general kit/reference (campgrounds in each biome).
+  - **Feeds:** campgrounds, NPC life, forest, desert, rivers.
+  - **Rule flags:** none.
+- **WC099** · Surf break with contest on a reef beach
+  - **Shows:** A sandy cove between rock headlands with a reef break, a line-up of surfers, a lifeguard tower and quad; a surf-contest stage with banners and board racks; a roadside pull-out car park off a curving coast road, a sandy path and timber stairs down the bluff.
+  - **Goes to:** Sandpiper Bay (59) / Sandpiper Coast (52); fallback Sunset Beach (10).
+  - **Feeds:** beaches, surf spots, events/NPC life, coast road pull-outs.
+  - **Rule flags:** none. Near-duplicate of WC100.
+- **WC100** · Surf contest judging tower on the beach
+  - **Shows:** Closer variant of WC099: a scaffold judges' tower with banners, surfboard rack, team tent, two lifeguard towers, palms, umbrellas, a small car park and stairs down through scrub.
+  - **Goes to:** as WC099.
+  - **Feeds:** as WC099.
+  - **Rule flags:** none. Near-duplicate of WC099.
+- **WC101** · Surf contest at a reef cove (third variant)
+  - **Shows:** Same set as WC099/WC100 from a wider angle: a cove between two rock reefs with a peeling wave and surfers, a judges' scaffold, team tents, board racks, two lifeguard towers, a car park on the bluff and a long timber stair down through flowering scrub.
+  - **Goes to:** Sandpiper Bay (59); fallback Sunset Beach (10).
+  - **Feeds:** beaches, surf spots, events.
+  - **Rule flags:** none. Near-duplicate of WC099/WC100 (keep one of the three).
+- **WC102** · Scenic overlook pull-out on a pine coast
+  - **Shows:** A two-lane mountain road climbs in a hairpin to a loop car park on a pine-and-granite headland; picnic tables, a paved viewing terrace with coin binoculars at the tip, dirt paths down to pebble coves with a small jetty, a rocky pine islet offshore.
+  - **Goes to:** North Cape / Windy Point on the north-west coast (nature 4.9); fallback Lighthouse Rock coast (19).
+  - **Feeds:** coast road viewpoints, trails, forest meeting the sea, islands.
+  - **Rule flags:** none.
+- **WC103** · Two surf coves split by a rocky point
+  - **Shows:** A coast road along the bluff top with a surf shack and car park; stairs down to two sand coves either side of a rocky point with tide-pool reef; a contest stage with bleachers and tents on the east cove, lifeguard towers, surfers riding the break.
+  - **Goes to:** Sandpiper Coast (52); fallback Pelican Key (14).
+  - **Feeds:** beaches, surf spots, coast road, events.
+  - **Rule flags:** none. Same theme as WC099-WC101 but a distinct layout.
+- **WC104** · Stone circle on a heather moor
+  - **Shows:** A ring of tall standing stones round a flat altar stone on a grassy heath with heather, granite outcrops and scattered boulders, a stone cairn, a footpath leading in from the south.
+  - **Goes to:** Granite Peaks (48) high moor; fallback a headland above The Islets or North Cape.
+  - **Feeds:** a landmark/secret spot, trails, wild region dressing.
+  - **Rule flags:** none. Near-duplicate of WC105.
+- **WC105** · Stone circle moor with pools (variant)
+  - **Shows:** The same stone circle in golden late light, with moorland pools, a small cairn, tumbled granite outcrops and a path running south to stone steps.
+  - **Goes to:** as WC104.
+  - **Feeds:** as WC104 (adds moor pools).
+  - **Rule flags:** none. Near-duplicate of WC104.
+- **WC106** · Lakeshore lodge with cabins and docks
+  - **Shows:** A big timber lodge on a terrace over a lake with an umbrella dining deck, kayak and canoe docks, rental cabins on rocky points with their own jetties, a ranger station with a fire lookout tower, a car park with map board and a highway through granite and pines.
+  - **Goes to:** a mountain lake in Highland Woods (47) / the R1 lakes; fallback Kestrel Lake.
+  - **Feeds:** mountain lakes, venues (lodge), homes (cabins), forest, boats.
+  - **Rule flags:** national flag at the ranger station.
+- **WC107** · Smugglers' cove on a rock islet
+  - **Shows:** A cliff-ringed islet with a sheltered turquoise cove, a tin-roofed shack on a dock with a speedboat, crates and barrels under a tarp, a dirt trail up to a timber lookout platform with a pennant on the summit; sea stacks all round.
+  - **Goes to:** The Islets (20); fallback Egret Rocks (56).
+  - **Feeds:** islands, crime/extraction drop point, boats.
+  - **Rule flags:** none.
+- **WC108** · Prison island fortress
+  - **Shows:** A walled rectangular compound with four corner guard towers, cell blocks round an exercise yard, an admin block and gate, a helipad, a water tower; one road down to a ferry dock with a prison boat and a patrol launch; the rest of the island rocky with small coves.
+  - **Goes to:** Prison Island (55).
+  - **Feeds:** prison set piece, ferry, police gameplay.
+  - **Rule flags:** none.
+- **WC109** · Sawmill with log pond and rail siding
+  - **Shows:** A mill hall with a smoking stack, a log pond of floating booms with an excavator loading, log decks, kiln sheds and stacks of cut lumber, sawdust piles, log trucks on a highway at left and a lumber train on the siding at right, pines all round.
+  - **Goes to:** Timber Bend (57) (the sawmill).
+  - **Feeds:** logging town, train ride (siding), forest industry.
+  - **Rule flags:** none.
+- **WC110** · Botanical garden with glass conservatory
+  - **Shows:** A walled city garden: a domed Victorian glasshouse, parterre flower beds with fountain, a hedge maze with statue fountain, a ring rose garden, a koi pond with stepping stones and waterfall, a gazebo, and a café glasshouse with umbrellas; gated entrance on a city street.
+  - **Goes to:** Arts District (46); fallback a corner of Greenfield Park (12) or Bayside Heights (16).
+  - **Feeds:** venues, parks, a landmark.
+  - **Rule flags:** none.
+- **WC111** · County fairgrounds with racetrack and rodeo
+  - **Shows:** A dirt oval horse track with grandstand and infield pond, show barns and stables, a midway with ferris wheel, carousel and stalls, a floodlit rodeo arena, grass car parks along a highway, RV camping, and a river with a road bridge on the east side.
+  - **Goes to:** Willow Valley (49) by Willow Crossing (58); fallback Cedar Farms (38).
+  - **Feeds:** venues, events, farm valley, river.
+  - **Rule flags:** none (keep the midway adult NPCs only).
+- **WC112** · Road course and drag strip complex
+  - **Shows:** A twisty road circuit with red-white kerbs and gravel traps, a grandstand and pit building, a paddock of team transporters and tents, large car parks, a separate drag strip with its own stands and christmas-tree start, a pond, pines and farm fields round it.
+  - **Goes to:** the Egret Coast raceway by Egret Point (65); fallback Red Rock Desert / Mesa Flats.
+  - **Feeds:** raceway venue, events, racing gameplay.
+  - **Rule flags:** none.
+- **WC113** · Golf course with Spanish clubhouse
+  - **Shows:** A tile-roofed clubhouse with a roundabout drop-off, pool and car park on a road, a netted driving range, putting green, fairways round ponds and a creek with a timber bridge, bunkers, cart paths and carts, mixed woods.
+  - **Goes to:** Bayside Heights (16); fallback West Hills (28) or Lake District (37).
+  - **Feeds:** venues, wealthy district dressing, ponds.
+  - **Rule flags:** none.
+- **WC114** · Water park among red-rock mesas
+  - **Shows:** A waterpark set into red canyon country: tangled tube slides from towers, a funnel slide, a lazy river ringed by palms, a wave pool, a splash pad, cabanas, a lodge-style entrance plaza, service yard, big car park on a grid road; a canyon creek with a waterfall at left.
+  - **Goes to:** Lucky Mesa (The Strip 60 edge); fallback Sunset Beach (10) water park (L3).
+  - **Feeds:** venues (water park), desert resort.
+  - **Rule flags:** splash pad / kids' areas - adult NPCs only.
+- **WC115** · Hot-air balloon festival on a farm field
+  - **Shows:** Six balloons inflating on a fenced meadow with chase trucks and baskets, food trucks and a white marquee, a red-roof farm restaurant with umbrella terrace, a car park, a country road, hay-bale fields and a stream corner.
+  - **Goes to:** Willow Valley (49); fallback near Willow Crossing (58).
+  - **Feeds:** events, farm valley, NPC life.
+  - **Rule flags:** none.
+- **WC116** · Desert aircraft boneyard by a runway
+  - **Shows:** A fenced desert yard of parked airliners and fighter jets in rows, stripped fuselages, engines and parts, a big maintenance hangar, a taxiway onto a long runway at right, a gate road, red-rock outcrops.
+  - **Goes to:** Lucky Mesa's airstrip / Mesa Flats (62); fallback Red Rock Desert (50).
+  - **Feeds:** a landmark, airstrips, scavenging/extraction loot site.
+  - **Rule flags:** none (keep markings generic, no national insignia).
+- **WC117** · Ruined desert mission
+  - **Shows:** A crumbling adobe mission: bell tower with cross, roofless chapel, an arcaded cloister round a fountain courtyard, an overgrown orchard garden, a walled graveyard with crosses, perimeter walls, a dirt road with a small parking yard, cacti and red boulders.
+  - **Goes to:** Red Rock Desert (50) near Dusty Hollow (64); fallback Old Downtown (61).
+  - **Feeds:** a landmark, desert dressing, ghost-town mood.
+  - **Rule flags:** none.
+- **WC118** · Desert roadhouse with biker stage
+  - **Shows:** A tin-roofed saloon with a long porch and rows of motorbikes, an outdoor stage with band and string lights, picnic tables round a fire pit, a single gas pump, barrels, a beer-mug neon pylon sign, a motel row behind; cracked two-lane road with telegraph poles.
+  - **Goes to:** Route 9 (Red Rock Desert 50); fallback Dusty Hollow (64).
+  - **Feeds:** venues, highway stops, gang/biker NPC life.
+  - **Rule flags:** none.
+- **WC119** · Desert drive-in cinema
+  - **Shows:** A big screen (showing a cowboy silhouette) facing arcs of speaker posts, a central snack bar/projection booth, a ticket kiosk at the entrance with a neon star-arrow sign, a projectionist's trailer and water tower, cacti and fences along a desert highway.
+  - **Goes to:** Mesa Flats (62); fallback Route 9 / Dusty Hollow (64).
+  - **Feeds:** venues, NPC life (night).
+  - **Rule flags:** none.
+- **WC120** · Wind farm along a ridge
+  - **Shows:** Six white turbines on a gravel service road along a dry grassy ridge with oaks and granite outcrops; a fenced substation feeds pylons; a country highway with a side track winds along the foot.
+  - **Goes to:** the dry hills between Willow Valley (49) and the Red Rock Desert (50); fallback Granite Peaks foothills.
+  - **Feeds:** a landmark, hills dressing, country roads.
+  - **Rule flags:** none.
+- **WC121** · Oil field and solar farm in the desert
+  - **Shows:** Pump jacks on gravel pads linked by dirt tracks, tank batteries and pipes, a gas flare stack, a tanker truck; to the east a fenced solar farm with a substation and pylon line; a dry wash with a culvert bridge, mesas, and a straight desert highway at left.
+  - **Goes to:** Red Rock Desert (50) along Route 9; fallback Mesa Flats edge.
+  - **Feeds:** desert industry, extraction targets, roads.
+  - **Rule flags:** none.
+- **WC122** · Arch dam in a red-rock canyon
+  - **Shows:** A curved concrete dam with a road on its crest between canyon walls, spillway falls and a powerhouse at its foot, the river below; a reservoir with sandstone islets, a marina dock and boat ramp, a visitor centre with car park and a viewing terrace on the far rim.
+  - **Goes to:** the dam in the Red Rock Desert (50) (5245, 2160).
+  - **Feeds:** a landmark, rivers, lakes, boats, roads.
+  - **Rule flags:** none.
+- **WC123** · Open-pit copper mine with ore railway
+  - **Shows:** A terraced open pit with haul roads and dump trucks, crushers and conveyors at the bottom, a processing plant with stockpiles and two tailings ponds, an ore train on a trestle round the rim, an older tunnel portal with headframe and mine office, red canyon walls.
+  - **Goes to:** Copper Gulch (63) mine (4920, 1600).
+  - **Feeds:** mining town, train ride, extraction sites.
+  - **Rule flags:** none.
+- **WC124** · Granite quarry and old mine in the pines
+  - **Shows:** A terraced granite quarry with cut blocks, excavator and dump trucks, a crusher with gravel cones; on the left an old timber headframe and ore-cart tramway to a mine portal; site offices, a fuel tank and gate onto a highway through pines and boulders.
+  - **Goes to:** Granite Peaks (48) (mine portals); fallback Highland Woods (47).
+  - **Feeds:** mountains, mines, industry.
+  - **Rule flags:** none.
+- **WC125** · Terraced hot springs by a waterfall
+  - **Shows:** Steaming turquoise pools stepping down a rocky slope beside a cascading stream, joined by timber boardwalks and stairs, small changing huts, a timber bathhouse lodge, a footbridge over the stream, a gravel car park in pines and boulders.
+  - **Goes to:** the waterfalls and mountain lakes (Granite Peaks 48); fallback Highland Woods (47).
+  - **Feeds:** waterfalls, venues, mountain region.
+  - **Rule flags:** none.
+- **WC126** · Trapper's cabin by a beaver pond
+  - **Shows:** A log cabin and smokehouse in a clearing with hide-drying racks, woodpile and barrels; a dirt track in; a short dock with a canoe on a pond of dead snags and lily pads, a beaver lodge in the middle and a stick dam spilling into a rocky creek; granite ledges and mixed forest.
+  - **Goes to:** Highland Woods (47) back country near Timber Bend (57).
+  - **Feeds:** forest, rivers (beaver dams/ponds), homes (cabins), fishing spot.
+  - **Rule flags:** none. Near-duplicate of WC127 (and WC131 is the autumn version).
+- **WC127** · Trapper's cabin by a beaver pond (variant)
+  - **Shows:** The same scene as WC126 in warmer light, a little closer: cabin, smokehouse, hide racks, dock and canoe, beaver lodge, stick dam with a cascade down to the creek.
+  - **Goes to:** as WC126.
+  - **Feeds:** as WC126.
+  - **Rule flags:** none. Near-duplicate of WC126.
+- **WC128** · Mountaintop observatory with switchback road
+  - **Shows:** A summit with a twin-dome observatory and office block, a red-white radio mast in a fenced compound, a loop car park and a stone viewing bastion on the cliff edge; a guard-railed switchback road climbs through granite spires and pines.
+  - **Goes to:** Granite Peaks (48) summit.
+  - **Feeds:** a landmark, mountain roads (switchbacks), viewpoints.
+  - **Rule flags:** none. Near-duplicate of WC129.
+- **WC129** · Mountaintop observatory (variant)
+  - **Shows:** The same observatory, mast, car park and stone viewing terrace from a slightly higher angle with the hairpins of the road further down the slope.
+  - **Goes to:** as WC128.
+  - **Feeds:** as WC128.
+  - **Rule flags:** none. Near-duplicate of WC128.
+- **WC130** · Fire lookout with helipad over a canyon
+  - **Shows:** A timber fire-lookout cabin on stilts with a water tower, solar panel and picnic tables on a granite ridge, a helipad beside it and an off-road vehicle; a dirt road switchbacks up; below, a creek tumbles through a rocky gorge crossed by a log footbridge.
+  - **Goes to:** Highland Woods (47); fallback Granite Peaks (48).
+  - **Feeds:** forest, trails/dirt-bike tracks, waterfalls, ranger presence.
+  - **Rule flags:** national flag on the lookout.
+- **WC131** · Hunting cabin by a beaver pond in autumn
+  - **Shows:** A log cabin with antler mount, smokehouse, game hanging racks, campfire and work table, a pickup and quad on the dirt track, a deer stand in the woods, an outhouse; a dock with canoe on a beaver pond with lodge and dam spilling to a creek; red and gold autumn trees.
+  - **Goes to:** Highland Woods (47); fallback Timber Bend (57) outskirts.
+  - **Feeds:** forest (autumn palette), rivers, homes, hunting NPC life.
+  - **Rule flags:** none. Same scene family as WC126/WC127.
+- **WC132** · Autumn hunting camp of wall tents
+  - **Shows:** Four canvas wall tents round a fire ring, a cook tent with game hanging on a meat pole, a hide stretcher, a deer stand and outhouse, pickups, a quad and a trailer on a muddy track, a rocky river at left; blazing autumn forest.
+  - **Goes to:** Highland Woods (47).
+  - **Feeds:** campgrounds, forest, NPC life.
+  - **Rule flags:** none.
+- **WC133** · Beach campfire below the dunes
+  - **Shows:** A small campsite in the dunes: tent, picnic table, fire ring with campers, an SUV with roof box; boardwalk stairs and sand fences down through dune grass to a beach with driftwood, dark rocks and surf.
+  - **Goes to:** Northshore Beaches (54); fallback Egret Coast (53) or Sandpiper Coast (52).
+  - **Feeds:** beaches, campsites, coast dressing.
+  - **Rule flags:** none.
+- **WC134** · Redwood lakeshore campsite
+  - **Shows:** A lone tent and fire ring under huge redwoods above a rocky lakeshore with clear shallows, lily pads, granite boulders and a small pine islet; dirt trails through the forest.
+  - **Goes to:** a mountain lake in Highland Woods (47).
+  - **Feeds:** forest (redwoods), lakes, campsites, clear water with visible bottom.
+  - **Rule flags:** none.
+- **WC135** · Redwood creek camp with swimming hole
+  - **Shows:** A tent and fire in a redwood grove by a trail; a creek drops over a granite fall into a clear turquoise pool with swimmers, then runs on through boulders under two fallen-log bridges.
+  - **Goes to:** Highland Woods (47) / the R1 waterfall chain.
+  - **Feeds:** waterfalls, swimming holes, rivers (how a creek steps), campsites.
+  - **Rule flags:** none. Near-duplicate family with WC136/WC137.
+- **WC136** · Redwood creek pool and campfire
+  - **Shows:** Close-up variant of WC135: fire ring with log seats, a small cascade into a clear pool over pebbles, a weir-like outlet of boulders and fallen redwood logs; no tent.
+  - **Goes to:** as WC135.
+  - **Feeds:** as WC135.
+  - **Rule flags:** none. Near-duplicate of WC135/WC137.
+- **WC137** · Redwood creek pool and tent (variant)
+  - **Shows:** Another variant: orange tent and fire on the bank, a step cascade into a long clear pool lined with boulders and fallen logs, ferns and redwoods.
+  - **Goes to:** as WC135.
+  - **Feeds:** as WC135.
+  - **Rule flags:** none. Near-duplicate of WC135/WC136.
+- **WC138** · Developed campsite loop under redwoods
+  - **Shows:** A paved campground loop with back-in spots for a pickup and SUV, a site with tent, table, fire ring and bear box, a toilet/shower block, a trailhead info board, an amphitheatre fire circle with log benches, and a path with steps down to a creek pool with a small fall.
+  - **Goes to:** Highland Woods (47) campground; fallback near Timber Bend (57).
+  - **Feeds:** campgrounds (map icon), forest, trails.
+  - **Rule flags:** none.
+- **WC139** · Redwood campground with two loops
+  - **Shows:** A gated entrance with a ranger kiosk off a forest road, a camp store and lodge in the middle, a campfire amphitheatre, two one-way loop roads with tent, car and RV sites, and a trail to a river beach with a waterfall and swimmers.
+  - **Goes to:** Highland Woods (47) main campground; fallback the R1 lakes.
+  - **Feeds:** campgrounds, forest, rivers, NPC life.
+  - **Rule flags:** none.
+- **WC140** · Lighthouse and keeper's cottage on a point
+  - **Shows:** A white lighthouse with red lantern beside a red-tile keeper's cottage inside a white-walled garden on a cliff point; a path along the cliff edge, a small car park on the coast road, a tide-pool rock shelf below, sea stacks, and a sandy cove to the east.
+  - **Goes to:** North Point Light (32); fallback Sandpiper Point Light / Egret Point Light / Lighthouse Rock.
+  - **Feeds:** lighthouses, coast, tide pools.
+  - **Rule flags:** none.
+- **WC141** · Basalt-column waterfall with viewing deck
+  - **Shows:** A tall fall over a horseshoe of dark basalt columns into a deep green pool with mist; a timber viewing deck at the lip, a long stair trail down the slope, a timber footbridge over the outflow, a trailhead car park with toilet and info board under redwoods.
+  - **Goes to:** the waterfalls (Granite Peaks 48 / R1 chain); fallback Willow River Falls on the Long Reach.
+  - **Feeds:** waterfalls (signature), trails, viewpoints.
+  - **Rule flags:** none.
+- **WC142** · Crop-duster grass airstrip on a farm
+  - **Shows:** A paved strip with threshold markings and edge lights, a parallel taxiway, an apron of small prop planes and a yellow crop duster, two hangars, a red-roof office, a tractor shed with water tower and fuel truck, a windsock; orchards, crop rows and hay-bale fields with tractors round it.
+  - **Goes to:** Willow Valley (49) crop-duster airstrips; fallback Lucky Mesa airstrip.
+  - **Feeds:** airstrips, farm valley, planes.
+  - **Rule flags:** none.
+- **WC143** · Highway rest area in the pines
+  - **Shows:** A divided highway with a rest-area loop: a car park and a separate truck lane with parked semis, a toilet/visitor building with vending machines, a picnic pavilion, a pet area, a footpath to a fenced viewpoint terrace; pines and granite.
+  - **Goes to:** the highway through Highland Woods (47); fallback the highway towards Granite Peaks.
+  - **Feeds:** highways, highway stops, NPC life (truckers).
+  - **Rule flags:** none. Near-duplicate of WC144.
+- **WC144** · Highway rest area with valley view (variant)
+  - **Shows:** The same rest area as WC143 from further back, with a river valley, red cliffs and a winding road in the distance behind the viewpoint.
+  - **Goes to:** as WC143.
+  - **Feeds:** as WC143.
+  - **Rule flags:** none. Near-duplicate of WC143.
+- **WC145** · Divided highway bridge over a redwood creek
+  - **Shows:** A curving four-lane highway with a planted median crosses a boulder creek on a short concrete bridge through giant redwoods; a gravel pull-out with an info sign and a pickup, a dirt track and fence along the creek.
+  - **Goes to:** Highland Woods (47) highway; fallback the road to Timber Bend (57).
+  - **Feeds:** highways, rivers, forest.
+  - **Rule flags:** none. Near-duplicate of WC146.
+- **WC146** · Divided highway over a redwood creek (variant)
+  - **Shows:** The same bridge and pull-out as WC145 with a little more of the dirt trail on the right.
+  - **Goes to:** as WC145.
+  - **Feeds:** as WC145.
+  - **Rule flags:** none. Near-duplicate of WC145.
+- **WC147** · Mountain switchback road with snow shed
+  - **Shows:** A mountain road climbing in stacked hairpins on stone retaining walls, a concrete avalanche/rock shed over one leg, a stone culvert arch where a cascading stream passes under, a gravel pull-out and a summit car park with a viewpoint overlooking water.
+  - **Goes to:** Granite Peaks (48); fallback the pass road above the mountain lakes.
+  - **Feeds:** mountain roads, waterfalls/streams, viewpoints, driving set piece.
+  - **Rule flags:** none.
+- **WC148** · Farm crossroads with four-way stop
+  - **Shows:** Two straight two-lane country roads cross at a four-way stop with ditches and culverts; a red barn farmstead with silo, windmill and machine shed, a farmhouse, a roadside produce stand, a grain elevator with tanks; wheat, corn rows and a ploughed field with hay bales.
+  - **Goes to:** Willow Valley (49) / Cedar Farms (38).
+  - **Feeds:** farm valley, country roads, grain elevator, roadside stands.
+  - **Rule flags:** none.
+- **WC149** · Interstate truck stop with motel
+  - **Shows:** A huge truck-stop superblock between a highway and a frontage road: a truck fuel canopy, a car fuel canopy, rows of parked semis, a diner and convenience stores with coffee-cup neon pylons, a truck wash, a weigh/service bay, a motel with pool, a pond corner, fields beyond.
+  - **Goes to:** Willow Crossing (58) truck stop; fallback Route 9 (Red Rock Desert).
+  - **Feeds:** highway stops, venues, NPC life (truckers), cargo/extraction (semis).
+  - **Rule flags:** none.
+- **WC150** · Car ferry terminal on a town waterfront
+  - **Shows:** A ferry pier with a central car ramp and lane markings, a car ferry docked bow-in, two passenger ferries at side berths, a terminal hall with a bus turn-around loop and car park, a seawall promenade with café umbrellas and a small water-taxi jetty; rocks and beaches either side; red-roof town behind.
+  - **Goes to:** the Harbor (8) ferry terminal; fallback Gull Harbor (43) or Egret Point (65) car-ferry pier.
+  - **Feeds:** ferries (car ferry to Gull Harbor), harbour, transit.
+  - **Rule flags:** none.
+- **WC151** · Elevated rail station over a city plaza
+  - **Shows:** An elevated line comes out of a portal in a planted embankment and runs on columns over a plaza between brick blocks; a two-platform station with green canopies, stair and lift towers down to a tree-planted plaza with benches; streets with zebra crossings pass under; a train at the platform.
+  - **Goes to:** Midtown (1) main-line station (the viaduct over streets); fallback the Pink/Yellow lines' elevated stretches.
+  - **Feeds:** the missing rail viaduct over streets (missing #2), train ride, station plazas.
+  - **Rule flags:** none.
+- **WC152** · Freight rail yard with ore and lumber loading
+  - **Shows:** A multi-track yard full of hoppers, tank cars and log flats with two locomotives, a coal/ore loading tower with conveyor, gravel and sand stockpiles with a loader, a log yard with stacked logs and an excavator, a fuel depot, a yard office, a gated road, a river with rocks along the bottom.
+  - **Goes to:** The Yards (3); fallback Port Westport (26) freight spur.
+  - **Feeds:** rail yard with sidings (missing #11), train ride, cargo.
+  - **Rule flags:** none.
+- **WC153** · Mountain railway with stone viaduct
+  - **Shows:** A single track loops through granite gorges: a multi-arch stone viaduct over a cascading river, a tunnel portal, a timber snow shed on a ledge, a small station with sidings and wagons, a mountain lake and snowy peaks above, pines everywhere.
+  - **Goes to:** the main line through Granite Peaks (48) / Highland Woods (47).
+  - **Feeds:** train ride (signature), rivers, mountains, tunnels.
+  - **Rule flags:** none.
+- **WC154** · Rail junction with depot and flyover
+  - **Shows:** A main line crossing under a road bridge; a branch climbs on a flyover and curves north to a locomotive depot with an engine shed, turntable-style fan of tracks and a signal box; signals, a maintenance yard with rails and sleepers, a passenger train and a freight train, houses and a river at the edges, a pond.
+  - **Goes to:** The Yards (3); fallback Old Quarter (30) near the main line.
+  - **Feeds:** rail yard, train ride, junctions.
+  - **Rule flags:** none.
+- **WC155** · Small-town station with level crossing
+  - **Shows:** A two-platform station with canopies and a footbridge, a brick station house on a forecourt with bus stop, taxi rank and car park, a level crossing with gates and lights, a freight siding with a goods shed; a main road crossing over the line on a bridge, brick terraces, a creek with a boat jetty, farm fields at the edge.
+  - **Goes to:** Old Quarter (30) station block; fallback Northshore (31) or Willow Crossing (58) station.
+  - **Feeds:** station towns, level crossings, train ride.
+  - **Rule flags:** none.
+- **WC156** · Causeway road hopping rocky islets
+  - **Shows:** A two-lane road on a low concrete trestle crossing open sea from islet to islet: each pine-and-boulder islet has a pull-out with cars and a bench, small sand pockets and tide-washed rocks; turquoise shallows round the islets, deep blue between.
+  - **Goes to:** the bridge to Coral Cay (44) or the east island's bridge; fallback a footbridge/road to The Islets (20).
+  - **Feeds:** island bridges, islands, coast, scenic drive.
+  - **Rule flags:** none.
+- **WC157** · Toll plaza and marina at a bridgehead
+  - **Shows:** A twin-deck road bridge lands on a rocky headland at a covered multi-lane toll plaza with its admin building and a radio mast; below, a breakwater-sheltered small-boat marina with finger piers, a lighthouse on the breakwater tip, red/green channel buoys, a sandy cove and a cliff-backed coast road with palms.
+  - **Goes to:** the island bridgeheads of the Gulf Island (Midtown (1) / Neon Strip (7) ends); fallback Bayside Heights (16) diagonal bridge to the south-east island.
+  - **Feeds:** bridges, highways (toll plaza), marina, lighthouse on breakwater, buoyed channel.
+  - **Rule flags:** none.
+- **WC158** · Harbour mouth with bascule and swing bridges
+  - **Shows:** A buoyed channel runs inland between two breakwater-tipped sand spits (lighthouse on the east one) into a river; a red steel rail swing/truss bridge carries a freight train across, and a twin-tower lift/bascule road bridge crosses further up. West bank: a small-boat marina and red-roof houses; east bank: a working quay with a crane, a moored tug, warehouses and three storage tanks.
+  - **Goes to:** Old Town (18) at the river mouth / Harbor (8); fallback Port Westport (26) basin entrance.
+  - **Feeds:** river mouth, rivers (navigable channel for the river ferry), bridges, train ride, harbour.
+  - **Rule flags:** none.
+- **WC159** · Strait crossing: road bridge and road-rail bridge
+  - **Shows:** Two long parallel spans cross a strait: a two-lane road bridge with a lift section, and a wide combined bridge carrying a four-lane road beside a double rail track with trains; both have steel lift towers. Each shore has a seawall promenade with palms, a marina (yachts at left), red-brick town blocks, and a fishing quay with a green-roof fish market and boats at right; tanks and an industrial quay on the far shore.
+  - **Goes to:** the bridges between the mainland city (Midtown 1 / Harbor 8) and the Gulf Island; fallback the western city crossing.
+  - **Feeds:** bridges (rail + road over the gulf), train ride, fish market (missing exterior), harbour, promenades.
+  - **Rule flags:** none.
+- **WC160** · Stone arch bridges over a granite gorge
+  - **Shows:** A deep granite gorge with a white-water river; a highway crosses on a single open-spandrel concrete arch with gravel pull-outs and a viewpoint on each rim; lower down, a railway on a three-arch stone viaduct carries a freight train; pines on the rims.
+  - **Goes to:** the main line and highway through Granite Peaks (48) / Highland Woods (47); fallback Willow River Falls gorge on the Long Reach.
+  - **Feeds:** train ride, highways, rivers (gorge), viewpoints.
+  - **Rule flags:** none.
+- **WC161** · Twin highway tunnels and rail tunnel portal
+  - **Shows:** A divided four-lane highway enters twin tunnel portals in a granite ridge (retaining walls, lit), with fences on the ridge above marking the buried road; beside it a rail tunnel portal with signals and a small maintenance yard and hut; a winding service road climbs the ridge, and a river with a road bridge runs down the left.
+  - **Goes to:** the highway and main line tunnels through Granite Peaks (48); fallback the main loop's tunnels in Highland Woods.
+  - **Feeds:** highways, train ride (tunnels), mountains.
+  - **Rule flags:** none. Near-duplicate of WC162.
+- **WC162** · Twin highway tunnels and rail tunnel (variant)
+  - **Shows:** The same scene as WC161 in warmer light, slightly wider: adds green overhead sign gantries before the portals, a rail bridge over the river at top-right and more of the river on the left.
+  - **Goes to:** as WC161.
+  - **Feeds:** as WC161.
+  - **Rule flags:** none. Near-duplicate of WC161.
+
+## Near-duplicates in this batch
+- WC086 = WC087 (coastal downtown with port, marina, beach).
+- WC096 = WC097 (farms kit; WC097 larger).
+- WC099 = WC100 = WC101 (surf contest cove); WC103 is the same theme, different layout.
+- WC104 = WC105 (stone circle).
+- WC126 = WC127 (trapper's cabin, beaver pond); WC131 the autumn hunting version.
+- WC128 = WC129 (observatory).
+- WC135 = WC136 = WC137 (redwood creek pool).
+- WC143 = WC144 (rest area).
+- WC145 = WC146 (highway bridge in redwoods).
+- WC161 = WC162 (tunnels).
+
+## Batch highlights
+1. **WC151** elevated station over a city plaza - the only concept of the missing "rail viaduct over a street between buildings" (Midtown's main line).
+2. **WC152** freight rail yard (and WC154 junction/depot) - the missing rail yard with sidings for The Yards.
+3. **WC159** strait road-rail bridge with promenades, marina and fish market - the gulf crossings and a fish-market exterior.
+4. **WC082** hairpin villa loop with cliff stairs to a cove and a seaside station - the missing hillside winding estate street (Bayside Heights / The Bluffs).
+5. **WC086/087** coastal downtown meeting marina, beach, lighthouse and port - a full district-blend layout for Harbor/Midtown.
+6. **WC108** Prison Island - ready-made layout for district 55 (walls, towers, yard, helipad, ferry dock).
+7. **WC123** open-pit copper mine with ore train - Copper Gulch's mine as a set piece.
+8. **WC122** arch dam with reservoir and visitor centre - the desert dam at (5245, 2160).
+9. **WC109** sawmill with log pond and rail siding - Timber Bend's sawmill.
+10. **WC153/WC160/WC161** mountain railway: stone viaducts, gorge arches, tunnels and snow sheds - the main line's scenic ride through Granite Peaks.
+Also strong: WC158 (river mouth with bridges), WC157 (toll plaza + breakwater marina), WC150 (car ferry terminal), WC149 (truck stop), WC111 (fairgrounds), WC112 (raceway), WC141 (basalt falls).
+
+**Recurring themes:** (a) transport set pieces - bridges, tunnels, viaducts, stations, toll plaza, ferry terminal (WC150-162); (b) six-vignette kits (WC088-098) for industry, parks, civic, rural homes, crossings, waterfront, trails, roadside stops, farms, camps; (c) the redwood/granite forest with campsites, creeks and pools (WC126-139); (d) desert attractions round Lucky Mesa/Route 9 (boneyard, mission, roadhouse, drive-in, oil/solar, dam, mine); (e) surf-contest beaches (four images). Rule flags are few: playground (WC089, WC090), school + school bus (WC090), national flags (WC090, WC093, WC095, WC106, WC130).
+
+
+## Batch, batch 3: WC163 - WC243 (81 images)
+
+Places named as in WORLD-V3.md Part 9 (v3b); plan refs = handcraft/city.md s4 and nature.md s4. All are golden-hour / dusk / night top-down 16-bit illustrated maps.
+Near-duplicates in this batch: **WC165 ~ WC166**, **WC197 ~ WC198** (autumn recolour), **WC199 ~ WC200**, **WC207 ~ WC208**, **WC228 ~ WC229**, **WC235 ~ WC236** (re-render); siblings (same brief, different layout): WC163/164, WC212/213, WC220/221, WC215/216 (Lucky Mesa pair), WC237/238 (night pair).
+
+- **WC163** · Dry-oak freeway flyover and truck weigh station
+  - **Shows:** A 6-lane E-W freeway with median barrier; a single flyover loop ramp on piers to a N-S highway; lattice power pylons, a creek pond TL, oaks and scrub on orange dirt. Bottom: a truck weigh/inspection station (canopy, scale lane, booth, parked rigs, a small office).
+  - **Goes to:** the highway where the farm valley meets the Red Rock Desert (the desert's west fringe); fallback general highway kit.
+  - **Feeds:** highways (s5: flyover ramp, weigh station as a roadside stop), truck/cargo gameplay (a checkpoint for crate runs).
+  - **Rule flags:** none.
+- **WC164** · Trumpet interchange with truck stop and river
+  - **Shows:** A wider sibling of 163. A loop/trumpet interchange in chaparral; a highway bridge over a rocky river with rapids TL; a truck stop and gas canopy with parked rigs R; a motel and small town TR; an industrial yard with containers BL; a ranch shack, water tanks and dirt tracks.
+  - **Goes to:** the desert highway junction west of Copper Gulch, where the Copper River is bridged; fallback Willow Valley's highway.
+  - **Feeds:** highways, truck stop venue, river crossings (3.4: a bridge at every crossing).
+  - **Rule flags:** none.
+- **WC165** (~ **WC166**, tighter crop) · Mountain freeway viaduct interchange
+  - **Shows:** A N-S freeway crossed by an E-W highway on a tall-pier viaduct, with flyover ramps, in pines and granite crags. A **runaway-truck arrester bed** (gravel ramp) TL; a creek waterfall TR; an overlook rest area with a log lodge, car park and picnic shelter; a river in the gorge under the viaduct.
+  - **Goes to:** where the highway climbs into Granite Peaks / Highland Woods; fallback the Timber Bend approach.
+  - **Feeds:** highways in mountains, a rest-stop venue, waterfalls (the R1 chain under a bridge), bridge/viaduct art.
+  - **Rule flags:** none.
+- **WC166** · Near-duplicate of WC165 (same scene, slightly different crop and light). Use 165.
+- **WC167** · Sunken freeway diamond interchange by the bay
+  - **Shows:** A N-S freeway in a cutting with grassed embankments; an E-W arterial on a bridge with diamond ramps. Gas station and burger joint with a pole sign TL; a motel with a pool and palm sign TR; a park-and-ride lot on the bay shore with a small jetty BL; strip retail and suburbs R.
+  - **Goes to:** **Stadium District (25)**: exactly its "diamond interchange onto Stadium Avenue with gas and strip malls at its terminals"; fallback West Hills.
+  - **Feeds:** highways (s5: sunken freeway, diamond ramps), city layout at freeway edges.
+  - **Rule flags:** none.
+- **WC168** · Full cloverleaf in suburbs and farmland
+  - **Shows:** A N-S freeway crosses an E-W freeway with four loops and slip ramps. Sound walls back onto suburban houses TL; strip/big-box retail BL; a mall or park-and-ride lot with a pond TR; a freight rail line in a cutting under the bridges R; a farm field and a creek.
+  - **Goes to:** the highway junction between West Hills (28) and Westport International (27); fallback the Stadium District's east edge.
+  - **Feeds:** highways (cloverleaf, sound walls), rail under highways.
+  - **Rule flags:** none.
+- **WC169** · Redwood headland lighthouse and campground
+  - **Shows:** A lighthouse and red-roofed keeper's cottage on a cliff top, sea stacks with trees on them, and a cove beach with driftwood at a creek mouth. Also a cliff trail with steps, a campground (tents, RV, picnic tables, host hut), the coast road on a bridge over the creek, and giant redwoods to the cliff edge.
+  - **Goes to:** **North Cape** (nature 4.9: light, campground, redwoods to the cliff); fallback the Highland Woods coast (Redwood Cove, Coast Trail).
+  - **Feeds:** coast, lighthouses, campgrounds, forest-to-sea edge, creek-to-beach (N8-D).
+  - **Rule flags:** none.
+- **WC170** · Desert meets the sea: beach cottages
+  - **Shows:** A two-lane coast road with power poles; beach cottages with porches and stairs to the sand; an RV/tent camp with a ramada; a lifeguard tower, umbrellas and surfers. Red sandstone mesas and hoodoos stand inland, with a windmill and ranch shack TL and red boulders on the shore.
+  - **Goes to:** **Sandpiper Coast (52) / Sandpiper Bay (59)**. This fills the plan's missing "desert coast" concept (nature 4.8).
+  - **Feeds:** coast, beach, desert-sea blend, homes (beach cottages), campground.
+  - **Rule flags:** none.
+- **WC171** · Swamp causeway with boardwalk and bird hides
+  - **Shows:** A straight dirt causeway road runs N-S through a swamp, with a plank-bridge section. A zigzag boardwalk leads from a trailhead kiosk to a viewing deck. Two bird hides on stilts; dead snags and fallen logs; herons, egrets and ducks; willows, reed beds and granite boulders, with redwoods at the edge.
+  - **Goes to:** **Egret Coast (53)** marsh; fills its missing "marsh with boardwalks" and "bird hide" (nature 4.5).
+  - **Feeds:** marsh, boardwalk loops, bird hides, wildlife, dirt road over water.
+  - **Rule flags:** none.
+- **WC172** · Alpine switchback road up a snowy face
+  - **Shows:** A road climbs a snow-capped granite slope in tight S-bends, with a cascading creek and falls beside it, scree chutes, pine forest below and meadow patches.
+  - **Goes to:** **Granite Peaks (48)** mountain road; fills its missing "snowfield edge and a snowy road at game scale" (nature 4.2).
+  - **Feeds:** mountain roads (guardrails, hairpins), snowline, creeks.
+  - **Rule flags:** none.
+- **WC173** · Forest road at a red canyon, with fire lookout
+  - **Shows:** A 2-lane road with guardrails crosses a creek on a culvert bridge. A scenic pullout with a parked RV and an interpretive sign sits at the canyon rim; a fire lookout tower with stairs stands on a red-rock knob. The red canyon has a waterfall; there's a footbridge in the woods, picnic tables, and mixed pine/oak forest.
+  - **Goes to:** the Red Rock Desert's west rim where the Copper River canyon meets the forest; fallback Highland Woods roads.
+  - **Feeds:** biome blend (forest to desert), viewpoints, fire lookout, canyon falls.
+  - **Rule flags:** none.
+- **WC174** · Irrigated desert farms at the mesa edge
+  - **Shows:** A main canal with a sluice gate/weir and lateral ditches with culverts; green crop fields, an orchard and corn; a farmhouse, red barn and silo; a corral with cattle, a windmill and water tanks. A 2-lane road runs E-W with a dirt road N-S and a power line, then a hard edge into red mesas, hoodoos and cacti.
+  - **Goes to:** the Copper River floodplain below Red Rock Dam (near Dusty Hollow); fallback Willow Valley's east edge.
+  - **Feeds:** irrigation and water (canals, gates), farms, desert edge blend.
+  - **Rule flags:** none.
+- **WC175** · Highway embankment between farms and town
+  - **Shows:** An elevated E-W highway on an embankment with an underpass road. North: farms (red barn, silo, hay bales, crop rows, a farm stand). South: a motel with a pool, a diner, strip shops, a sports park (running track, soccer, baseball) and suburban homes. A brick school with a yellow school bus stands in the middle.
+  - **Goes to:** **Willow Crossing (58)** on its highway; fallback Cedar Falls' edge.
+  - **Feeds:** town-edge layout, highway embankment and underpass, farm stand.
+  - **Rule flags:** **school building + yellow school bus** (centre bottom): replace with a community hall/rec centre and a plain bus.
+- **WC176** · Coastal headland tunnels: road and railway
+  - **Shows:** A rugged headland with a sea arch, sea stacks and a pebble cove. The coast highway pierces it in 2 portal tunnels; the railway runs below in 2 more tunnels with a freight train. A viewpoint lot with a trail sits on top, a cabin on the point, and a vineyard, farmhouse and pond BL.
+  - **Goes to:** the main line's **north coast scenic stretch** (between Northshore and the north-west; or The Bluffs' headland); fallback Sandpiper Coast.
+  - **Feeds:** **train ride** (tunnels on the coast), highway tunnels, coast (arch, stacks).
+  - **Rule flags:** none.
+- **WC177** · Surf cove between two headlands
+  - **Shows:** A crescent sand beach between rocky headlands; a lifeguard tower with a red flag, a surf shack with a board rack, a beach car park with stairs and ramps, and a cliff stair. A coastal road curves above, with red-tile and flat-roof houses, and many surfers in the break.
+  - **Goes to:** **Sandpiper Coast** surf point (SR1); fallback The Bluffs' cove or the Sunset Beach west end.
+  - **Feeds:** beach, surf venue, cove access.
+  - **Rule flags:** none.
+- **WC178** · Reef bay marina with buoyed channel
+  - **Shows:** A sand bay with a beach restaurant/bar and parking, and a T-shaped dock with a boathouse and moored motorboats. Red/green channel buoys mark the safe lane through coral and rock shallows; a palm islet has its own jetty; sailboats; a shore road and houses.
+  - **Goes to:** **Coral Cay (44)**; fallback Pelican Key's (14) charter dock.
+  - **Feeds:** water (shallows, navigation buoys), marina, boat routes, island venues.
+  - **Rule flags:** none.
+- **WC179** · Sea-stack islets, sea lions and a wreck
+  - **Shows:** A cluster of sandstone stacks and a natural sea arch on reef shallows; one islet has a sand beach and a sea cave; sea lions haul out on a flat rock; a wooden shipwreck lies on the reef. Kelp and coral; boats on dashed tour lines with buoys.
+  - **Goes to:** **The Islets (20)**; fallback Egret Rocks (56).
+  - **Feeds:** islands, sea life (seal rock), wreck (dive/salvage spot), boat tours.
+  - **Rule flags:** none.
+- **WC180** · Jungle island with waterfall lagoon and ruins
+  - **Shows:** A palm-jungle island ringed by sand. A waterfall drops off a rock wall into a lagoon pool crossed by a footbridge; roofless stone ruins sit in a clearing. There's a wooden dock with a hut, crates and a moored boat, a watchtower on a rocky summit reached by cliff stairs, reef shallows and stacks, and a satellite islet.
+  - **Goes to:** an offshore islet by Coral Cay (44) / Pelican Key (a smuggler's hideout); fallback general island reference (SC3-H lagoon with fall).
+  - **Feeds:** islands, smuggler's cove / extraction target, waterfall pool.
+  - **Rule flags:** none.
+- **WC181** · Desert oasis spring and salt flat
+  - **Shows:** A spring pool fed by a small cascade, with palms and reeds; a campsite (canopy, campfire, chairs, two SUVs) on a dirt track; adobe ruins. A cracked white salt flat with dead trees and a dry channel lies R; red rocks, saguaros and a plank jetty.
+  - **Goes to:** **Red Rock Desert (50)**: the Canyon Oasis (nature 4.6); fallback the Mesa camp near Lucky Mesa.
+  - **Feeds:** desert water, campsite, salt flat (a dirt-bike/racing surface).
+  - **Rule flags:** none.
+- **WC182** · Hoodoo badlands with mesa-top lookout and arch
+  - **Shows:** Flat-topped mesas, one with a fire lookout tower, a fence and a switchback trail up; fields of hoodoo spires; a natural arch with twin spires TR. Sandy jeep tracks wind between them, with two jeeps/off-roaders, cacti and dead trees.
+  - **Goes to:** **Red Rock Desert (50)** (the arch, hoodoos); fallback Lucky Mesa's surrounds.
+  - **Feeds:** desert landforms, off-road / dirt-bike trails (nature 4.6 enduro), viewpoints.
+  - **Rule flags:** none.
+- **WC183** · Slot canyons and a mesa overlook
+  - **Shows:** Deep narrow slot canyons cut into a red mesa block, with a sandy wash/jeep track running diagonally between them. A fenced mesa-top viewpoint with a hiker; a small spring pool with greenery TL; a jeep, cacti and hoodoos.
+  - **Goes to:** **Red Rock Canyon** in the Red Rock Desert; fallback Copper Gulch's canyon.
+  - **Feeds:** canyon terrain (fixes "rock as a block with straight edges"), viewpoints, jeep trails.
+  - **Rule flags:** none.
+- **WC184** · Desert highway with ranch gate and dry wash
+  - **Shows:** A 2-lane E-W highway with timber power poles; a ranch entry archway with a cattle guard; a tin-roof ranch house, corral with horses, windmill, water tank and shed. A billboard, a log truck and pickups; a low bridge over a dry cracked wash; red rocks and cacti.
+  - **Goes to:** **Route 9** across the Red Rock Desert; fallback the Casino Highway outside Lucky Mesa.
+  - **Feeds:** desert road kit (nature 4.6: cattle grid at ranch gates, poles, no sidewalks), ranch, dry wash bridge.
+  - **Rule flags:** billboard: keep it blank or use an invented brand.
+- **WC185** · Lake swim beach and boat-rental marina
+  - **Shows:** A lakeside sand beach with a roped swim area and a swim raft; a boat-rental lodge (green roof) on docks with a kayak rack; boats and a sailboat; boat-trailer parking. Picnic shelters and fire rings, a lakeside road, pines, reed beds at a creek mouth, granite boulders and a cabin.
+  - **Goes to:** **Kestrel Lake**'s east beach (Willow Valley); fills nature 4.11's missing "game-scale picture of the lake's east beach" (swim area, buoys, boat hire). Fallback Pine Lake (Highland Woods).
+  - **Feeds:** lakes, boat hire venue, swimming, fishing spots.
+  - **Rule flags:** none.
+- **WC186** · Twin waterfalls in a granite gorge
+  - **Shows:** A river runs through a granite gorge with two wide waterfalls. A wooden footbridge crosses the rapids; a rim trail with hikers, two fenced overlooks with railings, a trail sign, fallen logs, pines and golden aspens.
+  - **Goes to:** the R1 waterfall chain's **twin falls off the rocky knoll**: nature 4.3 lists it as missing. Fallback Highland Woods' Fern Gorge.
+  - **Feeds:** waterfalls, rivers, trails (footbridges, overlooks).
+  - **Rule flags:** none.
+- **WC187** · Navigable farm river with bridge and docks
+  - **Shows:** A N-S river with red/green channel buoys and boats; a stone-pier road bridge E-W. A boat dock and small marina with a boat shed and bait shop L; a tour-boat landing with a shelter R. Wheat with bales and a tractor, crop rows, a red-tile farmhouse, cypress and willows, reed beds.
+  - **Goes to:** **The Long Reach (R4)** by Willow Crossing (the river ferry's navigable channel); fallback Cedar Farms.
+  - **Feeds:** rivers (navigable channel, buoys), river ferry stops, farms, fishing.
+  - **Rule flags:** none.
+- **WC188** · Horse ranch with arena and paddocks
+  - **Shows:** A red barn with hay, a ranch house, a round pen and a riding arena with jumps. Paddocks with horses and troughs, a cattle pasture, a windmill and water tank, a horse trailer and sheds. A creek with willows and a gate/footbridge along the top; a country road E-W with the ranch drive.
+  - **Goes to:** **Cedar Farms (38)** / Willow Valley; fallback a desert-edge ranch off Route 9.
+  - **Feeds:** farms, homes (ranch house), animals, country road meets farm lane.
+  - **Rule flags:** none.
+- **WC189** · Hillside winery estate with orchards
+  - **Shows:** A stone winery with red-tile roofs, a courtyard with barrels and a terrace; a cypress-lined drive from a stone gate; contour vineyard rows on the slopes; orchards (one in pink blossom). A farm stand with an umbrella on the road, a fishing pond with a dock, boathouse and willow, barns, a casita and a windmill.
+  - **Goes to:** Willow Valley: **Lookout Hill's orchard** slope above Kestrel Lake; fallback Cedar Farms.
+  - **Feeds:** farms, venues (winery, farm stand), ponds and fishing.
+  - **Rule flags:** none.
+- **WC190** · Irrigated farm grid with lavender and silos
+  - **Shows:** Section-line roads N-S and E-W, with irrigation canals and culverts along the E-W roads. Fields of wheat with bales, crop rows, pumpkins, **lavender**, ploughed soil, sunflowers, orchard rows and a dairy pasture with cows. Two farmsteads (house, red barn, silos, windmill, tractors); poplar windbreaks.
+  - **Goes to:** **Willow Valley (49) / Cedar Farms (38)**; also fills the v3 gap Cedar Point Lavender.
+  - **Feeds:** farms (field patchwork), country roads, irrigation.
+  - **Rule flags:** none.
+- **WC191** · Meadow knoll, reedy pond and stone walls
+  - **Shows:** Rolling grass hills with wildflowers; a reedy pond with lily pads, a small jetty and an islet; willows. Dirt farm tracks forking, dry-stone walls and rail fences, granite boulders on a knoll with a lone oak, a wayside cross, and a hay field with bales.
+  - **Goes to:** Willow Valley's hills; fallback the Highland Woods edge near Timber Bend.
+  - **Feeds:** countryside fill between farms, ponds, fishing, farm lanes.
+  - **Rule flags:** wayside cross (religious marker; fine to keep, or make it a signpost).
+- **WC192** · Dune beach access with boardwalk stairs
+  - **Shows:** A road ends in a beach car park with a restroom/kiosk in pines. Three timber stair-boardwalks cross grassy dunes to the sand; dune fences, a lifeguard tower with a red flag, driftwood logs, beach-goers with umbrellas and surfboards, and rocks at both ends.
+  - **Goes to:** **Northshore Beaches (54)**, east end; fallback Pelican Key's beach.
+  - **Feeds:** beach access kit (NT1-E dune boardwalks), car parks, coast road ends.
+  - **Rule flags:** none.
+- **WC193** · Tidal marsh preserve with observation deck
+  - **Shows:** Meandering tidal channels and reed islands. A zigzag boardwalk runs from a trailhead lot (portable toilet, info board) to a covered pavilion and observation deck; three bird hides on stilts; dead snags, egrets, pelicans and ducks; a gravel road along the top.
+  - **Goes to:** **Egret Coast (53)**, near Egret Point; pairs with WC171.
+  - **Feeds:** marsh, boardwalk loops, bird hides, trailheads.
+  - **Rule flags:** none.
+- **WC194** · Cliff coast road with creek falls to coves
+  - **Shows:** A winding 2-lane coast highway on a cliff shelf with guardrails. Two small creek waterfalls spill from culverts under the road onto little cove beaches; sea stacks and rock shelves offshore; a viewpoint pullout with a car and sign TL; a picnic area in redwoods R.
+  - **Goes to:** the north-west coast road between North Cape and Highland Woods (Coast Trail, Redwood Cove); fallback The Bluffs.
+  - **Feeds:** coast roads, creek-to-sea falls (N8-D/SC3-B), viewpoints.
+  - **Rule flags:** none.
+- **WC195** · Alpine tarn with outlet fall and stone hut
+  - **Shows:** A turquoise cirque lake in granite walls with snow patches; its outlet drops as a waterfall into a cascading creek. A hiking trail crosses on a plank footbridge; a stone/log mountain hut with a fire ring, woodshed and trail sign; a side pond, a wildflower meadow and pines below.
+  - **Goes to:** **Granite Peaks: Summit Tarn**, the high lake feeding R1 (nature 4.2/4.3).
+  - **Feeds:** mountain lakes, waterfalls, trails, a hut (shelter/stash spot).
+  - **Rule flags:** none.
+- **WC196** · Summit ridge trail with cairns and shelter
+  - **Shows:** A rocky ridge-crest trail with cairns climbs to a stone summit shelter. A deep blue tarn lies in a snowy cirque L, with sheer granite walls, scree, snowfields and scattered pines.
+  - **Goes to:** **Granite Peaks**: the Ridge Trail and the summit cairn trail.
+  - **Feeds:** trails, granite cliff look (pale columns, scree cones).
+  - **Rule flags:** none.
+- **WC197** · Forest lake campsite with canoe dock
+  - **Shows:** A small lake with lily pads, a plank dock and a red canoe. A campsite (two tents, fire ring, chairs, picnic table, an SUV with a roof box), an info board and a hunting stand/deer platform; a switchback trail up through boulders; a dirt road loop with a timber gate; birch and pine, fallen logs.
+  - **Goes to:** **Highland Woods**: Pine Lake / Pine Ridge Campground (or the Ridge Trail Hunting Camp, moved out of the snow); fallback Granite Peaks' foot.
+  - **Feeds:** campgrounds, lakes, hunting, forest edges.
+  - **Rule flags:** none.
+- **WC198** · Near-duplicate of WC197: the same layout recoloured in autumn foliage. Useful only as a seasonal palette reference (E3b edges).
+- **WC199** (~ **WC200**) · Active logging site and gravel quarry
+  - **Shows:** A haul-road loop off a forest road. A log deck yard with stacked logs, an excavator loader, log trucks and site trailers; a rock quarry pit with gravel heaps, a loader and a conveyor at the top. A clearcut with stumps, slash piles and skid trails; replanted seedling rows R; a creek with small falls and a plank bridge; giant redwoods and a timber gate.
+  - **Goes to:** **Highland Woods** near Timber Bend (felled patches, WD1), with the **Granite Quarry**; fallback Granite Peaks' foothills.
+  - **Feeds:** forest industry, cargo/heist targets (log trucks), quarry, clearings.
+  - **Rule flags:** none.
+- **WC200** · Near-duplicate of WC199 (slightly wider, redrawn). Use either.
+- **WC201** · Redwood grove trails with hollow-log tunnel
+  - **Shows:** Giant redwood trunks and a boulder creek with small cascades; two railed footbridges and timber stair trails. A hollow fallen log the trail passes through, and a second fallen giant across the creek; a trail kiosk/sign, hikers with a dog, ferns.
+  - **Goes to:** **Highland Woods**: the Giants Loop / Redwood Creek Trail (nature 4.1).
+  - **Feeds:** forest (old-growth band), trail network, footbridges.
+  - **Rule flags:** none.
+- **WC202** · Small-town main street with depot and church
+  - **Shows:** An E-W main street with diagonal parking and brick storefronts with awnings. A train depot with a passenger train, platform and bus shelter TL; a gas station and convenience store R; a church with a spire and walled cemetery TR; houses on wooded lots, a pond and a pine forest edge. A brick school with a basketball court, playground and yellow school bus BL.
+  - **Goes to:** **Timber Bend (57)** (pine edge, on the line) or Willow Crossing; fallback Northshore's station town.
+  - **Feeds:** small-town main street (a city.md missing item), station town, church.
+  - **Rule flags:** **school, playground, yellow school bus** (BL): replace with a community hall, a park or a lot.
+- **WC203** · Tropical twin islands: village and wild cove
+  - **Shows:** A village island with thatched and tin-roof huts, a beach bar/cafe and market stalls; a plank pier with an excursion boat and a skiff; a two-step waterfall and a lookout tower on a rock knob with cliff stairs. A second, wild island has high cliffs, a hidden cove beach and a sea cave; red/white channel buoys and reef patches between.
+  - **Goes to:** **Coral Cay (44)** (the quiet key); fallback Pelican Key (14).
+  - **Feeds:** islands ("handcrafted with unique communities"), boat routes, hidden cove (stash/extraction).
+  - **Rule flags:** none.
+- **WC204** · Stone harbour village with car-ferry slip
+  - **Shows:** At dusk, a rocky islet/headland reached by a causeway road from the N. A walled harbour basin with lit quays and fishing boats; a car-ferry ramp/linkspan with queued cars and a ticket booth; a breakwater with a red-topped lighthouse. A stone church with a spire and graveyard, slate-roofed cottages and quayside pubs; stairs down to a cove beach with a bonfire.
+  - **Goes to:** **Gull Harbor (43)**, the ferry island reached only by the car ferry; fallback North Point.
+  - **Feeds:** island community, car-ferry terminal, harbour, lighthouse, pub venue.
+  - **Rule flags:** none.
+- **WC205** · Beach road with colourful cottages
+  - **Shows:** A coast highway along the top. Below it a beach road lined with colourful raised beach cottages with porches, a cafe with a striped awning and a surf/rental shop. Also a playground (swings, slide) in a sandy lot, beach stairs over a dune fence, a lifeguard tower, umbrellas, swimmers, an RV.
+  - **Goes to:** **Pelican Key (14)**; fallback Sunset Beach's quieter west end / Northshore Beaches.
+  - **Feeds:** homes (beach cottages), beachfront street section.
+  - **Rule flags:** **playground** (centre R): replace with a picnic/volleyball lot.
+- **WC206** · Desert crossroads farm town with airstrip
+  - **Shows:** A rail line along the top with a freight train, depot and water tower. A small grid town: a motel with neon, a diner, a church, a saloon/biker bar with motorbikes lined up, a general store. Irrigated farms on a creek on the west (orchards, barns, windmill); a highway interchange; an airstrip with a hangar, two light planes and a fuel tank R; red mesas E.
+  - **Goes to:** **Copper Gulch (63)** (the depot town); fallback Mesa Flats / Lucky Mesa's airstrip.
+  - **Feeds:** desert town layout, biker bar venue, airstrips (world3-airstrips), rail depot.
+  - **Rule flags:** none.
+- **WC207** (~ **WC208**) · Marsh fishing village on stilts with lighthouse
+  - **Shows:** A single main road N-S ends at the docks. Piled timber wharves with shrimp trawlers, fishing boats and fuel tanks; a fish house/packing shed and a net shed; a wooden boat in a cradle under a travel lift. Stilt houses on piers over marsh channels on both sides; a red-white striped lighthouse and keeper's house on a rocky point SE; reed islands and palms.
+  - **Goes to:** **Egret Point (65)**: fills its missing "fishing-village street", with Egret Point Light; fallback North Point.
+  - **Feeds:** fishing village, marsh, harbour, lighthouse, fish market.
+  - **Rule flags:** none.
+- **WC208** · Near-duplicate of WC207 (rearranged, a touch more town). Use either; 207 has the clearer light.
+- **WC209** · Boardwalk beach town with amusement pier
+  - **Shows:** A rail line and depot along the top; a grid of cottages and motels with pools; an RV and tent campground in the dunes TR. The beachfront row has an arcade (game-controller sign), a burger stand, a surf shop with a board rack and cafes. A boardwalk with stairs to the sand; an amusement pier with a ferris wheel, carousel and funhouse; a lifeguard tower, crowds and surfers.
+  - **Goes to:** **Sunset Beach (10)**: "the boardwalk, surf shops, a pier" (fills "beach boardwalk set as a whole street"); fallback Sandpiper Bay.
+  - **Feeds:** beach town, amusement pier venue, arcade (AC1), station by the sea.
+  - **Rule flags:** none (rides are fine; keep the crowd adult).
+- **WC210** · Abandoned western ghost town by a mine
+  - **Shows:** In red rock, one dirt street of false-front buildings (saloon, hotel, bank, general store); a white church with a steeple; a fenced cemetery with crosses and headstones on the hill. A mine headframe, ore chute, trestle and water tank TL; a livery barn and corral with horses; collapsed shacks, broken wagons, a rusted car, an old well and cistern; a jeep on the approach road.
+  - **Goes to:** **Dusty Hollow (64)**: fills its missing "ghost-town street (boarded false fronts)".
+  - **Feeds:** ghost town, mine (MI1 adit), desert landmarks, stash/extraction spot.
+  - **Rule flags:** none.
+- **WC211** · Copper mining company town with open pit
+  - **Shows:** An open-pit mine with benches, haul trucks and an excavator TR. A headframe, conveyor gantry, ore mill, tailings heaps and a tank. An ore train loads on the rail along the top, with a tunnel portal TL. A company-town grid of small houses, a church, a sheriff's office (star), a saloon and a water tower; rail tank cars, a windmill, a dirt switchback road in, and red canyon walls.
+  - **Goes to:** **Copper Gulch (63)** and its mine: fills its missing "mining-town main street / company row".
+  - **Feeds:** mining town, cargo (ore trains/trucks), rail, desert industry.
+  - **Rule flags:** none.
+- **WC212** · Desert regional airport, N-S runway
+  - **Shows:** A single N-S runway marked "27" with approach lights and beacon masts. A terminal with a control tower, glazed hall and jet bridge; 3 airliners on the apron; 3 hangars with a small plane; a fuel farm, a radar-ball tower, car parks with palms, an entrance gate booth and a highway L.
+  - **Goes to:** an upgrade of **Lucky Mesa's airstrip** (5751-5769 x 740-900 runs N-S); fallback Westport International's layout reference.
+  - **Feeds:** airports (terminal-apron-runway order), venue.
+  - **Rule flags:** none.
+- **WC213** · Desert regional airport, E-W runway
+  - **Shows:** The sibling of 212. An E-W runway along the top with taxiways; an apron with 4 airliners, one at a jet bridge; a terminal and control tower; a palm-roundabout drop-off and car parks; two hangars with light planes; a fuel farm with a tanker truck, cargo containers, a fenced perimeter, a highway and red rocks.
+  - **Goes to:** Lucky Mesa (alternative to 212); fallback Westport International (27).
+  - **Feeds:** airports, perimeter fence (sneak-in route), fuel tanker cargo.
+  - **Rule flags:** none.
+- **WC214** · Desert suburb edge: strip, trailers, stucco homes
+  - **Shows:** An E-W commercial strip (a diner with a neon cactus sign, a motel with a pool, shops, gas) with stucco homes with pools on curving streets and cul-de-sacs behind. A trailer park/mobile homes BL; a water tower; a brick school with a bus and basketball court TR. ATV/dirt-bike tracks fan out into the desert past boulder piles.
+  - **Goes to:** **Mesa Flats (62)**: fills nature 4.7's missing "the town's desert edge (where the neon meets the sand)"; fallback Dusty Hollow's Route 9 motel strip.
+  - **Feeds:** desert suburb, trailer park, dirt-bike trails from town, motel strip.
+  - **Rule flags:** **school with yellow bus and court** (TR): replace with a community centre/rec hall.
+- **WC215** · Covered neon street of lights at dusk
+  - **Shows:** An E-W pedestrian street under a lit canopy roof between casinos with neon facades, a pink wedding chapel with a heart sign, motels round pools, parking decks, a bus depot with buses TR, rooftop water tanks and a grid of side streets.
+  - **Goes to:** **Lucky Mesa: Old Downtown (61)** ("the covered street of lights, the wedding chapel, cheap motels round pools").
+  - **Feeds:** casino venues, nightlife, motel row, bus depot.
+  - **Rule flags:** the covered light canopy echoes a real downtown attraction: keep ours generic (already the plan's VG1 idea); no real casino names.
+- **WC216** · Resort strip: pyramid, palace and skybridges
+  - **Shows:** A wide N-S boulevard with a palm and fountain median and 3 glass skybridges across it. A black glass pyramid casino with a sphinx and obelisk; a gold crown-topped hotel tower with lagoon pools; a domed palace casino with a fountain court; blue glass twin towers and a convention hall. Fountain roundabouts, a bus terminal BR, pink wedding chapels with heart signs, parking decks, desert at the edges.
+  - **Goes to:** **Lucky Mesa: The Strip (60)** (matches its plan: palm-median Strip, black pyramid, drop-off loops).
+  - **Feeds:** casino resorts, skybridges, drop-off loops, fountain show.
+  - **Rule flags:** the **pyramid + sphinx + obelisk** and the domed palace closely echo real resorts: stylise them (no sphinx, or a different guardian; invented names, no real logos).
+- **WC217** · River lock town with grain elevator
+  - **Shows:** A river with a weir/waterfall and a navigation lock (a boat in the chamber, gates, lock house) at the top; a steel truss road bridge E-W. A grain elevator and silos by a rail line with a freight train TL; a brick main street (a coffee-cup-sign cafe, shops with awnings) and riverside market stalls. Boat docks and tour boats below the bridge; a church and cemetery R; farms with hay bales and tractors around.
+  - **Goes to:** **Willow Crossing (58)** on the Long Reach: fills its missing "farm-town main street; grain elevator by the line" and the Long Reach's weir (nature 4.4/4.12).
+  - **Feeds:** farm town, rivers (lock, weir, navigable channel), river ferry, rail.
+  - **Rule flags:** none.
+- **WC218** · Logging town with sawmill and log pond
+  - **Shows:** A highway junction at the top with a gas station. A lodge with a flag (green roof), a coffee-cup diner, main-street shops, a clinic (red cross) and a sheriff (star). A sawmill with a smoking stack, a log pond full of log booms and a conveyor R; log trucks; a railway curving along the bottom with a log/freight train and a depot with a water tower; a creek waterfall; redwoods.
+  - **Goes to:** **Timber Bend (57)**: fills its missing "logging-town main street" and nature 4.1's missing "log yard / log boom on a river".
+  - **Feeds:** logging town, sawmill venue, rail, cargo (log trucks).
+  - **Rule flags:** the flag on the lodge must be invented (no national flag).
+- **WC219** · Car-ferry terminal with marshalling lanes
+  - **Shows:** A coast road with a junction at the top; a terminal hall with green roofs and a forecourt. Marshalling lanes run straight down onto a car ferry in its berth (bow loading, cars aboard); passenger ferries and launches at piled piers on both sides. A boatyard with a gantry travel lift, a hauled boat and a shed R; a crane and containers L; red-tile houses on rocky cliffs.
+  - **Goes to:** **Port Westport (26)**: the car ferry's marshalling lot to Gull Harbor (FE2); fallback Egret Point's car-ferry pier.
+  - **Feeds:** ferries (terminal layout, vehicle queue), boatyard, harbour.
+  - **Rule flags:** none.
+- **WC220** · Seaside rail station with beach pier
+  - **Shows:** A rail station (red tile, clock gable) across the tracks with trains; bus bays in a forecourt plaza; a car park R; an elevated highway behind. Mid-rise shop blocks with murals, rooftop gardens and cafes; a palm promenade; a beach with a short T-pier and a docked excursion boat; rocks L, a sailboat.
+  - **Goes to:** **Northshore (31)**: the main line's Northshore station by the beach (Station Avenue); fallback Sunset Beach.
+  - **Feeds:** train stations, bus interchange, beachfront promenade, water bus stop.
+  - **Rule flags:** none.
+- **WC221** · Sibling of 220: canopy station, ferry pier
+  - **Shows:** The same brief in a different layout. A station with long green platform canopies and a clock tower, a raised highway and ramp behind, a bus loop. Denser shop and apartment blocks with a rooftop pool; two beach crescents split by a central ferry pier with a ferry at its head; a small marina R; rocky points.
+  - **Goes to:** **Sunset Beach (10)** (station + pier + marina); fallback Northshore.
+  - **Feeds:** stations, ferry/water-bus pier, beach town.
+  - **Rule flags:** none.
+- **WC222** · Waterfall plaza above a small harbour
+  - **Shows:** At dusk, a coast road along the top. A stream drops as a waterfall through a terraced park (two arched footbridges, a gazebo) into a round plaza with a fountain and striped market stalls. An art-deco cinema with a vertical sign; a station with green canopies and a train R; brick mid-rises. On the harbour front: an angled fishing pier L, finger piers with boats, a small lighthouse on the breakwater R, rocky shore.
+  - **Goes to:** **North Point (32)** (harbour village + light) or **Old Town (18)** at the river mouth (fills its missing "river-mouth quay"); fallback Falls Center (36), named for its falls.
+  - **Feeds:** a signature plaza, stream-to-sea, harbour, cinema venue.
+  - **Rule flags:** none.
+- **WC223** · Lake villa estates round a promenade
+  - **Shows:** An irregular lake ringed by a lit promenade; a wooded islet with a footbridge; a lakeside restaurant on a deck with umbrellas. Boathouses with boats and speedboats; red-tile villas with pools, a modern villa, a tennis court, a fountain garden with flowering trees; winding lanes; a small cascade at the outlet BR; cypress and palms.
+  - **Goes to:** **Lake District (37)**: fills its missing "lakeside villa street section" (villas round Falls Lake Park).
+  - **Feeds:** homes (lakeside villas), neighbourhood type (estates), lakes, restaurant venue.
+  - **Rule flags:** none.
+- **WC224** · Canal quarter with cafes and bridges
+  - **Shows:** A straight E-W canal with stone embankments and water-level steps; a flower-boxed pedestrian bridge in the middle and road bridges at both ends. Moored tour boats and a water taxi; cafe terraces with umbrellas on the quays; brick and stucco apartment blocks with balconies and roof gardens; tree-lined cross streets.
+  - **Goes to:** **Old Town (18)** along the river channel by the mouth; fallback the Arts District (46).
+  - **Feeds:** city water (a canal street section), water taxi, neighbourhood type (canal blocks).
+  - **Rule flags:** none.
+- **WC225** · Island airport on reclaimed land
+  - **Shows:** An airport fills a reclaimed island with a rock revetment, reached by two causeway roads from the N. An E-W runway along the S edge; a terminal with a control tower, glass hall and 6 jet bridges; an apron with airliners, hangars at both ends, a helipad and fuel tanks NW. Car parks and loop roads; an elevated people-mover/rail leaves E on piers; a ferry and sailboats around.
+  - **Goes to:** **Westport International (27)** as a layout reference (terminal-apron-runway order, people mover); v3b has no island airport, so mostly general reference.
+  - **Feeds:** airports, causeways, people mover / rail link.
+  - **Rule flags:** none.
+- **WC226** · Stadium district with arena and plaza
+  - **Shows:** At dusk, an open-air football stadium with floodlight masts and a screen; a domed arena with banner graphics; a festival plaza between them with a globe sculpture, food stalls and flags. Vast car parks, a bus lot, a rail station with trains TR, training pitches and a running track TL; hotels with rooftop pools and bars along the bottom street.
+  - **Goes to:** **Stadium District (25)**: fills "tailgate/event car-park dressing".
+  - **Feeds:** venues (stadium, arena), event crowds/NPC life, car parks, station.
+  - **Rule flags:** banners and flags must be invented (no real teams, leagues or national flags).
+- **WC227** · Beach pier with arched gate and volleyball
+  - **Shows:** A wooden pier runs straight out from an arched entrance gate on the promenade, with a pavilion halfway along. Volleyball nets on each side, two lifeguard towers, a surfboard rack/shop; hotels with pools behind a palm-lined boulevard; crowds, surfers and kayaks.
+  - **Goes to:** **Sunset Beach (10)** (the pier, volleyball, surf shops); fallback Sandpiper Bay.
+  - **Feeds:** beach venues, pier, promenade.
+  - **Rule flags:** none.
+- **WC228** (~ **WC229**) · City park with pond, boathouse and ballfield
+  - **Shows:** A city park block in a brick grid. A pond with an island gazebo on footbridges; a boathouse renting rowboats and pedal boats; a sculpture-fountain plaza at the N entrance and an ornate iron S gate; picnic lawns, a cafe with umbrellas. Basketball and tennis courts L, a baseball diamond R, a dog run, and a playground (slides, climbing frame) R.
+  - **Goes to:** **Greenfield Park (12)** with its pond, inside Downtown's ring; fallback Falls Lake Park (Lake District).
+  - **Feeds:** parks, boat hire, sports venues, NPC life.
+  - **Rule flags:** **playground** (R in both): replace with a fitness area or flower garden.
+- **WC229** · Near-duplicate of WC228 (same park rearranged; same playground flag).
+- **WC230** · Heavy-industry docks: bulk, smelter, tank farm
+  - **Shows:** Bulk carriers at a quay with grab gantry cranes and conveyors feeding coal/ore heaps worked by loaders. Sawtooth-roofed brick factory halls; refinery/smelter towers and a tall smoking red-white chimney; two settling/cooling ponds; a tank farm (domed tanks) R; freight rail sidings with trains; a truck yard and warehouses.
+  - **Goes to:** **Port Westport (26)**, its bulk/industrial side; fallback The Yards' (3) river channel.
+  - **Feeds:** port industry, cargo, rail sidings, pollution set pieces.
+  - **Rule flags:** none.
+- **WC231** · Container terminal with gate and lift bridge
+  - **Shows:** Two container ships at the quay under red STS cranes; container stacks in rows with straddle carriers and reach stackers. A truck gate with a canopy and booths; a rail intermodal yard with a gantry (RMG) crane and long container trains; cross-dock warehouses with truck bays. A bascule/lift bridge with twin green towers carries road and rail over the channel; a tug, channel buoys, rock revetment.
+  - **Goes to:** **Port Westport (26)**: fills its missing "port gate/customs set piece".
+  - **Feeds:** port, cargo crates (containers), rail, lift bridge.
+  - **Rule flags:** **a US flag** on a pole by the warehouse: replace with an invented flag or remove.
+- **WC232** · Working waterfront: ferries, marina, fish market
+  - **Shows:** A ferry terminal (green roof) with passenger ferries at piled piers L; a bus loop with buses. A central marina of finger piers with yachts and sailboats; a fish market hall (fish sign) with striped market stalls on the quay; a restaurant with red umbrellas; a dry dock/boat lift with a hauled boat. A harbour master/coast guard building with a flagpole, a crane and trawlers R; a buoy; brick blocks behind.
+  - **Goes to:** **Harbor (8)**: its fish market on the quay, the ferry terminal and a marina (fills the "fish market exterior" gap).
+  - **Feeds:** harbour, fish market venue, ferries, marina, coast guard (police-water).
+  - **Rule flags:** flag on the harbour master's pole must be invented.
+- **WC233** · Rail yards, scrapyard and cement plant
+  - **Shows:** A freight yard and loco shed (engines in bays) at the top; a scrapyard with car piles and a grab crane L. A cement/aggregate plant with silos, mixer trucks and sand heaps; a container stack and yellow gantry crane; warehouses with loading docks; a guarded gate barrier. A corner diner/store, a brick mill with a chimney and graffiti, a water tower, freight trains along the top and bottom.
+  - **Goes to:** **The Yards (3)**: fills "rail yard with sidings" and "scrap yard" (city.md missing 11).
+  - **Feeds:** rough district, rail yard, scrapyard (car disposal), gang compound sites, cargo.
+  - **Rule flags:** none.
+- **WC234** · Autumn suburb with creek greenway
+  - **Shows:** Curving streets, cul-de-sacs and roundabouts; a creek greenway with footbridges along the W side; a neighbourhood park with a pond, gazebo and playground. A strip mall/supermarket with a big car park R; a church with a steeple and parking TR. A school campus (building, running track/soccer field, court) at the top centre with a yellow school bus on the main road; family homes with pools and trampolines.
+  - **Goes to:** **Cedar Falls (35)** (cul-de-sacs and crescents, a strip mall); fallback West Hills (28) (its creek greenway, NK1-L).
+  - **Feeds:** neighbourhood type (suburb pods), homes, greenway, strip mall.
+  - **Rule flags:** **school campus + yellow school bus, playground, trampolines**: replace with a rec centre/sports park, plain bus and a garden.
+- **WC235** (~ **WC236**) · Clifftop mansions on switchback lanes
+  - **Shows:** Switchback lanes climb a headland over a rocky sea. Gated villas (red-tile Mediterranean and flat-roof modern) with pools, terraced retaining walls and fountain forecourts; a tennis court and lit garden stairs; a clifftop lookout terrace with a railing TL; cypress, palms and bougainvillea.
+  - **Goes to:** **Bayside Heights (16)**: fills city.md missing 9 "a hillside winding estate street" and its clifftop overlook (and the Hilltop Mansion's setting); fallback The Bluffs (34).
+  - **Feeds:** homes (mansions on big lots), neighbourhood type (hillside estates), overlook.
+  - **Rule flags:** none.
+- **WC236** · Near-duplicate of WC235 (same image re-rendered, warmer). Use either.
+- **WC237** · Night club grid with neon motels
+  - **Shows:** A tight grid of brick blocks at night. A neon club with a pink dancer-silhouette sign; a cocktail-glass bar; two vertical neon HOTEL signs (one with a palm); a motel with a lit pool courtyard; a coffee-cup diner with a red neon band. A big face mural, rooftop bars and patios, a taxi rank, crowds on the corners.
+  - **Goes to:** **The Pink Mile (17)** (motel row, lounges); fallback the Neon Strip's four-corner crossroads.
+  - **Feeds:** nightlife venues, motel, signage kit, NPC night crowds.
+  - **Rule flags:** dancer-silhouette club sign: keep it tame (the plan has no red-light set).
+- **WC238** · Night entertainment boulevard with theatre
+  - **Shows:** An E-W boulevard with a palm and flower median and a small fountain roundabout. An art-deco theatre/cinema with a lit marquee screen; a video billboard; a hotel tower with rooftop pools and a vertical sign; murals and neon clubs; a side-street grid of low blocks; crowds.
+  - **Goes to:** **Neon Strip (7)**: Neon Boulevard; fallback Downtown.
+  - **Feeds:** boulevard section, theatre/cinema venue, rooftop pool hotel.
+  - **Rule flags:** none.
+- **WC239** · Arts warehouse quarter with high-line and wharf
+  - **Shows:** Sawtooth-gabled brick warehouse lofts with murals; a theatre (masks mural); a chimney and water tower. A disused rail spur curves through as a green elevated walkway (high-line) with a steel bridge. A street-food market with stalls and cafe umbrellas, galleries, string lights; a waterfront wharf R with finger piers, sailboats and a harbour crane.
+  - **Goes to:** **Arts District (46)** (playhouse, galleries, murals, lofts; fills the theatre front and murals asks); fallback Harbor's warehouse back blocks.
+  - **Feeds:** neighbourhood type (warehouse lofts), venues (theatre, market), a raised greenway.
+  - **Rule flags:** none.
+- **WC240** · Walled old quarter with piazza and harbour
+  - **Shows:** Dense red-tile blocks on irregular lanes. A central piazza with a fountain, a glass/iron market hall and awning stalls; a church with a bell tower and steps. A round bastion tower and crenellated sea wall along the rocky shore SW with a terraced garden inside; a quay below with steps, small jetties, a passenger ferry and boats; a multi-arch stone bridge E over the water.
+  - **Goes to:** **Old Town (18)**: "the piazza at a fork with church, statue and market", by the river mouth; fallback Old Quarter (30).
+  - **Feeds:** old-town neighbourhood type, piazza, market hall, sea wall, stone bridge, water bus.
+  - **Rule flags:** none.
+- **WC241** · Bridgehead plaza under the elevated rail ring
+  - **Shows:** A wide bridge deck (roads on either side of a central rail line) lands from the water at the top. A curving elevated rail ring runs along the shore with trains; a glass transit hall stands at the bridge foot. An axial palm plaza with pavilions steps south through a grid of brick mid-rise courtyard blocks. A small park with a play area TL, sports courts and a yellow bus TR, bus stops.
+  - **Goes to:** **Midtown (1)** at the bridgeheads: its main line on a viaduct over the streets (helps city.md missing 2, rail viaduct).
+  - **Feeds:** city layout (bridgehead axis), train ride (elevated line, rail on the bridge), transit hall.
+  - **Rule flags:** **play area** TL and **yellow (school-type) bus** TR: replace with a garden and a city bus.
+- **WC242** · Civic center axis: capitol, courts, hospital
+  - **Shows:** A symmetrical axis: a domed capitol/city hall with gardens, a statue and fountain plaza down the middle, and a rail station with a clock arch closing the S end. A police HQ with a rooftop helipad and badge sign TL; a hospital with a helipad, red cross and ambulances TR; a columned courthouse L; a museum/library (green roof, banners) R; a post office (envelope sign) BL; a fire station with engines and a flag BR; bus bays.
+  - **Goes to:** **Civic Center (5)** (city hall, courthouse, plaza with statue, St. Neon General with helipad, the library): fills "library / museum exterior".
+  - **Feeds:** civic layout, police/hospital/fire spawn points, station.
+  - **Rule flags:** fire-station flag must be invented; the red cross on the hospital is a protected emblem (use a plain medical sign).
+- **WC243** · Downtown boulevards: tram stop, mall, cinema
+  - **Shows:** An E-W double boulevard with a palm median and a central tram/transit stop, crossed by a N-S avenue with a planted median and bus lanes. A multi-storey parking garage (P sign); a department store/mall with an atrium skylight and banners; a cinema with a film-reel billboard and vertical neon; a hotel with a rooftop pool and vertical HOTEL sign; glass office blocks and rooftop gardens.
+  - **Goes to:** **Downtown (4)** (the ring/boulevard sections round Greenfield Park); fallback Westport Center (23).
+  - **Feeds:** boulevard/avenue sections (city.md 3.1, missing 4 "ring boulevard section"), garage (S1), mall and cinema venues, transit stop.
+  - **Rule flags:** none.
+
+## Batch highlights
+
+**The 10 most useful:**
+1. **WC211 mining town**: Copper Gulch has no concept for its mining-town main street or company row. This gives the pit, the headframe, the ore train and the company grid in one plan.
+2. **WC210 ghost town**: Dusty Hollow's missing ghost-town street (false fronts, cemetery, headframe), ready to build.
+3. **WC218 logging town**: Timber Bend's missing main street, plus nature's missing log pond/log boom and sawmill, with the rail depot.
+4. **WC217 river lock town**: Willow Crossing's missing farm-town main street and grain elevator by the line, plus the Long Reach's weir and a lock for the river ferry.
+5. **WC207 marsh fishing village**: Egret Point's missing fishing-village street, with stilt houses, trawlers and its striped light.
+6. **WC233 rail yards**: The Yards' missing rail yard with sidings, scrapyard and gate compound.
+7. **WC241 bridgehead**: Midtown's bridge landing with the elevated main line ring. It is the closest to the "rail over streets" ask so far.
+8. **WC204 stone harbour village**: Gull Harbor as a whole, with the car-ferry slip, walled harbour, light, church and pubs.
+9. **WC170 desert coast**: the Sandpiper Coast's missing "red rock meets surf" picture.
+10. **WC185 + WC186**: Kestrel Lake's missing east beach (swim area, boat hire) and the R1 chain's missing twin falls.
+
+Close runners-up: WC242 Civic Center (library/museum exterior), WC223 Lake District villas (missing street section), WC235 Bayside Heights hillside estates (missing 9), WC232 Harbor fish market, WC171/193 Egret marsh boardwalks and bird hides, WC172 snowy switchback road, WC176 coastal rail tunnels (train ride).
+
+**Recurring themes:**
+- Many in this batch answer the "MISSING" lists in city.md s4 and nature.md s4: four town main streets, rail yard, fish market, hillside estates, lake beach, twin falls, desert coast, marsh boardwalks, snowy road.
+- **Transport set pieces**: 5 interchanges (163-168), 3 ferry terminals (204, 219, 232), 3 stations by the sea (220-222), 3 airports (212, 213, 225), rail in tunnels and on viaducts (176, 241).
+- **The desert is well covered** (170, 174, 181-184, 206, 210-216). Forest, peaks and lakes are covered by 185-201.
+- **Schools, playgrounds and school buses creep into every town and suburb scene** (175, 202, 205, 214, 228/229, 234, 241). Swap them for rec centres, gardens and plain buses.
+- Flags and real-resort lookalikes are the other recurring flags (216 pyramid/sphinx, 231 US flag, 232/242/218 flags, 226 banners). No real brand names or place names were seen.
+- Six near-duplicate pairs (listed at the top); 198 is an autumn recolour, which is useful as a seasonal palette reference.
+
+
+# World concepts WC244-WC323 (batch 4)
+
+- **WC244** · Downtown fountain axis with helipad towers
+  - **Shows:** A tight downtown grid at golden hour: a palm-lined pedestrian axis running north-south (red-paved promenade, kiosks, a round fountain at its crossing) between glass towers, two with rooftop helipads and several with rooftop pools. A spiral-ramp parking garage on the west, a bus depot with covered bays and parked buses on the east, an elevated highway curving along the north edge. Every block is a full tower podium with planters; crosswalks at each corner.
+  - **Goes to:** Downtown (4), the towers round Greenfield Park; fallback Westport Center (23).
+  - **Feeds:** city layout (tower blocks, pedestrian axis), venues (helipads, bus depot, parking garage), highways (elevated edge road).
+  - **Rule flags:** none.
+
+- **WC245** · Rugged coast road and railway through gorges
+  - **Shows:** A coastal highway and a railway side by side along forested cliffs, entering tunnels at both ends and crossing a deep gorge on a trestle where a river falls in cascades to a sandy cove. A tiny harbour behind a rock headland (breakwater, red sheds, a few boats), a lighthouse on the east headland, sea stacks and rock skerries offshore. Viewpoint car parks, a fire lookout, autumn maples in the conifers and a footbridge low in the gorge.
+  - **Goes to:** the north-west coast (Granite Peaks' shore / North Cape, near Lighthouse Rock); fallback Highland Woods' coast.
+  - **Feeds:** train ride (tunnels, trestle over a gorge), rivers (waterfall to the sea), coast (cove harbour, lighthouse, sea stacks), forest, road set pieces (viewpoints).
+  - **Rule flags:** none.
+
+- **WC246** · Red-rock desert coast with dirt oval
+  - **Shows:** A two-lane highway along a mesa edge to the sea: a roadside diner and a motel with a pool at a bend, a small mining camp (water tower, tailings heap, shacks) north of the road. South of it white salt flats, a dirt oval race track with a small grandstand and trucks, striped badland hills and sand dunes. The red cliffs drop to a turquoise coast with a sea arch, sea stacks and small sand coves.
+  - **Goes to:** the Sandpiper Coast (52), where the desert meets the sea; fallback Dusty Hollow (64) / the Route 9 places.
+  - **Feeds:** desert (salt flats, dunes, badlands), coast (sea arch), venues (dirt raceway, roadside motel/diner), dirt bike tracks.
+  - **Rule flags:** none.
+
+- **WC247** · Forest coast with sea caves and lakes
+  - **Shows:** A rocky forested shore with sea caves, sea stacks and a waterfall straight off the cliff into the sea; a river cascading down to a beach, crossed by a footbridge and by the road on a wooden bridge. Inland a lake with wooded islets and a cabin on a dock, a smaller pond, a ranger lodge with a water tower and parking, a fire lookout on the ridge and a patch of red-orange autumn trees. A fishing hut on a small jetty in a cove.
+  - **Goes to:** Highland Woods (47) where it meets the north-west coast; fallback The Islets / Lighthouse Rock shore.
+  - **Feeds:** forest (autumn patch, lookout), rivers (cascades to a beach), water (lake with islets), coast (sea caves, cliff waterfall), campgrounds.
+  - **Rule flags:** none.
+
+- **WC248** · Prison Island fortress and its reefs
+  - **Shows:** A walled prison on a rocky island: corner watchtowers with searchlights, two cellblocks, an exercise yard with inmates, an admin block and a gatehouse down to a ferry dock with the prison ferry pulling out. Around it a smugglers' cove islet (cave mouth, hut, a boat at a jetty), a seal rock, a sea arch, bird rocks and a shipwreck broken on a reef.
+  - **Goes to:** Prison Island (55); the wreck and seal rock fallback to Egret Rocks (56) / The Islets.
+  - **Feeds:** islands, a specific landmark (the prison), ferries, water (reef shallows, wreck), NPC life (yard).
+  - **Rule flags:** none.
+
+- **WC249** · Tropical key cluster with ferry harbour
+  - **Shows:** Three palm islands on reef shallows: the main one has a harbour village of colourful two-storey houses round a quay, finger piers with a car ferry docked, a lighthouse on its hill and a causeway bridge to the west; a beach with tiki huts and a bonfire. The other islands carry stilt cottages on piers, a beach village and waterfalls from a wooded hill. Channel buoys mark a lane between them; small rock islets with reef round them.
+  - **Goes to:** Coral Cay (44) / Pelican Key (14); fallback Gull Harbor (43) (car ferry).
+  - **Feeds:** islands, ferries (marked channel, car ferry slip), water (reef shallows, buoys), homes (stilt cottages), venues (beach bar).
+  - **Rule flags:** none.
+
+- **WC250** · Marsh coast, fishing village and raceway
+  - **Shows:** A tidal marsh behind a long beach, criss-crossed by boardwalks with hides and huts; a causeway road hops along rocky islets to a lighthouse on the point. A fishing village with docks and boats where the marsh meets a river channel, a lift bridge over the channel, a paved oval raceway with pits and grandstand at the forest edge. On the far bank a container port with red cranes and a ship.
+  - **Goes to:** the Egret Coast (53) and Egret Point (65) with its raceway and light; the port edge = Port Westport (26).
+  - **Feeds:** marsh (boardwalks), coast (causeway to the light), venues (raceway), fishing village, rivers/bridges (lift bridge), port.
+  - **Rule flags:** none.
+
+- **WC251** · Desert surf town with pier and railway
+  - **Shows:** A beachfront town where red-rock mesas come down to the sea: a palm-lined beach road, a fishing pier with a restaurant at its end, surfers on a curling break, lifeguard stands and beach umbrellas. Behind it the coast railway with a small station and a highway with loop interchanges, desert homes among palms; a marina at the west rocks and a striped lighthouse on the east point.
+  - **Goes to:** Sandpiper Bay (59); fallback Sunset Beach (10).
+  - **Feeds:** beach town layout, train ride (coast line with station), venues (pier restaurant, surf break), highways (loop interchange), lighthouse (Sandpiper Point Light).
+  - **Rule flags:** none.
+
+- **WC252** · Island suburb ringed by a loop road
+  - **Shows:** An island whose loop road rings a lagoon with wooded islets; houses on curving drives with pools, a waterfall dropping from a central ridge into the lagoon, a golf course with bunkers in the north-east, small farm plots (lavender, crops) and a farmhouse. A marina and a ferry pier with two ferries on the south shore, bridges west to a city and east, a marsh with a stilt boathouse.
+  - **Goes to:** the east island: Lake District (37) round its ponds, Falls Center (36) at the falls, Cedar Falls (35); fallback Bayside Heights (16).
+  - **Feeds:** neighbourhood type (loop-road island suburb), water (lagoon, waterfall), venues (golf course, marina, ferry pier), bridges.
+  - **Rule flags:** none.
+
+- **WC253** · Island city core with canal and capitol
+  - **Shows:** A whole island city: towers round a domed capitol on a plaza with a fountain, a canal cutting east-west across the island with several road bridges and an arched footbridge, a waterfront amusement pier with a Ferris wheel, a cargo quay with a crane and container ship in the north-east. Row-house blocks south of the canal, a ring road, villas on the south coves and a lighthouse islet joined by a footbridge; long bridges to the mainland west and east, an elevated line along the north shore.
+  - **Goes to:** the Gulf Island: Downtown (4) and the Civic Center (5) (the domed capitol), Neon Strip (7) for the amusement pier, Bayside Heights (16) on the south shore.
+  - **Feeds:** city layout (island plan, canal), a specific landmark (capitol dome), venues (Ferris wheel pier), bridges.
+  - **Rule flags:** the dome reads like a generic capitol; keep it unbranded (no real flag on it).
+
+- **WC254** · Bay city: port, stadium, island airport
+  - **Shows:** A city on a bay: a container port with red cranes and a rail yard in the west beside a marsh, a dense downtown, a stadium with its car parks, suburbs on hills round a small lake with an island, suspension bridges to the east. In front, an airport on a reclaimed island (runway, terminal, tower, hangars) reached by a curving bridge, and a rail viaduct crossing the water with a train on it; a lighthouse point in the south-west.
+  - **Goes to:** the mainland/western city as a whole: Port Westport (26), Stadium District (25), Westport International (27); fallback general city reference.
+  - **Feeds:** city layout (how port, core, stadium and airport sit together), train ride (viaduct over water), bridges, airport.
+  - **Rule flags:** none.
+
+- **WC255** · Red Rock Desert: mine, wind and drive-in
+  - **Shows:** A desert plateau with everything: a north-south highway with interchange loops, a railway with a freight train, a terraced open-pit mine with conveyors and headframes, a company town of small houses round a water tower and a rail siding. A wind farm and solar field, pump jacks, a drive-in theatre, mission ruins, an airstrip with light planes, hot-air balloons on a launch field, an irrigated farm town by the highway, natural arches and hoodoo spires; the coast road along red cliffs at the south.
+  - **Goes to:** the Red Rock Desert (50): Copper Gulch (63) and its mine; the coast strip fallback the Sandpiper Coast (52).
+  - **Feeds:** desert (arches, hoodoos), a specific landmark (open-pit mine), venues (drive-in, airstrip, balloon field), energy (wind/solar/pump jacks), train ride.
+  - **Rule flags:** none.
+
+- **WC256** · Farm belt meets a harbour town
+  - **Shows:** A patchwork of crop fields (lavender, sunflowers, pumpkins, wheat with a combine, orchards) north of a highway with a cloverleaf; a grain elevator and silos, a white church and a farmers' market by the river. South of the railway a brick town grid with a fountain plaza, a beach to the west and a harbour with piers, a river with a weir and a bridge, a lighthouse on a boulder breakwater at the river mouth.
+  - **Goes to:** where Willow Valley (49) meets the north coast: Northshore (31) and the east beach (9.6's open item); fallback Willow Crossing (58).
+  - **Feeds:** farm valley (crop patchwork, grain elevator), city layout (small harbour town grid), rivers (weir, river mouth), highways, train ride.
+  - **Rule flags:** none.
+
+- **WC257** · Logging town in the redwoods by the sea
+  - **Shows:** A logging town's main street of false-front shops and a big red lodge on a bend of the highway, a sawmill with log decks, a log pond and loaders, and the railway crossing a gorge on a stone arch viaduct with a log train. A waterfall into a lake with a dock, a campground with RVs, giant redwoods; the coast road on arch viaducts along cliffs with sea stacks and a lighthouse on a rock.
+  - **Goes to:** Timber Bend (57) (the missing logging-town main street); fallback Highland Woods (47).
+  - **Feeds:** town main street (logging), a specific landmark (sawmill), train ride (stone viaduct), forest (redwoods), coast, campgrounds.
+  - **Rule flags:** none.
+
+- **WC258** · Lucky Mesa strip, dam and airport
+  - **Shows:** A desert resort city: a gold hotel with a fountain lake, a domed casino, a black pyramid with a sphinx and an obelisk, an observation tower, a neon covered street; a grid of workers' bungalows south of it. A dam and reservoir in the west with a dry canyon river and a rail trestle, an old-west ghost town in the canyon, an airport with tower and jets on the east, pump jacks, freight trains and a highway interchange on the north.
+  - **Goes to:** Lucky Mesa: The Strip (60), Old Downtown (61) (covered street), Mesa Flats (62) (bungalows); the dam fallback the Red Rock Desert's dam (4.6).
+  - **Feeds:** city layout (strip superblocks), a specific landmark (pyramid, tower, fountain show), venues (casinos, airport), water (dam and reservoir).
+  - **Rule flags:** the pyramid-with-sphinx and the needle tower read as real resort landmarks; keep them generic (the black pyramid is already in VG1).
+
+- **WC259** · Farm valley between lake and mesas
+  - **Shows:** A valley of fenced fields (wheat with a tractor, vegetable rows, orchards), red barns, silos, windmills and horse and cattle paddocks on a grid of lanes; a river crossed by a stone bridge with the railway beside it and a freight train heading into a tunnel in red mesas. A lake with a wooded island and a lodge with a boat dock, a lakeside campground, a mountain highway with tunnels at the top; a desert ranch at the canyon edge.
+  - **Goes to:** Willow Valley (49) round Kestrel Lake, Cedar Farms (38); the mesa edge where the valley meets the Red Rock Desert.
+  - **Feeds:** farm valley, water (lake with island, river), train ride (tunnel into the mesa), homes (farmsteads), campgrounds.
+  - **Rule flags:** none.
+
+- **WC260** · Mountain lake with lodge and viaduct
+  - **Shows:** A lake with a wooded rocky island, a lodge with a dock, a boat rental hut, a lakeside campground, cascades leaving the lake under a footbridge. A highway curving on a high viaduct across a waterfall gorge into a tunnel, a stacked interchange at the top, a radio mast on a peak, the railway with a freight train, and a farm hamlet (barns, windmill, silo, crop squares) south of the line.
+  - **Goes to:** Granite Peaks' mountain lakes (4.3); fallback Kestrel Lake in Willow Valley (49).
+  - **Feeds:** water (mountain lake with island), rivers (cascades), highways (viaduct over a gorge), forest, campgrounds, train ride.
+  - **Rule flags:** none.
+
+- **WC261** · Mountain coast road, mine and observatory
+  - **Shows:** A coast road through several tunnels and arch viaducts below snowy peaks; a lighthouse and keeper's cottage on the cliff, a beach campground with RVs. Up the mountain a waterfall into a tarn, a fire lookout, a mine portal with ore-cart rails, a terraced quarry with trucks, hot-spring pools, a stone circle, an observatory dome and a radio mast on the summit road, a second waterfall under a bridge.
+  - **Goes to:** Granite Peaks (48) and its coast (North Cape); fallback Highland Woods (47).
+  - **Feeds:** mountains, a specific landmark (observatory, mine), venues (hot springs), road set pieces (tunnels and viaducts), coast (lighthouse), campgrounds.
+  - **Rule flags:** none.
+
+- **WC262** · Desert crossroads town on Route 9
+  - **Shows:** A crossroads town in the desert: a motel round a pool with a neon cactus sign, a neon diner, a gas station with canopies, a drive-in theatre with its screen, a farm stand with produce. A paved airstrip with a hangar and a light plane, an irrigation canal with crop rows and a windmill, trailer homes on fenced lots, an oil field with pump jacks, tanks and a dirt track.
+  - **Goes to:** Dusty Hollow (64) / the Route 9 places (the Route 9 motel and its neon cactus); fallback Mesa Flats (62).
+  - **Feeds:** town main street (desert crossroads), venues (motel, diner, drive-in, airstrip), homes (trailers), desert energy (oil field).
+  - **Rule flags:** none.
+
+- **WC263** · Fishing village with stock-car speedway
+  - **Shows:** A fishing village on a bay: a main street of shops (a fish restaurant with a big fish sign, a crab shack, a neon bar), a white church, cottages on lanes, finger piers with fishing boats, a boat ramp and boat storage, a lighthouse on a boulder breakwater. Behind the town a small banked oval speedway with pits and grandstands, an RV lot and a water tower; marsh and boardwalks along the west shore.
+  - **Goes to:** Egret Point (65) with its raceway (the missing fishing-village street); fallback North Point (32).
+  - **Feeds:** town main street (fishing village), venues (speedway, fish restaurant), harbour (finger piers), marsh edge, lighthouse.
+  - **Rule flags:** none.
+
+- **WC264** · Beach town boardwalk, pier and marina
+  - **Shows:** A close view of a beach town's front: a raised boardwalk with stairs down to the sand, lined with shops, cafes and a surf shop (boards racked outside), a long pier with a pavilion and boat landing at its end, a lifeguard tower, dune fences, umbrellas. Behind it a fountain plaza, a clinic with a red cross, cottages with palms; to the east a marina with sailboats, a boatyard with sheds and a lighthouse on a boulder point.
+  - **Goes to:** Sandpiper Bay (59); fallback Sunset Beach (10) (Sunset Boulevard's boardwalk).
+  - **Feeds:** beach boardwalk street (BE2, missing), venues (pier pavilion, surf shop), harbour (marina, boatyard), NPC life (beach crowd).
+  - **Rule flags:** none.
+
+- **WC265** · Desert ghost town at a crossroads
+  - **Shows:** A ghost town on two crossing dirt roads: boarded false-front saloons and stores, half-collapsed timber frames, a statue on a rock pile in the middle, two water towers and a windmill, rusted pickups and a wagon. A ruined stone mission church with a walled graveyard and a dead tree; a mine portal with ore-cart rails at the top-left; a campfire camp with a pickup at a cave mouth in the cliffs (a squatter/hideout spot).
+  - **Goes to:** Dusty Hollow (64) (the missing ghost-town street); fallback Copper Gulch's old workings.
+  - **Feeds:** town main street (ghost town), a specific landmark (ruined mission), crime hideout, desert dressing (water towers, wrecks).
+  - **Rule flags:** none.
+
+- **WC266** · Canyon mining town main street
+  - **Shows:** A mining town on a canyon shelf: a mine portal with a rail incline, a headframe and ore loader filling hopper cars on a railway with a signalled level crossing. The main street has a saloon, a general store with an awning, a sheriff's office with a star and a brick smelter/assay works with stacks and ore heaps; a row of company houses on fenced lots, a windmill and water towers. A creek in the canyon below under a culvert bridge, stairs up the canyon walls.
+  - **Goes to:** Copper Gulch (63) (the missing mining-town main street and company row).
+  - **Feeds:** town main street (mining), homes (company row), train ride (ore trains, level crossing), rivers (canyon creek), a specific landmark (the mine).
+  - **Rule flags:** none.
+
+- **WC267** · Farm town square on a river
+  - **Shows:** A farm town's centre: a square with a gazebo and statue, a white church with a graveyard, a town hall, sheriff, clinic, a diner with a coffee-cup neon, a gas station, brick shops and market stalls. A farm co-op with three silos and a feed store, the railway depot with freight cars and a bus, a water tower; a riverside quay with a tour boat and rowboats. Across the river paddocks with cows, sunflowers and tractors; orchards, vineyards, a red barn and a combine to the north.
+  - **Goes to:** Willow Crossing (58) on the Long Reach (the missing farm-town main street); fallback Cedar Farms (38).
+  - **Feeds:** town main street (farm), farm valley, rivers (river quay, river ferry), train ride (depot), venues (diner, co-op).
+  - **Rule flags:** the town hall's flagpole: no real flag.
+
+- **WC268** · Logging town with sawmill and rail spur
+  - **Shows:** A logging town at street scale: a main street with a steakhouse (cow sign), a hardware store (crossed-tools sign), a tackle shop (fish sign), a sheriff, a church and a lodge; on the highway bend a gas station, a neon diner and a motel round a pool. A big sawmill with a smoking stack, log decks, loaders, a rail spur with log cars and log trucks on dirt roads; a creek with cascades and footbridges, cabins and a forest lodge in the trees.
+  - **Goes to:** Timber Bend (57) (the missing logging-town main street).
+  - **Feeds:** town main street (logging), a specific landmark (sawmill), venues (diner, motel, outfitter), train ride (log spur), forest, rivers.
+  - **Rule flags:** none.
+
+- **WC269** · Desert beach town with amusement pier
+  - **Shows:** A beach town where red desert meets the sea: an amusement pier with a Ferris wheel and carousel, boardwalk shops, volleyball courts, lifeguard towers and a surf break full of surfers. A small grid of colourful shops and houses with pools behind, an RV park among palms, the highway coming out of a tunnel, a beach bar on the rocks and a lighthouse with keeper's house on a headland.
+  - **Goes to:** Sandpiper Bay (59); fallback Sunset Beach (10).
+  - **Feeds:** beach town layout, venues (amusement pier, beach bar), surf, campgrounds (RV park), lighthouse (Sandpiper Point Light).
+  - **Rule flags:** none.
+
+- **WC270** · Marsh lagoon harbour with dirt oval
+  - **Shows:** A lagoon harbour village (a tall ship, fishing boats, piers, a fish hall) at the edge of a marsh threaded with boardwalks and bird hides, a dirt oval race track and pits just above it. A long dune beach with fences and lifeguard huts, a causeway road hopping across islets to hamlets with jetties, a striped lighthouse on the rocky point.
+  - **Goes to:** Egret Point (65) and the Egret Coast (53) with its raceway and light.
+  - **Feeds:** marsh (boardwalks, hides), fishing village, venues (raceway), coast (causeway, lighthouse), harbour.
+  - **Rule flags:** none. Same place as WC250 and WC263 (Egret Point read three ways).
+
+- **WC271** · Mountain lake lodge and canyon falls
+  - **Shows:** A lake with a wooded island, a big log lodge with a boat dock and canoes, a lakeside campground with vans and tents; a tall waterfall and a cascading river on the east crossed by road and foot bridges. A road tunnel with a stone portal, a fire lookout on a snowy ridge, a tarn, and a small sawmill hamlet (log stacks, gas station, cabins) on the railway at the bottom-left.
+  - **Goes to:** Granite Peaks' mountain lakes (4.3); fallback Highland Woods (47).
+  - **Feeds:** water (lake with island), rivers (falls, cascades), forest, campgrounds, venues (lodge, boat rental).
+  - **Rule flags:** none. Close to WC260 (same lake-and-lodge idea).
+
+- **WC272** · Redwood coast crossroads with sawmill
+  - **Shows:** A logging crossroads where the coast road meets a forest highway: a sawmill with a smokestack, log decks and log trains on a curving rail line, a lodge, a motel and a gas station at the junction, a waterfall behind with a footbridge. The coast road runs along cliffs past a sea arch and sea stacks to a lighthouse and keeper's cottage on a point, a second small light on a rock offshore; a log pond and a campground in the trees.
+  - **Goes to:** Timber Bend (57); the coast fallback Lighthouse Rock (19).
+  - **Feeds:** town (logging junction), forest, train ride (log trains), coast (sea arch, two lights).
+  - **Rule flags:** none. **Near-duplicate of WC257** (same logging-town-by-the-sea composition).
+
+- **WC273** · Mountain pass with quarry and hot springs
+  - **Shows:** A highway leaving a tunnel through a loop junction and over a stone bridge across a waterfall gorge; a terraced quarry with a crusher and trucks, steaming hot-spring pools with huts, a mountain lake with an island, a lodge and a campground. An observatory dome with a radio mast on a summit road, fire lookouts, miners' cabins and a hiker on the snowy ridge.
+  - **Goes to:** Granite Peaks (48); fallback the waterfalls and mountain lakes (4.3).
+  - **Feeds:** mountains, venues (hot springs, observatory), a specific landmark (quarry), highways (gorge bridge, tunnel), water.
+  - **Rule flags:** none. Shares most set pieces with WC261.
+
+- **WC274** · Lucky Mesa strip and fountain lake
+  - **Shows:** A resort city plan: a palm-boulevard strip with a fountain-show lake, a gold-domed casino, twin blue glass towers, a lotus-shaped sign, a needle tower with a sky beam, and a neon covered street with a heart-sign chapel in the old quarter. Golf courses with lakes on the east, an airport to the north, a mission-style rail depot, suburbs with pools on curving drives, a reservoir with a dam in the south-west, canyons with a dry wash.
+  - **Goes to:** Lucky Mesa: The Strip (60), Old Downtown (61), Mesa Flats (62); the dam fallback the Red Rock Desert (4.6).
+  - **Feeds:** city layout (strip superblocks, golf suburbs), a specific landmark (fountain lake, needle tower), venues (casinos, wedding chapel, golf, airport), train ride (depot).
+  - **Rule flags:** the fountain lake and needle tower recall real resorts; keep them generic, no real names.
+
+- **WC275** · Red Rock Desert with dam and mine
+  - **Shows:** A canyon dam holding a reservoir with a rail bridge below it, an open-pit mine with an ore train and loaders, a ghost town with a chapel and headframes, a natural arch and hoodoo spires along a dry wash. Pump jacks, a wind farm and a solar field, a roadside motel with a pool, a neon diner, a drive-in theatre and a billboard on the highway; a small farm town with an airstrip and crops on the west.
+  - **Goes to:** the Red Rock Desert (50): the dam, Copper Gulch (63) and its mine, Dusty Hollow (64), the Route 9 places.
+  - **Feeds:** desert (arch, hoodoos), water (dam, reservoir), a specific landmark (open-pit mine), venues (drive-in, motel, airstrip), energy, train ride.
+  - **Rule flags:** none. Same set as WC255 (near-duplicate region).
+
+- **WC276** · Farm valley grid round a river town
+  - **Shows:** A grid of farm roads with square fields (wheat with combines, lavender, sunflowers, orchards, vineyards, pasture with horses and cows), red barns, silos and windmills, a truck stop on the highway along the west. A small river town in the middle with a church, a grain elevator by the railway and market tents; the river leaves a lake with a wooded island over a weir, with a river boat at a dock, a bridge and a campground, and reaches a bay with a lighthouse on a point.
+  - **Goes to:** Willow Valley (49): Willow Crossing (58) on the Long Reach, Kestrel Lake with its island, Cedar Farms (38).
+  - **Feeds:** farm valley (field grid), rivers (weir, river boat), water (lake with island), town (grain elevator by the line), highways (truck stop).
+  - **Rule flags:** none.
+
+- **WC277** · Island chain: ferry town, wreck and prison
+  - **Shows:** A harbour town with a red church on its hill and a car ferry at the quay; a causeway road hopping across palm islets to a little village with a jetty. A forested rock island with a cabin and dock, a shipwreck on its reef, a striped lighthouse on a rock, a walled prison island with two ferries at its docks; dotted ferry lanes, buoys and whales in the channel.
+  - **Goes to:** Prison Island (55) and Gull Harbor (43) (the car-ferry town); fallback Coral Cay (44) for the causeway islets.
+  - **Feeds:** islands, ferries (lanes, slips), water (reefs, wreck, whales), a specific landmark (prison).
+  - **Rule flags:** none.
+
+- **WC278** · Bayshore between suspension and lift bridges
+  - **Shows:** A shore strip between a red suspension bridge (west, to the city) and a river on the east crossed by a red-towered rail/road lift bridge and a green twin-tower lift bridge: botanical gardens with a glass conservatory, a hedge maze, a fountain and tennis courts; a suburb of roundabouts and cul-de-sacs. A railway with a red-roofed station, a highway interchange, a marina with a green-roofed clubhouse and finger piers, vineyards; a ferry crossing to the city in the south-west.
+  - **Goes to:** the mainland city's waterfront: Harbor (8) and Old Town (18) at the river mouth (lift bridge); fallback Bayside Heights' marina terrace (16).
+  - **Feeds:** venues (botanical garden, hedge maze, marina), neighbourhood type (roundabout suburb), bridges (lift bridge), train ride (station).
+  - **Rule flags:** the red suspension bridge reads as a famous real bridge; give it another colour/form.
+
+- **WC279** · Island town with a farm in its loop
+  - **Shows:** An island linked to a dense city by a red suspension bridge and to the east by a toll-plaza causeway: a grid town on the west half, a loop road round a market garden / small farm (crop plots, barn, silo) in the middle, a pond park with cherry blossoms and footbridges, a pagoda-like lookout on a wooded hill. A harbour with a walled breakwater and a lighthouse, a marina on the east, beach coves, palm islets with huts.
+  - **Goes to:** the south-west island: Pine Hills (0) and Sunset Beach (10); fallback the east island (Falls Center 36).
+  - **Feeds:** neighbourhood type (island town grid), community garden (missing concept 5), parks (pond garden), harbour, bridges.
+  - **Rule flags:** red suspension bridge (famous-bridge look); keep it generic.
+
+- **WC280** · Island town with a farm in its loop (variant)
+  - **Shows:** The same island as WC279 with small changes: the grid town, the loop road round the market-garden farm, the pond park, the lookout tower on the hill, the walled harbour with its lighthouse, the marina, the toll causeway east, palm islets.
+  - **Goes to:** as WC279.
+  - **Feeds:** as WC279.
+  - **Rule flags:** red suspension bridge. **Near-duplicate of WC279.**
+
+- **WC281** · Port city with stadium and lake park
+  - **Shows:** A city district inside a rounded ring road: a container port with red cranes and a ship along the whole west side, a grid of mixed blocks with an old quarter of red roofs, a lake park with an island in the middle, a stadium with car parks, curving residential drives in the east. A road-and-rail bridge east, a beach cove with piers, a lighthouse on the north-west tip, a ferry terminal at the south-west corner and an islet off the south shore.
+  - **Goes to:** the western city: Port Westport (26) and Westport Center (23); the stadium fallback the Stadium District (25).
+  - **Feeds:** city layout (ring road, port beside the core), venues (stadium, ferry terminal), parks (lake park), bridges.
+  - **Rule flags:** none.
+
+- **WC282** · Port city with island airport
+  - **Shows:** Close to WC281: a container port and car ferry on the west, an old red-roof quarter, a lake park with an island, a stadium with car parks, a ring road, a rail bridge east and a lighthouse. Added: an airport on its own island to the south (runway, terminal, tower, hangars) reached by a short bridge, and a hooked sand spit with palms and a beach.
+  - **Goes to:** the western city: Port Westport (26), Westport Center (23), Westport International (27).
+  - **Feeds:** city layout, airport placement, beaches (sand spit), bridges, venues (stadium).
+  - **Rule flags:** none. **Near-duplicate of WC281** (same plan, airport added).
+
+- **WC283** · The gulf: two cities and a spit airport
+  - **Shows:** A whole bay: the west city (container port, stadium, lake park, ferry, marina) and the east downtown (towers round a plaza, a Ferris wheel pier on a beach, villas on a hill), joined by a low bridge and two red suspension bridges with a railway over one. An airport on a long sandspit island to the south with a lighthouse at its tip, islets with houses, farmland in the north-east.
+  - **Goes to:** the gulf as a whole: the western city (Port Westport 26, Westport International 27) and the Gulf Island (Downtown 4, Neon Strip 7, Bayside Heights 16).
+  - **Feeds:** city layout (how the gulf's cities face each other), bridges, airport, ferries.
+  - **Rule flags:** red suspension bridges (famous-bridge look).
+
+- **WC284** · Gulf Island downtown with neon and port
+  - **Shows:** A downtown of glass towers round a plaza with a fountain, a domed civic hall and a hospital with a helipad; a neon quarter with pink signs and billboards on the west, a beach with a Ferris wheel pier, a marina and a rail yard with a station and freight trains in the south-east. An old brick quarter at the end of a red suspension bridge, a container port in the north-west, hillside villas in the north-east, a castle-like fort on an islet; across a channel to the south a grid suburb with a station on the rail line.
+  - **Goes to:** the Gulf Island: Downtown (4), Civic Center (5), Neon Strip (7) / The Pink Mile (17); the south suburb = Pine Hills (0); fallback the mainland city.
+  - **Feeds:** city layout (downtown with a neon edge), venues (hospital helipad, Ferris wheel pier, marina), train ride (station, rail yard), bridges.
+  - **Rule flags:** red suspension bridge (famous-bridge look).
+
+- **WC285** · Forest gorge falls, lake and mines
+  - **Shows:** A tall waterfall into a rock gorge with cascades and footbridges, a lake with a wooded island and a cabin dock, lodges and cabins in the woods, mine portals in a red rock cliff with ore tracks, a fire lookout, snowy peaks. A highway from a tunnel winds down to the coast past a beach cove with a dock and a sailboat.
+  - **Goes to:** the waterfalls and mountain lakes (4.3) between Highland Woods (47) and Granite Peaks (48).
+  - **Feeds:** rivers (waterfall, gorge), water (lake with island), forest, mines, coast.
+  - **Rule flags:** none.
+
+- **WC286** · Forest gorge falls with farm and harbour
+  - **Shows:** The same scene as WC285 (falls into a gorge, lake with an island, mine portals, lookout, snowy peaks) plus a farm hamlet with red barns, a silo and a vineyard on the east, and a lighthouse and a small harbour with a marina on the beach in the south-west.
+  - **Goes to:** as WC285; its farm edge where Highland Woods meets Willow Valley (49).
+  - **Feeds:** rivers, water, forest, farm edge, coast (small harbour, lighthouse).
+  - **Rule flags:** none. **Near-duplicate of WC285.**
+
+- **WC287** · Coastal station town with harbour
+  - **Shows:** A small coastal town: a harbour with finger piers and a ferry at the quay, a waterfront promenade, a grid with a domed church on a square, a large hospital with a helipad, a brick building with a sports field, warehouses and containers at a rail yard with a red station. The highway runs along the shore on a long viaduct past the ferry pier into a tunnel; a lighthouse on the point, beach coves; farm fields, a lake with a waterfall, a mountain tunnel and a mining hamlet behind.
+  - **Goes to:** Northshore (31) (station town, medical centre) with North Point (32); fallback Gull Harbor (43).
+  - **Feeds:** town layout (station town), harbour, highways (shore viaduct), train ride (rail yard), venues (hospital), lighthouse.
+  - **Rule flags:** the brick building with a sports field reads as a school: build it as something else (sports club, town hall).
+
+- **WC288** · Curving-drive suburb on an arterial
+  - **Shows:** A close suburb: houses on looping drives and cul-de-sacs with pools, a townhouse court round a shared pool, a strip of shops on the corner, a ballfield, a soccer pitch and tennis courts by a brick building with a yellow school bus out front. A busy four-lane arterial with a signalled crossroads, a big-box/warehouse block and a gas station across it, a wastewater plant with round clarifiers by a creek, a park with a pond, a playground and a boat jetty on a lake.
+  - **Goes to:** West Hills (28) / Cedar Falls (35) (cul-de-sac pods and a strip mall on the arterial); fallback Pine Hills (0).
+  - **Feeds:** neighbourhood type (curving-drive suburb), homes, venues (strip mall, big box), utilities (water works), parks.
+  - **Rule flags:** **school bus, a school campus with sports fields, a playground** - leave out (sports fields alone are fine as a park).
+
+- **WC289** · River-fork town at dusk with rail yard
+  - **Shows:** A brick town on a peninsula between two river arms at dusk: a grid with a fountain square, a big Gothic church and a steepled chapel, tall brick blocks, a stadium-sized sports field by a brick building. A long road bridge across the river to a beach and lighthouse, a marina with finger piers, a riverside industrial quay with a crane, a ship, tank farms and a rail yard; the railway crosses the river on a truss bridge and enters a tunnel; farms with a red barn and water tower north-west.
+  - **Goes to:** Old Town (18) at the river mouth with The Yards (3) across the channel; fallback Willow Crossing (58).
+  - **Feeds:** city layout (river-mouth old town), rivers (two arms, quays), train ride (truss bridge, tunnel), port (river quay), lighthouse.
+  - **Rule flags:** the brick building with a sports field may read as a school: not a school.
+
+- **WC290** · River town quay, bridge and rail port
+  - **Shows:** Close to WC289 at street scale: a brick town on the river with a lit quay wall, a high road bridge and a low town bridge, a church, a fountain square, a football pitch and baseball diamond by a brick building, a gas station and diner at the bridgehead. A river port with a crane, a ship, warehouses, tank silos and a rail yard; across the river a beach with a pier and a bar, houses with pools, a waterfall from the forest, a farm with cows and a fire lookout.
+  - **Goes to:** Old Town (18) / The Yards (3); fallback Willow Crossing (58).
+  - **Feeds:** rivers (quay wall, two bridges), city layout, port, beaches, train ride.
+  - **Rule flags:** brick building with sports fields (school-like): not a school. **Near-duplicate of WC289** (closer view).
+
+- **WC291** · The Strip close-up with pyramid
+  - **Shows:** A palm-median Strip with crosswalks: a lotus-crowned casino, a domed palace casino with a fountain pool, a black glass pyramid with a sphinx and two obelisks, a curving glass tower pair; pylon billboards along the kerb. Across the road a motel round a pool, a parking deck, a shop with a giant red-lips sign, a strip mall with a gold-coin sign (pawn/chips); a wedding chapel with a heart sign, a bus depot, an RV park, a lookout tower and red rocks at the edges.
+  - **Goes to:** Lucky Mesa: The Strip (60) (Old Downtown 61's chapel).
+  - **Feeds:** a specific landmark (pyramid, palace casino), venues (casinos, motel, chapel, diner), city layout (Strip superblocks with drop-offs), NPC life (crowds).
+  - **Rule flags:** the pyramid + sphinx, the lotus casino and the domed palace are copies of real resorts; make them generic.
+
+- **WC292** · City skate park (kit)
+  - **Shows:** A fenced skate park on a city block: a kidney bowl, a halfpipe with a painted deck, a stair set with a handrail, funboxes, quarter pipes, ledges and benches; graffiti murals on the ramps, a vending machine, lamps, trees round it and a taxi and cars on the street with a zebra crossing. Skaters and BMX riders in action.
+  - **Goes to:** general kit/reference: a skate plaza for the Arts District (46) or Northgate (2) (SK5).
+  - **Feeds:** venues (skate park), parks, NPC life (skaters).
+  - **Rule flags:** some riders look young; build with adult skaters only.
+
+- **WC293** · Egret Point: marsh, raceway, car ferry (map icons)
+  - **Shows:** A portrait plan of a marsh tip: reed islands with a bird hide on a boardwalk, a dirt oval raceway with a small grandstand, a fishing village of sheds on piers (fish icon) with boats, a car ferry at its slip with cars queued, buoys. The coast road runs north past a dune beach with lifeguard tower and beach umbrellas to a lighthouse with keeper's house on the rocks; map icons mark hide, birds, raceway, fish, ferry, beach, lighthouse.
+  - **Goes to:** Egret Point (65) and the Egret Coast (53) (fishing village, car ferry pier, raceway, Egret Point Light).
+  - **Feeds:** marsh, venues (raceway), ferries (car ferry slip), fishing village, map icons (which places get one).
+  - **Rule flags:** none. Same place as WC250/WC263/WC270, and the clearest of them.
+
+- **WC294** · Copper Gulch with mine, dam and arch (icons)
+  - **Shows:** A terraced open-pit mine with a processing plant and conveyors above a company town (rows of houses, water tower, ore train at the depot); the main street on the highway with a gas station, a saloon, a sheriff's star office, a diner and billboards, a motel round a pool. A concrete dam across a canyon with a dry wash below and a truss bridge, a natural arch, a fire lookout over a reservoir; a ghost town and an RV/camp spot south of the highway; map icons on each place.
+  - **Goes to:** Copper Gulch (63) with the dam (4.6); the ghost town = Dusty Hollow (64).
+  - **Feeds:** town main street (mining), a specific landmark (mine, dam, arch), venues (saloon, motel, diner), map icons, train ride.
+  - **Rule flags:** none.
+
+- **WC295** · Farm grid with canals and river weir (icons)
+  - **Shows:** A farm grid cut by irrigation canals with little bridges: wheat with a tractor and hay bales, corn, lavender, pumpkins, apples, sunflowers, a dairy with cows, a horse paddock, a vineyard on a terraced slope; red barns and silos at each farmstead. A truck stop on the highway along the west, a river village with a church, a diner and a market, a grain elevator with a rail siding and train, a dam/weir on the river, a river boat, a lake island with a cabin, a boat launch and a campground; icons on each.
+  - **Goes to:** Willow Valley (49): Willow Crossing (58) and Cedar Farms (38); the weir on the Long Reach.
+  - **Feeds:** farm valley (canals, crop kinds), rivers (weir, river boat), town (grain elevator by the line), map icons, highways (truck stop).
+  - **Rule flags:** none. Same valley as WC276 with icons.
+
+- **WC296** · Mountain pass panorama (icons)
+  - **Shows:** A wide strip of mountains: a highway through a tunnel and across a gorge on an arched bridge beside twin waterfalls, then up switchbacks. An observatory dome on a peak, a summit cross, a fire lookout, a mine portal, steaming hot springs, a lake with a log lodge and boats, a tarn with a campground, a terraced quarry, a ranger station and a trailhead; map icons on each.
+  - **Goes to:** Granite Peaks (48) and the mountain lakes (4.3).
+  - **Feeds:** mountains, roads (switchbacks, gorge bridge), venues (hot springs, observatory, lodge), map icons, campgrounds.
+  - **Rule flags:** summit cross is fine (no flag). Same set as WC261/WC273.
+
+- **WC297** · Redwood coast logging town (icons)
+  - **Shows:** The logging town at a highway fork: a gas station, a diner, a motel, a lodge with an elk sign, a sawmill with log decks and a rail spur, a church; a beaver pond with a dam, a lake with a boathouse, a campground and a hunting camp in the woods. The coast road runs along cliffs past sea stacks, a sea arch, a waterfall off a cliff under a road bridge and a viewpoint to a lighthouse with keeper's house; icons on each.
+  - **Goes to:** Timber Bend (57); the coast fallback the north-west coast by Lighthouse Rock (19).
+  - **Feeds:** town (logging), forest (beaver pond), coast, campgrounds, map icons, train ride.
+  - **Rule flags:** none. Same composition as WC257/WC272.
+
+- **WC298** · Beach town with lido and cliff trail
+  - **Shows:** A beach town's edge: a lido (big outdoor pool with lanes and a splash pool) beside a brick hall with a glass-walled indoor pool, a running track with stadium seats, tennis courts and a baseball diamond. A beach with umbrellas, a pier with a restaurant pavilion, a marina on a breakwater with a small light; a cliff trail with stairs and a gazebo up the rocky headland; a gridded town of shops and houses with pools behind.
+  - **Goes to:** Sunset Beach (10) (or Northgate's public pool idea in a beach setting); fallback Sandpiper Bay (59).
+  - **Feeds:** venues (public pool/lido, sports grounds, pier restaurant), beaches, harbour (marina), coast trails.
+  - **Rule flags:** the track-and-field and diamond complex reads as a high school's: build as a public sports park.
+
+- **WC299** · Mesas, lakes and a farm on a rocky coast
+  - **Shows:** A compact region: a red mesa island of buttes with a ranch and dirt tracks, ringed by forested lakes, river channels and a wetland; snowy peaks with a waterfall and a mine portal in the north-west, a lake with wooded islets and cabins, a fire lookout. A farm grid with a big red barn in the north-east, a lighthouse on the rocky coast, a fishing harbour village in the south-east cove; the coast road and railway along the south on arched viaducts.
+  - **Goes to:** where the farm valley meets the desert and the coast; fallback the Sandpiper Coast (52) or the Lucky Mesa edge. General region reference if unclear.
+  - **Feeds:** biome blend (mesa / forest / farm / coast meeting), water (lakes, wetland), train ride (coastal viaducts), harbour.
+  - **Rule flags:** none.
+
+- **WC300** · Copper Basin canyon trails (labelled map)
+  - **Shows:** A canyon with a palm-lined oasis creek falling in steps (waterfalls, footbridges), trails signed to viewpoints, a trailhead car park with a picnic area, a natural arch with a fall through it, an old prospect mine portal with rails and a cart, and a roadside fuel/supply stop with a water tower and windmill. Labelled sign boards with distances, a title cartouche, compass and scale bar.
+  - **Goes to:** the Red Rock Desert (50) near Copper Gulch (63) (the old prospect mine); fallback Dusty Hollow (64).
+  - **Feeds:** desert (oasis creek, arch), trails and dirt tracks, venues (trailhead, fuel stop), map icons/labels.
+  - **Rule flags:** "Route 66" shield (real highway) - use Route 9; drop the invented "Copper Basin" title (use the game's names).
+
+- **WC301** · Redwood Glen park trails (labelled)
+  - **Shows:** A redwood park: giant trunks, a creek with two waterfalls and boulder cascades, footbridges and log bridges, trails with signed loops (Big Tree Circle, Fern Loop), a fire lookout, cliff viewpoints, a campground with tents and an RV, cabins, a picnic meadow, a ranger station with car park and an entry sign on the highway.
+  - **Goes to:** Highland Woods (47) near Timber Bend (57).
+  - **Feeds:** forest (redwood grove), trails, campgrounds, rivers (creek falls), venues (ranger station), map labels.
+  - **Rule flags:** **US flag** at the ranger station - leave out.
+
+- **WC302** · Redwood Glen park trails (variant)
+  - **Shows:** The same park as WC301 drawn tighter (4:3): the boulder creek with falls and a dozen footbridges, the picnic meadow, the ranger station and bus car park, the campground, cabins, lookouts.
+  - **Goes to:** as WC301.
+  - **Feeds:** as WC301.
+  - **Rule flags:** none visible. **Near-duplicate of WC301.**
+
+- **WC303** · Redwood Glen park trails (variant 2)
+  - **Shows:** The same park again (16:9): the falls with a timber viewing platform, a cliff pool viewpoint, log bridges, campground, cabins with smoke, the lookout, a bus at the car park.
+  - **Goes to:** as WC301.
+  - **Feeds:** as WC301.
+  - **Rule flags:** none visible. **Near-duplicate of WC301/WC302.**
+
+- **WC304** · Red Mesa mines and outpost (labelled)
+  - **Shows:** A canyon mining camp: two mine portals with ore tracks, a timber tipple and conveyors over ore heaps, a big red mill barn, water towers; a small ghost town with a chapel; a roadside outpost (fuel pumps, garage, a house); a canyon campground with RVs, a wash with a bridge, lookouts and a mesa trail. A signpost with distances, compass and scale.
+  - **Goes to:** Copper Gulch (63) and its mine; the ghost town = Dusty Hollow (64).
+  - **Feeds:** a specific landmark (mine tipple and mill), town (outpost), campgrounds, desert trails, map labels.
+  - **Rule flags:** "Route 66" shield (real highway) and a **US flag** at the outpost - leave out; drop the invented "Arroyo County" label.
+
+- **WC305** · Route 9 biker stop at the river
+  - **Shows:** A highway roadhouse strip: a saloon with a longhorn neon sign and a row of motorcycles out front, a parts & service garage, a gas station, an outfitter, a water tower and radio mast. A lakeside fishing marina with a dock and boats, a rock arch footbridge over the river, a campground; across the road an RV park, a dirt track under a ranch gate, cacti, windmills and red rocks.
+  - **Goes to:** the Route 9 places in the Red Rock Desert (50); fallback Dusty Hollow (64).
+  - **Feeds:** venues (biker saloon, garage, marina), roads (roadhouse strip), campgrounds, dirt bike tracks, NPC life (bikers).
+  - **Rule flags:** "Route 66" road marking and shield, a star-in-circle fuel sign that looks like a real oil brand, real-looking town names on the green sign - all generic.
+
+- **WC306** · Rocky cove beach and fishing harbour (close)
+  - **Shows:** A close Mediterranean-style cove: a small sand beach between rocks with sunbathers, umbrellas and a snack hut, stairs and a lookout down the cliff, a car park with a kiosk up top, a cliff-top chapel. Tile-roofed houses with terraces and a cafe above a small walled harbour with fishing boats and a harbour light; snorkellers over rocky reef, a sailboat.
+  - **Goes to:** The Bluffs (34) (stairs down to a cove, L9); fallback Bayside Heights' hidden cove (16) or Coral Cay (44).
+  - **Feeds:** coast (cove beach, cliff stairs), harbour (small walled harbour), venues (cafe terrace, beach hut), homes.
+  - **Rule flags:** none.
+
+- **WC307** · Canal marina village at sunset
+  - **Shows:** A waterfront village built round canal basins: villas with pools and private docks on fingers of land, a central basin with a yacht club (clubhouse with flagpole), a long marina of finger piers, boat rentals and a bait & tackle shop on the quay, a boatyard with a travel lift. A lift/bascule bridge over the channel mouth, channel buoys, a lighthouse on a rocky point with a small beach, a Spanish-style mission chapel and a roundabout with the village's sign.
+  - **Goes to:** Bayside Heights (16) (the marina terrace, missing I4 marina); fallback Sandpiper Bay's marina (59) or Pelican Key (14).
+  - **Feeds:** harbour (canal marina, yacht club, boatyard), homes (waterfront villas with docks), bridges (bascule), venues (boat rental, bait shop).
+  - **Rule flags:** **US flag** at the yacht club - leave out; drop the "Harbor Point"/"Seaside" sign names (use the game's).
+
+- **WC308** · Station town on the main line
+  - **Shows:** A small town cut by a four-track main line with a long passenger train at a platform with canopies; a street with a level crossing through its middle. Brick blocks with shops and a pharmacy and cafe, a clock-tower church, a sports field with running track and tennis courts by a brick building with a school bus. South of the line houses with pools, a lumber yard, warehouses and a water tower; on the west a winding road down to a cove harbour with finger piers and a lighthouse, a creek with cascades from a forest lake.
+  - **Goes to:** Northshore (31) (Station Avenue by the main line's station); fallback the Old Quarter (30) (station block with level crossing).
+  - **Feeds:** train ride (station, level crossing in town), town layout (station town), harbour, rivers.
+  - **Rule flags:** **school bus and a school campus** (brick hall with track) - leave out.
+
+- **WC309** · Regional airport at night
+  - **Shows:** A regional airport after dark: a terminal with a jet bridge and an airliner, a lit apron with light planes, a tower, an edge-lit runway with numbers and a windsock, maintenance and aviation hangars, cargo sheds, fuel tanks, a hotel and a diner on the approach, a big rental-car lot. A freeway with an exit, a roundabout with the airport sign, a utility substation and a small housing street by the fence.
+  - **Goes to:** Westport International (27) (terminal, car parks, car rental lots, airport motel); fallback the Lucky Mesa airport.
+  - **Feeds:** airport layout, venues (airport hotel, diner, rental lots), lighting (runway lights at night), highways (airport exit).
+  - **Rule flags:** **real brands**: Hertz, Avis, Budget, Enterprise on the rental lot - replace with invented names; the "Riverton" name is not the game's.
+
+- **WC310** · Forest airport with freight rail
+  - **Shows:** A small airport in pine forest at golden hour: terminal with a jet bridge and airliner, a multi-level car park, a runway with numbers and a parallel taxiway, light aircraft on stands, three big hangars and an aviation building, a fuel farm with tanks and tankers, a tower and a radio mast. A freight train passes behind; a freeway with an exit sign runs on the west; a pond with a boardwalk in the infield.
+  - **Goes to:** Westport International (27); fallback a larger regional airstrip (the Lucky Mesa airstrip).
+  - **Feeds:** airport layout (fuel farm, hangars, car park), train ride (freight line past the airport), highways.
+  - **Rule flags:** "Pinecrest" names on signs (not the game's).
+
+- **WC311** · Hunting lodge crossroads in the woods
+  - **Shows:** A forest crossroads: a hunting outfitter lodge with an antler sign, pickups and a quad, a game check station, a general store with a gas pump on the paved road, a ranger's cabin. Deer stands on dirt tracks, a lake with a fishing dock and a cabin, a beaver pond with its dam, a meadow with deer and elk, cascades under a stone bridge, a fire lookout on boulders, trucks on logging roads.
+  - **Goes to:** Highland Woods (47) near Timber Bend (57).
+  - **Feeds:** forest (deer stands, meadows, beaver ponds), venues (outfitter, general store), rivers (cascades), dirt tracks, wildlife.
+  - **Rule flags:** small **US flag** on the lookout - leave out.
+
+- **WC312** · Beaver pond chain in the forest (kit)
+  - **Shows:** A creek stepped down through a chain of beaver dams and lodges, each spilling a small fall, with drowned dead trees, lily pads, ducks and a heron; a timber viewing platform, a footbridge, a campfire camp with a tent, cut stumps and felled logs. A trail car park with a kiosk, a cabin with smoke and a pickup, a fire lookout, a moose at the edge.
+  - **Goes to:** Highland Woods (47); general kit for any forest stream.
+  - **Feeds:** rivers (beaver dams as steps), forest (wetland, stumps), wildlife, campgrounds, trails.
+  - **Rule flags:** none.
+
+- **WC313** · Highway diamond with strip malls
+  - **Shows:** A divided highway on a raised deck with a diamond interchange onto a north-south boulevard: at its terminals a supermarket with a big car park, a fast-food place, a gas station, brick apartment blocks, a mall-like row. North of it a creek with a bridge, a freight train on a curving line, a park with a pond and a sports pitch; south a cul-de-sac suburb with pools, a lake shore with a jetty, a water tower and a depot with a school bus in its yard.
+  - **Goes to:** the Stadium District (25) (the diamond interchange onto Stadium Avenue with gas and strip malls at its terminals); fallback West Hills (28).
+  - **Feeds:** highways (diamond interchange), neighbourhood type (strip mall terminals, suburb), city layout.
+  - **Rule flags:** **school bus** in the depot - leave out.
+
+- **WC314** · Golf resort, lake and farm edge
+  - **Shows:** A lakeside edge of town: a clubhouse with tile roofs and a car park on a golf course with bunkers, ponds and a footbridge; a lake with a boathouse and boat dock, wooded islets, sailboats and a lakeside RV campground. A curving-drive village of large houses, and across a lane a farm with a red barn and silo, cows, vineyards, a wheat field and a farm stand; a creek falls from a forest ridge with a lookout; a highway with a green sign on the east.
+  - **Goes to:** the Lake District (37) (lakeside estates with docks); fallback Cedar Farms (38) by Kestrel Lake.
+  - **Feeds:** venues (golf club, boathouse, farm stand), water (lake with islets), homes (estate drives), farm edge, campgrounds.
+  - **Rule flags:** "Pinecrest" sign (not the game's name).
+
+- **WC315** · Community gardens row-house quarter
+  - **Shows:** A brick row-house neighbourhood at dusk where back yards become allotments: a central community garden with raised beds, a greenhouse, market stalls and a sign, gardens behind every house, a pocket park with a playground. A market and a bakery on the corner, a cafe with outdoor tables, a creek greenway with footbridges and a trail, a railway along the south with a water tower, signposts to downtown.
+  - **Goes to:** the Arts District (46) or Northgate (2) (missing concept 5: a community garden in the city); fallback Old Town (18).
+  - **Feeds:** neighbourhood type (allotment row houses), community garden, parks (creek greenway), venues (bakery, market, cafe), homes.
+  - **Rule flags:** **playground** in the pocket park - leave out; the "Riverdale"/"Maplewood" names are not the game's.
+
+- **WC316** · Harbour town with paddle-steamer ferry
+  - **Shows:** A ferry harbour town: a large multi-deck ferry at a pier with a terminal shed, a second ferry arriving, a stone breakwater with a red light, a fishing harbour with finger piers, a crane and a red shed. A square with a gazebo, a steepled church, painted shopfronts, a car park; a beach cove on the left, a bridge over a creek to a rocky islet with a lighthouse, farms and a radio mast up the hill.
+  - **Goes to:** Gull Harbor (43) (the ferry island, reached by the car ferry); fallback North Point (32) / the ferry terminal in Harbor (8).
+  - **Feeds:** ferries (terminal, ferry pier), harbour, town layout (harbour square), lighthouse.
+  - **Rule flags:** none.
+
+- **WC317** · Farmsteads between a river and the highway
+  - **Shows:** A farm country patch: a big green-roofed barn with a silo and tractors, farmhouses with porches, a combine in wheat, corn, sunflowers, lavender, orchards, a greenhouse, cows and hay bales, a farm stand on the highway, a pond with a dock. A river with falls and cascades in a gorge on the west crossed by plank bridges, a lookout tower; the highway with a green "Pinecrest" sign on a bridge over a river gorge at the bottom.
+  - **Goes to:** Willow Valley (49) / Cedar Farms (38).
+  - **Feeds:** farm valley (farmsteads, crop kinds), rivers (gorge), venues (farm stand), homes (farmhouses).
+  - **Rule flags:** "Pinecrest" sign (not the game's name).
+
+- **WC318** · Coastal city where forest meets desert
+  - **Shows:** A small city: a downtown of towers with a helipad and a domed civic hall, an old clock-tower church, a fountain plaza, a beach with a Ferris wheel pier and palms, a marina, a port with cranes and a ship, a long curving bridge over the bay. A sports field complex, villas with pools and a golf course in the north-west, a railway and a water tower on the east, then red desert with pump jacks and a mine; forest and a waterfall in the north-east; highway signs.
+  - **Goes to:** Sandpiper Bay (59) as the town where desert meets sea, or the eastern end of the mainland city (Stadium District 25); general reference for a biome seam.
+  - **Feeds:** city layout (small city at a biome seam), venues (Ferris wheel pier, marina), port, bridges.
+  - **Rule flags:** the sports-field complex may read as a school: build as a sports park; "Pinecrest" signs.
+
+- **WC319** · Desert-forest river town with marina
+  - **Shows:** A town at a river mouth where forest meets desert: a grid with a domed town hall, a fountain square, a gas station, a neon motel with a pool, a diner and shops, two water towers. A riverside marina with finger piers and a wooden market hall on the quay, a red arch bridge over the river mouth, a beach with a pier and a pavilion, a lighthouse on rocks, an RV campground. A cloverleaf interchange to the north, farms with a barn and silos, a waterfall and lookout in the forest, pump jacks and a mining barn in the desert.
+  - **Goes to:** Sandpiper Bay (59) (the south-east town, desert meets sea); fallback Willow Crossing (58).
+  - **Feeds:** town layout (river-mouth town), harbour (river marina), venues (motel, diner, pier pavilion), bridges, biome seam.
+  - **Rule flags:** "Pinecrest" sign.
+
+- **WC320** · Farmstead by a creek (close)
+  - **Shows:** A close farmstead: a red barn with a silo, a windmill, a porch farmhouse, hay bales and tractors with trailers, cows in a paddock, a scarecrow in wheat with a combine, vegetable plots with farmers working, corn rows, an orchard, sunflowers. A creek with ducks winds under small bridges; a country road with a truck; across the creek a white church and a grain elevator with silos by the railway and a brick main street.
+  - **Goes to:** Willow Crossing (58) edge / Cedar Farms (38).
+  - **Feeds:** homes (farmsteads), farm valley (yard dressing), rivers (creek), NPC life (farm workers), town (grain elevator by the line).
+  - **Rule flags:** none.
+
+- **WC321** · Town park with pond and gazebo
+  - **Shows:** A big town park: a pond with willow islands and arched footbridges, a fishing dock, a stream with cascades under a stone bridge, a bandstand gazebo, a statue on a circular plaza, picnic lawns with cherry trees, food stalls with umbrellas, two soccer pitches, tennis courts, a basketball court, allotments with a greenhouse, a playground. A railway along the south-west, a car park with a ranger building, houses round the edge.
+  - **Goes to:** Greenfield Park (12) in Downtown (its pond); fallback the Lake District's Falls Lake Park (37).
+  - **Feeds:** parks (pond, bandstand, sports courts), venues (food stalls), NPC life (picnics, sport), community garden.
+  - **Rule flags:** **playground** and some small children - leave out.
+
+- **WC322** · Desert crossroads with oil field and airstrip
+  - **Shows:** A two-lane desert highway crossing a north-south road: a diner/gas station with canopies and a repair shop at the junction, an oil field with pump jacks and a gas flare, tanks and a water tower, a dirt airstrip with a light plane, a windsock and a hangar. A river canyon crossed by a truss bridge, ranch shacks with windmills and a corral, an RV and campfires, red hoodoos and a natural arch, dirt tracks everywhere.
+  - **Goes to:** the Route 9 places in the Red Rock Desert (50); fallback Mesa Flats' edge (62).
+  - **Feeds:** desert (arch, hoodoos, canyon river), venues (diner, garage, airstrip), energy (oil field), dirt bike tracks.
+  - **Rule flags:** none.
+
+- **WC323** · Downtown civic blocks with helipads (close)
+  - **Shows:** Four downtown blocks round a palm-median avenue: a police HQ with patrol cars in its yard, a domed theatre/opera house with banners and a red carpet, a columned bank, two glass towers with rooftop helipads and roof gardens, a stone hotel with a drop-off loop round a fountain, a sculpture plaza, a row of boutiques and a fountain square with a bus. Crosswalks at every corner, street lamps, crowds.
+  - **Goes to:** Downtown (4) and the Civic Center (5) (police HQ SC2-C, the corner bank, the Grand Neon Hotel's drop-off); fallback Westport Center (23).
+  - **Feeds:** city layout (civic blocks, palm median avenue), venues (police HQ, bank, theatre, hotel), a specific landmark (the domed theatre), NPC life.
+  - **Rule flags:** **US flags** on the police HQ - leave out.
+
+---
+
+## Near-duplicates in this batch
+- WC279 = WC280 (island town with a farm in its loop).
+- WC281 ~ WC282 (port city; WC282 adds the island airport); WC283 the same gulf zoomed out.
+- WC285 = WC286 (forest gorge falls; 286 adds a farm and harbour).
+- WC289 ~ WC290 (river-fork brick town; 290 closer).
+- WC301 = WC302 = WC303 (Redwood Glen park, three framings).
+- WC255 ~ WC275 (Red Rock Desert set), with WC294 the same pieces round Copper Gulch.
+- WC257 ~ WC272 ~ WC297 (logging town by the sea); WC260 ~ WC271 (lake lodge); WC261 ~ WC273 ~ WC296 (mountain pass, observatory, hot springs).
+- WC250 ~ WC263 ~ WC270 ~ WC293 (Egret Point: marsh, raceway, fishing village, light).
+- WC258 ~ WC274 ~ WC291 (Lucky Mesa Strip at three zooms).
+- WC276 ~ WC295 (farm grid with river town and weir).
+
+## Batch highlights
+1. **WC293** (Egret Point, portrait with icons): the clearest single plan for Egret Point - marsh hide, raceway, fishing piers, car-ferry slip, beach road, light. Build straight from it.
+2. **WC266** (Copper Gulch main street): fills the missing mining-town main street - saloon, store, sheriff, smelter, company row, ore loader on the line.
+3. **WC268** (Timber Bend main street): fills the missing logging-town street - themed shop signs, sawmill, log spur, motel on the highway bend.
+4. **WC267** (Willow Crossing square): fills the missing farm-town street - gazebo square, co-op silos, depot, river quay.
+5. **WC265** (Dusty Hollow ghost town): fills the missing ghost-town street, with a ruined mission and a hideout cave.
+6. **WC315** (community gardens quarter): fills missing concept 5 (a community garden in the city), a fresh neighbourhood type.
+7. **WC313** (highway diamond): exactly the Stadium District's diamond onto Stadium Avenue with strip malls at the terminals.
+8. **WC323** (civic blocks close-up): police HQ, bank, domed theatre, hotel drop-off, helipads - ready blocks for Downtown/Civic Center.
+9. **WC307** (canal marina village): the missing marina (I4) for Bayside Heights / Sandpiper Bay, with a bascule bridge and yacht club.
+10. **WC312** (beaver pond chain): a reusable river-step kit for forest streams (fish holds, falls, wildlife).
+Runners-up: WC277 (Prison Island with ferry lanes), WC309 (airport with rental lots and motel strip for Westport International), WC308 (station town with level crossing), WC264 (beach boardwalk street, missing BE2), WC300 (canyon oasis trail).
+
+**Recurring themes:** lighthouses on almost every coast; red suspension bridges (avoid the famous-bridge look); waterfalls into lakes with a wooded island and a lodge; fire lookouts; logging and mining towns with ore/log trains; dirt ovals and raceways by marshes; farm grids with lavender/sunflower/pumpkin patches and grain elevators by the line; neon motels with pools and diners on desert highways; many images carry map icons/labels (useful for choosing map icons). **Rule issues recur:** school buses and school-like campuses with sports fields (WC287, 288, 289, 290, 298, 308, 313, 318), playgrounds (288, 315, 321), US flags (301, 304, 307, 311, 323), "Route 66" (300, 304, 305), real rental brands (309), resort-copy landmarks on the Strip (258, 274, 291), invented sign names (Pinecrest, Riverton, Riverdale) to replace with the game's.
+
+
+## Original file names
+
+- WC001: ChatGPT Image Oct 17, 2026, 12_59_09 AM.png (1619x971)
+- WC002: ChatGPT Image Oct 17, 2026, 01_00_41 AM.png (1448x1086)
+- WC003: ChatGPT Image Oct 17, 2026, 01_00_44 AM.png (1619x971)
+- WC004: ChatGPT Image Oct 17, 2026, 01_00_46 AM.png (1536x1024)
+- WC005: ChatGPT Image Oct 17, 2026, 01_00_50 AM.png (1619x971)
+- WC006: ChatGPT Image Oct 17, 2026, 01_00_52 AM.png (1536x1024)
+- WC007: ChatGPT Image Oct 17, 2026, 01_00_56 AM.png (1619x971)
+- WC008: ChatGPT Image Oct 17, 2026, 01_01_04 AM.png (1448x1086)
+- WC009: ChatGPT Image Oct 17, 2026, 01_01_09 AM.png (1448x1086)
+- WC010: ChatGPT Image Oct 17, 2026, 01_01_12 AM.png (1536x1024)
+- WC011: ChatGPT Image Oct 17, 2026, 01_01_16 AM.png (1619x971)
+- WC012: ChatGPT Image Oct 17, 2026, 01_01_20 AM.png (1536x1024)
+- WC013: ChatGPT Image Oct 17, 2026, 01_01_24 AM.png (1619x971)
+- WC014: ChatGPT Image Oct 17, 2026, 01_01_28 AM.png (1619x971)
+- WC015: ChatGPT Image Oct 17, 2026, 01_01_31 AM.png (1536x1024)
+- WC016: ChatGPT Image Oct 17, 2026, 01_01_35 AM.png (1536x1024)
+- WC017: ChatGPT Image Oct 17, 2026, 01_01_38 AM.png (1536x1024)
+- WC018: ChatGPT Image Oct 17, 2026, 01_01_45 AM.png (1448x1086)
+- WC019: ChatGPT Image Oct 17, 2026, 01_01_50 AM.png (1536x1024)
+- WC020: ChatGPT Image Oct 17, 2026, 01_02_05 AM.png (1536x1024)
+- WC021: ChatGPT Image Oct 17, 2026, 01_02_08 AM.png (1448x1086)
+- WC022: ChatGPT Image Oct 17, 2026, 01_02_14 AM.png (1536x1024)
+- WC023: ChatGPT Image Oct 17, 2026, 01_02_19 AM.png (1448x1086)
+- WC024: ChatGPT Image Oct 17, 2026, 01_02_23 AM.png (1536x1024)
+- WC025: ChatGPT Image Oct 17, 2026, 01_02_27 AM.png (1448x1086)
+- WC026: ChatGPT Image Oct 17, 2026, 01_02_31 AM.png (1536x1024)
+- WC027: ChatGPT Image Oct 17, 2026, 01_02_35 AM.png (1536x1024)
+- WC028: ChatGPT Image Oct 17, 2026, 01_02_39 AM.png (1536x1024)
+- WC029: ChatGPT Image Oct 17, 2026, 01_02_43 AM.png (1672x941)
+- WC030: ChatGPT Image Oct 17, 2026, 01_02_49 AM.png (1672x941)
+- WC031: ChatGPT Image Oct 17, 2026, 01_02_52 AM.png (1536x1024)
+- WC032: ChatGPT Image Oct 17, 2026, 01_02_57 AM.png (1448x1086)
+- WC033: ChatGPT Image Oct 17, 2026, 01_03_01 AM.png (1536x1024)
+- WC034: ChatGPT Image Oct 17, 2026, 01_03_05 AM.png (1254x1254)
+- WC035: ChatGPT Image Oct 17, 2026, 01_03_09 AM.png (1536x1024)
+- WC036: ChatGPT Image Oct 17, 2026, 01_03_12 AM.png (1254x1254)
+- WC037: ChatGPT Image Oct 17, 2026, 01_03_16 AM.png (1536x1024)
+- WC038: ChatGPT Image Oct 17, 2026, 01_03_49 AM.png (1448x1086)
+- WC039: ChatGPT Image Oct 17, 2026, 01_03_53 AM.png (1536x1024)
+- WC040: ChatGPT Image Oct 17, 2026, 01_03_57 AM.png (1086x1448)
+- WC041: ChatGPT Image Oct 17, 2026, 01_04_01 AM.png (1254x1254)
+- WC042: ChatGPT Image Oct 17, 2026, 01_04_04 AM.png (1672x941)
+- WC043: ChatGPT Image Oct 17, 2026, 01_04_08 AM.png (1536x1024)
+- WC044: ChatGPT Image Oct 17, 2026, 01_04_12 AM.png (941x1672)
+- WC045: ChatGPT Image Oct 17, 2026, 01_04_15 AM.png (1448x1086)
+- WC046: ChatGPT Image Oct 17, 2026, 01_04_19 AM.png (1254x1254)
+- WC047: ChatGPT Image Oct 17, 2026, 01_04_23 AM.png (1254x1254)
+- WC048: ChatGPT Image Oct 17, 2026, 01_04_26 AM.png (1448x1086)
+- WC049: ChatGPT Image Oct 17, 2026, 01_04_30 AM.png (1448x1086)
+- WC050: ChatGPT Image Oct 17, 2026, 01_04_34 AM.png (1086x1448)
+- WC051: ChatGPT Image Oct 17, 2026, 01_04_39 AM.png (1448x1086)
+- WC052: ChatGPT Image Oct 17, 2026, 01_04_43 AM.png (1536x1024)
+- WC053: ChatGPT Image Oct 17, 2026, 01_04_47 AM.png (1536x1024)
+- WC054: ChatGPT Image Oct 17, 2026, 01_04_51 AM.png (1122x1402)
+- WC055: ChatGPT Image Oct 17, 2026, 01_04_55 AM.png (1448x1086)
+- WC056: ChatGPT Image Oct 17, 2026, 01_04_59 AM.png (1536x1024)
+- WC057: ChatGPT Image Oct 17, 2026, 01_05_03 AM.png (1619x971)
+- WC058: ChatGPT Image Oct 17, 2026, 01_05_06 AM.png (1619x971)
+- WC059: ChatGPT Image Oct 17, 2026, 01_05_13 AM.png (1619x971)
+- WC060: ChatGPT Image Oct 17, 2026, 01_05_16 AM.png (1536x1024)
+- WC061: ChatGPT Image Oct 17, 2026, 01_05_20 AM.png (1448x1086)
+- WC062: ChatGPT Image Oct 17, 2026, 01_05_25 AM.png (1448x1086)
+- WC063: ChatGPT Image Oct 17, 2026, 01_05_30 AM.png (1536x1024)
+- WC064: ChatGPT Image Oct 17, 2026, 01_05_35 AM.png (1448x1086)
+- WC065: ChatGPT Image Oct 17, 2026, 01_05_38 AM.png (1536x1024)
+- WC066: ChatGPT Image Oct 17, 2026, 01_05_43 AM.png (1672x941)
+- WC067: ChatGPT Image Oct 17, 2026, 01_05_46 AM.png (1086x1448)
+- WC068: ChatGPT Image Oct 17, 2026, 01_05_51 AM.png (1448x1086)
+- WC069: ChatGPT Image Oct 17, 2026, 01_05_55 AM.png (1254x1254)
+- WC070: ChatGPT Image Oct 17, 2026, 01_05_58 AM.png (1448x1086)
+- WC071: ChatGPT Image Oct 17, 2026, 01_06_02 AM.png (1122x1402)
+- WC072: ChatGPT Image Oct 17, 2026, 01_06_06 AM.png (1672x941)
+- WC073: ChatGPT Image Oct 17, 2026, 01_06_09 AM.png (1254x1254)
+- WC074: ChatGPT Image Oct 17, 2026, 01_06_14 AM.png (1254x1254)
+- WC075: ChatGPT Image Oct 17, 2026, 01_06_18 AM.png (1254x1254)
+- WC076: ChatGPT Image Oct 17, 2026, 01_06_23 AM.png (1254x1254)
+- WC077: ChatGPT Image Oct 17, 2026, 01_06_27 AM.png (1254x1254)
+- WC078: ChatGPT Image Oct 17, 2026, 01_06_31 AM.png (1448x1086)
+- WC079: ChatGPT Image Oct 17, 2026, 01_06_35 AM.png (1672x941)
+- WC080: ChatGPT Image Oct 17, 2026, 01_06_40 AM.png (887x1774)
+- WC081: ChatGPT Image Oct 17, 2026, 01_06_44 AM.png (887x1774)
+- WC082: ChatGPT Image Oct 17, 2026, 01_06_47 AM.png (1448x1086)
+- WC083: ChatGPT Image Oct 17, 2026, 01_06_51 AM.png (1448x1086)
+- WC084: ChatGPT Image Oct 17, 2026, 01_06_55 AM.png (1448x1086)
+- WC085: ChatGPT Image Oct 17, 2026, 01_06_59 AM.png (1254x1254)
+- WC086: ChatGPT Image Oct 17, 2026, 01_07_03 AM.png (1619x971)
+- WC087: ChatGPT Image Oct 17, 2026, 01_07_07 AM.png (1619x971)
+- WC088: ChatGPT Image Oct 17, 2026, 01_07_11 AM.png (1254x1254)
+- WC089: ChatGPT Image Oct 17, 2026, 01_07_15 AM.png (1448x1086)
+- WC090: ChatGPT Image Oct 17, 2026, 01_07_18 AM.png (1254x1254)
+- WC091: ChatGPT Image Oct 17, 2026, 01_07_22 AM.png (1536x1024)
+- WC092: ChatGPT Image Oct 17, 2026, 01_07_26 AM.png (1448x1086)
+- WC093: ChatGPT Image Oct 17, 2026, 01_07_30 AM.png (1254x1254)
+- WC094: ChatGPT Image Oct 17, 2026, 01_07_34 AM.png (1254x1254)
+- WC095: ChatGPT Image Oct 17, 2026, 01_07_37 AM.png (1536x1024)
+- WC096: ChatGPT Image Oct 17, 2026, 01_07_41 AM.png (1254x1254)
+- WC097: ChatGPT Image Oct 17, 2026, 01_07_45 AM.png (1254x1254)
+- WC098: ChatGPT Image Oct 17, 2026, 01_07_48 AM.png (1536x1024)
+- WC099: ChatGPT Image Oct 17, 2026, 01_07_52 AM.png (1536x1024)
+- WC100: ChatGPT Image Oct 17, 2026, 01_07_56 AM.png (1536x1024)
+- WC101: ChatGPT Image Oct 17, 2026, 01_08_00 AM.png (1536x1024)
+- WC102: ChatGPT Image Oct 17, 2026, 01_08_04 AM.png (1619x971)
+- WC103: ChatGPT Image Oct 17, 2026, 01_08_09 AM.png (1491x1055)
+- WC104: ChatGPT Image Oct 17, 2026, 01_08_13 AM.png (1619x971)
+- WC105: ChatGPT Image Oct 17, 2026, 01_08_16 AM.png (1536x1024)
+- WC106: ChatGPT Image Oct 17, 2026, 01_08_20 AM.png (1619x971)
+- WC107: ChatGPT Image Oct 17, 2026, 01_08_24 AM.png (1619x971)
+- WC108: ChatGPT Image Oct 17, 2026, 01_08_28 AM.png (1619x971)
+- WC109: ChatGPT Image Oct 17, 2026, 01_08_31 AM.png (1619x971)
+- WC110: ChatGPT Image Oct 17, 2026, 01_08_35 AM.png (1619x971)
+- WC111: ChatGPT Image Oct 17, 2026, 01_08_39 AM.png (1619x971)
+- WC112: ChatGPT Image Oct 17, 2026, 01_08_42 AM.png (1619x971)
+- WC113: ChatGPT Image Oct 17, 2026, 01_08_46 AM.png (1619x971)
+- WC114: ChatGPT Image Oct 17, 2026, 01_08_50 AM.png (1619x971)
+- WC115: ChatGPT Image Oct 17, 2026, 01_08_55 AM.png (1536x1024)
+- WC116: ChatGPT Image Oct 17, 2026, 01_09_52 AM.png (1491x1055)
+- WC117: ChatGPT Image Oct 17, 2026, 01_09_56 AM.png (1619x971)
+- WC118: ChatGPT Image Oct 17, 2026, 01_10_00 AM.png (1619x971)
+- WC119: ChatGPT Image Oct 17, 2026, 01_10_04 AM.png (1619x971)
+- WC120: ChatGPT Image Oct 17, 2026, 01_10_09 AM.png (1619x971)
+- WC121: ChatGPT Image Oct 17, 2026, 01_10_13 AM.png (1619x971)
+- WC122: ChatGPT Image Oct 17, 2026, 01_10_18 AM.png (1619x971)
+- WC123: ChatGPT Image Oct 17, 2026, 01_10_22 AM.png (1619x971)
+- WC124: ChatGPT Image Oct 17, 2026, 01_10_26 AM.png (1448x1086)
+- WC125: ChatGPT Image Oct 17, 2026, 01_10_30 AM.png (1536x1024)
+- WC126: ChatGPT Image Oct 17, 2026, 01_10_34 AM.png (1619x971)
+- WC127: ChatGPT Image Oct 17, 2026, 01_10_37 AM.png (1619x971)
+- WC128: ChatGPT Image Oct 17, 2026, 01_10_41 AM.png (1619x971)
+- WC129: ChatGPT Image Oct 17, 2026, 01_10_45 AM.png (1619x971)
+- WC130: ChatGPT Image Oct 17, 2026, 01_10_49 AM.png (1536x1024)
+- WC131: ChatGPT Image Oct 17, 2026, 01_10_53 AM.png (1536x1024)
+- WC132: ChatGPT Image Oct 17, 2026, 01_10_57 AM.png (1448x1086)
+- WC133: ChatGPT Image Oct 17, 2026, 01_11_01 AM.png (1536x1024)
+- WC134: ChatGPT Image Oct 17, 2026, 01_11_05 AM.png (1448x1086)
+- WC135: ChatGPT Image Oct 17, 2026, 01_11_09 AM.png (1536x1024)
+- WC136: ChatGPT Image Oct 17, 2026, 01_11_13 AM.png (1536x1024)
+- WC137: ChatGPT Image Oct 17, 2026, 01_11_17 AM.png (1619x971)
+- WC138: ChatGPT Image Oct 17, 2026, 01_11_21 AM.png (1536x1024)
+- WC139: ChatGPT Image Oct 17, 2026, 01_11_24 AM.png (1619x971)
+- WC140: ChatGPT Image Oct 17, 2026, 01_11_30 AM.png (1619x971)
+- WC141: ChatGPT Image Oct 17, 2026, 01_11_34 AM.png (1536x1024)
+- WC142: ChatGPT Image Oct 17, 2026, 01_11_38 AM.png (1619x972)
+- WC143: ChatGPT Image Oct 17, 2026, 01_11_42 AM.png (1619x971)
+- WC144: ChatGPT Image Oct 17, 2026, 01_11_46 AM.png (1619x971)
+- WC145: ChatGPT Image Oct 17, 2026, 01_11_49 AM.png (1619x971)
+- WC146: ChatGPT Image Oct 17, 2026, 01_11_53 AM.png (1619x971)
+- WC147: ChatGPT Image Oct 17, 2026, 01_11_57 AM.png (1619x971)
+- WC148: ChatGPT Image Oct 17, 2026, 01_12_01 AM.png (1619x971)
+- WC149: ChatGPT Image Oct 17, 2026, 01_12_05 AM.png (1536x1024)
+- WC150: ChatGPT Image Oct 17, 2026, 01_12_08 AM.png (1536x1024)
+- WC151: ChatGPT Image Oct 17, 2026, 01_12_12 AM.png (1536x1024)
+- WC152: ChatGPT Image Oct 17, 2026, 01_12_17 AM.png (1448x1086)
+- WC153: ChatGPT Image Oct 17, 2026, 01_12_21 AM.png (1619x971)
+- WC154: ChatGPT Image Oct 17, 2026, 01_12_27 AM.png (1619x971)
+- WC155: ChatGPT Image Oct 17, 2026, 01_12_31 AM.png (1619x971)
+- WC156: ChatGPT Image Oct 17, 2026, 01_12_34 AM.png (1619x971)
+- WC157: ChatGPT Image Oct 17, 2026, 01_12_38 AM.png (1619x971)
+- WC158: ChatGPT Image Oct 17, 2026, 01_12_44 AM.png (1619x971)
+- WC159: ChatGPT Image Oct 17, 2026, 01_12_49 AM.png (1619x971)
+- WC160: ChatGPT Image Oct 17, 2026, 01_12_53 AM.png (1619x971)
+- WC161: ChatGPT Image Oct 17, 2026, 01_12_57 AM.png (1619x971)
+- WC162: ChatGPT Image Oct 17, 2026, 01_13_01 AM.png (1619x971)
+- WC163: ChatGPT Image Oct 17, 2026, 01_13_05 AM.png (1619x971)
+- WC164: ChatGPT Image Oct 17, 2026, 01_13_09 AM.png (1619x971)
+- WC165: ChatGPT Image Oct 17, 2026, 01_13_13 AM.png (1619x971)
+- WC166: ChatGPT Image Oct 17, 2026, 01_13_16 AM.png (1619x971)
+- WC167: ChatGPT Image Oct 17, 2026, 01_13_21 AM.png (1619x971)
+- WC168: ChatGPT Image Oct 17, 2026, 01_13_27 AM.png (1619x971)
+- WC169: ChatGPT Image Oct 17, 2026, 01_13_30 AM.png (1619x971)
+- WC170: ChatGPT Image Oct 17, 2026, 01_13_33 AM.png (1619x972)
+- WC171: ChatGPT Image Oct 17, 2026, 01_13_37 AM.png (1536x1024)
+- WC172: ChatGPT Image Oct 17, 2026, 01_13_41 AM.png (1619x971)
+- WC173: ChatGPT Image Oct 17, 2026, 01_13_45 AM.png (1619x971)
+- WC174: ChatGPT Image Oct 17, 2026, 01_13_49 AM.png (1619x971)
+- WC175: ChatGPT Image Oct 17, 2026, 01_13_52 AM.png (1619x971)
+- WC176: ChatGPT Image Oct 17, 2026, 01_13_56 AM.png (1619x971)
+- WC177: ChatGPT Image Oct 17, 2026, 01_14_00 AM.png (1619x971)
+- WC178: ChatGPT Image Oct 17, 2026, 01_14_04 AM.png (1619x971)
+- WC179: ChatGPT Image Oct 17, 2026, 01_14_07 AM.png (1619x971)
+- WC180: ChatGPT Image Oct 17, 2026, 01_14_12 AM.png (1536x1024)
+- WC181: ChatGPT Image Oct 17, 2026, 01_14_18 AM.png (1619x971)
+- WC182: ChatGPT Image Oct 17, 2026, 01_14_59 AM.png (1619x971)
+- WC183: ChatGPT Image Oct 17, 2026, 01_15_08 AM.png (1619x971)
+- WC184: ChatGPT Image Oct 17, 2026, 01_15_11 AM.png (1619x971)
+- WC185: ChatGPT Image Oct 17, 2026, 01_15_15 AM.png (1620x971)
+- WC186: ChatGPT Image Oct 17, 2026, 01_15_19 AM.png (1619x971)
+- WC187: ChatGPT Image Oct 17, 2026, 01_15_39 AM.png (1619x971)
+- WC188: ChatGPT Image Oct 17, 2026, 01_15_44 AM.png (1619x971)
+- WC189: ChatGPT Image Oct 17, 2026, 01_15_48 AM.png (1619x971)
+- WC190: ChatGPT Image Oct 17, 2026, 01_15_52 AM.png (1619x971)
+- WC191: ChatGPT Image Oct 17, 2026, 01_15_55 AM.png (1619x971)
+- WC192: ChatGPT Image Oct 17, 2026, 01_16_01 AM.png (1619x971)
+- WC193: ChatGPT Image Oct 17, 2026, 01_16_04 AM.png (1619x971)
+- WC194: ChatGPT Image Oct 17, 2026, 01_16_08 AM.png (1619x971)
+- WC195: ChatGPT Image Oct 17, 2026, 01_16_11 AM.png (1619x971)
+- WC196: ChatGPT Image Oct 17, 2026, 01_16_15 AM.png (1619x971)
+- WC197: ChatGPT Image Oct 17, 2026, 01_16_18 AM.png (1620x971)
+- WC198: ChatGPT Image Oct 17, 2026, 01_16_24 AM.png (1620x971)
+- WC199: ChatGPT Image Oct 17, 2026, 01_16_28 AM.png (1619x971)
+- WC200: ChatGPT Image Oct 17, 2026, 01_16_31 AM.png (1619x971)
+- WC201: ChatGPT Image Oct 17, 2026, 01_16_35 AM.png (1619x971)
+- WC202: ChatGPT Image Oct 17, 2026, 01_16_39 AM.png (1619x971)
+- WC203: ChatGPT Image Oct 17, 2026, 01_16_43 AM.png (1672x941)
+- WC204: ChatGPT Image Oct 17, 2026, 01_16_49 AM.png (1619x971)
+- WC205: ChatGPT Image Oct 17, 2026, 01_16_53 AM.png (1619x971)
+- WC206: ChatGPT Image Oct 17, 2026, 01_16_56 AM.png (1619x971)
+- WC207: ChatGPT Image Oct 17, 2026, 01_17_00 AM.png (1620x971)
+- WC208: ChatGPT Image Oct 17, 2026, 01_17_03 AM.png (1619x971)
+- WC209: ChatGPT Image Oct 17, 2026, 01_17_07 AM.png (1619x971)
+- WC210: ChatGPT Image Oct 17, 2026, 01_17_11 AM.png (1619x971)
+- WC211: ChatGPT Image Oct 17, 2026, 01_17_15 AM.png (1536x1024)
+- WC212: ChatGPT Image Oct 17, 2026, 01_17_19 AM.png (1619x971)
+- WC213: ChatGPT Image Oct 17, 2026, 01_17_22 AM.png (1536x1024)
+- WC214: ChatGPT Image Oct 17, 2026, 01_17_25 AM.png (1491x1055)
+- WC215: ChatGPT Image Oct 17, 2026, 01_17_29 AM.png (1619x971)
+- WC216: ChatGPT Image Oct 17, 2026, 01_17_33 AM.png (1619x971)
+- WC217: ChatGPT Image Oct 17, 2026, 01_17_37 AM.png (1620x971)
+- WC218: ChatGPT Image Oct 17, 2026, 01_17_40 AM.png (1620x971)
+- WC219: ChatGPT Image Oct 17, 2026, 01_17_44 AM.png (1619x971)
+- WC220: ChatGPT Image Oct 17, 2026, 01_17_48 AM.png (1619x971)
+- WC221: ChatGPT Image Oct 17, 2026, 01_17_52 AM.png (1619x971)
+- WC222: ChatGPT Image Oct 17, 2026, 01_17_56 AM.png (1619x971)
+- WC223: ChatGPT Image Oct 17, 2026, 01_18_01 AM.png (1619x971)
+- WC224: ChatGPT Image Oct 17, 2026, 01_18_06 AM.png (1619x971)
+- WC225: ChatGPT Image Oct 17, 2026, 01_18_10 AM.png (1619x972)
+- WC226: ChatGPT Image Oct 17, 2026, 01_18_14 AM.png (1536x1024)
+- WC227: ChatGPT Image Oct 17, 2026, 01_18_17 AM.png (1536x1024)
+- WC228: ChatGPT Image Oct 17, 2026, 01_18_21 AM.png (1536x1024)
+- WC229: ChatGPT Image Oct 17, 2026, 01_18_26 AM.png (1536x1024)
+- WC230: ChatGPT Image Oct 17, 2026, 01_18_30 AM.png (1536x1024)
+- WC231: ChatGPT Image Oct 17, 2026, 01_18_34 AM.png (1536x1024)
+- WC232: ChatGPT Image Oct 17, 2026, 01_18_37 AM.png (1619x971)
+- WC233: ChatGPT Image Oct 17, 2026, 01_18_40 AM.png (1619x971)
+- WC234: ChatGPT Image Oct 17, 2026, 01_18_44 AM.png (1619x971)
+- WC235: ChatGPT Image Oct 17, 2026, 01_18_50 AM.png (1619x971)
+- WC236: ChatGPT Image Oct 17, 2026, 01_18_54 AM.png (1619x971)
+- WC237: ChatGPT Image Oct 17, 2026, 01_18_57 AM.png (1619x971)
+- WC238: ChatGPT Image Oct 17, 2026, 01_19_00 AM.png (1619x971)
+- WC239: ChatGPT Image Oct 17, 2026, 01_19_04 AM.png (1619x971)
+- WC240: ChatGPT Image Oct 17, 2026, 01_19_09 AM.png (1619x971)
+- WC241: ChatGPT Image Oct 17, 2026, 01_19_13 AM.png (1619x971)
+- WC242: ChatGPT Image Oct 17, 2026, 01_19_18 AM.png (1619x971)
+- WC243: ChatGPT Image Oct 17, 2026, 01_19_23 AM.png (1619x971)
+- WC244: ChatGPT Image Oct 17, 2026, 01_19_28 AM.png (1619x971)
+- WC245: ChatGPT Image Oct 17, 2026, 01_19_31 AM.png (1619x971)
+- WC246: ChatGPT Image Oct 17, 2026, 01_19_36 AM.png (1619x971)
+- WC247: ChatGPT Image Oct 17, 2026, 01_19_39 AM.png (1619x971)
+- WC248: ChatGPT Image Oct 17, 2026, 01_19_45 AM.png (1619x971)
+- WC249: ChatGPT Image Oct 17, 2026, 01_19_49 AM.png (1536x1024)
+- WC250: ChatGPT Image Oct 17, 2026, 01_19_54 AM.png (1536x1024)
+- WC251: ChatGPT Image Oct 17, 2026, 01_19_58 AM.png (1536x1024)
+- WC252: ChatGPT Image Oct 17, 2026, 01_20_02 AM.png (1536x1024)
+- WC253: ChatGPT Image Oct 17, 2026, 01_20_05 AM.png (1536x1024)
+- WC254: ChatGPT Image Oct 17, 2026, 01_20_09 AM.png (1619x971)
+- WC255: ChatGPT Image Oct 17, 2026, 01_20_14 AM.png (1448x1086)
+- WC256: ChatGPT Image Oct 17, 2026, 01_20_19 AM.png (1619x971)
+- WC257: ChatGPT Image Oct 17, 2026, 01_20_23 AM.png (1536x1024)
+- WC258: ChatGPT Image Oct 17, 2026, 01_20_27 AM.png (1536x1024)
+- WC259: ChatGPT Image Oct 17, 2026, 01_20_31 AM.png (1536x1024)
+- WC260: ChatGPT Image Oct 17, 2026, 01_20_40 AM.png (1536x1024)
+- WC261: ChatGPT Image Oct 17, 2026, 01_20_44 AM.png (1536x1024)
+- WC262: ChatGPT Image Oct 17, 2026, 01_20_49 AM.png (1536x1024)
+- WC263: ChatGPT Image Oct 17, 2026, 01_20_55 AM.png (1536x1024)
+- WC264: ChatGPT Image Oct 17, 2026, 01_21_01 AM.png (1448x1086)
+- WC265: ChatGPT Image Oct 17, 2026, 01_21_06 AM.png (1536x1024)
+- WC266: ChatGPT Image Oct 17, 2026, 01_21_11 AM.png (1536x1024)
+- WC267: ChatGPT Image Oct 17, 2026, 01_21_17 AM.png (1536x1024)
+- WC268: ChatGPT Image Oct 17, 2026, 01_21_22 AM.png (1448x1086)
+- WC269: ChatGPT Image Oct 17, 2026, 01_21_27 AM.png (1536x1024)
+- WC270: ChatGPT Image Oct 17, 2026, 01_21_32 AM.png (1536x1024)
+- WC271: ChatGPT Image Oct 17, 2026, 01_21_35 AM.png (1536x1024)
+- WC272: ChatGPT Image Oct 17, 2026, 01_21_40 AM.png (1536x1024)
+- WC273: ChatGPT Image Oct 17, 2026, 01_21_45 AM.png (1536x1024)
+- WC274: ChatGPT Image Oct 17, 2026, 01_21_49 AM.png (1619x971)
+- WC275: ChatGPT Image Oct 17, 2026, 01_21_58 AM.png (1619x971)
+- WC276: ChatGPT Image Oct 17, 2026, 01_22_13 AM.png (1619x971)
+- WC277: ChatGPT Image Oct 17, 2026, 01_23_10 AM.png (1619x971)
+- WC278: ChatGPT Image Oct 17, 2026, 01_23_13 AM.png (1619x971)
+- WC279: ChatGPT Image Oct 17, 2026, 01_23_18 AM.png (1619x971)
+- WC280: ChatGPT Image Oct 17, 2026, 01_23_41 AM.png (1619x971)
+- WC281: ChatGPT Image Oct 17, 2026, 01_23_45 AM.png (1619x971)
+- WC282: ChatGPT Image Oct 17, 2026, 01_23_49 AM.png (1619x971)
+- WC283: ChatGPT Image Oct 17, 2026, 01_23_56 AM.png (1619x971)
+- WC284: ChatGPT Image Oct 17, 2026, 01_24_02 AM.png (1619x971)
+- WC285: ChatGPT Image Oct 17, 2026, 01_24_08 AM.png (1619x971)
+- WC286: ChatGPT Image Oct 17, 2026, 01_24_10 AM.png (1619x971)
+- WC287: ChatGPT Image Oct 17, 2026, 01_24_14 AM.png (1619x971)
+- WC288: ChatGPT Image Oct 17, 2026, 01_24_17 AM.png (1619x971)
+- WC289: ChatGPT Image Oct 17, 2026, 01_24_19 AM.png (1619x971)
+- WC290: ChatGPT Image Oct 17, 2026, 01_24_22 AM.png (1619x971)
+- WC291: ChatGPT Image Oct 17, 2026, 01_24_26 AM.png (1586x992)
+- WC292: ChatGPT Image Oct 17, 2026, 01_24_30 AM.png (1448x1086)
+- WC293: ChatGPT Image Oct 17, 2026, 01_24_33 AM.png (1049x1499)
+- WC294: ChatGPT Image Oct 17, 2026, 01_24_35 AM.png (1341x1173)
+- WC295: ChatGPT Image Oct 17, 2026, 01_24_38 AM.png (1295x1214)
+- WC296: ChatGPT Image Oct 17, 2026, 01_24_42 AM.png (1983x793)
+- WC297: ChatGPT Image Oct 17, 2026, 01_24_46 AM.png (1391x1131)
+- WC298: ChatGPT Image Oct 17, 2026, 01_24_49 AM.png (1619x971)
+- WC299: ChatGPT Image Oct 17, 2026, 01_24_53 AM.png (1619x971)
+- WC300: ChatGPT Image Oct 17, 2026, 01_24_57 AM.png (1620x971)
+- WC301: ChatGPT Image Oct 17, 2026, 01_25_01 AM.png (1619x971)
+- WC302: ChatGPT Image Oct 17, 2026, 01_25_04 AM.png (1448x1086)
+- WC303: ChatGPT Image Oct 17, 2026, 01_25_07 AM.png (1672x941)
+- WC304: ChatGPT Image Oct 17, 2026, 01_25_09 AM.png (1672x941)
+- WC305: ChatGPT Image Oct 17, 2026, 01_25_12 AM.png (1619x971)
+- WC306: ChatGPT Image Oct 17, 2026, 01_25_16 AM.png (1448x1086)
+- WC307: ChatGPT Image Oct 17, 2026, 01_25_19 AM.png (1672x941)
+- WC308: ChatGPT Image Oct 17, 2026, 01_25_22 AM.png (1619x971)
+- WC309: ChatGPT Image Oct 17, 2026, 01_25_25 AM.png (1672x941)
+- WC310: ChatGPT Image Oct 17, 2026, 01_25_29 AM.png (1619x971)
+- WC311: ChatGPT Image Oct 17, 2026, 01_25_32 AM.png (1672x941)
+- WC312: ChatGPT Image Oct 17, 2026, 01_25_35 AM.png (1672x941)
+- WC313: ChatGPT Image Oct 17, 2026, 01_25_38 AM.png (1619x971)
+- WC314: ChatGPT Image Oct 17, 2026, 01_25_41 AM.png (1619x971)
+- WC315: ChatGPT Image Oct 17, 2026, 01_25_44 AM.png (1536x1024)
+- WC316: ChatGPT Image Oct 17, 2026, 01_25_49 AM.png (1619x971)
+- WC317: ChatGPT Image Oct 17, 2026, 01_25_52 AM.png (1619x971)
+- WC318: ChatGPT Image Oct 17, 2026, 01_25_56 AM.png (1619x971)
+- WC319: ChatGPT Image Oct 17, 2026, 01_26_00 AM.png (1619x971)
+- WC320: ChatGPT Image Oct 17, 2026, 01_26_04 AM.png (1619x971)
+- WC321: ChatGPT Image Oct 17, 2026, 01_26_07 AM.png (1619x971)
+- WC322: ChatGPT Image Oct 17, 2026, 01_26_10 AM.png (1619x971)
+- WC323: ChatGPT Image Oct 17, 2026, 01_26_40 AM.png (1448x1086)
