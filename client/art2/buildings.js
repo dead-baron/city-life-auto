@@ -494,6 +494,39 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
       if (iy > H2 * 0.62) c = step(MAT.dinerRed, 0.4 + (x % 16 < 2 ? -0.2 : 0), x, y, 0.4);            // booth seats
       if (iy > H2 * 0.55 && iy < H2 * 0.62) c = MAT.chrome[3];                                          // table tops
       if (iy < 4) c = step(ramp('#e8d8b0', 5, 2), 0.6, x, y, 0.3);                                     // pendant lamps
+    } else if (shop.kind === 'books') {                                                             // shelves of spines, a table of new ones
+      c = step(ramp('#5a3e2a', 5, 2), 0.35, x, y, 0.6);
+      const shelf = iy % 9;
+      if (shelf === 0) c = step(ramp('#7a5434', 5, 2), 0.6, x, y, 0);
+      else if (iy < H2 * 0.7 && shelf > 1) { const g = hash(x >> 1, (iy / 9) | 0, seed + 7); c = g > 0.12 ? [[150, 50, 44], [40, 70, 120], [60, 110, 70], [200, 180, 120], [110, 60, 90], [210, 120, 50]][Math.floor(g * 60) % 6].map((v) => v * (shelf < 3 ? 0.7 : 1)) : c; }
+      else if (iy >= H2 * 0.78) c = (x >> 3) % 2 ? [226, 214, 190] : [120, 150, 180];
+    } else if (shop.kind === 'records') {                                                           // posters up top, the bins of sleeves below
+      c = step(ramp('#3a3440', 5, 2), 0.35 + (iy / H2) * 0.2, x, y, 0.8);
+      const px2 = Math.floor((x - 4) / 22);
+      if (iy > 2 && iy < H2 * 0.42 && (x - 4) % 22 > 3 && (x - 4) % 22 < 19) { const g = hash(px2, 1, seed + 9); c = [[220, 70, 60], [240, 200, 70], [60, 160, 200], [230, 120, 180], [90, 200, 120]][Math.floor(g * 5)]; if (((x + iy) % 7) < 2) c = c.map((v) => v * 0.6); }
+      else if (iy > H2 * 0.58 && iy < H2 * 0.85) { const g = hash(x >> 2, 3, seed + 11); c = (x % 4) === 0 ? [30, 26, 34] : [[200, 60, 50], [40, 40, 44], [230, 220, 200], [60, 110, 170], [220, 170, 60]][Math.floor(g * 5)]; }
+      else if (iy >= H2 * 0.85) c = [120, 84, 52];
+    } else if (shop.kind === 'laundry') {                                                           // a row of washers, their round doors, dryers above
+      c = step(ramp('#cfd6d8', 5, 2), 0.6, x, y, 0.5);
+      const lx = (x - 4) % 20, row = iy < H2 * 0.48 ? 0 : 1, ly = row ? iy - H2 * 0.5 : iy - 2, cy = row ? H2 * 0.23 : H2 * 0.2;
+      if (lx < 2) c = [150, 158, 164];
+      else if (Math.hypot(lx - 10, ly - cy) < 6) c = Math.hypot(lx - 10, ly - cy) < 4.6 ? (row ? [70, 110, 150] : [60, 64, 72]) : [190, 196, 200];
+      else c = row ? [236, 238, 236] : [214, 218, 220];
+    } else if (shop.kind === 'clothes') {                                                           // racks of clothes on hangers, a mannequin
+      c = step(ramp('#e4dccc', 5, 2), 0.55 + (iy / H2) * 0.15, x, y, 0.6);
+      if (iy === 5) c = MAT.chrome[2];
+      else if (iy > 5 && iy < H2 * 0.75) { const g = hash(x >> 2, 5, seed + 13); if (g > 0.18) c = [[150, 40, 50], [40, 50, 90], [210, 200, 180], [60, 90, 70], [190, 140, 80], [30, 30, 36], [170, 120, 160]][Math.floor(g * 70) % 7].map((v) => v * (iy > H2 * 0.7 ? 0.8 : 1)); }
+      if (Math.abs(((x - 4) % 90) - 70) < 4 && iy > 3) c = iy < 8 ? [230, 214, 196] : [240, 236, 228];
+    } else if (shop.kind === 'florist') {                                                           // buckets of flowers, greenery behind
+      c = step(ramp('#4a7040', 5, 2), 0.35 + (iy / H2) * 0.25, x, y, 0.8);
+      if (iy > H2 * 0.3 && iy < H2 * 0.8 && hash(x >> 1, iy >> 1, seed + 15) > 0.45) c = [[230, 70, 90], [250, 210, 70], [245, 245, 240], [200, 90, 200], [250, 140, 60]][Math.floor(hash(x >> 2, iy >> 2, seed + 16) * 5)];
+      if (iy >= H2 * 0.8) c = ((x >> 3) & 1) ? [90, 90, 96] : [150, 110, 70];
+    } else if (shop.kind === 'salon') {                                                             // mirrors along the back, the chairs in front of them
+      c = step(ramp('#e8e2dc', 5, 2), 0.6, x, y, 0.4);
+      const lx = (x - 4) % 30;
+      if (lx > 6 && lx < 24 && iy > 3 && iy < H2 * 0.55) c = (lx > 8 && lx < 22 && iy > 5) ? step(ramp('#a8c0cc', 5, 2), 0.6 - iy / H2 * 0.4, x, y, 0.3) : [200, 170, 110];
+      else if (lx > 9 && lx < 21 && iy > H2 * 0.6 && iy < H2 * 0.9) c = [40, 36, 40];
+      else if (iy >= H2 * 0.9) c = (((x >> 2) + (iy >> 2)) & 1) ? [30, 30, 32] : [230, 230, 226];
     } else {
       c = step(ramp('#a88a64', 5, 2), 0.35 + (iy / H2) * 0.35, x, y, 0.8);
       const shelf = iy % 10;

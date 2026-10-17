@@ -41,9 +41,9 @@ for (const sh of shots) {
   for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
     const g = chunk(cx, cy), col = g.col, nrm = g.nrm, flag = g.flag;
     const ox = cx * CHP, oy = cy * CHP;
-    for (let py = Math.max(0, Math.floor((oy - y0) / S)); py < GH; py++) {
+    for (let py = Math.max(0, Math.ceil((oy - y0) / S)); py < GH; py++) {   // (a picture pixel straddling two chunks: averaged over the first one's part)
       const wy = y0 + py * S; if (wy >= oy + CHP) break;
-      for (let px = Math.max(0, Math.floor((ox - x0) / S)); px < GW; px++) {
+      for (let px = Math.max(0, Math.ceil((ox - x0) / S)); px < GW; px++) {
         const wx = x0 + px * S; if (wx >= ox + CHP) break;
         let R = 0, G = 0, B = 0, q = 0;
         for (let y = wy - oy; y < Math.min(CHP, wy - oy + S); y++) for (let x = wx - ox; x < Math.min(CHP, wx - ox + S); x++) {

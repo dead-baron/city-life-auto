@@ -498,3 +498,75 @@ export function marketStall(kind = 0, col = '#c8343a') {
   m.box(10, 27, 0, 22, 33, 8, wood); m.fill((x, y, z) => (x >= 11 && x < 21 && y >= 28 && y < 32 && z >= 8 && z < 10 ? GOODS[(Math.round(x) + Math.round(y)) % 4] : -1));
   return m;
 }
+
+// ---- the skate spot by the El (Midtown, 2026-10-17): DIY concrete under the viaduct's shadow - a quarter pipe, ledges,
+// a flat bar, a plywood kicker, a pyramid, and a block wall covered in pieces. All face the camera (+y: south); the
+// concrete scuffed, its edges waxed dark.
+const CONC = (m, s, wax = 0) => m.mat({ ramp: R('#aaa69c', 7, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(y / 3) + Math.round(z / 3) * 7, s) - 0.5) * 0.5 + (hash(Math.round(x), Math.round(y), s + 9) > 0.94 ? -0.5 : 0) + (wax && z >= wax - 1 && hash(Math.round(x / 6), Math.round(y), s + 3) > 0.6 ? -0.7 : 0) });
+const STEEL = (m) => m.mat({ ramp: R('#8c929a'), k: 4, shade: (x) => (hash(Math.round(x / 5), 2, 41) > 0.7 ? 0.6 : 0) });
+// a quarter pipe: the transition curving up from the south to a deck at the back, steel coping along its lip
+export function skateQuarter(w = 128, d = 48, h = 32) {
+  const m = new Vox(w, d, h + 2), c = CONC(m, 3), cop = STEEL(m), deck = 9, L = d - deck;
+  const surf = (y) => (y < deck ? h : h * (1 - Math.sqrt(Math.max(0, 1 - ((d - y) / L) * ((d - y) / L)))));
+  m.fill((x, y, z) => (z <= surf(y + 0.5) ? c : -1), 0, 0, 0, w, d, h + 1);
+  m.fill((x, y, z) => (Math.hypot(y + 0.5 - deck, z + 0.5 - h) < 2 ? cop : -1), 0, deck - 3, h - 3, w, deck + 3, h + 2);
+  m.smooth = 1;
+  return m;
+}
+// a concrete ledge (a painted curb when paint: red, blue, yellow), angle iron along both top edges, waxed
+export function skateLedge(w = 96, d = 20, h = 14, paint = 0) {
+  const m = new Vox(w, d, h + 1), st = STEEL(m);
+  const body = paint ? m.mat({ ramp: R(['#c8402e', '#2e6ab0', '#e0b030'][(paint - 1) % 3]), k: 3, shade: (x, y, z) => (hash(Math.round(x / 4), Math.round(z / 3), 7) > 0.82 ? -0.8 : 0) }) : CONC(m, 5, h);
+  m.box(0, 0, 0, w, d, h, body);
+  m.box(0, d - 2, h - 2, w, d, h + 1, st); m.box(0, 0, h - 2, w, 2, h + 1, st);
+  return m;
+}
+// a flat bar: a round steel rail on two legs with feet
+export function skateRail(w = 96, h = 13) {
+  const m = new Vox(w, 8, h + 2), st = STEEL(m), leg = m.mat({ ramp: R('#3a3e46'), k: 3 });
+  m.fill((x, y, z) => (Math.hypot(y + 0.5 - 4, z + 0.5 - h) < 1.8 ? st : -1), 0, 1, h - 2, w, 7, h + 2);
+  for (const x of [6, w - 8]) { m.box(x, 3, 0, x + 2, 5, h, leg); m.box(x - 3, 1, 0, x + 5, 7, 1, leg); }
+  return m;
+}
+// a plywood kicker: ridden from the south, its lip to the north; the frame showing at the sides, a steel plate at the toe
+export function skateKicker(w = 40, d = 34, h = 13) {
+  const m = new Vox(w, d, h + 1), pl = STEEL(m);
+  const ply = m.mat({ ramp: R('#b48e5c'), k: 3, shade: (x, y) => (Math.round(y) % 12 === 0 ? -0.7 : 0) + (hash(Math.round(x / 2), Math.round(y / 6), 3) - 0.5) * 0.4 }), fr = m.mat({ ramp: R('#7e6040'), k: 3, shade: (x, y, z) => (Math.round(y) % 8 < 2 || z < 2 ? 0.4 : -0.6) });
+  m.fill((x, y, z) => { const t = h * (1 - (y + 0.5) / d); return z > t ? -1 : z > t - 1.6 ? (y > d - 5 ? pl : ply) : fr; });
+  return m;
+}
+// a concrete pyramid: banks on all four sides up to a flat top with a steel edge round it
+export function skatePyramid(w = 120, d = 80, h = 16, r = 30) {
+  const m = new Vox(w, d, h + 1), c = CONC(m, 7), st = STEEL(m);
+  const top = (x, y) => Math.min(h, h * Math.min(x, w - x, y, d - y) / r);
+  m.fill((x, y, z) => { const t = top(x + 0.5, y + 0.5); return z > t ? -1 : t >= h - 0.01 && z >= h - 1 && Math.min(x - r, w - r - x, y - r, d - r - y) < 1.5 ? st : c; }, 0, 0, 0, w, d, h);
+  m.smooth = 1;
+  return m;
+}
+// a block wall covered in pieces: bubble letters along a wave in one colour each, outlined dark, lit along the top-left,
+// a throw-up or two and tags between them; a capping course along the top
+export function graffitiWall(len = 256, h = 40, seed = 1) {
+  len = Math.round(len);
+  const m = new Vox(len, 10, h + 2);
+  const blk = m.mat({ ramp: R('#9c988e', 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 8 === 0 || (Math.round(x) + (Math.floor(z / 8) % 2) * 8) % 16 === 0 ? -0.9 : 0) + (hash(Math.round(x / 4), Math.round(z / 4), seed) - 0.5) * 0.4 });
+  const cap = m.mat({ ramp: R('#bab6ac'), k: 3 }), out = m.mat({ ramp: R('#1e1a26'), k: 2 }), hi = m.mat({ ramp: R('#f4f2ec'), k: 4 });
+  const SPR = ['#e8402e', '#2e8ae8', '#f0c020', '#3ac06a', '#c040c8', '#f07820', '#e86aa0'].map((c) => m.mat({ ramp: R(c), k: 3, shade: (x, y, z) => 0.3 - z / h * 0.6 }));
+  const mask = new Int8Array(len * h).fill(-1), at = (x, z) => x >= 0 && z >= 0 && x < len && z < h && mask[z * len + x] >= 0;
+  const disc = (cx, cz, r, ci) => { for (let z = Math.floor(cz - r); z <= cz + r; z++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (x >= 0 && z >= 2 && x < len && z < h - 2 && (x - cx) * (x - cx) + (z - cz) * (z - cz) <= r * r) mask[z * len + x] = ci; };
+  for (let x0 = 6, k = 0; x0 < len - 30; k++) {
+    const ci = Math.floor(hash(k, seed, 3) * SPR.length), big = hash(k, seed, 4) < 0.65, span = big ? 70 + Math.floor(hash(k, seed, 5) * 30) : 30;
+    if (big) for (let L = 0; L < 4 + Math.floor(hash(k, seed, 6) * 3) && x0 + L * 16 < x0 + span; L++) {   // the letters: a cluster of blobs each
+      const lx = x0 + 8 + L * 16, lz = h * 0.5 + Math.sin(L * 1.3 + seed + k) * h * 0.12;
+      for (let j = 0; j < 5; j++) disc(lx + (hash(L, j, seed + k) - 0.5) * 10, lz + (hash(j, L, seed + k) - 0.5) * h * 0.4, 3.2 + hash(L + j, k, seed) * 2.6, ci);
+    } else for (let i = 0, x = x0, z = h * 0.6; i < 14; i++) { x += 2; z += Math.sin(i * 0.9 + seed + k) * 2.2; disc(x, Math.max(6, Math.min(h - 7, z)), 1.4, ci); }   // a tag
+    x0 += span + 6 + Math.floor(hash(k, seed, 7) * 14);
+  }
+  m.fill((x, y, z) => {
+    if (z >= h) return cap;
+    if (y < 8) return blk;
+    const X = Math.floor(x), Z = Math.floor(z);
+    if (at(X, Z)) return !at(X - 1, Z + 1) ? hi : SPR[mask[Z * len + X]];
+    return at(X - 1, Z) || at(X + 1, Z) || at(X, Z - 1) || at(X, Z + 1) ? out : blk;
+  });
+  return m;
+}

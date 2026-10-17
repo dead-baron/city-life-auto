@@ -96,11 +96,46 @@ const SIGNS = [['#2a2c38', [236, 206, 120]], ['#e8e0cc', [180, 40, 46]], ['#1e3a
   ['#8a2a2e', [250, 230, 190]], ['#232838', [236, 214, 150]], ['#e8c040', [40, 40, 50]], ['#2a4a7a', [250, 250, 240]], ['#f4f0e8', [40, 60, 120]]];
 // Midtown's own shops (invented names): [name, storefront kind, poi kind or null]
 const SHOPS = {
-  cafe: [['Daily Grind', 'cafe'], ['Milk & Honey', 'cafe'], ['Golden Crust Bakery', 'cafe'], ['Corner Cup', 'cafe'], ['Tea Leaf', 'cafe']],
+  cafe: [['Daily Grind', 'cafe'], ['Milk & Honey', 'cafe'], ['Golden Crust', 'cafe'], ['Corner Cup', 'cafe'], ['Tea Leaf', 'cafe']],
   food: [['Lucky Noodle', 'diner'], ['Slice Brothers', 'diner'], ['Taqueria Sol', 'diner'], ['Mama Rosa', 'diner'], ['Pho Corner', 'diner'], ['Gyro King', 'diner'], ['Dumpling House', 'diner']],
-  shop: [['Petal & Stem', 'mart'], ['Needle & Thread', 'lobby'], ['Clear View Optics', 'lobby'], ['Second Act Thrift', 'lobby'], ['Polished Nails', 'lobby'], ['Paper Lantern', 'mart'], ['Hardware & Keys', 'mart'], ['Phone Fix', 'mart'], ['Holly Deli', 'mart'], ['Fresh Stop', 'mart'], ['Midtown Shoe Repair', 'mart'], ['Bold Ink Tattoo', 'lobby'], ['Penny Arcade', 'arcade']],
+  shop: [['Petal & Stem', 'florist'], ['Needle & Thread', 'clothes'], ['Clear View Optics', 'lobby'], ['Second Act Thrift', 'clothes'], ['Polished Nails', 'salon'], ['Paper Lantern', 'mart'], ['Hardware & Keys', 'mart'], ['Phone Fix', 'mart'], ['Holly Deli', 'mart'], ['Fresh Stop', 'mart'], ['Midtown Shoe Repair', 'mart'], ['Bold Ink Tattoo', 'salon'], ['Penny Arcade', 'arcade']],
   bar: [['The Trestle Tap', 'bar'], ['Last Stop Lounge', 'bar'], ['The Brass Rail', 'bar']],
 };
+// The rest of Midtown's shops (invented names, never the same twice in the district): an owner's name, a word or a
+// street with the trade - [trade, storefront kind (client/art2/buildings.js storefront: what the window shows)]
+const OWNERS = ['Reyes', 'Kowal', 'Okafor', 'Delgado', 'Novak', 'Park', 'Feld', 'Moreau', 'Haddad', 'Russo', 'Lindqvist', 'Tanaka', 'Mendes', 'Brody', 'Costa', 'Abara', 'Vega', 'Petrov', 'Quinn', 'Sato',
+  'Marlow', 'Ruiz', 'Bianchi', 'Duval', 'Castillo', 'Varga', 'Hollis', 'Amari', 'Pereira', 'Kaplan', 'Ferro', 'Monroe', 'Sorensen', 'Ibarra', 'Wexler', 'Calloway', 'Oduya', 'Szabo', 'Lam', 'Galindo'];
+const FIRSTS = ["Rosa's", "Sal's", "Lenny's", "Mei's", "Tony's", "Gus's", "Ana's", "Benny's", "Lou's", "Nico's", "Dot's", "Vic's", "Ida's", "Manny's", "Rita's", "Joe's", "Yuki's", "Omar's", "Paulo's",
+  "Hank's", "Lupe's", "Kiki's", "Sam's", "Bea's"];
+const WORDS = ['Blue Door', 'Copper', 'North Star', 'Twin Oak', 'Red Lantern', 'Iron Gate', 'Silver', 'Brass Key', 'Lucky', 'Green Leaf', 'Half Moon', 'Old Mill', 'Little Owl', 'Gold Leaf',
+  'Black Cat', 'Kingfisher', 'Sparrow', 'Juniper', 'Saffron', 'Polaris', 'Corner', 'Uptown', 'Good Day', 'Union', 'Hometown', 'Daybreak', 'Bluebird', 'Main Line'];
+const STREETS = ['Holly', 'Carroll', 'Spring', 'Linden', 'Madison', 'Fulton', 'Mercer', 'Pier', 'Trestle', 'Civic', 'Garden', 'Bridge'];
+const TRADES = {
+  cafe: [['Coffee', 'cafe'], ['Bakery', 'cafe'], ['Bagels', 'cafe'], ['Tea House', 'cafe'], ['Pastry', 'cafe'], ['Donuts', 'cafe'], ['Espresso', 'cafe'], ['Juice Bar', 'cafe'], ['Creamery', 'cafe']],
+  food: [['Pizza', 'diner'], ['Noodles', 'diner'], ['Deli', 'diner'], ['Tacos', 'diner'], ['Dumplings', 'diner'], ['Ramen', 'diner'], ['Curry House', 'diner'], ['Kebab', 'diner'], ['Pho', 'diner'],
+    ['Bistro', 'diner'], ['Grill', 'diner'], ['Sushi', 'diner'], ['Soul Food', 'diner'], ['Falafel', 'diner'], ['Chicken', 'diner'], ['Empanadas', 'diner'], ['Wok', 'diner'], ['Burgers', 'diner'],
+    ['Luncheonette', 'diner'], ['Kitchen', 'diner']],
+  shop: [['Tailor', 'clothes'], ['Shoe Repair', 'mart'], ['Florist', 'florist'], ['Optical', 'lobby'], ['Thrift', 'clothes'], ['Nails', 'salon'], ['Hair Studio', 'salon'], ['Phone Repair', 'mart'],
+    ['Locksmith', 'mart'], ['Dry Cleaners', 'laundry'], ['Books', 'books'], ['Records', 'records'], ['Vintage', 'clothes'], ['Boutique', 'clothes'], ['Hardware', 'mart'], ['Electronics', 'pawn'],
+    ['Wine & Spirits', 'liquor'], ['Cards & Gifts', 'mart'], ['Frames', 'mart'], ['Print Shop', 'mart'], ['Bike Shop', 'mart'], ['Pet Supply', 'mart'], ['Spice Shop', 'mart'], ['Butcher', 'mart'],
+    ['Cheese Shop', 'mart'], ['Produce', 'florist'], ['Tobacco', 'liquor'], ['Watch Repair', 'pawn'], ['Insurance', 'lobby'], ['Tax Service', 'lobby'], ['Travel', 'lobby'], ['Bridal', 'clothes'],
+    ['Hats', 'clothes'], ['Fabrics', 'clothes'], ['Lighting', 'mart'], ['Kitchenware', 'mart'], ['Music', 'records'], ['Tattoo', 'salon'], ['Barber', 'salon'], ['Beauty Supply', 'mart'],
+    ['Laundromat', 'laundry'], ['Comics', 'books'], ['Stationery', 'books'], ['Gallery', 'lobby']],
+  bar: [['Tavern', 'bar'], ['Pub', 'bar'], ['Lounge', 'bar'], ['Taproom', 'bar'], ['Saloon', 'bar'], ['Wine Bar', 'bar'], ['Social Club', 'bar']],
+  rough: [['Check Cashing', 'lobby'], ['Liquor', 'liquor'], ['Mini Mart', 'mart'], ['Cell Shop', 'mart'], ['Lotto & More', 'mart'], ['Smoke Shop', 'liquor'], ['Wash & Fold', 'laundry'],
+    ['Pawn', 'pawn'], ['Discount', 'mart'], ['Bail Bonds', 'lobby'], ['Deli & Grill', 'diner'], ['Fried Chicken', 'diner'], ['Beer & Wine', 'liquor'], ['Quick Cash', 'lobby']],
+};
+// a name not used yet for a shop of the category, drawn by r(k) (0..1): { name, store }
+function composeShop(named, cat, r) {
+  const T = TRADES[cat];
+  for (let t = 0; t < 60; t++) {
+    const [trade, store] = T[Math.floor(r(t * 4) * T.length) % T.length], p = r(t * 4 + 1), q = r(t * 4 + 2);
+    const head = p < 0.34 ? OWNERS[Math.floor(q * OWNERS.length)] : p < 0.58 ? FIRSTS[Math.floor(q * FIRSTS.length)] : p < 0.84 ? WORDS[Math.floor(q * WORDS.length)] : STREETS[Math.floor(q * STREETS.length)];
+    const name = `${head} ${trade}`;
+    if (name.length <= 18 && !named.has(name)) { named.add(name); return { name, store }; }
+  }
+  return null;
+}
 
 // ---------------------------------------------------------------------------------------------------------------
 export const MIDTOWN = {
@@ -201,9 +236,9 @@ function build(m, api, K) {
   };
   // a shop with a name not used yet in Midtown
   const genericShop = (x, y) => {
-    const r = rnd(x, y, 100), pool = r < 0.24 ? SHOPS.cafe : r < 0.5 ? SHOPS.food : r < 0.58 ? SHOPS.bar : SHOPS.shop;
-    for (let t = 0; t < 12; t++) { const [name, store] = pick(pool, rnd(x + t, y, 101)); if (!named.has(name)) { named.add(name); return { name, store }; } }
-    return { name: `Shop ${x % 97}`, store: 'mart', poi: { kind: 'delivery', label: 'Storefront' } };
+    const r = rnd(x, y, 100), cat = r < 0.2 ? 'cafe' : r < 0.44 ? 'food' : r < 0.52 ? 'bar' : 'shop';
+    if (rnd(x, y, 103) < 0.25) { const [name, store] = pick(SHOPS[cat], rnd(x, y, 101)); if (!named.has(name)) { named.add(name); return { name, store }; } }
+    return composeShop(named, cat, (k) => rnd(x + k, y, 104)) || composeShop(named, 'shop', (k) => rnd(x, y + k, 105));
   };
   // A row of backs (fronts facing north onto the street there; the camera sees their back walls on the alley or yard
   // behind): walk-ups with homes, a plain building now and then
@@ -249,6 +284,7 @@ function build(m, api, K) {
   }
   for (const [a, ka, b, kb] of [[MX.civic, 'ave', MX.fulton, 'st'], [MX.fulton, 'st', MX.harborview, 'ave'], [MX.harborview, 'ave', MX.mercer, 'st']]) {
     const [x0, x1] = span(a, ka, b, kb);
+    if (a === MX.fulton) skateSpot(K, x0 + 14, ay0, 26, ay1 - ay0 + 1, out);   // (the skate spot by the El, the row built round it)
     mainRow(x0, x1, ay0, ay1, [], { gardens: false });
   }
   {
@@ -293,13 +329,13 @@ function build(m, api, K) {
     const room = x1 - x0;
     const MT2 = [
       { kind: 'gap', gap: Math.max(3, room - 52), kind2: 'garden' },
-      { kind: 'shop', w: 7, name: 'Harper & Co', store: 'lobby', poi: { kind: 'delivery', label: 'Harper & Co' }, trade: 'books', awning: null, sign: ['#2f6a4e', [240, 232, 200]], floors: 4, face: { style: 'brick', brickTone: TONE.red } },
+      { kind: 'shop', w: 7, name: 'Harper & Co', store: 'books', poi: { kind: 'delivery', label: 'Harper & Co' }, trade: 'books', awning: null, sign: ['#2f6a4e', [240, 232, 200]], floors: 4, face: { style: 'brick', brickTone: TONE.red } },
       { kind: 'shop', w: 6, name: 'Sunbean', store: 'cafe', poi: { kind: 'coffee', label: 'Sunbean' }, awning: null, sign: ['#4a3a2a', [250, 220, 150]], floors: 3, face: { style: 'stucco', wallColor: '#d8c8a8' } },
       { kind: 'shop', w: 7, name: 'Red Cup Diner', store: 'diner', poi: { kind: 'coffee', label: 'Red Cup Diner' }, key: 'diner', trade: 'diner', awning: ['#a8343a', '#f0ece4'], sign: ['#e8e0cc', [180, 40, 46]], floors: 3, face: { style: 'brick', brickTone: TONE.deep } },
       { kind: 'shop', w: 6, name: 'Lucky Pawn', store: 'pawn', poi: { kind: 'pawn', label: 'Lucky Pawn' }, awning: null, sign: ['#232838', [236, 214, 150]], grille: true, floors: 3, face: { style: 'brick', brickTone: TONE.green } },
-      { kind: 'shop', w: 6, name: 'Vinyl & More', store: 'lobby', poi: { kind: 'delivery', label: 'Vinyl & More' }, trade: 'records', awning: null, sign: ['#2a2c38', [236, 206, 120]], floors: 3, face: { style: 'brick', brickTone: TONE.red } },
-      { kind: 'shop', w: 6, name: 'Suds Laundry', store: 'mart', poi: { kind: 'delivery', label: 'Suds Laundry' }, trade: 'laundry', awning: null, sign: ['#2a6ab0', [250, 250, 240]], floors: 3, face: { style: 'stucco', wallColor: '#c8c4bc' } },
-      { kind: 'shop', w: 5, name: 'Clip Joint', store: 'lobby', poi: { kind: 'barber', label: 'Clip Joint' }, awning: ['#a8343a', '#f0ece4'], sign: ['#8a2a2e', [250, 230, 190]], floors: 3, face: { style: 'brick', brickTone: TONE.brown } },
+      { kind: 'shop', w: 6, name: 'Vinyl & More', store: 'records', poi: { kind: 'delivery', label: 'Vinyl & More' }, trade: 'records', awning: null, sign: ['#2a2c38', [236, 206, 120]], floors: 3, face: { style: 'brick', brickTone: TONE.red } },
+      { kind: 'shop', w: 6, name: 'Suds Laundry', store: 'laundry', poi: { kind: 'delivery', label: 'Suds Laundry' }, trade: 'laundry', awning: null, sign: ['#2a6ab0', [250, 250, 240]], floors: 3, face: { style: 'stucco', wallColor: '#c8c4bc' } },
+      { kind: 'shop', w: 5, name: 'Clip Joint', store: 'salon', poi: { kind: 'barber', label: 'Clip Joint' }, awning: ['#a8343a', '#f0ece4'], sign: ['#8a2a2e', [250, 230, 190]], floors: 3, face: { style: 'brick', brickTone: TONE.brown } },
       { kind: 'shop', w: 8, name: 'Corner Mart', store: 'mart', poi: { kind: 'convenience', label: 'Corner Mart' }, awning: ['#2f8a72', '#f0ece4'], sign: ['#d24a4a', [250, 246, 236]], doorSide: 'right', openSign: true, floors: 3, face: { style: 'brick', brickTone: TONE.red } },
     ];
     mainRow(x0, x1, alleyB1 + 2, b1y1, MT2.map((q) => (q.kind === 'gap' ? { gap: q.gap, kind: 'garden' } : q)));
@@ -314,7 +350,7 @@ function build(m, api, K) {
     mainRow(x0, x1, alleyB1 + 2, b1y1, [
       { kind: 'raw', w: 12, lot: bankLot(x0, b1y1) },
       ...(room > 34 ? [{}].map(() => ({ kind: 'walkup', w: room - 12 - 8 - 7 })) : []),
-      { kind: 'shop', w: 7, name: 'Holly Florist', store: 'mart', awning: ['#6a3a8a', '#f0ece4'] },
+      { kind: 'shop', w: 7, name: 'Holly Florist', store: 'florist', awning: ['#6a3a8a', '#f0ece4'] },
       { kind: 'raw', w: 8, lot: neonCafe() },
     ]);
     backRow(x0, x1, b2y0, alleyB2 - 2);
@@ -361,13 +397,13 @@ function build(m, api, K) {
   // --- Harborview to Mercer: the rough edge begins - walk-ups with tags, a liquor store, walled yards
   {
     const [x0, x1] = span(MX.harborview, 'ave', MX.mercer, 'st');
-    roughBlock(K, x0, b1y0, x1 - x0, b1y1 - b1y0 + 1, { walkup, shopLot, out });
-    roughBlock(K, x0, b2y0, x1 - x0, b2y1 - b2y0 + 1, { walkup, shopLot, out });
+    roughBlock(K, x0, b1y0, x1 - x0, b1y1 - b1y0 + 1, { walkup, shopLot, out, named });
+    roughBlock(K, x0, b2y0, x1 - x0, b2y1 - b2y0 + 1, { walkup, shopLot, out, named });
   }
   // --- Mercer to Stadium Avenue: the projects (PJ1), on the rough east edge
   {
     const [x0, x1] = span(MX.mercer, 'st', MX.stadium, 'ave');
-    projects(K, x0, b1y0, x1 - x0, b2y1 - b1y0 + 1, { walkup, shopLot, out });
+    projects(K, x0, b1y0, x1 - x0, b2y1 - b1y0 + 1, { walkup, shopLot, out, named });
   }
 
   // ===========================================================================================================
@@ -413,7 +449,8 @@ function build(m, api, K) {
     for (const [a, ka, b, kb] of [[MX.civic, 'ave', MX.fulton, 'st'], [MX.fulton, 'st', MX.harborview, 'ave']]) {
       const [x0, x1] = span(a, ka, b, kb);
       backRow(x0, x1, c1y0, c1y0 + 14);
-      mainRow(x0, x1, c1y0 + 15, c1y1, []);
+      // (Midtown's precinct on Pier Street at Civic Avenue, its motor pool next door)
+      mainRow(x0, x1, c1y0 + 15, c1y1, a === MX.civic ? [{ kind: 'raw', w: 26, lot: precinctLot(), depth: 19 }, { kind: 'raw', w: 15, lot: { roof: 'tar', name: 'Motor Pool', poi: false }, depth: 15 }] : []);
       backRow(x0, x1, c2y0, c2y0 + 14);
       mainRow(x0, x1, c2y0 + 15, c2y1, []);
     }
@@ -423,16 +460,16 @@ function build(m, api, K) {
     // then the diagonal's two sides down to Harbor Avenue - small rough lots
     pocketPlaza(K, out);
     const [x0, x1] = span(MX.harborview, 'ave', MX.mercer, 'st');
-    roughBlock(K, x0, c1y0, x1 - x0, c2y1 - c1y0 + 1, { walkup, shopLot, out, mask: southOfDiag });
+    roughBlock(K, x0, c1y0, x1 - x0, c2y1 - c1y0 + 1, { walkup, shopLot, out, named, mask: southOfDiag });
     const [x2, x3] = span(MX.harborview, 'ave', MX.stadium, 'ave');
-    roughBlock(K, x2, c1y0, x3 - x2, c2y1 - c1y0 + 1, { walkup, shopLot, out, mask: northOfDiag });
+    roughBlock(K, x2, c1y0, x3 - x2, c2y1 - c1y0 + 1, { walkup, shopLot, out, named, mask: northOfDiag });
   }
   // the street trees, benches and bus stops of the main streets (curated: the generator's sprinkle stays off here)
   streetDressing(K, out);
   out.named = named.size;
   return out;
 
-  function pickShop(cat, k) { for (let t = 0; t < 20; t++) { const [name, store] = pick(SHOPS[cat], rnd(k * 31 + t, cat.length, 102)); if (!named.has(name)) { named.add(name); return { name, store, w: 6 }; } } return { name: 'Storefront', store: 'mart', w: 6 }; }
+  function pickShop(cat, k) { for (let t = 0; t < 20; t++) { const [name, store] = pick(SHOPS[cat], rnd(k * 31 + t, cat.length, 102)); if (!named.has(name)) { named.add(name); return { name, store, w: 6 }; } } return { ...composeShop(named, cat, (j) => rnd(k * 31 + j, 7, 106)), w: 6 }; }
   function splitLots(room, f) { const out2 = []; let k = 0; while (room >= 5) { const L = f(k++); const w = Math.min(room, L.w || 6); out2.push({ ...L, w }); room -= w; } if (room > 0) out2.push({ gap: room, kind: 'passage' }); return out2; }
 }
 
@@ -520,6 +557,12 @@ function stripLot() {
 function groceryLot() {
   return { arch: 'strip', key: 'strip', name: 'FreshHub Grocery', poi: { kind: 'grocery', label: 'FreshHub Grocery' }, whole: true,
     art: { spec: { floors: 1, style: 'stucco', wallColor: '#e2dccc', parapet: 14 }, shop: { kind: 'mart', door: 'left', open: true, people: 3, awning: ['#2f8a4e', '#2f8a4e'], sign: { text: 'FRESHHUB GROCERY', bg: '#2f8a4e', fg: [250, 246, 236], lit: true } } } };
+}
+// The 9th Precinct on Pier Street at Civic Avenue: the station with a forecourt (the flag, the planters and lamps by the
+// doors), the cells at the back (shared/cells.js); the plain block next door becomes its motor pool (shared/map.js
+// buildMotorPools: the fenced lot, the cruisers and bikes inside, the gate onto Pier Street)
+function precinctLot() {
+  return { arch: 'police', key: 'police', name: 'Midtown Precinct', poi: { kind: 'police', label: 'Midtown 9th Precinct' }, front: 3, whole: true };
 }
 function garageLot() {
   return { arch: 'garage', key: 'repair', name: 'Fresh Coat Garage', poi: { kind: 'garage', label: 'Fresh Coat Garage' }, whole: true };
@@ -651,13 +694,11 @@ function roughBlock(K, x, y, w, h, ctx) {
       if (room < 4) return room >= 1 ? { gap: room, kind: 'yard' } : null;
       if (rnd(xx, r1, 150) < 0.16) return { gap: Math.min(room, 5 + Math.floor(rnd(xx, r1, 151) * 4)), kind: 'yard' };
       const ww = Math.min(room, 7 + Math.floor(rnd(xx, r1, 152) * 5));
-      if (f === 'S' && i % 4 === 1) return { w: ww, ...shopLot(xx, r1, ww, { name: pickRough(xx, r1), store: rnd(xx, r1, 153) < 0.5 ? 'liquor' : 'mart', grille: true, openSign: true, awning: rnd(xx, r1, 154) < 0.4 ? ['#3a3a44', '#e8e4dc'] : null, grime: 0.45, floors: 2 + Math.floor(rnd(xx, r1, 155) * 2) }) };
+      if (f === 'S' && i % 4 === 1) return { w: ww, ...shopLot(xx, r1, ww, { ...composeShop(ctx.named, 'rough', (k) => rnd(xx + k, r1, 153)), grille: true, openSign: true, awning: rnd(xx, r1, 154) < 0.4 ? ['#3a3a44', '#e8e4dc'] : null, grime: 0.45, floors: 2 + Math.floor(rnd(xx, r1, 155) * 2) }) };
       return { w: ww, ...walkup(xx, r1, ww, { grime: 0.45, graffiti: rnd(xx, r1, 156) < 0.4 ? 1 : 0, boarded: rnd(xx, r1, 157) < 0.2 ? 0.25 : 0 }), ...(f === 'N' ? { face: 'N' } : {}) };
     }, { rough: true, mask: ctx.mask || null });
   }
 }
-const ROUGH_NAMES = ['Quick Cash', 'Beer Wine Liquor', 'Check Cashing', 'Mercer Mini Mart', 'Cell Shop', 'Lotto & More', 'Discount Smokes', 'Wash & Fold'];
-const pickRough = (x, y) => ROUGH_NAMES[(x * 7 + y * 3) % ROUGH_NAMES.length];
 
 // Motor Row Dealership on Harbor Avenue: the glass showroom at the back, its display lot in front (buildDealerLots
 // stands the cars for sale on it)
@@ -669,6 +710,37 @@ function dealership(K, x, y, w, h, out) {
   for (let k = 0; k < 5; k++) K.prop('bollard', x + 6 + k * 6, y + h - 1.5, 5);
   K.prop('textsign', x + sw + 8, y + h - 3, 0, { text: 'MOTOR ROW', bg: '#1e3a5e', fg: [250, 236, 160], z: 54 });
   void out;
+}
+// The skate spot by the El (Trestle Street between Fulton Street and Harborview Avenue): an empty lot the skaters
+// poured themselves, in the viaduct's shadow - the slab, a block wall along the back covered in pieces, quarter pipes
+// against it, a pyramid in the middle, ledges (a red curb, a blue one), a flat bar, a plywood kicker; chain-link along
+// Central Avenue with the way in; skaters riding laps (server/systems/activities.js 'skaters': map.skateSpots)
+function skateSpot(K, x, y, w, h, out) {
+  const { m, prop } = K;
+  K.fill(x, y, w, h, T.PLAZA);
+  const at = (fx, fy) => [x + w * fx, y + h * fy];
+  const put = (t, [px, py], extra, solid = 0) => prop(t, px, py, solid, extra);
+  put('skatepad', [x + w / 2, y + 1.3], { w: Math.round((w - 0.4) * TILE), d: Math.round((h - 1.6) * TILE) });
+  put('gwall', [x + w / 2, y + 0.6], { len: Math.round((w - 0.6) * TILE), v: 3 });
+  put('qpipe', [x + 4, y + 2.2], { w: 192 });
+  put('qpipe', [x + w - 3.5, y + 2.2], { w: 160 });
+  put('pyramid', at(0.5, 0.42));
+  put('kicker', at(0.2, 0.42));
+  put('ledge', at(0.8, 0.46), { w: 160, v: 1 });
+  put('ledge', at(0.28, 0.66), { w: 128 });
+  put('flatbar', at(0.56, 0.7), { w: 128 });
+  put('ledge', at(0.84, 0.74), { w: 96, v: 2 });
+  put('boombox', at(0.3, 0.71));
+  put('trashcan', [x + 0.8, y + h - 2], null, 0);
+  put('trashcan', [x + w - 0.8, y + 3.8], null, 0);
+  put('bags', [x + w - 1, y + 4.6]);
+  put('chainfence', [x + 0.2, y + h - 0.4], { tx: (w * 0.36) * TILE, ty: 0 });
+  put('chainfence', [x + w * 0.64, y + h - 0.4], { tx: (w * 0.36 - 0.2) * TILE, ty: 0 });
+  put('lamp', [x + w * 0.38, y + h - 0.6]); put('lamp', [x + w * 0.62, y + h - 0.6]);
+  // where a friend sits to watch: on the plain ledge, on the red one (px)
+  const seats = [[0.28, 0.66], [0.8, 0.46]].map(([fx, fy]) => ({ x: Math.round((x + w * fx) * TILE), y: Math.round((y + h * fy) * TILE) + 4 }));
+  (m.skateSpots ||= []).push({ name: 'The Trestle Spot', x, y, w, h, seats });
+  (out.places ||= []).push({ name: 'The Trestle Spot', x0: x, y0: y, x1: x + w, y1: y + h });
 }
 // a subway entrance's plaza (shared/map.js reserveSubwayPlazas) within r tiles of (x, y): kept clear and paved
 function onSubwayPlaza(m, x, y, r = 0) { return (m.subwayPlazas || []).some((q) => x >= q.x - r && x < q.x + q.w + r && y >= q.y - r && y < q.y + q.h + r); }

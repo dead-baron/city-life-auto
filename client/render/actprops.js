@@ -1,6 +1,6 @@
 // People going about their lives (task #423, server/systems/activities.js), in the classic view: what they have by them
 // - the descriptor's pp (the painter's easel, the angler's cooler, the chess board, the car washer's sponge and bucket,
-// the picker's crate, the hunter's slung rifle, the neighbours' garden fence, a pool cue stood up) and the pool player's
+// the picker's crate, the hunter's slung rifle, the neighbours' garden fence, a pool cue stood up, a skater's board) and the pool player's
 // cue (gt 'cue'). Loaded with the first person at an activity (main.js drawUpright), not with the page. The poses: sat,
 // kneeling and bent over the table are drawn low there, like a kneel.
 // Drawn in world px after the figure, on the ground plane (y down) with heights lifted up the screen.
@@ -40,6 +40,11 @@ const PROPS = {
     const L = at(p, 11, -14, 0), R = at(p, 11, 14, 0);
     for (let k = 0; k <= 8; k++) { const u = k / 8, x = L[0] + (R[0] - L[0]) * u, y = L[1] + (R[1] - L[1]) * u; line(g, [x, y], [x, y - (k % 8 ? 20 : 23)], k % 8 ? '#f2efe6' : '#d8d2c2', k % 8 ? 2 : 2.6); }
     for (const z of [7, 17]) line(g, [L[0], L[1] - z], [R[0], R[1] - z], '#d8d2c2', 1.4);
+  },
+  board(g, p) {   // a skater's board under the feet: the deck along the way they ride, the wheels at each end (a skate spot's riders)
+    const a = at(p, -9, 0, 0), b = at(p, 9, 0, 0);
+    line(g, a, b, '#3a2e2a', 4); line(g, a, b, '#c8402e', 2);
+    g.fillStyle = '#e8e4d8'; for (const q of [at(p, -6, -2, 0), at(p, -6, 2, 0), at(p, 6, -2, 0), at(p, 6, 2, 0)]) g.fillRect(q[0] - 1, q[1] - 1, 2, 2);
   },
   cueup(g, p) { const b = at(p, 2, 7, 0); line(g, b, [b[0] + 1, b[1] - 46], '#c08a4a', 1.4); g.fillStyle = '#3a6ad0'; g.fillRect(b[0], b[1] - 48, 2, 2); },
 };

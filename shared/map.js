@@ -399,7 +399,7 @@ function buildCity(seed, opts = null, frame = null) {
   if (m.rails) v3().bores(m);   // (H33: World v3's main line through the mountains - its bores under the hill's cover: shared/world3-passes.js)
 
   const hosp = m.pois.find((p) => p.kind === 'hospital' && m.zoneAt(p.x, p.y) === Z.CITY) || m.pois.find((p) => p.kind === 'hospital');
-  const pd = m.pois.find((p) => p.kind === 'police');
+  const pd = m.pois.find((p) => p.kind === 'police' && !p.sub) || m.pois.find((p) => p.kind === 'police');   // (sub: a hand plan's precinct - shared/world3-hand.js)
   m.hospitals = m.pois.filter((p) => p.kind === 'hospital').map((p) => ({ id: p.id, name: p.label, x: p.x, y: p.y + 44 }));
   // (an island build may have neither: the world's are elsewhere; World v3b's build has none until its city is laid -
   // its world hook's `spawn`, tiles)

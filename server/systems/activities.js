@@ -14,6 +14,8 @@
 //   miners    swinging pickaxes at a quarry's rock face (one at the old mine's adit): the felling swing (net.js ch 5)
 //   hoops     a pickup game at the courts (shared/hoops.js courtHoops): two to four shooting around, the ball (a K.BALL,
 //             ballKind 'pickup': drawn as the hoops ball) dribbled, shot at the rim, the rebound bounced on to the next
+//   skaters   riding laps round a skate spot's ramps and ledges on their boards (map.skateSpots: World v3's Midtown has
+//             one by the El), stopping now and then for a breather; a friend or two sat on a ledge watching
 //   pool      two at the Rusty Spur's pool table taking turns (round the table to the next shot, bent over the cue),
 //             the other waiting at the end of the table with his cue up; a watcher or two
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
@@ -55,7 +57,8 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   hunter: { day: 0.7, night: 0 },
   hoops: { day: 0.75, night: 0.2, cap: 1 },
   pool: { day: 0.5, night: 0.9, cap: 1 },
-  diners: { day: 0.85, night: 0.6, cap: 2 },   // (IN8: eating at a food place's tables, the cook at the line)
+  diners: { day: 0.85, night: 0.6, cap: 2 },
+  skaters: { day: 0.85, night: 0.4, cap: 1 },   // (IN8: eating at a food place's tables, the cook at the line)
 };
 // a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
 const pk = (r, a) => a[Math.floor(r() * a.length) % a.length];
@@ -182,6 +185,11 @@ export function spotsOf(map) {
     const x = h.rim.x + (mx - h.rim.x) / d * 70, y = h.rim.y + (my - h.rim.y) / d * 70;
     if (walkable(map, x, y) && clear(x, y, 60)) { list.push({ k: 'hoops', x, y, a: Math.atan2(h.rim.y - y, h.rim.x - x), rim: h.rim, court: c, wild: false }); taken.push({ x, y }); }
   }
+  // the skate spots (shared/world3-midtown.js skateSpot: the lot in tiles, its ledges to sit on in px)
+  for (const q of map.skateSpots || []) {
+    const box = { x0: q.x * TILE, y0: q.y * TILE, x1: (q.x + q.w) * TILE, y1: (q.y + q.h) * TILE }, x = (box.x0 + box.x1) / 2, y = (box.y0 + box.y1) / 2;
+    list.push({ k: 'skaters', x, y, a: 0, box, seats: q.seats || [], wild: false }); taken.push({ x, y });
+  }
   // pool at the Rusty Spur (its bar room's table: where client/art2/game/statics.js roadhouseRoom draws it)
   const pt = poolTable(map);
   if (pt) { list.push({ k: 'pool', x: pt.cx, y: pt.cy, a: 0, table: pt, wild: false }); taken.push({ x: pt.cx, y: pt.cy }); }
@@ -267,6 +275,18 @@ function members(s) {
     const n = Math.min(groups.length, 1 + Math.floor(rng() * 2) + (groups.length > 3 ? 1 : 0));
     for (let k = 0; k < n; k++) { const seats = groups[order[k][1]], two = rng() < 0.65 ? 2 : 1; for (let j = 0; j < two; j++) { const q = seats[j]; out.push({ x: q.x, y: q.y, a: q.a, arche: rng() < 0.3 ? 'senior' : 'casual', gt: 'sit' }); } }
     if (L.cook) out.push({ x: L.cook.x, y: L.cook.y, a: L.cook.a, arche: 'casual', look: 'cook' });
+  } else if (s.k === 'skaters') {   // two to four riding laps (each their own loop round the middle, either way round); a friend on a ledge
+    const B = s.box, W = B.x1 - B.x0, H = B.y1 - B.y0, n = 2 + Math.floor(rng() * 3);
+    for (let i = 0; i < n; i++) {
+      const rx = W * (0.26 + rng() * 0.12), ry = H * (0.22 + rng() * 0.1), dir = rng() < 0.5 ? 1 : -1, ph = rng() * Math.PI * 2, ride = [];
+      for (let k = 0; k < 10; k++) {
+        const a = ph + dir * k * Math.PI / 5, x = s.x + Math.cos(a) * rx + (rng() - 0.5) * 24, y = s.y + Math.sin(a) * ry + (rng() - 0.5) * 24;
+        ride.push({ x: Math.max(B.x0 + 20, Math.min(B.x1 - 20, x)), y: Math.max(B.y0 + 60, Math.min(B.y1 - 20, y)) });
+      }
+      out.push({ x: ride[0].x, y: ride[0].y, a: 0, arche: 'casual', look: 'skater', gt: 'skate', pp: 'board', ride });
+    }
+    const seat = s.seats[Math.floor(rng() * s.seats.length)];
+    if (seat && rng() < 0.7) out.push({ x: seat.x, y: seat.y, a: Math.atan2(s.y - seat.y, s.x - seat.x), arche: 'casual', look: 'skater', gt: 'sit', watch: true });
   } else if (s.k === 'pool') {      // the one shooting bent over the table, the other waiting at its end, cue up; watchers
     const T = s.table;
     out.push({ ...poolSpot(T, 0), arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 0, gt: 'cue' });
@@ -332,7 +352,7 @@ export function fill(world, s, opts = {}) {
     dressAs(world, ped, m.look);
     ped.a = m.a; ped.vx = ped.vy = 0;
     const n = ped.npc;
-    n.act = { g: s.id, k: s.k, x: m.x, y: m.y, a: m.a, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1 };
+    n.act = { g: s.id, k: s.k, x: m.ride ? s.x : m.x, y: m.ride ? s.y : m.y, a: m.a, ride: m.ride || null, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1 };
     n.state = 'idle'; n.until = world.time + 9999; n.sway = false; n.umbrellaType = false;
     pose(ped, true);
     g.ids.push(ped.id);
@@ -420,7 +440,7 @@ function pose(ped, on) {
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
-const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash', 'hoops']);
+const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters']);
 export function steer(world, ped, now) {
   const n = ped.npc, a = n.act;
   if (!a) return null;
@@ -437,6 +457,14 @@ export function steer(world, ped, now) {
   }
   const off = d > 420 || (RAIN_OFF.has(a.k) && world.weather === WEATHER.RAIN) || (a.k === 'carwash' && now >= (n.carAt || 0) && !(n.carAt = now + 1, world.query(a.x, a.y, 48, K.VEH).some((v) => !v.removed && v.def && v.def.kind === 'car')));
   if (off) { pose(ped, false); n.act = null; n.state = 'wander'; n.until = 0; return null; }
+  if (a.ride) {   // a skater: round the loop on the board, now and then a stop for a breather
+    pose(ped, true);
+    if (n.state !== 'idle') { n.state = 'idle'; n.until = now + 9999; }
+    if (now < (n.holdTo || 0)) { ped.vx = ped.vy = 0; return { inp: NO_INPUT, factor: 0.55 }; }
+    if (Math.hypot(a.ride[a.leg % a.ride.length].x - ped.x, a.ride[a.leg % a.ride.length].y - ped.y) < 22) { a.leg++; if (rng() < 0.05) n.holdTo = now + 2 + rng() * 5; }
+    const t = a.ride[a.leg % a.ride.length];
+    return { inp: seekTo(ped, t.x, t.y, 1), factor: 0.85 };
+  }
   if (d > 5) { if (ped.gt || ped.pp || ped.fishing || ped.chop) pose(ped, false); return { inp: seekTo(ped, a.x, a.y, 0.9), factor: 0.55 }; }   // back to it
   ped.vx = ped.vy = 0;
   if (n.state !== 'idle') { n.state = 'idle'; n.until = now + 9999; }
@@ -462,7 +490,7 @@ export function update(world) {
   }
   for (const g of A.values()) for (const i of g.ids) {
     const e = world.get(i);
-    if (e && e.npc && e.npc.act && !e.npc.act.patrol && (e.gt || e.pp || e.fishing || e.chop) && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) > 5) pose(e, false);
+    if (e && e.npc && e.npc.act && !e.npc.act.patrol && !e.npc.act.ride && (e.gt || e.pp || e.fishing || e.chop) && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) > 5) pose(e, false);
   }
   if (world.tick % 20 === 13) fillRound(world);
 }

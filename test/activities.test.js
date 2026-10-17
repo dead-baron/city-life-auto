@@ -206,7 +206,7 @@ test('the classic view draws every activity prop and the pool cue (render/actpro
   const { draw } = await import('../client/render/actprops.js');
   const calls = [];
   const g = new Proxy({}, { get: (o, k) => (k in o ? o[k] : (...a) => calls.push([k, ...a])), set: (o, k, v) => { o[k] = v; return true; } });
-  const pps = ['easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle', 'fence', 'cueup'];
+  const pps = ['easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle', 'fence', 'cueup', 'board'];
   for (const pp of [...pps, null]) {
     calls.length = 0;
     draw(g, { id: 7, rx: 500, ry: 300, ra: 0.6, d: pp ? { pp } : { gt: 'cue' } }, 12.3);

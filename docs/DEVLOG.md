@@ -9930,3 +9930,30 @@ Tools: tools/area-shot.mjs (any rectangle of the world through the chunk bake, f
 Budgets: the bake code 765 -> 770 KB (tools/perf.mjs): the El's deck, inclines, bents, platforms and stair towers are
 drawn by the chunk bake (767 KB; their models joined props-road.js, so the files hold at 73). The hand plans' building
 maker lives in shared/world3-hand.js, not map.js, so the page's generator code stays within its 360 KB.
+
+## 2026-10-17 · Midtown, second push: the 9th Precinct, the skate spot by the El, every shop named
+- **Midtown 9th Precinct** (shared/world3-midtown.js `precinctLot`): Pier Street at Civic Avenue - the station with a
+  forecourt (its flag, the planters and lamps by the glass doors), a walk-in lobby with the cells at the back
+  (shared/cells.js), the evidence locker; the plain block beside it is its motor pool (shared/map.js buildMotorPools:
+  the fenced lot, three cruisers and two bikes, the gate onto Pier Street). Arrests in Midtown go there. A hand plan's
+  station is a precinct (`sub`): the police spawn and the HQ helipad stay at Metro City PD's headquarters
+  (shared/map.js, shared/flight.js). shared/world3-hand.js `handBuilding` takes `front`: a forecourt inside the lot.
+- **The Trestle Spot** (`skateSpot`): an empty lot on Trestle Street between Fulton Street and Harborview Avenue, in the
+  El's shadow, poured by the skaters themselves - a smooth slab in saw-cut squares, a block wall along the back covered
+  in pieces, two quarter pipes against it, a pyramid in the middle, a red curb, a blue curb and a plain ledge, a flat
+  bar, a plywood kicker, a boombox; chain-link along Central Avenue with the way in, two lamps. New models in
+  client/art2/props-park.js (skateQuarter, skateLedge, skateRail, skateKicker, skatePyramid, graffitiWall) and the
+  slab's ground (statics.js makeSkatePad). Skaters ride laps there (server/systems/activities.js `skaters`: two to four,
+  each on their own loop either way round, now and then a stop; a friend sat on a ledge watching; rained off; quieter
+  at night) - `map.skateSpots` lists the spots for the skateboarding feature to come.
+- **Every shop named**: Midtown ran out of names and showed "SHOP 23" and "STOREFRONT" signs. Its shops now draw from
+  a name composer (an owner, a first name, a word or a Midtown street with one of ~90 trades: "Okafor Tailor", "Lenny's
+  Tacos", "Half Moon Butcher", "Holly Bagels"), never the same name twice in the district (215 signs, none repeated).
+- **Six new shop windows** (client/art2/buildings.js storefront): books (shelves of spines, a table of new ones), records
+  (posters, the bins of sleeves), laundry (washers and dryers with their round doors), clothes (racks, a mannequin),
+  florist (buckets of flowers), salon (mirrors and chairs - the barbers, nails and tattoo shops) - Harper & Co, Vinyl &
+  More, Suds Laundry, Clip Joint and Holly Florist show theirs.
+- tools/area-shot.mjs: no black seam across a picture where two chunks meet.
+Budgets: the bake code 770 -> 775 KB (771 KB: the skate models and the shop windows - tools/perf.mjs). The page's
+generator code is at its 360 KB with the Midtown plan; the next handcrafted district will need room there (the
+generator is the fallback: a served or kept city loads the worker's 5 files, 16 KB).

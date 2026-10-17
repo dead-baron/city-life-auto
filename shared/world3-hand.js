@@ -170,7 +170,7 @@ function makeKit(m, api, P) {
 //   label, fixed }: its business; label defaults to the name), home ({ kind: 'apartment' | 'house' | 'shack', price,
 //   slots }: one home behind its door), signs (extra sign texts along its front: [{ x (tile), text }]) } -> the building
 function handBuilding(m, o) {
-  const { x, y, w, h } = o, bid = m.buildings.length;
+  const { x, y, w } = o, bid = m.buildings.length, front = o.front || 0, h = o.h - front;   // (front: a forecourt that much deep, the lot's own)
   const d = o.d ?? m.dist[(y + (h >> 1)) * m.w + x + (w >> 1)];
   const b = { id: bid, prefab: -1, tx: x, ty: y, tw: w, th: h, kind: o.roof ? 'roof' : o.key || 'apt1', name: o.name || 'Building', business: null, signs: [], hand: true };
   if (o.arch) b.arch = o.arch;
@@ -180,7 +180,8 @@ function handBuilding(m, o) {
   if (o.look) b.handLook = o.look;
   if (o.trade) b.trade = o.trade;   // (what the shop is - books, records, laundry, diner: its walk-in, later)
   if (o.roof) { m.roofs.push({ tx: x, ty: y, tw: w, th: h, kind: o.roof, seed: Math.floor(hash2(x, y, 977) * 1e9), d, b: bid }); b.roof = m.roofs.length - 1; }
-  else { b.prefab = m.prefabs.length; m.prefabs.push({ key: b.kind, tx: x, ty: y, tw: w, th: h, rot: 0, d, solid: [0, 0, w, h], hand: true }); }
+  else { b.prefab = m.prefabs.length; m.prefabs.push({ key: b.kind, tx: x, ty: y, tw: w, th: h + front, rot: 0, d, solid: [0, 0, w, h], hand: true }); }
+  for (let ty = y + h; ty < y + h + front; ty++) for (let tx = x; tx < x + w; tx++) if (m.tileAt(tx, ty) === T.GRASS) m.set(tx, ty, T.PLAZA);
   m.buildings.push(b);
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * m.w + tx] = bid; }
   // (face 'N': its front and door on the north side, onto a street there - drawn from the camera's side as its back)
@@ -203,8 +204,11 @@ function handBuilding(m, o) {
   } else if (o.poi) {
     const label = o.poi.label || b.name;
     b.business = o.poi.kind;
-    m.pois.push({ id: m.pois.length, kind: o.poi.kind, label, x: px, y: py, r: o.poi.kind === 'delivery' ? 40 : 48, b: bid, fixed: o.poi.fixed !== false });
+    const poi = { id: m.pois.length, kind: o.poi.kind, label, x: px, y: py, r: o.poi.kind === 'delivery' ? 40 : 48, b: bid, fixed: o.poi.fixed !== false };
+    m.pois.push(poi);
     b.signs.push({ x: px, y: (y + h - 0.6) * TILE, text: label });
+    // a precinct (sub: not the headquarters - the police spawn, the helipad stay at the first station the generator placed)
+    if (o.poi.kind === 'police') { poi.sub = true; m.pois.push({ id: m.pois.length, kind: 'evidence', label: 'Evidence Locker', x: (x + w - 1) * TILE, y: py, r: 56, b: bid }); }
     if (o.poi.kind === 'coffee' || o.poi.kind === 'pharmacy') { const vx = px + 56, vy = py + 12; if (vx < (x + w) * TILE - 8) { m.props.push({ t: 'vend_cola', x: vx, y: vy }); m.pois.push({ id: m.pois.length, kind: 'vending', label: 'Vending Machine', x: vx, y: vy + 18, r: 32 }); } }
   } else if (o.home) {
     const H = o.home, dist = DISTRICTS[d], id = m.homes.length;

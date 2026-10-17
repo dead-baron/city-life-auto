@@ -304,7 +304,7 @@ export function airfields(m) {
   // the Search & Rescue HQs (World v3: shared/world3-sarhq.js) - the pad on the apron in front of the door
   for (const p of m.pois || []) if (p.kind === 'sar') pads.push({ x: p.x + SAR_PAD[0], y: p.y + SAR_PAD[1], kind: 'sar', name: p.label, roof: false, alt: 0 });
   // the police headquarters (the first station) - a pad in its yard
-  const pd = (m.pois || []).find((p) => p.kind === 'police');
+  const pd = (m.pois || []).find((p) => p.kind === 'police' && !p.sub) || (m.pois || []).find((p) => p.kind === 'police');
   if (pd) { const sp = findPadSpot(m, pd.x, pd.y + 120, FLY.PAD_R, 700); if (sp) pads.push({ x: sp.x, y: sp.y, kind: 'police', name: `${pd.label || 'Police HQ'} helipad`, roof: false, alt: 0 }); }
   // the hospitals: a pad on the roof (the next wave lands rescues there) and one in the yard
   for (const h of m.hospitals || []) {
