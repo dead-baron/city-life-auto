@@ -10050,3 +10050,32 @@ new interiors - a laundromat, a record shop, a bookshop and a diner.
   (shared/map.js spanSignal); an armored truck's guards caught in each other's fire keep after the attacker, not each
   other (server/systems/npc.js onAttacked) - and the test of it gives the attacker the health to see it through. The
   world map's picture rebaked (tools/build-worldmap2.mjs).
+
+## 2026-10-17 · Midtown, third pass: lower, so the streets stay in view; facades that differ; busier pavements
+The owner, 10-17: "Midtown is still feeling really repetitive and open ... we don't need to have the buildings so high
+that they all cover so much of the street behind them". In this camera a building stands up over what's north of it
+by its height, so the rows were hiding their alleys and, on the south side of every street, the street itself.
+- **Lower** (shared/world3-midtown.js): most buildings two or three floors (a shop one to three), a corner a floor more;
+  the rows facing a street to their north (the south side of each street) one or two floors and set back behind a
+  strip of **front gardens** - a low picket or iron fence or a hedge along the pavement, the gate and the path to the
+  door, shrubs and flowers, the bins (frontGardens) - so they cover their own gardens and the pavement, not the road.
+  The projects' slabs four floors behind a fenced forecourt on Central Avenue; the courtyard apartments three, two
+  on Central Avenue; the wedge four.
+- **Facades that differ** (client/art2/buildings.js): the windows' rhythm (spec.win) - evenly spaced, in pairs,
+  three-light, tall, round-headed under brick arches, steel-framed loft windows, an oriel up the middle - and the
+  cornice (spec.cornice: corbel brackets, dentils, a stepped parapet with its datestone, spec.date); never the same
+  windows as the building next door. Painted blade signs hung off the wall by the shop's trade (BOOKS, VINYL, EAT,
+  DELI...), where they fit under the cornice. A building under **scaffolding** now and then (spec.scaffold: standards,
+  boards at each lift, a brace, netting), the skip and cones at the kerb in front.
+- **The set pieces between the rows**: The Palace, the old picture house on Midtown Boulevard (its marquee, TONIGHT and
+  the CINEMA blade); St. Brendan's church on Pier Street; a car park on Harbor Avenue (bays, the barrier, the pay board).
+- **Busier pavements**: each trade puts its stock out - the grocers' fruit crates and a vending machine, the bookshops'
+  and record shops' crates, the hardware shop's ladder and wheelbarrow, chalkboards outside the cafes, bars, salons and
+  tailors, the florists' buckets, a bench outside the laundromat; phone booths and news boxes at some corners.
+- **The yards**: the back yards' patios decked, brick-paved or stone-flagged (a flat 'patio' - not the pavement's
+  concrete), more lawns and vegetable gardens; a parking pad off the alley at the end of some, a car on it now and then
+  (the alley fence stops short of it: never across where a car comes out); a car or a van in a deep walled yard.
+- The bake worker's code budget 775 -> 800 KB (tools/perf.mjs): the facades' variety, the patios, and the Neon Strip's
+  picture signs (client/art2/neonsigns.js handNeon - the eye-patch woman, the striding tiger, the roaring head - and
+  blade signs, ready for the Strip's plan).
+- **The streets**: manhole covers in the lanes (client/art2/streetgrit.js).

@@ -50,7 +50,7 @@ import * as TN from '../props-towns.js';
 import { EL_Z } from './chunkgeom.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
-import { nightFront, paintSigns } from '../neonsigns.js';   // (the night's big neon signs)
+import { nightFront, paintSigns, handNeon } from '../neonsigns.js';   // (the night's big neon signs)
 import { streetGrit } from '../streetgrit.js';              // (grit on the town's streets)
 import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
@@ -1107,6 +1107,8 @@ function specOf(c, b, A, s, D) {
       if (!had) shopSpill(lights, w, spec.shop.door === 'left' ? 21 : w - 21);
     }
     if (ART.lights) lights.push(...ART.lights);
+    // (a hand-planned front's own neon - the Neon Strip's: its name, a picture sign, a blade sign, the cornice tube)
+    if (ART.neon && s.south) handNeon(spec, { door: spec.shop && spec.shop.door, ...ART.neon }, { w, lights, rnd: rndOf(b.id * 31 + s.k, 979) });
   }
   let up = null;
   if (!pitched && !s.frame && !s.vox) {
@@ -1856,6 +1858,7 @@ function propItems(c, p, pi, I) {
     case 'atmw': { const col = { neon: '#e83a9a', kiosk: '#3a6ab0' }[p.v] || null; V('atm', 'atmWall', [1]); lightAt(I, x, y + 8, 32, 60, [0.5, 0.8, 1], 0.9, 'sign'); void col; return; }
     case 'trashpile': V(`tp:${seed % 3}`, 'trashPile', [seed % 3]); return;
     case 'mosaic': put(I, { key: `mos:${seed % 3}`, recipe: { t: 'flat', k: 'mosaic', w: 56, h: 44, s: seed % 3 }, x, y, ext: [30, 26, 30, 26], pi }); return;
+    case 'patio': { const pw = Math.round((p.w || 96) / 2) * 2, ph = Math.round((p.h || 64) / 2) * 2, pk = p.k || 'flag'; put(I, { key: `pat:${pk}:${pw}:${ph}:${seed % 3}`, recipe: { t: 'flat', k: 'patio', pk, w: pw, h: ph, s: seed % 3 }, x, y, ext: [pw / 2 + 2, ph / 2 + 2, pw / 2 + 2, ph / 2 + 2], pi }); return; }
     case 'pallet': case 'pallet_b': case 'pallet_s': V(`pal:${t}:${seed % 2}`, 'pallets', [seed, t === 'pallet_s' ? 1 : t === 'pallet_b' ? 3 : 2], qa(u * TAU, 4)); return;
     case 'drum': V(`drm:${seed % 3}`, 'oilDrum', [pick(['#3a5a8a', '#4a6a3a', '#8a3a2a'], seed / 6), seed % 2]); return;
     case 'planter_g': V('plg', 'planter', [true]); return;
@@ -2247,6 +2250,11 @@ function makeFlat(r) {
       if (d > w / 2) continue;
       const ring = Math.floor(d / 6), pet = Math.floor((ang + PI) / (TAU / 8));
       c = d > w / 2 - 3 ? MAT.stone[2] : [[200, 90, 60], [230, 200, 120], [70, 120, 170], [236, 232, 222]][(ring + (ring % 2 ? pet : 0) + r.s) % 4].map((q) => q * (0.85 + hash(x >> 1, y >> 1, 5) * 0.2));
+    } else if (r.k === 'patio') {   // a back yard's patio (World v3's Midtown): decking, brick pavers or stone flags
+      const e = Math.min(x, y, w - 1 - x, h - 1 - y), hh = hash(x >> 1, y >> 1, r.s + 77);
+      if (r.pk === 'deck') { const b = Math.floor(y / 6), seam = y % 6 === 5 || (x + b * 23) % 47 === 0; c = step2(MAT.woodDock, (seam ? 0.25 : 0.58) + (hash(b, Math.floor((x + b * 23) / 47), r.s) - 0.5) * 0.25 + (e < 2 ? -0.18 : 0), x, y); z = 1; }
+      else if (r.pk === 'brick') { const row = Math.floor(y / 4), off = (row & 1) * 4, seam = y % 4 === 3 || (x + off) % 8 === 7; c = seam ? [118, 104, 94] : [[150, 78, 58], [164, 92, 66], [138, 70, 54], [172, 112, 80]][Math.floor(hash(Math.floor((x + off) / 8), row, r.s) * 4)].map((q) => q * (0.92 + hh * 0.12)); if (e < 2) c = MAT.stone[2]; }
+      else { const cx = Math.floor((x + (Math.floor(y / 11) & 1) * 7) / 14), cy = Math.floor(y / 11), seam = y % 11 === 10 || (x + (cy & 1) * 7) % 14 === 13; c = seam ? [92, 96, 90] : step2(MAT.stone, 0.42 + hash(cx, cy, r.s + 5) * 0.32, x, y); if (seam && hh > 0.7) c = [70, 96, 52]; }
     } else if (r.k === 'drive') { const p = groundPixel('driveway', x + r.s * 13, y, 4); c = p.c; }
     else if (r.k === 'path') { const p = groundPixel('paver', x, y, 5); c = p.c; }
     else if (r.k === 'tennis') { const p = groundPixel('courtGreen', x, y, 5); c = p.c; if (x % 60 < 2 || y === 4 || y === h - 5) c = [236, 236, 228]; }

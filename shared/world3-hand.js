@@ -127,6 +127,8 @@ function makeKit(m, api, P) {
       }
       if (kind === 'yard') {
         fill(x, y, w, h, T.LOT);
+        // (a van or a car parked in a yard deep enough: server/systems/traffic.js parks one in m.parking now and then)
+        if (w >= 4 && h >= 9) m.parking.push({ x: (x + w / 2) * TILE, y: (y + h * 0.4) * TILE, a: Math.PI / 2, drive: true });
         const pool = opt.rough ? ['pallet', 'tires', 'drum', 'dump_o', 'crates', 'bags'] : ['pallet_s', 'crates', 'dump_g', 'bikerack', 'planks'];
         for (let k = 0; k < Math.max(1, Math.floor((w * h) / 30)); k++) prop(pick(pool, rnd(x + k, y, 13)), x + 1 + rnd(x, y + k, 14) * Math.max(1, w - 2), y + 1 + rnd(x + k, y + k, 15) * Math.max(1, h - 4), 10);
         api.streetWall(m, x, y + h - 1, w, () => rnd(x, y, 16), w >= 5);

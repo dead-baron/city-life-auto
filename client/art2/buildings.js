@@ -116,10 +116,98 @@ function sash(G, x0, y0, w, h, lit, seed, opt = {}) {
   }
   // stone lintel and sill (they face up: the sill catches light)
   for (let x = -2; x < w + 2; x++) {
-    for (let k = 0; k < 3; k++) { setC(G, x0 + x, y0 - 3 + k, step(MAT.stone, 0.75 - k * 0.18, x0 + x, k, 0.3)); }
+    if (!opt.noLintel) for (let k = 0; k < 3; k++) { setC(G, x0 + x, y0 - 3 + k, step(MAT.stone, 0.75 - k * 0.18, x0 + x, k, 0.3)); }
     setC(G, x0 + x, y0 + h, step(MAT.stone, 0.9, x0 + x, 0, 0)); setN(G, x0 + x, y0 + h, [0, 0.5, 0.86]);
     setC(G, x0 + x, y0 + h + 1, MAT.stone[1]);
   }
+}
+// a plain stone lintel over an opening (a three-light window's: one across all three)
+function lintel(G, x0, y0, w) { for (let x = 0; x < w; x++) for (let k = 0; k < 3; k++) setC(G, x0 + x, y0 + k, step(MAT.stone, 0.75 - k * 0.18, x0 + x, k, 0.3)); }
+// a round-headed window's arch over its sash: the fanlight (glass, lit with the room) under a ring of voussoirs - brick
+// headers in a brick wall, stone in any other
+function archHead(G, x0, y0, w, style, lit, night) {
+  const r = w / 2, cx = x0 + r, R = style === 'brick' ? (BRICKC || MAT.brick) : MAT.stone;
+  for (let y = -Math.ceil(r) - 3; y <= 0; y++) for (let x = -3; x < w + 3; x++) {
+    const X = x0 + x, Y = y0 + y, d = Math.hypot(X + 0.5 - cx, y + 0.5);
+    if (d > r + 2.6) continue;
+    if (d > r) { setC(G, X, Y, step(R, 0.32 + (Math.floor(Math.atan2(y, X + 0.5 - cx) * 4) & 1 ? 0.18 : 0), X, Y, 0.3)); if (y < -r) setN(G, X, Y, [0, 0.45, 0.89]); continue; }
+    if (d > r - 1.2 || y === 0) { setC(G, X, Y, MAT.metalDark[2]); continue; }
+    const rib = Math.abs(X + 0.5 - cx) < 0.6;
+    setC(G, X, Y, rib ? MAT.metalDark[2] : lit ? [236, 190, 120] : step(MAT.glassDark, 0.42 + ((X + y) % 6 < 2 ? 0.3 : 0), X, Y, 0.4));
+    if (lit) G.glow(X, Y, [255, 200, 130, 90 + night * 60]);
+    G.flag[Y * G.w + X] |= F_GLASS;
+  }
+}
+// a factory loft's window: a steel frame of small panes, a hopper open now and then
+function loftWin(G, x0, y0, w, h, lit, seed) {
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const X = x0 + x, Y = y0 + y;
+    if (!G.inside(X, Y)) continue;
+    const bar = x === 0 || y === 0 || x === w - 1 || y === h - 1 || x % 8 === 0 || y % 7 === 0;
+    if (bar) { setC(G, X, Y, step(MAT.metalDark, x === 0 || y === 0 ? 0.25 : 0.5, X, Y, 0)); continue; }
+    const pane = hash(Math.floor(x / 8), Math.floor(y / 7), seed), streak = ((x + (h - y)) % 11) < 2;
+    let c = lit ? step(ramp('#d8964e', 5, 2), 0.5 + (y / h) * 0.3, X, Y, 0.5) : step(MAT.glassDark, 0.28 + (streak ? 0.4 : 0) + (pane > 0.86 ? 0.25 : 0), X, Y, 0.4);
+    if (!lit && pane < 0.06) c = [36, 32, 34];   // (a hopper tipped open)
+    setC(G, X, Y, c);
+    if (lit) G.glow(X, Y, [255, 196, 120, 100]);
+    G.flag[Y * G.w + X] |= F_GLASS;
+  }
+  for (let x = -2; x < w + 2; x++) { setC(G, x0 + x, y0 + h, step(MAT.concrete, 0.8, x0 + x, 0, 0)); setC(G, x0 + x, y0 + h + 1, MAT.concrete[1]); }
+}
+// an oriel up the middle of the upper floors: a painted bay standing out from the wall - three windows a floor (its
+// sides in shade), panels under them, its own cornice and a lead cap
+function oriel(G, x0, w, fy, gH, floors, night, seed, style) {
+  const Pn = style === 'brick' ? ramp(hash(seed, 3, 9) < 0.5 ? '#d8cfbc' : '#3a4a5a', 6, 3) : ramp(hash(seed, 3, 9) < 0.5 ? '#efe6d2' : '#5a6a52', 6, 3);
+  const top = gH + (floors - 1) * FLOOR + 4, bot = gH + 6, side = Math.round(w * 0.2);
+  for (let v = bot; v < top; v++) for (let x = 0; x < w; x++) {
+    const X = x0 + x, Y = fy(v), sh = x < side ? 0.3 : x >= w - side ? 0.18 : 0.62, e = x === side || x === w - side - 1;
+    setC(G, X, Y, step(Pn, sh + (e ? 0.2 : 0), X, Y, 0.3));
+    setN(G, X, Y, x < side ? [-0.6, 0, 0.8] : x >= w - side ? [0.6, 0, 0.8] : [0, 0, 1]);
+  }
+  for (let f = 1; f < floors; f++) {
+    const base = gH + (f - 1) * FLOOR, wh = 28, py = fy(base + 12 + wh), lit = hash(f, 7, seed + 17) < night * 0.75;
+    sash(G, x0 + side + 3, py, w - 2 * side - 6, wh, lit, seed + f * 11, { noLintel: true });
+    for (const sx of [2, w - side + 1]) sash(G, x0 + sx, py + 2, side - 3, wh - 4, lit && hash(f, sx, seed) < 0.6, seed + f * 13 + sx, { noLintel: true });
+    for (let x = 1; x < w - 1; x++) for (let k = 0; k < 2; k++) setC(G, x0 + x, fy(base + 8 - k * 4), step(Pn, 0.82 - k * 0.3, x0 + x, k, 0.2));   // the panel rails
+  }
+  // its cornice and the lead cap over it
+  for (let x = -2; x < w + 2; x++) for (let k = 0; k < 6; k++) { setC(G, x0 + x, fy(top + k), k < 3 ? step(Pn, 0.9 - k * 0.15, x0 + x, k, 0.2) : step(MAT.metal, 0.4 + (k - 3) * 0.12, x0 + x, k, 0.2)); if (k >= 3) setN(G, x0 + x, fy(top + k), [0, 0.5, 0.86]); }
+  // its shadow on the wall beside it (the light from the west: on the east side)
+  for (let v = bot; v < top + 4; v++) for (let k = 0; k < 3; k++) { const X = x0 + w + k, Y = fy(v); if (!G.inside(X, Y)) continue; const j = (Y * G.w + X) * 4; G.col[j] *= 0.72 + k * 0.08; G.col[j + 1] *= 0.72 + k * 0.08; G.col[j + 2] *= 0.74 + k * 0.08; }
+}
+// the cornice's character (spec.cornice): 'bracket' corbels under the band, 'dentil' a row of teeth, 'step' a raised
+// panel in the middle of the parapet (spec.date: the year on its datestone), 'plain' as it is
+function corniceDress(G, spec, w, d, H, cornice, fy) {
+  const k = spec.cornice, S = MAT.stone;
+  if (k === 'bracket') for (let x = 6; x < w - 6; x += 16) for (let v = H - cornice - 7; v < H - cornice; v++) for (let q = 0; q < 4; q++) { const t = v - (H - cornice - 7); if (q < 4 - Math.floor((7 - t) / 3)) setC(G, x + q, fy(v), step(S, 0.7 - q * 0.12 - (q === 3 ? 0.2 : 0), x + q, v, 0.2)); }
+  else if (k === 'dentil') for (let x = 2; x < w - 2; x++) for (let v = H - cornice - 4; v < H - cornice; v++) setC(G, x, fy(v), x % 6 < 3 ? step(S, 0.8, x, v, 0.2) : step(S, 0.35, x, v, 0.2));
+  else if (k === 'step') {
+    const sw = Math.max(40, Math.round(w * 0.32)), x0 = Math.round(w / 2 - sw / 2), sh = 12;
+    for (let v = H; v < H + sh; v++) for (let x = x0; x < x0 + sw; x++) {
+      const Y = fy(v), top = v >= H + sh - 3;
+      const c = top ? step(S, v === H + sh - 1 ? 0.88 : 0.6, x, v, 0.2) : wallColor(spec.style || 'stucco', x, v, spec.seed || 1, x, Y);
+      setC(G, x, Y, c); setN(G, x, Y, top ? [0, 0.45, 0.89] : [0, 0, 1]);
+    }
+    if (spec.date) { const t = String(spec.date).slice(0, 4), tw = textWidth(t, { sx: 1, gap: 1 }), px = Math.round(w / 2 - tw / 2) - 3; for (let y = 0; y < 9; y++) for (let x = 0; x < tw + 6; x++) setC(G, px + x, fy(H + 1) - y, (x === 0 || y === 0 || x === tw + 5 || y === 8) ? S[2] : S[4]); drawText((qx, qy) => setC(G, qx, qy, S[1]), t, px + 3, fy(H + 1) - 7, { sx: 1, gap: 1 }); }
+  }
+}
+// scaffolding up the front (spec.scaffold: a building having its brickwork repointed - the skip and the van are the
+// plan's props): steel standards and ledgers, a deck of boards at each lift, a brace, debris netting over the top lift
+function scaffold(G, w, d, H, gH, floors, seed) {
+  const yG = d + H, top = Math.min(H - 4, gH + (floors - 1) * FLOOR + 30), bays = Math.max(1, Math.round((w - 8) / 44)), bw = (w - 8) / bays;
+  const tube = (X, Y, t) => setC(G, X, Y, step(MAT.metal, 0.35 + t * 0.4, X, Y, 0.2));
+  for (let i = 0; i <= bays; i++) { const X = Math.round(4 + i * bw); for (let v = 0; v < top; v++) { tube(X, yG - v, 0.8); tube(X + 1, yG - v, 0.2); } }
+  for (let lift = gH; lift < top; lift += FLOOR) {
+    for (let x = 2; x < w - 2; x++) {
+      tube(x, yG - lift - 30, 0.7);                                                                              // the guard rail
+      for (let k = 0; k < 3; k++) setC(G, x, yG - lift + k, step(MAT.woodDark, 0.7 - k * 0.2 + (hash(Math.floor(x / 12), lift, seed) - 0.5) * 0.2, x, k, 0.3));   // the boards
+      setC(G, x, yG - lift - 1, step(MAT.woodDark, 0.85, x, 0, 0)); setN(G, x, yG - lift - 1, [0, 0.6, 0.8]);
+    }
+  }
+  // a brace across the first bay, the netting over the top lift
+  for (let t = 0; t < 1; t += 1 / (bw * 2)) { const X = Math.round(4 + t * bw), Y = Math.round(yG - gH - t * FLOOR); tube(X, Y, 0.6); }
+  const nt = Math.max(gH, top - FLOOR);
+  for (let v = nt; v < top; v++) for (let x = 2; x < w - 2; x++) if ((x + v) % 3 !== 0) { const Y = yG - v, j = (Y * G.w + x) * 4; if (!G.inside(x, Y)) continue; G.col[j] = G.col[j] * 0.35 + 40; G.col[j + 1] = G.col[j + 1] * 0.35 + 92; G.col[j + 2] = G.col[j + 2] * 0.35 + 64; }
 }
 function windowBox(G, x0, y0, w, seed) {
   for (let x = -1; x <= w; x++) for (let k = 0; k < 6; k++) {
@@ -204,25 +292,46 @@ export function makeBuilding(spec) {
     setC(G, x, Y, c);
     if (k < 2) setN(G, x, Y, [0, 0.4, 0.92]);
   }
+  if (spec.cornice) corniceDress(G, spec, w, d, H, cornice, fy);
   // diner neon band along the top of the facade
   if (spec.trim) for (let x = 1; x < w - 1; x++) for (const k of [cornice + 2, cornice + 4]) { const Y = fy(H - k); setC(G, x, Y, spec.trim.map((c) => Math.min(255, c * 0.7 + 80))); glow(G, x, Y, [...spec.trim, 120 + night * 135]); }
-  // ---- upper floors
+  // ---- upper floors. spec.win, the rhythm of the windows (World v3's handcrafted streets: no two neighbours alike):
+  // 'even' (the default) evenly spaced sashes; 'pair' in pairs; 'triple' three-light windows; 'tall' taller and fewer;
+  // 'arch' round-headed under brick arches; 'loft' wide steel-framed factory windows; 'bay' an oriel up the middle
+  const WIN = spec.win || 'even';
+  let bay = null;
+  if (WIN === 'bay' && floors > 1 && w >= 110 && style !== 'glass') { const bw = w >= 220 ? 62 : 50; bay = [Math.round(w / 2 - bw / 2), bw]; }
   for (let f = 1; f < floors && style !== 'glass'; f++) {
     const base = gH + (f - 1) * FLOOR;
-    const ww = style === 'brick' ? 18 : 16, wh = style === 'brick' ? 30 : 26, gap = style === 'brick' ? 20 : 22;
-    const n = Math.max(1, Math.floor((w - 16) / (ww + gap)));
-    const span = n * ww + (n - 1) * gap, x0 = Math.floor((w - span) / 2);
-    for (let i = 0; i < n; i++) {
-      const px = x0 + i * (ww + gap), py = fy(base + 12 + wh);
-      const lit = hash(i, f, seed + 13) < night * 0.75 + (night > 0 ? 0.08 : 0);
-      if (spec.boarded && hash(i, f, seed + 41) < spec.boarded) { boards(G, px, py, ww, wh, seed + i * 5 + f); continue; }
-      sash(G, px, py, ww, wh, lit, seed + f * 7 + i);
-      if (spec.shutters) shutters(G, px, py, ww, wh, spec.shutters);
-      if (spec.balconies) balconyRail(G, px - 6, py + wh + 3, ww + 12, seed + i * 3 + f);
-      else if (hash(i, f, seed + 21) > 0.62) windowBox(G, px, py + wh + 2, ww, seed + i);
-      else if (hash(i, f, seed + 23) > 0.82) acBox(G, px + 1, py + wh - 8);
+    let ww = style === 'brick' ? 18 : 16, wh = style === 'brick' ? 30 : 26, gap = style === 'brick' ? 20 : 22;
+    if (WIN === 'tall') { wh += 6; gap += 12; } else if (WIN === 'loft') { ww = 38; wh = 32; gap = 14; } else if (WIN === 'arch') { wh -= 4; gap += 4; }
+    const L = [];   // the floor's windows: [x, w]
+    if (WIN === 'pair') {
+      const pw = 2 * ww + 4, pg = 30, n = Math.max(1, Math.floor((w - 16 + pg) / (pw + pg))), x0 = Math.floor((w - (n * pw + (n - 1) * pg)) / 2);
+      for (let i = 0; i < n; i++) { L.push([x0 + i * (pw + pg), ww]); L.push([x0 + i * (pw + pg) + ww + 4, ww]); }
+    } else if (WIN === 'triple') {
+      const tw = 40, tg = 26, n = Math.max(1, Math.floor((w - 16 + tg) / (tw + tg))), x0 = Math.floor((w - (n * tw + (n - 1) * tg)) / 2);
+      for (let i = 0; i < n; i++) L.push([x0 + i * (tw + tg), tw]);
+    } else {
+      const n = Math.max(1, Math.floor((w - 16) / (ww + gap))), x0 = Math.floor((w - (n * ww + (n - 1) * gap)) / 2);
+      for (let i = 0; i < n; i++) L.push([x0 + i * (ww + gap), ww]);
     }
+    L.forEach(([px, pw], i) => {
+      if (bay && px + pw > bay[0] - 4 && px < bay[0] + bay[1] + 4) return;   // (the oriel takes the middle)
+      const py = fy(base + 12 + wh);
+      const lit = hash(i, f, seed + 13) < night * 0.75 + (night > 0 ? 0.08 : 0);
+      if (spec.boarded && hash(i, f, seed + 41) < spec.boarded) { boards(G, px, py, pw, wh, seed + i * 5 + f); return; }
+      if (WIN === 'loft') loftWin(G, px, py, pw, wh, lit, seed + f * 7 + i);
+      else if (WIN === 'triple') { for (let k = 0; k < 3; k++) sash(G, px + k * 13 + (k ? 1 : 0), py, 13 + (k === 1 ? 0 : 0), wh, lit, seed + f * 7 + i * 3 + k, { noLintel: k > 0 }); lintel(G, px - 2, py - 3, pw + 4); }
+      else sash(G, px, py, pw, wh, lit, seed + f * 7 + i, WIN === 'arch' ? { noLintel: true } : undefined);
+      if (WIN === 'arch') archHead(G, px, py, pw, style, lit, night);
+      if (spec.shutters && WIN !== 'loft' && WIN !== 'triple') shutters(G, px, py, pw, wh, spec.shutters);
+      if (spec.balconies) balconyRail(G, px - 6, py + wh + 3, pw + 12, seed + i * 3 + f);
+      else if (WIN !== 'loft' && hash(i, f, seed + 21) > 0.62) windowBox(G, px, py + wh + 2, pw, seed + i);
+      else if (hash(i, f, seed + 23) > 0.82) acBox(G, px + 1, py + wh - 8);
+    });
   }
+  if (bay) oriel(G, bay[0], bay[1], fy, gH, floors, night, seed, style);
   // stone band over the ground floor
   if (style === 'brick' && floors > 1 && gH > 0) for (let k = 0; k < 4; k++) for (let x = 0; x < w; x++) setC(G, x, fy(gH + 2 - k), step(MAT.stone, 0.8 - k * 0.15, x, k, 0.3));
   // ---- ground floor
@@ -249,6 +358,7 @@ export function makeBuilding(spec) {
   }
   if (spec.grime) grime(G, w, d, H, spec.grime, seed);
   if (spec.fireEscape) fireEscape(G, spec.fireEscape, d + H, gH, floors, seed);
+  if (spec.scaffold) scaffold(G, w, d, H, gH, floors, seed);
   if (spec.graffiti) for (let i = 0; i < spec.graffiti; i++) tag(G, Math.floor(hash(i, 1, seed + 61) * Math.max(1, w - 60)) + 4, d + H - 10 - Math.floor(hash(i, 2, seed + 61) * 18), seed + i * 17, spec.tagText && i === 0 ? spec.tagText : null);
   if (spec.ivy) ivy(G, w, d, H, spec.ivy, seed);
   if (spec.mural) mural(G, spec.mural, d + H, seed);
@@ -817,6 +927,13 @@ function plaque(G, p, yG, night) {
 // (b: { text, x, v (bottom height above the pavement), col: [r,g,b] })
 function blade(G, b, yG, night) {
   const t = String(b.text || '').slice(0, 8), sx = 2, w = 5 * sx + 10, h = t.length * (5 * sx + 4) + 10, x0 = b.x, y0 = yG - b.v - h, col = b.col || [255, 80, 200];
+  if (b.paint) {   // a painted sign hung off the wall (a shop's, by day): its own colours, no tubes
+    const bg = ramp(b.bg || '#2a3a5a', 5, 2), fg = b.fg || [240, 232, 210];
+    for (let k = 0; k < 2; k++) for (let x = -3; x < 2; x++) setC(G, x0 + x, y0 + 8 + k * (h - 18), MAT.metalDark[1]);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const e = x === 0 || y === 0 || x === w - 1 || y === h - 1; setC(G, x0 + x, y0 + y, e ? MAT.metalDark[2] : x === 1 || y === 1 ? bg[3] : bg[2]); }
+    for (let i = 0; i < t.length; i++) drawText((px, py) => setC(G, px, py, fg), t[i], x0 + 5, y0 + 6 + i * (5 * sx + 4), { sx, sy: sx, gap: 1 });
+    return;
+  }
   for (let k = 0; k < 2; k++) for (let x = -3; x < 2; x++) setC(G, x0 + x, y0 + 8 + k * (h - 18), MAT.metalDark[1]);      // brackets
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const e = x === 0 || y === 0 || x === w - 1 || y === h - 1, e2 = x === 2 || y === 2 || x === w - 3 || y === h - 3;

@@ -85,6 +85,17 @@ function roofMat(r, garden = false, w = 8) {
   const m = garden ? (r < 0.4 && w <= 8 ? 'deck' : r < 0.78 ? 'paver' : 'green') : r < 0.26 ? 'membrane' : r < 0.48 ? 'gravel' : r < 0.66 ? 'tar' : r < 0.8 ? 'paver' : r < 0.88 ? 'rubber' : r < 0.95 ? 'green' : 'deck';
   return { roofMat: m, lip: 10, rimW: 4 };
 }
+// a shop's painted blade sign by its trade (short words: it must fit under a low cornice)
+const BLADE = { books: 'BOOKS', records: 'VINYL', laundry: 'WASH', diner: 'EAT', cafe: 'CAFE', bar: 'BAR', pawn: 'PAWN', liquor: 'LIQUOR', salon: 'HAIR', florist: 'FLORIST', clothes: 'TAILOR', mart: 'DELI' };
+// the windows' rhythm and the cornice by the wall (client/art2/buildings.js spec.win, spec.cornice): [weight, kind]
+const WINS = {
+  brick: [[3, 'even'], [2, 'pair'], [2, 'arch'], [1, 'tall'], [1, 'triple'], [1, 'bay'], [0.6, 'loft']],
+  stucco: [[3, 'even'], [2, 'pair'], [2, 'triple'], [1, 'tall'], [1, 'bay']],
+  stone: [[2, 'tall'], [2, 'even'], [1, 'arch'], [1, 'pair']],
+  peach: [[2, 'even'], [2, 'pair'], [1, 'triple']],
+};
+const CORNICES = { brick: [[3, 'bracket'], [3, 'dentil'], [2, 'step'], [2, null]], stucco: [[4, null], [2, 'step'], [1, 'bracket']], stone: [[2, 'dentil'], [2, 'bracket'], [1, 'step']], peach: [[3, null], [1, 'step']] };
+const wpick = (list, r) => { let v = r * list.reduce((a, q) => a + q[0], 0); for (const q of list) { v -= q[0]; if (v <= 0) return q[1]; } return list[0][1]; };
 function facadeOf(r) {
   let v = r * MIX_W;
   for (const q of MIX) { v -= q[0]; if (v <= 0) return q; }
@@ -174,10 +185,27 @@ function build(m, api, K) {
   // (the roofs: the art lays out each one's kit by its look - client/art2/game/statics.js kitFor - water towers, stair
   // huts, chimneys, AC; spec.garden: a roof garden on it, the planters, a table and an umbrella, festoon lights)
   const roofGarden = (x, y, k) => rnd(x, y, k) < 0.2;
-  let lastMural = false, muralN = 0;
+  let lastMural = false, muralN = 0, lastWin = null, lastCor = null;
+  // the windows' rhythm, the cornice and a datestone now and then (never the same windows as the building next door)
+  const dress = (spec, x, y, f) => {
+    const st = f.style in WINS ? f.style : 'stucco';
+    let win = wpick(WINS[st], rnd(x, y, 64));
+    if (win === lastWin) win = wpick(WINS[st], rnd(x, y, 65));
+    if (win === lastWin) win = win === 'even' ? 'pair' : 'even';
+    let cor = wpick(CORNICES[st], rnd(x, y, 66));
+    if (cor && cor === lastCor && rnd(x, y, 67) < 0.6) cor = null;
+    lastWin = win; lastCor = cor;
+    spec.win = win;
+    if (cor) spec.cornice = cor;
+    if (cor === 'step' && rnd(x, y, 68) < 0.7) spec.date = String(1888 + Math.floor(rnd(x, y, 69) * 52));
+    return spec;
+  };
+  // how many floors a lot gets: mostly two or three (the owner, 10-17: lower, so the streets behind stay in view), a
+  // corner a floor more; a shop one to three
+  const floorsOf = (x, y, k, corner) => { const r = rnd(x, y, 50); const f = k === 'shop' ? (r < 0.2 ? 1 : r < 0.72 ? 2 : 3) : (r < 0.5 ? 2 : r < 0.92 ? 3 : 4); return Math.min(4, f + (corner ? 1 : 0)); };
   // a shop on the ground floor of a walk-up: name, storefront kind, poi kind (a walk-in, a business) or a plain business
   const shopLot = (x, y, w, o) => {
-    const f = o.face || face(x, y), floors = o.floors ?? 2 + Math.floor(rnd(x, y, 50) * 3);
+    const f = o.face || face(x, y), floors = Math.min(o.floors ?? floorsOf(x, y, 'shop', o.corner), o.maxFloors ?? 9);
     const [bg, fg] = o.sign || pick(SIGNS, rnd(x, y, 51));
     const aw = o.awning === undefined ? (rnd(x, y, 52) < 0.7 ? pick(AWNINGS, rnd(x, y, 53)) : null) : o.awning;
     const side = o.doorSide || (rnd(x, y, 54) < 0.5 ? 'left' : 'right');
@@ -185,7 +213,11 @@ function build(m, api, K) {
     if (o.grille) shop.grille = true;
     if (o.openSign) shop.openSign = { col: [255, 60, 70] };
     const garden = o.garden ?? roofGarden(x, y, 62);
-    const spec = { floors, ...f, parapet: 6 + Math.floor(rnd(x, y, 56) * 6), grime: o.grime ?? 0.12 + rnd(x, y, 57) * 0.15, ...roofMat(rnd(x, y, 58), garden, w), garden };
+    const spec = dress({ floors, ...f, parapet: 6 + Math.floor(rnd(x, y, 56) * 6), grime: o.grime ?? 0.12 + rnd(x, y, 57) * 0.15, ...roofMat(rnd(x, y, 58), garden, w), garden }, x, y, f);
+    // a painted sign hung off the wall by the shop's trade, on the side away from the door (now and then)
+    // (it hangs over the shop floor and must fit under the cornice: 14 px a letter, 10 of frame - client/art2/buildings.js blade)
+    const bt = BLADE[o.store || 'mart'], wallH = 64 + (floors - 1) * 56 + (f.style === 'brick' ? 10 : 6) + spec.parapet;
+    if (bt && w >= 6 && rnd(x, y, 49) < 0.25 && 74 + bt.length * 14 + 10 <= wallH - 6) spec.blades = [{ text: bt, x: side === 'left' ? w * TILE - 24 : 6, v: 74, paint: true, bg, fg }];
     if (floors >= 3 && w >= 8 && rnd(x, y, 58) < 0.45) spec.fireEscape = [Math.max(8, Math.round(w * TILE * (0.45 + rnd(x, y, 59) * 0.2)) - 25), 50];
     if (o.shutters || (f.style !== 'brick' && floors >= 2 && rnd(x, y, 60) < 0.3)) spec.shutters = pick(['#3a4a5c', '#2e5a4a', '#56606a', '#6a3a34', '#2e4a6a'], rnd(x, y, 61));
     if (o.mural) spec.mural = o.mural;
@@ -201,9 +233,10 @@ function build(m, api, K) {
   };
   // a residential walk-up: a stoop door, windows, a fire escape now and then; a home behind its door
   const walkup = (x, y, w, o = {}) => {
-    const f = o.face || face(x, y), floors = o.floors ?? 3 + Math.floor(rnd(x, y, 70) * 3);
+    const f = o.face || face(x, y), floors = Math.min(o.floors ?? floorsOf(x, y, 'walkup', o.corner), o.maxFloors ?? 9);
     const garden = o.garden ?? roofGarden(x, y, 77);
-    const spec = { floors, ...f, parapet: 6 + Math.floor(rnd(x, y, 71) * 5), grime: o.grime ?? 0.1 + rnd(x, y, 72) * 0.2, ...roofMat(rnd(x, y, 76), garden, w), garden };
+    const spec = dress({ floors, ...f, parapet: 6 + Math.floor(rnd(x, y, 71) * 5), grime: o.grime ?? 0.1 + rnd(x, y, 72) * 0.2, ...roofMat(rnd(x, y, 76), garden, w), garden }, x, y, f);
+    if (o.scaffold) spec.scaffold = true;
     if (floors >= 3 && w >= 8 && rnd(x, y, 73) < 0.6) spec.fireEscape = [Math.max(8, Math.round(w * TILE * (0.5 + rnd(x, y, 74) * 0.2)) - 25), 50];
     else if (floors >= 3 && rnd(x, y, 75) < 0.3) spec.balconies = true;
     if (o.graffiti) { spec.graffiti = o.graffiti; spec.tagText = o.tag || null; }
@@ -219,9 +252,10 @@ function build(m, api, K) {
   const mainRow = (x0, x1, y0, y1, list = [], o = {}) => {
     let k = 0;
     const depth = o.depth || 11 + Math.floor(rnd(x0, y1, 89) * 2);
-    const made = K.row(x0, x1, y0, y1, (x, room) => {
+    const made = K.row(x0, x1, y0, y1, (x, room, i) => {
       if (room < 4) return room >= 1 ? { gap: room, kind: 'plaza' } : null;
-      const L = k < list.length ? list[k++] : null;
+      const corner = i === 0 || room <= 13;   // (the row's first lot and its last: the corners of the block)
+      const L0 = k < list.length ? list[k++] : null, L = L0 && !L0.gap && L0.corner === undefined && L0.floors === undefined ? { ...L0, corner } : L0;
       if (L) {
         if (L.gap) return { gap: L.gap, kind: L.kind || 'passage' };
         const w = Math.min(room, L.w);
@@ -231,12 +265,12 @@ function build(m, api, K) {
       }
       // the generic mix: shops 5-8 wide, now and then a walk-up, a passage to the alley, a pocket garden
       const r = rnd(x, y1, 90);
-      if (room <= 9) return rnd(x, y1, 91) < 0.5 ? { w: room, depth, ...walkup(x, y1, room, { arch: 'walkup' }) } : { w: room, depth, ...shopLot(x, y1, room, genericShop(x, y1)) };
+      if (room <= 9) return rnd(x, y1, 91) < 0.5 ? { w: room, depth, ...walkup(x, y1, room, { arch: 'walkup', corner }) } : { w: room, depth, ...shopLot(x, y1, room, { ...genericShop(x, y1), corner }) };
       if (r < 0.06 && o.passages !== false) return { gap: 2 + Math.floor(rnd(x, y1, 92) * 2), kind: 'passage' };
       if (r < 0.09 && o.gardens !== false) return { gap: 5 + Math.floor(rnd(x, y1, 93) * 3), kind: 'garden' };
-      if (r < 0.32) { const w = Math.min(room, 8 + Math.floor(rnd(x, y1, 94) * 4)); return { w, depth, ...walkup(x, y1, w) }; }
+      if (r < 0.32) { const w = Math.min(room, 8 + Math.floor(rnd(x, y1, 94) * 4)); return { w, depth, ...walkup(x, y1, w, { corner, scaffold: rnd(x, y1, 96) < 0.05 }) }; }
       const w = Math.min(room, 5 + Math.floor(rnd(x, y1, 95) * 4));
-      return { w, depth, ...shopLot(x, y1, w, genericShop(x, y1)) };
+      return { w, depth, ...shopLot(x, y1, w, { ...genericShop(x, y1), corner }) };
     }, o);
     if (o.yard !== false) backYards(K, made, y0, o);
     return made;
@@ -250,15 +284,20 @@ function build(m, api, K) {
   // A row of backs (fronts facing north onto the street there; the camera sees their back walls on the alley or yard
   // behind): walk-ups with homes, a plain building now and then
   const backRow = (x0, x1, y0, y1, o = {}) => {
-    const made = K.row(x0, x1, y0, y1, (x, room) => {
+    // (a building is drawn standing up over what's north of it: a row facing a street to the north would cover the
+    // street with its height. So it stands back behind a strip of front gardens and is one or two floors - the
+    // owner's 10-17 note: the streets behind stay in view)
+    const sb = o.mask || y1 - y0 + 1 < 11 ? 0 : 2;
+    const made = K.row(x0, x1, y0 + sb, y1, (x, room) => {
       if (room < 4) return room >= 1 ? { gap: room, kind: 'plaza' } : null;
       const w = room <= 12 ? room : Math.min(room, 7 + Math.floor(rnd(x, y0, 110) * 6));
       if (rnd(x, y0, 111) < (o.yards ?? 0.08)) return { gap: Math.min(room, 4 + Math.floor(rnd(x, y0, 112) * 3)), kind: 'yard' };
       const mural = !lastMural && rnd(x, y0, 114) < 0.08 ? MURALS[(Math.floor(rnd(x, y0, 115) * MURALS.length) + muralN++) % MURALS.length] : null;
       lastMural = !!mural;
-      const L = walkup(x, y0, w, { floors: 2 + Math.floor(rnd(x, y0, 113) * 3), grime: o.grime, mural });
-      return { w, depth: o.depth || Math.min(y1 - y0 + 1, 11 + Math.floor(rnd(x, y0, 116) * 4)), ...L, face: 'N' };
+      const L = walkup(x, y0, w, { floors: sb ? (rnd(x, y0, 113) < 0.75 ? 2 : 1) : 1, grime: o.grime, mural });
+      return { w, depth: o.depth || Math.min(y1 - y0 - sb + 1, 11 + Math.floor(rnd(x, y0, 116) * 4)), ...L, face: 'N' };
     }, { ...o, north: !o.mask });
+    if (sb) frontGardens(K, made, y0, sb, o);
     if (!o.mask) rearYards(K, made, y1, o);
     return made;
   };
@@ -373,7 +412,9 @@ function build(m, api, K) {
       { kind: 'raw', w: 8, lot: neonCafe() },
     ]);
     backRow(x0, x1, b2y0, alleyB2 - 2);
-    mainRow(x0, x1, alleyB2 + 2, b2y1, []);
+    // (The Palace, the old picture house on the boulevard: its marquee, TONIGHT and the CINEMA blade - statics.js
+    // 'theatre'; the neon over its doors)
+    mainRow(x0, x1, alleyB2 + 2, b2y1, [{ kind: 'walkup', w: 9 }, { kind: 'raw', w: 16, lot: { arch: 'theatre', key: 'theatre', name: 'The Palace', poi: { kind: 'delivery', label: 'The Palace' }, whole: true } }]);
   }
   // --- Main Avenue to Madison Street: R1-I's corner store at Holly and Main, the hero corner's diner at Holly and Madison
   {
@@ -459,8 +500,10 @@ function build(m, api, K) {
   for (const [a, ka, b, kb] of [[MX.main, 'ave', MX.madison, 'st'], [MX.madison, 'st', MX.civic, 'ave']]) {
     const [x0, x1] = span(a, ka, b, kb);
     backRow(x0, x1, c1y0, alleyC1 - 2);
-    mainRow(x0, x1, alleyC1 + 2, c1y1, a === MX.main ? [{ kind: 'raw', w: 14, lot: garageLot(), depth: 16 }] : []);
+    mainRow(x0, x1, alleyC1 + 2, c1y1, a === MX.main ? [{ kind: 'raw', w: 14, lot: garageLot(), depth: 16 }] : [{ kind: 'walkup', w: 10 }, { kind: 'raw', w: 15, lot: { arch: 'church', key: 'church', name: "St. Brendan's", poi: false, whole: true }, depth: 16 }]);
     backRow(x0, x1, c2y0, alleyC2 - 2);
+    // (a car park on Harbor Avenue between Main Avenue and Madison Street: the bays, the barrier, the pay board)
+    if (a === MX.main) carPark(K, x0 + 18, alleyC2 + 2, 24, c2y1 - alleyC2 - 1, out);
     mainRow(x0, x1, alleyC2 + 2, c2y1, []);
   }
   {
@@ -506,29 +549,41 @@ function rearYards(K, made, yEnd, o = {}) {
     const x = b.tx, w = b.tw, y = b.ty + b.th, h = yEnd - y + 1;
     if (h < 2) continue;
     const r = (k) => rnd(x, y, 300 + k), rough = o.rough || (o.grime || 0) > 0.3 || r(0) < 0.08;
+    // a parking pad off the alley at the east end of some yards (the car kept round the back): decided first, so the
+    // garden keeps off it
+    let padX = null;
+    if (!rough && w >= 9 && h >= 8 && r(40) < 0.3) padX = x + w - 4;
+    const wg = padX !== null ? padX - x : w;   // (the width the garden has: all of it but the pad)
     // the patio by the back door: paving, a table under an umbrella and two chairs (or a bench), pots, a bike
-    const ph = rough ? h : Math.min(h, 2 + Math.floor(r(30) * 2)), cx = x + w / 2;
+    const ph = rough ? h : Math.min(h, 2 + Math.floor(r(30) * 2)), cx = x + wg / 2;
     fill(x, y, w, ph, T.PLAZA);
+    // (its surface: decking, brick pavers or stone flags - not the pavement's concrete)
+    if (!rough && ph >= 2) prop('patio', x + wg / 2, y + ph / 2, 0, { w: Math.round(wg * TILE) - 6, h: Math.round(ph * TILE) - 4, k: pick(['deck', 'brick', 'flag', 'deck'], r(41)) });
     if (!rough) {
       if (r(31) < 0.65) { prop('cafetable', cx, y + ph / 2 + 0.2, 0); prop(pick(['umbrella_y', 'umbrella_b', 'umbrella_r', 'umbrella_g'], r(2)), cx, y + ph / 2 + 0.1, 0); prop('chair', cx - 0.9, y + ph / 2 + 0.3, 0, { v: Math.floor(r(3) * 4), a: 0 }); prop('chair', cx + 0.9, y + ph / 2 + 0.3, 0, { v: Math.floor(r(4) * 4), a: 3.1416 }); }
       else prop('bench_m', cx, y + ph - 0.6, 0);
       prop('potted', x + 0.7, y + 0.6, 0); if (w >= 6) prop(pick(['potted', 'planter_fl', 'acunit'], r(32)), x + w - 0.7, y + 0.6, 0);
       if (w >= 6 && r(5) < 0.4) prop('festoon', x + 0.5, y + 0.4, 0, { tx: Math.round((w - 1) * TILE), ty: 0, h: 34 });
-      if (r(6) < 0.25) prop('bikerack', x + w - 1.6, y + ph - 0.5, 0);
+      if (r(6) < 0.25) prop('bikerack', x + wg - 1.6, y + ph - 0.5, 0);
     } else for (let i = 0; i < 3; i++) prop(pick(['tires', 'pallet', 'drum', 'crates', 'bags', 'dump_o'], r(17 + i)), x + 1 + r(19 + i) * Math.max(0, w - 2), y + 0.8 + r(21 + i) * Math.max(0, h - 1.6), 8);
     // the rest of it: a lawn (a tree, shrubs, flowers, a shed), a vegetable garden (raised beds, a shed), or paved
-    const gy = y + ph, gh = h - ph, kind = r(1) < 0.5 ? 'lawn' : r(1) < 0.82 ? 'garden' : 'yard';
+    const gy = y + ph, gh = h - ph, kind = r(1) < 0.55 ? 'lawn' : r(1) < 0.88 ? 'garden' : 'yard';
     if (!rough && gh >= 2) {
       fill(x, gy, w, gh, kind === 'yard' ? T.PLAZA : T.GRASS);
       if (kind === 'lawn') {
-        if (gh >= 3 && r(7) < 0.75) prop('tree_a', x + 1.5 + r(8) * Math.max(0, w - 3), gy + gh / 2 + 0.6, 10, { sp: pick(['maple', 'street', 'oak', 'cherry', 'flowerTree'], r(9)), k: 0.9 });
-        for (let i = 0; i < Math.max(1, Math.floor(w / 4)); i++) prop(pick(['flowers_a', 'shrub_a', 'bush_c', 'flowers_big'], r(11 + i)), x + 0.8 + i * 3.6, gy + gh - 0.9, 0);
-        if (w >= 7 && gh >= 3 && r(12) < 0.35) prop('shed', x + w - 1.8, gy + 1.3, 12);
+        if (gh >= 3 && r(7) < 0.75) prop('tree_a', x + 1.5 + r(8) * Math.max(0, wg - 3), gy + gh / 2 + 0.6, 10, { sp: pick(['maple', 'street', 'oak', 'cherry', 'flowerTree'], r(9)), k: 0.9 });
+        for (let i = 0; i < Math.max(1, Math.floor(wg / 4)); i++) prop(pick(['flowers_a', 'shrub_a', 'bush_c', 'flowers_big'], r(11 + i)), x + 0.8 + i * 3.6, gy + gh - 0.9, 0);
+        if (wg >= 7 && gh >= 3 && r(12) < 0.35) prop('shed', x + wg - 1.8, gy + 1.3, 12);
       } else if (kind === 'garden') {
-        const n = Math.max(1, Math.min(3, Math.floor((w - 1.5) / 2.2))), rows = gh >= 5 ? 2 : 1;
+        const n = Math.max(1, Math.min(3, Math.floor((wg - 1.5) / 2.2))), rows = gh >= 5 ? 2 : 1;
         for (let j = 0; j < rows; j++) for (let i = 0; i < n; i++) prop('raisedbed', x + 1.3 + i * 2.2, gy + 1 + j * 2.2, 0, { v: Math.floor(r(13 + i + j * 3) * 3) });
-        if (w >= 6 && r(16) < 0.4) prop('shed', x + w - 1.6, gy + gh - 1.4, 12); else prop('potted', x + w - 1, gy + gh - 1, 0);
-      } else { prop(pick(['bikerack', 'crates', 'pallet_s'], r(33)), x + 1.5, gy + gh / 2, 8); prop('acunit', x + w - 1.4, gy + 0.8, 0); }
+        if (wg >= 6 && r(16) < 0.4) prop('shed', x + wg - 1.6, gy + gh - 1.4, 12); else prop('potted', x + wg - 1, gy + gh - 1, 0);
+      } else { prop('patio', x + wg / 2, gy + gh / 2, 0, { w: Math.round(wg * TILE) - 6, h: Math.round(gh * TILE) - 4, k: 'flag' }); prop(pick(['bikerack', 'crates', 'pallet_s'], r(33)), x + 1.5, gy + gh / 2, 8); prop('acunit', x + wg - 1.4, gy + 0.8, 0); }
+    }
+    // the pad: asphalt, a car on it now and then (server/systems/traffic.js parks one in m.parking)
+    if (padX !== null) {
+      K.paint(padX, y + h - 6, 4, 6, T.LOT);
+      K.m.parking.push({ x: (padX + 2) * TILE, y: (y + h - 3) * TILE, a: Math.PI / 2, drive: true });
     }
     // its fences: on the west side (a board or picket fence, a hedge now and then; chain-link in a rough one), along the
     // alley with a gap for the gate; the bins by the gate
@@ -536,9 +591,33 @@ function rearYards(K, made, yEnd, o = {}) {
       if (!rough && r(34) < 0.2) prop('hedgebox', x + 0.2, y + h - 0.2, 0, { w: 10, d: Math.round((h - 0.4) * TILE), h: 26 });
       else prop(rough ? 'chainfence' : 'fenceline', x + 0.08, y + 0.2, 0, rough ? { tx: 0, ty: Math.round((h - 0.4) * TILE) } : { kind: r(24) < 0.5 ? 'picket' : 'wood', tx: 0, ty: Math.round((h - 0.4) * TILE) });
     }
-    if (h >= 3 && r(27) < 0.6) prop(rough ? 'chainfence' : 'fenceline', x + 0.1, y + h - 0.3, 0, rough ? { tx: Math.round((w - 2.2) * TILE), ty: 0 } : { kind: r(28) < 0.5 ? 'wood' : 'picket', tx: Math.round((w - 2.2) * TILE), ty: 0 });
+    // (the alley fence stops short of the gate - and of the parking pad: never across where the car comes out)
+    const fl = (padX !== null ? padX - x - 0.4 : w - 2.2);
+    if (h >= 3 && r(27) < 0.6 && fl >= 1.5) prop(rough ? 'chainfence' : 'fenceline', x + 0.1, y + h - 0.3, 0, rough ? { tx: Math.round(fl * TILE), ty: 0 } : { kind: r(28) < 0.5 ? 'wood' : 'picket', tx: Math.round(fl * TILE), ty: 0 });
     const bin = r(25) < 0.6;
-    prop(bin ? 'trashcan' : 'dump_g', x + w - 1.2, y + h - 0.6, bin ? 0 : 12);
+    prop(bin ? 'trashcan' : 'dump_g', padX !== null ? padX - 0.8 : x + w - 1.2, y + h - 0.6, bin ? 0 : 12);
+  }
+}
+
+// The front gardens of a row facing the street to its north (its buildings stand `sb` tiles back from the pavement):
+// a little garden each - a low picket fence or a hedge along the pavement with the gate at the path to the door, a
+// shrub or flowers, the bins by the gate; a paved front for a rough one (bins, a bike, a planter)
+function frontGardens(K, made, y0, sb, o = {}) {
+  const { rnd, pick, prop, fill } = K;
+  for (const b of made) {
+    if (!b || b.gap || b.tw === undefined || b.ty - y0 !== sb) continue;
+    const x = b.tx, w = b.tw, r = (k) => rnd(x, y0, 600 + k), rough = o.rough || (o.grime || 0) > 0.3 || r(0) < 0.12;
+    const dx = b.door ? b.door.tx : x + (w >> 1);
+    fill(x, y0, w, sb, rough ? T.PLAZA : T.GRASS);
+    fill(dx, y0, 1, sb, T.PLAZA);   // (the path to the door)
+    if (!rough) {
+      const kind = r(1) < 0.55 ? 'picket' : r(1) < 0.8 ? 'iron' : 'hedge';
+      if (kind === 'hedge') { if (dx - x >= 2) prop('hedgebox', x + 0.2, y0 + 0.5, 0, { w: Math.round((dx - x - 0.4) * TILE), d: 10, h: 18 }); if (x + w - dx - 1 >= 2) prop('hedgebox', dx + 1.2, y0 + 0.5, 0, { w: Math.round((x + w - dx - 1.4) * TILE), d: 10, h: 18 }); }
+      else { if (dx - x >= 2) prop('fenceline', x + 0.15, y0 + 0.3, 0, { kind, tx: Math.round((dx - x - 0.3) * TILE), ty: 0 }); if (x + w - dx - 1 >= 2) prop('fenceline', dx + 1.15, y0 + 0.3, 0, { kind, tx: Math.round((x + w - dx - 1.3) * TILE), ty: 0 }); }
+      for (let i = 0; i < Math.max(1, Math.floor(w / 4)); i++) { const px = x + 0.9 + i * 3.7; if (Math.abs(px - dx - 0.5) > 1.1) prop(pick(['flowers_a', 'shrub_a', 'bush_c', 'flowers_big', 'potted'], r(3 + i)), px, y0 + sb - 0.8, 0); }
+    }
+    prop(r(9) < 0.6 ? 'trashcan' : 'bikerack', dx + (dx - x > 2 ? -1.1 : 1.6), y0 + sb - 0.6, 0);
+    if (rough && r(10) < 0.5) prop(pick(['bags', 'crates', 'tires'], r(11)), x + w - 1.2, y0 + 0.8, 0);
   }
 }
 
@@ -637,6 +716,27 @@ function garageLot() {
   return { arch: 'garage', key: 'repair', name: 'Fresh Coat Garage', poi: { kind: 'garage', label: 'Fresh Coat Garage' }, whole: true };
 }
 
+// A car park on a corner lot: asphalt, bays in two rows facing a lane down the middle, the barrier at the way in from
+// the street, the pay board and a lamp or two, chain-link along the pavement (its cars: server/systems/traffic.js parks
+// them in m.parking)
+function carPark(K, x, y, w, h, out) {
+  const { m, prop } = K;
+  if (!K.allFree(x, y, w, h)) return;
+  K.fill(x, y, w, h, T.LOT); K.take(x, y, w, h);
+  const rows = h >= 14 ? [y + 2, y + h - 6] : [y + 2];
+  for (const ry of rows) for (let sx = x + 1; sx + 2 <= x + w - 1; sx += 3) {
+    const back = ry === rows[0];
+    m.stalls.push({ x: sx * TILE, y: ry * TILE, w: 3 * TILE, h: 4 * TILE });
+    m.parking.push({ x: (sx + 1.5) * TILE, y: (ry + 2) * TILE, a: back ? -Math.PI / 2 : Math.PI / 2 });
+  }
+  const gx = x + w - 4;
+  prop('chainfence', x + 0.2, y + h - 0.3, 0, { tx: (gx - x - 1.4) * TILE, ty: 0 });
+  prop('ygate', gx + 1.5, y + h - 0.8, 0, { a: 0 });
+  prop('textsign', x + 3, y + h - 1.2, 0, { text: 'PARKING $5', bg: '#1e3a5e', fg: [250, 250, 240], z: 34, sx: 1 });
+  prop('lamp', x + 0.8, y + 0.8, 0); prop('lamp', x + w - 0.8, y + h / 2, 0);
+  (out.places ||= []).push({ name: 'Harbor Avenue Parking', x0: x, y0: y, x1: x + w, y1: y + h });
+}
+
 // The community garden by the tracks (WC315): raised beds in rows, a greenhouse, a tool shed, a bench under a tree,
 // sunflowers along the fence, a water butt; open to the street through a gate in its fence
 function communityGarden(K, x, y, w, h, out) {
@@ -667,16 +767,17 @@ function courtyard(K, x, y, w, h, ctx) {
   const { rnd, prop, fill, paint } = K;
   const rowD = 14, wing = 12;
   // the north row (fronts on Central Avenue, north)
-  K.row(x, x + w, y, y + rowD - 1, (xx, room) => { if (room < 4) return null; const ww = room <= 13 ? room : 9 + Math.floor(rnd(xx, y, 140) * 4); return { w: ww, ...walkup(xx, y, ww, { floors: 4, line: true }), face: 'N' }; });
+  const nrow = K.row(x, x + w, y + 2, y + rowD - 1, (xx, room) => { if (room < 4) return null; const ww = room <= 13 ? room : 9 + Math.floor(rnd(xx, y, 140) * 4); return { w: ww, ...walkup(xx, y, ww, { floors: 2, line: true }), face: 'N' }; }, { north: true });
+  frontGardens(K, nrow, y, 2, {});
   // the side wings (west and east), their doors on the court
-  for (const wx of [x, x + w - wing]) K.building({ x: wx, y: y + rowD, w: wing, h: h - 2 * rowD, ...walkup(wx, y + rowD, wing, { floors: 4 }), door: null, home: null });
+  for (const wx of [x, x + w - wing]) K.building({ x: wx, y: y + rowD, w: wing, h: h - 2 * rowD, ...walkup(wx, y + rowD, wing, { floors: 3 }), door: null, home: null });
   // the south row on the boulevard: shops and the corner bodega
   K.row(x, x + w, y + h - rowD, y + h - 1, (xx, room, i) => {
     if (room < 4) return null;
-    if (i === 0) return { w: 8, ...shopLot(xx, y + h - 1, 8, { name: 'Court Bodega', store: 'mart', poi: { kind: 'convenience', label: 'Court Bodega' }, awning: ['#e0b040', '#f0ece4'], openSign: true, floors: 4 }) };
+    if (i === 0) return { w: 8, ...shopLot(xx, y + h - 1, 8, { name: 'Court Bodega', store: 'mart', poi: { kind: 'convenience', label: 'Court Bodega' }, awning: ['#e0b040', '#f0ece4'], openSign: true, floors: 3 }) };
     if (room >= 10 && Math.abs(xx + 3 - (x + (w >> 1))) < 6) return { gap: 6, kind: 'passage' };   // the gate into the court
     const ww = room <= 13 ? room : 9 + Math.floor(rnd(xx, y + h, 141) * 4);
-    return { w: ww, ...walkup(xx, y + h - 1, ww, { floors: 4 }) };
+    return { w: ww, ...walkup(xx, y + h - 1, ww, { floors: 3 }) };
   });
   // the court: paving, a half court with its hoop at the north end, a lawn with a tree and the garden beds in the
   // middle, benches, bikes by the gate
@@ -707,7 +808,7 @@ function projects(K, x, y, w, h, ctx) {
   const { walkup, shopLot, out } = ctx;
   const { prop, fill, paint } = K;
   const slab = (bx, by, bw, bh, name, mural = null) => {
-    const L = walkup(bx, by, bw, { floors: 5, grime: 0.45, graffiti: 2, line: true, home: { price: 7000 }, mural });
+    const L = walkup(bx, by, bw, { floors: 4, grime: 0.45, graffiti: 2, line: true, home: { price: 7000 }, mural });
     L.art.spec.balconies = false;
     L.art.spec.fireEscape = [Math.max(8, Math.round(bw * TILE * 0.5) - 25), 50];
     return K.building({ x: bx, y: by, w: bw, h: bh, ...L, name });
@@ -715,14 +816,20 @@ function projects(K, x, y, w, h, ctx) {
   const sh = 13, rowS = 16, side = 13;   // a slab's depth, the boulevard row's, a side slab's width
   const backW = (w - 6) >> 1;
   // (the residents' murals on the two slabs facing the yard: the wave, the flowers)
-  slab(x + 1, y + 1, backW, sh, 'Midtown Houses A', 'waves');
-  slab(x + w - backW - 1, y + 1, backW, sh, 'Midtown Houses B', 'flowers');
-  const sy0 = y + sh + 5, sy1 = y + h - rowS - 6;   // the side slabs, the yard's west and east sides
+  // (the forecourt between Central Avenue and the two back slabs: cracked paving, chain-link along the pavement with the
+  // gate, the bins, a bench, a shopping cart - the slabs stand back behind it, so the avenue stays in view)
+  const fc = 6;
+  K.fill(x, y, w, fc, T.PLAZA); K.take(x, y, w, fc);
+  prop('chainfence', x + 1, y + 0.4, 0, { tx: (w / 2 - 5) * TILE, ty: 0 }); prop('chainfence', x + w / 2 + 3, y + 0.4, 0, { tx: (w / 2 - 4) * TILE, ty: 0 });
+  for (const [t, fx, sol] of [['dump_g', 0.12, 14], ['dump_o', 0.2, 14], ['bench_m', 0.38, 0], ['trashcan', 0.62, 0], ['tires', 0.7, 0], ['bags', 0.86, 0]]) prop(t, x + w * fx, y + fc - 2, sol);
+  slab(x + 1, y + fc, backW, sh, 'Midtown Houses A', 'waves');
+  slab(x + w - backW - 1, y + fc, backW, sh, 'Midtown Houses B', 'flowers');
+  const sy0 = y + fc + sh + 4, sy1 = y + h - rowS - 6;   // the side slabs, the yard's west and east sides
   slab(x + 1, sy0, side, sy1 - sy0, 'Midtown Houses C');
   slab(x + w - side - 1, sy0, side, sy1 - sy0, 'Midtown Houses D');
   // the yard: cracked paving, the court and its hoop at the north end, the burn barrel and the benches; a worn lawn
   // with trees and picnic tables in the middle; the residents' car park at the south end
-  const yx = x + side + 2, yy = y + sh + 2, yw = w - 2 * side - 4, yh = sy1 - yy;
+  const yx = x + side + 2, yy = y + fc + sh + 2, yw = w - 2 * side - 4, yh = sy1 - yy;
   fill(yx, yy, yw, yh, T.PLAZA); K.take(yx, yy, yw, yh);
   const cx = x + w / 2;
   if (yw >= 24 && yh >= 30) {
@@ -767,7 +874,7 @@ function roughBlock(K, x, y, w, h, ctx) {
       if (rnd(xx, r1, 150) < 0.16) return { gap: Math.min(room, 5 + Math.floor(rnd(xx, r1, 151) * 4)), kind: 'yard' };
       const ww = Math.min(room, 7 + Math.floor(rnd(xx, r1, 152) * 5));
       if (f === 'S' && i % 4 === 1) return { w: ww, ...shopLot(xx, r1, ww, { ...composeShop(ctx.named, 'rough', (k) => rnd(xx + k, r1, 153)), grille: true, openSign: true, awning: rnd(xx, r1, 154) < 0.4 ? ['#3a3a44', '#e8e4dc'] : null, grime: 0.45, floors: 2 + Math.floor(rnd(xx, r1, 155) * 2) }) };
-      return { w: ww, ...walkup(xx, r1, ww, { grime: 0.45, graffiti: rnd(xx, r1, 156) < 0.4 ? 1 : 0, boarded: rnd(xx, r1, 157) < 0.2 ? 0.25 : 0 }), ...(f === 'N' ? { face: 'N' } : {}) };
+      return { w: ww, ...walkup(xx, r1, ww, { grime: 0.45, graffiti: rnd(xx, r1, 156) < 0.4 ? 1 : 0, boarded: rnd(xx, r1, 157) < 0.2 ? 0.25 : 0, ...(f === 'N' ? { floors: 1 + (rnd(xx, r1, 158) < 0.35 ? 1 : 0) } : {}) }), ...(f === 'N' ? { face: 'N' } : {}) };
     }, { rough: true, mask: ctx.mask || null });
   }
 }
@@ -878,7 +985,7 @@ function wedge(K, out) {
     if (!K.allFree(xw, y0, xe - xw + 1, 5)) break;
     const first = step === 0;
     K.building({ x: xw, y: y0, w: xe - xw + 1, h: 5, arch: 'mixed', whole: true, name: first ? 'The Wedge' : null, back: !first, door: first ? undefined : null, poi: first ? { kind: 'coffee', label: 'Wedge Cafe' } : false,
-      art: { spec: { floors: 6, ...f, parapet: 12, roofMat: 'tar', lip: 10, rimW: 4, balconies: false, fireEscape: first ? [60, 50] : null, groundH: first ? undefined : 0 }, noShop: !first,
+      art: { spec: { floors: 4, ...f, parapet: 12, cornice: 'bracket', win: 'tall', roofMat: 'tar', lip: 10, rimW: 4, balconies: false, fireEscape: first ? [60, 50] : null, groundH: first ? undefined : 0 }, noShop: !first,
         shop: first ? { kind: 'cafe', door: 'right', open: true, people: 3, awning: ['#2f6a4e', '#f0ece4'], sign: { text: 'WEDGE CAFE', bg: '#2f6a4e', fg: [240, 232, 200], lit: true } } : undefined,
         kit: step === 2 ? [['tank', 80, 60], ['acs', 160, 60]] : [['acs', 60, 60], ['vent', 140, 70]] } });
     made++;
@@ -931,12 +1038,26 @@ function streetDressing(K, out, poi0) {
     doors.add(Math.floor(dx));
     if (!sh || p.kind === 'home') continue;
     const r = (k) => rnd(Math.floor(dx), fy, 400 + k), st = sh.kind;
+    // (what each trade puts out on the pavement - the owner, 10-17: busier pavements, the shops' own stock outside)
+    const inLot = (sx) => dx + sx > b.tx + 0.6 && dx + sx < b.tx + b.tw - 0.6, nm = p.label || '';
     if (st === 'cafe' || st === 'diner') {
-      for (const sx of [-2.2, 2.2]) if (r(sx > 0 ? 1 : 2) < 0.75 && dx + sx > b.tx + 0.6 && dx + sx < b.tx + b.tw - 0.6 && put('cafetable', dx + sx, fy + 1.3)) prop(pick(['umbrella_y', 'umbrella_b', 'umbrella_r', 'umbrella_g'], r(3)), dx + sx, fy + 1.2, 0);
-    } else if (st === 'florist') for (const sx of [-1.6, -2.6, 1.6]) put(pick(['flowers_big', 'potted', 'flowers_a'], r(sx + 5)), dx + sx, fy + 0.8);
-    else if (p.kind === 'grocery' || p.kind === 'convenience') { put('fruitcrate', dx + 1.8, fy + 0.8); put('fruitcrate', dx + 2.7, fy + 0.8); if (r(6) < 0.5) put('news_a', dx - 1.8, fy + 0.9); }
+      for (const sx of [-2.2, 2.2]) if (r(sx > 0 ? 1 : 2) < 0.75 && inLot(sx) && put('cafetable', dx + sx, fy + 1.3)) prop(pick(['umbrella_y', 'umbrella_b', 'umbrella_r', 'umbrella_g'], r(3)), dx + sx, fy + 1.2, 0);
+      if (r(12) < 0.7) put('chalkboard', dx + (r(13) < 0.5 ? -1.2 : 1.2), fy + 0.6);
+    } else if (st === 'florist') for (const sx of [-1.6, -2.6, 1.6, 2.6]) { if (inLot(sx)) put(pick(['flowers_big', 'potted', 'flowers_a', 'planter_fl'], r(sx + 5)), dx + sx, fy + 0.8); }
+    else if (p.kind === 'grocery' || p.kind === 'convenience' || /Produce|Grocer|Deli|Bodega/.test(nm)) { put('fruitcrate', dx + 1.8, fy + 0.8); put('fruitcrate', dx + 2.7, fy + 0.8); if (inLot(-2.6)) put('fruitcrate', dx - 2.6, fy + 0.8); if (r(6) < 0.6) put('news_a', dx - 1.6, fy + 0.9); if (r(14) < 0.5) put('vend_cola', dx - 3.4, fy + 0.6, 8); }
+    else if (st === 'books' || st === 'records' || /Books|Comics|Records|Music/.test(nm)) { put('crates', dx + 1.8, fy + 0.8); if (inLot(2.9)) put('crates', dx + 2.9, fy + 0.8); put('chalkboard', dx - 1.3, fy + 0.6); }
+    else if (/Hardware|Lighting|Bike/.test(nm)) { put('ladder', dx + 1.9, fy + 0.6); put('wheelbarrow', dx + 3, fy + 0.9); if (inLot(-2)) put('planks', dx - 2, fy + 0.8); }
+    else if (st === 'bar') { put('chalkboard', dx + 1.3, fy + 0.6); if (r(15) < 0.5) put('bench_m', dx - 2.6, fy + 0.8); }
+    else if (st === 'salon' || st === 'clothes') { put('chalkboard', dx + 1.3, fy + 0.6); const t = pick(['planter_fl', 'potted'], r(16)); if (inLot(-1.3)) put(t, dx - 1.3, fy + 0.7); }
+    else if (st === 'laundry') { put('bench_m', dx + 2.4, fy + 0.8); put('trashcan', dx - 1.4, fy + 0.7); }
     else if (r(7) < 0.45) { const t = pick(['planter_fl', 'potted', 'planter_sq'], r(8)); put(t, dx - 1.3, fy + 0.7); put(t, dx + 1.3, fy + 0.7); }
     else if (r(9) < 0.25) put('bikerack', dx + 2.5, fy + 1);
+  }
+  // the building under scaffolding: the skip at the kerb, cones round it, a board against the scaffold
+  for (const b of m.buildings) {
+    if (!b || !b.hand || b.back || !b.art || !b.art.spec || !b.art.spec.scaffold) continue;
+    const fy = b.ty + b.th, cx = b.tx + b.tw / 2;
+    put('dump_o', cx + 1, fy + 2.1, 16); put('cone', cx - 1.4, fy + 2.6); put('cone', cx + 3.4, fy + 2.6); put('planks', cx - 2.6, fy + 0.8);
   }
   // the corners: where two of the plan's streets cross, a hydrant at one corner, news boxes at another on the main
   // streets, a bin or two, a mailbox now and then
@@ -951,6 +1072,7 @@ function streetDressing(K, out, poi0) {
       else if (k === 1 && a.kind !== 'st' && r(1) < 0.7) { put('news_a', cx, cy + sy * 2.4); put(pick(['news_b', 'news_c'], r(2)), cx, cy + sy * 3.2); }
       else if (k === 2) put('trashcan', cx + sx * 0.4, cy + sy * 1.8);
       else if (r(3 + c) < 0.35) put(r(8) < 0.7 ? 'mailbox' : 'trashcan', cx + sx * 1.8, cy + sy * 0.4);
+      else if (r(20 + c) < 0.3) put(r(24) < 0.5 ? 'phonebox' : 'newsBox', cx + sx * 2.2, cy + sy * 1.2, 6);
     }
   }
   // the street trees in their grates along both pavements, clear of the doors and the corners
@@ -959,7 +1081,7 @@ function streetDressing(K, out, poi0) {
   for (const a of EW) {
     const sp = SP[a.name] === undefined ? 'street' : SP[a.name], y = a.pts[0][1];
     if (!sp) continue;
-    for (const sy of [-1, 1]) for (let x = Math.min(a.pts[0][0], a.pts[1][0]) + 4; x < Math.max(a.pts[0][0], a.pts[1][0]) - 4; x += 9 + Math.floor(rnd(x, y + sy, 520) * 4)) {
+    for (const sy of [-1, 1]) for (let x = Math.min(a.pts[0][0], a.pts[1][0]) + 4; x < Math.max(a.pts[0][0], a.pts[1][0]) - 4; x += 7 + Math.floor(rnd(x, y + sy, 520) * 4)) {
       const yy = y + sy * (EXT[a.kind] - 1);
       if (nearCross(x, yy, false) || doors.has(Math.floor(x)) || doors.has(Math.floor(x) + 1)) continue;
       put('tree_a', x + 0.5, yy, 10, { sp, k: 1.15, grate: true });

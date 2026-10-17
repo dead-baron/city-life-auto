@@ -1,4 +1,4 @@
-// Art v2: grit on the town's streets (concepts E1 ground materials, S1 street kit): drain grates at the kerb, leaves
+// Art v2: grit on the town's streets (concepts E1 ground materials, S1 street kit): drain grates at the kerb, manholes, leaves
 // and litter in the gutters, oil drips in the lanes (most where cars wait at the lights), cracks and patched asphalt,
 // weeds where the pavement meets the kerb - by the district's grit (shared/alleys.js gritOf: the rough end of town is
 // cracked and littered, uptown is swept). Flat decoration (the decals of alleyart.js), drawn into the chunks with the
@@ -47,6 +47,9 @@ export function streetGrit(M) {
       }
       // the lanes: oil drips (most where cars wait), cracks and patched asphalt
       const u = H0(7), o = (H0(8) - 0.5) * hw * 1.2, p = [Math.round(q.x - q.ty * o), Math.round(q.y + q.tx * o)];
+      // a manhole cover in a lane now and then (the utilities under the street: the owner, 10-17 - more going on in
+      // the streets themselves)
+      if (!near && i % 9 === 4 && H0(12) < 0.75) { const ol = (H0(13) < 0.5 ? -1 : 1) * hw * 0.42; push('manhole', [Math.round(q.x - q.ty * ol), Math.round(q.y + q.tx * ol)], 0); continue; }
       if (u < (near ? 0.12 : 0.03) * (0.5 + g)) push('oil', p, Math.floor(H0(9) * 6));
       else if (u > 1 - 0.09 * g) push(H0(10) < 0.5 ? 'crack' : 'patch', p, Math.floor(H0(11) * 6));
     }
