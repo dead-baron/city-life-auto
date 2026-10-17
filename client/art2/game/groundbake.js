@@ -1001,10 +1001,11 @@ function lineSpec(e) {
   const L = [], hw = e.hw, k = e.kind;
   const add = (o, w, colr, on = 0, off = 0, a = 1) => L.push([o, w / 2, colr, on, off, a]);
   if (k === 'ave' || k === 'blvd') {
-    add(4, 2.5, 1); add(-4, 2.5, 1);
+    if (e.median > 30) for (const sg of [1, -1]) add(sg * (e.median / 2 + 4), 2, 0, 0, 0, 0.7);   // (a wide planted median: a white edge line along its kerb)
+    else { add(4, 2.5, 1); add(-4, 2.5, 1); }
     for (const sg of [1, -1]) { for (let n = 0; n < e.nl - 1; n++) add(sg * (laneOffset(e, n) + laneOffset(e, n + 1)) / 2, 2.5, 0, 22, 26); add(sg * (hw - 9), 2, 0, 0, 0, 0.75); }
   } else if (k === 'front') { add(0, 2.5, 0, 22, 26); for (const sg of [1, -1]) add(sg * (hw - 9), 2, 0, 0, 0, 0.75); }
-  else if ((k === 'st' || k === 'drive') && e.park) { add(0, 2.5, 1, 20, 20); for (const sg of [1, -1]) { add(sg * (hw - e.park), 2, 0, 0, 0, 0.7); add(sg * (hw - e.park / 2 - 1), e.park - 4, 0, 3, 147, 0.6); } }   // (a parking lane by each kerb: its line, the bays' ticks)
+  else if ((k === 'st' || k === 'drive') && e.park) { if (!e.oneway) add(0, 2.5, 1, 20, 20); for (const sg of [1, -1]) { add(sg * (hw - e.park), 2, 0, 0, 0, 0.7); add(sg * (hw - e.park / 2 - 1), e.park - 4, 0, 3, 147, 0.6); } }   // (a parking lane by each kerb: its line, the bays' ticks)
   else if (k === 'st' || k === 'drive') { add(0, 2.5, 1, 20, 20); for (const sg of [1, -1]) add(sg * (hw - 8), 2, 0, 0, 0, 0.55); }
   else if (k === 'minor') add(0, 2, 0, 14, 20, 0.8);
   else if (k === 'rural') { add(0, 2, 1, 24, 30, 0.85); for (const sg of [1, -1]) add(sg * (hw - 6), 1.6, 0, 0, 0, 0.5); }
@@ -1039,9 +1040,9 @@ function markings(C, G) {
         setC(G, gi, sd(MEDIAN, edge ? 0.3 : 0.55 + (hh(X >> 2, Y, C.seed) - 0.5) * 0.12, X, Y, 0.3)); G.z[gi] = edge ? 2 : 4; putN(G, gi, 0, edge ? 0.8 : 0);
         continue;
       }
-      if (e.kind === 'blvd' && Math.abs(v) < 6 && s > I.t0 && s < I.t1) {                          // a planted median
-        const av = Math.abs(v);
-        setC(G, gi, av > 4.5 ? sd(MAT.curb, 0.7, X, Y, 0.3) : GSHADE.grassPark(X, Y, C.seed)); G.z[gi] = 3;
+      if (e.kind === 'blvd' && Math.abs(v) < Math.max(6, e.median / 2 - 1) && s > I.t0 && s < I.t1) {   // a planted median (as wide as the boulevard's: World v3's Midtown Boulevard, 3 tiles)
+        const av = Math.abs(v), mh = Math.max(6, e.median / 2 - 1);
+        setC(G, gi, av > mh - 1.5 - (mh > 12 ? 1.5 : 0) ? sd(MAT.curb, 0.7, X, Y, 0.3) : GSHADE.grassPark(X, Y, C.seed)); G.z[gi] = av > mh - 3 ? 3 : 2;
         continue;
       }
       if (m === M_.DIRTROAD) {                                    // wheel ruts and the grassy hump between them

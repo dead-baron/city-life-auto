@@ -8,6 +8,9 @@ import { mapFrameOf } from './hud.js';
 
 const PAVED = new Set([T.SIDEWALK, T.PLAZA]);
 const OPEN = new Set([T.LOT, T.GRASS, T.SAND, T.DIRT, T.DOCK, T.FIELD]);
+// (a handcrafted district's buildings worth a button: its set pieces - by the lot's kind - and the key businesses)
+const SET_PIECE = new Set(['theatre', 'construction', 'strip', 'dealer', 'repair', 'church', 'police', 'motorpool', 'club', 'clubeclipse', 'clubnova', 'arcade', 'hotel', 'bank', 'hospital', 'cinema', 'bowling', 'stadium', 'museum', 'market']);
+const NOTABLE = new Set(['police', 'bank', 'hospital', 'grocery', 'pharmacy', 'dealer', 'garage', 'gunshop', 'clothing']);
 let cache = null;
 
 function zoneName(map, x, y) {
@@ -62,7 +65,35 @@ export function teleportPlaces(map) {
     const p = spotNear(map, pt.x + pt.w / 2, pt.y + pt.h / 2, () => true);
     if (p) list.push({ name: pt.name, group: 'Landmarks', x: p.x, y: p.y, kind: 'landmark' });
   }
-  const order = [...Object.values(ISLANDS).map((I) => I.name), 'Outer islands & the wild', 'Stations', 'Landmarks'];
+  // World v3's handcrafted districts (shared/world3-hand.js: map.world3hand, a record per plan): the places each plan
+  // named - its squares, parks, markets - then its stations, and its set-piece buildings and key businesses
+  const v3 = [];
+  for (const H of Object.values(map.world3hand || {})) {
+    if (!H || !H.rect || !DISTRICTS[H.d]) continue;
+    const dn = DISTRICTS[H.d].name, g = `World v3 · ${dn}`, gs = `World v3 · ${dn} buildings`;
+    v3.push(g, gs);
+    const [X0, Y0, X1, Y1] = H.rect, inRect = (x, y) => x >= X0 * TILE && y >= Y0 * TILE && x < X1 * TILE && y < Y1 * TILE;
+    const seen = new Set();
+    for (const pl of H.places || []) {
+      if (seen.has(pl.name)) continue;
+      const p = spotNear(map, ((pl.x0 + pl.x1) / 2) * TILE, ((pl.y0 + pl.y1) / 2) * TILE, () => true);
+      if (p) { seen.add(pl.name); list.push({ name: pl.name, group: g, x: p.x, y: p.y, kind: 'v3' }); }
+    }
+    for (const st of (map.rail && map.rail.stations) || []) {
+      const sx = st.kiosk ? st.kiosk.out.x : st.platform.x, sy = st.kiosk ? st.kiosk.out.y + 40 : st.platform.y;
+      if (!inRect(sx, sy) || seen.has(st.name)) continue;
+      const p = st.kiosk ? { x: sx, y: sy } : spotNear(map, sx, sy, () => true);
+      if (p) { seen.add(st.name); list.push({ name: st.name, group: g, x: p.x, y: p.y, kind: 'v3' }); }
+    }
+    for (const b of map.buildings || []) {
+      if (!b.hand || !b.door || !b.name || seen.has(b.name) || !(SET_PIECE.has(b.kind) || NOTABLE.has(b.business))) continue;
+      const x = (b.door.tx + 0.5) * TILE, y = (b.door.ty + 0.5) * TILE;
+      if (!inRect(x, y)) continue;
+      const p = spotNear(map, x, y, () => true);
+      if (p) { seen.add(b.name); list.push({ name: b.name, group: gs, x: p.x, y: p.y, kind: 'v3shop' }); }
+    }
+  }
+  const order = [...v3, ...Object.values(ISLANDS).map((I) => I.name), 'Outer islands & the wild', 'Stations', 'Landmarks'];
   list.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.name.localeCompare(b.name));
   cache = { map, list };
   return list;
@@ -89,7 +120,8 @@ export function buildTeleport(box, map, go) {
     g.font = '600 9px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
     for (const p of list) {
       const x = (p.x - fx0) * sc, y = (p.y - fy0) * sc, hot = p === hover;
-      g.fillStyle = p.kind === 'district' ? '#f2c21b' : p.kind === 'station' ? '#f28c28' : '#7de0ff';
+      if (p.kind === 'v3shop' && !hot) continue;   // (a district's businesses: in the list, too many to dot the map with)
+      g.fillStyle = p.kind === 'district' ? '#f2c21b' : p.kind === 'station' ? '#f28c28' : p.kind === 'v3' || p.kind === 'v3shop' ? '#ff6ad5' : '#7de0ff';
       g.strokeStyle = '#000'; g.lineWidth = 1.5;
       g.beginPath(); g.arc(x, y, hot ? 6 : 4, 0, 6.283); g.fill(); g.stroke();
       if (hot || p.kind === 'district') { g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(p.name, x, y - 5); g.fillStyle = hot ? '#fff' : '#ffeaa0'; g.fillText(p.name, x, y - 5); }

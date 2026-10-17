@@ -1,75 +1,113 @@
 // Midtown, handcrafted (the World v3 Handcraft Plan, "Midtown, decided" 2026-10-17; the owner's concepts RW1/RW1-Z the
 // train over the street, RW2 the raised station, MT1 the diagonal avenue and its wedge, MT2 the main-street block, PJ1
 // the projects, R1-A the hero corner, R1-I the corner store and bus stop, OS33 the corner bank, WC315 the community
-// garden). The mainland city's middle, between the bridgeheads (Bridge Avenue, Main Avenue) and the waterfront:
+// garden, D4 the courtyard block, NB1 the crescent, WC069/D11/WC228 the park, G2-B the public court, WC243 the
+// boulevard). The mainland city's middle, between the bridgeheads (Bridge Avenue, Main Avenue) and the waterfront.
+// Re-planned the same day (the owner's 10-17 notes: too much grid - fewer streets and junctions, long blocks, a main
+// boulevard, one-way streets, a curve, dead ends, a big park, apartment complexes, public walking spaces):
 //   - Trestle Street along the north edge, the main line overhead on its viaduct (the El: shared/world3-rail.js EL,
 //     elFurniture; client/art2/game/statics.js addEl), the station at Madison Street, its inclines down to the portals
 //     between Garden Street and Bridge Avenue and east of Mercer Street;
-//   - Central Avenue, the rail-side row of walk-ups backing onto the El; Holly Street, the neighbourhood's main street
-//     (the MT2 row, the hero corner at Madison Street, R1-I's corner at Main Avenue, the corner bank);
-//   - Midtown Boulevard, the big stores; Pier Street and Union Square by the subway, down to Harbor Avenue;
+//   - Central Avenue, the rail-side row of walk-ups backing onto the El;
+//   - Holly Street, the high street, from Bridge Avenue to the diagonal: one long block north of it from Bridge Avenue to
+//     Main Avenue (the corner bank, the market, Linden Courts, the MT2 row, R1-I's cafe), the hero corner at Madison
+//     Street; Holly Mews (a dead end, its terrace) west of Bridge Avenue, Holly Place east of the diagonal;
+//   - Linden Walk, the paved walk down through the long blocks to the Commons' north gate;
+//   - Midtown Boulevard, the main drag, its planted median; Carroll Street (one way south) the one cross street between
+//     the bridge approaches; the big stores and The Palace on it;
+//   - the Commons, the park between the bridge approaches south of the boulevard (the pond, the Great Lawn and its
+//     bandstand, the courts, the dog run, Union Square round the subway's stairs); Garden Crescent west of it, a terrace
+//     round its garden on a curved one-way street; Pier Street from Main Avenue east (the grocery, the strip, the market
+//     hall), Madison Court's flats on Harbor Avenue;
 //   - Crosstown Way, the diagonal from Civic Avenue to the Yards road, its wedge building and plaza where it crosses the
-//     boulevard; the courtyard blocks in the west, the community garden by the tracks, the projects on the rough east edge.
+//     boulevard; Fulton Street (one way north) by the precinct; the courtyard apartments in the west, the community garden
+//     by the tracks, the projects on the rough east edge round Mercer Court (a dead end).
 // Every building faces south (the camera); the lots step along the diagonal (the plan's rule: buildings square to the
 // grid, the angled lot filled with paving and planters). Draws are fixed by place (hash2), so reworking one block moves
 // nothing else. The plan's frame: shared/world3-hand.js.
 import { TILE, T } from './constants.js';
 
 const D = 1;   // Midtown's district id (shared/mapcore.js DISTRICTS)
-// the street centre lines (tiles)
+// the street centre lines (tiles). Linden Walk is no street: the paved walk from Central Avenue down through the long
+// blocks to the Commons' north gate
 export const MY = { trestle: 1664, central: 1700, holly: 1750, blvd: 1800, pier: 1850, harbor: 1900 };
-export const MX = { westside: 2860, garden: 2924, bridge: 2988, linden: 3046, spring: 3085, carroll: 3118, main: 3184, madison: 3250, civic: 3320, fulton: 3400, harborview: 3480, mercer: 3580, stadium: 3680 };
-// how far a street's pavement reaches from its centre line (tiles, inclusive): an avenue 9 wide + 3 of pavement a side,
-// a street 9 too (its parking lanes: ST_W) + 3, an alley 3 with no pavement (shared/roads.js ROAD_KINDS, SIDEWALK commercial)
-const EXT = { ave: 7, blvd: 7, st: 7, alley: 1 };
+export const MX = { westside: 2860, garden: 2924, bridge: 2988, linden: 3048, carroll: 3118, main: 3184, madison: 3250, civic: 3320, fulton: 3400, harborview: 3480, mercer: 3580, stadium: 3680 };
 // a street's parking lane along each kerb (px; a sedan is 59 wide) and the street's width with them (tiles: an avenue's
-// nine - one traffic lane each way inside the parking lanes, shared/roadcore.js laneOffset)
-const PARK = 60, ST_W = 9;
-// the back alleys' centre lines: 11 tiles behind the street to the north (the back row's depth), so the main row's
-// lots in front have a yard behind them
-const AL = { b1: 1730, b2: 1780, c1: 1831, c2: 1880 };
+// nine - one traffic lane each way inside the parking lanes, shared/roadcore.js laneOffset); a one-way street's single
+// lane between its two (OW_W); the boulevard's four lanes either side of its planted median (BLVD_W, MEDIAN px); the
+// mews and the crescent, one car wide with a 2-tile pavement (shared/roads.js 'minor')
+const PARK = 60, ST_W = 9, OW_W = 7, OW_PARK = 52, BLVD_W = 13, MEDIAN = 96, MEWS_W = 5;
+// how far a street's pavement reaches from its centre line (tiles, inclusive): half its width (odd widths: centred on
+// the tile) + its pavement - 3 tiles in Midtown (shared/roads.js SIDEWALK commercial), 2 for a mews, none in an alley
+const extOf = (w, kind) => (w - 1) / 2 + (kind === 'alley' ? 0 : kind === 'minor' ? 2 : 3);
+const EXT = { ave: extOf(9, 'ave'), blvd: extOf(BLVD_W, 'blvd'), st: extOf(ST_W, 'st'), ow: extOf(OW_W, 'st'), mews: extOf(MEWS_W, 'minor'), alley: 1 };
+// the back alleys' centre lines: behind the main rows (each row's lots in front have a yard behind them)
+const AL = { b1: 1730, b2: 1776, c1: 1826 };
 // the diagonal: Crosstown Way, from Civic Avenue at Central Avenue to Harbor Avenue (the road on to the Yards Bridge)
 const DIAG = [[MX.civic, MY.central], [3640, MY.harbor]];
 // the diagonal's centre line at a column (tiles), and the two sides of it (a lot keeps 1 tile clear of its pavement)
 const diagY = (x) => DIAG[0][1] + (x - DIAG[0][0]) * (DIAG[1][1] - DIAG[0][1]) / (DIAG[1][0] - DIAG[0][0]);
 const northOfDiag = (x, y) => y < diagY(x);
 const southOfDiag = (x, y) => y > diagY(x);
+// Garden Crescent: the terrace's street, a half oval from Harbor Avenue up round the crescent's garden and back down
+// (one way, west leg up, east leg down); its middle and half-axes (tiles)
+const CRES = { cx: 2924, rx: 44, top: 1844 };
+const crescentPts = () => {
+  const pts = [], ry = MY.harbor - CRES.top;
+  // (fixed angles, no Math.cos at load - shared/dmath.js: the arc's points from a table of the quarter circle)
+  const Q = [[1, 0], [0.966, 0.259], [0.866, 0.5], [0.707, 0.707], [0.5, 0.866], [0.259, 0.966], [0, 1]];
+  const arc = [...Q.map(([c, s]) => [-c, s]), ...Q.slice(0, -1).reverse().map(([c, s]) => [c, s])];
+  for (const [c, s] of arc) pts.push([Math.round(CRES.cx + c * CRES.rx), Math.round(MY.harbor - s * ry)]);
+  return pts;
+};
+// the dead ends: Holly Mews west from Bridge Avenue, Holly Place east from the diagonal, Mercer Court south from Central
+// Avenue (each ends in its turning circle: shared/map.js, the bulbs)
+const MEWS_X = 2938, PLACE_X = 3462, COURT_Y = 1766;
 
+// Midtown's streets (re-planned 2026-10-17, the owner's 10-17 notes: fewer streets and junctions, long blocks, a main
+// boulevard, one-way streets, a curve, dead ends, the Commons): every one { name, kind, pts, w, park, median, oneway,
+// culdesac, ext }. The bridge approaches (Bridge Avenue, Main Avenue), the city's avenues through it (Central Avenue,
+// Civic Avenue, Harborview Avenue), the boulevard and the diagonal stay where the rest of the world meets them.
 function streets() {
   const S = [];
-  // (the streets - not the avenues - have a parking lane along each kerb: shared/roadcore.js laneOffset, the bays
-  // streetDressing lays)
-  const ew = (name, kind, y, x0, x1) => S.push({ name, kind, pts: [[x0, y], [x1, y]], ...(kind === 'st' ? { park: PARK, w: ST_W } : {}) });
-  const ns = (name, kind, x, y0, y1) => S.push({ name, kind, pts: [[x, y0], [x, y1]], ...(kind === 'st' ? { park: PARK, w: ST_W } : {}) });
+  const add = (name, kind, pts, o = {}) => { const w = o.w || (kind === 'alley' ? 3 : kind === 'minor' ? MEWS_W : 9); S.push({ name, kind, pts, ...o, ext: extOf(w, kind) }); };
+  const st = { park: PARK, w: ST_W }, ow = { oneway: true, park: OW_PARK, w: OW_W }, mews = { w: MEWS_W, culdesac: true };
+  const ew = (name, kind, y, x0, x1, o) => add(name, kind, [[x0, y], [x1, y]], o);
+  const ns = (name, kind, x, y0, y1, o) => add(name, kind, [[x, y0], [x, y1]], o);
   // (Trestle Street under the El: the inclines between Garden Street and Bridge Avenue and east of Mercer Street take
   // its line - shared/world3-rail.js EL - so it runs in two pieces)
   ew('Trestle Street', 'ave', MY.trestle, MX.westside, MX.garden);
   ew('Trestle Street', 'ave', MY.trestle, MX.bridge, MX.mercer);
   ew('Central Avenue', 'ave', MY.central, MX.westside, MX.stadium);
-  ew('Holly Street', 'st', MY.holly, MX.garden, MX.mercer);
-  ew('Midtown Boulevard', 'blvd', MY.blvd, MX.westside, MX.stadium);
-  ew('Pier Street', 'st', MY.pier, MX.westside, MX.harborview);
-  ns('Garden Street', 'st', MX.garden, MY.trestle, MY.harbor);
+  // Holly Street, the high street: from Bridge Avenue to the diagonal, one long block north of it all the way to Main
+  // Avenue; Holly Mews carries it on west of Bridge Avenue, Holly Place east of the diagonal
+  ew('Holly Street', 'st', MY.holly, MX.bridge, MX.fulton, st);
+  // Midtown Boulevard, the main drag: two lanes each way either side of a planted median, the trees down it
+  ew('Midtown Boulevard', 'blvd', MY.blvd, MX.westside, MX.stadium, { w: BLVD_W, median: MEDIAN });
+  // Pier Street: from Main Avenue (the Commons west of it) to Harborview Avenue
+  ew('Pier Street', 'st', MY.pier, MX.main, MX.harborview, st);
+  ns('Garden Street', 'st', MX.garden, MY.trestle, MY.central, st);
   ns('Bridge Avenue', 'ave', MX.bridge, MY.trestle, MY.harbor);
-  ns('Linden Street', 'st', MX.linden, MY.central, MY.blvd);
-  ns('Spring Street', 'st', MX.spring, MY.blvd, MY.harbor);
-  ns('Carroll Street', 'st', MX.carroll, MY.trestle, MY.blvd);
+  // Carroll Street, one way south from Holly Street to the boulevard (it splits the block south of Holly Street)
+  ns('Carroll Street', 'st', MX.carroll, MY.holly, MY.blvd, ow);
   ns('Main Avenue', 'ave', MX.main, MY.trestle, MY.harbor);
-  ns('Madison Street', 'st', MX.madison, MY.trestle, MY.harbor);
+  // Madison Street from the station to the boulevard: the hero corner on Holly Street halfway
+  ns('Madison Street', 'st', MX.madison, MY.trestle, MY.blvd, st);
   ns('Civic Avenue', 'ave', MX.civic, MY.trestle, MY.harbor);
-  ns('Fulton Street', 'st', MX.fulton, MY.trestle, MY.holly);
-  ns('Mercer Street', 'st', MX.mercer, MY.central, MY.holly);
-  ns('Fulton Street', 'st', MX.fulton, MY.blvd, MY.harbor);
+  // Fulton Street, one way north from Harbor Avenue to the boulevard
+  ns('Fulton Street', 'st', MX.fulton, MY.harbor, MY.blvd, ow);
   ns('Harborview Avenue', 'ave', MX.harborview, MY.trestle, MY.harbor);
-  ns('Mercer Street', 'st', MX.mercer, MY.trestle, MY.central);
-  ns('Mercer Street', 'st', MX.mercer, MY.blvd, 1862);
-  S.push({ name: 'Crosstown Way', kind: 'ave', pts: DIAG });
-  // the back alleys (the MT2 block's, behind every main-street row): one car wide, the back doors, the bins
-  ew('Holly Back Alley', 'alley', AL.b1, MX.garden, MX.civic);
-  ew('Boulevard Alley', 'alley', AL.b2, MX.garden, MX.civic);
-  ew('Pier Alley', 'alley', AL.c1, MX.bridge, MX.civic);
-  ew('Harbor Alley', 'alley', AL.c2, MX.westside, MX.bridge);
-  ew('Harbor Alley', 'alley', AL.c2, MX.main, MX.civic);
+  ns('Mercer Street', 'st', MX.mercer, MY.trestle, MY.central, st);
+  add('Crosstown Way', 'ave', DIAG);
+  // the dead ends and the crescent
+  ew('Holly Mews', 'minor', MY.holly, MX.bridge, MEWS_X, mews);
+  ew('Holly Place', 'minor', MY.holly, MX.fulton, PLACE_X, mews);
+  ns('Mercer Court', 'minor', MX.mercer, MY.central, COURT_Y, mews);
+  add('Garden Crescent', 'minor', crescentPts(), { w: MEWS_W, oneway: true });
+  // the back alleys behind the main rows: one car wide, the back doors, the bins
+  ew('Holly Back Alley', 'alley', AL.b1, MX.bridge, MX.civic);
+  ew('Boulevard Alley', 'alley', AL.b2, MX.bridge, MX.civic);
+  ew('Pier Alley', 'alley', AL.c1, MX.main, MX.civic);
   return S;
 }
 
@@ -306,6 +344,32 @@ function build(m, api, K) {
     if (!o.mask) rearYards(K, made, y1, o);
     return made;
   };
+  // A mews terrace (Holly Mews): narrow townhouses side by side facing south onto the mews, three floors, painted render
+  // and brick in turn, bay windows, a stoop each; the little front areas behind iron railings with a pot or two
+  const mewsRow = (x0, x1, y0, y1) => {
+    const PAINT = ['#d9c9a3', '#b9c7b4', '#d8a98c', '#c3cdd6', '#e4dcc8', '#cdb2b8'];
+    let k = 0;
+    const made = K.row(x0, x1, y0, y1 - 2, (x, room) => {
+      if (room < 5) return room >= 1 ? { gap: room, kind: 'garden' } : null;
+      const w = room <= 9 ? room : 6 + Math.floor(rnd(x, y1, 130) * 2);
+      const f = k++ % 3 === 2 ? { style: 'brick', brickTone: pick([TONE.red, TONE.brown, TONE.deep], rnd(x, y1, 131)) } : { style: 'stucco', wallColor: pick(PAINT, rnd(x, y1, 132)) };
+      const L = walkup(x, y1, w, { face: f, floors: 3, home: { kind: 'house' } });
+      L.art.spec.win = rnd(x, y1, 133) < 0.6 ? 'bay' : 'tall';
+      L.art.spec.cornice = f.style === 'brick' ? 'dentil' : 'step';
+      L.art.spec.fireEscape = null; L.art.spec.balconies = false;
+      return { w, depth: 11, ...L };
+    });
+    // the front areas: railings either side of the steps, a pot by the door
+    for (const b of made) {
+      if (!b || b.gap || b.tw === undefined || !b.door) continue;
+      const fy = b.ty + b.th, dx = b.door.tx;
+      K.fill(b.tx, fy, b.tw, y1 - fy + 1, T.PLAZA);
+      if (dx - b.tx >= 2) prop('fenceline', b.tx + 0.2, fy + 1.6, 0, { kind: 'iron', tx: Math.round((dx - b.tx - 0.4) * TILE), ty: 0 });
+      if (b.tx + b.tw - dx - 1 >= 2) prop('fenceline', dx + 1.2, fy + 1.6, 0, { kind: 'iron', tx: Math.round((b.tx + b.tw - dx - 1.4) * TILE), ty: 0 });
+      prop(pick(['potted', 'planter_fl', 'flowers_a'], rnd(dx, fy, 134)), dx + (dx - b.tx > 2 ? -1 : 1.6), fy + 0.7, 0);
+    }
+    return made;
+  };
 
   // ===========================================================================================================
   // Row A: the rail-side row between Trestle Street (the El overhead) and Central Avenue - walk-ups facing south onto
@@ -326,12 +390,9 @@ function build(m, api, K) {
     communityGarden(K, x0, ay0, x1 - x0, ay1 - ay0 + 1, out);
   }
   {
-    const [x0, x1] = span(MX.bridge, 'ave', MX.carroll, 'st');
-    railRow(x0, x1, [{ kind: 'walkup', w: 10 }, { kind: 'shop', w: 7, name: 'The Trestle Tap', store: 'bar', awning: null, people: 3 }, { gap: 13, kind: 'park' }]);
-  }
-  {
-    const [x0, x1] = span(MX.carroll, 'st', MX.main, 'ave');
-    railRow(x0, x1, [{ kind: 'walkup', w: 9 }, { kind: 'shop', w: 6, ...pickShop('food', 0) }]);
+    // Bridge Avenue to Main Avenue: one long rail-side row, the Trestle Tap and a pocket park by the El
+    const [x0, x1] = span(MX.bridge, 'ave', MX.main, 'ave');
+    railRow(x0, x1, [{ kind: 'walkup', w: 10 }, { kind: 'shop', w: 7, name: 'The Trestle Tap', store: 'bar', awning: null, people: 3 }, { gap: 13, kind: 'park' }, { kind: 'walkup', w: 9 }, { kind: 'shop', w: 6, ...pickShop('food', 0) }]);
   }
   // the station blocks either side of Madison Street (the stair towers stand on Trestle Street's pavement: the rail pass)
   {
@@ -345,10 +406,15 @@ function build(m, api, K) {
     stationPlaza(K, x0, ay0, 11, 10);
     railRow(x0, x1, [{ kind: 'shop', w: 7, name: 'Platform Coffee', store: 'cafe', poi: { kind: 'coffee', label: 'Platform Coffee' }, awning: ['#8a5a2a', '#efe6d0'] }]);
   }
-  for (const [a, ka, b, kb] of [[MX.civic, 'ave', MX.fulton, 'st'], [MX.fulton, 'st', MX.harborview, 'ave'], [MX.harborview, 'ave', MX.mercer, 'st']]) {
-    const [x0, x1] = span(a, ka, b, kb);
-    if (a === MX.fulton) skateSpot(K, x0 + 14, ay0, 26, ay1 - ay0 + 1, out);   // (the skate spot by the El, the row built round it)
-    railRow(x0, x1, a === MX.civic ? [{ kind: 'walkup', w: 11 }, { gap: 12, kind: 'park' }] : [], { gardens: false });
+  {
+    // Civic Avenue to Harborview Avenue: the skate spot by the El, the row built round it
+    const [x0, x1] = span(MX.civic, 'ave', MX.harborview, 'ave');
+    skateSpot(K, 3422, ay0, 26, ay1 - ay0 + 1, out);
+    railRow(x0, x1, [{ kind: 'walkup', w: 11 }, { gap: 12, kind: 'park' }], { gardens: false });
+  }
+  {
+    const [x0, x1] = span(MX.harborview, 'ave', MX.mercer, 'st');
+    railRow(x0, x1, [], { gardens: false });
   }
   {
     // the east end, rougher: by the projects
@@ -362,37 +428,44 @@ function build(m, api, K) {
   }
 
   // ===========================================================================================================
-  // Rows B: between Central Avenue and Midtown Boulevard, Holly Street through the middle (from Bridge Avenue to the
-  // diagonal), an alley behind each row
-  const [b1y0, b1y1] = band(MY.central, 'ave', MY.holly, 'st');      // 1708..1743
-  const [b2y0, b2y1] = band(MY.holly, 'st', MY.blvd, 'blvd');        // 1757..1792
+  // Rows B: between Central Avenue and Midtown Boulevard. Holly Street through the middle from Bridge Avenue to the
+  // diagonal: north of it one long block to Main Avenue (the bank, the market, the court, Linden Walk, the MT2 row, R1-I's
+  // cafe), its alley behind; south of it Carroll Street, one way, the one cross street before Main Avenue
+  const [b1y0, b1y1] = band(MY.central, 'ave', MY.holly, 'st');      // 1708..1742
+  const [b2y0, b2y1] = band(MY.holly, 'st', MY.blvd, 'blvd');        // 1758..1790
   const alleyB1 = AL.b1, alleyB2 = AL.b2;
-  // --- the west: courtyard apartments (D4) between Westside Avenue and Garden Street, Central Avenue to the boulevard
+  // Linden Walk: the paved walk from Central Avenue down through both blocks to the Commons' north gate (the rows
+  // leave it open: laid first)
+  lindenWalk(K, b1y0, b2y1, out);
+  const LW0 = MX.linden - 2, LW1 = MX.linden + 3;   // [x0, x1) of the walk
+  // --- the west: Garden Court (D4) by Westside Avenue, Holly Mews' terrace beside it, Marlow & Finch on the boulevard
   {
-    const [x0, x1] = span(MX.westside, 'ave', MX.garden, 'st');
-    courtyard(K, x0, b1y0, x1 - x0, b2y1 - b1y0 + 1, { walkup, shopLot, out, name: 'Garden Court' });
-    const [x2, x3] = span(MX.garden, 'st', MX.bridge, 'ave');
-    backRow(x2, x3, b1y0, alleyB1 - 2);
-    mainRow(x2, x3, alleyB1 + 2, b1y1, [{ kind: 'walkup', w: 10 }, { kind: 'shop', ...pickShop('cafe', 7) }]);
-    backRow(x2, x3, b2y0, alleyB2 - 2);
+    const [x0, x1] = span(MX.westside, 'ave', MX.bridge, 'ave');
+    const cw = 50;
+    courtyard(K, x0, b1y0, cw, b2y1 - b1y0 + 1, { walkup, shopLot, out, name: 'Garden Court' });
+    const mx0 = x0 + cw + 1, mN = MY.holly - EXT.mews - 1, mS = MY.holly + EXT.mews + 1;
+    backRow(mx0, x1, b1y0, b1y0 + 15);
+    mewsRow(mx0, x1, b1y0 + 17, mN);
+    backRow(mx0, x1, mS, mS + 13, { yards: 0.05 });
     // (Marlow & Finch, the department store on the boulevard: shared/map.js CLOTHES_SHOPS takes it by name)
-    mainRow(x2, x3, alleyB2 + 2, b2y1, [{ kind: 'raw', w: 26, lot: deptStore() }, { kind: 'shop', ...pickShop('food', 8) }]);
+    mainRow(mx0, x1, mS + 15, b2y1, [{ kind: 'raw', w: 26, lot: deptStore(), depth: 13 }, { kind: 'shop', ...pickShop('food', 8) }]);
+    (out.places ||= []).push({ name: 'Holly Mews', x0: mx0, y0: mN - 10, x1, y1: mS + 2 });
   }
-  // --- Bridge Avenue to Linden Street
+  // --- the long block: Bridge Avenue to Main Avenue, north of Holly Street (Linden Walk through it)
   {
-    const [x0, x1] = span(MX.bridge, 'ave', MX.linden, 'st');
-    backRow(x0, x1, b1y0, alleyB1 - 2);
-    mainRow(x0, x1, alleyB1 + 2, b1y1, [{ kind: 'shop', w: 8, name: 'Holly Street Market', store: 'mart', poi: { kind: 'grocery', label: 'Holly Street Market' }, awning: ['#2f6a4e', '#f0ece4'] }]);
-    backRow(x0, x1, b2y0, alleyB2 - 2);
-    mainRow(x0, x1, alleyB2 + 2, b2y1, [{ kind: 'shop', w: 10, name: 'MediMart Pharmacy', store: 'mart', poi: { kind: 'pharmacy', label: 'MediMart Pharmacy' }, sign: ['#f4f0e8', [40, 60, 120]], awning: null, floors: 2 }]);
-  }
-  // --- Linden to Carroll: the MT2 row on Holly Street (Harper & Co ... Corner Mart), a pocket garden at its west end
-  {
-    const [x0, x1] = span(MX.linden, 'st', MX.carroll, 'st');
-    backRow(x0, x1, b1y0, alleyB1 - 2, { yards: 0.04 });
-    const room = x1 - x0;
+    const [x0, x1] = span(MX.bridge, 'ave', MX.main, 'ave');
+    backRow(x0, LW0, b1y0, alleyB1 - 2);
+    backRow(LW1, x1, b1y0, alleyB1 - 2, { yards: 0.04 });
+    // west of the walk: the corner bank (OS33) at Bridge Avenue, the Holly Street Market, walk-ups and a cafe
+    mainRow(x0, LW0, alleyB1 + 2, b1y1, [
+      { kind: 'raw', w: 12, lot: bankLot() },
+      { kind: 'shop', w: 8, name: 'Holly Street Market', store: 'mart', poi: { kind: 'grocery', label: 'Holly Street Market' }, awning: ['#2f6a4e', '#f0ece4'] },
+      { kind: 'walkup', w: 10 },
+      { kind: 'shop', ...pickShop('cafe', 7) },
+    ]);
+    // east of it: Linden Courts (the neighbourhood's court, open to the walk), the MT2 row (Harper & Co ... Corner Mart),
+    // walk-ups and shops, Holly Florist and R1-I's neon cafe at Main Avenue
     const MT2 = [
-      { kind: 'gap', gap: Math.max(3, room - 52), kind2: 'garden' },
       { kind: 'shop', w: 7, name: 'Harper & Co', store: 'books', poi: { kind: 'delivery', label: 'Harper & Co' }, trade: 'books', awning: null, sign: ['#2f6a4e', [240, 232, 200]], floors: 4, face: { style: 'brick', brickTone: TONE.red } },
       { kind: 'shop', w: 6, name: 'Sunbean', store: 'cafe', poi: { kind: 'coffee', label: 'Sunbean' }, awning: null, sign: ['#4a3a2a', [250, 220, 150]], floors: 3, face: { style: 'stucco', wallColor: '#d8c8a8' } },
       { kind: 'shop', w: 7, name: 'Red Cup Diner', store: 'diner', poi: { kind: 'coffee', label: 'Red Cup Diner', food: true }, key: 'diner', trade: 'diner', awning: ['#a8343a', '#f0ece4'], sign: ['#e8e0cc', [180, 40, 46]], floors: 3, face: { style: 'brick', brickTone: TONE.deep } },
@@ -402,25 +475,36 @@ function build(m, api, K) {
       { kind: 'shop', w: 5, name: 'Clip Joint', store: 'salon', poi: { kind: 'barber', label: 'Clip Joint' }, awning: ['#a8343a', '#f0ece4'], sign: ['#8a2a2e', [250, 230, 190]], floors: 3, face: { style: 'brick', brickTone: TONE.brown } },
       { kind: 'shop', w: 8, name: 'Corner Mart', store: 'mart', poi: { kind: 'convenience', label: 'Corner Mart' }, awning: ['#2f8a72', '#f0ece4'], sign: ['#d24a4a', [250, 246, 236]], doorSide: 'right', openSign: true, floors: 3, face: { style: 'brick', brickTone: TONE.red } },
     ];
-    mainRow(x0, x1, alleyB1 + 2, b1y1, MT2.map((q) => (q.kind === 'gap' ? { gap: q.gap, kind: 'garden' } : q)));
-    backRow(x0, x1, b2y0, alleyB2 - 2);
-    mainRow(x0, x1, alleyB2 + 2, b2y1, [{ kind: 'shop', w: 9, name: 'Bean Machine Coffee', store: 'cafe', poi: { kind: 'coffee', label: 'Bean Machine Coffee' }, awning: ['#2f6a4e', '#f0ece4'] }]);
-  }
-  // --- Carroll Street to Main Avenue: the corner bank (OS33) at Holly and Carroll, R1-I's neon cafe at Holly and Main
-  {
-    const [x0, x1] = span(MX.carroll, 'st', MX.main, 'ave');
-    backRow(x0, x1, b1y0, alleyB1 - 2);
-    const room = x1 - x0;
-    mainRow(x0, x1, alleyB1 + 2, b1y1, [
-      { kind: 'raw', w: 12, lot: bankLot(x0, b1y1) },
-      ...(room > 34 ? splitLots(room - 12 - 8 - 7, (k) => ({ kind: 'walkup', w: 8 + (k % 2) * 2 })) : []),
+    const room = x1 - LW1, fixed = 16 + 51 + 3 + 7 + 8;
+    mainRow(LW1, x1, alleyB1 + 2, b1y1, [
+      { gap: 16, kind: 'court' },
+      ...MT2,
+      { gap: 3, kind: 'passage' },
+      ...splitLots(room - fixed, (k) => (k % 3 === 1 ? { kind: 'walkup', w: 9 } : { kind: 'shop', ...pickShop(k % 3 ? 'shop' : 'food', 20 + k) })),
       { kind: 'shop', w: 7, name: 'Holly Florist', store: 'florist', awning: ['#6a3a8a', '#f0ece4'] },
       { kind: 'raw', w: 8, lot: neonCafe() },
     ]);
-    backRow(x0, x1, b2y0, alleyB2 - 2);
+    (out.places ||= []).push({ name: 'Linden Courts', x0: LW1, y0: alleyB1 + 2, x1: LW1 + 16, y1: b1y1 });
+  }
+  // --- south of Holly Street: Bridge Avenue to Carroll Street (MediMart on the boulevard, The Palace at Carroll Street)
+  {
+    const [x0, x1] = span(MX.bridge, 'ave', MX.carroll, 'ow');
+    backRow(x0, LW0, b2y0, alleyB2 - 2);
+    backRow(LW1, x1, b2y0, alleyB2 - 2);
+    mainRow(x0, LW0, alleyB2 + 2, b2y1, [{ kind: 'shop', w: 10, name: 'MediMart Pharmacy', store: 'mart', poi: { kind: 'pharmacy', label: 'MediMart Pharmacy' }, sign: ['#f4f0e8', [40, 60, 120]], awning: null, floors: 2 }]);
     // (The Palace, the old picture house on the boulevard: its marquee, TONIGHT and the CINEMA blade - statics.js
     // 'theatre'; the neon over its doors)
-    mainRow(x0, x1, alleyB2 + 2, b2y1, [{ kind: 'walkup', w: 9 }, { kind: 'raw', w: 16, lot: { arch: 'theatre', key: 'theatre', name: 'The Palace', poi: { kind: 'delivery', label: 'The Palace' }, whole: true } }]);
+    const room = x1 - LW1;
+    mainRow(LW1, x1, alleyB2 + 2, b2y1, [
+      ...splitLots(room - 16, (k) => (k % 2 ? { kind: 'walkup', w: 9 } : { kind: 'shop', ...pickShop(k ? 'shop' : 'cafe', 40 + k) })),
+      { kind: 'raw', w: 16, lot: { arch: 'theatre', key: 'theatre', name: 'The Palace', poi: { kind: 'delivery', label: 'The Palace' }, whole: true } },
+    ]);
+  }
+  // --- Carroll Street to Main Avenue
+  {
+    const [x0, x1] = span(MX.carroll, 'ow', MX.main, 'ave');
+    backRow(x0, x1, b2y0, alleyB2 - 2);
+    mainRow(x0, x1, alleyB2 + 2, b2y1, [{ kind: 'walkup', w: 9 }, { kind: 'shop', w: 9, name: 'Bean Machine Coffee', store: 'cafe', poi: { kind: 'coffee', label: 'Bean Machine Coffee' }, awning: ['#2f6a4e', '#f0ece4'] }]);
   }
   // --- Main Avenue to Madison Street: R1-I's corner store at Holly and Main, the hero corner's diner at Holly and Madison
   {
@@ -435,19 +519,21 @@ function build(m, api, K) {
     backRow(x0, x1, b2y0, alleyB2 - 2);
     mainRow(x0, x1, alleyB2 + 2, b2y1, []);
   }
-  // --- Madison Street to Civic Avenue: the hero corner's corner store, walk-up and Madison Row at Holly and Madison
+  // --- Madison Street to Civic Avenue: the hero corner's corner store, walk-up and Madison Row at Holly and Madison; St.
+  // Brendan's on the boulevard (Boulevard Alley stops at Madison Street: the church's lot runs back to the row behind)
   {
     const [x0, x1] = span(MX.madison, 'st', MX.civic, 'ave');
     backRow(x0, x1, b1y0, alleyB1 - 2);
     mainRow(x0, x1, alleyB1 + 2, b1y1, [{ kind: 'raw', w: 8, lot: heroMart() }, { kind: 'raw', w: 10, lot: heroWalkup() }, { kind: 'raw', w: 6, lot: madisonRow() }]);
-    backRow(x0, x1, b2y0, alleyB2 - 2);
-    mainRow(x0, x1, alleyB2 + 2, b2y1, [{ kind: 'shop', w: 9, name: 'Holly Hardware', store: 'mart', awning: ['#c8503a', '#f0ece4'] }]);
+    backRow(x0, x1, b2y0, b2y0 + 12);
+    mainRow(x0, x1, b2y0 + 14, b2y1, [{ kind: 'raw', w: 15, lot: { arch: 'church', key: 'church', name: "St. Brendan's", poi: false, whole: true }, depth: 17 }, { kind: 'shop', w: 9, name: 'Holly Hardware', store: 'mart', awning: ['#c8503a', '#f0ece4'] }]);
   }
   // --- along the diagonal (Civic Avenue to Harborview Avenue): Crosstown Way runs from Civic Avenue at Central Avenue
-  // to Fulton Street at Holly Street and on to Harborview Avenue at the boulevard. North-east of it: a row of backs on
-  // the street above (Central Avenue, Holly Street), then lots stepping down to the diagonal, their fronts on its
-  // pavement. South-west of it: lots facing the street below (Holly Street, the boulevard) as deep as the diagonal lets
-  // them - their backs step along it. The wedge (MT1) is the sharp corner at the boulevard.
+  // to Fulton Street at Holly Street (Holly Place on east of it, a dead end) and on to Harborview Avenue at the
+  // boulevard. North-east of it: a row of backs on the street above (Central Avenue, Holly Place), then lots stepping
+  // down to the diagonal, their fronts on its pavement. South-west of it: lots facing the street below (Holly Street,
+  // the boulevard) as deep as the diagonal lets them - their backs step along it. The wedge (MT1) is the sharp corner at
+  // the boulevard.
   {
     const [cx0, cx1] = span(MX.civic, 'ave', MX.harborview, 'ave');
     // the band between Central Avenue and Holly Street
@@ -460,80 +546,66 @@ function build(m, api, K) {
     backRow(cx0, cx1, b2y0, b2y0 + 10, { mask: northOfDiag });
     mainRow(cx0, cx1, b2y0 + 12, b2y1, [], { passages: false, mask: northOfDiag, depth: 99, yard: false });
   }
-  // --- Harborview to Mercer: the rough edge begins - walk-ups with tags, a liquor store, walled yards
+  // --- Harborview Avenue to Mercer Court: the rough edge begins - walk-ups with tags, a liquor store, walled yards
   {
-    const [x0, x1] = span(MX.harborview, 'ave', MX.mercer, 'st');
+    const [x0, x1] = span(MX.harborview, 'ave', MX.mercer, 'mews');
     roughBlock(K, x0, b1y0, x1 - x0, b1y1 - b1y0 + 1, { walkup, shopLot, out, named });
     roughBlock(K, x0, b2y0, x1 - x0, b2y1 - b2y0 + 1, { walkup, shopLot, out, named });
   }
-  // --- Mercer to Stadium Avenue: the projects (PJ1), on the rough east edge
+  // --- Mercer Court to Stadium Avenue: the projects (PJ1), on the rough east edge (the court's dead end their way in)
   {
-    const [x0, x1] = span(MX.mercer, 'st', MX.stadium, 'ave');
+    const [x0, x1] = span(MX.mercer, 'mews', MX.stadium, 'ave');
     projects(K, x0, b1y0, x1 - x0, b2y1 - b1y0 + 1, { walkup, shopLot, out, named });
   }
 
   // ===========================================================================================================
-  // Rows C: Midtown Boulevard to Harbor Avenue, Pier Street between; Union Square by the subway
-  const [c1y0, c1y1] = band(MY.blvd, 'blvd', MY.pier, 'st');        // 1808..1843
-  const [c2y0, c2y1] = band(MY.pier, 'st', MY.harbor, 'ave');       // 1857..1892
-  const alleyC1 = AL.c1, alleyC2 = AL.c2;
+  // Rows C: Midtown Boulevard to Harbor Avenue. Garden Crescent in the west, the Commons between the bridge
+  // approaches (Union Square in its corner by the subway), Pier Street from Main Avenue east
+  const [c1y0, c1y1] = band(MY.blvd, 'blvd', MY.pier, 'st');        // 1810..1842
+  const [c2y0, c2y1] = band(MY.pier, 'st', MY.harbor, 'ave');       // 1858..1892
   {
-    // the west: Westside Avenue to Garden Street, Garden Street to Bridge Avenue
-    for (const [a, ka, b, kb] of [[MX.westside, 'ave', MX.garden, 'st'], [MX.garden, 'st', MX.bridge, 'ave']]) {
-      const [x0, x1] = span(a, ka, b, kb), west = a === MX.westside;
-      backRow(x0, x1, c1y0, c1y0 + 15);
-      // (the Pier Street Market, the old market hall: its glazed roof, the food counters inside)
-      mainRow(x0, x1, c1y0 + 16, c1y1, west ? [] : [{ kind: 'walkup', w: 9 }, { kind: 'raw', w: 26, lot: marketHall(), depth: 16 }]);
-      backRow(x0, x1, c2y0, alleyC2 - 2);
-      // (a tower going up on Harbor Avenue: the frame, the crane, the site fence - statics.js 'construction')
-      mainRow(x0, x1, alleyC2 + 2, c2y1, west ? [{ kind: 'shop', ...pickShop('food', 9) }, { kind: 'raw', w: 24, lot: { key: 'construction', name: 'Harbor Tower site', poi: false, whole: true }, depth: 15 }] : []);
-    }
+    const [x0, x1] = span(MX.westside, 'ave', MX.bridge, 'ave');
+    gardenCrescent(K, x0, c1y0, x1, c2y1, { walkup, out });
   }
   {
-    // Bridge Avenue to Spring Street: the strip of sports, guns, hardware and clothes (Iron Sights Arms...) on Pier
-    // Street; the dealership on Harbor Avenue
-    const [x0, x1] = span(MX.bridge, 'ave', MX.spring, 'st');
-    backRow(x0, x1, c1y0, alleyC1 - 2);
-    mainRow(x0, x1, alleyC1 + 2, c1y1, [{ kind: 'raw', w: 40, lot: stripLot(x0, c1y1), depth: 16 }]);
-    dealership(K, x0, c2y0, 46, c2y1 - c2y0 + 1, out);
-    mainRow(x0 + 46, x1, c2y0, c2y1, [], { depth: 16 });
+    const [x0, x1] = span(MX.bridge, 'ave', MX.main, 'ave');
+    commons(K, x0, c1y0, x1 - x0, c2y1 - c1y0 + 1, out);
   }
   {
-    // Spring Street to Main Avenue: FreshHub Grocery on Pier Street, Union Square below it
-    const [x0, x1] = span(MX.spring, 'st', MX.main, 'ave');
-    backRow(x0, x1, c1y0, alleyC1 - 2);
-    mainRow(x0, x1, alleyC1 + 2, c1y1, [{ kind: 'raw', w: 30, lot: groceryLot(), depth: 16 }]);
-    unionSquare(K, x0, c2y0, x1 - x0, c2y1 - c2y0 + 1, out);
-  }
-  for (const [a, ka, b, kb] of [[MX.main, 'ave', MX.madison, 'st'], [MX.madison, 'st', MX.civic, 'ave']]) {
-    const [x0, x1] = span(a, ka, b, kb);
-    backRow(x0, x1, c1y0, alleyC1 - 2);
-    mainRow(x0, x1, alleyC1 + 2, c1y1, a === MX.main ? [{ kind: 'raw', w: 14, lot: garageLot(), depth: 16 }] : [{ kind: 'walkup', w: 10 }, { kind: 'raw', w: 15, lot: { arch: 'church', key: 'church', name: "St. Brendan's", poi: false, whole: true }, depth: 16 }]);
-    backRow(x0, x1, c2y0, alleyC2 - 2);
-    // (a car park on Harbor Avenue between Main Avenue and Madison Street: the bays, the barrier, the pay board)
-    if (a === MX.main) carPark(K, x0 + 18, alleyC2 + 2, 24, c2y1 - alleyC2 - 1, out);
-    mainRow(x0, x1, alleyC2 + 2, c2y1, []);
+    // Main Avenue to Civic Avenue: on Pier Street FreshHub Grocery, the strip of sports, guns, hardware and clothes
+    // (Iron Sights Arms...) and the Pier Street Market (the old market hall: its glazed roof, the food counters inside);
+    // on Harbor Avenue the car park and Madison Court, the apartments behind their lawns
+    const [x0, x1] = span(MX.main, 'ave', MX.civic, 'ave');
+    backRow(x0, x1, c1y0, AL.c1 - 2);
+    mainRow(x0, x1, AL.c1 + 2, c1y1, [{ kind: 'raw', w: 30, lot: groceryLot(), depth: 15 }, { kind: 'raw', w: 40, lot: stripLot(), depth: 15 }, { gap: 3, kind: 'passage' }, { kind: 'raw', w: 26, lot: marketHall(), depth: 15 }]);
+    // (a car park on Harbor Avenue at Main Avenue: the bays, the barrier, the pay board)
+    carPark(K, x0, c2y0, 24, c2y1 - c2y0 + 1, out);
+    madisonCourt(K, x0 + 26, c2y0, x1 - x0 - 26, c2y1 - c2y0 + 1, { walkup, out });
   }
   {
-    // Civic Avenue to Harborview Avenue (Fulton Street between)
-    for (const [a, ka, b, kb] of [[MX.civic, 'ave', MX.fulton, 'st'], [MX.fulton, 'st', MX.harborview, 'ave']]) {
+    // Civic Avenue to Harborview Avenue (Fulton Street between, one way north)
+    for (const [a, ka, b, kb] of [[MX.civic, 'ave', MX.fulton, 'ow'], [MX.fulton, 'ow', MX.harborview, 'ave']]) {
       const [x0, x1] = span(a, ka, b, kb);
       backRow(x0, x1, c1y0, c1y0 + 14);
       // (Midtown's precinct on Pier Street at Civic Avenue, its motor pool next door)
-      mainRow(x0, x1, c1y0 + 15, c1y1, a === MX.civic ? [{ kind: 'raw', w: 26, lot: precinctLot(), depth: 19 }, { kind: 'raw', w: 15, lot: { roof: 'tar', name: 'Motor Pool', poi: false }, depth: 15 }] : []);
+      mainRow(x0, x1, c1y0 + 15, c1y1, a === MX.civic ? [{ kind: 'raw', w: 26, lot: precinctLot(), depth: 18 }, { kind: 'raw', w: 15, lot: { roof: 'tar', name: 'Motor Pool', poi: false }, depth: 15 }] : []);
       backRow(x0, x1, c2y0, c2y0 + 14);
       // (The Holloway, a small hotel on Harbor Avenue; The Foundry Lofts, a brick works turned flats over a cafe)
       mainRow(x0, x1, c2y0 + 15, c2y1, a === MX.civic ? [{ kind: 'walkup', w: 10 }, { kind: 'raw', w: 14, lot: hotelLot() }] : [{ kind: 'raw', w: 30, lot: loftLot(), depth: 17 }]);
     }
   }
   {
-    // east of Harborview Avenue: the pocket plaza in the corner opposite the wedge (MT1's: its fountain, benches, trees),
-    // then the diagonal's two sides down to Harbor Avenue - small rough lots
+    // east of Harborview Avenue: the pocket plaza in the corner opposite the wedge (MT1's: its fountain, benches, trees);
+    // a tower going up on Harbor Avenue (the frame, the crane, the site fence - statics.js 'construction'); Motor Row's
+    // dealership and Fresh Coat Garage on the diagonal; then the diagonal's two sides down to Harbor Avenue - small rough
+    // lots
     pocketPlaza(K, out);
-    const [x0, x1] = span(MX.harborview, 'ave', MX.mercer, 'st');
+    const [x0, x1] = span(MX.harborview, 'ave', MX.stadium, 'ave');
+    K.building({ x: x0 + 1, y: c2y1 - 14, w: 24, h: 15, key: 'construction', name: 'Harbor Tower site', poi: false, whole: true });
+    dealership(K, 3606, c1y0 + 2, 46, 34, out);
+    mainRow(3574, 3604, c1y0, c2y1, [{ kind: 'raw', w: 16, lot: garageLot(), depth: 12 }], { mask: northOfDiag, yard: false, passages: false, gardens: false });
     roughBlock(K, x0, c1y0, x1 - x0, c2y1 - c1y0 + 1, { walkup, shopLot, out, named, mask: southOfDiag });
-    const [x2, x3] = span(MX.harborview, 'ave', MX.stadium, 'ave');
-    roughBlock(K, x2, c1y0, x3 - x2, c2y1 - c1y0 + 1, { walkup, shopLot, out, named, mask: northOfDiag });
+    roughBlock(K, x0, c1y0, x1 - x0, c2y1 - c1y0 + 1, { walkup, shopLot, out, named, mask: northOfDiag });
   }
   // the street trees, benches and bus stops of the main streets (curated: the generator's sprinkle stays off here)
   streetDressing(K, out, poi0);
@@ -1059,6 +1131,270 @@ function pocketPlaza(K, out) {
   (out.places ||= []).push({ name: 'Wedge Plaza', x0: Math.round(cx) - 8, y0: Math.round(cy) - 8, x1: Math.round(cx) + 8, y1: Math.round(cy) + 8 });
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Linden Walk: a paved walk five tiles wide down through the long blocks, from Central Avenue over the alleys and Holly
+// Street to the boulevard and the Commons' north gate - the shops turn their side walls to it. Plane trees in grates
+// down both sides, benches between them, lamps, a cafe's tables, bollards where it crosses the alleys, its sign.
+function lindenWalk(K, y0, y1, out) {
+  const { m, prop, rnd, pick } = K;
+  const x0 = MX.linden - 2, w = 5;
+  K.fill(x0, y0, w, y1 - y0 + 1, T.PLAZA);
+  K.take(x0, y0, w, y1 - y0 + 1);
+  const paved = (x, y) => m.tiles[Math.floor(y) * m.w + Math.floor(x)] === T.PLAZA;
+  for (let y = y0 + 2, k = 0; y <= y1 - 2; y += 4, k++) {
+    if (!paved(x0, y) || !paved(x0, y + 1) || !paved(x0, y - 1)) continue;
+    if (k % 2 === 0) for (const tx of [x0 + 0.6, x0 + w - 0.6]) prop('tree_a', tx, y + 0.5, 10, { sp: 'streetPl', k: 1.05, grate: true });
+    else if (k % 4 === 1) { prop('bench_m', x0 + 1.1, y + 0.5, 0); prop('lamp', x0 + w - 0.5, y + 0.5, 0); }
+    else if (rnd(x0, y, 700) < 0.6) { prop('cafetable', x0 + w / 2, y + 0.5, 0); prop(pick(['umbrella_g', 'umbrella_r', 'umbrella_y'], rnd(x0, y, 701)), x0 + w / 2, y + 0.4, 0); prop('chair', x0 + w / 2 - 0.9, y + 0.6, 0, { v: 1, a: 0 }); prop('chair', x0 + w / 2 + 0.9, y + 0.6, 0, { v: 1, a: 3.1416 }); }
+    else prop(pick(['planter_fl', 'flowers_big', 'potted'], rnd(x0, y, 702)), x0 + w / 2, y + 0.5, 0);
+  }
+  // (bollards across its ends at the alleys - the walk is no way round for a car)
+  for (const ay of [AL.b1, AL.b2]) for (const sy of [-2, 2]) for (let k = 0; k < 3; k++) if (paved(x0 + 1 + k * 1.5, ay + sy)) prop('bollard', x0 + 1 + k * 1.5, ay + sy + 0.5, 5);
+  prop('textsign', x0 + w / 2, y0 + 1.4, 0, { text: 'LINDEN WALK', bg: '#2f5a4a', fg: [240, 232, 200], z: 30, sx: 1 });
+  (out.places ||= []).push({ name: 'Linden Walk', x0, y0, x1: x0 + w, y1 });
+}
+
+// Garden Crescent (the owner's 10-17 ask for a curved street and a residential set piece; concept 3.2's crescent of
+// townhouses): one terrace of cream stucco houses round the north side of the crescent street, its middle a floor
+// higher, iron railings and steps; their back gardens to the boulevard behind a hedge; inside the curve the residents'
+// garden - a fountain in the middle of a ring path, the bandstand, cherry and magnolia trees round the railings, beds
+// and benches - open to Harbor Avenue through its gate
+function gardenCrescent(K, x0, y0, x1, y1, ctx) {
+  const { m, prop, rnd, pick } = K;
+  const { walkup, out } = ctx;
+  const cx = CRES.cx, rx = CRES.rx, ry = MY.harbor - CRES.top, oy = MY.harbor;
+  const k2 = (x, y, ax, ay) => ((x + 0.5 - cx) / ax) ** 2 + ((y + 0.5 - oy) / ay) ** 2;
+  const outside = (x, y) => k2(x, y, rx, ry) > 1;
+  // the terrace: houses six wide stepping round the curve, the middle three a floor higher
+  const made = K.row(cx - 38, cx + 39, y0 + 1, y1, (x, room, i) => {
+    if (room < 5) return room >= 1 ? { gap: room, kind: 'garden' } : null;
+    const w = Math.min(room, 6), mid = Math.abs(x + 3 - cx) < 10;
+    const L = walkup(x, y1, w, { face: { style: 'stucco', wallColor: mid ? '#ece4d2' : '#e2d8c2' }, floors: mid ? 4 : 3, home: { kind: 'house', price: 34000, name: `${12 + i * 2} Garden Crescent` }, garden: false });
+    Object.assign(L.art.spec, { win: 'tall', cornice: 'dentil', fireEscape: null, balconies: mid, shutters: null, parapet: 8, grime: 0.04 });
+    return { w, depth: 11, ...L, name: null };
+  }, { mask: outside });
+  for (const b of made) {
+    if (!b || b.gap || b.tw === undefined) continue;
+    const fy = b.ty + b.th, dx = b.door ? b.door.tx : b.tx + 1;
+    // the front: paving to the pavement, railings either side of the steps, a pot
+    for (let xx = b.tx; xx < b.tx + b.tw; xx++) { const c = K.column(xx, fy, y1, outside); if (c) K.fill(xx, fy, 1, c[0] - fy + 1, T.PLAZA); }
+    if (dx - b.tx >= 2) prop('fenceline', b.tx + 0.2, fy + 1.4, 0, { kind: 'iron', tx: Math.round((dx - b.tx - 0.4) * TILE), ty: 0 });
+    if (b.tx + b.tw - dx - 1 >= 2) prop('fenceline', dx + 1.2, fy + 1.4, 0, { kind: 'iron', tx: Math.round((b.tx + b.tw - dx - 1.4) * TILE), ty: 0 });
+    prop(pick(['potted', 'planter_fl'], rnd(dx, fy, 800)), dx + 1.6, fy + 0.6, 0);
+    // the back garden up to the boulevard's pavement: a lawn, a tree or a shed now and then, a board fence between
+    const gy = y0 + 1, gh = b.ty - gy;
+    if (gh >= 3) {
+      K.fill(b.tx, gy, b.tw, gh, T.GRASS);
+      if (rnd(b.tx, gy, 801) < 0.6) prop('tree_a', b.tx + b.tw / 2, gy + gh * 0.45, 10, { sp: pick(['maple', 'cherry', 'oak', 'flowerTree'], rnd(b.tx, gy, 802)), k: 0.95 });
+      else if (gh >= 6) prop('shed', b.tx + b.tw / 2, gy + gh * 0.4, 12);
+      prop('fenceline', b.tx + 0.08, gy + 0.6, 0, { kind: 'wood', tx: 0, ty: Math.round((gh - 0.8) * TILE) });
+    }
+  }
+  // the hedge along the boulevard behind the gardens, and the two corners past the terrace planted
+  prop('hedgerun', x0 + 0.5, y0 + 0.4, 0, { tx: Math.round((x1 - x0 - 1) * TILE), ty: 0, h: 18 });
+  for (let y = y0 + 2; y <= y1; y++) for (let x = x0; x < x1; x++) {
+    if (!K.free(x, y) || !outside(x, y)) continue;
+    K.fill(x, y, 1, 1, T.GRASS);
+    if (rnd(x, y, 803) < 0.045) prop(pick(['tree_a', 'tree_b', 'shrub_a', 'bush_c'], rnd(x, y, 804)), x + 0.5, y + 0.5, 10, { sp: pick(['oak', 'maple', 'street'], rnd(x, y, 805)), k: 1 });
+  }
+  // the garden inside the curve
+  const gx = rx - 5.2, gyR = ry - 5.2;
+  let n = 0;
+  for (let y = CRES.top; y <= y1; y++) for (let x = cx - rx; x <= cx + rx; x++) if (K.free(x, y) && k2(x, y, gx, gyR) <= 1) { K.fill(x, y, 1, 1, T.GRASS); n++; }
+  if (n < 200) return;
+  const fy = oy - 26, fyN = CRES.top + 12;
+  // the path in from the gate on Harbor Avenue, the ring round the fountain, the bandstand at the top of the lawn
+  K.paint(cx - 1, fy, 3, y1 - fy + 1, T.PLAZA);
+  for (let a = 0; a < 48; a++) { const t = (a / 48) * 6.2832, px = cx + 0.5 + Math.cos(t) * 7, py = fy + 0.5 + Math.sin(t) * 5; for (const [ox, oy2] of [[0, 0], [0.6, 0], [0, 0.6]]) K.paint(Math.floor(px + ox - 0.5), Math.floor(py + oy2 - 0.5), 1, 1, T.PLAZA); }
+  K.paint(cx - 1, fyN + 3, 3, fy - 5 - fyN - 3, T.PLAZA);
+  prop('fountain', cx + 0.5, fy + 0.5, 36);
+  prop('gazebo', cx + 0.5, fyN + 1.5, 30);
+  for (const [dx, dy] of [[-6, -3.6], [6, -3.6], [-6, 4.4], [6, 4.4]]) prop('pbench', cx + 0.5 + dx, fy + dy, 0);
+  for (const [dx, dy] of [[-12, -1], [12, -1], [-10, 7], [10, 7], [-5, -9], [5, -9]]) prop(pick(['flowers_big', 'flowers_a', 'planter_fl'], rnd(cx + dx, fy, 806)), cx + 0.5 + dx, fy + dy, 0);
+  prop('lamp', cx - 1.2, y1 - 3, 0); prop('lamp', cx + 2.2, y1 - 3, 0); prop('lamp', cx - 3, fyN + 4, 0); prop('lamp', cx + 4, fyN + 4, 0);
+  // cherry and magnolia trees round the inside of the railings, the railings themselves (a ring of short runs)
+  for (let a = 3; a < 46; a += 3) {
+    const t = Math.PI + (a / 48) * Math.PI, px = cx + 0.5 + Math.cos(t) * (gx - 1.6), py = oy + Math.sin(t) * (gyR - 1.6);
+    if (py < y1 - 2 && K.m.tiles[Math.floor(py) * m.w + Math.floor(px)] === T.GRASS) prop('tree_a', px, py, 10, { sp: a % 6 ? 'cherry' : 'magnolia', k: 1.05 });
+  }
+  for (let a = 0; a < 24; a++) {
+    const t0 = Math.PI + (a / 24) * Math.PI, t1 = Math.PI + ((a + 1) / 24) * Math.PI;
+    const p0 = [cx + 0.5 + Math.cos(t0) * (gx + 0.4), oy + Math.sin(t0) * (gyR + 0.4)], p1 = [cx + 0.5 + Math.cos(t1) * (gx + 0.4), oy + Math.sin(t1) * (gyR + 0.4)];
+    if (Math.max(p0[1], p1[1]) > y1 - 0.5) continue;
+    prop('fenceline', p0[0], p0[1], 0, { kind: 'iron', tx: Math.round((p1[0] - p0[0]) * TILE), ty: Math.round((p1[1] - p0[1]) * TILE) });
+  }
+  // the hedge along Harbor Avenue with the gate, the garden's name board
+  prop('hedgerun', cx - gx + 1, y1 + 0.6, 0, { tx: Math.round((gx - 3.5) * TILE), ty: 0, h: 16 });
+  prop('hedgerun', cx + 2.5, y1 + 0.6, 0, { tx: Math.round((gx - 3) * TILE), ty: 0, h: 16 });
+  prop('textsign', cx - 4, y1 - 1.2, 0, { text: 'CRESCENT GARDENS', bg: '#2f5a4a', fg: [240, 232, 200], z: 28, sx: 1 });
+  (out.places ||= []).push({ name: 'Garden Crescent', x0: cx - 40, y0, x1: cx + 40, y1: CRES.top }, { name: 'Crescent Gardens', x0: cx - 20, y0: CRES.top + 6, x1: cx + 20, y1 });
+}
+
+// The Commons (the owner's 10-17 ask for a big park and its pavilion): the park between the bridge approaches, the
+// boulevard to Harbor Avenue. Linden Walk comes in at the north gate to the fountain; the walk runs on south through the
+// park to the statue at the south gate; the Great Lawn inside its ring path with the bandstand, the pavilion cafe on the
+// lawn's north side; the duck pond in the west; the dog run; Commons Courts in the north-east corner; Union Square, the
+// paved square round the subway's stairs, in the south-east corner. Iron railings round it with gates; groves of oak,
+// maple and plane, cherries by the pond; lamps and benches along the paths.
+function commons(K, x, y, w, h, out) {
+  const { m, prop, rnd, pick } = K;
+  const X1 = x + w, Y1 = y + h - 1;   // (x1 exclusive, y1 inclusive)
+  const lawn = { cx: 3092, cy: 1857, rx: 27, ry: 19 };
+  // (the pavilion cafe first, on the lawn's north side: the park's ground is all taken next)
+  K.building({ x: lawn.cx - 9, y: y + 2, w: 18, h: 7, arch: 'pavilion', name: 'Commons Pavilion', poi: { kind: 'coffee', label: 'Pavilion Cafe' }, whole: true,
+    art: { spec: { floors: 1, style: 'stucco', wallColor: '#e8e2d2', parapet: 6, roofMat: 'green', lip: 8, rimW: 4 }, shop: { kind: 'cafe', door: 'left', open: true, people: 3, awning: ['#2f6a4e', '#f0ece4'], sign: { text: 'PAVILION CAFE', bg: '#2f6a4e', fg: [240, 232, 200], lit: true } } } });
+  K.fill(x, y, w, h, T.GRASS); K.take(x, y, w, h);
+  const tileAt = (tx, ty) => m.tiles[ty * m.w + tx];
+  const pave = (tx, ty, t = T.PLAZA) => { if (tx >= x && ty >= y && tx < X1 && ty <= Y1) K.paint(tx, ty, 1, 1, t); };
+  const path = (pts, wd = 3, t = T.PLAZA) => {
+    for (let j = 1; j < pts.length; j++) {
+      const [ax, ay] = pts[j - 1], [bx, by] = pts[j], n = Math.ceil(Math.hypot(bx - ax, by - ay) * 2);
+      for (let k = 0; k <= n; k++) { const px = ax + ((bx - ax) * k) / n, py = ay + ((by - ay) * k) / n; for (let dy = -wd / 2; dy < wd / 2; dy += 0.5) for (let dx = -wd / 2; dx < wd / 2; dx += 0.5) pave(Math.floor(px + dx), Math.floor(py + dy), t); }
+    }
+  };
+  const oval = (cx, cy, ax, ay, n = 64) => { const pts = []; for (let a = 0; a <= n; a++) pts.push([cx + Math.cos((a / n) * 6.2832) * ax, cy + Math.sin((a / n) * 6.2832) * ay]); return pts; };
+  const LX = MX.linden + 0.5;   // (the walk's middle)
+  // --- Union Square, the paved square in the south-east corner by the subway's stairs
+  const UQ = [3124, 1850];
+  unionSquare(K, UQ[0], UQ[1], X1 - UQ[0], Y1 - UQ[1] + 1, out);
+  // --- the paths: the walk from the north gate to the south gate, the Great Lawn's ring, the ways in from the avenues
+  path([[LX, y], [LX, Y1 + 1]], 4);
+  path(oval(lawn.cx, lawn.cy, lawn.rx, lawn.ry), 3);
+  path([[LX, lawn.cy], [lawn.cx - lawn.rx, lawn.cy]], 3);
+  path([[x, 1848], [LX, 1848]], 3);
+  path([[lawn.cx + lawn.rx * 0.7, lawn.cy + lawn.ry * 0.72], [UQ[0] + 2, 1874]], 3);
+  path([[lawn.cx + lawn.rx * 0.78, lawn.cy - lawn.ry * 0.62], [X1, 1839]], 3);
+  path([[lawn.cx, y + 9], [lawn.cx, lawn.cy - lawn.ry]], 3);
+  // --- the fountain plaza inside the north gate: the big fountain, benches round it, beds, the chess tables
+  const F = [LX, y + 11];
+  for (let ty = F[1] - 8; ty <= F[1] + 8; ty++) for (let tx = Math.floor(F[0] - 9); tx <= F[0] + 9; tx++) if (((tx + 0.5 - F[0]) / 8.5) ** 2 + ((ty + 0.5 - F[1]) / 7) ** 2 <= 1) pave(tx, ty);
+  prop('fountain', F[0], F[1], 36);
+  for (const [dx, dy] of [[-5, -3], [5, -3], [-5.5, 3.2], [5.5, 3.2]]) prop('pbench', F[0] + dx, F[1] + dy, 0);
+  for (const [dx, dy] of [[-8, 0], [8, 0], [0, 6.2]]) prop('flowers_big', F[0] + dx, F[1] + dy, 0);
+  for (const dx of [-13, -16, 13]) { prop('cafetable', F[0] + dx, F[1] + 5, 0); prop('chair', F[0] + dx - 0.9, F[1] + 5.1, 0, { v: 1, a: 0 }); prop('chair', F[0] + dx + 0.9, F[1] + 5.1, 0, { v: 1, a: 3.1416 }); }
+  K.m.squares ||= []; K.m.squares.push({ x: Math.round(F[0]) - 6, y: F[1] - 5, w: 12, h: 10, name: 'Commons Fountain' });
+  // --- the pavilion cafe on the lawn's north side, the bandstand on the lawn, festoon lights between them
+  for (const dx of [-6, -3, 3, 6]) { prop('cafetable', lawn.cx + dx, y + 10.5, 0); prop(pick(['umbrella_g', 'umbrella_y'], rnd(dx, y, 900)), lawn.cx + dx, y + 10.4, 0); }
+  prop('gazebo', lawn.cx + 12, lawn.cy - 8, 30);
+  prop('festoon', lawn.cx + 2, lawn.cy - 12, 0, { tx: 9 * TILE, ty: 3 * TILE, h: 40 });
+  for (const [dx, dy, v] of [[-14, 2, 0], [-6, 8, 1], [4, 6, 2], [-10, -4, 1], [10, 9, 0]]) prop('blanket', lawn.cx + dx, lawn.cy + dy, 0, { v });
+  for (const [dx, dy] of [[-22, -6], [-23, 7], [20, 10]]) prop('picnic', lawn.cx + dx, lawn.cy + dy, 0);
+  // --- the duck pond in the west: the water, its lilies, the ducks and a swan, benches looking on to it
+  const P = { cx: 3021, cy: 1868, rx: 14, ry: 8 };
+  for (let ty = P.cy - P.ry; ty <= P.cy + P.ry; ty++) for (let tx = P.cx - P.rx; tx <= P.cx + P.rx; tx++) {
+    const q = ((tx + 0.5 - P.cx) / P.rx) ** 2 + ((ty + 0.5 - P.cy) / P.ry) ** 2;
+    if (q <= 1 && tileAt(tx, ty) === T.GRASS) K.paint(tx, ty, 1, 1, q < 0.4 ? T.DEEP : T.WATER);
+  }
+  path(oval(P.cx, P.cy, P.rx + 3, P.ry + 3, 48).filter(([, py]) => py < P.cy + 2), 2);
+  for (const [dx, dy, v] of [[-6, -2, 0], [5, 2, 1], [8, -3, 2]]) prop('lily', P.cx + dx, P.cy + dy, 0, { v });
+  for (const [dx, dy, a] of [[-2, 1, 0.6], [1, -1, 2.2], [3, 2, 4]]) prop('duck', P.cx + dx, P.cy + dy, 0, { a });
+  prop('swan', P.cx - 8, P.cy + 1, 0, { a: 1.2 });
+  for (const dx of [-9, -2, 6]) prop('bench_m', P.cx + dx, P.cy - P.ry - 4.6, 0);
+  // --- the dog run in the north-west corner: chain-link round a patch of dirt, its gate, a bench and a bin, its sign
+  const DR = [x + 3, y + 3, 20, 15];
+  K.paint(DR[0], DR[1], DR[2], DR[3], T.DIRT);
+  prop('chainfence', DR[0] + 0.1, DR[1] + 0.1, 0, { tx: DR[2] * TILE - 6, ty: 0 });
+  prop('chainfence', DR[0] + 0.1, DR[1] + 0.1, 0, { tx: 0, ty: DR[3] * TILE - 6 });
+  prop('chainfence', DR[0] + DR[2] - 0.1, DR[1] + 0.1, 0, { tx: 0, ty: DR[3] * TILE - 6 });
+  prop('chainfence', DR[0] + 0.1, DR[1] + DR[3] - 0.1, 0, { tx: (DR[2] - 4) * TILE, ty: 0 });
+  prop('bench_m', DR[0] + 4, DR[1] + 2, 0); prop('trashcan', DR[0] + DR[2] - 2, DR[1] + DR[3] - 1.4, 0); prop('post', DR[0] + 10, DR[1] + 8, 0, { h: 30 });
+  prop('textsign', DR[0] + DR[2] - 2, DR[1] + DR[3] + 1.2, 0, { text: 'DOG RUN', bg: '#5a3a2a', fg: [250, 232, 190], z: 24, sx: 1 });
+  // --- Commons Courts in the north-east corner: two courts side by side behind chain-link, the bleachers between
+  commonsCourts(K, 3134, y + 2, X1 - 3134 - 2, 22, out);
+  // --- the statue at the south gate, the railings round the park with its gates, lamps and benches along the paths
+  prop('statue', LX, Y1 - 5, 14);
+  prop('flowers_big', LX - 3, Y1 - 4, 0); prop('flowers_big', LX + 3, Y1 - 4, 0);
+  const rail = (ax, ay, bx, by) => prop('fenceline', ax, ay, 0, { kind: 'iron', tx: Math.round((bx - ax) * TILE), ty: Math.round((by - ay) * TILE) });
+  rail(x + 0.2, y + 0.25, LX - 3, y + 0.25); rail(LX + 3, y + 0.25, lawn.cx - 10, y + 0.25); rail(lawn.cx + 10, y + 0.25, 3133, y + 0.25);
+  rail(x + 0.2, y + 0.25, x + 0.2, 1846); rail(x + 0.2, 1851, x + 0.2, Y1 + 0.75);
+  rail(x + 0.2, Y1 + 0.75, LX - 3, Y1 + 0.75); rail(LX + 3, Y1 + 0.75, UQ[0] - 0.5, Y1 + 0.75);
+  rail(X1 - 0.2, y + 24, X1 - 0.2, 1837); rail(X1 - 0.2, 1842, X1 - 0.2, UQ[1] - 0.5);
+  for (const [gx, gy] of [[LX - 3.6, y + 1], [LX + 3.6, y + 1], [x + 1, 1845.5], [LX - 3.6, Y1 - 0.2]]) prop('parksign', gx, gy, 0);
+  prop('textsign', LX - 7, y + 1.6, 0, { text: 'MIDTOWN COMMONS', bg: '#2f5a4a', fg: [240, 232, 200], z: 32, sx: 1 });
+  let k = 0;
+  for (let ty = y + 1; ty <= Y1; ty += 2) for (let tx = x + 1; tx < X1 - 1; tx += 2) {
+    if (tileAt(tx, ty) !== T.PLAZA || tx >= UQ[0] - 1 || (Math.abs(tx - F[0]) < 10 && Math.abs(ty - F[1]) < 9)) continue;
+    // (a lamp or a bench by the path every so often, on the grass at its edge)
+    const r = rnd(tx, ty, 910);
+    if (r > 0.1) continue;
+    for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) {
+      if (tileAt(tx + dx, ty + dy) !== T.GRASS || tileAt(tx + dx * 1.5, ty + dy * 1.5) !== T.GRASS) continue;
+      prop(k++ % 3 ? 'bench_m' : 'lamp', tx + dx + 0.5, ty + dy + 0.5, 0);
+      break;
+    }
+  }
+  // --- the trees: groves on the grass away from the paths, the water and the Great Lawn (oaks and maples in the west,
+  // plane trees by the walk, cherries by the pond, a magnolia or two by the fountain)
+  const clear = (tx, ty, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (tileAt(tx + dx, ty + dy) !== T.GRASS) return false; return true; };
+  for (let ty = y + 2; ty < Y1 - 1; ty += 4) for (let tx = x + 2; tx < X1 - 2; tx += 4) {
+    const jx = tx + Math.floor(rnd(tx, ty, 920) * 3), jy = ty + Math.floor(rnd(tx, ty, 921) * 3);
+    if (rnd(tx, ty, 922) < 0.5 || !clear(jx, jy, 1)) continue;
+    if (jx >= UQ[0] - 1 && jy >= UQ[1] - 1) continue;   // (Union Square has its own plane trees)
+    if (((jx + 0.5 - lawn.cx) / (lawn.rx - 2)) ** 2 + ((jy + 0.5 - lawn.cy) / (lawn.ry - 2)) ** 2 < 1) continue;   // (the Great Lawn kept open)
+    if (jx >= DR[0] - 1 && jx < DR[0] + DR[2] + 1 && jy >= DR[1] - 1 && jy < DR[1] + DR[3] + 1) continue;
+    const nearPond = Math.hypot((jx - P.cx) / (P.rx + 8), (jy - P.cy) / (P.ry + 8)) < 1, nearWalk = Math.abs(jx - LX) < 6;
+    const sp = nearPond ? pick(['cherry', 'willow', 'cherry'], rnd(jx, jy, 923)) : nearWalk ? 'streetPl' : jx < 3070 ? pick(['oak', 'maple', 'oak', 'mapleAutumn'], rnd(jx, jy, 924)) : pick(['maple', 'streetPl', 'oak', 'magnolia'], rnd(jx, jy, 925));
+    prop(rnd(jx, jy, 926) < 0.5 ? 'tree_a' : 'tree_b', jx + 0.5, jy + 0.5, 12, { sp, k: 1.1 + rnd(jx, jy, 927) * 0.35 });
+    if (rnd(jx, jy, 928) < 0.12) prop(pick(['shrub_a', 'bush_c', 'flowers_a'], rnd(jx, jy, 929)), jx + 2, jy + 1.5, 0);
+  }
+  (out.places ||= []).push({ name: 'Midtown Commons', x0: x, y0: y, x1: X1, y1: Y1 }, { name: 'Commons Pond', x0: P.cx - P.rx, y0: P.cy - P.ry - 5, x1: P.cx + P.rx, y1: P.cy - P.ry }, { name: 'The Great Lawn', x0: lawn.cx - 8, y0: lawn.cy - 4, x1: lawn.cx + 8, y1: lawn.cy + 4 });
+}
+// Commons Courts: two courts side by side on asphalt, each its hoop at the north end, chain-link round them with the
+// gate on the path, the bleachers between them, lamps on the corners, a bench and a bin by the gate
+function commonsCourts(K, x, y, w, h, out) {
+  const { prop } = K;
+  K.paint(x, y, w, h, T.LOT);
+  const cw = Math.floor((w - 6) / 2);
+  for (const k of [0, 1]) {
+    const mx = x + 1 + cw / 2 + k * (cw + 4);
+    prop('court', mx, y + 0.6, 0, { w: cw * TILE, d: (h - 4) * TILE, c1: k ? '#4a6a8a' : '#3a6a5a', c2: '#c86a3a' });
+    prop('hoop', mx, y + 1.2, 6);
+    (K.m.courtSpots ||= []).push({ x: Math.round(mx * TILE), y: Math.round((y + h / 2) * TILE), w: cw, h: h - 4, name: 'Commons Courts' });
+  }
+  prop('bleachers', x + 1 + cw + 2, y + h / 2, 10, { len: 64, rows: 3 });
+  prop('chainfence', x + 0.1, y + 0.1, 0, { tx: w * TILE - 6, ty: 0 });
+  prop('chainfence', x + 0.1, y + 0.1, 0, { tx: 0, ty: h * TILE - 6 });
+  prop('chainfence', x + w - 0.1, y + 0.1, 0, { tx: 0, ty: h * TILE - 6 });
+  prop('chainfence', x + 0.1, y + h - 0.1, 0, { tx: (w - 5) * TILE, ty: 0 });
+  for (const [lx, ly] of [[x + 0.8, y + 0.8], [x + w - 0.8, y + 0.8], [x + 0.8, y + h - 1], [x + w - 0.8, y + h - 1]]) prop('lamp', lx, ly, 0);
+  prop('bench_m', x + w - 3, y + h + 1.2, 0); prop('trashcan', x + w - 5.5, y + h + 1.2, 0);
+  (out.places ||= []).push({ name: 'Commons Courts', x0: x, y0: y, x1: x + w, y1: y + h });
+}
+
+// Madison Court (the owner's 10-17 ask for apartment complexes): three four-storey blocks of flats in a row along Harbor
+// Avenue, set back behind their lawns - a path to each door, trees, the name board, lamps, benches; the residents' car
+// park behind them off Pier Street, passages between the blocks with the bikes and the bins
+function madisonCourt(K, x, y, w, h, ctx) {
+  const { prop, rnd, pick } = K;
+  const { walkup, out } = ctx;
+  const back = 7, depth = 14, gap = 6, n = 3, bw = Math.floor((w - (n - 1) * gap) / n), fy = y + back + depth;
+  // the car park behind (Pier Street's south side): a row of bays facing north, chain-link with the gate on the pavement
+  K.paint(x, y, w, back, T.LOT); K.take(x, y, w, back);
+  for (let sx = x + 2; sx + 3 <= x + w - 6; sx += 3) { K.m.stalls.push({ x: sx * TILE, y: (y + 2) * TILE, w: 3 * TILE, h: 4 * TILE }); K.m.parking.push({ x: (sx + 1.5) * TILE, y: (y + 4) * TILE, a: -Math.PI / 2 }); }
+  prop('chainfence', x + 0.2, y + 0.3, 0, { tx: (w - 8) * TILE, ty: 0 }); prop('ygate', x + w - 4, y + 0.8, 0, { a: 0 });
+  for (let k = 0; k < n; k++) {
+    const bx = x + k * (bw + gap);
+    const L = walkup(bx, fy - 1, bw, { face: { style: 'stucco', wallColor: pick(['#d6d0c4', '#cfc6b4', '#d8d2c6'], rnd(bx, y, 950)) }, floors: 4, home: { price: 17500 }, garden: false });
+    Object.assign(L.art.spec, { win: 'triple', cornice: null, fireEscape: null, balconies: true, parapet: 8, grime: 0.06, roofMat: 'membrane' });
+    const b = K.building({ x: bx, y: y + back, w: bw, h: depth, ...L, name: `Madison Court ${'ABC'[k]}` });
+    // the lawn in front: the path from its door to the pavement, a tree either side, a bench
+    K.fill(bx, fy, bw, y + h - fy, T.GRASS);
+    const dx = b && b.door ? b.door.tx : bx + (bw >> 1);
+    K.paint(dx - 1, fy, 3, y + h - fy, T.PLAZA);
+    for (const tx of [bx + 3, bx + bw - 3]) prop('tree_a', tx + 0.5, fy + 5, 10, { sp: pick(['maple', 'streetPl', 'flowerTree'], rnd(tx, fy, 951)), k: 1.1 });
+    prop('bench_m', dx + 4, fy + 2, 0); prop('lamp', dx - 2, y + h - 1.5, 0); prop('flowers_a', dx + 3, y + h - 2, 0);
+    if (k < n - 1) {
+      // the passage to the car park: paving, the bikes, the bins
+      const px = bx + bw;
+      K.paint(px, y + back, gap, y + h - y - back, T.PLAZA);
+      prop('bikerack', px + gap / 2, fy - 3, 0); prop('dump_g', px + gap / 2, y + back + 2, 12);
+    }
+  }
+  prop('hedgerun', x + 0.5, y + h - 0.4, 0, { tx: Math.round((w - 1) * TILE), ty: 0, h: 14 });
+  prop('textsign', x + bw + gap / 2, y + h - 1.4, 0, { text: 'MADISON COURT', bg: '#33485e', fg: [240, 236, 220], z: 26, sx: 1 });
+  (out.places ||= []).push({ name: 'Madison Court Apartments', x0: x, y0: y, x1: x + w, y1: y + h });
+}
+
 // The main streets' furniture: street trees in grates every few lots, benches by the shops, bus shelters on the boulevard
 // and Main Avenue (R1-I's), the hot-dog cart at the hero corner, the iron fence and planted strip by R1-I's bus stop
 function streetDressing(K, out, poi0) {
@@ -1104,7 +1440,7 @@ function streetDressing(K, out, poi0) {
   for (const a of EW) for (const b of NS) {
     const y = a.pts[0][1], x = b.pts[0][0];
     if (x < Math.min(a.pts[0][0], a.pts[1][0]) || x > Math.max(a.pts[0][0], a.pts[1][0]) || y < Math.min(b.pts[0][1], b.pts[1][1]) || y > Math.max(b.pts[0][1], b.pts[1][1])) continue;
-    const ex = EXT[b.kind] - 1.4, ey = EXT[a.kind] - 1.4, r = (k) => rnd(x, y, 500 + k), c0 = Math.floor(r(0) * 4);
+    const ex = b.ext - 1.4, ey = a.ext - 1.4, r = (k) => rnd(x, y, 500 + k), c0 = Math.floor(r(0) * 4);
     for (let c = 0; c < 4; c++) {
       const sx = c & 1 ? 1 : -1, sy = c & 2 ? 1 : -1, cx = x + sx * ex, cy = y + sy * ey, k = (c - c0 + 4) % 4;
       if (k === 0) put('hydrant', cx + sx * 2.4, cy, 6);
@@ -1114,14 +1450,18 @@ function streetDressing(K, out, poi0) {
       else if (r(20 + c) < 0.3) put(r(24) < 0.5 ? 'phonebox' : 'newsBox', cx + sx * 2.2, cy + sy * 1.2, 6);
     }
   }
-  // the kerbside parking along the streets (their parking lanes: PARK): a bay every 150 px, clear of the junctions and
-  // their crossings, cars in most of them (server/systems/traffic.js parks them - spots with kerb: true)
-  const C = (v) => (v + 0.5) * TILE, hwSt = ST_W * TILE / 2, off = hwSt - PARK / 2;
+  // the kerbside parking along the streets (their parking lanes): a bay every 150 px, clear of the junctions and their
+  // crossings, cars in most of them (server/systems/traffic.js parks them - spots with kerb: true); on a one-way street
+  // every car faces the way it runs
+  const C = (v) => (v + 0.5) * TILE;
   for (const a of S) {
-    if (a.kind !== 'st') continue;
+    if (a.kind !== 'st' || !a.park) continue;
     const [[ax, ay], [bx, by]] = a.pts, horiz = ay === by, lo = horiz ? Math.min(ax, bx) : Math.min(ay, by), hi = horiz ? Math.max(ax, bx) : Math.max(ay, by);
-    const cross = (horiz ? NS : EW).filter((q) => { const c = horiz ? q.pts[0][0] : q.pts[0][1], r0 = horiz ? Math.min(q.pts[0][1], q.pts[1][1]) : Math.min(q.pts[0][0], q.pts[1][0]), r1 = horiz ? Math.max(q.pts[0][1], q.pts[1][1]) : Math.max(q.pts[0][0], q.pts[1][0]), me = horiz ? ay : ax; return c >= lo && c <= hi && me >= r0 - 1 && me <= r1 + 1; }).map((q) => [horiz ? q.pts[0][0] : q.pts[0][1], EXT[q.kind]]);
-    if (horiz) cross.push([lo, 7], [hi, 7]); else cross.push([lo, 7], [hi, 7]);
+    const off = (a.w * TILE) / 2 - a.park / 2, run = Math.atan2(by - ay, bx - ax);
+    const cross = (horiz ? NS : EW).filter((q) => { const c = horiz ? q.pts[0][0] : q.pts[0][1], r0 = horiz ? Math.min(q.pts[0][1], q.pts[1][1]) : Math.min(q.pts[0][0], q.pts[1][0]), r1 = horiz ? Math.max(q.pts[0][1], q.pts[1][1]) : Math.max(q.pts[0][0], q.pts[1][0]), me = horiz ? ay : ax; return c >= lo && c <= hi && me >= r0 - 1 && me <= r1 + 1; }).map((q) => [horiz ? q.pts[0][0] : q.pts[0][1], q.ext]);
+    cross.push([lo, 7], [hi, 7]);
+    // (Crosstown Way crosses a street at an angle: its crossing kept clear too)
+    if (horiz && ay > DIAG[0][1] && ay < DIAG[1][1]) cross.push([DIAG[0][0] + (ay - DIAG[0][1]) * (DIAG[1][0] - DIAG[0][0]) / (DIAG[1][1] - DIAG[0][1]), 12]);
     for (let t = C(lo) + 40; t < C(hi) - 40; t += 150) {
       const tt = t / TILE - 0.5;
       if (cross.some(([c, e]) => Math.abs(tt - c) < e + 5)) continue;
@@ -1129,7 +1469,7 @@ function streetDressing(K, out, poi0) {
         const x = horiz ? t : C(ax) + sd * off, y = horiz ? C(ay) + sd * off : t;
         if (onSubwayPlaza(m, x / TILE, y / TILE, 2)) continue;
         // (right-hand traffic: the south kerb's cars face east, the north's west; the west kerb's south, the east's north)
-        const ang = horiz ? (sd > 0 ? 0 : Math.PI) : (sd > 0 ? -1.5707 : 1.5707);
+        const ang = a.oneway ? run : horiz ? (sd > 0 ? 0 : Math.PI) : (sd > 0 ? -1.5707 : 1.5707);
         m.parking.push({ x: Math.round(x), y: Math.round(y), a: ang, kerb: true });
       }
     }
@@ -1144,25 +1484,25 @@ function streetDressing(K, out, poi0) {
     for (const q of kerbs) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd && !q.model) { bd = d; best = q; } }
     if (best) best.model = /Market|Marlow/.test(p.label) ? 'boxtruck' : 'van';
   }
-  // the road crew at a hole in Linden Street's pavement (activities.js 'roadcrew'): its cones, the broken paving, the
+  // the road crew at a hole in Holly Street's pavement (activities.js 'roadcrew'): its cones, the broken paving, the
   // boards; their van in the nearest bay
   {
-    const cx = MX.linden - 6, cy = 1726;
+    const cx = 3150, cy = MY.holly + EXT.st - 1;
     for (const [dx, dy] of [[-1.1, -1.3], [1.1, -1.3], [-1.1, 1.5], [1.1, 1.5], [0, -1.7]]) prop('cone', cx + dx, cy + dy, 0);
     prop('rubble', cx, cy, 0); prop('planks', cx + 0.3, cy + 2.6, 0);
-    (m.crewSpots ||= []).push({ x: Math.round((cx + 0.5) * TILE), y: Math.round((cy + 0.5) * TILE), name: 'Linden Street' });
+    (m.crewSpots ||= []).push({ x: Math.round((cx + 0.5) * TILE), y: Math.round((cy + 0.5) * TILE), name: 'Holly Street' });
     let best = null, bd = 1e9;
     for (const q of kerbs) { const d = Math.hypot(q.x - (cx + 0.5) * TILE, q.y - (cy + 0.5) * TILE); if (d < bd && !q.model) { bd = d; best = q; } }
     if (best) best.model = 'van';
   }
   // the street trees in their grates along both pavements, clear of the doors and the corners
-  const nearCross = (x, y, dir) => (dir ? EW : NS).some((q) => Math.abs((dir ? q.pts[0][1] : q.pts[0][0]) - (dir ? y : x)) < EXT[q.kind] + 3);
-  const SP = { 'Holly Street': 'street', 'Central Avenue': 'maple', 'Midtown Boulevard': 'streetPl', 'Pier Street': 'street', 'Trestle Street': null };
+  const nearCross = (x, y, dir) => (dir ? EW : NS).some((q) => Math.abs((dir ? q.pts[0][1] : q.pts[0][0]) - (dir ? y : x)) < q.ext + 3 && (dir ? x >= Math.min(q.pts[0][0], q.pts[1][0]) - 1 && x <= Math.max(q.pts[0][0], q.pts[1][0]) + 1 : y >= Math.min(q.pts[0][1], q.pts[1][1]) - 1 && y <= Math.max(q.pts[0][1], q.pts[1][1]) + 1));
+  const SP = { 'Holly Street': 'street', 'Central Avenue': 'maple', 'Midtown Boulevard': 'streetPl', 'Pier Street': 'street', 'Trestle Street': null, 'Holly Mews': null, 'Holly Place': null };
   for (const a of EW) {
     const sp = SP[a.name] === undefined ? 'street' : SP[a.name], y = a.pts[0][1];
     if (!sp) continue;
     for (const sy of [-1, 1]) for (let x = Math.min(a.pts[0][0], a.pts[1][0]) + 4; x < Math.max(a.pts[0][0], a.pts[1][0]) - 4; x += 7 + Math.floor(rnd(x, y + sy, 520) * 4)) {
-      const yy = y + sy * (EXT[a.kind] - 1);
+      const yy = y + sy * (a.ext - 1);
       if (nearCross(x, yy, false) || doors.has(Math.floor(x)) || doors.has(Math.floor(x) + 1)) continue;
       put('tree_a', x + 0.5, yy, 10, { sp, k: 1.15, grate: true });
     }
@@ -1171,12 +1511,18 @@ function streetDressing(K, out, poi0) {
     if (b.kind !== 'ave') continue;
     const x = b.pts[0][0];
     for (const sx of [-1, 1]) for (let y = Math.min(b.pts[0][1], b.pts[1][1]) + 4; y < Math.max(b.pts[0][1], b.pts[1][1]) - 4; y += 10 + Math.floor(rnd(x + sx, y, 521) * 4)) {
-      const xx = x + sx * (EXT[b.kind] - 1);
+      const xx = x + sx * (b.ext - 1);
       if (!nearCross(xx, y, true)) put('tree_a', xx + 0.5, y + 0.5, 10, { sp: 'street', k: 1.1, grate: true });
     }
   }
+  // the boulevard's median: plane trees down it, clear of the junctions (where it stops for the turns)
+  for (let x = MX.westside + 12; x < MX.stadium - 10; x += 6) {
+    if (NS.some((q) => Math.abs(q.pts[0][0] - x) < q.ext + 5 && Math.max(q.pts[0][1], q.pts[1][1]) >= MY.blvd - 1 && Math.min(q.pts[0][1], q.pts[1][1]) <= MY.blvd + 1)) continue;
+    if (Math.abs(x - 3480) < 16) continue;   // (the diagonal's crossing at Harborview Avenue)
+    prop('tree_a', x + 0.5, MY.blvd + 0.5, 10, { sp: 'streetPl', k: 1.05 });
+  }
   // the bus stops: the boulevard (both ways), Main Avenue at Holly Street (R1-I's, with its planted strip and fence)
-  for (const [x, y] of [[3010, MY.blvd - 6], [3300, MY.blvd + 6], [3560, MY.blvd - 6], [MX.main + 6, MY.holly + 9]]) if (onWalk(x, y)) prop('busstop', x, y, 0);
+  for (const [x, y] of [[3010, MY.blvd - EXT.blvd + 1], [3300, MY.blvd + EXT.blvd - 1], [3560, MY.blvd - EXT.blvd + 1], [MX.main + 6, MY.holly + 9]]) if (onWalk(x, y)) prop('busstop', x, y, 0);
   prop('flowers_a', MX.main + 6, MY.holly + 13, 0); prop('fenceline', MX.main + 4.5, MY.holly + 14.5, 0, { kind: 'iron', tx: 3 * TILE, ty: 0 });
   // the hero corner's life (R1-A): the hot-dog cart, benches, a news box
   prop('foodcart', MX.madison + 10, MY.holly - 5.6, 14);

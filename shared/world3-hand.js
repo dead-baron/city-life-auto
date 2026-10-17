@@ -22,7 +22,7 @@ const C = (v) => (v + 0.5) * TILE;
 export function handStreets(lines) {
   const out = { streets: 0, len: 0 };
   for (const P of HAND_PLANS) for (const s of P.streets()) {
-    lines.push({ pts: s.pts.map(([x, y]) => ({ x: C(x), y: C(y) })), kind: s.kind, lvl: 0, name: s.name, city: true, hand: P.key, ...(s.park ? { park: s.park } : {}), ...(s.w ? { w: s.w } : {}) });
+    lines.push({ pts: s.pts.map(([x, y]) => ({ x: C(x), y: C(y) })), kind: s.kind, lvl: 0, name: s.name, city: true, hand: P.key, ...(s.park ? { park: s.park } : {}), ...(s.w ? { w: s.w } : {}), ...(s.median ? { median: s.median } : {}), ...(s.oneway ? { oneway: true } : {}), ...(s.culdesac ? { culdesac: true } : {}) });
     out.streets++;
     for (let i = 1; i < s.pts.length; i++) out.len += Math.round(Math.hypot(s.pts[i][0] - s.pts[i - 1][0], s.pts[i][1] - s.pts[i - 1][1]));
   }
@@ -38,6 +38,7 @@ export function buildHand(m, api0) {
     out[P.key] = P.build(m, api, kit);
     kit.seal();   // (what the plan left open in its area: paved or planted, so the block filler doesn't build over it)
     out[P.key].buildings = kit.count();
+    out[P.key].d = P.d; out[P.key].rect = P.rect;   // (which district, where: client/devtp.js lists its places to teleport to)
   }
   return out;
 }
@@ -152,6 +153,24 @@ function makeKit(m, api, P) {
         prop('fenceline', mx + 1.6, y + h - 0.3, 0, { kind: 'iron', tx: (x + w - 0.2 - mx - 1.6) * TILE, ty: 0 });
         prop('lamp', mx + 1.8, y + h - 1.4, 0);
         prop('trashcan', mx - 1.9, y + h - 1.2, 0);
+        return;
+      }
+      if (kind === 'court') {
+        // a public court in the row (the neighbourhood's): the painted half court with its hoop at the back, chain-link
+        // round it with the gate on the pavement, the bleachers down one side, a bench and a bin by the gate, two lamps
+        fill(x, y, w, h, T.LOT);
+        const cw = Math.min(w - 4, 14), mx = x + 1 + cw / 2;
+        prop('court', mx, y + 0.5, 0, { w: cw * TILE, d: Math.max(6, h - 3.4) * TILE, c1: '#3a6a5a', c2: '#c8703a' });
+        prop('hoop', mx, y + 1.1, 6);
+        prop('chainfence', x + 0.2, y + 0.2, 0, { tx: 0, ty: Math.round((h - 0.5) * TILE) });
+        prop('chainfence', x + w - 0.2, y + 0.2, 0, { tx: 0, ty: Math.round((h - 0.5) * TILE) });
+        prop('chainfence', x + 0.2, y + 0.2, 0, { tx: Math.round((w - 0.4) * TILE), ty: 0 });
+        prop('chainfence', x + 0.2, y + h - 0.3, 0, { tx: Math.round((w - 4.6) * TILE), ty: 0 });
+        prop('bleachers', x + 1 + Math.min(4, (w - 6) / 2), y + h - 1.5, 10, { len: Math.min(128, Math.round((w - 6) * TILE / 2)), rows: 2 });
+        prop('bench_m', x + w - 2.4, y + h - 1.4, 0); prop('trashcan', x + w - 0.9, y + h - 1.6, 0);
+        prop('lamp', x + 0.9, y + 1.2, 0); prop('lamp', x + w - 0.9, y + 1.2, 0);
+        // (where a pick-up game is played: a later activity's - map.courtSpots)
+        (m.courtSpots ||= []).push({ x: Math.round(mx * TILE), y: Math.round((y + h / 2) * TILE), w: cw, h, name: opt.courtName || 'Court' });
         return;
       }
       if (kind === 'garden') {

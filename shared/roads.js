@@ -212,7 +212,7 @@ export function buildNetwork(lines, seed = 1) {
       const zb = l.lvl === 'ramp' ? l.z0 + (l.z1 - l.z0) * (c1.s / l.len) : l.lvl;
       const e = {
         id: edges.length, a: na.id, b: nb.id, pts, len: 0, kind: l.kind, lvl, za, zb, name: l.name || '',
-        w: (l.w || K.w) * TILE, hw: ((l.w || K.w) * TILE) / 2, nl: K.nl, median: K.median, oneway: !!(l.oneway || K.oneway), bridge: false, culdesac: !!l.culdesac,
+        w: (l.w || K.w) * TILE, hw: ((l.w || K.w) * TILE) / 2, nl: K.nl, median: l.median ?? K.median, oneway: !!(l.oneway || K.oneway), bridge: false, culdesac: !!l.culdesac,
       };
       if (l.lvl === 'ramp' && l.zr && c0.s < 1 && c1.s > l.len - 1) e.zr = l.zr.slice(); // (a whole ramp: its climb as laid)
       if (l.notraffic) e.notraffic = true;   // (World v3's wild tracks: the traffic keeps off them - server/systems/traffic.js)

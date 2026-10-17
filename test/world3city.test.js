@@ -78,11 +78,12 @@ test('World v3b city: every street east-west or north-south, on land with its pa
   layCity3(lines, m);
   assert.ok(lines.length > 300, `${lines.length} lines`);
   for (const l of lines) {
-    assert.equal(l.pts.length, 2);
+    // (a handcrafted district's streets - shared/world3-hand.js - may run at an angle or bend: Midtown's Crosstown Way,
+    // Garden Crescent; and be mews, one car wide: Holly Mews)
+    assert.ok(l.pts.length === 2 || (l.hand && l.pts.length > 2), `${l.name}: two points`);
     const [a, b] = l.pts;
-    // (a handcrafted district's streets - shared/world3-hand.js - may run at an angle: Midtown's Crosstown Way)
     assert.ok(a.x === b.x || a.y === b.y || l.hand, `${l.name}: axis-aligned`);
-    assert.ok(['st', 'ave', 'blvd', 'alley'].includes(l.kind), `${l.name}: a kind the generator knows (${l.kind})`);
+    assert.ok(['st', 'ave', 'blvd', 'alley'].includes(l.kind) || (l.hand && l.kind === 'minor'), `${l.name}: a kind the generator knows (${l.kind})`);
     assert.equal(l.lvl, 0);
   }
   // the avenues named, the main ones boulevards

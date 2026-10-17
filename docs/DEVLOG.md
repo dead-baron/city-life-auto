@@ -10143,3 +10143,36 @@ the Gulf Island's north shore, facing the mainland (shared/world3-neon.js, a han
 - The picture signs (neonsigns.js handNeon, b.art.neon): the facade's name in tubes, a picture sign where the face has
   the room, a blade sign down the side, the cornice tube. The Velvet Room is The Violet Room now (shared/map.js).
 - tools/area-shot.mjs --night: a picture after dark (a moonlit ambient, the lamps' and the signs' light, what glows).
+
+## 2026-10-17 · Midtown re-planned: long blocks, the boulevard, the Commons, the crescent, one-way streets and dead ends
+The owner's 10-17 notes: too much of a grid - a street and a junction after every small plot, no variety in street
+types or widths, no curves, no big park or public walking space. Midtown's street plan is redrawn (shared/world3-midtown.js
+streets(); a review of every concept for it found WC243, MT2, D4, NB1, WC069, D11, WC228, G2-B, WC244, OS17):
+- **Fewer streets.** North-south, only the avenues the rest of the world meets (Bridge, Main, Civic, Harborview) and
+  Madison Street (the station and the hero corner) run through. Linden, Spring and Mercer Streets are gone, Carroll and
+  Fulton are short one-way streets, Garden and Mercer Streets only link Trestle Street to Central Avenue. About half the
+  junctions are gone.
+- **Long blocks.** North of Holly Street one block runs from Bridge Avenue to Main Avenue (181 tiles): the corner bank,
+  the Holly Street Market, **Linden Courts** (a public court behind chain-link with its bleachers: a new 'court' gap
+  kind in shared/world3-hand.js, map.courtSpots for a pick-up game later), the MT2 row, R1-I's cafe; its alley behind.
+- **Linden Walk**: a paved walk down through the long blocks from Central Avenue to the Commons' gate - plane trees,
+  benches, cafe tables, bollards at the alleys.
+- **Midtown Boulevard** is the main drag: 13 tiles, four lanes either side of a 3-tile planted median with plane trees
+  (a street's own median now: shared/roads.js l.median; the art draws a median that wide - groundbake.js).
+- **The Commons**, the big park between the bridge approaches south of the boulevard: the duck pond, the Great Lawn in
+  its ring path with the bandstand and picnic blankets, the Pavilion Cafe, Commons Courts (two courts, bleachers), the
+  dog run, the fountain plaza at the north gate, iron railings and gates; **Union Square** round the subway's stairs
+  in its corner. FreshHub, the strip (Iron Sights Arms...) and the Pier Street Market moved onto Pier Street, the
+  dealership and Fresh Coat Garage to Crosstown Way, the tower site to Harbor Avenue's east end.
+- **Garden Crescent**: a curved one-way street off Harbor Avenue round the crescent's garden (a fountain on its ring,
+  the bandstand, cherry trees inside the railings), a terrace of thirteen cream stucco houses round it, their back
+  gardens to the boulevard behind a hedge.
+- **Dead ends**: Holly Mews west of Bridge Avenue (a terrace of painted townhouses), Holly Place east of the diagonal,
+  Mercer Court into the projects - each with its turning circle.
+- **Apartments**: Madison Court, three four-storey blocks behind their lawns on Harbor Avenue, the residents' car park
+  behind.
+- A street's one-way flag, dead end and median pass through from a hand plan (world3-hand.js handStreets); the kerb
+  bays on a one-way street face the way it runs; a one-way street draws no centre line.
+- **Debug teleport** (client/devtp.js): a "World v3 · <district>" group for each handcrafted district - the places its
+  plan names (squares, parks, markets, the crescent, the station) - and a "buildings" group of its set pieces and key
+  businesses (map.world3hand: each plan's district and area now).
