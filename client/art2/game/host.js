@@ -28,7 +28,7 @@
 //   const w = await World2.create({ S, map, canvas, gfx, lowMem, api, onFail })   null: no WebGL2
 //   w.ready, w.resize(W, H, dpr), w.frame(F), w.propChanged(i), w.resync(), w.diag(), w.stats(), w.dispose()
 // api: helpers lent by main.js (pedLook, vehLift, birds, umbrella colours, seats, scales).
-import { CHUNK, DECK_Z, groundZ } from './chunkgeom.js';   // (not the bake itself: that runs in the workers)
+import { CHUNK, DECK_Z, EL_Z, groundZ } from './chunkgeom.js';   // (not the bake itself: that runs in the workers)
 import { WorkerPool, takeWarmPool, isPhone } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
@@ -1502,7 +1502,7 @@ export class World2 {
     if (!sk) return;
     c._v2k = sk;
     const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false;
-    this.E.drawSprite(sk, c.rx, c.ry, 0, o); this.n.drawn++;
+    this.E.drawSprite(sk, c.rx, c.ry, (c.rz || 0) * EL_Z, o); this.n.drawn++;   // (up on the El: World v3's main line over Trestle Street)
   }
 
   // ---- the rides (shared/rides.js) -------------------------------------------------------------------------------
@@ -1611,7 +1611,7 @@ export class World2 {
     const meVeh = S.pred && S.pred.kind === 'veh' ? S.ctrlId : -1;
     for (const v of F.vehs) { this.sprPrio = v.id === meVeh ? -3 : -1; this._veh(v, now, v.id === meVeh); }
     for (const p of F.peds) { this.sprPrio = p.id === S.myPedId ? -3 : -1; this._ped(p, now, p.id === S.myPedId, F); }
-    for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; this._ped(p, now, p.id === S.myPedId, F, 8); }
+    for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; const car = S.ents.get(p.parent); this._ped(p, now, p.id === S.myPedId, F, 8 + (car ? (car.rz || 0) * EL_Z : 0)); }   // (up on the El: its car's height)
     this.sprPrio = -1;
     for (const c of F.cars) this._train(c, now, F.myTrain);
     this._rides(F, now);

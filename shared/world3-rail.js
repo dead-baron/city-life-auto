@@ -30,6 +30,18 @@ function townRailUnder(x, y) {
   return !MAIN_AT.some(([sx, sy]) => (x - sx) * (x - sx) + (y - sy) * (y - sy) < STATION_OPEN * STATION_OPEN);
 }
 
+// The El (2026-10-17, the owner's RW1/RW2): the main line up on a steel viaduct over Midtown's Trestle Street (row y,
+// tiles), its inclines between the portals (x0, x3: the track at ground level going under) and the full height (x1..x2).
+// A point's `ez`: 0..1 of EL_Z (the deck's height, px: client/art2/game/chunkgeom.js EL_Z). Up at full height the track
+// is `under` to the generator (nothing on the ground: no bed, no crossings - the streets pass beneath) and `elevated`;
+// on the inclines it is at ground level (its bed reserved, no street crosses there) climbing on its ramp.
+export const EL = { y: 1664, x0: 2931, x1: 2978, x2: 3592, x3: 3650 };
+export function elAt(x, y) {
+  if (Math.abs(y - EL.y) > 4 || x <= EL.x0 || x >= EL.x3) return 0;
+  if (x < EL.x1) return (x - EL.x0) / (EL.x1 - EL.x0);
+  if (x > EL.x2) return (EL.x3 - x) / (EL.x3 - EL.x2);
+  return 1;
+}
 export const TRACK_OFF = 48;   // px from the main line's centre to each track's centre (the two 96 px apart: 3 tiles)
 export const HUB_R = 20;       // tiles: every corner at a junction (H33: the hub stations there stand on straight track)
 const SAMPLE = 8;              // px between a track's points (as today's railLine)
@@ -120,10 +132,14 @@ export function trackOf(path) {
     const x = (a[0] + (b[0] - a[0]) * w) * TILE - dy * TRACK_OFF, y = (a[1] + (b[1] - a[1]) * w) * TILE + dx * TRACK_OFF;
     // (World v3b's elevated stretch - the main line over Midtown's streets on a viaduct - is laid below ground, flagged
     // `elevated`, until the generator builds a rail viaduct over streets: so no street crosses it at grade)
-    const elev = inR(path.elevated || [], s), mx = a[0] + (b[0] - a[0]) * w, my = a[1] + (b[1] - a[1]) * w;
+    const mx = a[0] + (b[0] - a[0]) * w, my = a[1] + (b[1] - a[1]) * w, ez = elAt(mx, my);
+    // (the El: up on its viaduct - `under` to the generator - or on an incline at ground level; the rest of the skeleton's
+    // `elevated` stretch, past the portals, is tunnel)
+    if (ez >= 1) { out.push({ x, y, under: true, subway: false, tunnel: false, elevated: true, ez: 1 }); continue; }
+    if (ez > 0) { out.push({ x, y, under: false, subway: false, tunnel: false, incline: true, ez: Math.round(ez * 1000) / 1000 }); continue; }
     // (and below ground through the city's districts but round the stations - world3-city.js cityRailUnder; a bridge stays one)
-    const under = inR(path.tunnels, s) || elev || (!inR(path.bridges, s) && (cityRailUnder(mx, my) || townRailUnder(mx, my)));
-    out.push(elev ? { x, y, under, subway: false, tunnel: under, elevated: true } : { x, y, under, subway: false, tunnel: under });
+    const under = inR(path.tunnels, s) || inR(path.elevated || [], s) || (!inR(path.bridges, s) && (cityRailUnder(mx, my) || townRailUnder(mx, my)));
+    out.push({ x, y, under, subway: false, tunnel: under });
   }
   let s = 0;
   for (let i = 0; i < out.length; i++) { if (i) s += Math.sqrt((out[i].x - out[i - 1].x) ** 2 + (out[i].y - out[i - 1].y) ** 2); out[i].s = s; }
@@ -165,6 +181,56 @@ function mountainBores(m, loops) {
   }
 }
 export const mainJunctions = () => MAIN_JUNCTIONS.map((j) => ({ name: j.name, x: j.at[0] * TILE, y: j.at[1] * TILE }));
+
+// The El's furniture (2026-10-17): where it stands for the server and both renderers - m.el = { y (its centre line,
+// px), x0, x1, x2, x3 (px: the portals and the ends of its full height), Z (unused here: the art's EL_Z), piers: [x]
+// (a steel bent every PIER_GAP px under the full-height deck, clear of the cross streets' roadways), stairs: [{ x, y,
+// dir, station }] (a station's stair towers, foot on the pavement, the flight rising toward +dir along x) } - and its
+// stations: up on the deck (`el`), boarded from the stair foot on the side of their track (eastbound south, westbound
+// north). Their hub's map point moves to the south stairs and it has no house. Called from shared/world3-world.js'
+// done hook, before the station houses are seated.
+const PIER_GAP = 288, PIER_SPAN = 384;   // (the columns on the middle of Trestle Street's pavements, 192 px either side of its centre)
+export function elFurniture(m, removeProps = null) {
+  if (!m.rails) return null;
+  const T0 = TILE, yc = (EL.y + 0.5) * T0;   // (the street's centre line; the deck's - the tracks' - is EL.y * TILE)
+  const el = { y: EL.y * T0, py: yc, x0: EL.x0 * T0, x1: EL.x1 * T0, x2: EL.x2 * T0, x3: EL.x3 * T0, span: PIER_SPAN, piers: [], stairs: [] };
+  // the piers: every PIER_GAP px, moved off any roadway crossing beneath (a column on the pavement, never in a lane)
+  const lane = (x) => { for (const dy of [-PIER_SPAN / 2, PIER_SPAN / 2]) { const t = m.tileAtPx(x, yc + dy); if (t === T.ROAD) return true; } return false; };
+  for (let x = el.x1 + 40; x < el.x2 - 20; x += PIER_GAP) {
+    let px = x;
+    for (let k = 0; k < 12 && lane(px); k++) px += 16;
+    if (lane(px)) continue;
+    el.piers.push(Math.round(px));
+    for (const dy of [-PIER_SPAN / 2, PIER_SPAN / 2]) m.addSolidProp(px, yc + dy, 12);
+  }
+  // the stations up on it: the stair towers on the pavements either side, at the station's cross street
+  const done = new Set();
+  for (const r of m.rails) for (const st of r.stations || []) {
+    if (elAt(st.x / T0, st.y / T0) < 1) continue;
+    st.el = true; st.under = true;
+    const south = st.y > el.y, key = st.name + (south ? 's' : 'n');
+    // (the foot: south side east of the cross street, north side west of it; on the pavement's middle)
+    const xs = Math.round(st.x / T0) * T0;
+    let fx = xs + (south ? 220 : -220);
+    for (let k = 0; k < 20 && m.tileAtPx(fx + (south ? 0 : 0), yc + (south ? 196 : -196)) === T.ROAD; k++) fx += south ? 16 : -16;
+    const foot = { x: fx, y: yc + (south ? 196 : -196) };
+    st.platform = foot;
+    if (!done.has(key)) { done.add(key); el.stairs.push({ x: foot.x, y: foot.y, dir: south ? 1 : -1, station: st.name }); }
+  }
+  for (const h of m.railHubs || []) {
+    if (elAt(h.x / T0, h.y / T0) < 1 && Math.abs(h.y - yc) > 400) continue;
+    if (h.x < el.x1 || h.x > el.x2) continue;
+    const s = el.stairs.find((q) => q.dir > 0) || el.stairs[0];
+    if (!s) continue;
+    h.el = true; h.x = s.x; h.y = s.y; h.bridges = [];
+    const poi = m.pois[h.poi];
+    if (poi) { poi.x = s.x; poi.y = s.y; }
+  }
+  // nothing tall under the deck: the trees and lamps the streets were dressed with along its line go
+  if (removeProps) removeProps(m, (x, y) => x > el.x0 - 32 && x < el.x3 + 32 && Math.abs(y - el.y) < 150 && m.props.some((p) => p.x === x && p.y === y && /^(tree|palm|lamp)/.test(p.t)));
+  m.el = el;
+  return { piers: el.piers.length, stairs: el.stairs.length };
+}
 
 // (H35, 8.14) Each station's house on open ground: the house (140 x 92 px, its canopy toward the tracks, drawn by the
 // renderers at the hub's place moved 18 px along `a`) where map.js buildRailHubs put it if it stands clear there, else
@@ -209,6 +275,7 @@ export function seatStationHouses(m) {
   };
   let moved = 0;
   for (const h of m.railHubs) {
+    if (h.el) continue;   // (up on the El: no house - its stair towers, elFurniture)
     const cx = h.x + Math.cos(h.a) * 18, cy = h.y + Math.sin(h.a) * 18;
     if (fits(cx, cy, h.a)) continue;
     // (the whole house; failing that - a dense block - its middle at least on open ground; every platform within 560 px)

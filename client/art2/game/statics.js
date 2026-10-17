@@ -46,7 +46,9 @@ import * as WL from '../props-wild.js';
 import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
 import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and pole sign: task #366)
-import * as TN from '../props-towns.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
+import * as TN from '../props-towns.js';
+import * as ELV from '../props-el.js';   // (2026-10-17: the El over Midtown's Trestle Street - its bents and stair towers)
+import { EL_Z } from './chunkgeom.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
 import { nightFront, paintSigns } from '../neonsigns.js';   // (the night's big neon signs)
@@ -251,6 +253,7 @@ export function staticIndex(M) {
     addSignals(c, I);
     addDecks(c, I);
     addRail(c, I);
+    addEl(c, I);
     addSetPieces(c, I);
     addNature(c, I);
     addCameras(c, I);
@@ -335,6 +338,7 @@ export function makeStatic(r) {
     case 'f': return makeFlora(r);
     case 'rw': return r.k === 'stump' ? RW.oldStump(11 + r.s * 7, 26) : RW.nurseLog(5 + r.s * 13, r.len || 200, 18, r.flip);   // (redwoods.js: an old stump, a fallen giant)
     case 'deck': return makeDeck(r);
+    case 'el': return makeEl(r);
     case 'sg': return makeSignal(r);
     case 'span': return makeSpan(r);
     case 'wire': return makeWire(r);
@@ -465,6 +469,7 @@ function archOf(c, b) {
   const D = c.dist((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE), st = D.style;
   const r = b.roof >= 0 ? c.M.roofs[b.roof] : null, rk = r ? r.kind : null;
   if (b.business === 'courthouse') return 'court';
+  if (b.arch) return b.arch;   // (World v3's handcrafted districts: the plan says what each building is drawn as - shared/world3-hand.js)
   if (b.look && LOOK_ARCH[b.look]) return LOOK_ARCH[b.look];   // (H40: World v3's towns' own buildings)
   if (b.kind === 'shop') { const n = (b.name || '').toUpperCase(); return /AUTO/.test(n) ? 'garage' : /FITNESS/.test(n) ? 'gym' : 'handshop'; }
   if (KIND_ARCH[b.kind]) return KIND_ARCH[b.kind];
@@ -504,11 +509,12 @@ function sectionsOf(c, b, A) {
     if (doorL) xs.push([b.tx, b.tw - ww, 0], [b.tx + b.tw - ww, ww, 1, 'wing']);
     else xs.push([b.tx, ww, 1, 'wing'], [b.tx + ww, b.tw - ww, 0]);
   } else if (b.lookW) xs.push([b.tx, b.lookW, 0]);   // (H40: a sawmill's shed, an elevator's head house - its yard, logs or silos, on the rest)
+  else if (b.whole) xs.push([b.tx, b.tw, 0]);   // (a hand plan's building drawn as the one building it is: shared/world3-hand.js)
   else if (b.tw > (GENERIC.has(A) ? 18 : 26)) {
     let x = b.tx, k = 0;
     while (x < b.tx + b.tw) { let w = GENERIC.has(A) ? 7 + Math.floor(rnd() * 7) : 16; if (b.tx + b.tw - x - w < 5) w = b.tx + b.tw - x; xs.push([x, w, k++]); x += w; }
   } else xs.push([b.tx, b.tw, 0]);
-  if (b.th > 18 && GENERIC.has(A)) {
+  if (b.th > 18 && GENERIC.has(A) && !b.whole) {
     let y = b.ty;
     while (y < b.ty + b.th) { let h = 9 + Math.floor(rnd() * 6); if (b.ty + b.th - y - h < 6) h = b.ty + b.th - y; ys.push([y, h]); y += h; }
   } else ys.push([b.ty, b.th]);
@@ -1306,6 +1312,7 @@ const step2 = (R, t, x, y) => R[clamp(Math.round(t * (R.length - 1) + (((x & 3) 
 // ================================================================================================
 function voxModel(m, a) {
   switch (m) {
+    case 'elPier': return ELV.elPier(a[0], a[1]); case 'elStairs': return ELV.elStairs(a[0], a[1], a[2] ?? 1);
     case 'hydrant': return P.hydrant(); case 'bin': return P.bin(a[0] ?? true); case 'wireBin': return P.wireBin(); case 'newsBox': return P.newsBox(a[0]);
     case 'bench': return P.bench(); case 'bollard': return P.bollard(a[0] || 12); case 'acUnit': return P.acUnit(); case 'planter': return P.planter(a[0] ?? true);
     case 'pottedPalm': return P.pottedPalm(); case 'umbrella': return P.umbrella(a[0], a[1]); case 'dumpster': return dumpster(a[0]); case 'crate': return P.crate(a[0] || 1);
@@ -1371,6 +1378,7 @@ const EMPTY_VOX = () => new Vox(1, 1, 1);
 // model sizes [w, d, h] for each name (used for the chunk extents without building the model)
 function vdim(m, a) {
   switch (m) {
+    case 'elPier': return [18, (a[1] || 300) + 26, (a[0] || 128) - 18]; case 'elStairs': return [(a[0] || 150) + 20, 44, (a[1] || 128) + 40];
     case 'gnawStump': return [30, 30, a[0] ? 64 : 26]; case 'gnawLog': return [(a[0] || 90) + 14, 26, 16]; case 'hideRack': return [40, 16, 44];
     case 'alley': return AL.dim(a[0]);
     case 'hydrant': return [10, 10, 16]; case 'bin': case 'wireBin': case 'wheelieBin': return [12, 12, 20]; case 'newsBox': return [10, 9, 18]; case 'bench': return [32, 10, 14];
@@ -1988,6 +1996,7 @@ function propItems(c, p, pi, I) {
     case 'lguard': V(`lgt:${qa(p.a || 0, 4).toFixed(2)}`, 'lifeguard', [], qa(p.a || 0, 4)); return;
     case 'cafetable': V('ctab', 'cafeTable', []); return;
     case 'chainfence': fenceLine(I, 'chain', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;
+    case 'fenceline': fenceLine(I, p.kind || 'iron', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;   // (a hand plan's fence: picket, wood, chain, iron, stone)
     case 'hedgerun': fenceLine(I, 'hedge', x, y, x + (p.tx || 0), y + (p.ty || 0), { h: p.h || 16 }); return;
     case 'boathouse': V('bhouse', 'boathouse', [1]); lightAt(I, x, y + 36, 30, 100, [1, 0.8, 0.5], 1.3, 'lamp'); return;
     case 'fbridge': { const len = p.len || 140, hd = qa(p.a || 0, 16); V(`fbr:${len}:${hd.toFixed(2)}`, 'footbridge', [len, 30, 6], hd); return; }
@@ -2408,6 +2417,7 @@ function addRail(c, I) {
 // name over its door, and a footbridge over the tracks between each pair of platforms that face each other.
 function railHubs(I, hubs) {
   for (const h of hubs) {
+    if (h.el) continue;   // (the El's station: addEl)
     // (H35) the station house: its platform-side canopy toward the tracks, its doors and clock gable on the street side
     const hd = qa(h.a - PI / 2, 16), ox = Math.cos(h.a) * 18, oy = Math.sin(h.a) * 18;
     put(I, vitem(`sth:${hd.toFixed(2)}`, 'stationHouse', [1, 140], h.x + ox, h.y + oy, hd));
@@ -2421,6 +2431,7 @@ function addRailLoop(c, I, R, once) {
   if (!R || !R.pts) return;
   for (const st of R.stations || []) {
     if (!once(st.x, st.y, st.side)) continue;
+    if (st.el) continue;   // (up on the El: its stairs and platforms are addEl's)
     if (st.under) {
       const k = st.kiosk;
       if (k) {   // (SU5-B: the stairs down inside green iron railings, globe lamps and the lit train sign along the back)
@@ -2451,7 +2462,7 @@ function addRailLoop(c, I, R, once) {
   const pts = R.pts, n = pts.length;
   for (let i = 0; i < n; i++) {
     const p = pts[i], q = pts[(i + 1) % n];
-    if (!!p.under === !!q.under || !once(p.x, p.y, 'p')) continue;
+    if (!!p.under === !!q.under || p.elevated || q.elevated || !once(p.x, p.y, 'p')) continue;   // (the El's top: no mouth)
     const a = Math.atan2(q.y - p.y, q.x - p.x) + (p.under ? PI : 0), hd = qa(a, 32);
     put(I, vitem(`ptl:${hd.toFixed(3)}`, 'portal', [100], p.x, p.y, hd, [67, 52]));
   }
@@ -2467,6 +2478,107 @@ function crossingSignals(I, list) {
       lightAt(I, px, py, 40, 60, [1, 0.2, 0.15], 0.6, 'sign', 1);
     }
   }
+}
+
+// ================================================================================================
+// the El (World v3's main line over Midtown's Trestle Street, the owner's RW1/RW2; shared/world3-rail.js elFurniture
+// lays M.el): the deck in pieces along x - its two tracks on the steel plate between riveted girders, walkways at the
+// edges - up on steel bents; the inclines at either end on concrete retaining walls down to the portals; at a station
+// the platforms out over the pavements under their canopies, the stair towers down to the street
+// ================================================================================================
+const EL_PIECE = 128, EL_HW = 104, EL_STA_HW = 168, EL_STA_LEN = 360;   // (the platforms: a train's length either side of the station's middle)
+function addEl(c, I) {
+  const E = c.M.el;
+  if (!E) return;
+  const yc = E.y, Z = EL_Z;
+  // the stations' stretches of deck (wider: the platforms)
+  const sta = [];
+  for (const R of c.M.rails || []) for (const st of R.stations || []) if (st.el && !sta.some((q) => Math.abs(q - st.x) < 200)) sta.push(st.x);
+  const atSta = (x) => sta.some((sx) => Math.abs(x - sx) < EL_STA_LEN);
+  // the inclines: up from each portal (west: x0 -> x1, east: x3 -> x2)
+  for (const [a, b] of [[E.x0, E.x1], [E.x3, E.x2]]) {
+    const lo = Math.min(a, b), hi = Math.max(a, b);
+    for (let x = lo; x < hi; x += EL_PIECE) {
+      const len = Math.min(EL_PIECE, hi - x), za = Math.round(Z * Math.abs(x - a) / (hi - lo)), zb = Math.round(Z * Math.abs(x + len - a) / (hi - lo));
+      const r = { t: 'el', len, hw: EL_HW, za, zb, ramp: 1 };
+      put(I, { key: `el:r:${len}:${za}:${zb}`, recipe: r, x, y: yc + EL_HW, ext: [0, 2 * EL_HW + Math.max(za, zb) + 24, len, 4] });
+    }
+  }
+  // the deck at full height
+  for (let x = E.x1; x < E.x2; x += EL_PIECE) {
+    const len = Math.min(EL_PIECE, E.x2 - x), st = atSta(x + len / 2), hw = st ? EL_STA_HW : EL_HW;
+    const r = { t: 'el', len, hw, za: Z, zb: Z, ramp: 0, st: st ? 1 : 0, s: (x / EL_PIECE) % 4 };
+    put(I, { key: `el:d:${len}:${hw}:${r.st}:${r.s}`, recipe: r, x, y: yc + hw, ext: [0, 2 * hw + Z + 24, len, 4] });
+    // the deck's lamps every other piece (and over the platforms)
+    if (st || (x / EL_PIECE) % 3 === 0) lightAt(I, x + len / 2, yc + (st ? 120 : 0), Z + 40, st ? 220 : 160, [1, 0.88, 0.66], st ? 1.7 : 1.1, 'lamp', 1);
+  }
+  // the steel bents under it
+  for (const px of E.piers || []) put(I, vitem(`elp:${Z}:${E.span}`, 'elPier', [Z, E.span], px, E.py ?? yc, 0));
+  // a station: canopies over the platforms, the name boards, the stair towers
+  for (const sx of sta) {
+    for (const side of [-1, 1]) {
+      const py = yc + side * 136;
+      for (const dx of [-200, 0, 200]) put(I, vitem('pcan:192:0.00', 'platformCanopy', [192, 40, 1], sx + dx, py, 0, null, { z0: Z }));
+      put(I, { key: 'elsign:MIDTOWN', recipe: { t: 'sign', text: 'MIDTOWN', sx: 1, bg: '#1c4a8a', lit: true, z: 26, posts: true }, x: sx - 160, y: py + 6, z0: Z, ext: [80, 60 + Z, 80, 12] });
+      lightAt(I, sx, py, Z + 52, 200, [1, 0.94, 0.8], 1.6, 'lamp', 1);
+    }
+  }
+  for (const s of E.stairs || []) {
+    // (the flight rises away from the foot along x: dir +1 east, -1 west - the model rises along +x, turned for -1)
+    const len = 150, hd = s.dir > 0 ? 0 : PI;
+    put(I, vitem(`els:${len}:${Z}:${s.dir}`, 'elStairs', [len, Z, 1], s.x + s.dir * (len / 2 + 10), s.y, hd));
+    lightAt(I, s.x + s.dir * (len + 6), s.y, Z + 30, 120, [1, 0.92, 0.75], 1.4, 'lamp', 1);
+    lightAt(I, s.x, s.y, 54, 90, [0.6, 0.75, 1], 1.2, 'sign', 1);
+  }
+}
+// One piece of the El, EL_PIECE px along x (painted, not voxels: a long low thing): top surface at za..zb (the deck,
+// or an incline's slope), the south face below its front edge - the deck's plate girder, an incline's retaining wall
+// down to the ground; anchor at its south-west corner on the ground.
+const ELC = { steel: ramp('#3e5a54', 6, 3), steelDk: ramp('#2a3c38', 6, 3), plate: ramp('#5e6462', 6, 3), tie: ramp('#5a4232', 6, 3), rail: ramp('#a8a8a4', 5, 3),
+  ballast: ramp('#6e6a64', 6, 3), conc: ramp('#b4aea2', 6, 3), plat: ramp('#c4beb2', 6, 3), edge: ramp('#e0b83a', 5, 3) };
+function makeEl(r) {
+  const { len, hw, za, zb } = r, zt = Math.max(za, zb), GIR = 26;
+  const H = 2 * hw + zt + 12, G = new GBuf(len, H);
+  G.ax = 0; G.ay = H;   // (pixel (i, j): world x + i, screen row = the front edge - H + j)
+  const N_UP = [0, 0, 1], N_S = [0, 1, 0];
+  const zAt = (i) => za + (zb - za) * (i / Math.max(1, len - 1));
+  for (let i = 0; i < len; i++) {
+    const zz = Math.round(zAt(i));
+    // the south face: the incline's wall from the ground, the deck's girder (GIR deep) below its top
+    const fz0 = r.ramp ? 0 : zz - GIR;
+    for (let h = Math.max(0, fz0); h <= zz; h++) {
+      const j = H - 1 - h;   // (the front edge at world y = anchor: screen row H - 1 at height 0)
+      let c;
+      if (r.ramp) { const pan = (i % 64 === 0) || (h % 32 === 0 && h > 0); c = step2(ELC.conc, pan ? 0.32 : 0.52 + (hash(i >> 2, h >> 2, 91) - 0.5) * 0.12 - (h < 6 ? 0.1 : 0), i, h); }
+      else { const stiff = i % 32 < 3, flange = zz - h < 3 || h - fz0 < 3, rivet = (i % 8 === 4 && (zz - h === 5 || h - fz0 === 5)); c = step2(ELC.steel, flange ? 0.72 : stiff ? 0.62 : rivet ? 0.8 : 0.45 + (hash(i >> 3, h >> 2, 92) - 0.5) * 0.08, i, h); }
+      G.put(i, j, c, N_S, h, null, 0);
+    }
+    // the top: across the deck, north (u = -hw) to south (u = hw)
+    for (let u = -hw; u < hw; u++) {
+      const j = H - 1 - (hw - u) - zz;   // (world y = front - (hw - u); screen row = that - zz)
+      if (j < 0) continue;
+      const au = Math.abs(u);
+      let c, z = zz;
+      if (r.st && au > 112) {   // a platform out over the pavement, its yellow edge by the track
+        c = au < 120 ? step2(ELC.edge, 0.6, i, u) : step2(ELC.plat, 0.5 + (((i >> 4) + (u >> 4)) & 1 ? 0.05 : -0.05), i, u);
+        if (au > hw - 4) { c = step2(ELC.steelDk, 0.5, i, u); z = zz + 10; }
+        z += 2;
+      } else if (au > hw - 8) {   // the walkway's railing at the edge
+        c = step2(ELC.steelDk, au > hw - 3 ? 0.62 : 0.4, i, u); z = zz + (au > hw - 3 ? 10 : 2);
+      } else {
+        // which track (centres at u = -48 and 48) and where on it
+        const tu = u < 0 ? u + 48 : u - 48, at = Math.abs(tu);
+        if (at <= 30) {
+          const tie = (i + 4) % 14 < 6 && at < 28, railP = Math.abs(at - 14) < 1.5;
+          if (railP) { c = step2(ELC.rail, at < 14 ? 0.82 : 0.6, i, u); z = zz + 3; }
+          else if (tie) c = step2(ELC.tie, 0.5 + (hash(i >> 3, u, 93) - 0.5) * 0.2, i, u);
+          else c = step2(r.ramp ? ELC.ballast : ELC.plate, 0.4 + hash(i, u, 94) * 0.15, i, u);
+        } else c = step2(r.ramp ? ELC.ballast : ELC.plate, 0.52 + (au < 12 ? -0.06 : 0) + hash(i >> 1, u >> 1, 95) * 0.1 - ((i % 48) < 2 ? 0.12 : 0), i, u);
+      }
+      G.put(i, j, c, N_UP, z, null, 0);
+    }
+  }
+  return G;
 }
 
 // ================================================================================================

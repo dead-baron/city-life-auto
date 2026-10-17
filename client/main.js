@@ -425,7 +425,7 @@ function reconcile(s) {
 function pushOutOfTrains(s) {
   if ((s.lz || 0) > 0.3) return;
   for (const e of S.ents.values()) {
-    if (e.kind !== K.TRAIN || (e.flags & 1) || !e.d || !e.buf.length) continue;   // (subway cars run underground)
+    if (e.kind !== K.TRAIN || (e.flags & 33) || !e.d || !e.buf.length) continue;   // (subway cars run underground; El cars - 32 - overhead)
     const def = TRAIN_CARS[e.d.c] || TRAIN_CARS[1], b = e.buf[e.buf.length - 1];   // (where the server last had it)
     if (Math.abs(b.x - s.x) > def.L / 2 + 40 || Math.abs(b.y - s.y) > def.L / 2 + 40) continue;
     const h = circleVsObb(s.x, s.y, PED_RADIUS, b.x, b.y, b.a, def.L / 2, def.W / 2);

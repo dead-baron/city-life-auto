@@ -335,7 +335,7 @@ export function aheadOf(world, ped, L = 9000, step = 768) {
 function carPose(rail, t, c) {
   const sc = t.s - c.off, h = c.def.L * 0.4;
   const f = railAt(rail, sc + h), b = railAt(rail, sc - h), m = railAt(rail, sc);
-  return { x: (f.x + b.x) / 2, y: (f.y + b.y) / 2, a: Math.atan2(f.y - b.y, f.x - b.x), sub: m.under };
+  return { x: (f.x + b.x) / 2, y: (f.y + b.y) / 2, a: Math.atan2(f.y - b.y, f.x - b.x), sub: m.under, ez: m.ez || 0 };
 }
 
 function placeCars(world, t) {
@@ -348,6 +348,7 @@ function placeCars(world, t) {
     e.x = q.x; e.y = q.y; e.a = q.a;
     e.vx = Math.cos(q.a) * t.v; e.vy = Math.sin(q.a) * t.v;
     e.sub = q.sub;
+    e.lz = q.ez; e.el = q.ez > 0.35;   // (up on the El - shared/world3-rail.js EL: over the street, out of its reach)
     e.doors = !!t.dwellUntil;
     e.horn = now < t.hornUntil;
     e.lit = lit || q.sub;
@@ -980,7 +981,7 @@ export function keepPedsSafe(world) {
     if (t.v < 5 && !(t.dwellUntil && t.dwellUntil - now < 3)) continue;
     if (world.rails && !t.near) continue;   // (nobody near it: nobody on the line ahead of it - update)
     const loco = world.get(t.cars[0].id);
-    if (!loco || loco.sub) continue;
+    if (!loco || loco.sub || loco.el) continue;
     const reach = Math.max(400, t.v * 5) + t.len;
     for (const p of world.query(loco.x, loco.y, reach, K.PED)) {
       if (!p.npc || p.dead || p.vehId || p.onTrain || p.npc.boardTrain || p.npc.stairs || (p.lz || 0) > 0.3 || p.npc.role === 'cop') continue;
@@ -1014,7 +1015,7 @@ function collide(world, t, dt) {
   const now = world.time;
   for (let ci = 0; ci < t.cars.length; ci++) {
     const c = t.cars[ci], e = world.get(c.id);
-    if (!e || e.sub) continue;
+    if (!e || e.sub || e.el) continue;
     const hl = c.def.L / 2, hw = c.def.W / 2;
     const ca = Math.cos(e.a), sa = Math.sin(e.a);
     for (const v of world.query(e.x, e.y, hl + 80, K.VEH)) {
@@ -1292,7 +1293,7 @@ function climbable(world, ped, x, y, reach, vx, vy) {
   for (const t of world.trains) {
     for (let ci = 0; ci < t.cars.length; ci++) {
       const e = world.get(t.cars[ci].id);
-      if (!e || e.sub || Math.hypot(e.x - x, e.y - y) > t.cars[ci].def.L / 2 + reach) continue;
+      if (!e || e.sub || e.el || Math.hypot(e.x - x, e.y - y) > t.cars[ci].def.L / 2 + reach) continue;
       const ca = Math.cos(e.a), sa = Math.sin(e.a);
       const lx = (x - e.x) * ca + (y - e.y) * sa, ly = -(x - e.x) * sa + (y - e.y) * ca;
       if (Math.abs(lx) > half(t.cars[ci]) + 8 || Math.abs(ly) > t.cars[ci].def.W / 2 + reach) continue;
@@ -1322,6 +1323,7 @@ export function getOff(world, p) {
   p.crack = null;
   if (t.dwellUntil) { alightAtStation(world, t, ped); return; }
   if (world.get(t.cars[ped.onTrain.c].id).sub) { world.notify(p, 'You\'re in the tunnel - the doors stay shut until the next station.', 'warn'); return; }
+  if (world.get(t.cars[ped.onTrain.c].id).el && !stationAt(world, t)) { world.notify(p, 'You\'re up on the El - the doors stay shut until the next station.', 'warn'); return; }
   jumpOff(world, ped);
 }
 

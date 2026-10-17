@@ -72,7 +72,7 @@ function fields(world, e) {
     case K.PROJ: return [0, 1, 0, e.alt0 ? altByte(e.alt0 * Math.max(0, 1 - e.dist / e.maxDist)) : 0];   // (extra: a missile's height - the gunship's, gliding down from it to where it lands)
     case K.BALL: return [0, 1, 0, Math.max(0, Math.min(255, Math.round(e.z / 2)))]; // extra: height above the ground / 2
     // train car flags: 1 underground, 2 doors open, 4 horn, 8 lights on, 16 strongbox gone (mail car); parent: the car ahead
-    case K.TRAIN: return [(e.sub ? 1 : 0) | (e.doors ? 2 : 0) | (e.horn ? 4 : 0) | (e.lit ? 8 : 0) | (e.boxGone ? 16 : 0), 1, e.car ? world.trains[e.train].cars[e.car - 1].id : 0, 0];
+    case K.TRAIN: return [(e.sub ? 1 : 0) | (e.doors ? 2 : 0) | (e.horn ? 4 : 0) | (e.lit ? 8 : 0) | (e.boxGone ? 16 : 0) | (e.el ? 32 : 0), 1, e.car ? world.trains[e.train].cars[e.car - 1].id : 0, 0];
     default: return [0, 0, 0, 0];
   }
 }
@@ -96,7 +96,7 @@ function encodeAll(world) {
     recDv.setUint8(o + 17, Math.max(0, Math.min(255, Math.round(hp * 255))));
     recDv.setUint32(o + 18, (parent || 0) >>> 0, true);
     recDv.setUint8(o + 22, extra & 0xff);
-    const lz = e.kind === K.PED || e.kind === K.VEH || e.kind === K.PROJ ? Math.max(0, Math.min(255, Math.round((e.lz || 0) * 255))) : 0;
+    const lz = e.kind === K.PED || e.kind === K.VEH || e.kind === K.PROJ || e.kind === K.TRAIN ? Math.max(0, Math.min(255, Math.round((e.lz || 0) * 255))) : 0;
     recDv.setUint8(o + 23, lz);
     // change detection on the quantized record
     const sig = (Math.round(e.x * 4) * 73856093) ^ (Math.round(e.y * 4) * 19349663) ^ (recDv.getUint16(o + 15, true) * 83492791) ^ (flags * 2654435761) ^ (recBuf[o + 17] << 3) ^ ((parent || 0) * 97) ^ (extra << 11) ^ (lz << 19);

@@ -26,6 +26,7 @@ import { DISTRICTS } from './mapcore.js';
 import { ISLANDS3, MAINLAND3, HIGHWAYS3, MAIN_LOOP3 } from './world3-layout.js';
 import { STATIONS } from './world3-skeleton.js';
 import { TERRAIN3 } from './world3-land.js';
+import { handPlanAt, handStreets, HAND_PLANS } from './world3-hand.js';
 
 // the v3b frame the plan is drawn on (WORLD-V3.md 9.1: 13 x 8 regions of 504 tiles); the build lays the city only there
 export const CITY_FRAME = [6552, 4032];
@@ -98,7 +99,7 @@ export const CITY3 = [
   { d: 2, on: 'main', zone: ZC, rects: [[2700, 1440, 3680, 1660]], look: 'Northgate: apartment blocks along the north, the high school, Fire Station 7' },
   { d: 8, on: 'main', zone: ZC, rects: [[2860, 1900, 3800, 2120]], look: 'the Harbor along the waterfront: piers, the fish market, the ferry terminal, the marina' },
   { d: 18, on: 'main', zone: ZC, rects: [[2600, 1660, 2860, 2120]], look: 'Old Town at the river mouth: narrow brick streets, the infirmary, the Rusty Anchor' },
-  { d: 1, on: 'main', zone: ZC, rects: [[2860, 1660, 3680, 1900]], look: 'Midtown at the bridgeheads: shops, the dealership, the grocery along Midtown Boulevard' },
+  { d: 1, on: 'main', zone: ZC, rects: [[2860, 1660, 3680, 1900]], hand: 'midtown', look: 'Midtown at the bridgeheads, handcrafted (shared/world3-midtown.js): the train over Trestle Street, Holly Street\'s main street, the boulevard, the diagonal to The Yards' },
   // --- the western city ---
   { d: 27, on: 'main', zone: ZW, rects: [[1440, 2600, 2090, 2860]], keep: [[1440, 2600, 2090, 2860]], look: 'Westport International: the north-south runway, its taxiway, the terminal, the apron and hangars' },
   { d: 26, on: 'main', zone: ZW, rects: [[1960, 2160, 2200, 2400], [2090, 2600, 2320, 2780]], port: true, look: 'Port Westport: the container quays and cranes on the gulf shore, the Gull Harbor car ferry\'s terminal' },
@@ -265,6 +266,7 @@ export function planCity3(land, dist, avoid) {
     return [...out].sort((p, q) => p - q);
   };
   for (const c of CITY3) {
+    if (c.hand) continue;   // (a handcrafted district lays its own streets: shared/world3-hand.js)
     const P = PITCH[DISTRICTS[c.d].style];
     for (const [x0, y0, x1, y1] of c.rects) {
       const ys = P ? cuts(y0, y1, AVE_Y.map((A) => A[0]), P[1]) : [y0, y1];
@@ -300,6 +302,7 @@ export function planCity3(land, dist, avoid) {
     for (const [x, y] of pts) for (let o = -half; o <= half; o += 2) { const tx = horiz ? x : x + o, ty = horiz ? y + o : y; if (!land(tx, ty)) return false; }
     const mx = horiz ? (a + b) >> 1 : c, my = horiz ? c : (a + b) >> 1;
     if (inKeep(mx, my)) return false;
+    if (handPlanAt(mx, my)) return false;   // (inside a handcrafted district: its own plan's)
     const side = half + 3;
     let by = 0;
     for (const [x, y] of pts) if (horiz ? mine(x, y - side) || mine(x, y + side) || mine(x, y) : mine(x - side, y) || mine(x + side, y) || mine(x, y)) by++;
@@ -311,6 +314,9 @@ export function planCity3(land, dist, avoid) {
   const kept = { h: new Map(), v: new Map() };
   const roads = avoid.filter((A) => A.road);
   const onRoad = (x, y) => roads.some((A) => nearSeg(A.pts, x, y).d <= ON_ROAD);
+  // (the handcrafted districts' streets: a grid street that ends on one is met there)
+  const handLines = HAND_PLANS.flatMap((P) => P.streets().filter((s) => s.kind !== 'alley').map((s) => s.pts));
+  const onHand = (x, y) => handLines.some((pts) => nearSeg(pts, x, y).d <= 8);
   const crossings = (M, c, a, b) => { const out = []; for (const [k, S] of M) if (k > a && k < b && S.some(([p, q]) => c >= p && c <= q)) out.push(k); return out.sort((p, q) => p - q); };
   for (const [horiz, M, O, out, aves] of [[true, H, V, kept.h, isAveY], [false, V, H, kept.v, isAveX]]) {
     for (const [c, S] of M) {
@@ -332,7 +338,7 @@ export function planCity3(land, dist, avoid) {
     for (const [y, L] of kept.h) for (const [a, b] of L.segs) { bump(a, y); bump(b, y); }
     for (const [x, L] of kept.v) for (const [a, b] of L.segs) { bump(x, a); bump(x, b); }
     // (an end on a country road is met by it)
-    for (const k of [...deg.keys()]) { const x = Math.floor(k / 100000), y = k - x * 100000; if (y < COUNTRY_Y + ON_ROAD && onRoad(x, y)) deg.set(k, deg.get(k) + 1); }
+    for (const k of [...deg.keys()]) { const x = Math.floor(k / 100000), y = k - x * 100000; if ((y < COUNTRY_Y + ON_ROAD && onRoad(x, y)) || onHand(x, y)) deg.set(k, deg.get(k) + 1); }
     let cut = 0;
     for (const [horiz, M] of [[true, kept.h], [false, kept.v]]) for (const [c, L] of M) {
       L.segs = L.segs.filter(([a, b]) => {
@@ -418,6 +424,7 @@ export function layCity3(lines, m) {
     out.len += r.b - r.a;
   }
   for (const r of plan.alleys) { push([{ x: C(r.c), y: C(r.a) }, { x: C(r.c), y: C(r.b) }], 'alley', 'Alley'); out.alleys++; }
+  out.hand = handStreets(lines);   // (the handcrafted districts' own streets: shared/world3-hand.js)
   // the bridges: an arterial (or a footbridge: its narrow lane) whose points cross the water and whose end is on a city
   // district - a stub, east-west or north-south, from its end to the nearest of the city's streets within 60 tiles (none:
   // the generator's repair; a footbridge's lane reaches only 22 tiles, so one landing mid-block - the Gulf Footbridge -

@@ -409,7 +409,10 @@ export function railAt(rail, s) {
   const a = pts[lo], b = pts[(lo + 1) % pts.length];
   const segLen = (lo + 1 < pts.length ? b.s : L) - a.s || 1;
   const t = Math.min(1, (s - a.s) / segLen);
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, a: Math.atan2(b.y - a.y, b.x - a.x), under: !!(a.under && b.under), i: lo };
+  // (World v3's El, shared/world3-rail.js EL: the track up on its viaduct is `under` to the generator but not below
+  // ground - ez, how high it stands, 0..1 of its deck's height)
+  const ez = (a.ez || 0) + ((b.ez || 0) - (a.ez || 0)) * t;
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, a: Math.atan2(b.y - a.y, b.x - a.x), under: !!(a.under && b.under && !a.elevated && !b.elevated), ez, i: lo };
 }
 
 // Street furniture vehicles can smash through. Heavy items slow the car more; everything not

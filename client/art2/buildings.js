@@ -50,13 +50,14 @@ const setN = (G, x, y, n) => { if (!G.inside(x, y)) return; const j = (y * G.w +
 const glow = (G, x, y, e) => G.glow(x, y, e);
 
 let WALLC = null;   // a custom wall ramp for the building being made (spec.wallColor)
+let BRICKC = null;  // a brick building's own tone (spec.brickTone: brown, buff, cream, painted...; none: the red brick ramp)
 let GLOW_ONLY = false; // spec.glowOnly: lit windows keep their glass albedo and carry the light in the emissive
                        // map only (the game bakes a chunk once for every time of day; the Lighter scales emi)
 // (big and mid: vnoise(u, v, 30, seed) and vnoise(u, v, 8, seed + 1) when the caller has them precomputed)
 function wallColor(style, u, v, seed, x, y, big = vnoise(u, v, 30, seed), mid = vnoise(u, v, 8, seed + 1)) {
   const h = hash(u, v, seed);
   if (style === 'brick' || style === 'brickDark') {
-    const R = style === 'brick' ? MAT.brick : MAT.brickDark;
+    const R = BRICKC || (style === 'brick' ? MAT.brick : MAT.brickDark);
     const row = Math.floor(v / 4), off = (row & 1) * 4, col = Math.floor((u + off) / 8);
     const mortar = v % 4 === 0 || (u + off) % 8 === 0;
     if (mortar) return step(MAT.concrete, 0.3 + (mid - 0.5) * 0.2, x, y, 0.4);
@@ -140,6 +141,7 @@ function acBox(G, x0, y0) { for (let y = 0; y < 9; y++) for (let x = 0; x < 13; 
 export function makeBuilding(spec) {
   const { w, d } = spec, seed = spec.seed || 1, style = spec.style || 'stucco';
   WALLC = spec.wallColor ? ramp(spec.wallColor, 6, 3) : null;
+  BRICKC = spec.brickTone ? ramp(spec.brickTone, 6, 3, { dark: 0.55 }) : null;
   GLOW_ONLY = !!spec.glowOnly;
   const floors = spec.floors || 1, gH = spec.groundH ?? (spec.shop ? SHOP_FLOOR : FLOOR), cornice = style === 'brick' ? 10 : 6;
   const H = buildingH(spec);
@@ -196,7 +198,7 @@ export function makeBuilding(spec) {
   for (let k = 0; k < cornice; k++) for (let x = 0; x < w; x++) {
     const v = H - k, Y = fy(v);
     let c;
-    if (style === 'brick') c = k < 2 ? MAT.stone[k ? 2 : 4] : k < 4 ? MAT.brickDark[3] : (k < 7 && x % 4 < 2) ? MAT.stone[3] : MAT.brickDark[1];
+    if (style === 'brick') { const BD = BRICKC ? [BRICKC[0], BRICKC[1], BRICKC[1], BRICKC[2]] : MAT.brickDark; c = k < 2 ? MAT.stone[k ? 2 : 4] : k < 4 ? BD[3] : (k < 7 && x % 4 < 2) ? MAT.stone[3] : BD[1]; }
     else if (style === 'diner') c = k < 2 ? MAT.chrome[3] : MAT.dinerRed[3 - (k > 3 ? 1 : 0)];
     else c = step(MAT.stone, 0.75 - k * 0.1, x, k, 0.3);
     setC(G, x, Y, c);

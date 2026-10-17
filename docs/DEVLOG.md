@@ -9893,3 +9893,37 @@ at the street's far end, through the clinic (server/systems/traffic.js, roadends
   waypoint goes back onto its lane and on along the street.
 Tests: test/roadends.test.js (3 new). The station streets and car parks and the square level crossings (the same
 helper's world work) wait for tomorrow.
+
+## 2026-10-17 · World v3, handcrafted: Midtown laid out by hand; the El over Trestle Street
+The first district of the World v3 Handcraft Plan (the project's plan doc; the owner's Midtown concepts RW1, RW2, MT1,
+MT2, PJ1, the hero corner R1-A and R1-I, OS33's corner bank, WC315's community garden). Midtown was one grid of
+look-alike strip blocks with the main line hidden underground; now:
+- **The handcraft frame** (shared/world3-hand.js): a district can be laid out by hand. Its plan gives its own streets
+  (the grid planner leaves its area alone - world3-city.js `hand`) and builds every lot before the block filler looks
+  for blocks (shared/map.js `hand` hook, `handBuilding`: a building placed whole with its look, business or home). The
+  kit's rows step along an angled street (the plan's rule: buildings square to the grid, the wedge in front paved and
+  planted); gaps are passages to the alley, walled yards or pocket gardens; the yards behind a shop row get their bins,
+  crates and a fence now and then; whatever the plan leaves open is sealed (paved by a street, else planted) and kept
+  from the block filler.
+- **Midtown** (shared/world3-midtown.js): Trestle Street along the north under the El; Central Avenue's rail-side
+  walk-ups; Holly Street, the main street, with MT2's row (Harper & Co, Sunbean, Red Cup Diner, Lucky Pawn, Vinyl & More,
+  Suds Laundry, Clip Joint, Corner Mart), the hero corner at Madison Street (the Starlite Diner, the corner store, the
+  Madison Walk-up and Row) and R1-I's corner store and neon coffee-cup cafe at Main Avenue, the corner bank; Midtown
+  Boulevard's big stores (MediMart, Bean Machine, the Pier Street strip of guns, sports, hardware and clothes, FreshHub,
+  the garage, Motor Row's showroom and lot); Union Square by the subway; Crosstown Way, the diagonal to the Yards road,
+  with MT1's wedge building and the plaza opposite; Garden Court (walk-ups round a court with a hoop, a lawn and beds);
+  the Trestle Community Garden by the tracks; the projects (PJ1) on the rough east edge - slabs round a yard with a
+  court, a burn barrel, a lawn and a car park, the bottle shop and pawn on the boulevard - and rougher lots toward The
+  Yards. Back alleys behind every main-street row.
+- **Colours** (the owner: no district all one colour): brick takes a tone (client/art2/buildings.js `brickTone`):
+  Midtown's mix is red, deep red, brown, chocolate, buff, tan, cream and painted brick (green, navy, oxblood, mustard,
+  sage) with stucco, stone and peach; a neighbour repeats the one before it now and then (a run of one colour along a row
+  is fine). Roofs mostly pale membrane and gravel, some tar, pavers, a green roof now and then.
+- **The El** (shared/world3-rail.js EL, elFurniture; client/art2/props-el.js, statics.js addEl): the main line runs
+  straight along Trestle Street on a steel viaduct 128 px up, its inclines down to portals east of Garden Street and
+  east of Mercer Street; steel bents on the pavements; Midtown Station up on the deck with its platforms, canopies and
+  name boards, a stair tower down to each pavement (boarding at the stair foot). A train up there is out of the
+  street's reach (server/systems/trains.js `el`: no collisions, no climbing on, the doors shut between stations), drawn
+  at the deck's height with its riders (the wire carries a train's lz; flag 32).
+- WORLD_VERSION 12: the homes' list moved - homes bought are bought back at what was paid.
+Tools: tools/area-shot.mjs (any rectangle of the world through the chunk bake, for checking a place as it's built).
