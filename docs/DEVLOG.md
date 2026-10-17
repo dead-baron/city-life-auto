@@ -10227,3 +10227,17 @@ from starting.
 - **The watcher:** now stands behind the board, never between the camera and the game.
 
 The Neon Strip's boulevard gets Midtown Boulevard's section too: four lanes either side of a planted median of royal palms with lights strung between them. The owner's concepts of the day are filed: WC324-WC352, the Midtown set, and WC353-WC356, Downtown (`docs/art-v2/world-concepts/CATALOGUE.md`, batches 5 and 6).
+
+## 2026-10-17 · Walk-in rooms just inside the door: compact shops, the back rooms roofed over
+
+**The owner:** "Some building interiors are extremely long, they shouldn't have to go this far back down the building like this, can just have the interior be a square or small rectangle space near the entrance."
+
+**What it was:** a walk-in's room was the building's whole footprint inside a one-tile wall ring (`shared/map.js` buildInteriors), with the counter and the clerk near the back. World v3's handcrafted districts have deep buildings: a records store in Midtown's long block (5 x 33 tiles) was a room 3 tiles wide and 31 deep, an empty wooden corridor to the counter at the far end. The Violet Room's floor was 39 rows deep.
+
+**Now:**
+- **The room's size** (`shared/map.js` roomDepth): it runs from the front wall about as deep as the widest unit is wide - round(1.2 x width), at least 6 rows and at most 10, counter and stock room included. The bank, the courthouse and the hospital get 8-12 rows. The police station gets 10-12 (three-deep cells along the back: `shared/cells.js`). A club gets up to 12 (the dance floor). A food place gets at least 8 (its tables in front of the counter: `shared/foodrooms.js`). A footprint at most 2 rows deeper than that keeps the whole of it. A strip mall's units share one depth.
+- **Behind the room:** a solid wall, then the back rooms, which stay plain building (not walkable, nobody in them). The counter row, the clerk, the POI's spot in front of the counter, the doors, the partitions, the club shutters, the ER mat, the ATMs inside, the cells, the food fit-outs and the dance floor all come from the room as before, so they all follow it.
+- **From inside (art v2, `client/art2/game/statics.js` cutRecipe / makeCut):** only the room is cut away. Its back wall rises to the roof, and behind it the building stands as it does from outside: its roof and what's on it (the rooftop kit over the room is left out). Above the shop's own height the back wall is in the building's own wall. A section of a building with no room in it isn't cut at all: a section wholly behind the room, or a closed shop along the row (it used to be drawn as floor). The classic renderer (`client/render/tiles.js` interiorArt) paints the back rooms with the building's roof.
+- **World v3:** 294 of its 855 walk-ins got a compact room. None is deeper than 14 rows now (it was 39 before). The records store is 3 x 6, the café beside it 4 x 8, the Violet Room 20 x 12, the strip mall on Holly Street 38 x 10 (from 38 x 13), a hospital 30 x 12 (from 30 x 15). The police stations, the banks and most hospitals keep their rooms.
+- **Tools:** `node tools/area-shot.mjs --rect ... --cut <building>` renders an area as seen from inside a walk-in (its chunks baked cut away).
+- **Tests:** `test/walkinrooms.test.js` covers the depth rule and checks every walk-in's room: just inside the door, walled all round, back rooms solid, the counter, clerk and spot inside it. It also checks that the cutaway keeps the back rooms' roof and leaves nothing over the room.
