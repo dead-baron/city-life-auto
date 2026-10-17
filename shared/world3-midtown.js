@@ -1134,6 +1134,27 @@ function streetDressing(K, out, poi0) {
       }
     }
   }
+  // the loading bays: the kerb bay in front of a grocer, a corner store, the market hall and the department store has
+  // its delivery van in it (traffic.js: sp.model), one each
+  const shops = [];
+  for (let i = poi0; i < m.pois.length; i++) { const p = m.pois[i]; if (p.kind === 'grocery' || p.kind === 'convenience' || p.label === 'Pier Street Market' || p.label === 'Marlow & Finch') shops.push(p); }
+  const kerbs = m.parking.filter((q) => q.kerb);
+  for (const p of shops) {
+    let best = null, bd = 6 * TILE;
+    for (const q of kerbs) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd && !q.model) { bd = d; best = q; } }
+    if (best) best.model = /Market|Marlow/.test(p.label) ? 'boxtruck' : 'van';
+  }
+  // the road crew at a hole in Linden Street's pavement (activities.js 'roadcrew'): its cones, the broken paving, the
+  // boards; their van in the nearest bay
+  {
+    const cx = MX.linden - 6, cy = 1726;
+    for (const [dx, dy] of [[-1.1, -1.3], [1.1, -1.3], [-1.1, 1.5], [1.1, 1.5], [0, -1.7]]) prop('cone', cx + dx, cy + dy, 0);
+    prop('rubble', cx, cy, 0); prop('planks', cx + 0.3, cy + 2.6, 0);
+    (m.crewSpots ||= []).push({ x: Math.round((cx + 0.5) * TILE), y: Math.round((cy + 0.5) * TILE), name: 'Linden Street' });
+    let best = null, bd = 1e9;
+    for (const q of kerbs) { const d = Math.hypot(q.x - (cx + 0.5) * TILE, q.y - (cy + 0.5) * TILE); if (d < bd && !q.model) { bd = d; best = q; } }
+    if (best) best.model = 'van';
+  }
   // the street trees in their grates along both pavements, clear of the doors and the corners
   const nearCross = (x, y, dir) => (dir ? EW : NS).some((q) => Math.abs((dir ? q.pts[0][1] : q.pts[0][0]) - (dir ? y : x)) < EXT[q.kind] + 3);
   const SP = { 'Holly Street': 'street', 'Central Avenue': 'maple', 'Midtown Boulevard': 'streetPl', 'Pier Street': 'street', 'Trestle Street': null };

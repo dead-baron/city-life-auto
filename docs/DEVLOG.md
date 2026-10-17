@@ -10108,3 +10108,11 @@ an alley and yards between. Now blocks break that with buildings of their own (s
 - **Pocket parks** in the rows by the El (shared/world3-hand.js gap 'park'): lawns either side of a path in from the
   street, two trees, benches, a chess table (the old men's game: activities.js 'chess'), flower beds, an iron fence and
   its gate, a lamp.
+
+## 2026-10-17 · Midtown: delivery vans in the loading bays, a road crew at work
+- **Loading bays**: the kerb bay in front of each grocer and corner store has its delivery van in it, the market hall's
+  and the department store's a box truck (shared/world3-midtown.js streetDressing; a parking spot's own `model`:
+  server/systems/traffic.js).
+- **A road crew** (server/systems/activities.js 'roadcrew', map.crewSpots): a hole in Linden Street's pavement inside
+  its cones, the broken paving and the boards; by day one swinging a pick at it, one down on a knee, the foreman stood
+  watching; their van in the nearest bay.
