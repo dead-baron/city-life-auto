@@ -2,6 +2,7 @@
 // reflex dive-roll evasion, fight-or-flight temperaments, syndicate gangs in turf,
 // passed-out boozers, rain umbrellas, and the Snatch-and-Grab street event (§12).
 import { K, T, WEATHER, TILE } from '../../shared/constants.js';
+import { DISTRICTS } from '../../shared/mapcore.js';
 import { IN } from '../../shared/input.js';
 import { pedStep } from '../../shared/physics.js';
 import { isTurf, PED_BLOCK, isSwimming, nearestLand } from '../../shared/map.js';
@@ -30,6 +31,21 @@ const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND,
 const PREFERRED = new Set([T.SIDEWALK, T.PLAZA]);
 const COUNTRY_PREFERRED = new Set([T.DIRT, T.SIDEWALK, T.PLAZA, T.LOT]); // out in the country: the tracks and trails, the yards
 const CIV_TARGET_DAY = 30, CIV_TARGET_NIGHT = 20;
+// How busy a place is (the World v3 plan: busy downtown pavements, a quiet suburb - density set per place): the
+// district's style, [by day, by night]; round a train station at the rush hours, half as many again
+const CROWD = { towers: [1.5, 0.7], commercial: [1.3, 0.9], nightlife: [0.9, 1.6], redlight: [0.8, 1.4], arts: [1.2, 1], oldtown: [1.15, 0.9], apartments: [1, 0.7], civic: [1.1, 0.6], beach: [1.3, 0.6], houses: [0.6, 0.35], luxury: [0.6, 0.5], southside: [0.9, 0.9], industrial: [0.4, 0.2], factory: [0.4, 0.2], harbor: [0.5, 0.3], park: [0.8, 0.3] };
+const RUSH = [[420, 570], [990, 1140]];   // (minutes: 7:00-9:30, 16:30-19:00)
+function crowdAt(world, x, y, night) {
+  const m = world.map, tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  const D = m.inside && m.inside(tx, ty) ? DISTRICTS[m.dist[m.idx(tx, ty)]] : null, c = (D && CROWD[D.style]) || [1, 1];
+  let k = c[night ? 1 : 0];
+  const min = world.clock && world.clock.minutes;
+  if (!night && RUSH.some(([a, b]) => min >= a && min < b)) {
+    const st = (m._stations ||= m.pois.filter((q) => q.kind === 'station'));
+    if (st.some((q) => Math.abs(q.x - x) < 900 && Math.abs(q.y - y) < 900)) k *= 1.5;
+  }
+  return k;
+}
 const COUNTRY_TARGET_DAY = 4, COUNTRY_TARGET_NIGHT = 2; // people round a player out in the open country
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const CRAWL_SPEED = 0.17; // dragging themselves along on the stomach: this fraction of walking pace
@@ -696,7 +712,7 @@ function manageDensity(world) {
   for (const a of anchors) {
     // out in the open country it's quiet: a few people, where they belong (spawnCountry)
     const country = !!wildlife.wildStyle(world.map, a.x, a.y);
-    const target = country ? (night ? COUNTRY_TARGET_NIGHT : COUNTRY_TARGET_DAY) : night ? CIV_TARGET_NIGHT : CIV_TARGET_DAY;
+    const target = country ? (night ? COUNTRY_TARGET_NIGHT : COUNTRY_TARGET_DAY) : Math.round((night ? CIV_TARGET_NIGHT : CIV_TARGET_DAY) * crowdAt(world, a.x, a.y, night));
     let count = 0;
     for (const e of world.query(a.x, a.y, 1200, K.PED)) if (e.npc && !e.dead) count++;
     if (count >= target) continue;

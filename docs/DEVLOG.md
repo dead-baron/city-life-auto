@@ -10003,3 +10003,12 @@ new interiors - a laundromat, a record shop, a bookshop and a diner.
   low walk-ups and shops fronting Trestle Street under the viaduct (their little yards behind them, toward the Central
   Avenue row) instead of a wide strip of empty paving; at Madison Street, where the station's stair tower comes down, a
   plaza takes the row's place - the commuters' hot-dog cart, benches, a bike rack, news boxes, the map board.
+
+## 2026-10-17 · Midtown's people: busier pavements, the station's rush hours, neighbours out on the stoops
+- **Density by place** (server/systems/npc.js `CROWD`): how many people are about follows the district's style, by
+  day and by night - Downtown's and Midtown's pavements busy, the Neon Strip busier after dark than by day, the
+  suburbs and the luxury hills quiet, the industrial districts and the harbour nearly empty at night. Round a train
+  station at the rush hours (7:00-9:30, 16:30-19:00) half as many again.
+- **Stoops** (server/systems/activities.js `stoop`): neighbours sat out on a walk-up's front steps, one or two, now and
+  then one stood by for a word - more of an evening, not in the rain. A Midtown walk-up's door is where its facade
+  draws it (the stoop in front of it).

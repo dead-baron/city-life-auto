@@ -16,6 +16,8 @@
 //             ballKind 'pickup': drawn as the hoops ball) dribbled, shot at the rim, the rebound bounced on to the next
 //   skaters   riding laps round a skate spot's ramps and ledges on their boards (map.skateSpots: World v3's Midtown has
 //             one by the El), stopping now and then for a breather; a friend or two sat on a ledge watching
+//   stoop     neighbours sat out on a walk-up's front steps (World v3's handcrafted districts: Midtown's walk-ups), a
+//             word with one stood by them - more of an evening
 //   pool      two at the Rusty Spur's pool table taking turns (round the table to the next shot, bent over the cue),
 //             the other waiting at the end of the table with his cue up; a watcher or two
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
@@ -58,7 +60,8 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   hoops: { day: 0.75, night: 0.2, cap: 1 },
   pool: { day: 0.5, night: 0.9, cap: 1 },
   diners: { day: 0.85, night: 0.6, cap: 2 },
-  skaters: { day: 0.85, night: 0.4, cap: 1 },   // (IN8: eating at a food place's tables, the cook at the line)
+  skaters: { day: 0.85, night: 0.4, cap: 1 },
+  stoop: { day: 0.18, night: 0.45, cap: 2 },   // (IN8: eating at a food place's tables, the cook at the line)
 };
 // a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
 const pk = (r, a) => a[Math.floor(r() * a.length) % a.length];
@@ -190,6 +193,12 @@ export function spotsOf(map) {
     const box = { x0: q.x * TILE, y0: q.y * TILE, x1: (q.x + q.w) * TILE, y1: (q.y + q.h) * TILE }, x = (box.x0 + box.x1) / 2, y = (box.y0 + box.y1) / 2;
     list.push({ k: 'skaters', x, y, a: 0, box, seats: q.seats || [], wild: false }); taken.push({ x, y });
   }
+  // the walk-ups' front steps (a hand plan's walk-up with a home behind its door, its front to the camera)
+  for (const b of map.buildings || []) {
+    if (!b || !b.hand || b.arch !== 'walkup' || b.back || !b.door || b.home === undefined) continue;
+    const x = (b.door.tx + 0.5) * TILE + 2, y = (b.ty + b.th) * TILE + 7;
+    if (walkable(map, x, y + 6) && clear(x, y, 90)) { list.push({ k: 'stoop', x, y, a: Math.PI / 2, wild: false }); taken.push({ x, y }); }
+  }
   // pool at the Rusty Spur (its bar room's table: where client/art2/game/statics.js roadhouseRoom draws it)
   const pt = poolTable(map);
   if (pt) { list.push({ k: 'pool', x: pt.cx, y: pt.cy, a: 0, table: pt, wild: false }); taken.push({ x: pt.cx, y: pt.cy }); }
@@ -287,6 +296,10 @@ function members(s) {
     }
     const seat = s.seats[Math.floor(rng() * s.seats.length)];
     if (seat && rng() < 0.7) out.push({ x: seat.x, y: seat.y, a: Math.atan2(s.y - seat.y, s.x - seat.x), arche: 'casual', look: 'skater', gt: 'sit', watch: true });
+  } else if (s.k === 'stoop') {     // one or two sat on the steps facing the street; now and then one stood by for a word
+    out.push({ x: s.x - 5, y: s.y, a: Math.PI / 2, arche: rng() < 0.35 ? 'senior' : 'casual', gt: 'sitlow' });
+    if (rng() < 0.6) out.push({ x: s.x + 9, y: s.y + 1, a: Math.PI / 2, arche: rng() < 0.3 ? 'senior' : 'casual', gt: 'sitlow' });
+    if (rng() < 0.35) out.push({ x: s.x + 2, y: s.y + 22, a: -Math.PI / 2, arche: 'casual', chat: true });
   } else if (s.k === 'pool') {      // the one shooting bent over the table, the other waiting at its end, cue up; watchers
     const T = s.table;
     out.push({ ...poolSpot(T, 0), arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 0, gt: 'cue' });
@@ -440,7 +453,7 @@ function pose(ped, on) {
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
-const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters']);
+const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop']);
 export function steer(world, ped, now) {
   const n = ped.npc, a = n.act;
   if (!a) return null;

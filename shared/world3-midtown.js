@@ -209,7 +209,8 @@ function build(m, api, K) {
     if (o.graffiti) { spec.graffiti = o.graffiti; spec.tagText = o.tag || null; }
     if (o.boarded) spec.boarded = o.boarded;
     if (o.mural) spec.mural = { x: 8, w: w * TILE - 16, h: Math.min(floors * 56 - 30, 150), kind: o.mural };
-    return { arch: o.arch || 'walkup', art: { spec, noShop: true, ...(o.kit ? { kit: o.kit } : {}) }, name: o.name || null, home: o.home === false ? null : { kind: 'apartment', ...(o.home || {}) }, whole: true };
+    // (its door where the facade draws it, a fifth of the way along, its stoop in front: shared/map.js handBuilding)
+    return { arch: o.arch || 'walkup', door: x + Math.floor(w * 0.22 + 0.3), art: { spec, noShop: true, ...(o.kit ? { kit: o.kit } : {}) }, name: o.name || null, home: o.home === false ? null : { kind: 'apartment', ...(o.home || {}) }, whole: true };
   };
   const place = (L, o) => { const b = K.building({ ...L, ...o }); if (b) { if (L.home) out.homes++; if (L.poi) out.shops++; } return b; };
 
