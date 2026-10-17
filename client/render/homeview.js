@@ -453,6 +453,8 @@ function piece(b, p, P, L) {
     }
     case 'r': box(P.cloth, x + 3, y + 3, w - 6, h - 6); b.strokeStyle = P.accent; b.lineWidth = 2; b.strokeRect(x + 7, y + 7, w - 14, h - 14); break;
     case 'w': box('#eceae4', x + 4, y + 4, w - 8, h - 8); b.fillStyle = '#5a7a8a'; b.beginPath(); b.arc(x + 16, y + 18, 7, 0, 6.28); b.fill(); box('#3a3e46', x + 8, y + 6, 6, 2); break;
+    case 'd': box('#5a3c22', x + 4, y + 10, w - 8, h - 14); box('#22222a', x + 6, y + 4, w - 12, 12); b.fillStyle = '#0e0e12'; b.beginPath(); b.arc(x + w / 2 - 2, y + 10, 5, 0, 6.28); b.fill(); box('#c83a2a', x + w / 2 - 3, y + 9, 2, 2); box('#c8ccd2', x + w - 10, y + 6, 2, 7); break;   // a record player on its cabinet
+    case 'q': for (let k = 0; k < 2; k++) { box(k ? '#2f6ab0' : '#a8743c', x + 3 + k * 13, y + 8, 12, h - 12); for (let j = 0; j < 4; j++) box(['#c83a2a', '#e8c040', '#2a2a30', '#5aa0d0'][(j + k) % 4], x + 4 + k * 13 + j * 3, y + 6, 2, 8); } break;   // two crates of records
     case 'k': box('#4a5a6a', x + 2, y + 6, w - 4, h - 10); box('#b08a5a', x + 3, y + 7, w - 6, h - 14); box('#b8342e', x + 10, y + 10, 12, 7); box('#c8ccd2', x + w - 14, y + h - 10, 8, 4); break;
     // (H71) a lobby's: the mailboxes on the back wall, the stairs climbing to it
     case 'M': box('#5a6068', x + 2, y + 2, w - 4, h - 12); for (let j = 0; j < 2; j++) for (let i = 0; i < Math.floor((w - 8) / 10); i++) { box('#a8aeb4', x + 5 + i * 10, y + 4 + j * 9, 8, 7); box('#22262c', x + 7 + i * 10, y + 6 + j * 9, 4, 1); } break;

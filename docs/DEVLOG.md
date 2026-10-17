@@ -9977,3 +9977,25 @@ camera a block is its roofs and its south faces, so:
 - **The pavements** (`streetDressing`): a cafe's or a diner's tables out under umbrellas, a florist's buckets, a
   grocer's crates and news box, planters either side of a door, bike racks; at the corners a hydrant, news boxes, bins,
   a mailbox; street trees in grates along both sides of the main streets and the avenues, clear of doors and corners.
+
+## 2026-10-17 · Midtown's shops you walk into: the main streets' counters, the laundromat, the bookshop, the record shop
+The decided brief (the plan doc, "Midtown, decided"): walk-in shops along most of the main-street rows, and four small
+new interiors - a laundromat, a record shop, a bookshop and a diner.
+- **Walk in** (shared/map.js buildInteriors `p.walk`): a hand plan's shop is a walk-in unit (its door, the counter,
+  the clerk) whatever its trade; its door is where its storefront draws it (left or right). 217 walk-ins in Midtown.
+- **Food places**: every cafe and food place is a sit-down one (poi kind coffee, shared/foodrooms.js) - its fit-out by
+  what it serves: booths and stools in a luncheonette or a grill, tables in a bistro, a noodle bar or a cafe, a counter
+  and its queue at a pizza, taco or chicken place; diners at their tables (activities.js). Their counters sell coffee
+  and, where there's a kitchen, a plate of the day and fresh bread. Every cafe's menu carries its own name now (they all
+  said Bean Machine Coffee).
+- **The counters by trade** (server/systems/economy.js walkCounter): a bar pours rye and red; a deli, a grocer or a
+  bodega sells bread, fruit and energy drinks; the laundromat washes and dries ($6) or sells you a machine; Harper & Co
+  and the other bookshops sell a bookshelf, a reading chair and a lamp; Vinyl & More and the record shops a record player,
+  a crate of records and framed art - delivered to your home (two new decor pieces: shared/homedecor.js turntable,
+  crates; drawn in client/art2/props-home.js and render/homeview.js). A tailor or an optician: a clerk and a look round.
+- **The rooms by trade** (client/art2/game/statics.js TRADE_ROOM): the laundromat's dryers stacked along the back wall and
+  washers down the sides with a folding table; the bookshop's spines floor to ceiling, low bookcases and a table of new
+  books; the record shop's posters over the LPs and the bins of sleeves; the boutiques' rails; the florist's cold room
+  and buckets on stands; the salons' mirrors and chairs. Their floors to match (tile, checker, wood).
+- **Flats over the shops**: most shops have a flat upstairs with its own door at the other end of the front (474 homes
+  in Midtown).

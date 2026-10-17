@@ -203,24 +203,31 @@ function handBuilding(m, o) {
       b.signs.push({ x: ux0, y: (y + h - 0.6) * TILE, text: label });
     });
     b.business = o.units[0][0];
-  } else if (o.poi) {
+  }
+  const addHome = (hx, hy) => {
+    const H = o.home, dist = DISTRICTS[d], id = m.homes.length;
+    const kind = H.kind || 'apartment', apt = kind === 'apartment', shack = kind === 'shack';
+    const price = H.price ?? (shack ? 6000 : apt ? (dist.tier === 'lux' ? 30000 : dist.tier === 'low' || dist.tier === 'rough' ? 11000 : 15000) : (dist.turf ? 12000 : dist.tier === 'lux' ? 60000 : 25000));
+    const home = { id, kind, name: H.name || `${dist.name} ${apt ? 'Apt' : shack ? 'Shack' : 'House'} #${id + 1}`, price, slots: H.slots ?? (apt ? 2 : shack ? 1 : 3), x: hx, y: hy, garage: H.garage || { x: (x + w * 0.5) * TILE, y: (y + h + 2.5) * TILE, a: 0 }, b: bid };
+    m.homes.push(home);
+    m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: hx, y: hy, r: 40, b: bid });
+    b.home = id;
+  };
+  if (o.units) { /* (the strip's units, above) */ } else if (o.poi) {
     const label = o.poi.label || b.name;
     b.business = o.poi.kind;
     const poi = { id: m.pois.length, kind: o.poi.kind, label, x: px, y: py, r: o.poi.kind === 'delivery' ? 40 : 48, b: bid, fixed: o.poi.fixed !== false };
+    if (o.poi.walk) { poi.walk = true; poi.store = o.poi.store || (o.art && o.art.shop && o.art.shop.kind) || 'mart'; }   // (a shop you walk into: shared/map.js buildInteriors)
+    if (o.poi.food) poi.food = true;   // (a food place's counter sells a plate as well as coffee: server/systems/economy.js)
     m.pois.push(poi);
     b.signs.push({ x: px, y: (y + h - 0.6) * TILE, text: label });
     // a precinct (sub: not the headquarters - the police spawn, the helipad stay at the first station the generator placed)
     if (o.poi.kind === 'police') { poi.sub = true; m.pois.push({ id: m.pois.length, kind: 'evidence', label: 'Evidence Locker', x: (x + w - 1) * TILE, y: py, r: 56, b: bid }); }
-    if (o.poi.kind === 'coffee' || o.poi.kind === 'pharmacy') { const vx = px + 56, vy = py + 12; if (vx < (x + w) * TILE - 8) { m.props.push({ t: 'vend_cola', x: vx, y: vy }); m.pois.push({ id: m.pois.length, kind: 'vending', label: 'Vending Machine', x: vx, y: vy + 18, r: 32 }); } }
-  } else if (o.home) {
-    const H = o.home, dist = DISTRICTS[d], id = m.homes.length;
-    const kind = H.kind || 'apartment', apt = kind === 'apartment', shack = kind === 'shack';
-    const price = H.price ?? (shack ? 6000 : apt ? (dist.tier === 'lux' ? 30000 : dist.tier === 'low' || dist.tier === 'rough' ? 11000 : 15000) : (dist.turf ? 12000 : dist.tier === 'lux' ? 60000 : 25000));
-    const home = { id, kind, name: H.name || `${dist.name} ${apt ? 'Apt' : shack ? 'Shack' : 'House'} #${id + 1}`, price, slots: H.slots ?? (apt ? 2 : shack ? 1 : 3), x: px, y: py, garage: H.garage || { x: (x + w * 0.5) * TILE, y: (y + h + 2.5) * TILE, a: 0 }, b: bid };
-    m.homes.push(home);
-    m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: px, y: py, r: 40, b: bid });
-    b.home = id;
-  } else if (o.poi !== false && o.name) m.pois.push({ id: m.pois.length, kind: 'delivery', label: b.name, x: px, y: py, r: 40, b: bid, fixed: true });
+    if (o.poi.kind === 'pharmacy' || o.poi.vend) { const vx = px + 56, vy = py + 12; if (vx < (x + w) * TILE - 8) { m.props.push({ t: 'vend_cola', x: vx, y: vy }); m.pois.push({ id: m.pois.length, kind: 'vending', label: 'Vending Machine', x: vx, y: vy + 18, r: 32 }); } }
+    // a flat over the shop: its own door at the other end of the front (o.home with o.poi)
+    if (o.home && !north && w >= 5) { const hx = dtx - x < w / 2 ? x + w - 1 : x; addHome((hx + 0.5) * TILE, py); }
+  } else if (o.home) addHome(px, py);
+  else if (o.poi !== false && o.name) m.pois.push({ id: m.pois.length, kind: 'delivery', label: b.name, x: px, y: py, r: 40, b: bid, fixed: true });
   for (const s of o.signs || []) b.signs.push({ x: (s.x + 0.5) * TILE, y: (y + h - 0.6) * TILE, text: s.text });
   return b;
 }

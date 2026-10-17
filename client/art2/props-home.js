@@ -459,4 +459,27 @@ export function raisedBed(w = 64, d = 32, tier = 2, seed = 0) {
 }
 export const YARD_MAKERS = { patio: patioSet, mower, chair: lawnChair, bed: raisedBed };
 
-export const MAKERS = { M: mailboxes, Z: stairs, B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench, x: poolTable, j: arcade, i: cinemaSeats, n: island, s: sectional, h: bathtub };
+// a record player on a low wooden cabinet: the platter and a record on it, the tone arm, the lid up behind (Vinyl & More)
+export function turntable(w = 32, d = 32, tier = 1) {
+  const P = L4(tier), m = new Vox(w, d, 30);
+  const cab = m.mat({ ramp: R(P.wood), k: 3, shade: grain() }), deck = m.mat({ ramp: R('#2a2a30'), k: 3 }), rec = m.mat({ ramp: R('#141418'), k: 2, shade: (x, y) => (Math.round(Math.hypot(x - w / 2 + 2, y - d / 2 - 2)) % 2 ? -0.4 : 0) }), lab = m.mat({ ramp: R('#c83a2a'), k: 3 }), arm = m.mat({ ramp: R('#c8ccd2'), k: 4 }), lid = m.mat({ ramp: R('#8a9aa8'), k: 3, flag: F_GLASS });
+  m.box(3, 8, 0, w - 3, d - 3, 16, cab); m.box(4, 9, 16, w - 4, d - 4, 19, deck);
+  m.fill((x, y, z) => { const r = Math.hypot(x - w / 2 + 2, y - d / 2 - 2); return r < 2.4 ? lab : r < 9 ? rec : -1; }, 4, 9, 19, w - 4, d - 4, 20);
+  m.box(w - 8, 11, 19, w - 6, 13, 22, arm); for (let k = 0; k < 8; k++) m.box(w - 8 - k, 13 + k * 0.6, 21, w - 7 - k, 14 + k * 0.6, 22, arm);
+  m.box(4, 8, 19, w - 4, 10, 29, lid);
+  void tier;
+  return m;
+}
+// two crates of records side by side (a wooden one, a blue plastic one), the sleeves standing in them
+export function recordCrates(w = 32, d = 32, tier = 1) {
+  const m = new Vox(w, d, 22), wd = m.mat({ ramp: R('#a8743c'), k: 3, shade: grain() }), bl = m.mat({ ramp: R('#2f6ab0'), k: 3 });
+  const sl = ['#c83a2a', '#e8c040', '#2a2a30', '#5aa0d0', '#e8e4dc', '#3a8a5a'].map((c) => m.mat({ ramp: R(c), k: 3 }));
+  for (let k = 0; k < 2; k++) {
+    const x0 = 2 + k * 14, c = k ? bl : wd;
+    m.box(x0, 10, 0, x0 + 13, d - 4, 13, c); m.box(x0 + 1, 11, 2, x0 + 12, d - 5, 13, 0);
+    for (let j = 0; j < 9; j++) m.box(x0 + 1, 12 + j * 2, 2, x0 + 12, 13 + j * 2, 17 - (j % 3), sl[(j + k * 2 + (j >> 1)) % sl.length]);
+  }
+  void tier;
+  return m;
+}
+export const MAKERS = { M: mailboxes, d: turntable, q: recordCrates, Z: stairs, B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench, x: poolTable, j: arcade, i: cinemaSeats, n: island, s: sectional, h: bathtub };

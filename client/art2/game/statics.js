@@ -3176,7 +3176,7 @@ function coverItems(c, I, cx, cy) {
 // ================================================================================================
 const FLOORK = { convenience: 'tileWhite', pharmacy: 'tileWhite', grocery: 'tileWhite', coffee: 'woodFloor', clothing: 'woodFloor', barber: 'checker', sports: 'rubber', hardware: 'platform', gunshop: 'platform',
   pawn: 'woodFloor', club: 'checker', fence: 'checker', hospital: 'tileWhite', reception: 'tileWhite', bank: 'stoneTile', courthouse: 'stoneTile', fishmarket: 'tileGreen', tackle: 'woodFloor', police: 'platform',
-  roadhouse: 'woodFloor' };
+  roadhouse: 'woodFloor', laundry: 'tileWhite', records: 'checker', books: 'woodFloor', clothes: 'woodFloor', florist: 'tileGreen', salon: 'checker' };
 function cutRecipe(c, b, s, spec) {
   const W = s.tw * TILE, Dd = s.th * TILE, wi = b.walkIn, units = [];
   for (const u of wi.units) {
@@ -3189,7 +3189,7 @@ function cutRecipe(c, b, s, spec) {
     const cm = u.kind === 'cinema' && c.M.cinema ? c.M.cinema : null;   // (The Grand Theatre: shared/cinema.js lays the screens out)
     const cine = cm ? { rooms: cm.rooms.map((R) => ({ x0: R.x0 - ox, x1: R.x1 - ox, y0: R.y0 - oy, y1: R.y1 - oy, back: R.backEdge - oy, dir: R.dir, seats: R.seats.map((q) => [q.x - ox, q.y - oy, q.row]), sx0: R.screen.x0 - ox, sx1: R.screen.x1 - ox, sh: R.screen.h, lift: R.screen.lift })), cc: (cm.cc - s.tx) * TILE, wall: (cm.wallRow - s.ty) * TILE, ca: (cm.ca - s.tx) * TILE, cb: (cm.cb + 1 - s.tx) * TILE, dir: cm.south ? 1 : -1 } : null;
     const fl = u.kind === 'coffee' ? foodLayout(b, u, TILE) : null, food = fl ? { L: fl, ox, oy } : null;   // (IN8: a food place's fit-out, shared/foodrooms.js)
-    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl, cine, food });
+    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl, cine, food, trade: u.trade || null });
   }
   // a wing with no room you walk into (a hospital's wards): its floor all across, walls cut low round it
   const inY0 = Math.max(32, Math.min(Dd - 64, (wi.y0 - s.ty) * TILE)), inY1 = Math.max(inY0 + 32, Math.min(Dd - 32, (wi.y1 - s.ty + 1) * TILE));
@@ -3207,7 +3207,7 @@ function makeCut(r) {
   for (const u of r.units) {
     if (u.bowl) { bowlingFloor(u, r, px); continue; }
     if (u.cine) { cinemaFloor(u, r, px); continue; }
-    const fk = FLOORK[u.kind] || 'woodFloor', lob = LOBBY[u.kind], fo = u.food ? FOOD_FLOOR[u.food.L.style] : null;
+    const fk = FLOORK[u.trade] || FLOORK[u.kind] || 'woodFloor', lob = LOBBY[u.kind], fo = u.food ? FOOD_FLOOR[u.food.L.style] : null;
     for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, fo ? fo(x, Y, u.food) : lob ? lob.floor(x + r.seed, Y) : groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   }
   if (r.wing) for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = 0; x < w; x++) px(x, Y, 0, groundPixel(r.wing, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
@@ -3239,12 +3239,63 @@ function makeCut(r) {
     for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = ca; x < cb; x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
     for (let x = ca; x < cb; x++) for (let v = 0; v < 22; v++) px(x, u.cy + 26, v, CT[v > 18 ? 4 : 2 + ((x >> 3) & 1)], [0, 1, 0]);
     if (u.cells) { cellRoom(u.cells, px); continue; }   // (the cells along the back: no shelves)
+    if (u.trade && TRADE_ROOM[u.trade]) { TRADE_ROOM[u.trade](u, r, px); continue; }   // (a hand plan's walk-in shop by its trade: the laundromat, the bookshop, the record shop...)
     const goods = [[204, 72, 64], [236, 200, 80], [76, 146, 204], [116, 180, 100], [226, 224, 214], [170, 100, 200]];
     for (let x = u.x0 + 4; x < u.x1 - 4; x++) for (let v = 0; v < 52; v++) { const sh = v % 13; px(x, r.inY0 + 10, v, sh < 2 ? MAT.metalDark[2] : goods[Math.floor(hash(x >> 1, v / 13 | 0, r.seed + u.x0) * goods.length)], [0, 1, 0]); }
     for (let Y = r.inY0; Y < r.inY0 + 10; Y++) for (let x = u.x0 + 4; x < u.x1 - 4; x++) px(x, Y, 52, MAT.metalDark[3], [0, 0, 1]);
     if (u.kind === 'roadhouse') roadhouseRoom(u, r, px);
   }
   return G;
+}
+// ---- the hand plans' walk-in shops by trade (World v3's Midtown: the laundromat, the bookshop, the record shop, the
+// boutiques, the florist, the salons): the back wall's fittings behind the counter, and what stands out front along the
+// side walls, low, so the way from the door to the counter stays open
+const TRADE_ROOM = {};
+{
+  const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const slabOf = (px) => (x0, x1, Y0, Y1, z, top, side) => {
+    x0 = Math.round(x0); x1 = Math.round(x1); Y0 = Math.round(Y0); Y1 = Math.round(Y1);
+    for (let Y = Y0; Y < Y1; Y++) for (let x = x0; x < x1; x++) px(x, Y, z, top(x, Y), [0, 0, 1]);
+    for (let x = x0; x < x1; x++) for (let v = 0; v < z; v++) px(x, Y1, v, side(x, v), [0, 1, 0]);
+  };
+  const flat = (c) => () => c, back = (u, r, px, f, h = 56) => { for (let x = u.x0 + 4; x < u.x1 - 4; x++) for (let v = 0; v < h; v++) px(x, r.inY0 + 10, v, f(x - u.x0, v), [0, 1, 0]); for (let Y = r.inY0; Y < r.inY0 + 10; Y++) for (let x = u.x0 + 4; x < u.x1 - 4; x++) px(x, Y, h, MAT.metalDark[3], [0, 0, 1]); };
+  const sides = (u, r, n, f) => { const Ya = u.cy + 44, Yb = r.inY1 - 30; for (let k = 0; k < n; k++) { const Y = Ya + k * ((Yb - Ya) / Math.max(1, n)); if (Y + 28 > Yb) break; f(u.x0 + 8, Y, -1); f(u.x1 - 8, Y, 1); } };
+  const SPINE = ['#8a2a2a', '#2a5a8a', '#c8a050', '#3a6a3a', '#6a3a7a', '#d0d0c0', '#a85a2a', '#2a2a30'].map(rgb), SLEEVE = ['#c83a2a', '#e8c040', '#2a2a30', '#5aa0d0', '#e8e4dc', '#3a8a5a', '#d86aa0'].map(rgb);
+  const WOOD = rgb('#6a4a2c'), WOODL = rgb('#8a6440'), WHITE = rgb('#e8eae8'), STEEL = rgb('#9aa0a8'), DARK = rgb('#2a2a30'), GLASS = rgb('#5a7a8a');
+  TRADE_ROOM.laundry = (u, r, px) => {   // dryers stacked along the back wall; washers down the side walls, a folding table, chairs
+    back(u, r, px, (x, v) => { const lx = x % 26, ly = v % 26; return lx < 2 || ly < 2 ? STEEL : Math.hypot(lx - 13, ly - 13) < 8 ? (Math.hypot(lx - 13, ly - 13) < 6 ? GLASS : STEEL) : WHITE; }, 52);
+    const slab = slabOf(px);
+    sides(u, r, 4, (x, Y, s) => { const x0 = s < 0 ? x : x - 26; slab(x0, x0 + 26, Y, Y + 24, 26, (xx, YY) => (Math.hypot(xx - x0 - 13, YY - Y - 12) < 8 ? GLASS : WHITE), flat(WHITE)); });
+    const mx = (u.x0 + u.x1) / 2, my = (u.cy + r.inY1) / 2 + 10;
+    if (u.x1 - u.x0 > 140) slab(mx - 30, mx + 30, my - 10, my + 10, 22, flat(WOODL), flat(WOOD));
+  };
+  TRADE_ROOM.books = (u, r, px) => {   // shelves of spines floor to ceiling; low bookcases down the sides, a table of new books
+    back(u, r, px, (x, v) => (v % 13 < 2 ? WOOD : SPINE[Math.floor(hash(x >> 1, v / 13 | 0, 7) * SPINE.length)]), 60);
+    const slab = slabOf(px);
+    sides(u, r, 3, (x, Y, s) => { const x0 = s < 0 ? x : x - 18; slab(x0, x0 + 18, Y, Y + 40, 30, (xx, YY) => (YY % 4 < 1 ? WOOD : SPINE[Math.floor(hash(xx, YY >> 2, 9) * SPINE.length)]), flat(WOOD)); });
+    const mx = (u.x0 + u.x1) / 2, my = (u.cy + r.inY1) / 2 + 12;
+    if (u.x1 - u.x0 > 140) slab(mx - 26, mx + 26, my - 12, my + 12, 20, (xx, YY) => ((xx >> 3) + (YY >> 3)) & 1 ? SPINE[(xx >> 3) % SPINE.length] : WOODL, flat(WOOD));
+  };
+  TRADE_ROOM.records = (u, r, px) => {   // posters over the shelves of LPs; bins of sleeves down the sides; the listening post
+    back(u, r, px, (x, v) => (v > 34 ? (x % 24 < 20 ? SLEEVE[Math.floor(x / 24) % SLEEVE.length] : DARK) : v % 9 < 1 ? WOOD : SLEEVE[Math.floor(hash(x >> 1, v / 9 | 0, 3) * SLEEVE.length)]), 58);
+    const slab = slabOf(px);
+    sides(u, r, 3, (x, Y, s) => { const x0 = s < 0 ? x : x - 30; slab(x0, x0 + 30, Y, Y + 26, 20, (xx, YY) => ((YY - Y) % 3 === 0 ? DARK : SLEEVE[Math.floor(hash(xx >> 2, YY, 5) * SLEEVE.length)]), flat(WOOD)); });
+  };
+  TRADE_ROOM.clothes = (u, r, px) => {   // a rail of clothes along the back wall; racks down the sides
+    back(u, r, px, (x, v) => (v === 46 ? STEEL : v > 12 && v < 46 ? SLEEVE[Math.floor(hash(x >> 2, 1, 11) * SLEEVE.length)] : rgb('#e4dccc')), 50);
+    const slab = slabOf(px);
+    sides(u, r, 3, (x, Y, s) => { const x0 = s < 0 ? x : x - 12; slab(x0, x0 + 12, Y, Y + 40, 34, (xx, YY) => SLEEVE[Math.floor(hash(xx, YY >> 2, 13) * SLEEVE.length)], (xx, v) => (v < 6 ? STEEL : SLEEVE[Math.floor(hash(xx >> 2, 2, 13) * SLEEVE.length)])); });
+  };
+  TRADE_ROOM.florist = (u, r, px) => {   // the cold room's glass doors full of flowers; buckets on stands down the sides
+    back(u, r, px, (x, v) => (x % 40 < 2 || v < 2 ? STEEL : v > 10 && hash(x >> 1, v >> 1, 15) > 0.5 ? SLEEVE[Math.floor(hash(x >> 2, v >> 2, 16) * 5)] : rgb('#5a8a5a')), 54);
+    const slab = slabOf(px);
+    sides(u, r, 4, (x, Y, s) => { const x0 = s < 0 ? x : x - 22; slab(x0, x0 + 22, Y, Y + 22, 16, (xx, YY) => (hash(xx >> 1, YY >> 1, 17) > 0.4 ? SLEEVE[Math.floor(hash(xx >> 2, YY >> 2, 18) * 5)] : rgb('#3a7a3a')), flat(rgb('#5a5a62'))); });
+  };
+  TRADE_ROOM.salon = (u, r, px) => {   // mirrors and shelves of bottles along the back; the chairs down one side
+    back(u, r, px, (x, v) => { const lx = x % 40; return lx > 6 && lx < 34 && v > 14 && v < 50 ? rgb('#a8c0cc') : v === 10 ? WOOD : v < 10 && (x % 4) < 2 ? SLEEVE[(x >> 2) % SLEEVE.length] : rgb('#e8e2dc'); }, 56);
+    const slab = slabOf(px);
+    sides(u, r, 3, (x, Y, s) => { if (s > 0) return; slab(x, x + 20, Y, Y + 20, 16, flat(DARK), flat(DARK)); slab(x + 2, x + 18, Y - 6, Y, 30, flat(DARK), flat(DARK)); });
+  };
 }
 // ---- Pinwheel Lanes (IN14; shared/bowling.js): eight maple lanes with their gutters and capping, the pin decks and the
 // dark pits along the back wall, the arrows and dots, the foul line and the approach; the rest a navy carpet with

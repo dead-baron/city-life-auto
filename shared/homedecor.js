@@ -32,6 +32,8 @@ export const PIECES = {
   rug: { name: 'Rug', w: 2, h: 2, cat: 'Decor', ch: 'r', flat: 1 },
   washer: { name: 'Washing machine', w: 1, h: 1, cat: 'Utility', ch: 'w' },
   workbench: { name: 'Workbench', w: 2, h: 1, cat: 'Garage', ch: 'k' },
+  turntable: { name: 'Record player', w: 1, h: 1, cat: 'Living', ch: 'd' },   // (Midtown's record shop, Vinyl & More, sells these two)
+  crates: { name: 'Crate of records', w: 1, h: 1, cat: 'Storage', ch: 'q' },
 };
 export const KINDS = Object.keys(PIECES);
 export const priceOf = (k) => (DECOR.price[k] || 0);

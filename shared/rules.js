@@ -749,7 +749,7 @@ export const MEDIC = {
 // ---- decorating your home (H67; shared/homedecor.js has the pieces): the furniture's prices at the hardware store's
 // counter, a placed piece sold back for sellBack of its price, a room's walls painted (paint) or a new floor (floor), at
 // most max pieces placed in a home
-export const DECOR = { sellBack: 0.5, paint: 80, floor: 150, max: 40, price: { couch: 350, armchair: 220, table: 260, bedside: 90, lamp: 70, bookshelf: 180, plant: 45, tv: 400, walltv: 650, art: 120, rug: 150, washer: 480, workbench: 300 } };
+export const DECOR = { sellBack: 0.5, paint: 80, floor: 150, max: 40, price: { couch: 350, armchair: 220, table: 260, bedside: 90, lamp: 70, bookshelf: 180, plant: 45, tv: 400, walltv: 650, art: 120, rug: 150, washer: 480, workbench: 300, turntable: 260, crates: 60 } };
 // (H71) the mail: utilities billed per home each `week` in-game days (late: added if unpaid by the next), a letter or a
 // coupon (`off` % at the furniture counter) on `odds` of the days, at most `keep` kept; a pet's pace at home
 export const MAIL = { util: 45, week: 7, late: 15, odds: 0.35, off: 20, keep: 12, petWalk: 110 };

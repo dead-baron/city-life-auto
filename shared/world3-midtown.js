@@ -125,6 +125,12 @@ const TRADES = {
   rough: [['Check Cashing', 'lobby'], ['Liquor', 'liquor'], ['Mini Mart', 'mart'], ['Cell Shop', 'mart'], ['Lotto & More', 'mart'], ['Smoke Shop', 'liquor'], ['Wash & Fold', 'laundry'],
     ['Pawn', 'pawn'], ['Discount', 'mart'], ['Bail Bonds', 'lobby'], ['Deli & Grill', 'diner'], ['Fried Chicken', 'diner'], ['Beer & Wine', 'liquor'], ['Quick Cash', 'lobby']],
 };
+// a food place's fit-out by what it serves (shared/foodrooms.js FOOD_STYLE: the key 'diner' booths and stools, 'rest1'
+// and 'greenbistro' tables, anything else a counter with a queue)
+function foodKey(name, store) {
+  if (store === 'cafe') return /Bakery|Bagels|Donuts|Pastry|Juice|Creamery/.test(name) ? 'rest2' : 'greenbistro';
+  return /Pizza|Burgers|Chicken|Kebab|Falafel|Tacos|Empanadas|Wok|Gyro|Slice|Taqueria/.test(name) ? 'rest2' : /Luncheonette|Kitchen|Grill|Deli|Diner/.test(name) ? 'diner' : 'rest1';
+}
 // a name not used yet for a shop of the category, drawn by r(k) (0..1): { name, store }
 function composeShop(named, cat, r) {
   const T = TRADES[cat];
@@ -174,7 +180,8 @@ function build(m, api, K) {
     const f = o.face || face(x, y), floors = o.floors ?? 2 + Math.floor(rnd(x, y, 50) * 3);
     const [bg, fg] = o.sign || pick(SIGNS, rnd(x, y, 51));
     const aw = o.awning === undefined ? (rnd(x, y, 52) < 0.7 ? pick(AWNINGS, rnd(x, y, 53)) : null) : o.awning;
-    const shop = { kind: o.store || 'mart', door: o.doorSide || (rnd(x, y, 54) < 0.5 ? 'left' : 'right'), open: true, people: o.people ?? 1 + Math.floor(rnd(x, y, 55) * 3), sign: { text: o.name.toUpperCase().slice(0, 18), bg, fg, lit: true }, awning: aw };
+    const side = o.doorSide || (rnd(x, y, 54) < 0.5 ? 'left' : 'right');
+    const shop = { kind: o.store || 'mart', door: side, open: true, people: o.people ?? 1 + Math.floor(rnd(x, y, 55) * 3), sign: { text: o.name.toUpperCase().slice(0, 18), bg, fg, lit: true }, awning: aw };
     if (o.grille) shop.grille = true;
     if (o.openSign) shop.openSign = { col: [255, 60, 70] };
     const garden = o.garden ?? roofGarden(x, y, 62);
@@ -182,7 +189,15 @@ function build(m, api, K) {
     if (floors >= 3 && w >= 8 && rnd(x, y, 58) < 0.45) spec.fireEscape = [Math.max(8, Math.round(w * TILE * (0.45 + rnd(x, y, 59) * 0.2)) - 25), 50];
     if (o.shutters || (f.style !== 'brick' && floors >= 2 && rnd(x, y, 60) < 0.3)) spec.shutters = pick(['#3a4a5c', '#2e5a4a', '#56606a', '#6a3a34', '#2e4a6a'], rnd(x, y, 61));
     if (o.mural) spec.mural = o.mural;
-    return { arch: 'mixed', ...(o.key ? { key: o.key } : {}), art: { spec, shop, ...(o.kit ? { kit: o.kit } : {}) }, name: o.name, poi: o.poi === undefined ? { kind: 'delivery', label: o.name } : o.poi, trade: o.trade || null, whole: true };
+    // its business: a cafe or a food place is one you sit down in (a walk-in food place: its booths, tables or queue by
+    // the key - shared/foodrooms.js), any other shop one you walk into to its counter (o.walk false: a door only)
+    const st = shop.kind, food = st === 'cafe' || st === 'diner';
+    let poi = o.poi === undefined ? (food ? { kind: 'coffee', label: o.name, food: st === 'diner' } : { kind: 'delivery', label: o.name }) : o.poi;
+    if (poi && poi.kind === 'delivery' && o.walk !== false) poi = { ...poi, walk: true, store: st };
+    const key = o.key || (food && poi && poi.kind === 'coffee' ? foodKey(o.name, st) : null);
+    // a flat over the shop, its own door at the other end of the front
+    const home = o.home !== undefined ? o.home : floors >= 2 && w >= 5 && rnd(x, y, 63) < 0.6 ? { kind: 'apartment' } : null;
+    return { arch: 'mixed', ...(key ? { key } : {}), art: { spec, shop, ...(o.kit ? { kit: o.kit } : {}) }, name: o.name, poi, ...(home ? { home } : {}), door: side === 'left' ? x : x + w - 1, trade: o.trade || null, whole: true };
   };
   // a residential walk-up: a stoop door, windows, a fire escape now and then; a home behind its door
   const walkup = (x, y, w, o = {}) => {
@@ -328,7 +343,7 @@ function build(m, api, K) {
       { kind: 'gap', gap: Math.max(3, room - 52), kind2: 'garden' },
       { kind: 'shop', w: 7, name: 'Harper & Co', store: 'books', poi: { kind: 'delivery', label: 'Harper & Co' }, trade: 'books', awning: null, sign: ['#2f6a4e', [240, 232, 200]], floors: 4, face: { style: 'brick', brickTone: TONE.red } },
       { kind: 'shop', w: 6, name: 'Sunbean', store: 'cafe', poi: { kind: 'coffee', label: 'Sunbean' }, awning: null, sign: ['#4a3a2a', [250, 220, 150]], floors: 3, face: { style: 'stucco', wallColor: '#d8c8a8' } },
-      { kind: 'shop', w: 7, name: 'Red Cup Diner', store: 'diner', poi: { kind: 'coffee', label: 'Red Cup Diner' }, key: 'diner', trade: 'diner', awning: ['#a8343a', '#f0ece4'], sign: ['#e8e0cc', [180, 40, 46]], floors: 3, face: { style: 'brick', brickTone: TONE.deep } },
+      { kind: 'shop', w: 7, name: 'Red Cup Diner', store: 'diner', poi: { kind: 'coffee', label: 'Red Cup Diner', food: true }, key: 'diner', trade: 'diner', awning: ['#a8343a', '#f0ece4'], sign: ['#e8e0cc', [180, 40, 46]], floors: 3, face: { style: 'brick', brickTone: TONE.deep } },
       { kind: 'shop', w: 6, name: 'Lucky Pawn', store: 'pawn', poi: { kind: 'pawn', label: 'Lucky Pawn' }, awning: null, sign: ['#232838', [236, 214, 150]], grille: true, floors: 3, face: { style: 'brick', brickTone: TONE.green } },
       { kind: 'shop', w: 6, name: 'Vinyl & More', store: 'records', poi: { kind: 'delivery', label: 'Vinyl & More' }, trade: 'records', awning: null, sign: ['#2a2c38', [236, 206, 120]], floors: 3, face: { style: 'brick', brickTone: TONE.red } },
       { kind: 'shop', w: 6, name: 'Suds Laundry', store: 'laundry', poi: { kind: 'delivery', label: 'Suds Laundry' }, trade: 'laundry', awning: null, sign: ['#2a6ab0', [250, 250, 240]], floors: 3, face: { style: 'stucco', wallColor: '#c8c4bc' } },
@@ -556,7 +571,7 @@ function backYards(K, made, y0, o = {}) {
 // R1-A, the hero corner (the old world's Starlite Diner, Corner Mart, Madison Walk-up and Madison Row, their looks as
 // shared/map.js HERO_BLDS drew them): Holly Street at Madison Street.
 function heroDiner() {
-  return { arch: 'diner', key: 'diner', name: 'Starlite Diner', poi: { kind: 'coffee', label: 'Starlite Diner' }, whole: true,
+  return { arch: 'diner', key: 'diner', name: 'Starlite Diner', poi: { kind: 'coffee', label: 'Starlite Diner', food: true }, whole: true,
     art: { spec: { floors: 1, style: 'diner', trim: [255, 70, 90], neon: { icon: 'cup', col: [70, 210, 255], x: 150, y: -4 }, parapet: 10, roofMat: 'membrane', lip: 8, rimW: 4 },
       shop: { kind: 'diner', door: 'right', open: true, people: 4, awning: null, band: null, sign: null },
       kit: [['ac', 44, 40], ['ac', 92, 40], ['acs', 150, 44], ['vent', 30, 96], ['vent', 210, 92], ['hatch', 180, 120], ['plant', 60, 150], ['ac', 120, 170], ['palm', 214, 168]] } };

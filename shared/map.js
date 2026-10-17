@@ -2820,8 +2820,11 @@ function buildInteriors(m) {
   for (const [bid, list] of byB) {
     const b = m.buildings[bid];
     if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
-    const main = list.filter((p) => WALK_IN.has(p.kind) || p.kind === 'delivery');
-    if (!main.some((p) => WALK_IN.has(p.kind)) || list.some((p) => !WALK_IN.has(p.kind) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery')) continue;
+    // (p.walk: a hand plan's shop you can walk into - its counter by its trade, p.store; b.hand: a flat over the shop
+    // has its own door beside it - shared/world3-hand.js)
+    const isWalk = (p) => WALK_IN.has(p.kind) || !!p.walk;
+    const main = list.filter((p) => isWalk(p) || p.kind === 'delivery');
+    if (!main.some(isWalk) || list.some((p) => !isWalk(p) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery' && !(b.hand && p.kind === 'home'))) continue;
     const south = m.prefabs[b.prefab].rot === 0;
     const x0 = b.tx + 1, x1 = b.tx + b.tw - 2, y0 = b.ty + 1, y1 = b.ty + b.th - 2; // interior (inclusive)
     main.sort((a, c) => a.x - c.x);
@@ -2833,7 +2836,7 @@ function buildInteriors(m) {
       const dc = Math.max(x0, Math.min(x1, Math.floor(p.x / TILE)));
       const ux0 = i === 0 ? x0 : Math.floor((Math.floor(main[i - 1].x / TILE) + dc) / 2) + 1;
       const ux1 = i === main.length - 1 ? x1 : Math.floor((dc + Math.floor(main[i + 1].x / TILE)) / 2) - 1;
-      if (!WALK_IN.has(p.kind) || ux1 - ux0 < 1) return; // other storefronts in the row stay closed
+      if (!isWalk(p) || ux1 - ux0 < 1) return; // other storefronts in the row stay closed
       for (let ty = y0; ty <= y1; ty++) for (let tx = ux0; tx <= ux1; tx++) m.set(tx, ty, T.FLOOR);
       // the doorway: two tiles of the front wall
       const fy = south ? b.ty + b.th - 1 : b.ty;
@@ -2847,7 +2850,7 @@ function buildInteriors(m) {
       const staffY = (counterRow - dir + 0.5) * TILE, frontY = (counterRow + dir + 0.55) * TILE;
       p.outside = { x: p.x, y: p.y };
       p.x = cx; p.y = frontY; p.r = Math.max(p.r || 40, 40);
-      units.push({ poi: p.id, kind: p.kind, x0: ux0, x1: ux1, counterRow, clerk: { x: cx, y: staffY, a: south ? Math.PI / 2 : -Math.PI / 2 }, door: { tx: dx0, ty: fy, w: 2 } });
+      units.push({ poi: p.id, kind: p.kind, x0: ux0, x1: ux1, counterRow, clerk: { x: cx, y: staffY, a: south ? Math.PI / 2 : -Math.PI / 2 }, door: { tx: dx0, ty: fy, w: 2 }, ...(p.walk ? { trade: p.store || 'mart' } : null) });
       if (p.kind === 'club') {
         // a roller shutter over the club's doors: down all day, up from dusk till dawn
         const gate = { x: (dx0 + 1) * TILE, y: (fy + 0.5) * TILE, w: 2 * TILE, props: [], rule: 'night', club: true, rect: { tx: b.tx, ty: b.ty, tw: b.tw, th: b.th } };

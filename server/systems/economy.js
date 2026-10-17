@@ -31,7 +31,21 @@ import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } f
 import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
+// A hand plan's walk-in shop's counter (World v3's Midtown: shared/world3-hand.js poi.walk, poi.store): what it has for
+// you by its trade - a bar's drinks, a deli's or a grocer's food, the laundromat's machines, the bookshop's and the
+// record shop's pieces for your home (shared/homedecor.js); a tailor or an optician just a clerk to say hello to
+const FOODISH = /Deli|Butcher|Cheese|Spice|Produce|Bodega|Mini Mart|Market|Discount|Lotto/;
+function walkCounter(poi) {
+  const st = poi.store, n = poi.label || '';
+  if (st === 'bar') return { items: [['whiskey', 8], ['redwine', 10]], sub: 'A quiet one at the bar.' };
+  if (st === 'laundry') return { items: [], wash: true, decor: ['washer'], sub: 'Wash and dry while you wait - or take a machine home.' };
+  if (st === 'books') return { items: [], decor: ['bookshelf', 'armchair', 'lamp'], sub: 'New and used. A reading corner for your place, delivered.' };
+  if (st === 'records') return { items: [], decor: ['turntable', 'crates', 'art'], sub: 'Crates of vinyl, a listening booth. Take the sound home.' };
+  if (FOODISH.test(n)) return { items: [['bread', 5], ['apple', 3], ['energy', 8]], sub: 'Fresh in this morning.' };
+  return null;
+}
 export function poiLabel(world, p, poi) {
+  if (poi.walk && poi.kind === 'delivery') return walkCounter(poi) ? `Counter - ${poi.label}` : null;
   switch (poi.kind) {
     case 'delivery': case 'evidence': case 'reception': case 'paint': case 'ride': case 'race': return null;   // (a ride's boarding point: server/systems/rides.js; a race's start: races.js)
     case 'bowling': return null;   // (Pinwheel Lanes' shoe counter: server/systems/bowling.js)
@@ -155,10 +169,19 @@ export function buildMenu(world, p, poi) {
   const opts = [];
   let title = poi.label, sub = '', interior = null;
   if (kind === 'hardware' && p.furnShop === poi.id) return furnitureMenu(p, poi);   // (H67: the furniture counter)
+  if (kind === 'delivery' && poi.walk) {   // (a walk-in shop's counter: walkCounter)
+    const W = walkCounter(poi) || { items: [], sub: 'Just looking.' }, none = !(prof.homes || []).length, furn = prof.furn || {};
+    for (const [id, price] of W.items) opts.push({ id: `i:${id}:${price}:1`, label: ITEMS[id].name, price, note: prof.inventory[id] ? `have ${prof.inventory[id]}` : '' });
+    if (W.wash) opts.push({ id: 'wash', label: 'Wash and dry your clothes', price: 6 });
+    for (const k of W.decor || []) opts.push({ id: `fb:${k}`, label: DECOR_PIECES[k].name, price: decorPrice(k), dis: none, note: `for your home${furn[k] ? ` · ${furn[k]} in storage` : ''}` });
+    if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
+    return { t: 'menu', poi: poi.id, title: poi.label, sub: W.sub, opts, cash: prof.cash, bank: prof.bank };
+  }
   const shopKey = kind === 'vending' ? 'vending' : kind;
   const shop = kind === 'smuggler' && !gang.isMember(p) ? null : SHOPS[shopKey];
   if (shop && kind !== 'dealer' && kind !== 'marina' && kind !== 'garage' && kind !== 'clothing') {
-    title = kind === 'gunshop' ? poi.label : shop.title;   // (the gun shops round the world: each its own name)
+    title = kind === 'gunshop' || kind === 'coffee' ? poi.label : shop.title;   // (the gun shops and the cafes round the world: each its own name)
+    if (kind === 'coffee' && poi.food) opts.push({ id: 'i:hotdog:7:1', label: 'A plate of the day', price: 7, note: prof.inventory.hotdog ? `have ${prof.inventory.hotdog}` : '' }, { id: 'i:bread:4:1', label: ITEMS.bread.name, price: 4, note: '' });
     for (const o of shop.buy) {
       if (o.kind === 'weapon') opts.push(weaponOffer(o, prof));
       else if (o.kind === 'ammo') { const an = WEAPONS[o.id].ammoName; opts.push({ id: `a:${o.id}:${o.price}:${o.qty}`, label: an ? `${an[0].toUpperCase()}${an.slice(1)} x${o.qty}` : `${WEAPONS[o.id].name} ammo x${o.qty}`, price: o.price, dis: prof.weapons[o.id] === undefined, note: prof.weapons[o.id] === undefined ? `need the ${WEAPONS[o.id].name}` : `have ${prof.weapons[o.id]}` }); }
@@ -481,6 +504,7 @@ function execute(world, p, poi, opt) {
   if (valid.dis) return 'Not available.';
   switch (parts[0]) {
     case 'close': return null;
+    case 'wash': if (!pay(p, 6)) return 'Not enough money.'; world.notify(p, 'Forty minutes and a magazine later: your clothes come out clean and warm.', 'good'); return null;   // (a laundromat's machines)
     case 'furn': p.furnShop = poi.id; return null;   // (H67: the furniture counter - furnitureMenu)
     case 'fback': p.furnShop = null; return null;
     case 'fb': {
@@ -492,7 +516,7 @@ function execute(world, p, poi, opt) {
       if (prof.coupon) { world.notify(p, `Your coupon from the mail: ${prof.coupon}% off.`, 'good'); prof.coupon = 0; }
       prof.furn ||= {};
       prof.furn[k] = (prof.furn[k] || 0) + 1;
-      mail.post(p, 'pkg', `Delivered from Nail & Gear Hardware: ${/^[aeiou]/i.test(P.name) ? 'an' : 'a'} ${P.name.toLowerCase()}, in your home's storage.`);   // (H71: the package's note in your mailbox)
+      mail.post(p, 'pkg', `Delivered from ${poi.kind === 'hardware' ? 'Nail & Gear Hardware' : poi.label}: ${/^[aeiou]/i.test(P.name) ? 'an' : 'a'} ${P.name.toLowerCase()}, in your home's storage.`);   // (H71: the package's note in your mailbox)
       store.touch();
       world.notify(p, `Bought ${/^[aeiou]/i.test(P.name) ? 'an' : 'a'} ${P.name.toLowerCase()} - delivered to your home's storage. Place it from the hall table: Decorate.`, 'good');
       return null;
