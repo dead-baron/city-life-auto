@@ -192,6 +192,17 @@ function build(m, api, K) {
     { w: 10, name: 'Vinyl Vault', store: 'records', neon: 'bar', blade: 'VINYL', walk: true },
     { w: 8, name: 'Bao Bar', store: 'diner', neon: 'diner', blade: 'BAO' },
   ], { depth: 14, floors: 3 });
+  // between the two: Lantern Hall, the market's food hall, its front on the lane facing down Blossom Plaza; a garden of
+  // cherry trees either side of it, the terraces behind it to Harbor Walk planted (landscape(), below)
+  {
+    const hw = 28, hx = Math.round((PLAZA[0] + PLAZA[1]) / 2 - hw / 2);
+    place({ x: hx, y: ly1 - 13, w: hw, h: 14, ...lit(hx, ly1, hw, { name: 'Lantern Hall', store: 'diner', neon: 'diner', blade: 'FOOD HALL', sign: 'LANTERN HALL', floors: 2, key: 'market', poi: { kind: 'coffee', label: 'Lantern Hall', food: true }, home: null }) });
+    for (const [gx0, gx1] of [[PLAZA[0], hx], [hx + hw, PLAZA[1]]]) {
+      K.fill(gx0, ly0, gx1 - gx0, ly1 - ly0 + 1, T.GRASS);
+      for (let ty = ly0 + 2; ty < ly1 - 1; ty += 6) prop('tree_a', (gx0 + gx1) / 2, ty + 1, 10, { sp: 'cherry', k: 1.2 });
+      prop('bench_m', (gx0 + gx1) / 2, ly1 - 0.8, 0); prop('lamp', gx0 + 0.8, ly1 - 0.6, 0);
+    }
+  }
   // the boulevard row: the lit fronts of NE1, 3-4 floors (the stalls' strip and the lane behind them stay in view)
   const ry0 = LANE[1] + 1;
   litRow(bx0, PLAZA[0], ry0, by1, [
@@ -247,6 +258,9 @@ function build(m, api, K) {
   // The Docks: east of Harborview Avenue down to the Gulf Loop - a warehouse club, the container bar, stacked containers
   docks(K, NX.harborview + EXT.ave + 1, out, lit);
 
+  // what the plan left open: lawn with palms and flowering trees (else the kit's seal paves it - the owner, 2026-10-17:
+  // "a lot of big open pavilion spaces")
+  K.landscape({ bare: 0.35, tree: (x, y, r) => r < 0.55 ? ['palm_a', pick(['royal', 'coconut'], rnd(x, y, 820)), 1.15 + rnd(x, y, 821) * 0.2] : r < 0.85 ? ['tree_a', pick(['cherry', 'magnolia', 'cherry'], rnd(x, y, 822)), 1.1] : [pick(['shrub_a', 'bush_c', 'flowers_big'], rnd(x, y, 823)), null, 1] });
   dressing(K, out, poi0);
   out.named = used.size;
   return out;
@@ -278,11 +292,14 @@ function waterfront(K, x0, x1, yS, out) {
     while (y > yS - 40 && m.land[y * m.w + x] && m.tiles[y * m.w + x] !== T.WATER && m.tiles[y * m.w + x] !== T.DEEP) y--;
     const top = y + 1;
     if (yS - top < 2) continue;
-    K.fill(x, top, 1, yS - top + 1, T.PLAZA);
+    // (paved by the water and along the street; between them, where it's deep enough, lawn beds cut by a path every
+    // fourteen columns)
+    for (let yy = top; yy <= yS; yy++) K.fill(x, yy, 1, 1, yS - top >= 10 && yy >= top + 6 && yy <= yS - 3 && (x - x0) % 14 > 2 ? T.GRASS : T.PLAZA);
+    if ((x - x0) % 14 === 8 && yS - top >= 10) prop(rnd(x, top, 9) < 0.5 ? 'tree_a' : 'flowers_big', x + 0.5, top + 7.5, 10, { sp: 'cherry', k: 1.1 });
     if (x % 7 === 3 && yS - top >= 6) prop('palm_a', x + 0.5, top + 3.2, 10, { sp: 'royal', k: 1.25 });
     if (x % 11 === 6) prop('bench_m', x + 0.5, top + 1.6, 0);
     if (x % 9 === 1) prop('lamp', x + 0.5, top + 0.8, 0);
-    if (x % 3 === 0) prop('rail', x * TILE, top * TILE + 6, 0, { tx: 3 * TILE, ty: 0 });
+    if (x % 3 === 0) prop('rail', x, top + 0.2, 0, { tx: 3 * TILE, ty: 0 });
     n++;
   }
   // the boardwalk along the water's edge: timber decking in lengths (a 'patio' flat) - not the plain paving
@@ -322,8 +339,16 @@ function waterfront(K, x0, x1, yS, out) {
 // it, the food truck, flower beds, lamps; on its north edge (the lane's side) the eye-patch woman's billboard over it
 function blossomPlaza(K, x, y, w, h, out) {
   const { prop } = K;
-  K.fill(x, y, w, h, T.PLAZA); K.take(x, y, w, h);
   const cx = x + w / 2, cy = y + h * 0.55;
+  // (the paving: the walk down the middle from the lane to the boulevard, the cross walk, the ring round the fountain,
+  // a margin along the boulevard; the four corners lawn under the cherry trees, their beds)
+  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) {
+    const ex = (tx + 0.5 - cx) / Math.min(w / 2 - 3, 14), ey = (ty + 0.5 - cy) / Math.min(h / 2 - 4, 9), e = ex * ex + ey * ey;
+    const paved = Math.abs(tx + 0.5 - cx) < 3.5 || Math.abs(ty + 0.5 - cy) < 2 || e < 1.25 || ty >= y + h - 3 || ty < y + 2;
+    K.fill(tx, ty, 1, 1, paved ? T.PLAZA : T.GRASS);
+  }
+  K.take(x, y, w, h);
+  for (const [fx, fy] of [[x + 3, y + 4], [x + w - 3, y + 4], [x + 3, y + h - 5], [x + w - 3, y + h - 5]]) prop('flowers_big', fx, fy, 0);
   prop('fountain', cx, cy, 36);
   for (let k = 0; k < 10; k++) {
     const a = 0, rx = Math.min(w / 2 - 3, 14), ry = Math.min(h / 2 - 4, 9);
@@ -360,8 +385,9 @@ function lanternLane(K, x0, x1, out) {
     // what's stacked by them: crates, a cooler, a stool
     if (rnd(x, y0, 3) < 0.5) prop(pick(['crates', 'cooler', 'fruitcrate', 'crates'], rnd(x, y0, 4)), x + 2.6, sN - 1.4, 0);
     if (rnd(x, y1, 5) < 0.5) prop(pick(['crates', 'cooler', 'fruitcrate', 'bags'], rnd(x, y1, 6)), x + 2.6, sS + 1.6, 0);
-    // the lanterns strung across the lane, every other stall
+    // the lanterns strung across the lane, every other stall; the tables down the middle between
     if ((x - x0) % 8 === 3) prop('festoon', x + 0.5, sN + 1.2, 0, { tx: 0, ty: Math.round((sS - sN - 2.4) * TILE), h: 54 });
+    else if ((x - x0) % 8 === 7) { const ty = (y0 + y1) / 2 + 0.5; prop('cafetable', x + 0.5, ty, 0); prop(pick(['umbrella_r', 'umbrella_y', 'umbrella_g'], rnd(x, ty, 7)), x + 0.5, ty - 0.1, 0); prop('chair', x - 0.4, ty + 0.1, 0, { v: 1, a: 0 }); prop('chair', x + 1.4, ty + 0.1, 0, { v: 1, a: 3.1416 }); }
   }
   // a gate at each end (where the lane meets the bridges' avenues), the market's sign over the west one
   for (const gx of [x0 + 1, x1 - 1]) prop('gatearch', gx, (y0 + y1) / 2, 0, { w: Math.round((y1 - y0 - 2) * TILE), a: Math.PI / 2 });
@@ -448,12 +474,23 @@ function harborLights(K, x0, out) {
   const { m, prop, rnd } = K;
   const y0 = 2196, y1 = 2259;   // down to The Docks
   let n = 0;
-  for (let y = y0; y <= y1; y++) for (let x = x0; x < 3640; x++) if (K.free(x, y)) { m.tiles[y * m.w + x] = (x - 3500) * (x - 3500) / 900 + (y - 2246) * (y - 2246) / 100 < 1 || (x >= 3448 && x < 3480 && y >= 2228 && y < 2244) ? T.GRASS : T.PLAZA; K.take(x, y, 1, 1); n++; }
+  // (the ground a festival lawn; paved where people gather - the stage's forecourt, the stalls' rows, the wheel's pad,
+  // the walk along the shore and in from the boulevard's end)
+  const PAVED = [[3440, 2226, 3472, 2242], [3482, 2226, 3518, 2240], [3526, 2249, 3562, 2258], [3552, 2248, 3574, 2259], [3574, 2222, 3594, 2242]];
+  const paved = (x, y) => PAVED.some(([a, b, c, d]) => x >= a && y >= b && x < c && y < d) || (y >= 2218 && y < 2221) || (x >= 3478 && x < 3481) || (x >= 3532 && x < 3535 && y < 2249);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x < 3640; x++) if (K.free(x, y)) { m.tiles[y * m.w + x] = paved(x, y) ? T.PLAZA : T.GRASS; K.take(x, y, 1, 1); n++; }
   if (n < 200) return;
+  // the lawn's trees: palms on a loose grid, where the lawn is open round them
+  for (let gy = y0 + 2; gy < y1 - 2; gy += 7) for (let gx = x0 + 2; gx < 3636; gx += 7) {
+    const tx = gx + Math.floor(rnd(gx, gy, 20) * 5), ty = gy + Math.floor(rnd(gx, gy, 21) * 5);
+    let ok = rnd(tx, ty, 22) > 0.35;
+    for (let dy = -2; dy <= 2 && ok; dy++) for (let dx = -2; dx <= 2; dx++) if (m.tileAt(tx + dx, ty + dy) !== T.GRASS) { ok = false; break; }
+    if (ok) prop('palm_a', tx + 0.5, ty + 0.5, 10, { sp: rnd(tx, ty, 23) < 0.6 ? 'coconut' : 'royal', k: 1.2 + rnd(tx, ty, 24) * 0.2 });
+  }
   // the beach along the water's edge, four tiles of sand
   for (let y = y0; y <= y1; y++) for (let x = x0; x < 3640; x++) {
     const i = y * m.w + x;
-    if (m.tiles[i] !== T.PLAZA) continue;
+    if (m.tiles[i] !== T.PLAZA && m.tiles[i] !== T.GRASS) continue;
     let wet = false;
     for (let d = 1; d <= 4 && !wet; d++) for (const [dx, dy] of [[0, -d], [d, 0], [d, -d]]) { const t = m.tileAt(x + dx, y + dy); if (t === T.WATER || t === T.DEEP) { wet = true; break; } }
     if (wet) m.tiles[i] = T.SAND;
@@ -498,7 +535,7 @@ function shorePromenade(K, x0, x1, yS, out, deep = 99) {
     if (x % 8 === 4 && yS - top >= 5) prop('palm_a', x + 0.5, top + 2.8, 10, { sp: 'royal', k: 1.2 });
     if (x % 13 === 7) prop('bench_m', x + 0.5, top + 1.4, 0);
     if (x % 10 === 2) prop('lamp', x + 0.5, top + 0.8, 0);
-    if (x % 3 === 0) prop('rail', x * TILE, top * TILE + 6, 0, { tx: 3 * TILE, ty: 0 });
+    if (x % 3 === 0) prop('rail', x, top + 0.2, 0, { tx: 3 * TILE, ty: 0 });
   }
   void out;
 }

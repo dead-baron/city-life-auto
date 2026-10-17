@@ -471,6 +471,7 @@ function roofDeck(G, spec, w, d, H, seed, style) {
 // in from the nearest eave), drawn north to south so nearer slopes cover farther ones; each face is
 // shaded by which way it slopes, with shingle courses or barrel tiles running along it.
 function pitched(G0, spec, w, d, H, seed) {
+  if (spec.pitch === 'mansard') return mansard(G0, spec, w, d, H, seed);
   const k = spec.slope ?? 0.75, gable = spec.pitch === 'gable', ns = gable && spec.ridge === 'ns';
   const E = Math.ceil((ns ? w / 2 : gable ? d / 2 : Math.min(w, d) / 2) * k) + 2;
   const G = new GBuf(w, G0.h + E);
@@ -525,6 +526,45 @@ function pitched(G0, spec, w, d, H, seed) {
   }
   // a chimney on some houses
   if (spec.chimney) { const cx = Math.floor(w * 0.7), cy = Math.floor(d * 0.35), q = Math.min(cx, w - cx, cy, d - cy) * k; for (let yy = 0; yy < 14; yy++) for (let xx = 0; xx < 8; xx++) G.put(cx + xx, Math.round(E + cy - q - 10 + yy), step(MAT.brick, xx < 2 ? 0.7 : 0.45, xx, yy, 0.3), [0, 1, 0], H + q + 10, null, 0); }
+  return G;
+}
+
+// A mansard roof (World v3's Midtown, Garden Crescent: the owner's WC338/341 - cream terraces under slate mansards):
+// steep slate slopes up from the eaves for spec.mans px (slope spec.slope, steep), then a flat top with a lead curb
+// at the break; dormer windows set in the south slope every 30 px, each a little window in a white frame under its
+// own cap. Drawn north to south like the hip roof, each face shaded by which way it slopes.
+function mansard(G0, spec, w, d, H, seed) {
+  const k = spec.slope ?? 1.6, M = Math.min(spec.mans || 14, Math.floor(Math.min(w, d) / 2) - 1);
+  const E = Math.ceil(M * k) + 2, rows = Math.ceil(1 + k);
+  const G = new GBuf(w, G0.h + E);
+  G.ax = 0; G.ay = G0.ay + E;
+  G.blit(G0, 0, E);
+  const R = spec.roofColor ? ramp(spec.roofColor, 6, 3) : ramp('#4a5260', 6, 3), lead = ramp('#7a828a', 5, 3), frame = ramp('#ece6d8', 5, 2);
+  const FACE = { w: [-0.85, 0, 0.5], e: [0.85, 0, 0.5], n: [0, -0.85, 0.5], s: [0, 0.85, 0.5], t: [0, 0.25, 0.97] };
+  const LIT = { w: 0.66, n: 0.56, s: 0.5, e: 0.34, t: 0.6 };
+  for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) {
+    const dW = x, dE = w - 1 - x, dN = y, dS = d - 1 - y, q = Math.min(dW, dE, dN, dS);
+    let f = q >= M ? 't' : q === dS ? 's' : q === dN ? 'n' : q === dW ? 'w' : 'e';
+    const z = Math.min(q, M) * k, row = Math.round(E + y - z);
+    let t = LIT[f] + (vnoise(x, y, 11, seed) - 0.5) * 0.12, c;
+    if (f === 't') c = q <= M + 1 ? step(lead, 0.7, x, row, 0.3) : step(R, t + 0.06 + ((x >> 3) + (y >> 3)) % 2 * 0.03, x, row, 0.4);   // (the lead curb at the break, then the flat)
+    else {
+      // slates in courses up the slope, a dark line at the eave
+      t += (q % 3 === 0 ? -0.16 : 0) + (((f === 's' || f === 'n' ? x : y) + (Math.floor(q / 3) & 1) * 3) % 6 === 0 ? -0.08 : 0) + (q < 1 ? -0.18 : 0);
+      c = step(R, t, x, row, 0.45);
+      // a dormer in the south slope: its white frame, the glass, a cap over it
+      if (f === 's' && w >= 26 && q >= 2 && q < M - 1) {
+        const a = (x - Math.floor((w % 30) / 2) + 30) % 30;
+        if (a >= 9 && a < 21 && x > 3 && x < w - 4) {
+          const edge = a === 9 || a === 20 || q === M - 2, glass = !edge && q >= 3 && q < M - 3;
+          c = glass ? step(MAT.glassDark, 0.4 + (a === 14 ? 0.2 : 0), x, row, 0.2) : edge && q === M - 2 ? step(R, 0.3, x, row, 0.3) : step(frame, 0.7, x, row, 0.2);
+          f = 's';
+        }
+      }
+    }
+    for (let r = row; r <= row + (f === 's' ? rows : 0); r++) G.put(x, r, c, FACE[f], H + z, null, 0);
+  }
+  if (spec.chimney) { for (const fx of [0.22, 0.78]) { const cx = Math.floor(w * fx), cy = Math.floor(d * 0.3), z = M * k; for (let yy = 0; yy < 16; yy++) for (let xx = 0; xx < 7; xx++) G.put(cx + xx, Math.round(E + cy - z - 12 + yy), step(MAT.brick, xx < 2 ? 0.7 : 0.45, xx, yy, 0.3), [0, 1, 0], H + z + 12, null, 0); } }
   return G;
 }
 

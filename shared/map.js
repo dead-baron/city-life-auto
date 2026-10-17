@@ -3834,6 +3834,7 @@ function buildWaterfronts(m, rand) {
   for (let ty = 2; ty < H - 2; ty += 3) for (let tx = 2; tx < W - 2; tx += 3) {
     const i = ty * W + tx;
     if (!(m.reserve[i] & 4)) continue;
+    if (OPTS?.handAt?.(tx, ty)) continue;   // (a handcrafted district dresses its own shore: shared/world3-hand.js)
     const t = m.tiles[i];
     let nearRoad = false;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const q = m.tileAt(tx + dx, ty + dy); if (q === T.ROAD || q === T.BRIDGE) nearRoad = true; }
@@ -3854,7 +3855,7 @@ function buildWaterfronts(m, rand) {
   for (let ty = 2; ty < H - 2; ty += 2) for (let tx = 2; tx < W - 2; tx += 2) {
     const i = ty * W + tx;
     const dd = m.dist[i];
-    if ((DISTRICTS[dd].style !== 'harbor' && dd !== 3) || (perD.get(dd) || 0) >= 5 || !(m.reserve[i] & 4) || m.reserve[i] & 3) continue;
+    if ((DISTRICTS[dd].style !== 'harbor' && dd !== 3) || (perD.get(dd) || 0) >= 5 || !(m.reserve[i] & 4) || m.reserve[i] & 3 || OPTS?.handAt?.(tx, ty)) continue;   // (a handcrafted harbour lays its own piers)
     if (piers.some((p) => Math.abs(p.tx - tx) + Math.abs(p.ty - ty) < 18)) continue;
     for (const [dx, dy] of [[-1, 0], [0, 1], [1, 0], [0, -1]]) {
       if (!isWater(m.tileAt(tx + dx, ty + dy))) continue;

@@ -164,7 +164,7 @@ export const ARTERIALS = [
   { name: 'Southside Bridge', pts: [[3459, 2941], [3457, 3137]] },
   { name: 'Bayside Bridge', pts: [[3689, 2723], [3993, 2883]] },
   // footbridges between the islands and the mainland (the owner: "some footbridges")
-  { name: 'Harbor Footbridge', foot: true, pts: [[3350, 2020], [3350, 2170]] },
+  { name: 'Harbor Footbridge', foot: true, pts: [[3350, 2016], [3350, 2200]] },   // (Harbor Drive to Neon Boulevard: the owner, 2026-10-17 - all the way through to the street)
   { name: 'Strand Footbridge', foot: true, pts: [[2860, 2820], [2860, 2950]] },
   { name: 'Lakes Footbridge', foot: true, pts: [[3735, 2560], [3870, 2560]] },
   { name: 'Gulf Footbridge', foot: true, pts: [[2290, 2760], [2475, 2760]] },

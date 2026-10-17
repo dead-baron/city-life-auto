@@ -11,8 +11,9 @@ import { DISTRICTS } from './mapcore.js';
 import { hash2 } from './rng.js';
 import { MIDTOWN } from './world3-midtown.js';
 import { NEON } from './world3-neon.js';
+import { HARBOR } from './world3-harbor.js';
 
-export const HAND_PLANS = [MIDTOWN, NEON];
+export const HAND_PLANS = [MIDTOWN, NEON, HARBOR];
 const M_IN = 2;   // (a street within this many tiles of a plan's edge is the edge's - the grid planner's)
 export const handPlanAt = (x, y) => HAND_PLANS.find((p) => x > p.rect[0] + M_IN && y > p.rect[1] + M_IN && x < p.rect[2] - M_IN && y < p.rect[3] - M_IN) || null;
 export const handDistricts = () => new Set(HAND_PLANS.map((p) => p.d));
@@ -196,6 +197,34 @@ function makeKit(m, api, P) {
       }
       fill(x, y, w, h, T.PLAZA);
       if (w >= 3 && h >= 3 && rnd(x, y, 20) < 0.5) prop(pick(['planter_g', 'potted', 'bench_m', 'planter_sq'], rnd(x, y, 21)), x + w / 2, y + h / 2, 8);
+    },
+    // Plant what the plan left open, before seal() would pave it (the owner, 2026-10-17: "a lot of big open pavilion
+    // spaces"): lawn, its trees and shrubs on a jittered grid wherever the lawn is open all round them; the shore band's
+    // grass in the plan's district kept as lawn too. opt.rect: only there; opt.tree(x, y, r) -> [prop, sp, k] or null
+    // (what grows at a spot: palms by the water, plane trees by a street...); opt.bare: how much of the grid stays open.
+    landscape(opt = {}) {
+      const [lx0, ly0, lx1, ly1] = opt.rect || P.rect, mine = new Uint8Array((X1 - X0) * (Y1 - Y0));
+      for (let y = Math.max(Y0, ly0); y < Math.min(Y1, ly1); y++) for (let x = Math.max(X0, lx0); x < Math.min(X1, lx1); x++) {
+        const k = at(x, y), i = y * W + x;
+        if (m.dist[i] !== P.d) continue;
+        if (free(x, y)) { used[k] = 1; mine[k] = 1; }
+        else if (!used[k] && m.tiles[i] === T.GRASS && (m.reserve[i] & 4) && m.land[i]) { m.reserve[i] |= 16; used[k] = 1; mine[k] = 1; }
+      }
+      const lawn = (x, y) => { const k = at(x, y); return k >= 0 && m.tiles[y * W + x] === T.GRASS && m.bld[y * W + x] < 0; };
+      const G = opt.grid || 6, bare = opt.bare ?? 0.3;
+      for (let gy = ly0; gy < ly1; gy += G) for (let gx = lx0; gx < lx1; gx += G) {
+        const x = gx + Math.floor(rnd(gx, gy, 801) * G), y = gy + Math.floor(rnd(gx, gy, 802) * G), k = at(x, y);
+        if (k < 0 || !mine[k]) continue;
+        let ok = true;
+        for (let dy = -2; dy <= 2 && ok; dy++) for (let dx = -2; dx <= 2; dx++) if (!lawn(x + dx, y + dy)) { ok = false; break; }
+        if (!ok) continue;
+        const r = rnd(x, y, 803);
+        if (r < bare) continue;
+        const pl = opt.tree ? opt.tree(x, y, r) : r < 0.85 ? [rnd(x, y, 804) < 0.5 ? 'tree_a' : 'tree_b', pick(['streetPl', 'maple', 'oak', 'magnolia', 'cherry'], rnd(x, y, 805)), 1.05 + rnd(x, y, 806) * 0.25] : [pick(['shrub_a', 'bush_c', 'flowers_big'], rnd(x, y, 807)), null, 1];
+        if (!pl) continue;
+        const [t, sp, kk] = pl;
+        prop(t, x + 0.5, y + 0.5, t === 'tree_a' || t === 'tree_b' ? 12 : t === 'palm_a' ? 10 : 0, sp ? { sp, k: kk } : null);
+      }
     },
     // Close the plan's area: every tile left open is paved (by a street) or planted, and reserved from the block filler.
     seal() {

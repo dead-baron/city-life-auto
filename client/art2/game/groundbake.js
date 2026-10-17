@@ -256,7 +256,7 @@ function tileFacts(C) {
       else if (b.tres[k] & 128) m = M_.PASTURE;                 // (a river's lush banks, even in dry country: Willow River)
       else if (inRects(paint, X, Y, 'golf')) m = golfAt(X, Y);
       else if (inRects(parks, X, Y)) m = hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK;
-      else if (!wild) m = (b.tres[k] & 64) ? M_.FOREST : (b.tres[k] & 32) ? M_.MEADOW : st === 'park' ? (hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK) : (D.tier === 'rough' || D.tier === 'industrial') ? M_.DRYGRASS : st === 'beach' ? M_.MEADOW : M_.LAWN;   // (32: a designed nature place in town - meadow, not lawn)
+      else if (!wild) m = (b.tres[k] & 64) ? M_.FOREST : (b.tres[k] & 32) ? M_.MEADOW : st === 'park' ? (hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK) : (D.tier === 'rough' || D.tier === 'industrial') && !(b.tres[k] & 16) ? M_.DRYGRASS : st === 'beach' ? M_.MEADOW : M_.LAWN;   // (32: a designed nature place in town - meadow, not lawn; 16: a hand plan's kept lawn - kept green even in a rough or industrial district, the Harbor's)
       else if (st === 'rural' || st === 'airport') m = bio === 2 ? M_.FOREST : bio === 3 ? M_.DRYGRASS : st === 'airport' ? M_.LAWN : M_.PASTURE;
       else if (st === 'desert') m = tabs && tabs.length ? tabMat(tx, ty, M_.DRYGRASS) : M_.DRYGRASS;
       else m = bio === 2 ? M_.FOREST : bio === 4 ? (b.tz[k] === Z.EAST ? M_.DRYGRASS : M_.ALPINE) : bio === 3 ? M_.DRYGRASS : bio === 5 ? M_.MEADOW : M_.MEADOW;

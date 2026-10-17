@@ -79,7 +79,7 @@ export const DISTRICTS = [
   { id: 5, name: 'Civic Center', isl: 'Metro City', style: 'civic', tier: 'mid', walk: 'concrete', plaza: 'slate', road: 'asphalt', ground: T.GRASS, turf: false },
   { id: 6, name: 'Southside', isl: 'Southbank', style: 'southside', tier: 'rough', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: true },
   { id: 7, name: 'Neon Strip', isl: 'Metro City', style: 'nightlife', tier: 'neon', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.PLAZA, turf: false },
-  { id: 8, name: 'Harbor', isl: 'Metro City', style: 'harbor', tier: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: false },
+  { id: 8, name: 'Harbor', isl: 'Metro City', style: 'harbor', tier: 'industrial', walk: 'concrete', plaza: 'brick', road: 'asphalt_worn', ground: T.LOT, turf: false },
   { id: 9, name: 'Dry Creek', isl: 'Dry Creek', style: 'rural', tier: 'rural', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.GRASS, turf: false },
   { id: 10, name: 'Sunset Beach', isl: 'Metro City', style: 'beach', tier: 'mid', walk: 'brick', plaza: 'brick', road: 'asphalt', ground: T.SAND, turf: false },
   { id: 11, name: 'Ironworks', isl: 'Metro City', style: 'factory', tier: 'industrial', walk: 'concrete', plaza: 'concrete', road: 'asphalt_worn', ground: T.LOT, turf: false },

@@ -214,7 +214,10 @@ export function corridorWay(m, a, b, hint, clear, pad = 60) {
   const bx = Math.max(0, Math.floor(x0) - pad), by = Math.max(0, Math.floor(y0) - pad), bw = Math.min(W, Math.ceil(x1) + pad) - bx, bh = Math.min(H, Math.ceil(y1) + pad) - by;
   const N = bw * bh, dist = new Uint8Array(N), q = new Int32Array(N);
   let qh = 0, qt = 0;
-  for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) { const i = y * bw + x; if (!boatWater(m, (by + y) * W + bx + x)) { dist[i] = 0; q[qt++] = i; } else dist[i] = 255; }
+  // (a ship moored at a quay is in the way as much as the quay: m.portShips, px rects - the Harbor's, shared/world3-harbor.js)
+  const ships = (m.portShips || []).map((r) => [Math.floor(r.x / TILE), Math.floor(r.y / TILE), Math.ceil((r.x + r.w) / TILE), Math.ceil((r.y + r.h) / TILE)]);
+  const moored = (x, y) => ships.some((r) => x >= r[0] && y >= r[1] && x < r[2] && y < r[3]);
+  for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) { const i = y * bw + x; if (!boatWater(m, (by + y) * W + bx + x) || (ships.length && moored(bx + x, by + y))) { dist[i] = 0; q[qt++] = i; } else dist[i] = 255; }
   while (qh < qt) {
     const j = q[qh++], d = dist[j];
     if (d >= 16) continue;

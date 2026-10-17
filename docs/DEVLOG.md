@@ -10227,3 +10227,56 @@ from starting.
 - **The watcher:** now stands behind the board, never between the camera and the game.
 
 The Neon Strip's boulevard gets Midtown Boulevard's section too: four lanes either side of a planted median of royal palms with lights strung between them. The owner's concepts of the day are filed: WC324-WC352, the Midtown set, and WC353-WC356, Downtown (`docs/art-v2/world-concepts/CATALOGUE.md`, batches 5 and 6).
+
+## 2026-10-17 · World v3, handcrafted: the Harbor waterfront; Midtown from the new concepts; the Neon Strip's open spaces planted; the Harbor Footbridge through to Neon Boulevard
+
+**The Harbor** (shared/world3-harbor.js, the third hand plan: the owner's Midtown concepts WC324-WC352, whose south half
+runs down to the water, and the catalogue's Harbor set). Harbor Avenue to the water, Westside Avenue to the inlet, west
+to east along a seawall promenade (brick, the rail, royal palms strung with lights, benches, telescopes, life rings):
+- **The Marina:** the Harbor Light on the seawall's corner; four finger piers with the boats you can take and the yachts
+  and sailboats moored (sails furled); Harbor Marina's shop (the boats for sale); the Harbor Yacht Club and its terrace
+  over the water; the Marina Lawn's palms and picnic tables; the car park off Marina Way; the Crescent Steps opposite
+  Crescent Gardens' gate - terraces of flower beds behind low hedges, a fountain at the top, the steps down the middle.
+- **Harbor Green** (the Commons carried on to the water): lawns either side of Linden Walk's line, the Harbor Fountain,
+  chess tables, the kiosk and the bike hire; Linden Pier with its T head; Pier House Seafood's green roof on its deck.
+- **The Fish Market quay:** the Harbor Master, the Harbor Maritime Museum over Ferry Square, The Tidewater and the
+  chandlery; Dockside Fish Market's shed, its truck yard and its timber quay (the fishing boats, the fish tables, the
+  crates, a forklift, the gulls); Ferry Plaza where the Gulf Water Bus calls, a lawn beside it.
+- **The Boatworks quarter:** Dock Street's row (Ironside Army Surplus, Galley Diner, Bosun Tattoo, Net & Tackle, the
+  laundry, the liquor store, the sailors' flats); **Bosun Lane** behind it, a new lane with its own row facing it (The
+  Lantern, the Mariners' Mission, the sail loft, Seaglass Books, Harbor Pawn, Ropewalk Coffee) and their back gardens to
+  Harbor Avenue; Harbor Boatworks' shed and paint shop, the fenced yard of boats laid up on cradles, the travel lift;
+  below Harbor Drive the Footbridge Landing's lawn and seawall, the slipway, the work boats.
+- **The Port:** Dock Street's warehouses in their own colours and roofs (Portside Logistics and its cargo pad, Bayline
+  Freight, Pier 7 Cold Storage, the Harbor Brewing Co in an old one); behind the fence the **Harbor Container
+  Terminal** - the gate at Stadium Avenue's foot, the truck depot and the empties by Harborview Avenue, the stacks in
+  pairs with lanes between, straddle carriers and floodlight masts, and the timber quay with three gantry cranes over a
+  container ship moored alongside. Harbor Drive now ends at Harborview Avenue; Stadium Avenue at the gate.
+- The Harbor's paving is brick now (shared/mapcore.js district 8 `plaza`), and its lawns are lawn: a hand plan's kept
+  grass stays green in a rough or industrial district (client/art2/game/groundbake.js, `tres & 16`).
+
+**Nothing left as bare paving** (the owner, 14:51: "a lot of big open pavilion spaces"): whatever a plan leaves open was
+paved by the kit's seal. The kit's new `landscape()` (shared/world3-hand.js) plants it first - lawn, and trees and
+shrubs on a jittered grid wherever the lawn is open round them, each plan saying what grows where (palms by the water).
+The Harbor and the Neon Strip use it. In the Neon Strip as well: Lantern Hall, the night market's food hall, fills the
+gap over Blossom Plaza with cherry gardens either side; Blossom Plaza's corners are lawns round the paved cross and the
+fountain's ring; tables down the middle of Lantern Lane; lawn beds in the headland's promenade; Harbor Lights is a
+festival lawn with paving only where people gather.
+
+**The Harbor Footbridge** (the owner: "this bridge goes across the river then ends at a coldesac against a building ...
+I'm good with it coming all the way through and connecting to the street"): it runs from Harbor Drive all the way to
+Neon Boulevard now (shared/world3-skeleton.js), a junction at both ends; the boulevard's north row parts for it.
+
+**Midtown from the concepts:** Bridgeview Hotel at the boulevard's west end; Linden Corner (a fountain plaza with a
+statue and cherries); Marlow & Finch and MediMart; The Palace and St. Brendan's east of Linden Walk; the Midtown Post
+Office on Madison; Garden Crescent's houses under mansard roofs with dormers and chimneys; the boulevard's median in
+trees, flowers and lamps; on the Commons an arched footbridge over the pond, a path, a jetty, willows, the dog run's
+agility course.
+
+**Art:** yachts and sailboats as props (client/art2/game/statics.js: moored or laid up, sails up or furled); the mansard
+roof (client/art2/buildings.js `mansard`); a gantry crane, a ship's sections and crane rails at any heading (Port
+Westport's stay as they were). The Neon Strip's rails stood off the map (their place was given in px to a kit that
+takes tiles).
+
+**Ferries:** a ship moored at a quay is in a ferry's way like the quay itself (shared/world3-ferries.js corridorWay,
+`m.portShips`).

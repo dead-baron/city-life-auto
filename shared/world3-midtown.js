@@ -447,8 +447,8 @@ function build(m, api, K) {
     backRow(mx0, x1, b1y0, b1y0 + 15);
     mewsRow(mx0, x1, b1y0 + 17, mN);
     backRow(mx0, x1, mS, mS + 13, { yards: 0.05 });
-    // (Marlow & Finch, the department store on the boulevard: shared/map.js CLOTHES_SHOPS takes it by name)
-    mainRow(mx0, x1, mS + 15, b2y1, [{ kind: 'raw', w: 26, lot: deptStore(), depth: 13 }, { kind: 'shop', ...pickShop('food', 8) }]);
+    // (the Bridgeview, the hotel on the bridgehead corner at Bridge Avenue - WC344's - shops and a walk-up to the west)
+    mainRow(mx0, x1, mS + 15, b2y1, [{ kind: 'shop', ...pickShop('food', 8) }, ...splitLots(x1 - mx0 - 8 - 24, (k) => (k % 2 ? { kind: 'walkup', w: 10 } : { kind: 'shop', ...pickShop('shop', 60 + k) })), { kind: 'raw', w: 24, lot: bridgeviewHotel(), depth: 16 }]);
     (out.places ||= []).push({ name: 'Holly Mews', x0: mx0, y0: mN - 10, x1, y1: mS + 2 });
   }
   // --- the long block: Bridge Avenue to Main Avenue, north of Holly Street (Linden Walk through it)
@@ -491,13 +491,18 @@ function build(m, api, K) {
     const [x0, x1] = span(MX.bridge, 'ave', MX.carroll, 'ow');
     backRow(x0, LW0, b2y0, alleyB2 - 2);
     backRow(LW1, x1, b2y0, alleyB2 - 2);
-    mainRow(x0, LW0, alleyB2 + 2, b2y1, [{ kind: 'shop', w: 10, name: 'MediMart Pharmacy', store: 'mart', poi: { kind: 'pharmacy', label: 'MediMart Pharmacy' }, sign: ['#f4f0e8', [40, 60, 120]], awning: null, floors: 2 }]);
+    // (the grand row, the owner's WC324/325/330: the department store, the pharmacy, the cinema and the church in a row
+    // on the boulevard over its flower median; Marlow & Finch - shared/map.js CLOTHES_SHOPS takes it by name)
+    const cp = 10;   // (the corner plaza at Linden Walk's foot: its statue fountain, the walk widened to meet the Commons' gate)
+    cornerPlaza(K, LW0 - cp, alleyB2 + 2, cp + (LW1 - LW0), b2y1 - alleyB2 - 1, out);
+    mainRow(x0, LW0 - cp, alleyB2 + 2, b2y1, [{ kind: 'raw', w: 30, lot: deptStore(), depth: 13 }, { kind: 'shop', w: 10, name: 'MediMart Pharmacy', store: 'mart', poi: { kind: 'pharmacy', label: 'MediMart Pharmacy' }, sign: ['#2f6a4e', [240, 232, 200]], awning: ['#2f6a4e', '#f0ece4'], floors: 3 }]);
     // (The Palace, the old picture house on the boulevard: its marquee, TONIGHT and the CINEMA blade - statics.js
-    // 'theatre'; the neon over its doors)
+    // 'theatre'; the neon over its doors; St. Brendan's on the Carroll Street corner, its spire over the row)
     const room = x1 - LW1;
     mainRow(LW1, x1, alleyB2 + 2, b2y1, [
-      ...splitLots(room - 16, (k) => (k % 2 ? { kind: 'walkup', w: 9 } : { kind: 'shop', ...pickShop(k ? 'shop' : 'cafe', 40 + k) })),
-      { kind: 'raw', w: 16, lot: { arch: 'theatre', key: 'theatre', name: 'The Palace', poi: { kind: 'delivery', label: 'The Palace' }, whole: true } },
+      { kind: 'raw', w: 18, lot: { arch: 'theatre', key: 'theatre', name: 'The Palace', poi: { kind: 'delivery', label: 'The Palace' }, whole: true } },
+      ...splitLots(room - 18 - 16, (k) => ({ kind: 'shop', ...pickShop(k ? 'shop' : 'cafe', 40 + k) })),
+      { kind: 'raw', w: 16, lot: { arch: 'church', key: 'church', name: "St. Brendan's", poi: false, whole: true } },
     ]);
   }
   // --- Carroll Street to Main Avenue
@@ -526,7 +531,7 @@ function build(m, api, K) {
     backRow(x0, x1, b1y0, alleyB1 - 2);
     mainRow(x0, x1, alleyB1 + 2, b1y1, [{ kind: 'raw', w: 8, lot: heroMart() }, { kind: 'raw', w: 10, lot: heroWalkup() }, { kind: 'raw', w: 6, lot: madisonRow() }]);
     backRow(x0, x1, b2y0, b2y0 + 12);
-    mainRow(x0, x1, b2y0 + 14, b2y1, [{ kind: 'raw', w: 15, lot: { arch: 'church', key: 'church', name: "St. Brendan's", poi: false, whole: true }, depth: 17 }, { kind: 'shop', w: 9, name: 'Holly Hardware', store: 'mart', awning: ['#c8503a', '#f0ece4'] }]);
+    mainRow(x0, x1, b2y0 + 14, b2y1, [{ kind: 'raw', w: 16, lot: postOffice(), depth: 15 }, { kind: 'shop', w: 9, name: 'Holly Hardware', store: 'mart', awning: ['#c8503a', '#f0ece4'] }]);
   }
   // --- along the diagonal (Civic Avenue to Harborview Avenue): Crosstown Way runs from Civic Avenue at Central Avenue
   // to Fulton Street at Holly Street (Holly Place on east of it, a dead end) and on to Harborview Avenue at the
@@ -796,8 +801,20 @@ function precinctLot() {
 // Marlow & Finch, the department store: stone, tall windows under a dentil cornice, the long shopfront
 function deptStore() {
   return { arch: 'mixed', name: 'Marlow & Finch', poi: { kind: 'clothing', label: 'Marlow & Finch' }, whole: true,
-    art: { spec: { floors: 3, style: 'stone', wallColor: '#d8ccb4', win: 'tall', cornice: 'dentil', parapet: 12, grime: 0.08, roofMat: 'gravel', lip: 10, rimW: 5 },
+    art: { spec: { floors: 4, style: 'stone', wallColor: '#ddd2bc', win: 'arch', cornice: 'dentil', parapet: 16, grime: 0.06, roofMat: 'gravel', lip: 10, rimW: 5, date: '1902' },
       shop: { kind: 'clothes', door: 'left', open: true, people: 4, awning: ['#1e2a3a', '#1e2a3a'], sign: { text: 'MARLOW & FINCH', bg: '#1e2a3a', fg: [236, 214, 150], lit: true } } } };
+}
+// The Bridgeview, the hotel on the bridgehead corner (WC344): pale stone, five floors of tall windows over a canopy,
+// the HOTEL blade down the corner
+function bridgeviewHotel() {
+  return { arch: 'hotel', key: 'hotel', name: 'The Bridgeview', poi: { kind: 'delivery', label: 'The Bridgeview Hotel' }, whole: true,
+    art: { spec: { floors: 5, style: 'stone', wallColor: '#e2d8c4', win: 'tall', cornice: 'bracket', parapet: 12, grime: 0.06, roofMat: 'paver', lip: 10, rimW: 5, balconies: true, blades: [{ text: 'HOTEL', x: 12, v: 90, col: [255, 200, 120] }] },
+      shop: { kind: 'lobby', door: 'right', open: true, people: 3, awning: ['#1e2a3a', '#1e2a3a'], sign: { text: 'THE BRIDGEVIEW', bg: '#1e2a3a', fg: [236, 214, 150], lit: true } } } };
+}
+// Midtown Post Office: stone, two floors, the eagle-less pediment of a plain civic front, its counter
+function postOffice() {
+  return { arch: 'civicblock', name: 'Midtown Post Office', poi: { kind: 'delivery', label: 'Midtown Post Office' }, whole: true,
+    art: { spec: { floors: 2, style: 'stone', wallColor: '#d8ccb4', win: 'tall', cornice: 'dentil', parapet: 14, grime: 0.08, roofMat: 'gravel', lip: 10, rimW: 5, date: '1911' } } };
 }
 // The Pier Street Market: the old market hall, round-headed windows, its glazed roof ridge (rows of skylights), food
 // counters inside (a counter with a queue: the key's)
@@ -1134,6 +1151,22 @@ function pocketPlaza(K, out) {
   (out.places ||= []).push({ name: 'Wedge Plaza', x0: Math.round(cx) - 8, y0: Math.round(cy) - 8, x1: Math.round(cx) + 8, y1: Math.round(cy) + 8 });
 }
 
+// The corner plaza at Linden Walk's foot on the boulevard (WC324's: a round fountain with a bronze figure on a raised
+// corner where a side way meets the boulevard): paving, the fountain and its statue, cherry trees in blossom, benches
+// round it, flower beds, lamps - across the boulevard from the Commons' north gate
+function cornerPlaza(K, x, y, w, h, out) {
+  const { prop } = K;
+  K.fill(x, y, w, h, T.PLAZA); K.take(x, y, w, h);
+  const cx = x + w / 2, cy = y + h / 2 + 0.5;
+  prop('fountain', cx, cy, 36); prop('statue', cx, cy + 0.2, 0);
+  for (const [dx, dy] of [[-w / 2 + 1.5, -h / 2 + 1.5], [w / 2 - 1.5, -h / 2 + 1.5]]) prop('tree_a', cx + dx, cy + dy, 10, { sp: 'cherry', k: 1.15 });
+  for (const [dx, dy] of [[-5, 3.4], [5, 3.4]]) prop('pbench', cx + dx, cy + dy, 0);
+  for (const dx of [-w / 2 + 1.2, w / 2 - 1.2]) prop('flowers_big', cx + dx, cy + 2.5, 0);
+  prop('lamp', x + 0.6, y + h - 0.8, 0); prop('lamp', x + w - 0.6, y + h - 0.8, 0);
+  K.m.squares ||= []; K.m.squares.push({ x: Math.round(cx) - 5, y: Math.round(cy) - 4, w: 10, h: 8, name: 'Linden Corner' });
+  (out.places ||= []).push({ name: 'Linden Corner', x0: x, y0: y, x1: x + w, y1: y + h });
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Linden Walk: a paved walk five tiles wide down through the long blocks, from Central Avenue over the alleys and Holly
 // Street to the boulevard and the Commons' north gate - the shops turn their side walls to it. Plane trees in grates
@@ -1172,8 +1205,11 @@ function gardenCrescent(K, x0, y0, x1, y1, ctx) {
   const made = K.row(cx - 38, cx + 39, y0 + 1, y1, (x, room, i) => {
     if (room < 5) return room >= 1 ? { gap: room, kind: 'garden' } : null;
     const w = Math.min(room, 6), mid = Math.abs(x + 3 - cx) < 10;
-    const L = walkup(x, y1, w, { face: { style: 'stucco', wallColor: mid ? '#ece4d2' : '#e2d8c2' }, floors: mid ? 4 : 3, home: { kind: 'house', price: 34000, name: `${12 + i * 2} Garden Crescent` }, garden: false });
-    Object.assign(L.art.spec, { win: 'tall', cornice: 'dentil', fireEscape: null, balconies: mid, shutters: null, parapet: 8, grime: 0.04 });
+    const L = walkup(x, y1, w, { face: { style: 'stucco', wallColor: mid ? '#ece4d2' : '#e2d8c2' }, floors: mid ? 3 : 2, home: { kind: 'house', price: 34000, name: `${12 + i * 2} Garden Crescent` }, garden: false });
+    // (the owner's WC338/341: cream terraces under slate mansards, dormers in the slope, a pair of chimneys - the attic
+    // the third, fourth floor; no rooftop kit on them)
+    Object.assign(L.art.spec, { win: 'tall', cornice: 'dentil', fireEscape: null, balconies: mid, shutters: null, parapet: 4, grime: 0.04, pitch: 'mansard', roofColor: mid ? '#46505e' : '#4e5664', slope: 1.5, mans: 22, dorm: 48, chimney: true });
+    L.art.kit = [];
     return { w, depth: 11, ...L, name: null };
   }, { mask: outside });
   for (const b of made) {
@@ -1293,6 +1329,16 @@ function commons(K, x, y, w, h, out) {
   for (const [dx, dy, a] of [[-2, 1, 0.6], [1, -1, 2.2], [3, 2, 4]]) prop('duck', P.cx + dx, P.cy + dy, 0, { a });
   prop('swan', P.cx - 8, P.cy + 1, 0, { a: 1.2 });
   for (const dx of [-9, -2, 6]) prop('bench_m', P.cx + dx, P.cy - P.ry - 4.6, 0);
+  // the arched footbridge over the pond's east end (WC342), the deck under it; the little jetty on the north shore
+  {
+    const bx = P.cx + 11, by0 = P.cy - P.ry, by1 = P.cy + P.ry;
+    for (let ty = by0; ty <= by1; ty++) for (const tx of [bx, bx + 1]) { const t = tileAt(tx, ty); if (t === T.WATER || t === T.DEEP) m.tiles[ty * m.w + tx] = T.DOCK; }
+    prop('archbridge', bx + 1, P.cy + 0.5, 0, { len: (P.ry * 2 + 2) * TILE, a: Math.PI / 2 });
+    path([[bx + 1, by1 + 1], [bx + 1, Y1 - 6]], 2);
+    const jx = P.cx - 6;
+    for (let ty = P.cy - P.ry; ty < P.cy - P.ry + 4; ty++) for (const tx of [jx, jx + 1, jx + 2]) { const t = tileAt(tx, ty); if (t === T.WATER || t === T.DEEP) m.tiles[ty * m.w + tx] = T.DOCK; }
+    prop('lamp', jx + 1.5, P.cy - P.ry + 3.5, 0);
+  }
   // --- the dog run in the north-west corner: chain-link round a patch of dirt, its gate, a bench and a bin, its sign
   const DR = [x + 3, y + 3, 20, 15];
   K.paint(DR[0], DR[1], DR[2], DR[3], T.DIRT);
@@ -1301,6 +1347,10 @@ function commons(K, x, y, w, h, out) {
   prop('chainfence', DR[0] + DR[2] - 0.1, DR[1] + 0.1, 0, { tx: 0, ty: DR[3] * TILE - 6 });
   prop('chainfence', DR[0] + 0.1, DR[1] + DR[3] - 0.1, 0, { tx: (DR[2] - 4) * TILE, ty: 0 });
   prop('bench_m', DR[0] + 4, DR[1] + 2, 0); prop('trashcan', DR[0] + DR[2] - 2, DR[1] + DR[3] - 1.4, 0); prop('post', DR[0] + 10, DR[1] + 8, 0, { h: 30 });
+  // the agility gear (WC342): the ramp, a row of weave poles, a tyre to jump through
+  prop('kicker', DR[0] + 6, DR[1] + 10, 0);
+  for (let k = 0; k < 5; k++) prop('post', DR[0] + 12 + k * 1.2, DR[1] + 5, 0, { h: 22 });
+  prop('tires', DR[0] + 16, DR[1] + 11, 0);
   prop('textsign', DR[0] + DR[2] - 2, DR[1] + DR[3] + 1.2, 0, { text: 'DOG RUN', bg: '#5a3a2a', fg: [250, 232, 190], z: 24, sx: 1 });
   // --- Commons Courts in the north-east corner: two courts side by side behind chain-link, the bleachers between
   commonsCourts(K, 3134, y + 2, X1 - 3134 - 2, 22, out);
@@ -1336,7 +1386,7 @@ function commons(K, x, y, w, h, out) {
     if (((jx + 0.5 - lawn.cx) / (lawn.rx - 2)) ** 2 + ((jy + 0.5 - lawn.cy) / (lawn.ry - 2)) ** 2 < 1) continue;   // (the Great Lawn kept open)
     if (jx >= DR[0] - 1 && jx < DR[0] + DR[2] + 1 && jy >= DR[1] - 1 && jy < DR[1] + DR[3] + 1) continue;
     const nearPond = Math.hypot((jx - P.cx) / (P.rx + 8), (jy - P.cy) / (P.ry + 8)) < 1, nearWalk = Math.abs(jx - LX) < 6;
-    const sp = nearPond ? pick(['cherry', 'willow', 'cherry'], rnd(jx, jy, 923)) : nearWalk ? 'streetPl' : jx < 3070 ? pick(['oak', 'maple', 'oak', 'mapleAutumn'], rnd(jx, jy, 924)) : pick(['maple', 'streetPl', 'oak', 'magnolia'], rnd(jx, jy, 925));
+    const sp = nearPond ? pick(['willow', 'cherry', 'willow'], rnd(jx, jy, 923)) : nearWalk ? 'streetPl' : jx < 3070 ? pick(['oak', 'maple', 'oak', 'mapleAutumn'], rnd(jx, jy, 924)) : pick(['maple', 'streetPl', 'oak', 'magnolia'], rnd(jx, jy, 925));
     prop(rnd(jx, jy, 926) < 0.5 ? 'tree_a' : 'tree_b', jx + 0.5, jy + 0.5, 12, { sp, k: 1.1 + rnd(jx, jy, 927) * 0.35 });
     if (rnd(jx, jy, 928) < 0.12) prop(pick(['shrub_a', 'bush_c', 'flowers_a'], rnd(jx, jy, 929)), jx + 2, jy + 1.5, 0);
   }
@@ -1518,11 +1568,16 @@ function streetDressing(K, out, poi0) {
       if (!nearCross(xx, y, true)) put('tree_a', xx + 0.5, y + 0.5, 10, { sp: 'street', k: 1.1, grate: true });
     }
   }
-  // the boulevard's median: plane trees down it, clear of the junctions (where it stops for the turns)
-  for (let x = MX.westside + 12; x < MX.stadium - 10; x += 6) {
+  // the boulevard's median (the owner's WC325/330): a bed of flowers down it, a plane tree every few cars, the lamps
+  // between them - clear of the junctions (where it stops for the turns)
+  let mk = 0;
+  for (let x = MX.westside + 12; x < MX.stadium - 10; x += 4) {
     if (NS.some((q) => Math.abs(q.pts[0][0] - x) < q.ext + 5 && Math.max(q.pts[0][1], q.pts[1][1]) >= MY.blvd - 1 && Math.min(q.pts[0][1], q.pts[1][1]) <= MY.blvd + 1)) continue;
     if (Math.abs(x - 3480) < 16) continue;   // (the diagonal's crossing at Harborview Avenue)
-    prop('tree_a', x + 0.5, MY.blvd + 0.5, 10, { sp: 'streetPl', k: 1.05 });
+    const j = mk++ % 4;
+    if (j === 0) prop('tree_a', x + 0.5, MY.blvd + 0.5, 10, { sp: 'streetPl', k: 1.15 });
+    else if (j === 2) prop('lamp', x + 0.5, MY.blvd + 0.5, 0);
+    else prop(pick(['flowers_big', 'flowers_a', 'flowers_big'], rnd(x, MY.blvd, 530)), x + 0.5, MY.blvd + 0.5, 0);
   }
   // the bus stops: the boulevard (both ways), Main Avenue at Holly Street (R1-I's, with its planted strip and fence)
   for (const [x, y] of [[3010, MY.blvd - EXT.blvd + 1], [3300, MY.blvd + EXT.blvd - 1], [3560, MY.blvd - EXT.blvd + 1], [MX.main + 6, MY.holly + 9]]) if (onWalk(x, y)) prop('busstop', x, y, 0);
