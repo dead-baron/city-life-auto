@@ -18,6 +18,8 @@
 //             one by the El), stopping now and then for a breather; a friend or two sat on a ledge watching
 //   stoop     neighbours sat out on a walk-up's front steps (World v3's handcrafted districts: Midtown's walk-ups), a
 //             word with one stood by them - more of an evening
+//   party     a block party on a yard's court after dark (map.partySpots: Midtown Houses' court), dancing round the
+//             boombox, a couple watching
 //   pool      two at the Rusty Spur's pool table taking turns (round the table to the next shot, bent over the cue),
 //             the other waiting at the end of the table with his cue up; a watcher or two
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
@@ -61,7 +63,8 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   pool: { day: 0.5, night: 0.9, cap: 1 },
   diners: { day: 0.85, night: 0.6, cap: 2 },
   skaters: { day: 0.85, night: 0.4, cap: 1 },
-  stoop: { day: 0.18, night: 0.45, cap: 2 },   // (IN8: eating at a food place's tables, the cook at the line)
+  stoop: { day: 0.18, night: 0.45, cap: 2 },
+  party: { day: 0.08, night: 0.55, cap: 1 },   // (IN8: eating at a food place's tables, the cook at the line)
 };
 // a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
 const pk = (r, a) => a[Math.floor(r() * a.length) % a.length];
@@ -193,6 +196,7 @@ export function spotsOf(map) {
     const box = { x0: q.x * TILE, y0: q.y * TILE, x1: (q.x + q.w) * TILE, y1: (q.y + q.h) * TILE }, x = (box.x0 + box.x1) / 2, y = (box.y0 + box.y1) / 2;
     list.push({ k: 'skaters', x, y, a: 0, box, seats: q.seats || [], wild: false }); taken.push({ x, y });
   }
+  for (const q of map.partySpots || []) { list.push({ k: 'party', x: q.x, y: q.y, a: 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
   // the walk-ups' front steps (a hand plan's walk-up with a home behind its door, its front to the camera)
   for (const b of map.buildings || []) {
     if (!b || !b.hand || b.arch !== 'walkup' || b.back || !b.door || b.home === undefined) continue;
@@ -296,6 +300,10 @@ function members(s) {
     }
     const seat = s.seats[Math.floor(rng() * s.seats.length)];
     if (seat && rng() < 0.7) out.push({ x: seat.x, y: seat.y, a: Math.atan2(s.y - seat.y, s.x - seat.x), arche: 'casual', look: 'skater', gt: 'sit', watch: true });
+  } else if (s.k === 'party') {     // four to seven dancing in a loose ring, one or two watching from the edge
+    const n = 4 + Math.floor(rng() * 4);
+    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + rng() * 0.4, r = 22 + rng() * 18, x = s.x + Math.cos(a) * r, y = s.y + Math.sin(a) * r * 0.8; out.push({ x, y, a: Math.atan2(s.y - y, s.x - x), arche: rng() < 0.2 ? 'hustler' : 'casual', look: rng() < 0.4 ? 'skater' : null, gt: 'dance' }); }
+    for (let i = 0; i < 1 + (rng() < 0.5 ? 1 : 0); i++) { const x = s.x + (i ? 60 : -62), y = s.y + 30; out.push({ x, y, a: Math.atan2(s.y - y, s.x - x), arche: 'casual', watch: true }); }
   } else if (s.k === 'stoop') {     // one or two sat on the steps facing the street; now and then one stood by for a word
     out.push({ x: s.x - 5, y: s.y, a: Math.PI / 2, arche: rng() < 0.35 ? 'senior' : 'casual', gt: 'sitlow' });
     if (rng() < 0.6) out.push({ x: s.x + 9, y: s.y + 1, a: Math.PI / 2, arche: rng() < 0.3 ? 'senior' : 'casual', gt: 'sitlow' });
@@ -453,7 +461,7 @@ function pose(ped, on) {
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
-const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop']);
+const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party']);
 export function steer(world, ped, now) {
   const n = ped.npc, a = n.act;
   if (!a) return null;

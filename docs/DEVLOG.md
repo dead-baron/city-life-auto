@@ -10012,3 +10012,6 @@ new interiors - a laundromat, a record shop, a bookshop and a diner.
 - **Stoops** (server/systems/activities.js `stoop`): neighbours sat out on a walk-up's front steps, one or two, now and
   then one stood by for a word - more of an evening, not in the rain. A Midtown walk-up's door is where its facade
   draws it (the stoop in front of it).
+- **The projects**: the residents' murals on the two slabs facing the yard (the wave, the flowers), more tags; a block
+  party on the court after dark (activities.js `party`: four to seven dancing round the boombox, a couple watching;
+  `map.partySpots`).

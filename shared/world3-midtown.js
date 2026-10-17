@@ -706,16 +706,17 @@ function courtyard(K, x, y, w, h, ctx) {
 function projects(K, x, y, w, h, ctx) {
   const { walkup, shopLot, out } = ctx;
   const { prop, fill, paint } = K;
-  const slab = (bx, by, bw, bh, name) => {
-    const L = walkup(bx, by, bw, { floors: 5, grime: 0.45, graffiti: 1, line: true, home: { price: 7000 } });
+  const slab = (bx, by, bw, bh, name, mural = null) => {
+    const L = walkup(bx, by, bw, { floors: 5, grime: 0.45, graffiti: 2, line: true, home: { price: 7000 }, mural });
     L.art.spec.balconies = false;
     L.art.spec.fireEscape = [Math.max(8, Math.round(bw * TILE * 0.5) - 25), 50];
     return K.building({ x: bx, y: by, w: bw, h: bh, ...L, name });
   };
   const sh = 13, rowS = 16, side = 13;   // a slab's depth, the boulevard row's, a side slab's width
   const backW = (w - 6) >> 1;
-  slab(x + 1, y + 1, backW, sh, 'Midtown Houses A');
-  slab(x + w - backW - 1, y + 1, backW, sh, 'Midtown Houses B');
+  // (the residents' murals on the two slabs facing the yard: the wave, the flowers)
+  slab(x + 1, y + 1, backW, sh, 'Midtown Houses A', 'waves');
+  slab(x + w - backW - 1, y + 1, backW, sh, 'Midtown Houses B', 'flowers');
   const sy0 = y + sh + 5, sy1 = y + h - rowS - 6;   // the side slabs, the yard's west and east sides
   slab(x + 1, sy0, side, sy1 - sy0, 'Midtown Houses C');
   slab(x + w - side - 1, sy0, side, sy1 - sy0, 'Midtown Houses D');
@@ -728,6 +729,8 @@ function projects(K, x, y, w, h, ctx) {
     prop('court', cx, yy + 1.5, 0, { w: 15 * TILE, d: 11 * TILE, c1: '#5a5a62', c2: '#7a4a9a' });
     prop('hoop', cx, yy + 2.1, 6);
     prop('burnbarrel', cx - 10, yy + 10, 8); prop('bench_m', cx - 13, yy + 12, 0);
+    // the block party on the court of a summer night (server/systems/activities.js 'party': map.partySpots)
+    prop('boombox', cx + 5, yy + 9.5, 0); (K.m.partySpots ||= []).push({ x: Math.round(cx * TILE), y: Math.round((yy + 7.5) * TILE), name: 'Midtown Houses' });
     const ly0 = yy + 15, lh = Math.max(6, yh - 28);
     paint(yx + 2, ly0, yw - 4, lh, T.GRASS);
     for (const tx of [yx + 5, cx, yx + yw - 5]) prop('tree_a', tx, ly0 + lh / 2, 12, { sp: 'street', k: 1.15 });
