@@ -82,7 +82,7 @@ export function buildNetwork(lines, seed = 1) {
     const pts = l.pts.map((p) => ({ x: p.x, y: p.y }));
     const len = measure(pts);
     const K = ROAD_KINDS[l.kind] || ROAD_KINDS.st;
-    return { ...l, i, pts, len, hw: (K.w * TILE) / 2, cuts: [] };
+    return { ...l, i, pts, len, hw: ((l.w || K.w) * TILE) / 2, cuts: [] };   // (l.w: a line's own width in tiles - World v3's Midtown streets, wide enough for their parking lanes)
   }).filter((l) => l.len > 8);
   // which level an end of a line lives on
   const endLvl = (l, end) => (l.lvl === 'ramp' ? ((end ? l.z1 : l.z0) > 0.5 ? 1 : 0) : l.lvl);
@@ -212,10 +212,11 @@ export function buildNetwork(lines, seed = 1) {
       const zb = l.lvl === 'ramp' ? l.z0 + (l.z1 - l.z0) * (c1.s / l.len) : l.lvl;
       const e = {
         id: edges.length, a: na.id, b: nb.id, pts, len: 0, kind: l.kind, lvl, za, zb, name: l.name || '',
-        w: K.w * TILE, hw: (K.w * TILE) / 2, nl: K.nl, median: K.median, oneway: !!(l.oneway || K.oneway), bridge: false, culdesac: !!l.culdesac,
+        w: (l.w || K.w) * TILE, hw: ((l.w || K.w) * TILE) / 2, nl: K.nl, median: K.median, oneway: !!(l.oneway || K.oneway), bridge: false, culdesac: !!l.culdesac,
       };
       if (l.lvl === 'ramp' && l.zr && c0.s < 1 && c1.s > l.len - 1) e.zr = l.zr.slice(); // (a whole ramp: its climb as laid)
       if (l.notraffic) e.notraffic = true;   // (World v3's wild tracks: the traffic keeps off them - server/systems/traffic.js)
+      if (l.park) e.park = l.park;   // (a parking lane along each kerb, px: the traffic lanes inside it - roadcore.js laneOffset)
       e.len = measure(e.pts);
       edges.push(e);
       na.edges.push(e.id); nb.edges.push(e.id);
@@ -233,7 +234,7 @@ function joinChains(nodes, edges) {
     for (const n of nodes) {
       if (n.dead || n.edges.length !== 2) continue;
       const [e1, e2] = n.edges.map((id) => edges[id]);
-      if (!e1 || !e2 || e1 === e2 || e1.dead || e2.dead || e1.kind !== e2.kind || e1.lvl !== e2.lvl || e1.oneway !== e2.oneway || e1.name !== e2.name) continue;
+      if (!e1 || !e2 || e1 === e2 || e1.dead || e2.dead || e1.kind !== e2.kind || e1.lvl !== e2.lvl || e1.oneway !== e2.oneway || e1.name !== e2.name || (e1.park || 0) !== (e2.park || 0)) continue;
       if (e1.oneway && !(e1.b === n.id && e2.a === n.id) && !(e2.b === n.id && e1.a === n.id)) continue;
       // orient both so the chain runs first -> n -> second
       let first = e1, second = e2;

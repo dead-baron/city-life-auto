@@ -10079,3 +10079,16 @@ by its height, so the rows were hiding their alleys and, on the south side of ev
   picture signs (client/art2/neonsigns.js handNeon - the eye-patch woman, the striding tiger, the roaring head - and
   blade signs, ready for the Strip's plan).
 - **The streets**: manhole covers in the lanes (client/art2/streetgrit.js).
+
+## 2026-10-17 · Midtown's streets: parking lanes along both kerbs, cars parked in them
+- **Kerbside parking** (the owner, 10-17: streets that aren't interesting): Midtown's streets (Holly, Pier, Garden,
+  Linden, Spring, Carroll, Madison, Fulton, Mercer) are nine tiles wide now, an avenue's width, with a parking lane
+  along each kerb - its line and the bays' ticks painted (client/art2/game/groundbake.js lineSpec) - and one traffic
+  lane each way inside them (a line's own width and parking lane: shared/roads.js `l.w`, `e.park`; the lanes'
+  offsets in shared/roadcore.js laneOffset and the signals' in map.js laneOffs). A bay every 150 px clear of the
+  junctions (shared/world3-midtown.js streetDressing: m.parking spots with `kerb`), cars in about six in ten of them
+  near you (server/systems/traffic.js, never spawned onto a car going by). A street's pavement keeps its three tiles.
+- (Two-sided parking doesn't fit a six-tile street with the game's cars: a sedan is 59 px, a garbage truck 64 - the
+  traffic shoved the parked cars along. At nine tiles a minute of Holly Street's traffic leaves them where they are.)
+- The city code's budget 360 -> 380 KB (tools/perf.mjs): World v3's handcrafted districts, Midtown's plan and the
+  Neon Strip's to come.

@@ -21,7 +21,7 @@ const C = (v) => (v + 0.5) * TILE;
 export function handStreets(lines) {
   const out = { streets: 0, len: 0 };
   for (const P of HAND_PLANS) for (const s of P.streets()) {
-    lines.push({ pts: s.pts.map(([x, y]) => ({ x: C(x), y: C(y) })), kind: s.kind, lvl: 0, name: s.name, city: true, hand: P.key });
+    lines.push({ pts: s.pts.map(([x, y]) => ({ x: C(x), y: C(y) })), kind: s.kind, lvl: 0, name: s.name, city: true, hand: P.key, ...(s.park ? { park: s.park } : {}), ...(s.w ? { w: s.w } : {}) });
     out.streets++;
     for (let i = 1; i < s.pts.length; i++) out.len += Math.round(Math.hypot(s.pts[i][0] - s.pts[i - 1][0], s.pts[i][1] - s.pts[i - 1][1]));
   }

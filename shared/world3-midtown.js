@@ -20,8 +20,11 @@ const D = 1;   // Midtown's district id (shared/mapcore.js DISTRICTS)
 export const MY = { trestle: 1664, central: 1700, holly: 1750, blvd: 1800, pier: 1850, harbor: 1900 };
 export const MX = { westside: 2860, garden: 2924, bridge: 2988, linden: 3046, spring: 3085, carroll: 3118, main: 3184, madison: 3250, civic: 3320, fulton: 3400, harborview: 3480, mercer: 3580, stadium: 3680 };
 // how far a street's pavement reaches from its centre line (tiles, inclusive): an avenue 9 wide + 3 of pavement a side,
-// a street 6 + 3, an alley 3 with no pavement (shared/roads.js ROAD_KINDS, SIDEWALK commercial)
-const EXT = { ave: 7, blvd: 7, st: 6, alley: 1 };
+// a street 9 too (its parking lanes: ST_W) + 3, an alley 3 with no pavement (shared/roads.js ROAD_KINDS, SIDEWALK commercial)
+const EXT = { ave: 7, blvd: 7, st: 7, alley: 1 };
+// a street's parking lane along each kerb (px; a sedan is 59 wide) and the street's width with them (tiles: an avenue's
+// nine - one traffic lane each way inside the parking lanes, shared/roadcore.js laneOffset)
+const PARK = 60, ST_W = 9;
 // the back alleys' centre lines: 11 tiles behind the street to the north (the back row's depth), so the main row's
 // lots in front have a yard behind them
 const AL = { b1: 1730, b2: 1780, c1: 1831, c2: 1880 };
@@ -34,8 +37,10 @@ const southOfDiag = (x, y) => y > diagY(x);
 
 function streets() {
   const S = [];
-  const ew = (name, kind, y, x0, x1) => S.push({ name, kind, pts: [[x0, y], [x1, y]] });
-  const ns = (name, kind, x, y0, y1) => S.push({ name, kind, pts: [[x, y0], [x, y1]] });
+  // (the streets - not the avenues - have a parking lane along each kerb: shared/roadcore.js laneOffset, the bays
+  // streetDressing lays)
+  const ew = (name, kind, y, x0, x1) => S.push({ name, kind, pts: [[x0, y], [x1, y]], ...(kind === 'st' ? { park: PARK, w: ST_W } : {}) });
+  const ns = (name, kind, x, y0, y1) => S.push({ name, kind, pts: [[x, y0], [x, y1]], ...(kind === 'st' ? { park: PARK, w: ST_W } : {}) });
   // (Trestle Street under the El: the inclines between Garden Street and Bridge Avenue and east of Mercer Street take
   // its line - shared/world3-rail.js EL - so it runs in two pieces)
   ew('Trestle Street', 'ave', MY.trestle, MX.westside, MX.garden);
@@ -1061,7 +1066,7 @@ function streetDressing(K, out, poi0) {
   }
   // the corners: where two of the plan's streets cross, a hydrant at one corner, news boxes at another on the main
   // streets, a bin or two, a mailbox now and then
-  const S = MIDTOWN.streets().filter((q) => q.kind !== 'alley' && q.pts.length === 2), EW = S.filter((q) => q.pts[0][1] === q.pts[1][1]), NS = S.filter((q) => q.pts[0][0] === q.pts[1][0]);
+  const S = MIDTOWN.streets().filter((q) => q.kind !== 'alley' && q.pts.length === 2 && (q.pts[0][0] === q.pts[1][0] || q.pts[0][1] === q.pts[1][1])), EW = S.filter((q) => q.pts[0][1] === q.pts[1][1]), NS = S.filter((q) => q.pts[0][0] === q.pts[1][0]);
   for (const a of EW) for (const b of NS) {
     const y = a.pts[0][1], x = b.pts[0][0];
     if (x < Math.min(a.pts[0][0], a.pts[1][0]) || x > Math.max(a.pts[0][0], a.pts[1][0]) || y < Math.min(b.pts[0][1], b.pts[1][1]) || y > Math.max(b.pts[0][1], b.pts[1][1])) continue;
@@ -1073,6 +1078,26 @@ function streetDressing(K, out, poi0) {
       else if (k === 2) put('trashcan', cx + sx * 0.4, cy + sy * 1.8);
       else if (r(3 + c) < 0.35) put(r(8) < 0.7 ? 'mailbox' : 'trashcan', cx + sx * 1.8, cy + sy * 0.4);
       else if (r(20 + c) < 0.3) put(r(24) < 0.5 ? 'phonebox' : 'newsBox', cx + sx * 2.2, cy + sy * 1.2, 6);
+    }
+  }
+  // the kerbside parking along the streets (their parking lanes: PARK): a bay every 150 px, clear of the junctions and
+  // their crossings, cars in most of them (server/systems/traffic.js parks them - spots with kerb: true)
+  const C = (v) => (v + 0.5) * TILE, hwSt = ST_W * TILE / 2, off = hwSt - PARK / 2;
+  for (const a of S) {
+    if (a.kind !== 'st') continue;
+    const [[ax, ay], [bx, by]] = a.pts, horiz = ay === by, lo = horiz ? Math.min(ax, bx) : Math.min(ay, by), hi = horiz ? Math.max(ax, bx) : Math.max(ay, by);
+    const cross = (horiz ? NS : EW).filter((q) => { const c = horiz ? q.pts[0][0] : q.pts[0][1], r0 = horiz ? Math.min(q.pts[0][1], q.pts[1][1]) : Math.min(q.pts[0][0], q.pts[1][0]), r1 = horiz ? Math.max(q.pts[0][1], q.pts[1][1]) : Math.max(q.pts[0][0], q.pts[1][0]), me = horiz ? ay : ax; return c >= lo && c <= hi && me >= r0 - 1 && me <= r1 + 1; }).map((q) => [horiz ? q.pts[0][0] : q.pts[0][1], EXT[q.kind]]);
+    if (horiz) cross.push([lo, 7], [hi, 7]); else cross.push([lo, 7], [hi, 7]);
+    for (let t = C(lo) + 40; t < C(hi) - 40; t += 150) {
+      const tt = t / TILE - 0.5;
+      if (cross.some(([c, e]) => Math.abs(tt - c) < e + 5)) continue;
+      for (const sd of [-1, 1]) {
+        const x = horiz ? t : C(ax) + sd * off, y = horiz ? C(ay) + sd * off : t;
+        if (onSubwayPlaza(m, x / TILE, y / TILE, 2)) continue;
+        // (right-hand traffic: the south kerb's cars face east, the north's west; the west kerb's south, the east's north)
+        const ang = horiz ? (sd > 0 ? 0 : Math.PI) : (sd > 0 ? -1.5707 : 1.5707);
+        m.parking.push({ x: Math.round(x), y: Math.round(y), a: ang, kerb: true });
+      }
     }
   }
   // the street trees in their grates along both pavements, clear of the doors and the corners
@@ -1096,10 +1121,10 @@ function streetDressing(K, out, poi0) {
     }
   }
   // the bus stops: the boulevard (both ways), Main Avenue at Holly Street (R1-I's, with its planted strip and fence)
-  for (const [x, y] of [[3010, MY.blvd - 6], [3300, MY.blvd + 6], [3560, MY.blvd - 6], [MX.main + 6, MY.holly + 3]]) if (onWalk(x, y)) prop('busstop', x, y, 0);
-  prop('flowers_a', MX.main + 6, MY.holly + 7, 0); prop('fenceline', MX.main + 4.5, MY.holly + 8.5, 0, { kind: 'iron', tx: 3 * TILE, ty: 0 });
+  for (const [x, y] of [[3010, MY.blvd - 6], [3300, MY.blvd + 6], [3560, MY.blvd - 6], [MX.main + 6, MY.holly + 9]]) if (onWalk(x, y)) prop('busstop', x, y, 0);
+  prop('flowers_a', MX.main + 6, MY.holly + 13, 0); prop('fenceline', MX.main + 4.5, MY.holly + 14.5, 0, { kind: 'iron', tx: 3 * TILE, ty: 0 });
   // the hero corner's life (R1-A): the hot-dog cart, benches, a news box
-  prop('foodcart', MX.madison + 9, MY.holly - 4.5, 14);
-  prop('bench_m', MX.madison - 9, MY.holly - 5, 0); prop('news_b', MX.madison + 5, MY.holly - 5.5, 0); put('hydrant', MX.madison + 4.5, MY.holly - 3.5, 6);
+  prop('foodcart', MX.madison + 10, MY.holly - 5.6, 14);
+  prop('bench_m', MX.madison - 10, MY.holly - 6.2, 0); prop('news_b', MX.madison + 6, MY.holly - 6.4, 0); put('hydrant', MX.madison + 8.5, MY.holly - 5.2, 6);
   out.dressed = true;
 }

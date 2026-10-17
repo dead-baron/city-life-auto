@@ -1004,6 +1004,7 @@ function lineSpec(e) {
     add(4, 2.5, 1); add(-4, 2.5, 1);
     for (const sg of [1, -1]) { for (let n = 0; n < e.nl - 1; n++) add(sg * (laneOffset(e, n) + laneOffset(e, n + 1)) / 2, 2.5, 0, 22, 26); add(sg * (hw - 9), 2, 0, 0, 0, 0.75); }
   } else if (k === 'front') { add(0, 2.5, 0, 22, 26); for (const sg of [1, -1]) add(sg * (hw - 9), 2, 0, 0, 0, 0.75); }
+  else if ((k === 'st' || k === 'drive') && e.park) { add(0, 2.5, 1, 20, 20); for (const sg of [1, -1]) { add(sg * (hw - e.park), 2, 0, 0, 0, 0.7); add(sg * (hw - e.park / 2 - 1), e.park - 4, 0, 3, 147, 0.6); } }   // (a parking lane by each kerb: its line, the bays' ticks)
   else if (k === 'st' || k === 'drive') { add(0, 2.5, 1, 20, 20); for (const sg of [1, -1]) add(sg * (hw - 8), 2, 0, 0, 0, 0.55); }
   else if (k === 'minor') add(0, 2, 0, 14, 20, 0.8);
   else if (k === 'rural') { add(0, 2, 1, 24, 30, 0.85); for (const sg of [1, -1]) add(sg * (hw - 6), 1.6, 0, 0, 0, 0.5); }

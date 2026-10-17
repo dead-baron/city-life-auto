@@ -14,7 +14,7 @@ export const wrap = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -M
 // outer (right-hand, kerb-side) lane.
 export function laneOffset(e, k) {
   if (e.oneway) { const lw = e.w / e.nl; return (k - (e.nl - 1) / 2) * -lw; }
-  const lw = (e.w / 2 - e.median / 2) / e.nl;
+  const lw = (e.w / 2 - e.median / 2 - (e.park || 0)) / e.nl;   // (e.park: a parking lane along each kerb - World v3's Midtown streets)
   return e.median / 2 + lw * (e.nl - 0.5 - k);
 }
 

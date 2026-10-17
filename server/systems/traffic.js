@@ -723,12 +723,13 @@ function manage(world) {
     for (const i of spotGrid.near(a.x, a.y, 1150)) {
       const sp = spots[i];
       if (world.parked.has(i) || homeLots.has(i)) continue;
-      if (hash2(i, 7, world.map.seed) > (sp.sparse ? 0.3 : sp.drive ? 0.5 : 0.7)) continue; // a home's driveway: often a car, often not
+      if (hash2(i, 7, world.map.seed) > (sp.sparse ? 0.3 : sp.drive ? 0.5 : sp.kerb ? 0.6 : 0.7)) continue; // a home's driveway: often a car, often not (a kerb's bay: more often than not)
       const d2 = (sp.x - a.x) ** 2 + (sp.y - a.y) ** 2;
       if (d2 > 1150 * 1150) continue;
       const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
       if (!fresh && inAnyView(world, sp.x, sp.y, 80)) continue; // never pops in on someone's screen
       if (world.npcCount + world.trafficCount > world.npcBudget) break;
+      if (sp.kerb && world.query(sp.x, sp.y, 70, K.VEH).length) continue;   // (a kerb's bay on a live street: not on a car going by)
       let pm = sp.drive ? DRIVEWAY_CARS[Math.floor(hash2(i, 5, 2) * DRIVEWAY_CARS.length)] : weighted(PARKED_MIX);
       if (pm === 'bike') pm = weighted(motoMix('', world.map.districtAt(sp.x, sp.y).style));   // (which motorcycle: by district - task #366)
       const v = world.spawnVehicle(pm, sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });

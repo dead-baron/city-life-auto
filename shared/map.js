@@ -4616,7 +4616,7 @@ const POLE_GROUND = new Set([T.SIDEWALK, T.PLAZA, T.GRASS, T.LOT, T.DIRT, T.SAND
 // the middles of an approach's incoming lanes (px to the right of the road's centre line, for the traffic coming
 // in), at most five: a head over each
 const laneOffs = (e) => {
-  const inner = e.oneway ? -e.hw : e.median / 2, lanes = Math.max(1, e.nl), lw = (e.hw - inner) / lanes, o = []; // incoming lanes run from inner out to the kerb
+  const inner = e.oneway ? -e.hw : e.median / 2, lanes = Math.max(1, e.nl), lw = (e.hw - inner - (e.oneway ? 0 : e.park || 0)) / lanes, o = []; // incoming lanes run from inner out to the kerb (inside a parking lane)
   for (let i = 0; i < Math.min(lanes, 5); i++) o.push(inner + lw * (lanes <= 5 ? i + 0.5 : (i + 0.5) * (lanes / 5)));
   return o;
 };
