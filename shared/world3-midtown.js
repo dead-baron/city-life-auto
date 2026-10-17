@@ -266,10 +266,13 @@ function build(m, api, K) {
   // Row A: the rail-side row between Trestle Street (the El overhead) and Central Avenue - walk-ups facing south onto
   // Central Avenue, their backs and fire escapes to the viaduct
   const [ay0, ay1] = band(MY.trestle, 'ave', MY.central, 'ave');
+  // (a row of low walk-ups and shops fronting Trestle Street under the El - their backs and little yards toward the
+  // row on Central Avenue, which the camera sees - then the main row on Central Avenue)
+  const railRow = (x0, x1, list, o) => { backRow(x0, x1, ay0, ay0 + 9, { depth: 7, yards: 0.1 }); return mainRow(x0, x1, ay0 + 10, ay1, list, o); };
   {
     // the west end: walk-ups and a corner store at Westside Avenue
     const [x0, x1] = span(MX.westside, 'ave', MX.garden, 'st');
-    mainRow(x0, x1, ay0, ay1, [{ kind: 'shop', w: 8, name: 'Westside Bodega', store: 'mart', poi: { kind: 'convenience', label: 'Westside Bodega' }, awning: ['#2f7a5c', '#f0ece4'], openSign: true }]);
+    railRow(x0, x1, [{ kind: 'shop', w: 8, name: 'Westside Bodega', store: 'mart', poi: { kind: 'convenience', label: 'Westside Bodega' }, awning: ['#2f7a5c', '#f0ece4'], openSign: true }]);
   }
   {
     // the community garden by the tracks (WC315): raised beds, a greenhouse, a tool shed, sunflowers, benches - the
@@ -279,25 +282,28 @@ function build(m, api, K) {
   }
   {
     const [x0, x1] = span(MX.bridge, 'ave', MX.carroll, 'st');
-    mainRow(x0, x1, ay0, ay1, [{ kind: 'walkup', w: 10 }, { kind: 'shop', w: 7, name: 'The Trestle Tap', store: 'bar', awning: null, people: 3 }]);
+    railRow(x0, x1, [{ kind: 'walkup', w: 10 }, { kind: 'shop', w: 7, name: 'The Trestle Tap', store: 'bar', awning: null, people: 3 }]);
   }
   {
     const [x0, x1] = span(MX.carroll, 'st', MX.main, 'ave');
-    mainRow(x0, x1, ay0, ay1, [{ kind: 'walkup', w: 9 }, { kind: 'shop', w: 6, ...pickShop('food', 0) }]);
+    railRow(x0, x1, [{ kind: 'walkup', w: 9 }, { kind: 'shop', w: 6, ...pickShop('food', 0) }]);
   }
   // the station blocks either side of Madison Street (the stair towers stand on Trestle Street's pavement: the rail pass)
   {
     const [x0, x1] = span(MX.main, 'ave', MX.madison, 'st');
-    mainRow(x0, x1, ay0, ay1, [{ kind: 'shop', w: 8, name: 'Station News', store: 'mart', awning: ['#1e3a5e', '#e8e4dc'] }, { kind: 'shop', w: 6, name: 'Last Stop Lounge', store: 'bar', awning: null }]);
+    railRow(x0, x1, [{ kind: 'shop', w: 8, name: 'Station News', store: 'mart', awning: ['#1e3a5e', '#e8e4dc'] }, { kind: 'shop', w: 6, name: 'Last Stop Lounge', store: 'bar', awning: null }]);
   }
   {
     const [x0, x1] = span(MX.madison, 'st', MX.civic, 'ave');
-    mainRow(x0, x1, ay0, ay1, [{ kind: 'shop', w: 7, name: 'Platform Coffee', store: 'cafe', poi: { kind: 'coffee', label: 'Platform Coffee' }, awning: ['#8a5a2a', '#efe6d0'] }]);
+    // (the station's stair tower comes down to Trestle Street's pavement at Madison Street, at this block's west end: a
+    // little plaza in front of it instead of the row - the food cart, benches, the bikes, the news boxes, the map board)
+    stationPlaza(K, x0, ay0, 11, 10);
+    railRow(x0, x1, [{ kind: 'shop', w: 7, name: 'Platform Coffee', store: 'cafe', poi: { kind: 'coffee', label: 'Platform Coffee' }, awning: ['#8a5a2a', '#efe6d0'] }]);
   }
   for (const [a, ka, b, kb] of [[MX.civic, 'ave', MX.fulton, 'st'], [MX.fulton, 'st', MX.harborview, 'ave'], [MX.harborview, 'ave', MX.mercer, 'st']]) {
     const [x0, x1] = span(a, ka, b, kb);
     if (a === MX.fulton) skateSpot(K, x0 + 14, ay0, 26, ay1 - ay0 + 1, out);   // (the skate spot by the El, the row built round it)
-    mainRow(x0, x1, ay0, ay1, [], { gardens: false });
+    railRow(x0, x1, [], { gardens: false });
   }
   {
     // the east end, rougher: by the projects
@@ -803,6 +809,17 @@ function skateSpot(K, x, y, w, h, out) {
   const seats = [[0.28, 0.66], [0.8, 0.46]].map(([fx, fy]) => ({ x: Math.round((x + w * fx) * TILE), y: Math.round((y + h * fy) * TILE) + 4 }));
   (m.skateSpots ||= []).push({ name: 'The Trestle Spot', x, y, w, h, seats });
   (out.places ||= []).push({ name: 'The Trestle Spot', x0: x, y0: y, x1: x + w, y1: y + h });
+}
+// The plaza at the foot of Midtown Station's stair tower (Trestle Street at Madison Street): paving, the hot-dog cart for
+// the commuters, benches, a bike rack and a planter or two, the news boxes, the neighbourhood map board
+function stationPlaza(K, x, y, w, h) {
+  const { prop } = K;
+  K.fill(x, y, w, h, T.PLAZA);
+  prop('foodcart', x + w * 0.35, y + 3.2, 14);
+  prop('bench_m', x + w * 0.2, y + h - 1.6, 0); prop('bench_m', x + w * 0.62, y + h - 1.6, 0);
+  prop('bikerack', x + 1.6, y + 1.2, 0); prop('mapboard', x + w * 0.75, y + 2.4, 6);
+  prop('news_a', x + w - 1.2, y + 4.8, 0); prop('news_c', x + w - 1.2, y + 5.6, 0); prop('trashcan', x + 1, y + h - 1, 0);
+  prop('planter_g', x + w * 0.45, y + h - 3.2, 10); prop('tree_a', x + w * 0.85, y + h - 2.2, 10, { sp: 'street', k: 1.1, grate: true });
 }
 // a subway entrance's plaza (shared/map.js reserveSubwayPlazas) within r tiles of (x, y): kept clear and paved
 function onSubwayPlaza(m, x, y, r = 0) { return (m.subwayPlazas || []).some((q) => x >= q.x - r && x < q.x + q.w + r && y >= q.y - r && y < q.y + q.h + r); }

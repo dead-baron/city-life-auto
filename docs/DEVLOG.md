@@ -9999,3 +9999,7 @@ new interiors - a laundromat, a record shop, a bookshop and a diner.
   and buckets on stands; the salons' mirrors and chairs. Their floors to match (tile, checker, wood).
 - **Flats over the shops**: most shops have a flat upstairs with its own door at the other end of the front (474 homes
   in Midtown).
+- (later the same morning) **Under the El**: the rail-side band between Trestle Street and Central Avenue gets a row of
+  low walk-ups and shops fronting Trestle Street under the viaduct (their little yards behind them, toward the Central
+  Avenue row) instead of a wide strip of empty paving; at Madison Street, where the station's stair tower comes down, a
+  plaza takes the row's place - the commuters' hot-dog cart, benches, a bike rack, news boxes, the map board.
