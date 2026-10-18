@@ -147,6 +147,8 @@ function state(p) {
   return p.sk || (p.sk = { score: 0, best: p.profile.skateBest || 0, combo: null, special: 0, spUntil: 0, last: null });
 }
 const special = (world, S) => S.spUntil > world.time;
+// the debug menu (server/devplay.js): the special on now
+export function devSpecial(world, p) { const S = state(p); S.special = 0; S.spUntil = world.time + SKATE_SCORE.specialS; p.meDirty = true; }
 const nameOf = (world, S, k) => { const t = SK.trickOf(k); return t ? (special(world, S) ? t.sp : t.name) : ''; };
 const combo = (world, S) => S.combo || (S.combo = { pts: 0, n: 0, names: [], used: {}, gaps: 0 });
 // a trick into the combo: worth half each time it's done again in it, three times in a special (not the gaps)

@@ -112,14 +112,14 @@ const ROWS = [
   ['cavecat', 'Blind Cave Catfish', 'cave', 0.5, 6, 3, 'any', 'sinker', 56, 150, 'cat', ['#f0e8e0', '#d8c8c0', '#f8f4f0', '#e0d0c8'], 'wd'],
 ];
 // The legendary catches (FC01, FC02): one of each, only in its own place, at its time, on a rod that can hold it (spot:
-// what the water's spot has to be - server/systems/fishing.js habitatAt: lily (a park's pond), drop (a lake's deep
+// what the water's spot has to be - server/systems/fishing.js habitatAt: lily (a park's pond or lake), drop (a lake's deep
 // water), falls (below a waterfall), bridge (a river under a bridge), cave (the still pool), mangrove (the Egret
 // Coast's salt marsh), pilings (a pier), blue (open water by day), night (the deep))
 const LEGEND = [
-  ['goldenkoi', 'The Golden Koi', 'pond', 18, 40, 'day', 'floater', 97, 2500, 'koi', ['#f0b820', '#e89a10', '#f8d860', '#f0c030'], 'd', 'lily'],
+  ['goldenkoi', 'The Golden Koi', 'pond lake', 18, 40, 'day', 'floater', 97, 2500, 'koi', ['#f0b820', '#e89a10', '#f8d860', '#f0c030'], 'd', 'lily'],
   ['oldsturgeon', 'Old Ironsides', 'lake', 300, 560, 'any', 'sinker', 98, 3000, 'sturgeon', ['#5a5a50', '#3a3a30', '#a8a898', '#4a4a40'], 'ws', 'drop'],
   ['rainbowking', 'The Rainbow King', 'river creek', 24, 44, 'day', 'mixed', 98, 2800, 'trout', ['#d8e0d8', '#4a8a6a', '#f8f8f0', '#f070c0'], 'i', 'falls'],
-  ['bigmuddy', 'Big Muddy', 'river', 250, 540, 'night', 'sinker', 97, 2600, 'cat', ['#5a5040', '#3a3020', '#c8b890', '#4a4030'], 'dc', 'bridge'],
+  ['bigmuddy', 'Big Muddy', 'river creek', 250, 540, 'night', 'sinker', 97, 2600, 'cat', ['#5a5040', '#3a3020', '#c8b890', '#4a4030'], 'dc', 'bridge'],
   ['ghostkoi', 'The Ghost Koi', 'cave', 15, 30, 'any', 'floater', 100, 4000, 'koi', ['#e8f8ff', '#a8e0f8', '#ffffff', '#c8f0ff'], 'd', 'cave'],
   ['gatorgar', 'The Swamp Dragon', 'swamp', 300, 400, 'any', 'dart', 99, 3200, 'gar', ['#6a7a3a', '#3a4a1a', '#b8c088', '#5a6a2a'], 'mc', 'mangrove'],
   ['barndoor', 'The Barn Door', 'pier', 400, 700, 'any', 'sinker', 98, 3000, 'flat', ['#6a6050', '#3a3020', '#f0f0e8', '#5a5040'], 'sq', 'pilings'],

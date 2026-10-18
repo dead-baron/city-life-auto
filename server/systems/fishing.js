@@ -42,6 +42,14 @@ const wet = (t) => t === T.WATER || t === T.DEEP;
 const REEF_D = new Set([14, 44, 45, 52, 59]);
 const SALT_MARSH_D = new Set([53, 65]);
 const PARK_STYLES = new Set(['park', 'luxury', 'civic', 'arts']);
+const PARK_PLACE = /park|commons|garden|pond|square/i;
+// a park's water (the lily pond's): in a park's district, or in one of World v3's handcrafted parks, gardens or ponds
+export function parkish(m, tx, ty, d) {
+  const D = DISTRICTS[d];
+  if (D && (PARK_STYLES.has(D.style) || d === 12)) return true;
+  const R = m._parkRects || Object.defineProperty(m, '_parkRects', { value: Object.values(m.world3hand || {}).flatMap((H) => ((H && H.places) || []).filter((q) => q.name && PARK_PLACE.test(q.name))), enumerable: false })._parkRects;
+  return R.some((q) => tx >= q.x0 - 2 && ty >= q.y0 - 2 && tx <= q.x1 + 2 && ty <= q.y1 + 2);
+}
 
 // ---- where -------------------------------------------------------------------------------------------------------
 const inPool = (m, x, y) => (m.pools || []).some((r) => (r.ring ? Math.abs(Math.hypot((x - r.ring.cx) / r.ring.rx, (y - r.ring.cy) / r.ring.ry) - 1) * Math.min(r.ring.rx, r.ring.ry) < r.ring.hw + 16 : x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h));
@@ -88,7 +96,8 @@ function inMarsh(m, x, y) {
   for (const q of m.landmarks || []) if (q.type === 'marsh' && x >= q.x && y >= q.y && x < q.x + q.w && y < q.y + q.h) return true;
   return false;
 }
-function lakeSize(m, tx, ty) { let n = 0; for (let dy = -6; dy <= 6; dy += 3) for (let dx = -6; dx <= 6; dx += 3) if (m.inside(tx + dx, ty + dy) && m.lake && m.lake[m.idx(tx + dx, ty + dy)]) n++; return n; }
+// how much lake there is round about (out to 12 tiles, every third: 81 looks) - a lake's shore is still a lake
+function lakeSize(m, tx, ty) { let n = 0; for (let dy = -12; dy <= 12; dy += 3) for (let dx = -12; dx <= 12; dx += 3) if (m.inside(tx + dx, ty + dy) && m.lake && m.lake[m.idx(tx + dx, ty + dy)]) n++; return n; }
 function narrow(m, tx, ty) { let n = 0; for (let k = -4; k <= 4; k++) { if (wet(m.tileAt(tx + k, ty))) n++; if (wet(m.tileAt(tx, ty + k))) n++; } return n < 11; }
 function belowFalls(m, x, y) { for (const s of m.natureSites || []) { const f = s.falls; if (f && Number.isFinite(f.x) && Math.abs(x - f.x) < 220 && y > f.y - 40 && y < f.y + 420) return true; } return false; }
 // The water at (x, y) px: { water (shared/fish.js WATERS), spot (a legendary's place, or null) }. o: { ug (underground),
@@ -104,14 +113,23 @@ export function habitatAt(world, x, y, o = {}) {
   const d = i >= 0 ? map.dist[i] : -1;
   if (i >= 0 && map.lake && map.lake[i]) {   // a lake or a pond (fresh, still)
     if (inMarsh(map, x, y)) return { water: 'swamp', spot: null };
-    if (lakeSize(map, tx, ty) >= 18) return { water: 'lake', spot: map.tileAt(tx, ty) === T.DEEP ? 'drop' : null };
-    const ld = landNear(map, tx, ty, 6), D = DISTRICTS[ld >= 0 ? ld : d];
-    return { water: 'pond', spot: D && (PARK_STYLES.has(D.style) || ld === 12) ? 'lily' : null };
+    const park = parkish(map, tx, ty, d);   // (a park's water: the lily pond, however big - the Golden Koi's)
+    if (lakeSize(map, tx, ty) >= 24) return { water: 'lake', spot: park ? 'lily' : map.tileAt(tx, ty) === T.DEEP ? 'drop' : null };
+    return { water: 'pond', spot: park ? 'lily' : null };
   }
   if (i >= 0 && map.river && map.river[i]) {   // a river, a creek; the marsh's tidal creeks
     if (SALT_MARSH_D.has(d) || inMarsh(map, x, y)) return { water: 'swamp', spot: SALT_MARSH_D.has(d) ? 'mangrove' : null };
+    if (parkish(map, tx, ty, d)) { const body = waterBody(map, tx, ty); if (body < Infinity) return { water: body >= POND_MAX ? 'lake' : 'pond', spot: 'lily' }; }   // (World v3's park ponds wear the river's flag)
     const spot = near(map, tx, ty, 4, T.BRIDGE) ? 'bridge' : belowFalls(map, x, y) ? 'falls' : null;
     return { water: narrow(map, tx, ty) ? 'creek' : 'river', spot };
+  }
+  // a water of its own with no way to the sea (World v3's park ponds and the Stadium Ponds carry no lake flag): a pond, or
+  // a lake if it's big; a park's is the lily pond
+  const body = waterBody(map, tx, ty);
+  if (body < Infinity) {
+    if (inMarsh(map, x, y)) return { water: 'swamp', spot: null };
+    const park = parkish(map, tx, ty, d);
+    return body >= POND_MAX ? { water: 'lake', spot: park ? 'lily' : map.tileAt(tx, ty) === T.DEEP ? 'drop' : null } : { water: 'pond', spot: park ? 'lily' : null };
   }
   // the sea
   if (o.boat && offshoreAt(map, x, y)) return o.night ? { water: 'deep', spot: 'night' } : { water: 'offshore', spot: 'blue' };
@@ -121,6 +139,61 @@ export function habitatAt(world, x, y, o = {}) {
   if (REEF_D.has(ld) || REEF_D.has(d)) return { water: 'reef', spot: null };
   if (ld < 0 && !o.boat && offshoreAt(map, x, y)) return o.night ? { water: 'deep', spot: 'night' } : { water: 'offshore', spot: 'blue' };
   return { water: 'shore', spot: null };
+}
+// A bank of the water want(habitat) takes, nearest (x, y) px out to R tiles: { x, y, a (facing the water), hab } or null -
+// a tile you can stand on beside open water, the habitat taken a few tiles out, where a cast lands (the debug menu's
+// fishing places: server/devplay.js)
+export function bankNear(world, x, y, R, want, block) {
+  const m = world.map, cx = Math.floor(x / TILE), cy = Math.floor(y / TILE);
+  const stand = (t) => !wet(t) && !(block && block[t]) && t !== T.WALL && t !== T.BUILDING;
+  const ring = [];
+  for (let r = 0; r <= R; r += 2) {
+    ring.length = 0;   // (the ring's tiles, every other one: its top and bottom rows, then its sides)
+    if (!r) ring.push(cx, cy);
+    else { for (let tx = cx - r; tx <= cx + r; tx += 2) ring.push(tx, cy - r, tx, cy + r); for (let ty = cy - r + 2; ty <= cy + r - 2; ty += 2) ring.push(cx - r, ty, cx + r, ty); }
+    for (let n = 0; n < ring.length; n += 2) {
+      const tx = ring[n], ty = ring[n + 1];
+      if (!wet(m.tileAt(tx, ty))) continue;
+      for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1]]) {
+        if (!stand(m.tileAt(tx + dx, ty + dy)) || !stand(m.tileAt(tx + dx * 2, ty + dy * 2))) continue;
+        const nx = (tx + 0.5) * TILE, ny = (ty + 0.5) * TILE, ox = (tx + 0.5 - dx * 3) * TILE, oy = (ty + 0.5 - dy * 3) * TILE;
+        if (inPool(m, nx, ny)) continue;
+        let hab = habitatAt(world, nx, ny);   // (by the bank, else a few tiles out, where a cast lands: a lake's drop-off)
+        if (!want(hab) && wet(m.tileAtPx(ox, oy))) hab = habitatAt(world, ox, oy);
+        if (!want(hab)) continue;
+        return { x: (tx + dx + 0.5) * TILE + dx * 4, y: (ty + dy + 0.5) * TILE + dy * 4, a: Math.atan2(-dy, -dx), hab };
+      }
+    }
+  }
+  return null;
+}
+// How big the water is that (tx, ty) is in, if it's closed in (a flood through the water and under bridges, up to BODY_CAP
+// tiles; Infinity: it runs on - the sea, or a water joined to it). Closed bodies are remembered tile by tile.
+const BODY_CAP = 6000, POND_MAX = 700, OPEN_RUN = 64;
+function waterBody(m, tx, ty) {
+  const memo = m._waterBody || Object.defineProperty(m, '_waterBody', { value: new Map(), enumerable: false })._waterBody;
+  const k0 = ty * 65536 + tx;
+  if (memo.has(k0)) return memo.get(k0);
+  // (first, a quick look: water running on OPEN_RUN tiles any of eight ways is open water - no need to flood the sea)
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    let k = 1; while (k <= OPEN_RUN && wet(m.tileAt(tx + dx * k, ty + dy * k))) k++;
+    if (k > OPEN_RUN) return Infinity;
+  }
+  const seen = new Set([k0]), q = [tx, ty];
+  while (q.length && seen.size < BODY_CAP) {
+    const b = q.pop(), a = q.pop();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const na = a + dx, nb = b + dy, k = nb * 65536 + na;
+      if (seen.has(k) || !m.inside(na, nb)) { if (!m.inside(na, nb)) seen.add(-1); continue; }   // (the map's edge: the open sea)
+      const t = m.tileAt(na, nb);
+      if (!wet(t) && t !== T.BRIDGE) continue;
+      seen.add(k); q.push(na, nb);
+    }
+    if (seen.has(-1)) break;
+  }
+  if (seen.size >= BODY_CAP || seen.has(-1)) { memo.set(k0, Infinity); return Infinity; }
+  for (const k of seen) memo.set(k, seen.size);
+  return seen.size;
 }
 // the hour as the fish see it
 export function whenOf(world) {
@@ -179,12 +252,26 @@ function cast(world, p, ped, L) {
   const hab = habitatAt(world, bx, by, { ug: ped.ug === UG.CAVE, boat: !!boat, night: when === 'night' });
   const bait = baitFor(prof, hab.water, when);
   const rand = world.rand;
-  const f = FS.pickFish(hab, { when, bait, rodLb: R.lb, far: F.power }, rand) || FS.FISH_BY_ID.bluegill;
+  let f = FS.pickFish(hab, { when, bait, rodLb: R.lb, far: F.power }, rand) || FS.FISH_BY_ID.bluegill;
+  const rig = p.devFish, forced = rig && rig.next ? rigged(rig.next, hab, rand) : null;   // (the debug menu's next bite: server/devplay.js)
+  if (forced) { f = forced; rig.next = null; }
   const lb = FS.weighFish(f, rand), seed = Math.floor(rand() * 4294967296) >>> 0;
   L.P = FS.fightParams(f, lb, rodId, hab.water, seed, { bait });
+  if (rig) {
+    if (forced) L.P.snap = false;
+    if (rig.easy) { L.P.diff = 5; L.P.fight = 'smooth'; L.P.snap = false; }
+    if (rig.now) { L.P.bite = 0.8; rig.now = false; }
+  }
   L.fish = f.id; L.lb = lb; L.bait = bait; L.hab = hab;
   world.emit(bx, by, { e: 'cast', id: ped.id, x: Math.round(bx), y: Math.round(by), fx: Math.round(ped.x), fy: Math.round(ped.y) });
   p.meDirty = true;
+}
+// the debug menu's pick for the next bite: 'legend' (this water's legendary, else any), 'rare' (a rare one or a trophy from
+// this water), or a fish's id
+function rigged(k, hab, rand) {
+  if (k === 'legend') return FS.FISH.find((q) => q.rare === 5 && q.waters.includes(hab.water)) || FS.FISH.find((q) => q.rare === 5);
+  if (k === 'rare') { const c = FS.FISH.filter((q) => (q.rare === 3 || q.rare === 4) && q.waters.includes(hab.water)); return c.length ? c[Math.floor(rand() * c.length)] : null; }
+  return FS.FISH_BY_ID[k] || null;
 }
 function hooked(world, p, ped, L) {
   const prof = p.profile;

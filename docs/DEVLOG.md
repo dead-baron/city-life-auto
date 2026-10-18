@@ -11058,3 +11058,56 @@ that shipped earlier today:
   - the hard crash tips the cart, and taking it stands it up;
   - the tipped and crushed models;
   - the passenger's two frames.
+
+## 2026-10-18 · Today's new play in the debug menu
+
+The owner: "Can you make sure all these new features are accessible in the debug menu for easy testing?" Five new
+sections (`client/devcats.js`; the commands are in `server/devplay.js`, handed on by `server/dev.js`):
+- **🆕 New:** the batch in one place.
+  - A board and on it; the skate spot.
+  - You and a friend in a cart; two loaded carts head on.
+  - The fishing kit; a river bank.
+  - Garden Crescent; Waves Stadium and the Westport Galleria (the Stadium District); the Stadium Ponds.
+  - These are reached through a new `place` command, which finds a place by name among World v3's handcrafted
+    districts' places and sights, and the landmarks.
+- **🛹 Skateboarding:**
+  - a board and on it;
+  - the nearest skate spot, on your board, and a session there;
+  - lined up a run-up away from the nearest ledge, flat bar or bench, or from the nearest kicker, quarter pipe or
+    pyramid;
+  - the special meter full;
+  - the skaters riding laps;
+  - rain.
+- **🛒 Shopping carts:**
+  - a cart;
+  - you at the handle with a friend in the basket, or an empty basket;
+  - two loaded carts rolling at each other just ahead (everyone flies);
+  - a tipped cart and a crushed one;
+  - the nearest grocery.
+- **🎣 Fishing:**
+  - every rod and 20 of every bait;
+  - the nearest bank of each kind of water: a pond, a lake, a river, a creek, the marshes, the shallows, a pier, the
+    reef;
+  - out at sea in a still boat;
+  - the cave's still pool;
+  - each legendary's place: a park's lily pond, a lake's drop-off, the foot of a waterfall, a river under a bridge,
+    the salt marsh, a pier's pilings;
+  - the next bite at once; the next fish rare, or this water's legendary (the line won't snap); easy fights (a
+    toggle);
+  - dusk, night and noon;
+  - ten fish in the cooler; the log and the cooler emptied; the records board wiped;
+  - the bait shop, the fish market and the charter desk.
+- **🐟 The next fish, every kind:** a button per species (91): the next cast hooks it, wherever you are.
+- **Finding a water far off:** banks are searched near you first, then from where that water lives (the marsh's
+  districts and Heron Marsh, the southern keys, the parks, the waterfalls). After that comes a coarse list of that
+  kind of water across the whole world, nearest first. On a World v3 build each search takes 2-300 ms.
+- **What the World v3 check found** (and fixed in `server/systems/fishing.js` habitatAt):
+  - World v3's park ponds and the Stadium Ponds carry no lake flag (Greenfield Pond wears the river's). They read as
+    the sea, or as a creek. Now a water closed in on itself is a pond, or a lake if it's big. That's found by a flood
+    of at most 6000 tiles, after a quick look along eight rays: water running 64 tiles any way is open water.
+  - A park's water is the lily pond, however big: a park district, or one of World v3's handcrafted parks, commons,
+    gardens and ponds. So the Golden Koi swims in Midtown's Commons Pond, Greenfield Pond and the Stadium Ponds. Its
+    waters are now 'pond lake'.
+  - A lake's shore counted as a pond, because the lake was measured too close in. It's now measured out to 12 tiles.
+  - Big Muddy takes a creek under a bridge too.
+- **Tests:** `test/devplay.test.js` runs every new button's command on the test map.

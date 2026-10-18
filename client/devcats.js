@@ -2,6 +2,7 @@
 // (server/dev.js): most spawn the thing, or take you to the nearest place it happens ('near' + the kind of
 // place - pois, landmarks, nature places, race starts, pitches). Commands starting with '@' only change your own
 // screen (fog, a lightning strike). An entry: [label, command, extra fields for the message].
+import { FISH, RARITY, WATER_NAME } from '../shared/fish.js';
 export const DEV_SECTIONS = [
   { id: 'wx', title: '🌦 Weather & time', items: [
     ['🌧 Rain (10 min)', 'rain', { s: 600 }], ['☀ Clear skies', 'clear'], ['🔒 Hold the weather (toggle)', 'wxhold'],
@@ -18,6 +19,45 @@ export const DEV_SECTIONS = [
     ['🛡 Invincible (toggle)', 'god'], ['❤ Heal', 'heal'], ['💵 +$25k', 'money'], ['😇 +50 Samaritan', 'samaritan'],
     ['📜 Wipe criminal record', 'record'], ['☠ Die (respawn test)', 'die'], ['🎒 Dropped backpacks, Common to Legendary', 'packs'],
   ] },
+  // the owner's 2026-10-18 batch, everything in one place to try (server/devplay.js; World v3's places: the 'place' command)
+  { id: 'new', title: '🆕 New: skate, carts, fishing, places', items: [
+    ['🛹 A skateboard, and on it', 'skate', { k: 'on' }], ['🛹 The skate spot (Midtown, by the El), on your board', 'skate', { k: 'spot' }],
+    ['🛒 Me at a cart\'s handle, a friend in the basket', 'cart', { k: 'pair' }], ['💥 Two loaded carts head on, just ahead', 'cart', { k: 'headon' }],
+    ['🎣 Every rod and 20 of every bait', 'fish', { k: 'kit' }], ['🏞 Fishing: the nearest river bank', 'fish', { k: 'go', w: 'river' }],
+    ['🌳 Garden Crescent (Midtown)', 'place', { n: 'Garden Crescent' }], ['🏟 Waves Stadium (the Stadium District)', 'place', { n: 'Waves Stadium' }],
+    ['🛍 Westport Galleria (the Stadium District)', 'place', { n: 'Westport Galleria' }], ['🦆 Stadium Ponds (fishing)', 'place', { n: 'Stadium Ponds' }],
+  ] },
+  { id: 'skate', title: '🛹 Skateboarding', items: [
+    ['🛹 A skateboard, and on it', 'skate', { k: 'on' }], ['🛹 The nearest skate spot, on your board', 'skate', { k: 'spot' }],
+    ['⏱ A skate session there (5 min, goals, a high score)', 'skate', { k: 'session' }],
+    ['🛤 Lined up on the nearest ledge, flat bar or bench (grind it)', 'skate', { k: 'rail' }],
+    ['📐 Lined up on the nearest kicker, quarter pipe or pyramid', 'skate', { k: 'ramp' }],
+    ['⚡ The special meter full (SPECIAL on: tricks worth three times)', 'skate', { k: 'special' }],
+    ['🛹 Skaters riding laps at the skate spot', 'act', { k: 'skaters' }], ['🌧 Rain (wet boards)', 'rain'], ['☀ Clear skies', 'clear'],
+  ] },
+  { id: 'cart', title: '🛒 Shopping carts', items: [
+    ['🛒 A cart beside me', 'car', { m: 'cart' }], ['🛒 Me at the handle, a friend in the basket', 'cart', { k: 'pair' }],
+    ['🛒 Me at the handle, the basket empty', 'car', { m: 'cart', in: 1 }], ['💥 Two loaded carts head on, just ahead (everyone flies)', 'cart', { k: 'headon' }],
+    ['⤵ A cart over on its side (take it to stand it up)', 'cart', { k: 'tipped' }], ['🗑 A crushed cart', 'cart', { k: 'crushed' }],
+    ['🛒 The nearest grocery (carts by the door)', 'near', { k: 'grocery' }],
+  ] },
+  { id: 'fish', title: '🎣 Fishing', items: [
+    ['🎣 Every rod and 20 of every bait', 'fish', { k: 'kit' }],
+    ['🏞 A pond', 'fish', { k: 'go', w: 'pond' }], ['🏞 A lake', 'fish', { k: 'go', w: 'lake' }], ['🏞 A river', 'fish', { k: 'go', w: 'river' }],
+    ['🏞 A creek', 'fish', { k: 'go', w: 'creek' }], ['🦢 The marshes', 'fish', { k: 'go', w: 'swamp' }], ['🏖 The shallows', 'fish', { k: 'go', w: 'shore' }],
+    ['⚓ A pier', 'fish', { k: 'go', w: 'pier' }], ['🐠 The reef (the southern keys)', 'fish', { k: 'go', w: 'reef' }],
+    ['🚤 Out at sea in a boat (open water; the deep after dark)', 'fish', { k: 'boat' }], ['🦇 The cave\'s still pool', 'fish', { k: 'cave' }],
+    ['✨ The Golden Koi\'s lily pond (a park\'s)', 'fish', { k: 'go', spot: 'lily' }], ['✨ Old Ironsides\' lake drop-off', 'fish', { k: 'go', w: 'lake', spot: 'drop' }],
+    ['✨ The Rainbow King: below a waterfall', 'fish', { k: 'go', spot: 'falls' }], ['✨ Big Muddy: a river under a bridge (at night)', 'fish', { k: 'go', w: 'river', spot: 'bridge' }],
+    ['✨ The Swamp Dragon and the Silver King: the salt marsh', 'fish', { k: 'go', w: 'swamp', spot: 'mangrove' }], ['✨ The Barn Door: a pier\'s pilings', 'fish', { k: 'go', w: 'pier', spot: 'pilings' }],
+    ['⚡ The next bite at once', 'fish', { k: 'bite', f: 'now' }], ['🐟 The next fish: a rare one or a trophy from this water', 'fish', { k: 'bite', f: 'rare' }],
+    ['✨ The next fish: this water\'s legendary', 'fish', { k: 'bite', f: 'legend' }], ['🪶 Easy fights (toggle)', 'fish', { k: 'easy' }],
+    ['🌆 18:30 dusk (the dusk fish)', 'time', { m: 1110 }], ['🌙 23:00 night (the night fish)', 'time', { m: 1380 }], ['☀ 12:00 noon', 'time', { m: 720 }],
+    ['🧊 Ten fish in my cooler', 'fish', { k: 'cooler' }], ['📒 Empty my fishing log and my cooler', 'fish', { k: 'clear' }], ['🏆 Wipe the records board', 'fish', { k: 'records' }],
+    ['🎣 Bait & tackle shop', 'near', { k: 'tackle' }], ['🐟 Fish market (sell the catch)', 'near', { k: 'fishmarket' }], ['🛥 Charter desk (deep-sea charter)', 'near', { k: 'charter' }],
+  ] },
+  // the next bite, any kind of fish (shared/fish.js FISH): the next cast hooks it, wherever you are
+  { id: 'fishes', title: '🐟 The next fish: every kind', items: FISH.map((f) => [`${f.rare === 5 ? '✨' : '🐟'} ${f.name} (${RARITY[f.rare]}; ${f.waters.map((w) => WATER_NAME[w]).join(', ')})`, 'fish', { k: 'bite', f: f.id }]) },
   { id: 'blades', title: '🗡 Blades & practice', items: [
     ['🎯 3 practice dummies in front of you', 'dummy'], ['🎯 3 one-hit dummies (see how they fall)', 'dummy', { hp: 1 }],
     ['🗡 The hooded stranger (sells the plasma blade)', 'wanderer'], ['⚔ Pawn shop (swords)', 'near', { k: 'pawn' }],

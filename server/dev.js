@@ -37,6 +37,7 @@ import { undergroundOf, caveNear } from '../shared/underground.js';
 import * as underground from './systems/underground.js';
 import * as rescue from './systems/rescue.js';
 import * as revive from './systems/revive.js';
+import * as devplay from './devplay.js';
 import { kerbFor } from './systems/kerbdrive.js';
 import { Z } from '../shared/citylayout.js';
 
@@ -89,6 +90,7 @@ export const NEAR_KINDS = {
   // flying (shared/flight.js): the foot of each runway (the far end ahead, the way to take off), the helipads
   runway: (m) => (m.airports || []).map((A) => ({ x: A.runway.x + A.runway.w / 2, y: A.runway.y + A.runway.h - 120, name: `${A.name}'s runway` })),
   helipad: (m) => airfields(m).pads.filter((p) => !p.roof).map((p) => ({ x: p.x + 90, y: p.y, name: p.name })),
+  skatespot: (m) => (m.skateSpots || []).map((q) => ({ x: (q.x + q.w / 2) * TILE, y: (q.y + q.h / 2) * TILE, name: q.name })),
 };
 // the stops of every line on the map (one each: a hub's stop is shared by the loops through it), those keep(stop, rail) takes
 function railStops(m, keep) {
@@ -599,6 +601,28 @@ export function command(world, p, c, msg) {
       break;
     }
     case 'rescue': devRescue(world, p, ped, String(msg.at || 'water')); break;   // tasks #409, #420
+    case 'place': {   // a place by its name: World v3's handcrafted districts' places and sights (map.world3hand), a landmark, a district
+      if (!ped || ped.dead) break;
+      if (ped.vehId) { world.notify(p, '[dev] Get out of the vehicle first.', 'warn'); break; }
+      const n = String(msg.n || '').toLowerCase(), m = world.map;
+      let q = null;
+      for (const H of Object.values(m.world3hand || {})) {
+        for (const pl of (H && H.places) || []) if (!q && pl.name && pl.name.toLowerCase().includes(n)) q = { x: ((pl.x0 + pl.x1) / 2) * TILE, y: ((pl.y0 + pl.y1) / 2) * TILE, name: pl.name };
+        for (const sg of (H && H.sights) || []) if (!q && sg.name && sg.name.toLowerCase().includes(n)) q = { x: sg.x, y: sg.y, name: sg.name };
+      }
+      if (!q) for (const l of m.landmarks || []) if (!q && l.name && l.name.toLowerCase().includes(n)) q = { x: l.x + (l.w || 0) / 2, y: l.y + (l.h || 0) / 2, name: l.name };
+      if (!q) { world.notify(p, `[dev] No "${msg.n}" on this map (World v3's places).`, 'warn'); break; }
+      const at = tpSpot(m, q.x, q.y);
+      if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
+      ped.sub = false; ped.ug = 0; ped.x = at.x; ped.y = at.y; ped.lz = 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;
+      world.notify(p, `[dev] At ${q.name}.`, 'info');
+      break;
+    }
+    case 'skate': case 'cart': case 'fish': {   // today's new play (2026-10-18): skateboarding, the shopping carts, fishing - server/devplay.js
+      const err = (c === 'skate' ? devplay.devSkate : c === 'cart' ? devplay.devCart : devplay.devFish)(world, p, msg);
+      if (err) world.notify(p, err, 'warn');
+      break;
+    }
     case 'goto': devmode.goTo(world, p, msg.pid); break;     // teleport to an online player
     case 'bring': devmode.bring(world, p, msg.pid); break;   // fetch an online player to you
     case 'grant': devmode.grant(world, p, msg.pid); break;   // give someone Dev Debug Mode (their progress stops saving too)
