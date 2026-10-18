@@ -430,6 +430,7 @@ function fishQuay(K, m, ctx) {
   // and a food cart, palms - between lawns
   {
     const px0 = 3238, px1 = 3300, py0 = ln + EXT.minor + 1, fx0 = 3262;
+    K.building({ x: fx0 + 30, y: py0 + 1, w: 8, h: 6, arch: 'snackbar', name: 'Ferry Ticket Office', poi: { kind: 'delivery', label: 'Harbor Ferry Tickets' }, whole: true });
     for (let y = py0; y < 2004; y++) for (let x = px0; x < px1; x++) if (K.free(x, y)) K.fill(x, y, 1, 1, x >= fx0 ? T.PLAZA : T.GRASS);
     ctx.band(px0, px1, T.PLAZA, 6);
     for (const [x, y] of [[fx0 + 3, py0 + 4], [fx0 + 14, py0 + 4], [fx0 + 25, py0 + 4]]) { prop('planter_g', x, y, 10); prop('bench_m', x + 3, y + 2, 0); }
@@ -558,6 +559,7 @@ function boatworks(K, m, ctx) {
       deck(slx, sly - 1, slx + 5, sly + 10);
       for (let k2 = 0; k2 < 3; k2++) m.marina.push({ x: (slx + 7.5) * TILE, y: (sly + 2 + k2 * 3.2) * TILE, a: Math.PI / 2, kind: k2 === 1 ? 'dinghy' : 'speedboat' });
       prop('textsign', slx + 2.5, sly - 2, 0, { text: 'SLIPWAY', bg: '#3a3e46', fg: [240, 236, 220], z: 26, sx: 1 });
+      if ([...Array(5)].every((_, dy) => [...Array(6)].every((_, dx) => m.tiles[m.idx(slx + 8 + dx, sly - 9 + dy)] === T.LOT))) ctx.raw({ x: slx + 8, y: sly - 9, w: 6, h: 5, arch: 'hut', name: 'Slipway Hut', whole: true, roof: 'tar' });
       for (let k2 = 0; k2 < 3; k2++) prop('canoe', slx - 6 + k2 * 0.9, sly - 4, 0, { a: Math.PI / 2, c: k2 });
     }
     for (let x = fl1 + 2; x < x1 - 2; x += 7) { const s = shoreY(x, 2000); if (s !== null && Math.abs(x - slx - 2) > 5) prop('bollard', x + 0.5, s - 0.8, 5); }
@@ -585,7 +587,9 @@ const WH = [
 export const SHIP = [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 10];   // (the ship alongside, stern to bow: tiles - shared/world3-passes.js's)
 function port(K, m, ctx) {
   const { prop, rnd, pick } = K;
-  const { isW, out } = ctx;
+  const { isW, out, raw } = ctx;
+  // (the terminal's buildings stand on its yard once it's laid: placed whole over the asphalt)
+  const onYard = (o) => { for (let y = o.y; y < o.y + o.h; y++) for (let x = o.x; x < o.x + o.w; x++) { if (!m.inside(x, y)) return null; const t = m.tiles[m.idx(x, y)]; if (t !== T.LOT || m.bld[m.idx(x, y)] >= 0) return null; } return raw(o); };
   const n0 = HY.harbor + EXT.ave + 1, n1 = HY.dock - EXT.st - 1, s0 = HY.dock + EXT.st + 1;
   // north of Dock Street: the warehouses fronting it (their roller doors, the name over them), the brewery among them
   let wi = 0;
@@ -624,7 +628,7 @@ function port(K, m, ctx) {
   }
   // the gate at Stadium Avenue's foot: the barrier, the gatehouse, the lane in; the fence along Dock Street
   const GX = HX.stadium;
-  K.building({ x: GX + 4, y: s0 + 1, w: 4, h: 4, arch: 'hut', name: 'Terminal Gatehouse', whole: true, roof: 'tar' });
+  onYard({ x: GX + 4, y: s0 + 1, w: 4, h: 4, arch: 'hut', name: 'Terminal Gatehouse', whole: true, roof: 'tar' });
   prop('ygate', GX - 1.5, s0 + 0.6, 0, { a: 0 }); prop('ygate', GX + 2, s0 + 0.6, 0, { a: Math.PI });
   for (let x = TX0 + 1; x + 4 <= TX1 - 12; x += 4) {
     if (x + 4 > GX - 4 && x < GX + 9) continue;
@@ -633,11 +637,17 @@ function port(K, m, ctx) {
     prop('yfence', x, s0 + 0.4, 0, { x1: (x + 4) * TILE, y1: (s0 + 0.4) * TILE });
   }
   prop('textsign', GX + 9, s0 + 1.6, 0, { text: 'HARBOR CONTAINER TERMINAL', bg: '#3a3e46', fg: [240, 236, 220], z: 44, sx: 1, lit: true });
+  // the customs house beside the gate (stone, two floors: the papers for every box)
+  onYard({ x: GX - 21, y: s0 + 2, w: 16, h: 9, arch: 'civicblock', name: 'Harbor Customs House', poi: { kind: 'delivery', label: 'Harbor Customs House' }, whole: true,
+    art: { spec: { floors: 2, style: 'stone', wallColor: '#cfc6b2', win: 'tall', cornice: 'dentil', parapet: 10, grime: 0.15, roofMat: 'gravel', lip: 10, rimW: 5, date: '1926' } } });
   // the truck depot (by Harborview Avenue): the office, the box trucks backed into their bays, the empties stacked
   {
     const ox = TX0 + 2, oy = s0 + 2;
-    K.building({ x: ox, y: oy, w: 14, h: 8, arch: 'yardoffice', name: 'Harbor Truck Depot', poi: { kind: 'delivery', label: 'Harbor Truck Depot' }, whole: true });
+    onYard({ x: ox, y: oy, w: 14, h: 8, arch: 'yardoffice', name: 'Harbor Truck Depot', poi: { kind: 'delivery', label: 'Harbor Truck Depot' }, whole: true });
     prop('textsign', ox + 7, oy + 9.6, 0, { text: 'HARBOR TRUCK DEPOT', bg: '#7a2e2e', fg: [250, 230, 190], z: 30, sx: 1 });
+    // the reefer shed (the cold boxes plugged in along it) and the drivers' canteen
+    onYard({ x: ox, y: s0 + 13, w: 20, h: 9, arch: 'shed', name: 'Reefer Shed', whole: true, art: { spec: { style: 'corrugated', wallColor: '#d8dcde' } } });
+    onYard({ x: ox + 24, y: s0 + 14, w: 9, h: 6, arch: 'snackbar', key: 'rest2', name: 'Dockers Canteen', poi: { kind: 'coffee', label: 'Dockers Canteen', food: true }, whole: true });
     for (let k = 0; k < 9; k++) { const px = ox + 18 + k * 4; if (!lot(px, s0 + 10)) continue; m.parking.push({ x: px * TILE, y: (s0 + 9) * TILE, a: -Math.PI / 2, model: k % 3 === 1 ? 'van' : 'boxtruck' }); m.stalls.push({ x: (px - 1.5) * TILE, y: (s0 + 6) * TILE, w: 3 * TILE, h: 6 * TILE }); }
     // the empties: single boxes end to end in rows, two high here and there (drawn one above the other)
     for (let ry = s0 + 18; ry < 2090; ry += 3) for (let rx = TX0 + 3; rx + 4 < 3560; rx += 4.4) {
