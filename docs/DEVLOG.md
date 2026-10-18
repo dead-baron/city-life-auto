@@ -10540,3 +10540,14 @@ in `shared/world3-civic.js`: two bands east of Greenfield Park, registered after
   - Two hand-plan props: `flagpole` (a banner in a given colour) and `canopy`.
 - **Shared:** Downtown's tower helpers are exported as `towerKit` (`shared/world3-downtown.js`), so both plans build
   their towers the same way.
+
+## 2026-10-18 · Fix: the page didn't start (the title screen's buttons did nothing)
+
+Since the skateboarding change, `client/main.js` imported `BOARD` from `shared/physics.js` (the board's numbers) while
+declaring its own `BOARD` (the confetti colours). Two declarations of one name in a module is a SyntaxError, so the page's
+script never ran. The title screen sat on "Connecting to the city..." and PLAY, PRACTICE OFFLINE and SETTINGS did
+nothing, on every device. The server was fine. The import is renamed `SKATE`.
+- **New test** `test/pagemodules.test.js`: every module under client/, shared/ and server/ is parsed as the browser
+  parses it and the whole graph is linked. The test checks that each static import's file exists and exports the names
+  imported from it, without running anything. It runs in a child node with `--experimental-vm-modules`, and takes
+  about a second. No other test loads the page's own script, which is how this got through.
