@@ -10470,3 +10470,34 @@ The owner, 21:39: "lets do it" - riding first; tricks, grinds and the parks are 
   on the wire; no board / grass / water / indoors; off the board and into a car; rolling onto grass; a bail into a wall
   (hurt a little, the board still yours, back on it); knocked down; the shops; the poses.
 - **Budgets:** the bake bundle is at 799 of 800 KB and the renderer at 362 of 363; part 2 will need room.
+
+## 2026-10-17 · World v3, handcrafted: Greenfield Park from the owner's concepts
+
+Downtown's park rebuilt after the owner's three park concepts (WC417, WC418 and WC424: prompt Greenfield-A1), in
+`shared/world3-downtown.js` `greenfieldPark`. It replaces the circus of lawns round a round pond.
+- **The pond** (the skeleton's Greenfield Pond, a rounded box) is reshaped into a big west lobe, an arm reaching
+  north-east and a bay to the south, with a wavering shore. It is deep out from the shore. Land made from the water,
+  and the water cut from the land, keep the map's land, lake, river and district layers in step. The generator's
+  waterfront strip round the old shore is released, so it no longer draws as boardwalk.
+- **Two wooded islands**, edged with rocks. Arched footbridges run from the west shore to the west island and on to the
+  east one. The east island has a gazebo on a little paved floor. Lilies, ducks and two swans are on the water.
+- **The boathouse** on the west shore: a clapboard pavilion under a green hipped roof (Greenfield Boathouse, the
+  Boathouse Cafe), its tables in front, the jetty and four rowing boats tied up.
+- **The north gate:** a round plaza with the statue fountain, benches and flower beds.
+- **Greenfield Park Pitch** (north-west): the soccer mini-game's pitch (moved here from the west band). It has the
+  stand along its north side, chain-link, and floodlights at the corners.
+- **The courts** (north-east): two tennis courts (teal in green run-off, with nets) and two basketball courts. The
+  basketball courts are pick-up spots. Chain-link runs round all four courts, with lamps and benches.
+- **The bandstand** sits on the east lawn with picnic blankets round it. There are more picnic lawns in the south-west.
+- **Greenfield Allotments** (south-east): soil plots in a grid with raised beds or rows of flowers on them. There is a
+  greenhouse, a shed, a dirt walk down the middle, a picket fence and a sign.
+- **The main gate** on the south avenue: the iron arch with the park's name. Inside it is a round lawn with the path
+  round it.
+- **The paths:** a loop inside the railings, a ring round the pond, and the ways in from the four gates. Iron railings
+  run all round. Lamps and benches line the paths. Groves of oaks, maples, plane trees, cypresses, cherries and
+  magnolias fill the lawns, with willows by the water and a few royal palms along the loop.
+- The **Westside Offices** tower is back in the west band where the pitch had been.
+- **Art:** `makeCourt` gains a tennis court (`k: 'tennis'`: the run-off, the doubles and singles lines, the service
+  boxes). The new prop `tnet` is the tennis net (`props-district.js` `tennisNet`, turned to the court).
+- Places: Greenfield Park Pitch, Greenfield Park Courts, Greenfield Boathouse, Greenfield Allotments, Greenfield Park,
+  Greenfield Pond.

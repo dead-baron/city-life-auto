@@ -186,70 +186,223 @@ function northBand(K, m, ctx) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Greenfield Park, the circus (WC356, WC355): the pond in the middle (Greenfield Pond: the skeleton's), the ring walk
-// round it under two rings of trees, the gates' walks in on the axes, the pavilions on the pond's shores, the statue and
-// the long pool on the south axis, a fountain plaza in each corner, benches and lamps round the ring
+// Greenfield Park (the owner's park concepts WC417, WC418, WC424: the prompt Greenfield-A1). Greenfield Pond in the
+// middle (the skeleton's lake) with two wooded islands, footbridges out to them and between them, a gazebo on the east
+// one; the boathouse and its rowing boats on the west shore; the north gate's statue fountain; the soccer pitch with its
+// covered stand in the north-west (the soccer mini-game's: m.venues), two tennis courts and two basketball courts
+// in the north-east; the bandstand on the east lawn; the allotments with their greenhouse and shed in the south-east; the
+// iron main gates on the south avenue. Winding paths: a loop round the park inside its railings, the ring round the
+// pond, the ways in from the four gates. Picnic lawns, willows by the water, groves of oaks, maples, plane trees,
+// cherries and a few palms.
 function greenfieldPark(K, m, out) {
   const { prop, rnd, pick } = K;
   const x0 = DX.parkW + EXT.ave + 1, x1 = DX.parkE - EXT.ave, y0 = DY.green + EXT.ave + 1, y1 = DY.fountain - EXT.ave;   // [x0, x1) x [y0, y1)
-  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, RX = 74, RY = 64, CW = 16, CH = 14;
-  const e = (x, y) => Math.hypot((x + 0.5 - cx) / RX, (y + 0.5 - cy) / RY);
-  const corner = (x, y) => (x < x0 + CW || x >= x1 - CW) && (y < y0 + CH || y >= y1 - CH);
-  const diag = (x, y) => { const dx = Math.abs(x + 0.5 - cx), dy = Math.abs(y + 0.5 - cy); return Math.abs(dx * RY - dy * RX) / Math.hypot(RX, RY) < 1.6 && e(x, y) > 1; };
-  const paved = (x, y) => Math.abs(e(x, y) - 1) * RY < 2.2 || Math.abs(x + 0.5 - cx) < 3 || Math.abs(y + 0.5 - cy) < 2.5 || corner(x, y) || diag(x, y);
+  const W = x1 - x0, H = y1 - y0, AX = DX.axis + 0.5, MY = 2483;
+  const at = (x, y) => (m.inside(x, y) ? m.tiles[m.idx(x, y)] : -1);
+  const isW = (x, y) => { const t = at(x, y); return t === T.WATER || t === T.DEEP; };
+  const inPark = (x, y) => x >= x0 && y >= y0 && x < x1 && y < y1;
+  // ---- the pond reshaped (the skeleton's is a rounded box): a big west lobe round the islands, an arm reaching north-east,
+  // a bay to the south - its shore wavering. Land made from water and water from land keep the map's layers in step.
+  const c0 = m.idx(3088, 2483), lakeV = m.lake ? m.lake[c0] : 0, riverV = m.river ? m.river[c0] : 0, wetD = m.dist[c0], dryD = m.dist[m.idx(x0 + 2, y0 + 2)];
+  const setWet = (x, y, wet) => {
+    const i = m.idx(x, y);
+    m.land[i] = wet ? 0 : 1; if (m.lake) m.lake[i] = wet ? lakeV : 0; if (m.river) m.river[i] = wet ? riverV : 0; m.dist[i] = wet ? wetD : dryD;
+    m.tiles[i] = wet ? T.WATER : T.GRASS;
+  };
+  // (the old pond's waterfront strip - the generator's band kept clear round it, drawn as boardwalk where it's paved - is
+  // the park's own ground now)
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) m.reserve[m.idx(x, y)] &= ~4;
+  const LOBES = [[3074, 2486, 36, 28, 0.3], [3112, 2470, 28, 18, 1.9], [3104, 2503, 18, 12, 4.1]];
+  const pondAt = (x, y) => LOBES.some(([cx, cy, rx, ry, ph]) => { const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry, a = Math.atan2(dy, dx); return dx * dx + dy * dy < 1 + 0.07 * Math.sin(a * 3 + ph) + 0.05 * Math.sin(a * 7 + ph * 2); });
+  for (let y = 2440; y < 2526; y++) for (let x = 3026; x < 3152; x++) {
+    if (!inPark(x, y)) continue;
+    const w = pondAt(x, y), was = isW(x, y);
+    if (w && !was && at(x, y) === T.GRASS && !m.reserve[m.idx(x, y)]) setWet(x, y, true);
+    else if (!w && was) setWet(x, y, false);
+  }
+  for (let y = 2440; y < 2526; y++) for (let x = 3026; x < 3152; x++) {   // (deep out from the shore)
+    if (!isW(x, y)) continue;
+    let deep = true; for (let dy = -4; dy <= 4 && deep; dy++) for (let dx = -4; dx <= 4; dx++) if (dx * dx + dy * dy <= 16 && !isW(x + dx, y + dy)) { deep = false; break; }
+    m.tiles[m.idx(x, y)] = deep ? T.DEEP : T.WATER;
+  }
   let n = 0;
-  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (K.free(x, y)) { K.fill(x, y, 1, 1, paved(x, y) ? T.PLAZA : T.GRASS); n++; }
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (K.free(x, y)) n++;   // (free: open grass - the kit's fill would claim it)
   if (n < 2000) return;
-  const lawn = (x, y, r = 1) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (!m.inside(x + dx, y + dy) || m.tiles[m.idx(x + dx, y + dy)] !== T.GRASS) return false; return true; };
-  const isW = (x, y) => { const t = m.tiles[m.idx(x, y)]; return t === T.WATER || t === T.DEEP; };
-  // the two rings of trees either side of the ring walk: plane trees outside, flowering trees inside
-  for (const [f, sp, nk] of [[1.09, 'streetPl', 56], [0.9, 'cherry', 44]]) for (let k = 0; k < nk; k++) {
-    const a = (k + 0.5) * 6.2832 / nk, tx = cx + RX * f * dcos(a), ty = cy + RY * f * dsin(a);
-    if (!lawn(Math.floor(tx), Math.floor(ty))) continue;
-    prop(f > 1 ? 'tree_a' : 'tree_b', tx, ty, 12, { sp: f > 1 ? sp : pick(['cherry', 'magnolia', 'cherry'], rnd(k, nk, 1)), k: 1.15 });
+  // (the boathouse first: the kit's buildings want free ground, and the park takes the rest)
+  const shore = (y) => { let x = x0 + 8; while (x < AX && !isW(x, y)) x++; return x; };   // (the pond's west shore on row y)
+  const sx = shore(MY), bw = 14, bh = 8, by = MY + 3, JY = by + 3;
+  let bs = AX; for (let y = by - 1; y <= by + bh; y++) bs = Math.min(bs, shore(y));
+  const bx = bs - bw - 2;
+  const boat = K.building({ x: bx, y: by, w: bw, h: bh, arch: 'pavilion', name: 'Greenfield Boathouse', poi: { kind: 'coffee', label: 'Boathouse Cafe' }, whole: true,
+    art: { spec: { floors: 1, style: 'clapboard', wallColor: '#e8e2d2', pitch: true, slope: 0.6, roofColor: '#3e6a50' }, shop: { kind: 'cafe', door: 'right', open: true, people: 3, awning: ['#2f6a4e', '#f0ece4'], sign: { text: 'BOATHOUSE', bg: '#2f6a4e', fg: [240, 232, 200], lit: true } } } });
+  K.take(x0, y0, W, H);
+  const pave = (x, y, t = T.PLAZA) => { if (inPark(x, y) && at(x, y) === T.GRASS) K.paint(x, y, 1, 1, t); };
+  const path = (pts, wd = 3, t = T.PLAZA) => {
+    for (let j = 1; j < pts.length; j++) {
+      const [ax, ay] = pts[j - 1], [bx, by] = pts[j], k = Math.ceil(Math.hypot(bx - ax, by - ay) * 2);
+      for (let i = 0; i <= k; i++) { const px = ax + ((bx - ax) * i) / k, py = ay + ((by - ay) * i) / k; for (let dy = -wd / 2; dy < wd / 2; dy += 0.5) for (let dx = -wd / 2; dx < wd / 2; dx += 0.5) pave(Math.floor(px + dx), Math.floor(py + dy), t); }
+    }
+  };
+  // a wandering line from a to b: the straight way with a gentle sway (deterministic: by its ends)
+  const wander = (ax, ay, bx, by, amp = 3) => { const pts = [], k = 8, L = Math.hypot(bx - ax, by - ay) || 1, nx = -(by - ay) / L, ny = (bx - ax) / L, ph = rnd(ax, ay, 1) * 6.28; for (let i = 0; i <= k; i++) { const u = i / k, w = Math.sin(u * Math.PI) * Math.sin(u * 6.28 + ph) * amp; pts.push([ax + (bx - ax) * u + nx * w, ay + (by - ay) * u + ny * w]); } return pts; };
+  // ---- the pond's islands (two, wooded, rock-edged) and the footbridges: west shore -> the west island -> the east one
+  const ISL = [{ cx: 3066, cy: 2481, rx: 9, ry: 7 }, { cx: 3106, cy: 2483, rx: 8, ry: 6 }], isle = new Set();
+  for (const I of ISL) for (let y = I.cy - I.ry; y <= I.cy + I.ry; y++) for (let x = I.cx - I.rx; x <= I.cx + I.rx; x++) {
+    const q = ((x + 0.5 - I.cx) / I.rx) ** 2 + ((y + 0.5 - I.cy) / I.ry) ** 2;
+    if (q <= 1 && isW(x, y)) { setWet(x, y, false); isle.add(m.idx(x, y)); }
   }
-  // lamps and benches round the ring walk, looking in
-  for (let k = 0; k < 32; k++) {
-    const a = (k + 0.25) * 6.2832 / 32, ca = dcos(a), sa = dsin(a), tx = cx + RX * 1.035 * ca, ty = cy + RY * 1.035 * sa;
-    if (Math.abs(tx - cx) < 5 || Math.abs(ty - cy) < 5) continue;
-    prop(k % 2 ? 'lamp' : 'bench_m', tx, ty, 0);
+  // (an arched stone footbridge east-west over the water: from land at xa, the way dir, to the next land; its deck two
+  // tiles wide on rows y and y + 1)
+  const bridge = (xa, y, dir) => {
+    let a = xa; while (inPark(a, y) && !isW(a, y)) a += dir;
+    let b = a; while (inPark(b + dir, y) && isW(b + dir, y) && isW(b + dir, y + 1)) b += dir;
+    if (!inPark(b + dir, y) || Math.abs(b - a) > 30) return;
+    const lo = Math.min(a, b), hi = Math.max(a, b);
+    for (let x = lo; x <= hi; x++) for (const yy of [y, y + 1]) if (isW(x, yy)) m.set(x, yy, T.DOCK);
+    prop('archbridge', (lo + hi + 1) / 2, y + 1, 0, { len: (hi - lo + 1) * TILE, a: 0 });
+  };
+  bridge(ISL[0].cx, MY - 1, -1);          // the west shore to the west island: the way in from Park West Avenue
+  bridge(ISL[0].cx, ISL[0].cy, 1);        // the west island to the east one
+  // ---- the paths: the ring round the pond (3 tiles out from the water), the loop inside the railings, the ways in
+  const dist = new Map(), ring = [];   // (tiles' distance from the water, out to 7: a breadth-first spread)
+  let front = [];
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (isW(x, y)) { dist.set(m.idx(x, y), 0); front.push([x, y]); }
+  for (let d = 1; d <= 7; d++) { const next = []; for (const [x, y] of front) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const q = [x + dx, y + dy]; if (!inPark(q[0], q[1])) continue; const k = m.idx(q[0], q[1]); if (!dist.has(k)) { dist.set(k, d); next.push(q); if (d >= 4 && d <= 6) ring.push(q); } } front = next; }
+  for (const [x, y] of ring) if (!isle.has(m.idx(x, y))) pave(x, y);
+  const R = 9;   // (the loop: a rounded rectangle 4 tiles in from the railings)
+  const rr = (x, y) => { const qx = Math.max(Math.abs(x + 0.5 - (x0 + x1) / 2) - (W / 2 - 4 - R), 0), qy = Math.max(Math.abs(y + 0.5 - (y0 + y1) / 2) - (H / 2 - 4 - R), 0); return Math.hypot(qx, qy) - R; };
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const d = rr(x, y); if (d > -1.5 && d <= 1.5 && at(x, y) === T.GRASS) pave(x, y); }
+  path(wander(AX, y0, AX, 2446, 2), 4);              // the north gate down to the pond
+  path(wander(AX, y1, AX, 2516, 2), 4);              // the main gate up to the pond
+  path(wander(x0, MY - 0.5, sx - 1, MY - 0.5, 2), 3);  // in from Park West Avenue to the bridge out to the island
+  path(wander(x1, MY, 3146, MY, 2), 3);              // in from Park East Avenue past the bandstand
+  path(wander(3044, 2524, 3008, y1 - 6, 5), 3);      // across the south-west lawn
+  path(wander(3136, 2522, 3152, 2446, 5), 3);        // between the courts and the bandstand
+  // ---- the north gate: its statue fountain on a round plaza, beds round it
+  const F = [AX, y0 + 10];
+  for (let y = F[1] - 8; y <= F[1] + 8; y++) for (let x = Math.floor(F[0] - 10); x <= F[0] + 10; x++) if (((x + 0.5 - F[0]) / 9.5) ** 2 + ((y + 0.5 - F[1]) / 7.5) ** 2 <= 1) pave(x, y);
+  prop('fountain', F[0], F[1], 36); prop('statue', F[0], F[1] - 0.3, 0);
+  for (const [dx, dy] of [[-5.5, -3], [5.5, -3], [-6, 3.4], [6, 3.4]]) prop('pbench', F[0] + dx, F[1] + dy, 0);
+  for (const [dx, dy] of [[-8.6, 0], [8.6, 0], [-4, -6.4], [4, -6.4]]) prop('flowers_big', F[0] + dx, F[1] + dy, 0);
+  K.m.squares ||= []; K.m.squares.push({ x: Math.round(F[0]) - 6, y: F[1] - 5, w: 12, h: 10, name: 'Greenfield Fountain' });
+  // ---- the soccer pitch in the north-west: turf in chain-link, the covered stand along its north side, floodlights
+  {
+    const px0 = x0 + 6, px1 = 3056, py0 = y0 + 9, py1 = 2443;
+    K.paint(px0 - 2, py0 - 6, px1 - px0 + 4, py1 - py0 + 8, T.GRASS);
+    m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Greenfield Park Pitch', rect: { x: px0 * TILE, y: py0 * TILE, w: (px1 - px0) * TILE, h: (py1 - py0) * TILE }, goalW: 5 * TILE });
+    prop('bleachers', (px0 + px1) / 2, py0 - 3.4, 10, { len: Math.round((px1 - px0 - 16) * TILE / 2), rows: 4 });
+    prop('festoon', px0 + 8, py0 - 5.6, 0, { tx: Math.round((px1 - px0 - 16) * TILE), ty: 0, h: 70 });   // (the stand's roof line, lit at night)
+    const fx0 = px0 - 1.6, fx1 = px1 + 1.6, fy0 = py0 - 1.6, fy1 = py1 + 1.6;
+    prop('chainfence', fx0, fy0, 0, { tx: (fx1 - fx0) * TILE, ty: 0 }); prop('chainfence', fx0, fy1, 0, { tx: (fx1 - fx0 - 5) * TILE, ty: 0 });
+    prop('chainfence', fx0, fy0, 0, { tx: 0, ty: (fy1 - fy0) * TILE }); prop('chainfence', fx1, fy0, 0, { tx: 0, ty: (fy1 - fy0) * TILE });
+    for (const [lx, ly] of [[fx0, fy0], [fx1, fy0], [fx0, fy1], [fx1, fy1]]) prop('ymast', lx, ly, 0, { tall: 150 });
+    (out.places ||= []).push({ name: 'Greenfield Park Pitch', x0: px0, y0: py0, x1: px1, y1: py1 });
   }
-  // the groves outside the ring (the corners' lawns) and inside it round the pond
-  for (let gy = y0 + 2; gy < y1 - 2; gy += 6) for (let gx = x0 + 2; gx < x1 - 2; gx += 6) {
-    const tx = gx + Math.floor(rnd(gx, gy, 2) * 5), ty = gy + Math.floor(rnd(gx, gy, 3) * 5), ee = e(tx, ty);
-    if (!lawn(tx, ty, 2) || (ee > 0.84 && ee < 1.17) || rnd(tx, ty, 4) < 0.35) continue;
-    let wet = false; for (let d = 1; d <= 4 && !wet; d++) for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]]) if (isW(tx + dx, ty + dy)) { wet = true; break; }
-    if (wet) { if (rnd(tx, ty, 5) < 0.5) prop('tree_b', tx + 0.5, ty + 0.5, 12, { sp: 'willow', k: 1.2 }); continue; }
-    prop(rnd(tx, ty, 6) < 0.5 ? 'tree_a' : 'tree_b', tx + 0.5, ty + 0.5, 12, { sp: pick(['oak', 'maple', 'streetPl', 'oak', 'magnolia'], rnd(tx, ty, 7)), k: 1.1 + rnd(tx, ty, 8) * 0.3 });
-    if (rnd(tx, ty, 9) < 0.15) prop(pick(['flowers_big', 'shrub_a', 'bush_c'], rnd(tx, ty, 10)), tx + 2, ty + 1.5, 0);
+  // ---- the courts in the north-east: two tennis courts (teal in green run-off), two basketball courts, chain-link round them
+  {
+    const cy0 = y0 + 4, ch = 28, cw = 14, cx0 = x1 - 6 - 4 * (cw + 1);
+    K.paint(cx0 - 1, cy0 - 1, 4 * (cw + 1) + 1, ch + 2, T.LOT);
+    for (let k = 0; k < 4; k++) {
+      const cx = cx0 + k * (cw + 1), mx = cx + cw / 2, tennis = k < 2;
+      if (tennis) { prop('court', mx, cy0, 0, { w: cw * TILE, d: ch * TILE, k: 'tennis', c1: '#3a7e86', c2: '#3a6a4e' }); prop('tnet', mx, cy0 + ch / 2, 0, { len: (cw - 2) * TILE, a: Math.PI / 2 }); }
+      else {
+        prop('court', mx, cy0, 0, { w: cw * TILE, d: ch * TILE, c1: '#3a5a8a', c2: '#8a3a32' }); prop('hoop', mx, cy0 + 0.6, 6);
+        (K.m.courtSpots ||= []).push({ x: Math.round(mx * TILE), y: Math.round((cy0 + ch / 2) * TILE), w: cw, h: ch, name: 'Greenfield Park Courts' });
+      }
+    }
+    const fx0 = cx0 - 0.8, fx1 = cx0 + 4 * (cw + 1) - 0.2, fy0 = cy0 - 0.8, fy1 = cy0 + ch + 0.8;
+    prop('chainfence', fx0, fy0, 0, { tx: (fx1 - fx0) * TILE, ty: 0 }); prop('chainfence', fx0, fy1, 0, { tx: (fx1 - fx0 - 4) * TILE, ty: 0 });
+    prop('chainfence', fx0, fy0, 0, { tx: 0, ty: (fy1 - fy0) * TILE }); prop('chainfence', fx1, fy0, 0, { tx: 0, ty: (fy1 - fy0) * TILE });
+    for (let k = 1; k < 4; k++) prop('chainfence', cx0 + k * (cw + 1) - 0.5, fy0, 0, { tx: 0, ty: (ch * 0.6) * TILE });
+    for (const lx of [fx0, (fx0 + fx1) / 2, fx1]) prop('lamp', lx, fy1 + 0.6, 0);
+    prop('bench_m', fx0 + 6, fy1 + 1.6, 0); prop('bench_m', fx1 - 6, fy1 + 1.6, 0);
+    (out.places ||= []).push({ name: 'Greenfield Park Courts', x0: cx0, y0: cy0, x1: cx0 + 4 * (cw + 1), y1: cy0 + ch });
   }
-  // the corner plazas: a fountain in each, benches round it, beds at its edges
-  for (const [qx, qy] of [[x0, y0], [x1 - CW, y0], [x0, y1 - CH], [x1 - CW, y1 - CH]]) {
-    const fx = qx + CW / 2, fy = qy + CH / 2;
-    prop('fountain', fx, fy, 36);
-    for (const [dx, dy] of [[-5, -2.6], [5, -2.6], [-5, 3.4], [5, 3.4]]) prop('pbench', fx + dx, fy + dy, 0);
-    for (const [dx, dy] of [[-6.5, -5], [6.5, -5], [-6.5, 5.5], [6.5, 5.5]]) prop('flowers_big', fx + dx, fy + dy, 0);
-    prop('lamp', fx - 7, fy, 0); prop('lamp', fx + 7, fy, 0);
+  // ---- the boathouse on the west shore: its pavilion (a cafe and the boats for hire), the jetty, rowing boats tied up
+  {
+    const js = shore(JY + 1);
+    for (let y = JY; y <= JY + 2; y++) for (let x = bx + bw; x < js + 8; x++) if (isW(x, y) || at(x, y) === T.GRASS || at(x, y) === T.PLAZA) m.set(x, y, T.DOCK);
+    for (let k = 0; k < 4; k++) prop('canoe', js + 1 + k * 2, JY + (k % 2 ? 4.4 : -1.4), 0, { c: k % 3, a: Math.PI / 2 });
+    for (let k = 0; k < 3; k++) { prop('cafetable', bx + 2 + k * 4, by + bh + 1.8, 0); prop(k % 2 ? 'umbrella_g' : 'umbrella_r', bx + 2 + k * 4, by + bh + 1.7, 0); }
+    prop('lamp', js + 7.5, JY - 0.4, 0);
+    if (boat) (out.places ||= []).push({ name: 'Greenfield Boathouse', x0: bx, y0: by, x1: js + 8, y1: by + bh });
   }
-  // where the axes meet the pond: a pavilion on its north shore, a terrace with telescopes on the west, the boathouse's
-  // pedal boats on the east; on the south axis the statue and the long pool down to the south gate
-  const shore = (x, yFrom, dir) => { for (let y = yFrom; y !== cy; y += dir) if (isW(x, y)) return y; return null; };
-  const nShore = shore(Math.floor(cx), y0 + 2, 1), sShore = shore(Math.floor(cx), y1 - 3, -1);
-  if (nShore !== null) { prop('gazebo', cx, nShore - 5, 20); prop('textsign', cx, y0 + 1.6, 0, { text: 'GREENFIELD PARK', bg: '#2f5a4a', fg: [240, 232, 200], z: 30, sx: 2 }); }
-  if (sShore !== null) {
-    const top = sShore + 4, bot = y1 - 6;
-    prop('statue', cx, top + 2, 14);
-    if (bot - top > 14) {
-      const px0 = Math.floor(cx) - 2, py0 = top + 6, ph = bot - py0;
-      for (let y = py0; y < py0 + ph; y++) for (let x = px0; x < px0 + 4; x++) m.set(x, y, T.WATER);
-      (m.pools ||= []).push({ x: px0 * TILE, y: py0 * TILE, w: 4 * TILE, h: ph * TILE, lanes: 0, deck: { x: (px0 - 1) * TILE, y: (py0 - 1) * TILE, w: 6 * TILE, h: (ph + 2) * TILE } });
-      for (let k = 0; k < 3; k++) prop('fountain', cx, py0 + 2 + k * (ph - 4) / 2, 0, { s: 0.5 });
+  // ---- the islands: rocks round them, trees, the gazebo on the east one; lilies, ducks and a swan on the water
+  for (const [k, I] of ISL.entries()) {
+    for (let j = 0; j < 10; j++) { const a = j * 0.63 + k, rx = I.cx + Math.cos(a) * (I.rx - 0.6), ry = I.cy + Math.sin(a) * (I.ry - 0.6); prop('boulder', rx, ry, 8, { s: 14 + (j % 3) * 4 }); }
+    if (k === 1) { for (let y = I.cy - 2; y < I.cy + 2; y++) for (let x = I.cx - 2; x < I.cx + 2; x++) pave(x, y); prop('gazebo', I.cx, I.cy, 20); }
+    for (let j = 0; j < (k ? 3 : 6); j++) { const a = j * (k ? 2.1 : 1.1) + 0.4, f = k ? 0.66 : 0.45, tx = I.cx + Math.cos(a) * I.rx * f, ty = I.cy + Math.sin(a) * I.ry * f; prop(j % 2 ? 'tree_b' : 'tree_a', tx, ty, 12, { sp: pick(['willow', 'oak', 'cherry', 'maple'], rnd(j, k, 3)), k: k ? 0.95 : 1.15 }); }
+  }
+  for (const [dx, dy, v] of [[-34, -16, 0], [-22, 18, 1], [24, -20, 2], [40, 6, 0], [-6, 22, 1], [10, -24, 2]]) prop('lily', 3088 + dx, MY + dy, 0, { v });
+  for (const [dx, dy, a] of [[-12, -8, 0.6], [-10, -6, 2.2], [30, 14, 4], [32, 12, 1.4]]) prop('duck', 3088 + dx, MY + dy, 0, { a });
+  prop('swan', 3080, 2508, 0, { a: 1.2 }); prop('swan', 3122, 2462, 0, { a: 3.6 });
+  // ---- the bandstand on the east lawn, picnic blankets round it; picnic lawns in the south-west
+  prop('gazebo', 3160, 2470, 30);
+  for (const [dx, dy, v] of [[-8, 8, 0], [6, 10, 1], [-10, -6, 2], [8, -8, 0]]) prop('blanket', 3160 + dx, 2470 + dy, 0, { v });
+  for (const [x, y, v] of [[3016, 2540, 1], [3030, 2550, 0], [3048, 2536, 2], [3060, 2552, 1], [3012, 2524, 0]]) prop('blanket', x, y, 0, { v });
+  for (const [x, y] of [[3022, 2530], [3054, 2546], [3072, 2534]]) prop('picnic', x, y, 0);
+  // ---- the allotments in the south-east: plots in rows, the greenhouse, the shed, picket fence and its gate
+  {
+    const gx0 = 3112, gx1 = x1 - 8, gy0 = 2528, gy1 = y1 - 7;
+    K.paint(gx0, gy0, gx1 - gx0, gy1 - gy0, T.GRASS);
+    const mx = Math.floor((gx0 + gx1) / 2);
+    K.paint(mx - 1, gy0, 2, gy1 - gy0, T.DIRT);
+    // the plots: soil beds 5 by 3 with grass walks between, a raised bed or a row of flowers on some (WC418's grid)
+    for (let y = gy0 + 2; y + 3 <= gy1 - 2; y += 4) for (let x = gx0 + 2; x + 5 <= gx1 - 1; x += 6) {
+      if (x + 5 > mx - 2 && x < mx + 2) continue;
+      if (y < gy0 + 8 && (x > gx1 - 13 || x < gx0 + 8)) continue;   // (the greenhouse's and the shed's corners)
+      K.paint(x, y, 5, 3, T.DIRT);
+      const u = rnd(x, y, 60);
+      if (u < 0.4) prop('raisedbed', x + 2.5, y + 1.5, 0, { v: (x * 7 + y) % 5 });
+      else if (u < 0.85) { const sp = pick(['sunflowers', 'lavender', 'berryShrub', 'tulips', 'rose', 'daffodils', 'hydrangea'], rnd(x, y, 61)); for (const dx of [1, 2.5, 4]) prop('flowers_a', x + dx, y + 1.5, 0, { sp, k: 1 }); }
+    }    prop('greenhouse', gx1 - 8, gy0 + 4, 26); prop('shed', gx0 + 4, gy0 + 3, 18);
+    prop('fenceline', gx0, gy0, 0, { kind: 'picket', tx: (gx1 - gx0) * TILE, ty: 0 });
+    prop('fenceline', gx0, gy1, 0, { kind: 'picket', tx: (mx - 1.5 - gx0) * TILE, ty: 0 }); prop('fenceline', mx + 1.5, gy1, 0, { kind: 'picket', tx: (gx1 - mx - 1.5) * TILE, ty: 0 });
+    prop('fenceline', gx0, gy0, 0, { kind: 'picket', tx: 0, ty: (gy1 - gy0) * TILE }); prop('fenceline', gx1, gy0, 0, { kind: 'picket', tx: 0, ty: (gy1 - gy0) * TILE });
+    prop('textsign', mx, gy1 - 1.4, 0, { text: 'ALLOTMENTS', bg: '#2f6a4e', fg: [250, 240, 200], z: 26, sx: 1 });
+    (out.places ||= []).push({ name: 'Greenfield Allotments', x0: gx0, y0: gy0, x1: gx1, y1: gy1 });
+  }
+  // ---- the main gates on the south avenue (an iron arch between stone piers), the round lawn inside them, the park's
+  // name; the railings all round with the four gates; lamps and benches along the paths
+  prop('gatearch', AX, y1 - 0.6, 0, { w: 7 * TILE, a: 0 });
+  prop('textsign', AX, y1 - 2.4, 0, { text: 'GREENFIELD PARK', bg: '#2f5a4a', fg: [240, 232, 200], z: 44, sx: 2, lit: true });
+  for (let y = y1 - 19; y <= y1 - 3; y++) for (let x = Math.floor(AX - 11); x <= AX + 11; x++) {   // (the round lawn, the path round it)
+    const q = ((x + 0.5 - AX) / 6.5) ** 2 + ((y + 0.5 - (y1 - 11)) / 5) ** 2, q2 = ((x + 0.5 - AX) / 9.5) ** 2 + ((y + 0.5 - (y1 - 11)) / 8) ** 2;
+    if (q <= 1) { if (at(x, y) === T.PLAZA) K.paint(x, y, 1, 1, T.GRASS); } else if (q2 <= 1) pave(x, y);
+  }
+  prop('flowers_big', AX, y1 - 11, 0);
+  const rail = (ax, ay, bx, by) => prop('fenceline', ax, ay, 0, { kind: 'iron', tx: Math.round((bx - ax) * TILE), ty: Math.round((by - ay) * TILE) });
+  rail(x0 + 0.2, y0 + 0.25, AX - 3.5, y0 + 0.25); rail(AX + 3.5, y0 + 0.25, x1 - 0.2, y0 + 0.25);
+  rail(x0 + 0.2, y1 - 0.25, AX - 4.5, y1 - 0.25); rail(AX + 4.5, y1 - 0.25, x1 - 0.2, y1 - 0.25);
+  rail(x0 + 0.2, y0 + 0.25, x0 + 0.2, MY - 2); rail(x0 + 0.2, MY + 2, x0 + 0.2, y1 - 0.25);
+  rail(x1 - 0.2, y0 + 0.25, x1 - 0.2, MY - 2); rail(x1 - 0.2, MY + 2, x1 - 0.2, y1 - 0.25);
+  for (const [gx, gy] of [[AX - 4, y0 + 1], [AX + 4, y0 + 1], [x0 + 1, MY - 2.6], [x1 - 1, MY - 2.6]]) prop('parksign', gx, gy, 0);
+  let lk = 0;
+  for (let y = y0 + 1; y < y1 - 1; y += 2) for (let x = x0 + 1; x < x1 - 1; x += 2) {
+    if (at(x, y) !== T.PLAZA || rnd(x, y, 40) > 0.09) continue;
+    for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) {
+      if (at(x + dx, y + dy) !== T.GRASS || at(x + dx * 1.5, y + dy * 1.5) !== T.GRASS) continue;
+      prop(lk++ % 3 ? 'bench_m' : 'lamp', x + dx + 0.5, y + dy + 0.5, 0);
+      break;
     }
   }
-  for (const [dx, dy] of [[-1, 0], [1, 0]]) { const tx = Math.floor(cx + dx * 40), ty = Math.floor(cy); for (let x = tx; Math.abs(x - cx) > 2; x -= dx) if (isW(x, ty)) { prop('scope', x + dx * 3, ty - 2, 6); prop('bench_m', x + dx * 5, ty + 2, 0); break; } }
+  // ---- the trees: groves on the grass away from the paths, the pitch, the courts and the allotments; willows by the
+  // water, flowering trees by the fountain and the bandstand, a few palms along the loop
+  const clear = (x, y, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (at(x + dx, y + dy) !== T.GRASS) return false; return true; };
+  const keepOut = [[x0 + 2, y0 + 1, 3060, 2447], [3104, y0, x1, y0 + 34], [3110, 2526, x1, y1], [3152, 2462, 3168, 2478]];
+  for (let y = y0 + 2; y < y1 - 2; y += 4) for (let x = x0 + 2; x < x1 - 2; x += 4) {
+    const jx = x + Math.floor(rnd(x, y, 50) * 3), jy = y + Math.floor(rnd(x, y, 51) * 3);
+    if (rnd(x, y, 52) < 0.42 || !clear(jx, jy, 1)) continue;
+    if (keepOut.some(([a, b, c, d]) => jx >= a && jy >= b && jx < c && jy < d)) continue;
+    const dw = dist.get(m.idx(jx, jy)), wet = dw !== undefined && dw <= 3;
+    const sp = wet ? pick(['willow', 'willow', 'cherry'], rnd(jx, jy, 53)) : Math.abs(rr(jx, jy)) < 5 && rnd(jx, jy, 54) < 0.3 ? 'royal' : pick(['oak', 'maple', 'streetPl', 'oak', 'magnolia', 'cypress', 'cherry', 'mapleAutumn', 'oak', 'cypress'], rnd(jx, jy, 55));
+    if (sp === 'royal') prop('palm_a', jx + 0.5, jy + 0.5, 10, { sp, k: 1.2 });
+    else prop(rnd(jx, jy, 56) < 0.5 ? 'tree_a' : 'tree_b', jx + 0.5, jy + 0.5, 12, { sp, k: 1.05 + rnd(jx, jy, 57) * 0.35 });
+    if (rnd(jx, jy, 58) < 0.12) prop(pick(['shrub_a', 'bush_c', 'flowers_a', 'flowers_big'], rnd(jx, jy, 59)), jx + 2, jy + 1.5, 0);
+  }
   // the park's place (the generator's park would have given one): its stop for errands
-  m.pois.push({ id: m.pois.length, kind: 'delivery', label: 'Greenfield Park', x: Math.round(cx * TILE), y: Math.round((y1 - 2) * TILE), r: 48 });
-  (out.places ||= []).push({ name: 'Greenfield Park', x0, y0, x1, y1 });
+  m.pois.push({ id: m.pois.length, kind: 'delivery', label: 'Greenfield Park', x: Math.round(AX * TILE), y: Math.round((y1 - 2) * TILE), r: 48 });
+  (out.places ||= []).push({ name: 'Greenfield Park', x0, y0, x1, y1 }, { name: 'Greenfield Pond', x0: 3038, y0: 2450, x1: 3142, y1: 2517 });
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -277,22 +430,7 @@ function westBand(K, m, ctx) {
   pair(cb[0], wb, r2, { h: 36, name: 'Greenfield Medical Building', style: 'stone', wall: '#e2dac6', floors: 7, win: 'tall' }, { name: 'Sycamore House', floors: 5, wall: '#b8b0a2' });
   // the Westside car park: concrete decks, its ramp, the P on its corner; across Maple Street, the Westside Offices
   towerLot({ x: ca[0], y: r3[0] + 4, w: wa, h: r3[1] - r3[0] - 3, name: 'Westside Parking', arch: 'block', style: 'concrete', wall: '#b8b4aa', floors: 5, win: 'loft', sign: 'PARKING', signC: ['#1e3a5e', [250, 250, 240]], poi: { kind: 'delivery', label: 'Westside Parking' } });
-  // Greenfield Pitch (the soccer mini-game's: the park's pitch moved here when the park became a circus): turf in a
-  // chain-link cage, the stand along its north side, floodlights at the corners
-  {
-    const x0 = cb[0], x1 = cb[1], y0 = r3[0], y1 = r3[1] + 1;
-    K.fill(x0, y0, x1 - x0, y1 - y0, T.LOT); K.take(x0, y0, x1 - x0, y1 - y0);
-    const p = { x0: x0 + 3, y0: y0 + 12, x1: x1 - 3, y1: y1 - 4 };
-    for (let y = p.y0 - 1; y <= p.y1; y++) for (let x = p.x0 - 1; x <= p.x1; x++) m.set(x, y, T.GRASS);
-    m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Greenfield Pitch', rect: { x: p.x0 * TILE, y: p.y0 * TILE, w: (p.x1 - p.x0) * TILE, h: (p.y1 - p.y0) * TILE }, goalW: 5 * TILE });
-    prop('chainfence', x0 + 0.3, p.y0 - 1.6, 0, { tx: (x1 - x0 - 0.6) * TILE, ty: 0 });
-    prop('chainfence', x0 + 0.3, p.y0 - 1.6, 0, { tx: 0, ty: (p.y1 - p.y0 + 2.4) * TILE });
-    prop('chainfence', x1 - 0.3, p.y0 - 1.6, 0, { tx: 0, ty: (p.y1 - p.y0 + 2.4) * TILE });
-    prop('bleachers', x0 + 6, y0 + 6, 10, { len: Math.round((x1 - x0 - 12) * TILE / 2), rows: 3 });
-    for (const [fx, fy] of [[x0 + 1, y0 + 9], [x1 - 1, y0 + 9], [x0 + 1, y1 - 1], [x1 - 1, y1 - 1]]) prop('ymast', fx, fy, 0, { tall: 160 });
-    prop('textsign', (x0 + x1) / 2, y1 - 0.6, 0, { text: 'GREENFIELD PITCH', bg: '#2f5a4a', fg: [240, 232, 200], z: 30, sx: 1 });
-    (out.places ||= []).push({ name: 'Greenfield Pitch', x0, y0, x1, y1 });
-  }
+  towerLot({ x: cb[0], y: r3[0] + 6, w: wb, h: r3[1] - r3[0] - 5, name: 'Westside Offices', floors: 10, tint: '#284256' });
   // the Downtown subway stop's square (its kiosk: shared/world3-subway.js - on the square's paving), a tower beside it
   {
     const sx1 = ca[0] + 34;
