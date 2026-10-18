@@ -14,8 +14,9 @@ import { NEON } from './world3-neon.js';
 import { HARBOR } from './world3-harbor.js';
 import { DOWNTOWN } from './world3-downtown.js';
 import { CIVIC } from './world3-civic.js';
+import { NORTHGATE } from './world3-northgate.js';
 
-export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC];
+export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE];
 const M_IN = 2;   // (a street within this many tiles of a plan's edge is the edge's - the grid planner's)
 // (a plan of several rects - Downtown's bands round its park - is in its area strictly inside any of them; p.rect is
 // their bounding box: the kit's frame)

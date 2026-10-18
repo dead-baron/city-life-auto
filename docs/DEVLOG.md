@@ -10540,3 +10540,36 @@ in `shared/world3-civic.js`: two bands east of Greenfield Park, registered after
   - Two hand-plan props: `flagpole` (a banner in a given colour) and `canopy`.
 - **Shared:** Downtown's tower helpers are exported as `towerKit` (`shared/world3-downtown.js`), so both plans build
   their towers the same way.
+
+## 2026-10-18 · World v3, handcrafted: the heart of Northgate (the freeway, the pool, Overpass Park); the medical signs
+
+**Northgate** (district 2), from Ash Street to Harborview Avenue and 1st Street to 12th Street, is laid by hand from
+the owner's concepts WC400 (courtyard blocks under the freeway) and WC401 (the freeway's underside). The plan is in
+`shared/world3-northgate.js`; the rest of Northgate stays the generator's.
+- **North of the Gulf Loop's viaduct, along 3rd Street:**
+  - **Fire Station 7** (brick) has two fire engines on its apron and a flag.
+  - **The Northgate Public Library** is stone under a green hipped roof, with its portico on a plaza. The plaza has a
+    statue in a flower ring, plane trees and benches.
+  - **The Northgate Pool** has six lanes and a deep end with the springboard. Round it are the poolhouse, loungers and
+    umbrellas, the lifeguard's chair, chain-link and the sign.
+  - Walk-ups stand back to back between 1st Street and 3rd Street.
+- **Overpass Park**, between the viaduct and 9th Street, Main Avenue to Civic Avenue:
+  - The mural walls run along the viaduct.
+  - **Overpass Skate Park** has quarter pipes, a pyramid, kickers, ledges and a flat bar. It is a skate spot, so the
+    skaters use it.
+  - **Two half courts** are painted blue and orange (pick-up spots), with chain-link and bleachers.
+  - The **food-truck corner** has the van and two carts and tables under string lights.
+  - There is a fenced car park.
+  - Below these are lawns with groves, picnic tables, the **community garden's** beds behind a picket fence, and paths
+    and lamps.
+- **Courtyard blocks** stand round the park and south of 9th Street: walk-ups facing the streets on both sides, with
+  the courtyard's trees and benches between. Corner stores have flats over them. **Sycamore Court** is a cul-de-sac off
+  12th Street.
+- Specials this plan places itself: Fire Station 7 and the Northgate Public Library.
+
+**The medical signs** (the owner): no more red cross on any building, since it is a protected emblem.
+- A hospital's sign is now a **red letter H** on a white panel (`client/art2/buildings.js` `medSign`). The ER
+  canopies carry the same H, on their roofs and fascias (`props-road.js` `erCanopy`).
+- A clinic's sign (any name with Clinic or Infirmary) is a **white cross on green**, like the pharmacy in the owner's
+  Midtown concepts.
+- The phone's "Hospitals & police" places and the wake-up picker show a red H.

@@ -303,7 +303,8 @@ export function subwayKiosk(on = 1, flip = 0) {
   return m;
 }
 // a hospital's ambulance bay, built to IN1-B: a flat white canopy on four posts over the drop-off, a red fascia along its
-// front with the red cross on a white panel, lights under it, hazard-striped kerbs either side and yellow bollards
+// front with a red H on a white panel (the hospital sign: not the red cross), lights under it, hazard-striped kerbs either
+// side and yellow bollards
 export function erCanopy(on = 1) {
   const W = 120, Dd = 62, m = new Vox(W, Dd, 60);
   const post = m.mat({ ramp: R('#c8ccd2'), k: 3 }), roof = m.mat({ ramp: R('#e8e8e4'), k: 3, shade: (x) => (Math.round(x) % 10 === 0 ? -0.5 : 0) });
@@ -313,10 +314,10 @@ export function erCanopy(on = 1) {
   for (const x of [6, W - 10]) for (const y of [8, Dd - 10]) { m.box(x, y, 0, x + 4, y + 4, 46, post); m.box(x - 1, y - 1, 0, x + 5, y + 5, 6, haz); }
   const rim = m.mat({ ramp: R('#b8bcc0'), k: 3 });
   m.box(0, 0, 46, W, Dd - 4, 50, roof); m.box(0, 0, 48, W, 2, 51, rim); m.box(0, 0, 48, 2, Dd - 4, 51, rim); m.box(W - 2, 0, 48, W, Dd - 4, 51, rim);
-  m.box(W / 2 - 3, Dd / 2 - 13, 50, W / 2 + 3, Dd / 2 + 7, 51, red); m.box(W / 2 - 10, Dd / 2 - 6, 50, W / 2 + 10, Dd / 2, 51, red);   // (the cross on its roof)
+  m.box(W / 2 - 10, Dd / 2 - 13, 50, W / 2 - 5, Dd / 2 + 7, 51, red); m.box(W / 2 + 5, Dd / 2 - 13, 50, W / 2 + 10, Dd / 2 + 7, 51, red); m.box(W / 2 - 5, Dd / 2 - 6, 50, W / 2 + 5, Dd / 2 - 1, 51, red);   // (the H on its roof)
   m.box(0, Dd - 5, 40, W, Dd - 2, 52, red);
   m.box(W / 2 - 9, Dd - 2, 39, W / 2 + 9, Dd - 1, 53, wht);
-  m.box(W / 2 - 2, Dd - 1, 40, W / 2 + 2, Dd, 52, crs); m.box(W / 2 - 6, Dd - 1, 44, W / 2 + 6, Dd, 48, crs);
+  m.box(W / 2 - 6, Dd - 1, 40, W / 2 - 3, Dd, 52, crs); m.box(W / 2 + 3, Dd - 1, 40, W / 2 + 6, Dd, 52, crs); m.box(W / 2 - 3, Dd - 1, 45, W / 2 + 3, Dd, 47, crs);   // (the red H)
   for (let x = 20; x < W - 16; x += 26) m.box(x, Dd / 2 - 2, 44, x + 12, Dd / 2 + 2, 46, lamp);
   for (const x of [0, W - 4]) m.box(x, 0, 0, x + 4, Dd, 3, haz);
   for (const x of [2, W - 6]) m.cyl('z', x + 2, Dd + 0 - 3, 0, 1.8, 0, 12, boll);

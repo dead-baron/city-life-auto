@@ -1180,7 +1180,7 @@ function specOf(c, b, A, s, D) {
         spec.windows = winXs(w, blind ? [] : [[dx0, dx0 + dw0]], 30);
         const txt = A === 'hospital' ? 'HOSPITAL' : A === 'police' ? 'POLICE' : clean(named || 'SCHOOL', 18);
         spec.plaques = blind ? [] : [{ text: txt, x: Math.max(4, Math.round(w / 2 - textWidth(txt, { sx: 2, gap: 1 }) / 2) - 5), v: 66, sx: 2, bg: A === 'police' ? '#1d3a8a' : A === 'school' ? '#2a4a3a' : null, fg: A === 'hospital' ? [60, 54, 48] : [250, 250, 240], lit: A !== 'hospital' }];   // (one name plaque: on the section with the doors, not on each)
-        if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', x: Math.round(dx0 + dw0 / 2 - 25), v: 52, sx: 1, bg: '#c8343a', fg: [250, 246, 240], lit: true }); spec.cross = { x: 14, v: 80, s: 22 }; lights.push([w / 2, 14, 40, 140, [1, 0.5, 0.5], 1.2, 'sign']); }
+        if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', x: Math.round(dx0 + dw0 / 2 - 25), v: 52, sx: 1, bg: '#c8343a', fg: [250, 246, 240], lit: true }); spec.cross = { x: 14, v: 80, s: 22, k: /CLINIC|INFIRMARY/i.test(b.name || named || '') ? 'clinic' : 'hospital' }; lights.push([w / 2, 14, 40, 140, [1, 0.5, 0.5], 1.2, 'sign']); }   // (the sign: a clinic's white cross on green, a hospital's red H)
         if (A === 'police') lights.push([w / 2, 14, 60, 120, [0.4, 0.6, 1], 1, 'sign']);
       }
       lights.push([w / 2, 12, 34, 110, [1, 0.9, 0.75], 1, 'window']); upperLights(fl, 0.4);

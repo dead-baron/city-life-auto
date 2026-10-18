@@ -368,7 +368,7 @@ export function makeBuilding(spec) {
   if (spec.rose) rose(G, spec.rose.x, d + H - spec.rose.v, spec.rose.r || 14, night);
   for (const pq of spec.plaques || []) plaque(G, pq, d + H, night);
   for (const bl of spec.blades || []) blade(G, bl, d + H, night);
-  if (spec.cross) redCross(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night);
+  if (spec.cross) medSign(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night, spec.cross.k);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
   return spec.pitch ? pitched(G, spec, w, d, H, seed) : G;
 }
@@ -1012,10 +1012,15 @@ function blade(G, b, yG, night) {
   }
   for (let i = 0; i < t.length; i++) drawText((px, py) => { setC(G, px, py, col.map((v) => Math.min(255, v * 0.55 + 115))); glow(G, px, py, [...col, 170 + night * 85]); }, t[i], x0 + 5, y0 + 6 + i * (5 * sx + 4), { sx, sy: sx, gap: 1 });
 }
-function redCross(G, x0, y0, s, night) {
+// the medical sign (the owner, 2026-10-18: never the red cross, a protected emblem): a hospital's red letter H on a white
+// panel; a clinic's white cross on a green one (k 'clinic'), the pharmacy sign of the Midtown concepts
+function medSign(G, x0, y0, s, night, k = 'hospital') {
+  const clinic = k === 'clinic';
   for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) {
-    const c = s / 2, arm = s * 0.18, inX = Math.abs(x - c + 0.5) < arm, inY = Math.abs(y - c + 0.5) < arm, inner = x > 2 && y > 2 && x < s - 3 && y < s - 3;
-    const col = (inX || inY) && inner && Math.abs(x - c) < s * 0.38 && Math.abs(y - c) < s * 0.38 ? [212, 40, 44] : [244, 242, 236];
+    const a = s * 0.24, b = s * 0.76, t = s * 0.17, c = s / 2, inner = y > s * 0.18 && y < s * 0.82;
+    const h = clinic ? (Math.abs(x + 0.5 - c) < s * 0.13 || Math.abs(y + 0.5 - c) < s * 0.13) && Math.abs(x + 0.5 - c) < s * 0.36 && Math.abs(y + 0.5 - c) < s * 0.36
+      : inner && ((x + 0.5 > a && x + 0.5 < a + t) || (x + 0.5 > b - t && x + 0.5 < b) || (x + 0.5 >= a && x + 0.5 <= b && Math.abs(y + 0.5 - c) < t * 0.55));
+    const col = clinic ? (h ? [246, 246, 240] : [34, 128, 84]) : h ? [212, 40, 44] : [244, 242, 236];
     setC(G, x0 + x, y0 + y, col); G.glow(x0 + x, y0 + y, [...col, 30 + night * 120]);
   }
 }

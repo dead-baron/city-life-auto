@@ -95,7 +95,7 @@ export function draw(H, me) {
   const box = $('d-spawn'), sig = opts.map((o) => o.id).join() + '|' + (chosen && chosen.id) + '|' + input.device;
   if (box.dataset.sig !== sig) {
     box.dataset.sig = sig;
-    box.innerHTML = chosen ? `<span class="d-lbl">Wake up at</span><button class="d-step" data-s="-1" aria-label="Previous spot">◀</button><b class="d-pick">${chosen.kind === 'home' ? '⌂' : '✚'} ${esc(chosen.label)}${opts.length > 1 ? ` <small>${ci + 1}/${opts.length}</small>` : ''}</b><button class="d-step" data-s="1" aria-label="Next spot">▶</button>${k('← →', 'D-pad')}` : '';
+    box.innerHTML = chosen ? `<span class="d-lbl">Wake up at</span><button class="d-step" data-s="-1" aria-label="Previous spot">◀</button><b class="d-pick">${chosen.kind === 'home' ? '⌂' : '<span style="color:#e0182d">H</span>'} ${esc(chosen.label)}${opts.length > 1 ? ` <small>${ci + 1}/${opts.length}</small>` : ''}</b><button class="d-step" data-s="1" aria-label="Next spot">▶</button>${k('← →', 'D-pad')}` : '';
   }
 }
 // the back control (Esc, B, the hide button, a tap on the bar): fold or open the choices; false before they're up

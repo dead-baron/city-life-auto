@@ -14,7 +14,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 // Place finder categories -> POI kinds (labels say what you'd go there for)
 export const PLACE_GROUPS = [
-  { id: 'emergency', icon: '✚', title: 'Hospitals & police', kinds: ['hospital', 'police'] },
+  { id: 'emergency', icon: '<b style="color:#e0182d">H</b>', title: 'Hospitals & police', kinds: ['hospital', 'police'] },
   { id: 'money', icon: '$', title: 'Banks & ATMs', kinds: ['bank', 'atm'] },
   { id: 'shops', icon: '🛒', title: 'Shops', kinds: ['convenience', 'gasstation', 'gunshop', 'sports', 'hardware', 'pharmacy', 'coffee', 'grocery', 'clothing', 'barber', 'tackle'] },
   { id: 'out', icon: '🎡', title: 'Food, drink & days out', kinds: ['winery', 'clubhouse', 'roadhouse', 'market', 'fruitstand', 'farmstand', 'snack', 'ride', 'race', 'bowling', 'cinema'] },
