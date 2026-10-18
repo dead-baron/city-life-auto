@@ -469,3 +469,272 @@ export function steam(w = 80, h = 50, seed = 1) {
   }
   return G;
 }
+
+// ---- roof gardens -----------------------------------------------------------------------------------------------
+// What a roof garden is planted in (statics.js gardenKit lays one out; the owner, 2026-10-17: "rooftop gardens would be
+// in raised garden beds with things growing in them or pretty flowers or bushes or small trees"): raised beds of any
+// length and big planters with a small tree, painted rather than voxel-built (a bed is any size). Model point (x, y, z)
+// - x east and y south over the w x d footprint, z up - lands on pixel (x + ox, y + top + 2 - z), the anchor the
+// footprint's middle on the ground; every pixel is depth-tested (in this projection the taller of two at a pixel is
+// the nearer), so the parts go down in any order. The foliage is F_LEAF | F_WET (gbuf.js F_ROCKLEAF): it sways as a
+// plant on its own patch of ground does, not as a treetop that high up (engine.js leanAmp), and the rain wets it.
+//   roofBed(w, d, h, box, plant, v)  box: timber | grey | sage | char | sleeper | brick | stone | concrete | corten;
+//     plant: fl0..fl5 (flowers by palette) | lav | box (a clipped hedge) | ball (box balls) | shrub | veg (rows of
+//     vegetables) | tall (tomatoes or beans on canes) | herb | grass | sun (sunflowers) | straw (strawberries)
+//   roofTree(kind, box, v)            a big planter (24 x 24) with an olive | maple | bamboo | bay | birch in it
+//   pergola, waterButt, compostBin, gardenLantern   voxel models
+const LF = F_LEAF | F_WET;
+const BOXC = { timber: ['#9a7650', 0], grey: ['#8e897e', 0], sage: ['#6f8c7a', 0], char: ['#55575e', 0], sleeper: ['#5e4a38', 1], brick: ['#9a5442', 2], stone: ['#b8ae9c', 3], concrete: ['#aca89e', 4], corten: ['#8f4f2c', 5] };
+let GR = null;   // (the garden's ramps, made on first use)
+function gr() {
+  if (GR) return GR;
+  const fr = (h) => ramp(h, 5, 2, { light: 0.6 }), fo = F.FOL;
+  GR = {
+    soil: R('#5a3e2c', 6, 3), mulch: R('#7a5434', 6, 3), box: {},
+    // flower palettes: pinks, hot colours, blues and purples, a white garden (it shows after dark), pastels, yellows
+    fl: [['#e86a9a', '#f4f0ea', '#c8407a'], ['#d83a2a', '#f08a2a', '#f0c83a'], ['#5a6ad8', '#9a62c8', '#eef0f6'], ['#f4f2ea', '#e8e2c4', '#dfe8f2'], ['#f0a8c0', '#c8b0e8', '#f8e8a0'], ['#f4d040', '#f6f2e8', '#e8a030']].map((p) => p.map(fr)),
+    leaf: fo('#4a8030'), leafD: fo('#3a6a2e'), leafL: fo('#6a9a34'), boxw: fo('#2f5e2a', { light: 0.4 }), silver: fo('#8a9a72', { shift: 0.3, desat: 0.3 }), lav: fo('#7e9a7c', { shift: 0.25 }), plum: fo('#6a3a48', { warm: 20, shift: 0.3 }),
+    purple: fr('#8a5ac8'), red: fr('#d8342a'), orange: fr('#e8782a'), white: fr('#f4f2ea'), yellow: fr('#f0c428'), pink: fr('#e07ab0'), blue: fr('#6a7ae0'), brown: R('#5a3a22', 5, 2),
+    // lettuce, red lettuce, cabbage, chard, carrots, onions, kale
+    crops: [fo('#8cc040'), fo('#8a3a4a', { warm: 10, shift: 0.2 }), fo('#6a9c8c', { warm: 120, shift: 0.3 }), fo('#3e7a2e'), fo('#5cae3a'), fo('#6a9a7a', { shift: 0.3 }), fo('#3e5a48', { shift: 0.3 })],
+    cane: R('#c4a870', 6, 3), bark: R('#7a7266', 6, 3), birch: R('#e4e0d6', 6, 3), bamboo: R('#a0a848', 6, 3),
+    grass: [fo('#c0ae6c', { shift: 0.2 }), fo('#8aa058'), fo('#a8784e', { warm: 30 })],
+    maple: [fo('#b8302a', { cool: 330, shiftD: 0.3, warm: 30, shift: 0.5 }), fo('#d0702a', { cool: 10, warm: 50 }), fo('#7a2a3e', { cool: 300, warm: 10 })],
+  };
+  return GR;
+}
+const boxRamp = (hex) => GR.box[hex] || (GR.box[hex] = R(hex, 7, 3));
+// (a canvas: mx px either side for what overhangs the footprint - a tree's crown - and 2 for the outline and the shadow)
+function gcan(w, d, top, mx = 2) { const S = new GBuf(w + 4 + 2 * mx, d + top + 6); S.ox = 2 + mx; S.ax = (w >> 1) + S.ox; S.ay = (d >> 1) + top + 2; S.t = top + 2; return S; }
+// one pixel of model point (x, y, z) (whole numbers), depth-tested
+function gp(S, x, y, z, c, nx, ny, nz, f = 0) {
+  const X = x + S.ox, Y = y + S.t - z;
+  if (X < 0 || Y < 0 || X >= S.w || Y >= S.h) return;
+  const i = Y * S.w + X, j = i * 4;
+  if (S.col[j + 3] && S.z[i] > z) return;
+  const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+  S.col[j] = c[0]; S.col[j + 1] = c[1]; S.col[j + 2] = c[2]; S.col[j + 3] = 255;
+  S.nrm[j] = (nx / l * 0.5 + 0.5) * 255; S.nrm[j + 1] = (ny / l * 0.5 + 0.5) * 255; S.nrm[j + 2] = (nz / l * 0.5 + 0.5) * 255; S.nrm[j + 3] = 255;
+  S.z[i] = Math.max(0, z); S.flag[i] = f; S.emi[j + 3] = 0;
+}
+const lit = (nx, ny, nz) => (-0.5 * nx - 0.45 * ny + 0.74 * nz) / (Math.sqrt(nx * nx + ny * ny + nz * nz) || 1);
+// leaf clusters in screen space: each lit on its upper left, a dark pocket at its lower right
+function clu(X, Y, cs, s) { const gy = Math.floor(Y / cs), o = hash(gy, 9, s) * cs, gx = Math.floor((X + o) / cs), fx = (X + o) / cs - gx, fy = Y / cs - gy; return (0.8 - fx - fy) * 0.3 + (hash(gx, gy, s) - 0.5) * 0.24; }
+// a lump of foliage: an ellipsoid round (cx, cy, cz) - radii rx, ry, up and dn (0: it sits on its foot) - in leaf
+// clusters lit from the north-west, darker down its front. o: fl(x, y) -> a flower ramp for its top there (or null),
+// holes (0..1: airy, ragged toward the edge), cs (the clusters' size), rough (how lumpy its top)
+function lump(S, cx, cy, cz, rx, ry, up, dn, Rf, s, o = {}) {
+  const cs = o.cs || 2.5, hl = o.holes || 0, rg = o.rough ?? 1.2;
+  const topAt = (x, y) => { const u = (x + 0.5 - cx) / rx, v = (y + 0.5 - cy) / ry, q = 1 - u * u - v * v; if (q <= 0.03 || (hl && hash(x >> 1, y >> 1, s + 3) < hl * (1.2 - q))) return -1e9; const k = Math.sqrt(q); return Math.round(cz + up * k + (hash(x, y, s) - 0.5) * rg * k); };
+  for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+    const zt = topAt(x, y);
+    if (zt < -1e8) continue;
+    const u = (x + 0.5 - cx) / rx, v = (y + 0.5 - cy) / ry, k = Math.sqrt(1 - u * u - v * v), zb = Math.round(cz - dn * k);
+    // (sitting on its foot, what's under the next column south's top is behind it: only the face above that shows)
+    const z0 = dn ? zb : Math.max(zb, Math.min(zt, topAt(x, y + 1)));
+    const nx = u / rx, ny = v / ry, nzz = k / Math.max(1, up), Lt = lit(nx, ny, nzz), fr = o.fl ? o.fl(x, y) : null;
+    for (let z = zt; z >= z0; z--) {
+      const X = x + S.ox, Y = y + S.t - z, top = z === zt;
+      if (top && fr) { gp(S, x, y, z, pick(fr, clamp(0.3 + Lt * 0.6 + clu(X, Y, 2, s + 1) * 0.7), X, Y, 0.3), nx, ny, nzz, LF); continue; }
+      const t = top ? 0.1 + Lt * 0.62 + clu(X, Y, cs, s) : 0.08 + Lt * 0.32 + clu(X, Y, cs, s) - (zt - z) * 0.03;
+      gp(S, x, y, z, pick(Rf, clamp(t), X, Y, 0.45), nx, top ? ny : ny + 0.7, top ? nzz : 0.3, LF);
+    }
+  }
+}
+// a stem, blade or cane: up from (x, y, z0), leaning `lean` px east by its tip; t0: its shade at the foot
+function spike(S, x, y, z0, len, lean, Rm, t0, f = LF) {
+  for (let k = 0; k <= len; k++) { const X = x + Math.round(lean * k / Math.max(1, len)); gp(S, X, y, z0 + k, pick(Rm, clamp(t0 + k / Math.max(1, len) * 0.3), X + 2, y + k, 0.3), -0.3, 0.6, 0.5, f); }
+}
+// the bed's walls: their tops (the rim), the south face by what they're built of, the north wall's inside over the soil
+function frame(S, w, d, h, box, s, zs) {
+  const [hex, fk] = BOXC[box] || BOXC.timber, M = boxRamp(hex), t = fk >= 1 && fk <= 3 ? 3 : 2;
+  for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) {
+    if (x >= t && y >= t && x < w - t && y < d - t) continue;
+    const q = 0.72 + (hash(x >> 2, y >> 2, s) - 0.5) * 0.1 - (x === w - 1 || y === d - 1 ? 0.12 : 0) + (x === 0 || y === 0 ? 0.06 : 0) - (fk === 0 && x % 30 === 29 ? 0.2 : 0);
+    gp(S, x, y, h, pick(M, q, x, y, 0.3), 0, 0, 1);
+  }
+  for (let z = 0; z < h; z++) for (let x = 0; x < w; x++) {
+    const v = h - 1 - z;
+    let q = 0.5 + (v === 0 ? 0.14 : 0) - (z < 2 ? 0.08 : 0);
+    if (fk === 0) { const b = Math.floor(v / 4); q += (v % 4 === 3 ? -0.22 : 0) + (hash(Math.floor((x + b * 13) / 10), b, s) - 0.5) * 0.14 + (x < 2 || x >= w - 2 ? -0.1 : 0); }
+    else if (fk === 1) { const b = Math.floor(v / 5); q += (v % 5 === 4 || (x + b * 17) % 44 === 0 ? -0.26 : 0) + (hash(Math.floor((x + b * 17) / 44), b, s) - 0.5) * 0.2 - (hash(x, v >> 1, s) > 0.9 ? 0.1 : 0); }
+    else if (fk === 2 || fk === 3) { const ch = fk === 2 ? 3 : 5, cw = fk === 2 ? 8 : 14, c = Math.floor(v / ch), o = (c & 1) * (cw >> 1); q = v % ch === ch - 1 || (x + o) % cw === 0 ? 0.8 : q + (hash(Math.floor((x + o) / cw), c, s) - 0.5) * 0.3; }
+    else if (fk === 4) q += (v % 6 === 5 ? -0.07 : 0) + (v % 6 === 2 && x % 16 === 8 ? -0.3 : 0) + (vnoise(x, v, 9, s) - 0.5) * 0.12;
+    else q += (vnoise(x, v * 0.3, 5, s) - 0.5) * 0.36 - (v === 1 ? 0.12 : 0);
+    gp(S, x, d - 1, z, pick(M, q, x, v, 0.35), 0, 1, 0.15);
+  }
+  for (let z = zs; z < h; z++) for (let x = t; x < w - t; x++) gp(S, x, t - 1, z, pick(M, 0.2 - (h - 1 - z) * 0.03, x, z, 0.3), 0, 1, 0.1);
+  return t;
+}
+// the soil (bark mulch under flowers and shrubs; rows: true where a furrow runs)
+function soil(S, x0, y0, x1, y1, zs, s, mulch, rows = null) {
+  const G = gr();
+  for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+    const hh = hash(x, y, s + 5), t = 0.3 + hh * 0.24 - (y === y0 ? 0.16 : 0) - (rows && rows(x, y) ? 0.14 : 0);
+    gp(S, x, y, zs, mulch && hh > 0.55 ? pick(G.mulch, 0.3 + hh * 0.3 - (y === y0 ? 0.16 : 0), x, y, 0.3) : pick(G.soil, t, x, y, 0.3), 0, 0, 1);
+  }
+}
+// the outline (16-bit selective: open at the base), then a soft contact shadow under the south face and down the east
+// side (half see-through: it darkens the deck it falls on and nothing above it)
+function gfinish(S, w, d) {
+  S.outline(0.42, true);
+  const sh = (X, Y, a) => { if (X < 0 || Y < 0 || X >= S.w || Y >= S.h) return; const i = Y * S.w + X, j = i * 4; if (S.col[j + 3]) return; S.col[j] = 12; S.col[j + 1] = 10; S.col[j + 2] = 24; S.col[j + 3] = a; S.z[i] = 0; };
+  const o = S.ox;
+  for (let x = 0; x <= w; x++) { sh(x + o - 1, d + S.t, 96); sh(x + o, d + S.t + 1, 52); }
+  for (let y = 1; y < d; y++) { sh(w + o, y + S.t, 80); sh(w + o + 1, y + S.t, 64); }
+  return S;
+}
+// what grows in a bed: its inside [x0, x1) x [y0, y1), the soil at zs; laid along the bed's long side
+function plantBed(S, x0, y0, x1, y1, zs, plant, s) {
+  const G = gr(), hz = x1 - x0 >= y1 - y0, L = hz ? x1 - x0 : y1 - y0, W = hz ? y1 - y0 : x1 - x0, rnd = mulberry32(s * 977 + 13);
+  const at = (a, b) => (hz ? [x0 + a, y0 + b] : [x0 + b, y0 + a]);
+  const blob = (a, b, rA, rB, up, Rf, o, dn = 0, z = zs) => { const [x, y] = at(a, b); lump(S, x, y, z, hz ? rA : rB, hz ? rB : rA, up, dn, Rf, s + Math.round(a * 7 + b * 3), o); };
+  const pt = (a, b) => { const [x, y] = at(a, b); return [Math.round(x), Math.round(y)]; };
+  const k = plant.startsWith('fl') ? 'fl' : plant;
+  if (k === 'fl') {   // a border of flowers: clumps of foliage, the flowers on them in drifts of the palette's colours
+    const P = G.fl[(+plant.slice(2) || 0) % G.fl.length], nb = W >= 15 ? 2 : 1, fl = (x, y) => (hash(x >> 1, y >> 1, s + 7) < 0.42 ? P[Math.floor(vnoise(x, y, 8, s) * P.length * 0.999)] : null);
+    for (let j = 0; j < nb; j++) for (let a = 2 + rnd() * 2; a < L - 1; a += 4.5 + rnd() * 2.5) blob(a, (j + 0.5) * W / nb + (rnd() - 0.5) * 2, 3.4 + rnd() * 1.8, W / nb / 2 + 1, 4 + rnd() * 3, rnd() < 0.5 ? G.leaf : G.leafL, { fl });
+    if (plant === 'fl2' || plant === 'fl4' || rnd() < 0.25) for (let i = 0; i < L / 6; i++) { const [x, y] = pt(2 + rnd() * (L - 4), 1 + rnd() * (W - 2)); spike(S, x, y, zs + 3, 6 + rnd() * 4 | 0, 0, P[i % P.length], 0.4); }   // (spires: delphiniums, foxgloves)
+  } else if (k === 'lav') {   // lavender: grey-green mounds, the purple spikes over them
+    for (let a = 3; a < L - 2; a += 7 + rnd()) blob(a, W / 2, 4.2, W / 2, 5.5, G.lav, { fl: (x, y) => (hash(x, y >> 1, s + 7) < 0.5 ? G.purple : null) });
+    for (let i = 0; i < L * W / 10; i++) { const [x, y] = pt(1 + rnd() * (L - 2), 1 + rnd() * (W - 2)); spike(S, x, y, zs + 4, 2 + (rnd() * 3 | 0), 0, G.purple, 0.45); }
+  } else if (k === 'box') {   // a parterre: a low clipped box edging round the bed, lavender, white flowers or box balls inside it
+    const X0 = x0, X1 = x1, Y0 = y0, Y1 = y1, hb = 5 + (s % 2), th = W >= 16 ? 3 : 2;
+    for (let y = Y0; y < Y1; y++) for (let x = X0; x < X1; x++) {
+      const e = Math.min(x - X0, X1 - 1 - x, y - Y0, Y1 - 1 - y); if (e >= th) continue;
+      const zt = zs + hb - (e === 0 || e === th - 1 ? 1 : 0);
+      for (let z = zt; z >= zs; z--) {
+        const X = x + S.ox, Y = y + S.t - z, top = z === zt;
+        gp(S, x, y, z, pick(G.boxw, clamp(top ? 0.58 + (e === 0 && (x === X0 || y === Y0) ? 0.1 : 0) + clu(X, Y, 2, s) * 0.8 : 0.26 + clu(X, Y, 2, s) * 0.8), X, Y, 0.4), 0, top ? 0 : 1, top ? 1 : 0.2, LF);
+      }
+    }
+    if (X1 - X0 > 2 * th + 3 && Y1 - Y0 > 2 * th + 3) plantBed(S, X0 + th, Y0 + th, X1 - th, Y1 - th, zs, ['lav', 'fl3', 'ball', 'fl0', 'fl2'][s % 5], s + 1);
+  } else if (k === 'ball') {   // box balls in a row on bark mulch, a little white between them now and then
+    const r = Math.min(5.5, W / 2 - 0.5), n = Math.max(1, Math.floor((L - 2) / (2 * r + 3))), g = (L - n * 2 * r) / (n + 1), mid = rnd() < 0.5;
+    for (let i = 0; i < n; i++) { const a = g + r + i * (2 * r + g); blob(a, W / 2, r, r, r * 1.1, G.boxw, { rough: 0.5, cs: 2 }); if (mid && i < n - 1) blob(a + r + g / 2, W / 2, 2.2, 2.5, 3, G.leafL, { fl: () => G.white }); }
+  } else if (k === 'shrub') {   // low shrubs filling the bed, flowering now and then (hydrangea heads, roses)
+    const n = Math.max(1, Math.round(L / 18)), fk = rnd(), FC = fk < 0.25 ? G.blue : fk < 0.45 ? G.pink : fk < 0.6 ? G.white : fk < 0.75 ? G.red : null, big = fk < 0.6;
+    for (let i = 0; i < n; i++) { const R = [G.leaf, G.leafD, G.leafL, G.plum][(s + i) % (FC ? 3 : 4)]; blob((i + 0.5) * L / n + (rnd() - 0.5) * 2, W / 2, L / n / 2 + 1.5, W / 2 + 0.5, 8 + rnd() * 5, R, { fl: FC ? (x, y) => (hash(big ? x >> 1 : x, big ? y >> 1 : y, s + 9 + i) < (big ? 0.2 : 0.1) ? FC : null) : null }); }
+  } else if (k === 'veg') {   // vegetables in rows along the bed, a different crop in each
+    const nr = Math.max(1, Math.floor(W / 6)), sp = W / nr;
+    soil(S, ...at(0, 0), ...at(L, W), zs, s, false, (x, y) => (Math.floor(((hz ? y - y0 : x - x0) + 0.5) % sp) === 0));
+    for (let j = 0; j < nr; j++) {
+      const c = Math.floor(hash(j, 3, s) * 7), b = (j + 0.5) * sp, R = G.crops[c], st = c === 2 ? 7.5 : c === 5 ? 3 : 5.5;
+      for (let a = st / 2 + rnd(); a < L - 1; a += st) {
+        if (c === 5) { const [x, y] = pt(a, b); spike(S, x, y, zs, 4 + (rnd() * 3 | 0), 0, R, 0.35); spike(S, x + 1, y, zs, 3 + (rnd() * 3 | 0), 1, R, 0.5); continue; }   // onions
+        blob(a, b, c === 2 ? 3.2 : 2.6, Math.min(sp / 2, c === 2 ? 3.2 : 2.6), c === 2 ? 4 : c === 3 ? 5.5 : c === 4 ? 3 : 3.5, R, { holes: c === 4 ? 0.45 : 0, rough: c === 2 ? 0.4 : 1, cs: 2 });
+        if (c === 3) { const [x, y] = pt(a, b); gp(S, x, y + 2, zs + 1, pick(hash(a | 0, j, s) < 0.5 ? G.red : G.yellow, 0.4, x, y, 0), 0, 1, 0.3, LF); }   // (chard's stems)
+      }
+    }
+  } else if (k === 'tall') {   // tomatoes (or runner beans) up a row of canes tied across at the top
+    const beans = rnd() < 0.4, b = W / 2, n = Math.max(1, Math.floor((L - 2) / 7)), g = (L - (n - 1) * 7) / 2, top = 18 + (s % 4);
+    for (let i = 0; i < n; i++) {
+      const a = g + i * 7, [x, y] = pt(a, b);
+      spike(S, x, y, zs, top + 1, 0, G.cane, 0.45, 0);
+      blob(a, b, 2.8, Math.min(3, W / 2), top - 2, beans ? G.leafL : G.leaf, { holes: 0.3, cs: 2 });
+      for (let f = 0; f < 4; f++) { const z = zs + 4 + (rnd() * (top - 8) | 0), dx = (rnd() * 4 | 0) - 2; gp(S, x + dx, y + 2, z, pick(beans ? G.red : rnd() < 0.7 ? G.red : G.orange, 0.5, x, z, 0), 0, 1, 0.4, LF); }
+    }
+    const [ax, ay] = pt(g, b), [bx, by] = pt(g + (n - 1) * 7, b);
+    for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x++) for (let y = Math.min(ay, by); y <= Math.max(ay, by); y++) gp(S, x, y, zs + top, pick(G.cane, 0.6, x, y, 0), 0, 0.3, 1);
+  } else if (k === 'herb') {   // herbs in patches along the bed: sage, thyme in flower, chives, rosemary, basil, mint
+    const H = [[G.silver, null, 4], [G.leafD, G.pink, 3], [G.crops[5], G.purple, 5], [G.crops[6], G.blue, 5], [G.leafL, null, 4], [G.leaf, G.white, 3.5]];
+    for (let a = 0, i = Math.floor(rnd() * 6); a < L - 3; i++) {
+      const pw = 7 + rnd() * 4, [R, FC, up] = H[i % 6];
+      for (let q = a + 2; q < a + pw - 1; q += 3.5) blob(q, W / 2 + (rnd() - 0.5) * 2, 2.6, W / 2 - 0.5, up + rnd() * 1.5, R, { cs: 2, fl: FC ? (x, y) => (hash(x, y, s + i) < 0.14 ? FC : null) : null });
+      a += pw;
+    }
+  } else if (k === 'grass') {   // ornamental grasses in tufts, coneflowers or black-eyed susans among them
+    const R = G.grass[s % 3], FC = s % 2 ? G.pink : G.yellow, nb = W >= 15 ? 2 : 1;
+    for (let j = 0; j < nb; j++) for (let a = 3; a < L - 2; a += 6 + rnd() * 2) {
+      const [x, y] = pt(a, (j + 0.5) * W / nb), n = 9 + (rnd() * 5 | 0), hgt = 10 + (rnd() * 6 | 0);
+      blob(a, (j + 0.5) * W / nb, 3, Math.min(3, W / nb / 2), 4, G.leafD, {});
+      for (let i = 0; i < n; i++) spike(S, x + Math.round((rnd() - 0.5) * 4), y + Math.round((rnd() - 0.5) * 2), zs + 2, hgt - (rnd() * 4 | 0), Math.round((rnd() - 0.5) * 6), R, 0.35);
+    }
+    for (let i = 0; i < L / 9; i++) { const [x, y] = pt(2 + rnd() * (L - 4), 1 + rnd() * (W - 2)), z = zs + 8 + (rnd() * 4 | 0); spike(S, x, y, zs, z - zs, 0, G.leafD, 0.3); for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [2, 0]]) gp(S, x + dx, y + 1, z + dz, pick(Math.abs(dx - 0.5) < 1 && dz === 0 ? G.brown : FC, 0.55, x, z, 0), 0, 1, 0.5, LF); }
+  } else if (k === 'sun') {   // sunflowers along the bed, their heads turned to the south (to the camera), leafy at the foot
+    for (let a = 3; a < L - 2; a += 4) blob(a, W / 2, 3.2, W / 2, 5, G.leaf, {});
+    for (let a = 4 + rnd() * 2; a < L - 3; a += 7 + rnd() * 3) {
+      const [x, y] = pt(a, W / 2 + (rnd() - 0.5) * 2), hgt = 22 + (rnd() * 8 | 0);
+      spike(S, x, y, zs, hgt, 0, G.leafD, 0.4); spike(S, x + 1, y, zs, hgt - 2, 0, G.leafD, 0.25);
+      blob(a - 2, W / 2, 2.5, 1.5, 1.5, G.leaf, {}, 1.5, zs + (hgt >> 1)); blob(a + 2.5, W / 2, 2.5, 1.5, 1.5, G.leaf, {}, 1.5, zs + (hgt >> 1) + 3);
+      for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) { const q = dx * dx + dz * dz; if (q > 11) continue; gp(S, x + dx, y + 1, zs + hgt + dz, q <= 2 ? pick(G.brown, 0.4 + (dx + dz < 0 ? 0.2 : 0), x + dx, dz, 0) : pick(G.yellow, 0.55 - dz * 0.06 - dx * 0.04, x + dx, dz, 0.4), -dx * 0.1, 1, 0.3 + dz * 0.1, LF); }
+    }
+  } else {   // strawberries: low leafy mounds, the red fruit and white flowers in them
+    const nb = W >= 14 ? 2 : 1;
+    for (let j = 0; j < nb; j++) for (let a = 2.5; a < L - 1; a += 5) blob(a, (j + 0.5) * W / nb, 3, W / nb / 2, 3, G.leaf, { fl: (x, y) => { const q = hash(x, y, s + 11); return q < 0.1 ? G.red : q < 0.15 ? G.white : null; }, cs: 2 });
+  }
+}
+const BED_H = { fl: 9, lav: 12, box: 11, ball: 12, shrub: 14, veg: 7, tall: 24, herb: 8, grass: 18, sun: 34, straw: 5 };
+// a raised bed, w x d, h high (its rim), built of `box`, planted with `plant` (variant v)
+export function roofBed(w = 48, d = 20, h = 10, box = 'timber', plant = 'fl0', v = 0) {
+  gr();
+  const k = plant.startsWith('fl') ? 'fl' : plant, zs = h - 2, S = gcan(w, d, h + (BED_H[k] ?? 12) + 4), s = v * 977 + w * 13 + d * 7 + h;
+  const t = frame(S, w, d, h, box, s, zs), mulch = k === 'fl' || k === 'shrub' || k === 'ball' || k === 'lav' || k === 'grass' || k === 'box';
+  soil(S, t, t, w - t, d - t, zs, s, mulch);
+  plantBed(S, t, t, w - t, d - t, zs, plant, s);
+  return gfinish(S, w, d);
+}
+// a small tree in a big planter (24 x 24, 14 high): an olive (a gnarled trunk, a silver-green crown in clouds), a Japanese
+// maple (low, wide and red, orange or plum), a clump of bamboo, a bay clipped to a lollipop, a multi-stemmed birch
+export function roofTree(kind = 'olive', box = 'concrete', v = 0) {
+  const G = gr(), w = 24, d = 24, h = 14, zs = h - 2, S = gcan(w, d, 84, 12), s = v * 131 + kind.length * 17 + 3, rnd = mulberry32(s), c = 12;
+  const t = frame(S, w, d, h, box, s, zs);
+  soil(S, t, t, w - t, d - t, zs, s, true);
+  const trunk = (x, y, z0, z1, Rm, wob, wd = 2) => { for (let z = z0; z <= z1; z++) { const X = x + Math.round((vnoise(z, 0, 7, s + x) - 0.5) * 2 * wob * (z - z0) / Math.max(1, z1 - z0)); for (let i = 0; i < wd; i++) { gp(S, X + i, y, z, pick(Rm, 0.62 - i * 0.3 + (kind === 'birch' && hash(z >> 1, x, s) > 0.8 ? -0.5 : 0), X + i, z, 0.3), i ? 0.5 : -0.5, 0.5, 0.2); gp(S, X + i, y - 1, z, pick(Rm, 0.4, X, z, 0.3), 0, 0, 1); } } };
+  // a crown: n lumps of foliage spread sx by sy round (c, c) from z0 to z0 + sz, each r0..r0 + rr across
+  const crown = (n, sx, sy, z0, sz, r0, rr, R, o) => { for (let i = 0; i < n; i++) { const a = rnd(), e = rnd(); lump(S, c + (a - 0.5) * sx, c + (e - 0.5) * sy, z0 + rnd() * sz, r0 + rnd() * rr, (r0 + rnd() * rr) * 0.8, r0 * 0.6, r0 * 0.5, R, s + i * 7, o); } };
+  if (kind === 'olive') {
+    trunk(c - 1, c + 1, zs, zs + 13, G.bark, 2.5, 3); trunk(c - 3, c, zs + 8, zs + 17, G.bark, 2, 1); trunk(c + 2, c, zs + 8, zs + 18, G.bark, 2, 1);
+    crown(11, 20, 12, zs + 16, 10, 5, 3, G.silver, { holes: 0.18 });
+  } else if (kind === 'maple') {
+    trunk(c - 1, c + 1, zs, zs + 8, G.bark, 1.5); trunk(c - 4, c, zs + 5, zs + 13, G.bark, 3, 1); trunk(c + 3, c, zs + 5, zs + 14, G.bark, 3, 1);
+    crown(9, 22, 12, zs + 12, 8, 6, 3, G.maple[v % 3], { holes: 0.2, cs: 2 });
+  } else if (kind === 'bamboo') {
+    const canes = [];
+    for (let i = 0; i < 18; i++) { const a = rnd() * 6.283, r = Math.sqrt(rnd()) * 7; canes.push([Math.round(c + Math.cos(a) * r), Math.round(c + Math.sin(a) * r * 0.8), 40 + (rnd() * 22 | 0)]); }
+    canes.sort((p, q) => p[1] - q[1]);
+    for (const [x, y, hgt] of canes) { for (let z = zs; z < zs + hgt; z++) gp(S, x, y, z, pick(G.bamboo, (z - zs) % 7 === 0 ? 0.2 : 0.55 + (hash(x, y, s) - 0.5) * 0.3, x, z, 0.3), -0.4, 0.6, 0.3); }
+    for (const [x, y, hgt] of canes) for (let z = zs + hgt * 0.3; z < zs + hgt; z += 4 + rnd() * 3) lump(S, x + (rnd() - 0.5) * 8, y + (rnd() - 0.5) * 3, z, 3.5 + rnd() * 2, 2.4, 1.8, 1.8, G.leafL, s + x * 3 + Math.round(z), { holes: 0.3, cs: 2 });
+  } else if (kind === 'bay') {
+    trunk(c - 1, c + 1, zs, zs + 22, G.bark, 0.4, 2);
+    lump(S, c, c, zs + 31, 9.5, 8.5, 9, 8, G.boxw, s, { rough: 0.6, cs: 2 });
+    for (let i = 0; i < 4; i++) lump(S, c + (rnd() - 0.5) * 14, c + 4 + rnd() * 4, zs + 1, 2.5, 2, 3, 0, G.leafL, s + i, { fl: () => (i & 1 ? G.white : null) });   // (trailing plants round its foot)
+  } else {   // birch
+    for (const [x, y] of [[c - 4, c + 1], [c + 2, c + 3], [c, c - 3]]) trunk(x, y, zs, zs + 34 + (x & 7), G.birch, 2, 2);
+    crown(14, 22, 12, zs + 20, 24, 4, 2.5, G.leafL, { holes: 0.3, cs: 2 });
+  }
+  return gfinish(S, w, d);
+}
+// a timber pergola over a table: four posts, two beams along x, rafters across, a climber up a post and over one corner,
+// festoon bulbs under the beams (they glow, and cast no shadow)
+export function pergola(w = 44, d = 34, h = 30) {
+  const m = new Vox(w, d, h + 5), p = m.mat({ ramp: R('#8a6a4a', 6, 3), k: 3, shade: (x, y, z) => (hash(Math.floor(x / 6), Math.floor(z / 6), 3) - 0.5) * 0.5 });
+  const lf = m.mat({ ramp: F.FOL('#4a8030'), k: 3, flag: F_LEAF | F_WET, shade: (x, y, z) => (hash(x | 0, y | 0, z | 0) - 0.5) * 1.8 });
+  const b = m.mat({ ramp: R('#ffd890', 5, 3), k: 4, emi: [255, 196, 110, 255], flag: F_NOCAST });
+  for (const [x, y] of [[1, 1], [w - 4, 1], [1, d - 4], [w - 4, d - 4]]) m.box(x, y, 0, x + 3, y + 3, h, p);
+  for (const y of [1, d - 4]) m.box(0, y, h, w, y + 3, h + 2, p);
+  for (let x = 1; x < w - 1; x += 5) m.box(x, 0, h + 2, x + 2, d, h + 4, p);
+  m.fill((x, y, z) => (hash(x | 0, y | 0, z | 0) > 0.4 ? lf : -1), 0, d - 7, 0, 6, d, h + 2);
+  m.fill((x, y, z) => (hash(x >> 1, y >> 1, 5) > 0.25 + (x + d - y) / (w + d) * 1.1 ? lf : -1), 0, 0, h + 3, w, d, h + 5);   // (thinning out from the post it climbs)
+  for (let x = 5; x < w - 4; x += 6) for (const y of [2, d - 3]) m.box(x, y, h - 3, x + 1, y + 1, h - 1, b);
+  return m;
+}
+// a water butt: a ribbed barrel with its lid and tap
+export function waterButt(col = '#2f5a3a') {
+  const m = new Vox(12, 12, 17), b = m.mat({ ramp: R(col, 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 5 === 0 ? -0.7 : 0) }), l = m.mat({ ramp: R('#2a2c30', 5, 2), k: 2 });
+  m.cyl('z', 6, 6, 0, 5.5, 0, 15, b); m.cyl('z', 6, 6, 0, 5.8, 15, 17, l); m.box(5, 11, 3, 7, 12, 5, l);
+  return m;
+}
+// a slatted compost bin, the heap showing through the gaps and green on top
+export function compostBin() {
+  const m = new Vox(18, 16, 13), wd = m.mat({ ramp: R('#8a6a46', 6, 3), k: 3 }), c = m.mat({ ramp: R('#4a3a2a', 6, 3), k: 2, shade: (x, y) => (hash(x | 0, y | 0, 3) > 0.7 ? 1.2 : 0) });
+  const g = m.mat({ ramp: F.FOL('#5a8a34'), k: 3, flag: F_LEAF | F_WET, shade: (x, y) => (hash(x | 0, y | 0, 4) - 0.5) * 1.6 });
+  m.fill((x, y, z) => (x < 1.5 || y < 1.5 || x > 16.5 || y > 14.5 ? (Math.round(z) % 3 === 0 ? -1 : wd) : z < 9 ? c : z < 10 && hash(x | 0, y | 0, 6) > 0.5 ? g : -1));
+  return m;
+}
+// a little lamp on a post along a garden path (lit after dark)
+export function gardenLantern() {
+  const m = new Vox(6, 6, 16), p = m.mat({ ramp: R('#2e3036', 5, 2), k: 2 }), g = m.mat({ ramp: R('#ffe0a0', 5, 3), k: 4, emi: [255, 200, 120, 230], flag: F_NOCAST });
+  m.box(2, 2, 0, 4, 4, 11, p); m.box(1, 1, 11, 5, 5, 15, g); m.box(1, 1, 15, 5, 5, 16, p);
+  return m;
+}
