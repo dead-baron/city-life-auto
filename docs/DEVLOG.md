@@ -10501,3 +10501,42 @@ Downtown's park rebuilt after the owner's three park concepts (WC417, WC418 and 
   boxes). The new prop `tnet` is the tennis net (`props-district.js` `tennisNet`, turned to the court).
 - Places: Greenfield Park Pitch, Greenfield Park Courts, Greenfield Boathouse, Greenfield Allotments, Greenfield Park,
   Greenfield Pond.
+
+## 2026-10-17 · World v3, handcrafted: the Civic Center (the forum, City Hall, St. Neon General)
+
+The Civic Center (district 5) is now laid by hand from the owner's concepts. WC419 is the forum (prompt Civic-A1) and
+WC420 the hospital block (Civic-B1); WC071 and WC242 add the church and the round park with its monument. The plan is
+in `shared/world3-civic.js`: two bands east of Greenfield Park, registered after Downtown in `shared/world3-hand.js`.
+- **The forum** runs on Elm Street's line between Greenfield Avenue and Fountain Avenue.
+  - **Metro City Hall** stands at its head: pale stone, a ten-column portico and a copper dome on a colonnaded drum
+    (the new rooftop kit `dome`), with its terrace and banners.
+  - **The forum** itself is a long paved promenade with four lawns of plane trees and box hedges. It has the statue on
+    its plinth in a flower bed, red and blue banners in two rows, a fountain at each end, and lamps and benches along
+    its edges.
+  - Cypresses and plane trees stand in the lawns either side.
+  - **The Hall of Justice** (the courthouse, walk-in) closes the foot of the forum. Its portico faces Fountain Avenue,
+    with flags, lamps and planters on its steps.
+- **West of the forum:** the **Hall of Records**, then the **Metro City Public Library**. The library has a portico
+  and a glass dome (kit `gdome`), and its doors open onto the **Civic Garden**. The garden has a gazebo in a ring of
+  paths, flower beds, a fountain, benches, lamps and flowering trees.
+- **East of the forum (WC420):** **St. Neon General**, the city hospital and the default respawn, walk-in with its ER
+  desk.
+  - Seven floors, with the helipad on the roof and the glass canopy over its doors (the new prop `canopy`).
+  - The ER bay holds three parked ambulances under an AMBULANCES ONLY sign.
+  - A drop-off loop off Harborview Avenue circles a planted island with a big oak and the bus shelter.
+  - South of it are the healing garden (a sculpture fountain, benches, beds, cherries and magnolias) and the
+    St. Neon Medical Center tower on Fountain Avenue.
+- **North of Greenfield Avenue:** 6th Street, Alder Street, Civic Avenue and Elm Street are laid by the plan.
+  - The Municipal Building and the State Office Building (over its fountain plaza) stand on Crosstown Avenue.
+  - **St. Pixel Chapel** stands in its churchyard of yews, oaks and cypresses.
+  - **Liberty Square** faces City Hall across the avenue: a monument in a ring of lawn, benches, and the Liberty Kiosk.
+  - The Federal Building stands on Greenfield Avenue.
+  - Rows of shops with flats over them line the streets: the clerks' and lawyers' cafes, bars, stationers, bookshops,
+    tailors and a print shop, all walk-in. Walk-ups behind them have their doors on the street to the north.
+- **Specials** this plan places itself: St. Neon General, the Hall of Justice and St. Pixel Chapel.
+- **Art** (`client/art2/game/statics.js`):
+  - The observatory dome gains civic variants: copper on a colonnaded drum, and glass, each with a lantern. These are
+    the rooftop kits `dome` and `gdome`.
+  - Two hand-plan props: `flagpole` (a banner in a given colour) and `canopy`.
+- **Shared:** Downtown's tower helpers are exported as `towerKit` (`shared/world3-downtown.js`), so both plans build
+  their towers the same way.

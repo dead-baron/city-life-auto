@@ -87,7 +87,7 @@ export const AVE_X = [
 export const CITY3 = [
   // --- the Gulf Island: downtown's glass towers round the central park and its pond, inside the Gulf Loop ---
   { d: 12, on: 'big', zone: ZC, rects: [[2988, 2400, 3184, 2576]], keep: [[2988, 2400, 3184, 2576]], look: 'the central park: lawns, the pond (LAKES3\'s small lake), the fountain, the pitch' },
-  { d: 5, on: 'big', zone: ZC, rects: [[3184, 2300, 3480, 2400], [3320, 2400, 3480, 2576]], look: 'city hall, the courthouse, St. Neon General: stone and glass on wide plazas north-east of the park' },
+  { d: 5, on: 'big', zone: ZC, rects: [[3184, 2300, 3480, 2400], [3320, 2400, 3480, 2576]], hand: 'civic', look: 'the Civic Center, handcrafted (shared/world3-civic.js): the forum between City Hall and the Hall of Justice, the library and its garden, St. Neon General and its drop-off loop, St. Pixel Chapel, Liberty Square' },
   { d: 4, on: 'big', zone: ZC, rects: [[2860, 2300, 3184, 2400], [2860, 2400, 2988, 2730], [2988, 2576, 3480, 2730], [3184, 2400, 3320, 2576]], hand: 'downtown', look: 'Downtown round Greenfield Park, handcrafted (shared/world3-downtown.js): the circus park, Greenfield Tower\'s plaza, the bank plaza between its towers, the police headquarters, the Grand Neon Hotel\'s fountain drive, Fountain Square and The Grand Theatre' },
   { d: 7, on: 'big', zone: ZC, rects: [[2860, 2080, 3640, 2300]], look: 'the Neon Strip: clubs, the arcade and hotels along Neon Boulevard on the north shore, facing the mainland' },
   { d: 17, on: 'big', zone: ZC, rects: [[2560, 2120, 2860, 2400]], look: 'the Pink Mile behind the Strip to the west: lounges, motels, neon' },

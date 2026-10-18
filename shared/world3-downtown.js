@@ -64,9 +64,10 @@ const GLASS = ['#2a4a6a', '#2e5670', '#284256', '#36606e', '#3a4e66'];
 const STONE = ['#ddd2bc', '#d4c8b0', '#c8bca4', '#e2dac6', '#b8b0a2'];
 const SIGNS = [['#1e2a3a', [236, 214, 150]], ['#16202c', [240, 236, 220]], ['#2a2420', [236, 200, 140]], ['#f0ece4', [30, 42, 58]]];
 
-function build(m, api, K) {
+// The towers' kit, shared with the Civic Center (shared/world3-civic.js): place (a building, counted), tower (a tower's
+// art), towerLot (a tower placed whole, shrinking to fit a kerb's corner), forecourt (paving, planters, benches)
+export function towerKit(K, out) {
   const { rnd, pick, prop } = K;
-  const out = { homes: 0, shops: 0 };
   const place = (o) => { const b = K.building(o); if (b && o.home) out.homes++; if (b && o.poi) out.shops++; return b; };
   // a tower's art: its floors, its skin, its lobby's name over the door
   const tower = (x, y, o) => {
@@ -87,7 +88,7 @@ function build(m, api, K) {
       const x = o.x + l, w = o.w - l - r, h = o.h - s;
       if (w < 6 || h < 6 || !K.allFree(x, o.y, w, h)) continue;
       return place({ x, y: o.y, w, h, arch: o.arch || ((o.style || 'glass') === 'glass' ? 'glass' : 'office'), ...(o.key ? { key: o.key } : {}), name: o.name,
-        poi: o.poi === undefined ? { kind: 'delivery', label: o.name } : o.poi, whole: true, art: tower(x, o.y, o), ...(o.home ? { home: o.home } : {}), ...(o.front ? { front: o.front } : {}) });
+        poi: o.poi === undefined ? { kind: 'delivery', label: o.name } : o.poi, whole: true, art: o.art || tower(x, o.y, o), ...(o.home ? { home: o.home } : {}), ...(o.front ? { front: o.front } : {}), ...(o.door !== undefined && typeof o.door === 'number' ? { door: o.door } : {}) });
     }
     return null;
   };
@@ -99,6 +100,13 @@ function build(m, api, K) {
     if (o.fountain) prop('fountain', x + w / 2, y + h / 2 + 0.5, 36);
     if (o.lamps !== false) { prop('lamp', x + 0.8, y + h - 0.8, 0); prop('lamp', x + w - 0.8, y + h - 0.8, 0); }
   };
+  return { place, tower, towerLot, forecourt };
+}
+
+function build(m, api, K) {
+  const { rnd, pick } = K;
+  const out = { homes: 0, shops: 0 };
+  const { place, tower, towerLot, forecourt } = towerKit(K, out);
 
   // ===========================================================================================================
   northBand(K, m, { towerLot, tower, place, forecourt, out });
