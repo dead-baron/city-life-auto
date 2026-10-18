@@ -157,8 +157,9 @@ test('the debug menu takes you to each kind, filled, a little way off', async ()
   clear();
   const { p } = joinPlayer(w);
   const kinds = DEV_SECTIONS.flatMap((sec) => sec.items).filter(([, c]) => c === 'act').map(([, , x]) => x.k);
-  assert.equal(kinds.length, 12);
+  assert.equal(kinds.length, 13);   // (the twelve in Activities, and the skaters riding laps in Skateboarding)
   for (const k of kinds) {
+    if (k === 'skaters' && !(m.skateSpots || []).length) continue;   // (World v3's skate spots: none on the test map)
     command(w, p, 'act', { k });
     const g = [...w.acts.values()].find((q) => q.k === k && Math.hypot(q.x - p.ped.x, q.y - p.ped.y) < 340);
     assert.ok(g && g.ids.length, `${k}: there, with its people`);

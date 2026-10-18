@@ -30,6 +30,7 @@ import { buildFerries3 } from './world3-ferries.js';
 import { paintDesert3, layDesert3, buildDesert, desertDone, DESERT_SPECIALS, DESERT_STYLES } from './world3-desert.js';
 import { subwayLoops } from './world3-subway.js';
 import { paintWater3, buildWater3, waterDone } from './world3-water.js';
+import { waterBodies3 } from './world3-waterbodies.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
 import { wildSites3, wildDone, movedAt, wildDist, wildFarm3 } from './world3-wild.js';
 import { buildRelief3 } from './world3-relief.js';
@@ -216,6 +217,7 @@ export function worldOpts(asked) {
       if (H3) { m.world3.railCleared = clearRailDressing(m, H3.removeProps); clearBeachFront(m, H3.removeProps); }   // (8.14: no tree over the main line or a platform; the promenade and car parks clear)
       m.world3.ferries = buildFerries3(m, H3);   // (H42, 8.17: the ferries' piers, terminals, ramps and pontoons where each route calls: world3-ferries.js)
       waterDone(m, H3);   // (H46, 8.21: the boat rental at Kestrel Lake, the quays at the River Water Bus's stops, the prison's harbour: world3-water.js)
+      m.world3.waterBodies = waterBodies3(m);   // (2026-10-18, the water upgrade: which water is a creek, a river, a lake, a pond or the marsh, which way each channel runs - m.waters, m.lake: world3-waterbodies.js)
     },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a
     // handcrafted district's plan, which places its own

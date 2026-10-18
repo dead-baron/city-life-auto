@@ -11123,3 +11123,82 @@ pond) now commits a crime where you stand (`server/systems/fishing.js` land, `se
 - Any other fish out of the same pond (a bluegill, a carp) is fine, and so is a koi out of a lake or a river.
 - **Tests:** `test/fishing.test.js` catches a bluegill and then a koi at a park's lily pond. Only the koi raises the
   criminal record.
+
+## 2026-10-18 · The water upgrade: see-through water, every river running its own way, calm lakes, life along the banks
+
+The owner: "Have we made the water beautiful and semi translucent and added details all up and down every body of
+water yet or does that come later?", then "let's do water next". The handcraft research's diagnosis (nature and water,
+2.2) was right on each count:
+- World v3's inland water was all river water. Kestrel Lake, the mountain lakes and the parks' ponds were drawn as
+  rivers, and lakes got the sea's breaking waves.
+- No v3 river said which way it ran. Its current lines ran along the screen's rows, and the light pass's fixed chop
+  made the glints streak north-east.
+- The water was clear only in its first 12 px from the shore.
+
+Built:
+- **Which water is which** (`shared/world3-waterbodies.js`, at the end of the v3 build):
+  - `m.waters` lists every channel: the Long Reach and the 69 creeks and rivers. Each has its kind (creek, river, marsh,
+    lake), its setting (alpine, forest, valley, desert, marsh), its speed, and its centre line in downstream order
+    (downhill by the relief; on the flat, towards the sea). It also lists the lakes laid as polygons.
+  - `m.lake` now marks the lakes (1) and the ponds (2) on their tiles:
+    - Kestrel Lake;
+    - the wide pieces that are lakes: the woods' lake above Silver Thread Falls, the high tarn and the lake below it,
+      the Pine Lake hills' lake;
+    - Greenfield Pond;
+    - every water dug on land: the parks' ponds and the nature sites' pools (a lake if over 1,500 tiles).
+  - The fishing, the wildlife and the ambience already read `m.lake`.
+- **See-through water** (`client/art2/water.js` waterTiles / waterPx, the ground bake's water):
+  - Every water pixel has a depth in metres. It comes from how far the pixel is from land (a distance field over the
+    chunk and 24 tiles round it), shaped by the kind of water:
+    - a creek's bed rises to its banks;
+    - a lake shelves, then drops away;
+    - a beach's sea is a long shallow shelf;
+    - a quay's water is deep at once.
+  - Every water has a clarity:
+    - mountain creek nearly 5 m, forest creek 3, big river 1.3, park pond 1.1, marsh 0.6;
+    - the tropical keys' sea 7, a temperate beach 3.6, the north coast 2.5, a harbour 1.2.
+  - The bed shows through by those two:
+    - pebbles and cobbles in the creeks (now and then a big stone), granite in the mountains;
+    - gravel and silt in the rivers, red sand in the desert;
+    - mud and weed in the ponds and the marsh;
+    - sand with ripple marks and seagrass meadows by the beaches;
+    - coral heads off Coral Cay, Pelican Key and Paradise Cay;
+    - boulders and kelp on rocky coasts.
+  - The water colours what is seen through it: the sea takes the reds first, so it shows turquoise over sand.
+  - Each water has four shades of its colour, ordered-dithered by depth.
+  - Where two waters meet (a river's mouth, a creek into a lake, one coast's sea and the next) they dither into each
+    other across a tile, instead of the tiles' steps.
+- **Currents along each channel:** the current's lines and the ripple lattice are drawn along and across each
+  channel's centre line, so they curve with its bends. The light pass runs ripples and foam downstream on every v3
+  creek and river.
+- **Calm lakes and ponds:** they have their own word for the light pass (`lightgame.js` waterSurf):
+  - a little chop along the wind (a pond barely moves);
+  - soft glints;
+  - a thin line lapping at the shore, and no breaking waves.
+  - The chop turns with the wind everywhere (no fixed north-east).
+- **The sun's caustics:** a shifting web of light on every clear bed. In the creeks and rivers it drifts downstream.
+- **Details along the water:**
+  - boulders in the creeks, along the rivers' banks, on the mountain lakes' shores and along rocky sea coasts: lumpy,
+    mossy in the woods, with a collar of foam on the side the current comes from and a broken wake behind;
+  - reeds standing in clumps in the shallows of lakes, ponds, the marsh and slow water;
+  - rafts of lily pads on still water;
+  - duckweed drifting on the marsh.
+- **Tests:**
+  - `test/waterbake.test.js` (today's map): a river's word runs the way its `m.flow` says; a lake lies still; the sea
+    off a beach is lighter and textured near the shore; boulders stand in the creeks; no baked water glows.
+  - `test/world3waterbodies.test.js` (World v3): every channel is listed and runs downhill; Kestrel Lake is a lake;
+    Greenfield Pond and the Commons Pond are ponds; the bake's words over a creek, Kestrel Lake and Sunset Beach.
+  - `test/biolum.test.js` checks the swatch sheet's water.
+  - `test/activities.test.js` counts the debug menu's skaters button too (Skateboarding's, from this morning's debug
+    menu batch), skipped where the map has no skate spot.
+- **Budgets:**
+  - The renderer goes from 366 to 367 KB: the water's light (`lightgame.js` grew 0.4 KB).
+  - The bake's code stays at 73 files: the water's bake lives in `client/art2/water.js` (which the bake loaded
+    already), in place of the old seaPx / stillPx.
+
+Still to come (the research's N2.4 and N3):
+- fish you can see in the water;
+- ducks and their wakes;
+- mist at the falls' feet;
+- rapids and riffles;
+- the rivers laid as authored splines, with point bars and meanders.

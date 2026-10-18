@@ -4,7 +4,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bioAt, BIO_NIGHTS } from '../client/render/atmos.js';
-import { seaPx, stillPx } from '../client/art2/water.js';
+import { bakeSwatches } from '../client/art2/game/groundbake.js';
+import { F_WATER } from '../client/art2/gbuf.js';
 import { gameClock, DAY_LOOP_S } from '../shared/constants.js';
 
 const at = (day, loopTime) => bioAt(day * DAY_LOOP_S + loopTime, gameClock(loopTime).minutes);
@@ -33,9 +34,10 @@ test('a sparkling night fades in after dusk and out before dawn, never in one st
 });
 
 test('the water has no glowing pixels of its own any more', () => {
+  // (the baked water: client/art2/water.js waterPx, as the E1 sheet's swatches bake it; test/waterbake.test.js bakes
+  // the map's rivers, lakes and sea and checks them too)
+  const G = bakeSwatches();
   let n = 0;
-  for (let Y = 0; Y < 400; Y += 3) for (let X = 0; X < 400; X += 3) {
-    for (const r of [seaPx(X, Y, (X + Y) % 60, ((X * 7 + Y) % 100) / 100, (X >> 6) % 3), stillPx(X, Y, (X * 3 + Y) % 40, ((X + Y * 3) % 100) / 100, (Y >> 7) & 1, (X >> 7) & 1)]) { n++; assert.equal(r.e, 0); }
-  }
-  assert.ok(n > 30000);
+  for (let i = 0; i < G.w * G.h; i++) if (G.flag[i] & F_WATER) { n++; assert.equal(G.emi[i * 4 + 3], 0); }
+  assert.ok(n > 5000, `water on the sheet (${n} px)`);
 });

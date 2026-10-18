@@ -28,7 +28,7 @@
 //   3. classes per pixel: soft ground blends organically between tiles (domain-warped lookups), coastlines
 //              and lawn / paving edges are smoothed (blurred tile fields, thresholded), hard ground stays square
 //   4. shores  a chamfer distance to the land / water boundary: foam, wet sand, clear shallows, quay walls
-//   5. paint   every material from ground.js GSHADE (E1 sheet) and water.js seaPx / stillPx, with normals for
+//   5. paint   every material from ground.js GSHADE (E1 sheet) and the water from water.js waterPx, with normals for
 //              relief; heights: sidewalks and plazas z 3, docks 4, kerb faces 3..1, bridge decks up to deckZ,
 //              platforms 6, crops 2-5, rails 3, parapets, bollards and pilings up to deckZ + 9
 //   6. roads   lane lines from laneOffset, double yellow, dashes, edge lines, concrete or planted medians, stop
@@ -41,11 +41,11 @@
 //              upright cover (z 1-14): flowers, seed heads, ferns, reeds, dune grass, dry tufts, scrub, lilies
 // Flags: ground F_GROUND | F_WET (rain darkens it), water F_GROUND | F_WATER, puddles F_GROUND | F_WATER | F_WET;
 // cover and crops add F_LEAF (mown turf also F_NOCAST: self-shaded, it casts no shadow).
-import { GBuf, F_GROUND, F_WATER, F_WET, F_LEAF } from '../gbuf.js';
+import { GBuf, F_GROUND, F_WATER, F_WET, F_LEAF, F_NOCAST } from '../gbuf.js';
 import { MAT, ramp } from '../palette.js';
 import { GSHADE, GS, gsReset, coverSprite, turfGround, turfFlat, cloverAt, hh, vnc, worley, shadeStep as sd } from '../ground.js';
 import { edgeCovers } from '../../../shared/covers.js';
-import { seaPx, stillPx, WP, WATER } from '../water.js';
+import { WATER, waterTiles, waterPx, waterAt, waterOff, WK } from '../water.js';
 import { T, TILE } from '../../../shared/constants.js';
 import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome } from '../../../shared/mapcore.js';
 import { Z } from '../../../shared/layoutcore.js';
@@ -112,10 +112,11 @@ function scratch() {
     lS: new Float32Array(WA), lV: new Float32Array(WA), dist: new Uint16Array(WA), ex: new Uint8Array(WA),
     lS2: new Float32Array(WA), lV2: new Float32Array(WA),   // (H33: a second track through a pixel - a switch, a diamond)
     tt: new Uint8Array(TN * TN), td: new Uint8Array(TN * TN), tb: new Uint8Array(TN * TN), tz: new Uint8Array(TN * TN), tm: new Uint8Array(TN * TN),
-    tf: new Float32Array(TN * TN), tdp: new Float32Array(TN * TN), tw: new Uint8Array(TN * TN), tsand: new Uint8Array(TN * TN), tdeck: new Uint8Array(TN * TN),
+    tf: new Float32Array(TN * TN), tw: new Uint8Array(TN * TN), tsand: new Uint8Array(TN * TN), tdeck: new Uint8Array(TN * TN),
     tres: new Uint8Array(TN * TN), tbld: new Int16Array(TN * TN), tsf: new Float32Array(TN * TN), tso: new Int8Array(TN * TN),
     tfl: new Uint8Array(TN * TN), twear: new Float32Array(TN * TN),
     tsh: new Float32Array(TN * TN),   // (World v3 8.22: the hillshade of each tile, from M.relief)
+    wcode: new Uint8Array(CHUNK * CHUNK),   // (each water pixel's word for the light pass: water.js waterPx)
     wx: new Float32Array((WN / 4 + 2) * (WN / 4 + 2)), wy: new Float32Array((WN / 4 + 2) * (WN / 4 + 2)),
   };
   return B;
@@ -183,7 +184,7 @@ export const E1_SWATCHES = ['LAWN', 'CLOVER', 'MEADOW', 'FOREST', 'MUD', 'GRAVEL
 export function bakeSwatches(names = E1_SWATCHES, opt = {}) {
   const b = scratch(), cols = opt.cols ?? 5, rows = Math.ceil(names.length / cols), seed = ((opt.seed ?? 1337) | 0) & 0xffff;
   const C = { M: { props: [], nodes: [], edges: [], parking: [], venues: [], airports: [] }, b, q: opt.quality ?? 2, seed, X0: 0, Y0: 0, WX0: -PAD, WY0: -PAD, TX0: Math.floor(-PAD / TILE) - TP, TY0: Math.floor(-PAD / TILE) - TP, deckZ: 6, E: [] };
-  b.rE.fill(-1); b.aux.fill(0); b.ex.fill(0); b.zb.fill(0); b.td.fill(1); b.tdp.fill(0.35); b.tsand.fill(1); b.tw.fill(0);
+  b.rE.fill(-1); b.aux.fill(0); b.ex.fill(0); b.zb.fill(0); b.td.fill(1); b.tsand.fill(1); b.tw.fill(0);
   const cw = CHUNK / cols, ch = CHUNK / rows, gap = 5;
   for (let py = 0; py < WN; py++) for (let px = 0; px < WN; px++) {
     const x = px - PAD, y = py - PAD, i = py * WN + px, c = Math.floor(x / cw), r = Math.floor(y / ch), lx = x - c * cw, ly = y - r * ch;
@@ -195,7 +196,7 @@ export function bakeSwatches(names = E1_SWATCHES, opt = {}) {
     b.mat[i] = m; b.zb[i] = raised(m) ? 3 : 0;
   }
   const G = new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;
-  shoreDistance(C); paint(C, G); edges(C, G); decor(C, G);
+  waterOff(); shoreDistance(C); paint(C, G); edges(C, G); decor(C, G);
   return G;
 }
 
@@ -249,7 +250,7 @@ function tileFacts(C) {
     let m;
     if ((t === T.WATER || t === T.DEEP) && pools.length && inPools(pools, X, Y)) m = M_.POOL;
     else if ((t === T.WATER || t === T.DEEP) && springs.length && springs.some((e) => ((X - e.x) / e.rx) ** 2 + ((Y - e.y) / e.ry) ** 2 < 1.6)) m = M_.SPRING;
-    else if (t === T.WATER || t === T.DEEP || t === T.BRIDGE) m = M.lake[g] ? M_.LAKE : !M.land[g] ? (M.river[g] ? M_.RIVER : M_.SEA) : M_.POND;
+    else if (t === T.WATER || t === T.DEEP || t === T.BRIDGE) m = M.lake[g] === 2 ? M_.POND : M.lake[g] ? M_.LAKE : !M.land[g] ? (M.river[g] ? M_.RIVER : M_.SEA) : M_.POND;
     else if (t === T.DOCK) m = runAxis(M, tx, ty, T.DOCK) ? M_.DOCK : M_.DOCKX;
     else if (t === T.GRASS) {
       if (b.tdeck[k]) m = M_.UNDERDECK;
@@ -315,11 +316,8 @@ function tileFacts(C) {
   // blurred wetness (rounds the coast's tile steps), deep-water fraction, sandy shores
   for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
     const k = j * TN + i;
-    if (i === 0 || j === 0 || i === TN - 1 || j === TN - 1) { b.tf[k] = b.tw[k]; b.tdp[k] = b.tt[k] === T.DEEP ? 1 : 0; continue; }
+    if (i === 0 || j === 0 || i === TN - 1 || j === TN - 1) { b.tf[k] = b.tw[k]; continue; }
     b.tf[k] = b.tw[k] * 0.5 + (b.tw[k - 1] + b.tw[k + 1] + b.tw[k - TN] + b.tw[k + TN]) * 0.1 + (b.tw[k - TN - 1] + b.tw[k - TN + 1] + b.tw[k + TN - 1] + b.tw[k + TN + 1]) * 0.025;
-    const dp = (t) => (t === T.DEEP ? 1 : 0);
-    b.tdp[k] = dp(b.tt[k]) * 0.4 + (dp(b.tt[k - 1]) + dp(b.tt[k + 1]) + dp(b.tt[k - TN]) + dp(b.tt[k + TN])) * 0.15;
-    if (b.tw[k] && b.tt[k] !== T.DEEP) b.tdp[k] = Math.max(b.tdp[k], landDist(M, TX0 + i, TY0 + j) / 18);
     let s = 0;
     for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) { const kk = k + dj * TN + di; if (kk >= 0 && kk < TN * TN && (b.tm[kk] === M_.BEACH || b.tm[kk] === M_.DUNE)) s = 1; }
     let hard = 0;
@@ -353,7 +351,10 @@ function tileFacts(C) {
     b.wx[j * GW + i] = (vnc(X, Y, 23, seed + 31) - 0.5) * 26 + (vnc(X, Y, 7, seed + 33) - 0.5) * 7;
     b.wy[j * GW + i] = (vnc(X, Y, 23, seed + 37) - 0.5) * 26 + (vnc(X, Y, 7, seed + 39) - 0.5) * 7;
   }
+  // the water: which water each wet tile is, how far from land, which way it runs (water.js waterTiles)
+  waterTiles(C, WMATS, TN);
 }
+const WMATS = { SEA: M_.SEA, LAKE: M_.LAKE, POND: M_.POND, RIVER: M_.RIVER };
 // true when a run of this tile type through (tx, ty) is longer along x than along y
 function runAxis(M, tx, ty, t) {
   let h = 0, v = 0;
@@ -370,18 +371,6 @@ function walkOf(D) {
   if (D.style === 'beach') return M_.PLAZAB;
   if (D.walk === 'concrete') return D.tier === 'rough' || D.tier === 'low' || D.tier === 'industrial' ? M_.WALKCR : M_.WALKC;
   return WALKS[D.walk] ?? M_.WALKC;
-}
-// tiles from (tx, ty) to the nearest land, probed along 8 directions out to 18 tiles (coarse, but smooth enough
-// once blurred into the per-pixel depth: the river inlet is far wider than a chunk)
-const PROBE = Array.from({ length: 16 }, (_, k) => [Math.cos(k * Math.PI / 8), Math.sin(k * Math.PI / 8)]);
-function landDist(M, tx, ty) {
-  for (let r = 1; r <= 18; r++) for (const [dx, dy] of PROBE) {
-    const x = Math.round(tx + dx * r), y = Math.round(ty + dy * r);
-    if (!M.inside(x, y)) continue;
-    const t = M.tiles[M.idx(x, y)];
-    if (t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE) return r;
-  }
-  return 18;
 }
 const inRect = (r, X, Y) => r && X >= r.x && X < r.x + r.w && Y >= r.y && Y < r.y + r.h;
 const inRects = (list, X, Y, key) => list.some((r) => (!key || r.key === key) && inRect(r, X, Y));
@@ -829,20 +818,16 @@ for (const k of ['BEACH', 'WETSAND', 'SHINGLE', 'DUNE', 'ROCKSHORE']) SURF_LAND[
 // A river's water (M.flow: which way it runs, sixteenths of a turn) takes 239 + that instead: the lighting runs its
 // ripples and foam downstream.
 function surf(C, G) {
-  const { b } = C, col = G.col, fl = G.flag, flow = C.M.flow;
+  const { b } = C, col = G.col, fl = G.flag;
   for (let y = 0; y < CHUNK; y++) {
     const r = (y + PAD) * WN + PAD;
     for (let x = 0; x < CHUNK; x++) {
-      const dd = b.dist[r + x], m = b.mat[r + x], gi = y * CHUNK + x;
-      if (m === M_.RIVER && flow && (fl[gi] & F_WATER) && (fl[gi] & F_GROUND)) {
-        const f = flow.get(C.M.idx(Math.floor((C.X0 + x) / TILE), Math.floor((C.Y0 + y) / TILE)));
-        if (f !== undefined) { col[gi * 4 + 3] = 239 + f; continue; }
-      }
-      if (dd >= 470) continue;
-      if (!(fl[gi] & F_GROUND)) continue;
+      const gi = y * CHUNK + x, f = fl[gi];
+      if ((f & F_WATER) && (f & F_GROUND) && !(f & F_WET)) { const c = b.wcode[gi]; if (c) col[gi * 4 + 3] = c; continue; }   // (the water's word: water.js waterPx)
+      const dd = b.dist[r + x], m = b.mat[r + x];
+      if (dd >= 470 || !(f & F_GROUND)) continue;
       const d = Math.round(dd / 10);
-      if (m === M_.SEA || m === M_.LAKE) { if (fl[gi] & F_WATER) col[gi * 4 + 3] = 191 + d; }
-      else if (SURF_LAND[m] && d <= 30) col[gi * 4 + 3] = 191 - d;
+      if (SURF_LAND[m] && d <= 30) col[gi * 4 + 3] = 191 - d;
     }
   }
 }
@@ -860,12 +845,17 @@ function paint(C, G) {
       if (KIND[m] === 2) {
         const d = Math.min(47, b.dist[i] / 10);
         const fx = X / TILE - 0.5 - TX0, i0 = Math.floor(fx), vx = fx - i0, k00 = j0 * TN + i0;
-        const dpt = (b.tdp[k00] * (1 - vx) + b.tdp[k00 + 1] * vx) * (1 - vy) + (b.tdp[k00 + TN] * (1 - vx) + b.tdp[k00 + TN + 1] * vx) * vy;
-        const dd = Math.min(1, Math.max(d / 90, dpt));
         const ti = (Math.floor(Y / TILE) - TY0) * TN + Math.floor(X / TILE) - TX0;
-        const r = m === M_.POOL ? poolPx(C.M.pools, X, Y, d, seed) : m === M_.SPRING ? springPx(X, Y, d, seed) : m === M_.SEA ? seaPx(X, Y, d, dd, b.tsand[ti], seed + 13) : stillPx(X, Y, d, m === M_.POND ? Math.min(1, d / 50) : dd, m === M_.RIVER ? 1 : 0, b.tsand[ti] === 1 ? 0 : 1, seed + 17);
-        c = r.c; nx = r.nx; ny = r.ny; f = F_GROUND | F_WATER;
-        if (r.e) { emi[j] = 255; emi[j + 1] = 246; emi[j + 2] = 222; emi[j + 3] = r.e; }
+        if (m === M_.POOL || m === M_.SPRING) {
+          const r = m === M_.POOL ? poolPx(C.M.pools, X, Y, d, seed) : springPx(X, Y, d, seed);
+          c = r.c; nx = r.nx; ny = r.ny; f = F_GROUND | F_WATER; b.wcode[gi] = 0;
+          if (r.e) { emi[j] = 255; emi[j + 1] = 246; emi[j + 2] = 222; emi[j + 3] = r.e; }
+        } else {
+          const r = waterPx(C, X, Y, d, ti, k00, vx, vy, TN, m === M_.SEA ? WK.SEA : m === M_.LAKE ? WK.LAKE : m === M_.POND ? WK.POND : WK.RIVER);
+          c = r.c; nx = r.nx; ny = r.ny;
+          if (r.solid) { f = F_GROUND | F_WET; z += r.z; b.wcode[gi] = 0; }   // (a boulder standing in the water)
+          else { f = r.inl ? F_GROUND | F_WATER | F_NOCAST : F_GROUND | F_WATER; b.wcode[gi] = r.code; }
+        }
       } else if (TURFPAL[m] >= 0 && m !== M_.DRYGRASS && m !== M_.ALPINE && m !== M_.FOREST) {
         c = C.q >= 1 ? turfGround(TURFPAL[m], X, Y, seed, TURFCLOV[m]) : turfFlat(TURFPAL[m], X, Y, seed);
       } else {
@@ -1532,10 +1522,15 @@ function decor(C, G) {
       }
       continue;
     }
-    if (isWater(m)) {                                        // lily pads and reeds at pond and lake edges
-      const d = b.dist[i] / 10;
-      if ((m === M_.POND || m === M_.LAKE) && d < 22 && h0 < 0.05 * dens) stamp(C, G, coverSprite('lily', (hh(cx, cy, seed + 99) * 6) | 0), X, Y, 0);
-      else if ((m === M_.POND || m === M_.LAKE || m === M_.RIVER) && d < 4 && h0 < 0.1 * dens) stamp(C, G, coverSprite('reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
+    if (isWater(m)) {                                        // reeds standing in the shallows, rafts of lily pads on still water
+      const gx = px - PAD, gy = py - PAD;
+      if (gx >= 0 && gy >= 0 && gx < CHUNK && gy < CHUNK && !(G.flag[gy * CHUNK + gx] & F_WATER)) continue;   // (a boulder)
+      const d = b.dist[i] / 10, w = waterAt(C, X, Y, d, TN);
+      if (!w || w.k === WK.SEA) continue;
+      const still = w.k === WK.POND || w.k === WK.LAKE || w.k === WK.MARSH || w.fv < 0.2;
+      const reedy = vnc(X, Y, 150, seed + 103) + (w.k === WK.MARSH ? 0.25 : w.k === WK.POND ? 0.1 : 0);
+      if (w.depth < (w.k === WK.MARSH ? 0.9 : 0.45) && (d < 5 || reedy > 0.55) && h0 < (reedy > 0.55 ? 0.42 : 0.1) * dens) stamp(C, G, coverSprite('reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
+      else if (still && w.depth > 0.25 && w.depth < 1.9 && d > 5 && vnc(X, Y, 110, seed + 105) > (w.k === WK.LAKE ? 0.68 : w.k === WK.MARSH ? 0.7 : 0.6) && h0 < 0.55 * dens) stamp(C, G, coverSprite('lily', (hh(cx, cy, seed + 99) * 6) | 0), X, Y, 0);
       continue;
     }
     // paving and asphalt: litter and weeds by wealth

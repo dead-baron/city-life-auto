@@ -12,9 +12,8 @@
 //   paintSea(G, isSea, opts)     open sea: depth bands, a lattice of swell lines, surf foam along the shore
 //   foamPatch / foamRing / ripples   whitewater in a plunge pool, round a rock in a current, rings
 // World water for the live game's chunk baker (client/art2/game/groundbake.js), per pixel in world
-// coordinates and allocation free: seaPx (open sea: turquoise shelf to blue, a scalloped lattice of crests,
-// foam at the waterline, sand showing through clear shallows), stillPx (lakes, ponds and the river inlet:
-// deep teal, a faint ripple lattice, current streaks on the river, pebbles in the shallows). Result in WP.
+// coordinates and allocation free: waterTiles / waterPx (the end of this file: every creek, river, lake, pond, the
+// marsh and the sea, see-through over their beds, with the light pass's word for each pixel). Result in WQ.
 // Painted water keeps a per-buffer depth map, so a tributary meets its parent without a seam and banks
 // never overwrite water that is already there.
 //
@@ -32,6 +31,8 @@ import { person } from './people.js';
 import { distSq } from './scene.js';
 import { prepPoints, detectFeatures } from './rivergen.js';
 import { worley, vnc, hh, shadeStep as sd } from './ground.js';
+import { T, TILE } from '../../shared/constants.js';
+import { DISTRICTS } from '../../shared/mapcore.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
@@ -98,7 +99,7 @@ function cellPer(s, v, sz, per, seed) {
 }
 // one pixel of moving water. dd: depth 0 (edge) .. 1 (deep); s, v: along / across the flow (px);
 // cur: current strength 0..1; rap: whitewater 0..1; phase: animation 0..1 (loops)
-function waterPx(x, y, dd, s, v, cur, rap, phase, seed, pal = WATER.river) {
+function streamPx(x, y, dd, s, v, cur, rap, phase, seed, pal = WATER.river) {
   const big = vnoise(x, y, 37, seed + 3), fine = vnoise(x, y, 7, seed + 5);
   let t = 0.6 - dd * 0.3 + (big - 0.5) * 0.16 + (fine - 0.5) * 0.06, c, e = null;
   // current lines: long thin streaks along the flow under a still envelope; the carrier drifts with the phase
@@ -226,10 +227,10 @@ export function paintRiver(G, river, opts = {}) {
       // clear shallows show the bed: sand and pebbles tinted by the water
       if (dd < 0.38 && !(rp > 0.5)) {
         const peb = pebbleAt(x, y, w < 30 ? 5 : 6, seed + 31, 0.42) || step(BAR, 0.35 + vnoise(x, y, 5, seed) * 0.3, x, y, 0.6);
-        const wpx = waterPx(x, y, dd, s, v, (opts.current ?? 1) * clamp(dd * 3) * (1 - (opts.calm ?? 0)), rp, phase, seed, WATER.shallow);
+        const wpx = streamPx(x, y, dd, s, v, (opts.current ?? 1) * clamp(dd * 3) * (1 - (opts.calm ?? 0)), rp, phase, seed, WATER.shallow);
         const k2 = clamp(0.3 + dd * 1.8 + (ww < 2 ? -0.1 : 0));
         px = { c: mix(peb, wpx.c, k2), e: wpx.e, n: wpx.n };
-      } else px = waterPx(x, y, dd, s, v, (opts.current ?? 1) * (0.35 + dd * 0.65) * (1 - (opts.calm ?? 0)), rp, phase, seed, pal);
+      } else px = streamPx(x, y, dd, s, v, (opts.current ?? 1) * (0.35 + dd * 0.65) * (1 - (opts.calm ?? 0)), rp, phase, seed, pal);
       // a thin light line where the water laps the edge; foam there on rapids
       if (ww < 1.4) px.c = rp > 0.2 ? step(WATER.foam, 0.6, x, y, 0.4) : mix(px.c, [200, 226, 220], 0.35);
       G.put(x, y, px.c, px.n, 0, px.e, F_GROUND | F_WATER);
@@ -319,8 +320,8 @@ export function paintPond(G, inside, opts = {}) {
       if (isWaterPx(G, gi) && D[gi] >= dd) continue;
       D[gi] = dd;
       let px;
-      if (dd < 0.3) { const peb = pebbleAt(X, Y, 6, seed + 31, 0.42) || step(BAR, 0.35, X, Y, 0.6); const wp = waterPx(X, Y, dd, X * 0.7 + Y * 0.3, Y, 0.15, 0, phase, seed, WATER.shallow); px = { c: mix(peb, wp.c, clamp(0.45 + dd * 1.6)), e: wp.e, n: wp.n }; }
-      else px = waterPx(X, Y, dd, X * 0.8 + Y * 0.2 + Math.sin(Y * 0.05) * 20, Y - X * 0.2, opts.current ?? 0.2, 0, phase, seed, opts.pal || WATER.river);
+      if (dd < 0.3) { const peb = pebbleAt(X, Y, 6, seed + 31, 0.42) || step(BAR, 0.35, X, Y, 0.6); const wp = streamPx(X, Y, dd, X * 0.7 + Y * 0.3, Y, 0.15, 0, phase, seed, WATER.shallow); px = { c: mix(peb, wp.c, clamp(0.45 + dd * 1.6)), e: wp.e, n: wp.n }; }
+      else px = streamPx(X, Y, dd, X * 0.8 + Y * 0.2 + Math.sin(Y * 0.05) * 20, Y - X * 0.2, opts.current ?? 0.2, 0, phase, seed, opts.pal || WATER.river);
       if (opts.rim && d < 2.5 + vnoise(X, Y, 5, seed) * 3) px.c = step(WATER.foam, 0.5 + hash(X, Y, seed) * 0.3, X, Y, 0.4);
       else if (d < 1.2) px.c = mix(px.c, [200, 226, 220], 0.35);
       G.put(X, Y, px.c, px.n, 0, px.e, F_GROUND | F_WATER);
@@ -757,68 +758,478 @@ export function dressRiver(sc, info, o = {}) {
 }
 export { detectFeatures };
 
-// ---- world water (the live game's chunk baker) --------------------------------------------------------------
-// One pixel of water in world coordinates; the result lands in WP (c: a colour - shared, copy it; nx, ny: the
-// normal's tilt; e: a glint 0..255 for the emissive map). d: px from the waterline (0 at the edge; pass 99
-// when far), dd: depth 0 (shallow) .. 1 (deep), shore: 1 a sandy beach nearby, 2 a quay or seawall, 0 other.
-// The sea and the lakes have no glints of their own any more (one crest pixel in 40 used to glow): baked into the
-// map, they shone on all the water every night like a bioluminescence nobody asked for (task #392). The sun glints
-// off the waves in the light itself (lightgame.js waterSurf), and so does the sea's sparkle on the nights it comes.
-export const WP = { c: null, nx: 0, ny: 0, e: 0 };
-const WMIX = [0, 0, 0];
-const mixInto = (a, b, k) => { WMIX[0] = a[0] + (b[0] - a[0]) * k; WMIX[1] = a[1] + (b[1] - a[1]) * k; WMIX[2] = a[2] + (b[2] - a[2]) * k; return WMIX; };
-// the world sea's own ramps: calibrated so the golden-hour light lands on the targets' teal and blue
-const SEABED = R('#b8b4a0', 6, 3, { dark: 0.4, light: 0.45, shift: 0.15 }), WSH = R('#2a9cc0', 7, 3, { dark: 0.5, light: 0.55, shift: 0.1 });
-const WSEA = R('#1a72aa', 7, 3, { dark: 0.55, light: 0.5, shift: 0.08 }), NAVY = R('#155a90', 6, 3, { dark: 0.6, light: 0.45, shift: 0.08 });
-// lakes and the river: deep blue-teal in the channel, green-teal over the shallows
-const RDEEP = R('#134f78', 7, 3, { dark: 0.6, light: 0.45, shift: 0.08 }), RMID = R('#1a6a88', 7, 3, { dark: 0.55, light: 0.5, shift: 0.08 }), RSHAL = R('#2e8a8e', 7, 3, { dark: 0.5, light: 0.5, shift: 0.1 });
-// ordered dither between two depth palettes across a band (the 16-bit way: no hard edge where the depth changes)
+// ---- the world's water (the live game's chunk baker) ------------------------------------------------------------
+// The world's water as the chunk baker paints it (the water upgrade, 2026-10-18): every pixel of a creek, a river, a
+// lake, a pond, the marsh and the sea, see-through where it is shallow - the bed under it (pebbles in a mountain creek,
+// gravel and silt in a river, sand and seagrass and coral in the sea, mud and weed in a pond) fading into the water's
+// own colour as it deepens, the depth bands ordered-dithered (no hard edge, the 16-bit way) - with the current's lines
+// curving along each channel and the ripples and crests on top. client/art2/game/groundbake.js calls it: waterTiles
+// once per chunk (what each tile of the window is: which water, how far from land, which way it runs), waterPx per
+// water pixel. Allocation free in the pixel loop; the result lands in WQ.
+//
+// What it reads of the map: the tiles and their water flags (m.lake: 1 a lake, 2 a pond; m.river; land-flagged water
+// is dug on land - a pond), m.flow (a nature site's creek: which way, sixteenths of a turn) and World v3's m.waters
+// (shared/world3-waterbodies.js: each channel's centre line downstream, its width, kind, setting and speed; the lakes
+// laid as polygons). A map without m.waters (today's world, the tests' maps) gets the same water from its flags: the
+// rivers by m.flow where they have it, still where not.
+//
+// For the light pass (lightgame.js waterSurf) each water pixel says, in the albedo's alpha (WQ.code) and the
+// F_NOCAST flag (WQ.inl: inland water - nothing on the flat ground casts with it, so the flag is free on water):
+//   sea (no F_NOCAST): 191 + px from the shore (0..47: the waves break, the swash runs), else 239 + how clear
+//     (0..15: the sun's caustics on the bed), else 255 (open, deep);
+//   inland running (F_NOCAST): 128 + direction * 4 + fast * 2 + clear (direction in sixteenths of a turn);
+//   inland still (F_NOCAST): 192 + px from the shore (0..23: it laps), else 216 + how clear (0..7) on a lake, the
+//     marsh or a still river, 224 + how clear on a pond (a mirror).
+export const WK = { LAND: 0, SEA: 1, CREEK: 2, RIVER: 3, LAKE: 4, POND: 5, MARSH: 6 };
+const RW = (h, n = 7, k = 3, o = {}) => ramp(h, n, k, { dark: 0.55, light: 0.5, shift: 0.08, ...o });
+const RB = (h, o = {}) => ramp(h, 6, 3, { dark: 0.5, light: 0.45, shift: 0.15, ...o });
 const BAYW = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.5);
-const dpal = (dd, X, Y, a, A, B, band = 0.14) => (dd + BAYW[(Y & 3) * 4 + (X & 3)] * band > a ? A : B);
-export function seaPx(X, Y, d, dd, shore = 0, seed = 13) {
-  WP.e = 0;
-  const big = vnc(X, Y, 41, seed), fine = vnc(X, Y, 6, seed + 2), swell = vnc(X, Y, 97, seed + 4);
-  // the lattice of crests: the edges of stretched Worley cells, scalloped like fish scales; finer and brighter in
-  // the shallows, wider apart and fainter out in the blue, and broken up by long swells
-  const sz = dd < 0.35 ? 11 : 15, w = worley(X * 0.8 + fine * 3, Y + big * 7, sz, seed + 7, 0.85), edge = w.d2 - w.d1;
-  const near = d < 40, sw = near ? Math.sin(d * 0.21 + big * 5 + X * 0.02) : (big - 0.5) * 1.6;
-  const pal = dpal(dd, X, Y, 0.8, NAVY, null) || dpal(dd, X, Y, 0.3, WSEA, WSH);
-  const t = (dd < 0.3 ? 0.68 - dd * 0.8 : dd < 0.8 ? 0.6 - (dd - 0.3) * 0.4 : 0.58) + (big - 0.5) * 0.16 + (swell - 0.5) * 0.14 + sw * 0.05 + (w.d1 < 2.5 ? 0.05 : 0);
-  let c = sd(pal, t, X, Y, 0.7);
-  const net = edge < (dd < 0.35 ? 1.05 : 0.75 * (0.4 + swell));
-  if (net) {
-    c = d < 30 ? sd(WATER.foam, 0.28 + (1 - edge) * 0.35 + (d < 14 ? 0.15 : 0), X, Y, 0.4) : sd(pal, Math.min(1, t + (dd < 0.35 ? 0.32 : 0.2)), X, Y, 0.5);
-  } else if (shore === 1 && d < 16) c = mixInto(c, sd(SEABED, 0.55 + fine * 0.3, X, Y, 0.6), (1 - d / 16) * 0.55);     // clear water over sand
-  if (shore === 2) { if (d < 1.6) c = sd(WATER.foam, 0.45, X, Y, 0.4); else if (d < 6 && !net) c = sd(pal, t - 0.18, X, Y, 0.6); }   // calm at a quay wall
-  else if (d < 18) {                                  // the wash: foam at the waterline, a broken scalloped band beyond
-    const wash = 2.5 + 2 * Math.sin(X * 0.07 + Y * 0.05) + fine * 2.5;
-    if (d < wash) c = sd(WATER.foam, 0.85 - d / wash * 0.35, X, Y, 0.4);
-    else if (Math.abs(d - (10 + 3.5 * Math.sin(X * 0.05 + Y * 0.031))) < 1.1 + fine * 1.4 && hh(X >> 1, Y >> 1, seed) > 0.3) c = sd(WATER.foam, 0.62, X, Y, 0.4);
-  }
-  WP.c = c; WP.nx = sw * 0.06; WP.ny = near ? Math.cos(d * 0.21) * 0.1 : (fine - 0.5) * 0.12;
-  return WP;
+const by = (X, Y) => BAYW[(Y & 3) * 4 + (X & 3)];
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+// ---- the beds -------------------------------------------------------------------------------------------------
+const BED = {
+  peb: RB('#9a9286'), pebW: RB('#bcae92'), pebD: RB('#5e584e'), pebR: RB('#a07a56'), pebG: RB('#7e8a86'), gran: RB('#8c8a86', { shift: 0.1 }), granW: RB('#c2c0ba', { shift: 0.08 }),
+  bar: RB('#c8b896', { dark: 0.42, light: 0.4 }), silt: RB('#8a8270', { dark: 0.45 }), mud: RB('#6a5038', { dark: 0.55, light: 0.4 }),
+  weed: RB('#4e5e2c', { dark: 0.55, shift: 0.25 }), leaf: RB('#8a5a2c', { dark: 0.5 }), red: RB('#c08a62', { dark: 0.45 }),
+  sand: RB('#d6ccaa', { dark: 0.4, light: 0.45 }), grass: RB('#3e6e3c', { dark: 0.55, shift: 0.3 }), kelp: RB('#6e5c26', { dark: 0.55, shift: 0.25 }),
+  rock: RB('#6e6c68', { dark: 0.6, light: 0.45, shift: 0.18 }),
+  coral: [RB('#c87868', { shift: 0.2 }), RB('#c89a58', { shift: 0.2 }), RB('#9a78a8', { shift: 0.2 }), RB('#b8b070', { shift: 0.2 }), RB('#c8909a', { shift: 0.2 }), RB('#7a8a5a', { shift: 0.2 })],
+};
+// one stone of a bed: its ramp's colour, lit from the upper left with a dark rim, or null between the stones
+function stoneOf(X, Y, sz, seed, fill, A, B) {
+  const w = worley(X + 0.5, Y + 0.5, sz, seed, 0.85), r = sz * fill * (0.65 + 0.7 * w.h);
+  if (w.d1 >= r) return null;
+  let t = 0.54 + (w.h - 0.5) * 0.4 - (w.dx + w.dy) / r * 0.3;
+  if (w.d1 > r - 1.5) t -= 0.32;
+  return sd(w.h > 0.82 ? B : A, t, X | 0, Y | 0, 0.4);
 }
-// kind: 0 a lake or pond, 1 the river (its current runs along x). bottom: 1 pebbles (rocky banks), 0 mud
-export function stillPx(X, Y, d, dd, kind = 0, bottom = 0, seed = 17) {
-  WP.e = 0;
-  const big = vnc(X, Y, 37, seed + 3), fine = vnc(X, Y, 7, seed + 5);
-  const pal = dpal(dd, X, Y, 0.5, RDEEP, null, 0.2) || dpal(dd, X, Y, 0.18, RMID, RSHAL, 0.12);
-  let t = 0.62 - dd * 0.36 + (big - 0.5) * 0.16 + (fine - 0.5) * 0.06;
-  // the ripple lattice: bright in the shallows, in drifting patches out on open water
-  const w = worley(X * (kind ? 0.55 : 0.9), Y + big * 5, 12, seed + 9, 0.85), edge = w.d2 - w.d1, patch = vnc(X, Y, 71, seed + 11);
-  const lat = edge < (dd < 0.3 ? 0.85 : patch > 0.55 ? 0.7 : 0.3);
-  if (lat) t += dd < 0.3 ? 0.24 : 0.14;
-  if (kind) {                                        // current lines: long thin streaks along the flow
-    const lane = Math.floor((Y + 2.6 * Math.sin(X * 0.037 + seed)) / 4.2), lh = hh(lane, 7, seed), env = vnc(X * 0.5 + lh * 400, lane * 13, 14, seed + 9);
-    if (env > 0.66 && ((Y + 2.6 * Math.sin(X * 0.037 + seed)) / 4.2 - lane) < 0.3 && Math.sin(X / (44 + lh * 30) * 6.283 + lh * 40) > -0.1) t += 0.2;
+// the bed at a pixel: kind of bed, distT the tiles to the shore, fine a small noise
+function bedPx(bed, X, Y, distT, fine, seed) {
+  const x = X | 0, y = Y | 0;
+  switch (bed) {
+    case 1: {   // a creek's: pebbles and cobbles on gravel, a big stone now and then
+      const big = stoneOf(X, Y, 30, seed + 41, 0.4, BED.pebD, BED.peb);
+      if (big && hh(Math.floor(X / 30), Math.floor(Y / 30), seed + 43) > 0.7) return big;
+      const hc = hh(Math.floor(X / 12), Math.floor(Y / 12), seed + 29);
+      return stoneOf(X, Y, 12, seed + 31, 0.46, hc > 0.7 ? BED.pebR : hc > 0.45 ? BED.pebG : BED.peb, BED.pebW) || stoneOf(X + 5, Y + 3, 7, seed + 39, 0.42, BED.pebD, BED.peb) || sd(BED.pebD, 0.2 + fine * 0.25, x, y, 0.6);
+    }
+    case 2: {   // granite: grey cobbles and pale sand, boulders
+      const big = stoneOf(X, Y, 34, seed + 45, 0.42, BED.gran, BED.granW);
+      if (big && hh(Math.floor(X / 34), Math.floor(Y / 34), seed + 47) > 0.6) return big;
+      return stoneOf(X, Y, 13, seed + 33, 0.42, BED.gran, BED.granW) || sd(BED.sand, 0.42 + fine * 0.3, x, y, 0.6);
+    }
+    case 3: {   // a river's: gravel by the banks, sand and silt out in the channel, ripple marks
+      if (distT < 2.6 + fine * 1.5) { const s = stoneOf(X, Y, 11, seed + 35, 0.38, BED.peb, BED.pebW); if (s) return s; }
+      const rip = Math.sin(X * 0.19 + Y * 0.11 + vnc(X, Y, 37, seed + 49) * 5);
+      return sd(distT > 6 ? BED.silt : BED.bar, 0.42 + rip * 0.12 + (fine - 0.5) * 0.2, x, y, 0.6);
+    }
+    case 4: {   // red desert sand, ripples, a few pebbles
+      const s = hh(x >> 3, y >> 3, seed + 51) > 0.88 ? stoneOf(X, Y, 12, seed + 37, 0.32, BED.peb, BED.pebW) : null;
+      if (s) return s;
+      return sd(BED.red, 0.45 + Math.sin(X * 0.17 + Y * 0.07 + vnc(X, Y, 41, seed + 53) * 5) * 0.12 + (fine - 0.5) * 0.15, x, y, 0.6);
+    }
+    case 5: {   // mud: dark weed in patches, fallen leaves
+      if (hh(x >> 1, y >> 1, seed + 55) > 0.985) return sd(BED.leaf, 0.5 + fine * 0.3, x, y, 0.4);
+      const wv = vnc(X, Y, 23, seed + 57) + (fine - 0.5) * 0.3;
+      if (wv > 0.62) return sd(BED.weed, 0.3 + (wv - 0.62) * 1.2 + (hh(x, y >> 1, seed + 59) - 0.5) * 0.3, x, y, 0.5);
+      return sd(BED.mud, 0.4 + fine * 0.3, x, y, 0.6);
+    }
+    case 6: {   // a sandy seabed: ripples along the shore, seagrass meadows, a boulder now and then
+      const g = vnc(X, Y, 61, seed + 61) + (vnc(X, Y, 13, seed + 63) - 0.5) * 0.25;
+      if (distT > 3 && g > 0.6) return sd(BED.grass, 0.25 + (g - 0.6) * 1.4 + (Math.sin(X * 0.9 + vnc(X, Y, 5, seed + 65) * 6) > 0.2 ? 0.3 : 0), x, y, 0.5);
+      const b = hh(Math.floor(X / 31), Math.floor(Y / 31), seed + 67) > 0.9 ? stoneOf(X, Y, 31, seed + 69, 0.35, BED.rock, BED.gran) : null;
+      if (b) return b;
+      const rip = Math.sin(X * 0.21 + Y * 0.09 + vnc(X, Y, 43, seed + 71) * 6);
+      return sd(BED.sand, 0.5 + rip * 0.1 + (fine - 0.5) * 0.2, x, y, 0.6);
+    }
+    case 7: {   // a reef: coral heads in patches (lumpy, a few colours), white sand and seagrass between
+      const w = worley(X + 0.5, Y + 0.5, 30, seed + 73, 0.9), r = (9 + 9 * w.h) * (0.75 + 0.5 * vnc(X, Y, 9, seed + 85));
+      if (distT > 2 && w.h > 0.35 && w.d1 < r && vnc(X, Y, 120, seed + 87) > 0.38) {
+        const C = BED.coral[(w.h * 97 | 0) % BED.coral.length], f = worley(X + 0.5, Y + 0.5, 4, seed + 75, 0.9);
+        return sd(C, 0.5 - w.d1 / r * 0.32 + (f.d2 - f.d1 < 0.8 ? -0.28 : 0.04) - (w.dx + w.dy) / r * 0.14, x, y, 0.4);
+      }
+      return bedPx(6, X, Y, distT, fine, seed);
+    }
+    case 8: {   // a rocky seabed: boulders, kelp, sand between
+      const s = stoneOf(X, Y, 22, seed + 77, 0.46, BED.rock, BED.gran);
+      if (s) return s;
+      const k = vnc(X, Y, 29, seed + 79);
+      if (k > 0.55 && Math.sin(X * 0.35 + Y * 0.6 + vnc(X, Y, 7, seed + 81) * 5) > 0) return sd(BED.kelp, 0.3 + (k - 0.55) * 1.4, x, y, 0.5);
+      return sd(BED.sand, 0.35 + fine * 0.25, x, y, 0.6);
+    }
+    default:    // silt (harbours, canals)
+      return sd(BED.silt, 0.38 + fine * 0.25 + (hh(x >> 2, y >> 2, seed + 83) > 0.97 ? -0.25 : 0), x, y, 0.6);
   }
-  let c = sd(pal, t, X, Y, 0.7);
-  if (d < 12 && !lat) {                               // the bed shows through the shallows
-    const ww = worley(X + 0.5, Y + 0.5, bottom ? 6 : 8, seed + 31), rr = (bottom ? 6 : 8) * (bottom ? 0.45 : 0.25) * (0.7 + 0.6 * ww.h);
-    const bed = ww.d1 < rr ? sd(ww.h > 0.8 ? PEBW : bottom ? ROCKG : PEB, 0.5 + (ww.h - 0.5) * 0.4 - (ww.dx + ww.dy) / rr * 0.22 - (ww.d1 > rr - 1 ? 0.25 : 0), X, Y, 0.4) : sd(bottom ? BAR : MUD, 0.35 + fine * 0.3, X, Y, 0.6);
-    c = mixInto(bed, c, Math.min(1, 0.35 + d / 12 * 0.65));
-  }
-  if (d < 1.4) c = mixInto(c, [200, 226, 220], 0.35);
-  WP.c = c; WP.nx = (fine - 0.5) * 0.08; WP.ny = (big - 0.5) * 0.1;
-  return WP;
 }
+
+// ---- the waters' looks ----------------------------------------------------------------------------------------
+// r: the water's own colour from the shallows to the deep (four ramps, dithered between by depth over clarity);
+// clar: metres the bed shows through (an e-fold); bed: bedPx's kind; lat: the ripple lattice's strength
+const STY = [];
+// mul: how the water colours what is seen through it (its shallow colour, brightest channel 1)
+// (the sea colours what is under it more than fresh water does: the reds go first)
+// mul: what the water does to the light off the bed (the sea's takes the reds first, then the greens: turquoise over
+// sand; fresh water's a little green)
+const sty = (name, hex, clar, bed, lat = 1, deepBed = bed, sea = false) => {
+  const r = hex.map((h) => RW(h)), c = r[0][3], mx = Math.max(c[0], c[1], c[2]) || 1;
+  const mul = sea ? [0.42, 0.84, 1.0] : [0.62 + 0.3 * c[0] / mx, 0.66 + 0.3 * c[1] / mx, 0.7 + 0.3 * c[2] / mx];
+  STY.push({ name, r, clar, bed, deepBed, lat, mul }); return STY.length - 1;
+};
+const S = {
+  alpine: sty('alpine', ['#62bcb4', '#2e93a6', '#1e6492', '#173f70'], 4.2, 2),
+  forest: sty('forest', ['#3f9a8c', '#2f817e', '#1f5f6e', '#173f56'], 2.6, 1, 1, 5),
+  valley: sty('valley', ['#5c9e88', '#30828a', '#1e6282', '#164a70'], 1.7, 3, 1, 3),
+  desert: sty('desert', ['#7ca88c', '#4c8c82', '#2e6c74', '#20505e'], 1.5, 4, 1, 4),
+  marsh: sty('marsh', ['#6a7c5c', '#536a56', '#40564e', '#304444'], 0.6, 5, 0.5, 5),
+  park: sty('park', ['#3e8278', '#2a6668', '#1d4e5e', '#163a4a'], 1.1, 5, 0.35, 5),
+  tropic: sty('tropic', ['#5ad2da', '#3ab6ca', '#1e88b6', '#155a90'], 7.0, 7, 1, 7, true),
+  warm: sty('warm', ['#4cc4d0', '#30a8c4', '#1c7cb0', '#155a90'], 5.0, 6, 1, 6, true),
+  temperate: sty('temperate', ['#48b2c4', '#2a9cc0', '#1a72aa', '#155a90'], 3.6, 6, 1, 6, true),
+  cold: sty('cold', ['#4aa2a6', '#2a869c', '#1a6492', '#14466e'], 2.5, 8, 1, 8, true),
+  harbour: sty('harbour', ['#5c8c82', '#3e7282', '#2a5c7a', '#1d4668'], 1.2, 0, 1, 0, true),
+};
+const FOAM = RW('#e4f2f0', 5, 2, { dark: 0.3, light: 0.6 }), DUCKWEED = RB('#6a8a3a', { dark: 0.5, shift: 0.3 });
+const BY_T = { alpine: S.alpine, forest: S.forest, valley: S.valley, desert: S.desert, marsh: S.marsh, park: S.park };
+// the sea's look by the coast it washes (the district of the nearest land)
+const TROPIC = new Set([14, 44, 45]), WARM = new Set([10, 43, 52, 59]), COLD = new Set([19, 20, 21, 29, 31, 32, 33, 34, 47, 48, 51, 53, 54, 56, 65]);
+function seaStyle(d, ty) {
+  const D = DISTRICTS[d];
+  if (D && (D.style === 'harbor' || D.tier === 'industrial')) return S.harbour;
+  if (TROPIC.has(d)) return S.tropic;
+  if (WARM.has(d)) return S.warm;
+  if (COLD.has(d) || ty < 1000) return S.cold;
+  return S.temperate;
+}
+
+// ---- what each tile of the bake's window is -------------------------------------------------------------------
+const F = { n: 0, k: null, st: null, ld: null, dep: null, tmp: null, fx: null, fy: null, fv: null, sa: null, su: null, ch: null, bs: null, cst: null, on: false };
+function ensure(n) {
+  if (F.n === n) return;
+  F.n = n; F.k = new Uint8Array(n); F.st = new Uint8Array(n); F.ld = new Float32Array(n); F.dep = new Float32Array(n); F.fx = new Float32Array(n); F.fy = new Float32Array(n);
+  F.fv = new Float32Array(n); F.sa = new Float32Array(n); F.su = new Float32Array(n); F.ch = new Int16Array(n); F.bs = new Float32Array(n); F.cst = new Uint8Array(n); F.tmp = new Float32Array(n);
+}
+const LAND_R = 24;
+// how far (tiles) each tile of the window is from the nearest land, and which land tile that is: a distance transform
+// (chamfer 1 / 1.4, carrying the nearest land) over the window and LAND_R tiles round it - land further off doesn't
+// matter. Off the map is water (the open sea); a pier, a bridge's deck stand in the water.
+const DT = { n: 0, d: null, hit: null };
+function landField(M, TX0, TY0, TN) {
+  const G = TN + 2 * LAND_R, n = G * G, X0 = TX0 - LAND_R, Y0 = TY0 - LAND_R;
+  if (DT.n !== n) { DT.n = n; DT.d = new Float32Array(n); DT.hit = new Int32Array(n); }
+  const D = DT.d, Hh = DT.hit;
+  for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
+    const k = j * G + i, x = X0 + i, y = Y0 + j;
+    let land = false, g = -1;
+    if (M.inside(x, y)) { g = M.idx(x, y); const t = M.tiles[g]; land = t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE && t !== T.DOCK; }
+    D[k] = land ? 0 : 1e6; Hh[k] = land ? g : -1;
+  }
+  const S2 = 1.4142;
+  for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
+    const k = j * G + i;
+    let v = D[k], h = Hh[k];
+    if (i > 0 && D[k - 1] + 1 < v) { v = D[k - 1] + 1; h = Hh[k - 1]; }
+    if (j > 0) {
+      if (D[k - G] + 1 < v) { v = D[k - G] + 1; h = Hh[k - G]; }
+      if (i > 0 && D[k - G - 1] + S2 < v) { v = D[k - G - 1] + S2; h = Hh[k - G - 1]; }
+      if (i < G - 1 && D[k - G + 1] + S2 < v) { v = D[k - G + 1] + S2; h = Hh[k - G + 1]; }
+    }
+    D[k] = v; Hh[k] = h;
+  }
+  for (let j = G - 1; j >= 0; j--) for (let i = G - 1; i >= 0; i--) {
+    const k = j * G + i;
+    let v = D[k], h = Hh[k];
+    if (i < G - 1 && D[k + 1] + 1 < v) { v = D[k + 1] + 1; h = Hh[k + 1]; }
+    if (j < G - 1) {
+      if (D[k + G] + 1 < v) { v = D[k + G] + 1; h = Hh[k + G]; }
+      if (i < G - 1 && D[k + G + 1] + S2 < v) { v = D[k + G + 1] + S2; h = Hh[k + G + 1]; }
+      if (i > 0 && D[k + G - 1] + S2 < v) { v = D[k + G - 1] + S2; h = Hh[k + G - 1]; }
+    }
+    D[k] = v; Hh[k] = h;
+  }
+  return G;
+}
+// the channels of m.waters with their bounding boxes and lengths along (tiles), kept per map
+const CH = new WeakMap();
+function channels(M) {
+  const W = M.waters;
+  if (!W || !Array.isArray(W.ch)) return null;
+  let c = CH.get(W);
+  if (c) return c;
+  c = W.ch.map((h) => {
+    const p = h.pts, s = new Float32Array(p.length), bb = [1e9, 1e9, -1e9, -1e9];
+    for (let j = 0; j < p.length; j++) { if (j) s[j] = s[j - 1] + Math.hypot(p[j][0] - p[j - 1][0], p[j][1] - p[j - 1][1]); bb[0] = Math.min(bb[0], p[j][0]); bb[1] = Math.min(bb[1], p[j][1]); bb[2] = Math.max(bb[2], p[j][0]); bb[3] = Math.max(bb[3], p[j][1]); }
+    const r = h.w / 2 + 4;
+    return { ...h, s, bb: [bb[0] - r, bb[1] - r, bb[2] + r, bb[3] + r], kind: h.k === 'creek' ? WK.CREEK : h.k === 'marsh' ? WK.MARSH : h.k === 'lake' ? WK.LAKE : WK.RIVER, sty: BY_T[h.t] ?? S.forest };
+  });
+  CH.set(W, c);
+  return c;
+}
+// mats: the bake's water materials { SEA, LAKE, POND, RIVER } (its material ids); b.tm, b.tw: each tile's material
+// and whether it is wet; TX0, TY0, TN: the window
+export function waterTiles(C, mats, TN) {
+  const { M, b, TX0, TY0 } = C, n = TN * TN;
+  ensure(n);
+  F.on = false;
+  if (!M || !M.tiles) return;
+  F.k.fill(0); F.dep.fill(0); F.fx.fill(0); F.fy.fill(0); F.fv.fill(0); F.ch.fill(-1); F.bs.fill(1e9); F.cst.fill(0);
+  const lk = M.waters && Array.isArray(M.waters.lk) ? M.waters.lk : [], flow = M.flow || null;
+  let any = false;
+  for (let k = 0; k < n && !any; k++) if (b.tw[k]) any = true;
+  if (!any) return;
+  any = false;
+  const G = landField(M, TX0, TY0, TN);
+  for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
+    const k = j * TN + i, m = b.tm[k];
+    if (!b.tw[k] || (m !== mats.SEA && m !== mats.LAKE && m !== mats.POND && m !== mats.RIVER)) { F.ld[k] = 0; continue; }
+    any = true;
+    const tx = TX0 + i, ty = TY0 + j, inside = M.inside(tx, ty), g = inside ? M.idx(tx, ty) : -1;
+    const q = (j + LAND_R) * G + i + LAND_R, near = { d: Math.min(LAND_R, Math.max(0.5, DT.d[q] - 0.5)), hit: DT.d[q] <= LAND_R + 0.5 ? DT.hit[q] : -1 };   // (land further off than LAND_R is not this water's coast: what the window round it happens to hold beyond)
+    F.ld[k] = near.d;
+    if (m === mats.SEA) {
+      F.k[k] = WK.SEA;
+      const h = near.hit, ht = h >= 0 ? M.tiles[h] : -1;
+      F.cst[k] = ht === T.SAND ? 1 : ht === T.SIDEWALK || ht === T.ROAD || ht === T.BUILDING || ht === T.LOT || ht === T.PLAZA ? 2 : 0;   // (a quay, a seawall: deep at once; rock - a cliff, the stacks - 0)
+      F.st[k] = seaStyle(h >= 0 ? M.dist[h] : 13, ty);
+    } else if (m === mats.LAKE || m === mats.POND) {
+      const pond = m === mats.POND || (g >= 0 && M.lake && M.lake[g] === 2);
+      F.k[k] = pond ? WK.POND : WK.LAKE;
+      let st = pond ? S.park : S.forest;
+      for (const L of lk) if (tx >= L.box[0] && ty >= L.box[1] && tx < L.box[2] && ty < L.box[3]) { st = BY_T[L.t] ?? st; break; }
+      F.st[k] = st;
+    } else {
+      F.k[k] = WK.RIVER; F.st[k] = S.valley;
+      const f = flow && g >= 0 ? flow.get(g) : undefined;
+      if (f !== undefined) { const a = f * Math.PI / 8; F.k[k] = WK.CREEK; F.st[k] = S.forest; F.fx[k] = Math.cos(a); F.fy[k] = Math.sin(a); F.fv[k] = 0.6; F.bs[k] = -1; }
+    }
+  }
+  if (!any) return;
+  F.on = true;
+  // the channels: each tile of their water takes the nearest centre line's - its kind, look, the way it runs, how far
+  // along it and across it (px) it is
+  const chs = channels(M);
+  if (chs) channelTiles(chs, TX0, TY0, TN);
+  for (let k = 0; k < n; k++) if (F.k[k]) F.dep[k] = depthOf(F.k[k], F.ld[k], F.cst[k], F.st[k]);
+  // (blurred twice over the water's tiles: where a shallow creek runs into a deep lake the bed falls away over a few
+  // tiles, not in the tiles' steps)
+  const T2 = F.tmp;
+  for (let pass = 0; pass < 2; pass++) {
+    for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
+      const k = j * TN + i;
+      if (!F.k[k]) { T2[k] = 0; continue; }
+      let s = 0, w = 0;
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        const ii = i + di, jj = j + dj;
+        if (ii < 0 || jj < 0 || ii >= TN || jj >= TN) continue;
+        const kk = jj * TN + ii;
+        if (F.k[kk]) { s += F.dep[kk]; w++; }
+      }
+      T2[k] = s / w;
+    }
+    for (let k = 0; k < n; k++) if (F.k[k]) F.dep[k] = Math.min(F.dep[k] * 1.6 + 0.3, T2[k]);   // (never deeper than its own nearly: the shallows by a bank stay shallow)
+  }
+}
+function channelTiles(chs, TX0, TY0, TN) {
+  const n = TN * TN;
+  const wx0 = TX0, wy0 = TY0, wx1 = TX0 + TN, wy1 = TY0 + TN;
+  chs.forEach((c, ci) => {
+    if (c.bb[2] < wx0 || c.bb[0] > wx1 || c.bb[3] < wy0 || c.bb[1] > wy1) return;
+    const p = c.pts, hw = c.w / 2, reach = hw + 3;
+    for (let q = 1; q < p.length; q++) {
+      const ax = p[q - 1][0], ay = p[q - 1][1], dx = p[q][0] - ax, dy = p[q][1] - ay, L2 = dx * dx + dy * dy, L = Math.sqrt(L2) || 1, ux = dx / L, uy = dy / L;
+      const i0 = Math.max(0, Math.floor(Math.min(ax, ax + dx) - reach) - wx0), i1 = Math.min(TN - 1, Math.ceil(Math.max(ax, ax + dx) + reach) - wx0);
+      const j0 = Math.max(0, Math.floor(Math.min(ay, ay + dy) - reach) - wy0), j1 = Math.min(TN - 1, Math.ceil(Math.max(ay, ay + dy) + reach) - wy0);
+      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+        const k = j * TN + i, kk = F.k[k];
+        if (kk !== WK.RIVER && kk !== WK.LAKE && kk !== WK.POND) continue;
+        if (F.bs[k] < 0) continue;   // (a nature site's creek: its own way)
+        const cx = wx0 + i + 0.5 - ax, cy = wy0 + j + 0.5 - ay;
+        let t = L2 ? (cx * dx + cy * dy) / L2 : 0;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const ex = cx - dx * t, ey = cy - dy * t, dist = Math.sqrt(ex * ex + ey * ey);
+        if (dist > reach) continue;
+        const score = dist / hw;
+        if (score >= F.bs[k]) continue;
+        F.bs[k] = score; F.ch[k] = ci;
+        F.sa[k] = (c.s[q - 1] + t * L) * TILE; F.su[k] = (ex * -uy + ey * ux) * TILE;
+        F.fx[k] = ux; F.fy[k] = uy;
+      }
+    }
+  });
+  for (let k = 0; k < n; k++) {
+    const ci = F.ch[k];
+    if (ci < 0 || F.bs[k] < 0) continue;
+    const c = chs[ci];
+    if (F.k[k] === WK.RIVER) { F.k[k] = c.kind; F.st[k] = c.sty; }
+    else if (c.kind === WK.LAKE) F.st[k] = c.sty;   // (a lake laid as a piece: its look)
+    if (F.k[k] === WK.LAKE || F.k[k] === WK.POND || F.k[k] === WK.MARSH) { F.fv[k] = 0; continue; }   // (the marsh lies still: its braids barely move)
+    F.fv[k] = c.v;
+  }
+}
+
+// ---- one pixel --------------------------------------------------------------------------------------------------
+export const WQ = { c: null, nx: 0, ny: 0, code: 255, inl: false, solid: false, z: 0 };
+// ---- boulders in the water ----------------------------------------------------------------------------------------
+// One in a 48 px cell now and then, by the water and how near the bank (a mountain creek is strewn with them; a
+// river has a few along its banks; a rocky sea coast its stacks of rock; a mountain lake's shore its granite): a dome
+// of rock lit by the light pass (its normal, its height), wet and dark at the waterline, moss on top in the woods; a
+// collar of foam round it - white on the side the current comes from, a broken wake behind.
+const BCELL = 64, BOULDER = [0, 0.1, 0.14, 0.06, 0.06, 0, 0], BOULDER_DT = [0, 5, 99, 3, 3, 0, 0];
+const MOSS_W = RB('#5e7a34', { dark: 0.55, shift: 0.3 }), BASALT_W = RB('#4e4c4a', { dark: 0.6, light: 0.45 });
+function boulder(X, Y, k, st, dt, cst, fx, fy, fv, seed) {
+  const pk = k === WK.SEA ? (cst === 0 ? 0.07 : 0) : k === WK.LAKE ? (st === S.alpine || st === S.forest ? BOULDER[k] : 0) : BOULDER[k];
+  if (!pk || dt > BOULDER_DT[k] + 1) return 0;
+  const cx = Math.floor(X / BCELL), cy = Math.floor(Y / BCELL), h = hh(cx, cy, seed + 301);
+  if (h >= pk * (dt < 2.5 ? 1.7 : 0.55)) return 0;   // (most by the banks)
+  const h2 = hh(cy, cx, seed + 303), r = 6 + 9 * h2, bx = (cx + 0.32 + 0.36 * hh(cx, cy, seed + 305)) * BCELL, by2 = (cy + 0.32 + 0.36 * hh(cy, cx, seed + 307)) * BCELL;
+  const dx = X - bx, dy = Y - by2, D = Math.sqrt(dx * dx + dy * dy) * (0.86 + 0.28 * vnc(X, Y, 7, seed + 317));   // (lumpy, not round)
+  if (D < r) {
+    const u = D / r, x = X | 0, y = Y | 0;
+    const R0 = k === WK.SEA ? BASALT_W : st === S.alpine ? BED.gran : BED.rock;
+    let t = 0.56 - (dx + dy) / r * 0.26 + (hh(x >> 1, y >> 1, seed + 309) - 0.5) * 0.12;
+    if (u > 0.82) t -= 0.3;
+    WQ.c = st === S.forest && dy < -r * 0.25 && dx < r * 0.3 && vnc(X, Y, 5, seed + 311) > 0.45 ? sd(MOSS_W, t + 0.05, x, y, 0.4) : sd(R0, t, x, y, 0.4);
+    WQ.nx = dx / r * 0.9; WQ.ny = dy / r * 0.9; WQ.z = Math.max(1, Math.round((1 - u * u) * r * 0.75));
+    WQ.solid = true;
+    return 1;
+  }
+  const run = fv > 0.08, ax = run ? -(dx * fx + dy * fy) / (D || 1) : 0;   // (ax > 0: on the upstream side)
+  if (run ? ax > -0.25 && D < r + 1.2 + (ax + 0.25) * 3.2 : D < r + 1.4 && vnc(X, Y, 5, seed + 319) > 0.4) { if (hh(X | 0, Y | 0, seed + 313) > 0.15) return 2; }
+  if (run) {   // the wake: broken foam trailing downstream
+    const along = (dx * fx + dy * fy), across = Math.abs(-dx * fy + dy * fx);
+    if (along > 0 && along < r * 3 && across < r * (0.8 - along / (r * 5)) && vnc(X * 0.7, Y * 0.7, 4, seed + 315) > 0.52 + along / (r * 8)) return 2;
+  }
+  return 0;
+}
+const MIX = [0, 0, 0], MIX2 = [0, 0, 0];
+const mixTo = (o, a, b, k) => { o[0] = a[0] + (b[0] - a[0]) * k; o[1] = a[1] + (b[1] - a[1]) * k; o[2] = a[2] + (b[2] - a[2]) * k; return o; };
+const WET = [200, 226, 220];
+// how clear each kind of water is, against its look's clarity (a big river carries silt; a creek runs clear)
+const CLAR_K = [1, 1, 1.15, 0.75, 1, 1, 1];
+// how much the bed's depth wanders (the sea's sandbanks and hollows; a pond's bowl is smooth)
+const DEPTH_N = [0.36, 0.36, 0.3, 0.3, 0.25, 0.1, 0.25];
+// metres of water at a pixel: kind, the tiles to the shore, the sea's coast (0 rock, 1 sand, 2 a quay), its look
+function depthOf(k, dt, cst, st) {
+  switch (k) {
+    case WK.SEA: { const s = cst === 1 ? (st === S.tropic ? 0.14 : 0.22) : cst === 2 ? 1.4 : 0.55, e = dt - 10; return s * dt + (e > 0 ? e * e * 0.08 : 0); }
+    case WK.LAKE: { const e = dt - 8; return Math.min(14, 0.32 * dt + (e > 0 ? e * e * 0.05 : 0)); }
+    case WK.POND: return Math.min(3.2, 0.55 * dt);
+    case WK.CREEK: return Math.min(2.4, 0.3 * dt);
+    case WK.MARSH: return Math.min(1.4, 0.16 * dt);
+    default: return Math.min(3.4, 0.21 * dt);
+  }
+}
+// C: the bake (its window: TX0, TY0, and seed); X, Y world px; d px to the shore (0..47); ti the pixel's tile in the
+// window, k00 the top-left of the 2 x 2 tiles round it (vx, vy: where between them); kind: the water its material is
+// (what it is when the window's facts are off: a swatch, a map without tiles)
+export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
+  const seed = C.seed | 0, x = X | 0, y = Y | 0;
+  let k = kind, st = kind === WK.SEA ? S.temperate : kind === WK.POND ? S.park : kind === WK.LAKE ? S.forest : S.valley, cst = 0, dt = d / TILE, dep = -1, fx = 0, fy = 0, fv = 0, sa = 0, su = 0, chan = false;
+  if (F.on) {
+    // which water and what look: one of the four tiles round the pixel, picked by their weights through a dither -
+    // where two waters meet (a river's mouth at the sea, a creek into a lake, one coast's sea and another's) the
+    // looks dither into each other over a tile, not the tiles' steps
+    const w00 = (1 - vx) * (1 - vy), w10 = vx * (1 - vy), w01 = (1 - vx) * vy, r = (by(x, y) + 0.5) * 0.55 + hh(x, y, seed + 209) * 0.45;
+    let kc = r < w00 ? k00 : r < w00 + w10 ? k00 + 1 : r < w00 + w10 + w01 ? k00 + TN : k00 + TN + 1;
+    if (!F.k[kc]) kc = ti;
+    if (F.k[kc]) { k = F.k[kc]; st = F.st[kc]; cst = F.cst[kc]; }
+    const ld = (F.ld[k00] * (1 - vx) + F.ld[k00 + 1] * vx) * (1 - vy) + (F.ld[k00 + TN] * (1 - vx) + F.ld[k00 + TN + 1] * vx) * vy;
+    const far = Math.max(46 / TILE, ld - 0.35), u = d < 36 ? 0 : (d - 36) / 10;
+    dt = d >= 46 ? far : d / TILE * (1 - u) + Math.max(d / TILE, far) * u;
+    dep = (F.dep[k00] * (1 - vx) + F.dep[k00 + 1] * vx) * (1 - vy) + (F.dep[k00 + TN] * (1 - vx) + F.dep[k00 + TN + 1] * vx) * vy;
+    fx = (F.fx[k00] * (1 - vx) + F.fx[k00 + 1] * vx) * (1 - vy) + (F.fx[k00 + TN] * (1 - vx) + F.fx[k00 + TN + 1] * vx) * vy;
+    fy = (F.fy[k00] * (1 - vx) + F.fy[k00 + 1] * vx) * (1 - vy) + (F.fy[k00 + TN] * (1 - vx) + F.fy[k00 + TN + 1] * vx) * vy;
+    fv = F.fv[ti];
+    const c0 = F.ch[k00];
+    chan = c0 >= 0 && F.bs[k00] >= 0 && F.ch[k00 + 1] === c0 && F.ch[k00 + TN] === c0 && F.ch[k00 + TN + 1] === c0 && k !== WK.LAKE && k !== WK.POND;
+    if (chan) {
+      sa = (F.sa[k00] * (1 - vx) + F.sa[k00 + 1] * vx) * (1 - vy) + (F.sa[k00 + TN] * (1 - vx) + F.sa[k00 + TN + 1] * vx) * vy;
+      su = (F.su[k00] * (1 - vx) + F.su[k00 + 1] * vx) * (1 - vy) + (F.su[k00 + TN] * (1 - vx) + F.su[k00 + TN + 1] * vx) * vy;
+    }
+  }
+  WQ.solid = false;
+  const rock = boulder(X, Y, k, st, dt, cst, fx, fy, fv, seed);
+  if (rock === 1) return WQ;
+  const S0 = STY[st], big = vnc(X, Y, 37, seed + 3), fine = vnc(X, Y, 7, seed + 5);
+  // metres of water: the tiles' depths blended (seamless across tiles and waters), shallower still by the shore
+  let depth = dep >= 0 ? dep : depthOf(k, dt, cst, st);
+  if (d < 46) depth = Math.min(depth, depthOf(k, dt, cst, st));
+  depth *= 1 + DEPTH_N[k] * (vnc(X, Y, 83, seed + 7) - 0.5);
+  // (far out at sea every coast's water is the same deep blue: its clarity eases to the open sea's)
+  const clar = k === WK.SEA && dt > 16 ? S0.clar + (STY[S.temperate].clar - S0.clar) * Math.min(1, (dt - 16) / 7) : S0.clar;
+  const q = depth / (clar * CLAR_K[k]), vis = Math.exp(-q);
+  // the water's own colour: four depths of it, ordered-dithered between
+  const qd = q + by(x, y) * 0.5, rr = S0.r[qd < 0.7 ? 0 : qd < 1.8 ? 1 : qd < 3.6 ? 2 : 3];
+  const still = k === WK.POND || k === WK.LAKE;
+  let t = 0.62 - Math.min(1, q / 5) * 0.2 + (big - 0.5) * 0.14 + (fine - 0.5) * 0.05;
+  // the ripples: Worley cells' edges - fish scales on the sea, a fine lattice on lakes, stretched along a river's
+  // current; brighter in the shallows, in drifting patches out on open water
+  let lat = false, lane = false;
+  if (k === WK.SEA) {
+    const w = worley(X * 0.8 + fine * 3, Y + big * 7, q < 1.2 ? 11 : 15, seed + 7, 0.85), edge = w.d2 - w.d1;
+    lat = edge < (q < 1.2 ? 1.05 : 0.75 * (0.4 + vnc(X, Y, 97, seed + 4)));
+  } else {
+    const w = chan ? worley(sa * 0.5 + fine * 2, su + big * 4, 12, seed + 9, 0.85) : worley(X * 0.9, Y + big * 5, 12, seed + 9, 0.85), edge = w.d2 - w.d1, patch = vnc(X, Y, 71, seed + 11);
+    lat = edge < (q < 0.6 ? 0.85 : patch > 0.55 ? 0.7 : 0.3) * S0.lat;
+    if (chan && fv > 0.08) {   // the current: long thin lines along the channel, broken, faster water more of them
+      const lp = (su + 2.6 * Math.sin(sa * 0.031 + seed)) / 4.2, ln = Math.floor(lp), lh = hh(ln, 7, seed), env = vnc(sa * 0.5 + lh * 400, ln * 13, 14, seed + 9);
+      lane = env > 0.78 - fv * 0.12 && lp - ln < 0.3 && Math.sin(sa / (44 + lh * 30) * 6.283 + lh * 40) > -0.1;
+    }
+  }
+  let c = sd(rr, t, x, y, 0.7);
+  // the bed through the water: tinted by it, fading as it deepens (in dithered steps)
+  if (vis > 0.04) {
+    const bed = bedPx(q > 1.2 && still ? S0.deepBed : k === WK.SEA ? (cst === 1 ? S0.bed : cst === 2 ? 0 : S0.bed === 7 || S0.bed === 6 ? 8 : S0.bed) : S0.bed, X, Y, dt, fine, seed);
+    // (seen through water: coloured by it - the reds go first - and dimmer the deeper it lies)
+    const mul = S0.mul, dim = 0.62 + 0.3 * vis;
+    MIX2[0] = bed[0] * mul[0] * dim; MIX2[1] = bed[1] * mul[1] * dim; MIX2[2] = bed[2] * mul[2] * dim;
+    const kd = Math.floor(clamp01(vis * 1.05 + by(x, y) * 0.22) * 4) / 4;
+    if (kd > 0) c = mixTo(MIX, c, MIX2, kd * 0.88);
+  }
+  if (lat && k === WK.SEA && d < 30 && cst !== 2) c = sd(FOAM, 0.28 + (d < 14 ? 0.15 : 0) + fine * 0.2, x, y, 0.4);   // (the crests break white near the shore)
+  else if (lat) c = mixTo(MIX, c, rr[Math.min(rr.length - 1, 5)], q < 0.6 ? 0.34 : 0.2);
+  if (lane) c = mixTo(MIX, c, rr[5], 0.22);
+  // the water's edge
+  if (k === WK.SEA) {
+    if (cst === 2) { if (d < 1.6) c = sd(FOAM, 0.45, x, y, 0.4); }
+    else if (d < 18) {                                  // the wash: foam at the waterline, a broken scalloped band beyond
+      const wash = 2.5 + 2 * Math.sin(X * 0.07 + Y * 0.05) + fine * 2.5;
+      if (d < wash) c = sd(FOAM, 0.85 - d / wash * 0.35, x, y, 0.4);
+      else if (Math.abs(d - (10 + 3.5 * Math.sin(X * 0.05 + Y * 0.031))) < 1.1 + fine * 1.4 && hh(x >> 1, y >> 1, seed) > 0.3) c = sd(FOAM, 0.62, x, y, 0.4);
+    }
+  } else if (d < 1.4) c = mixTo(MIX, c, WET, k === WK.CREEK ? 0.5 : 0.35);
+  else if (k === WK.MARSH && vnc(X, Y, 47, seed + 221) + (fine - 0.5) * 0.3 > 0.76 && hh(x >> 1, y >> 1, seed + 223) > 0.55) c = sd(DUCKWEED, 0.25 + fine * 0.4, x, y, 0.5);   // (duckweed floating in drifts)
+  else if (k === WK.CREEK && d < 3.2 && hh(x >> 1, y >> 1, seed + 211) > 0.55) c = mixTo(MIX, c, WET, 0.3);
+  if (rock === 2) c = sd(FOAM, 0.55 + fine * 0.35, x, y, 0.4);
+  WQ.c = c;
+  const calm = k === WK.POND ? 0.25 : k === WK.LAKE || k === WK.MARSH ? 0.6 : 1;
+  WQ.nx = (fine - 0.5) * 0.08 * calm; WQ.ny = (big - 0.5) * 0.1 * calm;
+  // what the light pass needs (the header)
+  const clear = vis > 0.3 ? 1 : 0;
+  if (k === WK.SEA) { WQ.inl = false; WQ.code = d < 46.5 ? 191 + Math.round(d) : vis > 0.02 ? 239 + Math.min(15, (vis * 18) | 0) : 255; }
+  else if (fv > 0.08 && (fx || fy)) {
+    WQ.inl = true;
+    const dir = Math.round(Math.atan2(fy, fx) / (Math.PI / 8)) & 15;
+    WQ.code = 128 + dir * 4 + (fv > 0.55 ? 2 : 0) + clear;
+  } else {
+    WQ.inl = true;
+    WQ.code = d < 23.5 ? 192 + Math.round(d) : (k === WK.POND ? 224 : 216) + Math.min(7, (vis * 9) | 0);
+  }
+  return WQ;
+}
+// the kind of water and how deep it is at a world point, from the last waterTiles (for the dressing: reeds stand in
+// the shallows, lilies float on still water): { k, depth } or null on land
+export const WAT = { k: 0, depth: 0, fv: 0, st: 0 };
+export function waterAt(C, X, Y, d, TN) {
+  if (!F.on) return null;
+  const tj = Math.floor(Y / TILE) - C.TY0, ti = Math.floor(X / TILE) - C.TX0;
+  if (tj < 0 || ti < 0 || tj >= TN || ti >= TN) return null;
+  const k = tj * TN + ti;
+  if (!F.k[k]) return null;
+  const dt = d < 46 ? d / TILE : Math.max(46 / TILE, F.ld[k] - 0.35);
+  WAT.k = F.k[k]; WAT.depth = depthOf(WAT.k, dt, F.cst[k], F.st[k]); WAT.fv = F.fv[k]; WAT.st = F.st[k];
+  return WAT;
+}
+export const STYLE_NAMES = STY.map((s) => s.name);
+// no window's facts (a swatch sheet): each water by its material alone
+export function waterOff() { F.on = false; }

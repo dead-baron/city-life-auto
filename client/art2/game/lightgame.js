@@ -295,42 +295,56 @@ float canopyVis(vec3 P){
   float d;
   return 1.0 - canopyCover(worg + P.xy + sunDir.xy * (up / sunDir.z), d) * 0.94;
 }
-// Water. Open water rolls with little waves along the wind (the normal tilts with them; the sun glints off the
-// crests in crisp pixels). Near a shore - code: the shore distance the ground bake keeps in the albedo's alpha
-// (groundbake surf: 191 + px out into the water, 191 - px up a beach) - a wave runs in every few seconds (each
-// stretch of shore in its own time), breaks into foam, and its swash runs up the sand and back, leaving it wet.
-// Anchored to the world (w: world px): nothing travels with the camera. alb is linear; returns the glint.
+// Water: the bake's word for each water pixel in the albedo's alpha (art2/water.js waterPx; F_NOCAST: inland).
+// Running (128 + way * 4 + fast * 2 + clear): ripples and foam flecks travelling downstream. Still inland (192 + px
+// from the shore, 216 + clear on a lake, 224 + clear on a pond: a mirror) and the sea (191 + px from the shore, 239 +
+// clear, 255 open): little waves along the wind, glints; a lake laps at its shore; on the sea's shores a wave runs in,
+// breaks and its swash runs up the sand. Over a clear bed the sun's caustics (the zero lines of warped sine waves)
+// shift on it. Anchored to the world (w: world px); alb is linear; returns the glint.
+float caustic(vec2 p, float t){
+  p *= 0.085;
+  vec2 q = p + vec2(sin(p.y * 1.7 + t * 0.9), sin(p.x * 1.5 - t * 0.8)) * 0.55;
+  return 1.0 - smoothstep(0.06, 0.32, abs(sin(q.x * 2.2 + t * 0.6) + sin(q.y * 2.0 - t * 0.5) + sin((q.x + q.y) * 1.6 + t * 0.7)));
+}
+vec3 caustics(vec2 w, float t, float k, ivec2 wq){
+  return caustic(w, t) * k > 0.38 + bayer4(wq) * 0.3 ? vec3(0.085, 0.105, 0.09) * (0.5 + k * 0.6) : vec3(0.0);
+}
 float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 wq){
   float glint = 0.0, t = time;
   int cf = int(code + 0.5);
-  if (cf >= 239 && cf <= 254 && (fl & ${F_WATER}) != 0) {
-    // a river or a creek running downstream (the ground bake's code: which way, sixteenths of a turn): ripples
-    // whose crests cross the current and travel with it, a fine chop, the light sliding over them, and flecks of
-    // foam riding the current
-    float fa = float(cf - 239) * 0.3927;
+  bool still = (fl & ${F_WATER}) != 0 && (fl & ${F_WET}) == 0, inl = still && (fl & ${F_NOCAST}) != 0;
+  vec3 H = normalize(sunDir + vec3(0.0, 0.5, 0.866));
+  if (inl && cf >= 128 && cf < 192) {
+    int c = cf - 128;
+    float fa = float(c >> 2) * 0.3927, sp = (c & 2) != 0 ? 1.35 : 0.8;
     vec2 fd = vec2(cos(fa), sin(fa)), fn = vec2(-fd.y, fd.x);
     float al = dot(w, fd), ac = dot(w, fn);
-    float p1 = al * 0.15 - t * 3.6 + sin(ac * 0.06) * 1.6, p2 = al * 0.33 - t * 5.4 + ac * 0.09 + 1.3;
-    float hgt = sin(p1) * 0.65 + sin(p2) * 0.35;
-    alb *= 1.0 + hgt * 0.06;
-    vec3 nw = normalize(vec3(n.xy + fd * (cos(p1) * 0.22 + cos(p2) * 0.1), n.z)), H = normalize(sunDir + vec3(0.0, 0.5, 0.866));
-    n = nw;
-    glint = step(0.7 + bayer4(wq) * 0.25, pow(max(dot(nw, H), 0.0), 120.0)) * 0.5;
-    float fo = wnoise(vec2(al * 0.03 - t * 1.4, ac * 0.22)) * 0.7 + wnoise(vec2(al * 0.08 - t * 2.6, ac * 0.4 + 7.0)) * 0.3;
-    if (fo > 0.79 + bayer4(wq) * 0.08) alb = mix(alb, vec3(0.74, 0.84, 0.86), 0.28 + (fo - 0.79) * 1.6);
+    float p1 = al * 0.15 - t * 3.6 * sp + sin(ac * 0.06) * 1.6, p2 = al * 0.33 - t * 5.4 * sp + ac * 0.09 + 1.3;
+    alb *= 1.0 + (sin(p1) * 0.65 + sin(p2) * 0.35) * 0.06;
+    n = normalize(vec3(n.xy + fd * (cos(p1) * 0.22 + cos(p2) * 0.1), n.z));
+    glint = step(0.7 + bayer4(wq) * 0.25, pow(max(dot(n, H), 0.0), 120.0)) * 0.5;
+    float fo = wnoise(vec2(al * 0.09 - t * 2.4 * sp, ac * 0.18)) * 0.7 + wnoise(vec2(al * 0.16 - t * 3.8 * sp, ac * 0.3 + 7.0)) * 0.3;
+    float thr = (c & 2) != 0 ? 0.8 : 0.86;
+    if (fo > thr + bayer4(wq) * 0.08) alb = mix(alb, vec3(0.74, 0.84, 0.86), 0.2 + (fo - thr) * 1.4);
+    if ((c & 1) != 0) alb += caustics(w - fd * (t * 14.0 * sp), t, 0.8, wq);
     return glint;
   }
-  if ((fl & ${F_WATER}) != 0 && (fl & ${F_WET}) == 0) {
-    // two wave trains along the wind and a fine chop: the water brightens a little on the crests, and where a
-    // crest faces the sun just so, it glints (the baked ripples keep shading the surface)
-    vec2 d1 = normalize(wind4.zw + vec2(1e-3, 0.0)), d2 = normalize(vec2(-d1.y, d1.x) * 0.7 + d1);
-    float A = 0.16 + wind4.x * 0.5;
-    float p1 = dot(w, d1) * 0.13 - t * 1.7, p2 = dot(w, d2) * 0.21 - t * 2.3 + 1.7, p3 = dot(w, vec2(0.37, -0.29)) - t * 3.1;
-    float hgt = sin(p1) + sin(p2) * 0.6 + sin(p3) * 0.25;
-    alb *= 1.0 + hgt * (0.025 + wind4.x * 0.03);
-    vec2 g = d1 * cos(p1) + d2 * (cos(p2) * 0.6) + vec2(0.37, -0.29) * (cos(p3) * 0.25);
-    vec3 nw = normalize(vec3(n.xy + g * A, n.z)), H = normalize(sunDir + vec3(0.0, 0.5, 0.866));
-    glint = step(0.72 + bayer4(wq) * 0.25, pow(max(dot(nw, H), 0.0), 160.0)) * 0.5;
+  if (still) {
+    vec2 d1 = normalize(wind4.zw + vec2(1e-3, 0.0)), d2 = normalize(vec2(-d1.y, d1.x) * 0.7 + d1), d3 = vec2(d1.x * 0.77 + d1.y * 0.64, -d1.x * 0.64 + d1.y * 0.77);
+    bool pond = inl && cf >= 224 && cf < 232;
+    float f = inl ? 1.75 : 1.0, A = inl ? (pond ? 0.025 + wind4.x * 0.04 : 0.05 + wind4.x * 0.14) : 0.16 + wind4.x * 0.5;
+    float p1 = dot(w, d1) * 0.13 * f - t * 1.7, p2 = dot(w, d2) * 0.21 * f - t * 2.3 + 1.7, p3 = dot(w, d3) * 0.47 * f - t * 3.1;
+    alb *= 1.0 + (sin(p1) + sin(p2) * 0.6 + sin(p3) * 0.25) * (inl ? (0.012 + wind4.x * 0.02) * (pond ? 0.35 : 1.0) : 0.025 + wind4.x * 0.03);
+    vec3 nw = normalize(vec3(n.xy + (d1 * cos(p1) + d2 * (cos(p2) * 0.6) + d3 * (cos(p3) * 0.25)) * A, n.z));
+    glint = step(inl ? 0.8 + bayer4(wq) * 0.18 : 0.72 + bayer4(wq) * 0.25, pow(max(dot(nw, H), 0.0), inl ? 200.0 : 160.0)) * (pond ? 0.22 : inl ? 0.4 : 0.5);
+    float k = inl ? (cf >= 192 && cf < 216 ? 1.0 : cf >= 216 && cf < 232 ? float(cf - (pond ? 224 : 216)) / 7.0 : 0.0) : cf >= 239 && cf <= 254 ? float(cf - 239) / 15.0 : cf >= 191 && cf <= 238 ? 0.55 * (1.0 - float(cf - 191) / 47.0) : 0.0;
+    if (k > 0.2) alb += caustics(w + d1 * (t * 3.5), t * 0.75, k * (pond ? 0.6 : 0.9), wq);
+    if (inl) {
+      n = nw;
+      float sd = cf >= 192 && cf < 216 ? float(cf - 192) : 99.0, lap = 2.2 + sin(t * 1.3 + dot(w, vec2(0.05, 0.07))) * 1.1;
+      if (sd < lap) alb = mix(alb, vec3(0.8, 0.87, 0.87), sd < lap - 1.2 ? 0.42 : 0.22);
+      return glint;
+    }
   }
   int ci = int(code + 0.5);
   if (ci >= 143 && ci <= 238) {
