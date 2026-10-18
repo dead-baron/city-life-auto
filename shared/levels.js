@@ -8,7 +8,7 @@
 // barriers push back like walls, and z follows the ramp you're on. Everything is geometry, so
 // curved and diagonal decks have smooth barriers. Server and client run the same code.
 import { edgeZ } from './roadcore.js';
-import { BARRIER_BREAK_SPEED } from './rules.js';
+import { BARRIER_BREAK_SPEED } from './rules-base.js';
 
 export const GROUND_Z = 0.3;  // below this you're on the ground (tile collisions apply)
 export const DECK_LIFT = 88;  // screen px a thing on the deck is drawn above its ground position (render only): high enough

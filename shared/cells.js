@@ -13,7 +13,7 @@
 //     cells: [{ x0, x1, y0, y1 (px: where you can stand in it), door: { x, y, props: [solid prop refs] },
 //               bench: { x, y, a }, toilet: { x, y, a }, front: y (where you stand holding the bars), a (facing out) }] }
 import { TILE, T } from './constants.js';
-export { CELL_CAP } from './rules.js';   // people a cell takes
+export { CELL_CAP } from './rules-base.js';   // people a cell takes
 
 export const BAR_R = 4;          // a bar's solid radius (px)
 const BAR_STEP = 9;              // bar to bar: a person (radius 11) can't squeeze between

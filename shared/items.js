@@ -1,4 +1,4 @@
-import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SKATEBOARD_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules.js';
+import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SKATEBOARD_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 

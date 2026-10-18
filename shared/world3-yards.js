@@ -208,13 +208,13 @@ function salvage(K, m, ctx) {
   for (const ry of [Y0 + 40, Y0 + 52]) for (let rx = X0 + 20; rx < X1 - 6; rx += 4) if (lot(rx, ry) && lot(rx, ry + 3) && rnd(rx, ry, 41) < 0.75) m.parking.push({ x: (rx + 0.5) * TILE, y: (ry + 1.5) * TILE, a: Math.PI / 2 + (rnd(ry, rx, 42) < 0.5 ? 0 : Math.PI), model: pick(['sedan', 'compact', 'pickup', 'sedan', 'compact', 'van'], rnd(rx, ry, 43)), bare: true });
   // the heaps: scrap piled up in mounds - tyres, rubble, pipe, drums, rubbish - each a dozen pieces tumbled together
   const HEAPS = [[X0 + 26, Y0 + 6], [X0 + 42, Y0 + 7], [X0 + 58, Y0 + 6], [X0 + 30, Y0 + 26], [X0 + 50, Y0 + 27], [X0 + 30, Y0 + 66], [X0 + 48, Y0 + 68], [X0 + 62, Y0 + 70], [X0 + 6, Y0 + 30], [X0 + 6, Y0 + 50]];
-  for (const [hx, hy] of HEAPS) for (let k = 0; k < 14; k++) {
-    const a = rnd(hx, k, 44) * 6.283, r = Math.sqrt(rnd(k, hy, 45)) * 4.2, x = hx + Math.cos(a) * r * 1.3, y = hy + Math.sin(a) * r * 0.8;
+  for (const [hx, hy] of HEAPS) for (let k = 0; k < 30; k++) {
+    const a = rnd(hx, k, 44) * 6.283, r = Math.sqrt(rnd(k, hy, 45)) * 5, x = hx + Math.cos(a) * r * 1.3, y = hy + Math.sin(a) * r * 0.8;
     if (!lot(Math.floor(x), Math.floor(y))) continue;
     prop(pick(['tires', 'rubble', 'rubble', 'pipes', 'drum', 'trashpile', 'tires', 'rubble'], rnd(k, hx + hy, 46)), x, y, k % 3 ? 0 : 10);
   }
-  for (const [x, y] of [[X0 + 14, Y0 + 18], [X0 + 40, Y0 + 82]]) if (lot(Math.floor(x), Math.floor(y))) { prop('cstack', x, y, 0, { v: 5, tall: 240 }); for (const ox of [-1.2, 1.2]) K.m.addSolidProp((x + ox) * TILE, y * TILE, 40); }
-  for (let y = Y0 + 4; y < Y1 - 12; y += 6) if (lot(X1 - 3, y) && lot(X1 - 3, y + 4)) prop('container', X1 - 2.5, y + 2, 18, { c: 4, a: Math.PI / 2 });
+  for (const [x, y, n] of [[X0 + 10, Y0 + 14, 3], [X0 + 36, Y0 + 80, 4], [X0 + 56, Y0 + 44, 3]]) for (let j = 0; j < n; j++) if (lot(Math.floor(x + j * 4.4), Math.floor(y))) prop('container', x + j * 4.4, y + (j % 2) * 0.4, 18, { c: j % 2 ? 0 : 3, a: 0 });
+  for (let y = Y0 + 4; y < Y1 - 12; y += 6) if (lot(X1 - 3, y) && lot(X1 - 3, y + 4)) prop('container', X1 - 2.5, y + 2, 18, { c: (y >> 1) % 2 ? 0 : 3, a: Math.PI / 2 });
   for (const [x, y] of [[X0 + 6, Y1 - 12], [X0 + 12, Y0 + 8]]) if (lot(x, y)) prop('burnbarrel', x, y, 6);
   // the fence round it, the gate on Yards Avenue
   fence(K, X0, Y0, X0, Y1); fence(K, X1, Y0, X1, Y1, [[Y1 - 12, Y1 - 4]]); fence(K, X0, Y0, X1, Y0); fence(K, X0, Y1 + 0.6, X1, Y1 + 0.6, [[X0 + 1, X0 + 15]]);
@@ -415,7 +415,7 @@ function cement(K, m, ctx) {
   const X0 = 4026, X1 = 4097, Y0 = 1956, Y1 = 1997;
   const b = place({ x: X0 + 2, y: Y1 - 22, w: 30, h: 22, arch: 'factory', key: 'industrial', name: 'Gulf Cement Works', poi: { kind: 'delivery', label: 'Gulf Cement Works' }, whole: true, art: wh(X0, Y1, { brick: false, spec: { wallColor: '#b8b4a8', grime: 0.5 } }) });
   ground(K, X0, Y0, X1, Y1);
-  for (let k = 0; k < 5; k++) prop('silo', X0 + 38 + k * 6, Y0 + 9, 24, { h: 130 });
+  for (let k = 0; k < 12; k++) prop('silo', X0 + 40 + (k % 6) * 1.7, Y0 + 7 + Math.floor(k / 6) * 1.7, 22, { h: 130 });
   prop('pipes', X0 + 36, Y0 + 18, 0); prop('pipes', X0 + 50, Y0 + 20, 0);
   for (let k = 0; k < 3; k++) prop('gravel', X0 + 40 + k * 8, Y1 - 6, 14, { s: 2 });
   if (b) prop('textsign', X0 + 17, Y1 + 0.4, 0, { text: 'GULF CEMENT WORKS', bg: '#5a5e64', fg: [240, 236, 220], z: 32, sx: 1 });

@@ -39,7 +39,7 @@ export const CUSTODY_WAIT_BREAK_S = 20; // ...and the same once you've waited th
 export const CUSTODY_SKIP_S = 30;      // the ride getting no nearer this long: they get you to the station anyway (booked)
 export const JAIL_S = 60;              // in the cell this long...
 export const BAIL_PER_STAR = 100;      // ...or out now for this much a star (from the bank, then cash)
-export const CELL_CAP = 4;             // people a cell takes (a prisoner goes to the cell with the fewest in it - shared/cells.js)
+export { CELL_CAP } from './rules-base.js';             // people a cell takes (a prisoner goes to the cell with the fewest in it - shared/cells.js)
 export const CELL_WALK_S = 45;         // the walk from the police car to the cell: stuck longer than this, they're put in it
 export const INMATE_S = 240;           // an NPC crook the police arrest sits this long in the nearest station's cells
 export const CELL_SHARE = 0.6;         // booked into a cell block where someone's doing time (an NPC, a cell with room), you're put
@@ -123,7 +123,7 @@ export const REVIVE_LIMP_S = 10;              // ...limping and bleeding, healin
 export const REVIVE_LIMP_SPEED = 0.55;        // move speed while limping
 export const FINISH_S = 2;                    // hold interact over a downed player this long to finish them
 export const GIVE_AFTER_REVIVE_S = 15;        // after a revive you may hand them a bandage (to half) or med kit (full)
-export const REVIVE_KIT_PRICE = 50;           // hospitals and pharmacies; never used up, only works on someone else
+export { REVIVE_KIT_PRICE } from './rules-base.js';           // hospitals and pharmacies; never used up, only works on someone else
 export const AMBULANCE_FEE = 200;             // paid from the bank, and only if the paramedics actually revive you
 export const GHOST_SECONDS = 30;              // a disconnected player's body lingers this long
 export const PACK_LIFE_S = 600;               // the backpack (and the cash) you drop when you die stays this long
@@ -212,7 +212,7 @@ export const PICK_REACH = 40;           // stand this close to the trunk / the r
 // A spot gives a few, then it's bare until it grows back (by kind, seconds)
 export const FORAGE_REACH = 38;          // stand this close to it
 export const FORAGE_REGROW_S = { goldTrumpet: 420, bunCap: 420, shelfOyster: 360, redcap: 300, ghostglass: 1200, goldStar: 2400 };
-export const FORAGE_FENCE_GHOSTGLASS = 70;   // what the Back-Alley Exchange pays a cap (nobody else will touch them)
+export { FORAGE_FENCE_GHOSTGLASS } from './rules-base.js';   // what the Back-Alley Exchange pays a cap (nobody else will touch them)
 
 // Hunting (server/systems/hunting.js): field-dressing what you shot, cooking the meat over a campfire
 export const HUNT_REACH = 40;            // stand this close to the carcass / the fire
@@ -413,7 +413,7 @@ export const TAXI_PER_KM = 30;             // ...and runs this much a kilometre 
 export const TAXI_WAIT_S = 60;             // a taxi you hailed or called waits this long at the kerb for you
 export const TAXI_REFUSE_STARS = 2;        // no taxi stops for anyone this wanted
 export const HIGHWAY_SPEED = 560;          // traffic cruising speed up on the ring highway (px/s)
-export const BARRIER_BREAK_SPEED = 300;    // ram a highway barrier this fast (px/s, straight into it) and it gives way
+export { BARRIER_BREAK_SPEED } from './rules-base.js';    // ram a highway barrier this fast (px/s, straight into it) and it gives way
 export const BARRIER_REPAIR_S = 300;       // the road crew puts a smashed barrier back after this long (when nobody's looking)
 
 // Boats
@@ -431,9 +431,9 @@ export const ATM_DEPOSIT_PX = 48;          // walk up this close to an ATM with 
 // Skateboarding, part 1 (the owner, 2026-10-17; server/systems/skate.js; the board's physics: shared/physics.js BOARD):
 // the board's price at a skate shop, a sports shop or a surf shop; a bail - thrown off into a wall, a post or a car, or off
 // a fall - hurts this much at bailHit speed and up to the most at full speed, and you're down this long
-export const SKATEBOARD_PRICE = 85;
+export { SKATEBOARD_PRICE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
-export const FLASHLIGHT_PRICE = 35;        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
+export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
 
 // Lost pets
 export const PET_EVERY_S = 480;            // roughly how often a pet goes missing somewhere near a player (was 150: too often)
@@ -511,14 +511,14 @@ export const TOW_IDLE_S = 300;            // a car a player drove: only once lef
 export const TOW_FEE = 150;               // your own car towed back to your garage: from your bank
 
 // ---- Lights to carry (task #359: shared/lights.js, server/systems/lights.js) ----------------------------------------
-export const LIGHT_PRICES = { headlamp: 45, hardhat: 75, lantern: 55, heavyflash: 95, flare: 12, glowstick: 5, batteries: 8 };
+export { LIGHT_PRICES } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BATTERY_S = 1800;             // a set of batteries: half an hour switched on (a light lasts a little more or less by its kind)
 export const FLARE_S = 60;                 // a road flare burns about a minute
 export const GLOWSTICK_S = 240;            // a glow stick glows a few minutes
 export const GROUND_LIGHTS_MAX = 10;       // lights one player has set down at once (the oldest goes out)
 export const HARDHAT_GUARD = 0.4;          // a hard hat takes this share off the hurt of a falling tree or rock
 // ---- Felling trees (task #358: shared/felling.js, server/systems/felling.js) ----------------------------------------
-export const FELL_TOOL_PRICES = { hatchet: 40, axe: 120, fellaxe: 260, chainsaw: 650, sawfuel: 15 };
+export { FELL_TOOL_PRICES } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const CHAINSAW_FUEL_S = 240;        // a tank of fuel: four minutes of cutting (a can of fuel fills it again)
 export const TREE_REGROW_S = 1500;         // a felled tree grows back after about 25 minutes...
 export const TREE_REGROW_NEAR = 900;       // ...when no player is within this many px of it
@@ -542,8 +542,8 @@ export const BEAR_BITE = 18;               // its bite...
 export const BEAR_BITE_S = 1.3;            // ...this often while you stay
 export const MINE_REACH = 44;              // px: face a vein this close to work it
 export const VEIN_REGROW_S = 300;          // a worked-out vein grows back (somewhere near) after this long
-export const PICK_PRICES = { pickStone: 30, pickIron: 95, pickSteel: 280, pickDiamond: 1250 };
-export const ASSAY_PAYS = 1.3;             // the quarry's assay office pays this much over what a pawn shop does
+export { PICK_PRICES } from './rules-base.js';   // (the numbers: shared/rules-base.js)
+export { ASSAY_PAYS } from './rules-base.js';             // the quarry's assay office pays this much over what a pawn shop does
 
 // guarding (combat.js blocked): walk speed, front arc (rad); the plasma blade's deflection odds by angle (deflectChance);
 // fire arrows: extra damage, to a vehicle (burning for vehBurnS), a campfire within lightPx catches
@@ -665,16 +665,8 @@ export const COAST = {
 // while it's wet - ripe after its crop's days of wet growing. Dry wiltDays it wilts (water perks it up, but the prize is
 // lost); dry dieDays it dies. Picked ripe: the crop's yield (eat one for its heal; the grocery and the co-op buy them at
 // sell each); now and then (prize: the chance, rolled at planting) a prize one, worth prizeX times a plain one.
-export const GARDEN = { plots: 4, reach: 34, waterDays: 0.5, wiltDays: 0.35, dieDays: 1.5, prize: 0.1, prizeX: 6 };
-export const GARDEN_CROPS = {
-  tomato: { seeds: 10, days: 1.5, yield: 3, sell: 6, heal: 8 },
-  carrot: { seeds: 8, days: 1.2, yield: 4, sell: 4, heal: 6 },
-  lettuce: { seeds: 8, days: 1, yield: 2, sell: 7, heal: 7 },
-  pumpkin: { seeds: 16, days: 2.5, yield: 1, sell: 34, heal: 20 },
-  corn: { seeds: 9, days: 1.8, yield: 3, sell: 6, heal: 7 },   // (H78: the FA5 concept's other three)
-  strawberry: { seeds: 12, days: 1.4, yield: 5, sell: 4, heal: 5 },
-  sunflower: { seeds: 7, days: 2, yield: 2, sell: 12, heal: 3 },
-};
+export { GARDEN } from './rules-base.js';   // (the numbers: shared/rules-base.js)
+export { GARDEN_CROPS } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 // ---- farm work (H61) - server/systems/farming.js. The farms' fields in rows rowW px wide along their length, each
 // going round stubble -> ploughed -> sown -> growing (growDays in-game days) -> ripe -> harvested (stubble again).
 // Driving a tractor down a row does the job it needs - plough, sow or harvest - once cover of its length is done

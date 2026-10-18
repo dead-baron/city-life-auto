@@ -10775,3 +10775,14 @@ The owner: pulling the board out of the bag every time is a hassle. Now, with a 
 - Checked on a phone-sized page against a local server: the pill appears once the board is in the bag; a tap on a
   pavement gets on (the pill lit, CAR → OFF, ROLL → OLLIE); another tap gets off; on grass the server says it's too
   rough.
+
+## 2026-10-18 · Room in the art's bake workers: the numbers they need out of rules.js
+
+The art's bake bundle was at its 800 KB budget, with no room for new art: the El station's canopy, a stadium, scrap-car
+heaps. A quarter of what was in it was `shared/rules.js` (25 KB gzipped): the item list (`shared/items.js`), the
+barriers (`shared/levels.js`) and the cells (`shared/cells.js`) imported it for twelve numbers (some prices, the
+garden's crops, how hard you ram a barrier, how many people a cell takes).
+- Those twelve now live in **`shared/rules-base.js`**, and those three files import them from there.
+- `shared/rules.js` re-exports every one, so it's still the place to import game numbers from, and its notes stay.
+- **Bake workers: 800 → 776 KB. The city worker: 362 → 338 KB.** The page loads both files, so it's +1 file and
+  +0.7 KB (485 of 485, unchanged budget).
