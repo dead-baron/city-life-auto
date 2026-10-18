@@ -34,6 +34,7 @@ import * as FS from '../../shared/fish.js';
 import { ITEMS } from '../../shared/items.js';
 import { FISHING, DEEPSEA_PAY } from '../../shared/rules.js';
 import { store } from '../store.js';
+import * as law from './law.js';
 
 const { PH } = FS;
 const wet = (t) => t === T.WATER || t === T.DEEP;
@@ -294,6 +295,7 @@ function end(p, ped) {
   if (L && W.rod === undefined) ped.weapon = L.held && W[L.held] !== undefined ? L.held : 'fists';   // (a rod from the bag goes back in it)
   p.meDirty = true;
 }
+const KOI = new Set(['koi', 'goldenkoi']);
 // Landed: into the cooler, the log, the records board; the charter's count; the catch card on your screen
 function land(world, p, ped, f, lb, hab) {
   const prof = p.profile, v = FS.fishValue(f, lb);
@@ -308,6 +310,12 @@ function land(world, p, ped, f, lb, hab) {
   if (p.conn) p.conn.sendJSON({ t: 'fish', f: f.i, lb, v, nw: first ? 1 : 0, pb: best && !first ? 1 : 0, wr: world1 ? 1 : 0, n: kinds, of: FS.FISH.length, w: FS.WATER_NAME[hab.water] });
   world.notify(p, `${f.name}, ${lb} lb${first ? ' - new to your log!' : best ? ' - your best yet!' : ''} Into the cooler (${creelOf(prof).length}/${FISHING.creel}).`, 'good');
   if (f.rare === 5) world.broadcast({ e: 'toast', text: `${p.name || 'Someone'} has landed ${f.name} - ${lb} lb!`, tone: 'good' });
+  // a koi out of a park's pond (Midtown's Commons Pond, Greenfield Pond, the Stadium Ponds): the ponds are for looking at -
+  // anyone who sees you take one calls it in (law.js koiTheft, goldenKoi)
+  if (hab.spot === 'lily' && KOI.has(f.id)) {
+    law.crime(world, ped, f.id === 'goldenkoi' ? 'goldenKoi' : 'koiTheft', null, ped.x, ped.y);
+    world.notify(p, f.id === 'goldenkoi' ? 'That was the park\'s own Golden Koi. Better hope nobody saw that.' : 'That\'s one of the park\'s koi - the pond\'s for looking at. Hope nobody saw.', 'warn');
+  }
   if ((hab.water === 'offshore' || hab.water === 'deep') && p.job && p.job.type === 'deepsea') {
     p.job.got++;
     if (p.job.got >= p.job.need) { prof.bank += p.job.pay || DEEPSEA_PAY; prof.samaritan += 2; world.notify(p, `Charter complete! +$${p.job.pay || DEEPSEA_PAY} to your bank. Sell the catch at the charter desk or the fish market.`, 'good'); p.job = null; }

@@ -11111,3 +11111,15 @@ sections (`client/devcats.js`; the commands are in `server/devplay.js`, handed o
   - A lake's shore counted as a pond, because the lake was measured too close in. It's now measured out to 12 tiles.
   - Big Muddy takes a creek under a bridge too.
 - **Tests:** `test/devplay.test.js` runs every new button's command on the test map.
+
+## 2026-10-18 · Poaching the park's koi is a crime
+
+The owner: "if you get caught catching a koi from the midtown commons pond it is a crime? That would be kind of
+funny." Landing a koi out of a park's lily pond (Midtown's Commons Pond, Greenfield Pond, the Stadium Ponds, any park
+pond) now commits a crime where you stand (`server/systems/fishing.js` land, `server/systems/law.js` CRIMES):
+- **A koi:** "Stealing a koi from the park pond", a minor crime (6 heat), and only if someone sees it (the usual
+  witness check, at a slightly shorter sight range). You're told: "the pond's for looking at. Hope nobody saw."
+- **The Golden Koi:** "Stealing the park's Golden Koi", a bigger crime (15 heat).
+- Any other fish out of the same pond (a bluegill, a carp) is fine, and so is a koi out of a lake or a river.
+- **Tests:** `test/fishing.test.js` catches a bluegill and then a koi at a park's lily pond. Only the koi raises the
+  criminal record.

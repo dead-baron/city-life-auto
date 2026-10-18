@@ -3,7 +3,7 @@
 // page's prediction of it (client/fishing.js), the cooler, the log, the records board and the fish market.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, teleport, calmWater } from './helpers.js';
+import { makeWorld, joinPlayer, teleport, calmWater, playLine } from './helpers.js';
 import { T, TILE } from '../shared/constants.js';
 import { IN } from '../shared/input.js';
 import * as FS from '../shared/fish.js';
@@ -319,5 +319,22 @@ test('a deep-sea charter: offshore fish from a boat count; a legendary is news f
   assert.ok(heard.some((e) => e.e === 'toast' && /Blue Thunder/.test(e.text)), 'everyone hears about it');
   p.ped.vehId = 0; p.ped.seat = -1; boat.seats[0] = 0;
   W.remove(boat);
+  players.leave(W, p);
+});
+
+test('a koi out of a park\'s pond is a crime (the owner: "if you get caught catching a koi from the midtown commons pond it is a crime"); other fish there aren\'t', () => {
+  const b = fishing.bankNear(W, W.map.w * TILE / 2, W.map.h * TILE / 2, 700, (h) => h && h.spot === 'lily', null);
+  assert.ok(b, 'a park pond on the test map (Greenfield Park\'s)');
+  const { p, prof } = joinPlayer(W);
+  prof.weapons.rod = 0;
+  teleport(W, p.ped, b.x, b.y); p.ped.a = b.a;
+  const catchOne = (f) => { p.devFish = { next: f, easy: true, now: true }; fishing.begin(W, p, fishing.spotFor(W, p.ped)); return playLine(W, p, { hold: 4 }); };
+  const exp0 = prof.criminalExp || 0;
+  assert.equal(catchOne('bluegill').F.out, 1);
+  assert.equal(prof.criminalExp || 0, exp0, 'a bluegill from the park pond: fine');
+  const L = catchOne('koi');
+  assert.equal(L.F.out, 1);
+  assert.equal(L.hab.spot, 'lily');
+  assert.ok((prof.criminalExp || 0) > exp0, 'a koi from the park pond: a crime');
   players.leave(W, p);
 });

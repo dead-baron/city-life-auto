@@ -40,6 +40,10 @@ export const CRIMES = {
   ram:         { heat: 8,  label: 'Reckless ramming', sev: 0.7, minor: true },
   possession:  { heat: 20, label: 'Contraband possession', sev: 1 },
   poaching:    { heat: 30, label: 'Poaching protected sea life', felony: true, sev: 1 },
+  // the park's koi (the owner, 2026-10-18: "if you get caught catching a koi from the midtown commons pond it is a crime?
+  // That would be kind of funny"): a koi landed from a park's pond - fishing.js land
+  koiTheft:    { heat: 6,  label: 'Stealing a koi from the park pond', sev: 0.6, sight: 0.8, minor: true },
+  goldenKoi:   { heat: 15, label: 'Stealing the park\'s Golden Koi', sev: 0.9 },
   robbery:     { heat: ROB_CALLED_HEAT, label: 'Armed robbery', felony: true, sev: 1.5 },   // (1 star; it grows from there: robbery.js)
   trainRobbery: { heat: 50, label: 'Train robbery', felony: true, sev: 1.5 },
   escape:      { heat: 25, label: 'Escaping custody', felony: true, sev: 1 },
