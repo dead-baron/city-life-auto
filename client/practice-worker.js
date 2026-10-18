@@ -1,12 +1,27 @@
 // Offline practice: runs the full authoritative city simulation inside a Web Worker on the
 // player's own device. Nothing is saved and nothing touches the online account.
+//
+// The city it runs is today's world - shared/map.js generateCity(seed) with no options, the city as it was before
+// World v3 - not the live World v3 (2026-10-18). The simulation needs the whole world in memory, and World v3's whole
+// world is more than a phone can hold or build: server/world3.js builds it in about 47 s here and peaks at 1.6 GB, the
+// World running on it 1.35 GB, where today's city takes about 5 s and 0.3 GB. (The page itself never holds World v3
+// whole either: only the window round the player, downloaded from the game server - client/worldgen.js - which practice,
+// offline, hasn't got.)
+// The page plays the city this worker built: a copy of it goes to the page first ({ city }: client/main.js
+// WorkerSocket, practiceWorld), before the welcome, so the page doesn't build it a second time, nor take the online
+// city it may have - World v3's window, which is another world with the same seed.
 import { World } from '../server/world.js';
 import { createSession } from '../server/session.js';
-import { generateCity } from '../shared/map.js';
+import { generateCity, cityData } from '../shared/map.js';
 import { TICK_MS } from '../shared/constants.js';
 
 const SEED = 1337;
-const world = new World(generateCity(SEED), { dev: true, npcBudget: 400 });
+const t0 = performance.now();
+const map = generateCity(SEED);
+// (copied now, as generated: the World changes the map once it runs - smashed props, open gates - as the server's cut
+// is taken before it runs, server/worldcdn.js. The copy is about 37 MB, made in a fraction of a second)
+postMessage({ city: cityData(map), ms: Math.round(performance.now() - t0) });
+const world = new World(map, { dev: true, npcBudget: 400 });
 
 const conn = {
   open: true,

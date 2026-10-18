@@ -112,13 +112,18 @@ def main():
         ctx.add_init_script("try { localStorage.setItem('cla.tutorial', '99'); const s = JSON.parse(localStorage.getItem('cla.settings') || '{}'); s.gfxPreset = %s; s.gfxOpts = null; s.autoFullscreen = false; localStorage.setItem('cla.settings', JSON.stringify(s)); } catch (e) {}" % json.dumps(a.preset))
         pg = ctx.new_page()
         pg.on('pageerror', lambda e: errors.append('pageerror: ' + str(e) + ' ' + (getattr(e, 'stack', '') or '')[:600]))
-        pg.on('console', lambda m: (errors if m.type == 'error' else logs).append(f'console.{m.type}: {m.text}') if m.type in ('error', 'warning', 'log', 'info') else None)
+        # (offline practice: the page's tries at its online server - the static server here, no game server - fail, as they
+        # should: not counted as errors)
+        offline = lambda m: a.server == 'practice' and m.type == 'error' and m.text.startswith('WebSocket connection to ')
+        pg.on('console', lambda m: (logs if m.type != 'error' or offline(m) else errors).append(f'console.{m.type}: {m.text}') if m.type in ('error', 'warning', 'log', 'info') else None)
         say('open', url, f'{W}x{H}')
         pg.goto(url)
         t0 = time.time()
         try:
             if a.server == 'practice':
-                pg.wait_for_selector('#practice', timeout=a.timeout * 1000)
+                # (the button is in index.html before the game's script has run: a click before main.js gave it its
+                # handler did nothing, and the run sat on the title - window.CLA is set at the end of main.js)
+                pg.wait_for_function('window.CLA', timeout=a.timeout * 1000)
                 pg.click('#practice')
             else:
                 pg.wait_for_function('!document.getElementById("play").disabled', timeout=a.timeout * 1000)

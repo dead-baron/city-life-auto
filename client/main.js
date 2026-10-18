@@ -142,6 +142,7 @@ class WorkerSocket {
     this.w = new Worker(new URL('./practice-worker.js', import.meta.url), { type: 'module' });
     this.w.onmessage = (e) => {
       if (e.data === '{"t":"ready"}') { this.readyState = 1; this.onopen && this.onopen(); return; }
+      if (e.data && e.data.city) { this.city = e.data.city; this.cityMs = e.data.ms; return; }   // (the city it built, before the welcome: practiceWorld)
       this.onmessage && this.onmessage({ data: e.data });
     };
     this.w.onerror = (e) => { console.error('practice worker error', e.message || e); $('t-status').textContent = 'Offline practice failed to start: ' + (e.message || 'unknown error'); };
@@ -153,6 +154,12 @@ class WorkerSocket {
 function startPractice() {
   S.practice = true;
   if (S.ws) { const old = S.ws; S.ws = null; try { old.close(); } catch { /* closing */ } }
+  // The online city goes: practice plays its worker's city and never goes back online (a reload does). boot.js's city
+  // worker stops - it would go on downloading World v3's window, or building today's city alongside the practice
+  // worker's build (on a phone, twice the time and the memory) - and what it got isn't taken (holdForCity, cityIn).
+  const job = window.CLA_WORLD;
+  if (job) { job.taken = true; job.map = null; try { job.worker.terminate(); } catch { /* gone */ } }
+  clearInterval(S.winTimer);
   S.welcomed = false;
   $('t-status').textContent = 'Starting offline practice city on this device...';
   const ws = new WorkerSocket();
@@ -251,8 +258,9 @@ function onText(m) {
   switch (m.t) {
     case 'welcome':
       loadMark('welcome');
-      if (worldChanged(m)) break;   // (the server runs another world than the one this page asked its city worker for)
-      if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
+      if (m.practice) practiceWorld(m);   // (offline practice: its worker's city - never the server's world, so not worldChanged's)
+      else if (worldChanged(m)) break;   // (the server runs another world than the one this page asked its city worker for)
+      else if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
       try { localStorage.setItem('cla.seed', String(m.seed >>> 0)); } catch { /* storage blocked */ }
       S.welcomed = true; S.pid = m.pid; S.dev = !!m.dev;
       S.day = Number(m.day) || 0; S.snapLoop = undefined;   // (the day: the server's count of the loop's turns; onBinary counts on)
@@ -969,7 +977,7 @@ function holdForCity(m) {
   if (!job.waiting) {
     job.waiting = true;
     job.promise.then((data) => { job.map = cityFromData(data); }, (e) => { console.warn('[city] the worker could not build it - building it here', e); job.failed = true; })
-      .then(() => { if (job.failed && m.world === 'v3') $('t-status').textContent = 'The World v3 city could not be downloaded from the game server - reload to try again.'; else releaseHeld(); });   // (the server runs World v3's city: never built here - the page would build today's)
+      .then(() => { if (S.practice) return; if (job.failed && m.world === 'v3') $('t-status').textContent = 'The World v3 city could not be downloaded from the game server - reload to try again.'; else releaseHeld(); });   // (the server runs World v3's city: never built here - the page would build today's)
   }
   return true;
 }
@@ -992,6 +1000,19 @@ function worldChanged(m) {
   if (want === asked) return false;
   location.reload();
   return true;
+}
+// Offline practice's city (client/practice-worker.js): today's world, built by the practice worker and handed over with
+// its first message (WorkerSocket). The page plays that one unless it has that very city already (today's, from the
+// server or this browser: the same signature) - never World v3's window round the player, which has the same seed but
+// is another world. Its welcome isn't the server's, so worldChanged doesn't hear of it: until 2026-10-18 it did, noted
+// 'today', and loaded the page again - practice never got into the city once World v3 was live.
+function practiceWorld(m) {
+  const data = S.ws && S.ws.city;
+  if (!data) return;   // (taken: a welcome again)
+  S.ws.city = null;
+  if (S.map && !S.win && S.map.seed === (m.seed >>> 0) && mapSignature(S.map) === m.sig) return;
+  S.win = null;   // (the window isn't moved in practice: startPractice stopped the city worker)
+  setupWorld(m.seed, false, cityFromData(data));
 }
 // the city from the worker is in, for this seed
 function cityIn(seed) { const job = window.CLA_WORLD; return !!(job && job.map && job.seed === (seed >>> 0)); }
@@ -1028,10 +1049,11 @@ function releaseHeld() {
 }
 function forgetCity() { import('./worldcache.js').then((c) => c.dropWorld()).catch(() => {}); }
 
-function setupWorld(seed, here = false) {
+function setupWorld(seed, here = false, given = null) {
   let t = performance.now();
   const job = window.CLA_WORLD;
-  if (!here && job && job.map && job.seed === (seed >>> 0)) {
+  if (given) { S.map = given; S.mapFrom = 'practice'; loadSpan('city', S.ws.cityMs || 0); }   // (offline practice's: practiceWorld)
+  else if (!here && job && job.map && job.seed === (seed >>> 0)) {
     // built (or read back from this browser's copy) by client/worldgen.js while the page loaded
     S.map = job.map; job.map = null; job.taken = true; S.mapFrom = job.from;
     if ((S.mapFrom === 'cache' || S.mapFrom === 'served') && !job.win) { delete S.map._sig; mapSignature(S.map); }   // (its fingerprint worked out from what was read or downloaded: server/worldcdn.js)
@@ -1174,7 +1196,8 @@ async function startArt2(map) {
   let w = null;
   // (a city read back from this browser's copy is read by the bake workers themselves: no copy sent from here)
   const worldKey = S.mapFrom === 'cache' && window.CLA_WORLD ? window.CLA_WORLD.key : null;
-  try { w = await mod.World2.create({ S, map, canvas: worldCv, gfx, lowMem: LOW_MEM, api, onFail: art2Failed, worldKey, artKey: window.CLA_ART_KEY || null, artCdn: artCdnBase() }); } catch (e) { console.error('[art2]', e); w = null; }
+  // (offline practice: no chunks kept or read back - its city is today's world, CLA_ART_KEY the online world's art: World v3's)
+  try { w = await mod.World2.create({ S, map, canvas: worldCv, gfx, lowMem: LOW_MEM, api, onFail: art2Failed, worldKey, artKey: (!S.practice && window.CLA_ART_KEY) || null, artCdn: artCdnBase() }); } catch (e) { console.error('[art2]', e); w = null; }
   if (token !== S.art2Token || S.map !== map) { if (w) w.dispose(); return; }
   if (!w) { art2Failed(mod.World2.lastWhy || 'WebGL2 is not available'); return; }
   S.art2 = w; S.art2At = performance.now();
