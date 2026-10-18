@@ -10583,3 +10583,25 @@ nothing, on every device. The server was fine. The import is renamed `SKATE`.
   parses it and the whole graph is linked. The test checks that each static import's file exists and exports the names
   imported from it, without running anything. It runs in a child node with `--experimental-vm-modules`, and takes
   about a second. No other test loads the page's own script, which is how this got through.
+
+## 2026-10-18 · Midtown refined from the owner's new Midtown concepts (WC425-WC432)
+
+The owner's answers to the Midtown prompts show the re-plan as planned, so this pass dresses what's built to match them
+(`shared/world3-midtown.js`). Everything here is placement and dressing, so the art code didn't grow.
+- **Midtown Boulevard's median** (WC425, WC431, WC432): a lush planted strip. It has shrubs and flower beds every two
+  tiles, a plane tree every twelve, and lamps between them.
+- **St. Brendan's** (WC425): grey stone under a slate roof instead of red tile.
+- **MediMart Pharmacy**: the white cross on green beside its sign, the owner's pharmacy and clinic sign.
+- **The Wedge** (WC431's flatiron): cream render, a red awning and sign, cafe tables under umbrellas on the boulevard's
+  pavement.
+- **The Commons** (WC428):
+  - The white bandstand now stands in the middle of the Great Lawn on a round paved floor, ringed with flower beds. The
+    festoon lights are strung to it from the pavilion's path, and there are more picnic blankets.
+  - The duck pond gets a rocky edge, plus reeds and cattails in its western shallows.
+  - Union Square's market has six striped stalls along its north edge and two by the fountain.
+- **Madison Court** (WC426): the three blocks are three different colours (cream render, red brick, pale blue render),
+  three storeys with dentil cornices and balconies. Their front gardens have lamps either side of each door, low
+  hedges along the paths, and beds under the windows. The pay car park on Harbor Avenue gets its attendant's booth by
+  the barrier.
+- Still to do once the art bundle has room: the station's full-length glass canopy and glass stair towers at both ends
+  (WC432), which are new art.

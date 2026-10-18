@@ -496,13 +496,15 @@ function build(m, api, K) {
     const cp = 10;   // (the corner plaza at Linden Walk's foot: its statue fountain, the walk widened to meet the Commons' gate)
     cornerPlaza(K, LW0 - cp, alleyB2 + 2, cp + (LW1 - LW0), b2y1 - alleyB2 - 1, out);
     mainRow(x0, LW0 - cp, alleyB2 + 2, b2y1, [{ kind: 'raw', w: 30, lot: deptStore(), depth: 13 }, { kind: 'shop', w: 10, name: 'MediMart Pharmacy', store: 'mart', poi: { kind: 'pharmacy', label: 'MediMart Pharmacy' }, sign: ['#2f6a4e', [240, 232, 200]], awning: ['#2f6a4e', '#f0ece4'], floors: 3 }]);
+    // (the pharmacy's sign, WC425: the white cross on green beside its name - client/art2/buildings.js medSign)
+    for (const b of K.m.buildings) if (b && b.hand && b.name === 'MediMart Pharmacy' && b.art && b.art.spec) b.art.spec.cross = { x: 8, v: 62, s: 20, k: 'clinic' };
     // (The Palace, the old picture house on the boulevard: its marquee, TONIGHT and the CINEMA blade - statics.js
     // 'theatre'; the neon over its doors; St. Brendan's on the Carroll Street corner, its spire over the row)
     const room = x1 - LW1;
     mainRow(LW1, x1, alleyB2 + 2, b2y1, [
       { kind: 'raw', w: 18, lot: { arch: 'theatre', key: 'theatre', name: 'The Palace', poi: { kind: 'delivery', label: 'The Palace' }, whole: true } },
       ...splitLots(room - 18 - 16, (k) => ({ kind: 'shop', ...pickShop(k ? 'shop' : 'cafe', 40 + k) })),
-      { kind: 'raw', w: 16, lot: { arch: 'church', key: 'church', name: "St. Brendan's", poi: false, whole: true } },
+      { kind: 'raw', w: 16, lot: { arch: 'church', key: 'church', name: "St. Brendan's", poi: false, whole: true, art: { spec: { wallColor: '#a6a298', roofColor: '#4a5058' } } } },   // (WC425: grey stone, slate)
     ]);
   }
   // --- Carroll Street to Main Avenue
@@ -850,10 +852,13 @@ function garageLot() {
 function carPark(K, x, y, w, h, out) {
   const { m, prop } = K;
   if (!K.allFree(x, y, w, h)) return;
+  // (WC426: the attendant's booth by the barrier, first - the kit's buildings want free ground)
+  K.building({ x: x + w - 8, y: y + h - 4, w: 3, h: 2, arch: 'hut', name: 'Parking Booth', poi: false, whole: true, art: { spec: { style: 'stucco', wallColor: '#e8e4da', height: 34, roof: 'flat' }, noShop: true } });
   K.fill(x, y, w, h, T.LOT); K.take(x, y, w, h);
   const rows = h >= 14 ? [y + 2, y + h - 6] : [y + 2];
   for (const ry of rows) for (let sx = x + 1; sx + 2 <= x + w - 1; sx += 3) {
     const back = ry === rows[0];
+    if (!back && rows.length > 1 && sx + 3 > x + w - 9) continue;   // (the booth's corner)
     m.stalls.push({ x: sx * TILE, y: ry * TILE, w: 3 * TILE, h: 4 * TILE });
     m.parking.push({ x: (sx + 1.5) * TILE, y: (ry + 2) * TILE, a: back ? -Math.PI / 2 : Math.PI / 2 });
   }
@@ -1090,7 +1095,9 @@ function unionSquare(K, x, y, w, h, out) {
   // the life of it: the food cart, the newsstand, a couple of market stalls along the north edge
   if (clearOf(K, x + 4, y + h - 3, 1)) prop('foodcart', x + 4, y + h - 3, 10);
   if (clearOf(K, x + w - 4, y + h - 3, 1)) prop('news_b', x + w - 4, y + h - 3, 0);
-  for (let k = 0; k < 3; k++) { const sx = x + 10 + k * 8; if (clearOf(K, sx, y + 2, 2)) prop('mstall', sx, y + 2, 0, { v: k }); }
+  // (WC428: the market's striped stalls along the square's north edge and down the walk by the fountain)
+  for (let k = 0; k < 6; k++) { const sx = x + 8 + k * 6; if (sx < x + w - 6 && clearOf(K, sx, y + 2, 2)) prop('mstall', sx, y + 2, 0, { v: k % 3 }); }
+  for (const [dx, dy] of [[-3, -6], [3, -6]]) if (clearOf(K, cx + dx, cy + dy, 1)) prop('mstall', cx + dx, cy + dy, 0, { v: 2 });
   // the chess tables under the plane trees on the square's west side (server/systems/activities.js 'chess': the old
   // men's games, a watcher behind the board)
   for (const [tx, ty] of [[x + 4, cy - 1], [x + 4, cy + 5]]) if (clearOf(K, tx, ty, 2)) { prop('cafetable', tx, ty, 0, { chess: 1, seat: 27 }); prop('chair', tx - 0.9, ty + 0.1, 0, { v: 2, a: 0 }); prop('chair', tx + 0.9, ty + 0.1, 0, { v: 2, a: 3.1416 }); }
@@ -1103,7 +1110,7 @@ function unionSquare(K, x, y, w, h, out) {
 // the boulevard, under the diagonal - built in steps along the diagonal, one look and one roof line (the plan's one
 // wedge per diagonal: every other building stays square to the grid)
 function wedge(K, out) {
-  const yS = MY.blvd - EXT.blvd - 1, f = { style: 'brick', brickTone: '#b07a52' };
+  const yS = MY.blvd - EXT.blvd - 1, f = { style: 'stucco', wallColor: '#e6dcc2' };   // (WC431: the flatiron's cream render)
   let made = 0, xe0 = null;
   for (let step = 0; step < 5; step++) {
     // each step a slice 5 tiles deep, the northern ones shorter: it ends where the diagonal's pavement begins
@@ -1117,8 +1124,9 @@ function wedge(K, out) {
     const first = step === 0;
     K.building({ x: xw, y: y0, w: xe - xw + 1, h: 5, arch: 'mixed', whole: true, name: first ? 'The Wedge' : null, back: !first, door: first ? undefined : null, poi: first ? { kind: 'coffee', label: 'Wedge Cafe' } : false,
       art: { spec: { floors: 4, ...f, parapet: 12, cornice: 'bracket', win: 'tall', roofMat: 'tar', lip: 10, rimW: 4, balconies: false, fireEscape: first ? [60, 50] : null, groundH: first ? undefined : 0 }, noShop: !first,
-        shop: first ? { kind: 'cafe', door: 'right', open: true, people: 3, awning: ['#2f6a4e', '#f0ece4'], sign: { text: 'WEDGE CAFE', bg: '#2f6a4e', fg: [240, 232, 200], lit: true } } : undefined,
+        shop: first ? { kind: 'cafe', door: 'right', open: true, people: 3, awning: ['#a8343a', '#f0ece4'], sign: { text: 'WEDGE CAFE', bg: '#7a1e2a', fg: [250, 232, 200], lit: true } } : undefined,
         kit: step === 2 ? [['tank', 80, 60], ['acs', 160, 60]] : [['acs', 60, 60], ['vent', 140, 70]] } });
+    if (first) for (let k = 0; k < 4; k++) { const tx = xw + 4 + k * 6; K.prop('cafetable', tx, yS + 2, 0); K.prop(k % 2 ? 'umbrella_r' : 'umbrella_y', tx, yS + 1.9, 0); }   // (its tables on the pavement)
     made++;
   }
   out.wedge = made;
@@ -1314,9 +1322,13 @@ function commons(K, x, y, w, h, out) {
   K.m.squares ||= []; K.m.squares.push({ x: Math.round(F[0]) - 6, y: F[1] - 5, w: 12, h: 10, name: 'Commons Fountain' });
   // --- the pavilion cafe on the lawn's north side, the bandstand on the lawn, festoon lights between them
   for (const dx of [-6, -3, 3, 6]) { prop('cafetable', lawn.cx + dx, y + 10.5, 0); prop(pick(['umbrella_g', 'umbrella_y'], rnd(dx, y, 900)), lawn.cx + dx, y + 10.4, 0); }
-  prop('gazebo', lawn.cx + 12, lawn.cy - 8, 30);
-  prop('festoon', lawn.cx + 2, lawn.cy - 12, 0, { tx: 9 * TILE, ty: 3 * TILE, h: 40 });
-  for (const [dx, dy, v] of [[-14, 2, 0], [-6, 8, 1], [4, 6, 2], [-10, -4, 1], [10, 9, 0]]) prop('blanket', lawn.cx + dx, lawn.cy + dy, 0, { v });
+  // (WC428: the white bandstand in the middle of the Great Lawn, on its round paved floor in a ring of flower beds, the
+  // festoon lights strung to it from the path by the pavilion)
+  for (let ty = lawn.cy - 4; ty <= lawn.cy + 4; ty++) for (let tx = lawn.cx - 4; tx <= lawn.cx + 4; tx++) if (((tx + 0.5 - lawn.cx) / 3.6) ** 2 + ((ty + 0.5 - lawn.cy) / 3) ** 2 <= 1) pave(tx, ty);
+  prop('gazebo', lawn.cx + 0.5, lawn.cy + 0.5, 30);
+  for (let k = 0; k < 10; k++) { const a = k * 0.6283 + 0.3; prop(k % 2 ? 'flowers_big' : 'flowers_a', lawn.cx + 0.5 + Math.cos(a) * 5.4, lawn.cy + 0.5 + Math.sin(a) * 4.4, 0); }
+  prop('festoon', lawn.cx + 0.5, lawn.cy - lawn.ry + 1, 0, { tx: 0, ty: Math.round((lawn.ry - 5) * TILE), h: 40 });
+  for (const [dx, dy, v] of [[-14, 2, 0], [-8, 9, 1], [8, 8, 2], [-12, -6, 1], [13, 4, 0], [11, -7, 2], [-2, 11, 0]]) prop('blanket', lawn.cx + dx, lawn.cy + dy, 0, { v });
   for (const [dx, dy] of [[-22, -6], [-23, 7], [20, 10]]) prop('picnic', lawn.cx + dx, lawn.cy + dy, 0);
   // --- the duck pond in the west: the water, its lilies, the ducks and a swan, benches looking on to it
   const P = { cx: 3021, cy: 1868, rx: 14, ry: 8 };
@@ -1329,6 +1341,13 @@ function commons(K, x, y, w, h, out) {
   for (const [dx, dy, a] of [[-2, 1, 0.6], [1, -1, 2.2], [3, 2, 4]]) prop('duck', P.cx + dx, P.cy + dy, 0, { a });
   prop('swan', P.cx - 8, P.cy + 1, 0, { a: 1.2 });
   for (const dx of [-9, -2, 6]) prop('bench_m', P.cx + dx, P.cy - P.ry - 4.6, 0);
+  // (WC428: the pond's rocky edge - stones round the shore, reeds and cattails in its western shallows)
+  for (let k = 0; k < 22; k++) {
+    const a = k * 0.2856, bx = P.cx + Math.cos(a) * (P.rx + 0.4), by = P.cy + Math.sin(a) * (P.ry + 0.5);
+    if (Math.abs(bx - (P.cx + 11.5)) < 2 || (Math.abs(bx - (P.cx - 4.5)) < 2.5 && by < P.cy)) continue;   // (not on the bridge or the jetty)
+    prop('boulder', bx, by, 8, { s: 22 + (k % 3) * 5 });
+  }
+  for (const [dx, dy] of [[-12.5, -2], [-13, 2], [-11, 4.5]]) prop('flowers_a', P.cx + dx, P.cy + dy, 0, { sp: pick(['cattails', 'reeds'], rnd(dx, dy, 905)), k: 1 });
   // the arched footbridge over the pond's east end (WC342), the deck under it; the little jetty on the north shore
   {
     const bx = P.cx + 11, by0 = P.cy - P.ry, by1 = P.cy + P.ry;
@@ -1427,8 +1446,10 @@ function madisonCourt(K, x, y, w, h, ctx) {
   prop('chainfence', x + 0.2, y + 0.3, 0, { tx: (w - 8) * TILE, ty: 0 }); prop('ygate', x + w - 4, y + 0.8, 0, { a: 0 });
   for (let k = 0; k < n; k++) {
     const bx = x + k * (bw + gap);
-    const L = walkup(bx, fy - 1, bw, { face: { style: 'stucco', wallColor: pick(['#d6d0c4', '#cfc6b4', '#d8d2c6'], rnd(bx, y, 950)) }, floors: 4, home: { price: 17500 }, garden: false });
-    Object.assign(L.art.spec, { win: 'triple', cornice: null, fireEscape: null, balconies: true, parapet: 8, grime: 0.06, roofMat: 'membrane' });
+    // (WC426: cream render, red brick, pale blue render, side by side; three storeys, flower boxes on the balconies)
+    const face = [{ style: 'stucco', wallColor: '#e6dcc4' }, { style: 'brick', brickTone: '#a85a42' }, { style: 'stucco', wallColor: '#b8c8d2' }][k];
+    const L = walkup(bx, fy - 1, bw, { face, floors: 3, home: { price: 17500 }, garden: false });
+    Object.assign(L.art.spec, { win: 'pair', cornice: 'dentil', fireEscape: null, balconies: true, parapet: 8, grime: 0.04, roofMat: 'membrane', kit: undefined });
     const b = K.building({ x: bx, y: y + back, w: bw, h: depth, ...L, name: `Madison Court ${'ABC'[k]}` });
     // the lawn in front: the path from its door to the pavement, a tree either side, a bench
     K.fill(bx, fy, bw, y + h - fy, T.GRASS);
@@ -1436,6 +1457,10 @@ function madisonCourt(K, x, y, w, h, ctx) {
     K.paint(dx - 1, fy, 3, y + h - fy, T.PLAZA);
     for (const tx of [bx + 3, bx + bw - 3]) prop('tree_a', tx + 0.5, fy + 5, 10, { sp: pick(['maple', 'streetPl', 'flowerTree'], rnd(tx, fy, 951)), k: 1.1 });
     prop('bench_m', dx + 4, fy + 2, 0); prop('lamp', dx - 2, y + h - 1.5, 0); prop('flowers_a', dx + 3, y + h - 2, 0);
+    // (WC426's front gardens: lamps either side of the door, a low hedge along each side of the path, beds under the windows)
+    for (const lx of [dx - 2, dx + 2]) prop('lamp', lx + 0.5, fy + 0.8, 0);
+    for (const sx of [-1, 1]) prop('hedgerun', dx + 0.5 + sx * 2, fy + 2, 0, { tx: 0, ty: Math.round((y + h - fy - 3) * TILE), h: 12 });
+    for (let tx = bx + 1.5; tx < bx + bw - 1; tx += 2.5) if (Math.abs(tx - dx) > 3) prop(pick(['flowers_a', 'flowers_big', 'shrub_a'], rnd(tx, fy, 952)), tx, fy + 1, 0);
     if (k < n - 1) {
       // the passage to the car park: paving, the bikes, the bins
       const px = bx + bw;
@@ -1568,16 +1593,17 @@ function streetDressing(K, out, poi0) {
       if (!nearCross(xx, y, true)) put('tree_a', xx + 0.5, y + 0.5, 10, { sp: 'street', k: 1.1, grate: true });
     }
   }
-  // the boulevard's median (the owner's WC325/330): a bed of flowers down it, a plane tree every few cars, the lamps
-  // between them - clear of the junctions (where it stops for the turns)
+  // the boulevard's median (the owner's WC325/330, and WC425/WC431/WC432 of 10-18: a lush planted strip): shrubs and
+  // flower beds every couple of tiles, a plane tree every twelve, the lamps between them - clear of the junctions
+  // (where it stops for the turns)
   let mk = 0;
-  for (let x = MX.westside + 12; x < MX.stadium - 10; x += 4) {
+  for (let x = MX.westside + 12; x < MX.stadium - 10; x += 2) {
     if (NS.some((q) => Math.abs(q.pts[0][0] - x) < q.ext + 5 && Math.max(q.pts[0][1], q.pts[1][1]) >= MY.blvd - 1 && Math.min(q.pts[0][1], q.pts[1][1]) <= MY.blvd + 1)) continue;
     if (Math.abs(x - 3480) < 16) continue;   // (the diagonal's crossing at Harborview Avenue)
-    const j = mk++ % 4;
+    const j = mk++ % 6;
     if (j === 0) prop('tree_a', x + 0.5, MY.blvd + 0.5, 10, { sp: 'streetPl', k: 1.15 });
-    else if (j === 2) prop('lamp', x + 0.5, MY.blvd + 0.5, 0);
-    else prop(pick(['flowers_big', 'flowers_a', 'flowers_big'], rnd(x, MY.blvd, 530)), x + 0.5, MY.blvd + 0.5, 0);
+    else if (j === 3) prop('lamp', x + 0.5, MY.blvd + 0.5, 0);
+    else prop(pick(['flowers_big', 'shrub_a', 'flowers_a', 'bush_c', 'flowers_big'], rnd(x, MY.blvd, 530)), x + 0.5, MY.blvd + 0.5 + (j % 2 ? -0.6 : 0.6), 0);
   }
   // the bus stops: the boulevard (both ways), Main Avenue at Holly Street (R1-I's, with its planted strip and fence)
   for (const [x, y] of [[3010, MY.blvd - EXT.blvd + 1], [3300, MY.blvd + EXT.blvd - 1], [3560, MY.blvd - EXT.blvd + 1], [MX.main + 6, MY.holly + 9]]) if (onWalk(x, y)) prop('busstop', x, y, 0);
