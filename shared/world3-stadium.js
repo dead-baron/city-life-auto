@@ -40,6 +40,7 @@ function streets() {
 
 export const STADIUM = {
   key: 'stadium', d: D, rect: [3680, 1440, 3940, 1900],
+  few: 25,   // (a district of big set pieces - the stadium, the mall, the lots, the ponds: about thirty buildings, not fifty - test/world3world.test.js)
   // (round the Westport Stadium park, the keep: the generator lays it out - its pitch, the Stadium Lido)
   rects: [[3680, 1440, 3940, 1750], [3800, 1750, 3940, 1900], [3680, 1860, 3800, 1900]],
   streets,

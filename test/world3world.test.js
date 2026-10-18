@@ -15,9 +15,11 @@ import { DISTRICTS } from '../shared/mapcore.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { ISLANDS3, MAINLAND3 } from '../shared/world3-layout.js';
 import { CITY3 } from '../shared/world3-city.js';
+import { HAND_PLANS } from '../shared/world3-hand.js';
 import { ARTERIALS, BIOMES, inPoly } from '../shared/world3-skeleton.js';
 import { prepare, sizes, placeOf } from '../tools/world3-build.mjs';
 
+const FEW = new Map(HAND_PLANS.filter((q) => q.few).map((q) => [q.d, q.few]));
 test('World v3: the whole world in one build - every city district on its island, the small islands, the land as planned, the mainland\'s ground', { timeout: 300000 }, () => {
   const prep = prepare();
   const m = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });
@@ -38,7 +40,7 @@ test('World v3: the whole world in one build - every city district on its island
     const r = per.get(c.d), D = DISTRICTS[c.d], open = D.style === 'park' || D.style === 'airport';
     // (a park's streets are the avenues round it - Greenfield Park, Downtown's circus: its four sides - none inside)
     assert.ok(r.land > 20000 && r.edges >= (open ? 4 : 10) && r.pois >= 1, `${D.name}: ${JSON.stringify(r)}`);
-    assert.ok(open || r.buildings >= 50, `${D.name}: ${r.buildings} buildings`);
+    assert.ok(open || r.buildings >= (FEW.get(c.d) ?? 50), `${D.name}: ${r.buildings} buildings`);   // (a plan of big set pieces says how few it has: shared/world3-hand.js)
   }
   // every island (ISLANDS3) land as traced (its outline sampled; the smallest rocks lose a little to the smoothing);
   // the islands a district is on have streets, buildings and places
