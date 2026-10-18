@@ -277,22 +277,21 @@ test('the page plays your line as the server does: the charge, the bite and the 
 });
 
 test('a deep-sea charter: offshore fish from a boat count; a legendary is news for everyone', () => {
-  const { p, prof } = joinPlayer(W);
+  const { p, prof, conn } = joinPlayer(W);
   prof.weapons.rod = 0; prof.inventory.gameRod = 1;
   const desk = W.map.pois.find((q) => q.kind === 'charter');
   teleport(W, p.ped, desk.x, desk.y);
   economy.handleMenu(W, p, desk.id, 'deepsea');
   assert.equal(p.job.type, 'deepsea');
-  // (somewhere out of the ferries' and the patrols' way)
-  const busy = [...W.entities.values()].filter((e) => e.def && e.def.kind === 'boat');
-  const off = W.map.offshore.find((q) => busy.every((b) => Math.hypot(b.x - q.x, b.y - q.y) > 2500)) || W.map.offshore[0];
+  const off = W.map.offshore[0];
   const boat = W.spawnVehicle('speedboat', off.x, off.y, 0, { npcOwned: false });
   teleport(W, p.ped, off.x, off.y); p.ped.vehId = boat.id; p.ped.seat = 0; boat.seats[0] = p.ped.id;
   const spot = fishing.spotFor(W, p.ped);
   assert.ok(spot && spot.boat === boat.id, 'over the side');
   const it = players.findInteraction(W, p);
   assert.ok(it && /over the side/.test(it.label), `the prompt: ${it && it.label}`);
-  const send = inputs(W, p);
+  // (the NPC boaters who cruise round anyone out on the water kept off it: one ramming this boat would pull the line in)
+  const send0 = inputs(W, p), send = (bits, n = 1) => { for (let i = 0; i < n; i++) { for (const e of [...W.entities.values()]) if (e !== boat && e.def && e.def.kind === 'boat' && !e.seats.some(Boolean)) W.remove(e); send0(bits); } };
   const rand = W.rand; W.rand = mulberry32(31337);
   for (let k = 0; k < 3 && p.job; k++) {
     fishing.begin(W, p, fishing.spotFor(W, p.ped));
@@ -304,7 +303,7 @@ test('a deep-sea charter: offshore fish from a boat count; a legendary is news f
     L.P.diff = 5; L.P.snap = false;   // (an easy one for the test)
     send(IN.ACTION);
     n = 0; while (p.ped.fishing && n++ < 3000) { const F = L.F, P = L.P; boat.vx = boat.vy = 0; send(FS.fishY(P, F.t) > F.barY + P.bar / 2 + F.barV * 0.25 ? IN.ACTION : 0); }
-    assert.equal(L.F.out, 1, `fish ${k + 1} landed (${L.fish}, ph ${L.F.ph}; told: ${p.toasts.map((q) => q.text).slice(-2).join(' / ')})`);
+    assert.equal(L.F.out, 1, `fish ${k + 1} landed (${L.fish}, ph ${L.F.ph}; told: ${JSON.stringify(conn.sent.filter((q) => q && q.t !== 'me').slice(-3)).slice(0, 300)}; in the boat: ${p.ped.vehId === boat.id}, its speed ${Math.round(Math.hypot(boat.vx, boat.vy))})`);
   }
   assert.equal(p.job, null, 'the charter done');
   assert.equal(prof.creel.length, 3);

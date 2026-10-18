@@ -79,8 +79,11 @@ export { store, players };
 // over. o.easy: the fish fights like a bluegill and the line holds. -> the line (its F.out: 1 landed).
 export function playLine(world, p, o = {}) {
   let seq = p.ack;
-  const send = (bits, n = 1) => { for (let i = 0; i < n; i++) { p.inputQ.push({ seq: ++seq, bits, mx: 0, my: 0, aim: p.ped.a }); world.step(); } };
   const L = p.ped.fishing;
+  // (fishing from a boat: the NPC boaters who cruise round anyone out on the water kept off it - one ramming the boat
+  // would pull the line in)
+  const calm = () => { if (L.boat) for (const e of [...world.entities.values()]) if (e.id !== L.boat && e.def && e.def.kind === 'boat' && !e.seats.some(Boolean)) world.remove(e); };
+  const send = (bits, n = 1) => { for (let i = 0; i < n; i++) { calm(); p.inputQ.push({ seq: ++seq, bits, mx: 0, my: 0, aim: p.ped.a }); world.step(); } };
   send(IN.ACTION, o.hold ?? 12); send(0);
   let n = 0; while (L.F.ph === FS.PH.WAIT && n++ < 400) send(0);
   if (o.easy) { L.P.diff = 5; L.P.snap = false; }
