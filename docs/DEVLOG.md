@@ -10362,7 +10362,8 @@ Bank" over and over); now, in its four bands round the park:
   boutiques (Vellori's flagship, Aurum Watches, Petit Four), the Westside Tower and the Halcyon Building.
 - **West of the park:** blocks built back to back - a tower on the street to the south, a lower building turned to the
   street to the north, a service yard between: Westgate Residences, Park West Tower, Fountain Court, the Greenfield
-  Medical Building; the Westside car park; the Downtown subway stop's square and its plane trees.
+  Medical Building; the Westside car park; Greenfield Pitch (the soccer mini-game's pitch, moved out of the park into a
+  chain-link cage with its stand and floodlights); the Downtown subway stop's square and its plane trees.
 - **East of the park:** the Grand Neon Hotel and its drive round a fountain to 23rd Street (WC356), Park East Tower and
   Concord House beside it; Kestrel Tower and the Ellison Building round a fountain court.
 - **South of the park:** Fountain Square on the park's axis (the long pool and its fountains, palms, beds), The Grand

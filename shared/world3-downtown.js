@@ -277,7 +277,22 @@ function westBand(K, m, ctx) {
   pair(cb[0], wb, r2, { h: 36, name: 'Greenfield Medical Building', style: 'stone', wall: '#e2dac6', floors: 7, win: 'tall' }, { name: 'Sycamore House', floors: 5, wall: '#b8b0a2' });
   // the Westside car park: concrete decks, its ramp, the P on its corner; across Maple Street, the Westside Offices
   towerLot({ x: ca[0], y: r3[0] + 4, w: wa, h: r3[1] - r3[0] - 3, name: 'Westside Parking', arch: 'block', style: 'concrete', wall: '#b8b4aa', floors: 5, win: 'loft', sign: 'PARKING', signC: ['#1e3a5e', [250, 250, 240]], poi: { kind: 'delivery', label: 'Westside Parking' } });
-  towerLot({ x: cb[0], y: r3[0] + 6, w: wb, h: r3[1] - r3[0] - 5, name: 'Westside Offices', floors: 10, tint: '#284256' });
+  // Greenfield Pitch (the soccer mini-game's: the park's pitch moved here when the park became a circus): turf in a
+  // chain-link cage, the stand along its north side, floodlights at the corners
+  {
+    const x0 = cb[0], x1 = cb[1], y0 = r3[0], y1 = r3[1] + 1;
+    K.fill(x0, y0, x1 - x0, y1 - y0, T.LOT); K.take(x0, y0, x1 - x0, y1 - y0);
+    const p = { x0: x0 + 3, y0: y0 + 12, x1: x1 - 3, y1: y1 - 4 };
+    for (let y = p.y0 - 1; y <= p.y1; y++) for (let x = p.x0 - 1; x <= p.x1; x++) m.set(x, y, T.GRASS);
+    m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Greenfield Pitch', rect: { x: p.x0 * TILE, y: p.y0 * TILE, w: (p.x1 - p.x0) * TILE, h: (p.y1 - p.y0) * TILE }, goalW: 5 * TILE });
+    prop('chainfence', x0 + 0.3, p.y0 - 1.6, 0, { tx: (x1 - x0 - 0.6) * TILE, ty: 0 });
+    prop('chainfence', x0 + 0.3, p.y0 - 1.6, 0, { tx: 0, ty: (p.y1 - p.y0 + 2.4) * TILE });
+    prop('chainfence', x1 - 0.3, p.y0 - 1.6, 0, { tx: 0, ty: (p.y1 - p.y0 + 2.4) * TILE });
+    prop('bleachers', x0 + 6, y0 + 6, 10, { len: Math.round((x1 - x0 - 12) * TILE / 2), rows: 3 });
+    for (const [fx, fy] of [[x0 + 1, y0 + 9], [x1 - 1, y0 + 9], [x0 + 1, y1 - 1], [x1 - 1, y1 - 1]]) prop('ymast', fx, fy, 0, { tall: 160 });
+    prop('textsign', (x0 + x1) / 2, y1 - 0.6, 0, { text: 'GREENFIELD PITCH', bg: '#2f5a4a', fg: [240, 232, 200], z: 30, sx: 1 });
+    (out.places ||= []).push({ name: 'Greenfield Pitch', x0, y0, x1, y1 });
+  }
   // the Downtown subway stop's square (its kiosk: shared/world3-subway.js - on the square's paving), a tower beside it
   {
     const sx1 = ca[0] + 34;
