@@ -229,7 +229,7 @@ function kerbMap(props = []) {
 }
 const RIDE = { canMove: true, canSprint: true, speedMul: 1, analog: true, board: true, canSwim: true };
 const steps = (s, m, inp, n) => { for (let i = 0; i < n; i++) pedStep(s, typeof inp === 'function' ? inp(s) : inp, 0.05, m, RIDE); return s; };
-const evs = (s) => s.skEv.map((e) => e.e);
+const evs = (s) => s.skEv.map((e) => e.w);
 const grinding = (s) => s.bm === 1 || s.bm === 3;
 
 test('tricks: an ollie along the kerb lands on it and grinds - the stick across it keeps the balance, without it you fall; off the end you drop', () => {
@@ -253,7 +253,7 @@ test('tricks: an ollie along the kerb lands on it and grinds - the stick across 
   steps(r, L, go, 40); while (r.x < 3080) pedStep(r, go, 0.05, L, RIDE);
   pedStep(r, { ...go, bits: IN.DIVE }, 0.05, L, RIDE);
   for (let i = 0; i < 40 && !r.skFall; i++) pedStep(r, { ...go, my: grinding(r) ? Math.sign(r.bb) : 0 }, 0.05, L, RIDE);
-  assert.ok(evs(r).includes('grind') && r.skEv.find((e) => e.e === 'grindEnd').why === 'end', 'up on the ledge, along it, off its end');
+  assert.ok(evs(r).includes('grind') && r.skEv.find((e) => e.w === 'grindEnd').why === 'end', 'up on the ledge, along it, off its end');
   assert.ok(r.x > 3200 + 75 && !grinding(r), 'past it');
 });
 
@@ -269,7 +269,7 @@ test('tricks: the trick button pops a flip (the stick picks it), a flip not roun
     assert.ok(s.rollT > 0, 'popped');
     steps(s, m, { bits: 0, mx: 0.1, my: 0 }, 16);
     assert.ok(!s.skFall, `${k}: landed`);
-    const tr = s.skEv.find((e) => e.e === 'trick');
+    const tr = s.skEv.find((e) => e.w === 'trick');
     assert.equal(tr && SK.trickOf(tr.k).id, k, `the stick ${mx},${my}: a ${k}`);
     steps(s, m, go, 10);
   }
@@ -287,7 +287,7 @@ test('tricks: the trick button pops a flip (the stick picks it), a flip not roun
   steps(q, m, (z) => { const f = Math.max(-1, Math.min(1, z.bb * 3)); return { bits: 0, mx: Math.cos(z.a) * f, my: Math.sin(z.a) * f, aim: 0 }; }, 30);
   assert.equal(q.bm, 2, 'balanced: still in it');
   pedStep(q, { ...go, bits: IN.DIVE }, 0.05, m, RIDE);
-  assert.ok(q.bm === 0 && q.rollT > 0 && q.skEv.some((e) => e.e === 'manualEnd'), 'popped out of it into an ollie');
+  assert.ok(q.bm === 0 && q.rollT > 0 && q.skEv.some((e) => e.w === 'manualEnd'), 'popped out of it into an ollie');
   // a kicker ridden at speed: a big air, and in it a grab held, let go before the landing
   const K2 = kerbMap([{ t: 'kicker', x: 3000, y: 140 * TILE }]), k = newPedState(3000, 140 * TILE + 320); k.a = -Math.PI / 2; k.skEv = [];
   const up = { bits: 0, mx: 0, my: -1, aim: 0 };

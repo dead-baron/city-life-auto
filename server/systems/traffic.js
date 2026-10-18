@@ -902,6 +902,20 @@ function manage(world) {
       const v = world.spawnVehicle(weighted(RACK_MIX), sp.x, sp.y, sp.a, { parked: true });
       world.rackParked.set(i, v.id);
     }
+    // shopping carts outside the groceries and the markets (cartSpots): free to take - kick off, ride the back rail
+    world.cartParked ??= new Map();
+    const corral = cartSpots(world.map);
+    for (const i of pointGrid(corral).near(a.x, a.y, 1100)) {
+      const sp = corral[i];
+      if (world.cartParked.has(i) && world.get(world.cartParked.get(i))) continue;
+      if (hash2(i, 13, world.map.seed) > 0.8 || (sp.x - a.x) ** 2 + (sp.y - a.y) ** 2 > 1100 * 1100) continue;
+      const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
+      if (!fresh && inAnyView(world, sp.x, sp.y, 80)) continue;
+      if (world.npcCount + world.trafficCount > world.npcBudget) break;
+      if (world.query(sp.x, sp.y, 14, K.VEH).length) continue;
+      const v = world.spawnVehicle('cart', sp.x, sp.y, sp.a, { parked: true, npcOwned: false });
+      world.cartParked.set(i, v.id);
+    }
   }
   // moving traffic: placed on a lane somewhere off screen, already rolling
   const net = world.map.net;
@@ -996,6 +1010,31 @@ function rackSpots(m) {
     }
   });
   return (m._rackSpots = out);
+}
+
+// Where the shopping carts stand (the owner, 2026-10-18): by the door of each grocery and market (a POI of kind grocery,
+// or one named a market, a mart, a megastore or a grocery), two or three side by side on the pavement beside it, nosed to
+// the wall. Worked out once per map.
+const CART_POI = /grocery|market|\bmart\b|megastore|supermarket|freshhub|food co-op/i;
+export function cartSpots(m) {   // (exported for the tests)
+  if (m._cartSpots) return m._cartSpots;
+  const out = [];
+  const ok = (x, y) => { const t = m.tileAtPx(x, y); return (t === T.SIDEWALK || t === T.PLAZA || t === T.LOT) && !m.isWater(x, y); };
+  for (const p of m.pois || []) {
+    if (!(p.kind === 'grocery' || (p.label && CART_POI.test(p.label) && p.kind !== 'fishmarket'))) continue;
+    const n = p.kind === 'grocery' ? 3 : 2;
+    // a run of pavement beside the door: east or west of it along the front, a tile or so out from the wall
+    let done = false;
+    for (const dy of [TILE * 1.5, -TILE * 1.5, TILE * 2.5, -TILE * 2.5]) for (const side of [1, -1]) {
+      if (done) break;
+      const pts = [];
+      for (let k = 0; k < n; k++) pts.push([p.x + side * (TILE * 1.6 + k * 17), p.y + dy]);
+      if (!pts.every(([x, y]) => ok(x, y) && ok(x + 12, y) && ok(x - 12, y))) continue;
+      for (const [x, y] of pts) out.push({ x, y, a: dy > 0 ? -Math.PI / 2 : Math.PI / 2 });
+      done = true;
+    }
+  }
+  return (m._cartSpots = out);
 }
 
 function bboxOf(pts) {

@@ -10893,3 +10893,43 @@ down (not much at all) before starting the next kick", and "the skateboard moves
   kick's frames and the tricks' poses (364).
 - `tools/playtest.py`: the Play click waits as long as the city load does. On a slow machine, the click's own work ran
   past Playwright's 30 s.
+
+## 2026-10-18 · The shopping cart (task #329)
+
+The owner, 07:01: "shopping carts as a vehicle. The driver holds on and kicks from the back and rides on the back bar.
+You can have a passenger in the actual cart ride along. This should go as fast as bicycles too. And if you crash at all
+and you have a passenger in the cart they go flying. If you ram two shopping carts together head-on and they both have
+passengers in it everyone goes flying. The driver often goes flying off if the shopping cart crashes."
+- **The cart** (`shared/vehicles.js` cart):
+  - A pedal vehicle as fast as the commuter bike (330 px/s).
+  - Light on its casters: it slides round the corners more than a bike, and on grass, dirt or sand it bogs down.
+  - Two aboard: the driver behind it and one in the basket (`crew`: where each is).
+  - It buckles rather than burns.
+- **Crashes** (`server/systems/vehicles.js` cartCrash, `shared/rules.js` CART):
+  - Into a wall, a car, a post or a person at 70 px/s or more, whoever's in the basket is thrown on out over the front.
+  - The driver goes too, more than half the time, and always from 230 px/s.
+  - When two carts that both have someone in the basket meet head on, all four go flying.
+  - The landings hurt a little (3-14).
+  - The thrown fly with the game's usual arc and landing (a roll, a faceplant, a slide).
+- **Where:** outside each grocery and market (a grocery POI, or one named a market, a mart, a megastore or a
+  supermarket), two or three side by side on the pavement by the door (`server/systems/traffic.js` cartSpots). They
+  turn up near players the way the rack bikes do. Taking one is no crime.
+- **The look** (art v2):
+  - The cart: a wire basket narrowing to the front, the bottom rack, four casters, the back rail, and the handle and
+    child-seat flap in the paint's plastic (`client/art2/vehicles.js` shoppingCart).
+  - The driver: holding the handle with a foot on the back rail, kicking the ground (`cartkick`, eight frames)
+    while the cart gathers speed; once it's up to speed or coasting, both feet up on the rail, leaning on the handle
+    (`cartride`).
+  - The passenger sits in the basket, knees up, hands on the rims (`cartsit`).
+  - The classic renderer draws the riders at the same places.
+- **Sounds:** the casters rattle (the pedal bikes' class), and a crash clangs the wire with a scrape (`cartcrash`).
+- **Tests** (`test/carts.test.js`):
+  - its speed on the road and on the grass;
+  - the passenger thrown in a crash; the driver hanging on or not by the chance and by how hard;
+  - nothing below the line, and only a little hurt;
+  - into a real wall;
+  - two loaded carts head on;
+  - the carts by the groceries, free to take;
+  - the poses and the model.
+- **Budgets:** the renderer goes 365 → 366 KB (365) for the cart's model and its riders' poses. The page is at 485 of 485
+  (rounded: 485.3 KB), so the next thing on the page has to make room.

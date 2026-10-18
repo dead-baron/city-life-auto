@@ -188,7 +188,7 @@ function score(world, p, ped, dt) {
   ped.skEv = [];
   for (const e of L) {
     const t = SK.trickOf(e.k);
-    switch (e.e) {
+    switch (e.w) {
       case 'trick': if (t) add(world, p, S, nameOf(world, S, e.k), t.pts); break;
       case 'grab': if (t) add(world, p, S, nameOf(world, S, e.k), t.pts); break;
       case 'grabEnd': more(S, ps.grab * (e.t || 0)); break;

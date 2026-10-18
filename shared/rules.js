@@ -438,6 +438,9 @@ export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (ro
 // specialPts: specialS s of tricks worth specialMul, till you bail; the gaps' points (shared/skate.js)
 export const SKATE_SCORE = { comboGap: 0.6, specialPts: 2500, specialMul: 3, specialS: 25, perS: { grind: 120, grab: 150, manual: 100 },
   gaps: { kicker: 250, pyramid: 150, vert: 200, street: 300, streetPer: 100 }, kickerTiles: 5, streetRoads: 3 };
+// A shopping cart's crash (server vehicles.js cartCrash): from hit px/s the one in the basket is thrown, the driver at
+// driverP's chance (sure from hard, and when two loaded carts meet head on); hurt: the landing's, from hit to hard
+export const CART = { hit: 70, hard: 230, driverP: 0.55, hurt: [3, 14] };
 // a session at a skate spot: s seconds, each goal pays goalPay
 export const SKATE_SESSION = { s: 120, goalPay: 40, goals: [['bank', 3000, 'Bank a 3,000-point combo'], ['tricks', 5, 'Land a 5-trick combo'], ['gap', 1, 'Hit a gap'], ['score', 15000, 'Score 15,000']] };
 export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out

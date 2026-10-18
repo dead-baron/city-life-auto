@@ -4070,7 +4070,7 @@ function drawVehicleEnt(v, now, dt) {
   // riders on bikes and jet skis sit in the open: driver up front, a passenger behind; in an open boat at its seats
   // (def.crew: the driver's, the one beside it, then the back seats in turn - task #420)
   if (def.kind === 'bike' || def.crew) {
-    const seats = def.kind === 'bike' ? SEAT_BIKE : def.crew; let nb = 0;
+    const seats = def.crew || SEAT_BIKE; let nb = 0;   // (a shopping cart: its crew - the driver behind it, one in the basket)
     for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) { const pass = (p.flags & PF.PASSENGER) !== 0; drawRider(p, v, def, !pass && def.seat !== undefined ? [def.seat, 0] : seats[p.back ? Math.min(seats.length - 1, 2 + nb++) : pass ? 1 : 0]); }
   }
   void dt;

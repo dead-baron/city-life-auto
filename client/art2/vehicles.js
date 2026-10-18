@@ -29,7 +29,7 @@ export const VEHICLE_DIMS = {
   compact: [80, 48], sedan: [94, 52], taxi: [100, 48], sports: [96, 48], pickup: [110, 50], flatbed: [150, 56],
   van: [112, 54], bus: [186, 62], police: [100, 48], swat: [120, 58], ambulance: [112, 56], armored: [122, 54],
   bike: [48, 20], policebike: [50, 20], bicycle: [40, 14], speedboat: [104, 48], dinghy: [80, 40], jetski: [46, 22],
-  cruiser: [42, 16], mtb: [42, 16], roadbike: [42, 12], bmx: [34, 14], cargobike: [58, 18],
+  cruiser: [42, 16], mtb: [42, 16], roadbike: [42, 12], bmx: [34, 14], cargobike: [58, 18], cart: [30, 20],
   policeboat: [104, 48], boxtruck: [150, 58], dumptruck: [140, 60], mixer: [146, 60], tanker: [160, 58],
   garbage: [140, 60], firetruck: [172, 66], towtruck: [134, 58],
   // the MC1 motorcycles (task #366)
@@ -57,7 +57,7 @@ export const VEHICLE_TALL = {
   compact: 31, sedan: 33, taxi: 33, police: 33, sports: 27, pickup: 36, van: 46, suv: 42, limo: 32, ambulance: 54, armored: 50,
   swat: 52, bus: 62, flatbed: 46, boxtruck: 62, dumptruck: 46, mixer: 62, tanker: 54, garbage: 60, firetruck: 56, towtruck: 50,
   bike: 24, policebike: 31, bicycle: 20, speedboat: 22, dinghy: 14, jetski: 16, policeboat: 34,
-  cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20,
+  cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20, cart: 26,
   tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, waterbus: 70, foodtruck: 60,
   fbi: 42, army: 52,
   vtwin: 25, tourer: 31, chopper: 35, bobber: 24, caferacer: 25, dirtbike: 28, scooter: 25, trike: 28, ratbike: 26, bagger: 29,
@@ -70,7 +70,7 @@ const DEFAULT_PAINT = {
   police: '#22242c', swat: '#262c44', ambulance: '#ecebe4', armored: '#7a7e84', flatbed: '#e6e2d8', boxtruck: '#e6e2d8',
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#3f7a3a', firetruck: '#c0302a', towtruck: '#2f4a8a',
   bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a',
-  cruiser: '#5ab0a8', mtb: '#d8682a', roadbike: '#c8302c', bmx: '#3a7ad0', cargobike: '#2f5a7a',
+  cruiser: '#5ab0a8', mtb: '#d8682a', roadbike: '#c8302c', bmx: '#3a7ad0', cargobike: '#2f5a7a', cart: '#c8302c',
   vtwin: '#26282e', tourer: '#b8302a', chopper: '#2a2a2e', bobber: '#26282e', caferacer: '#e6e2d8', dirtbike: '#2f56b0', scooter: '#7ac0a0', trike: '#22357a', ratbike: '#4e5a34', bagger: '#22357a',
   jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', fbi: '#17181d', army: '#4f5a36', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', waterbus: '#f0eee6', tractor: '#b83a2e', combine: '#3f9a2c', plane: '#ecebe4', excavator: '#e0b030',
   tank: '#5a6440', tankturret: '#5a6440',
@@ -449,11 +449,40 @@ function roofKit(m, M, x0, x1, z, o = {}) {
   }
 }
 
+// ---- the shopping cart (shared/vehicles.js cart, 2026-10-18: kicked along from the back, ridden on its back rail, one in the
+// basket) --------------------------------------------------------------------------------------------------------------
+// x from the back (the handle, 0) to the front, z up: a wire basket narrowing to the front on four legs and casters, the
+// bottom rack, the folding child seat at the back in the paint's plastic, the handle in it too, the back rail to stand on
+function shoppingCart(m, M, A) {
+  const L = m.w, W = m.d, cy = W / 2, wire = M.chrome, plastic = M.body;
+  const bx0 = 3, bx1 = L, bz0 = 9, bz1 = 22;
+  const half = (x) => (W / 2 - 0.5) * (0.8 + 0.2 * (1 - (x - bx0) / (bx1 - bx0)));
+  m.fill((x, y, z) => {
+    const h = half(x + 0.5), dy = Math.abs(y + 0.5 - cy);
+    if (dy > h) return -1;
+    if (z === bz1 - 1) return dy > h - 1 || x === bx0 || x === bx1 - 1 ? wire : -1;   // (the rim)
+    if (z === bz0) return (x + Math.floor(y)) % 2 === 0 || dy > h - 1 ? wire : -1;     // (the floor's mesh)
+    const wall = dy > h - 1 || x === bx0 || x === bx1 - 1;
+    return wall && (x % 3 === 0 || z % 3 === 1) ? wire : -1;
+  }, bx0, 0, bz0, bx1, W, bz1);
+  for (let x = bx0 + 1; x < bx1 - 2; x += 2) m.box(x, 3, 4, x + 1, W - 3, 5, wire);                        // the bottom rack
+  for (const [x, y] of [[bx0, 2], [bx0, W - 3], [L - 3, 3], [L - 3, W - 4]]) {
+    m.box(x, y, 2, x + 1, y + 1, bz0, wire);                                                               // the legs
+    m.cyl('y', x + 0.5, 0, 1.4, 1.4, y - 0.5, y + 1.5, M.tyre);                                            // the casters
+  }
+  m.box(0, 3, 3, 3, W - 3, 4, wire);                                                                        // the back rail
+  for (const y of [2, W - 3]) m.box(1, y, 4, 2, y + 1, bz1 + 2, wire);                                      // the handle's uprights
+  m.box(0, 2, bz1 + 2, 2.5, W - 2, bz1 + 3.5, plastic);                                                     // the handle
+  m.box(bx0 + 1, cy - 4, bz1 - 5, bx0 + 3, cy + 4, bz1 - 1, plastic);                                       // the child seat's flap
+  m.look = { ...m.look, belt: 12, z0: 2, roof: bz1 + 3, wheels: [bx0, L - 3], wr: 1.4 };
+  A.seat = [L / 2, cy, bz0 + 1];
+}
+
 // ---- bicycles --------------------------------------------------------------------------------------------
 // The pedal bikes (shared/vehicles.js pedal), all from one builder: the wheels (spoked; balloon, knobby or skinny
 // tyres), the frame drawn as tubes in the bike's middle plane, the fork, bars, saddle and each type's own kit.
 // Coordinates: x from the rear (0) to the front, z up; the frame sits at y = cy.
-export const PEDAL = new Set(['bicycle', 'cruiser', 'mtb', 'roadbike', 'bmx', 'cargobike']);
+export const PEDAL = new Set(['bicycle', 'cruiser', 'mtb', 'roadbike', 'bmx', 'cargobike', 'cart']);
 const BIKES = {
   // r: wheel radius; tw: tyre thickness across (voxels); xr / xf: the axles (rf: a smaller front wheel); bb: the bottom
   // bracket; st: the top of the seat tube; ht / hb: the head tube's top and bottom; seat: the saddle [x0, x1, z, half-width];
@@ -1112,6 +1141,7 @@ export function vehicleModel(type, o = {}) {
       break;
     }
     case 'bicycle': case 'cruiser': case 'mtb': case 'roadbike': case 'bmx': case 'cargobike': pedalBike(m, M, V, type, A); break;
+    case 'cart': shoppingCart(m, M, A); break;
     case 'speedboat': case 'policeboat': case 'dinghy': case 'jetski': {
       const pol = type === 'policeboat', jet = type === 'jetski', din = type === 'dinghy';
       const hz = jet ? 8 : din ? 9 : 12, cy = W / 2;

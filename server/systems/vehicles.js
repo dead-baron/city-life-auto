@@ -38,6 +38,7 @@ export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHE
   if (v.dead) { const di = deadInput(v, v.input.steer || 0, v.input.hb); v.input.throttle = di.throttle; v.input.slide = false; } // (engine dead: it rolls to a stop)
   const pvx = v.vx, pvy = v.vy;   // (the way it was going: the end that hit the wall)
   const impact = vehStep(v, v.input, dt, world.map, v.def, env);
+  if (v.def.cart && impact >= CART.hit) cartCrash(world, v, impact);   // (a shopping cart into anything: the one in the basket flies)
   if (impact > 160) {
     const dmg = (impact - 140) * 0.22 / Math.sqrt(v.def.mass);
     crashDamage(world, v, dmg, null, impact, zoneFrom(v, pvx, pvy));
@@ -163,6 +164,12 @@ function resolveVehicleHit(world, a, b, hit) {
   a.av += crossA * j * 0.06 / ma;
   b.av -= crossA * j * 0.06 / mb;
   const impact = -vn;
+  // a shopping cart in it: the one in its basket thrown, the driver likely - and two loaded carts head on, everyone
+  if (a.def.cart || b.def.cart) {
+    const both = !!(a.def.cart && b.def.cart && a.seats[1] && b.seats[1] && Math.cos(a.a - b.a) < -0.5);
+    if (a.def.cart) cartCrash(world, a, impact, both);
+    if (b.def.cart) cartCrash(world, b, impact, both);
+  }
   // two of a club's bikes riding together, a wheel's width apart: a nudge, not a crash (bikers.js)
   const pack = a.club && a.club === b.club && a.ai?.kind === 'club' && b.ai?.kind === 'club';
   if (impact > 110 && !pack) {
@@ -201,6 +208,7 @@ function strikePed(world, v, ped, vn, h) {
     world.emit(ped.x, ped.y, { e: 'blood', x: ped.x, y: ped.y, a: Math.atan2(v.vy, v.vx), n: 10 });
     killed = combat.damage(world, ped, dmg, driver, 'vehicle', Math.atan2(v.vy, v.vx));
   }
+  if (v.def.cart && vn > 150) cartCrash(world, v, vn * 0.8);   // (a shopping cart into someone: its rider in the basket goes over)
   if (killed) v.bloody = true;
   else if (!ped.wild && vn > 200) npc.spectacle(world, ped.x, ped.y, { r: 380, near: 70, chance: 0.7, secs: 8 });   // (knocked flying: phones out - a death does it in kill())
   if (driver && !ped.wild) law.hitAndRun(world, driver, ped, killed, v); // (an animal on the road: no crime)
@@ -210,7 +218,7 @@ function strikePed(world, v, ped, vn, h) {
 
 export function bikeCrash(world, v, impact) {
   // GDD: crashing a sport bike at high speed triggers an immediate ragdoll ejection (not off a trike: three wheels)
-  if (v.def.stable) return;
+  if (v.def.stable || v.def.cart) return;   // (a shopping cart: cartCrash)
   if (v.ai && v.ai.kind === 'club' && impact < 420) return;   // (a club rider in formation rides out a knock: bikers.js)
   for (const sid of [...v.seats]) {
     if (!sid) continue;
@@ -223,6 +231,29 @@ export function bikeCrash(world, v, impact) {
   }
 }
 
+
+// A shopping cart in a crash (the owner, 2026-10-18: "if you crash at all and you have a passenger in the cart they go
+// flying. If you ram two shopping carts together head-on and they both have passengers in it everyone goes flying. The
+// driver often goes flying off if the shopping cart crashes"): into anything at CART.hit px/s or harder, the one in the
+// basket is thrown on out over the front; the driver at CART.driverP's chance, sure at CART.hard - and every time when
+// two loaded carts meet head on (both). Hurt a little by the landing (CART.hurt).
+export function cartCrash(world, v, impact, both = false) {
+  if (impact < CART.hit || v.cartHitAt === world.time) return;
+  v.cartHitAt = world.time;
+  const k = Math.min(1, (impact - CART.hit) / (CART.hard - CART.hit)), sp = impact * 0.9 + 80;
+  let n = 0;
+  for (let i = v.seats.length - 1; i >= 0; i--) {
+    const ped = v.seats[i] && world.get(v.seats[i]);
+    if (!ped) continue;
+    if (i === 0 && !both && k < 1 && world.rand() > CART.driverP + (1 - CART.driverP) * k) continue;   // (the driver hung on)
+    ejectPed(world, ped, true);
+    const a = v.a + (world.rand() - 0.5) * 0.6, s2 = sp * (i === 0 ? 0.8 : 1);
+    fling(world, ped, Math.cos(a) * s2, Math.sin(a) * s2, null, 'crash', 0);
+    combat.damage(world, ped, Math.round(CART.hurt[0] + (CART.hurt[1] - CART.hurt[0]) * k), null, 'crash', a);
+    n++;
+  }
+  if (n) world.emit(v.x, v.y, { e: 'cartcrash', x: v.x, y: v.y, n });
+}
 
 // How much a vehicle shrugs off (damage is divided by this): by kind, heavy trucks and buses the most.
 export function toughOf(def) { return def.kind === 'bike' ? VEHICLE_TOUGH.bike : def.kind === 'boat' ? VEHICLE_TOUGH.boat : def.mass >= 2.4 ? VEHICLE_TOUGH.heavy : VEHICLE_TOUGH.car; }
@@ -377,7 +408,7 @@ export function explode(world, v, attackerPed) {
 // Bailing out of a moving car: you roll out and keep sliding. The faster you were going the
 // longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
 // can finish you off.
-import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S, PLASMA_CUT } from '../../shared/rules.js';
+import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S, PLASMA_CUT, CART } from '../../shared/rules.js';
 import { VDMG, VZ, VPART, damageStage, packVehDamage, hitZone } from '../../shared/vehicles.js';
 import * as ferries from './ferries.js';
 import * as burning from './burning.js';   // (thrown out of it on fire: H58)

@@ -1,8 +1,7 @@
 // Logical actions and how each device triggers them. The HUD prompts and the tutorial both read
 // these tables, so a rebind here updates every hint in the game.
 export const KEY_ACTION = { E: 'action', F: 'vehicle', Q: 'throw', R: 'reload', X: 'use', H: 'horn', SPACE: 'dive', TAB: 'nextw', M: 'map', CLICK: 'fire', SHIFT: 'sprint', V: 'cruiser', P: 'phone', I: 'bag', L: 'light', G: 'dance', B: 'board' };
-// (on a skateboard the fire button is the trick button - shared/skate.js: a flip, held in a big air a grab, with the stick
-// pulled back a manual; the dive button ollies and pops you off a rail)
+// (on a skateboard the fire button is the trick button: shared/skate.js)
 // (light shares D-pad up with the horn: the horn is only in a vehicle, the flashlight only on foot)
 // On a pad (tasks #301, #411): RT fires and the right stick only aims (Settings: "right stick full push fires" puts the
 // stick-ring fire back); at the wheel RT is the gas, so a drive-by is R3 - click the stick you aim with. A tap of RB / LB

@@ -20,7 +20,8 @@
 // fall), bT how long in it; tk the trick going (TRICKS; 20-23: the trick button down in a big air - a grab once held,
 // a flip if let go) and tt its time; airT the air's length, airH its height, h0 where it started, airK what it was (0 an
 // ollie, 1 off a kicker or a bank, 2 up a quarter pipe, 3 dropping off the end of a rail), vg the quarter pipe's speed.
-// Where the server keeps score (server/systems/skate.js) it gives the ped an skEv list: what happened, step by step.
+// Where the server keeps score (server/systems/skate.js) it gives the ped an skEv list: what happened, step by step
+// (w: what - not a world event).
 // Deterministic like the rest of the physics: the same map, the same input, the same ride (nothing random, nothing timed
 // but the step).
 import { TILE, T } from './constants.js';
@@ -182,7 +183,7 @@ export function stickWay(a, mx, my, ml) {
 const ev = (s, e) => { if (s.skEv) s.skEv.push(e); };
 function startAir(s, T0, H, h0, k) { s.rollT = s.airT = T0; s.airH = H; s.h0 = h0; s.airK = k; s.bm = 0; s.bg = -1; s.gh = 0; s.bT = 0; s.bb = 0; }
 function flip(s, way) { s.tk = FLIP0 + way; s.tt = 0; }
-function fall(s, why) { s.skFall = why; s.bm = 0; s.bg = -1; s.gh = 0; s.tk = 0; s.tt = 0; s.bb = 0; ev(s, { e: 'fall', why }); }
+function fall(s, why) { s.skFall = why; s.bm = 0; s.bg = -1; s.gh = 0; s.tk = 0; s.tt = 0; s.bb = 0; ev(s, { w: 'fall', why }); }
 // the balance a step on (grinds and manuals): it tips away from the middle, faster the longer you're on, wobbling, and the
 // stick held against it brings it back
 function balance(s, push, dt, seed) {
@@ -204,8 +205,8 @@ export function step(s, inp, bits, pressed, mx, my, ml, dt, ground, mods, map) {
   // the trick button on the ground: the stick pulled back and rolling, a manual; else pop a flip
   if (pressed & IN.FIRE) {
     const way = stickWay(s.a, mx, my, ml);
-    if (way === 1 && v > SKATE.manualMin) { s.bm = 2; s.bT = 0; s.bb = -0.25; s.tk = MANUAL; s.tt = 0; ev(s, { e: 'manual' }); return true; }
-    startAir(s, 0.6, 16, 0, 0); flip(s, way === 1 ? 0 : way); ev(s, { e: 'air', k: 0 });
+    if (way === 1 && v > SKATE.manualMin) { s.bm = 2; s.bT = 0; s.bb = -0.25; s.tk = MANUAL; s.tt = 0; ev(s, { w: 'manual' }); return true; }
+    startAir(s, 0.6, 16, 0, 0); flip(s, way === 1 ? 0 : way); ev(s, { w: 'air', k: 0 });
     return true;
   }
   // the ramps: rolling onto one fast enough
@@ -215,18 +216,18 @@ export function step(s, inp, bits, pressed, mx, my, ml, dt, ground, mods, map) {
       if (gone(map, r)) continue;
       if (r.k === 'kick') {   // ridden from the south: off its lip, up and on
         const lip = r.y0 + 3;
-        if (s.vy < -80 && s.x > r.x0 + 2 && s.x < r.x1 - 2 && py >= lip && s.y < lip && py < r.y1 + 4) { startAir(s, 0.55 + v / 650, 16 + v / 22, 12, 1); ev(s, { e: 'air', k: 1, r: r.pi }); return true; }
+        if (s.vy < -80 && s.x > r.x0 + 2 && s.x < r.x1 - 2 && py >= lip && s.y < lip && py < r.y1 + 4) { startAir(s, 0.55 + v / 650, 16 + v / 22, 12, 1); ev(s, { w: 'air', k: 1, r: r.pi }); return true; }
       } else if (r.k === 'qp') {   // up it from the south: straight up, the hang, back down the way you came
         const toe = r.y1 - 4;
         if (s.vy < -120 && Math.abs(s.vx) < -s.vy && s.x > r.x0 + 4 && s.x < r.x1 - 4 && py >= toe && s.y < toe) {
           const up = -s.vy;
           startAir(s, 0.7 + up / 650, 26 + up / 14, 0, 2); s.vg = up; s.a = -Math.PI / 2; s.vx *= 0.3;
-          ev(s, { e: 'air', k: 2, r: r.pi });
+          ev(s, { w: 'air', k: 2, r: r.pi });
           return true;
         }
       } else if (r.k === 'pyr' && v > 170) {   // off a bank, going out
         const inside = (x, y) => x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1;
-        if (inside(px, py) && !inside(s.x, s.y)) { startAir(s, 0.45 + v / 1200, 10 + v / 45, 8, 1); ev(s, { e: 'air', k: 1, r: r.pi }); return true; }
+        if (inside(px, py) && !inside(s.x, s.y)) { startAir(s, 0.45 + v / 1200, 10 + v / 45, 8, 1); ev(s, { w: 'air', k: 1, r: r.pi }); return true; }
       }
     }
   }
@@ -248,13 +249,13 @@ function air(s, bits, pressed, mx, my, ml, dt, map) {
   if (s.tk >= PENDING) {
     s.tt += dt;
     if (!fire) { flip(s, s.tk - PENDING); s.tt = SKATE.grabHold * 0.5; }
-    else if (s.tt >= SKATE.grabHold) { s.tk = GRAB0 + s.tk - PENDING; s.tt = 0; ev(s, { e: 'grab', k: s.tk }); }
+    else if (s.tt >= SKATE.grabHold) { s.tk = GRAB0 + s.tk - PENDING; s.tt = 0; ev(s, { w: 'grab', k: s.tk }); }
   } else if (s.tk >= GRAB0 && s.tk < GRIND0) {
     s.tt += dt;
-    if (!fire || s.rollT < 0.12) { ev(s, { e: 'grabEnd', k: s.tk, t: s.tt }); s.tk = 0; s.tt = 0; }
+    if (!fire || s.rollT < 0.12) { ev(s, { w: 'grabEnd', k: s.tk, t: s.tt }); s.tk = 0; s.tt = 0; }
   } else if (s.tk >= FLIP0 && s.tk < GRAB0) {
     s.tt += dt;
-    if (s.tt >= TRICKS[s.tk].d) { ev(s, { e: 'trick', k: s.tk }); s.tk = 0; s.tt = 0; }
+    if (s.tt >= TRICKS[s.tk].d) { ev(s, { w: 'trick', k: s.tk }); s.tk = 0; s.tt = 0; }
   }
   if ((pressed & IN.FIRE) && !s.tk) {
     const way = stickWay(s.a, mx, my, ml);
@@ -275,22 +276,22 @@ function air(s, bits, pressed, mx, my, ml, dt, map) {
     }
     if (best) {
       if (s.tk && s.tk < GRIND0 && s.tk < PENDING && TRICKS[s.tk].kind === 'flip') { fall(s, 'flip'); return true; }   // (mid-flip onto a rail)
-      if (s.tk >= GRAB0 && s.tk < GRIND0) ev(s, { e: 'grabEnd', k: s.tk, t: s.tt });
+      if (s.tk >= GRAB0 && s.tk < GRIND0) ev(s, { w: 'grabEnd', k: s.tk, t: s.tt });
       const q = best, dir = s.vx * q.ux + s.vy * q.uy >= 0 ? 1 : -1, way = stickWay(Math.atan2(q.uy * dir, q.ux * dir), mx, my, ml);
       const t = clamp(along(q, s.x, s.y), 0, q.len), sp = Math.abs(s.vx * q.ux + s.vy * q.uy);
       s.x = q.x0 + q.ux * t; s.y = q.y0 + q.uy * t; s.vx = q.ux * dir * sp; s.vy = q.uy * dir * sp;
       s.a = Math.atan2(q.uy * dir, q.ux * dir);
       s.rollT = 0; s.bm = dir > 0 ? 1 : 3; s.bg = q.id; s.gh = q.h; s.bT = 0; s.bb = ((q.id & 255) / 255 - 0.5) * 0.16;
       s.tk = GRIND0 + way; s.tt = 0; s.over = true;
-      ev(s, { e: 'grind', k: s.tk, q: q.k });
+      ev(s, { w: 'grind', k: s.tk, q: q.k });
       return true;
     }
   }
   if (s.rollT <= 0) {   // down
     if (s.tk >= FLIP0 && s.tk < GRAB0) { fall(s, 'flip'); return true; }   // (the flip not round yet)
-    if (s.tk >= GRAB0 && s.tk < GRIND0) ev(s, { e: 'grabEnd', k: s.tk, t: s.tt });
+    if (s.tk >= GRAB0 && s.tk < GRIND0) ev(s, { w: 'grabEnd', k: s.tk, t: s.tt });
     s.tk = 0; s.tt = 0; s.airK = 0; s.vg = 0; s.h0 = 0; s.over = false;
-    ev(s, { e: 'land' });
+    ev(s, { w: 'land' });
   }
   return true;
 }
@@ -300,12 +301,12 @@ const liftAt = (s) => { const T0 = s.airT || 0.55, k = 1 - s.rollT / T0; return 
 function grind(s, bits, pressed, mx, my, ml, dt, map) {
   let q = map ? segById(map, s.x, s.y, s.bg) : null;
   let dir = s.bm === 1 ? 1 : -1;
-  const end = (H, why) => { const h = s.gh || 0; ev(s, { e: 'grindEnd', t: s.bT, why }); s.tk = 0; s.tt = 0; startAir(s, 0.16 + h / 110 + H / 60, H, h, 3); return true; };
+  const end = (H, why) => { const h = s.gh || 0; ev(s, { w: 'grindEnd', t: s.bT, why }); s.tk = 0; s.tt = 0; startAir(s, 0.16 + h / 110 + H / 60, H, h, 3); return true; };
   if (!q) return end(4, 'gone');
   let v = Math.max(0, Math.hypot(s.vx, s.vy) - (SKATE.fr[q.k] || 50) * dt);
   if (v < SKATE.grindMin) return end(2, 'slow');
-  if (pressed & IN.DIVE) { ev(s, { e: 'grindEnd', t: s.bT, why: 'ollie' }); const h = s.gh; s.tk = 0; s.tt = 0; startAir(s, 0.55, 15, h, 0); return true; }
-  if (pressed & IN.FIRE) { ev(s, { e: 'grindEnd', t: s.bT, why: 'flip' }); const h = s.gh; startAir(s, 0.6, 16, h, 0); flip(s, stickWay(s.a, mx, my, ml)); return true; }
+  if (pressed & IN.DIVE) { ev(s, { w: 'grindEnd', t: s.bT, why: 'ollie' }); const h = s.gh; s.tk = 0; s.tt = 0; startAir(s, 0.55, 15, h, 0); return true; }
+  if (pressed & IN.FIRE) { ev(s, { w: 'grindEnd', t: s.bT, why: 'flip' }); const h = s.gh; startAir(s, 0.6, 16, h, 0); flip(s, stickWay(s.a, mx, my, ml)); return true; }
   // the balance: the stick across the rail (+ to the left of the way you go) holds it
   const nx = q.uy * dir, ny = -q.ux * dir, push = ml > 0.15 ? clamp(mx * nx + my * ny, -1, 1) : 0;
   if (balance(s, push, dt, q.id & 7)) { fall(s, 'grind'); return true; }
@@ -327,7 +328,7 @@ function grind(s, bits, pressed, mx, my, ml, dt, map) {
 function manual(s, bits, pressed, mx, my, ml, dt, ground) {
   const c = Math.cos(s.a), sn = Math.sin(s.a);
   let v = Math.max(0, s.vx * c + s.vy * sn - SKATE.manualDrag * dt);
-  const done = (why) => { ev(s, { e: 'manualEnd', t: s.bT, why }); s.bm = 0; s.tk = 0; s.tt = 0; s.bT = 0; s.bb = 0; };
+  const done = (why) => { ev(s, { w: 'manualEnd', t: s.bT, why }); s.bm = 0; s.tk = 0; s.tt = 0; s.bT = 0; s.bb = 0; };
   if (pressed & IN.DIVE) { done('ollie'); startAir(s, 0.55, 15, 0, 0); return true; }
   if (pressed & IN.FIRE) { done('flip'); startAir(s, 0.6, 16, 0, 0); flip(s, stickWay(s.a, mx, my, ml)); return true; }
   if (v < SKATE.manualMin * 0.7 || ground === 2) { done('slow'); return false; }

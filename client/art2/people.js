@@ -49,7 +49,7 @@ const LT = (() => { const v = [-0.6, 0.38, 0.7], l = Math.hypot(v[0], v[1], v[2]
 export const PERSON_CAM = { elevation: 35, zScale: CA };          // world px of height per model unit = zScale
 // seat heights (world px above the anchor) the seated poses sit on: motorbike / jet ski, bicycle, bench, car, the ground
 // (by a campfire, knees up)
-export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9, sitlow: 3 };
+export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9, sitlow: 3, cartsit: 10 };
 export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, aimw: 6, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2, sitlow: 2, cuffed: 6,
   // hit reactions: a stagger (0-1 knocked back, 2-3 shoved forward), a limp, crawling on the stomach, down on the face or the
   // back (1: pushing up to get back on their feet), dead face down or on the side ('dead' lies on the back)
@@ -557,7 +557,7 @@ function rig(D, A, pose, f, kind, acc) {
       P.elR = [1, 0, -0.2]; P.elL = [-1, 0, -0.2]; P.openL = P.openR = 1;
     };
     P.root = rx(1.32);
-  } else if (pose === 'ride' || pose === 'pedal' || pose === 'sit' || pose === 'drive' || pose === 'sitlow') {
+  } else if (pose === 'ride' || pose === 'pedal' || pose === 'sit' || pose === 'drive' || pose === 'sitlow' || pose === 'cartsit') {
     const seat = SEATS[pose] / CA;
     P.acc = false; P.pel = [0, pose === 'sit' || pose === 'sitlow' ? -0.6 : -1.6, seat + 3.7];
     if (pose === 'ride') {
@@ -578,6 +578,10 @@ function rig(D, A, pose, f, kind, acc) {
         if (f) { P.hL = [-2.4, 12.4, seat + 9.6]; P.hR = [2.4, 12.4, seat + 9.9]; P.openL = P.openR = 1; } else { P.hL = [-3.4, 6.8, seat + 10.2]; P.hR = [3.4, 6.8, seat + 10.2]; }
         P.elL = [-1, -0.3, -0.2]; P.elR = [1, -0.3, -0.2];
       };
+    } else if (pose === 'cartsit') {   // in a shopping cart's basket (shared/vehicles.js cart): knees up, hands on the rims
+      P.lean = -0.06; P.headPitch = -0.06;
+      P.fL = [-D.hipX - 0.6, 6.4, seat + D.ank - 2.6]; P.fR = [D.hipX + 0.6, 6.2, seat + D.ank - 2.6]; P.kneeL = [-0.2, 0.5, 1]; P.kneeR = [0.2, 0.5, 1];
+      P.hands = (S) => { P.hL = [-6.4, 2.6, seat + 8.6]; P.hR = [6.4, 2.6, seat + 8.6]; P.elL = [-1, -0.2, -0.2]; P.elR = [1, -0.2, -0.2]; };
     } else if (pose === 'sit') {
       P.lean = f ? 0.48 : -0.04; P.headPitch = f ? 0.15 : 0;
       P.fL = [-D.hipX - 0.9, 7.8, D.ank]; P.fR = [D.hipX + 0.9, 7.6, D.ank]; P.kneeL = P.kneeR = [0, 1, 0.8];
@@ -1894,7 +1898,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump', 'cue'].includes(pn)) kind = null;
+  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump', 'cue', 'cartkick', 'cartride', 'cartsit'].includes(pn)) kind = null;   // (nothing in the hands on a shopping cart)
   if (pn === 'hood') kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
@@ -1940,6 +1944,10 @@ Object.assign(POSES, { hunch: 6, strut: 6, skate: 8, blade: 6, dance: 4, push: 6
 // at once); skgrab the grabs (0 indy, 1 melon, 2 method, 3 nosegrab); skgrind on a rail (0 50-50, 1 5-0, 2 boardslide, 3
 // crooked); skmanual on the back wheels (2 frames: the balance)
 Object.assign(POSES, { skatec: 1, skateair: 3, skflip: 12, skshove: 6, sktre: 6, skgrab: 4, skgrind: 4, skmanual: 2 });
+// a shopping cart (shared/vehicles.js cart, 2026-10-18): cartkick - holding the handle, a foot on the back rail, the other
+// kicking the ground (8 frames, as the skateboard's kick); cartride - both feet up on the back rail, leaning on the handle;
+// cartsit - in the basket (the sitting poses above)
+Object.assign(POSES, { cartkick: 8, cartride: 2, cartsit: 1 });
 CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
 Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
 // people at their activities (server activities.js, task #423): easel (a street painter's, in front: the brush up to the
@@ -2059,6 +2067,21 @@ const GAITS2 = {
     P.fL = [-1.4, 8.0, D.ank + 4.0]; P.fR = [-1.6, -1.8, D.ank + 1.8]; P.kneeL = [-0.3, 1, 0.5]; P.kneeR = [0.3, -0.2, 0.6];
     P.deck = { c: [-1.5, 3.6, 2.6], M: rx(-0.32) };
     P.hands = (S) => { P.hL = vadd(S.shL, [-9.2, 2.2 + w, -3.4 + w * 0.8]); P.hR = vadd(S.shR, [9.0, -1.4 + w, -3.0 - w * 0.8]); P.openL = P.openR = 1; };
+  },
+  cartkick(D, P, f) {   // (the cart's handle and back rail ahead: client/art2/vehicles.js shoppingCart; the rider at shared/vehicles.js crew[0])
+    const k = f & 7, FR = [[1.6, 2.6, 2.2], [3.0, 4.2, 1.2], [3.2, 3.0, 0], [3.4, -1.6, 0], [3.4, -6.4, 0], [3.0, -9.6, 0.8], [2.6, -6.0, 3.0], [2.0, -1.0, 3.2]][k];
+    const sink = [0.4, 0.9, 1.5, 2.0, 1.8, 1.4, 0.9, 0.5][k];
+    P.acc = false; P.lean = 0.3 + sink * 0.04; P.headPitch = -0.16; P.twist = [-0.04, -0.06, -0.1, -0.08, 0.02, 0.08, 0.04, -0.02][k];
+    P.pel = [-0.3, 1.4, D.pelZ + 0.6 - sink];
+    P.fL = [-1.8, 6.4, D.ank + 4.6]; P.kneeL = [-0.2, 1, 0.5];
+    P.fR = [D.hipX + FR[0] - 2.2, FR[1], D.ank + FR[2]]; P.kneeR = [0.2, 1, k >= 4 && k <= 5 ? -0.3 : 0];
+    P.hands = (S) => { P.hL = [-5.2, 6.2, 29.6]; P.hR = [5.2, 6.2, 29.6]; P.elL = [-1, -0.5, -0.4]; P.elR = [1, -0.5, -0.4]; P.openL = P.openR = 0; };
+  },
+  cartride(D, P, f) {   // both feet up on the back rail, the weight forward on the handle, a little bob
+    P.acc = false; P.lean = 0.34; P.headPitch = -0.12 - f * 0.04;
+    P.pel = [-0.2, 1.8, D.pelZ + 3.0 - f * 0.4];
+    P.fL = [-1.9, 6.4, D.ank + 4.6]; P.fR = [1.9, 6.0, D.ank + 4.6]; P.kneeL = [-0.2, 1, 0.6]; P.kneeR = [0.2, 1, 0.6];
+    P.hands = (S) => { P.hL = [-5.2, 6.2, 29.6]; P.hR = [5.2, 6.2, 29.6]; P.elL = [-1, -0.5, -0.4]; P.elR = [1, -0.5, -0.4]; P.openL = P.openR = 0; };
   },
   blade(D, P, f) {   // each stride pushed out to the side, a long glide, low and leaning
     gait(D, P, 1, f / 6, true);

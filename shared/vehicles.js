@@ -52,6 +52,9 @@ export const VEHICLES = {
   // the ferries to the islands (server/systems/ferries.js): run to a timetable, never driven, never hurt
   ferry:     { i: 31, name: 'Car Ferry',        kind: 'boat', L: 470, W: 150, max: 320, accel: 60, brake: 80, rev: 60, turn: 0.4, grip: 2, drift: 1, mass: 60, hp: 99999, seats: 24, slots: [[-140, -40], [-140, 40]], ferry: true },
   waterbus:  { i: 32, name: 'Water Bus',        kind: 'boat', L: 240, W: 76,  max: 320, accel: 60, brake: 80, rev: 60, turn: 0.5, grip: 2, drift: 1, mass: 30, hp: 99999, seats: 16, slots: [[-80, 0]], ferry: true },
+  // the shopping cart (task #329): kicked along, ridden on the back rail, one in the basket (crew: where they are); a
+  // crash throws them (server vehicles.js cartCrash); free outside the groceries (traffic.js cartSpots)
+  cart:      { i: 50, name: 'Shopping Cart',    kind: 'bike', L: 30,  W: 20, max: 330, accel: 250, brake: 420, rev: 60,  turn: 3.7, grip: 7.0, drift: 2.4, mass: 0.22, hp: 60, seats: 2, slots: [[1, 0]], pedal: true, cart: true, rough: 2.4, crew: [[-20, 0], [3, 0]], blurb: 'kick it along, ride the back rail; one rides in the basket' },
   cargobike: { i: 30, name: 'Cargo Bike',       kind: 'bike', L: 58,  W: 18, max: 280, accel: 190, brake: 520, rev: 50,  turn: 3.0, grip: 10,  drift: 2.8, mass: 0.45, hp: 75, seats: 1, slots: [[15, 0], [-19, 0]], price: 900, pedal: true, rough: 1.1, seat: -11, blurb: 'slow, carries two crates' },
   // the five-star response (server/systems/police.js): the FBI's black SUVs (strobes in the grille, no light bar) and the
   // army's olive troop trucks (no siren; armoured like the SWAT truck)
@@ -106,7 +109,7 @@ export const VEHICLES = {
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);
-export const PEDAL_BIKES = Object.keys(VEHICLES).filter((id) => VEHICLES[id].pedal);
+export const PEDAL_BIKES = Object.keys(VEHICLES).filter((id) => VEHICLES[id].pedal && !VEHICLES[id].cart);
 
 export const VEHICLE_BY_INDEX = [];
 for (const [id, v] of Object.entries(VEHICLES)) {

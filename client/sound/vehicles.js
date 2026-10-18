@@ -53,7 +53,7 @@ export const ENGINE_CLASS = {
   police: 'police', swat: 'truck', ambulance: 'van', rescue4x4: 'van', armored: 'truck', bike: 'sportbike', policebike: 'moto', fbi: 'police', army: 'truck',
   speedboat: 'outboard', policeboat: 'outboard', rescueboat: 'outboard', dinghy: 'dinghy', jetski: 'jetski', ferry: 'ship', waterbus: 'ship',
   boxtruck: 'truck', dumptruck: 'truck', mixer: 'truck', tanker: 'truck', garbage: 'truck', firetruck: 'truck', towtruck: 'truck',
-  bicycle: 'pedal', cruiser: 'pedal', mtb: 'pedal', roadbike: 'pedal', bmx: 'pedal', cargobike: 'pedal',
+  bicycle: 'pedal', cruiser: 'pedal', mtb: 'pedal', roadbike: 'pedal', bmx: 'pedal', cargobike: 'pedal', cart: 'pedal',   // (a shopping cart: its casters' rattle)
   vtwin: 'vtwin', tourer: 'vtwin', chopper: 'vtwin', bobber: 'vtwin', bagger: 'vtwin', trike: 'vtwin', ratbike: 'vtwin',
   caferacer: 'thumper', dirtbike: 'twostroke', scooter: 'scooter',
   heli: 'rotor', policeheli: 'rotor', gunship: 'rotor', plane: 'prop', duster: 'prop', rescueheli: 'rotor',

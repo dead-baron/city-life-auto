@@ -1413,7 +1413,7 @@ export class World2 {
     const o = this.opts;
     o.alpha = sinking ? 1 - 0.75 * sk : 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = !sinking; o.tint = v.tint || null;   // (render/boom.js)
     if (v.blinkUntil > now) o.alpha *= Math.floor(now * 10) % 2 ? 0.25 : 1;
-    const lean = def.kind === 'boat' ? 0 : -(v.lean || 0) * (def.kind === 'bike' ? 2.5 : 1.6);
+    const lean = def.kind === 'boat' ? 0 : -(v.lean || 0) * (def.cart ? 0.6 : def.kind === 'bike' ? 2.5 : 1.6);
     const z0 = this._z0(v, def.kind === 'boat') - (sinking ? sk * 8 : 0);
     // a moving boat: its foam under the hull (bow collar, churned stern, the V close behind) and wake points
     // dropped for the trail that spreads and fades behind it (_wakeTrail)
@@ -1436,15 +1436,15 @@ export class World2 {
     // it, then the back seats in turn - task #420), a rescue crew member kneeling at the side to pull someone in
     const Pd = this.Pd;
     if ((def.kind === 'bike' || def.crew) && Pd && Pd.pedKey) {
-      const seats = def.kind === 'bike' ? api.SEAT_BIKE : def.crew, myPed = this.S.myPedId;
+      const seats = def.crew || api.SEAT_BIKE, myPed = this.S.myPedId, kick = def.cart ? this._cartKick(v, now, def) : -1;   // (a shopping cart: its driver behind it, kicking or up on the back rail - one in the basket)
       let nb = 0;
       for (const p of this.S.ents.values()) {
         if (p.kind !== K.PED || p.parent !== v.id || !p.d || (p.flags & PF.DEAD)) continue;
         const pass = (p.flags & PF.PASSENGER) !== 0, seat = !pass && def.seat !== undefined ? [def.seat, 0] : seats[p.back ? Math.min(seats.length - 1, 2 + nb++) : pass ? 1 : 0];   // (a bicycle: where its saddle is)
         const c = Math.cos(v.ra), s = Math.sin(v.ra), x = v.rx + c * seat[0] - s * seat[1], y = v.ry + s * seat[0] + c * seat[1];
         const kneel = def.kind === 'boat' && api.pedPose(p) === 'kneel';
-        const d8 = dir8(kneel ? p.ra ?? v.ra : v.ra), pose = def.pedal ? 'pedal' : kneel ? 'kneel' : (!pass && def.ride) || 'ride', A2 = this._app(p.d.app || {}, p.d.ar);   // (def.ride: leaned back on a chopper, tucked on a sport bike)
-        const fr = pose === 'pedal' && (p.as || 0) > 20 ? Math.floor(p.phase || 0) % 4 : 0, wpn = p.extra | 0;
+        const d8 = dir8(kneel ? p.ra ?? v.ra : v.ra), pose = def.cart ? (pass ? 'cartsit' : kick >= 0 ? 'cartkick' : 'cartride') : def.pedal ? 'pedal' : kneel ? 'kneel' : (!pass && def.ride) || 'ride', A2 = this._app(p.d.app || {}, p.d.ar);   // (def.ride: leaned back on a chopper, tucked on a sport bike)
+        const fr = pose === 'pedal' && (p.as || 0) > 20 ? Math.floor(p.phase || 0) % 4 : pose === 'cartkick' ? kick : pose === 'cartride' ? Math.floor(now * 2 + v.id) & 1 : 0, wpn = def.cart ? 0 : p.extra | 0;
         const was = this.sprPrio;
         if (p.id === myPed) this.sprPrio = -3;
         const bo = bladeOpt(p, wpn);
@@ -1461,6 +1461,19 @@ export class World2 {
     }
   }
 
+  // A shopping cart's driver kicking (the frame, 0-7) or riding the back rail (-1): kicking while it gathers speed, a kick
+  // seen through once begun, riding once it's up to speed or coasting (from how fast it's going, the last few steps)
+  _cartKick(v, now, def) {
+    const b = v.buf, sp = b && b.length > 1 ? Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20 : 0;
+    const was = v._csp ?? sp;
+    v._csp = was + (sp - was) * 0.25;
+    const going = sp > 8 && (sp > was + 0.6 || sp < def.max * 0.35) && sp < def.max * 0.92;
+    if (going && v._ck === undefined) v._ck = now;
+    if (v._ck === undefined) return -1;
+    const k = (now - v._ck) / 0.7;
+    if (k >= 1) { if (!going) { v._ck = undefined; return -1; } v._ck = now; return 0; }
+    return Math.min(7, Math.floor(k * 8));
+  }
   // An aircraft (H66): its block model (art2/aircraft.js - loaded the first time one is near, out of the renderer's code)
   // up the screen by its height, the rotor turning; until it's made the overlay draws it (render/aircraft.js: v._v2at)
   _air(v, now, me) {

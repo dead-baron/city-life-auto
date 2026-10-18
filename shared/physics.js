@@ -29,9 +29,7 @@ export const PED = {
   aWalk: 100, aRun: 178, aSprint: 222, WALK_AT: 0.6, easeIn: 8.5, easeOut: 4.2, turnRate: 13,
 };
 
-// Riding a skateboard (shared/board.js: its numbers, its step, the tricks - loaded by the server, and by the page once you
-// have a board or see someone ride one: client/skate.js). It registers its step here (setBoard); until it's in, a rider
-// in the page's prediction rolls on as it was.
+// Riding a skateboard: shared/board.js registers its step here (the server loads it; the page with client/skate.js).
 let BSTEP = null, BAIL_HIT = 150;
 export function setBoard(step, bailHit) { BSTEP = step; BAIL_HIT = bailHit; }
 export const boardOn = () => !!BSTEP;
