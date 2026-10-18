@@ -5,7 +5,7 @@ import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_L
 import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
-import { pedStep, vehStep, driveInput, BOARD } from '../shared/physics.js';
+import { pedStep, vehStep, driveInput, BOARD as SKATE } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
@@ -4149,7 +4149,7 @@ function pedLook(p, now) {
   if (p.d && p.d.bd && !(f & (PF.DEAD | PF.DOWN | PF.STUN | PF.INVEH)) && !flying) {
     if (f & PF.ROLL) {
       if (p._oa === undefined) p._oa = now;
-      const k = Math.min(1, (now - p._oa) / BOARD.ollieT);
+      const k = Math.min(1, (now - p._oa) / SKATE.ollieT);
       pose = 'skateair'; fr = k < 0.18 ? 0 : k < 0.82 ? 1 : 2; lift = Math.sin(Math.PI * k) * 15;
     } else { p._oa = undefined; pose = (f & PF.SPRINT) && (f & PF.MOVING) ? 'skate' : 'skatec'; fr = pose === 'skate' ? Math.floor(now * 7 + p.id) % 8 : 0; }
   } else p._oa = undefined;
