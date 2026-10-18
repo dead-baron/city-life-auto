@@ -10583,3 +10583,65 @@ nothing, on every device. The server was fine. The import is renamed `SKATE`.
   parses it and the whole graph is linked. The test checks that each static import's file exists and exports the names
   imported from it, without running anything. It runs in a child node with `--experimental-vm-modules`, and takes
   about a second. No other test loads the page's own script, which is how this got through.
+## 2026-10-18 · Fix: PRACTICE OFFLINE never got into the city (since World v3 went live)
+
+Since World v3 went live (2026-10-15), pressing **PRACTICE OFFLINE** said "Starting offline practice city on this
+device..." and then the title screen came back, with "The online city isn't reachable right now" under it. Practice
+never started, on every device.
+
+**Why.** The page boots World v3's world (version.json `live`), and it only ever holds the window round the player,
+downloaded from the game server. The practice worker (`client/practice-worker.js`, unchanged since practice was first
+written) built today's world from the seed and ran it. Its welcome has no `world`, and `client/main.js` passed it to
+`worldChanged` like a server's welcome. That noted 'today' in `cla.world` and loaded the page again. The reloaded page
+was back on the title, not in practice; the "isn't reachable" line was its status. (The reconnect loop never wrote over
+practice's status: `connect` and `scheduleReconnect` return at once in practice.) The reload also left 'today' in
+`cla.world`, so the next online visit built today's city for nothing and reloaded once more. In a headless test the
+page sat on the title for good, with no page errors.
+
+**Which world practice plays: still today's.** The simulation needs the whole world in memory, and a phone can't build
+or hold World v3's. Measured here (node 22, two shared cores):
+
+| | Build | Memory |
+|---|---|---|
+| World v3 (`server/world3.js buildWorld3`) | 47.5 s | peak 1.64 GB; 1.35 GB with the World running |
+| Today's world (`generateCity(1337)`) | 4.9 s | 0.28 GB, the whole node process with the World running |
+
+The page can't lend practice its World v3 city either: it holds only a window of it, and offline there is no server to
+fetch the rest from. So practice plays the classic city, as it did before World v3. World v3's handcrafted districts are
+not in it.
+
+**The fix.**
+- **The worker hands its city to the page.** It posts a copy of the city it built (`{ city, ms }`, about 37 MB, made in
+  a fraction of a second) before anything else. The copy is taken as generated, before the World runs, as the server's
+  cut is. The page doesn't build the city a second time or load the generator.
+- **The page plays that city** (`main.js practiceWorld`). A practice welcome goes there instead of to `worldChanged`
+  and `holdForCity`. The page takes the handed city unless it already has that very city (today's world, the same
+  signature). It never keeps World v3's window, which has the same seed but is another world. The window is dropped and
+  no longer moved.
+- **The online city stops when practice starts.** `startPractice` stops boot.js's city worker, so it doesn't go on
+  downloading World v3's window or build today's city beside the practice worker's build (on a phone, twice the time
+  and the memory). What it got isn't taken.
+- **Practice keeps no baked chunks.** Before, they went under `CLA_ART_KEY`, the online world's art key: today's
+  world's chunks kept under World v3's key would be drawn in the online game later. Kept chunks aren't read back in
+  practice either.
+- `holdForCity`'s "The World v3 city could not be downloaded" status isn't written in practice.
+- **`tools/playtest.py --server practice`** now waits for the game's script before pressing PRACTICE OFFLINE. The
+  button is in index.html before main.js gives it its handler, so an early click did nothing and the run sat on the
+  title. That made the harness flaky. It also no longer counts the page's failed tries at its online server as errors
+  in practice: there is no game server there.
+- **New test** `test/practice.test.js`, about 9 s. It runs the practice worker in a thread as the browser does. The
+  city must come first, today's world whole and not World v3's. The welcome must carry no `world` and the signature of
+  the city handed over. Snapshots must follow. It also checks the page's side in main.js: the practice welcome skips
+  `worldChanged`, the city worker is stopped, and no chunks are kept.
+
+**Checked in headless Chromium** on an 844 x 390 phone page (`tools/playtest.py --mobile --vp 844x390 --server
+practice`):
+- **In the city in 6.5-11 s** after the click. The worker's build takes 4.2-8.3 s on this shared machine.
+- **Memory:** the renderer process (the page and its workers) is 150 MB on the title. It is about 460-510 MB on
+  entering the city, and 700-750 MB once the art's bake worker is going.
+- **The live case** ran against a local World v3 server (`CLA_WORLD=v3`). The page went online with the window and into
+  the city. Back on the title, PRACTICE OFFLINE replaced the window with practice's city (1312 x 1200, no window). The
+  page didn't reload, and `cla.world` stayed 'v3'.
+- **Online play is unchanged.** `tools/playtest.py --start-server` (a local today's-world server) gets into the city as
+  before.
+- The page's code goes from 483 to 484 KB of its 485.
