@@ -1356,11 +1356,15 @@ function addBuildings(c, I) {
         if (up) { const zU = zD + roofDeckZ(up.spec); top = Math.max(top, zD + buildingH(up.spec) + 4, kTop(up.kit, zU)); }
         const key = `b:${bi}:${s.k}`;
         it = { key, recipe: { t: 'b', spec, kit, up, stands: !!s.stands }, x: x0, y: y1, ext: [2, d + top + 4, w + 2, 4] };
-        // inside a walk-in building the whole of it is cut away - the rooms you can walk into and the wings you
-        // can't (a hospital's) alike - so it reads as one building, not one open room beside a roofed block
+        // inside a walk-in building its room is cut away - no roof, the walls cut low - and only that: the rest of a
+        // deep footprint behind it (its back rooms: shared/map.js roomDepth) keeps its roof, as does a part of the
+        // building with no room in it, so you see into the room you're in and nothing else
         if (b.walkIn) {
           const sec = s, bld = b, base = it;
-          it.cut = () => base._cut || (base._cut = { ...base, key: 'cut:' + base.key, recipe: cutRecipe(c, bld, sec, spec), ext: [2, d + Math.min(buildingH(spec), 120) + 12, w + 2, 4] });
+          it.cut = () => {
+            if (base._cut === undefined) { const r = cutRecipe(c, bld, sec, spec, base.recipe); base._cut = r ? { ...base, key: 'cut:' + base.key, recipe: r, ext: [2, r.back ? base.ext[1] + 12 : d + Math.min(buildingH(spec), 120) + 12, w + 2, 4] } : null; }
+            return base._cut || base;
+          };
         }
       }
       it.b = bi; it.fp = [x0, y1 - d, x0 + w, y1];   // (fp: the section's footprint; a fading building keeps it covered)
@@ -3376,8 +3380,13 @@ function coverItems(c, I, cx, cy) {
 const FLOORK = { convenience: 'tileWhite', pharmacy: 'tileWhite', grocery: 'tileWhite', coffee: 'woodFloor', clothing: 'woodFloor', barber: 'checker', sports: 'rubber', hardware: 'platform', gunshop: 'platform',
   pawn: 'woodFloor', club: 'checker', fence: 'checker', hospital: 'tileWhite', reception: 'tileWhite', bank: 'stoneTile', courthouse: 'stoneTile', fishmarket: 'tileGreen', tackle: 'woodFloor', police: 'platform',
   roadhouse: 'woodFloor', laundry: 'tileWhite', records: 'checker', books: 'woodFloor', clothes: 'woodFloor', florist: 'tileGreen', salon: 'checker' };
-function cutRecipe(c, b, s, spec) {
+// A section of a walk-in building cut away round its room, or null for one with no room in it (a section of a deep
+// footprint wholly behind the room, a closed shop along the row): that stays as it stands, roofed. base: the section's
+// own building recipe - a room in front of the building's back rooms (shared/map.js roomDepth) has them drawn as they
+// stand behind its back wall (r.back, makeCut), their roof and what's on it.
+function cutRecipe(c, b, s, spec, base) {
   const W = s.tw * TILE, Dd = s.th * TILE, wi = b.walkIn, units = [];
+  if (wi.y0 > s.ty + s.th - 1 || wi.y1 < s.ty) return null;
   for (const u of wi.units) {
     const ux0 = Math.max(u.x0, s.tx), ux1 = Math.min(u.x1, s.tx + s.tw - 1);
     if (ux1 < ux0) continue;
@@ -3390,31 +3399,65 @@ function cutRecipe(c, b, s, spec) {
     const fl = u.kind === 'coffee' ? foodLayout(b, u, TILE) : null, food = fl ? { L: fl, ox, oy } : null;   // (IN8: a food place's fit-out, shared/foodrooms.js)
     units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl, cine, food, trade: u.trade || null });
   }
-  // a wing with no room you walk into (a hospital's wards): its floor all across, walls cut low round it
-  const inY0 = Math.max(32, Math.min(Dd - 64, (wi.y0 - s.ty) * TILE)), inY1 = Math.max(inY0 + 32, Math.min(Dd - 32, (wi.y1 - s.ty + 1) * TILE));
-  const wing = units.length ? null : FLOORK[(wi.units[0] || {}).kind] || 'tileWhite';
-  // (ew / ee: the section has the building's west / east wall - a big walk-in is drawn in sections, open to each other)
-  return { t: 'cut', w: W, d: Dd, H: Math.min(buildingH(spec), 120), wall: spec.style || 'stucco', wallColor: spec.wallColor || null, seed: spec.seed, units, inY0: wing ? inY0 : (wi.y0 - s.ty) * TILE, inY1: wing ? inY1 : (wi.y1 - s.ty + 1) * TILE, wing, ew: s.tx <= b.tx, ee: s.tx + s.tw >= b.tx + b.tw };
+  if (!units.length) return null;
+  const inY0 = (wi.y0 - s.ty) * TILE, inY1 = (wi.y1 - s.ty + 1) * TILE;
+  // the back rooms behind the room's back wall, when they're in this section (the camera looks over them into the room
+  // in front - a room with its door on the north side has them in front of it, cut low with the rest): the building's
+  // own recipe, without the rooftop kit standing over the room (it would be cut in two)
+  let back = null;
+  if (wi.south && wi.y0 - 1 > b.ty && inY0 > 0 && base && base.t === 'b' && !base.frame) {
+    const behind = (k, y) => { const q = KITS[kitBase(k)], kd = q ? (k.endsWith('@') ? q[0] : q[1]) : 0; return y + kd / 2 < inY0 - 4; };
+    const up = base.up && base.up.y < inY0 ? { ...base.up, kit: (base.up.kit || []).filter(([k, , y]) => behind(k, base.up.y + y)) } : null;
+    back = { ...base, kit: (base.kit || []).filter(([k, , y]) => behind(k, y)), up };
+  }
+  // (ew / ee: the section has the building's west / east wall - a big walk-in is drawn in sections, open to each other;
+  // a room starting on the line where a section behind it starts is drawn a pixel in from it, its back wall in front of
+  // that section's own south wall so it shows over it)
+  return { t: 'cut', w: W, d: Dd, H: Math.min(buildingH(spec), 120), Hb: buildingH(spec), wall: spec.style || 'stucco', wallColor: spec.wallColor || null, seed: spec.seed, units, inY0: inY0 === 0 ? 1 : inY0, inY1, back, ew: s.tx <= b.tx, ee: s.tx + s.tw >= b.tx + b.tw };
 }
 function makeCut(r) {
-  const { w, d, H } = r, CUT = 18, G = new GBuf(w, d + H + 8); G.ax = 0; G.ay = d + H + 8;
+  const { w, d } = r, CUT = 18, BY = r.inY0;
+  // the back rooms (r.back): the building as it stands behind the room's back wall; the wall's face goes up to their roof
+  const O = r.back ? makeBld(r.back) : null, oy = O ? O.ay - d : 0, fh = O ? new Int32Array(w).fill(r.Hb || r.H) : null;
+  if (O) {
+    const top = new Int32Array(w).fill(-1);
+    for (let row = 0; row < O.h; row++) for (let x = 0; x < Math.min(w, O.w); x++) {
+      const i = row * O.w + x, Y = row - oy + O.z[i];
+      if (O.col[i * 4 + 3] && Y >= BY - 3 && Y < BY && O.z[i] > top[x]) top[x] = O.z[i];
+    }
+    for (let x = 0; x < w; x++) if (top[x] >= 0) fh[x] = top[x];
+  }
+  let H = r.H;
+  if (fh) for (let x = 0; x < w; x++) H = Math.max(H, fh[x]);
+  const G = new GBuf(w, Math.max(d + H + 8, O ? O.ay : 0)); G.ax = 0; G.ay = G.h;
+  if (O) {   // what of it is north of the back wall: its roof, the kit on it, the upper storey's part
+    const dy = G.ay - O.ay;
+    for (let row = 0; row < O.h; row++) for (let x = 0; x < Math.min(w, O.w); x++) {
+      const i = row * O.w + x, j = i * 4;
+      if (!O.col[j + 3] || row - oy + O.z[i] >= BY) continue;
+      const di = (row + dy) * G.w + x, dj = di * 4;
+      for (let k = 0; k < 4; k++) { G.col[dj + k] = O.col[j + k]; G.nrm[dj + k] = O.nrm[j + k]; G.emi[dj + k] = O.emi[j + k]; }
+      G.z[di] = O.z[i]; G.flag[di] = O.flag[i];
+    }
+  }
   const WR = r.wall === 'brick' ? MAT.brick : r.wall === 'brickDark' ? MAT.brickDark : ramp(r.wallColor || '#d8cfc0', 6, 3), CAP = ramp('#8a8680', 5, 2);
   const gy = (Y, z) => G.ay - d + Y - z;   // sprite row of ground point Y (from the section's north edge) at height z
   const wallAt = (u, v) => (r.wall === 'brick' || r.wall === 'brickDark') ? ((v % 4 === 0 || (u + (Math.floor(v / 4) & 1) * 4) % 8 === 0) ? MAT.concrete[2] : WR[3 - ((hash(u >> 3, v >> 2, r.seed) * 2) | 0)]) : WR[3 + (hash(u >> 2, v >> 2, r.seed) > 0.85 ? -1 : 0)];
   const px = (x, Y, z, c, n, f = 0) => zw(G, x, gy(Y, z), c, n, z, f);
-  // floor (a wing's all across it)
+  // floor
   for (const u of r.units) {
     if (u.bowl) { bowlingFloor(u, r, px); continue; }
     if (u.cine) { cinemaFloor(u, r, px); continue; }
     const fk = FLOORK[u.trade] || FLOORK[u.kind] || 'woodFloor', lob = LOBBY[u.kind], fo = u.food ? FOOD_FLOOR[u.food.L.style] : null;
     for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, fo ? fo(x, Y, u.food) : lob ? lob.floor(x + r.seed, Y) : groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   }
-  if (r.wing) for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = 0; x < w; x++) px(x, Y, 0, groundPixel(r.wing, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
-  // the back wall: full height, its face toward the camera, its top a cap
+  // the back wall: full height (up to the back rooms' roof, the building's own wall above the shop's), its face toward
+  // the camera, its top a cap (over the back rooms: their roof)
   for (let x = 0; x < w; x++) {
     const lu = r.units.find((u) => (LOBBY[u.kind] || u.food) && x >= u.x0 && x < u.x1);   // (IN1-B / IN2-B: the lobby's own wall; IN8: a food place's)
-    for (let v = 0; v < H; v++) px(x, r.inY0, v, lu ? (lu.food ? FOOD_WALL[lu.food.L.style](x, v) : LOBBY[lu.kind].wall(x, v)) : wallAt(x, v), [0, 1, 0]);
-    for (let Y = 0; Y < r.inY0; Y++) px(x, Y, H, CAP[Y === 0 ? 4 : 2], [0, 0, 1]);
+    const hx = fh ? fh[x] : H;
+    for (let v = 0; v < hx; v++) px(x, BY, v, v >= r.H ? wallAt(x, v) : lu ? (lu.food ? FOOD_WALL[lu.food.L.style](x, v) : LOBBY[lu.kind].wall(x, v)) : wallAt(x, v), [0, 1, 0]);
+    if (!O) for (let Y = 0; Y < r.inY0; Y++) px(x, Y, H, CAP[Y === 0 ? 4 : 2], [0, 0, 1]);
   }
   // side walls and unit dividers cut low (caps), the front wall cut low with the doorways open
   const capRun = (xa, xb, Ya, Yb) => { for (let Y = Ya; Y < Yb; Y++) for (let x = xa; x < xb; x++) px(x, Y, CUT, CAP[x === xa || x === xb - 1 ? 3 : 2], [0, 0, 1]); for (let x = xa; x < xb; x++) for (let v = 0; v < CUT; v++) px(x, Yb, v, wallAt(x + 400, v), [0, 1, 0]); };

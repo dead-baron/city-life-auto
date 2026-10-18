@@ -965,6 +965,16 @@ export function interiorArt(m, b) {
       g.fillStyle = 'rgba(0,0,0,.05)'; g.fillRect(x, y + TILE - 1, TILE, 1);
     } else { g.fillStyle = '#3a3a42'; g.fillRect(x, y, TILE, TILE); g.fillStyle = '#4c4c56'; g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4); }
   }
+  // the back rooms behind a room just inside the door (a deep footprint: shared/map.js roomDepth): roofed over, as from
+  // outside, the room's back wall in front of them
+  const wi = b.walkIn, rf = b.roof >= 0 && m.roofs ? m.roofs[b.roof] : null;
+  if (rf && wi.south && wi.y0 - 1 > b.ty) {
+    const by = (wi.y0 - 1 - b.ty) * TILE;
+    g.save(); g.beginPath(); g.rect(0, 0, b.tw * TILE, by); g.clip();
+    g.translate(-ox, -oy); drawRoof(g, rf);
+    g.restore();
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, by - 3, b.tw * TILE, 3);
+  }
   for (const u of b.walkIn.units) {
     if (u.kind === 'bowling' && m.bowling) { bowlingArt(g, m.bowling, b, u, ox, oy); continue; }   // (Pinwheel Lanes: shared/bowling.js)
     if (u.kind === 'cinema' && m.cinema) { cinemaArt(g, m.cinema, b, ox, oy); continue; }   // (The Grand Theatre: shared/cinema.js)

@@ -2810,12 +2810,30 @@ function buildCornerStores(m) {
 }
 
 // Walk-in buildings: shops, banks, hospitals, the courthouse and police stations get a real
-// interior behind their front door - a one-tile wall ring, a floor, partition walls between the
-// units of a strip mall, and a counter with a clerk behind it. The roof art fades out while you
-// are inside (client). The place's interaction point moves in front of its counter.
+// interior behind their front door - a room just inside it walled all round, a floor, partition
+// walls between the units of a strip mall, and a counter with a clerk behind it. The roof art
+// fades out over the room while you are inside (client). The place's interaction point moves in
+// front of its counter.
 export const WALK_IN = new Set(['club', 'convenience', 'gasstation', 'hospital', 'gunshop', 'sports', 'hardware', 'clothing', 'grocery', 'pawn', 'bank', 'courthouse', 'pharmacy', 'police', 'fence', 'fishmarket', 'coffee', 'tackle',
   'barber', 'roadhouse']);   // (roadhouse: the Rusty Spur, countryside.js - task #366)
 const HELPER_POIS = new Set(['reception', 'evidence', 'atm']);
+// How deep a walk-in's room is (rows, the counter and the stock room behind it included): about as deep as the shop is
+// wide - roughly square to a modest rectangle - however deep the building is. A narrow shop thirty tiles deep (World v3's
+// hand plans: Midtown's long block) was one long empty corridor to a counter at the far end (the owner's 2026-10-17
+// report). The rest of a deep footprint stays solid building, its back rooms, roofed over even from inside
+// (client/art2/game/statics.js cutRecipe, client/render/tiles.js interiorArt). The bank, the courthouse, the hospital and
+// the police station (its cells along the back: shared/cells.js wants ten rows for three-deep cells), the clubs (a dance
+// floor) and the food places (their tables in front of the counter: shared/foodrooms.js) a little deeper; a footprint only
+// a little deeper than the room keeps the whole of it.
+export const WALKIN_ROOM = { perWide: 1.2, min: 6, max: 10, slack: 2 };
+const BIG_ROOM = { bank: [8, 12], courthouse: [8, 12], hospital: [8, 12], police: [10, 12], club: [6, 12], coffee: [8, 10] };
+// kinds: the units' POI kinds; wide: the widest unit (tiles); full: the rows the footprint has inside its walls
+export function roomDepth(kinds, wide, full) {
+  let lo = WALKIN_ROOM.min, hi = WALKIN_ROOM.max;
+  for (const k of kinds) { const r = BIG_ROOM[k]; if (r) { lo = Math.max(lo, r[0]); hi = Math.max(hi, r[1]); } }
+  const want = Math.max(lo, Math.min(hi, Math.round(wide * WALKIN_ROOM.perWide)));
+  return full <= want + WALKIN_ROOM.slack ? full : want;
+}
 function buildInteriors(m) {
   m.walkIns = [];
   // the nightclubs become walk-ins (their doors open after dark)
@@ -2835,17 +2853,28 @@ function buildInteriors(m) {
     const main = list.filter((p) => isWalk(p) || p.kind === 'delivery');
     if (!main.some(isWalk) || list.some((p) => !isWalk(p) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery' && !(b.hand && p.kind === 'home'))) continue;
     const south = m.prefabs[b.prefab].rot === 0;
-    const x0 = b.tx + 1, x1 = b.tx + b.tw - 2, y0 = b.ty + 1, y1 = b.ty + b.th - 2; // interior (inclusive)
+    const x0 = b.tx + 1, x1 = b.tx + b.tw - 2; // inside the side walls (inclusive)
     main.sort((a, c) => a.x - c.x);
-    const depth = y1 - y0 + 1;
+    // the units along the front, split halfway between their doors (a walk-in's spot, once laid out, is in front of its
+    // counter: where the next one along splits from it); other storefronts in the row stay closed
+    const spans = [], at = main.map((p) => p.x);
+    main.forEach((p, i) => {
+      const dc = Math.max(x0, Math.min(x1, Math.floor(p.x / TILE)));
+      const ux0 = i === 0 ? x0 : Math.floor((Math.floor(at[i - 1] / TILE) + dc) / 2) + 1;
+      const ux1 = i === main.length - 1 ? x1 : Math.floor((dc + Math.floor(at[i + 1] / TILE)) / 2) - 1;
+      if (!isWalk(p) || ux1 - ux0 < 1) return;
+      spans.push({ p, dc, ux0, ux1 });
+      at[i] = (ux0 + ux1 + 1) / 2 * TILE;
+    });
+    if (!spans.length) continue;
+    // the room: just inside the front wall, as deep as the widest unit wants (roomDepth); behind it, a wall and the back
+    // rooms, solid
+    const depth = roomDepth(spans.map((q) => q.p.kind), Math.max(...spans.map((q) => q.ux1 - q.ux0 + 1)), b.th - 2);
+    const y0 = south ? b.ty + b.th - 1 - depth : b.ty + 1, y1 = y0 + depth - 1; // the room (inclusive)
     const back = south ? y0 : y1, dir = south ? 1 : -1;
     const counterRow = back + dir * Math.max(1, Math.min(3, Math.floor(depth * 0.3)));
     const units = [];
-    main.forEach((p, i) => {
-      const dc = Math.max(x0, Math.min(x1, Math.floor(p.x / TILE)));
-      const ux0 = i === 0 ? x0 : Math.floor((Math.floor(main[i - 1].x / TILE) + dc) / 2) + 1;
-      const ux1 = i === main.length - 1 ? x1 : Math.floor((dc + Math.floor(main[i + 1].x / TILE)) / 2) - 1;
-      if (!isWalk(p) || ux1 - ux0 < 1) return; // other storefronts in the row stay closed
+    for (const { p, dc, ux0, ux1 } of spans) {
       for (let ty = y0; ty <= y1; ty++) for (let tx = ux0; tx <= ux1; tx++) m.set(tx, ty, T.FLOOR);
       // the doorway: two tiles of the front wall
       const fy = south ? b.ty + b.th - 1 : b.ty;
@@ -2869,8 +2898,7 @@ function buildInteriors(m) {
       }
       // a hospital's ER mat sits beside its desk
       for (const q of list) if (q.kind === 'reception') { q.x = cx - 48; q.y = frontY + dir * 10; }
-    });
-    if (!units.length) continue;
+    }
     b.walkIn = { south, units, x0, x1, y0, y1 };
     m.walkIns.push(bid);
   }
