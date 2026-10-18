@@ -124,7 +124,7 @@ function northBand(K, m, ctx) {
   // boutiques - Vellori's flagship, the watchmaker, the patisserie
   towerLot({ x: ca[0], y: nr[0] + 4, w: 26, h: nr[1] - nr[0] - 3, name: 'Westside Tower', floors: 12 });
   K.row(ca[0] + 26, ca[1], nr[0], nr[1], (x, room) => room >= 8 ? { w: room, depth: 16, arch: 'mixed', name: 'Crosstown Deli', poi: { kind: 'coffee', label: 'Crosstown Deli', food: true }, whole: true, art: tower(x, nr[1], { name: 'Crosstown Deli', style: 'stone', floors: 3, store: 'cafe', awning: ['#2f5a4a', '#f0ece4'], win: 'even' }) } : room >= 1 ? { gap: room, kind: 'garden' } : null);
-  towerLot({ x: cb[0], y: nr[0] + 2, w: cb[1] - cb[0], h: nr[1] - nr[0] - 1, name: 'Halcyon Building', style: 'stone', floors: 9, wall: '#d8ccb4', cornice: 'dentil', win: 'arch' });
+  towerLot({ x: cb[0], y: nr[0] + 2, w: cb[1] - cb[0], h: nr[1] - nr[0] - 1, name: 'Halcyon Building', style: 'stone', floors: 9, wall: '#d8ccb4', cornice: 'dentil', win: 'arch', roofMat: 'green' });
   let k = 0;
   const westShops = [
     { w: 13, name: 'Silk & Shears Salon', sign: 'SILK & SHEARS', store: 'salon', poi: { kind: 'barber', label: 'Silk & Shears Salon' }, awning: ['#2a2420', '#2a2420'] },
@@ -174,7 +174,7 @@ function northBand(K, m, ctx) {
   for (const fx of [DX.axis - 3, DX.axis + 4]) prop('bench_m', fx, sr[1] - 1, 0);
   prop('lamp', px0 + 0.8, sr[1] - 0.6, 0); prop('lamp', px1 - 0.8, sr[1] - 0.6, 0);
   (out.places ||= []).push({ name: 'Greenfield Tower Plaza', x0: px0, y0: py0, x1: px1, y1: sr[1] + 1 });
-  towerLot({ x: cc[0], y: sr[0] + 2, w: 30, h: sr[1] - sr[0] - 1, name: 'The Meridian', floors: 12, tint: '#36606e' });
+  towerLot({ x: cc[0], y: sr[0] + 2, w: 30, h: sr[1] - sr[0] - 1, name: 'The Meridian', floors: 12, tint: '#36606e', roofMat: 'green' });
   towerLot({ x: cc[0] + 32, y: sr[0] + 6, w: px0 - cc[0] - 33, h: sr[1] - sr[0] - 5, name: 'Corvo House', style: 'stone', floors: 8 });
   towerLot({ x: px1 + 1, y: sr[0] + 6, w: 30, h: sr[1] - sr[0] - 5, name: 'Halden Tower', floors: 14 });
   towerLot({ x: px1 + 33, y: sr[0] + 2, w: cc[1] - px1 - 33, h: sr[1] - sr[0] - 1, name: 'Solano House', style: 'stone', floors: 9, wall: '#c8bca4' });
@@ -271,7 +271,7 @@ function westBand(K, m, ctx) {
       if (b) { K.fill(x, r[0] + nh, w, yard, T.LOT); for (let k = 0; k < Math.floor(w / 9); k++) prop(K.pick(['dump_g', 'dump_b', 'pallet_s', 'acunit'], K.rnd(x + k, r[0], 40)), x + 4 + k * 9, r[0] + nh + 1.8, 10); }
     }
   };
-  pair(ca[0], wa, r1, { h: 40, name: 'Westgate Residences', arch: 'condo', style: 'stone', wall: '#e8e2d2', floors: 14, win: 'even', home: { kind: 'apartment', price: 42000 }, poi: false }, { name: 'Linden Court', floors: 7 });
+  pair(ca[0], wa, r1, { h: 40, name: 'Westgate Residences', arch: 'condo', style: 'stone', wall: '#e8e2d2', floors: 14, win: 'even', roofMat: 'green', home: { kind: 'apartment', price: 42000 }, poi: false }, { name: 'Linden Court', floors: 7 });
   pair(cb[0], wb, r1, { h: 46, name: 'Park West Tower', floors: 16, tint: '#2a4a6a' }, { name: 'Park West Annex', floors: 6, wall: '#c8bca4' });
   pair(ca[0], wa, r2, { h: 34, name: 'Fountain Court', arch: 'condo', style: 'stone', wall: '#d8ccb4', floors: 8, win: 'pair', home: { kind: 'apartment', price: 36000 }, poi: false }, { name: 'Maple Hall', floors: 6, wall: '#e2dac6', arch: 'condo', home: { kind: 'apartment', price: 32000 }, poi: false });
   pair(cb[0], wb, r2, { h: 36, name: 'Greenfield Medical Building', style: 'stone', wall: '#e2dac6', floors: 7, win: 'tall' }, { name: 'Sycamore House', floors: 5, wall: '#b8b0a2' });
@@ -319,7 +319,7 @@ function eastBand(K, m, ctx) {
   towerLot({ x: cx0, y: r1[0] + 2, w: hx - cx0 - 1, h: hh - 2, name: 'Park East Tower', floors: 14, tint: '#3a5a72' });
   towerLot({ x: hx + hw + 1, y: r1[0] + 6, w: cx1 - hx - hw - 1, h: hh - 6, name: 'Concord House', style: 'stone', floors: 10, wall: '#d8ccb4', cornice: 'dentil' });
   // south of 23rd Street: two towers either side of a pocket plaza
-  towerLot({ x: cx0, y: r2[0] + 4, w: 48, h: r2[1] - r2[0] - 3, name: 'Kestrel Tower', floors: 15, tint: '#2e5670' });
+  towerLot({ x: cx0, y: r2[0] + 4, w: 48, h: r2[1] - r2[0] - 3, name: 'Kestrel Tower', floors: 15, tint: '#2e5670', roofMat: 'green' });
   towerLot({ x: cx1 - 48, y: r2[0] + 2, w: 48, h: r2[1] - r2[0] - 1, name: 'Ellison Building', style: 'stone', floors: 10, wall: '#d4c8b0', cornice: 'step' });
   forecourt(cx0 + 49, r2[0] + 10, cx1 - cx0 - 98, r2[1] - r2[0] - 9, { fountain: true });
   void out;
@@ -404,7 +404,7 @@ function southBand(K, m, ctx) {
     // the bank, its van bay, the jeweller
     const by0 = ty0 + th + 1, bw = 36;
     place({ x: c2[0], y: by0, w: bw, h: rn[1] - by0 + 1, arch: 'bank', key: 'bank', name: 'First Pixel Bank', poi: { kind: 'bank', label: 'First Pixel Bank' }, whole: true,
-      art: { spec: { floors: 3, style: 'stone', wallColor: '#ddd2bc', win: 'tall', cornice: 'dentil', parapet: 14, grime: 0.05, roofMat: 'green', lip: 10, rimW: 5, date: '1911' } } });
+      art: { spec: { floors: 3, style: 'stone', wallColor: '#ddd2bc', win: 'tall', cornice: 'dentil', parapet: 14, grime: 0.05, roofMat: 'gravel', lip: 10, rimW: 5, date: '1911' } } });
     const vx0 = c2[0] + bw + 1, vx1 = vx0 + 18;
     K.fill(vx0, by0, vx1 - vx0, rn[1] - by0 + 1, T.LOT); K.take(vx0, by0, vx1 - vx0, rn[1] - by0 + 1);
     m.parking.push({ x: (vx0 + 5) * TILE, y: (by0 + 5) * TILE, a: Math.PI / 2, model: 'armored' }, { x: (vx0 + 12) * TILE, y: (by0 + 5) * TILE, a: Math.PI / 2, model: 'armored' });
@@ -418,9 +418,9 @@ function southBand(K, m, ctx) {
       art: tower(x, rn[1], { name: 'Brilliant & Co.', sign: 'BRILLIANT & CO.', style: 'stone', wall: '#2a2a30', floors: 3, store: 'mart', awning: ['#16202c', '#16202c'], signC: ['#16202c', [236, 214, 150]], win: 'arch' }) } : room >= 1 ? { gap: room, kind: 'plaza' } : null);
   }
   // south of 12th Street, Park East to Civic: offices round a fountain court
-  towerLot({ x: c2[0], y: rs[0] + 2, w: 40, h: rs[1] - rs[0] - 1, name: 'Commerce Tower', floors: 14, tint: '#284256' });
-  towerLot({ x: c2[1] - 40, y: rs[0] + 4, w: 40, h: rs[1] - rs[0] - 3, name: 'Harlow Building', style: 'stone', floors: 9, wall: '#d4c8b0', cornice: 'dentil' });
-  forecourt(c2[0] + 41, rs[0] + 14, c2[1] - c2[0] - 82, rs[1] - rs[0] - 13, { fountain: true });
+  towerLot({ x: c2[0], y: rs[0] + 2, w: 52, h: rs[1] - rs[0] - 1, name: 'Commerce Tower', floors: 14, tint: '#284256' });
+  towerLot({ x: c2[1] - 52, y: rs[0] + 4, w: 52, h: rs[1] - rs[0] - 3, name: 'Harlow Building', style: 'stone', floors: 9, wall: '#d4c8b0', cornice: 'dentil', roofMat: 'green' });
+  forecourt(c2[0] + 53, rs[0] + 20, c2[1] - c2[0] - 106, rs[1] - rs[0] - 19, { fountain: true });
   // ---- Civic Avenue to Harborview Avenue: the Civic car park (WC356's spiral ramp: the concrete decks, the round ramp
   // on its corner), offices and the Grand Neon Residences ----
   towerLot({ x: c3[0], y: rn[0] + 2, w: c3[1] - c3[0], h: rn[1] - rn[0] - 1, name: 'Civic Parking', arch: 'block', style: 'concrete', wall: '#b8b4aa', floors: 6, win: 'loft', sign: 'PARKING', signC: ['#1e3a5e', [250, 250, 240]], poi: { kind: 'delivery', label: 'Civic Parking' } });
@@ -429,7 +429,7 @@ function southBand(K, m, ctx) {
     towerLot({ x: c4[0], y: rn[0] + 6, w: hw4 - 1, h: rn[1] - rn[0] - 5, name: 'Walnut Street Offices', style: 'stone', floors: 8, wall: '#c8bca4' });
     towerLot({ x: c4[0] + hw4, y: rn[0] + 2, w: c4[1] - c4[0] - hw4, h: rn[1] - rn[0] - 1, name: 'Calder Tower', floors: 12, tint: '#284256' });
   }
-  towerLot({ x: c3[0], y: rs[0] + 4, w: c3[1] - c3[0], h: rs[1] - rs[0] - 3, name: 'Grand Neon Residences', arch: 'condo', style: 'stone', wall: '#e8e2d2', floors: 12, win: 'even', home: { kind: 'apartment', price: 48000 }, poi: false });
+  towerLot({ x: c3[0], y: rs[0] + 4, w: c3[1] - c3[0], h: rs[1] - rs[0] - 3, name: 'Grand Neon Residences', arch: 'condo', style: 'stone', wall: '#e8e2d2', floors: 12, win: 'even', roofMat: 'green', home: { kind: 'apartment', price: 48000 }, poi: false });
   towerLot({ x: c4[0], y: rs[0] + 2, w: c4[1] - c4[0], h: rs[1] - rs[0] - 1, name: 'Harborview Tower', floors: 15, tint: '#2e5670' });
   void rnd; void pick;
 }
