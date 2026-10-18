@@ -1,56 +1,56 @@
-# World concepts WC001-WC356: the catalogue
+# World concepts WC001-WC424: the catalogue
 
-The owner's 356 world-design concepts of 2026-10-17 (WC324-WC352: the Midtown set; WC353-WC356: Downtown) (made from the World Building Prompt Pack, mostly zoomed-out planning views of about 2 x 1.2 km), filed here as `WCnnn.jpg`. Original file names: see the index at the end. Each entry: what it shows, where it goes in World v3b, what it feeds in the World v3 Handcraft Plan, and what the rules leave out when it's built (children, schools, colleges, playgrounds, school buses, real brands, flags and place names, copies of real landmarks).
+The owner's 424 world-design concepts of 2026-10-17 (WC324-WC352: the Midtown set; WC353-WC356: Downtown; WC357-WC424: the District Layout Concept Prompts, parts 1-4) (made from the World Building Prompt Pack, mostly zoomed-out planning views of about 2 x 1.2 km), filed here as `WCnnn.jpg`. Original file names: see the index at the end. Each entry: what it shows, where it goes in World v3b, what it feeds in the World v3 Handcraft Plan, and what the rules leave out when it's built (children, schools, colleges, playgrounds, school buses, real brands, flags and place names, copies of real landmarks).
 
 ## By place
 
-- **Downtown:** WC011, WC013, WC023, WC054, WC055, WC074, WC083, WC084, WC215, WC228, WC243, WC244, WC253, WC258, WC274, WC283, WC284, WC291, WC321, WC323, WC353-WC356
-- **Civic Center:** WC071, WC242, WC253, WC284, WC323
-- **Neon Strip:** WC011, WC012, WC157, WC238, WC283
-- **Pink Mile:** WC046, WC047, WC237
-- **Arts District:** WC070, WC110, WC239, WC292, WC315
-- **Bayside Heights:** WC005, WC006, WC076, WC082, WC085, WC113, WC235, WC307
-- **Midtown:** WC066, WC073, WC086, WC087, WC151, WC157, WC159, WC241, WC324-WC352
-- **Harbor:** WC003, WC004, WC040, WC045, WC057, WC059, WC072, WC086, WC087, WC093, WC150, WC158, WC159, WC204, WC219, WC232, WC277, WC278, WC316, WC328, WC333, WC334, WC340, WC344-WC352
-- **Old Town:** WC014, WC025, WC056, WC158, WC222, WC224, WC240, WC278, WC289, WC290
-- **Northgate:** WC002, WC069, WC089, WC292, WC298, WC315
-- **Stadium District:** WC067, WC167, WC226, WC254, WC313, WC318
-- **The Yards:** WC001, WC003, WC009, WC010, WC051, WC088, WC152, WC154, WC233, WC289, WC290
-- **Westport Center:** WC065, WC281, WC282
-- **Port Westport:** WC004, WC042, WC043, WC044, WC219, WC230, WC231, WC254, WC281, WC282
-- **Old Quarter:** WC155
-- **West Hills:** WC008, WC089, WC168, WC288
-- **Westport International:** WC041, WC168, WC225, WC309, WC310
-- **Lake District:** WC080, WC091, WC223, WC252, WC314
-- **Falls Center:** WC064, WC252
-- **Cedar Falls:** WC007, WC008, WC075, WC234, WC288
-- **Sunset Beach:** WC063, WC209, WC221, WC227, WC279, WC298
-- **Pine Hills:** WC078, WC279
-- **Southside:** WC010, WC050
-- **Pelican Key:** WC060, WC180, WC205, WC249
-- **Coral Cay:** WC034, WC058, WC156, WC178, WC180, WC203, WC249
+- **Downtown:** WC011, WC013, WC023, WC054, WC055, WC074, WC083, WC084, WC215, WC228, WC243, WC244, WC253, WC258, WC274, WC283, WC284, WC291, WC321, WC323, WC353-WC356, WC417, WC418, WC424
+- **Civic Center:** WC071, WC242, WC253, WC284, WC323, WC419, WC420
+- **Neon Strip:** WC011, WC012, WC157, WC238, WC283, WC421, WC422
+- **Pink Mile:** WC046, WC047, WC237, WC423
+- **Arts District:** WC070, WC110, WC239, WC292, WC315, WC397, WC416
+- **Bayside Heights:** WC005, WC006, WC076, WC082, WC085, WC113, WC235, WC307, WC398, WC399
+- **Midtown:** WC066, WC073, WC086, WC087, WC151, WC157, WC159, WC241, WC324-WC352, WC368, WC369, WC376
+- **Harbor:** WC003, WC004, WC040, WC045, WC057, WC059, WC072, WC086, WC087, WC093, WC150, WC158, WC159, WC204, WC219, WC232, WC277, WC278, WC316, WC328, WC333, WC334, WC340, WC344-WC352, WC375, WC402
+- **Old Town:** WC014, WC025, WC056, WC158, WC222, WC224, WC240, WC278, WC289, WC290, WC403, WC404
+- **Northgate:** WC002, WC069, WC089, WC292, WC298, WC315, WC400, WC401
+- **Stadium District:** WC067, WC167, WC226, WC254, WC313, WC318, WC405
+- **The Yards:** WC001, WC003, WC009, WC010, WC051, WC088, WC152, WC154, WC233, WC289, WC290, WC406, WC407
+- **Westport Center:** WC065, WC281, WC282, WC408, WC409
+- **Port Westport:** WC004, WC042, WC043, WC044, WC219, WC230, WC231, WC254, WC281, WC282, WC410
+- **Old Quarter:** WC155, WC411
+- **West Hills:** WC008, WC089, WC168, WC288, WC370, WC412, WC413, WC414
+- **Westport International:** WC041, WC168, WC225, WC309, WC310, WC415
+- **Lake District:** WC080, WC091, WC223, WC252, WC314, WC396
+- **Falls Center:** WC064, WC252, WC395
+- **Cedar Falls:** WC007, WC008, WC075, WC234, WC288, WC370, WC377
+- **Sunset Beach:** WC063, WC209, WC221, WC227, WC279, WC298, WC378, WC379, WC380
+- **Pine Hills:** WC078, WC279, WC381
+- **Southside:** WC010, WC050, WC382, WC383
+- **Pelican Key:** WC060, WC180, WC205, WC249, WC384
+- **Coral Cay:** WC034, WC058, WC156, WC178, WC180, WC203, WC249, WC388
 - **Gull Harbor:** WC040, WC059, WC204, WC277, WC316
 - **Prison Island:** WC048, WC108, WC248
-- **Northshore:** WC061, WC090, WC133, WC176, WC192, WC220, WC256, WC287, WC308
-- **North Point:** WC140, WC222, WC287
-- **The Bluffs:** WC029, WC306
+- **Northshore:** WC061, WC090, WC133, WC176, WC192, WC220, WC256, WC287, WC308, WC367, WC385
+- **North Point:** WC140, WC222, WC287, WC386
+- **The Bluffs:** WC029, WC306, WC387
 - **Willow Valley:** WC039, WC091, WC096, WC111, WC115, WC120, WC142, WC148, WC185, WC188, WC189, WC190, WC191, WC256, WC259, WC276, WC286, WC295, WC317
-- **Willow Crossing:** WC037, WC090, WC095, WC096, WC111, WC149, WC175, WC187, WC202, WC217, WC267, WC276, WC295, WC320
+- **Willow Crossing:** WC037, WC090, WC095, WC096, WC111, WC149, WC175, WC187, WC202, WC217, WC267, WC276, WC295, WC320, WC394
 - **Kestrel Lake:** WC039, WC093, WC185, WC189, WC259
 - **Long Reach:** WC187, WC217, WC267
 - **Highland Woods:** WC028, WC094, WC106, WC126, WC130, WC131, WC132, WC134, WC135, WC138, WC139, WC143, WC145, WC153, WC160, WC165, WC169, WC186, WC194, WC197, WC199, WC201, WC247, WC285, WC301, WC311, WC312
-- **Timber Bend:** WC038, WC109, WC126, WC199, WC202, WC218, WC257, WC268, WC272, WC297, WC301, WC311
+- **Timber Bend:** WC038, WC109, WC126, WC199, WC202, WC218, WC257, WC268, WC272, WC297, WC301, WC311, WC392, WC393
 - **Granite Peaks:** WC027, WC032, WC094, WC104, WC124, WC125, WC128, WC141, WC147, WC153, WC160, WC161, WC165, WC172, WC195, WC196, WC245, WC260, WC261, WC271, WC273, WC285, WC296
-- **Egret:** WC031, WC036, WC049, WC052, WC112, WC171, WC193, WC207, WC250, WC263, WC270, WC293
+- **Egret:** WC031, WC036, WC049, WC052, WC112, WC171, WC193, WC207, WC250, WC263, WC270, WC293, WC360
 - **Red Rock:** WC026, WC117, WC118, WC120, WC121, WC122, WC163, WC173, WC174, WC181, WC182, WC183, WC184, WC255, WC275, WC300, WC305, WC322
-- **Copper Gulch:** WC053, WC123, WC164, WC206, WC211, WC255, WC266, WC275, WC294, WC300, WC304
-- **Dusty Hollow:** WC033, WC095, WC117, WC119, WC174, WC210, WC214, WC262, WC265
+- **Copper Gulch:** WC053, WC123, WC164, WC206, WC211, WC255, WC266, WC275, WC294, WC300, WC304, WC357
+- **Dusty Hollow:** WC033, WC095, WC117, WC119, WC174, WC210, WC214, WC262, WC265, WC358
 - **Route 9:** WC026, WC118, WC121, WC184, WC262, WC305, WC322
-- **Lucky Mesa:** WC054, WC055, WC074, WC079, WC114, WC116, WC212, WC213, WC215, WC216, WC258, WC274, WC291, WC299
-- **Sandpiper:** WC062, WC068, WC099, WC101, WC103, WC170, WC177, WC246, WC251, WC264, WC269, WC318, WC319
+- **Lucky Mesa:** WC054, WC055, WC074, WC079, WC114, WC116, WC212, WC213, WC215, WC216, WC258, WC274, WC291, WC299, WC389, WC390, WC391
+- **Sandpiper:** WC062, WC068, WC099, WC101, WC103, WC170, WC177, WC246, WC251, WC264, WC269, WC318, WC319, WC359
 - **Lighthouse Rock:** WC028, WC035, WC036, WC102, WC245
 - **Islets:** WC034, WC049, WC058, WC107, WC179
-- **Kits, near-duplicates and general references:** WC015, WC016, WC017, WC018, WC019, WC020, WC021, WC022, WC024, WC030, WC077, WC081, WC092, WC097, WC098, WC100, WC105, WC127, WC129, WC136, WC137, WC144, WC146, WC162, WC166, WC198, WC200, WC208, WC229, WC236, WC280, WC302, WC303
+- **Kits, near-duplicates and general references:** WC015, WC016, WC017, WC018, WC019, WC020, WC021, WC022, WC024, WC030, WC077, WC081, WC092, WC097, WC098, WC100, WC105, WC127, WC129, WC136, WC137, WC144, WC146, WC162, WC166, WC198, WC200, WC208, WC229, WC236, WC280, WC302, WC303, WC361-WC376
 
 ## Batch, batch 1: WC001-WC081
 
@@ -2040,6 +2040,436 @@ The owner's Downtown concepts of 2026-10-17 (close views and the district plan).
   - **Feeds:** a circus (roundabout park), the police HQ lot, the car park, bus lanes.
   - **Rule flags:** "Riverdale Police HQ" and the tower names (Velora, Lynx, Arden, Maris) are placeholders - use the game's own.
 
+# World concepts WC357-WC424 (batch 7: the District Layout Concept Prompts, parts 1-4)
+
+The owner's district layout concepts of the evening of 2026-10-17 (four parts, uploaded 19:05-19:08), made from the District Layout Concept Prompts sheet whose Midtown and Downtown prompts gave batches 5 and 6. Each image answers one prompt of the sheet (named in its entry: A = zoomed-out district overview, B = 2-4 blocks at mid zoom, C = street level). Together they cover the rest of the city's districts, the towns and islands, and the sheet's shared kit pieces (WC361-WC376: the garden, the court, the crescent, the cul-de-sac pod, the courtyard block, the promenade and the pocket park, several in three wealth states). Sign names in them are placeholders to replace with the game's own.
+
+- **WC357** · Copper Gulch: false-front main street below the mine
+  - **Prompt:** CopperGulch-A1
+  - **Shows:** A mining town in a red-rock canyon: a false-front main street with a saloon (steer skull, balcony), a stone assay office with crossed picks and general stores, a white clapboard hall with a bell tower, and five miners' cottages behind picket fences. A rocky creek gully crossed by a timber bridge. Above the town, a mine headframe, ore heaps, a conveyor, an ore train on a trestle, works tanks and sheds, water towers and a windmill.
+  - **Goes to:** Copper Gulch (the town and its mine); fallback Dusty Hollow.
+  - **Feeds:** the false-front main street, the assay office, the mine set piece (headframe, ore trestle, conveyor), the creek bridge.
+  - **Rule flags:** none (the bell-tower hall should read as a meeting hall or chapel, not a schoolhouse).
+- **WC358** · Dusty Hollow: a dying highway hamlet
+  - **Prompt:** DustyHollow-A1
+  - **Shows:** A near-empty desert crossroads: false-front shops (a steer skull, a cowboy-hat sign, a mesa mural), a motel round a pool with a neon cactus sign, an old gas station with a canopy and pumps, a water tower. Trailers, a tin shack with junk, a rusted car, tumbleweeds, Joshua trees and saguaros along the road.
+  - **Goes to:** Dusty Hollow on Route 9; fallback the Mesa Flats edge.
+  - **Feeds:** the ghost-town set (false fronts, junk lots), the old motel and gas station, desert props.
+  - **Rule flags:** none.
+- **WC359** · Sandpiper: the surf town on the beach road
+  - **Prompt:** SandpiperBay-A1
+  - **Shows:** A beach strip: a motel round a pool with a palm mural, surf shops, a tiki bar, a pink surf shack and a white beach club with a roof terrace. A pier with a thatched shack, a lifeguard tower, volleyball and surfers; a marina with a fuel dock and yachts; houses with pools behind, and a palm roundabout on the road.
+  - **Goes to:** Sandpiper (the surf town); fallback Sunset Beach.
+  - **Feeds:** surf shops, the beach club, the fuel dock, beach NPC life (surfers, volleyball).
+  - **Rule flags:** the lifeguard tower flies what looks like a national flag - invent it or leave it off.
+- **WC360** · Egret Point: marsh fishing village and dirt raceway
+  - **Prompt:** EgretPoint-A1
+  - **Shows:** A fishing village on the marsh: a car-ferry ramp with a ticket booth, fish sheds on piers, a seafood shop with a fish sign, lobster pots and a trawler. A boardwalk winds through the reeds to a shelter past a house on stilts; clapboard houses and a store-diner at the crossroads; a dirt oval raceway with stands and an RV camp beside it.
+  - **Goes to:** Egret Point on the Egret Coast (village, car-ferry pier, raceway).
+  - **Feeds:** the car-ferry ramp, fish sheds, the marsh boardwalk, the dirt oval (race venue), RV camp.
+  - **Rule flags:** a flag over the raceway - make it invented.
+- **WC361** · Community garden, well kept
+  - **Prompt:** Shared-1 (the kept version)
+  - **Shows:** A fenced corner lot between brick terraces: raised vegetable beds, sunflowers, a small greenhouse, a pergola with a bench, a tool shed, compost bins and water butts, a skyline mural on the party wall and a gate sign reading "Community Garden". Double yellow lines on the street outside.
+  - **Goes to:** shared kit: a corner lot in a dense district (Midtown, Old Town, Northgate).
+  - **Feeds:** the community garden (a vacant-lot set piece) and its props.
+  - **Rule flags:** none.
+- **WC362** · Community garden, abandoned
+  - **Prompt:** Shared-1 (the poor version)
+  - **Shows:** WC361's lot left to go wild: the beds overgrown, weeds over the paths, the greenhouse, pergola and shed neglected.
+  - **Goes to:** shared kit: Southside, The Yards.
+  - **Feeds:** the garden's run-down state.
+  - **Rule flags:** none.
+- **WC363** · Community garden, half tended
+  - **Prompt:** Shared-1 (the middle version)
+  - **Shows:** WC361's lot in between: gardeners at work, compost heaps open, some beds gone weedy.
+  - **Goes to:** shared kit: Northgate, Old Town.
+  - **Feeds:** the garden's middle state, NPC life (gardeners).
+  - **Rule flags:** none.
+- **WC364** · Garden and court in three states (sheet)
+  - **Prompt:** Shared-1 and Shared-2 (all three versions of each)
+  - **Shows:** A six-panel sheet. Top: a walled corner garden (sunflower murals on the walls, greenhouse, pergola, red shed, raised beds, stone gate piers) kept, half-tended, then overgrown with a rusted pickup outside. Bottom: a fenced streetball court with floodlights and bleachers - fresh paint and a crowd, then faded with a boombox, then cracked and run-down, wet at night; brick terraces and palms round it.
+  - **Goes to:** shared kit for every district's lots (kept in Midtown or Bayside Heights, worn in Northgate or Old Town, run-down in Southside or The Yards).
+  - **Feeds:** vacant-lot states (the same lot by district wealth), the street court, NPC life (pickup games, spectators).
+  - **Rule flags:** none (the players should read as adults).
+- **WC365** · Garden and court in three states (variant sheet)
+  - **Prompt:** Shared-1 and Shared-2 (all three versions)
+  - **Shows:** As WC364: the walled garden with greenhouse, pergola, shed and a mural on its gate wall, a canopy gazebo in the middle version, overgrown in the third. The court in blue and red with bleachers, then faded with a food-stall canopy, then patched and graffitied with a boombox on the bench.
+  - **Goes to:** as WC364.
+  - **Feeds:** as WC364.
+  - **Rule flags:** none (the players should read as adults).
+- **WC366** · Garden and court in three states (palm street)
+  - **Prompt:** Shared-1 and Shared-2 (all three versions)
+  - **Shows:** The same pair on a palm-lined street: the garden with a pergola, a shed and a sunflower mural; a full-length court with bleachers; in the run-down panels, sheets hung on the fence of a squatted lot.
+  - **Goes to:** as WC364 (the palm version for the warmer districts).
+  - **Feeds:** as WC364.
+  - **Rule flags:** none.
+- **WC367** · Seaside terrace crescent
+  - **Prompt:** Shared-4 (the seaside version)
+  - **Shows:** Pastel clapboard terraces with dormers and porches round a loop road that encloses a fenced oval garden (two windswept pines, flower beds, benches), on a rocky shore with a sailboat offshore.
+  - **Goes to:** Northshore or Gull Harbor; fallback The Bluffs.
+  - **Feeds:** the terrace crescent in coastal style and its garden.
+  - **Rule flags:** none.
+- **WC368** · Brick crescent round a statue garden
+  - **Prompt:** Shared-4 (the city version)
+  - **Shows:** A crescent of brick Victorian terraces with bay windows round a railed oval garden: a statue on a flower-bed plinth, crossing paths, gates, lamps and bollards.
+  - **Goes to:** Midtown (an alternative Garden Crescent); fallback Old Town.
+  - **Feeds:** the crescent and its garden.
+  - **Rule flags:** none.
+- **WC369** · Stucco crescent round a fountain garden
+  - **Prompt:** Shared-4 (the wealthy version)
+  - **Shows:** A cream Regency stucco crescent (balconies, stoops, mansard roofs) round a railed oval garden with a statue fountain in a ring of hedge, topiary cones and benches. A dog walker; classic saloons parked at the kerb.
+  - **Goes to:** Midtown's Garden Crescent; fallback Bayside Heights.
+  - **Feeds:** the crescent, its fountain garden.
+  - **Rule flags:** none.
+- **WC370** · Cul-de-sac suburb plan
+  - **Prompt:** Shared-5
+  - **Shows:** Four bulb-ended cul-de-sacs off a collector road with a planted median; bungalows, ranch houses and flat-roofed modern homes with garages and fenced yards. Footpaths cut through between the bulbs to a park strip along a creek, with stairs at the top.
+  - **Goes to:** Cedar Falls or West Hills (the cul-de-sac pods); fallback Pine Hills.
+  - **Feeds:** the cul-de-sac pod, cut-through paths, the creek greenway, suburban home types.
+  - **Rule flags:** none.
+- **WC371** · Neighbourhood modules in several styles (sheet)
+  - **Prompt:** Shared-4, Shared-5 and Shared-6 (styles)
+  - **Shows:** A sheet. The terrace crescent in three styles (brick, cream with palms, pastel clapboard by a beach); a strip of cul-de-sacs in four styles (Spanish tile, Craftsman, flat-roofed modern with solar panels, ranch) with a linear park behind; the U-shaped courtyard block with a court and laundry lines in three styles (brick, cream stone, blue clapboard), each with a corner shop.
+  - **Goes to:** shared kit: the same modules dressed per district (brick for Midtown and Old Town, cream for Bayside Heights and Westport Center, clapboard for the coast towns).
+  - **Feeds:** neighbourhood modules by style.
+  - **Rule flags:** none.
+- **WC372** · Neighbourhood modules (variant sheet)
+  - **Prompt:** Shared-4, Shared-5 and Shared-6 (styles)
+  - **Shows:** As WC371: crescents in three styles, the cul-de-sac strip in four, and the courtyard block closed on all four sides in three.
+  - **Goes to:** as WC371.
+  - **Feeds:** as WC371.
+  - **Rule flags:** none.
+- **WC373** · Courtyard block in three states
+  - **Prompt:** Shared-6 (all three versions)
+  - **Shows:** The brick U-shaped courtyard block with a corner shop under a striped awning, three times: kept (a court, flower beds, a pergola bench, laundry lines), shabby, and run-down (graffiti, weeds, an old sofa in the yard).
+  - **Goes to:** shared kit: kept for Midtown's Garden Court, run-down for Southside or The Yards.
+  - **Feeds:** courtyard-block states by district wealth.
+  - **Rule flags:** none.
+- **WC374** · Courtyard blocks and a cul-de-sac strip (sheet)
+  - **Prompt:** Shared-6 and Shared-5 (styles)
+  - **Shows:** The courtyard block in three styles (brick; cream stucco with palms; blue clapboard with a surf shop on the corner) above a strip of four cul-de-sacs off a palm-lined arterial.
+  - **Goes to:** as WC371.
+  - **Feeds:** as WC371.
+  - **Rule flags:** none.
+- **WC375** · Seawall promenade with a crab shack
+  - **Prompt:** Shared-7
+  - **Shows:** A palm-lined paved promenade on a seawall with a balustrade, coin binoculars, benches, planters and lamps. A crab-shack kiosk with a big crab sign, a striped awning and stools; stone stairs down to sand and rocks; a timber jetty with a fishing boat. On the street side, a bus shelter, cafes and a parking meter.
+  - **Goes to:** the Harbor's promenade below Midtown; fallback Sunset Beach.
+  - **Feeds:** the seawall promenade (section and props), the crab shack, beach stairs.
+  - **Rule flags:** none.
+- **WC376** · Pocket park on a corner
+  - **Prompt:** Shared-8
+  - **Shows:** A big old tree in a railed corner garden with a cobbled path, a bench, a chess table with two old men, flower beds and a lamp. Next to it a corner grocer with green awnings and fruit crates, a brick walk-up with a fire escape, a bus shelter, a yellow taxi, a hydrant and a crosswalk.
+  - **Goes to:** Midtown or Old Town; fallback Northgate.
+  - **Feeds:** the pocket park, the corner grocer, street props, NPC life (chess players).
+  - **Rule flags:** none.
+- **WC377** · Cedar Falls: a suburb round a pond park
+  - **Prompt:** CedarFalls-A1
+  - **Shows:** A wooded suburb of curving streets and cul-de-sacs, houses with pools, round a central park: a pond with a gazebo island, footbridges and willows, and a lodge restaurant on the shore. A rec centre with an outdoor pool, a skate-bowl park, a creek falling down rocky cliffs under a footbridge (top right), and a strip mall with a gas station and parking on a four-lane arterial. Pines and autumn colour.
+  - **Goes to:** Cedar Falls; fallback Pine Hills.
+  - **Feeds:** the central park and pond, the rec centre and pool, the skate park, the strip mall, the falls.
+  - **Rule flags:** none (swimmers and skaters should read as adults).
+- **WC378** · Sunset Beach: the beach strip from above
+  - **Prompt:** SunsetBeach-A1
+  - **Shows:** Hillside villas with pools above a water park (slides, a lazy river, thatched huts), shop rows, colourful motels with pools and a big car park. A boardwalk with stairs to the sand, beach volleyball, lifeguard huts and a long pier with a green-roofed pavilion restaurant; boats offshore and rocky headlands at both ends.
+  - **Goes to:** Sunset Beach; fallback Sandpiper.
+  - **Feeds:** the water park (venue), the boardwalk, the pier pavilion, motel row.
+  - **Rule flags:** none (the water-park crowd should read as adults).
+- **WC379** · Sunset Beach: the boardwalk at sunset
+  - **Prompt:** SunsetBeach-B1
+  - **Shows:** A timber boardwalk with roller skaters, a pink hotel with a neon palm sign and a pool deck, surf shops with board racks, a tiki bar, a striped vendor cart and string lights. Stairs down to the beach, a lifeguard tower, boards stuck in the sand; the long pier with its green-roofed pavilion, and a tall ship offshore.
+  - **Goes to:** Sunset Beach.
+  - **Feeds:** the boardwalk section and its shops, beach props, NPC life (skaters, surfers).
+  - **Rule flags:** none.
+- **WC380** · Sunset Beach boardwalk (variant)
+  - **Prompt:** SunsetBeach-B1
+  - **Shows:** As WC379 from higher: more beach stairs, volleyball, vendor carts, the pier pavilion and boats.
+  - **Goes to:** as WC379.
+  - **Feeds:** as WC379.
+  - **Rule flags:** none.
+- **WC381** · Pine Hills: houses under pines above the beach
+  - **Prompt:** PineHills-A1
+  - **Shows:** Winding roads through dense pines with Craftsman houses; a creek cascading down a rocky gorge under a timber footbridge. A small clinic with a red cross and a police station with a flagpole and cruisers; a clifftop lookout with a monument and benches; a clifftop house with a pool. Timber stairs go down the bluffs to a sand beach with driftwood; sea stacks offshore.
+  - **Goes to:** Pine Hills; fallback The Bluffs or Northshore.
+  - **Feeds:** houses under pines, the creek gorge, the viewpoint, cliff stairs, a small police station.
+  - **Rule flags:** a national flag on the police station's pole - invent it; the clinic's red cross is a protected emblem (use the game's medical sign).
+- **WC382** · Southside: the rough grid by the tracks
+  - **Prompt:** Southside-A1
+  - **Shows:** Brick tenements with graffiti, a bare fenced court, a freight train at a level crossing with barriers, a vacant lot with an excavator. Corner businesses: ROYAL PAWN (gold, tools, TVs, cash), SOUTHSIDE LAUNDRY, LAST CHANCE BAR, MIKE'S AUTO REPAIR, JAY'S FOOD MART (beer, lotto, cigs, soda, ATM), SUNRISE LIQUOR. A tyre junkyard, a trailer park behind a wall by the water, utility poles; graffiti tags "SOUTHSIDE" and "A1".
+  - **Goes to:** Southside; fallback The Yards.
+  - **Feeds:** the rough shop row (pawn, liquor, laundromat, auto repair, food mart), vacant lots, the level crossing, the trailer park.
+  - **Rule flags:** the shop names are placeholders - use the game's own; the "A1" tag is the prompt's id - leave it off.
+- **WC383** · Southside: the projects yard
+  - **Prompt:** Southside-B1
+  - **Shows:** Four three-storey brick blocks round a shared yard with a cracked court, men round a burn barrel, laundry lines, satellite dishes and window AC units, overgrown corners and chained gates. A fenced car park with a burnt-out wreck; utility poles.
+  - **Goes to:** Southside (the projects); fallback The Yards.
+  - **Feeds:** the projects block and its yard, NPC life (burn barrel), wreck props.
+  - **Rule flags:** none.
+- **WC384** · Pelican Key: the key by the causeway
+  - **Prompt:** PelicanKey-A1
+  - **Shows:** A causeway bridge onto a small tropical key: a beach bar with umbrellas, a dockside seafood restaurant, a charter and fishing marina with finger piers, stilt houses with their own docks. A loop road round a rocky hill with a lookout deck and stairs; reef shallows, a buoy, and a palm islet with a hut.
+  - **Goes to:** Pelican Key; fallback Coral Cay.
+  - **Feeds:** the loop road, stilt beach houses, the charter dock, the beach bar, the lookout.
+  - **Rule flags:** none.
+- **WC385** · Northshore: station town on the inlet
+  - **Prompt:** Northshore-A1
+  - **Shows:** A rail station with a clock tower, green roofs and a passenger train; a grid of two-storey brick shopfronts with awnings, a clinic with a green cross, a brick civic building with a flag, and a strip mall with parking. Waterfront cafes and a marina, a sand cove with a rock groyne, a stone arch bridge over the inlet, and wooded rocky shores with villas, docks and a pool.
+  - **Goes to:** Northshore; fallback North Point.
+  - **Feeds:** Station Avenue (the station, the shop row), the strip mall, the inlet bridge, the beach road.
+  - **Rule flags:** a flag on the civic building - invent it.
+- **WC386** · North Point: harbour village out to the lighthouse
+  - **Prompt:** NorthPoint-A1
+  - **Shows:** A rocky fishing harbour: timber piers with fishing boats and trawlers, a red boathouse on a pier, a covered fish-market shed with a gantry and crates. Waterfront cafes and a seafood restaurant under umbrellas, clapboard houses, a little fountain square and a ridge road; a lighthouse and keeper's house on the point with a path, cliff stairs and a sand cove.
+  - **Goes to:** North Point; fallback Gull Harbor.
+  - **Feeds:** the harbour village, the fish shed, the lighthouse point, cliff stairs.
+  - **Rule flags:** none.
+- **WC387** · The Bluffs: clifftop villas and the hidden cove
+  - **Prompt:** Bluffs-A1
+  - **Shows:** Tile-roofed villas with pools behind gated drives along a winding clifftop road; a cliff-edge walk with railings and benches, a tennis court, cypresses and palms. Switchback timber stairs drop to a tiny cove with a beach-shack bar, surfboards and a jetty; sea stacks offshore.
+  - **Goes to:** The Bluffs; fallback Bayside Heights.
+  - **Feeds:** clifftop villas, the private road, cliff stairs, the hidden cove (a stash or meeting spot).
+  - **Rule flags:** none.
+- **WC388** · Coral Cay: cottages round the cove
+  - **Prompt:** CoralCay-A1
+  - **Shows:** Pastel stilt cottages with porches among palms round a horseshoe sand cove; a thatched beach bar with umbrellas and loungers, a restaurant on a deck by the dock, plank jetties with skiffs and a sport-fishing boat. Reef patches, a buoy, and a bridge (top right) to the next island.
+  - **Goes to:** Coral Cay; fallback Pelican Key.
+  - **Feeds:** stilt cottages, the cove beach, the beach bar, jetties.
+  - **Rule flags:** none.
+- **WC389** · Lucky Mesa: Old Downtown at night
+  - **Prompt:** LuckyMesa-OldDowntown-A1
+  - **Shows:** A pedestrian street under an arched canopy of lights, lined with neon (guitars, cacti, steer skulls, a horse-and-rider mural) and a giant waving neon cowboy. A white wedding chapel with a neon heart, motels with pools and neon palm signs, a stone courthouse with a clock tower, a parking garage, a bus depot with buses, a water tower and the highway curving round the top right.
+  - **Goes to:** Lucky Mesa: Old Downtown.
+  - **Feeds:** the covered street of lights (VG1), the wedding chapel, motel row, the bus depot.
+  - **Rule flags:** the light canopy and the giant waving neon cowboy echo a real desert downtown's canopy and its famous cowboy sign - keep the canopy generic and use a different figure.
+- **WC390** · Lucky Mesa: The Strip at night
+  - **Prompt:** LuckyMesa-Strip-A1
+  - **Shows:** A palm-median boulevard of resorts: a domed palace casino behind a lake of dancing fountains, a black glass pyramid with a sky beam, a sphinx and obelisks, and twin purple neon towers with a fountain roundabout drive. Parking decks behind; a freeway with an interchange and a gantry sign; desert and cacti at the edge.
+  - **Goes to:** Lucky Mesa: The Strip.
+  - **Feeds:** casino resorts, the fountain show, drop-off loops, parking decks.
+  - **Rule flags:** the palace behind its fountain lake and the pyramid with sphinx, obelisks and sky beam copy real resorts - stylise them (no sphinx; invented names, no real logos).
+- **WC391** · Mesa Flats at dusk
+  - **Prompt:** MesaFlats-A1
+  - **Shows:** A "Welcome to Mesa Flats" sign with a neon cactus by the highway. Trailer parks on looping dirt roads, a grid of stucco bungalows with palms, a two-storey motel round a pool, a gas station, a truck and RV lot, billboards and a gantry sign at the exit. A water tower with a cactus emblem and oil pump jacks on the scrub beyond; the Strip's skyline (the black pyramid and its beam) on the horizon.
+  - **Goes to:** Lucky Mesa: Mesa Flats.
+  - **Feeds:** the workers' town (trailer parks, bungalows, RV lot), pump jacks, the welcome sign, the skyline backdrop.
+  - **Rule flags:** the pyramid-and-beam skyline - as WC390.
+- **WC392** · Timber Bend: the sawmill wharf and main street
+  - **Prompt:** TimberBend-A1
+  - **Shows:** A logging town on a river: PINE RIVER SAWMILL on a timber wharf with log rafts, log trucks and a tug. The main street: TRAIL & TIDE OUTFITTERS, a diner, the SHERIFF's office, BARTON'S FEED & SUPPLY and THE CEDAR SALOON, with a water tower. Behind it the railway with a steam freight train and a depot, a truss rail bridge over a waterfall gorge, and cabins on dirt roads by a creek.
+  - **Goes to:** Timber Bend; fallback Highland Woods.
+  - **Feeds:** the sawmill and log wharf, main street, the rail bridge, cabins, log trucks.
+  - **Rule flags:** the sign names are placeholders - use the game's own; a small flag on the sheriff's office - invent it.
+- **WC393** · Timber Bend round its green (variant)
+  - **Prompt:** TimberBend-A1
+  - **Shows:** OUTFITTER, DINER, SHERIFF, FEED and SALOON fronts facing a green with a gazebo; a steam sawmill with a smokestack and log piles by a rushing river; log trucks, a water tower, a steam train at the depot, cabins up the hill, a timber bridge and a stone arch bridge over the river.
+  - **Goes to:** as WC392.
+  - **Feeds:** as WC392, plus the town green.
+  - **Rule flags:** none.
+- **WC394** · Willow Crossing: farm town at the river bridge
+  - **Prompt:** WillowCrossing-A1
+  - **Shows:** A grain elevator and silos (a wheat emblem) on a rail siding with hopper cars, by a highway bridge over the river. A main street of brick shops (a feed store with a cow sign), a white steepled church, and a farmers' market of tents on a green round an obelisk; a chrome diner with a giant coffee cup on its roof and flag bunting, and a truck stop with a fuel canopy, a pole sign and a store. Below the road, a red barn with cows and a tractor, corn and wheat fields with hay bales, farmhouses and a windmill.
+  - **Goes to:** Willow Crossing; fallback Cedar Farms in Willow Valley.
+  - **Feeds:** the grain elevator, the truck stop, the coffee-cup diner, the farmers' market, the farm set.
+  - **Rule flags:** the diner's flag bunting - keep it invented (no national flags).
+- **WC395** · Falls Center: harbour town where the falls meet the sea
+  - **Prompt:** FallsCenter-A1
+  - **Shows:** A stone quay with an arched seawall and a marina of finger piers and motor yachts, a green-roofed harbour restaurant on the quay, a curving shore road with a row of brick shops under awnings. A town square with a clock column and an equestrian statue between a stone town hall and a clinic with a red cross; Craftsman houses on a terraced hill with stairs. A cascading falls runs under two stone arch bridges into the harbour, and a lighthouse with a keeper's cottage stands on the rocky point.
+  - **Goes to:** Falls Center on the east island; fallback Cedar Falls or North Point.
+  - **Feeds:** the curving main street, the clock square, the pier and marina, the falls with its bridges.
+  - **Rule flags:** the clinic's red cross - use the game's medical sign.
+- **WC396** · Lake District: villas round the lake park
+  - **Prompt:** Lake-A1
+  - **Shows:** A big lake with a wooded island park (a gazebo, a footbridge, willows, a jetty); lakeside villas with pools, boathouses and docks along a lakeshore road. A waterfront restaurant and a marina with sailboats, a gazebo pavilion on the promenade, and a cascade falling from the hills at the top right.
+  - **Goes to:** Lake District round Falls Lake Park; fallback Kestrel Lake.
+  - **Feeds:** lakeside villas, boathouses, the island park, the lake marina.
+  - **Rule flags:** none.
+- **WC397** · Arts District: the gallery passage
+  - **Prompt:** Arts-B1
+  - **Shows:** A cobbled pedestrian lane between ivy-covered brick lofts at dusk: two huge murals (a woman's portrait, a saxophone player), galleries with lit windows, a record shop with vinyl crates and a sandwich board, cafe tables under umbrellas and string lights. A rooftop terrace bar under a pergola, skylights, planters and a parked bike.
+  - **Goes to:** Arts District.
+  - **Feeds:** the gallery passage, murals, the record shop, street-level NPC life.
+  - **Rule flags:** none.
+- **WC398** · Bayside Heights: the villa hill
+  - **Prompt:** Bayside-A1
+  - **Shows:** Terraced tile-roofed villas with pools on switchback estate lanes, four tennis courts and fountain roundabouts; a grand palazzo on the summit with a fountain court and a balustraded terrace. A palm boulevard with a promenade along the cliff, a tunnel portal at the right, and a yacht marina with a clubhouse restaurant.
+  - **Goes to:** Bayside Heights; fallback The Bluffs.
+  - **Feeds:** estate lanes, walled villa lots with pools and courts, the hilltop mansion, the clifftop promenade, the cove marina.
+  - **Rule flags:** none.
+- **WC399** · Bayside Heights (variant, evening)
+  - **Prompt:** Bayside-A1
+  - **Shows:** Mansions with fountain courts behind gated drives, clay tennis courts, a helipad with a helicopter by a gate tower, a yacht club marina, the cliff promenade on an arched seawall and a beach at the right.
+  - **Goes to:** as WC398.
+  - **Feeds:** as WC398, plus the helipad.
+  - **Rule flags:** none.
+- **WC400** · Northgate: courtyard blocks under the freeway
+  - **Prompt:** Northgate-A1
+  - **Shows:** Courtyard walk-ups cut through by an elevated freeway on piers, with a park beneath it (skate bowls, graffiti, gardens). A green-roofed stone civic building (the library) on a plaza with a statue, a brick fire station with red engines and a hose tower, a public outdoor pool, cul-de-sac turnarounds, and the El on a green steel viaduct with a station at the bottom.
+  - **Goes to:** Northgate.
+  - **Feeds:** the under-freeway park, the library, the fire station, the pool, courtyard blocks, the El.
+  - **Rule flags:** none.
+- **WC401** · Northgate: the freeway's underside
+  - **Prompt:** Northgate-B1
+  - **Shows:** The elevated freeway on piers painted with murals (portraits, palms). Under it, skate bowls and rails, a food truck with umbrella tables, a fenced basketball court painted blue and orange, and a fenced car park. Brick walk-ups with fire escapes along the street; the El viaduct and a station canopy at the bottom left.
+  - **Goes to:** Northgate.
+  - **Feeds:** the under-freeway park at mid zoom (skate bowls, court, food truck, mural piers).
+  - **Rule flags:** none.
+- **WC402** · Harbor: the working waterfront
+  - **Prompt:** Harbor-A1
+  - **Shows:** Timber fishing piers with trawlers and stairs down from the seawall; green-roofed market halls on a pier with a car park (the fish market and the ferry terminal) and a ferry at the ferry pier. A twin-towered lift bridge over the channel, a long road bridge on piers at the left, a breakwater with a green light, and a yacht marina at the right. Behind, a freight train on the waterfront line through warehouse blocks with a mural, and a water tower.
+  - **Goes to:** the Harbor; fallback Port Westport.
+  - **Feeds:** the fish market, the ferry terminal, the lift bridge, fishing piers, the marina.
+  - **Rule flags:** none.
+- **WC403** · Old Town: the piazza at the fork (street level)
+  - **Prompt:** OldTown-B1
+  - **Shows:** A cobbled quay with stone bollards, a fishing boat and rowboats, a stone arch bridge. A stone church with a bell tower and a rose window above a piazza with a bronze statue on a flower plinth, market stalls (vegetables, flowers), a trattoria with an awning and tables, barrels. Terraced lanes with stairs, laundry lines, a clinic with a red cross on a terrace, cypresses, a scooter, and a bathhouse with a dark blue curtain bearing a hot-spring sign.
+  - **Goes to:** Old Town; fallback Old Quarter.
+  - **Feeds:** the piazza (church, statue, market), the quay, stepped lanes (swap the hot-spring bathhouse for a local shop).
+  - **Rule flags:** the clinic's red cross - use the game's medical sign.
+- **WC404** · Old Town: the piazza (wider)
+  - **Prompt:** OldTown-B1
+  - **Shows:** The piazza from higher: the statue in a ring of paving, market stalls under red, white and green umbrellas, the church with its bell tower up a flight of steps, the quay with stairs and moored boats, arched stone retaining walls and terraces with cafes.
+  - **Goes to:** as WC403.
+  - **Feeds:** as WC403.
+  - **Rule flags:** none.
+- **WC405** · Stadium District
+  - **Prompt:** Stadium-A1
+  - **Shows:** An open-bowl football stadium with floodlights, red banners bearing an invented crest and a full crowd, inside a ring road of tailgate lots with canopies and RVs. Retention ponds with a footbridge; a mall with a glass vault and big car parks; a brick row of sports bars and a fan walk hung with banners. A freeway interchange with flyovers and an underpass, a fast-food place, a gas station and a canal.
+  - **Goes to:** Stadium District.
+  - **Feeds:** the stadium, tailgate lots, the glass-vault mall, the fan walk, the interchange.
+  - **Rule flags:** none (the crest is invented - keep it so).
+- **WC406** · The Yards: freight sidings and the scrap yard
+  - **Prompt:** Yards-A1
+  - **Shows:** A freight yard of many sidings with locomotives and tank cars, level crossings with barriers, an auto salvage yard with a grab crane and piles of cars. Brick and corrugated warehouses with roll-up doors and forklifts, the silos and tanks of a plant, trailers in a fenced lot. A sheet-piled quay with containers and a gantry crane, a tug, a steel truss bridge over the channel and an industrial pier with tanks opposite.
+  - **Goes to:** The Yards; fallback Port Westport.
+  - **Feeds:** rail sidings, the scrap yard, level crossings, the trailer lot, the quay.
+  - **Rule flags:** none.
+- **WC407** · The Yards: the level crossing by the liquor store
+  - **Prompt:** Yards-B1
+  - **Shows:** A freight train (box cars, tank cars) crossing a street with barrier arms and lights; RIVERSIDE LIQUOR on the brick corner with a bottle neon. A warehouse loading dock with a truck and a forklift, a salvage yard with an excavator and rusted wrecks, trailers behind a fence; graffiti walls, water towers, sidings, utility poles and a taxi.
+  - **Goes to:** The Yards; fallback Southside.
+  - **Feeds:** the level crossing at street level, the liquor store, the salvage yard, the trailer lot.
+  - **Rule flags:** "Riverside Liquor" is a placeholder - use the game's own.
+- **WC408** · Westport Center round its harbour basin
+  - **Prompt:** Westport-A1
+  - **Shows:** A marina basin with finger piers, sailboats and yachts; a ferry at a clock-tower terminal; green-roofed restaurants on the piers and a palm promenade. A fountain roundabout in front of a domed civic building on a statue plaza, a multi-storey car park, a hospital with a blue cross, a glass entrance canopy and ambulances, food trucks, mid-rise glass towers on podiums; the raised railway on a viaduct with a station and glass lift towers.
+  - **Goes to:** Westport Center; fallback Downtown's waterfront.
+  - **Feeds:** the harbour basin, the round fountain plaza, the raised railway's station, the hospital, the car park.
+  - **Rule flags:** none.
+- **WC409** · Westport Center: the hotel plaza
+  - **Prompt:** Westport-B1
+  - **Shows:** A grand stone hotel under a glass tower: a canopied entrance with a red carpet and a doorman, a fountain in the drop-off loop, black SUVs and a limousine, banners with a crest, a roof terrace with pergola dining. On the palm promenade, a row of food trucks and a striped cart; a red bus lane with a red bus, a flower median, and a seawall balustrade with a boat below.
+  - **Goes to:** Westport Center; fallback Downtown (the hotel with a fountain drive in WC356).
+  - **Feeds:** the hotel drop-off, the food-truck row, the red bus lane, rich NPC life (valets, limousines).
+  - **Rule flags:** none.
+- **WC410** · Port Westport: the container terminal
+  - **Prompt:** Port-A1
+  - **Shows:** A quay with three red ship-to-shore cranes over a container ship, a tug, straddle carriers and container stacks; a freight train of intermodal cars on the rail spur. A gate complex with booths and a queue of trucks, offices and a cross-dock warehouse; a roll-on car ferry at the top right with marshalling lanes full of cars. A breakwater light, buoys, a palm-lined port road and sailboats in the bay.
+  - **Goes to:** Port Westport (the terminal, the port gate, and the car ferry's marshalling lot for Gull Harbor).
+  - **Feeds:** gantry cranes, stacks, the port gate, the rail spur, the car-ferry lot (FE2).
+  - **Rule flags:** none.
+- **WC411** · Old Quarter: the station quarter
+  - **Prompt:** OldQuarter-A1
+  - **Shows:** A red-brick station house with a clock gable and glass platform canopies, a passenger train, freight on the main line and level crossings with gates. A Gothic church with a spire over a statue square, a market hall with red awnings and cafes, brick terraces and walk-ups. A redevelopment site with a tower crane and an excavator behind graffitied hoarding, a river with a stone arch bridge and a tour boat, and an arched, domed building with a fountain forecourt.
+  - **Goes to:** Old Quarter; fallback Old Town.
+  - **Feeds:** the street-level station, the chapel square, the construction site (crane), the market hall.
+  - **Rule flags:** none.
+- **WC412** · West Hills: suburb meeting forest and marsh
+  - **Prompt:** WestHills-A1
+  - **Shows:** Curving drives and cul-de-sacs among pines with mixed houses; a creek winding through with timber footbridges to a marsh with a boardwalk and a lookout hut. A strip mall and a blue-canopied gas station on a four-lane arterial.
+  - **Goes to:** West Hills; fallback Pine Hills.
+  - **Feeds:** cul-de-sacs, the creek greenway, the marsh boardwalk, the strip mall.
+  - **Rule flags:** the strip mall's sign names are garbled placeholders - use the game's own.
+- **WC413** · West Hills (variant)
+  - **Prompt:** WestHills-A1
+  - **Shows:** A curving collector with two cul-de-sacs round tree islands, two-storey houses with gardens and pools, and a creek greenway with a gazebo, timber footbridges and boulders running to a marsh and lake at the top right. A row of brick shops with parking and a gas station with a pole sign on the arterial.
+  - **Goes to:** as WC412.
+  - **Feeds:** as WC412.
+  - **Rule flags:** none.
+- **WC414** · West Hills: one cul-de-sac pod
+  - **Prompt:** WestHills-B1 (also Shared-5 close up)
+  - **Shows:** A round turnaround with a planted tree island, ringed by five houses (Craftsman, brick, stone chimneys) with garages and pickups and SUVs on the drives; fenced back yards with patios, umbrellas and pergolas. A creek with rapids, a timber footbridge and a path along the right.
+  - **Goes to:** West Hills; fallback Cedar Falls.
+  - **Feeds:** the cul-de-sac pod at mid zoom, back yards, the greenway path.
+  - **Rule flags:** none.
+- **WC415** · Westport International: the landside
+  - **Prompt:** Airport-A1
+  - **Shows:** A terminal with a control tower, a glass-arched hall and jet bridges with airliners; a curving two-level drop-off ramp; surface car parks with shuttle shelters and covered walkways, and a multi-storey car park. A motel with a pool, a neon diner and a low strip of rental desks and shops; the perimeter fence with a trailer park beyond it, a marsh pond, a freeway with a flyover, and pines.
+  - **Goes to:** Westport International.
+  - **Feeds:** the terminal front, the two-level drop-off, car parks, the motel strip, the trailer park by the fence.
+  - **Rule flags:** none (keep the airliners' liveries invented).
+- **WC416** · Arts District: lofts, the museum and the green walk
+  - **Prompt:** Arts-A1
+  - **Shows:** Brick warehouse lofts with huge murals; a neoclassical museum with banners and steps on a square with an abstract sculpture fountain; a raised green walk on an old rail viaduct curving through the blocks, with string lights, planters and strollers. A food-truck court under umbrellas, a playhouse with an arched entrance and banners, a glass-roofed market hall and a water tower; piers on the water at the lower left and a freight line on the right.
+  - **Goes to:** Arts District.
+  - **Feeds:** the museum square, the raised green walk, lofts and murals, the playhouse, the food-truck court.
+  - **Rule flags:** none.
+- **WC417** · Greenfield Park on the seawall
+  - **Prompt:** Greenfield-A1
+  - **Shows:** A park inside a rounded ring road: a pond with two wooded islands and stone footbridges, a boathouse with rowboats, a statue fountain at the north gate, a fenced soccer pitch with a covered stand, two tennis and two basketball courts, a green bandstand, allotments with a greenhouse and a shed, and ornate iron main gates on stone piers. Winding paths and picnickers; a seawall promenade with palms, jetties and a ferry along the south side; mid-rise blocks and a round tower round it.
+  - **Goes to:** Downtown: Greenfield Park.
+  - **Feeds:** every piece of the park (pond, islands, boathouse, pitch, courts, bandstand, allotments, gates).
+  - **Rule flags:** none.
+- **WC418** · Greenfield Park (inland variant)
+  - **Prompt:** Greenfield-A1
+  - **Shows:** As WC417 with city blocks on every side (cafe awnings, a bus on the ring road) instead of the seawall.
+  - **Goes to:** as WC417.
+  - **Feeds:** as WC417.
+  - **Rule flags:** none.
+- **WC419** · Civic Center: the forum
+  - **Prompt:** Civic-A1
+  - **Shows:** A green-domed city hall on a balustraded riverfront at the head of a long paved forum with a statue on a plinth, banners and small fountains. A glass-domed library with a green roof and columns on the left, a temple-fronted courthouse at the forum's foot, and a hospital with a rooftop helipad, a glass ER canopy and ambulances on the right; a garden with a gazebo, and a tree-lined boulevard with three medians below. The river with a towered stone bridge and ferries at the top.
+  - **Goes to:** Civic Center.
+  - **Feeds:** the forum axis, city hall, the courthouse, the library, the hospital.
+  - **Rule flags:** the red cross on the helipad is a protected emblem (use a plain medical sign); keep the dome unbranded.
+- **WC420** · Civic Center: the hospital block
+  - **Prompt:** Civic-B1
+  - **Shows:** A hospital with a rooftop helipad, a glass entrance canopy and a red ER bay with four ambulances; a drop-off loop round a planted island with a tree and a bus shelter; a ramp down to an underground car park; a healing garden with a sculpture fountain, a pergola and benches. Tree-lined streets with medians round it.
+  - **Goes to:** Civic Center (the city hospital).
+  - **Feeds:** the hospital block (home of the ambulance loop), the drop-off, the car-park ramp, the garden.
+  - **Rule flags:** the red cross on the helipad - as WC419.
+- **WC421** · Neon Strip at night
+  - **Prompt:** Neon-A1
+  - **Shows:** An island's north shore at night: neon clubs and bars, a huge video billboard of a palm sunset, a glowing covered arcade, a fountain roundabout and hotel towers with rooftop pools. A palm promenade above a marina with yachts and a pier club; a riprap breakwater with a lighthouse; on the headland a ferris wheel, a carousel tent and string lights. Across the water, the city skyline, a long bridge and ferries.
+  - **Goes to:** Neon Strip.
+  - **Feeds:** the strip's layout (boulevard, arcade, roundabout), the ferris-wheel headland, the marina, night lighting.
+  - **Rule flags:** none.
+- **WC422** · Neon Strip: Lantern Lane after rain
+  - **Prompt:** Neon-B1
+  - **Shows:** A wet cobbled lane under strings of red paper lanterns: a ramen counter with a bowl neon, an octopus neon over a seafood bar, a cocktail-glass neon, a smoking grill stall, a busker with a guitar, scooters, diners on a rooftop terrace, striped awnings and a delivery truck. A canal quay with palms and stairs in front.
+  - **Goes to:** Neon Strip: Lantern Lane (the night market).
+  - **Feeds:** the night market's stalls and signs, a rain-wet street, NPC life (busker, diners).
+  - **Rule flags:** the lantern signs are in a CJK-like script (one reads "ramen", the rest is garbled) - placeholders; set the game's own sign text.
+- **WC423** · The Pink Mile at night
+  - **Prompt:** PinkMile-A1
+  - **Shows:** A curving palm-median road of motels and lounges: the Sundown Motel (a sunset-and-palm neon) round its pool, a second motel with a vertical palm MOTEL blade and a kidney pool, the Velvet lounge, the Moonrise Lounge (a crescent moon and palm in neon), a cocktail-glass bar, a tattoo parlour with a skull sign and a pawn shop. Graffitied back blocks with roller doors and boarded shops behind; gated apartment towers round a courtyard garden at the top right.
+  - **Goes to:** The Pink Mile.
+  - **Feeds:** motel row, the lounges, neon signs, the back-alley blocks.
+  - **Rule flags:** the sign names (Sundown, Velvet, Moonrise) are placeholders - use the game's own.
+- **WC424** · Greenfield Park as a circus
+  - **Prompt:** Greenfield-A1
+  - **Shows:** A round park in a circular ring road: a pond with two islands, two footbridges and a gazebo on one island, a boathouse with rowboats, a tiered statue fountain at the north gate, a bandstand, a soccer pitch with a stand, two clay tennis and two basketball courts, allotments with a greenhouse and a shed, and iron gates opening south onto an avenue; willows. Mansard stone blocks, a clock tower, green domes and buses on the ring.
+  - **Goes to:** Downtown: Greenfield Park; fallback Downtown's circus (WC356).
+  - **Feeds:** as WC417, in the round form.
+  - **Rule flags:** none.
+
+## Near-duplicates in this batch
+- WC361 ~ WC362 ~ WC363 (the garden in three states); WC364 ~ WC365 ~ WC366 (the garden-and-court sheets).
+- WC368 ~ WC369 (crescents round an oval garden); WC371 ~ WC372 ~ WC374 (the module sheets; WC373 repeats their courtyard row in three states).
+- WC379 ~ WC380 (the boardwalk); WC392 ~ WC393 (Timber Bend); WC398 ~ WC399 (Bayside Heights).
+- WC400 ~ WC401 (Northgate, wide and mid); WC403 ~ WC404 (the Old Town piazza); WC412 ~ WC413 (West Hills), WC414 a pod from them.
+- WC417 ~ WC418 ~ WC424 (Greenfield Park).
+
+## Batch highlights
+1. **WC417 / WC424** (Greenfield Park): the whole park in one plan - the pond with two islands, boathouse, pitch, courts, bandstand, allotments and gates, square and round.
+2. **WC419 + WC420** (Civic Center): the forum axis (city hall, courthouse, library, hospital) and the hospital block the ambulance loop needs (ER bay, drop-off loop, car-park ramp).
+3. **WC402** (the Harbor): the working waterfront - fish market, ferry terminal, fishing piers and the lift bridge.
+4. **WC410** (Port Westport): the container terminal with its gate, rail spur and the car ferry's marshalling lot.
+5. **WC421 + WC422** (Neon Strip): the strip and its ferris-wheel headland at night, and Lantern Lane at street level.
+6. **WC400 / WC401** (Northgate): the park under the freeway (skate bowls, court, food truck, mural piers) with the library, fire station and pool round it.
+7. **WC364 / WC365** (shared kit): the garden and the court each in three wealth states - one lot, dressed per district.
+8. **WC411** (Old Quarter): a whole station quarter - clock-gable station, level crossings, chapel square, market hall and the crane site.
+
 ## Original file names
 
 - WC001: ChatGPT Image Oct 17, 2026, 12_59_09 AM.png (1619x971)
@@ -2398,3 +2828,71 @@ The owner's Downtown concepts of 2026-10-17 (close views and the district plan).
 - WC354: 17bcfce9-image.png (upload of 2026-10-17 13:32) (1672x941)
 - WC355: 10c2f631-image.png (upload of 2026-10-17 13:32) (1672x941)
 - WC356: ab681896-image.png (upload of 2026-10-17 13:32) (1672x941)
+- WC357: b870aac9-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC358: 1b4ca09c-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC359: 5f91f2da-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC360: 8dee710e-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC361: 3a9c235b-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC362: a8c7d1aa-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC363: 61794656-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC364: a882ed02-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC365: 1ac146a8-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC366: be834073-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC367: b3943b23-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC368: e3ed6b91-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC369: 61556660-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC370: 31da09fe-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC371: 92739092-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC372: 6634da4e-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC373: 385a9380-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC374: 24b91cde-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC375: 9d5bbb9e-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC376: 938447a5-image.png (upload of 2026-10-17 19:05) (1672x941)
+- WC377: 105e5ee9-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC378: fbe7a504-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC379: 1505f81b-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC380: 2d54a0da-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC381: 0f4ec273-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC382: 9fd9b3ad-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC383: fd80de46-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC384: e66c6f19-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC385: e8880a42-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC386: cd2518d7-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC387: afec7a82-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC388: 014aad94-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC389: 7ed54ef3-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC390: a3a71f52-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC391: 89cd0659-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC392: 5a63fe90-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC393: 8c51f99a-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC394: 7c03c174-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC395: d96bd615-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC396: 0ed81bff-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC397: 8adb92b5-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC398: f1353b92-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC399: 3a472dd3-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC400: 17b253d8-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC401: cc01d274-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC402: 9b1ae430-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC403: 1a94b46d-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC404: ec359b61-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC405: 337d9216-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC406: 345baf16-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC407: b2700d8a-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC408: e8dd4fbb-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC409: 4ed0a299-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC410: 8cb43159-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC411: c5d33432-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC412: 3366b238-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC413: 7cccb191-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC414: 5fe269ae-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC415: 1098a89e-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC416: 620d6ed0-image.png (upload of 2026-10-17 19:06) (1672x941)
+- WC417: d864cdac-image.png (upload of 2026-10-17 19:08) (1672x941)
+- WC418: 10adee9f-image.png (upload of 2026-10-17 19:08) (1672x941)
+- WC419: bb86e12c-image.png (upload of 2026-10-17 19:08) (1672x941)
+- WC420: 582ea552-image.png (upload of 2026-10-17 19:08) (1672x941)
+- WC421: 08c8ebf9-image.png (upload of 2026-10-17 19:08) (1672x941)
+- WC422: 6f689f02-image.png (upload of 2026-10-17 19:08) (1672x941)
+- WC423: 059c88b4-image.png (upload of 2026-10-17 19:08) (1672x941)
+- WC424: c6dc3b6d-image.png (upload of 2026-10-17 19:08) (1672x941)
