@@ -57,7 +57,10 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Shoot hoops (North Point Courts: E for a ball, then hold and let go in the meter's green band) | E · hold left click | B · hold RT | ACT · hold FIRE |
 | Bowl (Pinwheel Lanes: rent a lane at the shoe counter, E on your lane's approach for a ball and again to pick a hook; stand and face where you want it, then hold and let go - the meter is the power) | E · hold left click | B · hold RT | ACT · hold FIRE |
 | Go to the pictures (The Grand Theatre: buy a ticket and popcorn at the counter, walk into a screen and E by a seat to sit and watch; E again, or walk off, to get up; eat the popcorn from your bag) | E | B | ACT |
-| Fish over the side (still boat, far out at sea) | E | B | ACT |
+| Fish: face the water with a rod (or sit still in a boat) - hold to charge the cast, let go to throw it | Hold E, let go | Hold B, let go | Hold ACT, let go |
+| Fish: strike when the bobber goes under (not before - that reels in) | E | B | ACT |
+| Fish: reel in the fight - hold to raise your bar, let go to drop it; keep the fish inside it till the meter fills | Hold E | Hold B | Hold ACT |
+| Fish: reel your line in without a fish | Move (or E before a bite) | Left stick (or B) | Stick (or ACT) |
 | Under the ground: climb down a manhole over the sewers (stand on the cover) or go into the cave through the Old Granite Mine's adit · climb a ladder up / through the service door into a subway station / walk out of the cave · switch on a flashlight (it's dark down there) | E · E · L | B · B · D-pad up | ACT · ACT · 🔦 |
 | Mine an ore vein (face it with a pickaxe good enough for its ore, stand still while the ring fills; the quarry's assay office buys ore best) | E | B | ACT |
 | Stalk game: creep (slow is quiet; keep downwind and behind trees and rocks; move while it grazes, freeze when it looks up) | C or Ctrl + move | push the stick gently | push the thumb gently |

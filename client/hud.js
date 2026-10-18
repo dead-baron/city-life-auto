@@ -1,5 +1,5 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
-// job tracker, weapon panel, fishing cue, shop menus, death screen, radar + big map.
+// job tracker, weapon panel, shop menus, death screen, radar + big map.
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
@@ -235,9 +235,6 @@ export class HUD {
     document.body.classList.toggle('armed', w.type !== 'melee' && w.type !== 'tool');
     const inv = Object.entries(me.inv).filter(([k]) => ITEMS[k]).map(([k, n]) => `${ITEMS[k].name} x${n}`);
     $('w-carry').textContent = (me.carrying ? `Carrying ${['', 'Wood Box', 'Steel Barrel', 'Iron Vault', 'Carbon-Gold Case'][me.carrying]} · ` : '') + (inv.length ? inv.slice(0, 3).join(', ') : '');
-    // fishing
-    const fb = $('fishbar');
-    if (me.fishing) { fb.classList.remove('hidden'); fb.classList.toggle('bite', me.fishing.bite); fb.innerHTML = me.fishing.bite ? `BITE! ${glyph('action')}` : 'Waiting for a bite...'; } else fb.classList.add('hidden');
     // in a cell (server custody.js): the time left and the bail
     const jl = $('jail');
     if (cu && cu.s === 'cell' && !me.dead) {

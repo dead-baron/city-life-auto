@@ -10947,3 +10947,85 @@ built from the earlier crescent concept, so this refines it (`shared/world3-midt
 - **The back gardens** each have their own feature now: a tree, a shed, a greenhouse, a parasol over a table and two
   chairs, or a willow.
 - The middle houses' iron balconies and the chimney pots were already there.
+
+## 2026-10-18 · Fishing, rebuilt from the owner's fishing concepts (FC01-FC22, task #277)
+
+The old fishing was a timer and one button press. This is the full system the concepts call for, with Stardew Valley's
+fishing as the model for the fight:
+- **Casting:** face the water with a rod (or sit still in a boat) and hold the action button. The cast's power swings up
+  and down. Let go and the line flies out that far, along the way you face, as far as the water goes
+  (`shared/fish.js` landing). A long cast reaches the deeper water, where the rare fish are.
+- **The wait:** the bobber sits, a nibble or two twitches it, then it dives. Strike within the bite's window (shorter
+  for the hard fish). Striking before the bite reels in.
+- **The fight:** a track beside you with your bar on it. Hold the button to push the bar up; let go and it falls,
+  bouncing off the bottom. The fish swims its own way: a darter flicks, a sinker keeps low, a floater keeps high, and
+  a mixed one now and then leaps to an end. Keep it inside the bar and the catch meter fills; let it out and the meter
+  drains. Full means landed; empty means it got away.
+- **What bites:**
+  - **The water** (`server/systems/fishing.js` habitatAt): a pond (a park's is a lily pond), a lake (its deep water
+    the drop-off), a river or a creek (by a bridge, below a waterfall), the marshes (Heron Marsh, and the Egret
+    Coast's salt marsh as the mangroves), the shallows, a pier's pilings, the reef round the southern keys, open water
+    from a boat by day, the deep at night, the cave's pool.
+  - **The hour:** day, dusk or night.
+  - **Your bait:** each bait brings the fish that eat it, and one is used up per fish hooked. You can choose one at a
+    bait shop, or the best you carry for the water is put on for you.
+  - **Your rod:** the strongest one you have that's made for the water. Each rod holds fish up to a weight; past half
+    as much again, the line snaps on the strike.
+- **91 kinds of fish** from the species sheets (FC12-FC20), each with:
+  - its waters, its weight range and how rare it is;
+  - its hour, its fight and how hard it fights;
+  - what it eats, its price, its shape and its colours.
+  - The concepts' dolphins, whale sharks and sea turtles are there to see, never to catch.
+- **Ten legendaries** (FC01, FC02), each only at its own spot, at its hour, on a rod that can hold it:
+  - the Golden Koi (a park's lily pond), Old Ironsides (a lake's drop-off), the Rainbow King (below a waterfall), Big
+    Muddy (a river under a bridge at night) and the Ghost Koi (the cave's still pool);
+  - the Swamp Dragon and the Silver King (the salt marsh), the Barn Door (a pier's pilings), Blue Thunder (open water)
+    and the Kraken (the deep at night).
+  - Landing one is announced to everyone.
+- **The gear** (FC09):
+  - Six rods. The Fishing Pole stays a weapon slot. The Cane Pole, Baitcaster, Fly Rod, Surf Rod and Big-Game Rod are
+    tools in the bag.
+  - Ten baits: worms, crickets, minnows, shrimp, squid strips, dough balls, chum, dry flies, a spinner and a glow squid
+    lure (night only).
+  - They're sold at the bait shops, the fish market and the charter desks.
+- **The catch** (FC08):
+  - It goes into your cooler with its weight (30 fish; the bag shows what they'd fetch). The cooler is kept when you
+    die, as the log is.
+  - Your log keeps each kind you've caught and your best of it.
+  - The records board keeps the biggest of each kind anyone has landed (`store.kept.fishRecords`). The fish market's
+    menu shows its top three.
+  - The catch card shows the fish drawn, its weight, its rarity and what it's worth, with the news: a new species, a
+    personal best or a record.
+  - Sell the cooler at a fish market (full price), a bait shop or a charter desk (90%). Fish caught under the old
+    system still sell as before.
+- **The deep-sea charter** counts the offshore fish you land from a boat.
+- **Prediction:**
+  - The fight is stepped one input at a time, on the server and on the page alike (`shared/fish.js` fightStep). Each
+    snapshot carries the server's state in the slots the skateboard uses when riding (`fishOut`). The page sets its
+    line back to it and plays its unacknowledged inputs again on top (`client/fishing.js`).
+  - So the meter, the strike and the bar answer your thumb at once, and the server judges the strike in the page's own
+    time.
+  - The fight's parameters go to the page when the line goes out (the me record), but not whether the line will snap.
+- **On the page** (`client/fishing.js`, `client/fishart.js`): everyone's lines and bobbers (from the 'cast' events),
+  the nibbles, the bite, the line taut with the fish thrashing while it's on, your cast's meter, the fight's track, the
+  prompts and the catch card. The fish are drawn from their shapes and colours, side on (`drawFish`).
+- **Tuning:** simulated players of three skills against every kind of fight set the numbers. A steady hand lands a
+  common fish nearly every time in 4-6 s. With a rod made for the water, a trophy is a fair fight and a legendary a
+  hard one (roughly a third to two thirds of the time for a good player).
+- **Budgets:**
+  - The page was at its 485 KB, so room was made: the golf, hoops and bowling swing meters left the page for a module
+    of their own (`client/meters.js`, loaded once you're at a ball, a hoop or a lane), taking `shared/golf.js` and
+    `shared/hoops.js` with them. The page is now 482 KB with the fishing's hooks in.
+  - The fishing itself loads the first time you have a line out or see someone cast: `client/fishing.js`,
+    `client/fishart.js` and `shared/fish.js`, 20 KB as sent.
+- **Tests** (`test/fishing.test.js`):
+  - the fish, the waters, the legendaries, the rods and the baits;
+  - the fight against a steady hand, an easy fish and a hard one;
+  - the waters found on the map;
+  - a whole catch at the river: the prompt, the charge, the nibbles, the bite, the strike, the fight, the cooler, the
+    log, the records board and the fish market;
+  - striking too soon or too late, a line that snaps, walking off, a full cooler;
+  - the page's prediction against the server's, three inputs behind;
+  - a deep-sea charter from a boat;
+  - a legendary's news.
+  - The old fishing tests (core, homes, water, nature) play the new line through `test/helpers.js` playLine.

@@ -326,8 +326,8 @@ test('Stadium Lido: a fenced public pool in the stadium park - swimmable water, 
   assert.ok(!near(s.gate.x, s.gate.y), 'the gate is open');
   assert.ok(near(s.gate.x - 4 * TILE, s.gate.y), 'the fence is solid');
   // no fishing in it
-  const { fishingSpot } = await import('../server/systems/jobs.js');
-  assert.equal(fishingSpot({ map: m }, { x: pool.x - 20, y: pool.y + pool.h / 2, a: 0 }), null, 'no fish in the pool');
+  const { spotFor } = await import('../server/systems/fishing.js');
+  assert.equal(spotFor({ map: m }, { x: pool.x - 20, y: pool.y + pool.h / 2, a: 0 }), null, 'no fish in the pool');
   assert.ok(m.landmarks.some((l) => l.name === 'Stadium Lido'));
 });
 
@@ -419,8 +419,8 @@ test('Splash Canyon Water Park: a fenced water park on the mainland (the desert 
   assert.equal(m.props.filter((q) => q && q.t === 'wslide').length, 3, 'three slides');
   assert.equal(tileAt(s.tower.x, s.tower.y - TILE), T.WALL, 'the tower is solid');
   assert.equal(tileAt(s.gate.x + TILE, s.gate.y), T.PLAZA, 'in through the gate');
-  const { fishingSpot } = await import('../server/systems/jobs.js');
-  assert.equal(fishingSpot({ map: m }, { x: g.cx + g.rx + g.hw + 30, y: g.cy, a: Math.PI }), null, 'no fish in the lazy river');
+  const { spotFor } = await import('../server/systems/fishing.js');
+  assert.equal(spotFor({ map: m }, { x: g.cx + g.rx + g.hw + 30, y: g.cy, a: Math.PI }), null, 'no fish in the lazy river');
   assert.ok(m.landmarks.some((l) => l.name === 'Splash Canyon Water Park'));
 });
 

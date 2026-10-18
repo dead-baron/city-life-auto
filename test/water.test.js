@@ -2,12 +2,11 @@
 // police boats, and the water races.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, playLine } from './helpers.js';
 import { K, T, TILE } from '../shared/constants.js';
 import { ISLANDS, PED_BLOCK, isSwimming } from '../shared/map.js';
 import { pointAt } from '../shared/geom.js';
 import { GANG_JOIN_FEE, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, POACH_PAY } from '../shared/rules.js';
-import { OFFSHORE_FISH } from '../shared/items.js';
 import * as economy from '../server/systems/economy.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as players from '../server/systems/players.js';
@@ -100,12 +99,11 @@ test('deep-sea charter: fish over the side far from land, land the catch for the
   board(w, p, boat);
   for (let k = 0; k < DEEPSEA_CATCH; k++) {
     const act = players.findInteraction(w, p);
-    assert.ok(act && /offshore/i.test(act.label), act && act.label);
+    assert.ok(act && /over the side/i.test(act.label), act && act.label);
     act.run();
-    p.ped.fishing.biteAt = w.time - 0.1;
-    jobs.reelIn(w, p);
+    assert.equal(playLine(w, p, { easy: true }).F.out, 1, 'landed');
   }
-  assert.equal(OFFSHORE_FISH.reduce((n, id) => n + (prof.inventory[id] || 0), 0), DEEPSEA_CATCH);
+  assert.equal(prof.creel.length, DEEPSEA_CATCH);
   assert.equal(prof.bank, DEEPSEA_PAY);
   assert.equal(p.job, null);
 });

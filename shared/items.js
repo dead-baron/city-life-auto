@@ -88,12 +88,23 @@ export const ITEMS = {
   coffee:  { name: 'Hot Coffee',    stamina: true, buff: 'coffee', sell: 0 },
   energy:  { name: 'Energy Drink',  stamina: true, buff: 'energy', sell: 0 },
   cocktail: { name: 'Neon Cocktail', stamina: true, buff: 'energy', sell: 0 },
-  // bait: multiplies the odds of a fish (one bait is used per catch)
-  lure:    { name: 'Shiny Lure',    bait: { salmon: 1.6, tuna: 1.8 }, sell: 5 },
-  worms:   { name: 'Nightcrawler Worms', bait: { bass: 1.8 }, sell: 1 },
-  shrimp:  { name: 'Live Shrimp',   bait: { salmon: 2.2 }, sell: 2 },
-  squid:   { name: 'Whole Squid',   bait: { tuna: 3 }, sell: 4 },
-  glowlure: { name: 'Glow Lure',    bait: { catfish: 2.5 }, night: true, sell: 4 },
+  // bait (what each brings to the hook: shared/fish.js BAITS; one goes per fish hooked - server/systems/fishing.js)
+  lure:    { name: 'Spinner Lure',  bait: 1, sell: 5 },
+  worms:   { name: 'Nightcrawler Worms', bait: 1, sell: 1 },
+  crickets: { name: 'Live Crickets', bait: 1, sell: 1 },
+  minnows: { name: 'Bait Minnows',  bait: 1, sell: 2 },
+  shrimp:  { name: 'Live Shrimp',   bait: 1, sell: 2 },
+  squid:   { name: 'Squid Strips',  bait: 1, sell: 4 },
+  doughballs: { name: 'Dough Balls', bait: 1, sell: 1 },
+  chum:    { name: 'Bucket of Chum', bait: 1, sell: 6 },
+  dryfly:  { name: 'Dry Flies',     bait: 1, sell: 4 },
+  glowlure: { name: 'Glow Squid Lure', bait: 1, night: true, sell: 4 },
+  // the rods (the Fishing Pole is a weapon slot: 'rod'); the one made for the water you face is the one you fish with
+  caneRod: { name: 'Cane Pole', tool: true, rod: true, sell: 6 },
+  baitcaster: { name: 'Baitcaster Rod', tool: true, rod: true, sell: 60 },
+  flyRod:  { name: 'Fly Rod', tool: true, rod: true, sell: 80 },
+  surfRod: { name: 'Surf Rod', tool: true, rod: true, sell: 110 },
+  gameRod: { name: 'Big-Game Rod', tool: true, rod: true, sell: 500 },
   bass:    { name: 'Common Green Bass', fish: 1, sell: 35 },
   catfish: { name: 'Night Catfish',     fish: 2, sell: 70 },
   salmon:  { name: 'Rare Silver Salmon', fish: 3, sell: 120 },
@@ -374,12 +385,13 @@ export const SHOPS = {
     { kind: 'weapon', id: 'katana', price: 1500 },
   ], sells: ['purse', 'bonds', 'jewelry', 'ghostglass', 'goldStar'], sellPrice: { ghostglass: FORAGE_FENCE_GHOSTGLASS, goldStar: 175 } },
   tackle: { title: 'Hook & Line Bait and Tackle', buy: [
-    { kind: 'weapon', id: 'rod', price: 60 }, { kind: 'item', id: 'worms', price: 10, qty: 5 }, { kind: 'item', id: 'shrimp', price: 20, qty: 5 },
-    { kind: 'item', id: 'squid', price: 35, qty: 3 }, { kind: 'item', id: 'glowlure', price: 30, qty: 3 }, { kind: 'item', id: 'lure', price: 20, qty: 3 },
+    { kind: 'item', id: 'caneRod', price: 25, qty: 1 }, { kind: 'weapon', id: 'rod', price: 60 }, { kind: 'item', id: 'baitcaster', price: 240, qty: 1 }, { kind: 'item', id: 'flyRod', price: 300, qty: 1 }, { kind: 'item', id: 'surfRod', price: 380, qty: 1 },
+    { kind: 'item', id: 'worms', price: 10, qty: 5 }, { kind: 'item', id: 'crickets', price: 10, qty: 5 }, { kind: 'item', id: 'minnows', price: 15, qty: 5 }, { kind: 'item', id: 'doughballs', price: 8, qty: 5 },
+    { kind: 'item', id: 'shrimp', price: 20, qty: 5 }, { kind: 'item', id: 'squid', price: 35, qty: 3 }, { kind: 'item', id: 'dryfly', price: 30, qty: 3 }, { kind: 'item', id: 'glowlure', price: 30, qty: 3 }, { kind: 'item', id: 'lure', price: 20, qty: 3 },
     { kind: 'weapon', id: 'huntrifle', price: 1100 }, { kind: 'ammo', id: 'huntrifle', price: 40, qty: 10 },
   ], sells: ['bass', 'catfish', 'salmon', 'tuna', 'grouper', 'swordfish', 'marlin'] },
-  fishmarket: { title: 'Dockside Fish Market', buy: [{ kind: 'weapon', id: 'rod', price: 75 }, { kind: 'item', id: 'lure', price: 25, qty: 3 }], sells: ['bass', 'catfish', 'salmon', 'tuna', 'grouper', 'swordfish', 'marlin'] },
-  charter: { title: 'Pelican Key Charters', buy: [{ kind: 'weapon', id: 'rod', price: 90 }, { kind: 'item', id: 'squid', price: 35, qty: 3 }, { kind: 'item', id: 'lure', price: 20, qty: 3 }], sells: ['grouper', 'swordfish', 'marlin', 'tuna', 'salmon'] },
+  fishmarket: { title: 'Dockside Fish Market', buy: [{ kind: 'weapon', id: 'rod', price: 75 }, { kind: 'item', id: 'surfRod', price: 400, qty: 1 }, { kind: 'item', id: 'shrimp', price: 22, qty: 5 }, { kind: 'item', id: 'squid', price: 35, qty: 3 }, { kind: 'item', id: 'chum', price: 40, qty: 3 }, { kind: 'item', id: 'lure', price: 25, qty: 3 }], sells: ['bass', 'catfish', 'salmon', 'tuna', 'grouper', 'swordfish', 'marlin'] },
+  charter: { title: 'Pelican Key Charters', buy: [{ kind: 'weapon', id: 'rod', price: 90 }, { kind: 'item', id: 'surfRod', price: 400, qty: 1 }, { kind: 'item', id: 'gameRod', price: 1800, qty: 1 }, { kind: 'item', id: 'squid', price: 35, qty: 3 }, { kind: 'item', id: 'chum', price: 40, qty: 3 }, { kind: 'item', id: 'glowlure', price: 30, qty: 3 }, { kind: 'item', id: 'lure', price: 20, qty: 3 }], sells: ['grouper', 'swordfish', 'marlin', 'tuna', 'salmon'] },
   smuggler: { title: "Smuggler's Den (members only)", buy: [
     { kind: 'weapon', id: 'smg', price: 1100 }, { kind: 'ammo', id: 'smg', price: 45, qty: 30 },
     { kind: 'weapon', id: 'rocket', price: 5200 }, { kind: 'ammo', id: 'rocket', price: 350, qty: 1 },
@@ -424,14 +436,6 @@ export const SHOPS = {
   marina: { title: 'Harbor Marina', buy: ['jetski', 'dinghy', 'speedboat'].map((id) => ({ kind: 'vehicle', id })) },
 };
 
-export const FISH_TABLE = {
-  // base weights: [bass, catfish, salmon, tuna]
-  shore: [70, 0, 25, 5],
-  river: [60, 0, 35, 5],
-  deep: [45, 0, 40, 15],
-  offshore: [50, 32, 18], // out at sea from a boat: [grouper, swordfish, marlin]
-};
-export const OFFSHORE_FISH = ['grouper', 'swordfish', 'marlin'];
 
 // ---- underground: mining (server/systems/underground.js, shared/underground.js ORES and PICKS) -----------------------
 // The pickaxes: tools (never used up; the best one you carry is the one you swing). Their tiers gate the ores: coal and

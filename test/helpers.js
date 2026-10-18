@@ -10,6 +10,8 @@ const { World } = await import('../server/world.js');
 const { generateCity } = await import('../shared/map.js');
 const { store } = await import('../server/store.js');
 const players = await import('../server/systems/players.js');
+const FS = await import('../shared/fish.js');
+const { IN } = await import('../shared/input.js');
 
 let cachedMap = null;
 export function makeWorld(opts = {}) {
@@ -71,3 +73,18 @@ export function straightRoad(map, minLen = 900, opts = {}) {
 }
 
 export { store, players };
+
+// Play out a line already started (server/systems/fishing.js begin, or the prompt's run): hold to charge for `hold`
+// inputs, let go, wait for the bite, strike, then reel - holding while the fish is above the bar's middle - till it's
+// over. o.easy: the fish fights like a bluegill and the line holds. -> the line (its F.out: 1 landed).
+export function playLine(world, p, o = {}) {
+  let seq = p.ack;
+  const send = (bits, n = 1) => { for (let i = 0; i < n; i++) { p.inputQ.push({ seq: ++seq, bits, mx: 0, my: 0, aim: p.ped.a }); world.step(); } };
+  const L = p.ped.fishing;
+  send(IN.ACTION, o.hold ?? 12); send(0);
+  let n = 0; while (L.F.ph === FS.PH.WAIT && n++ < 400) send(0);
+  if (o.easy) { L.P.diff = 5; L.P.snap = false; }
+  send(IN.ACTION);
+  n = 0; while (p.ped.fishing && n++ < 3000) { const F = L.F, P = L.P; send(FS.fishY(P, F.t) > F.barY + P.bar / 2 + F.barV * 0.25 ? IN.ACTION : 0); }
+  return L;
+}

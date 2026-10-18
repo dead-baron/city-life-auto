@@ -2,7 +2,7 @@ import { RESPAWN_SECONDS, GHOST_SECONDS } from '../shared/rules.js';
 import { AWAY_SECONDS } from '../server/systems/players.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport, players, straightRoad } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, players, straightRoad, playLine } from './helpers.js';
 import { generateCity, PED_BLOCK } from '../shared/map.js';
 import { gameClock, K, T, STAR_HEAT, VF } from '../shared/constants.js';
 import { encodeInput, decodeInput, SnapshotWriter, decodeSnapshot } from '../shared/protocol.js';
@@ -235,7 +235,8 @@ test('EMS hard memory despawn removes bodies that nobody can reach within 45s', 
   assert.ok(!w.entities.has(body.id));
 });
 
-test('fishing: reeling inside the bite window lands a fish; too early spooks it', () => {
+test('fishing: by the water with a rod, the prompt; hold, let go, strike on the bite and reel it in', async () => {
+  const fishing = await import('../server/systems/fishing.js');
   const w = makeWorld();
   const { p, prof } = joinPlayer(w);
   prof.weapons.rod = 0;
@@ -243,17 +244,13 @@ test('fishing: reeling inside the bite window lands a fish; too early spooks it'
   const ped = p.ped;
   teleport(w, ped, pier.x - 3 * 32, pier.y); // on the dock beside water
   ped.a = 0;
-  let spot = jobs.fishingSpot(w, ped);
-  for (let a = 0; !spot && a < 8; a++) { ped.a = a * Math.PI / 4; spot = jobs.fishingSpot(w, ped); }
+  let spot = fishing.spotFor(w, ped);
+  for (let a = 0; !spot && a < 8; a++) { ped.a = a * Math.PI / 4; spot = fishing.spotFor(w, ped); }
   assert.ok(spot, 'water within casting range');
-  jobs.castLine(w, p, spot);
-  jobs.reelIn(w, p);
-  assert.equal(ped.fishing, null, 'too early cancels');
-  jobs.castLine(w, p, spot);
-  w.time = ped.fishing.biteAt + 0.2;
-  jobs.reelIn(w, p);
-  const fish = ['bass', 'catfish', 'salmon', 'tuna'].reduce((s, k) => s + (prof.inventory[k] || 0), 0);
-  assert.equal(fish, 1);
+  fishing.begin(w, p, spot);
+  const L = playLine(w, p, { easy: true });
+  assert.equal(L.F.out, 1, 'landed');
+  assert.equal(prof.creel.length, 1, 'in the cooler');
 });
 
 test('economy: bank deposit protects money, purchases draw from wallet then bank', () => {

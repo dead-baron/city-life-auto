@@ -21,6 +21,7 @@ import * as law from './law.js';
 import * as bounties from './bounties.js';
 import * as economy from './economy.js';
 import * as jobs from './jobs.js';
+import * as fishing from './fishing.js';   // (the rod, the bite, the fight: task #277)
 import * as picking from './picking.js';
 import * as foraging from './foraging.js';
 import * as hunting from './hunting.js';
@@ -426,6 +427,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     if ((pressed & (IN.ACTION | IN.VEHICLE)) && !ped.ride) { if (ped.interior) station.openInterior(world, p); else homes.openInside(world, p); }
     return;
   }
+  if (ped.fishing && ped.fishing.F && fishing.input(world, p, ped, inp, pressed, dt)) pressed &= ~IN.ACTION;   // (fishing: the action button charges the cast, strikes and reels - fishing.js)
   dance.input(world, p, ped, inp, pressed);   // the dance button; walking off, a punch, a car: the dance stops (task #394)
   ped.aimAngle = inp.aim;
   if (inp.bits & IN.AIMING) ped.aimUntil = world.time + 0.3;
@@ -462,7 +464,6 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   }
 
   // on foot
-  if (ped.fishing && (Math.abs(inp.mx) > 0.3 || Math.abs(inp.my) > 0.3)) jobs.cancelFishing(world, p, 'You reeled in your line.');
   const tumbling = world.time < (ped.tumbleUntil || 0);
   const fr = world.time < (ped.airUntil || 0) ? AIR_FRICTION : TUMBLE_FRICTION;
   const v0 = tumbling ? Math.hypot(ped.vx, ped.vy) : 0;
@@ -554,6 +555,12 @@ function tackle(world, ped) {
 
 // ---------------------------------------------------------------------------
 // Context-sensitive interaction (GDD §13: E key manages context interactions)
+// with a rod, facing the water (or still in a boat): fish here - press and hold to charge the cast (fishing.js)
+function fishHere(world, p, ped) {
+  if (!fishing.canFish(p) || ped.fishing) return null;
+  const spot = fishing.spotFor(world, ped);
+  return spot ? { label: spot.boat ? 'Fish over the side (hold to cast)' : 'Fish here (hold to cast)', run: () => fishing.begin(world, p, spot) } : null;
+}
 export function findInteraction(world, p) {
   const ped = p.ped;
   if (p.struggle) return null;   // (fighting an officer off: the struggle bar says what to press - client/hud.js)
@@ -566,30 +573,22 @@ export function findInteraction(world, p) {
   if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
   if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
   if (ped.onTrain) return trains.interaction(world, p);
-  if (ped.ug && !ped.vehId) return underground.interaction(world, p);   // (down the sewers or in the cave: only what's down there)
+  if (ped.ug && !ped.vehId) return fishing.interaction(world, p) || underground.interaction(world, p) || fishHere(world, p, ped);   // (down the sewers or in the cave: only what's down there)
   if (!ped.vehId) { const rv = revive.interaction(world, p); if (rv) return rv; }
   if (ped.vehId) {
     const hop = trains.interaction(world, p);
     if (hop) return hop;
-    if (ped.fishing) {
-      if (ped.fishing.biteAt && world.time >= ped.fishing.biteAt && world.time <= ped.fishing.biteAt + ped.fishing.window) return { label: 'REEL IN NOW!', run: () => jobs.reelIn(world, p) };
-      return { label: 'Waiting for a bite... (drive off to stop)', run: () => jobs.reelIn(world, p) };
-    }
-    if (p.profile.weapons.rod !== undefined) {
-      const spot = jobs.boatFishingSpot(world, ped);
-      if (spot) return { label: 'Fish offshore (deep-sea)', run: () => jobs.castLine(world, p, spot) };
-    }
-    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p);
+    const fi = fishing.interaction(world, p);
+    if (fi) return fi;
+    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped);   // (a boat sitting still: fish over the side)
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
   const sk = skate.interaction(world, p);   // on your board at a skate spot: a session there (skate.js)
   if (sk) return sk;
 
-  if (ped.fishing) {
-    if (ped.fishing.biteAt && now >= ped.fishing.biteAt && now <= ped.fishing.biteAt + ped.fishing.window) return { label: 'REEL IN NOW!', run: () => jobs.reelIn(world, p) };
-    return { label: 'Waiting for a bite... (move to stop)', run: () => jobs.reelIn(world, p) };
-  }
+  const fi = fishing.interaction(world, p);
+  if (fi) return fi;
 
   if (ped.carrying) {
     const crate = world.get(ped.carrying);
@@ -694,10 +693,8 @@ export function findInteraction(world, p) {
   const drive = taxijob.interaction(world, p) || towjob.interaction(world, p) || busjob.interaction(world, p);   // a taxi rank, an impound lot, a bus stop: sign on to drive (H72)
   if (drive) return drive;
 
-  if (p.profile.weapons.rod !== undefined) {
-    const spot = jobs.fishingSpot(world, ped);
-    if (spot) return { label: 'Cast fishing line', run: () => jobs.castLine(world, p, spot) };
-  }
+  const fish = fishHere(world, p, ped);
+  if (fish) return fish;
 
   const sale = dealer.saleNear(world, ped);
   if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };
@@ -732,7 +729,7 @@ export function onPedDeath(world, ped, killer, cause) {
   p.heat = 0; p.wanted = 0; p.disguised = false;
   p.cityBounty = 0; bounties.sync(world, p);   // the city's bounty goes with the stars; the ones placed on you stick
   if (p.job && p.job.failOnDeath) jobs.failJob(world, p, 'Job failed - you died.');
-  jobs.cancelFishing(world, p);
+  fishing.cancel(world, p, null);
   cargo.dropEverything(world, ped, p.name);
   p.meDirty = true;
   store.touch();
@@ -826,7 +823,7 @@ export function buildMe(world, p) {
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
-    fishing: ped && ped.fishing ? { bite: !!(ped.fishing.biteAt && world.time >= ped.fishing.biteAt) } : null,
+    fishing: fishing.meInfo(p), creel: fishing.creelInfo(prof),   // (a line out: where, the rod, the fight's parameters once it's cast; the cooler's catch - fishing.js)
     reloading: ped ? world.time < ped.reloadUntil : false,
     buffs: ped ? { coffee: Math.max(0, (ped.buffs.coffee || 0) - world.time), energy: Math.max(0, (ped.buffs.energy || 0) - world.time), wine: Math.max(0, (ped.buffs.wine || 0) - world.time), hearty: Math.max(0, (ped.buffs.hearty || 0) - world.time), scent: Math.max(0, (ped.buffs.scent || 0) - world.time) } : {},
     vehicles: prof.vehicles.map((v) => v.model),

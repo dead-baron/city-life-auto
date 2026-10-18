@@ -2,7 +2,7 @@ import { RESPAWN_SECONDS, PLAYER_GRIT } from '../shared/rules.js';
 // Homes & estates, hiding indoors, spawn protection / spread, paint shops, felony payoff, bait.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport, players, fakeConn } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, players, fakeConn, playLine } from './helpers.js';
 import { ESTATE_TYPES, PED_BLOCK, CAR_SPAWN_BLOCK } from '../shared/map.js';
 import { K } from '../shared/constants.js';
 import { HIDE_TIME_S, SPAWN_PROTECT_S, PAINT_PRICE, PAINT_TIME_S, FELONY_FINE } from '../shared/rules.js';
@@ -235,28 +235,40 @@ test('felony fines: pay them at the courthouse or police for a clean record (not
   assert.equal(prof.bank, 5000 - 2 * FELONY_FINE);
 });
 
-test('tackle shops: rods and bait; chosen bait is used up on a catch; fish sell there', () => {
+test('tackle shops: rods and bait; the bait you choose goes on the hook and is used up on a catch; the catch and the old fish sell there', async () => {
+  const fishing = await import('../server/systems/fishing.js');
   const w = makeWorld();
-  const { p, prof } = joinPlayer(w, { cash: 0, bank: 500 });
+  const { p, prof } = joinPlayer(w, { cash: 0, bank: 2000 });
   const shops = w.map.pois.filter((q) => q.kind === 'tackle');
   assert.ok(shops.length >= 3, 'several bait shops');
   const shop = shops[0];
   teleport(w, p.ped, shop.x, shop.y);
   economy.handleMenu(w, p, shop.id, 'w:rod:60');
   assert.ok(prof.weapons.rod !== undefined);
+  economy.handleMenu(w, p, shop.id, 'i:flyRod:300:1');
+  assert.equal(prof.inventory.flyRod, 1, 'a fly rod in the bag');
   economy.handleMenu(w, p, shop.id, 'i:squid:35:3');
   economy.handleMenu(w, p, shop.id, 'i:worms:10:5');
   economy.handleMenu(w, p, shop.id, 'bait:squid');
   assert.equal(prof.bait, 'squid');
-  p.ped.fishing = { biteAt: w.time - 0.1, window: 2, kind: 'shore', x: p.ped.x, y: p.ped.y };
-  jobs.reelIn(w, p);
+  // a cast by the marina: the squid goes on and is used once a fish is hooked
+  const pier = w.map.marina[0];
+  teleport(w, p.ped, pier.x - 3 * 32, pier.y);
+  let spot = null;
+  for (let a = 0; !spot && a < 8; a++) { p.ped.a = a * Math.PI / 4; spot = fishing.spotFor(w, p.ped); }
+  fishing.begin(w, p, spot);
+  const L = playLine(w, p, { easy: true });
+  assert.equal(L.bait, 'squid');
   assert.equal(prof.inventory.squid, 2, 'one squid used');
   assert.equal(prof.inventory.worms, 5);
-  const fish = ['bass', 'catfish', 'salmon', 'tuna'].find((f) => prof.inventory[f] > 0);
-  assert.ok(fish);
+  assert.equal(prof.creel.length, 1);
+  // the old catch in the bag sells too
+  prof.inventory.bass = 2;
+  teleport(w, p.ped, shop.x, shop.y);
   const bank = prof.bank;
-  economy.handleMenu(w, p, shop.id, `s:${fish}`);
-  assert.ok(prof.bank > bank, 'sold to the bank');
+  economy.handleMenu(w, p, shop.id, 's:bass');
+  economy.handleMenu(w, p, shop.id, 'creel');
+  assert.ok(prof.bank > bank && !prof.inventory.bass && !prof.creel.length, 'sold to the bank');
 });
 
 // The owner, 2026-10-10: "a debug option to go to more homes, maybe a 'nearest' home option but also a 'next home' or

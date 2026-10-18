@@ -12,6 +12,7 @@ import { STORES, storeOf } from '../../shared/wardrobe.js';
 import { store } from '../store.js';
 import * as law from './law.js';
 import * as bounties from './bounties.js';
+import * as fishing from './fishing.js';
 import * as jobs from './jobs.js';
 import * as combat from './combat.js';
 import * as homes from './homes.js';
@@ -200,10 +201,7 @@ export function buildMenu(world, p, poi) {
       title = poi.label;
       sub = 'The bar. A cocktail fills your stamina past full for a minute. Open from dusk till dawn.';
     }
-    if (kind === 'tackle') {
-      sub = 'Bait changes what bites: worms for bass, shrimp for salmon, squid for tuna, a glow lure for catfish at night.';
-      for (const id of ['worms', 'shrimp', 'squid', 'glowlure', 'lure']) if ((prof.inventory[id] || 0) > 0) opts.push({ id: `bait:${id}`, label: `Fish with ${ITEMS[id].name}`, note: prof.bait === id ? 'selected' : `have ${prof.inventory[id]}`, dis: prof.bait === id });
-    }
+    { const fsub = fishing.shopOptions(p, kind, opts); if (fsub) sub = fsub; }   // (a fish market, a bait shop, a charter desk: sell the catch, choose the bait - fishing.js)
     for (const id of shop.sells || []) {
       const n = prof.inventory[id] || 0;
       if (n > 0) opts.push({ id: `s:${id}`, label: `Sell ${ITEMS[id].name} (x${n})`, price: -sellPrice(shop, id), note: n > 1 ? 'sells all' : '' });
@@ -394,7 +392,7 @@ export function buildMenu(world, p, poi) {
       opts.push({ id: 'poach:dolphin', label: 'Job: dolphin hunt', price: -POACH_PAY.dolphin, dis: !!p.job, note: p.job ? 'busy' : 'paid in cash' });
       break;
     case 'charter':
-      sub += ` Deep water starts well away from land: sit still in a boat out there and fish over the side. Squid brings in the marlin.`;
+      sub += ` Deep water starts well away from land: sit still in a boat out there and fish over the side - the tuna and the billfish by day, the deep's strange ones after dark. A Big-Game Rod holds them.`;
       opts.unshift({ id: 'deepsea', label: `Deep-sea charter: land ${DEEPSEA_CATCH} offshore fish`, price: -DEEPSEA_PAY, dis: !!p.job, note: p.job ? 'busy' : 'bonus' });
       break;
     case 'barber':   // (the barbershops and the hair salons: map.js buildClothesShops, looks.js cut)
@@ -629,7 +627,12 @@ function execute(world, p, poi, opt) {
       store.touch();
       return null;
     }
-    case 'bait': { if (!ITEMS[parts[1]] || !ITEMS[parts[1]].bait) return 'Not bait.'; prof.bait = parts[1]; world.notify(p, `You'll fish with ${ITEMS[parts[1]].name} while you have it.`, 'info'); return null; }
+    case 'bait': {
+      if (parts[1] === 'auto') { prof.bait = null; world.notify(p, 'You\'ll put on whichever bait suits the water.', 'info'); return null; }
+      if (!ITEMS[parts[1]] || !ITEMS[parts[1]].bait) return 'Not bait.';
+      prof.bait = parts[1]; world.notify(p, `You'll fish with ${ITEMS[parts[1]].name} while you have it.`, 'info'); return null;
+    }
+    case 'creel': return fishing.sellCatch(world, p, poi.kind);
     case 'armory': return law.restockService(world, p);
     case 'cruiser': {
       if (!p.badge) return 'On-duty officers only.';

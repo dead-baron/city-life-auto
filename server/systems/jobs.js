@@ -1,10 +1,11 @@
 // Professions & extraction loops: courier contracts, Dry Creek harvests (GDD §5),
-// contraband drops for the black market / evidence locker, and the deep-sim fishing loop.
-import { K, T } from '../../shared/constants.js';
-import { ITEMS, FISH_TABLE, OFFSHORE_FISH } from '../../shared/items.js';
+// contraband drops for the black market / evidence locker, and the deep-sea charter (the fishing itself: fishing.js).
+import { K } from '../../shared/constants.js';
+import { ITEMS } from '../../shared/items.js';
 import { POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, WORK_TRUCK, WORK_TRUCK_RETURN } from '../../shared/rules.js';
 import * as law from './law.js';
-import { waterKind, CAR_SPAWN_BLOCK } from '../../shared/map.js';
+import { CAR_SPAWN_BLOCK } from '../../shared/map.js';
+import * as fishing from './fishing.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
@@ -15,7 +16,6 @@ import { pointGrid } from '../pointgrid.js';
 import * as vehicles from './vehicles.js';
 
 const rng = mulberry32(5150);
-const BAIT_ORDER = ['squid', 'glowlure', 'shrimp', 'lure', 'worms'];
 
 export function init(world) {
   world.nextDropAt = world.time + 90;
@@ -40,14 +40,8 @@ export function update(world) {
     if (p.job && now > p.job.expires) failJob(world, p, 'Contract expired.');
     if (p.truckReturn) checkReturn(world, p);
     if (p.job && p.job.type === 'poach') stepPoach(world, p, 0.05);
-    const ped = p.ped;
-    if (ped && ped.fishing && ped.vehId) { const bv = world.get(ped.vehId); if (!bv || Math.hypot(bv.vx, bv.vy) > 60) cancelFishing(world, p, 'You pulled your line in.'); }
-    if (ped && ped.fishing) {
-      const f = ped.fishing;
-      if (!f.notified && now >= f.biteAt) { f.notified = true; p.meDirty = true; world.emit(f.x, f.y, { e: 'bite', x: f.x, y: f.y }); }
-      if (now > f.biteAt + f.window) { cancelFishing(world, p, 'The fish got away... cast again.'); }
-    }
   }
+  fishing.tick(world);   // (a line out: a boat driven off, a cast left - fishing.js)
 }
 
 export function spawnDrop(world, forceTier = 0) {
@@ -284,86 +278,7 @@ export function returnPurse(world, p, victim) {
   store.touch();
 }
 
-// ---- Fishing (GDD §5) ----------------------------------------------------------------
-export function fishingSpot(world, ped) {
-  const m = world.map;
-  for (const off of [0, 0.6, -0.6, Math.PI / 2, -Math.PI / 2]) {
-    const a = ped.a + off;
-    for (const d of [30, 48]) {
-      const x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d;
-      const t = m.tileAtPx(x, y);
-      if (t === T.WATER || t === T.DEEP) {
-        if ((m.pools || []).some((r) => (r.ring ? Math.abs(Math.hypot((x - r.ring.cx) / r.ring.rx, (y - r.ring.cy) / r.ring.ry) - 1) * Math.min(r.ring.rx, r.ring.ry) < r.ring.hw + 16 : x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h))) continue;   // (no fish in a swimming pool or the water park)
-        const kind = waterKind(m, Math.floor(x / 32), Math.floor(y / 32));
-        return { x, y, kind, a };
-      }
-    }
-  }
-  return null;
-}
-
-export function castLine(world, p, spot) {
-  const ped = p.ped;
-  ped.a = spot.a;
-  ped.fishing = { x: spot.x, y: spot.y, kind: spot.kind, biteAt: world.time + 3 + rng() * 6, window: 1.2, notified: false };
-  ped.weapon = 'rod';
-  world.emit(spot.x, spot.y, { e: 'cast', x: spot.x, y: spot.y, fx: ped.x, fy: ped.y });
-  p.meDirty = true;
-}
-
-export function reelIn(world, p) {
-  const ped = p.ped;
-  const f = ped.fishing;
-  if (!f) return;
-  const now = world.time;
-  if (now < f.biteAt) { cancelFishing(world, p, 'Too early - you spooked the fish.'); return; }
-  if (now > f.biteAt + f.window) { cancelFishing(world, p, 'Too slow - it got away.'); return; }
-  const prof = p.profile;
-  const offshore = f.kind === 'offshore';
-  const w = [...FISH_TABLE[f.kind]];
-  if (world.clock.isNight && !offshore) w[1] = 35; // catfish spike at night
-  // bait: your chosen one if you have it, otherwise the best you're carrying
-  const ids = offshore ? OFFSHORE_FISH : ['bass', 'catfish', 'salmon', 'tuna'];
-  const night = world.clock.isNight;
-  const usable = (id) => (prof.inventory[id] || 0) > 0 && ITEMS[id] && ITEMS[id].bait && (!ITEMS[id].night || night);
-  const bait = usable(prof.bait) ? prof.bait : BAIT_ORDER.find(usable) || null;
-  if (bait) { for (const [fish, m] of Object.entries(ITEMS[bait].bait)) if (ids.includes(fish)) w[ids.indexOf(fish)] *= m; prof.inventory[bait]--; }
-  if (offshore && bait === 'squid') w[2] *= 2; // marlin love squid
-  const total = w.reduce((a, b) => a + b, 0);
-  let r = rng() * total;
-  let caught = ids[0];
-  for (let i = 0; i < ids.length; i++) { r -= w[i]; if (r <= 0) { caught = ids[i]; break; } }
-  prof.inventory[caught] = (prof.inventory[caught] || 0) + 1;
-  prof.stats.fish++;
-  ped.fishing = null;
-  world.emit(f.x, f.y, { e: 'catch', x: f.x, y: f.y, fish: caught });
-  world.notify(p, `Caught a ${ITEMS[caught].name}!${bait ? ` (${ITEMS[bait].name} used)` : ''} Sell it at a bait shop or the fish market.`, 'good');
-  if (offshore && p.job && p.job.type === 'deepsea') {
-    p.job.got++;
-    if (p.job.got >= p.job.need) { prof.bank += p.job.pay; prof.samaritan += 2; world.notify(p, `Charter complete! +$${p.job.pay} to your bank. Sell the catch at the charter dock or the fish market.`, 'good'); p.job = null; }
-    else p.job.text = `Deep-sea charter: ${p.job.got}/${p.job.need} offshore fish`;
-  }
-  p.meDirty = true;
-  store.touch();
-}
-
 // ---- out on the water ------------------------------------------------------------------------
-const TILE_PX = 32;
-const isWaterT = (t) => t === T.WATER || t === T.DEEP;
-// Far enough out at sea for the big ones: no land within ~12 tiles.
-export function offshoreAt(world, x, y) {
-  const tx = Math.floor(x / TILE_PX), ty = Math.floor(y / TILE_PX);
-  for (let dy = -12; dy <= 12; dy += 2) for (let dx = -12; dx <= 12; dx += 2) if (!isWaterT(world.map.tileAt(tx + dx, ty + dy))) return false;
-  return true;
-}
-// Fishing over the side of a boat that's sitting still out at sea.
-export function boatFishingSpot(world, ped) {
-  const v = ped.vehId ? world.get(ped.vehId) : null;
-  if (!v || v.def.kind !== 'boat' || Math.hypot(v.vx, v.vy) > 40) return null;
-  if (!offshoreAt(world, v.x, v.y)) return null;
-  const a = v.a + Math.PI / 2;
-  return { x: v.x + Math.cos(a) * (v.def.W / 2 + 20), y: v.y + Math.sin(a) * (v.def.W / 2 + 20), kind: 'offshore', a };
-}
 function nearestOffshore(world, x, y, minD, maxD) {
   const list = pointGrid(world.map.offshore || []).within(x, y, minD, maxD);   // (the points near: server/pointgrid.js)
   return list.length ? list[Math.floor(rng() * list.length)] : (world.map.offshore || [])[0];
@@ -374,7 +289,7 @@ export function startDeepSea(world, p, poi) {
   const spot = nearestOffshore(world, poi.x, poi.y, 900, 3000);
   if (!spot) return 'No charters today.';
   p.job = { type: 'deepsea', need: DEEPSEA_CATCH, got: 0, pay: DEEPSEA_PAY, tx: spot.x, ty: spot.y, expires: world.time + 1500, text: `Deep-sea charter: 0/${DEEPSEA_CATCH} offshore fish` };
-  world.notify(p, `Charter booked: take a boat out to the deep water (marked) and land ${DEEPSEA_CATCH} offshore fish - grouper, swordfish or marlin. Squid brings in the marlin.`, 'good');
+  world.notify(p, `Charter booked: take a boat out to the deep water (marked) and land ${DEEPSEA_CATCH} offshore fish - tuna, mahi-mahi, marlin, swordfish after dark. A Big-Game Rod holds the big ones; squid and chum bring them in.`, 'good');
   p.meDirty = true;
   return null;
 }
@@ -421,13 +336,6 @@ export function deliverPoach(world, p, crate) {
   world.notify(p, `The Den pays out: +$${crate.value} cash. No questions asked.`, 'good');
   if (p.job && p.job.type === 'poach') { p.job = null; p.meDirty = true; }
   store.touch();
-}
-
-export function cancelFishing(world, p, msg) {
-  if (!p.ped || !p.ped.fishing) return;
-  p.ped.fishing = null;
-  if (msg) world.notify(p, msg, 'info');
-  p.meDirty = true;
 }
 
 // A job done that pays as it goes (the farm work: farming.js): over, its truck's return bonus on offer (releaseTruck)

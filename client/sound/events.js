@@ -185,7 +185,10 @@ export const EVENT_SOUNDS = {
   toast: (ev, A) => A.ui(ev.tone === 'bad' ? 'bad' : ev.tone === 'good' ? 'good' : ev.tone === 'warn' ? 'alert' : 'notify', ev.tone === 'info' ? 0.5 : 0.8),
   // ---- fishing, games, rides, the town ----
   cast: at('cast'),
+  nibble: (ev, A) => A.at('splash', ev.x, ev.y, 0.3, { n: 3 }),   // (a fish at the bait: the bobber twitches)
   bite: at('bite'),
+  hook: (ev, A) => A.at('splash', ev.x, ev.y, ev.leg ? 1 : 0.8, { n: ev.leg ? 16 : 10 }),   // (struck: it's on)
+  flost: (ev, A) => A.at('splash', ev.x, ev.y, 0.5, { n: 5 }),   // (it got away, or the line snapped)
   catch: (ev, A) => { A.at('splash', ev.x, ev.y, 0.8, { n: 12 }); A.ui('good', 0.7); },
   golfhit: (ev, A) => A.at(ev.k ? 'golfhit' : 'putt', ev.x, ev.y),
   golfcup: at('golfcup'),

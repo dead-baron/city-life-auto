@@ -6,6 +6,7 @@
 import { K, CHUNK_PX, VF } from '../shared/constants.js';
 import { altByte } from '../shared/flight.js';
 import { boardOut } from '../shared/board.js';
+import { fishOut } from '../shared/fish.js';
 import { SnapshotWriter, CTRL, SNAP_ENTITY, LZ_SCALE } from '../shared/protocol.js';
 import { WEAPONS } from '../shared/items.js';
 import { isSwimming, WATER_T } from '../shared/map.js';
@@ -142,6 +143,7 @@ export function send(world) {
         sflags = (mods.canMove ? 1 : 0) | (mods.canSprint ? 2 : 0) | (mods.regenMul > 1 ? 4 : 0) | (mods.staminaMax > 100 ? 8 : 0) | (mods.tumble ? 16 : 0) | (mods.air ? 32 : 0) | (mods.board ? 64 : 0) | (mods.wet ? 128 : 0);   // (64: on a skateboard, 128: in the rain on one - skate.js)
       }
     } else if (ped) { ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: 0, vy: 0, lz: ped.lz || 0 }; }
+    if (self && ped && ped.fishing && ped.fishing.F && !ped.board) self.k = fishOut(ped.fishing.F);   // (a line out: the cast's charge, the bite, the fight - shared/fish.js, predicted by the page)
     writer.begin(tick, p.ack, world.loopTime, world.weather, ctrl, ctrlId, self, sflags, ped ? ped.prevBits : 0);
 
     // the subway is its own level: underground you only see your own train; up top, nothing below

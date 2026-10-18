@@ -17,7 +17,8 @@ import { keyName } from './glyphs.js';
 
 export const ITEM_ICON = {
   medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', skateboard: '🛹',
-  lure: '🎣', worms: '🪱', shrimp: '🦐', squid: '🦑', glowlure: '✨',
+  lure: '🎣', worms: '🪱', shrimp: '🦐', squid: '🦑', glowlure: '✨', crickets: '🦗', minnows: '🐟', doughballs: '⚪', chum: '🪣', dryfly: '🪰',
+  caneRod: '🎣', baitcaster: '🎣', flyRod: '🎣', surfRod: '🎣', gameRod: '🎣',
   bass: '🐟', catfish: '🐟', salmon: '🐟', tuna: '🐟', grouper: '🐟', swordfish: '🐟', marlin: '🐟',
   purse: '👜', bonds: '📜', jewelry: '💎', scrap: '⚙', wallet: '👛',
   apple: '🍎', orange: '🍊', grapes: '🍇', hotdog: '🌭', bread: '🍞', honey: '🍯', lemonade: '🍋', cider: '🧃', redwine: '🍷', whitewine: '🥂', beer: '🍺', whiskey: '🥃', lavender: '💜', nugget: '🟡', quartz: '🔷', doubloon: '🪙',
@@ -97,6 +98,11 @@ export function createInventory({ el, send, me, onClose }) {
         }
       }
       is.appendChild(r);
+    }
+    if (m.creel) {   // the cooler (server fishing.js): what's in it, what it'd fetch
+      const r = document.createElement('div'); r.className = 'inv-item';
+      r.innerHTML = `<span class="ic">🧊</span><span class="nm">Cooler <small>${m.creel.n}/${m.creel.max} fish</small><em>about $${m.creel.v.toLocaleString()} at a fish market</em></span>`;
+      section(body, 'Your catch').appendChild(r);
     }
     if (other.length) {
       const os = section(body, 'Loot, fish & bait');

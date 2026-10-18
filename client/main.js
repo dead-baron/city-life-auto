@@ -52,8 +52,6 @@ import { noteServerBuild, myBuild } from './update.js';
 import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
-import { swingMeter, carry as golfCarry } from '../shared/golf.js';
-import { courtHoops, idealPower, shotWindow } from '../shared/hoops.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
 import { ANIMAL_ART } from '../shared/animal-art.js';
@@ -312,9 +310,11 @@ function onText(m) {
     case 'looks': S.looks = m; if (S.creator) S.creator.onState(m); if (m.open) openCreator(m.open); else if (!m.picked && S.playing && topOverlay() !== 'creator') openCreator('start'); break;   // (a new player picks a starting look first; the home's wardrobe opens the wheel or the mirror)
     case 'ds': for (const id of m.ids) S.ents.delete(id); break;
     case 'ev': for (const ev of m.l) onEvent(ev); break;
+    case 'fish': fishGo(m); break;   // (a catch landed: its card)
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
-      if ((m.inv && m.inv.skateboard > 0) || m.sk) loadSkate();   // (a board in your bag: riding it and its tricks - client/skate.js)
+      if ((m.inv && m.inv.skateboard > 0) || m.sk) loadSkate();
+      if (m.fishing) loadFish();   // (a line out: client/fishing.js)   // (a board in your bag: riding it and its tricks - client/skate.js)
       S.ugLayer = m.ug || 0;   // (under the ground: the physics steps you through its own map, the underground view draws)
       syncTaxiDest();
       if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
@@ -390,6 +390,7 @@ function pedModsFrom(flags, speedMul) {
 
 function reconcile(s) {
   S.pending = S.pending.filter((p) => p.seq > s.ack);
+  if (S.fish) S.fish.reconcile(s); else if (s.self && s.self.k && s.self.k[0] >= 1 && !(s.selfFlags & 64)) loadFish();   // (your line: predicted - client/fishing.js)
   const kind = s.ctrlKind === CTRL.PED ? 'ped' : s.ctrlKind === CTRL.DRIVER ? 'veh' : null;
   if (!kind) { S.pred = null; S.ctrlKind = s.ctrlKind; S.ctrlId = s.ctrlId; if ((s.ctrlKind === CTRL.NONE || s.ctrlKind === CTRL.RIDER) && s.ctrlId) S.myPedId = s.ctrlId; return; }
   const switched = !S.pred || S.pred.kind !== kind || S.ctrlId !== s.ctrlId;
@@ -497,7 +498,7 @@ function fixedStep() {
   if (menuUp || performance.now() < (S.inputMuteUntil || 0)) inp = { bits: 0, mx: 0, my: 0, aim: inp.aim };
   if (S.suppressBits) { const held = inp.bits & S.suppressBits; inp.bits &= ~S.suppressBits; S.suppressBits &= held; }
   if (inp.bits & IN.AIMING) { S.lastAim = inp.aim; S.lastAimAt = performance.now(); S.lastFire = !!(inp.bits & IN.FIRE); }
-  golfSwingStep(inp);
+  if (S.meters) S.meters.step(inp); else if (S.me && (S.me.golf || S.me.hoops || S.me.bowl)) loadMeters();   // (the swing's meter, counted as the server counts it)
   S.seq++;
   const mxq = quantizeAxis(inp.mx), myq = quantizeAxis(inp.my), aq = quantizeAngle(inp.aim);
   send(encodeInput(S.seq, inp.bits, mxq, myq, aq));
@@ -505,6 +506,7 @@ function fixedStep() {
   S.pending.push(dq);
   if (S.pending.length > 60) S.pending.shift();
   if (S.pred) { S.pred.prev = { ...S.pred.s }; stepPred(dq); }
+  if (S.fish) S.fish.step(dq);
   // predict our own melee swing so punches animate the instant you click
   if ((dq.bits & IN.FIRE) && S.pred && S.pred.kind === 'ped' && !(S.pred.mods && S.pred.mods.board) && S.me && !S.me.carrying && !S.me.dead && !(S.me.golf && S.me.golf.near) && !S.me.hoops && !(S.me.bowl && S.me.bowl.ball) && !S.me.fight) {   // (by your golf ball it's a swing of the club; held down by an officer, the struggle's grunts instead)
     const w = WEAPONS[S.me.weapon];
@@ -927,9 +929,7 @@ function onEvent(ev) {
     case 'say': fx.say(ev.id, ev.x, ev.y, ev.text); sfx('alert', distVol(ev.x, ev.y) * 0.5); break;
     case 'yelp': fx.floatText(ev.x, ev.y - 18, 'WHOA!', '#ffd36b'); break;
     case 'thanks': fx.floatText(ev.x, ev.y - 18, 'Thank you!', '#3ddc84'); break;
-    case 'bite': fx.splash(ev.x, ev.y, 6); sfx('bite'); break;
-    case 'cast': fx.splash(ev.x, ev.y, 4); break;
-    case 'catch': fx.splash(ev.x, ev.y, 12); fx.floatText(ev.x, ev.y - 20, 'Caught!', '#7de0ff'); sfx('cash'); break;
+    case 'cast': case 'nibble': case 'bite': case 'hook': case 'flost': case 'catch': fishGo(ev); break;   // (fishing: client/fishing.js)
     case 'heal': fx.ring(ev.x, ev.y, 26, 'rgba(120,255,160,'); break;
     // the hunt (combat.js arrows, wildlife.js): a bow loosed, an arrow striking home or into the ground, an animal's
     // roar as it charges, its swipe landing, birds bursting up
@@ -2648,6 +2648,12 @@ function interp(e, rt) {
 
 // Skateboarding on the page (client/skate.js: the board's step and its tricks for the prediction, how riders look, the
 // combo and the score on the screen): loaded once, when you get a board or first see someone ride one
+function loadFish() {
+  if (S.fish || S.fishAsk) return;
+  S.fishAsk = 1;
+  import('./fishing.js').then((k) => { S.fish = new k.FishView(S); S.fish.drain(); }).catch((e) => { S.fishAsk = 0; console.warn('[fish]', e); });
+}
+function fishGo(x) { (S.fishQ ||= []).push(x); if (S.fish) S.fish.drain(); else loadFish(); }
 function loadSkate() {
   if (S.skate || S.skateAsk) return;
   S.skateAsk = 1;
@@ -3317,6 +3323,7 @@ function drawOverlays(F, v2) {
   // the ore veins at the quarry and the mine (once you're near: client/underground/view.js), the ring while you mine
   nearVeins(sp); drawVeinsTop(F); drawMineRing(F);
   if (S.skate && S.pred && S.pred.kind === 'ped' && S.pred.mods && S.pred.mods.board) S.skate.drawWorld(g, sp, S.pred.s);   // (the balance on a rail or in a manual)
+  if (S.fish) S.fish.drawWorld(g);   // (the lines out, your cast's meter)
   tunnelsTop(F);   // the hills over the tunnels, their portals, the inside of the one you're in (client/tunnels.js)
   // name tags + public flares + rumor marker
   drawWorldLabels(F.peds, F.vehs, now, z);
@@ -3335,7 +3342,8 @@ function drawOverlays(F, v2) {
   }
 
   // HUD bits
-  if (S.skate && S.me && S.me.sk) S.skate.drawHud(g, W, H, S.me.sk, now);   // (on a skateboard: the combo, the score, the special meter, a session)
+  if (S.skate && S.me && S.me.sk) S.skate.drawHud(g, W, H, S.me.sk, now);
+  if (S.fish) S.fish.drawHud(g, W, H);   // (the fight, the prompts, the catch card)   // (on a skateboard: the combo, the score, the special meter, a session)
   // (where you are: the water doesn't change it - a river, a lake, the sea near land keep the name - client/areaname.js)
   { const me = F.meEnt, cv = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER ? S.ents.get(S.ctrlId) : null, cd = cv && cv.d && VEHICLE_BY_INDEX[cv.d.m];
     const area = (S.area ||= new AreaTracker()).update(S.map, sp.x, sp.y, performance.now() / 1000, { train: !!(F.myCar && F.myCar.kind === K.TRAIN), afloat: !!(me && me.swim) || !!(cd && cd.kind === 'boat') || !!(S.me && S.me.bus && S.me.bus.k === 'ferry') });
@@ -3805,27 +3813,12 @@ function drawStationClocks(view, now) {
   }
 }
 
-// ---- golf (shared/golf.js; the server: server/systems/golf.js) ------------------------------------------------------
-// The swing as this page sees it, one fixed step at a time exactly as the server counts it: S.golfHold is how long
-// the attack button has been held by your ball (the meter: swingMeter), -1 when it isn't; the last swing's meter
-// lingers on screen a moment (S.golfShown). Each new shot starts aimed at the flag (the server takes your aim from
-// the last input, so a pad or touch player who doesn't touch the aim stick hits straight at the pin).
-function golfSwingStep(inp) {
-  const G = S.me && S.me.golf, Hh = S.me && S.me.hoops, Bw = S.me && S.me.bowl;
-  if (!(G && G.near) && !(Hh && Hh.ready) && !(Bw && Bw.ball && Bw.mine && !Bw.rolling)) { if (S.golfHold >= 0) S.golfHold = -1; return; }
-  if (!G) { if (inp.bits & IN.FIRE) S.golfHold = S.golfHold >= 0 ? S.golfHold + DT : 0; else if (S.golfHold >= 0) { S.golfShown = { p: swingMeter(S.golfHold), until: performance.now() + 900 }; S.golfHold = -1; } return; }
-  const key = `${G.ball}:${G.s}`;
-  if (S.golfAimFor !== key && G.pin) {
-    const b = S.ents.get(G.ball);
-    if (b && b.rx !== undefined) { S.lastAim = Math.atan2(G.pin.y - b.ry, G.pin.x - b.rx); S.golfAimFor = key; }
-  }
-  if (inp.bits & IN.FIRE) S.golfHold = S.golfHold >= 0 ? S.golfHold + DT : 0;
-  else if (S.golfHold >= 0) { S.golfShown = { p: swingMeter(S.golfHold), until: performance.now() + 900 }; S.golfHold = -1; }
-}
-// where the swing points now: the mouse from your character, else the last aim (the pad's right stick, the aim stick)
-function golfAimNow() {
-  if (input.device === 'keyboard') { const sp = worldToScreen(selfPos()), m = mouseScreen(); if (sp && m) return Math.atan2(m.y - sp.y, m.x - sp.x); }
-  return S.lastAim || 0;
+// ---- golf, hoops, the bowling alley's power: the swing meters (client/meters.js, loaded once you're at a ball, a hoop
+// or a lane - the server: golf.js, hoops.js, bowling.js) ------------------------------------------------------------
+function loadMeters() {
+  if (S.meters || S.metersAsk) return;
+  S.metersAsk = 1;
+  import('./meters.js').then((m) => { S.meters = m.makeMeters(S, { worldToScreen, selfPos }); }).catch((e) => { S.metersAsk = 0; console.warn('[meters]', e); });
 }
 // Pinwheel Lanes (client/bowling.js, loaded near the alley): the pins on the lanes, your power meter and the score card
 function drawBowling(F) {
@@ -3842,45 +3835,6 @@ function drawCinema(F) {
   if (S.cineView) { S.cineView.draw(g, F, { walkInAt }); g.setTransform(...S.worldTf); }
   else if (!S.cineAsk && Math.hypot(F.sp.x - C.counter.x, F.sp.y - C.counter.y) < 1600) { S.cineAsk = 1; import('./cinema.js').then((m) => { S.cineView = new m.CinemaView(S); }).catch((e) => console.warn('[cinema]', e)); }
 }
-// shooting hoops: the meter beside you, with the band that drops it in from where you stand
-function drawHoops(g, z) {
-  const Hh = S.me && S.me.hoops;
-  if (!Hh || S.me.dead) return;
-  const holding = S.golfHold >= 0, shown = !holding && S.golfShown && performance.now() < S.golfShown.until ? S.golfShown.p : null;
-  if (!Hh.ready && shown === null) return;
-  const hp = courtHoops(S.map)[Hh.k], sp = selfPos();
-  if (!hp) return;
-  const d = Math.hypot(hp.rim.x - sp.x, hp.rim.y - sp.y), ideal = idealPower(d), win = shotWindow(d), p = holding ? swingMeter(S.golfHold) : shown ?? 0;
-  const x = sp.x + 18, y = sp.y - 34, h = 40, w = 6;
-  g.save(); g.globalAlpha = 0.95;
-  g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(x - 1 / z, y - 1 / z, w + 2 / z, h + 2 / z);
-  g.fillStyle = 'rgba(80,220,110,.55)'; g.fillRect(x, y + h * (1 - Math.min(1, ideal + win)), w, h * (Math.min(1, ideal + win) - Math.max(0, ideal - win)));
-  if (holding || shown !== null) { g.fillStyle = Math.abs(p - ideal) <= win ? '#7dff7a' : '#ff8a3a'; g.fillRect(x + 1 / z, y + h * (1 - p) - 1.5 / z, w - 2 / z, 3 / z); }
-  g.restore();
-}
-// your ball ringed; by it, the aim line out as far as the swing would carry and the meter beside you
-function drawGolf(g, z, now) {
-  const G = S.me && S.me.golf, b = G && S.ents.get(G.ball);
-  if (!G || !b || b.rx === undefined || S.me.dead) return;
-  const bz = (b.extra || 0) * 2, by = b.ry - bz - 2;
-  g.save();
-  g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1.5 / z;
-  g.beginPath(); g.arc(b.rx, by, 7 + Math.sin(now * 5) * 1.5, 0, 6.28); g.stroke();
-  if (G.near) {
-    const holding = S.golfHold >= 0, shown = !holding && S.golfShown && performance.now() < S.golfShown.until ? S.golfShown.p : null;
-    const p = holding ? swingMeter(S.golfHold) : shown ?? 1, a = golfAimNow(), d = golfCarry(G.club, p);
-    g.globalAlpha = holding ? 0.95 : 0.5; g.setLineDash([6 / z, 5 / z]); g.strokeStyle = '#fff8c0'; g.lineWidth = 2 / z;
-    g.beginPath(); g.moveTo(b.rx, by); g.lineTo(b.rx + Math.cos(a) * d, by + Math.sin(a) * d); g.stroke(); g.setLineDash([]);
-    g.beginPath(); g.arc(b.rx + Math.cos(a) * d, by + Math.sin(a) * d, 5 / z, 0, 6.28); g.stroke();
-    if (holding || shown !== null) {   // the meter: a bar beside you, green to the top, red past it
-      const sp = selfPos(), x = sp.x + 18, y = sp.y - 34, h = 40, w = 6;
-      g.globalAlpha = 0.95; g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(x - 1 / z, y - 1 / z, w + 2 / z, h + 2 / z);
-      g.fillStyle = p > 0.92 ? '#7dff7a' : p > 0.6 ? '#ffd400' : '#ff8a3a'; g.fillRect(x, y + h * (1 - p), w, h * p);
-    }
-  }
-  g.restore();
-}
-
 // ---- rides (shared/rides.js; the server: server/systems/rides.js) -------------------------------------------------
 // What's under way, by id: the kind, the cab, the route and the balloon's colours or the slide and the slider's looks,
 // and when it started on this page's clock (the server says how far in it is). The renderer draws them (art2 host.js
@@ -4691,8 +4645,7 @@ function drawWorldLabels(peds, vehs, now, z) {
     g.save(); g.globalAlpha = 0.85; g.fillStyle = '#4fd6ff'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     g.beginPath(); g.moveTo(w.x, w.y - 30 + bob); g.lineTo(w.x + 8, w.y - 20 + bob); g.lineTo(w.x, w.y - 10 + bob); g.lineTo(w.x - 8, w.y - 20 + bob); g.closePath(); g.fill(); g.stroke(); g.restore();
   }
-  drawGolf(g, z, now);
-  drawHoops(g, z);
+  if (S.meters) { S.meters.drawGolf(g, z, now); S.meters.drawHoops(g, z); }   // (your golf ball's aim and meter, the hoop's: client/meters.js)
   if (me && me.job) {
     g.fillStyle = '#ffd400'; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     const bob = Math.sin(now * 4) * 5;
