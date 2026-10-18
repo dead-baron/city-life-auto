@@ -30,7 +30,7 @@ import { project, pointAt } from '../../shared/geom.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { CAR_BLOCK } from '../../shared/map.js';
-import { leaveBy, enterEdge } from './traffic.js';
+import { leaveBy, enterEdge, onLaneFromHere } from './traffic.js';
 import { markBlocked } from './reroute.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
@@ -67,17 +67,19 @@ export const TURN_SPEED = 75, BACK_SPEED = 55;   // px/s: forward and back while
 const DONE_A = 0.5;            // within this of the way out (rad): round - the lane takes it from there
 const STALL_S = 9;             // no nearer to coming round (or backing out) for this long: stuck,
 const RETRY_S = 4;             // ...put off this long, then tried again
+const STREET_STALLS = 2;       // (in the street: stuck this many times, it gives the turn up)
 const WAIT_MAX = 6;            // waiting for a vehicle on the move or a person to get out of the way, at most (s)
 const MAX_BACK_A = 1.5;        // one leg back turns it this far at most (rad)
 const SHUFFLE = 28;            // px: a straight shuffle to get a corner clear of something
 const BACK_UP = 150;           // px: backing up the road for more room, after a turn that got stuck
 const EDGE_M = 3, VEH_M = 7, PED_R = 16;   // px kept clear of the kerb (and anything solid), of other vehicles, of people
+const WALL_M = 14;             // px kept clear of a building or a wall once it's over the kerb
 const LOOK = 64;               // px along the arc looked at, each tick
 // where a car may put its wheels while turning round: the road (a parking lot, a driveway); out in the country, where
 // the roads have no kerbs, the verge and the open ground too
 const OPEN_TOWN = new Set([T.ROAD, T.BRIDGE, T.LOT]);
 const OPEN_KERB = new Set([T.ROAD, T.BRIDGE, T.LOT, T.SIDEWALK]);   // (wedged: over the kerb - nextLeg)
-const OPEN_ANY = new Set([T.ROAD, T.BRIDGE, T.LOT, T.SIDEWALK, T.PLAZA, T.GRASS, T.DIRT, T.SAND, T.FIELD, T.DOCK]);   // (still wedged: wherever a car can go)
+export const OPEN_ANY = new Set([T.ROAD, T.BRIDGE, T.LOT, T.SIDEWALK, T.PLAZA, T.GRASS, T.DIRT, T.SAND, T.FIELD, T.DOCK]);   // (still wedged: wherever a car can go)
 const WET = (t) => t === T.WATER || t === T.DEEP;
 const OPEN_COUNTRY = new Set([T.ROAD, T.BRIDGE, T.LOT, T.DIRT, T.GRASS, T.SAND, T.FIELD]);
 const COUNTRY = new Set(['rural', 'dirt']);
@@ -177,6 +179,10 @@ function stuck(world, v, t) {
   v.ai.hopeless = true;
   pedals(v, 0, 0);
   if (t.mode === 'turn' && t.node >= 0 && t.tries < 3) { t.tries++; backOut(world, v, t, t.tries >= 2 ? Infinity : BACK_UP); return; }
+  // in the street, stuck a second time: it gives the turn up and takes its lane again from where it is, the way it faces
+  // (it used to try again every few seconds for as long as anyone could see it - boxed in up on the pavement against a
+  // shop front, the owner's 2026-10-17 screenshot)
+  if (t.node < 0 && (t.stalls = (t.stalls || 0) + 1) >= STREET_STALLS) { endTurn(world, v, false); onLaneFromHere(world, v); world.turnsGivenUp = (world.turnsGivenUp || 0) + 1; return; }
   t.pausedUntil = world.time + RETRY_S;
   if (t.mode === 'back') { t.mode = 'turn'; t.tries = 0; }
   legsFrom(world, v, t, 1);
@@ -216,6 +222,59 @@ function stepBack(world, v, t) {
   pedals(v, 0, 0);
   if (room.mover && t.waited < WAIT_MAX) t.waited += 0.05;
   return true;
+}
+
+// Room to start turning round in the street (reroute.js, giving up on a blocked road)? (The owner's 2026-10-17
+// screenshot: two ambulances across both lanes of a street by a diner; the cars queued behind them turned round anyway -
+// nowhere to go in the road, so over the kerb on full lock - and stuck there nosed into the shop fronts, boxed in by the
+// queue.) Where no building stands by the road for it to swing into, or where it can come round in one sweep on the
+// road with nothing in the way: yes, as ever. Otherwise - shop fronts at the back of the pavement, and it would have to
+// go back and forth - only with nothing in the other lane where it would swing across (from a car's length ahead of it
+// to half one behind; a car parked at the kerb is the manoeuvre's to go round), nobody else turning round beside it,
+// and room on the road to start: forward across it on full lock, or back on the other. Otherwise it waits in the queue
+// (reroute.js tries again in a while).
+export function roomToTurn(world, v, edgeId, from) {
+  const net = world.map.net, e = net.edges[edgeId], now = world.time;
+  if (!e) return false;
+  if (!buildingsBy(world, v)) return true;
+  const open = COUNTRY.has(e.kind) ? OPEN_COUNTRY : OPEN_TOWN;
+  const sweep = Math.PI * turnRadius(v) + 16;
+  if (clearance(world, v, 1, -1, open, sweep).free >= sweep - 8) return true;
+  for (const o of world.query(v.x, v.y, v.def.L * 2, K.VEH)) if (o !== v && o.ai && o.ai.turn && !(o.ai.turn.pausedUntil > now)) return false;   // (one turning round beside it)
+  // the other lane, across from it
+  const other = e.a === from ? e.b : e.a, lp = lanePath(net, e, other, 0), L = lp[lp.length - 1].s, pr = project(lp, v);
+  const mine = lanePath(net, e, from, Math.min(v.ai.lane || 0, e.nl - 1));
+  if (!pr) return false;
+  for (let t = pr.s - v.def.L * 1.2; t <= pr.s + v.def.L * 0.6; t += 16) {
+    if (t < 0 || t > L) continue;
+    const p = pointAt(lp, t);
+    for (const q of world.query(p.x, p.y, 40)) {
+      if (q === v || !sameLevel(q.lz, v.lz)) continue;
+      const dq = Math.hypot(q.x - p.x, q.y - p.y);
+      if (q.kind === K.VEH && !q.parked && !((q.alt || 0) > FLY.HIGH) && dq < 30 + q.def.W / 2 && !(project(mine, q).d < dq)) return false;   // (not one in its own lane: the clearance below)
+      if (q.kind === K.PED && !q.vehId && !q.hidden && dq < 30) return false;   // (people in the road: paramedics at work, someone lying there)
+    }
+  }
+  return clearance(world, v, 1, -1, open, 32).free >= 16 || clearance(world, v, -1, 1, open, 32).free >= 16;
+}
+// A building or a wall by the road where v is, near enough for a turn over the kerb to swing into: across the road to
+// either side of it and three quarters of a car's length past the kerb, from a car's length behind it to one and a half
+// ahead.
+function buildingsBy(world, v) {
+  const m = world.map, c = Math.cos(v.a), s = Math.sin(v.a), reach = v.def.L * 0.75 + 8;
+  for (const along of [-1, -0.5, 0, 0.5, 1, 1.5]) {
+    const bx = v.x + c * along * v.def.L, by = v.y + s * along * v.def.L;
+    for (const side of [-1, 1]) {
+      let kerb = -1;
+      for (let d = 0; d <= 360; d += 16) {
+        const t = m.tileAtPx(bx - s * side * d, by + c * side * d);
+        if (CAR_BLOCK[t]) return true;
+        if (kerb < 0 && !OPEN_TOWN.has(t)) kerb = d;
+        if (kerb >= 0 && d - kerb > reach) break;
+      }
+    }
+  }
+  return false;
 }
 
 // Round (or given up): back to its lane - the waypoints behind it dropped.
@@ -312,9 +371,10 @@ const wrap = (a) => { a %= TAU; if (a > Math.PI) a -= TAU; else if (a < -Math.PI
 const RING = [[1, -1], [1, -0.4], [1, 0.4], [1, 1], [0.5, -1], [0.5, 1], [0, -1], [0, 1], [-0.5, -1], [-0.5, 1], [-1, -1], [-1, -0.4], [-1, 0.4], [-1, 1]];
 export function clearance(world, v, dir, steer, open, look = LOOK) {
   const m = world.map, k = (steer * dir) / turnRadius(v), hl = v.def.L / 2 + EDGE_M, hw = v.def.W / 2 + EDGE_M;
+  const wm = open === OPEN_TOWN || open === OPEN_COUNTRY ? 0 : WALL_M - EDGE_M;
   const near = [];
   for (const e of world.query(v.x, v.y, v.def.L / 2 + look + 110)) {
-    if (e === v || !sameLevel(e.lz, v.lz)) continue;
+    if (e === v || !sameLevel(e.lz, v.lz) || e.towedBy === v.id) continue;   // (a tow truck's own load hangs behind it, moving with it)
     if ((e.kind === K.VEH && !((e.alt || 0) > FLY.HIGH)) || (e.kind === K.PED && !e.vehId && !e.dead && !e.hidden)) near.push(e);   // (an aircraft overhead: not in the way)
   }
   // outline points that start out off the open ground are let be (it's only kept from going further off)
@@ -338,6 +398,8 @@ export function clearance(world, v, dir, steer, open, look = LOOK) {
         const tt = m.tileAtPx(px, py);
         if (CAR_BLOCK[tt]) return hit(s, false, 'wall', px, py);
         if (ok0[i] && !open.has(tt) && !WET(tt)) return hit(s, false, 'edge', px, py);
+        // (over the kerb: its leading corners keep WALL_M off the buildings - not nosed up against a shop front)
+        if (wm && f * dir > 0 && CAR_BLOCK[m.tileAtPx(px + (c * f * wm - sn * l * wm) * 0.7, py + (sn * f * wm + c * l * wm) * 0.7)]) return hit(s, false, 'wall', px, py);
       }
       const tx = Math.floor(px / 32), ty = Math.floor(py / 32);
       for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
