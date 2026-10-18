@@ -16,7 +16,7 @@ import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { enterEdge } from './traffic.js';
 import { rejoin } from './transit.js';
-import { startTurn } from './roadends.js';   // (turning round in the street by a manoeuvre: task #384)
+import { startTurn, roomToTurn } from './roadends.js';   // (turning round in the street by a manoeuvre: task #384)
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 export const MEMORY = 24, TTL = 45;   // the blocked-road memory: this many roads at most, each kept this long (s)
@@ -109,7 +109,9 @@ function findWay(world, v) {
   markBlocked(world, e.id);
   if (v.bus) { ai.howOut = 'round'; ai.roundUntil = now + 20; return false; }   // (round it on the other side when that's clear: goRound)
   if (e.oneway || (v.lz || 0) > 0.3) { ai.howOut = 'wait'; return false; }   // (no turning round on a one-way street or the highway)
-  // 3. turn round and take another way (a taxi plans a new way to where it's going)
+  // 3. turn round and take another way (a taxi plans a new way to where it's going) - where there's room to; otherwise
+  //    it waits its turn (roadends.js roomToTurn: not over the kerb into the shop fronts with the far lane blocked)
+  if (!roomToTurn(world, v, e.id, ai.from)) { ai.howOut = 'wait'; world.turnsHeld = (world.turnsHeld || 0) + 1; return false; }
   const other = e.a === ai.from ? e.b : e.a, s2 = Math.max(0, e.len - s);
   if (ai.route && v.taxi && rejoin(world, v, e, other, s2)) { /* (on its new way) */ }
   else { delete ai.route; enterEdge(world, v, e.id, other, 0, s2); }

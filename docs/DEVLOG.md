@@ -10227,3 +10227,58 @@ from starting.
 - **The watcher:** now stands behind the board, never between the camera and the game.
 
 The Neon Strip's boulevard gets Midtown Boulevard's section too: four lanes either side of a planted median of royal palms with lights strung between them. The owner's concepts of the day are filed: WC324-WC352, the Midtown set, and WC353-WC356, Downtown (`docs/art-v2/world-concepts/CATALOGUE.md`, batches 5 and 6).
+
+## 2026-10-17 · Traffic stays off the buildings: streets driven round their corners, nothing pushes into a wall, no U-turns into the shop fronts
+The owner, at night by a City Diner, two ambulances and a burning wreck in the road: "Vehicles are still turning and
+getting stuck on buildings" - taxis, a box truck and a van up on the pavement, nosed into the diner's front and the
+building beside it. Measured first: `tools/trafficbuildings.mjs` (new) runs World v3 as the server builds it with players
+at eight junction corners - the City Diner corners first - and makes the screenshot at each every 70-90 s: a car blown
+up in a lane short of the junction, people killed beside it (the ambulances come), the player wanted for a few seconds
+(the police come), gunfire and cars shot at (drivers panic). It counts every AI vehicle that leaves the road, touches a
+building, ends up inside one or is stuck against one, and the driving mode it was in. What it found
+(server/systems/traffic.js, roadends.js, reroute.js):
+- **Streets lost their corners.** A car's waypoints for a road are its lane's points every 72 px - and the first point
+  past where it joins the lane was never kept. Most streets are straight; but where a street turns a corner in one point
+  (Gull Lane, Shell Street and Pier Street in Sandpiper Bay, Assay Street and Company Row in Copper Gulch, Timber Bend's
+  and Willow Crossing's streets, Mill Lane in today's world), that point was the corner, and a car came off the junction
+  and steered straight for the far end of the street - across the pavement, the plaza and into the building. That was the
+  2026-10-15 Copper Gulch report too: its fix put the car back on its lane, which gave it the same waypoints again (in the
+  run, 1,779 such rejoins in 5 minutes). Now `stride` also keeps any point the straight line on would miss by more than
+  20 px: of World v3's 17,416 lane entries, 636 had waypoints straying more than 24 px from the lane, 41 of them (on 23
+  roads) across a building or a wall -> none.
+- **Giving way to a siren** a car aimed a little to the side of where its own nose pointed, every tick - the longer it
+  gave way, the further round it turned, up the pavement and into the shop fronts. Now it eases over from its lane's line,
+  along the lane, a wheel's width up the kerb at most.
+- **Nothing an NPC drove knew about buildings.** A panicking driver (flat out, through everything), a police car or an
+  ambulance going round a jam on the pavement, an ambulance swinging round to leave, a car shoved off the road: each drove
+  on at whatever lay beyond the building and pushed against the wall until the "wedged" timer backed it off, and again.
+  Now `driveToward` - traffic, the police, ambulances, tow trucks, everyone - looks along the arc it's about to drive
+  (`wallGuard`): a corner clipping a wall, a little more lock the other way; otherwise it brakes short, and stopped
+  against the wall backs out on the opposite lock into the room behind (a tow truck's own load doesn't count as in the
+  way); when its way on was through the building, it heads back to its street first and along it until the way is clear.
+  The police's and the ambulances' routes start and end at a junction they can drive to in a straight line (`planRoute`:
+  the nearest as the crow flies was often across the block).
+- **U-turns into the shop fronts.** Behind the ambulances, with both lanes blocked, the queue gave up on the street and
+  turned round anyway: no room in the road, so over the kerb on full lock into the diner, and the queue closed in behind
+  (the box truck). Where buildings stand at the back of the pavement and a car can't come round in one sweep, it now turns
+  only with nothing in the other lane where it would swing, nobody else turning beside it and room to start on the road;
+  otherwise it waits its turn (`roomToTurn`). Up on the kerb a manoeuvre keeps 14 px off a building, and one stuck twice
+  in the street gives the turn up and takes its lane again (it used to retry every few seconds for as long as anyone
+  watched).
+- **The numbers** (`tools/trafficbuildings.mjs`, seeds 5 and 11, 5 in-game minutes at 8 corners, before -> after): AI
+  vehicles off the road 188 / 198 -> 101 / 106; touching a building 75 / 83 -> 9 / 16; inside one 1 / 1 -> 0 / 0; stuck
+  against one for more than 4 s 20 / 27 episodes, 254 / 303 vehicle-seconds -> 3 / 4, 82 / 111; NPC traffic among them
+  11 / 18 (176 / 217 vehicle-s: turning round on the kerb, off the road on a lane through a block, panicking) -> none.
+  What's left is the police pulled up on the pavement by the player (as meant) and, once, an ambulance pulled up on the
+  pavement against a wall at a scene that can't leave while the bodies lie round it. Road ends (`tools/trafficjams.mjs
+  --only ends`, 8 seeds of 3 minutes, today's world): time stuck at road ends 5,891 -> 7,222 vehicle-seconds (5 seeds
+  worse, 3 better - its runs swing by half from one seed to the next; nothing systematic found), crashes 3,828 -> 3,543.
+- Found, not changed: in Pelican Key "Pelican Key Charters" (6 x 4 tiles at 3637,3325) stands in 24th Street's lanes,
+  the one place in World v3 where a building is on a road (the world build's: traffic now brakes short of it).
+- **Tests:** `test/trafficwalls.test.js` (6, today's world; all six fail without the change): a lane's waypoints keep
+  its corners (an L, and every lane of the map within 24 px); a car down Mill Lane drives round its corner and never
+  touches the block; a car on the pavement nose to a shop front backs out and is back on the road along it within 8 s,
+  never pushing on the wall; a panicking driver brakes short of a building instead of crashing into it; a car giving way
+  to a siren for 12 s stays along the road, a wheel up the kerb at most; a queue behind a street blocked across both
+  lanes (two vans), a box truck and a garbage truck in it, along a shop front: nobody in a building, nobody against one
+  for more than 2 s, and they wait their turn.

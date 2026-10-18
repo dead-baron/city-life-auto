@@ -3,7 +3,7 @@
 // through junctions on smooth paths, obey 2- and 3-phase signals, keep their distance, slow for
 // bends, pull over for sirens and panic when attacked; parked cars and docked boats near players.
 // Also exports the shared driving controller + route planner used by police and EMS.
-import { K, T } from '../../shared/constants.js';
+import { K, T, TILE } from '../../shared/constants.js';
 import { lanePath, turnPath, exitsFrom, edgeZ, nearestEdge } from '../../shared/roads.js';
 import { signalFor } from '../../shared/signals.js';
 import { pointAt, measure, project } from '../../shared/geom.js';
@@ -21,7 +21,7 @@ import { pointGrid } from '../pointgrid.js';
 import { HIGHWAY_SPEED } from '../../shared/rules.js';
 import { routeSteps, haltsOn, haltCap, haltAt, rejoin } from './transit.js';
 import { isBlocked, unjam, goRound } from './reroute.js';   // (drivers who find another way round a backup: task #315)
-import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind, giveUpEnd } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384; giving one up: giveUpEnd)
+import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind, giveUpEnd, clearance, OPEN_ANY as OPEN_ANY_GROUND } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384; giving one up: giveUpEnd)
 import { loadExplosives } from './cargo.js';
 import { homeLotSpots } from './homes.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
@@ -143,12 +143,26 @@ function laneFor(e, turn, cur) {
   return Math.min(e.nl - 1, cur ?? Math.floor(rng() * e.nl));
 }
 
-const stride = (pts, from, step = 72) => {
+// A lane's points every `step` px or so, from point `from` on - and any point the straight line on from the last one
+// kept would miss by more than STRIDE_DEV px: a corner left out is a chord across the block. (The owner, 2026-10-17:
+// "Vehicles are still turning and getting stuck on buildings". Streets that turn a corner in one point - Gull Lane in
+// Sandpiper Bay, Assay Street and Company Row in Copper Gulch, Timber Bend's and Willow Crossing's in World v3, Mill
+// Lane in today's world - lost the corner: it was the first point of the stretch, never kept, and a car came off the
+// junction and steered straight for the far end of the street, across the pavement, the plaza and into the building.)
+// (The gentle curves keep their points as before: only a point the line would miss by that much is added.)
+const STRIDE_DEV = 20;
+const offLine = (p, a, b) => {   // (how far p is from the segment a-b)
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy, t = L2 ? clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / L2, 0, 1) : 0;
+  return Math.hypot(a.x + dx * t - p.x, a.y + dy * t - p.y);
+};
+export const stride = (pts, from, step = 72) => {
   const out = [];
-  let acc = 0;
+  let acc = 0, last = from > 0 ? from - 1 : 0;   // (the last point kept, or where it joins: the point before)
   for (let i = from; i < pts.length; i++) {
     if (i > from) acc += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
-    if (i === pts.length - 1 || acc >= step) { out.push({ x: pts[i].x, y: pts[i].y }); acc = 0; }
+    let keep = i === pts.length - 1 || acc >= step;
+    for (let j = last + 1; !keep && j <= i; j++) keep = offLine(pts[j], pts[last], pts[i + 1]) > STRIDE_DEV;
+    if (keep) { out.push({ x: pts[i].x, y: pts[i].y }); acc = 0; last = i; }
   }
   return out;
 };
@@ -270,6 +284,9 @@ export function driveToward(world, v, wx, wy, desired, opts = {}) {
   const ai = v.ai;
   let reversing = false;
   if (ai) {
+    // never on into a building or a wall - panicking, going round something, pulling over or pushed off the road; up
+    // against one with its way on past it, it backs out (wallGuard)
+    if ((v.lz || 0) < 0.3) ({ speed, wx, wy } = wallGuard(world, v, wx, wy, speed, fwd));
     if (Math.abs(fwd) < 12 && desired > 60 && speed > 40) ai.stuck = (ai.stuck || 0) + 0.05; else ai.stuck = Math.max(0, (ai.stuck || 0) - 0.1);
     if (ai.stuck > 2.5) { ai.reverseUntil = world.time + 1.3; ai.stuck = 0; }
     reversing = !!(ai.reverseUntil && world.time < ai.reverseUntil);
@@ -299,6 +316,109 @@ export function trim(v) {
   const c = v.ai && v.ai.ctl;
   if (!c || v.wreckAt) return;
   pedals(v, c.wx, c.wy, c.speed, c.reversing);
+}
+
+// ---- never into a building --------------------------------------------------------------------------------------------
+// (The owner, 2026-10-17: "Vehicles are still turning and getting stuck on buildings" - cars that had come off the road
+// for whatever reason, a driver panicking, a police car going round a jam on the pavement, an ambulance swinging round to
+// leave, drove on at whatever was beyond the building and pushed against its wall until something else gave.)
+// How far v can go (px, forward: dir 1; back: -1) with the wheel at `steer` before its bumper meets a building or a wall
+// (CAR_BLOCK, the ground the levels block): along the arc it would drive, its bumper's corners (a little in from its
+// sides, so a wall it drives alongside doesn't count) and its middle. Infinity: nothing within `look`.
+const WALL_STEP = 8;
+export function wallGap(m, v, dir, steer, look) {
+  const sp = Math.max(120, Math.abs(vehForwardSpeed(v)));
+  const k = (dir * steer * v.def.turn * (1 - 0.35 * Math.min(1, sp / v.def.max))) / sp;   // (rad a px: shared/physics.js vehStep's yaw rate over the speed)
+  const hl = v.def.L / 2 + 2, hw = v.def.W / 2 * 0.8, lb = m.lvl0Block;
+  let x = v.x, y = v.y, a = v.a;
+  for (let s = WALL_STEP; s <= look + WALL_STEP - 1; s += WALL_STEP) {
+    const am = a + (k * WALL_STEP) / 2;
+    x += dir * Math.cos(am) * WALL_STEP; y += dir * Math.sin(am) * WALL_STEP; a += k * WALL_STEP;
+    const c = Math.cos(a), sn = Math.sin(a);
+    for (let l = -1; l <= 1; l++) {
+      const tx = Math.floor((x + c * dir * hl - sn * l * hw) / TILE), ty = Math.floor((y + sn * dir * hl + c * l * hw) / TILE);
+      if (CAR_BLOCK[m.tileAt(tx, ty)] || (lb && m.inside(tx, ty) && lb[m.idx(tx, ty)] === 1)) return s - WALL_STEP;
+    }
+  }
+  return Infinity;
+}
+// Is there a building or a wall on the straight line between two points (its first `max` px)?
+export function lineBlocked(m, x0, y0, x1, y1, max = 640) {
+  const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy);
+  for (let s = 16; s < Math.min(L, max); s += 16) if (CAR_BLOCK[m.tileAtPx(x0 + dx * s / L, y0 + dy * s / L)]) return true;
+  return false;
+}
+// In driveToward, every tick: the speed it may go at and where it steers for ({ speed, wx, wy }). A building or a wall on
+// the arc ahead (the wheel as it's about to be turned toward the target):
+//  - only a corner of it clipping one, and a little more lock the other way clears it: it steers that way;
+//  - otherwise it brakes to stop short of it, and stopped against it, backs out on the opposite lock - the nose swings
+//    round toward the target - into the room behind it (a vehicle, a person, a post, another wall there: it waits);
+//  - and when its way on was through the building (an ambulance's way out, a police car's way to someone, across the
+//    block), it heads back to the road first (wallEsc: along its nearest street, the way the target is) and goes on
+//    from there.
+// Backing up, it stops short of a wall behind.
+export const WALL_BACK_S = 0.9;
+const WALL_ESC_S = 6;   // s at most heading back to the road
+const WALL_LOOK = 220;  // px at most looked ahead (its stopping distance and a little, up to this)
+const ROADISH = (t) => t === T.ROAD || t === T.BRIDGE || t === T.LOT;
+function wallGuard(world, v, wx, wy, speed, fwd) {
+  const ai = v.ai, now = world.time, m = world.map, out = { speed, wx, wy };
+  if (v.def.kind === 'boat' || v.def.kind === 'air' || v.onDeck) return out;
+  const esc = ai.wallEsc;
+  if (esc) {
+    // (back on the road with its way on clear, or given long enough: on as before; at the point and its way on still
+    // through the building: on along the street, the next stretch)
+    const there = Math.hypot(esc.x - v.x, esc.y - v.y) < 60, onRoad = ROADISH(m.tileAtPx(v.x, v.y));
+    if (now > esc.until || (onRoad && !lineBlocked(m, v.x, v.y, wx, wy))) ai.wallEsc = null;
+    else if (there && onRoad) { const p = roadPointToward(world, v, wx, wy); if (p) { esc.x = p.x; esc.y = p.y; } else ai.wallEsc = null; }
+    if (ai.wallEsc) { out.wx = esc.x; out.wy = esc.y; out.speed = Math.min(speed, 110); }
+  }
+  const diff = angleDiff(v.a, Math.atan2(out.wy - v.y, out.wx - v.x));
+  if (ai.reverseUntil > now) {
+    if (wallGap(m, v, -1, -clamp(diff * 2.4, -1, 1), 10 + Math.max(0, -fwd) * 0.25) < 4) ai.reverseUntil = 0;   // (a wall behind: no further)
+    return out;
+  }
+  const f = Math.max(0, fwd), look = Math.min(WALL_LOOK, 16 + (f * f) / 700 + f * 0.1), steer = clamp(diff * 2.4 - (v.av || 0) * 0.12, -1, 1);
+  const gap = wallGap(m, v, 1, steer, look);
+  if (gap === Infinity) { ai.wallT = 0; return out; }
+  // a corner clipping it: a little more lock the other way
+  for (const d of [0.35, -0.35, 0.7, -0.7]) {
+    const s = clamp(steer + d, -1, 1);
+    if (s === steer || wallGap(m, v, 1, s, look + 24) !== Infinity) continue;
+    const a = v.a + s / 2.4;
+    out.wx = v.x + Math.cos(a) * 80; out.wy = v.y + Math.sin(a) * 80; out.speed = Math.min(out.speed, 160);
+    ai.wallT = 0;
+    return out;
+  }
+  out.speed = Math.min(out.speed, Math.max(0, (gap - 4) * 2));
+  if (gap < 10 && f < 30) {
+    ai.wallT = (ai.wallT || 0) + 0.05;
+    if (ai.wallT >= 0.3) {
+      ai.wallT = 0;
+      // its way on is through the building: back to the road first
+      if (!ai.wallEsc && (Math.abs(diff) <= 0.12 || lineBlocked(m, v.x, v.y, wx, wy, 240))) {
+        const p = roadPointToward(world, v, wx, wy);
+        if (p) { ai.wallEsc = { x: p.x, y: p.y, until: now + WALL_ESC_S }; world.wallEscapes = (world.wallEscapes || 0) + 1; }
+      }
+      const tx = ai.wallEsc ? ai.wallEsc.x : out.wx, ty = ai.wallEsc ? ai.wallEsc.y : out.wy, d2 = angleDiff(v.a, Math.atan2(ty - v.y, tx - v.x));
+      if (clearance(world, v, -1, -clamp(d2 * 2.4, -1, 1), OPEN_ANY_GROUND, 40).free >= 16) {
+        ai.reverseUntil = now + WALL_BACK_S; ai.stuck = 0;
+        world.wallBackouts = (world.wallBackouts || 0) + 1;      }
+    }
+  } else ai.wallT = 0;
+  return out;
+}
+// The point to head for back on the road: on the lane of the nearest street (of the ground), 90 px on from the point of
+// it nearest the vehicle, the way (gx, gy) is
+function roadPointToward(world, v, gx, gy) {
+  const net = world.map.net;
+  if (!net) return null;
+  const ne = nearestEdge(net, v.x, v.y, (e) => e.lvl === 0);
+  if (!ne) return null;
+  const e = ne.e, t = pointAt(e.pts, ne.s);
+  const fwd = e.oneway || (gx - t.x) * t.tx + (gy - t.y) * t.ty >= 0;
+  const lp = lanePath(net, e, fwd ? e.a : e.b, 0), pr = project(lp, v);
+  return pr ? pointAt(lp, Math.min(lp[lp.length - 1].s, pr.s + 90)) : null;
 }
 
 // The point a smooth driver looks at: `look` px ahead along the path (the car's position, then
@@ -347,7 +467,7 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
 // highway too): world waypoints along the lanes, ending at the target.
 export function planRoute(world, fromX, fromY, toX, toY) {
   const m = world.map, net = m.net;
-  const start = m.nearestNode(fromX, fromY), goal = m.nearestNode(toX, toY);
+  const start = clearNode(m, fromX, fromY), goal = clearNode(m, toX, toY);
   if (!start || !goal || !net) return [{ x: toX, y: toY, final: true }];
   let prev;
   for (const avoid of world.blockedEdges && world.blockedEdges.size ? [true, false] : [false]) {   // (roads remembered as blocked: reroute.js)
@@ -374,6 +494,20 @@ export function planRoute(world, fromX, fromY, toX, toY) {
   }
   pts.push({ x: toX, y: toY, final: true });
   return pts;
+}
+
+// The ground junction nearest (x, y) that it can be driven to in a straight line - the first leg of a route, and its last
+// - with no building or wall in between (the nearest as the crow flies was often the one on the next street, behind the
+// block: an ambulance leaving a scene steered straight for it, up the pavement and into the building); the nearest if
+// none is.
+function clearNode(m, x, y) {
+  const n0 = m.nearestNode(x, y);
+  if (!n0 || !lineBlocked(m, x, y, n0.x, n0.y, 4000)) return n0;
+  const d0 = Math.hypot(n0.x - x, n0.y - y);
+  const near = pointGrid(m.nodes).within(x, y, 0, d0 * 2 + 400).filter((n) => n.lvl === 0 && n !== n0);
+  near.sort((p, q) => Math.hypot(p.x - x, p.y - y) - Math.hypot(q.x - x, q.y - y));
+  for (const n of near.slice(0, 8)) if (!lineBlocked(m, x, y, n.x, n.y, 4000)) return n;
+  return n0;
 }
 
 // ---- traffic update ----------------------------------------------------------
@@ -481,10 +615,15 @@ function steerTraffic(world, v, t) {
   if (!panic && !reckless && (world.tick + v.id) % 4 === 0) ai.yieldUntil = sirenBehind(world, v) ? now + 1.5 : ai.yieldUntil;
   if (!panic && ai.yieldUntil && now < ai.yieldUntil) {
     // an emergency vehicle with its siren on is coming: ease over toward the curb and slow
-    // right down. Only ever onto empty road - never up onto the pavement or into people.
-    const c = Math.cos(v.a), sn = Math.sin(v.a);
-    const rx = -sn, ry = c;
+    // right down. Only ever onto empty road - a wheel's width up the kerb at most, never onto the pavement or into
+    // people. Over from its lane's line, along the lane: it used to aim a little to the side of where its own nose
+    // pointed, every tick - so the longer it gave way the further round it turned, up the pavement and into the shop
+    // fronts (the owner, 2026-10-17: "Vehicles are still turning and getting stuck on buildings").
     const up = (v.lz || 0) > 0.3;
+    const e = net.edges[ai.edge], lp = e ? lanePath(net, e, ai.from, Math.min(ai.lane || 0, e.nl - 1)) : null, pr = lp ? project(lp, v) : null;
+    if (!pr || pr.d > 60) { driveToward(world, v, wp.x, wp.y, Math.min(desired, 40), {}); return; }   // (off its lane - turning through a junction: just slow)
+    const q0 = pointAt(lp, pr.s), c = q0.tx, sn = q0.ty, ox0 = q0.x, oy0 = q0.y;
+    const rx = -sn, ry = c;
     const solidNear = (x, y) => {
       if (up) return false;
       const k0x = Math.floor(x / 32), k0y = Math.floor(y / 32);
@@ -494,19 +633,21 @@ function steerTraffic(world, v, t) {
       }
       return false;
     };
-    const curbOk = (x, y) => { if (up) return true; const tt = world.map.tileAtPx(x, y); return tt === T.ROAD || tt === T.BRIDGE || tt === T.SIDEWALK || tt === T.LOT || tt === T.PLAZA; };
+    const roadAt = (x, y) => { const tt = world.map.tileAtPx(x, y); return tt === T.ROAD || tt === T.BRIDGE || tt === T.LOT; };
+    const kerbAt = (x, y) => { const tt = world.map.tileAtPx(x, y); return tt === T.ROAD || tt === T.BRIDGE || tt === T.LOT || tt === T.SIDEWALK; };
     let shift = 0;
-    const strip = (k) => { // the car's outer edge from its tail to 70 px past its nose
+    const strip = (k) => { // the car's outer edge (k px over from the lane's line) from its tail to 70 px past its nose
       for (let along = -v.def.L / 2; along <= v.def.L / 2 + 70; along += 14) {
-        const ox = v.x + c * along + rx * (k + v.def.W / 2), oy = v.y + sn * along + ry * (k + v.def.W / 2);
-        if (!curbOk(ox, oy) || solidNear(ox, oy)) return false;
+        const bx = ox0 + c * along, by = oy0 + sn * along, ox = bx + rx * (k + v.def.W / 2), oy = by + ry * (k + v.def.W / 2);
+        if (up) continue;
+        if (!kerbAt(ox, oy) || !roadAt(ox - rx * 10, oy - ry * 10) || solidNear(ox, oy)) return false;
       }
       return true;
     };
     for (let k = 4; k <= (up ? 14 : 26); k += 2) { if (!strip(k)) break; shift = k; }
     const room = shift >= 6;
-    const tx = v.x + c * 50 + rx * shift, ty = v.y + sn * 50 + ry * shift;
-    const busy = room && world.query(v.x + c * 40 + rx * (shift + v.def.W / 2), v.y + sn * 40 + ry * (shift + v.def.W / 2), 70, K.PED).some((e) => !e.dead && !e.vehId && sameLevel(e.lz, v.lz));
+    const tx = ox0 + c * 50 + rx * shift, ty = oy0 + sn * 50 + ry * shift;
+    const busy = room && world.query(ox0 + c * 40 + rx * (shift + v.def.W / 2), oy0 + sn * 40 + ry * (shift + v.def.W / 2), 70, K.PED).some((e) => !e.dead && !e.vehId && sameLevel(e.lz, v.lz));
     driveToward(world, v, room && !busy ? tx : wp.x, room && !busy ? ty : wp.y, Math.min(desired, 40), {});
     return;
   }
@@ -642,7 +783,8 @@ function rejoinLane(world, v) {
 }
 
 // Rejoin the network on the nearest lane of our level, going the way the car faces (how a lost
-// driver "gets themselves out" of a loop).
+// driver "gets themselves out" of a loop; one that gave up turning round in the street: roadends.js).
+export { replanFromHere as onLaneFromHere };
 function replanFromHere(world, v) {
   const ai = v.ai;
   const net = world.map.net;
