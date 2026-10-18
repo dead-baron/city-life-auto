@@ -375,7 +375,7 @@ export function makeBuilding(spec) {
 
 // ---- flat roof decks (spec.roofMat) ------------------------------------------------------------------
 const DECK = { tar: ramp('#615c5c', 6, 3), gravel: ramp('#7c756c', 6, 3), membrane: ramp('#a29f99', 6, 3), metal: ramp('#7a838c', 6, 3),
-  paver: ramp('#908376', 6, 3), deck: MAT.woodDock, green: ramp('#aca392', 6, 3), sedum: ramp('#4a4846', 6, 3), rubber: ramp('#4c494c', 6, 3) };
+  paver: ramp('#908376', 6, 3), deck: MAT.woodDock, green: ramp('#aca392', 6, 3), sedum: ramp('#4a4846', 6, 3), rubber: ramp('#4c494c', 6, 3), seats: ramp('#b02a2e', 6, 3) };
 const RUST = ramp('#8a5a3a', 6, 3), PAD = ramp('#b6b0a4', 6, 3);
 const SEDUM = [ramp('#6e8e3a', 6, 3), ramp('#8e6c3a', 6, 3), ramp('#4a6e3c', 6, 3), ramp('#9a5c4c', 6, 3)];
 const GPAVE = [ramp('#8e7258', 6, 3), ramp('#9a705c', 6, 3), ramp('#d870a0', 5, 2), ramp('#e8c848', 5, 2)];   // (a garden's decking, its clay pavers; sedum in flower)
@@ -456,6 +456,20 @@ function roofDeck(G, spec, w, d, H, seed, style) {
           const th = hash(tx, ty, seed + 11), pv = vnoise(tx, ty, 3, seed + 3) + (th - 0.5) * 0.3;   // (greens mostly, ochre and red in patches across trays)
           RI[i] = pv < 0.5 ? 4 : pv < 0.66 ? 6 : pv < 0.8 ? 5 : 7; T[i] = 0.42 + (hash(x >> 1, y >> 1, seed + 6) - 0.5) * 0.34 + (B[y * w + x] - 0.5) * 0.2 - (a === 2 || b === 2 ? 0.14 : 0);
           if (th > 0.78 && hash(x >> 1, y >> 1, seed + 9) > 0.88) { RI[i] = 10 + ((tx + ty) & 1); T[i] = 0.6; }       // (in flower)
+        });
+        break;
+      }
+      case 'seats': {                                                          // a stadium's stand from above: rows of seats stepping down to its front
+        // edge (spec.seatTo 'N' 'S' 'E' 'W': toward the pitch), concrete risers, aisles of steps, the crowd in its colours
+        // (spec.crowd: how full); a row higher up a shade lighter (The Yards' neighbour, the Stadium District, WC405)
+        const to = spec.seatTo || 'S', ax = to === 'E' || to === 'W', n = ax ? iw : id, full = spec.crowd ?? 0.6, CR = [2, 10, 11, 1, 7, 9, 12, 3];
+        each((u, v, i, x, y) => {
+          const f = to === 'S' ? id - 1 - v : to === 'N' ? v : to === 'E' ? iw - 1 - u : u, along = ax ? v : u, r = f % 7;
+          T[i] = 0.4 + (f / n) * 0.22;
+          if (along % 112 < 6) { RI[i] = 3; T[i] += r < 2 ? -0.18 : 0.06; return; }   // (the aisle's steps)
+          if (r < 2) { RI[i] = 12; T[i] = r ? 0.24 : 0.4; return; }                    // (the riser)
+          const h1 = hash(x >> 1, y >> 1, seed + 21);
+          if (h1 < full) { RI[i] = CR[(hash(x >> 1, y >> 1, seed + 22) * 8) | 0]; T[i] = 0.4 + hash(x, y, seed + 23) * 0.3; }
         });
         break;
       }

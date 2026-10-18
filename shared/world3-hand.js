@@ -17,8 +17,9 @@ import { CIVIC } from './world3-civic.js';
 import { NORTHGATE } from './world3-northgate.js';
 import { OLDTOWN } from './world3-oldtown.js';
 import { YARDS } from './world3-yards.js';
+import { STADIUM } from './world3-stadium.js';
 
-export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, OLDTOWN, YARDS];
+export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, OLDTOWN, YARDS, STADIUM];
 const M_IN = 2;   // (a street within this many tiles of a plan's edge is the edge's - the grid planner's)
 // (a plan of several rects - Downtown's bands round its park - is in its area strictly inside any of them; p.rect is
 // their bounding box: the kit's frame)
@@ -73,6 +74,9 @@ function makeKit(m, api, P) {
   const W = m.w;
   const used = new Uint8Array((X1 - X0) * (Y1 - Y0));   // tiles a lot or a dressed patch has taken
   const at = (x, y) => (x >= X0 && y >= Y0 && x < X1 && y < Y1 ? (y - Y0) * (X1 - X0) + (x - X0) : -1);
+  // (a plan of several rects: its own ground is inside them - what lies between them in its bounding box, the Stadium
+  // District's park, is left to the generator by landscape and seal)
+  const mine = P.rects ? (x, y) => P.rects.some((r) => x >= r[0] && y >= r[1] && x < r[2] && y < r[3]) : () => true;
   let nb = 0;
   // a tile the plan may still build on: in its area, grass (not road, pavement, plaza, rail), not reserved, not taken
   const free = (x, y) => { const k = at(x, y); if (k < 0 || used[k]) return false; const i = y * W + x; return m.tiles[i] === T.GRASS && !m.reserve[i] && m.land[i] && !(m.river && m.river[i]); };
@@ -210,18 +214,18 @@ function makeKit(m, api, P) {
     // grass in the plan's district kept as lawn too. opt.rect: only there; opt.tree(x, y, r) -> [prop, sp, k] or null
     // (what grows at a spot: palms by the water, plane trees by a street...); opt.bare: how much of the grid stays open.
     landscape(opt = {}) {
-      const [lx0, ly0, lx1, ly1] = opt.rect || P.rect, mine = new Uint8Array((X1 - X0) * (Y1 - Y0));
+      const [lx0, ly0, lx1, ly1] = opt.rect || P.rect, mine2 = new Uint8Array((X1 - X0) * (Y1 - Y0));
       for (let y = Math.max(Y0, ly0); y < Math.min(Y1, ly1); y++) for (let x = Math.max(X0, lx0); x < Math.min(X1, lx1); x++) {
         const k = at(x, y), i = y * W + x;
-        if (m.dist[i] !== P.d) continue;
-        if (free(x, y)) { used[k] = 1; mine[k] = 1; }
-        else if (!used[k] && m.tiles[i] === T.GRASS && (m.reserve[i] & 4) && m.land[i]) { m.reserve[i] |= 16; used[k] = 1; mine[k] = 1; }
+        if (m.dist[i] !== P.d || !mine(x, y)) continue;
+        if (free(x, y)) { used[k] = 1; mine2[k] = 1; }
+        else if (!used[k] && m.tiles[i] === T.GRASS && (m.reserve[i] & 4) && m.land[i]) { m.reserve[i] |= 16; used[k] = 1; mine2[k] = 1; }
       }
       const lawn = (x, y) => { const k = at(x, y); return k >= 0 && m.tiles[y * W + x] === T.GRASS && m.bld[y * W + x] < 0; };
       const G = opt.grid || 6, bare = opt.bare ?? 0.3;
       for (let gy = ly0; gy < ly1; gy += G) for (let gx = lx0; gx < lx1; gx += G) {
         const x = gx + Math.floor(rnd(gx, gy, 801) * G), y = gy + Math.floor(rnd(gx, gy, 802) * G), k = at(x, y);
-        if (k < 0 || !mine[k]) continue;
+        if (k < 0 || !mine2[k]) continue;
         let ok = true;
         for (let dy = -2; dy <= 2 && ok; dy++) for (let dx = -2; dx <= 2; dx++) if (!lawn(x + dx, y + dy)) { ok = false; break; }
         if (!ok) continue;
@@ -240,7 +244,7 @@ function makeKit(m, api, P) {
         // (the plan's own lawns and gardens kept from the block filler, which builds on any open grass it finds)
         if (used[k] && m.tiles[i] === T.GRASS) { m.reserve[i] |= 16; continue; }
         if (used[k] || m.tiles[i] !== T.GRASS || m.reserve[i] || !m.land[i]) continue;
-        if (m.dist[i] !== P.d) continue;
+        if (m.dist[i] !== P.d || !mine(x, y)) continue;
         // (by a pavement: paved; deeper in: a patch of green - a back garden, the inside of a block)
         let pave = false;
         for (let dy = -1; dy <= 1 && !pave; dy++) for (let dx = -1; dx <= 1; dx++) { const t = m.tiles[(y + dy) * W + x + dx]; if (t === T.SIDEWALK || t === T.PLAZA) { pave = true; break; } }

@@ -10786,3 +10786,42 @@ garden's crops, how hard you ram a barrier, how many people a cell takes).
 - `shared/rules.js` re-exports every one, so it's still the place to import game numbers from, and its notes stay.
 - **Bake workers: 800 → 776 KB. The city worker: 362 → 338 KB.** The page loads both files, so it's +1 file and
   +0.7 KB (485 of 485, unchanged budget).
+
+## 2026-10-18 · World v3, handcrafted: the Stadium District (Waves Stadium, the tailgate lots, the fan walk)
+
+The Stadium District (district 25, across the channel from The Yards) is now laid out by hand
+(`shared/world3-stadium.js`), from the owner's concept WC405 (Stadium-A1). The Westport Stadium park south of 15th
+Street (its pitch and the Stadium Lido) stays the generator's: the plan is three rects round it
+(`STADIUM.rects`), and the hand kit's `landscape` and `seal` now leave alone what lies between a plan's rects
+(`shared/world3-hand.js`).
+- **Waves Stadium** (the Westport Waves: an invented club), an open bowl in the middle of the district:
+  - Four stands round the pitch. From above you see their **seats stepping down to the pitch**, with the crowd in
+    them. This is a new roof, `roofMat: 'seats'` (`client/art2/buildings.js`): rows with concrete risers, aisles of
+    steps, the crowd's colours; `spec.seatTo` says which way the seats face and `spec.crowd` how full they are.
+  - The south stand's outside wall faces the camera: the club's red banners, the WAVES STADIUM plaque, roller doors.
+    The north stand is the seating you see across the pitch.
+  - The north corners are closed. The south corners are **Gate A and Gate B**, with turnstile posts and signs.
+  - Floodlight masts at the four corners. A paved concourse runs round the bowl, with food carts, stalls and bins.
+  - The pitch is a soccer venue, **Waves Stadium Pitch**: matches are played on it like on the park's.
+- **Stadium Way**, a ring avenue round the concourse. Gameday Drive comes in from Stadium Avenue. Willow Road runs
+  down under the Gulf Loop. Turnstile Lane runs south to Fan Street and Dealer Row.
+- **The tailgate lots**, with painted bays, cars, and tents with coolers and chairs among them:
+  - Lot A, under the Gulf Loop.
+  - The RV lot along the water, with coaches end to end.
+  - The lot behind the bars.
+- **The retention ponds** west of the stadium: two ponds with a footbridge across the south one, reeds and cattails at
+  the edges, willows, benches.
+- **North of the Gulf Loop**: Westport Galleria, two long wings with the glass vault between them (its sky lights),
+  the Stadium Megastore by Willow Road, and the big car park across Galleria Drive (a cul-de-sac by the water).
+- **The fan walk**: a brick row of sports bars facing the stadium across a wide paved walk, with banner lamps, flags
+  in the club's red and navy, food carts and benches. The bars are The Turnstile Bar, Overtime Sports Grill, The Penalty
+  Box, End Zone Pizza, Hat Trick Tavern, the Waves Pro Shop, Sideline Sports Bar and The Fourth Quarter, with a way
+  through to the stadium in the middle.
+- **Dealer Row**:
+  - Trail & Field Outfitters and Touchdown Burger.
+  - **Westport Motors**' glass showroom, with its lot of cars for sale and its flags.
+  - Gas 'n Go - Stadium District, its pumps under the canopy (a gas station you can fill up at).
+- **Along Harbor Avenue**, a row of small brick shops: the Waves Fan Shop, Halftime Donuts, the Stadium Inn, Corner
+  Kick Laundry and Bleachers Liquor, then walk-ups.
+- What's left is paved, with a tree here and there; the grass by the water stays.
+- `test/world3city.test.js` counts the plan's streets for the district, as for the other plans.
