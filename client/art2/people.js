@@ -1933,6 +1933,9 @@ function shift(p, dz) {
 // props (app.carry): trolley (a senior's two-wheeled shopping trolley, pulled along), cart (a shopping cart with a blanket
 // in it, pushed), leads (three dog leads out in front, to where the dogs trot), guitar (a busker's), call (the phone at an ear)
 Object.assign(POSES, { hunch: 6, strut: 6, skate: 4, blade: 6, dance: 4, push: 6, lean: 2 });
+// a player on a skateboard (server skate.js, 2026-10-17): skatec rolling with both feet on the deck, side-on, knees soft;
+// skateair the ollie - the crouch to pop, up in the air knees tucked and arms out, the landing (lifted by the renderer)
+Object.assign(POSES, { skatec: 1, skateair: 3 });
 CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
 Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
 // people at their activities (server activities.js, task #423): easel (a street painter's, in front: the brush up to the
@@ -1966,6 +1969,26 @@ const GAITS2 = {
     P.fL = [-1.5, 3.2, D.ank + 2.3]; P.kneeL = [-0.2, 1, 0.3];
     P.fR = [D.hipX + 1.2, [1.6, -7.4, -6.2, -1.2][k], D.ank + [0, 0, 3.2, 2.6][k]]; P.kneeR = [0.2, 1, 0];
     P.hands = (S) => { P.hL = vadd(S.shL, [-4.6, 1.6 - k * 0.3, -9.2]); P.hR = vadd(S.shR, [4.2, -1.4 + k * 0.4, -9.6]); P.openL = P.openR = 1; };
+  },
+  skatec(D, P) {   // rolling: the front foot over the front bolts, the back foot on the tail, side-on to the way they go
+    P.acc = false; P.board = true; P.lean = 0.06; P.twist = 0.32; P.pelYaw = -0.55; P.headYaw = 0.5; P.headPitch = -0.08;
+    P.pel = [-1.2, 3.2, D.pelZ - 2.0];
+    P.fL = [-1.4, 8.4, D.ank + 2.3]; P.kneeL = [-0.3, 1, 0.4];
+    P.fR = [-1.6, -1.8, D.ank + 2.3]; P.kneeR = [0.3, -0.2, 0.6];
+    P.hands = (S) => { P.hL = vadd(S.shL, [-5.6, 2.4, -8.6]); P.hR = vadd(S.shR, [5.2, -2.2, -8.8]); P.openL = P.openR = 1; };
+  },
+  skateair(D, P, f) {   // 0: crouched to pop; 1: up, knees tucked, arms out for balance; 2: landing, knees taking it
+    const up = f === 1, low = up ? 1.6 : f === 0 ? 4.0 : 3.0;
+    P.acc = false; P.board = true; P.lean = up ? 0.04 : 0.14; P.twist = 0.3; P.pelYaw = -0.5; P.headYaw = 0.45; P.headPitch = up ? -0.14 : 0.02;
+    P.pel = [-1.2, 3.2, D.pelZ - low];
+    P.fL = [-1.4, 8.0, D.ank + 2.3]; P.kneeL = [-0.3, 1, up ? 0.9 : 0.5];
+    P.fR = [-1.6, -1.6, D.ank + 2.3]; P.kneeR = [0.3, -0.2, up ? 1.0 : 0.7];
+    P.hands = (S) => {
+      if (up) { P.hL = vadd(S.shL, [-9.6, 1.6, -2.4]); P.hR = vadd(S.shR, [9.4, -1.4, -2.0]); }
+      else if (f === 0) { P.hL = vadd(S.shL, [-6.4, 3.4, -7.0]); P.hR = vadd(S.shR, [6.2, -1.2, -7.4]); }
+      else { P.hL = vadd(S.shL, [-8.4, 0.6, -5.0]); P.hR = vadd(S.shR, [8.2, -0.8, -5.4]); }
+      P.openL = P.openR = 1;
+    };
   },
   blade(D, P, f) {   // each stride pushed out to the side, a long glide, low and leaning
     gait(D, P, 1, f / 6, true);

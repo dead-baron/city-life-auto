@@ -5,7 +5,7 @@ import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_L
 import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
-import { pedStep, vehStep, driveInput } from '../shared/physics.js';
+import { pedStep, vehStep, driveInput, BOARD } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
@@ -376,7 +376,7 @@ function onBinary(buf) {
 // ---------------------------------------------------------------------------
 // Client-side prediction for the local character / driven vehicle
 function pedModsFrom(flags, speedMul) {
-  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: flags & 8 ? 140 : 100, tumble: !!(flags & 16), air: !!(flags & 32), canSwim: true, analog: true };
+  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: flags & 8 ? 140 : 100, tumble: !!(flags & 16), air: !!(flags & 32), board: !!(flags & 64), wet: !!(flags & 128), canSwim: true, analog: true };
 }
 
 function reconcile(s) {
@@ -891,6 +891,12 @@ function onEvent(ev) {
     case 'splash': fx.splash(ev.x, ev.y, ev.n || 10); sfx('splash', distVol(ev.x, ev.y)); break;
     case 'sinkboom': fx.splash(ev.x, ev.y, 44); fx.ring(ev.x, ev.y, 60, 'rgba(220,240,255,', 1.2); fx.ring(ev.x, ev.y, 36, 'rgba(255,190,90,', 0.5); for (let i = 0; i < 14; i++) fx.smoke(ev.x + (Math.random() - 0.5) * 50, ev.y + (Math.random() - 0.5) * 50, false); sfx('explode', distVol(ev.x, ev.y) * 0.45); S.cam.shake = Math.max(S.cam.shake, 6 * distVol(ev.x, ev.y)); break;
     case 'thud': sfx('thud', distVol(ev.x, ev.y)); break;
+    case 'bail': {   // thrown off a skateboard (server skate.js): the board shoots off the way they were going, spinning, and lies there a moment
+      const a = ev.a || 0, sp = 60 + (ev.v || 0) * 0.55;
+      fx.chunk(boardImg(), 0, 0, 22, 8, 20, 7, ev.x, ev.y, Math.cos(a) * sp, Math.sin(a) * sp, 70, (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 5), 1.6);
+      const c = fx.chunks[(fx.ci + fx.chunks.length - 1) % fx.chunks.length]; if (c) c.a = a;
+      break;
+    }
     case 'door': sfx('door', distVol(ev.x, ev.y)); break;
     case 'deposit': fx.ring(ev.x, ev.y - 20, 26, 'rgba(61,220,132,'); sfx('cash', distVol(ev.x, ev.y)); fx.floatText(ev.x, ev.y - 40, `Banked $${ev.n}`, '#3ddc84'); break;
     case 'loot': case 'cash': fx.ring(ev.x, ev.y, 20, 'rgba(120,255,160,'); sfx('cash', distVol(ev.x, ev.y)); if (ev.n) fx.floatText(ev.x, ev.y - 18, `+$${ev.n}`, '#7fe07f'); break;
@@ -2602,6 +2608,17 @@ function interp(e, rt) {
   e.rx = x; e.ry = y; e.ra = a;
 }
 
+// a skateboard on its own, seen from above (the deck along x, the wheels at each end): flying off after a bail
+let BOARD_IMG = null;
+function boardImg() {
+  if (BOARD_IMG || typeof document === 'undefined') return BOARD_IMG;
+  const c = document.createElement('canvas'); c.width = 22; c.height = 8;
+  const g = c.getContext('2d');
+  g.fillStyle = '#e8e4d8'; for (const x of [3, 16]) { g.fillRect(x, 0, 3, 2); g.fillRect(x, 6, 3, 2); }   // (the wheels)
+  g.fillStyle = '#3a2e2a'; g.fillRect(1, 2, 20, 4); g.fillRect(0, 3, 22, 2);
+  g.fillStyle = '#2a9aa8'; g.fillRect(2, 3, 18, 2); g.fillStyle = '#c8402e'; g.fillRect(9, 3, 4, 2);
+  return (BOARD_IMG = c);
+}
 const SWING_TIME = 0.3, BANG_S = 0.42;
 // One of n ways, held a while and then another (in a cell: at the bars - looking out, the head down, along the corridor):
 // each person on their own clock, `span` seconds or a little more each
@@ -3287,6 +3304,8 @@ function drawOverlays(F, v2) {
     if (showTouch !== S.uiTouch) { S.uiTouch = showTouch; $('touch').classList.toggle('hidden', !showTouch); }
     const inVeh = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER;
     if (inVeh !== S.uiInVeh) { S.uiInVeh = inVeh; document.body.classList.toggle('in-veh', inVeh); }
+    const onBoard = !inVeh && !!(S.pred && S.pred.kind === 'ped' && S.pred.mods && S.pred.mods.board);   // (riding a skateboard: the dive button ollies, the CAR button steps off)
+    if (onBoard !== S.uiOnBoard) { S.uiOnBoard = onBoard; document.body.classList.toggle('on-board', onBoard); }
     const inAir = S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId));   // (at the controls of an aircraft: the ▲ / ▼ buttons)
     if (inAir !== S.uiInAir) { S.uiInAir = inAir; document.body.classList.toggle('in-air', inAir); }
     const dead = !!(S.me && S.me.dead);
@@ -4124,7 +4143,18 @@ function pedLook(p, now) {
   if (fight) fr = pose === 'crawl' ? Math.floor(now * 9 + p.id) % 4 : 1;
   if (run && (pose === 'downF' || pose === 'downB')) fr = now - p.runAt > p.runD - 0.8 ? 1 : 0;   // (flat, then pushing up)
   if (fire) fr = fire === 1 ? Math.floor(now * 7 + p.id) % 4 : 1;   // (flailing; pushing up)
+  // on a skateboard (the descriptor's bd: server skate.js): pushing (the SPRINT flag, a push about every second), rolling
+  // with both feet on the deck, or up in an ollie (ROLL: the crouch, the pop in the air, the landing - lifted on its arc)
+  let lift = 0;
+  if (p.d && p.d.bd && !(f & (PF.DEAD | PF.DOWN | PF.STUN | PF.INVEH)) && !flying) {
+    if (f & PF.ROLL) {
+      if (p._oa === undefined) p._oa = now;
+      const k = Math.min(1, (now - p._oa) / BOARD.ollieT);
+      pose = 'skateair'; fr = k < 0.18 ? 0 : k < 0.82 ? 1 : 2; lift = Math.sin(Math.PI * k) * 15;
+    } else { p._oa = undefined; pose = (f & PF.SPRINT) && (f & PF.MOVING) ? 'skate' : 'skatec'; fr = pose === 'skate' ? Math.floor(now * 7 + p.id) % 8 : 0; }
+  } else p._oa = undefined;
   const L = p._look || (p._look = {});
+  L.lift = lift; L.board = !!(p.d && p.d.bd) && (pose === 'skate' || pose === 'skatec' || pose === 'skateair');
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;
   L.lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
   L.hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
@@ -4246,7 +4276,7 @@ function drawPed(p, now) {
 }
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
-const UPRIGHT = new Set(['idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup', 'escortR', 'escortL', 'bars', 'bang', 'thump', 'guard']);
+const UPRIGHT = new Set(['skate', 'skatec', 'skateair', 'idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup', 'escortR', 'escortL', 'bars', 'bang', 'thump', 'guard']);
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // flat on the ground (art2 people.js poses)
 const STAGGER_FROM = new Set(['idle', 'move', 'aim', 'aimw', 'punch', 'swing', 'carry']);
 const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', stab: 'deadF', slump: 'dead', spin: 'deadS', slash: 'deadS', halved: 'dead' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
@@ -4256,7 +4286,7 @@ const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', 
 const DEATH_SEQ = { knees: [[0.22, 'stagger', 0], [0.95, 'kneel', 1]], stab: [[0.3, 'stagger', 2], [0.85, 'kneel', 1]], slump: [[0.35, 'stagger', 0], [0.6, 'stagger', 1]], spin: [[0.55, 'stagger', 0]], slash: [[0.4, 'stagger', 0]] };
 const DEATH_TURN = { spin: [4.4, 0.55], slash: [2.2, 0.4] };
 // the old renderer's sprites for the poses it doesn't have (the subway view)
-const V1_POSE = { stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down', escortR: 'move', escortL: 'move', bars: 'carry', bang: 'carry', thump: 'punch', guard: 'aim' };
+const V1_POSE = { skate: 'move', skatec: 'idle', skateair: 'idle', stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down', escortR: 'move', escortL: 'move', bars: 'carry', bang: 'carry', thump: 'punch', guard: 'aim' };
 const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;

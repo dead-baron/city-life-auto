@@ -10433,3 +10433,40 @@ Bank" over and over); now, in its four bands round the park:
   park between them.
 - **The headquarters by hand:** a hand plan's police station is a precinct unless it says it's the headquarters
   (`poi.hq`): the police spawn and the helicopter's pad are at Metro City PD - HQ, as before.
+
+## 2026-10-17 · Skateboarding, part 1: ride a board
+The owner, 21:39: "lets do it" - riding first; tricks, grinds and the parks are parts 2 and 3 (docs/DESIGN-NOTES.md,
+"Skating"). The concept sheets: SB1 (the skater's moves), SB2 (street skating), SK1-SK8.
+- **The board** (`shared/items.js` skateboard: a tool, never used up; `SKATEBOARD_PRICE` $85): Kickflip Skate Co., the
+  sports shops (Home Run Sports, Sandpiper Surf Co.) and the surf shops (Salt & Swell) sell it.
+- **On and off** (`server/systems/skate.js`): the vehicle button hops you on where you stand when there's no vehicle in
+  reach (F / X / CAR), and steps you off again; next to a car it steps you off and into the car. Or use the board from the
+  bag (or the quick wheel). The action button steps off to do whatever's there. Not on grass, dirt or sand, in the water,
+  indoors, carrying a crate or fishing.
+- **Riding** (`shared/physics.js` BOARD, boardStep - the page predicts it with the same code): the stick pushes and
+  steers; held all the way (or sprint) pushes harder, at a little stamina. Faster than a sprint (250 px/s pushing, 305
+  pushing hard), slower than a bike. Let go and it coasts a long way; pull back and a foot brakes it, then a kick-turn
+  brings you round. The deck carves wider the faster you go, and the wheels carry the speed round the turn; in the rain
+  a carve slides. The dive button ollies (Space / A / OLLIE): up for 0.55 s, carried on at your speed.
+- **The ground:** roads, pavements, plazas, car parks and bridges are smooth; a dock's planks are bumpy (slower); on
+  grass, dirt or sand the wheels dig in and you step off (`BAIL.roughS`). Into the water or through a shop door: off.
+- **Bails:** run into a wall, a post or a car at 150 px/s or more and you're thrown off: down 1.1 s, hurt 6-18 by how
+  hard (`BAIL`), the board shooting off ahead of you (the 'bail' event: it skids away spinning and lies there a moment).
+  Knocked down any other way (hit by a car, a punch, a blast), cuffed, in a vehicle, on a train: off the board. A hard hit
+  you only glance off just costs you that much speed.
+- **Riding is all you do on it:** no fighting (step off first), no dancing; an ollie is no police tackle.
+- **The look:** the rider's descriptor carries gt 'skate', pp 'board' and `bd` (`server/net.js`); pushing is the SPRINT
+  flag, the ollie the ROLL flag. Two new poses (`client/art2/people.js`): `skatec`, rolling with both feet on the deck,
+  side-on; `skateair`, the ollie in three frames (the crouch, up with the knees tucked and arms out, the landing), lifted
+  on its arc by the renderer (`client/main.js` pedLook `L.lift`). Pushing uses the city skaters' `skate` frames, about a
+  push a second. No weapon is drawn on the board. The classic renderer shows them walking or standing on the board.
+- **Sounds** (`client/sound/events.js`): a clack stepping on, the ollie's pop and its landing, the scrape and thump of a
+  bail.
+- **Touch:** on the board the ROLL button reads OLLIE and CAR reads OFF. **Controls:** README table.
+- **The wire:** the snapshot's self flags gain 64 (on a board) and 128 (in the rain on one): the page's prediction rides
+  the board too.
+- **Tests:** `test/skate.test.js` - the board's speeds against a sprint and a bike, coasting, braking and the kick-turn,
+  grass, the carve at speed, the ollie, the rain; on and off with the vehicle button and from the bag, the look and flags
+  on the wire; no board / grass / water / indoors; off the board and into a car; rolling onto grass; a bail into a wall
+  (hurt a little, the board still yours, back on it); knocked down; the shops; the poses.
+- **Budgets:** the bake bundle is at 799 of 800 KB and the renderer at 362 of 363; part 2 will need room.

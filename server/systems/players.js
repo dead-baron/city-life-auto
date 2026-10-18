@@ -1,6 +1,6 @@
 // Player sessions: join/leave (30-second Ghost State), input application, context
 // interactions, death + respawn, persistence sync and HUD prompts.
-import { PF, FACTION, TILE, K } from '../../shared/constants.js';
+import { PF, FACTION, TILE, K, WEATHER } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
 import * as aircraft from './aircraft.js';   // (at the controls of an aircraft)
@@ -15,6 +15,7 @@ import * as carhits from './carhits.js';
 import * as combat from './combat.js';
 import * as tank from './tank.js';   // (H58)
 import * as cargo from './cargo.js';
+import * as skate from './skate.js';   // (riding a skateboard: the owner, 2026-10-17)
 const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); return out; };   // + the backpack you dropped when you died
 import * as law from './law.js';
 import * as bounties from './bounties.js';
@@ -370,6 +371,7 @@ export function pedMods(world, ped) {
   if (now < (ped.guardUntil || 0)) speedMul *= GUARD.speed;   // guarding: a careful step (rules.js GUARD)
   return {
     canMove, canSprint: !ped.carrying, speedMul, tumble: now < (ped.tumbleUntil || 0), air: now < (ped.airUntil || 0),
+    board: !!ped.board, wet: !!ped.board && world.weather === WEATHER.RAIN,   // (on a skateboard: shared/physics.js boardStep)
     canSwim: !!ped.player || isSwimming(world.map, ped), // players swim anywhere; NPCs only get out of water
     regenMul: ped.buffs.coffee > now ? 2.2 : 1,
     staminaMax: ped.buffs.energy > now ? 140 : 100,
@@ -386,6 +388,7 @@ export function processInputs(world, dt) {
     // with the last input - guessing put the server a step ahead and made the car jitter.
     const n = p.inputQ.length > 3 ? 2 : 1;
     const ped = p.ped;
+    if (ped && ped.board) skate.guard(world, p, ped);   // (off the board when you can't ride: knocked down, in a car, inside...)
     const drivingV = ped && ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
     if (drivingV && !drivingV.wreckAt && !drivingV.scripted && !drivingV.onDeck) drivingV.ownStepTick = world.tick;
     for (let k = 0; k < n; k++) {
@@ -465,7 +468,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   const wasDropping = !!ped.dropping;
   // the guard (rules.js GUARD; combat.js blocked, deflects): held with something to block with, on your feet, not busy
   const gw = WEAPONS[ped.weapon] || WEAPONS.fists;
-  const guard = !!(inp.bits & IN.BLOCK) && !!gw.guard && !ped.carrying && !ped.fishing && !(ped.rollT > 0) && !tumbling
+  const guard = !!(inp.bits & IN.BLOCK) && !!gw.guard && !ped.carrying && !ped.fishing && !(ped.rollT > 0) && !tumbling && !ped.board
     && world.time >= ped.downUntil && world.time >= ped.stunUntil && !isSwimming(world.map, ped);
   ped.guardUntil = guard ? world.time + 0.12 : 0;
   if (guard) ped.aimUntil = world.time + 0.3;   // (the aim pose for an older page; the guard's own pose: the 'guard' event)
@@ -474,20 +477,26 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     ped.guardShownAt = guard ? world.time : undefined;
   }
   pedStep(ped, inp, dt, world.map, { ...pedMods(world, ped), analog: true });
-  if (ped.hardLanding) { ped.hardLanding = false; combat.damage(world, ped, 45, null, 'fall'); ped.tumbleUntil = world.time + 0.8; }
+  if (ped.hardLanding) { ped.hardLanding = false; if (ped.board) skate.bail(world, ped, 0, false); combat.damage(world, ped, 45, null, 'fall'); ped.tumbleUntil = world.time + 0.8; }
+  if (ped.board) skate.after(world, p, ped, dt);   // (a hard hit throws you off; the water, a doorway or rough ground takes you off)
   // down a waterfall or off its cliff (shared/ledges.js): a splash at the foot, or a thud on dry ground
   if (wasDropping && !ped.dropping) world.emit(ped.x, ped.y, isSwimming(world.map, ped) ? { e: 'splash', x: ped.x, y: ped.y, n: 16 } : { e: 'thud', x: ped.x, y: ped.y });
   if (tumbling) tumbleImpact(world, ped, v0, dt, fr);
-  if (ped.rollT > 0 && (p.badge || p.hunter)) tackle(world, ped);
+  if (ped.rollT > 0 && (p.badge || p.hunter) && !ped.board) tackle(world, ped);   // (an ollie isn't a tackle)
   const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || bowling.input(world, p, ped, inp, pressed, dt) || firefighter.hose(world, p, ped, inp, pressed, dt);   // (the hose by your fire engine: firefighter.js) (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
-  const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
-  if ((inp.bits & IN.FIRE) && !kicked && !swung && !guard) {   // (guarding: no striking)
+  const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && !ped.board && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
+  if ((inp.bits & IN.FIRE) && !kicked && !swung && !guard && !ped.board) {   // (guarding: no striking; on a board: step off to fight)
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
     else if (!ped.fishing) combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
   }
   if (pressed & IN.THROW) { if (ped.carrying) cargo.throwCrate(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a); }
-  if ((pressed & IN.VEHICLE) && !revive.tryFinish(world, p)) vehicles.playerEnter(world, ped);   // (Safety mode asks first when it'd be a crime)
-  if (pressed & IN.ACTION) doAct(world, p);
+  // the vehicle button: into a vehicle in reach; with none, on or off your skateboard (off it, into the vehicle by you)
+  if ((pressed & IN.VEHICLE) && !revive.tryFinish(world, p)) {
+    if (ped.board) { skate.hopOff(world, ped); if (vehicles.nearestVehicle(world, ped, 56)) vehicles.playerEnter(world, ped); }
+    else if (!vehicles.nearestVehicle(world, ped, 56) && skate.has(p)) skate.hopOn(world, p, ped);
+    else vehicles.playerEnter(world, ped);   // (Safety mode asks first when it'd be a crime)
+  }
+  if (pressed & IN.ACTION) { if (ped.board) skate.hopOff(world, ped); doAct(world, p); }   // (step off to do it)
 }
 
 // The Act button: what findInteraction offers - one that's a crime (act.crime) waits for Safety mode's say-so (safety.js).
@@ -770,7 +779,8 @@ export function pedFlags(world, ped) {
   if (now < ped.downUntil || ped.passedOut) f |= PF.DOWN;
   if (ped.npc && ped.npc.state === 'crawl') f |= PF.DOWN | PF.ROLL; // (down + rolling: crawling along on the stomach)
   if (now < ped.stunUntil) f |= PF.STUN;
-  if (ped.vehId) { if (ped.seat > 0) f |= PF.PASSENGER; } else if (ped.prevBits & IN.SPRINT && Math.hypot(ped.vx, ped.vy) > 140) f |= PF.SPRINT;
+  if (ped.vehId) { if (ped.seat > 0) f |= PF.PASSENGER; } else if (ped.board) { if (ped.push) f |= PF.SPRINT; }   // (on a board: pushing - the pushing frames)
+  else if (ped.prevBits & IN.SPRINT && Math.hypot(ped.vx, ped.vy) > 140) f |= PF.SPRINT;
   if (now < ped.attackAnimUntil) f |= PF.ATTACK;
   if (now < ped.aimUntil) f |= PF.AIM;
   if (ped.rollT > 0) f |= PF.ROLL;

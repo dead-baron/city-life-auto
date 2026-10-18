@@ -277,6 +277,9 @@ body:not(.can-call) #tbtns .cruiser { display: none; }
 #dev-btn { display: none !important; }   /* (the 🐞 in the round menu buttons opens the debug menu on every device) */
 #tbtns .veh { display: none; }
 body.in-veh #tbtns .dive .foot { display: none; } body.in-veh #tbtns .dive .veh { display: inline; }
+/* on a skateboard (server skate.js): the dive button ollies, the CAR button steps off */
+#tbtns .brd { display: none; }
+body.on-board #tbtns .dive .foot, body.on-board #tbtns .car .nb { display: none; } body.on-board #tbtns .brd { display: inline; }
 body:not(.in-veh) #tbtns .horn, body:not(.carrying) #tbtns .throw, body:not(.armed) #tbtns .reload { display: none; }
 /* at the controls of an aircraft (shared/flight.js): climb and descend */
 #tbtns .climb, #tbtns .descend { display: none; width: 66px; height: 54px; border-radius: 27px; font-size: 20px; background: rgba(40,120,200,.7); }

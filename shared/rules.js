@@ -428,6 +428,11 @@ export const SPIKE_STRIP_S = 45;           // a deployed spike strip stays acros
 export const ATM_DEPOSIT_PX = 48;          // walk up this close to an ATM with cash on you and it's banked automatically
 
 // Gear
+// Skateboarding, part 1 (the owner, 2026-10-17; server/systems/skate.js; the board's physics: shared/physics.js BOARD):
+// the board's price at a skate shop, a sports shop or a surf shop; a bail - thrown off into a wall, a post or a car, or off
+// a fall - hurts this much at bailHit speed and up to the most at full speed, and you're down this long
+export const SKATEBOARD_PRICE = 85;
+export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
 export const FLASHLIGHT_PRICE = 35;        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
 
 // Lost pets

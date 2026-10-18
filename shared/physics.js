@@ -29,6 +29,25 @@ export const PED = {
   aWalk: 100, aRun: 178, aSprint: 222, WALK_AT: 0.6, easeIn: 8.5, easeOut: 4.2, turnRate: 13,
 };
 
+// Riding a skateboard (the owner, 2026-10-17; server/systems/skate.js hops you on and off). Speeds px/s, rates /s:
+// push - the top speed pushing with the stick all the way (pushHard: with sprint / the full stick, at a little stamina);
+// pushAcc - how fast a push builds speed; roll - the drag rolling on smooth ground (coasting), dock - on boards and planks,
+// rough - on grass, dirt and sand (the wheels dig in: you step off - skate.js); brake - a foot dragged (the stick pulled
+// back); turnLo / turnHi - how fast the deck carves at a standstill / at full speed; kick - a kick-turn on the spot;
+// grip - how fast the wheels bring the slide back in line (wetGrip: in the rain); ollieT - the time in the air;
+// bailHit - the speed into a wall, a car or a post that throws you off; drain - stamina a second pushing hard.
+export const BOARD = {
+  push: 250, pushHard: 305, pushAcc: 210, roll: 24, dock: 70, rough: 650, brake: 430, turnLo: 4.6, turnHi: 2.4, kick: 7,
+  grip: 14, wetGrip: 4.5, ollieT: 0.55, bailHit: 150, drain: 9,
+};
+// the ground a board rolls on: 0 smooth (roads, pavements, plazas, car parks, bridges), 1 bumpy (a dock's planks), 2
+// rough (anything else on dry land - the board won't go)
+export function boardGround(tile) {
+  if (tile === T.DOCK) return 1;
+  const sf = SURFACE[tile];
+  return sf && sf[2] === 1 ? 0 : 2;
+}
+
 // Analog stick magnitude (0..1) -> target ground speed for players.
 export function analogSpeed(m, sprint) {
   if (m <= 0.02) return 0;
@@ -63,7 +82,7 @@ export function pedStep(s, inp, dt, map, mods) {
     if (mods.air) { const k = Math.exp(-AIR_FRICTION * dt); s.vx *= k; s.vy *= k; }
     else if (mods.tumble) { const k = Math.exp(-(swim ? 6 : TUMBLE_FRICTION) * dt); s.vx *= k; s.vy *= k; } else { s.vx *= 0.5; s.vy *= 0.5; }
     s.rollT = 0;
-  } else if (s.rollT > 0) {
+  } else if (s.rollT > 0 && !(mods.board && !swim)) {   // (on a board rollT is the ollie's air time: boardStep)
     s.rollT -= dt;
     s.vx = s.rdx * PED.rollSpeed; s.vy = s.rdy * PED.rollSpeed;
     if (s.rollT <= 0) { s.rollT = 0; s.vx *= 0.3; s.vy *= 0.3; }
@@ -71,7 +90,8 @@ export function pedStep(s, inp, dt, map, mods) {
     let mx = inp.mx, my = inp.my;
     const ml = Math.hypot(mx, my);
     if (ml > 1) { mx /= ml; my /= ml; }
-    if ((pressed & IN.DIVE) && !swim && s.stamina >= PED.rollCost && ml > 0.2) {
+    if (mods.board && !swim) boardStep(s, inp, bits, pressed, mx, my, Math.min(1, ml), dt, tile, mods, smax);
+    else if ((pressed & IN.DIVE) && !swim && s.stamina >= PED.rollCost && ml > 0.2) {
       s.rollT = PED.rollTime; s.rdx = mx / Math.max(ml, 1e-6); s.rdy = my / Math.max(ml, 1e-6);
       if (Math.hypot(s.rdx, s.rdy) > 1.01) { const l = Math.hypot(s.rdx, s.rdy); s.rdx /= l; s.rdy /= l; }
       s.stamina -= PED.rollCost;
@@ -122,8 +142,70 @@ export function pedStep(s, inp, dt, map, mods) {
   } else if (s.dropping) s.dropping = false;
   s.x += s.vx * dt; s.y += s.vy * dt;
   edgeBrake(s, map.frame);   // (out past the world's edge: slowed, and stopped at its end - border.js)
+  const bx = s.x, by = s.y, pvx = s.vx, pvy = s.vy;
   collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : PED_BLOCK);
+  // on a board: how hard it ran into what it hit (a wall, a post, a tree: the push back out of it against the way it was
+  // going) - hard enough and you're thrown off (s.boardHit: server skate.js bails you); a glancing touch just loses that
+  // much speed (a solid prop moves you out but keeps your speed: take it off here)
+  if (mods.board && mods.canMove) {
+    const dx = s.x - bx, dy = s.y - by, dl = Math.hypot(dx, dy);
+    if (dl > 0.25) {
+      const nx = dx / dl, ny = dy / dl, into = -(pvx * nx + pvy * ny);
+      if (into > BOARD.bailHit) s.boardHit = into;
+      const vn = s.vx * nx + s.vy * ny;
+      if (vn < 0) { s.vx -= vn * nx; s.vy -= vn * ny; }
+    }
+  }
   if (map.levels && levelStep(map, s, PED_RADIUS) >= LAND_IMPACT) s.hardLanding = true; // dropped off the deck
+}
+
+// One step on a board. The deck faces s.a and the wheels roll along it: the stick carves the deck round toward where it
+// points (slower the faster you go), held the way you face it pushes (harder with sprint, at a little stamina), pulled
+// back it drags a foot to brake - or, all but stopped, kick-turns you round. Let go and you coast. The dive button pops an
+// ollie (s.rollT: the time left in the air - the ped's ROLL flag), the deck and you going on as you were; the wheels take
+// up the line again when you land. s.push: pushing this step (the SPRINT flag: the pushing frames).
+function boardStep(s, inp, bits, pressed, mx, my, ml, dt, tile, mods, smax) {
+  const ground = boardGround(tile), regen = PED.regen * (mods.regenMul || 1) * dt;
+  s.push = false;
+  if (s.rollT > 0) {   // in the air: carried on as you were, the body's twist turning the deck a little
+    s.rollT = Math.max(0, s.rollT - dt);
+    if (ml > 0.15) { const d = wrapAngle(Math.atan2(my, mx) - s.a), st = 1.6 * dt; s.a = wrapAngle(s.a + clamp(d, -st, st)); }
+    s.stamina = Math.min(smax, s.stamina + regen);
+    return;
+  }
+  if ((pressed & IN.DIVE) && ground < 2) { s.rollT = BOARD.ollieT; s.stamina = Math.min(smax, s.stamina + regen); return; }
+  // the deck carves round toward the stick (slower the faster you go; all but stopped, a kick-turn), and the wheels carry
+  // the speed round with it - in the rain only part of the way, the rest sliding
+  let along = Math.max(0, s.vx * Math.cos(s.a) + s.vy * Math.sin(s.a));
+  let braking = false, hard = false, da = 0;
+  if (ml > 0.15) {
+    const d = wrapAngle(Math.atan2(my, mx) - s.a);
+    if (Math.abs(d) > 2.2 && along > 12) braking = true;   // (pulled back: a foot dragged, then, stopped, a kick-turn round)
+    else {
+      const k = Math.min(1, along / BOARD.push), rate = along < 25 ? BOARD.kick : BOARD.turnLo + (BOARD.turnHi - BOARD.turnLo) * k;
+      da = clamp(d, -rate * dt, rate * dt);
+      hard = !!(bits & IN.SPRINT) && s.stamina > 1 && mods.canSprint !== false;
+    }
+  }
+  if (da) {
+    s.a = wrapAngle(s.a + da);
+    const r = da * (mods.wet ? 0.55 : 1), cr = Math.cos(r), sr = Math.sin(r), vx = s.vx;
+    s.vx = vx * cr - s.vy * sr; s.vy = vx * sr + s.vy * cr;
+  }
+  const c = Math.cos(s.a), sn = Math.sin(s.a);
+  let v = s.vx * c + s.vy * sn, lat = -s.vx * sn + s.vy * c;
+  if (v < 0) v = 0;
+  if (braking) v = Math.max(0, v - BOARD.brake * dt);
+  else if (ml > 0.15) {
+    const top = (hard ? BOARD.pushHard : BOARD.push) * ml * (mods.speedMul ?? 1), d = wrapAngle(Math.atan2(my, mx) - s.a);
+    if (Math.abs(d) < 1.1 && v < top && ground < 2) { v = Math.min(top, v + BOARD.pushAcc * (ground === 1 ? 0.6 : 1) * dt); s.push = true; }
+  }
+  if (s.push && hard) s.stamina = Math.max(0, s.stamina - BOARD.drain * (mods.drainMul ?? 1) * dt);
+  else s.stamina = Math.min(smax, s.stamina + regen);
+  v = Math.max(0, v - (ground === 2 ? BOARD.rough : ground === 1 ? BOARD.dock : BOARD.roll) * dt);
+  lat *= Math.exp(-(mods.wet ? BOARD.wetGrip : BOARD.grip) * dt);   // (the wheels bite: a slide dies away)
+  s.vx = c * v - sn * lat; s.vy = sn * v + c * lat;
+  if (v < 2 && Math.abs(lat) < 4 && ml < 0.15) { s.vx = 0; s.vy = 0; }
 }
 
 export function collideCircle(s, r, map, block) {

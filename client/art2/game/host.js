@@ -1253,7 +1253,7 @@ export class World2 {
     let d8 = dir8(p.ra + (L.turn || 0));   // (spun round as they go down; a dancer's spin: below)
     const lying = !L.upright && LYING.has(pose) && !L.flying && !L.swimming;
     let ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
-    let lift = 0;
+    let lift = L.lift || 0;   // (an ollie on a skateboard: client pedLook)
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
     // (a paramedic wheeling someone on the stretcher - the descriptor's pa, server ems.js: that very person lies on it, drawn
     // after them; the stretcher empty under them - or with the blanket figure till their sprite is ready)
@@ -1269,7 +1269,7 @@ export class World2 {
     const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
     // felling a tree (d.ch: server felling.js): the axe swung, the chainsaw held out; the lantern carried by its bail
     if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
-    const wpn = phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
+    const wpn = L.board ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
     if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined)) && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
@@ -1706,7 +1706,7 @@ export class World2 {
         let ppose = L.swimming ? 'swim' : pose === 'move' ? 'walk' + L.lvl : pose, d8 = dir8(e.ra), A2 = this._app(e.d.app || {}, e.d.ar);
         if (e.d.pp && A2 && Pd.withProp) A2 = this._propped(A2, e.d.pp);   // (a street personality: their prop and walk, as _ped draws them)
         if ((e.d.gt || e.d.sb) && Pd.personaPose) ppose = Pd.personaPose(e.d, ppose);
-        const wpn = (e.extra | 0) || (e.d.fl ? 'flashlight' : 0), pf = ppose === 'sitx' && Pd.sitFrame ? Pd.sitFrame(e.d, e.id, now) : ppose === 'sit' && e.d && e.d.gt === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(e.d, e.id, now) : Pd.pedFrame(ppose, L.fr);
+        const wpn = L.board ? 0 : (e.extra | 0) || (e.d.fl ? 'flashlight' : 0), pf = ppose === 'sitx' && Pd.sitFrame ? Pd.sitFrame(e.d, e.id, now) : ppose === 'sit' && e.d && e.d.gt === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(e.d, e.id, now) : Pd.pedFrame(ppose, L.fr);
         const bo = bladeOpt(e, wpn);
         if (this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo], prio)) budget--;
       } else if (e.kind === K.VEH && A && A.vehicleKey && A.vehState) {

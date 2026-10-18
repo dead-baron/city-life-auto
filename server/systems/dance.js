@@ -24,7 +24,7 @@ export function stop(ped) {
 }
 // can this player dance right now? (on foot, up, free)
 function free(ped) {
-  return !!ped && !ped.dead && !ped.vehId && !ped.hidden && !ped.cuffed && !ped.carrying && !ped.fishing && !ped.onTrain && !ped.hoodOf && !ped.sit && !ped.sitBench && !(ped.rollT > 0) && !(ped.downUntil > 0 && ped.swimming);
+  return !!ped && !ped.dead && !ped.vehId && !ped.hidden && !ped.cuffed && !ped.carrying && !ped.board && !ped.fishing && !ped.onTrain && !ped.hoodOf && !ped.sit && !ped.sitBench && !(ped.rollT > 0) && !(ped.downUntil > 0 && ped.swimming);
 }
 // The dance button (or the phone's): start, the next move, or stop after the last. Returns the move's index or -1 (stopped).
 export function next(world, p) {

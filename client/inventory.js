@@ -16,7 +16,7 @@ import { weaponIcon } from './render/peds.js';
 import { keyName } from './glyphs.js';
 
 export const ITEM_ICON = {
-  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦',
+  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', skateboard: '🛹',
   lure: '🎣', worms: '🪱', shrimp: '🦐', squid: '🦑', glowlure: '✨',
   bass: '🐟', catfish: '🐟', salmon: '🐟', tuna: '🐟', grouper: '🐟', swordfish: '🐟', marlin: '🐟',
   purse: '👜', bonds: '📜', jewelry: '💎', scrap: '⚙', wallet: '👛',
@@ -28,7 +28,7 @@ export const ITEM_ICON = {
   seed_tomato: '🌱', seed_carrot: '🌱', seed_lettuce: '🌱', seed_pumpkin: '🌱', tomato: '🍅', carrot: '🥕', lettuce: '🥬', pumpkin: '🎃', prize_tomato: '🍅', prize_carrot: '🥕', prize_lettuce: '🥬', prize_pumpkin: '🎃',   // (gardening: H61)
   seed_corn: '🌱', seed_strawberry: '🌱', seed_sunflower: '🌱', corn: '🌽', strawberry: '🍓', sunflower: '🌻', prize_corn: '🌽', prize_strawberry: '🍓', prize_sunflower: '🌻',   // (H78)
 };
-const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light)); // (the flashlight: switched on / off)
+const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].board)); // (the flashlight: switched on / off; the skateboard: on / off)
 const SLOTS = 4;
 
 export function createInventory({ el, send, me, onClose }) {
@@ -139,6 +139,7 @@ function bladeSwatches(cur, send) {
 function describe(id) {
   const it = ITEMS[id];
   if (id === 'revivekit') return 'revive a downed player to full health - never used up';
+  if (id === 'skateboard') return `${keyName('vehicle')} hops you on and off where there's no car to get into (or use it here) - push and steer with the stick, pull back to brake, ${keyName('dive')} ollies; roads, pavements and plazas only`;
   if (id === 'flashlight') return `${keyName('light')} switches it on and off - held in your free hand (dark while both are busy); everyone sees the beam`;
   if (id === 'headlamp' || id === 'hardhat') return `${keyName('light')} switches it on and off - hands free${id === 'hardhat' ? '; the hat takes some of a falling tree or rock' : ''}; runs on batteries`;
   if (id === 'lantern') return 'a warm glow all round you, in one hand - use it again while it\'s lit to set it down (it stays lit)';

@@ -1,4 +1,4 @@
-import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules.js';
+import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SKATEBOARD_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules.js';
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
@@ -83,6 +83,7 @@ export const ITEMS = {
   medkit:  { name: 'Medical Kit',   heal: 60, stopBleed: true, sell: 30 },
   revivekit: { name: 'Revive Kit', tool: true, sell: 20 },   // defib paddles: revive a downed player to full health (never used up; not on yourself)
   flashlight: { name: 'Flashlight', tool: true, light: true, sell: 10 }, // switched on and off (never used up); no hand slot: you keep your weapon
+  skateboard: { name: 'Skateboard', tool: true, board: true, sell: 30 },   // ridden anywhere smooth: hop on and off with the vehicle button or from the bag (server skate.js)
   bandage: { name: 'Field Bandage', heal: 15, stopBleed: true, sell: 8 },
   coffee:  { name: 'Hot Coffee',    stamina: true, buff: 'coffee', sell: 0 },
   energy:  { name: 'Energy Drink',  stamina: true, buff: 'energy', sell: 0 },
@@ -346,7 +347,7 @@ export const SHOPS = {
   sports: { title: 'Home Run Sports', buy: [
     { kind: 'weapon', id: 'bat', price: 120 }, { kind: 'weapon', id: 'rod', price: 60 },
     { kind: 'weapon', id: 'pepper', price: 70 }, { kind: 'ammo', id: 'pepper', price: 15, qty: 6 },
-    { kind: 'item', id: 'lure', price: 20, qty: 3 },
+    { kind: 'item', id: 'lure', price: 20, qty: 3 }, { kind: 'item', id: 'skateboard', price: SKATEBOARD_PRICE, qty: 1 },
   ] },
   hardware: { title: 'Nail & Gear Hardware', buy: [
     { kind: 'weapon', id: 'knife', price: 90 }, { kind: 'weapon', id: 'crowbar', price: 110 },

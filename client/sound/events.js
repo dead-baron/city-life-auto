@@ -108,6 +108,11 @@ export const EVENT_SOUNDS = {
   vcut: (ev, A) => { A.at('sear', ev.x, ev.y, 1); A.at('hum', ev.x, ev.y, 1.2); A.at('clang', ev.x, ev.y, 0.7); },
   wreckland: (ev, A) => { A.at('crash', ev.x, ev.y, 1, { p: 1 }); A.at('rubble', ev.x, ev.y, 0.8); A.at('clang', ev.x, ev.y, 0.7); },   // a wreck blown up into the air slams down
   runover: (ev, A) => { A.at('bonk', ev.x, ev.y, 1); A.at('bodyfall', ev.x, ev.y, 0.9); A.at('crash', ev.x, ev.y, 0.5, { p: 0.2 }); },   // a body under a car (task #361)
+  // a skateboard (server skate.js): stepping on, an ollie's pop and its landing, a bail - the scrape and the thump down
+  boardon: (ev, A) => A.at('clack', ev.x, ev.y, 0.35),
+  ollie: (ev, A) => A.at('clack', ev.x, ev.y, 0.7),
+  land: (ev, A) => { A.at('clack', ev.x, ev.y, 0.55); A.at('thud', ev.x, ev.y, 0.3); },
+  bail: (ev, A) => { A.at('scrape', ev.x, ev.y, 0.7); A.at('thud', ev.x, ev.y, 0.9); },
   hood: (ev, A) => { A.at('thud', ev.x, ev.y, 1); A.at('bonk', ev.x, ev.y, 0.8); A.at('clank', ev.x, ev.y, 0.6); },   // a thud up onto the hood
   hoodoff: (ev, A) => A.at('bodyfall', ev.x, ev.y, 0.9),
   sinkboom: (ev, A) => { A.at('explosion', ev.x, ev.y, 0.5, { r: 60, wet: 1 }); A.at('splash', ev.x, ev.y, 1, { n: 40 }); },

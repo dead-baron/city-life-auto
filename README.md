@@ -39,6 +39,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Aim / attack | Mouse / left click | Right stick aims, RT fires (at the wheel RT is the gas: click R3 for a drive-by). Settings → "pushing the right stick all the way also fires" puts the stick-ring fire back (off by default) | Right stick (push far to fire - with the FIRE toggle by the stick on; off, it only aims) |
 | Interact (shops and the countryside counters, crates, loot, arrest, fishing, picking fruit at the orchard and the vineyard, cutting lavender, stripping the boneyard's planes for parts, chipping for gold at the old mine, searching the shipwreck, ringing the old mission's bells, the pier's coin telescope, stargazing at the observatory after dark, the Ferris wheel, balloon flights and the Splash Canyon water slides, teeing off at the golf club) | E | B | E |
 | Enter / exit vehicle (the prompt says what it is first: your car, your work truck, your rental - or Vehicle theft, Carjacking. Safety mode, on for new characters, asks you to press again before a crime: Settings → Safety mode) | F | X | CAR |
+| Skateboard: hop on / off (with a board in your bag and no vehicle in reach; or use it from the bag) | F | X | CAR / OFF |
+| On the board: push and steer, pull back to brake (a kick-turn when stopped), push harder, ollie | WASD · Shift · Space | Left stick · all the way · A | Left thumb · all the way · OLLIE |
 | Sprint | Shift | Push the left stick all the way | Push the left thumb all the way |
 | Dive roll / handbrake (in a car: e-brake skid turn / drift; held with gas = burnout, + steer = donuts) | Space | A | ROLL / BRAKE |
 | Drift: brake while steering at speed | S + A/D (car) · pull back to one side (Controls 2) | LT + stick | pull back to one side |

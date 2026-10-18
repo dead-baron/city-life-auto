@@ -26,9 +26,10 @@ import * as farming from './farming.js';
 import * as homeinside from './homeinside.js';
 import * as mortgage from './mortgage.js';
 import * as mail from './mail.js';
+import * as skate from './skate.js';
 import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
-import { REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
+import { SKATEBOARD_PRICE, REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 // A hand plan's walk-in shop's counter (World v3's Midtown: shared/world3-hand.js poi.walk, poi.store): what it has for
@@ -263,6 +264,7 @@ export function buildMenu(world, p, poi) {
       title = poi.label;
       sub = `${(STORES[storeOf(poi)] || {}).line || 'Clothes'}. Try things on in the fitting room. A fresh outfit drops your public wanted level to 0 (if no cop is watching); your peak record is remembered. They buy handmade furs and buckskin.`;
       opts.push({ id: 'outfit', label: 'Buy a new outfit (whatever fits)', price: 120, dis: p.badge, note: p.badge ? 'off duty only' : '' });
+      if (storeOf(poi) === 'kickflip' || storeOf(poi) === 'surf') { const have = (prof.inventory.skateboard || 0) > 0; opts.push({ id: `i:skateboard:${SKATEBOARD_PRICE}:1`, label: ITEMS.skateboard.name, price: SKATEBOARD_PRICE, dis: have, note: have ? 'have one' : 'ride it anywhere smooth' }); }   // (the skate shop's decks, the surf shops' cruisers)
       for (const id of SHOPS.clothing.sells) { const n = prof.inventory[id] || 0; if (n > 0) opts.push({ id: `s:${id}`, label: `Sell ${ITEMS[id].name} (x${n})`, price: -sellPrice(SHOPS.clothing, id), note: n > 1 ? 'sells all' : '' }); }
       break;
     case 'garage': {
@@ -549,6 +551,7 @@ function execute(world, p, poi, opt) {
       autoSlot(p, id);
       if (it.buff) world.notify(p, `${it.name} in your bag - drink it from the quick wheel (${'X / View / ITEMS'}).`, 'good');
       if (it.light) world.notify(p, `${it.name} in your bag - press L to switch it on and off (or use it from the bag). It doesn't take a hand: you keep your weapon.`, 'good');
+      if (it.board) world.notify(p, `${it.name} in your bag - hop on with the vehicle button (F / X / CAR) where there's no car to get into, or use it from the bag. Ride it on roads, pavements and plazas.`, 'good');
       store.touch();
       return null;
     }
@@ -900,6 +903,7 @@ export function useItem(world, p, id) {
   if (!ped || ped.dead || !it) return;
   if ((inv[id] || 0) <= 0) { world.notify(p, `No ${it.name} left.`, 'warn'); return; }
   if (it.light) { lights.use(world, p, id); return; }   // (a light: chosen and switched on; a flare or a glow stick lit and dropped)
+  if (it.board) { skate.toggle(world, p); return; }   // (the skateboard: on it where you stand, or off - skate.js)
   if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
   if (it.heal) {
     if (ped.hp >= ped.maxHp && (it.food || !ped.bleeding) && !(it.hearty && !(ped.buffs.hearty > world.time + HEARTY_S * 0.5))) { world.notify(p, it.food ? 'You\'re not hungry - you\'re at full health.' : 'You are already healthy.', 'info'); return; }
