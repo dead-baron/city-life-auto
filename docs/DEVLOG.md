@@ -10933,3 +10933,17 @@ passengers in it everyone goes flying. The driver often goes flying off if the s
   - the poses and the model.
 - **Budgets:** the renderer goes 365 → 366 KB (365) for the cart's model and its riders' poses. The page is at 485 of 485
   (rounded: 485.3 KB), so the next thing on the page has to make room.
+
+## 2026-10-18 · Garden Crescent refined from the owner's Midtown-B3 concept (WC433)
+
+The crescent concept that was missing from the Midtown batch came in this morning, filed as WC433. Garden Crescent was
+built from the earlier crescent concept, so this refines it (`shared/world3-midtown.js` gardenCrescent):
+- **The bandstand** now stands to the fountain's east on its own path, not at the top of the lawn.
+- **A round bed of flowers** surrounds the fountain, inside the ring path.
+- **The lawn's groves:** cherry, magnolia, maple and oak trees, shrubs and beds of flowers fill the garden, kept clear
+  of the paths and the bandstand.
+- **The gate** on Harbor Avenue stands between two stone piers with urns. This is a new prop, `gatepier`
+  (`client/art2/game/statics.js` gatePier).
+- **The back gardens** each have their own feature now: a tree, a shed, a greenhouse, a parasol over a table and two
+  chairs, or a willow.
+- The middle houses' iron balconies and the chimney pots were already there.

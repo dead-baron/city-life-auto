@@ -1199,10 +1199,12 @@ function lindenWalk(K, y0, y1, out) {
 }
 
 // Garden Crescent (the owner's 10-17 ask for a curved street and a residential set piece; concept 3.2's crescent of
-// townhouses): one terrace of cream stucco houses round the north side of the crescent street, its middle a floor
-// higher, iron railings and steps; their back gardens to the boulevard behind a hedge; inside the curve the residents'
-// garden - a fountain in the middle of a ring path, the bandstand, cherry and magnolia trees round the railings, beds
-// and benches - open to Harbor Avenue through its gate
+// townhouses, refined from WC433 - Midtown-B3): one terrace of cream stucco houses round the north side of the crescent
+// street, its middle a floor higher with iron balconies, railings and steps, chimney pots; their long back gardens to the
+// boulevard behind a hedge - a tree, a shed, a greenhouse, a parasol over a table, a willow; inside the curve the
+// residents' garden - a tiered fountain in a round bed of flowers in the middle of a ring path, the bandstand to its east,
+// cherry and magnolia trees round the railings, benches - open to Harbor Avenue through its gate between stone piers
+// with urns
 function gardenCrescent(K, x0, y0, x1, y1, ctx) {
   const { m, prop, rnd, pick } = K;
   const { walkup, out } = ctx;
@@ -1232,8 +1234,13 @@ function gardenCrescent(K, x0, y0, x1, y1, ctx) {
     const gy = y0 + 1, gh = b.ty - gy;
     if (gh >= 3) {
       K.fill(b.tx, gy, b.tw, gh, T.GRASS);
-      if (rnd(b.tx, gy, 801) < 0.6) prop('tree_a', b.tx + b.tw / 2, gy + gh * 0.45, 10, { sp: pick(['maple', 'cherry', 'oak', 'flowerTree'], rnd(b.tx, gy, 802)), k: 0.95 });
-      else if (gh >= 6) prop('shed', b.tx + b.tw / 2, gy + gh * 0.4, 12);
+      // (WC433: each garden its own - a tree, a shed, a greenhouse, a parasol over a table and chairs, a willow)
+      const r = rnd(b.tx, gy, 801), mx = b.tx + b.tw / 2;
+      if (r < 0.34) prop('tree_a', mx, gy + gh * 0.45, 10, { sp: pick(['maple', 'cherry', 'oak', 'flowerTree'], rnd(b.tx, gy, 802)), k: 0.95 });
+      else if (r < 0.52 && gh >= 6) prop('shed', mx, gy + gh * 0.4, 12);
+      else if (r < 0.7 && gh >= 5 && b.tw >= 5) prop('greenhouse', mx, gy + gh * 0.45, 0);
+      else if (r < 0.86) { prop(pick(['umbrella_r', 'umbrella_g', 'umbrella_y'], rnd(b.tx, gy, 803)), mx, gy + gh * 0.5, 0); prop('chair', mx - 0.9, gy + gh * 0.5 + 0.4, 0, { v: 1, a: 0 }); prop('chair', mx + 0.9, gy + gh * 0.5 + 0.4, 0, { v: 1, a: 3.1416 }); }
+      else prop('tree_b', mx, gy + gh * 0.45, 12, { sp: 'willow', k: 1 });
       prop('fenceline', b.tx + 0.08, gy + 0.6, 0, { kind: 'wood', tx: 0, ty: Math.round((gh - 0.8) * TILE) });
     }
   }
@@ -1250,12 +1257,24 @@ function gardenCrescent(K, x0, y0, x1, y1, ctx) {
   for (let y = CRES.top; y <= y1; y++) for (let x = cx - rx; x <= cx + rx; x++) if (K.free(x, y) && k2(x, y, gx, gyR) <= 1) { K.fill(x, y, 1, 1, T.GRASS); n++; }
   if (n < 200) return;
   const fy = oy - 26, fyN = CRES.top + 12;
-  // the path in from the gate on Harbor Avenue, the ring round the fountain, the bandstand at the top of the lawn
+  // the path in from the gate on Harbor Avenue, the ring round the fountain, a path on up to the terrace and one east to
+  // the bandstand (WC433: beside the fountain, not above it), the round bed of flowers round the fountain
   K.paint(cx - 1, fy, 3, y1 - fy + 1, T.PLAZA);
   for (let a = 0; a < 48; a++) { const t = (a / 48) * 6.2832, px = cx + 0.5 + Math.cos(t) * 7, py = fy + 0.5 + Math.sin(t) * 5; for (const [ox, oy2] of [[0, 0], [0.6, 0], [0, 0.6]]) K.paint(Math.floor(px + ox - 0.5), Math.floor(py + oy2 - 0.5), 1, 1, T.PLAZA); }
   K.paint(cx - 1, fyN + 3, 3, fy - 5 - fyN - 3, T.PLAZA);
+  K.paint(cx + 7, fy - 1, 7, 3, T.PLAZA);
   prop('fountain', cx + 0.5, fy + 0.5, 36);
-  prop('gazebo', cx + 0.5, fyN + 1.5, 30);
+  for (let a = 0; a < 14; a++) { const t = (a / 14) * 6.2832; prop(a % 2 ? 'flowers_big' : 'flowers_a', cx + 0.5 + Math.cos(t) * 3.6, fy + 0.5 + Math.sin(t) * 2.7, 0); }
+  prop('gazebo', cx + 16.5, fy + 0.5, 30);
+  // (WC433: the lawn's groves - blossom and shade trees, shrubs and beds of flowers - clear of the paths and the bandstand)
+  const W0 = m.w, paved = (x, y) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (m.tiles[(y + dy) * W0 + x + dx] === T.PLAZA) return true; return false; };
+  for (let y = CRES.top + 4; y < y1 - 3; y++) for (let x = cx - rx; x <= cx + rx; x++) {
+    if (k2(x, y, gx - 3, gyR - 3) > 1 || m.tiles[y * W0 + x] !== T.GRASS || paved(x, y) || Math.hypot(x - cx - 16.5, (y - fy) * 1.3) < 4) continue;
+    const r = rnd(x, y, 807);
+    if (r < 0.022) prop('tree_a', x + 0.5, y + 0.5, 10, { sp: pick(['cherry', 'cherry', 'magnolia', 'maple', 'oak'], rnd(x, y, 808)), k: 0.9 + rnd(y, x, 809) * 0.25 });
+    else if (r < 0.04) prop(pick(['shrub_a', 'bush_c', 'bush_a'], rnd(x, y, 810)), x + 0.5, y + 0.5, 10);
+    else if (r < 0.06) prop(pick(['flowers_big', 'flowers_a'], rnd(x, y, 811)), x + 0.5, y + 0.5, 0);
+  }
   for (const [dx, dy] of [[-6, -3.6], [6, -3.6], [-6, 4.4], [6, 4.4]]) prop('pbench', cx + 0.5 + dx, fy + dy, 0);
   for (const [dx, dy] of [[-12, -1], [12, -1], [-10, 7], [10, 7], [-5, -9], [5, -9]]) prop(pick(['flowers_big', 'flowers_a', 'planter_fl'], rnd(cx + dx, fy, 806)), cx + 0.5 + dx, fy + dy, 0);
   prop('lamp', cx - 1.2, y1 - 3, 0); prop('lamp', cx + 2.2, y1 - 3, 0); prop('lamp', cx - 3, fyN + 4, 0); prop('lamp', cx + 4, fyN + 4, 0);
@@ -1270,9 +1289,10 @@ function gardenCrescent(K, x0, y0, x1, y1, ctx) {
     if (Math.max(p0[1], p1[1]) > y1 - 0.5) continue;
     prop('fenceline', p0[0], p0[1], 0, { kind: 'iron', tx: Math.round((p1[0] - p0[0]) * TILE), ty: Math.round((p1[1] - p0[1]) * TILE) });
   }
-  // the hedge along Harbor Avenue with the gate, the garden's name board
+  // the hedge along Harbor Avenue with the gate between its stone piers and their urns, the garden's name board
   prop('hedgerun', cx - gx + 1, y1 + 0.6, 0, { tx: Math.round((gx - 3.5) * TILE), ty: 0, h: 16 });
   prop('hedgerun', cx + 2.5, y1 + 0.6, 0, { tx: Math.round((gx - 3) * TILE), ty: 0, h: 16 });
+  prop('gatepier', cx - 1.3, y1 + 0.5, 6); prop('gatepier', cx + 2.3, y1 + 0.5, 6);
   prop('textsign', cx - 4, y1 - 1.2, 0, { text: 'CRESCENT GARDENS', bg: '#2f5a4a', fg: [240, 232, 200], z: 28, sx: 1 });
   (out.places ||= []).push({ name: 'Garden Crescent', x0: cx - 40, y0, x1: cx + 40, y1: CRES.top }, { name: 'Crescent Gardens', x0: cx - 20, y0: CRES.top + 6, x1: cx + 20, y1 });
 }

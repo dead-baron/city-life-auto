@@ -1482,7 +1482,7 @@ function voxModel(m, a) {
     case 'elPier': return RD.elPier(a[0], a[1]); case 'elStairs': return RD.elStairs(a[0], a[1], a[2] ?? 1);   // (2026-10-17: the El over Midtown's Trestle Street - its bents and stair towers)
     case 'hydrant': return P.hydrant(); case 'bin': return P.bin(a[0] ?? true); case 'wireBin': return P.wireBin(); case 'newsBox': return P.newsBox(a[0]);
     case 'bench': return P.bench(); case 'bollard': return P.bollard(a[0] || 12); case 'acUnit': return P.acUnit(); case 'planter': return P.planter(a[0] ?? true);
-    case 'pottedPalm': return P.pottedPalm(); case 'umbrella': return P.umbrella(a[0], a[1]); case 'dumpster': return dumpster(a[0]); case 'crate': return P.crate(a[0] || 1);
+    case 'pottedPalm': return P.pottedPalm(); case 'umbrella': return P.umbrella(a[0], a[1]); case 'dumpster': return dumpster(a[0]); case 'gatePier': return gatePier(); case 'crate': return P.crate(a[0] || 1);
     case 'hotdogCart': return P.hotdogCart(a[0] || 0); case 'armLamp': return P.armLamp(a[0], a[1], a[2]); case 'streetLamp': return P.streetLamp(a[0]);
     case 'lampPost': return P.lampPost(a[0], a[1]); case 'bannerLamp': return D.bannerLamp(a[0], a[1]); case 'twinLamp': return K.twinLamp(a[0]); case 'wallLamp': return RD.wallLamp(a[0], a[1]);
     case 'busShelter': return D.busShelter(a[0], a[1]); case 'phoneBooth': return K.phoneBooth(a[0]); case 'atmWall': return K.atmWall(a[0]); case 'vending': return K.vendingMachine(a[0], a[1]);
@@ -1550,7 +1550,7 @@ function vdim(m, a) {
     case 'alley': return AL.dim(a[0]);
     case 'hydrant': return [10, 10, 16]; case 'bin': case 'wireBin': case 'wheelieBin': return [12, 12, 20]; case 'newsBox': return [10, 9, 18]; case 'bench': return [32, 10, 14];
     case 'bollard': return [6, 6, a[0] || 12]; case 'acUnit': return [18, 14, 12]; case 'planter': return [24, 14, 22]; case 'pottedPalm': return [22, 22, 40]; case 'umbrella': return [30, 30, 30];
-    case 'dumpster': return [32, 18, 20]; case 'crate': return [14, 14, 13]; case 'hotdogCart': return [40, 24, 56]; case 'armLamp': return [a[0] + 12, 10, 102]; case 'streetLamp': return [14, 14, 94];
+    case 'dumpster': return [32, 18, 20]; case 'gatePier': return [12, 12, 46]; case 'crate': return [14, 14, 13]; case 'hotdogCart': return [40, 24, 56]; case 'armLamp': return [a[0] + 12, 10, 102]; case 'streetLamp': return [14, 14, 94];
     case 'lampPost': return a[0] === 'cast' || a[0] === 'iron' ? [12, 12, 84] : [30, 12, 106]; case 'bannerLamp': return [22, 12, 90]; case 'twinLamp': return [46, 12, 98]; case 'wallLamp': return [8, 12, (a[1] || 46) + 4];
     case 'busShelter': return [a[0] || 64, 22, 46]; case 'phoneBooth': return [20, 20, 58]; case 'atmWall': return [36, 12, 52]; case 'vending': return [24, 16, 46]; case 'mailbox': return [12, 8, 20];
     case 'tires': return [18, 18, 16]; case 'trashBags': return [30, 24, 16]; case 'pallets': return [28, 24, 6 + 6 * (a[1] || 1)]; case 'oilDrum': return [12, 12, 18]; case 'cableSpool': return [24, 18, 26];
@@ -1604,6 +1604,15 @@ function vitem(key, m, a, x, y, hd = 0, pv = null, extra = null) {
 }
 
 // ---- small custom models ---------------------------------------------------------------------------------
+// a stone gate pier: dressed blocks, a moulded cap and an urn on top (the owner's WC433: Crescent Gardens' gate)
+function gatePier() {
+  const m = new Vox(12, 12, 46), R = (h) => ramp(h, 6, 3);
+  const st = m.mat({ ramp: R('#cfc8b8'), k: 3, shade: (x, y, z) => ((z | 0) % 6 === 0 ? -0.6 : 0) }), cap = m.mat({ ramp: R('#e2dccf'), k: 3 }), urn = m.mat({ ramp: R('#bdb4a2'), k: 2.6 });
+  m.box(1, 1, 0, 11, 11, 32, st); m.box(0, 0, 32, 12, 12, 35, cap);
+  m.box(4, 4, 35, 8, 8, 37, urn);
+  m.fill((x, y, z) => { const r = z < 41 ? 2 + (z - 37) * 0.7 : 4.8 - (z - 41) * 0.9, d = Math.hypot(x + 0.5 - 6, y + 0.5 - 6); return d < r ? urn : -1; }, 0, 0, 37, 12, 12, 45);
+  return m;
+}
 function dumpster(col = '#2f6a54') {
   const m = new Vox(32, 18, 20), R = (h) => ramp(h, 6, 3);
   const g = m.mat({ ramp: R(col), k: 3, shade: (x, y, z) => (Math.round(x) % 8 === 0 ? -0.6 : 0) }), lid = m.mat({ ramp: R('#2a2e30'), k: 3 }), w = m.mat({ ramp: MAT.tyre, k: 2 });
@@ -2133,6 +2142,7 @@ function propItems(c, p, pi, I) {
     case 'pickaxe': V('mpick', 'pickaxe', [], 0.6); return;
     case 'crystal': put(I, { key: `crys:${p.size || 20}`, recipe: { t: 'crystal', size: p.size || 20, s: Math.round(x) % 5 }, x, y, ext: [40, 50, 40, 12], pi }); lightAt(I, x, y, 14, 70, [0.4, 0.8, 1], 0.6, 'neon'); return;
     case 'rails': put(I, { key: `rails:${p.len || 200}`, recipe: { t: 'rails', len: p.len || 200 }, x, y, ext: [20, (p.len || 200) / 2 + 10, 20, (p.len || 200) / 2 + 10], pi }); return;
+    case 'gatepier': V('gpier', 'gatePier', []); return;   // (a stone gate pier with its urn: Crescent Gardens' gate, WC433)
     case 'greenhouse': V('ghouse', 'greenhouse', []); lightAt(I, x, y, 30, 160, [1, 0.88, 0.62], 1.2, 'window'); return;
     case 'statue': V('gstat', 'gStatue', []); return;
     case 'gazebo': V('gazebo', 'gazebo', []); lightAt(I, x, y - 10, 60, 120, [1, 0.86, 0.6], 1.0, 'window'); return;
