@@ -10,7 +10,7 @@ The owner's 424 world-design concepts of 2026-10-17 (WC324-WC352: the Midtown se
 - **Pink Mile:** WC046, WC047, WC237, WC423
 - **Arts District:** WC070, WC110, WC239, WC292, WC315, WC397, WC416
 - **Bayside Heights:** WC005, WC006, WC076, WC082, WC085, WC113, WC235, WC307, WC398, WC399
-- **Midtown:** WC066, WC073, WC086, WC087, WC151, WC157, WC159, WC241, WC324-WC352, WC368, WC369, WC376, WC425-WC432
+- **Midtown:** WC066, WC073, WC086, WC087, WC151, WC157, WC159, WC241, WC324-WC352, WC368, WC369, WC376, WC425-WC433
 - **Harbor:** WC003, WC004, WC040, WC045, WC057, WC059, WC072, WC086, WC087, WC093, WC150, WC158, WC159, WC204, WC219, WC232, WC277, WC278, WC316, WC328, WC333, WC334, WC340, WC344-WC352, WC375, WC402
 - **Old Town:** WC014, WC025, WC056, WC158, WC222, WC224, WC240, WC278, WC289, WC290, WC403, WC404
 - **Northgate:** WC002, WC069, WC089, WC292, WC298, WC315, WC400, WC401
@@ -2471,10 +2471,10 @@ The owner's district layout concepts of the evening of 2026-10-17 (four parts, u
 8. **WC411** (Old Quarter): a whole station quarter - clock-gable station, level crossings, chapel square, market hall and the crane site.
 
 
-# World concepts WC425-WC432 (batch 8: Midtown from the District Layout Concept Prompts)
+# World concepts WC425-WC433 (batch 8: Midtown from the District Layout Concept Prompts)
 
-The owner's 2026-10-18 answers to the Midtown prompts of the District Layout Concept Prompts (all but Midtown-B3, the
-crescent, which A1 and A2 show from above). They show Midtown's re-plan as planned, so they refine the built district
+The owner's 2026-10-18 answers to the Midtown prompts of the District Layout Concept Prompts (Midtown-B3, the crescent,
+came on its own the same morning as WC433). They show Midtown's re-plan as planned, so they refine the built district
 rather than restart it.
 
 - **WC425** · Midtown: the boulevard
@@ -2524,6 +2524,21 @@ rather than restart it.
   - **Shows:** The elevated station on the green steel viaduct: a long island platform under a glass and green-iron canopy with a clock, a route map, benches and people; a silver train at the platform. A glass stair tower at each end comes down to the pavement plaza under the viaduct: a hot-dog cart with an umbrella, bikes, news boxes, banners on the lamps, bus shelters at both ends, the station's shops in the arches. The boulevard with its planted median below.
   - **Goes to:** Midtown Station (the El, Trestle Street).
   - **Feeds:** the station's stair towers and canopy, the plaza under the viaduct; how the stairs reach the platform.
+  - **Rule flags:** none.
+- **WC433** · Midtown: Garden Crescent
+  - **Prompt:** Midtown-B3 (the owner's upload of 2026-10-18 07:03, the one missing from batch 8)
+  - **Shows:** A curved terrace of cream and pale stucco townhouses under slate roofs with rows of chimney pots, round
+    the north side of an oval street: a taller double-fronted house in the middle with iron balconies, the end houses a
+    bay forward, each door up its own stone steps between iron railings, flower boxes and climbers. Inside the oval, the
+    residents' garden behind iron railings: a tiered fountain in a round bed of flowers in the middle, a green-roofed
+    octagonal bandstand to its east, cherry and white blossom trees, lawns, benches on the paths, and stone gate piers
+    with urns and an iron gate opening south onto the avenue. Behind the terrace, the long back gardens with sheds, a
+    greenhouse, a summerhouse, a willow and parasols, fenced from each other. The oval meets a tree-lined avenue with
+    kerb bollards, lamps and crossings along the bottom; brick blocks either side.
+  - **Goes to:** Midtown, Garden Crescent and Crescent Gardens (built 2026-10-17 from concept 3.2: this refines it).
+  - **Feeds:** the bandstand to the fountain's east (not above it), the round flower bed round the fountain, the gate
+    piers on the avenue, the middle house's balconies and the end houses stepped forward, sheds and greenhouses in the
+    back gardens, the chimney pots.
   - **Rule flags:** none.
 
 ## Original file names
@@ -2953,3 +2968,4 @@ rather than restart it.
 - WC423: 059c88b4-image.png (upload of 2026-10-17 19:08) (1672x941)
 - WC424: c6dc3b6d-image.png (upload of 2026-10-17 19:08) (1672x941)
 - WC425-WC432: the owner's 2026-10-18 uploads (1672x941), in the order Midtown-C1, B5, B4, B2, B1, A2, A1, C2.
+- WC433: 2e58bb0e-image.png (upload of 2026-10-18 07:03, Midtown-B3) (1536x1024)
