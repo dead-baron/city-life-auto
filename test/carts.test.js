@@ -11,6 +11,7 @@ import { vehStep, newVehState } from '../shared/physics.js';
 import { POSES } from '../client/art2/people.js';
 import { pedSprite } from '../client/art2/game/peds.js';
 import { vehicleModel } from '../client/art2/vehicles.js';
+import { vehState } from '../client/art2/game/actors.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import { cartSpots } from '../server/systems/traffic.js';
 import * as players from '../server/systems/players.js';
@@ -47,6 +48,11 @@ test('a cart into a wall: the one in the basket goes flying; the driver often do
   seat(v, b.ped, 1);
   vehicles.cartCrash(W, v, CART.hard + 10);
   assert.ok(thrown(a.ped) && thrown(b.ped), 'a hard one: both off');
+  assert.ok(v.tipped && v.flat, 'and the cart goes over on its side (CC04)');
+  for (const q of [a, b]) { q.ped.airUntil = 0; q.ped.downUntil = 0; }
+  teleport(W, a.ped, v.x - 30, v.y);
+  assert.ok(vehicles.tryEnter(W, a.ped) && a.ped.vehId === v.id && !v.tipped && !v.flat, 'taking it stands it up');
+  vehicles.ejectPed(W, a.ped, false);
   W.rand = () => 0.01;
   W.time += 1;
   for (const q of [a, b]) { q.ped.airUntil = 0; q.ped.downUntil = 0; }
@@ -70,7 +76,7 @@ test('a cart into a wall: the one in the basket goes flying; the driver often do
     if (ok) wall = [(tx - 6) * TILE, (ty + 0.5) * TILE];
   }
   assert.ok(wall, 'a run up to a wall');
-  v.x = wall[0]; v.y = wall[1]; v.a = 0; v.vx = 300; v.vy = 0;
+  v.x = wall[0]; v.y = wall[1]; v.a = 0; v.vx = 300; v.vy = 0; v.tipped = false; v.flat = false;   // (stood up again: the seats below are filled directly, not through tryEnter)
   seat(v, a.ped, 0); seat(v, b.ped, 1);
   v.input = { throttle: 1, steer: 0, hb: false, slide: false, drv: true };
   for (let i = 0; i < 20 && b.ped.vehId; i++) vehicles.stepVehicle(W, v, 0.05);
@@ -107,13 +113,19 @@ test('carts stand outside the groceries, free to take; the riders\' poses and th
   assert.equal(vehicles.entryInfo(W, p, cart).crime, null, 'free to take');
   players.leave(W, p);
   // the poses: the kick (8), up on the back rail (2), in the basket - each frame its own
-  assert.equal(POSES.cartkick, 8); assert.equal(POSES.cartride, 2); assert.equal(POSES.cartsit, 1);
+  assert.equal(POSES.cartkick, 8); assert.equal(POSES.cartride, 2); assert.equal(POSES.cartsit, 2);
   const app = { s: 2, h: 1, hc: '#3a2414', t: 4, tc: '#7a3a2a', tc2: '#eee', l: '#4a5a3a', sh: '#eee' };
   const sum = (G) => { let h = 0; for (let i = 0; i < G.col.length; i += 3) h = (Math.imul(h, 31) + G.col[i]) | 0; return h; };
   const set = new Set(); for (let f = 0; f < 8; f++) set.add(sum(pedSprite(app, 'cartkick', 2, f, 0, { ar: 'casual' })));
-  set.add(sum(pedSprite(app, 'cartride', 2, 0, 0, { ar: 'casual' }))); set.add(sum(pedSprite(app, 'cartsit', 2, 0, 0, { ar: 'casual' })));
-  assert.equal(set.size, 10, 'all different');
+  set.add(sum(pedSprite(app, 'cartride', 2, 0, 0, { ar: 'casual' }))); set.add(sum(pedSprite(app, 'cartsit', 2, 0, 0, { ar: 'casual' }))); set.add(sum(pedSprite(app, 'cartsit', 2, 1, 0, { ar: 'casual' })));
+  assert.equal(set.size, 11, 'all different (the one in the basket: hands on the rims, or both arms up)');
   const m = vehicleModel('cart', { variant: 2 });
   let n = 0; for (let i = 0; i < m.v.length; i++) if (m.v[i]) n++;
   assert.ok(m.w === C.L && m.d === C.W && n > 300, `the cart's model: ${m.w} x ${m.d}, ${n} voxels`);
+  // over on its side (the server's FLAT on a cart), and crushed (wrecked): models of their own (CC04)
+  const tip = vehicleModel('cart', { variant: 2, state: 'tipped' }), crush = vehicleModel('cart', { variant: 2, state: 'wrecked' });
+  assert.ok(tip.h < m.h && tip.d > m.d, `tipped: lower and wider (${tip.d} x ${tip.h})`);
+  let nc = 0, same = 0; for (let i = 0; i < crush.v.length; i++) { if (crush.v[i]) nc++; if (crush.v[i] && crush.v[i] === m.v[i]) same++; }
+  assert.ok(nc > 200 && same < nc * 0.8, `crushed: the front buckled (${same} of ${nc} where they were)`);
+  assert.equal(vehState(4096).tip, true);
 });

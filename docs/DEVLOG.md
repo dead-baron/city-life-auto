@@ -11029,3 +11029,32 @@ fishing as the model for the fight:
   - a deep-sea charter from a boat;
   - a legendary's news.
   - The old fishing tests (core, homes, water, nature) play the new line through `test/helpers.js` playLine.
+
+## 2026-10-18 · The shopping cart refined from the owner's cart concepts (CC01-CC04)
+
+Four cart concepts came in this morning, filed as CC01-CC04 (`docs/art-v2/cart-concepts`). They refine the cart
+that shipped earlier today:
+- **The cart** (`client/art2/vehicles.js` shoppingCart, from CC04):
+  - a deeper basket of galvanised wire (greyer than chrome) on a solid frame: the top rim, the corner posts, the floor
+    and the wall mesh;
+  - the front wall leans out, so the top is longer than the floor;
+  - the bottom rack has its side rails, and the casters are bigger, with hubs;
+  - the concepts' red plastic: the handle with its end caps, the child seat's flap on the back, a bumper at each front
+    corner.
+- **Its states** (CC04):
+  - *Tipped over:* a hard crash (CART.hard) puts the cart on its side. The server marks it `tipped` and sends it as the
+    FLAT flag, which a cart can't otherwise have; the renderer's 'tipped' model is the cart turned onto its side.
+    Whoever takes it next stands it back up (`tryEnter`, a clang: the 'cartup' event).
+  - *Crushed:* a wrecked cart buckles. The front half is pushed in and down, wires are gone here and there, the
+    handle is bent and a caster is off.
+- **The one in the basket** (CC02) sits lower, and now and then, with the cart going fast, throws both arms up
+  (`cartsit` frame 1, picked by host.js).
+- **The driver's hands** (CC03) move up to the new handle.
+- **The shopping flies** (CC01): a cart's crash throws cans, cartons and fruit out round it, and some is left lying
+  (`cartcrash` on the page).
+- **Not yet:** the corrals of nested carts by the markets and out in their car parks (CC01). They'd be props in the
+  map, so that's a world change for another day.
+- **Tests** (`test/carts.test.js`):
+  - the hard crash tips the cart, and taking it stands it up;
+  - the tipped and crushed models;
+  - the passenger's two frames.

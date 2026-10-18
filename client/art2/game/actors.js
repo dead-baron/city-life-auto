@@ -222,13 +222,13 @@ export const vehType = (d) => { if (d && d.tt) return 'tankturret'; const id = v
 export function vehState(flags, sirenPhase = 1, hp = 1, dw = 0) {
   const D = unpackVehDamage(dw >>> 0);
   const dmg = D.stage ? Math.min(4, D.stage) : flags & 64 ? 3 : hp < 0.6 ? 2 : 0;
-  return { lights: !!(flags & 1), siren: flags & (2 | 16384) ? sirenPhase : 0, brake: !!(flags & 4), rev: !!(flags & 8), wreck: !!(flags & 16), burn: !!(flags & 32), dmg, zones: D.zones, holes: D.holes, off: D.off, cut: D.cut, bloody: !!(flags & 512) };
+  return { lights: !!(flags & 1), siren: flags & (2 | 16384) ? sirenPhase : 0, brake: !!(flags & 4), rev: !!(flags & 8), wreck: !!(flags & 16), burn: !!(flags & 32), dmg, zones: D.zones, holes: D.holes, off: D.off, cut: D.cut, bloody: !!(flags & 512), tip: !!(flags & 4096) };   // (FLAT on a shopping cart: tipped over - server vehicles.js cartCrash)
 }
 // tow: on a tow truck's hook (the wire's extra byte: server tow.js) - 1 / 2 its nose up (half way, still being winched up /
 // right up), -1 / -2 its tail up; the model's the same, it's drawn tilted (renderCompact opt.lift)
 // (holes in steps of 0-3 and the zones only where they show: a few damage looks per model, cached like the other states)
-function normSt(st = {}) {
-  const s = { wreck: !!st.wreck, burn: !!st.burn, lights: !!st.lights, siren: st.siren === true ? 3 : st.siren | 0, brake: !!st.brake, rev: !!st.rev, bloody: !!st.bloody, dmg: st.dmg === true ? 3 : Math.max(0, Math.min(4, st.dmg | 0)), tow: Math.max(-2, Math.min(2, st.tow | 0)),
+function normSt(st = {}, t = '') {
+  const s = { tip: t === 'cart' && !!st.tip, wreck: !!st.wreck, burn: !!st.burn, lights: !!st.lights, siren: st.siren === true ? 3 : st.siren | 0, brake: !!st.brake, rev: !!st.rev, bloody: !!st.bloody, dmg: st.dmg === true ? 3 : Math.max(0, Math.min(4, st.dmg | 0)), tow: Math.max(-2, Math.min(2, st.tow | 0)),
     zones: (st.zones | 0) & 15, holes: Math.min(3, Math.ceil((st.holes | 0) / 2)), off: (st.off | 0) & 63, cut: (st.cut | 0) & 255, half: st.half === 'a' || st.half === 'b' ? st.half : '' };
   if (!s.dmg) { s.zones = 0; s.off = 0; }
   if (s.dmg && !s.zones) s.zones = 1;
@@ -241,7 +241,7 @@ function normSt(st = {}) {
 export const TOW_TILT = 0.11;
 // st.tow from a vehicle's wire record (main.js keeps the extra byte: bits 0-1 the end up - 1 nose, 2 tail - bit 2 being winched)
 export const towOf = (extra) => { const e = (extra | 0) & 3; return !e ? 0 : (e === 2 ? -1 : 1) * ((extra & 4) ? 1 : 2); };
-const stKey = (s) => (s.wreck ? 'W' : '') + (s.burn ? 'B' : '') + (s.lights ? 'L' : '') + (s.siren ? 'S' + s.siren : '') + (s.brake ? 'K' : '') + (s.rev ? 'R' : '') + (s.bloody ? 'X' : '') + (s.dmg ? 'D' + s.dmg + 'z' + s.zones + 'o' + s.off : '') + (s.holes ? 'H' + s.holes : '') + (s.half ? 'C' + s.cut + s.half : '') || '-';
+const stKey = (s) => (s.tip ? 'P' : '') + (s.wreck ? 'W' : '') + (s.burn ? 'B' : '') + (s.lights ? 'L' : '') + (s.siren ? 'S' + s.siren : '') + (s.brake ? 'K' : '') + (s.rev ? 'R' : '') + (s.bloody ? 'X' : '') + (s.dmg ? 'D' + s.dmg + 'z' + s.zones + 'o' + s.off : '') + (s.holes ? 'H' + s.holes : '') + (s.half ? 'C' + s.cut + s.half : '') || '-';
 function vehLook(d) {
   const t = vehType(d), tn = d.tn ?? -1, p = (((d.p ?? 0) % PAINTS.length) + PAINTS.length) % PAINTS.length;
   if (CIVIL.has(t)) return { t, paint: carPaint(PAINTS[tn >= 0 ? tn : p]) };
@@ -252,9 +252,9 @@ function vehLook(d) {
 // WRECK + BURN: the fresh wreck still burning (charred, embers glowing; the host adds the fire); WRECK: the
 // burnt-out shell (a bicycle just buckles); BURN alone: on fire before it blows (hp < 15%)
 // (the dents, parts and holes: o.damage - art2/vehicles.js applyDamage; a half of one cut in two: o.half)
-const modelState = (t, s) => (s.wreck ? (PEDAL.has(t) ? 'wrecked' : s.burn ? 'smoulder' : 'burnt') : s.burn ? 'burning' : 'clean');
+const modelState = (t, s) => (s.wreck ? (PEDAL.has(t) ? 'wrecked' : s.burn ? 'smoulder' : 'burnt') : s.tip ? 'tipped' : s.burn ? 'burning' : 'clean');
 export function vehicleKey(d, st, hi = 0, N = 32) {
-  const s = normSt(st), k = vehLook(d);
+  const k = vehLook(d), s = normSt(st, k.t);
   return `v|${k.t}|${k.paint || k.cab || k.band || 'L'}|${(((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS}|${stKey(s)}|${wrapHi(hi, N)}|${N}${s.tow ? '|T' + s.tow : ''}`;
 }
 // The biggest models are kept at half resolution in the live game, 2 world px a voxel - what it draws them at anyway
@@ -273,7 +273,7 @@ function vehModel(d, s) {
 // the vehicle sprite at heading index hi of N (angle hi * 2pi / N, 0 east, + toward south); anchor = the
 // vehicle's centre on the ground
 export function vehicleSprite(d, st, hi = 0, N = 32) {
-  const s = normSt(st), C = vehModel(d, s), a = wrapHi(hi, N) * TAU / N;
+  const s = normSt(st, vehType(d)), C = vehModel(d, s), a = wrapHi(hi, N) * TAU / N;
   return trimSprite(renderCompact(C, a, { dither: 0.35, px: ART_PX, lift: s.tow ? Math.sign(s.tow) * TOW_TILT * (Math.abs(s.tow) === 2 ? 1 : 0.5) : 0 }));
 }
 // lamp and fitting positions in local coordinates at heading 0 (+x forward, +y right, z up, origin the

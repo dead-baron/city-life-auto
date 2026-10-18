@@ -450,32 +450,65 @@ function roofKit(m, M, x0, x1, z, o = {}) {
 }
 
 // ---- the shopping cart (shared/vehicles.js cart, 2026-10-18: kicked along from the back, ridden on its back rail, one in the
-// basket) --------------------------------------------------------------------------------------------------------------
-// x from the back (the handle, 0) to the front, z up: a wire basket narrowing to the front on four legs and casters, the
-// bottom rack, the folding child seat at the back in the paint's plastic, the handle in it too, the back rail to stand on
-function shoppingCart(m, M, A) {
-  const L = m.w, W = m.d, cy = W / 2, wire = M.chrome, plastic = M.body;
-  const bx0 = 3, bx1 = L, bz0 = 9, bz1 = 22;
-  const half = (x) => (W / 2 - 0.5) * (0.8 + 0.2 * (1 - (x - bx0) / (bx1 - bx0)));
+// basket; refined from the owner's cart concepts CC01-CC04 the same day) ---------------------------------------------------
+// x from the back (the handle, 0) to the front, z up: a deep wire basket on a chrome frame - the top rim and the corner
+// posts solid, the walls a mesh, the front wall leaning out (the top longer than the floor), narrowing to the front - the
+// bottom rack, four legs and casters, the red plastic of the concepts: the handle with its end caps, the folding child
+// seat's flap on the back, a bumper at each front corner; the back rail to stand on. Its states (CC04): 'tipped' - over on
+// its side (a hard crash: server vehicles.js cartCrash); 'wrecked' - crushed, the front buckled in and down, a caster gone.
+function shoppingCart(m, M, A, state) {
+  const L = m.w, W = m.d, cy = W / 2, red = M.body;
+  const wire = m.mat({ ramp: R('#9ca2ac', 6, 3, { light: 0.7 }), k: 2.6, gloss: 0.4 });   // (galvanised wire: greyer than chrome, CC04)
+  const bx0 = 3, bz0 = 10, bz1 = 23;
+  const front = (z) => L - 1 - (bz1 - 1 - z) * 0.3;   // (the front wall leans out to the top)
+  const half = (x) => (W / 2 - 0.5) * (0.8 + 0.2 * (1 - (x - bx0) / (L - bx0)));
   m.fill((x, y, z) => {
-    const h = half(x + 0.5), dy = Math.abs(y + 0.5 - cy);
-    if (dy > h) return -1;
-    if (z === bz1 - 1) return dy > h - 1 || x === bx0 || x === bx1 - 1 ? wire : -1;   // (the rim)
-    if (z === bz0) return (x + Math.floor(y)) % 2 === 0 || dy > h - 1 ? wire : -1;     // (the floor's mesh)
-    const wall = dy > h - 1 || x === bx0 || x === bx1 - 1;
-    return wall && (x % 3 === 0 || z % 3 === 1) ? wire : -1;
-  }, bx0, 0, bz0, bx1, W, bz1);
-  for (let x = bx0 + 1; x < bx1 - 2; x += 2) m.box(x, 3, 4, x + 1, W - 3, 5, wire);                        // the bottom rack
-  for (const [x, y] of [[bx0, 2], [bx0, W - 3], [L - 3, 3], [L - 3, W - 4]]) {
-    m.box(x, y, 2, x + 1, y + 1, bz0, wire);                                                               // the legs
-    m.cyl('y', x + 0.5, 0, 1.4, 1.4, y - 0.5, y + 1.5, M.tyre);                                            // the casters
+    const fx = front(z), h = half(x), dy = Math.abs(y - cy);
+    if (x > fx + 0.5 || dy > h) return -1;
+    const side = dy > h - 1, back = x < bx0 + 1, fw = x > fx - 0.5;
+    if (z > bz1 - 1.5) return side || back || fw ? wire : -1;                                     // the top rim
+    if (z < bz0 + 1) return ((x | 0) + (y | 0)) % 2 === 0 || side || back || fw ? wire : -1;      // the floor's mesh
+    if ((side && (back || fw)) || (back && dy > h - 2) || (fw && dy > h - 2)) return wire;      // the corner posts
+    if (!side && !back && !fw) return -1;
+    const u = side ? x : y;   // (along the wall)
+    return (u | 0) % 3 === 0 || (z | 0) % 3 === 1 ? wire : -1;                                   // the mesh
+  }, bx0, 0, bz0, L, W, bz1);
+  for (let x = bx0 + 1; x < L - 5; x += 2) m.box(x, 4, 4, x + 1, W - 4, 5, wire);                           // the bottom rack
+  m.box(bx0, 3, 4, L - 5, 4, 5, wire); m.box(bx0, W - 4, 4, L - 5, W - 3, 5, wire);                           // its sides
+  for (const [x, y] of [[bx0, 2], [bx0, W - 3], [L - 5, 3], [L - 5, W - 4]]) {
+    m.box(x, y, 2.5, x + 1, y + 1, bz0, wire);                                                                // the legs
+    if (state === 'wrecked' && x > bx0 && y < cy) continue;                                                   // (a caster gone)
+    m.cyl('y', x + 0.5, 0, 1.7, 1.7, y - 0.5, y + 1.5, M.tyre); m.box(x, y - 0.6, 1.2, x + 1, y + 1.6, 2.2, M.rim);   // the casters, their hubs
   }
-  m.box(0, 3, 3, 3, W - 3, 4, wire);                                                                        // the back rail
+  m.box(0, 3, 3.5, 3, W - 3, 4.5, wire);                                                                    // the back rail
   for (const y of [2, W - 3]) m.box(1, y, 4, 2, y + 1, bz1 + 2, wire);                                      // the handle's uprights
-  m.box(0, 2, bz1 + 2, 2.5, W - 2, bz1 + 3.5, plastic);                                                     // the handle
-  m.box(bx0 + 1, cy - 4, bz1 - 5, bx0 + 3, cy + 4, bz1 - 1, plastic);                                       // the child seat's flap
-  m.look = { ...m.look, belt: 12, z0: 2, roof: bz1 + 3, wheels: [bx0, L - 3], wr: 1.4 };
+  m.box(0, 2, bz1 + 2, 2.6, W - 2, bz1 + 3.6, red);                                                         // the handle
+  for (const y of [1, W - 3]) m.box(-0.2, y, bz1 + 1.2, 2.8, y + 2, bz1 + 4, red);                         // its end caps
+  m.box(bx0 - 0.2, cy - 5, bz1 - 9, bx0 + 1.2, cy + 5, bz1 - 2, red);                                       // the child seat's flap
+  for (const y of [0, W - 2]) m.box(L - 6, y, bz0 + 1, L - 2, y + 2, bz0 + 5, red);                         // the front bumpers
+  m.look = { ...m.look, belt: 12, z0: 2, roof: bz1 + 3, wheels: [bx0, L - 5], wr: 1.7 };
   A.seat = [L / 2, cy, bz0 + 1];
+  if (state === 'wrecked') {   // crushed: the front half buckled in and down, wires gone here and there, the handle bent
+    const nv = new Uint8Array(m.v.length);
+    for (let z = 0; z < m.h; z++) for (let y = 0; y < W; y++) for (let x = 0; x < L; x++) {
+      const v = m.v[m.idx(x, y, z)];
+      if (!v) continue;
+      const k = Math.max(0, (x - L * 0.42) / (L * 0.58)), hy = (y - cy) * (1 - k * 0.35) + k * k * 3;
+      if (k > 0.2 && v === wire && ((x * 7 + y * 13 + z * 5) % 11) === 0) continue;
+      const X = Math.round(x - k * k * 8), Y = Math.round(cy + hy), Z = Math.round(z - k * (z - 2) * 0.5 + (x < 3 ? (y - cy) * 0.3 : 0));
+      if (X >= 0 && Y >= 0 && Z >= 0 && X < L && Y < W && Z < m.h) nv[m.idx(X, Y, Z)] = v;
+    }
+    m.v = nv; m.prepared = false;
+  }
+  if (state === 'tipped') {   // over on its side: what was up now lies across, the left side down on the ground
+    const H = m.h, D2 = bz1 + 6, nv = new Uint8Array(L * D2 * (W + 1));
+    for (let z = 0; z < H; z++) for (let y = 0; y < W; y++) for (let x = 0; x < L; x++) {
+      const v = m.v[m.idx(x, y, z)];
+      if (v && z < D2) nv[(y * D2 + z) * L + x] = v;   // (x, y, z) -> (x, z, y): idx(x, y', z') = (z' * d + y') * w + x
+    }
+    m.v = nv; m.d = D2; m.h = W + 1; m.prepared = false;
+    m.look = { ...m.look, belt: 6, z0: 0, roof: W, wheels: null };
+  }
 }
 
 // ---- bicycles --------------------------------------------------------------------------------------------
@@ -1141,7 +1174,7 @@ export function vehicleModel(type, o = {}) {
       break;
     }
     case 'bicycle': case 'cruiser': case 'mtb': case 'roadbike': case 'bmx': case 'cargobike': pedalBike(m, M, V, type, A); break;
-    case 'cart': shoppingCart(m, M, A); break;
+    case 'cart': shoppingCart(m, M, A, o.state); break;
     case 'speedboat': case 'policeboat': case 'dinghy': case 'jetski': {
       const pol = type === 'policeboat', jet = type === 'jetski', din = type === 'dinghy';
       const hz = jet ? 8 : din ? 9 : 12, cy = W / 2;
@@ -1389,7 +1422,7 @@ export function vehicleModel(type, o = {}) {
     applyDamage(m, M, o.damage, type);
     if ((o.damage.off & 12) && (o.damage.stage | 0) >= 4 && !PEDAL.has(type) && !MOTO.has(type) && type !== 'bike' && VEHICLE_DIMS[type][1] >= 40) m = hangDoors(m, M, o.damage.off);
   }
-  if (o.state && o.state !== 'clean') applyState(m, M, o.state, type);
+  if (o.state && o.state !== 'clean' && !(type === 'cart' && (o.state === 'wrecked' || o.state === 'tipped'))) applyState(m, M, o.state, type);   // (the cart's own: shoppingCart)
   if (o.half) cutHalf(m, o.half, o.cut | 0, !!o.cool);
   m.smooth = 2;
   if (o.dry) return m;                                   // anchors only: no normals

@@ -252,7 +252,8 @@ export function cartCrash(world, v, impact, both = false) {
     combat.damage(world, ped, Math.round(CART.hurt[0] + (CART.hurt[1] - CART.hurt[0]) * k), null, 'crash', a);
     n++;
   }
-  if (n) world.emit(v.x, v.y, { e: 'cartcrash', x: v.x, y: v.y, n });
+  if (impact >= CART.hard && !v.wreckAt) { v.tipped = true; v.flat = true; v.vx *= 0.3; v.vy *= 0.3; }   // (a hard one: it goes over on its side - the clients draw a tipped cart from the FLAT flag; whoever takes it next stands it up: tryEnter)
+  if (n || v.tipped) world.emit(v.x, v.y, { e: 'cartcrash', x: v.x, y: v.y, n });
 }
 
 // How much a vehicle shrugs off (damage is divided by this): by kind, heavy trucks and buses the most.
@@ -520,6 +521,7 @@ export function tryEnter(world, ped) {
   if (v.forSale) { if (p) world.notify(p, `It's for sale: $${v.forSale.price.toLocaleString()}. Walk up to it and press interact to buy it.`, 'info'); return false; }
   if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
   if (ped.carrying) cargo.dropCrate(world, ped);
+  if (v.tipped) { v.tipped = false; v.flat = false; world.emit(v.x, v.y, { e: 'cartup', x: Math.round(v.x), y: Math.round(v.y) }); }   // (a shopping cart over on its side: stood up as you take it - cartCrash)
   let seat = -1;
   const driver = driverOf(world, v);
   if (!driver) seat = 0;
