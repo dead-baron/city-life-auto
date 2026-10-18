@@ -10,7 +10,7 @@ The owner's 424 world-design concepts of 2026-10-17 (WC324-WC352: the Midtown se
 - **Pink Mile:** WC046, WC047, WC237, WC423
 - **Arts District:** WC070, WC110, WC239, WC292, WC315, WC397, WC416
 - **Bayside Heights:** WC005, WC006, WC076, WC082, WC085, WC113, WC235, WC307, WC398, WC399
-- **Midtown:** WC066, WC073, WC086, WC087, WC151, WC157, WC159, WC241, WC324-WC352, WC368, WC369, WC376
+- **Midtown:** WC066, WC073, WC086, WC087, WC151, WC157, WC159, WC241, WC324-WC352, WC368, WC369, WC376, WC425-WC432
 - **Harbor:** WC003, WC004, WC040, WC045, WC057, WC059, WC072, WC086, WC087, WC093, WC150, WC158, WC159, WC204, WC219, WC232, WC277, WC278, WC316, WC328, WC333, WC334, WC340, WC344-WC352, WC375, WC402
 - **Old Town:** WC014, WC025, WC056, WC158, WC222, WC224, WC240, WC278, WC289, WC290, WC403, WC404
 - **Northgate:** WC002, WC069, WC089, WC292, WC298, WC315, WC400, WC401
@@ -2470,6 +2470,62 @@ The owner's district layout concepts of the evening of 2026-10-17 (four parts, u
 7. **WC364 / WC365** (shared kit): the garden and the court each in three wealth states - one lot, dressed per district.
 8. **WC411** (Old Quarter): a whole station quarter - clock-gable station, level crossings, chapel square, market hall and the crane site.
 
+
+# World concepts WC425-WC432 (batch 8: Midtown from the District Layout Concept Prompts)
+
+The owner's 2026-10-18 answers to the Midtown prompts of the District Layout Concept Prompts (all but Midtown-B3, the
+crescent, which A1 and A2 show from above). They show Midtown's re-plan as planned, so they refine the built district
+rather than restart it.
+
+- **WC425** · Midtown: the boulevard
+  - **Prompt:** Midtown-C1
+  - **Shows:** Street level on a four-lane boulevard with a kerbed median of plane trees and flower beds. On the north side: the Grandview Department Store (stone, tall lit windows with mannequins, a dark-blue awning), a red-brick picture palace with a vertical CINEMA blade and a lit marquee, Parkside Pharmacy (a white cross on green over the door, a striped awning), and a grey stone Gothic church with a lit cross and lancet windows behind iron railings. Bus shelters on both pavements, bins, a postbox, hydrants, signals only at the corners; flat roofs with AC units and roof gardens along the south side.
+  - **Goes to:** Midtown, Midtown Boulevard's north side (Marlow & Finch, The Palace, the pharmacy, St. Brendan's).
+  - **Feeds:** the boulevard section and its median, the department store and cinema fronts, the pharmacy sign (the owner, 10-18: the white cross on green is the clinics' sign too).
+  - **Rule flags:** none.
+- **WC426** · Midtown: Madison Court apartments
+  - **Prompt:** Midtown-B5
+  - **Shows:** Three 3-storey apartment blocks in a row (cream render, red brick, pale blue render) with arched lobby doors, flower boxes and awnings, behind front gardens with hedges, lamps and a name board. Passages between them with bins and bike racks lead to the residents' car park behind; a pay car park with a barrier arm and an attendant's booth on the corner. Across the street a seawall promenade with a rail, lamps, benches, planters and a life ring over rocks and the sea.
+  - **Goes to:** Midtown, Madison Court on the waterfront avenue.
+  - **Feeds:** the waterfront apartment row, the pay car park with its barrier, the seawall promenade (Shared-7).
+  - **Rule flags:** none.
+- **WC427** · Midtown: Holly Mews and Garden Court
+  - **Prompt:** Midtown-B4
+  - **Shows:** A cobbled dead-end mews off the avenue ending in a turning circle round a tree island. Along its north side a terrace of narrow townhouses in brick and painted render (white, sage, terracotta, cream, blue) with stoops and railings. Beside it a U-shaped courtyard block of brick walk-ups round a paved court with a half court, benches, potted plants and laundry lines, an iron gate, and a corner bodega with a striped awning on the boulevard. The boulevard's planted median runs along the bottom.
+  - **Goes to:** Midtown, Holly Mews and Garden Court.
+  - **Feeds:** the mews and its turning circle, the courtyard block (Shared-6), the corner bodega.
+  - **Rule flags:** none.
+- **WC428** · Midtown: the Commons
+  - **Prompt:** Midtown-B2
+  - **Shows:** A city park inside iron railings and gates between avenues. A pond with lily pads, rocks, a swan and a little footbridge in the south-west; a fenced pair of basketball courts with bleachers in the north-west; a fountain plaza inside the north gate; a green-roofed pavilion cafe with umbrella tables; a great lawn with a white bandstand gazebo and picnic blankets; a dirt dog run with agility gear behind chain-link in the north-east; market stalls and a second fountain round a green-iron subway entrance in the south-east. Paths curve round the lawn; cherries, oaks and maples.
+  - **Goes to:** Midtown, the Commons.
+  - **Feeds:** the Commons' layout (it matches the built plan), the dog run, the subway entrance in the market corner.
+  - **Rule flags:** none.
+- **WC429** · Midtown: the long block and its court
+  - **Prompt:** Midtown-B1
+  - **Shows:** A row of shopfronts on a two-lane street with kerb parking: a corner store with a striped awning, a bookshop, a coffee shop (a neon cup), a burger diner (a neon burger, stools in the window), a pawn shop under a roller gate, a record shop, a laundromat with washers in the window, a barber with a pole, a tailor (scissors), a florist. A paved walk with trees cuts north through the block to a fenced half court with bleachers; behind, the back alley with vans, dumpsters, fire stairs, water towers and roof gardens.
+  - **Goes to:** Midtown, Holly Street's long block.
+  - **Feeds:** the shop row's sign shapes (as BF2), the walk through the block, the court behind.
+  - **Rule flags:** none.
+- **WC430** · Midtown at dusk
+  - **Prompt:** Midtown-A2
+  - **Shows:** As WC431 at blue hour: shop windows and neon lit, string lights over the park's paths, the train on the viaduct with lit windows, the ferry lit at its pier.
+  - **Goes to:** Midtown (the night look).
+  - **Feeds:** night lighting: shopfronts, park festoons, the train's windows.
+  - **Rule flags:** a playground in the park, as WC431.
+- **WC431** · Midtown, the whole district
+  - **Prompt:** Midtown-A1
+  - **Shows:** The green steel El along the top with its glass-roofed station and stair towers, the shop rows under it with a fenced court; the planted-median boulevard; below it a park with diagonal paths, string lights, a statue plaza, a gazebo, a rock-edged pond and lawns; a crescent of cream townhouses round an oval garden with a fountain on the west; a flatiron building with a cafe on the diagonal avenue on the east; brick walk-ups beyond; a waterfront promenade with piers, a ferry, boats and kiosks along the bottom.
+  - **Goes to:** Midtown, the whole re-plan (the El, the boulevard, the Commons, Garden Crescent, Wedge Plaza, the waterfront).
+  - **Feeds:** the district's layout as planned; the waterfront piers below the park.
+  - **Rule flags:** a playground in the park: leave out (a lawn or a garden there).
+- **WC432** · Midtown: the station you can walk up to
+  - **Prompt:** Midtown-C2
+  - **Shows:** The elevated station on the green steel viaduct: a long island platform under a glass and green-iron canopy with a clock, a route map, benches and people; a silver train at the platform. A glass stair tower at each end comes down to the pavement plaza under the viaduct: a hot-dog cart with an umbrella, bikes, news boxes, banners on the lamps, bus shelters at both ends, the station's shops in the arches. The boulevard with its planted median below.
+  - **Goes to:** Midtown Station (the El, Trestle Street).
+  - **Feeds:** the station's stair towers and canopy, the plaza under the viaduct; how the stairs reach the platform.
+  - **Rule flags:** none.
+
 ## Original file names
 
 - WC001: ChatGPT Image Oct 17, 2026, 12_59_09 AM.png (1619x971)
@@ -2896,3 +2952,4 @@ The owner's district layout concepts of the evening of 2026-10-17 (four parts, u
 - WC422: 6f689f02-image.png (upload of 2026-10-17 19:08) (1672x941)
 - WC423: 059c88b4-image.png (upload of 2026-10-17 19:08) (1672x941)
 - WC424: c6dc3b6d-image.png (upload of 2026-10-17 19:08) (1672x941)
+- WC425-WC432: the owner's 2026-10-18 uploads (1672x941), in the order Midtown-C1, B5, B4, B2, B1, A2, A1, C2.
