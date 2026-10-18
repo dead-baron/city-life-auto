@@ -12,10 +12,13 @@ import { hash2 } from './rng.js';
 import { MIDTOWN } from './world3-midtown.js';
 import { NEON } from './world3-neon.js';
 import { HARBOR } from './world3-harbor.js';
+import { DOWNTOWN } from './world3-downtown.js';
 
-export const HAND_PLANS = [MIDTOWN, NEON, HARBOR];
+export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN];
 const M_IN = 2;   // (a street within this many tiles of a plan's edge is the edge's - the grid planner's)
-export const handPlanAt = (x, y) => HAND_PLANS.find((p) => x > p.rect[0] + M_IN && y > p.rect[1] + M_IN && x < p.rect[2] - M_IN && y < p.rect[3] - M_IN) || null;
+// (a plan of several rects - Downtown's bands round its park - is in its area strictly inside any of them; p.rect is
+// their bounding box: the kit's frame)
+export const handPlanAt = (x, y) => HAND_PLANS.find((p) => (p.rects || [p.rect]).some((r) => x > r[0] + M_IN && y > r[1] + M_IN && x < r[2] - M_IN && y < r[3] - M_IN)) || null;
 export const handDistricts = () => new Set(HAND_PLANS.map((p) => p.d));
 
 // The plans' streets as the generator's lines (px), into the `lines` hook after the skeleton's roads.
@@ -305,7 +308,7 @@ function handBuilding(m, o) {
     m.pois.push(poi);
     b.signs.push({ x: px, y: (y + h - 0.6) * TILE, text: label });
     // a precinct (sub: not the headquarters - the police spawn, the helipad stay at the first station the generator placed)
-    if (o.poi.kind === 'police') { poi.sub = true; m.pois.push({ id: m.pois.length, kind: 'evidence', label: 'Evidence Locker', x: (x + w - 1) * TILE, y: py, r: 56, b: bid }); }
+    if (o.poi.kind === 'police') { if (!o.poi.hq) poi.sub = true; m.pois.push({ id: m.pois.length, kind: 'evidence', label: 'Evidence Locker', x: (x + w - 1) * TILE, y: py, r: 56, b: bid }); }
     if (o.poi.kind === 'pharmacy' || o.poi.vend) { const vx = px + 56, vy = py + 12; if (vx < (x + w) * TILE - 8) { m.props.push({ t: 'vend_cola', x: vx, y: vy }); m.pois.push({ id: m.pois.length, kind: 'vending', label: 'Vending Machine', x: vx, y: vy + 18, r: 32 }); } }
     // a flat over the shop: its own door at the other end of the front (o.home with o.poi)
     if (o.home && !north && w >= 5) { const hx = dtx - x < w / 2 ? x + w - 1 : x; addHome((hx + 0.5) * TILE, py); }
