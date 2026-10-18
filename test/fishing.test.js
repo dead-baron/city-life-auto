@@ -3,7 +3,7 @@
 // page's prediction of it (client/fishing.js), the cooler, the log, the records board and the fish market.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, teleport } from './helpers.js';
+import { makeWorld, joinPlayer, teleport, calmWater } from './helpers.js';
 import { T, TILE } from '../shared/constants.js';
 import { IN } from '../shared/input.js';
 import * as FS from '../shared/fish.js';
@@ -291,7 +291,7 @@ test('a deep-sea charter: offshore fish from a boat count; a legendary is news f
   const it = players.findInteraction(W, p);
   assert.ok(it && /over the side/.test(it.label), `the prompt: ${it && it.label}`);
   // (the NPC boaters who cruise round anyone out on the water kept off it: one ramming this boat would pull the line in)
-  const send0 = inputs(W, p), send = (bits, n = 1) => { for (let i = 0; i < n; i++) { for (const e of [...W.entities.values()]) if (e !== boat && e.def && e.def.kind === 'boat' && !e.seats.some(Boolean)) W.remove(e); send0(bits); } };
+  const send0 = inputs(W, p), send = (bits, n = 1) => { for (let i = 0; i < n; i++) { calmWater(W, boat.id); send0(bits); } };
   const rand = W.rand; W.rand = mulberry32(31337);
   for (let k = 0; k < 3 && p.job; k++) {
     fishing.begin(W, p, fishing.spotFor(W, p.ped));
