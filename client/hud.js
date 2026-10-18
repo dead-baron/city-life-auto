@@ -219,6 +219,8 @@ export class HUD {
     // the flashlight's touch button: there while you own one, lit while it's on
     document.body.classList.toggle('has-light', !!(me.inv && (me.inv.flashlight > 0 || me.inv.headlamp > 0 || me.inv.hardhat > 0 || me.inv.lantern > 0) && !me.dead));
     $('b-light')?.classList.toggle('lit', !!me.light);
+    // the skateboard's: there while one's in your bag (main.js quickBoard)
+    document.body.classList.toggle('has-board', !!(me.inv && me.inv.skateboard > 0 && !me.dead));
     // weapon
     const w = WEAPON_BY_ID[me.weapon] || WEAPONS.fists;
     $('w-name').textContent = w.name;

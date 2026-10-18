@@ -476,7 +476,7 @@ function fixedStep() {
   if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
   if (!inOverlay && !S.playing) titlePad();
   const padUI = !spec && !inOverlay && S.playing && !S.hud.menuOpen && !S.bigmap, up = padUI && !(S.me && S.me.dead);   // (down, the D-pad picks where to wake up)
-  if (up && input.padCall) callCruiser();
+  if (up && input.padCall) { if (S.me && S.me.cruiser) callCruiser(); else quickBoard(); }   // (D-pad down: the cop car, else the skateboard)
   if (up && input.padPhone) openPhone();
   // the bag (D-pad →) and the quick wheel (hold View, point with the right stick, let go)
   if (padUI && input.padRight) toggleBag();
@@ -1410,6 +1410,7 @@ initInput(canvas, {
     if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
     if (k === 'KeyV' && S.playing && !topOverlay()) callCruiser();
+    if (k === 'KeyB' && S.playing && !topOverlay() && !inCell()) quickBoard();
     if (k === 'Backquote' && S.playing) { if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
@@ -1419,6 +1420,7 @@ initInput(canvas, {
   onDev() { if (!S.playing) return; if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
   onCruiser() { if (S.playing) callCruiser(); },
+  onBoard() { if (S.playing) quickBoard(); },
   onPhone() { if (S.playing) openPhone(); },
   onSettings() { openSettings(true); },
   onFullscreen() { toggleFullscreen(); },
@@ -2504,6 +2506,15 @@ function baseZoom() {
   return long / (viewH * 16 / 9) * (S.camScale || 1); // (S.camScale: a closer camera, for trying framings)
 }
 
+// ---- the skateboard straight out of the bag (the owner, 2026-10-18: "pulling it out of the inventory is a hassle") ----
+// B, the touch 🛹 pill (there while you own a board, on foot) or D-pad down (when there's no cop car to call): on it
+// where you stand, or off - the bag's own use (server economy.js useItem -> skate.js toggle), which says why not
+function quickBoard() {
+  const me = S.me;
+  if (!me || me.dead || !(me.inv && me.inv.skateboard > 0)) return;
+  if (S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) return;
+  send({ t: 'inv', a: 'use', id: 'skateboard' });
+}
 // ---- personal police cruiser: radio dispatch, then an arrow leads you to it ------------------
 function callCruiser() {
   const c = S.me && S.me.cruiser;

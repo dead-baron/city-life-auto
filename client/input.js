@@ -149,6 +149,7 @@ function initTouch(hooks) {
       if (name === 'dev') { hooks.onDev?.(); return; }
       if (name === 'map') { hooks.onMap?.(); return; }
       if (name === 'cruiser') { hooks.onCruiser?.(); return; }
+      if (name === 'board') { hooks.onBoard?.(); return; }   // (the skateboard: on or off - main.js quickBoard)
       if (name === 'phone') { hooks.onPhone?.(); return; }
       if (name === 'use') { hooks.onItems?.(); return; } // the quick wheel (stays open until you tap a slot)
       if (name === 'settings') { hooks.onSettings?.(); return; }

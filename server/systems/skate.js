@@ -1,6 +1,7 @@
 // Skateboarding, part 1 (the owner, 2026-10-17): riding a board. A skateboard (shared/items.js: a tool, never used up)
-// is carried in the bag; the vehicle button - when there's no vehicle to get into - or the bag hops you on where you
-// stand, and the vehicle button again steps you off. On it you push, carve, coast, brake and ollie (shared/physics.js
+// is carried in the bag; the board button (B, D-pad down, the touch 🛹 pill - client/main.js quickBoard: the bag's use),
+// the vehicle button - when there's no vehicle to get into - or the bag hops you on where you stand, and any of them
+// again steps you off. On it you push, carve, coast, brake and ollie (shared/physics.js
 // BOARD, boardStep: the client predicts it the same way). It rolls on anything paved and on the docks; on grass, dirt or
 // sand the wheels dig in and you step off. Run into a wall, a post or a car hard and you bail: thrown down, a little hurt,
 // the board shooting off ahead of you (the 'bail' event). Knocked down any other way, into the water, a vehicle or a
@@ -53,7 +54,7 @@ export function hopOn(world, p, ped) {
   world.emit(ped.x, ped.y, { e: 'boardon', id: ped.id, x: ped.x, y: ped.y });
   if (!p.profile.boardTold) {
     p.profile.boardTold = 1;
-    world.notify(p, 'On your board. The stick pushes and steers (all the way or sprint to push harder), pull it back to brake, the dive button ollies (Space / A / OLLIE). The vehicle button steps off (F / X / CAR).', 'good');
+    world.notify(p, 'On your board. The stick pushes and steers (all the way or sprint to push harder), pull it back to brake, the dive button ollies (Space / A / OLLIE). The board button gets you on and off any time (B / D-pad down / 🛹), and so does the vehicle button with no vehicle in reach (F / X / CAR).', 'good');
   }
   return true;
 }

@@ -685,6 +685,14 @@ body.portrait #spec { width: 210px; font-size: 14px; }
 #tbtns .light.lit { background: rgba(255,228,140,.85); border-color: #fff; }
 body:not(.has-light) #tbtns .light, body.in-veh #tbtns .light { display: none; }
 body.portrait.touch #tbtns .light { left: max(10px, env(safe-area-inset-left)); top: calc(242px + var(--corner-top)); }
+/* the skateboard (the owner, 2026-10-18): the same small pill beside it while there's a board in your bag (on foot), lit
+   while you're riding - a tap gets on or off, no digging in the bag */
+#tbtns .board { left: calc(max(10px, env(safe-area-inset-left)) + 182px); top: 46px; width: 52px; height: 30px; border-radius: 15px; font-size: 15px; }
+body:not(.has-light) #tbtns .board { left: calc(max(10px, env(safe-area-inset-left)) + 124px); }
+body.on-board #tbtns .board { background: rgba(140,220,255,.85); border-color: #fff; }
+body:not(.has-board) #tbtns .board, body.in-veh #tbtns .board { display: none; }
+body.portrait.touch #tbtns .board { left: calc(max(10px, env(safe-area-inset-left)) + 58px); top: calc(242px + var(--corner-top)); }
+body.portrait.touch:not(.has-light) #tbtns .board { left: max(10px, env(safe-area-inset-left)); }
 #inv .inv-use.lit { background: #8a6a12; border-color: #ffd23e; }
 
 /* dev give menu (client/devgive.js) */

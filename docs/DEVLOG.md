@@ -10757,3 +10757,21 @@ plain roofs here.
   - A parking spot can be `bare` (no painted bay): the salvage yard's cars (`groundbake.js`).
 - `test/world3city.test.js`: a district with a plan counts its plan's streets. The Yards keeps the grid's lattice
   so Juniper Street stays on its east edge, so its CITY3 entry has no `hand`.
+
+## 2026-10-18 · The skateboard's own button (B, D-pad down, the 🛹 pill)
+
+The owner: pulling the board out of the bag every time is a hassle. Now, with a skateboard in your bag:
+- **B** on the keyboard, **D-pad down** on a pad, or the small **🛹 pill** on touch gets you on the board where you
+  stand, and again gets you off. On a pad, D-pad down is still the cop car's button when you're a cop who can call
+  one.
+- The pill is the same size as the flashlight's and sits beside it, under ITEMS (left of the flashlight's place when
+  you have no flashlight). It shows only while there's a board in your bag and you're on foot, and lights up blue
+  while you ride.
+- It's the bag's own use (`client/main.js` `quickBoard` sends what the bag's USE does), so the server says why not in
+  the same words ("Too rough to ride here...", "Not indoors..."). The vehicle button with no vehicle in reach still
+  works, and so does the bag.
+- The first ride's hint names the new button. The README controls table and `shared/controls.js` (`board`) are
+  updated.
+- Checked on a phone-sized page against a local server: the pill appears once the board is in the bag; a tap on a
+  pavement gets on (the pill lit, CAR → OFF, ROLL → OLLIE); another tap gets off; on grass the server says it's too
+  rough.
