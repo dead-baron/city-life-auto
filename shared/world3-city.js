@@ -98,7 +98,7 @@ export const CITY3 = [
   { d: 25, on: 'main', zone: ZC, rects: [[3680, 1440, 3940, 1900]], keep: [[3680, 1750, 3800, 1860]], look: 'the Stadium District: the stadium, its car parks, the megastore, the ponds' },
   { d: 2, on: 'main', zone: ZC, rects: [[2700, 1440, 3680, 1660]], look: 'Northgate: apartment blocks along the north, the public library, Fire Station 7' },
   { d: 8, on: 'main', zone: ZC, rects: [[2860, 1900, 3800, 2120]], hand: 'harbor', look: 'the Harbor along the waterfront, handcrafted (shared/world3-harbor.js): the marina and the Harbor Light, Harbor Green and Linden Pier, the fish market\'s quay, Ferry Plaza, the boatworks, the port' },
-  { d: 18, on: 'main', zone: ZC, rects: [[2600, 1660, 2860, 2120]], look: 'Old Town at the river mouth: narrow brick streets, the infirmary, the Rusty Anchor' },
+  { d: 18, on: 'main', zone: ZC, rects: [[2600, 1660, 2860, 2120]], hand: 'oldtown', look: 'Old Town at the river mouth, handcrafted (shared/world3-oldtown.js): the quay along Water Street, Piazza Vecchia with St. Anne\'s and the market, the wandering lanes, the infirmary, the Rusty Anchor at the bridge foot' },
   { d: 1, on: 'main', zone: ZC, rects: [[2860, 1660, 3680, 1900]], hand: 'midtown', look: 'Midtown at the bridgeheads, handcrafted (shared/world3-midtown.js): the train over Trestle Street, Holly Street\'s main street, the boulevard, the diagonal to The Yards' },
   // --- the western city ---
   { d: 27, on: 'main', zone: ZW, rects: [[1440, 2600, 2090, 2860]], keep: [[1440, 2600, 2090, 2860]], look: 'Westport International: the north-south runway, its taxiway, the terminal, the apron and hangars' },

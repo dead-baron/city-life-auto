@@ -135,7 +135,7 @@ export function buildNatureSites(m, H) {
   try { buildSites(m, H); } finally { PG = null; }
 }
 function buildSites(m, H) {
-  m.natureSites = [];
+  m.natureSites = (m.natureSites || []).filter((q) => q && q.hand);   // (the handcrafted districts' own: world3-oldtown.js's market)
   Object.defineProperty(m, '_distStyle', { value: H.distStyle || [], enumerable: false, configurable: true });
   if (H.terrainAt && m.terrainCls && !m.terrainCls.at) Object.defineProperty(m.terrainCls, 'at', { value: (tx, ty) => H.terrainAt(m.terrainCls.cls, m.terrainCls.cw, tx, ty), enumerable: false });
   redwoodCreek(m, H);

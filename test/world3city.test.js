@@ -46,6 +46,9 @@ test('World v3b city: the plan is 9.3\'s districts, each painted on its own isla
   for (const c of CITY3) {
     const st = DISTRICTS[c.d].style;
     let n = 0;
+    // (a handcrafted district lays its own streets - shared/world3-hand.js - and the grid only the edges round it)
+    const hp = c.hand && HAND_PLANS.find((q) => q.key === c.hand);
+    if (hp) { assert.ok(hp.streets().length >= 4, `${DISTRICTS[c.d].name}: ${hp.streets().length} streets of its own`); continue; }
     for (const r of runs) for (let u = r.a; u <= r.b; u += 4) {
       const x = r.horiz ? u : r.c, y = r.horiz ? r.c : u;
       if ([[0, 0], [0, -9], [0, 9], [-9, 0], [9, 0]].some(([dx, dy]) => landAt(x + dx, y + dy) && L.dist[at(x + dx, y + dy)] === c.d)) { n++; break; }
@@ -129,12 +132,13 @@ test('World v3b city: the avenues reach the islands\' shores (the bridges land o
   const main = xsOn(1900, 1990), isle = xsOn(2120, 2200);
   const both = [...main].filter((x) => isle.has(x));
   assert.ok(both.length >= 3, `avenues facing across the gulf: ${both}`);
-  // a bridge (an arterial over the water) from the mainland's Harbor to the Gulf Island: each end met by a stub
+  // a bridge (an arterial over the water) between two shores of the city: each end met by a stub
   const m = { w: W, h: H, land: L.land, dist: L.dist, river: null };
   const shore = (x, y0, dir) => { let y = y0; while (landAt(x, y)) y += dir; return y - dir; };
-  // (west of the Neon Strip: a handcrafted district lays its own streets - shared/world3-hand.js - so the grid's stubs
-  // meet a bridge only outside one)
-  const x = 2700, a = shore(x, 1950, 1), b = shore(x, 2200, -1);
+  // (a handcrafted district lays its own streets - shared/world3-hand.js - so the grid's stubs meet a bridge only outside
+  // one: since Old Town's, the mainland's whole shore facing the Gulf Island is handcrafted, so the test bridge crosses
+  // the creek through Westport Center instead)
+  const x = 2170, a = shore(x, 1950, 1), b = shore(x, 2200, -1);
   const lines = [{ kind: 'art', lvl: 0, name: 'Test Bridge', pts: [{ x: (x + 0.5) * TILE, y: (a - 3 + 0.5) * TILE }, { x: (x + 0.5) * TILE, y: (b + 3 + 0.5) * TILE }] }];
   const out = layCity3(lines, m);
   assert.equal(out.bridges.length, 2);

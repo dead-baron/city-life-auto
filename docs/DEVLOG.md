@@ -10605,3 +10605,45 @@ The owner's answers to the Midtown prompts show the re-plan as planned, so this 
   the barrier.
 - Still to do once the art bundle has room: the station's full-length glass canopy and glass stair towers at both ends
   (WC432), which are new art.
+
+## 2026-10-18 · World v3, handcrafted: Old Town (the quay, Piazza Vecchia, the wandering lanes)
+
+Old Town (district 18, the old quarter at the river mouth west of Midtown) is now laid out by hand
+(`shared/world3-oldtown.js`), from the owner's concepts WC403 and WC404 (the piazza), WC014 (the church square and the
+quay) and WC240 (the walled quarter's piazza and market). The grid it replaces had twelve straight streets and sixty
+square blocks of corner stores.
+- **The streets.** Central Avenue, Midtown Boulevard and Harbor Avenue still cross it to Midtown, where the city meets
+  them. The highways and the Arts Bridge keep their lines, and the Old Town Bridge comes ashore onto Harbor Avenue as
+  before. Between the avenues the lanes wander and meet at odd angles: Water Street along the quay, Bell Lane, Market
+  Street, Tanner Street, Rope Walk, Salt Lane (a dead end), Rowan Street, Ferry Street under the West Loop, and the
+  narrow ones (Juniper Steps, Ash Lane, Bell Street, Ash Street, Quay Lane). Pavements are two tiles, the lanes one
+  lane each way and the narrow ones one car wide.
+- **The quay** (Water Street's west side, over the inlet and the bay): stone bollards every few yards, lamps, life
+  rings, barrels and crates, rowing boats and two sailing boats at the wall, gulls.
+- **Point Garden**, on the neck of land between the inlet and the bay: a path across it from Water Street and one from
+  shore to shore, the bandstand in a ring of flowers where they meet, cypresses down the cross path, olive and orange
+  trees in rows in the lawns, benches, the lookout's telescope at the point.
+- **Piazza Vecchia**: St. Anne's at its head up its steps (stone, a terracotta roof), Trattoria da Rocco and Caffe del
+  Porto either side with their tables under umbrellas, and a terrace of shops along its south side (Ristorante Il Faro,
+  Pescheria del Molo, Galleria San Marco...). The fountain and its bronze statue sit in a ring of flowers. The **Old
+  Town Market** has eighteen striped stalls either side of it with crates of produce and string lights over the
+  aisles, and its two counters sell as before (`shared/items.js` `market`). Plane trees line the sides. South of Quay
+  Lane is a paved strip with trees and benches.
+- **The lanes**: terraces of two and three storeys back to back over narrow courts. They are warm render (ochre, rose,
+  cream, straw, sage) or old red brick, under terracotta roofs, gabled or hipped. Some have flat roofs with a roof
+  garden, or a terrace with the washing out on its line. About forty shops have flats over them, each name used once:
+  the bakery, the wine bar, the fishmonger, the cheese shop, the gelateria, the bookbinder, the tailor, the osteria,
+  the florist, the records shop... The courts hold cypresses, olives and orange trees.
+- **The key places**: the Old Town Infirmary on the boulevard (cream stone, three storeys under a hipped roof, the
+  white cross on green, its forecourt to the pavement; one of the places you come round after a knockout); the Rusty
+  Anchor and Old Quay Bait & Tackle at the bridge foot; First Pixel Bank's Old Town branch on Harbor Avenue.
+- **What Old Town keeps**: the bank, the market, a barber (Old Town Barbers), a vintage clothes shop (Second Skin
+  Vintage), a bait shop, two corner stores, ten cafes and restaurants, about 320 homes (it had 17). The infirmary is
+  now actually in Old Town: the grid version never placed it. Its gas station, five generic clubs and sixty-odd corner
+  stores are gone. The city's gas stations are picked elsewhere.
+- **The market's site** survives the nature-site pass: `shared/naturesites.js` keeps the handcrafted districts' own
+  sites (`hand: true`) instead of starting the list empty. The old market-square code looked for the grid's square
+  and finds nothing in World v3.
+- `test/world3city.test.js`: a handcrafted district's street count is its plan's own (the grid only lays the edges
+  round it). The test bridge crosses the creek in Westport Center: since Old Town, the mainland's whole shore facing
+  the Gulf Island is handcrafted, so no grid stub meets a bridge there.
