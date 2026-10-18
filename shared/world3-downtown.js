@@ -256,17 +256,25 @@ function greenfieldPark(K, m, out) {
 // West of the park: Westside Avenue to Park West Avenue
 function westBand(K, m, ctx) {
   const { prop, rnd } = K;
-  const { towerLot, forecourt, out } = ctx;
+  const { towerLot, place, forecourt, out } = ctx;
   const ca = [DX.westside + EXT.ave + 1, DX.maple - EXT.st], cb = [DX.maple + EXT.st + 1, DX.parkW - EXT.ave];
   const r1 = [DY.green + EXT.ave + 1, DY.s22 - EXT.st - 1], r2 = [DY.s22 + EXT.st + 1, DY.fountain - EXT.ave - 1], r3 = [DY.fountain + EXT.ave + 1, DY.s12 - EXT.st - 1], r4 = [DY.s12 + EXT.st + 1, DY.bayside - EXT.ave - 1];
   const wa = ca[1] - ca[0], wb = cb[1] - cb[0];
-  // Westgate Residences (a tower of flats behind its garden) and Park West Tower over the park
-  towerLot({ x: ca[0], y: r1[0] + 2, w: wa, h: 40, name: 'Westgate Residences', arch: 'condo', style: 'stone', wall: '#e8e2d2', floors: 14, win: 'even', home: { kind: 'apartment', price: 42000 }, poi: false });
-  towerLot({ x: cb[0], y: r1[0] + 6, w: wb, h: 46, name: 'Park West Tower', floors: 16, tint: '#2a4a6a' });
-  forecourt(cb[0], r1[0] + 52, wb, r1[1] - r1[0] - 51);
-  // Fountain Court: flats round a courtyard garden; the Greenfield Medical Building
-  towerLot({ x: ca[0], y: r2[0] + 2, w: wa, h: 34, name: 'Fountain Court', arch: 'condo', style: 'stone', wall: '#d8ccb4', floors: 8, win: 'pair', home: { kind: 'apartment', price: 36000 }, poi: false });
-  towerLot({ x: cb[0], y: r2[0] + 8, w: wb, h: 36, name: 'Greenfield Medical Building', style: 'stone', wall: '#e2dac6', floors: 7, win: 'tall' });
+  // each block filled back to back: a tower fronting the street to its south, a lower building turned to the street to
+  // its north (its front unseen - the camera sees its back wall), a service yard between
+  const pair = (x, w, r, south, north, yard = 4) => {
+    const sh = south.h, nh = r[1] - r[0] + 1 - sh - yard;
+    towerLot({ x, y: r[1] - sh + 1, w, h: sh, ...south });
+    if (nh >= 10) {
+      const b = place({ x, y: r[0], w, h: nh, arch: north.arch || 'office', name: north.name, face: 'N', poi: north.poi === undefined ? { kind: 'delivery', label: north.name } : north.poi, whole: true, ...(north.home ? { home: north.home } : {}),
+        art: { spec: { floors: north.floors, style: north.style || 'stone', wallColor: north.wall || '#d4c8b0', win: north.win || 'even', cornice: north.cornice || null, parapet: 10, grime: 0.08, roofMat: north.roofMat || 'gravel', lip: 10, rimW: 5 }, noShop: true } });
+      if (b) { K.fill(x, r[0] + nh, w, yard, T.LOT); for (let k = 0; k < Math.floor(w / 9); k++) prop(K.pick(['dump_g', 'dump_b', 'pallet_s', 'acunit'], K.rnd(x + k, r[0], 40)), x + 4 + k * 9, r[0] + nh + 1.8, 10); }
+    }
+  };
+  pair(ca[0], wa, r1, { h: 40, name: 'Westgate Residences', arch: 'condo', style: 'stone', wall: '#e8e2d2', floors: 14, win: 'even', home: { kind: 'apartment', price: 42000 }, poi: false }, { name: 'Linden Court', floors: 7 });
+  pair(cb[0], wb, r1, { h: 46, name: 'Park West Tower', floors: 16, tint: '#2a4a6a' }, { name: 'Park West Annex', floors: 6, wall: '#c8bca4' });
+  pair(ca[0], wa, r2, { h: 34, name: 'Fountain Court', arch: 'condo', style: 'stone', wall: '#d8ccb4', floors: 8, win: 'pair', home: { kind: 'apartment', price: 36000 }, poi: false }, { name: 'Maple Hall', floors: 6, wall: '#e2dac6', arch: 'condo', home: { kind: 'apartment', price: 32000 }, poi: false });
+  pair(cb[0], wb, r2, { h: 36, name: 'Greenfield Medical Building', style: 'stone', wall: '#e2dac6', floors: 7, win: 'tall' }, { name: 'Sycamore House', floors: 5, wall: '#b8b0a2' });
   // the Westside car park: concrete decks, its ramp, the P on its corner; across Maple Street, the Westside Offices
   towerLot({ x: ca[0], y: r3[0] + 4, w: wa, h: r3[1] - r3[0] - 3, name: 'Westside Parking', arch: 'block', style: 'concrete', wall: '#b8b4aa', floors: 5, win: 'loft', sign: 'PARKING', signC: ['#1e3a5e', [250, 250, 240]], poi: { kind: 'delivery', label: 'Westside Parking' } });
   towerLot({ x: cb[0], y: r3[0] + 6, w: wb, h: r3[1] - r3[0] - 5, name: 'Westside Offices', floors: 10, tint: '#284256' });
@@ -341,7 +349,9 @@ function southBand(K, m, ctx) {
     prop('textsign', DX.axis + 0.5, rn[0] + 1.6, 0, { text: 'FOUNTAIN SQUARE', bg: '#2f5a4a', fg: [240, 232, 200], z: 30, sx: 2 });
     K.m.squares ||= []; K.m.squares.push({ x: DX.axis - 6, y: rn[1] - 10, w: 12, h: 10, name: 'Fountain Square' });
     (out.places ||= []).push({ name: 'Fountain Square', x0: sx0, y0: rn[0], x1: sx1, y1: rn[1] + 1 });
-    place({ x: c1[0], y: rn[0] + 4, w: 40, h: rn[1] - rn[0] - 3, arch: 'theatre', key: 'theatre', name: 'The Grand Theatre', poi: { kind: 'delivery', label: 'The Grand Theatre' }, whole: true });
+    place({ x: c1[0], y: rn[0] + 4, w: 40, h: rn[1] - rn[0] - 3, arch: 'theatre', key: 'theatre', name: 'The Grand Theatre', poi: { kind: 'delivery', label: 'The Grand Theatre' }, whole: true,
+      art: { spec: { floors: 4, style: 'stone', wallColor: '#e2d6bc', win: 'arch', cornice: 'dentil', parapet: 16, grime: 0.05, roofMat: 'gravel', lip: 10, rimW: 5, date: '1924' },
+        shop: { kind: 'lobby', door: 'right', open: true, people: 4, awning: ['#7a1e2a', '#7a1e2a'], sign: { text: 'THE GRAND THEATRE', bg: '#7a1e2a', fg: [255, 214, 140], lit: true } } } });
     for (let y = rn[0]; y < rn[0] + 4; y++) for (let x = c1[0]; x < c1[0] + 40; x++) if (K.free(x, y)) K.fill(x, y, 1, 1, T.GRASS);
     K.row(c1[0] + 41, sx0, rn[0], rn[1], (x, room) => room >= 10 ? { w: room, depth: 30, arch: 'mixed', name: 'Opera Bar', poi: { kind: 'delivery', label: 'Opera Bar' }, whole: true, art: tower(x, rn[1], { name: 'Opera Bar', style: 'stone', floors: 4, store: 'bar', awning: ['#5a2a2e', '#efe6d0'], win: 'arch', wall: '#d8ccb4' }), home: { kind: 'apartment' } } : room >= 1 ? { gap: room, kind: 'garden' } : null);
     place({ x: sx1 + 1, y: rn[1] - 17, w: 18, h: 18, arch: 'mixed', key: 'rest2', name: 'Cafe Fontaine', poi: { kind: 'coffee', label: 'Cafe Fontaine', food: true }, whole: true, art: tower(sx1 + 1, rn[1], { name: 'Cafe Fontaine', style: 'stone', floors: 3, store: 'cafe', awning: ['#2f6a5a', '#f0ece4'], wall: '#e8e2d2', win: 'arch' }) });
