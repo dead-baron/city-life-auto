@@ -10280,3 +10280,53 @@ takes tiles).
 
 **Ferries:** a ship moored at a quay is in a ferry's way like the quay itself (shared/world3-ferries.js corridorWay,
 `m.portShips`).
+
+## 2026-10-17 · Roof gardens: raised beds, not a lawn on the roof
+
+**The owner:** "I like the rooftop garden idea but right now a lot of roofs are just one huge patch of grass on the top, I think rooftop gardens would be in raised garden beds with things growing in them or pretty flowers or bushes or small trees and clearly a rooftop garden instead of what kind of looks like a random patch of grass growing in the wrong place."
+
+A 'green' roof was one flat sedum mat with a gravel margin and a path down the middle. Now it is a roof garden, and so is every `spec.garden` roof the handcrafted districts plan (Midtown's walk-ups and shops, the Neon Strip's rooftop bars).
+
+**The beds** (`client/art2/props-garden.js` roofBed, roofTree):
+- **Raised beds of any length**, painted rather than voxel-built. Their south faces and rims show, with a soft contact shadow and an outline, and they cast their sun shadows from their heights.
+- **What they're built of:** timber planks, grey or painted timber, railway sleepers, brick, stone blocks, cast concrete or weathering steel, picked to suit the building.
+- **What grows in them varies bed by bed:**
+  - flowers in drifts, in six palettes (one a white garden that shows after dark), with spires now and then;
+  - lavender;
+  - a parterre (a clipped box edging with lavender or flowers inside);
+  - box balls on bark mulch;
+  - shrubs, flowering now and then (hydrangea heads, roses);
+  - vegetables in rows: lettuce, red lettuce, cabbage, chard, carrots, onions, kale;
+  - tomatoes or runner beans up canes;
+  - herbs in patches;
+  - ornamental grasses with coneflowers;
+  - sunflowers facing the street;
+  - strawberries.
+- **Small trees in big planters:** an olive, a Japanese maple (red, orange or plum), bamboo, a bay lollipop, a multi-stemmed birch.
+- **The foliage sways like a plant on its own ground** (F_LEAF | F_WET, as the plants on rock do), not like a treetop that high up, and the rain wets it.
+
+**The layout** (`client/art2/game/statics.js` gardenKit, after the roof's own kit):
+- **The roof's kit stays where it was.** Its AC rows and their walkway pads, the hatch, tanks, huts and vents keep their places, and no bed is planted over them. Beds run round them and split where something stands in the way.
+- **A plan for each roof, seeded by the building:**
+  - beds along the parapets, with island beds in the middle when there's room;
+  - rows of beds like an allotment;
+  - beds framing a court round a tree or a table;
+  - a grid of square beds.
+- **A theme for each garden:** flowers, a kitchen garden, a formal one or a mix.
+- **Furniture where there's room:** a table under an umbrella or a pergola (bulbs under its beams, a climber over one corner), a bench, loungers on hotels and condos. A kitchen garden gets a shed, a water butt and a compost bin.
+- **After dark:** festoon lights over the seats, or garden lanterns (the pergola and the lanterns light the roof).
+- **Scaled to the roof:**
+  - a small roof gets a few beds and a bench;
+  - a big one gets deeper beds, wider paths and two places to sit;
+  - a huge one (the Neon Strip's lounges) gets a garden terrace on its front part, about 60% of it, with membrane round the rest (`spec.gzone`).
+  - At most 40 beds a roof.
+
+**The deck** (`client/art2/buildings.js` roofDeck):
+- **A 'green' roof is the garden's paving:** big slabs in a stretcher bond, decking, or clay pavers in a basket weave, with a gravel strip and an edging along the parapets.
+- **A gardens plan on tar, rubber, membrane or gravel** gets the garden's paving too.
+- **A sedum roof stays as a rarer option, `'sedum'`, where it clearly reads as one.** It is trays in a grid, mostly greens with ochre and red patches across trays and a few in flower, a gravel margin and a path of pads. It is on offices, glass towers and terminals (8% of them) and civic blocks (10%), and on any 'green' roof too small for a garden or whose kit is set by hand.
+
+**Budgets** (no budget raised):
+- **Bake code:** 782 → 796 KB of the 800, still 73 files (the painter lives in props-garden.js, which the bake already loads).
+- **Bake time, garden buildings:** a garden building's sprite costs about 1.3x what its lawn did (a bed is about 0.4-1.5 ms to paint and isn't kept in the kit memo).
+- **Bake time, the perf sample:** A/B against HEAD on the perf report's sample chunks, and on Midtown's, the condo's and the Bayview Lounge's chunks, came out within noise. This machine was heavily shared at the time: the yardstick ran 165-620 ms.

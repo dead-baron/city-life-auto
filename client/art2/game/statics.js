@@ -7,7 +7,8 @@
 //                membrane, standing-seam metal, pavers, planks or sedum sunk behind their parapets, some with a
 //                setback volume on top, and carry a laid-out rooftop kit (air handlers in rows with walkway pads,
 //                stair huts, tanks, chimneys, skylights, dishes, roof bars with umbrellas and festoon lights, neon
-//                roof signs); a cut-away variant (no roof, walls cut low, the shop floor) for walk-ins
+//                roof signs) and roof gardens (raised beds, small trees in planters, seats: gardenKit); a cut-away
+//                variant (no roof, walls cut low, the shop floor) for walk-ins
 //   lot dressing gas canopies and pumps, house yards (fences, hedges, beds along the front wall, a yard tree,
 //                pools), shopfront pots, sandwich boards and cafe tables, parking wheel stops, motor pool fences
 //                and gate posts, construction cranes, barns and silos, brick walls, security camera poles
@@ -550,7 +551,9 @@ function sectionsOf(c, b, A) {
 const KITS = { ac: [30, 22, 16], acs: [18, 14, 11], hvac: [44, 30, 22], vent: [10, 10, 12], pipe: [8, 8, 22], sky: [24, 18, 7], dish: [18, 14, 18], tank: [26, 26, 44],
   plant: [30, 12, 10], palm: [22, 22, 40], solar: [30, 20, 8], heli: [82, 82, 3], hut: [34, 26, 36], ant: [14, 14, 63], stack: [18, 18, 72], bill: [130, 12, 118],
   hatch: [16, 16, 9], chim: [12, 12, 39], line: [60, 4, 30], umb: [30, 30, 30], table: [14, 14, 12], lounge: [34, 14, 16], cool: [36, 36, 36], duct: [64, 10, 11],
-  skyL: [24, 18, 7], string: [60, 4, 30], neon: [110, 6, 48] };
+  skyL: [24, 18, 7], string: [60, 4, 30], neon: [110, 6, 48],
+  // a roof garden's (gardenKit): 'bed|w|d|h|box|plant|v' a raised bed of any size (its height here: the tallest planting's top), 'tree|kind|box|v'
+  bed: [48, 20, 44], tree: [24, 24, 78], perg: [44, 34, 36], bench: [32, 10, 14], shed: [30, 24, 40], butt: [12, 12, 17], comp: [18, 16, 13], lant: [6, 6, 16] };
 // 'neon|TEXT|c' is a lit sign standing at the roof's front edge (c: its NEONC colour)
 const kitBase = (k) => k.replace(/@$/, '').split('|')[0];
 function kitModel(k) {
@@ -561,13 +564,17 @@ function kitModel(k) {
     case 'hatch': return P.roofHatch(); case 'chim': return P.chimney(34); case 'line': return P.laundryLine(60); case 'umb': return P.umbrella('#f0ece4', '#2f7a5c'); case 'table': return P.cafeTable();
     case 'lounge': return D.lounger('#f0eee8'); case 'cool': return P.coolingTower(36, 30); case 'duct': return P.duct(64);
     case 'skyL': return P.skylight(1); case 'string': return P.stringLights(60, 1);
+    case 'perg': return GD.pergola(); case 'bench': return P.bench(); case 'shed': return GD.gardenShed(30, 24, 26, '#3a6a8a'); case 'butt': return GD.waterButt();
+    case 'comp': return GD.compostBin(); case 'lant': return GD.gardenLantern();
     default: return P.roofVent();
   }
 }
-const kitSprite = (k) => memo('kit:' + k, () => {
+// (a roof garden's bed is painted for its roof alone - props-garden.js roofBed, about a millisecond - so it isn't kept)
+const kitSprite = (k) => (kitBase(k) === 'bed' ? GD.roofBed(...k.split('|').slice(1).map((q, i) => (i === 3 || i === 4 ? q : +q))) : memo('kit:' + k, () => {
   if (kitBase(k) === 'neon') { const [, text, ci] = k.split('|'); return makeSignBoard({ t: 'sign', text, sx: 2, bg: '#16141e', fg: NEONC[+ci % NEONC.length], lit: true, z: 22, posts: true }); }
+  if (kitBase(k) === 'tree') { const a = k.split('|'); return GD.roofTree(a[1], a[2], +a[3]); }
   return voxSprite(kitModel(kitBase(k)), k.endsWith('@') ? PI / 2 : 0);
-});
+}));
 // Lay out a roof's kit: pieces stay clear of each other, of the parapets (margin m) and of `avoid` rects; rows of
 // units get a walkway of pads along their south side (painted on the deck)
 function layout(w, d, rnd, m, avoid = []) {
@@ -576,7 +583,7 @@ function layout(w, d, rnd, m, avoid = []) {
   const fits = (x, y, kw, kd, g = 5, mm = m) => x >= mm && y >= mm && x + kw <= w - mm && y + kd <= d - mm && !occ.some(([ox, oy, ow, od]) => x < ox + ow + g && x + kw + g > ox && y < oy + od + g && y + kd + g > oy);
   const add = (k, x, y, kw, kd, rot) => { occ.push([x, y, kw, kd]); out.push([rot ? k + '@' : k, Math.round(x + kw / 2), Math.round(y + kd / 2)]); };
   const L = {
-    out, pads,
+    out, pads, fits, add,
     free(k, n, north = false, rotP = 0) {                 // anywhere (north: the back 55% of the roof)
       for (let t = 0, got = 0; t < n * 14 && got < n; t++) {
         const rot = rnd() < rotP, [kw, kd] = dims(k, rot), sx = w - 2 * m - kw, sy = north ? (d - 2 * m) * 0.55 - kd : d - 2 * m - kd;
@@ -638,9 +645,8 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null) {
   if (w < 64 || d < 56) return { kit: [], pads: [] };
   const area = w * d - (avoid ? avoid[2] * avoid[3] : 0), n = clamp(Math.round(area / 15000), 1, 6), r = rnd, big = area > 40000, rough = tier === 'rough';
   const L = layout(w, d, r, (spec.rimW || 4) + 6, avoid ? [avoid] : []);
-  // (spec.garden - World v3's handcrafted districts: a roof garden - planters along the parapets, a table under an
-  // umbrella, a lounger, festoon lights; laid first so the rest keeps clear of it)
-  if (spec.garden) { L.edge('plant', 3 + (r() * 3 | 0)); L.free('umb', 1); L.free('table', 1 + (r() < 0.5 ? 1 : 0)); if (r() < 0.6) L.free('string', 1, false, 0.5); if (r() < 0.4) L.free('lounge', 1, false, 0.5); if (r() < 0.4) L.free('palm', 1); }
+  // (a roof garden - spec.garden, World v3's handcrafted districts, or a 'green' roof: its beds and furniture go round
+  // the roof's own kit, laid after it: gardenKit)
   switch (A) {
     case 'glass': case 'office': case 'hotel': case 'terminal':
       if (area > 70000 && A !== 'hotel' && r() < 0.3) L.free('heli', 1);
@@ -697,7 +703,149 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null) {
       if (big && r() < 0.5) L.row('hvac', 1); L.row('ac', n, r() < 0.3); L.free('acs', n >> 1); L.free('vent', 1 + (n >> 1)); if (r() < 0.3) L.free('sky', 1);
       if (r() < 0.15) L.grid('solar', 2 + (r() * 3 | 0), 2); if (A === 'mixed' && r() < 0.2) L.free('tank', 1, true); L.free('hatch', 1); if (r() < 0.2) L.edge('plant', 2);
   }
+  if (spec.garden || spec.roofMat === 'green') gardenKit(L, A, w, d, spec);
   return { kit: L.out, pads: L.pads };
+}
+// A roof garden (the owner, 2026-10-17: "rooftop gardens would be in raised garden beds with things growing in them or
+// pretty flowers or bushes or small trees and clearly a rooftop garden instead of what kind of looks like a random patch
+// of grass growing in the wrong place"): raised beds (props-garden.js roofBed) round what already stands on the roof -
+// its service kit and their walkway pads keep their places, nothing is planted over them - in one of a few plans: beds
+// along the parapets round a terrace, rows of beds like an allotment, beds framing a court, a grid of square beds; the
+// deck between them is the walkways (buildings.js: a 'green' roof's deck is the garden's paving with a gravel strip
+// along the parapets). What grows varies bed by bed with the garden's theme (flowers, a kitchen garden, a formal one, a
+// mix); then the furniture where there's room: a table under an umbrella or a pergola, a bench, small trees in big
+// planters, a shed, a water butt and a compost bin by the vegetables, festoon lights or lanterns. Scaled to the roof
+// (a small one: a few beds and a bench), seeded by the building - never Math.random - so it comes out the same.
+const G_BOX = { brick: ['brick', 'timber', 'corten', 'sleeper', 'grey'], stone: ['stone', 'timber', 'concrete', 'sage'], glass: ['concrete', 'corten', 'char', 'timber'], concrete: ['concrete', 'char', 'corten', 'timber'] };
+const G_BOXES = ['timber', 'grey', 'sage', 'sleeper', 'corten', 'concrete', 'char', 'brick'];
+const G_THEME = {
+  flower: [['fl', 6], ['shrub', 2], ['lav', 1.5], ['grass', 1.2], ['ball', 0.7], ['box', 0.4]],
+  kitchen: [['veg', 6], ['tall', 2.5], ['herb', 2], ['straw', 1.2], ['sun', 0.6], ['fl', 1]],
+  formal: [['box', 2.4], ['ball', 2.4], ['lav', 2], ['fl', 1.6], ['shrub', 0.8]],
+  mixed: [['fl', 3.5], ['veg', 2], ['herb', 1.6], ['shrub', 1.6], ['lav', 1], ['grass', 1], ['tall', 0.8], ['straw', 0.5]],
+};
+const G_TREES = ['olive', 'maple', 'bamboo', 'bay', 'birch'];
+const wpk = (list, u) => { let t = list.reduce((a, q) => a + q[1], 0) * u; for (const q of list) if ((t -= q[1]) < 0) return q[0]; return list[list.length - 1][0]; };
+function gardenKit(L, A, w, d, spec) {
+  const r = rndOf(spec.seed | 0, 4243), mm = (spec.rimW || 4) + 2;
+  if (w - 2 * mm < 44 || d - 2 * mm < 36) return;
+  // (a huge roof's garden is a terrace on the front part of it, spec.gzone: buildings.js paves that and leaves the rest
+  // of the roof membrane round its plant)
+  let x0 = mm, y0 = mm, x1 = w - mm, y1 = d - mm;
+  if ((x1 - x0) * (y1 - y0) > 200000) {
+    const zw = Math.max(380, Math.round((x1 - x0) * (0.55 + r() * 0.15))), zh = Math.max(300, Math.round((y1 - y0) * (0.55 + r() * 0.15)));
+    if (x1 - x0 > zw) { x0 = Math.round(x0 + r() * (x1 - x0 - zw)); x1 = x0 + zw; }
+    if (y1 - y0 > zh) y0 = y1 - zh;
+    spec.gzone = [x0 - 10, y0 - 10, x1 + 10, y1 + 10];
+  }
+  const iw = x1 - x0, ih = y1 - y0, area = iw * ih, small = area < 22000 || iw < 96 || ih < 80, big = area > 70000, sc = clamp(Math.sqrt(area) / 240, 1, 1.5);
+  const home = A === 'hotel' || A === 'condo' || A === 'beachblock' || A === 'villa', civic = A === 'glass' || A === 'office' || A === 'terminal' || A === 'bank' || A === 'court' || A === 'cityhall' || A === 'civicblock' || A === 'theatre';
+  const theme = pick(home ? ['flower', 'formal', 'mixed', 'flower'] : civic ? ['formal', 'flower', 'mixed'] : ['mixed', 'kitchen', 'flower', 'mixed', 'kitchen', 'formal'], r());
+  const boxes = G_BOX[spec.style] || G_BOXES, box = pick(boxes, r()), bh = (theme === 'kitchen' ? 12 : 8) + 2 * Math.floor(r() * 2), even = (v) => Math.round(v / 2) * 2;
+  const bd = even((16 + 2 * Math.floor(r() * 4)) * sc), path = even((14 + 2 * Math.floor(r() * 3)) * sc), maxL = even((56 + 8 * Math.floor(r() * 6)) * sc);
+  const pal = [Math.floor(r() * 6), Math.floor(r() * 6)];
+  let last = null, nBeds = 0, kitchen = false;
+  const plantOf = (len, north, vert) => {
+    let p = null;
+    for (let k = 0; k < 4 && (!p || p === last); k++) p = wpk(G_THEME[theme], r());
+    if (len < 28 && (p === 'veg' || p === 'tall' || p === 'sun')) p = theme === 'kitchen' ? 'herb' : 'shrub';     // (a short bed: something that fills it)
+    if ((p === 'sun' || p === 'tall') && (vert || (!north && r() < 0.6))) p = theme === 'kitchen' ? 'veg' : 'grass';   // (the tall ones at the back, in rows across the view)
+    last = p; if (p === 'veg' || p === 'tall' || p === 'herb' || p === 'straw') kitchen = true;
+    return p === 'fl' ? 'fl' + pal[r() < 0.7 ? 0 : 1] : p;
+  };
+  const bed = (x, y, bw, bdd, north) => { if (nBeds >= 40) return; L.add(`bed|${bw}|${bdd}|${bh}|${box}|${plantOf(Math.max(bw, bdd), north, bdd > bw)}|${Math.floor(r() * 8)}`, x, y, bw, bdd, false); nBeds++; };
+  // a run of beds from (x, y), len long along x (hz) or y, dep deep: split round whatever stands in its way, and into
+  // beds of up to maxL with a gap to step through between them
+  const run = (x, y, len, dep, hz, north = false) => {
+    x = Math.round(x); y = Math.round(y); len = Math.floor(len / 2) * 2;
+    if (len < 20 || dep < 12) return;
+    const st = 4, n = Math.floor(len / st), ok = [];
+    for (let i = 0; i < n; i++) ok.push(hz ? L.fits(x + i * st, y, st, dep, 3, mm) : L.fits(x, y + i * st, dep, st, 3, mm));
+    for (let i = 0; i < n;) {
+      if (!ok[i]) { i++; continue; }
+      let j = i; while (j < n && ok[j]) j++;
+      const a0 = i * st, span = (j - i) * st;
+      if (span >= 20) {
+        const k = Math.max(1, Math.ceil((span + 6) / (maxL + 6))), bl = Math.floor((span - (k - 1) * 6) / k / 2) * 2;
+        for (let q = 0; q < k; q++) { const a = a0 + q * (bl + 6); if (hz) bed(x + a, y, bl, dep, north); else bed(x, y + a, dep, bl, north); }
+      }
+      i = j;
+    }
+  };
+  // a free spot in the garden for something kw x kd (south: its front half first), or null
+  const spot = (kw, kd, south = false, g = 4) => {
+    for (let t = 0; t < 40 && iw >= kw && ih >= kd; t++) {
+      const x = Math.round(x0 + r() * (iw - kw)), y = Math.round(south && t < 26 ? y0 + ih * 0.35 + r() * (ih * 0.65 - kd) : y0 + r() * (ih - kd));
+      if (L.fits(x, y, kw, kd, g, mm)) return [x, y];
+    }
+    return null;
+  };
+  const put = (k, kw, kd, south, g) => { const p = spot(kw, kd, south, g); if (p) L.add(k, p[0], p[1], kw, kd, false); return p; };
+  const tree = (x, y) => { if (L.fits(x, y, 24, 24, 3, mm)) { L.add(`tree|${pick(G_TREES, r())}|${box === 'brick' || box === 'stone' ? box : pick(['concrete', 'corten', box], r())}|${Math.floor(r() * 6)}`, x, y, 24, 24, false); return true; } return false; };
+  // island beds over a rect with paths round them (now and then a tree among them)
+  const islands = (ax0, ay0, ax1, ay1) => {
+    const bw = even(Math.min(maxL, (40 + r() * 40) * sc)), bdd = bd + 2 * Math.floor(r() * 4), nx = Math.floor((ax1 - ax0 + path) / (bw + path)), ny = Math.floor((ay1 - ay0 + path) / (bdd + path));
+    if (nx < 1 || ny < 1) return;
+    const gx = Math.round(ax0 + (ax1 - ax0 - (nx * bw + (nx - 1) * path)) / 2), gy = Math.round(ay0 + (ay1 - ay0 - (ny * bdd + (ny - 1) * path)) / 2);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const u = r(), x = gx + i * (bw + path), y = gy + j * (bdd + path);
+      if (u < 0.1 && bdd >= 24) tree(x + (bw >> 1) - 12, y); else if (u < 0.88) run(x, y, bw, bdd, true, j === 0);
+    }
+  };
+  // small trees in big planters first, in the corners (the beds then run between them)
+  const nt = small ? (r() < 0.45 ? 1 : 0) : 1 + (r() < 0.55 ? 1 : 0) + (big && r() < 0.5 ? 1 : 0);
+  const cs = [[x0 + 4, y0], [x1 - 28, y0], [x0 + 4, y1 - 24], [x1 - 28, y1 - 24]];   // (a little in: a crown spreads past its planter)
+  for (let i = 0, k = Math.floor(r() * 4), got = 0; i < 4 && got < nt; i++) if (tree(...cs[(k + i * (r() < 0.5 ? 1 : 3)) % 4])) got++;
+  // the beds, by the plan
+  const plan = small ? 'edge' : wpk([['edge', 3], ['rows', theme === 'kitchen' ? 4 : 1.2], ['court', 2], ['grid', 1.8]], r()), seatH = small ? 0 : even(44 * sc);
+  if (plan === 'edge') {
+    run(x0, y0, iw, bd, true, true);                                                                   // along the north parapet
+    const sideL = ih - bd - 6 - (r() < 0.6 ? seatH : 0), south = !small && r() < 0.4;
+    if (r() < 0.85) run(x0, y0 + bd + 6, sideL, bd, false);                                            // the west
+    if (r() < 0.85) run(x1 - bd, y0 + bd + 6, sideL * (0.5 + r() * 0.5), bd, false);                    // the east
+    if (south) run(x0 + bd + 10, y1 - bd, iw - 2 * bd - 20, bd, true);                                 // behind the south parapet: its plants over it
+    // the middle: island beds where there's room for them and a path round them, else now and then one
+    const ix0 = x0 + bd + path, ix1 = x1 - bd - path, iy0 = y0 + bd + path, iy1 = y1 - (south ? bd : 0) - path - seatH;
+    if (ix1 - ix0 >= 60 && iy1 - iy0 >= bd + 10) islands(ix0, iy0, ix1, iy1);
+    else if (!small && r() < 0.5) run(x0 + iw * 0.3, y0 + ih * 0.42, iw * 0.4, bd, true);
+  } else if (plan === 'rows') {
+    const split = iw > 170, ns = ih > iw * 1.6 && r() < 0.6;
+    if (ns) { for (let x = x0; x + bd <= x1; x += bd + path) run(x, y0, ih - seatH, bd, false, true); }
+    else for (let y = y0, j = 0; y + bd <= y1 - seatH; y += bd + path, j++) {
+      if (split) { run(x0, y, iw / 2 - path / 2, bd, true, j === 0); run(x0 + iw / 2 + path / 2, y, iw / 2 - path / 2, bd, true, j === 0); }
+      else run(x0, y, iw, bd, true, j === 0);
+    }
+  } else if (plan === 'court') {
+    run(x0, y0, iw, bd, true, true);
+    const cw = Math.min(iw, ih - bd - 12) * (0.62 + r() * 0.2), qx = Math.round(x0 + (iw - cw) / 2), qy = Math.round(y0 + bd + 12 + (ih - bd - 12 - cw) / 2), half = cw / 2 - 8;
+    run(qx, qy, half, bd, true); run(qx + cw / 2 + 8, qy, half, bd, true);
+    run(qx, qy + cw - bd, half, bd, true); run(qx + cw / 2 + 8, qy + cw - bd, half, bd, true);
+    run(qx, qy + bd + 6, cw - 2 * bd - 12, bd, false); run(qx + cw - bd, qy + bd + 6, cw - 2 * bd - 12, bd, false);
+    if (!tree(Math.round(qx + cw / 2 - 12), Math.round(qy + cw / 2 - 12))) { const p = put('umb', 30, 30); if (p) L.out.push(['table', p[0] + 15, p[1] + 15]); }   // the middle: a tree, or a table
+    if (qx - x0 >= bd + path) { run(x0, y0 + bd + 6, ih - bd - 6 - seatH, bd, false); run(x1 - bd, y0 + bd + 6, ih - bd - 6 - seatH, bd, false); }   // (room either side: beds along them)
+  } else {
+    const sz = bd + even((10 + 2 * Math.floor(r() * 4)) * sc), nx = Math.max(1, Math.floor((iw + path) / (sz + path))), ny = Math.max(1, Math.floor((ih - seatH + path) / (sz + path)));
+    const gx = Math.round(x0 + (iw - (nx * sz + (nx - 1) * path)) / 2);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) run(gx + i * (sz + path), y0 + j * (sz + path), sz, sz, true, j === 0);
+  }
+  // somewhere to sit (a big garden: two places): a pergola over a table, or a table under an umbrella; a bench; loungers
+  // on a hotel's or a condo's
+  let seat = null;
+  for (let k = 0, n = big && area > 110000 ? 2 : 1; k < n; k++) {
+    let p = null;
+    if (!small && big && r() < 0.35) { p = put('perg', 44, 34, true); if (p) L.out.push(['table', p[0] + 22, p[1] + 17]); }
+    if (!p && r() < 0.8) { p = put('umb', 30, 30, true); if (p) L.out.push(['table', p[0] + 15, p[1] + 15]); }
+    seat = seat || p;
+  }
+  if (r() < (seat ? 0.45 : 0.9)) put('bench', 32, 10, false);
+  if (home && r() < 0.6) put('lounge', 34, 14, true);
+  // a kitchen garden's shed, water butt and compost bin
+  if (kitchen && !small && r() < 0.6) put('shed', 30, 24, false);
+  if (kitchen && r() < 0.7) put('butt', 12, 12, false, 2);
+  if (kitchen && !small && r() < 0.45) put('comp', 18, 16, false);
+  // after dark: festoon lights over the seats, or lanterns along the beds
+  if (seat && r() < 0.55) put('string', 60, 4, true, 2);
+  else if (nBeds > 2 && r() < 0.5) for (let i = 0, n = 2 + Math.floor(r() * 2); i < n; i++) put('lant', 6, 6, false, 2);
 }
 // the roof deck's material, parapet height and thickness by archetype (spec.roofMat, lip, rimW)
 function roofOf(A, D, rnd, spec) {
@@ -705,19 +853,25 @@ function roofOf(A, D, rnd, spec) {
   const r = rnd(), rough = D.tier === 'rough';
   let m, lip = 8, rw = 4;
   switch (A) {
-    case 'glass': case 'office': case 'terminal': case 'hotel': m = r < 0.5 ? 'gravel' : r < 0.85 ? 'membrane' : 'green'; lip = 10; rw = 5; break;
+    case 'glass': case 'office': case 'terminal': case 'hotel': m = r < 0.5 ? 'gravel' : r < 0.85 ? 'membrane' : A !== 'hotel' && r < 0.93 ? 'sedum' : 'green'; lip = 10; rw = 5; break;
     case 'condo': case 'beachblock': m = r < 0.4 ? 'paver' : r < 0.6 ? 'deck' : r < 0.75 ? 'green' : 'membrane'; lip = 10; break;
     case 'walkup': case 'rough': m = rough || A === 'rough' ? (r < 0.5 ? 'rubber' : 'tar') : r < 0.7 ? 'tar' : 'gravel'; lip = 10 + (rnd() * 4 | 0); break;
     case 'oldrow': case 'townhouse': m = r < 0.6 ? 'tar' : 'gravel'; lip = 10; break;
     case 'warehouse': case 'factory': case 'shed': case 'hangar': case 'pits': case 'grandstand': m = spec.style === 'corrugated' || r < 0.5 ? 'metal' : 'membrane'; lip = 3; rw = 3; break;
     case 'garage': case 'yardoffice': case 'den': case 'block': case 'hut': case 'siteoffice': case 'poolhouse': case 'shack': m = r < 0.5 ? 'tar' : 'gravel'; lip = 5; rw = 3; break;
     case 'hospital': case 'school': case 'police': case 'fire': m = r < 0.6 ? 'membrane' : 'gravel'; lip = 8; rw = 5; break;
-    case 'bank': case 'court': case 'cityhall': case 'civicblock': case 'theatre': m = r < 0.6 ? 'gravel' : r < 0.8 ? 'membrane' : 'green'; lip = 10; rw = 5; break;
+    case 'bank': case 'court': case 'cityhall': case 'civicblock': case 'theatre': m = r < 0.6 ? 'gravel' : r < 0.8 ? 'membrane' : r < 0.9 ? 'sedum' : 'green'; lip = 10; rw = 5; break;
     case 'nightrow': case 'club': case 'arcade': case 'tattoo': m = r < 0.6 ? 'tar' : 'rubber'; break;
     default: m = r < 0.4 ? 'gravel' : r < 0.8 ? 'tar' : 'membrane';
   }
   if (rough && m === 'tar') m = 'rubber';
   Object.assign(spec, { roofMat: m, lip, rimW: rw });
+}
+// a roof garden's deck: the garden's paving ('green': buildings.js roofDeck), on a garden the plan put on tar, rubber or
+// membrane too; a 'green' roof too small for a garden, or one whose kit is set (bare: no garden laid on it), is sedum
+function gardenRoof(spec, w, d, bare = false) {
+  if (spec.roofMat === 'green' && (bare || w < 64 || d < 56)) spec.roofMat = 'sedum';
+  else if (spec.garden && (spec.roofMat === 'tar' || spec.roofMat === 'rubber' || spec.roofMat === 'membrane' || spec.roofMat === 'gravel')) spec.roofMat = 'green';
 }
 // a setback: a smaller volume standing on the roof (offices step back, walk-ups have a taller rear, condos a
 // penthouse), with windows on every floor and its own roof
@@ -734,7 +888,7 @@ function upperOf(A, D, rnd, spec, w, d) {
   const fl = tall ? 1 + Math.floor(rnd() * (D.style === 'towers' ? 5 : 3)) : 1 + (rnd() < 0.3 ? 1 : 0);
   const us = { w: uw, d: ud, seed: spec.seed + 17, glowOnly: true, night: NIGHT, floors: fl + 1, groundH: 0, blank: true, style: spec.style, wallColor: spec.wallColor, parapet: 4,
     balconies: !!spec.balconies && rnd() < 0.5, shutters: spec.shutters || null, roof: 'flat' };
-  roofOf(A, D, rnd, us);
+  roofOf(A, D, rnd, us); gardenRoof(us, uw, ud);
   return { spec: us, x: inW, y: inN };
 }
 const winXs = (w, avoid = [], gap = 36, m = 10) => { const out = []; for (let x = m; x + 16 <= w - m; x += gap) if (!avoid.some(([a, b]) => x + 16 > a - 5 && x < b + 5)) out.push(x); return out; };
@@ -1114,6 +1268,7 @@ function specOf(c, b, A, s, D) {
   let up = null;
   if (!pitched && !s.frame && !s.vox) {
     roofOf(A, D, rnd, spec);
+    gardenRoof(spec, w, d, !!(ART && ART.kit) || !!b.lookW);
     up = ART || b.look ? null : upperOf(A, D, rnd, spec, w, d);
     const K = ART && ART.kit ? { kit: ART.kit.filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null);   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
@@ -1122,7 +1277,9 @@ function specOf(c, b, A, s, D) {
     const zD = roofDeckZ(spec), kl = (list, ox, oy, z) => { for (const [k, rx, ry] of list) { const b = kitBase(k), X = ox + rx, Y = oy + ry - d;
       if (b === 'string') lights.push([X, Y, z + 26, 110, [1, 0.76, 0.42], 1.1, 'lamp']);
       else if (b === 'neon') lights.push([X, Y + 6, z + 40, 160, NEONC[+k.split('|')[2] % NEONC.length].map((q) => q / 255), 1.4, 'neon']);
-      else if (b === 'skyL') lights.push([X, Y, z + 8, 56, [1, 0.84, 0.6], 0.45, 'window']); } };
+      else if (b === 'skyL') lights.push([X, Y, z + 8, 56, [1, 0.84, 0.6], 0.45, 'window']);
+      else if (b === 'perg') lights.push([X, Y, z + 26, 96, [1, 0.76, 0.42], 1, 'lamp']);
+      else if (b === 'lant') lights.push([X, Y, z + 13, 44, [1, 0.78, 0.48], 0.7, 'lamp']); } };
     kl(kit, 0, 0, zD);
     if (up) kl(up.kit, up.x, up.y, zD + roofDeckZ(up.spec));
   }
