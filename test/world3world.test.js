@@ -36,7 +36,8 @@ test('World v3: the whole world in one build - every city district on its island
   for (const p of m.pois) count(tileOf(p.x, p.y), 'pois');
   for (const c of CITY3) {
     const r = per.get(c.d), D = DISTRICTS[c.d], open = D.style === 'park' || D.style === 'airport';
-    assert.ok(r.land > 20000 && r.edges >= 10 && r.pois >= 1, `${D.name}: ${JSON.stringify(r)}`);
+    // (a park's streets are the avenues round it - Greenfield Park, Downtown's circus: its four sides - none inside)
+    assert.ok(r.land > 20000 && r.edges >= (open ? 4 : 10) && r.pois >= 1, `${D.name}: ${JSON.stringify(r)}`);
     assert.ok(open || r.buildings >= 50, `${D.name}: ${r.buildings} buildings`);
   }
   // every island (ISLANDS3) land as traced (its outline sampled; the smallest rocks lose a little to the smoothing);

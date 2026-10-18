@@ -10400,3 +10400,36 @@ building, ends up inside one or is stuck against one, and the driving mode it wa
   to a siren for 12 s stays along the road, a wheel up the kerb at most; a queue behind a street blocked across both
   lanes (two vans), a box truck and a garbage truck in it, along a shop front: nobody in a building, nobody against one
   for more than 2 s, and they wait their turn.
+
+## 2026-10-17 · World v3, handcrafted: Downtown round Greenfield Park (the circus, the bank plaza, the police headquarters)
+The owner's Downtown concepts of the day (WC353/354 the bank plaza between two glass towers, WC355 the park with its
+grand axis and the domed tower's plaza, WC356 the circus) laid out by hand (shared/world3-downtown.js, the fourth plan).
+Downtown was the block filler's grid of look-alike towers named after their lot kinds ("Vellori", "Hotel", "First City
+Bank" over and over); now, in its four bands round the park:
+- **Greenfield Park, a circus:** the pond in the middle, a ring walk round it under two rings of trees (plane trees
+  outside, cherries and magnolias inside), the four gates' walks in on the axes, a fountain plaza in each corner,
+  benches and lamps round the ring, a pavilion on the pond's north shore, telescopes on its west terrace, willows by the
+  water, and on the south axis the statue and a long pool with its jets down to the south gate.
+- **North of the park:** Greenfield Tower (stone, 18 floors) behind its plaza on the park's axis - two fountains, the
+  flags' lamps, the benches - between The Meridian, Corvo House, Halden Tower and Solano House; on 6th Street Crosstown
+  Center, Pinnacle House, Larkspur Tower and the Brightwater Building either side of the Greenfield Park subway stop's
+  food-truck plaza; at the west end the Silk & Shears Salon's row (Cask & Cork, Gilt & Grain, Fernwood Florist) and the
+  boutiques (Vellori's flagship, Aurum Watches, Petit Four), the Westside Tower and the Halcyon Building.
+- **West of the park:** blocks built back to back - a tower on the street to the south, a lower building turned to the
+  street to the north, a service yard between: Westgate Residences, Park West Tower, Fountain Court, the Greenfield
+  Medical Building; the Westside car park; Greenfield Pitch (the soccer mini-game's pitch, moved out of the park into a
+  chain-link cage with its stand and floodlights); the Downtown subway stop's square and its plane trees.
+- **East of the park:** the Grand Neon Hotel and its drive round a fountain to 23rd Street (WC356), Park East Tower and
+  Concord House beside it; Kestrel Tower and the Ellison Building round a fountain court.
+- **South of the park:** Fountain Square on the park's axis (the long pool and its fountains, palms, beds), The Grand
+  Theatre beside it, the Opera Bar, Cafe Fontaine's tables; the bank plaza (WC353/354) - Union Trust Tower (its
+  helipad) and Sterling Tower with Sterling Plaza's pool and three jets between them, First Pixel Bank in front with its
+  cash-van bay behind the gates (two armoured vans) and Brilliant & Co. on the corner; the police headquarters (WC356,
+  SC2-C): Metro City PD - HQ on Bayside Avenue, its motor pool beside it, the City Impound behind; the Ledger Building,
+  Fairmont Tower, the Bayside Arcade; offices, the Civic car park and the Grand Neon Residences toward Harborview Avenue.
+- **The streets:** the plan keeps the grid's avenues round the park and lays its own between (6th Street, Maple Street,
+  22nd and 23rd Streets, 12th Street, Park East, Civic and Walnut south of Fountain Avenue); fewer cross streets than the
+  grid had, for bigger blocks. A plan can be several rects now (shared/world3-hand.js `rects`): Downtown's bands and the
+  park between them.
+- **The headquarters by hand:** a hand plan's police station is a precinct unless it says it's the headquarters
+  (`poi.hq`): the police spawn and the helicopter's pad are at Metro City PD - HQ, as before.
