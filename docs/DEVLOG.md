@@ -10825,3 +10825,71 @@ Street (its pitch and the Stadium Lido) stays the generator's: the plan is three
   Kick Laundry and Bleachers Liquor, then walk-ups.
 - What's left is paved, with a tree here and there; the grass by the water stays.
 - `test/world3city.test.js` counts the plan's streets for the district, as for the other plans.
+
+## 2026-10-18 · Skateboarding, parts 2 and 3: bike speed kick by kick, the tricks, combos and skate sessions
+
+The owner, 07:01: "make skateboards go about as fast as bicycles... we want them to be cool", the push "like it really
+looks like you're kicking a skateboard, it goes a little faster at the very start of the kick and very subtly slows
+down (not much at all) before starting the next kick", and "the skateboard moves (part 2 and part 3)".
+- **Speed:** a push now tops out at a commuter bike's 330 px/s (380 pushing hard, short of the road bike's 430).
+- **The kick** (`shared/board.js` KICK): a push is a run of kicks, one every 0.8 s. The back foot comes off the deck,
+  plants, shoves hardest at the plant and less as the leg goes back, and comes back onto the tail. The speed peaks just
+  over your cruising speed after the shove and eases off a touch till the next kick. Let go mid-kick and the kick
+  finishes first. The kick has eight frames now (`client/art2/people.js` skate: the foot reaching, planting, driving
+  back, the toe-off, swinging forward, back on the tail, the body sinking into it and the arms swinging), played on the
+  kick's own phase: yours from the prediction, anyone else's from when they started pushing.
+- **The tricks** (`shared/skate.js`; the page predicts them with the same code):
+  - **Flips:** the trick button (click / RT / TRICK). Ahead a kickflip, left a pop shove-it, right a 360 flip; pulled
+    back in the air a heelflip. Each has to come round before you land, or you bail.
+  - **Grabs:** in a big air (off a kicker or up a quarter pipe), hold the trick button: indy, melon, method or
+    nosegrab by the stick. Let go before you land.
+  - **Grinds and slides:** come down out of an air onto a kerb, a ledge, a bench, a flat bar, a planter's edge or a
+    quarter pipe's coping along it, and the board snaps on (50-50, 5-0, boardslide, crooked grind by the stick). The
+    balance tips; the stick across the rail holds it (the bar at your feet: push away from the dot). Kerbs run on from
+    run to run. Off the end you drop; too slow and you drop; the dive button pops you off, the trick button flips you
+    off. Lose the balance and you fall.
+  - **Manuals:** the trick button with the stick pulled back: on the back wheels, the stick along the deck holding
+    the balance; it links tricks into one combo.
+  - **The ramps** (the skate spots' obstacles): a kicker launches you up and on; a quarter pipe takes you straight up,
+    you hang, turn and come back down the way you came; off the pyramid's banks at speed, a little air. While you're
+    high enough you clear benches and bins.
+  - **The poses:** the flips with the deck turning over under tucked feet (12 frames for the kickflip and heelflip,
+    6 for the shove-it and the 360 flip), four grabs, four grinds, the manual. Everyone sees them (the trick rides
+    the ped's extra byte).
+- **The score** (`server/systems/skate.js`, `shared/rules.js` SKATE_SCORE):
+  - A combo is every trick from an air or a manual to the next, banked once you roll on 0.6 s: its points times its
+    tricks. A trick done again in the same combo is worth half. Grinds, grabs and manuals earn by the second too.
+  - What you bank fills the special meter. Full, your tricks are their specials (a Darkslide, a Christ Air, a 360
+    Shove-It...) worth three times, for 25 s or till you bail.
+  - Gaps: a kicker gap, a pyramid hop, a vert air, and a street gap (an air from a pavement over a road to the
+    pavement across).
+  - A bail loses the combo and the special. Your best combo is kept.
+  - On the screen: the combo going (its tricks, its points x how many), what you banked, your score and best, the
+    special meter (`client/skate.js`).
+- **Skate sessions:** on your board at a skate spot (The Trestle Spot, Overpass Skate Park), the action button starts
+  a session and leaves you on the board. It lasts two minutes, with four goals that pay $40 each (a 3,000-point combo,
+  a five-trick combo, a gap, 15,000 points). The spot keeps its best score, and so do you.
+- **Out of the page's first load:** the board's step moved from `shared/physics.js` to `shared/board.js`, and it
+  registers itself with physics (setBoard). The server loads it with skate.js; the page loads it with
+  `client/skate.js` (the tricks, the riders' looks, the HUD) the first time you have a board or see someone ride one.
+  Until it's in, a rider in the page's prediction rolls on as they were.
+- **The wire:** the snapshot's self record carries the board's state: the kick's phase, the rail, the mode and the
+  balance in the ped slots a rider leaves free, plus seven floats of its own (`boardOut` / `boardIn`). The 'ollie'
+  event says how long and how high an air is, for the other pages.
+- **Touch:** on a board FIRE reads TRICK. **Controls:** `shared/controls.js` (`trick`), the README table.
+- **Tests** (`test/skate.test.js`):
+  - the kick cycle: a surge after each plant, the easing off between kicks, the speed at a bike's;
+  - a kerb grind, balanced and not, along its runs; off a ledge's end;
+  - each flip, and a flip landed too late;
+  - a manual held and popped out of;
+  - a kicker's big air with a grab;
+  - a quarter pipe up and back;
+  - the server's combo, the halving, the bank, the special meter, the best, a bail;
+  - a street gap's road count;
+  - a session at a skate spot, its goals and records;
+  - the poses' frames;
+  - the board's state through a snapshot.
+- **Budgets:** the page stays at 485 KB because the board's code left it. The renderer goes 363 → 365 KB for the
+  kick's frames and the tricks' poses (364).
+- `tools/playtest.py`: the Play click waits as long as the city load does. On a slow machine, the click's own work ran
+  past Playwright's 30 s.

@@ -127,7 +127,7 @@ def main():
                 pg.click('#practice')
             else:
                 pg.wait_for_function('!document.getElementById("play").disabled', timeout=a.timeout * 1000)
-                pg.click('#play')
+                pg.click('#play', timeout=a.timeout * 1000)   # (a slow machine: the click's own work can run past 30 s)
             pg.wait_for_function('window.__S && __S.playing && __S.welcomed && __S.me && __S.ents.size > 0', timeout=a.timeout * 1000)
         except Exception as e:
             print('could not get into the city:', str(e)[:300])

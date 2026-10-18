@@ -433,6 +433,13 @@ export const ATM_DEPOSIT_PX = 48;          // walk up this close to an ATM with 
 // a fall - hurts this much at bailHit speed and up to the most at full speed, and you're down this long
 export { SKATEBOARD_PRICE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
+// Skateboarding's score (server/systems/skate.js): a combo banked after comboGap s rolling on is its points x its tricks
+// (a trick again in the same combo: half); perS - a grind, grab, manual by the second; the special meter full at
+// specialPts: specialS s of tricks worth specialMul, till you bail; the gaps' points (shared/skate.js)
+export const SKATE_SCORE = { comboGap: 0.6, specialPts: 2500, specialMul: 3, specialS: 25, perS: { grind: 120, grab: 150, manual: 100 },
+  gaps: { kicker: 250, pyramid: 150, vert: 200, street: 300, streetPer: 100 }, kickerTiles: 5, streetRoads: 3 };
+// a session at a skate spot: s seconds, each goal pays goalPay
+export const SKATE_SESSION = { s: 120, goalPay: 40, goals: [['bank', 3000, 'Bank a 3,000-point combo'], ['tricks', 5, 'Land a 5-trick combo'], ['gap', 1, 'Hit a gap'], ['score', 15000, 'Score 15,000']] };
 export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
 
 // Lost pets

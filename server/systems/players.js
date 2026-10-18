@@ -389,6 +389,7 @@ export function processInputs(world, dt) {
     const n = p.inputQ.length > 3 ? 2 : 1;
     const ped = p.ped;
     if (ped && ped.board) skate.guard(world, p, ped);   // (off the board when you can't ride: knocked down, in a car, inside...)
+    if (p.skSession) skate.sessionTick(world, p);   // (a session at a skate spot runs out on or off the board)
     const drivingV = ped && ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
     if (drivingV && !drivingV.wreckAt && !drivingV.scripted && !drivingV.onDeck) drivingV.ownStepTick = world.tick;
     for (let k = 0; k < n; k++) {
@@ -496,7 +497,10 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     else if (!vehicles.nearestVehicle(world, ped, 56) && skate.has(p)) skate.hopOn(world, p, ped);
     else vehicles.playerEnter(world, ped);   // (Safety mode asks first when it'd be a crime)
   }
-  if (pressed & IN.ACTION) { if (ped.board) skate.hopOff(world, ped); doAct(world, p); }   // (step off to do it)
+  if (pressed & IN.ACTION) {   // (step off to do it - but at a skate spot, the session there: on the board)
+    if (ped.board) { const it = findInteraction(world, p); if (!(it && it.keepBoard)) skate.hopOff(world, ped); }
+    doAct(world, p);
+  }
 }
 
 // The Act button: what findInteraction offers - one that's a crime (act.crime) waits for Safety mode's say-so (safety.js).
@@ -579,6 +583,8 @@ export function findInteraction(world, p) {
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
+  const sk = skate.interaction(world, p);   // on your board at a skate spot: a session there (skate.js)
+  if (sk) return sk;
 
   if (ped.fishing) {
     if (ped.fishing.biteAt && now >= ped.fishing.biteAt && now <= ped.fishing.biteAt + ped.fishing.window) return { label: 'REEL IN NOW!', run: () => jobs.reelIn(world, p) };
@@ -830,6 +836,7 @@ export function buildMe(world, p) {
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible, safety: safety.on(p),
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
+    sk: skate.meInfo(world, p),   // (on a skateboard: the score, the combo, the special meter, a session - skate.js)
     ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p), bowl: bowling.meInfo(world, p), cine: cinema.meInfo(world, p),
     arrows: ped && world.arrows && world.arrows.length ? world.arrows.filter((a) => a.owner === ped.id && Math.abs(a.x - ped.x) < 1600 && Math.abs(a.y - ped.y) < 1600).slice(-16).map((a) => [Math.round(a.x), Math.round(a.y), +a.a.toFixed(2)]) : null,
   };

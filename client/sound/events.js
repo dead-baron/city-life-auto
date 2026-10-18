@@ -113,6 +113,9 @@ export const EVENT_SOUNDS = {
   ollie: (ev, A) => A.at('clack', ev.x, ev.y, 0.7),
   land: (ev, A) => { A.at('clack', ev.x, ev.y, 0.55); A.at('thud', ev.x, ev.y, 0.3); },
   bail: (ev, A) => { A.at('scrape', ev.x, ev.y, 0.7); A.at('thud', ev.x, ev.y, 0.9); },
+  // the tricks (2026-10-18): onto a rail - the clack and the trucks' scrape (a metal rail rings: clank); a combo banked
+  skgrind: (ev, A) => { A.at('clack', ev.x, ev.y, 0.6); A.at(ev.q === 'rail' || ev.q === 'coping' ? 'clank' : 'scrape', ev.x, ev.y, 0.5); },
+  skbank: (ev, A) => A.at('cashtoss', ev.x, ev.y, 0.35),
   hood: (ev, A) => { A.at('thud', ev.x, ev.y, 1); A.at('bonk', ev.x, ev.y, 0.8); A.at('clank', ev.x, ev.y, 0.6); },   // a thud up onto the hood
   hoodoff: (ev, A) => A.at('bodyfall', ev.x, ev.y, 0.9),
   sinkboom: (ev, A) => { A.at('explosion', ev.x, ev.y, 0.5, { r: 60, wet: 1 }); A.at('splash', ev.x, ev.y, 1, { n: 40 }); },

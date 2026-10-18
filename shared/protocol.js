@@ -33,7 +33,9 @@ export function decodeInput(dv) {
 }
 
 // ---- Server -> client snapshot ---------------------------------------------
-export const SNAP_HEADER = 1 + 4 + 4 + 4 + 1 + 1 + 4 + 12 * 4 + 1 + 2 + 2;
+// (the self record: 12 floats, then a rider's board state - 7 more: shared/physics.js boardOut)
+export const SELF_K = 7;
+export const SNAP_HEADER = 1 + 4 + 4 + 4 + 1 + 1 + 4 + (12 + SELF_K) * 4 + 1 + 2 + 2;
 // entity: id, kind, flags, x, y, angle, hp, parent, extra, level height (a byte: LZ_SCALE a level - 0 the ground, 1 the
 // highway deck, 1.45 the El's platforms - World v3's main line over Midtown)
 export const SNAP_ENTITY = 4 + 1 + 2 + 4 + 4 + 2 + 1 + 4 + 1 + 1;
@@ -69,6 +71,7 @@ export class SnapshotWriter {
     dv.setFloat32(o, f.rdy || 0, true); o += 4;
     dv.setFloat32(o, f.speedMul || 1, true); o += 4;
     dv.setFloat32(o, f.lz || 0, true); o += 4;
+    for (let i = 0; i < SELF_K; i++) { dv.setFloat32(o, (f.k && f.k[i]) || 0, true); o += 4; }
     dv.setUint8(o, selfFlags); o += 1;
     dv.setUint16(o, prevBits & 0xffff, true); o += 2;
     this.countOffset = o;
@@ -116,6 +119,7 @@ export function decodeSnapshot(dv) {
   };
   const self = {};
   for (const k of ['x', 'y', 'a', 'vx', 'vy', 'av', 'stamina', 'rollT', 'rdx', 'rdy', 'speedMul', 'lz']) { self[k] = dv.getFloat32(o, true); o += 4; }
+  self.k = []; for (let i = 0; i < SELF_K; i++) { self.k.push(dv.getFloat32(o, true)); o += 4; }
   snap.self = self;
   snap.selfFlags = dv.getUint8(o); o += 1;
   snap.prevBits = dv.getUint16(o, true); o += 2;

@@ -1932,10 +1932,14 @@ function shift(p, dz) {
 // lean (back to a wall, a foot up on it)
 // props (app.carry): trolley (a senior's two-wheeled shopping trolley, pulled along), cart (a shopping cart with a blanket
 // in it, pushed), leads (three dog leads out in front, to where the dogs trot), guitar (a busker's), call (the phone at an ear)
-Object.assign(POSES, { hunch: 6, strut: 6, skate: 4, blade: 6, dance: 4, push: 6, lean: 2 });
+Object.assign(POSES, { hunch: 6, strut: 6, skate: 8, blade: 6, dance: 4, push: 6, lean: 2 });
 // a player on a skateboard (server skate.js, 2026-10-17): skatec rolling with both feet on the deck, side-on, knees soft;
-// skateair the ollie - the crouch to pop, up in the air knees tucked and arms out, the landing (lifted by the renderer)
-Object.assign(POSES, { skatec: 1, skateair: 3 });
+// skateair the ollie - the crouch to pop, up in the air knees tucked and arms out, the landing (lifted by the renderer).
+// The tricks (shared/skate.js TRICKS, 2026-10-18): skflip a kickflip (frames 0-5, the deck turning over under the feet)
+// and a heelflip (6-11, the other way); skshove a pop shove-it (the deck spinning round under them); sktre a 360 flip (both
+// at once); skgrab the grabs (0 indy, 1 melon, 2 method, 3 nosegrab); skgrind on a rail (0 50-50, 1 5-0, 2 boardslide, 3
+// crooked); skmanual on the back wheels (2 frames: the balance)
+Object.assign(POSES, { skatec: 1, skateair: 3, skflip: 12, skshove: 6, sktre: 6, skgrab: 4, skgrind: 4, skmanual: 2 });
 CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
 Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
 // people at their activities (server activities.js, task #423): easel (a street painter's, in front: the brush up to the
@@ -1948,6 +1952,13 @@ CARRY.push('fence', 'cueup');
 Object.assign(ACC_HANDS, { cueup: 1 });
 Object.assign(POSES, { cue: 4 });
 const MAT = (c, g = 0) => (Q) => { if (g) Q.gloss = g; return cloth(c); };
+// in the air over the board: knees tucked up (the feet `up` over the ankles' height), arms out; the deck drawn apart (P.deck)
+function skTuck(D, P, up, tw) {
+  P.acc = false; P.board = true; P.lean = 0.04; P.twist = tw; P.pelYaw = -0.5; P.headYaw = 0.45; P.headPitch = 0.1;
+  P.pel = [-1.2, 3.2, D.pelZ - 1.0];
+  P.fL = [-1.4, 7.6, D.ank + up]; P.fR = [-1.6, -1.2, D.ank + up - 0.4]; P.kneeL = [-0.3, 1, 1.1]; P.kneeR = [0.3, -0.2, 1.2];
+  P.hands = (S) => { P.hL = vadd(S.shL, [-9.6, 1.6, -2.0]); P.hR = vadd(S.shR, [9.4, -1.4, -1.6]); P.openL = P.openR = 1; };
+}
 const M365 = { metal: MAT('#a4a8b0', 0.5), rubber: MAT('#26262a'), blanket: MAT('#6a7a9a'), tartan: MAT('#8a2a34'), wood: MAT('#d0903e', 0.4), deck: MAT('#2a9aa8', 0.3), lead: MAT('#c8262b'), dark: MAT('#1c1c22', 0.4), wheel: MAT('#f2c21b'), bag: MAT('#3a5a3a') };
 const GAITS2 = {
   hunch(D, P, f, kind, acc) {
@@ -1962,13 +1973,19 @@ const GAITS2 = {
     P.pel = [P.pel[0] * 3.2, P.pel[1], P.pel[2] + 0.2]; P.tilt = -P.pel[0] * 0.07; P.pelYaw *= 1.8; P.twist *= 1.6; P.lean = -0.02; P.headPitch = -0.14; P.splay = 0.34;
     wrapAcc(D, P, acc);
   },
-  skate(D, P, f) {   // the front (left) foot on the board, the right pushing off the ground beside it
-    const k = f & 3;
-    P.acc = false; P.board = true; P.lean = 0.16; P.twist = -0.1; P.headPitch = -0.1;
-    P.pel = [-0.6, 0.4, D.pelZ - 1.6];
-    P.fL = [-1.5, 3.2, D.ank + 2.3]; P.kneeL = [-0.2, 1, 0.3];
-    P.fR = [D.hipX + 1.2, [1.6, -7.4, -6.2, -1.2][k], D.ank + [0, 0, 3.2, 2.6][k]]; P.kneeR = [0.2, 1, 0];
-    P.hands = (S) => { P.hL = vadd(S.shL, [-4.6, 1.6 - k * 0.3, -9.2]); P.hR = vadd(S.shR, [4.2, -1.4 + k * 0.4, -9.6]); P.openL = P.openR = 1; };
+  skate(D, P, f) {   // a kick (8 frames, shared/physics.js KICK: the page plays them on the push's own phase): 0 rolling with
+    // the back foot on the tail; 1 it comes off the deck; 2 reaches ahead; 3 plants beside the front wheels; 4 drives back;
+    // 5 the toe-off far behind; 6 swings forward again; 7 comes down onto the tail. The front (left) foot stays over the
+    // front bolts; the front knee gives as the body sinks into the push and leans into it
+    const k = f & 7;
+    const FR = [[-1.0, -2.4, 2.3], [1.8, 1.4, 4.8], [3.6, 8.2, 2.0], [3.9, 5.4, 0], [4.0, -4.2, 0], [3.6, -11.0, 0.8], [2.8, -6.4, 4.4], [0.6, -3.0, 3.6]][k];
+    const sink = [0.9, 1.6, 2.6, 3.6, 3.4, 2.8, 1.9, 1.2][k], lean = [0.07, 0.1, 0.16, 0.22, 0.25, 0.26, 0.17, 0.1][k];
+    P.acc = false; P.board = true; P.lean = lean; P.twist = [-0.06, -0.08, -0.14, -0.12, 0.02, 0.1, 0.04, -0.04][k]; P.headPitch = -0.1;
+    P.pel = [-0.6 + FR[0] * 0.12, 0.4, D.pelZ - sink];
+    P.fL = [-1.5, 5.6, D.ank + 2.3]; P.kneeL = [-0.2, 1, 0.3];
+    P.fR = [k === 0 ? -1.0 : D.hipX + FR[0] - 1.6, FR[1], D.ank + FR[2]]; P.kneeR = [0.2, 1, k >= 5 && k <= 6 ? -0.3 : 0];
+    const sw = [0, 0.3, 0.8, 1, 0.4, -0.5, -0.8, -0.3][k];   // (the arms swing against the pushing leg)
+    P.hands = (S) => { P.hL = vadd(S.shL, [-4.6, 1.4 + sw * 2.6, -9.2 + Math.abs(sw) * 0.8]); P.hR = vadd(S.shR, [4.4, -1.2 - sw * 2.8, -9.4 + Math.abs(sw) * 0.8]); P.openL = P.openR = 1; };
   },
   skatec(D, P) {   // rolling: the front foot over the front bolts, the back foot on the tail, side-on to the way they go
     P.acc = false; P.board = true; P.lean = 0.06; P.twist = 0.32; P.pelYaw = -0.55; P.headYaw = 0.5; P.headPitch = -0.08;
@@ -1989,6 +2006,59 @@ const GAITS2 = {
       else { P.hL = vadd(S.shL, [-8.4, 0.6, -5.0]); P.hR = vadd(S.shR, [8.2, -0.8, -5.4]); }
       P.openL = P.openR = 1;
     };
+  },
+  // the tricks: the deck where the trick has it (P.deck: its middle and how it's turned - figure365), the body round it
+  skflip(D, P, f) {   // the deck turning over under tucked feet: a kickflip one way (0-5), a heelflip the other (6-11)
+    const k = f % 6, s = f < 6 ? 1 : -1;
+    skTuck(D, P, 6.0, 0.4);
+    P.deck = { c: [-1.5, 3.6, 3.0], M: ry(s * k * Math.PI / 3) };
+  },
+  skshove(D, P, f) {   // the deck spinning half round under them, the feet up out of its way
+    skTuck(D, P, 5.4, 0.3);
+    P.deck = { c: [-1.5, 3.6, 2.6], M: rz(f * Math.PI / 6) };
+  },
+  sktre(D, P, f) {   // a 360 flip: spinning round and turning over at once
+    skTuck(D, P, 6.4, 0.5);
+    P.deck = { c: [-1.5, 3.6, 3.0], M: mmul(rz(f * Math.PI / 3), ry(f * Math.PI / 3)) };
+  },
+  skgrab(D, P, f) {   // knees up, the board brought up to a hand: 0 indy (the back hand, toe side), 1 melon (the front hand,
+    // heel side), 2 method (the board kicked out behind, the front hand on it), 3 nosegrab (the nose up in the front hand)
+    skTuck(D, P, 7.2, 0.2);
+    const z = D.ank + 5.6;
+    P.deck = { c: [-1.5, f === 2 ? 0.6 : 3.6, f === 3 ? 4.6 : 4.0], M: f === 2 ? mmul(ry(-0.5), rx(0.25)) : f === 3 ? rx(-0.55) : I3 };
+    P.hands = (S) => {
+      if (f === 0) { P.hR = [1.6, 3.4, z]; P.hL = vadd(S.shL, [-8.8, 2.0, -2.6]); }
+      else if (f === 1) { P.hL = [-3.8, 4.4, z]; P.hR = vadd(S.shR, [8.6, -1.2, -2.0]); }
+      else if (f === 2) { P.hL = [-3.6, 0.4, z + 0.6]; P.hR = vadd(S.shR, [8.2, 2.4, 1.6]); P.twist = 0.5; }
+      else { P.hL = [-1.6, 9.4, z + 1.8]; P.hR = vadd(S.shR, [8.4, -2.0, -1.4]); }
+      P.openL = P.openR = 0;
+    };
+  },
+  skgrind(D, P, f) {   // up on a rail, crouched, the arms out for the balance: 0 50-50, 1 5-0 (on the back truck, the nose up),
+    // 2 boardslide (the deck across the rail, the feet apart along it), 3 crooked (the front truck, the nose down and in)
+    P.acc = false; P.board = true; P.lean = f === 1 ? -0.06 : 0.1; P.headPitch = -0.08;
+    if (f === 2) {
+      P.twist = 0.9; P.pelYaw = -1.2; P.headYaw = 0.9;
+      P.pel = [-1.2, 3.6, D.pelZ - 2.6];
+      P.fL = [-5.0, 3.6, D.ank + 2.3]; P.fR = [2.2, 3.6, D.ank + 2.3]; P.kneeL = [-1, 0.4, 0.3]; P.kneeR = [1, 0.4, 0.3];
+      P.deck = { c: [-1.5, 3.6, 1.7], M: rz(Math.PI / 2) };
+    } else {
+      P.twist = 0.32; P.pelYaw = -0.55; P.headYaw = 0.5;
+      P.pel = [-1.2, f === 1 ? 1.6 : 3.2, D.pelZ - 2.8];
+      P.fL = [-1.4, 8.4, D.ank + 2.3 + (f === 1 ? 1.8 : f === 3 ? -0.8 : 0)]; P.fR = [-1.6, -1.8, D.ank + 2.3 + (f === 3 ? 1.0 : 0)];
+      P.kneeL = [-0.3, 1, 0.6]; P.kneeR = [0.3, -0.2, 0.8];
+      if (f === 1) P.deck = { c: [-1.5, 3.6, 2.4], M: rx(-0.22) };
+      else if (f === 3) P.deck = { c: [-1.5, 3.6, 2.0], M: mmul(rz(0.3), rx(0.16)) };
+    }
+    P.hands = (S) => { P.hL = vadd(S.shL, [-9.4, 1.4, -3.2]); P.hR = vadd(S.shR, [9.2, -1.2, -2.8]); P.openL = P.openR = 1; };
+  },
+  skmanual(D, P, f) {   // on the back wheels, the nose up, the weight back over the tail and the arms out (a little either way)
+    const w = f ? 1 : -1;
+    P.acc = false; P.board = true; P.lean = -0.1; P.twist = 0.3; P.pelYaw = -0.5; P.headYaw = 0.45; P.headPitch = -0.12;
+    P.pel = [-1.2, 1.8, D.pelZ - 2.0];
+    P.fL = [-1.4, 8.0, D.ank + 4.0]; P.fR = [-1.6, -1.8, D.ank + 1.8]; P.kneeL = [-0.3, 1, 0.5]; P.kneeR = [0.3, -0.2, 0.6];
+    P.deck = { c: [-1.5, 3.6, 2.6], M: rx(-0.32) };
+    P.hands = (S) => { P.hL = vadd(S.shL, [-9.2, 2.2 + w, -3.4 + w * 0.8]); P.hR = vadd(S.shR, [9.0, -1.4 + w, -3.0 - w * 0.8]); P.openL = P.openR = 1; };
   },
   blade(D, P, f) {   // each stride pushed out to the side, a long glide, low and leaning
     gait(D, P, 1, f / 6, true);
@@ -2049,9 +2119,11 @@ function accHands2(D, P, S, acc) {
 // what the props and walks add to the figure (buildFigure)
 function figure365(B, C, E, D, P, S, acc) {
   const I = I3;
-  if (P.board) {   // the deck under the front foot, its four wheels
-    E([-1.5, 3.6, 1.7], I, [2.7, 8.6, 0.7], GR.ACC, 'deck', M365.deck);
-    for (const [x, y] of [[-3.1, -2.4], [0.1, -2.4], [-3.1, 9.6], [0.1, 9.6]]) E([x, y, 0.8], I, [0.7, 0.8, 0.8], GR.ACC, 'wheel', M365.wheel);
+  if (P.board) {   // the deck under the front foot, its four wheels; in a trick, where the trick has it (P.deck)
+    const dk = P.deck, c = dk ? dk.c : [-1.5, 3.6, 1.7], M = dk ? dk.M : I;
+    E(c, M, [2.7, 8.6, 0.7], GR.ACC, 'deck', M365.deck);
+    if (dk) E(vadd(c, mv(M, [0, 0, -0.75])), M, [2.2, 7.4, 0.3], GR.ACC, 'grip', M365.dark);   // (its underside: a trick turns it over)
+    for (const [x, y] of [[-1.6, -6.0], [1.6, -6.0], [-1.6, 6.0], [1.6, 6.0]]) E(vadd(c, mv(M, [x, y, -0.9])), M, [0.7, 0.8, 0.8], GR.ACC, 'wheel', M365.wheel);
   }
   if (P.blades) for (const k of ['L', 'R']) {   // a wheel bar under each boot
     const a = S['an' + k];

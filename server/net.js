@@ -5,6 +5,7 @@
 // that client's previous snapshot (static entities refresh at 1 Hz).
 import { K, CHUNK_PX, VF } from '../shared/constants.js';
 import { altByte } from '../shared/flight.js';
+import { boardOut } from '../shared/board.js';
 import { SnapshotWriter, CTRL, SNAP_ENTITY, LZ_SCALE } from '../shared/protocol.js';
 import { WEAPONS } from '../shared/items.js';
 import { isSwimming, WATER_T } from '../shared/map.js';
@@ -51,7 +52,8 @@ function descVersion(e) { return e.kind === K.PED ? (e.appVer || 0) : e.kind ===
 
 function fields(world, e) {
   switch (e.kind) {
-    // extra: bits 0-4 weapon, 5-6 blink (1 slow, 2 fast, 3 hidden indoors), bit 7 in the water (incl. under a bridge) -
+    // extra: bits 0-4 weapon (on a skateboard: what they're doing on it - shared/skate.js TRICKS: the flip, the grab, the
+    // grind, the manual), 5-6 blink (1 slow, 2 fast, 3 hidden indoors), bit 7 in the water (incl. under a bridge) -
     // or, in a vehicle, sat in one of its back seats (2 on: where an open boat shows them - shared/vehicles.js crew)
     // parent: the vehicle you're in, or the train car you're riding; its top bit: on fire (burning.js - the clients strip it),
     // the next: burned to death (combat.js kill: ped.charred - the body lies blackened)
@@ -59,7 +61,7 @@ function fields(world, e) {
     // home with its owner, pets.js)
     case K.PED: if (e.wild) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, (wildlife.poseOf(e) & 31) | (WATER_T[(e.ug ? ugMapOf(world.map) : world.map).tileAtPx(e.x, e.y)] === 1 ? 128 : 0)];
       if (e.pet) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, ((e.pet.mood || 0) & 31) | (isSwimming(world.map, e) ? 128 : 0)];
-      return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), (e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0)) + (e.burnT > 0 ? 0x80000000 : 0) + (e.dead && e.charred ? 0x40000000 : 0), (e.cuffed ? 0 : WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(e.ug ? ugMapOf(world.map) : world.map, e) ? 128 : 0) | (e.vehId && e.seat > 1 ? 128 : 0)];
+      return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), (e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0)) + (e.burnT > 0 ? 0x80000000 : 0) + (e.dead && e.charred ? 0x40000000 : 0), (e.cuffed ? 0 : e.board ? (e.board.code || 0) & 31 : WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(e.ug ? ugMapOf(world.map) : world.map, e) ? 128 : 0) | (e.vehId && e.seat > 1 ? 128 : 0)];
     // (a vehicle on a tow truck's hook: extra bits 0-1 the end up on the wheel lift - 1 its nose, 2 its tail - and bit 2
     // still being winched up: tow.js; the clients draw it tilted)
     // (parent: the damage you can see - its stage, the sides it's dented on, bullet holes, the parts off, a plasma cut:
@@ -136,6 +138,7 @@ export function send(world) {
         ctrl = CTRL.PED; ctrlId = ped.id;
         const mods = players.pedMods(world, ped);
         self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, av: 0, stamina: ped.stamina, rollT: ped.rollT, rdx: ped.rdx, rdy: ped.rdy, speedMul: mods.speedMul, lz: ped.lz || 0 };
+        if (ped.board) Object.assign(self, boardOut(ped));   // (on a skateboard: its kick, grind, manual and air in the slots a rider leaves free, and its own - shared/physics.js)
         sflags = (mods.canMove ? 1 : 0) | (mods.canSprint ? 2 : 0) | (mods.regenMul > 1 ? 4 : 0) | (mods.staminaMax > 100 ? 8 : 0) | (mods.tumble ? 16 : 0) | (mods.air ? 32 : 0) | (mods.board ? 64 : 0) | (mods.wet ? 128 : 0);   // (64: on a skateboard, 128: in the rain on one - skate.js)
       }
     } else if (ped) { ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: 0, vy: 0, lz: ped.lz || 0 }; }
