@@ -94,7 +94,7 @@ export const CITY3 = [
   { d: 46, on: 'big', zone: ZC, rects: [[2300, 2240, 2560, 2400], [2300, 2400, 2860, 2730]], look: 'the Arts District west of downtown: the museum on its square, the playhouse, galleries, records' },
   { d: 16, on: 'big', zone: ZC, rects: [[2300, 2730, 3840, 3020], [3480, 2300, 3840, 2730]], look: 'Bayside Heights on the ocean side: mansions with pools on big lots, the Hilltop Mansion, the marina' },
   // --- the mainland city on the gulf's north shore ---
-  { d: 3, on: 'main', zone: ZC, rects: [[3940, 1440, 4260, 2100]], look: 'The Yards east of the river channel: rail sidings, warehouses, scrap, the rough side' },
+  { d: 3, on: 'main', zone: ZC, rects: [[3940, 1440, 4260, 2100]], look: 'The Yards east of the river channel, handcrafted (shared/world3-yards.js): the freight sidings by Northgate Station, the level crossing by Yards Liquor, the salvage yard under the Gulf Loop, the warehouses and their docks, the intermodal terminal, the cement works and the tank farm' },   // (not \`hand\`: the grid still lays Juniper Street on its east edge)
   { d: 25, on: 'main', zone: ZC, rects: [[3680, 1440, 3940, 1900]], keep: [[3680, 1750, 3800, 1860]], look: 'the Stadium District: the stadium, its car parks, the megastore, the ponds' },
   { d: 2, on: 'main', zone: ZC, rects: [[2700, 1440, 3680, 1660]], look: 'Northgate: apartment blocks along the north, the public library, Fire Station 7' },
   { d: 8, on: 'main', zone: ZC, rects: [[2860, 1900, 3800, 2120]], hand: 'harbor', look: 'the Harbor along the waterfront, handcrafted (shared/world3-harbor.js): the marina and the Harbor Light, Harbor Green and Linden Pier, the fish market\'s quay, Ferry Plaza, the boatworks, the port' },

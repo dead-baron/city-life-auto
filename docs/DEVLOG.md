@@ -10710,3 +10710,50 @@ practice`):
 - **Online play is unchanged.** `tools/playtest.py --start-server` (a local today's-world server) gets into the city as
   before.
 - The page's code goes from 483 to 484 KB of its 485.
+
+## 2026-10-18 · World v3, handcrafted: The Yards (the sidings, the crossing, the salvage yard, the docks)
+
+The Yards (district 3, the rough industrial island east of the river channel) is now laid out by hand
+(`shared/world3-yards.js`). It's built from the owner's concepts WC406 (the freight sidings and the salvage yard) and
+WC407 (the level crossing by the liquor store), with the older yard and back-lot concepts. The grid had built 227
+plain roofs here.
+- **The streets** keep the island's shape: Yards Avenue up the middle; Central Avenue, Midtown Boulevard and Harbor
+  Avenue across it (Harbor Avenue off the Yards Bridge); Channel Street along the quay; the short streets east of the
+  avenue to the Gulf Loop and Juniper Street (Rail, Tank, Spur, Spruce, Foundry, Gasworks). Four of the grid's
+  streets are gone to make room for the big yards. **Central Avenue now crosses the main line at grade** by Northgate
+  Station and runs on under the Gulf Loop to Juniper Street, so the line's crossing gets its barriers and lights
+  (WC407).
+- **Under the Gulf Loop's deck** in the north:
+  - **Yards Auto Salvage**: scrap heaps of tyres, rubble, pipe and drums behind barbed chain-link, rusted container
+    stacks, cars waiting in rows, burn barrels, the office and its skull sign by the gate.
+  - **Bayline Aggregates**: gravel heaps, the hopper, the loader.
+- **The freight sidings** beside the main line, north of Northgate Station: four sidings with **boxcars and tank
+  cars** standing on them, the freight office and the light masts.
+- **By the crossing**: Yards Liquor on the corner with its grille and lit sign; the Rail Car Diner; Danny's Pawn &
+  Loan, where the Syndicate's Yards headquarters now is. Behind them, along Central Avenue, are the backs of the dives
+  (The Switchman, Lucky 7 Billiards...) with their tags. Across the tracks, the **Railside Trailer Court**: ten
+  trailers, ten homes, behind a fence.
+- **The warehouses** fill the blocks between the yards, about fifty of them, each name used once. Those between
+  Central Avenue and the boulevard face both streets, with box trucks at their docks, forklifts and pallets. **Rivet
+  & Sons Ironworks** has its water tower and steel store. The **Old Freight House** on Harbor Avenue is the biggest
+  warehouse in the city, so Pinwheel Lanes is in it.
+- **The Yards Intermodal Terminal**: sidings with boxes on them, the gantry crane, container stacks, trucks, the
+  gatehouse.
+- **Harbor Avenue to Foundry Road**: the workshops (the body shop, the tyre place, the radiator works), Hardline
+  Workwear, the Back-Alley Exchange in the old tavern, the Steelworkers' hall.
+- **The south shore**:
+  - **Gulf Cement Works**: its silos, cement mixers, and the barge quay with its aggregate heaps.
+  - The **Gulf Fuel Terminal's tank farm** behind its fence.
+  - A construction site, self-storage units, the Pink Line's station square with a food cart.
+  - Rough brick walk-ups with fire escapes (the railmen's flats, ten homes).
+- **Channel Quay** along the channel: bollards along the piling, boxes and crates on the apron, the crane, and
+  sheds with their yards running from the north quay down past Harbor Avenue.
+- The open ground is gravel with weeds and the odd tree, not lawn. The grass under the Gulf Loop's ramps stays.
+- **Art** (`client/art2/game/statics.js`; the bake bundle stays at 800 KB):
+  - New: standing **boxcars and tank cars** (the props-transit models the trains already had).
+  - New prop placements for the **forklift**, the **silo** and the **gantry crane**. These had models but no
+    placement, so a forklift placed as a prop showed as a crate, the Harbor's two included.
+  - Containers and wagons can now stand north-south.
+  - A parking spot can be `bare` (no painted bay): the salvage yard's cars (`groundbake.js`).
+- `test/world3city.test.js`: a district with a plan counts its plan's streets. The Yards keeps the grid's lattice
+  so Juniper Street stays on its east edge, so its CITY3 entry has no `hand`.
