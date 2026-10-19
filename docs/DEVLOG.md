@@ -11547,3 +11547,29 @@ a few apartment slabs here.
 
 Tests: test/westhills2.test.js (the drive, the crescent, the lane, the courts and the loop meet the streets; the
 avenues stay the grid's).
+
+## 2026-10-19 · World v3, handcrafted: Westport Center's heart (The Harborlight Hotel, Westport Center Plaza, Pier Avenue's towers, the Waterfront Walk)
+
+Westport Center's heart (district 23: Westport Avenue to Quarter Avenue, 8th Street to the bay) is now laid out by hand
+(`shared/world3-westport.js`), built from the research's sources for the western city's downtown (D1: the tower district
+round its plaza with the monument sign; SK6, SC2-C/D: the towers, their podium shops and forecourts; B1: the corner
+storefronts) with Downtown's towers' kit. The grid had cut it into small blocks of look-alike towers, two theatres of
+the same name and three identical banks in a row along the shore.
+- **The streets:** the avenues stay (Westport Boulevard, Pier Avenue, Westport and Quarter Avenues) and so does 8th
+  Street; Chestnut and Juniper Streets, 12th and 17th Streets give way to the plaza and the towers' blocks.
+- **On the boulevard's north side:** **The Harborlight Hotel** on the district's axis, its canopy over the door, the
+  drive-up with the taxis, royal palms; **Westport Center Tower** (glass, 18 floors) and the **Quarter Trust
+  Building** (stone, 12) either side; Harborlight Grill, Center News, Westport Optics and Blue Gull Coffee between.
+- **Westport Center Plaza** across the boulevard: the WESTPORT CENTER sign at the kerb, the fountain court with its long
+  basin and three jets, benches and magnolias round it, the food carts' courts either side with their tables and
+  umbrellas under festoon lights, lawns under rows of plane trees beyond, the walks along the boulevard and the south
+  edge.
+- **On Pier Avenue:** **Westport Exchange**, **Pier Avenue Tower** (Pier Street Deli in its podium), **Bayview Tower**
+  and **The Commodore** (apartments) behind their forecourts; on the corner Gilded Gull Jewelers, Tidewater Books and
+  Pier Pressed Juice under flats.
+- **Between Pier Avenue and the bay:** **Westport Savings Bank** on Westport Avenue's corner, **Harbor Point One, Two
+  and Three** (apartment towers) facing the **Waterfront Walk** - the promenade along the shore with its palms,
+  benches, lamps, telescopes and the railing over the water; **Harbor Point Gardens** behind them.
+
+Tests: test/westport.test.js (the avenues round it stay the grid's; it keeps clear of Westport General and Westport PD,
+which the generator places).

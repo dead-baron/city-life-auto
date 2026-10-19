@@ -93,35 +93,54 @@ function build(m, api, K) {
   }
 
   // ===========================================================================================================
-  // Westport Center Plaza across the boulevard from the hotel: the monument sign at the kerb on the axis, the fountain,
-  // the food carts and their tables under festoon lights, plane trees along the boulevard, benches, planters, lamps
+  // Westport Center Plaza across the boulevard from the hotel: the monument sign at the kerb on the axis, the fountain
+  // court (the long basin and its jets, benches round it), the food carts' courts either side under festoon lights,
+  // and the lawns beyond them under rows of plane trees, their cross walks and benches; the walk along the boulevard
   function plaza() {
     const A = area(PX.west, PY.blvd + 4, PX.quarter, PY.pier - 4);
     if (!A) return;
-    const [x0, y0, x1] = A, py1 = y0 + 30;
-    K.fill(x0, y0, x1 - x0, py1 - y0, T.PLAZA);
-    // the sign and the fountain on the axis
-    prop('textsign', PX.axis, y0 + 1.2, 0, { text: 'WESTPORT CENTER', bg: '#1e3a5e', fg: [250, 236, 180], z: 40, sx: 2, lit: true });
-    for (const dx of [-7, 7]) prop('flowers_big', PX.axis + dx, y0 + 1.6, 0);
-    prop('fountain', PX.axis, y0 + 14, 36);
-    for (const [dx, dy] of [[-8, 0], [8, 0], [0, -7], [0, 7]]) prop('flowers_big', PX.axis + dx, y0 + 14 + dy, 0);
-    // plane trees in a row along the boulevard, lamps between
-    for (let x = x0 + 4; x < x1 - 3; x += 12) { if (Math.abs(x - PX.axis) < 12) continue; prop('tree_a', x, y0 + 3, 10, { sp: 'streetPl', k: 1.15 }); prop('lamp', x + 6, y0 + 2.2, 0); }
-    // the food carts west and east of the fountain, their tables, the festoon over them
-    for (const side of [-1, 1]) {
-      const cx = PX.axis + side * 38;
-      for (let k = 0; k < 3; k++) prop('foodcart', cx - 10 + k * 10, y0 + 10, 14);
-      for (let k = 0; k < 4; k++) {
-        const tx = cx - 12 + k * 8, ty = y0 + 17 + (k % 2) * 3;
-        prop('cafetable', tx, ty, 0);
-        prop(pick(['umbrella_r', 'umbrella_y', 'umbrella_b'], rnd(tx, ty, 1)), tx, ty - 0.1, 0);
-      }
-      prop('festoon', cx - 16, y0 + 14, 0, { tx: 32 * TILE, ty: 0, h: 60 });
-    }
-    // benches and planters along the south edge, the trees' planters at the ends
-    for (let x = x0 + 6; x < x1 - 6; x += 9) { if (Math.abs(x - PX.axis) < 6) continue; prop(rnd(x, py1, 2) < 0.5 ? 'bench_m' : pick(['planter_g', 'planter_sq', 'planter_fl'], rnd(x, py1, 3)), x, py1 - 1.6, 8); }
-    for (const tx of [x0 + 2, x1 - 2]) prop('tree_b', tx, py1 - 4, 10, { sp: 'magnolia', k: 1.1 });
+    const [x0, y0, x1] = A, py1 = y0 + 30, ax = PX.axis;
     K.take(x0, y0, x1 - x0, py1 - y0);
+    // the walk along the boulevard and along the south edge; the fountain court; the carts' courts
+    K.paint(x0, y0, x1 - x0, 4, T.PLAZA);
+    K.paint(x0, py1 - 3, x1 - x0, 3, T.PLAZA);
+    K.paint(ax - 20, y0, 40, py1 - y0, T.PLAZA);
+    for (const side of [-1, 1]) K.paint(side < 0 ? ax - 52 : ax + 20, y0 + 6, 32, py1 - y0 - 9, T.PLAZA);
+    // the sign and the fountain basin on the axis
+    prop('textsign', ax, y0 + 1.2, 0, { text: 'WESTPORT CENTER', bg: '#1e3a5e', fg: [250, 236, 180], z: 40, sx: 2, lit: true });
+    for (const dx of [-7, 7]) prop('flowers_big', ax + dx, y0 + 1.6, 0);
+    const bx0 = ax - 9, by0 = y0 + 10, bw = 18, bh = 7;
+    K.paint(bx0 - 1, by0 - 1, bw + 2, bh + 2, T.PLAZA);
+    for (let y = by0; y < by0 + bh; y++) for (let x = bx0; x < bx0 + bw; x++) m.set(x, y, T.WATER);
+    for (const dx of [-5, 0, 5]) prop('fountain', ax + dx, by0 + bh / 2, 36);
+    for (const dx of [-12, 12]) { prop('bench_m', ax + dx, by0 + 1, 0); prop('bench_m', ax + dx, by0 + bh - 1, 0); }
+    for (const dx of [-6, 0, 6]) prop('bench_m', ax + dx, by0 + bh + 3, 0);
+    for (const dx of [-17, 17]) for (const dy of [6, 18]) prop('tree_a', ax + dx, y0 + dy, 10, { sp: 'magnolia', k: 1.1 });
+    // the food carts' courts: three carts, their tables and umbrellas, the festoon over them, bins
+    for (const side of [-1, 1]) {
+      const cx = ax + side * 36;
+      for (let k = 0; k < 3; k++) prop('foodcart', cx - 9 + k * 9, y0 + 9, 14);
+      for (let k = 0; k < 6; k++) {
+        const tx = cx - 12 + (k % 3) * 12, ty = y0 + 15 + Math.floor(k / 3) * 5;
+        prop('cafetable', tx, ty, 0);
+        prop(pick(['umbrella_r', 'umbrella_y', 'umbrella_b', 'umbrella_g'], rnd(tx, ty, 1)), tx, ty - 0.1, 0);
+      }
+      for (const fy of [y0 + 13, y0 + 19]) prop('festoon', cx - 15, fy, 0, { tx: 30 * TILE, ty: 0, h: 60 });
+      prop('trashcan', cx - 15, py1 - 4.4, 0); prop('trashcan', cx + 15, py1 - 4.4, 0);
+    }
+    // the lawns beyond: plane trees in rows, a cross walk, benches along it
+    for (const [lx0, lx1] of [[x0, ax - 52], [ax + 52, x1]]) {
+      if (lx1 - lx0 < 10) continue;
+      const mx = Math.floor((lx0 + lx1) / 2);
+      K.paint(mx - 1, y0 + 4, 2, py1 - y0 - 7, T.PLAZA);
+      K.paint(lx0, y0 + 14, lx1 - lx0, 2, T.PLAZA);
+      for (let ty = y0 + 7; ty < py1 - 4; ty += 7) for (let tx = lx0 + 3; tx < lx1 - 2; tx += 7) { if (Math.abs(tx - mx) < 3 || Math.abs(ty - y0 - 15) < 2) continue; prop('tree_a', tx, ty, 10, { sp: pick(['streetPl', 'streetPl', 'maple'], rnd(tx, ty, 2)), k: 1.15 }); }
+      for (const bx of [mx - 5, mx + 5]) { prop('bench_m', bx, y0 + 13.2, 0); prop('bench_m', bx, y0 + 16.8, 0); }
+      for (const fx of [lx0 + 2, lx1 - 2]) prop('flowers_big', fx, y0 + 15, 0);
+    }
+    // the lamps along the boulevard walk, the planters along the south walk
+    for (let x = x0 + 6; x < x1 - 4; x += 12) prop('lamp', x, y0 + 3.4, 0);
+    for (let x = x0 + 4; x < x1 - 4; x += 10) { if (Math.abs(x - ax) < 8) continue; prop(pick(['planter_g', 'planter_sq', 'planter_fl'], rnd(x, py1, 3)), x, py1 - 1.6, 8); }
     placeName('Westport Center Plaza', x0, y0, x1, py1);
   }
 
@@ -130,7 +149,7 @@ function build(m, api, K) {
   function pierAvenue() {
     const A = area(PX.west, PY.blvd + 4, PX.quarter, PY.pier - 4);
     if (!A) return;
-    const [x0, , x1, y1] = A, y0 = A[1] + 31, h = y1 - y0;
+    const [x0, , x1, y1] = A, y0 = A[1] + 1, h = y1 - y0;   // (the plaza is taken: what's left is its south)
     const T4 = [
       { w: 36, name: 'Westport Exchange', floors: 16, tint: '#2a4a6a', inset: 2 },
       { w: 30, name: 'Pier Avenue Tower', style: 'stone', floors: 10, wall: '#ddd2bc', cornice: 'dentil', inset: 8, cafe: { name: 'Pier Street Deli', store: 'cafe', poi: { kind: 'coffee', label: 'Pier Street Deli', food: true }, awning: ['#2f5a4a', '#f0ece4'] } },
@@ -183,20 +202,30 @@ function build(m, api, K) {
     }
     for (let x = x0; x < x1 - 1; x += 4) { const s = Math.max(shoreY(x), shoreY(x + 4)); if (s < PY.shore + 4) prop('fenceline', x + 0.1, s - 0.3, 0, { kind: 'iron', tx: 4 * TILE - 6, ty: 0 }); }   // (the railing only over the water)
     placeName('Waterfront Walk', x0, wy0, x1, sMin);
-    // the bank on Westport Avenue's corner, Harbor Point's towers east of it, the passages between
-    const bh = wy0 - y0 - 2;
-    const bank = place({ x: x0 + 1, y: y0 + 2, w: 30, h: Math.min(22, bh), arch: 'bank', key: 'bank2', name: 'Westport Savings Bank', poi: { kind: 'bank', label: 'Westport Savings Bank' }, whole: true,
-      art: tower(x0 + 1, y0 + 2, { name: 'Westport Savings Bank', sign: 'WESTPORT SAVINGS', style: 'stone', wall: '#e2dac6', floors: 3, win: 'arch', cornice: 'dentil', store: 'lobby', awning: ['#2a2420', '#2a2420'], signC: ['#2a2420', [236, 200, 140]] }) });
+    // the row facing the walk: Westport Savings Bank on Westport Avenue's corner, Harbor Point's towers east of it, the
+    // passages between; behind them, up to Pier Avenue, Harbor Point Gardens (the lawn, its walks, benches)
+    const th = 30, ty = wy0 - 6 - th;
+    const bank = place({ x: x0 + 1, y: wy0 - 6 - 20, w: 30, h: 20, arch: 'bank', key: 'bank2', name: 'Westport Savings Bank', poi: { kind: 'bank', label: 'Westport Savings Bank' }, whole: true,
+      art: tower(x0 + 1, ty, { name: 'Westport Savings Bank', sign: 'WESTPORT SAVINGS', style: 'stone', wall: '#e2dac6', floors: 3, win: 'arch', cornice: 'dentil', store: 'lobby', awning: ['#2a2420', '#2a2420'], signC: ['#2a2420', [236, 200, 140]] }) });
     if (bank) forecourt(bank.tx, bank.ty + bank.th, bank.tw, wy0 - bank.ty - bank.th, {});
     let x = x0 + 34;
     const HP = [['Harbor Point One', 15, '#2e5670'], ['Harbor Point Two', 13, '#36606e'], ['Harbor Point Three', 11, '#3a4e66']];
     for (const [name, floors, tint] of HP) {
-      const w = Math.min(38, Math.floor((x1 - x - 6) / 1));
+      const w = Math.min(38, x1 - x - 2);
       if (w < 20) break;
-      const b = towerLot({ x, y: y0 + 2, w: Math.min(w, 40), h: bh - 4, name, floors, tint, poi: false, home: { kind: 'apartment', price: 30000 }, store: 'lobby' });
+      const b = towerLot({ x, y: ty, w, h: th, name, floors, tint, poi: false, home: { kind: 'apartment', price: 30000 }, store: 'lobby' });
       if (b) { const fy = b.ty + b.th; forecourt(b.tx, fy, b.tw, wy0 - fy, { fountain: false }); K.take(b.tx, fy, b.tw, wy0 - fy); }
-      x += Math.min(w, 40) + 4;
+      x += w + 4;
     }
-    for (let xx = x0; xx < x1; xx++) { const c = K.column(xx, y0, wy0 - 1); if (c && c[0] === wy0 - 1) K.fill(xx, c[1], 1, c[0] - c[1] + 1, T.PLAZA); }
+    // the passages between them to the gardens
+    for (let xx = x0; xx < x1; xx++) { const c = K.column(xx, ty, wy0 - 1); if (c && c[0] === wy0 - 1 && c[1] <= ty + 1) K.fill(xx, c[1], 1, c[0] - c[1] + 1, T.PLAZA); }
+    const G = area(PX.west, PY.pier + 4, PX.quarter, ty - 1);
+    if (G) {
+      const [gx0, gy0, gx1, gy1] = G, gm = Math.floor((gy0 + gy1) / 2);
+      K.paint(gx0, gm - 1, gx1 - gx0, 2, T.PLAZA);
+      for (let xx = gx0 + 20; xx < gx1 - 10; xx += 42) K.paint(xx, gy0, 2, gy1 - gy0, T.PLAZA);
+      for (let xx = gx0 + 8; xx < gx1 - 6; xx += 14) prop('bench_m', xx, gm - 2.4, 0);
+      placeName('Harbor Point Gardens', gx0, gy0, gx1, gy1);
+    }
   }
 }
