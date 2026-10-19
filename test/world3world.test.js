@@ -10,13 +10,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
-import { TILE } from '../shared/constants.js';
+import { TILE, T } from '../shared/constants.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { ISLANDS3, MAINLAND3 } from '../shared/world3-layout.js';
 import { CITY3 } from '../shared/world3-city.js';
 import { HAND_PLANS } from '../shared/world3-hand.js';
 import { courtHoops, hoopAt } from '../shared/hoops.js';
+import { ferrisSite } from '../shared/rides.js';
 import { ARTERIALS, BIOMES, inPoly } from '../shared/world3-skeleton.js';
 import { prepare, sizes, placeOf } from '../tools/world3-build.mjs';
 
@@ -100,4 +101,10 @@ test('World v3: the whole world in one build - every city district on its island
   const sc = m.scopeSpots || [];
   assert.ok(sc.length >= 6 && sc.every((q) => q.look && q.say), `${sc.length} telescopes`);
   assert.ok(sc.filter((q) => /water/.test(q.say)).length >= sc.length / 2, 'most over the water');
+  // the Ferris wheel on Sunset Beach Pier (shared/world3-sunsetbeach.js; the ride: shared/rides.js): its boarding deck
+  // on the pier's head, out over the water; the boat rentals at the pier's root (m.publicPier)
+  const fw = ferrisSite(m), fs = (m.natureSites || []).find((q) => q.kind === 'pier' && q.ferris);
+  assert.ok(fw && fs && fs.name === 'Sunset Beach Pier', 'the Ferris wheel on Sunset Beach Pier');
+  assert.equal(m.tiles[tileOf(fw.board.x, fw.board.y)], T.DOCK, 'boarding from the pier\'s deck');
+  assert.ok(m.publicPier && m.marina.length > 0, 'the boat rentals by the pier');
 });
