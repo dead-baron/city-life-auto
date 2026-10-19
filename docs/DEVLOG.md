@@ -11621,3 +11621,24 @@ Avenue rather than the water.
 
 Tests: test/oldquarter.test.js (the lanes run from Elm Street to Cedar Street with the alley between; the streets round
 it and the station stay the grid's).
+
+## 2026-10-19 · World v3, handcrafted: Southside's Riverway Houses (the projects round their yard, Crown Pawn's corner)
+
+Southside's Riverway Houses (district 6: Marina Avenue to Poplar Street, 11th Street to 17th Street) are now laid out by
+hand (`shared/world3-southside.js`): the first of the run-down projects the owner asked for (10-05, 10-16), from the
+research's sources for Southside (D6: the rough side's projects round a yard; CR2's east half: Crown Pawn and Riverway
+Liquor on their corner; IN11: the corner shops; AL1-3: the yards; SC2-G: the laundromat and the check-cashing front).
+The grid had cut it into little blocks of look-alike corner marts.
+- **The streets:** the avenues and streets round it stay (11th Street, Pelican Avenue, 17th Street, Marina Avenue,
+  Poplar Street); Chestnut and Juniper Streets, 14th Street and the alleys give way to the Houses and their yard. The
+  Syndicate's Southside headquarters north of 9th Street stays where it is.
+- **Pelican Avenue's north side:** Crown Pawn and Riverway Liquor on Marina Avenue's corner, Wash World, Lucky 7 Check
+  Cashing, Southside Wings and a boarded-up shop, in grimy tagged brick with grilles, flats over them, yards between.
+- **Riverway Houses:** three brick slab blocks seven floors high along the yard's north side (Buildings A, B and C, fire
+  escapes up them; the residents' parking behind the chain-link on Pelican Avenue), their fronts on the yard: the asphalt, the basketball court in its chain-link (a hoop to shoot at,
+  with NPC pickup games), graffiti walls either side of it, patches of grass with scraggly trees, benches, picnic
+  tables, the burn barrel, a boombox, dumpsters, lamps.
+- **17th Street:** the Houses' two-storey row, Rico's Corner Store on Poplar Street's corner, and the vacant lot behind
+  its chain-link (weeds, a tyre pile, a trash pile, a drum, a pallet).
+
+Tests: test/southside.test.js (the streets round it stay the grid's; the gang's headquarters stays the generator's).
