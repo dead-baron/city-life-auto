@@ -16,6 +16,7 @@ import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { ISLANDS3, MAINLAND3 } from '../shared/world3-layout.js';
 import { CITY3 } from '../shared/world3-city.js';
 import { HAND_PLANS } from '../shared/world3-hand.js';
+import { courtHoops, hoopAt } from '../shared/hoops.js';
 import { ARTERIALS, BIOMES, inPoly } from '../shared/world3-skeleton.js';
 import { prepare, sizes, placeOf } from '../tools/world3-build.mjs';
 
@@ -87,4 +88,12 @@ test('World v3: the whole world in one build - every city district on its island
   for (const A of joins) assert.ok(names.has(A.name), `crossing ${A.name} listed`);
   const named = new Set(m.edges.map((e) => e.name));
   for (const n of names) assert.ok(named.has(n), `crossing ${n} laid`);
+  // the handcrafted districts' basketball courts are hoops to shoot at (shared/hoops.js): each rim over its half court,
+  // standing on it finds that hoop
+  const hs = courtHoops(m);
+  assert.ok(hs.length >= 8, `${hs.length} hoops`);
+  hs.forEach((h, k) => {
+    assert.ok(h.rim.x > h.court.x0 && h.rim.x < h.court.x1 && h.rim.y > h.court.y0 && h.court.y1 - h.court.y0 >= 6 * TILE, `hoop ${k} over its court`);
+    assert.equal(hoopAt(m, h.rim.x, h.rim.y + 80), k, `hoop ${k}: its court found`);
+  });
 });

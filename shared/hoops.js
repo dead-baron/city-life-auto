@@ -1,14 +1,15 @@
-// Shooting hoops at North Point Courts: where the rims are, and the power that drops the ball in from where you
+// Shooting hoops (North Point Courts, the handcrafted districts' courts): where the rims are, and the power that drops the ball in from where you
 // stand. server/systems/hoops.js plays it; the client draws the meter with its green band (the swing meter is
 // golf's: shared/golf.js swingMeter).
 export const HOOP_MIN = 40, HOOP_MAX = 300;   // you shoot from this close to the rim to this far (px, along the ground)
 export const HOOP_HANDS = 34;                 // the ball leaves your hands this high
 
-// The hoops (the courts' site record: each one's rim and its half court), or [].
+// The hoops (North Point Courts' site record, and World v3's handcrafted courts - map.hoopCourts, shared/world3-hand.js:
+// each one's rim and its half court), or [].
 export function courtHoops(map) {
   if (map._hoops === undefined) {
     const s = (map.natureSites || []).find((q) => q.kind === 'courts' && q.hoops && q.hoops[0] && q.hoops[0].rim);
-    Object.defineProperty(map, '_hoops', { value: s ? s.hoops : [], enumerable: false, configurable: true });
+    Object.defineProperty(map, '_hoops', { value: (s ? s.hoops : []).concat(map.hoopCourts || []), enumerable: false, configurable: true });
   }
   return map._hoops;
 }

@@ -48,7 +48,7 @@ export function handStreets(lines) {
 // Every plan built (the generator's `hand` hook: after the roads, the rail and the plazas are laid, before the blocks).
 export function buildHand(m, api0) {
   const api = { ...api0, hash2, handBuilding };
-  const out = {};
+  const out = {}, p0 = m.props.length;
   for (const P of HAND_PLANS) {
     const kit = makeKit(m, api, P), b0 = m.buildings.length;
     out[P.key] = P.build(m, api, kit);
@@ -66,7 +66,24 @@ export function buildHand(m, api0) {
     }
     out[P.key].sights = sights;
   }
+  // the hoops on the plans' basketball courts (shared/hoops.js courtHoops: shooting hoops, NPC pickup games): every hoop
+  // a plan put up with the court painted under it - its post, the rim 17 px out over the court and 43 px up (as North
+  // Point Courts'), its half court
+  m.hoopCourts = handHoops(m, p0);
   return out;
+}
+function handHoops(m, p0) {
+  const courts = [], hoops = [];
+  for (let i = p0; i < m.props.length; i++) { const p = m.props[i]; if (p && p.t === 'court' && p.k !== 'tennis' && p.w && p.d) courts.push(p); }
+  for (let i = p0; i < m.props.length; i++) {
+    const p = m.props[i];
+    if (!p || p.t !== 'hoop') continue;
+    const c = courts.find((q) => Math.abs(q.x - p.x) < 2 && p.y >= q.y - 4 && p.y - q.y < 3 * TILE);
+    if (!c) continue;
+    const x = Math.round(p.x), y = Math.round(p.y);
+    hoops.push({ x, y, rim: { x, y: y + 17, z: 43 }, court: { x0: Math.round(c.x - c.w / 2), y0: Math.round(c.y), x1: Math.round(c.x + c.w / 2), y1: Math.round(c.y + c.d) } });
+  }
+  return hoops;
 }
 // (a building worth a teleport button: its lot's kind - the set pieces - or its business)
 const SIGHT_KINDS = new Set(['theatre', 'construction', 'strip', 'dealer', 'repair', 'church', 'police', 'motorpool', 'club', 'clubeclipse', 'clubnova', 'arcade', 'hotel', 'bank', 'hospital', 'cinema', 'bowling', 'stadium', 'museum', 'market', 'lighthouse', 'warehouse']);

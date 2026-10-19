@@ -11573,3 +11573,17 @@ the same name and three identical banks in a row along the shore.
 
 Tests: test/westport.test.js (the avenues round it stay the grid's; it keeps clear of Westport General and Westport PD,
 which the generator places).
+
+## 2026-10-19 · World v3: basketball is back - the handcrafted districts' courts are hoops
+
+The old world's one basketball park (North Point Courts) never came over to v3, so shooting hoops and the NPC pickup
+games had nowhere to happen (the GDD's "systems with nothing to use in v3"). The handcrafted districts have painted
+courts with their hoops up - Greenfield Park, Overpass Park, Northgate Sports Ground, Spruce Street Court, the
+courtyard blocks' half courts, the plans' neighbourhood courts - and now each one is a hoop to shoot at: the hand kit
+(`shared/world3-hand.js`) lists every hoop a plan put up with the court painted under it (`map.hoopCourts`: its post,
+the rim over the court as at North Point, its half court), and `shared/hoops.js courtHoops` serves them with North
+Point's. Walk onto one of those courts and press the action button for a ball; the NPCs' pickup games (activities.js)
+run on each of them too.
+
+Tests: test/world3world.test.js (the v3 world has its hoops; each rim over its half court, standing on the court finds
+it). The old world's hoops tests (test/golf.test.js, test/activities.test.js) are unchanged.
