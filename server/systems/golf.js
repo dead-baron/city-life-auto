@@ -1,4 +1,4 @@
-// Golf at Cedar Hills Golf Club (the course: shared/naturesites.js golfClub; the ball, the clubs and the lies:
+// Golf at Lakeside Greens (World v3: shared/world3-lakeside.js; the old world's Cedar Hills Golf Club: shared/naturesites.js golfClub; the ball, the clubs and the lies:
 // shared/golf.js). Step onto a hole's tee and press the action button to tee off ($5 a hole): your ball is put down
 // there. Walk up to it, aim (the mouse, the right stick or the aim stick: it starts pointing at the flag) and hold
 // the attack button - the meter swings up and back while you hold, and the shot goes when you let go. The club suits
