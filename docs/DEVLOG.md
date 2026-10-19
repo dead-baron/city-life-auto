@@ -11768,5 +11768,9 @@ house lots.
 - **Pinewood Park** inside the crescent: a grove of pines and spruces, a dirt trail looping through it from the drive's
   two arms, a clearing with the picnic shelter and its tables, the pond with lilies and a duck.
 
+Also: Sunset Beach's lifeguard towers and the pier float's posts were drawn as crates (a prop name the art doesn't
+know falls back to one): the towers are the art's `lguard`, the posts bollards. A hammock is a prop now
+(`client/art2/game/statics.js`), slung between two palms.
+
 Tests: test/pinehills.test.js (the avenues and streets round it stay the grid's; the grid inside gives way to the
 courts and the crescent).
