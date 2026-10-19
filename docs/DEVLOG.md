@@ -11388,3 +11388,50 @@ Tests: test/arts.test.js (the streets carry on the city's and meet the bridges; 
 sawtooth and the glazed roofs; the pictures; the sculptures).
 
 Budgets: none raised (the bake workers' code grew from 795 to 797 KB of its 800).
+
+## 2026-10-19 · World v3, handcrafted: Bayside Heights (Ocean Drive, the villas, the Ritz, the Hilltop Mansion, the marina)
+
+Bayside Heights (district 16, the Gulf Island's ocean side and its east shore) is now laid out by hand
+(`shared/world3-bayside.js`). It's built from the owner's concepts WC005 and WC006 (the curving palm-median boulevard
+along the clifftop, gated villas with pools and fountain courts, the grand hotel with its café terrace and drop-off, a
+domed gazebo on the cliff edge, the railed promenade with the stair down to a sandy cove, a tennis court),
+WC235/WC082/WC076 (estate lanes, the lookout terrace, cypresses, palms and bougainvillea) and WC307 (the marina:
+finger piers, the yacht club and the bait shop on the quay), with the research's Hilltop Mansion, gated estate rows,
+the clifftop overlook and the hidden cove. The grid had laid the district as square blocks of generic luxury lots.
+- **The streets:** **Ocean Drive**, a boulevard with a palm median and festoon lights between the palms, curving
+  along the clifftop from the Gulf Footbridge's end to Marina Avenue; **Hillcrest Drive** inland of it from the Pine
+  Hills Bridge's end; the avenues carried down from Downtown (Westside Avenue on to the Strand Footbridge, Park West
+  Avenue on to the Pine Hills Bridge, Civic Avenue, Harborview Avenue on to the Southside Bridge); on the east shore
+  **Marina Avenue** from the Lake District Bridge's end down to Ocean Drive, Lake Street, Falls Street on to the Falls
+  Bridge, Marina Walk to the Lakes Footbridge, Cypress Lane across the deepest block, Harbor Lane and Point Lane.
+- **The villas**, each a home with its own name (Villa Serena, Casa del Mar, Seacliff House...; composed when the list
+  runs out, never the same twice):
+  Mediterranean under terracotta (cream, peach and white stucco, arched windows, balconies) or modern under flat roofs
+  with their terraces; each behind its gate and iron railing, the drive up to the garage, the terrace, the pool with
+  loungers and an umbrella, hedges down the sides, palms and cypresses, a fountain court inside the gate on the deep
+  lots. Where a block is deep, a second row faces the street north of it, its garden and pool behind it. The
+  clifftop villas on Ocean Drive's seaward side have their gardens to the cliff.
+- **The Bayside Ritz** on Ocean Drive: the seven-storey hotel in cream stone set back behind its drop-off (the loop round the
+  fountain island, the canopy, a limousine waiting), the café terrace; **Monarch** (clothing), **Diamond & Co.** and
+  the **Seaglass Spa** beside it.
+- **The Bayside Overlook** across the drive from the hotel: the **Overlook Gardens** (the walk from the drive down to
+  the cliff between royal palms, the fountain where the cross walk meets it, four hedged parterres of flower beds,
+  olives and palms on the lawns either side), the railed terrace at the cliff edge, the domed gazebo, two coin
+  telescopes, benches and lamps, **Café Belvedere** and its terrace over the sea; the path down the cliff to the
+  **Hidden Cove** (sand, umbrellas, towels, the snack stand).
+- **The Hilltop Mansion** on the headland south of Ocean Drive, through the generator's own mansion builder (its
+  walled lot, fountain, pool and three-car garage; `shared/map.js` handApi `mansion`), its grounds down to the cliff:
+  the tennis court, the gazebo on the edge, a cypress walk.
+- **The Strand**: the clifftop walk west of Westside Avenue (lawn, the promenade along the edge, palms, lamps,
+  benches); the walk along the cliff edge carries on east to the marina.
+- **Marina Heights**, the east shore north of Bayside Avenue: the **Bayside Marina** (the quay along the strait, four
+  finger piers with sailboats, yachts, speedboats and dinghies), the **Bayside Yacht Club** and **Marina Bait &
+  Tackle** on the quay, **Bayside Boatworks** and its boat yard (boats up on the hard), the marina's car park, the
+  **Marina Terrace** (Spinnaker's seafood, the Bayside Chandlery, Gelato al Porto, the Harbourmaster, Bayside Dive &
+  Sail, tables under umbrellas and lights strung across); villas along Marina Avenue
+  over the strait; pastel townhouses under tile roofs between Harborview Avenue and the Gulf Loop's deck (parking under
+  the deck).
+- Coral Court's court on the Pink Mile is a tennis court now (it was drawn with basketball lines).
+
+Tests: test/bayside.test.js (the streets meet every bridge and footbridge on the district's shores; the areas keep
+clear of Pine Hills' and Southside's land; the specials).
