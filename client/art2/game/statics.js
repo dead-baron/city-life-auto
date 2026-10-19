@@ -2232,6 +2232,7 @@ function propItems(c, p, pi, I) {
     case 'lanerope': { const len = Math.round((p.len || 400) / 8) * 8, hd = qa(p.a || 0, 4); V(`lrope:${len}:${hd.toFixed(2)}`, 'laneRope', [len], hd); return; }
     case 'lounger': { const col = ['#f0eee8', '#2f6ab0', '#e8604a', '#3a9a7a'][(p.v || 0) % 4], hd = qa(p.a || 0, 4); V(`lng:${col}:${hd.toFixed(2)}`, 'lounger', [col], hd); return; }
     case 'lguard': V(`lgt:${qa(p.a || 0, 4).toFixed(2)}`, 'lifeguard', [], qa(p.a || 0, 4)); return;
+    case 'hammock': V(`ham:${p.len || 60}:${qa(p.a || 0, 4).toFixed(2)}`, 'hammock', [p.len || 60], qa(p.a || 0, 4)); return;   // (slung between two palms: World v3's Coral Cay)
     case 'cafetable': V('ctab', 'cafeTable', []); return;
     case 'chainfence': fenceLine(I, 'chain', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;
     case 'fenceline': fenceLine(I, p.kind || 'iron', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;   // (a hand plan's fence: picket, wood, chain, iron, stone)
