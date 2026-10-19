@@ -35,7 +35,9 @@ function streets() {
   return [
     { name: 'Meadowbrook Drive', kind: 'st', pts: DRIVE_A },
     { name: 'Meadowbrook Drive', kind: 'st', pts: DRIVE_B },
-    { name: 'Sorrel Crescent', kind: 'st', pts: SORREL },
+    // (a minor street: the drive's own bend between the crescent's ends is a street - two streets of one kind between
+    // the same two corners would be one edge to the road network, shared/roads.js)
+    { name: 'Sorrel Crescent', kind: 'minor', pts: SORREL },
     { name: 'Quail Run', kind: 'st', pts: QUAIL },
     { name: 'Gardens Way', kind: 'minor', culdesac: true, pts: GARDENS },
     // (the grid's Hillcrest Avenue starts at Birch Street: carried on to Hills Avenue)
