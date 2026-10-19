@@ -322,7 +322,7 @@ function build(m, api, K) {
     for (const [x, y, a] of [[HX0 + 0.1, HY0 + 5.2, 2.4], [sx0 + 0.1, sy + 9, -0.6], [HX1 + 0.92, HY1 - 0.4, 0.9]]) prop('gull', x, y, 0, { a, z: 30 });
     // the float off the head's east side: dinghies tied up, cleats at its corners
     prop('canoe', FX1 + 1.8, FY0 + 0.6, 0, { a: 0, c: 0 }); prop('canoe', FX1 + 1.6, FY1 + 0.6, 0, { a: 0, c: 2 });
-    for (const [x, y] of [[FX1 + 0.7, FY0 + 0.3], [FX1 + 0.7, FY1 + 0.7]]) prop('mooring', x, y, 0, { lift: 4 });
+    for (const [x, y] of [[FX1 + 0.7, FY0 + 0.3], [FX1 + 0.7, FY1 + 0.7]]) prop('bollard', x, y, 5);
     m.marina.push({ x: Math.round((FX1 + 4) * TILE), y: Math.round((FY0 + 1.5) * TILE), a: 0, kind: 'dinghy' });
     // ashore: bollards across the root (no cars on the pier), the lit sign over it
     for (const bx of [sx0 + 0.3, sx0 + 1.4, sx0 + 2.6, sx0 + 3.7]) prop('bollard', bx, yR - 0.3, 5);
@@ -367,7 +367,7 @@ function build(m, api, K) {
       const b = K.building({ x, y, w, h, arch: 'office', name: 'Sunset Beach Lifeguards', poi: { kind: 'delivery', label: 'Sunset Beach Lifeguards' }, whole: true, art });
       if (b) { out.shops++; K.fill(x - 1, y + h, w + 2, 2, T.PLAZA); busy.push([x - 1, y, x + w + 1, y + h + 4]); prop('surfboard', x + w + 0.6, y + h - 1, 0, { v: 1 }); prop('lifering', x - 0.6, y + h - 1.2, 0); }
     }
-    for (const lx of [2532, 2600, 2650, 2700]) { const s = shore(lx); if (s < SEA) { prop('lifeguard', lx, s - 4.5, 16); busy.push([lx - 2, s - 7, lx + 2, s - 3]); } }
+    for (const lx of [2532, 2600, 2650, 2700]) { const s = shore(lx); if (s < SEA) { prop('lguard', lx, s - 4.5, 16, { a: 0 }); busy.push([lx - 2, s - 7, lx + 2, s - 3]); } }
   }
 
   // ===========================================================================================================

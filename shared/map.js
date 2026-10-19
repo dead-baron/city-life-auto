@@ -4196,6 +4196,7 @@ function buildBoatDocks(m) {
   const anchors = [];
   const marinaPoi = m.pois.find((p) => p.kind === 'marina');
   if (m.publicPier) anchors.push({ x: m.publicPier.x, y: m.publicPier.y + 6 * TILE, name: 'Sunset Beach Boat Rentals' });
+  for (const a of m.handRentals || []) anchors.push(a);   // (a handcrafted district's own boat hire: World v3's Coral Cay - shared/world3-coralcay.js)
   if (marinaPoi) anchors.push({ x: marinaPoi.x, y: marinaPoi.y, name: 'Harbor Boat & Jet Ski Hire' });
   if (m.pelican) anchors.push({ x: m.pelican.dock.x, y: m.pelican.dock.y, name: 'Pelican Key Jet Skis' });
   for (const v of m.gullIsles || []) anchors.push({ x: v.x, y: v.y, name: v.rent });   // (the only way off the Gull Isles is by boat)

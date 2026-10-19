@@ -11751,3 +11751,54 @@ few houses over the empty headland.
 
 Tests: test/lakeside.test.js (the streets round it stay the grid's; the holes inside the course, each par fitting its
 length); test/world3world.test.js (four holes, every tee on its tee box and pin on its green, the ground, the bar).
+
+## 2026-10-19 · World v3, handcrafted: Pine Hills' south side (Larch and Sequoia Courts, Pinewood Drive, Pinewood Park)
+
+Pine Hills' south side (district 0: Sunset Avenue to Westside Avenue, Pine Avenue down to 5th Street, behind Sunset
+Beach's beachfront) is now laid out by hand (`shared/world3-pinehills.js`), from the research's sources for Pine Hills
+(D9 and I1: houses on winding drives and courts; NK1-L: the woods kept between them - the old world's Pine Hills had
+its own plan of drives) and the suburbs' kit (`shared/world3-suburb.js`). The grid had laid square blocks of scattered
+house lots.
+- **The streets:** Sunset and Westside Avenues, Pine Avenue and 5th Street stay; Magnolia, Alder and Laurel Streets and
+  20th and 2nd Streets give way to **Larch Court** and **Sequoia Court** off Sunset Avenue, bending as they go, and
+  **Pinewood Drive**, the crescent off Westside Avenue.
+- **The houses:** every one a home on its lawn round the courts and the crescent - fronts with the drive, the mailbox
+  and a tree, or back yards to the camera with the patio, a pool now and then, the picket fence - and pines everywhere:
+  in the yards, along the drives, in what's left between the lots (the suburb kit's rows take their species now).
+- **Pinewood Park** inside the crescent: a grove of pines and spruces, a dirt trail looping through it from the drive's
+  two arms, a clearing with the picnic shelter and its tables, the pond with lilies and a duck.
+
+Also: Sunset Beach's lifeguard towers and the pier float's posts were drawn as crates (a prop name the art doesn't
+know falls back to one): the towers are the art's `lguard`, the posts bollards. A hammock is a prop now
+(`client/art2/game/statics.js`), slung between two palms.
+
+Tests: test/pinehills.test.js (the avenues and streets round it stay the grid's; the grid inside gives way to the
+courts and the crescent).
+
+## 2026-10-19 · World v3, handcrafted: Coral Cay (the dive village, Tiki Point, the rainforest, the eco lodge)
+
+The quiet key (district 44) is now laid out by hand, all of it (`shared/world3-coralcay.js`), from the owner's concepts
+WC249 (the tropical key: colourful two-storey houses, a quay, tiki huts, stilt cottages, a light on the point), WC178
+(the reef bay: the beach bar, the T-dock and its boats) and NA1-E (the jungle paths, the thatched bar with its hammocks,
+the T-jetty), with the research's plan for the key (a sleepy dive village, an eco-resort on the east lobe, the dive
+shop and boat hire, the rainforest). The grid had laid a mainland town's streets over the key (Lake and Pinecrest
+Avenues, a burger and noodle place on every block), and Willow Valley's farm fields and lavender rows covered its east
+lobe: the key's land outside the town was the valley's meadow (`shared/world3-land.js` ISLE3) and the biomes' farm
+sections dressed it.
+- **The village:** Harbor Street through it, Coral Street from the north beach down to the quay, Palm, Shell, Conch and
+  Reef Lanes, Lagoon Way along the south shore; houses in painted stucco under tile roofs, two floors, palms in their
+  yards (the suburb kit's rows take a look of their own now: `o.art`). On Harbor Street **Coral Dive Co.**, **Cay
+  Market**, **Reef Cafe**, **Island Threads** (the surf shop's stock), **The Conch Bar** and **Cay Post & Supply**;
+  across from them **Conch Square** (the fountain, palms, benches, market umbrellas).
+- **Coral Cay Dock** at Coral Street's foot: the T-jetty, the dive boat and skiffs, the bait shack (a tackle counter),
+  **Coral Cay Boat Hire** beside it (`m.handRentals`: a handcrafted district asks the generator's rental pass for a
+  dock), a drop-off at the jetty's end.
+- **Tiki Point** on the north beach: the thatched bar (a bar), torches, tables, hammocks slung between the palms (the
+  hammock is a prop now), loungers on the sand.
+- **Coral Cay Rainforest** on the east lobe: coconut and royal palms, banana and bird of paradise, monstera, elephant
+  ear and hibiscus, jungle paths through it; **Cay Road** out through it to the **Coral Cay Eco Lodge** - the lodge,
+  its cabins along the shore on a boardwalk (rooms to rent), their jetty - and **Coral Point Light** on the tip.
+- The whole key is Coral Cay's district now (`m.dist`), and the plan keeps all of its land (no farm sections, meadow
+  trees or rocks dressed over it).
+
+Tests: test/coralcay.test.js (the streets on the key, one network).

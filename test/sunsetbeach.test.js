@@ -12,5 +12,5 @@ test('Sunset Beach: the streets round the beachfront stay the grid\'s; the plan 
   for (let x = BX.juniper + 6; x < BX.hazel - 4; x += 7) for (const y of [BY.fifth, BY.blvd]) assert.equal(handPlanAt(x, y), null, `${x}, ${y}`);
   for (let y = BY.fifth + 6; y < BY.blvd - 4; y += 5) for (const x of Object.values(BX)) assert.equal(handPlanAt(x, y), null, `${x}, ${y}`);
   for (const [x, y] of [[2530, 3130], [2590, 3130], [2650, 3130], [2710, 3130], [2600, 3175], [2560, 3220]]) assert.equal(handPlanAt(x, y), SUNSETBEACH, `${x}, ${y}`);
-  for (const [x, y] of [[2480, 3130], [2780, 3170], [2600, 3090]]) assert.equal(handPlanAt(x, y), null, `${x}, ${y}`);
+  for (const [x, y] of [[2480, 3130], [2780, 3170], [2600, 2990]]) assert.equal(handPlanAt(x, y), null, `${x}, ${y}`);
 });
