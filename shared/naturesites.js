@@ -194,7 +194,7 @@ function buildSites(m, H) {
 // north-east corner by the road, its car park, a practice green and tables on the lawn; oaks, pines and cypresses
 // between the holes. (m.golf: the ground bake draws the greens, tees and fairways.)
 function golfClub(m, H) {
-  const pt = (m.paintings || []).find((q) => q.key === 'golf');
+  const pt = (m.paintings || []).find((q) => q.key === 'golf' && !q.hand);   // (not a handcrafted course: World v3's Lakeside Greens lays itself)
   if (!pt) return;
   const PX = Math.round(pt.x / TILE), PY = Math.round(pt.y / TILE), PW = Math.round(pt.w / TILE), PH = Math.round(pt.h / TILE);
   if (PW < 50 || PH < 34) return;

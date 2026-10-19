@@ -4233,7 +4233,7 @@ function buildBoatDocks(m) {
 }
 
 function buildScenePaintings(m) {
-  m.paintings = [];
+  m.paintings = (m.paintings || []).filter((p) => p && p.hand);   // (a handcrafted district's own: World v3's Lakeside Greens - shared/world3-lakeside.js)
   const W = m.w, H = m.h;
   // the painted islands: sand, grass, the jetty's planks and the cabin, exactly as painted
   for (const si of m.sceneIslands || []) {

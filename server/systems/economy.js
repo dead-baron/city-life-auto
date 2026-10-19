@@ -93,7 +93,7 @@ const COUNTER = {
   market: { label: (l) => `${l} - the stalls`, title: (l) => l, sub: 'Bread, fruit and honey from the farms round about. The stallholders buy fruit and honey too.' },
   snack: { label: (l) => `${l} (hot dogs, lemonade)`, title: (l) => l, sub: 'Hot dogs, ice-cold lemonade and energy drinks.' },
   tackle: { label: (l) => `${l} (bait, rods; sells fish)`, title: (l) => l, sub: null },
-  clubhouse: { label: (l) => `${l} - the bar`, title: (l) => SHOPS.clubhouse.title, sub: 'Members and guests welcome. Cocktails, coffee, a fine red and a hot dog at the turn.' },
+  clubhouse: { label: (l) => `${l} - the bar`, title: (l) => `${l} - ${SHOPS.clubhouse.title}`, sub: 'Members and guests welcome. Cocktails, coffee, a fine red and a hot dog at the turn.' },
   farmstand: { label: (l) => `${l} - farm stand (honey)`, title: (l) => SHOPS.farmstand.title, sub: 'Lavender honey from the hives at the end of the rows, and fresh lemonade. They buy honey back.' },
   salvage: { label: (l) => `${l} - yard office (buys scrap)`, title: (l) => SHOPS.salvage.title, sub: 'The foreman buys component scrap for more than the pawn shop pays. Bring it to the window.' },
   assay: { label: (l) => `${l} (pickaxes; buys ore)`, title: (l) => SHOPS.assay.title, sub: 'Ore from the quarry\'s faces, the mine\'s outcrops and the cave under the peaks: the assayer pays more than any pawn shop. Pickaxes for every rock - the best ore needs the best pick.' },
