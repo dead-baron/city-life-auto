@@ -17,7 +17,7 @@ export const OX = { quarter: 1960, laurel: 2120, east: 2200 };
 export const OY = { eighth: 2160, blvd: 2200, pier: 2300 };
 const RECTS = [[OX.quarter, OY.eighth, OX.east, OY.blvd], [OX.quarter, OY.blvd, OX.east, OY.pier]];
 const BW = 5, BL = 8, LANE = 4;   // (a stack block: 5 x 8 tiles - the cstack prop's footprint; the lanes between groups)
-const SHIP = [8, 8, 8, 8, 8, 8, 8, 8, 8, 10];
+const SHIP = [8, 8, 8, 8, 8, 8, 10];   // (stern, the holds, the bow: tiles)
 
 export const PORT = {
   key: 'port', d: D, rects: RECTS, rect: [OX.quarter, OY.eighth, OX.east, OY.pier],
@@ -125,22 +125,27 @@ function build(m, api, K) {
       for (const dy of [-1.2, 1.2]) for (const dx of [-2, 0]) m.addSolidProp((ex - 2.5 + dx) * TILE, (y + dy) * TILE, 9);
       out.cranes++;
     }
-    // the ship: its hull lies north-south off the quay, clear of the land the length of it
-    const LS = SHIP.reduce((a, b) => a + b, 0);
-    for (const off of [0, -12, 12, -24, 24]) {
-      const sy = Math.floor((ys0 + ys1 - LS) / 2) + off;
-      if (sy < ys0 || sy + LS > ys1 + 20) continue;
-      let ex = 0;
-      for (let y = sy; y < sy + LS; y++) ex = Math.max(ex, edge(y));
+    // the ship: its hull lies north-south off the quay where the quay runs straight the length of it (the shore bulges
+    // out north of the boulevard), clear water under it
+    const LS = SHIP.reduce((a2, b2) => a2 + b2, 0), E = [];
+    for (let y = ys0; y < ys1 + 20; y++) E.push(edge(y));
+    let best = null;
+    for (let sy = ys0; sy + LS <= ys1 + 20; sy++) {
+      let lo = 1e9, hi = -1;
+      for (let y = sy; y < sy + LS; y++) { lo = Math.min(lo, E[y - ys0]); hi = Math.max(hi, E[y - ys0]); }
+      if (hi - lo > 3 || hi >= OX.east + 20) continue;
       let ok = true;
-      for (let y = sy; y < sy + LS && ok; y++) for (let x = ex + 1; x < ex + 9; x++) if (!wet(x, y)) { ok = false; break; }
+      for (let y = sy; y < sy + LS && ok; y++) for (let x = hi + 1; x < hi + 9; x++) if (!wet(x, y)) { ok = false; break; }
       if (!ok) continue;
-      const cx = (ex + 1) * TILE + 120;
+      const d = Math.abs(sy + LS / 2 - (ys0 + ys1) / 2);
+      if (!best || d < best.d) best = { sy, ex: hi, d };
+    }
+    if (best) {
+      const { sy, ex } = best, cx = (ex + 1) * TILE + 120;
       let yy = sy * TILE;
       for (const [k, len] of SHIP.entries()) { prop('cship', cx / TILE, (yy + len * TILE / 2) / TILE, 0, { v: k === 0 ? 2 : k === SHIP.length - 1 ? 0 : 1, c: Math.floor(rnd(sy, k, 4) * 4), a: Math.PI / 2, tall: 250 }); yy += len * TILE; }
       for (let y2 = sy * TILE + 16; y2 < (sy + LS) * TILE; y2 += 28) for (const ox of [-94, 94]) m.addSolidProp(cx + ox, y2, 16);
       placeName('The Westport Trader', ex + 1, sy, ex + 9, sy + LS);
-      break;
     }
   }
 
