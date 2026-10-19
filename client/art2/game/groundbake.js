@@ -1442,7 +1442,7 @@ const low = (m) => KIND[m] === 3 || KIND[m] === 2;
 // ---- 8. decorations ------------------------------------------------------------------------------------------------
 // stamp a cover sprite with its root at world (X, Y): each pixel is kept only where it stands at least as high
 // as what is already there (the depth rule, so overlaps come out the same in every chunk)
-function stamp(C, G, spr, X, Y, z0 = 0) {
+function stamp(C, G, spr, X, Y, z0 = 0, fl = 0) {
   const ox = Math.round(X) - C.X0 - spr.ax, oy = Math.round(Y) - C.Y0 - spr.ay;
   for (let y = 0; y < spr.h; y++) {
     const gy = oy + y; if (gy < 0 || gy >= CHUNK) continue;
@@ -1455,10 +1455,14 @@ function stamp(C, G, spr, X, Y, z0 = 0) {
       G.col[j] = spr.col[sj]; G.col[j + 1] = spr.col[sj + 1]; G.col[j + 2] = spr.col[sj + 2];
       G.nrm[j] = spr.nrm[sj]; G.nrm[j + 1] = spr.nrm[sj + 1]; G.nrm[j + 2] = spr.nrm[sj + 2];
       G.z[gi] = z;
-      G.flag[gi] = spr.flag[si] | F_GROUND | F_WET;            // (cover is ground: rain wets it, nothing mirrors it)
+      G.flag[gi] = spr.flag[si] | F_GROUND | F_WET | fl;       // (cover is ground: rain wets it, nothing mirrors it)
     }
   }
 }
+// a lily pad floats a sliver above the water's ground (ground sinks GSINK = 4 px for the engine's depth test): just
+// enough that the fish, drawn as decals on the water just above it (client/art2/game/waterlife.js FISH_Z), pass under
+// the pads instead of over them; F_NOCAST: no shadow of that height on the water
+export const LILY_Z = 5;
 // what is strewn on each material: [cover kind, variants, per-cell chance]; cells of CELL px
 const CELL = 6;
 const COVER = {};
@@ -1530,7 +1534,7 @@ function decor(C, G) {
       const still = w.k === WK.POND || w.k === WK.LAKE || w.k === WK.MARSH || w.fv < 0.2;
       const reedy = vnc(X, Y, 150, seed + 103) + (w.k === WK.MARSH ? 0.25 : w.k === WK.POND ? 0.1 : 0);
       if (w.depth < (w.k === WK.MARSH ? 0.9 : 0.45) && (d < 5 || reedy > 0.55) && h0 < (reedy > 0.55 ? 0.42 : 0.1) * dens) stamp(C, G, coverSprite('reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
-      else if (still && w.depth > 0.25 && w.depth < 1.9 && d > 5 && vnc(X, Y, 110, seed + 105) > (w.k === WK.LAKE ? 0.68 : w.k === WK.MARSH ? 0.7 : 0.6) && h0 < 0.55 * dens) stamp(C, G, coverSprite('lily', (hh(cx, cy, seed + 99) * 6) | 0), X, Y, 0);
+      else if (still && w.depth > 0.25 && w.depth < 1.9 && d > 5 && vnc(X, Y, 110, seed + 105) > (w.k === WK.LAKE ? 0.68 : w.k === WK.MARSH ? 0.7 : 0.6) && h0 < 0.55 * dens) stamp(C, G, coverSprite('lily', (hh(cx, cy, seed + 99) * 6) | 0), X, Y, LILY_Z, F_NOCAST);
       continue;
     }
     // paving and asphalt: litter and weeds by wealth

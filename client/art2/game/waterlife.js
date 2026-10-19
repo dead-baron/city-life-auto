@@ -27,6 +27,9 @@ const CELL = 6 * TILE;              // the patches of water fish are placed by (
 const MAXF = [30, 64, 72, 80];      // fish at once, by the renderer's quality tier
 const MAXR = 96, MAXP = 260, MAXW = 240;   // rings on the water, puffs of mist and foam, swimmers' wake points
 const ART = 2;                      // world px per art pixel of these sprites
+// the height the fish and the rings are drawn at: a decal is tested at 3.5 px over its z0 (engine.js DECAL_H), the water
+// at 0 and a lily pad at 1 (groundbake.js LILY_Z less the ground's sink) - so the pads cover what swims under them
+const FISH_Z = -3.4;
 const angd = (a, b) => { let d = (a - b) % TAU; if (d > Math.PI) d -= TAU; else if (d < -Math.PI) d += TAU; return d; };
 const hh = (a, b, c = 0) => { let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(c | 0, 1274126177)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 const hex = (s) => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
@@ -700,7 +703,7 @@ export class WaterLife {
       if (S.deep || f.air >= 0 || !sh || f.vis <= 0) continue;
       const fr = FR[Math.floor(f.ph * 4) & 3], key = conv(`wlf|${f.s}|-1|${fr}`, () => fishSprite(S, -1, BEND[fr]));
       const dep = S.jelly ? 9 : 5;
-      if (key) E.drawDecal(key, f.x + e.sx * dep, f.y + e.sy * dep, f.a, Math.min(0.45, 0.24 * day * sh * f.vis * rainK), 0);
+      if (key) E.drawDecal(key, f.x + e.sx * dep, f.y + e.sy * dep + FISH_Z, f.a, Math.min(0.45, 0.24 * day * sh * f.vis * rainK), FISH_Z);
     }
     for (const f of this.fish) {
       const S = f.S;
@@ -717,7 +720,7 @@ export class WaterLife {
       if (al <= 0.02) continue;
       const fr = S.jelly ? Math.floor(f.ph * 3) % 3 : FR[Math.floor(f.ph * 4) & 3], vk = S.jelly ? fr : S.flash ? (f.flash > 0.5 ? 1 : 0) : f.vk;
       const key = S.jelly ? conv(`wlf|jelly|${fr}|0`, () => fishSprite(S, fr, 0)) : spr(S, f.s, vk, fr);
-      if (key) E.drawDecal(key, f.x, f.y, f.a, al, 0);
+      if (key) E.drawDecal(key, f.x, f.y + FISH_Z, f.a, al, FISH_Z);
     }
     // the rings spreading on the water
     const R = this.rings;
@@ -727,7 +730,7 @@ export class WaterLife {
       const life = 1.1 + R[j + 3] * 0.12, age = now - R[j + 2];
       if (age < 0 || age > life) { if (age > life) R[j + 4] = 0; continue; }
       const u = age / life, r = Math.max(1, Math.round(1 + u * R[j + 3] * 1.6)), key = conv(`wlr|${r}`, () => ringSprite(r));
-      if (key) E.drawDecal(key, R[j], R[j + 1], 0, Math.pow(1 - u, 1.4) * 0.55 * k * rainK, 0);
+      if (key) E.drawDecal(key, R[j], R[j + 1] + FISH_Z, 0, Math.pow(1 - u, 1.4) * 0.55 * k * rainK, FISH_Z);
     }
     // the swimmers' wakes: two thin streaks from each point, spreading out from its track and fading - a small V
     const Wk = this.wakes, sk = conv('wlw', streakSprite);
@@ -735,7 +738,7 @@ export class WaterLife {
       const hw = Wk[j + 4], age = now - Wk[j + 3];
       if (!hw || age < 0.15 || age > 2) continue;
       const a = Wk[j + 2], sp = Wk[j + 5], al = Math.pow(1 - age / 2, 1.3) * Math.min(1, sp / 70) * 0.6 * rainK, sp2 = hw * 0.8 + age * sp * 0.3, nx = -Math.sin(a), ny = Math.cos(a);
-      for (let sd = -1; sd <= 1; sd += 2) E.drawDecal(sk, Wk[j] + nx * sp2 * sd, Wk[j + 1] + ny * sp2 * sd, a + sd * 0.45, al, 0);
+      for (let sd = -1; sd <= 1; sd += 2) E.drawDecal(sk, Wk[j] + nx * sp2 * sd, Wk[j + 1] + ny * sp2 * sd + FISH_Z, a + sd * 0.45, al, FISH_Z);
     }
     // the foam on the pools, then the spray over the falls - drawn where they are, over whatever is there below the
     // height they're tested at (lift: a decal is put at y - z0 and tested at z0, so lifting both alike keeps its

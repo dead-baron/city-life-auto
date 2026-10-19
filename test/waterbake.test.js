@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
 import { T, TILE } from '../shared/constants.js';
-import { bakeGround, bakeSwatches, CHUNK } from '../client/art2/game/groundbake.js';
+import { bakeGround, bakeSwatches, CHUNK, LILY_Z } from '../client/art2/game/groundbake.js';
 import { F_GROUND, F_WATER, F_WET, F_NOCAST } from '../client/art2/gbuf.js';
 
 const M = generateCity(1337);
@@ -106,4 +106,28 @@ test('the E1 swatch sheet still paints its water (no window: each water by its m
   let water = 0;
   for (let i = 0; i < G.w * G.h; i++) if (G.flag[i] & F_WATER) water++;
   assert.ok(water > 1000);
+});
+
+test('lily pads float a sliver over the water, so the fish drawn on the water pass under them (and cast no shadow of it)', () => {
+  // the ponds' and lakes' chunks: their leaf cover over the water at a pad's height
+  const LEAF = 32;
+  let found = 0, cast = 0;
+  const seen = new Set();
+  for (let ty = M.y0 + 30; ty < M.y0 + M.h - 30 && found < 200; ty += 6) for (let tx = M.x0 + 30; tx < M.x0 + M.w - 30 && found < 200; tx += 6) {
+    const i = M.idx(tx, ty);
+    if (!wet(i) || !M.lake[i]) continue;
+    const cx = Math.floor(tx / CT), cy = Math.floor(ty / CT), k = cy * 1000 + cx;
+    if (seen.has(k) || seen.size > 12) continue;
+    seen.add(k);
+    const G = bakeGround(M, cx, cy, { quality: 1, seed: 1337 });
+    for (let p = 0; p < G.w * G.h; p++) {
+      const f = G.flag[p];
+      if (!(f & LEAF) || (f & F_WATER)) continue;
+      const X = cx * CHUNK + (p % CHUNK), Y = cy * CHUNK + Math.floor(p / CHUNK), g = M.idx(Math.floor(X / TILE), Math.floor(Y / TILE));
+      if (!wet(g) || !M.lake[g] || G.z[p] !== LILY_Z) continue;   // (at a pad's height: the pads, and a reed's stems passing it)
+      if (f & F_NOCAST) found++; else cast++;
+    }
+  }
+  assert.ok(found > 1000, `lily pads floating over the ponds' water (${found} px)`);
+  assert.ok(cast < found * 0.2, `casting no shadow from that height (${cast} px that do: reeds)`);
 });

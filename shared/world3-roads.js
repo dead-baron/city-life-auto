@@ -18,6 +18,7 @@
 // Generator-only: nothing live imports it (the page never builds the v3 world).
 import { TILE } from './constants.js';
 import { HIGHWAYS, ARTERIALS, INTERCHANGES, CLOSURES, LANDMARKS, MAIN_LINE, RADIUS, linePath, pointAt, nearestOnPath, stretchRanges, inRanges, skeletonLines, skeletonCrossings } from './world3-skeleton.js';
+import { HAND_PLANS } from './world3-hand.js';
 
 const RAMP = 24;        // tiles: a highway's climb from the ground to the deck
 const OVER = 16;        // tiles of deck either side of an arterial a highway passes over
@@ -229,9 +230,10 @@ export function layRoads(lines, m, L) {
   return out;
 }
 
-// 3. an arterial's end that meets no road (within 1.5 tiles of another line on the ground) is carried on to the nearest
-// road within REACH tiles, by a straight run over land that doesn't pass a highway's bore: the West Sea Road to the
-// Redwood Coast Road and to Gull Harbor's streets, the Toll Point Bridge to Cedar Isle's and Toll Point's.
+// 3. an arterial's end that meets no road (within 1.5 tiles of another line on the ground, or of a handcrafted district's
+// street's end) is carried on to the nearest road within REACH tiles, by a straight run over land that doesn't pass a
+// highway's bore: the West Sea Road to the Redwood Coast Road and to Gull Harbor's streets, the Toll Point Bridge to
+// Cedar Isle's and Toll Point's.
 function carryEnds(lines, m, ends, bores, out) {
   const W = m.w, H = m.h, R = REACH * TILE;
   const ground = lines.filter((l) => l.lvl === 0 && l.pts.length >= 2);
@@ -244,10 +246,14 @@ function carryEnds(lines, m, ends, bores, out) {
     return true;
   };
   const inBore = (p) => bores.some((B) => { const q = nearS(B.path, p.x / TILE, p.y / TILE, true); return q.d < BORE_END && q.s >= B.a - 4 && q.s <= B.b + 4; });
+  // (the handcrafted districts' streets are laid after these - shared/world3-hand.js: one that starts or ends at an
+  // arterial's end meets it there - the Pink Mile's Bridge Street at the Arts Bridge, its boulevard at the Westport Bridge)
+  const handEnds = HAND_PLANS.flatMap((P) => P.streets().flatMap((q) => [q.pts[0], q.pts[q.pts.length - 1]]));
   for (const { l, end, kind } of ends) {
     {
       const p = end ? l.pts[l.pts.length - 1] : l.pts[0];
       if (LANDMARKS.some((k) => Math.hypot(k.at[0] * TILE - p.x, k.at[1] * TILE - p.y) < DEST * TILE)) continue;   // (a spur to a landmark)
+      if (handEnds.some(([hx, hy]) => Math.hypot((hx + 0.5) * TILE - p.x, (hy + 0.5) * TILE - p.y) < 1.5 * TILE)) continue;   // (a handcrafted district's street meets it there)
       let met = false;
       for (const o of ground) {
         if (o === l) continue;

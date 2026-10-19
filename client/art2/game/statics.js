@@ -345,6 +345,7 @@ export function makeStatic(r) {
     case 'flat': return makeFlat(r);
     case 'grp': return group(r.parts.map(([q, dx, dy, dz]) => [makeStatic(q), dx, dy, dz || 0]));
     case 'sign': return makeSignBoard(r);
+    case 'msign': return makeMotelSign(r);
     case 'debris': return makeDebris(r);
     case 'rock': return makeRock(r);
     case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams });
@@ -2183,6 +2184,7 @@ function propItems(c, p, pi, I) {
     }
     case 'ringfloat': { const col = ['#f06a9a', '#e8c030', '#2fb0d8', '#f08a30'][(p.v || 0) % 4]; V(`rfl:${col}`, 'ringFloat', [col]); return; }
     case 'stower': V('stwr', 'slideTower', [96, 56, 84]); lightAt(I, x, y, 90, 160, [1, 0.9, 0.7], 1.2, 'lamp'); return;
+    case 'motelsign': { const text = String(p.text || 'MOTEL').toUpperCase().slice(0, 14), word = String(p.word || 'MOTEL').toUpperCase().slice(0, 7), z = p.z || 60, ci = (p.col || 0) % NEONC.length; put(I, { key: `msign:${text}:${word}:${ci}:${z}`, recipe: { t: 'msign', text, word, ci, z }, x, y, ext: [70, z + 170, 70, 10], pi }); lightAt(I, x, y + 4, z + 70, 220, NEONC[ci].map((q) => q / 255), 2.4, 'neon'); return; }
     case 'textsign': { const text = String(p.text || 'SIGN').slice(0, 24), z = p.z || 40; put(I, { key: `tsign:${text}:${p.bg || ''}:${z}`, recipe: { t: 'sign', text, sx: p.sx || 2, bg: p.bg || '#1a4a8a', fg: p.fg || [255, 226, 90], lit: 1, z, posts: true }, x, y, ext: [90, z + 40, 90, 10], pi }); lightAt(I, x, y + 4, z, 90, [1, 0.9, 0.6], 0.9, 'sign'); return; }
     case 'bathpav': V('bpav', 'bathPavilion', [0.6]); lightAt(I, x, y + 26, 22, 120, [1, 0.78, 0.46], 1.5, 'lamp'); return;
     case 'bamboo': { const len = Math.round((p.len || 80) / 8) * 8, hd = qa(p.a || 0, 4); V(`bmb:${len}:${hd.toFixed(2)}`, 'bambooFence', [len, 30], hd); return; }
@@ -2491,6 +2493,39 @@ function makeSignBoard(r) {
   const S = upright(F, r.z || 0);
   if (r.posts) { const pole = memo('signpost:' + (r.z || 0), () => { const m = new Vox(4, 4, (r.z || 0) + 2), p = m.mat({ ramp: MAT.metalDark, k: 2 }); m.box(1, 1, 0, 3, 3, (r.z || 0) + 2, p); return voxSprite(m); }); return group([[S, 0, 0, 0], [pole, -Math.round(w * 0.35), -1, 0], [pole, Math.round(w * 0.35), -1, 0]]); }
   return S;
+}
+
+// A motel's tall sign (the Pink Mile's, WC423): on one pole, its name lit along the top, the word (MOTEL) stacked letter
+// over letter down a board below in its neon colour, an arrow of bulbs pointing in at the drive, VACANCY lit at the
+// foot, a star on top
+function makeMotelSign(r) {
+  const col = NEONC[r.ci || 0], hot = (c) => c.map((q) => Math.min(255, q * 0.62 + 96)), dim = col.map((q) => Math.round(q * 0.28 + 12));
+  const name = r.text, word = r.word, tw = textWidth(name, { sx: 2, gap: 1 }), pw = tw + 14, cw = 36, ch = word.length * 24 + 12, vw = textWidth('VACANCY', { sx: 1, gap: 1 }) + 10;
+  const W = Math.max(pw, cw + 42) + 2, Hs = 12 + 20 + ch + 16, cx = Math.round(W / 2 - 10), F = new GBuf(W, Hs);
+  const P = (x, y, c, e = 0) => { if (x >= 0 && y >= 0 && x < W && y < Hs) F.put(x, y, c, [0, 1, 0.1], 0, e ? [c[0], c[1], c[2], e] : null, 0); };
+  const panel = (x0, y0, w, h, bg, tube) => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const e = x === 0 || y === 0 || x === w - 1 || y === h - 1, e2 = x === 2 || y === 2 || x === w - 3 || y === h - 3; P(x0 + x, y0 + y, e ? MAT.metalDark[2] : e2 && tube ? hot(tube) : bg, e2 && tube ? 170 : 0); } };
+  // the star
+  for (let y = 0; y < 11; y++) for (let x = -5; x <= 5; x++) { const dy = Math.abs(y - 5); if ((Math.abs(x) < 1 && dy <= 5) || (dy < 1 && Math.abs(x) <= 5) || Math.abs(x) + dy <= 2) P(cx + x, y, [255, 230, 140], 200); }
+  // the name along the top
+  const nx = Math.round(W / 2 - pw / 2);
+  panel(nx, 12, pw, 20, [26, 20, 32], col);
+  drawText((px, py) => P(px, py, hot(col), 200), name, nx + 7, 17, { sx: 2, sy: 2, gap: 1 });
+  // the word down the board
+  const by = 32;
+  panel(cx - 18, by, cw, ch, dim, col);
+  for (let i = 0; i < word.length; i++) { const lw = textWidth(word[i], { sx: 4, gap: 1 }); drawText((px, py) => P(px, py, [255, 246, 236], 210), word[i], cx - Math.round(lw / 2), by + 6 + i * 24, { sx: 4, sy: 4, gap: 1 }); }
+  // the arrow of bulbs: down the board's side and out to the drive, its head
+  const ax = cx + 23, ay1 = by + ch - 6;
+  for (let y = by + 4; y <= ay1; y += 3) P(ax, y, (y >> 1) % 3 ? [255, 214, 110] : [255, 250, 220], 190);
+  for (let x = ax; x <= ax + 14; x += 3) P(x, ay1, [255, 214, 110], 190);
+  for (let k = 0; k < 5; k++) { P(ax + 16 - k, ay1 - k, [255, 230, 140], 200); P(ax + 16 - k, ay1 + k, [255, 230, 140], 200); }
+  // VACANCY at the foot
+  const vy = by + ch + 2;
+  panel(cx - Math.round(vw / 2), vy, vw, 12, [24, 10, 14], null);
+  drawText((px, py) => P(px, py, [255, 70, 90], 200), 'VACANCY', cx - Math.round(vw / 2) + 5, vy + 3, { sx: 1, sy: 1, gap: 1 });
+  const S = upright(F, r.z || 0);
+  const pole = memo('msignpole:' + (r.z || 0), () => { const m = new Vox(6, 6, (r.z || 0) + 40), p = m.mat({ ramp: MAT.metalDark, k: 2 }); m.box(1, 1, 0, 5, 5, (r.z || 0) + 40, p); return voxSprite(m); });
+  return group([[S, 0, 0, 0], [pole, cx - Math.round(W / 2), -1, 0]]);
 }
 
 // ================================================================================================

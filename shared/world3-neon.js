@@ -412,7 +412,7 @@ function westPoint(K, out, lit) {
   for (let k = 0; k < 4; k++) prop('lounger', 2950 + k * 3, 2146, 0);
   prop('umbrella_r', 2953, 2145.6, 0); prop('umbrella_y', 2959, 2145.6, 0);
   K.building({ x: 2954, y: 2124, w: 9, h: 6, arch: 'beachbar', key: 'beachbar', name: 'Tiki Glow', poi: { kind: 'coffee', label: 'Tiki Glow Beach Bar' }, whole: true });
-  for (const [x, y] of [[2951, 2131], [2966, 2131]]) prop('tiki', x, y, 6);
+  for (const [x, y] of [[2951, 2131], [2966, 2131]]) prop('torch', x, y, 6);   // (the tiki torches)
   // the hotel
   const w = x1 - x0;
   K.building({ x: x0, y: 2160, w, h: yB - 2160 + 1, arch: 'hotel', key: 'hotel', name: 'Neon Palms Hotel', poi: { kind: 'delivery', label: 'Neon Palms Hotel' }, whole: true,

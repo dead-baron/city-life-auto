@@ -6,8 +6,9 @@
 //   paintSigns(G, spec)             paints spec.neonSigns onto makeBuilding(spec)'s south face (G.ax, G.ay: the
 //                                   footprint's south-west corner; a face pixel at height v is at row G.ay - v)
 //   signsFor(...)                   (the same choice, for tests: which buildings get what)
-//   handNeon(spec, N, ctx)          a hand-planned front's own neon (World v3's Neon Strip: b.art.neon) - its name in
-//                                   tubes, a picture sign (the eye-patch woman, the striding tiger, the roaring head),
+//   handNeon(spec, N, ctx)          a hand-planned front's own neon (World v3's Neon Strip, the Pink Mile: b.art.neon) -
+//                                   its name in tubes, a picture sign (the eye-patch woman, the striding tiger, the
+//                                   roaring head; the Pink Mile's moon, cocktail glass, heart, lips, palm and rose),
 //                                   a blade sign down the side, a tube along the cornice
 // Names and icons are original (no real venues, brands or logos). Pure and worker-safe.
 import { drawText, textWidth } from './font.js';
@@ -100,13 +101,109 @@ const PICS = {
   tiger: { pal: [[80,230,255],[255,140,40],[20,10,20],[40,12,30],[255,200,90],[120,255,160],[255,235,190],[255,80,190]], rows: '..................................................aaa......./...a.......................................aaaa..abbba....../..aca.....................................abbbbaabbbbba...../.abba.....................................abbbbabbbbcba...../.aba......................................abbcbbbbbbba....../adba.......................................abbbbbdbbbba...../aba.................................aaaaaaabbbbbddbbbbba..../abba............aaaaaaaaaaaaaaaaaaaabbbbbbabbbdbbdbbbcba..../.ada........aaaaeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbdbbdbffbaa.a./.aba.......abddebbddbbbddbbbddbbbddbbbddbbbbbbbdbbbbgggggaha/.abbaa....abbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbbbbbbbbbbgggggghha/..abbbaaaabbbbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbbdbbbbbbggggggga./...abdbbbbbbbbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbdbbbbbbbgggggga../....aabbbbbbbbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbgbbbbbbbbbgcccca./......aaabbbbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbbbggaabbaaaaaaaa../........abbbbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbbbbba.aa........../........abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba............/.........abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba.........../.........abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba........../.........abbbbbbbbbbbggggggggbbbbbbbbbbbbbbbbbbddda........./.........abbbbbaaabbbbgggggggggggggggbbbbbabbbbbbbbaa......./.........adddbba.abdddbaaaaaagggggggbbbaaa.abbbbbbdddaa...../.........abbbba...abbbba.....aaaaadddba.....abbbbbbeeeea..../.........abbbba...abbbba.........abbbba......abbbbeeeeeea.../.........abbbba...abbbba.........abbbba.......aabbbeeeea..../.........abddda...abdddba........abbbba.........aaaaaaa...../.........abbba....abbbbba........abddda...................../........abbbba.....abbbba........abbbbba..................../........abbbba.....abbbbba.......abbbbba..................../.......aeeeeea.....aeeeeea.......aeeeeea..................../.......aeeeeea.....aeeeeea.......aeeeeea..................../........aaaaa.......aaaaa.........aaaaa.....................' },
   tigerHead: { pal: [[80,230,255],[120,60,200],[255,80,190],[30,10,60],[255,220,80],[24,16,40],[170,100,240],[200,40,110],[250,245,255]], rows: '......a..........................a....../.....abaa......................aaba...../.....abbba....................abbba...../......abbbaa................aabbba....../......abcbbba..............abbbbca....../......abbbbba...aaaaaaaa...abbbbba....../.......abbba..aabbbbbbbbaa..abbba......./.......abaa.aabbdbbbdbbbdbaa.aaba......./........a..abbbbdbbbdbbbdbbba..a......../..........abbbbbbdbbdbbbdbbbba........../.........abbbbbbbdbbdbbdbbbbbba........./........abbbbbbbbdbbdbbdbbbbbbba......../.......abbdddbbbbbbbdbbbbbbbdddba......./.......abbbbbddddbbbbbbbddddbbbba......./.......abbbeebbbbbbbbbbbbbbbeebba......./......abbbbbbfeebbbbbbbbbeefbbbbba....../......abbbbbbbbbbbbbbbbbbbbbbbbbba....../......addbbbbbbbbgccccgbbbbbbbbbdda...../......abbdddbbbbgggccgggbbbbbdddba....../......abbbbbbbbggggggggggbbbbbbbba....../.....aabbbbbbbbggggggggggbbbbbbbbaa...../....abddbbbbbbbbggggggggbbbbbbbbbdda..../...abbbbdddbbbbbbggggggbbbbbbbdddbbba.../...abbbbbbbbbhihhhhhhhhhhihbbbbbbbbba.../..abbbbbbbbbbhihhhhhhhhhhihbbbbbbbbbba../..abbbbbbbbddbhihhhhhhhhhibbddbbbbbbba../.abbbbbbbddbbbhihhhhhhhhihbbbbddbbbbbba./.abbbbbbbbbbbbhihhhhhhhhihbbbbbbbbbbbba./abbbbaaabbbbbbhhhcccccchhhbbbbbbaaabbbba/.aaaa...abbbbbhhiccccccihhbbbbba...aaaa./.........abbbbbhiccccccihbbbbba........./..........abbbbihcccccchibbbba........../...........aabbibbbbbbbbibbaa.........../.............aaabbbbbbbbaaa............./................aaabbaaa................/...................aa...................' },
 };
+// ---- the Pink Mile's picture signs (2026-10-18; WC423, WC046, WC237): drawn from shapes - a crescent moon and its stars,
+// a cocktail glass with its olive, a heart and its arrow, lips, a palm, a rose - each a lit tube round its outline over
+// the dimmer glow of its fill. at(x, y) -> a colour or null; edge(f, x, y): (x, y) inside f with a neighbour outside it.
+const edge = (f, x, y) => f(x, y) && (!f(x - 1, y) || !f(x + 1, y) || !f(x, y - 1) || !f(x, y + 1));
+const segD = (x, y, ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))); return [Math.hypot(x - ax - dx * t, y - ay - dy * t), t]; };
+const twinkle = (x, y, cx, cy, r) => { const dx = Math.abs(x + 0.5 - cx), dy = Math.abs(y + 0.5 - cy); return (dx < 0.8 && dy <= r) || (dy < 0.8 && dx <= r) || dx + dy <= r * 0.45; };
+const ring = (cx, cy, r) => (x, y) => (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 < r * r;
+const SHAPES = {
+  moon: { w: 38, h: 36, glow: [255, 220, 120], at(x, y) {
+    const C = (x2, y2) => ring(16, 18, 15)(x2, y2) && !ring(23, 12, 13)(x2, y2);
+    if (edge(C, x, y)) return [255, 226, 120];
+    if (C(x, y)) return [96, 70, 24];
+    if (twinkle(x, y, 31, 27, 5)) return [255, 120, 220];
+    if (twinkle(x, y, 34, 9, 2.5) || twinkle(x, y, 26, 33, 2)) return [255, 200, 240];
+    return null;
+  } },
+  martini: { w: 32, h: 40, glow: [90, 230, 255], at(x, y) {
+    const bowl = (x2, y2) => y2 >= 3 && y2 <= 21 && Math.abs(x2 + 0.5 - 16) <= (21.5 - y2) * 0.8;
+    const olive = ring(19, 12, 3.2), stem = (x2, y2) => y2 > 21 && y2 < 34 && Math.abs(x2 + 0.5 - 16) < 1.4, base = (x2, y2) => y2 >= 34 && y2 <= 37 && Math.abs(x2 + 0.5 - 16) < 9 - (y2 - 34);
+    if (edge(bowl, x, y) || edge(stem, x, y) || edge(base, x, y)) return [110, 236, 255];
+    if (segD(x + 0.5, y + 0.5, 19, 12, 26, 1)[0] < 0.8) return [255, 220, 120];   // (the pick)
+    if (edge(olive, x, y)) return [140, 255, 120];
+    if (olive(x, y)) return [40, 110, 30];
+    if (bowl(x, y) && y === 7) return [255, 120, 210];
+    if (bowl(x, y) && y > 7) return [150, 30, 100];
+    if (stem(x, y) || base(x, y)) return [30, 80, 100];
+    return null;
+  } },
+  heart: { w: 40, h: 34, glow: [255, 80, 160], at(x, y) {
+    const H = (x2, y2) => { const X = (x2 + 0.5 - 20) / 13, Y = (15.5 - (y2 + 0.5)) / 12, q = X * X + Y * Y - 1; return q * q * q - X * X * Y * Y * Y <= 0; };
+    const X = x + 0.5, Y = y + 0.5, near = (ax, ay, bx, by, r = 0.85) => segD(X, Y, ax, ay, bx, by)[0] < r;
+    // the arrow through it: its shaft where it's outside the heart, its head, its feathers
+    if ((near(2, 32, 38, 3) && !H(x, y)) || near(38, 3, 32, 3.6) || near(38, 3, 37, 9) || near(3, 31, 1, 26) || near(6, 28.6, 4, 23.6) || near(3, 31, 8, 32.4) || near(6, 28.6, 11, 30)) return [255, 210, 90];
+    if (edge(H, x, y)) return [255, 80, 150];
+    if (H(x, y)) { const r = Math.hypot(X - 14, Y - 10); return r > 2.6 && r < 3.8 && Y < 10.5 ? [255, 180, 215] : [130, 16, 60]; }
+    return null;
+  } },
+  kiss: { w: 42, h: 24, glow: [255, 60, 110], at(x, y) {
+    const X = x + 0.5, Y = y + 0.5, dx = (X - 21) / 19;
+    if (Math.abs(dx) >= 1) return null;
+    const env = Math.sqrt(1 - dx * dx), bow = Math.max(0, 1 - Math.abs(X - 21) / 4.5);
+    const top = 12 - 9 * env * (0.6 + 0.4 * env) + 3 * bow, bot = 12 + 9 * Math.sqrt(env) * env, mid = 12 + 1.4 * dx * dx;
+    const L = (x2, y2) => { const q = (x2 + 0.5 - 21) / 19; if (Math.abs(q) >= 1) return false; const e = Math.sqrt(1 - q * q), b = Math.max(0, 1 - Math.abs(x2 + 0.5 - 21) / 4.5); return y2 + 0.5 > 12 - 9 * e * (0.6 + 0.4 * e) + 3 * b && y2 + 0.5 < 12 + 9 * Math.sqrt(e) * e; };
+    if (edge(L, x, y)) return [255, 130, 170];
+    if (!(Y > top && Y < bot)) return null;
+    if (Math.abs(Y - mid) < 0.8 && Math.abs(dx) < 0.86) return [60, 0, 24];
+    if (Y > mid && Y < mid + 3.5 && Math.abs(X - 24) < 4) return [255, 150, 180];   // (the light on the lower lip)
+    return Y < mid ? [190, 16, 58] : [215, 26, 70];
+  } },
+  palm: { w: 38, h: 44, glow: [120, 255, 150], at(x, y) {
+    const X = x + 0.5, Y = y + 0.5;
+    // the trunk: a curve up from the foot, its rings
+    const tx = (yy) => 17 + 4 * ((43 - yy) / 28) ** 2;
+    if (Y > 15 && Y < 43 && Math.abs(X - tx(Y)) < 1.8) return Math.abs(X - tx(Y)) > 0.9 || (Math.floor(Y) % 4 === 0) ? [255, 170, 70] : [120, 60, 20];
+    // the fronds: arcs out from the crown (a quadratic each, sampled), tapering to their tips
+    const cx = 21, cy = 15;
+    for (const [ex, ey, kx, ky] of [[2, 22, 8, 8], [7, 7, 12, 2], [22, 2, 20, 4], [35, 7, 31, 2], [36, 21, 33, 11], [12, 26, 13, 15]]) {
+      let px = cx, py = cy;
+      for (let k = 1; k <= 10; k++) {
+        const t = k / 10, u = 1 - t, qx = u * u * cx + 2 * u * t * kx + t * t * ex, qy = u * u * cy + 2 * u * t * ky + t * t * ey;
+        if (segD(X, Y, px, py, qx, qy)[0] < 1.6 - t * 0.9) return [110, 255, 150];
+        px = qx; py = qy;
+      }
+    }
+    if (ring(19, 17, 1.8)(x, y) || ring(23, 17.5, 1.8)(x, y)) return [255, 200, 90];
+    return null;
+  } },
+  rose: { w: 30, h: 44, glow: [255, 60, 110], at(x, y) {
+    const X = x + 0.5, Y = y + 0.5, head = ring(15, 11, 9.5);
+    if (edge(head, x, y)) return [255, 70, 120];
+    // (the swirl of the petals: rings broken at turns)
+    const r = Math.hypot(X - 15, Y - 11.5), up = Y < 11.5;
+    if (head(x, y)) return (Math.abs(r - 6) < 0.7 && (up || X > 15)) || (Math.abs(r - 3) < 0.7 && !up) ? [255, 110, 150] : [140, 12, 44];
+    // the stem and its leaves, the thorns
+    if (Y > 20 && Y < 43 && Math.abs(X - (15 - (Y - 20) * 0.08)) < 1) return [110, 230, 120];
+    const leaf = (cx, cy, rx, ry) => ((X - cx) / rx) ** 2 + ((Y - cy) / ry) ** 2 < 1;
+    if (leaf(9, 29, 5, 2.3) || leaf(20, 34, 5, 2.3)) return Math.abs(Y - (X < 15 ? 29 : 34)) < 0.6 ? [110, 230, 120] : [30, 100, 40];
+    if (twinkle(x, y, 13.5, 24, 1) || twinkle(x, y, 15.5, 38, 1)) return [110, 230, 120];
+    return null;
+  } },
+};
+// (a picture sign's glow colour: the shape's own, else the panel's pink, the tiger's orange, the head's violet)
+export const picGlow = (k) => (SHAPES[k] ? SHAPES[k].glow : k === 'lucy' ? [255, 80, 200] : k === 'tiger' ? [255, 150, 60] : [170, 100, 255]);
 const picCache = new Map();
 function picOf(k) {
   let P = picCache.get(k);
   if (P) return P;
-  const D = PICS[k] || PICS.tigerHead, rows = D.rows.split('/'), h = rows.length, w = rows[0].length, px = new Int8Array(w * h).fill(-1);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const c = rows[y].charCodeAt(x); if (c !== 46) px[y * w + x] = c - 97; }
-  P = { w, h, px, pal: D.pal, panel: k === 'lucy' };
+  if (SHAPES[k]) {
+    // (a shape: its colours gathered into a palette as they're met)
+    const S = SHAPES[k], w = S.w, h = S.h, px = new Int8Array(w * h).fill(-1), pal = [], keyOf = new Map();
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const c = S.at(x, y);
+      if (!c) continue;
+      const kk = c.join(',');
+      if (!keyOf.has(kk)) { keyOf.set(kk, pal.length); pal.push(c); }
+      px[y * w + x] = keyOf.get(kk);
+    }
+    P = { w, h, px, pal, panel: false };
+  } else {
+    const D = PICS[k] || PICS.tigerHead, rows = D.rows.split('/'), h = rows.length, w = rows[0].length, px = new Int8Array(w * h).fill(-1);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const c = rows[y].charCodeAt(x); if (c !== 46) px[y * w + x] = c - 97; }
+    P = { w, h, px, pal: D.pal, panel: k === 'lucy' };
+  }
   picCache.set(k, P);
   return P;
 }
@@ -182,7 +279,7 @@ export function handNeon(spec, N, ctx) {
     const s = N.picS || 2, [pw, ph] = picSize(N.pic, s), v = Math.max(top, N.picV || 0);
     if (v + ph <= H - 4 && pw <= w - 12) {
       const x = Math.round(N.picX !== undefined ? Math.max(6, Math.min(w - pw - 6, N.picX)) : (w - pw) / 2);
-      const pc = N.picCol || (N.pic === 'lucy' ? [255, 80, 200] : N.pic === 'tiger' ? [255, 150, 60] : [170, 100, 255]);
+      const pc = N.picCol || picGlow(N.pic);
       out.push({ pic: N.pic, x, v, s, col: pc });
       lights.push([x + pw / 2, 18, v + ph / 2, 300, L(pc), 2.6, 'neon']);
     }

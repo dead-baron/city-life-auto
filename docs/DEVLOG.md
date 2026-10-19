@@ -11253,3 +11253,75 @@ Budgets: none raised. The renderer stays at 367 KB: the water life is its own mo
 Not yet:
 - Fish swim over lily pads rather than under them (the decals can't tell a pad from the water under it).
 - The rapids and the rivers redrawn by hand: the world-wide pass with the nature regions' overhaul.
+
+## 2026-10-18 · World v3, handcrafted: The Pink Mile (the motels round their pools, the lounges, the waterfront under the Loop)
+
+The Pink Mile (district 17, behind the Neon Strip to the west) is now laid out by hand (`shared/world3-pinkmile.js`).
+It's built from the owner's concepts WC423 (the curving palm-median road of motels round their pools, the motel's tall
+sign, the lounges under moon and palm neon, the tattoo parlour's skull, the pawn shop, the back blocks' roller doors
+and boarded shops, the gated towers round a garden), WC046 and WC047 (the red-light waterfront under the curving
+highway, kept suggestive at most), WC237 (two vertical HOTEL signs, one with a palm; the coffee-cup diner's red neon
+band; rooftop bars; the taxi rank) and the research's motel row, tattoo and pawn back street and rough dead end. The
+grid had built about 120 plain fronts here under a dozen names used over and over (eleven Bold Ink Tattoos, a run of
+Taco Locos and Liquor Marts).
+- **The streets:**
+  - **Pink Mile Boulevard** (the Mile): a palm-median boulevard, lights strung between the palms, curving from the
+    Westport Bridge's foot through the middle of the district to Westside Avenue, where Crosstown Avenue carries on. It
+    takes Crosstown Avenue's place through the district and replaces the straight diagonal that joined the Westport
+    Bridge to the Arts Bridge.
+  - **Neon Boulevard** carried on west from the Strip along the water to the Arts Bridge; **Bridge Street** from the
+    bridge down to Greenfield Avenue; **Rose Street** and **Rose Alley**, the Strip's Lantern Street and back alley
+    carried on; **Sideshow Street**, the back street; **Blind Alley**, a dead end off it.
+- **The motels** along the Mile: the Starlite, the Pink Palms, the Moonglow and the Hourly Hearts. Each one has:
+  - a two-storey bar of rooms (a second, taller bar behind on the deep lots): the gallery along the upper floor and the
+    stair up to it at one end, a door, a window and an AC box to every room, a lamp by every door;
+  - the office at the front corner, VACANCY lit in its window;
+  - the pool in its court with loungers, umbrellas and a diving board (the Hourly Hearts' is a kidney with a hot tub);
+  - the cars nosed in under the rooms;
+  - a tall sign at the pavement: the name lit along the top, MOTEL down a board, an arrow of bulbs into the drive,
+    VACANCY at the foot, a star on top;
+  - a room to rent as a home (the cheapest in the city).
+- **Facing the Mile** with the motels: Pink Moon Lounge (the crescent moon), Velvet Lounge (its roof a garden bar), The
+  Garter Room (the burlesque cabaret, a pair of lips in neon; it takes the specials list's Pink Pussycat Lounge's
+  place), The Martini Moon (the cocktail glass), The Coffee Cup (open 24 hours, the cup and the red neon band), **The
+  Rose Theatre** (the cabaret house: the marquee, the rose up its face, the fly tower behind) and **The Little Pink
+  Chapel** (weddings, under its gable, the heart).
+- **The waterfront east of the Gulf Loop** (WC046): Siren Bait & Tackle, The Salty Siren (the fish bar), Lace & Satin
+  (lingerie, a clothing shop you walk into), **Siren Square** (a cherry tree, a statue, lights strung over it),
+  Starlet Club (the eye-patch woman's portrait, the SHOWGIRL blade) and Red Lantern Ramen; the promenade along the
+  shore and the **Siren Dock** under the overpass with the boats tied up.
+- **Between Neon Boulevard and Rose Street**, only the water behind them: **Hotel Rosa** (the heart) and **Hotel
+  Paloma** (the palm), each with its HOTEL blade and a pool deck on the roof; Midnight Rose (the rose), Mile Liquors,
+  Moonshine Bar, Shaker & Twist (a rooftop bar), Club Paradiso, Satin & Smoke. Their backs and the lit fronts on Rose
+  Street carry rooftop signs.
+- **Rose Plaza** at the Arts Bridge's foot: the round basin and its fountain, rose beds, palms, the statue by the
+  water, café tables, the flower seller's stall, lights strung in from the corners.
+- **Mile Beach** along the shore to Gallery Avenue: sand, loungers under umbrellas, the Tiki Hut's bar, a volleyball
+  net, the lifeguard tower; the promenade behind it; a palm walk down from the Mile.
+- **Sideshow Street**, the back street south of the Mile: Mile Pawn & Loan (the pawn shop you walk into), Ink & Thorns
+  Tattoo (the rose, the skull), Sideshow Tattoo (the tiger's head), Rusty's Body Shop behind its roller doors, Bail
+  Bonds 24/7, Lucky Liquor, the laundromat, shops boarded up and for lease, their names painted over the windows,
+  tags on the walls. **Blind Alley** off it: fenced across its end, a fire in a barrel, the dumpsters and tyres, the
+  tagged walls. The row's backs on the Mile carry its rooftop signs. Greenfield Avenue gets a row of small shops.
+- **Under the Gulf Loop**: the taxi rank by the Mile, parking stalls along the deck's ground, **Under the Loop Eats**
+  (food carts, tables under strings of lights).
+- **Coral Court**, where the Mile meets Downtown: two seven-storey towers on Greenfield Avenue and a low block with the
+  gate between them, round the garden (the palm walk, hedges, the fountain, the pool, the gazebo, a court, the
+  clubhouse at its head); the residents' car parks behind the towers.
+- **The roads** (`shared/world3-roads.js`): a bridge's loose end is no longer carried on to another road when a
+  handcrafted district's street starts or ends there (the plans' streets are laid after the skeleton's). Only the Arts
+  Bridge's and the Westport Bridge's ends changed: the diagonal between them is gone.
+- **Art:**
+  - Six new neon pictures (`client/art2/neonsigns.js`), drawn from shapes rather than rows of pixels: a crescent moon
+    with stars, a cocktail glass with its olive, a heart and its arrow, lips, a palm, a rose.
+  - Motel fronts (`client/art2/buildings.js`, `spec.motel`).
+  - The motel sign (the `motelsign` prop, `client/art2/game/statics.js`).
+  - Fix: the Neon Strip's two tiki torches by Tiki Glow showed as crates (the plan placed `tiki`; the map draws
+    `torch`).
+- **Lily pads** (the water life's "Not yet"): the pads now float a sliver over the water (`groundbake.js` LILY_Z), so
+  the fish swim under them rather than over.
+
+Tests: test/pinkmile.test.js (the streets meet the bridges and carry the Strip's on; the specials; a motel's front;
+the sign; the pictures); test/waterbake.test.js (the lily pads over the water).
+
+Budgets: none raised (the bake workers' code grew from 790 to 795 KB of its 800: the pictures, the motel fronts and signs).

@@ -302,7 +302,7 @@ export function makeBuilding(spec) {
   const WIN = spec.win || 'even';
   let bay = null;
   if (WIN === 'bay' && floors > 1 && w >= 110 && style !== 'glass') { const bw = w >= 220 ? 62 : 50; bay = [Math.round(w / 2 - bw / 2), bw]; }
-  for (let f = 1; f < floors && style !== 'glass'; f++) {
+  for (let f = 1; f < floors && style !== 'glass' && !spec.motel; f++) {
     const base = gH + (f - 1) * FLOOR;
     let ww = style === 'brick' ? 18 : 16, wh = style === 'brick' ? 30 : 26, gap = style === 'brick' ? 20 : 22;
     if (WIN === 'tall') { wh += 6; gap += 12; } else if (WIN === 'loft') { ww = 38; wh = 32; gap = 14; } else if (WIN === 'arch') { wh -= 4; gap += 4; }
@@ -337,6 +337,7 @@ export function makeBuilding(spec) {
   if (style === 'brick' && floors > 1 && gH > 0) for (let k = 0; k < 4; k++) for (let x = 0; x < w; x++) setC(G, x, fy(gH + 2 - k), step(MAT.stone, 0.8 - k * 0.15, x, k, 0.3));
   // ---- ground floor
   if (spec.blank) { /* a plain wall: no doors or windows */ }
+  else if (spec.motel) motelFront(G, w, gH, floors, spec, seed, night, fy);
   else if (spec.shop) storefront(G, w, d, H, gH, spec, seed, night, fy);
   else if (spec.doors) {
     for (const dd of spec.doors) {
@@ -764,6 +765,51 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
       G.put(x, Y, step(stripe ? cb : ca, 0.8 - y / depth * 0.4, x, Y, 0.5), [0, 0.6, 0.8], vTop - y * 0.3, null, 0);
     }
     for (let x = 0; x < w; x++) { const s = x % 6, len = s === 0 || s === 5 ? 1 : 3; const stripe = Math.floor(x / 6) % 2 === 1; for (let k = 0; k < len; k++) { const Y = top + depth + k; G.put(x, Y, step(stripe ? cb : ca, 0.3 - k * 0.06, x, Y, 0), [0, 1, 0.2], vTop - depth * 0.3 - k, null, 0); } }
+  }
+}
+
+// A motel's front (spec.motel = { room: px per room, door: its doors' colour, stair: 'left' | 'right' - the end its stair
+// climbs at; the Pink Mile's motels, World v3): every room a door, a window and the AC box under it, a lamp by the door,
+// on both floors; the upper floor's open gallery - the slab's edge, the rail, its posts, the columns down between the
+// rooms, its shade on the rooms under it - and the stair up to it at one end
+function motelFront(G, w, gH, floors, spec, seed, night, fy) {
+  const M = spec.motel, SB = 46, stairL = M.stair === 'left', x0 = stairL ? SB : 6, x1 = stairL ? w - 6 : w - SB;
+  const n = Math.max(1, Math.round((x1 - x0) / (M.room || 96))), rw = (x1 - x0) / n, DC = ramp(M.door || '#2e8a8a', 5, 2);
+  const darken = (x, Y, k) => { if (!G.inside(x, Y)) return; const j = (Y * G.w + x) * 4; G.col[j] *= k; G.col[j + 1] *= k; G.col[j + 2] *= k; };
+  for (let f = 0; f < floors; f++) {
+    const base = f === 0 ? 0 : gH + (f - 1) * FLOOR;
+    for (let i = 0; i < n; i++) {
+      const rx = Math.round(x0 + i * rw), dx = rx + 10, wx = rx + Math.round(rw * 0.5) - 2, top = fy(base + 44);
+      for (let y = 0; y < 44; y++) for (let x = 0; x < 18; x++) { const X = dx + x, Y = top + y, fr = x < 2 || x >= 16 || y < 2; setC(G, X, Y, fr ? step(MAT.stone, 0.72, X, Y, 0) : step(DC, x === 4 || x === 13 || y === 20 ? 0.3 : 0.62, X, Y, 0.3)); }
+      setC(G, dx + 13, top + 24, MAT.chrome ? MAT.chrome[4] : [220, 220, 210]);   // (the knob)
+      const lit = hash(i, f, seed + 51) < night * 0.7 + (night > 0 ? 0.1 : 0);
+      sash(G, wx, fy(base + 40), 28, 22, lit, seed + i * 3 + f * 17);
+      if (rw >= 80) acBox(G, wx + 7, fy(base + 13));
+      const lx = dx + 21, ly = fy(base + 38);
+      for (let k = 0; k < 4; k++) for (let q = 0; q < 3; q++) { setC(G, lx + q, ly + k, k === 0 ? MAT.metalDark[1] : [250, 226, 160]); if (k) glow(G, lx + q, ly + k, [255, 210, 140, 110 + night * 135]); }
+    }
+  }
+  for (let f = 1; f < floors; f++) {
+    const yb = fy(gH + (f - 1) * FLOOR) + 1;   // (the slab's top row)
+    for (let k = 1; k <= 12; k++) for (let x = 0; x < w; x++) darken(x, yb + 3 + k, 0.62 + 0.38 * (k / 12));   // (the gallery's shade)
+    for (let x = 2; x < w - 2; x++) {
+      for (let k = 0; k < 4; k++) setC(G, x, yb + k, step(MAT.stone, k === 0 ? 0.88 : 0.55 - k * 0.08, x, k, 0.3));
+      setC(G, x, yb - 15, MAT.metal[4]); setC(G, x, yb - 14, MAT.metal[2]);
+      if (x % 5 === 0) for (let k = 1; k < 14; k++) setC(G, x, yb - k, MAT.metal[2]);
+    }
+    // the columns under the slab, between the rooms
+    for (let i = 0; i <= n; i++) { const cx = Math.round(x0 + i * rw) - 2; for (let Y = yb + 4; Y < fy(0); Y++) for (let q = 0; q < 4; q++) setC(G, cx + q, Y, step(MAT.stone, q === 0 ? 0.8 : 0.5, cx + q, Y, 0.2)); }
+  }
+  // the stair: from the pavement at the building's end up across its bay to the gallery
+  if (floors > 1) {
+    const yTop = fy(gH) + 1, yBot = fy(0), dir = stairL ? 1 : -1, xa = stairL ? 4 : w - 5, steps = Math.round(gH / 7);
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps, X = Math.round(xa + dir * t * (SB - 10)), Y = Math.round(yBot - t * (yBot - yTop));
+      for (let q = -3; q <= 3; q++) setC(G, X + q, Y, step(MAT.stone, 0.8, X + q, Y, 0.2));   // (a tread)
+      for (let k = 1; k < 3; k++) setC(G, X + dir * 3, Y + k, MAT.metalDark[1]);              // (its riser's shadow)
+      for (let k = 12; k < 14; k++) setC(G, X, Y - k, MAT.metal[k === 12 ? 2 : 4]);            // (the handrail)
+      if (s % 2 === 0) for (let k = 1; k < 12; k++) setC(G, X, Y - k, MAT.metal[2]);
+    }
   }
 }
 
