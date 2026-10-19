@@ -11774,3 +11774,31 @@ know falls back to one): the towers are the art's `lguard`, the posts bollards. 
 
 Tests: test/pinehills.test.js (the avenues and streets round it stay the grid's; the grid inside gives way to the
 courts and the crescent).
+
+## 2026-10-19 · World v3, handcrafted: Coral Cay (the dive village, Tiki Point, the rainforest, the eco lodge)
+
+The quiet key (district 44) is now laid out by hand, all of it (`shared/world3-coralcay.js`), from the owner's concepts
+WC249 (the tropical key: colourful two-storey houses, a quay, tiki huts, stilt cottages, a light on the point), WC178
+(the reef bay: the beach bar, the T-dock and its boats) and NA1-E (the jungle paths, the thatched bar with its hammocks,
+the T-jetty), with the research's plan for the key (a sleepy dive village, an eco-resort on the east lobe, the dive
+shop and boat hire, the rainforest). The grid had laid a mainland town's streets over the key (Lake and Pinecrest
+Avenues, a burger and noodle place on every block), and Willow Valley's farm fields and lavender rows covered its east
+lobe: the key's land outside the town was the valley's meadow (`shared/world3-land.js` ISLE3) and the biomes' farm
+sections dressed it.
+- **The village:** Harbor Street through it, Coral Street from the north beach down to the quay, Palm, Shell, Conch and
+  Reef Lanes, Lagoon Way along the south shore; houses in painted stucco under tile roofs, two floors, palms in their
+  yards (the suburb kit's rows take a look of their own now: `o.art`). On Harbor Street **Coral Dive Co.**, **Cay
+  Market**, **Reef Cafe**, **Island Threads** (the surf shop's stock), **The Conch Bar** and **Cay Post & Supply**;
+  across from them **Conch Square** (the fountain, palms, benches, market umbrellas).
+- **Coral Cay Dock** at Coral Street's foot: the T-jetty, the dive boat and skiffs, the bait shack (a tackle counter),
+  **Coral Cay Boat Hire** beside it (`m.handRentals`: a handcrafted district asks the generator's rental pass for a
+  dock), a drop-off at the jetty's end.
+- **Tiki Point** on the north beach: the thatched bar (a bar), torches, tables, hammocks slung between the palms (the
+  hammock is a prop now), loungers on the sand.
+- **Coral Cay Rainforest** on the east lobe: coconut and royal palms, banana and bird of paradise, monstera, elephant
+  ear and hibiscus, jungle paths through it; **Cay Road** out through it to the **Coral Cay Eco Lodge** - the lodge,
+  its cabins along the shore on a boardwalk (rooms to rent), their jetty - and **Coral Point Light** on the tip.
+- The whole key is Coral Cay's district now (`m.dist`), and the plan keeps all of its land (no farm sections, meadow
+  trees or rocks dressed over it).
+
+Tests: test/coralcay.test.js (the streets on the key, one network).
