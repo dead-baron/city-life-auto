@@ -11564,9 +11564,9 @@ the same name and three identical banks in a row along the shore.
   basin and three jets, benches and magnolias round it, the food carts' courts either side with their tables and
   umbrellas under festoon lights, lawns under rows of plane trees beyond, the walks along the boulevard and the south
   edge.
-- **On Pier Avenue:** **Westport Exchange**, **Pier Avenue Tower** (Pier Street Deli in its podium), **Bayview Tower**
-  and **The Commodore** (apartments) behind their forecourts; on the corner Gilded Gull Jewelers, Tidewater Books and
-  Pier Pressed Juice under flats.
+- **On Pier Avenue:** mid-rises behind their forecourts (a tall building's height is drawn up over what's north of it,
+  and the plaza is): **Westport Exchange**, the **Pier Avenue Building**, **Bayview House** and **The Commodore**
+  (apartments); on the corner Gilded Gull Jewelers, Tidewater Books and Pier Pressed Juice under flats.
 - **Between Pier Avenue and the bay:** **Westport Savings Bank** on Westport Avenue's corner, **Harbor Point One, Two
   and Three** (apartment towers) facing the **Waterfront Walk** - the promenade along the shore with its palms,
   benches, lamps, telescopes and the railing over the water; **Harbor Point Gardens** behind them.

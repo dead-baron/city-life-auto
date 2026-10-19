@@ -6,8 +6,8 @@
 //     Westport Center Tower and Quarter Trust Building either side of it, shops between;
 //   - across the boulevard, Westport Center Plaza: the WESTPORT CENTER monument sign at the kerb, the fountain on the
 //     axis, the food carts and their tables under festoon lights, plane trees, benches, planters, lamps;
-//   - on Pier Avenue, the towers behind their forecourts - Westport Exchange, Pier Avenue Tower, Bayview Tower, The
-//     Commodore - with the cafes and shops in their podiums;
+//   - on Pier Avenue, the mid-rises behind their forecourts - Westport Exchange, Pier Avenue Building, Bayview House,
+//     The Commodore - and the shops on the corner;
 //   - between Pier Avenue and the bay, Harbor Point's apartment towers and Westport Savings Bank facing the Waterfront
 //     Walk: the promenade along the shore with its palms, benches, lamps, telescopes and railing.
 // Every building faces south (the camera). Names, signs and brands are invented. Draws are fixed by place (hash2).
@@ -145,16 +145,17 @@ function build(m, api, K) {
   }
 
   // ===========================================================================================================
-  // Pier Avenue's towers behind the plaza: their forecourts to the avenue, cafes and shops in their podiums
+  // Pier Avenue's mid-rises behind the plaza: their forecourts to the avenue, the shops on the corner
   function pierAvenue() {
     const A = area(PX.west, PY.blvd + 4, PX.quarter, PY.pier - 4);
     if (!A) return;
     const [x0, , x1, y1] = A, y0 = A[1] + 1, h = y1 - y0;   // (the plaza is taken: what's left is its south)
     const T4 = [
-      { w: 36, name: 'Westport Exchange', floors: 16, tint: '#2a4a6a', inset: 2 },
-      { w: 30, name: 'Pier Avenue Tower', style: 'stone', floors: 10, wall: '#ddd2bc', cornice: 'dentil', inset: 8, cafe: { name: 'Pier Street Deli', store: 'cafe', poi: { kind: 'coffee', label: 'Pier Street Deli', food: true }, awning: ['#2f5a4a', '#f0ece4'] } },
-      { w: 38, name: 'Bayview Tower', floors: 14, tint: '#36606e', inset: 2 },
-      { w: 30, name: 'The Commodore', style: 'stone', floors: 9, wall: '#c8bca4', cornice: 'bracket', inset: 6, home: true },
+      // (mid-rise: a tall building's height is drawn up over what's north of it - here the plaza)
+      { w: 36, name: 'Westport Exchange', floors: 6, tint: '#2a4a6a', inset: 2 },
+      { w: 30, name: 'Pier Avenue Building', style: 'stone', floors: 5, wall: '#ddd2bc', cornice: 'dentil', inset: 8 },
+      { w: 38, name: 'Bayview House', floors: 6, tint: '#36606e', inset: 2 },
+      { w: 30, name: 'The Commodore', style: 'stone', floors: 5, wall: '#c8bca4', cornice: 'bracket', inset: 6, home: true },
     ];
     let x = x0;
     for (const t of T4) {
