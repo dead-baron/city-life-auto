@@ -143,9 +143,10 @@ function makeKit(m, api, P) {
         // (opt.noStep: the caller lays the fronts itself - a suburb's lawns down to a street that bends)
         if (!opt.north && !opt.noStep) for (let xx = x; xx < x + w; xx++) { const c = K.column(xx, front + 1, y1, mk); if (c) { fill(xx, front + 1, 1, c[0] - front, T.PLAZA); if (c[0] - front >= 2 && rnd(xx, front, 3) < 0.18) prop(pick(['planter_g', 'planter_sq', 'potted', 'bench_m', 'flowers_a'], rnd(xx, front, 4)), xx + 0.5, front + 1.5, 10); } }
         if (L.gap) { K.gap(L.kind || 'passage', x, y, w, depth, opt); made.push({ gap: L.kind, x, y, w, h: depth }); x += w; continue; }
-        if (depth < (L.minDepth || 6)) { K.gap('plaza', x, y, w, depth, opt); x += w; continue; }
+        // (a lot too shallow, or not all free: paved - or opt.fallback's kind of gap, a suburb's lawn)
+        if (depth < (L.minDepth || 6)) { K.gap(opt.fallback || 'plaza', x, y, w, depth, opt); x += w; continue; }
         const b = K.building({ ...L, x, y, w, h: depth });
-        if (b) made.push(b); else K.gap('plaza', x, y, w, depth, opt);
+        if (b) made.push(b); else K.gap(opt.fallback || 'plaza', x, y, w, depth, opt);
         x += w;
       }
       return made;

@@ -94,7 +94,7 @@ function build(m, api, K) {
       const w = Math.min(room, (o.w || 10) + Math.floor(rnd(x, y0, 602) * 4));
       out.homes++;
       return { w, depth: o.depth || 8 + Math.floor(rnd(x, y0, 603) * 2), minDepth: 7, arch: 'house', home: { kind: 'house', price: o.price || 30000 + Math.floor(rnd(x, y0, 604) * 6) * 3000 }, whole: true };
-    }, { mask, noStep: true });
+    }, { mask, noStep: true, fallback: 'garden' });
     for (const b of made) {
       if (!b || b.gap || b.tw === undefined) continue;
       const yb = b.ty + b.th;
@@ -118,12 +118,14 @@ function build(m, api, K) {
   // south where the camera sees them - the lawn, the patio, a pool now and then with its lounger, the fence round, a tree
   const backRow = (x0, x1, y0, y1, o = {}) => {
     const made = K.row(x0, x1, y0, y1, (x, room, i) => {
-      if (room < 9) return room >= 1 ? { gap: room, kind: 'garden' } : null;
-      if (i % 2 === 1) return { gap: 2 + Math.floor(rnd(x, y0, 611) * 2), kind: 'garden' };
+      // (the gaps between them only as deep as a house and its yard: the row facing the next street south has the rest)
+      const gd = 9 + (o.yard || 12);
+      if (room < 9) return room >= 1 ? { gap: room, kind: 'garden', depth: gd } : null;
+      if (i % 2 === 1) return { gap: 2 + Math.floor(rnd(x, y0, 611) * 2), kind: 'garden', depth: gd };
       const w = Math.min(room, (o.w || 10) + Math.floor(rnd(x, y0, 612) * 4));
       out.homes++;
       return { w, depth: 8 + Math.floor(rnd(x, y0, 613) * 2), minDepth: 7, arch: 'house', face: 'N', home: { kind: 'house', price: o.price || 32000 + Math.floor(rnd(x, y0, 614) * 6) * 3000, garage: { x: (x + w / 2) * TILE, y: (y0 - 1) * TILE, a: -Math.PI / 2 } }, whole: true };
-    }, { north: true, mask: o.mask });
+    }, { north: true, mask: o.mask, fallback: 'garden' });
     for (const b of made) {
       if (!b || b.gap || b.tw === undefined) continue;
       const yb = b.ty + b.th, x = b.tx - 1, w = b.tw + 2;
@@ -197,7 +199,7 @@ function build(m, api, K) {
     let px0 = x0;
     while (px0 < x1 && !(K.free(px0, y0) && K.free(px0, y1 - 1) && K.free(px0, Math.floor((y0 + y1) / 2)))) px0++;
     // ---- the pool: fenced on the tile lines, the changing block along the north side, the pool below it
-    const fx1 = x1 - 1, fx0 = fx1 - 34, fy0 = y0 + 1, fy1 = y0 + 25;
+    const fx1 = x1 - 1, fx0 = fx1 - 34, fy0 = y0 + 1, fy1 = y0 + 18;
     if (K.allFree(fx0 - 1, y0, fx1 - fx0 + 2, fy1 - y0 + 1)) {
       K.take(fx0 - 1, y0, fx1 - fx0 + 2, fy1 - y0 + 2);
       K.paint(fx0, fy0, fx1 - fx0, fy1 - fy0, T.PLAZA);
@@ -266,6 +268,12 @@ function build(m, api, K) {
     const wsX = px0 + 22;   // (and one from the drive's corner over to the south side)
     for (let y = bankY(wsX); y < y1; y++) { if (wet(wsX, y) || wet(wsX + 1, y)) continue; K.paint(wsX, y, 2, 1, T.PLAZA); }
     prop('fbridge', wsX + 1, cy(wsX), 0, { len: 150, a: Math.PI / 2 });
+    // (from the pool's gate down to the bank path; the pond's path down to the bank path at both ends)
+    if (m.natureSites && m.natureSites.length && m.natureSites[m.natureSites.length - 1].name === 'Meadowbrook Pool') {
+      const g = m.natureSites[m.natureSites.length - 1].gate, gx = Math.round(g.x / TILE) - 1;
+      for (let y = Math.round(g.y / TILE) + 1; y < bankY(gx); y++) K.paint(gx, y, 2, 1, T.PLAZA);
+    }
+    for (const ex of [pcx - prx - 3, pcx + prx + 3]) { const ya = pcy - pry - 3, yb = bankY(ex) + 1; for (let y = Math.min(ya, yb); y <= Math.max(ya, yb); y++) K.paint(ex, y, 2, 1, T.PLAZA); }
     // the gazebo south of the pond, its lawn; picnic tables; benches by the water; willows along the creek
     const gzx = pcx, gzy = pcy + pry + 7;
     K.paint(gzx - 4, gzy - 4, 8, 8, T.PLAZA);
@@ -309,9 +317,9 @@ function build(m, api, K) {
     const WALL = ['#e8dcc4', '#dcd0b8', '#e4d4c0', '#d8dccc', '#e8d8c8', '#d4ccbc'];
     let n = 0;
     const row = (x0, x1, y0, y1, o = {}) => K.row(x0, x1, y0, y1, (x, room, i) => {
-      if (room < 14) return room >= 1 ? { gap: room, kind: 'garden' } : null;
-      if (i % 2 === 1) return { gap: 4 + Math.floor(rnd(x, y0, 650) * 3), kind: 'garden' };
-      const w = Math.min(room, 20 + Math.floor(rnd(x, y0, 651) * 6));
+      if (room < 12) return room >= 1 ? { gap: room, kind: 'garden' } : null;
+      if (i % 2 === 1) return { gap: 5 + Math.floor(rnd(x, y0, 650) * 3), kind: 'garden' };
+      const w = Math.min(room, 15 + Math.floor(rnd(x, y0, 651) * 6));
       n++; out.homes++;
       return { w, depth: o.depth || 10, minDepth: 9, arch: 'townhouse', name: 'Hillcrest Gardens', poi: false, whole: true, home: { kind: 'apartment', price: 15000 + Math.floor(rnd(x, y0, 652) * 4) * 1000, slots: 2 },
         art: { spec: { floors: 2, style: 'stucco', wallColor: pick(WALL, rnd(x, y0, 653)), win: 'even', pitch: 'hip', roof: 'tile', roofColor: pick(['#a8543a', '#9a4a34', '#b4603e'], rnd(x, y0, 654)), slope: 0.4, parapet: 4, grime: 0.04, balconies: true, blades: [], plaques: [] }, noShop: true } };
@@ -343,14 +351,15 @@ function build(m, api, K) {
     const S = area(1460, 2361, MX.syc, MY.hillcrest - 6);
     if (S) {
       const [x0, y0, x1, y1] = S;
-      const ly1 = Math.min(y0 + 9, y1 - 24);
-      K.fill(x0, y0, x1 - x0, ly1 - y0, T.LOT);
+      // (head-in bays off the way, a hedge behind them)
+      const ly1 = y0 + 6;
+      K.fill(x0, y0, x1 - x0, 4, T.LOT); K.fill(x0, y0 + 4, x1 - x0, 2, T.GRASS);
       for (let sx = x0 + 2; sx + 3 <= x1 - 2; sx += 3) {
-        if (ly1 - y0 < 5) break;
-        m.stalls.push({ x: sx * TILE, y: (ly1 - 4) * TILE, w: 3 * TILE, h: 4 * TILE });
-        if (rnd(sx, ly1, 657) < 0.55) m.parking.push({ x: (sx + 1.5) * TILE, y: (ly1 - 2) * TILE, a: Math.PI / 2 });
+        m.stalls.push({ x: sx * TILE, y: y0 * TILE, w: 3 * TILE, h: 4 * TILE });
+        if (rnd(sx, ly1, 657) < 0.55) m.parking.push({ x: (sx + 1.5) * TILE, y: (y0 + 2) * TILE, a: Math.PI / 2 });
       }
-      for (let lx = x0 + 8; lx < x1 - 4; lx += 22) prop('lamp', lx, ly1 - 0.4, 0);
+      prop('hedgerun', x0 + 0.5, y0 + 4.6, 0, { tx: (x1 - x0 - 1) * TILE, ty: 0, h: 12 });
+      for (let lx = x0 + 8; lx < x1 - 4; lx += 22) prop('lamp', lx, y0 + 5.4, 0);
       const R3 = row(x0 + 2, x1 - 22, ly1, ly1 + 10, { north: true });
       const b3 = R3.filter((b) => b && !b.gap && b.tw !== undefined);
       // the leasing office at the row's east end, facing the court
@@ -416,11 +425,11 @@ function build(m, api, K) {
     const trailer = (x, y, i) => {
       const b = K.building({ x, y, w: 12, h: 5, arch: 'shack', key: 'shanty1', name: 'Skyview Mobile Home', poi: false, whole: true,
         home: { kind: 'shack', price: 6500 + Math.floor(rnd(x, y, 660) * 5) * 500 },
-        art: { spec: { style: 'siding', wallColor: pick(COLS, rnd(x, y, 661)), height: 34, roof: 'metal', boarded: 0, grime: 0.25, graffiti: 0 } } });
+        art: { spec: { style: 'siding', wallColor: pick(COLS, rnd(x, y, 661)), height: 34, roof: 'metal', roofMat: 'metal', roofColor: '#c4c8cc', lip: 2, rimW: 2, boarded: 0, grime: 0.25, graffiti: 0 }, kit: [] } });
       if (!b) return null;
       out.homes++; out.trailers++;
       // the pad in front: the car on the gravel, the awning's shade, a table or a grill, a bit of clutter
-      K.fill(x, y + 5, 12, 4, T.LOT);
+      K.fill(x, y + 5, 12, 4, T.DIRT);
       m.parking.push({ x: (x + (i % 2 ? 2 : 10)) * TILE, y: (y + 7) * TILE, a: 0 });
       if (rnd(x, y, 662) < 0.6) prop('driftshade', x + (i % 2 ? 8 : 4), y + 6.6, 0, { w: 70, d: 48 });
       prop(pick(['picnic', 'chair', 'cooler', 'propane', 'picnic'], rnd(x, y, 663)), x + (i % 2 ? 9 : 3), y + 7.4, 0);
@@ -442,7 +451,7 @@ function build(m, api, K) {
     if (mid !== undefined) {
       const cx = x0 + 16, cw = 27;
       const lau = K.building({ x: cx + 1, y: mid, w: 10, h: 6, arch: 'shack', key: 'shanty2', name: 'Skyview Laundry', poi: { kind: 'delivery', label: 'Skyview Laundry' }, whole: true,
-        art: { spec: { style: 'siding', wallColor: '#c8d4dc', height: 40, roof: 'metal', boarded: 0, grime: 0.3, graffiti: 0 } } });
+        art: { spec: { style: 'siding', wallColor: '#c8d4dc', height: 40, roof: 'metal', roofMat: 'metal', lip: 3, rimW: 2, boarded: 0, grime: 0.3, graffiti: 0 }, kit: [] } });
       void lau;
       K.fill(cx, mid + 6, cw, 4, T.PLAZA);
       prop('driftshade', cx + 18, mid + 3, 0, { w: 110, d: 70 });
@@ -477,7 +486,7 @@ function build(m, api, K) {
     const [, , x1, y1] = A;
     // the boxes' backs: from the first column free all the way down from the freeway's side
     let bx0 = A[0];
-    const by0 = 2466, bh = 22;
+    const by0 = 2478, bh = 22;
     while (bx0 < x1 && !K.allFree(bx0, by0 - 2, 1, y1 - by0 + 2)) bx0++;
     const box = (x, w, name, poi, look) => K.building({ x, y: by0, w, h: bh, arch: 'strip', key: 'strip', name, poi, whole: true,
       art: { spec: { floors: 2, style: 'concrete', wallColor: look.wall, parapet: 8, grime: 0.06, blades: [], plaques: [] }, shop: { kind: 'mart', door: 'left', open: true, people: 4, awning: null, sign: { text: name.toUpperCase(), bg: look.bg, fg: look.fg, lit: true } } } });
