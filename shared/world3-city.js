@@ -91,7 +91,7 @@ export const CITY3 = [
   { d: 4, on: 'big', zone: ZC, rects: [[2860, 2300, 3184, 2400], [2860, 2400, 2988, 2730], [2988, 2576, 3480, 2730], [3184, 2400, 3320, 2576]], hand: 'downtown', look: 'Downtown round Greenfield Park, handcrafted (shared/world3-downtown.js): the circus park, Greenfield Tower\'s plaza, the bank plaza between its towers, the police headquarters, the Grand Neon Hotel\'s fountain drive, Fountain Square and The Grand Theatre' },
   { d: 7, on: 'big', zone: ZC, rects: [[2860, 2080, 3640, 2300]], look: 'the Neon Strip: clubs, the arcade and hotels along Neon Boulevard on the north shore, facing the mainland' },
   { d: 17, on: 'big', zone: ZC, rects: [[2560, 2120, 2860, 2400]], hand: 'pinkmile', look: 'The Pink Mile behind the Strip to the west, handcrafted (shared/world3-pinkmile.js): the Mile\'s motels round their pools, the lounges, the waterfront under the Gulf Loop, Rose Plaza at the Arts Bridge\'s foot, Sideshow Street, Coral Court' },
-  { d: 46, on: 'big', zone: ZC, rects: [[2300, 2240, 2560, 2400], [2300, 2400, 2860, 2730]], look: 'the Arts District west of downtown: the museum on its square, the playhouse, galleries, records' },
+  { d: 46, on: 'big', zone: ZC, rects: [[2300, 2240, 2560, 2400], [2300, 2400, 2860, 2730]], hand: 'arts', look: 'the Arts District west of downtown, handcrafted (shared/world3-arts.js): Museum Square with the Metro Museum of Art and the Playhouse, the Brickworks\' warehouse lofts, Canvas Market, Gallery Lane, Studio Court, the Underpass under the Gulf Loop, the Glasshouse Gardens, the Spur Line, the Wharf' },
   { d: 16, on: 'big', zone: ZC, rects: [[2300, 2730, 3840, 3020], [3480, 2300, 3840, 2730]], look: 'Bayside Heights on the ocean side: mansions with pools on big lots, the Hilltop Mansion, the marina' },
   // --- the mainland city on the gulf's north shore ---
   { d: 3, on: 'main', zone: ZC, rects: [[3940, 1440, 4260, 2100]], look: 'The Yards east of the river channel, handcrafted (shared/world3-yards.js): the freight sidings by Northgate Station, the level crossing by Yards Liquor, the salvage yard under the Gulf Loop, the warehouses and their docks, the intermodal terminal, the cement works and the tank farm' },   // (not \`hand\`: the grid still lays Juniper Street on its east edge)
@@ -144,7 +144,7 @@ export const CITY_AIRPORT = {
   planes: [[1540, 2680], [1572, 2680], [1604, 2696]], poiAt: [1562, 2662],
 };
 export const CITY_SPOTS = {
-  museumSquare: { x0: 2640, y0: 2470, x1: 2700, y1: 2520 },   // (the Metro Museum of Art fronts onto it; the Playhouse beside)
+  museumSquare: { x0: 2469, y0: 2439, x1: 2553, y1: 2488 },   // (the Metro Museum of Art fronts onto it, the Playhouse beside: shared/world3-arts.js)
   museum: [2670, 2462], playhouse: [2610, 2462],
   ferryWest: [2190, 2640],     // (the Gull Harbor Car Ferry's terminal in Port Westport: FERRIES3's first stop)
   ferryMain: [3260, 2004],     // (the Gulf Water Bus at the mainland Harbor)

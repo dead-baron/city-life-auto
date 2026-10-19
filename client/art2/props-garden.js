@@ -71,6 +71,24 @@ export function greenhouse(w = 150, d = 80, h = 40, roofH = 30, on = 0.5, seed =
 }
 
 // ---- statues, lanterns, bridges ------------------------------------------------------------------------------
+// a modern sculpture on its stone plinth (the Arts District's museum forecourt, WC070): v 0 painted blocks stacked at
+// angles, 1 a red ring stood on its edge, 2 a bronze twist rising to a point
+export function sculpture(v = 0) {
+  const m = new Vox(36, 36, 92), c = 18;
+  const st = m.mat({ ramp: STONE, k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.5 : 0) });
+  m.box(5, 5, 0, 31, 31, 3, st); m.box(8, 8, 3, 28, 28, 14, st);
+  if (v === 1) {
+    const red = m.mat({ ramp: R('#c8342e', 6, 3), k: 3, gloss: 0.3 });
+    m.fill((x, y, z) => { const r = Math.hypot(x + 0.5 - c, z - 50); return Math.abs(y + 0.5 - c) < 3 && r > 26 && r < 33 && z >= 14 ? red : -1; }, 0, 0, 14, 36, 36, 92);
+  } else if (v === 2) {
+    const br = m.mat({ ramp: R('#8a6a3a', 6, 3), k: 3, gloss: 0.4 });
+    m.fill((x, y, z) => { const t = (z - 14) / 76, a = t * 5.2, r = 7 * (1 - t) + 1, ox = Math.cos(a) * 3, oy = Math.sin(a) * 3; return Math.hypot(x + 0.5 - c - ox, y + 0.5 - c - oy) < r ? br : -1; }, 0, 0, 14, 36, 36, 90);
+  } else {
+    const cols = ['#e0b040', '#2a5aa0', '#c8343a', '#f0ece4'].map((h) => m.mat({ ramp: R(h, 6, 3), k: 3 }));
+    for (let k = 0; k < 4; k++) { const s2 = 16 - k * 2, ox = [0, 4, -3, 2][k], oy = [0, -3, 2, 3][k], z0 = 14 + k * 17; m.box(c - s2 / 2 + ox, c - s2 / 2 + oy, z0, c + s2 / 2 + ox, c + s2 / 2 + oy, z0 + 17, cols[k]); }
+  }
+  return m;
+}
 // a pale marble figure in a long robe holding a vase at her shoulder, on a round stepped plinth
 export function gardenStatue() {
   const m = new Vox(30, 30, 82), c = 15;

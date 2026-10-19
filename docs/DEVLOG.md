@@ -11325,3 +11325,66 @@ Tests: test/pinkmile.test.js (the streets meet the bridges and carry the Strip's
 the sign; the pictures); test/waterbake.test.js (the lily pads over the water).
 
 Budgets: none raised (the bake workers' code grew from 790 to 795 KB of its 800: the pictures, the motel fronts and signs).
+
+## 2026-10-19 · World v3, handcrafted: the Arts District (the museum on its square, the warehouse lofts, the market, the glasshouse gardens)
+
+The Arts District (district 46, west of Downtown on the Gulf Island) is now laid out by hand (`shared/world3-arts.js`).
+It's built from the owner's concepts WC239 (sawtooth-roofed brick warehouse lofts with murals, water towers and a
+chimney, the theatre, the street-food market reached by passages, galleries under string lights, a wharf with finger
+piers and sailboats, an old rail spur made a green walk), WC070 (the museum with banners and two sculptures on its
+forecourt, a records shop, a noodle bar, a café terrace, a columned bank, loft studios with big arched windows, murals
+on blank walls), WC110 (the botanical garden), WC292 (the skate plaza) and WC315 (the community garden, the bakery on
+the corner), with the research's courtyard of artist lofts, the records and books corner and the bathhouse. The grid
+had built about 300 fronts here under a few dozen names used over and over.
+- **The streets:** Gallery Avenue carried on south to Bayside Avenue; Bridge Street carried on from Greenfield Avenue
+  to the Sunset Bridge (one street from the Arts Bridge to the Sunset Bridge now); Fountain Avenue carried on west from
+  Downtown to the water bus pier; Canvas Street and Mosaic Street across the district; Easel Street and Studio Street;
+  Foundry Street and Kiln Street between the Westport Bridge and Greenfield Avenue; Wharf Street from Gallery Avenue's
+  end out onto the spit north of the bridge.
+- **Museum Square**: the **Metro Museum of Art** under its portico, red and blue banners and two sculptures on its
+  forecourt (a new `sculpt` prop: painted blocks, a red ring, a bronze twist), the long reflecting pool, plane trees in
+  a grid across the square, benches, chess tables; **The Playhouse** beside it (the masks in neon, its marquee, the box
+  office, the poster boards, the fly tower behind). The subway's stairs (Arts District, Yellow Line) are at the
+  square's corner.
+- **The Brickworks** along Foundry Street: the warehouses made lofts and galleries under sawtooth roofs (Brickworks
+  Lofts with the Kiln Gallery, Ochre & Ash, Glassworks Guild, Studio Ten), **The Boiler House** (a music club under its
+  chimney), murals on the end walls, **Gallery Nine** (the palette in neon); on Greenfield Avenue Burnt Sienna Art
+  Supply, Easel Cafe, **Dog-Ear Books** and **Second Spin Records** (the disc in neon) on the corner of Gallery Avenue.
+- **Canvas Market** by the water: rows of stalls, tables under umbrellas, food carts, lights strung across, its
+  eateries round it (Kanji Noodle Bar, Mural Tacos, Little Lisbon, Gouache Gelato, The Inkwell), passages in from the
+  streets; a block party spot.
+- **Gallery Lane**: a cobbled lane across the block between Gallery Avenue and Bridge Street, the galleries along it
+  (Gesso, Linocut Press, The Clay Room, Lumen Photo, Halftone, Cobalt, Atelier Noor...), lights strung over it,
+  planters, bollards at its ends.
+- **Studio Court**: lofts round their court (the half court, the lawn with its trees, beds and picnic tables, the koi
+  mural), the Corner Bodega, The Hair Loft and Bric-a-Brac on Fountain Avenue, the gate between.
+- **Under the Gulf Loop**: Canvas Savings Bank (the columned bank), North Light Studios, the tiger mural, The
+  Sketchbook's roof terrace, parking under the deck; **The Underpass** skate plaza beside it, **Kickflip Skate Co.**
+  (a clothing shop you walk into) and **Canvas Brewing Co.** under its sawtooth roof.
+- **By the water**: the **Canvas Community Garden** (raised beds, the greenhouse, the shed, the produce stalls at its
+  gate), **Steam & Stone Baths** (the bathhouse), the promenade along the shore with the water bus piers.
+- **The Glasshouse Gardens** south of Fountain Avenue: the gate, the parterres and the fountain, **The Palm House**
+  (the great glasshouse and its wings), the hedge maze with a statue at its heart, the koi pond with its stepping stones,
+  lilies, stone lanterns and the gazebo, the rose garden under its arches, **The Orangery** café, trees over the lawns.
+- **The Spur Line**: the old freight spur from Fountain Avenue to Bayside Avenue, its rails left in a strip of wild
+  flowers, birches and maples, benches and lamps; **Boxcar Coffee** in the old boxcar.
+- **The Arts Wharf** north of the Westport Bridge: Pier Nine Gallery, The Salt Crane (oysters, a terrace on the quay),
+  Wharf Bait & Tackle, Tidewater Studios, Wharfside Cafe; three finger piers with motorboats you can take and sailboats
+  and a yacht moored.
+- The rest: rows of shops and lofts on Greenfield Avenue, Canvas Street, Mosaic Street and Bayside Avenue (names
+  composed from the district's own words when its list runs out: never the same twice), the lofts' backs and gardens
+  between.
+- **Art:**
+  - A gallery's window (`client/art2/buildings.js`, shop kind `gallery`): white walls, canvases hung in a line under
+    the track lights, a sculpture on a plinth, the polished floor.
+  - Sawtooth roofs (`spec.pitch 'saw'`): teeth across the width, the north lights glazed, the front wall's top a row of
+    triangles with a tall window in each.
+  - Glazed roofs (`spec.roof 'glass'`): panes between white-grey ribs (the Palm House).
+  - Three neon pictures (`client/art2/neonsigns.js`): the theatre's masks, the painter's palette, a record.
+  - Fountain basins and the reflecting pool (`m.pools` with `basin`): still dark water over stone, not a swimming
+    pool's tiles (Rose Plaza's basin on the Pink Mile too).
+
+Tests: test/arts.test.js (the streets carry on the city's and meet the bridges; the specials; a gallery's window; the
+sawtooth and the glazed roofs; the pictures; the sculptures).
+
+Budgets: none raised (the bake workers' code grew from 795 to 797 KB of its 800).

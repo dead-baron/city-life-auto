@@ -181,6 +181,37 @@ const SHAPES = {
     if (twinkle(x, y, 13.5, 24, 1) || twinkle(x, y, 15.5, 38, 1)) return [110, 230, 120];
     return null;
   } },
+  // ---- the Arts District's (2026-10-19; WC239, WC070): the theatre's two masks, the gallery's palette, the record shop's disc
+  masks: { w: 44, h: 34, glow: [255, 210, 110], at(x, y) {
+    const X = x + 0.5, Y = y + 0.5;
+    // two faces, the smiling one in front (gold), the frowning one behind it to the right (blue), each an oval tapering to
+    // the chin: its eyes and its mouth cut out
+    const face = (cx, cy) => (x2, y2) => { const u = (x2 + 0.5 - cx) / 10, v = (y2 + 0.5 - cy) / 13; return u * u * (1 + Math.max(0, v) * 0.5) + v * v < 1; };
+    const A = face(15, 15), B = face(29, 18);
+    const cut = (cx, cy, smile) => Math.abs(X - cx + 4) < 2.2 && Math.abs(Y - cy + 3) < 1.4 || Math.abs(X - cx - 4) < 2.2 && Math.abs(Y - cy + 3) < 1.4
+      || (Math.abs(X - cx) < 5 && Math.abs(Y - (cy + 5 + (smile ? 1 : -1) * ((X - cx) / 5) ** 2 * -2.2)) < 0.9);
+    if (A(x, y)) { if (edge(A, x, y)) return [255, 220, 110]; return cut(15, 15, true) ? null : [140, 90, 20]; }
+    if (B(x, y)) { if (edge(B, x, y)) return [110, 200, 255]; return cut(29, 18, false) ? null : [20, 60, 120]; }
+    if (segD(X, Y, 6, 26, 2, 31)[0] < 0.8 || segD(X, Y, 38, 29, 42, 33)[0] < 0.8) return [255, 120, 200];   // (the ribbons)
+    return null;
+  } },
+  palette: { w: 40, h: 30, glow: [255, 180, 90], at(x, y) {
+    const X = x + 0.5, Y = y + 0.5;
+    const P = (x2, y2) => { const u = (x2 + 0.5 - 20) / 18, v = (y2 + 0.5 - 15) / 13; return u * u + v * v < 1 && Math.hypot(x2 + 0.5 - 29, y2 + 0.5 - 20) > 3.6; };
+    if (segD(X, Y, 4, 28, 16, 12)[0] < 1 && !P(x, y)) return [255, 230, 190];   // (the brush across it)
+    if (edge(P, x, y)) return [255, 190, 100];
+    if (!P(x, y)) return null;
+    for (const [cx, cy, c] of [[11, 10, [255, 70, 70]], [19, 7, [255, 220, 70]], [27, 9, [90, 220, 120]], [32, 14, [80, 160, 255]], [9, 18, [230, 110, 255]]]) if (Math.hypot(X - cx, Y - cy) < 2.4) return c;
+    return [110, 70, 30];
+  } },
+  vinyl: { w: 34, h: 34, glow: [255, 90, 140], at(x, y) {
+    const r = Math.hypot(x + 0.5 - 17, y + 0.5 - 17);
+    if (r > 16) return null;
+    if (r > 15) return [255, 110, 160];
+    if (r < 1.2) return null;
+    if (r < 6) return r > 5 ? [255, 220, 110] : [200, 60, 90];
+    return Math.round(r) % 3 === 0 ? [255, 110, 160] : [30, 16, 30];
+  } },
 };
 // (a picture sign's glow colour: the shape's own, else the panel's pink, the tiger's orange, the head's violet)
 export const picGlow = (k) => (SHAPES[k] ? SHAPES[k].glow : k === 'lucy' ? [255, 80, 200] : k === 'tiger' ? [255, 150, 60] : [170, 100, 255]);

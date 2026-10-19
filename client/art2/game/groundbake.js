@@ -927,6 +927,7 @@ export function tableEdge(t, x, y) {
 // the edge, lane lines with T-ends on the floor along the pool (pool.lanes lanes along its long side), the deep end
 // (pool.deep) darker; a fine bright ripple lattice over it all
 const POOLW = ramp('#62c8dc', 6, 3), POOLD = ramp('#2a88b8', 6, 3), POOLL = ramp('#1e3e8a', 4, 2), POOLE = ramp('#1e5a96', 4, 2), PWP = { c: null, nx: 0, ny: 0, e: 0 };
+const BASIN = ramp('#2e5258', 6, 3), BASINE = ramp('#8a8478', 4, 2);   // (a basin's still water over dark stone - a fountain's, a reflecting pool's: p.basin)
 // a pool is a rect ({x, y, w, h}) or a ring (a lazy river: {ring: {cx, cy, rx, ry, hw}}, round an ellipse)
 const inRing = (g, X, Y, pad = 0) => Math.abs(Math.hypot((X - g.cx) / g.rx, (Y - g.cy) / g.ry) - 1) * Math.min(g.rx, g.ry) < g.hw + pad;
 const inPool = (r, X, Y) => (r.ring ? inRing(r.ring, X, Y, 16) : inRect(r, X, Y));
@@ -945,6 +946,12 @@ function poolPx(pools, X, Y, d, seed) {
   }
   const along = p.w >= p.h, u = along ? X - p.x : Y - p.y, v = along ? Y - p.y : X - p.x, L = along ? p.w : p.h, Wd = along ? p.h : p.w;
   const big = vnc(X, Y, 23, seed + 3), fine = vnc(X, Y, 5, seed + 5);
+  if (p.basin) {   // still dark water, the sky's light on it in slow swells, a stone lip at the edge
+    const sw = Math.sin((X + Y * 0.6) * 0.045 + big * 3);
+    PWP.c = d < 1.6 ? sd(BASINE, 0.55 + (fine - 0.5) * 0.3, X, Y, 0.6) : sd(BASIN, 0.42 + (big - 0.5) * 0.14 + (sw > 0.85 ? 0.16 : 0), X, Y, 0.6);
+    PWP.nx = (fine - 0.5) * 0.04; PWP.ny = sw * 0.03;
+    return PWP;
+  }
   let t = (deep ? 0.42 : 0.6) + (big - 0.5) * 0.12 + (fine - 0.5) * 0.06;
   const w = worley(X * 1.1, Y + big * 4, 9, seed + 9, 0.85), lat = w.d2 - w.d1 < 0.55;
   if (lat) t += 0.2;

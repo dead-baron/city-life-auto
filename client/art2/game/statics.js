@@ -1519,7 +1519,7 @@ function voxModel(m, a) {
     case 'roadSign': return U.roadSign(a[0] || 'arrow'); case 'fingerPost': return U.fingerPost(); case 'stand': return RD.produceStand(40);
     case 'minePortal': return WL.minePortal(80, 70); case 'mineCart': return WL.mineCart(true); case 'mBarrel': return WL.barrel('#8a5a34');
     case 'chest': return WL.chest(); case 'pickaxe': return WL.pickaxe();
-    case 'greenhouse': return GD.greenhouse(150, 80, 40, 30, 0.6, 1); case 'gStatue': return GD.gardenStatue(); case 'stoneLantern': return GD.stoneLantern(a[0] ?? 0.6);
+    case 'greenhouse': return GD.greenhouse(150, 80, 40, 30, 0.6, 1); case 'gStatue': return GD.gardenStatue(); case 'sculpt': return GD.sculpture(a[0] || 0); case 'stoneLantern': return GD.stoneLantern(a[0] ?? 0.6);
     case 'redBridge': return GD.redBridge(a[0] || 110, 26, 16); case 'beehive': return GD.beehive(['#e0b850', '#d8a848', '#e8c060'][a[0] || 0], (a[0] || 0) + 3);
     case 'raisedBed': return GD.raisedBed(60, 26, 9, (a[0] || 0) + 1); case 'gShed': return GD.gardenShed(52, 38, 32, '#3a6a8a'); case 'ladder': return GD.orchardLadder(46);
     case 'fruitCrate': return GD.fruitCrate('#c8302a', 2);
@@ -1581,7 +1581,7 @@ function vdim(m, a) {
     case 'creekRail': return [a[0] || 200, 10, 26]; case 'footbridge': return [a[0] || 140, a[1] || 26, (a[2] || 8) + 22];
     case 'roadSign': return a[0] === 'curve' ? [18, 4, 44] : [50, 4, 52]; case 'fingerPost': return [30, 6, 44]; case 'stand': return [44, 18, 24];
     case 'minePortal': return [80, 22, 78]; case 'mineCart': return [32, 22, 26]; case 'mBarrel': return [14, 14, 18]; case 'chest': return [26, 16, 18]; case 'pickaxe': return [10, 6, 34];
-    case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
+    case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'sculpt': return [36, 36, 92]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
     case 'beehive': return [18, 16, 26]; case 'raisedBed': return [60, 26, 9]; case 'gShed': return [52, 38, 46]; case 'ladder': return [14, 18, 48]; case 'fruitCrate': return [18, 14, 14];
     case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, 34, 32]; case 'pier': return [a[0] || 120, a[1] || 30, 54];
     case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 8]; case 'canoe': return [64, 16, 12]; case 'yacht': return [110, 40, 30]; case 'sailboat': return [a[0] || 120, 40, 150]; case 'poolHouse': return [a[0] || 288, (a[1] || 60) + 16, 62]; case 'hotTub': return [(a[0] || 30) * 2 + 4, (a[0] || 30) * 2 + 4, 26]; case 'divingBoard': return [(a[0] || 56) + 18, 16, 30]; case 'laneRope': return [a[0] || 400, 4, 3]; case 'culvert': return [a[0] || 150, 22, (a[1] || 34) + 4]; case 'basketHoop': return [36, 30, 64]; case 'tennisNet': return [6, a[0] || 100, 14]; case 'skateQuarter': return [a[0] || 128, 48, 34]; case 'skateLedge': return [a[0] || 96, 20, 15]; case 'skateRail': return [a[0] || 96, 8, 15]; case 'skateKicker': return [40, 34, 14]; case 'skatePyramid': return [120, 80, 17]; case 'graffitiWall': return [a[0] || 256, 10, 42]; case 'boombox': return [16, 6, 12]; case 'bleachers': return [a[0] || 120, (a[1] || 4) * 10 + 8, (a[1] || 4) * 8 + 22]; case 'bathPavilion': return [84, 62, 68]; case 'ringFloat': return [22, 22, 6]; case 'pierRail': return [a[0] || 192, 6, 26]; case 'baitShack': return [120, 76, 66]; case 'lifeRing': return [14, 8, 34]; case 'fishTable': return [34, 16, 26]; case 'rodHolder': return [22, 30, 48]; case 'ferrisWheel': return [224, 44, 262]; case 'marketStall': return [60, 34, 46]; case 'clubhouse': return [252, 144, 100]; case 'golfCart': return [34, 20, 26]; case 'golfPin': return [14, 4, 36]; case 'waterSlide': return [Math.ceil(Math.abs(a[0] || 0) + 112), (a[1] || 240) + 18, (a[2] || 84) + 20]; case 'slideTower': return [(a[0] || 96) + 30, (a[1] || 56) + 8, (a[2] || 84) + 36]; case 'bambooFence': return [a[0] || 80, 6, (a[1] || 30) + 2]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
@@ -2146,6 +2146,7 @@ function propItems(c, p, pi, I) {
     case 'gatepier': V('gpier', 'gatePier', []); return;   // (a stone gate pier with its urn: Crescent Gardens' gate, WC433)
     case 'greenhouse': V('ghouse', 'greenhouse', []); lightAt(I, x, y, 30, 160, [1, 0.88, 0.62], 1.2, 'window'); return;
     case 'statue': V('gstat', 'gStatue', []); return;
+    case 'sculpt': V(`sculpt:${(p.v || 0) % 3}`, 'sculpt', [(p.v || 0) % 3]); return;   // (the museum's forecourt: shared/world3-arts.js)
     case 'gazebo': V('gazebo', 'gazebo', []); lightAt(I, x, y - 10, 60, 120, [1, 0.86, 0.6], 1.0, 'window'); return;
     case 'archbridge': V(`abr:${p.len || 120}:${qa(p.a || 0, 4).toFixed(2)}`, 'archBridge', [p.len || 120, 26, 16], qa(p.a || 0, 4)); return;
     case 'parksign': V('psign', 'parkSign', []); return;

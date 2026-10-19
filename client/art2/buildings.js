@@ -516,19 +516,23 @@ function roofDeck(G, spec, w, d, H, seed, style) {
 // shaded by which way it slopes, with shingle courses or barrel tiles running along it.
 function pitched(G0, spec, w, d, H, seed) {
   if (spec.pitch === 'mansard') return mansard(G0, spec, w, d, H, seed);
-  const k = spec.slope ?? 0.75, gable = spec.pitch === 'gable', ns = gable && spec.ridge === 'ns';
-  const E = Math.ceil((ns ? w / 2 : gable ? d / 2 : Math.min(w, d) / 2) * k) + 2;
+  // (spec.pitch 'saw': a sawtooth - teeth across the width, each rising west to east to its glazed north light; the
+  // front wall's top a row of triangles, a tall window in each: the Arts District's warehouses, WC239)
+  const saw = spec.pitch === 'saw', TW = Math.max(24, spec.tooth || 64);
+  const k = spec.slope ?? (saw ? 0.5 : 0.75), gable = spec.pitch === 'gable', ns = gable && spec.ridge === 'ns';
+  const E = Math.ceil((saw ? TW - 1 : ns ? w / 2 : gable ? d / 2 : Math.min(w, d) / 2) * k) + 2;
   const G = new GBuf(w, G0.h + E);
   G.ax = 0; G.ay = G0.ay + E;
   G.blit(G0, 0, E);
   const R = spec.roofColor ? ramp(spec.roofColor, 6, 3) : spec.roof === 'tile' ? MAT.terracotta : MAT.roofShingle || ramp('#5a5c66', 6, 3);
-  const tile = spec.roof === 'tile';
+  const tile = spec.roof === 'tile', glazed = spec.roof === 'glass';
   const FACE = { w: [-0.7, 0, 0.7], e: [0.7, 0, 0.7], n: [0, -0.7, 0.7], s: [0, 0.7, 0.7] };
   const LIT = { w: 0.68, n: 0.58, s: 0.5, e: 0.32 };
   for (let y = 0; y < d; y++) for (let x = 0; x < w; x++) {
     const dW = x, dE = w - 1 - x, dN = y, dS = d - 1 - y;
     let q, f;
-    if (ns) { q = Math.min(dW, dE); f = dW < dE ? 'w' : 'e'; }
+    if (saw) { q = x % TW; f = 'w'; }
+    else if (ns) { q = Math.min(dW, dE); f = dW < dE ? 'w' : 'e'; }
     else if (gable) { q = Math.min(dN, dS); f = dN < dS ? 'n' : 's'; }
     else { q = Math.min(dW, dE, dN, dS); f = q === dS ? 's' : q === dN ? 'n' : q === dW ? 'w' : 'e'; }
     const z = q * k, row = Math.round(E + y - z);
@@ -543,10 +547,16 @@ function pitched(G0, spec, w, d, H, seed) {
       const qc = q % 4, tab = Math.floor((along + (course & 1) * 4) / 8), th = hash(tab, course, seed);
       t += (qc === 0 ? -0.3 : qc === 1 ? 0.07 : 0) + ((along + (course & 1) * 4) % 8 === 0 && qc ? -0.16 : 0) + th * 0.16 - 0.08 + (th > 0.95 ? 0.14 : th < 0.04 ? -0.16 : 0);
     }
-    const ridge = ns ? Math.abs(dW - dE) <= 1 : gable ? Math.abs(dN - dS) <= 1 : (Math.abs(dN - dS) <= 1 && q === Math.min(dN, dS)) || (q > 2 && Math.abs(Math.min(dW, dE) - Math.min(dN, dS)) < 0.6);
+    const ridge = saw ? q >= TW - 2 : ns ? Math.abs(dW - dE) <= 1 : gable ? Math.abs(dN - dS) <= 1 : (Math.abs(dN - dS) <= 1 && q === Math.min(dN, dS)) || (q > 2 && Math.abs(Math.min(dW, dE) - Math.min(dN, dS)) < 0.6);
     if (ridge) t += 0.2;
     if (q < 2) t -= 0.14;                                                               // eave shadow line
     let c = step(R, t, x, row, 0.45), fl = 0;
+    // a glazed roof (spec.roof 'glass': the glasshouses) - panes between white-grey iron ribs; the sawtooth's north lights
+    if (glazed || (saw && q > TW * 0.7)) {
+      const rib = glazed ? (along % 16 === 0 || q % 12 === 0 || ridge || q < 2) : (q === Math.ceil(TW * 0.7) + 1 || y % 18 === 0);
+      c = rib ? step(ramp('#e4e6e0', 5, 2), 0.72 + (f === 'e' ? -0.22 : 0), x, row, 0) : step(ramp(glazed ? '#3e6e70' : '#7ab0b8', 6, 3), 0.3 + LIT[f] * 0.4 + (vnoise(x, y, 9, seed) - 0.5) * 0.2, x, row, 0.3);
+      if (!rib) fl = F_GLASS;
+    }
     // solar panels on the sunny slope, a skylight on another (spec.solar, spec.skylight)
     if (spec.solar && f === (ns ? 'w' : 's')) {
       const span = ns ? d : w, a0 = Math.round(span * 0.16), a1 = Math.round(span * 0.56), q0 = 4, q1 = Math.min(Math.round(E / k) - 6, 40);
@@ -557,6 +567,16 @@ function pitched(G0, spec, w, d, H, seed) {
       if (along >= a0 && along < a0 + 14 && q >= q0 && q < q0 + 11) { const fr = along === a0 || along === a0 + 13 || q === q0 || q === q0 + 10; c = fr ? MAT.metalDark[3] : step(MAT.glass, 0.35 + ((along + q) % 6 < 2 ? 0.3 : 0), x, row, 0); fl = F_GLASS; }
     }
     for (let r = row; r <= row + (f === 's' ? 1 : 0); r++) G.put(x, r, c, FACE[f], H + z, null, fl);
+  }
+  // the sawtooth's end over the front wall: a triangle of wall to each tooth, a tall window in it
+  if (saw) for (let x = 0; x < w; x++) {
+    const lx = x % TW, top = Math.round(E + d - 1 - lx * k);
+    for (let r = top + 1; r < E + d; r++) {
+      const v = H + (E + d - r);
+      let c = wallColor(spec.style || 'brick', x, v, seed, x, r);
+      if (lx > TW * 0.42 && lx < TW * 0.82 && r > top + 3 && r < E + d - 3) c = (lx - Math.round(TW * 0.42)) % 6 === 0 ? MAT.metalDark[2] : MAT.glassDark[2];
+      G.put(x, r, c, [0, 1, 0], v, null, 0);
+    }
   }
   // the gable end over the front wall (ridge running north-south): a triangle of wall with a round vent
   if (ns) for (let x = 0; x < w; x++) {
@@ -715,6 +735,16 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
       c = step(ramp('#4a7040', 5, 2), 0.35 + (iy / H2) * 0.25, x, y, 0.8);
       if (iy > H2 * 0.3 && iy < H2 * 0.8 && hash(x >> 1, iy >> 1, seed + 15) > 0.45) c = [[230, 70, 90], [250, 210, 70], [245, 245, 240], [200, 90, 200], [250, 140, 60]][Math.floor(hash(x >> 2, iy >> 2, seed + 16) * 5)];
       if (iy >= H2 * 0.8) c = ((x >> 3) & 1) ? [90, 90, 96] : [150, 110, 70];
+    } else if (shop.kind === 'gallery') {                                                           // white walls, canvases hung in a line under the track lights, a plinth
+      c = step(ramp('#f2f0ea', 5, 2), 0.62 + (iy / H2) * 0.1, x, y, 0.3);
+      const lx = (x - 4) % 46, cw2 = 16 + Math.floor(hash(Math.floor((x - 4) / 46), 2, seed + 17) * 14), g = hash(Math.floor((x - 4) / 46), 3, seed + 19);
+      if (iy < 3) c = (x % 12) < 3 ? [255, 240, 200] : [60, 60, 66];                                 // the track and its spots
+      else if (lx >= 8 && lx < 8 + cw2 && iy > H2 * 0.18 && iy < H2 * 0.62) {                          // a canvas: bold blocks of colour, a thin frame
+        const fr = lx === 8 || lx === 7 + cw2 || iy < H2 * 0.18 + 1.5 || iy > H2 * 0.62 - 1.5;
+        const P = [[220, 70, 60], [40, 90, 170], [240, 200, 70], [30, 30, 36], [90, 170, 140], [230, 130, 160]], k = Math.floor(g * 6);
+        c = fr ? [40, 36, 34] : (lx - 8) < cw2 * (0.3 + g * 0.4) ? P[k] : (iy > H2 * 0.4 ? P[(k + 2) % 6] : P[(k + 4) % 6]);
+      } else if (g > 0.6 && Math.abs(lx - 38) < 4 && iy > H2 * 0.55) c = iy < H2 * 0.7 ? [180, 90, 60] : [236, 234, 228];   // a sculpture on its plinth
+      if (iy >= H2 * 0.88) c = step(ramp('#b8b0a4', 5, 2), 0.55, x, y, 0.2);                          // the polished floor
     } else if (shop.kind === 'salon') {                                                             // mirrors along the back, the chairs in front of them
       c = step(ramp('#e8e2dc', 5, 2), 0.6, x, y, 0.4);
       const lx = (x - 4) % 30;

@@ -447,7 +447,7 @@ function build(m, api, K) {
     // the basin: a round pool of water, its fountain in the middle (the deck its stone rim)
     const br = 4.2;
     for (let y = Math.floor(cy - br); y <= Math.ceil(cy + br); y++) for (let x = Math.floor(cx - br); x <= Math.ceil(cx + br); x++) if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 < br * br) m.set(x, y, T.WATER);
-    (m.pools ||= []).push({ x: Math.floor(cx - br) * TILE, y: Math.floor(cy - br) * TILE, w: (Math.ceil(cx + br) - Math.floor(cx - br) + 1) * TILE, h: (Math.ceil(cy + br) - Math.floor(cy - br) + 1) * TILE, lanes: 0 });
+    (m.pools ||= []).push({ x: Math.floor(cx - br) * TILE, y: Math.floor(cy - br) * TILE, w: (Math.ceil(cx + br) - Math.floor(cx - br) + 1) * TILE, h: (Math.ceil(cy + br) - Math.floor(cy - br) + 1) * TILE, lanes: 0, basin: true });
     prop('fountain', cx, cy + 0.5, 0);
     for (let k = 0; k < 8; k++) prop('flowers_big', cx + 7 * C8[k][0], cy + 5.2 * C8[k][1], 0);
     prop('statue', cx, shoreAt(Math.round(cx)) + 4 + PROM + 1.5, 20);
