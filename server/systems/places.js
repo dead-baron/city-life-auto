@@ -239,29 +239,31 @@ export function mazeTarget(world, p) {
   return { text: `Bluffs Maze: ${clock(world.time - p.maze.t0).replace(/\.\d$/, '')} - find the gazebo in the middle`, x: mz.heart.x, y: mz.heart.y, stage: 'maze' };
 }
 
-// ---- a lap of the Stadium Lido -------------------------------------------------------------------------------------
+// ---- a lap of a lido (the Stadium Lido, Meadowbrook Pool...) -------------------------------------------------------
 // The lanes run from the shallow end's wall (west) to the rope across the deep end. In the water by the wall you're
 // ready; push off and the clock runs; touch the rope line and turn; back at the wall: your time. Out of the water
-// (or out of the lanes) and the lap is off. p.lap: { phase: 'wall' | 'out' | 'back', t0 }.
+// (or out of the lanes) and the lap is off. p.lap: { phase: 'wall' | 'out' | 'back', t0, pool (which lido) }.
 const LAP_WALL = 40, LAP_ROPE = 36;
-function lido(map) {
-  if (map._lido === undefined) Object.defineProperty(map, '_lido', { value: (map.pools || []).find((q) => q.deep && q.lanes) || null, enumerable: false, configurable: true });
-  return map._lido;
+function lidos(map) {
+  if (map._lidos === undefined) Object.defineProperty(map, '_lidos', { value: (map.pools || []).filter((q) => q.deep && q.lanes), enumerable: false, configurable: true });
+  return map._lidos;
 }
+const inPool = (q, ped) => ped.x >= q.x && ped.x < q.deep.x + 8 && ped.y >= q.y && ped.y < q.y + q.h;
 function lapStep(world) {
-  const pool = lido(world.map);
-  if (!pool) return;
-  const x0 = pool.x, x1 = pool.deep.x;
+  const pools = lidos(world.map);
+  if (!pools.length) return;
   for (const p of world.players.values()) {
     const ped = p.ped, L = p.lap;
-    const inLanes = !!ped && !ped.dead && !ped.vehId && !ped.hidden && ped.x >= x0 && ped.x < x1 + 8 && ped.y >= pool.y && ped.y < pool.y + pool.h && isSwimming(world.map, ped);
+    const pool = !ped ? null : L ? pools[L.pool || 0] : pools.find((q) => inPool(q, ped));
+    const inLanes = !!pool && !ped.dead && !ped.vehId && !ped.hidden && inPool(pool, ped) && isSwimming(world.map, ped);
     if (!inLanes) {
       if (L && L.phase !== 'wall' && ped && !ped.dead) world.notify(p, 'Out of the lanes - the lap is off.', 'info');
       if (L) { p.lap = null; p.meDirty = true; }
       continue;
     }
+    const x0 = pool.x, x1 = pool.deep.x;
     const atWall = ped.x < x0 + LAP_WALL, atRope = ped.x > x1 - LAP_ROPE;
-    if (!L) { if (atWall) { p.lap = { phase: 'wall' }; world.notify(p, 'Push off the wall to start the clock: to the rope across the deep end and back.', 'info'); p.meDirty = true; } continue; }
+    if (!L) { if (atWall) { p.lap = { phase: 'wall', pool: pools.indexOf(pool) }; world.notify(p, 'Push off the wall to start the clock: to the rope across the deep end and back.', 'info'); p.meDirty = true; } continue; }
     if (L.phase === 'wall' && !atWall) { L.phase = 'out'; L.t0 = world.time; p.meDirty = true; }
     else if (L.phase === 'out' && atRope) { L.phase = 'back'; world.notify(p, 'Turn!', 'info'); p.meDirty = true; }
     else if (L.phase === 'back' && atWall) finishLap(world, p, world.time - L.t0);
@@ -269,7 +271,7 @@ function lapStep(world) {
 }
 function finishLap(world, p, t) {
   const prof = p.profile, first = !prof.lapBest, best = !first && t < prof.lapBest;
-  p.lap = { phase: 'wall' };   // (ready for another)
+  p.lap = { phase: 'wall', pool: p.lap ? p.lap.pool : 0 };   // (ready for another, in the same pool)
   if (first || best) prof.lapBest = +t.toFixed(1);
   const board = (world.lapBoard ||= []);
   const mine = board.find((q) => q.pid === p.pid);
@@ -286,7 +288,7 @@ function finishLap(world, p, t) {
 }
 // the HUD tracker while you swim a lap: the time so far, the rope or the wall marked
 export function lapTarget(world, p) {
-  const pool = lido(world.map), L = p.lap;
+  const L = p.lap, pool = L ? lidos(world.map)[L.pool || 0] : null;
   if (!pool || !L || L.phase === 'wall') return null;
   const back = L.phase === 'back';
   return { text: `Lido lap: ${clock(world.time - L.t0).replace(/\.\d$/, '')} - ${back ? 'back to the wall' : 'to the rope and back'}`, x: Math.round(back ? pool.x + 8 : pool.deep.x), y: Math.round(pool.y + pool.h / 2), stage: 'lap' };
