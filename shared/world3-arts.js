@@ -778,8 +778,13 @@ function build(m, api, K) {
     }
     wall(x, y - 0.5, (cw - 1) * C, true); wall(x + C, y + chh * C - 0.5, (cw - 1) * C, true);
     wall(x - 0.25, y, chh * C, false); wall(x + cw * C - 0.25, y, chh * C, false);
-    prop('statue', x + Math.floor(cw / 2) * C + C / 2, y + Math.floor(chh / 2) * C + C / 2, 16);
+    const hx = x + Math.floor(cw / 2) * C + C / 2, hy = y + Math.floor(chh / 2) * C + C / 2;
+    prop('statue', hx, hy, 16);
     (out.places ||= []).push({ name: 'The Maze', x0: x, y0: y, x1: x + cw * C, y1: y + chh * C });
+    // against the clock (server/systems/places.js: in at the corner, the clock runs till you reach the statue in the
+    // middle; the day's fastest, a prize the first time - the old world's Bluffs Maze Garden's game)
+    (m.natureSites ||= []).push({ kind: 'maze', hand: true, name: 'The Glasshouse Maze', goal: 'the statue', x: Math.round(hx * TILE), y: Math.round(hy * TILE), gate: { x: Math.round((x + C / 2) * TILE), y: Math.round((y + chh * C) * TILE) }, size: cw * C,
+      rect: { x0: Math.round((x - 0.25) * TILE), y0: Math.round((y - 0.5) * TILE), x1: Math.round((x + cw * C) * TILE), y1: Math.round((y + chh * C) * TILE) }, heart: { x: Math.round(hx * TILE), y: Math.round(hy * TILE), r: Math.round(1.6 * TILE) } });
   }
 
   // ===========================================================================================================

@@ -117,4 +117,11 @@ test('World v3: the whole world in one build - every city district on its island
   }
   assert.ok((m.paintings || []).some((p) => p.key === 'golf' && p.hand), 'its ground');
   assert.ok(m.pois.some((p) => p.kind === 'clubhouse' && p.label === 'Lakeside Greens' && p.counter), 'the clubhouse bar');
+  // the Glasshouse Maze against the clock (shared/world3-arts.js; server/systems/places.js): its bounds, the statue in
+  // its middle inside them
+  const mz = (m.natureSites || []).find((q) => q.kind === 'maze' && q.rect);
+  assert.ok(mz && mz.heart.x > mz.rect.x0 && mz.heart.x < mz.rect.x1 && mz.heart.y > mz.rect.y0 && mz.heart.y < mz.rect.y1, 'the maze, its middle inside it');
+  // Wreck Beach on Coral Cay (shared/world3-coralcay.js): the wreck's three places to search, each on the key's land
+  const wr = (m.natureSites || []).find((q) => q.kind === 'wreck' && q.search);
+  assert.ok(wr && wr.search.length === 3 && wr.search.every((q) => m.land[tileOf(q.x, q.y)]), 'the wreck to search');
 });

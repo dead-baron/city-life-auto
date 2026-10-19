@@ -3336,6 +3336,7 @@ function shoreSand(m, box, ground, zone) {
     if (tx < 0 || ty < 0 || tx >= m.w || ty >= m.h || m.zone[i] !== zone) continue;
     const t0 = m.tiles[i];
     if (t0 !== T.GRASS && t0 !== T.SAND && t0 !== T.DIRT) continue; // leave streets and lots alone
+    if (OPTS?.handAt?.(tx, ty)) continue;   // (and a handcrafted district's ground: World v3's Pelican Point lays its own beach - shared/world3-pelican.js)
     let near = false;
     for (let dy = -3; dy <= 3 && !near; dy++) for (let dx = -3; dx <= 3; dx++) if (isWater(m.tileAt(tx + dx, ty + dy))) { near = true; break; }
     m.set(tx, ty, near ? T.SAND : ground);
@@ -3449,7 +3450,7 @@ function buildOffshore(m, rand) {
   for (let k = 0; k < 2; k++) m.marina.push({ x: (tip.x - 2.6) * TILE, y: (tip.y + 2 + k * 3.2) * TILE, a: Math.PI, kind: 'jetski' });
   for (let k = 0; k < 120; k++) {
     const tx = px0 + Math.floor(rand() * (px1 - px0)), ty = py0 + Math.floor(rand() * (py1 - py0));
-    if (m.zone[ty * m.w + tx] !== Z.KEY || tx > pcx + 14) continue;
+    if (m.zone[ty * m.w + tx] !== Z.KEY || tx > pcx + 14 || OPTS?.handAt?.(tx, ty)) continue;
     const t = m.tileAt(tx, ty);
     if (onCourt(tx, ty)) continue;
     if (t === T.SAND && rand() < 0.5) addProp(m, ['palm_a', 'palm_b', 'palm_c', 'umbrella_r', 'umbrella_y'][Math.floor(rand() * 5)], (tx + 0.5) * TILE, (ty + 0.5) * TILE, 0);

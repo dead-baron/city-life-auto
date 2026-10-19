@@ -11,9 +11,10 @@
 //     gate buys it), chip at the Old Granite Mine's seams with the old pick (quartz, and now and then a gold nugget),
 //     search the shipwreck on Wreck Island (an old doubloon now and then). Stand there, press the action button and
 //     work at it a few seconds standing still; then that spot is done for a while;
-//   - the Bluffs Maze against the clock: in through any gate and the clock runs until you find the gazebo in the
-//     middle. Your best time is kept, the day's fastest are listed when you finish, and the first time you make it
-//     the gardeners pay you a prize;
+//   - the maze against the clock (the Bluffs Maze; World v3: the Arts District's Glasshouse Maze): in through any gate
+//     and the clock runs until you find its middle (the gazebo; the Glasshouse Maze's statue). Your best time is
+//     kept, the day's fastest are listed when you finish, and the first time you make it the gardeners pay you a
+//     prize;
 //   - a lap of the Stadium Lido's lanes against the clock: push off from the shallow end's wall, swim to the rope
 //     across the deep end and back; the same best time, the day's fastest and a prize the first time.
 import { payFrom } from './economy.js';
@@ -200,7 +201,7 @@ function workStep(world) {
   }
 }
 
-// ---- the Bluffs Maze against the clock ----------------------------------------------------------------------------
+// ---- the maze against the clock (the old world's Bluffs Maze Garden; World v3's Glasshouse Maze) ----------------
 const clock = (t) => `${Math.floor(t / 60)}:${(t % 60).toFixed(1).padStart(4, '0')}`;
 const inRect = (r, x, y) => x >= r.x0 && x < r.x1 && y >= r.y0 && y < r.y1;
 // p.maze: { t0 } while the clock runs, { done } from the middle until you're out of the maze again
@@ -219,7 +220,7 @@ function mazeStep(world) {
     if (!p.maze) {
       if (atHeart) { p.maze = { done: true }; continue; }   // (already in the middle: logged in there, say)
       p.maze = { t0: world.time };
-      world.notify(p, "The clock's running: find your way to the gazebo in the middle.", 'info');
+      world.notify(p, `The clock's running: find your way to ${mz.goal || 'the gazebo'} in the middle.`, 'info');
       p.meDirty = true;
     } else if (!p.maze.done && atHeart) finishMaze(world, p, world.time - p.maze.t0);
   }
@@ -246,7 +247,7 @@ function finishMaze(world, p, t) {
 export function mazeTarget(world, p) {
   const mz = maze(world.map);
   if (!mz || !p.maze || p.maze.done) return null;
-  return { text: `Bluffs Maze: ${clock(world.time - p.maze.t0).replace(/\.\d$/, '')} - find the gazebo in the middle`, x: mz.heart.x, y: mz.heart.y, stage: 'maze' };
+  return { text: `${mz.name || 'Bluffs Maze'}: ${clock(world.time - p.maze.t0).replace(/\.\d$/, '')} - find ${mz.goal || 'the gazebo'} in the middle`, x: mz.heart.x, y: mz.heart.y, stage: 'maze' };
 }
 
 // ---- a lap of a lido (the Stadium Lido, Meadowbrook Pool...) -------------------------------------------------------

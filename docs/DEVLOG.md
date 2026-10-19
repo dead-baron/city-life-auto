@@ -11802,3 +11802,39 @@ sections dressed it.
   trees or rocks dressed over it).
 
 Tests: test/coralcay.test.js (the streets on the key, one network).
+
+## 2026-10-19 · World v3: the Glasshouse Maze against the clock, Wreck Beach to search
+
+The old world's Bluffs Maze Garden (the maze time trial: in at the gate, the clock runs till you reach the middle; your
+best kept, the day's fastest listed, the gardeners' prize the first time) had no maze to run in World v3. The Arts
+District's hedge maze in the Glasshouse Gardens (`shared/world3-arts.js`) is the timed maze now: it lists itself as the
+maze site (its bounds, the statue in its middle as the goal), and the trial (`server/systems/places.js`) names the maze
+and its goal from the site - "The Glasshouse Maze: 0:42 - find the statue in the middle".
+
+The wreck search (the old world's Wreck Island: three places on a beached ship to pick through, an old doubloon now
+and then) is back too: **Wreck Beach** on Coral Cay's west shore (`shared/world3-coralcay.js`), NA1-E's wreck - an old
+wooden ship run aground, heeled over, stern in the shallows and bow up the sand, the mast along the tide line, barrels
+and crates spilled from the hold, gulls and crabs.
+
+Tests: test/world3world.test.js (the maze, its middle inside it; the wreck's places to search on the key's land);
+test/business.test.js (the trial and the search, unchanged).
+
+## 2026-10-19 · World v3, handcrafted: Pelican Point (Pelican Key's beach at the point)
+
+Pelican Key's lobe south of 19th Street at the key's west end (district 14) is now laid out by hand
+(`shared/world3-pelican.js`), from the owner's concept WC060 (the sandy point at one crossroads: a thatched tiki bar, a
+crab-sign seafood shack, a jet-ski rental, parasols and loungers, volleyball, a lifeguard chair, a marina with jet skis
+and a cabin cruiser) and the research's D10 / BE3. The grid had put a car park and a row of lots on it.
+- **The beach** round the point, a strip of lawn under palms along 19th Street behind it.
+- **The Crab Shack** (seafood: a plate and a coffee, its neon) and **Pelican Point Tiki** (a bar) on the sand facing the
+  water, their decks, tables under umbrellas, tiki torches.
+- **Pelican Jet Ski Rentals**: the hut by the car park, its boards; the jet skis to hire at the shore below it
+  (`m.handRentals`).
+- **Pelican Point Marina**: a finger pier off the point's west shore, the cabin cruiser, jet skis tied up.
+- **Pelican Point Volleyball** (a court to play on), the lifeguard chair, parasols, loungers, towels, surfboards, and
+  the beach car park off 19th Street.
+- The Pelican Key Beach Bar and the charter dock north of 19th Street stay the generator's.
+- The old key's shore pass (`shared/map.js` shoreSand, and its palms and umbrellas) leaves a handcrafted district's
+  ground alone, so the point's beach stays sand.
+
+Tests: test/pelican.test.js (19th Street and Breaker Avenue stay the grid's).

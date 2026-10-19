@@ -75,6 +75,7 @@ function build(m, api, K) {
   tikiPoint();
   lodge();
   light();
+  wreckBeach();
   rainforest();
   // what's left in the village: lawn under palms, hibiscus and bougainvillea
   K.landscape({ bare: 0.4, tree: (x, y, r) => r < 0.7 ? ['palm_a', pick(PALMS, rnd(x, y, 830)), 1.2 + rnd(x, y, 831) * 0.25] : r < 0.85 ? ['palm_s', pick(['banana', 'bird', 'smallPalm'], rnd(x, y, 832)), 1] : ['shrub_a', pick(['hibiscus', 'bougain', 'monstera'], rnd(x, y, 833)), 1] });
@@ -266,6 +267,29 @@ function build(m, api, K) {
     const b = K.building({ x: lx - 2, y: ly - 2, w: 5, h: 5, arch: 'lighthouse', key: 'lighthouse', name: 'Coral Point Light', poi: false, whole: true });
     for (let y = ly - 4; y < ly + 6; y++) for (let x = lx - 5; x < lx + 6; x++) if (K.free(x, y)) { m.set(x, y, T.DIRT); K.take(x, y, 1, 1); }
     if (b) { prop('pbench', lx - 4, ly + 3, 0, { a: Math.PI / 2 }); (m.landmarks ||= []).push({ name: 'Coral Point Light', type: 'lighthouse', x: (lx - 8) * TILE, y: (ly - 8) * TILE, w: 17 * TILE, h: 16 * TILE }); }
+  }
+
+  // ===========================================================================================================
+  // Wreck Beach on the west lobe's shore (NA1-E's wreck; the old world's Wreck Island): an old wooden ship run aground,
+  // heeled over, its stern in the shallows and its bow up the sand, the mast and a spar along the tide line, barrels and
+  // crates spilled from the hold, gulls and crabs - a wreck to search (server/systems/places.js: the bow, amidships, the
+  // stern; an old doubloon now and then)
+  function wreckBeach() {
+    const row = 3428;
+    let sx = 4040; while (sx > 4004 && m.land[row * W + sx - 1]) sx--;
+    if (tile(sx, row) !== T.SAND) return;
+    const a = -0.45, L = 220, X = (sx + 2.5) * TILE, Y = (row + 0.5) * TILE;
+    prop('wreck', X / TILE, Y / TILE, 0, { a });
+    for (let u = -L / 2 + 20; u <= L / 2 - 16; u += 22) m.addSolidProp(X + Math.cos(a) * u, Y + Math.sin(a) * u, 22);
+    for (let y = row - 5; y <= row + 4; y++) for (let x = sx - 3; x <= sx + 8; x++) K.take(x, y, 1, 1);
+    prop('driftwood', sx + 2.2, row + 4.4, 0, { len: 110, a: 0.55 }); prop('driftwood', sx + 3.4, row - 4.4, 0, { len: 90, a: 0.3 });
+    for (const [dx, dy] of [[5.2, 1.6], [5.9, 2.3], [6.8, -1.2], [4.2, 3.6]]) prop('barrel', sx + dx, row + dy, 8);
+    for (const [dx, dy] of [[7.4, 0.6], [3.4, -3.4]]) prop('crates', sx + dx, row + dy, 12);
+    prop('gull', sx + 3.6, row - 1.2, 0, { a: 0.6, z: 30 }); prop('crab', sx + 1.6, row + 2.8, 0, { a: 1.2 }); prop('crab', sx + 2.8, row - 3.2, 0, { a: 4.1 });
+    (m.landmarks ||= []).push({ name: 'Wreck Beach', type: 'wreck', x: (sx - 4) * TILE, y: (row - 8) * TILE, w: 24 * TILE, h: 16 * TILE });
+    const search = [-70, 0, 70].map((u) => ({ x: Math.round(X + Math.cos(a) * u - Math.sin(a) * 40), y: Math.round(Y + Math.sin(a) * u + Math.cos(a) * 40) }));
+    (m.natureSites ||= []).push({ kind: 'wreck', hand: true, name: 'Wreck Beach', x: Math.round(X), y: Math.round(Y), beach: { x: (sx + 6) * TILE, y: (row + 1) * TILE }, search });
+    place('Wreck Beach', sx - 4, row - 8, sx + 20, row + 8);
   }
 
   // ===========================================================================================================

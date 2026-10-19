@@ -28,6 +28,7 @@ import { SUNSETBEACH } from './world3-sunsetbeach.js';
 import { LAKESIDE } from './world3-lakeside.js';
 import { PINEHILLS } from './world3-pinehills.js';
 import { CORALCAY } from './world3-coralcay.js';
+import { PELICAN } from './world3-pelican.js';
 import { OLDTOWN } from './world3-oldtown.js';
 import { YARDS } from './world3-yards.js';
 import { STADIUM } from './world3-stadium.js';
@@ -35,7 +36,7 @@ import { PINKMILE } from './world3-pinkmile.js';
 import { ARTS } from './world3-arts.js';
 import { BAYSIDE } from './world3-bayside.js';
 
-export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, NORTHGATE2, OLDTOWN, YARDS, STADIUM, PINKMILE, ARTS, BAYSIDE, WESTHILLS, WESTHILLS2, WESTPORT, OLDQUARTER, SOUTHSIDE, PORT, CEDARFALLS, FALLSCENTER, SUNSETBEACH, LAKESIDE, PINEHILLS, CORALCAY];
+export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, NORTHGATE2, OLDTOWN, YARDS, STADIUM, PINKMILE, ARTS, BAYSIDE, WESTHILLS, WESTHILLS2, WESTPORT, OLDQUARTER, SOUTHSIDE, PORT, CEDARFALLS, FALLSCENTER, SUNSETBEACH, LAKESIDE, PINEHILLS, CORALCAY, PELICAN];
 const M_IN = 2;   // (a street within this many tiles of a plan's edge is the edge's - the grid planner's)
 // (a plan of several rects - Downtown's bands round its park - is in its area strictly inside any of them; p.rect is
 // their bounding box: the kit's frame)
