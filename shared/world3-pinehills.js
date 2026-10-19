@@ -71,7 +71,7 @@ function build(m, api, K) {
     const [px0, py0, px1, py1] = A, w = px1 - px0, h = py1 - py0;
     K.take(px0, py0, w, h);
     const cx = px0 + w * 0.42, cy = py0 + h / 2, rx = w * 0.32, ry = h * 0.3;
-    const onTrail = (x, y) => Math.abs(Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry) - 1) < 0.07;
+    const onTrail = (x, y) => Math.abs(Math.hypot((x + 0.5 - cx) / rx, (y + 0.5 - cy) / ry) - 1) < 0.045;
     const gate = Math.round(cx);
     // the trail: a loop round the clearing, out to the drive at the north and south gates
     for (let y = py0; y < py1; y++) for (let x = px0; x < px1; x++) if (onTrail(x, y) || ((x === gate || x === gate + 1) && (y < cy - ry || y > cy + ry))) K.paint(x, y, 1, 1, T.DIRT);
@@ -91,10 +91,10 @@ function build(m, api, K) {
     // the grove: pines and spruces wherever the ground is open (not on the trail, the clearing or the pond's edge)
     for (let y = py0 + 1.5; y < py1 - 1; y += 2.4) for (let x = px0 + 1.5; x < px1 - 1; x += 2.4) {
       const jx = x + (rnd(Math.round(x * 3), Math.round(y * 3), 840) - 0.5) * 1.4, jy = y + (rnd(Math.round(x * 3), Math.round(y * 3), 841) - 0.5) * 1.4;
-      if (Math.hypot((jx - cx) / (rx - 2.5), (jy - cy) / (ry - 2)) < 1) continue;   // (the clearing)
+      if (Math.hypot((jx - cx) / 10, (jy - cy) / 6.5) < 1) continue;   // (the clearing round the shelter)
       if (Math.hypot((jx - qx) / (qrx + 2), (jy - qy) / (qry + 2)) < 1) continue;   // (the pond's edge)
       const tx = Math.floor(jx), ty = Math.floor(jy);
-      if (onTrail(tx, ty) || m.tiles[ty * m.w + tx] !== T.GRASS || Math.abs(jx - gate - 1) < 2.5 || rnd(tx, ty, 842) < 0.18) continue;
+      if (onTrail(tx, ty) || onTrail(tx, ty + 1) || m.tiles[ty * m.w + tx] !== T.GRASS || (Math.abs(jx - gate - 1) < 2.5 && Math.abs(jy - cy) > ry - 1) || rnd(tx, ty, 842) < 0.22) continue;
       tree(jx, jy, 843, pick(['pine', 'pine', 'spruce', 'pine', 'cypress'], rnd(tx, ty, 844)));
     }
     prop('parksign', gate + 3, py0 + 1.2, 0);
