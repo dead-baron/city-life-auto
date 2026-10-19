@@ -11751,3 +11751,22 @@ few houses over the empty headland.
 
 Tests: test/lakeside.test.js (the streets round it stay the grid's; the holes inside the course, each par fitting its
 length); test/world3world.test.js (four holes, every tee on its tee box and pin on its green, the ground, the bar).
+
+## 2026-10-19 · World v3, handcrafted: Pine Hills' south side (Larch and Sequoia Courts, Pinewood Drive, Pinewood Park)
+
+Pine Hills' south side (district 0: Sunset Avenue to Westside Avenue, Pine Avenue down to 5th Street, behind Sunset
+Beach's beachfront) is now laid out by hand (`shared/world3-pinehills.js`), from the research's sources for Pine Hills
+(D9 and I1: houses on winding drives and courts; NK1-L: the woods kept between them - the old world's Pine Hills had
+its own plan of drives) and the suburbs' kit (`shared/world3-suburb.js`). The grid had laid square blocks of scattered
+house lots.
+- **The streets:** Sunset and Westside Avenues, Pine Avenue and 5th Street stay; Magnolia, Alder and Laurel Streets and
+  20th and 2nd Streets give way to **Larch Court** and **Sequoia Court** off Sunset Avenue, bending as they go, and
+  **Pinewood Drive**, the crescent off Westside Avenue.
+- **The houses:** every one a home on its lawn round the courts and the crescent - fronts with the drive, the mailbox
+  and a tree, or back yards to the camera with the patio, a pool now and then, the picket fence - and pines everywhere:
+  in the yards, along the drives, in what's left between the lots (the suburb kit's rows take their species now).
+- **Pinewood Park** inside the crescent: a grove of pines and spruces, a dirt trail looping through it from the drive's
+  two arms, a clearing with the picnic shelter and its tables, the pond with lilies and a duck.
+
+Tests: test/pinehills.test.js (the avenues and streets round it stay the grid's; the grid inside gives way to the
+courts and the crescent).
