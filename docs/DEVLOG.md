@@ -11478,3 +11478,33 @@ courtyard walk-ups (D4) and the diner. The grid had filled these blocks with loo
 
 Tests: test/northgate2.test.js (the streets end on the grid's kept lines or on each other; the avenues stay the grid's;
 no overlap with the heart's plan).
+
+## 2026-10-19 · World v3, handcrafted: West Hills' north end (Larkspur Way's cul-de-sacs, Primrose Loop, Westhill Plaza)
+
+West Hills' north end (district 28: Linden Street to Hawthorn Street, Quarter Avenue to Harbor Avenue) is now laid out
+by hand (`shared/world3-westhills.js`): the first of the curving suburbs and cul-de-sacs the owner asked for (10-05,
+10-16). It's built from the owner's concept WC288 (houses on looping drives and cul-de-sacs with their pools, a
+townhouse court round a shared pool, the strip of shops on the corner, tennis courts, the gas station) with WC008 (the
+suburban street: lawns, drives, mailboxes) and WC089 (the park kit), and the research's cul-de-sac pod and winding
+suburb. The grid had laid square blocks of tiny house lots here.
+- **The streets:** the avenues stay (Quarter, Westport, Old Quarter Road, Harbor), and so do Linden and Hawthorn
+  Streets; the grid's 6th, 9th, 10th and 13th Streets and Hazel and Cedar Streets give way to **Larkspur Way**, a
+  collector bending down from Quarter Avenue to Old Quarter Road, its courts **Aster Court**, **Bluebell Court** and
+  **Clover Court**, **Primrose Loop** off Westport Avenue, **Hollyhock Court**, **Foxglove Court** and **Cypress
+  Court** - each court ends in its turning bulb.
+- **The houses:** every one a home, the generic house's look (siding or stucco, hip or gable roofs, garages) on its own
+  lawn: the ones facing a street to the south stand back behind their front yards (the drive down to the kerb, the
+  mailbox, a tree); the ones facing a street to the north show their back yards to the camera (the patio, a pool now
+  and then with a lounger, a hammock or a picnic table, the picket fence round, a tree).
+- **Larkspur Green** along Linden Street: two tennis courts in chain-link, the footpath out of the courts' bulbs,
+  benches and trees.
+- **Primrose Green** inside Primrose Loop: the ring path, the gazebo at its heart, the duck pond with its lilies,
+  flower beds, benches.
+- **Westhill Plaza** on Harbor Avenue: Hillside Market, Westhill Pharmacy, Bean There, Sunny Side Diner, Hills
+  Hardware, Paws & Claws and Fluff & Fold in a row over their car park, the plaza's sign at the kerb; **Hilltop Fuel**
+  on the corner, its pumps under the canopy.
+- **Cypress Court:** two rows of townhouses facing the court, their shared pool behind them with its loungers and
+  umbrellas.
+
+Tests: test/westhills.test.js (the collector bends and meets the avenues; every court leaves a street; the loop's ends
+on Westport Avenue; the avenues stay the grid's).
