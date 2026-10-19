@@ -1,7 +1,8 @@
 // World v3's suburbs' kit (the handcrafted suburbs: Cedar Falls, shared/world3-cedarfalls.js), from West Hills' middle
 // (shared/world3-westhills2.js, where these were first written): the rows of houses along streets that bend - fronts
 // with their lawns, drives, mailboxes and trees, or back yards to the camera with their patios, pools and fences - and
-// the public pool with its lanes (o.trees: the species a row's trees are drawn from - Pine Hills' pines).
+// the public pool with its lanes (o.trees: the species a row's trees are drawn from - Pine Hills' pines; o.art(x, y, w):
+// a row's houses' own look - Coral Cay's painted stucco).
 // makeSuburb(m, K, out) -> the composers, bound to a plan's kit.
 import { TILE, T } from './constants.js';
 
@@ -41,7 +42,7 @@ export function makeSuburb(m, K, out) {
       if (i % 2 === 1) return { gap: 2 + Math.floor(rnd(x, y0, 601) * 2), kind: 'garden' };
       const w = Math.min(room, (o.w || 10) + Math.floor(rnd(x, y0, 602) * 4));
       out.homes++;
-      return { w, depth: o.depth || 8 + Math.floor(rnd(x, y0, 603) * 2), minDepth: 7, arch: 'house', home: { kind: 'house', price: o.price || 30000 + Math.floor(rnd(x, y0, 604) * 6) * 3000 }, whole: true };
+      return { w, depth: o.depth || 8 + Math.floor(rnd(x, y0, 603) * 2), minDepth: 7, arch: 'house', home: { kind: 'house', price: o.price || 30000 + Math.floor(rnd(x, y0, 604) * 6) * 3000 }, whole: true, ...(o.art ? { art: o.art(x, y0, w) } : {}) };
     }, { mask, noStep: true, fallback: 'garden' });
     for (const b of made) {
       if (!b || b.gap || b.tw === undefined) continue;
@@ -72,7 +73,7 @@ export function makeSuburb(m, K, out) {
       if (i % 2 === 1) return { gap: 2 + Math.floor(rnd(x, y0, 611) * 2), kind: 'garden', depth: gd };
       const w = Math.min(room, (o.w || 10) + Math.floor(rnd(x, y0, 612) * 4));
       out.homes++;
-      return { w, depth: 8 + Math.floor(rnd(x, y0, 613) * 2), minDepth: 7, arch: 'house', face: 'N', home: { kind: 'house', price: o.price || 32000 + Math.floor(rnd(x, y0, 614) * 6) * 3000, garage: { x: (x + w / 2) * TILE, y: (y0 - 1) * TILE, a: -Math.PI / 2 } }, whole: true };
+      return { w, depth: 8 + Math.floor(rnd(x, y0, 613) * 2), minDepth: 7, arch: 'house', face: 'N', home: { kind: 'house', price: o.price || 32000 + Math.floor(rnd(x, y0, 614) * 6) * 3000, garage: { x: (x + w / 2) * TILE, y: (y0 - 1) * TILE, a: -Math.PI / 2 } }, whole: true, ...(o.art ? { art: o.art(x, y0, w) } : {}) };
     }, { north: true, mask: o.mask, fallback: 'garden' });
     for (const b of made) {
       if (!b || b.gap || b.tw === undefined) continue;
