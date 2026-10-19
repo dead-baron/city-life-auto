@@ -196,8 +196,9 @@ function build(m, api, K) {
     // the walk: paving from the buildings' fronts to the water's edge, palms, benches, lamps, telescopes, the railing
     for (let x = x0; x < x1; x++) { const s = shoreY(x); for (let y = wy0; y < s; y++) if (K.free(x, y)) K.fill(x, y, 1, 1, T.PLAZA); }
     for (let x = x0 + 4; x < x1 - 3; x += 10) {
-      const s = shoreY(x);
+      const s = shoreY(x), wet = s < PY.shore + 4;   // (west of the bay the walk ends on Hillcrest Avenue, not the water)
       prop('palm_a', x, wy0 + 2, 10, { sp: pick(['royal', 'coconut', 'royal'], rnd(x, wy0, 4)), k: 1.15 });
+      if (!wet) { prop('bench_m', x + 5, wy0 + 4.5, 0); continue; }
       prop(rnd(x, s, 5) < 0.6 ? 'bench_m' : 'lamp', x + 5, s - 1.6, 0);
       if (rnd(x, s, 6) < 0.25) prop('scope', x + 2, s - 1.2, 6);
     }

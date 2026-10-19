@@ -11573,3 +11573,51 @@ the same name and three identical banks in a row along the shore.
 
 Tests: test/westport.test.js (the avenues round it stay the grid's; it keeps clear of Westport General and Westport PD,
 which the generator places).
+
+## 2026-10-19 · World v3: basketball is back - the handcrafted districts' courts are hoops; the coin telescopes work
+
+The old world's one basketball park (North Point Courts) never came over to v3, so shooting hoops and the NPC pickup
+games had nowhere to happen (the GDD's "systems with nothing to use in v3"). The handcrafted districts have painted
+courts with their hoops up - Greenfield Park, Overpass Park, Northgate Sports Ground, Spruce Street Court, the
+courtyard blocks' half courts, the plans' neighbourhood courts - and now each one is a hoop to shoot at: the hand kit
+(`shared/world3-hand.js`) lists every hoop a plan put up with the court painted under it (`map.hoopCourts`: its post,
+the rim over the court as at North Point, its half court), and `shared/hoops.js courtHoops` serves them with North
+Point's. Walk onto one of those courts and press the action button for a ball; the NPCs' pickup games (activities.js)
+run on each of them too.
+
+The coin telescopes are back the same way: the old world's one was at the end of Westport Pier. The handcrafted
+districts have put telescopes up along their waterfronts - the Harbor's promenade and pier, Old Town's quay, Bayside
+Heights' overlook, Westport's Waterfront Walk - and each is now a coin telescope (`map.scopeSpots`): a dollar, and the
+view swings out a few seconds the way the most water lies within 40 tiles of it (or over the rooftops).
+`server/systems/places.js` serves them with the pier's.
+
+Tests: test/world3world.test.js (the v3 world has its hoops - each rim over its half court, standing on the court finds
+it - and its telescopes, most looking out over the water). The old world's hoops and telescope tests
+(test/golf.test.js, test/activities.test.js, test/gameplay.test.js) are unchanged.
+
+## 2026-10-19 · World v3, handcrafted: the Old Quarter's Chapel Street quarter (Lantern Lane, Station Square, St. Brigid's Chapel, the baths)
+
+The Old Quarter's Chapel Street quarter (district 30: Elm Street to Cedar Street, Old Quarter Road to Harbor Avenue,
+across Elm Street from Old Quarter Station) is now laid out by hand (`shared/world3-oldquarter.js`), from the
+research's sources for the Old Quarter (D5: old brick round a small square; AL1-4: the back lanes; SC2-E: the station
+town's street life at the gates; IN11: the corner shops; L6-A: the sento). The grid had cut it into nine little blocks
+of look-alike liquor marts.
+- **The streets:** Old Quarter Road, Harbor Avenue, Elm and Cedar Streets stay; Oak and Maple Streets and 11th and 14th
+  Streets give way to **Lantern Lane** and **Bell Lane**, the old lanes jogging across the quarter, and **Tanner's
+  Alley** between them.
+- **Lantern Lane:** old brick tenements four and five floors high over their shops, fire escapes on the wider ones -
+  Lucky Dragon Noodles, Quarter Pawn & Loan, Suds Laundromat, Kovac's Barber, Mama Rosa's Bodega - passages and yards
+  between, the backs on Old Quarter Road.
+- **Station Square** across Elm Street from the station: two rows of market stalls with their fruit crates, the news
+  box, the food cart, benches and lamps, the sign.
+- **St. Brigid's Chapel** facing Bell Lane over its churchyard (the headstones, two cypresses, the iron railing);
+  the **Old Quarter Baths** beside it, the timber bath house with its woodpile and drums; Bao House among the
+  tenements.
+- **Harbor Avenue:** the **Quarter Yards Redevelopment** - the frame going up behind its hoarding, the cones, the
+  COMING SOON sign - and the tenements' shops: Ink & Iron Tattoo, Second Chance Thrift, Madame Zora's, Quarter Liquor.
+
+Also: Westport's Waterfront Walk keeps its benches, lamps and telescopes on the walk where it ends on Hillcrest
+Avenue rather than the water.
+
+Tests: test/oldquarter.test.js (the lanes run from Elm Street to Cedar Street with the alley between; the streets round
+it and the station stay the grid's).

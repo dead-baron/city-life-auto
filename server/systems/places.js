@@ -1,8 +1,9 @@
 // Small things to do at the designed places (shared/naturesites.js):
 //   - ring the old mission's bells: stand at its great doorway and haul on the rope, and three slow strikes carry
 //     out over the desert for everyone near;
-//   - the coin telescope at the end of Westport Pier: a dollar, and your view swings out over the bay to the seals
-//     on their islets for a few seconds (the camera only: you stay where you are);
+//   - the coin telescopes: a dollar, and your view swings out a few seconds to what one looks at (the camera only: you
+//     stay where you are) - at the end of Westport Pier the seals on their islets; Bayside Heights' overlook and
+//     Westport's Waterfront Walk over the water (map.scopeSpots: World v3's handcrafted districts);
 //   - stargazing at the Granite Peak Observatory: after dark, two dollars at either telescope on its terrace and you see
 //     the night sky through the eyepiece a few seconds - tonight's sight (the same for everyone that night: a planet,
 //     the Moon, a nebula, a galaxy, now and then a comet). By day the telescopes are capped;
@@ -44,6 +45,16 @@ const mission = (map) => site(map, '_mission', (q) => q.kind === 'mission');
 const pier = (map) => site(map, '_pier', (q) => q.kind === 'pier' && q.scope);
 const boneyard = (map) => site(map, '_boneyard', (q) => q.kind === 'boneyard' && q.stored);
 const maze = (map) => site(map, '_maze', (q) => q.kind === 'maze' && q.rect);
+// the coin telescopes: Westport Pier's (the old world's: its seals) and the handcrafted districts' (map.scopeSpots,
+// World v3: each one where it stands, where it looks and what you see there)
+const SEALS = 'Clunk. Out on the islets the seals are hauled out in the sun.';
+function scopes(map) {
+  if (map._scopes) return map._scopes;
+  const pr = pier(map), out = pr ? [{ x: pr.scope.x, y: pr.scope.y, look: pr.scope.look, say: SEALS }] : [];
+  for (const q of map.scopeSpots || []) if (q && q.look) out.push(q);
+  Object.defineProperty(map, '_scopes', { value: out, enumerable: false, configurable: true });
+  return out;
+}
 // the Granite Peak Observatory's telescopes (the scope props on its terrace)
 function obsScopes(map) {
   if (map._obsScopes) return map._obsScopes;
@@ -97,8 +108,8 @@ export function interaction(world, p) {
   if (ped.work) return { label: WORK[workSpots(world.map)[ped.work.i].kind].doing, passive: true, run: () => {} };
   const ms = mission(world.map);
   if (ms && Math.hypot(ped.x - ms.door.x, ped.y - ms.door.y) < BELL_REACH) return { label: 'Ring the mission bells', run: () => ringBells(world, p) };
-  const pr = pier(world.map);
-  if (pr && Math.hypot(ped.x - pr.scope.x, ped.y - pr.scope.y) < SCOPE_REACH) return { label: `Look through the telescope ($${SCOPE_PRICE})`, run: () => lookOut(world, p) };
+  const sc = scopes(world.map).find((q) => Math.hypot(ped.x - q.x, ped.y - q.y) < SCOPE_REACH);
+  if (sc) return { label: `Look through the telescope ($${SCOPE_PRICE})`, run: () => lookOut(world, p, sc) };
   if (obsScopes(world.map).some((q) => Math.hypot(ped.x - q.x, ped.y - q.y) < SCOPE_REACH)) {
     if (!world.clock.isNight) return { label: 'The telescope is capped till dark', run: () => world.notify(p, 'The observatory\'s telescopes open after dark. Come back tonight.', 'info') };
     return { label: `Look at the stars ($${STARS_PRICE})`, run: () => stargaze(world, p) };
@@ -113,12 +124,11 @@ export function interaction(world, p) {
 }
 
 // the telescope: the camera swings out to what it looks at for SCOPE_S seconds (moving cuts it short)
-export function lookOut(world, p) {
-  const pr = pier(world.map);
-  if (!pr) return false;
+export function lookOut(world, p, sc = scopes(world.map)[0]) {
+  if (!sc) return false;
   if (!payFrom(p, SCOPE_PRICE)) { world.notify(p, 'The telescope takes a dollar.', 'warn'); return false; }
-  if (p.conn) p.conn.sendJSON({ t: 'look', x: pr.scope.look.x, y: pr.scope.look.y, s: SCOPE_S });
-  world.notify(p, 'Clunk. Out on the islets the seals are hauled out in the sun.', 'good');
+  if (p.conn) p.conn.sendJSON({ t: 'look', x: sc.look.x, y: sc.look.y, s: SCOPE_S });
+  world.notify(p, sc.say || SEALS, 'good');
   p.meDirty = true;
   return true;
 }

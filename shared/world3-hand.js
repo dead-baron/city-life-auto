@@ -19,6 +19,7 @@ import { NORTHGATE2 } from './world3-northgate2.js';
 import { WESTHILLS } from './world3-westhills.js';
 import { WESTHILLS2 } from './world3-westhills2.js';
 import { WESTPORT } from './world3-westport.js';
+import { OLDQUARTER } from './world3-oldquarter.js';
 import { OLDTOWN } from './world3-oldtown.js';
 import { YARDS } from './world3-yards.js';
 import { STADIUM } from './world3-stadium.js';
@@ -26,7 +27,7 @@ import { PINKMILE } from './world3-pinkmile.js';
 import { ARTS } from './world3-arts.js';
 import { BAYSIDE } from './world3-bayside.js';
 
-export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, NORTHGATE2, OLDTOWN, YARDS, STADIUM, PINKMILE, ARTS, BAYSIDE, WESTHILLS, WESTHILLS2, WESTPORT];
+export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, NORTHGATE2, OLDTOWN, YARDS, STADIUM, PINKMILE, ARTS, BAYSIDE, WESTHILLS, WESTHILLS2, WESTPORT, OLDQUARTER];
 const M_IN = 2;   // (a street within this many tiles of a plan's edge is the edge's - the grid planner's)
 // (a plan of several rects - Downtown's bands round its park - is in its area strictly inside any of them; p.rect is
 // their bounding box: the kit's frame)
@@ -48,7 +49,7 @@ export function handStreets(lines) {
 // Every plan built (the generator's `hand` hook: after the roads, the rail and the plazas are laid, before the blocks).
 export function buildHand(m, api0) {
   const api = { ...api0, hash2, handBuilding };
-  const out = {};
+  const out = {}, p0 = m.props.length;
   for (const P of HAND_PLANS) {
     const kit = makeKit(m, api, P), b0 = m.buildings.length;
     out[P.key] = P.build(m, api, kit);
@@ -66,7 +67,47 @@ export function buildHand(m, api0) {
     }
     out[P.key].sights = sights;
   }
+  // the hoops on the plans' basketball courts (shared/hoops.js courtHoops: shooting hoops, NPC pickup games): every hoop
+  // a plan put up with the court painted under it - its post, the rim 17 px out over the court and 43 px up (as North
+  // Point Courts'), its half court
+  m.hoopCourts = handHoops(m, p0);
+  // the coin telescopes the plans put up (server/systems/places.js: a dollar, and the view swings out): each looks out
+  // the way the most water lies within 40 tiles of it, or out over the rooftops
+  m.scopeSpots = handScopes(m, p0);
   return out;
+}
+const SCOPE_DIRS = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
+const SCOPE_SAY = ['Clunk. The view swings out over the water to the far shore.', 'Clunk. Gulls wheel low over the water.', 'Clunk. The water glitters all the way out.'];
+function handScopes(m, p0) {
+  const out = [], wet = (x, y) => x >= 0 && y >= 0 && x < m.w && y < m.h && (m.tiles[y * m.w + x] === T.WATER || m.tiles[y * m.w + x] === T.DEEP);
+  for (let i = p0; i < m.props.length; i++) {
+    const p = m.props[i];
+    if (!p || p.t !== 'scope') continue;
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+    let best = null;
+    for (const [dx, dy] of SCOPE_DIRS) {
+      let n = 0, first = -1;
+      for (let k = 2; k <= 40; k++) if (wet(tx + dx * k, ty + dy * k)) { n++; if (first < 0) first = k; }
+      if (n > 4 && (!best || n > best.n)) best = { n, dx, dy, k: Math.min(40, first + Math.floor(n / 2)) };
+    }
+    const r = hash2(tx, ty, 977);
+    const look = best ? { x: Math.round((tx + best.dx * best.k + 0.5) * TILE), y: Math.round((ty + best.dy * best.k + 0.5) * TILE) } : { x: Math.round(p.x), y: Math.round(p.y + 18 * TILE) };
+    out.push({ x: Math.round(p.x), y: Math.round(p.y), look, say: best ? SCOPE_SAY[Math.floor(r * SCOPE_SAY.length) % SCOPE_SAY.length] : 'Clunk. The view swings out over the rooftops.' });
+  }
+  return out;
+}
+function handHoops(m, p0) {
+  const courts = [], hoops = [];
+  for (let i = p0; i < m.props.length; i++) { const p = m.props[i]; if (p && p.t === 'court' && p.k !== 'tennis' && p.w && p.d) courts.push(p); }
+  for (let i = p0; i < m.props.length; i++) {
+    const p = m.props[i];
+    if (!p || p.t !== 'hoop') continue;
+    const c = courts.find((q) => Math.abs(q.x - p.x) < 2 && p.y >= q.y - 4 && p.y - q.y < 3 * TILE);
+    if (!c) continue;
+    const x = Math.round(p.x), y = Math.round(p.y);
+    hoops.push({ x, y, rim: { x, y: y + 17, z: 43 }, court: { x0: Math.round(c.x - c.w / 2), y0: Math.round(c.y), x1: Math.round(c.x + c.w / 2), y1: Math.round(c.y + c.d) } });
+  }
+  return hoops;
 }
 // (a building worth a teleport button: its lot's kind - the set pieces - or its business)
 const SIGHT_KINDS = new Set(['theatre', 'construction', 'strip', 'dealer', 'repair', 'church', 'police', 'motorpool', 'club', 'clubeclipse', 'clubnova', 'arcade', 'hotel', 'bank', 'hospital', 'cinema', 'bowling', 'stadium', 'museum', 'market', 'lighthouse', 'warehouse']);
