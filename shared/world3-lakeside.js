@@ -26,7 +26,7 @@ export const HOLES = [
   { tee: [4273, 2313], way: [[4269, 2312], [4261, 2309], [4252, 2305.5], [4244, 2301]], green: [4237, 2297], par: 4 },
   { tee: [4214, 2294], way: [[4214.5, 2297], [4216, 2305], [4218, 2314], [4220, 2322]], green: [4222, 2330], par: 4 },
 ];
-const PONDS = [[4252, 2328, 6.5, 3.6], [4282.5, 2330, 2.8, 1.8]];   // [cx, cy, rx, ry] (tiles)
+const PONDS = [[4252, 2328, 6.5, 3.6], [4271, 2329, 3, 2]];   // [cx, cy, rx, ry] (tiles)
 const BUNKERS = [[4281, 2343.6, 1.7, 1.0], [4289.4, 2350.4, 1.5, 0.9], [4285.6, 2317.4, 1.4, 0.9], [4293.2, 2323.2, 1.2, 0.9], [4241.4, 2294.2, 1.6, 0.9], [4232.6, 2300.4, 1.4, 1.0],
   [4218.2, 2333.6, 1.5, 0.9], [4226.6, 2326.8, 1.3, 1.0], [4266, 2357.4, 1.8, 0.8], [4256, 2310.6, 1.6, 0.8]];
 // the cart path round the pond (tiles): from the clubhouse east between the 1st and the pond, up the 2nd's west side,
@@ -102,7 +102,7 @@ function build(m, api, K) {
   for (const [dx, dy] of [[-1, -0.6], [0.9, 0.2], [-0.2, 1.1]]) prop('golfflag', PG[0] + dx, PG[1] + dy, 0);
   m.golf = golf;
   // the cart path (pale concrete), the carts parked on it
-  const cart = curve(CART, 8);
+  const cart = curve(CART, 24);
   for (const [x, y] of cart) for (const [ox, oy] of [[0, 0], [10, 0], [0, 10], [10, 10]]) { const tx = Math.floor((x + ox - 5) / TILE), ty = Math.floor((y + oy - 5) / TILE); if (K.free(tx, ty)) { m.set(tx, ty, T.PLAZA); K.take(tx, ty, 1, 1); } }
   for (const [k, a, v] of [[10, 0.2, 0], [44, -1.6, 1], [80, Math.PI, 2]]) if (cart[k]) prop('golfcart', cart[k][0] / TILE, cart[k][1] / TILE - 0.15, 12, { a, v });
   // the clubhouse: its terrace (tables under umbrellas), the bar at the steps; the car park off 15th Street; the sign
@@ -118,20 +118,22 @@ function build(m, api, K) {
   prop('golfcart', hx + 7.5, py0 + 1.6, 12, { a: Math.PI / 2, v: 1 });
   prop('textsign', hx + 12, cy1 - 0.4, 0, { text: 'LAKESIDE GREENS', z: 34, sx: 1, bg: '#1e4a32', fg: [240, 230, 190] });
   // the trees between the holes and along the shore (never on a fairway, a green, a tee, the path, the water or the sand)
-  const clear = (x, y, r) => {
+  const clear = (x, y, r, up = false) => {
     for (const g of golf.greens) if (Math.hypot(x - g.x, y - g.y) < g.r + r) return false;
     for (const f of golf.fairways) if (segDist(f.pts, x, y) < f.hw + r) return false;
     for (const t of golf.tees) if (x > t.x - r && x < t.x + t.w + r && y > t.y - r && y < t.y + t.h + r) return false;
     if (segDist(cart, x, y) < r + 20) return false;
     if (Math.abs(x - hx * TILE) < 6 * TILE && y > (hy - 5) * TILE) return false;   // (the clubhouse, its terrace, its car park)
+    if (up) return true;
+    for (const dy of [2, 4]) if (!clear(x, y - dy * TILE, 30, true)) return false;   // (a tree stands up over the ground north of it: keep that clear too)
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const t = m.tiles[(ty + dy) * W + tx + dx]; if (t !== T.GRASS) return false; }
     return K.free(tx, ty);
   };
   for (let ty = cy0 + 1.5; ty < cy1 - 1; ty += 2.6) for (let tx = cx0 + 1.5; tx < cx1 - 1; tx += 2.6) {
     const jx = tx + (rnd(Math.round(tx * 3), Math.round(ty * 3), 52) - 0.5) * 1.6, jy = ty + (rnd(Math.round(tx * 3), Math.round(ty * 3), 53) - 0.5) * 1.6;
-    if (rnd(Math.round(tx), Math.round(ty), 54) > 0.5 || !clear(jx * TILE, jy * TILE, 52)) continue;
-    const h = rnd(Math.round(tx), Math.round(ty), 55), sp = h < 0.35 ? 'pine' : h < 0.6 ? 'cypress' : h < 0.85 ? 'oak' : 'maple';
+    if (rnd(Math.round(tx), Math.round(ty), 54) > 0.32 || !clear(jx * TILE, jy * TILE, 48)) continue;
+    const h = rnd(Math.round(tx), Math.round(ty), 55), sp = h < 0.38 ? 'pine' : h < 0.76 ? 'cypress' : h < 0.92 ? 'oak' : 'maple';
     prop('tree_a', jx, jy, 12, { sp, k: 1.25 + rnd(Math.round(tx), Math.round(ty), 56) * 0.3 }); out.trees++;
   }
   // the rough: every tile of the course left (kept as lawn: the block filler stays off it)
