@@ -154,8 +154,8 @@ function build(m, api, K) {
   // Conch Square across Harbor Street from the shops: paving, a fountain, palms, benches, the market umbrellas
   function conchSquare() {
     const x0 = CX.coral + 6, x1 = CX.conch + 12, y0 = CY.harbor + 6, y1 = CY.lagoon - 6;
-    if (!K.allFree(x0, y0, x1 - x0, y1 - y0)) return;
-    K.fill(x0, y0, x1 - x0, y1 - y0, T.PLAZA); K.take(x0, y0, x1 - x0, y1 - y0);
+    if (!K.free(Math.round((x0 + x1) / 2), Math.round((y0 + y1) / 2))) return;
+    K.fill(x0, y0, x1 - x0, y1 - y0, T.PLAZA); K.take(x0, y0, x1 - x0, y1 - y0);   // (all but the street corners' rounded kerbs)
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     prop('fountain', cx, cy + 0.4, 36);
     for (const [dx, dy] of [[-8, -6], [8, -6], [-8, 6], [8, 6], [-14, 0], [14, 0]]) prop('palm_a', cx + dx, cy + dy, 10, { sp: pick(PALMS, rnd(dx, dy, 40)), k: 1.3 });
@@ -263,8 +263,8 @@ function build(m, api, K) {
     let lx = 4490, ly = 3430;
     while (lx > 4460 && !K.allFree(lx - 2, ly - 2, 5, 5)) lx--;
     if (!K.allFree(lx - 2, ly - 2, 5, 5)) return;
-    for (let y = ly - 4; y < ly + 6; y++) for (let x = lx - 5; x < lx + 6; x++) if (K.free(x, y)) { m.set(x, y, T.DIRT); K.take(x, y, 1, 1); }
     const b = K.building({ x: lx - 2, y: ly - 2, w: 5, h: 5, arch: 'lighthouse', key: 'lighthouse', name: 'Coral Point Light', poi: false, whole: true });
+    for (let y = ly - 4; y < ly + 6; y++) for (let x = lx - 5; x < lx + 6; x++) if (K.free(x, y)) { m.set(x, y, T.DIRT); K.take(x, y, 1, 1); }
     if (b) { prop('pbench', lx - 4, ly + 3, 0, { a: Math.PI / 2 }); (m.landmarks ||= []).push({ name: 'Coral Point Light', type: 'lighthouse', x: (lx - 8) * TILE, y: (ly - 8) * TILE, w: 17 * TILE, h: 16 * TILE }); }
   }
 
