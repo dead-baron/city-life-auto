@@ -11684,3 +11684,19 @@ unchanged. The grid had laid square blocks of scattered house lots.
 
 Tests: test/cedarfalls.test.js (the crescent and the courts leave Pinecrest Avenue; the streets round them and the
 station stay the grid's).
+
+## 2026-10-19 · World v3, handcrafted: Falls Center's main street (Falls Avenue's shops, Falls Green)
+
+Falls Center's main street (district 36: Lake Avenue to Linden Street either side of Falls Avenue) is now laid out by
+hand (`shared/world3-fallscenter.js`), from the research's sources for Falls Center (B1: the main street's storefronts;
+SC4-C and IN4: the corner shops and the coffee house; NP3: the town green; D12: the small civic heart). The grid had
+put the island's shops in two look-alike rows on a back street.
+- **Falls Avenue's north side:** storefronts under their awnings, two and three floors of brick or painted clapboard
+  with flats over them - Falls Pizza, the 24/7 Mart, Bean There Coffee, Urban Wear, Falls Pharmacy, Falls Hardware, the
+  Main Street Diner, Cedar Books, Pine & Petal Florist (the generator's two rows of them, laid here) - benches,
+  planters, bike racks, the bus shelter and lamps along the pavement.
+- **Falls Green** across the avenue: the bandstand at the heart, the memorial on its plinth, the fountain, the paths
+  round and across, benches, flower beds, maples and oaks, the farmers' market stalls along 16th Street.
+- Cedar Falls Clinic and Cedar Falls Police stay where the generator puts them, a block away.
+
+Tests: test/fallscenter.test.js (the streets round it stay the grid's; the clinic and the police the generator's).
