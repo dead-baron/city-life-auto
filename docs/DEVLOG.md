@@ -11662,3 +11662,25 @@ their stacks and cranes; concept 1's red cranes; I7: the docks) and its missing 
   the **Dockside Diner**, their backs on the yard.
 
 Tests: test/port.test.js (the streets round it stay the grid's; the gang's headquarters stays the generator's).
+
+## 2026-10-19 · World v3, handcrafted: Cedar Falls (Willow Crescent round the Commons, the courts, Cedar Falls Center, FuelMax)
+
+Cedar Falls (district 35: Pelican Bridge's road to Laurel Street, 19th Street to Bayside Avenue), the east island's
+family suburb, is now laid out by hand (`shared/world3-cedarfalls.js`), from the research's sources for Cedar Falls
+(D9 and I1: the cul-de-sacs and crescents; SC2-H: the strip mall and the gas station on the avenue; L1: the public
+pool) with the owner's concepts WC007 and WC008. West Hills' suburb composers moved into a kit of their own
+(`shared/world3-suburb.js`: the rows of houses along streets that bend, the public pool) for it; West Hills' plan is
+unchanged. The grid had laid square blocks of scattered house lots.
+- **The streets:** 19th Street, Cedar and Bayside Avenues, Pinecrest Avenue and Laurel Street stay, and Pelican Bridge's
+  road past the station; Linden and Magnolia Streets, 24th, 2nd and 4th Streets give way to **Willow Crescent** off
+  Pinecrest Avenue, **Hazel Court**, and **Birch**, **Maple** and **Alder Courts** east of the avenue.
+- **Cedar Falls Center** on Cedar Avenue: Falls Fresh Market, Cedar Falls Pharmacy, The Grind, Pizza Pronto, Falls
+  Hardware, Snip & Style, Cedar Falls Video and Lucky Wok over their car park, the sign at the kerb; **FuelMax** on
+  Pinecrest Avenue's corner, its pumps under the canopy.
+- **Cedar Falls Commons** inside the crescent: **Cedar Falls Pool** (the lanes, the springboard, the deck), the **Cedar
+  Falls Playhouse** (the district's playhouse) facing the green, the duck pond, the paths, picnic tables, benches.
+- **The houses:** every one a home on its lawn, round the crescent and the courts - fronts with the drive, the mailbox
+  and a tree, or back yards with the patio, a pool now and then, the picket fence.
+
+Tests: test/cedarfalls.test.js (the crescent and the courts leave Pinecrest Avenue; the streets round them and the
+station stay the grid's).
