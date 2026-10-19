@@ -11,6 +11,7 @@ import { ISLANDS3 } from '../shared/world3-layout.js';
 import { CITY3, CITY_IDS, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, PITCH, layCity3, avoidOf } from '../shared/world3-city.js';
 import { buildPlan } from '../tools/world3-city-plan.mjs';
 import { HAND_PLANS } from '../shared/world3-hand.js';
+import { ARTERIALS } from '../shared/world3-skeleton.js';
 
 const P = buildPlan();
 const { W, H, L, painted, plan } = P;
@@ -104,10 +105,21 @@ test('World v3b city: the avenues reach the islands\' shores (the bridges land o
     if (ay === by) hand.h.push({ c: ay, a: Math.min(ax, bx), b: Math.max(ax, bx), kind: q.kind });
     else if (ax === bx) hand.v.push({ c: ax, a: Math.min(ay, by), b: Math.max(ay, by), kind: q.kind });
   }
+  // (a bent hand avenue that ends on a bridge's end lands it too - Bayside Heights' Park West Avenue on the Pine Hills
+  // Bridge, Harborview Avenue on the Southside Bridge: shared/world3-bayside.js), its side the way its last leg runs
+  const bridgeEnd = new Set(ARTERIALS.filter((a) => /Bridge/.test(a.name)).flatMap((a) => [a.pts[0], a.pts.at(-1)]).map(([x, y]) => `${x},${y}`));
+  const bent = [];
+  for (const P of HAND_PLANS) for (const q of P.streets()) {
+    if ((q.kind !== 'ave' && q.kind !== 'blvd') || q.pts.length <= 2) continue;
+    for (const [e, f] of [[q.pts[0], q.pts[1]], [q.pts.at(-1), q.pts.at(-2)]]) {
+      if (!bridgeEnd.has(`${e[0]},${e[1]}`)) continue;
+      bent.push({ x: e[0], y: e[1], s: Math.abs(e[0] - f[0]) > Math.abs(e[1] - f[1]) ? (e[0] > f[0] ? 'E' : 'W') : (e[1] > f[1] ? 'S' : 'N') });
+    }
+  }
   const shoreEnds = (key, side) => {
     const I = ISLANDS3.find((q) => q.key === key);
     const [bx0, by0, bx1, by1] = I.box;
-    let n = 0;
+    let n = bent.filter((b) => b.x >= bx0 && b.x <= bx1 && b.y >= by0 && b.y <= by1 && (!side || b.s === side)).length;
     for (const [horiz, R] of [[true, [...plan.h, ...hand.h]], [false, [...plan.v, ...hand.v]]]) for (const r of R) {
       if (r.kind === 'st') continue;
       for (const [e, dir] of [[r.a, -1], [r.b, 1]]) {

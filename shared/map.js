@@ -280,7 +280,7 @@ function buildCity(seed, opts = null, frame = null) {
   const rows = [];
   const estateRows = [];
   // the mansion takes the biggest lot in Bayside Heights that opens north onto a street
-  const mlot = m.blocks.filter((b) => b.d === 16 && b.w >= MANSION_SIZE[0] + 1 && b.h >= MANSION_SIZE[1] + 1 && facesStreet(m, { x: b.x + Math.floor((b.w - MANSION_SIZE[0]) / 2), y: b.y, w: MANSION_SIZE[0], h: 1 }, 'N')).sort((a, b) => b.w * b.h - a.w * a.h)[0];
+  const mlot = (m.mansions || []).length ? null : m.blocks.filter((b) => b.d === 16 && b.w >= MANSION_SIZE[0] + 1 && b.h >= MANSION_SIZE[1] + 1 && facesStreet(m, { x: b.x + Math.floor((b.w - MANSION_SIZE[0]) / 2), y: b.y, w: MANSION_SIZE[0], h: 1 }, 'N')).sort((a, b) => b.w * b.h - a.w * a.h)[0];
   if (mlot) mlot.mansion = true;
   // Sunset Beach's volleyball court takes a whole block by the sea
   const clot = m.blocks.filter((b) => b.d === 10 && !b.mansion && b.w >= 16 && b.h >= 10).sort((a, b) => m.distSea[(a.y + (a.h >> 1)) * m.w + a.x] - m.distSea[(b.y + (b.h >> 1)) * m.w + b.x])[0];
@@ -3826,7 +3826,10 @@ function buildPark(m, b, rand, info) {
 
 // What a handcrafted district's plan builds with (World v3: shared/world3-hand.js has the rest - the building maker
 // and the composers - out of the page's generator code)
-function handApi(seed) { return { seed, addProp, streetWall }; }
+function handApi(seed) {
+  // (mansion: the Hilltop Mansion's walled lot, its north edge on a street - a handcrafted Bayside Heights places it: shared/world3-bayside.js)
+  return { seed, addProp, streetWall, mansion: (m, x, y) => { m.garages ||= []; m.mansions ||= []; mansion(m, mulberry32(seed ^ 0x6d61), x, y); return m.mansions[m.mansions.length - 1]; }, MANSION_SIZE };
+}
 
 function addProp(m, t, x, y, solidR = 0, extra = null) {
   const p = { t, x, y };

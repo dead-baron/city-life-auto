@@ -212,6 +212,18 @@ export function worldOpts(asked) {
       if (m.world3.west) m.world3.west.done = westDone(m);   // (8.20: Egret Point, the raceway's race, the summary: world3-west.js)
       if (m.world3.wild) m.world3.wild = wildDone(m, m.world3.wild);   // (8.19: what was built on the wild land's lots: world3-wild.js)
       const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
+      // (no tree on the snowfields: a roadside stop's picnic tree, a grove's edge - whatever a pass planted above the
+      // snow line in Granite Peaks goes)
+      if (H3) {
+        const snow = new Set();
+        for (const p of m.props) {
+          if (p.t !== 'tree_a' && p.t !== 'tree_b' && p.t !== 'redwood') continue;
+          const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+          if (tx >= 0 && ty >= 0 && tx < W && ty < H && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE) snow.add(p.x + ',' + p.y);
+        }
+        if (snow.size) H3.removeProps(m, (x, y) => snow.has(x + ',' + y));
+        m.world3.snowTrees = snow.size;
+      }
       m.world3.el = elFurniture(m, H3 && H3.removeProps);   // (2026-10-17: the El over Trestle Street - its piers, its station's stairs)
       m.world3.housesMoved = seatStationHouses(m);   // (8.14: each station's house on open ground)
       if (H3) { m.world3.railCleared = clearRailDressing(m, H3.removeProps); clearBeachFront(m, H3.removeProps); }   // (8.14: no tree over the main line or a platform; the promenade and car parks clear)
