@@ -11594,3 +11594,30 @@ view swings out a few seconds the way the most water lies within 40 tiles of it 
 Tests: test/world3world.test.js (the v3 world has its hoops - each rim over its half court, standing on the court finds
 it - and its telescopes, most looking out over the water). The old world's hoops and telescope tests
 (test/golf.test.js, test/activities.test.js, test/gameplay.test.js) are unchanged.
+
+## 2026-10-19 · World v3, handcrafted: the Old Quarter's Chapel Street quarter (Lantern Lane, Station Square, St. Brigid's Chapel, the baths)
+
+The Old Quarter's Chapel Street quarter (district 30: Elm Street to Cedar Street, Old Quarter Road to Harbor Avenue,
+across Elm Street from Old Quarter Station) is now laid out by hand (`shared/world3-oldquarter.js`), from the
+research's sources for the Old Quarter (D5: old brick round a small square; AL1-4: the back lanes; SC2-E: the station
+town's street life at the gates; IN11: the corner shops; L6-A: the sento). The grid had cut it into nine little blocks
+of look-alike liquor marts.
+- **The streets:** Old Quarter Road, Harbor Avenue, Elm and Cedar Streets stay; Oak and Maple Streets and 11th and 14th
+  Streets give way to **Lantern Lane** and **Bell Lane**, the old lanes jogging across the quarter, and **Tanner's
+  Alley** between them.
+- **Lantern Lane:** old brick tenements four and five floors high over their shops, fire escapes on the wider ones -
+  Lucky Dragon Noodles, Quarter Pawn & Loan, Suds Laundromat, Kovac's Barber, Mama Rosa's Bodega - passages and yards
+  between, the backs on Old Quarter Road.
+- **Station Square** across Elm Street from the station: two rows of market stalls with their fruit crates, the news
+  box, the food cart, benches and lamps, the sign.
+- **St. Brigid's Chapel** facing Bell Lane over its churchyard (the headstones, two cypresses, the iron railing);
+  the **Old Quarter Baths** beside it, the timber bath house with its woodpile and drums; Bao House among the
+  tenements.
+- **Harbor Avenue:** the **Quarter Yards Redevelopment** - the frame going up behind its hoarding, the cones, the
+  COMING SOON sign - and the tenements' shops: Ink & Iron Tattoo, Second Chance Thrift, Madame Zora's, Quarter Liquor.
+
+Also: Westport's Waterfront Walk keeps its benches, lamps and telescopes on the walk where it ends on Hillcrest
+Avenue rather than the water.
+
+Tests: test/oldquarter.test.js (the lanes run from Elm Street to Cedar Street with the alley between; the streets round
+it and the station stay the grid's).

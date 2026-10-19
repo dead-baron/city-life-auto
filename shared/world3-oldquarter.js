@@ -100,8 +100,10 @@ function build(m, api, K) {
       placeName('Station Square', sx0, y0, sx1, y1 + 1);
     }
     // St. Brigid's Chapel over its churchyard, its front on Bell Lane
-    const cx0 = 2284, cw = 20, cy1 = Math.floor(along(BELL, cx0 + 10)) - 6;
-    const ch = place({ x: cx0, y: y0, w: cw, h: Math.min(16, cy1 - y0 - 5), arch: 'church', key: 'church', name: "St. Brigid's Chapel", poi: { kind: 'delivery', label: "St. Brigid's Chapel" }, whole: true,
+    // (each lot's top: below Lantern Lane's pavement where it stands - the lane jogs south at Oak Street's line)
+    const top = (x0, w) => Math.max(Math.ceil(along(LANTERN, x0)), Math.ceil(along(LANTERN, x0 + w))) + 6;
+    const cx0 = 2286, cw = 20, cy1 = Math.floor(along(BELL, cx0 + 10)) - 6, chy = top(cx0, cw);
+    const ch = place({ x: cx0, y: chy, w: cw, h: Math.min(16, cy1 - chy - 5), arch: 'church', key: 'church', name: "St. Brigid's Chapel", poi: { kind: 'delivery', label: "St. Brigid's Chapel" }, whole: true,
       art: { spec: { wallColor: '#a89c88', roofColor: '#4a5058' } } });
     if (ch) {
       const gy0 = ch.ty + ch.th, gy1 = cy1 + 1;
@@ -111,26 +113,26 @@ function build(m, api, K) {
       prop('tree_b', cx0 + 1, gy0 + 1, 10, { sp: 'cypress', k: 1.1 }); prop('tree_b', cx0 + cw - 1, gy0 + 1, 10, { sp: 'cypress', k: 1.1 });
       prop('fenceline', cx0 - 1.8, gy1 - 0.4, 0, { kind: 'iron', tx: (cw / 2 + 0.6) * TILE, ty: 0 });
       prop('fenceline', cx0 + cw / 2 + 1.2, gy1 - 0.4, 0, { kind: 'iron', tx: (cw / 2 + 0.6) * TILE, ty: 0 });
-      placeName("St. Brigid's Chapel", cx0, y0, cx0 + cw, gy1);
+      placeName("St. Brigid's Chapel", cx0, chy, cx0 + cw, gy1);
     }
     // the Old Quarter Baths (the sento: the timber bath house, its noren, the tall boiler chimney behind)
-    const bx0 = QX.tanner + 6, bw = 22;
-    const bh = place({ x: bx0, y: y0 + 2, w: bw, h: Math.min(14, cy1 - y0 - 3), arch: 'mixed', key: 'rest2', name: 'Old Quarter Baths', poi: { kind: 'delivery', label: 'Old Quarter Baths' }, whole: true,
+    const bx0 = QX.tanner + 6, bw = 22, by = top(bx0, bw) + 1, by1 = Math.floor(along(BELL, bx0 + bw)) - 6;
+    const bh = place({ x: bx0, y: by, w: bw, h: Math.min(14, by1 - by - 3), arch: 'mixed', key: 'rest2', name: 'Old Quarter Baths', poi: { kind: 'delivery', label: 'Old Quarter Baths' }, whole: true,
       art: { spec: { floors: 2, style: 'siding', wallColor: '#7a5a40', win: 'pair', pitch: 'gable', ridge: 'ns', slope: 0.42, roofColor: '#3a4048', parapet: 6, grime: 0.12, blades: [], plaques: [] },
         shop: { kind: 'lobby', door: 'left', open: true, people: 2, sign: { text: 'BATHS', bg: '#2a3a5a', fg: [240, 236, 220], lit: true }, awning: ['#2a3a5a', '#2a3a5a'] }, kit: [] } });
     if (bh) {
       prop('chainfence', bx0 + bw + 0.6, bh.ty + 1, 0, { tx: 0, ty: (bh.th - 2) * TILE });
       prop('woodpile', bx0 + bw + 2, bh.ty + 3, 8); prop('drum', bx0 + bw + 2.2, bh.ty + 7, 6);
       const fy = bh.ty + bh.th;
-      K.fill(bx0, fy, bw, cy1 - fy + 1, T.PLAZA);
+      K.fill(bx0, fy, bw, by1 - fy + 1, T.PLAZA);
       prop('planter_g', bx0 + 2, fy + 1.4, 8); prop('bikerack', bx0 + bw - 3, fy + 1.4, 6);
       out.shops++;
-      placeName('Old Quarter Baths', bx0, y0, bx0 + bw, cy1 + 1);
+      placeName('Old Quarter Baths', bx0, by, bx0 + bw, by1 + 1);
     }
     // tenements to Cedar Street
-    tenements(bx0 + bw + 4, QX.cedar - 5, y0, cy1, [{ name: 'Bao House', store: 'cafe', w: 9, poi: { kind: 'coffee', label: 'Bao House', food: true }, awning: ['#c8a040', '#2a2420'], sign: ['#2a2420', [236, 200, 120]] }], 14);
+    tenements(bx0 + bw + 4, QX.cedar - 5, top(bx0 + bw + 4, 4), by1, [{ name: 'Bao House', store: 'cafe', w: 9, poi: { kind: 'coffee', label: 'Bao House', food: true }, awning: ['#c8a040', '#2a2420'], sign: ['#2a2420', [236, 200, 120]] }], 14);
     // between the chapel and the alley: tenements
-    tenements(cx0 + cw + 3, QX.tanner - 3, y0, cy1, [], 13);
+    tenements(cx0 + cw + 3, QX.tanner - 3, top(cx0 + cw + 3, 4), cy1, [], 13);
   }
 
   // ===========================================================================================================
