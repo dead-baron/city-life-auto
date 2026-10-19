@@ -48,8 +48,10 @@ test('World v3b city: the plan is 9.3\'s districts, each painted on its own isla
     const st = DISTRICTS[c.d].style;
     let n = 0;
     // (a handcrafted district lays its own streets - shared/world3-hand.js - and the grid only the edges round it)
-    const hp = HAND_PLANS.find((q) => q.d === c.d);   // (The Yards' plan keeps the grid's lattice for its east edge: no c.hand)
-    if (hp) { assert.ok(hp.streets().length >= 4, `${DISTRICTS[c.d].name}: ${hp.streets().length} streets of its own`); continue; }
+    // (The Yards' plan keeps the grid's lattice for its east edge: no c.hand. A plan over part of a district with few
+    // streets of its own - Westport Center's heart between its avenues - leaves the rest of it to the grid's streets)
+    const own = HAND_PLANS.filter((q) => q.d === c.d).reduce((s, q) => s + q.streets().length, 0);
+    if (own >= 4) continue;
     for (const r of runs) for (let u = r.a; u <= r.b; u += 4) {
       const x = r.horiz ? u : r.c, y = r.horiz ? r.c : u;
       if ([[0, 0], [0, -9], [0, 9], [-9, 0], [9, 0]].some(([dx, dy]) => landAt(x + dx, y + dy) && L.dist[at(x + dx, y + dy)] === c.d)) { n++; break; }

@@ -17,6 +17,8 @@ import { CIVIC } from './world3-civic.js';
 import { NORTHGATE } from './world3-northgate.js';
 import { NORTHGATE2 } from './world3-northgate2.js';
 import { WESTHILLS } from './world3-westhills.js';
+import { WESTHILLS2 } from './world3-westhills2.js';
+import { WESTPORT } from './world3-westport.js';
 import { OLDTOWN } from './world3-oldtown.js';
 import { YARDS } from './world3-yards.js';
 import { STADIUM } from './world3-stadium.js';
@@ -24,7 +26,7 @@ import { PINKMILE } from './world3-pinkmile.js';
 import { ARTS } from './world3-arts.js';
 import { BAYSIDE } from './world3-bayside.js';
 
-export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, NORTHGATE2, OLDTOWN, YARDS, STADIUM, PINKMILE, ARTS, BAYSIDE, WESTHILLS];
+export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, NORTHGATE2, OLDTOWN, YARDS, STADIUM, PINKMILE, ARTS, BAYSIDE, WESTHILLS, WESTHILLS2, WESTPORT];
 const M_IN = 2;   // (a street within this many tiles of a plan's edge is the edge's - the grid planner's)
 // (a plan of several rects - Downtown's bands round its park - is in its area strictly inside any of them; p.rect is
 // their bounding box: the kit's frame)
@@ -139,11 +141,13 @@ function makeKit(m, api, P) {
         // behind it to the south, where the camera sees them: the caller dresses them)
         const y = opt.north ? back : front - depth + 1;
         // the strip in front where the lot stepped back from the street (a diagonal's wedges): paved, a planter now and then
-        if (!opt.north) for (let xx = x; xx < x + w; xx++) { const c = K.column(xx, front + 1, y1, mk); if (c) { fill(xx, front + 1, 1, c[0] - front, T.PLAZA); if (c[0] - front >= 2 && rnd(xx, front, 3) < 0.18) prop(pick(['planter_g', 'planter_sq', 'potted', 'bench_m', 'flowers_a'], rnd(xx, front, 4)), xx + 0.5, front + 1.5, 10); } }
+        // (opt.noStep: the caller lays the fronts itself - a suburb's lawns down to a street that bends)
+        if (!opt.north && !opt.noStep) for (let xx = x; xx < x + w; xx++) { const c = K.column(xx, front + 1, y1, mk); if (c) { fill(xx, front + 1, 1, c[0] - front, T.PLAZA); if (c[0] - front >= 2 && rnd(xx, front, 3) < 0.18) prop(pick(['planter_g', 'planter_sq', 'potted', 'bench_m', 'flowers_a'], rnd(xx, front, 4)), xx + 0.5, front + 1.5, 10); } }
         if (L.gap) { K.gap(L.kind || 'passage', x, y, w, depth, opt); made.push({ gap: L.kind, x, y, w, h: depth }); x += w; continue; }
-        if (depth < (L.minDepth || 6)) { K.gap('plaza', x, y, w, depth, opt); x += w; continue; }
+        // (a lot too shallow, or not all free: paved - or opt.fallback's kind of gap, a suburb's lawn)
+        if (depth < (L.minDepth || 6)) { K.gap(opt.fallback || 'plaza', x, y, w, depth, opt); x += w; continue; }
         const b = K.building({ ...L, x, y, w, h: depth });
-        if (b) made.push(b); else K.gap('plaza', x, y, w, depth, opt);
+        if (b) made.push(b); else K.gap(opt.fallback || 'plaza', x, y, w, depth, opt);
         x += w;
       }
       return made;

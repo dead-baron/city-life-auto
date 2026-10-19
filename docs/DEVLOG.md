@@ -11508,3 +11508,68 @@ suburb. The grid had laid square blocks of tiny house lots here.
 
 Tests: test/westhills.test.js (the collector bends and meets the avenues; every court leaves a street; the loop's ends
 on Westport Avenue; the avenues stay the grid's).
+
+## 2026-10-19 · World v3, handcrafted: West Hills' middle (Sorrel Crescent, Meadowbrook Park and its pool, Quail Run, Hillcrest Gardens, Skyview, Hillcrest Commons)
+
+West Hills' middle (district 28: Hills Avenue to Sycamore and Alder Streets, Westport Boulevard to Fountain Avenue) is
+now laid out by hand (`shared/world3-westhills2.js`), south of the north end's plan. It's built from the owner's
+concepts WC007 (the suburb of crescents: curving streets of houses with their back yard pools, the wooded creek with its
+footbridge, the park with its gazebo), WC008 (the suburban street), WC288 (the big box by the arterial, the park with a
+pond) and WC168 (the sound walls the houses back onto along the freeway), and the research's winding suburb, its
+trailer park by the airport's fence and its big-box superblock. The grid had laid square blocks of small house lots and
+a few apartment slabs here.
+- **The streets:** the avenues stay (Westport Boulevard, Pier, Hillcrest and Fountain Avenues), and so do Hills Avenue
+  and Sycamore and Alder Streets; Hillcrest Avenue now runs on to Hills Avenue. The grid's 11th, 14th, 15th, 18th, 21st,
+  24th, 2nd, 3rd and 5th Streets, and Cedar, Birch, Willow and Juniper Streets give way to **Meadowbrook Drive**, a
+  collector bending from Westport Boulevard to Hillcrest Avenue (Willow Street's line), **Sorrel Crescent** off it,
+  **Quail Run** winding from Hills Avenue to it, **Gardens Way**, **Wren Court** and **Finch Court**, and **Skyview
+  Loop** off Fountain Avenue.
+- **The houses:** every one a home in the generic house's looks on its own lawn, the rows stepping along the streets'
+  bends: fronts with the drive down to the kerb, the mailbox and a tree; back yards to the camera with the patio, a pool
+  now and then, the picket fence. Along Hillcrest Avenue's south side the back yards end at a stone sound wall under the
+  West Loop.
+- **Meadowbrook Park:** Meadowbrook Creek winding across from the drive to Sycamore Street through its duck pond (lilies,
+  reeds, boulders), two footbridges, willows and birches along the water, the gazebo, picnic tables, open lawns; the
+  **Hills Avenue Greenbelt** along the suburb's west edge.
+- **Meadowbrook Pool**, the public pool in the park's corner: four lanes, the deep end and its springboard, the changing
+  block, the lifeguard chair, the deck's loungers and umbrellas, the hot tub, the chain-link and its gate, its car park
+  on the boulevard. Lido laps (`server/systems/places.js`) now work in every lap pool, not only the Stadium Lido.
+- **Hillcrest Gardens** (the owner's apartment complexes with courtyards): two-storey garden apartments under hip roofs
+  round two courts and their pools, the car park on Gardens Way, the leasing office, the barbecue shade, the iron fence
+  and the sign on Hillcrest Avenue.
+- **Skyview Mobile Home Park** round its loop under the airport's approach: trailers on their pads (each a home, the
+  cheapest in West Hills), a car, an awning, a picnic table or a grill, tyres and sheds; the commons in the middle - the
+  laundry, the mailboxes, the shade over the tables, the pay phone; the chain-link and the sign at the gate.
+- **Hillcrest Commons** by the freeway: **Hills Home Center** and its fenced garden centre (the greenhouse, potted
+  plants in rows), **Fresh Fields Market**, the corner shops (Hills Animal Clinic, Sunrise Donuts, Polished Nail Bar,
+  Commons Cleaners), the service lane and docks behind, the car park with its tree islands and lamps, **Burger Barn** and
+  **Java Junction**'s kiosk on their pads by Fountain Avenue, the pylon signs.
+
+Tests: test/westhills2.test.js (the drive, the crescent, the lane, the courts and the loop meet the streets; the
+avenues stay the grid's).
+
+## 2026-10-19 · World v3, handcrafted: Westport Center's heart (The Harborlight Hotel, Westport Center Plaza, Pier Avenue's towers, the Waterfront Walk)
+
+Westport Center's heart (district 23: Westport Avenue to Quarter Avenue, 8th Street to the bay) is now laid out by hand
+(`shared/world3-westport.js`), built from the research's sources for the western city's downtown (D1: the tower district
+round its plaza with the monument sign; SK6, SC2-C/D: the towers, their podium shops and forecourts; B1: the corner
+storefronts) with Downtown's towers' kit. The grid had cut it into small blocks of look-alike towers, two theatres of
+the same name and three identical banks in a row along the shore.
+- **The streets:** the avenues stay (Westport Boulevard, Pier Avenue, Westport and Quarter Avenues) and so does 8th
+  Street; Chestnut and Juniper Streets, 12th and 17th Streets give way to the plaza and the towers' blocks.
+- **On the boulevard's north side:** **The Harborlight Hotel** on the district's axis, its canopy over the door, the
+  drive-up with the taxis, royal palms; **Westport Center Tower** (glass, 18 floors) and the **Quarter Trust
+  Building** (stone, 12) either side; Harborlight Grill, Center News, Westport Optics and Blue Gull Coffee between.
+- **Westport Center Plaza** across the boulevard: the WESTPORT CENTER sign at the kerb, the fountain court with its long
+  basin and three jets, benches and magnolias round it, the food carts' courts either side with their tables and
+  umbrellas under festoon lights, lawns under rows of plane trees beyond, the walks along the boulevard and the south
+  edge.
+- **On Pier Avenue:** mid-rises behind their forecourts (a tall building's height is drawn up over what's north of it,
+  and the plaza is): **Westport Exchange**, the **Pier Avenue Building**, **Bayview House** and **The Commodore**
+  (apartments); on the corner Gilded Gull Jewelers, Tidewater Books and Pier Pressed Juice under flats.
+- **Between Pier Avenue and the bay:** **Westport Savings Bank** on Westport Avenue's corner, **Harbor Point One, Two
+  and Three** (apartment towers) facing the **Waterfront Walk** - the promenade along the shore with its palms,
+  benches, lamps, telescopes and the railing over the water; **Harbor Point Gardens** behind them.
+
+Tests: test/westport.test.js (the avenues round it stay the grid's; it keeps clear of Westport General and Westport PD,
+which the generator places).
