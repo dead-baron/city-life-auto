@@ -11642,3 +11642,23 @@ The grid had cut it into little blocks of look-alike corner marts.
   its chain-link (weeds, a tyre pile, a trash pile, a drum, a pallet).
 
 Tests: test/southside.test.js (the streets round it stay the grid's; the gang's headquarters stays the generator's).
+
+## 2026-10-19 · World v3, handcrafted: Port Westport's container terminal (the stacks, the cranes, the ship, the gate)
+
+World v3b's container port never came over: the quays pass (`shared/world3-passes.js`) lays Port Westport's apron and
+a crane, but the yard it was to build fell to the bay's district, and the city grid laid little blocks of look-alike
+buildings over the port. Port Westport (district 26: Quarter Avenue to the gulf, 8th Street to Pier Avenue) is now laid
+out by hand (`shared/world3-port.js`), from the research's sources for the port (D7 and SC4-I: the container quays,
+their stacks and cranes; concept 1's red cranes; I7: the docks) and its missing port gate.
+- **The streets:** 8th Street, Pier Avenue and Quarter Avenue stay, and Westport Boulevard runs on between the yards to
+  the quay; Sycamore and Laurel Streets and 11th Street give way to the yards. The Syndicate's Port Westport
+  headquarters south of Pier Avenue stays where it is.
+- **The container yards** either side of the boulevard: the stacks in their blocks (groups of four along the quay, the
+  lanes between), straddle carriers in the lanes, light masts, the box trucks waiting in the gate lanes, the yard fence
+  with its gates on the boulevard and the gatehouses; the PORT WESTPORT sign.
+- **The quay:** the ship-to-shore cranes along its edge, their booms out over the water, and **The Westport Trader**
+  moored alongside where the water is clear the length of her.
+- **On Pier Avenue:** the **Port Westport Authority**, the **Westport Customs House**, **Westport Freight**'s warehouse and
+  the **Dockside Diner**, their backs on the yard.
+
+Tests: test/port.test.js (the streets round it stay the grid's; the gang's headquarters stays the generator's).
