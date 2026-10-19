@@ -11700,3 +11700,32 @@ put the island's shops in two look-alike rows on a back street.
 - Cedar Falls Clinic and Cedar Falls Police stay where the generator puts them, a block away.
 
 Tests: test/fallscenter.test.js (the streets round it stay the grid's; the clinic and the police the generator's).
+
+## 2026-10-19 · World v3, handcrafted: Sunset Beach's beachfront (the boardwalk, the beach, Sunset Beach Pier)
+
+Sunset Beach's beachfront (district 10: Juniper Street to Hazel Street, from 5th Street down to the sea) is now laid out
+by hand (`shared/world3-sunsetbeach.js`), from the owner's concepts WC209 (the boardwalk beach town: the beachfront row,
+the boardwalk with its stairs to the sand, the amusement pier and its Ferris wheel) and WC063 (the palm promenade behind
+a wide beach, tiki bars on their decks, lifeguard towers), with the research's D10 / BE1 / BE2 / BE3 / SK5 / SR7. The
+grid had put a row of look-alike beach houses between the boulevard and a strip of sand five tiles wide.
+- **Sunset Boulevard's north side**, every front facing the sea: the **Sea Breeze Motel** round its pool; **Pier
+  Arcade** (its neon), **Wipeout Surf Co.** (swimwear and cruisers: the surf shop's stock; its boards stood out front),
+  **Tiki Taco**, **Scoops Ice Cream**, **Seashell Souvenirs**; **Sunset Grill**, **Boardwalk Burgers**, **The Salty
+  Dog** (a bar), **Driftwood Cafe**, **Beach Bum Rentals**; the **Surf Rider Motel**, **Coconut Joe's** and **Sun & Sand
+  Pharmacy** - tables under umbrellas out front, their car parks behind on 5th Street.
+- **The Sunset Boardwalk** along the boulevard's south side: timber decking, palms, iron lamps, benches facing the sea
+  along its rail, gaps in the rail down to the sand with an outdoor shower and a bike rack at each, the snack cart and
+  the ice-cream cart (counters).
+- **The beach**, from the boardwalk to the water (about thirty tiles deep now): lifeguard towers, umbrellas over
+  loungers and towels, surfboards, **Boardwalk Volleyball** (a court to play on), **Sunset Skate Park** on the sand side
+  (quarter pipes, the pyramid, ledges, a kicker, a flat bar, the tagged wall: a skate spot, NPC skaters ride it), the
+  **Sunset Beach Lifeguards** station, and two tiki bars on their decks, **Coconut Tiki Bar** and **The Sandbar**.
+- **Sunset Beach Pier** at Sunset Avenue's foot, straight out to sea: iron lamps in pairs, benches facing out, rods in
+  holders, life rings, **Sunset Pier Bait & Tackle** on a bump-out halfway along (a counter), and the T-head with **the
+  Ferris wheel** (the ride is back: World v3 had no pier with a wheel) and a coin telescope, a float with dinghies off
+  its east side; bollards across its root. The boat rentals come back beside it (`m.publicPier`: the generator lays the
+  rental dock and kiosk), and the head is a drop-off for deliveries.
+- Bonfire Beach and the generator's volleyball court west of Juniper Street stay as they were.
+
+Tests: test/sunsetbeach.test.js (the streets round it stay the grid's); test/world3world.test.js (the Ferris wheel on
+Sunset Beach Pier, boarding from its deck; the boat rentals).
