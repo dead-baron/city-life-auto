@@ -11438,3 +11438,43 @@ the clifftop overlook and the hidden cove. The grid had laid the district as squ
 Tests: test/bayside.test.js (the streets meet every bridge and footbridge on the district's shores; the areas keep
 clear of Pine Hills' and Southside's land; the specials); test/world3city.test.js counts a bent hand avenue that ends on
 a bridge's end (Park West and Harborview Avenues) among the avenues reaching the Gulf Island's shores.
+
+## 2026-10-19 · World v3, handcrafted: the rest of Northgate (Allotment Row, the community garden, Linden Park, 9th Street, the sports ground, east of Harborview)
+
+The rest of Northgate (district 2) is now laid out by hand (`shared/world3-northgate2.js`), round the plan of its heart
+from 10-18 (`shared/world3-northgate.js`): west of Spruce Street to Linden Street, and east of Harborview Avenue to
+Stadium Avenue. It's built from the owner's concepts WC315 (the community gardens quarter: brick row houses whose back
+yards are allotments, the central garden with its greenhouse, arbour gate and market stalls, the bakery and the café on
+the corner), WC069 (a block made a park: the fenced five-a-side pitch with its bleachers, the lily pond behind its
+railing), WC089 (the park kit: courts, a dog park), WC002 (the high street: brownstone stoops, the laundromat, the
+grocer's crates, the neon coffee shop, the bus shelter) and the research's row-house grid with its garage lanes, the
+courtyard walk-ups (D4) and the diner. The grid had filled these blocks with look-alike apartment lots.
+- **The streets:** the avenues stay (Westside, Bridge, Harborview), and so do the district's edges; inside, Sycamore and
+  Laurel Streets are gone north of 9th Street, so Allotment Row's terraces run the whole way from Linden Street to
+  Westside Avenue, with two garage lanes behind them (Allotment Lane, Orchard Lane); 1st, 2nd, 3rd, 6th, 7th and 9th
+  Streets, Rowan and Maple Streets laid by the plan; east of Harborview Avenue 1st, 5th and 8th Streets, Maple and
+  Spruce Streets.
+- **Allotment Row:** terraces of brick, brownstone and painted row houses (three floors, bay windows, a stoop each with
+  iron railings either side), back to back on the streets; the north-facing rows' back yards are allotments (a raised
+  bed, a shed or a wheelbarrow, a picket fence between); corner stores (Sycamore Grocer, Laurel Deli...). Every house
+  is a home.
+- **Northgate Community Garden** on 3rd Street: rows of raised beds, the greenhouse, the tool shed, a scarecrow, the
+  arbour gate with the market stalls either side, the picket fence and the sign; **Morning Crumb Bakery** and **The
+  Daily Grind** on the corner of Linden Street with their tables out.
+- **Linden Park:** the five-a-side pitch (a soccer venue: kick the ball, play a match) in chain-link with its bleachers
+  and floodlights, the lily pond with its rocks and railing, paths, flower beds, lamps; **Linden Dog Run** under the
+  Gulf Loop's curve.
+- **9th Street**, the high street, from the Gulf Loop to Spruce Street: shops under three- and four-storey walk-ups along
+  its north side (Suds & Spin Laundromat, Greenleaf Grocer with its produce out front, Ninth Street Coffee, Clip Joint
+  Barbers, Northgate Pharmacy, Lucky Noodle, Second Hand Rose, Hot Bagel Co., Page Turner Books, Spin City Records,
+  Tony's Pizza, Bloom & Stem...), a bus shelter, bike racks and news boxes on each block.
+- **Rowan Court** and the other courtyard blocks (walk-ups on both streets, trees, benches and picnic tables in the
+  court, a half court in two of them); rows facing the streets round the Gulf Loop's curve and the North Spur's
+  junction; Loop Lot and Spur Lot under the decks.
+- **Northgate Sports Ground** on Trestle Street: tennis and basketball courts in chain-link, floodlights, the clubhouse.
+- **East of Harborview Avenue:** the **Harborview Diner** on 1st Street's corner, walk-ups, **The Bullpen**, **Fourth
+  Quarter** and **Gameday Grill** by the stadium; walk-ups north and south of the Gulf Loop and the Stadium Overflow Lot
+  under it; the **Northgate Clinic**, **Spruce Street Court** in chain-link mid-block, courtyard blocks.
+
+Tests: test/northgate2.test.js (the streets end on the grid's kept lines or on each other; the avenues stay the grid's;
+no overlap with the heart's plan).
