@@ -115,10 +115,13 @@ function build(m, api, K) {
     // the pool at the east end, the playhouse at the west, the green between
     const px1 = x1 - 1, px0 = px1 - 34;
     lido(px0, y0 + 1, px1, Math.min(y1 - 2, y0 + 18), 'Cedar Falls Pool');
-    const ph = K.building({ x: x0 + 2, y: y0, w: 22, h: 14, arch: 'theatre', key: 'theatre', name: 'Cedar Falls Playhouse', poi: { kind: 'delivery', label: 'Cedar Falls Playhouse' }, whole: true,
+    // (clear of the crescent's corner: the first spot all free from its west end)
+    let hx = x0 + 2, hy = y0 + 1;
+    while (hx < x0 + 14 && !K.allFree(hx, hy, 22, 17)) hx++;
+    const ph = K.building({ x: hx, y: hy, w: 22, h: 14, arch: 'theatre', key: 'theatre', name: 'Cedar Falls Playhouse', poi: { kind: 'delivery', label: 'Cedar Falls Playhouse' }, whole: true,
       art: { spec: { floors: 2, style: 'brick', wallColor: '#b8705a', parapet: 10, grime: 0.05, blades: [], plaques: [] }, shop: { kind: 'lobby', door: 'left', open: true, people: 2, sign: { text: 'PLAYHOUSE', bg: '#7a1e2a', fg: [255, 226, 150], lit: true }, awning: ['#7a1e2a', '#7a1e2a'] } } });
-    if (ph) { K.fill(x0 + 2, y0 + 14, 22, 3, T.PLAZA); prop('picboard', x0 + 4, y0 + 15.5, 0, { pic: 'masks', z: 30, col: [255, 210, 110] }); }
-    const gx0 = x0 + 26, gx1 = px0 - 2;
+    if (ph) { K.fill(hx, hy + 14, 22, 3, T.PLAZA); prop('picboard', hx + 2, hy + 15.5, 0, { pic: 'masks', z: 30, col: [255, 210, 110] }); }
+    const gx0 = hx + 24, gx1 = px0 - 2;
     if (gx1 - gx0 >= 20) {
       const gm = Math.floor((y0 + y1) / 2);
       K.paint(gx0, gm - 1, gx1 - gx0, 2, T.PLAZA);
