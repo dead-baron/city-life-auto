@@ -120,7 +120,7 @@ const SYSTEMS = [
   ['paint', paint.update],          // Spray & Go paint shop bays
   ['races', races.update],
   ['minigames', minigames.update],  // soccer pitch, beach volleyball          // jetski / boat races
-  ['golf', golf.update],            // Cedar Hills Golf Club: the balls in play
+  ['golf', golf.update],            // the golf course (Lakeside Greens): the balls in play
   ['hoops', hoops.update],          // North Point Courts: shooting hoops
   ['events', events.update],        // world events (snatch-and-grabs, drops) for blips + arrows
   ['phone', phone.update],          // phone job board + police patrol calls

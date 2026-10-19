@@ -11729,3 +11729,25 @@ grid had put a row of look-alike beach houses between the boulevard and a strip 
 
 Tests: test/sunsetbeach.test.js (the streets round it stay the grid's); test/world3world.test.js (the Ferris wheel on
 Sunset Beach Pier, boarding from its deck; the boat rentals).
+
+## 2026-10-19 · World v3, handcrafted: Lakeside Greens (golf is back)
+
+Golf had nothing to play in World v3: the old world's Cedar Hills Golf Club was never placed, so `map.golf` stayed
+empty and the clubhouse's bar unused. **Lakeside Greens** (`shared/world3-lakeside.js`) is a four-hole links on the
+Lake District's headland, between Magnolia Street, 15th Street and the sea beside Falls Lake Park, from the owner's
+concepts GO1 / GO3 (the clubhouse with its terrace and car park, greens and bunkers, a pond, cart paths and carts, a
+practice green; GO3's scorecard names the course) and WC314 (the golf club on a lake edge). The grid had scattered a
+few houses over the empty headland.
+- **Four holes** round the pond: the 1st (par 4) east along 15th Street, the 2nd (par 3) up the headland past a second
+  pond, the 3rd (par 4) back west along the shore - the sea is the hazard on the right - and the 4th (par 4) down
+  Magnolia Street's side to the clubhouse. Greens with their flags and bunkers at their lips, tee boxes with a bench and
+  a hole-and-par board, fairways through the rough (the ground: the course's painting, `client/art2/game/groundbake.js`).
+- **The clubhouse** at the south-west corner (its bar, now named for its club: "Lakeside Greens - The Nineteenth"),
+  tables under umbrellas on its terrace, the practice green beside it, its car park off 15th Street, the course's sign.
+- **The cart path** round the pond between the holes, carts on it; pines, cypresses, oaks and maples between the holes.
+- Play it as before (`server/systems/golf.js`): step onto a tee, tee off ($5 a hole), hole out against par.
+- The generator keeps a handcrafted district's own painting (`shared/map.js buildScenePaintings`), and the old world's
+  course builder leaves a handcrafted course alone (`shared/naturesites.js golfClub`).
+
+Tests: test/lakeside.test.js (the streets round it stay the grid's; the holes inside the course, each par fitting its
+length); test/world3world.test.js (four holes, every tee on its tee box and pin on its green, the ground, the bar).

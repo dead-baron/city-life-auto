@@ -18,6 +18,7 @@ import { CITY3 } from '../shared/world3-city.js';
 import { HAND_PLANS } from '../shared/world3-hand.js';
 import { courtHoops, hoopAt } from '../shared/hoops.js';
 import { ferrisSite } from '../shared/rides.js';
+import { lieAt } from '../shared/golf.js';
 import { ARTERIALS, BIOMES, inPoly } from '../shared/world3-skeleton.js';
 import { prepare, sizes, placeOf } from '../tools/world3-build.mjs';
 
@@ -107,4 +108,13 @@ test('World v3: the whole world in one build - every city district on its island
   assert.ok(fw && fs && fs.name === 'Sunset Beach Pier', 'the Ferris wheel on Sunset Beach Pier');
   assert.equal(m.tiles[tileOf(fw.board.x, fw.board.y)], T.DOCK, 'boarding from the pier\'s deck');
   assert.ok(m.publicPier && m.marina.length > 0, 'the boat rentals by the pier');
+  // Lakeside Greens (shared/world3-lakeside.js; played: server/systems/golf.js): four holes - each tee box under its
+  // tee, each pin on its green - the course's ground painted, the clubhouse's bar
+  assert.ok(m.golf && m.golf.holes.length === 4, 'the course');
+  for (const h of m.golf.holes) {
+    assert.equal(lieAt(m, h.tee.x, h.tee.y), 'tee', `hole ${h.n}: its tee`);
+    assert.equal(lieAt(m, h.pin.x, h.pin.y), 'green', `hole ${h.n}: its pin on the green`);
+  }
+  assert.ok((m.paintings || []).some((p) => p.key === 'golf' && p.hand), 'its ground');
+  assert.ok(m.pois.some((p) => p.kind === 'clubhouse' && p.label === 'Lakeside Greens' && p.counter), 'the clubhouse bar');
 });

@@ -1,5 +1,6 @@
-// Golf at Cedar Hills Golf Club: what the ball lies on, the clubs and the swing meter. The course itself is laid
-// out by shared/naturesites.js golfClub (map.golf: the holes with their tees, pins and pars, the greens, the
+// Golf at Lakeside Greens (World v3; the old world's Cedar Hills Golf Club): what the ball lies on, the clubs and the
+// swing meter. The course itself is laid out by shared/world3-lakeside.js (shared/naturesites.js golfClub in the old
+// world) (map.golf: the holes with their tees, pins and pars, the greens, the
 // fairways, the course's bounds; the bunkers are sand tiles, the pond water). server/systems/golf.js plays it; the
 // client draws your aim line and the swing meter from the same numbers.
 import { T } from './constants.js';
