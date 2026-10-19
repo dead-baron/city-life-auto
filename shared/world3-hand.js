@@ -70,6 +70,29 @@ export function buildHand(m, api0) {
   // a plan put up with the court painted under it - its post, the rim 17 px out over the court and 43 px up (as North
   // Point Courts'), its half court
   m.hoopCourts = handHoops(m, p0);
+  // the coin telescopes the plans put up (server/systems/places.js: a dollar, and the view swings out): each looks out
+  // the way the most water lies within 40 tiles of it, or out over the rooftops
+  m.scopeSpots = handScopes(m, p0);
+  return out;
+}
+const SCOPE_DIRS = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
+const SCOPE_SAY = ['Clunk. The view swings out over the water to the far shore.', 'Clunk. Gulls wheel low over the water.', 'Clunk. The water glitters all the way out.'];
+function handScopes(m, p0) {
+  const out = [], wet = (x, y) => x >= 0 && y >= 0 && x < m.w && y < m.h && (m.tiles[y * m.w + x] === T.WATER || m.tiles[y * m.w + x] === T.DEEP);
+  for (let i = p0; i < m.props.length; i++) {
+    const p = m.props[i];
+    if (!p || p.t !== 'scope') continue;
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+    let best = null;
+    for (const [dx, dy] of SCOPE_DIRS) {
+      let n = 0, first = -1;
+      for (let k = 2; k <= 40; k++) if (wet(tx + dx * k, ty + dy * k)) { n++; if (first < 0) first = k; }
+      if (n > 4 && (!best || n > best.n)) best = { n, dx, dy, k: Math.min(40, first + Math.floor(n / 2)) };
+    }
+    const r = hash2(tx, ty, 977);
+    const look = best ? { x: Math.round((tx + best.dx * best.k + 0.5) * TILE), y: Math.round((ty + best.dy * best.k + 0.5) * TILE) } : { x: Math.round(p.x), y: Math.round(p.y + 18 * TILE) };
+    out.push({ x: Math.round(p.x), y: Math.round(p.y), look, say: best ? SCOPE_SAY[Math.floor(r * SCOPE_SAY.length) % SCOPE_SAY.length] : 'Clunk. The view swings out over the rooftops.' });
+  }
   return out;
 }
 function handHoops(m, p0) {

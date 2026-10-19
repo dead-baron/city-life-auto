@@ -96,4 +96,8 @@ test('World v3: the whole world in one build - every city district on its island
     assert.ok(h.rim.x > h.court.x0 && h.rim.x < h.court.x1 && h.rim.y > h.court.y0 && h.court.y1 - h.court.y0 >= 6 * TILE, `hoop ${k} over its court`);
     assert.equal(hoopAt(m, h.rim.x, h.rim.y + 80), k, `hoop ${k}: its court found`);
   });
+  // the plans' coin telescopes: each looks somewhere, most of them out over the water
+  const sc = m.scopeSpots || [];
+  assert.ok(sc.length >= 6 && sc.every((q) => q.look && q.say), `${sc.length} telescopes`);
+  assert.ok(sc.filter((q) => /water/.test(q.say)).length >= sc.length / 2, 'most over the water');
 });

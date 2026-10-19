@@ -11574,7 +11574,7 @@ the same name and three identical banks in a row along the shore.
 Tests: test/westport.test.js (the avenues round it stay the grid's; it keeps clear of Westport General and Westport PD,
 which the generator places).
 
-## 2026-10-19 · World v3: basketball is back - the handcrafted districts' courts are hoops
+## 2026-10-19 · World v3: basketball is back - the handcrafted districts' courts are hoops; the coin telescopes work
 
 The old world's one basketball park (North Point Courts) never came over to v3, so shooting hoops and the NPC pickup
 games had nowhere to happen (the GDD's "systems with nothing to use in v3"). The handcrafted districts have painted
@@ -11585,5 +11585,12 @@ the rim over the court as at North Point, its half court), and `shared/hoops.js 
 Point's. Walk onto one of those courts and press the action button for a ball; the NPCs' pickup games (activities.js)
 run on each of them too.
 
-Tests: test/world3world.test.js (the v3 world has its hoops; each rim over its half court, standing on the court finds
-it). The old world's hoops tests (test/golf.test.js, test/activities.test.js) are unchanged.
+The coin telescopes are back the same way: the old world's one was at the end of Westport Pier. The handcrafted
+districts have put telescopes up along their waterfronts - the Harbor's promenade and pier, Old Town's quay, Bayside
+Heights' overlook, Westport's Waterfront Walk - and each is now a coin telescope (`map.scopeSpots`): a dollar, and the
+view swings out a few seconds the way the most water lies within 40 tiles of it (or over the rooftops).
+`server/systems/places.js` serves them with the pier's.
+
+Tests: test/world3world.test.js (the v3 world has its hoops - each rim over its half court, standing on the court finds
+it - and its telescopes, most looking out over the water). The old world's hoops and telescope tests
+(test/golf.test.js, test/activities.test.js, test/gameplay.test.js) are unchanged.
