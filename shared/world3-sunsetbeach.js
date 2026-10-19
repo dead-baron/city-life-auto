@@ -413,13 +413,14 @@ function build(m, api, K) {
   // The beach: sand from the boardwalk down to the water; umbrellas over loungers and towels in loose rows above the
   // waterline, surfboards stood in the sand, a cooler or two (keeping off the set pieces)
   function beach(bw) {
+    for (let x = bw.x0; x < bw.x1; x++) { const s = shore(x); for (let y = bw.y1; y < s; y++) if (K.free(x, y)) { m.set(x, y, T.SAND); K.take(x, y, 1, 1); } }
     for (let x = bw.x0; x < bw.x1; x++) {
       const s = shore(x);
-      for (let y = bw.y1; y < s; y++) if (K.free(x, y)) { m.set(x, y, T.SAND); K.take(x, y, 1, 1); }
       if (s >= SEA) continue;
       const put = (t, px, py, extra) => { if (!isBusy(Math.floor(px), Math.floor(py)) && tile(Math.floor(px), Math.floor(py)) === T.SAND) prop(t, px, py, 0, extra); };
       if (x % 6 === 1) { put('lounger', x + 0.5, s - 9.5, { v: x % 4, a: Math.PI / 2 }); put(pick(['umbrella_r', 'umbrella_y', 'umbrella_b', 'umbrella_g'], rnd(x, s, 40)), x + 1.4, s - 9.8); }
       if (x % 7 === 4) { put('towel', x + 0.5, s - 6, { v: x % 5 }); if (rnd(x, s, 41) < 0.5) put(pick(['umbrella_y', 'umbrella_r', 'umbrella_g'], rnd(x, s, 42)), x + 1.5, s - 6.4); }
+      if (x % 9 === 5) { put('towel', x + 0.5, s - 15, { v: (x + 2) % 5 }); put(pick(['umbrella_b', 'umbrella_r', 'umbrella_y'], rnd(x, s, 43)), x + 1.6, s - 15.4); }
       if (x % 23 === 11) put('surfboard', x + 0.5, s - 3.6, { v: x % 3 });
       if (x % 29 === 17) put('cooler', x + 0.5, s - 7.2, { v: x % 3 });
     }
