@@ -11634,8 +11634,8 @@ The grid had cut it into little blocks of look-alike corner marts.
   Syndicate's Southside headquarters north of 9th Street stays where it is.
 - **Pelican Avenue's north side:** Crown Pawn and Riverway Liquor on Marina Avenue's corner, Wash World, Lucky 7 Check
   Cashing, Southside Wings and a boarded-up shop, in grimy tagged brick with grilles, flats over them, yards between.
-- **Riverway Houses:** three brick slab blocks ten floors high along the yard's north side (Buildings A, B and C, fire
-  escapes up them), their fronts on the yard: the asphalt, the basketball court in its chain-link (a hoop to shoot at,
+- **Riverway Houses:** three brick slab blocks seven floors high along the yard's north side (Buildings A, B and C, fire
+  escapes up them; the residents' parking behind the chain-link on Pelican Avenue), their fronts on the yard: the asphalt, the basketball court in its chain-link (a hoop to shoot at,
   with NPC pickup games), graffiti walls either side of it, patches of grass with scraggly trees, benches, picnic
   tables, the burn barrel, a boombox, dumpsters, lamps.
 - **17th Street:** the Houses' two-storey row, Rico's Corner Store on Poplar Street's corner, and the vacant lot behind

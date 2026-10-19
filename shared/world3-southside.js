@@ -4,7 +4,7 @@
 // and the check-cashing front; B7: the street at night): the grid's little blocks of look-alike corner marts give way to
 //   - on Pelican Avenue's north side, the corner of Crown Pawn and Riverway Liquor, Wash World, Lucky 7 Check Cashing,
 //     Southside Wings and a boarded-up shop, their backs on 11th Street;
-//   - across the avenue, Riverway Houses: three brick slab blocks ten floors high round their yard - the asphalt, the
+//   - across the avenue, Riverway Houses: three brick slab blocks seven floors high round their yard - the asphalt, the
 //     basketball court in its chain-link (a hoop to shoot at: shared/hoops.js), the benches, the picnic tables, the
 //     burn barrel, the graffiti walls, scraggly trees in the patches of grass;
 //   - on 17th Street, the low blocks of the Houses, Rico's Corner Store and the vacant lot behind its chain-link.
@@ -69,7 +69,15 @@ function build(m, api, K) {
     ];
     let k = 0;
     K.row(x0, x1, y0, y1, (x, room) => {
-      if (k >= SHOPS.length) return room >= 1 ? { gap: room, kind: 'yard' } : null;
+      if (k >= SHOPS.length) {
+        // (past the shops: walk-ups' flats over boarded or grilled fronts, yards between)
+        if (room < 8) return room >= 1 ? { gap: room, kind: 'yard' } : null;
+        k++;
+        if (k % 2 === 0) return { gap: 3 + Math.floor(rnd(x, y0, 54) * 3), kind: 'yard' };
+        const w = Math.min(room, 10 + Math.floor(rnd(x, y0, 55) * 4));
+        out.homes++;
+        return { w, depth: y1 - y0, arch: 'walkup', name: 'Building', poi: false, home: { kind: 'apartment', price: 6500 }, whole: true, art: roughArt(x, y0, w, 3, null, { boarded: 0.3 }) };
+      }
       const L = SHOPS[k++];
       if (!L) return { gap: 4, kind: 'yard' };
       const w = Math.min(room, L.w), floors = 2 + Math.floor(rnd(x, y0, 52) * 2);
@@ -86,14 +94,19 @@ function build(m, api, K) {
     const A = area(SX.marina, SY.pelican + 4, SX.poplar, SY.seventeenth - 4);
     if (!A) return;
     const [x0, y0, x1, y1] = A;
-    // the three slabs along the north side, their fronts on the yard
-    const sw = Math.floor((x1 - x0 - 8) / 3), sh = 20;
+    // the residents' parking along Pelican Avenue behind the chain-link; the three slabs south of it along the yard's
+    // north side, their fronts on the yard (seven floors: a taller block's height is drawn up over the avenue)
+    const pk = 6;
+    K.fill(x0, y0, x1 - x0, pk, T.LOT);
+    for (let sx = x0 + 2; sx + 3 <= x1 - 2; sx += 3) { m.stalls.push({ x: sx * TILE, y: (y0 + 1) * TILE, w: 3 * TILE, h: 4 * TILE }); if (rnd(sx, y0, 56) < 0.45) m.parking.push({ x: (sx + 1.5) * TILE, y: (y0 + 3) * TILE, a: -Math.PI / 2 }); }
+    chain(x0 + 0.3, y0 + 0.2, x1 - 0.3, y0 + 0.2);
+    const sw = Math.floor((x1 - x0 - 8) / 3), sh = 18, sy = y0 + pk;
     const names = ['Riverway Houses A', 'Riverway Houses B', 'Riverway Houses C'];
     for (let k = 0; k < 3; k++) {
       const sx = x0 + 1 + k * (sw + 3);
-      const b = place({ x: sx, y: y0, w: sw, h: sh, arch: 'walkup', name: names[k], poi: false, home: { kind: 'apartment', price: 6000 + k * 500, slots: 3 }, whole: true,
-        art: roughArt(sx, y0, sw, 10, null, { spec: { fireEscape: [Math.round(sw * TILE * 0.5) - 25, 50] } }) });
-      if (b) prop('textsign', sx + 4, y0 + sh + 0.7, 0, { text: ['BLDG A', 'BLDG B', 'BLDG C'][k], bg: '#3a3a3a', fg: [220, 220, 210], z: 24, sx: 1 });
+      const b = place({ x: sx, y: sy, w: sw, h: sh, arch: 'walkup', name: names[k], poi: false, home: { kind: 'apartment', price: 6000 + k * 500, slots: 3 }, whole: true,
+        art: roughArt(sx, sy, sw, 7, null, { spec: { fireEscape: [Math.round(sw * TILE * 0.5) - 25, 50] } }) });
+      if (b) prop('textsign', sx + 4, sy + sh + 0.7, 0, { text: ['BLDG A', 'BLDG B', 'BLDG C'][k], bg: '#3a3a3a', fg: [220, 220, 210], z: 24, sx: 1 });
     }
     // the low blocks on 17th Street (the Houses' two-storey row), the corner store on Poplar Street's corner, the vacant lot
     const ly0 = y1 - 12;
@@ -122,7 +135,7 @@ function build(m, api, K) {
     }
     // the yard between: asphalt, the court in its chain-link, the patches of grass with their trees, benches, tables,
     // the burn barrel, the graffiti walls, a boombox on a bench
-    const yy0 = y0 + sh, yy1 = ly0;
+    const yy0 = sy + sh, yy1 = ly0;
     if (yy1 - yy0 < 12) return;
     K.fill(x0, yy0, x1 - x0, yy1 - yy0, T.LOT);
     K.take(x0, yy0, x1 - x0, yy1 - yy0);
