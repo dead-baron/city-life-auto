@@ -626,7 +626,7 @@ function build(m, api, K) {
       prop('fountain', mx, wy + 0.5, 30);
       prop('gazebo', cx0 + 10, cy1 - 8, 20);
       const tcx = cx1 - 16, tcy = cy0 + 20;
-      prop('court', tcx, tcy - 6, 0, { w: 18 * TILE, d: 12 * TILE, c1: '#2a6a5a', c2: '#3a8a6a' }); prop('tnet', tcx, tcy, 0, { len: 140, a: 0 });
+      prop('court', tcx, tcy - 6, 0, { w: 18 * TILE, d: 12 * TILE, k: 'tennis', c1: '#3a7e86', c2: '#3a6a4e' }); prop('tnet', tcx, tcy, 0, { len: 12 * TILE - 24, a: 0 });
       prop('chainfence', tcx - 9.5, tcy - 7, 0, { tx: Math.round(19 * TILE), ty: 0 }); prop('chainfence', tcx - 9.5, tcy + 7, 0, { tx: Math.round(19 * TILE), ty: 0 });
       // the gate through the low block onto the avenue: its piers, the drive paved through, the name over it
       const gx = Math.round((cx0 + cx1) / 2);
