@@ -224,7 +224,7 @@ export const HABITATS = ['redwood', 'forest', 'meadow', 'scrub', 'desert', 'moun
 // from the speed (stand / walk / trot / run). happy: a lost pet back with its owner (server/systems/pets.js).
 export const APOSE = {
   auto: 0, graze: 1, alert: 2, stalk: 3, charge: 4, rear: 5, swim: 6, gnaw: 7, rest: 8, drink: 9, call: 10, attack: 11,
-  fly: 12, climb: 13, float: 14, dive: 15, peck: 16, sit: 17, warn: 18, eat: 19, flinch: 20, happy: 21,
+  fly: 12, climb: 13, float: 14, dive: 15, peck: 16, sit: 17, warn: 18, eat: 19, flinch: 20, happy: 21, dabble: 22,
 };
 
 // What raw meat becomes over a campfire (hunting.js), one for one - see shared/items.js for what each gives (the

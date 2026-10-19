@@ -179,7 +179,7 @@ function pick(list) {
 const ground = (map, x, y) => GROUND.has(map.tileAtPx(x, y)) && !PED_BLOCK[map.tileAtPx(x, y)];
 const wet = (map, x, y) => WATER_T[map.tileAtPx(x, y)] === 1;
 
-// Make one animal. o: { herd, young, legend, mother }
+// Make one animal. o: { herd, young, legend, mother, tame (a town park's: used to people) }
 export function spawnAnimal(world, kind, x, y, herd = 0, o = {}) {
   const S = SPECIES[kind], L = LIVESTOCK[kind];
   const young = !!o.young && !!S, legend = !!o.legend && !!S;
@@ -189,14 +189,14 @@ export function spawnAnimal(world, kind, x, y, herd = 0, o = {}) {
   a.wild = {
     kind, state: 'idle', until: world.time + rng() * 4, wx: x, wy: y, hx: x, hy: y, herd, look: 0, fx: 0, fy: 0,
     aware: 0, threat: 0, pose: 0, hits: [], young, legend, mother: o.mother || 0, lead: !!o.lead, livestock: !S,
-    think: world.time + rng() * 0.3, rest: false, predator: false, stalkOf: 0, nextBite: 0, bluffs: 0,
+    think: world.time + rng() * 0.3, rest: false, predator: false, stalkOf: 0, nextBite: 0, bluffs: 0, tame: !!o.tame,
   };
   if (S && S.predatory && !young) a.wild.predator = rng() < S.predatory;   // (decided once: it may see a lone walker as prey)
   return a;
 }
 
 // a group of a species at (x, y), as it lives
-export function spawnGroup(world, kind, x, y, legendOk = false) {
+export function spawnGroup(world, kind, x, y, legendOk = false, tame = false) {
   const S = SPECIES[kind], G = S.group;
   const herd = (world.nextHerd = (world.nextHerd || 0) + 1);
   const n = G.n[0] + Math.floor(rng() * (G.n[1] - G.n[0] + 1));
@@ -209,7 +209,7 @@ export function spawnGroup(world, kind, x, y, legendOk = false) {
   for (let i = 0; i < adults * 4 && made < adults; i++) {
     const ax = x + (rng() - 0.5) * 80, ay = y + (rng() - 0.5) * 80;
     if (!okAt(ax, ay)) continue;
-    const a = spawnAnimal(world, kind, ax, ay, herd, { legend: legend && made === 0, lead: made === 0 });
+    const a = spawnAnimal(world, kind, ax, ay, herd, { legend: legend && made === 0, lead: made === 0, tame });
     a.wild.hx = x; a.wild.hy = y;
     if (made === 0) lead = a;
     made++;
@@ -220,7 +220,7 @@ export function spawnGroup(world, kind, x, y, legendOk = false) {
     for (let j = 0; j < k; j++) {
       const ax = lead.x + (rng() - 0.5) * 40, ay = lead.y + (rng() - 0.5) * 40;
       if (!okAt(ax, ay) && !ground(world.map, ax, ay)) continue;
-      const y2 = spawnAnimal(world, kind, ax, ay, herd, { young: true, mother: lead.id });
+      const y2 = spawnAnimal(world, kind, ax, ay, herd, { young: true, mother: lead.id, tame });
       y2.wild.hx = x; y2.wild.hy = y;
       made++;
     }
@@ -234,6 +234,51 @@ export function spawnGroup(world, kind, x, y, legendOk = false) {
   return made;
 }
 const legendAbout = (world, kind) => world.legendAt && world.get(world.legendAt.id) && !world.get(world.legendAt.id).dead;
+
+// ---- the town's ponds' ducks (2026-10-18, the owner: "ducks") -----------------------------------------------------
+// The still water of the town's ponds and lakes (the Commons Pond, Greenfield Pond, the Stadium Ponds, ...), worked out
+// once per map: every fourth tile of a lake or a pond in a town district (not a swimming pool), gathered by 24-tile
+// patches - [{ x, y, pts }]
+// (px: the patch's middle and up to eight of its water's tiles)
+const PONDS = new WeakMap();
+const TOWNISH = (D) => D && D.style !== 'wild' && D.style !== 'rural' && D.style !== 'desert';
+export function parkPonds(map) {
+  let out = PONDS.get(map);
+  if (out) return out;
+  const cells = new Map();
+  if (map.lake) for (let ty = map.y0 | 0; ty < (map.y0 | 0) + map.h; ty += 4) for (let tx = map.x0 | 0; tx < (map.x0 | 0) + map.w; tx += 4) {
+    const i = map.idx(tx, ty);
+    if (!map.lake[i] || !WATER_T[map.tiles[i]] || !TOWNISH(DISTRICTS[map.dist[i]])) continue;
+    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
+    if ((map.pools || []).some((r) => !r.ring && x >= r.x - 32 && x < r.x + r.w + 32 && y >= r.y - 32 && y < r.y + r.h + 32)) continue;   // (not a swimming pool)
+    const k = Math.floor(ty / 24) * 65536 + Math.floor(tx / 24);
+    let c = cells.get(k); if (!c) cells.set(k, c = { sx: 0, sy: 0, n: 0, pts: [] });
+    c.sx += x; c.sy += y; c.n++;
+    if (c.pts.length < 8) c.pts.push([x, y]);
+  }
+  out = [];
+  for (const c of cells.values()) if (c.n >= 3) out.push({ x: c.sx / c.n, y: c.sy / c.n, pts: c.pts });
+  PONDS.set(map, out);
+  return out;
+}
+// round a player: the nearer ponds' patches, out of sight, get a pair or a few ducks, or a gaggle of geese, until there
+// are a handful about the player and about each patch - tame ones (react: they don't take off at the sight of you); the
+// count spawned
+function parkDucks(world, q, anchors) {
+  const near = [];
+  for (const p of parkPonds(world.map)) { const d = (p.x - q.x) ** 2 + (p.y - q.y) ** 2; if (d < 1600 * 1600) near.push([d, p]); }
+  if (!near.length) return 0;
+  const isDuck = (e) => e.wild && !e.dead && (e.wild.kind === 'duck' || e.wild.kind === 'goose');
+  if (world.query(q.x, q.y, 1700, K.PED).filter(isDuck).length >= 9) return 0;
+  near.sort((a, b) => a[0] - b[0]);
+  for (let k = 0; k < near.length && k < 6; k++) {
+    const p = near[k][1];
+    if (world.query(p.x, p.y, 520, K.PED).filter(isDuck).length >= 4) continue;
+    const pt = p.pts.find(([x, y]) => !inAnyView(world, x, y, 60) && !anchors.some((b) => (b.x - x) ** 2 + (b.y - y) ** 2 < 300 * 300));
+    if (pt) return spawnGroup(world, rng() < 0.75 ? 'duck' : 'goose', pt[0], pt[1], false, true);
+  }
+  return 0;
+}
 
 // livestock round a farm
 function spawnLivestock(world, x, y) {
@@ -297,7 +342,10 @@ function populate(world) {
   if (total >= MAX_WILD || world.npcBudget <= 0) return; // (no NPCs at all: no animals either)
   const ph = phaseOf(world);
   for (const q of anchors) {
-    // only out in the open country (or right on its edge)
+    // the town's ponds' ducks
+    total += parkDucks(world, q, anchors);
+    if (total >= MAX_WILD) return;
+    // the rest only out in the open country (or right on its edge)
     if (!wildStyle(world.map, q.x, q.y)) {
       let edge = false;
       for (let k = 0; k < 8 && !edge; k++) edge = !!wildStyle(world.map, q.x + Math.cos(k * 0.785) * 900, q.y + Math.sin(k * 0.785) * 900);
@@ -564,6 +612,12 @@ function think(world, a, S, now, ph) {
   // (how sure it is: th.s - a faint sound at the edge of hearing is ~0.1, someone in plain sight close by ~1)
   const d = th.d, temper = S.temper;
   const spooked = th.shot || th.veh && d < 260;
+  // the park's ducks and geese are used to people: someone right on top of them is paddled (or waddled) away from; only
+  // a shot or a car close by sends them up
+  if (w.tame && !spooked) {
+    if (th.ped && d < 70 && w.state !== 'flee' && w.state !== 'trotoff') { w.fx = th.x; w.fy = th.y; setState(w, 'trotoff', now, 1.6 + rng()); }
+    return;
+  }
   if (temper === 'skittish' || spooked) {
     if (w.aware > 0.7 || th.s > 0.85 || spooked) { flee(world, a, th.x, th.y, now, 2.5, spooked); alarmGroup(world, a, th.x, th.y, now); }
     else if (w.state !== 'flee') { setState(w, 'alert', now, 1.5); face(a, th.x, th.y); }
@@ -1023,7 +1077,7 @@ function herdLead(world, a) {
 function activityPose(w, S, map, a) {
   if (S.swims === 'float' && wet(map, a.x, a.y)) return APOSE.float;
   if (w.kind === 'turkey' && !w.young && !(a.id & 1) && rng() < 0.3) return APOSE.call;   // (a tom struts: the fan up, the wings down - AN2)
-  if (S.swims && wet(map, a.x, a.y)) return APOSE.swim;
+  if (S.swims && wet(map, a.x, a.y)) return S.diet === 'dabble' && rng() < 0.4 ? APOSE.dabble : APOSE.swim;   // (a duck up-ended, feeding)
   switch (S.diet) {
     case 'graze': case 'browse': return rng() < 0.75 ? APOSE.graze : APOSE.auto;
     case 'root': case 'peck': case 'dabble': return rng() < 0.7 ? (S.bird ? APOSE.peck : APOSE.graze) : APOSE.auto;

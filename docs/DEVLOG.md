@@ -11202,3 +11202,54 @@ Still to come (the research's N2.4 and N3):
 - mist at the falls' feet;
 - rapids and riffles;
 - the rivers laid as authored splines, with point bars and meanders.
+
+## 2026-10-18 · Life in the water: fish you can see, ducks on the town's ponds, mist at the falls
+
+The owner: "Let's do the fish yes, and ducks and mist and rapids..." We agreed on fish, ducks and mist now. The rapids
+and the rivers redrawn by hand come later, as one pass over the whole world with the nature regions' overhaul.
+
+Built:
+- **Fish in the water** (`client/art2/game/waterlife.js`, new; the renderer loads it the first time it draws a frame):
+  - Who lives where is decided by 6-tile patch of water, so the same water has the same fish every visit:
+    - koi in the parks' ponds (the Commons Pond, Greenfield Pond, ...), with a carp or two; they gather at the bank
+      where someone stands still;
+    - trout in the creeks, holding in the current facing upstream, now and then moving up or down the run;
+    - shoals of perch and bluegill in the lakes and ponds, a bass on its own, now and then a pike's long shadow over a
+      lake's deep water;
+    - chub shoals and bass in the rivers, sometimes a catfish;
+    - carp and gar in the marsh;
+    - silver shoals, mullet and rays over the sand in the sea's shallows; moon jellies off the beaches and in harbours;
+    - tangs, yellow tangs, clownfish and parrotfish round the reefs off the southern keys.
+  - Each fish is a flat decal on the water. Decals only change the colour under them, so the light pass's waves,
+    glints and caustics stay on top and the fish reads as under the surface. In clear shallows by day its shadow
+    shows on the bed. How plainly a fish shows depends on the water (clearly in a creek or on the reef, dimly in the
+    marsh) and drops in rain.
+  - Their tails beat faster the faster they swim. A silver shoal flashes as it turns.
+  - They dart off from anyone in the water, anyone running along the bank, a boat or fast traffic, then keep low
+    for a few seconds. The park's koi don't mind people walking by.
+  - They rise: a ring spreads on the water (the trout more at dawn and dusk). Now and then one leaps clear, the
+    mullet most often.
+  - At a bobber (yours or anyone's): a fish comes and circles it, drawing in as the bite nears. It noses the bobber
+    at each nibble, takes it at the bite, and thrashes at the end of the line while it's on. Landed, it's gone.
+  - 30 to 80 fish at once, by graphics tier, nearest the middle of the screen first. Their sprites are made in code
+    the first time each one is drawn.
+- **Mist at the falls:** puffs of spray rise off every waterfall's foot and drift with the wind, and foam churns out
+  over its pool. This covers the nature sites' falls, the small falls and weirs, the coast's falls and Silver Thread
+  Falls. The spray is drawn in front of the falling water, so it shows over the rock and the pool.
+- **Ducks:**
+  - The town's ponds now keep a few mallards or a gaggle of geese (`server/systems/wildlife.js` parkPonds /
+    parkDucks). The server puts them on a pond near a player, out of sight, up to a handful round each player.
+  - They're tame: walk right up and they paddle (or waddle) off. Only a shot or a car close by sends them up.
+  - On the water they now and then up-end to feed: drawn tail up, head under, feet paddling (`client/art2/birds.js`
+    pose 'dabble', `APOSE.dabble` in shared/fauna.js).
+  - Anything swimming leaves a small V wake on the water: a duck, a goose, an otter, someone swimming.
+
+Tests: test/waterlife.test.js (fish of the water's kind staying in it, the same fish each time, darting from a
+swimmer, a fish coming to a bobber and landed off the line, a duck's wake, the spray and foam at a falls, the sprites)
+and test/parkducks.test.js (ducks on a town pond, tame, up at a shot, dabbling; the up-ended model).
+
+Budgets: none raised. The renderer stays at 367 KB: the water life is its own module, loaded after the first frame.
+
+Not yet:
+- Fish swim over lily pads rather than under them (the decals can't tell a pad from the water under it).
+- The rapids and the rivers redrawn by hand: the world-wide pass with the nature regions' overhaul.

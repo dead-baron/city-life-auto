@@ -96,6 +96,7 @@ function wildPose(p, S2, base, sp, now, M) {
   if (ap === APOSE.fly) return 'fly';
   if (p.swim && !S2.bird && !S2.swims && M && shallows(M, p.rx, p.ry)) return ap === APOSE.drink && sp <= 12 ? 'wadedrink' : 'wade';   // (AN5: a deer, a moose in the shallows - the legs in the water to the knees)
   if (p.swim && ap === APOSE.dive && !S2.bird) return 'dive';   // (AN5: going under, the tail up)
+  if (p.swim && S2.bird && ap === APOSE.dabble && sp <= 12) return 'dabble';   // (a duck up-ended, feeding)
   if (p.swim) return base === 'seaotter' && (ap === APOSE.float || sp < 25) ? 'float' : 'swim';
   switch (ap) {
     case APOSE.climb: return 'climb';
@@ -519,6 +520,7 @@ export class World2 {
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
+    this._waterLife(F); mk('waterlife');
     this._decals(F); this._wakeTrail(F); mk('decals');
     if (S.farmArt) S.farmArt.drawV2(this, F, gbuf, put);   // (the garden plots near you, the fields' rows: render/farmart.js)
     this._entities(F); mk('entities');
@@ -2028,6 +2030,12 @@ export class World2 {
     if (t === TT.WATER || t === TT.DEEP || t === TT.SAND || st === 'desert' || st === 'beach') return -1;
     if (TOWN.has(st)) return Math.random() < 0.33 ? (Math.random() < 0.3 ? 3 : 2) : -1;
     return t === TT.GRASS ? (Math.random() < 0.25 ? 1 : 0) : -1;
+  }
+  // ---- the life in the water --------------------------------------------------------------------------------
+  // the fish seen through the water, a fish to each bobber, swimmers' wakes; the spray at the falls (waterlife.js)
+  _waterLife(F) {
+    if (this.wl) { try { this.wl.frame(this, F); } catch (e) { if (!this.wlErr) { this.wlErr = true; console.warn('[art2] waterlife', e); } } return; }
+    if (!this.wlP) this.wlP = import('./waterlife.js').then((m) => { this.wl = new m.WaterLife(this.q); }, (e) => console.warn('[art2] waterlife', e));
   }
   // ---- boat wakes ------------------------------------------------------------------------------------------
   // Each moving boat drops a wake point every ~0.1 s at its stern (a pooled ring of 320). A point draws two foam
