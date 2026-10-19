@@ -31,7 +31,7 @@ export const CEDARFALLS = {
     { name: 'Maple Court', kind: 'minor', culdesac: true, pts: MAPLE },
     { name: 'Alder Court', kind: 'minor', culdesac: true, pts: ALDER },
   ],
-  specials: [],
+  specials: ['Cedar Falls Playhouse', 'FuelMax Cedar Falls'],   // (the generator's two: laid here)
   build,
 };
 
@@ -91,7 +91,7 @@ function build(m, api, K) {
       place('Cedar Falls Center', x0, y0, sx1, y1);
     }
     if (x1 - gasX >= 18 && K.allFree(gasX, y0 + 1, 14, 10)) {
-      const gs = K.building({ x: gasX, y: y0 + 1, w: 14, h: 10, arch: 'gas', key: 'gas', name: 'FuelMax', poi: { kind: 'gasstation', label: 'FuelMax' }, whole: true });
+      const gs = K.building({ x: gasX, y: y0 + 1, w: 14, h: 10, arch: 'gas', key: 'gas', name: 'FuelMax Cedar Falls', poi: { kind: 'gasstation', label: 'FuelMax Cedar Falls' }, whole: true });
       if (gs) {
         out.shops++;
         K.fill(gasX - 2, y0 + 11, x1 - gasX + 2, y1 - y0 - 11, T.LOT);
