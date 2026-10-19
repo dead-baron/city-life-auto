@@ -79,7 +79,11 @@ function build(m, api, K) {
   // what's left in the village: lawn under palms, hibiscus and bougainvillea
   K.landscape({ bare: 0.4, tree: (x, y, r) => r < 0.7 ? ['palm_a', pick(PALMS, rnd(x, y, 830)), 1.2 + rnd(x, y, 831) * 0.25] : r < 0.85 ? ['palm_s', pick(['banana', 'bird', 'smallPalm'], rnd(x, y, 832)), 1] : ['shrub_a', pick(['hibiscus', 'bougain', 'monstera'], rnd(x, y, 833)), 1] });
   // (every tile of the key's land the plan's: the meadows' farm sections, trees and rocks keep off it)
-  for (let y = BOX[1]; y < BOX[3]; y++) for (let x = BOX[0]; x < BOX[2]; x++) if (K.free(x, y)) K.take(x, y, 1, 1);
+  for (let y = BOX[1]; y < BOX[3]; y++) for (let x = BOX[0]; x < BOX[2]; x++) {
+    if (K.free(x, y)) K.take(x, y, 1, 1);
+    const i = y * W + x, t = m.tiles[i];
+    if (m.land[i] && (t === T.DIRT || t === T.SAND)) m.reserve[i] |= 16;   // (the paths and the beaches too: the farm sections would take a dirt path)
+  }
   void api;
   return out;
 
@@ -138,9 +142,10 @@ function build(m, api, K) {
       K.fill(x0, fy, x1 - x0, CY.harbor - 5 - fy, T.PLAZA);
       for (const b of built) { prop('bench_m', b.tx + 1.5, fy + 1.2, 0); prop('potted', b.tx + b.tw - 1, fy + 0.8, 6); }
       prop('textsign', x0 + 3, fy + 0.6, 0, { text: list[0].name === 'Coral Dive Co.' ? 'DIVE  SNORKEL  BOATS' : 'OPEN DAILY', bg: '#1e3a5e', fg: [250, 240, 200], z: 28, sx: 1 });
-      // (their backs to Palm Lane: a strip of yard)
+      // (their backs to Palm Lane: a service yard behind them, lawn and palms beyond)
       const by = Math.min(...built.map((b) => b.ty));
-      K.fill(x0, CY.palm + 6, x1 - x0, by - CY.palm - 6, T.LOT);
+      K.fill(x0, by - 6, x1 - x0, 6, T.LOT);
+      prop('dump_g', x0 + 2, by - 1, 12); prop('crates', x1 - 3, by - 1.2, 10);
     }
     place('Harbor Street', CX.coral, CY.palm, CX.reef, CY.harbor + 6);
   }
