@@ -12403,7 +12403,8 @@ country roads without sidewalks), on World v3:
   (`client/art2/game/groundbake.js`: now only where the district has pavements, or on the map's own pavement; out in
   the country a gravel verge instead). And a beach district's county road has its pavement only through its towns -
   the unbuilt Sandpiper Coast's road lost its long brick promenade (`shared/map.js` rasterRoads: within a cell of the
-  towns' own streets).
+  towns' own streets, or along Northshore's beach towns' whole stretch: 8,259 pavement tiles on the Sandpiper Coast
+  before, under 1,000 now - the towns' own streets that run into it).
 
 Tests: test/world3rivers.test.js - no traced end left a short way off another's water; every big river system in
 World v3 reaches the sea; the bars, the shingle, the cut and the green banks, clear of the roads; no pavement on the
