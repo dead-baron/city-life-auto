@@ -4279,9 +4279,10 @@ function buildScenePaintings(m) {
 }
 
 function buildAirports(m) {
-  m.airports = [];
+  m.airports = (m.airports || []).filter((a) => a.hand);   // (a handcrafted airport registered its own field: World v3's Westport International - shared/world3-airport.js)
   const onLand = (x, y, w, h) => { for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) if (!m.inside(tx, ty) || !m.land[ty * m.w + tx]) return false; return true; };
   for (const A0 of OPTS?.airports || AIRPORTS) {   // (World v3b: the airport at its v3b spot, frame tiles - shared/world3-city.js)
+    if (A0.hand) continue;   // (laid by its plan: the runway, the terminal, the stands, the hangars)
     const A = airportPlan(A0);
     if (PL && !onLand(A.terminal[0], A.terminal[1], 1, 1)) continue;   // (placed: an airport is built by the place it stands on)
     if (PL && PL.s < 1) A.hangars = A.hangars.filter(([x, y, w, h]) => onLand(x, y, w, h));

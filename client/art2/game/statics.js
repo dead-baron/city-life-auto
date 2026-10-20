@@ -1502,7 +1502,8 @@ function voxModel(m, a) {
     case 'tSaw': return TN.sawLine(a[0]); case 'tSilos': return TN.silos(a[0], a[1]); case 'tSteeple': return TN.steeple(); case 'tDock': return TN.loadingDock(a[0]);
     case 'tSacks': return TN.feedSacks(); case 'tBoards': return TN.boardRack(a[0]); case 'tShelter': return TN.pierShelter();
     case 'erCanopy': return RD.erCanopy(a[0]);   // (IN1-B: the hospital's ambulance bay)
-    case 'controlTower': return RD.controlTower(a[0], a[1]); case 'fence': return D.fence(a[0], a[1], a[2] || {}); case 'fenceKind': return K.fenceKind(a[0], a[1]); case 'gatePillar': return D.gatePillar(a[0], a[1]);
+    case 'controlTower': return RD.controlTower(a[0], a[1]); case 'jetBridge': return RD.jetBridge(a[0], a[1]); case 'bagCart': return RD.baggageCart(a[0]); case 'beltLoader': return RD.beltLoader(); case 'aircraftTug': return RD.aircraftTug(); case 'approachBar': return RD.approachLightBar(a[0]);   // (Westport International's apron: shared/world3-airport.js)
+    case 'fence': return D.fence(a[0], a[1], a[2] || {}); case 'fenceKind': return K.fenceKind(a[0], a[1]); case 'gatePillar': return D.gatePillar(a[0], a[1]);
     case 'compoundWall': return TW.compoundWall(a[0], a[1], a[2]); case 'guardTower': return TW.guardTower(a[0], a[1]); case 'hedge': return P.hedge(a[0], a[1]); case 'volleyNet': return P.volleyNet(a[0]);
     case 'soccerGoal': return PK.soccerGoal(a[0], a[1], a[2]); case 'terrace': return U.terrace(a[0], a[1], a[2], a[3]); case 'hayBale': return U.hayBale(a[0]); case 'scarecrow': return U.scarecrow();
     case 'windmill': return U.windmill(a[0]); case 'waterTower': return U.waterTower(a[0]); case 'lightPlane': return U.lightPlane(a[0]); case 'windsock': return U.windsock(); case 'vineRow': return U.vineRow(a[0] || 160, a[1] || 1, a[2] || 0, a[3] || 0); case 'winery': return U.winery(a[0] ?? 0.6); case 'wineBarrels': return U.wineBarrels(); case 'gateArch': return U.gateArch(a[0] || 90); case 'hotAirBalloon': return U.hotAirBalloon(a[0] || 0, a[1] ?? 1); case 'balloonLaid': return U.balloonLaid(a[0] || 0); case 'inflationFan': return U.inflationFan(); case 'missionRuins': return U.missionRuins(); case 'standingStone': return U.standingStone(a[0], a[1], a[2], a[3], a[4]); case 'piling': return P.piling(a[0]); case 'mooring': return X.mooringBollard(); case 'lounger': return D.lounger(a[0]);
@@ -1562,6 +1563,7 @@ function vdim(m, a) {
     case 'flare': return [14, 14, 90]; case 'tank': return [(a[0] || 44) * 2 + 4, (a[0] || 44) * 2 + 4, (a[1] || 120) + 26]; case 'cellTower': return [30, 30, (a[0] || 150) + 6]; case 'screen': return [(a[0] || 120) + 16, 12, (a[1] || 56) + 26];
     case 'solar': return [a[0] || 30, a[1] || 20, 8]; case 'runwayLight': return [4, 4, 6]; case 'viewer': return [14, 10, 40]; case 'wheelbarrow': return [30, 14, 14]; case 'airliner': return [a[0] || 460, a[1] || 420, 140];
     case 'lighthouse': return [48, 48, (a[0] || 140) + 36]; case 'pillar': return [(a[1] || 30) + 4, a[2] || 90, a[0] || 90]; case 'canopy': return [a[0] || 150, a[1] || 80, (a[2] || 52) + 10]; case 'fuelPump': return [12, 10, 34];
+    case 'jetBridge': return [a[0] || 180, 34, 62]; case 'bagCart': return [36, 24, 26]; case 'beltLoader': return [80, 26, 46]; case 'aircraftTug': return [56, 34, 22]; case 'approachBar': return [8, (a[0] || 5) * 10, 16];
     case 'platformCanopy': return [a[0] || 200, a[1] || 40, 62]; case 'stationEntrance': return [70, 44, 54]; case 'stationHouse': return [a[1] || 140, 92, 74]; case 'lifeguardTower': return [46, 70, 66]; case 'crossingSignal': return [24, 8, 70]; case 'controlTower': return [70, 70, (a[0] || 220) + 50];
     case 'subwayKiosk': return [128, 96, 64]; case 'erCanopy': return [120, 62, 60];
     case 'tPorch': return [a[0] || 160, 34 + (a[1] ? 14 : 0), Math.max((a[1] || 0) + 56, (a[2] || 0) + 14)]; case 'tAntlers': return [36, 6, 26]; case 'tLogs': return [a[0] || 160, 42, 34]; case 'tLoader': return [84, 46, 52];
@@ -2103,7 +2105,14 @@ function propItems(c, p, pi, I) {
     case 'wheelbarrow': V('whb', 'wheelbarrow', [], qa(u * TAU, 4)); return;
     case 'plane': V(`pln:${qa(p.a ?? -PI / 2, 8).toFixed(2)}`, 'airliner', [300, 270, pick(['#c83a30', '#2a5aa8', '#2a8a6a'], u)], qa(p.a ?? -PI / 2, 8)); return;
     case 'radiotower': V('rt', 'cellTower', [190]); lightAt(I, x, y, 196, 70, [1, 0.15, 0.1], 1.4, 'sign', 1); return;
-    case 'otank': V('otk', 'tank', [46, 96, '#a8acb0']); return;
+    case 'otank': V(`otk:${p.r || 46}:${p.h || 96}`, 'tank', [p.r || 46, p.h || 96, p.c || '#a8acb0']); return;   // (p.r, p.h: a fuel farm's big tanks)
+    // the airport's apron (shared/world3-airport.js): the jet bridges, the ground crews' kit, the approach lights, the tower
+    case 'jetbridge': V(`jb:${p.len || 180}:${qa(p.a || 0, 8).toFixed(2)}`, 'jetBridge', [p.len || 180, 1], qa(p.a || 0, 8)); lightAt(I, x, y, 44, 90, [1, 0.85, 0.6], 0.9, 'window'); return;
+    case 'bagcart': { const col = ['#5a6a7a', '#3a5a8a', '#5a6a5a'][(p.c || 0) % 3]; V(`bgc:${col}:${qa(p.a || 0, 4).toFixed(2)}`, 'bagCart', [col], qa(p.a || 0, 4)); return; }
+    case 'beltloader': V(`blt:${qa(p.a || 0, 8).toFixed(2)}`, 'beltLoader', [], qa(p.a || 0, 8)); return;
+    case 'tug': V(`tug:${qa(p.a || 0, 4).toFixed(2)}`, 'aircraftTug', [], qa(p.a || 0, 4)); return;
+    case 'appbar': V(`apb:${p.n || 4}`, 'approachBar', [p.n || 4], qa(p.a ?? PI / 2, 4)); lightAt(I, x, y, 14, 60, [1, 0.9, 0.67], 1.2, 'lamp', 1); return;
+    case 'ctower': V(`ctw:h${p.h || 220}`, 'controlTower', [p.h || 220, 1]); lightAt(I, x, y, (p.h || 220) + 20, 160, [1, 0.88, 0.6], 1.6, 'window'); return;
     case 'lplane': { const c = ['#c83a30', '#2a5aa8', '#2a8a6a', '#e8a030'][(p.c || 0) % 4], hd = qa(p.a || 0, 8); V(`lpl:${c}:${hd.toFixed(2)}`, 'lightPlane', [c], hd); return; }
     case 'windsock': V(`wsk:${qa(p.a || 0, 8).toFixed(2)}`, 'windsock', [], qa(p.a || 0, 8)); return;
     case 'watertower': V(`wtw:${p.h || 90}`, 'waterTower', [p.h || 90]); return;
@@ -2234,7 +2243,7 @@ function propItems(c, p, pi, I) {
     case 'lguard': V(`lgt:${qa(p.a || 0, 4).toFixed(2)}`, 'lifeguard', [], qa(p.a || 0, 4)); return;
     case 'hammock': V(`ham:${p.len || 60}:${qa(p.a || 0, 4).toFixed(2)}`, 'hammock', [p.len || 60], qa(p.a || 0, 4)); return;   // (slung between two palms: World v3's Coral Cay)
     case 'cafetable': V('ctab', 'cafeTable', []); return;
-    case 'chainfence': fenceLine(I, 'chain', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;
+    case 'chainfence': fenceLine(I, 'chain', x, y, x + (p.tx || 0), y + (p.ty || 0), p.barbed ? { barbed: true } : {}); return;   // (p.barbed: an airside's fence)
     case 'fenceline': fenceLine(I, p.kind || 'iron', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;   // (a hand plan's fence: picket, wood, chain, iron, stone)
     case 'hedgerun': fenceLine(I, 'hedge', x, y, x + (p.tx || 0), y + (p.ty || 0), { h: p.h || 16 }); return;
     case 'boathouse': V('bhouse', 'boathouse', [1]); lightAt(I, x, y + 36, 30, 100, [1, 0.8, 0.5], 1.3, 'lamp'); return;
@@ -2939,6 +2948,7 @@ function addSetPieces(c, I) {
   }
   // airports: a control tower by each terminal (or hangar)
   for (const ap of M.airports || []) {
+    if (ap.tower) continue;   // (a handcrafted airport stands its own: the 'ctower' prop - shared/world3-airport.js)
     const box = [ap.runway.x - 1200, ap.runway.y - 600, ap.runway.x + ap.runway.w + 1600, ap.runway.y + ap.runway.h + 600];
     const bl = M.buildings.filter((b) => b && !b.gone && (b.kind === 'terminal' || b.kind === 'hangar') && b.tx * TILE > box[0] && b.tx * TILE < box[2] && b.ty * TILE > box[1] && b.ty * TILE < box[3]);
     const b = bl.find((q) => q.kind === 'terminal') || bl[0];

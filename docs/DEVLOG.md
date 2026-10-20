@@ -12052,3 +12052,64 @@ Drive into Marina Avenue and more; no prop ends up on a road, and the plans' bui
 
 Tests: test/roundcorners.test.js (North Point's 1st Street and Waterside Road meet on their curve, the bend through
 them gentle; a line through the corner keeps it square).
+
+## 2026-10-20 · World v3, handcrafted: Westport International (the airport)
+
+From the owner's concepts: Airport-A1 (WC415: the terminal across the top with its glass hall and the tower, the planes
+at the gates beyond; the terminal road, the parking garage, the surface lots with palms and covered walkways, the rental
+lots, a motel with its pool, the round neon diner, a fenced storage yard, a pond in the reeds, pines by the highway),
+I5-A/B (the terminal's glass front under WESTPORT INTERNATIONAL, the jet bridge to an airliner being serviced - belt
+loader, tug, baggage carts, fuel truck, cones - a hangar with a light plane, the tower, the windsock, runway 27's
+lights), WC309 (cargo sheds and their trucks, maintenance and aviation hangars, light planes on the apron, fuel tanks,
+the hotel and the diner on the approach, the rental lots, the airport's sign), WC310 (the multi-level car park, the fuel
+farm, the radio mast, the pond with its boardwalk) and WC041 (the taxi rank and car park, the airport's own station).
+Until now the generator laid the airport (a runway, a 64-tile glass box, four hangars, three planes, the rest of the
+district open grass); now `shared/world3-airport.js` lays the whole district, and `CITY_AIRPORT` (world3-city.js) is
+the plan's field marked `hand` - the generator's airport pass (map.js buildAirports) keeps the record the plan
+registered and builds nothing.
+- **The field**: the north-south runway where it was (14 x 210 tiles; the flying, the air traffic and the rescue base
+  read it as before), its numbers painted at the thresholds (36 at the south end, 18 at the north, upside down to the
+  camera, as a pilot reads it), the approach light bars off both ends, two windsocks; the parallel taxiway and four
+  exits; the apron the length of the terminal and on east to the cargo sheds, its taxi lane painted, floodlight masts
+  along its north edge; a barbed chain-link fence along 22nd Street, Spruce Street and Marsh Road.
+- **The terminal** facing Terminal Drive: the West Concourse (DEPARTURES), the Main Hall (the airport's place: its
+  glass front, WESTPORT INTERNATIONAL across it, a glazed roof on iron ribs) and the East Concourse (ARRIVALS). Seven
+  gates on the apron behind (A1-A3, B1 on the hall, C1-C3), a jet bridge at each, airliners nosed in at five with their
+  ground crews' kit (the belt loader at the hold, a tug and its baggage carts, cones, a fuel truck now and then), the
+  stands' lead-in lines, stop bars and names painted; a remote stand (R1); the ground crews' yard at the west end. The
+  control tower and Airport Operations between the East Concourse and the Search & Rescue HQ (its spot kept open and
+  paved). The forecourt: drop-off canopies with benches and planters, bollards along the kerb, the taxi rank, the bus
+  stop, and the Yellow Line's kiosk (moved off the old plaza by 22nd Street, where the apron is now).
+- **Landside**: the Terminal Parking garage across from the hall (five decks; its top deck painted with bays and
+  parked cars - a new roof deck, roofMat 'parking', `client/art2/buildings.js`), the Ground Transportation Center and
+  its shuttle buses on Hangar Road, the short-term lot with palms on its islands, light masts and two covered walkways,
+  the **Skyview Hotel** (nine floors of glass, its porte-cochere, its pool, its car park), the **Car Rental Center**
+  on Cargo Road (Zipline, Sunbelt, EconoRide, Coastline: each counter's ready line behind it, a canopy, its tall
+  sign), **Economy Parking** (the long-stay lot, its booth and barrier, shuttle shelters) and the airport's sign on its
+  lawn at Marsh Road.
+- **Cargo and general aviation**: Westport Air Cargo and Bayline Air Freight facing Terminal Drive, trucks at their
+  docks, two freighters on the cargo apron behind with their containers; the airport's utilities (the water tower, the
+  plant house) by the bay. South of Hangar Road four hangars - Westport Aviation, Gulf Air Maintenance, Coastal Air
+  Charter, Westport Flight School - facing their apron, light planes tied down in two rows (the three flyable planes'
+  stands kept clear), and the Jet A fuel farm (four big tanks, its fence, the tanker at the rack).
+- **The approach** (Cargo Road to Bayside Avenue): the **Runway Diner** (coffee and a plate), the **Jetway Motor Inn**
+  round its court and pool (a room to rent), **Approach Fuel**; on Skyport Drive Meridian Aerospace, Altura
+  Logistics, the Skyport Business Center, Skyport Self Storage and its fenced RV yard; south of it Skyport Pond in its
+  reeds and cattails with a boardwalk, a heron and ducks; pines and oaks out to the West Loop. West of the runway's
+  south end, off Spruce Street, the **Runway End Overlook**: benches, picnic tables, coin telescopes and a food cart
+  where people watch the planes come in.
+- The art: the jet bridge, baggage cart, belt loader, aircraft tug and approach light bar models (props-road.js, drawn
+  for the I5 concept sheet) are now game props ('jetbridge', 'bagcart', 'beltloader', 'tug', 'appbar'), and 'ctower'
+  places the control tower (a handcrafted airport stands its own; the renderer's automatic one skips it); 'otank' takes
+  a size; 'chainfence' can be barbed. The ground: a handcrafted airport lists its aprons (paved as apron) - its car
+  parks and yards are asphalt; its runway numbers, the stands' markings and the taxi lane are painted.
+
+Budget: the bake workers' code 800 -> 810 KB (tools/perf.mjs) - the ground crews' kit as game props, the parking
+deck's roof and the airport's paint came to 801 KB; the airport's art is baked into its chunks, fetched once by the
+workers after the page.
+
+Tests: test/airport.test.js (the district the plan's, its streets meeting, the field handed to the generator the
+plan's, the runway north-south, the terminal and the hangars clear of the rescue base); test/world3world.test.js (the
+airport registered once by its plan, its place at the main hall's door, the airliners and the seven jet bridges, the
+tower, the light planes, the three flyable planes' stands and the helipad, the rescue base at its spot, the kiosk on
+the forecourt, the businesses).

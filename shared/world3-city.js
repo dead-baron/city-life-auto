@@ -27,6 +27,7 @@ import { ISLANDS3, MAINLAND3, HIGHWAYS3, MAIN_LOOP3 } from './world3-layout.js';
 import { STATIONS } from './world3-skeleton.js';
 import { TERRAIN3 } from './world3-land.js';
 import { handPlanAt, handStreets, HAND_PLANS } from './world3-hand.js';
+import { AP_NAME, FIELD } from './world3-airport.js';
 
 // the v3b frame the plan is drawn on (WORLD-V3.md 9.1: 13 x 8 regions of 504 tiles); the build lays the city only there
 export const CITY_FRAME = [6552, 4032];
@@ -101,7 +102,7 @@ export const CITY3 = [
   { d: 18, on: 'main', zone: ZC, rects: [[2600, 1660, 2860, 2120]], hand: 'oldtown', look: 'Old Town at the river mouth, handcrafted (shared/world3-oldtown.js): the quay along Water Street, Piazza Vecchia with St. Anne\'s and the market, the wandering lanes, the infirmary, the Rusty Anchor at the bridge foot' },
   { d: 1, on: 'main', zone: ZC, rects: [[2860, 1660, 3680, 1900]], hand: 'midtown', look: 'Midtown at the bridgeheads, handcrafted (shared/world3-midtown.js): the train over Trestle Street, Holly Street\'s main street, the boulevard, the diagonal to The Yards' },
   // --- the western city ---
-  { d: 27, on: 'main', zone: ZW, rects: [[1440, 2600, 2090, 2860]], keep: [[1440, 2600, 2090, 2860]], look: 'Westport International: the north-south runway, its taxiway, the terminal, the apron and hangars' },
+  { d: 27, on: 'main', zone: ZW, rects: [[1440, 2600, 2090, 2860]], keep: [[1440, 2600, 2090, 2860]], look: 'Westport International, handcrafted (shared/world3-airport.js): the north-south runway and its taxiway, the terminal on Terminal Drive - its glass hall and two concourses, six gates, the tower - the cargo sheds, the general-aviation hangars and the fuel farm; the parking garage, the lots, the Car Rental Center, the Skyview Hotel; on Cargo Road the Runway Diner, the Jetway Motor Inn, Approach Fuel; Skyport Drive\'s business park and the pond' },
   { d: 26, on: 'main', zone: ZW, rects: [[1960, 2160, 2200, 2400], [2090, 2600, 2320, 2780]], port: true, look: 'Port Westport: the container quays and cranes on the gulf shore, the Gull Harbor car ferry\'s terminal' },
   { d: 23, on: 'main', zone: ZW, rects: [[1680, 1960, 2200, 2160], [1680, 2160, 1960, 2400]], look: 'Westport Center: towers round Westport Boulevard, Westport General, Westport PD' },
   { d: 30, on: 'main', zone: ZW, rects: [[1900, 1640, 2500, 1960]], look: 'the Old Quarter round its station: old brick, the chapel, the redevelopment site' },
@@ -138,11 +139,9 @@ export const CITY_PARKS = [
   { x0: 3680, y0: 1750, x1: 3800, y1: 1860, label: 'Westport Stadium', pitch: true },   // (the label naturesites.js' Stadium Lido looks for)
   { x0: 4300, y0: 2340, x1: 4420, y1: 2440, label: 'Falls Lake Park', pond: true },
 ];
-export const CITY_AIRPORT = {
-  name: 'Westport International', runway: [1474, 2626, 14, 210], taxi: [1494, 2626, 5, 210], apron: [1504, 2636, 120, 110],
-  terminal: [1530, 2644, 64, 16], hangars: [[1512, 2780, 18, 14], [1536, 2780, 18, 14], [1560, 2780, 18, 14], [1584, 2780, 18, 14]],
-  planes: [[1540, 2680], [1572, 2680], [1604, 2696]], poiAt: [1562, 2662],
-};
+// (handcrafted since 2026-10-20: shared/world3-airport.js lays the field and registers it - hand: the generator's airport
+// pass leaves it be; the rects here are its field's, which the country roads' sites keep clear of)
+export const CITY_AIRPORT = { name: AP_NAME, hand: true, ...FIELD };
 export const CITY_SPOTS = {
   museumSquare: { x0: 2469, y0: 2439, x1: 2553, y1: 2488 },   // (the Metro Museum of Art fronts onto it, the Playhouse beside: shared/world3-arts.js)
   museum: [2670, 2462], playhouse: [2610, 2462],

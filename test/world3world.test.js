@@ -19,6 +19,7 @@ import { HAND_PLANS } from '../shared/world3-hand.js';
 import { courtHoops, hoopAt } from '../shared/hoops.js';
 import { ferrisSite } from '../shared/rides.js';
 import { lieAt } from '../shared/golf.js';
+import { airfields } from '../shared/flight.js';
 import { ARTERIALS, BIOMES, inPoly } from '../shared/world3-skeleton.js';
 import { prepare, sizes, placeOf } from '../tools/world3-build.mjs';
 
@@ -145,4 +146,30 @@ test('World v3: the whole world in one build - every city district on its island
   assert.equal(m.props.filter((p) => p.t === 'mstall' && p.x > ms.x && p.x < ms.x + ms.w && p.y > ms.y && p.y < ms.y + ms.h).length, 8, 'its eight stalls');
   assert.ok(m.pois.some((p) => p.kind === 'coffee' && p.label === 'Fontaine Cafe'), 'Fontaine Cafe');
   assert.ok(m.pois.some((p) => p.kind === 'market' && p.label === 'Midtown Market' && p.counter), 'the stalls a market to buy and sell at');
+  // Westport International, handcrafted (2026-10-20: shared/world3-airport.js): its field registered by the plan (the
+  // runway, the tower, the stands, the aprons); the airport's place at the main hall's door; the airliners at their gates
+  // with their jet bridges; the flyable planes' stands and the helipad clear; the rescue base at its spot; the Yellow
+  // Line's kiosk on the forecourt; the businesses round it
+  const ap = (m.airports || []).find((a) => a.name === 'Westport International');
+  assert.ok(ap && ap.hand && ap.tower && ap.stands.length >= 6 && ap.aprons.length >= 4, 'the airport registered by its plan');
+  assert.equal(m.airports.filter((a) => a.name === 'Westport International').length, 1, 'once');
+  const apPoi = m.pois.find((p) => p.kind === 'airport' && p.label === 'Westport International');
+  const hallB = apPoi && m.buildings[apPoi.b];
+  assert.ok(hallB && hallB.name === 'Westport International' && Math.abs(apPoi.y / TILE - (hallB.ty + hallB.th)) < 2, 'the airport\'s place at the main hall\'s door');
+  const inAp = (p) => p.x > 1440 * TILE && p.x < 2090 * TILE && p.y > 2600 * TILE && p.y < 2860 * TILE;
+  assert.ok(m.props.filter((p) => p.t === 'plane' && inAp(p)).length >= 6, 'the airliners at the gates and the freighters');
+  assert.equal(m.props.filter((p) => p.t === 'jetbridge' && inAp(p)).length, 7, 'seven gates, a jet bridge at each');
+  assert.equal(m.props.filter((p) => p.t === 'ctower' && inAp(p)).length, 1, 'the control tower');
+  assert.ok(m.props.filter((p) => p.t === 'lplane' && inAp(p)).length >= 10, 'light planes on the general-aviation apron');
+  const af = airfields(m);
+  assert.equal(af.aprons.filter((a) => a.name === 'Westport International').length, 3, 'three flyable planes\' stands');
+  assert.ok(af.pads.some((q) => q.kind === 'airport'), 'the airport\'s helipad');
+  assert.ok(af.strips.some((q) => q.name === 'Westport International' && q.h > q.w), 'the runway (north-south)');
+  const sar = m.pois.find((p) => p.kind === 'sar');
+  assert.ok(sar && Math.abs(sar.x / TILE - 1709) <= 2 && Math.abs(sar.y / TILE - 2660) <= 2, `the rescue base at its spot (${sar && [Math.round(sar.x / TILE), Math.round(sar.y / TILE)]})`);
+  const kp = (m.subwayPlazas || []).filter((q) => q.name === 'Westport International');
+  assert.equal(kp.length, 1, 'one plaza for the airport\'s subway kiosk');
+  assert.ok(kp[0].y + kp[0].h <= hallB.ty + hallB.th + 6 && kp[0].y >= hallB.ty + hallB.th, 'the kiosk on the terminal\'s forecourt');
+  for (const [k, l] of [['coffee', 'Runway Diner'], ['gasstation', 'Approach Fuel'], ['delivery', 'Skyview Hotel'], ['delivery', 'Westport Air Cargo'], ['delivery', 'Zipline Car Rental'], ['delivery', 'Coastline Car Hire'], ['delivery', 'Westport Aviation']]) assert.ok(m.pois.some((p) => p.kind === k && p.label === l), l);
+  assert.ok(m.pois.some((p) => p.kind === 'home' && /Jetway Motor Inn/.test(p.label)), 'a room to rent at the motel');
 });

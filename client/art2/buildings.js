@@ -376,7 +376,9 @@ export function makeBuilding(spec) {
 
 // ---- flat roof decks (spec.roofMat) ------------------------------------------------------------------
 const DECK = { tar: ramp('#615c5c', 6, 3), gravel: ramp('#7c756c', 6, 3), membrane: ramp('#a29f99', 6, 3), metal: ramp('#7a838c', 6, 3),
-  paver: ramp('#908376', 6, 3), deck: MAT.woodDock, green: ramp('#aca392', 6, 3), sedum: ramp('#4a4846', 6, 3), rubber: ramp('#4c494c', 6, 3), seats: ramp('#b02a2e', 6, 3) };
+  paver: ramp('#908376', 6, 3), deck: MAT.woodDock, green: ramp('#aca392', 6, 3), sedum: ramp('#4a4846', 6, 3), rubber: ramp('#4c494c', 6, 3), seats: ramp('#b02a2e', 6, 3), parking: ramp('#8c8984', 6, 3) };
+// (a parking garage's top deck: the bays' paint, the parked cars' bodies, their glass - RS 13, 14-19, 20)
+const BAYPAINT = ramp('#ecebe2', 5, 2), CARS = ['#c8342e', '#2a5aa8', '#ecebe6', '#34383f', '#a8acb4', '#2a7a4a'].map((c) => ramp(c, 6, 3)), CARGLASS = ramp('#2a3444', 5, 2);
 const RUST = ramp('#8a5a3a', 6, 3), PAD = ramp('#b6b0a4', 6, 3);
 const SEDUM = [ramp('#6e8e3a', 6, 3), ramp('#8e6c3a', 6, 3), ramp('#4a6e3c', 6, 3), ramp('#9a5c4c', 6, 3)];
 const GPAVE = [ramp('#8e7258', 6, 3), ramp('#9a705c', 6, 3), ramp('#d870a0', 5, 2), ramp('#e8c848', 5, 2)];   // (a garden's decking, its clay pavers; sedum in flower)
@@ -411,7 +413,7 @@ function roofDeck(G, spec, w, d, H, seed, style) {
   if (iw > 0 && id > 0) {
     // per deck pixel: a shade (T) and which ramp (RI: 0 the material, 1 rust, 2 walkway pads, 3 gravel, 4-7 sedum, 8 decking,
     // 9 clay pavers, 10-11 sedum flowers, 12 membrane)
-    const RS = [DECK[mat] || DECK.tar, RUST, PAD, DECK.gravel, SEDUM[0], SEDUM[1], SEDUM[2], SEDUM[3], ...GPAVE, DECK.membrane], DI = [mat === 'gravel' || mat === 'paver' || mat === 'green' ? 0.3 : 0.5, 0.5, 0.5, 0.3, 0.6, 0.6, 0.6, 0.6, 0.5, 0.35, 0.3, 0.3, 0.5];
+    const RS = [DECK[mat] || DECK.tar, RUST, PAD, DECK.gravel, SEDUM[0], SEDUM[1], SEDUM[2], SEDUM[3], ...GPAVE, DECK.membrane, BAYPAINT, ...CARS, CARGLASS], DI = [mat === 'gravel' || mat === 'paver' || mat === 'green' ? 0.3 : 0.5, 0.5, 0.5, 0.3, 0.6, 0.6, 0.6, 0.6, 0.5, 0.35, 0.3, 0.3, 0.5, 0.2, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.2];
     const T = new Float32Array(iw * id), RI = new Uint8Array(iw * id), F = (sx, sy, s) => noiseField(w, d, sx, sy, s);
     const each = (fn) => { for (let v = 0, i = 0; v < id; v++) for (let u = 0; u < iw; u++, i++) fn(u, v, i, u + rw, v + rw); };
     switch (mat) {
@@ -471,6 +473,27 @@ function roofDeck(G, spec, w, d, H, seed, style) {
           if (r < 2) { RI[i] = 12; T[i] = r ? 0.24 : 0.4; return; }                    // (the riser)
           const h1 = hash(x >> 1, y >> 1, seed + 21);
           if (h1 < full) { RI[i] = CR[(hash(x >> 1, y >> 1, seed + 22) * 8) | 0]; T[i] = 0.4 + hash(x, y, seed + 23) * 0.3; }
+        });
+        break;
+      }
+      case 'parking': {                                                        // a parking garage's top deck (Westport International's, Airport-A1): bays
+        // in double rows across it, the drive aisles between, a car in most bays - its body, the windscreen and the back
+        // window darker, the roof a shade lighter
+        const A = F(30, 30, seed + 4), BW = 60, BD = 96, AI = 110, P = 2 * BD + AI, m0 = 14;
+        each((u, v, i, x, y) => {
+          T[i] = 0.52 + (A[y * w + x] - 0.5) * 0.12 + (hash(x, y, seed + 2) > 0.97 ? 0.06 : 0);
+          if (u < m0 || v < m0 || u >= iw - m0 || v >= id - m0) return;
+          const q = (v - m0) % P, row = Math.floor((v - m0) / P);
+          if (q >= 2 * BD) { if (Math.abs(q - 2 * BD - AI / 2) < 1.5 && (u >> 4) % 2 === 0) { RI[i] = 13; T[i] = 0.5; } return; }   // (the aisle's dashed centre line)
+          if (row * P + 2 * BD > id - 2 * m0) return;   // (no double row cut off at the far end)
+          const half = q >= BD ? 1 : 0, bv = q - half * BD, bay = Math.floor((u - m0) / BW), bu = (u - m0) % BW;
+          if (bu < 2 || (half === 0 && bv < 2) || (half === 1 && bv > BD - 3)) { RI[i] = 13; T[i] = 0.55; return; }   // (the bays' lines)
+          const k = row * 2 + half;
+          if (hash(bay, k, seed + 31) > 0.74 || bu < 9 || bu > BW - 8 || bv < 8 || bv > BD - 9) return;
+          const n = half ? BD - 1 - bv : bv, r = Math.min(bu - 9, BW - 8 - bu);   // (n: from the nose, which faces the aisle)
+          RI[i] = 14 + ((hash(bay, k, seed + 32) * 6) | 0);
+          T[i] = 0.5 + (r < 2 ? -0.16 : 0) + (n > BD - 34 && n < BD - 22 ? 0.12 : 0);
+          if ((n > BD - 46 && n < BD - 34 && r >= 2) || (n > BD - 22 && n < BD - 16 && r >= 2)) { RI[i] = 20; T[i] = 0.4; }   // (the windscreen, the back window)
         });
         break;
       }

@@ -50,6 +50,7 @@ import { T, TILE } from '../../../shared/constants.js';
 import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome } from '../../../shared/mapcore.js';
 import { Z } from '../../../shared/layoutcore.js';
 import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roadcore.js';
+import { drawText } from '../font.js';
 
 export const CHUNK = 768;
 const PAD = 48, WN = CHUNK + PAD * 2, WA = WN * WN, TP = 4, TN = WN / TILE + TP * 2 + 1;
@@ -299,7 +300,7 @@ function tileFacts(C) {
       if (inRects(races, X, Y)) m = M_.TRACK;
       else if (airports.some((a) => inRect(a.runway, X, Y))) m = M_.RUNWAY;
       else if (airports.some((a) => inRect(a.taxi, X, Y))) m = M_.LOT;
-      else if (st === 'airport') m = M_.APRON;
+      else if (st === 'airport') m = airports.some((a) => a.aprons && inRect(a.box, X, Y) && !a.aprons.some((r) => inRect(r, X, Y))) ? M_.LOT : M_.APRON;   // (a handcrafted airport's car parks and yards: asphalt - its aprons listed, shared/world3-airport.js)
       else if (D.tier === 'industrial') m = M_.YARD;
       else if (st === 'rural' || wild) m = M_.GRAVLOT;
       else if (b.tres[k] & 1) m = M_.GRAVLOT;
@@ -1271,6 +1272,25 @@ function runways(C, G) {
         if (edge || centre || thr) plot(C, G, X, Y, (gi, x, y) => setC(G, gi, sd(WHITE, 0.62, x, y, 0)));
         else if (hh(X >> 2, Y >> 2, 5) > 0.97 && ((a % 300) < 30)) plot(C, G, X, Y, (gi) => darken(G, gi, 0.85));    // tyre marks
       }
+    }
+    // a handcrafted airport's runway numbers (a north-south runway: 36 at its south end, read coming in from the south;
+    // 18 at the north end, upside down to the camera) and its stands' lead-in lines, stop bars and names (ap.stands)
+    if (ap.hand && r && r.h > r.w && !(r.x > C.X0 + CHUNK || r.x + r.w < C.X0 || r.y > C.Y0 + CHUNK || r.y + r.h < C.Y0)) {
+      const paint = (X, Y) => plot(C, G, X, Y, (gi, x, y) => { if (hh(X, Y, 23) > 0.06) setC(G, gi, sd(WHITE, 0.62, x, y, 0)); });
+      const cx = r.x + r.w / 2, TW = 2 * 64 - 16;
+      drawText((px, py) => paint(px, py), '36', cx - TW / 2, r.y + r.h - 290, { sx: 16, sy: 24, gap: 1 });
+      const ny = r.y + 170, ncy = ny + 60;
+      drawText((px, py) => paint(2 * cx - px, 2 * ncy - py), '18', cx - TW / 2, ny, { sx: 16, sy: 24, gap: 1 });
+    }
+    const yel = (X, Y) => plot(C, G, X, Y, (gi, x, y) => setC(G, gi, sd(YELLOW, 0.6, x, y, 0)));
+    for (const [x0, y0, x1] of ap.lanes || []) if (!(y0 < C.Y0 - 4 || y0 > C.Y0 + CHUNK + 4 || x1 < C.X0 || x0 > C.X0 + CHUNK)) for (let X = Math.max(x0, C.X0 - 2); X <= Math.min(x1, C.X0 + CHUNK + 2); X++) for (let w = -1; w <= 1; w++) yel(X, y0 + w);   // (the apron's taxi lane)
+    for (const st of ap.stands || []) {
+      const t0 = st.to !== undefined ? -Math.abs(st.to - st.y) : -14 * TILE;   // (the lead-in line from the taxi lane)
+      if (st.x < C.X0 - 600 || st.x > C.X0 + CHUNK + 600 || Math.max(st.y, st.y + t0) < C.Y0 - 600 || Math.min(st.y, st.y + t0) > C.Y0 + CHUNK + 600) continue;
+      const dy = st.a > 0 ? 1 : -1;
+      for (let t = t0; t <= 4.4 * TILE; t++) for (let w = -1; w <= 1; w++) yel(st.x + w, st.y + dy * t);
+      for (let X = st.x - 40; X <= st.x + 40; X++) for (let k = 0; k < 4; k++) yel(X, st.y + dy * (4.4 * TILE + k));
+      if (st.n) drawText((px, py) => yel(px, py), st.n, st.x + 24, st.y + dy * 2.4 * TILE - 20, { sx: 6, sy: 8, gap: 1 });
     }
     if (tx && !(tx.x > C.X0 + CHUNK || tx.x + tx.w < C.X0 || tx.y > C.Y0 + CHUNK || tx.y + tx.h < C.Y0)) {
       const vert = tx.h > tx.w;
