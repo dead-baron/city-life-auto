@@ -53,7 +53,7 @@ test('pick mushrooms: a few in the bag, the spot bare for everyone until it grow
   // it grows back
   run(w, FORAGE_REGROW_S.goldTrumpet + 2);
   assert.ok(evs.some((e) => e.i === i && e.up), 'it grows back, and everyone hears');
-  assert.ok(/golden trumpets/.test(players.findInteraction(w, p).label), 'something to pick again');
+  assert.ok(/golden trumpets/.test(foraging.interaction(w, p).label), 'something to pick again');   // (the spot's own prompt: a lost pet that wandered up in the meantime would take the button first)
   // sell them at the market
   const market = w.map.pois.find((q) => q.counter && q.kind === 'market');
   teleport(w, p.ped, market.x, market.y + 6);

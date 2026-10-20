@@ -1,0 +1,58 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 the hunt, staged</title>
+<style>body{margin:0;background:#2a2e34}canvas{image-rendering:pixelated;display:block}</style></head><body><canvas id="c"></canvas>
+<!-- Nature-A2 staged at the game's scale and in its light (the sprites the live game draws: renderUpright, the
+     character view; a bird of prey up in the air seen more from above, its shadow on the ground below): a meadow where
+     a wolf pack runs a deer down and two more feed on a kill, a mountain lion springs, an eagle soars and another carries
+     off a rabbit, a fox pounces in the long grass; a pond with a heron poised in the shallows and one striking, a bear
+     with a salmon, an osprey in a splash, an otter eating its fish on the bank. ?z= zoom, ?time=noon|golden -->
+<script type="module">
+import { animalModel, renderUpright } from '../../client/art2/animals.js';
+import { birdModel } from '../../client/art2/birds.js';
+import { GBuf, hash } from '../../client/art2/gbuf.js';
+import { Lighter, PRESETS } from '../../client/art2/light.js';
+const q = new URLSearchParams(location.search), Z = Number(q.get('z') || 2), T = q.get('time') || 'noon';
+const W = 760, H = 430, G = new GBuf(W, H);
+const UP = [0, 0, 1];
+// the ground: meadow grass in patches, a worn track; the pond (deep in the middle, the shallows paler at its edge)
+const pond = (x, y) => ((x - 560) / 170) ** 2 + ((y - 300) / 95) ** 2;
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+  const n = hash(x >> 2, y >> 2, 3), m = hash(x >> 4, y >> 4, 5), p = pond(x, y);
+  let c;
+  if (p < 1) { const d = Math.min(1, (1 - p) * 3); c = [Math.round(84 - d * 40 + n * 6), Math.round(128 - d * 34 + n * 6), Math.round(130 - d * 10 + n * 6)]; }
+  else if (p < 1.18) c = [Math.round(118 + n * 14), Math.round(110 + n * 10), Math.round(78 + n * 8)];   // (the muddy margin)
+  else { const g = 100 + m * 26 + n * 16; c = [Math.round(g * 0.62), Math.round(g), Math.round(g * 0.42)]; if (Math.abs(y - 120 - Math.sin(x / 70) * 20) < 6 && x < 380) c = [Math.round(140 + n * 12), Math.round(122 + n * 10), Math.round(84 + n * 8)]; }
+  G.put(x, y, c, UP, 0, null, p < 1 ? 0 : 1);
+}
+// lily pads and reeds round the pond; tufts of long grass in the meadow
+for (let k = 0; k < 40; k++) { const a = hash(k, 1, 9) * 6.28, r = 0.55 + hash(k, 2, 9) * 0.4, cx = 560 + Math.cos(a) * 170 * r, cy = 300 + Math.sin(a) * 95 * r; for (let dy = -3; dy <= 3; dy++) for (let dx = -4; dx <= 4; dx++) if (dx * dx / 16 + dy * dy / 9 <= 1 && !(dx > 0 && Math.abs(dy) < 1)) G.put(cx + dx, cy + dy, [66 + (dx & 3) * 4, 118 + (dy & 3) * 4, 52], UP, 1, null, 1); if (k % 6 === 0) for (let d = -1; d <= 1; d++) G.put(cx + d, cy - 1, [236, 210, 226], UP, 2, null, 1); }
+for (let k = 0; k < 90; k++) { const a = hash(k, 3, 9) * 6.28, cx = 560 + Math.cos(a) * 172, cy = 300 + Math.sin(a) * 97; if (Math.cos(a) < -0.2 && Math.sin(a) > -0.3) continue; for (let h = 0; h < 10 + hash(k, 4, 9) * 8; h++) G.put(cx + (h > 8 ? 1 : 0), cy - h, h > 13 ? [120, 82, 50] : [58, 94, 44], [0.3, 0.3, 0.9], h, null, 1); }
+for (let k = 0; k < 160; k++) { const cx = hash(k, 5, 9) * 400, cy = 230 + hash(k, 6, 9) * 190; for (let h = 0; h < 4 + hash(k, 7, 9) * 4; h++) G.put(cx + (h & 1), cy - h, [104 + h * 6, 128 + h * 4, 54], [0.2, 0.2, 0.95], h, null, 1); }
+// the cast: [model, heading, x, y, fy, up]
+const A = (k, o) => animalModel(k, o), B = (k, o) => birdModel(k, o);
+const W2 = Math.PI, SW = Math.PI * 0.75, S0 = Math.PI / 2;
+const cast = [
+  // the wolf pack running a deer down across the meadow (west), the deer tiring
+  [A('deer', { phase: 0.15, gait: 'run' }), W2 + 0.2, 92, 168], [A('deer:y', { phase: 0.65, gait: 'run' }), W2 + 0.1, 118, 196],
+  [A('wolf', { phase: 0.35, gait: 'run' }), W2 + 0.2, 176, 160], [A('wolf', { phase: 0.8, gait: 'run' }), W2 + 0.05, 212, 186], [A('wolf', { phase: 0.55, gait: 'run' }), W2 - 0.25, 196, 138],
+  // two more on a kill
+  [A('deer', { pose: 'dead' }), 0.4, 300, 74], [A('wolf', { pose: 'graze' }), W2 + 0.5, 330, 66], [A('wolf', { pose: 'graze' }), 0.2, 274, 84], [A('wolf:y', { pose: 'alert' }), S0, 318, 98],
+  // the lion's spring onto a deer at the edge of the trees
+  [A('deer', { phase: 0.4, gait: 'run' }), 0.3, 452, 92], [A('cougar', { pose: 'pounce', phase: 0.2 }), 0.3, 410, 82],
+  // the fox's pounce in the long grass, and one with its mouse
+  [A('redfox', { pose: 'pounce', phase: 0.25 }), SW, 120, 330], [A('redfox', { pose: 'catch', prey: 'mouse' }), S0 - 0.4, 210, 372],
+  // a rabbit; an eagle stooping on another; one carrying a rabbit off; one soaring high
+  [A('rabbit', { phase: 0.3, gait: 'run' }), -0.3, 300, 268], [B('eagle', { pose: 'stoop' }), 2.6, 326, 250, 0.72, 18],
+  [B('eagle', { pose: 'soar', carry: 'game', phase: 0.2 }), -0.5, 250, 300, 0.72, 46], [B('eagle', { pose: 'soar', phase: 0.6 }), 2.1, 470, 160, 0.72, 74],
+  // the pond: a heron poised in the shallows, one striking, a bear with its salmon, the osprey's splash, the otter on the bank
+  [B('heron', { pose: 'poised', wade: 1 }), W2 + 0.4, 430, 290], [B('heron', { pose: 'strike' }), 0.2, 690, 228], [B('heron', { pose: 'fishbill', wade: 1 }), S0 + 0.3, 650, 372],
+  [A('blackbear', { pose: 'wadecatch', prey: 'fish' }), S0 - 0.6, 560, 380], [B('osprey', { pose: 'plunge', phase: 0.3 }), 0.6, 560, 285], [B('osprey', { pose: 'soar', carry: 'fish', phase: 0.1 }), -0.9, 690, 160, 0.72, 46],
+  [A('otter', { pose: 'eatfish' }), S0 + 0.4, 400, 360],
+];
+// the osprey's splash: a ring of white round it
+for (let k = 0; k < 40; k++) { const a = k / 40 * 6.28; for (const r of [11, 14]) G.put(560 + Math.cos(a) * r, 289 + Math.sin(a) * r * 0.45, [228, 238, 242], UP, 2, null, 1); }
+cast.sort((a, b) => a[3] - b[3]);
+for (const [m, hd, x, y, fy = 0.38, up = 0] of cast) { const s = renderUpright(m, hd, { fy }); G.blit(s, x - s.ax, y - s.ay - up, Math.round(up * 0.2)); }
+const cv = document.getElementById('c'); cv.width = W * Z; cv.height = H * Z;
+const L = new Lighter(cv); L.setScene(G); L.render(PRESETS[T] || PRESETS.noon, [], 0);
+window.done = true;
+</script></body></html>

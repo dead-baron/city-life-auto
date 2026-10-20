@@ -100,6 +100,7 @@ export function died(world, ped, cause, dir) {
   if (ped.halved) { ped.vx *= 0.1; ped.vy *= 0.1; lie = 'halved'; }                 // the plasma blade: in two halves where it stood
   else if (ped.finisher) { ped.vx *= 0.1; ped.vy *= 0.1; lie = ped.finisher; }      // a finishing stab or slash: down where they stand
   else if (now < (ped.tumbleUntil || 0)) lie = LIE[ped.flungKind] || 'back';
+  else if (cause === 'predator') { ped.vx *= 0.15; ped.vy *= 0.15; lie = 'side'; }   // (taken by a hunter, wildlife.js the hunt: down where it was caught)
   else if (cause === 'melee' && ped.killBlade && world.rand() < 0.8) { ped.vx *= 0.25; ped.vy *= 0.25; lie = BLADE_DEATHS[Math.floor(world.rand() * BLADE_DEATHS.length)]; }   // cut down: to the knees, spun round, slumping back
   else if (sp > 100 && cause !== 'train' && cause !== 'bleed') {
     const r = world.rand(), backward = Math.cos((ped.a || 0) - mv) < -0.2;
@@ -110,5 +111,5 @@ export function died(world, ped, cause, dir) {
     if (world.rand() < 0.55) { knock(world, ped, dir, 110 + world.rand() * 60, 'slide', 0.1, 0.3, 0); lie = 'back'; }
     else { ped.vx *= 0.2; ped.vy *= 0.2; lie = world.rand() < 0.7 ? 'face' : 'side'; }
   } else { ped.vx *= 0.3; ped.vy *= 0.3; lie = ['back', 'face', 'side'][Math.floor(world.rand() * 3)]; }
-  world.emit(ped.x, ped.y, { e: 'death', x: ped.x, y: ped.y, a: dir, id: ped.id, k: lie });
+  world.emit(ped.x, ped.y, { e: 'death', x: ped.x, y: ped.y, a: dir, id: ped.id, k: lie, ...(cause === 'predator' ? { nb: 1 } : null) });   // (nb: no blood - a clean kill, as Nature-A2 draws it)
 }

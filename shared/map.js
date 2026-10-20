@@ -411,9 +411,69 @@ function buildCity(seed, opts = null, frame = null) {
   if (pd || !(OPTS?.island || fb)) m.spawns.police = { x: pd.x, y: pd.y + 44 }; else if (fb) m.spawns.police = fb;
   m.spawns.default = m.spawns.hospital;
   if (OPTS?.done) OPTS.done(m, { removeProps });   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js; the main line's dressing cleared)
+  naturalFinds(m);   // (Nature-D1: the wilds' finds - shared/foraging.js)
   mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)
   m.softEdge = true; // (from here on the sea runs on past the edge: tileAt)
   return m;
+}
+
+// ---- the wilds' finds (Nature-D1, 2026-10-20: shared/foraging.js) ------------------------------------------------------
+// Some 2,300 across World v3's wild country (about 90 on the old map), each where it belongs: gold to pan on a creek's
+// gravel and mussel beds on a river's banks; geodes in the rock of the desert's canyons and the peaks, fossils in the
+// desert's; old arrowheads in its sand; truffles, shed antlers and now and then a wild hive under the trees of the woods;
+// berries at the woods' edges, in the meadows (with the herbs) and in the farms' hedgerows; an eagle's feather by the
+// lakes and the cliffs, rarely. One look per 14-tile cell (hashes of the cell: no random stream), never on or by a road,
+// a path, a field or anything built.
+const FIND_C = 14;
+const FIND_STYLES = new Set(['wild', 'rural', 'desert']);
+const FIND_BLOCK = new Set([T.ROAD, T.BRIDGE, T.BUILDING, T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK, T.FIELD]);
+function naturalFinds(m) {
+  const forage = (m.forage ||= []), TC = m.terrainCls;
+  const at = (tx, ty) => (m.inside(tx, ty) ? m.idx(tx, ty) : -1);
+  const tile = (tx, ty) => { const i = at(tx, ty); return i < 0 ? -1 : m.tiles[i]; };
+  const any = (tx, ty, r, f) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (f(tx + dx, ty + dy)) return true; return false; };
+  const water = (j) => j >= 0 && (m.tiles[j] === T.WATER || m.tiles[j] === T.DEEP);
+  // a tree beside (tx, ty): a solid prop of a trunk's size within two tiles - [x, y] or null
+  const treeBy = (tx, ty) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const j = at(tx + dx, ty + dy), arr = j >= 0 && m.solidProps.get(j); if (arr) for (const p of arr) if (!p.off && p.r >= 8 && p.r <= 40) return [p.x, p.y, p.r]; } return null; };
+  // the rock: the walls and cliffs (tiles), and the boulders, outcrops, mesas and buttes (props) - their boxes, by 8-tile cell
+  const RG = new Map(), RC = 8 * TILE;
+  for (const p of m.props || []) {
+    if (p.t !== 'boulder' && p.t !== 'outcrop' && p.t !== 'cliff') continue;
+    const hw = (p.w || p.s || 40) / 2, hd = (p.d || p.s || 40) / 2, b = [p.x - hw, p.y - hd, p.x + hw, p.y + hd];
+    for (let gy = Math.floor(b[1] / RC); gy <= Math.floor(b[3] / RC); gy++) for (let gx = Math.floor(b[0] / RC); gx <= Math.floor(b[2] / RC); gx++) { const key = gy * 65536 + gx; let a = RG.get(key); if (!a) RG.set(key, (a = [])); a.push(b); }
+  }
+  const rockProp = (x, y, r) => { for (let gy = Math.floor((y - r) / RC); gy <= Math.floor((y + r) / RC); gy++) for (let gx = Math.floor((x - r) / RC); gx <= Math.floor((x + r) / RC); gx++) for (const b of RG.get(gy * 65536 + gx) || []) if (x > b[0] - r && x < b[2] + r && y > b[1] - r && y < b[3] + r) return true; return false; };
+  const y0 = Math.floor(m.y0 / FIND_C), y1 = Math.floor((m.y0 + m.h - 1) / FIND_C), x0 = Math.floor(m.x0 / FIND_C), x1 = Math.floor((m.x0 + m.w - 1) / FIND_C);
+  for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+    if (hash2(cx, cy, 70301) > 0.55) continue;
+    const tx = cx * FIND_C + Math.floor(hash2(cx, cy, 70302) * FIND_C), ty = cy * FIND_C + Math.floor(hash2(cx, cy, 70303) * FIND_C), i = at(tx, ty);
+    if (i < 0) continue;
+    const D = DISTRICTS[m.dist[i]], t = m.tiles[i];
+    if (!D || !FIND_STYLES.has(D.style) || (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) || (m.reserve && m.reserve[i])) continue;
+    if (any(tx, ty, 2, (x, y) => FIND_BLOCK.has(tile(x, y)))) continue;
+    const b = TC ? wildBiome(m.dist[i], terrainAt(TC.cls, TC.cw, tx, ty)) : 0;   // (0 open grass, 1 scrub, 2 forest, 3 desert, 4 / 9 the peaks)
+    const river = any(tx, ty, 2, (x, y) => { const j = at(x, y); return water(j) && !!m.river[j]; });
+    const lake = !river && any(tx, ty, 3, (x, y) => { const j = at(x, y); return water(j) && !!m.lake[j]; });
+    const rock = any(tx, ty, 2, (x, y) => tile(x, y) === T.WALL) || rockProp(tx * TILE + 16, ty * TILE + 16, 40);
+    const desert = D.style === 'desert' || b === 3, forest = b === 2, peaks = b === 4 || b === 9, meadow = b === 0 && D.style === 'wild';
+    const v = hash2(cx, cy, 70304);
+    let k = null, x = tx * TILE + 16, y = ty * TILE + 18;
+    if (river) {
+      // a creek (narrow: the water across it in a few strides) or a river
+      let n = 0;
+      for (let d = -4; d <= 4; d++) { if (water(at(tx + d, ty))) n++; if (water(at(tx, ty + d))) n++; }
+      k = n < 6 ? (v < 0.55 ? 'goldpan' : null) : v < 0.45 ? 'mussels' : null;
+    } else if (rock && desert) k = v < 0.3 ? 'geode' : v < 0.62 ? 'fossil' : null;
+    else if (rock && peaks) k = v < 0.32 ? 'geode' : null;
+    else if (desert) k = v < 0.06 ? 'arrowhead' : null;   // (the desert is wide: rarer than they'd look)
+    else if (forest) {
+      k = v < 0.05 ? 'truffle' : v < 0.11 ? 'antler' : v < 0.15 ? 'hive' : v < 0.26 ? 'berries' : null;
+      if (k === 'truffle' || k === 'hive') { const tr = treeBy(tx, ty); if (!tr) k = null; else { x = Math.round(tr[0] + (k === 'hive' ? tr[2] + 8 : 6)); y = Math.round(tr[1] + tr[2] * 0.6 + 6); } }   // (under a tree; a hive in one)
+    } else if (meadow || peaks) k = v < 0.14 ? 'herbs' : v < 0.24 ? 'berries' : v < 0.27 ? 'antler' : null;
+    else if (D.style === 'rural') k = v < 0.07 ? 'berries' : null;   // (the hedgerows)
+    if (!k && (lake || rock) && v > 0.975) k = 'feather';
+    if (k) forage.push({ x, y, k });
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,39 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Art v2 the hunt</title>
+<style>body{margin:0;background:#4a4e58;color:#eee;font:11px monospace}canvas{image-rendering:pixelated;display:block}</style></head><body><canvas id="c"></canvas>
+<!-- Nature-A2's hunters and fishers as the live game draws them (renderUpright, the character view): the heron (on the
+     bank and in the shallows: poised, stalking, the strike, a fish in its bill, in flight with its legs trailing), the
+     osprey and the bald eagle (soaring, stooping, in the water after a fish, carrying off a fish or a rabbit), the grey
+     wolf, the bears with a salmon (in the white water), the fox's pounce and its mouse. Cells on blue: stood in water.
+     ?z= zoom, ?time=noon|dusk|night -->
+<script type="module">
+import { animalModel, renderUpright } from '../../client/art2/animals.js';
+import { birdModel } from '../../client/art2/birds.js';
+import { GBuf } from '../../client/art2/gbuf.js';
+import { Lighter, PRESETS } from '../../client/art2/light.js';
+const q = new URLSearchParams(location.search), Z = Number(q.get('z') || 2), T = q.get('time') || 'noon';
+const cw = 96, rh = 100, cols = 12;
+const ROWS = [
+  ['heron', [['stand', {}], ['stand', {}, 0], ['poised', {}], ['stalk', { gait: 'walk', phase: 0.25 }], ['strike', {}], ['fishbill', {}], ['wade', { pose: 'stand', wade: 1 }, 0.55, 1], ['wpoised', { pose: 'poised', wade: 1 }, 0.55, 1], ['wstrike', { pose: 'strike', wade: 1 }, 0.55, 1], ['wfish', { pose: 'fishbill', wade: 1 }, 0.55, 1], ['fly', { pose: 'fly', phase: 0 }, 0.3, 0, -20], ['fly', { pose: 'fly', phase: 0.5 }, 0.3, 0, -20]]],
+  ['osprey', [['stand', {}], ['soar', { pose: 'soar' }, 0.3, 0, -20], ['soar', { pose: 'soar', phase: 0.5 }, 2.2, 0, -20], ['stoop', { pose: 'stoop' }, 0.3, 0, -14], ['carry', { pose: 'soar', carry: 'fish' }, 0.3, 0, -20], ['carry', { pose: 'soar', carry: 'fish' }, 0, 0, -20], ['plunge', { pose: 'plunge' }, 0.55, 1], ['plunge', { pose: 'plunge', phase: 0.5 }, 0.55, 1], ['fly', { pose: 'fly', phase: 0 }, 0.3, 0, -20], ['fly', { pose: 'fly', phase: 0.5 }, 0.3, 0, -20], ['peck', { pose: 'peck' }], ['dead', { pose: 'dead' }]]],
+  ['eagle', [['stand', {}], ['soar', { pose: 'soar' }, 0.3, 0, -20], ['soar', { pose: 'soar', phase: 0.5 }, 2.2, 0, -20], ['stoop', { pose: 'stoop' }, 0.3, 0, -14], ['carry', { pose: 'soar', carry: 'game' }, 0.3, 0, -20], ['carry', { pose: 'soar', carry: 'fish' }, 0, 0, -20], ['plunge', { pose: 'plunge' }, 0.55, 1], ['plunge', { pose: 'plunge', phase: 0.5 }, 0.55, 1], ['fly', { pose: 'fly', phase: 0 }, 0.3, 0, -20], ['fly', { pose: 'fly', phase: 0.5 }, 0.3, 0, -20], ['alert', { pose: 'alert' }, 1.57], ['dead', { pose: 'dead' }]]],
+  ['wolf', [['stand', { pose: 'stand' }], ['stand', { pose: 'stand' }, 0], ['walk', { phase: 0.25 }, 0], ['run', { phase: 0.4, gait: 'run' }, 0], ['run', { phase: 0.9, gait: 'run' }, 0.55], ['feed', { pose: 'graze' }, 0], ['alert', { pose: 'alert' }, 1.57], ['stalk', { pose: 'stalk', phase: 0.2 }, 0], ['lie', { pose: 'lie' }, 0], ['dead', { pose: 'dead' }, 0], ['pup', { pose: 'stand' }, 0.55, 0, 0, 'wolf:y'], ['legend', { pose: 'stand' }, 0.55, 0, 0, 'wolf:L']]],
+  ['bears', [['catch', { pose: 'catch', prey: 'fish' }, 0.55, 0, 0, 'blackbear'], ['catch', { pose: 'catch', prey: 'fish', wag: 1 }, 0, 0, 0, 'blackbear'], ['wadecatch', { pose: 'wadecatch', prey: 'fish' }, 0.55, 1, 0, 'blackbear'], ['wadeswipe', { pose: 'wadeswipe', phase: 0.2 }, 4.2, 1, 0, 'blackbear'], ['wadeswipe', { pose: 'wadeswipe', phase: 0.7 }, 4.2, 1, 0, 'blackbear'], ['watch', { pose: 'wade' }, 4.2, 1, 0, 'blackbear'], ['catch', { pose: 'catch', prey: 'fish' }, 0.55, 0, 0, 'grizzly'], ['wadecatch', { pose: 'wadecatch', prey: 'fish' }, 0.55, 1, 0, 'grizzly'], ['wadeswipe', { pose: 'wadeswipe', phase: 0.7 }, 4.2, 1, 0, 'grizzly'], ['cougar', { pose: 'pounce', phase: 0.2 }, 0, 0, 0, 'cougar'], ['cougar', { pose: 'stalk', phase: 0.3 }, 0.55, 0, 0, 'cougar'], ['otter', { pose: 'eatfish' }, 0.55, 0, 0, 'otter']]],
+  ['fox', [['listen', { pose: 'alert' }, 0.55, 0, 0, 'redfox'], ['pounce', { pose: 'pounce', phase: 0.2 }, 0, 0, 0, 'redfox'], ['pounce', { pose: 'pounce', phase: 0.7 }, 0, 0, 0, 'redfox'], ['pounce', { pose: 'pounce', phase: 0.2 }, 0.55, 0, 0, 'redfox'], ['mouse', { pose: 'catch', prey: 'mouse' }, 0.55, 0, 0, 'redfox'], ['mouse', { pose: 'catch', prey: 'mouse' }, 0, 0, 0, 'redfox'], ['grey', { pose: 'pounce', phase: 0.2 }, 0, 0, 0, 'greyfox'], ['grey', { pose: 'catch', prey: 'mouse' }, 0.55, 0, 0, 'greyfox'], ['coyote', { pose: 'catch', prey: 'mouse' }, 0.55, 0, 0, 'coyote'], ['bobcat', { pose: 'pounce', phase: 0.2 }, 0, 0, 0, 'bobcat'], ['deer', { pose: 'dead' }, 0, 0, 0, 'deer'], ['rabbit', { pose: 'dead' }, 0, 0, 0, 'rabbit']]],
+];
+const W = cols * cw + 10, H = ROWS.length * rh + 20;
+const G = new GBuf(W, H);
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = 112 + ((x * 7 + y * 13) % 5) * 2; G.put(x, y, [v - 10, v + 4, v - 14], [0, 0, 1], 0, null, 1); }
+const items = [];
+ROWS.forEach(([kind, cells], r) => cells.forEach(([label, o, hd = 0.55, wet = 0, dy = 0, k2], c) => {
+  const x = 48 + c * cw, y = 80 + r * rh, k = k2 || kind;
+  if (wet) for (let yy = y - 14; yy < y + 16; yy++) for (let xx = x - 40; xx < x + 40; xx++) G.put(xx, yy, [64, 104, 132], [0, 0, 1], 0, null, 1);
+  const bird = ['heron', 'osprey', 'eagle'].includes(k);
+  if (!o.pose && !o.gait && !o.phase) o = { ...o, pose: label };
+  items.push([bird ? birdModel(k, o) : animalModel(k, o), hd, x, y + dy, bird && (o.pose === 'soar' || o.pose === 'stoop' || o.pose === 'fly') ? 0.72 : 0.38]);
+}));
+items.sort((a, b) => a[3] - b[3]);
+for (const [m, hd, x, y, fy] of items) { const s = renderUpright(m, hd, { fy }); G.blit(s, x - s.ax, y - s.ay); }
+const cv = document.getElementById('c'); cv.width = W * Z; cv.height = H * Z;
+const L = new Lighter(cv); L.setScene(G); L.render(PRESETS[T] || PRESETS.noon, [], 0);
+window.done = true;
+</script></body></html>

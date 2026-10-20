@@ -4,7 +4,10 @@
 //   the creeks' current facing upstream, shoals of perch and bluegill in the lakes and ponds, carp in the slow water and
 //   the marsh with the gar, a big shadow now and then out over a lake's deep water (a pike) or a river's (a catfish),
 //   chub and bass in the rivers, the reef's bright fish round the southern keys (tangs, clownfish, parrotfish), silver
-//   shoals and mullet in the sea's shallows, moon jellies drifting off the beaches and in the harbours. Each is a flat
+//   shoals and mullet in the sea's shallows, moon jellies drifting off the beaches and in the harbours. Nature-A1
+//   (2026-10-20): sockeye salmon holding in the white water at a falls' foot, leaping at the falls (and falling back);
+//   bluegill and bass shoaling under a lake's dock; now and then a golden koi gone wild among a pond's carp; in the
+//   tidepools a sculpin or two and a shore crab scuttling sideways over the bed. Each is a flat
 //   decal on the water - the engine's decals blend into the albedo only, so the light pass's waves, glints and
 //   caustics stay on top of them, as on the bed - its tail beating, its shadow on the bed below it in the clear
 //   shallows by day. They dart off from anyone running by or in the water, from boats and fast traffic, and lie low a
@@ -42,7 +45,13 @@ const sstep = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 // 0 never), leap the share of its rises that are leaps, deep how far down it keeps (dimmer; no shadow), leash how far
 // it strays from its patch (px); its colours: back, side, fin and its marks ('bars', 'spots', 'stripe', 'bands',
 // 'scales')
-const SP = {
+export const SP = {
+  // (Nature-A1: the salmon at the falls - spawning red, the green head; head: its own colour there; climb: it leaps
+  // at the falls, up the white water and back down into the pool - and the tidepools' sculpin and shore crab, which
+  // scuttles sideways: crab)
+  salmon: { L: 14, W: 4, bend: 1.2, al: 0.86, cruise: 9, dart: 160, turn: 3, beh: 'hold', rise: 12, leap: 0.6, climb: 1, back: '#8a2a1e', side: '#cc4430', fin: '#3e5a40', head: '#44603e', marks: 'spots', mark: '#6a1c14', leash: 60 },
+  sculpin: { L: 4, W: 2, bend: 0.6, al: 0.9, cruise: 4, dart: 50, turn: 3, beh: 'roam', rise: 0, leap: 0, back: '#4a4834', side: '#706a48', fin: '#5c5640', marks: 'spots', mark: '#2c2a20', leash: 16 },
+  crab: { L: 7, W: 9, bend: 0, al: 0.96, cruise: 7, dart: 45, turn: 2.4, beh: 'roam', rise: 0, leap: 0, crab: 1, back: '#a8402a', side: '#cc5a36', fin: '#7a2a1a', leash: 16 },
   koi: { L: 12, W: 5, bend: 1.4, al: 0.82, cruise: 13, dart: 120, turn: 1.7, beh: 'roam', rise: 22, leap: 0, leash: 170 },
   carp: { L: 13, W: 5, bend: 1.1, al: 0.7, cruise: 9, dart: 90, turn: 1.2, beh: 'roam', rise: 45, leap: 0.1, deep: 0.3, back: '#3e3c2a', side: '#76643a', fin: '#5a4a2e', leash: 170 },
   bluegill: { L: 6, W: 4, bend: 0.7, al: 0.72, cruise: 16, dart: 130, turn: 3.5, beh: 'school', rise: 40, leap: 0, back: '#34442e', side: '#5e7048', fin: '#4a5a3a', marks: 'bars', mark: '#26321e', leash: 120 },
@@ -62,7 +71,7 @@ const SP = {
   ray: { L: 14, W: 12, bend: 0.5, al: 0.88, cruise: 9, dart: 90, turn: 0.9, beh: 'roam', rise: 0, leap: 0, ray: 1, back: '#3a3026', side: '#4a3e30', fin: '#2e261e', marks: 'spots', mark: '#66583e', leash: 260 },
   jelly: { L: 9, W: 9, bend: 0, al: 0.5, cruise: 3, dart: 6, turn: 0.3, beh: 'drift', rise: 0, leap: 0, jelly: 1, leash: 320 },
 };
-for (const S of Object.values(SP)) for (const k of ['back', 'side', 'fin', 'mark']) if (S[k]) S[k] = hex(S[k]);
+for (const S of Object.values(SP)) for (const k of ['back', 'side', 'fin', 'mark', 'head']) if (S[k]) S[k] = hex(S[k]);
 // the koi's colours: kohaku (white, red), sanke (and a little black), showa (black, red, white), ogon (gold), plain
 // orange, tancho (the red spot on the head alone), chagoi (brown); their fins white and see-through
 const KOI = [
@@ -72,13 +81,13 @@ const KOI = [
 ].map((k) => ({ ...k, base: hex(k.base), side: k.side ? hex(k.side) : null, mark: k.mark ? hex(k.mark) : null, ink: k.ink ? hex(k.ink) : null }));
 const KOI_FIN = hex('#eee8de'), BLACK = [10, 14, 18], SILVER_FLASH = [hex('#7a9ab4'), hex('#e8f0f6')];
 // how clearly each water shows what's in it
-const CLEAR = { koi: 1, pond: 0.85, lake: 0.82, deep: 0.75, creek: 1, river: 0.72, marsh: 0.78, shore: 0.95, reef: 1, harbour: 0.5, open: 0.6 };
+const CLEAR = { koi: 1, pond: 0.85, lake: 0.82, deep: 0.75, creek: 1, river: 0.72, marsh: 0.78, shore: 0.95, reef: 1, harbour: 0.5, open: 0.6, falls: 0.8, dock: 0.85, tidepool: 1 };
 // the shallows where a fish's shadow shows on the bed by day
-const SHADOWED = { koi: 1, pond: 1, creek: 1.4, reef: 1.2, shore: 1, lake: 0.6 };
+const SHADOWED = { koi: 1, pond: 1, creek: 1.4, reef: 1.2, shore: 1, lake: 0.6, falls: 0.6, dock: 0.8, tidepool: 1.4 };
 // who lives in each water, by patch: [chance, species, fewest, most]
 const POP = {
   koi: [[0.8, 'koi', 2, 4], [0.15, 'carp', 1, 1]],
-  pond: [[0.5, 'bluegill', 3, 6], [0.25, 'carp', 1, 2]],
+  pond: [[0.5, 'bluegill', 3, 6], [0.25, 'carp', 1, 2], [0.07, 'koi', 1, 1]],   // (the koi: a golden one gone wild)
   lake: [[0.32, 'perch', 4, 8], [0.12, 'bass', 1, 1], [0.1, 'bluegill', 3, 5]],
   deep: [[0.07, 'pike', 1, 1], [0.15, 'perch', 5, 9]],
   creek: [[0.42, 'trout', 1, 2]],
@@ -89,10 +98,13 @@ const POP = {
   reef: [[0.85, 'reef', 4, 8], [0.35, 'parrot', 1, 2], [0.1, 'ray', 1, 1]],
   harbour: [[0.15, 'mullet', 3, 6], [0.14, 'jelly', 1, 4]],
   open: [[0.03, 'jelly', 1, 2]],
+  falls: [[0.9, 'salmon', 2, 3], [0.3, 'trout', 1, 1]],             // (the white water at a falls' foot)
+  dock: [[0.9, 'bluegill', 4, 7], [0.6, 'bass', 1, 2]],             // (under a lake's dock, among its piles)
+  tidepool: [[0.85, 'sculpin', 1, 2], [0.65, 'crab', 1, 1]],
 };
 const REEF_MIX = ['tang', 'yellowtang', 'tang', 'clown', 'yellowtang'];
 // the fish that comes to a bobber, by the water
-const TAKER = { koi: 'koi', pond: 'bluegill', lake: 'perch', deep: 'bass', creek: 'trout', desert: 'chub', river: 'bass', marsh: 'carp', shore: 'mullet', reef: 'parrot', harbour: 'mullet', open: 'mullet' };
+const TAKER = { koi: 'koi', pond: 'bluegill', lake: 'perch', deep: 'bass', creek: 'trout', desert: 'chub', river: 'bass', marsh: 'carp', shore: 'mullet', reef: 'parrot', harbour: 'mullet', open: 'mullet', falls: 'salmon', dock: 'bass', tidepool: 'sculpin' };
 
 // ---- what water a place is ------------------------------------------------------------------------------------------
 // 0 none, 1 the sea, 2 a lake, 3 a pond, 4 running water
@@ -160,7 +172,8 @@ function cellAt(W, m, cx, cy) {
     const s = shoreOf(m, x, y, 10);
     if (s > bs) { bs = s; bx = x; by = y; }
   }
-  if (n < 3 || inPool(m, bx, by)) return null;   // (no fish in a swimming pool)
+  if (n < 3) return tidepoolIn(m, cx, cy);   // (too little water for fish - but a tidepool's life)
+  if (inPool(m, bx, by)) return null;   // (no fish in a swimming pool)
   const c = wcls(m, bx, by), tx = Math.floor(bx / TILE), ty = Math.floor(by / TILE), i = m.idx(tx, ty), d = m.dist ? m.dist[i] : -1;
   const o = { k: 'shore', c, x: bx, y: by, up: NaN, d, shore: bs };
   if (c === 2 || c === 3) {
@@ -189,7 +202,58 @@ function cellAt(W, m, cx, cy) {
     const D = DISTRICTS[ld];
     o.k = MARSH_D.has(ld) ? 'marsh' : REEF_D.has(ld) || REEF_D.has(d) ? 'reef' : dock || (D && (D.style === 'harbor' || D.style === 'industrial')) ? 'harbour' : bs > 7 ? 'open' : 'shore';
   }
+  if (c !== 1) {
+    // the white water at the foot of a falls: the salmon's (holding there facing up into it - the falls face south)
+    for (const f of W.falls || (W.falls = fallsOf(m))) if (f.h >= 20 && Math.abs(bx - f.x) < f.w / 2 + 48 && by > f.y - 12 && by < f.y + 150) { o.k = 'falls'; o.up = -Math.PI / 2; return o; }
+    // a dock out over a lake or a pond: the bluegill and bass under it (their patch the water beside it)
+    if (o.k === 'lake' || o.k === 'pond' || o.k === 'deep') { const dk = dockBy(m, cx, cy); if (dk) { o.k = 'dock'; o.x = dk[0]; o.y = dk[1]; } }
+  }
   return o;
+}
+// the water beside a dock in a patch (px), or null
+function dockBy(m, cx, cy) {
+  const t0x = cx * 6, t0y = cy * 6;
+  for (let ty = t0y; ty < t0y + 6; ty++) for (let tx = t0x; tx < t0x + 6; tx++) {
+    if (!m.inside(tx, ty) || m.tiles[m.idx(tx, ty)] !== T.DOCK) continue;
+    for (const [dx, dy] of [[0, 1], [1, 0], [-1, 0], [0, -1]]) { const x = (tx + dx * 1.6 + 0.5) * TILE, y = (ty + dy * 1.6 + 0.5) * TILE; if (wcls(m, x, y) === 2 || wcls(m, x, y) === 3) return [x, y]; }
+  }
+  return null;
+}
+// A tidepool in a patch: a little pool of the sea's water cut off among the sand and the rocks (shared/naturesites.js
+// tidepools) - the patch the one its first tile is in - as a cell { k: 'tidepool', x, y (its middle) ... }, or null
+function tidepoolIn(m, cx, cy) {
+  const t0x = cx * 6, t0y = cy * 6, seen = new Set();
+  let best = null;
+  for (let ty = t0y; ty < t0y + 6; ty++) for (let tx = t0x; tx < t0x + 6; tx++) {
+    if (!m.inside(tx, ty)) continue;
+    const i0 = m.idx(tx, ty);
+    if (seen.has(i0) || m.tiles[i0] !== T.WATER || (m.lake && m.lake[i0]) || (m.river && m.river[i0])) continue;
+    // its water, out to 16 tiles: a pool if it's all there is (closed in)
+    const q = [[tx, ty]], got = [];
+    seen.add(i0);
+    let open = false;
+    while (q.length && !open) {
+      const [x, y] = q.pop();
+      got.push([x, y]);
+      if (got.length > 16) { open = true; break; }
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const X = x + dx, Y = y + dy;
+        if (!m.inside(X, Y)) { open = true; break; }
+        const j = m.idx(X, Y), t = m.tiles[j];
+        if ((t === T.WATER || t === T.DEEP) && !seen.has(j)) { seen.add(j); q.push([X, Y]); }
+      }
+    }
+    if (open || got.length < 2) continue;
+    // (the pool is this patch's if its first tile - the topmost, then leftmost - is in it)
+    const first = got.reduce((a, b) => (b[1] < a[1] || (b[1] === a[1] && b[0] < a[0]) ? b : a));
+    if (first[0] < t0x || first[0] >= t0x + 6 || first[1] < t0y || first[1] >= t0y + 6) continue;
+    if (!best || got.length > best.length) best = got;
+  }
+  if (!best) return null;
+  let sx = 0, sy = 0;
+  for (const [x, y] of best) { sx += x; sy += y; }
+  const x = (sx / best.length + 0.5) * TILE, y = (sy / best.length + 0.5) * TILE, i = m.idx(Math.floor(x / TILE), Math.floor(y / TILE));
+  return { k: 'tidepool', c: 1, x, y, up: NaN, d: m.dist ? m.dist[i] : -1, shore: 0 };
 }
 // in one of the map's swimming pools (server/systems/fishing.js inPool: a pool's box, or its ring for a lazy river)
 const inPool = (m, x, y) => (m.pools || []).some((r) => (r.ring ? Math.abs(Math.hypot((x - r.ring.cx) / r.ring.rx, (y - r.ring.cy) / r.ring.ry) - 1) * Math.min(r.ring.rx, r.ring.ry) < r.ring.hw + 16 : x >= r.x - 16 && x < r.x + r.w + 16 && y >= r.y - 16 && y < r.y + r.h + 16));
@@ -259,6 +323,7 @@ function fishCover(S, b, u, v) {
 }
 function fishPx(S, vk, b, u, v) {
   if (S.jelly) return jellyPx(vk, u, v);
+  if (S.crab) return crabPx(S, vk, b, u, v);
   const part = fishCover(S, b, u, v);
   if (!part) return null;
   if (vk < 0) { OUT.c = BLACK; OUT.a = 255; return OUT; }
@@ -282,8 +347,20 @@ function fishPx(S, vk, b, u, v) {
     case 'bands': if (Math.abs(t - 0.66) < 0.09 || Math.abs(t - 0.36) < 0.08) col = S.mark; break;
     case 'scales': if (((Math.floor(u + L) + Math.floor(v + 9)) % 3) === 0 && t < 0.85) col = S.mark; break;
   }
-  if (t > 0.86 && r < 0.6 && !S.flash) col = S.back;   // (the head: the back's colour)
+  if (t > 0.86 && r < 0.6 && !S.flash) col = S.head || S.back;   // (the head: the back's colour, a salmon's green)
   OUT.c = col; return OUT;
+}
+// a shore crab from above: its shell broad across (v), the claws forward (+u), three legs a side stepping (b) - drawn
+// turned a quarter round, so it goes sideways (draw)
+function crabPx(S, vk, b, u, v) {
+  const sh = (u / 2.3) ** 2 + (v / 3) ** 2 <= 1, claw = u > 1.8 && u < 3.6 && Math.abs(Math.abs(v) - 1.7) < 0.9;
+  let leg = false;
+  for (const lu of [-1.4, 0, 1.4]) for (const sd of [-1, 1]) { const off = lu + b * 0.5 * sd * (lu === 0 ? -1 : 1); if (Math.abs(u - off - (Math.abs(v) - 3) * 0.3) < 0.5 && Math.abs(v) > 2.6 && Math.abs(v) < 4.4) leg = true; }
+  if (!sh && !claw && !leg) return null;
+  OUT.a = 255;
+  if (vk < 0) { OUT.c = BLACK; return OUT; }
+  OUT.c = claw ? S.fin : leg ? S.fin : (u / 2.3) ** 2 + (v / 3) ** 2 < 0.4 ? S.back : S.side;
+  return OUT;
 }
 // a moon jelly, its bell beating (vk the frame: 0 open .. 2 shut): see-through, a pale rim, its four rings
 const JELLY = [hex('#f4eefa'), hex('#d8cce8'), hex('#d48cc0')];
@@ -297,13 +374,13 @@ function jellyPx(vk, u, v) {
   OUT.c = JELLY[1]; OUT.a = 150; return OUT;
 }
 // a fish flat on the water as a decal: facing +x, its middle the anchor
-function fishSprite(S, vk, b) {
+export function fishSprite(S, vk, b) {
   const w = S.L + 2, h = S.W + 2 * (Math.ceil(S.bend * 1.3) + 1), G = gb(w, h, w / 2, h / 2);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const o = fishPx(S, vk, b, x + 0.5 - w / 2, y + 0.5 - h / 2); if (o) px(G, x, y, o.c, o.a); }
   return G;
 }
 // a fish in the air (leaping): a sprite of its own, facing one of eight ways, bright in the light
-function leapSprite(S, vk, d8) {
+export function leapSprite(S, vk, d8) {
   const n = S.L + 4, G = gb(n, n, n / 2, n / 2), a = d8 * Math.PI / 4, c = Math.cos(a), s = Math.sin(a);
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
     const X = x + 0.5 - n / 2, Y = y + 0.5 - n / 2, o = fishPx(S, vk, 0, X * c + Y * s, -X * s + Y * c);
@@ -418,12 +495,12 @@ export class WaterLife {
       const s = sp === 'reef' ? REEF_MIX[Math.floor(hh(cx * 3 + j, cy, 17) * REEF_MIX.length)] : sp, S = SP[s];
       let x = c.x, y = c.y;
       for (let t = 0; t < 10; t++) {
-        const ang = hh(cx, cy * 7 + j, 300 + t) * TAU, r = (0.2 + 0.8 * hh(cx * 5 + j, cy, 400 + t)) * (S0.beh === 'school' ? 40 : CELL * 0.5);
+        const ang = hh(cx, cy * 7 + j, 300 + t) * TAU, r = (0.2 + 0.8 * hh(cx * 5 + j, cy, 400 + t)) * (c.k === 'tidepool' ? 8 : S0.beh === 'school' ? 40 : CELL * 0.5);   // (a tidepool's: in it)
         const qx = c.x + Math.cos(ang) * r, qy = c.y + Math.sin(ang) * r;
         if (clearAt(m, qx, qy, c.c, 10)) { x = qx; y = qy; break; }
       }
       const f = this._newFish(s, S, x, y, c.c, g);
-      f.vk = s === 'koi' ? Math.floor(hh(cx * 11 + j, cy * 13, 5) * KOI.length) : 0;
+      f.vk = s === 'koi' ? (c.k === 'koi' ? Math.floor(hh(cx * 11 + j, cy * 13, 5) * KOI.length) : 3) : 0;   // (gone wild in a pond: a golden one)
       f.ox = (hh(cx, cy, 500 + j) - 0.5) * 34; f.oy = (hh(cx, cy, 600 + j) - 0.5) * 26;   // (its place in the shoal)
       if (S.beh === 'hold') { f.hx = x; f.hy = y; f.a = Number.isFinite(c.up) ? c.up : f.a; }
       g.fish.push(f);
@@ -519,7 +596,8 @@ export class WaterLife {
         if (g.feed && this.rnd() < 0.85) { const a = this.rnd() * TAU, r = 6 + this.rnd() * 30; f.ax = g.feed.x + Math.cos(a) * r; f.ay = g.feed.y + Math.sin(a) * r; f.tv = S.cruise * (0.7 + this.rnd() * 0.6); }
         else if (this.rnd() < 0.25) { f.ax = f.x + Math.cos(f.a) * 4; f.ay = f.y + Math.sin(f.a) * 4; f.tv = 0; }
         else {
-          for (let t = 0; t < 6; t++) { const a = this.rnd() * TAU, r = 20 + this.rnd() * S.leash, x = f.hx + Math.cos(a) * r, y = f.hy + Math.sin(a) * r; if (clearAt(m, x, y, f.c, 12)) { f.ax = x; f.ay = y; break; } }
+          const pool = g.c.k === 'tidepool';   // (in a tidepool: about its middle - the sea a stride off beyond the sand is not its water)
+          for (let t = 0; t < 6; t++) { const a = this.rnd() * TAU, r = (pool ? 2 : 20) + this.rnd() * S.leash, x = (pool ? g.c.x : f.hx) + Math.cos(a) * r, y = (pool ? g.c.y : f.hy) + Math.sin(a) * r; if (clearAt(m, x, y, f.c, pool ? 4 : 12)) { f.ax = x; f.ay = y; break; } }
           f.tv = S.cruise * (0.5 + this.rnd() * 0.8);
         }
       }
@@ -527,6 +605,7 @@ export class WaterLife {
       if (hiding) f.tv *= 0.6;
       // too far from its patch: back
       if (S.beh !== 'school' && Math.hypot(f.x - f.hx, f.y - f.hy) > S.leash * 1.3) f.tA = Math.atan2(f.hy - f.y, f.hx - f.x);
+      if (g.c.k === 'tidepool' && Math.hypot(f.x - g.c.x, f.y - g.c.y) > 20) { f.tA = Math.atan2(g.c.y - f.y, g.c.x - f.x); f.tv = Math.min(f.tv, S.cruise); }
     }
     // turning, the speed, the water ahead
     const tr = (f.st === DART ? 9 : S.turn) * dt, d = angd(f.tA, f.a);
@@ -567,6 +646,13 @@ export class WaterLife {
   // a leap: out over the water ahead, if it comes down in the water
   _leap(m, f, now) {
     const S = f.S, T0 = 0.42 + S.L * 0.02, sp = 55 + S.L * 4, c = Math.cos(f.a), s = Math.sin(f.a);
+    f.airBack = null;
+    if (S.climb && f.g && f.g.c.k === 'falls') {   // (a salmon at the falls: up at the white water - and back down into the pool)
+      f.air = now; f.airT = 0.7 + this.rnd() * 0.25; f.airV = 0; f.airBack = { x: f.x, y: f.y, r: 18 + this.rnd() * 16 };
+      this._ring(f.x, f.y, 5, 0.9);
+      if (this.onSplash) this.onSplash(f.x, f.y, 4);
+      return true;
+    }
     if (!clearAt(m, f.x + c * sp * T0, f.y + s * sp * T0, f.c, 8)) return false;
     f.air = now; f.airT = T0; f.airV = sp;
     this._ring(f.x, f.y, 5, 0.9);
@@ -574,8 +660,9 @@ export class WaterLife {
     return true;
   }
   _airStep(m, f, now, dt) {
-    const k = (now - f.air) / f.airT;
-    f.x += Math.cos(f.a) * f.airV * dt; f.y += Math.sin(f.a) * f.airV * dt;
+    const k = (now - f.air) / f.airT, B = f.airBack;
+    if (B) { const o = Math.sin(Math.min(1, k) * Math.PI) * B.r; f.x = B.x + Math.cos(f.a) * o; f.y = B.y + Math.sin(f.a) * o; }
+    else { f.x += Math.cos(f.a) * f.airV * dt; f.y += Math.sin(f.a) * f.airV * dt; }
     if (k >= 1) {
       f.air = -1; f.hide = now + 2.5; f.v = f.S.cruise;
       this._ring(f.x, f.y, 7, 1); this._ring(f.x, f.y, 4, 0.7);
@@ -703,14 +790,14 @@ export class WaterLife {
       if (S.deep || f.air >= 0 || !sh || f.vis <= 0) continue;
       const fr = FR[Math.floor(f.ph * 4) & 3], key = conv(`wlf|${f.s}|-1|${fr}`, () => fishSprite(S, -1, BEND[fr]));
       const dep = S.jelly ? 9 : 5;
-      if (key) E.drawDecal(key, f.x + e.sx * dep, f.y + e.sy * dep + FISH_Z, f.a, Math.min(0.45, 0.24 * day * sh * f.vis * rainK), FISH_Z);
+      if (key) E.drawDecal(key, f.x + e.sx * dep, f.y + e.sy * dep + FISH_Z, S.crab ? f.a + Math.PI / 2 : f.a, Math.min(0.45, 0.24 * day * sh * f.vis * rainK), FISH_Z);
     }
     for (const f of this.fish) {
       const S = f.S;
       if (f.vis <= 0) continue;
       if (f.air >= 0) {
         // in the air: the fish itself, up over the water, its shadow down on it
-        const k = Math.min(1, (now - f.air) / f.airT), z = Math.sin(k * Math.PI) * (8 + S.L * 1.2), d8 = ((Math.round(f.a / (Math.PI / 4)) % 8) + 8) % 8;
+        const k = Math.min(1, (now - f.air) / f.airT), z = Math.sin(k * Math.PI) * (8 + S.L * 1.2) * (f.airBack ? 1.7 : 1), d8 = ((Math.round(f.a / (Math.PI / 4)) % 8) + 8) % 8;   // (a salmon at the falls: higher, up the white water)
         const key = conv(`wlj|${f.s}|${f.vk}|${d8}`, () => leapSprite(S, S.flash ? 1 : f.vk, d8));
         if (key && E.drawSprite) { const o = this.jo || (this.jo = { alpha: 1, flipX: false, flash: 0, xray: false, shadow: true, tint: null, air: true }); E.drawSprite(key, f.x, f.y, z, o); }
         continue;
@@ -720,7 +807,7 @@ export class WaterLife {
       if (al <= 0.02) continue;
       const fr = S.jelly ? Math.floor(f.ph * 3) % 3 : FR[Math.floor(f.ph * 4) & 3], vk = S.jelly ? fr : S.flash ? (f.flash > 0.5 ? 1 : 0) : f.vk;
       const key = S.jelly ? conv(`wlf|jelly|${fr}|0`, () => fishSprite(S, fr, 0)) : spr(S, f.s, vk, fr);
-      if (key) E.drawDecal(key, f.x, f.y + FISH_Z, f.a, al, FISH_Z);
+      if (key) E.drawDecal(key, f.x, f.y + FISH_Z, S.crab ? f.a + Math.PI / 2 : f.a, al, FISH_Z);   // (a crab: sideways)
     }
     // the rings spreading on the water
     const R = this.rings;

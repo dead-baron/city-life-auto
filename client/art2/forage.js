@@ -27,6 +27,10 @@ const M = {
   black: R5('#3a2244', { light: 0.5 }), rasp: R5('#c83050'), herb: R5('#5a8a3a', { light: 0.5 }), honey: R5('#e8a020', { light: 0.6 }),
   wicker: R5('#a8682e', { light: 0.5 }), sack: R5('#d8c8a6', { dark: 0.45 }), soil: MAT.soil, grass: MAT.grass, wood: R5('#6a4a30'), stone: R5('#8a8890', { light: 0.45 }),
   sand: ramp('#dcc29a', 4, 2), moss: R5('#5a7e2e'), white: [244, 240, 232], ink: [52, 34, 44], gold: [240, 214, 120],
+  // Nature-D1's finds
+  truff: R5('#3a2c26', { light: 0.45 }), marble: R5('#d8c8b0', { dark: 0.5 }), geo: R5('#8a7a6a', { light: 0.5 }), ame: R5('#9a52d8', { light: 0.65 }),
+  shale: R5('#5c5c64', { light: 0.45 }), print: R5('#b8aa92', { dark: 0.45 }), flint: R5('#a8a49a', { light: 0.6 }), pebble: R5('#8e8a86', { light: 0.5 }),
+  nug: R5('#e8b830', { light: 0.75 }), horn: R5('#dcc8a2', { dark: 0.45 }), plume: R5('#4a3424', { light: 0.5 }), rim: R5('#ece6f0'), quill: R5('#d8ccb4'),
 };
 const GLOW_V = [206, 112, 255], GLOW_B = [96, 176, 255], GLOW_G = [196, 224, 255];
 
@@ -183,6 +187,48 @@ const DRAW = {
     p.cap([11, 23.5], [10.4, 26.4], 1.1, 1.4, M.honey, { k: 0.66 });
     p.ell(10.2, 27, 3.2, 1.1, M.honey, { k: 0.6, flatN: true });
   },
+  // ---- Nature-D1: the wilds' finds ----
+  truffle(p) {   // two black truffles on the dug earth, one cut open (the marbling), the trowel's scrape
+    p.ell(16, 24.6, 10, 3.2, M.soil, { k: 0.45, pat: (u, v, x, y) => (hash(x, y, 4) > 0.75 ? 0.2 : 0) });
+    const warts = (u, v, x, y) => (hash(x, y, 6) > 0.6 ? 0.22 : hash(x, y, 7) > 0.85 ? -0.2 : 0);
+    p.ell(11.4, 19.6, 5.2, 4.6, M.truff, { k: 0.5, pat: warts });
+    p.ell(21.6, 21.2, 4.6, 4, M.truff, { k: 0.5, pat: warts });
+    p.ell(21.2, 20.6, 3.4, 2.8, M.marble, { k: 0.55, flatN: true, pat: (u, v, x, y) => (Math.abs(Math.sin(u * 7 + v * 5)) > 0.75 ? M.truff[1] : Math.hypot(u, v) > 0.84 ? M.truff[2] : 0) });
+  },
+  geode(p) {   // a round rock split open: the crust, the white rim, the violet crystals inside
+    const crust = (u, v, x, y) => (hash(x, y, 3) > 0.8 ? -0.18 : 0);
+    p.ell(10.4, 20.4, 7.2, 6.4, M.geo, { k: 0.5, pat: crust });
+    p.ell(10.6, 19.8, 5.2, 4.4, M.rim, { k: 0.66, flatN: true });
+    p.ell(10.6, 19.8, 4, 3.3, M.ame, { k: 0.55, flatN: true, pat: (u, v, x, y) => (hash(x, y, 5) > 0.6 ? 0.3 : Math.hypot(u, v) < 0.35 ? -0.3 : 0) });
+    p.ell(22.4, 21.6, 6.4, 5.8, M.geo, { k: 0.46, pat: crust });
+    p.ell(22.6, 21, 4.4, 3.8, M.rim, { k: 0.6, flatN: true });
+    p.ell(22.6, 21, 3.3, 2.8, M.ame, { k: 0.5, flatN: true, pat: (u, v, x, y) => (hash(x, y, 8) > 0.6 ? 0.3 : 0) });
+  },
+  fossil(p) {   // a slab of shale, its layers, a spiral (an ammonite) and a fern pressed in it
+    p.poly([[4, 18], [9, 12.6], [25.6, 12], [28.4, 19.4], [24, 26.6], [6.6, 26]], M.shale, { k: 0.5, bevel: 0.7, pat: (u, v) => (Math.round(v * 1.2) % 3 === 0 ? -0.14 : 0) });
+    for (let t = 0; t < 1; t += 0.02) { const a = t * 13, r = 0.6 + t * 4.4; p.dot(12 + Math.cos(a) * r, 19.4 + Math.sin(a) * r * 0.8, M.print[2 + (t > 0.5 ? 1 : 0)], { ol: false }); }
+    p.line([19, 24.6], [23.6, 14.6], M.print[2], { ol: false });
+    for (let k = 1; k < 7; k++) { const t = k / 7, x = 19 + 4.6 * t, y = 24.6 - 10 * t; for (const sd of [-1, 1]) p.line([x, y], [x + sd * 2.4 * (1 - t * 0.5), y + 0.8], M.print[1], { ol: false }); }
+  },
+  arrowhead(p) {   // an old stone point, its edges flaked, lying in the sand; the light catching it
+    p.poly([[16, 13], [21.4, 23.6], [17.6, 22.6], [16.6, 26.4], [15.4, 26.4], [14.4, 22.6], [10.6, 23.6]], M.flint, { k: 0.58, bevel: 0.8, pat: (u, v, x, y) => (hash(x, y, 4) > 0.7 ? 0.2 : (x + y) % 3 === 0 ? -0.12 : 0) });
+    p.dot(15.4, 16, M.white, { ol: false }); p.dot(16.4, 17, M.white, { ol: false });
+  },
+  goldGravel(p) {   // a creek's gravel bar: pebbles, wet sand, flecks of gold
+    p.ell(16, 24, 11, 3.6, M.sand, { k: 0.4 });
+    for (let i = 0; i < 12; i++) p.ell(6 + (i % 6) * 4 + hash(i, 1, 3) * 2, 21 + Math.floor(i / 6) * 3.4 + hash(i, 2, 3), 1.8, 1.3, M.pebble, { k: 0.4 + hash(i, 3, 3) * 0.3 });
+    for (let i = 0; i < 9; i++) p.dot(6 + hash(i, 4, 3) * 20, 20 + hash(i, 5, 3) * 7, M.nug[3 + (i % 2)], { ol: false, e: [255, 220, 120, 60] });
+    p.ell(20.4, 22.6, 1.4, 1.1, M.nug, { k: 0.7 });
+  },
+  antlerShed(p) {   // a shed antler lying in the grass: the beam curving, the tines up off it
+    for (let t = 0; t <= 1; t += 0.05) { const x = 6 + t * 20, y = 24 - Math.sin(t * Math.PI) * 5; p.ell(x, y, 1.6 - t * 0.6, 1.4 - t * 0.5, M.horn, { k: 0.55 }); }
+    for (const [t, l] of [[0.28, 6], [0.52, 7], [0.76, 5]]) { const x = 6 + t * 20, y = 24 - Math.sin(t * Math.PI) * 5; p.cap([x, y], [x + 1.6, y - l], 1, 0.5, M.horn, { k: 0.6 }); }
+    p.ell(5.6, 24.4, 2, 1.6, R5('#a8946e'), { k: 0.5 });   // (the burr where it came off)
+  },
+  eagleFeather(p) {   // a long dark feather, its pale quill, lying in the grass
+    p.ell(16, 19, 10.4, 2.6, M.plume, { a: -0.5, k: 0.5, pat: (u, v) => (Math.abs(v) < 0.14 ? M.quill[2] : u > 0.86 ? M.white : Math.round(u * 9) % 2 ? -0.1 : 0) });
+    p.line([5.4, 26], [8.6, 23.4], M.quill[2]);
+  },
   forageBasket(p) {
     p.ell(16, 15.2, 10.4, 3, M.wicker, { k: 0.3 });
     for (const [x, y] of [[11, 13.6], [15, 12.6], [19, 13.4]]) p.ell(x, y, 3, 1.8, M.leaf, { k: 0.55 });
@@ -225,6 +271,14 @@ export const FORAGE = {
   brambleBerries: T('Bramble Berries', ['forest', 'farm', 'wetland', 'park'], 'cook', 'none', ['bush', ONE(0.3)]),
   meadowHerbs: T('Meadow Herbs', ['garden', 'park', 'farm'], 'cook', 'none', ['grass', ONE(0.42)]),
   wildHoneycomb: T('Wild Honeycomb', ['forest', 'farm', 'garden'], 'sell', 'none', ['stump', ONE(0.34)]),
+  // Nature-D1: the wilds' finds (shared/foraging.js; the berries, herbs, honeycomb and river mussels drawn as above)
+  truffle: T('Black Truffle', ['forest'], 'restaurant', 'tuft', ['litter', ONE(0.42)]),
+  geode: T('Geode', ['desert', 'mountain'], 'sell', 'rocks', ['rock', ONE(0.44)]),
+  fossil: T('Fossil', ['desert'], 'sell', 'rocks', ['rock', ONE(0.46)]),
+  arrowhead: T('Old Arrowhead', ['desert'], 'sell', 'sand', ['sand', ONE(0.32)]),
+  goldGravel: T('Gold Flakes', ['creek'], 'sell', 'pebbles', ['sand', ONE(0.5)]),
+  antlerShed: T('Shed Antler', ['forest', 'mountain'], 'sell', 'tuft', ['grass', ONE(0.5)]),
+  eagleFeather: T('Eagle Feather', ['lake', 'mountain'], 'sell', 'tuft', ['grass', ONE(0.42)]),
   forageBasket: T('Forage Basket', ['town'], 'sell', 'none', ['none', ONE(0.42)], { carry: 8 }),
   forageSack: T('Forage Sack', ['town'], 'sell', 'none', ['none', ONE(0.4)], { carry: 5 }),
 };

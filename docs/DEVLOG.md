@@ -12196,3 +12196,131 @@ the side streets, every look its own, the skybridge between Mesa Grande and Casa
 test/world3mesa.test.js (the Strip a palm-median boulevard; every resort's drive loop, fountain and porte-cochere, the
 cabanas, the skybridge's span and towers, the median's palms and banner poles, the two car parks, the Neon Saguaro's
 cactus, the bus stops - and as before each resort's look, casino door, pools and palms).
+
+## 2026-10-20 · Nature: the hunters (Nature-A2) - animal against animal, and the animals that fish
+
+The first step of the nature program (`claude/nature-plan-2026-10-20.md`): the owner asked for "animals that catch fish
+(herons, bears...) and predators that hunt smaller wildlife (wolves, bears, cougars) - never pets", and drew all eight
+hunts in Nature-A2. Until now the predators hunted only players; the herons were props and the otter's fish a pose.
+
+`server/systems/wildlife.js`, "the hunt" (the kinds in `shared/fauna.js`: `hunts`, `fishes`, `mouses`, `soars`, `wader`):
+- **The hunters** (`hunts: { prey, how, r, spring, chase, p }`). At their ease, in their hours, not hurt and not fed
+  lately, they look about for something to hunt (huntCheck, every 5-11 s, the nearest - the young sooner). Three ways:
+  *ambush* - a mountain lion, a bobcat, a fox after a rabbit creeps up low at its stalking pace (APOSE.stalk), freezes
+  whenever its prey looks up from grazing, and springs from close in (the cat's pounce); seen and the prey off, it
+  gives up - a cat doesn't run it down. *chase* - a coyote trots in and runs a rabbit down for a few seconds. *pack* -
+  the wolves trot in together, fanning out to either side of it, and run it down for up to 12 s: a chased animal tires
+  after a few seconds' hard running (tired()), and slips away now and then (a stumble for the hunter, a bound on it).
+  The take is quick and clean as A2 draws it: the prey goes down where it was caught - no blood (`reactions.died`
+  'predator' and the death event's `nb`; `client/main.js` leaves no pool) - its carcass a poor hide (takenBy, grade 1);
+  the pack feeds on it, heads down; a small kill is gone once eaten, a deer left; then they lie up.
+- **The prey watch for their hunters** as they watch for people (`sense`: `PREDATORS_OF`): a pack trotting in is seen a
+  long way off, a lion creeping low and slow hardly at all; a bird of prey up soaring is no danger, one stooping is.
+- **Never** a pet (they aren't wild), the farms' livestock, the town ponds' tame ducks, a legend or a person (that's
+  still preyCheck: a lion or a bear, rarely, at night) - and never with anyone close by: nothing starts with a person
+  within 240 px of the hunter or its prey, and someone coming close puts a stop to it (or the hunter slinks off from
+  them, its temper). So a hunt is watched from a little way off, never in your face.
+- **The fishers** (`fishes: { how, p }`). The **heron** (new: the Great Blue Heron) walks into the shallows, stands
+  poised, the neck drawn back in an S, edges along a step or two, and spears one - a splash - now and then a fish held a
+  moment in its bill; between times it stands on the bank, and put up off the water it flies back to it. The **bears**
+  go down into the white water at the foot of a falls (`map.natureSites` falls, as `shared/ledges.js` reads them) or a
+  river's shallows, stand facing up into it and grab salmon. The **otter** paddles about, dives, and comes up with a fish
+  to eat out on the bank. The **osprey** (new) soars over the lake and drops into it feet first - the big splash - and
+  lifts off with a fish, carrying it away. The **bald eagle** (new) soars over open country, stoops on a rabbit, a
+  squirrel, a duck or a quail and carries it off (the prey taken away with it), and fishes like the osprey. The
+  **foxes** mouse in the long grass: still and listening, a leap nose first, now and then up with a mouse.
+- **New kinds**: the Grey Wolf (packs of 2-4 in the mountains, forest and meadows, a wolf pelt: `shared/items.js` wolfPelt,
+  the furs, and the White Wolf's legendary pelt), the Great Blue Heron (the marsh, ponds, lakes and creeks), the Osprey
+  (the lakes, rivers, marsh and the kelp coves) and the Bald Eagle (lakes, mountains, cliffs, meadows) - the three birds
+  protected like the sea otters (no buyer, the wardens' fine). `few` caps a kind round a player (one osprey, one eagle,
+  two herons, a pack). The birds of prey live up in the air (state soar: circling over their country, the circle moving
+  on, never far from where they came).
+- New poses (fauna.js APOSE, the wire's 5 bits): strike 23, fish 24, carryFish 25, carryGame 26, soar 27, stoop 28,
+  pounce 29.
+- Dev (`server/dev.js` animal { scene }, the debug menu's Hunting & wildlife): wolves on a deer, a lion on a deer, an
+  eagle on a rabbit, a fox mousing, a heron, a bear, an otter fishing, an osprey diving - set up a little way ahead (east
+  or west first, across the screen), the watcher unnoticed by what it set up (`watchedBy`) so it plays out in front of
+  them. And the wolf pack, the heron, the osprey and the eagle to spawn.
+
+The art (`client/art2/birds.js`, `animals.js`; `game/actors.js` ANIMAL_FRAMES and the poses' options; `game/host.js`
+wildPose): the heron in the bird rig (long legs, the S of its neck - deep across, or the character view's steep look
+skips it - the black crest, the yellow dagger; poised, stalking, the strike, the fish in its bill, all of them stood in
+the shallows too - the model cut at the waterline - and in flight with the neck folded and the legs trailing); the
+osprey and the eagle (broad fingered wings and a hooked bill, the osprey's eye stripe, the eagle's white head and tail;
+soaring, stooping with the talons out, in the water after a fish with the wings up, a fish or a rabbit in the talons;
+the big birds' wings in two flat tones so no lit stripes run along them; up in the air seen more from above - fy 0.72 -
+so the spread reads, drawn high over their shadows: HIGH); the grey wolf in the four-legged rig (grizzled, a darker
+saddle, the pale face and legs); a salmon in a bear's jaws (on the bank or in the white water, and the swipe there), a
+mouse in a fox's. Previews: `tools/art2/hunt-preview.html` (every pose), `tools/art2/hunt-scene.html` (the hunts staged
+at the game's scale and light).
+
+Budget: the renderer's code 372 -> 377 KB and the bake's 810 -> 816 KB for the hunters' art (374 and 814).
+
+Tests: test/predation.test.js - who hunts whom (the prey lists, the protected birds, the wolf pelt, the poses in 5
+bits); a wolf pack runs a deer down (in, fanned out, the rush, the take with no blood, a poor hide, the pack feeding); a
+lion creeps in at its stalking pace, freezes while the deer looks up and springs from close in; a deer bolts from a wolf
+coming in but not from a pack lying up far off; never a legend or a tame duck, never with someone standing by, a hunt
+given up when you walk up; a bear in the white water under the falls with its salmon; a heron's strikes and its fish,
+an otter's dive and its fish eaten on the bank; an osprey's splash and its fish, carried off; an eagle stooping on a
+rabbit and carrying it away; a fox's pounce and its mouse; a heron shot brings the wardens' fine.
+
+## 2026-10-20 · Nature: fish you can see in every water (Nature-A1)
+
+The nature program's "fish in every natural water: ponds, streams, lakes, tidepools", from the five panels of
+Nature-A1 (`client/art2/game/waterlife.js`; the trout holding in a creek's current, the carp in the murky ponds and the
+bluegill and bass were there already):
+- **Salmon at the falls**: the white water at a falls' foot is its own water ('falls': within its width and ~150 px
+  below it) - sockeye salmon, spawning red with the green head, holding there facing up into the falls, and now and then
+  one leaps at it - up the white water and back down into the pool (the leap higher than a lake fish's, a splash going
+  up and coming down). A trout or two among them. (The bears fish there: Nature-A2.)
+- **Under the docks**: a dock out over a lake or a pond keeps a shoal of bluegill and a bass or two among its piles
+  ('dock': their patch the water beside it).
+- **A golden koi gone wild** now and then among a wild pond's carp and bluegill.
+- **The tidepools** (`shared/naturesites.js`'s little pools of the sea's water cut off in the sand and the rocks, found by
+  their tiles - closed in, 2-16 of them): a sculpin or two and a shore crab that scuttles sideways over the bed (drawn
+  turned a quarter round), kept about the pool's middle - the sea a stride off beyond the sand is not their water. The
+  starfish, urchins and anemones were there (the sites' props).
+
+Tests: test/waterlife.test.js - the salmon at a falls facing up into it, leaping at it and back in the pool; the
+bluegill round a dock; a tidepool's sculpin and crab in its water and about its middle.
+
+## 2026-10-20 · Nature: the wilds' finds (Nature-D1)
+
+The nature program's "natural finds, with a value table" from the Nature-D1 sheet. Eleven new things to find out in the
+wild country (`shared/foraging.js` kinds; laid out with the map by `shared/map.js` `naturalFinds`; picked in
+`server/systems/foraging.js`; drawn in `client/art2/forage.js`), each where it belongs and each worth the trip:
+
+| Find | Where | Takes | Worth (who buys) |
+|---|---|---|---|
+| Wild berries | the woods' edges, the meadows, the farms' hedgerows | - | $4 (the market) |
+| Wild herbs | the open meadows and the high ones | - | $7 (the market) |
+| Wild honeycomb | in an old tree in the woods - the bees sting by day | - | $28 (the market) |
+| Black truffle | under the trees of the woods | a trowel | $160 (the market) |
+| Geode / amethyst geode | the rock of the desert's canyons and the peaks | a pickaxe | $60 / $240 (assay office, pawn) |
+| Fern fossil / ammonite | the shale of the desert's rock | a pickaxe | $70 / $130 (pawn) |
+| Old arrowhead | the desert's sand and washes | - | $45 (pawn) |
+| River mussels / a pearl | a river's shallows | - | $3 / $210 (market / pawn) |
+| Gold flakes / a nugget | a creek's gravel bar | a gold pan | $16 / $90 (assay office, pawn) |
+| Shed antler | the woods' floor and the high meadows | - | $30 (the lodges, the trappers) |
+| Eagle feather | by the lakes and the cliffs, rarely | - | protected: nobody buys it - it fletches arrows |
+
+- **Laid out with the map**, deterministic: one look per 14-tile cell (the cell's hashes, no random stream), out in the
+  wild, rural and desert districts only, on grass, dirt or sand, never within two tiles of a road, a path, a field, a
+  dock or anything built. The rock is the walls and cliffs and the boulders', outcrops' and mesas' boxes; a creek is
+  water a few strides across, a river wider. Some 2,300 across World v3's wilds (Highland Woods' berries, antlers,
+  truffles and hives; Red Rock Desert's arrowheads, geodes and fossils; Granite Peaks' herbs, berries and geodes; gold
+  on the creeks; about 90 on the old map). The desert is wide, so its arrowheads are rarer than they'd look.
+- **Picking**: stand by one and press the action button. A find that takes a tool says so ("You need a garden trowel");
+  the rare one now and then instead (the amethyst geode, the ammonite), the extra now and then as well (a pearl in the
+  mussels, a nugget in the pan). Taking a hive's comb by day, the bees may sting - a little hurt, never to death; at
+  night they're slow. Then the spot is bare for everyone until it grows back or another turns up
+  (`FORAGE_REGROW_S`: the bushes and meadows in 8 minutes, the river beds 15, a hive 25, a truffle 30, the rock's finds
+  50, an arrowhead or a feather an hour).
+- **The tools**: the garden trowel ($25) and the gold pan ($45) at the hardware store, the lodges and the hunting camps;
+  any pickaxe does for the rock.
+
+Tests: test/finds.test.js - every find has its item, its drawing, its regrowth, its tool and a buyer (the eagle's
+feather none, and it fletches); laid out across the wilds, each where it belongs, never on a road or anything built, all
+spread out; a truffle wants a trowel, a geode a pickaxe, the rare and the extra turn up, the bees sting but never kill.
+(test/foraging.test.js: the regrown mushroom checked by the spot's own prompt - a lost pet that wandered up in the
+meantime took the button first, now and then.)

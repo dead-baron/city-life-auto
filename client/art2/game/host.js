@@ -84,6 +84,8 @@ const petHop = (t, id) => { const k = (t * 2.4 + id * 0.37) % 1; return k < 0.55
 // reared, charging, stalking low, bedded down, head down feeding, head up and alert; else by its speed. Dead: on its
 // side (a bird with a wing out).
 const BEARS = new Set(['blackbear', 'grizzly']), CATS = new Set(['cougar', 'bobcat']);
+// how high a bird of prey is drawn above its shadow (px): soaring high, carrying its catch off lower, stooping down at it
+const HIGH = { soar: 74, carryfish: 46, carrygame: 46, stoop: 20 };
 // the art kind of an animal ('pet:<kind>' on the wire): a covey's two adult quail (a pair of mallards) spawn one after
 // the other, so the odd id is drawn as the hen (birds.js ':f') and the even one as the cock (the drake)
 const HENS = new Set(['quail', 'duck']);
@@ -94,6 +96,20 @@ function wildPose(p, S2, base, sp, now, M) {
   if (p.hitAt !== undefined && now - p.hitAt < 0.3 && !S2.bird) return 'hit';   // (the flinch as the hit lands - AN7)
   const ap = (p.extra || 0) & 31;
   if (ap === APOSE.fly) return 'fly';
+  // the hunt (Nature-A2): a bird of prey up soaring, stooping, carrying off its catch, in the water after a fish; a heron
+  // on the bank or in the shallows - poised, stalking, striking, a fish in its bill; a bear's grab and its salmon (in the
+  // white water under a falls); a fox's leap into the long grass and its mouse
+  if (S2.soars) { if (ap === APOSE.soar) return 'soar'; if (ap === APOSE.stoop) return 'stoop'; if (ap === APOSE.carryFish) return 'carryfish'; if (ap === APOSE.carryGame) return 'carrygame'; if (ap === APOSE.dive) return 'plunge'; }
+  if (S2.wader) {
+    const wd = !!p.swim;
+    if (ap === APOSE.strike) return wd ? 'wstrike' : 'strike';
+    if (ap === APOSE.fish) return wd ? 'wfish' : 'fishbill';
+    if (ap === APOSE.stalk) return sp > 6 ? (wd ? 'wade' : 'stalk') : wd ? 'wpoised' : 'poised';
+    if (wd) return sp > 6 ? 'wade' : 'wstand';
+  }
+  if (ap === APOSE.strike) return p.swim ? 'wadeswipe' : 'swipe';
+  if (ap === APOSE.fish) return p.swim && !S2.swims ? 'wadecatch' : 'catch';
+  if (ap === APOSE.pounce) return 'pounce';
   if (p.swim && !S2.bird && !S2.swims && M && shallows(M, p.rx, p.ry)) return ap === APOSE.drink && sp <= 12 ? 'wadedrink' : 'wade';   // (AN5: a deer, a moose in the shallows - the legs in the water to the knees)
   if (p.swim && ap === APOSE.dive && !S2.bird) return 'dive';   // (AN5: going under, the tail up)
   if (p.swim && S2.bird && ap === APOSE.dabble && sp <= 12) return 'dabble';   // (a duck up-ended, feeding)
@@ -1362,7 +1378,7 @@ export class World2 {
         return;
       }
     }
-    const rate = pose === 'run' ? 14 : pose === 'limp' ? 6 + sp / 20 : pose === 'fly' ? (S2 && S2.size === 'medium' ? 7 : 11) : pose === 'walk' ? 8 : pose === 'stalk' ? 5 : pose === 'idle' ? (happy ? 12 : 3) : pose === 'swim' ? 2.5 : 1.5;   // (happy: the tail wagging nineteen to the dozen)
+    const rate = pose === 'run' ? 14 : pose === 'limp' ? 6 + sp / 20 : pose === 'fly' ? (S2 && S2.size === 'medium' ? 7 : 11) : pose === 'walk' ? 8 : pose === 'stalk' ? 5 : pose === 'idle' ? (happy ? 12 : 3) : pose === 'swim' ? 2.5 : pose === 'plunge' ? 7 : pose === 'catch' || pose === 'wadecatch' ? 4 : 1.5;   // (happy: the tail wagging nineteen to the dozen)
     const fr = pose === 'dead' || (pose === 'lie' && p.flags & PF.DEAD) ? 0 : Math.floor(now * rate + p.id) % n;
     let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null;
@@ -1373,8 +1389,8 @@ export class World2 {
     // up in the air (a bird in flight: its shadow on the ground below), up a trunk (a squirrel), or a happy pet's hops
     // (up at its owner standing, a bounce in its stride racing round them: its shadow stays on the ground)
     const hop = happy ? (pose === 'idle' ? petHop(now, p.id) : pose === 'run' || pose === 'walk' ? petHop(now * 1.6, p.id) * 0.35 : 0) : 0;
-    const up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : hop;
-    o.air = pose === 'fly' || hop > 0.5;
+    const up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : HIGH[pose] ? HIGH[pose] + Math.sin(now * 0.9 + p.id) * (pose === 'soar' ? 6 : 2) : hop;
+    o.air = pose === 'fly' || hop > 0.5 || !!HIGH[pose];
     if (p.hitAt !== undefined && now - p.hitAt < 0.12) o.flash = 0.6;   // (hit: a white flash, like people)
     E.drawSprite(sk, p.rx, p.ry, this._z0(p, false) + up, o); this.n.drawn++;
     o.air = false;

@@ -769,7 +769,7 @@ function onEvent(ev) {
         fx.sparks(ev.x, ev.y, 10); for (let k = 0; k < 4; k++) fx.smoke(ev.x, ev.y, false);
         fx.ring(ev.x, ev.y, 22, 'rgba(255,170,90,', 0.35);
         if (e) e.smokeUntil = S.loopClock + 5;
-      } else fx.decal(5, ev.x - Math.cos(ev.a) * 4, ev.y - Math.sin(ev.a) * 4, ev.a, 14, '#6a0a10', now, 0.9);
+      } else if (!ev.nb) fx.decal(5, ev.x - Math.cos(ev.a) * 4, ev.y - Math.sin(ev.a) * 4, ev.a, 14, '#6a0a10', now, 0.9);   // (nb: taken by a hunter in the wilds - no blood: server wildlife.js the hunt)
       break;
     }
     // blades (server combat.js melee): a killing blow that's a finisher - a stab (a deep thrust) or a slash (a long cut

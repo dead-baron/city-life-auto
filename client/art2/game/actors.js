@@ -305,7 +305,15 @@ export function vehicleLights(d) {
 // otter on its back), climb 2 (a squirrel on a trunk), dead 1 (on its side); the game birds: peck 2, fly 4 (the
 // wingbeat), swim 2, alert 1, dead 1, dabble 2 (a duck up-ended on the water, feeding: its tail up, its feet paddling).
 const PET_ART = { dog_golden: 'golden', dog_retriever: 'golden', dog_black: 'lab', dog_spaniel: 'spaniel', dog_pup: 'puppy', cat_black: 'catBlack', cat_grey: 'catTabby', cat_ginger: 'catGinger' };
-export const ANIMAL_FRAMES = { idle: 4, walk: 4, run: 4, sit: 2, lie: 2, graze: 2, alert: 1, stalk: 4, rear: 2, swim: 2, float: 2, climb: 2, dead: 1, peck: 2, fly: 4, cutA: 1, cutB: 1, hit: 1, limp: 4, down: 2, fall: 2, drink: 2, wade: 4, wadedrink: 2, strut: 2, swipe: 2, pounce: 2, crouch: 2, dive: 1, eatfish: 2, dabble: 2 };   // (strut, swipe: AN2; pounce, crouch: AN4)   // (hit, limp, down, fall: AN7; drink, wade: AN5)
+export const ANIMAL_FRAMES = { idle: 4, walk: 4, run: 4, sit: 2, lie: 2, graze: 2, alert: 1, stalk: 4, rear: 2, swim: 2, float: 2, climb: 2, dead: 1, peck: 2, fly: 4, cutA: 1, cutB: 1, hit: 1, limp: 4, down: 2, fall: 2, drink: 2, wade: 4, wadedrink: 2, strut: 2, swipe: 2, pounce: 2, crouch: 2, dive: 1, eatfish: 2, dabble: 2,
+  // Nature-A2, the hunt: a heron's strike, its fish, poised over the water (w...: the same stood in the shallows); a
+  // bird of prey soaring, stooping, carrying off its catch, in the water after a fish; a bear's salmon (a fox's mouse)
+  // and its grab in the white water
+  strike: 1, wstrike: 1, fishbill: 1, wfish: 1, poised: 1, wpoised: 1, wstand: 1, soar: 2, stoop: 1, carryfish: 2, carrygame: 2, plunge: 2, catch: 2, wadecatch: 2, wadeswipe: 2 };   // (strut, swipe: AN2; pounce, crouch: AN4)   // (hit, limp, down, fall: AN7; drink, wade: AN5)
+const MOUSERS = new Set(['redfox', 'greyfox', 'coyote']);
+const AIRP = new Set(['soar', 'stoop', 'carryfish', 'carrygame']), BIG_FLIERS = new Set(['heron', 'osprey', 'eagle']);   // (a catch in the jaws: a mouse; the others' is a fish)
+// the bird poses of the hunt (birds.js birdModel options)
+const BIRD_HUNT = { strike: { pose: 'strike' }, wstrike: { pose: 'strike', wade: 1 }, fishbill: { pose: 'fishbill' }, wfish: { pose: 'fishbill', wade: 1 }, poised: { pose: 'poised' }, wpoised: { pose: 'poised', wade: 1 }, wstand: { pose: 'stand', wade: 1 }, stoop: { pose: 'stoop' } };
 export function animalKind(kind) {
   let k = String(kind ?? '');
   if (k.startsWith('pet:')) k = k.slice(4);
@@ -327,18 +335,24 @@ export function animalSprite(kind, pose = 'idle', dir8 = 0, frame = 0) {
   const k = animalKind(kind), p = animPose(pose), n = ANIMAL_FRAMES[p], f = (((frame | 0) % n) + n) % n;
   const bird = !!BIRDS[k.split(':')[0]];
   let o;
-  if (bird) o = p === 'walk' ? { phase: f / n, gait: 'walk' } : p === 'run' ? { phase: f / n, gait: 'run' } : p === 'fly' ? { pose: 'fly', phase: f / n } : p === 'graze' || p === 'peck' ? { pose: 'peck' } : p === 'swim' || p === 'float' ? { pose: 'swim' } : p === 'dead' || p === 'lie' || p === 'down' || p === 'fall' ? { pose: 'dead' } : p === 'alert' || p === 'hit' ? { pose: 'alert' } : p === 'limp' ? { phase: f / n, gait: 'walk' } : p === 'strut' ? { pose: 'strut', phase: f / n } : p === 'dive' ? { pose: 'swim' } : p === 'eatfish' ? { pose: 'peck' } : p === 'pounce' ? { phase: f / n, gait: 'run' } : p === 'drink' || p === 'wadedrink' ? { pose: 'peck' } : p === 'wade' ? { pose: 'swim' } : p === 'dabble' ? { pose: 'dabble', phase: f / n } : { pose: 'stand' };
+  if (bird && BIRD_HUNT[p]) o = BIRD_HUNT[p];
+  else if (bird && (p === 'soar' || p === 'carryfish' || p === 'carrygame' || p === 'plunge' || p === 'stalk' || p === 'wade')) o = p === 'stalk' ? { pose: 'stalk', gait: 'walk', phase: f / n } : p === 'wade' ? { gait: 'walk', phase: f / n, wade: 1 } : { pose: p === 'plunge' ? 'plunge' : 'soar', phase: f / n, carry: p === 'carryfish' ? 'fish' : p === 'carrygame' ? 'game' : null };
+  else if (bird) o = p === 'walk' ? { phase: f / n, gait: 'walk' } : p === 'run' ? { phase: f / n, gait: 'run' } : p === 'fly' ? { pose: 'fly', phase: f / n } : p === 'graze' || p === 'peck' ? { pose: 'peck' } : p === 'swim' || p === 'float' ? { pose: 'swim' } : p === 'dead' || p === 'lie' || p === 'down' || p === 'fall' ? { pose: 'dead' } : p === 'alert' || p === 'hit' ? { pose: 'alert' } : p === 'limp' ? { phase: f / n, gait: 'walk' } : p === 'strut' ? { pose: 'strut', phase: f / n } : p === 'dive' ? { pose: 'swim' } : p === 'eatfish' ? { pose: 'peck' } : p === 'pounce' ? { phase: f / n, gait: 'run' } : p === 'drink' || p === 'wadedrink' ? { pose: 'peck' } : p === 'dabble' ? { pose: 'dabble', phase: f / n } : { pose: 'stand' };
   else o = p === 'walk' ? { phase: f / n, wag: f / n } : p === 'run' ? { phase: f / n, gait: 'run', pant: 1 } : p === 'sit' ? { pose: 'sit', wag: f * 0.25, pant: 1 }
     : p === 'lie' ? { pose: 'lie', wag: f * 0.2 } : p === 'graze' || p === 'peck' ? { pose: 'graze', wag: f * 0.25 } : p === 'stalk' ? { pose: 'stalk', phase: f / n }
       : p === 'alert' ? { pose: 'alert' } : p === 'rear' ? { pose: 'rear', wag: f * 0.3 } : p === 'swim' ? { pose: 'swim', phase: f / n } : p === 'float' ? { pose: 'float' }
         : p === 'climb' ? { pose: 'climb' } : p === 'dead' ? { pose: 'dead' } : p === 'fly' ? { gait: 'run', phase: f / n }
-          : p === 'hit' ? { pose: 'hit' } : p === 'limp' ? { pose: 'limp', phase: f / n } : p === 'down' ? { pose: 'down', wag: f * 0.2 } : p === 'fall' ? { pose: 'fall', phase: f / n } : p === 'drink' ? { pose: 'drink', wag: f * 0.25 } : p === 'wade' ? { pose: 'wade', phase: f / n } : p === 'wadedrink' ? { pose: 'wadedrink', wag: f * 0.25 } : p === 'swipe' ? { pose: 'swipe', phase: f / n } : p === 'pounce' ? { pose: 'pounce', phase: f / n } : p === 'dive' ? { pose: 'dive' } : p === 'eatfish' ? { pose: 'eatfish', wag: f } : p === 'crouch' ? { pose: 'stalk', wag: f * 0.4 } : { wag: f * 0.22, pant: f >> 1 };
+          : p === 'hit' ? { pose: 'hit' } : p === 'limp' ? { pose: 'limp', phase: f / n } : p === 'down' ? { pose: 'down', wag: f * 0.2 } : p === 'fall' ? { pose: 'fall', phase: f / n } : p === 'drink' ? { pose: 'drink', wag: f * 0.25 } : p === 'wade' ? { pose: 'wade', phase: f / n } : p === 'wadedrink' ? { pose: 'wadedrink', wag: f * 0.25 } : p === 'swipe' ? { pose: 'swipe', phase: f / n } : p === 'pounce' ? { pose: 'pounce', phase: f / n } : p === 'dive' ? { pose: 'dive' } : p === 'eatfish' ? { pose: 'eatfish', wag: f } : p === 'crouch' ? { pose: 'stalk', wag: f * 0.4 }
+            : p === 'catch' || p === 'wadecatch' ? { pose: p, prey: MOUSERS.has(k.split(':')[0]) ? 'mouse' : 'fish', wag: f } : p === 'wadeswipe' ? { pose: 'wadeswipe', phase: f / n } : { wag: f * 0.22, pant: f >> 1 };
   // (cut in two by the plasma blade: the dead body's two halves, the edges seared)
   const cut = p === 'cutA' || p === 'cutB';
   if (cut) o = { pose: 'dead' };
   const mk = cut ? 'dead' : p;
   const m = ANIMAL_MODELS.get(`${k}|${mk}|${p === mk ? f : 0}`, () => { const mm = bird ? birdModel(k, o) : animalModel(k, o); mm.bytes = mm.w * mm.d * mm.h * 17; return mm; });
-  const G = trimSprite(renderUpright(m, Math.PI / 2 + wrap8(dir8) * Math.PI / 4, { px: ART_PX }));
+  // (a bird of prey up in the air, a heron in flight: seen more from above - the wings' full spread - than the people's
+  // and the animals' character view on the ground)
+  const air = bird && (AIRP.has(p) || (p === 'fly' && BIG_FLIERS.has(k.split(':')[0])));
+  const G = trimSprite(renderUpright(m, Math.PI / 2 + wrap8(dir8) * Math.PI / 4, { px: ART_PX, ...(air ? { fy: 0.72 } : null) }));
   return cut ? cutGBuf(G, p === 'cutA' ? 'a' : 'b', 6) : G;
 }
 

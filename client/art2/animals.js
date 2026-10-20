@@ -18,6 +18,8 @@
 //     'eatfish' (AN5: an otter sat up on the bank, a fish crosswise in its jaws)
 //     'dive' (AN5: a swimmer going under, nose first - the rump and the tail up out of the water)
 //     AN4: 'pounce' (a cat's leap: off the ground, stretched out, the forepaws reaching (phase < 0.5) or about to land)
+//     Nature-A2: 'catch' (head up with its catch in its jaws: o.prey 'fish' - a bear's salmon - or 'mouse' - a fox's)
+//     'wadecatch' / 'wadeswipe' (the same, and the swipe, stood in the white water under a falls: the legs in the water)
 //     kind may carry a variant: 'deer:y' the young (smaller, a fawn's spots, no antlers), 'deer:L' the legendary
 //     pure white one (it glows faintly)
 //   renderUpright(vox, heading, { fy = 0.38, dither }) -> GBuf (anchor at the model centre on the ground)
@@ -54,6 +56,9 @@ export const ANIMALS = {
   rabbit: { len: 11, h: 7, w: 6.5, coat: '#9a7652', belly: '#f0e4d4', ears: 'rabbit', tail: 'puff', snout: 1.5, head: 3.6, jl: 1, lower: '#b8946a', haunch: 1, hop: 2.2 },
   raccoon: { len: 18, h: 9, w: 9, coat: '#7a7678', mask: '#26242a', ears: 'cat', tail: 'ringed', snout: 2.5, head: 4, jl: 1, lower: '#3a383c' },
   coyote: { len: 26, h: 17, w: 8, coat: '#a8885a', belly: '#e8dcc0', ears: 'up', tail: 'bushy', snout: 5, head: 4.6, jl: 1, lower: '#c0a070', throat: '#ece2cc', tips: '#6a5a46' },
+  // (Nature-A2's grey wolves: bigger and longer-legged than a coyote, grizzled grey with a darker saddle, a pale face and
+  // legs, the bushy tail)
+  wolf: { len: 32, h: 21, w: 9.5, coat: '#8e8a84', belly: '#dcd6cc', pattern: 'saddle', patch: '#5e5a56', ears: 'up', tail: 'bushy', snout: 5.6, head: 5.4, jl: 1, lower: '#b8b2a8', throat: '#e6e0d6', muzzle: '#c8c2b8', fluffy: 0.5 },
   // the wilds (shared/fauna.js): deer and their kin, the predators, the water's edge, small game
   elk: { len: 44, h: 32, w: 13, coat: '#b08458', belly: '#6a4a30', mane: '#4e3424', neckC: '#6a4a32', pattern: 'rump', patch: '#e2cea4', ears: 'up', tail: 'stub', snout: 6, head: 6, neck: 13, antlers: 2, jl: 1, lower: '#4a3222', hoof: 1 },
   moose: { len: 50, h: 40, w: 15, coat: '#3e2c22', socks: '#a8988a', ears: 'side', tail: 'stub', snout: 9, head: 7, neck: 10, antlers: 3, hump: 1.4, bell: 1, droop: 1, jl: 1, lower: '#a8988a', hoof: 1 },
@@ -97,6 +102,9 @@ export function animalModel(kind, o = {}) {
   if (pose0 === 'dead') return onSide(animalModel(kind, { ...o, pose: 'stand', phase: 0.12 }), A);
   if (pose0 === 'fall') return onSide(animalModel(kind, { ...o, pose: 'stand', gait: 'run', phase: o.phase || 0 }), A);   // (AN7: the legs going as it hits the ground)
   if (pose0 === 'swipe') return flinch(animalModel(kind, { ...o, pose: 'swipeleg' }), A, 0.36);   // (AN2: the bear's swipe)
+  if (pose0 === 'catch') return animalModel(kind, { ...o, pose: 'alert', prey: o.prey || 'fish' });   // (Nature-A2: up with its catch)
+  if (pose0 === 'wadecatch') return waterline(animalModel(kind, { ...o, pose: 'alert', prey: o.prey || 'fish', wl: A.h * 0.3 }), A, 0.3);
+  if (pose0 === 'wadeswipe') return waterline(animalModel(kind, { ...o, pose: 'swipe' }), A, 0.3);
   if (pose0 === 'hit') return flinch(animalModel(kind, { ...o, pose: 'alert', phase: 0 }), A, 0.2);              // (AN7: the flinch)
   if (pose0 === 'swim') return waterline(animalModel(kind, { ...o, pose: 'alert' }), A);
   if (pose0 === 'dive') return waterline(tipDown(animalModel(kind, { ...o, pose: 'stand', phase: 0 }), 0.75), A);   // (AN5: going under)
@@ -210,6 +218,16 @@ export function animalModel(kind, o = {}) {
     const fx = sx + A.snout * 0.55, fz = sz - HD * 0.35 - (o.wag || 0) * 0.6;
     m.ell(fx, cy + 1, fz, 1.7, 4.8, 1.6, R('#dce6ee')); m.ell(fx, cy + 1, fz + 0.9, 1.2, 4.4, 0.7, R('#5a7a8c'));
     m.box(fx - 1, cy + 5.4, fz - 1.8, fx + 1, cy + 6.8, fz + 1.8, R('#5a7a8c'));
+  }
+  if (o.prey && !eatfish) {   // (Nature-A2: a salmon crosswise in a bear's jaws, its tail flapping; a mouse in a fox's)
+    const fx = sx + A.snout * 0.7, fz = sz - HD * 0.3, big = A.len > 30 ? 1.5 : 1;
+    if (o.prey === 'fish') {
+      m.ell(fx, cy + 1, fz, 1.9 * big, 5.4 * big, 1.7 * big, R('#c8a8a2')); m.ell(fx, cy + 1, fz + 1 * big, 1.3 * big, 4.8 * big, 0.7 * big, R('#5a6a74'));
+      m.box(fx - 1.2 * big, cy + 6 * big, fz - 2 * big + (o.wag || 0) * 0.8, fx + 1.2 * big, cy + 7.4 * big, fz + 2 * big + (o.wag || 0) * 0.8, R('#5a6a74'));
+    } else {
+      m.ell(fx + 0.4, cy + 1.2, fz - 0.4, 1.7, 1.1, 1.1, R('#7a6a5e'));
+      for (let k = 0; k < 3.5; k += 0.5) m.box(fx + 0.2, cy + 2.2 + k, fz - 0.8 - k * 0.3, fx + 0.7, cy + 2.7 + k, fz - 0.4 - k * 0.3, R('#c8a8a0'));
+    }
   }
   if (A.tusks) for (const s of [-1, 1]) for (let k = 0; k < 2.6; k += 0.4) m.box(sx + A.snout * 0.55 - k * 0.3, cy + s * 1.6, sz + k * 0.7 - 0.6, sx + A.snout * 0.55 - k * 0.3 + 0.9, cy + s * 1.6 + 0.9, sz + k * 0.7 + 0.3, R('#f0ead8'));   // a boar's tusks
   if (A.buck) m.box(sx + A.snout + 0.2, cy - 0.8, sz - HD * 0.45, sx + A.snout + 1.2, cy + 0.8, sz - HD * 0.1, R('#e08a2a'));   // a beaver's orange teeth

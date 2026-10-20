@@ -9,7 +9,7 @@ import { birdModel, BIRDS } from '../../client/art2/birds.js';
 import { GBuf } from '../../client/art2/gbuf.js';
 import { Lighter, PRESETS } from '../../client/art2/light.js';
 const q = new URLSearchParams(location.search), Z = Number(q.get('z') || 2), T = q.get('time') || 'noon';
-const WILD = ['deer', 'elk', 'moose', 'mtgoat', 'boar', 'blackbear', 'grizzly', 'cougar', 'bobcat', 'coyote', 'redfox', 'greyfox', 'raccoon', 'beaver', 'otter', 'seaotter', 'rabbit', 'squirrel'];
+const WILD = ['deer', 'elk', 'moose', 'mtgoat', 'boar', 'blackbear', 'grizzly', 'cougar', 'bobcat', 'coyote', 'wolf', 'redfox', 'greyfox', 'raccoon', 'beaver', 'otter', 'seaotter', 'rabbit', 'squirrel'];
 const BIRD = Object.keys(BIRDS);
 const cols = 12, cw = 92, rows = WILD.length + BIRD.length, chH = (k) => (['moose', 'elk', 'grizzly'].includes(k) ? 104 : 74);
 let H = 10; const ys = []; for (const k of [...WILD, ...BIRD]) { H += chH(k); ys.push(H - 10); }

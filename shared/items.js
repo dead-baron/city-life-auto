@@ -136,6 +136,23 @@ export const ITEMS = {
   redcap:  { name: 'Redcap Toadstool',  loot: true, sell: 2 },      // (pretty and poisonous: nobody eats one)
   ghostglass: { name: 'Ghostglass Caps', loot: true, illegal: true, sell: 0 },   // the glowing hallucinogen: only the black market buys them, and the police take them
   goldStar: { name: 'Golden Star',      loot: true, sell: 150 },    // a rare sea star that glows, from the tidepools
+  // the wilds' finds (Nature-D1, shared/foraging.js: where each is found, and who buys it) and the tools two of them take
+  wildBerries: { name: 'Wild Berries',  food: true, heal: 6, sell: 4 },
+  wildHerbs: { name: 'Wild Herbs',      sell: 7 },
+  wildHoneycomb: { name: 'Wild Honeycomb', food: true, heal: 14, sell: 28 },
+  blackTruffle: { name: 'Black Truffle', loot: true, sell: 160 },
+  geode:   { name: 'Geode',             loot: true, sell: 60 },
+  amethystGeode: { name: 'Amethyst Geode', loot: true, sell: 240 },
+  fossilFern: { name: 'Fern Fossil',    loot: true, sell: 70 },
+  ammonite: { name: 'Ammonite Fossil',  loot: true, sell: 130 },
+  arrowhead: { name: 'Old Arrowhead',   loot: true, sell: 45 },
+  riverMussels: { name: 'River Mussels', food: true, heal: 5, sell: 3 },
+  riverPearl: { name: 'River Pearl',    loot: true, sell: 210 },
+  goldFlakes: { name: 'Gold Flakes',    loot: true, sell: 16 },
+  antlerShed: { name: 'Shed Antler',    game: true, sell: 30 },
+  eagleFeather: { name: 'Eagle Feather', protected: true, sell: 0 },   // (eagles are protected: nobody buys one - it fletches arrows: MATERIALS.feathers)
+  trowel:  { name: 'Garden Trowel',     tool: true, sell: 6 },
+  goldPan: { name: 'Gold Pan',          tool: true, sell: 12 },
   // hunting (server/systems/hunting.js, shared/fauna.js): what a field-dressed animal gives - meat, a hide or a pelt
   // (graded: see GRADED below), the parts the trappers pay for - and the meat cooked over a fire. Cooked game is
   // hearty: it heals and builds you up (a while of more health: HEARTY_HP, HEARTY_S in rules.js).
@@ -173,6 +190,7 @@ export const ITEMS = {
   cougarPelt: { name: 'Mountain Lion Pelt', game: true, pelt: true, sell: 120 },
   bobcatPelt: { name: 'Bobcat Pelt',    game: true, pelt: true, sell: 60 },
   coyotePelt: { name: 'Coyote Pelt',    game: true, pelt: true, sell: 24 },
+  wolfPelt: { name: 'Grey Wolf Pelt',  game: true, pelt: true, sell: 95 },
   redFoxPelt: { name: 'Red Fox Pelt',   game: true, pelt: true, sell: 55 },
   greyFoxPelt: { name: 'Grey Fox Pelt', game: true, pelt: true, sell: 50 },
   raccoonPelt: { name: 'Raccoon Pelt',  game: true, pelt: true, sell: 14 },
@@ -240,11 +258,11 @@ export const graded = (id, g) => (ITEMS[id] && ITEMS[id].pelt && g !== 2 && ITEM
 // id - any grade of a hide or pelt counts, the poorest used first - or a group (MATERIALS); gives the item, or ammo
 // [weapon, n] (arrows fletched with feathers). The legendary pelts are too good to cut up.
 export const MATERIALS = {
-  feathers: ['quailFeathers', 'pheasantFeathers', 'turkeyFeathers', 'duckFeathers', 'gooseFeathers'],
-  furs: ['raccoonPelt', 'redFoxPelt', 'greyFoxPelt', 'beaverPelt', 'otterPelt', 'coyotePelt', 'bobcatPelt'],
+  feathers: ['quailFeathers', 'pheasantFeathers', 'turkeyFeathers', 'duckFeathers', 'gooseFeathers', 'eagleFeather'],
+  furs: ['raccoonPelt', 'redFoxPelt', 'greyFoxPelt', 'beaverPelt', 'otterPelt', 'coyotePelt', 'wolfPelt', 'bobcatPelt'],
   heavyHide: ['elkHide', 'mooseHide'],
 };
-export const MATERIAL_NAME = { feathers: 'feathers', furs: 'furs (fox, raccoon, beaver, otter, coyote, bobcat)', heavyHide: 'elk or moose hide' };
+export const MATERIAL_NAME = { feathers: 'feathers', furs: 'furs (fox, raccoon, beaver, otter, coyote, wolf, bobcat)', heavyHide: 'elk or moose hide' };
 export const CRAFTS = [
   { id: 'arrows', name: 'Fletch 8 arrows', needs: [['feathers', 2]], ammo: ['bow', 8] },
   { id: 'leatherGloves', needs: [['deerHide', 1]] },
@@ -461,6 +479,14 @@ SHOPS.pawn.sells.push(...ORE_ITEMS);
 // the assay office at the Granite Quarry (shared/countryside.js): it buys ore best, and sells the pickaxes
 SHOPS.assay = { title: 'Granite Quarry Assay Office', buy: PICK_OFFERS(['pickStone', 'pickIron', 'pickSteel', 'pickDiamond']), sells: ORE_ITEMS.concat(['nugget', 'quartz']),
   sellPrice: Object.fromEntries(ORE_ITEMS.concat(['nugget', 'quartz']).map((id) => [id, Math.round(ITEMS[id].sell * ASSAY_PAYS)])) };
+// who buys the wilds' finds (Nature-D1), and where the trowel and the gold pan are sold
+SHOPS.market.sells.push('wildBerries', 'wildHerbs', 'wildHoneycomb', 'blackTruffle', 'riverMussels');
+Object.assign(SHOPS.market.sellPrice, { wildBerries: 5, wildHerbs: 9, wildHoneycomb: 32, blackTruffle: 175 });
+SHOPS.pawn.sells.push('geode', 'amethystGeode', 'fossilFern', 'ammonite', 'arrowhead', 'riverPearl', 'goldFlakes');
+SHOPS.assay.sells.push('geode', 'amethystGeode', 'goldFlakes');
+Object.assign(SHOPS.assay.sellPrice, Object.fromEntries(['geode', 'amethystGeode', 'goldFlakes'].map((id) => [id, Math.round(ITEMS[id].sell * ASSAY_PAYS)])));
+const FIND_KIT = [{ kind: 'item', id: 'trowel', price: 25, qty: 1 }, { kind: 'item', id: 'goldPan', price: 45, qty: 1 }];
+SHOPS.hardware.buy.push(...FIND_KIT); SHOPS.lodge.buy.push(...FIND_KIT); SHOPS.huntcamp.buy.push(...FIND_KIT);
 // The Grand Theatre's ticket and popcorn counter (shared/cinema.js; the prices are CINE's there)
 SHOPS.cinema = { title: 'The Grand Theatre - tickets & popcorn', buy: [{ kind: 'item', id: 'filmTicket', price: 12, qty: 1 }, { kind: 'item', id: 'popcorn', price: 5, qty: 1 }] };
 // ---- gardening (H61: server/systems/gardening.js; the numbers: shared/rules.js GARDEN, GARDEN_CROPS): a packet of seeds

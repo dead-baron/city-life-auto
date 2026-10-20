@@ -211,7 +211,10 @@ export const PICK_REACH = 40;           // stand this close to the trunk / the r
 // Foraging (shared/foraging.js, server/systems/foraging.js): mushrooms on the redwood floor, the tidepools' golden stars.
 // A spot gives a few, then it's bare until it grows back (by kind, seconds)
 export const FORAGE_REACH = 38;          // stand this close to it
-export const FORAGE_REGROW_S = { goldTrumpet: 420, bunCap: 420, shelfOyster: 360, redcap: 300, ghostglass: 1200, goldStar: 2400 };
+export const FORAGE_REGROW_S = { goldTrumpet: 420, bunCap: 420, shelfOyster: 360, redcap: 300, ghostglass: 1200, goldStar: 2400,
+  // the wilds' finds (Nature-D1): the bushes and meadows soon, the hives and the river beds a while, the rock's and the
+  // ground's finds long (another turns up in time)
+  berries: 480, herbs: 480, hive: 1500, truffle: 1800, geode: 3000, fossil: 3000, arrowhead: 3600, mussels: 900, goldpan: 900, antler: 2400, feather: 3600 };
 export { FORAGE_FENCE_GHOSTGLASS } from './rules-base.js';   // what the Back-Alley Exchange pays a cap (nobody else will touch them)
 
 // Hunting (server/systems/hunting.js): field-dressing what you shot, cooking the meat over a campfire

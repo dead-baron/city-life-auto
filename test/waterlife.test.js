@@ -121,6 +121,42 @@ test('spray rises and foam spreads at the falls; everything is drawn as small de
   }
 });
 
+// Nature-A1: fish you can see in every natural water
+test('salmon hold in the white water under a falls and leap at it; bluegill and bass under a dock; a tidepool has its sculpin and crab', () => {
+  // the falls: the salmon facing up into it, leaping up the white water and falling back into the pool
+  const fa = waterView('falls', 2);
+  assert.ok(fa, 'a falls with a pool');
+  const wl = new WaterLife(2), V = view(fa.x, fa.y);
+  let leaps = 0, upAt = 0;
+  const seen = new Set();
+  for (let now = 0, i = 0; i < 40 * 30; i++, now += 1 / 30) {
+    wl.update(M, V, now, 1 / 30, [], [], ENV);
+    for (const f of wl.fish) if (f.s === 'salmon' && f.air >= 0 && f.airBack && !seen.has(f)) { seen.add(f); leaps++; } else if (f.air < 0) seen.delete(f);
+    if (i === 30 * 20) upAt = wl.fish.filter((f) => f.s === 'salmon' && f.air < 0 && f.v < 2 && Math.abs(Math.sin(f.a) + 1) < 0.35).length;
+  }
+  const salmon = wl.fish.filter((f) => f.s === 'salmon');
+  assert.ok(salmon.length >= 2, `salmon at the falls (${salmon.length})`);
+  assert.ok(upAt >= 1, 'holding facing up into the falls');
+  assert.ok(leaps >= 2, `leaping at it (${leaps})`);
+  for (const f of salmon) assert.ok(cls(f.x, f.y) === f.c, 'and back in the pool');
+  // the dock: a shoal of bluegill (and a bass or two) round it
+  const dk = waterView('dock', 2);
+  assert.ok(dk, 'a dock out over a lake');
+  const wd = new WaterLife(2);
+  sim(wd, view(dk.x, dk.y), 15);
+  const under = wd.fish.filter((f) => f.g && f.g.c.k === 'dock');
+  assert.ok(under.some((f) => f.s === 'bluegill'), 'bluegill under the dock');
+  for (const f of under) assert.ok(Math.hypot(f.x - dk.x, f.y - dk.y) < 260, 'keeping round it');
+  // a tidepool: its little fish and its crab, never out of it
+  const tp = waterView('tidepool', 1);
+  assert.ok(tp, 'a tidepool');
+  const wt = new WaterLife(2);
+  sim(wt, view(tp.x, tp.y), 25);
+  const life = wt.fish.filter((f) => f.g && f.g.c.k === 'tidepool');
+  assert.ok(life.length >= 1 && life.every((f) => f.s === 'sculpin' || f.s === 'crab'), `the pool's life (${life.map((f) => f.s)})`);
+  for (const f of life) { assert.equal(cls(f.x, f.y), 1, `the ${f.s} in the pool's water`); assert.ok(Math.hypot(f.x - tp.x, f.y - tp.y) < 80, `the ${f.s} in its pool`); }
+});
+
 test("the renderer's glue: who's about from the frame, the bobbers from the fishing view, a step and a frame drawn", () => {
   const at = waterView('lake') || waterView('shore');
   const made = new Map(), decals = [];

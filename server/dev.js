@@ -129,6 +129,56 @@ export function tpSpot(m, x, y) {
   return best || { x, y };
 }
 // open ground you can stand on (or, water: open water), as close to (x, y) as there is within reach
+// A hunt to watch (Nature-A2, server wildlife.js the hunt), set up a little way ahead of you - far enough off that it
+// isn't given up for you being there: wolves run down a deer, a cougar creeps up on one, an eagle stoops on a rabbit, a
+// fox mouses, a heron, a bear, an otter fish, an osprey drops into the water. What it said, or null (no room here).
+function huntScene(world, ped, scene, k = 0) {
+  const said = setScene(world, ped, scene, k);
+  // (the one watching goes unnoticed by what it set up - wildlife.js: so it plays out in front of them)
+  if (said) for (const e of wildlife.animals(world)) if (!e.dead && world.time - (e.bornAt ?? -1) < 0.01 && Math.hypot(e.x - ped.x, e.y - ped.y) < 1600) { e.wild.watchedBy = ped.id; e.wild.watchUntil = world.time + 120; }
+  return said;
+}
+function setScene(world, ped, scene, k = 0) {
+  // (to the east or the west first - the long way across the screen, so it stays in view - then the other ways round)
+  const dir = [0, Math.PI, ped.a, ped.a + 1, ped.a - 1, ped.a + 2, ped.a - 2][k];
+  if (dir === undefined) return null;
+  const ax = Math.cos(dir), ay = Math.sin(dir), at = (d, s = 0) => standAt(world, ped.x + ax * d - ay * s, ped.y + ay * d + ax * s, 200);
+  const herd = (kind, pt) => { wildlife.spawnGroup(world, kind, pt.x, pt.y, false); return wildlife.animals(world).filter((e) => e.wild.kind === kind && !e.dead && Math.hypot(e.x - pt.x, e.y - pt.y) < 140); };
+  const water = () => standAt(world, ped.x + ax * 420, ped.y + ay * 420, 900, true);
+  switch (scene) {
+    case 'wolves': case 'cougar': case 'eagle': {
+      const P = at(scene === 'eagle' ? 360 : 400), H = at(400, scene === 'wolves' ? 820 : 560);   // (the hunters off to one side of it: the chase runs across your view, not at you)
+      if (!P || !H) return setScene(world, ped, scene, k + 1);
+      const prey = herd(scene === 'eagle' ? 'rabbit' : 'deer', P), q = prey.find((e) => !e.wild.young) || prey[0];
+      const hunters = scene === 'wolves' ? herd('wolf', H) : [wildlife.spawnAnimal(world, scene, H.x, H.y, 0, { lead: true })];
+      const lead = hunters.find((e) => e.wild.lead) || hunters[0];
+      if (!q || !lead) return null;
+      wildlife.startHunt(world, lead, q);
+      return scene === 'wolves' ? `A wolf pack (${hunters.length}) on a deer ahead of you - keep back and watch.` : scene === 'cougar' ? 'A mountain lion creeping up on a deer ahead of you - keep still.' : 'A bald eagle after a rabbit ahead of you.';
+    }
+    case 'fox': { const P = at(330); if (!P) return setScene(world, ped, scene, k + 1); const f = wildlife.spawnAnimal(world, 'redfox', P.x, P.y, 0, { lead: true }); wildlife.startMousing(world, f); return 'A red fox mousing in the grass ahead of you.'; }
+    case 'heron': case 'bear': case 'otter': {
+      const W = water();
+      if (!W) return null;
+      const kind = scene === 'bear' ? 'blackbear' : scene;
+      const pt = scene === 'otter' ? W : wildlife.edgeSpot(world.map, W.x, W.y) && { x: W.x, y: W.y };
+      const g = scene === 'otter' ? W : standAt(world, pt.x, pt.y, 300);
+      if (!g) return null;
+      const a = wildlife.spawnAnimal(world, kind, g.x, g.y, 0, { lead: true });
+      a.wild.calmUntil = 0;
+      if (!wildlife.startFishing(world, a)) return `${a.name} by the water (nowhere to fish from here).`;
+      return `${a.name.replace(/^a /, 'A ')} off to fish, just ahead of you.`;
+    }
+    case 'osprey': {
+      const W = water();
+      if (!W) return null;
+      const a = wildlife.spawnAnimal(world, 'osprey', W.x - ay * 300, W.y + ax * 300, 0, { lead: true });
+      wildlife.startPlunge(world, a, W.x, W.y);
+      return 'An osprey dropping on a fish ahead of you.';
+    }
+    default: return null;
+  }
+}
 function standAt(world, x, y, reach = 320, water = false) {
   const m = world.map;
   const ok = (px, py) => { const t = m.tileAtPx(px, py); return water ? t === T.WATER || t === T.DEEP : !PED_BLOCK[t] && !m.isWater(px, py); };
@@ -472,6 +522,7 @@ export function command(world, p, c, msg) {
       break;
     case 'animal': { // an animal (or its group) out of sight nearby: msg.k kind, msg.young / msg.legend, msg.stalk (a predator that stalks you)
       if (!ped) break;
+      if (msg.scene) { const said = huntScene(world, ped, String(msg.scene).slice(0, 16)); world.notify(p, `[dev] ${said || 'No room for that here - try out in the wilds, near water for the fishers.'}`, said ? 'info' : 'warn'); break; }   // (Nature-A2: a hunt to watch)
       const kind = String(msg.k || 'deer');
       if (!SPECIES[kind] && !wildlife.LIVESTOCK[kind]) { world.notify(p, `[dev] No animal "${kind}".`, 'warn'); break; }
       const S = SPECIES[kind];

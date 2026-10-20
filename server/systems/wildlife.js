@@ -21,6 +21,13 @@
 // and dive when alarmed; otters swim and dive; ducks and geese paddle and take off; pheasants flush; quail
 // scatter and call each other back to the hen; squirrels run up a tree.
 //
+// And they hunt each other (Nature-A2: "the hunt", below): a cougar creeps up on a deer and springs, a pack of wolves
+// runs one down, a coyote or a bobcat goes after a rabbit, a fox pounces on mice in the long grass, a heron spears
+// fish in the shallows, a bear grabs salmon in the white water under a falls, an otter dives for fish and eats them on
+// the bank, an osprey drops into the lake and lifts off with one, an eagle stoops on a rabbit and carries it off. The
+// prey watch for their hunters as they watch for you. Never a pet, the farms' stock, the park's ducks, a legend or a
+// person - and never right in front of anyone: someone close by and it waits, or gives it up.
+//
 // Hit: they flinch, stagger, are knocked off their feet like people (reactions.js), limp when badly hurt and
 // leave a blood trail you can follow; the dangerous ones may turn and come at you. Every hit is noted for the
 // grade of the hide (fauna.js gradeOf; hunting.js). The farms' livestock (cows, sheep, horses, goats, pigs) just
@@ -31,7 +38,7 @@ import { pedStep, PED } from '../../shared/physics.js';
 import { circleVsObb } from '../../shared/math.js';
 import { sameLevel } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { SPECIES, YOUNG_SCALE, APOSE, huntClass, gradeOf } from '../../shared/fauna.js';
+import { SPECIES, YOUNG_SCALE, APOSE, PREDATORS_OF, SIZE_ORDER, huntClass, gradeOf } from '../../shared/fauna.js';
 import { inAnyView } from '../view.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
@@ -186,12 +193,15 @@ export function spawnAnimal(world, kind, x, y, herd = 0, o = {}) {
   const hp = S ? Math.round(S.hp * (young ? 0.4 : 1) * (legend ? 1.7 : 1)) : (L || LIVESTOCK.cow).hp;
   const a = world.spawnPed(x, y, { hp, archetype: `pet:${kind}${young ? ':y' : legend ? ':L' : ''}`, a: rng() * 6.28, app: { bd: 1 }, name: S ? (legend ? S.legend.name.replace(/^the /, 'The ') : `a ${S.name.toLowerCase()}`) : `a ${kind}` });
   a.r = S ? Math.round(SIZE_R[S.size] * (young ? 0.7 : 1)) : 12;
+  a.bornAt = world.time;
   a.wild = {
     kind, state: 'idle', until: world.time + rng() * 4, wx: x, wy: y, hx: x, hy: y, herd, look: 0, fx: 0, fy: 0,
     aware: 0, threat: 0, pose: 0, hits: [], young, legend, mother: o.mother || 0, lead: !!o.lead, livestock: !S,
     think: world.time + rng() * 0.3, rest: false, predator: false, stalkOf: 0, nextBite: 0, bluffs: 0, tame: !!o.tame,
   };
   if (S && S.predatory && !young) a.wild.predator = rng() < S.predatory;   // (decided once: it may see a lone walker as prey)
+  if (S && S.soars) { a.wild.state = 'soar'; a.wild.until = world.time + 20 + rng() * 25; a.wild.home = { x, y }; }   // (a bird of prey: up in the air)
+  if (S && (S.hunts || S.fishes || S.mouses)) a.wild.nextHunt = world.time + 4 + rng() * 10;   // (just come: it settles in before it hunts)
   return a;
 }
 
@@ -203,7 +213,7 @@ export function spawnGroup(world, kind, x, y, legendOk = false, tame = false) {
   const legend = legendOk && S.legend && rng() < S.legend.p && !legendAbout(world, kind);
   // (on the water if it lives on it and was put there; else on dry ground)
   const onWater = S.swims === 'float' || (!!S.swims && wet(world.map, x, y));
-  const okAt = (ax, ay) => (onWater ? wet(world.map, ax, ay) : ground(world.map, ax, ay));
+  const okAt = (ax, ay) => (S.soars ? true : onWater ? wet(world.map, ax, ay) : ground(world.map, ax, ay));   // (a bird of prey: anywhere, up there)
   let made = 0, lead = null;
   const adults = legend ? 1 : n;
   for (let i = 0; i < adults * 4 && made < adults; i++) {
@@ -305,7 +315,7 @@ function faunaFor(world, tags, ph, counts) {
     if (tags.isle && !S.bird && kind !== 'seaotter') continue;                          // no deer on the little islands
     w *= activity(S, ph);
     // the predators and the big ones are few: one of a kind about at a time, round any one player
-    const cap = S.temper === 'elusive' && S.predatory ? 1 : S.size === 'huge' ? 1 : S.size === 'large' ? 2 : 6;
+    const cap = S.few || (S.temper === 'elusive' && S.predatory ? 1 : S.size === 'huge' ? 1 : S.size === 'large' ? 2 : 6);
     if ((counts[kind] || 0) >= cap) continue;
     out.push([kind, w]);
   }
@@ -389,7 +399,9 @@ function populate(world) {
       if (!kind) continue;
       const S = SPECIES[kind];
       let sx = x, sy = y;
-      if (S.swims === 'float' || kind === 'otter' || kind === 'beaver' || ((kind === 'duck' || kind === 'goose') && (tags.lake || tags.pond || tags.marsh || tags.river))) {
+      if (S.soars) { /* up over its country: anywhere */ }
+      else if (S.wader) { const es = edgeSpot(world.map, x, y); if (!es) continue; [sx, sy] = es; }   // (a heron: on the bank)
+      else if (S.swims === 'float' || kind === 'otter' || kind === 'beaver' || ((kind === 'duck' || kind === 'goose') && (tags.lake || tags.pond || tags.marsh || tags.river))) {
         const ws = waterSpot(world, x, y, kind);
         if (!ws) continue;
         [sx, sy] = ws;
@@ -483,7 +495,7 @@ function sense(world, a, S, ph) {
   const sens = w.legend ? 1.25 : 1, resting = w.rest ? 0.45 : 1, head = headDown(w, world.time) ? 0.5 : 1;
   const light = 1 - 0.5 * ph.dark;
   let best = null, bestS = 0;
-  const consider = (q, x, y, inVeh) => {
+  const consider = (q, x, y, inVeh, beast = false) => {
     const dx = x - a.x, dy = y - a.y, d = Math.hypot(dx, dy) || 1;
     if (d > 900) return;
     let s = 0;
@@ -501,17 +513,18 @@ function sense(world, a, S, ph) {
     const hearR = S.sense.hear * HEAR_K * sens * resting * loud;
     if (d < hearR) s = Math.max(s, 1.1 - d / hearR);
     // smell: from straight downwind it carries a long way (not through cover scent)
-    if (!inVeh && !(q.buffs && q.buffs.scent > world.time)) {
+    if (!inVeh && !beast && !(q.buffs && q.buffs.scent > world.time)) {
       const down = Math.cos(Math.atan2(-dy, -dx) - wind.a);   // the wind blows from them to it?
       if (down > 0.55) { const smR = S.sense.smell * SMELL_K * sens * down * wind.s; if (d < smR) s = Math.max(s, 1 - d / smR); }
     }
     // right on top of it, it knows
     if (d < 34 + (a.r || 10)) s = Math.max(s, 1.2);
-    if (s > bestS) { bestS = s; best = { x, y, id: q.id, d, ped: inVeh ? null : q, veh: inVeh }; }
+    if (s > bestS) { bestS = s; best = { x, y, id: q.id, d, ped: inVeh ? null : q, veh: inVeh, beast }; }
   };
+  const unseen = watcher(w, world.time);   // (dev.js huntScene: the one watching a hunt set up for them goes unnoticed)
   for (const p of world.players.values()) {
     const q = p.ped;
-    if (!q || q.dead || q.hidden || q.sub || q.onTrain) continue;
+    if (!q || q.dead || q.hidden || q.sub || q.onTrain || q.id === unseen) continue;
     if (q.vehId) { const v = world.get(q.vehId); if (v && v.lz < 0.3 && v.def.kind !== 'boat') consider(v, v.x, v.y, true); continue; }
     consider(q, q.x, q.y, false);
   }
@@ -523,6 +536,14 @@ function sense(world, a, S, ph) {
   for (const v of world.query(a.x, a.y, 300, K.VEH)) {
     if (v.lz > 0.3 || v.def.kind === 'boat' || Math.hypot(v.vx, v.vy) < 60) continue;
     consider(v, v.x, v.y, true);
+  }
+  // its hunters (the hunt): seen and heard like anyone - a cougar creeping up low and slow is hard to make out, a pack
+  // trotting in is seen a long way off; a bird of prey up soaring is no danger, one dropping on it is
+  const P = PREDATORS_OF[w.kind];
+  if (P && !w.tame) for (const q of world.query(a.x, a.y, 600, K.PED)) {
+    const qw = q.wild;
+    if (q === a || !qw || q.dead || q.hidden || qw.young || !P.has(qw.kind) || (AIRBORNE.has(qw.state) && qw.state !== 'stoop')) continue;
+    consider(q, q.x, q.y, false, true);
   }
   // a gunshot (not an arrow) carries far
   for (const sh of world.shotLog) if (world.time - sh.t < 1.2) { const R = S.sense.hear * HEAR_K * 2, d = Math.hypot(sh.x - a.x, sh.y - a.y); if (d < R && 1.2 - d / R > bestS) { bestS = 1.2 - d / R; best = { x: sh.x, y: sh.y, id: 0, d, shot: true }; } }
@@ -586,7 +607,7 @@ function takeOff(world, a, fx, fy, now) {
 
 function think(world, a, S, now, ph) {
   const w = a.wild;
-  if (w.state === 'fly' || w.state === 'dive' || w.state === 'attack') return;
+  if (AIRBORNE.has(w.state) || w.state === 'dive' || w.state === 'attack' || a.hidden) return;   // (up in the air, under the water)
   if (w.calmUntil > now) return;   // (dev: spawned calm, to be looked at)
   const th = sense(world, a, S, ph);
   // awareness builds while it senses something and fades when it doesn't
@@ -607,6 +628,8 @@ function think(world, a, S, now, ph) {
     if (w.state === 'alert' && now > w.until) setState(w, 'idle', now, 1 + rng() * 2);
     // a predator that has decided someone is prey goes after them when the conditions are right
     if (w.predator && !w.young && preyCheck(world, a, S, ph, now)) return;
+    // the hunters look about for something to hunt (the hunt)
+    if (S.hunts && CALM.has(w.state)) huntCheck(world, a, S, ph, now);
     return;
   }
   // (how sure it is: th.s - a faint sound at the edge of hearing is ~0.1, someone in plain sight close by ~1)
@@ -680,6 +703,399 @@ function charge(world, a, targetId, now, bluff) {
   world.emit(a.x, a.y, { e: 'roar', x: a.x, y: a.y, id: a.id, k: w.kind });
 }
 
+// ---- the hunt: animal against animal (Nature-A2, 2026-10-20) ------------------------------------------------------
+// The hunters (fauna.js hunts) go after the wild things they live on: never a pet (they aren't wild), never the farms'
+// livestock or the town ponds' tame ducks, never a legend, never a person (that's preyCheck: a cougar or a bear, and
+// rarely). None of it starts with anyone close by - a person within PEOPLE_R of the hunter or its prey - and it's
+// given up if someone comes close (or the hunter slinks off from them as it would: its temper, think). So it's seen
+// from a little way off, as A2 draws it, and it's quick and clean: the prey goes down (no blood: reactions.js), the
+// hunters feed on it, a bird of prey carries its catch off. The fishers (fauna.js fishes) and the foxes mousing go
+// about it the same way: their own business, out of the way.
+const PEOPLE_R = 240;
+const AIRBORNE = new Set(['fly', 'soar', 'stoop', 'plunge', 'carry']);
+const CALM = new Set(['idle', 'walk', 'alert']);
+// anyone about (on foot, or in a vehicle on the move or with someone in it) within r of (x, y) - but for skip (the
+// dev's watcher of a hunt set up for them: dev.js huntScene)
+function peopleNear(world, x, y, r, skip = 0) {
+  for (const q of world.query(x, y, r, K.PED)) if (!q.wild && !q.dead && (q.player || q.npc) && q.id !== skip) return true;
+  for (const v of world.query(x, y, r, K.VEH)) if (!v.removed && !(v.lz > 0.3) && (Math.hypot(v.vx, v.vy) > 30 || (v.seats && v.seats.some((id) => id)))) return true;
+  return false;
+}
+const watcher = (w, now) => (w.watchedBy && now < (w.watchUntil || 0) ? w.watchedBy : 0);   // (dev.js huntScene)
+const preyOk = (q, H) => !!q.wild && !q.dead && !q.removed && !q.hidden && !q.ug && !q.wild.livestock && !q.wild.tame && !q.wild.legend && !q.wild.flewOff
+  && H.prey.includes(q.wild.kind) && !AIRBORNE.has(q.wild.state) && q.wild.state !== 'climb' && q.wild.state !== 'dive' && q.wild.state !== 'totree';
+// the nearest thing to hunt within H.r of (x, y) (the young sooner), with nobody about it
+function preyNear(world, a, H, x, y) {
+  let best = null, bs = Infinity;
+  for (const q of world.query(x, y, H.r, K.PED)) {
+    if (q === a || !preyOk(q, H)) continue;
+    const d = Math.hypot(q.x - x, q.y - y) * (q.wild.young ? 0.6 : 1);
+    if (d < bs && !peopleNear(world, q.x, q.y, PEOPLE_R, watcher(a.wild, world.time))) { bs = d; best = q; }
+  }
+  return best;
+}
+// A hunter at its ease, in its hours, not hurt and not fed lately: anything to hunt about?
+function huntCheck(world, a, S, ph, now) {
+  const w = a.wild, H = S.hunts;
+  if (!H || H.how === 'stoop' || w.young || w.tame || now < (w.nextHunt || 0) || a.hp < a.maxHp * 0.6) return false;
+  w.nextHunt = now + 5 + rng() * 6;
+  if (w.herd && !w.lead && herdLead(world, a)) return false;   // (the pack's lead starts it; the rest go with it)
+  if (activity(S, ph) < 0.5 || rng() > H.p || peopleNear(world, a.x, a.y, PEOPLE_R, watcher(w, now))) return false;
+  const q = preyNear(world, a, H, a.x, a.y);
+  return q ? startHunt(world, a, q, now) : false;
+}
+// Off after q: the stalk, the trot in (the pack with it, fanning out either side), or - a bird of prey - the stoop.
+export function startHunt(world, a, q, now = world.time) {
+  const w = a.wild, S = SPECIES[w.kind], H = S && S.hunts;
+  if (!H || !q || !q.wild) return false;
+  w.huntOf = q.id; w.rushAt = 0; w.flank = 0; w.feedOn = 0; w.rest = false;
+  if (H.how === 'stoop') { setState(w, 'stoop', now, 7); return true; }
+  setState(w, 'hunt', now, 45 + rng() * 25);
+  if (H.how === 'pack' && w.herd) {
+    let k = 0;
+    for (const m of world.query(a.x, a.y, 700, K.PED)) {
+      const mw = m.wild;
+      if (m === a || !mw || m.dead || mw.herd !== w.herd || mw.young || AIRBORNE.has(mw.state)) continue;
+      k++; mw.huntOf = q.id; mw.rushAt = 0; mw.feedOn = 0; mw.rest = false; mw.flank = k % 2 ? 1 : -1;
+      setState(mw, 'hunt', now, w.until - now);
+    }
+  }
+  return true;
+}
+function endHunt(world, a, now, why = '') {
+  const w = a.wild;
+  w.huntEnd = why; w.huntOf = 0; w.flank = 0; w.nextHunt = Math.max(w.nextHunt || 0, now + 35 + rng() * 45);
+  if (SPECIES[w.kind] && SPECIES[w.kind].soars) { setState(w, 'soar', now, 15 + rng() * 15); return; }
+  setState(w, 'idle', now, 2 + rng() * 3); w.hx = a.x; w.hy = a.y;
+}
+// how fast a hunted animal can still run: run hard for a few seconds it tires (the long chase of A2: the pack wears
+// it down); just twisted out of a hunter's reach, a bound on it
+function tired(w, now) {
+  const burst = now < (w.burstUntil || 0) ? 1.12 : 1;
+  if (!(now < (w.chasedUntil || 0))) return burst;
+  return burst * Math.max(0.86, 1 - Math.max(0, now - (w.chasedSince || now) - 5) * 0.018);
+}
+// The way in and the rush: { mx, my, speed, pose, goal } for step()
+function huntMove(world, a, w, S, now, limp) {
+  const H = S.hunts, q = world.get(w.huntOf), out = { mx: 0, my: 0, speed: S.walk, pose: APOSE.auto, goal: Infinity };
+  if (!H || !q || q.removed || q.hidden || now > w.until) { endHunt(world, a, now, !q ? 'lost' : q.removed ? 'removed' : q.hidden ? 'hidden' : 'time'); return out; }
+  if (q.dead) { if (q.wild && q.wild.takenBy) feedOn(world, a, q, now); else endHunt(world, a, now, 'dead'); return out; }   // (the pack's kill: to it; someone else's: not theirs)
+  if (!preyOk(q, H)) { endHunt(world, a, now, 'gone'); return out; }
+  if (peopleNear(world, q.x, q.y, PEOPLE_R * 0.8, watcher(w, now))) { endHunt(world, a, now, 'people'); return out; }   // (someone's there now: not this time)
+  const qw = q.wild, dx = q.x - a.x, dy = q.y - a.y, d = Math.hypot(dx, dy) || 1;
+  if (w.state === 'hunt') {
+    const running = qw.state === 'flee' || qw.state === 'scatter' || qw.state === 'trotoff';
+    if (d < H.spring || (H.how !== 'ambush' && running && d < H.spring * 2.4)) { setState(w, 'rush', now, w.until - now); w.rushAt = now; return out; }
+    if (H.how === 'ambush') {
+      if (running) { endHunt(world, a, now, 'seen'); return out; }   // (seen, and off: a cat doesn't run it down from out there)
+      face(a, q.x, q.y); out.pose = APOSE.stalk;
+      if (qw.state === 'alert' || now < (qw.scanUntil || 0) || (qw.aware > 0.45 && qw.tid === a.id)) return out;   // (frozen, crouched low, while it looks up)
+      out.mx = dx / d; out.my = dy / d; out.speed = (S.stalk || S.walk * 0.7) * (d > H.spring * 3 ? 1.7 : 1) * limp; out.goal = d;
+      return out;
+    }
+    let tx = q.x, ty = q.y;
+    if (w.flank) { const o = Math.min(150, d * 0.45) * w.flank; tx += (-dy / d) * o; ty += (dx / d) * o; }   // (the pack fans out round it)
+    const ex = tx - a.x, ey = ty - a.y, e = Math.hypot(ex, ey) || 1;
+    out.mx = ex / e; out.my = ey / e; out.speed = S.trot * (d > H.spring * 2 ? 1 : 0.75) * limp; out.goal = e;
+    return out;
+  }
+  // the rush: flat out at it, leading it a little; close enough, the take - or it twists away
+  if (now - w.rushAt > H.chase) { endHunt(world, a, now, 'tired'); return out; }
+  if (d > (H.how === 'pack' ? 950 : H.spring * 3.2)) { endHunt(world, a, now, 'away'); return out; }
+  if (!(now < (qw.chasedUntil || 0))) qw.chasedSince = now;
+  qw.chasedUntil = now + 0.8;
+  const lead = Math.min(0.45, d / 500), tx = q.x + (q.vx || 0) * lead, ty = q.y + (q.vy || 0) * lead;
+  const ex = tx - a.x, ey = ty - a.y, e = Math.hypot(ex, ey) || 1;
+  out.mx = ex / e; out.my = ey / e; out.speed = S.run * limp * (now < (w.missUntil || 0) ? 0.45 : 1);
+  out.pose = H.how === 'ambush' && d < 90 ? APOSE.attack : APOSE.charge;   // (a cat's spring: the pounce)
+  if (d < (a.r || 10) + (q.r || 8) + 9 && now >= (w.missUntil || 0)) {
+    const QS = SPECIES[qw.kind], big = SIZE_ORDER.indexOf(QS.size) >= SIZE_ORDER.indexOf(S.size);
+    let p = big ? 0.42 : 0.55;
+    if (H.how === 'pack') for (const m of world.query(q.x, q.y, 70, K.PED)) if (m !== a && m.wild && m.wild.herd === w.herd && m.wild.huntOf === q.id) p += 0.12;
+    if (qw.young) p += 0.15;
+    if (rng() < p) takeDown(world, a, q, now);
+    else { w.missUntil = now + 0.9; qw.burstUntil = now + 1.1; }   // (it twists away: the hunter stumbles, the prey has a bound on it)
+  }
+  return out;
+}
+// the take: down it goes (quick, clean - no blood: reactions.js 'predator'); a bird of prey off with it, the others
+// on it, the pack round it
+function takeDown(world, a, q, now) {
+  const w = a.wild, S = SPECIES[w.kind];
+  q.vx *= 0.3; q.vy *= 0.3;
+  combat.kill(world, q, a, 'predator', Math.atan2(q.y - a.y, q.x - a.x));
+  if (!q.dead || !q.wild) return;
+  q.wild.takenBy = w.kind; q.wild.grade = 1;   // (what's left of it after them: a poor hide at best - hunting.js)
+  w.kills = (w.kills || 0) + 1;
+  if (S.hunts && S.hunts.how === 'stoop') { world.remove(q); carryOff(world, a, w, 'game', now); return; }
+  feedOn(world, a, q, now);
+  if (w.herd) for (const m of world.query(q.x, q.y, 900, K.PED)) if (m !== a && m.wild && !m.dead && m.wild.herd === w.herd && m.wild.huntOf === q.id) feedOn(world, m, q, now);
+}
+function feedOn(world, a, q, now) {
+  const w = a.wild, small = SIZE_ORDER.indexOf((SPECIES[q.wild.kind] || {}).size) <= 1;
+  w.huntOf = 0; w.feedOn = q.id; w.flank = 0; w.nextHunt = now + 150 + rng() * 150;
+  setState(w, 'feed', now, small ? 9 + rng() * 6 : 24 + rng() * 16);
+}
+// fed: a small kill is gone (eaten: cleared away once nobody's looking), a big one left; it lies up a while
+function doneFeeding(world, a, w, q, now) {
+  if (q && q.dead && q.wild && SIZE_ORDER.indexOf((SPECIES[q.wild.kind] || {}).size) <= 1) q.wild.flewOff = true;
+  w.feedOn = 0; w.hx = a.x; w.hy = a.y;
+  if (!SPECIES[w.kind].swims && rng() < 0.6) { w.rest = true; setState(w, 'rest', now, 25 + rng() * 35); }
+  else setState(w, 'idle', now, 3 + rng() * 4);
+}
+
+// ---- the fishers -----------------------------------------------------------------------------------------------
+const freshAt = (map, x, y) => { const i = at(map, Math.floor(x / TILE), Math.floor(y / TILE)); return i >= 0 && WATER_T[map.tiles[i]] === 1 && !!(map.lake[i] || map.river[i]); };
+// shallow fresh water: not the deep, with land within a stride or two
+function shallowAt(map, x, y) {
+  if (!freshAt(map, x, y) || map.tileAtPx(x, y) !== T.WATER) return false;
+  for (let k = 0; k < 8; k++) { const ang = k * 0.785; for (const r of [24, 44]) if (!WATER_T[map.tileAtPx(x + Math.cos(ang) * r, y + Math.sin(ang) * r)]) return true; }
+  return false;
+}
+// a spot on the bank near (x, y): open ground with fresh water a stride off (where a heron comes in)
+export function edgeSpot(map, x, y) {
+  for (let k = 0; k < 30; k++) {
+    const ax = x + (rng() - 0.5) * 560, ay = y + (rng() - 0.5) * 560;
+    if (!ground(map, ax, ay)) continue;
+    for (let j = 0; j < 8; j++) { const ang = j * 0.785; if (freshAt(map, ax + Math.cos(ang) * 40, ay + Math.sin(ang) * 40)) return [ax, ay]; }
+  }
+  return null;
+}
+// the falls near (x, y) (where the salmon leap: the nature sites' falls, as shared/ledges.js reads them)
+function fallsNear(map, x, y, r) {
+  const out = [];
+  for (const s of map.natureSites || []) if (s.falls && Number.isFinite(s.falls.x) && Math.hypot(s.falls.x - x, s.falls.y - y) < r) out.push({ x: s.falls.x, y: s.falls.y, w: s.falls.w || 64, drop: s.falls.drop || 40 });
+  return out;
+}
+// where a fisher fishes from, near where it is: [x, y, atFalls] (null: no water near)
+function fishSpot(world, a, S) {
+  const map = world.map, how = S.fishes.how;
+  if (how === 'swipe') for (const f of fallsNear(map, a.x, a.y, 1100)) for (let k = 0; k < 10; k++) {
+    const x = f.x + (rng() - 0.5) * f.w * 0.8, y = f.y + f.drop + 24 + rng() * 60;   // (the white water at the foot of the falls)
+    if (freshAt(map, x, y)) return [x, y, true];
+  }
+  for (let k = 0; k < 28; k++) {
+    const ang = rng() * 6.28, r = (how === 'strike' ? 20 + rng() * 170 : 50 + rng() * 320) * (k < 14 ? 1 : 1.6), x = a.x + Math.cos(ang) * r, y = a.y + Math.sin(ang) * r;   // (a heron: the shallows close by)
+    if (how === 'dive' ? freshAt(map, x, y) : shallowAt(map, x, y)) return [x, y, false];
+  }
+  return null;
+}
+// Off to fish: down into the shallows (a heron, a bear: the falls' white water if there's a falls near), into the
+// river (an otter)
+export function startFishing(world, a, now = world.time) {
+  const w = a.wild, S = SPECIES[w.kind];
+  if (!S || !S.fishes || S.soars) return false;
+  const spot = fishSpot(world, a, S);
+  if (!spot) {   // (a heron put up from the water and landed away from it: it flies back to the shallows)
+    if (!S.wader) return false;
+    for (let k = 0; k < 40; k++) {
+      const ang = rng() * 6.28, r = 200 + rng() * 800, x = a.x + Math.cos(ang) * r, y = a.y + Math.sin(ang) * r;
+      if (!shallowAt(world.map, x, y)) continue;
+      w.fa = ang; setState(w, 'fly', now, r / (S.fly || 220)); w.fsp = 0; w.backTo = [x, y];
+      return true;
+    }
+    return false;
+  }
+  w.wx = spot[0]; w.wy = spot[1]; w.atFalls = spot[2]; w.rest = false;
+  setState(w, 'tofish', now, 6 + Math.hypot(spot[0] - a.x, spot[1] - a.y) / (S.walk * 0.7));
+  return true;
+}
+function beginFishing(world, a, w, S, now) {
+  const map = world.map;
+  if (!nearWater(map, a.x, a.y, 50)) { setState(w, 'idle', now, 2); return; }
+  setState(w, 'fish', now, (S.fishes.how === 'dive' ? 45 : 50) + rng() * 40);
+  w.fishA = w.atFalls ? -Math.PI / 2 + (rng() - 0.5) * 0.7 : waterward(map, a.x, a.y);   // (at the falls: facing up into the white water)
+  w.nextStrike = now + 2 + rng() * 4; w.strikeUntil = 0; w.holdUntil = 0; w.underUntil = 0; w.diveAt = now + 1 + rng() * 2; w.edgeAt = now + 5 + rng() * 6; w.edgeTo = null;
+}
+// which way the open water lies from (x, y)
+function waterward(map, x, y) {
+  let best = 0, bn = -1;
+  for (let k = 0; k < 16; k++) {
+    const ang = k / 16 * 6.28;
+    let n = 0;
+    for (const r of [20, 40, 64, 96]) if (WATER_T[map.tileAtPx(x + Math.cos(ang) * r, y + Math.sin(ang) * r)]) n++;
+    if (n > bn) { bn = n; best = ang; }
+  }
+  return best;
+}
+// the nearest dry ground from (x, y) out to r: a point a little way onto it
+function landDir(map, x, y, r) {
+  for (const d of [r * 0.25, r * 0.5, r * 0.75, r]) for (let k = 0; k < 16; k++) {
+    const ang = k / 16 * 6.28, px = x + Math.cos(ang) * d, py = y + Math.sin(ang) * d;
+    if (ground(map, px, py) && ground(map, px + Math.cos(ang) * 12, py + Math.sin(ang) * 12)) return [px + Math.cos(ang) * 12, py + Math.sin(ang) * 12];
+  }
+  return null;
+}
+// Fishing: { mx, my, speed, pose, goal } for step(). The heron and the bears stand and watch, strike now and then -
+// a splash, and sometimes a fish (held a moment in the bill, the jaws, and swallowed); a heron edges along the
+// shallows between strikes. The otter paddles about, dives (gone under), comes up - with a fish, out onto the bank to
+// eat it (eatfish).
+function fishMove(world, a, w, S, now) {
+  const out = { mx: 0, my: 0, speed: S.walk, pose: APOSE.auto, goal: Infinity }, map = world.map, F = S.fishes;
+  if (F.how === 'dive') {
+    if (now < w.underUntil) {   // under, after one
+      out.pose = APOSE.dive;
+      const ang = (w.fishA || 0) + Math.sin(now * 0.7 + a.id) * 1.2;
+      if (freshAt(map, a.x + Math.cos(ang) * 24, a.y + Math.sin(ang) * 24)) { out.mx = Math.cos(ang); out.my = Math.sin(ang); out.speed = (S.swim || 90) * 0.35; }
+      return out;
+    }
+    if (a.hidden) {   // up again
+      a.hidden = false; world.place(a); world.emit(a.x, a.y, { e: 'splash', x: a.x, y: a.y });
+      if (rng() < F.p) { const t = landDir(map, a.x, a.y, 280); if (t) { w.wx = t[0]; w.wy = t[1]; w.fishCaught = (w.fishCaught || 0) + 1; setState(w, 'tobank', now, 10); return out; } }
+      w.diveAt = now + 1.5 + rng() * 3;
+    }
+    if (now > w.until || !wet(map, a.x, a.y)) { setState(w, 'idle', now, 2 + rng() * 2); w.nextFish = now + 30 + rng() * 30; return out; }
+    if (now >= (w.diveAt || 0)) { w.underUntil = now + 3 + rng() * 3.5; w.fishA = rng() * 6.28; world.emit(a.x, a.y, { e: 'splash', x: a.x, y: a.y }); a.hidden = true; world.place(a); out.pose = APOSE.dive; return out; }
+    out.pose = APOSE.swim;
+    return out;
+  }
+  if (now > w.until && now > w.holdUntil) { setState(w, 'idle', now, 3 + rng() * 4); w.hx = a.x; w.hy = a.y; w.nextFish = now + (S.wader ? 8 + rng() * 15 : 40 + rng() * 50); return out; }   // (a heron is back at it soon: fishing is what it does)
+  // a heron edging along the shallows a step or two (not mid-strike, nor with a fish)
+  if (S.bird && w.edgeTo && now >= w.strikeUntil && now >= w.holdUntil) {
+    const dx = w.edgeTo[0] - a.x, dy = w.edgeTo[1] - a.y, d = Math.hypot(dx, dy);
+    if (d < 5 || now > w.edgeAt + 6) { w.edgeTo = null; w.edgeAt = now + 6 + rng() * 8; w.fishA = waterward(map, a.x, a.y); w.nextStrike = Math.max(w.nextStrike, now + 1.5 + rng() * 2); }
+    else { out.mx = dx / d; out.my = dy / d; out.speed = S.walk * 0.45; out.goal = d; out.pose = APOSE.stalk; return out; }
+  }
+  a.a = w.fishA; w.hd = w.fishA;
+  if (now < w.holdUntil) { out.pose = APOSE.fish; return out; }   // (the fish in its bill, its jaws: swallowed)
+  if (now < w.strikeUntil) { out.pose = APOSE.strike; return out; }
+  if (now >= w.nextStrike) {   // the strike: the spear, the grab - a splash - and now and then a fish
+    w.strikeUntil = now + (S.bird ? 0.45 : 0.6);
+    const bx = a.x + Math.cos(a.a) * ((a.r || 10) + 12), by = a.y + Math.sin(a.a) * ((a.r || 10) + 12);
+    world.emit(bx, by, { e: 'splash', x: bx, y: by, big: S.bird ? 0 : 1 });
+    w.holdUntil = 0;
+    if (rng() < F.p) { w.holdUntil = w.strikeUntil + (S.bird ? 2.4 : 3.6); w.fishCaught = (w.fishCaught || 0) + 1; }
+    w.nextStrike = Math.max(w.strikeUntil, w.holdUntil) + 3 + rng() * 6;
+    out.pose = APOSE.strike;
+    return out;
+  }
+  // waiting, watching the water: the heron's neck coiled, poised; the bear stood looking down into the white water
+  out.pose = S.bird ? APOSE.stalk : APOSE.alert;
+  if (S.bird && now >= w.edgeAt && !w.edgeTo) {
+    for (let k = 0; k < 6 && !w.edgeTo; k++) {
+      const ang = w.fishA + (rng() - 0.5) * 2.6, r = 18 + rng() * 30, x = a.x + Math.cos(ang) * r, y = a.y + Math.sin(ang) * r;
+      if (shallowAt(map, x, y) || (ground(map, x, y) && nearWater(map, x, y, 30))) w.edgeTo = [x, y];
+    }
+    if (!w.edgeTo) w.edgeAt = now + 6 + rng() * 6;
+  }
+  return out;
+}
+
+// ---- the foxes mousing ------------------------------------------------------------------------------------------
+// In the long grass: still, listening, the head cocked - a leap, nose first into the grass - and now and then up with
+// a mouse (fish: in its jaws a moment). Turns to the next sound and listens again.
+const mousingAt = (map, x, y) => { const t = map.tileAtPx(x, y); return (t === T.GRASS || t === T.FIELD) && !!wildStyle(map, x, y); };
+export function startMousing(world, a, now = world.time) {
+  const w = a.wild;
+  w.rest = false; setState(w, 'mouse', now, 22 + rng() * 22);
+  w.nextPounce = now + 1.5 + rng() * 2.5; w.pounceUntil = 0; w.holdUntil = 0; w.listenA = a.a;
+  return true;
+}
+function mouseMove(world, a, w, S, now) {
+  const out = { mx: 0, my: 0, speed: S.walk, pose: APOSE.alert };
+  if (now > w.until && now > w.holdUntil) { setState(w, 'idle', now, 2 + rng() * 3); w.nextMouse = now + 40 + rng() * 50; return out; }
+  if (now < w.holdUntil && now >= w.pounceUntil) { out.pose = APOSE.fish; return out; }   // (a mouse in its jaws)
+  if (now < w.pounceUntil) {   // the leap: up and over, nose first into the grass
+    out.pose = APOSE.pounce;
+    if (w.pounceUntil - now > 0.3) { out.mx = Math.cos(a.a); out.my = Math.sin(a.a); out.speed = 95; }
+    return out;
+  }
+  if (now >= w.nextPounce) {
+    w.pounceUntil = now + 0.75; w.holdUntil = 0;
+    if (rng() < 0.4) { w.holdUntil = w.pounceUntil + 2.6; w.mice = (w.mice || 0) + 1; }
+    w.nextPounce = Math.max(w.pounceUntil, w.holdUntil) + 2.5 + rng() * 3.5;
+    w.listenA = a.a + (rng() - 0.5) * 1.6;
+    out.pose = APOSE.pounce;
+    return out;
+  }
+  a.a = w.listenA ?? a.a; w.hd = a.a;   // (listening: turned to the rustle)
+  return out;
+}
+
+// ---- the birds of prey: up in the air ---------------------------------------------------------------------------
+// Soaring: circling over its country (now and then moving the circle on, never far from where it came), looking down;
+// a stoop onto a rabbit (takeDown: off with it), a plunge into the water feet first - the splash - and up again with a
+// fish or without; carrying it off over the trees, gone (cleared away once out of sight).
+function airMove(world, a, w, S, dt, now) {
+  const top = S.fly || 300;
+  let h = a.a, sp = top * 0.4;
+  switch (w.state) {
+    case 'soar': {
+      if (w.soarR === undefined) { w.soarR = 160 + rng() * 120; w.soarDir = rng() < 0.5 ? 1 : -1; w.soarA = Math.atan2(a.y - w.hy, a.x - w.hx); }
+      w.soarA += (sp / w.soarR) * dt * w.soarDir;
+      const tx = w.hx + Math.cos(w.soarA + 0.35 * w.soarDir) * w.soarR, ty = w.hy + Math.sin(w.soarA + 0.35 * w.soarDir) * w.soarR;
+      h = turnTo(a.a, Math.atan2(ty - a.y, tx - a.x), 1.6 * dt);
+      w.pose = APOSE.soar;
+      if (now > w.until) {
+        const H0 = w.home || { x: w.hx, y: w.hy }, ang = rng() * 6.28, r = rng() * 600;
+        w.hx = H0.x + Math.cos(ang) * r; w.hy = H0.y + Math.sin(ang) * r; setState(w, 'soar', now, 20 + rng() * 25);
+      }
+      if (now >= (w.lookAt || 0)) { w.lookAt = now + 0.8 + rng() * 0.6; raptorLook(world, a, S, now); }
+      break;
+    }
+    case 'stoop': {   // dropping on it, wings folded
+      const q = world.get(w.huntOf);
+      if (!q || q.removed || q.dead || now > w.until || !preyOk(q, S.hunts) || peopleNear(world, q.x, q.y, PEOPLE_R * 0.8, watcher(w, now))) { endHunt(world, a, now, 'stoop'); return; }
+      const dx = q.x - a.x, dy = q.y - a.y, d = Math.hypot(dx, dy) || 1;
+      h = Math.atan2(dy, dx); sp = Math.min(top * 1.2, d / dt);
+      w.pose = APOSE.stoop;
+      if (d < 16) {
+        if (rng() < 0.6) { takeDown(world, a, q, now); return; }
+        w.huntOf = 0; w.nextHunt = now + 20 + rng() * 20; setState(w, 'soar', now, 12 + rng() * 10);   // (missed: up again)
+      }
+      break;
+    }
+    case 'plunge': {   // down onto the water feet first - the splash - and up again
+      if (w.splashAt) {
+        a.vx = a.vy = 0; w.sp = 0; w.pose = APOSE.dive;
+        if (now - w.splashAt > 0.8) {
+          w.splashAt = 0;
+          if (rng() < S.fishes.p) { w.fishCaught = (w.fishCaught || 0) + 1; carryOff(world, a, w, 'fish', now); }
+          else { setState(w, 'soar', now, 12 + rng() * 12); w.nextHunt = now + 8 + rng() * 8; }
+        }
+        return;
+      }
+      if (now > w.until) { setState(w, 'soar', now, 12); return; }
+      const dx = w.px - a.x, dy = w.py - a.y, d = Math.hypot(dx, dy) || 1;
+      if (d < 8) { w.splashAt = now; world.emit(a.x, a.y, { e: 'splash', x: a.x, y: a.y, big: 1 }); return; }
+      h = Math.atan2(dy, dx); sp = Math.min(top * 1.1, d / dt);
+      w.pose = APOSE.stoop;
+      break;
+    }
+    case 'carry': {   // off with it, over the trees and away
+      sp = top * 0.55; h = w.fa;
+      w.pose = w.carry === 'fish' ? APOSE.carryFish : APOSE.carryGame;
+      if (now > w.until) w.flewOff = true;
+      break;
+    }
+    default: break;
+  }
+  a.x += Math.cos(h) * sp * dt; a.y += Math.sin(h) * sp * dt;
+  a.vx = Math.cos(h) * sp; a.vy = Math.sin(h) * sp; a.a = h; w.sp = sp; w.hd = h;
+  world.place(a);
+}
+const turnTo = (from, to, max) => { const e = wrapA(to - from); return Math.abs(e) <= max ? to : from + Math.sign(e) * max; };
+function carryOff(world, a, w, what, now) {
+  w.carry = what; w.huntOf = 0; w.splashAt = 0; w.nextHunt = now + 200;
+  // away from whoever's about (off out of their sight), else on the way it was going
+  let ang = a.a, best = 1600;
+  for (const p of world.players.values()) { const q = p.ped; if (!q || q.dead) continue; const d = Math.hypot(q.x - a.x, q.y - a.y); if (d < best) { best = d; ang = Math.atan2(a.y - q.y, a.x - q.x) + (rng() - 0.5) * 0.8; } }
+  w.fa = ang; setState(w, 'carry', now, 7 + rng() * 4);
+}
+// up there, looking down: a rabbit in the open (the eagle); a fish near the surface below (the osprey, the eagle)
+function raptorLook(world, a, S, now) {
+  const w = a.wild;
+  if (now < (w.nextHunt || 0) || peopleNear(world, a.x, a.y, PEOPLE_R, watcher(w, now))) return;
+  w.nextHunt = now + 2.5 + rng() * 3;
+  if (S.hunts && rng() < S.hunts.p) { const q = preyNear(world, a, S.hunts, a.x, a.y); if (q) { startHunt(world, a, q, now); return; } }
+  if (S.fishes && rng() < (S.hunts ? 0.3 : 0.55)) for (let k = 0; k < 10; k++) {
+    const ang = rng() * 6.28, r = 40 + rng() * 170, x = a.x + Math.cos(ang) * r, y = a.y + Math.sin(ang) * r;
+    if (freshAt(world.map, x, y) || (wet(world.map, x, y) && kelpAt(world.map, x, y))) { w.px = x; w.py = y; w.splashAt = 0; setState(w, 'plunge', now, 5); return; }
+  }
+}
+// dev / tests: a bird of prey drops into the water at (x, y)
+export function startPlunge(world, a, x, y, now = world.time) { const w = a.wild; w.px = x; w.py = y; w.splashAt = 0; setState(w, 'plunge', now, 6); return true; }
+
 // ---- moving -----------------------------------------------------------------------------------------------------
 // A heading near ang that's open for a few tiles (water is open to swimmers; birds fly over everything).
 function steer(map, a, ang, swims, dist = 70) {
@@ -708,7 +1124,8 @@ function step(world, a, dt, now, ph) {
     }
   }
   if (now >= w.think) { w.think = now + 0.22 + rng() * 0.08; think(world, a, S, now, ph); }
-  let mx = 0, my = 0, speed = S.walk, pose = APOSE.auto, swim = !!S.swims, goal = Infinity;   // (goal: how far off where it's going is)
+  // (a heron wades; a bear goes into the river to fish; anything stood in the water can get out of it)
+  let mx = 0, my = 0, speed = S.walk, pose = APOSE.auto, swim = !!S.swims || !!S.wader || w.state === 'fish' || w.state === 'tofish' || wet(map, a.x, a.y), goal = Infinity;   // (goal: how far off where it's going is)
   const limp = a.hp < a.maxHp * 0.5 && !w.young ? 0.65 : 1;
   switch (w.state) {
     case 'flee': case 'scatter': case 'trotoff': {
@@ -720,7 +1137,7 @@ function step(world, a, dt, now, ph) {
       let ang = fleeAngle(world, a, w, swim && w.kind !== 'deer', now) + (w.bias || 0);
       if (S.zig && w.state === 'flee') ang += Math.sin(now * 7 + a.id) * 0.7;   // a rabbit jinks
       mx = Math.cos(ang); my = Math.sin(ang);
-      speed = (w.state === 'trotoff' ? S.trot : S.run) * limp * (w.young ? 0.85 : 1);
+      speed = (w.state === 'trotoff' ? S.trot : S.run) * limp * (w.young ? 0.85 : 1) * tired(w, now);
       break;
     }
     case 'regroup': {   // the covey calls back to the hen
@@ -790,6 +1207,32 @@ function step(world, a, dt, now, ph) {
       else { charge(world, a, q.id, now, false); }
       break;
     }
+    // ---- the hunt (below) ----
+    case 'hunt': case 'rush': { const h = huntMove(world, a, w, S, now, limp); mx = h.mx; my = h.my; speed = h.speed; pose = h.pose; goal = h.goal; break; }
+    case 'feed': {   // on its kill, head down; the pack round it
+      const q = world.get(w.feedOn);
+      if (!q || q.removed || !q.dead || now > w.until) { doneFeeding(world, a, w, q, now); break; }
+      const dx = q.x - a.x, dy = q.y - a.y, d = Math.hypot(dx, dy) || 1, near = (a.r || 10) + (q.r || 8) + 2;
+      if (d > near + 6) { mx = dx / d; my = dy / d; speed = S.trot * 0.6; goal = d - near; }
+      else { face(a, q.x, q.y); pose = APOSE.eat; }
+      break;
+    }
+    case 'tofish': {   // down to its fishing spot (into the shallows, the white water under the falls)
+      const dx = w.wx - a.x, dy = w.wy - a.y, d = Math.hypot(dx, dy);
+      if (d < 12 || now > w.until) { beginFishing(world, a, w, S, now); break; }
+      mx = dx / d; my = dy / d; speed = S.walk * (S.bird ? 0.8 : 1); goal = d;
+      break;
+    }
+    case 'fish': { const f = fishMove(world, a, w, S, now); mx = f.mx; my = f.my; speed = f.speed; pose = f.pose; goal = f.goal; break; }
+    case 'tobank': {   // an otter with its fish, out onto the bank to eat it
+      const dx = w.wx - a.x, dy = w.wy - a.y, d = Math.hypot(dx, dy);
+      if (d < 10 || now > w.until || (ground(map, a.x, a.y) && d < 40)) { setState(w, 'eatfish', now, 8 + rng() * 5); break; }
+      mx = dx / d; my = dy / d; speed = wet(map, a.x, a.y) ? (S.swim || 90) * 0.6 : S.walk; goal = d;
+      break;
+    }
+    case 'eatfish': pose = APOSE.eat; if (now > w.until) { setState(w, 'idle', now, 3 + rng() * 3); w.nextFish = now + 25 + rng() * 30; } break;
+    case 'mouse': { const f = mouseMove(world, a, w, S, now); mx = f.mx; my = f.my; speed = f.speed; pose = f.pose; break; }
+    case 'soar': case 'stoop': case 'plunge': case 'carry': airMove(world, a, w, S, dt, now); return;
     case 'towater': {
       const dx = w.wx - a.x, dy = w.wy - a.y, d = Math.hypot(dx, dy);
       if (d < 10 || wet(map, a.x, a.y) || now > w.until) { divesFrom(world, a, now); break; }
@@ -809,10 +1252,11 @@ function step(world, a, dt, now, ph) {
       a.vx = Math.cos(w.fa) * fsp; a.vy = Math.sin(w.fa) * fsp; a.a = w.fa;
       world.place(a);
       w.pose = APOSE.fly;
+      if (now > w.until && S.soars) { setState(w, 'soar', now, 15 + rng() * 15); w.hx = a.x; w.hy = a.y; return; }   // (a bird of prey: back up to soaring, away from you)
       if (now > w.until) {
-        const okLand = w.kind === 'duck' || w.kind === 'goose' ? (wet(map, a.x, a.y) || ground(map, a.x, a.y)) : ground(map, a.x, a.y);
+        const okLand = w.kind === 'duck' || w.kind === 'goose' ? (wet(map, a.x, a.y) || ground(map, a.x, a.y)) : S.wader ? ground(map, a.x, a.y) || shallowAt(map, a.x, a.y) : ground(map, a.x, a.y);   // (a heron: on the bank or in the shallows)
         // (it glides in: moveLike brings it down from its flying speed)
-        if (okLand && rng() < 0.7) { setState(w, 'idle', now, 3); w.hx = a.x; w.hy = a.y; w.hd = w.fa; w.sp = Math.min(fsp, (S.run || 150) * 1.2); }
+        if (okLand && (rng() < 0.7 || w.backTo)) { setState(w, 'idle', now, 3); w.hx = a.x; w.hy = a.y; w.hd = w.fa; w.sp = Math.min(fsp, (S.run || 150) * 1.2); if (S.wader) { w.backTo = null; w.nextFish = 0; w.until = now + 1; } }
         else if (now > w.until + 4) w.flewOff = true;   // gone: cleared away once out of sight (populate)
       }
       return;
@@ -853,6 +1297,7 @@ function step(world, a, dt, now, ph) {
       break;
     }
     default: {   // idle: whatever it does when it's standing about, and every so often somewhere else to go
+      if (S.soars) { setState(w, 'soar', now, 15 + rng() * 15); w.hx = a.x; w.hy = a.y; return; }   // (a bird of prey stays up)
       pose = w.act || APOSE.auto;
       // head down feeding, it looks up and round every few seconds (warier when it has young, and the legends)
       if (HEAD_DOWN.has(pose)) {
@@ -870,7 +1315,7 @@ function step(world, a, dt, now, ph) {
   }
   // round whatever's in its way - or, boxed in, it gives up what it was doing (task #422). (Not up a tree or to a beaver's
   // tree on the bank: there it's the trunk it's going for. Under the water it keeps to the water: dive.)
-  if ((mx || my) && w.state !== 'totree' && w.state !== 'work' && w.state !== 'dive') [mx, my] = wayRound(world, a, w, mx, my, swim, goal, now);
+  if ((mx || my) && w.state !== 'totree' && w.state !== 'work' && w.state !== 'dive' && !a.hidden) [mx, my] = wayRound(world, a, w, mx, my, swim, goal, now);
   if (S.swims === 'float' && wet(map, a.x, a.y) && pose === APOSE.auto && Math.hypot(mx, my) < 0.1) pose = APOSE.float;
   w.pose = pose;
   const mv = moveLike(a, w, S.size, S.run, mx, my, speed, dt, now);
@@ -925,8 +1370,11 @@ const canReach = (w, id, now) => !(id && w.unreach === id && now < (w.unreachUnt
 function giveUp(world, a, w, now) {
   w.blockA = w.hd ?? a.a; w.blockUntil = now + 1.5; w.fhAt = 0; w.stuck = (w.stuck || 0) + 1;
   switch (w.state) {
-    case 'walk': case 'regroup': case 'follow': case 'work': case 'towater': case 'totree':
+    case 'walk': case 'regroup': case 'follow': case 'work': case 'towater': case 'totree': case 'tofish': case 'tobank':
       setState(w, 'idle', now, 0.4 + rng() * 0.8); break;
+    case 'hunt': case 'rush':   // (a trunk in the way: a stumble round it; still stuck - the far side of a fence or a river from it - not this one)
+      if (w.stuck > 4) endHunt(world, a, now, 'blocked'); else w.missUntil = now + 0.4;
+      break;
     case 'charge': case 'attack': case 'stalk': {
       w.unreach = w.state === 'charge' ? w.chargeOf : w.state === 'attack' ? w.attackOf : w.stalkOf;
       w.unreachUntil = now + UNREACH_S;
@@ -1076,6 +1524,7 @@ function herdLead(world, a) {
 // what it does standing about (by what it eats, and where it is)
 function activityPose(w, S, map, a) {
   if (S.swims === 'float' && wet(map, a.x, a.y)) return APOSE.float;
+  if (S.wader) return rng() < 0.35 ? APOSE.alert : APOSE.auto;   // (a heron between its fishing: stood still, the neck up)
   if (w.kind === 'turkey' && !w.young && !(a.id & 1) && rng() < 0.3) return APOSE.call;   // (a tom struts: the fan up, the wings down - AN2)
   if (S.swims && wet(map, a.x, a.y)) return S.diet === 'dabble' && rng() < 0.4 ? APOSE.dabble : APOSE.swim;   // (a duck up-ended, feeding)
   switch (S.diet) {
@@ -1098,6 +1547,12 @@ function wander(world, a, S, now, ph) {
     const bp = (map.beaverPonds || []).find((b) => Math.hypot(b.x - a.x, b.y - a.y) < 400);
     if (bp) { const tgt = rng() < 0.5 && bp.trees && bp.trees.length ? bp.trees[Math.floor(rng() * bp.trees.length)] : rng() < 0.5 ? bp.dam : bp.lodge; if (tgt) { w.wx = tgt.x + (rng() - 0.5) * 16; w.wy = tgt.y + (rng() - 0.5) * 16; setState(w, 'work', now, 10 + rng() * 8); return; } }
   }
+  // the fishers go fishing (a heron mostly does nothing else); a fox goes mousing in the long grass (the hunt)
+  if (S.fishes && !S.soars && now >= (w.nextFish || 0) && rng() < (S.wader ? 0.8 : S.swims ? 0.45 : 0.3) && activity(S, ph) >= 0.5) {
+    w.nextFish = now + 20 + rng() * 25;
+    if (startFishing(world, a, now)) return;
+  }
+  if (S.mouses && now >= (w.nextMouse || 0) && rng() < 0.35 && mousingAt(map, a.x, a.y)) { startMousing(world, a, now); return; }
   // thirsty: down to the water's edge - the shore that way, its nose at the water (it used to make for a spot out in the
   // water, and wade into the edge of it until it gave up and drank where it stood: task #422)
   if (!S.swims && rng() < 0.12) {
