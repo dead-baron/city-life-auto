@@ -20,8 +20,9 @@ import { smoothPath, stampPath, scanPoly, smoothPoly, SMOOTH } from './world3-la
 
 // the wide pieces of stream that are lakes (the sketch drew them as blobs on its rivers), by their first point: the
 // woods' lake above Silver Thread Falls (three pieces), the high tarn's two and the lake below it in Granite Peaks, the
-// lake in the Pine Lake hills (two)
-export const LAKE_PIECES = new Set(['1748,1088', '1796,1094', '1500,560', '1478,404', '1482,402', '1330,1364', '1202,1352']);
+// lake in the Pine Lake hills (two); and (the nature program, 2026-10-20: still water lies still) the wide reach between
+// the high tarns' two (drawn as running river till then) and the broad pool on the river down toward Old Town
+export const LAKE_PIECES = new Set(['1748,1088', '1796,1094', '1500,560', '1478,404', '1482,402', '1330,1364', '1202,1352', '1500,558', '2596,1628']);
 // the Egret Coast's marsh: a channel whose middle is in this box (tiles) is a marsh channel (braided, slow, murky)
 export const MARSH_BOX = [820, 1890, 1530, 3300];
 // the desert's water from this column east (the Copper River, the canyon)
@@ -45,7 +46,7 @@ export function waterBodies3(m) {
   for (const S of [RIVER, ...STREAMS].filter(Boolean)) {
     let pts = smoothPath(S).pts.map((p) => [r1(p[0]), r1(p[1])]);
     const L = len(pts), mid = pts[pts.length >> 1], w = S.width;
-    const lake = LAKE_PIECES.has(key(S.pts[0])), marsh = !lake && mid[0] >= MARSH_BOX[0] && mid[0] <= MARSH_BOX[2] && mid[1] >= MARSH_BOX[1] && mid[1] <= MARSH_BOX[3];
+    const lake = LAKE_PIECES.has(key(S.first || S.pts[0])), marsh = !lake && mid[0] >= MARSH_BOX[0] && mid[0] <= MARSH_BOX[2] && mid[1] >= MARSH_BOX[1] && mid[1] <= MARSH_BOX[3];
     const ha = hAt(pts[0]), hb = hAt(pts[pts.length - 1]), drop = Math.abs(ha - hb);
     // downstream: downhill; on the flat, to the sea
     let flip = false;

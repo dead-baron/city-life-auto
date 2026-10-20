@@ -60,6 +60,16 @@ const DECK_LIFT = 88;                                  // shared/levels.js: px p
 const DECK_FACE = 13, DECK_SHADE = 9;                  // a bridge's face over the water (slab and girders), the shade under it
 const DECK_LEE = 14;                                    // the shade east of a deck that runs north-south (the light is from the north-west)
 const CITY = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
+const NO_WALK = new Set(['rural', 'desert', 'wild', 'rocky', 'water']);   // (the districts the map lays no pavement in: shared/roads.js SIDEWALK_CLASS)
+// whether the pavement's band may be drawn on this tile: not out in the country; on a beach district's coast road only
+// beside its pavement (shared/map.js rasterRoads lays it through the towns only)
+function paved(b, ti) {
+  const st = DISTRICTS[b.td[ti]].style;
+  if (NO_WALK.has(st)) return false;
+  if (st !== 'beach') return true;
+  for (let n = 0; n < 8; n++) if (b.tt[ti + NB8[n]] === T.SIDEWALK) return true;
+  return false;
+}
 const TREES = new Set(['tree_a', 'tree_b']), PALMS = new Set(['palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s']);
 
 // ---- materials ---------------------------------------------------------------------------------------------
@@ -729,12 +739,13 @@ function classify(C) {
           else if (wetSpan && !(a & A_FILLET)) { m = DISTRICTS[b.td[ti]].road === 'asphalt_worn' ? M_.DECK : M_.DECKF; z = deckRamp(C, I.wet, s); }
           else m = DISTRICTS[b.td[ti]].road === 'asphalt_worn' ? M_.ROADOLD : M_.ROAD;
           if (e.kind === 'dirt' && (a & A_FILLET)) m = M_.DIRTROAD;
-        } else if (I.city && (val < I.walk || (t === T.SIDEWALK && val < I.walk + 18))) {   // (a 112 px pavement fills its 4th tile row)
+        } else if (I.city && (val < I.walk || (t === T.SIDEWALK && val < I.walk + 18)) && (t === T.SIDEWALK || paved(b, ti))) {   // (a 112 px pavement fills its 4th tile row; none out in the country, where the map laid none - a road on its way through a town has its pavement there only)
           if (wetSpan) { if (Math.abs(b.rV[i]) < e.hw + 14) { m = M_.DECKWALK; z = deckRamp(C, I.wet, s) + 3; } }
           else if (t !== T.BUILDING && t !== T.WALL && t !== T.FLOOR && t !== T.COUNTER && t !== T.DOCK && !isWater(m)) {
             m = walkOf(DISTRICTS[b.td[ti]]);
           }
-        } else if (e.kind === 'rural' && val < I.walk && isSoft(m)) m = M_.SHOULDER;
+        } else if (I.city && val < 12 && isSoft(m) && NO_WALK.has(DISTRICTS[b.td[ti]].style)) m = M_.SHOULDER;   // (out in the country: a gravel verge, as a county road's)
+        else if (e.kind === 'rural' && val < I.walk && isSoft(m)) m = M_.SHOULDER;
         else if (e.kind === 'rural' && val < I.walk + 34 && (m === M_.DIRT || m === M_.MUD) && t === T.DIRT) {
           for (let n = 0; n < 8; n++) { const kk = ti + NB8[n]; const mm = b.tm[kk]; if (isSoft(mm) && mm !== M_.DIRT && mm !== M_.MUD && b.tt[kk] !== T.DIRT) { m = mm; break; } }
         }

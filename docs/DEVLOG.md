@@ -12373,3 +12373,40 @@ shoes); a backpacker out to the far end of the trail and back, the forager down 
 beat with the radio, the kayaker along the shore with the kayak up; a word with the ranger - the prompt, something new
 each time, a find and which way, what's protected; the riders dressed. (test/activities.test.js: the classic view draws
 the new props, the debug menu's eight more.)
+
+## 2026-10-20 · Nature: the rivers joined to the sea, their banks, the country roads (water and terrain, part 1)
+
+The nature program's second step, the owner's notes of 10-16 on the water and the country ("rivers cut off by land:
+make them connect all the way"; "rivers that look natural: bends, banks, varied width, sandy and rocky shores";
+country roads without sidewalks), on World v3:
+- **The rivers joined up** (`shared/world3-skeleton.js`): World v3's rivers are the sketch's traced fragments, and 21
+  of them stopped a few tiles of dry land short of the next one's water (the Copper River twice, so its middle reach
+  and Red Rock's reservoir lay cut off; the lake below Silver Thread Falls from the gorge's creek; the high tarns from
+  the Pine Lake hills...). A fragment whose end stops up to `JOIN_GAP` (32) tiles off another's water now runs on into
+  it. The joined western system - the high tarns, the Pine Lake hills, the woods' river and the Egret marsh, 267k tiles
+  of water - had no way out at all: `MOUTHS` carries its two last reaches over the dunes into the sea. Every river
+  system now reaches the sea (Kestrel Lake stays behind its weir, Red Rock Dam stands across the Copper River - both
+  rivers it parts run to the sea). The joined lines are the skeleton's, so a road over a join is a bridge.
+- **Still water** (`shared/world3-waterbodies.js` LAKE_PIECES): the wide reach between the high tarns and the broad pool
+  on the river down toward Old Town were drawn as running river; they lie still now, as lakes.
+- **The banks** (`shared/world3-banks.js`, after the world is built, before the water bodies are read): along every
+  creek and river out in the country (not in the towns, the lakes or the marsh), read bend by bend off its centre line:
+  on the inside of each bend a gravel bar built out into the water - wider the tighter the bend, never past a third of
+  the channel - and shingle up the bank behind it (the ground bake's river gravel); on the outside, the cut bank's bare
+  earth; along the straight reaches between, the green strip that runs beside water even in dry country. The water's
+  width wanders with the bars and its edge changes as it goes. Never on a road, a bridge, a dock or a building, nor a
+  designed place's ground, and nothing within three tiles of a road. In World v3: some 5,000 tiles of bar, 5,100 of
+  shingle bank, 2,800 of cut bank and 9,400 of green bank.
+- **No pavement out in the country, as drawn**: the map already laid none there (10-17), but the ground bake drew a
+  road's pavement by its distance from the road, so a county road that runs through a town somewhere drew the town's
+  pavement for its whole length - through the woods, the desert, the farm valley, the marsh
+  (`client/art2/game/groundbake.js`: now only where the district has pavements, or on the map's own pavement; out in
+  the country a gravel verge instead). And a beach district's county road has its pavement only through its towns -
+  the unbuilt Sandpiper Coast's road lost its long brick promenade (`shared/map.js` rasterRoads: within a cell of the
+  towns' own streets, or along Northshore's beach towns' whole stretch: 8,259 pavement tiles on the Sandpiper Coast
+  before, under 1,000 now - the towns' own streets that run into it).
+
+Tests: test/world3rivers.test.js - no traced end left a short way off another's water; every big river system in
+World v3 reaches the sea; the bars, the shingle, the cut and the green banks, clear of the roads; no pavement on the
+country districts' tiles, the Sandpiper Coast's road bare, the beach towns' kept; the bake of a county road through
+the Egret Coast grass to the verge.
