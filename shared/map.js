@@ -1169,7 +1169,12 @@ function rasterRoads(m) {
   const ground = m.edges.filter((e) => e.lvl === 0);
   for (const e of m.edges) e.walk = e.lvl === 0 ? edgeWalk(m, e) : 0;
   // sidewalks first (roads win where they overlap); none out in the country (a road on its way through a town has its
-  // pavement there only)
+  // pavement there only). A beach district's county road (art) has its pavement only through its towns too - where the
+  // town's streets run (8-tile cells with one in them, and the cells round them): World v3's coasts are long and mostly
+  // empty (Nature, 2026-10-20: "country roads without sidewalks")
+  const TOWN_K = new Set(['st', 'minor', 'ave', 'blvd', 'drive', 'front']), TC = 8 * TILE, townCells = new Set();
+  for (const e of ground) if (TOWN_K.has(e.kind)) for (let s = 0; s <= e.len; s += TC / 2) { const q = pointAt(e.pts, Math.min(s, e.len)); townCells.add(Math.floor(q.y / TC) * 65536 + Math.floor(q.x / TC)); }
+  const nearTown = (tx, ty) => { const cx = Math.floor(tx * TILE / TC), cy = Math.floor(ty * TILE / TC); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (townCells.has((cy + dy) * 65536 + cx + dx)) return true; return false; };
   for (const e of ground) {
     if (!CITY_KINDS.has(e.kind) || !e.walk) continue;
     const district = ROAD_KINDS[e.kind] && ROAD_KINDS[e.kind].walk === 'district';
@@ -1177,6 +1182,7 @@ function rasterRoads(m) {
       const i = at(tx, ty);
       if (i < 0 || d <= e.hw) return;
       if (district && !sidewalkPx(e.kind, DISTRICTS[m.dist[i]].style)) return;
+      if (e.kind === 'art' && DISTRICTS[m.dist[i]].style === 'beach' && !nearTown(tx, ty)) return;
       const t = m.tiles[i];
       if (isWet(t) || t === T.ROAD || t === T.BRIDGE) return;
       m.tiles[i] = T.SIDEWALK;

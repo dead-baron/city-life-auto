@@ -75,12 +75,46 @@ export const CANAL = null;
 // The rivers and creeks (STREAMS3: centre lines with their widths, tiles), the tiny traced fragments (under 40 tiles)
 // left out. RIVER: the navigable river from the farm valley's lake (Kestrel Lake) down through the mainland city to the
 // gulf - the lake's outflow and its channel, joined.
-export const STREAMS = STREAMS3.filter((s) => {
+export const RIVER = { name: 'The Long Reach', width: 46, pts: [[3592, 1178], [3646, 1230], [3736, 1300], [3770, 1316], [3830, 1360], [3880, 1420], [3920, 1500], [3964, 1560], [3964, 1666], [3952, 1708], [3964, 1760], [3958, 1830], [3956, 1900]] };
+const TRACED = STREAMS3.filter((s) => {
   let l = 0;
   for (let i = 1; i < s.pts.length; i++) l += Math.sqrt((s.pts[i][0] - s.pts[i - 1][0]) ** 2 + (s.pts[i][1] - s.pts[i - 1][1]) ** 2);
   return l >= 40;
-}).map((s, k) => ({ name: `Creek ${k + 1}`, width: s.width, pts: s.pts }));
-export const RIVER = { name: 'The Long Reach', width: 46, pts: [[3592, 1178], [3646, 1230], [3736, 1300], [3770, 1316], [3830, 1360], [3880, 1420], [3920, 1500], [3964, 1560], [3964, 1666], [3952, 1708], [3964, 1760], [3958, 1830], [3956, 1900]] };
+}).map((s, k) => ({ name: `Creek ${k + 1}`, width: s.width, pts: s.pts.map((p) => [p[0], p[1]]), first: s.pts[0] }));   // (first: the traced line's own first point, its key - world3-waterbodies.js LAKE_PIECES - whatever's joined on before it)
+// ...joined up (the nature program, 2026-10-20 - the owner, "rivers cut off by land: make them connect all the way"):
+// a fragment whose end stops a short way off another's water (up to JOIN_GAP tiles of dry land between their banks)
+// runs on into it, its end carried to the nearest point of the other's centre line - so each river is one body of water
+// from its source down (wetRanges and landAt see the joined lines, so a road over the join is a bridge).
+export const JOIN_GAP = 32;
+export const STREAMS = joinStreams(TRACED, RIVER);
+// ...and the western rivers - the high tarns, the Pine Lake hills, the woods' river, the Egret marsh, joined into one
+// system - run out to the sea through the marsh: its two last reaches carried on over the dunes into the sea (their ends
+// 21 and 26 tiles of shore off it, from the built map)
+export const MOUTHS = [['Creek 37', 1, [846, 2941]], ['Creek 26', 0, [1342, 3150]]];
+for (const [name, end, p] of MOUTHS) { const S = STREAMS.find((q) => q.name === name); if (S) { if (end) S.pts.push(p); else S.pts.unshift(p); } }
+function joinStreams(list, main) {
+  const near = (p, pts) => {   // the nearest point of a polyline to p: [distance, point]
+    let bd = Infinity, bq = null;
+    for (let j = 1; j < pts.length; j++) {
+      const a = pts[j - 1], b = pts[j], dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy;
+      let t = L ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L : 0;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const qx = a[0] + dx * t, qy = a[1] + dy * t, d = Math.sqrt((qx - p[0]) * (qx - p[0]) + (qy - p[1]) * (qy - p[1]));
+      if (d < bd) { bd = d; bq = [qx, qy]; }
+    }
+    return [bd, bq];
+  };
+  const all = main ? [...list, main] : list;
+  for (const s of list) for (const end of [0, 1]) {
+    const p = end ? s.pts[s.pts.length - 1] : s.pts[0];
+    let gap = Infinity, q = null;
+    for (const o of all) { if (o === s) continue; const [d, at] = near(p, o.pts), g = d - s.width / 2 - o.width / 2; if (g < gap) { gap = g; q = at; } }
+    if (!(gap > 0 && gap <= JOIN_GAP)) continue;   // (already in another's water, or a river of its own)
+    const qq = [Math.round(q[0]), Math.round(q[1])];
+    if (end) s.pts.push(qq); else s.pts.unshift(qq);
+  }
+  return list;
+}
 // The lakes: the farm valley's (Kestrel Lake, its island is shared/world3-water.js's), the downtown park's pond.
 export const LAKES = LAKES3.map((l, k) => ({ name: k === 0 ? 'Kestrel Lake' : 'Greenfield Pond', poly: l.poly }));
 
