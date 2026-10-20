@@ -12,6 +12,7 @@ import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { DISTRICTS3 } from '../shared/world3-land.js';
 import { peakHeight, SNOW_LINE, skeletonRoom } from '../shared/world3-biomes.js';
 import { prepare } from '../tools/world3-build.mjs';
+import { HAND_PLANS } from '../shared/world3-hand.js';
 
 test('World v3: the mainland\'s biomes - their districts, ground and dressing', { timeout: 300000 }, () => {
   // the new districts are the generator's (after today's: today's ids don't move), shaped like today's
@@ -121,7 +122,9 @@ test('World v3: the mainland\'s biomes - their districts, ground and dressing', 
     cols++; if (top - y <= 40) meets++; widest = Math.max(widest, top - y);
   }
   console.log('Northshore', JSON.stringify({ land: TOWN.map((d) => land[d]), buildings: nb }), meets, 'of', cols, 'columns meet the sea; widest gap', widest);
-  for (const d of TOWN) check(land[d] > 20000 && (nb[d] || 0) >= 40, `${DISTRICTS[d].name}: ${land[d]} land tiles, ${nb[d] || 0} buildings`);
+  // (a handcrafted town of big lots says how few buildings it has: The Bluffs' villas - shared/world3-hand.js `few`)
+  const few = (d) => HAND_PLANS.find((P) => P.d === d && P.few)?.few ?? 40;
+  for (const d of TOWN) check(land[d] > 20000 && (nb[d] || 0) >= few(d), `${DISTRICTS[d].name}: ${land[d]} land tiles, ${nb[d] || 0} buildings`);
   check(cols > 100 && meets / cols > 0.6, `the north coast's towns meet the sea along ${meets} of ${cols} columns`);
   assert.deepEqual(problems, []);
 });

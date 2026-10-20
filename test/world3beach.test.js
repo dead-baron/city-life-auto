@@ -13,6 +13,7 @@ import { shoreY, BEACH_D } from '../shared/world3-beach.js';
 import { stationHouse, lifeguardTower } from '../client/art2/props-road.js';
 import { STATIONS } from '../shared/world3-skeleton.js';
 import { prepare } from '../tools/world3-build.mjs';
+import { PX as NPX } from '../shared/world3-northpoint.js';
 
 test('World v3: Northshore\'s beach towns built; the stations clear of trees, each with its house', { timeout: 300000 }, () => {
   const prep = prepare();
@@ -87,6 +88,20 @@ test('World v3: Northshore\'s beach towns built; the stations clear of trees, ea
   console.log('north coast', JSON.stringify(NB));
   check(NB && NB.piers >= 4 && NB.boats >= 20 && NB.decking > 300, `North Point's piers: ${JSON.stringify(NB)}`);
   check(NB && NB.shack && m.pois.some((p) => p.kind === 'fishmarket' && p.label === 'North Point Fish Shack'), 'the fish shack');
+  // (2026-10-19: North Point handcrafted - shared/world3-northpoint.js: the fish shack and the charter office on its quay
+  // between Waterside Road and the water, the charter boat the office's; Mariners' Square)
+  const shack = m.buildings.find((b) => b && b.hand && b.name === 'North Point Fish Shack'), office = m.pois.find((p) => p.kind === 'charter' && p.label === 'North Point Charters');
+  check(shack && shack.tx + shack.tw <= NPX.water && shack.tx > NPX.west, `the fish shack on North Point's quay (${shack && [shack.tx, shack.ty]})`);
+  check(office && office.boat && Math.abs(office.boat.y / TILE - office.y / TILE) < 30, 'the charter office and its boat');
+  check((m.landmarks || []).some((l) => l.name === "Mariners' Square"), "Mariners' Square");
+  console.log('North Point', JSON.stringify({ ...m.world3hand.northpoint, sights: undefined, places: undefined }));
+  // (2026-10-19: The Bluffs handcrafted - shared/world3-bluffs.js: the houses on their big lots with their pools, the Cliff
+  // Walk along the top of the east beach, Bluffs Overlook on the point, the tennis club)
+  const BL = m.world3hand.bluffs;
+  console.log('The Bluffs', JSON.stringify({ ...BL, sights: undefined, places: undefined }));
+  check(BL && BL.villas >= 25 && BL.pools >= 15 && BL.walk > 600, `The Bluffs' houses, pools and walk: ${JSON.stringify(BL && { villas: BL.villas, pools: BL.pools, walk: BL.walk })}`);
+  for (const n of ['Cliff Walk', 'Bluffs Overlook']) check((m.landmarks || []).some((l) => l.name === n), n);
+  check(m.buildings.some((b) => b && b.hand && b.name === 'The Bluffs Tennis Club'), 'the tennis club');
   const light = m.buildings.find((b) => b && b.kind === 'lighthouse' && b.name === 'North Point Light');
   check(light && (m.landmarks || []).some((l) => l.name === 'North Point Light'), 'North Point Light');
   for (const P of [NB?.light]) if (P) { let sea = false; for (let dy = -24; dy <= 24; dy += 2) for (let dx = -24; dx <= 24; dx += 2) if (!m.land[m.idx(P[0] + dx, P[1] + dy)]) sea = true; check(sea, 'the light by the sea'); }

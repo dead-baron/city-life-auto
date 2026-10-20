@@ -109,8 +109,16 @@ export function buildNorth(m, addProp) {
   // 2. Northshore's piers off the lobe across the inlet (east into it), a few dinghies
   NORTH.lobePiers.forEach((py, k) => { if (pier(NORTH.lobeFrom, py, 1, 18, 10 + k, 0.5)) out.lobePiers++; });
   // 3. the fish shack at the piers' root: a fish market (rods, the catch sold), weathered siding and a tin roof; the
-  // charter office beside it
-  {
+  // charter office beside it (2026-10-19: North Point's handcrafted plan - shared/world3-northpoint.js - builds both on
+  // its quay: the charter office gets the boat)
+  const HP = m.world3hand && m.world3hand.northpoint;
+  if (HP && HP.shack) {
+    out.shack = HP.shack;
+    const c = m.pois.find((p) => p.kind === 'charter' && p.label === 'North Point Charters');
+    if (c && charter) { c.boat = { x: Math.round(charter[0] * TILE), y: Math.round(charter[1] * TILE) }; out.charter = true; }
+    const [x0, y0, x1, y1] = NORTH.harbor;
+    landmark('North Point Harbor', 'harbor', x0, y0, x1, y1);
+  } else {
     const at = spot(NORTH.shack[0], NORTH.shack[1], 10, 6, 40);
     if (at) {
       const [x, y] = at;

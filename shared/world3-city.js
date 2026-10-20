@@ -122,8 +122,8 @@ export const CITY3 = [
   // roads (planCity3: the country roads' room); the main line between stays up (the scenic route). `shore`: the beach
   // (the land layer's sand) stays the Northshore Beaches' (54: sand, the promenade) in front of the town ---
   { d: 31, on: 'main', zone: ZN, shore: true, rects: [[3100, 560, 3300, 706], [3030, 752, 3230, 880]], look: 'Northshore: the station town - shops, the medical centre and the sheriff on the lobe west of the inlet and round Station Avenue south of the line' },
-  { d: 32, on: 'main', zone: ZN, rects: [[3380, 380, 3620, 706]], look: 'North Point: the harbour village on the peninsula\'s inlet shore - the finger piers and the fleet, the fish shack, North Point Light on the tip (world3-north.js)' },
-  { d: 34, on: 'main', zone: ZN, shore: true, rects: [[3620, 400, 3860, 706]], look: 'The Bluffs: villas on big lots on the peninsula\'s headland above its east beach' },
+  { d: 32, on: 'main', zone: ZN, rects: [[3380, 380, 3620, 706]], look: 'North Point, handcrafted (shared/world3-northpoint.js - its edges stay the grid\'s: 1st Street, Willow and Rowan Streets): the harbour village on the peninsula\'s inlet shore - the quay on Waterside Road with the fish shack, the charters and The Wheelhouse, Fountain Square, the cottages up the lanes, Inlet Green; the finger piers and the fleet, North Point Light on the tip (world3-north.js)' },
+  { d: 34, on: 'main', zone: ZN, shore: true, rects: [[3620, 400, 3860, 706]], look: 'The Bluffs, handcrafted (shared/world3-bluffs.js - its edges stay the grid\'s): shingle-style houses on big lots with their pools on Bluffs Avenue and the lanes, the Cliff Walk along the top of the east beach, Bluffs Overlook on the point, the tennis club, Headland Chapel, Bluffs Market by the gate' },
   // --- the quiet key and the ferry island ---
   { d: 44, on: 'key', zone: ZG, rects: [[4100, 3320, 4320, 3500]], look: 'Coral Cay: a few streets of beach houses round the cove' },
   { d: 43, on: 'ferry', zone: ZG, rects: [[1560, 3400, 1940, 3580]], look: 'Gull Harbor: the fishing village, the fish shack, the general store, the Anchor' },

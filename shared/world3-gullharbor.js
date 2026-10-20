@@ -143,7 +143,8 @@ function build(m, api, K) {
       for (const b of made2) {
         if (!b || b.gap || b.tw === undefined) continue;
         out.shops++;
-        prop('potted', b.tx + 0.8, b.ty + b.th + 0.6, 6); prop('lamp', b.tx + b.tw - 0.6, b.ty + b.th + 0.5, 5, { style: 'iron' });
+        // (on the strip in front where there is one: the village's streets have no pavements, so not out in the road)
+        if (tile(b.tx, b.ty + b.th) !== T.ROAD) { prop('potted', b.tx + 0.8, b.ty + b.th + 0.6, 6); prop('lamp', b.tx + b.tw - 0.6, b.ty + b.th + 0.5, 5, { style: 'iron' }); }
       }
     }
     place('Quay Street', GX.net, GY.chapel + 30, GX.gull, GY.quay + 6);

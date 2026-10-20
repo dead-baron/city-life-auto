@@ -30,6 +30,8 @@ import { PINEHILLS } from './world3-pinehills.js';
 import { CORALCAY } from './world3-coralcay.js';
 import { PELICAN } from './world3-pelican.js';
 import { GULLHARBOR } from './world3-gullharbor.js';
+import { NORTHPOINT } from './world3-northpoint.js';
+import { BLUFFS } from './world3-bluffs.js';
 import { OLDTOWN } from './world3-oldtown.js';
 import { YARDS } from './world3-yards.js';
 import { STADIUM } from './world3-stadium.js';
@@ -37,7 +39,7 @@ import { PINKMILE } from './world3-pinkmile.js';
 import { ARTS } from './world3-arts.js';
 import { BAYSIDE } from './world3-bayside.js';
 
-export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, NORTHGATE2, OLDTOWN, YARDS, STADIUM, PINKMILE, ARTS, BAYSIDE, WESTHILLS, WESTHILLS2, WESTPORT, OLDQUARTER, SOUTHSIDE, PORT, CEDARFALLS, FALLSCENTER, SUNSETBEACH, LAKESIDE, PINEHILLS, CORALCAY, PELICAN, GULLHARBOR];
+export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, NORTHGATE2, OLDTOWN, YARDS, STADIUM, PINKMILE, ARTS, BAYSIDE, WESTHILLS, WESTHILLS2, WESTPORT, OLDQUARTER, SOUTHSIDE, PORT, CEDARFALLS, FALLSCENTER, SUNSETBEACH, LAKESIDE, PINEHILLS, CORALCAY, PELICAN, GULLHARBOR, NORTHPOINT, BLUFFS];
 const M_IN = 2;   // (a street within this many tiles of a plan's edge is the edge's - the grid planner's)
 // (a plan of several rects - Downtown's bands round its park - is in its area strictly inside any of them; p.rect is
 // their bounding box: the kit's frame)
@@ -46,10 +48,69 @@ export const handDistricts = () => new Set(HAND_PLANS.map((p) => p.d));
 
 // The plans' streets as the generator's lines (px), into the `lines` hook after the skeleton's roads.
 const C = (v) => (v + 0.5) * TILE;
+// (2026-10-19, the owner: "some streets have a sharp angle to the turn instead of a smooth curve") A street's bends
+// rounded: each corner of more than ~15 degrees between straight pieces becomes a curve (a quadratic arc from a point
+// back along the piece before to one along the piece after, the corner its control point), its radius by the street's
+// width and no more than 45% of either piece (a chamfer under 10 tiles keeps its corners; a jog that short is rounded). Square roots and arithmetic only (the world must come out the same in
+// every engine: shared/dmath.js). A street that ends on another's corner is moved onto its curve (handStreets).
+const ROUND_R = { minor: 7, st: 9, ave: 12, blvd: 16, rural: 10, dirt: 8 };
+export function roundCorners(pts, kind) {
+  if (pts.length < 3 || kind === 'alley') return pts.map((p) => p.slice());
+  const R = ROUND_R[kind] || 8, out = [pts[0].slice()];
+  for (let i = 1; i + 1 < pts.length; i++) {
+    const [ax, ay] = pts[i - 1], [bx, by] = pts[i], [cx, cy] = pts[i + 1];
+    const l1 = Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay)), l2 = Math.sqrt((cx - bx) * (cx - bx) + (cy - by) * (cy - by));
+    if (l1 < 1e-6 || l2 < 1e-6) { out.push(pts[i].slice()); continue; }
+    const ux = (bx - ax) / l1, uy = (by - ay) / l1, vx = (cx - bx) / l2, vy = (cy - by) / l2, dot = ux * vx + uy * vy;
+    // (straight enough; or a short chamfer between two longer pieces - Skyview Loop's corners, both turning the same way:
+    // already a corner cut, its neighbours' fences and lots laid round it. A short jog - turning one way then back, Old
+    // Quarter's lanes - is rounded into an S)
+    if (dot > 0.966) { out.push(pts[i].slice()); continue; }
+    if (Math.min(l1, l2) < 10) {
+      const cr = (p, q, r) => (q[0] - p[0]) * (r[1] - q[1]) - (q[1] - p[1]) * (r[0] - q[0]);
+      const here = cr(pts[i - 1], pts[i], pts[i + 1]);
+      const other = l2 < 10 ? (i + 2 < pts.length ? cr(pts[i], pts[i + 1], pts[i + 2]) : 0) : (i >= 2 ? cr(pts[i - 2], pts[i - 1], pts[i]) : 0);
+      if (here * other >= 0) { out.push(pts[i].slice()); continue; }
+    }
+    // (each piece shared by two corners gives each at most 45% of its length)
+    const r = Math.min(R, 0.45 * l1, 0.45 * l2), n = dot > 0.85 ? 3 : dot > 0.4 ? 5 : 8;
+    const p0x = bx - ux * r, p0y = by - uy * r, p2x = bx + vx * r, p2y = by + vy * r;
+    for (let k = 0; k <= n; k++) {
+      const t = k / n, a = (1 - t) * (1 - t), b2 = 2 * (1 - t) * t, c = t * t;
+      out.push([Math.round((a * p0x + b2 * bx + c * p2x) * 100) / 100, Math.round((a * p0y + b2 * by + c * p2y) * 100) / 100]);
+    }
+  }
+  out.push(pts[pts.length - 1].slice());
+  return out;
+}
+// the point on a polyline nearest p
+function nearestOn(P, [px, py]) {
+  let best = P[0], bd = Infinity;
+  for (let i = 0; i + 1 < P.length; i++) {
+    const [ax, ay] = P[i], [bx, by] = P[i + 1], dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+    let t = L ? ((px - ax) * dx + (py - ay) * dy) / L : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const qx = ax + dx * t, qy = ay + dy * t, d = (qx - px) * (qx - px) + (qy - py) * (qy - py);
+    if (d < bd) { bd = d; best = [Math.round(qx * 100) / 100, Math.round(qy * 100) / 100]; }
+  }
+  return best;
+}
+// every plan's streets with their corners rounded, and the streets that end on another's corner moved onto its curve
+export function roundedStreets() {
+  const all = [];
+  for (const P of HAND_PLANS) for (const s of P.streets()) all.push({ P, s, pts: s.sharp ? s.pts.map((p) => p.slice()) : roundCorners(s.pts, s.kind) });
+  for (const a of all) for (const e of [0, a.s.pts.length - 1]) {
+    const [px, py] = a.s.pts[e];
+    for (const b of all) {
+      if (b === a || b.pts.length === b.s.pts.length) continue;
+      if (b.s.pts.some((v, i) => i > 0 && i < b.s.pts.length - 1 && (v[0] - px) * (v[0] - px) + (v[1] - py) * (v[1] - py) <= 2.25)) { a.pts[e === 0 ? 0 : a.pts.length - 1] = nearestOn(b.pts, [px, py]); break; }
+    }
+  }
+  return all;
+}
 export function handStreets(lines) {
   const out = { streets: 0, len: 0 };
-  for (const P of HAND_PLANS) for (const s of P.streets()) {
-    lines.push({ pts: s.pts.map(([x, y]) => ({ x: C(x), y: C(y) })), kind: s.kind, lvl: 0, name: s.name, city: true, hand: P.key, ...(s.park ? { park: s.park } : {}), ...(s.w ? { w: s.w } : {}), ...(s.median ? { median: s.median } : {}), ...(s.oneway ? { oneway: true } : {}), ...(s.culdesac ? { culdesac: true } : {}) });
+  for (const { P, s, pts } of roundedStreets()) {
+    lines.push({ pts: pts.map(([x, y]) => ({ x: C(x), y: C(y) })), kind: s.kind, lvl: 0, name: s.name, city: true, hand: P.key, ...(s.park ? { park: s.park } : {}), ...(s.w ? { w: s.w } : {}), ...(s.median ? { median: s.median } : {}), ...(s.oneway ? { oneway: true } : {}), ...(s.culdesac ? { culdesac: true } : {}) });
     out.streets++;
     for (let i = 1; i < s.pts.length; i++) out.len += Math.round(Math.hypot(s.pts[i][0] - s.pts[i - 1][0], s.pts[i][1] - s.pts[i - 1][1]));
   }

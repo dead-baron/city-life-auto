@@ -11889,3 +11889,87 @@ the far north-west of the frame, and two boat-hire anchors there.
 Tests: test/gullharbor.test.js (the whole island the plan's; its streets on the island, each meeting another or the
 loop road); test/world3city.test.js (a plan's country lanes and tracks are kinds the generator knows); test/world3world.test.js (the island Gull Harbor's district, the fish shed, the two lights, the car
 ferry's slip on the village's quay, no stray Gull Isles).
+
+## 2026-10-19 · World v3, handcrafted: North Point (the harbour village on the north coast's peninsula)
+
+North Point (district 32) is now laid out by hand (`shared/world3-northpoint.js`), from the owner's concept WC386
+(NorthPoint-A1: the rocky fishing harbour - timber piers with the fishing boats, a red boathouse, the covered fish
+market with its crates, waterfront cafes and a seafood restaurant under umbrellas, clapboard houses, a little fountain
+square, a ridge road, the lighthouse on the point). The generator had filled it with a numbered grid (2nd to 20th
+Street, Linden and Alder Streets) of apartment blocks. Now:
+- **Waterside Road** along the inlet shore from its corner with 1st Street, and **the quay** between it and the
+  water: stone-edged with bollards, iron lamps, lobster pots, crates and barrels, nets drying on their racks, benches;
+  **North Point Fish Shack** (the fish market: sell your catch - the gutting table, the cooler and crates out front),
+  **North Point Charters** (the deep-sea charter desk - its boat at the end of the middle pier), **The Wheelhouse**
+  (seafood, its terrace on the quay under red and yellow umbrellas); fishing boats tied up along the quay between the
+  finger piers, the red boathouse at its south end. The piers, the fleet along them and North Point Light on the tip
+  stay the north coast builder's (`shared/world3-north.js`), which now finds the plan's fish shack and charter office
+  instead of building its own.
+- **Beacon Lane**'s corner by the water: **The Bell Buoy** (the pub) and **Gannet's Fish Bar**.
+- **Mariners' Square** by the water on Herring Lane: the fountain in its basin, benches, trees in grates, lamps, flowers; **The
+  Seaglass Cafe** (its tables out on the square) and **Point Provisions** (the corner store) facing it.
+- **Lighthouse Avenue** up the peninsula's spine where the avenue ran (on to the light's track at 1st Street), **Crest
+  Road** along its east side, **Beacon, Herring, Anchor and Mackerel Lanes** and **Netmaker Row** across: their painted
+  clapboard cottages under dark shingle (homes for sale), a row facing each lane and one with its doors on the lane
+  above, back yards between them where the camera sees them; trees on what's left.
+- **The Shore Road front**, where the road in arrives: **The Crab Pot**, **Point Diner**, **Scoops by the Sea**, **Harbor
+  Slice**, **Morning Tide Bakery**, **Point Bait & Tackle** and **The Tide Table**, their tables out on the pavement.
+- **Inlet Green** in the corner where the peninsula meets the coast: lawn down to the sand under oaks, maples and pines, the path across with
+  its lamps, the gazebo, the statue by the water, picnic tables, flower beds.
+The district's edges stay the grid's (1st Street, Willow and Rowan Streets) and the Shore Road's.
+
+`shared/world3-suburb.js`: a row's lots can carry their kind for the old renderer (o.key - North Point's cottages are
+'house1' / 'house2').
+
+Tests: test/northpoint.test.js (the plan's streets inside the district, each meeting another or an edge, Lighthouse
+Avenue on the avenue lattice); test/world3beach.test.js (the fish shack on the quay, the charter office and its boat,
+Mariners' Square).
+
+## 2026-10-19 · World v3, handcrafted: The Bluffs (the villa headland east of North Point)
+
+The Bluffs (district 34) is now laid out by hand (`shared/world3-bluffs.js`), from the owner's concept WC387
+(Bluffs-A1: tile-roofed villas with pools behind gated drives along a winding clifftop road, a cliff-edge walk with
+railings and benches, a tennis court, cypresses and palms, stairs down to a tiny cove with a beach-shack bar, surfboards
+and a jetty, sea stacks offshore) and WC306 (the cove below the cliff walk, the chapel on the cliff top). The generator
+had filled it with a numbered grid (3rd to 18th Street, Walnut and Spruce Streets) of villas.
+- **Bluffs Avenue** up the headland from the Shore Road, where **THE BLUFFS** stands on its gate piers, to the point,
+  where it turns west to Rowan Street; **Cliff Road** winding along the clifftop from the avenue's top to Headland Road;
+  **Seacliff, Cormorant and Windward Lanes**, **Club Lane**, **Headland Road** and **Chapel Road** across.
+- **The villas** on their big lots (homes for sale, named - Windcrest, Greystones, Tidewatch...): warm stucco under
+  terracotta, a few modern ones in white; the house at the back, the terrace and the pool in front with its loungers
+  and umbrella, the drive in from the gate to the garage, hedges down the sides, iron railings on the street,
+  cypresses up the drive, palms; on Chapel Road and Windward Lane the houses face the lane above, their gardens and
+  pools behind them.
+- **The Cliff Walk** between Cliff Road and the top of the east beach: paved, railed along the edge, benches looking
+  out, coin telescopes, lamps, the gazebo halfway.
+- **Bluffs Overlook** on the point: the terrace out to its railing, the gazebo, telescopes at the corners, benches, the
+  beds.
+- **Bluffs Cove** below the walk's south end: the timber stairs down, the beach-shack bar on the sand, surfboards,
+  umbrellas and towels, the jetty with a dinghy tied up, basalt stacks offshore.
+- **The Bluffs Tennis Club** on Club Lane (the clubhouse facing its two fenced courts, the members' cars),
+  **Headland Chapel** on Chapel Road above the cove, **Bluffs Market** by the gate.
+The district's edges stay the grid's (Rowan and Elm Streets, the east edge street) and the Shore Road's.
+
+Tests: test/bluffs.test.js (the plan's streets inside the district, each meeting another or an edge, Bluffs Avenue on
+the avenue lattice); test/world3beach.test.js (the villas, their pools, the Cliff Walk, the overlook, the tennis club).
+
+## 2026-10-19 · World v3: the handcrafted streets' bends rounded
+
+The owner: "some streets have a sharp angle to the turn instead of a smooth curve". A handcrafted street is a list of
+points, and where two straight pieces met the road turned on the spot (The Bluffs' Cliff Road, North Point's Waterside
+Road, Stadium Way's corners, Old Town's wandering lanes, the West Hills loops). Now every bend of more than about 15
+degrees in a plan's street is laid as a curve (`shared/world3-hand.js` roundCorners: a quadratic arc from a point back
+along the piece before to one along the piece after, its radius by the street's width - 7 tiles for a lane, 9 a street,
+12 an avenue, 16 a boulevard - and never more than 45% of either piece; a short chamfer, as at Skyview Loop's corners,
+keeps its corners, a short jog, as on the Old Quarter's lanes, becomes an S); a street that ended on another's corner is
+moved onto its curve. The road art already follows the line, so nothing else changed; the crossroads of the grids are
+untouched (a street of two points has no bend). 30 of the plans' 217 streets are rounded. Square roots and arithmetic
+only, so the world still comes out the same in every engine. A plan can keep a corner sharp (`sharp: true`).
+North Point's Waterside Road had a jog of its own at the top - it stepped 10 tiles east from the end of the grid's 1st
+Street to leave room for the quay: North Point now lays its own 1st Street along the top to meet it at a plain corner.
+And two plans' props that stood out in the road: Gull Harbor's Quay Street shops' pots and lamps (the village's streets
+have no pavements: not where there's no strip in front), Mariners' Square's planters.
+
+Tests: test/roundcorners.test.js (a right angle becomes a curve, a short jog an S, the ends stay, straight streets and gentle arcs are
+left alone, no handcrafted street keeps a bend sharper than 45 degrees, a street ending on a corner still meets
+its curve).
