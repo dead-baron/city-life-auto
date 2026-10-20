@@ -1,7 +1,8 @@
 // World v3 (docs/WORLD-V3.md 8.15): Lucky Mesa, the casino city, in the whole-world build - its three districts (after
 // the towns': no id moves), the Strip (Mesa Road straight through the city as a boulevard) and its side streets on the
-// one road network, Station Road down to the main line's station, the resorts on their lots (each its own look, a
-// casino door, pools and palms, the fountain lake), Old Downtown's covered street and its old casinos, the planned
+// one road network, Station Road down to the main line's station, the resorts on their lots (the Strip's plan's -
+// shared/world3-strip.js: each its own look, a casino door, pools and palms, the fountain lake, a drive loop round a
+// fountain, the skybridge, the median's palms and banner poles), Old Downtown's covered street and its old casinos, the planned
 // places (pawn shops, the gun shop, clubs, the bank, motels, wedding chapels, the counting room, the hospital, the
 // police, the gas station), a bus stop; nothing in the highway's room or on the main line. One world build.
 import { test } from 'node:test';
@@ -12,6 +13,7 @@ import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { skeletonLines, nearestOnPath, STATIONS } from '../shared/world3-skeleton.js';
 import { MESA, MESA_SPECIALS, MESA_IDS } from '../shared/world3-mesa.js';
+import { RESORTS, SKYBRIDGE, STRIP_ROAD } from '../shared/world3-strip.js';
 import { prepare } from '../tools/world3-build.mjs';
 
 test('World v3: Lucky Mesa - districts, the Strip and its streets on the network, the resorts, the places, clear of the highway and the main line', { timeout: 300000 }, () => {
@@ -54,6 +56,7 @@ test('World v3: Lucky Mesa - districts, the Strip and its streets on the network
   let len = 0, off = 0;
   for (const e of strip) { len += e.len; for (const p of e.pts) if (Math.abs(p.y - row) > 2) off++; check(comp[e.a] === main && comp[e.b] === main, 'the Strip on the one network'); }
   check(len >= 280 * TILE && off === 0, `the Strip: ${(len / TILE).toFixed(0)} tiles of boulevard, ${off} points off its row`);
+  check(strip.every((e) => e.w === STRIP_ROAD.w * TILE && e.median === STRIP_ROAD.median), `the Strip a palm-median boulevard (${strip.map((e) => `${e.w}/${e.median}`).join(' ')})`);
   // Station Road from Route 9 to the station
   const stn = STATIONS.find((s) => s.name === 'Lucky Mesa' && s.line === 'main');
   const sr = m.edges.filter((e) => e.name === 'Station Road');
@@ -78,6 +81,26 @@ test('World v3: Lucky Mesa - districts, the Strip and its streets on the network
     check(palms >= 6, `${R.name}: ${palms} palms`);
   }
   check(looks.size === MESA.resorts.length, `${looks.size} looks`);
+  // the Strip's plan (2026-10-20, LuckyMesa-B2): a drive loop round a fountain in front of each resort, its porte-cochere
+  // (the casino's marquee, the adobe's pergola); the cabanas; the two car parks; the skybridge's span and towers; the
+  // median's palms and banner poles; the Neon Saguaro's cactus up its pylon; the bus stops
+  const propsIn = (t, x0, y0, x1, y1) => m.props.filter((p) => p && p.t === t && p.x >= x0 * TILE && p.x < x1 * TILE && p.y >= y0 * TILE && p.y < y1 * TILE);
+  for (const R of RESORTS) {
+    const [x0, y0, x1, y1] = R.lot, fy0 = R.face === 'S' ? y1 - 8 : y0, fy1 = fy0 + 8;
+    check(propsIn('fountain', x0, fy0, x1, fy1).length >= 1 || R.look === 'lake', `${R.name}: the fountain in its drive loop`);
+    const py0 = R.face === 'S' ? y1 - 22 : y0, py1 = py0 + 22;   // (the Silver Lagoon's at the end of its drive past the lake)
+    check(propsIn('porte', x0, py0, x1, py1).length + propsIn('pergola', x0, py0, x1, py1).length >= 1, `${R.name}: its porte-cochere`);
+  }
+  const [sx0, sy0, sx1, sy1] = [5330, 552, 5552, 690];
+  check(propsIn('cabana', sx0, sy0, sx1, sy1).length >= 12, `${propsIn('cabana', sx0, sy0, sx1, sy1).length} cabanas`);
+  check(propsIn('skybridge', SKYBRIDGE.x - 1, SKYBRIDGE.north, SKYBRIDGE.x + 2, SKYBRIDGE.south + 1).length === 4 && propsIn('sbtower', SKYBRIDGE.x - 1, SKYBRIDGE.north - 2, SKYBRIDGE.x + 2, SKYBRIDGE.south + 3).length === 2, 'the skybridge: its span and its two towers');
+  const med = m.props.filter((p) => p && Math.abs(p.y - row) < TILE && p.x >= 5330 * TILE && p.x < 5560 * TILE);
+  check(med.filter((p) => p.t === 'palm_a').length >= 15 && med.filter((p) => p.t === 'bannerpole').length >= 15, `the median: ${med.filter((p) => p.t === 'palm_a').length} palms, ${med.filter((p) => p.t === 'bannerpole').length} banner poles`);
+  const parking = blds.filter((b) => b.art && b.art.spec && b.art.spec.roofMat === 'parking');
+  check(parking.length === 2, `${parking.length} car parks`);
+  const sag = blds.find((b) => b.name === 'The Neon Saguaro');
+  check(sag && sag.art.neon && sag.art.neon.pic === 'saguaro', 'the Neon Saguaro\'s cactus up its pylon');
+  check(propsIn('busstop', 5330, 600, 5560, 625).length >= 2, 'the Strip\'s bus stops');
   // Old Downtown's covered street: paving under the canopy, the old casinos fronting it
   const [cx0, cy0, cx1, cy1] = MESA.canopy;
   let paved = 0;

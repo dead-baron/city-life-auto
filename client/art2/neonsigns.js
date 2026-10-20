@@ -204,6 +204,23 @@ const SHAPES = {
     for (const [cx, cy, c] of [[11, 10, [255, 70, 70]], [19, 7, [255, 220, 70]], [27, 9, [90, 220, 120]], [32, 14, [80, 160, 255]], [9, 18, [230, 110, 255]]]) if (Math.hypot(X - cx, Y - cy) < 2.4) return c;
     return [110, 70, 30];
   } },
+  // ---- Lucky Mesa's (2026-10-20; LuckyMesa-B2): the Neon Saguaro's cactus up its pylon - the trunk and its two arms a
+  // green tube over a dark fill with its ribs, pink flowers at their tips, the desert's line under it, the frame's red
+  // tube round it all
+  saguaro: { w: 34, h: 58, glow: [110, 255, 140], at(x, y) {
+    const X = x + 0.5, Y = y + 0.5;
+    const fr = (x2, y2) => { const u = x2 + 0.5, v = y2 + 0.5; if (u < 1 || u > 33 || v < 1 || v > 57) return false; const dx = Math.max(0, Math.abs(u - 17) - 11), dy = Math.max(0, Math.abs(v - 29) - 23); return dx * dx + dy * dy <= 25; };
+    if (edge(fr, x, y)) return [255, 70, 90];
+    const cap = (ax, ay, bx, by, r) => (x2, y2) => segD(x2 + 0.5, y2 + 0.5, ax, ay, bx, by)[0] < r;
+    const trunk = cap(17, 10, 17, 49, 4.2), la = (x2, y2) => cap(17, 35, 9.5, 35, 2.8)(x2, y2) || cap(9.5, 35, 9.5, 22, 2.8)(x2, y2), ra = (x2, y2) => cap(17, 28, 24.5, 28, 2.8)(x2, y2) || cap(24.5, 28, 24.5, 15, 2.8)(x2, y2);
+    const Cc = (x2, y2) => trunk(x2, y2) || la(x2, y2) || ra(x2, y2);
+    if (edge(Cc, x, y)) return [130, 255, 150];
+    if (Cc(x, y)) return (trunk(x, y) && Math.abs(X - 17) < 0.7) || (Math.abs(X - 9.5) < 0.6 && Y < 33) || (Math.abs(X - 24.5) < 0.6 && Y < 26) ? [70, 200, 100] : [18, 84, 40];
+    if (ring(17, 8.4, 1.7)(x, y) || ring(9.5, 20.2, 1.4)(x, y) || ring(24.5, 13.2, 1.4)(x, y)) return [255, 110, 200];
+    if (Y > 50 && Y < 51.6 && X > 5 && X < 29) return [255, 170, 70];
+    if (twinkle(x, y, 7, 8, 2) || twinkle(x, y, 28, 40, 2)) return [255, 210, 240];
+    return null;
+  } },
   vinyl: { w: 34, h: 34, glow: [255, 90, 140], at(x, y) {
     const r = Math.hypot(x + 0.5 - 17, y + 0.5 - 17);
     if (r > 16) return null;

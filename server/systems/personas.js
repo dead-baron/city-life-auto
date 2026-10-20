@@ -142,6 +142,8 @@ export const LOOKS = {
     fix(L, r) { L.outfit.set = null; L.outfit.jacket = null; L.outfit.top = item(r() < 0.5 ? 'Polo shirt' : 'Plain tee', pick(r, ['white', 'red', 'yellow'])); L.outfit.bottoms = item(r() < 0.5 ? 'Chinos' : 'Jeans', pick(r, ['black', 'khaki', 'denim'])); L.outfit.shoes = item('Sneakers', pick(r, ['white', 'black'])); L.outfit.hat = r() < 0.7 ? item('Baseball cap', pick(r, ['red', 'white', 'yellow'])) : null; L.outfit.glasses = null; L.outfit.bag = null; L.outfit.jewel = null; } },
   fisher: { styles: Wt('outdoors:3 casual:1'), fem: 0.15, age: [0.5, 1, 2, 3, 3, 2], shade: 0, builds: 'casual', pool: 6,
     fix(L, r) { L.outfit.set = null; L.outfit.top = item(r() < 0.5 ? 'Flannel shirt' : 'Thermal top', pick(r, ['red', 'forest', 'navy', 'cream'])); L.outfit.jacket = r() < 0.5 ? item(r() < 0.5 ? 'Puffer vest' : 'Rain jacket', pick(r, ['olive', 'navy', 'yellow', 'khaki'])) : null; L.outfit.bottoms = item('Cargo pants', pick(r, ['olive', 'khaki', 'charcoal'])); L.outfit.shoes = item(r() < 0.5 ? 'Rain boots' : 'Work boots', pick(r, ['yellow', 'olive', 'brown'])); L.outfit.hat = r() < 0.8 ? item(pick(r, ['Bucket hat', 'Trucker cap', 'Beanie']), pick(r, ['khaki', 'olive', 'red', 'navy'])) : null; L.outfit.glasses = r() < 0.3 ? item('Sport shades') : null; L.outfit.bag = null; L.outfit.jewel = null; } },
+  statue: { styles: Wt('business:1'), fem: 0.3, age: [2, 3, 2, 1, 0, 0], shade: 0, builds: 'casual', pool: 4,   // (a living statue: a suit and a fedora, all of it painted bronze - client/art2/people.js statueApp)
+    fix(L, r) { L.outfit.set = null; L.outfit.jacket = item('Suit jacket'); L.outfit.bottoms = item('Suit trousers'); L.outfit.shoes = item('Oxfords'); L.outfit.hat = item('Fedora'); L.outfit.bag = null; L.outfit.glasses = null; L.outfit.jewel = null; void r; } },
   busker: { styles: Wt('retro:2 alt:2 casual:1 western:1'), fem: 0.35, age: [2, 3, 2, 1, 1, 0], shade: 0, builds: 'casual', pool: 6,
     fix(L, r) { L.outfit.hat = r() < 0.6 ? item(r() < 0.5 ? 'Fedora' : 'Beanie', pick(r, ['brown', 'charcoal', 'black', 'mustard'])) : null; if (r() < 0.5) L.outfit.jacket = item(r() < 0.5 ? 'Denim jacket' : 'Leather jacket'); L.outfit.bag = null; if (L.body.base === 'm' && r() < 0.6) L.hair.facial = pick(r, [1, 2, 3, 5]); } },
 };
@@ -173,7 +175,7 @@ export const PERSONAS = {
   caller:   { arche: 'casual', look: 'casual', pp: 'call', speed: 0.85, where: 'commercial:2 towers:2 apartments:1 civic:1', day: 1.5, night: 0.5 },
   bench:    { arche: 'casual', look: 'casual', where: 'park:3 commercial:1 civic:2 beach:1 houses:1 oldtown:1', day: 2.5, night: 0.4, bench: true },
   sleeper:  { arche: 'drunk', look: 'homeless', where: 'park:2 southside:1 civic:1', day: 0.6, night: 0.6, cap: 1, sleep: true, poor: true },
-  busker:   { arche: 'casual', look: 'busker', pp: 'guitar', where: 'commercial:2 civic:2 oldtown:2 towers:1 nightlife:1 beach:1', day: 1.5, night: 1, cap: 1, busk: true },
+  busker:   { arche: 'casual', look: 'busker', pp: 'guitar', where: 'commercial:2 civic:2 oldtown:2 towers:1 nightlife:1 beach:1', day: 1.5, night: 1, cap: 3, busk: true },
   selfie:   { arche: 'casual', look: 'casual', where: 'civic:2 park:1 beach:1 towers:1', day: 0.4, night: 0.1, cap: 1, selfie: true },
   // more of the city's characters
   tourists: { arche: 'casual', look: 'tourist', pp: 'map', speed: 0.8, where: 'civic:2 beach:2 oldtown:2 towers:1 park:1 commercial:1', day: 1.5, night: 0.3, pair: true, cap: 1 },
@@ -244,10 +246,24 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
     at = spot; at.water = waterward(world.map, spot.x, spot.y);
     if (at.water === null) return null;
   }
+  if (P.busk) {   // a pitch by the square's fountain or statue when there's one near (else where they are), and an act no other busker near is doing
+    const pitch = buskSpot(world, x, y);
+    if (pitch) at = pitch;
+    else if (world.query(x, y, PITCH_GAP, K.PED).some((e) => e.npc && e.npc.busk)) return null;   // (never two buskers on top of each other)
+    at.kind = buskKind(world, at.x, at.y, night);
+    if (!at.kind) return null;
+  }
   if (offView && (at.x !== x || at.y !== y) && inAnyView(world, at.x, at.y, 64)) return null;
   const ped = spawnNpc(world, P.arche, at.x, at.y, 'civ');
   apply(world, ped, key, night);
   const n = ped.npc;
+  if (P.busk) {
+    const B = BUSKS[at.kind];
+    n.busk = at.kind; ped.pp = B.pp; if (B.gt) ped.gt = B.gt;
+    if (B.look) { const g = dress(world, 'p:' + B.look, ped.x, ped.y, night, rng, LOOKS[B.look]); if (g) { ped.app = { ...g.app, bd: ped.app.bd }; } }
+    n.spot = { x: at.x, y: at.y, a: at.a }; if (at.a !== undefined) ped.a = at.a;
+    n.drawAt = world.time + 2; ped.appVer = (ped.appVer || 0) + 1;
+  }
   if (P.bench || P.sleep) n.bench = { x: at.x, y: at.y, a: at.a };
   if (at.mark) {   // a photo of themselves with the fountain (the statue, the big wheel) behind them - npc.js's filming, the phone held
     // up, facing away from it, a flash now and then - then on they go like anyone
@@ -397,7 +413,14 @@ export function steer(world, ped, now) {
     ped.vx = ped.vy = 0; ped.a = n.spot.a;
     return { inp: NO_INPUT, factor: 0.55 };
   }
-  if ((P.busk || P.cart || P.fish) && n.spot) {   // the busker, the hot-dog seller and the fisherman keep their spot
+  if (P.busk && n.spot) {   // the busker plays on the pitch, facing the square; now and then a passer-by stops to listen
+    if (Math.hypot(n.spot.x - ped.x, n.spot.y - ped.y) > 10) return { inp: seekTo(ped, n.spot.x, n.spot.y), factor: 0.5 };
+    ped.vx = ped.vy = 0; if (n.spot.a !== undefined) ped.a = n.spot.a;
+    if (n.bowUntil && now > n.bowUntil) { n.bowUntil = 0; ped.gt = 'statue'; ped.appVer = (ped.appVer || 0) + 1; }
+    if (now >= (n.drawAt || 0)) { n.drawAt = now + 2 + rng() * 2; drawCrowd(world, ped, now); }
+    return { inp: NO_INPUT, factor: 0.55 };
+  }
+  if ((P.cart || P.fish) && n.spot) {   // the hot-dog seller and the fisherman keep their spot
     if (P.fish) { ped.a = n.spot.a; if (!ped.fishing) ped.fishing = { npc: true }; return { inp: NO_INPUT, factor: 0.55 }; }
     if (Math.hypot(n.spot.x - ped.x, n.spot.y - ped.y) > 10) return { inp: seekTo(ped, n.spot.x, n.spot.y), factor: 0.5 };
     ped.vx = ped.vy = 0; if (P.cart) ped.a = Math.PI / 2;
@@ -460,7 +483,87 @@ export function update(world, dt) {
   }
 }
 
-// ---- the busker: drop a coin in the guitar case (ACT beside them) ----------------------------------------------------------
+// ---- the buskers (Shared-9, 2026-10-20): the acts, the pitch, the crowd ------------------------------------------------------
+// The acts: a guitarist with his amp and the open case, a saxophonist, a violinist at her music stand, a drummer on upturned
+// buckets, a living statue on its crate (by day). pp: the prop the client draws (client/art2/people.js); gt: the statue's
+// pose; w: how often; tip / thanks: the ACT's label and what comes of a coin.
+export const BUSKS = {
+  guitar: { pp: 'guitar', w: 3, tip: 'Drop a coin in the guitar case', thanks: 'The busker nods along: "Thank you kindly!"' },
+  sax: { pp: 'sax', w: 2, tip: 'Drop a coin in the sax case', thanks: 'A little flourish on the sax, just for you.' },
+  violin: { pp: 'violin', w: 2, tip: 'Drop a coin in the violin case', thanks: 'The violinist bows the next phrase your way.' },
+  drums: { pp: 'drums', w: 2, tip: 'Drop a coin in the drummer\'s pot', thanks: 'A drum roll on the buckets for you.' },
+  statue: { pp: 'statue', gt: 'statue', look: 'statue', w: 1.5, day: true, tip: 'Drop a coin in the statue\'s hat', thanks: 'The statue comes to life, bows, and freezes again.' },
+};
+const PITCH_GAP = 220, AUDIENCE = 6;   // (px between two buskers' pitches; how many stop to listen at once)
+// a pitch near (x, y): on the paving 3-6 tiles from a fountain, a statue, a gazebo or a map board, facing it, clear of
+// another busker's - or null
+function buskSpot(world, x, y) {
+  const marks = propsNear(world.map, x, y, 700, MARK).filter((q) => q.t !== 'ferris').sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));
+  for (const q of marks.slice(0, 4)) for (let k = 0; k < 16; k++) {
+    const s = spotNear(world, q.x, q.y, 90, 230);
+    if (!s) continue;
+    const t = world.map.tileAtPx(s.x, s.y);
+    if (t !== T.PLAZA && t !== T.SIDEWALK) continue;
+    if (world.query(s.x, s.y, PITCH_GAP, K.PED).some((e) => e.npc && e.npc.busk)) continue;
+    return { x: s.x, y: s.y, a: Math.atan2(q.y - s.y, q.x - s.x) };
+  }
+  return null;
+}
+// an act for a busker at (x, y): one no busker near is doing (the statue by day only), by how often each turns up
+function buskKind(world, x, y, night) {
+  const near = new Set();
+  for (const e of world.query(x, y, CAP_R, K.PED)) if (e.npc && e.npc.busk && !e.dead) near.add(e.npc.busk);
+  const list = Object.entries(BUSKS).filter(([k, B]) => !near.has(k) && !(B.day && night));
+  let tot = 0; for (const [, B] of list) tot += B.w;
+  if (!tot) return null;
+  let r = rng() * tot;
+  for (const [k, B] of list) { r -= B.w; if (r <= 0) return k; }
+  return list[list.length - 1][0];
+}
+// a passer-by wandering near stops to listen: to a spot in front of the busker, facing them, a while; some step up to drop a
+// coin first (npc.js 'audience', personas.audience)
+function drawCrowd(world, b, now) {
+  let have = 0;
+  const cand = [];
+  for (const e of world.query(b.x, b.y, 300, K.PED)) {
+    const q = e.npc;
+    if (!q || e === b || e.dead || e.vehId || e.hidden || e.onTrain) continue;
+    if (q.state === 'audience' && q.aud && q.aud.b === b.id) { have++; continue; }
+    if (q.role !== 'civ' || q.persona || q.act || q.desk || q.guard || q.keep || q.state !== 'wander') continue;
+    if (now - (q.heardAt ?? -1e9) < 120) continue;
+    cand.push(e);
+  }
+  if (have >= AUDIENCE || !cand.length || rng() > 0.5) return;
+  const e = cand[Math.floor(rng() * cand.length) % cand.length], fa = b.npc.spot.a ?? b.a;
+  for (let k = 0; k < 6; k++) {
+    const a = fa + (rng() - 0.5) * 2.4, d = 52 + rng() * 46, sx = b.x + Math.cos(a) * d, sy = b.y + Math.sin(a) * d;
+    if (!walkable(world.map, sx, sy)) continue;
+    e.npc.state = 'audience'; e.npc.heardAt = now;
+    e.npc.aud = { b: b.id, x: sx, y: sy, until: now + 14 + rng() * 22, tip: rng() < 0.3 ? now + 4 + rng() * 8 : 0, tipped: false };
+    return;
+  }
+}
+// someone in a busker's crowd (npc.js state 'audience'): to their spot, then watching the act; up to the case with a coin
+// if they mean to; off again when it's time, or when the busker's gone
+export function audience(world, ped, now) {
+  const n = ped.npc, A = n.aud, b = A && world.get(A.b);
+  if (!A || !b || b.dead || b.removed || !b.npc || !b.npc.busk || now > A.until) {
+    n.state = 'wander'; n.aud = null;
+    if (b) n.awayFrom = Math.atan2(ped.y - b.y, ped.x - b.x);
+    return NO_INPUT;
+  }
+  let tx = A.x, ty = A.y;
+  if (A.tip && now > A.tip && !A.tipped) {
+    const fa = b.npc.spot.a ?? b.a;
+    tx = b.x + Math.cos(fa) * 26; ty = b.y + Math.sin(fa) * 26;
+    if (Math.hypot(tx - ped.x, ty - ped.y) < 12) { A.tipped = true; b.npc.coins = (b.npc.coins || 0) + 1; }
+  }
+  if (Math.hypot(tx - ped.x, ty - ped.y) > 8) return seekTo(ped, tx, ty, 0.55);
+  ped.vx = ped.vy = 0; ped.a = Math.atan2(b.y - ped.y, b.x - ped.x);
+  return NO_INPUT;
+}
+
+// ---- a coin for a busker (ACT beside them) ----------------------------------------------------------------------------------
 export function interaction(world, p) {
   const ped = p.ped;
   if (!ped || ped.vehId) return null;
@@ -469,7 +572,8 @@ export function interaction(world, p) {
     const last = e.npc.tips && e.npc.tips.get(p.profile.pid);
     if (last !== undefined && world.time - last < BUSKER_EVERY_S) return null;
     if ((p.profile.cash || 0) < BUSKER_TIP) return null;
-    return { label: `Drop a coin for the busker ($${BUSKER_TIP})`, run: () => tip(world, p, e) };
+    const B = BUSKS[e.npc.busk] || BUSKS.guitar;
+    return { label: `${B.tip} ($${BUSKER_TIP})`, run: () => tip(world, p, e) };
   }
   return null;
 }
@@ -478,6 +582,9 @@ function tip(world, p, busker) {
   p.profile.cash -= BUSKER_TIP; p.profile.samaritan = (p.profile.samaritan || 0) + BUSKER_SAMARITAN;
   busker.npc.tips.set(p.profile.pid, world.time);
   store.touch(); p.meDirty = true;
-  busker.a = Math.atan2(p.ped.y - busker.y, p.ped.x - busker.x);
-  world.notify(p, `The busker nods along: "Thank you kindly!" -$${BUSKER_TIP}, +${BUSKER_SAMARITAN} Samaritan.`, 'good');
+  const B = BUSKS[busker.npc.busk] || BUSKS.guitar;
+  if (busker.npc.busk === 'statue') { busker.gt = 'statuebow'; busker.npc.bowUntil = world.time + 2.5; busker.appVer = (busker.appVer || 0) + 1; }   // (it comes to life for a moment)
+  else busker.a = Math.atan2(p.ped.y - busker.y, p.ped.x - busker.x);
+  busker.npc.coins = (busker.npc.coins || 0) + 1;
+  world.notify(p, `${B.thanks} -$${BUSKER_TIP}, +${BUSKER_SAMARITAN} Samaritan.`, 'good');
 }

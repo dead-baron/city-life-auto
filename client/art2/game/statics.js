@@ -348,7 +348,7 @@ export function makeStatic(r) {
     case 'msign': return makeMotelSign(r);
     case 'debris': return makeDebris(r);
     case 'rock': return makeRock(r);
-    case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams });
+    case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams, stone: r.stone });
     case 'sbridge': return makeStoneBridge(r);
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
     case 'festoon': return makeFestoon(r);
@@ -1511,6 +1511,8 @@ function voxModel(m, a) {
     case 'forklift': return X.forklift(a[0], a[1]); case 'container': return X.container(a[0], a[1]); case 'boxcar': return X.boxcar(a[0]); case 'tankcar': return X.tankCar(a[0]); case 'clockPost': return RD.clockPost(); case 'stopPole': return X.stopPole(a[0]); case 'gazebo': return PK.gazebo(); case 'archBridge': return PK.archBridge(a[0] || 120, a[1] || 26, a[2] || 16); case 'parkSign': return PK.parkSign(a[0]);
     case 'beachChair': return PK.beachChair(a[0]); case 'lifeguard': return P.lifeguardTower(); case 'cafeTable': return P.cafeTable(); case 'chalkboard': return P.chalkboard(); case 'topiary': return D.topiary(a[0], a[1]);
     case 'trough': return U.trough(); case 'woodpile': return U.woodpile(); case 'propane': return U.propaneTank(); case 'barrierArm': return U.barrierArm(a[0], a[1]); case 'gantryCrane': return X.gantryCrane(a[0], a[1], a[2]);
+    case 'cabana': return D.cabana(a[0] || 0); case 'skySpan': return D.skySpan(a[0] || 150); case 'skyTower': return D.skyTower(a[0] || 144); case 'porte': return D.porte(a[0] || 300, a[1] || 96, a[2] || 58, a[3] || 0);
+    case 'timberPergola': return D.timberPergola(a[0] || 380, a[1] || 96, a[2] || 60); case 'bannerPole': return D.bannerPole(a[0] || 0);
     case 'dome': return obsDome(a[0] || 90); case 'marquee': return marquee(); case 'speaker': return speakerPost(); case 'portal': return portal(a[0] || 100); case 'wheelStop': return wheelStop();
     case 'gravel': return gravelPile(a[0] || 1); case 'rubble': return rubblePile(a[0] || 1); case 'trashPile': return trashPile(a[0] || 1); case 'pipes': return pipeStack(a[0] || 1); case 'lumber': return lumberStack(a[0] || 1, a[1] || 0);
     case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'spanPole': return spanPole(); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
@@ -1577,6 +1579,8 @@ function vdim(m, a) {
     case 'flagpole': return [46, 8, (a[0] || 110) + 4]; case 'jersey': return [a[0] || 48, 14, 18]; case 'forklift': return [46, 26, 50]; case 'container': return [a[1] || 130, 54, 58]; case 'boxcar': return [230, 58, 74]; case 'tankcar': return [210, 58, 74]; case 'clockPost': return [16, 10, 64];
     case 'stopPole': return [14, 8, 60]; case 'gazebo': return [74, 74, 86]; case 'archBridge': return [a[0] || 120, a[1] || 26, (a[2] || 16) + 22]; case 'parkSign': return [26, 6, 30]; case 'beachChair': return [26, 14, 16]; case 'lifeguard': return [34, 30, 46]; case 'cafeTable': return [14, 14, 12]; case 'chalkboard': return [12, 8, 18];
     case 'topiary': return [16, 16, 30]; case 'trough': return [36, 16, 12]; case 'woodpile': return [30, 12, 16]; case 'propane': return [60, 24, 30]; case 'barrierArm': return [a[0] || 70, 10, 30];
+    case 'cabana': return [44, 40, 50]; case 'skySpan': return [64, a[0] || 150, 46]; case 'skyTower': return [60, 60, (a[0] || 144) + 4]; case 'porte': return [a[0] || 300, a[1] || 96, (a[2] || 58) + 16];
+    case 'timberPergola': return [a[0] || 380, a[1] || 96, (a[2] || 60) + 14]; case 'bannerPole': return [32, 8, 100];
     case 'gantryCrane': return [70, a[0] || 170, (a[1] || 200) + 6]; case 'dome': return [(a[0] || 90) + 10, (a[0] || 90) + 10, (a[0] || 90) * 0.8 + 30]; case 'marquee': return [84, 10, 80]; case 'speaker': return [10, 10, 22];
     case 'portal': return [74, (a[0] || 100) + 4, 48]; case 'wheelStop': return [26, 6, 4]; case 'gravel': case 'rubble': return [40, 32, 14]; case 'trashPile': return [38, 28, 16]; case 'pipes': return [48, 24, 16];
     case 'fallenLog': return [(a[0] || 110) + 4, (a[1] || 11) * 2 + 6, (a[1] || 11) * 2 + 10];
@@ -2121,6 +2125,14 @@ function propItems(c, p, pi, I) {
     case 'dome': V('dome', 'dome', [150]); lightAt(I, x, y + 40, 40, 120, [1, 0.85, 0.6], 1, 'window'); return;
     case 'flare': V('flr', 'flare', [1]); lightAt(I, x, y, 92, 200, LIGHT.fire, 2.4, 'fire', 0); return;
     case 'dscreen': V('dsc', 'screen', [200, 100]); lightAt(I, x, y + 10, 60, 180, [0.7, 0.8, 1], 1.4, 'sign'); return;
+    // (Lucky Mesa's Strip, shared/world3-strip.js: a poolside cabana, the skybridge's span lifted p.z and its towers, a
+    // porte-cochere - k 1 a casino's marquee - the adobe resort's pergola, a banner pole on the median)
+    case 'cabana': V(`cab:${(p.v || 0) % 4}`, 'cabana', [(p.v || 0) % 4]); lightAt(I, x, y, 34, 60, [1, 0.8, 0.5], 0.8, 'lamp'); return;
+    case 'skybridge': { const len = Math.round((p.len || 150) / 2) * 2, z = p.z || 96; V(`sksp:${len}`, 'skySpan', [len], 0, null, { z0: z }); lightAt(I, x, y, z + 30, 130, [1, 0.84, 0.6], 1.1, 'window'); return; }
+    case 'sbtower': { const h = p.h || 144; V(`sktw:${h}`, 'skyTower', [h]); lightAt(I, x, y + 20, 40, 120, [1, 0.86, 0.62], 1.2, 'window'); return; }
+    case 'porte': { const w = Math.round((p.w || 300) / 8) * 8, d = Math.round((p.d || 96) / 8) * 8, h = p.h || 58, k = p.k ? 1 : 0; V(`porte:${w}:${d}:${h}:${k}`, 'porte', [w, d, h, k]); lightAt(I, x, y, h - 6, 150, k ? [1, 0.45, 0.85] : [1, 0.85, 0.6], k ? 2 : 1.4, k ? 'neon' : 'lamp'); return; }
+    case 'pergola': { const w = Math.round((p.w || 380) / 8) * 8, d = Math.round((p.d || 96) / 8) * 8, h = p.h || 60; V(`tperg:${w}:${d}:${h}`, 'timberPergola', [w, d, h]); lightAt(I, x, y, h - 14, 140, [1, 0.76, 0.45], 1.3, 'lamp'); return; }
+    case 'bannerpole': V(`bpole:${(p.v || 0) % 2}`, 'bannerPole', [(p.v || 0) % 2]); lightAt(I, x, y, 92, 100, [1, 0.86, 0.62], 1.2, 'lamp'); return;
     case 'marquee': V('mrq', 'marquee', []); lightAt(I, x, y + 6, 50, 110, [1, 0.84, 0.5], 1.6, 'neon'); return;
     case 'dspeaker': V('spk', 'speaker', []); return;
     case 'upole': {
@@ -2135,7 +2147,7 @@ function propItems(c, p, pi, I) {
     case 'rwlight': { const col = { w: '#f0eee0', g: '#3ae070', r: '#e83a30', b: '#3a6ae8' }[p.c] || '#f0eee0'; V(`rw:${p.c}`, 'runwayLight', [col]); lightAt(I, x, y, 6, 50, L01(col), 1.1, 'lamp', 1); return; }
     case 'boulder': {
       const bio = c.biome(x, y), st = c.dist(x, y).style, size = p.s || [20, 26, 34][Math.floor(hh(x, y, 17) * 3)]; // (p.s: an outcrop)
-      if (!WILDS.has(st)) { V(`bld:${size}:${seed % 3}`, 'boulder', [seed % 3 + 1, size - 4, pick(['#8a8478', '#7a7068', '#9a9488'], seed / 6)]); return; }
+      if (!WILDS.has(st) && !p.rock) { V(`bld:${size}:${seed % 3}`, 'boulder', [seed % 3 + 1, size - 4, pick(['#8a8478', '#7a7068', '#9a9488'], seed / 6)]); return; }
       const isle = SEA_ISLES.has(c.di(x, y)), style = p.style || (isle ? 'basalt' : bio === 3 || st === 'desert' ? 'sandstone' : bio === 5 ? 'basalt' : 'granite'), moss = p.moss || bio === 2 ? 1 : 0, barn = p.barn ? 1 : 0;
       put(I, { key: `rk:${style}:${size}:${seed % 2}:${moss}:${barn}`, recipe: { t: 'rock', style, size, s: seed % 2, moss: moss ? 0.5 : 0, barn }, x, y, ext: [size * 1.4 + 16, size * 1.8 + 24, size * 1.4 + 16, size + 14], pi });
       return;
@@ -2185,7 +2197,7 @@ function propItems(c, p, pi, I) {
     case 'boombox': V('bbox', 'boombox', []); return;
     case 'bleachers': { const len = Math.round((p.len || 120) / 8) * 8, rows = p.rows || 4; V(`blch:${len}:${rows}`, 'bleachers', [len, rows]); return; }
     case 'cliffwall': { const len = Math.round((p.len || 160) / 8) * 8, h = p.h || 70, dp = p.d || 60, sd = p.s || 1; put(I, vitem(`cliffw:${len}:${h}:${sd}:${dp}`, 'cliffWall', [len, h, dp, sd], x, y, 0, null, { pi })); return; }
-    case 'coastfall': { const w = p.w || 28, drop = p.drop || 66, sd = p.s || 11; put(I, { key: `fall:c:${w}:${drop}:${sd}`, recipe: { t: 'fall', kind: p.kind || 'cliff', w, drop, seed: sd, mist: p.mist ?? 0.7 }, x, y, ext: [w / 2 + 80, drop + 130, w / 2 + 80, 50], pi }); lightAt(I, x, y + 10, 12, 130, [0.75, 0.9, 1], 0.5, 'sign', 0); return; }
+    case 'coastfall': { const w = p.w || 28, drop = p.drop || 66, sd = p.s || 11; put(I, { key: `fall:c:${w}:${drop}:${sd}${p.kind && p.kind !== 'cliff' ? ':' + p.kind : ''}${p.stone ? ':' + p.stone : ''}`, recipe: { t: 'fall', kind: p.kind || 'cliff', w, drop, seed: sd, mist: p.mist ?? 0.7, ...(p.stone ? { stone: p.stone } : {}) }, x, y, ext: [w / 2 + 80, drop + 130, w / 2 + 80, 50], pi }); lightAt(I, x, y + 10, 12, 130, [0.75, 0.9, 1], 0.5, 'sign', 0); return; }
     case 'wslide': {   // a water slide from its tower (x, y: the start, at the tower's south face) down to its pool
       const dx = Math.round(p.dx || 0), len = Math.round(p.len || 240), z0 = p.z || 84, kind = p.kind || 'flume', col = p.c || '#d8342e', wig = 34;
       const x0 = 22 + (dx < 0 ? Math.abs(dx) : 0) + wig;

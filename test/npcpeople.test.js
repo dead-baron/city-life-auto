@@ -7,7 +7,7 @@ import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { K, T, TILE, MAP_W, MAP_H } from '../shared/constants.js';
 import { validLook, encodeLook, decodeLook, LOOK_CODE_LEN, PIECES } from '../shared/look.js';
 import { RECIPES, recipeLook, poolFor, POOL_N, styleMix } from '../server/systems/npclooks.js';
-import { PERSONAS, LOOKS, spawnPersona, spawnHere, interaction as busk } from '../server/systems/personas.js';
+import { PERSONAS, LOOKS, BUSKS, spawnPersona, spawnHere, interaction as busk } from '../server/systems/personas.js';
 import { BUSKER_TIP, BUSKER_SAMARITAN } from '../shared/rules.js';
 import { spawnNpc, onGunfire, onDeath } from '../server/systems/npc.js';
 import { _descriptor } from '../server/net.js';
@@ -118,11 +118,12 @@ test('the personalities: where they turn up, their walks and props, their ways',
   clear();
   // walks and props
   const at = spotIn('park');
-  for (const [k, gt, pp] of [['cane', 'hunch', 'cane'], ['glam', 'strut', undefined], ['skater', 'skate', 'board'], ['blader', 'blade', undefined], ['homeless', 'push', 'cart'], ['phone', undefined, 'phone'], ['dancer', 'dance', undefined], ['swim', 'dance', undefined], ['trolley', undefined, 'trolley'], ['busker', undefined, 'guitar']]) {
+  for (const [k, gt, pp] of [['cane', 'hunch', 'cane'], ['glam', 'strut', undefined], ['skater', 'skate', 'board'], ['blader', 'blade', undefined], ['homeless', 'push', 'cart'], ['phone', undefined, 'phone'], ['dancer', 'dance', undefined], ['swim', 'dance', undefined], ['trolley', undefined, 'trolley']]) {
     const p = spawnPersona(w, spawnNpc, k, at.x, at.y);
     assert.equal(p.npc.persona, k); assert.equal(p.gt, gt, k); assert.equal(p.pp, pp, k);
     assert.ok(p.app.lk, `${k} dressed from the wardrobe`);
   }
+  { const p = spawnPersona(w, spawnNpc, 'busker', at.x, at.y); const B = BUSKS[p.npc.busk]; assert.ok(B, 'a busker\'s act'); assert.equal(p.pp, B.pp, 'busker'); assert.equal(p.gt, B.gt, 'busker'); assert.ok(p.app.lk, 'busker dressed from the wardrobe'); }
   clear();
   // the dog walker's three dogs, at heel out in front
   const dw = spawnPersona(w, spawnNpc, 'dogs', at.x, at.y);
@@ -175,12 +176,12 @@ test('street life: the busker plays for coins, people sit on benches, someone sl
   const b = spawnPersona(w, spawnNpc, 'busker', at.x, at.y);
   teleport(w, p.ped, b.x + 20, b.y);
   const it = busk(w, p);
-  assert.ok(it && /busker/.test(it.label), 'drop a coin');
+  assert.ok(it && /Drop a coin/.test(it.label), 'drop a coin');
   it.run();
   assert.equal(prof.cash, 50 - BUSKER_TIP); assert.equal(prof.samaritan, BUSKER_SAMARITAN);
   assert.equal(busk(w, p), null, 'once in a while');
   run(w, 2);
-  assert.ok(Math.hypot(b.x - at.x, b.y - at.y) < 14, 'the busker keeps his spot');
+  assert.ok(Math.hypot(b.x - b.npc.spot.x, b.y - b.npc.spot.y) < 14, 'the busker keeps his pitch');
   // a bench: walk to it, sit (the descriptor's sb), get up after a while
   clear();
   const park = spotIn('park');
@@ -228,4 +229,55 @@ test('the walks and props are drawn: the client turns gt / pp / sb into the peop
   assert.equal(Pd.personaPose({ sb: 1 }, 'idle'), 'sitx', 'a seat on the bench: one of the ways of sitting, held a while (peds.js sitFrame)');
   for (const pp of ['trolley', 'leads', 'guitar', 'call', 'cane', 'board', 'map']) assert.ok(Pd.pedSprite(Pd.withProp(A, pp), 'walk0', 2, 1, 0).w > 10, pp);
   assert.equal(Pd.pedFrame('hunch', 7), 5);
+});
+
+test('the buskers (Shared-9): five acts with their kit, a pitch by the fountain facing it, a crowd that stops to listen, a statue that bows for a coin', () => {
+  clear();
+  const f = m.props.find((q) => q.t === 'fountain' && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => m.tileAtPx(q.x + dx * 140, q.y + dy * 140) === T.PLAZA || m.tileAtPx(q.x + dx * 140, q.y + dy * 140) === T.SIDEWALK));
+  assert.ok(f, 'a fountain with paving round it');
+  const { p, prof } = joinPlayer(w, { cash: 50 }); teleport(w, p.ped, f.x + 400, f.y + 400);
+  // by day, each act once - none twice near each other
+  w.clock && (w.clock.isNight = false);
+  const acts = new Map();
+  for (let k = 0; k < 40 && acts.size < 3; k++) {
+    const b = spawnPersona(w, spawnNpc, 'busker', f.x + ((k % 5) - 2) * 60, f.y + 60, false);
+    if (b) acts.set(b.npc.busk, b);
+  }
+  assert.ok(acts.size >= 2, `acts at once round the fountain (${[...acts.keys()]})`);
+  for (const [kind, b] of acts) {
+    assert.ok(BUSKS[kind], kind);
+    assert.equal(b.pp, BUSKS[kind].pp, `${kind}: its kit (the descriptor's pp)`);
+    assert.equal(_descriptor(b).pp, BUSKS[kind].pp);
+    const d = Math.hypot(b.x - f.x, b.y - f.y);
+    if (d < 200 && b.npc.spot.a !== undefined) assert.ok(Math.abs(Math.atan2(Math.sin(b.npc.spot.a - Math.atan2(f.y - b.y, f.x - b.x)), Math.cos(b.npc.spot.a - Math.atan2(f.y - b.y, f.x - b.x)))) < 0.2, `${kind}: facing the fountain`);
+  }
+  assert.ok([...acts.values()].some((q) => q.npc.spot.a !== undefined && Math.hypot(q.x - f.x, q.y - f.y) < 200), 'a pitch by the fountain');
+  const ks = [...acts.values()];
+  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) assert.ok(Math.hypot(ks[i].x - ks[j].x, ks[i].y - ks[j].y) >= 220, 'their pitches apart');
+  // passers-by stop to listen, facing the act, then go on their way
+  const b = ks[0];
+  for (let k = 0; k < 8; k++) spawnNpc(w, 'casual', b.x + 120 + k * 12, b.y + 40, 'civ');
+  let crowd = [];
+  for (let s = 0; s < 40 && crowd.length < 2; s++) { run(w, 1); crowd = [...w.entities.values()].filter((e) => e.npc && e.npc.state === 'audience' && e.npc.aud.b === b.id); }
+  assert.ok(crowd.length >= 2, `a crowd gathers (${crowd.length})`);
+  run(w, 3);
+  const at = crowd.filter((e) => e.npc.state === 'audience' && Math.hypot(e.x - e.npc.aud.x, e.y - e.npc.aud.y) < 12);
+  for (const e of at) { const da = Math.atan2(b.y - e.y, b.x - e.x) - e.a; assert.ok(Math.abs(Math.atan2(Math.sin(da), Math.cos(da))) < 0.3, 'watching the act'); }
+  run(w, 45);
+  assert.ok(crowd.every((e) => e.removed || e.npc.state !== 'audience'), 'and on they go');
+  // the living statue: in bronze on its crate; a coin and it bows, then freezes again
+  let st = [...acts.values()].find((q) => q.npc.busk === 'statue');
+  for (let k = 0; k < 60 && !st; k++) { clear(); const q = spawnPersona(w, spawnNpc, 'busker', f.x, f.y + 60, false); if (q && q.npc.busk === 'statue') st = q; }
+  assert.ok(st, 'a living statue by day');
+  assert.equal(st.gt, 'statue'); assert.equal(_descriptor(st).gt, 'statue');
+  teleport(w, p.ped, st.x + 20, st.y);
+  const it = busk(w, p);
+  assert.ok(it && /statue's hat/.test(it.label), it && it.label);
+  it.run();
+  assert.equal(st.gt, 'statuebow', 'it bows');
+  run(w, 4);
+  assert.equal(st.gt, 'statue', 'and freezes again');
+  assert.equal(prof.cash, 50 - BUSKER_TIP);
+  // never a statue after dark
+  for (let k = 0; k < 30; k++) { clear(); const q = spawnPersona(w, spawnNpc, 'busker', f.x, f.y + 60, true); assert.ok(!q || q.npc.busk !== 'statue', 'no statue at night'); }
 });

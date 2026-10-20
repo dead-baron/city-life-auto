@@ -5,15 +5,14 @@
 // - paintMesa3(L, W, H): its districts (shared/mapcore.js DISTRICTS 60-62: The Strip, Old Downtown, Mesa Flats - the side
 //   streets and suburbs) and the built zone painted on the land layer (the desert's sand under them made plain desert,
 //   so the build lays lots, not a beach), off the highway's room, the main line's and its station's, as the towns are.
-// - layMesa3(lines, m): Mesa Road pulled straight through the city as the Strip, a boulevard (`blvd`: two lanes each
-//   way and a median) from Old Downtown to the hub; the side streets (`st`) behind the resorts and round Old Downtown
-//   and the flats, and Station Road from Route 9 down to the main line's Lucky Mesa station.
-// - mesaLots(m): before the blocks, the resorts' lots along the Strip and Old Downtown's covered street of lights (a
-//   pedestrian street under its canopy) kept as paving, so the generator's blocks fill only what's left.
-// - buildMesa(m, addProp): the resorts on their lots - each a big footprint of its own invented look (a lotus-crowned
-//   gold tower, a palace under a copper dome, a black glass pyramid with its beam, twin glass towers, a white star
-//   tower, a lagoon resort behind its fountain lake, a castle with coned turrets): the casino podium, the tower, the
-//   porte-cochere drive with its palms and lamps, the pools with loungers; the old casinos along the covered street.
+// - layMesa3(lines, m): Mesa Road pulled straight through the city as the Strip, a palm-median boulevard (`blvd`, the
+//   section shared/world3-strip.js STRIP_ROAD gives it: two lanes each way either side of a planted median) from Old
+//   Downtown to the hub; the side streets (`st`) behind the resorts and round Old Downtown and the flats, and Station
+//   Road from Route 9 down to the main line's Lucky Mesa station.
+// - mesaLots(m): before the blocks, Old Downtown's covered street of lights (a pedestrian street under its canopy) and
+//   its old casinos' lots kept as paving, so the generator's blocks fill only what's left.
+// - buildMesa(m, addProp): the old casinos along the covered street, its canopy of lights. (The Strip's resorts are
+//   handcrafted since 2026-10-20 - shared/world3-strip.js, from the owner's LuckyMesa-B2: the district's own plan.)
 //   Their looks are the buildings' `art` (art v2 statics.js reads it, as the hero corner's) and their roofs' `resort`
 //   (the classic renderer's). Each casino is a named place (`delivery`, fixed, `casino`: the gambling to come, GM3/GM4).
 // - MESA_SPECIALS / MESA_STYLES: the planned places (pawn shops, a gun shop, clubs, the bank, motels, wedding chapels,
@@ -25,6 +24,7 @@ import { TILE, T } from './constants.js';
 import { skeletonLines, STATIONS } from './world3-skeleton.js';
 import { measure } from './geom.js';
 import { stamp, pull } from './world3-towns.js';
+import { STRIP_ROAD, RESORTS } from './world3-strip.js';
 
 const SAND = 5, DESERT = 3;   // (world3-land.js TERRAIN3: sand under the city becomes plain desert)
 const Z_TOWN = 8;             // (the mainland's built zone, as the towns': map.js BUILT_ZONES, buildBusStops)
@@ -33,8 +33,8 @@ export const MESA_IDS = { strip: 60, old: 61, flats: 62 };
 // The city (tiles; World v3b, docs/WORLD-V3.md part 9: the owner's top-right corner, the Casino Highway arriving from
 // the south-west, the main line along its south side, its airstrip just east). The Strip is Mesa Road pulled straight
 // on row 612 (`main`, as a town's main street: pulledAt) and laid as a boulevard from Gold Street to the hub; the
-// resorts face it from both sides, Old Downtown at its west end, the flats behind (north) and south-west of it, down to
-// the main line's room.
+// resorts face it from both sides (the Strip's plan's: world3-strip.js RESORTS), Old Downtown at its west end, the
+// flats behind (north) and south-west of it, down to the main line's room.
 export const MESA = {
   key: 'mesa', name: 'Lucky Mesa', at: [5600, 640], box: [5236, 448, 5640, 752],
   main: { line: 'Mesa Road', y: 612, a: 5250, b: 5558, ramp: 40 }, pulls: [],
@@ -56,17 +56,8 @@ export const MESA = {
     ['Chapel Lane', [[5444, 500], [5444, 466]]],                           // the lane out into the desert (a turnaround)
     ['Station Road', [[5612, 620], [5612, 884], [5532, 940]]],             // Route 9 down to the main line's station (v3b: 190 tiles south of the town, past the line's bend - STATIONS 'Lucky Mesa')
   ],
-  // the resorts (a lot [x0, y0, x1, y1), the side it fronts the Strip on, its look): north of the Strip they front south
-  resorts: [
-    { name: 'The Golden Lotus', look: 'lotus', lot: [5334, 554, 5387, 605], face: 'S' },
-    { name: 'Palazzo Aurelio', look: 'dome', lot: [5387, 554, 5439, 605], face: 'S' },
-    { name: 'The Sunstone Pyramid', look: 'pyramid', lot: [5439, 554, 5491, 605], face: 'S' },
-    { name: 'The Prism', look: 'glass', lot: [5491, 554, 5540, 605], face: 'S' },
-    // south of it they front north; their lots run back to the flats' street (the resorts' car parks and pools)
-    { name: 'Starfall Tower', look: 'star', lot: [5334, 620, 5387, 686], face: 'N' },
-    { name: 'The Silver Lagoon', look: 'lake', lot: [5387, 620, 5452, 686], face: 'N' },
-    { name: 'Castillo Dorado', look: 'castle', lot: [5458, 620, 5532, 686], face: 'N' },
-  ],
+  // the resorts (a lot [x0, y0, x1, y1), the side it fronts the Strip on, its look): the Strip's plan's (world3-strip.js)
+  resorts: RESORTS,
   // Old Downtown's covered street of lights: a pedestrian street (plaza) under its canopy, the old casinos either side
   // fronting it (x from, x to; north side's fronts south, south side's north)
   // (v3b: the skeleton's Mesa Flats Road comes down to the Strip at x 5317 - the street and its old casinos end short of it)
@@ -143,7 +134,7 @@ export function layMesa3(lines, m) {
       const part = (a, b) => { const q = P.slice(a, b + 1).map((p) => ({ ...p })); measure(q); return q; };
       const parts = [];
       if (ja > 0) parts.push({ ...l, pts: part(0, ja) });
-      parts.push({ ...l, pts: part(ja, jb), kind: 'blvd', strip: true });
+      parts.push({ ...l, pts: part(ja, jb), kind: 'blvd', strip: true, w: STRIP_ROAD.w, median: STRIP_ROAD.median });
       if (jb < P.length - 1) parts.push({ ...l, pts: part(jb, P.length - 1) });
       lines.splice(k, 1, ...parts);
       out.strip = Math.round(Math.abs(P[jb].x - P[ja].x) / TILE);
@@ -158,13 +149,12 @@ export function layMesa3(lines, m) {
 }
 
 const mine = (m, i) => m.dist[i] >= 60 && m.dist[i] <= 62;
-// Before the blocks: the resorts' lots and the covered street kept as paving (reserve 4: the promenade's, so nothing is
-// dressed on them and no block takes them).
+// Before the blocks: the covered street and its old casinos' lots kept as paving (reserve 4: the promenade's, so nothing
+// is dressed on them and no block takes them). (The resorts' lots are the Strip's plan's: world3-strip.js.)
 export function mesaLots(m) {
   const W = m.w;
   let n = 0;
   const keep = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = y * W + x; if (!mine(m, i) || m.tiles[i] !== T.GRASS) continue; m.tiles[i] = T.PLAZA; m.reserve[i] |= 4; n++; } };
-  for (const r of MESA.resorts) keep(...r.lot);
   const [cx0, cy0, cx1, cy1] = MESA.canopy;
   keep(cx0, cy0, cx1, cy1);
   for (const [, a, b, side] of MESA.oldCasinos) keep(a, side === 'N' ? cy0 - 17 : cy1, b, side === 'N' ? cy0 : cy1 + 15);
@@ -185,86 +175,10 @@ function addBld(m, x, y, w, h, kind, name, roofKind, look, art) {
 const neon = (w, d, z, col, n = 3) => { const L = []; for (let k = 0; k <= n; k++) { L.push([w * TILE * k / n, -2, z, 150, col, 1.3, 'neon'], [w * TILE * k / n, -d * TILE + 2, z, 150, col, 1.3, 'neon']); } return L; };
 const C = { gold: [1, 0.8, 0.35], pink: [1, 0.3, 0.75], cyan: [0.3, 0.9, 1], white: [0.95, 0.95, 1], violet: [0.65, 0.4, 1], red: [1, 0.3, 0.3] };
 
-// The resorts and the old casinos, built on their kept lots (from the dress hook: props now have their pass).
+// The old casinos, built on their kept lots (from the dress hook: props now have their pass).
 export function buildMesa(m, addProp) {
-  const W = m.w, out = { resorts: [], old: [], pools: 0, lake: 0, palms: 0 };
-  const water = (x0, y0, x1, y1, deep) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = y * W + x; if (m.tiles[i] !== T.PLAZA || !mine(m, i)) continue; m.set(x, y, deep && x > x0 && x < x1 - 1 && y > y0 && y < y1 - 1 ? T.DEEP : T.WATER); } };
+  const out = { old: [] };
   const poi = (b, name, x, y) => { const p = { id: m.pois.length, kind: 'delivery', label: name, x, y, r: 48, b: b.id, fixed: true, casino: true }; m.pois.push(p); return p; };
-  const free = (x, y) => { const i = Math.floor(y / TILE) * W + Math.floor(x / TILE); return m.tiles[i] === T.PLAZA && m.bld[i] < 0; };
-  const palm = (x, y, k) => { if (!free(x, y)) return; addProp(m, ['palm_a', 'palm_b', 'palm_c'][k % 3], x, y, 10); out.palms++; };
-  for (const R of MESA.resorts) {
-    const [x0, y0, x1, y1] = R.lot, LW = x1 - x0, S = R.face === 'S';
-    // a rect in the lot's own terms: fx across it from its west edge, fd back from its front (the Strip's side)
-    const rect = (fx, fd, w, d) => [x0 + fx, S ? y1 - fd - d : y0 + fd, w, d];
-    const blds = [];
-    // (on a flat roof: a tower's helipad and water tank, a podium's air handlers - art v2's roof kit, px from its north-west)
-    const roofKit = (w, d, spec) => (spec.pitch ? [] : spec.floors >= 8 ? [['heli', w * TILE / 2, d * TILE / 2 + 40], ['tank', w * TILE - 50, 60], ['ac', 50, 60]] : [['hvac', w * TILE / 2, d * TILE / 2], ['ac', 60, 70], ['ac', w * TILE - 70, 70], ['vent', w * TILE - 60, d * TILE - 50]]);
-    const put = (fx, fd, w, d, name, look, spec, lights, kit) => { const [x, y] = rect(fx, fd, w, d); const b = addBld(m, x, y, w, d, 'hotel', name, look === 'pyramid' ? 'glass' : 'gravel', look, { spec, lights, kit: kit || roofKit(w, d, spec), noShop: true, resort: R.look }); if (b) blds.push(b); return b; };
-    const mid = LW >> 1;
-    const st = (o) => ({ style: 'stone', parapet: 12, roofMat: 'membrane', lip: 8, rimW: 4, ...o });
-    // (each building at most 26 tiles wide - art v2 draws it whole; a wide front is two wings side by side)
-    if (R.look === 'lotus') {
-      put(4, 8, 24, 14, R.name, 'lotus', st({ floors: 2, wallColor: '#e8d6a8' }), neon(24, 14, 120, C.gold));
-      put(28, 8, 21, 12, `${R.name} Wing`, 'lotus', st({ floors: 2, wallColor: '#e2cc98' }), neon(21, 12, 120, C.gold));
-      put(8, 24, 18, 18, `${R.name} Tower`, 'lotus', { floors: 12, style: 'glass', wallColor: '#c8a050', parapet: 18, roofMat: 'membrane', lip: 10 }, [...neon(18, 18, 760, C.pink, 2), [9 * TILE, -9 * TILE, 820, 300, C.pink, 2.2, 'neon']]);
-      water(...poolAt(rect(30, 26, 16, 8)));
-    } else if (R.look === 'dome') {
-      put(3, 8, 23, 14, R.name, 'dome', st({ floors: 4, wallColor: '#efe6d2' }), neon(23, 14, 240, C.gold));
-      put(26, 8, 23, 14, `${R.name} East Wing`, 'dome', st({ floors: 4, wallColor: '#efe6d2' }), neon(23, 14, 240, C.gold));
-      put(18, 24, 16, 16, `${R.name} Dome`, 'dome', { floors: 3, style: 'stone', wallColor: '#e6dcc4', pitch: 'hip', slope: 0.95, roof: 'shingle', roofColor: '#4f8f80' }, [[8 * TILE, -8 * TILE, 380, 240, C.gold, 1.6, 'neon']]);
-      water(...poolAt(rect(3, 26, 11, 8))); water(...poolAt(rect(38, 26, 11, 8)));
-    } else if (R.look === 'pyramid') {
-      put(3, 8, 26, 26, R.name, 'pyramid', { floors: 1, style: 'stone', wallColor: '#2a2c34', pitch: 'hip', slope: 1.25, roof: 'shingle', roofColor: '#20232c' }, [[13 * TILE, -13 * TILE, 1000, 460, C.white, 2.4, 'lamp'], ...neon(26, 26, 40, C.cyan, 2)]);
-      put(31, 8, 18, 12, `${R.name} Hall`, 'pyramid', st({ floors: 2, style: 'glass', wallColor: '#24262e' }), neon(18, 12, 120, C.cyan));
-      water(...poolAt(rect(33, 24, 15, 8)));
-    } else if (R.look === 'glass') {
-      put(3, 8, 24, 10, R.name, 'glass', st({ floors: 2, style: 'glass', wallColor: '#2c3c5c' }), neon(24, 10, 120, C.violet));
-      put(27, 8, 16, 10, `${R.name} Hall`, 'glass', st({ floors: 2, style: 'glass', wallColor: '#2c3c5c' }), neon(16, 10, 120, C.violet));
-      put(5, 20, 14, 16, `${R.name} East`, 'glass', { floors: 12, style: 'glass', wallColor: '#4a7ab0', parapet: 12, roofMat: 'membrane', lip: 8 }, neon(14, 16, 760, C.cyan, 2));
-      put(25, 20, 14, 14, `${R.name} West`, 'glass', { floors: 10, style: 'glass', wallColor: '#9a4a9a', parapet: 12, roofMat: 'membrane', lip: 8 }, neon(14, 14, 640, C.pink, 2));
-      water(...poolAt(rect(28, 38, 15, 7)));
-    } else if (R.look === 'star') {
-      put(4, 8, 24, 12, R.name, 'star', st({ floors: 2, wallColor: '#e4e8ee' }), neon(24, 12, 120, C.cyan));
-      put(28, 8, 21, 12, `${R.name} Wing`, 'star', st({ floors: 2, wallColor: '#dde2ea' }), neon(21, 12, 120, C.cyan));
-      put(18, 22, 16, 16, `${R.name} Spire`, 'star', { floors: 12, style: 'glass', wallColor: '#dde4ee', parapet: 22, roofMat: 'membrane', lip: 10 }, [...neon(16, 16, 780, C.white, 2), [8 * TILE, -8 * TILE, 840, 320, C.cyan, 2.2, 'neon']]);
-      water(...poolAt(rect(4, 26, 12, 8)));
-    } else if (R.look === 'lake') {
-      water(...poolAt(rect(4, 3, LW - 8, 14), true), true);
-      put(4, 21, 22, 16, R.name, 'lake', st({ floors: 7, wallColor: '#efe2c8' }), neon(22, 16, 420, C.gold));
-      put(26, 21, 22, 16, `${R.name} Center`, 'lake', st({ floors: 6, wallColor: '#ece0c6' }), neon(22, 16, 360, C.gold));
-      put(48, 21, 13, 16, `${R.name} South`, 'lake', st({ floors: 5, wallColor: '#e8dac0' }), neon(13, 16, 300, C.gold));
-      water(...poolAt(rect(24, 42, 16, 8)));
-      const [lx, ly, lw, ld] = rect(4, 3, LW - 8, 14);
-      for (let k = 0; k < 6; k++) { addProp(m, 'fountain', (lx + lw * (k + 0.5) / 6) * TILE, (ly + ld / 2) * TILE, 0); out.lake++; }
-    } else if (R.look === 'castle') {
-      put(14, 10, 24, 16, R.name, 'castle', st({ floors: 3, wallColor: '#f2f0ea', parapet: 16 }), neon(24, 16, 200, C.violet));
-      put(38, 10, 18, 14, `${R.name} Hall`, 'castle', st({ floors: 3, wallColor: '#eeece4', parapet: 16 }), neon(18, 14, 200, C.violet));
-      for (const [fx, col] of [[9, '#c83a3a'], [56, '#3a5ac8']]) put(fx, 12, 5, 5, `${R.name} Turret`, 'castle', { floors: 4, style: 'stone', wallColor: '#f2f0ea', pitch: 'hip', slope: 2.4, roof: 'shingle', roofColor: col }, []);
-      put(28, 28, 10, 10, `${R.name} Keep`, 'castle', { floors: 6, style: 'stone', wallColor: '#ecebe6', pitch: 'hip', slope: 2.0, roof: 'shingle', roofColor: '#3a5ac8' }, [[5 * TILE, -5 * TILE, 460, 220, C.violet, 1.6, 'neon']]);
-      water(...poolAt(rect(4, 30, 12, 8)));
-    }
-    // the casino's door on the podium's front (the first building), a named place for the gambling to come (GM3, GM4)
-    const main = blds[0];
-    if (main) {
-      const dx = main.tx + (main.tw >> 1), dy = S ? main.ty + main.th : main.ty - 1;
-      main.door = { tx: dx, ty: dy };
-      poi(main, R.name, (dx + 0.5) * TILE, S ? (main.ty + main.th + 0.7) * TILE : (main.ty - 0.7) * TILE);
-    }
-    // the porte-cochere's drive: palms along the front, lamps either side of the door; palms round the pools
-    const fy = S ? (y1 - 1.5) * TILE : (y0 + 1.5) * TILE;
-    for (let x = x0 + 2; x < x1 - 1; x += 4) if (Math.abs(x - (x0 + mid)) > 5) palm((x + 0.5) * TILE, fy, x);
-    if (main) for (const dx of [-5, 5]) { const x = (main.tx + main.tw / 2 + dx) * TILE, y = S ? (main.ty + main.th + 2.5) * TILE : (main.ty - 2.5) * TILE; if (free(x, y)) addProp(m, 'lamp', x, y, 5); }
-    out.resorts.push({ name: R.name, look: R.look, buildings: blds.length, tiles: blds.reduce((a, b) => a + b.tw * b.th, 0) });
-  }
-  // the pools: water a few tiles back from the lot's paving, loungers and umbrellas along their edges, palms at the corners
-  function poolAt([x, y, w, d], lake) {
-    if (!lake) {
-      out.pools++;
-      for (let k = 0; k < w; k += 3) { const px = (x + k + 0.5) * TILE, py = (y + d + 0.8) * TILE; if (free(px, py)) addProp(m, k % 6 ? 'lounger' : 'umbrella_r', px, py, 0, k % 6 ? { a: Math.PI / 2, v: k % 4 } : null); }
-      palm((x - 0.6) * TILE, (y - 0.6) * TILE, x); palm((x + w + 0.6) * TILE, (y + d + 0.6) * TILE, y);
-    }
-    return [x, y, x + w, y + d];
-  }
   // Old Downtown's covered street: lamps down its middle under the canopy, the old casinos either side fronting it
   const [cx0, cy0, cx1, cy1] = MESA.canopy;
   for (let x = cx0 + 3; x < cx1 - 2; x += 6) addProp(m, 'lamp', (x + 0.5) * TILE, (cy0 + cy1) / 2 * TILE, 5);
@@ -307,7 +221,7 @@ export function mesaDone(m) {
       for (const s of b.signs || []) if (s.text === g.label) s.text = "Gas 'n Go";
     }
   }
-  // a bus stop on the Strip's sidewalk if none: on 5 tiles of sidewalk with nothing solid within 70 px
+  // a bus stop on the Strip's sidewalk if none (the plan puts its own): on 5 tiles of sidewalk with nothing solid within 70 px
   const [bx0, by0, bx1, by1] = MESA.box;
   const busAt = (p) => p && p.t === 'busstop' && p.x >= bx0 * TILE && p.x < bx1 * TILE && p.y >= by0 * TILE && p.y < by1 * TILE;
   if (!m.props.some(busAt)) {
@@ -316,7 +230,7 @@ export function mesaDone(m) {
     const walk = (tx, ty) => [-2, -1, 0, 1, 2].every((dx) => m.tileAt(tx + dx, ty) === T.SIDEWALK);
     let done = false;
     for (let x = (MESA.main.a + 20) * TILE; x < (MESA.main.b - 10) * TILE && !done; x += TILE) for (const side of [-1, 1]) {
-      const y = ya + side * (5.5 * TILE), tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+      const y = ya + side * ((STRIP_ROAD.w / 2 + 1) * TILE), tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
       if (done || !walk(tx, ty) || solid.some((p) => Math.hypot(p.x - x, p.y - y) < 70)) continue;
       m.props.push({ t: 'busstop', x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, face: side < 0 ? 'S' : 'N' });
       const sp = m.addSolidProp((tx + 0.5) * TILE, (ty + 0.5) * TILE, 14); sp.pi = m.props.length - 1; sp.brk = true; m.propSolid.set(sp.pi, sp);

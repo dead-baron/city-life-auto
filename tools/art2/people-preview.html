@@ -1,6 +1,6 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Art v2 people</title>
 <style>body{margin:0;background:#6b6f78;color:#eee;font:12px monospace}canvas{image-rendering:pixelated;display:block}.wrap{display:inline-block;position:relative;background:#6b6f78}.wrap canvas{position:absolute;left:0;top:0}.wrap canvas#c{position:relative}</style></head><body>
-<!-- ?view=turn (C1: four bodies, 8 facings), ?view=line (C2/C3: every art2 archetype facing SE), ?view=walk,
+<!-- ?view=turn (C1: four bodies, 8 facings), ?view=busk (the buskers' acts, Shared-9), ?view=line (C2/C3: every art2 archetype facing SE), ?view=walk,
      ?view=items (P4: inventory icons, then one character holding each item facing SE, E and N; &dirs=0,3,6 picks other
      facings, &pose=walk), ?view=poses (one character, every pose x 8 facings x frames; &pose=walk2 for one pose, &dirs=...),
      ?view=crowd (40 server-like appearances through peds.js adaptApp, walking), ?view=weapons (every game weapon: rest,
@@ -67,6 +67,11 @@ if (view === 'turn') {
     { build: 2, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'spiky', color: 1 }, skin: 1, shoes: 'white' },
     { build: 3, top: { kind: 'tee', color: 'grey' }, bottom: { kind: 'jeans', color: 'navy' }, hair: { style: 'curly', color: 0 }, skin: 4, shoes: 'white' }];
   bodies.forEach((b, r) => [0, 1, 2, 3, 4, 5, 6, 7].forEach((d, c) => add(person(b, d), 22 + c * 40, 50 + r * 54)));
+} else if (view === 'busk') {   // the buskers (Shared-9): each act facing S, SE, E, N, its two idle frames; the statue's bow
+  const acts = [['guitar', 'idle'], ['sax', 'idle'], ['violin', 'idle'], ['drums', 'idle'], ['statue', 'statue'], ['statue', 'statuebow']];
+  const who = { ...guy, top: { kind: 'shirt', color: 'cream' }, bottom: { kind: 'jeans', color: 'navy' }, hat: { kind: 'fedora', color: 'charcoal' }, shoes: 'brown' };
+  acts.forEach(([carry, pose], r) => [6, 7, 0, 2].forEach((d, c) => [0, 1].forEach((f) => { add(person({ ...who, carry }, d, pose, f), 30 + (c * 2 + f) * 46, 60 + r * 62); })));
+  acts.forEach(([carry, pose], r) => label(`${carry} ${pose}`, 4, 20 + r * 62));
 } else if (view === 'line') {
   const ks = Object.keys(ARCHETYPES), cols = 9;
   ks.forEach((k, i) => add(person(randomPerson(i * 31 + 7, k), 1), 22 + (i % cols) * 40, 50 + Math.floor(i / cols) * 56));

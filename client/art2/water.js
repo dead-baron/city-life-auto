@@ -435,6 +435,7 @@ function basaltShade(x, y, z, seed) {
 //   o.width  water width; o.drop total drop (z); o.rock side rock width each side; o.frame / o.frames
 //   o.streams  for the lower tier of 'twoTier': [[x0, x1], ...] relative to the centre
 // The model's .face is the y of the lowest face (the anchor the sprite is placed by) and .lip the drop.
+const SANDROCK = R('#c49a6a', 7, 3, { dark: 0.55, light: 0.45 });
 export function fallModel(o = {}) {
   const kind = o.kind || 'ledge', seed = o.seed ?? 3, frames = o.frames || 4;
   const width = o.width ?? (kind === 'cliff' ? 22 : kind === 'weir' ? 120 : 60), drop = o.drop ?? (kind === 'cliff' ? 120 : kind === 'twoTier' ? 110 : kind === 'weir' ? 12 : 26);
@@ -447,7 +448,10 @@ export function fallModel(o = {}) {
   const frame = { v: o.frame || 0 };
   // basalt: columns from a jittered grid (Voronoi), each with its own top; seams between columns
   const CC = new Map(), colAt = (x, y) => { const k = (x | 0) * 4096 + (y | 0); let c = CC.get(k); if (!c) { c = cellPt((x | 0) + 0.5, (y | 0) + 0.5, 11, seed + 7); CC.set(k, c); } return c; };
-  const rock = m.mat({ ramp: kind === 'weir' ? CONC : BASALT, k: kind === 'weir' ? 3 : 4, shade: (x, y, z) => {
+  // (o.stone 'sand': a resort's rockwork of warm sandstone in courses - Lucky Mesa's Mesa Grande)
+  const sand = o.stone === 'sand';
+  const rock = m.mat({ ramp: kind === 'weir' ? CONC : sand ? SANDROCK : BASALT, k: kind === 'weir' ? 3 : 4, shade: (x, y, z) => {
+    if (sand) return (Math.round(z) % 9 === 0 ? -0.6 : 0) + (hash(Math.round(x / 5), Math.round(z / 4), seed) - 0.5) * 0.8 + (hash(Math.round(x), Math.round(y), seed + 3) > 0.9 ? 0.3 : 0);
     if (kind === 'weir') return (Math.round(z) % 6 === 0 ? -0.6 : 0) + (Math.round(x) % 24 === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0) + (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 0.5;
     return basaltShade(x, y, z, seed);
   } });

@@ -301,3 +301,134 @@ export function railing(len = 80) {
   for (let x = 0; x < len; x += 10) m.box(x, 1, 0, x + 2, 3, 21, ir);
   return m;
 }
+
+// ---- Lucky Mesa's Strip (shared/world3-strip.js, 2026-10-20; the owner's LuckyMesa-B2): a poolside cabana, the
+// skybridge's glass span and its towers, a resort's porte-cochere (stone, or a casino's marquee of bulbs), the adobe
+// resort's timber pergola and the boulevard's banner poles. Original designs: no real venue or brand.
+const RS = (h, n = 6, k = 3) => ramp(h, n, k);
+const STRIPES = ['#2a8a8a', '#2a4a8a', '#d8604a', '#d8a83a'];
+
+// a cabana (w 44 along x, 40 deep): four white posts, a low canvas top with a striped valance, the back curtain drawn
+// and the side curtains tied back at the front, a daybed with cushions, a lantern under the top (v: the stripe)
+export function cabana(v = 0) {
+  const W = 44, D = 40, m = new Vox(W, D, 50), col = STRIPES[v % STRIPES.length];
+  const canvas = m.mat({ ramp: RS('#f2eee4'), k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -0.25 : 0) });
+  const stripe = m.mat({ ramp: RS(col), k: 3 }), post = m.mat({ ramp: RS('#e8e2d4'), k: 3, flag: F_THIN });
+  const bed = m.mat({ ramp: RS('#f6f4ee'), k: 3 }), base = m.mat({ ramp: MAT.woodDark, k: 3 }), cush = m.mat({ ramp: RS(col), k: 3 });
+  const lamp = m.mat({ ramp: RS('#ffd890', 5, 3), k: 4, emi: [255, 200, 120, 220], flag: F_NOCAST });
+  for (const [x, y] of [[1, 1], [W - 4, 1], [1, D - 4], [W - 4, D - 4]]) m.box(x, y, 0, x + 3, y + 3, 42, post);
+  // the top: a low hip of canvas over the posts, the valance scalloped round its edge in stripes
+  m.fill((x, y, z) => { const e = Math.min(x, W - x, y, D - y); return z < 42 + Math.min(6, e * 0.35) ? canvas : -1; }, 0, 0, 42, W, D, 48);
+  m.fill((x, y, z) => {
+    const edge = x < 1.5 || x > W - 1.5 || y < 1.5 || y > D - 1.5;
+    if (!edge) return -1;
+    const u = edge && (y < 1.5 || y > D - 1.5) ? x : y, sc = (Math.round(u) % 8) < 4 ? 0 : 2;
+    return z >= 36 + sc ? (Math.floor(u / 6) % 2 ? stripe : canvas) : -1;
+  }, 0, 0, 36, W, D, 42);
+  // the curtains: the back one drawn, the sides' gathered at the back and tied at the front posts
+  m.box(1, 0, 2, W - 1, 2, 38, canvas);
+  for (const x of [0, W - 2]) { m.box(x, 2, 6, x + 2, 12, 38, canvas); m.box(x, D - 7, 4, x + 2, D - 4, 38, canvas); }
+  // the daybed, its cushions, the lantern
+  m.box(6, 8, 0, W - 6, D - 8, 6, base); m.box(7, 9, 6, W - 7, D - 9, 11, bed);
+  for (const x of [10, 19, 28]) m.box(x, 9, 11, x + 7, 13, 17, cush);
+  m.box(W / 2 - 2, D / 2 - 2, 34, W / 2 + 2, D / 2 + 2, 39, lamp);
+  return m;
+}
+
+// the skybridge's span (len along y, 64 across x, its floor at the model's foot - the item lifts it): the floor slab
+// on two steel box girders, glass walls between steel posts, a barrel roof of glass panes on steel ribs, warm light
+// inside (its glow through the glass after dark)
+export function skySpan(len = 150) {
+  const W = 64, m = new Vox(W, len, 46);
+  const steel = m.mat({ ramp: RS('#5a636c'), k: 3 }), slab = m.mat({ ramp: RS('#c8c2b6'), k: 3 }), white = m.mat({ ramp: RS('#dcdcd6'), k: 3 });
+  const glass = m.mat({ ramp: RS('#5ab0c4', 6, 3), k: 3, flag: F_GLASS, gloss: 0.7, emi: [255, 214, 150, 70], shade: (x, y) => ((Math.round(x) + Math.round(y)) % 9 < 2 ? 0.5 : 0) });
+  const strip = m.mat({ ramp: RS('#ffe0a0', 5, 3), k: 4, emi: [255, 210, 140, 200], flag: F_NOCAST });
+  // the girders and the floor
+  for (const x of [1, W - 6]) m.box(x, 0, 0, x + 5, len, 8, steel);
+  m.box(0, 0, 8, W, len, 11, slab);
+  m.box(0, 0, 0, W, len, 1.5, white);
+  // the walls: glass between posts every 12 px, a rail and a top chord
+  for (const x of [0, W - 2]) {
+    m.box(x, 0, 11, x + 2, len, 34, glass);
+    for (let y = 0; y < len; y += 12) m.box(x, y, 11, x + 2, y + 2, 34, steel);
+    m.box(x, 0, 32, x + 2, len, 35, steel); m.box(x, 0, 18, x + 2, len, 19.5, white);
+  }
+  // the roof: a low barrel of panes on ribs, the light strip along the ridge's underside
+  m.fill((x, y, z) => {
+    const u = (x - W / 2) / (W / 2), top = 35 + 9 * (1 - u * u);
+    if (z > top || z < top - 2.2) return -1;
+    return Math.round(y) % 12 < 2 || Math.abs(u) > 0.94 || Math.abs(x - W / 2) < 1 ? steel : glass;
+  }, 0, 0, 33, W, len, 46);
+  m.box(W / 2 - 3, 0, 40, W / 2 + 3, len, 41, strip);
+  return m;
+}
+// a skybridge tower (60 x 60, h tall): a stone base, a glass box on a steel frame (its escalators and lift inside), a
+// cap overhanging it, the doors on the south face lit, a gold band under the cap
+export function skyTower(h = 144) {
+  const W = 60, m = new Vox(W, W, h + 4);
+  const stone = m.mat({ ramp: RS('#d4c4a4'), k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.5 : 0) }), steel = m.mat({ ramp: RS('#5a636c'), k: 3 });
+  const glass = m.mat({ ramp: RS('#4a9ab0', 6, 3), k: 3, flag: F_GLASS, gloss: 0.7, emi: [255, 210, 150, 60], shade: (x, y, z) => ((Math.round(x + y) + Math.round(z)) % 11 < 2 ? 0.5 : 0) });
+  const cap = m.mat({ ramp: RS('#e2dccc'), k: 3 }), gold = m.mat({ ramp: RS('#d8a848', 6, 3), k: 3, emi: [255, 200, 110, 120] });
+  const door = m.mat({ ramp: RS('#2a3a44'), k: 2, flag: F_GLASS, emi: [255, 214, 150, 160] });
+  m.box(2, 2, 0, W - 2, W - 2, 12, stone);
+  m.box(4, 4, 12, W - 4, W - 4, h - 12, glass);
+  for (const [x, y] of [[4, 4], [W - 7, 4], [4, W - 7], [W - 7, W - 7]]) m.box(x, y, 12, x + 3, y + 3, h - 10, steel);
+  for (let z = 30; z < h - 14; z += 28) { m.box(4, 4, z, W - 4, 5, z + 2, steel); m.box(4, W - 5, z, W - 4, W - 4, z + 2, steel); m.box(4, 4, z, 5, W - 4, z + 2, steel); m.box(W - 5, 4, z, W - 4, W - 4, z + 2, steel); }
+  m.box(W / 2 - 10, W - 5, 12, W / 2 + 10, W - 3, 42, door);
+  m.box(4, 4, h - 12, W - 4, W - 4, h - 8, gold);
+  m.box(0, 0, h - 8, W, W, h, cap);
+  return m;
+}
+
+// a porte-cochere (w along x, d deep, its soffit h up): a deep slab on four columns, its fascia gold, spots under it -
+// or (kind 1) a casino's marquee: the fascia pink neon between rows of chasing bulbs
+export function porte(w = 300, d = 96, h = 58, kind = 0) {
+  const m = new Vox(w, d, h + 16);
+  const col = m.mat({ ramp: RS(kind ? '#e8dcd8' : '#e2d6bc'), k: 3, shade: (x, y, z) => (Math.round(z) % 10 === 0 ? -0.3 : 0) });
+  const slab = m.mat({ ramp: RS(kind ? '#3a2434' : '#d8ccb0'), k: 3 }), top = m.mat({ ramp: RS(kind ? '#4a3444' : '#cfc2a6'), k: 3, shade: (x, y) => (Math.round(x) % 24 === 0 ? -0.4 : 0) });
+  const fascia = m.mat({ ramp: RS(kind ? '#ff60c0' : '#d8a848', 6, 3), k: 3, emi: kind ? [255, 90, 200, 230] : [255, 200, 110, 90] });
+  const bulb = m.mat({ ramp: RS('#fff0c0', 5, 3), k: 4, emi: [255, 220, 150, 255], flag: F_NOCAST }), spot = m.mat({ ramp: RS('#fff4d8', 5, 3), k: 4, emi: [255, 226, 170, 255], flag: F_NOCAST });
+  m.box(0, 0, h, w, d, h + 10, slab); m.box(2, 2, h + 10, w - 2, d - 2, h + 12, top);
+  // the fascia round the slab (the bulbs above and below it on a marquee)
+  for (const [x0, y0, x1, y1] of [[0, d - 2, w, d], [0, 0, 2, d], [w - 2, 0, w, d], [0, 0, w, 2]]) {
+    m.box(x0, y0, h + 3, x1, y1, h + 8, fascia);
+    if (kind) for (const z of [h + 1, h + 9]) m.fill((x, y) => ((Math.round(x) + Math.round(y)) % 6 < 2 ? bulb : -1), x0, y0, z, x1, y1, z + 1.5);
+  }
+  for (const [x, y] of [[14, 14], [w - 14, 14], [14, d - 16], [w - 14, d - 16]]) m.cyl('z', x, y, 0, 5, 0, h, col);
+  for (let x = 30; x < w - 20; x += 40) for (const y of [d * 0.3, d * 0.7]) m.box(x - 3, y - 3, h - 1, x + 3, y + 3, h, spot);
+  return m;
+}
+// the adobe resort's pergola over its drive (w along x, d deep, h to the beams): thick timber posts on stone footings,
+// two beams along it, the rafters across them running out past both (vigas), lanterns hung under them
+export function timberPergola(w = 380, d = 96, h = 60) {
+  const m = new Vox(w, d, h + 14);
+  const post = m.mat({ ramp: MAT.woodDark, k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(z / 4), 3) - 0.5) * 0.5 }), foot = m.mat({ ramp: RS('#cbb894'), k: 3 });
+  const beam = m.mat({ ramp: RS('#6a4a2e'), k: 3, shade: (x) => (Math.round(x) % 30 === 0 ? -0.5 : 0) }), raft = m.mat({ ramp: RS('#7a5838'), k: 3 });
+  const lamp = m.mat({ ramp: RS('#ffcf80', 5, 3), k: 4, emi: [255, 190, 110, 240], flag: F_NOCAST }), wire = m.mat({ ramp: MAT.metalDark, k: 2, flag: F_THIN });
+  const n = Math.max(2, Math.round(w / 120));
+  for (let i = 0; i <= n; i++) for (const y of [8, d - 18]) {
+    const x = Math.round(8 + (w - 26) * i / n);
+    m.box(x - 1, y - 1, 0, x + 11, y + 11, 8, foot); m.box(x, y, 8, x + 10, y + 10, h, post);
+  }
+  for (const y of [8, d - 18]) m.box(0, y - 1, h, w, y + 11, h + 7, beam);
+  for (let x = 4; x < w - 4; x += 14) m.box(x, 0, h + 7, x + 6, d, h + 12, raft);
+  for (let x = 40; x < w - 30; x += 70) { m.box(x, d / 2 - 0.5, h - 10, x + 1, d / 2 + 0.5, h + 7, wire); m.box(x - 3, d / 2 - 3, h - 18, x + 4, d / 2 + 4, h - 10, lamp); }
+  return m;
+}
+// a lamp post on the Strip's median with two banners on brackets (v: their colours swapped), its lantern on top
+export function bannerPole(v = 0) {
+  const m = new Vox(32, 8, 100);
+  const pole = m.mat({ ramp: RS('#3a3430'), k: 3, flag: F_THIN }), gold = m.mat({ ramp: RS('#c8a048'), k: 3 });
+  const a = m.mat({ ramp: RS(v % 2 ? '#c8503a' : '#2a8a8a'), k: 3, shade: (x, y, z) => (Math.round(z) % 12 === 0 ? -0.3 : 0) }), b = m.mat({ ramp: RS(v % 2 ? '#2a8a8a' : '#c8503a'), k: 3 });
+  const sun = m.mat({ ramp: RS('#ffd070', 5, 3), k: 3, emi: [255, 200, 110, 60] });
+  const lamp = m.mat({ ramp: RS('#ffe0a0', 5, 3), k: 4, emi: [255, 214, 150, 255], flag: F_NOCAST });
+  m.box(15, 2, 0, 18, 5, 88, pole); m.box(13, 0, 0, 20, 7, 6, pole);
+  m.box(4, 3, 76, 28, 4, 78, pole);
+  for (const [x0, M] of [[4, a], [19, b]]) {
+    m.box(x0, 3, 44, x0 + 9, 4.5, 76, M);
+    m.fill((x, y, z) => ((x - x0 - 4.5) ** 2 + (z - 62) ** 2 < 6.5 ? sun : -1), x0, 2, 58, x0 + 9, 3, 67);
+    m.box(x0, 3, 43, x0 + 9, 4.5, 44.5, gold);
+  }
+  m.box(13, 0, 88, 20, 7, 96, lamp); m.box(12, 0, 96, 21, 8, 99, pole);
+  return m;
+}

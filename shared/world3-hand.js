@@ -40,8 +40,9 @@ import { PINKMILE } from './world3-pinkmile.js';
 import { ARTS } from './world3-arts.js';
 import { BAYSIDE } from './world3-bayside.js';
 import { AIRPORT } from './world3-airport.js';
+import { STRIP } from './world3-strip.js';
 
-export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, NORTHGATE2, OLDTOWN, YARDS, STADIUM, PINKMILE, ARTS, BAYSIDE, WESTHILLS, WESTHILLS2, WESTPORT, OLDQUARTER, SOUTHSIDE, PORT, CEDARFALLS, FALLSCENTER, SUNSETBEACH, LAKESIDE, PINEHILLS, CORALCAY, PELICAN, GULLHARBOR, NORTHPOINT, BLUFFS, NORTHSHORE, AIRPORT];
+export const HAND_PLANS = [MIDTOWN, NEON, HARBOR, DOWNTOWN, CIVIC, NORTHGATE, NORTHGATE2, OLDTOWN, YARDS, STADIUM, PINKMILE, ARTS, BAYSIDE, WESTHILLS, WESTHILLS2, WESTPORT, OLDQUARTER, SOUTHSIDE, PORT, CEDARFALLS, FALLSCENTER, SUNSETBEACH, LAKESIDE, PINEHILLS, CORALCAY, PELICAN, GULLHARBOR, NORTHPOINT, BLUFFS, NORTHSHORE, AIRPORT, STRIP];
 const M_IN = 2;   // (a street within this many tiles of a plan's edge is the edge's - the grid planner's)
 // (a plan of several rects - Downtown's bands round its park - is in its area strictly inside any of them; p.rect is
 // their bounding box: the kit's frame)

@@ -764,13 +764,21 @@ const BEARD = {
   soul: (a, b, c) => c < -0.5 && c > -0.66 && a < 0.12 && b > 0.6,
   vandyke: (a, b, c) => (c < -0.55 && a < 0.26) || MOU(a, b, c),
 };
+// a living statue (the buskers, Shared-9: server/systems/personas.js BUSKS statue): every colour of the look bronze - the
+// skin, the clothes, the hat, the hair - so it reads as a cast figure on its crate
+const BRONZE_SKIN = cloth('#a07a44'), BRONZE = ['#8a6a3a', '#7a5a30', '#9a7844', '#6e5028'];
+function statueApp(A) {
+  const re = (o, k) => (o ? { ...o, color: BRONZE[k], color2: BRONZE[(k + 1) % 4], inner: BRONZE[(k + 2) % 4], trim: BRONZE[(k + 3) % 4], tie: BRONZE[3], sleeve: o.sleeve ? BRONZE[k] : o.sleeve, pattern: null } : o);
+  return { ...A, bronze: true, top: re(A.top, 0), bottom: re(A.bottom, 1), hat: re(A.hat, 2), shoes: BRONZE[3], shoeTrim: BRONZE[2], hair: { ...(A.hair || {}), color: BRONZE[0] }, chain: null, jewel: null, glassColor: BRONZE[3], bagColor: BRONZE[1], backColor: BRONZE[1], tattoo: 0 };
+}
 function wardrobe(A, D, TF, seed) {
+  if (A.carry === 'statue') A = statueApp(A);
   let tk = A.top?.kind || 'tee', bk = A.bottom?.kind || 'jeans';
   if (A.censored) {   // the "censored nudity" setting: swimwear instead of nothing
     if (tk === 'none' && D.fem) tk = 'bikini';
     if (bk === 'none') bk = D.fem ? 'bikini' : 'trunks';
   }
-  const T = TOP[tk] || TOP.tee, skin = SKIN[clamp(A.skin ?? 1, 0, SKIN.length - 1) | 0];
+  const T = TOP[tk] || TOP.tee, skin = A.bronze ? BRONZE_SKIN : SKIN[clamp(A.skin ?? 1, 0, SKIN.length - 1) | 0];
   const top = cloth(A.top?.color || (tk === 'bikini' || tk === 'swimsuit' ? 'teal' : tk === 'towel' ? 'white' : 'grey')), top2 = cloth(A.top?.color2 || 'white');
   const bot = cloth(A.bottom?.color || (bk === 'jeans' ? 'denim' : bk === 'trunks' || bk === 'bikini' ? (A.top?.color || 'red') : bk === 'towel' ? 'white' : 'black'));
   const shoeC = A.shoes || 'white', shoe = cloth(shoeC), sk = SHOE_OF(shoeC, A);
@@ -1953,6 +1961,13 @@ Object.assign(POSES, { skatec: 1, skateair: 3, skflip: 12, skshove: 6, sktre: 6,
 Object.assign(POSES, { cartkick: 8, cartride: 2, cartsit: 2 });
 CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
 Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
+// the buskers (Shared-9, 2026-10-20: server/systems/personas.js BUSKS): sax (a saxophone in both hands, its case open on the
+// ground), violin (under the chin, the bow drawn across it; the music stand in front), drums (sticks over upturned
+// buckets and a pot), statue (a living statue in bronze on its crate - statue: still, a hand at the hat's brim;
+// statuebow: the bow when a coin drops in the hat); the guitarist has his amp and the open case of coins
+CARRY.push('sax', 'violin', 'drums', 'statue');
+Object.assign(ACC_HANDS, { sax: 2, violin: 2, drums: 2, statue: 2 });
+Object.assign(POSES, { statue: 1, statuebow: 1 });
 // people at their activities (server activities.js, task #423): easel (a street painter's, in front: the brush up to the
 // canvas), cooler (an angler's, on the deck at their side), chess (the board on the table in front of a seated player)
 CARRY.push('easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle');
@@ -1970,7 +1985,14 @@ function skTuck(D, P, up, tw) {
   P.fL = [-1.4, 7.6, D.ank + up]; P.fR = [-1.6, -1.2, D.ank + up - 0.4]; P.kneeL = [-0.3, 1, 1.1]; P.kneeR = [0.3, -0.2, 1.2];
   P.hands = (S) => { P.hL = vadd(S.shL, [-9.6, 1.6, -2.0]); P.hR = vadd(S.shR, [9.4, -1.4, -1.6]); P.openL = P.openR = 1; };
 }
-const M365 = { metal: MAT('#a4a8b0', 0.5), rubber: MAT('#26262a'), blanket: MAT('#6a7a9a'), tartan: MAT('#8a2a34'), wood: MAT('#d0903e', 0.4), deck: MAT('#2a9aa8', 0.3), lead: MAT('#c8262b'), dark: MAT('#1c1c22', 0.4), wheel: MAT('#f2c21b'), bag: MAT('#3a5a3a') };
+const STATUE_UP = 8;   // (the living statue's crate: how high it stands)
+// an instrument case open on the ground in front of a busker (x, y: its middle, in the figure's frame), coins in its lining
+function buskCase(B, E, x, y, shell = '#2a2228', lining = '#a83040') {
+  B([x, y, 0.8], I3, [2.8, 7.4, 0.8], GR.ACC, 'case', MAT(shell, 0.3));
+  B([x, y, 1.45], I3, [2.2, 6.6, 0.2], GR.ACC, 'lining', MAT(lining));
+  for (const [dx, dy] of [[-0.8, -2.4], [0.9, -0.4], [-0.4, 1.6], [0.7, 3.4], [-1.0, 4.6]]) E([x + dx, y + dy, 1.8], I3, [0.6, 0.6, 0.2], GR.ACC, 'coin', M365.brass);
+}
+const M365 = { brass: MAT('#d8a83a', 0.6), violin: MAT('#9a4a22', 0.5), metal: MAT('#a4a8b0', 0.5), rubber: MAT('#26262a'), blanket: MAT('#6a7a9a'), tartan: MAT('#8a2a34'), wood: MAT('#d0903e', 0.4), deck: MAT('#2a9aa8', 0.3), lead: MAT('#c8262b'), dark: MAT('#1c1c22', 0.4), wheel: MAT('#f2c21b'), bag: MAT('#3a5a3a') };
 const GAITS2 = {
   hunch(D, P, f, kind, acc) {
     gait(D, P, 0, f / 6, !kind && !(acc && ACC_HANDS[acc] === 2));
@@ -2106,6 +2128,18 @@ const GAITS2 = {
       P.elL = [-1, -0.2, -0.3]; P.elR = [1, -0.2, -0.3];
     };
   },
+  statue(D, P) {   // a living statue up on its crate: weight on one leg, the right hand at the hat's brim, the left on the hip
+    const up = STATUE_UP;
+    P.acc = false; P.lean = -0.03; P.headPitch = -0.1; P.headYaw = 0.2; P.pelYaw = -0.15;
+    P.pel = [0.5, 0, D.pelZ + up]; P.fL = [-D.hipX - 0.3, 1.2, D.ank + up]; P.fR = [D.hipX + 0.9, -0.6, D.ank + up]; P.kneeR = [0.3, 1, 0.4];
+    P.hands = (S) => { P.hR = vadd(S.neck, mv(S.SP, [3.2, 2.4, 5.6])); P.elR = [1, 0.2, 0.4]; P.hL = vadd(S.shL, mv(S.SP, [-2.4, -0.4, -8.0])); P.elL = [-1, -0.6, 0]; };
+  },
+  statuebow(D, P) {   // ...a coin in the hat: it comes to life for a moment - a deep bow, the hat swept off in the right hand
+    const up = STATUE_UP;
+    P.acc = false; P.lean = 0.62; P.headPitch = 0.3;
+    P.pel = [0, -1.2, D.pelZ + up - 0.6]; P.fL = [-D.hipX - 0.4, 0.4, D.ank + up]; P.fR = [D.hipX + 0.4, 0.2, D.ank + up];
+    P.hands = (S) => { P.hR = vadd(S.shR, mv(S.SP, [5.6, 6.4, -2.0])); P.elR = [1, -0.3, -0.2]; P.hL = vadd(S.shL, mv(S.SP, [-1.4, -1.6, -8.4])); P.elL = [-1, -0.4, 0]; };
+  },
   lean(D, P, f, kind, acc) {   // back to a wall, a foot up on it behind, arms folded (1: a glance along the street)
     P.lean = -0.14; P.pel = [0.6, -1.2, D.pelZ - 0.4]; P.headYaw = f ? 0.55 : -0.1; P.headPitch = -0.05;
     P.fL = [-D.hipX - 0.8, 1.6, D.ank]; P.fR = [D.hipX - 0.2, -4.6, D.ank + 6.2]; P.kneeR = [0.2, 1, 0];
@@ -2135,6 +2169,9 @@ function accHands2(D, P, S, acc) {
   if (acc === 'leads') { P.hR = vadd(S.shR, [0.4, 7.2, -r * 0.62]); P.elR = [1, -0.5, -0.5]; return true; }
   if (acc === 'guitar') { P.hL = vadd(S.chest, mv(S.SP, [-8.6, 6.4, -2.2])); P.hR = vadd(S.chest, mv(S.SP, [2.2, 7.0, -6.6 + P.breath * 2])); P.elL = [-1, -0.4, -0.5]; P.elR = [1, -0.6, -0.4]; return true; }
   if (acc === 'call') { P.hR = vadd(S.neck, mv(S.SP, [4.4, 1.6, 5.6])); P.elR = [1, -0.2, -1]; P.headYaw += 0.15; return true; }
+  if (acc === 'sax') { P.hL = vadd(S.chest, mv(S.SP, [0.4, 7.2, -0.6])); P.hR = vadd(S.chest, mv(S.SP, [1.6, 7.6, -5.4 + P.breath * 1.5])); P.elL = [-1, -0.5, -0.5]; P.elR = [1, -0.5, -0.4]; P.headPitch -= 0.08 + P.breath * 0.1; return true; }   // (the fingers on its keys, swaying with the tune)
+  if (acc === 'violin') { P.hL = vadd(S.shL, mv(S.SP, [-2.0, 9.6, 1.2])); P.elL = [-1, -0.4, -0.3]; P.hR = vadd(S.chest, mv(S.SP, [3.4 - P.breath * 6, 6.4, 1.6])); P.elR = [1, -0.4, -0.2]; P.headYaw -= 0.35; P.headPitch += 0.12; return true; }   // (the bow drawn across: P.breath)
+  if (acc === 'drums') { const k = P.breath > 0.2 ? 1 : 0; P.hL = [-3.6, 9.4, 13.4 + (k ? 3.4 : 0)]; P.hR = [3.6, 9.4, 13.4 + (k ? 0 : 3.4)]; P.elL = [-1, -0.4, -0.3]; P.elR = [1, -0.4, -0.3]; P.lean = 0.22; P.headPitch += 0.2; return true; }   // (the sticks coming down in turn)
   if (acc === 'map') { P.hR = vadd(S.chest, mv(S.SP, [4.4, 7.4, -1.6])); P.hL = vadd(S.chest, mv(S.SP, [-4.4, 7.4, -1.6])); P.elR = [1, -0.5, -0.5]; P.elL = [-1, -0.5, -0.5]; P.headPitch += 0.3; return true; }
   if (acc === 'sponge') { P.hR = [2.0 + P.breath * 5, 13.4, 23 + P.breath * 3]; P.elR = [1, -0.3, -0.4]; P.lean = 0.16; return true; }   // (wiping the car's side)
   if (acc === 'easel') { P.hR = [2.6 + P.breath * 3, 12.2, 31 + P.breath * 4]; P.elR = [1, -0.4, -0.5]; P.hL = vadd(S.shL, [-2.6, 4.4, -r * 0.62]); P.elL = [-1, -0.3, -0.5]; P.headPitch += 0.08; return true; }   // (a dab of the brush, the palette low in the other hand)
@@ -2183,11 +2220,45 @@ function figure365(B, C, E, D, P, S, acc) {
     E(c, S.SP, [5.2, 2.0, 4.3], GR.ACC, 'guitar', M365.wood);
     E(vadd(c, mv(S.SP, [0.4, 1.9, 0.4])), S.SP, [1.3, 0.3, 1.3], GR.ACC, 'hole', M365.dark);
     C(vadd(c, mv(S.SP, [-4.0, 0.6, 1.6])), vadd(S.haL, mv(S.SP, [-1.6, 0, 0.8])), 0.8, 0.65, GR.ACC, 'neck', MAT('#6a4428'));
+    // (his kit on the ground: the case open in front with the coins in it, the little amp at his side)
+    buskCase(B, E, -5, 13);
+    B([10.2, 2.4, 3.4], I, [2.6, 2.0, 3.4], GR.ACC, 'amp', M365.dark); B([10.2, 4.45, 3.6], I, [2.0, 0.05, 2.4], GR.ACC, 'grille', MAT('#5a5a60'));
+  } else if (acc === 'sax') {   // a gold saxophone: the mouthpiece up at the lips, the body down the front, the bell turned up and out
+    const top = vadd(S.neck, mv(S.SP, [0.6, 3.4, 2.4])), low = vadd(S.chest, mv(S.SP, [1.4, D.chestR[1] + 2.6, -8.6]));
+    C(top, low, 1.0, 1.5, GR.ACC, 'sax', M365.brass);
+    E(vadd(low, mv(S.SP, [1.8, 0.8, 1.4])), S.SP, [2.3, 2.0, 2.4], GR.ACC, 'bell', M365.brass);
+    E(vadd(low, mv(S.SP, [2.0, 1.4, 2.2])), S.SP, [1.4, 0.6, 1.4], GR.ACC, 'mouth', M365.dark);
+    buskCase(B, E, -4, 12, '#2a2228', '#2a4a8a');
+  } else if (acc === 'violin') {   // under the chin on the left shoulder, its neck out to the left hand; the bow in the right
+    const body = vadd(S.shL, mv(S.SP, [1.6, 3.2, 1.6]));
+    E(body, mmul(S.SP, rx(0.25)), [2.3, 3.8, 1.1], GR.ACC, 'violin', M365.violin);
+    C(vadd(body, mv(S.SP, [-0.8, 2.6, 0])), S.haL, 0.35, 0.3, GR.ACC, 'vneck', M365.dark);
+    C(vadd(S.haR, mv(S.SP, [-0.6, 0.2, 0])), vadd(S.haR, mv(S.SP, [-8.4, 1.8, 1.4])), 0.22, 0.22, GR.ACC, 'bow', MAT('#e8e0c8'));
+    // the music stand in front of him, his case open at his feet
+    C([0, 13.4, 0.4], [0, 13.4, 24], 0.4, 0.35, GR.ACC, 'stand', M365.dark);
+    for (const [x, y] of [[-3.2, 15.4], [3.2, 15.4], [0, 10.6]]) C([0, 13.4, 3.4], [x, y, 0.3], 0.35, 0.3, GR.ACC, 'leg', M365.dark);
+    B([0, 13.8, 26.4], rx(-0.45), [4.4, 0.3, 3.0], GR.ACC, 'music', MAT('#2a2a30'));
+    B([0, 13.5, 26.8], rx(-0.45), [3.6, 0.15, 2.4], GR.ACC, 'sheet', MAT('#f0ece0'));
+    buskCase(B, E, 7, 9, '#3a2a22', '#8a2a3a');
+  } else if (acc === 'drums') {   // the sticks; upturned buckets and a stock pot in front of him (white, blue, red, steel)
+    for (const [h, d] of [[S.haL, -1], [S.haR, 1]]) C(h, vadd(h, [d * 0.8, 4.6, -2.6]), 0.3, 0.3, GR.ACC, 'stick', M365.wood);
+    for (const [x, y, r, hgt, c] of [[-4.8, 12.6, 3.0, 7.6, '#e8e8e4'], [0.4, 14.6, 3.0, 8.2, '#2f68c8'], [5.4, 12.4, 2.8, 7.2, '#c8342e'], [-0.4, 10.0, 2.4, 6.0, '#a8acb4']]) {
+      C([x, y, 0.4], [x, y, hgt], r * 0.86, r, GR.ACC, 'bucket', MAT(c, 0.3));
+      E([x, y, hgt + 0.1], I, [r * 0.96, r * 0.96, 0.3], GR.ACC, 'bottom', MAT(c, 0.2));
+    }
+    E([-7.6, 13.6, 1.2], I, [2.2, 2.2, 1.2], GR.ACC, 'pot', M365.metal);   // (the tip pot)
   } else if (acc === 'call') B(vadd(hR, [-0.6, 0.4, 1.4]), S.SP, [0.5, 1.0, 1.9], GR.ACC, 'phone', M365.dark);
   else if (acc === 'map') B(vmul(vadd(hR, S.haL), 0.5), mmul(S.SP, rx(-0.5)), [5.0, 0.25, 3.4], GR.ACC, 'map', MAT('#e8e0c0'));   // a tourist's map, open in both hands
 }
 // the things people at their activities have by them (server activities.js), in the figure's frame (y ahead, z up)
 const ACT_PROPS = {
+  statue(B, C, E) {   // the living statue's crate under its feet, its upturned hat on the ground in front with the coins in it
+    const up = STATUE_UP, W = MAT('#8a6a44');
+    B([0, 0, up / 2], I3, [6.2, 5.2, up / 2], GR.ACC, 'crate', W);
+    for (const z of [2.4, 5.6]) B([0, -5.25, z], I3, [6.3, 0.15, 0.35], GR.ACC, 'slat', MAT('#6a4e30'));
+    E([1.6, 11.6, 1.0], I3, [3.0, 3.0, 1.1], GR.ACC, 'hat', MAT('#2a2420'));
+    for (const [x, y] of [[0.8, 11.2], [2.4, 12.0], [1.4, 12.4]]) E([x, y, 1.6], I3, [0.6, 0.6, 0.2], GR.ACC, 'coin', M365.brass);
+  },
   easel(B, C) {   // three legs, a canvas on its ledge (a painting of sky and grass), the brush's side toward the painter
     const W = M365.wood;
     C([-4.4, 13.2, 0.4], [-2.4, 15.4, 42], 0.5, 0.4, GR.ACC, 'leg', W); C([4.4, 13.2, 0.4], [2.4, 15.4, 42], 0.5, 0.4, GR.ACC, 'leg', W); C([0, 22, 0.4], [0, 16.2, 38], 0.5, 0.4, GR.ACC, 'leg', W);

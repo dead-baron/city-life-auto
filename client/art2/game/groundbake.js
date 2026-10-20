@@ -53,6 +53,8 @@ import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roadcore.js';
 import { drawText } from '../font.js';
 
 export const CHUNK = 768;
+// the desert's towns (Lucky Mesa, Copper Gulch): no watered lawns - their grass dry, their beds and medians earth
+const DRY_D = new Set(DISTRICTS.filter((d) => d.isl === 'Red Rock Desert' && !WILD_STYLES.has(d.style)).map((d) => d.id));
 const PAD = 48, WN = CHUNK + PAD * 2, WA = WN * WN, TP = 4, TN = WN / TILE + TP * 2 + 1;
 const DECK_LIFT = 88;                                  // shared/levels.js: px per deck level (ramp heights)
 const DECK_FACE = 13, DECK_SHADE = 9;                  // a bridge's face over the water (slab and girders), the shade under it
@@ -258,6 +260,7 @@ function tileFacts(C) {
       else if (b.tres[k] & 128) m = M_.PASTURE;                 // (a river's lush banks, even in dry country: Willow River)
       else if (inRects(paint, X, Y, 'golf')) m = golfAt(X, Y);
       else if (inRects(parks, X, Y)) m = hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK;
+      else if (!wild && DRY_D.has(b.td[k])) m = M_.DRYGRASS;   // (a desert town's - Lucky Mesa's, Copper Gulch's: no watered lawns, the desert's dry grass)
       else if (!wild) m = (b.tres[k] & 64) ? M_.FOREST : (b.tres[k] & 32) ? M_.MEADOW : st === 'park' ? (hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK) : (D.tier === 'rough' || D.tier === 'industrial') && !(b.tres[k] & 16) ? M_.DRYGRASS : st === 'beach' ? M_.MEADOW : M_.LAWN;   // (32: a designed nature place in town - meadow, not lawn; 16: a hand plan's kept lawn - kept green even in a rough or industrial district, the Harbor's)
       else if (st === 'rural' || st === 'airport') m = bio === 2 ? M_.FOREST : bio === 3 ? M_.DRYGRASS : st === 'airport' ? M_.LAWN : M_.PASTURE;
       else if (st === 'desert') m = tabs && tabs.length ? tabMat(tx, ty, M_.DRYGRASS) : M_.DRYGRASS;
@@ -269,6 +272,7 @@ function tileFacts(C) {
       else if (inRects(paint, X, Y, 'canyon')) m = M.relief ? canyonRock(tx, ty, M_.DESERT) : M_.REDROCK;
       else if (b.tdeck[k]) m = M_.UNDERDECK;
       else if (b.tres[k] & 2) m = M_.GRAVEL;
+      else if (!wild && DRY_D.has(b.td[k])) m = tabs && tabs.length ? tabMat(tx, ty, M_.DESERT) : M_.DESERT;   // (a desert town's beds and yards: the desert's sand and gravel - the Strip's gardens)
       else if (!wild) m = (D.tier === 'industrial' || D.tier === 'rough') ? M_.GRAVEL : M_.DIRT;
       else if (bio === 9) m = vnc(tx, ty, 9, 9101) > 0.58 ? M_.QUARRY : M_.SCREE;   // (the summits: bare granite and scree, no snow - the owner, 10-16)
       else if (bio === 3 || st === 'desert') m = nearCanyon(X, Y) ? canyonRock(tx, ty, M_.DESERT) : tabs && tabs.length ? tabMat(tx, ty, M_.DESERT) : M_.DESERT;
@@ -1040,7 +1044,9 @@ function markings(C, G) {
       }
       if (e.kind === 'blvd' && Math.abs(v) < Math.max(6, e.median / 2 - 1) && s > I.t0 && s < I.t1) {   // a planted median (as wide as the boulevard's: World v3's Midtown Boulevard, 3 tiles)
         const av = Math.abs(v), mh = Math.max(6, e.median / 2 - 1);
-        setC(G, gi, av > mh - 1.5 - (mh > 12 ? 1.5 : 0) ? sd(MAT.curb, 0.7, X, Y, 0.3) : GSHADE.grassPark(X, Y, C.seed)); G.z[gi] = av > mh - 3 ? 3 : 2;
+        const kerb = av > mh - 1.5 - (mh > 12 ? 1.5 : 0), tq = Math.floor(X / TILE), tr = Math.floor(Y / TILE);
+        const dry = !kerb && C.M.inside(tq, tr) && DRY_D.has(C.M.dist[C.M.idx(tq, tr)]);   // (a desert town's median - Lucky Mesa's Strip: pebbled earth round its palms and agaves, no lawn)
+        setC(G, gi, kerb ? sd(MAT.curb, 0.7, X, Y, 0.3) : dry ? GSHADE.dirtPebbly(X, Y, C.seed) : GSHADE.grassPark(X, Y, C.seed)); G.z[gi] = av > mh - 3 ? 3 : 2;
         continue;
       }
       if (m === M_.DIRTROAD) {                                    // wheel ruts and the grassy hump between them

@@ -229,6 +229,7 @@ export function update(world, dt) {
       }
       case 'fight': inp = fight(world, ped, now); factor = 1; break;
       case 'watch': inp = watch(world, ped, now); break;
+      case 'audience': inp = personas.audience(world, ped, now); factor = 0.45; break;   // (in a busker's crowd: personas.js)
       case 'limp': inp = limp(world, ped, now); factor = LIMP_SPEED; break;
       case 'crawl': inp = crawl(world, ped, now); factor = CRAWL_SPEED; break;
       case 'mug': inp = mugRun(world, ped, now); factor = 1; break;

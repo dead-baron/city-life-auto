@@ -51,6 +51,7 @@ const setN = (G, x, y, n) => { if (!G.inside(x, y)) return; const j = (y * G.w +
 const glow = (G, x, y, e) => G.glow(x, y, e);
 
 let WALLC = null;   // a custom wall ramp for the building being made (spec.wallColor)
+let GLASSC = null;  // a glass tower's own tint (spec.glassTint: Lucky Mesa's gold towers; none: the city's blue glass)
 let BRICKC = null;  // a brick building's own tone (spec.brickTone: brown, buff, cream, painted...; none: the red brick ramp)
 let GLOW_ONLY = false; // spec.glowOnly: lit windows keep their glass albedo and carry the light in the emissive
                        // map only (the game bakes a chunk once for every time of day; the Lighter scales emi)
@@ -81,7 +82,7 @@ function wallColor(style, u, v, seed, x, y, big = vnoise(u, v, 30, seed), mid = 
   if (style === 'glass') {
     const mull = u % 16 === 0 || v % 22 === 0;
     if (mull) return step(MAT.metalDark, 0.45, x, y, 0);
-    return step(MAT.glass, 0.35 + ((u + (40 - v % 40)) % 40 < 8 ? 0.35 : 0) + (big - 0.5) * 0.2, x, y, 0.4);
+    return step(GLASSC || MAT.glass, 0.35 + ((u + (40 - v % 40)) % 40 < 8 ? 0.35 : 0) + (big - 0.5) * 0.2, x, y, 0.4);
   }
   const R = WALLC ? WALLC : style === 'diner' ? MAT.diner : style === 'purple' ? MAT.stuccoPurple : style === 'peach' ? MAT.stuccoPeach : style === 'teal' ? MAT.stuccoTeal : style === 'concrete' ? MAT.concrete : MAT.stucco;
   let t = 0.55 + (big - 0.5) * 0.22 + (mid - 0.5) * 0.12 + (h > 0.95 ? 0.1 : 0) - (h < 0.03 ? 0.12 : 0);
@@ -230,6 +231,7 @@ function acBox(G, x0, y0) { for (let y = 0; y < 9; y++) for (let x = 0; x < 13; 
 export function makeBuilding(spec) {
   const { w, d } = spec, seed = spec.seed || 1, style = spec.style || 'stucco';
   WALLC = spec.wallColor ? ramp(spec.wallColor, 6, 3) : null;
+  GLASSC = spec.glassTint ? ramp(spec.glassTint, 6, 3, { light: 0.65 }) : null;
   BRICKC = spec.brickTone ? ramp(spec.brickTone, 6, 3, { dark: 0.55 }) : null;
   GLOW_ONLY = !!spec.glowOnly;
   const floors = spec.floors || 1, gH = spec.groundH ?? (spec.shop ? SHOP_FLOOR : FLOOR), cornice = style === 'brick' ? 10 : 6;
@@ -289,11 +291,14 @@ export function makeBuilding(spec) {
     let c;
     if (style === 'brick') { const BD = BRICKC ? [BRICKC[0], BRICKC[1], BRICKC[1], BRICKC[2]] : MAT.brickDark; c = k < 2 ? MAT.stone[k ? 2 : 4] : k < 4 ? BD[3] : (k < 7 && x % 4 < 2) ? MAT.stone[3] : BD[1]; }
     else if (style === 'diner') c = k < 2 ? MAT.chrome[3] : MAT.dinerRed[3 - (k > 3 ? 1 : 0)];
+    else if (style === 'adobe') c = step(WALLC || MAT.stucco, 0.66 - k * 0.04 + (k < 2 ? 0.1 : 0), x, k, 0.4);   // (the parapet's rounded lip, in the wall's own render)
     else c = step(MAT.stone, 0.75 - k * 0.1, x, k, 0.3);
     setC(G, x, Y, c);
     if (k < 2) setN(G, x, Y, [0, 0.4, 0.92]);
   }
   if (spec.cornice) corniceDress(G, spec, w, d, H, cornice, fy);
+  // the vigas: the roof beams' ends out through the wall under the parapet (an adobe's, spec.vigas)
+  if (spec.vigas) for (let x = 9; x + 4 < w - 6; x += 18) for (let k = 0; k < 4; k++) for (let q = 0; q < 4; q++) { const Y = fy(H - cornice - (spec.parapet || 0) + 2 - k); setC(G, x + q, Y, step(MAT.woodDark, 0.62 - k * 0.1 - q * 0.07, x + q, k, 0.3)); }
   // diner neon band along the top of the facade
   if (spec.trim) for (let x = 1; x < w - 1; x++) for (const k of [cornice + 2, cornice + 4]) { const Y = fy(H - k); setC(G, x, Y, spec.trim.map((c) => Math.min(255, c * 0.7 + 80))); glow(G, x, Y, [...spec.trim, 120 + night * 135]); }
   // ---- upper floors. spec.win, the rhythm of the windows (World v3's handcrafted streets: no two neighbours alike):
@@ -324,7 +329,8 @@ export function makeBuilding(spec) {
       if (spec.boarded && hash(i, f, seed + 41) < spec.boarded) { boards(G, px, py, pw, wh, seed + i * 5 + f); return; }
       if (WIN === 'loft') loftWin(G, px, py, pw, wh, lit, seed + f * 7 + i);
       else if (WIN === 'triple') { for (let k = 0; k < 3; k++) sash(G, px + k * 13 + (k ? 1 : 0), py, 13 + (k === 1 ? 0 : 0), wh, lit, seed + f * 7 + i * 3 + k, { noLintel: k > 0 }); lintel(G, px - 2, py - 3, pw + 4); }
-      else sash(G, px, py, pw, wh, lit, seed + f * 7 + i, WIN === 'arch' ? { noLintel: true } : undefined);
+      else sash(G, px, py, pw, wh, lit, seed + f * 7 + i, WIN === 'arch' || style === 'adobe' ? { noLintel: true, ...(style === 'adobe' ? { frame: MAT.woodDark } : {}) } : undefined);
+      if (style === 'adobe') for (let x = -2; x < pw + 2; x++) for (let k = 0; k < 3; k++) setC(G, px + x, py - 3 + k, step(MAT.woodDark, 0.6 - k * 0.15, px + x, k, 0.3));   // (a timber lintel)
       if (WIN === 'arch') archHead(G, px, py, pw, style, lit, night);
       if (spec.shutters && WIN !== 'loft' && WIN !== 'triple') shutters(G, px, py, pw, wh, spec.shutters);
       if (spec.balconies) balconyRail(G, px - 6, py + wh + 3, pw + 12, seed + i * 3 + f);
@@ -376,7 +382,7 @@ export function makeBuilding(spec) {
 
 // ---- flat roof decks (spec.roofMat) ------------------------------------------------------------------
 const DECK = { tar: ramp('#615c5c', 6, 3), gravel: ramp('#7c756c', 6, 3), membrane: ramp('#a29f99', 6, 3), metal: ramp('#7a838c', 6, 3),
-  paver: ramp('#908376', 6, 3), deck: MAT.woodDock, green: ramp('#aca392', 6, 3), sedum: ramp('#4a4846', 6, 3), rubber: ramp('#4c494c', 6, 3), seats: ramp('#b02a2e', 6, 3), parking: ramp('#8c8984', 6, 3) };
+  paver: ramp('#908376', 6, 3), deck: MAT.woodDock, green: ramp('#aca392', 6, 3), sedum: ramp('#4a4846', 6, 3), rubber: ramp('#4c494c', 6, 3), seats: ramp('#b02a2e', 6, 3), parking: ramp('#8c8984', 6, 3), adobe: ramp('#cbb595', 6, 3) };
 // (a parking garage's top deck: the bays' paint, the parked cars' bodies, their glass - RS 13, 14-19, 20)
 const BAYPAINT = ramp('#ecebe2', 5, 2), CARS = ['#c8342e', '#2a5aa8', '#ecebe6', '#34383f', '#a8acb4', '#2a7a4a'].map((c) => ramp(c, 6, 3)), CARGLASS = ramp('#2a3444', 5, 2);
 const RUST = ramp('#8a5a3a', 6, 3), PAD = ramp('#b6b0a4', 6, 3);
@@ -418,6 +424,7 @@ function roofDeck(G, spec, w, d, H, seed, style) {
     const each = (fn) => { for (let v = 0, i = 0; v < id; v++) for (let u = 0; u < iw; u++, i++) fn(u, v, i, u + rw, v + rw); };
     switch (mat) {
       case 'gravel': { const A = F(4, 4, seed + 5), B = F(40, 40, seed); each((u, v, i, x, y) => { const j = y * w + x, h1 = hash(x, y, seed + 2); T[i] = 0.5 + (A[j] - 0.5) * 0.2 + (h1 > 0.86 ? 0.12 : h1 < 0.1 ? -0.12 : 0) + (B[j] - 0.5) * 0.12; }); break; }   // (calm: the art pixel shows the stones)
+      case 'adobe': { const A = F(26, 26, seed + 6), B = F(7, 7, seed + 7); each((u, v, i, x, y) => { const j = y * w + x; T[i] = 0.6 + (A[j] - 0.5) * 0.12 + (B[j] - 0.5) * 0.05; }); break; }   // (an adobe's earthen roof: packed and smoothed, softly mottled)
       case 'membrane': { const A = F(30, 30, seed + 4); each((u, v, i, x, y) => { const h1 = hash(x, y, seed + 2), s = u % 46; T[i] = 0.56 + (A[y * w + x] - 0.5) * 0.12 + (h1 > 0.97 ? 0.08 : 0) + (s === 0 ? 0.12 : s === 1 ? -0.08 : 0); }); break; }
       case 'metal': {
         const A = F(26, 26, seed), B = F(10, 42, seed + 9);

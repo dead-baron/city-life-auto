@@ -12113,3 +12113,86 @@ plan's, the runway north-south, the terminal and the hangars clear of the rescue
 airport registered once by its plan, its place at the main hall's door, the airliners and the seven jet bridges, the
 tower, the light planes, the three flyable planes' stands and the helipad, the rescue base at its spot, the kiosk on
 the forecourt, the businesses).
+
+## 2026-10-20 · Street performers: five acts, their pitches by the fountains, the crowds that stop to listen
+
+From the owner's Shared-9 (a square full of buskers: a guitarist on his stool with the amp and the open case of coins, a
+saxophonist by a lamp post, a drummer on upturned buckets, a violinist at her music stand, a living statue in bronze on
+its crate with a hat for coins, people stopping to listen). The city's busker (server/systems/personas.js, task #365)
+played a guitar wherever a passer-by happened to be; now:
+- **Five acts** (`BUSKS`): the guitarist (his amp beside him, the case open in front with coins in it), the
+  saxophonist (a gold sax, its case open), the violinist (the violin under her chin, the bow drawn across, the music
+  stand in front, the case at her feet), the drummer (sticks coming down in turn on three upturned buckets and a stock
+  pot, the tip pot beside them) and, by day only, the **living statue**: every colour of the look bronze - skin, suit,
+  fedora, hair - standing on its crate with a hand at the brim, its hat upturned on the ground (client/art2/people.js:
+  the 'sax', 'violin', 'drums' and 'statue' props, the 'statue' and 'statuebow' poses, statueApp).
+- **A pitch**: a busker sets up on the paving three to seven tiles from a fountain, a statue, a gazebo or a map board,
+  facing it, at least seven tiles from another busker; no act twice near one another, up to three buskers round a big
+  square (the Market Square, Piazza Vecchia, Westport Center Plaza...). With no landmark near, where they are - never on
+  top of another busker.
+- **The crowd**: every few seconds a busker draws a passer-by wandering near to stop and listen - to a spot in front of
+  them, facing the act, for 15-35 seconds (npc.js state 'audience'), up to six at a time; some step up first to drop a
+  coin in the case. Then on they go.
+- **A coin** (ACT beside them, $2 and a Samaritan point as before): each act thanks you its own way; the statue comes to
+  life for a moment and bows, then freezes again.
+- `tools/art2/people-preview.html?view=busk`: the acts in four facings, the statue's bow.
+
+Budget: the renderer's code 367 -> 372 KB (tools/perf.mjs) - the acts' instruments, the statue's bronze and its
+bow in client/art2/people.js came to 370 KB.
+
+Tests: test/npcpeople.test.js (the acts with their kit on the wire, pitches by the fountain facing it and apart, a crowd
+gathering and watching and moving on, the statue bowing for a coin and freezing again, never a statue after dark).
+
+## 2026-10-20 · World v3, handcrafted: Lucky Mesa's Strip
+
+From the owner's LuckyMesa-B2 (the Strip at street level at dusk, two views: the boulevard with its planted median of
+palms, agaves and cactus and banners on its lamp posts; the glass skybridge across it; the gold glass resort tower in
+terraces with planted ledges and a two-stage waterfall into its lagoon, cabanas round it; the Pueblo adobe resort round
+its palm-island lagoon under its timber pergola; the neon casino with the tall neon cactus over its marquee; the
+fountain loops at every door; the multi-level car parks). Until now the resorts stood on lots world3-mesa.js kept for
+them, built by its own small builder; now `shared/world3-strip.js` is The Strip's (district 60) hand plan and lays the
+whole district - Old Downtown and Mesa Flats stay the generator's (world3-mesa.js).
+- **The Strip** itself: Mesa Road (world3-mesa.js still pulls it straight on row 612) widened to Neon Boulevard's
+  palm-median section (13 tiles, two lanes each way either side of a 3-tile planted median: STRIP_ROAD); down the
+  median royal palms every nine tiles with banner poles between them (teal and coral banners, a lantern on top) and
+  beds of agave, barrel cactus, prickly pear, yucca and cholla with sandstone rocks, clear of the side streets'
+  junctions; a bus stop on each pavement.
+- **North of it** (fronting south, to the camera): **The Golden Lotus** (kept: its gold podium, the gold glass tower and
+  its pink crown); **The Neon Saguaro** (new, in the domed palace's old place: a low pink-banded casino either side of its
+  pylon, the green neon saguaro up the pylon in its red frame, a bar with umbrellas and string lights on the wings'
+  roofs, the marquee of chasing bulbs over its drive, its five-deck car park beside it, its pool behind); **Mesa
+  Grande** (new, in the pyramid's place: the gold glass tower in three terraces - podium, terrace block, tower -
+  their roofs planted with palms and agave beds, its east wing; beside it the lagoon under a two-stage waterfall down
+  its sandstone rockwork, cabanas along it, loungers); **The Silver Lagoon** (moved across the Strip, where the camera
+  sees its lake of five fountains in front of its hotel, not hidden behind it: the iron balustrade on the Strip, the
+  promenade under the palms, the drive past the lake's end to its porte-cochere).
+- **South of it** (fronting north; the camera looks north, so a south-side resort's tower stands at the far end of its
+  grounds and hides only its own gardens): **Starfall Tower** (its white podium on the Strip, the pool behind it, the
+  spire between its two car parks), **The Prism** (moved across: its dark glass podium on the Strip, the pool and
+  cabanas, its two glass towers at the back), **Casa del Sol** (new, in the castle's place: the adobe lodge on the Strip
+  and its wings stepping down in terraces - three floors, two, one - round the courtyard and its lagoon, an island of
+  palms and a thatched bar in the middle, cabanas along the far side, the cactus garden behind, its car park at the
+  east end; the timber pergola over the drive at the lodge's door).
+- Every resort a casino (its place at its door, as before) with a **drive loop round a fountain** in front: the loop's
+  asphalt and its two mouths on the Strip, the island's fountain, flower beds and agave, palms along the kerb strip,
+  lamps, taxis waiting, a **porte-cochere** over the drive at the door (stone and gold; the Neon Saguaro's a marquee of
+  bulbs; Casa del Sol's the pergola).
+- **The skybridge** across the Strip between Mesa Grande's forecourt and Casa del Sol's: a glass tower at each end, the
+  glass span on its steel girders 96 px over the traffic (four pieces), lit inside after dark.
+- **The grounds** the resorts leave open are the desert's gardens, not lawns: beds of sand and gravel planted with
+  palms, saguaros, agave, barrel cactus, prickly pear, yucca and sandstone rocks, paved where they meet the paving.
+  Art v2 draws a desert town's grass as the desert's dry grass and its beds as desert (the Red Rock Desert's towns,
+  groundbake.js DRY_D): Lucky Mesa's yards and Copper Gulch's turn from green lawn to dry grass, and the Strip's
+  median is pebbled earth round its palms, not lawn.
+- The pyramid, the domed palace and the castle are gone (each too like a real resort); every look is still its own.
+- The art (client/art2/props-district.js): the cabana, the skybridge's span and towers, the porte-cochere and the
+  marquee, the timber pergola, the banner pole; the 'saguaro' picture sign (client/art2/neonsigns.js); tinted glass
+  (`spec.glassTint`: the gold towers), the 'adobe' wall (its render-soft parapet, timber lintels) and its vigas,
+  and an adobe's earthen roof (roofMat 'adobe', client/art2/buildings.js); a waterfall down sandstone (`stone:
+  'sand'`, water.js); a boulder drawn as rock in town (`rock: 1`).
+
+Tests: test/strip.test.js (the district the plan's, its lots inside it, apart and clear of the Strip's pavements and
+the side streets, every look its own, the skybridge between Mesa Grande and Casa del Sol over the Strip);
+test/world3mesa.test.js (the Strip a palm-median boulevard; every resort's drive loop, fountain and porte-cochere, the
+cabanas, the skybridge's span and towers, the median's palms and banner poles, the two car parks, the Neon Saguaro's
+cactus, the bus stops - and as before each resort's look, casino door, pools and palms).
