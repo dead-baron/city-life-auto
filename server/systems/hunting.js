@@ -10,6 +10,7 @@
 // Raw meat cooks over any lit campfire: stand by the fire, press the action button, and everything raw in the bag
 // comes off it cooked (fauna.js COOKS) - real food, and the big game makes hearty meals (economy.js: more health for
 // a while). The Highland Hunting Lodge, the hunting camps and the trappers buy it all (shared/items.js SHOPS).
+import { rangerSaw } from './wildfolk.js';
 import { HUNT_REACH, HUNT_DRESS_S, HUNT_COOK_S, WARDEN_FINE, ARROW_PICKUP_PX, ARROW_KEEP_S } from '../../shared/rules.js';
 import { ITEMS, peltOf, graded } from '../../shared/items.js';
 import { SPECIES, COOKS, gradeOf, GRADE_NAME } from '../../shared/fauna.js';
@@ -195,7 +196,7 @@ export function onKilled(world, a, attacker) {
     const prof = p.profile, fine = WARDEN_FINE;
     const fromCash = Math.min(prof.cash, fine);
     prof.cash -= fromCash; prof.bank = Math.max(0, prof.bank - (fine - fromCash));
-    world.notify(p, `${S.name}s are protected. The wildlife wardens fine you $${fine}.`, 'bad');
+    world.notify(p, rangerSaw(world, a.x, a.y) ? `A ranger saw that: ${S.name}s are protected. The wildlife wardens fine you $${fine}.` : `${S.name}s are protected. The wildlife wardens fine you $${fine}.`, 'bad');
     p.meDirty = true;
     store.touch();
   }

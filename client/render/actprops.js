@@ -47,6 +47,17 @@ const PROPS = {
     g.fillStyle = '#e8e4d8'; for (const q of [at(p, -6, -2, 0), at(p, -6, 2, 0), at(p, 6, -2, 0), at(p, 6, 2, 0)]) g.fillRect(q[0] - 1, q[1] - 1, 2, 2);
   },
   cueup(g, p) { const b = at(p, 2, 7, 0); line(g, b, [b[0] + 1, b[1] - 46], '#c08a4a', 1.4); g.fillStyle = '#3a6ad0'; g.fillRect(b[0], b[1] - 48, 2, 2); },
+  // the people of the wilds (server/systems/wildfolk.js, Nature-C4)
+  binoculars(g, p) { const c = at(p, 5, 0, 38); g.fillStyle = '#1e1e22'; g.fillRect(c[0] - 3, c[1] - 1.5, 6, 3); },
+  poles(g, p, now) { const s = Math.sin(now * 6 + p.id) * 3; for (const side of [-6, 6]) line(g, at(p, side > 0 ? s : -s, side, 22), at(p, 6 + (side > 0 ? s : -s), side, 0), '#c8ccd4', 1.2); },
+  radio(g, p) { const c = at(p, 3, 4, 34); g.fillStyle = '#2a2a2e'; g.fillRect(c[0] - 1, c[1] - 2, 2.5, 4); line(g, [c[0] + 1, c[1] - 2], [c[0] + 1, c[1] - 5], '#2a2a2e', 0.8); },
+  basket(g, p) { const c = at(p, 3, -9, 12); box(g, c[0], c[1], 7, 4, '#d8a030', '#c8925a'); line(g, [c[0] - 3, c[1] - 4], [c[0], c[1] - 8], '#8a5e30', 0.8); line(g, [c[0], c[1] - 8], [c[0] + 3, c[1] - 4], '#8a5e30', 0.8); },
+  kayak(g, p) { line(g, at(p, -20, 6, 36), at(p, 20, 6, 36), '#a82420', 4); line(g, at(p, -19, 6, 37), at(p, 19, 6, 37), '#e03a2e', 2); line(g, at(p, 2, -7, 8), at(p, 2, -7, 42), '#1e1e22', 1); },
+  tripod(g, p) { for (const s of [-4, 4]) line(g, at(p, 12, s, 0), at(p, 14, 0, 30), '#2a2a2e', 1); line(g, at(p, 10, 0, 32), at(p, 17, 0, 34), '#4a5a4a', 3); },
+  tackle(g, p) { const c = at(p, -1, -10, 0); box(g, c[0], c[1], 8, 5, '#d8c86a', '#2e6a3a'); line(g, at(p, 2, -14, 0), at(p, 1, -13, 18), '#2a2a2e', 1); },
+  campstove(g, p) { const c = at(p, 0, 0, 14); box(g, c[0], c[1], 11, 3, '#5a8ad8', '#2f68c8'); const s = at(p, 14, 0, 0); box(g, s[0], s[1], 6, 4, '#8a8a90', '#3a3a40'); box(g, s[0], s[1] - 4, 4, 3, '#c8ccd4', '#a8acb4'); },
+  climbkit(g, p) { const c = at(p, 3, -9, 0); g.fillStyle = '#2fa8c0'; g.fillRect(c[0] - 4, c[1] - 3, 8, 3); const h = at(p, 4, 9, 0); g.fillStyle = '#f2c21b'; g.fillRect(h[0] - 2, h[1] - 3, 4, 3); },
+  rope(g, p) { const c = at(p, 0, 4, 30); g.fillStyle = '#2fa8c0'; g.fillRect(c[0] - 2, c[1] - 3, 4, 6); line(g, at(p, 4, 5, 24), at(p, 14, 2, 60), '#2fa8c0', 0.8); },
 };
 // gt 'cue': bent over the table, the cue from behind the drawing hand out over the felt toward the cue ball
 function cue(g, p, now) {

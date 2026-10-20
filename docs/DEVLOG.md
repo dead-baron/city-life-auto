@@ -12324,3 +12324,52 @@ feather none, and it fletches); laid out across the wilds, each where it belongs
 spread out; a truffle wants a trowel, a geode a pickaxe, the rare and the extra turn up, the bees sting but never kill.
 (test/foraging.test.js: the regrown mushroom checked by the spot's own prompt - a lost pet that wandered up in the
 meantime took the button first, now and then.)
+
+## 2026-10-20 · Nature: the people of the wilds (Nature-C4)
+
+The nature program's "only appropriate NPCs in secluded natural areas", from the twelve figures of the Nature-C4 sheet
+(`server/systems/wildfolk.js`, filled and emptied round players by `server/systems/activities.js` like the town's
+activities; their kit drawn in `client/art2/people.js`, and in the classic view in `client/render/actprops.js`):
+- **Park rangers** in the flat-brimmed hat and khaki, walking a beat out from each ranger station (and from about a third
+  of the trailheads' map boards) and back, a word on the radio and a look about at each end. **Talk to one** (the action
+  button: "Talk to the ranger") and they turn to you and tell you something about the wilds round here, a new thing each
+  time: where the nearest find worth the trip is and which way ("There's truffle ground under the trees - you'll want a
+  trowel - a fair walk north-east of here": Nature-D1's finds and the mushrooms, never one picked bare), what's
+  protected and the fine, who hunts what in these woods, the peaks or the desert (Nature-A2), where the fish hold, and
+  to put the campfire out. Shoot a protected bird with a ranger in sight and the fine says the ranger saw it.
+- **On the trails**: from a trailhead's map board or fingerpost, a route along the dirt trail (5-14 points of ~72 px,
+  keeping its line): one or two backpackers with trekking poles and the tall trekking pack (the bedroll on top) walking
+  it out and back, a breather at the far end - or a trail runner at a run.
+- **Birdwatchers** at the water's edge (a lake's, a marsh's: the edge of the water found tile by tile) and at the coin
+  telescopes out at the viewpoints, binoculars up, now and then a friend at a spotting scope on its tripod.
+- **Anglers at the holds**: on a creek's, a river's or a lake's bank out in the wild country, the rod out over the water,
+  the tackle box and the landing net at their side (the town's anglers stay on the piers).
+- **Kayakers** in a life vest, walking a lake's shore with the kayak up on a shoulder and the paddle.
+- **Climbers** at the foot of the crags of the peaks and the canyons (the cliffs and the big outcrops): one with the rope,
+  its end run up the rock, the other down on a knee by the kit - the rope's coil, a helmet, the chalk bag.
+- **Foragers** with a basket on their round of three patches of mushrooms (berries, herbs) close together, down on a knee
+  at each - for show: what's there is still there for you.
+- **Campers** by a tent, sat in a folding camp chair cooking at a camp stove, now and then a friend stood by.
+- **Out on the dirt roads**, the country traffic's mountain bikers wear their helmets and shades and the dirt bikers the
+  MX jersey, the moto helmet and boots. The hunter in blaze orange and his dog were there already.
+- The kit as clothes, sold in the outdoor and sports shops too (shared/lookcore.js, new at the end of the catalogue):
+  the Ranger hat, the Field vest (rows of pockets), the Life vest (its straps), the MX jersey, the Climbing helmet and
+  the Trekking pack.
+- All of them country folk (npc.js): a gunshot sends them running and they go on their way; rain sends the birders,
+  climbers and kayakers home. Spaced by kind (a birder every 1,500 px of shore at most, an angler every 1,000...); only
+  the few nearest a player are ever out (activities.js: four groups round a player, one or two of a kind). In World v3:
+  7 rangers' beats, 7 trails, 45 birders' spots, 557 anglers' holds, 46 kayakers' shores, 415 crags, 124 foragers' rounds
+  and 10 campers' tents (the old map: 7, 10, 8, 11, 6, 5, 5, 16). The debug menu's "People of the wilds" takes you to
+  each.
+
+Budgets (tools/perf.mjs): the people renderer 377 -> 382 KB and a bake worker 816 -> 821 KB for the kit (380 and 818
+KB now): twelve kinds of people's things to carry and to set down, drawn once each and kept with the people's art.
+
+Tests: test/wildfolk.test.js - every kind found out in the wilds on open ground, the anglers and the birders facing the
+water, the climbers in the peaks or the canyons, the trails along the dirt, the foragers from patch to patch, all spread
+out; each in their kit on the wire (the ranger's hat, the life vest, the climbing helmet, the binoculars, the rod and the
+tackle box, the kayak, the rope and the kit, the basket, the camp stove, the poles and the trekking pack or the runner's
+shoes); a backpacker out to the far end of the trail and back, the forager down on a knee at the patches, the ranger's
+beat with the radio, the kayaker along the shore with the kayak up; a word with the ranger - the prompt, something new
+each time, a find and which way, what's protected; the riders dressed. (test/activities.test.js: the classic view draws
+the new props, the debug menu's eight more.)

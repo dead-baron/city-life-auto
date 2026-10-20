@@ -348,6 +348,15 @@ add('bag', 'Messenger bag', 'mf', 'smart casual streetwear retro', 60, 'boutique
 add('bag', 'Shopping bags', 'mf', 'hifashion smart casual', 10, 'clothing', { carry: 'shopping' }, 'cream', 'red');
 add('bag', 'Chest rig', 'mf', 'outdoors work disguise', 55, 'outdoor', { rig: 1 }, 'olive');
 add('bag', 'Guitar case', 'mf', 'alt punk retro festival', 80, 'clothing', { back: 2 }, 'black');
+// the people of the wilds' kit (Nature-C4, 2026-10-20: server/systems/wildfolk.js): a park ranger's flat-brimmed hat, the
+// birder's and the angler's pocketed field vest, a kayaker's life vest, a dirt biker's jersey, a climber's helmet and a
+// backpacker's tall trekking pack with the bedroll on top - all in the outdoor and the sports shops too
+add('hat', 'Ranger hat', 'mf', 'outdoors work', 45, 'outdoor', { k: 'cowboy', flat: 1 }, 'tan', 'brown');
+add('jacket', 'Field vest', 'mf', 'outdoors work', 55, 'outdoor', { k: 'vest', pockets: 1 }, 'khaki', 'olive');
+add('jacket', 'Life vest', 'mf', 'outdoors beach athletic', 60, 'outdoor', { k: 'vest', pfd: 1 }, 'orange', 'black');
+add('top', 'MX jersey', 'mf', 'athletic outdoors streetwear', 60, 'sports', { k: 'jersey' }, 'red', 'white');
+add('hat', 'Climbing helmet', 'mf', 'outdoors athletic', 55, 'outdoor', { k: 'skatehelmet' }, 'orange');
+add('bag', 'Trekking pack', 'mf', 'outdoors', 150, 'outdoor', { back: 1, big: 1 }, 'orange');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
@@ -504,7 +513,7 @@ export function lookArt(L, opt = {}) {
   }
   if (jk) {   // worn open over the top: the top's colour down the front
     const under = A.top;
-    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind };
+    A.top = { kind: jk.d.k === 'hoodie' ? 'ziphoodie' : jk.d.k, color: HEX(O.jacket.c), color2: HEX(O.jacket.t), trim: HEX(O.jacket.t), inner: under.kind === 'none' ? null : under.color, innerKind: under.kind, pattern: pat(O.jacket), quilt: jk.d.quilt ? 1 : 0, studs: jk.d.studs ? 1 : 0, fringe: jk.d.fringe ? 1 : 0, bomber: jk.d.bomber ? 1 : 0, varsity: jk.d.varsity ? 1 : 0, gloss: jk.d.gloss ? 1 : 0, robe: jk.d.robe ? 1 : 0, len: under.len || 0, under: under.kind, ...(jk.d.pockets ? { pockets: 1 } : null), ...(jk.d.pfd ? { pfd: 1 } : null) };
     if (jk.d.k === 'vest') A.top.sleeve = under.kind === 'none' || under.kind === 'tank' || under.kind === 'tube' || under.kind === 'bra' || under.kind === 'crop' || under.kind === 'bikini' ? 'skin' : under.color;
     if (jk.d.k === 'kevlar') { A.top.kind = 'kevlar'; A.top.color = under.color || A.top.color; A.top.color2 = HEX(O.jacket.c); A.top.sleeve = under.kind === 'none' || under.kind === 'tank' ? 'skin' : under.color; A.top.chevrons = under.chevrons || 0; }   // (the plates over the shirt, the shirt's sleeves)
     if (jk.d.k === 'apron' || jk.d.k === 'overalls') {   // (worn over the top: the shirt round them is the top - its colour, its sleeves, a flannel's check - or bare skin)
@@ -522,7 +531,7 @@ export function lookArt(L, opt = {}) {
   }
   else { A.shoes = '#d8c8b0'; A.shoeKind = 'barefoot'; }
   const hat = P('hat');
-  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat) };
+  if (hat) A.hat = { kind: hat.d.k, color: HEX(O.hat.c), trim: HEX(O.hat.t), braid: hat.d.braid ? 1 : 0, back: hat.d.back ? 1 : 0, pom: hat.d.pom ? 1 : 0, slouch: hat.d.slouch ? 1 : 0, pattern: pat(O.hat), ...(hat.d.flat ? { flat: 1 } : null) };
   if (hat && hat.d.k === 'hood') A.hat.color = A.top.color;
   const gl = P('glasses');
   if (gl) {
@@ -545,7 +554,7 @@ export function lookArt(L, opt = {}) {
   if (jw && jw.d.gloves) A.gloves = HEX(O.jewel.c);
   const bg = P('bag');
   if (bg) {
-    if (bg.d.back) { A.back = bg.d.back === 2 ? 'guitarcase' : 'backpack'; A.backColor = HEX(O.bag.c); }
+    if (bg.d.back) { A.back = bg.d.back === 2 ? 'guitarcase' : 'backpack'; A.backColor = HEX(O.bag.c); if (bg.d.big) A.backBig = 1; }
     else if (bg.d.belt) A.beltBag = HEX(O.bag.c);
     else if (bg.d.rig) A.rig = HEX(O.bag.c);
     else { A.carry = bg.d.carry; A.bagColor = HEX(O.bag.c); if (bg.d.small) A.bagSmall = 1; if (bg.d.big) A.bagBig = 1; }

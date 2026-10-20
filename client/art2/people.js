@@ -878,6 +878,10 @@ function wardrobe(A, D, TF, seed) {
     if (T.check && !topPat) { if (Q.res > 1) { const a = Math.floor((u + 2) * 3.2), b = Math.floor(z / 1.7); if ((a + b) & 1) Q.k -= 0.22; if ((a & 1) && (b & 1)) return dark(top); } else { const g = gridCheck(Q, top); if (g) return g; } }
     if (T.floral && !topPat && (Q.res > 1 ? hash(Math.round(u * 6), Math.round(z), 7) : hash(Math.floor(Q.x / 2), Math.floor(Q.y / 2), 7)) > 0.78) return top2;
     if (T.quilt && Math.abs(z * 0.5 - Math.round(z * 0.5)) < 0.1) Q.k -= 0.3;
+    // the people of the wilds' vests (shared/lookcore.js, Nature-C4): a field vest's rows of pockets down the front; a life
+    // vest's straps across it, in the trim colour
+    if (A.top?.pockets && front && au > 0.2 && au < 0.64 && z > D.waistUp - 1.2 && z < D.chestUp + 1.2) { const r2 = (z - D.waistUp + 1.2) % 2.3; if (r2 < 0.35) Q.k -= 0.3; else if (Math.abs(au - 0.42) > 0.19) Q.k -= 0.12; }
+    if (A.top?.pfd && (front || back) && (Math.abs(z - D.waistUp - 0.6) < 0.4 || Math.abs(z - D.chestUp + 0.4) < 0.4)) return trim;
     if (T.pocket && front && z > D.waistUp - 2.4 && z < D.waistUp + 1.4 && au < 0.52) { if (au > 0.46 || z > D.waistUp + 1.0) Q.k -= 0.25; }
     if (T.strings && front && z > D.chestUp + 0.6 && Math.abs(au - 0.17) < 0.05) return top2;
     if (T.placket && front && au < 0.035) Q.k -= 0.2;
@@ -1183,7 +1187,11 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
     B(vadd(S.pel, mv(S.PF, [0, D.pelR[1] + 0.9, cz - S.pel[2]])), S.PF, [D.pelR[0] * 0.92, 0.5, (hi - lo) / 2], GR.SKIRT, 'apron', W.apron);
   }
   // things carried on the body
-  if (A.back === 'backpack') B(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 1.3), -0.6])), S.SP, [4.4, 1.7, 5.0], GR.ACC, 'pack', W.pack);
+  if (A.back === 'backpack' && !A.backBig) B(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 1.3), -0.6])), S.SP, [4.4, 1.7, 5.0], GR.ACC, 'pack', W.pack);
+  if (A.back === 'backpack' && A.backBig) {   // a backpacker's trekking pack (Nature-C4): tall, up over the shoulders, the rolled bedroll strapped on top
+    B(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 2.0), 0.6])), S.SP, [4.6, 2.4, 7.4], GR.ACC, 'pack', (Q) => { if (Math.abs(Q.l2 + 0.35) < 0.06 || Math.abs(Q.l0) > 0.9) Q.k -= 0.22; return W.pack(Q); });
+    C(vadd(S.chest, mv(S.SP, [-4.8, -(D.chestR[1] + 2.0), 9.0])), vadd(S.chest, mv(S.SP, [4.8, -(D.chestR[1] + 2.0), 9.0])), 1.7, 1.7, GR.ACC, 'bedroll', MAT('#3a6a9a'));
+  }
   if (A.back === 'guitarcase') E(vadd(S.chest, mv(S.SP, [1.0, -(D.chestR[1] + 1.7), -1.6])), mmul(S.SP, ry(0.38)), [3.3, 1.5, 11.5], GR.ACC, 'gcase', (Q) => { Q.gloss = 0.4; if (Math.abs(Q.l2 + 0.25) < 0.05) Q.k -= 0.25; return cloth(A.backColor || 'black'); });
   if (A.rig) B(vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.8, -0.6])), S.SP, [3.8, 1.0, 2.3], GR.ACC, 'rig', (Q) => { if (Math.abs(Q.l0) < 0.05 || Math.abs(Q.l2 - 0.2) < 0.08) Q.k -= 0.25; return cloth(A.rig); });
   // a robbery's takings (server hotmoney.js; game/host.js puts back 'moneybag' on while the descriptor's mb): a canvas sack, tied off
@@ -1422,7 +1430,7 @@ function hatPrims(E, C, A, D, S, W, at, k) {
     // a bucket or a sun hat
     E(at([0, -0.1, k === 'bucket' ? 0.56 : tall ? 0.86 : 0.68]), HD, tall ? [hr[0] * 0.84, hr[1] * 0.8, hr[2] * 0.72] : [hr[0] + 0.5, hr[1] + 0.45, hr[2] * 0.78], GR.HAT, 'crown', W.hat, (a, b, c) => c > (tall ? -0.6 : -0.1));
     E(vadd(S.head, mv(HDw, [0, -0.4, hr[2] * 0.5])), HDw, [hr[0] + big, hr[1] + big * 0.85, 1.05], GR.HAT, 'brim', W.brim);
-    if (k === 'cowboy') for (const s of [-1, 1]) E(vadd(S.head, mv(HDw, [s * (hr[0] + big - 1.0), -0.4, hr[2] * 0.66])), HDw, [1.3, hr[1] + 1.8, 1.3], GR.HAT, 'brim', W.brim);
+    if (k === 'cowboy' && !A.hat.flat) for (const s of [-1, 1]) E(vadd(S.head, mv(HDw, [s * (hr[0] + big - 1.0), -0.4, hr[2] * 0.66])), HDw, [1.3, hr[1] + 1.8, 1.3], GR.HAT, 'brim', W.brim);
   } else if (k === 'helmet') {
     E(at([0, -0.2, 0.15]), HD, [hr[0] + 1.9, hr[1] + 2.0, hr[2] + 1.0], GR.HAT, 'crown', W.hat, (a, b, c) => c > (b > 0.4 ? -0.08 : -0.42));
     if (!A.hat.plain) E(at([0, 1.0, 0.16]), HD, [hr[0] * 0.78, 1.3, 1.6], GR.HAT, 'goggles', W.glass);
@@ -1977,6 +1985,15 @@ Object.assign(ACC_HANDS, { easel: 1, sponge: 1 });   // (sponge: washing the car
 CARRY.push('fence', 'cueup');
 Object.assign(ACC_HANDS, { cueup: 1 });
 Object.assign(POSES, { cue: 4 });
+// the people of the wilds (Nature-C4, 2026-10-20: server/systems/wildfolk.js): binoculars (a birder's, up at the eyes),
+// poles (a backpacker's trekking poles, one in each hand, planted as they walk), radio (a ranger's, up at the mouth); and,
+// whatever the pose, basket (a forager's on the arm, mushrooms in it), kayak (carried up on the shoulder, the paddle in the
+// other hand), tripod (a spotting scope on its legs in front of a birder), tackle (an angler's tackle box and landing net
+// at their side), campstove (a folding camp chair under a sat camper, the little stove in front with a pot on it),
+// climbkit (a climber's rope in a coil, a helmet and the chalk bag laid out by them), rope (the rope coiled over a
+// climber's shoulder, its end run up the rock in front)
+CARRY.push('binoculars', 'poles', 'radio', 'basket', 'kayak', 'tripod', 'tackle', 'campstove', 'climbkit', 'rope');
+Object.assign(ACC_HANDS, { binoculars: 2, radio: 1, basket: 1, kayak: 2 });
 const MAT = (c, g = 0) => (Q) => { if (g) Q.gloss = g; return cloth(c); };
 // in the air over the board: knees tucked up (the feet `up` over the ankles' height), arms out; the deck drawn apart (P.deck)
 function skTuck(D, P, up, tw) {
@@ -2177,6 +2194,10 @@ function accHands2(D, P, S, acc) {
   if (acc === 'easel') { P.hR = [2.6 + P.breath * 3, 12.2, 31 + P.breath * 4]; P.elR = [1, -0.4, -0.5]; P.hL = vadd(S.shL, [-2.6, 4.4, -r * 0.62]); P.elL = [-1, -0.3, -0.5]; P.headPitch += 0.08; return true; }   // (a dab of the brush, the palette low in the other hand)
   if (acc === 'cueup') { P.hR = vadd(S.shR, [1.8, 2.6, -r * 0.45]); P.elR = [1, -0.2, -0.7]; return true; }   // (the cue stood up beside him, waiting his turn)
   if (acc === 'hail') { P.hR = vadd(S.shR, [2.2, 1.4, r * 0.92]); P.elR = [1, 0.1, 0.3]; P.openR = 1; return true; }   // (an arm up for a cab: server taxijob.js, H72)
+  if (acc === 'binoculars') { P.hR = vadd(S.head, mv(S.HD, [1.3, 2.6, -0.5])); P.hL = vadd(S.head, mv(S.HD, [-1.3, 2.6, -0.5])); P.elR = [1, -0.1, -0.7]; P.elL = [-1, -0.1, -0.7]; return true; }   // (a birder's, up at the eyes)
+  if (acc === 'radio') { P.hR = vadd(S.neck, mv(S.SP, [2.8, 2.8, 3.6])); P.elR = [1, -0.2, -1]; P.headYaw += 0.1; return true; }   // (a ranger's, a word on it)
+  if (acc === 'basket') { P.hL = vadd(S.shL, [-2.2, 3.4, -r * 0.52]); P.elL = [-1, -0.3, -0.7]; return true; }   // (on the crook of the arm)
+  if (acc === 'kayak') { P.hR = vadd(S.shR, [0.6, 1.0, 2.6]); P.elR = [1, 0.2, -0.3]; P.hL = vadd(S.shL, [-1.8, 2.6, -r * 0.62]); P.elL = [-1, -0.3, -0.5]; return true; }   // (the cockpit's rim up on the shoulder; the paddle)
   return false;
 }
 // what the props and walks add to the figure (buildFigure)
@@ -2247,6 +2268,15 @@ function figure365(B, C, E, D, P, S, acc) {
       E([x, y, hgt + 0.1], I, [r * 0.96, r * 0.96, 0.3], GR.ACC, 'bottom', MAT(c, 0.2));
     }
     E([-7.6, 13.6, 1.2], I, [2.2, 2.2, 1.2], GR.ACC, 'pot', M365.metal);   // (the tip pot)
+  } else if (acc === 'binoculars') {   // two short black barrels between the hands, out in front of the eyes
+    const c = vmul(vadd(S.haR, S.haL), 0.5);
+    for (const sx of [-0.85, 0.85]) C(vadd(c, mv(S.HD, [sx, -0.6, 0.3])), vadd(c, mv(S.HD, [sx, 1.8, 0.3])), 0.85, 0.75, GR.ACC, 'binocs', M365.dark);
+    E(vadd(c, mv(S.HD, [0, 0.4, 0.6])), S.HD, [0.6, 0.9, 0.4], GR.ACC, 'hinge', M365.dark);
+  } else if (acc === 'poles') {   // a trekking pole in each hand, its tip planted on the ground ahead of the hand (they swing with the arms)
+    for (const [h, sx] of [[S.haL, -0.8], [S.haR, 0.8]]) { C(vadd(h, [0, 0, 1.4]), [h[0] + sx, h[1] + 4.6, 0.2], 0.48, 0.36, GR.ACC, 'pole', MAT('#d8dce4', 0.6)); E(vadd(h, [0, 0, 0.9]), I, [0.55, 0.55, 0.9], GR.ACC, 'grip', M365.dark); }
+  } else if (acc === 'radio') {   // a handheld radio up at the mouth, its stubby aerial
+    const c = vadd(S.haR, [-0.5, 0.5, 1.0]);
+    B(c, S.SP, [0.7, 0.5, 1.5], GR.ACC, 'radio', MAT('#2a2a2e', 0.3)); C(vadd(c, [0.3, 0, 1.4]), vadd(c, [0.3, 0, 3.6]), 0.16, 0.14, GR.ACC, 'aerial', M365.dark);
   } else if (acc === 'call') B(vadd(hR, [-0.6, 0.4, 1.4]), S.SP, [0.5, 1.0, 1.9], GR.ACC, 'phone', M365.dark);
   else if (acc === 'map') B(vmul(vadd(hR, S.haL), 0.5), mmul(S.SP, rx(-0.5)), [5.0, 0.25, 3.4], GR.ACC, 'map', MAT('#e8e0c0'));   // a tourist's map, open in both hands
 }
@@ -2289,6 +2319,44 @@ const ACT_PROPS = {
   cueup(B, C, E, S) {   // the cue stood up beside him, its butt on the floor, the tip above his head, chalked blue
     const h = S.haR, a = [h[0] + 0.6, h[1] + 0.4, 0.6], b = [h[0] + 1.6, h[1] + 1.2, 50];
     C(a, b, 0.8, 0.4, GR.ACC, 'cue', M365.wood); E([b[0], b[1], 50.6], I3, [0.45, 0.45, 0.5], GR.ACC, 'tip', MAT('#3a6ad0'));
+  },
+  // the people of the wilds (Nature-C4)
+  basket(B, C, E, S) {   // a wicker basket hung from the left forearm (on the ground beside them, kneeling), mushrooms and berries in it
+    const h = S.haL, c = [h[0] - 3.4, h[1] + 1.8, Math.max(2.4, h[2] - 4.4)];
+    B(c, I3, [3.6, 2.8, 2.4], GR.ACC, 'basket', (Q) => { if (Q.l2 > 0.82) return cloth('#8a5e30'); if ((Math.round(Q.l0 * 6) + Math.round(Q.l2 * 4)) & 1) Q.k -= 0.2; return cloth('#e8bc70'); });
+    C([c[0] - 3.2, c[1], c[2] + 2.2], [c[0], c[1], c[2] + 5.6], 0.35, 0.35, GR.ACC, 'handle', MAT('#8a5e30')); C([c[0], c[1], c[2] + 5.6], [c[0] + 3.2, c[1], c[2] + 2.2], 0.35, 0.35, GR.ACC, 'handle', MAT('#8a5e30'));
+    for (const [x, y, col] of [[-1.6, -0.6, '#d8a030'], [0.8, 0.7, '#e2b040'], [2.0, -0.8, '#c8342e'], [-0.3, 1.2, '#5a2a7a'], [1.1, -1.4, '#f0e0b8']]) E([c[0] + x, c[1] + y, c[2] + 2.4], I3, [1.2, 1.2, 0.7], GR.ACC, 'find', MAT(col));
+  },
+  kayak(B, C, E, S) {   // a red kayak up on the right shoulder, bow ahead, the cockpit turned in to the head; the paddle in the left hand
+    const c = vadd(S.shR, [2.0, 2.2, 3.6]);
+    E(c, I3, [2.6, 20, 1.9], GR.ACC, 'kayak', (Q) => { Q.gloss = 0.5; return cloth(Q.l2 < -0.3 ? '#a82420' : '#e03a2e'); }); E([c[0] - 0.6, c[1] - 1.5, c[2] + 0.9], I3, [1.4, 3.0, 0.6], GR.ACC, 'cockpit', M365.dark);
+    const h = S.haL; C([h[0], h[1], h[2] - 13], [h[0], h[1], h[2] + 14], 0.3, 0.3, GR.ACC, 'paddle', M365.dark);
+    for (const z of [-15, 16]) B([h[0], h[1], h[2] + z], I3, [0.3, 1.2, 2.6], GR.ACC, 'blade', MAT('#f2c21b', 0.4));
+  },
+  tripod(B, C, E) {   // a spotting scope on its tripod in front, the eyepiece toward them
+    for (const [x, y] of [[-3.2, 9.4], [3.2, 9.4], [0, 15.6]]) C([0, 11.8, 30], [x, y, 0.3], 0.35, 0.3, GR.ACC, 'leg', M365.dark);
+    C([0, 9.6, 33.4], [0, 15.6, 35.4], 1.2, 1.5, GR.ACC, 'scope', MAT('#4a5a4a', 0.4)); E([0, 8.8, 33.2], I3, [0.7, 0.7, 0.7], GR.ACC, 'eyepiece', M365.dark);
+  },
+  tackle(B, C, E) {   // a green tackle box at their side, its tray up; a landing net leant by it
+    B([-9.6, -1.2, 2.4], I3, [3.2, 2.0, 2.2], GR.ACC, 'tackle', MAT('#2e6a3a', 0.4)); B([-9.6, -1.2, 4.9], I3, [3.0, 1.8, 0.4], GR.ACC, 'tray', MAT('#d8c86a', 0.3));
+    C([-13.6, 2.0, 0.4], [-12.4, 1.0, 16], 0.3, 0.3, GR.ACC, 'net', M365.dark); E([-12.2, 0.9, 18.4], I3, [2.6, 0.4, 2.6], GR.ACC, 'hoop', MAT('#8a8a90', 0.4));
+  },
+  campstove(B, C, E) {   // a folding camp chair under them (its seat, the arms, the cross legs), the stove and its pot in front
+    const blue = MAT('#2f68c8'), leg = MAT('#a8acb4', 0.5);
+    B([0, -1.2, 15.6], I3, [5.0, 4.4, 0.5], GR.ACC, 'seat', blue); B([0, -5.8, 22.6], rx(0.2), [5.0, 0.4, 6.4], GR.ACC, 'back', blue);
+    for (const s of [-1, 1]) { C([s * 5.2, -5, 0.3], [s * 5.2, 3, 15.4], 0.3, 0.3, GR.ACC, 'leg', leg); C([s * 5.2, 3, 0.3], [s * 5.2, -5, 15.4], 0.3, 0.3, GR.ACC, 'leg', leg); B([s * 5.4, -1.4, 19.4], I3, [0.5, 3.6, 0.4], GR.ACC, 'arm', leg); }
+    B([0, 13.6, 1.6], I3, [2.6, 2.6, 1.6], GR.ACC, 'stove', MAT('#3a3a40', 0.4)); E([0, 13.6, 3.6], I3, [1.6, 1.6, 0.4], GR.ACC, 'flame', MAT('#5a8ad8'));
+    C([0, 13.6, 4.0], [0, 13.6, 6.6], 2.0, 2.0, GR.ACC, 'pot', M365.metal);
+  },
+  climbkit(B, C, E) {   // a rope in a coil, a helmet and the chalk bag laid out on the ground beside them
+    E([-8.6, 3.0, 0.9], I3, [3.6, 3.6, 0.9], GR.ACC, 'rope', (Q) => { if ((Math.round(Math.hypot(Q.l0, Q.l1) * 4)) & 1) Q.k -= 0.18; return cloth('#2fa8c0'); });
+    E([-8.6, 3.0, 1.4], I3, [1.2, 1.2, 0.6], GR.ACC, 'hole', MAT('#5a4a3a'));
+    E([8.2, 4.4, 1.6], I3, [2.0, 2.2, 1.6], GR.ACC, 'helmet', MAT('#f2c21b', 0.4)); C([9.2, -1.6, 0.4], [9.2, -1.6, 2.6], 1.1, 1.0, GR.ACC, 'chalk', MAT('#c8262b'));
+  },
+  rope(B, C, E, S) {   // the rope coiled over the right shoulder and across the chest; its end run up the rock in front of them
+    C(vadd(S.shR, [0.4, 0.2, 0.8]), vadd(S.chest, [-3.4, 1.4, -3.0]), 0.8, 0.8, GR.ACC, 'coil', MAT('#2fa8c0'));
+    E(vadd(S.shR, [1.6, -0.2, -2.2]), I3, [1.2, 2.6, 3.6], GR.ACC, 'coil', (Q) => { if ((Math.round(Q.l2 * 4)) & 1) Q.k -= 0.16; return cloth('#2fa8c0'); });
+    C(vadd(S.haR, [0, 0.4, 0]), [S.haR[0], 14, 60], 0.22, 0.22, GR.ACC, 'line', MAT('#2fa8c0'));
   },
   chess(B, C) {   // the board on the table between the players, a few pieces still standing
     B([0, 15, 19.4], I3, [4.2, 4.2, 0.35], GR.ACC, 'chessb', (Q) => cloth(Math.abs(Q.l0) > 0.9 || Math.abs(Q.l1) > 0.9 ? '#5a3a22' : (Math.floor((Q.l0 + 1) * 4) + Math.floor((Q.l1 + 1) * 4)) & 1 ? '#efe2c4' : '#3a2a20'));

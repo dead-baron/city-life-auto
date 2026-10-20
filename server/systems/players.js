@@ -40,6 +40,7 @@ import * as pets from './pets.js';
 import * as happenings from './happenings.js';
 import * as streetlife from './streetlife.js';
 import * as personas from './personas.js';
+import * as wildfolk from './wildfolk.js';
 import * as unstuck from './unstuck.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
@@ -634,6 +635,8 @@ export function findInteraction(world, p) {
 
   const busk = personas.interaction(world, p);   // a coin for the busker (personas.js)
   if (busk) return busk;
+  const ranger = wildfolk.interaction(world, p);   // a word with a park ranger (wildfolk.js)
+  if (ranger) return ranger;
   const pet = pets.interaction(world, p);
   if (pet) return pet;
 

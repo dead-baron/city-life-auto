@@ -157,7 +157,7 @@ test('the debug menu takes you to each kind, filled, a little way off', async ()
   clear();
   const { p } = joinPlayer(w);
   const kinds = DEV_SECTIONS.flatMap((sec) => sec.items).filter(([, c]) => c === 'act').map(([, , x]) => x.k);
-  assert.equal(kinds.length, 13);   // (the twelve in Activities, and the skaters riding laps in Skateboarding)
+  assert.equal(kinds.length, 21);   // (the twelve in Activities, the skaters riding laps in Skateboarding, the eight people of the wilds)
   for (const k of kinds) {
     if (k === 'skaters' && !(m.skateSpots || []).length) continue;   // (World v3's skate spots: none on the test map)
     command(w, p, 'act', { k });
@@ -210,7 +210,7 @@ test('the classic view draws every activity prop and the pool cue (render/actpro
   const { draw } = await import('../client/render/actprops.js');
   const calls = [];
   const g = new Proxy({}, { get: (o, k) => (k in o ? o[k] : (...a) => calls.push([k, ...a])), set: (o, k, v) => { o[k] = v; return true; } });
-  const pps = ['easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle', 'fence', 'cueup', 'board'];
+  const pps = ['easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle', 'fence', 'cueup', 'board', 'binoculars', 'poles', 'radio', 'basket', 'kayak', 'tripod', 'tackle', 'campstove', 'climbkit', 'rope'];
   for (const pp of [...pps, null]) {
     calls.length = 0;
     draw(g, { id: 7, rx: 500, ry: 300, ra: 0.6, d: pp ? { pp } : { gt: 'cue' } }, 12.3);
@@ -219,7 +219,7 @@ test('the classic view draws every activity prop and the pool cue (render/actpro
   }
   // every pp the server sends is drawn; the page loads it lazily (not in main.js's import graph)
   const { readFileSync } = await import('node:fs');
-  const src = readFileSync(new URL('../server/systems/activities.js', import.meta.url), 'utf8');
+  const src = readFileSync(new URL('../server/systems/activities.js', import.meta.url), 'utf8') + readFileSync(new URL('../server/systems/wildfolk.js', import.meta.url), 'utf8');   // (and the people of the wilds')
   for (const m of src.matchAll(/pp: '(\w+)'/g)) assert.ok(pps.includes(m[1]), `the server's ${m[1]}: drawn in the classic view`);
   assert.ok(!/^import .*actprops/m.test(readFileSync(new URL('../client/main.js', import.meta.url), 'utf8')), 'not with the page');
 });

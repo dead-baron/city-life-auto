@@ -42,6 +42,7 @@ import { spawnNpc, despawnNpc } from './npc.js';
 import { BUILDS } from '../entities.js';
 import { courtHoops } from '../../shared/hoops.js';
 import { foodLayout, foodSeats } from '../../shared/foodrooms.js';
+import { WILD_KINDS, WILD_LOOKS, wildSpots, wildMembers, wildSteer } from './wildfolk.js';   // (the people of the wilds: Nature-C4)
 
 let rng = mulberry32(42300);
 export function setRng(r) { rng = r; }
@@ -68,6 +69,7 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   stoop: { day: 0.18, night: 0.45, cap: 2 },
   party: { day: 0.08, night: 0.55, cap: 1 },
   roadcrew: { day: 0.9, night: 0, cap: 1 },   // (IN8: eating at a food place's tables, the cook at the line)
+  ...WILD_KINDS,   // (the people of the wilds: wildfolk.js)
 };
 // a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
 const pk = (r, a) => a[Math.floor(r() * a.length) % a.length];
@@ -203,6 +205,8 @@ export function spotsOf(map) {
       break;
     }
   }
+  // the people of the wilds (wildfolk.js): rangers, trails, birders, the anglers' holds, kayakers, climbers, foragers, campers
+  wildSpots(map, list, taken, { walkable, freeAt, clearWalk, hsh, clear });
   // a pickup game on each half court (shared/hoops.js): the spot out on the court in front of the rim, facing it
   for (const h of courtHoops(map)) {
     const c = h.court, mx = (c.x0 + c.x1) / 2, my = (c.y0 + c.y1) / 2, d = Math.hypot(mx - h.rim.x, my - h.rim.y) || 1;
@@ -265,6 +269,7 @@ export function spotsNear(map, x, y, r) {
 // ---- who's there, doing what ---------------------------------------------------------------------------------------------
 // members: { x, y, a, arche, look (personas LOOKS key or an npclooks recipe), gt (the pose held), pp (the prop), fish, watch }
 function members(s) {
+  if (WILD_KINDS[s.k]) return wildMembers(s, rng);
   const c = Math.cos(s.a), sn = Math.sin(s.a), out = [];
   if (s.k === 'anglers') {
     out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: 'fisher', fish: true, pp: 'cooler' });
@@ -368,9 +373,9 @@ function carAt(world, s) {
 
 // dress an NPC from a persona look (personas.js LOOKS) or keep the archetype's own
 function dressAs(world, ped, look) {
-  const rec = look && (MY_LOOKS[look] || LOOKS[look]);
+  const rec = look && (MY_LOOKS[look] || WILD_LOOKS[look] || LOOKS[look]);
   if (!rec) return;
-  const g = dress(world, (MY_LOOKS[look] ? 'a:' : 'p:') + look, ped.x, ped.y, !!(world.clock && world.clock.isNight), rng, rec);
+  const g = dress(world, (MY_LOOKS[look] ? 'a:' : WILD_LOOKS[look] ? 'w:' : 'p:') + look, ped.x, ped.y, !!(world.clock && world.clock.isNight), rng, rec);
   if (!g) return;
   const old = ped.build, nb = BUILDS[g.bi] || old;
   ped.app = g.app; ped.app.bd = g.bi; ped.appVer = (ped.appVer || 0) + 1;
@@ -400,7 +405,7 @@ export function fill(world, s, opts = {}) {
     dressAs(world, ped, m.look);
     ped.a = m.a; ped.vx = ped.vy = 0;
     const n = ped.npc;
-    n.act = { g: s.id, k: s.k, x: m.ride ? s.x : m.x, y: m.ride ? s.y : m.y, a: m.a, ride: m.ride || null, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1, cv: m.cv ?? null };
+    n.act = { g: s.id, k: s.k, x: m.ride ? s.x : m.x, y: m.ride ? s.y : m.y, a: m.a, ride: m.ride || null, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: m.leg ?? 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1, cv: m.cv ?? null, route: m.route || null, pace: m.pace || 0, kneel: !!m.kneel, ranger: !!m.ranger };
     n.state = 'idle'; n.until = world.time + 9999; n.sway = false; n.umbrellaType = false;
     pose(ped, true);
     g.ids.push(ped.id);
@@ -488,10 +493,11 @@ function pose(ped, on) {
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
-const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party']);
+const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party', 'birders', 'climbers', 'kayakers']);
 export function steer(world, ped, now) {
   const n = ped.npc, a = n.act;
   if (!a) return null;
+  if (a.route || a.ranger) { const r = wildSteer(world, ped, now, { pose, seekTo, NO_INPUT, rng: () => rng() }); if (r !== undefined) return r; }   // (wildfolk.js)
   const d = Math.hypot(a.x - ped.x, a.y - ped.y);
   // far off after a scare, rained off (the picnic packs up, the painter folds the easel), the car driven away: on their way
   if (a.patrol) {   // the hunter: along the edge to the far end, a look about, and back
@@ -538,7 +544,7 @@ export function update(world) {
   }
   for (const g of A.values()) for (const i of g.ids) {
     const e = world.get(i);
-    if (e && e.npc && e.npc.act && !e.npc.act.patrol && !e.npc.act.ride && (e.gt || e.pp || e.fishing || e.chop) && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) > 5) pose(e, false);
+    if (e && e.npc && e.npc.act && !e.npc.act.patrol && !e.npc.act.ride && !e.npc.act.route && (e.gt || e.pp || e.fishing || e.chop) && Math.hypot(e.x - e.npc.act.x, e.y - e.npc.act.y) > 5) pose(e, false);
   }
   if (world.tick % 20 === 13) fillRound(world);
 }

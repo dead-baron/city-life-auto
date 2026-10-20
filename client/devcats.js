@@ -161,6 +161,13 @@ export const DEV_SECTIONS = [
     ['🦺 A hunter and his dog', 'act', { k: 'hunter' }], ['🏀 A pickup game at the courts', 'act', { k: 'hoops' }], ['🎱 Pool at the Rusty Spur', 'act', { k: 'pool' }],
     ['🍔 Eating at a diner (a cafe, a bistro)', 'act', { k: 'diners' }],
   ] },
+  // the people of the wilds (Nature-C4: server/systems/wildfolk.js) - the nearest spot, filled, you a little way off
+  { id: 'wildfolk', title: '🥾 People of the wilds', items: [
+    ['🎩 A park ranger on the beat (talk to them)', 'act', { k: 'ranger' }], ['🥾 Backpackers or a runner on a trail', 'act', { k: 'trail' }],
+    ['🔭 A birdwatcher by the water', 'act', { k: 'birders' }], ['🎣 An angler at a creek\'s hold', 'act', { k: 'holds' }],
+    ['🛶 A kayaker on the shore', 'act', { k: 'kayakers' }], ['🧗 Climbers at a crag', 'act', { k: 'climbers' }],
+    ['🍄 A forager on their round', 'act', { k: 'foragers' }], ['🏕 A camper cooking by the tent', 'act', { k: 'campcook' }],
+  ] },
   // vehicle damage you can see (task #402: server/dev.js 'vdmg')
   { id: 'vdmg', title: '🚗 Vehicle damage', items: [
     ['🚗 Scuffed (front)', 'vdmg', { s: 1 }], ['🚗 Dented (front)', 'vdmg', { s: 2 }], ['🚗 Crumpled (front, bumper off)', 'vdmg', { s: 3 }],

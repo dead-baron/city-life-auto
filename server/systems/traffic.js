@@ -25,6 +25,7 @@ import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomB
 import { loadExplosives } from './cargo.js';
 import { homeLotSpots } from './homes.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
+import { dressWild, riderLook } from './wildfolk.js';   // (the country riders' looks: the people of the wilds)
 
 const rng = mulberry32(4242);
 // a flatbed out of the yards, the docks, off the highway or on the country roads (to the quarry, the mine) carries a
@@ -962,6 +963,7 @@ function manage(world) {
       v.vx = p.tx * sp0; v.vy = p.ty * sp0;
       const driver = spawnNpc(world, country ? countryDriver(moto ? 'bike' : model, country) : townDriver(model), p.x, p.y, 'driver');
       if (country) driver.npc.country = true;
+      if (country && riderLook(model)) dressWild(world, driver, riderLook(model), rng);   // (the mountain bikers and the dirt bikers: wildfolk.js)
       driver.vehId = v.id; driver.seat = 0; v.seats[0] = driver.id; driver.lz = z;
       v.ai = { kind: 'traffic' };
       enterEdge(world, v, e.id, from, lane, s + 30);

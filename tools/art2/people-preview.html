@@ -140,6 +140,31 @@ if (view === 'turn') {
     const L = [...LK.STARTERS.map((s) => s.look), ...LK.STYLES.map(([k], i) => LK.validLook(LK.randomLook(7 + i * 13, i & 1 ? 'f' : 'm', k)))];
     L.forEach((look, i) => { const A = LK.lookArt(look); add(person(A, 7), 22 + (i % 17) * 40, 50 + Math.floor(i / 17) * 112); add(person(A, 4), 22 + (i % 17) * 40, 106 + Math.floor(i / 17) * 112); });
   }
+} else if (view === 'wilds') {   // the people of the wilds (Nature-C4: server/systems/wildfolk.js), their kit: each facing S, SE, E, N, NW (and walking E)
+  const it = LK.item, O = (L, o) => { L.outfit.set = null; for (const k of ['top', 'jacket', 'bottoms', 'shoes', 'hat', 'glasses', 'bag', 'jewel']) L.outfit[k] = o[k] || null; return L; };
+  const W = [
+    ['ranger', 'radio', 'idle', { top: it('Work shirt', 'khaki'), jacket: it('Field vest', 'olive'), bottoms: it('Cargo pants', 'olive'), shoes: it('Hiking boots', 'brown'), hat: it('Ranger hat', 'tan', 'brown') }],
+    ['backpacker', 'poles', 'walk', { top: it('Flannel shirt', 'red', 'black'), bottoms: it('Cargo pants', 'khaki'), shoes: it('Hiking boots'), hat: it('Bucket hat', 'olive'), bag: it('Trekking pack', 'orange') }],
+    ['runner', null, 'run', { top: it('Tank top', 'lime'), bottoms: it('Shorts', 'black'), shoes: it('Running shoes', 'royal blue'), hat: it('Visor', 'white'), glasses: it('Sport shades') }],
+    ['angler', 'tackle', 'fish', { top: it('Long-sleeve tee', 'sand'), jacket: it('Field vest', 'khaki', 'olive'), bottoms: it('Cargo pants', 'olive'), shoes: it('Rain boots', 'olive'), hat: it('Bucket hat', 'khaki') }],
+    ['kayaker', 'kayak', 'walk', { top: it('Long-sleeve tee', 'teal'), jacket: it('Life vest', 'orange', 'black'), bottoms: it('Shorts', 'navy'), shoes: it('Sandals', 'black'), hat: it('Visor', 'white'), glasses: it('Sport shades') }],
+    ['birder', 'binoculars', 'idle', { top: it('Long-sleeve tee', 'olive'), jacket: it('Field vest', 'khaki', 'olive'), bottoms: it('Cargo pants', 'khaki'), shoes: it('Hiking boots'), hat: it('Bucket hat', 'olive') }],
+    ['birder2', 'tripod', 'idle', { top: it('Flannel shirt', 'forest', 'black'), bottoms: it('Jeans', 'denim'), shoes: it('Hiking boots'), hat: it('Baseball cap', 'olive') }],
+    ['camper', 'campstove', 'sit', { top: it('Hoodie', 'forest'), bottoms: it('Jeans', 'denim'), shoes: it('Hiking boots'), hat: it('Beanie', 'orange') }],
+    ['mtbiker', null, 'idle', { top: it('Plain tee', 'lime'), bottoms: it('Shorts', 'charcoal'), shoes: it('Sneakers', 'black'), hat: it('Bike helmet', 'red'), glasses: it('Sport shades'), bag: it('Backpack', 'black') }],
+    ['dirtbiker', null, 'idle', { top: it('MX jersey', 'red', 'white'), bottoms: it('Cargo pants', 'black'), shoes: it('Biker boots', 'black'), hat: it('Moto helmet', 'white', 'red') }],
+    ['forager', 'basket', 'idle', { top: it('Flannel shirt', 'mustard', 'brown'), jacket: it('Puffer vest', 'forest'), bottoms: it('Cargo pants', 'brown'), shoes: it('Rain boots', 'yellow'), hat: it('Beanie', 'burgundy') }],
+    ['forager2', 'basket', 'kneel', { top: it('Sweater', 'cream'), bottoms: it('Jeans', 'denim'), shoes: it('Hiking boots'), hat: it('Bucket hat', 'tan') }],
+    ['climber', 'rope', 'idle', { top: it('Tank top', 'charcoal'), bottoms: it('Joggers', 'slate'), shoes: it('Sneakers', 'red'), hat: it('Climbing helmet', 'orange'), bag: it('Belt bag', 'red') }],
+    ['climber2', 'climbkit', 'kneel', { top: it('Plain tee', 'sky'), bottoms: it('Cargo pants', 'charcoal'), shoes: it('Sneakers', 'white'), hat: it('Climbing helmet', 'yellow') }],
+  ];
+  W.forEach(([name, carry, pose, o], r) => {
+    const look = LK.validLook(O(LK.randomLook(41 + r * 7, r % 3 === 1 ? 'f' : 'm', 'outdoors'), o)), A0 = LK.lookArt(look), A = carry ? { ...A0, carry } : A0;
+    label(name, 4, 18 + r * 64);
+    const frames = pose === 'walk' || pose === 'run' ? [[2, 0], [2, 1], [2, 2], [2, 3]] : [[0, 0], [1, 0], [2, 0], [4, 0], [5, 0]];
+    frames.forEach(([d, f], c) => add(person(A, d, pose === 'run' ? 'walk3' : pose, pose === 'run' ? f + 1 : f), 90 + c * 46, 62 + r * 64));
+    if (pose !== 'walk' && pose !== 'run') [0, 1, 2, 3].forEach((f, c) => add(person(A, 2, 'walk', f), 330 + c * 46, 62 + r * 64));
+  });
 } else if (view === 'leisure') {
   const L = [
     { fem: true, skin: 1, hair: { style: 'pony', color: 3 }, top: { kind: 'bikini', color: 'coral' }, bottom: { kind: 'bikini', color: 'coral' }, shoeKind: 'barefoot' },

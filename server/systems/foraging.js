@@ -40,7 +40,7 @@ export function forageNear(world, x, y) {
   }
   return best >= 0 ? best : bare;
 }
-const isBare = (world, i) => !!(world.forageGone && world.forageGone.has(i));
+export const isBare = (world, i) => !!(world.forageGone && world.forageGone.has(i));
 
 // the action-button prompt by a spot (null elsewhere)
 export function interaction(world, p) {
