@@ -52,9 +52,11 @@ test('World v3: Northshore\'s beach towns built; the stations clear of trees, ea
   let coast = 0;
   for (const b of m.buildings) if (!b.gone && m.dist[b.ty * W + b.tx] === BEACH_D) n54++;
   for (const b of m.buildings) if (!b.gone && [BEACH_D, 31, 32, 34].includes(m.dist[b.ty * W + b.tx])) coast++;
-  for (const p of m.prefabs) if (!p.gone && p.tw && [BEACH_D, 32].includes(m.dist[p.ty * W + p.tx])) kinds[p.key] = (kinds[p.key] || 0) + 1;
+  // (2026-10-19: and Northshore's - its cafes on Front Street and the inlet)
+  for (const p of m.prefabs) if (!p.gone && p.tw && [BEACH_D, 31, 32].includes(m.dist[p.ty * W + p.tx])) kinds[p.key] = (kinds[p.key] || 0) + 1;
   console.log('buildings', n54, 'the coast', coast, JSON.stringify(kinds), 'cover', (built[54] / area[54]).toFixed(3), 'Northshore', (built[31] / area[31]).toFixed(3));
-  check(n54 >= 20 && coast >= 300, `${n54} buildings in the beach towns, ${coast} on the north coast`);   // (v3b: 107; 9.6: 28, the coast's 410)
+  // (2026-10-19: Northshore, North Point and The Bluffs handcrafted - fewer, bigger buildings than the generator's grids: 235+)
+  check(n54 >= 20 && coast >= 200, `${n54} buildings in the beach towns, ${coast} on the north coast`);   // (v3b: 107; 9.6: 28, the coast's 410)
   check((kinds.house1 || 0) + (kinds.house2 || 0) + (kinds.house5 || 0) + (kinds.house9 || 0) >= 8, 'beach houses');   // (v3b: 10)
   check((kinds.rest1 || 0) + (kinds.rest2 || 0) + (kinds.beachbar || 0) + (kinds.diner || 0) >= 12, 'cafes, bars and restaurants');
   // ("less dense than a city": Metro City's built districts, as a whole)
@@ -102,6 +104,14 @@ test('World v3: Northshore\'s beach towns built; the stations clear of trees, ea
   check(BL && BL.villas >= 25 && BL.pools >= 15 && BL.walk > 600, `The Bluffs' houses, pools and walk: ${JSON.stringify(BL && { villas: BL.villas, pools: BL.pools, walk: BL.walk })}`);
   for (const n of ['Cliff Walk', 'Bluffs Overlook']) check((m.landmarks || []).some((l) => l.name === n), n);
   check(m.buildings.some((b) => b && b.hand && b.name === 'The Bluffs Tennis Club'), 'the tennis club');
+  // (2026-10-19: Northshore handcrafted - shared/world3-northshore.js: Depot Square by the station, Front Street's shops,
+  // Bank Street's Town Hall, Medical Center and Sheriff, Northshore Plaza; on the lobe Bayview Green and the marina)
+  const NS = m.world3hand.northshore;
+  console.log('Northshore', JSON.stringify({ ...NS, sights: undefined, places: undefined }));
+  check(NS && NS.shops >= 15 && NS.homes >= 16, `Northshore's shops and homes: ${JSON.stringify(NS && { shops: NS.shops, homes: NS.homes })}`);
+  for (const n of ['Depot Square', 'Bayview Green', 'Northshore Cove']) check((m.landmarks || []).some((l) => l.name === n), n);
+  for (const n of ['Northshore Town Hall', 'Northshore Plaza']) check(m.buildings.some((b) => b && b.hand && b.name === n), n);
+  for (const [k, n] of [['hospital', 'Northshore Medical Center'], ['police', 'Northshore Sheriff'], ['marina', 'Northshore Marina'], ['bank', 'Northshore Savings']]) check(m.pois.some((p) => p.kind === k && p.label === n), n);
   const light = m.buildings.find((b) => b && b.kind === 'lighthouse' && b.name === 'North Point Light');
   check(light && (m.landmarks || []).some((l) => l.name === 'North Point Light'), 'North Point Light');
   for (const P of [NB?.light]) if (P) { let sea = false; for (let dy = -24; dy <= 24; dy += 2) for (let dx = -24; dx <= 24; dx += 2) if (!m.land[m.idx(P[0] + dx, P[1] + dy)]) sea = true; check(sea, 'the light by the sea'); }

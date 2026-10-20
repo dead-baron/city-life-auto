@@ -11973,3 +11973,40 @@ have no pavements: not where there's no strip in front), Mariners' Square's plan
 Tests: test/roundcorners.test.js (a right angle becomes a curve, a short jog an S, the ends stay, straight streets and gentle arcs are
 left alone, no handcrafted street keeps a bend sharper than 45 degrees, a street ending on a corner still meets
 its curve).
+
+## 2026-10-19 · World v3, handcrafted: Northshore (the station town on the inlet)
+
+Northshore (district 31) is now laid out by hand (`shared/world3-northshore.js`), from the owner's concept WC385
+(Northshore-A1: the station with its clock gable and green roofs, a grid of two-storey brick shopfronts with awnings, a
+clinic, a brick civic building with its flag, a strip mall with its car park; waterfront cafes and a marina, a sand cove
+with a rock groyne, wooded shores with villas and docks) and WC367 (Shared-4, the seaside terrace round its fenced garden), with the
+research's Northshore (Station Avenue's shops - Joe's Burgers, Riverside Books, Pixel Tech, Thread & Co., Brew Haven;
+the medical centre and the sheriff; the strip mall on its car park). The generator had filled it with a numbered grid.
+- **South of the main line**: **Depot Square** across North Coast Road from Northshore Station (the fountain in its
+  basin, two lawns under plane trees, benches, planters, cafe tables, the bus shelters, the taxi rank, the town's
+  banners); **Front Street**, the high street of brick shopfronts under their awnings - **Brew Haven**, **Joe's
+  Burgers**, **Riverside Books**, **Sea Pink Florist**, **Pixel Tech**, **Thread & Co.**, **Harbor Barber**,
+  **Northshore Savings** (the bank), **Gull & Gallon Deli**; **Bank Street** with **Northshore Town Hall** (brick under
+  its cornice, the portico, the banners, its lawn), the **Northshore Medical Center** (a place you come round) and the
+  **Northshore Sheriff**; **Northshore Plaza** on its car park on Cedar Farms Road (Northshore Market, Harbor Pharmacy,
+  Hammer & Nail Hardware, Rocco's Pizza, Suds & Bubbles Laundry); Station Avenue and Elm Street across; cottages east
+  of the plaza.
+- **The inlet shore** east of Oak Street (it was an empty field): Front and Bank Streets run on to the water and end in
+  their turning circles; big clapboard villas face them and Cedar Farms Road on wide lots under pines and birches,
+  their gardens back to back between the streets, and the lots at the water have a timber jetty each with a boat.
+- **On the lobe** north of the Shore Road: **Bayview Drive** round **Bayview Green** (the oval garden behind its picket
+  fence, the bandstand where its path crosses, windswept pines, flower beds, benches), the pastel terrace facing it and
+  the cottages below, beach cottages on the dunes west of the drive; the waterfront on the inlet - the boardwalk with
+  its bollards and lamps, **Northshore Marina**'s office, **The Tidewater Cafe** and the **Inlet Oyster Bar** facing
+  south over their terraces, a path from each out to the boardwalk, sailboats and motor boats off it (the lobe's two
+  piers are the north coast builder's); **Northshore Cove** on the west beach with its granite groyne out into the water.
+- The strip between the Shore Road and North Coast Road, where the main line runs, is left open (the beach towns'
+  builder had put boxes there).
+Northshore Station and its house stay the main line's. The district's edges stay the grid's (Poplar and Oak Streets,
+North Coast and Cedar Farms Roads) and the Shore Road's.
+
+Tests: test/northshore.test.js (the plan's streets inside its three pieces, each meeting another or an edge, Station
+Avenue on the avenue lattice); test/world3beach.test.js (Depot Square, Bayview Green, the cove, the Town Hall, the
+plaza, the medical center, the Sheriff, the bank, the marina, the shops and homes). Its count of the north coast's
+buildings is now 200+ (the three handcrafted towns put fewer, bigger buildings where the grids were: 237), and its
+cafes and restaurants count Northshore's.
