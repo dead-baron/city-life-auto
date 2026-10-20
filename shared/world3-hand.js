@@ -52,8 +52,9 @@ const C = (v) => (v + 0.5) * TILE;
 // (2026-10-19, the owner: "some streets have a sharp angle to the turn instead of a smooth curve") A street's bends
 // rounded: each corner of more than ~15 degrees between straight pieces becomes a curve (a quadratic arc from a point
 // back along the piece before to one along the piece after, the corner its control point), its radius by the street's
-// width and no more than 45% of either piece (a chamfer under 10 tiles keeps its corners; a jog that short is rounded). Square roots and arithmetic only (the world must come out the same in
-// every engine: shared/dmath.js). A street that ends on another's corner is moved onto its curve (handStreets).
+// width and no more than 45% of either piece (a chamfer under 10 tiles keeps its corners; a jog that short is rounded).
+// Square roots and arithmetic only (the world must come out the same in every engine: shared/dmath.js). A street that
+// ends on another's corner is moved onto its curve, and two that meet end to end at a bend share one (roundedStreets).
 const ROUND_R = { minor: 7, st: 9, ave: 12, blvd: 16, rural: 10, dirt: 8 };
 export function roundCorners(pts, kind) {
   if (pts.length < 3 || kind === 'alley') return pts.map((p) => p.slice());
@@ -95,22 +96,73 @@ function nearestOn(P, [px, py]) {
   }
   return best;
 }
-// every plan's streets with their corners rounded, and the streets that end on another's corner moved onto its curve
-export function roundedStreets() {
+// the distance from p to a polyline (squared)
+function dist2To(P, [px, py]) {
+  let bd = Infinity;
+  for (let i = 0; i < P.length; i++) {
+    const [ax, ay] = P[i];
+    if (i + 1 >= P.length) { bd = Math.min(bd, (ax - px) * (ax - px) + (ay - py) * (ay - py)); continue; }
+    const [bx, by] = P[i + 1], dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+    let t = L ? ((px - ax) * dx + (py - ay) * dy) / L : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const qx = ax + dx * t - px, qy = ay + dy * t - py;
+    bd = Math.min(bd, qx * qx + qy * qy);
+  }
+  return bd;
+}
+// Every plan's streets with their corners rounded; the streets that end on another's corner moved onto its curve; and
+// two streets that meet end to end at a bend (2026-10-19, the owner's North Point picture: 1st Street turning into
+// Waterside Road) given the curve between them, half of it each - unless anything else meets them there: a third of
+// the plans' streets, or one of `others` (the grid's and the skeleton's lines, tiles), within the curve's reach.
+export function roundedStreets(others = []) {
   const all = [];
-  for (const P of HAND_PLANS) for (const s of P.streets()) all.push({ P, s, pts: s.sharp ? s.pts.map((p) => p.slice()) : roundCorners(s.pts, s.kind) });
+  for (const P of HAND_PLANS) for (const s of P.streets()) all.push({ P, s, pts: s.sharp ? s.pts.map((p) => p.slice()) : roundCorners(s.pts, s.kind), moved: [false, false] });
   for (const a of all) for (const e of [0, a.s.pts.length - 1]) {
     const [px, py] = a.s.pts[e];
     for (const b of all) {
       if (b === a || b.pts.length === b.s.pts.length) continue;
-      if (b.s.pts.some((v, i) => i > 0 && i < b.s.pts.length - 1 && (v[0] - px) * (v[0] - px) + (v[1] - py) * (v[1] - py) <= 2.25)) { a.pts[e === 0 ? 0 : a.pts.length - 1] = nearestOn(b.pts, [px, py]); break; }
+      if (b.s.pts.some((v, i) => i > 0 && i < b.s.pts.length - 1 && (v[0] - px) * (v[0] - px) + (v[1] - py) * (v[1] - py) <= 2.25)) { a.pts[e === 0 ? 0 : a.pts.length - 1] = nearestOn(b.pts, [px, py]); a.moved[e === 0 ? 0 : 1] = true; break; }
     }
+  }
+  // the end-to-end bends
+  const ends = (q) => [[q, 0], [q, 1]].filter(([x, j]) => !x.moved[j]);
+  const endPt = (q, j) => q.s.pts[j === 0 ? 0 : q.s.pts.length - 1];
+  for (const a of all) for (const [, ja] of ends(a)) {
+    if (a.s.sharp || a.s.kind === 'alley' || a.moved[ja]) continue;
+    const K = endPt(a, ja), close = (p) => (p[0] - K[0]) * (p[0] - K[0]) + (p[1] - K[1]) * (p[1] - K[1]) <= 2.25;
+    const mates = [];
+    for (const b of all) if (b !== a) for (const [, jb] of ends(b)) if (close(endPt(b, jb))) mates.push([b, jb]);
+    if (mates.length !== 1) continue;
+    const [b, jb] = mates[0];
+    if (b.s.sharp || b.s.kind === 'alley') continue;
+    const Ap = ja === 0 ? a.pts[1] : a.pts[a.pts.length - 2], Bn = jb === 0 ? b.pts[1] : b.pts[b.pts.length - 2];
+    const l1 = Math.sqrt((K[0] - Ap[0]) * (K[0] - Ap[0]) + (K[1] - Ap[1]) * (K[1] - Ap[1])), l2 = Math.sqrt((Bn[0] - K[0]) * (Bn[0] - K[0]) + (Bn[1] - K[1]) * (Bn[1] - K[1]));
+    if (l1 < 10 || l2 < 10) continue;
+    const ux = (K[0] - Ap[0]) / l1, uy = (K[1] - Ap[1]) / l1, vx = (Bn[0] - K[0]) / l2, vy = (Bn[1] - K[1]) / l2, dot = ux * vx + uy * vy;
+    if (dot > 0.966) continue;
+    const r = Math.min(ROUND_R[a.s.kind] || 8, ROUND_R[b.s.kind] || 8, 0.45 * l1, 0.45 * l2), n = dot > 0.85 ? 4 : dot > 0.4 ? 6 : 8;
+    // (anything else reaching the corner, within the curve's reach: a junction - Midtown's Bridge Avenue going on north
+    // under the El - left square)
+    const reach = (r + 1.5) * (r + 1.5);
+    if (all.some((q) => q !== a && q !== b && dist2To(q.pts, K) <= reach) || others.some((P) => dist2To(P, K) <= reach)) continue;
+    const p0 = [K[0] - ux * r, K[1] - uy * r], p2 = [K[0] + vx * r, K[1] + vy * r], arc = [];
+    for (let k = 0; k <= n; k++) {
+      const t = k / n, c0 = (1 - t) * (1 - t), c1 = 2 * (1 - t) * t, c2 = t * t;
+      arc.push([Math.round((c0 * p0[0] + c1 * K[0] + c2 * p2[0]) * 100) / 100, Math.round((c0 * p0[1] + c1 * K[1] + c2 * p2[1]) * 100) / 100]);
+    }
+    const half = n / 2, toA = arc.slice(0, half + 1), toB = arc.slice(half);   // (a's half from its side to the middle; b's from the middle on)
+    a.pts = ja === 0 ? [...toA.slice().reverse(), ...a.pts.slice(1)] : [...a.pts.slice(0, -1), ...toA];
+    b.pts = jb === 0 ? [...toB, ...b.pts.slice(1)] : [...b.pts.slice(0, -1), ...toB.slice().reverse()];
+    a.moved[ja] = b.moved[jb] = true;
+    a.joined = b.joined = true;
   }
   return all;
 }
 export function handStreets(lines) {
   const out = { streets: 0, len: 0 };
-  for (const { P, s, pts } of roundedStreets()) {
+  const others = lines.filter((l) => l.lvl === 0 || l.lvl === undefined).map((l) => l.pts.map((p) => [p.x / TILE - 0.5, p.y / TILE - 0.5]));
+  const R = roundedStreets(others);
+  out.joined = R.filter((q) => q.joined).map((q) => `${q.P.key}: ${q.s.name}`);
+  for (const { P, s, pts } of R) {
     lines.push({ pts: pts.map(([x, y]) => ({ x: C(x), y: C(y) })), kind: s.kind, lvl: 0, name: s.name, city: true, hand: P.key, ...(s.park ? { park: s.park } : {}), ...(s.w ? { w: s.w } : {}), ...(s.median ? { median: s.median } : {}), ...(s.oneway ? { oneway: true } : {}), ...(s.culdesac ? { culdesac: true } : {}) });
     out.streets++;
     for (let i = 1; i < s.pts.length; i++) out.len += Math.round(Math.hypot(s.pts[i][0] - s.pts[i - 1][0], s.pts[i][1] - s.pts[i - 1][1]));

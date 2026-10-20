@@ -49,4 +49,15 @@ test('streets: their sharp bends rounded into curves, the ends kept, a street en
       assert.ok(near(q, b.pts, 0.05), `${a.s.name} meets ${b.s.name}'s curve`);
     }
   }
+  // two streets meeting end to end at a bend share its curve, half each (North Point's 1st Street into Waterside Road):
+  // they still meet, at a point off the old corner, and the bend through them is gentle; with another street there
+  // (a junction) the corner stays square
+  const get = (R, n) => R.find((q) => q.P.key === 'northpoint' && q.s.name === n);
+  const f = get(all, '1st Street'), w = get(all, 'Waterside Road');
+  assert.ok(f.joined && w.joined, 'joined');
+  const fe = f.pts[0], we = w.pts[0], K = f.s.pts[0];
+  assert.ok(Math.hypot(fe[0] - we[0], fe[1] - we[1]) < 1e-6 && Math.hypot(fe[0] - K[0], fe[1] - K[1]) > 1.5, `they meet on the curve (${fe} / ${we})`);
+  assert.ok(turn([...w.pts.slice(0, 4).reverse(), ...f.pts.slice(1, 4)]) < 0.15, 'the bend through them gentle');
+  const JN = roundedStreets([[[K[0] - 30, K[1]], [K[0] - 1, K[1]]]]);
+  assert.ok(!get(JN, '1st Street').joined && get(JN, '1st Street').pts[0][0] === K[0], 'a junction stays square');
 });

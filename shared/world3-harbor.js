@@ -399,8 +399,9 @@ function fishQuay(K, m, ctx) {
   {
     const fx = 3180, fw = 52, fy = ln + EXT.minor + 3, fh = 18;
     const fm = K.allFree(fx, fy, fw, fh) ? K.building({ x: fx, y: fy, w: fw, h: fh, arch: 'mixed', key: 'market', name: 'Dockside Fish Market', poi: { kind: 'fishmarket', label: 'Dockside Fish Market', walk: true, store: 'mart' }, whole: true,
-      art: { spec: { floors: 2, style: 'siding', wallColor: '#8ab0c0', pitch: 'gable', roof: 'metal', roofColor: '#6a7a84', slope: 0.42, grime: 0.25, win: 'loft' },
-        shop: { kind: 'mart', door: 'left', open: true, people: 5, sign: { text: 'DOCKSIDE FISH MARKET', bg: '#1e3a5e', fg: [240, 236, 220], lit: true }, awning: ['#2e6a8a', '#f0ece4'] }, kit: [] } }) : null;
+      // (Harbor-B1, 2026-10-19: the brick market hall under its green roof, striped awnings, the fish on its sign)
+      art: { spec: { floors: 2, style: 'brick', brickTone: '#9a4a36', pitch: 'gable', roof: 'metal', roofColor: '#3e7a5a', slope: 0.42, grime: 0.18, win: 'arch', cornice: 'dentil', date: '1911', blades: [{ text: 'FISH', x: fw * TILE - 40, v: 70, paint: true, bg: '#1e3a5e', fg: [240, 236, 220] }] },
+        shop: { kind: 'mart', door: 'left', open: true, people: 5, sign: { text: 'DOCKSIDE FISH MARKET', bg: '#2a5a44', fg: [244, 238, 220], lit: true }, awning: ['#2a6a4e', '#f0ece4'] }, kit: [] } }) : null;
     if (fm) out.shops++;
     // the yard between the shed and the lane: asphalt, the trucks backed up to it
     for (let y = ln + EXT.minor + 1; y < fy; y++) for (let x = fx; x < fx + fw; x++) if (K.free(x, y)) K.fill(x, y, 1, 1, T.LOT);
@@ -420,6 +421,10 @@ function fishQuay(K, m, ctx) {
       prop('forklift', fx + fw - 6, fy + fh + 4.5, 16, { a: 0 });
       for (let k = 0; k < 5; k++) prop('gull', sx0 + 6 + k * 11, qy + 1 + (k % 2) * 2, 0, { a: k });
       prop('lamp', sx0 + 2, qy - 1.5, 0); prop('lamp', sx1 - 3, qy - 1.5, 0);
+      // (Harbor-B1: the crates and the ice along the market's front under its awnings; palms and lamps at the quay's ends)
+      if (fm) for (let k = 0; k < 7; k++) { const cx = fx + 6 + k * 6.5; if (Math.abs(cx - (fx + 4 + Math.round((cx - fx - 4) / 8) * 8)) > 1.6) prop(pick(['fruitcrate', 'crates', 'cooler'], rnd(k, fx, 2)), cx, fy + fh + 0.9, 6, { v: k % 3 }); }
+      for (const [px, py] of [[sx0 + 1, qy - 4], [sx1 - 1.5, qy - 4]]) if (m.tiles[m.idx(Math.floor(px), Math.floor(py))] !== T.ROAD) prop('palm_a', px, py, 10, { sp: 'royal', k: 1.15 });
+      for (const lx of [fx + 14, fx + 38]) prop('lamp', lx, qy - 1.5, 0);
     }
     // the trucks in the yard (traffic.js parks them: their model)
     for (const dx of [8, 22, 36]) m.parking.push({ x: (fx + dx) * TILE, y: (ln + EXT.minor + 2) * TILE, a: 0, model: dx === 22 ? 'van' : 'boxtruck' });

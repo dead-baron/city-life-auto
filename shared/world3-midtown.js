@@ -579,15 +579,19 @@ function build(m, api, K) {
     commons(K, x0, c1y0, x1 - x0, c2y1 - c1y0 + 1, out);
   }
   {
-    // Main Avenue to Civic Avenue: on Pier Street FreshHub Grocery, the strip of sports, guns, hardware and clothes
-    // (Iron Sights Arms...) and the Pier Street Market (the old market hall: its glazed roof, the food counters inside);
-    // on Harbor Avenue the car park and Madison Court, the apartments behind their lawns
+    // Main Avenue to Civic Avenue: on Pier Street FreshHub Grocery, the Pier Street Market (the old market hall: iron and
+    // glass, its glazed roof, the food counters inside) and the strip of sports, guns, hardware and clothes (Iron Sights
+    // Arms...); across Pier Street from the hall the Market Square (Midtown-A1, Shared-3), the car park on its west side
+    // and Madison Court, the apartments behind their lawns, on its east
     const [x0, x1] = span(MX.main, 'ave', MX.civic, 'ave');
     backRow(x0, x1, c1y0, AL.c1 - 2);
-    mainRow(x0, x1, AL.c1 + 2, c1y1, [{ kind: 'raw', w: 30, lot: groceryLot(), depth: 15 }, { kind: 'raw', w: 40, lot: stripLot(), depth: 15 }, { gap: 3, kind: 'passage' }, { kind: 'raw', w: 26, lot: marketHall(), depth: 15 }]);
+    const pier = mainRow(x0, x1, AL.c1 + 2, c1y1, [{ kind: 'raw', w: 30, lot: groceryLot(), depth: 15 }, { gap: 3, kind: 'passage' }, { kind: 'raw', w: 34, lot: marketHall(), depth: 15 }, { kind: 'raw', w: 40, lot: stripLot(), depth: 15 }]);
+    const hall = pier.find((b) => b && !b.gap && b.name === 'Pier Street Market');
+    const SQ_W = 34, sqx = hall ? Math.round(hall.tx + hall.tw / 2 - SQ_W / 2) : x0 + 33;
     // (a car park on Harbor Avenue at Main Avenue: the bays, the barrier, the pay board)
-    carPark(K, x0, c2y0, 24, c2y1 - c2y0 + 1, out);
-    madisonCourt(K, x0 + 26, c2y0, x1 - x0 - 26, c2y1 - c2y0 + 1, { walkup, out });
+    carPark(K, x0, c2y0, sqx - x0 - 3, c2y1 - c2y0 + 1, out);
+    marketSquare(K, sqx, c2y0, SQ_W, c2y1 - c2y0 + 1, { shopLot, out });
+    madisonCourt(K, sqx + SQ_W + 2, c2y0, x1 - sqx - SQ_W - 2, c2y1 - c2y0 + 1, { walkup, out });
   }
   {
     // Civic Avenue to Harborview Avenue (Fulton Street between, one way north)
@@ -602,7 +606,7 @@ function build(m, api, K) {
     }
   }
   {
-    // east of Harborview Avenue: the pocket plaza in the corner opposite the wedge (MT1's: its fountain, benches, trees);
+    // east of Harborview Avenue: the pocket plaza in the corner opposite the wedge (MT1's: its monument, benches, trees);
     // a tower going up on Harbor Avenue (the frame, the crane, the site fence - statics.js 'construction'); Motor Row's
     // dealership and Fresh Coat Garage on the diagonal; then the diagonal's two sides down to Harbor Avenue - small rough
     // lots
@@ -820,13 +824,12 @@ function postOffice() {
 }
 // The Pier Street Market: the old market hall, round-headed windows, its glazed roof ridge (rows of skylights), food
 // counters inside (a counter with a queue: the key's)
+// (2026-10-19, Midtown-A1 and Shared-3: the hall of glass and iron along the top of the market square - stone piers
+// between tall arched windows, the glazed roof on its iron ribs, the green awning and its sign)
 function marketHall() {
-  const kit = [];
-  for (let ry = 70; ry <= 380; ry += 52) for (let rx = 40; rx <= 780; rx += 34) kit.push(['sky', rx, ry]);
-  kit.push(['hvac', 60, 470], ['vent', 400, 470], ['vent', 700, 470]);
   return { arch: 'strip', key: 'rest2', name: 'Pier Street Market', poi: { kind: 'coffee', label: 'Pier Street Market', food: true }, whole: true,
-    art: { spec: { floors: 2, style: 'stone', wallColor: '#c8b898', win: 'arch', cornice: 'step', date: '1898', parapet: 14, grime: 0.15, roofMat: 'metal', lip: 10, rimW: 5 },
-      shop: { kind: 'diner', door: 'left', open: true, people: 6, awning: ['#2f6a4e', '#2f6a4e'], sign: { text: 'MARKET HALL', bg: '#2f6a4e', fg: [250, 240, 200], lit: true } }, kit } };
+    art: { spec: { floors: 2, style: 'stone', wallColor: '#d4c8aa', win: 'arch', cornice: 'step', date: '1898', pitch: 'gable', roof: 'glass', slope: 0.45, parapet: 6, grime: 0.1, blades: [], plaques: [] },
+      shop: { kind: 'diner', door: 'left', open: true, people: 6, awning: ['#2f6a4e', '#2f6a4e'], sign: { text: 'MARKET HALL', bg: '#2f6a4e', fg: [250, 240, 200], lit: true } }, kit: [] } };
 }
 // The Holloway, a small hotel: brick, an oriel up the middle, the HOTEL blade, the lobby under its awning
 function hotelLot() {
@@ -844,6 +847,66 @@ function loftLot() {
 }
 function garageLot() {
   return { arch: 'garage', key: 'repair', name: 'Fresh Coat Garage', poi: { kind: 'garage', label: 'Fresh Coat Garage' }, whole: true };
+}
+
+// The Market Square (Midtown-A1, Shared-3), across Pier Street from the market hall, as wide as the hall: the paving;
+// the fountain with its statue in the middle, benches and flower planters round it; eight striped stalls in a ring
+// round it (fruit and vegetables, flowers, bread, cheese), their crates and chalkboards, festoon lights strung between
+// them; plane trees in planters on the corners and halfway down the sides; bollards along the kerb and the sides; a
+// food cart; the cafe tables under umbrellas on the two southern corners; iron lamps; the square's sign. Along its
+// south side, their fronts on Harbor Avenue, Fontaine Cafe, Market Bakery and Stem & Bloom (two floors of brick and
+// render, flower boxes; their rooftops the square's south edge, as Shared-3 draws it)
+function marketSquare(K, x, y, w, h, ctx) {
+  const { m, prop, rnd, pick } = K;
+  const { shopLot, out } = ctx;
+  if (!K.allFree(x, y, w, h)) return;
+  const sd = Math.min(24, h - 11), cx = x + w / 2, cy = y + sd / 2;
+  // the row on Harbor Avenue (a building wants free ground: first)
+  const SHOPS = [
+    { name: 'Fontaine Cafe', store: 'cafe', w: 12, awning: ['#a8343a', '#f0ece4'], face: { style: 'brick', brickTone: '#9a4a36' } },
+    { name: 'Market Bakery', store: 'cafe', w: 11, awning: ['#2f6a4e', '#f0ece4'], face: { style: 'stucco', wallColor: '#e8dcc0' } },
+    { name: 'Stem & Bloom', store: 'florist', w: 11, awning: ['#d87a9a', '#f8eef0'], face: { style: 'brick', brickTone: '#7a3a2e' } },
+  ];
+  let k = 0;
+  const row = K.row(x, x + w, y + sd + 1, y + h - 1, (sx, room) => {
+    const L = SHOPS[k++];
+    if (!L || room < 6) return room >= 1 ? { gap: room, kind: 'passage' } : null;
+    const lw = Math.min(room, L.w);
+    return { w: lw, depth: 9, ...shopLot(sx, y + h - 1, lw, { ...L, floors: 2, garden: false }) };
+  });
+  for (const b of row) if (b && !b.gap && b.tw !== undefined) { out.shops++; if (b.home) out.homes++; }
+  // the square
+  K.fill(x, y, w, sd, T.PLAZA); K.take(x, y, w, sd);
+  prop('fountain', cx, cy, 36); prop('statue', cx, cy + 0.2, 0);
+  for (const [dx, dy, a] of [[-5.6, 0.4, 0], [5.6, 0.4, Math.PI]]) prop('pbench', cx + dx, cy + dy, 0, { a });
+  for (const [dx, dy] of [[-3.4, -2.8], [3.4, -2.8], [-3.4, 3.2], [3.4, 3.2]]) prop('planter_fl', cx + dx, cy + dy, 6);
+  // the ring of stalls: the north four facing south to the fountain, the south four facing north to it
+  const RING = [[-9.5, -4, 0], [-3.5, -6, 0], [3.5, -6, 0], [9.5, -4, 0], [-9.5, 4.5, Math.PI], [-3.5, 6.5, Math.PI], [3.5, 6.5, Math.PI], [9.5, 4.5, Math.PI]];
+  RING.forEach(([dx, dy, a], j) => {
+    const sx = cx + dx, sy = cy + dy, north = dy < 0;
+    prop('mstall', sx, sy, 12, { v: j % 4, c: (j * 3 + 1) % 4, a });
+    prop(rnd(j, sy, 950) < 0.5 ? 'fruitcrate' : 'crates', sx + (dx < 0 ? -2.3 : 2.3), sy + (north ? 0.6 : -0.6), 6, { v: j });
+    if (j % 3 !== 2) prop('chalkboard', sx + (dx < 0 ? 1.8 : -1.8), sy + (north ? 1.8 : -1.8), 0);
+    // (the lights strung from stall to stall round each half of the ring)
+    if (j % 4 < 3) { const [ex, ey] = RING[j + 1]; prop('festoon', sx, sy - 1.6, 0, { tx: Math.round((ex - dx) * TILE), ty: Math.round((ey - dy) * TILE), h: 58 }); }
+  });
+  // plane trees in planters: the north corners and halfway down the sides
+  for (const [tx, ty] of [[x + 2.5, y + 2.5], [x + w - 2.5, y + 2.5], [x + 2.5, cy + 1], [x + w - 2.5, cy + 1]]) { prop('planter_g', tx, ty, 10); prop('tree_a', tx, ty - 0.2, 0, { sp: 'streetPl', k: 1.05 }); }
+  // bollards along the kerb (a gap in the middle) and down both sides; iron lamps
+  for (let bx = x + 5; bx < x + w - 4; bx += 2.5) if (Math.abs(bx - cx) > 3.5) prop('bollard', bx, y + 0.5, 5);
+  for (const bx of [x + 0.5, x + w - 0.5]) for (let by = y + 5; by < y + sd - 2; by += 3) prop('bollard', bx, by, 5);
+  for (const [lx, ly] of [[x + 7, y + 3], [x + w - 7, y + 3], [x + 7, y + sd - 3], [x + w - 7, y + sd - 3]]) prop('lamp', lx, ly, 5, { style: 'iron' });
+  // the cafe tables on the southern corners (clear of the shops' fronts' height); the food cart on the east side
+  for (const tx0 of [x + 3, x + w - 10]) for (let j = 0; j < 3; j++) { const tx = tx0 + j * 3, ty = y + sd - 5 + (j % 2) * 1.4; prop('cafetable', tx, ty, 0); prop(pick(['umbrella_g', 'umbrella_r', 'umbrella_y'], rnd(tx, ty, 951)), tx, ty - 0.1, 0); }
+  prop('foodcart', x + w - 3.5, cy - 1, 14);
+  prop('bikerack', x + 3.5, y + 5.5, 0);
+  prop('textsign', cx, y + sd - 0.8, 0, { text: 'MARKET SQUARE', bg: '#2f6a4e', fg: [250, 240, 200], z: 30, sx: 1 });
+  // the stalls are Midtown Market: bread, fruit and honey to buy, fruit and honey bought (server/systems/economy.js)
+  m.pois.push({ id: m.pois.length, kind: 'market', label: 'Midtown Market', x: Math.round(cx * TILE), y: Math.round((cy - 6) * TILE), r: 48, counter: true });
+  m.squares ||= []; m.squares.push({ x: Math.round(cx) - 8, y: Math.round(cy) - 6, w: 16, h: 12, name: 'Market Square' });
+  (m.landmarks ||= []).push({ name: 'Market Square', type: 'plaza', x: x * TILE, y: y * TILE, w: w * TILE, h: sd * TILE });
+  (out.places ||= []).push({ name: 'Market Square', x0: x, y0: y, x1: x + w, y1: y + sd });
+  out.marketSquare = { x, y, w, h: sd };
 }
 
 // A car park on a corner lot: asphalt, bays in two rows facing a lane down the middle, the barrier at the way in from
@@ -1110,7 +1173,8 @@ function unionSquare(K, x, y, w, h, out) {
 // the boulevard, under the diagonal - built in steps along the diagonal, one look and one roof line (the plan's one
 // wedge per diagonal: every other building stays square to the grid)
 function wedge(K, out) {
-  const yS = MY.blvd - EXT.blvd - 1, f = { style: 'stucco', wallColor: '#e6dcc2' };   // (WC431: the flatiron's cream render)
+  // (WC431's flatiron; 2026-10-19, Midtown-A1: red brick, the green cupola on its prow at the sharp corner)
+  const yS = MY.blvd - EXT.blvd - 1, f = { style: 'brick', brickTone: '#8a3a2c' };
   let made = 0, xe0 = null;
   for (let step = 0; step < 5; step++) {
     // each step a slice 5 tiles deep, the northern ones shorter: it ends where the diagonal's pavement begins
@@ -1125,14 +1189,14 @@ function wedge(K, out) {
     K.building({ x: xw, y: y0, w: xe - xw + 1, h: 5, arch: 'mixed', whole: true, name: first ? 'The Wedge' : null, back: !first, door: first ? undefined : null, poi: first ? { kind: 'coffee', label: 'Wedge Cafe' } : false,
       art: { spec: { floors: 4, ...f, parapet: 12, cornice: 'bracket', win: 'tall', roofMat: 'tar', lip: 10, rimW: 4, balconies: false, fireEscape: first ? [60, 50] : null, groundH: first ? undefined : 0 }, noShop: !first,
         shop: first ? { kind: 'cafe', door: 'right', open: true, people: 3, awning: ['#a8343a', '#f0ece4'], sign: { text: 'WEDGE CAFE', bg: '#7a1e2a', fg: [250, 232, 200], lit: true } } : undefined,
-        kit: step === 2 ? [['tank', 80, 60], ['acs', 160, 60]] : [['acs', 60, 60], ['vent', 140, 70]] } });
+        kit: first ? [['cdome', (xe - xw + 1) * TILE - 52, 80], ['acs', 60, 60], ['vent', 140, 70]] : step === 2 ? [['tank', 80, 60], ['acs', 160, 60]] : [['acs', 60, 60], ['vent', 140, 70]] } });
     if (first) for (let k = 0; k < 4; k++) { const tx = xw + 4 + k * 6; K.prop('cafetable', tx, yS + 2, 0); K.prop(k % 2 ? 'umbrella_r' : 'umbrella_y', tx, yS + 1.9, 0); }   // (its tables on the pavement)
     made++;
   }
   out.wedge = made;
 }
 // MT1's pocket plaza across the street from the wedge: the triangle between Harborview Avenue, the boulevard and the
-// diagonal - a fountain, benches round it, a tree, flower beds, lamps
+// diagonal - the monument in its ring of flowers, benches round it, a tree, flower beds, lamps
 function pocketPlaza(K, out) {
   const { m, prop, fill } = K;
   const x0 = MX.harborview + EXT.ave + 1, y0 = MY.blvd + EXT.blvd + 1, y1 = MY.pier + EXT.st;
@@ -1143,8 +1207,11 @@ function pocketPlaza(K, out) {
   }
   if (n < 30) return;
   const cx = sx / n, cy = sy / n;
-  prop('fountain', cx, cy + 1, 36);
-  prop('bench_m', cx - 5, cy + 4, 0); prop('bench_m', cx + 4, cy + 5, 0); prop('pbench', cx - 2, cy - 4, 0);
+  // (Midtown-A1: across from the flatiron a monument on its round plaza - the statue on its plinth in a ring of flowers,
+  // benches facing it)
+  prop('statue', cx, cy + 1, 14);
+  for (let k = 0; k < 10; k++) { const a = k * 0.6283; prop(k % 2 ? 'flowers_a' : 'flowers_big', cx + Math.cos(a) * 3.6, cy + 1.4 + Math.sin(a) * 2.8, 0); }
+  prop('pbench', cx - 6, cy + 1.2, 0, { a: 0 }); prop('pbench', cx + 6, cy + 1.2, 0, { a: Math.PI }); prop('pbench', cx, cy - 3.4, 0, { a: Math.PI / 2 });
   prop('tree_b', cx - 7, cy - 2, 12, { sp: 'magnolia', k: 1.2 });
   prop('flowers_big', cx + 6, cy, 0); prop('flowers_a', cx - 8, cy + 6, 0);
   prop('lamp', cx + 3, cy - 5, 0); prop('lamp', cx - 6, cy + 8, 0);
@@ -1459,7 +1526,7 @@ function commonsCourts(K, x, y, w, h, out) {
 function madisonCourt(K, x, y, w, h, ctx) {
   const { prop, rnd, pick } = K;
   const { walkup, out } = ctx;
-  const back = 7, depth = 14, gap = 6, n = 3, bw = Math.floor((w - (n - 1) * gap) / n), fy = y + back + depth;
+  const back = 7, depth = 14, gap = 6, n = w >= 54 ? 3 : 2, bw = Math.floor((w - (n - 1) * gap) / n), fy = y + back + depth;
   // the car park behind (Pier Street's south side): a row of bays facing north, chain-link with the gate on the pavement
   K.paint(x, y, w, back, T.LOT); K.take(x, y, w, back);
   for (let sx = x + 2; sx + 3 <= x + w - 6; sx += 3) { K.m.stalls.push({ x: sx * TILE, y: (y + 2) * TILE, w: 3 * TILE, h: 4 * TILE }); K.m.parking.push({ x: (sx + 1.5) * TILE, y: (y + 4) * TILE, a: -Math.PI / 2 }); }

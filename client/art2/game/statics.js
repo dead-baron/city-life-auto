@@ -554,7 +554,7 @@ const KITS = { ac: [30, 22, 16], acs: [18, 14, 11], hvac: [44, 30, 22], vent: [1
   hatch: [16, 16, 9], chim: [12, 12, 39], line: [60, 4, 30], umb: [30, 30, 30], table: [14, 14, 12], lounge: [34, 14, 16], cool: [36, 36, 36], duct: [64, 10, 11],
   skyL: [24, 18, 7], string: [60, 4, 30], neon: [110, 6, 48],
   // a roof garden's (gardenKit): 'bed|w|d|h|box|plant|v' a raised bed of any size (its height here: the tallest planting's top), 'tree|kind|box|v'
-  bed: [48, 20, 44], tree: [24, 24, 78], perg: [44, 34, 36], bench: [32, 10, 14], shed: [30, 24, 40], butt: [12, 12, 17], comp: [18, 16, 13], lant: [6, 6, 16], dome: [190, 190, 174], gdome: [100, 100, 102] };
+  bed: [48, 20, 44], tree: [24, 24, 78], perg: [44, 34, 36], bench: [32, 10, 14], shed: [30, 24, 40], butt: [12, 12, 17], comp: [18, 16, 13], lant: [6, 6, 16], dome: [190, 190, 174], gdome: [100, 100, 102], cdome: [94, 94, 97] };
 // 'neon|TEXT|c' is a lit sign standing at the roof's front edge (c: its NEONC colour)
 const kitBase = (k) => k.replace(/@$/, '').split('|')[0];
 function kitModel(k) {
@@ -566,7 +566,7 @@ function kitModel(k) {
     case 'lounge': return D.lounger('#f0eee8'); case 'cool': return P.coolingTower(36, 30); case 'duct': return P.duct(64);
     case 'skyL': return P.skylight(1); case 'string': return P.stringLights(60, 1);
     case 'perg': return GD.pergola(); case 'bench': return P.bench(); case 'shed': return GD.gardenShed(30, 24, 26, '#3a6a8a'); case 'butt': return GD.waterButt();
-    case 'comp': return GD.compostBin(); case 'lant': return GD.gardenLantern(); case 'dome': return obsDome(180, 1); case 'gdome': return obsDome(90, 2);
+    case 'comp': return GD.compostBin(); case 'lant': return GD.gardenLantern(); case 'dome': return obsDome(180, 1); case 'gdome': return obsDome(90, 2); case 'cdome': return obsDome(84, 1);   // (cdome: a copper cupola - Midtown's flatiron)
     default: return P.roofVent();
   }
 }
@@ -1809,7 +1809,7 @@ function marquee() {
   return m;
 }
 // (civ: a civic dome on a roof - 1 copper green on a colonnaded drum, 2 glass - with its lantern; the Civic Center's
-// city hall and library: rooftop kits 'dome', 'gdome')
+// city hall and library: rooftop kits 'dome', 'gdome'; 'cdome' the flatiron's copper cupola)
 function obsDome(r = 90, civ = 0) {
   const m = new Vox(r + 10, r + 10, Math.round(r * 0.8) + 30), c = (r + 10) / 2, ang = (x, y) => Math.atan2(y - c, x - c);
   const wall = m.mat({ ramp: ramp(civ ? '#e2dac6' : '#d8d4cc', 6, 3), k: 3, ...(civ ? { shade: (x, y, z) => (z > 4 && z < 24 && Math.round(ang(x, y) * 13) % 2 === 0 ? -0.9 : 0) } : null) });

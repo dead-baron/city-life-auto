@@ -12010,3 +12010,45 @@ Avenue on the avenue lattice); test/world3beach.test.js (Depot Square, Bayview G
 plaza, the medical center, the Sheriff, the bank, the marina, the shops and homes). Its count of the north coast's
 buildings is now 200+ (the three handcrafted towns put fewer, bigger buildings where the grids were: 237), and its
 cafes and restaurants count Northshore's.
+
+## 2026-10-19 · World v3: Midtown's Market Square; the Harbor's fish market in brick; street corners rounded end to end
+
+From the owner's concepts of the day: Midtown-A1 (the glass market hall with its stalls and fountain), Shared-3 (the
+market square: the glass and iron hall along the top, the fountain and statue, eight striped stalls, trees in planters,
+bollards, a food truck, cafe terraces on the corners) and Harbor-B1 (the fish market: a brick hall under a green roof,
+the fish on its sign, striped awnings, crates on the pavement, palms and lamps along the quay).
+- **The Market Square** (`shared/world3-midtown.js` marketSquare) across Pier Street from the **Pier Street Market**,
+  as wide as the hall: the paving; the fountain with its statue in the middle, benches and flower planters round it;
+  eight striped stalls in a ring round it (their crates and chalkboards, festoon lights strung from stall to stall);
+  plane trees in planters on the corners and halfway down the sides; bollards along the kerb and down both sides; a
+  food cart; cafe tables under umbrellas on the two southern corners; iron lamps; the square's sign. The stalls are
+  **Midtown Market**, a market counter like Old Town's (bread, fruit and honey to buy; fruit and honey bought). Along
+  its south side, their fronts on Harbor Avenue, **Fontaine Cafe**, **Market Bakery** and **Stem & Bloom** (two
+  floors of brick and render; their rooftops the square's south edge, as Shared-3 draws it). The hall itself is now
+  iron and glass: cream stone piers between tall arched windows under a glazed roof on iron ribs (spec.roof 'glass',
+  as the Arts District's glasshouses), 34 tiles wide (26), moved along Pier Street to stand at the square's head
+  (FreshHub Grocery, the hall, then the strip). The car park on Harbor Avenue is the square's west side, Madison
+  Court its east.
+- **The Wedge** (MT1, the flatiron where Crosstown Way meets the boulevard) in red brick with a copper cupola on its
+  prow, as Midtown-A1 draws it (it was WC431's cream render; the cupola is a new roof kit, 'cdome' in
+  `client/art2/game/statics.js`); across the street **Wedge Plaza**'s fountain gives way to a monument on its round
+  plaza: the statue on its plinth in a ring of flowers, benches facing it.
+- **Dockside Fish Market** (`shared/world3-harbor.js` fishQuay): red brick under a green metal roof, arched windows,
+  its datestone, a painted FISH sign, green-and-white awnings; crates and the ice along its front between the fish
+  tables; palms at the quay's ends, two more lamps along it.
+
+Tests: test/world3world.test.js (the Market Square across Pier Street from the hall, its eight stalls, Fontaine Cafe,
+Midtown Market's counter).
+
+**Street corners where two streets meet end to end** (the owner's North Point picture: 1st Street turning into
+Waterside Road at a square corner). The bends inside a handcrafted street were already curves; now two of the plans'
+streets that meet end to end at a bend share the curve between them, half each (`shared/world3-hand.js`
+roundedStreets), with the same radius rule (by the street's width, at most 45% of either piece, a piece under 10 tiles
+left square). A corner anything else reaches - a third street of the plans, or one of the grid's or the skeleton's
+lines, within the curve's reach - is a junction and stays square (Midtown's Bridge Avenue goes on north under the El).
+24 streets got their corner (listed in the build: `m.world3.city.streets.hand.joined`) - North Point's, The Bluffs'
+Cliff and Headland Roads, Gull Harbor's lanes, the Yards' loop, Old Town's Water Street into Central Avenue, Ocean
+Drive into Marina Avenue and more; no prop ends up on a road, and the plans' building counts barely move.
+
+Tests: test/roundcorners.test.js (North Point's 1st Street and Waterside Road meet on their curve, the bend through
+them gentle; a line through the corner keeps it square).
