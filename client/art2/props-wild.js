@@ -151,6 +151,79 @@ export function lighthouse(h = 140, on = 1) {
   for (const z of [50, 90]) m.box(c - 2, c + 9, z, c + 2, c + 14, z + 8, iron);
   return m;
 }
+// a harbour-mouth light on the end of a breakwater (Gull Harbor, WC204/WC059): a stone drum, the tapered iron tower
+// painted red (v 0, port) or green (v 1, starboard) with a white band, the gallery, the lantern glowing its colour, the cap
+export function beacon(v = 0, h = 46, on = 1) {
+  const COL = ['#c8302a', '#2e8a4a'][v % 2], GLOW = [[255, 96, 70], [110, 255, 150]][v % 2], c = 12;
+  const m = new Vox(24, 24, h + 14);
+  const stone = m.mat({ ramp: R('#9a9286'), k: 3, shade: (x, y, z) => (Math.round(z) % 4 === 0 ? -0.8 : 0) + (hash(Math.round(x / 3), Math.round(y / 3), 7) > 0.85 ? -0.4 : 0) });
+  const paint = m.mat({ ramp: R(COL), k: 3 }), white = m.mat({ ramp: R('#ecebe2'), k: 3 }), iron = m.mat({ ramp: R('#2c2c34'), k: 2 });
+  const glass = m.mat({ ramp: R('#ffe6c0', 5, 3), k: 4, emi: [...GLOW, 255 * on], flag: F_GLASS | F_NOCAST });
+  m.cyl('z', c, c, 0, 10.5, 0, 8, stone);
+  m.fill((x, y, z) => (Math.hypot(x - c, y - c) <= 6 - (z - 8) / (h - 8) * 1.6 ? (z > h * 0.5 && z < h * 0.64 ? white : paint) : -1), 0, 0, 8, 24, 24, h);
+  m.box(c - 2, c + 4, 8, c + 2, c + 6, 20, iron);   // (the door)
+  m.cyl('z', c, c, 0, 7, h, h + 1.5, iron);
+  m.fill((x, y, z) => { const d = Math.hypot(x - c, y - c); return d <= 7 && d > 6 && Math.round(Math.atan2(y - c, x - c) * 5) % 2 === 0 ? iron : -1; }, 0, 0, h + 1.5, 24, 24, h + 4);
+  m.cyl('z', c, c, 0, 3.6, h + 1.5, h + 8.5, glass);
+  m.fill((x, y, z) => (Math.hypot(x - c, y - c) <= 4.6 * (1 - (z - h - 8.5) / 5) ? paint : -1), 0, 0, h + 8.5, 24, 24, h + 13.5);
+  return m;
+}
+// a churchyard's headstone (v: 0 a round-topped slab, 1 a cross, 2 a little obelisk, 3 a low slab leaning back),
+// weathered grey stone with lichen
+export function headstone(v = 0) {
+  const m = new Vox(14, 8, 20);
+  const s = m.mat({ ramp: R(['#a8a49a', '#9a968e', '#b4ae9e', '#8e8c86'][v % 4]), k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(z), 11) > 0.86 ? -0.7 : 0) + (hash(Math.round(x / 2), Math.round(z / 2), 12) > 0.9 ? 0.5 : 0) });
+  const moss = m.mat({ ramp: R('#6a7a4a'), k: 3 });
+  if (v % 4 === 0) { m.fill((x, y, z) => (z < 11 || Math.hypot(x - 7, z - 11) <= 5 ? s : -1), 2, 3, 0, 12, 5, 16); m.box(2, 3, 0, 12, 5, 2, moss); }
+  else if (v % 4 === 1) { m.box(6, 3, 0, 8, 5, 19, s); m.box(3, 3, 12, 11, 5, 14, s); m.box(5, 2, 0, 9, 6, 2, s); }
+  else if (v % 4 === 2) { m.fill((x, y, z) => (Math.abs(x - 7) <= 3 - z * 0.08 && Math.abs(y - 4) <= 2.6 - z * 0.06 ? s : -1), 0, 0, 2, 14, 8, 19); m.box(2, 0, 0, 12, 8, 2, s); m.box(6, 3, 19, 8, 5, 20, s); }
+  else { m.fill((x, y, z) => (y >= 2 + z * 0.35 && y < 5 + z * 0.35 ? s : -1), 1, 0, 0, 13, 8, 9); m.box(1, 2, 0, 13, 5, 1, moss); }
+  return m;
+}
+// an inshore fishing boat moored in a harbour (Gull Harbor): a painted hull (c: blue, red, green) with a white
+// sheer strake, a timber deck, the wheelhouse forward, the mast and the stern gantry, the net drum, fish boxes, buoys
+export function fishboat(c = 0) {
+  const m = new Vox(80, 28, 40), cy = 14;
+  const hull = m.mat({ ramp: R(['#2f5a8a', '#b8382e', '#2e6a4a'][c % 3]), k: 3 }), band = m.mat({ ramp: R('#ecebe2'), k: 3 }), keel = m.mat({ ramp: R('#2a2a30', 5, 2), k: 2 });
+  const deck = m.mat({ ramp: MAT.woodDock, k: 3 }), white = m.mat({ ramp: R('#f0eee8'), k: 3 }), glass = m.mat({ ramp: MAT.glassDark, k: 3, flag: F_GLASS });
+  const roof = m.mat({ ramp: R(['#c8302a', '#2f5a8a', '#e8b030'][c % 3]), k: 3 }), iron = m.mat({ ramp: R('#3a3a42'), k: 2 }), net = m.mat({ ramp: R('#3e6a52'), k: 3 }), box = m.mat({ ramp: R('#e07030'), k: 3 }), buoy = m.mat({ ramp: R('#e8402e'), k: 3 });
+  const half = (x) => 12.5 * (x > 56 ? 1 - ((x - 56) / 24) ** 2 * 0.92 : 1);
+  m.fill((x, y, z) => (Math.abs(y - cy) < half(x) - (z < 3 ? 3 - z : 0) ? (z < 2 ? keel : z >= 8 ? band : hull) : -1), 0, 0, 0, 80, 28, 10);
+  m.fill((x, y) => (Math.abs(y - cy) < half(x) - 1.5 ? deck : -1), 1, 0, 9, 79, 28, 10);
+  m.box(46, 7, 10, 60, 21, 25, white); m.box(47, 7, 18, 59, 21, 22, glass); m.box(45, 6, 25, 61, 22, 27, roof);
+  m.cyl('z', 40, cy, 0, 1, 10, 40, iron); m.box(30, cy - 0.5, 34, 41, cy + 0.5, 35, iron);
+  for (const y of [5, 22]) m.box(4, y, 10, 6, y + 1, 30, iron);
+  m.box(4, 5, 29, 6, 23, 31, iron);
+  m.cyl('y', 18, 0, 16, 4.5, 8, 20, net);
+  for (const [x, y] of [[26, 7], [30, 7], [26, 18], [34, 18]]) m.box(x, y, 10, x + 3.5, y + 3, 13, box);
+  for (const x of [12, 28, 64]) for (const y of [cy - half(x) + 1, cy + half(x) - 2]) m.ell(x, y, 11, 1.4, 1.4, 1.4, buoy);
+  return m;
+}
+// nets hung out to dry on a fishing quay (Gull Harbor, GullHarbor-A1): two posts and a bar, the green net sagging
+// between them with its cork floats along the top, a couple of buoys hung on it
+export function netRack(len = 60) {
+  const m = new Vox(len, 6, 34);
+  const wood = m.mat({ ramp: MAT.woodDark, k: 3 }), net = m.mat({ ramp: R('#3e6a52'), k: 3, flag: F_NOCAST }), cork = m.mat({ ramp: R('#e0a040'), k: 3 }), buoy = m.mat({ ramp: R('#e8402e'), k: 3 });
+  m.box(0, 2, 0, 3, 4, 33, wood); m.box(len - 3, 2, 0, len, 4, 33, wood); m.box(0, 2, 30, len, 4, 32, wood);
+  m.fill((x, y, z) => { const bot = 6 + 4 * Math.sin(((x - 3) / (len - 6)) * Math.PI); return z >= bot && z < 30 && (x % 3 === 0 || z % 3 === 0) ? net : -1; }, 3, 2, 0, len - 3, 3, 30);
+  for (let x = 6; x < len - 4; x += 6) m.box(x, 1, 28, x + 2, 3, 30, cork);
+  for (const x of [Math.round(len * 0.3), Math.round(len * 0.7)]) m.ell(x, 2, 9, 2.2, 2, 2.6, buoy);
+  return m;
+}
+// lobster pots stacked on a quay (v: how many, the wire's and the buoy's colours): wire-mesh traps on timber runners,
+// the top one's buoy and its rope
+export function lobsterPots(v = 0) {
+  const n = 2 + (v % 2), m = new Vox(18, 13, n * 8 + 6);
+  const wire = m.mat({ ramp: R(['#4a6a5a', '#5a6a72', '#6a5a3a'][v % 3]), k: 3, flag: F_NOCAST }), frame = m.mat({ ramp: MAT.woodDark, k: 3 });
+  const buoy = m.mat({ ramp: R(['#e8b030', '#e8402e', '#e07030'][v % 3]), k: 3 }), rope = m.mat({ ramp: R('#c8b88a'), k: 2 });
+  for (let k = 0; k < n; k++) {
+    const z0 = k * 8, dx = k % 2;
+    m.fill((x, y, z) => { const face = x === dx + 1 || x === dx + 15 || y === 1 || y === 11 || z === z0 || z === z0 + 7; return face && (x % 2 === 0 || z % 2 === 0 || y % 2 === 0) ? wire : -1; }, dx + 1, 1, z0, dx + 16, 12, z0 + 8);
+    m.box(dx + 1, 1, z0, dx + 16, 2, z0 + 1, frame); m.box(dx + 1, 11, z0, dx + 16, 12, z0 + 1, frame);
+  }
+  m.box(8.5, 5.5, n * 8, 9.5, 6.5, n * 8 + 2, rope); m.ell(9, 6, n * 8 + 3, 2.5, 2.5, 2.5, buoy);
+  return m;
+}
 // a whitewashed cottage with a red tile roof (ridge along x), a chimney, windows and a door on the south
 // log: a log cabin (the hunting lodge): stacked round logs with dark chinks, a green tin roof, a porch light
 export function cottage(w = 84, d = 54, on = 0.4, log = 0) {

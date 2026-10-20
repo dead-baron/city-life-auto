@@ -3364,6 +3364,7 @@ function jetty(m, sx, sy, dx, dy, len, w = 3) {
 function buildGullIsles(m, rand) {
   const W = m.w, H = m.h, at = (x, y) => y * W + x;
   m.gullIsles = [];
+  if (OPTS?.handAt) return;   // (World v3: the islands are handcrafted - shared/world3-gullharbor.js, world3-coralcay.js; these were today's map's tiles)
   // --- Gull Harbor ---
   const quay = [];
   for (let tx = 128; tx <= 194; tx++) {

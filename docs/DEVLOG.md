@@ -11838,3 +11838,54 @@ and a cabin cruiser) and the research's D10 / BE3. The grid had put a car park a
   ground alone, so the point's beach stays sand.
 
 Tests: test/pelican.test.js (19th Street and Breaker Avenue stay the grid's).
+
+## 2026-10-19 · World v3, handcrafted: Gull Harbor (the ferry island - the harbour village, Windrush Farm, Gull Point Light)
+
+The ferry island (district 43, all of it) is now laid out by hand (`shared/world3-gullharbor.js`), from the owner's
+concepts GullHarbor-A1 (2026-10-19: the ferry island village - the car-ferry slip in the harbour, the quay, the fish
+sheds on their wharf, the pub and the store, clapboard cottages up the rocky hill), WC204 (the stone harbour village: the walled harbour with its quay and fishing boats, a breakwater with a red
+light, the stone church with its spire and graveyard, slate-roofed cottages, the quayside pub) and WC059 (the island
+harbour village: the breakwater harbour and its red beacon, red roofs and a cafe terrace round the harbour, the white
+lighthouse and its keeper's house on the far headland), with the research's island template NT1-F. The generator had
+put a grid of mainland streets ("Gull Harbor House #3198", chain diners, a Quick Mart) in the island's middle, and the
+farm valley's fields over the rest: the island's land was Willow Valley's meadow (shared/world3-land.js ISLE3), so it
+was named Willow Valley there too. Now the whole island is Gull Harbor's district, and the plan dresses it.
+- **Gull Harbor village** round the cove on the south shore, every building facing south over the harbour: Quay Street
+  along it with the harbour-front row - **Harbor General Store**, **The Anchor** (the pub), **Gull Harbor Chandlery**,
+  **The Salty Gull Cafe** (its terrace on the quay), **Gull's Rest Inn**, **The Lobster Pot** - painted clapboard
+  under dark shingle; Kirk Lane, Net Lane and Kittiwake Lane behind with their cottages, more up the hill along the loop road; **St. Elmo's by the
+  Sea** at the top of Steeple Street in its walled churchyard (headstones, yews and cypress, the gate piers); **Gull
+  Harbor Allotments** beside it (raised beds, the shed, a greenhouse, beehives).
+- **The car ferry's slip** on the quay: the marshalling lot down from Quay Street between two ticket huts, the barrier,
+  the cars queued for the boat; the ramp and booth are the ferry builder's. The Gull Harbor Car Ferry now comes round
+  the island's east end into the harbour (`shared/world3-layout.js` FERRIES3) instead of landing on the north shore.
+- **The harbour**: the stone quay along the cove's head, made out over the water - its gazebo, trees, benches, lobster
+  pots, the cafe's terrace, the dinghies tied up; **Salty Nets Fish & Shellfish** (sell your catch: the fish market)
+  and **Gull Harbor Lobster Co.** facing their timber wharf, its pier out into the cove with the fishing boats either
+  side, lobster pots, crates, the gutting table, nets drying beyond; the two **breakwaters** across the cove's mouth, rubble along their sea
+  side, a **red light** on the west head and a **green** one on the east; dinghies and a speedboat in the basin; the
+  beaches either side inside the walls; **Gull Harbor Boat Hire**.
+- **Windrush Road** up the island from the village through the farm to the north shore (a bench and a coin telescope
+  looking out to the city); **East Road** closes the island's loop road (it ended at the old grid's corner).
+- **Windrush Farm** on Ferry Road: the farmhouse (a home for sale) and the red barn round the yard, the silos, hay
+  bales, the trough, the vegetable beds, **Windrush Farm Stand** at the road (a grocery), the apple and orange orchard
+  across the road; its fields in a grid over the island's middle between hedgerows (a couple left as meadow).
+- **Gull Point Light** on the island's west end at the end of Gull Point Track, on its rocky knoll (granite outcrops,
+  boulders), the keeper's cottage (a home), a bench and a coin telescope looking out to sea.
+- **Gull Woods** (pines, oaks and birch) on the south-west, **Gull Woods Campground** in a clearing at the end of the
+  Campground Track (tents, picnic tables, the fire ring), the path on down to **Bonfire Beach** (the driftwood fire, logs
+  to sit on, surfboards in the sand, torches - the generator's own bonfire stays away when a plan lays one);
+  copses on the north shore and the east; meadow under scattered oaks round the rest.
+
+New art (`client/art2/props-wild.js`): the harbour-mouth **beacon** (a stone drum, the tapered iron tower painted red
+or green with a white band, the lantern glowing its colour at night), **headstones** (four kinds), an inshore
+**fishing boat** (painted hull, wheelhouse forward, mast and stern gantry, net drum, fish boxes, buoys), **lobster
+pots** (stacked wire traps with a buoy) and a **net rack** (nets drying between two posts).
+
+Today's map's Gull Isles builder (`shared/map.js` buildGullIsles: its quay, jetties, light and Coral Cay's cabins, at
+today's map's tiles) no longer runs in World v3: it had left a stray "Gull Harbor" landmark and "Coral Cay Cove" in
+the far north-west of the frame, and two boat-hire anchors there.
+
+Tests: test/gullharbor.test.js (the whole island the plan's; its streets on the island, each meeting another or the
+loop road); test/world3city.test.js (a plan's country lanes and tracks are kinds the generator knows); test/world3world.test.js (the island Gull Harbor's district, the fish shed, the two lights, the car
+ferry's slip on the village's quay, no stray Gull Isles).

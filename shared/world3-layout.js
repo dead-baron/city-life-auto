@@ -285,7 +285,7 @@ export const SUBWAYS3 = [
 
 // The ferries (piers where each route calls; world3-ferries.js finds the routes between them).
 export const FERRIES3 = [
-  { name: 'Gull Harbor Car Ferry', note: 'the ferry island\'s only link: from the western city\'s ferry terminal', pts: [[2150, 2520], [2100, 2900], [2000, 3200], [1900, 3330]] },
+  { name: 'Gull Harbor Car Ferry', note: 'the ferry island\'s only link: from the western city\'s ferry terminal round the island\'s east end into Gull Harbor (shared/world3-gullharbor.js: the slip on the quay)', pts: [[2150, 2520], [2330, 2700], [2300, 3000], [2260, 3400], [2220, 3700], [1900, 3840], [1625, 3820], [1601, 3741]] },
   { name: 'Prison Boat', pts: [[5480, 3150], [5600, 3400], [5700, 3530]] },
   { name: 'Gulf Water Bus', loop: true, pts: [[3300, 2060], [3100, 2140], [2420, 2480], [2250, 2600], [2500, 2850], [2950, 2900], [3700, 2960], [3850, 2650], [3800, 2200], [3600, 2080], [3300, 2060]] },
   { name: 'Key Water Bus', pts: [[3700, 3100], [3900, 3250], [4100, 3330]] },

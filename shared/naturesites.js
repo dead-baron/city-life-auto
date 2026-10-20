@@ -2127,6 +2127,7 @@ function campDressing(m, H) {
 // On the open sand of Gull Harbor, clear of the road: a big driftwood fire ringed with logs, a surfboard stuck in the
 // sand, towels, a cooler, two tiki torches.
 function beachBonfire(m, H) {
+  if ((m.natureSites || []).some((q) => q.kind === 'bonfire')) return;   // (World v3: Gull Harbor's own - shared/world3-gullharbor.js)
   const cand = [];
   for (const want of DISTRICT_NAMES.beaches) {
     for (let ty = 3; ty < m.h - 3; ty++) for (let tx = 4; tx < m.w - 4; tx++) {

@@ -89,7 +89,7 @@ test('World v3b city: every street east-west or north-south, on land with its pa
     assert.ok(l.pts.length === 2 || (l.hand && l.pts.length > 2), `${l.name}: two points`);
     const [a, b] = l.pts;
     assert.ok(a.x === b.x || a.y === b.y || l.hand, `${l.name}: axis-aligned`);
-    assert.ok(['st', 'ave', 'blvd', 'alley'].includes(l.kind) || (l.hand && l.kind === 'minor'), `${l.name}: a kind the generator knows (${l.kind})`);
+    assert.ok(['st', 'ave', 'blvd', 'alley'].includes(l.kind) || (l.hand && ['minor', 'rural', 'dirt'].includes(l.kind)), `${l.name}: a kind the generator knows (${l.kind})`);   // (and a country plan's lanes and tracks: Gull Harbor's Windrush Road, Gull Point Track)
     assert.equal(l.lvl, 0);
   }
   // the avenues named, the main ones boulevards

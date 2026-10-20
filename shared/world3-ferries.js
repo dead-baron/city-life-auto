@@ -25,7 +25,7 @@ const ANY = 'any';             // (any land: World v3b's city islands and shores
 export const FERRY3 = [
   { name: 'Gull Harbor Car Ferry', model: 'ferry', car: true, stops: [
     { pt: 0, name: 'Westport Ferry Terminal', kind: 'ramp', ids: ANY },
-    { pt: 3, name: 'Gull Harbor', kind: 'ramp', ids: ANY },
+    { pt: 7, name: 'Gull Harbor', kind: 'ramp', ids: ANY },   // (the slip on Gull Harbor's quay: shared/world3-gullharbor.js)
   ] },
   // custody only (the owner's list, 1.7): no arrests system takes prisoners to the island yet - built and listed
   { name: 'Prison Boat', model: 'waterbus', custody: true, stops: [

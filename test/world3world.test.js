@@ -124,4 +124,18 @@ test('World v3: the whole world in one build - every city district on its island
   // Wreck Beach on Coral Cay (shared/world3-coralcay.js): the wreck's three places to search, each on the key's land
   const wr = (m.natureSites || []).find((q) => q.kind === 'wreck' && q.search);
   assert.ok(wr && wr.search.length === 3 && wr.search.every((q) => m.land[tileOf(q.x, q.y)]), 'the wreck to search');
+  // Gull Harbor (shared/world3-gullharbor.js): the whole ferry island Gull Harbor's district (not the farm valley's
+  // meadow), the fish shed on its wharf, the breakwaters' two lights, the car ferry calling at the slip on the
+  // village's quay; none of today's map's Gull Isles left in the frame (shared/map.js buildGullIsles)
+  const ferryIsle = ISLANDS3.find((I) => I.key === 'ferry');
+  let gh = 0, notGh = 0;
+  for (let y = ferryIsle.box[1]; y < ferryIsle.box[3]; y += 4) for (let x = ferryIsle.box[0]; x < ferryIsle.box[2]; x += 4) { const i = m.idx(x, y); if (m.land[i] && inPoly(ferryIsle.poly, x + 0.5, y + 0.5)) { if (m.dist[i] === 43) gh++; else notGh++; } }
+  assert.ok(gh > 10000 && notGh <= gh / 100, `the island Gull Harbor's (${notGh} of ${gh + notGh} not)`);
+  assert.ok(m.pois.some((p) => p.kind === 'fishmarket' && p.label === 'Salty Nets Fish & Shellfish'), 'the fish shed on the wharf');
+  assert.equal(m.props.filter((p) => p.t === 'beacon').length, 2, 'the harbour mouth\'s lights');
+  const gf = (m.world3.ferries || []).find((r) => r.name === 'Gull Harbor Car Ferry');
+  assert.ok(gf && gf.stops.length === 2, 'the car ferry calls at the island');
+  const slip = gf.stops.find((s) => s.name === 'Gull Harbor');
+  assert.ok(slip && Math.abs(slip.shore[0] - 1601) <= 2 && Math.abs(slip.shore[1] - 3737) <= 2, `its slip on the village's quay (${slip && slip.shore})`);
+  assert.ok(!(m.landmarks || []).some((l) => (l.name === 'Gull Harbor' && l.x < 1000 * TILE) || l.name === 'Coral Cay Cove'), 'none of today\'s Gull Isles');
 });
