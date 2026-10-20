@@ -1174,7 +1174,13 @@ function rasterRoads(m) {
   // empty (Nature, 2026-10-20: "country roads without sidewalks")
   const TOWN_K = new Set(['st', 'minor', 'ave', 'blvd', 'drive', 'front']), TC = 8 * TILE, townCells = new Set();
   for (const e of ground) if (TOWN_K.has(e.kind)) for (let s = 0; s <= e.len; s += TC / 2) { const q = pointAt(e.pts, Math.min(s, e.len)); townCells.add(Math.floor(q.y / TC) * 65536 + Math.floor(q.x / TC)); }
-  const nearTown = (tx, ty) => { const cx = Math.floor(tx * TILE / TC), cy = Math.floor(ty * TILE / TC); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (townCells.has((cy + dy) * 65536 + cx + dx)) return true; return false; };
+  const BT = m.beachTowns && m.beachTowns.box;   // (World v3's Northshore beach towns: their whole stretch of the Shore Road keeps its pavement - world3-beach.js)
+  const nearTown = (tx, ty) => {
+    if (BT && tx >= BT[0] && tx <= BT[2] && ty >= BT[1] && ty <= BT[3]) return true;
+    const cx = Math.floor(tx * TILE / TC), cy = Math.floor(ty * TILE / TC);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (townCells.has((cy + dy) * 65536 + cx + dx)) return true;
+    return false;
+  };
   for (const e of ground) {
     if (!CITY_KINDS.has(e.kind) || !e.walk) continue;
     const district = ROAD_KINDS[e.kind] && ROAD_KINDS[e.kind].walk === 'district';
