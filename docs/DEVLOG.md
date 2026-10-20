@@ -12410,3 +12410,28 @@ Tests: test/world3rivers.test.js - no traced end left a short way off another's 
 World v3 reaches the sea; the bars, the shingle, the cut and the green banks, clear of the roads; no pavement on the
 country districts' tiles, the Sandpiper Coast's road bare, the beach towns' kept; the bake of a county road through
 the Egret Coast grass to the verge.
+
+## 2026-10-20 · Nature: the Egret Marsh Boardwalk (Nature-C3)
+
+The Nature-C3 concept - a timber boardwalk out over a marsh - built into World v3's Egret Coast marsh
+(`shared/world3-marsh.js`, the World v3 build's last step):
+- **The site**: along the county roads through the Egret Coast, the point a few tiles off the road with the most open
+  marsh water out beyond it (and its edge close by).
+- **The walk**: from a trailhead by the road (a map board, a split-rail fence along the dirt path in), a plank
+  boardwalk with rails zig-zags out over the channels - each leg 6-14 tiles over open marsh water or a reed island,
+  turning one way and then the other, ending out over the water. Its planks are dock tiles, walkable all the way; the
+  ground bake draws the marsh under the boardwalk's legs (`m.walkways`), the boardwalk's own model standing over them
+  (now laid at any heading, and wider: `client/art2/game/statics.js`).
+- **The bird hide**: a roofed plank hut on piles beside the walk at its third bend, its viewing slot to the open water
+  (`client/art2/props-garden.js` birdHide).
+- **The viewing platform** at the far end: a square plank deck with rails round three sides out over the water, a
+  bench and a coin telescope on it (`viewPlatform`). (The telescope draws a birdwatcher: Nature-C4.)
+- **The canoe dock**: a short pier off the first leg where it reaches the water, two canoes moored by it.
+- **The beavers**: their lodge out in the water off the platform, and their dam across a narrow channel where there's
+  one near (3-6 tiles of water across, ground at both ends).
+- Lily pads in the quiet water, cattails and reeds on the islands' edges; the herons, ducks and fish are the marsh's
+  own. Nothing the woods or the dressing put on the planks stays.
+
+Tests: test/world3marsh.test.js - built in the Egret Coast's marsh, zig-zagging out over the water most of the way and
+on its planks every step, a boardwalk for each leg, the hide, the platform out over the water with its telescope and
+bench, two canoes, the lodge; the walkways listed; nothing else on the planks.

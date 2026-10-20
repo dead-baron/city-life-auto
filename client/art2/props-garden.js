@@ -228,6 +228,41 @@ export function boardwalk(len = 160, w = 30, h = 8, rails = 'ns') {
   for (const side of rails) { const y = side === 'n' ? 1 : w - 4; for (let x = 2; x < len; x += 20) m.box(x, y, 0, x + 3, y + 3, h + 18, post); m.box(0, y, h + 15, len, y + 3, h + 18, rail); m.box(0, y + 0.5, h + 7, len, y + 2.5, h + 9, rail); }
   return m;
 }
+// a marsh's bird hide (Nature-C3: shared/world3-marsh.js): a plank hut on piles over the water, its door on the walk's
+// side (y = 0), the long viewing slot on the far side, a shingled roof pitched along x with eaves
+export function birdHide(w = 60, d = 48, h = 40) {
+  const m = new Vox(w + 4, d + 4, h + 26);
+  const pl = m.mat({ ramp: R('#8a6646', 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 4 === 0 ? -1.0 : 0) + (hash(Math.floor(x / 6), Math.floor(z / 4), 11) - 0.5) * 0.5 });
+  const post = m.mat({ ramp: R('#5e4434', 6, 3), k: 3 }), dark = m.mat({ ramp: R('#1e1a18', 4, 2), k: 1 });
+  const roof = m.mat({ ramp: R('#5a5048', 6, 3), k: 3, shade: (x, y, z) => (Math.round(y) % 3 === 0 ? -1.1 : 0) + (hash(Math.floor(x / 4), Math.floor(y / 3), 13) - 0.5) * 0.7 });
+  const x0 = 2, y0 = 2, x1 = w + 2, y1 = d + 2, fl = 10;
+  for (const [x, y] of [[x0 + 1, y0 + 1], [x1 - 4, y0 + 1], [x0 + 1, y1 - 4], [x1 - 4, y1 - 4]]) m.box(x, y, 0, x + 3, y + 3, fl, post);   // (the piles)
+  m.box(x0, y0, fl - 2, x1, y1, fl, pl);   // (the floor)
+  // the walls: planks, the door on the near side, the viewing slot along the far side
+  m.fill((x, y, z) => { if (z < fl || z >= fl + h) return -1; const edge = x < x0 + 2 || x >= x1 - 2 || y < y0 + 2 || y >= y1 - 2; if (!edge) return -1; return pl; });
+  m.box(x0 + w * 0.4, y0, fl, x0 + w * 0.4 + 12, y0 + 2, fl + 26, dark);   // (the doorway)
+  m.box(x0 + 6, y1 - 2, fl + 18, x1 - 6, y1, fl + 25, dark);               // (the slot)
+  m.box(x0 + 6, y1 - 1, fl + 17, x1 - 6, y1 + 1, fl + 18, post);           // (its sill)
+  // the roof: pitched across y, the ridge along x, eaves over every wall
+  const rz = (y) => fl + h + 14 - Math.abs(y - (y0 + y1) / 2) * (14 / ((d + 4) / 2));
+  m.fill((x, y, z) => (z >= fl + h - 1 && z < rz(y) + 1.5 && z >= rz(y) - 2 ? roof : -1));
+  return m;
+}
+// a marsh's viewing platform (Nature-C3): a square plank deck on posts over the water, len deep along x (the boardwalk
+// comes in at x = 0, through the gap in its rail), w across; rails round the other three sides
+export function viewPlatform(len = 160, w = 160, h = 8) {
+  const m = new Vox(len, w, h + 24);
+  const plank = m.mat({ ramp: R('#8a6646', 6, 3), k: 3, shade: (x, y) => (Math.round(y) % 5 === 0 ? -1.1 : 0) + (hash(Math.floor(y / 5), Math.floor(x / 40), 9) - 0.5) * 0.6 });
+  const post = m.mat({ ramp: R('#5e4434', 6, 3), k: 3 }), rail = m.mat({ ramp: R('#7a5a40', 6, 3), k: 3 });
+  m.box(0, 0, h - 3, len, w, h, plank);
+  for (let x = 4; x < len; x += 38) for (let y = 4; y < w; y += 38) m.box(x, y, 0, x + 4, y + 4, h - 3, post);
+  const railRun = (x0, y0, x1, y1) => { m.box(x0, y0, h + 15, x1, y1, h + 18, rail); m.box(x0, y0, h + 7, x1, y1, h + 9, rail); };
+  for (let x = 0; x < len; x += 20) { m.box(x, 0, h, x + 3, 3, h + 18, post); m.box(x, w - 3, h, x + 3, w, h + 18, post); }
+  for (let y = 0; y < w; y += 20) m.box(len - 3, y, h, len, y + 3, h + 18, post);
+  railRun(0, 0, len, 3); railRun(0, w - 3, len, w); railRun(len - 3, 0, len, w);
+  for (const [y0, y1] of [[0, w * 0.32], [w * 0.68, w]]) { railRun(0, y0, 3, y1); m.box(0, y0, h, 3, y0 + 3, h + 18, post); m.box(0, y1 - 3, h, 3, y1, h + 18, post); }   // (the near side: open in the middle)
+  return m;
+}
 // an interpretive sign: a slanted dark-framed panel with a map and text on two posts
 export function infoSign() {
   const m = new Vox(30, 12, 30);

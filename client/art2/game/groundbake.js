@@ -60,6 +60,8 @@ const DECK_LIFT = 88;                                  // shared/levels.js: px p
 const DECK_FACE = 13, DECK_SHADE = 9;                  // a bridge's face over the water (slab and girders), the shade under it
 const DECK_LEE = 14;                                    // the shade east of a deck that runs north-south (the light is from the north-west)
 const CITY = new Set(['ave', 'blvd', 'st', 'minor', 'drive', 'front', 'art']);
+// the boardwalks' leg tiles (m.walkways: shared/world3-marsh.js), as a set kept on the map (not sent)
+const walkways = (M) => M._walkways || Object.defineProperty(M, '_walkways', { value: new Set(M.walkways), enumerable: false, configurable: true })._walkways;
 const NO_WALK = new Set(['rural', 'desert', 'wild', 'rocky', 'water']);   // (the districts the map lays no pavement in: shared/roads.js SIDEWALK_CLASS)
 // whether the pavement's band may be drawn on this tile: not out in the country; on a beach district's coast road only
 // beside its pavement (shared/map.js rasterRoads lays it through the towns only)
@@ -264,6 +266,7 @@ function tileFacts(C) {
     if ((t === T.WATER || t === T.DEEP) && pools.length && inPools(pools, X, Y)) m = M_.POOL;
     else if ((t === T.WATER || t === T.DEEP) && springs.length && springs.some((e) => ((X - e.x) / e.rx) ** 2 + ((Y - e.y) / e.ry) ** 2 < 1.6)) m = M_.SPRING;
     else if (t === T.WATER || t === T.DEEP || t === T.BRIDGE) m = M.lake[g] === 2 ? M_.POND : M.lake[g] ? M_.LAKE : !M.land[g] ? (M.river[g] ? M_.RIVER : M_.SEA) : M_.POND;
+    else if (t === T.DOCK && M.walkways && walkways(M).has(g)) m = !M.land[g] ? (M.lake[g] === 2 ? M_.POND : M.lake[g] ? M_.LAKE : M.river[g] ? M_.RIVER : M_.POND) : M_.MEADOW;   // (under a boardwalk's legs: the marsh, its model's planks over it - shared/world3-marsh.js)
     else if (t === T.DOCK) m = runAxis(M, tx, ty, T.DOCK) ? M_.DOCK : M_.DOCKX;
     else if (t === T.GRASS) {
       if (b.tdeck[k]) m = M_.UNDERDECK;
