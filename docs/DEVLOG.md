@@ -13214,3 +13214,25 @@ within 18 tiles, its fire, driftwood seats and lantern; far apart.
 
 Tests: test/world3dirt.test.js - the camp by marker 2 and its rest spot, its fire, two tents, three chairs, the two
 dirt bikes and the pickup parked on open ground by it.
+
+## 2026-10-21 · Nature: Giant's Gate, the drive-through redwood
+
+- **Giant's Gate** (`shared/world3-drivetree.js`, new, World v3's done hook; task #399, the owner's of 10-09): a giant
+  coast redwood in Highland Woods with a tunnel cut through its foot, on its own dirt lane.
+  - **the site**: a road running east-west through the woods with open forest floor beside it for the lane's length,
+    among the most giants.
+  - **the lane** runs north-south, because the camera looks north and the arch has to face it. It is three tiles of
+    dirt with ruts from the road's edge (`m.tracks`), nothing growing on it, and a turning circle at the far end with
+    a boulder or two. A sign at its mouth reads GIANT'S GATE - DRIVE-THRU TREE, and the tree is on the map.
+  - **the tree** (`client/art2/redwoods.js` giantRedwood `o.tunnel`; `client/art2/game/statics.js` species `gate`) is
+    a size up from the biggest giants. An arch about 92 px wide and 60 px tall is cut through its foot, with the lane
+    seen through it and raw wood round the cut. No root crosses the tunnel's mouth.
+  - **driving through**: the trunk is solid either side of the arch, built from small solids on a grid so a car's
+    corner finds each one by its own tile (`shared/physics.js`), and the arch itself is clear. A pickup has about 20
+    px to spare each side. The tree fades while you're in the tunnel, like any giant you're behind (the host's tree
+    fade, its own outline), and it's never felled (`shared/felling.js`).
+  - Traffic keeps to the road graph, so only players drive through.
+
+Tests: test/world3woods.test.js - the gate tree on its lane, the lane dirt all the way through and off a road, the arch
+clear (every solid near it at least 44 px off the lane's middle) and the trunk solid either side, a pickup driven
+along the lane's middle never pushed and pushed back either side of it, never felled, the sign, on the map.

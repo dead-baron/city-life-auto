@@ -49,6 +49,7 @@ import { mirageByHand3 } from './world3-mirage.js';
 import { fallsInView3 } from './world3-falls.js';
 import { ledgeFalls3 } from './world3-ledgefalls.js';
 import { beachCamps3 } from './world3-camps.js';
+import { driveTree3 } from './world3-drivetree.js';
 import { woodsLake3 } from './world3-woodslake.js';
 import { wildEdges3 } from './world3-edges.js';
 import { riverRun3 } from './world3-riverrun.js';
@@ -270,7 +271,8 @@ export function worldOpts(asked) {
       m.world3.beachCamps = beachCamps3(m, H3);   // (secluded camps on the wild coasts' beaches, the few most out of the way - world3-camps.js)
       m.world3.mirage = mirageByHand3(m, H3);   // (the desert by hand, part 1: Mirage Lake's rim, its green belt and palms, its white beach and jetty - world3-mirage.js)
       m.world3.ledges = ledgeFalls3(m, H3);   // (the falls chain, part 2: the ledge falls at the top of four steep reaches, their plunge pools and viewpoints - world3-ledgefalls.js)
-      m.world3.woodsLake = woodsLake3(m, H3);   // (Highland Woods by hand, part 3: Silver Thread Lake's shore, islets and boathouse - world3-woodslake.js)
+      m.world3.woodsLake = woodsLake3(m, H3);
+      m.world3.driveTree = driveTree3(m, H3);   // (Giant's Gate, the drive-through redwood on its dirt lane - world3-drivetree.js)   // (Highland Woods by hand, part 3: Silver Thread Lake's shore, islets and boathouse - world3-woodslake.js)
       m.world3.riverRun = riverRun3(m, H3);   // (the Redwood River Run: the kayak hire's put-in in the woods, the take-out above the bay - world3-riverrun.js)
       m.world3.edges = wildEdges3(m, H3);   // (the wild districts' tile-stepped borders meander: the valley and the desert, the tree line, the woods and the valley - world3-edges.js)
       m.world3.fallsView = fallsInView3(m, H3);   // (the falls chain, part 1: no tree standing where it would hide a fall - world3-falls.js)

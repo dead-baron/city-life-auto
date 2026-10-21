@@ -32,7 +32,7 @@ const PALM_SMALL = new Set(['palm_s', 'palm_d']);
 export function treeSize(p) {
   if (!p) return 0;
   const t = p.t;
-  if (t === 'redwood') return p.sp === 'redwood2' ? 3 : 4;
+  if (t === 'redwood') return p.sp === 'gate' ? 0 : p.sp === 'redwood2' ? 3 : 4;   // (Giant's Gate, the drive-through, is never felled: shared/world3-drivetree.js)
   if (t === 'tree_a' || t === 'tree_b') return !p.sp || SMALL_SP.has(p.sp) ? 1 : 2;
   if (PALM_SMALL.has(t)) return 1;
   if (t === 'palm_a' || t === 'palm_b' || t === 'palm_c') return 2;
