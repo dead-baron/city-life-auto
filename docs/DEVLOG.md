@@ -12841,3 +12841,14 @@ are drawn as rubble under it (the designed rock's ground). The crest still block
 was.
 
 Tests: test/world3water.test.js - the weir's sill along the crest, its tiles drawn as rubble.
+
+## 2026-10-21 · Nature: the desert by hand, part 1 - Mirage Lake
+
+From the concepts N4-B, N4-C and SC3-F; `shared/world3-mirage.js`, new, World v3's done hook after the coasts': the lake
+south of the North Coast Road lay in the bare sand as a stiff octagon, the desert's dirt to its edge. Now its rim
+wavers round in slow lobes (the lake grown a little into the sand); a green belt of grass with reeds and cattails at
+the water rings its north and east shores under desert fan palms, date palms and a palo verde; a pale beach of white
+sand lies along its south and west shores with a plank jetty out from it, a rowboat tied up and a bench, boulders on
+the sand. A nature site and on the map. Mirage Camp stands north of it as it was.
+
+Tests: test/world3desert.test.js - Mirage Lake's rim, its green belt and palms, its beach, jetty and rowboat.

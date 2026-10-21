@@ -131,6 +131,16 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
     for (const h of hwys) { const q = nearestOnPath(h.path, x, y); check(q.d >= 22, `${b.name} at ${b.tx}, ${b.ty} ${q.d.toFixed(0)} tiles from the ${h.name}`); }
     for (const r of rails) { const q = nearestOnPath(r.path, x, y); check(q.d >= 14, `${b.name} at ${b.tx}, ${b.ty} ${q.d.toFixed(0)} tiles from the main line (${r.name})`); }
   }
+  // 8. Mirage Lake by hand (shared/world3-mirage.js): its rim rounded out, the green belt and its palms, the white beach,
+  // the jetty and its rowboat
+  const ML = m.world3.mirage;
+  console.log('Mirage Lake', JSON.stringify(ML));
+  check(ML.lake > 100 && ML.added + ML.removed > 20, `Mirage Lake's rim (${ML.added} added, ${ML.removed} taken)`);
+  check(ML.belt >= 80 && ML.palms >= 4, `its green belt (${ML.belt} tiles, ${ML.palms} palms)`);
+  check(ML.beach >= 80 && ML.jetty >= 6, `its white beach (${ML.beach}) and jetty (${ML.jetty})`);
+  const mls = m.natureSites.find((s) => s.kind === 'lake' && s.name === 'Mirage Lake');
+  check(mls && m.props.some((p) => p && p.t === 'rowboat' && Math.hypot(p.x - mls.x, p.y - mls.y) < 30 * TILE), 'its rowboat by the jetty');
+  check(mls && m.props.filter((p) => p && p.t === 'palm_a' && Math.hypot(p.x - mls.x, p.y - mls.y) < 30 * TILE).length >= 4, 'palms round it');
   console.log('Red Rock Desert', JSON.stringify({ tiles, gulch: gb.length, hollow: hb.length, pois: pois.length, station: Math.round(near), ours: ours.length }));
   assert.deepEqual(bad.slice(0, 20), [], `${bad.length} problems`);
 });
