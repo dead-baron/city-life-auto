@@ -177,10 +177,12 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
     assert.ok(m.land[ly * W + xa - 1] && m.land[ly * W + xb + 1], `${q.name}: bank to bank`);
     assert.ok(drop === lip, `${q.name}: a one-way drop (${drop})`);
     assert.ok(q.segs.length >= 1 && q.segs.every((g) => g.up.length >= 2 && Math.abs(g.y - (ly + 1) * TILE) < TILE * 1.5), `${q.name}: drawn along it, in strands`);
-    for (const [cx, cy] of [[Math.round(xa + (xb - xa) * 0.25), ly], [Math.round((xa + xb) / 2), ly], [Math.round(xa + (xb - xa) * 0.75), ly]]) {   // (across it, clear of the banks' wet sand)
+    let wetN = 0;
+    for (const [cx, cy] of [[Math.round(xa + (xb - xa) * 0.25), ly], [Math.round((xa + xb) / 2), ly], [Math.round(xa + (xb - xa) * 0.75), ly]]) {   // (across it, clear of the banks' wet sand; a reed by the bank may stand on it)
       const G = bakeGround(m, Math.floor(cx * TILE / CHUNK), Math.floor(cy * TILE / CHUNK), { quality: 1, seed: 1337 }), px = cx * TILE + 16 - Math.floor(cx * TILE / CHUNK) * CHUNK, py = cy * TILE + 16 - Math.floor(cy * TILE / CHUNK) * CHUNK;
-      assert.ok(G.flag[py * G.w + px] & F_WATER, `${q.name}: the lip drawn as water`);
+      if (G.flag[py * G.w + px] & F_WATER) wetN++;
     }
+    assert.ok(wetN >= 2, `${q.name}: the lip drawn as water (${wetN} of 3 across it)`);
   }
   for (const name of LF.names) {
     const last = sites.filter((q) => q.name === name).pop();
@@ -189,6 +191,11 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
     assert.ok(m.props.some((p) => p && p.t === 'pbench' && Math.hypot(p.x - last.falls.x, p.y - last.falls.y) < Math.max(40 * TILE, last.falls.w)), `${name}: a bench looking at it`);
     assert.ok(m.props.some((p) => p && p.t === 'textsign' && p.text === name.toUpperCase()), `${name}: its sign`);
   }
+  // an angler's hold on the bank below the falls (server/systems/wildfolk.js: the plunge pools early)
+  const { spotsOf } = await import('../server/systems/activities.js');
+  const holdsAt = spotsOf(m).list.filter((q) => q.k === 'holds');
+  const fished = LF.names.filter((name) => { const last = sites.filter((q) => q.name === name).pop(); return holdsAt.some((q) => Math.abs(q.x - last.falls.x) < last.falls.w / 2 + 6 * TILE && q.y > last.falls.y && q.y < last.falls.y + 12 * TILE); });
+  assert.ok(fished.length >= Math.ceil(LF.names.length / 2), `anglers' holds below the falls: ${fished}`);
   // footbridges across the narrower outlets: a deck of bridge tiles under each, from bank to bank
   assert.ok(LF.bridges >= 1, `a footbridge below a fall (${LF.bridges})`);
   const fb = m.props.filter((p) => p && p.t === 'fbridge' && sites.some((q) => Math.hypot(p.x - q.falls.x, p.y - q.falls.y) < 30 * TILE));

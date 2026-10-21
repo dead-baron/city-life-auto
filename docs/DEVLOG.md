@@ -13028,3 +13028,15 @@ there: grass both sides).
 
 Tests: test/world3biomes.test.js - each border moved in a wide band; the valley's and the desert's ground follow the
 wandering line.
+
+## 2026-10-21 · Nature: anglers at the falls
+
+The anglers of the wilds take a hold on the bank below each ledge fall's plunge pool early, among their first spots
+(`server/systems/wildfolk.js`: the last ledge's pool, the bank found out from the falls' middle). The pool is where the
+falls' fish hold.
+
+No reeds or lilies stand on a ledge fall's lip any more: the bake's water decor skips its row of rock
+(`client/art2/game/groundbake.js`).
+
+Tests: test/world3rapids.test.js - an anglers' hold below most of the falls.
+

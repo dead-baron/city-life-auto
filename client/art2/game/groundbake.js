@@ -1579,7 +1579,7 @@ function decor(C, G) {
       const gx = px - PAD, gy = py - PAD;
       if (gx >= 0 && gy >= 0 && gx < CHUNK && gy < CHUNK && !(G.flag[gy * CHUNK + gx] & F_WATER)) continue;   // (a boulder)
       const d = b.dist[i] / 10, w = waterAt(C, X, Y, d, TN);
-      if (!w || w.k === WK.SEA) continue;
+      if (!w || w.k === WK.SEA || b.tt[(Math.floor(Y / TILE) - C.TY0) * TN + Math.floor(X / TILE) - C.TX0] === T.WALL) continue;   // (nor on a ledge fall's lip)
       const still = (w.k === WK.POND || w.k === WK.LAKE || w.k === WK.MARSH || w.fv < 0.2) && !(w.pk > 0.05);   // (a river's calm pocket: no lilies)
       const reedy = vnc(X, Y, 150, seed + 103) + (w.k === WK.MARSH ? 0.25 : w.k === WK.POND ? 0.1 : 0);
       if (w.depth < (w.k === WK.MARSH ? 0.9 : 0.45) && (d < 5 || reedy > 0.55) && h0 < (reedy > 0.55 ? 0.42 : 0.1) * dens) stamp(C, G, coverSprite('reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
