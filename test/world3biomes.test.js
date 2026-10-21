@@ -126,5 +126,23 @@ test('World v3: the mainland\'s biomes - their districts, ground and dressing', 
   const few = (d) => HAND_PLANS.find((P) => P.d === d && P.few)?.few ?? 40;
   for (const d of TOWN) check(land[d] > 20000 && (nb[d] || 0) >= few(d), `${DISTRICTS[d].name}: ${land[d]} land tiles, ${nb[d] || 0} buildings`);
   check(cols > 100 && meets / cols > 0.6, `the north coast's towns meet the sea along ${meets} of ${cols} columns`);
+  // (2026-10-21) the wild districts' borders meander (shared/world3-edges.js): each pair's line moved in a wide band, and
+  // the ground follows it - the valley's side grass, the desert's its sand and gravel, the woods' side its floor
+  const E = m.world3.edges;
+  check(E && E.pairs.every((n) => n > 500), `the borders wander: ${E && JSON.stringify(E)}`);
+  {
+    let wrong = 0, seen = 0;
+    for (let y = 700; y < 1800; y++) for (let x = 4100; x < 4700; x++) {
+      const i = y * m.w + x;
+      if (!m.land[i] || (m.reserve[i] & ~(4 | 128)) || (m.bld && m.bld[i] >= 0)) continue;
+      const d = m.dist[i], t = m.tiles[i];
+      if (d !== 49 && d !== 50) continue;
+      let near = false; for (const j of [i - 3, i + 3, i - 3 * m.w, i + 3 * m.w]) if (m.dist[j] !== d && (m.dist[j] === 49 || m.dist[j] === 50)) near = true;
+      if (!near) continue;
+      seen++;
+      if ((d === 49 && t !== T.GRASS && t !== T.FIELD && t !== T.DIRT) || (d === 50 && t === T.GRASS)) wrong++;
+    }
+    check(seen > 500 && wrong < seen * 0.05, `the valley's and the desert's ground follow the wandering border: ${wrong} of ${seen} near it the other side's`);
+  }
   assert.deepEqual(problems, []);
 });

@@ -13011,3 +13011,20 @@ that keeps most of the field (`shared/world3-verges.js`, the same cut as the fie
 
 Tests: test/world3rapids.test.js - a footbridge below a fall, a deck of bridge tiles under it.
 
+
+## 2026-10-21 · Nature: the wild districts' borders meander
+
+Where two of the wilds meet, the ground changed along the districts' tile-stepped border. Willow Valley's pasture met
+the Red Rock Desert's sand and gravel in a staircase of 32-pixel steps, and Highland Woods' forest floor met Granite
+Peaks' bare rock (the tree line) the same way. Now `shared/world3-edges.js`, new, World v3's done hook, makes the line
+wander:
+- **the line** moves in a band seven tiles either side of the border, in slow lobes with small tongues on them.
+- **each plain tile** takes the side the line puts it on: its district and, where the two sides' ground differs, that
+  side's ground. What grew there that the new side doesn't grow goes.
+- **left alone**: roads, a farm field's box, trails, yards, designed places, the water and buildings.
+
+The pairs are the valley and the desert, the woods and the peaks, and the woods and the valley (the district alone
+there: grass both sides).
+
+Tests: test/world3biomes.test.js - each border moved in a wide band; the valley's and the desert's ground follow the
+wandering line.
