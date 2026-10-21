@@ -1071,7 +1071,7 @@ export function skidDabFrames() {
 // flat along the way something went through a field - pale straw where the bent stalks show their light undersides,
 // dark creases between them, ragged ends. Frames 0-7: a wheel's swath (18 x 6) at eight angles over half a turn;
 // 8-15: a person's or an animal's trodden track (10 x 4). Semi-opaque, so the crop's own colour shows through.
-const STRAW = [[208, 192, 128], [182, 164, 102], [96, 84, 46]];
+const STRAW = [[226, 212, 150], [104, 92, 52], [70, 60, 34]];
 export function crushFrames() {
   const out = [];
   for (const [L, Wd] of [[9, 3], [5, 2]]) for (let k = 0; k < 8; k++) {
@@ -1081,8 +1081,10 @@ export function crushFrames() {
       const end = L - (hashC(Math.round(ly * 2), k, L) * 2.5);   // (ragged ends)
       if (Math.abs(lx) > end || Math.abs(ly) > Wd) continue;
       if (dith(x, y, Math.abs(ly) > Wd - 0.8 ? 0.45 : 0.08)) continue;
-      const lane = ((Math.round(ly * 1.6) % 3) + 3) % 3;   // (stalks side by side, a dark crease every third)
-      dot(G, x, y, STRAW[lane === 2 ? 2 : (Math.round(lx * 0.5) & 1)], 0, 0, F_GROUND, NUP, lane === 2 ? 150 : 175);
+      // (the swath dark - the broken stalks' shade and the ground between them - with pale streaks of laid stalks
+      // along it, broken every few px)
+      const streak = ((Math.round(ly * 1.4) % 3) + 3) % 3 === 0 && hashC(Math.round(lx / 3), Math.round(ly * 2), k + 7) > 0.3;
+      dot(G, x, y, streak ? STRAW[0] : STRAW[1 + (hashC(x, y, k) > 0.6 ? 1 : 0)], 0, 0, F_GROUND, NUP, streak ? 170 : 200);
     }
     out.push(finish(G));
   }

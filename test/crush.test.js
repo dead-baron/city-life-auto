@@ -9,20 +9,20 @@ import { FX } from '../client/render/fx.js';
 import { fxFrames } from '../client/art2/fx.js';
 import { FX_FOR_V1, fxKey } from '../client/art2/game/actors.js';
 
-test('the crush marks: a wheel swath and a trodden track at eight angles, pale straw and dark creases, see-through', () => {
+test('the crush marks: a wheel swath and a trodden track at eight angles, dark with pale laid stalks, see-through', () => {
   const fr = fxFrames('dCrush');
   assert.equal(fr.length, 16);
   const px = (g) => { let n = 0, a = 0; for (let i = 3; i < g.col.length; i += 4) if (g.col[i]) { n++; a += g.col[i]; } return [n, n ? a / n : 0]; };
   for (let k = 0; k < 8; k++) {
     const [nb, ab] = px(fr[k]), [ns] = px(fr[8 + k]);
     assert.ok(nb > 40 && ns > 10 && nb > ns * 2, `angle ${k}: the swath (${nb} px) wider and longer than the track (${ns} px)`);
-    assert.ok(ab < 200, 'see-through: the crop shows under it');
+    assert.ok(ab <= 200, 'see-through: the crop shows under it');
   }
-  // straw: warm and pale, with darker creases
+  // dark broken stalks and ground, pale laid stalks streaking along it
   const g = fr[0];
   let pale = 0, dark = 0;
   for (let i = 0; i < g.col.length; i += 4) if (g.col[i + 3]) { if (g.col[i] > 170 && g.col[i] > g.col[i + 2] + 40) pale++; else if (g.col[i] < 110) dark++; }
-  assert.ok(pale > 10 && dark > 5, `pale stalks (${pale}) and creases (${dark})`);
+  assert.ok(dark > 30 && pale > 3, `the dark swath (${dark}) and its pale streaks (${pale})`);
   assert.equal(FX_FOR_V1.decal[7].name, 'dCrush');
   assert.ok(fxKey('dCrush', 3).includes('dCrush'));
 });
