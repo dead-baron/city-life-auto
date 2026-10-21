@@ -42,10 +42,10 @@ export function desertRoadside3(m, H3) {
       const dx = P[q][0] - P[q - 1][0], dy = P[q][1] - P[q - 1][1], l = Math.sqrt(dx * dx + dy * dy) || 1, nx = -dy / l, ny = dx / l;
       if (isRoad(tileAt(x, y)) === false) continue;   // (the road's own line off its asphalt: not here)
       for (const sd of [-1, 1]) {
-        const o = (e.hw || 40) + R.off, px = x + nx * sd * o, py = y + ny * sd * o, i = tileAt(px, py);
+        const o = (e.hw || 40) + R.off, px = Math.round(x + nx * sd * o), py = Math.round(y + ny * sd * o), i = tileAt(px, py);   // (rounded first: the post's own tile)
         // on the shoulder, with open desert beyond it (not another road's asphalt a tile further out)
         if (!shoulder(i, e.kind === 'hwy') || rail.has(i) || isRoad(tileAt(px + nx * sd * TILE, py + ny * sd * TILE))) continue;
-        H3.addProp(m, 'delineator', Math.round(px), Math.round(py), 0, { a: Math.round(Math.atan2(dy, dx) * 100) / 100 });
+        H3.addProp(m, 'delineator', px, py, 0, { a: Math.round(Math.atan2(dy, dx) * 100) / 100 });
         out.posts++; made++;
       }
     }
