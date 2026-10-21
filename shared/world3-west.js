@@ -87,6 +87,8 @@ export function layWest3(lines, m) {
 
 // ---- the set pieces -------------------------------------------------------------------------------------------------
 const GROUND = new Set([T.GRASS, T.DIRT, T.SAND]);
+// an integer hash in [0, 1) (no Math.random: the world comes out the same in every engine)
+const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 const hash = (x, y, s) => { let h = Math.imul(x | 0, 374761393) ^ Math.imul(y | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
 // a building of ours (a roof record for the classic renderer; `art` its look for art v2, or none: the kind's archetype)
@@ -351,10 +353,57 @@ export function buildWest(m, addProp) {
     const wide = inF(fx, fy) && m.river[fy * W + fx] && m.tiles[fy * W + fx] === T.WATER;
     if (wide) head = [fx, fy];
     for (let y = fy - 20; y < fy + 30 && !head; y++) for (let x = fx - 20; x < fx + 20; x++) if (inF(x, y) && m.river[y * W + x] && m.tiles[y * W + x] === T.WATER) { head = [x, y]; break; }
+    if (head && wide) {
+      // (2026-10-20, the nature program) a horseshoe of basalt columns across the river's mouth where it meets its lake,
+      // its middle bowed upstream, and a veil of silver threads over it - a dozen falls, the broadest in the middle, dry
+      // rock between - into the plunge basin inside the horseshoe; rocks splitting the flow above the lip, mist over the
+      // basin. (Not the band of before: a straight wall across the whole lake's head.)
+      const [cx] = head, cy = head[1];
+      const rw = (x, y) => inF(x, y) && m.river[y * W + x] && (m.tiles[y * W + x] === T.WATER || m.tiles[y * W + x] === T.DEEP);
+      const run = (y) => { let a = cx, b = cx; if (!rw(cx, y)) return null; while (rw(a - 1, y) && cx - a < 120) a--; while (rw(b + 1, y) && b - cx < 120) b++; return [a, b]; };
+      // the river's own width up the stream, then down to the last row before it flares into the lake: the arms' row
+      const up = run(cy - 30) || [cx - 20, cx + 20], wR = up[1] - up[0];
+      let yE = cy - 30;
+      for (let y = cy - 30; y <= cy + 6; y++) { const r = run(y); if (!r || r[1] - r[0] > wR + 4) break; yE = y; }
+      const [xa, xb] = run(yE) || up, xc = (xa + xb) / 2, hw = Math.max(4, (xb - xa) / 2), BOW = Math.min(9, Math.round(hw * 0.3));
+      const row = [];
+      for (let x = xa - 2; x <= xb + 2; x++) { const u = Math.min(1, Math.abs(x - xc) / hw); row.push(yE - Math.round(BOW * (1 - u * u) + (hh(x >> 1, 3, 911) - 0.5) * 1.6)); }
+      const rowAt = (x) => row[Math.max(0, Math.min(row.length - 1, x - (xa - 2)))];
+      let cliff = 0;
+      for (let x = xa - 2; x <= xb + 2; x++) for (let y = rowAt(x) - 1; y <= rowAt(x) + 1; y++) {
+        if (!inF(x, y)) continue;
+        const i = y * W + x, t = m.tiles[i];
+        if (t === T.ROAD || t === T.BRIDGE || t === T.SIDEWALK || t === T.BUILDING) continue;
+        if (rw(x, y) || open(x, y)) { m.land[i] = 1; m.river[i] = 0; m.dist[i] = 47; m.tiles[i] = T.WALL; m.reserve[i] |= 4; cliff++; }
+      }
+      // the columns' faces (south, toward the view): short lengths stepping round the curve
+      for (let x = xa - 2; x <= xb; x += 3) {
+        const r = Math.max(rowAt(x), rowAt(x + 1), rowAt(x + 2));
+        addProp(m, 'cliffwall', (x + 1.5) * TILE, (r + 2.4) * TILE, 0, { len: 3 * TILE, h: 112 + Math.round(hh(x, 1, 913) * 30), d: 64, s: x }), out.props++;
+      }
+      // the threads: one to every two tiles of the lip, the broad ones in the middle, now and then dry rock - each just in
+      // front of the columns' foot (drawn over the faces)
+      let threads = 0;
+      for (let x = xa; x <= xb; x += 2) {
+        const u = Math.abs(x + 0.5 - xc) / hw, q = hh(x, 2, 917);
+        if (u > 0.3 && q < 0.28) continue;
+        const w = Math.round(u < 0.3 ? 44 + q * 30 : u < 0.7 ? 22 + q * 26 : 14 + q * 16);
+        addProp(m, 'coastfall', (x + 0.5 + (q - 0.5) * 0.8) * TILE, (Math.max(rowAt(x - 1), rowAt(x), rowAt(x + 1)) + 3.1) * TILE, 0, { w, drop: 136 + Math.round(q * 16), s: 17 + (x % 11), kind: 'cliff', mist: u < 0.4 ? 0.9 : 0.5 });
+        out.props++; threads++;
+      }
+      // rocks in the stream above the lip, splitting the flow; mossy basalt boulders in the basin; the mist over it
+      for (let k = 0; k < 7; k++) { const x = Math.round(xa + 2 + hh(k, 4, 919) * (xb - xa - 4)), y = rowAt(x) - 3 - Math.round(hh(k, 5, 919) * 4); wet('boulder', x + 0.5, y + 0.5, 0, { s: 14 + Math.round(hh(k, 6, 919) * 16), style: 'basalt', moss: 1 }); }
+      for (let k = 0; k < 6; k++) { const x = Math.round(xa + 1 + hh(k, 7, 919) * (xb - xa - 2)), y = rowAt(x) + 3 + Math.round(hh(k, 8, 919) * 3); wet('boulder', x + 0.5, y + 0.5, 0, { s: 12 + Math.round(hh(k, 9, 919) * 14), style: 'basalt', moss: 1 }); }
+      for (const f of [-0.5, 0, 0.5]) { const x = Math.round(xc + f * hw); wet('steam', x + 0.5, rowAt(x) + 4.5, 0, { w: Math.round(hw * TILE * 0.8), h: 60, s: 3 + Math.round(f * 4) }); }
+      out.falls = { head: [Math.round(xc), rowAt(Math.round(xc))], cliff, threads, lip: { x0: xa - 2, x1: xb + 2, y: yE, row } };
+      keep(xa - 24, yE - 50, xb + 24, yE + 20);
+      landmark('Silver Thread Falls', 'falls', Math.round(xc) - 36, yE - BOW - 10, Math.round(xc) + 36, yE + 16);
+    }
     if (head) {
       const [cx] = head, cy = head[1];
-      // the plunge pool (water, as the creek's), the cliff band north of it (solid), the upper creek above
       const poolR = 14;
+    if (!wide) {
+      // the plunge pool (water, as the creek's), the cliff band north of it (solid), the upper creek above
       for (let y = cy - 2; y < cy + poolR + 4; y++) for (let x = cx - poolR - 2; x <= cx + poolR + 2; x++) {
         const dx = x - cx - 4, dy = (y - cy - poolR * 0.5) * 1.2;
         if (dx * dx + dy * dy > poolR * poolR || !inF(x, y)) continue;
@@ -363,16 +412,8 @@ export function buildWest(m, addProp) {
         m.land[i] = 0; m.river[i] = 1; m.tiles[i] = T.WATER; m.reserve[i] |= 4;
       }
       const top = cy - 5;
-      let x0 = cx - 10, x1 = cx + 20;
+      const x0 = cx - 10, x1 = cx + 20;
       let cliff = 0;
-      if (wide) {
-        // (the band across the whole river: its water on these rows the basalt lip, ground of the woods - 47 - the
-        // river falling over it into the pool)
-        const rw = (x, y) => inF(x, y) && m.river[y * W + x] && m.tiles[y * W + x] === T.WATER;
-        while (rw(x0 - 1, cy - 3)) x0--;
-        while (rw(x1 + 1, cy - 3)) x1++;
-        for (let y = top; y < cy - 2; y++) for (let x = x0; x <= x1; x++) if (rw(x, y)) { const i = y * W + x; m.land[i] = 1; m.river[i] = 0; m.dist[i] = 47; m.tiles[i] = T.WALL; m.reserve[i] |= 4; cliff++; }
-      }
       for (let y = top; y < cy - 2; y++) for (let x = x0; x <= x1; x++) { if (!open(x, y)) continue; m.tiles[y * W + x] = T.WALL; m.reserve[y * W + x] |= 4; cliff++; }
       for (let x = x0; x < x1; x += 6) addProp(m, 'cliffwall', (x + 3) * TILE, (cy - 2.4) * TILE, 0, { len: 6 * TILE, h: 120 + (x % 3) * 10, d: 64, s: x }), out.props++;
       // the upper creek: a narrow channel north over the cliff top, from the peaks
@@ -380,6 +421,10 @@ export function buildWest(m, addProp) {
       // the falls: three streams side by side over the band (SC3-A), the middle one the broadest
       for (const [dx, w, sd] of [[-4, 48, 17], [3, 72, 19], [10, 40, 23]]) { addProp(m, 'coastfall', (cx + dx) * TILE, (cy - 1.6) * TILE, 0, { w, drop: 140, s: sd, kind: 'cliff', mist: 0.9 }); out.props++; }
       for (const [dx, dy, r] of [[-7, 3, 14], [10, 4, 12], [-9, 9, 10], [12, 11, 14], [3, 13, 9]]) wet('boulder', cx + 2 + dx, cy + dy, r, { s: r * 2 + 4, style: 'basalt', moss: 1 });
+      out.falls = { head: [cx, cy], cliff };
+      keep(cx - poolR - 20, top - 42, cx + poolR + 24, cy + poolR + 6);
+      landmark('Silver Thread Falls', 'falls', cx - 30, top - 10, cx + 30, cy + poolR + 6);
+    }
       // the viewing platform: decking on the west bank, a rail and a scope, a bench; the trail from the road
       let px = null, east = false;
       for (let x = cx - poolR + 2; x > cx - poolR - 16 && px === null; x--) { let ok = true; for (let y = cy + 2; y < cy + 8 && ok; y++) for (let dx = 0; dx < 6; dx++) if (!open(x - dx, y)) { ok = false; break; } if (ok) px = x - 5; }
@@ -390,10 +435,8 @@ export function buildWest(m, addProp) {
         // the trail west to Falls Pass Road (the first road tile), the pull-off beside it
         if (!east) { let rx = px - 1; while (rx > px - 40 && tile(rx, cy + 5) !== T.ROAD) rx--; track([[px, cy + 5], [rx + 2, cy + 5]], 1.3); prop('mapboard', px - 3, cy + 3, 8); }
         out.platformSide = east ? 'east' : 'west';
+        if (out.falls) out.falls.platformAt = [px + 3, cy + 5];   // (where the woods' Gorge Trail ends: world3-trails.js)
       }
-      out.falls = { head: [cx, cy], cliff };
-      keep(cx - poolR - 20, top - 42, cx + poolR + 24, cy + poolR + 6);
-      landmark('Silver Thread Falls', 'falls', cx - 30, top - 10, cx + 30, cy + poolR + 6);
     }
   }
 

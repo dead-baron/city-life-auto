@@ -47,13 +47,13 @@ export const SPECIES = {
   deer: {
     name: 'Black-tailed Deer', size: 'medium', hp: 60, walk: 45, trot: 140, run: 310,
     sense: { sight: 340, hear: 320, smell: 440 }, temper: 'skittish', group: { kind: 'herd', n: [1, 4], young: 'fawn', youngP: 0.4 },
-    active: 'dawn-dusk', habitat: { redwood: 4, forest: 4, meadow: 3, farm: 1.2, scrub: 1 }, diet: 'browse',
+    active: 'dawn-dusk', habitat: { redwood: 4, forest: 4, meadow: 3, farm: 1.2, scrub: 1, glade: 8 }, diet: 'browse',
     loot: [['venison', 3, 5], ['deerHide', 1, 1], ['antlers', 1, 1, 0.45]], legend: { name: 'the White Hart', p: 0.014 },
   },
   elk: {
     name: 'Roosevelt Elk', size: 'large', hp: 150, walk: 42, trot: 130, run: 290,
     sense: { sight: 360, hear: 330, smell: 480 }, temper: 'wary', group: { kind: 'herd', n: [3, 7], young: 'calf', youngP: 0.5 },
-    active: 'dawn-dusk', habitat: { redwood: 3, meadow: 3, forest: 2, mountain: 1 }, diet: 'graze', charges: 0.25,
+    active: 'dawn-dusk', habitat: { redwood: 3, meadow: 3, forest: 2, mountain: 1, glade: 5 }, diet: 'graze', charges: 0.25,
     loot: [['elkMeat', 5, 8], ['elkHide', 1, 1], ['elkAntlers', 1, 1, 0.4]], legend: { name: 'the Ghost Elk', p: 0.012 },
   },
   moose: {
@@ -274,7 +274,7 @@ export const GRADE_NAME = ['', 'Poor', '', 'Perfect'];
 // meadow (open wild grass), scrub, desert, mountain (Granite Peaks), cliff (rock faces in the wilds), farm
 // (fields and pastures), water (any fresh water near), river / creek / lake / pond / marsh, kelp (the kelp
 // beds off the rocky coasts), beaver (a beaver pond: map.beaverPonds), park.
-export const HABITATS = ['redwood', 'forest', 'meadow', 'scrub', 'desert', 'mountain', 'cliff', 'farm', 'water', 'river', 'creek', 'lake', 'pond', 'marsh', 'kelp', 'beaver', 'park'];
+export const HABITATS = ['redwood', 'forest', 'meadow', 'scrub', 'desert', 'mountain', 'cliff', 'farm', 'water', 'river', 'creek', 'lake', 'pond', 'marsh', 'kelp', 'beaver', 'park', 'glade'];   // (glade: World v3's woods' hidden clearings, shared/world3-trails.js)
 
 // What the client draws an animal doing (the snapshot's extra byte, bits 0-4; bit 7: in the water). 0: work it out
 // from the speed (stand / walk / trot / run). happy: a lost pet back with its owner (server/systems/pets.js).

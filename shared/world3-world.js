@@ -32,9 +32,11 @@ import { subwayLoops } from './world3-subway.js';
 import { paintWater3, buildWater3, waterDone } from './world3-water.js';
 import { waterBodies3 } from './world3-waterbodies.js';
 import { riverBanks3 } from './world3-banks.js';
+import { buildMarshBoardwalk3 } from './world3-marsh.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
 import { wildSites3, wildDone, movedAt, wildDist, wildFarm3 } from './world3-wild.js';
 import { buildRelief3 } from './world3-relief.js';
+import { buildTrails3 } from './world3-trails.js';
 // (v3b, WORLD-V3.md 9.3: the city - its districts, its streets and its places; on the v3b frame only)
 import { buildAirstrips3 } from './world3-airstrips.js';
 import { buildSarHq3 } from './world3-sarhq.js';   // (v3b: the rescue pilots' base)   // (v3b: the crop dusters' strips and Lucky Mesa's)
@@ -230,8 +232,10 @@ export function worldOpts(asked) {
       if (H3) { m.world3.railCleared = clearRailDressing(m, H3.removeProps); clearBeachFront(m, H3.removeProps); }   // (8.14: no tree over the main line or a platform; the promenade and car parks clear)
       m.world3.ferries = buildFerries3(m, H3);   // (H42, 8.17: the ferries' piers, terminals, ramps and pontoons where each route calls: world3-ferries.js)
       waterDone(m, H3);   // (H46, 8.21: the boat rental at Kestrel Lake, the quays at the River Water Bus's stops, the prison's harbour: world3-water.js)
+      m.world3.marsh = buildMarshBoardwalk3(m, H3 && H3.removeProps);   // (Nature-C3, 2026-10-20: the Egret Marsh Boardwalk - world3-marsh.js)
       m.world3.banks = riverBanks3(m);   // (the nature program, 2026-10-20: the rivers' gravel bars, cut banks and green banks - world3-banks.js)
       m.world3.waterBodies = waterBodies3(m);   // (2026-10-18, the water upgrade: which water is a creek, a river, a lake, a pond or the marsh, which way each channel runs - m.waters, m.lake: world3-waterbodies.js)
+      m.world3.trails = buildTrails3(m, H3);   // (the nature program, 2026-10-20: Highland Woods' trails, their furniture, the glades and the fire lookout - world3-trails.js)
     },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a
     // handcrafted district's plan, which places its own

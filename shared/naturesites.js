@@ -1035,8 +1035,11 @@ function pineLake(m, H) {
   for (let ty = Math.floor(CY); ty < CY + 10; ty++) for (let tx = Math.floor(CX - 7); tx < CX + 7; tx++) { const i = at(tx, ty); if (land(i)) m.reserve[i] |= RES; }
   add('mapboard', CX + 5.2, CY - 1.4, 10);
   // the dirt track in from the Highland stop's lot, a timber guard rail where it runs along the water
+  // (the world build, 2026-10-20: the campground and the Highland stop moved far off with the woods - World v3's trails
+  // and tracks come in to the lake instead: world3-trails.js)
+  const near = (q) => !H.place?.d || Math.hypot(q.x - LX, q.y - LY) < 90;
   const stop = (m.countrySites || []).find((q) => q.name === 'Highland');
-  if (stop) {
+  if (stop && near(stop)) {
     const pts = way([[stop.x - 0.5, stop.y + stop.h - 2.5], [stop.x - 9, stop.y + stop.h - 4], [CX + 14, CY + 6], [CX + 6, CY + 3.2]], 40);
     for (let k = 0; k < pts.length - 6; k += 6) {
       const [x, y] = pts[k], [x2, y2] = pts[k + 6], tx = x / TILE, ty = y / TILE;
@@ -1049,7 +1052,7 @@ function pineLake(m, H) {
   // the trail up from the Pine Ridge Campground, over the creek on a timber footbridge, round the north shore
   const camp = (m.countrySites || []).find((q) => q.name === 'Pine Ridge Campground');
   let bridge = null;
-  if (camp) {
+  if (camp && near(camp)) {
     const tp = way([[camp.x + camp.w - 2, camp.y + 0.5], [camp.x + camp.w + 4, camp.y - 7], [LX - RX - 24.5, LY - 1], [LX - RX - 23.5, LY - 10], [LX - RX - 14, LY - 11.5], [LX - RX - 2, LY - 10.5], [BX - 4, BY - 2.5]], 22);
     // where it crosses the creek: planks over the water, the footbridge over them
     const cross = tp.filter(([x, y]) => wet.has(at(x / TILE, y / TILE)) && m.river[at(x / TILE, y / TILE)]);

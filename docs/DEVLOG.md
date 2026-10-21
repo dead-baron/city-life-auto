@@ -12410,3 +12410,86 @@ Tests: test/world3rivers.test.js - no traced end left a short way off another's 
 World v3 reaches the sea; the bars, the shingle, the cut and the green banks, clear of the roads; no pavement on the
 country districts' tiles, the Sandpiper Coast's road bare, the beach towns' kept; the bake of a county road through
 the Egret Coast grass to the verge.
+
+## 2026-10-20 · Nature: the Egret Marsh Boardwalk (Nature-C3)
+
+The Nature-C3 concept - a timber boardwalk out over a marsh - built into World v3's Egret Coast marsh
+(`shared/world3-marsh.js`, the World v3 build's last step):
+- **The site**: along the county roads through the Egret Coast, the point a few tiles off the road with the most open
+  marsh water out beyond it (and its edge close by).
+- **The walk**: from a trailhead by the road (a map board, a split-rail fence along the dirt path in), a plank
+  boardwalk with rails zig-zags out over the channels - each leg 6-14 tiles over open marsh water or a reed island,
+  turning one way and then the other, ending out over the water. Its planks are walkable all the way: over the water
+  a deck (bridge tiles - the marsh's channels stay one water under it, and the bake draws the marsh there), on the reed
+  islands dock tiles the ground bake draws as the island under the boardwalk (`m.walkways`), the boardwalk's own model standing over them
+  (now laid at any heading, and wider: `client/art2/game/statics.js`).
+- **The bird hide**: a roofed plank hut on piles beside the walk at its third bend, its viewing slot to the open water
+  (`client/art2/props-garden.js` birdHide).
+- **The viewing platform** at the far end: a square plank deck with rails round three sides out over the water, a
+  bench and a coin telescope on it (`viewPlatform`). (The telescope draws a birdwatcher: Nature-C4.)
+- **The canoe dock**: a short pier off the first leg where it reaches the water, two canoes moored by it.
+- **The beavers**: their lodge out in the water off the platform, and their dam across a narrow channel where there's
+  one near (3-6 tiles of water across, ground at both ends).
+- Lily pads in the quiet water, cattails and reeds on the islands' edges; the herons, ducks and fish are the marsh's
+  own. Nothing the woods or the dressing put on the planks stays.
+
+Tests: test/world3marsh.test.js - built in the Egret Coast's marsh, zig-zagging out over the water most of the way and
+on its planks every step, a boardwalk for each leg, the hide, the platform out over the water with its telescope and
+bench, two canoes, the lodge; the walkways listed; nothing else on the planks.
+
+## 2026-10-20 · Nature: Highland Woods by hand - the falls, the trails, the glades (Nature-D2, Nature-C2)
+
+The nature program's third step begins in Highland Woods, World v3's great forest. From the owner's notes ("every
+nature area beautiful and handcrafted", "Highland Woods walking paths like the concepts", "some semi-open clearings,
+on and off the paths", "long straight cliff lines: remove", "rivers that look natural") and the Nature-D2 (trail
+furniture) and Nature-C2 (the secluded glade) concepts:
+- **No straight lines round the falls** (`shared/world3-relief.js` escarpment): each falls raised the land north of its
+  lip in a band 140 tiles wide with a 1.5-tile wobble and walled its gorge in two straight lines 90 tiles long - and the
+  band ended in a 22 m step at its box's edge, so Redwood Creek's and Fern Gorge's falls drew a hard rectangle into the
+  woods. Now the lip bends back upstream as it leaves the falls (`ESC.BEND`), wobbling, its height fading 25-85 tiles
+  out and back down to the land's own 40-140 tiles behind it, its step sharp at the falls and a slope away from them;
+  the gorge's walls follow the water below the falls (a distance field to it), rising from the falls' row.
+- **Silver Thread Falls** (`shared/world3-west.js`): the band of basalt straight across the head of the woods' lake
+  is gone. A horseshoe of basalt columns now stands across the river's mouth, its middle bowed nine tiles upstream, its
+  faces stepping round the curve - and over it a veil of some two dozen threads, the broad ones in the middle, dry
+  rock between, rocks splitting the flow above the lip and boulders in the basin below.
+- **The rivers' straight reaches wander** (`shared/world3-banks.js` WOB): along a straight reach each bank is built out
+  into the water in a slow wave (up to 40% of the half-width, every 18 tiles or so), so no river runs canal-straight
+  (some 11,500 tiles in World v3); never by a moored boat, within three tiles of a road or in a lock's channel
+  (Willow Crossing's).
+- **The trails** (`shared/world3-trails.js`, new; the world build's done hook, after the water bodies): four marked
+  trails, laid where they walk easiest - an A* over the tiles pricing the slope (squared: they keep to the contours),
+  water (a crossing only where it must), roads, the designed places' ground and whatever stands there - two tiles of
+  packed dirt with the trees taken off them:
+  - the **Highland Way** (blue), the woods end to end: Pine Ridge Campground, Pine Lake, the big lake's shore, Redwood
+    Creek's falls, up through the redwoods to Silver Thread Falls (about 1.2 km);
+  - the **Mast Ridge Trail** (red) from the Way past the radio mast to the **Highland Fire Lookout** on the ridge where
+    the woods climb toward Granite Peaks - a tall tower over the redwoods' crowns, its coin telescope and a bench;
+  - the **Gorge Trail** (yellow) from Fern Gorge over Silver Thread Creek's gorge on a **rope bridge** from rim to rim
+    to the falls' viewing platform;
+  - the **Giants Link** from the Giants Loop to the Way.
+  Their furniture (D2): a trailhead board, the trail's sign, a drinking fountain and a bin where each starts;
+  fingerposts where they join; a blaze post in the trail's colour every 40 tiles; log steps up the steep stretches, a
+  handrail where the ground falls away beside them; a log bridge over a creek, a timber footbridge over wider water;
+  benches where a lake is in view. The bridges' decks are bridge tiles over the water (as a road bridge's: walked
+  onto from the bank, boats and swimmers pass beneath, the river stays one - and the bake draws the water there). Pine Lake's two ways in - laid from its anchor of the old world, they ran 260 and 620 tiles dead
+  straight to the moved campground and the Highland stop - are not laid in the world build any more
+  (`shared/naturesites.js` pineLake): the Highland Way comes in instead.
+- **The glades** (C2): four hidden clearings off the Highland Way, each down its own short path and out of sight of
+  it - Fern Hollow, Elk Glade, Toadstool Glade, and Hidden Pool by Redwood Creek with its pool, a little fall and a log
+  across the outflow. In each a stone fire ring (a campfire rest spot: `m.restSpots` kind 'glade', some still
+  burning), three log seats and two stumps round it, the long mossy log with the three mushrooms along it (redcap,
+  golden trumpets, the ghostglass caps that glow), berry bushes to pick, mossy boulders and white daisies in the sunlit
+  grass; the tall trees in front of it in the view taken out so it reads as open. Deer and elk come to them
+  (`server/systems/wildlife.js` habitatAt: the 'glade' tag; `shared/fauna.js`).
+- The art (`client/art2/props-garden.js`, drawn by `client/art2/game/statics.js`): trailBlaze, logSteps, logBridge,
+  ropeBridge, drinkFountain; the lookout tower takes a height (`p.h`).
+- The bake code budget 821 -> 824 KB (`tools/perf.mjs`) for the five new models.
+
+Tests: test/world3woods.test.js - no falls with its step on one row for 30 columns, no edge where the high ground's box
+ends; Silver Thread Falls a horseshoe with its veil, no rock out over the lake; the straight reaches' banks built
+out; every trail laid with nothing missed, the Highland Way at least 800 tiles, every step of each on walkable ground
+(none in the water), no tree on any; the blazes, fountains, boards and fingerposts; the rope bridge over a gorge at
+least 10 m deep, walkable under its line; each glade's fire ring (a rest spot), seats, mossy log, the three
+mushrooms and the berries, no tree in it, the deer's habitat; Hidden Pool's pool and fall; the lookout high over the
+Way; Pine Lake's straight old way gone.

@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
-import { T } from '../shared/constants.js';
+import { T, TILE } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { STREAMS, RIVER, JOIN_GAP, MOUTHS } from '../shared/world3-skeleton.js';
 import { BANK_DISTRICTS } from '../shared/world3-banks.js';
@@ -47,6 +47,18 @@ test('World v3: every river system runs to the sea; gravel bars on the bends, cu
       }
     }
   }
+  // (a waterfall's lip of rock parts the river above it from the pool below, but the water goes over it: the bodies
+  // round each falls - within 7 tiles of its foot, or 10 above it - are one)
+  const up = bodies.map((_, j) => j), find = (j) => { while (up[j] !== j) j = up[j] = up[up[j]]; return j; };
+  for (const p of m.props) {
+    if (!p || (p.t !== 'coastfall' && p.t !== 'fallsmall')) continue;
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE), ls = new Set();
+    for (let dy = -10; dy <= 7; dy++) for (let dx = -7; dx <= 7; dx++) { const x = tx + dx, y = ty + dy; if (x >= 0 && y >= 0 && x < W && y < H && lab[y * W + x] >= 0) ls.add(find(lab[y * W + x])); }
+    const [a0, ...rest] = [...ls]; for (const b of rest) up[find(b)] = find(a0);
+  }
+  const seaOf = new Map();
+  bodies.forEach((b, j) => { const r = find(j); seaOf.set(r, (seaOf.get(r) || false) || b.sea); });
+  bodies.forEach((b, j) => { b.sea = seaOf.get(find(j)); });
   const rivers = bodies.filter((b) => b.n >= 20000 && b.lake < b.n * 0.9);   // (Kestrel Lake behind its weir, the city's pond: lakes)
   assert.ok(rivers.length >= 4, `the big river systems (${rivers.length})`);
   for (const b of rivers) assert.ok(b.sea, `a river system of ${b.n} tiles reaches the sea`);

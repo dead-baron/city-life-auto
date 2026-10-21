@@ -135,6 +135,7 @@ export function habitatAt(map, x, y) {
   if (cls === 2) { tags.forest = 1; if (d === 29 || d === 47) tags.redwood = 1; }   // (47: World v3's Highland Woods)
   else if (cls === 0 && style === 'wild') tags.meadow = 1;
   if (cls === 1) tags.scrub = 1;
+  if (gladeAt(map, x, y)) { tags.glade = 1; tags.meadow = 1; }   // (World v3's woods' hidden glades: the deer and elk come to them)
   // water and rock round about (every other tile out to 8)
   let water = 0, rock = 0;
   for (let dy = -8; dy <= 8; dy += 2) for (let dx = -8; dx <= 8; dx += 2) {
@@ -151,6 +152,12 @@ export function habitatAt(map, x, y) {
 }
 function lakeBig(map, tx, ty) { let n = 0; for (let dy = -6; dy <= 6; dy += 3) for (let dx = -6; dx <= 6; dx += 3) { const j = at(map, tx + dx, ty + dy); if (j >= 0 && map.lake[j]) n++; } return n >= 18; }
 function narrow(map, tx, ty) { let n = 0; for (let k = -4; k <= 4; k++) { const a = at(map, tx + k, ty), b = at(map, tx, ty + k); if (a >= 0 && WATER_T[map.tiles[a]]) n++; if (b >= 0 && WATER_T[map.tiles[b]]) n++; } return n < 11; }
+// a glade of the woods' (map.natureSites kind 'glade': shared/world3-trails.js) round (x, y) px
+function gladeAt(map, x, y) {
+  if (!map._glades) Object.defineProperty(map, '_glades', { value: (map.natureSites || []).filter((q) => q.kind === 'glade'), enumerable: false, configurable: true });
+  for (const g of map._glades) if (Math.abs(g.x - x) < g.r && Math.abs(g.y - y) < g.r && Math.hypot(g.x - x, g.y - y) < g.r) return true;
+  return false;
+}
 function marshy(map, tx, ty) { return (map.natureSites || []).some((q) => q.kind === 'marsh' && Math.hypot(q.x - tx * TILE, q.y - ty * TILE) < 900); }
 function kelpAt(map, x, y) {
   if (!map._kelp) Object.defineProperty(map, '_kelp', { value: (map.natureSites || []).filter((q) => KELP_SITES.includes(q.kind)).map((q) => ({ x: q.x, y: q.y })), enumerable: false, configurable: true });

@@ -22,11 +22,17 @@ import { LAKE_PIECES, MARSH_BOX } from './world3-waterbodies.js';
 // Coast and its rocks, Paradise Cay
 export const BANK_DISTRICTS = new Set([45, 47, 48, 49, 50, 51, 53, 56]);
 export const BANK = { step: 1, bend0: 0.12, bendK: 26, barMax: 0.33, upBank: 3, cut: 0.22, cutW: 2, lush: 0.08, lushW: 2, road: 3 };
+// (the straight reaches' edges wander, 2026-10-20: each bank built out into the water in a slow wave along the reach -
+// up to `k` of the channel's half-width, the wave `wave` tiles long - so no reach runs canal-straight; channels at
+// least `min` tiles wide each side, never by a moored boat)
+export const WOB = { wave: 18, k: 0.4, min: 3, boat: 6 };
 
 const ih = (x, y, s) => { let h = (x * 374761393 + y * 668265263 + s * 2246822519) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
 export function riverBanks3(m) {
-  const W = m.w, H = m.h, out = { bars: 0, barBank: 0, cut: 0, lush: 0 };
+  const W = m.w, H = m.h, out = { bars: 0, barBank: 0, cut: 0, lush: 0, wob: 0 };
+  // the slow wave along a reach (0..1, smooth): a hash at every `wave` tiles of it, eased between
+  const wave = (sj, seed) => { const k = Math.floor(sj / WOB.wave), f = sj / WOB.wave - k, a = ih(k, seed, 31), b = ih(k + 1, seed, 31), t = f * f * (3 - 2 * f); return a + (b - a) * t; };
   const at = (x, y) => { const tx = Math.floor(x), ty = Math.floor(y); return tx >= 0 && ty >= 0 && tx < W && ty < H ? ty * W + tx : -1; };
   // the tiles near a road, a bridge or a dock (kept clear): a mask over the frame, BANK.road tiles round each
   const nearRoad = new Uint8Array(W * H), R = BANK.road;
@@ -37,8 +43,16 @@ export function riverBanks3(m) {
   }
   const country = (i) => BANK_DISTRICTS.has(m.dist[i]);
   const openLand = (i) => i >= 0 && m.land[i] && !nearRoad[i] && !m.reserve[i] && (m.bld ? m.bld[i] < 0 : true) && (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND) && country(i);
+  // (a lock and its weir - world3-water.js m.locks: their channel stays as built, its whole length)
+  for (const lk of m.locks || []) { const lx = Math.floor(lk.x / 32), ly = Math.floor(lk.y / 32); for (let dy = -36; dy <= 36; dy++) for (let dx = -36; dx <= 36; dx++) { const x = lx + dx, y = ly + dy; if (x >= 0 && y >= 0 && x < W && y < H) nearRoad[y * W + x] = 1; } }
   const openWater = (i) => i >= 0 && m.tiles[i] === T.WATER && m.river[i] && !(m.lake && m.lake[i]) && !nearRoad[i];   // (the water's own district is the sea's: the bank's says whose country it is)
   const barred = [];   // (the bars' tiles: the water caught between them filled after)
+  // the boats moored on the rivers (the marinas', the hire docks'): no bank built out under them
+  const boats = new Set();
+  for (const b of [...(m.marina || []), ...(m.rentals || []).flatMap((r) => r.spots || [])]) {
+    const bx = Math.floor(b.x / 32), by = Math.floor(b.y / 32);
+    for (let dy = -WOB.boat; dy <= WOB.boat; dy++) for (let dx = -WOB.boat; dx <= WOB.boat; dx++) { const i = at(bx + dx, by + dy); if (i >= 0) boats.add(i); }
+  }
   const lines = [RIVER, ...STREAMS].filter(Boolean).filter((S) => !LAKE_PIECES.has(`${(S.first || S.pts[0])[0]},${(S.first || S.pts[0])[1]}`));
   for (const S of lines) {
     const P = smoothPath(S).pts, hw = S.width / 2, n = P.length;
@@ -77,8 +91,14 @@ export function riverBanks3(m) {
         // the outside: the cut bank's gravel
         if (ab > BANK.cut) put(-sb, hw, hw + BANK.cutW, (i) => { if (openLand(i) && m.tiles[i] === T.GRASS) { m.tiles[i] = T.DIRT; out.cut++; } });
       } else if (ab < BANK.lush) {
-        // a straight reach: green banks both sides
-        for (const side of [1, -1]) put(side, hw, hw + BANK.lushW, (i) => { if (openLand(i) && m.tiles[i] === T.GRASS) { m.reserve[i] |= 128; out.lush++; } });
+        // a straight reach: green banks both sides, each edge wandering out into the water and back
+        const seed = Math.floor(S.pts[0][0]) * 7 + Math.floor(S.pts[0][1]) * 13;
+        for (const side of [1, -1]) {
+          put(side, hw, hw + BANK.lushW, (i) => { if (openLand(i) && m.tiles[i] === T.GRASS) { m.reserve[i] |= 128; out.lush++; } });
+          const bank = at(c[0] + nrm[0] * side * (hw + 1.5), c[1] + nrm[1] * side * (hw + 1.5));
+          const o = hw >= WOB.min ? Math.max(0, wave(j, seed + (side > 0 ? 1 : 0)) - 0.3) / 0.7 * hw * WOB.k : 0;
+          if (o >= 0.75 && bank >= 0 && m.land[bank] && country(bank)) put(side, hw - o, hw - 0.5, (i) => { if (openWater(i) && !boats.has(i)) { m.tiles[i] = T.GRASS; m.land[i] = 1; m.river[i] = 0; m.reserve[i] |= 128; out.wob++; } });
+        }
       }
     }
   }

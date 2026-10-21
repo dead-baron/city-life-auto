@@ -386,32 +386,51 @@ function gorge(m, z, W, H) {
     z[i] = Math.max(1, z[i] - cut);
   }
 }
-// each falls: the land north of its lip raised (the band a real cliff across the creek, 70 tiles either side, fading
-// by 120), and its gorge below: the ground beside the pool and the creek raised as walls, open to the south (90 tiles)
+// each falls: the land north of its lip raised and its gorge below - the ground beside the water under the falls raised
+// as walls, open to the south (90 tiles). (2026-10-20, the nature program: no straight lines. The lip is the falls' own
+// across the stream - `lipAt`, a falls that draws one: Silver Thread Falls' horseshoe - and beyond it an edge that
+// bends back upstream as it leaves the falls, wobbling, its height fading 25-85 tiles out, its step sharp at the falls
+// and a slope away from them, the high ground behind it coming back down to the land's 40-140 tiles back (no edge where
+// its box ends); the gorge's walls follow the water below the falls, not the falls' column.)
 export function fallsOf3(m) {
   const out = [];
-  const head = m.world3?.west?.built?.falls?.head;
-  if (head) out.push({ x: head[0], y: head[1] - 3, name: 'Silver Thread Falls', w: 16 });
+  const F = m.world3?.west?.built?.falls, head = F?.head;
   for (const s of m.natureSites || []) {
     if (s.falls && Number.isFinite(s.falls.x) && Number.isFinite(s.falls.y)) out.push({ x: Math.floor(s.falls.x / TILE), y: Math.floor((s.falls.y - (s.falls.drop || 40)) / TILE), name: s.name || s.kind, w: Math.ceil((s.falls.w || 64) / TILE / 2) + 2 });
   }
-  return out.filter((f) => f.x >= 0 && f.y >= 0 && f.x < m.w && f.y < m.h && m.dist[f.y * m.w + f.x] >= 47);
+  const own = out.filter((f) => f.x >= 0 && f.y >= 0 && f.x < m.w && f.y < m.h && m.dist[f.y * m.w + f.x] >= 47);
+  // (Silver Thread Falls: the woods' own, at the head of its lake - its lip's ends on the lake's water)
+  if (head) own.unshift({ x: head[0], y: F.lip ? F.lip.y : head[1] - 3, name: 'Silver Thread Falls', w: F.lip ? Math.ceil((F.lip.x1 - F.lip.x0) / 2) : 16, lip: F.lip || null });
+  return own;
 }
+export const ESC = { HF: 22, BEND: 30, WOB: 7, FULL: 25, GONE: 85, NORTH: [40, 140], GORGE: 90 };
 function escarpment(m, z, W, H, f) {
-  const HF = 22;
-  for (let y = Math.max(0, f.y - 140); y <= Math.min(H - 1, f.y + 100); y++) for (let x = Math.max(0, f.x - 130); x <= Math.min(W - 1, f.x + 130); x++) {
-    const i = y * W + x, dx = Math.abs(x - f.x), dy = y - f.y;
-    if (L_WET(m, i) && dy > 0) continue;
-    // north of the lip: the cliff top (the lip's line wobbles a little east-west)
-    const lip = 1.5 * (vn(x, 0, 23, 7501) - 0.5), across = sstep(0, 1, 1 - (dx - 70) / 50);
-    let add = 0;
-    if (dy <= lip) add = HF * across;
-    else if (dy < lip + 3) add = HF * across * (1 - (dy - lip) / 3) * 0.25;
-    // below it, the gorge's walls either side of the pool and the creek
-    if (dy > 0 && dy < 90) {
-      const open = f.w + 4 + dy * 0.05, wall = open + 4;
-      const k = dx <= open ? 0 : dx >= wall ? 1 : (dx - open) / 4;
-      add = Math.max(add, HF * k * (1 - dy / 90) * sstep(0, 1, 1 - (dx - 60) / 40));
+  const { HF, BEND, WOB, FULL, GONE, NORTH, GORGE } = ESC;
+  const x0 = Math.max(0, f.x - 150), x1 = Math.min(W - 1, f.x + 150), y0 = Math.max(0, f.y - 160), y1 = Math.min(H - 1, f.y + GORGE + 10);
+  const BW = x1 - x0 + 1, BH = y1 - y0 + 1;
+  // the lip's row (relative to f.y) at each column
+  const lipD = new Float32Array(BW);
+  for (let x = x0; x <= x1; x++) {
+    const beyond = Math.max(0, Math.abs(x - f.x) - f.w), wob = WOB * (vn(x, 0, 29, 7501) - 0.5) + 3 * (vn(x, 0, 9, 7503) - 0.5);
+    let d = -(beyond * beyond) / (2 * BEND) + wob * Math.min(1, beyond / 6);
+    if (f.lip && x >= f.lip.x0 && x <= f.lip.x1) d = f.lip.row[x - f.lip.x0] - f.y;
+    lipD[x - x0] = d;
+  }
+  // the water below the lip: each tile's distance to it (a 3-4 chamfer, tiles), for the gorge's walls
+  const INF = 1e9, dw = new Float32Array(BW * BH).fill(INF);
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (L_WET(m, y * W + x) && y - f.y > lipD[x - x0]) dw[(y - y0) * BW + x - x0] = 0;
+  for (let y = 0; y < BH; y++) for (let x = 0; x < BW; x++) { const k = y * BW + x; let v = dw[k]; if (x > 0) v = Math.min(v, dw[k - 1] + 1); if (y > 0) { v = Math.min(v, dw[k - BW] + 1); if (x > 0) v = Math.min(v, dw[k - BW - 1] + 1.4); if (x < BW - 1) v = Math.min(v, dw[k - BW + 1] + 1.4); } dw[k] = v; }
+  for (let y = BH - 1; y >= 0; y--) for (let x = BW - 1; x >= 0; x--) { const k = y * BW + x; let v = dw[k]; if (x < BW - 1) v = Math.min(v, dw[k + 1] + 1); if (y < BH - 1) { v = Math.min(v, dw[k + BW] + 1); if (x < BW - 1) v = Math.min(v, dw[k + BW + 1] + 1.4); if (x > 0) v = Math.min(v, dw[k + BW - 1] + 1.4); } dw[k] = v; }
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const i = y * W + x, adx = Math.abs(x - f.x), beyond = Math.max(0, adx - f.w), dy = y - f.y, lip = lipD[x - x0];
+    if (L_WET(m, i) && dy > lip) continue;
+    // north of the lip: the cliff top, its height fading away from the falls; the step sharp at the falls, a slope out
+    const height = HF * sstep(0, 1, 1 - (beyond - FULL) / (GONE - FULL)) * (1 - sstep(NORTH[0], NORTH[1], lip - dy)) * (0.8 + 0.4 * vn(x, 7, 41, 7505)), soft = 2 + beyond * 0.3;
+    let add = dy <= lip ? height : dy < lip + soft ? height * (1 - sstep(0, 1, (dy - lip) / soft)) : 0;
+    // below it, the gorge's walls beside the water (open 3 tiles, widening down it), fading south and away
+    if (dy > 0 && dy < GORGE) {
+      const d = dw[(y - y0) * BW + x - x0], open = 3 + dy * 0.04;
+      if (d < INF) add = Math.max(add, HF * sstep(open, open + 6, d) * (1 - sstep(30, 70, d)) * (1 - dy / GORGE) * sstep(0, 10, dy) * sstep(0, 1, 1 - (adx - 50) / 40));   // (rising from the falls' row: no step there)
     }
     if (add > 0 && z[i] > 0) z[i] += add;
   }

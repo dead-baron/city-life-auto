@@ -228,6 +228,41 @@ export function boardwalk(len = 160, w = 30, h = 8, rails = 'ns') {
   for (const side of rails) { const y = side === 'n' ? 1 : w - 4; for (let x = 2; x < len; x += 20) m.box(x, y, 0, x + 3, y + 3, h + 18, post); m.box(0, y, h + 15, len, y + 3, h + 18, rail); m.box(0, y + 0.5, h + 7, len, y + 2.5, h + 9, rail); }
   return m;
 }
+// a marsh's bird hide (Nature-C3: shared/world3-marsh.js): a plank hut on piles over the water, its door on the walk's
+// side (y = 0), the long viewing slot on the far side, a shingled roof pitched along x with eaves
+export function birdHide(w = 60, d = 48, h = 40) {
+  const m = new Vox(w + 4, d + 4, h + 26);
+  const pl = m.mat({ ramp: R('#8a6646', 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 4 === 0 ? -1.0 : 0) + (hash(Math.floor(x / 6), Math.floor(z / 4), 11) - 0.5) * 0.5 });
+  const post = m.mat({ ramp: R('#5e4434', 6, 3), k: 3 }), dark = m.mat({ ramp: R('#1e1a18', 4, 2), k: 1 });
+  const roof = m.mat({ ramp: R('#5a5048', 6, 3), k: 3, shade: (x, y, z) => (Math.round(y) % 3 === 0 ? -1.1 : 0) + (hash(Math.floor(x / 4), Math.floor(y / 3), 13) - 0.5) * 0.7 });
+  const x0 = 2, y0 = 2, x1 = w + 2, y1 = d + 2, fl = 10;
+  for (const [x, y] of [[x0 + 1, y0 + 1], [x1 - 4, y0 + 1], [x0 + 1, y1 - 4], [x1 - 4, y1 - 4]]) m.box(x, y, 0, x + 3, y + 3, fl, post);   // (the piles)
+  m.box(x0, y0, fl - 2, x1, y1, fl, pl);   // (the floor)
+  // the walls: planks, the door on the near side, the viewing slot along the far side
+  m.fill((x, y, z) => { if (z < fl || z >= fl + h) return -1; const edge = x < x0 + 2 || x >= x1 - 2 || y < y0 + 2 || y >= y1 - 2; if (!edge) return -1; return pl; });
+  m.box(x0 + w * 0.4, y0, fl, x0 + w * 0.4 + 12, y0 + 2, fl + 26, dark);   // (the doorway)
+  m.box(x0 + 6, y1 - 2, fl + 18, x1 - 6, y1, fl + 25, dark);               // (the slot)
+  m.box(x0 + 6, y1 - 1, fl + 17, x1 - 6, y1 + 1, fl + 18, post);           // (its sill)
+  // the roof: pitched across y, the ridge along x, eaves over every wall
+  const rz = (y) => fl + h + 14 - Math.abs(y - (y0 + y1) / 2) * (14 / ((d + 4) / 2));
+  m.fill((x, y, z) => (z >= fl + h - 1 && z < rz(y) + 1.5 && z >= rz(y) - 2 ? roof : -1));
+  return m;
+}
+// a marsh's viewing platform (Nature-C3): a square plank deck on posts over the water, len deep along x (the boardwalk
+// comes in at x = 0, through the gap in its rail), w across; rails round the other three sides
+export function viewPlatform(len = 160, w = 160, h = 8) {
+  const m = new Vox(len, w, h + 24);
+  const plank = m.mat({ ramp: R('#8a6646', 6, 3), k: 3, shade: (x, y) => (Math.round(y) % 5 === 0 ? -1.1 : 0) + (hash(Math.floor(y / 5), Math.floor(x / 40), 9) - 0.5) * 0.6 });
+  const post = m.mat({ ramp: R('#5e4434', 6, 3), k: 3 }), rail = m.mat({ ramp: R('#7a5a40', 6, 3), k: 3 });
+  m.box(0, 0, h - 3, len, w, h, plank);
+  for (let x = 4; x < len; x += 38) for (let y = 4; y < w; y += 38) m.box(x, y, 0, x + 4, y + 4, h - 3, post);
+  const railRun = (x0, y0, x1, y1) => { m.box(x0, y0, h + 15, x1, y1, h + 18, rail); m.box(x0, y0, h + 7, x1, y1, h + 9, rail); };
+  for (let x = 0; x < len; x += 20) { m.box(x, 0, h, x + 3, 3, h + 18, post); m.box(x, w - 3, h, x + 3, w, h + 18, post); }
+  for (let y = 0; y < w; y += 20) m.box(len - 3, y, h, len, y + 3, h + 18, post);
+  railRun(0, 0, len, 3); railRun(0, w - 3, len, w); railRun(len - 3, 0, len, w);
+  for (const [y0, y1] of [[0, w * 0.32], [w * 0.68, w]]) { railRun(0, y0, 3, y1); m.box(0, y0, h, 3, y0 + 3, h + 18, post); m.box(0, y1 - 3, h, 3, y1, h + 18, post); }   // (the near side: open in the middle)
+  return m;
+}
 // an interpretive sign: a slanted dark-framed panel with a map and text on two posts
 export function infoSign() {
   const m = new Vox(30, 12, 30);
@@ -754,5 +789,66 @@ export function compostBin() {
 export function gardenLantern() {
   const m = new Vox(6, 6, 16), p = m.mat({ ramp: R('#2e3036', 5, 2), k: 2 }), g = m.mat({ ramp: R('#ffe0a0', 5, 3), k: 4, emi: [255, 200, 120, 230], flag: F_NOCAST });
   m.box(2, 2, 0, 4, 4, 11, p); m.box(1, 1, 11, 5, 5, 15, g); m.box(1, 1, 15, 5, 5, 16, p);
+  return m;
+}
+
+// ---- the woods' trail furniture (the nature program, 2026-10-20: Nature-D2; shared/world3-trails.js) -------------
+// a trail's blaze: a waist-high marker post with its trail's colour painted round the top and a pale hiker's chevron
+export function trailBlaze(color = '#2a62c8') {
+  const m = new Vox(8, 8, 40);
+  const wd = m.mat({ ramp: R('#6a4a30'), k: 3, shade: (x, y, z) => (Math.round(z) % 7 === 0 ? -0.8 : 0) });
+  const paint = m.mat({ ramp: R(color, 6, 3), k: 3 }), pale = m.mat({ ramp: R('#ece6d6', 5, 2), k: 2 });
+  m.box(2, 2, 0, 6, 6, 36, wd);
+  m.box(2, 2, 27, 6, 6, 34, paint);
+  m.box(3, 6, 30, 5, 6.6, 32, pale);
+  m.box(2.5, 2.5, 36, 5.5, 5.5, 38, wd);
+  return m;
+}
+// log steps up a steep stretch of trail: two half-buried logs across it (w wide, across y), packed earth between
+export function logSteps(w = 60) {
+  const m = new Vox(30, w + 4, 10);
+  const log = m.mat({ ramp: R('#6e5038', 6, 3), k: 3, shade: (x, y, z) => (hash(Math.round(y / 3), Math.round(x), 41) - 0.5) * 0.7 });
+  const end = m.mat({ ramp: R('#b89a6a', 5, 2), k: 2, shade: (x, y, z) => (Math.abs(Math.hypot(x % 15 - 7, z - 3) % 2.4 - 1.2) < 0.4 ? -0.8 : 0) });
+  const earth = m.mat({ ramp: R('#7a6044', 6, 3), k: 3, shade: (x, y) => (hash(Math.round(x), Math.round(y), 43) - 0.5) * 0.8 });
+  for (const cx of [7, 22]) m.fill((x, y, z) => { const d = Math.hypot(x - cx, z - 2); return d < 5.2 && y >= 2 && y < w + 2 ? (y < 3 || y >= w + 1 ? end : log) : -1; }, cx - 6, 0, 0, cx + 6, w + 4, 8);
+  m.box(11, 3, 0, 18, w + 1, 4, earth);
+  return m;
+}
+// a log bridge over a creek: one great felled trunk along x, its top adzed flat to walk on, a peeled rail on posts
+export function logBridge(len = 140) {
+  const m = new Vox(len, 30, 36);
+  const bark = m.mat({ ramp: R('#5a4030', 6, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(z * 2), 45) - 0.5) * 1.0 });
+  const top = m.mat({ ramp: R('#b08a5e', 6, 3), k: 3, shade: (x, y) => (Math.round(x) % 9 === 0 ? -0.6 : 0) + (hash(Math.round(x), Math.round(y), 47) - 0.5) * 0.5 });
+  const moss = m.mat({ ramp: R('#5a7a34', 5, 2), k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4 });
+  const rail = m.mat({ ramp: R('#a8865a'), k: 3, flag: 0 });
+  const cy = 14, cz = 6, r = 11;
+  m.fill((x, y, z) => { const d = Math.hypot(y - cy, z - cz); if (d > r || z > cz + 6) return -1; if (z >= cz + 5) return top; return z < cz - 4 && hash(Math.round(x / 4), Math.round(y), 49) > 0.6 ? moss : bark; }, 0, 0, 0, len, 30, 18);
+  for (let x = 4; x < len - 2; x += 32) m.box(x, 26, cz + 2, x + 2, 28, cz + 26, rail);
+  m.box(0, 26, cz + 23, len, 28, cz + 25, rail);
+  return m;
+}
+// a rope bridge over a gorge: planks hung on ropes between timber posts at either end, sagging in the middle; the
+// hand ropes along both sides with their hangers
+export function ropeBridge(len = 240, w = 44) {
+  const m = new Vox(len, w, 44);
+  const plank = m.mat({ ramp: MAT.woodDock, k: 3, shade: (x) => (Math.round(x) % 5 === 0 ? -1.2 : 0) + (hash(Math.floor(x / 5), 3, 51) - 0.5) * 0.8 });
+  const rope = m.mat({ ramp: R('#b89a6a', 5, 2), k: 2 }), post = m.mat({ ramp: R('#5e4434', 6, 3), k: 3 });
+  const H0 = 14, SAG = Math.min(8, len / 40), deck = (x) => H0 - SAG * (1 - ((2 * x) / len - 1) * ((2 * x) / len - 1));
+  for (let x = 6; x < len - 6; x++) { const z = Math.round(deck(x)); if (Math.round(x) % 5 !== 4) m.box(x, 4, z - 2, x + 1, w - 4, z, plank); }
+  for (const y of [3, w - 4]) {
+    for (let x = 6; x < len - 6; x++) { const z = deck(x); m.box(x, y, z - 3, x + 1, y + 1, z - 2, rope); m.box(x, y, z + 18, x + 1, y + 1, z + 19, rope); if (x % 12 === 0) m.box(x, y, z - 2, x + 1, y + 1, z + 18, rope); }
+  }
+  for (const x of [0, len - 6]) for (const y of [1, w - 6]) m.box(x, y, 0, x + 5, y + 5, H0 + 24, post);
+  for (const x of [0, len - 6]) m.box(x, 1, H0 + 20, x + 5, w - 1, H0 + 24, post);
+  return m;
+}
+// a trailhead's drinking fountain: a stone pillar, a steel bowl on top, a push-button spout
+export function drinkFountain() {
+  const m = new Vox(14, 14, 32);
+  const st = m.mat({ ramp: R('#a09a8e', 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.8 : 0) + (hash(Math.round(x / 2), Math.round(z / 2), 53) - 0.5) * 0.7 });
+  const steel = m.mat({ ramp: MAT.metal, k: 3 }), water = m.mat({ ramp: R('#6aa8c8', 5, 2), k: 2, flag: F_WATER });
+  m.box(3, 3, 0, 11, 11, 24, st);
+  m.fill((x, y, z) => { const d = Math.hypot(x - 7, y - 7); return d < 6.5 && z >= 24 && z < 28 ? (d < 4.5 && z >= 26 ? water : steel) : -1; }, 0, 0, 24, 14, 14, 28);
+  m.box(6, 1, 27, 8, 4, 30, steel);
   return m;
 }
