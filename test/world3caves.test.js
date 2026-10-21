@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { undergroundOf, ugMapOf, cellAtPx, lightAt, mouthNear, wayOut, caveOf, UG, C } from '../shared/underground.js';
 import { cavernPlan, CAVERNS } from '../shared/world3-caves.js';
+import '../shared/caverns.js';
 import { TILE, T } from '../shared/constants.js';
 import { CHEST_LOOT } from '../shared/rules.js';
 import * as players from '../server/systems/players.js';

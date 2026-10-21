@@ -12,6 +12,7 @@
 // den's moss and the sea cave's cobbles; their lanterns light the dark.
 // Placeholder art in the game's palette, made in code: the sewer and mining sheets (SW1-SW2, MI1-MI7) replace it.
 import { undergroundOf, C, UG, UG_AMBIENT, LANTERN, cellAtPx, mouthsOf } from '../../shared/underground.js';
+import '../../shared/caverns.js';   // (the caverns' layout, registered with it: the page doesn't carry it till you're near one)
 import { TILE, K, PF } from '../../shared/constants.js';
 import { VEHICLE_BY_INDEX } from '../../shared/vehicles.js';
 

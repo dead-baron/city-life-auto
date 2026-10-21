@@ -15,6 +15,7 @@
 //   * The caverns (World v3's Redwood Caverns): in by any of their mouths, out by the nearest; a rowboat at each of their
 //     docks that has one (while someone is down there); old chests to open (CHEST_LOOT), filling again in a while.
 import { undergroundOf, UG, PICKS, ORE_BY_ID, bestPick, ugLos, openAt, caveOf, caveNear, mouthNear, mouthsOf, wayOut } from '../../shared/underground.js';
+import '../../shared/caverns.js';   // (the caverns' layout: registered with shared/underground.js)
 import { ITEMS } from '../../shared/items.js';
 import { K } from '../../shared/constants.js';
 import { pedStep } from '../../shared/physics.js';
