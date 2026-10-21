@@ -324,13 +324,15 @@ function tablesOf3(m, L, z) {
 }
 // how far (tiles) outside a table's rim a tile lies (negative: on its top) - a ragged superellipse. The bake has a copy
 // (client/art2/game/groundbake.js tableEdge: the top's cap rock, the talus at the foot) - keep the two the same
+// (the nature program, 2026-10-21, "the mesas' rims less blocky": rounder than the old superellipse - half way to an
+// ellipse - and wavering more, in big slow lobes as well as the small ragged ones)
 export function tableEdge(t, x, y) {
   const ax = (x - t.x) / t.rx, ay = (y - t.y) / t.ry, a2 = ax * ax, b2 = ay * ay;
-  return (Math.sqrt(Math.sqrt(a2 * a2 + b2 * b2)) * (1 + 0.16 * (vn(x, y, 21, 7301 + t.s) - 0.5) + 0.06 * (vn(x, y, 7, 7302 + t.s) - 0.5)) - 1) * Math.min(t.rx, t.ry);
+  return ((0.45 * Math.sqrt(a2 + b2) + 0.55 * Math.sqrt(Math.sqrt(a2 * a2 + b2 * b2))) * (1 + 0.2 * (vn(x, y, 21, 7301 + t.s) - 0.5) + 0.12 * (vn(x, y, 48, 7303 + t.s) - 0.5) + 0.06 * (vn(x, y, 7, 7302 + t.s) - 0.5)) - 1) * Math.min(t.rx, t.ry);
 }
 // how far (tiles, x and y) from its middle a table reaches out to e tiles past its rim (tableEdge: e runs on the short
-// radius, the rim ragged out by an eighth at most)
-export const tableReach = (t, e) => { const f = (1 + e / Math.min(t.rx, t.ry)) * 1.13; return [t.rx * f + 1, t.ry * f + 1]; };
+// radius, the rim ragged out by a fifth at most)
+export const tableReach = (t, e) => { const f = (1 + e / Math.min(t.rx, t.ry)) * 1.23; return [t.rx * f + 1, t.ry * f + 1]; };
 // a table: a flat top inside a ragged superellipse rim, a cliff 3 tiles wide down to its talus, the apron 11 more
 // (v3b: the tables stand close, a wash between - where two aprons meet the higher holds, they don't add up; a top is
 // level, h metres over the ground at its middle, whatever the land does under it - the coast's fall to the sea - and
@@ -527,23 +529,26 @@ export function buildRelief3(m, L, addProp) {
   for (let i = 0; i < N; i++) if (cliff[i] && !keepB[i]) { cliff[i] = 0; cliffs--; }
   for (let i = 0; i < N; i++) if (cliff[i]) { m.tiles[i] = T.WALL; m.reserve[i] |= 32; }
   CLIFFS.set(m, cliff);
-  // the desert's tables (H50): red sandstone all round each rim - its band in blocks (a 6-tile grid), each block's face
-  // as tall as the table on the south, two thirds of it east and west, a low lip on the north (the face looks away)
+  // the desert's tables (H50): red sandstone all round each rim - its band in arcs of 6 to 13 tiles round the rim (2026-10-21:
+  // was a 6-tile grid, a ring of even knobs), each arc's face as tall as the table on the south, two thirds of it east
+  // and west, a low lip on the north (the face looks away), each a little taller or lower than the next
   let faces = 0;
   const own = new Uint8Array(N);
   for (const t of tables) {
-    const B = 6, [ex, ey] = tableReach(t, 5), bx0 = Math.max(1, Math.floor(t.x - ex)), by0 = Math.max(1, Math.floor(t.y - ey)), bx1 = Math.min(W - 2, Math.ceil(t.x + ex)), by1 = Math.min(H - 2, Math.ceil(t.y + ey));
-    for (let gy = by0; gy <= by1; gy += B) for (let gx = bx0; gx <= bx1; gx += B) {
+    const [ex, ey] = tableReach(t, 5), bx0 = Math.max(1, Math.floor(t.x - ex)), by0 = Math.max(1, Math.floor(t.y - ey)), bx1 = Math.min(W - 2, Math.ceil(t.x + ex)), by1 = Math.min(H - 2, Math.ceil(t.y + ey));
+    const band = [];
+    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) { const i = y * W + x; if (cliff[i] && !own[i] && tableEdge(t, x, y) <= 4) { own[i] = 1; band.push([Math.atan2((y - t.y) / t.ry, (x - t.x) / t.rx), x, y]); } }
+    if (band.length < 4) continue;
+    band.sort((p, q) => p[0] - q[0] || p[2] - q[2] || p[1] - q[1]);
+    const rr = (t.rx + t.ry) / 2;
+    for (let j = 0, k = 0; j < band.length; k++) {
+      const span = (6 + Math.floor(hash(t.x + k, t.y, 7313) * 8)) / rr, a0 = band[j][0];
       let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, n = 0, sx = 0, sy = 0;
-      for (let y = gy; y < Math.min(by1 + 1, gy + B); y++) for (let x = gx; x < Math.min(bx1 + 1, gx + B); x++) {
-        const i = y * W + x;
-        if (!cliff[i] || own[i] || tableEdge(t, x, y) > 4) continue;
-        own[i] = 1; n++; sx += x; sy += y; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
-      }
+      for (; j < band.length && band[j][0] < a0 + span; j++) { const [, x, y] = band[j]; n++; sx += x; sy += y; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
       if (n < 4) continue;
       const nx = (sx / n - t.x) / t.rx, ny = (sy / n - t.y) / t.ry, nl = Math.sqrt(nx * nx + ny * ny) || 1, f = ny / nl;
-      const k = f > 0.45 ? 1 : f > -0.45 ? 0.65 : 0.3, h = Math.round(clamp((40 + t.h * 3) * k, 30, 160) / 10) * 10;
-      addProp(m, 'cliff', (x0 + x1 + 1) / 2 * TILE, (y1 + 1) * TILE, 0, { w: (x1 - x0 + 1) * TILE, d: (y1 - y0 + 1) * TILE, h, s: (gx * 7 + gy * 13) % 8 + 1, st: 'sandstone', relief: 1 });
+      const kf = f > 0.45 ? 1 : f > -0.45 ? 0.65 : 0.3, h = Math.round(clamp((40 + t.h * 3) * kf * (0.85 + 0.3 * hash(t.x, t.y + k, 7314)), 30, 160) / 10) * 10;
+      addProp(m, 'cliff', (x0 + x1 + 1) / 2 * TILE, (y1 + 1) * TILE, 0, { w: (x1 - x0 + 1) * TILE, d: (y1 - y0 + 1) * TILE, h, s: (t.s * 7 + k * 13) % 8 + 1, st: 'sandstone', relief: 1 });
       faces++;
     }
   }

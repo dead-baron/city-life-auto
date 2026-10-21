@@ -12883,3 +12883,64 @@ field gate"); `shared/world3-verges.js`:
 
 Tests: test/world3kestrel.test.js - no field runs out of the valley; a lane from every farmstead, with a mailbox at the
 road for each.
+
+## 2026-10-21 · Nature: the falls chain, part 2 - the ledge falls
+
+From the handcraft research's 3.1 ("a ledge fall across the whole width on rivers ... a staircase of steps on creeks ...
+each gets its plunge pool, mist, a viewpoint") and its R1 ("below the falls: an emerald plunge pool, then rapids");
+`shared/world3-ledgefalls.js`, new, World v3's done hook after the rapids. The rivers ran white down their steep
+reaches but never fell: the only falls in the wilds were the designed places'. Now four steep reaches that run toward
+the camera start with a fall:
+- **Long Ledge Falls** on the woods' eastern river below Highland Woods, right across its 60-tile width;
+- **Granite Steps**, three low ledges in a staircase down the narrows of the creek that leaves the peaks' river;
+- **Sandpiper Falls**, the river's last ledge before the beach on the Sandpiper Coast;
+- **Slickrock Falls** in the Red Rock Desert's canyon river, over red sandstone.
+
+Each:
+- **the lip** is a row of rock from bank to bank. Boats stop at it. A swimmer goes down it and can't come back up
+  (`shared/ledges.js` reads it as a falls' cliff band). The bake draws it as the river's water running over it:
+  `client/art2/game/groundbake.js`, rock flagged 64|32.
+- **the falls** are drawn along the lip in a few wide pieces (`client/art2/game/statics.js` addNature 'ledgefall').
+  Each piece's water is split into strands by low ribs of basalt, and the taller pieces fall in two tiers with a shelf
+  pool between. The line bows back upstream in the middle like a worn horseshoe, a little ragged, with boulders in the
+  white water at the joins.
+- **mist** rises off its foot (`client/art2/game/waterlife.js` reads the site's falls).
+- **the plunge pool** is a calm, deep pocket below the last ledge. The fishing calls it the falls' spot
+  (`server/systems/fishing.js`'s below-the-falls check now spans a wide fall's whole width), and bears fish there
+  (`wildlife.js` reads the site's falls). The white water starts below the pool.
+- **a bench** stands on the bank below, looking up at it, with the falls' name on a post. No tree stands in front of it
+  (`shared/world3-falls.js` counts the ledge falls).
+
+Tests: test/world3rapids.test.js - the four falls: each lip right across from bank to bank, a one-way drop, drawn as
+water in the bake and drawn along in strands; the falls' fish in the plunge pool; the bench and the sign. The
+plunge pools are counted among the calm pockets. test/world3rivers.test.js joins the river's water above and below
+each lip as one body.
+
+## 2026-10-21 · Nature: goats on the ledges
+
+The mountain goats lived on the cliffs (fauna.js `nimble`, habitat `cliff`) but walked only where a person can, so they
+grazed at the foot of the rock with the rest. Now the wilds' bare rock is their ground too: the cliffs, crags and scree
+of Granite Peaks and the desert's cliff bands, WALL flagged 32 that no one can climb.
+- **sure-footed**: `shared/mapcore.js` ROCK_BLOCK is PED_BLOCK with that rock open (`shared/physics.js` blockedAt), and a
+  goat moves by it (`mods.rock`). It spawns on its ledges as well as below them and wanders mostly along them
+  (`server/systems/wildlife.js` footing).
+- **escape terrain**: startled, a goat runs for the rocks (fleeAngle favours a way onto the rock). Once it is well up
+  on the rock and you aren't, it stops and stands staring down at you, out of reach. A person can't follow it there,
+  and neither can a deer or a wolf.
+- **the carcass comes down**: a goat shot on a ledge falls to the nearest ground below it, with a thud, so a hunter can
+  reach the carcass.
+
+Tests: test/wildmoves.test.js - a goat runs up onto a crag, where you and a deer can't follow, and stands there; shot
+up there, it lands on the ground below.
+
+## 2026-10-21 · Nature: the desert by hand, part 2 - the mesas' rims
+
+The Red Rock Desert's mesas all came out the same rounded square (the relief's tables: a superellipse rim with a little
+noise), each ringed by a necklace of even sandstone knobs (the rim's faces on a 6-tile grid). Now, in
+`shared/world3-relief.js` tableEdge:
+- **the rim** is rounder, half way to an ellipse, and wavers more: big slow lobes as well as the small ragged ones, so
+  no two mesas share an outline.
+- **the faces** go round the rim in arcs of 6 to 13 tiles, each a little taller or lower than the next, instead of the
+  grid's ring of knobs.
+- **kept in step**: the bake's copy of the rim (client/art2/game/groundbake.js: the cap rock and the talus) and the dressing's
+  check for a table (shared/world3-biomes.js: no boulders on a top) reach out as far as the new rim does.

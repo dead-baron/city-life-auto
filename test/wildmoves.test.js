@@ -208,3 +208,44 @@ test('a flushed pheasant beats up to speed; a deer creeping hunters can reach wh
   walk(w, p, 0.3, 0, 40, () => { closest = Math.min(closest, Math.hypot(d.x - p.ped.x, d.y - p.ped.y)); return d.wild.state === 'flee' || closest < 70; });
   assert.ok(closest < 140, `crept within ${Math.round(closest)} px`);
 });
+
+// Goats on the ledges (the nature program, 2026-10-21): the wilds' bare rock - the cliffs and scree a person can't climb
+// (WALL flagged 32) - is a mountain goat's ground (shared/physics.js ROCK_BLOCK): startled, it runs up onto it, where you
+// (and a deer) can't follow; shot up there, it falls to the ground below, where you can get to it.
+test('a mountain goat runs up onto the rock where you can\'t follow; shot up there, it falls to where you can reach it', async () => {
+  const combat = await import('../server/systems/combat.js');
+  const w = makeWorld({ npcBudget: 0 });
+  const { p } = joinPlayer(w);
+  clearAll(w);
+  const at = openWoods(w), m = w.map, tx0 = Math.floor(at.x / TILE) + 4, ty0 = Math.floor(at.y / TILE);
+  // a band of crag east of it: 8 tiles wide, 13 high
+  const saved = [];
+  for (let ty = ty0 - 6; ty <= ty0 + 6; ty++) for (let tx = tx0; tx < tx0 + 8; tx++) { const i = ty * m.w + tx; saved.push([i, m.tiles[i], m.reserve[i]]); m.tiles[i] = T.WALL; m.reserve[i] |= 32; }
+  try {
+    const g = wildlife.spawnAnimal(w, 'mtgoat', at.x, at.y, 0);
+    g.wild.lead = true;
+    w.windHold = { a: 0, s: 0.6 };
+    teleport(w, p.ped, at.x - 230, at.y);
+    run(w, 0.05);
+    walk(w, p, 1, 0, 3);
+    const onRock = (q) => q.x >= tx0 * TILE && q.x < (tx0 + 8) * TILE && Math.abs(q.y - at.y) < 6 * TILE;
+    assert.equal(g.wild.state === 'flee' || onRock(g), true, 'it bolts');
+    run(w, 3);
+    assert.ok(onRock(g), `up on the rock (${Math.round(g.x - tx0 * TILE)} px past its foot)`);
+    assert.ok(g.wild.state !== 'flee', `and stands there out of reach (${g.wild.state})`);
+    assert.ok(p.ped.x < tx0 * TILE, `you can't follow (${Math.round(p.ped.x - tx0 * TILE)} px)`);
+    // a deer can't go up there either
+    const d = wildlife.spawnAnimal(w, 'deer', tx0 * TILE - 60, at.y - 100, 0);
+    d.wild.lead = true; d.wild.state = 'walk'; d.wild.wx = (tx0 + 3) * TILE; d.wild.wy = at.y - 100; d.wild.until = w.time + 4;
+    run(w, 2);
+    assert.ok(d.x < tx0 * TILE, `the deer stays off it (${Math.round(d.x - tx0 * TILE)})`);
+    // shot up on the rock: it falls to the ground below, where you can get to it
+    const gx = g.x;
+    combat.damage(w, g, 999, p.ped, 'gun');
+    assert.ok(g.dead, 'down');
+    const t = m.tiles[Math.floor(g.y / TILE) * m.w + Math.floor(g.x / TILE)];
+    assert.ok(t !== T.WALL && t !== T.WATER && t !== T.DEEP, `off the rock (${t}, from ${Math.round(gx)} to ${Math.round(g.x)}, ${Math.round(g.y - at.y)})`);
+  } finally {
+    for (const [i, t, r] of saved) { m.tiles[i] = t; m.reserve[i] = r; }
+  }
+});

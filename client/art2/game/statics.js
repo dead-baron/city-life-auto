@@ -3164,6 +3164,10 @@ function addNature(c, I) {
       put(I, { key: `fall:r:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'ledge', w: f.w, drop: f.drop, seed: 13, mist: 0.6 }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.drop + 100, f.w / 2 + 60, 50] });
       continue;
     }
+    if (s.kind === 'ledgefall') {   // (the falls chain, part 2: a river over a band of rock in pieces, its water in strands - shared/world3-ledgefalls.js)
+      for (const g of s.segs) put(I, { key: `fall:l:${g.k}:${g.w}:${g.d}:${g.s}:${s.stone || ''}`, recipe: { t: 'fall', kind: g.k, w: g.w, drop: g.d, seed: g.s, mist: 0.5, upper: g.up, streams: g.st, stone: s.stone }, x: g.x, y: g.y + 8, ext: [g.w / 2 + 60, g.d + 120, g.w / 2 + 60, 40] });
+      continue;
+    }
     if (s.kind === 'tarn') {   // the tarn spilling over its granite ledge
       const f = s.falls, w = Math.max(f.w, FALLS_LOOK.tarn.w), drop = Math.max(f.drop, FALLS_LOOK.tarn.drop);   // (2026-10-21: a fall you can see from the shore - its ledge face up into the tarn's lip)
       put(I, { key: `fall:t:${w}:${drop}`, recipe: { t: 'fall', kind: 'twoTier', w, drop, seed: 9, mist: FALLS_LOOK.tarn.mist }, x: f.x, y: f.y + 8, ext: [w / 2 + 60, drop + 100, w / 2 + 60, 50] });

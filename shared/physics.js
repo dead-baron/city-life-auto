@@ -2,7 +2,7 @@
 // exact same functions to predict its own character/vehicle between snapshots.
 
 import { TILE, PED_RADIUS, T } from './constants.js';
-import { PED_BLOCK, SWIM_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './mapcore.js';
+import { PED_BLOCK, SWIM_BLOCK, ROCK_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './mapcore.js';
 import { IN } from './input.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';
@@ -15,8 +15,8 @@ const mapOf = (s, map) => (s.ug && !map.ug ? ugMapOf(map) || map : map);
 
 // Ground tile under a moving thing - up on the highway deck it's always road.
 const up = (s) => (s.lz || 0) > GROUND_Z;
-const blockedAt = (map, tx, ty, block) => {
-  if (block[map.tileAt(tx, ty)]) return true;
+export const blockedAt = (map, tx, ty, block) => {
+  if (block[map.tileAt(tx, ty)]) return !(block === ROCK_BLOCK && map.tileAt(tx, ty) === T.WALL && map.reserve && map.inside(tx, ty) && (map.reserve[map.idx(tx, ty)] & 32));   // (a goat on the cliff)
   const lb = map.lvl0Block;
   return !!lb && map.inside(tx, ty) && lb[map.idx(tx, ty)] === 1;
 };
@@ -130,7 +130,7 @@ export function pedStep(s, inp, dt, map, mods) {
   edgeBrake(s, map.frame);   // (out past the world's edge: slowed, and stopped at its end - border.js)
   const bx = s.x, by = s.y, pvx = s.vx, pvy = s.vy;
   // (up off the ground on a board - grinding, high in an air - the benches, bins and posts are under you: only the walls)
-  collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : PED_BLOCK, !!(mods.board && s.over));
+  collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : mods.rock ? ROCK_BLOCK : PED_BLOCK, !!(mods.board && s.over));   // (mods.rock: a sure-footed animal's)
   // on a board: how hard it ran into what it hit (a wall, a post, a tree: the push back out of it against the way it was
   // going) - hard enough and you're thrown off (s.boardHit: server skate.js bails you); a glancing touch just loses that
   // much speed (a solid prop moves you out but keeps your speed: take it off here)

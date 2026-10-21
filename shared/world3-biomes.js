@@ -124,8 +124,8 @@ export function dress3(m, L, keep, H) {
   const tabs = m.tables || [];
   const nearTable = (tx, ty, pad, k = 1) => tabs.some((t) => ((tx - t.x) / (t.rx * k + pad)) ** 2 + ((ty - t.y) / (t.ry * k + pad)) ** 2 < 1);
   // (on a table, its rim or its talus, pad tiles out: the tables' squarish rim - a superellipse whose distance runs on its
-  // short radius, ragged by up to a ninth: world3-relief.js tableEdge)
-  const onTable = (tx, ty, pad) => tabs.some((t) => { const a = (tx - t.x) / t.rx, b = (ty - t.y) / t.ry, l = (1 + pad / Math.min(t.rx, t.ry)) * 1.13, l2 = l * l; return a * a * a * a + b * b * b * b < l2 * l2; });
+  // short radius, ragged by up to a fifth: world3-relief.js tableEdge)
+  const onTable = (tx, ty, pad) => tabs.some((t) => { const a = (tx - t.x) / t.rx, b = (ty - t.y) / t.ry, l = (1 + pad / Math.min(t.rx, t.ry)) * 1.23, l2 = l * l; return a * a * a * a + b * b * b * b < l2 * l2; });
   for (let gy = 0; gy < HH; gy += 36) for (let gx = 0; gx < W; gx += 36) {
     const tx = gx + 6 + Math.floor(hash2(gx, gy, 5501) * 24), ty = gy + 6 + Math.floor(hash2(gx, gy, 5502) * 24);
     if (tx >= W - 8 || ty >= HH - 8) continue;

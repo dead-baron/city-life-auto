@@ -33,8 +33,8 @@
 // grade of the hide (fauna.js gradeOf; hunting.js). The farms' livestock (cows, sheep, horses, goats, pigs) just
 // graze round the farms and lumber off.
 import { K, T, TILE, PED_RADIUS } from '../../shared/constants.js';
-import { PED_BLOCK, SWIM_BLOCK, WATER_T, DISTRICTS, wildBiome } from '../../shared/map.js';
-import { pedStep, PED } from '../../shared/physics.js';
+import { PED_BLOCK, SWIM_BLOCK, ROCK_BLOCK, WATER_T, DISTRICTS, wildBiome } from '../../shared/map.js';
+import { pedStep, PED, blockedAt } from '../../shared/physics.js';
 import { circleVsObb } from '../../shared/math.js';
 import { sameLevel } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
@@ -191,6 +191,14 @@ function pick(list) {
   return list[0][0];
 }
 const ground = (map, x, y) => GROUND.has(map.tileAtPx(x, y)) && !PED_BLOCK[map.tileAtPx(x, y)];
+// The sure-footed (fauna.js nimble: the mountain goats) on the wilds' bare rock - the cliffs, crags and scree a person
+// can't climb (WALL flagged 32: shared/physics.js ROCK_BLOCK): their ground too, where they go to be safe ("goats on the
+// ledges", the nature program 2026-10-21)
+const NIMBLE = new Set(Object.keys(SPECIES).filter((k) => SPECIES[k].nimble));
+const nimbleOf = (a) => !!(a.wild && NIMBLE.has(a.wild.kind));
+const rockAt = (map, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return map.inside(tx, ty) && map.tiles[map.idx(tx, ty)] === T.WALL && !!(map.reserve[map.idx(tx, ty)] & 32); };
+const footing = (map, x, y, nim) => ground(map, x, y) || (nim && rockAt(map, x, y));
+const deepRock = (map, x, y) => rockAt(map, x, y) && rockAt(map, x + TILE, y) && rockAt(map, x - TILE, y) && rockAt(map, x, y + TILE) && rockAt(map, x, y - TILE);   // (well up on it, not at its foot)
 const wet = (map, x, y) => WATER_T[map.tileAtPx(x, y)] === 1;
 
 // Make one animal. o: { herd, young, legend, mother, tame (a town park's: used to people) }
@@ -220,7 +228,7 @@ export function spawnGroup(world, kind, x, y, legendOk = false, tame = false) {
   const legend = legendOk && S.legend && rng() < S.legend.p && !legendAbout(world, kind);
   // (on the water if it lives on it and was put there; else on dry ground)
   const onWater = S.swims === 'float' || (!!S.swims && wet(world.map, x, y));
-  const okAt = (ax, ay) => (S.soars ? true : onWater ? wet(world.map, ax, ay) : ground(world.map, ax, ay));   // (a bird of prey: anywhere, up there)
+  const okAt = (ax, ay) => (S.soars ? true : onWater ? wet(world.map, ax, ay) : footing(world.map, ax, ay, S.nimble));   // (a bird of prey: anywhere, up there; a goat on its ledges too)
   let made = 0, lead = null;
   const adults = legend ? 1 : n;
   for (let i = 0; i < adults * 4 && made < adults; i++) {
@@ -1141,6 +1149,7 @@ function step(world, a, dt, now, ph) {
         setState(w, 'idle', now, 2 + rng() * 4); w.hx = a.x; w.hy = a.y; w.aware *= 0.5; break;   // settles where it ran to
       }
       if (now < (w.startle || 0)) { pose = APOSE.alert; face(a, w.fx, w.fy); break; }   // (the start: head up, a look)
+      if (S.nimble && w.state === 'flee' && deepRock(map, a.x, a.y) && !rockAt(map, w.fx, w.fy)) { setState(w, 'alert', now, 3 + rng() * 4); face(a, w.fx, w.fy); pose = APOSE.alert; w.hx = a.x; w.hy = a.y; break; }   // (up on its ledge, out of reach: it stands and stares down)
       let ang = fleeAngle(world, a, w, swim && w.kind !== 'deer', now) + (w.bias || 0);
       if (S.zig && w.state === 'flee') ang += Math.sin(now * 7 + a.id) * 0.7;   // a rabbit jinks
       mx = Math.cos(ang); my = Math.sin(ang);
@@ -1327,7 +1336,7 @@ function step(world, a, dt, now, ph) {
   w.pose = pose;
   const mv = moveLike(a, w, S.size, S.run, mx, my, speed, dt, now);
   const mods = players.pedMods(world, a);
-  mods.speedMul = mv[2] / PED.walk; mods.canSprint = false; mods.canSwim = swim;
+  mods.speedMul = mv[2] / PED.walk; mods.canSprint = false; mods.canSwim = swim; mods.rock = !!S.nimble;
   pedStep(a, { bits: 0, mx: mv[0], my: mv[1], aim: a.a }, dt, map, mods);
   world.place(a);
   unstick(world, a, w, now);
@@ -1407,10 +1416,8 @@ function arrive(world, a, w, now) {
 // still (parked, a wreck; one on the move gets out of the way). Its body is as wide as physics.js makes everyone
 // (PED_RADIUS) - or its own size if that's bigger (what the cars push it by: vehicles.js).
 const bodyR = (a) => Math.max(PED_RADIUS, a.r || 10);
-function solidAt(map, x, y, block) {
-  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), lb = map.lvl0Block;
-  return !!block[map.tileAt(tx, ty)] || (!!lb && map.inside(tx, ty) && lb[map.idx(tx, ty)] === 1);
-}
+function solidAt(map, x, y, block) { return blockedAt(map, Math.floor(x / TILE), Math.floor(y / TILE), block); }
+const blockOf = (a, swims) => (swims ? SWIM_BLOCK : nimbleOf(a) ? ROCK_BLOCK : PED_BLOCK);
 function propAt(map, x, y, r, minR = 0) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
   for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
@@ -1429,7 +1436,7 @@ const carAt = (cars, x, y, r) => { if (cars) for (const v of cars) if (circleVsO
 // How far its body can go along heading t before it touches any of that (px, in 8 px steps up to max): the tiles under
 // its nose and either flank, and the props and cars round its middle.
 function clearRun(map, a, t, swims, max, cars = null) {
-  const c = Math.cos(t), s = Math.sin(t), R = bodyR(a), f = R - 2, block = swims ? SWIM_BLOCK : PED_BLOCK;
+  const c = Math.cos(t), s = Math.sin(t), R = bodyR(a), f = R - 2, block = blockOf(a, swims);
   for (let d = 8; d <= max + 0.1; d += 8) {
     const x = a.x + c * d, y = a.y + s * d;
     if (solidAt(map, x + c * f, y + s * f, block) || solidAt(map, x - s * f, y + c * f, block) || solidAt(map, x + s * f, y - c * f, block)
@@ -1486,7 +1493,7 @@ function openTo(world, a, x, y, swims) {
 const FLEE_CLEAR = new Float32Array(16);
 function fleeAngle(world, a, w, swims, now) {
   if (w.fh !== undefined && now < (w.fhAt || 0)) return w.fh;
-  const map = world.map, cars = parkedNear(world, a, 200);
+  const map = world.map, cars = parkedNear(world, a, 200), nim = nimbleOf(a) && !swims;
   const away = Math.atan2(a.y - w.fy, a.x - w.fx), dTh = Math.hypot(a.x - w.fx, a.y - w.fy);
   let openAway = 0;
   for (let k = 0; k < 16; k++) {
@@ -1507,6 +1514,7 @@ function fleeAngle(world, a, w, swims, now) {
     if (now < (w.blockUntil || 0) && Math.cos(t - w.blockA) > 0.75) sc -= 2.5;
     if (trap !== null && Math.cos(t - trap) > 0.4) sc -= 2;
     if (clear < 30) sc -= 2.5;   // (blocked right there: never, if anything else is open)
+    if (nim && clear >= 60) { const ct = Math.cos(t), st = Math.sin(t); for (let d = 40; d <= Math.min(clear, 200); d += 40) if (rockAt(map, a.x + ct * d, a.y + st * d)) { sc += 1.1 - d / 400; break; } }   // (a goat runs for the rocks, where nothing follows)
     if (sc > bs) { bs = sc; best = t; }
   }
   w.fh = best; w.fhAt = now + (cornered ? 1.2 : 0.25);
@@ -1514,7 +1522,7 @@ function fleeAngle(world, a, w, swims, now) {
 }
 // how far it can go along heading t before something stops it (px, in 20 px steps up to max)
 function clearAlong(map, a, t, swims, max, cars = null) {
-  const c = Math.cos(t), s = Math.sin(t), r = (a.r || 10) + 3, block = swims ? SWIM_BLOCK : PED_BLOCK;
+  const c = Math.cos(t), s = Math.sin(t), r = (a.r || 10) + 3, block = blockOf(a, swims);
   for (let d = 20; d <= max; d += 20) {
     const x = a.x + c * d, y = a.y + s * d;
     if (solidAt(map, x, y, block) || propAt(map, x, y, r, 5) || carAt(cars, x, y, r)) return d - 20;
@@ -1575,8 +1583,9 @@ function wander(world, a, S, now, ph) {
     const ang = rng() * 6.28, r = 40 + rng() * 170;
     let tx = a.x + Math.cos(ang) * r, ty = a.y + Math.sin(ang) * r;
     if (Math.hypot(tx - w.hx, ty - w.hy) > LEASH) { tx = a.x + (w.hx - a.x) * 0.4; ty = a.y + (w.hy - a.y) * 0.4; }
-    const okT = S.swims === 'float' ? wet(map, tx, ty) : S.swims ? (wet(map, tx, ty) || ground(map, tx, ty)) : ground(map, tx, ty);
+    const okT = S.swims === 'float' ? wet(map, tx, ty) : S.swims ? (wet(map, tx, ty) || ground(map, tx, ty)) : footing(map, tx, ty, S.nimble);
     if (!okT) continue;
+    if (S.nimble && k < 5 && !rockAt(map, tx, ty) && rockAt(map, a.x, a.y)) continue;   // (a goat keeps to its ledges, mostly)
     if (map.tileAtPx((a.x + tx) / 2, (a.y + ty) / 2) === T.ROAD && rng() < 0.85) continue;
     if (!openTo(world, a, tx, ty, !!S.swims)) continue;   // (not the far side of a fence or a wall: task #422)
     w.wx = tx; w.wy = ty; w.state = 'walk'; w.until = now + 9; w.slow = rng() < 0.5; w.drink = false;
@@ -1665,11 +1674,22 @@ export function onHurt(world, a, attacker) {
   alarmGroup(world, a, sx, sy, now);
   if (a.hp < a.maxHp * 0.5) a.limpUntil = now + 999;   // (the limp: the client's blood trail and a slower run)
 }
+// a goat killed up on the rock falls to the nearest ground below it (down the screen first: the cliffs face south), so
+// a hunter can reach the carcass
+function tumble(world, a) {
+  const map = world.map, tx = Math.floor(a.x / TILE), ty = Math.floor(a.y / TILE);
+  for (let r = 1; r <= 14; r++) for (const [dx, dy] of [[0, r], [-1, r], [1, r], [-r, 0], [r, 0], [-r, r], [r, r], [0, -r]]) {
+    const x = (tx + dx + 0.5) * TILE, y = (ty + dy + 0.5) * TILE;
+    if (ground(map, x, y) && !solidAt(map, x, y, PED_BLOCK)) { a.x = x; a.y = y; a.vx = a.vy = 0; world.place(a); world.emit(a.x, a.y, { e: 'thud', x: a.x, y: a.y }); return true; }
+  }
+  return false;
+}
 // combat.kill: grade the carcass; the group bolts; a downed bird falls out of the air
 export function onKilled(world, a, attacker, cause) {
   const w = a.wild;
   if (!w) return;
   w.state = 'dead'; a.hidden = false;
+  if (nimbleOf(a) && rockAt(world.map, a.x, a.y)) tumble(world, a);   // (shot on a ledge, it comes down off it: where you can get to it)
   if (!w.livestock) w.grade = w.legend ? 3 : gradeOf(w.kind, w.hits);
   w.killedBy = attacker && attacker.player ? attacker.id : 0;
   alarmGroup(world, a, attacker ? attacker.x : a.x, attacker ? attacker.y : a.y, world.time);

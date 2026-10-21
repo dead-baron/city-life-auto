@@ -42,6 +42,9 @@ export const CAR_SPAWN_BLOCK = new Uint8Array(16);
 export const WATER_T = new Uint8Array(16);
 WATER_T[T.WATER] = 1; WATER_T[T.DEEP] = 1;
 for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP, T.COUNTER]) PED_BLOCK[t] = 1;
+// ROCK_BLOCK: where a sure-footed animal can't go (a mountain goat: server/systems/wildlife.js) - as PED_BLOCK, but the
+// wilds' bare rock (WALL flagged 32: the cliffs, crags and scree a person can't climb) is its ground (physics.js blockedAt)
+export const ROCK_BLOCK = PED_BLOCK.slice();
 for (const t of [T.WALL, T.BUILDING, T.COUNTER]) SWIM_BLOCK[t] = 1;
 for (const t of [T.WALL, T.BUILDING, T.FLOOR, T.COUNTER]) CAR_BLOCK[t] = 1;
 for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP, T.FLOOR, T.COUNTER]) CAR_SPAWN_BLOCK[t] = 1;
