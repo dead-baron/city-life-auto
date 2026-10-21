@@ -12543,3 +12543,54 @@ three-lap race with every checkpoint on the course, a road by its north side; bo
 rock or a building, the Red Rock Trail's markers 1-4, its rest stop and its wash, the enduro's berms, its three-table
 jump line, a ford with the water under it, its bridge, the root plate, the log ride, the board and the bikes at the
 trailhead.
+
+## 2026-10-20 · Nature: the Redwood Caverns - the underground river from the falls to the sea (Nature-B1, B2)
+
+The nature program's fifth step, from the Nature-B1 concept (the cave network: an underground river from a waterfall in
+the redwoods down through its caverns to a sea cave on a beach - docks with lanterns and rowboats, cascades between
+chambers, a great lake, crystal, glow, den, treasure and ore chambers) and Nature-B2 (the ways in: behind a forest
+waterfall up timber stairs, a sea cave in basalt at the back of a cobble beach). The owner's note of 10-08: "caves deep
+in the wilds: beautiful and very dark, glowing mushrooms, plants, glow worms; underground river".
+- **The ways in** (`shared/world3-caves.js`, new; World v3's done hook, after the dirt-bike country):
+  - beside **Redwood Creek Falls**: a cave mouth in the basalt of the gorge's west wall, timber stairs up to it from a
+    railed dirt path along the plunge pool's bank (from the footbridge), a lantern at the mouth, a sign;
+  - at **Redwood Cove**: a cobble beach dug into the woods at the cove's south end, a columnar basalt cliff along its
+    back with the sea cave's mouth in it, a rowboat drawn up on the cobbles, barrels, driftwood, basalt rocks at the
+    water's edge; the redwoods in front of it in this view taken off.
+- **The network** under Highland Woods (about a kilometre of river, west and down to the sea): the Falls Gallery (the
+  creek falling in through its roof into the river's head), the Glow Grotto (teal mushrooms, glow-worms, bats), the
+  Crystal Vault up a passage (blue and violet crystals, chests), the Stalactite Hall, the Great Lake (the cave fish live
+  in it), the Bear's Den off its outflow (a mossy floor, the bear asleep), the Glow-worm Gallery, the Treasure Chamber
+  (chests, gold glinting by lantern light), the Echo Hall, the Ore Face (gold, amethyst and silver seams, the old
+  miners' cart, pick and shoring) and the Sea Cave (the river's tidal pool, the smugglers' barrels and crates on its
+  cobbles, the daylight in at its mouth). The river wanders from side to side, its banks opening into halls and closing
+  to narrows; two cascades where it steps down (white water nobody gets through - walk round them on the bank's
+  stairs); eight timber docks with lanterns, five with a **rowboat** waiting (a new boat: `shared/vehicles.js` rowboat,
+  oars and no engine, in art v2 too); seven **old chests** to open (`shared/rules.js` CHEST_LOOT: old doubloons, gold
+  nuggets, geodes, now and then an amethyst geode or an arrowhead, and a little cash; each fills again in 45 minutes).
+- **The underground** (`shared/underground.js`, `shared/caverns.js` new): a cavern is a cave of `L.caves` after the
+  mines' (their seeds and veins come out as before), built from its plan (`m.caverns`, laid out by the world build) -
+  more than one way in (`mouthsOf`, `mouthNear`, `wayOut`), new cells: DOCK (planks over the water: walked on, the boats
+  moor beside) and CASCADE (a wall of white water); its chambers' own ores; its lanterns light the dark (`LANTERN`).
+  The carving lives in `shared/caverns.js`, registered with the underground's layout where it's loaded - the server,
+  the cave's view, the tests - so the page doesn't carry it (the view loads near a cave mouth).
+- **The server** (`server/systems/underground.js`): in by any mouth, out by the nearest ("Walk out of the sea cave onto
+  the beach"); a rowboat at each dock that keeps one while someone is down there, put away when they've all gone; the
+  chests (opened once, empty till they fill again; their state goes out with the layer). The chest's creak and coins
+  (`client/sound/events.js`).
+- **The view** (`client/underground/view.js`): the docks' planks and posts, the rowboats with their oars working, the
+  cascades' white water and spray, the creek falling in through the gallery's roof, stairs on the banks, chests shut or
+  open, barrels, crates, the cart and shoring, gold glints, the den's moss and the sea cave's cobbles, the lanterns'
+  warm light; the daylight in at every mouth.
+- Budgets (`tools/perf.mjs`): the page 485 -> 488 KB (the mouths and the way out, the rowboat, the chests' rules: 486),
+  the bake worker 824 -> 828 KB (the cave mouth's and the beached rowboat's models, the rowboat: 826).
+
+Tests: test/world3caves.test.js - a small network on a stand-in spot: every chamber and chest reached on foot from both
+ways in, and through from one to the other; the cascades a wall across the river, the boats parted into its reaches;
+the docks out over the water, each boat afloat its whole length; the lanterns' light, the crystals, glow-worms and
+mushrooms, the den, the moss and cobbles; the ore face's own ores; the nearest mouth and way out. On the server: in by
+one mouth, a rowboat at each dock, a chest opened once (doubloons, old coins), out by the other onto the beach, the boats
+put away. In World v3: the Redwood Caverns built, their mouths by the falls and at the cove with their lanterns, nothing
+solid where you come out, the stairs and rail, the cliff, the rowboat and barrels, the cobble beach; underground apart
+from every other region, every chamber from both ways in, five rowboats afloat, two cascades, the chests, the ore face's
+gold and amethyst, a kilometre of river. test/world3wild.test.js counts the mines' caves apart from the caverns.
