@@ -38,9 +38,9 @@ const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0,
 
 // the long rides: their via points (tiles), a closed loop back to the start; markers numbered at the points marked
 export const RIDES = [
-  { name: 'Red Rock Trail', kind: 'route', district: 50, from: 'mx', hw: 40, slope: 24, lump: 22, pts: [[5372, 1694, 1], [5430, 1722], [5401, 1652, 2], [5430, 1722], [5520, 1702], [5584, 1648, 3], [5520, 1702], [5482, 1772, 4], [5340, 1726]],
+  { name: 'Red Rock Trail', kind: 'route', district: 50, from: 'mx', hw: 40, slope: 24, lump: 22, wander: 1.6, pts: [[5372, 1694, 1], [5430, 1722], [5401, 1652, 2], [5430, 1722], [5520, 1702], [5584, 1648, 3], [5520, 1702], [5482, 1772, 4], [5340, 1726]],
     wash: { pts: [[5508, 1650], [5522, 1690], [5516, 1730], [5534, 1772]], hw: 3 }, rest: 3 },
-  { name: 'Highland Enduro', kind: 'enduro', district: 47, start: [978, 1338], hw: 24, slope: 40, lump: 14, pts: [[1012, 1302], [1068, 1282], [1090, 1226], [1050, 1186], [1000, 1208], [986, 1262]],
+  { name: 'Highland Enduro', kind: 'enduro', district: 47, start: [978, 1338], hw: 24, slope: 40, lump: 14, wander: 0.8, pts: [[1012, 1302], [1068, 1282], [1090, 1226], [1050, 1186], [1000, 1208], [986, 1262]],
     creek: { pts: [[982, 1232], [1030, 1246], [1075, 1240], [1120, 1255], [1176, 1262]], hw: 1.6 } },
 ];
 export function buildDirt3(m, H3) {
@@ -250,6 +250,25 @@ function ride(m, H3, R, out) {
   for (let r = 0; r < 3; r++) { const q = [L[0]]; for (let k = 1; k < L.length; k++) { const [x0, y0] = L[k - 1], [x1, y1] = L[k]; q.push([x0 * 0.75 + x1 * 0.25, y0 * 0.75 + y1 * 0.25], [x0 * 0.25 + x1 * 0.75, y0 * 0.25 + y1 * 0.75]); } q.push(L[L.length - 1]); L = q; }
   const S = [];
   for (let k = 1; k < L.length; k++) { const [x0, y0] = L[k - 1], [x1, y1] = L[k], n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / 16)); for (let j = k === 1 ? 0 : 1; j <= n; j++) S.push([x0 + (x1 - x0) * j / n, y0 + (y1 - y0) * j / n]); }
+  // the line sways from side to side as it goes (R.wander tiles): pushed sideways by a slow field over the ground, so a
+  // stretch ridden out and back sways the same way both times - only where the ground it sways onto is as open as the
+  // line's (never into the water, onto the rocks or a road it kept off), eased in and out of there and at its ends
+  if (R.wander) {
+    const A = R.wander * TILE, C = 10, n = S.length, nrm = [], off = new Float32Array(n), ok = new Uint8Array(n), er = new Uint8Array(n), Wn = 8;
+    const vn = (x, y, sd) => {
+      const gx = Math.floor(x / C), gy = Math.floor(y / C), fx = x / C - gx, fy = y / C - gy, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), h = (a, b) => hh(a, b, sd) * 2 - 1;
+      return (h(gx, gy) * (1 - sx) + h(gx + 1, gy) * sx) * (1 - sy) + (h(gx, gy + 1) * (1 - sx) + h(gx + 1, gy + 1) * sx) * sy;
+    };
+    const ridable = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); if (!inF(tx, ty)) return false; const i = idx(tx, ty), t = m.tiles[i]; return (t === T.GRASS || t === T.DIRT || t === T.SAND) && !blocked.has(i) && !(m.reserve[i] & (1 | 2 | 8)) && !(creek && creek.has(i)); };
+    for (let k = 0; k < n; k++) {
+      const a = S[Math.max(0, k - 2)], b = S[Math.min(n - 1, k + 2)], h = Math.atan2(b[1] - a[1], b[0] - a[0]), nx = -Math.sin(h), ny = Math.cos(h);
+      const tx = S[k][0] / TILE, ty = S[k][1] / TILE, d = A * (nx * vn(tx, ty, 981) + ny * vn(tx, ty, 983)), e = d + Math.sign(d) * R.hw, [x, y] = S[k];
+      nrm.push([nx, ny]); off[k] = d;
+      ok[k] = ridable(x + nx * d, y + ny * d) && ridable(x + nx * e, y + ny * e) && ridable(x + nx * d * 0.5, y + ny * d * 0.5) && ridable(x, y) ? 1 : 0;
+    }
+    for (let k = 0; k < n; k++) { let v = k >= 12 && k < n - 12 ? 1 : 0; for (let j = Math.max(0, k - Wn); j <= Math.min(n - 1, k + Wn) && v; j++) v = ok[j]; er[k] = v; }
+    for (let k = 0; k < n; k++) { let t = 0, c = 0; for (let j = Math.max(0, k - Wn); j <= Math.min(n - 1, k + Wn); j++) { t += er[j]; c++; } const f = t / c; if (f > 0) S[k] = [S[k][0] + nrm[k][0] * off[k] * f, S[k][1] + nrm[k][1] * off[k] * f]; }
+  }
   const N = S.length, head = (k) => { const a = S[Math.max(0, k - 2)], b = S[Math.min(N - 1, k + 2)]; return Math.atan2(b[1] - a[1], b[0] - a[0]); };
   const turn = (k) => { let d = head(Math.min(N - 1, k + 3)) - head(Math.max(0, k - 3)); while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
   // the dirt under it (a ford where it splashes through the creek: bridge tiles, the water still under them), the
