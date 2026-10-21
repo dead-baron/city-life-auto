@@ -31,6 +31,9 @@ export const PEAKS3 = {
   trail: { name: 'Summit Trail', cairnEvery: 30, road: 260, reach: 460 },   // (road: how far to look for its start - a road or a trail; reach: the summit at most this far from the hut)
 };
 const VEG = /^(tree_|shrub_|bush_|flowers_|log$|boulder|outcrop)/;
+// the designed places up in the mountains the snow leaves bare round (shared/world3-world.js's snowfields: the landmarks'
+// types) - the Ridge Trail Hunting Camp sat in the snow
+export const THAW = new Set(['huntcamp', 'lookout', 'mine', 'observatory', 'camp', 'springs', 'quarry']);
 
 export function buildPeaks3(m, H3) {
   const out = { meadows: [], summits: [], trail: null, cleared: 0, missed: 0 };

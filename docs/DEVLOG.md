@@ -12684,10 +12684,14 @@ mountains, between the tree line and the snow -
 - **the Summit Trail**: from the road (or the woods' trails) nearest the hut's meadow - its sign and a map board at the
   trailhead - through the meadow past the hut, up to the nearest summit; routed over the land where it walks easiest,
   packed earth through the grass and pale gravel over the scree, a cairn every 30 tiles to mark it above the trees.
+- **no snow on the designed places up there** (`world3-world.js`'s snowfields, `world3-peaks.js` THAW): the Ridge Trail
+  Hunting Camp sat in the snow; now the camp, the fire lookout, the mines' yards, the observatory, the campgrounds and
+  the springs have the ground bare round them, 8 tiles out from their boxes.
 New art (`client/art2/props-garden.js`): the cairn (and a summit's taller one), the stone hut, the mountain spring.
 Budget: the bake worker's code 828 -> 832 KB (measured 829 with this art and the rivers' white water before it): the
 workers fetch it once, after the page.
 
 Tests: test/world3peaks.test.js - the meadows (lush, flowered, open, apart, on the map, under the snow), the hut, its
 spring, the fire ring and its rest spot and seats, the summits' cairns, benches and telescope, the trail from a road or
-a trail (its sign and map board) through the hut's meadow to a summit, showing on the ground, with its cairns.
+a trail (its sign and map board) through the hut's meadow to a summit, showing on the ground, with its cairns; the hunting camp and the
+lookout clear of the snow.

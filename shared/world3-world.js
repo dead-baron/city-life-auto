@@ -41,7 +41,7 @@ import { buildTrails3 } from './world3-trails.js';
 import { buildDirt3 } from './world3-dirt.js';
 import { buildCaves3 } from './world3-caves.js';
 import { buildClearings3, forageInSight3 } from './world3-clearings.js';
-import { buildPeaks3 } from './world3-peaks.js';
+import { buildPeaks3, THAW } from './world3-peaks.js';
 // (v3b, WORLD-V3.md 9.3: the city - its districts, its streets and its places; on the v3b frame only)
 import { buildAirstrips3 } from './world3-airstrips.js';
 import { buildSarHq3 } from './world3-sarhq.js';   // (v3b: the rescue pilots' base)   // (v3b: the crop dusters' strips and Lucky Mesa's)
@@ -219,7 +219,11 @@ export function worldOpts(asked) {
       if (m.world3.desert) m.world3.desert.done = desertDone(m);   // (8.18: the assay office's counter, the summary: world3-desert.js)
       if (m.world3.west) m.world3.west.done = westDone(m);   // (8.20: Egret Point, the raceway's race, the summary: world3-west.js)
       if (m.world3.wild) m.world3.wild = wildDone(m, m.world3.wild);   // (8.19: what was built on the wild land's lots: world3-wild.js)
-      const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
+      // (Granite Peaks by hand: no snow on the designed places up there - the Ridge Trail Hunting Camp, the fire lookout,
+      // the mines' yards, the observatory: a thawed round each one's box, 8 tiles out - world3-peaks.js THAW)
+      const thaw = (m.landmarks || []).filter((l) => THAW.has(l.type)).map((l) => [(l.x + l.w / 2) / TILE, (l.y + l.h / 2) / TILE, Math.max(l.w, l.h) / 2 / TILE + 8]);
+      const thawed = (tx, ty) => thaw.some(([x, y, r]) => (tx - x) * (tx - x) + (ty - y) * (ty - y) < r * r);
+      const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE && !thawed(tx, ty) ? SNOW_CLS : c; });
       // (no tree on the snowfields: a roadside stop's picnic tree, a grove's edge - whatever a pass planted above the
       // snow line in Granite Peaks goes)
       if (H3) {

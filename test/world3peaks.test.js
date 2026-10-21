@@ -1,6 +1,6 @@
 // Granite Peaks by hand, part 1 (shared/world3-peaks.js): the alpine meadows, the stone hut with its spring and fire
 // ring on the biggest, the summits' cairns and benches, the Summit Trail from the road through the hut's meadow to a
-// summit. One World v3 build.
+// summit; no snow on the designed places up there. One World v3 build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
@@ -8,7 +8,8 @@ import '../shared/world3-islands.js';
 import { T, TILE } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { PEAKS3 } from '../shared/world3-peaks.js';
-import { peakHeight, SNOW_LINE } from '../shared/world3-biomes.js';
+import { peakHeight, SNOW_LINE, SNOW_CLS } from '../shared/world3-biomes.js';
+import { terrainAt } from '../shared/mapcore.js';
 import { prepare } from '../tools/world3-build.mjs';
 
 test('World v3: Granite Peaks\' alpine meadows, the stone hut and its spring, the summits\' cairns, the Summit Trail', { timeout: 400000 }, () => {
@@ -50,6 +51,14 @@ test('World v3: Granite Peaks\' alpine meadows, the stone hut and its spring, th
     assert.ok(q.h >= PEAKS3.summits.h[0] - 0.001, `${q.name}: high (${q.h})`);
     assert.ok(m.landmarks.some((l) => l.name === q.name && l.type === 'summit'), `${q.name} on the map`);
   });
+  // no snow on the designed places up there (the Ridge Trail Hunting Camp sat in it)
+  for (const nm of ['Ridge Trail Hunting Camp', 'Ridge Fire Lookout']) {
+    const l = m.landmarks.find((q) => q.name === nm);
+    assert.ok(l, nm);
+    const tx = Math.floor((l.x + l.w / 2) / TILE), ty = Math.floor((l.y + l.h / 2) / TILE);
+    let snow = 0; for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) if (terrainAt(m.terrainCls.cls, m.terrainCls.cw, tx + dx, ty + dy) === SNOW_CLS) snow++;
+    assert.equal(snow, 0, `${nm}: no snow on it`);
+  }
   // the Summit Trail: from a road, through the hut's meadow, to a summit; cairns along it
   const tr = (m.natureSites || []).find((s) => s.kind === 'trail' && s.name === PEAKS3.trail.name);
   assert.ok(tr && tr.line && tr.line.length > 40 && P.trail.len > 60, `the Summit Trail (${P.trail && P.trail.len} tiles)`);
