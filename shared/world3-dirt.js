@@ -38,9 +38,9 @@ const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0,
 
 // the long rides: their via points (tiles), a closed loop back to the start; markers numbered at the points marked
 export const RIDES = [
-  { name: 'Red Rock Trail', kind: 'route', district: 50, from: 'mx', hw: 40, slope: 24, pts: [[5372, 1694, 1], [5430, 1722], [5401, 1652, 2], [5430, 1722], [5520, 1702], [5584, 1648, 3], [5520, 1702], [5482, 1772, 4], [5340, 1726]],
+  { name: 'Red Rock Trail', kind: 'route', district: 50, from: 'mx', hw: 40, slope: 24, lump: 22, pts: [[5372, 1694, 1], [5430, 1722], [5401, 1652, 2], [5430, 1722], [5520, 1702], [5584, 1648, 3], [5520, 1702], [5482, 1772, 4], [5340, 1726]],
     wash: { pts: [[5508, 1650], [5522, 1690], [5516, 1730], [5534, 1772]], hw: 3 }, rest: 3 },
-  { name: 'Highland Enduro', kind: 'enduro', district: 47, start: [978, 1338], hw: 24, slope: 40, pts: [[1012, 1302], [1068, 1282], [1090, 1226], [1050, 1186], [1000, 1208], [986, 1262]],
+  { name: 'Highland Enduro', kind: 'enduro', district: 47, start: [978, 1338], hw: 24, slope: 40, lump: 14, pts: [[1012, 1302], [1068, 1282], [1090, 1226], [1050, 1186], [1000, 1208], [986, 1262]],
     creek: { pts: [[982, 1232], [1030, 1246], [1075, 1240], [1120, 1255], [1176, 1262]], hw: 1.6 } },
 ];
 export function buildDirt3(m, H3) {
@@ -212,14 +212,21 @@ function ride(m, H3, R, out) {
   let start;
   if (R.from === 'mx') { const L = m.landmarks.find((l) => l.name === MX.name); if (!L) { out.missed.push(`${R.name}: no park`); return null; } start = [Math.floor((L.x + L.w) / TILE) + 2, Math.floor((L.y + L.h / 2) / TILE)]; }
   else start = R.start;
+  // (a slow lumpy field over the open ground - a ride that wanders round the rough patches, not a ruler's line: value
+  // noise on 20-tile cells, eased)
+  const lump = (i) => {
+    const tx = i % W, ty = (i / W) | 0, gx = Math.floor(tx / 20), gy = Math.floor(ty / 20), fx = tx / 20 - gx, fy = ty / 20 - gy;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), h00 = hh(gx, gy, 997), h10 = hh(gx + 1, gy, 997), h01 = hh(gx, gy + 1, 997), h11 = hh(gx + 1, gy + 1, 997);
+    return Math.round(R.lump * ((h00 * (1 - sx) + h10 * sx) * (1 - sy) + (h01 * (1 - sx) + h11 * sx) * sy));
+  };
   const cost = (i) => {
     if (blocked.has(i)) return 0;
     const t = m.tiles[i], r = m.reserve[i];
     if (r & (1 | 2 | 8)) return 0;
     switch (t) {
-      case T.GRASS: return r & RES ? 18 : 10;
-      case T.DIRT: return 8;
-      case T.SAND: return r & RES ? 18 : 11;
+      case T.GRASS: return (r & RES ? 18 : 10) + lump(i);
+      case T.DIRT: return 8 + (r & RES ? 0 : lump(i));
+      case T.SAND: return (r & RES ? 18 : 11) + lump(i);
       case T.WATER: case T.DEEP: return m.lake && m.lake[i] ? 0 : creek && creek.has(i) ? 60 : 400;
       case T.ROAD: return 60;
       case T.BRIDGE: return 30;
@@ -347,7 +354,7 @@ function ride(m, H3, R, out) {
         for (let ty = Math.floor((y - w) / TILE); ty <= Math.floor((y + w) / TILE); ty++) for (let tx = Math.floor((x - w) / TILE); tx <= Math.floor((x + w) / TILE); tx++) {
           if (!inF(tx, ty) || Math.hypot((tx + 0.5) * TILE - x, (ty + 0.5) * TILE - y) > w) continue;
           const i = idx(tx, ty), t = m.tiles[i];
-          if ((t === T.SAND || t === T.DIRT || t === T.GRASS) && !(m.reserve[i] & (1 | 2 | 8))) { m.tiles[i] = T.SAND; m.reserve[i] |= 128 | RES; n++; }
+          if ((t === T.SAND || t === T.DIRT || t === T.GRASS) && !(m.reserve[i] & (1 | 2 | 8 | 128))) { m.tiles[i] = T.SAND; m.reserve[i] |= 128 | RES; n++; }
         }
       }
       if (k % 2 === 0) for (const s2 of [-1, 1]) P('boulder', ax + s2 * R.wash.hw * TILE * 0.5, ay + (s2 * 13) % 17, 14, { s: 20 + (k * 7) % 18 });
