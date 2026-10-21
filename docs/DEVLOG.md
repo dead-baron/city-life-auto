@@ -13378,3 +13378,22 @@ holes in its props. The first hole threw, every frame, so no fish, rise, leap or
 caught it and warned once. A hole is now skipped.
 
 Tests: test/waterlife.test.js - a map with holes in its props still has its fish.
+
+## 2026-10-21 · Nature: wrecks under the water
+
+The owner, 10-16: "see-through clear water ... underwater rocks and wrecks". The clear water showed its bed (pebbles,
+sand, seagrass, boulders), with nothing lying on it.
+
+- **the wrecks** (`shared/world3-wrecks.js`, new, World v3's done hook): sunken boats on the bed where the water is
+  clear and shallow enough to see them. There are rowboats and a skiff in the lakes, and skiffs and a sloop in the
+  sea's shallows, each lying at its own angle. They're always in open water 2.5-6 tiles off a shore out in the
+  country, never in a city pool, a park pond or a harbour, and far apart. Each is on the map's nature sites
+  ('sunken'), a place to find.
+- **their art** (`client/art2/water.js` wreckPx, drawn into the water's bed by the ground bake): the hull's planks,
+  the gunwale's dark rim broken here and there, holes with the ribs and the bed showing through, weed, a rowboat's
+  thwart, a sloop's mast fallen beside it, and pale scoured sand round it. The water tints it like the bed, a little
+  more clearly so it stands out.
+
+Tests: test/wrecks.test.js - the art (hull, rim and holes, a sloop's mast, nothing where none lies);
+test/world3coast.test.js - wrecks in the lakes and the sea, each in open shallow water out in the country, on the map,
+far apart.

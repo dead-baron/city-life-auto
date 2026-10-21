@@ -24,8 +24,9 @@ export function sunkenWrecks3(m) {
   const wet = (i) => m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP;
   // nothing built over it, no channel of a river running through, no dock or bridge by it
   const busy = (x, y) => { for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) { if (!inF(x + dx, y + dy)) return true; const t = m.tiles[idx(x + dx, y + dy)]; if (t === T.DOCK || t === T.BRIDGE) return true; } return false; };
-  const shoreAt = (x, y) => {   // tiles to the nearest land (by rings), or 99
-    for (let r = 1; r <= Math.ceil(R.shore[1]) + 1; r++) for (let k = -r; k <= r; k++) for (const [dx, dy] of [[k, -r], [k, r], [-r, k], [r, k]]) { const X = x + dx, Y = y + dy; if (inF(X, Y) && !wet(idx(X, Y))) return Math.sqrt(dx * dx + dy * dy); }
+  let shoreI = -1;
+  const shoreAt = (x, y) => {   // tiles to the nearest land (by rings), or 99 (shoreI: that land's tile)
+    for (let r = 1; r <= Math.ceil(R.shore[1]) + 1; r++) for (let k = -r; k <= r; k++) for (const [dx, dy] of [[k, -r], [k, r], [-r, k], [r, k]]) { const X = x + dx, Y = y + dy; if (inF(X, Y) && !wet(idx(X, Y))) { shoreI = idx(X, Y); return Math.sqrt(dx * dx + dy * dy); } }
     return 99;
   };
   // (out in the country and its coasts: no city pool or park pond, no harbour)
@@ -35,12 +36,13 @@ export function sunkenWrecks3(m) {
     const i = idx(x, y);
     if (m.tiles[i] !== T.WATER || (m.river && m.river[i])) continue;
     const where = m.lake && m.lake[i] ? 'lake' : 'sea';
-    if (!OUT.has(styles[m.dist[i]]) || (where === 'lake' && styles[m.dist[i]] === 'water')) continue;
+    if (!OUT.has(styles[m.dist[i]])) continue;
     let open = true;
     for (let dy = -R.open; dy <= R.open && open; dy++) for (let dx = -R.open; dx <= R.open; dx++) if (!wet(idx(x + dx, y + dy)) || (m.river && m.river[idx(x + dx, y + dy)])) { open = false; break; }
     if (!open) continue;
     const d = shoreAt(x, y);
     if (d < R.shore[0] || d > R.shore[1] || busy(x, y)) continue;
+    if (!OUT.has(styles[m.dist[shoreI]]) || styles[m.dist[shoreI]] === 'water') continue;   // (the shore it lies off out in the country: no city pool, park pond or harbour)
     cand[where].push([x, y, hh(x, y, 7301 + (where === 'lake' ? 1 : 0))]);
   }
   const list = (m.wrecks ||= []);
