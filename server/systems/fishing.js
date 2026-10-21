@@ -142,6 +142,9 @@ export function habitatAt(world, x, y, o = {}) {
     return body >= POND_MAX ? { water: 'lake', spot: park ? 'lily' : map.tileAt(tx, ty) === T.DEEP ? 'drop' : null } : { water: 'pond', spot: park ? 'lily' : null };
   }
   // the sea
+  // (a rock fishing point's wash: shared/world3-coast.js - the cast within 9 tiles of where the angler stands)
+  const FP = map._fishPts || Object.defineProperty(map, '_fishPts', { value: (map.natureSites || []).filter((s) => s.kind === 'fishpoint'), enumerable: false })._fishPts;
+  if (FP.length && FP.some((s) => Math.abs(s.x - x) < 9 * TILE && Math.abs(s.y - y) < 9 * TILE && Math.hypot(s.x - x, s.y - y) < 9 * TILE)) return { water: 'shore', spot: 'point' };
   if (o.boat && offshoreAt(map, x, y)) return o.night ? { water: 'deep', spot: 'night' } : { water: 'offshore', spot: 'blue' };
   if (near(map, tx, ty, 2, T.DOCK)) return { water: 'pier', spot: 'pilings' };
   const ld = landNear(map, tx, ty, 8);
@@ -265,8 +268,9 @@ function cast(world, p, ped, L) {
   let f = FS.pickFish(hab, { when, bait, rodLb: R.lb, far: F.power }, rand) || FS.FISH_BY_ID.bluegill;
   const rig = p.devFish, forced = rig && rig.next ? rigged(rig.next, hab, rand) : null;   // (the debug menu's next bite: server/devplay.js)
   if (forced) { f = forced; rig.next = null; }
-  const lb = FS.weighFish(f, rand, hab.spot === 'pocket' ? FS.POCKET.heavy : 0), seed = Math.floor(rand() * 4294967296) >>> 0;
+  const lb = FS.weighFish(f, rand, hab.spot === 'pocket' ? FS.POCKET.heavy : hab.spot === 'point' ? FS.POINT.heavy : 0), seed = Math.floor(rand() * 4294967296) >>> 0;
   if (hab.spot === 'pocket' && !(world.time - (p.pocketNote ?? -1e9) < 600)) { p.pocketNote = world.time; world.notify(p, 'A calm pocket: deep, slow water by the bank, out of the current - the big trout and bass hold here.', 'info'); }
+  if (hab.spot === 'point' && !(world.time - (p.pointNote ?? -1e9) < 600)) { p.pointNote = world.time; world.notify(p, 'Fishing the rocks: the stripers, the redfish and the flounder feed in the wash off the point.', 'info'); }
   L.P = FS.fightParams(f, lb, rodId, hab.water, seed, { bait });
   if (rig) {
     if (forced) L.P.snap = false;
