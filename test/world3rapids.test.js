@@ -236,7 +236,7 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   assert.ok(n > 50 && north > n * 0.8, `the current runs down the river to the bay (${north} of ${n} samples northward)`);
   // ...and it's a race (server/systems/races.js, kind 'kayak'): the start at the put-in's kayaks, a gate on the water every
   // so far down the river, the finish by the take-out; a kayak is entered, a rowboat isn't; first home takes the prize
-  const race = m.races.find((r) => r.kind === 'kayak');
+  const race = m.races.find((r) => r.kind === 'kayak' && RR.race && r.id === RR.race.id);   // (the Egret Marsh Paddle is a kayak race too)
   assert.ok(race && RR.race && race.id === RR.race.id && race.cps.length >= 5, `the river run's race and its gates (${JSON.stringify(RR.race)})`);
   const put = m.rentals.find((q) => q.poi === RR.put.poi);
   assert.ok(Math.hypot(race.start.x - put.spots[0].x, race.start.y - put.spots[0].y) < 4 * TILE, 'the start at the put-in\'s kayaks');
