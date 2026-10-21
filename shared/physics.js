@@ -8,6 +8,7 @@ import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';
 import { edgeBrake } from './border.js';
 import { dropsOf, DROP_SPEED } from './ledges.js';
+import { flowAt } from './flow.js';
 import { ugMapOf } from './underground.js';
 import { coverAtPx } from './tunnels.js';
 // Down the sewers or in the cave (e.ug: shared/underground.js) people and boats move through the underground's own map.
@@ -126,6 +127,7 @@ export function pedStep(s, inp, dt, map, mods) {
     s.vx *= Math.exp(-6 * dt); s.rollT = 0;
     s.dropping = true;
   } else if (s.dropping) s.dropping = false;
+  if (swim && !mods.still) { const f = flowAt(map, s.x, s.y); if (f) { s.x += f[0] * dt; s.y += f[1] * dt; } }   // (the river's current carries a swimmer: flow.js - mods.still: the wild things that live in it hold their own)
   s.x += s.vx * dt; s.y += s.vy * dt;
   edgeBrake(s, map.frame);   // (out past the world's edge: slowed, and stopped at its end - border.js)
   const bx = s.x, by = s.y, pvx = s.vx, pvy = s.vy;
@@ -331,6 +333,7 @@ export function vehStep(s, inp, dt, map, def, env) {
 
   s.vx = c * fwd - sn * lat;
   s.vy = sn * fwd + c * lat;
+  if (isBoat && inp.drv) { const f = flowAt(map, s.x, s.y); if (f) { s.x += f[0] * dt; s.y += f[1] * dt; } }   // (a boat under way drifts with the river: flow.js - never one tied up)
   s.x += s.vx * dt; s.y += s.vy * dt;
   edgeBrake(s, map.frame);   // (out past the world's edge: slowed, and stopped at its end - border.js)
   const hit = collideVehicleTiles(s, def, map, isBoat ? BOAT_BLOCK : CAR_BLOCK);

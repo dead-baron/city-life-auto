@@ -1336,7 +1336,7 @@ function step(world, a, dt, now, ph) {
   w.pose = pose;
   const mv = moveLike(a, w, S.size, S.run, mx, my, speed, dt, now);
   const mods = players.pedMods(world, a);
-  mods.speedMul = mv[2] / PED.walk; mods.canSprint = false; mods.canSwim = swim; mods.rock = !!S.nimble;
+  mods.speedMul = mv[2] / PED.walk; mods.canSprint = false; mods.canSwim = swim; mods.rock = !!S.nimble; mods.still = true;   // (a duck, an otter: at home in the current - shared/flow.js)
   pedStep(a, { bits: 0, mx: mv[0], my: mv[1], aim: a.a }, dt, map, mods);
   world.place(a);
   unstick(world, a, w, now);

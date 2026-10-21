@@ -12969,3 +12969,28 @@ nothing on it. Now:
 
 Tests: test/world3woods.test.js - the lake's shore dug and built out, the islets with pines out in the water, the jetty,
 the hire with rowboats, both on the map.
+
+## 2026-10-21 · Nature: the rivers' current
+
+The GDD's "still open: a current that carries you down a rapid". `shared/flow.js`, new, gives which way and how fast
+the water runs at any point:
+- **the direction** is along the nearest creek's or river's centre line. m.waters' channels each run downstream.
+- **the speed** is fastest in the middle of the channel and slower toward the banks. A creek or a steep river runs
+  faster than a slow one, and a rapid about two and a half times as fast.
+- **still water**: the calm pockets, the lakes, the ponds, the marsh and the sea have no current.
+
+What it carries (`shared/physics.js`):
+- **a swimmer** drifts with it. You make headway upstream on a slow reach, but a rapid sweeps you down and you can't
+  swim up one.
+- **a boat with someone at the helm** drifts too. One tied up never does, and neither do the ferries and the anglers'
+  boats, which have no one at the helm.
+- **the wild things that live in the water** (ducks, otters, beavers) hold their own (`mods.still`).
+
+The client predicts its own swimmer and boat with the same current from the same map. It is worked out once per map
+and kept beside it, not in it.
+
+Code budget: the page's code is 488 KB of its 488 (flow.js is about 1.5 KB of it).
+
+Tests: test/flow.test.js - on a small river: the current downstream, slower at the bank, faster in a rapid, none in a
+pocket, the lake or on land; a swimmer carried down, no headway up a rapid but some up the slow reach, a duck holding
+its place, a boat at the helm drifting and one tied up not.

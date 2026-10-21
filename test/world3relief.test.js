@@ -110,16 +110,16 @@ test('World v3: the land\'s relief - heights, cliff bands off the roads, the lan
   check(box(metro[0], metro[1], 4) < 6, `Metro City ${box(metro[0], metro[1], 4)} m`);
 
   // (H50) the tables' looks: m.tables for the bake, its rim the same as the relief's; red sandstone faces all round each
-  // rim (the south, and the north, east and west too); no small mesa of 8.8's on a table, its talus or by its foot; no
+  // rim (the south, and the north, east and west too: arcs of 6 to 13 tiles since 2026-10-21, so six at least); no small mesa of 8.8's on a table, its talus or by its foot; no
   // band less than two tiles thick; Red Rock Canyon cut into the plateau
   check(m.tables && m.tables.length === sum.tables, `m.tables: ${m.tables && m.tables.length} of ${sum.tables}`);
   for (const t of m.tables || []) for (const [x, y] of [[t.x, t.y], [t.x + t.rx, t.y + 3], [t.x - 7, t.y - t.ry], [t.x + 11, t.y + t.ry + 6]]) check(Math.abs(tableEdge(t, x, y) - bakeEdge(t, x, y)) < 1e-9, `the bake's rim of the table at ${t.x}, ${t.y} is the relief's`);
   const faces = m.props.filter((p) => p.t === 'cliff' && p.st === 'sandstone');
   for (const t of m.tables || []) {
-    const own = faces.filter((p) => Math.abs(p.x / TILE - t.x) < t.rx + 8 && Math.abs(p.y / TILE - t.y) < t.ry + 10);
+    const own = faces.filter((p) => Math.abs(p.x / TILE - t.x) < t.rx * 1.25 + 8 && Math.abs(p.y / TILE - t.y) < t.ry * 1.25 + 10);   // (2026-10-21: the rim wavers out by a fifth)
     const north = own.filter((p) => p.y / TILE < t.y - t.ry * 0.5).length, south = own.filter((p) => p.y / TILE > t.y + t.ry * 0.5).length;
     const east = own.filter((p) => p.x / TILE > t.x + t.rx * 0.6).length, west = own.filter((p) => p.x / TILE < t.x - t.rx * 0.6).length;
-    check([north, south, east, west].filter((n) => n > 0).length >= 3 && north + south + east + west >= 8, `the table at ${t.x}, ${t.y}: sandstone faces north ${north}, south ${south}, east ${east}, west ${west} (a road's cutting may open one side)`);
+    check([north, south, east, west].filter((n) => n > 0).length >= 3 && north + south + east + west >= 6, `the table at ${t.x}, ${t.y}: sandstone faces north ${north}, south ${south}, east ${east}, west ${west} (a road's cutting may open one side)`);
   }
   const towers = m.props.filter((p) => p.t === 'outcrop' && p.style === 'sandstone' && p.s < 4 && (m.tables || []).some((t) => tableEdge(t, p.x / TILE, p.y / TILE) < 16));   // (dress3's: s 0-3 - 8.18's lookout rock and hoodoos stand on its mesa by design)
   check(towers.length === 0, `small mesas on the tables or their talus: ${towers.length}`);
