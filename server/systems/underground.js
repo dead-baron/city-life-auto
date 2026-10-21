@@ -12,13 +12,16 @@
 //     first, then the rock (it hurts anyone under it). A motorboat waits on the underground river.
 //   * Mining: face a vein with a good enough pickaxe and work it (stand still); the ore comes free, the vein is used up
 //     and grows back after a while somewhere near it (seeded). The pickaxes' tiers gate the ores.
-import { undergroundOf, UG, PICKS, ORE_BY_ID, bestPick, ugLos, openAt, caveOf, caveNear } from '../../shared/underground.js';
+//   * The caverns (World v3's Redwood Caverns): in by any of their mouths, out by the nearest; a rowboat at each of their
+//     docks that has one (while someone is down there); old chests to open (CHEST_LOOT), filling again in a while.
+import { undergroundOf, UG, PICKS, ORE_BY_ID, bestPick, ugLos, openAt, caveOf, caveNear, mouthNear, mouthsOf, wayOut } from '../../shared/underground.js';
 import { ITEMS } from '../../shared/items.js';
 import { K } from '../../shared/constants.js';
 import { pedStep } from '../../shared/physics.js';
 import {
   MANHOLE_REACH, LADDER_REACH, MINE_REACH, VEIN_REGROW_S, POLICE_FOLLOW_R, POLICE_FOLLOW_S, POLICE_GIVE_UP_S,
   ROCKFALL_WARN_S, ROCKFALL_DMG, ROCKFALL_R, ROCKFALL_EVERY_S, BATS_REST_S, BEAR_WAKE_R, BEAR_BITE, BEAR_BITE_S,
+  CHEST_REACH, CHEST_REFILL_S, CHEST_LOOT,
 } from '../../shared/rules.js';
 import * as combat from './combat.js';
 import * as wildlife from './wildlife.js';
@@ -75,13 +78,18 @@ export function interaction(world, p) {
       if (door) return { label: `Through the service door up into ${door.name}`, run: () => toStation(world, p, door) };
     }
     const K2 = ped.ug === UG.CAVE && caveOf(L, ped.x, ped.y);
-    if (K2 && Math.hypot(ped.x - K2.inside.x, ped.y - K2.inside.y) < 56) return { label: 'Walk out of the cave', run: () => leaveCave(world, p, K2) };
+    if (K2) {
+      const w = wayOut(K2, ped.x, ped.y);
+      if (w && w.d < 56) return { label: w.M.kind === 'sea' ? 'Walk out of the sea cave onto the beach' : 'Walk out of the cave', run: () => leaveCave(world, p, K2, w.M) };
+      const c = chestInteraction(world, p, K2, ped);
+      if (c) return c;
+    }
     return mineInteraction(world, p, ped);
   }
   const mh = manholeNear(L, ped.x, ped.y, MANHOLE_REACH);
   if (mh) return { label: 'Lift the manhole cover and climb down into the sewer', run: () => goDown(world, p, mh) };
-  const K2 = caveNear(L, ped.x, ped.y);
-  if (K2 && Math.hypot(ped.x - K2.mouth.x, ped.y - K2.mouth.y) < 30) return { label: 'Go into the cave (it\'s pitch dark: bring a light)', run: () => enterCave(world, p, K2) };
+  const q = mouthNear(L, ped.x, ped.y);
+  if (q && q.d < 30) return { label: q.K.kind === 'cavern' ? `Go into ${q.K.name} (pitch dark: bring a light)` : 'Go into the cave (it\'s pitch dark: bring a light)', run: () => enterCave(world, p, q.K, q.M) };
   return mineInteraction(world, p, ped);
 }
 function mineInteraction(world, p, ped) {
@@ -140,28 +148,58 @@ export function toStation(world, p, door) {
   world.notify(p, `Through the service door, along the platform and up the stairs: ${st.name}.`, 'info');
   return true;
 }
-// (K: which cave - by default the one whose mouth is nearest)
-export function enterCave(world, p, K = null) {
+// (K: which cave - by default the one whose mouth is nearest; M: by which of its mouths - by default its nearest)
+export function enterCave(world, p, K = null, M = null) {
   const L = layoutOf(world), ped = p.ped, K2 = K || (ped && caveNear(L, ped.x, ped.y));
   if (!K2 || !ped || ped.dead || ped.vehId || ped.ug) return false;
   if (ped.carrying) { world.notify(p, 'Set the crate down first.', 'warn'); return false; }
-  moveTo(world, p, K2.inside.x, K2.inside.y, UG.CAVE);
+  const M2 = M || mouthsOf(K2).reduce((b, q) => (!b || Math.hypot(q.x - ped.x, q.y - ped.y) < Math.hypot(b.x - ped.x, b.y - ped.y) ? q : b), null);
+  moveTo(world, p, M2.inside.x, M2.inside.y, UG.CAVE);
   world.notify(p, p.profile.light ? 'Into the cave. Your flashlight shows the way.' : 'Into the cave. It\'s pitch dark in here - switch on a flashlight if you have one.', 'info');
   return true;
 }
-export function leaveCave(world, p, K = null) {
+export function leaveCave(world, p, K = null, M = null) {
   const L = layoutOf(world), K2 = K || (p.ped && caveOf(L, p.ped.x, p.ped.y));
   if (!K2 || !p.ped) return false;
-  moveTo(world, p, K2.mouth.x, K2.mouth.y + 26, 0);
-  world.notify(p, 'Out into the daylight.', 'info');
+  const M2 = M || wayOut(K2, p.ped.x, p.ped.y).M;
+  moveTo(world, p, M2.out.x, M2.out.y, 0);
+  world.notify(p, M2.kind === 'sea' ? 'Out onto the cobbles of the beach, the sea in front of you.' : 'Out into the daylight.', 'info');
   return true;
+}
+// ---- a cavern's old chests ------------------------------------------------------------------------------------------------
+function chestInteraction(world, p, K2, ped) {
+  if (!K2.chests || !K2.chests.length) return null;
+  const S = caveState(world, K2);
+  let best = null, bd = CHEST_REACH;
+  for (const c of K2.chests) { const d = Math.hypot(c.x - ped.x, c.y - ped.y); if (d < bd) { bd = d; best = c; } }
+  if (!best) return null;
+  const st = S.chests[best.i];
+  if (st.until > world.time) return { label: 'An empty chest - somebody\'s been here', run: () => world.notify(p, 'Empty. Whoever was here first took it all; there\'ll be more washed down or left behind in a while.', 'info') };
+  return { label: 'Open the old chest', run: () => openChest(world, p, K2, best) };
+}
+export function openChest(world, p, K2, c) {
+  const S = caveState(world, K2), st = S.chests[c.i];
+  if (!p.ped || p.ped.dead || st.until > world.time) return null;
+  st.until = world.time + CHEST_REFILL_S;
+  const inv = p.profile.inventory, got = [];
+  for (const [id, lo, hi] of CHEST_LOOT.items) { const n = lo + Math.floor(world.rand() * (hi - lo + 1)); if (n > 0) { inv[id] = (inv[id] || 0) + n; got.push(`${n > 1 ? n + ' x ' : ''}${ITEMS[id].name}`); } }
+  const cash = CHEST_LOOT.cash[0] + Math.floor(world.rand() * (CHEST_LOOT.cash[1] - CHEST_LOOT.cash[0] + 1));
+  p.profile.cash += cash;
+  world.emit(c.x, c.y, { e: 'chest', x: c.x, y: c.y, k: K2.k, i: c.i });
+  for (const q of world.players.values()) if (q.ped && q.ped.ug === UG.CAVE && Math.hypot(q.ped.x - c.x, q.ped.y - c.y) < 4000) sendLayer(world, q);
+  world.notify(p, `The lid creaks open: ${got.join(', ')}${got.length ? ' and ' : ''}$${cash} in old coins. The pawn shops and the assay office buy the finds.`, 'good');
+  p.meDirty = true;
+  store.touch();
+  return { got, cash };
 }
 // what the client needs to draw where you are (and its veins): sent on going down / up and when a vein changes
 function sendLayer(world, p) {
   if (!p.conn) return;
   const ped = p.ped;
-  p.conn.sendJSON({ t: 'ug', ug: (ped && ped.ug) || 0, veins: veinList(world) });
+  p.conn.sendJSON({ t: 'ug', ug: (ped && ped.ug) || 0, veins: veinList(world), chests: chestList(world) });
 }
+// the chests that are empty now: [cave k, chest i, seconds till they're full again]
+function chestList(world) { const out = []; for (const [k, S] of (world.caves || []).entries()) if (S && S.chests) S.chests.forEach((c, i) => { if (c.until > world.time) out.push([k, i, Math.round(c.until - world.time)]); }); return out; }
 function veinList(world) { const out = []; if (world.veins) for (const [i, s] of world.veins) if (s.alt || s.until > world.time) out.push([i, s.alt, Math.max(0, Math.round(s.until - world.time))]); return out; }
 
 // ---- mining ----------------------------------------------------------------------------------------------------------------
@@ -269,7 +307,7 @@ function caveStep(world, dt) {
 function caveState(world, K2) {
   const all = world.caves || (world.caves = []);
   if (!all[K2.k]) {
-    all[K2.k] = { roosts: K2.roosts.map(() => ({ until: 0 })), rocks: K2.rocks.map((r, i) => ({ next: 20 + i * 9, fallAt: 0 })), bear: 0, boat: 0 };
+    all[K2.k] = { roosts: K2.roosts.map(() => ({ until: 0 })), rocks: K2.rocks.map((r, i) => ({ next: 20 + i * 9, fallAt: 0 })), bear: 0, boat: 0, boats: (K2.boats || []).map(() => 0), chests: (K2.chests || []).map(() => ({ until: 0 })) };
     if (!K2.k) world.cave = all[0];
   }
   return all[K2.k];
@@ -313,6 +351,17 @@ function oneCave(world, dt, K2, inCave, S) {
     S.bear = b.id;
   } else if (!inCave.length && bear && !bear.removed) { world.remove(bear); S.bear = 0; }   // (nobody left in this cave)
   if (bear && !bear.removed && !bear.dead) bearStep(world, bear, inCave, dt, K2);
+  if (K2.boats) {   // (a cavern: a rowboat at each dock that keeps one)
+    K2.boats.forEach((b, i) => {
+      const v = S.boats[i] ? world.get(S.boats[i]) : null;
+      if (inCave.length && (!v || v.removed || v.dead)) {
+        const nv = world.spawnVehicle('rowboat', b.x, b.y, b.a, { npcOwned: false });
+        nv.sub = true; nv.ug = UG.CAVE;
+        S.boats[i] = nv.id;
+      } else if (!inCave.length && v && !v.removed && !v.seats.some((s) => s)) { world.remove(v); S.boats[i] = 0; }
+    });
+    return;
+  }
   const boat = S.boat ? world.get(S.boat) : null;
   if (inCave.length && (!boat || boat.removed || boat.dead)) {
     const v = world.spawnVehicle('dinghy', K2.boat.x, K2.boat.y, K2.boat.a, { npcOwned: false });
@@ -369,4 +418,4 @@ export function update(world, dt) {
   }
 }
 // regrowing veins: anyone near hears about them (a vein's state is sent with the layer: sendLayer)
-export const _test = { manholeNear, doorNear, veinList };
+export const _test = { manholeNear, doorNear, veinList, chestList, caveState };

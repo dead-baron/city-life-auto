@@ -326,7 +326,7 @@ function onText(m) {
     case 'menu': S.hud.openMenu(m); break;
     case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
     case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; if (!drawStarView) import('./stargaze.js').then((mod) => { drawStarView = mod.drawStarView; }).catch((e) => console.warn('[stargaze]', e)); break;   // (the observatory: the night sky through the eyepiece)
-    case 'ug': S.ugLayer = m.ug || 0; S.ugVeins = m.veins || []; S.ugVeinsAt = performance.now(); break;   // down the sewers / in the cave (1 / 2), and the ore veins' state (server/systems/underground.js)
+    case 'ug': S.ugLayer = m.ug || 0; S.ugVeins = m.veins || []; S.ugVeinsAt = performance.now(); S.ugChests = m.chests || []; break;   // down the sewers / in the cave (1 / 2), and the ore veins' state (server/systems/underground.js)
     case 'garden': case 'fields': S[m.t] = m.t === 'garden' ? m.g : m.f; if (!S.farmArt && !S.farmP) S.farmP = import('./render/farmart.js').then((mod) => { S.farmArt = new mod.FarmArt(S); }).catch((e) => { S.farmP = null; console.warn('[farm]', e); }); break;   // (the garden plots and the fields' rows near you: gardening.js, farming.js)
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
@@ -2834,7 +2834,7 @@ function drawMineRing(F) {
 function nearVeins(sp) {
   if (S.ugMod || S.ugViewP || !S.map || !S.map.quarries || !S.map.quarries[0]) return;
   const near = (x, y) => Math.abs(sp.x - x) < 2500 && Math.abs(sp.y - y) < 2500;   // (every pit and mine: World v3 has two of each)
-  if (S.map.quarries.some((q) => near(q.x + q.w / 2, q.y + q.h / 2)) || (S.map.natureSites || []).some((n) => n.kind === 'mine' && near(n.x, n.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
+  if (S.map.quarries.some((q) => near(q.x + q.w / 2, q.y + q.h / 2)) || (S.map.natureSites || []).some((n) => (n.kind === 'mine' || n.kind === 'cavemouth') && near(n.x, n.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
 }
 
 // (the tunnels' art: its module loads once one is near - shared/tunnels.js has where they are)
