@@ -12944,3 +12944,25 @@ noise), each ringed by a necklace of even sandstone knobs (the rim's faces on a 
   grid's ring of knobs.
 - **kept in step**: the bake's copy of the rim (client/art2/game/groundbake.js: the cap rock and the talus) and the dressing's
   check for a table (shared/world3-biomes.js: no boulders on a top) reach out as far as the new rim does.
+
+## 2026-10-21 · Nature: Highland Woods by hand, part 3 - Silver Thread Lake
+
+From the handcraft research's 4.3 ("the mid-forest lake (islets, boathouse)") and the concepts NA1-A, D15 and SC3-G
+("a rocky pine islet ... jetty and boat ramp"); `shared/world3-woodslake.js`, new, World v3's done hook. The lake under
+Silver Thread Falls lay as the river's still reach had left it: one smooth blob with the forest floor to a clean edge and
+nothing on it. Now:
+- **its shore wanders**: bays are dug into the forest floor and points built out into the water in slow waves, never
+  near the falls, the river's water in and out, a trail, a road or the bridge. A pine or a mossy boulder stands on
+  each point, and the bays' shallows grow reeds.
+- **three rocky islets** lie out in the deep water, one big and two smaller. Each has a rim of pebbles and boulders
+  and pines and firs on its middle.
+- **the Silver Thread Boathouse** is on the south shore: a boat shed, a plank jetty out into the lake with canoes
+  moored along it and a lamp at its end, a bench and a sign on the bank, and a clearing round the landing so the
+  redwoods don't stand over it. The canoe hire there lets out rowboats and the dock's motorboat
+  (`server/systems/rentals.js`: a rental can now name its own boats). Both are named on the map.
+- **pines drawn at last**: Pine Hills' and the Lakeside course's trees asked for the species 'pine', which the art
+  doesn't have, so they were drawn as nothing while still standing there as solid trunks. 'pine' is now drawn as the
+  ponderosa (`client/art2/game/statics.js`).
+
+Tests: test/world3woods.test.js - the lake's shore dug and built out, the islets with pines out in the water, the jetty,
+the hire with rowboats, both on the map.

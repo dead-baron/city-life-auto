@@ -14,7 +14,7 @@ import { FALLS3 } from '../shared/world3-falls.js';
 import { habitatAt } from '../server/systems/wildlife.js';
 import { prepare } from '../tools/world3-build.mjs';
 
-test('World v3: Highland Woods - the falls, the trails and their furniture, the glades, the lookout', { timeout: 400000 }, () => {
+test('World v3: Highland Woods - the falls, the trails and their furniture, the glades, the lookout', { timeout: 400000 }, async () => {
   const prep = prepare();
   const m = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });
   const fails = [], check = (ok, msg) => { if (!ok) fails.push(msg); };
@@ -137,5 +137,23 @@ test('World v3: Highland Woods - the falls, the trails and their furniture, the 
     for (let k = 10; k < 90; k++) { const x = Math.round(ax + (bx - ax) * k / 100), y = Math.round(ay + (by - ay) * k / 100); n++; if (m.tiles[at(x, y)] === T.DIRT) dirt++; }
     check(dirt < n * 0.3, `the old straight way from the campground: ${dirt} of ${n} tiles still dirt`);
   }
+  // Silver Thread Lake by hand (shared/world3-woodslake.js): its shore wandering, three rocky pine islets, the boathouse's
+  // jetty and canoe hire (rowboats)
+  const WL = m.world3.woodsLake, W = m.w;
+  console.log('woods lake', JSON.stringify({ ...WL, dbg: undefined }));
+  check(WL.lake > 15000 && WL.dug > 200 && WL.built > 200, `the lake's shore wanders: ${WL.dug} tiles dug, ${WL.built} built out`);
+  check(WL.isles >= 2 && WL.pines >= WL.isles * 2, `islets with pines: ${WL.isles}, ${WL.pines}`);
+  const isleTrees = m.props.filter((p) => p && p.t === 'tree_a' && (p.sp === 'pondPine' || p.sp === 'fir' || p.sp === 'spruce') && m.land[Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)] && (() => { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); let wet = 0; for (const [dx, dy] of [[12, 0], [-12, 0], [0, 12], [0, -12]]) { const t = m.tiles[(ty + dy) * W + tx + dx]; if (t === T.WATER || t === T.DEEP) wet++; } return wet === 4; })());
+  check(isleTrees.length >= WL.isles, `the islets' pines out in the water: ${isleTrees.length}`);
+  check(WL.boathouse && WL.boathouse.poi >= 0 && WL.boathouse.spots >= 2, `the boathouse and its hire: ${JSON.stringify(WL.boathouse)}`);
+  if (WL.boathouse) {
+    const [sx, sy] = WL.boathouse.shore;
+    let dock = 0; for (let k = 0; k < 9; k++) if (m.tiles[(sy - k) * W + sx] === T.DOCK) dock++;
+    check(dock >= 8, `the jetty out into the lake: ${dock} planks`);
+    const R = m.rentals.find((r) => r.poi === WL.boathouse.poi);
+    const { modelsAt } = await import('../server/systems/rentals.js');
+    check(R && modelsAt(R).includes('rowboat'), `rowboats for hire: ${R && modelsAt(R)}`);
+  }
+  check(m.landmarks.some((l) => l.name === 'Silver Thread Lake') && m.landmarks.some((l) => l.name === 'Silver Thread Boathouse'), 'on the map');
   assert.deepEqual(fails, []);
 });

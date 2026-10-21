@@ -12,7 +12,7 @@ const RETURN_R = 260;     // drive within this of a rental dock to hand the boat
 const WARN_BEFORE_S = 60; // "a minute left" nudge
 
 export const rentalFor = (world, poi) => world.map.rentals.find((r) => r.poi === poi.id);
-export const modelsAt = (rental) => (rental.lake ? ['jetski', 'dinghy'] : RENTAL_MODELS);
+export const modelsAt = (rental) => rental.models || (rental.lake ? ['jetski', 'dinghy'] : RENTAL_MODELS);   // (rental.models: a place's own - the woods' lake's rowboats: shared/world3-woodslake.js)
 
 // The hire boat this player has out right now (or null).
 export function current(world, p) {
