@@ -9,6 +9,11 @@
 //     Granite Peaks - a glow grotto, a long river hall with a boat, glow-worm and crystal caves, a bear's den (a cave
 //     per mine: L.caves, each its own region entered by its own mouth - World v3 has two, docs/WORLD-V3.md 8.19;
 //     L.cave is the first, today's world's only one);
+//   * the caverns (ug 2, World v3: map.caverns, laid out by the world build - shared/world3-caves.js): a network of
+//     chambers along an underground river with more than one way in (behind a waterfall, a sea cave), its own kinds of
+//     chamber (a glow grotto, a crystal vault, a great lake, a bear's den, a treasure chamber, an ore face), cascades
+//     where the river steps down, timber docks with lanterns and rowboats, stairs, chests - each a cave of L.caves like
+//     a mine's, after them;
 //   * the ore veins (mining): on the cave's walls and, above ground, round the Granite Quarry's pit and the outcrops by
 //     the mine. Better ore deeper in and further out in the wilds; the best needs the best pickaxe (ORES, PICKS).
 // The layout is worked out once per map from the map itself (lazily: nothing here runs while the city is built) and
@@ -21,8 +26,10 @@ import { edgeCovers, coverSeed } from './covers.js';
 
 export const UG = { SEWER: 1, CAVE: 2 };
 // cell codes in an underground region (drawn by client/underground/, walked by the physics through CELL_T)
-export const C = { ROCK: 0, WALK: 1, STREAM: 2, FLOOR: 3, RIVER: 4, POOL: 5, SHAFT: 6 };
-const CELL_T = [T.WALL, T.SIDEWALK, T.DIRT, T.DIRT, T.DEEP, T.WATER, T.SIDEWALK];
+// (DOCK: a timber pier out over the river - walked on, boats moor beside it; CASCADE: where the river steps down over
+// a ledge - white water nobody gets through, boat or swimmer: you walk round it on the bank's stairs)
+export const C = { ROCK: 0, WALK: 1, STREAM: 2, FLOOR: 3, RIVER: 4, POOL: 5, SHAFT: 6, DOCK: 7, CASCADE: 8 };
+const CELL_T = [T.WALL, T.SIDEWALK, T.DIRT, T.DIRT, T.DEEP, T.WATER, T.SIDEWALK, T.DOCK, T.WALL];
 
 // ---- ores and pickaxes ---------------------------------------------------------------------------------------------
 // tier: the pickaxe it needs (PICKS[id].tier >= it); val: what a vein of it is worth to the assay office (items.js
@@ -209,10 +216,25 @@ function buildCave(map, mine, k) {
   const fork = { ax: Math.round(rv.ax + (rv.bx - rv.ax) * 0.62), ay: Math.round(rv.ay + (rv.by - rv.ay) * 0.62), bx: ch.pool.x, by: ch.pool.y, hw: 50 };
   return { k, name: mine.name || 'the mine', X, face, flip, mouth, inside, chambers, ch, passages, river: rv, fork };
 }
-// the caves: one per mine with a cave of its own (a mine marked cave: false has none), in the map's order
+// A cavern (World v3's map.caverns: shared/world3-caves.js lays each out - its mouths, chambers, river, docks... all in
+// px): its chambers and passages as a mine cave's are, its mouths (mouths[0] is the cave's mouth and inside, as a mine
+// cave's one), the rest kept as its plan for the carving and the dressing.
+function buildCavern(map, P, k) {
+  const chambers = P.chambers.map((c) => ({ id: c.id, name: c.name, x: c.x, y: c.y, r: c.r, depth: c.depth, glow: c.glow || null, kind: c.kind || null, ores: c.ores || null }));
+  const ch = {};
+  for (const c of chambers) ch[c.id] = c;
+  if (!ch.pool && ch.lake) ch.pool = ch.lake;   // (the still water the cave fish live in - fishing.js: the great lake)
+  const mouths = P.mouths.map((q) => ({ name: q.name, kind: q.kind, x: q.x, y: q.y, out: q.out ? { x: q.out.x, y: q.out.y } : { x: q.x, y: q.y + 26 }, inside: { x: q.inside.x, y: q.inside.y }, toward: q.toward || null }));
+  const M0 = mouths[0];
+  const passages = (P.passages || []).map(([a, b, via]) => ({ a, b, via: null, vias: (via || []).map(([x, y]) => ({ x, y })) }));
+  return { k, kind: 'cavern', key: P.key || null, name: P.name, X: M0.x, face: M0.y, flip: 1, mouth: M0, inside: M0.inside, mouths, chambers, ch, passages, river: null, fork: null, plan: P };
+}
+// the caves: one per mine with a cave of its own (a mine marked cave: false has none), in the map's order; then the
+// caverns (theirs after the mines', so a mine cave's seeds and veins come out as they were)
 function buildCaves(map) {
   const out = [];
   for (const q of map.natureSites || []) if (q.kind === 'mine' && q.cave !== false) out.push(buildCave(map, q, out.length));
+  for (const P of map.caverns || []) out.push(buildCavern(map, P, out.length));
   return out;
 }
 // the cave a spot underground belongs to: the one whose region holds it, else the one whose mouth is nearest (one cave:
@@ -224,10 +246,23 @@ export function caveOf(L, x, y) {
   for (const K of cs) { const R = K.region; if (tx >= R.x0 && ty >= R.y0 && tx < R.x0 + R.w && ty < R.y0 + R.h) return K; }
   return caveNear(L, x, y);
 }
-// the cave whose mouth is nearest (x, y)
-export function caveNear(L, x, y) {
-  let best = null, bd = Infinity;
-  for (const K of L.caves || []) { const d = len(K.mouth.x - x, K.mouth.y - y); if (d < bd) { bd = d; best = K; } }
+// the cave whose mouth is nearest (x, y) (a cavern's: any of its mouths)
+export function caveNear(L, x, y) { const q = mouthNear(L, x, y); return q ? q.K : null; }
+// a cave's ways in: [{ name, kind, x, y (the mouth, on the surface), out (where you come out), inside (where you come
+// in), toward }] - a mine cave's one, a cavern's each
+export function mouthsOf(K) {
+  return K.mouths || (K._mouths ||= [{ name: K.name, kind: 'adit', x: K.mouth.x, y: K.mouth.y, out: { x: K.mouth.x, y: K.mouth.y + 26 }, inside: K.inside, toward: 'hall' }]);
+}
+// the nearest cave mouth to (x, y): { K: its cave, M: the mouth, d: px }
+export function mouthNear(L, x, y) {
+  let best = null;
+  for (const K of L.caves || []) for (const M of mouthsOf(K)) { const d = len(M.x - x, M.y - y); if (!best || d < best.d) best = { K, M, d }; }
+  return best;
+}
+// the way out of a cave nearest a spot inside it: { M: the mouth, d: px from where you come in by it }
+export function wayOut(K, x, y) {
+  let best = null;
+  for (const M of mouthsOf(K)) { const d = len(M.inside.x - x, M.inside.y - y); if (!best || d < best.d) best = { M, d }; }
   return best;
 }
 
@@ -270,6 +305,7 @@ function build(map) {
   // the caves' regions (one per mine with a cave)
   const caves = buildCaves(map);
   for (const cave of caves) {
+    if (cave.kind === 'cavern') { const cr = carveCavern(F, cave, kSeed(seed ^ 0x3c3c, cave.k)); regions.push(cr); cave.region = cr; continue; }
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (const c of cave.chambers) { const r = c.long ? 0 : c.r; const xs = c.long ? [c.long.ax, c.long.bx] : [c.x]; const ys = c.long ? [c.long.ay, c.long.by] : [c.y]; for (const x of xs) for (const y of ys) { x0 = Math.min(x0, x - r - c.r); x1 = Math.max(x1, x + r + c.r); y0 = Math.min(y0, y - r - c.r); y1 = Math.max(y1, y + r + c.r); } }
     x0 = Math.min(x0, cave.mouth.x - 200); x1 = Math.max(x1, cave.mouth.x + 200); y0 = Math.min(y0, cave.mouth.y - 200); y1 = Math.max(y1, cave.mouth.y + 200);
@@ -298,13 +334,112 @@ function build(map) {
     cave.region = cr;
   }
   const L = { routes, regions, sewer, caves, cave: caves[0] || null, seed };
-  for (const cave of caves) dressCave(L, cave);
+  for (const cave of caves) (cave.kind === 'cavern' ? dressCavern : dressCave)(L, cave);
   if (sewer) dressSewers(L);
   L.veins = veins(map, L);
   L.phys = physMap(L, F);
   return L;
 }
 
+// A cavern's rock, carved from its plan (P: shared/world3-caves.js): its box round everything in it; the chambers; the
+// passages between them; the ways in from each mouth; the river's corridor (a bank either side), the river down it, the
+// great lake, the sea pool at its mouth; the cascades across it; the docks out over it.
+function carveCavern(F, K, s2) {
+  const P = K.plan, rv = P.river;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const grow = (x, y, r) => { x0 = Math.min(x0, x - r); y0 = Math.min(y0, y - r); x1 = Math.max(x1, x + r); y1 = Math.max(y1, y + r); };
+  for (const c of K.chambers) grow(c.x, c.y, c.r * 1.6);
+  for (const M of K.mouths) { grow(M.x, M.y, 200); grow(M.inside.x, M.inside.y, 200); }
+  if (rv) for (const [x, y] of rv.pts) grow(x, y, rv.hw + 220);
+  if (P.lake) grow(P.lake.x, P.lake.y, P.lake.r + 200);
+  if (P.sea) grow(P.sea.x, P.sea.y, P.sea.r + 120);
+  for (const ps of K.passages) for (const q of ps.vias) grow(q.x, q.y, 140);
+  const cr = region(F, x0 / TILE - 4, y0 / TILE - 4, x1 / TILE + 4, y1 / TILE + 4);
+  cr.ug = UG.CAVE;
+  for (const c of K.chambers) disc(cr, c.x, c.y, c.r, C.FLOOR, false, 0.55, s2 + c.depth);
+  for (const ps of K.passages) {
+    const a = K.ch[ps.a], b = K.ch[ps.b], pts = [a, ...ps.vias, b];
+    for (let i = 1; i < pts.length; i++) capsule(cr, pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y, ps.hw || 46, C.FLOOR, false, 0.6, s2 + 7);
+  }
+  for (const M of K.mouths) {
+    capsule(cr, M.x, M.y, M.inside.x, M.inside.y, 46, C.FLOOR, false, 0.25, s2 + 9);
+    const to = M.toward && K.ch[M.toward];
+    if (to) capsule(cr, M.inside.x, M.inside.y, to.x, to.y, 46, C.FLOOR, false, 0.35, s2 + 10);
+  }
+  if (rv) {
+    for (let i = 1; i < rv.pts.length; i++) capsule(cr, rv.pts[i - 1][0], rv.pts[i - 1][1], rv.pts[i][0], rv.pts[i][1], rv.hw + (rv.bank || 76), C.FLOOR, false, 0.45, s2 + 14);
+    if (P.lake) disc(cr, P.lake.x, P.lake.y, P.lake.r + (rv.bank || 76) + 20, C.FLOOR, false, 0.5, s2 + 15);
+    for (let i = 1; i < rv.pts.length; i++) capsule(cr, rv.pts[i - 1][0], rv.pts[i - 1][1], rv.pts[i][0], rv.pts[i][1], rv.hw, C.RIVER, true, 0.25, s2 + 11);
+    if (P.lake) disc(cr, P.lake.x, P.lake.y, P.lake.r, C.RIVER, true, 0.3, s2 + 13);
+    if (P.sea) disc(cr, P.sea.x, P.sea.y, P.sea.r, C.RIVER, true, 0.3, s2 + 16);
+    // the cascades: a band across the river (white water, a wall to everyone) - only over the river's own cells
+    for (const q of P.cascades || []) {
+      const tx0 = Math.floor((q.x - rv.hw - 60) / TILE), tx1 = Math.floor((q.x + rv.hw + 60) / TILE), ty0 = Math.floor((q.y - rv.hw - 60) / TILE), ty1 = Math.floor((q.y + rv.hw + 60) / TILE);
+      for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+        const cx = (tx + 0.5) * TILE - q.x, cy = (ty + 0.5) * TILE - q.y, along = cx * q.ux + cy * q.uy, across = -cx * q.uy + cy * q.ux;
+        if (Math.abs(along) <= (q.t || 26) && Math.abs(across) <= rv.hw + 50 && cellAt(cr, tx, ty) === C.RIVER) setCell(cr, tx, ty, C.CASCADE, true);
+      }
+    }
+  }
+  for (const d of P.docks || []) capsule(cr, d.x0, d.y0, d.x1, d.y1, d.hw || 18, C.DOCK, true);
+  // little pools of still water about the dry chambers' floors
+  const rp = mulberry32(s2 + 21);
+  for (const c of K.chambers) if (c.kind === 'glow' || c.kind === 'crystal' || c.kind === 'den') { const px = c.x + Math.round((rp() - 0.5) * c.r), py = c.y + Math.round((rp() - 0.5) * c.r); if (cellAt(cr, Math.floor(px / TILE), Math.floor(py / TILE)) === C.FLOOR) disc(cr, px, py, 22 + Math.round(rp() * 14), C.POOL, true); }
+  return cr;
+}
+// A cavern's dressing, as a mine cave's (its glowing things, roosts, falling rocks, the den, stalagmites) from its
+// chambers' kinds, and from its plan: the docks and their boats, lanterns, chests, stairs, cascades, barrels, the den's
+// moss and the sea cave's cobbles.
+function dressCavern(L, K) {
+  const R = K.region, P = K.plan, rnd = mulberry32(kSeed((L.seed ^ 0x6a7) >>> 0, K.k));
+  const glow = [];
+  for (const c of K.chambers) {
+    if (!c.glow) continue;
+    for (const kind of c.glow.split('+')) {
+      const n = kind === 'worms' ? 7 : kind === 'crystal' ? 7 : 8;
+      const spots = kind === 'mush' ? wallSpots(R, c.x, c.y, c.r + 40) : floorSpots(R, c.x, c.y, c.r);
+      for (const s of pickN(rnd, spots, n)) glow.push({ x: Math.round(s.x + (s.nx || 0) * 8), y: Math.round(s.y + (s.ny || 0) * 8), r: kind === 'worms' ? 120 : kind === 'crystal' ? 90 : 76, kind, k: 0.55 + rnd() * 0.35, ...(kind === 'crystal' ? { hue: rnd() < 0.5 ? 1 : 0 } : {}) });
+    }
+  }
+  // along the river: glow-worms on the roof of the long reaches, teal mushrooms on its banks
+  const rv = P.river;
+  if (rv) for (let i = 1; i < rv.pts.length; i++) {
+    const [ax, ay] = rv.pts[i - 1], [bx, by] = rv.pts[i];
+    if (i % 2 === 0) for (const s of pickN(rnd, floorSpots(R, (ax + bx) / 2, (ay + by) / 2, rv.hw + 60), 1)) glow.push({ x: Math.round(s.x), y: Math.round(s.y), r: 120, kind: 'worms', k: 0.45 + rnd() * 0.3 });
+    if (i % 3 === 1) for (const s of pickN(rnd, wallSpots(R, (ax + bx) / 2, (ay + by) / 2, rv.hw + 120), 2)) glow.push({ x: Math.round(s.x), y: Math.round(s.y), r: 70, kind: 'mush', k: 0.5 + rnd() * 0.3 });
+  }
+  K.glow = glow;
+  const byKind = (k) => K.chambers.filter((c) => c.kind === k);
+  const roostIn = [...byKind('glow'), ...byKind('crystal'), ...byKind('lake')].slice(0, 4);
+  K.roosts = roostIn.map((c, i) => { const s = pickN(rnd, floorSpots(R, c.x, c.y, Math.min(c.r, 140)), 1)[0] || c; return { i, x: Math.round(s.x), y: Math.round(s.y), r: 240 }; });
+  // rocks fall where the roof is cracked: in the passages off the river
+  const rocks = [];
+  for (const ps of K.passages.slice(0, 3)) {
+    const a = K.ch[ps.a], b = K.ch[ps.b], m = ps.vias[0] || { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const s = pickN(rnd, floorSpots(R, m.x, m.y, 70), 1)[0];
+    if (s) rocks.push({ i: rocks.length, x: Math.round(s.x), y: Math.round(s.y) });
+  }
+  K.rocks = rocks;
+  // the den: against the back wall of the den chamber, the furthest floor from the river
+  const d = byKind('den')[0] || K.chambers[K.chambers.length - 1];
+  let den = null;
+  const nearR = (x, y) => { if (!rv) return 0; let b = Infinity; for (let i = 1; i < rv.pts.length; i++) b = Math.min(b, segDist(x, y, rv.pts[i - 1][0], rv.pts[i - 1][1], rv.pts[i][0], rv.pts[i][1]).d); return b; };
+  for (const s of wallSpots(R, d.x, d.y, d.r + 30)) { const far = nearR(s.x, s.y); if (!den || far > den.far) den = { x: Math.round(s.x - s.nx * 20), y: Math.round(s.y - s.ny * 20), far }; }
+  K.den = den ? { x: den.x, y: den.y } : { x: d.x, y: d.y };
+  K.boat = null;
+  K.boats = (P.docks || []).filter((q) => q.boat).map((q, i) => ({ i, x: q.boat.x, y: q.boat.y, a: q.boat.a }));
+  K.docks = (P.docks || []).map((q) => ({ x0: q.x0, y0: q.y0, x1: q.x1, y1: q.y1, hw: q.hw || 18 }));
+  K.lanterns = (P.lanterns || []).map((q) => ({ x: q.x, y: q.y }));
+  K.chests = (P.chests || []).map((q, i) => ({ i, x: q.x, y: q.y, a: q.a || 0 }));
+  K.stairs = (P.stairs || []).map((q) => ({ ...q }));
+  K.cascades = (P.cascades || []).map((q) => ({ x: q.x, y: q.y, ux: q.ux, uy: q.uy, w: (rv ? rv.hw : 60) + 20 }));
+  K.things = (P.things || []).map((q) => ({ ...q }));
+  K.moss = (P.moss || []).map((q) => ({ ...q }));
+  K.cobbles = (P.cobbles || []).map((q) => ({ ...q }));
+  K.seep = P.seep ? { ...P.seep } : null;
+  K.spikes = [];
+  for (const c of K.chambers) for (const s of pickN(rnd, floorSpots(R, c.x, c.y, c.r), c.kind === 'lake' ? 12 : 5)) K.spikes.push({ x: Math.round(s.x), y: Math.round(s.y), s: 0.6 + rnd() * 0.8 });
+}
 // floor cells next to rock in a box round (x, y) r px: [{ x, y, nx, ny }] (px; n: toward the rock)
 function wallSpots(R, x, y, r) {
   const out = [];
@@ -384,15 +519,17 @@ function dressSewers(L) {
 }
 
 // ---- the ore veins ------------------------------------------------------------------------------------------------------
+const VEINS_MAX = 260;   // (all of them, the world over: World v3's caves and caverns hold most)
 // Each: { i, x, y, ug (0: above ground), ore, need (pickaxe tier), alts: [{ x, y }] (where it grows back - [0] is where
 // it starts), where }.
 function veins(map, L) {
   const out = [], rnd = mulberry32((L.seed ^ 0x0e5) >>> 0);
-  const add = (spots, ug, depth, n, where) => {
+  // (ores: a chamber's own short list - the ore face's gold and amethyst - instead of what its depth and distance give)
+  const add = (spots, ug, depth, n, where, ores = null) => {
     const chosen = pickN(rnd, spots, n * 3);
-    for (let k = 0; k + 2 < chosen.length && out.length < 200; k += 3) {
-      const q = chosen[k], dist = len(q.x - CITY.x, q.y - CITY.y);
-      const ore = oreFor(dist, depth, rnd());
+    for (let k = 0; k + 2 < chosen.length && out.length < VEINS_MAX; k += 3) {
+      const q = chosen[k], dist = len(q.x - CITY.x, q.y - CITY.y), r = rnd();
+      const ore = ores ? ores[Math.min(ores.length - 1, Math.floor(r * ores.length))] : oreFor(dist, depth, r);
       out.push({ i: out.length, x: Math.round(q.x), y: Math.round(q.y), ug, ore, need: ORE_BY_ID[ore].tier, where, alts: [q, chosen[k + 1], chosen[k + 2]].map((s) => ({ x: Math.round(s.x), y: Math.round(s.y) })) });
     }
   };
@@ -410,6 +547,10 @@ function veins(map, L) {
   }
   for (const K of L.caves) {   // (each cave's: the first's named as today's)
     const X = K.X, f = K.face, of = K.k ? ` (${K.name})` : '';
+    if (K.kind === 'cavern') {   // (a cavern: no outcrops by its mouths - its chambers' walls; how many by its kind)
+      for (const c of K.chambers) add(wallSpots(K.region, c.x, c.y, c.r + 40), UG.CAVE, c.depth, c.kind === 'ore' ? 6 : c.kind === 'treasure' ? 4 : c.kind === 'hall' || c.kind === 'sea' ? 1 : 2, `${c.name} (${K.name})`, c.ores);
+      continue;
+    }
     add([{ x: X - 250, y: f + 30 }, { x: X - 214, y: f + 12 }, { x: X - 290, y: f + 18 }, { x: X + 256, y: f + 40 }, { x: X + 222, y: f + 24 }, { x: X + 296, y: f + 30 }], 0, 0.6, 2, K.k ? `${K.name}'s outcrops` : 'the mine\'s outcrops');
     for (const c of K.chambers) {
       const spots = wallSpots(K.region, c.x, c.y, c.long ? 600 : c.r + 40);
@@ -459,12 +600,14 @@ export function ugAt(L, x, y) {
 // flashlights, lamps - the client gathers them the way it does above ground); day: 0..1 daylight up on the street (it
 // comes down the sewer grates; the cave gets none). The client draws the darkness from the same sources.
 export const UG_AMBIENT = { [UG.SEWER]: 0.06, [UG.CAVE]: 0 };
+// a cavern's lanterns (on its docks, by its mouths, in its treasure chamber): how far their light carries, how bright
+export const LANTERN = { r: 150, k: 0.75 };
 export function lightAt(L, x, y, lights = [], day = 0) {
   const ug = ugAt(L, x, y);
   let v = UG_AMBIENT[ug] || 0;
   const add = (sx, sy, r, k) => { const d = len(x - sx, y - sy); if (d < r) v += k * (1 - d / r); };
   for (const l of lights) add(l.x, l.y, l.r, l.k ?? 1);
-  if (ug === UG.CAVE) for (const K of L.caves) for (const g of K.glow) add(g.x, g.y, g.r, g.k * 0.6);
+  if (ug === UG.CAVE) for (const K of L.caves) { for (const g of K.glow) add(g.x, g.y, g.r, g.k * 0.6); for (const l of K.lanterns || []) add(l.x, l.y, LANTERN.r, LANTERN.k); }
   if (ug === UG.SEWER) for (const g of L.grates || []) add(g.x, g.y, 90, 0.5 * day + 0.12);
   return Math.min(1, v);
 }

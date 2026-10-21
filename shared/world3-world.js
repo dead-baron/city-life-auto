@@ -38,6 +38,7 @@ import { wildSites3, wildDone, movedAt, wildDist, wildFarm3 } from './world3-wil
 import { buildRelief3 } from './world3-relief.js';
 import { buildTrails3 } from './world3-trails.js';
 import { buildDirt3 } from './world3-dirt.js';
+import { buildCaves3 } from './world3-caves.js';
 // (v3b, WORLD-V3.md 9.3: the city - its districts, its streets and its places; on the v3b frame only)
 import { buildAirstrips3 } from './world3-airstrips.js';
 import { buildSarHq3 } from './world3-sarhq.js';   // (v3b: the rescue pilots' base)   // (v3b: the crop dusters' strips and Lucky Mesa's)
@@ -238,6 +239,7 @@ export function worldOpts(asked) {
       m.world3.waterBodies = waterBodies3(m);   // (2026-10-18, the water upgrade: which water is a creek, a river, a lake, a pond or the marsh, which way each channel runs - m.waters, m.lake: world3-waterbodies.js)
       m.world3.trails = buildTrails3(m, H3);   // (the nature program, 2026-10-20: Highland Woods' trails, their furniture, the glades and the fire lookout - world3-trails.js)
       m.world3.dirt = buildDirt3(m, H3);   // (the nature program, 2026-10-20, Nature-C1: the Red Rock MX Park - world3-dirt.js)
+      m.world3.caves = buildCaves3(m, H3);   // (Nature-B1, B2: the Redwood Caverns - their ways in behind Redwood Creek Falls and at Redwood Cove, the plan underground: world3-caves.js)
     },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a
     // handcrafted district's plan, which places its own

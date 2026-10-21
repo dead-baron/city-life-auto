@@ -577,6 +577,59 @@ export function cliffWall(len = 120, h = 60, depth = 40, seed = 1) {
   m.smooth = 1;
   return m;
 }
+// a cave's mouth in a face of columnar basalt (Nature-B2): the rock w wide and h tall with a dark arch in its middle
+// running back into black; style 0 'moss' (a forest falls' - moss on the columns' tops, strands hanging over the arch,
+// ferns at its foot), 1 'sea' (a sea cave's - a dark wet band of barnacles along its foot, a glint of water inside)
+export function caveMouth(w = 96, h = 72, style = 0) {
+  const depth = 46, m = new Vox(w, depth, h + 8), sea = style === 1, seed = 7 + style;
+  const rock = m.mat({ ramp: BASALT, k: 4, shade: (x, y, z) => basaltShade(x, y, z, seed) });
+  const moss = m.mat({ ramp: MOSS, k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4 });
+  const wet = m.mat({ ramp: R('#3a3834', 6, 2), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2), 5) > 0.8 ? 1.2 : 0) + (hash(Math.round(x), Math.round(z), 6) - 0.5) * 0.8 });
+  const dark = m.mat({ ramp: R('#0c0a0e', 5, 1), k: 0, flag: F_NOCAST });
+  const glint = m.mat({ ramp: R('#1a2e38', 5, 2), k: 2, flag: F_WATER | F_NOCAST, shade: (x, y) => (hash(Math.round(x), Math.round(y), 9) - 0.5) * 1.2 - 0.4 });
+  const ow = w * 0.48, oh = h * 0.66, cx = w / 2;
+  const inArch = (x, z) => { const u = (x - cx) / (ow / 2); if (Math.abs(u) > 1) return false; const top = oh * 0.62 + oh * 0.38 * Math.sqrt(Math.max(0, 1 - u * u)); return z < top - Math.abs(u) * 3; };
+  for (let y = 0; y < depth; y++) for (let x = 0; x < w; x++) {
+    const c = cellPt(x + 0.5, y + 0.5, 10, seed), shoulder = Math.abs(x - cx) / (w / 2);
+    const top = Math.round(h * (1 - shoulder * shoulder * 0.28) + (c[1] - 0.5) * 14);
+    const front = depth - 4 - c[1] * 10 - shoulder * 8 + (vnoise(x, 1, 11, seed) - 0.5) * 5;
+    if (y > front) continue;
+    for (let z = 0; z < top; z++) {
+      if (inArch(x, z)) {   // (the way in: hollow back to a black wall; its floor dark, a sea cave's wet)
+        if (y < depth * 0.2) m.box(x, y, z, x + 1, y + 1, z + 1, dark);
+        else if (z < 2) m.box(x, y, z, x + 1, y + 1, z + 1, sea ? (Math.abs(x - cx) < ow * 0.22 ? glint : wet) : dark);
+        continue;
+      }
+      const mat = sea && z < 10 ? wet : z >= top - 2 && !sea && hash(x, y, seed + 9) > 0.35 ? moss : rock;
+      m.box(x, y, z, x + 1, y + 1, z + 1, mat);
+    }
+  }
+  if (!sea) for (let k = 0; k < 9; k++) {   // moss strands over the arch, ferns at its foot
+    const x = cx - ow / 2 + 4 + k * (ow - 8) / 8, len = 6 + hash(k, 3, seed) * 10, y = depth * 0.62;
+    m.box(x, y, oh - len, x + 1, y + 1, oh, moss);
+  }
+  if (!sea) for (const dx of [-0.42, 0.42]) m.ell(cx + dx * w * 0.6, depth * 0.78, 3, 7, 5, 4, moss);
+  m.smooth = 1;
+  return m;
+}
+// a wooden rowboat drawn up on a beach (as the cave river's - art2/vehicles.js rowboat - without its oars out): planked,
+// painted above the waterline, its oars laid in it
+export function rowboatProp(color = '#3f6a7a') {
+  const L = 64, Wd = 28, hz = 10, m = new Vox(L, Wd, 12), cy = Wd / 2;
+  const plank = m.mat({ ramp: R('#7a5434'), k: 3, shade: (x, y, z) => (Math.round(z) % 3 === 0 ? -0.9 : 0) });
+  const paint = m.mat({ ramp: R(color, 6, 3), k: 3 }), trim = m.mat({ ramp: R('#d8d0bc'), k: 3 }), inner = m.mat({ ramp: R('#9a7046'), k: 3, shade: (x) => (Math.round(x) % 5 === 0 ? -0.6 : 0) });
+  m.fill((x, y, z) => {
+    const t = x / L, bow = t > 0.62 ? (t - 0.62) / 0.38 : t < 0.1 ? (0.1 - t) / 0.1 * 0.35 : 0;
+    const half = (Wd / 2 - 1) * (1 - bow * bow * 0.9) * (0.58 + 0.42 * (z / hz));
+    if (Math.abs(y - cy) > half) return -1;
+    if (z > hz - 2) return Math.abs(y - cy) > half - 2 ? trim : -1;
+    if (Math.abs(y - cy) > half - 2) return z > hz * 0.45 ? paint : plank;
+    return z < 3 ? inner : -1;
+  }, 0, 0, 0, L, Wd, hz);
+  for (const x of [L * 0.32, L * 0.6]) m.box(x, 3, 5, x + 5, Wd - 3, 7, inner);
+  for (const y of [cy - 4, cy + 3]) m.box(L * 0.12, y, 3, L * 0.86, y + 1.5, 4.5, plank);   // (the oars, shipped)
+  return m;
+}
 // deck markings for a road deck: asphalt with a yellow double centre line and white edge lines
 function deckMats(m, d, edge) {
   const asp = m.mat({ ramp: MAT.asphaltWorn, k: 1, shade: (x, y) => (hash(Math.round(x), Math.round(y), 5) - 0.5) * 0.8 + (hash(Math.round(x / 4), Math.round(y / 4), 6) > 0.92 ? -0.6 : 0) });
