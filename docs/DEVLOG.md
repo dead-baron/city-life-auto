@@ -12665,3 +12665,27 @@ portal, its lanterns, the ore cart, the seams and the cave world behind it are a
 Highland Woods doesn't reach it: the desert is 3 km off.)
 
 Tests: test/world3desert.test.js - the adit in red rock, its sign, the cactus round it, the two ruts of the track in.
+
+## 2026-10-20 · Nature: Granite Peaks by hand, part 1 - the alpine meadows, the stone hut, the summits
+
+From the owner's ask ("mountain meadows", "amazing places to walk") and the concepts NS1-D, NA1-B and N5
+(`shared/world3-peaks.js`, new; World v3's done hook after the clearings): up in the high country of the north-west
+mountains, between the tree line and the snow -
+- **five alpine meadows**, each named on the map (Marmot Meadow, Columbine Basin, Heather Bench, Paintbrush Flat,
+  Saxifrage Meadow): a ragged round of lush grass on a level bench fading through the mountain's thin grass into the
+  scree, drifts of lupines, paintbrush and alpine daisies, heather, a few pale granite boulders - the pines and the loose
+  rock taken off it;
+- on the biggest, **the stone hut** (NS1-D): fieldstone walls in courses under a slate roof, a stone chimney, a plank
+  door and two small windows that glow at night; **the spring** beside it (a pipe out of a mossy boulder into a stone
+  basin, a tin mug on its post), a bench at the door, and a fire ring with three log seats to rest by (a campfire rest
+  spot);
+- **three summits** just under the snow (Cairn Peak, Eagle Knob, Windy Col), each a knob with its tall cairn and a bench
+  looking out, the highest with a coin telescope;
+- **the Summit Trail**: from the woods' trails (or a road) nearest the hut's meadow, through the meadow past the hut, up
+  to the nearest summit - routed over the land where it walks easiest, packed earth over the grass, a cairn every 30
+  tiles to mark it above the trees.
+New art (`client/art2/props-garden.js`): the cairn (and a summit's taller one), the stone hut, the mountain spring.
+
+Tests: test/world3peaks.test.js - the meadows (lush, flowered, open, apart, on the map, under the snow), the hut, its
+spring, the fire ring and its rest spot and seats, the summits' cairns, benches and telescope, the trail from a road or
+a trail through the hut's meadow to a summit with its cairns.

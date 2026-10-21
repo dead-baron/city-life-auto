@@ -853,6 +853,58 @@ export function drinkFountain() {
   return m;
 }
 
+// ---- Granite Peaks by hand (the nature program, 2026-10-20: NS1-D; shared/world3-peaks.js) --------------------------
+// a cairn: flat granite stones stacked smaller up, a little off true each, lichen on a few (big: a summit's, taller)
+export function cairn(v = 0, big = 0) {
+  const H = big ? 56 : 28, S = big ? 1.45 : 1, N = Math.round(20 * S), m = new Vox(N, N, H + 2);
+  const st = m.mat({ ramp: R('#a8a49a', 6, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z) + 71) - 0.5) * 0.7 });
+  const lich = m.mat({ ramp: R('#a4aa5e', 5, 2), k: 2 });
+  const L = (big ? [[9, 6], [8.2, 6], [7.4, 6], [6.6, 6], [5.8, 5.5], [5, 5.5], [4.2, 5], [3.4, 5], [2.6, 4.5], [1.8, 4]] : [[8, 4], [7, 4], [6, 4], [5, 3.5], [4.2, 3.5], [3.4, 3], [2.4, 3]]).map(([r, h]) => [r * S, h]);
+  let z0 = 0;
+  L.forEach(([r, h], k) => {
+    const ox = N / 2 + (hash(k, v, 73) - 0.5) * 1.8, oy = N / 2 + (hash(v, k, 75) - 0.5) * 1.8;
+    m.fill((x, y, z) => { const dx = x + 0.5 - ox, dy = (y + 0.5 - oy) * 1.1, dz = (z + 0.5 - z0 - h / 2) / (h / 2); return dx * dx + dy * dy <= r * r * (1 - dz * dz * 0.45) ? (hash(Math.round(x), Math.round(y), k + 77) > 0.9 ? lich : st) : -1; }, 0, 0, Math.floor(z0), N, N, Math.min(H + 2, Math.ceil(z0 + h)));
+    z0 += h * 0.86;
+  });
+  return m;
+}
+// a stone hut on an alpine meadow (NS1-D): fieldstone walls in courses, a slate roof pitched along x, a stone chimney,
+// a plank door and a small window on its south face (y = D is the front)
+export function stoneHut() {
+  const W = 136, D = 92, wallH = 46, m = new Vox(W, D, 92);
+  const st = m.mat({ ramp: R('#9e988c', 7, 3), k: 3, shade: (x, y, z) => { const row = Math.floor(z / 5), off = row % 2 ? 5 : 0, u = Math.floor((x + y + off) / 9); return (Math.round(z) % 5 === 0 || Math.round(x + y + off) % 9 === 0 ? -0.9 : 0) + (hash(u, row, 81) - 0.5) * 1.0; } });
+  const slate = m.mat({ ramp: R('#4c5058', 6, 3), k: 3, shade: (x, y, z) => (Math.round(x) % 7 === 0 ? -0.7 : 0) + (Math.round(z) % 3 === 0 ? -0.4 : 0) + (hash(Math.round(x / 7), Math.round(z / 3), 83) - 0.5) * 0.6 });
+  const wood = m.mat({ ramp: R('#6a4a30', 6, 3), k: 3, shade: (x) => (Math.round(x) % 4 === 0 ? -0.8 : 0) });
+  const glass = m.mat({ ramp: R('#3a3628', 5, 2), k: 2, emi: [255, 196, 120, 200] });
+  m.box(3, 6, 0, W - 3, D - 3, wallH, st);
+  // the roof: a slab 4 thick over the walls, rising to the ridge along the middle; the gables stone below it
+  const ridge = 32, mid = (D - 3 + 6) / 2;
+  m.fill((x, y, z) => {
+    const t = Math.abs(y + 0.5 - mid) / (mid - 1), top = wallH + ridge * (1 - Math.min(1, t));
+    if (z >= top || z < wallH - 2) return -1;
+    if (z >= top - 4 && y >= 2 && y < D - 1) return slate;
+    return (x < 6 || x >= W - 6) && y >= 6 && y < D - 3 ? st : -1;
+  }, 0, 0, wallH - 2, W, D, wallH + ridge + 1);
+  m.box(W - 30, mid - 7, wallH + 8, W - 16, mid + 7, wallH + ridge + 12, st);
+  m.box(W / 2 - 11, D - 4, 0, W / 2 + 11, D - 2, 36, wood);
+  for (const wx of [20, W - 44]) { m.box(wx, D - 4, 17, wx + 24, D - 2, 33, wood); m.box(wx + 3, D - 5, 20, wx + 21, D - 3, 30, glass); }
+  m.box(W / 2 - 14, D - 5, 36, W / 2 + 14, D - 2, 39, wood);
+  return m;
+}
+// a mountain spring: a pipe out of a mossy granite boulder trickling into a stone basin, a tin mug on its post
+export function mountainSpring() {
+  const m = new Vox(36, 22, 28);
+  const rock = m.mat({ ramp: R('#9c988e', 6, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2), 85) - 0.5) * 0.8 });
+  const moss = m.mat({ ramp: R('#5e7e36', 5, 2), k: 3 }), basin = m.mat({ ramp: R('#8a8478', 6, 3), k: 3 });
+  const water = m.mat({ ramp: R('#7ab8d0', 5, 2), k: 2, flag: F_WATER }), pipe = m.mat({ ramp: MAT.metal, k: 3 }), wd = m.mat({ ramp: R('#6a4a30'), k: 3 }), tin = m.mat({ ramp: R('#c8ccd0', 5, 2), k: 3 });
+  m.fill((x, y, z) => { const dx = (x + 0.5 - 28) / 8, dy = (y + 0.5 - 8) / 7, dz = (z + 0.5) / 22; const d = dx * dx + dy * dy + dz * dz; return d <= 1 ? (z > 15 && hash(Math.round(x), Math.round(y), 87) > 0.45 ? moss : rock) : -1; }, 18, 0, 0, 36, 16, 22);
+  m.fill((x, y, z) => { const inside = x > 5 && x < 21 && y > 8 && y < 19; return z < 9 ? (inside && z >= 3 ? (z < 7 ? water : -1) : basin) : -1; }, 3, 6, 0, 24, 21, 9);
+  m.box(14, 11, 14, 22, 13, 16, pipe);
+  m.box(14, 11, 7, 15, 13, 14, water);
+  m.box(1, 10, 0, 3, 12, 20, wd); m.box(0, 12, 15, 3, 15, 19, tin);
+  return m;
+}
+
 // ---- the MX park (the nature program, 2026-10-20: Nature-C1; shared/world3-dirt.js) -------------------------------
 // a tabletop jump: a mound of packed red dirt along x (len), its takeoff and landing ramps `ramp` long, the flat top h
 // high, w across - tyre tracks worn along it (the clients lift a bike over it: client/art2/game/jumps.js)
