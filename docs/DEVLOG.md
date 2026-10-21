@@ -12772,3 +12772,22 @@ Tests: test/world3coast.test.js - a blowhole spouts every few seconds when someo
 v3 each shelf's rock, its pools (closed in, small, alive, fishing as the shore's tidepool) and golden stars, its nature
 site; North Cape's blowhole on the lip, the seal rock and seals out in the sea, the light still standing; Redwood Cove
 bitten back, its beach all round, no tree on the sand or in the water, the path down, the sea cave and the fire ring.
+
+## 2026-10-20 · Nature: Willow Valley's countryside, part 1 - green banks by the rivers, power lines along the county roads
+
+From the handcraft research's 4.4 and the concepts NT1-D, SC3-E, D13 and W1; `shared/world3-verges.js`, new, World v3's
+done hook after the farm ponds:
+- **the river banks**: the farm fields were laid as boxes and the rivers through them after, so the wheat and the
+  furrows ran right to the water's edge, cut off square by it (and a field's rail fence ran on straight across the
+  river). Now a green bank runs between every field and the water it meets - lush grass and reeds three tiles deep,
+  a willow leaning out over the water now and then (about 1,100 tiles of bank, 17 willows) - and the crop stops at it.
+  The fields' fences, scarecrows and hay bales stand only on dry land (`client/art2/game/statics.js`: a river or a road
+  through a field's box breaks its fence).
+- **the power lines**: wooden poles along the valley's county roads (Valley Parkway, Cedar Farms Road, the North Coast
+  Road, Lakeshore Drive and the rest), one side, wired pole to pole, the line swinging over the road every five to ten
+  poles - about 720 poles in 35 lines. The old countryside's lines ran only along the few roads drawn as country lanes
+  (`shared/countryside.js` buildPowerLines); these keep out of the towns, off the bridges, out of the water and the yards,
+  and clear of the poles already there.
+
+Tests: test/world3kestrel.test.js (the valley's) - no field runs into the water, the banks and their willows, the poles
+along the county roads all on open ground, wired pole to pole.

@@ -1,7 +1,8 @@
 // Kestrel Lake by hand (shared/world3-kestrel.js): the south shore's straight runs wander - bays dug back into the
 // meadow, points built out, reeds and lilies in the bays - and Kestrel Beach on the east shore: its sand, the lifeguard
 // chair, umbrellas, the swim area's floats and raft, blankets on the grass; and Willow Valley's farm ponds
-// (shared/world3-farmponds.js). One World v3 build.
+// (shared/world3-farmponds.js); its countryside (shared/world3-verges.js): green banks between the fields and the
+// rivers, power lines along the county roads. One World v3 build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
@@ -13,7 +14,7 @@ import { FARMPONDS } from '../shared/world3-farmponds.js';
 import { habitatAt } from '../server/systems/fishing.js';
 import { prepare } from '../tools/world3-build.mjs';
 
-test('World v3: Kestrel Lake\'s south shore wanders (bays, points, reeds), Kestrel Beach, the farm ponds', { timeout: 400000 }, () => {
+test('World v3: Kestrel Lake\'s south shore wanders (bays, points, reeds), Kestrel Beach, the farm ponds, the valley\'s banks and power lines', { timeout: 400000 }, () => {
   const prep = prepare();
   const m = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });
   const K = m.world3.kestrel, W = m.w;
@@ -71,4 +72,16 @@ test('World v3: Kestrel Lake\'s south shore wanders (bays, points, reeds), Kestr
     assert.ok(m.landmarks.some((l) => l.name === q.name && l.type === 'pond'), `${q.name} on the map`);
     assert.ok(['pond', 'lake'].includes(habitatAt({ map: m }, site.x, site.y).water), `${q.name}: still fresh water to fish (a big one fishes as a lake)`);
   }
+  // the countryside: no field runs into the water, a green bank instead (willows on it); poles along the county roads
+  const V = m.world3.verges;
+  console.log('verges', JSON.stringify(V));
+  const wetT = (i) => m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP;
+  let touching = 0;
+  for (let i = W; i < W * (m.h - 1); i++) if (m.tiles[i] === T.FIELD && m.dist[i] === 49 && (wetT(i - 1) || wetT(i + 1) || wetT(i - W) || wetT(i + W))) touching++;
+  assert.equal(touching, 0, 'no field runs into the water');
+  assert.ok(V.bank >= 500 && V.willows >= 8, `the green banks (${V.bank} tiles, ${V.willows} willows)`);
+  const poles = m.props.filter((p) => p && p.t === 'upole' && m.dist[Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)] === 49);
+  assert.ok(V.poles >= 300 && poles.length >= 300, `poles along the county roads (${V.poles})`);
+  assert.ok(poles.every((p) => { const t = m.tiles[Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)]; return t === T.GRASS || t === T.DIRT || t === T.FIELD; }), 'every pole on open ground');
+  assert.ok(poles.filter((p) => p.wx !== undefined).length >= poles.length * 0.6, 'wired pole to pole');
 });

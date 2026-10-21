@@ -45,6 +45,7 @@ import { buildCaves3 } from './world3-caves.js';
 import { buildClearings3, forageInSight3 } from './world3-clearings.js';
 import { buildPeaks3, THAW } from './world3-peaks.js';
 import { coastByHand3 } from './world3-coast.js';
+import { vergesByHand3 } from './world3-verges.js';
 // (v3b, WORLD-V3.md 9.3: the city - its districts, its streets and its places; on the v3b frame only)
 import { buildAirstrips3 } from './world3-airstrips.js';
 import { buildSarHq3 } from './world3-sarhq.js';   // (v3b: the rescue pilots' base)   // (v3b: the crop dusters' strips and Lucky Mesa's)
@@ -249,6 +250,7 @@ export function worldOpts(asked) {
       m.world3.waterBodies = waterBodies3(m);   // (2026-10-18, the water upgrade: which water is a creek, a river, a lake, a pond or the marsh, which way each channel runs - m.waters, m.lake: world3-waterbodies.js)
       m.world3.kestrel = kestrelByHand3(m, H3);   // (Kestrel Lake by hand: the south shore's bays and points, Kestrel Beach - world3-kestrel.js)
       m.world3.farmPonds = farmPonds3(m, H3);   // (Willow Valley's farm ponds: jetties, rowboats, windmill pumps - world3-farmponds.js)
+      m.world3.verges = vergesByHand3(m, H3);   // (Willow Valley's countryside: green banks between the fields and the rivers, the power lines along the county roads - world3-verges.js)
       m.world3.trails = buildTrails3(m, H3);   // (the nature program, 2026-10-20: Highland Woods' trails, their furniture, the glades and the fire lookout - world3-trails.js)
       m.world3.dirt = buildDirt3(m, H3);   // (the nature program, 2026-10-20, Nature-C1: the Red Rock MX Park - world3-dirt.js)
       m.world3.caves = buildCaves3(m, H3);   // (Nature-B1, B2: the Redwood Caverns - their ways in behind Redwood Creek Falls and at Redwood Cove, the plan underground: world3-caves.js)

@@ -3074,10 +3074,20 @@ function addSetPieces(c, I) {
   }
   // farm fields: the crops are the ground's (groundbake.js: wheat that sways, corn, furrows, vegetable rows, hay
   // by field); rail fences round them, a scarecrow, hay bales by the gate
+  // (only on the land: a river or a road that cuts a field's box breaks its fence; the scarecrow and the bales stand in
+  // the field, never in the water)
+  const dryAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); if (!M.inside(tx, ty)) return false; const t = M.tiles[M.idx(tx, ty)]; return t !== T.WATER && t !== T.DEEP && t !== T.ROAD && t !== T.BRIDGE; };
   (M.fields || []).forEach((f) => {
-    fenceLine(I, 'rail', f.x - 10, f.y - 10, f.x + f.w + 10, f.y - 10);
-    put(I, vitem('scare', 'scarecrow', [], f.x + f.w * 0.5, f.y + f.h * 0.4));
-    for (let k = 0; k < 3; k++) put(I, vitem('hay:1', 'hayBale', [true], f.x + 30 + k * 34, f.y + f.h + 26));
+    const y0 = f.y - 10, x1 = f.x + f.w + 10;
+    let a = null;
+    for (let x = f.x - 10; ; x += 16) {
+      const ok = x <= x1 && dryAt(x, y0);
+      if (ok && a === null) a = x;
+      else if (!ok && a !== null) { const b = Math.min(x1, x - 16); if (b - a >= 48) fenceLine(I, 'rail', a, y0, b, y0); a = null; }
+      if (x > x1) break;
+    }
+    if (dryAt(f.x + f.w * 0.5, f.y + f.h * 0.4)) put(I, vitem('scare', 'scarecrow', [], f.x + f.w * 0.5, f.y + f.h * 0.4));
+    for (let k = 0; k < 3; k++) if (dryAt(f.x + 30 + k * 34, f.y + f.h + 26)) put(I, vitem('hay:1', 'hayBale', [true], f.x + 30 + k * 34, f.y + f.h + 26));
   });
 }
 
