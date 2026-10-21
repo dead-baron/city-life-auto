@@ -930,6 +930,13 @@ export const GSHADE = {
     if (vnc(x, y, 11, s + 33) > 0.72) return at(G_ALP, 2 + (hh(x, y, s) > 0.5 ? 1 : 0));
     return sd(DIRT2, 0.28 + vnc(x, y, 9, s) * 0.22 + (hh(x, y, s) - 0.5) * 0.14, x, y, 0.6);
   },
+  crag(x, y, s) {                                            // bare rock (the owner, 10-21: rock you couldn't see) - a crag's, a cliff band's top, a rock rib: granite slabs split by dark cracks, each slab tilted to the light its own way, lichen on them
+    const w = worley(x + 0.5, y + 0.5, 22, s + 51, 0.9), edge = w.d2 - w.d1, h = w.h, g = hh(w.gx, w.gy, s + 53);
+    if (edge < 1.4) { GS.nx = GS.ny = 0; return at(SCREE, edge < 0.7 ? 0 : 1); }   // (the cracks between the slabs)
+    GS.nx = (h - 0.5) * 0.9; GS.ny = (g - 0.5) * 0.9;
+    if (vnc(x, y, 7, s + 55) > 0.8 && hh(x, y, s + 57) > 0.3) return at(G_ALP, 5 + (hh(x, y, s) > 0.5 ? 1 : 0));   // (lichen)
+    return sd(SCREE, 0.5 + (h - 0.5) * 0.28 - (edge < 3 ? 0.12 : 0) + (vnc(x, y, 5, s + 59) - 0.5) * 0.12, x, y, 0.4);
+  },
   snowfield(x, y, s) {                                       // the summits' snowfields (World v3: Granite Peaks above the snow line): wind-packed snow, blue in its hollows, a rock through it here and there
     const p = stone(x, y, 23, s + 41, 0.12);
     if (p >= 0 && WC.h < 0.4) return sd(SCREE, p * 0.7 + 0.25, x, y, 0.35);
