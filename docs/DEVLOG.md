@@ -13236,3 +13236,30 @@ dirt bikes and the pickup parked on open ground by it.
 Tests: test/world3woods.test.js - the gate tree on its lane, the lane dirt all the way through and off a road, the arch
 clear (every solid near it at least 44 px off the lane's middle) and the trunk solid either side, a pickup driven
 along the lane's middle never pushed and pushed back either side of it, never felled, the sign, on the map.
+
+## 2026-10-21 · Nature: sharks
+
+- **the great white** (`server/systems/sharks.js`, new; `shared/fauna.js` shark; the owner, 2026-10-05: "sharks: very
+  rare, likeliest round the prison; fins; blood draws them"):
+  - **where**: only in the open sea, never on land, in a river or a lake, or in the shallows. Every 4 s the game looks
+    at each player swimming out at sea; a shark comes up out of deep water 760-1100 px off, out of sight if it can be.
+    Only one is about at a time.
+  - **how likely**: very rarely anywhere (0.35% a look, about once in 20 minutes' swimming). It's ten times likelier in
+    the water round Prison Island, and likely soon when there's blood in the water (a swimmer bleeding or under half
+    their health).
+  - **the hunt**: it cruises with its fin cutting the water, then finds a swimmer by sight (800 px) or, if they're
+    bleeding, by smell (2200 px). It circles them for about 9 s with the ring closing in, then rushes in and bites (38,
+    and you bleed) and goes round again for another pass.
+  - **getting away**: get out of the water (onto land, a dock or a boat) and it loses you. Hurt it below about half its
+    health and it turns away from you and goes back down.
+  - **as an animal**: protected, nothing taken from it, with its own way of moving (the wildlife's step leaves it
+    alone: `own`). Killed by one, the death screen says "Taken by a great white shark."
+- **its art** (`client/art2/animals.js` sharkModel; `client/art2/game/host.js` wildPose): seen from above, a long dark
+  shape just under the water with the dorsal fin standing out of it and the top of the tail beating side to side. At
+  the bite its head comes up out of the water, the jaws wide with their rows of teeth. Dead, it rolls belly up.
+- **the dev panel**: Animals - "A great white (swim out to sea)" calls one up near you.
+
+Tests: test/sharks.test.js - a protected sea animal of its own; up from deep water a way off a swimmer, circling first,
+then the bite (blood, the maul seen, you bleed), never out of the sea; out of the water it loses you and stays in the
+sea; none for someone on land or in fresh water whatever the odds, one soon for a bleeding swimmer, one at a time; hurt
+badly, it goes away; its art (the fin's shape, the jaws at the bite, belly up dead, the tail's two frames).

@@ -1702,7 +1702,7 @@ export function update(world, dt) {
   if (world.tick % 40 === 3) world.wind = world.windHold || windOf(world);   // (windHold: a test, or the dev panel)
   const now = world.time, ph = phaseOf(world);
   for (const e of world.entities.values()) {
-    if (!isAnimal(e) || e.dead || e.ug) continue;   // (the cave's den bear: server/systems/underground.js drives it)
+    if (!isAnimal(e) || e.dead || e.ug || e.wild.own) continue;   // (the cave's den bear: server/systems/underground.js drives it; a shark its own - sharks.js)
     step(world, e, dt, now, ph);
   }
 }

@@ -93,6 +93,7 @@ const HENS = new Set(['quail', 'duck']);
 const petKind = (p) => { const k = p.d.ar.slice(4); return HENS.has(k) && (p.id & 1) ? `${k}:f` : k; };
 function wildPose(p, S2, base, sp, now, M) {
   if (p.flags & PF.DEAD) return 'dead';
+  if (base === 'shark') return ((p.extra || 0) & 31) === APOSE.attack ? 'swipe' : 'swim';   // (a great white: its fin through the water, or up at the bite - sharks.js; animals.js sharkModel draws 'swipe' as the bite)
   if (p.flags & PF.DOWN) return 'fall';   // (knocked off its feet: on its side, the legs going - AN7)
   if (p.hitAt !== undefined && now - p.hitAt < 0.3 && !S2.bird) return 'hit';   // (the flinch as the hit lands - AN7)
   const ap = (p.extra || 0) & 31;

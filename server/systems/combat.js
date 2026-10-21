@@ -501,7 +501,7 @@ export function kill(world, ped, attacker, cause, dir = 0) {
   reactions.died(world, ped, cause, dir); // the fall (a slide, a roll, knocked back, a crumple) and the death event: how they lie
   if (!ped.wild) npc.spectacle(world, ped.x, ped.y, { r: 420, near: 110, chance: 0.8, secs: 10 });   // (somebody down in the street: phones out)
   if (ped.wild) { wildlife.onKilled(world, ped, attacker, cause); return; } // an animal: no crime, no tally, no ambulance - the carcass is cleared once nobody's looking (wildlife.js)
-  if (attacker && attacker.wild) { if (ped.player) players.onPedDeath(world, ped, attacker, `Mauled by ${attacker.name || 'a wild animal'}.`); else { npc.onDeath(world, ped, null); world.bodies.add(ped); } return; }   // (killed by an animal: nobody's crime)
+  if (attacker && attacker.wild) { if (ped.player) players.onPedDeath(world, ped, attacker, attacker.wild.kind === 'shark' ? 'Taken by a great white shark.' : `Mauled by ${attacker.name || 'a wild animal'}.`); else { npc.onDeath(world, ped, null); world.bodies.add(ped); } return; }   // (killed by an animal: nobody's crime)
   law.onKill(world, attacker, ped, cause);
   if (attacker && attacker.player) attacker.player.profile.stats.kills++;
   if (ped.player) {

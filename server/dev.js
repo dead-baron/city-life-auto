@@ -28,6 +28,7 @@ import * as pets from './systems/pets.js';
 import * as happenings from './systems/happenings.js';
 import * as streetlife from './systems/streetlife.js';
 import * as wildlife from './systems/wildlife.js';
+import * as sharks from './systems/sharks.js';
 import * as wanderer from './systems/wanderer.js';
 import * as personas from './systems/personas.js';
 import * as activities from './systems/activities.js';
@@ -526,6 +527,11 @@ export function command(world, p, c, msg) {
       const kind = String(msg.k || 'deer');
       if (!SPECIES[kind] && !wildlife.LIVESTOCK[kind]) { world.notify(p, `[dev] No animal "${kind}".`, 'warn'); break; }
       const S = SPECIES[kind];
+      if (kind === 'shark') {   // (a great white: up out of the deep near you, after you - you'll want to be in the sea: sharks.js)
+        const s = sharks.spawnNear(world, ped.x, ped.y, ped);
+        world.notify(p, s ? '[dev] A great white is coming up nearby - it hunts swimmers in the open sea.' : '[dev] No deep sea near enough for a shark: swim out further.', s ? 'info' : 'warn');
+        break;
+      }
       const ang = ped.a + Math.PI + (Math.random() - 0.5), d = msg.stalk ? 520 : 300;
       let x = ped.x + Math.cos(ang) * d, y = ped.y + Math.sin(ang) * d;
       if (S && (S.swims === 'float' || kind === 'beaver' || kind === 'otter' || kind === 'duck' || kind === 'goose')) { const wat = standAt(world, x, y, 900, true); if (wat) { x = wat.x; y = wat.y; } }
