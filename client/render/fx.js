@@ -27,6 +27,7 @@ function scorchTexture() {
   return c;
 }
 const MAX_D = 700;
+const MAX_C = 900;   // the crops' crush marks (art v2's trampled fields): their own ring, so a tractor working a field never pushes the blood out of the decals'
 
 // soft round puffs for smoke and steam (one sprite per colour)
 const puffs = new Map();
@@ -49,6 +50,8 @@ export class FX {
     this.pi = 0;
     this.d = new Array(MAX_D);
     for (let i = 0; i < MAX_D; i++) this.d[i] = { on: false, x: 0, y: 0, a: 0, type: 0, size: 1, alpha: 1, born: 0, color: '' };
+    this.c = []; this.ci = 0;
+    for (let i = 0; i < MAX_C; i++) this.c[i] = { on: false, x: 0, y: 0, a: 0, small: 0, alpha: 1, born: 0 };
     this.di = 0;
     this.tracers = [];
     // flying chunks of smashed street furniture: a piece of the object's own sprite, spinning
@@ -66,6 +69,12 @@ export class FX {
     this.pi = (this.pi + 1) % MAX_P;
     o.on = true; o.type = type; o.x = x; o.y = y; o.vx = vx; o.vy = vy; o.life = life; o.max = life; o.size = size; o.color = color; o.grow = grow; o.z = 0; o.vz = vz; o.veil = 1;   // (veil: drawn this much less solid - a manhole's thin steam)
     return o;
+  }
+  // a crush mark in a field's crop (small: a person's or an animal's track, else a wheel's swath), along angle a
+  crush(x, y, a, small, now, alpha = 0.8) {
+    const o = this.c[this.ci];
+    this.ci = (this.ci + 1) % MAX_C;
+    o.on = true; o.x = x; o.y = y; o.a = a; o.small = small ? 1 : 0; o.born = now; o.alpha = alpha;
   }
   decal(type, x, y, a, size, color, now, alpha = 1) {
     const o = this.d[this.di];

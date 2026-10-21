@@ -2108,6 +2108,15 @@ export class World2 {
     const fx = F.fx, E = this.E, now = F.now, wet = F.rain, A = this.A && this.A.v1DecalFx && this.A.fxKey ? this.A : null;
     fx.now = now;
     const x0 = this.vx0 - 40, x1 = this.vx1 + 40, y0 = this.vy0 - 40, y1 = this.vy1 + 40;
+    // the crops flattened (render/fx.js crush): under everything else, standing back up after a couple of minutes
+    if (fx.c && A) for (let i = 0; i < fx.c.length; i++) {
+      const c = fx.c[i];
+      if (!c.on || c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
+      const age = now - c.born, a = c.alpha * (age > 150 ? 1 - (age - 150) / 40 : 1);
+      if (a <= 0.02) { c.on = false; continue; }
+      const frm = c.small * 8 + (Math.round(((((c.a || 0) % Math.PI) + Math.PI) % Math.PI) / Math.PI * 8) & 7);
+      E.drawDecal(this._spr('actors', 'fx', A.fxKey('dCrush', frm), ['dCrush', frm]), c.x, c.y, 0, a, 0);
+    }
     for (let i = 0; i < fx.d.length; i++) {
       const d = fx.d[i];
       if (!d.on || d.x < x0 || d.x > x1 || d.y < y0 || d.y > y1) continue;
