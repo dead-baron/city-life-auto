@@ -32,7 +32,7 @@ test('World v3: Highland Woods\' clearings - meadows, stump clearings, windfalls
   const by = (k) => C.clearings.filter((c) => c.type === k);
   for (const k of ['meadow', 'stumps', 'windfall']) assert.ok(by(k).length >= 4, `${by(k).length} ${k}`);
   assert.ok(C.clearings.filter((c) => c.onTrail).length >= 3, `some the trails pass through (${C.clearings.filter((c) => c.onTrail).length}; ${JSON.stringify(C.why)})`);
-  const trails = m.natureSites.filter((s) => s.kind === 'trail');
+  const trails = m.natureSites.filter((s) => s.kind === 'trail' && s.line);
   const trailD = (x, y) => Math.min(...trails.flatMap((t) => t.line.map(([a, b]) => Math.hypot(a - x, b - y)))) / TILE;
   const near = (t, x, y, r) => m.props.filter((p) => p && p.t === t && Math.hypot(p.x - x, p.y - y) < r);
   for (const c of C.clearings) {
