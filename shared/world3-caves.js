@@ -28,20 +28,25 @@ const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0,
 // are found on the map and the plan meets them.)
 export const CAVERNS = {
   name: 'the Redwood Caverns', key: 'redwood', title: 'Redwood Caverns',
+  // (on: the river runs through it - its course doesn't wander there)
   chambers: [
-    { id: 'gallery', name: 'the Falls Gallery', at: [1546, 1290], r: 6.5, depth: 1, kind: 'hall' },
-    { id: 'grotto', name: 'the Glow Grotto', at: [1474, 1257], r: 9, depth: 1, kind: 'glow', glow: 'mush+worms', link: [1474, 1267] },
-    { id: 'crystal', name: 'the Crystal Vault', at: [1300, 1190], r: 9, depth: 3, kind: 'crystal', glow: 'crystal', link: [1306, 1219] },
-    { id: 'lake', name: 'the Great Lake', at: [1150, 1214], r: 17, depth: 2, kind: 'lake' },
-    { id: 'den', name: 'the Bear\'s Den', at: [1006, 1258], r: 8, depth: 3, kind: 'den', link: [1018, 1234] },
-    { id: 'treasure', name: 'the Treasure Chamber', at: [802, 1196], r: 8, depth: 3, kind: 'treasure', link: [806, 1170] },
-    { id: 'ore', name: 'the Ore Face', at: [650, 1100], r: 8, depth: 3, kind: 'ore', ores: ['goldOre', 'gem', 'goldOre', 'silverOre'], link: [646, 1130] },
-    { id: 'seacave', name: 'the Sea Cave', at: [515, 1100], r: 9, depth: 1, kind: 'sea' },
+    { id: 'gallery', name: 'the Falls Gallery', at: [1546, 1290], r: 9, depth: 1, kind: 'hall', on: 1 },
+    { id: 'grotto', name: 'the Glow Grotto', at: [1474, 1255], r: 12, depth: 1, kind: 'glow', glow: 'mush+worms', link: [1474, 1268] },
+    { id: 'crystal', name: 'the Crystal Vault', at: [1300, 1186], r: 11, depth: 3, kind: 'crystal', glow: 'crystal', link: [1306, 1219] },
+    { id: 'pillars', name: 'the Stalactite Hall', at: [1240, 1214], r: 11, depth: 2, kind: 'hall', on: 1 },
+    { id: 'lake', name: 'the Great Lake', at: [1150, 1214], r: 22, depth: 2, kind: 'lake', on: 1 },
+    { id: 'den', name: 'the Bear\'s Den', at: [1006, 1262], r: 10, depth: 3, kind: 'den', link: [1018, 1234] },
+    { id: 'worms', name: 'the Glow-worm Gallery', at: [902, 1200], r: 12, depth: 2, kind: 'glow', glow: 'worms', on: 1 },
+    { id: 'treasure', name: 'the Treasure Chamber', at: [802, 1198], r: 10, depth: 3, kind: 'treasure', link: [806, 1172] },
+    { id: 'echo', name: 'the Echo Hall', at: [716, 1147], r: 11, depth: 2, kind: 'hall', on: 1 },
+    { id: 'ore', name: 'the Ore Face', at: [650, 1098], r: 10, depth: 3, kind: 'ore', ores: ['goldOre', 'gem', 'goldOre', 'silverOre'], link: [646, 1130] },
+    { id: 'seacave', name: 'the Sea Cave', at: [515, 1100], r: 11, depth: 1, kind: 'sea', on: 1 },
   ],
   // the river, from its head (in the gallery) to the sea pool
   river: [[1553, 1288], [1530, 1284], [1500, 1277], [1472, 1270], [1444, 1262], [1420, 1257], [1396, 1250], [1362, 1239], [1324, 1227], [1284, 1219], [1244, 1214], [1204, 1212], [1150, 1214], [1098, 1222], [1072, 1228], [1052, 1231], [1028, 1232], [992, 1226], [952, 1214], [912, 1200], [872, 1186], [832, 1175], [792, 1166], [752, 1156], [712, 1146], [672, 1136], [632, 1128], [592, 1120], [556, 1112], [530, 1106], [512, 1103]],
-  hw: 2, bank: 2.4,   // (tiles: the river's half-width, the bank either side of it)
-  lake: { at: [1150, 1214], r: 14 },
+  hw: 2, bank: 2.4,   // (tiles: the river's half-width, the bank either side of it - wider and narrower as it goes)
+  wander: { a: 7, wave: 70 },   // (tiles: how far its course swings either side of the line above, and how long a swing is)
+  lake: { at: [1150, 1214], r: 16 },
   sea: { at: [503, 1101], r: 5 },
   cascades: [1418, 1060],   // (x: where the river steps down - the first after the grotto, the second the lake's outflow)
   // docks: x along the river, which bank (+1: the right of the way downstream, -1 the left), boat: one waits there
@@ -158,17 +163,37 @@ export function buildCaves3(m, H3) {
 // the network's plan in px (what shared/underground.js reads): the chambers, passages to the ones off the river, the
 // river and its bank, the lake, the sea pool, the cascades and stairs, docks with their boats and lanterns, chests, the
 // den's moss, the sea cave's cobbles and its smugglers' things, the roof seep in the gallery
-function cavernPlan(C, mouths) {
+export function cavernPlan(C, mouths) {
   const hw = Math.round(C.hw * TILE), bank = Math.round(C.bank * TILE);
-  const pts = C.river.map(([x, y]) => P2(x, y));
+  // the river's course: the line above, a point every 6 tiles, swung from side to side (slow waves, their length and
+  // reach varying) - but not through the chambers it runs through, nor the lake: there it keeps to the line
+  const line = C.river.map(([x, y]) => P2(x, y)), dense = [line[0]];
+  for (let k = 1; k < line.length; k++) { const [ax, ay] = line[k - 1], [bx, by] = line[k], n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) / (6 * TILE))); for (let j = 1; j <= n; j++) dense.push([ax + (bx - ax) * j / n, ay + (by - ay) * j / n]); }
+  const still = C.chambers.filter((c) => c.on).map((c) => { const [x, y] = P2(c.at[0], c.at[1]); return [x, y, (c.r + 6) * TILE]; });
+  const pts = [];
+  let s0 = 0;
+  for (let k = 0; k < dense.length; k++) {
+    if (k) s0 += Math.hypot(dense[k][0] - dense[k - 1][0], dense[k][1] - dense[k - 1][1]);
+    const a = dense[Math.max(0, k - 1)], b = dense[Math.min(dense.length - 1, k + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = -(b[1] - a[1]) / l, ny = (b[0] - a[0]) / l;
+    let fade = 1;
+    for (const [x, y, r] of still) { const d = Math.hypot(dense[k][0] - x, dense[k][1] - y); fade = Math.min(fade, Math.max(0, Math.min(1, (d - r) / (14 * TILE)))); }
+    const wv = C.wander.wave * TILE, sw = Math.sin(s0 / wv * 2 * Math.PI) * 0.7 + Math.sin(s0 / (wv * 0.43) * 2 * Math.PI + 1.3) * 0.3;
+    const o = C.wander.a * TILE * sw * fade * fade * (3 - 2 * fade);
+    pts.push([Math.round(dense[k][0] + nx * o), Math.round(dense[k][1] + ny * o)]);
+  }
   // the river's points: along it (s px), its heading at a point and its normal (+: the right going downstream)
   const S = [0]; for (let k = 1; k < pts.length; k++) S.push(S[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
   const atX = (x) => { let bk = 0, bd = Infinity; for (let k = 0; k < pts.length - 1; k++) { const d = Math.abs((pts[k][0] + pts[k + 1][0]) / 2 - (x + 0.5) * TILE); if (d < bd) { bd = d; bk = k; } } const a = pts[bk], b = pts[bk + 1], t = Math.max(0, Math.min(1, ((x + 0.5) * TILE - a[0]) / ((b[0] - a[0]) || 1))); const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, ux: (b[0] - a[0]) / l, uy: (b[1] - a[1]) / l }; };
   const chambers = C.chambers.map((c) => { const [x, y] = P2(c.at[0], c.at[1]); return { id: c.id, name: c.name, x, y, r: Math.round(c.r * TILE), depth: c.depth, kind: c.kind, ...(c.glow ? { glow: c.glow } : {}), ...(c.ores ? { ores: c.ores } : {}) }; });
   const byId = Object.fromEntries(chambers.map((c) => [c.id, c]));
+  // a point along the river s px from its head, its heading
+  const along = (s) => { let k = 1; while (k < pts.length - 1 && S[k] < s) k++; const a = pts[k - 1], b = pts[k], l = (S[k] - S[k - 1]) || 1, t = Math.max(0, Math.min(1, (s - S[k - 1]) / l)); return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, ux: (b[0] - a[0]) / l, uy: (b[1] - a[1]) / l }; };
+  // the river's nearest point to (x, y): its distance down the river
+  const sNear = (x, y) => { let bs = 0, bd = Infinity; for (let k = 1; k < pts.length; k++) { const a = pts[k - 1], b = pts[k], dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / l2)), d = Math.hypot(a[0] + dx * t - x, a[1] + dy * t - y); if (d < bd) { bd = d; bs = S[k - 1] + Math.sqrt(l2) * t; } } return bs; };
   // the chambers off the river: a passage from each to the river's bank (its link point)
   const passages = [];
-  for (const c of C.chambers) if (c.link) passages.push([c.id, c.id, [P2(c.link[0], c.link[1])]]);
+  // (to the river where it runs nearest - its course wanders: the bank there, on the chamber's side)
+  for (const c of C.chambers) if (c.link) { const q = byId[c.id], r = along(sNear(q.x, q.y)), d = Math.hypot(q.x - r.x, q.y - r.y) || 1; passages.push([c.id, c.id, [[Math.round(r.x + (q.x - r.x) / d * (hw + 20)), Math.round(r.y + (q.y - r.y) / d * (hw + 20))]]]); }
   const [lx, ly] = P2(C.lake.at[0], C.lake.at[1]), lake = { x: lx, y: ly, r: Math.round(C.lake.r * TILE) };
   const [sx, sy] = P2(C.sea.at[0], C.sea.at[1]), sea = { x: sx, y: sy, r: Math.round(C.sea.r * TILE) };
   // the cascades, and the stairs beside each on the bank (the way round)
@@ -183,15 +208,17 @@ function cavernPlan(C, mouths) {
   const docks = [], lanterns = [];
   for (const d of C.docks) {
     let bx, by, ix, iy, ux, uy;
-    if (d.lake !== undefined) {
+    let boat = null;
+    if (d.lake !== undefined) {   // (the lake's shore is ragged: the pier from well up the shore to well out, the boat further out)
       const a = d.lake, cx = Math.cos(a), cy = Math.sin(a);
-      bx = lake.x + cx * (lake.r + 34); by = lake.y + cy * (lake.r + 34); ix = lake.x + cx * (lake.r - 40); iy = lake.y + cy * (lake.r - 40); ux = -cy; uy = cx;
+      bx = lake.x + cx * lake.r * 1.14; by = lake.y + cy * lake.r * 1.14; ix = lake.x + cx * lake.r * 0.8; iy = lake.y + cy * lake.r * 0.8; ux = -cy; uy = cx;
+      if (d.boat) boat = { x: Math.round(lake.x + cx * lake.r * 0.68 + ux * 50), y: Math.round(lake.y + cy * lake.r * 0.68 + uy * 50), a: Math.round(Math.atan2(uy, ux) * 1000) / 1000 };
     } else {
-      const q = atX(d.x), nx = -q.uy * d.side, ny = q.ux * d.side;
+      const s0 = sNear(atX(d.x).x, atX(d.x).y), q = along(s0), nx = -q.uy * d.side, ny = q.ux * d.side;
       bx = q.x + nx * (hw + 34); by = q.y + ny * (hw + 34); ix = q.x + nx * (hw - 30); iy = q.y + ny * (hw - 30); ux = q.ux; uy = q.uy;
+      if (d.boat) { const b = along(s0 + 92), bn = [-b.uy * d.side, b.ux * d.side]; boat = { x: Math.round(b.x + bn[0] * (hw - 36)), y: Math.round(b.y + bn[1] * (hw - 36)), a: Math.round(Math.atan2(b.uy, b.ux) * 1000) / 1000 }; }
     }
     const nx = (ix - bx) / (Math.hypot(ix - bx, iy - by) || 1), ny = (iy - by) / (Math.hypot(ix - bx, iy - by) || 1);
-    const boat = d.boat ? { x: Math.round(ix - nx * 6 + ux * 58), y: Math.round(iy - ny * 6 + uy * 58), a: Math.round(Math.atan2(uy, ux) * 1000) / 1000 } : null;
     docks.push({ x0: Math.round(bx), y0: Math.round(by), x1: Math.round(ix), y1: Math.round(iy), hw: 18, boat });
     lanterns.push({ x: Math.round(bx - ux * 26 - nx * 8), y: Math.round(by - uy * 26 - ny * 8) });
   }
@@ -214,7 +241,7 @@ function cavernPlan(C, mouths) {
   void G2;
   return {
     name: C.name, key: C.key, title: C.title, mouths, chambers, passages,
-    river: { pts, hw, bank, len: Math.round(S[S.length - 1]) }, lake, sea, cascades, stairs, docks, lanterns, chests, things,
+    river: { pts, hw, bank, vary: 1, len: Math.round(S[S.length - 1]) }, lake, sea, cascades, stairs, docks, lanterns, chests, things,
     moss: [{ x: D2.x, y: D2.y, r: D2.r + 30 }], cobbles: [{ x: SC.x + 40, y: SC.y + 30, r: SC.r }], seep: { x: Math.round(gx), y: Math.round(gy) },
   };
 }

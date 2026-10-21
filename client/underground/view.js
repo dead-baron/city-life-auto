@@ -571,7 +571,7 @@ class UgView {
     if (this._mouth) return this._mouth;
     const out = [];
     for (const K2 of this.L.caves || []) for (const M of mouthsOf(K2)) {
-      const to = (M.toward && K2.ch[M.toward]) || K2.ch.hall || M.inside, ax = M.x, ay = M.y + MOUTH.out * (M.inside.y > M.y ? -1 : 1) * (K2.kind === 'cavern' ? 1 : K2.flip), bx = to.x, by = to.y;
+      const to = (M.toward && K2.ch[M.toward]) || K2.ch.hall || M.inside, ax = M.x, ay = M.y + MOUTH.out * (M.inside.y > M.y ? -1 : 1), bx = to.x, by = to.y;
       for (let i = 0; i < MOUTH.n; i++) {
         const t = i / (MOUTH.n - 1), u = 1 - t;
         out.push({ x: ax + (bx - ax) * t * MOUTH.reach, y: ay + (by - ay) * t * MOUTH.reach, r: MOUTH.r0 + (MOUTH.r1 - MOUTH.r0) * t, k: u * u * u * (MOUTH.k0 - 0.15) + 0.15 * u, t });

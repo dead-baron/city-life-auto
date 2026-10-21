@@ -368,6 +368,14 @@ function carveCavern(F, K, s2) {
   }
   if (rv) {
     for (let i = 1; i < rv.pts.length; i++) capsule(cr, rv.pts[i - 1][0], rv.pts[i - 1][1], rv.pts[i][0], rv.pts[i][1], rv.hw + (rv.bank || 76), C.FLOOR, false, 0.45, s2 + 14);
+    // (vary: the banks wider and narrower as it goes - halls opening off the river, narrows where the rock comes close)
+    if (rv.vary) for (let i = 1; i < rv.pts.length; i++) {
+      const [ax, ay] = rv.pts[i - 1], [bx, by] = rv.pts[i], n = Math.max(1, Math.ceil(len(bx - ax, by - ay) / 40));
+      for (let j = 0; j < n; j++) {
+        const x = ax + (bx - ax) * j / n, y = ay + (by - ay) * j / n, v = vnoise(x, y, 520, s2 + 17);
+        if (v > 0.45) disc(cr, x, y, rv.hw + rv.bank * (0.8 + (v - 0.45) * 5.5), C.FLOOR, false, 0.6, s2 + 18);
+      }
+    }
     if (P.lake) disc(cr, P.lake.x, P.lake.y, P.lake.r + (rv.bank || 76) + 20, C.FLOOR, false, 0.5, s2 + 15);
     for (let i = 1; i < rv.pts.length; i++) capsule(cr, rv.pts[i - 1][0], rv.pts[i - 1][1], rv.pts[i][0], rv.pts[i][1], rv.hw, C.RIVER, true, 0.25, s2 + 11);
     if (P.lake) disc(cr, P.lake.x, P.lake.y, P.lake.r, C.RIVER, true, 0.3, s2 + 13);
@@ -403,10 +411,14 @@ function dressCavern(L, K) {
   }
   // along the river: glow-worms on the roof of the long reaches, teal mushrooms on its banks
   const rv = P.river;
-  if (rv) for (let i = 1; i < rv.pts.length; i++) {
-    const [ax, ay] = rv.pts[i - 1], [bx, by] = rv.pts[i];
-    if (i % 2 === 0) for (const s of pickN(rnd, floorSpots(R, (ax + bx) / 2, (ay + by) / 2, rv.hw + 60), 1)) glow.push({ x: Math.round(s.x), y: Math.round(s.y), r: 120, kind: 'worms', k: 0.45 + rnd() * 0.3 });
-    if (i % 3 === 1) for (const s of pickN(rnd, wallSpots(R, (ax + bx) / 2, (ay + by) / 2, rv.hw + 120), 2)) glow.push({ x: Math.round(s.x), y: Math.round(s.y), r: 70, kind: 'mush', k: 0.5 + rnd() * 0.3 });
+  if (rv) {   // (every so far along it: a cluster of glow-worms on the roof, mushrooms by the bank)
+    let s0 = 0, nextW = 260, nextM = 520;
+    for (let i = 1; i < rv.pts.length; i++) {
+      const [ax, ay] = rv.pts[i - 1], [bx, by] = rv.pts[i];
+      s0 += len(bx - ax, by - ay);
+      if (s0 >= nextW) { nextW += 640; for (const s of pickN(rnd, floorSpots(R, bx, by, rv.hw + 60), 1)) glow.push({ x: Math.round(s.x), y: Math.round(s.y), r: 120, kind: 'worms', k: 0.45 + rnd() * 0.3 }); }
+      if (s0 >= nextM) { nextM += 900; for (const s of pickN(rnd, wallSpots(R, bx, by, rv.hw + 140), 2)) glow.push({ x: Math.round(s.x), y: Math.round(s.y), r: 70, kind: 'mush', k: 0.5 + rnd() * 0.3 }); }
+    }
   }
   K.glow = glow;
   const byKind = (k) => K.chambers.filter((c) => c.kind === k);
@@ -430,10 +442,25 @@ function dressCavern(L, K) {
   K.boats = (P.docks || []).filter((q) => q.boat).map((q, i) => ({ i, x: q.boat.x, y: q.boat.y, a: q.boat.a }));
   K.docks = (P.docks || []).map((q) => ({ x0: q.x0, y0: q.y0, x1: q.x1, y1: q.y1, hw: q.hw || 18 }));
   K.lanterns = (P.lanterns || []).map((q) => ({ x: q.x, y: q.y }));
-  K.chests = (P.chests || []).map((q, i) => ({ i, x: q.x, y: q.y, a: q.a || 0 }));
+  // (chests and the cave's things stand on dry floor: each on the nearest floor clear of the water to where it's planned)
+  const dry = (x, y) => {
+    const tx0 = Math.floor(x / TILE), ty0 = Math.floor(y / TILE);
+    let best = null;
+    for (let r = 0; r <= 7 && !best; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+      const tx = tx0 + dx, ty = ty0 + dy;
+      if (cellAt(R, tx, ty) !== C.FLOOR) continue;
+      let wet = false; for (let j = -1; j <= 1 && !wet; j++) for (let i = -1; i <= 1; i++) { const v = cellAt(R, tx + i, ty + j); if (v === C.RIVER || v === C.POOL || v === C.CASCADE || v === C.DOCK) { wet = true; break; } }
+      if (wet) continue;
+      const d = (tx - tx0) * (tx - tx0) + (ty - ty0) * (ty - ty0);
+      if (!best || d < best.d) best = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, d };
+    }
+    return best ? { x: Math.round(best.x), y: Math.round(best.y) } : { x, y };
+  };
+  K.chests = (P.chests || []).map((q, i) => ({ i, ...dry(q.x, q.y), a: q.a || 0 }));
   K.stairs = (P.stairs || []).map((q) => ({ ...q }));
   K.cascades = (P.cascades || []).map((q) => ({ x: q.x, y: q.y, ux: q.ux, uy: q.uy, w: (rv ? rv.hw : 60) + 20 }));
-  K.things = (P.things || []).map((q) => ({ ...q }));
+  K.things = (P.things || []).map((q) => ({ ...q, ...dry(q.x, q.y) }));
   K.moss = (P.moss || []).map((q) => ({ ...q }));
   K.cobbles = (P.cobbles || []).map((q) => ({ ...q }));
   K.seep = P.seep ? { ...P.seep } : null;
