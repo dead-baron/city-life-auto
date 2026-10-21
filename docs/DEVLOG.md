@@ -12851,4 +12851,5 @@ the water rings its north and east shores under desert fan palms, date palms and
 sand lies along its south and west shores with a plank jetty out from it, a rowboat tied up and a bench, boulders on
 the sand. A nature site and on the map. Mirage Camp stands north of it as it was.
 
-Tests: test/world3desert.test.js - Mirage Lake's rim, its green belt and palms, its beach, jetty and rowboat.
+Tests: test/world3desert.test.js - Mirage Lake's rim, its green belt and palms, its beach, jetty and rowboat. test/world3wild.test.js's
+check for a dry wash by the desert's camps counts a wash's gravel only (sand flagged 128), not the green belt's lush grass.
