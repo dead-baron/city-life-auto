@@ -16,7 +16,8 @@ export function desertRoadside3(m, H3) {
   if (!H3 || !H3.addProp || !Array.isArray(m.edges)) return out;
   const R = ROADSIDE3, W = m.w, HH = m.h, styles = m._distStyle || [];
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx >= 0 && ty >= 0 && tx < W && ty < HH ? ty * W + tx : -1; };
-  const shoulder = (i) => i >= 0 && m.land[i] && (m.tiles[i] === T.SAND || m.tiles[i] === T.DIRT) && !(m.reserve[i] & (16 | 32 | 1 | 2 | 8)) && !(m.bld && m.bld[i] >= 0) && R.styles.has(styles[m.dist[i]]);
+  // (reserve 1 by a highway: its band, kept clear of buildings - map.js; a post may stand there)
+  const shoulder = (i, hwy) => i >= 0 && m.land[i] && (m.tiles[i] === T.SAND || m.tiles[i] === T.DIRT) && !(m.reserve[i] & (16 | 32 | (hwy ? 0 : 1) | 2 | 8)) && !(m.bld && m.bld[i] >= 0) && R.styles.has(styles[m.dist[i]]);
   const isRoad = (i) => i >= 0 && (m.tiles[i] === T.ROAD || m.tiles[i] === T.BRIDGE || m.tiles[i] === T.SIDEWALK);
   // (the rails: no post within three tiles of the track - a level crossing has its own signals)
   const rail = new Set();
@@ -43,7 +44,7 @@ export function desertRoadside3(m, H3) {
       for (const sd of [-1, 1]) {
         const o = (e.hw || 40) + R.off, px = x + nx * sd * o, py = y + ny * sd * o, i = tileAt(px, py);
         // on the shoulder, with open desert beyond it (not another road's asphalt a tile further out)
-        if (!shoulder(i) || rail.has(i) || isRoad(tileAt(px + nx * sd * TILE, py + ny * sd * TILE))) continue;
+        if (!shoulder(i, e.kind === 'hwy') || rail.has(i) || isRoad(tileAt(px + nx * sd * TILE, py + ny * sd * TILE))) continue;
         H3.addProp(m, 'delineator', Math.round(px), Math.round(py), 0, { a: Math.round(Math.atan2(dy, dx) * 100) / 100 });
         out.posts++; made++;
       }

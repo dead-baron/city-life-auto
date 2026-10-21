@@ -3513,14 +3513,37 @@ function coverAt(c, tx, ty, x, y) {
 }
 // every cover plant whose picture can touch chunk (cx, cy): ground points from a little above it (shadows,
 // leaves) to a plant's height below it, a plant's half width either side
+// the ground cover keeps off the railway's bed (the owner, 10-16: "plants and trees on train tracks"): the tiles by a
+// ground-level track, further on its south side (a plant's sprite stands up north of its foot, over the ballast)
+const RAILCLEAR = new WeakMap();
+function railClear(M) {
+  let s = RAILCLEAR.get(M);
+  if (s) return s;
+  s = new Set();
+  for (const R of M.rails || (M.rail ? [M.rail] : [])) {
+    const P = R && R.pts, n = P ? P.length : 0;
+    for (let i = 0; i < n; i++) {
+      const a = P[i], b = P[(i + 1) % n];
+      if (a.under || b.under || (a.ez && b.ez)) continue;
+      const L = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 16));
+      if (L > 400) continue;   // (the loop's closing jump, if it isn't closed)
+      for (let k = 0; k <= L; k++) {
+        const x = a.x + (b.x - a.x) * k / L, y = a.y + (b.y - a.y) * k / L;
+        for (let ty = Math.floor((y - 72) / TILE); ty <= Math.floor((y + 110) / TILE); ty++) for (let tx = Math.floor((x - 72) / TILE); tx <= Math.floor((x + 72) / TILE); tx++) if (M.inside(tx, ty)) s.add(M.idx(tx, ty));
+      }
+    }
+  }
+  RAILCLEAR.set(M, s);
+  return s;
+}
 function coverItems(c, I, cx, cy) {
-  const out = [], W = c.W, H = c.H, taken = I.taken;
+  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M);
   const tx0 = Math.max(c.M.x0 + 1, Math.floor((cx * CH - 80) / TILE)), tx1 = Math.min(c.M.x0 + W - 2, Math.floor(((cx + 1) * CH + 80) / TILE));
   const ty0 = Math.max(c.M.y0 + 1, Math.floor((cy * CH - 40) / TILE)), ty1 = Math.min(c.M.y0 + H - 2, Math.floor(((cy + 1) * CH + 110) / TILE));
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
     const i = c.M.idx(tx, ty);
     const res = c.M.reserve ? c.M.reserve[i] : 0, lush = res & 128;   // (128: a river's lush banks - reeds right to the water)
-    if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16)) continue;
+    if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16) || rails.has(i)) continue;
     const x = Math.round((tx + hash(tx, ty, 7005)) * TILE), y = Math.round((ty + hash(tx, ty, 7007)) * TILE); // (anywhere in its tile: no rows)
     const r = coverAt(c, tx, ty, x, y);
     if (!r || !(lush ? coverClearWet(c, tx, ty) : coverClear(c, tx, ty, 1))) continue;
