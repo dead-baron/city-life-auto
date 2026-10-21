@@ -84,7 +84,7 @@ export function buildCaves3(m, H3) {
     }
     dropNear(MX, MY, 70);
     (m.tracks ||= []).push({ pts: path.map(([x, y]) => [Math.round(x), Math.round(y)]), hw: 26, bb: [Math.min(...path.map((q) => q[0])) - 40, Math.min(...path.map((q) => q[1])) - 40, Math.max(...path.map((q) => q[0])) + 40, Math.max(...path.map((q) => q[1])) + 40] });
-    P('cavemouth', MX, MY, 0, { w: 92, h: 62, style: 'moss' });
+    P('cavemouth', MX, MY, 0, { w: 108, h: 76, style: 'moss' });
     if (m.addSolidProp) for (const dx of [-40, 40]) m.addSolidProp(MX + dx, MY - 6, 12);   // (its rock either side: the way in between)
     P('stairs', MX + 2, MY + 104, 0, { len: 76, h: 22, w: 34 });
     P('lantern', MX + 50, MY + 14, 0);
@@ -133,10 +133,13 @@ export function buildCaves3(m, H3) {
     const MX = Math.round((BX - 1.5) * TILE), MY = Math.round(rimY + 16);
     for (let x = x0, k = 0; x < x1; x += 150, k++) {
       if (Math.abs(x + 75 - MX) < 70) continue;   // (where the mouth is: its own rock)
-      P('cliffwall', x + 75, rimY + (k % 2) * 6, 0, { len: 150, h: 78 + (k % 3) * 10, d: 60, s: 40 + k });
+      P('cliffwall', x + 75, rimY + (k % 2) * 6, 0, { len: 150, h: 132 + (k % 3) * 16, d: 84, s: 40 + k });
       if (m.addSolidProp) for (let dx = -64; dx <= 64; dx += 20) m.addSolidProp(x + 75 + dx, rimY - 8, 12);
     }
-    P('cavemouth', MX, MY, 0, { w: 128, h: 78, style: 'sea' });
+    P('cavemouth', MX, MY, 0, { w: 136, h: 120, style: 'sea' });
+    // the tall trees in front of it in this view (the camera looks north: a redwood south of it hides it) taken off
+    const VEG = /^(tree_|redwood|shrub_|bush_|rwstump|rwlog|fern)/;
+    for (const p of m.props) if (p && VEG.test(p.t) && Math.abs(p.x - MX) < 7 * TILE + Math.max(0, p.y - MY) * 0.25 && p.y > MY - 2 * TILE && p.y < MY + 26 * TILE) drop.add(p.x + ',' + p.y);
     if (m.addSolidProp) for (const dx of [-56, 56]) m.addSolidProp(MX + dx, MY - 6, 14);
     for (const [dx, dy, r] of [[R + 0.5, -3, 20], [R + 1.2, 1, 17], [R + 0.4, 4.5, 14]]) P('boulder', (BX + dx) * TILE, (BY + dy) * TILE, r, { s: r * 2 + 6, style: 'basalt' });
     // the cobble beach's things: the rowboat drawn up, barrels, driftwood logs; rocks and surf at the water's edge
