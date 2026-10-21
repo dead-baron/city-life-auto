@@ -13,7 +13,7 @@
 // Voxel models (voxel.js) unless noted: render(heading) faces the camera at heading 0. Sprites are GBufs
 // anchored at their foot (.ax, .ay).
 import { Vox } from './voxel.js';
-import { GBuf, F_WATER, F_NOCAST, F_LEAF, F_GLASS, F_GROUND, F_WET, hash, bayer, vnoise, mulberry32 } from './gbuf.js';
+import { GBuf, F_WATER, F_NOCAST, F_LEAF, F_GLASS, F_GROUND, F_WET, F_THIN, hash, bayer, vnoise, mulberry32 } from './gbuf.js';
 import { MAT, ramp } from './palette.js';
 import * as F from './flora.js';
 
@@ -850,5 +850,88 @@ export function drinkFountain() {
   m.box(3, 3, 0, 11, 11, 24, st);
   m.fill((x, y, z) => { const d = Math.hypot(x - 7, y - 7); return d < 6.5 && z >= 24 && z < 28 ? (d < 4.5 && z >= 26 ? water : steel) : -1; }, 0, 0, 24, 14, 14, 28);
   m.box(6, 1, 27, 8, 4, 30, steel);
+  return m;
+}
+
+// ---- the MX park (the nature program, 2026-10-20: Nature-C1; shared/world3-dirt.js) -------------------------------
+// a tabletop jump: a mound of packed red dirt along x (len), its takeoff and landing ramps `ramp` long, the flat top h
+// high, w across - tyre tracks worn along it (the clients lift a bike over it: client/art2/game/jumps.js)
+export function tabletop(len = 416, w = 112, h = 30, ramp = 128) {
+  const m = new Vox(len, w, h + 4);
+  const dirt = m.mat({ ramp: R('#a8603a', 7, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(y / 2), 61) - 0.5) * 0.9 + (Math.abs(((y + 7) % 26) - 13) < 2 ? -0.9 : 0) - (z < h * 0.4 ? 0.4 : 0) });
+  const lip = m.mat({ ramp: R('#8a4a2a', 6, 3), k: 3 });
+  const half = len / 2;
+  m.fill((x, y, z) => {
+    const u = Math.abs(x + 0.5 - half), edge = Math.min(y, w - 1 - y), side = Math.min(1, edge / 10);
+    const top = (u >= half ? 0 : u > half - ramp ? h * (half - u) / ramp : h) * (0.6 + 0.4 * side) - (edge < 10 ? (10 - edge) * 0.6 : 0);
+    if (z >= top) return -1;
+    return top - z < 2 && u < half - ramp + 3 && u > half - ramp - 3 ? lip : dirt;
+  });
+  return m;
+}
+// a berm: a banked wall of dirt round the outside of a turn, len along x, rising toward its outer side (y = depth when
+// side > 0)
+export function berm(len = 64, h = 18, side = 1) {
+  const d = 30, m = new Vox(len, d, h + 2);
+  const dirt = m.mat({ ramp: R('#9a5634', 7, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(y), 63) - 0.5) * 0.8 + (z > h - 3 ? 0.5 : 0) });
+  m.fill((x, y, z) => { const t = side > 0 ? y / (d - 1) : 1 - y / (d - 1), top = h * Math.min(1, t * 1.25) * (0.9 + 0.1 * hash(Math.round(x / 6), 1, 65)); return z < top ? dirt : -1; });
+  return m;
+}
+// red-and-white tape on stakes along a course, len along x
+export function tapeLine(len = 128) {
+  const m = new Vox(len, 4, 22);
+  const stake = m.mat({ ramp: R('#d8d0c0', 5, 2), k: 2, flag: F_THIN }), red = m.mat({ ramp: R('#d83a2a', 5, 2), k: 2, flag: F_THIN }), white = m.mat({ ramp: R('#f2ede4', 5, 2), k: 2, flag: F_THIN });
+  for (let x = 2; x < len; x += 32) m.box(x, 1, 0, x + 2, 3, 20, stake);
+  for (let x = 0; x < len; x++) m.box(x, 1.5, 15 + (Math.abs((x % 32) - 16) / 16) * 1.2, x + 1, 2.5, 17 + (Math.abs((x % 32) - 16) / 16) * 1.2, Math.floor(x / 8) % 2 ? red : white);
+  return m;
+}
+// the start gate: a row of steel drop-plates across the course on their bar, w wide (along x), a post at each end
+export function startGate(w = 120) {
+  const m = new Vox(w, 14, 30);
+  const steel = m.mat({ ramp: MAT.metal, k: 3 }), plate = m.mat({ ramp: R('#d8d8d0', 5, 2), k: 3, shade: (x) => (Math.round(x) % 12 < 1 ? -1 : 0) }), post = m.mat({ ramp: R('#3a3a40', 5, 2), k: 3 });
+  m.box(0, 5, 2, w, 9, 4, steel);
+  for (let x = 4; x < w - 4; x += 12) m.box(x, 5, 4, x + 10, 7, 18, plate);
+  for (const x of [0, w - 4]) m.box(x, 4, 0, x + 4, 10, 28, post);
+  m.box(0, 5, 26, w, 8, 28, post);
+  return m;
+}
+// the timing tower: a cab on four braced legs, its windows round, a chequered board on its front, a flag on top
+export function timingTower() {
+  const S = 40, h = 70, m = new Vox(S + 12, S + 12, h + 60);
+  const leg = m.mat({ ramp: R('#6e7076', 5, 2), k: 3 }), cab = m.mat({ ramp: R('#e8e2d4', 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 5 === 0 ? -0.6 : 0) });
+  const glass = m.mat({ ramp: R('#ffd890', 5, 3), k: 3, emi: [255, 210, 130, 140], flag: F_GLASS }), roof = m.mat({ ramp: R('#a8341e', 6, 3), k: 3 });
+  const chk = m.mat({ ramp: R('#202024', 4, 2), k: 1 }), wht = m.mat({ ramp: R('#f4f2ec', 4, 2), k: 1 });
+  const o = 6;
+  for (const [cx, cy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) m.box(o + cx * (S - 4), o + cy * (S - 4), 0, o + cx * (S - 4) + 4, o + cy * (S - 4) + 4, h, leg);
+  for (let z = 6; z < h - 4; z += 16) { m.box(o, o + S - 3, z, o + S, o + S - 1, z + 2, leg); m.box(o, o, z, o + S, o + 2, z + 2, leg); }
+  m.box(o - 3, o - 3, h, o + S + 3, o + S + 3, h + 3, leg);
+  m.box(o, o, h + 3, o + S, o + S, h + 30, cab);
+  m.box(o + 3, o + S - 1, h + 14, o + S - 3, o + S + 0.5, h + 26, glass);
+  for (let x = 0; x < 8; x++) for (let z = 0; z < 2; z++) m.box(o + 4 + x * 4, o + S, h + 6 + z * 4, o + 8 + x * 4, o + S + 1, h + 10 + z * 4, (x + z) % 2 ? chk : wht);
+  m.box(o - 4, o - 4, h + 30, o + S + 4, o + S + 4, h + 34, roof);
+  m.box(o + S / 2 - 1, o + S / 2 - 1, h + 34, o + S / 2 + 1, o + S / 2 + 1, h + 56, leg);
+  for (let x = 0; x < 6; x++) for (let z = 0; z < 4; z++) m.box(o + S / 2 + 1 + x * 3, o + S / 2, h + 44 + z * 3, o + S / 2 + 4 + x * 3, o + S / 2 + 1, h + 47 + z * 3, (x + z) % 2 ? chk : wht);
+  return m;
+}
+// a floodlight mast: a tall steel pole, a bank of lamps at its head
+export function floodMast(h = 220) {
+  const m = new Vox(36, 14, h + 18);
+  const pole = m.mat({ ramp: MAT.metal, k: 3 }), lamp = m.mat({ ramp: R('#fff2c8', 5, 3), k: 3, emi: [255, 240, 200, 220] }), head = m.mat({ ramp: R('#3a3a40', 5, 2), k: 3 });
+  m.fill((x, y, z) => (Math.hypot(x - 18, y - 7) < 3.2 - z / h && z < h ? pole : -1), 0, 0, 0, 36, 14, h);
+  m.box(2, 4, h, 34, 12, h + 16, head);
+  for (let x = 4; x < 32; x += 7) for (let z = 0; z < 2; z++) m.box(x, 11.5, h + 2 + z * 7, x + 5, 12.6, h + 7 + z * 7, lamp);
+  return m;
+}
+// an enclosed race trailer, its tail ramp down (len along x, the ramp at x = 0), in a team colour
+export function mxTrailer(c = 0) {
+  const L = 120, W = 46, H = 50, RL = 34, m = new Vox(L + RL, W, H + 4);
+  const body = m.mat({ ramp: R(['#e8e6e0', '#2a4a8a', '#c8342e'][c % 3], 6, 3), k: 3, shade: (x, y, z) => (Math.round(z) % 12 === 0 ? -0.5 : 0) });
+  const stripe = m.mat({ ramp: R(['#c8342e', '#e8c030', '#202024'][c % 3], 5, 2), k: 3 }), dark = m.mat({ ramp: R('#202024', 4, 2), k: 1 });
+  const tyre = m.mat({ ramp: R('#1a1a1c', 4, 1), k: 1 }), ramp = m.mat({ ramp: MAT.metal, k: 3, shade: (x) => (Math.round(x) % 4 === 0 ? -0.8 : 0) });
+  m.box(RL, 2, 8, RL + L, W - 2, H, body);
+  m.box(RL, W - 2.5, 22, RL + L, W - 1.5, 28, stripe); m.box(RL, 1.5, 22, RL + L, 2.5, 28, stripe);
+  m.box(RL, 6, 10, RL + 1, W - 6, H - 2, dark);   // (the open tail)
+  m.fill((x, y, z) => (x < RL && y > 6 && y < W - 6 && z < 8 * (x / RL) + 1 && z > 8 * (x / RL) - 2 ? ramp : -1), 0, 0, 0, RL, W, 10);
+  for (const x of [RL + 70, RL + 90]) for (const y of [0, W - 6]) m.box(x, y, 0, x + 14, y + 6, 12, tyre);
   return m;
 }
