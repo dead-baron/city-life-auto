@@ -96,6 +96,10 @@ test('World v3: the places on the water - Prison Island, the Long Reach, Kestrel
   let crest = 0, across = 0;
   for (let v = lk.vmin + 1; v < lk.channel[0] - 4; v++) { const [x, y] = tileAt(0, v); across++; if (m.tiles[at(x, y)] === T.WALL) crest++; }
   check(crest > 0.9 * across, `the weir's crest across the river (${crest} of ${across})`);
+  // (2026-10-21) the crest drawn as a concrete sill with the water over it, its tiles as rubble (not bare wall)
+  const sill = m.props.filter((p) => p && p.t === 'weir' && Math.hypot(p.x / TILE - cx, p.y / TILE - cy) < 30);
+  check(sill.length === 1 && sill[0].len >= across * TILE * 0.8, `the weir's sill (${sill.length})`);
+  { const [x, y] = tileAt(0, (lk.vmin + lk.channel[0]) / 2); check(m.tiles[at(x, y)] !== T.WALL || (m.reserve[at(x, y)] & 32), 'its crest drawn as rubble'); }
   for (let u = -26; u <= 26; u += 2) { const [x, y] = tileAt(u, (lk.channel[0] + lk.channel[1]) / 2); check(wet(x, y), `the lock's channel open at ${u}: ${x},${y}`); }
   check(bld("Lock Keeper's House").length === 1, "the lock keeper's house");
   // (v3b: no River Water Bus - world3-layout.js FERRIES3 has the car ferry, the Prison Boat and the two water buses on

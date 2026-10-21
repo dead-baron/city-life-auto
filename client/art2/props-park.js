@@ -199,6 +199,21 @@ export function swimRaft() {
   m.box(26, N - 3, 12, 38, N - 1, 14, steel);
   return m;
 }
+// a river weir's crest (the Long Reach's at Willow Crossing: shared/world3-water.js): a long sill of weathered concrete
+// across the river, its top wet and dark, the water sheeting over its curved downstream face (+y) into a band of foam
+export function weir(len = 320, seed = 3) {
+  const D = 30, m = new Vox(len, D, 14);
+  const conc = m.mat({ ramp: R('#9a988e', 6, 3), k: 3, shade: (x, y, z) => (Math.round(x) % 48 === 0 ? -1 : 0) + (hash(Math.round(x / 3), Math.round(z), seed) - 0.5) * 0.6 });
+  const wet = m.mat({ ramp: R('#5e625e', 5, 2), k: 2 }), moss = m.mat({ ramp: R('#4e6a3a', 5, 2), k: 2 });
+  const sheet = m.mat({ ramp: R('#cfe8ec', 5, 3), k: 3, flag: F_WATER | F_NOCAST, shade: (x, y) => (hash(Math.round(x / 2), Math.round(y), seed + 1) > 0.6 ? 1 : -0.3) });
+  const foam = m.mat({ ramp: R('#f2f8f8', 5, 3), k: 3, flag: F_WATER | F_NOCAST });
+  m.fill((x, y, z) => {
+    if (y < 10) return z < 10 ? (z > 8 ? (hash(Math.round(x / 4), 1, seed) > 0.8 ? moss : wet) : conc) : -1;   // (the crest)
+    if (y < 20) { const top = 10 - (y - 10) * 0.9; return z < top ? conc : z < top + 1.6 ? sheet : -1; }   // (the face, the water over it)
+    return z < 1.4 && hash(Math.round(x / 2), Math.round(y / 2), seed + 2) > 0.25 ? foam : -1;   // (the foam below)
+  });
+  return m;
+}
 // a climber's crash pad set down at the foot of a crag (Eagle Crag: shared/world3-tarn.js): a thick folded foam pad in
 // its coloured nylon cover, the seam where it folds, two black carry straps across it
 export function crashPad(v = 0) {

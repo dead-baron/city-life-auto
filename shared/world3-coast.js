@@ -21,12 +21,14 @@ export const COAST3 = {
   // (tiles) rows: the stretch of shore; from: a column inland to look west from for the sea; out: how far the shelf
   // reaches into the sea at most; back: how far it takes in the beach; pools: how many to dig (at most); stars: golden
   // stars in that many of them
-  cape: { name: 'North Cape tide pools', rows: [821, 854], from: 500, out: 6, back: 4, pools: 14, stars: 2, blowhole: true, seals: true },
+  cape: { name: 'North Cape tide pools', rows: [821, 854], from: 500, out: 6, back: 4, pools: 14, stars: 2, blowhole: true, seals: true, point: 'south' },
   cove: {
     name: 'Redwood Cove', rows: [1060, 1101], from: 514, depth: 15, beach: 8,
-    horn: { name: 'Redwood Cove tide pools', rows: [1044, 1066], from: 514, out: 7, back: 4, pools: 9, stars: 2 },
+    horn: { name: 'Redwood Cove tide pools', rows: [1044, 1066], from: 514, out: 7, back: 4, pools: 9, stars: 2, point: 'west' },
     path: { from: [521, 1100], r: 12 },   // (the cove's trail's end, from its track: shared/naturesites.js redwoodCove)
   },
+  capeTop: { rows: [806, 854], from: 486, span: 30 },   // (part 2) North Cape's cliff path: the rows, the column to look east from for the cliff band
+  rubble: [[440, 800, 520, 860], [640, 2440, 730, 2700]],   // (part 2) the cliff bands whose bare rock between the basalt faces draws as rubble: North Cape's, the Redwood Coast Road's coves'
   pool: { gap: 1.5 },   // the pools: this many tiles of rock between two (each one of POOL_SHAPES: small - the tidepool's life, not the sea's fish: client/art2/game/waterlife.js)
 };
 // the pools' shapes (tile offsets from a corner): two tiles across at least each way, so the water shows as a pool
@@ -55,7 +57,7 @@ export function coastByHand3(m, H3) {
   // a tidepool shelf along the shore's rows: the rock out into the sea and over the beach's seaward edge, its pools,
   // their life, the golden stars; the blowhole at its lip, the seal rock off it
   function shelf(S) {
-    const res = { name: S.name, rock: 0, pools: [], stars: 0, blowhole: null, sealrock: null };
+    const res = { name: S.name, rock: 0, pools: [], stars: 0, blowhole: null, sealrock: null, point: null };
     const [y0, y1] = S.rows, n = y1 - y0, raw = [];
     for (let y = y0; y <= y1; y++) {
       const sx = shoreX(y, S.from), t = (y - y0) / n, e = Math.sqrt(Math.max(0, Math.sin(Math.PI * t)));
@@ -98,11 +100,25 @@ export function coastByHand3(m, H3) {
       m.natureSites.push({ kind: 'blowhole', name: `${S.name.replace(/ tide pools$/, '')} blowhole`, x: Math.round(X), y: Math.round(Y) });
       res.blowhole = [bx, by];
     }
+    // the rock fishing point (part 2): a lip tile with rock behind it, clear of the blowhole - at the shelf's south end or
+    // its furthest out; an angler's rods and cooler on it, casting into the wash off the rocks (the stripers and the
+    // redfish: server/systems/fishing.js habitatAt's spot 'point')
+    if (S.point && lip.length) {
+      const fits = lip.filter(([x, y]) => rockAt(x + 1, y) && rockAt(x, y - 1) && rockAt(x, y + 1) && rockAt(x + 1, y - 1) && rockAt(x + 1, y + 1) && (!res.blowhole || Math.hypot(x - res.blowhole[0], y - res.blowhole[1]) >= 7));
+      fits.sort((a, b) => (S.point === 'south' ? b[1] - a[1] : a[0] - b[0]) || hh(a[0], a[1], 45) - hh(b[0], b[1], 45));
+      if (fits.length) {
+        const [px, py] = fits[0], X = (px + 0.55) * TILE, Y = (py + 0.5) * TILE;
+        P('rods', X + 8, Y - 16, 0, { a: Math.PI });
+        P('cooler', X + 26, Y + 12, 0, { v: 1 });
+        m.natureSites.push({ kind: 'fishpoint', name: `${S.name.replace(/ tide pools$/, '')} fishing rocks`, x: Math.round(X), y: Math.round(Y), a: Math.round(Math.PI * 100) / 100 });
+        res.point = [px, py];
+      }
+    }
     const PL = COAST3.pool, made = [];
     for (let gy = y0; gy <= y1; gy++) for (let gx = S.from - 60; gx <= S.from; gx++) {
       if (made.length >= S.pools) break;
       const px = gx, py = gy;
-      if (!rockAt(px, py) || hh(gx, gy, 23) < 0.2 || (res.blowhole && Math.hypot(px - res.blowhole[0], py - res.blowhole[1]) < 4)) continue;
+      if (!rockAt(px, py) || hh(gx, gy, 23) < 0.2 || (res.blowhole && Math.hypot(px - res.blowhole[0], py - res.blowhole[1]) < 4) || (res.point && Math.hypot(px - res.point[0], py - res.point[1]) < 4)) continue;
       const blob = POOL_SHAPES[Math.floor(hh(gx, gy, 24) * POOL_SHAPES.length)].map(([dx, dy]) => [px + dx, py + dy]);
       const bxs = blob.map(([x]) => x), bys = blob.map(([, y]) => y), rx = (Math.max(...bxs) - Math.min(...bxs) + 1) / 2, ry = (Math.max(...bys) - Math.min(...bys) + 1) / 2;
       // (every tile of it rock with rock or its own water all round: never open to the sea, never into another pool)
@@ -178,6 +194,34 @@ export function coastByHand3(m, H3) {
 
   // ---- North Cape ----
   out.cape = shelf(COAST3.cape);
+  // (part 2) the cliff path: along the top of the cliff band over the shelf, a worn footpath behind a post-and-rail fence,
+  // the fence broken where the stairs go down; a coin telescope looking out over the shelf and the seal rock
+  {
+    const K = COAST3.capeTop, tops = [];
+    for (let y = K.rows[0]; y <= K.rows[1]; y++) {
+      let x = K.from;
+      while (x < K.from + K.span && m.tiles[idx(x, y)] !== T.WALL) x++;
+      if (x >= K.from + K.span) { tops.push(null); continue; }
+      while (x < K.from + K.span + 6 && m.tiles[idx(x, y)] === T.WALL) x++;
+      tops.push(m.tiles[idx(x, y)] === T.WALL ? null : x);
+    }
+    let run = [], fence = 0, path = 0;
+    const flush = () => {
+      for (let k = 0; k + 1 < run.length; k += 3) { const a = run[k], b = run[Math.min(run.length - 1, k + 3)]; if (a === b) continue; P('rail', (a[0] + 0.35) * TILE, (a[1] + 0.5) * TILE, 0, { tx: (b[0] - a[0]) * TILE, ty: (b[1] - a[1]) * TILE }); fence++; }
+      run = [];
+    };
+    tops.forEach((x, k) => {
+      const y = K.rows[0] + k;
+      if (x === null) { flush(); return; }
+      run.push([x, y]);
+      for (const dx of [1, 2]) { const i = idx(x + dx, y); if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) { if (m.tiles[i] === T.GRASS) path++; m.tiles[i] = T.DIRT; m.reserve[i] |= RES; } }
+    });
+    flush();
+    // the telescope: on the path at the shelf's middle, looking west over it
+    const mid = Math.round((COAST3.cape.rows[0] + COAST3.cape.rows[1]) / 2) - 6, tx = tops[mid - K.rows[0]];
+    if (tx !== null && tx !== undefined) { P('scope', (tx + 1.6) * TILE, (mid + 0.5) * TILE, 6, { a: Math.PI }); P('pbench', (tx + 1.6) * TILE, (mid + 2.4) * TILE, 0, { a: Math.PI }); }
+    out.capeTop = { fence, path, scope: tx !== null && tx !== undefined };
+  }
 
   // ---- Redwood Cove: the cove bitten back into the woods, its beach, the horn's shelf, the path down ----
   {
@@ -259,6 +303,9 @@ export function coastByHand3(m, H3) {
     out.cove = cove;
   }
 
+  // (part 2) the cliff bands' bare rock between their basalt faces (shared/world3-west.js): rubble, not black squares
+  out.rubble = 0;
+  for (const [x0, y0, x1, y1] of COAST3.rubble) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = idx(x, y); if (inF(x, y) && m.tiles[i] === T.WALL && !(m.reserve[i] & RES) && m.dist[i] >= 47 && m.dist[i] <= 54) { m.reserve[i] |= RES; out.rubble++; } }
   // what stood on the changed ground goes (the coast's own furniture stays), and the finds on it but the stars
   const kept = new Set(m.props.filter((p) => p && KEEP_PROPS.test(p.t) && changed.has(Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE))).map((p) => p.x + ',' + p.y));
   if (changed.size && H3.removeProps) H3.removeProps(m, (x, y) => changed.has(Math.floor(y / TILE) * W + Math.floor(x / TILE)) && !kept.has(x + ',' + y));

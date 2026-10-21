@@ -191,6 +191,10 @@ const RARE_W = [0, 10, 5, 2.2, 0.8, 0.1];
 // a river's calm pocket (shared/world3-rapids.js; habitatAt's spot 'pocket'): the trout and the bass hold in its deep, slow
 // water by the bank - each of them half again as likely there and the rarer ones twice, and they run heavier (weighFish's up)
 export const POCKET = { hold: 1.5, rare: 2, heavy: 0.3 };
+// a rock fishing point on the coast (shared/world3-coast.js: m.natureSites kind 'fishpoint'; habitatAt's spot 'point'):
+// the striped bass, the redfish and the flounder feed in the wash off the rocks - each of them more likely there, the
+// rarer ones more so, and heavier
+export const POINT = { hold: 1.6, rare: 2, heavy: 0.3, shapes: ['bass', 'drum', 'flat'] };
 export function biteTable(hab, o = {}) {
   const out = [], when = o.when || 'day';
   for (const f of FISH) {
@@ -201,6 +205,7 @@ export function biteTable(hab, o = {}) {
     const B = o.bait && BAITS[o.bait];
     if (B && (!B.night || when === 'night') && [...B.eats].some((c) => f.eats.includes(c))) w *= B.x;
     if (hab.spot === 'pocket' && (f.shape === 'trout' || f.shape === 'bass')) w *= f.rare >= 2 ? POCKET.rare : POCKET.hold;
+    if (hab.spot === 'point' && POINT.shapes.includes(f.shape)) w *= f.rare >= 2 ? POINT.rare : POINT.hold;
     out.push([f, w]);
   }
   return out;

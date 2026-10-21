@@ -145,6 +145,7 @@ function seeds(world, ped, w, spot) {
   if (spot === 'mangrove' || w === 'swamp') { for (const d of MARSH_D) add(at(d), 260); for (const s of m.natureSites || []) if (s.kind === 'marsh') add(s, 60); for (const l of m.landmarks || []) if (l.type === 'marsh') add({ x: l.x + l.w / 2, y: l.y + l.h / 2 }, 160); }
   if (w === 'reef') for (const d of REEF_D) add(at(d), 260);
   if (spot === 'pocket') for (const c of (m.waters && m.waters.ch) || []) for (const q of c.p || []) add({ x: q[0] * TILE, y: q[1] * TILE }, q[2] + 8);   // (the rivers' calm pockets: shared/world3-rapids.js)
+  if (spot === 'point') for (const s of m.natureSites || []) if (s.kind === 'fishpoint') add(s, 40);   // (the coasts' rock fishing points: shared/world3-coast.js)
   if (spot === 'lily' || w === 'pond') for (const [d, q] of mids) if (DISTRICTS[d] && (DISTRICTS[d].style === 'park' || d === 12)) add(q, 200);
   return out;
 }
@@ -180,7 +181,7 @@ function farBank(world, ped, w, spot, want) {
   return null;
 }
 const WHERE = { pond: 'a pond', lake: 'a lake', river: 'a river', creek: 'a creek', swamp: 'the marshes', shore: 'the shallows', pier: 'a pier', reef: 'the reef' };
-const WATER_LABEL = { lily: 'a park\'s lily pond (the Golden Koi)', drop: 'a lake\'s drop-off (Old Ironsides)', falls: 'the foot of a waterfall (the Rainbow King)', bridge: 'a river under a bridge (Big Muddy, at night)', mangrove: 'the salt marsh (the Swamp Dragon, the Silver King at dusk)', pilings: 'a pier\'s pilings (the Barn Door)', pocket: 'a river\'s calm pocket (the big trout and bass)' };
+const WATER_LABEL = { lily: 'a park\'s lily pond (the Golden Koi)', drop: 'a lake\'s drop-off (Old Ironsides)', falls: 'the foot of a waterfall (the Rainbow King)', bridge: 'a river under a bridge (Big Muddy, at night)', mangrove: 'the salt marsh (the Swamp Dragon, the Silver King at dusk)', pilings: 'a pier\'s pilings (the Barn Door)', pocket: 'a river\'s calm pocket (the big trout and bass)', point: 'a rock fishing point on the coast (the stripers and the redfish)' };
 export function devFish(world, p, msg) {
   const ped = p.ped, prof = p.profile, k = String(msg.k || 'kit');
   if (!ped) return '[dev] No character.';
