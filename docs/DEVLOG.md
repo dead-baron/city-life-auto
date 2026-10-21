@@ -13211,6 +13211,10 @@ within 18 tiles, its fire, driftwood seats and lantern; far apart.
   dirt-bike trail from the wash out to a party camp"): off the Red Rock Trail at marker 2, on open ground a few tiles
   from the track, facing it. It has a fire to sit by, two tents, three camp chairs, a cooler and a lantern. The
   riders' two dirt bikes are parked beside it and their pickup behind it, and you can take them (`m.parking`).
+- **a camp keeps clear of the designed places** (`shared/world3-camps.js` campFits): a camp's spot is refused when the
+  ground it clears holds a designed place's own solids (a lookout tower, a wall, a cut trunk). The riders' camp's first
+  spot was on Lookout Mesa beside marker 2, and laying it took the fire lookout away; it now sits on the trail's other
+  side.
 
 Tests: test/world3dirt.test.js - the camp by marker 2 and its rest spot, its fire, two tents, three chairs, the two
 dirt bikes and the pickup parked on open ground by it.

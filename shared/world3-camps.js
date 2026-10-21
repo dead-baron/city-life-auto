@@ -43,6 +43,18 @@ export function campFits(m, tx, ty, allow = 0) {
     const i = y * m.w + x, t = m.tiles[i];
     if (!m.land[i] || !(t === T.GRASS || t === T.DIRT || t === T.SAND) || (m.reserve[i] & ~(allow | 4 | 128)) || (m.bld && m.bld[i] >= 0)) return false;
   }
+  // and nothing made by hand in the ground it clears (camp3's clear: r + 2): a designed place's own solids - a lookout
+  // tower, a wall, a tree's trunk cut through - are added by hand (pi < 0), and the clearing would take them with it
+  // (2026-10-21: the riders' camp took Lookout Mesa's tower)
+  if (m.solidProps) {
+    const C = Math.ceil(CAMPS3.r + 3);   // (a tile more: a thing's solids can stand a tile off the thing itself)
+    for (let dy = -C; dy <= C; dy++) for (let dx = -C; dx <= C; dx++) {
+      const x = tx + dx, y = ty + dy;
+      if (dx * dx + dy * dy > (CAMPS3.r + 3) * (CAMPS3.r + 3) || x < 0 || y < 0 || x >= m.w || y >= m.h) continue;
+      const arr = m.solidProps.get(y * m.w + x);
+      if (arr && arr.some((e) => e.pi < 0)) return false;
+    }
+  }
   return true;
 }
 
