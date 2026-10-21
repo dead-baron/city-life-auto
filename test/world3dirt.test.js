@@ -49,8 +49,9 @@ test('World v3: the Red Rock MX Park - the course, its berms and tabletops, the 
   // berms, tabletops (each a jump the clients know), the gate, the tower, the lights, the fence, the tape and the tyres
   const count = (t) => m.props.filter((p) => p && p.t === t && Math.hypot(p.x - site.x, p.y - site.y) < 3000).length;
   assert.ok(count('berm') >= 12, `${count('berm')} berms`);
-  assert.ok(count('tabletop') >= 3 && (m.jumps || []).length === count('tabletop'), `${count('tabletop')} tabletops, ${(m.jumps || []).length} jumps`);
-  for (const J of m.jumps) assert.equal(m.tiles[m.idx(Math.floor(J.x / TILE), Math.floor(J.y / TILE))], T.DIRT, 'a tabletop on the course');
+  const parkJumps = (m.jumps || []).filter((J) => J.name === MX.name);
+  assert.ok(count('tabletop') >= 3 && parkJumps.length === count('tabletop'), `${count('tabletop')} tabletops, ${parkJumps.length} jumps`);
+  for (const J of m.jumps) assert.equal(m.tiles[m.idx(Math.floor(J.x / TILE), Math.floor(J.y / TILE))], T.DIRT, `${J.name}'s tabletop on its dirt`);
   assert.ok(count('startgate') === 1 && count('timingtower') === 1 && count('floodmast') >= 4 && count('fenceline') >= 4 && count('tapeline') >= 6 && count('tires') >= 4, 'the gate, the tower, the lights, the fence, the tape, the tyres');
   // the pits: trailers, the tent, the bikes on their stands (dirt bikes to take), the trucks
   assert.ok(count('mxtrailer') === 2 && count('canopy') >= 1, 'the pits');
