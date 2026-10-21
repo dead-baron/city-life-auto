@@ -162,6 +162,18 @@ export function buildDesert(m, addProp) {
     out.tracks += n; (out.trackBy ||= {})[name] = n;
     return n;
   };
+  // a two-rut track (Nature-B2's way in to the adit): two narrow ruts of gravel `half` tiles either side of the line,
+  // the desert's ground between them
+  const ruts = (name, pts, half = 1.05, hw = 0.55) => {
+    const nrm = pts.map((p, j) => {
+      const a = pts[Math.max(0, j - 1)], b = pts[Math.min(pts.length - 1, j + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+      return [-dy / l, dx / l];
+    });
+    let n = 0;
+    for (const sd of [-1, 1]) n += track(`${name}${sd < 0 ? 'L' : 'R'}`, pts.map((p, j) => [p[0] + nrm[j][0] * half * sd, p[1] + nrm[j][1] * half * sd]), hw);
+    (out.trackBy ||= {})[name] = n;
+    return n;
+  };
   const landmark = (name, type, x0, y0, x1, y1) => (m.landmarks ||= []).push({ name, type, x: x0 * TILE, y: y0 * TILE, w: (x1 - x0) * TILE, h: (y1 - y0) * TILE });
 
   // 1. Copper Gulch Mine: the open pit (a quarry as today's - shared/countryside.js quarry: the ground bake paints it,
@@ -195,7 +207,7 @@ export function buildDesert(m, addProp) {
       for (let y = ty - 5; y <= ty; y++) for (let x = tx - 7; x <= tx + 7; x++) { const i = y * W + x; m.tiles[i] = T.WALL; m.reserve[i] |= 4; }
       keep(tx - 10, ty - 7, tx + 11, ty + 9);
       const X = (tx + 0.5) * TILE, face = (ty + 1) * TILE;
-      addProp(m, 'cliff', X, face, 0, { w: 15 * TILE, d: 6 * TILE, h: 120, s: 41 });
+      addProp(m, 'cliff', X, face, 0, { w: 15 * TILE, d: 6 * TILE, h: 150, s: 41, st: 'sandstone' });   // (Nature-B2: a face of red rock)
       addProp(m, 'mineportal', X, face + 10, 0);
       for (let y = ty + 1; y <= ty + 6; y++) for (let x = tx - 5; x <= tx + 5; x++) { const i = y * W + x; if (GROUND.has(m.tiles[i])) m.tiles[i] = T.DIRT; }
       addProp(m, 'rails', X, face + 4 * TILE, 0, { len: 7 * TILE });
@@ -204,10 +216,14 @@ export function buildDesert(m, addProp) {
       for (const [dx, dy, t, r] of [[-110, 40, 'crates', 12], [-88, 76, 'barrel', 8], [104, 50, 'chest', 10], [124, 90, 'pickaxe', 0], [86, 96, 'lumber', 10]]) addProp(m, t, X + dx, face + dy, r);
       const seams = [{ x: Math.round(X), y: Math.round(face + 22) }];
       for (const [dx, dy, size] of [[-150, 14, 26], [150, 18, 30], [74, 12, 18]]) { addProp(m, 'crystal', X + dx, face + dy, 0, { size }); seams.push({ x: Math.round(X + dx), y: Math.round(face + dy + 16) }); }
-      for (const [dx, dy] of [[-200, 150], [190, 140]]) addProp(m, 'gravel', X + dx, face + dy, 0);
+      // (Nature-B2, 2026-10-20: the way in as the concept has it - the mine's sign by the track, saguaros, prickly pear,
+      // barrel cactus, cholla and an ocotillo round the face, scrub, and a two-rut track leading in)
+      addProp(m, 'textsign', X - 200, face + 112, 0, { text: 'COPPER GULCH MINE', bg: '#6a3a1e', fg: [250, 230, 190], z: 30 });
+      for (const [dx, dy, sp] of [[-262, 34, 'saguaroBig'], [-228, 252, 'pear'], [236, 74, 'saguaroMid'], [268, 168, 'barrel'], [196, 232, 'cholla'], [304, 18, 'ocotillo'], [-300, 150, 'barrel'], [92, 244, 'agave']]) addProp(m, 'cactus', X + dx, face + dy, 8, { sp, k: 1 });
+      for (const [dx, dy] of [[-300, 104], [130, 150], [-46, 128], [240, 250], [-176, 30]]) addProp(m, 'shrub_a', X + dx, face + dy, 8);
       (m.natureSites ||= []).push({ kind: 'mine', name: 'Copper Gulch Mine', x: Math.round(X), y: Math.round(face), seams });
       out.adit = { x: Math.round(X), y: Math.round(face) }; out.seams = seams.length;
-      track('adit', [[4920, 1604], [4946, 1617], [tx, ty + 7]], 1.8);
+      ruts('adit', [[4920, 1604], [4946, 1617], [tx - 2, ty + 7]]);
     }
   }
 

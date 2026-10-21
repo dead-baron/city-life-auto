@@ -77,6 +77,16 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
   check(mine && mine.seams.length >= 3, 'the adit and its seams');
   check(m.props.some((p) => p && p.t === 'mineportal' && Math.abs(p.x - (DESERT.adit[0] + 0.5) * TILE) < 2 * TILE), 'the adit\'s portal');
   check(m.buildings.some((b) => b && b.name === 'Copper Gulch Crusher'), 'the crusher');
+  // (Nature-B2: the way in as the concept has it - a face of red rock, the mine's sign, cactus round it, a two-rut track)
+  if (mine) {
+    const nearMine = (t, r) => m.props.filter((p) => p && p.t === t && Math.hypot(p.x - mine.x, p.y - mine.y) < r * TILE);
+    check(nearMine('cliff', 2).some((p) => p.st === 'sandstone'), 'the adit in red rock');
+    check(nearMine('textsign', 10).some((p) => /COPPER GULCH MINE/.test(p.text)), 'the mine\'s sign');
+    check(nearMine('cactus', 12).length >= 6, `cactus round the adit (${nearMine('cactus', 12).length})`);
+    const ty = Math.round(mine.y / TILE) + 6, tx = Math.round(mine.x / TILE) - 22, at = (x, y) => m.tiles[y * W + x] === T.SAND && (m.reserve[y * W + x] & 128);
+    let ruts = 0; for (let x = tx - 6; x <= tx + 6; x++) { let col = ''; for (let y = ty - 4; y <= ty + 4; y++) col += at(x, y) ? '#' : '.'; if (/#\.+#/.test(col)) ruts++; }
+    check(ruts >= 8, `the two-rut track in (${ruts} of 13 columns)`);
+  }
   check((m.landmarks || []).some((l) => l.name === 'Copper Gulch Mine'), 'the mine on the map');
   // (the cave world of shared/underground.js under its adit - a cave per mine, the Old Granite Mine has its own, 8.19 -
   // the ore veins round the pit's faces and on the cave's walls - mined as today's)

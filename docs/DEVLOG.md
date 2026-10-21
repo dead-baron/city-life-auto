@@ -12654,3 +12654,14 @@ Tests: test/world3rapids.test.js - a stand-in creek with a steep stretch gets on
 hugging the bank, a flat river's bend a pool on the outside, nothing by a bridge; the pocket's bite table and weights;
 in World v3 the rapids (a few per cent of the rivers), the eddies and pools all in open water by a bank, the fishing's
 pocket spot at them, and the bake: the wildest rapid fast and white, a pocket's middle still.
+
+## 2026-10-20 · Nature: the desert's way in - Copper Gulch Mine's adit (Nature-B2, panel 3)
+
+The adit in its cliff east of Mine Road's end (`shared/world3-desert.js`) dressed as the concept's third way in: its face
+red sandstone (was granite and moss), taller; the mine's sign by the track ("COPPER GULCH MINE"); saguaros, prickly
+pear, barrel cactus, cholla, an ocotillo and an agave round the face, scrub between; and the way in a two-rut track
+(two narrow ruts of gravel with the desert's ground between them) up from the haul road to the rails. The timbered
+portal, its lanterns, the ore cart, the seams and the cave world behind it are as they were. (The caverns' river under
+Highland Woods doesn't reach it: the desert is 3 km off.)
+
+Tests: test/world3desert.test.js - the adit in red rock, its sign, the cactus round it, the two ruts of the track in.
