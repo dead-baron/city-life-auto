@@ -206,7 +206,7 @@ function scheduleReconnect(why, toTitle = false) {
     $('play').disabled = true;
     $('t-status').textContent = S.everConnected
       ? `${why}. Retrying in ${Math.round(S.reconnectIn / 1000)}s... (if you were mid-fight you have 30s before your ghost drops loot)`
-      : `The online city isn't reachable right now (retrying every few seconds). Try PRACTICE OFFLINE below.`;
+      : `The online city isn't reachable right now (retrying every few seconds).${PRACTICE_ON ? ' Try PRACTICE OFFLINE below.' : ''}`;
   }
   clearTimeout(S.reconnectT);
   S.reconnectT = setTimeout(connect, document.hidden ? Math.max(S.reconnectIn, 5000) : S.reconnectIn);
@@ -1369,7 +1369,12 @@ function submitDevPw() {
 $('devpw-go').onclick = submitDevPw;
 $('devpw-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submitDevPw(); } else if (e.key === 'Escape') closeOverlay('devpw'); });
 
-const practiceGo = () => { initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); startPractice(); };
+// Offline practice is paused (the owner, 2026-10-20: "Let's pause on developing the offline mode for now, we can just
+// disable until we come up with a plan"): it plays the old city, not World v3 (client/practice-worker.js), so the title
+// screen doesn't offer it. PRACTICE_ON brings the button and its note back; the worker and its test are kept as they are.
+const PRACTICE_ON = false;
+if (!PRACTICE_ON) { $('practice').classList.add('hidden'); $('t-practice').classList.add('hidden'); }
+const practiceGo = () => { if (!PRACTICE_ON) return; initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); startPractice(); };
 const playGo = () => { startPlaying(); if (S.dev) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
 $('practice').onclick = firstPlay(practiceGo);
 $('play').onclick = firstPlay(playGo);

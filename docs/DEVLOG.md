@@ -12594,3 +12594,11 @@ put away. In World v3: the Redwood Caverns built, their mouths by the falls and 
 solid where you come out, the stairs and rail, the cliff, the rowboat and barrels, the cobble beach; underground apart
 from every other region, every chamber from both ways in, five rowboats afloat, two cascades, the chests, the ore face's
 gold and amethyst, a kilometre of river. test/world3wild.test.js counts the mines' caves apart from the caverns.
+
+## 2026-10-20 · Practice Offline paused
+
+The owner: "Let's pause on developing the offline mode for now, we can just disable until we come up with a plan."
+Practice Offline plays the old city, not World v3 (the whole v3 world is more than a phone can build or hold:
+`client/practice-worker.js`), so the title screen no longer offers it: `PRACTICE_ON` in `client/main.js` (false) hides
+the PRACTICE OFFLINE button and its note, and the "city isn't reachable" message no longer points to it. The worker and
+its test are kept as they are; CLAUDE.md notes the pause.

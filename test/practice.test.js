@@ -81,3 +81,10 @@ test('the page plays practice\'s own city: its welcome never reaches worldChange
   assert.match(wk, /const map = generateCity\(SEED\);/);
   assert.ok(!/world3/.test(wk.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')), 'no World v3 build in the practice worker');
 });
+
+test('practice is paused (the owner, 2026-10-20): the title screen doesn\'t offer it until PRACTICE_ON is set again', () => {
+  const main = read('client/main.js');
+  assert.match(main, /const PRACTICE_ON = false;/);
+  assert.match(main, /if \(!PRACTICE_ON\) \{ \$\('practice'\)\.classList\.add\('hidden'\); \$\('t-practice'\)\.classList\.add\('hidden'\); \}/);
+  assert.match(main, /const practiceGo = \(\) => \{ if \(!PRACTICE_ON\) return;/);
+});

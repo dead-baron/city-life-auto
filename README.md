@@ -7,7 +7,7 @@ Open the page, you're in the city as a guest. No download, no sign-up.
 
 ## Play without a server: offline practice
 
-Open the page (https://deadbaron.com/city-life-auto/ or a local copy) and press **PRACTICE OFFLINE**. The whole city simulation runs inside your browser, with the cheats panel on and nothing saved. Practice plays the classic city (the world as it was before World v3): World v3's whole world is more than a phone can build or hold, and the simulation needs all of it.
+*Paused since 2026-10-20: the title screen doesn't offer it for now (`PRACTICE_ON` in `client/main.js`).* Open the page (https://deadbaron.com/city-life-auto/ or a local copy) and press **PRACTICE OFFLINE**. The whole city simulation runs inside your browser, with the cheats panel on and nothing saved. Practice plays the classic city (the world as it was before World v3): World v3's whole world is more than a phone can build or hold, and the simulation needs all of it.
 
 ## Run it on your computer (2 minutes)
 
