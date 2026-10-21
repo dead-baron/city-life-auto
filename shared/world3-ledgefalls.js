@@ -2,12 +2,14 @@
 // across the whole width on rivers (SC3-D, NK1-F twin curtains) ... a staircase of steps on creeks (N1-E) ... each gets
 // its plunge pool, mist, a viewpoint", and its R1, "below the falls: an emerald plunge pool, then rapids"). The rivers
 // ran white down their steep reaches (shared/world3-rapids.js) but never fell: the only falls in the wilds were the
-// designed places'. Now four of the steep reaches that run toward the camera start with a fall:
+// designed places'. Now six of the steep reaches that run toward the camera start with a fall:
 // - Long Ledge Falls on the woods' eastern river below Highland Woods: a band of basalt right across the river, the
 //   water over it in a row of curtains between the rock ribs;
 // - Granite Steps on the creek that leaves the peaks' river under Granite Peaks: three low ledges in a staircase;
 // - Sandpiper Falls, the river's last ledge before the beach on the Sandpiper Coast;
-// - Slickrock Falls in the Red Rock Desert's canyon river, over red sandstone.
+// - Slickrock Falls in the Red Rock Desert's canyon river, over red sandstone;
+// - Willow River Falls, where the river out of the woods comes down into Willow Valley's fields;
+// - Mossy Ledge Falls at the outlet of a small lake in the north of the woods, just above the road's bridge.
 // Each: the lip a row of rock from bank to bank (drawn as the water over it; boats stop at it, a swimmer goes down it
 // and can't come back up - shared/ledges.js), the falls drawn over it (client/art2/game/statics.js
 // addNature: 'ledgefall'), mist off its foot (client/art2/game/waterlife.js), a calm plunge pool below it where the big
@@ -25,6 +27,8 @@ export const LEDGES3 = [
   { name: 'Granite Steps', near: [1606, 896], drop: 44, steps: 3, gap: 9 },
   { name: 'Sandpiper Falls', near: [5603, 2727], drop: 56 },
   { name: 'Slickrock Falls', near: [5409, 2480], drop: 60, stone: 'sand' },
+  { name: 'Willow River Falls', near: [1384, 1856], drop: 52 },
+  { name: 'Mossy Ledge Falls', near: [1355, 591], drop: 40 },
 ];
 const PIECE = 440;         // px of lip to a piece of the falls (each drawn with its rock either side: a buttress between)
 const SEEDS = [31, 37, 41, 43];

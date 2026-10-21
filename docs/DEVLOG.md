@@ -12889,12 +12889,15 @@ road for each.
 From the handcraft research's 3.1 ("a ledge fall across the whole width on rivers ... a staircase of steps on creeks ...
 each gets its plunge pool, mist, a viewpoint") and its R1 ("below the falls: an emerald plunge pool, then rapids");
 `shared/world3-ledgefalls.js`, new, World v3's done hook after the rapids. The rivers ran white down their steep
-reaches but never fell: the only falls in the wilds were the designed places'. Now four steep reaches that run toward
+reaches but never fell: the only falls in the wilds were the designed places'. Now six steep reaches that run toward
 the camera start with a fall:
 - **Long Ledge Falls** on the woods' eastern river below Highland Woods, right across its 60-tile width;
 - **Granite Steps**, three low ledges in a staircase down the narrows of the creek that leaves the peaks' river;
 - **Sandpiper Falls**, the river's last ledge before the beach on the Sandpiper Coast;
-- **Slickrock Falls** in the Red Rock Desert's canyon river, over red sandstone.
+- **Slickrock Falls** in the Red Rock Desert's canyon river, over red sandstone;
+- **Willow River Falls**, where the river out of the woods comes down into Willow Valley's fields;
+- **Mossy Ledge Falls** at the outlet of a small lake in the north of the woods, just above the road's bridge (the
+  bridge is its viewpoint).
 
 Each:
 - **the lip** is a row of rock from bank to bank. Boats stop at it. A swimmer goes down it and can't come back up
@@ -12911,7 +12914,7 @@ Each:
 - **a bench** stands on the bank below, looking up at it, with the falls' name on a post. No tree stands in front of it
   (`shared/world3-falls.js` counts the ledge falls).
 
-Tests: test/world3rapids.test.js - the four falls: each lip right across from bank to bank, a one-way drop, drawn as
+Tests: test/world3rapids.test.js - the six falls: each lip right across from bank to bank, a one-way drop, drawn as
 water in the bake and drawn along in strands; the falls' fish in the plunge pool; the bench and the sign. The
 plunge pools are counted among the calm pockets. test/world3rivers.test.js joins the river's water above and below
 each lip as one body.
