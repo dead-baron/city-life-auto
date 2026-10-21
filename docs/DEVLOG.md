@@ -13155,3 +13155,18 @@ the map.
 Tests: test/world3rapids.test.js - the camps at Twin Falls (on the island below the falls) and at least one other falls,
 each a rest spot with its fire, seats and lantern on dry land. test/world3woods.test.js - the islet's camp with its
 fire, a seat, a tent and a canoe, the lake all round it.
+
+## 2026-10-21 · Nature: the ledge falls' strands join into curtains
+
+- **the falls' water** (`client/art2/water.js` fallModel): a ledge fall's or a two-tier fall's water split into strands
+  had rock ribs between them all the way down the face. Across a wide river (the ledge falls, Twin Falls) that read as
+  a row of posts, like a weir. Now each strand fans out as it falls, its edges ragged, and the rocks that split the
+  water at the lip taper away beneath it. They break the water near the top and the strands join into one curtain
+  further down.
+  - **a two-tier fall**: the lower streams fan wider still. The rock between them is a ragged wedge flush with the
+    shelf's pool, not a post standing up out of it.
+  - Every falls drawn in strands changes: the ledge falls, the tarn's and the creeks' falls, and the falls of the
+    designed places that give their streams.
+
+Tests: the full suite (the falls are drawn by the statics' recipes; their placement and the bake's checks are
+unchanged).
