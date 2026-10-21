@@ -13355,3 +13355,11 @@ foundation, so you saw forest floor or meadow and walked into an invisible wall.
 
 Tests: test/crag.test.js - the material (slabs and cracks, raised, tilted); the wilds' rock raised and grey in the
 ground bake, a city wall flat.
+## 2026-10-21 · Fix: no fish and no falls' mist on World v3's page
+
+The owner, 2026-10-21: "Should I be seeing fish in the water yet? Haven't seen any". The water life
+(`client/art2/game/waterlife.js`) read every prop of the map for the falls' feet, and World v3's map on the page has
+holes in its props. The first hole threw, every frame, so no fish, rise, leap or mist was ever drawn; the renderer
+caught it and warned once. A hole is now skipped.
+
+Tests: test/waterlife.test.js - a map with holes in its props still has its fish.
