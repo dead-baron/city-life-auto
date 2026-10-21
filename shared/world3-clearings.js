@@ -64,16 +64,17 @@ export function buildClearings3(m, H3) {
   const chosen = [];
   let onT = 0, kindK = 0;
   const why = out.why = { near: 0, spaced: 0, fit: 0, flat: 0 };
-  for (const c of cands) {
+  // (the ones the trails pass through first, then the rest off them)
+  for (const pass of [0, 1]) for (const c of cands) {
     if (chosen.length >= CLEARINGS.n) break;
-    const on = c.td <= 3 && onT < CLEARINGS.onTrail, off = c.td >= 14 && c.td <= 60;
-    if (c.td <= 3) why.near++;
+    const on = !pass && c.td <= 3 && onT < CLEARINGS.onTrail, off = pass && c.td >= 14 && c.td <= 60;
+    if (!pass && c.td <= 3) why.near++;
     if (!on && !off) continue;
     if (chosen.some((q) => Math.hypot(q.tx - c.tx, q.ty - c.ty) < CLEARINGS.spacing)) { if (on) why.spaced++; continue; }
     const kind = ORDER[kindK % 3], K = CLEARINGS.kinds[kind], R = Math.round(K.r[0] + hh(c.tx, c.ty, 74) * (K.r[1] - K.r[0]));
     if (!fits(c.tx, c.ty, R + 1, on)) { if (on) why.fit++; continue; }
     // (a meadow lies flat: the relief within a few metres over it)
-    if (m.relief && kind === 'meadow') { let lo = 1e9, hi = -1e9; for (let dy = -R; dy <= R; dy += 2) for (let dx = -R; dx <= R; dx += 2) { const r = m.relief[idx(c.tx + dx, c.ty + dy)]; lo = Math.min(lo, r); hi = Math.max(hi, r); } if (hi - lo > 8) continue; }
+    if (m.relief && kind === 'meadow') { let lo = 1e9, hi = -1e9; for (let dy = -R; dy <= R; dy += 2) for (let dx = -R; dx <= R; dx += 2) { const r = m.relief[idx(c.tx + dx, c.ty + dy)]; lo = Math.min(lo, r); hi = Math.max(hi, r); } if (hi - lo > 8) { why.flat++; continue; } }
     chosen.push({ ...c, kind, R, on, name: K.names[Math.floor(kindK / 3) % K.names.length] });
     kindK++; if (on) onT++;
   }
