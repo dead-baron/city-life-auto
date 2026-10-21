@@ -294,7 +294,8 @@ function tileFacts(C) {
       else m = M_.DIRT;
     } else if (t === T.SAND) {
       // wild coasts by their land: rock shores below mountains, shingle under the forests, sand elsewhere
-      if (b.tres[k] & 128) m = M_.SHINGLE;                      // (a river's gravel bars)
+      if ((b.tres[k] & 192) === 192) m = M_.ROCKSHORE;          // (a tidepool shelf's basalt: shared/world3-coast.js)
+      else if (b.tres[k] & 128) m = M_.SHINGLE;                 // (a river's gravel bars)
       else if ((b.tres[k] & 36) === 36) m = M_.BEACH;            // (a designed beach - the cove's sand - whatever the coast round it)
       else if (inRects(paint, X, Y, 'canyon')) m = M_.SHINGLE;    // (a dry wash's gravel and cobbles)
       else if ((bio === 4 || (bio === 2 && wild)) && WSTYLE.has(st) && st !== 'beach') m = bio === 4 ? (vnc(X, Y, 211, seed + 3) > 0.35 ? M_.ROCKSHORE : M_.SHINGLE) : (vnc(X, Y, 173, seed + 5) > 0.5 ? M_.SHINGLE : M_.BEACH);

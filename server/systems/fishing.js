@@ -131,6 +131,8 @@ export function habitatAt(world, x, y, o = {}) {
     const spot = near(map, tx, ty, 4, T.BRIDGE) ? 'bridge' : belowFalls(map, x, y) ? 'falls' : inPocket(map, x, y) ? 'pocket' : null;
     return { water: narrow(map, tx, ty) ? 'creek' : 'river', spot };
   }
+  // a tidepool in the rock (shared/world3-coast.js: the sea's water, cut off at low tide): the shore's fish
+  if (i >= 0 && map.land[i] && map.reserve[i] & 64 && map.tiles[i] === T.WATER) return { water: 'shore', spot: 'tidepool' };
   // a water of its own with no way to the sea (World v3's park ponds and the Stadium Ponds carry no lake flag): a pond, or
   // a lake if it's big; a park's is the lily pond
   const body = waterBody(map, tx, ty);

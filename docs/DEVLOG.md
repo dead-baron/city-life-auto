@@ -12742,3 +12742,33 @@ done hook after Kestrel Lake's:
 
 Tests: test/world3kestrel.test.js - five or more ponds, each with its water, off the fields, in Willow Valley, its
 jetty, reeds and lilies, named on the map, fresh water to fish.
+
+## 2026-10-20 · Nature: the coasts by hand, part 1 - the tidepools of North Cape and Redwood Cove, the blowhole
+
+From the handcraft research's 4.9 and the concepts N8, N8-B, N8-D, NR1-C and Nature-A1's fifth panel ("low-tide basalt
+pools - starfish, urchins, crabs - a sea stack with gulls, a seal rock, a blowhole"; "where the giant redwoods come down
+to the sea"); `shared/world3-coast.js`, new, World v3's done hook after Granite Peaks':
+- **North Cape's tidepool shelf**: below the light's cliff the beach was a strip of sand with a few puddles. Now a shelf
+  of black basalt runs out from it into the sea, ragged along its edge, the surf breaking on it; ten pools of clear
+  water lie in it, each closed in by the rock, barnacled boulders round them, sea stars, urchins and anemones in them,
+  crabs on the rock, gulls about; two of the pools hold a **golden star** to take (the rare find, $150-175: there was
+  one in all of World v3). At the shelf's seaward lip **a blowhole**: the sea spouts up through its cleft with the
+  bigger waves, every six to thirteen seconds, now and then two close together, with a gush (`server/systems/props.js`
+  BLOWHOLE: the spray the page draws for a burst hydrant, when someone is near). Off the point **a seal rock** with its
+  seals and a gull.
+- **Redwood Cove**: the woods' west coast ran ruler-straight, one beach from end to end, and the cove's tidepools never
+  got built in v3. Now a cove is bitten back into the woods - up to fifteen tiles - its sand curving round under the
+  giants (no tree left standing on the sand), driftwood along the high-water line, rocks at its south horn, a footpath
+  down to the sand from the cove's trail; its north horn a basalt point with seven tidepools and their golden stars. The
+  sea cave and the fire ring below the south horn are as they were.
+- The pools' water draws still and clear (a mountain lake's look, not a park pond's green), shows the tidepools' own
+  life (the sculpins and the shore crab: `client/art2/game/waterlife.js`), and fishes as the shore
+  (`server/systems/fishing.js` habitatAt: spot 'tidepool'). The shelf's rock is the rock shore's ground, bare of plants.
+  Otters come to both (`server/systems/wildlife.js` KELP_SITES).
+New art (`client/art2/props-wild.js`): the blowhole - a low hump of black basalt split by a dark cleft, the sea churning
+white in it, foam round its foot.
+
+Tests: test/world3coast.test.js - a blowhole spouts every few seconds when someone is near and not for nobody; in World
+v3 each shelf's rock, its pools (closed in, small, alive, fishing as the shore's tidepool) and golden stars, its nature
+site; North Cape's blowhole on the lip, the seal rock and seals out in the sea, the light still standing; Redwood Cove
+bitten back, its beach all round, no tree on the sand or in the water, the path down, the sea cave and the fire ring.

@@ -273,6 +273,28 @@ export function crab(col = '#d0582e') {
   m.box(11, 5.5, 4, 12, 6.5, 5, dk); m.box(11, 7.5, 4, 12, 8.5, 5, dk);
   return m;
 }
+// a blowhole in a tidepool shelf's seaward lip (the coasts by hand: shared/world3-coast.js): a low hump of black basalt,
+// wet and barnacled round its foot, split by a dark cleft the sea surges up through (its spout: server/systems/props.js),
+// white water churning down in the cleft, foam lacing the rock's foot
+export function blowhole(w = 64, d = 48, seed = 5) {
+  const h = 16, m = new Vox(w, d, h + 2), cx = w / 2, cy = d / 2;
+  const rock = m.mat({ ramp: R('#4a4644'), k: 3, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(y / 3) + Math.round(z / 2), seed) - 0.5) * 0.8 });
+  const wet = m.mat({ ramp: R('#2c2828'), k: 2 }), barn = m.mat({ ramp: R('#cfc8b8'), k: 3 }), dark = m.mat({ ramp: R('#14181a', 5, 2), k: 1 });
+  const foam = m.mat({ ramp: R('#e8f2f2', 5, 3), k: 3, flag: F_NOCAST }), deep = m.mat({ ramp: R('#1c3c46', 5, 2), k: 2, flag: F_WATER | F_NOCAST });
+  m.fill((x, y, z) => {
+    const u = (x + 0.5 - cx) / (w / 2), v = (y + 0.5 - cy) / (d / 2), r2 = u * u + v * v, n = hash(Math.round(x / 4), Math.round(y / 4), seed);
+    if (r2 > 1 || z > h * (1 - r2) + (n - 0.5) * 4) return -1;
+    // the cleft: a slot across the hump, its walls dark, the sea down in it churning white at its seaward end
+    const cu = (x + 0.5 - cx) / (w * 0.15), cv = (y + 0.5 - cy) / (d * 0.3), c2 = cu * cu + cv * cv;
+    if (c2 < 1) return z < 2 ? (x < cx - w * 0.04 && n > 0.3 ? foam : deep) : -1;
+    if (c2 < 1.6) return dark;
+    if (z < 3 && r2 > 0.62) return n > 0.5 ? foam : wet;
+    if (z < 6) return n > 0.55 ? barn : wet;
+    return rock;
+  });
+  m.smooth = 1;
+  return m;
+}
 export function driftwood(len = 60, seed = 1) {
   const m = new Vox(len, 16, 10);
   const wd = m.mat({ ramp: R('#b8aa94'), k: 3, shade: (x, y, z) => (Math.round(x + z * 3) % 6 === 0 ? -0.7 : 0) + (hash(Math.round(x / 5), 1, seed) - 0.5) * 0.5 });
