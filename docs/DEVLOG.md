@@ -12493,3 +12493,53 @@ out; every trail laid with nothing missed, the Highland Way at least 800 tiles, 
 least 10 m deep, walkable under its line; each glade's fire ring (a rest spot), seats, mossy log, the three
 mushrooms and the berries, no tree in it, the deer's habitat; Hidden Pool's pool and fall; the lookout high over the
 Way; Pine Lake's straight old way gone.
+
+## 2026-10-20 · Nature: dirt-bike country - the Red Rock MX Park, the Red Rock Trail, the Highland Enduro (Nature-C1, C1-B)
+
+The nature program's fourth step, from the owner's note of 10-16 ("dirt bike trails and loop tracks in the desert and
+forest, with bikes left there") and the Nature-C1 (the motocross park) and C1-B (the long rides) concepts. All in
+`shared/world3-dirt.js` (new), built from the world build's done hook after the trails:
+- **The Red Rock MX Park** on the sand flat under Lookout Mesa, off Dusty Hollow Road (a level, open 104 x 64-tile site
+  in the Red Rock Desert with the road a few tiles to its north):
+  - the course: a looping dirt track three tiles wide - the start straight, three straights back and forth joined by
+    hairpins, the long sweeper up the west side to the start - drawn as a dirt track in the bake;
+  - banked **berms** round the outside of every tight turn with tyre stacks behind them, red-and-white tape along the
+    straights;
+  - a **tabletop** on each long straight (takeoff ramp, flat top, landing): each is a jump in `m.jumps`, and the
+    clients lift a bike or a car that rides it (`client/art2/game/jumps.js`, new, used by `host.js`): up the ramp with
+    the ground, and off the lip fast enough it flies - a ballistic arc from the lip's speed and the ramp's kick, its
+    shadow left on the ground, the rider lifted with it; slow, it just rolls over the top. Cosmetic (the server's
+    vehicle stays on the ground);
+  - the start gate across the start straight, the timing tower on its stilts beside it, five floodlight masts, a rail
+    fence round the park with a gap in its north side, the way in from the road, the ticket shack and the riders'
+    trucks by it;
+  - the pits along the south side: two trailers with their ramps down, a pop-up tent, gear cases, a chair and a cooler,
+    and five **dirt bikes on their stands**, anyone's to take (`m.parking`);
+  - a **lap race** at the gate (`m.races` kind 'dirt': three laps, eight checkpoints a lap, $350): any motorbike
+    qualifies (`server/systems/races.js`); its place on the map.
+- **The Red Rock Trail**: a marked ride out of the park's east side round Lookout Mesa and up its jeep track to the top,
+  across a boulder-strewn dry wash (pale sand, its boulders) to a rest stop under the big mesa - a shade ramada over a
+  picnic table, a water tank and a trough, a rail fence, its sign - and back; numbered markers 1 to 4 at its
+  turns.
+- **The Highland Enduro** in Highland Woods: a trailhead car park off Highland Road (the riders' pickups and van, three
+  dirt bikes left there, a map board, the trail's sign, a fingerpost, a dirt drive from the road) and the single-track
+  loop from it through the pines and over the rocks above the lake - its bermed corners, an upturned root plate, a log
+  ride beside a fallen trunk, a jump line of three tables, and a new creek from a spring on the rocks down to the lake
+  that it splashes through (a ford: a bridge tile, the water running on under it) and crosses once on a timber bridge
+  where the creek tumbles over a ledge.
+- Both rides are laid by the trails' router (`routeTiles`, now exported from `shared/world3-trails.js`) over a slow
+  lumpy cost field so they wander round the rough rather than ruling straight lines across the flat, then rounded and
+  swayed side to side by a slow field over the ground (a stretch ridden out and back sways the same way both times;
+  never onto water, rock or a road); dirt under them, the trees taken off them, a dirt track for the bake.
+- The art (`client/art2/props-garden.js`, drawn by `client/art2/game/statics.js`): tabletop, berm, tapeLine,
+  startGate, timingTower, floodMast, mxTrailer, rootPlate.
+- The budgets hold (`tools/perf.mjs`): the bake worker 824 KB of 824, the renderer 381 of 382 with the jumps' code.
+
+Tests: test/world3dirt.test.js - a tabletop flies a fast bike over it and down again past it, either way along it,
+and a slow one just rolls over; nothing beside it. In World v3: the park built in the Red Rock Desert, its course a
+closed loop of dirt, at least 12 berms, a jump for every tabletop and each on the course, the gate, the tower, the
+lights, the fence, the tape and the tyres, the pits and at least four bikes and two trucks on open ground, the
+three-lap race with every checkpoint on the course, a road by its north side; both rides laid with no step on water,
+rock or a building, the Red Rock Trail's markers 1-4, its rest stop and its wash, the enduro's berms, its three-table
+jump line, a ford with the water under it, its bridge, the root plate, the log ride, the board and the bikes at the
+trailhead.
