@@ -2233,7 +2233,7 @@ function propItems(c, p, pi, I) {
     case 'startgate': { const hd = qa((p.a || 0) + PI / 2, 16); V(`sgate:${p.w || 120}:${hd.toFixed(3)}`, 'startGate', [p.w || 120], hd); return; }
     case 'timingtower': V('ttower', 'timingTower', []); lightAt(I, x, y, 90, 140, [1, 0.85, 0.55], 1.1, 'window'); return;
     case 'floodmast': V(`flood:${p.h || 220}`, 'floodMast', [p.h || 220]); lightAt(I, x, y, (p.h || 220) + 6, 520, [1, 0.96, 0.86], 2.4, 'lamp'); return;
-    case 'rootplate': V(`rootp:${seed % 2}`, 'rootPlate', [], qa(seed * 0.7, 8)); return;
+    case 'rootplate': { const hd = qa(seed * 0.7, 8); V(`rootp:${hd.toFixed(2)}`, 'rootPlate', [], hd); return; }   // (the Highland Enduro's upturned root plate)
     case 'mxtrailer': { const hd = qa(p.a || 0, 4); V(`mxtr:${p.c || 0}:${hd.toFixed(2)}`, 'mxTrailer', [p.c || 0], hd); return; }
     case 'birdhide': { const hd = qa(p.a || 0, 16); V(`bhide:${hd.toFixed(3)}`, 'birdHide', [], hd); return; }   // (Nature-C3: the marsh's bird hide on its piles)
     case 'viewdeck': { const len = Math.round((p.len || 160) / 8) * 8, w = Math.round((p.w || 160) / 8) * 8, hd = qa(p.a || 0, 4); V(`vdeck:${len}:${w}:${hd.toFixed(2)}`, 'viewPlatform', [len, w], hd); return; }   // (Nature-C3: the marsh's viewing platform)
