@@ -53,6 +53,7 @@ import { driveTree3 } from './world3-drivetree.js';
 import { desertRoadside3 } from './world3-roadside.js';
 import { stockTanks3 } from './world3-stocktanks.js';
 import { tidyProps3 } from './world3-tidy.js';
+import { sunkenWrecks3 } from './world3-wrecks.js';
 import { woodsLake3 } from './world3-woodslake.js';
 import { wildEdges3 } from './world3-edges.js';
 import { riverRun3 } from './world3-riverrun.js';
@@ -282,6 +283,7 @@ export function worldOpts(asked) {
       m.world3.roadside = desertRoadside3(m, H3);   // (the desert's roads: white delineator posts with red reflectors along their shoulders - world3-roadside.js; after the edges meander, so a post's district is the one it stands in)
       m.world3.fallsView = fallsInView3(m, H3);   // (the falls chain, part 1: no tree standing where it would hide a fall - world3-falls.js)
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)
+      m.world3.wrecks = sunkenWrecks3(m);   // (sunken boats on the bed where the water's clear: rowboats in the lakes, a skiff and a sloop in the sea's shallows - world3-wrecks.js)
       m.world3.tidy = tidyProps3(m);   // (last: nothing that needs dry ground left standing in the water, no fence run across a road - world3-tidy.js)
     },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a

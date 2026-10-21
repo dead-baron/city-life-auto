@@ -163,6 +163,8 @@ export function* groundSteps(M, cx, cy, opt = {}) {
   // ap 2: the live game draws the chunk at 1 art pixel = 2 world px - the paint (lane lines, zebras, stop lines,
   // arrows, stalls, court lines, wear) is decided once per art pixel so it comes out in whole art pixels
   const C = { M, b, q, seed, X0, Y0, WX0, WY0, TX0, TY0, deckZ: opt.deckZ ?? 6, E: [], ap: opt.artPx === 2 ? 2 : 1, later: !!opt.reliefLater };
+  // (the wrecks on the water's bed in reach of this chunk: client/art2/water.js wreckPx)
+  C.wk = (M.wrecks || []).filter((w) => w.x + w.len > WX0 - 40 && w.x - w.len < WX0 + WN + 40 && w.y + w.len > WY0 - 40 && w.y - w.len < WY0 + WN + 40);
   // (opt.scratch: a bake worker's - the G-buffer is used up before the next bake, so one is kept and cleared rather than
   // a fresh 9 MB every chunk)
   const G = opt.scratch ? scratchG() : new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;
