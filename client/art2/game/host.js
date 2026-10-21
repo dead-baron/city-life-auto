@@ -1464,8 +1464,8 @@ export class World2 {
         if (p.kind !== K.PED || p.parent !== v.id || !p.d || (p.flags & PF.DEAD)) continue;
         const pass = (p.flags & PF.PASSENGER) !== 0, seat = !pass && def.seat !== undefined ? [def.seat, 0] : seats[p.back ? Math.min(seats.length - 1, 2 + nb++) : pass ? 1 : 0];   // (a bicycle: where its saddle is)
         const c = Math.cos(v.ra), s = Math.sin(v.ra), x = v.rx + c * seat[0] - s * seat[1], y = v.ry + s * seat[0] + c * seat[1];
-        const kneel = def.kind === 'boat' && api.pedPose(p) === 'kneel';
-        const d8 = dir8(kneel ? p.ra ?? v.ra : v.ra), pose = def.cart ? (pass ? 'cartsit' : kick >= 0 ? 'cartkick' : 'cartride') : def.pedal ? 'pedal' : kneel ? 'kneel' : (!pass && def.ride) || 'ride', A2 = this._app(p.d.app || {}, p.d.ar);   // (def.ride: leaned back on a chopper, tucked on a sport bike)
+        const pp = def.kind === 'boat' ? api.pedPose(p) : null, kneel = pp === 'kneel', angle = pp === 'fish';   // (angle: fishing over the side - you, or an angler's boat: server boats.js)
+        const d8 = dir8(kneel || angle ? p.ra ?? v.ra : v.ra), pose = def.cart ? (pass ? 'cartsit' : kick >= 0 ? 'cartkick' : 'cartride') : def.pedal ? 'pedal' : kneel ? 'kneel' : angle ? 'fish' : (!pass && def.ride) || 'ride', A2 = this._app(p.d.app || {}, p.d.ar);   // (def.ride: leaned back on a chopper, tucked on a sport bike)
         const fr = pose === 'pedal' && (p.as || 0) > 20 ? Math.floor(p.phase || 0) % 4 : pose === 'cartkick' ? kick : pose === 'cartride' ? Math.floor(now * 2 + v.id) & 1 : pose === 'cartsit' && (v._csp || 0) > def.max * 0.55 && (now + v.id * 1.7) % 5 < 1.4 ? 1 : 0, wpn = def.cart ? 0 : p.extra | 0;   // (in the basket at speed: now and then both arms up - CC02)
         const was = this.sprPrio;
         if (p.id === myPed) this.sprPrio = -3;

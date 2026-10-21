@@ -154,7 +154,7 @@ function lakeBig(map, tx, ty) { let n = 0; for (let dy = -6; dy <= 6; dy += 3) f
 function narrow(map, tx, ty) { let n = 0; for (let k = -4; k <= 4; k++) { const a = at(map, tx + k, ty), b = at(map, tx, ty + k); if (a >= 0 && WATER_T[map.tiles[a]]) n++; if (b >= 0 && WATER_T[map.tiles[b]]) n++; } return n < 11; }
 // a glade of the woods' (map.natureSites kind 'glade': shared/world3-trails.js) round (x, y) px
 function gladeAt(map, x, y) {
-  if (!map._glades) Object.defineProperty(map, '_glades', { value: (map.natureSites || []).filter((q) => q.kind === 'glade'), enumerable: false, configurable: true });
+  if (!map._glades) Object.defineProperty(map, '_glades', { value: (map.natureSites || []).filter((q) => q.kind === 'glade' || (q.kind === 'clearing' && q.type !== 'stumps')), enumerable: false, configurable: true });
   for (const g of map._glades) if (Math.abs(g.x - x) < g.r && Math.abs(g.y - y) < g.r && Math.hypot(g.x - x, g.y - y) < g.r) return true;
   return false;
 }

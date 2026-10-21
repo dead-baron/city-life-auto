@@ -9,6 +9,7 @@
 //   birders    a birdwatcher at the water's edge (a lake, a marsh) with binoculars up, now and then a friend at a spotting
 //              scope on its tripod
 //   holds      an angler on a creek's, a river's or a lake's bank, the rod out over the water, the tackle box and the net
+//              (a river's calm pockets' banks first: shared/world3-rapids.js)
 //              at their side (the city's anglers are on the piers: activities.js)
 //   kayakers   a kayaker in a life vest walking the shore of a lake with the kayak up on a shoulder and the paddle
 //   climbers   two at the foot of a crag in the peaks or the canyons: one with the rope, its end run up the rock, the other
@@ -183,6 +184,9 @@ export function wildSpots(map, list, taken, h) {
   // with open ground two tiles off it, the spot on that ground facing the water (every other tile looked at, in a
   // hashed order so they don't all line up from the top left)
   const holds = [], shores = [];
+  // (a river's calm pockets - shared/world3-rapids.js ch.p, tiles: the anglers take their banks first)
+  const PK = ((map.waters && map.waters.ch) || []).flatMap((c) => c.p || []);
+  const byPocket = (tx, ty) => PK.some((q) => (q[0] - tx) * (q[0] - tx) + (q[1] - ty) * (q[1] - ty) < (q[2] + 2) * (q[2] + 2));
   for (let ty = map.y0; ty < map.y0 + map.h; ty += 2) for (let tx = map.x0 + (ty & 2 ? 1 : 0); tx < map.x0 + map.w; tx += 2) {
     const i = map.idx(tx, ty);
     if (!WATER(map.tiles[i]) || !(map.river[i] || map.lake[i])) continue;
@@ -191,7 +195,7 @@ export function wildSpots(map, list, taken, h) {
       if (!map.inside(lx, ly) || WATER(map.tiles[map.idx(lx, ly)]) || !map.inside(tx + dx, ty + dy)) continue;
       const x = (lx + 0.5) * TILE + dx * 6, y = (ly + 0.5) * TILE + dy * 6;
       if (!wildAt(map, x, y) || !ok(x, y)) continue;
-      const q = { x, y, a: Math.atan2(-dy, -dx), r: h.hsh(x, y, 403) };
+      const q = { x, y, a: Math.atan2(-dy, -dx), r: h.hsh(x, y, 403) - (PK.length && byPocket(tx, ty) ? 1 : 0) };
       (map.lake[i] ? shores : holds).push(q);
       break;
     }

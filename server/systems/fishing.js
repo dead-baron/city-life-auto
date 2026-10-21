@@ -100,8 +100,15 @@ function inMarsh(m, x, y) {
 // how much lake there is round about (out to 12 tiles, every third: 81 looks) - a lake's shore is still a lake
 function lakeSize(m, tx, ty) { let n = 0; for (let dy = -12; dy <= 12; dy += 3) for (let dx = -12; dx <= 12; dx += 3) if (m.inside(tx + dx, ty + dy) && m.lake && m.lake[m.idx(tx + dx, ty + dy)]) n++; return n; }
 function narrow(m, tx, ty) { let n = 0; for (let k = -4; k <= 4; k++) { if (wet(m.tileAt(tx + k, ty))) n++; if (wet(m.tileAt(tx, ty + k))) n++; } return n < 11; }
+// a river's calm pocket (shared/world3-rapids.js ch.p: tiles) at (x, y) px, or a tile and a half off its edge: the deep,
+// slow hole by the bank where the big trout and bass hold
+function inPocket(m, x, y) {
+  const P = m._pockets || Object.defineProperty(m, '_pockets', { value: ((m.waters && m.waters.ch) || []).flatMap((c) => (c.p || []).map((q) => [q[0] * TILE, q[1] * TILE, (q[2] + 1.5) * TILE])), enumerable: false })._pockets;
+  for (const [px, py, r] of P) if ((x - px) * (x - px) + (y - py) * (y - py) < r * r) return true;
+  return false;
+}
 function belowFalls(m, x, y) { for (const s of m.natureSites || []) { const f = s.falls; if (f && Number.isFinite(f.x) && Math.abs(x - f.x) < 220 && y > f.y - 40 && y < f.y + 420) return true; } return false; }
-// The water at (x, y) px: { water (shared/fish.js WATERS), spot (a legendary's place, or null) }. o: { ug (underground),
+// The water at (x, y) px: { water (shared/fish.js WATERS), spot (a legendary's place, a river's calm pocket, or null) }. o: { ug (underground),
 // boat (fishing from one), night }
 export function habitatAt(world, x, y, o = {}) {
   const map = world.map;
@@ -121,7 +128,7 @@ export function habitatAt(world, x, y, o = {}) {
   if (i >= 0 && map.river && map.river[i]) {   // a river, a creek; the marsh's tidal creeks
     if (SALT_MARSH_D.has(d) || inMarsh(map, x, y)) return { water: 'swamp', spot: SALT_MARSH_D.has(d) ? 'mangrove' : null };
     if (parkish(map, tx, ty, d)) { const body = waterBody(map, tx, ty); if (body < Infinity) return { water: body >= POND_MAX ? 'lake' : 'pond', spot: 'lily' }; }   // (World v3's park ponds wear the river's flag)
-    const spot = near(map, tx, ty, 4, T.BRIDGE) ? 'bridge' : belowFalls(map, x, y) ? 'falls' : null;
+    const spot = near(map, tx, ty, 4, T.BRIDGE) ? 'bridge' : belowFalls(map, x, y) ? 'falls' : inPocket(map, x, y) ? 'pocket' : null;
     return { water: narrow(map, tx, ty) ? 'creek' : 'river', spot };
   }
   // a water of its own with no way to the sea (World v3's park ponds and the Stadium Ponds carry no lake flag): a pond, or
@@ -256,7 +263,8 @@ function cast(world, p, ped, L) {
   let f = FS.pickFish(hab, { when, bait, rodLb: R.lb, far: F.power }, rand) || FS.FISH_BY_ID.bluegill;
   const rig = p.devFish, forced = rig && rig.next ? rigged(rig.next, hab, rand) : null;   // (the debug menu's next bite: server/devplay.js)
   if (forced) { f = forced; rig.next = null; }
-  const lb = FS.weighFish(f, rand), seed = Math.floor(rand() * 4294967296) >>> 0;
+  const lb = FS.weighFish(f, rand, hab.spot === 'pocket' ? FS.POCKET.heavy : 0), seed = Math.floor(rand() * 4294967296) >>> 0;
+  if (hab.spot === 'pocket' && !(world.time - (p.pocketNote ?? -1e9) < 600)) { p.pocketNote = world.time; world.notify(p, 'A calm pocket: deep, slow water by the bank, out of the current - the big trout and bass hold here.', 'info'); }
   L.P = FS.fightParams(f, lb, rodId, hab.water, seed, { bait });
   if (rig) {
     if (forced) L.P.snap = false;

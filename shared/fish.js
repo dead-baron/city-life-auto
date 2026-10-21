@@ -188,6 +188,9 @@ function baitGain(id, water, o) {
 // rare ones up a little), at their own hour, more if they eat the bait; a legendary only at its spot and its hour, on a
 // rod that can hold it, now and then.
 const RARE_W = [0, 10, 5, 2.2, 0.8, 0.1];
+// a river's calm pocket (shared/world3-rapids.js; habitatAt's spot 'pocket'): the trout and the bass hold in its deep, slow
+// water by the bank - each of them half again as likely there and the rarer ones twice, and they run heavier (weighFish's up)
+export const POCKET = { hold: 1.5, rare: 2, heavy: 0.3 };
 export function biteTable(hab, o = {}) {
   const out = [], when = o.when || 'day';
   for (const f of FISH) {
@@ -197,6 +200,7 @@ export function biteTable(hab, o = {}) {
     if (f.when !== 'any' && f.when !== when) w *= when === 'dusk' ? 0.7 : f.when === 'dusk' ? 0.5 : 0.2;
     const B = o.bait && BAITS[o.bait];
     if (B && (!B.night || when === 'night') && [...B.eats].some((c) => f.eats.includes(c))) w *= B.x;
+    if (hab.spot === 'pocket' && (f.shape === 'trout' || f.shape === 'bass')) w *= f.rare >= 2 ? POCKET.rare : POCKET.hold;
     out.push([f, w]);
   }
   return out;
@@ -208,8 +212,8 @@ export function pickFish(hab, o, rand) {
   for (const [f, w] of tab) { r -= w; if (r <= 0) return f; }
   return tab[tab.length - 1][0];
 }
-// its weight: most near the low end, a few big ones (lb, one decimal)
-export function weighFish(f, rand) { const u = rand(), v = rand(); return Math.round((f.lb[0] + (f.lb[1] - f.lb[0]) * u * u * (0.35 + 0.65 * v)) * 10) / 10; }
+// its weight: most near the low end, a few big ones (lb, one decimal); up: 0..1, heavier ones likelier (a calm pocket's)
+export function weighFish(f, rand, up = 0) { const u = up + rand() * (1 - up), v = rand(); return Math.round((f.lb[0] + (f.lb[1] - f.lb[0]) * u * u * (0.35 + 0.65 * v)) * 10) / 10; }
 
 // ---- the fishing itself ----------------------------------------------------------------------------------------------
 // The state (F), stepped once per input (dt) with the action button held and pressed this step:

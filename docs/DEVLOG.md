@@ -12595,6 +12595,68 @@ solid where you come out, the stairs and rail, the cliff, the rowboat and barrel
 from every other region, every chamber from both ways in, five rowboats afloat, two cascades, the chests, the ore face's
 gold and amethyst, a kilometre of river. test/world3wild.test.js counts the mines' caves apart from the caverns.
 
+## 2026-10-20 · Nature: Highland Woods by hand, part 2 - the clearings, the mushrooms in sight
+
+From the owner's notes of 10-16 ("forest: some semi-open, spaced-out clearings, on and off the paths"; "forage items
+(mushrooms) easier to see, in visible spots") and the concepts' felled patches and windthrows (WD1, N1):
+- **The clearings** (`shared/world3-clearings.js`, new; World v3's done hook after the caves): eighteen across Highland
+  Woods, at least 44 tiles apart, each named on the map - five the trails pass through, the rest off them (14-60 tiles
+  out, down nothing but deer paths), never by a road, a glade, a cave mouth, the enduro or a named place:
+  - **deer meadows** (Lupine Meadow, Deer Meadow, Foxglove Meadow, ...): a ragged round of sunlit grass on level
+    ground, lupines, foxglove and wildflowers, tall grass, a dead snag, mossy boulders, berry bushes to pick; the deer
+    and elk come to them (`server/systems/wildlife.js`: a meadow is a glade to them);
+  - **old stump clearings** (Logger's Clearing, Old Stumps, Springboard Flat, ...): grass in the sun where the old
+    growth was cut, its stumps sawn long ago, felled logs gone to moss, a fairy ring of second-growth redwoods round the oldest stump, ferns and bracken,
+    golden trumpets and ghostglass caps on the rot;
+  - **windfalls** (Fallen Giant, Windthrow Gap, Nurse Log Hollow, ...): a giant down across the gap it tore, its root
+    plate reared up at its foot, fir seedlings on the nurse log, shelf oysters along it, ferns and foxglove in the light.
+  The tall trees in front of each in this view are taken off, so it reads as open.
+  Where a trail passes through one, nothing stands or lies on the trail (its ferns, stumps, logs and boulders keep a
+  tile and a half off it) and it's never a windfall: no fallen giant across a trail.
+- **The mushrooms in sight** (`forageInSight3`): the camera looks north, so a tree south of a spot hides it - a giant's
+  trunk what's just behind it, its crown what's further back. Every forage spot in the woods hidden so moves to the
+  nearest open ground within eight tiles that nothing hides (or, with none, is left out).
+
+Tests: test/world3clearings.test.js - a spot behind a trunk moves out, the seen ones stay; in World v3 the clearings of
+each kind, some on the trails and the rest off them, apart, open, on the map, the meadows' grass and flowers and their
+deer, the stumps, the fallen giants and their root plates; the woods' mushrooms moved into sight, under one in a
+hundred left behind a giant's trunk.
+
+## 2026-10-20 · Nature: the rivers, part 2 - rapids, calm pockets, anglers' boats
+
+From the owner's notes of 10-16 ("rivers that look natural: ... calm fishing pockets, NPC fishing boats"; "see-through
+clear water ... rapids") and the water research (riffles and rapids on the steeper grades, eddies below them and in the
+lee of the bends, the anglers at the holds):
+- **The rapids** (`shared/world3-rapids.js`, new; World v3's done hook after the trails and the caves): along every creek
+  and river, where the land falls fast under the water - at least 0.13 of a height step a tile over 16 tiles, the
+  steepest few per cent of all the rivers' length - in runs at least 12 tiles long (or half the channel's width), none
+  at a channel's very ends: fourteen of them, from the Highland creeks' chutes to the run into the desert canyon. Each
+  is listed on its channel (`m.waters.ch[].r`: where along it, how wild). The bake draws them white
+  (`client/art2/water.js`): churns of white water in patches, trains of standing waves across the current by them,
+  foam streaks along it, the water paled with air, boulders strewn right across (bigger, each with its collar and
+  broken wake), and the light pass runs it fast.
+- **The calm pockets**: deep, slow water by a bank, where the fish hold - an eddy just below each rapid on the inside of
+  its bend, and on the quiet reaches a pool under the cut bank on the outside of each tight bend, at least 90 tiles
+  apart along a channel, only where all its water is open river water (no bridge, dock or lake by it), each hugging
+  its bank (`m.waters.ch[].p`). The bake draws them still and dark (a deeper hole), glassy, with a slow swirl turning in
+  them and the eddy's line of foam where the current goes by; no lily pads in them.
+- **Fishing a pocket** (`server/systems/fishing.js` habitatAt: the new 'pocket' spot; `shared/fish.js` POCKET): the trout
+  and the bass hold there - each half again as likely and the rarer ones twice, and heavier; the first cast into one
+  says so. The debug menu's fishing places have "A river's calm pocket". The fish are seen holding in them (trout, a
+  bass: `client/art2/game/waterlife.js`), and the anglers of the wilds take the pockets' banks first
+  (`server/systems/wildfolk.js`).
+- **The anglers' boats** (`server/systems/boats.js`): a rowboat (or now and then a dinghy) out on a lake near you - or
+  sat in a big river's pocket - its angler (in the fisher's look) standing with the rod out over the side a minute or
+  two, then rowing on to another spot on the same water; two kept near anyone by a lake. Anyone fishing from a boat
+  that sits still - you too - is now drawn standing with the rod out (`client/art2/game/host.js`).
+
+Still open: a current that carries a swimmer or a boat down a rapid; a raft or kayak run with a put-in and take-out.
+
+Tests: test/world3rapids.test.js - a stand-in creek with a steep stretch gets one rapid over it and an eddy below it
+hugging the bank, a flat river's bend a pool on the outside, nothing by a bridge; the pocket's bite table and weights;
+in World v3 the rapids (a few per cent of the rivers), the eddies and pools all in open water by a bank, the fishing's
+pocket spot at them, and the bake: the wildest rapid fast and white, a pocket's middle still.
+
 ## 2026-10-20 · Practice Offline paused
 
 The owner: "Let's pause on developing the offline mode for now, we can just disable until we come up with a plan."
