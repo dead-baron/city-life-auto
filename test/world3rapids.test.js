@@ -72,6 +72,37 @@ test('a calm pocket: the trout and the bass hold there - likelier, and heavier',
   assert.ok(b > a * 1.3, `heavier (${(a / 400).toFixed(1)} -> ${(b / 400).toFixed(1)} lb)`);
 });
 
+test('the anglers\' boats: one sits still with the rod out over the side, rows on to the next spot, puts the rod down when taken', async () => {
+  const { makeWorld, joinPlayer, run, teleport } = await import('./helpers.js');
+  const boats = await import('../server/systems/boats.js');
+  const players = await import('../server/systems/players.js');
+  const { PF } = await import('../shared/constants.js');
+  const w = makeWorld({ npcBudget: 60 });
+  const { p } = joinPlayer(w);
+  // (open water: an offshore point with open sea 700 px east of it; the anglers' spots stood in for by two points on it)
+  const open = (q) => { for (let dx = 0; dx <= 800; dx += 40) if (w.map.tileAtPx(q.x + dx, q.y) !== T.DEEP) return false; return true; };
+  const mid = Math.floor(w.map.offshore.length / 2), sp = w.map.offshore.slice(mid).find(open) || w.map.offshore[mid];
+  Object.defineProperty(w.map, '_fishSpots', { value: [{ x: sp.x, y: sp.y }, { x: sp.x + 600, y: sp.y }], configurable: true });
+  teleport(w, p.ped, sp.x - 900, sp.y);
+  const v = boats.spawnFisher(w, { x: sp.x, y: sp.y }), d = w.get(v.seats[0]);
+  assert.ok(v.model === 'rowboat' || v.model === 'dinghy', v.model);
+  run(w, 2);
+  assert.equal(v.ai && v.ai.kind, 'fisher');
+  assert.ok(d.fishing && d.fishing.npc && (players.pedFlags(w, d) & PF.FISHING), 'the rod out');
+  assert.ok(Math.hypot(v.vx, v.vy) < 30, 'sat still');
+  v.ai.until = w.time;   // (time to move on)
+  run(w, 3);
+  assert.ok(v.ai.to && !d.fishing && v.x > sp.x + 40, `rowing on to the next spot (${Math.round(v.x - sp.x)} px)`);
+  run(w, 12);
+  assert.ok(!v.ai.to && Math.hypot(v.x - sp.x - 600, v.y - sp.y) < 120, 'there');
+  run(w, 2);
+  assert.ok(d.fishing, 'the rod out again');
+  // taken: the angler out, the rod down, the boat yours
+  d.vehId = 0; v.seats[0] = p.ped.id; p.ped.vehId = v.id; p.ped.seat = 0;
+  run(w, 0.5);
+  assert.ok(!v.ai && !d.fishing, 'the rod down');
+});
+
 test('World v3: the rapids and calm pockets along the rivers; the fishing finds the pockets; the bake draws them', { timeout: 400000 }, async () => {
   const { generateCity } = await import('../shared/map.js');
   await import('../shared/world3-islands.js');
