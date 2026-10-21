@@ -13070,3 +13070,22 @@ keep lean.
 Tests: test/world3rapids.test.js - the put-in and the take-out with their landings and kayaks for hire, the take-out
 well down the river, the current running from the one to the other.
 
+
+## 2026-10-21 · Nature: the Redwood River Run race
+
+- **the race** (`shared/world3-riverrun.js`, `server/systems/races.js` kind `'kayak'`): the river run is a race too.
+  Sit in a kayak at the put-in's landing and you're entered; the usual countdown gives others time to rent one and
+  join. Then it's gate to gate down the river to the take-out, with the current and the white water on the way.
+  - **the gates** are on the river's centre line, one every 45 tiles, following it from channel to channel where one
+    runs into the next. A gate never sits on a bridge's deck or a ledge's lip; it moves on to the next point on open
+    water. The finish is by the take-out.
+  - **only kayaks qualify**: a rowboat or a jet ski isn't entered. The prize is the races' usual: $250 a racer, the
+    winner's share.
+  - **on the map**: the start is listed with the other races (Activities), and its float says what qualifies. Every
+    race's float now says this correctly: the raceway and the MX park were labelled "boats" (`client/main.js`).
+- **a flaky test fixed** (`test/burning.test.js`): the faller was sometimes spawned beside the roller. Running about
+  on fire, it could light the roller again. The two now start well apart.
+
+Tests: test/world3rapids.test.js - the race and its gates (at least 5, each on the water, spaced 15-90 tiles), the
+start at the put-in's kayaks, the finish by the take-out, the race on the map. Then the race itself on the built map:
+a kayak entered and a rowboat not, gate to gate, first home and paid.

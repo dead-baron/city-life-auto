@@ -8,8 +8,9 @@ import { store } from '../store.js';
 export const COUNTDOWN_S = 15;
 const RESULTS_S = 8, MAX_S = 330, CP_R = 130, START_R = 190, LOST_PX = 3200;
 
-// (dirt: the MX park's laps - any motorcycle, not a pedal bike: shared/world3-dirt.js)
-const qualifies = (race, v) => !!v && !v.wreckAt && (race.kind === 'jetski' ? v.model === 'jetski' : race.kind === 'wheels' ? v.def.kind !== 'boat' : race.kind === 'dirt' ? v.def.kind === 'bike' && !v.def.pedal : v.def.kind === 'boat' && v.model !== 'jetski');
+// (dirt: the MX park's laps - any motorcycle, not a pedal bike: shared/world3-dirt.js; kayak: the Redwood River Run's
+// gates down the river, kayaks only: shared/world3-riverrun.js)
+const qualifies = (race, v) => !!v && !v.wreckAt && (race.kind === 'jetski' ? v.model === 'jetski' : race.kind === 'kayak' ? v.model === 'kayak' : race.kind === 'wheels' ? v.def.kind !== 'boat' : race.kind === 'dirt' ? v.def.kind === 'bike' && !v.def.pedal : v.def.kind === 'boat' && v.model !== 'jetski');
 const where = (race) => race.where || 'the start buoy';
 const progress = (race, r) => (race.laps ? `lap ${Math.min(race.laps, Math.floor(r.cp / race.lapLen) + 1)}/${race.laps}` : `checkpoint ${r.cp + 1}/${race.cps.length}`);
 

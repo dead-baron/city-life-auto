@@ -208,6 +208,30 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   let north = 0, n = 0;
   for (let y = RR.put.shore[1] - 20; y > RR.take.shore[1] + 20; y -= 12) for (let x = 2300; x < 2560; x += 3) { const f = flowAt(m, (x + 0.5) * TILE, (y + 0.5) * TILE); if (f) { n++; if (f[1] < 0) north++; } }
   assert.ok(n > 50 && north > n * 0.8, `the current runs down the river to the bay (${north} of ${n} samples northward)`);
+  // ...and it's a race (server/systems/races.js, kind 'kayak'): the start at the put-in's kayaks, a gate on the water every
+  // so far down the river, the finish by the take-out; a kayak is entered, a rowboat isn't; first home takes the prize
+  const race = m.races.find((r) => r.kind === 'kayak');
+  assert.ok(race && RR.race && race.id === RR.race.id && race.cps.length >= 5, `the river run's race and its gates (${JSON.stringify(RR.race)})`);
+  const put = m.rentals.find((q) => q.poi === RR.put.poi);
+  assert.ok(Math.hypot(race.start.x - put.spots[0].x, race.start.y - put.spots[0].y) < 4 * TILE, 'the start at the put-in\'s kayaks');
+  for (const c of race.cps) assert.ok(wet(m, c.x / TILE - 0.5, c.y / TILE - 0.5), `a gate on the water at ${c.x / TILE | 0}, ${c.y / TILE | 0}`);
+  for (let k = 1; k < race.cps.length; k++) { const d = Math.hypot(race.cps[k].x - race.cps[k - 1].x, race.cps[k].y - race.cps[k - 1].y) / TILE; assert.ok(d > 15 && d < 90, `gates ${k} and ${k + 1} spaced down the river (${d | 0} tiles)`); }
+  const fin = race.cps[race.cps.length - 1];
+  assert.ok(Math.hypot(fin.x / TILE - RR.take.shore[0], fin.y / TILE - RR.take.shore[1]) < 30 && race.cps[0].y > fin.y + 200 * TILE, 'down the river to the finish by the take-out');
+  assert.ok(m.pois.some((q) => q.kind === 'race' && q.label === race.name), 'on the map as a race');
+  const races = await import('../server/systems/races.js');
+  const ents = new Map(), told = [];
+  const rider = (pid, model, id) => { const v = { id, x: race.start.x, y: race.start.y, model, def: { kind: 'boat' } }; ents.set(id, v); return { pid, name: pid, ped: { vehId: id, seat: 0 }, profile: { bank: 0 } }; };
+  const kay = rider('kay', 'kayak', 1), row = rider('row', 'rowboat', 2);
+  const rw = { map: m, players: new Map([['kay', kay], ['row', row]]), get: (id) => ents.get(id), notify: (p, t) => told.push([p.pid, t]), emit: () => {}, tick: 0, time: 0 };
+  races.init(rw);
+  const step = () => { rw.tick++; rw.time += 1 / 30; races.update(rw); };
+  for (let i = 0; i < 30 * (races.COUNTDOWN_S + 1); i++) step();
+  const st = rw.raceState[race.id];
+  assert.ok(st.phase === 'running' && st.racers.has('kay') && !st.racers.has('row'), `a kayak entered, a rowboat not (${st.phase}, ${[...st.racers.keys()]})`);
+  const kv = ents.get(1);
+  for (const c of race.cps) { kv.x = c.x; kv.y = c.y; for (let i = 0; i < 6; i++) step(); }
+  assert.ok(kay.profile.bank > 0 && told.some(([pid, t]) => pid === 'kay' && /Finished 1st/.test(t)), `home first, the prize (${kay.profile.bank})`);
   // an angler's hold on the bank below the falls (server/systems/wildfolk.js: the plunge pools early)
   const { spotsOf } = await import('../server/systems/activities.js');
   const holdsAt = spotsOf(m).list.filter((q) => q.k === 'holds');

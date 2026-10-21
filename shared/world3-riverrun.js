@@ -3,7 +3,8 @@
 // through two stretches of white water - one above the road's bridge, one below it down to the beach. Now there's a
 // kayak hire at a put-in in the woods where it starts - a plank landing, the kayaks waiting along it, a sign - and a
 // take-out at its last bend before the bay to hand the kayak back (any rental dock takes it: server/systems/rentals.js).
-// The current carries you down; the rapids sweep you through.
+// The current carries you down; the rapids sweep you through. And it's a race: in a kayak at the put-in's landing you're
+// entered, then gate to gate down the river to the take-out, first one home taking the prize (server/systems/races.js).
 // For the whole-world build only (shared/world3-world.js's done hook, after the ledge falls). Deterministic: arithmetic.
 import { TILE, T } from './constants.js';
 
@@ -13,10 +14,11 @@ export const RIVERRUN3 = {
   put: { at: [2357, 1128], label: 'Redwood River Run - Kayak Hire', sign: 'RIVER RUN - PUT-IN', note: 'The current takes you down to the bay at Northshore - the white water too. Hand it in at the take-out.' },
   take: { at: [2480, 811], label: 'Redwood River Run - Take-out', sign: 'RIVER RUN - TAKE-OUT', note: 'The end of the Redwood River Run: hand your kayak in here.' },
   jetty: 6, models: ['kayak'],
+  gate: 45, prize: 250,   // (the race: a gate every this many tiles down the river; the prize, as the races' - server/systems/races.js)
 };
 
 export function riverRun3(m, H3) {
-  const out = { put: null, take: null };
+  const out = { put: null, take: null, race: null };
   const V = m.waters;
   if (!V || !Array.isArray(V.ch) || !H3 || !H3.addProp || !m.rentals || !m.pois) return out;
   const R = RIVERRUN3, W = m.w, HH = m.h, inF = (x, y) => x >= 1 && y >= 1 && x < W - 1 && y < HH - 1, idx = (x, y) => y * W + x;
@@ -74,6 +76,44 @@ export function riverRun3(m, H3) {
   out.take = landing(R.take, 'shore');
   if (clear.size && H3.removeProps) H3.removeProps(m, (x, y) => clear.has(Math.floor(y / TILE) * W + Math.floor(x / TILE)));
   for (const [t, x, y, r, ex] of P) H3.addProp(m, t, Math.round(x), Math.round(y), r, ex);
+  // the race (server/systems/races.js, kind 'kayak'): from the put-in's landing down the river through a gate every
+  // `gate` tiles of the centre line - from channel to channel where one runs into the next - to the take-out
+  if (out.put && out.take) {
+    const near = (x, y) => { let b = null; V.ch.forEach((c, ci) => { if ((c.k !== 'river' && c.k !== 'creek') || !Array.isArray(c.pts)) return; c.pts.forEach((q, j) => { const d = (q[0] - x) * (q[0] - x) + (q[1] - y) * (q[1] - y); if (!b || d < b.d) b = { d, ci, j }; }); }); return b; };
+    const a = near(out.put.shore[0], out.put.shore[1]), z = near(out.take.shore[0], out.take.shore[1]), pts = [];
+    let ci = a.ci, j = a.j;
+    for (let hop = 0; hop < 8; hop++) {
+      const c = V.ch[ci];
+      if (ci === z.ci) { for (let k = j; k <= z.j; k++) pts.push(c.pts[k]); break; }
+      for (let k = j; k < c.pts.length; k++) pts.push(c.pts[k]);
+      const [ex, ey] = c.pts[c.pts.length - 1];
+      let nx = -1;
+      V.ch.forEach((c2, k2) => { if (k2 !== ci && (c2.k === 'river' || c2.k === 'creek') && c2.pts.length && (c2.pts[0][0] - ex) * (c2.pts[0][0] - ex) + (c2.pts[0][1] - ey) * (c2.pts[0][1] - ey) < 100) nx = k2; });
+      if (nx < 0) break;
+      ci = nx; j = 0;
+    }
+    // (a gate on the open water: past a bridge's deck or a ledge's lip to the next point that's wet; the last gate - the
+    // finish - takes the place of one just before it)
+    const cps = [];
+    let run = 0;
+    for (let k = 1; k < pts.length; k++) {
+      run += Math.sqrt((pts[k][0] - pts[k - 1][0]) * (pts[k][0] - pts[k - 1][0]) + (pts[k][1] - pts[k - 1][1]) * (pts[k][1] - pts[k - 1][1]));
+      const last = k === pts.length - 1;
+      if (run < R.gate && !last) continue;
+      const gx = Math.round(pts[k][0]), gy = Math.round(pts[k][1]);
+      if (!wet(gx, gy)) continue;
+      if (last && cps.length && run < R.gate / 2) cps.pop();
+      cps.push({ x: Math.round((gx + 0.5) * TILE), y: Math.round((gy + 0.5) * TILE) });
+      run = 0;
+    }
+    if (cps.length >= 4 && m.races) {
+      const st = m.rentals.find((q) => q.poi === out.put.poi).spots[0];
+      const race = { id: m.races.length, name: R.name, kind: 'kayak', start: { x: Math.round(st.x), y: Math.round(st.y) }, cps, prize: R.prize, where: 'the put-in\'s landing in the woods' };
+      m.races.push(race);
+      m.pois.push({ id: m.pois.length, kind: 'race', label: R.name, x: race.start.x, y: race.start.y, r: 60 });
+      out.race = { id: race.id, gates: cps.length };
+    }
+  }
   if (out.put && out.take) {
     m.natureSites.push({ kind: 'riverrun', name: R.name, x: Math.round((out.put.shore[0] + 0.5) * TILE), y: Math.round((out.put.shore[1] + 0.5) * TILE), to: { x: Math.round((out.take.shore[0] + 0.5) * TILE), y: Math.round((out.take.shore[1] + 0.5) * TILE) } });
     if (!(m.landmarks || []).some((l) => l.name === R.name)) m.landmarks.push({ name: R.name, type: 'marina', x: (out.put.shore[0] - 8) * TILE, y: (out.put.shore[1] - 8) * TILE, w: 16 * TILE, h: 16 * TILE });
