@@ -13332,7 +13332,8 @@ renderer trampled its flora (render/flora); the art v2 page had nothing.
   crop comes back up. They keep a ring of their own (`client/render/fx.js` crush, 900 marks), so a tractor working
   a field never pushes the blood and the skid marks out of the decals', and the page draws them under the other
   decals (`client/art2/game/host.js` _decals).
-- Not yet: the crops swaying in the wind.
+- The swaying was there already: art v2's wind leans the crops' ears, the grass tufts and the foliage, with gusts
+  travelling across (`client/art2/game/engine.js` uSway).
 
 Tests: test/crush.test.js - the marks' frames (a swath wider and longer than a track at every angle, dark with pale
 streaks, see-through); their own ring (2,000 marks leave the blood decal in place, the newest kept).
