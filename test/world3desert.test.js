@@ -156,6 +156,10 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
   // (by the asphalt: a road tile within a few tiles of each)
   const nearRoad = (p) => { for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const t = m.tiles[(Math.floor(p.y / TILE) + dy) * W + Math.floor(p.x / TILE) + dx]; if (t === T.ROAD || t === T.BRIDGE) return true; } return false; };
   check(dl.every(nearRoad), 'each by the asphalt');
+  const railT = new Set();
+  for (const r of m.rails || []) for (const q of r.pts || []) if (!q.under) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) railT.add((Math.floor(q.y / TILE) + dy) * W + Math.floor(q.x / TILE) + dx);
+  const onRail = dl.filter((p) => railT.has(Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)));
+  check(onRail.length === 0, `${onRail.length} delineators at a level crossing (${onRail.slice(0, 3).map((p) => [p.x / TILE | 0, p.y / TILE | 0])})`);
   // 10. the windmills and stock tanks out on the range (shared/world3-stocktanks.js): far apart, each a windmill over
   // its tank (both solid), a trough, a two-rut track out to a road; on the map
   const ST = m.natureSites.filter((s) => s.kind === 'stocktank');

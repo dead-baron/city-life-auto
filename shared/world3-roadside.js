@@ -2,8 +2,8 @@
 // desert roads ... every road type fits its setting"; the handcraft research's 5.1: "white delineator posts with red
 // reflectors" along the desert highway and its roads). Out in the Red Rock Desert a road had no pavement or lamps
 // (2026-10-17) and nothing else beside it; now white delineator posts with their red reflectors stand along both
-// shoulders every eight tiles, the highways' too - on the sand or gravel by the asphalt, never in a town, at a junction,
-// on a bridge, on a designed place's ground or in someone's yard. Not solid (a car brushes past them).
+// shoulders every eight tiles, the highways' too - on the sand or gravel by the asphalt, never in a town, at a junction or
+// a level crossing, on a bridge, on a designed place's ground or in someone's yard. Not solid (a car brushes past them).
 // For the whole-world build only (shared/world3-world.js's done hook). Deterministic: arithmetic.
 import { TILE, T } from './constants.js';
 
@@ -18,6 +18,12 @@ export function desertRoadside3(m, H3) {
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx >= 0 && ty >= 0 && tx < W && ty < HH ? ty * W + tx : -1; };
   const shoulder = (i) => i >= 0 && m.land[i] && (m.tiles[i] === T.SAND || m.tiles[i] === T.DIRT) && !(m.reserve[i] & (16 | 32 | 1 | 2 | 8)) && !(m.bld && m.bld[i] >= 0) && R.styles.has(styles[m.dist[i]]);
   const isRoad = (i) => i >= 0 && (m.tiles[i] === T.ROAD || m.tiles[i] === T.BRIDGE || m.tiles[i] === T.SIDEWALK);
+  // (the rails: no post within three tiles of the track - a level crossing has its own signals)
+  const rail = new Set();
+  for (const r of m.rails || (m.rail ? [m.rail] : [])) for (const p of r.pts || []) if (!p.under) {
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) rail.add((ty + dy) * W + tx + dx);
+  }
   for (const e of m.edges) {
     if (out.posts >= R.max) break;
     if (!e || !Array.isArray(e.pts) || e.pts.length < 2 || e.kind === 'dirt' || e.kind === 'ramp' || e.lvl || e.tunnel || e.bridge) continue;
@@ -37,7 +43,7 @@ export function desertRoadside3(m, H3) {
       for (const sd of [-1, 1]) {
         const o = (e.hw || 40) + R.off, px = x + nx * sd * o, py = y + ny * sd * o, i = tileAt(px, py);
         // on the shoulder, with open desert beyond it (not another road's asphalt a tile further out)
-        if (!shoulder(i) || isRoad(tileAt(px + nx * sd * TILE, py + ny * sd * TILE))) continue;
+        if (!shoulder(i) || rail.has(i) || isRoad(tileAt(px + nx * sd * TILE, py + ny * sd * TILE))) continue;
         H3.addProp(m, 'delineator', Math.round(px), Math.round(py), 0, { a: Math.round(Math.atan2(dy, dx) * 100) / 100 });
         out.posts++; made++;
       }
