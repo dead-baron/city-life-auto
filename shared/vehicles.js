@@ -26,6 +26,9 @@ export const VEHICLES = {
   // a wooden rowboat: oars, no engine - slow and quiet (the Redwood Caverns' river: shared/world3-caves.js, server/systems/
   // underground.js; Nature-B1)
   rowboat:   { i: 66, name: 'Rowboat',         kind: 'boat', L: 64,  W: 28, max: 250, accel: 130, brake: 220, rev: 90,  turn: 2.0, grip: 3.0, drift: 1.5, mass: 0.6, hp: 90,  seats: 2, slots: [[-22, 0]], price: 600, oars: true, crew: [[2, 0], [-16, 0]] },
+  // a river kayak: one seat, a double paddle, quick to turn and light - for the lakes and the white water (Silver Thread
+  // Lake's hire, the Redwood River run: shared/world3-woodslake.js, world3-riverrun.js; the nature program 2026-10-21)
+  kayak:     { i: 67, name: 'River Kayak',     kind: 'boat', L: 52,  W: 16, max: 300, accel: 230, brake: 240, rev: 80,  turn: 3.0, grip: 3.2, drift: 1.6, mass: 0.3, hp: 60,  seats: 1, slots: [[-17, 0]], price: 450, paddle: true, crew: [[-1, 0]] },
   jetski:    { i: 16, name: 'Wave Jet Ski',    kind: 'boat', L: 46,  W: 22, max: 690, accel: 520, brake: 300, rev: 90,  turn: 3.2, grip: 3.2, drift: 1.6, mass: 0.5, hp: 110, seats: 2, slots: [[-15, 0]], price: 3500, crew: [[-2, 0], [-14, 0]] },
   policeboat: { i: 17, name: 'Harbor Patrol Boat', kind: 'boat', L: 104, W: 48, max: 650, accel: 320, brake: 280, rev: 130, turn: 2.1, grip: 2.6, drift: 1.2, mass: 1.8, hp: 420, seats: 4, slots: [[-24, 0]], police: true, art: 'speedboat' },   // (a wheelhouse: no crew shown)
   // the search-and-rescue boat (server/systems/rescue.js): an orange and white rigid inflatable out of the nearest dock to

@@ -2,12 +2,13 @@
 // exact same functions to predict its own character/vehicle between snapshots.
 
 import { TILE, PED_RADIUS, T } from './constants.js';
-import { PED_BLOCK, SWIM_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './mapcore.js';
+import { PED_BLOCK, SWIM_BLOCK, ROCK_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './mapcore.js';
 import { IN } from './input.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';
 import { edgeBrake } from './border.js';
 import { dropsOf, DROP_SPEED } from './ledges.js';
+import { flowAt } from './flow.js';
 import { ugMapOf } from './underground.js';
 import { coverAtPx } from './tunnels.js';
 // Down the sewers or in the cave (e.ug: shared/underground.js) people and boats move through the underground's own map.
@@ -15,8 +16,8 @@ const mapOf = (s, map) => (s.ug && !map.ug ? ugMapOf(map) || map : map);
 
 // Ground tile under a moving thing - up on the highway deck it's always road.
 const up = (s) => (s.lz || 0) > GROUND_Z;
-const blockedAt = (map, tx, ty, block) => {
-  if (block[map.tileAt(tx, ty)]) return true;
+export const blockedAt = (map, tx, ty, block) => {
+  if (block[map.tileAt(tx, ty)]) return !(block === ROCK_BLOCK && map.tileAt(tx, ty) === T.WALL && map.reserve && map.inside(tx, ty) && (map.reserve[map.idx(tx, ty)] & 32));   // (a goat on the cliff)
   const lb = map.lvl0Block;
   return !!lb && map.inside(tx, ty) && lb[map.idx(tx, ty)] === 1;
 };
@@ -126,11 +127,12 @@ export function pedStep(s, inp, dt, map, mods) {
     s.vx *= Math.exp(-6 * dt); s.rollT = 0;
     s.dropping = true;
   } else if (s.dropping) s.dropping = false;
+  if (swim && !mods.still) { const f = flowAt(map, s.x, s.y); if (f) { s.x += f[0] * dt; s.y += f[1] * dt; } }   // (the river's current carries a swimmer: flow.js - mods.still: the wild things that live in it hold their own)
   s.x += s.vx * dt; s.y += s.vy * dt;
   edgeBrake(s, map.frame);   // (out past the world's edge: slowed, and stopped at its end - border.js)
   const bx = s.x, by = s.y, pvx = s.vx, pvy = s.vy;
   // (up off the ground on a board - grinding, high in an air - the benches, bins and posts are under you: only the walls)
-  collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : PED_BLOCK, !!(mods.board && s.over));
+  collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : mods.rock ? ROCK_BLOCK : PED_BLOCK, !!(mods.board && s.over));   // (mods.rock: a sure-footed animal's)
   // on a board: how hard it ran into what it hit (a wall, a post, a tree: the push back out of it against the way it was
   // going) - hard enough and you're thrown off (s.boardHit: server skate.js bails you); a glancing touch just loses that
   // much speed (a solid prop moves you out but keeps your speed: take it off here)
@@ -331,6 +333,7 @@ export function vehStep(s, inp, dt, map, def, env) {
 
   s.vx = c * fwd - sn * lat;
   s.vy = sn * fwd + c * lat;
+  if (isBoat && inp.drv) { const f = flowAt(map, s.x, s.y); if (f) { s.x += f[0] * dt; s.y += f[1] * dt; } }   // (a boat under way drifts with the river: flow.js - never one tied up)
   s.x += s.vx * dt; s.y += s.vy * dt;
   edgeBrake(s, map.frame);   // (out past the world's edge: slowed, and stopped at its end - border.js)
   const hit = collideVehicleTiles(s, def, map, isBoat ? BOAT_BLOCK : CAR_BLOCK);

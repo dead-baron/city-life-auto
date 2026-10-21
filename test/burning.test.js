@@ -182,9 +182,9 @@ test('the burning states on the wire: rolling, lying, getting up, in the water, 
   const combat = await import('../server/systems/combat.js');
   const { w, road } = scene();
   const rec = (q) => { const f = net._fields(w, q); return { fl: f[0], burn: f[2] >= 0x80000000, char: (f[2] & 0x40000000) !== 0, swim: (f[3] & 128) !== 0 }; };
-  const pick = (k) => {
+  const pick = (k, x0) => {   // (the two well apart: a faller running about on fire beside the roller lights it again)
     for (let i = 0; i < 40; i++) {
-      const q = spawnNpc(w, 'casual', road.x + 200 + i * 30, road.y);
+      const q = spawnNpc(w, 'casual', road.x + x0 + i * 12, road.y);
       if (!q) continue;
       q.hp = q.maxHp = 100; burning.ignite(w, q, null);
       if (q.npc.burn && q.npc.burn.k === k) return q;
@@ -192,7 +192,7 @@ test('the burning states on the wire: rolling, lying, getting up, in the water, 
     }
     return null;
   };
-  const roller = pick('roll'), faller = pick('fall');
+  const roller = pick('roll', 200), faller = pick('fall', 1000);
   assert.ok(roller && faller, 'a roller and a faller');
   const r0 = rec(roller);
   assert.ok(r0.burn && !(r0.fl & PF.DOWN) && !r0.char, 'catching: alight, on their feet');

@@ -8,7 +8,7 @@
 import { TILE } from './constants.js';
 
 export const FALLS3 = {
-  kinds: new Set(['creek', 'tarn', 'gorge']),   // the nature sites whose falls these are (Silver Thread Falls: its own, below)
+  kinds: new Set(['creek', 'tarn', 'gorge', 'ledgefall']),   // the nature sites whose falls these are (Silver Thread Falls: its own, below; the ledge falls: world3-ledgefalls.js)
   tall: { re: /^(redwood|tree_)/, giant: /^redwood/, reach: 22, near: 6 },   // (tiles: how far south a giant's sprite reaches up over a fall; how far south any tree's does; either side, the fall's half-width plus this)
   side: { giant: 5, tree: 2 },   // (tiles either side of the fall's half-width: a giant's crown spreads wide)
 };

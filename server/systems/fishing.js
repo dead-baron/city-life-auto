@@ -107,7 +107,7 @@ function inPocket(m, x, y) {
   for (const [px, py, r] of P) if ((x - px) * (x - px) + (y - py) * (y - py) < r * r) return true;
   return false;
 }
-function belowFalls(m, x, y) { for (const s of m.natureSites || []) { const f = s.falls; if (f && Number.isFinite(f.x) && Math.abs(x - f.x) < 220 && y > f.y - 40 && y < f.y + 420) return true; } return false; }
+function belowFalls(m, x, y) { for (const s of m.natureSites || []) { const f = s.falls; if (f && Number.isFinite(f.x) && Math.abs(x - f.x) < Math.max(220, (f.w || 0) / 2) && y > f.y - 40 && y < f.y + 420) return true; } return false; }
 // The water at (x, y) px: { water (shared/fish.js WATERS), spot (a legendary's place, a river's calm pocket, or null) }. o: { ug (underground),
 // boat (fishing from one), night }
 export function habitatAt(world, x, y, o = {}) {

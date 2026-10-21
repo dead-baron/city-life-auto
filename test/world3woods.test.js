@@ -14,7 +14,7 @@ import { FALLS3 } from '../shared/world3-falls.js';
 import { habitatAt } from '../server/systems/wildlife.js';
 import { prepare } from '../tools/world3-build.mjs';
 
-test('World v3: Highland Woods - the falls, the trails and their furniture, the glades, the lookout', { timeout: 400000 }, () => {
+test('World v3: Highland Woods - the falls, the trails and their furniture, the glades, the lookout', { timeout: 400000 }, async () => {
   const prep = prepare();
   const m = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });
   const fails = [], check = (ok, msg) => { if (!ok) fails.push(msg); };
@@ -137,5 +137,36 @@ test('World v3: Highland Woods - the falls, the trails and their furniture, the 
     for (let k = 10; k < 90; k++) { const x = Math.round(ax + (bx - ax) * k / 100), y = Math.round(ay + (by - ay) * k / 100); n++; if (m.tiles[at(x, y)] === T.DIRT) dirt++; }
     check(dirt < n * 0.3, `the old straight way from the campground: ${dirt} of ${n} tiles still dirt`);
   }
+  // Silver Thread Lake by hand (shared/world3-woodslake.js): its shore wandering, three rocky pine islets, the boathouse's
+  // jetty and canoe hire (rowboats)
+  const WL = m.world3.woodsLake, W = m.w;
+  console.log('woods lake', JSON.stringify({ ...WL, dbg: undefined }));
+  check(WL.lake > 15000 && WL.dug > 200 && WL.built > 200, `the lake's shore wanders: ${WL.dug} tiles dug, ${WL.built} built out`);
+  check(WL.isles >= 2 && WL.pines >= WL.isles * 2, `islets with pines: ${WL.isles}, ${WL.pines}`);
+  const isleTrees = m.props.filter((p) => p && p.t === 'tree_a' && (p.sp === 'pondPine' || p.sp === 'fir' || p.sp === 'spruce') && m.land[Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)] && (() => { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); let wet = 0; for (const [dx, dy] of [[12, 0], [-12, 0], [0, 12], [0, -12]]) { const t = m.tiles[(ty + dy) * W + tx + dx]; if (t === T.WATER || t === T.DEEP) wet++; } return wet === 4; })());
+  check(isleTrees.length >= WL.isles, `the islets' pines out in the water: ${isleTrees.length}`);
+  // the camp on the biggest islet (shared/world3-camps.js): a fire to sit by, seats, a tent, a canoe pulled up; water
+  // all round (paddle over)
+  const ic = WL.camp;
+  check(ic && ic.where === 'island' && m.restSpots.includes(ic), `the islet's camp: ${JSON.stringify(ic)}`);
+  if (ic) {
+    const has = (t) => m.props.some((p) => p && p.t === t && Math.hypot(p.x - ic.x, p.y - ic.y) < 4 * TILE);
+    check(has('campfire') && has('log') && has('tent') && has('canoe'), 'the fire, a seat, a tent and a canoe by it');
+    const tx = Math.floor(ic.x / TILE), ty = Math.floor(ic.y / TILE);
+    const ringed = [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => { for (let k = 1; k < 30; k++) { const i = (ty + dy * k) * W + tx + dx * k; if (m.lake[i] && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP)) return true; } return false; });
+    check(ringed, 'water all round it');
+  }
+  check(WL.boathouse && WL.boathouse.poi >= 0 && WL.boathouse.spots >= 2, `the boathouse and its hire: ${JSON.stringify(WL.boathouse)}`);
+  if (WL.boathouse) {
+    const [sx, sy] = WL.boathouse.shore;
+    let dock = 0; for (let k = 0; k < 9; k++) if (m.tiles[(sy - k) * W + sx] === T.DOCK) dock++;
+    check(dock >= 8, `the jetty out into the lake: ${dock} planks`);
+    const R = m.rentals.find((r) => r.poi === WL.boathouse.poi);
+    const { modelsAt } = await import('../server/systems/rentals.js');
+    check(R && modelsAt(R).includes('rowboat'), `rowboats for hire: ${R && modelsAt(R)}`);
+    const { BOAT_RENTAL_PRICE } = await import('../shared/rules.js');
+    check(modelsAt(R).every((id) => BOAT_RENTAL_PRICE[id] > 0), 'each boat for hire has its price');
+  }
+  check(m.landmarks.some((l) => l.name === 'Silver Thread Lake') && m.landmarks.some((l) => l.name === 'Silver Thread Boathouse'), 'on the map');
   assert.deepEqual(fails, []);
 });

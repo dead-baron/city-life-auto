@@ -12,7 +12,7 @@ const RETURN_R = 260;     // drive within this of a rental dock to hand the boat
 const WARN_BEFORE_S = 60; // "a minute left" nudge
 
 export const rentalFor = (world, poi) => world.map.rentals.find((r) => r.poi === poi.id);
-export const modelsAt = (rental) => (rental.lake ? ['jetski', 'dinghy'] : RENTAL_MODELS);
+export const modelsAt = (rental) => rental.models || (rental.lake ? ['jetski', 'dinghy'] : RENTAL_MODELS);   // (rental.models: a place's own - the woods' lake's rowboats: shared/world3-woodslake.js)
 
 // The hire boat this player has out right now (or null).
 export function current(world, p) {
@@ -38,7 +38,7 @@ export function subFor(world, p, poi) {
   const r = rentalFor(world, poi);
   const out = current(world, p);
   if (out) return `You've got a ${out.def.name} out. Bring it back to any rental dock before the time runs out - overdue boats get reported stolen.`;
-  return `Hire a boat for ${Math.round(BOAT_RENTAL_S / 60)} minutes. It's waiting at the end of the pier. Return it to any rental dock, or leave it and we'll tow it back.${r && r.lake ? ' Lake craft only here.' : ''}`;
+  return `Hire a boat for ${Math.round(BOAT_RENTAL_S / 60)} minutes. It's waiting at the end of the pier. Return it to any rental dock, or leave it and we'll tow it back.${r && r.note ? ' ' + r.note : r && r.lake ? ' Lake craft only here.' : ''}`;   // (r.note: a place's own word - the river run's)
 }
 
 // Find a free berth at this dock (clearing empty boats tied up there).

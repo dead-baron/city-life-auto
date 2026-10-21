@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { T, TILE } from '../shared/constants.js';
 import { RAPIDS, POCKETS, rapidsAndPockets3 } from '../shared/world3-rapids.js';
+import { LEDGES3 } from '../shared/world3-ledgefalls.js';
 import * as FS from '../shared/fish.js';
 
 // a stand-in map: water stamped round a centre line (half-width hw tiles), the land's height from hAt(x, y)
@@ -25,6 +26,7 @@ function standIn(W, H, lines, hAt) {
   }
   return m;
 }
+const near = (props, t, q, r) => props.filter((p) => p && p.t === t && Math.hypot(p.x - q.x, p.y - q.y) < r).length;
 const wet = (m, x, y) => { const i = Math.round(y) * m.w + Math.round(x); return m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP; };
 
 test('rapids where the land falls fast; an eddy below, hugging the bank; a pool on the outside of a bend; none by a bridge', () => {
@@ -103,7 +105,7 @@ test('the anglers\' boats: one sits still with the rod out over the side, rows o
   assert.ok(!v.ai && !d.fishing, 'the rod down');
 });
 
-test('World v3: the rapids and calm pockets along the rivers; the fishing finds the pockets; the bake draws them', { timeout: 400000 }, async () => {
+test('World v3: the rapids and calm pockets along the rivers; the fishing finds the pockets; the bake draws them; the ledge falls', { timeout: 400000 }, async () => {
   const { generateCity } = await import('../shared/map.js');
   await import('../shared/world3-islands.js');
   const { FRAME_W, FRAME_H } = await import('../shared/world3.js');
@@ -117,7 +119,8 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   console.log('rapids and pockets', JSON.stringify(S));
   assert.ok(S.rapids >= 8 && S.rapidTiles / S.riverTiles > 0.04 && S.rapidTiles / S.riverTiles < 0.15, `rapids on the steep tenth or so of the rivers (${JSON.stringify(S)})`);
   const CH = m.waters.ch, pockets = CH.flatMap((c) => c.p || []);
-  assert.ok(S.eddies >= 4 && S.pools >= 8 && pockets.length === S.eddies + S.pools, `eddies and bend pools (${S.eddies}, ${S.pools})`);
+  const LF = m.world3.ledges;   // (the ledge falls' plunge pools join them: shared/world3-ledgefalls.js)
+  assert.ok(S.eddies >= 4 && S.pools >= 8 && pockets.length === S.eddies + S.pools + LF.pools, `eddies and bend pools (${S.eddies}, ${S.pools}, ${LF.pools})`);
   for (const c of CH) for (const [s0, s1, k] of c.r || []) { assert.ok(c.k === 'river' || c.k === 'creek'); assert.ok(s1 - s0 >= RAPIDS.min - 0.01 && k >= 0.45 && k <= 1); }
   const W = m.w, at = (x, y) => Math.round(y) * W + Math.round(x);
   let hug = 0;
@@ -129,13 +132,13 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
     }
     let land = false;
     for (let a = 0; a < 16 && !land; a++) { const th = a / 16 * Math.PI * 2, q = at(x + Math.cos(th) * (r + 3), y + Math.sin(th) * (r + 3)); if (m.tiles[q] !== T.WATER && m.tiles[q] !== T.DEEP && m.tiles[q] !== T.BRIDGE) land = true; }
-    if (land) hug++;
+    if (land || pockets.find((q) => q[0] === x && q[1] === y)[3] === 2) hug++;   // (a plunge pool lies below its falls' middle)
   }
   assert.ok(hug >= pockets.length * 0.9, `the pockets hug a bank (${hug} of ${pockets.length})`);
   // the fishing: a cast into a pocket finds it
   const world = { map: m };
-  const found = pockets.filter(([x, y]) => habitatAt(world, x * TILE, y * TILE).spot === 'pocket').length;
-  assert.ok(found >= pockets.length * 0.8, `the fishing's pocket spot (${found} of ${pockets.length})`);
+  const calm = pockets.filter((p) => p[3] !== 2), found = calm.filter(([x, y]) => habitatAt(world, x * TILE, y * TILE).spot === 'pocket').length;   // (a plunge pool is the falls' own spot: below)
+  assert.ok(found >= calm.length * 0.8, `the fishing's pocket spot (${found} of ${calm.length})`);
   // the bake: the wildest rapid's chunk runs fast and white; a pocket's middle lies still
   const words = (cx, cy, px, py) => {
     const G = bakeGround(m, cx, cy, { quality: 1, seed: 1337 }), o = { fast: 0, run: 0, foam: 0, still: 0, near: 0 };
@@ -158,4 +161,111 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   console.log('bake', JSON.stringify({ rap, pw }));
   assert.ok(rap.fast > rap.run * 0.5 && rap.foam > 3000, `the rapid: fast, white water (${JSON.stringify(rap)})`);
   assert.ok(pw.near > 1000 && pw.still > pw.near * 0.6, `the pocket: still in its middle (${JSON.stringify(pw)})`);
+  // the falls chain, part 2 (shared/world3-ledgefalls.js): four steep reaches start with a fall - its lip a row of rock
+  // from bank to bank (boats stop at it; a swimmer goes down it, never up), drawn as the water over it; a plunge pool
+  // below the last ledge, where the fishing finds the falls' fish; the white water after the pool; a bench and a sign
+  console.log('ledge falls', JSON.stringify(LF));
+  assert.equal(LF.falls, LEDGES3.length, `the ledge falls (${LF.names})`);
+  assert.ok(LF.steps >= LEDGES3.length + 2 && LF.pools >= 3 && LF.benches === LEDGES3.length, JSON.stringify(LF));
+  const { dropsOf } = await import('../shared/ledges.js');
+  const drops = dropsOf(m), sites = m.natureSites.filter((q) => q.kind === 'ledgefall');
+  assert.equal(sites.length, LF.steps);
+  for (const q of sites) {
+    const ly = Math.round((q.falls.y + 8) / TILE) - 1, xa = Math.ceil((q.falls.x - q.falls.w / 2 + 8) / TILE), xb = Math.floor((q.falls.x + q.falls.w / 2 - 8) / TILE) - 1;
+    let lip = 0, drop = 0;
+    for (let x = xa; x <= xb; x++) { const i = ly * W + x; if (m.tiles[i] === T.WALL && (m.reserve[i] & 96) === 96) lip++; if (drops.has(i)) drop++; }
+    assert.equal(lip, xb - xa + 1, `${q.name} (${q.step}): its lip right across (${lip} of ${xb - xa + 1})`);
+    assert.ok(m.land[ly * W + xa - 1] && m.land[ly * W + xb + 1], `${q.name}: bank to bank`);
+    assert.ok(drop === lip, `${q.name}: a one-way drop (${drop})`);
+    assert.ok(q.segs.length >= 1 && q.segs.every((g) => g.up.length >= 2 && Math.abs(g.y - (ly + 1) * TILE) < TILE * 1.5), `${q.name}: drawn along it, in strands`);
+    let wetN = 0;
+    for (const [cx, cy] of [[Math.round(xa + (xb - xa) * 0.25), ly], [Math.round((xa + xb) / 2), ly], [Math.round(xa + (xb - xa) * 0.75), ly]]) {   // (across it, clear of the banks' wet sand; a reed by the bank may stand on it)
+      const G = bakeGround(m, Math.floor(cx * TILE / CHUNK), Math.floor(cy * TILE / CHUNK), { quality: 1, seed: 1337 }), px = cx * TILE + 16 - Math.floor(cx * TILE / CHUNK) * CHUNK, py = cy * TILE + 16 - Math.floor(cy * TILE / CHUNK) * CHUNK;
+      if (G.flag[py * G.w + px] & F_WATER) wetN++;
+    }
+    assert.ok(wetN >= 2, `${q.name}: the lip drawn as water (${wetN} of 3 across it)`);
+  }
+  for (const name of LF.names) {
+    const last = sites.filter((q) => q.name === name).pop();
+    const pool = pockets.find((p) => p[3] === 2 && Math.abs(p[0] * TILE - last.falls.x) < last.falls.w / 2 && p[1] * TILE > last.falls.y && p[1] * TILE < last.falls.y + 16 * TILE);
+    if (pool) assert.equal(habitatAt(world, pool[0] * TILE, pool[1] * TILE).spot, 'falls', `${name}: the falls' fish in its pool`);
+    assert.ok(m.props.some((p) => p && p.t === 'pbench' && Math.hypot(p.x - last.falls.x, p.y - last.falls.y) < Math.max(40 * TILE, last.falls.w)), `${name}: a bench looking at it`);
+    assert.ok(m.props.some((p) => p && p.t === 'textsign' && p.text === name.toUpperCase()), `${name}: its sign`);
+  }
+  // Twin Falls: two falls side by side on one row where the island splits the river, its head a knoll of rock between
+  // them (rock, not a lip: you can't go down it), pines on it; an overlook on each bank
+  const twin = sites.filter((q) => q.name === 'Twin Falls'), K = (LF.knolls || [])[0];
+  assert.ok(twin.length === 2 && K && K.rock >= 30 && K.decks === 2, `Twin Falls: two falls and the knoll (${JSON.stringify(K)})`);
+  const [ta, tb] = twin.sort((p, q) => p.falls.x - q.falls.x), tly = Math.round((ta.falls.y + 8) / TILE) - 1;
+  assert.equal(Math.round((tb.falls.y + 8) / TILE) - 1, tly, 'side by side on one row');
+  const k0 = Math.floor((ta.falls.x + ta.falls.w / 2 - 8) / TILE), k1 = Math.ceil((tb.falls.x - tb.falls.w / 2 + 8) / TILE) - 1;
+  assert.ok(k1 - k0 >= 6, `the knoll between them (${k0}..${k1})`);
+  for (let x = k0; x <= k1; x++) { const i = tly * W + x; assert.ok(m.tiles[i] === T.WALL && (m.reserve[i] & 96) === 32 && !drops.has(i), `the knoll's rock at ${x}, ${tly}`); }
+  const tmid = (ta.falls.x + tb.falls.x) / 2, tby = ta.falls.y;
+  assert.ok(m.props.some((p) => p && p.t === 'tree_a' && Math.abs(p.x - (k0 + k1 + 1) / 2 * TILE) < (k1 - k0) * TILE && p.y > tby && p.y < tby + 8 * TILE), 'pines on the knoll');
+  const decks = m.props.filter((p) => p && p.t === 'viewdeck' && Math.abs(p.y - tby) < 14 * TILE && Math.abs(p.x - tmid) < 80 * TILE);
+  assert.ok(decks.length === 2 && decks.some((p) => p.x < ta.falls.x) && decks.some((p) => p.x > tb.falls.x), 'an overlook on each bank');
+  // the secluded camps (shared/world3-camps.js): on the island below Twin Falls, and by the pools of the falls that ask
+  // for one - a fire to sit by (a rest spot), seats, a lantern; out of the way of the roads
+  assert.ok(K.camp && (LF.camps || []).includes('Twin Falls') && LF.camps.length >= 2, `the falls' camps (${LF.camps})`);
+  for (const name of LF.camps) {
+    const f = sites.filter((q) => q.name === name).pop(), spot = (m.restSpots || []).find((q) => q.kind === 'camp' && Math.hypot(q.x - f.falls.x, q.y - f.falls.y) < Math.max(40 * TILE, f.falls.w));
+    assert.ok(spot && ['bar', 'canyon', 'woods'].includes(spot.where), `${name}: its camp, a rest spot`);
+    const fire = m.props.find((p) => p && p.t === 'campfire' && p.x === spot.x && p.y === spot.y);
+    assert.ok(fire && fire.rest && near(m.props, 'log', spot, 3 * TILE) + near(m.props, 'driftwood', spot, 3 * TILE) >= 2 && near(m.props, 'lantern', spot, 3 * TILE) === 1, `${name}: the fire, the seats, the lantern`);
+    assert.ok(m.land[Math.floor(spot.y / TILE) * W + Math.floor(spot.x / TILE)], `${name}: the camp on dry land`);
+  }
+  const twinCamp = m.restSpots.find((q) => q.where === 'bar');
+  assert.ok(twinCamp && twinCamp.x > ta.falls.x && twinCamp.x < tb.falls.x && twinCamp.y > tby, 'the Twin Falls camp on the island below them');
+  // the Redwood River Run (shared/world3-riverrun.js): the kayak hire's landing at the put-in in the woods, the take-out
+  // above the bay; the current runs from the one to the other
+  const RR = m.world3.riverRun;
+  assert.ok(RR && RR.put && RR.take, `the river run's put-in and take-out (${JSON.stringify(RR)})`);
+  const { modelsAt } = await import('../server/systems/rentals.js');
+  const { BOAT_RENTAL_PRICE } = await import('../shared/rules.js');
+  const { flowAt } = await import('../shared/flow.js');
+  for (const end of [RR.put, RR.take]) {
+    const R = m.rentals.find((q) => q.poi === end.poi), [sx, sy] = end.shore;
+    assert.ok(R && modelsAt(R).includes('kayak') && BOAT_RENTAL_PRICE.kayak > 0 && R.spots.length >= 2, `kayaks for hire at ${sx}, ${sy}`);
+    let dock = 0; for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) if (m.tiles[(sy + dy) * W + sx + dx] === T.DOCK) dock++;
+    assert.ok(dock >= 9, `a landing of planks at ${sx}, ${sy} (${dock})`);
+  }
+  assert.ok(RR.take.shore[1] < RR.put.shore[1] - 200, 'the take-out well down the river (north, to the bay)');
+  let north = 0, n = 0;
+  for (let y = RR.put.shore[1] - 20; y > RR.take.shore[1] + 20; y -= 12) for (let x = 2300; x < 2560; x += 3) { const f = flowAt(m, (x + 0.5) * TILE, (y + 0.5) * TILE); if (f) { n++; if (f[1] < 0) north++; } }
+  assert.ok(n > 50 && north > n * 0.8, `the current runs down the river to the bay (${north} of ${n} samples northward)`);
+  // ...and it's a race (server/systems/races.js, kind 'kayak'): the start at the put-in's kayaks, a gate on the water every
+  // so far down the river, the finish by the take-out; a kayak is entered, a rowboat isn't; first home takes the prize
+  const race = m.races.find((r) => r.kind === 'kayak' && RR.race && r.id === RR.race.id);   // (the Egret Marsh Paddle is a kayak race too)
+  assert.ok(race && RR.race && race.id === RR.race.id && race.cps.length >= 5, `the river run's race and its gates (${JSON.stringify(RR.race)})`);
+  const put = m.rentals.find((q) => q.poi === RR.put.poi);
+  assert.ok(Math.hypot(race.start.x - put.spots[0].x, race.start.y - put.spots[0].y) < 4 * TILE, 'the start at the put-in\'s kayaks');
+  for (const c of race.cps) assert.ok(wet(m, c.x / TILE - 0.5, c.y / TILE - 0.5), `a gate on the water at ${c.x / TILE | 0}, ${c.y / TILE | 0}`);
+  for (let k = 1; k < race.cps.length; k++) { const d = Math.hypot(race.cps[k].x - race.cps[k - 1].x, race.cps[k].y - race.cps[k - 1].y) / TILE; assert.ok(d > 15 && d < 90, `gates ${k} and ${k + 1} spaced down the river (${d | 0} tiles)`); }
+  const fin = race.cps[race.cps.length - 1];
+  assert.ok(Math.hypot(fin.x / TILE - RR.take.shore[0], fin.y / TILE - RR.take.shore[1]) < 30 && race.cps[0].y > fin.y + 200 * TILE, 'down the river to the finish by the take-out');
+  assert.ok(m.pois.some((q) => q.kind === 'race' && q.label === race.name), 'on the map as a race');
+  const races = await import('../server/systems/races.js');
+  const ents = new Map(), told = [];
+  const rider = (pid, model, id) => { const v = { id, x: race.start.x, y: race.start.y, model, def: { kind: 'boat' } }; ents.set(id, v); return { pid, name: pid, ped: { vehId: id, seat: 0 }, profile: { bank: 0 } }; };
+  const kay = rider('kay', 'kayak', 1), row = rider('row', 'rowboat', 2);
+  const rw = { map: m, players: new Map([['kay', kay], ['row', row]]), get: (id) => ents.get(id), notify: (p, t) => told.push([p.pid, t]), emit: () => {}, tick: 0, time: 0 };
+  races.init(rw);
+  const step = () => { rw.tick++; rw.time += 1 / 30; races.update(rw); };
+  for (let i = 0; i < 30 * (races.COUNTDOWN_S + 1); i++) step();
+  const st = rw.raceState[race.id];
+  assert.ok(st.phase === 'running' && st.racers.has('kay') && !st.racers.has('row'), `a kayak entered, a rowboat not (${st.phase}, ${[...st.racers.keys()]})`);
+  const kv = ents.get(1);
+  for (const c of race.cps) { kv.x = c.x; kv.y = c.y; for (let i = 0; i < 6; i++) step(); }
+  assert.ok(kay.profile.bank > 0 && told.some(([pid, t]) => pid === 'kay' && /Finished 1st/.test(t)), `home first, the prize (${kay.profile.bank})`);
+  // an angler's hold on the bank below the falls (server/systems/wildfolk.js: the plunge pools early)
+  const { spotsOf } = await import('../server/systems/activities.js');
+  const holdsAt = spotsOf(m).list.filter((q) => q.k === 'holds');
+  const fished = LF.names.filter((name) => { const last = sites.filter((q) => q.name === name).pop(); return holdsAt.some((q) => Math.abs(q.x - last.falls.x) < last.falls.w / 2 + 6 * TILE && q.y > last.falls.y && q.y < last.falls.y + 12 * TILE); });
+  assert.ok(fished.length >= Math.ceil(LF.names.length / 2), `anglers' holds below the falls: ${fished}`);
+  // footbridges across the narrower outlets: a deck of bridge tiles under each, from bank to bank
+  assert.ok(LF.bridges >= 1, `a footbridge below a fall (${LF.bridges})`);
+  const fb = m.props.filter((p) => p && p.t === 'fbridge' && sites.some((q) => Math.hypot(p.x - q.falls.x, p.y - q.falls.y) < 30 * TILE));
+  assert.ok(fb.length >= LF.bridges, `the footbridges by the falls (${fb.length})`);
+  for (const p of fb) assert.equal(m.tiles[Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)], T.BRIDGE, `a deck under the footbridge at ${Math.round(p.x / TILE)}, ${Math.round(p.y / TILE)}`);
 });

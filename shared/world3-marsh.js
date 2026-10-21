@@ -2,7 +2,8 @@
 // Egret Coast marsh (world3-waterbodies.js MARSH_BOX) gets its walk: from a trailhead by a county road (a map board,
 // a split-rail fence along the path in), a plank boardwalk with rails zig-zags out over the channels and the reed
 // islands; a roofed bird hide on piles at a bend; a viewing platform at the far end with a bench and a coin
-// telescope; a canoe dock near the start with two canoes; a beaver lodge out in the water and, where a channel runs
+// telescope; a canoe dock near the start with two canoes, and kayaks to hire there and a paddle race through the
+// channels from it (2026-10-21); a beaver lodge out in the water and, where a channel runs
 // narrow, the beavers' dam with its little fall; lily pads in the quiet water and cattails and reeds on the islands'
 // edges. The herons, the ducks and the fish are the marsh's own (wildlife.js, client/art2/game/waterlife.js). Laid in
 // the World v3 build's last step (world3-world.js done), on tiles that are still open marsh water or open ground: the
@@ -13,7 +14,15 @@
 import { T, TILE } from './constants.js';
 import { MARSH_BOX } from './world3-waterbodies.js';
 
-export const MARSH = { name: 'Egret Marsh Boardwalk', district: 53, seg: [6, 14], segs: 6, turn: [0.75, -0.95, 0.85, -0.7, 0.9], plat: [7, 5] };
+export const MARSH = {
+  name: 'Egret Marsh Boardwalk', district: 53, seg: [6, 14], segs: 6, turn: [0.75, -0.95, 0.85, -0.7, 0.9], plat: [7, 5],
+  // the canoe dock's hire (2026-10-21; the research's 4.5 "a canoe launch and canoe trail"): kayaks to paddle the
+  // channels, handed back at the dock (server/systems/rentals.js)
+  hire: 'Egret Marsh Canoe Hire', models: ['kayak'], note: 'Paddle the channels between the reed islands - the herons, the beavers\' lodge and their dam, the lilies. Hand it back at the dock.',
+  // the race from the hire (server/systems/races.js kind 'kayak'): out through the channels as far as `reach` tiles of
+  // paddling take you and back another way where there is one, a gate every `gate` tiles; at least `min` tiles out
+  race: { name: 'Egret Marsh Paddle', gate: 30, reach: 240, min: 80, prize: 200 },
+};
 const RES = 32;
 const ih = (x, y, s) => { let h = (x * 374761393 + y * 668265263 + s * 2246822519) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 const COS = (a) => Math.cos(a), SIN = (a) => Math.sin(a);   // (called inside generateCity, under withDeterministicMath: shared/dmath.js)
@@ -131,6 +140,7 @@ export function buildMarshBoardwalk3(m, removeProps) {
     P('pbench', (pcx - uy * (plat.n / 2 - 1)) * TILE, (pcy + ux * (plat.n / 2 - 1)) * TILE, { a: qa + Math.PI / 2, lift: 8 });
   }
   // 6. the canoe dock: off the first leg where it reaches the water, a short pier out to the side, two canoes by it
+  let hireSpots = null;
   const c0 = pts[1], c1 = pts[0], ca = Math.atan2(c0[1] - c1[1], c0[0] - c1[0]);
   let canoes = 0;
   for (const side of [1, -1]) {
@@ -141,6 +151,17 @@ export function buildMarshBoardwalk3(m, removeProps) {
     for (let s = 0; s <= 4; s++) plank(Math.floor(bx + ux * s), Math.floor(by + uy * s));
     P('pier', (bx + ux * 2.2) * TILE, (by + uy * 2.2) * TILE, { len: 5 * TILE, w: 30, a: Math.atan2(uy, ux) });
     for (const o of [-1.4, 1.4]) { const x = bx + ux * 2.6 + COS(ca) * o, y = by + uy * 2.6 + SIN(ca) * o, i = idx(Math.floor(x), Math.floor(y)); if (marshWater(i, Math.floor(x), Math.floor(y))) { P('canoe', x * TILE, y * TILE, { a: Math.atan2(uy, ux), c: canoes % 3 }); canoes++; } }
+    // the hire: its desk where the pier leaves the boardwalk, the kayaks waiting in the water beyond the canoes
+    if (m.rentals && m.pois) {
+      const spots = [];
+      for (const o of [-3.2, 3.2]) for (const s2 of [3.6, 1.2]) { const x = bx + ux * s2 + COS(ca) * o, y = by + uy * s2 + SIN(ca) * o; if (spots.length < 2 && marshWater(idx(Math.floor(x), Math.floor(y)), Math.floor(x), Math.floor(y))) { spots.push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a: Math.round(Math.atan2(uy, ux) * 1000) / 1000 }); break; } }
+      if (spots.length) {
+        const door = { x: Math.round(bx * TILE), y: Math.round(by * TILE) }, poi = { id: m.pois.length, kind: 'rental', label: MARSH.hire, x: door.x, y: door.y, r: 48 };
+        m.pois.push(poi);
+        m.rentals.push({ poi: poi.id, name: MARSH.hire, spots, models: MARSH.models, dock: door, note: MARSH.note });
+        out.hire = spots.length; hireSpots = spots;
+      }
+    }
     break;
   }
   // 7. the beavers: their lodge in the water off the platform; their dam across a narrow channel near it (a run of
@@ -200,6 +221,57 @@ export function buildMarshBoardwalk3(m, removeProps) {
   const box = [Math.min(...xs) - 12, Math.min(...ys) - 12, Math.max(...xs) + 12, Math.max(...ys) + 12];
   (m.landmarks ||= []).push({ name: MARSH.name, type: 'marsh', x: box[0] * TILE, y: box[1] * TILE, w: (box[2] - box[0]) * TILE, h: (box[3] - box[1]) * TILE });
   (m.natureSites ||= []).push({ kind: 'marsh', name: MARSH.name, x: Math.round(last[0] * TILE), y: Math.round(last[1] * TILE), boardwalk: pts.map((p) => [Math.round(p[0] * TILE), Math.round(p[1] * TILE)]), hide: { x: Math.round(hx * TILE), y: Math.round(hy * TILE) }, ...(lodge ? { lodge: { x: (lodge[0] + 0.5) * TILE, y: (lodge[1] + 0.5) * TILE } } : {}), ...(dam ? { dam: { x: (dam[0] + dam[1] + 1) / 2 * TILE, y: (dam[2] + 0.5) * TILE } } : {}) });
+  // 10. the Egret Marsh Paddle (MARSH.race): from the hire's kayaks out through the channels to the far side and back
+  // by another channel where there is one (the way out barred but near its ends; else back the same way), a gate on
+  // the water every so far, moved to the channel's middle; the finish back at the dock - kayaks only
+  if (hireSpots && m.pois) {
+    const R = MARSH.race, bar0 = new Set();
+    if (dam) for (let x = dam[0] - 1; x <= dam[1] + 1; x++) bar0.add(idx(x, dam[2]));
+    const xy = (i) => [i % W, (i - (i % W)) / W];
+    const paddle = (i) => { if (i < 0 || bar0.has(i)) return false; const [x, y] = xy(i); return marshWater(i, x, y) || (m.tiles[i] === T.BRIDGE && !m.land[i] && inBox(x, y)); };
+    const open = (i) => { const [x, y] = xy(i); return marshWater(i, x, y); };
+    const bfs = (from, bar) => {
+      const d = new Map([[from, 0]]), prev = new Map(), q = [from];
+      for (let h = 0; h < q.length; h++) {
+        const i = q[h], k = d.get(i);
+        if (k >= R.reach) continue;
+        for (const j of [i - 1, i + 1, i - W, i + W]) if (!d.has(j) && paddle(j) && !(bar && bar.has(j))) { d.set(j, k + 1); prev.set(j, i); q.push(j); }
+      }
+      return { d, prev };
+    };
+    const trace = (prev, from, to) => { const p = [to]; while (p[p.length - 1] !== from) p.push(prev.get(p[p.length - 1])); return p.reverse(); };
+    const s0 = idx(Math.floor(hireSpots[0].x / TILE), Math.floor(hireSpots[0].y / TILE));
+    const A = paddle(s0) ? bfs(s0) : null;
+    let far = s0;
+    if (A) for (const [i, k] of A.d) { const kf = A.d.get(far); if (k > kf || (k === kf && i < far)) far = i; }
+    if (A && A.d.get(far) >= R.min) {
+      const way = trace(A.prev, s0, far), [ax, ay] = xy(s0), [fx2, fy2] = xy(far), bar = new Set();
+      for (const i of way) {
+        const [x, y] = xy(i);
+        if (Math.hypot(x - ax, y - ay) < 8 || Math.hypot(x - fx2, y - fy2) < 8) continue;
+        for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) bar.add(idx(x + dx, y + dy));
+      }
+      const B2 = bfs(far, bar), loop = B2.d.has(s0) && B2.d.get(s0) <= way.length * 2.2;
+      const route = way.concat((loop ? trace(B2.prev, far, s0) : way.slice().reverse()).slice(1));
+      // the gates: every R.gate tiles, each moved to the most open water near it (furthest from the reeds' edges)
+      const roomAt = (i) => { const [x, y] = xy(i); let r = 5; for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const j = idx(x + dx, y + dy); if (!paddle(j)) r = Math.min(r, Math.max(Math.abs(dx), Math.abs(dy))); } return r; };
+      const cps = [];
+      for (let k = R.gate; k < route.length; k += R.gate) {
+        const end = k >= route.length - R.gate / 2, i0 = end ? s0 : route[k], [x0, y0] = xy(i0);
+        let best2 = null;
+        for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const j = idx(x0 + dx, y0 + dy); if (j < 0 || !open(j)) continue; const sc = roomAt(j) * 10 - Math.hypot(dx, dy); if (!best2 || sc > best2.sc) best2 = { j, sc }; }
+        if (best2) { const [x, y] = xy(best2.j); cps.push({ x: (x + 0.5) * TILE, y: (y + 0.5) * TILE }); }
+        if (end) break;
+      }
+      const st = hireSpots[0], fin = cps[cps.length - 1];
+      if (cps.length >= 5 && Math.hypot(fin.x - st.x, fin.y - st.y) < 8 * TILE) {
+        const race = { id: (m.races ||= []).length, name: R.name, kind: 'kayak', start: { x: st.x, y: st.y }, cps, prize: R.prize, where: 'the canoe dock on the Egret Marsh Boardwalk' };
+        m.races.push(race);
+        m.pois.push({ id: m.pois.length, kind: 'race', label: R.name, x: race.start.x, y: race.start.y, r: 60 });
+        out.race = { id: race.id, gates: cps.length, loop, len: route.length };
+      }
+    }
+  }
   Object.assign(out, { built: true, legs: pts.length - 1, at: [sx, sy], planks: deck.size, canoes, lodge: !!lodge, dam: !!dam, lilies, reeds });
   return out;
 }

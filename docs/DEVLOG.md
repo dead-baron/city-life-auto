@@ -12883,3 +12883,310 @@ field gate"); `shared/world3-verges.js`:
 
 Tests: test/world3kestrel.test.js - no field runs out of the valley; a lane from every farmstead, with a mailbox at the
 road for each.
+
+## 2026-10-21 · Nature: the falls chain, part 2 - the ledge falls
+
+From the handcraft research's 3.1 ("a ledge fall across the whole width on rivers ... a staircase of steps on creeks ...
+each gets its plunge pool, mist, a viewpoint") and its R1 ("below the falls: an emerald plunge pool, then rapids");
+`shared/world3-ledgefalls.js`, new, World v3's done hook after the rapids. The rivers ran white down their steep
+reaches but never fell: the only falls in the wilds were the designed places'. Now six steep reaches that run toward
+the camera start with a fall:
+- **Long Ledge Falls** on the woods' eastern river below Highland Woods, right across its 60-tile width;
+- **Granite Steps**, three low ledges in a staircase down the narrows of the creek that leaves the peaks' river;
+- **Sandpiper Falls**, the river's last ledge before the beach on the Sandpiper Coast;
+- **Slickrock Falls** in the Red Rock Desert's canyon river, over red sandstone;
+- **Willow River Falls**, where the river out of the woods comes down into Willow Valley's fields;
+- **Mossy Ledge Falls** at the outlet of a small lake in the north of the woods, just above the road's bridge (the
+  bridge is its viewpoint).
+
+Each:
+- **the lip** is a row of rock from bank to bank. Boats stop at it. A swimmer goes down it and can't come back up
+  (`shared/ledges.js` reads it as a falls' cliff band). The bake draws it as the river's water running over it:
+  `client/art2/game/groundbake.js`, rock flagged 64|32.
+- **the falls** are drawn along the lip in a few wide pieces (`client/art2/game/statics.js` addNature 'ledgefall').
+  Each piece's water is split into strands by low ribs of basalt, and the taller pieces fall in two tiers with a shelf
+  pool between. The line bows back upstream in the middle like a worn horseshoe, a little ragged, with boulders in the
+  white water at the joins.
+- **mist** rises off its foot (`client/art2/game/waterlife.js` reads the site's falls).
+- **the plunge pool** is a calm, deep pocket below the last ledge. The fishing calls it the falls' spot
+  (`server/systems/fishing.js`'s below-the-falls check now spans a wide fall's whole width), and bears fish there
+  (`wildlife.js` reads the site's falls). The white water starts below the pool.
+- **a bench** stands on the bank below, looking up at it, with the falls' name on a post. No tree stands in front of it
+  (`shared/world3-falls.js` counts the ledge falls).
+
+Tests: test/world3rapids.test.js - the six falls: each lip right across from bank to bank, a one-way drop, drawn as
+water in the bake and drawn along in strands; the falls' fish in the plunge pool; the bench and the sign. The
+plunge pools are counted among the calm pockets. test/world3rivers.test.js joins the river's water above and below
+each lip as one body.
+
+## 2026-10-21 · Nature: goats on the ledges
+
+The mountain goats lived on the cliffs (fauna.js `nimble`, habitat `cliff`) but walked only where a person can, so they
+grazed at the foot of the rock with the rest. Now the wilds' bare rock is their ground too: the cliffs, crags and scree
+of Granite Peaks and the desert's cliff bands, WALL flagged 32 that no one can climb.
+- **sure-footed**: `shared/mapcore.js` ROCK_BLOCK is PED_BLOCK with that rock open (`shared/physics.js` blockedAt), and a
+  goat moves by it (`mods.rock`). It spawns on its ledges as well as below them and wanders mostly along them
+  (`server/systems/wildlife.js` footing).
+- **escape terrain**: startled, a goat runs for the rocks (fleeAngle favours a way onto the rock). Once it is well up
+  on the rock and you aren't, it stops and stands staring down at you, out of reach. A person can't follow it there,
+  and neither can a deer or a wolf.
+- **the carcass comes down**: a goat shot on a ledge falls to the nearest ground below it, with a thud, so a hunter can
+  reach the carcass.
+
+Tests: test/wildmoves.test.js - a goat runs up onto a crag, where you and a deer can't follow, and stands there; shot
+up there, it lands on the ground below.
+
+## 2026-10-21 · Nature: the desert by hand, part 2 - the mesas' rims
+
+The Red Rock Desert's mesas all came out the same rounded square (the relief's tables: a superellipse rim with a little
+noise), each ringed by a necklace of even sandstone knobs (the rim's faces on a 6-tile grid). Now, in
+`shared/world3-relief.js` tableEdge:
+- **the rim** is rounder, half way to an ellipse, and wavers more: big slow lobes as well as the small ragged ones, so
+  no two mesas share an outline.
+- **the faces** go round the rim in arcs of 6 to 13 tiles (shorter on a small mesa), each a little taller or lower than
+  the next, instead of the grid's ring of knobs.
+- **kept in step**: the bake's copy of the rim (client/art2/game/groundbake.js: the cap rock and the talus) and the dressing's
+  check for a table (shared/world3-biomes.js: no boulders on a top) reach out as far as the new rim does.
+
+## 2026-10-21 · Nature: Highland Woods by hand, part 3 - Silver Thread Lake
+
+From the handcraft research's 4.3 ("the mid-forest lake (islets, boathouse)") and the concepts NA1-A, D15 and SC3-G
+("a rocky pine islet ... jetty and boat ramp"); `shared/world3-woodslake.js`, new, World v3's done hook. The lake under
+Silver Thread Falls lay as the river's still reach had left it: one smooth blob with the forest floor to a clean edge and
+nothing on it. Now:
+- **its shore wanders**: bays are dug into the forest floor and points built out into the water in slow waves, never
+  near the falls, the river's water in and out, a trail, a road or the bridge. A pine or a mossy boulder stands on
+  each point, and the bays' shallows grow reeds.
+- **three rocky islets** lie out in the deep water, one big and two smaller. Each has a rim of pebbles and boulders
+  and pines and firs on its middle.
+- **the Silver Thread Boathouse** is on the south shore: a boat shed, a plank jetty out into the lake with canoes
+  moored along it and a lamp at its end, a bench and a sign on the bank, and a clearing round the landing so the
+  redwoods don't stand over it. The canoe hire there lets out rowboats ($40, `shared/rules.js`) and the dock's motorboat
+  (`server/systems/rentals.js`: a rental can now name its own boats). Both are named on the map.
+- **pines drawn at last**: Pine Hills' and the Lakeside course's trees asked for the species 'pine', which the art
+  doesn't have, so they were drawn as nothing while still standing there as solid trunks. 'pine' is now drawn as the
+  ponderosa (`client/art2/game/statics.js`).
+
+Tests: test/world3woods.test.js - the lake's shore dug and built out, the islets with pines out in the water, the jetty,
+the hire with rowboats, both on the map.
+
+## 2026-10-21 · Nature: the rivers' current
+
+The GDD's "still open: a current that carries you down a rapid". `shared/flow.js`, new, gives which way and how fast
+the water runs at any point:
+- **the direction** is along the nearest creek's or river's centre line. m.waters' channels each run downstream.
+- **the speed** is fastest in the middle of the channel and slower toward the banks. A creek or a steep river runs
+  faster than a slow one, and a rapid about two and a half times as fast.
+- **still water**: the calm pockets, the lakes, the ponds, the marsh and the sea have no current.
+
+What it carries (`shared/physics.js`):
+- **a swimmer** drifts with it. You make headway upstream on a slow reach, but a rapid sweeps you down and you can't
+  swim up one.
+- **a boat with someone at the helm** drifts too. One tied up never does, and neither do the ferries and the anglers'
+  boats, which have no one at the helm.
+- **the wild things that live in the water** (ducks, otters, beavers) hold their own (`mods.still`).
+
+The client predicts its own swimmer and boat with the same current from the same map. It is worked out once per map
+and kept beside it, not in it.
+
+Code budget: the page's code is 488 KB of its 488 (flow.js is about 1.5 KB of it).
+
+Tests: test/flow.test.js - on a small river: the current downstream, slower at the bank, faster in a rapid, none in a
+pocket, the lake or on land; a swimmer carried down, no headway up a rapid but some up the slow reach, a duck holding
+its place, a boat at the helm drifting and one tied up not.
+
+## 2026-10-21 · Nature: Willow Valley's fields squared along the banks
+
+The green banks between the fields and the rivers (part 1) left a field's crop stepped tile by tile wherever a river
+slants past it. Now such a field stops in a straight edge clear of the bank, with a grass headland between, wherever
+that keeps most of the field (`shared/world3-verges.js`, the same cut as the fields squared at the valley's edge).
+
+## 2026-10-21 · Nature: footbridges below the falls; the lake's islets in the woods
+
+- **footbridges**: where a ledge fall's outlet is narrow enough (26 tiles at most), a timber footbridge now crosses it
+  just below the plunge pool, so walkers cross the river at the falls (`shared/world3-ledgefalls.js`). Its deck is
+  bridge tiles: swimmers and boats pass beneath it, and the water is drawn under it. Granite Steps has one.
+- **the islets' ground**: Silver Thread Lake's islets and points are the woods' district now, not the water's, for
+  the name shown there and what lives there (`shared/world3-woodslake.js`).
+
+Tests: test/world3rapids.test.js - a footbridge below a fall, a deck of bridge tiles under it.
+
+
+## 2026-10-21 · Nature: the wild districts' borders meander
+
+Where two of the wilds meet, the ground changed along the districts' tile-stepped border. Willow Valley's pasture met
+the Red Rock Desert's sand and gravel in a staircase of 32-pixel steps, and Highland Woods' forest floor met Granite
+Peaks' bare rock (the tree line) the same way. Now `shared/world3-edges.js`, new, World v3's done hook, makes the line
+wander:
+- **the line** moves in a band seven tiles either side of the border, in slow lobes with small tongues on them.
+- **each plain tile** takes the side the line puts it on: its district and, where the two sides' ground differs, that
+  side's ground. What grew there that the new side doesn't grow goes.
+- **left alone**: roads, a farm field's box, trails, yards, designed places, the water and buildings.
+
+The pairs are the valley and the desert, the woods and the peaks, and the woods and the valley (the district alone
+there: grass both sides).
+
+Tests: test/world3biomes.test.js - each border moved in a wide band; the valley's and the desert's ground follow the
+wandering line.
+
+## 2026-10-21 · Nature: anglers at the falls
+
+The anglers of the wilds take a hold on the bank below each ledge fall's plunge pool early, among their first spots
+(`server/systems/wildfolk.js`: the last ledge's pool, the bank found out from the falls' middle). The pool is where the
+falls' fish hold.
+
+No reeds or lilies stand on a ledge fall's lip any more: the bake's water decor skips its row of rock
+(`client/art2/game/groundbake.js`).
+
+Tests: test/world3rapids.test.js - an anglers' hold below most of the falls.
+
+## 2026-10-21 · Code budgets raised (the owner's call)
+
+The renderer's and the bake workers' code budgets sat at exactly the code's size (382 and 832 KB gzipped), so every new
+piece of art meant raising one or trimming something. The owner agreed to give them room (`tools/perf.mjs`):
+- **the renderer**: 382 to 400 KB.
+- **the bake worker**: 832 to 860 KB.
+- **the page**: 488 to 490 KB. The rivers' current runs in the player's own movement (`shared/flow.js`), and that put
+  the page at 488.4.
+
+The renderer and the bake workers load once you're in the city, never at the title screen. The page stays the one to
+keep lean.
+
+## 2026-10-21 · Nature: the river kayak, and the Redwood River Run
+
+- **the kayak** (`shared/vehicles.js` kayak, `client/art2/vehicles.js`): a one-seat river kayak, quick to turn and
+  light. Its long yellow hull is pointed at both ends, with a black-rimmed cockpit and a double paddle across the deck.
+  Quiet like the rowboat (`client/sound/vehicles.js`). $30 to hire (`shared/rules.js`).
+- **the Redwood River Run** (`shared/world3-riverrun.js`, new, World v3's done hook): the river that leaves Highland
+  Woods to the north runs some 400 tiles to the bay at Northshore, through the white water above the road's bridge and
+  below it.
+  - **the put-in** is in the woods where the river starts: a plank landing square to the bank, a kayak hire whose
+    kayaks wait along the planks, two more boats pulled up on the bank, a sign and a lamp.
+  - **the take-out** is on the beach at the river's mouth, where you hand the kayak back (any rental dock takes one).
+  - **the run**: the current carries you down and the rapids sweep you through. The hires' own word says so
+    (`server/systems/rentals.js`: a rental can carry a note).
+- **kayaks at Silver Thread Lake**: the canoe hire there lets out kayaks too.
+
+Tests: test/world3rapids.test.js - the put-in and the take-out with their landings and kayaks for hire, the take-out
+well down the river, the current running from the one to the other.
+
+
+## 2026-10-21 · Nature: the Redwood River Run race
+
+- **the race** (`shared/world3-riverrun.js`, `server/systems/races.js` kind `'kayak'`): the river run is a race too.
+  Sit in a kayak at the put-in's landing and you're entered; the usual countdown gives others time to rent one and
+  join. Then it's gate to gate down the river to the take-out, with the current and the white water on the way.
+  - **the gates** are on the river's centre line, one every 45 tiles, following it from channel to channel where one
+    runs into the next. A gate never sits on a bridge's deck or a ledge's lip; it moves on to the next point on open
+    water. The finish is by the take-out.
+  - **only kayaks qualify**: a rowboat or a jet ski isn't entered. The prize is the races' usual: $250 a racer, the
+    winner's share.
+  - **on the map**: the start is listed with the other races (Activities), and its float says what qualifies. Every
+    race's float now says this correctly: the raceway and the MX park were labelled "boats" (`client/main.js`).
+- **two flaky tests fixed**:
+  - `test/burning.test.js`: the faller was sometimes spawned beside the roller. Running about on fire, it could light
+    the roller again. The two now start well apart.
+  - `test/core.test.js` (ghost state): it counted every bag in the city as the player's drop. A street happening's
+    dropped wallet or an NPC's loot sometimes turned up. It now counts only bags where the body stood.
+
+Tests: test/world3rapids.test.js - the race and its gates (at least 5, each on the water, spaced 15-90 tiles), the
+start at the put-in's kayaks, the finish by the take-out, the race on the map. Then the race itself on the built map:
+a kayak entered and a rowboat not, gate to gate, first home and paid.
+
+## 2026-10-21 · Nature: Twin Falls (the falls chain, part 3)
+
+- **Twin Falls** (`shared/world3-ledgefalls.js`, a ledge falls with `knoll: true`; the research's "twin falls off the
+  rocky knoll", WC186's "twin waterfalls in a granite gorge"): in Highland Woods below the fire lookout, the wide
+  river splits round an island at the top of a steep reach.
+  - **the falls**: the river falls off both sides of the island's head on one row. The west arm's fall is about 38
+    tiles wide and the east arm's about 50, each with its own strands, tiers and horseshoe bow. Each is its own falls
+    site (mist, the falls' fish, the bears), each lip a one-way drop.
+  - **the knoll**: the island's head between the two falls is granite (scree rock, from its tip to six rows below the
+    lip), with boulders on its head and pines on its back. Under each fall the ground stays open, so a fall's drop is
+    its lip alone (`shared/ledges.js`).
+  - **below**: a plunge pool below each fall, as big as the arm allows. A footbridge goes over the narrower arm to the
+    island further down, if one is narrow enough (here neither is).
+  - **the overlooks**: a railed viewing deck on each bank just below the falls, facing the other across the gorge,
+    with a bench on it. Golden aspens and a fallen log stand behind each deck, and the name is on a post by the west
+    one.
+- The ledge-fall machinery now handles any number of lips on a row: a row split by an island is found from the arm
+  the river's centre line is in, across 6-30 tiles of land whose upstream end is the island's tip.
+
+Tests: test/world3rapids.test.js - Twin Falls: two falls on one row, the knoll's rock between them (rock, not a lip,
+not a drop), pines on the knoll, an overlook on each bank; every ledge-falls check (lip, drop, strands, the lip drawn as
+water, the falls' fish in the pool, a bench and the sign) for both. The pocket-spot check now counts only the calm
+pockets: a plunge pool is the falls' own spot.
+
+## 2026-10-21 · Nature: kayaks to hire at the Egret Marsh, and the Egret Marsh Paddle
+
+- **the canoe hire** (`shared/world3-marsh.js` MARSH.hire; the research's 4.5, "a canoe launch and canoe trail"): the
+  Egret Marsh Boardwalk's canoe dock now hires out kayaks. The desk is where the pier leaves the boardwalk, and the
+  kayaks wait on the open water beyond the two canoes. Paddle the channels between the reed islands, past the herons,
+  the beavers' lodge and dam and the lilies, then hand the kayak back at the dock (any rental dock takes it:
+  `server/systems/rentals.js`). The hire's own note says so.
+- **the Egret Marsh Paddle** (`MARSH.race`, `server/systems/races.js` kind `'kayak'`): a race from the hire's kayaks.
+  The route goes out through the channels as far as 240 tiles of paddling take you, then back to the dock by another
+  channel where there is one, or the same way back if not. The beavers' dam is in the way, so the route goes round it.
+  - **the gates** are on the open water every 30 tiles, each moved to the channel's middle; the finish is back at the
+    dock.
+  - **only kayaks qualify**: the prize is $200 a racer, the winner's share.
+
+Tests: test/world3marsh.test.js - the hire at the dock with kayaks, its point on the map, each kayak waiting on open
+water by the canoes; the paddle race from the dock and back to it, its gates on the water, out across the marsh, on
+the map.
+
+## 2026-10-21 · Nature: secluded camps
+
+- **the camps** (`shared/world3-camps.js`, new; the owner's "secluded spots with a campfire and log seats", task #396):
+  hand-laid camps where few go, each by something worth looking at and each with a way in.
+  - **Silver Thread Lake**: on the biggest pine islet, a canoe pulled up by the fire. Paddle over from the boathouse
+    (`shared/world3-woodslake.js`).
+  - **Twin Falls**: on the island below the falls, as near them as there's room, looking up at the knoll between the
+    two curtains. Wade or paddle over (`shared/world3-ledgefalls.js`).
+  - **Slickrock Falls** (the desert canyon) and **Mossy Ledge Falls** (the woods): on the bank by the pool, across
+    from the bench, at least 12 tiles from any road (`LEDGES3`'s `camp`).
+  - Each camp has its ground cleared round a fire ring (some still burning), seats facing the view (logs, or
+    sun-bleached driftwood in the canyon) and a loose ring of stones. By kind, there's a tent, a woodpile, a lantern on
+    its post (lit at night), a cooler and camp chairs facing the fire.
+  - Each is an ordinary campfire (`server/systems/campfires.js`: light it, sit by it to heal) and a rest spot
+    (`m.restSpots`: the fireflies come at night). Hand-laid camps keep their rest spot when the generic ones near a
+    building or a place are pruned (`shared/naturesites.js` pruneRestSpots).
+
+Tests: test/world3rapids.test.js - the camps at Twin Falls (on the island below the falls) and at least one other falls,
+each a rest spot with its fire, seats and lantern on dry land. test/world3woods.test.js - the islet's camp with its
+fire, a seat, a tent and a canoe, the lake all round it.
+
+## 2026-10-21 · Nature: the ledge falls' strands join into curtains
+
+- **the falls' water** (`client/art2/water.js` fallModel): a ledge fall's or a two-tier fall's water split into strands
+  had rock ribs between them all the way down the face. Across a wide river (the ledge falls, Twin Falls) that read as
+  a row of posts, like a weir. Now each strand fans out as it falls, its edges ragged, and the rocks that split the
+  water at the lip taper away beneath it. They break the water near the top and the strands join into one curtain
+  further down.
+  - **a two-tier fall**: the lower streams fan wider still. The rock between them is a ragged wedge flush with the
+    shelf's pool, not a post standing up out of it.
+  - Every falls drawn in strands changes: the ledge falls, the tarn's and the creeks' falls, and the falls of the
+    designed places that give their streams.
+
+Tests: the full suite (the falls are drawn by the statics' recipes; their placement and the bake's checks are
+unchanged).
+
+## 2026-10-21 · Nature: the falls roar; a far river fades; the wind under the trees
+
+- **the water's sound** (`client/sound/ambience.js`; the owner, 2026-10-16: "stream or waterfall sound in the forest
+  with no visible source"):
+  - **a far river**: a river's babble sounded as loud from 24 tiles off as from its bank, whichever way it lay. A
+    river off the top or the bottom of the screen was heard with no water in sight. Now the river's samples count
+    for less the further off they are, and for nothing past 28 tiles. Within 6 tiles it sounds as before.
+  - **a falls roars**: the ledge falls, the tarn's and the creeks' falls, Silver Thread Falls and any other falls a
+    nature site has. The flow bed turns up to about three times a river's babble at the fall's foot (anywhere along
+    its width) and fades to nothing 22 tiles away.
+  - **a rapid's white water** rushes at a little under half that, out to 12 tiles.
+  - The beds' ceilings are unchanged: at its loudest a falls is still under the city's hum.
+- **the wind under the trees** (the owner, 2026-10-16: "ocean sounds in the forest"): in the woods the wind bed's
+  gusts swelled and fell like waves along the ground. Under the trees the wind is up in the canopy, which is the
+  leaves' rustle, so the whoosh is turned down by up to two thirds where the woods close round you.
+
+Tests: test/ambience.test.js - a river from its bank and from 20 tiles off (under a third as loud); a falls at its foot
+(over twice a river's bank, never over the bed's ceiling), 12 tiles off (fading) and 30 tiles off (just the river); a
+rapid's white water between the two; the wind under the trees under half what it is in the open.

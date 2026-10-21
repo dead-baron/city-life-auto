@@ -56,6 +56,12 @@ test('World v3: every river system runs to the sea; gravel bars on the bends, cu
     for (let dy = -10; dy <= 7; dy++) for (let dx = -7; dx <= 7; dx++) { const x = tx + dx, y = ty + dy; if (x >= 0 && y >= 0 && x < W && y < H && lab[y * W + x] >= 0) ls.add(find(lab[y * W + x])); }
     const [a0, ...rest] = [...ls]; for (const b of rest) up[find(b)] = find(a0);
   }
+  for (const q of m.natureSites) {   // (the ledge falls' lips of rock: shared/world3-ledgefalls.js - the bodies above and below each are one)
+    if (q.kind !== 'ledgefall') continue;
+    const tx = Math.floor(q.falls.x / TILE), ty = Math.floor(q.falls.y / TILE), hw = Math.ceil(q.falls.w / 2 / TILE), ls = new Set();
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -hw; dx <= hw; dx++) { const x = tx + dx, y = ty + dy; if (x >= 0 && y >= 0 && x < W && y < H && lab[y * W + x] >= 0) ls.add(find(lab[y * W + x])); }
+    const [a0, ...rest] = [...ls]; for (const b of rest) up[find(b)] = find(a0);
+  }
   const seaOf = new Map();
   bodies.forEach((b, j) => { const r = find(j); seaOf.set(r, (seaOf.get(r) || false) || b.sea); });
   bodies.forEach((b, j) => { b.sea = seaOf.get(find(j)); });

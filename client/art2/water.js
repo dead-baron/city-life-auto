@@ -502,24 +502,42 @@ export function fallModel(o = {}) {
     const lo1 = tier2 ? mid - 2 : 0, w1 = kind === 'cliff' ? width : width - 4;
     sheetTop = () => drop;
     const ups = o.upper || null;   // (o.upper: the top fall split into strands [lo, hi] across the notch, basalt between)
+    // (a strand fans out as it falls - its edges ragged - so the rocks that split it at the lip are hidden below: they
+    // break the water near the top and the strands join into one curtain further down, not posts down the face)
+    const spr = (z, top, k) => Math.max(0, (top - z) * 0.24 + (hash(Math.round(z / 4), k, seed + 11) - 0.5) * 2.6);
     m.fill((x, y, z) => {
       if (!inNotch(x, -w1 / 2 + Math.sin(z * 0.2 + x) * 0.6, w1 / 2)) return -1;
-      if (ups && !ups.some(([lo, hi]) => inNotch(x, lo + Math.sin(z * 0.3 + lo) * 0.8, hi))) return -1;
+      if (ups && !ups.some(([lo, hi], k) => inNotch(x, lo - spr(z, drop, k * 2) + Math.sin(z * 0.3 + lo) * 0.8, hi + spr(z, drop, k * 2 + 1)))) return -1;
       const out = (drop - z) * 0.12 + Math.min(3, (drop - z) * 0.04);
       return y >= d1 + out - 1 && y < d1 + out + 2 ? sheet : -1;
     }, 0, d1 - 2, lo1, W, d1 + Math.ceil(drop * 0.2) + 4, drop);
-    if (ups) for (let i = 0; i < ups.length - 1; i++) { const a = ups[i][1], b = ups[i + 1][0]; m.fill((x, y, z) => (inNotch(x, a, b) && y >= d1 - 4 && y < d1 + 2 && z >= lo1 && z < drop + 1 + hash(Math.round(x / 3), 2, seed) * 2 ? rock : -1), 0, d1 - 4, lo1, W, d1 + 2, drop + 3); }
+    if (ups) for (let i = 0; i < ups.length - 1; i++) {
+      const a = ups[i][1], b = ups[i + 1][0];
+      m.fill((x, y, z) => {
+        if (y < d1 - 4 || y >= d1 + 2 || z < lo1 || z >= drop + 1 + hash(Math.round(x / 3), 2, seed) * 2) return -1;
+        const l = a + spr(z, drop, i * 2 + 1) + (hash(Math.round(z / 3), i, seed + 5) - 0.5) * 2, r = b - spr(z, drop, i * 2 + 2) - (hash(Math.round(z / 3), i + 9, seed + 5) - 0.5) * 2;
+        return inNotch(x, l, r) ? rock : -1;
+      }, 0, d1 - 4, lo1, W, d1 + 2, drop + 3);
+    }
     if (tier2) {
       // the shelf pool, its foam, then the split lower falls
       m.fill((x, y, z) => (inNotch(x, -width / 2 + 3, width / 2 - 3) && z >= mid - 2 && z < mid ? (y < d1 + 10 && hash(Math.round(x), Math.round(y), seed + Math.round(frame.v)) > 0.35 ? foam : wtop) : -1), 0, d1, mid - 2, W, d2, mid);
       const streams = o.streams || [[-width / 2 + 2, -4], [6, width / 2 - 2]];
-      for (const [lo, hi] of streams) m.fill((x, y, z) => {
-        if (!inNotch(x, lo, hi)) return -1;
+      const spr2 = (z, k) => spr(z, mid, k) * 1.7;   // (the lower streams fan wider: the rock between them a ragged wedge)
+      streams.forEach(([lo, hi], k) => m.fill((x, y, z) => {
+        if (!inNotch(x, lo - spr2(z, 40 + k * 2), hi + spr2(z, 41 + k * 2))) return -1;
         const out = (mid - z) * 0.1;
         return y >= d2 + out - 1 && y < d2 + out + 2 ? sheet : -1;
-      }, 0, d2 - 2, 0, W, d2 + Math.ceil(mid * 0.15) + 4, mid);
-      // the rock between the lower streams
-      for (let i = 0; i < streams.length - 1; i++) { const a = streams[i][1], b = streams[i + 1][0]; m.fill((x, y, z) => (inNotch(x, a, b) && y >= d1 && y < d2 + 2 && z < mid + 2 + hash(Math.round(x / 3), 1, seed) * 3 ? rock : -1), 0, d1, 0, W, d2 + 2, mid + 6); }
+      }, 0, d2 - 2, 0, W, d2 + Math.ceil(mid * 0.15) + 4, mid));
+      // the rock between the lower streams: the shelf's lip, the streams fanning round it as they fall
+      for (let i = 0; i < streams.length - 1; i++) {
+        const a = streams[i][1], b = streams[i + 1][0];
+        m.fill((x, y, z) => {
+          if (y < d1 || y >= d2 + 2 || z >= mid - 1 + hash(Math.round(x / 3), 1, seed) * 2 || (y < d2 - 2 && z >= mid - 2)) return -1;   // (flush with the shelf's pool, under it behind the lip: a rock breaking its lip, not a post)
+          const zz = Math.min(z, mid), f = y >= d2 - 2 ? 1 : 0.3, l = a + spr2(zz, 41 + i * 2) * f + (hash(Math.round(z / 3), i + 20, seed + 5) - 0.5) * 3, r = b - spr2(zz, 42 + i * 2) * f - (hash(Math.round(z / 3), i + 29, seed + 5) - 0.5) * 3;
+          return inNotch(x, l, r) ? rock : -1;
+        }, 0, d1, 0, W, d2 + 2, mid + 6);
+      }
     }
   }
   // the churn at the foot

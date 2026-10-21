@@ -72,6 +72,9 @@ test('the woods rustle - softly; the leaves never over the city\'s hum, the rain
   assert.ok(woods.loud < HEAVY_RAIN, `the woods in a gale ${woods.loud.toFixed(1)} dBA, under heavy rain`);
   const half = listen(makeMap({ d: WILD, tile: T.GRASS, forest: (tx) => tx < 60 }));
   assert.ok(half.k.woods < woods.k.woods * 0.8 && half.k.woods > 0.3, `half woods, half meadow: less (${half.k.woods.toFixed(2)} of ${woods.k.woods.toFixed(2)})`);
+  // (under the trees the wind's whoosh is mostly gone - the owner's "ocean sounds in the forest", 2026-10-16)
+  const field = listen(makeMap({ d: WILD, tile: T.GRASS }));
+  assert.ok(woods.max.wind < field.max.wind * 0.5, `the wind under the trees (${woods.max.wind.toFixed(3)}) and out in the open (${field.max.wind.toFixed(3)})`);
   const wet = listen(makeMap({}), { rain: 1 });
   assert.ok(wet.max.rain > 0.15 && wet.max.rain <= BED_MAX.rain, 'rain when it rains');
 });
@@ -86,6 +89,24 @@ test('a river or a lake isn\'t the sea: no swell, no surf, no gulls\' sea - a qu
   const sea = listen(makeMap({ water: (tx) => (tx >= 58 ? 1 : 0) }));
   assert.ok(sea.max.sea > 0.1 && sea.max.surf > 0.1, 'the sea\'s shore: the swell and the surf');
   assert.ok(lake.max.sea < sea.max.sea * 0.6, 'a lake laps, the sea swells');
+});
+
+// The falls and the white water (2026-10-21; the owner, 10-16: "stream or waterfall sound in the forest with no visible
+// source"): a river off at the edge of hearing is barely there; a falls roars at its foot and fades as you walk away;
+// a rapid's white water is heard, less.
+test('a falls roars at its foot and fades away from it; a river 20 tiles off is barely heard; a rapid rushes', () => {
+  const bank = listen(makeMap({ d: WILD, tile: T.GRASS, water: (tx) => (tx >= 56 && tx < 64 ? 2 : 0) }), { x: 66 * 32 });
+  const off = listen(makeMap({ d: WILD, tile: T.GRASS, water: (tx) => (tx >= 56 && tx < 64 ? 2 : 0) }), { x: 84 * 32 });
+  assert.ok(bank.max.flow > 0.03 && off.max.flow < bank.max.flow * 0.3, `the river from its bank (${bank.max.flow.toFixed(3)}) and from 20 tiles off (${off.max.flow.toFixed(3)})`);
+  const fallsMap = () => { const m = makeMap({ d: WILD, tile: T.GRASS, water: (tx, ty) => (tx >= 52 && tx < 68 ? 2 : 0) }); m.natureSites = [{ kind: 'ledgefall', name: 'Test Falls', x: X, y: 50 * 32, falls: { x: X, y: 50 * 32 - 8, w: 16 * 32, drop: 60 } }]; return m; };
+  const foot = listen(fallsMap(), { x: 70 * 32, y: 53 * 32 }), mid = listen(fallsMap(), { x: 70 * 32, y: 62 * 32 }), gone = listen(fallsMap(), { x: 70 * 32, y: 80 * 32 });
+  assert.ok(foot.max.flow > bank.max.flow * 2 && foot.max.flow <= BED_MAX.flow, `the falls roaring at its foot (${foot.max.flow.toFixed(3)}, a river's bank ${bank.max.flow.toFixed(3)})`);
+  assert.ok(mid.max.flow < foot.max.flow * 0.75 && mid.max.flow > bank.max.flow, `fading 12 tiles off (${mid.max.flow.toFixed(3)})`);
+  assert.ok(gone.max.flow < bank.max.flow * 1.05, `30 tiles off, only the river (${gone.max.flow.toFixed(3)})`);
+  const rapidMap = makeMap({ d: WILD, tile: T.GRASS, water: (tx) => (tx >= 56 && tx < 64 ? 2 : 0) });
+  rapidMap.waters = { ch: [{ k: 'river', w: 8, pts: [[60, 20], [60, 100]], r: [[30, 50, 0.8]] }] };
+  const rush = listen(rapidMap, { x: 66 * 32, y: 60 * 32 });
+  assert.ok(rush.max.flow > bank.max.flow * 1.3 && rush.max.flow < foot.max.flow, `the white water (${rush.max.flow.toFixed(3)})`);
 });
 
 test('no bed ever over its level: country, woods, shore, river, city, open sea - day and night, dry and in rain, outdoors and in', () => {

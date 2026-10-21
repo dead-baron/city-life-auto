@@ -1874,7 +1874,7 @@ const SPECIES = {
   young: [FL.youngTree, 26, 114], flowerTree: [FL.flowerTree, 42, 124], magnolia: [FL.magnoliaTree, 44, 118], cherry: [FL.cherryTree, 42, 118], maple: [FL.mapleGreen, 48, 106],
   mapleAutumn: [FL.mapleAutumn, 48, 104], oak: [FL.bigOak, 66, 124], birch: [FL.birchClump, 48, 110], aspen: [FL.aspenGrove, 48, 112], willow: [FL.weepingWillow, 44, 106],
   apple: [FL.appleTree, 40, 92], orange: [FL.orangeTree, 40, 90], olive: [(s) => TR.olive(s, 92, 42), 48, 94], cypress: [(s) => TR.cypress(s, 112, 13), 18, 108],
-  fir: [FL.douglasFir, 38, 134], cedar: [FL.westernRedCedar, 38, 138], pondPine: [FL.ponderosaPine, 32, 138], spruce: [FL.blueSpruce, 34, 122], redwood: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 110, 405],
+  fir: [FL.douglasFir, 38, 134], cedar: [FL.westernRedCedar, 38, 138], pondPine: [FL.ponderosaPine, 32, 138], pine: [FL.ponderosaPine, 32, 138],   /* ('pine': Pine Hills' and the Lakeside course's - drawn as nothing till 2026-10-21) */ spruce: [FL.blueSpruce, 34, 122], redwood: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 110, 405],
   mtnPine: [FL.mountainPine, 36, 150], mtnFir: [FL.mountainFir, 40, 157], whitePine: [FL.whitebarkPine, 50, 114], larch: [FL.goldenLarch, 38, 154],
   mesquite: [FL.mesquite, 48, 116], paloVerde: [FL.paloVerde, 54, 115], joshua: [FL.joshuaTree, 52, 101], deadSnag: [FL.deadSnag, 38, 77],
   coconut: [FL.coconutPalm, 76, 151], royal: [FL.royalPalm, 56, 150], leaning: [FL.leaningPalm, 110, 133], fanSkirt: [FL.fanPalmSkirt, 52, 126], date: [FL.datePalm, 40, 92], desertFan: [FL.desertFanPalm, 38, 78],
@@ -3162,6 +3162,10 @@ function addNature(c, I) {
     if (s.kind === 'rainforest') {   // the falls in the jungle: over a mossy basalt ledge into the pool
       const f = s.falls;
       put(I, { key: `fall:r:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'ledge', w: f.w, drop: f.drop, seed: 13, mist: 0.6 }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.drop + 100, f.w / 2 + 60, 50] });
+      continue;
+    }
+    if (s.kind === 'ledgefall') {   // (the falls chain, part 2: a river over a band of rock in pieces, its water in strands - shared/world3-ledgefalls.js)
+      for (const g of s.segs) put(I, { key: `fall:l:${g.k}:${g.w}:${g.d}:${g.s}:${s.stone || ''}`, recipe: { t: 'fall', kind: g.k, w: g.w, drop: g.d, seed: g.s, mist: 0.5, upper: g.up, streams: g.st, stone: s.stone }, x: g.x, y: g.y + 8, ext: [g.w / 2 + 60, g.d + 120, g.w / 2 + 60, 40] });
       continue;
     }
     if (s.kind === 'tarn') {   // the tarn spilling over its granite ledge

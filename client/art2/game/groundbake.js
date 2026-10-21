@@ -259,13 +259,14 @@ function tileFacts(C) {
     const g = row + M.col(tx), t = M.tiles[g];
     b.tt[k] = t; b.td[k] = M.dist[g]; b.tz[k] = M.zone[g]; b.tdeck[k] = M.deck[g]; b.tres[k] = M.reserve[g]; b.tbld[k] = M.bld[g];
     b.tb[k] = M.land[g] ? wildBiome(M.dist[g], terrainAt(cls, cw, tx, ty)) : 0;
-    b.tw[k] = t === T.WATER || t === T.DEEP || t === T.BRIDGE || t === T.DOCK ? 1 : 0;
+    const lip = t === T.WALL && (b.tres[k] & 96) === 96;   // (a ledge fall's lip: the river over it - shared/world3-ledgefalls.js)
+    b.tw[k] = t === T.WATER || t === T.DEEP || t === T.BRIDGE || t === T.DOCK || lip ? 1 : 0;
     // water kind / land material
     const X = tx * TILE + 16, Y = ty * TILE + 16, D = DISTRICTS[b.td[k]] || DISTRICTS[13], st = D.style, wild = WSTYLE.has(st), bio = b.tb[k];
     let m;
     if ((t === T.WATER || t === T.DEEP) && pools.length && inPools(pools, X, Y)) m = M_.POOL;
     else if ((t === T.WATER || t === T.DEEP) && springs.length && springs.some((e) => ((X - e.x) / e.rx) ** 2 + ((Y - e.y) / e.ry) ** 2 < 1.6)) m = M_.SPRING;
-    else if (t === T.WATER || t === T.DEEP || t === T.BRIDGE) m = M.lake[g] === 2 ? M_.POND : M.lake[g] ? M_.LAKE : !M.land[g] ? (M.river[g] ? M_.RIVER : M_.SEA) : M_.POND;
+    else if (t === T.WATER || t === T.DEEP || t === T.BRIDGE || lip) m = M.lake[g] === 2 ? M_.POND : M.lake[g] ? M_.LAKE : !M.land[g] ? (M.river[g] ? M_.RIVER : M_.SEA) : M_.POND;
     else if (t === T.DOCK && M.walkways && walkways(M).has(g)) m = !M.land[g] ? (M.lake[g] === 2 ? M_.POND : M.lake[g] ? M_.LAKE : M.river[g] ? M_.RIVER : M_.POND) : M_.MEADOW;   // (under a boardwalk's legs: the marsh, its model's planks over it - shared/world3-marsh.js)
     else if (t === T.DOCK) m = runAxis(M, tx, ty, T.DOCK) ? M_.DOCK : M_.DOCKX;
     else if (t === T.GRASS) {
@@ -941,7 +942,7 @@ function rvn(x, y, sc, s) {
 }
 export function tableEdge(t, x, y) {
   const ax = (x - t.x) / t.rx, ay = (y - t.y) / t.ry, a2 = ax * ax, b2 = ay * ay;
-  return (Math.sqrt(Math.sqrt(a2 * a2 + b2 * b2)) * (1 + 0.16 * (rvn(x, y, 21, 7301 + t.s) - 0.5) + 0.06 * (rvn(x, y, 7, 7302 + t.s) - 0.5)) - 1) * Math.min(t.rx, t.ry);
+  return ((0.45 * Math.sqrt(a2 + b2) + 0.55 * Math.sqrt(Math.sqrt(a2 * a2 + b2 * b2))) * (1 + 0.2 * (rvn(x, y, 21, 7301 + t.s) - 0.5) + 0.12 * (rvn(x, y, 48, 7303 + t.s) - 0.5) + 0.06 * (rvn(x, y, 7, 7302 + t.s) - 0.5)) - 1) * Math.min(t.rx, t.ry);
 }
 // pool water: a tiled floor seen through clear turquoise water - grout lines, a dark band of waterline tiles round
 // the edge, lane lines with T-ends on the floor along the pool (pool.lanes lanes along its long side), the deep end
@@ -1578,7 +1579,7 @@ function decor(C, G) {
       const gx = px - PAD, gy = py - PAD;
       if (gx >= 0 && gy >= 0 && gx < CHUNK && gy < CHUNK && !(G.flag[gy * CHUNK + gx] & F_WATER)) continue;   // (a boulder)
       const d = b.dist[i] / 10, w = waterAt(C, X, Y, d, TN);
-      if (!w || w.k === WK.SEA) continue;
+      if (!w || w.k === WK.SEA || b.tt[(Math.floor(Y / TILE) - C.TY0) * TN + Math.floor(X / TILE) - C.TX0] === T.WALL) continue;   // (nor on a ledge fall's lip)
       const still = (w.k === WK.POND || w.k === WK.LAKE || w.k === WK.MARSH || w.fv < 0.2) && !(w.pk > 0.05);   // (a river's calm pocket: no lilies)
       const reedy = vnc(X, Y, 150, seed + 103) + (w.k === WK.MARSH ? 0.25 : w.k === WK.POND ? 0.1 : 0);
       if (w.depth < (w.k === WK.MARSH ? 0.9 : 0.45) && (d < 5 || reedy > 0.55) && h0 < (reedy > 0.55 ? 0.42 : 0.1) * dens) stamp(C, G, coverSprite('reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);

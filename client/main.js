@@ -3693,7 +3693,7 @@ function drawBuoys(view, now) {
     for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { g.fillStyle = (r + c) % 2 ? '#fff' : '#111'; g.fillRect(s.x + 1 + c * 4, s.y - 30 + r * 4, 4, 4); }
     g.font = 'bold 12px monospace'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(race.name, s.x + 1, s.y + 31);
     g.fillStyle = '#fff'; g.fillText(race.name, s.x, s.y + 30);
-    g.font = 'bold 10px monospace'; g.fillStyle = '#ffd36b'; g.fillText(race.kind === 'jetski' ? 'START - jet skis' : 'START - boats', s.x, s.y + 44);
+    g.font = 'bold 10px monospace'; g.fillStyle = '#ffd36b'; g.fillText(`START - ${{ jetski: 'jet skis', kayak: 'kayaks', wheels: 'anything on wheels', dirt: 'motorcycles' }[race.kind] || 'boats'}`, s.x, s.y + 44);
   }
 }
 

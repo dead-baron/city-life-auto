@@ -88,10 +88,13 @@ test('ghost state: leaving with nothing after you - the body waits minutes, then
   players.leave(w, p);
   run(w, GHOST_SECONDS + 5);
   assert.ok(w.entities.has(ped.id), 'still standing there past the 30 s');
+  const at = { x: ped.x, y: ped.y };
   run(w, AWAY_SECONDS - GHOST_SECONDS);
   assert.ok(!w.entities.has(ped.id), 'gone after AWAY_SECONDS');
   assert.equal(prof.cash, 750, 'the cash kept');
-  assert.equal([...w.entities.values()].filter((e) => e.kind === K.BAG).length, 0, 'nothing dropped');
+  // (nothing where the body stood: a street happening's dropped wallet or a fleeing NPC's loot elsewhere in the city
+  // isn't the player's)
+  assert.equal([...w.entities.values()].filter((e) => e.kind === K.BAG && Math.hypot(e.x - at.x, e.y - at.y) < 300).length, 0, 'nothing dropped');
   // left idle, then hurt: 30 s from then, and the drop rule
   const w2 = makeWorld();
   const j2 = joinPlayer(w2, { cash: 400 });

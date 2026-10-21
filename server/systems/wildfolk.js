@@ -201,6 +201,22 @@ export function wildSpots(map, list, taken, h) {
     }
   }
   holds.sort((p, q) => p.r - q.r); shores.sort((p, q) => p.r - q.r);
+  // (the ledge falls' plunge pools - shared/world3-ledgefalls.js: an angler on the bank below each, early)
+  for (const f of map.natureSites || []) {
+    if (f.kind !== 'ledgefall' || !f.falls || map.natureSites.some((g) => g.kind === 'ledgefall' && g.name === f.name && g.step > f.step)) continue;   // (the last ledge's: its pool)
+    const fx = Math.floor(f.falls.x / TILE), fy = Math.floor(f.falls.y / TILE), hw = Math.ceil(f.falls.w / 2 / TILE) + 4;
+    let got = null;
+    for (let dy = 3; dy <= 10 && !got; dy++) for (const side of [1, -1]) {
+      const ty = fy + dy;
+      let tx = fx;
+      while (Math.abs(tx - fx) < hw && map.inside(tx, ty) && WATER(map.tiles[map.idx(tx, ty)])) tx -= side;   // (out from the middle to the bank)
+      if (!map.inside(tx, ty) || !map.inside(tx + side, ty) || WATER(map.tiles[map.idx(tx, ty)]) || !WATER(map.tiles[map.idx(tx + side, ty)])) continue;
+      const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
+      if (!wildAt(map, x, y) || !ok(x, y)) continue;
+      got = { x, y, a: side > 0 ? 0 : Math.PI, r: -1.5 }; break;
+    }
+    if (got) holds.unshift(got);
+  }
   // (the coasts' rock fishing points: an angler on each first - shared/world3-coast.js)
   for (const s of map.natureSites || []) if (s.kind === 'fishpoint' && ok(s.x, s.y)) holds.unshift({ x: s.x, y: s.y, a: s.a ?? Math.PI, r: -2 });
   for (const q of shores) if (q.r < 0.5) holds.push(q);   // (a lake's bank: the anglers' too, now and then)
