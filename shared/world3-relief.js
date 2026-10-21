@@ -529,7 +529,7 @@ export function buildRelief3(m, L, addProp) {
   for (let i = 0; i < N; i++) if (cliff[i] && !keepB[i]) { cliff[i] = 0; cliffs--; }
   for (let i = 0; i < N; i++) if (cliff[i]) { m.tiles[i] = T.WALL; m.reserve[i] |= 32; }
   CLIFFS.set(m, cliff);
-  // the desert's tables (H50): red sandstone all round each rim - its band in arcs of 6 to 13 tiles round the rim (2026-10-21:
+  // the desert's tables (H50): red sandstone all round each rim - its band in arcs of 6 to 13 tiles round the rim (shorter on a small one; 2026-10-21:
   // was a 6-tile grid, a ring of even knobs), each arc's face as tall as the table on the south, two thirds of it east
   // and west, a low lip on the north (the face looks away), each a little taller or lower than the next
   let faces = 0;
@@ -542,7 +542,7 @@ export function buildRelief3(m, L, addProp) {
     band.sort((p, q) => p[0] - q[0] || p[2] - q[2] || p[1] - q[1]);
     const rr = (t.rx + t.ry) / 2;
     for (let j = 0, k = 0; j < band.length; k++) {
-      const span = (6 + Math.floor(hash(t.x + k, t.y, 7313) * 8)) / rr, a0 = band[j][0];
+      const span = (6 + Math.floor(hash(t.x + k, t.y, 7313) * 8)) * Math.min(1, 0.4 + rr / 40) / rr, a0 = band[j][0];
       let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, n = 0, sx = 0, sy = 0;
       for (; j < band.length && band[j][0] < a0 + span; j++) { const [, x, y] = band[j]; n++; sx += x; sy += y; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
       if (n < 4) continue;

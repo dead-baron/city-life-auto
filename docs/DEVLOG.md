@@ -12943,8 +12943,8 @@ noise), each ringed by a necklace of even sandstone knobs (the rim's faces on a 
 `shared/world3-relief.js` tableEdge:
 - **the rim** is rounder, half way to an ellipse, and wavers more: big slow lobes as well as the small ragged ones, so
   no two mesas share an outline.
-- **the faces** go round the rim in arcs of 6 to 13 tiles, each a little taller or lower than the next, instead of the
-  grid's ring of knobs.
+- **the faces** go round the rim in arcs of 6 to 13 tiles (shorter on a small mesa), each a little taller or lower than
+  the next, instead of the grid's ring of knobs.
 - **kept in step**: the bake's copy of the rim (client/art2/game/groundbake.js: the cap rock and the talus) and the dressing's
   check for a table (shared/world3-biomes.js: no boulders on a top) reach out as far as the new rim does.
 
