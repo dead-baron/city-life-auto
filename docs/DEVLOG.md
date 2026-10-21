@@ -13170,3 +13170,20 @@ fire, a seat, a tent and a canoe, the lake all round it.
 
 Tests: the full suite (the falls are drawn by the statics' recipes; their placement and the bake's checks are
 unchanged).
+
+## 2026-10-21 · Nature: the falls roar; a far river fades
+
+- **the water's sound** (`client/sound/ambience.js`; the owner, 2026-10-16: "stream or waterfall sound in the forest
+  with no visible source"):
+  - **a far river**: a river's babble sounded as loud from 24 tiles off as from its bank, whichever way it lay. A
+    river off the top or the bottom of the screen was heard with no water in sight. Now the river's samples count
+    for less the further off they are, and for nothing past 28 tiles. Within 6 tiles it sounds as before.
+  - **a falls roars**: the ledge falls, the tarn's and the creeks' falls, Silver Thread Falls and any other falls a
+    nature site has. The flow bed turns up to about three times a river's babble at the fall's foot (anywhere along
+    its width) and fades to nothing 22 tiles away.
+  - **a rapid's white water** rushes at a little under half that, out to 12 tiles.
+  - The beds' ceilings are unchanged: at its loudest a falls is still under the city's hum.
+
+Tests: test/ambience.test.js - a river from its bank and from 20 tiles off (under a third as loud); a falls at its foot
+(over twice a river's bank, never over the bed's ceiling), 12 tiles off (fading) and 30 tiles off (just the river); a
+rapid's white water between the two.

@@ -27,6 +27,12 @@ export const SURF_LEVEL = 0.32;
 export const BED_DBA = Object.freeze({ city: -25.3, wind: -21.3, leaves: -16.6, sea: -24.3, surf: -28.5, rain: -15, sub: -30.9, fire: -26.6, flow: -19.7, cave: -35 });
 export const BED_MAX = Object.freeze({ city: 0.42, wind: 0.4, leaves: 0.13, sea: 0.5, surf: SURF_LEVEL, rain: 0.22, sub: 0.6, fire: 0.35, flow: 0.3, cave: 0.28 });
 const LEAVES_LEVEL = BED_MAX.leaves, RIVER_LEVEL = 0.07, LAKE_K = 0.3;   // (a river running by: a quiet babble; a lake laps)
+// the falls and the white water (2026-10-21; the owner, 10-16: "stream or waterfall sound in the forest with no visible
+// source"): a river's babble was as loud from 24 tiles off as from its bank, any way you looked - heard off the top or
+// the bottom of the screen with no water in sight - and a falls made no more noise than a quiet reach. Now the river's
+// samples count less the further off they are (none past ROAR.far tiles), and a falls roars: loudest at its foot, gone
+// ROAR.falls tiles away (a rapid half as loud, ROAR.rapid tiles) - the flow bed, turned up
+const ROAR = { level: 0.2, falls: 22, rapid: 12, rapidK: 0.45, far: 28 };
 
 export class Ambience {
   constructor(E) {
@@ -64,9 +70,42 @@ export class Ambience {
     this.gust = 0.7; this.swellPh = R() * 6.28;
     this.next = { ugdrip: 0, rat: 0, flap: 0, scan: 0, bird: 0, cricket: 0, owl: rr(20, 60), dog: rr(20, 60), siren: rr(40, 120), horn: rr(8, 30), gull: rr(5, 15), drop: 0, crackle: 0, surf: 0 };
     this.crickets = [[0, 0], [0, 0], [0, 0]];
-    this.k = { water: 0, sand: 0, green: 0, urban: 0, shore: 0, wx: 0, wild: 0, woods: 0, river: 0, style: '' };
+    this.k = { water: 0, sand: 0, green: 0, urban: 0, shore: 0, wx: 0, wild: 0, woods: 0, river: 0, roar: 0, style: '' };
     this.fires = null;
     this.fire = null;   // the nearest fire (a lit campfire, a burning vehicle): { x, y, d }
+    this.roars = null;
+  }
+  // the map's falls (its nature sites' falls: their foot, as wide as the water) and white water (the rivers' rapids, a
+  // point every few tiles along them), found once - px
+  whiteWater(map) {
+    if (this.roars && this.roars.map === map) return this.roars;
+    const falls = [], rapids = [];
+    for (const s of (map && map.natureSites) || []) if (s && s.falls && Number.isFinite(s.falls.x)) falls.push({ x: s.falls.x, y: s.falls.y + 8, hw: Math.max(16, (s.falls.w || 64) / 2) });
+    for (const c of (map && map.waters && map.waters.ch) || []) {
+      if (!c || !Array.isArray(c.r) || !Array.isArray(c.pts)) continue;
+      let run = 0;
+      for (let j = 1; j < c.pts.length; j++) {
+        const [ax, ay] = c.pts[j - 1], [bx, by] = c.pts[j], l = Math.hypot(bx - ax, by - ay);
+        for (let u = 0; u < l; u += 4) { const s2 = run + u; if (c.r.some(([s0, s1]) => s2 >= s0 && s2 <= s1)) { const t = u / l; rapids.push((ax + (bx - ax) * t + 0.5) * TILE, (ay + (by - ay) * t + 0.5) * TILE); } }
+        run += l;
+      }
+    }
+    this.roars = { map, falls, rapids };
+    return this.roars;
+  }
+  // how loud the white water is where you stand: 0..1
+  roar(map, L) {
+    const W = this.whiteWater(map);
+    let best = 0;
+    for (const f of W.falls) {
+      const dx = Math.max(0, Math.abs(L.x - f.x) - f.hw), dy = L.y - f.y, d = Math.hypot(dx, dy) / TILE;
+      if (d < ROAR.falls) best = Math.max(best, (1 - d / ROAR.falls) * (1 - d / ROAR.falls));
+    }
+    for (let i = 0; i < W.rapids.length; i += 2) {
+      const d = Math.hypot(L.x - W.rapids[i], L.y - W.rapids[i + 1]) / TILE;
+      if (d < ROAR.rapid) best = Math.max(best, ROAR.rapidK * (1 - d / ROAR.rapid) * (1 - d / ROAR.rapid));
+    }
+    return best;
   }
   // the map's campfires, found once
   campfires(map) {
@@ -97,7 +136,7 @@ export class Ambience {
     for (let dy = -24; dy <= 24; dy += 6) for (let dx = -24; dx <= 24; dx += 6) {
       const tx = tx0 + dx, ty = ty0 + dy, t = map.tileAt(tx, ty), q = wet(tx, ty, t); n++;
       if (q === 1 || q === 3) { const kq = q === 1 ? 1 : LAKE_K; w += kq; wx += dx * kq; }
-      else if (q === 2) rv++;
+      else if (q === 2) rv += Math.max(0, 1 - Math.hypot(dx, dy) / ROAR.far);   // (a river off at the edge of hearing counts for little)
       else if (t === T.SAND) s++;
       else if (GREEN.has(t)) { g++; if (cls && cls[Math.floor(ty / TERRAIN_CELL) * cw + Math.floor(tx / TERRAIN_CELL)] === FOREST) wo++; }
       else if (URBAN.has(t)) u++;
@@ -109,6 +148,7 @@ export class Ambience {
     k.water = w / n; k.sand = s / n; k.green = Math.max(g / n, gi / ni); k.urban = u / n;
     k.woods = Math.min(1, wo / n * 1.25 + (k.style === 'park' ? k.green * 0.5 : 0));
     k.river = Math.min(1, Math.max(rv / n, rn / ni) * 3);
+    k.roar = this.roar(map, L);
     k.shore = wi && li ? Math.min(1, (Math.min(wi, li) / ni) * 3.5) : 0;
     k.wx = w ? wx / w / 24 : 0;
   }
@@ -180,7 +220,7 @@ export class Ambience {
     want.surf = open * roof * k.shore * SURF_LEVEL;
     want.rain = sub ? 0 : rain * (inside ? 0.09 : BED_MAX.rain) * (0.85 + 0.15 * this.gust);   // (the server's weather: heard through the roof indoors; it swells a little with the gusts)
     want.sub = sub && !F.ug ? BED_MAX.sub : 0;
-    want.flow = F.ug === 1 ? BED_MAX.flow : F.ug ? 0 : open * roof * k.river * RIVER_LEVEL;   // (the sewer's stream; up top, a river running by)
+    want.flow = F.ug === 1 ? BED_MAX.flow : F.ug ? 0 : open * roof * Math.min(BED_MAX.flow, k.river * RIVER_LEVEL + k.roar * ROAR.level);   // (the sewer's stream; up top, a river running by, a falls roaring)
     want.cave = F.ug === 2 ? BED_MAX.cave : 0;
     want.fire = this.fire && !sub ? Math.pow(Math.max(0, 1 - this.fire.d / 520), 2) * BED_MAX.fire : 0;
     for (const name in want) {
