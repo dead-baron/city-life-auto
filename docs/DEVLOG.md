@@ -12825,3 +12825,14 @@ cliff path"); `shared/world3-coast.js`:
 
 Tests: test/world3coast.test.js - the point's bite table (the three likelier, the rest as on the shore); in World v3 two
 fishing points, on the rock, their rods, the wash off them fishing as the point; the cliff path's fence and telescope.
+
+## 2026-10-21 · The Long Reach's weir: a concrete sill, not a staircase of black squares
+
+The weir beside the lock at Willow Crossing was its crest's wall tiles and nothing more: the river crosses it on a
+diagonal, so it drew as a staircase of bare black squares across the water. Now the crest is a long sill of weathered
+concrete across the river (`client/art2/props-park.js` weir, placed by `shared/world3-water.js` buildLock along the
+crest), its top wet and dark, the water sheeting over its curved downstream face into a band of foam, and its tiles
+are drawn as rubble under it (the designed rock's ground). The crest still blocks boats; the lock beside it is as it
+was.
+
+Tests: test/world3water.test.js - the weir's sill along the crest, its tiles drawn as rubble.
