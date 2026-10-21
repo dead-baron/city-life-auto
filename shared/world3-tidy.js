@@ -13,7 +13,8 @@ import { TILE, T } from './constants.js';
 // LAND: the prop types that need dry ground under them (plants by species: reeds and cattails grow in the water);
 // WET_SP: the plants that stand in water; FENCE: the fence kinds that stop at a road or the water; step: px along a run
 export const TIDY3 = {
-  LAND: new Set(['tree_a', 'tree_b', 'shrub_a', 'flowers_a', 'flowers_big', 'post', 'hayBale', 'hay', 'pbench', 'bench', 'picnic', 'yfence', 'mailbox', 'trough', 'woodpile']),
+  LAND: new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c', 'flowers_a', 'flowers_big', 'cactus', 'redwood', 'rwstump',
+    'post', 'hayBale', 'scarecrow', 'pbench', 'bench', 'bench_a', 'bench_b', 'picnic', 'yfence', 'mailbox', 'trough', 'woodpile']),
   WET_SP: new Set(['reeds', 'cattails', 'lily', 'papyrus', 'mangrove', 'cypress']),
   FENCE: new Set(['wood', 'rail', 'picket', 'iron', 'chain', 'stone']),
   step: 8,
@@ -26,6 +27,7 @@ export function tidyProps3(m) {
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx >= 0 && ty >= 0 && tx < W && ty < HH ? m.tiles[ty * W + tx] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
   const stop = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP || t === T.ROAD || t === T.BRIDGE; };
+  const dockNear = (x, y) => { for (let dy = -48; dy <= 48; dy += 16) for (let dx = -48; dx <= 48; dx += 16) { const t = tileAt(x + dx, y + dy); if (t === T.DOCK || t === T.BRIDGE) return true; } return false; };
   const gone = new Set();
   for (const p of m.props) {
     if (!p) continue;
@@ -33,6 +35,8 @@ export function tidyProps3(m) {
       if (p.sp && R.WET_SP.has(p.sp)) continue;
       // (a yard fence's panel by its middle; anything else by its foot)
       const x = p.t === 'yfence' && p.x1 !== undefined ? (p.x + p.x1) / 2 : p.x, y = p.t === 'yfence' && p.y1 !== undefined ? (p.y + p.y1) / 2 : p.y;
+      // (a post by a jetty is its mooring post: it stands in the water)
+      if (p.t === 'post' && dockNear(p.x, p.y)) continue;
       if (wet(x, y)) { gone.add(p); out.wet++; }
       continue;
     }

@@ -2228,11 +2228,15 @@ function lighthouseTidepools(m, H) {
     m.reserve[i] |= RES;
   }
   for (let ty = cy + 6; ty < cy + 22; ty++) for (let tx = cx - 1; tx <= cx + 1; tx++) { const i = ty * m.w + tx; if (m.tiles[i] === T.GRASS || m.tiles[i] === T.SAND) { m.tiles[i] = T.DIRT; m.reserve[i] |= RES; } }
-  // the keeper's cottage, east of the tower: solid over its footprint
-  const kx = (cx + 8) * TILE, ky = (cy + 2) * TILE;
+  // the keeper's cottage, east of the tower - or on the west, or behind it, where the island's dry ground is (World v3's
+  // Lighthouse Rock has the sea east of the tower: the cottage stood in the shallows): solid over its footprint
+  const dryAt = (tx, ty) => { const i = ty * m.w + tx, t = m.tiles[i]; return tx >= 0 && ty >= 0 && tx < m.w && ty < m.h && m.land[i] && onIsland(tx, ty) && t !== T.WATER && t !== T.DEEP && t !== T.BUILDING && t !== T.ROAD && t !== T.BRIDGE && !(m.bld && m.bld[i] >= 0); };
+  const fits = (ox, oy) => { for (let ty = cy + oy - 2; ty <= cy + oy + 3; ty++) for (let tx = cx + ox - 3; tx <= cx + ox + 3; tx++) if (!dryAt(tx, ty)) return false; return true; };
+  const [ox, oy] = [[8, 2], [-8, 2], [0, -8], [8, -7], [-8, -7]].find(([x, y]) => fits(x, y)) || [8, 2];
+  const kx = (cx + ox) * TILE, ky = (cy + oy) * TILE;
   for (let dy = -22; dy <= 22; dy += 14) for (let dx = -40; dx <= 40; dx += 14) m.addSolidProp(kx + dx, ky + dy - 4, 10);
   H.addProp(m, 'cottage', kx, ky + 26, 0, { w: 84, d: 54 });
-  for (let ty = cy - 1; ty <= cy + 5; ty++) for (let tx = cx + 5; tx <= cx + 11; tx++) m.reserve[ty * m.w + tx] |= RES;
+  for (let ty = cy + oy - 3; ty <= cy + oy + 3; ty++) for (let tx = cx + ox - 3; tx <= cx + ox + 3; tx++) m.reserve[ty * m.w + tx] |= RES;
   H.addProp(m, 'pbench', kx - 70, ky + 50, 0);
   // the tidepool shelf: the island's sand east of the tower, widened two tiles into the grass behind it
   const widen = [];

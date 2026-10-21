@@ -13292,3 +13292,27 @@ Tests: test/world3desert.test.js - the delineators (100 or more along four or mo
 road's shoulder by the asphalt, never on a road, a designed place's ground, a lot or a building); the stock tanks
 (four or more, far apart, out on the range, each with its windmill and trough, the tank and the windmill solid, its
 track out to a road). test/stocktanks.test.js - cows, and only cows, round a stock tank out in the desert.
+
+## 2026-10-21 · World: tidied (the owner's 10-16 clutter list)
+
+The owner, 10-16: "fence posts and hay bales spawning over water; fences across driveways; plants and trees on train
+tracks". A check of the built World v3 found trees, bushes and flowers standing in the water where a river or a shore
+came after them (redwoods in Highland Woods' streams, pines and maples by the lakes), a yard fence running out into
+Liberty Bay, Lighthouse Rock's keeper's cottage and its bench in the shallows, the farm lanes' gate fences running
+along the road's asphalt and across a side road, garden fences cut across by a street, and the wild flowers and
+bushes growing up onto the railway's ballast.
+
+- **the world tidied last** (`shared/world3-tidy.js`, new, the last step of World v3's done hook): anything that needs
+  dry ground (trees, palms, redwoods, bushes, flower beds, cacti, posts, bales, benches, tables, yard fence panels,
+  mailboxes, troughs) and has water under it is taken away, its solids with it. Reeds, cattails and lilies stay in
+  the water, and a jetty's mooring posts stay. A fence run that meets a road, a bridge or the water stops short of
+  it; one with nothing left goes.
+- **the keeper's cottage** (`shared/naturesites.js` lighthouseTidepools): it stands east of the tower where the
+  island's dry ground is there, else west of it or behind it (World v3's Lighthouse Rock has the sea on the east).
+- **the farm gates** (`shared/world3-verges.js`): the gateposts and their fences stand half a tile back off the road
+  (the asphalt's edge isn't the tile's).
+- **the railway's bed** (`client/art2/game/statics.js` railClear): the ground cover keeps off the ballast - no plants
+  within two tiles of a ground-level track, three on its south side, where a plant's sprite would stand up over it.
+
+Tests: test/world3desert.test.js - nothing that needs dry ground in the water anywhere in the world (but a jetty's
+mooring posts), no fence run across a road, a bridge or the water.

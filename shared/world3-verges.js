@@ -137,7 +137,7 @@ export function vergesByHand3(m, H3) {
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (m.tiles[idx(ex + dx, ey + dy)] === T.ROAD) { rdx = dx; rdy = dy; break; }
     const px = (ex + 0.5) * TILE, py = (ey + 0.5) * TILE;
     for (const sd of [-1, 1]) {
-      const gx = px + rdy * sd * 1.9 * TILE, gy = py + rdx * sd * 1.9 * TILE;
+      const gx = px + rdy * sd * 1.9 * TILE - rdx * 0.5 * TILE, gy = py + rdx * sd * 1.9 * TILE - rdy * 0.5 * TILE;   // (half a tile back off the road: the asphalt's edge isn't the tile's)
       laneProps.push(['post', gx, gy, 5, { h: 44 }]);
       laneProps.push(['fenceline', gx, gy, 0, { kind: 'wood', tx: rdy * sd * L.fence * TILE, ty: rdx * sd * L.fence * TILE }]);
     }

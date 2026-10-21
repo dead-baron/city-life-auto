@@ -190,7 +190,8 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
   // the water anywhere in the world, and no fence run crosses a road, a bridge or the water
   console.log('tidy', JSON.stringify(m.world3.tidy));
   const wetT = (x, y) => { const t = m.tiles[Math.floor(y / TILE) * W + Math.floor(x / TILE)]; return t === T.WATER || t === T.DEEP; };
-  const inWater = m.props.filter((p) => p && TIDY3.LAND.has(p.t) && !(p.sp && TIDY3.WET_SP.has(p.sp)) && (p.t === 'yfence' && p.x1 !== undefined ? wetT((p.x + p.x1) / 2, (p.y + p.y1) / 2) : wetT(p.x, p.y)));
+  const dockBy = (x, y) => { for (let dy = -48; dy <= 48; dy += 16) for (let dx = -48; dx <= 48; dx += 16) { const t = m.tiles[Math.floor((y + dy) / TILE) * W + Math.floor((x + dx) / TILE)]; if (t === T.DOCK || t === T.BRIDGE) return true; } return false; };
+  const inWater = m.props.filter((p) => p && TIDY3.LAND.has(p.t) && !(p.sp && TIDY3.WET_SP.has(p.sp)) && !(p.t === 'post' && dockBy(p.x, p.y)) && (p.t === 'yfence' && p.x1 !== undefined ? wetT((p.x + p.x1) / 2, (p.y + p.y1) / 2) : wetT(p.x, p.y)));
   check(inWater.length === 0, `${inWater.length} things in the water that need dry ground (${inWater.slice(0, 4).map((p) => [p.t, p.x / TILE | 0, p.y / TILE | 0])})`);
   const across = m.props.filter((p) => {
     if (!p || p.t !== 'fenceline' || !TIDY3.FENCE.has(p.kind || 'iron')) return false;
