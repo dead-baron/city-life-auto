@@ -714,7 +714,7 @@ function manageDensity(world) {
   if (world.npcCount >= world.npcBudget * 0.6) return;
   for (const a of anchors) {
     // out in the open country it's quiet: a few people, where they belong (spawnCountry)
-    const country = !!wildlife.wildStyle(world.map, a.x, a.y);
+    const country = !!wildlife.wildStyle(world.map, a.x, a.y) || openGround(world.map, a.x, a.y);
     const target = country ? (night ? COUNTRY_TARGET_NIGHT : COUNTRY_TARGET_DAY) : Math.round((night ? CIV_TARGET_NIGHT : CIV_TARGET_DAY) * crowdAt(world, a.x, a.y, night));
     let count = 0;
     for (const e of world.query(a.x, a.y, 1200, K.PED)) if (e.npc && !e.dead) count++;
@@ -728,10 +728,33 @@ function manageDensity(world) {
       for (const b of anchors) if ((b.x - x) ** 2 + (b.y - y) ** 2 < 400 * 400) { tooClose = true; break; }
       if (tooClose || inAnyView(world, x, y, 64)) continue; // just off screen: they walk into view
       if (style && !isTurf(world.map, x, y)) { if (spawnCountry(world, x, y, style, night)) break; continue; }
+      if (!peopleBelongAt(world.map, x, y)) {   // (the town's people where the town is - not on a river's grassy bank with nothing round it)
+        const os = OPEN_STYLES[(world.map.districtAt(x, y) || {}).style];   // (the open coast and the rocks: as quiet as the country)
+        if (os && countryFolk(world, x, y) < (night ? COUNTRY_TARGET_NIGHT : COUNTRY_TARGET_DAY) && spawnCountry(world, x, y, os, night)) break;
+        continue;
+      }
       spawnByDemographic(world, x, y, night);
       break;
     }
   }
+}
+
+// The town's people where the town is (the owner, 10-16: "NPCs spawning where there's no development (by a river,
+// nothing around)"): on a pavement, a plaza, a lot or a dock, in a park, or on the grass, the sand or the dirt only with
+// something built close by - a street, a path, a building - within DEV_R px. World v3's coast and rocks are town
+// districts (beach, rocky) that run on for miles past the last street, with open banks and greens in the towns too:
+// out there it's as quiet as the country (OPEN_STYLES: spawnCountry - a beachcomber, a hiker, folk round a site).
+const DEV_R = 8 * TILE, DEV_T = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.ROAD, T.BUILDING, T.DOCK, T.FLOOR, T.BRIDGE]);
+const OPEN_STYLES = { beach: 'beach', rocky: 'wild', water: 'beach' };
+const openGround = (map, x, y) => !!OPEN_STYLES[(map.districtAt(x, y) || {}).style] && !peopleBelongAt(map, x, y);
+const countryFolk = (world, x, y) => world.query(x, y, 1200, K.PED).filter((e) => e.npc && e.npc.country && !e.dead).length;
+export function peopleBelongAt(map, x, y) {
+  const t = map.tileAtPx(x, y);
+  if (DEV_T.has(t)) return true;
+  const d = map.districtAt(x, y);
+  if (d && d.style === 'park') return true;
+  for (let dy = -DEV_R; dy <= DEV_R; dy += TILE) for (let dx = -DEV_R; dx <= DEV_R; dx += TILE) if (DEV_T.has(map.tileAtPx(x + dx, y + dy))) return true;
+  return false;
 }
 
 // Out in the open country, people where they belong: campers at the campgrounds, farmers round the
@@ -744,7 +767,7 @@ const COUNTRY_FOLK = {
   venue: [['casual', 1]], farm: [['farmer', 1]], home: [['farmer', 5], ['casual', 4], ['senior', 1]], shop: [['casual', 6], ['farmer', 3], ['hiker', 1]],
   air: [['casual', 3], ['construction', 2]],
 };
-const LONER = { wild: 'hiker', rural: 'farmer', desert: 'nomad' };
+const LONER = { wild: 'hiker', rural: 'farmer', desert: 'nomad', beach: 'casual' };
 function spawnCountry(world, x, y, style, night) {
   const place = wildlife.placeNear(world.map, x, y, 520);
   let arche;

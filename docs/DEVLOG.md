@@ -13399,3 +13399,20 @@ sand, seagrass, boulders), with nothing lying on it.
 Tests: test/wrecks.test.js - the art (hull, rim and holes, a sloop's mast, nothing where none lies);
 test/world3coast.test.js - wrecks in the lakes and the sea, each in open shallow water out in the country, on the map,
 far apart.
+
+## 2026-10-21 · Fix: the town's people only where the town is
+
+The owner, 10-16: "NPCs spawning where there's no development (by a river, nothing around)". The server spawned its
+town crowd (executives, sweepers, socialites and the rest) on any walkable ground in a town district. World v3's
+coast and rocks are town districts (beach, rocky) that run for miles past the last street, so a player stood on an
+empty beach had a crowd of office workers turning up round them.
+
+- **where the town's people spawn** (`server/systems/npc.js` peopleBelongAt): on a pavement, a plaza, a lot, a dock
+  or a bridge, in a park, or on open grass, sand or dirt with a street, a path or a building within 8 tiles. In a
+  town that's still almost everywhere; out on the open coast it's nowhere.
+- **the open coast and the rocks are as quiet as the country:** past the last street, the beach, the rocks and the
+  lakeshores get the country's head count and the country's people (spawnCountry): folk round a site, and now and
+  then a lone beachcomber or a hiker on the rocks.
+
+Tests: test/townfolk.test.js - the rule on a made-up map (by the street, in the park, never out on open grass); and
+a player stood on World v3's open coast for 30 s sees none of the town crowd, only a few country folk.
