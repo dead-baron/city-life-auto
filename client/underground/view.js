@@ -139,8 +139,9 @@ class UgView {
         g.fillStyle = '#4e3520'; for (let k = 0; k < 4; k++) g.fillRect(px + 1, py + 2 + k * 8, TILE - 2, 1);
         g.fillStyle = '#8a6440'; g.fillRect(px + 2, py + 3 + Math.floor(hh(tx, ty, 7) * 3) * 8, TILE - 6, 2);
       } else if (v === C.CASCADE) {   // where the river steps down: the ledge and the white water over it
-        g.fillStyle = '#1e3a48'; g.fillRect(px, py, TILE, TILE);
-        g.fillStyle = '#b8d0d8'; for (let k = 0; k < 5; k++) g.fillRect(px + Math.floor(hh(tx, ty, 150 + k) * 28), py + Math.floor(hh(tx, ty, 160 + k) * 26), 4, 5);
+        g.fillStyle = '#4e7a8a'; g.fillRect(px, py, TILE, TILE);
+        g.fillStyle = '#9ec0cc'; for (let k = 0; k < 9; k++) g.fillRect(px + Math.floor(hh(tx, ty, 150 + k) * 28), py + Math.floor(hh(tx, ty, 160 + k) * 24), 3 + (k & 1) * 2, 6);
+        g.fillStyle = '#e8f2f6'; for (let k = 0; k < 6; k++) g.fillRect(px + Math.floor(hh(tx, ty, 170 + k) * 29), py + Math.floor(hh(tx, ty, 180 + k) * 27), 3, 3);
       }
     }
     // the ladders' feet under the manholes
@@ -213,7 +214,7 @@ class UgView {
       const v = cellAtPx(L, (tx + 0.5) * TILE, (ty + 0.5) * TILE);
       if (v === C.CASCADE) {   // white water tumbling over the ledge
         const h = hh(tx, ty, 78);
-        for (let k = 0; k < 3; k++) { const ph = (now * 1.8 + h + k / 3) % 1; g.fillStyle = `rgba(230,240,245,${0.55 * (1 - ph)})`; g.fillRect(tx * TILE + ((h * 13 + k * 11) % 26), ty * TILE + ph * TILE, 3, 5); }
+        for (let k = 0; k < 6; k++) { const ph = (now * 1.8 + h + k / 6) % 1; g.fillStyle = `rgba(240,248,250,${0.8 * (1 - ph)})`; g.beginPath(); g.arc(tx * TILE + ((h * 13 + k * 7) % 28) + 2, ty * TILE + ph * TILE, 2 + ph * 3, 0, 6.283); g.fill(); }
         continue;
       }
       if (v !== C.STREAM && v !== C.RIVER) continue;

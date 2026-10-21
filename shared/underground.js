@@ -556,7 +556,7 @@ function veins(map, L) {
     const chosen = pickN(rnd, spots, n * 3);
     for (let k = 0; k + 2 < chosen.length && out.length < VEINS_MAX; k += 3) {
       const q = chosen[k], dist = len(q.x - CITY.x, q.y - CITY.y), r = rnd();
-      const ore = ores ? ores[Math.min(ores.length - 1, Math.floor(r * ores.length))] : oreFor(dist, depth, r);
+      const ore = ores ? ores[(k / 3) % ores.length] : oreFor(dist, depth, r);   // (a chamber's own: round its list in turn)
       out.push({ i: out.length, x: Math.round(q.x), y: Math.round(q.y), ug, ore, need: ORE_BY_ID[ore].tier, where, alts: [q, chosen[k + 1], chosen[k + 2]].map((s) => ({ x: Math.round(s.x), y: Math.round(s.y) })) });
     }
   };
