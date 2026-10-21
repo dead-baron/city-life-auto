@@ -2,7 +2,8 @@
 // meadow, points built out, reeds and lilies in the bays - and Kestrel Beach on the east shore: its sand, the lifeguard
 // chair, umbrellas, the swim area's floats and raft, blankets on the grass; and Willow Valley's farm ponds
 // (shared/world3-farmponds.js); its countryside (shared/world3-verges.js): green banks between the fields and the
-// rivers, power lines along the county roads. One World v3 build.
+// rivers, power lines along the county roads; (part 2) the fields square at the valley's edge, the farm lanes. One
+// World v3 build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
@@ -84,4 +85,26 @@ test('World v3: Kestrel Lake\'s south shore wanders (bays, points, reeds), Kestr
   assert.ok(V.poles >= 300 && poles.length >= 300, `poles along the county roads (${V.poles})`);
   assert.ok(poles.every((p) => { const t = m.tiles[Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)]; return t === T.GRASS || t === T.DIRT || t === T.FIELD; }), 'every pole on open ground');
   assert.ok(poles.filter((p) => p.wx !== undefined).length >= poles.length * 0.6, 'wired pole to pole');
+  // (part 2) the fields square at the valley's edge: none runs out of the valley
+  const outOfValley = m.fields.filter((f) => {
+    const x0 = Math.round(f.x / TILE), y0 = Math.round(f.y / TILE), x1 = Math.round((f.x + f.w) / TILE), y1 = Math.round((f.y + f.h) / TILE);
+    if (m.dist[Math.floor((y0 + y1) / 2) * W + Math.floor((x0 + x1) / 2)] !== 49) return false;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = y * W + x; if (m.land[i] && m.dist[i] !== 49) return true; }
+    return false;
+  });
+  assert.equal(outOfValley.length, 0, `no field runs out of the valley (${outOfValley.length})`);
+  assert.ok(V.squared >= 10, `fields squared at the valley's edge (${V.squared})`);
+  // (part 2) a lane from every farmyard (it reaches some 13 tiles past the house) to a road: a grass centre strip between dirt ruts, gateposts and a mailbox at the road
+  const farms = m.buildings.filter((b) => b && b.kind === 'farmstead' && m.dist[Math.floor(b.ty + b.th / 2) * W + Math.floor(b.tx + b.tw / 2)] === 49);
+  assert.ok(farms.length >= 10 && V.lanes === farms.length, `a lane to every farmstead (${V.lanes} of ${farms.length})`);
+  assert.ok(V.laneTiles > 60 * V.lanes, `the lanes' ground (${V.laneTiles} tiles)`);
+  const laneAt = (x, y) => { const i = y * W + x; return m.tiles[i] === T.GRASS && (m.reserve[i] & 160) === 160; };
+  for (const b of farms) {
+    let near = false;
+    for (let y = b.ty - 16; y <= b.ty + b.th + 16 && !near; y++) for (let x = b.tx - 16; x <= b.tx + b.tw + 16; x++) if (laneAt(x, y)) { near = true; break; }
+    assert.ok(near, `a lane from the farmstead at ${b.tx},${b.ty}`);
+  }
+  const roadNear = (p, r) => { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (m.tiles[(ty + dy) * W + tx + dx] === T.ROAD) return true; return false; };
+  const boxes = m.props.filter((p) => p && p.t === 'mailbox' && m.dist[Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)] === 49 && roadNear(p, 4));
+  assert.ok(boxes.length >= V.lanes, `a mailbox at each lane's gate (${boxes.length})`);
 });
