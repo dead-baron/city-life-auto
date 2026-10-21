@@ -12853,3 +12853,16 @@ the sand. A nature site and on the map. Mirage Camp stands north of it as it was
 
 Tests: test/world3desert.test.js - Mirage Lake's rim, its green belt and palms, its beach, jetty and rowboat. test/world3wild.test.js's
 check for a dry wash by the desert's camps counts a wash's gravel only (sand flagged 128), not the green belt's lush grass.
+
+## 2026-10-21 · Nature: the falls chain, part 1 - the falls in view, drawn bigger
+
+From the handcraft research's 4.3 ("each fall: a plunge pool, mist, a trail to a viewpoint"):
+- **the falls in view** (`shared/world3-falls.js`, new, World v3's done hook): the camera looks down from the south and
+  a tree's sprite stands up the screen from its foot, so the giants south of Redwood Creek Falls hid it whole - only a
+  scrap of white showed between the trunks. Now no tree stands where it would hide a fall (the redwoods out to as far
+  as they stand tall and as wide as their crowns spread, the other trees a few tiles), so Redwood Creek Falls, Summit
+  Tarn's, Fern Gorge's and Silver Thread Falls show from the trail and the pool below them.
+- **drawn bigger** (`client/art2/game/statics.js` FALLS_LOOK): Summit Tarn's fall at least 96 px wide and 76 high (was 70
+  and 40: a small white box at the outlet), with more mist; the creeks' falls at least 56 high (was 34).
+
+Tests: test/world3woods.test.js - the falls looked at, no tree hiding any of them.
