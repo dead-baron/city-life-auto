@@ -8,6 +8,7 @@
 //   - on the island below Twin Falls, the falls in front of you (wade or paddle over: shared/world3-ledgefalls.js);
 //   - in the Red Rock Desert's canyon below Slickrock Falls, on the sand across the pool from the bench, and in the
 //     woods by Mossy Ledge Falls' pool (shared/world3-ledgefalls.js: the falls' `camp`).
+//   - on the wild coasts' beaches, the few most out of the way (beachCamps3, below).
 // Each one: its ground cleared round the fire (dirt, or the sand left as it is), a fire ring (some still burning), seats
 // (logs; driftwood on a beach), a ring of stones, and a few things left as if someone had just moved on - a tent, a
 // woodpile, a lantern on its post, a cooler and camp chairs. A campfire like any other (server/systems/campfires.js:
@@ -27,6 +28,7 @@ export const CAMPS3 = {
     beach: { seats: 3, driftwood: true, cooler: true, chairs: 2, lantern: true },
     canyon: { seats: 2, driftwood: true, tent: true, cooler: true, chairs: 1, lantern: true },   // (sun-bleached wood for seats)
     woods: { seats: 2, tent: true, woodpile: true, lantern: true },
+    riders: { seats: 2, tents: 2, cooler: true, chairs: 3, lantern: true },   // (the dirt-bike riders' camp: shared/world3-dirt.js - their bikes parked by it)
   },
 };
 
@@ -87,13 +89,60 @@ export function camp3(m, tx, ty, kind, water, put, clear) {
   // what's left about: behind the fire (away from the water) the tent, the woodpile and the lantern; by the seats a
   // cooler and chairs; a canoe pulled up toward the water
   const back = water + Math.PI;
-  if (K.tent) put('tent', X + C(back + 0.5) * 2.3 * TILE, Y + S(back + 0.5) * 2.0 * TILE, 10, { v: Math.floor(h(30) * 3) });
+  for (let k = 0; k < (K.tents || (K.tent ? 1 : 0)); k++) put('tent', X + C(back + 0.5 - k * 1.1) * (2.3 + k * 0.4) * TILE, Y + S(back + 0.5 - k * 1.1) * (2.0 + k * 0.4) * TILE, 10, { v: Math.floor(h(30 + k * 7) * 3) });
   if (K.woodpile) put('woodpile', X + C(back - 0.7) * 1.9 * TILE, Y + S(back - 0.7) * 1.7 * TILE, 6);
   if (K.lantern) put('lantern', X + C(back - 0.15) * 1.5 * TILE, Y + S(back - 0.15) * 1.3 * TILE, 4);
   if (K.cooler) put('cooler', X + C(water + 1.3) * 1.5 * TILE, Y + S(water + 1.3) * 1.3 * TILE, 4, { v: Math.floor(h(31) * 3) });
-  for (let k = 0; k < (K.chairs || 0); k++) { const a = water + (k ? -0.75 : 0.75); put('chair', X + C(a) * 1.7 * TILE, Y + S(a) * 1.5 * TILE, 4, { a: Math.round((a + Math.PI) * 100) / 100, v: Math.floor(h(32 + k) * 4) }); }   // (facing the fire)
+  for (let k = 0; k < (K.chairs || 0); k++) { const a = water + [0.75, -0.75, 0][k % 3]; put('chair', X + C(a) * 1.7 * TILE, Y + S(a) * 1.5 * TILE, 4, { a: Math.round((a + Math.PI) * 100) / 100, v: Math.floor(h(32 + k) * 4) }); }   // (facing the fire)
   if (K.canoe) put('canoe', X + C(water) * 2.4 * TILE, Y + S(water) * 2.1 * TILE, 0, { a: Math.round((water + Math.PI / 2) * 100) / 100, c: Math.floor(h(34) * 3) });
   const spot = { x: Math.round(X), y: Math.round(Y), kind: 'camp', where: kind, lit, hand: true };
   (m.restSpots ||= []).push(spot);
   return spot;
+}
+
+// Beach camps (2026-10-21; the owner's "secluded spots ... beaches", N11's beach bonfire): on the wild coasts' sand -
+// the woods', the rocks', the desert's, the country's - where no road or building is within `quiet` tiles and no place
+// within `poi`: a fire `back` tiles up the beach from the water, driftwood seats and chairs facing the sea, a cooler, a
+// lantern. The `n` most out-of-the-way, `apart` tiles from each other; nothing names them on the map - they're found.
+// For the whole-world build only (shared/world3-world.js's done hook, after the coasts).
+export const BEACH_CAMPS = { n: 3, apart: 600, quiet: 20, far: 32, poi: 40, fire: 40, back: [4, 7], step: 3 };
+export function beachCamps3(m, H3) {
+  const out = { camps: [] };
+  if (!H3 || !H3.addProp) return out;
+  const B = BEACH_CAMPS, W = m.w, HH = m.h, styles = m._distStyle || [], OK = new Set(['wild', 'rocky', 'desert', 'rural']);
+  const inF = (x, y) => x >= 0 && y >= 0 && x < W && y < HH;
+  const sea = (x, y) => { if (!inF(x, y)) return false; const i = y * W + x, t = m.tiles[i]; return (t === T.WATER || t === T.DEEP) && !m.land[i] && !(m.river && m.river[i]) && !(m.lake && m.lake[i]); };
+  const fires = (m.props || []).filter((p) => p && p.t === 'campfire'), pois = m.pois || [];
+  const cands = [];
+  for (let y = 4; y < HH - 4; y += B.step) for (let x = 4; x < W - 4; x += B.step) {
+    const i = y * W + x;
+    if (m.tiles[i] !== T.SAND || !m.land[i] || !OK.has(styles[m.dist[i]])) continue;
+    // (a shore tile: the sea beside it; which way the sea lies from here - its tiles round it, averaged)
+    let sx = 0, sy = 0, n = 0;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (sea(x + dx, y + dy)) { sx += dx; sy += dy; n++; }
+    if (n < 3) continue;
+    const l = Math.sqrt(sx * sx + sy * sy);
+    if (l < 1) continue;
+    const ux = sx / l, uy = sy / l;
+    for (let b = B.back[0]; b <= B.back[1]; b++) {
+      const cx = Math.round(x - ux * b), cy = Math.round(y - uy * b);
+      if (!inF(cx, cy) || m.tiles[cy * W + cx] !== T.SAND || !campFits(m, cx, cy, 32) || !campQuiet(m, cx, cy, B.quiet)) continue;
+      const X = (cx + 0.5) * TILE, Y = (cy + 0.5) * TILE;
+      if (pois.some((q) => Math.abs(q.x - X) < B.poi * TILE && Math.abs(q.y - Y) < B.poi * TILE) || fires.some((f) => Math.abs(f.x - X) < B.fire * TILE && Math.abs(f.y - Y) < B.fire * TILE)) break;
+      cands.push({ x: cx, y: cy, a: Math.atan2(uy, ux), sc: (campQuiet(m, cx, cy, B.far) ? 2 : 0) + hh(cx, cy, 4720) });
+      break;
+    }
+  }
+  cands.sort((p, q) => q.sc - p.sc || p.y - q.y || p.x - q.x);
+  const P = [], clear = new Set(), put = (t, x, y, r = 0, ex = null) => P.push([t, Math.round(x), Math.round(y), r, ex]);
+  for (const c of cands) {
+    if (out.camps.length >= B.n) break;
+    if (out.camps.some((q) => Math.abs(q.tx - c.x) + Math.abs(q.ty - c.y) < B.apart)) continue;
+    const spot = camp3(m, c.x, c.y, 'beach', c.a, put, clear);
+    out.camps.push({ ...spot, tx: c.x, ty: c.y });
+  }
+  if (clear.size && H3.removeProps) H3.removeProps(m, (x, y) => clear.has(Math.floor(y / TILE) * W + Math.floor(x / TILE)));
+  for (const [t, x, y, r, ex] of P) H3.addProp(m, t, x, y, r, ex);
+  out.cands = cands.length;
+  return out;
 }

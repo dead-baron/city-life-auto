@@ -81,6 +81,14 @@ test('World v3: the Red Rock MX Park - the course, its berms and tabletops, the 
   const rest = m.props.find((p) => p && p.t === 'pergola' && Math.hypot(p.x - 5584 * TILE, p.y - 1648 * TILE) < 2400);
   assert.ok(rest && m.props.some((p) => p && p.t === 'otank' && Math.hypot(p.x - rest.x, p.y - rest.y) < 300) && m.props.some((p) => p && p.t === 'picnic' && Math.hypot(p.x - rest.x, p.y - rest.y) < 100), 'the rest stop: the ramada, its table, the tank');
   assert.ok(D.washTiles >= 100, `the wash: ${D.washTiles} tiles`);
+  // the riders' camp off marker 2 (shared/world3-camps.js): its fire to sit by, tents, chairs, their dirt bikes and pickup
+  const rc = D.camp, mk2 = m.props.find((p) => p && p.t === 'textsign' && p.text === '2');
+  assert.ok(rc && rc.marker === 2 && Math.hypot(rc.x - mk2.x, rc.y - mk2.y) < 16 * TILE && m.restSpots.some((q) => q.x === rc.x && q.y === rc.y && q.where === 'riders'), `the riders' camp by marker 2 (${JSON.stringify(rc)})`);
+  const nearC = (t, r) => m.props.filter((p) => p && p.t === t && Math.hypot(p.x - rc.x, p.y - rc.y) < r).length;
+  assert.ok(nearC('campfire', 8) === 1 && nearC('tent', 4 * TILE) === 2 && nearC('chair', 3 * TILE) === 3, 'its fire, two tents, three chairs');
+  const parked = m.parking.filter((p) => p.ride && Math.hypot(p.x - rc.x, p.y - rc.y) < 7 * TILE);
+  assert.ok(parked.filter((p) => p.model === 'dirtbike').length === 2 && parked.some((p) => p.model === 'pickup'), 'their dirt bikes and pickup');
+  for (const p of parked) { const i = m.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE)); assert.ok(m.land[i] && (m.tiles[i] === T.SAND || m.tiles[i] === T.DIRT || m.tiles[i] === T.GRASS), `${p.model} parked on open ground`); }
   assert.ok(enduro.berms >= 4 && enduro.jumps === 3 && enduro.fords >= 1 && enduro.bridges === 1, `the enduro's berms ${enduro.berms}, jumps ${enduro.jumps}, fords ${enduro.fords}, bridges ${enduro.bridges}`);
   assert.equal(m.jumps.filter((J) => J.name === 'Highland Enduro').length, 3, 'its jump line');
   const es = m.natureSites.find((q) => q.name === 'Highland Enduro');

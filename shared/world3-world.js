@@ -48,6 +48,7 @@ import { coastByHand3 } from './world3-coast.js';
 import { mirageByHand3 } from './world3-mirage.js';
 import { fallsInView3 } from './world3-falls.js';
 import { ledgeFalls3 } from './world3-ledgefalls.js';
+import { beachCamps3 } from './world3-camps.js';
 import { woodsLake3 } from './world3-woodslake.js';
 import { wildEdges3 } from './world3-edges.js';
 import { riverRun3 } from './world3-riverrun.js';
@@ -266,6 +267,7 @@ export function worldOpts(asked) {
       m.world3.peaks = buildPeaks3(m, H3);   // (Granite Peaks by hand, part 1: the alpine meadows, the stone hut and its spring, the summits' cairns, the Summit Trail - world3-peaks.js)
       m.world3.tarn = tarnByHand3(m, H3);   // (Granite Peaks by hand, part 2: Summit Tarn's shore, beach and camp; Eagle Crag - world3-tarn.js)
       m.world3.coast = coastByHand3(m, H3);   // (the coasts by hand, part 1: North Cape's tidepool shelf, its blowhole and seal rock; Redwood Cove dug back into the woods, its horn's tidepools - world3-coast.js)
+      m.world3.beachCamps = beachCamps3(m, H3);   // (secluded camps on the wild coasts' beaches, the few most out of the way - world3-camps.js)
       m.world3.mirage = mirageByHand3(m, H3);   // (the desert by hand, part 1: Mirage Lake's rim, its green belt and palms, its white beach and jetty - world3-mirage.js)
       m.world3.ledges = ledgeFalls3(m, H3);   // (the falls chain, part 2: the ledge falls at the top of four steep reaches, their plunge pools and viewpoints - world3-ledgefalls.js)
       m.world3.woodsLake = woodsLake3(m, H3);   // (Highland Woods by hand, part 3: Silver Thread Lake's shore, islets and boathouse - world3-woodslake.js)

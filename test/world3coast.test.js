@@ -123,4 +123,19 @@ test('World v3: North Cape\'s tidepool shelf and blowhole, Redwood Cove dug back
   let bare = 0;
   for (const [x0, y0, x1, y1] of COAST3.rubble) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = at(x, y); if (m.tiles[i] === T.WALL && !(m.reserve[i] & 32) && m.dist[i] >= 47 && m.dist[i] <= 54) bare++; }
   assert.ok(C.rubble >= 200 && bare === 0, `the cliff bands' bare rock drawn as rubble (${C.rubble}, ${bare} left)`);
+  // the beach camps (shared/world3-camps.js beachCamps3): a few secluded ones on the wild coasts' sand, far apart, the
+  // sea in front of each, no road or building near; a fire to sit by, driftwood seats, a lantern
+  const BC = m.world3.beachCamps;
+  console.log('beach camps', JSON.stringify(BC));
+  assert.ok(BC && BC.camps.length >= 2, `the beach camps (${BC && BC.camps.length})`);
+  for (const c of BC.camps) {
+    const at2 = `${c.tx}, ${c.ty}`;
+    assert.ok(m.tiles[at(c.tx, c.ty)] === T.SAND && m.restSpots.some((q) => q.x === c.x && q.y === c.y && q.where === 'beach'), `${at2}: on the sand, a rest spot`);
+    let s2 = false; for (let dy = -9; dy <= 9 && !s2; dy++) for (let dx = -9; dx <= 9; dx++) if (sea(c.tx + dx, c.ty + dy)) { s2 = true; break; }
+    assert.ok(s2, `${at2}: the sea in front of it`);
+    let built = 0; for (let dy = -18; dy <= 18; dy++) for (let dx = -18; dx <= 18; dx++) { const t = m.tiles[at(c.tx + dx, c.ty + dy)]; if (t === T.ROAD || t === T.BUILDING || t === T.SIDEWALK) built++; }
+    assert.equal(built, 0, `${at2}: nothing built near`);
+    assert.ok(near('campfire', c.x, c.y, 8).length === 1 && near('driftwood', c.x, c.y, 3 * TILE).length >= 2 && near('lantern', c.x, c.y, 3 * TILE).length === 1, `${at2}: the fire, driftwood seats, a lantern`);
+  }
+  for (let i = 0; i < BC.camps.length; i++) for (let j = i + 1; j < BC.camps.length; j++) assert.ok(Math.abs(BC.camps[i].tx - BC.camps[j].tx) + Math.abs(BC.camps[i].ty - BC.camps[j].ty) >= 600, 'far apart');
 });

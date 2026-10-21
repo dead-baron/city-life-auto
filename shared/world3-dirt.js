@@ -13,7 +13,8 @@
 // And the long rides (Nature-C1-B):
 //   - the Red Rock Trail: a marked two-track out of the park's east gate round Lookout Mesa, up its jeep track to the
 //     top and down again, across a boulder-strewn dry wash to a rest stop under the big mesa (a shade ramada over a
-//     picnic table, a water tank, a rail fence) and back - numbered markers 1 to 4 at its turns;
+//     picnic table, a water tank, a rail fence) and back - numbered markers 1 to 4 at its turns; a riders' camp off
+//     marker 2, their dirt bikes and pickup parked by it (2026-10-21; NA1-C's party camp at the trail's end);
 //   - in Highland Woods the Highland Enduro: a trailhead car park off Highland Road (the riders' trucks, a map board,
 //     the trail's sign) and the single-track loop from it through the pines and over the rocks above the lake - its
 //     bermed corners, an upturned root plate, a log ride beside a fallen trunk, a jump line, a creek splash (the
@@ -23,6 +24,7 @@
 // shapes and integer hashes; Math's trig only inside generateCity (withDeterministicMath).
 import { TILE, T } from './constants.js';
 import { routeTiles } from './world3-trails.js';
+import { camp3, campFits } from './world3-camps.js';
 
 const RES = 32;
 export const MX = {
@@ -39,7 +41,7 @@ const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0,
 // the long rides: their via points (tiles), a closed loop back to the start; markers numbered at the points marked
 export const RIDES = [
   { name: 'Red Rock Trail', kind: 'route', district: 50, from: 'mx', hw: 40, slope: 24, lump: 22, wander: 1.6, pts: [[5372, 1694, 1], [5430, 1722], [5401, 1652, 2], [5430, 1722], [5520, 1702], [5584, 1648, 3], [5520, 1702], [5482, 1772, 4], [5340, 1726]],
-    wash: { pts: [[5508, 1650], [5522, 1690], [5516, 1730], [5534, 1772]], hw: 3 }, rest: 3 },
+    wash: { pts: [[5508, 1650], [5522, 1690], [5516, 1730], [5534, 1772]], hw: 3 }, rest: 3, camp: 2 },
   { name: 'Highland Enduro', kind: 'enduro', district: 47, start: [978, 1338], hw: 24, slope: 40, lump: 14, wander: 0.8, pts: [[1012, 1302], [1068, 1282], [1090, 1226], [1050, 1186], [1000, 1208], [986, 1262]],
     creek: { pts: [[982, 1232], [1030, 1246], [1075, 1240], [1120, 1255], [1176, 1262]], hw: 1.6 } },
 ];
@@ -360,6 +362,23 @@ function ride(m, H3, R, out) {
       P('otank', cx + 130, cy - 20, 30, { r: 28, h: 52, c: '#9a9ea2' }); P('trough', cx + 130, cy + 30, 6);
       P('fenceline', cx - 140, cy + 100, 0, { kind: 'wood', tx: 280, ty: 0 });
       P('textsign', cx - 120, cy - 70, 0, { text: 'REST STOP', bg: '#6a3a1e', fg: [250, 230, 190], z: 28 });
+    }
+  }
+  // the riders' camp at its marked point (R.camp; shared/world3-camps.js): off the track on open ground, its fire,
+  // tents, chairs and coolers, the riders' dirt bikes parked by it (to take) and their pickup
+  if (R.camp) {
+    const mk = marks.find((q) => q[0] === R.camp);
+    const k = mk ? nearestS(path[mk[1]][0], path[mk[1]][1]) : -1;
+    let at = null;
+    if (k >= 0) for (const off of [170, 200, 230, 260, 300]) { for (const sd of [1, -1]) { const [nx, ny] = side(k), tx = Math.floor((S[k][0] + nx * sd * (R.hw + off)) / TILE), ty = Math.floor((S[k][1] + ny * sd * (R.hw + off)) / TILE); if (campFits(m, tx, ty)) { at = { tx, ty, sd, nx, ny }; break; } } if (at) break; }
+    if (at) {
+      const campClear = new Set(), water = Math.atan2(-at.ny * at.sd, -at.nx * at.sd);   // (facing the track, the way they came)
+      const spot = camp3(m, at.tx, at.ty, 'riders', water, P, campClear);
+      if (H3.removeProps) H3.removeProps(m, (x, y) => campClear.has(Math.floor(y / TILE) * W + Math.floor(x / TILE)));
+      const X = spot.x, Y = spot.y, ux = Math.cos(water), uy = Math.sin(water), vx = -uy, vy = ux;
+      for (let j = 0; j < 2; j++) (m.parking ||= []).push({ x: Math.round(X + vx * (3.4 + j * 1.4) * TILE + ux * 0.6 * TILE), y: Math.round(Y + vy * (3.4 + j * 1.4) * TILE + uy * 0.6 * TILE), a: Math.round(water * 1000) / 1000, model: 'dirtbike', ride: 1 });
+      (m.parking ||= []).push({ x: Math.round(X - vx * 4.2 * TILE), y: Math.round(Y - vy * 4.2 * TILE), a: Math.round((water + Math.PI / 2) * 1000) / 1000, model: 'pickup', ride: 1 });
+      out.camp = { x: X, y: Y, marker: R.camp };
     }
   }
   if (R.wash) {

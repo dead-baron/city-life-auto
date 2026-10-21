@@ -13190,3 +13190,27 @@ unchanged).
 Tests: test/ambience.test.js - a river from its bank and from 20 tiles off (under a third as loud); a falls at its foot
 (over twice a river's bank, never over the bed's ceiling), 12 tiles off (fading) and 30 tiles off (just the river); a
 rapid's white water between the two; the wind under the trees under half what it is in the open.
+
+## 2026-10-21 · Nature: beach camps
+
+- **the beach camps** (`shared/world3-camps.js` beachCamps3, World v3's done hook after the coasts; the owner's
+  "secluded spots ... beaches", N11's beach bonfire): a few camps on the wild coasts' sand, in the woods', the rocks',
+  the desert's or the country's districts.
+  - **where**: no road or building within 20 tiles, no place on the map within 40, no other campfire within 40. The
+    most out of the way win (nothing built within 32 tiles), at least 600 tiles apart, three at most.
+  - **the camp**: a fire 4-7 tiles up the beach from the water, driftwood seats and two camp chairs facing the sea, a
+    cooler and a lantern. It's a campfire to light and sit by, and a rest spot.
+  - They aren't named on the map: they're there to be found.
+
+Tests: test/world3coast.test.js - at least two beach camps, each on the sand with the sea in front of it, nothing built
+within 18 tiles, its fire, driftwood seats and lantern; far apart.
+
+## 2026-10-21 · Nature: the riders' camp on the Red Rock Trail
+
+- **the riders' camp** (`shared/world3-dirt.js` RIDES' `camp`, `shared/world3-camps.js` kind `riders`; NA1-C's "a
+  dirt-bike trail from the wash out to a party camp"): off the Red Rock Trail at marker 2, on open ground a few tiles
+  from the track, facing it. It has a fire to sit by, two tents, three camp chairs, a cooler and a lantern. The
+  riders' two dirt bikes are parked beside it and their pickup behind it, and you can take them (`m.parking`).
+
+Tests: test/world3dirt.test.js - the camp by marker 2 and its rest spot, its fire, two tents, three chairs, the two
+dirt bikes and the pickup parked on open ground by it.
