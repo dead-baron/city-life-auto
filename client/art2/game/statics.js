@@ -3149,6 +3149,8 @@ function makeMesas(r) {
 // ================================================================================================
 // designed nature places (shared/naturesites.js): what stands on the map's tiles there
 // ================================================================================================
+// the nature sites' falls as drawn (2026-10-21, the falls chain): at least this wide and this high (px), the mist
+const FALLS_LOOK = { tarn: { w: 96, drop: 76, mist: 0.6 }, creek: { drop: 56, mist: 0.5 } };
 function addNature(c, I) {
   for (const s of c.M.natureSites || []) {
     if (s.kind === 'oasis') {   // the spring down the cliff into the pool
@@ -3163,8 +3165,8 @@ function addNature(c, I) {
       continue;
     }
     if (s.kind === 'tarn') {   // the tarn spilling over its granite ledge
-      const f = s.falls;
-      put(I, { key: `fall:t:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.drop, seed: 9, mist: 0.4 }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.drop + 100, f.w / 2 + 60, 50] });
+      const f = s.falls, w = Math.max(f.w, FALLS_LOOK.tarn.w), drop = Math.max(f.drop, FALLS_LOOK.tarn.drop);   // (2026-10-21: a fall you can see from the shore - its ledge face up into the tarn's lip)
+      put(I, { key: `fall:t:${w}:${drop}`, recipe: { t: 'fall', kind: 'twoTier', w, drop, seed: 9, mist: FALLS_LOOK.tarn.mist }, x: f.x, y: f.y + 8, ext: [w / 2 + 60, drop + 100, w / 2 + 60, 50] });
       continue;
     }
     if (s.kind === 'river') {   // Willow River (concept W1): the falls between basalt walls, the old stone bridge, the barn
@@ -3198,8 +3200,8 @@ function addNature(c, I) {
     // the gorge's basalt walls either side of the falls
     for (const cw of s.gorge || []) put(I, vitem(`cliffw:${cw.len}:${cw.h}:${cw.seed}`, 'cliffWall', [cw.len, cw.h, 60, cw.seed], cw.x, cw.y, 0));
     // the falls: water over a mossy basalt ledge, facing south, its foot on the pool's north shore
-    const f = s.falls;
-    put(I, { key: `fall:${f.w}:${f.drop}`, recipe: { t: 'fall', w: f.w, drop: f.drop, seed: 5, mist: 0.35 }, x: Math.round(f.x), y: Math.round(f.y + 10), ext: [f.w / 2 + 60, f.drop + 90, f.w / 2 + 60, 40] });
+    const f = s.falls, fd = Math.max(f.drop, FALLS_LOOK.creek.drop);   // (2026-10-21: the creek's fall over its ledge, a little higher)
+    put(I, { key: `fall:${f.w}:${fd}`, recipe: { t: 'fall', w: f.w, drop: fd, seed: 5, mist: FALLS_LOOK.creek.mist }, x: Math.round(f.x), y: Math.round(f.y + 10), ext: [f.w / 2 + 60, fd + 90, f.w / 2 + 60, 40] });
     lightAt(I, f.x, f.y + 20, 10, 120, [0.75, 0.9, 1], 0.5, 'sign', 0);   // (the white water catches the light)
     // the footbridge across the creek below the pool
     const fb = s.footbridge, fh = qa(fb.a, 16);

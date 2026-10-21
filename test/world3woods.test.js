@@ -10,6 +10,7 @@ import { T, TILE } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { fallsOf3 } from '../shared/world3-relief.js';
 import { WOODS3 } from '../shared/world3-trails.js';
+import { FALLS3 } from '../shared/world3-falls.js';
 import { habitatAt } from '../server/systems/wildlife.js';
 import { prepare } from '../tools/world3-build.mjs';
 
@@ -49,6 +50,13 @@ test('World v3: Highland Woods - the falls, the trails and their furniture, the 
     check(band <= 6, `rock out over the lake west of the falls: ${band} tiles`);
     const threads = m.props.filter((p) => p && p.t === 'coastfall' && p.x >= F.lip.x0 * TILE && p.x <= (F.lip.x1 + 1) * TILE);
     check(threads.length >= 10 && threads.some((p) => p.w >= 44), `the veil: ${threads.length} threads`);
+  }
+  // 2b. the falls in view (shared/world3-falls.js): no tree standing south of a fall where its sprite would hide it
+  check(m.world3.fallsView && m.world3.fallsView.falls >= 3, `the falls looked at (${m.world3.fallsView && m.world3.fallsView.falls})`);
+  for (const s of m.natureSites.filter((q) => FALLS3.kinds.has(q.kind) && q.falls)) {
+    const f = s.falls, w = Math.max(f.w || 64, 96);
+    const hiding = m.props.filter((p) => p && FALLS3.tall.re.test(p.t) && p.y > f.y - TILE && p.y < f.y + (FALLS3.tall.giant.test(p.t) ? FALLS3.tall.reach : FALLS3.tall.near) * TILE && Math.abs(p.x - f.x) < w / 2 + (FALLS3.tall.giant.test(p.t) ? FALLS3.side.giant : FALLS3.side.tree) * TILE);
+    check(hiding.length === 0, `${s.name}: ${hiding.length} trees hiding its fall`);
   }
   // 3. the banks wander along the straight reaches
   check(m.world3.banks && m.world3.banks.wob > 500, `the straight reaches' banks: ${m.world3.banks && m.world3.banks.wob} tiles built out`);
