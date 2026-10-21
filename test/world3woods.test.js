@@ -145,6 +145,17 @@ test('World v3: Highland Woods - the falls, the trails and their furniture, the 
   check(WL.isles >= 2 && WL.pines >= WL.isles * 2, `islets with pines: ${WL.isles}, ${WL.pines}`);
   const isleTrees = m.props.filter((p) => p && p.t === 'tree_a' && (p.sp === 'pondPine' || p.sp === 'fir' || p.sp === 'spruce') && m.land[Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)] && (() => { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); let wet = 0; for (const [dx, dy] of [[12, 0], [-12, 0], [0, 12], [0, -12]]) { const t = m.tiles[(ty + dy) * W + tx + dx]; if (t === T.WATER || t === T.DEEP) wet++; } return wet === 4; })());
   check(isleTrees.length >= WL.isles, `the islets' pines out in the water: ${isleTrees.length}`);
+  // the camp on the biggest islet (shared/world3-camps.js): a fire to sit by, seats, a tent, a canoe pulled up; water
+  // all round (paddle over)
+  const ic = WL.camp;
+  check(ic && ic.where === 'island' && m.restSpots.includes(ic), `the islet's camp: ${JSON.stringify(ic)}`);
+  if (ic) {
+    const has = (t) => m.props.some((p) => p && p.t === t && Math.hypot(p.x - ic.x, p.y - ic.y) < 4 * TILE);
+    check(has('campfire') && has('log') && has('tent') && has('canoe'), 'the fire, a seat, a tent and a canoe by it');
+    const tx = Math.floor(ic.x / TILE), ty = Math.floor(ic.y / TILE);
+    const ringed = [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dy]) => { for (let k = 1; k < 30; k++) { const i = (ty + dy * k) * W + tx + dx * k; if (m.lake[i] && (m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP)) return true; } return false; });
+    check(ringed, 'water all round it');
+  }
   check(WL.boathouse && WL.boathouse.poi >= 0 && WL.boathouse.spots >= 2, `the boathouse and its hire: ${JSON.stringify(WL.boathouse)}`);
   if (WL.boathouse) {
     const [sx, sy] = WL.boathouse.shore;

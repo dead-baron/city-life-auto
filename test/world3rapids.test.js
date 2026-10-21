@@ -26,6 +26,7 @@ function standIn(W, H, lines, hAt) {
   }
   return m;
 }
+const near = (props, t, q, r) => props.filter((p) => p && p.t === t && Math.hypot(p.x - q.x, p.y - q.y) < r).length;
 const wet = (m, x, y) => { const i = Math.round(y) * m.w + Math.round(x); return m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP; };
 
 test('rapids where the land falls fast; an eddy below, hugging the bank; a pool on the outside of a bend; none by a bridge', () => {
@@ -204,6 +205,18 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   assert.ok(m.props.some((p) => p && p.t === 'tree_a' && Math.abs(p.x - (k0 + k1 + 1) / 2 * TILE) < (k1 - k0) * TILE && p.y > tby && p.y < tby + 8 * TILE), 'pines on the knoll');
   const decks = m.props.filter((p) => p && p.t === 'viewdeck' && Math.abs(p.y - tby) < 14 * TILE && Math.abs(p.x - tmid) < 80 * TILE);
   assert.ok(decks.length === 2 && decks.some((p) => p.x < ta.falls.x) && decks.some((p) => p.x > tb.falls.x), 'an overlook on each bank');
+  // the secluded camps (shared/world3-camps.js): on the island below Twin Falls, and by the pools of the falls that ask
+  // for one - a fire to sit by (a rest spot), seats, a lantern; out of the way of the roads
+  assert.ok(K.camp && (LF.camps || []).includes('Twin Falls') && LF.camps.length >= 2, `the falls' camps (${LF.camps})`);
+  for (const name of LF.camps) {
+    const f = sites.filter((q) => q.name === name).pop(), spot = (m.restSpots || []).find((q) => q.kind === 'camp' && Math.hypot(q.x - f.falls.x, q.y - f.falls.y) < Math.max(40 * TILE, f.falls.w));
+    assert.ok(spot && ['bar', 'canyon', 'woods'].includes(spot.where), `${name}: its camp, a rest spot`);
+    const fire = m.props.find((p) => p && p.t === 'campfire' && p.x === spot.x && p.y === spot.y);
+    assert.ok(fire && fire.rest && near(m.props, 'log', spot, 3 * TILE) + near(m.props, 'driftwood', spot, 3 * TILE) >= 2 && near(m.props, 'lantern', spot, 3 * TILE) === 1, `${name}: the fire, the seats, the lantern`);
+    assert.ok(m.land[Math.floor(spot.y / TILE) * W + Math.floor(spot.x / TILE)], `${name}: the camp on dry land`);
+  }
+  const twinCamp = m.restSpots.find((q) => q.where === 'bar');
+  assert.ok(twinCamp && twinCamp.x > ta.falls.x && twinCamp.x < tb.falls.x && twinCamp.y > tby, 'the Twin Falls camp on the island below them');
   // the Redwood River Run (shared/world3-riverrun.js): the kayak hire's landing at the put-in in the woods, the take-out
   // above the bay; the current runs from the one to the other
   const RR = m.world3.riverRun;

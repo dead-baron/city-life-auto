@@ -3230,6 +3230,7 @@ function restSpot(m, H, c, trail) {
 // rocky islet) goes again - its props painted placeholders, every other prop keeping its index.
 export function pruneRestSpots(m) {
   m.restSpots = (m.restSpots || []).filter((s) => {
+    if (s.hand) return true;   // (laid by hand where it is: shared/world3-camps.js)
     if (m.buildings.every((b) => Math.hypot((b.tx + b.tw / 2) * TILE - s.x, (b.ty + b.th / 2) * TILE - s.y) - Math.max(b.tw, b.th) * TILE / 2 >= REST.built) && m.pois.every((q) => Math.hypot(q.x - s.x, q.y - s.y) >= REST.built)) return true;
     for (const p of s._items || []) { const i = m.props.indexOf(p); if (i >= 0) dropProp(m, i); }
     return false;

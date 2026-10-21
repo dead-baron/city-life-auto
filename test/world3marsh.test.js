@@ -44,6 +44,14 @@ test('World v3: the Egret Marsh Boardwalk - out over the marsh, the hide, the pl
   // the canoe hire at the dock: kayaks waiting on the open water by the canoes, handed back there
   const R = m.rentals.find((q) => q.name === MARSH.hire), cn = near('canoe', P[0][0], P[0][1], 900)[0];
   assert.ok(R && B.hire >= 1 && R.models.includes('kayak') && m.pois.some((q) => q.id === R.poi && q.kind === 'rental'), `the canoe hire (${B.hire})`);
+  // the Egret Marsh Paddle: from the kayaks out through the channels and back to the dock, gates on the open water
+  const race = m.races.find((r) => r.name === MARSH.race.name);
+  assert.ok(race && race.kind === 'kayak' && B.race && race.cps.length >= 5, `the paddle race (${JSON.stringify(B.race)})`);
+  assert.ok(Math.hypot(race.start.x - R.spots[0].x, race.start.y - R.spots[0].y) < TILE && Math.hypot(race.cps[race.cps.length - 1].x - race.start.x, race.cps[race.cps.length - 1].y - race.start.y) < 8 * TILE, 'from the dock and back to it');
+  for (const c of race.cps) assert.equal(m.tiles[m.idx(Math.floor(c.x / TILE), Math.floor(c.y / TILE))], T.WATER, `a gate on the water at ${c.x}, ${c.y}`);
+  const farG = Math.max(...race.cps.map((c) => Math.hypot(c.x - race.start.x, c.y - race.start.y))) / TILE;
+  assert.ok(farG > 30, `out across the marsh (${farG | 0} tiles at the furthest)`);
+  assert.ok(m.pois.some((q) => q.kind === 'race' && q.label === race.name), 'on the map as a race');
   for (const sp of R.spots) assert.ok(m.tiles[m.idx(Math.floor(sp.x / TILE), Math.floor(sp.y / TILE))] === T.WATER && Math.hypot(sp.x - cn.x, sp.y - cn.y) < 8 * TILE, `a kayak waiting on the water by the dock at ${sp.x}, ${sp.y}`);
   // the legs' planks on the reed islands drawn as the marsh's ground under the boardwalk (m.walkways), and nothing else
   // on any of the planks

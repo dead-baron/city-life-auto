@@ -14,7 +14,7 @@
 //   knoll"): in Highland Woods below the fire lookout, where the wide river splits round an island. The island's head
 //   is a knoll of granite with pines on it and the river falls off both its sides: a narrow fall in the west arm, a
 //   wide one in the east. Two fenced overlooks face each other across the gorge, a footbridge crosses the narrow arm
-//   below, and there are golden aspens and fallen logs on the banks.
+//   below, and there are golden aspens and fallen logs on the banks; a camp on the island below looks up at the falls.
 // Each: the lip a row of rock from bank to bank (drawn as the water over it; boats stop at it, a swimmer goes down it
 // and can't come back up - shared/ledges.js), the falls drawn over it (client/art2/game/statics.js
 // addNature: 'ledgefall'), mist off its foot (client/art2/game/waterlife.js), a calm plunge pool below it where the big
@@ -25,17 +25,19 @@
 // Deterministic: arithmetic and sqrt.
 import { TILE, T } from './constants.js';
 import { RAPIDS } from './world3-rapids.js';
+import { camp3, campFits, campQuiet } from './world3-camps.js';
 
 // near: a tile by the top of the steep reach (the rapid starting nearest it, within 16 tiles); drop: px; steps: ledges
 // in a staircase, gap tiles apart down the water; stone: the rock ('sand': red sandstone; else basalt); knoll: the falls
-// where an island splits the river - one either side of its rocky head
+// where an island splits the river - one either side of its rocky head; camp: a camp of that kind
+// (shared/world3-camps.js) on the bank by the pool, across from the bench
 export const LEDGES3 = [
   { name: 'Long Ledge Falls', near: [2516, 1522], drop: 64 },
   { name: 'Granite Steps', near: [1606, 896], drop: 44, steps: 3, gap: 9 },
   { name: 'Sandpiper Falls', near: [5603, 2727], drop: 56 },
-  { name: 'Slickrock Falls', near: [5409, 2480], drop: 60, stone: 'sand' },
+  { name: 'Slickrock Falls', near: [5409, 2480], drop: 60, stone: 'sand', camp: 'canyon' },
   { name: 'Willow River Falls', near: [1384, 1856], drop: 52 },
-  { name: 'Mossy Ledge Falls', near: [1355, 591], drop: 40 },
+  { name: 'Mossy Ledge Falls', near: [1355, 591], drop: 40, camp: 'woods' },
   { name: 'Twin Falls', near: [1211, 1223], drop: 60, knoll: true },
 ];
 const KNOLL = { arm: 5, gap: [6, 30], below: 6, above: 8, max: 900, deck: 4 };   // (tiles: the narrowest arm; the rock between; the knoll's rock below the lip and above it; the most of it; an overlook's deck)
@@ -102,7 +104,7 @@ export function ledgeFalls3(m, H3) {
   // a knoll's falls: the island's head between the two arms turned to granite with pines on it, a plunge pool below
   // each fall, a footbridge over the narrower arm below, an overlook on each bank facing the other across the gorge
   const knoll = (F, c, arms, ly) => {
-    const [A, B] = arms, K = { rock: 0, pools: 0, decks: 0, bridge: 0 };
+    const [A, B] = arms, K = { rock: 0, pools: 0, decks: 0, bridge: 0, camp: null };
     // the rock: the island's land from its tip to KNOLL.below rows under the lip, the puddles in it filled - between the
     // falls' ends (under a fall the ground stays open: its drop - shared/ledges.js - is the lip alone)
     const rock = new Set(), st = [], plainAt = (i) => m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT || m.tiles[i] === T.SAND;
@@ -176,6 +178,16 @@ export function ledgeFalls3(m, H3) {
       }
     }
     if (K.decks) out.benches++;
+    // a camp on the island below, as near the falls as there's room, looking up at them (shared/world3-camps.js)
+    for (let y = ly + KNOLL.below + 4; y <= ly + KNOLL.below + 40 && !K.camp; y++) {
+      const ra = runAt(y, (A[0] + A[1]) / 2), rb = runAt(y, (B[0] + B[1]) / 2);
+      if (!ra || !rb || ra[1] >= rb[0]) continue;
+      const mid = (ra[1] + rb[0]) / 2;
+      for (let d = 0; d <= (rb[0] - ra[1]) / 2 && !K.camp; d++) for (const x of d ? [Math.round(mid - d), Math.round(mid + d)] : [Math.round(mid)]) {
+        if (K.camp || !campFits(m, x, y)) continue;
+        K.camp = [x, y]; camp3(m, x, y, 'bar', -Math.PI / 2, (t, px, py, r, ex) => P.push([t, px, py, r, ex]), clear); (out.camps ||= []).push(F.name);
+      }
+    }
     (out.knolls ||= []).push({ name: F.name, ...K });
   };
   const clear = new Set(), P = [];
@@ -189,7 +201,7 @@ export function ledgeFalls3(m, H3) {
     }
     if (!best) continue;
     const { c, S, r } = best, Lc = S[S.length - 1], steps = F.steps || 1, gap = F.gap || 9;
-    let last = -1, made = 0, s = r[0] + 2, arms = null;
+    let last = -1, made = 0, s = r[0] + 2, arms = null, lastLy = 0;
     for (let k = 0; k < steps; k++, s += gap) {
       // (down the reach to where the water runs toward the camera - the falls face south - and a row across it is the
       // channel's own, not a junction's: within half again its width)
@@ -210,6 +222,7 @@ export function ledgeFalls3(m, H3) {
       // the lip: a row of rock across the water from bank to bank (boats stop at it; a swimmer goes down it and can't come
       // back up: shared/ledges.js) - under the falls, so the bake draws it as the river's water (reserve 64|32 on rock)
       const ly = Math.round(cy), lips = arms || [[x0, x1]];
+      lastLy = ly;
       lips.forEach(([x0, x1], j2) => {
         for (let x = x0; x <= x1; x++) { const i = idx(x, ly); m.tiles[i] = T.WALL; if (m.lake) m.lake[i] = 0; m.reserve[i] |= LIP | 4; out.lip++; }
         // the falls over it: a few wide pieces along it, each its water split into strands by low ribs of rock (and the
@@ -278,6 +291,19 @@ export function ledgeFalls3(m, H3) {
       P.push(['textsign', bx + seat.dir * 52, by + 20, 0, { text: F.name.toUpperCase(), bg: '#5a3a22', fg: [250, 230, 180], z: 30 }]);
       for (let dy = -2; dy <= 2; dy++) for (let dx = -3; dx <= 3; dx++) clear.add(idx(Math.round(seat.x) + dx, seat.y + dy));
       out.benches++;
+    }
+    // a camp by the pool (F.camp): on open ground 6-30 tiles from it, away from the bench and any road, looking at the
+    // falls
+    if (F.camp) {
+      const [qx, qy] = ptAt(c.pts, S, last + 1 + pr + 1.5);
+      let best2 = null;
+      for (let dy = -30; dy <= 30; dy++) for (let dx = -30; dx <= 30; dx++) {
+        const x = Math.round(qx) + dx, y = Math.round(qy) + dy, d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 6 || d > 30 || y < lastLy - 2 || (seat && Math.abs(x - seat.x) + Math.abs(y - seat.y) < 14) || !campFits(m, x, y) || !campQuiet(m, x, y, 12)) continue;
+        const sc = d + (seat && Math.sign(x - qx) === seat.dir ? 20 : 0);   // (the other bank, if there's room)
+        if (!best2 || sc < best2.sc) best2 = { x, y, sc };
+      }
+      if (best2) { camp3(m, best2.x, best2.y, F.camp, Math.atan2(qy - best2.y, qx - best2.x), (t, px, py, r, ex) => P.push([t, px, py, r, ex]), clear); (out.camps ||= []).push(F.name); }
     }
   }
   if (clear.size && H3.removeProps) H3.removeProps(m, (x, y) => clear.has(Math.floor(y / TILE) * W + Math.floor(x / TILE)));

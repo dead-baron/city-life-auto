@@ -13117,13 +13117,41 @@ not a drop), pines on the knoll, an overlook on each bank; every ledge-falls che
 water, the falls' fish in the pool, a bench and the sign) for both. The pocket-spot check now counts only the calm
 pockets: a plunge pool is the falls' own spot.
 
-## 2026-10-21 · Nature: kayaks to hire at the Egret Marsh
+## 2026-10-21 · Nature: kayaks to hire at the Egret Marsh, and the Egret Marsh Paddle
 
 - **the canoe hire** (`shared/world3-marsh.js` MARSH.hire; the research's 4.5, "a canoe launch and canoe trail"): the
   Egret Marsh Boardwalk's canoe dock now hires out kayaks. The desk is where the pier leaves the boardwalk, and the
   kayaks wait on the open water beyond the two canoes. Paddle the channels between the reed islands, past the herons,
   the beavers' lodge and dam and the lilies, then hand the kayak back at the dock (any rental dock takes it:
   `server/systems/rentals.js`). The hire's own note says so.
+- **the Egret Marsh Paddle** (`MARSH.race`, `server/systems/races.js` kind `'kayak'`): a race from the hire's kayaks.
+  The route goes out through the channels as far as 240 tiles of paddling take you, then back to the dock by another
+  channel where there is one, or the same way back if not. The beavers' dam is in the way, so the route goes round it.
+  - **the gates** are on the open water every 30 tiles, each moved to the channel's middle; the finish is back at the
+    dock.
+  - **only kayaks qualify**: the prize is $200 a racer, the winner's share.
 
 Tests: test/world3marsh.test.js - the hire at the dock with kayaks, its point on the map, each kayak waiting on open
-water by the canoes.
+water by the canoes; the paddle race from the dock and back to it, its gates on the water, out across the marsh, on
+the map.
+
+## 2026-10-21 · Nature: secluded camps
+
+- **the camps** (`shared/world3-camps.js`, new; the owner's "secluded spots with a campfire and log seats", task #396):
+  hand-laid camps where few go, each by something worth looking at and each with a way in.
+  - **Silver Thread Lake**: on the biggest pine islet, a canoe pulled up by the fire. Paddle over from the boathouse
+    (`shared/world3-woodslake.js`).
+  - **Twin Falls**: on the island below the falls, as near them as there's room, looking up at the knoll between the
+    two curtains. Wade or paddle over (`shared/world3-ledgefalls.js`).
+  - **Slickrock Falls** (the desert canyon) and **Mossy Ledge Falls** (the woods): on the bank by the pool, across
+    from the bench, at least 12 tiles from any road (`LEDGES3`'s `camp`).
+  - Each camp has its ground cleared round a fire ring (some still burning), seats facing the view (logs, or
+    sun-bleached driftwood in the canyon) and a loose ring of stones. By kind, there's a tent, a woodpile, a lantern on
+    its post (lit at night), a cooler and camp chairs facing the fire.
+  - Each is an ordinary campfire (`server/systems/campfires.js`: light it, sit by it to heal) and a rest spot
+    (`m.restSpots`: the fireflies come at night). Hand-laid camps keep their rest spot when the generic ones near a
+    building or a place are pruned (`shared/naturesites.js` pruneRestSpots).
+
+Tests: test/world3rapids.test.js - the camps at Twin Falls (on the island below the falls) and at least one other falls,
+each a rest spot with its fire, seats and lantern on dry land. test/world3woods.test.js - the islet's camp with its
+fire, a seat, a tent and a canoe, the lake all round it.

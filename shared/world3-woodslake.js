@@ -4,13 +4,15 @@
 // had left it: one smooth blob, the forest floor to a clean edge, nothing on it. Now:
 // - its shore wanders - small bays dug into the forest floor, points out into the water - in slow waves (never near the
 //   falls, the outlet, a trail, a road or a bridge); a pine or a boulder on each point, the bays' shallows reedy;
-// - three rocky islets out in the deep water, a rim of pebbles and boulders round each, pines on them;
+// - three rocky islets out in the deep water, a rim of pebbles and boulders round each, pines on them; on the biggest
+//   a camp, a canoe pulled up by its fire (shared/world3-camps.js: paddle over from the boathouse);
 // - the Silver Thread Boathouse on the south shore: a timber boat shed over the water, a plank jetty out into the lake
 //   with canoes along it and a lamp at its end, a bench on the bank, and the canoe hire - rowboats and the dock's
 //   motorboat (server/systems/rentals.js: the rental's own models); named on the map.
 // For the whole-world build only (shared/world3-world.js's done hook, after the trails and the rapids). Deterministic:
 // arithmetic, integer hashes, sqrt.
 import { TILE, T } from './constants.js';
+import { camp3, campFits } from './world3-camps.js';
 
 const RES = 32, KEEP = 4, LUSH = 128;
 const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
@@ -126,8 +128,19 @@ export function woodsLake3(m, H3) {
       m.tiles[i] = f > 0.72 ? T.SAND : T.GRASS; m.land[i] = 1; m.lake[i] = 0; m.river[i] = 0; m.dist[i] = landD; if (m.zone) m.zone[i] = landZ; m.reserve[i] |= RES | (f > 0.72 ? LUSH : 0);   // (the rim: pebbles - shingle, sand flagged 128)
       water.delete(i); changed.add(i); out.isleTiles++;
     }
+    // the biggest one's camp (shared/world3-camps.js): its fire a little off the middle, looking out over the water
+    let cp = null;
+    if (s === isles[0]) {
+      const want = [s.x, s.y + s.r * 0.3];
+      for (const [x, y] of tiles.filter((t) => t[2] < 0.6).sort((p, q) => Math.hypot(p[0] - want[0], p[1] - want[1]) - Math.hypot(q[0] - want[0], q[1] - want[1]) || p[1] - q[1] || p[0] - q[0])) {
+        if (!campFits(m, x, y, RES)) continue;
+        cp = [x, y]; out.camp = camp3(m, x, y, 'island', x === s.x && y === s.y ? Math.PI / 2 : Math.atan2(y - s.y, x - s.x), put, changed);
+        break;
+      }
+    }
+    const nearCamp = (x, y, r) => cp && Math.hypot(x - cp[0], y - cp[1]) < r;
     // boulders round the rim, pines on the middle (fewer on a small one)
-    const rim = tiles.filter((t) => t[2] > 0.72), mid = tiles.filter((t) => t[2] < 0.55);
+    const rim = tiles.filter((t) => t[2] > 0.72 && !nearCamp(t[0], t[1], 4.5)), mid = tiles.filter((t) => t[2] < 0.55 && !nearCamp(t[0], t[1], 4.5));
     for (let k = 0; k < Math.min(rim.length, 3 + s.r); k++) { const [x, y] = rim[Math.floor(hh(k, s.x, 4407) * rim.length)]; put('boulder', (x + 0.5) * TILE, (y + 0.5) * TILE, 8, { s: 18 + Math.round(hh(k, s.y, 4408) * 18), style: 'granite', moss: hh(k, x, 4409) < 0.5 ? 1 : 0 }); }
     const nP = Math.max(1, Math.round(s.r * 0.8)), pts = [];
     for (let k = 0; k < mid.length && pts.length < nP; k++) { const [x, y] = mid[Math.floor(hh(k, s.x + s.y, 4410) * mid.length)]; if (pts.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) < 3)) continue; pts.push([x, y]); put('tree_a', (x + 0.5) * TILE, (y + 0.5) * TILE, 12, { sp: hh(x, y, 4411) < 0.5 ? 'pondPine' : hh(x, y, 4411) < 0.8 ? 'fir' : 'spruce', k: 1.25 + hh(x, y, 4412) * 0.35 }); out.pines++; }
