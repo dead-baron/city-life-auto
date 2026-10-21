@@ -177,3 +177,12 @@ test("the renderer's glue: who's about from the frame, the bobbers from the fish
   assert.ok(wl.envB.sx > 0 && wl.envB.sy > 0, 'shadows fall away from the sun');
   assert.ok(wl.fish.length > 0 && decals.length > 0, 'fish drawn');
 });
+
+test('a hole in the map\'s props (World v3\'s map has them) never stops the fish or the falls\' mist', () => {
+  const at = waterView('lake') || waterView('shore');
+  const M2 = Object.assign(Object.create(Object.getPrototypeOf(M)), M, { props: [undefined, ...M.props, null] });
+  const V = view(at.x, at.y), wl = new WaterLife(2);
+  let now = 0;
+  for (let i = 0; i < 5 * 30; i++) { wl.update(M2, V, now, 1 / 30, [], [], ENV); now += 1 / 30; }
+  assert.ok(wl.fish.length > 0, `fish (${wl.fish.length})`);
+});
