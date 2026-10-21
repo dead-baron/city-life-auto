@@ -6,8 +6,8 @@
 //     the gap it tore, its root plate reared up, seedlings and ferns along it, shelf oysters on it) - some the trails
 //     pass through, most off them down nothing but deer paths; named on the map;
 //   - the mushrooms in sight: every forage spot in the woods that a tree in front of it in this view would hide (the
-//     camera looks north: a trunk or a crown south of it covers it) moved to the nearest open ground close by - or, with
-//     none, left out.
+//     camera looks north: a trunk or a crown south of it covers it) moved to the nearest open ground within eight tiles
+//     - or, with none, left out.
 // For the whole-world build only (shared/world3-world.js calls these from its done hook, after the trails and the
 // caves). Deterministic: integer hashes; Math's trig only inside generateCity (withDeterministicMath).
 import { TILE, T } from './constants.js';
@@ -35,6 +35,8 @@ export function buildClearings3(m, H3) {
   // where things are: the trails' lines, the designed places to keep clear of (the glades, the caves' mouths, the enduro)
   const trails = (m.natureSites || []).filter((s) => s.kind === 'trail' && s.line);
   const keepOff = (m.natureSites || []).filter((s) => s.kind === 'glade' || s.kind === 'cavemouth' || s.kind === 'enduro' || s.kind === 'creek' || s.kind === 'redwoodcove' || s.kind === 'gorge').map((s) => [s.x / TILE, s.y / TILE, s.kind === 'glade' ? 30 : 40]);
+  // (and every named place in the woods - a mast, a camp, a lodge, the lookout: its box and 16 tiles round it)
+  for (const l of m.landmarks || []) { const cx = (l.x + l.w / 2) / TILE, cy = (l.y + l.h / 2) / TILE; if (inF(Math.floor(cx), Math.floor(cy)) && m.dist[idx(Math.floor(cx), Math.floor(cy))] === D_WOODS) keepOff.push([cx, cy, Math.max(l.w, l.h) / 2 / TILE + 16]); }
   const tgrid = new Map(), TG = 16;   // (the trails' points by 16-tile cell)
   for (const t of trails) for (const [x, y] of t.line) { const k = Math.floor(x / TILE / TG) * 4096 + Math.floor(y / TILE / TG); let a = tgrid.get(k); if (!a) tgrid.set(k, (a = [])); a.push([x / TILE, y / TILE]); }
   const trailD = (tx, ty) => { let bd = 1e9; const cx = Math.floor(tx / TG), cy = Math.floor(ty / TG); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) for (const [x, y] of tgrid.get((cx + dx) * 4096 + cy + dy) || []) { const d = Math.hypot(x - tx, y - ty); if (d < bd) bd = d; } return bd; };
@@ -93,7 +95,7 @@ export function buildClearings3(m, H3) {
       if (dx * dx + dy * dy > rr * rr || !inF(tx + dx, ty + dy)) continue;
       const i = idx(tx + dx, ty + dy);
       if (m.tiles[i] !== T.GRASS) continue;
-      m.reserve[i] |= RES | (kind === 'stumps' ? 0 : 128);
+      m.reserve[i] |= RES | 128;   // (sunlit grass where the canopy's open)
     }
     clearVeg(X, Y, R * TILE * 0.95);
     for (let k = 1; k <= 6; k++) clearVeg(X, Y + R * TILE * (0.5 + k * 0.32), R * TILE * (0.8 - k * 0.08));   // (so it reads as open)
@@ -169,7 +171,7 @@ export function forageInSight3(m) {
     if (!inF(tx, ty) || m.dist[idx(tx, ty)] !== D_WOODS || f.k === 'goldStar') { keep.push(f); continue; }
     if (!hidden(f.x, f.y)) { keep.push(f); out.seen++; continue; }
     let to = null;
-    for (let r = 32; r <= 160 && !to; r += 32) for (let k = 0; k < 12 && !to; k++) {
+    for (let r = 32; r <= 256 && !to; r += 32) for (let k = 0; k < 12 && !to; k++) {
       const a = (k / 12) * Math.PI * 2 + hh(tx, ty, r) * 0.5, x = f.x + Math.cos(a) * r, y = f.y + Math.sin(a) * r;
       if (open(x, y) && !hidden(x, y)) to = [Math.round(x), Math.round(y)];
     }

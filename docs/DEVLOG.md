@@ -12601,19 +12601,19 @@ From the owner's notes of 10-16 ("forest: some semi-open, spaced-out clearings, 
 (mushrooms) easier to see, in visible spots") and the concepts' felled patches and windthrows (WD1, N1):
 - **The clearings** (`shared/world3-clearings.js`, new; World v3's done hook after the caves): eighteen across Highland
   Woods, at least 44 tiles apart, each named on the map - five the trails pass through, the rest off them (14-60 tiles
-  out, down nothing but deer paths), never by a road, a glade, a cave mouth or the enduro:
+  out, down nothing but deer paths), never by a road, a glade, a cave mouth, the enduro or a named place:
   - **deer meadows** (Lupine Meadow, Deer Meadow, Foxglove Meadow, ...): a ragged round of sunlit grass on level
     ground, lupines, foxglove and wildflowers, tall grass, a dead snag, mossy boulders, berry bushes to pick; the deer
     and elk come to them (`server/systems/wildlife.js`: a meadow is a glade to them);
-  - **old stump clearings** (Logger's Clearing, Old Stumps, Springboard Flat, ...): the old-growth stumps sawn long
-    ago, felled logs gone to moss, a fairy ring of second-growth redwoods round the oldest stump, ferns and bracken,
+  - **old stump clearings** (Logger's Clearing, Old Stumps, Springboard Flat, ...): grass in the sun where the old
+    growth was cut, its stumps sawn long ago, felled logs gone to moss, a fairy ring of second-growth redwoods round the oldest stump, ferns and bracken,
     golden trumpets and ghostglass caps on the rot;
   - **windfalls** (Fallen Giant, Windthrow Gap, Nurse Log Hollow, ...): a giant down across the gap it tore, its root
     plate reared up at its foot, fir seedlings on the nurse log, shelf oysters along it, ferns and foxglove in the light.
   The tall trees in front of each in this view are taken off, so it reads as open.
 - **The mushrooms in sight** (`forageInSight3`): the camera looks north, so a tree south of a spot hides it - a giant's
   trunk what's just behind it, its crown what's further back. Every forage spot in the woods hidden so moves to the
-  nearest open ground within five tiles that nothing hides (or, with none, is left out).
+  nearest open ground within eight tiles that nothing hides (or, with none, is left out).
 
 Tests: test/world3clearings.test.js - a spot behind a trunk moves out, the seen ones stay; in World v3 the clearings of
 each kind, some on the trails and the rest off them, apart, open, on the map, the meadows' grass and flowers and their
