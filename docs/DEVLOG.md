@@ -12961,7 +12961,7 @@ nothing on it. Now:
   and pines and firs on its middle.
 - **the Silver Thread Boathouse** is on the south shore: a boat shed, a plank jetty out into the lake with canoes
   moored along it and a lamp at its end, a bench and a sign on the bank, and a clearing round the landing so the
-  redwoods don't stand over it. The canoe hire there lets out rowboats and the dock's motorboat
+  redwoods don't stand over it. The canoe hire there lets out rowboats ($40, `shared/rules.js`) and the dock's motorboat
   (`server/systems/rentals.js`: a rental can now name its own boats). Both are named on the map.
 - **pines drawn at last**: Pine Hills' and the Lakeside course's trees asked for the species 'pine', which the art
   doesn't have, so they were drawn as nothing while still standing there as solid trunks. 'pine' is now drawn as the

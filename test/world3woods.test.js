@@ -153,6 +153,8 @@ test('World v3: Highland Woods - the falls, the trails and their furniture, the 
     const R = m.rentals.find((r) => r.poi === WL.boathouse.poi);
     const { modelsAt } = await import('../server/systems/rentals.js');
     check(R && modelsAt(R).includes('rowboat'), `rowboats for hire: ${R && modelsAt(R)}`);
+    const { BOAT_RENTAL_PRICE } = await import('../shared/rules.js');
+    check(modelsAt(R).every((id) => BOAT_RENTAL_PRICE[id] > 0), 'each boat for hire has its price');
   }
   check(m.landmarks.some((l) => l.name === 'Silver Thread Lake') && m.landmarks.some((l) => l.name === 'Silver Thread Boathouse'), 'on the map');
   assert.deepEqual(fails, []);
