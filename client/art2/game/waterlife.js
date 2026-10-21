@@ -292,6 +292,7 @@ function fallsOf(m) {
     else if (s.kind === 'oasis' && s.spring && Number.isFinite(s.spring.x)) add(s.spring.x, s.spring.y, s.spring.w || 16, s.spring.h || 30, 0.3);
   }
   for (const p of m.props || []) {
+    if (!p) continue;   // (a hole in the props - World v3's map has them - stopped every fish and every falls' mist: 2026-10-21)
     if (p.t === 'fallsmall') add(p.x, p.y, p.w || 16, p.h || 30, Math.min(0.5, 0.2 + (p.h || 30) / 120));
     else if (p.t === 'coastfall') add(p.x, p.y, p.w || 28, p.drop || 66, p.mist ?? 0.7);
   }
