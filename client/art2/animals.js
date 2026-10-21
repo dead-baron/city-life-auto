@@ -74,6 +74,7 @@ export const ANIMALS = {
   otter: { len: 26, h: 7, w: 7, coat: '#5a3e2c', belly: '#8a6a52', ears: 'tiny', tail: 'otter', snout: 2, head: 3.6 },
   seaotter: { len: 24, h: 8, w: 9, coat: '#5a4434', face: '#d8ccb8', ears: 'tiny', tail: 'otter', snout: 1.6, head: 4.4 },
   squirrel: { len: 9, h: 5, w: 4, coat: '#8a8a8c', belly: '#ece8e0', ears: 'cat', tail: 'squirrel', snout: 1.2, head: 2.8 },
+  shark: { len: 98, h: 10, w: 13, coat: '#5c6a74', belly: '#dcdcd6', ears: 'tiny', tail: 'stub', snout: 2, head: 6 },   // (drawn by sharkModel, not the legged rig)
 };
 // the young of a kind: smaller, bigger-headed, no antlers, horns or tusks; a fawn's (or an elk calf's) white spots,
 // a piglet's stripes, fluffier cubs and kits
@@ -91,8 +92,53 @@ function legendOf(A) {
 
 // extra room behind the rump for the long tails (so they stay inside the model)
 const TAIL_ROOM = { longcat: 14, fox: 9, paddle: 8, otter: 8, squirrel: 3 };
+// A great white (server/systems/sharks.js) seen from above as it swims: its long dark shape just under the water, the
+// dorsal fin standing out of it and the top of the tail beating side to side (phase); biting, the head up out of the
+// water, the jaws wide; dead, rolled belly up. +x is its nose, as every animal's.
+function sharkModel(pose, phase) {
+  const L = 118, W = 34, H = 24, cy = W / 2, cx = 62, m = new Vox(L, W, H);
+  const dark = m.mat({ ramp: ramp('#2a4250', 5, 2), k: 1 }), back = m.mat({ ramp: ramp('#5c6a74', 6, 3), k: 3 }), belly = m.mat({ ramp: ramp('#dcdcd6', 6, 3), k: 3 });
+  const mouth = m.mat({ ramp: ramp('#8a2a2a', 5, 2), k: 2 }), teeth = m.mat({ ramp: ramp('#f4f2ea', 4, 2), k: 1 }), eye = m.mat({ ramp: ramp('#101418', 3, 1), k: 1 });
+  const sway = Math.sin((phase + 0.25) * Math.PI * 2) * 4;   // (two swim frames: the tail one side, then the other)
+  // (the body's width along it: the blunt snout, the deep middle, the narrow tail stock)
+  const half = (u) => (u > 0.82 ? 13 * Math.sqrt(Math.max(0, (1 - u) / 0.18)) : u > 0.35 ? 13 : 4 + 9 * (u / 0.35));
+  if (pose === 'dead') {
+    for (let x = 6; x < 104; x++) { const u = (x - 6) / 98, hw = half(u) * 0.9; m.box(x, cy - hw, 0, x + 1, cy + hw, 3, back); m.box(x, cy - hw * 0.8, 3, x + 1, cy + hw * 0.8, 6, belly); }
+    for (const sd of [-1, 1]) m.box(58, cy + sd * 12, 1, 70, cy + sd * 17, 3, back);   // (the pectorals out flat)
+    m.smooth = 1; patchHidden(m); return m;
+  }
+  const bite = pose === 'bite';
+  // the shape under the water: the body, the pectoral fins out to the sides, the tail's lower lobe (all dark: deep)
+  for (let x = 6; x < 104; x++) {
+    const u = (x - 6) / 98, hw = half(u), off = u < 0.35 ? sway * (1 - u / 0.35) : 0;
+    if (bite && u > 0.62) continue;   // (the head's up out of the water, drawn below)
+    m.box(x, cy + off - hw, 0, x + 1, cy + off + hw, 2, dark);
+  }
+  for (const sd of [-1, 1]) for (let k = 0; k < 14; k++) m.box(66 - k * 0.9, cy + sd * (12 + k * 0.55), 0, 68 - k * 0.9, cy + sd * (13.5 + k * 0.55), 2, dark);
+  for (let k = 0; k < 12; k++) m.box(6 - k * 0.4, cy + sway - 2 - k * 0.6, 0, 8 - k * 0.4, cy + sway + 2 - k * 0.6, 1, dark);
+  // the dorsal fin: a tall swept-back triangle out of the water, a little ahead of the middle
+  for (let z = 2; z < 18; z++) { const t = (z - 2) / 16, x0 = 58 - t * 7, x1 = 58 + (1 - t) * 16 - t * 4; m.box(x0, cy - 1, z, x1, cy + 1, z + 1, z > 15 ? dark : back); }
+  // the top of the tail: its upper lobe beating side to side, out of the water
+  for (let z = 1; z < 10; z++) { const t = (z - 1) / 9; m.box(4 - t * 4, cy + sway * 1.4 - 1, z, 9 - t * 3, cy + sway * 1.4 + 1, z + 1, back); }
+  if (bite) {
+    // the head up out of the water at the bite: the snout raised, the jaws open, the rows of teeth, the black eye
+    for (let x = 66; x < 112; x++) {
+      const u = (x - 66) / 46, hw = 12 * (1 - u * u * 0.7), up = 3 + u * 10;
+      m.box(x, cy - hw, up + 5, x + 1, cy + hw, up + 9, back);                   // (the upper jaw, grey)
+      if (u < 0.85) m.box(x, cy - hw * 0.9, 1, x + 1, cy + hw * 0.9, 3 + u * 2, belly);   // (the lower jaw, white)
+      if (u > 0.15 && u < 0.92) m.box(x, cy - hw * 0.75, 3 + u * 2, x + 1, cy + hw * 0.75, up + 5, mouth);
+      if (x % 3 === 0 && u > 0.2 && u < 0.9) for (const sd of [-1, 1]) { m.box(x, cy + sd * hw * 0.8 - 0.5, up + 3, x + 1, cy + sd * hw * 0.8 + 0.5, up + 5, teeth); m.box(x, cy + sd * hw * 0.75 - 0.5, 3 + u * 2, x + 1, cy + sd * hw * 0.75 + 0.5, 5 + u * 2, teeth); }
+    }
+    for (const sd of [-1, 1]) m.box(84, cy + sd * 9 - 0.5, 13, 86, cy + sd * 9 + 1, 15, eye);
+  }
+  m.smooth = 1;
+  patchHidden(m);
+  return m;
+}
+
 export function animalModel(kind, o = {}) {
   const [baseKind, variant] = String(kind).split(':');
+  if (baseKind === 'shark') { const p0 = o.pose || 'stand'; return sharkModel(p0 === 'dead' ? 'dead' : p0 === 'bite' || p0 === 'swipe' || p0 === 'attack' ? 'bite' : 'swim', o.phase || 0); }
   let A = ANIMALS[baseKind] || ANIMALS.golden;
   if (variant === 'y') A = youngOf(A, baseKind);
   else if (variant === 'L') A = legendOf(A);

@@ -43,6 +43,7 @@ import * as pets from './systems/pets.js';
 import * as happenings from './systems/happenings.js';
 import * as personas from './systems/personas.js';
 import * as wildlife from './systems/wildlife.js';
+import * as sharks from './systems/sharks.js';
 import * as unstuck from './systems/unstuck.js';
 import * as props from './systems/props.js';
 import * as barriers from './systems/barriers.js';
@@ -104,6 +105,7 @@ const SYSTEMS = [
   ['happenings', happenings.update], // a street fight, someone collapsing, a dropped wallet - now and then near someone
   ['personas', personas.update],    // the street personalities' walked dogs (personas.js)
   ['wildlife', wildlife.update],    // animals out in the wilds: deer, coyotes, rabbits, the farms' herds
+  ['sharks', sharks.update],        // a great white now and then where someone's swimming out at sea (sharks.js)
   ['traffic', traffic.update],      // NPC drivers (lane following, lights)
   ['transit', transit.update],      // the bus lines: buses into service round their loops, the doors closing
   ['ferries', ferries.update],      // the island ferries to their timetable, the cars on their decks

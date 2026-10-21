@@ -832,7 +832,7 @@ const V1_PART = { 1: { name: 'pBlood', frames: 3 }, 2: { name: 'pSmoke', frames:
 export const FX_FOR_V1 = {
   ...V1_PART,
   particle: V1_PART,
-  decal: { 1: { name: 'bloodSplat', frames: 3 }, 2: { name: 'footprints', frames: 6 }, 3: { name: 'dScorch', frames: 3 }, 4: { name: 'dSkid', frames: 8 }, 5: { name: 'dBloodPool', frames: 3, oil: 'dOil' }, 6: { name: 'dLitter', frames: 6 } },
+  decal: { 1: { name: 'bloodSplat', frames: 3 }, 2: { name: 'footprints', frames: 6 }, 3: { name: 'dScorch', frames: 3 }, 4: { name: 'dSkid', frames: 8 }, 7: { name: 'dCrush', frames: 16 }, 5: { name: 'dBloodPool', frames: 3, oil: 'dOil' }, 6: { name: 'dLitter', frames: 6 } },
   // events (main.js onEvent) -> one-shot effects
   event: { shot: 'muzzleSmall', explode: 'explosion', spark: 'impactSpark', taser: 'sparkleBlue', splash: 'waterSplash', sinkboom: 'waterSplash', crash: 'impactSpark', glass: 'glassShatter', poof: 'dustPuff', loot: 'sparkle', cash: 'sparkle', deposit: 'sparkle', revive: 'sparkleBlue', blood: 'bloodSpray', geyser: 'waterSplash', pop: 'impactDirt', knockdown: 'dustPuff', hit: 'impactSpark' },
 };

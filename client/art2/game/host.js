@@ -93,6 +93,7 @@ const HENS = new Set(['quail', 'duck']);
 const petKind = (p) => { const k = p.d.ar.slice(4); return HENS.has(k) && (p.id & 1) ? `${k}:f` : k; };
 function wildPose(p, S2, base, sp, now, M) {
   if (p.flags & PF.DEAD) return 'dead';
+  if (base === 'shark') return ((p.extra || 0) & 31) === APOSE.attack ? 'swipe' : 'swim';   // (a great white: its fin through the water, or up at the bite - sharks.js; animals.js sharkModel draws 'swipe' as the bite)
   if (p.flags & PF.DOWN) return 'fall';   // (knocked off its feet: on its side, the legs going - AN7)
   if (p.hitAt !== undefined && now - p.hitAt < 0.3 && !S2.bird) return 'hit';   // (the flinch as the hit lands - AN7)
   const ap = (p.extra || 0) & 31;
@@ -2107,6 +2108,15 @@ export class World2 {
     const fx = F.fx, E = this.E, now = F.now, wet = F.rain, A = this.A && this.A.v1DecalFx && this.A.fxKey ? this.A : null;
     fx.now = now;
     const x0 = this.vx0 - 40, x1 = this.vx1 + 40, y0 = this.vy0 - 40, y1 = this.vy1 + 40;
+    // the crops flattened (render/fx.js crush): under everything else, standing back up after a couple of minutes
+    if (fx.c && A) for (let i = 0; i < fx.c.length; i++) {
+      const c = fx.c[i];
+      if (!c.on || c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
+      const age = now - c.born, a = c.alpha * (age > 150 ? 1 - (age - 150) / 40 : 1);
+      if (a <= 0.02) { c.on = false; continue; }
+      const frm = c.small * 8 + (Math.round(((((c.a || 0) % Math.PI) + Math.PI) % Math.PI) / Math.PI * 8) & 7);
+      E.drawDecal(this._spr('actors', 'fx', A.fxKey('dCrush', frm), ['dCrush', frm]), c.x, c.y, 0, a, 0);
+    }
     for (let i = 0; i < fx.d.length; i++) {
       const d = fx.d[i];
       if (!d.on || d.x < x0 || d.x > x1 || d.y < y0 || d.y > y1) continue;

@@ -123,7 +123,7 @@ export const DEV_SECTIONS = [
     ['🐆 Mountain lion stalking you', 'animal', { k: 'cougar', stalk: 1 }], ['🐈 Bobcat', 'animal', { k: 'bobcat' }], ['🐺 Coyotes', 'animal', { k: 'coyote' }],
     ['🦊 Red fox', 'animal', { k: 'redfox' }], ['🦊 Grey fox', 'animal', { k: 'greyfox' }], ['🐐 Mountain goats', 'animal', { k: 'mtgoat' }],
     ['🐗 Wild boar', 'animal', { k: 'boar' }], ['🦝 Raccoons', 'animal', { k: 'raccoon' }], ['🦫 Beavers', 'animal', { k: 'beaver' }],
-    ['🦦 River otters', 'animal', { k: 'otter' }], ['🦦 Sea otters (protected)', 'animal', { k: 'seaotter' }], ['🐇 Rabbits', 'animal', { k: 'rabbit' }],
+    ['🦦 River otters', 'animal', { k: 'otter' }], ['🦦 Sea otters (protected)', 'animal', { k: 'seaotter' }], ['🦈 A great white (swim out to sea)', 'animal', { k: 'shark' }], ['🐇 Rabbits', 'animal', { k: 'rabbit' }],
     ['🐺 Grey wolf pack', 'animal', { k: 'wolf' }], ['🪶 Great blue heron', 'animal', { k: 'heron' }], ['🦅 Osprey', 'animal', { k: 'osprey' }], ['🦅 Bald eagle', 'animal', { k: 'eagle' }],
     ['🎯 Watch: wolves run down a deer', 'animal', { scene: 'wolves' }], ['🎯 Watch: a lion stalks a deer', 'animal', { scene: 'cougar' }], ['🎯 Watch: an eagle takes a rabbit', 'animal', { scene: 'eagle' }],
     ['🎯 Watch: a fox mousing', 'animal', { scene: 'fox' }], ['🎯 Watch: a heron fishing', 'animal', { scene: 'heron' }], ['🎯 Watch: a bear fishing', 'animal', { scene: 'bear' }],

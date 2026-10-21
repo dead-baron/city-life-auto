@@ -218,6 +218,16 @@ export const SPECIES = {
     active: 'day', habitat: { lake: 1.4, mountain: 1.2, cliff: 1, meadow: 0.9, river: 0.9, farm: 0.4 }, diet: 'hunt', soars: true, protected: true, few: 1,
     loot: [], hunts: { prey: ['rabbit', 'squirrel', 'duck', 'quail'], how: 'stoop', r: 720, p: 0.55 }, fishes: { how: 'plunge', p: 0.3 },
   },
+  // ---- the sea (2026-10-21; the owner, 10-05: "sharks: very rare, likeliest round the prison; fins; blood draws them"):
+  // a great white, out in the open sea - it comes and goes on its own (server/systems/sharks.js: no habitat here, so
+  // the wildlife's spawner never puts one down, and its step leaves it alone); nothing taken from it, and no fine for
+  // one shot fending it off (not protected: hunting.js)
+  shark: {
+    name: 'Great White Shark', size: 'huge', hp: 320, walk: 0, trot: 0, run: 0, swim: 340,
+    sense: { sight: 800, hear: 400, smell: 2200 }, temper: 'aggressive', group: { kind: 'solo', n: [1, 1] },
+    active: 'any', habitat: {}, diet: 'hunt', aquatic: true, swims: 'deep', own: true, bite: 38, few: 1,
+    loot: [],
+  },
 };
 
 // who hunts whom: kind -> Set of the kinds that hunt it (the prey's senses watch for them: wildlife.js sense)

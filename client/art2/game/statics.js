@@ -1512,7 +1512,7 @@ function voxModel(m, a) {
     case 'hammock': return TW.hammock(a[0]); case 'boulder': return D.boulder(a[0], a[1], a[2]); case 'statue': return PK.statue(); case 'flagpole': return U.flagpole(a[0], a[1]); case 'jersey': return K.jerseyBarrier(a[0], a[1]);
     case 'forklift': return X.forklift(a[0], a[1]); case 'container': return X.container(a[0], a[1]); case 'boxcar': return X.boxcar(a[0]); case 'tankcar': return X.tankCar(a[0]); case 'clockPost': return RD.clockPost(); case 'stopPole': return X.stopPole(a[0]); case 'gazebo': return PK.gazebo(); case 'archBridge': return PK.archBridge(a[0] || 120, a[1] || 26, a[2] || 16); case 'parkSign': return PK.parkSign(a[0]);
     case 'beachChair': return PK.beachChair(a[0]); case 'lifeguard': return P.lifeguardTower(); case 'cafeTable': return P.cafeTable(); case 'chalkboard': return P.chalkboard(); case 'topiary': return D.topiary(a[0], a[1]);
-    case 'trough': return U.trough(); case 'woodpile': return U.woodpile(); case 'propane': return U.propaneTank(); case 'barrierArm': return U.barrierArm(a[0], a[1]); case 'gantryCrane': return X.gantryCrane(a[0], a[1], a[2]);
+    case 'trough': return U.trough(); case 'stocktank': return U.stockTank(a[0] || 26); case 'woodpile': return U.woodpile(); case 'propane': return U.propaneTank(); case 'barrierArm': return U.barrierArm(a[0], a[1]); case 'gantryCrane': return X.gantryCrane(a[0], a[1], a[2]);
     case 'cabana': return D.cabana(a[0] || 0); case 'skySpan': return D.skySpan(a[0] || 150); case 'skyTower': return D.skyTower(a[0] || 144); case 'porte': return D.porte(a[0] || 300, a[1] || 96, a[2] || 58, a[3] || 0);
     case 'timberPergola': return D.timberPergola(a[0] || 380, a[1] || 96, a[2] || 60); case 'bannerPole': return D.bannerPole(a[0] || 0);
     case 'dome': return obsDome(a[0] || 90); case 'marquee': return marquee(); case 'speaker': return speakerPost(); case 'portal': return portal(a[0] || 100); case 'wheelStop': return wheelStop();
@@ -1534,7 +1534,7 @@ function voxModel(m, a) {
     case 'beachBar': return WL.beachBar(a[0] ?? 0.5); case 'beachShower': return WL.beachShower(a[0] ?? 1); case 'driftShade': return WL.driftShade(a[0] || 70, a[1] || 50); case 'cliffStairs': return WL.cliffStairs(a[0] || 120, a[1] || 80, a[2] || 28);
     case 'logCabin': return WL.logCabin(a[0] || 96, a[1] || 60, a[2] ?? 0.6); case 'lookout': return WL.lookoutTower(a[0] || 110, a[1] ?? 0.6);
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
-    case 'surfboard': return P.surfboard(['#e8a040', '#2f8ac8', '#e85a7a'][a[0] || 0]); case 'tiki': return tikiTorch(); case 'post': return woodPost(a[0] || 46);
+    case 'surfboard': return P.surfboard(['#e8a040', '#2f8ac8', '#e85a7a'][a[0] || 0]); case 'tiki': return tikiTorch(); case 'post': return woodPost(a[0] || 46); case 'delineator': return delineatorPost();
     case 'cottage': return WL.cottage(a[0] || 84, a[1] || 54, a[2] ?? 0.5, a[3] || 0); case 'seal': return WL.seal(a[0] || 0, ['#8a8a92', '#6e6e78', '#9a9088'][a[1] || 0]); case 'beacon': return WL.beacon(a[0] || 0, a[1] || 46, a[2] ?? 1); case 'headstone': return WL.headstone(a[0] || 0); case 'fishboat': return WL.fishboat(a[0] || 0); case 'netRack': return WL.netRack(a[0] || 60); case 'lobsterPots': return WL.lobsterPots(a[0] || 0); case 'gull': return WL.gull(false);
     case 'crab': return WL.crab(); case 'blowhole': return WL.blowhole(a[0] || 64, a[1] || 48); case 'seaArch': return WL.seaArch(a[0] || 150, a[1] || 56, a[2] || 96, a[3] || 3); case 'driftwood': return WL.driftwood(a[0] || 50, a[1] || 1); case 'shipwreck': return WL.shipwreck(a[0] || 220, a[1] || 64, a[2] || 40);
     case 'footbridge': return WT.footbridge(a[0] || 140, a[1] || 26, a[2] || 8);
@@ -1580,7 +1580,7 @@ function vdim(m, a) {
     case 'hammock': return [a[0] || 40, 10, 22]; case 'boulder': return [Math.ceil((a[1] || 22) * 1.2) + 4, Math.ceil((a[1] || 22) * 1.2) + 4, Math.ceil((a[1] || 22) * 0.9) + 2]; case 'statue': return [24, 24, 84];
     case 'flagpole': return [46, 8, (a[0] || 110) + 4]; case 'jersey': return [a[0] || 48, 14, 18]; case 'forklift': return [46, 26, 50]; case 'container': return [a[1] || 130, 54, 58]; case 'boxcar': return [230, 58, 74]; case 'tankcar': return [210, 58, 74]; case 'clockPost': return [16, 10, 64];
     case 'stopPole': return [14, 8, 60]; case 'gazebo': return [74, 74, 86]; case 'archBridge': return [a[0] || 120, a[1] || 26, (a[2] || 16) + 22]; case 'parkSign': return [26, 6, 30]; case 'beachChair': return [26, 14, 16]; case 'lifeguard': return [34, 30, 46]; case 'cafeTable': return [14, 14, 12]; case 'chalkboard': return [12, 8, 18];
-    case 'topiary': return [16, 16, 30]; case 'trough': return [36, 16, 12]; case 'woodpile': return [30, 12, 16]; case 'propane': return [60, 24, 30]; case 'barrierArm': return [a[0] || 70, 10, 30];
+    case 'topiary': return [16, 16, 30]; case 'trough': return [36, 16, 12]; case 'stocktank': return [(a[0] || 26) * 2 + 6, (a[0] || 26) * 2 + 6, 19]; case 'woodpile': return [30, 12, 16]; case 'propane': return [60, 24, 30]; case 'barrierArm': return [a[0] || 70, 10, 30];
     case 'cabana': return [44, 40, 50]; case 'skySpan': return [64, a[0] || 150, 46]; case 'skyTower': return [60, 60, (a[0] || 144) + 4]; case 'porte': return [a[0] || 300, a[1] || 96, (a[2] || 58) + 16];
     case 'timberPergola': return [a[0] || 380, a[1] || 96, (a[2] || 60) + 14]; case 'bannerPole': return [32, 8, 100];
     case 'gantryCrane': return [70, a[0] || 170, (a[1] || 200) + 6]; case 'dome': return [(a[0] || 90) + 10, (a[0] || 90) + 10, (a[0] || 90) * 0.8 + 30]; case 'marquee': return [84, 10, 80]; case 'speaker': return [10, 10, 22];
@@ -1595,7 +1595,7 @@ function vdim(m, a) {
     case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 8]; case 'canoe': return [64, 16, 12]; case 'caveMouth': return [a[0] || 96, 46, (a[1] || 72) + 8]; case 'rowboatS': return [64, 28, 12]; case 'yacht': return [110, 40, 30]; case 'sailboat': return [a[0] || 120, 40, 150]; case 'poolHouse': return [a[0] || 288, (a[1] || 60) + 16, 62]; case 'hotTub': return [(a[0] || 30) * 2 + 4, (a[0] || 30) * 2 + 4, 26]; case 'divingBoard': return [(a[0] || 56) + 18, 16, 30]; case 'laneRope': return [a[0] || 400, 4, 3]; case 'swimRaft': return [64, 64, 14]; case 'swimBuoy': return [10, 10, 6]; case 'crashPad': return [44, 30, 12]; case 'ropeCoil': return [26, 22, 6]; case 'weir': return [a[0] || 320, 30, 14]; case 'culvert': return [a[0] || 150, 22, (a[1] || 34) + 4]; case 'basketHoop': return [36, 30, 64]; case 'tennisNet': return [6, a[0] || 100, 14]; case 'skateQuarter': return [a[0] || 128, 48, 34]; case 'skateLedge': return [a[0] || 96, 20, 15]; case 'skateRail': return [a[0] || 96, 8, 15]; case 'skateKicker': return [40, 34, 14]; case 'skatePyramid': return [120, 80, 17]; case 'graffitiWall': return [a[0] || 256, 10, 42]; case 'boombox': return [16, 6, 12]; case 'bleachers': return [a[0] || 120, (a[1] || 4) * 10 + 8, (a[1] || 4) * 8 + 22]; case 'bathPavilion': return [84, 62, 68]; case 'ringFloat': return [22, 22, 6]; case 'pierRail': return [a[0] || 192, 6, 26]; case 'baitShack': return [120, 76, 66]; case 'lifeRing': return [14, 8, 34]; case 'fishTable': return [34, 16, 26]; case 'rodHolder': return [22, 30, 48]; case 'ferrisWheel': return [224, 44, 262]; case 'marketStall': return [60, 34, 46]; case 'clubhouse': return [252, 144, 100]; case 'golfCart': return [34, 20, 26]; case 'golfPin': return [14, 4, 36]; case 'waterSlide': return [Math.ceil(Math.abs(a[0] || 0) + 112), (a[1] || 240) + 18, (a[2] || 84) + 20]; case 'slideTower': return [(a[0] || 96) + 30, (a[1] || 56) + 8, (a[2] || 84) + 36]; case 'bambooFence': return [a[0] || 80, 6, (a[1] || 30) + 2]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
     case 'beachBar': return [108, 84, 64]; case 'beachShower': return [40, 34, 64]; case 'driftShade': return [(a[0] || 70) + 8, (a[1] || 50) + 8, 52]; case 'cliffStairs': return [(a[2] || 28) + 6, (a[0] || 120) + 4, (a[1] || 80) + 26];
     case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
-    case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2];
+    case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2]; case 'delineator': return [4, 4, 28];
     case 'cottage': return [(a[0] || 84) + 4, (a[1] || 54) + 6, 64]; case 'seal': return [46, 22, 18]; case 'beacon': return [24, 24, (a[1] || 46) + 14]; case 'headstone': return [14, 8, 20]; case 'fishboat': return [80, 28, 40]; case 'netRack': return [a[0] || 60, 6, 34]; case 'lobsterPots': return [18, 13, ((a[0] || 0) % 2 + 2) * 8 + 6]; case 'gull': return [16, 8, 14]; case 'crab': return [16, 14, 6]; case 'blowhole': return [a[0] || 64, a[1] || 48, 18]; case 'seaArch': return [a[0] || 150, a[1] || 56, (a[2] || 96) + 6]; case 'shipwreck': return [(a[0] || 220) + 8, (a[1] || 64) + 30, (a[2] || 40) + 40]; case 'driftwood': return [a[0] || 50, 16, 10];
     case 'mapBoard': return [40, 12, 50]; case 'lantern': return [12, 12, 40];
     case 'lumber': return [60, 24, 18]; case 'crates': return [32, 28, 30]; case 'cctv': return [22, 8, (a[0] || 64) + 2]; case 'signal': return [(a[0] || 70) + 10, 14, 92]; case 'spanPole': return [8, 8, SPAN_Z + 6]; case 'bbframe': return [a[0] || 132, 10, (a[1] || 54) + (a[2] || 36) + 6]; case 'cabbages': return [(a[0] || 3) * 18, (a[1] || 3) * 18, 14]; case 'cornRow': return [120, 60, 36]; case 'wheatRow': return [120, 50, 22]; case 'ropeLine': return [a[0] || 60, 6, 20]; case 'silo': return [44, 44, (a[0] || 90) + 22]; case 'craneTower': return [(a[1] || 120) + 40, 30, (a[0] || 200) + 16];
@@ -1687,6 +1687,8 @@ function tikiTorch() {
   return m;
 }
 // a plain timber post (festoon lights hang from these)
+// a desert road's delineator (world3-roadside.js): a white post, a red reflector near its top
+function delineatorPost() { const m = new Vox(4, 4, 28), w = m.mat({ ramp: ramp('#ecebe6', 6, 3), k: 3, flag: F_THIN }), r = m.mat({ ramp: ramp('#d02a1e', 5, 2), k: 2, emi: [255, 60, 40, 60] }); m.box(0.5, 0.5, 0, 3.5, 3.5, 27, w); m.box(0.5, 0.5, 19, 3.5, 3.5, 24, r); return m; }
 function woodPost(h = 46) { const m = new Vox(6, 6, h + 2), w = m.mat({ ramp: ramp('#7a5434', 6, 3), k: 3, flag: F_THIN }); m.box(1, 1, 0, 5, 5, h, w); m.box(0, 0, h - 2, 6, 6, h, w); return m; }
 // festoon lights: a sagging wire from the item's anchor (height h) to (tx, ty) (height h), warm bulbs every 10 px
 function makeFestoon(r) {
@@ -2313,8 +2315,10 @@ function propItems(c, p, pi, I) {
     case 'towel': put(I, { key: `towel:${p.v || 0}`, recipe: { t: 'towel', v: p.v || 0 }, x, y, ext: [12, 20, 12, 20], pi }); return;
     case 'torch': V('tiki', 'tiki', []); lightAt(I, x, y, 46, 120, LIGHT.fire, 1.6, 'fire', 0); return;
     case 'post': V(`post:${p.h || 46}`, 'post', [p.h || 46]); return;
+    case 'delineator': V('dlin', 'delineator', []); return;   // (a desert road's: world3-roadside.js)
     case 'windmill': V('wmill', 'windmill', [120]); return;
     case 'trough': V('trough', 'trough', []); return;
+    case 'stocktank': V(`stk:${p.r || 26}`, 'stocktank', [p.r || 26]); return;   // (the desert's stock tanks: world3-stocktanks.js)
     case 'hayBale': V('hay:1', 'hayBale', [true], qa(u * PI, 2)); return;
     case 'festoon': {
       const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40;
@@ -3509,14 +3513,37 @@ function coverAt(c, tx, ty, x, y) {
 }
 // every cover plant whose picture can touch chunk (cx, cy): ground points from a little above it (shadows,
 // leaves) to a plant's height below it, a plant's half width either side
+// the ground cover keeps off the railway's bed (the owner, 10-16: "plants and trees on train tracks"): the tiles by a
+// ground-level track, further on its south side (a plant's sprite stands up north of its foot, over the ballast)
+const RAILCLEAR = new WeakMap();
+function railClear(M) {
+  let s = RAILCLEAR.get(M);
+  if (s) return s;
+  s = new Set();
+  for (const R of M.rails || (M.rail ? [M.rail] : [])) {
+    const P = R && R.pts, n = P ? P.length : 0;
+    for (let i = 0; i < n; i++) {
+      const a = P[i], b = P[(i + 1) % n];
+      if (a.under || b.under || (a.ez && b.ez)) continue;
+      const L = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 16));
+      if (L > 400) continue;   // (the loop's closing jump, if it isn't closed)
+      for (let k = 0; k <= L; k++) {
+        const x = a.x + (b.x - a.x) * k / L, y = a.y + (b.y - a.y) * k / L;
+        for (let ty = Math.floor((y - 72) / TILE); ty <= Math.floor((y + 110) / TILE); ty++) for (let tx = Math.floor((x - 72) / TILE); tx <= Math.floor((x + 72) / TILE); tx++) if (M.inside(tx, ty)) s.add(M.idx(tx, ty));
+      }
+    }
+  }
+  RAILCLEAR.set(M, s);
+  return s;
+}
 function coverItems(c, I, cx, cy) {
-  const out = [], W = c.W, H = c.H, taken = I.taken;
+  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M);
   const tx0 = Math.max(c.M.x0 + 1, Math.floor((cx * CH - 80) / TILE)), tx1 = Math.min(c.M.x0 + W - 2, Math.floor(((cx + 1) * CH + 80) / TILE));
   const ty0 = Math.max(c.M.y0 + 1, Math.floor((cy * CH - 40) / TILE)), ty1 = Math.min(c.M.y0 + H - 2, Math.floor(((cy + 1) * CH + 110) / TILE));
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
     const i = c.M.idx(tx, ty);
     const res = c.M.reserve ? c.M.reserve[i] : 0, lush = res & 128;   // (128: a river's lush banks - reeds right to the water)
-    if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16)) continue;
+    if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16) || rails.has(i)) continue;
     const x = Math.round((tx + hash(tx, ty, 7005)) * TILE), y = Math.round((ty + hash(tx, ty, 7007)) * TILE); // (anywhere in its tile: no rows)
     const r = coverAt(c, tx, ty, x, y);
     if (!r || !(lush ? coverClearWet(c, tx, ty) : coverClear(c, tx, ty, 1))) continue;

@@ -3950,6 +3950,14 @@ function vehVisual(v, now, dt) {
     for (const o of [-0.39, 0.39]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.4, o * def.W); S.fx.decal(4, x, y, v.ra + 1.571, 1, '#2b251d', S.loopClock, 0.4); }
     if (Math.random() < 0.3) S.fx.smoke(v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, true);
   }
+  // (art v2) the crop flattened under the wheels: a swath under each rear wheel every 12 px it rolls through a field
+  if (S.art2 && def.kind !== 'boat' && def.kind !== 'air' && !(f & VF.WRECK) && !(v.rz > 0.05)) {
+    const lx = v._crx ?? v.rx, ly = v._cry ?? v.ry;
+    if (Math.abs(v.rx - lx) + Math.abs(v.ry - ly) > 12) {
+      v._crx = v.rx; v._cry = v.ry;
+      for (const sgn of [-1, 1]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.3, sgn * def.W * 0.36); if (S.map.tileAtPx(x, y) === T.FIELD) S.fx.crush(x, y, v.ra, 0, S.loopClock, 0.8); }
+    }
+  }
   if (def.kind === 'boat' && v.buf.length > 1) {
     const b = v.buf; const sp = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y);
     if (sp > 2 && Math.random() < 0.8) S.fx.spawn(5, v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40, 0.7, 3, '#e8f6ff');
@@ -4176,6 +4184,11 @@ function pedVisual(p, now) {
   if (p.smokeUntil && now < p.smokeUntil && Math.random() < 0.05) S.fx.smoke(p.rx + (Math.random() - 0.5) * 12, p.ry + (Math.random() - 0.5) * 6, false);   // (cut in two by the plasma blade: the seared halves smoke a while)
   if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { if ((p.as || 0) > 12 || p.stillSince === undefined || (p.extra & 31) === APOSE.happy) p.stillSince = now; return; }   // (happy: it doesn't sit)
   if (p.blink === 3) return; // inside a home
+  // (art v2) the crop parts round someone walking through a field and stays trodden: a track every 10 px
+  if (S.art2 && !(f & PF.DEAD)) {
+    const lx = p._crx ?? p.rx, ly = p._cry ?? p.ry, d = Math.abs(p.rx - lx) + Math.abs(p.ry - ly);
+    if (d > 10) { p._crx = p.rx; p._cry = p.ry; if (d < 60 && S.map.tileAtPx(p.rx, p.ry) === T.FIELD) S.fx.crush(p.rx, p.ry + 2, Math.atan2(p.ry - ly, p.rx - lx), 1, S.loopClock, 0.85); }
+  }
   const L = pedLook(p, now);
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }
   if (L.swimming && (p.as || 0) > 30 && Math.random() < 0.12 && S.map.tileAtPx(p.rx, p.ry) !== T.BRIDGE) S.fx.splash(p.rx, p.ry, 2);

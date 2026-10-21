@@ -95,7 +95,7 @@ mat('TRACK', 'asphaltFresh', 3); mat('RUNWAY', 'asphaltOld', 3); mat('GORE', 'as
 mat('WALKC', 'slabConcrete', 4); mat('WALKCR', 'slabCracked', 4); mat('WALKS', 'slabStone', 4); mat('WALKB', 'brickRun', 4); mat('WALKO', 'cobbleSett', 4);
 mat('PLAZAC', 'slabPlaza', 4); mat('PLAZAS', 'slabStone', 4); mat('PLAZAB', 'brickHerring', 4); mat('PLAZAO', 'cobbleSett', 4);
 mat('DRIVE', 'slabDrive', 4); mat('APRONG', 'apron', 3); mat('ISLAND', 'slabConcrete', 4); mat('PATH', 'pathGravel', 4); mat('BOARD', 'boardwalk', 4); mat('BOARDV', 'boardwalkV', 4); mat('DOCK', 'planks', 4); mat('DOCKX', 'planksX', 4); mat('DECKWALK', 'slabConcrete', 4);
-mat('FOUND', 'foundation', 1); mat('WALL', 'foundation', 1); mat('FLOOR', 'floorTile', 1); mat('FLOORW', 'floorWood', 1); mat('COUNTER', 'counterTop', 1);
+mat('FOUND', 'foundation', 1); mat('WALL', 'foundation', 1); mat('CRAG', 'crag', 1); mat('FLOOR', 'floorTile', 1); mat('FLOORW', 'floorWood', 1); mat('COUNTER', 'counterTop', 1);
 mat('BALLAST', 'ballastStone', 1); mat('PLATFORM', 'slabPlaza', 1); mat('RAILDECK', 'planksX', 1);
 mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); mat('POOL', '', 2); mat('SPRING', '', 2);
 mat('SNOW', 'snowfield', 0);   // (World v3's summits: terrain class 9, shared/world3-biomes.js)
@@ -327,7 +327,11 @@ function tileFacts(C) {
     } else if (t === T.ROAD) m = D.road === 'asphalt_worn' ? M_.ROADOLD : M_.ROAD;
     else if (t === T.BUILDING) m = M_.FOUND;
     else if (t === T.WALL && mazes.length && inRects(mazes, X, Y)) m = M_.LAWN;
-    else if (t === T.WALL) m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : (b.tres[k] & 32) ? (st === 'desert' && b.tres[k] === 32 ? M_.REDROCK : M_.SCREE) : M_.WALL;   // (World v3 8.22: a desert table's cliff band, red rock)   // (32: a designed place's rock - cliffs, escarpments - natural rubble round their sprites)
+    // rock: out in the wilds (and a designed place's: 32) bare rock, granite slabs (red rock in the desert) - not the
+    // building's foundation the city's walls stand on. Most rock has its cliff face drawn over it (a sprite on its
+    // south edge); the rest - a band's top, its sides, a crag with no drop to the south - showed as plain ground you
+    // walked into (the owner, 2026-10-21)
+    else if (t === T.WALL) { const r = b.tres[k]; m = inRects(paint, X, Y, 'canyon') ? M_.REDROCK : (r & 32) || (!r && WILD_STYLES.has(st) && st !== 'airport') ? (st === 'desert' && !(r & ~32) ? M_.REDROCK : M_.CRAG) : M_.WALL; }   // (World v3 8.22: a desert table's cliff band, red rock)   // (32: a designed place's rock - cliffs, escarpments - natural rubble round their sprites)
     else if (t === T.FLOOR) { const bi = b.tbld[k], bd = bi >= 0 ? M.buildings[bi] : null; m = bd && /house|apt|home|shack|mansion|farm/.test(bd.kind) ? M_.FLOORW : M_.FLOOR; }
     else if (t === T.COUNTER) m = M_.COUNTER;
     else m = M_.FOUND;
@@ -1070,6 +1074,13 @@ function markings(C, G) {
         if (av > 14 && av < 30) { darken(G, gi, av > 18 && av < 26 ? 0.8 : 0.9); if (hh(X, Y, seed) > 0.97) setC(G, gi, sd(MAT.soil, 0.3, X, Y, 0)); }
         else if (av < 7 && vnc(X, Y, 9, seed + 3) > 0.45 && e.kind === 'dirt') { const c = GSHADE.grassMeadow(X, Y, seed); setC(G, gi, c); }
         continue;
+      }
+      // the desert's roads (the owner, 10-16: "desert roads look like old desert roads"): sun-cracked, the highway too,
+      // and the sand blown in over the asphalt's edges in drifts (the ghost town's street half buried)
+      const dst = DISTRICTS[b.td[(Math.floor(Y / TILE) - TY0) * TN + Math.floor(X / TILE) - TX0]];
+      if (dst && dst.style === 'desert' && e.kind !== 'ramp' && !e.lvl && m !== M_.DECK && m !== M_.DECKF) {
+        if (e.kind === 'hwy') wear = 0.3;
+        if (s >= 0 && v < 9e3) { const edge = e.hw - Math.abs(v); if (edge < 18 && vnc(X, Y, 29, seed + 93) * 20 > edge + 3) { setC(G, gi, GSHADE.desertGround(X, Y, seed)); continue; } }
       }
       if (a & (A_FILLET | A_BULB) || s < 0 || v > 9e3) { roadWear(C, G, gi, X, Y, wear, 0, 0, e); continue; }
       roadWear(C, G, gi, X, Y, wear, s, v, e);

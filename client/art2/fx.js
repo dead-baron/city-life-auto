@@ -1067,6 +1067,31 @@ export function skidDabFrames() {
   return out;
 }
 
+// crops flattened (the owner, 10-06 / 10-15: "crops ... part round people and flatten under tyres"): stalks laid
+// flat along the way something went through a field - pale straw where the bent stalks show their light undersides,
+// dark creases between them, ragged ends. Frames 0-7: a wheel's swath (18 x 8) at eight angles over half a turn;
+// 8-15: a person's or an animal's trodden track (12 x 6). Semi-opaque, so the crop's own colour shows through.
+const STRAW = [[226, 212, 150], [104, 92, 52], [70, 60, 34]];
+export function crushFrames() {
+  const out = [];
+  for (const [L, Wd] of [[9, 4], [6, 3]]) for (let k = 0; k < 8; k++) {
+    const a = k / 8 * Math.PI, ca = Math.cos(a), sa = Math.sin(a), S = 22, G = frame(S, S, S / 2, S / 2, 0, false);
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const dx = x + 0.5 - S / 2, dy = y + 0.5 - S / 2, lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
+      const end = L - (hashC(Math.round(ly * 2), k, L) * 2.5);   // (ragged ends)
+      if (Math.abs(lx) > end || Math.abs(ly) > Wd) continue;
+      if (dith(x, y, Math.abs(ly) > Wd - 0.8 ? 0.45 : 0.08)) continue;
+      // (the swath dark - the broken stalks' shade and the ground between them - with pale streaks of laid stalks
+      // along it, broken every few px)
+      const streak = ((Math.round(ly * 1.4) % 3) + 3) % 3 === 0 && hashC(Math.round(lx / 3), Math.round(ly * 2), k + 7) > 0.3;
+      dot(G, x, y, streak ? STRAW[0] : STRAW[1 + (hashC(x, y, k) > 0.6 ? 1 : 0)], 0, 0, F_GROUND, NUP, streak ? 170 : 200);
+    }
+    out.push(finish(G));
+  }
+  return out;
+}
+const hashC = (a, b, c) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+
 // ---- registry, memo and pool -------------------------------------------------------------------------
 const CACHE = new Map();
 // memoised frames of any maker + arguments (frames are built once and shared; never mutate them)
@@ -1124,6 +1149,7 @@ export const FX = {
   dOil: { make: M(poolFrames, true), frames: 3, decal: true, hold: 240 },
   dLitter: { make: M(litterFrames), frames: 6, decal: true, hold: 240 },
   dSkid: { make: M(skidDabFrames), frames: 8, decal: true, hold: 240 },
+  dCrush: { make: M(crushFrames), frames: 16, decal: true, hold: 150 },
   wakeBoat: { make: M(wakeFrames, 104, 48, 0), frames: 4, fps: 10, loop: true },
   wakeSmall: { make: M(wakeFrames, 46, 22, 0), frames: 4, fps: 12, loop: true },
 };

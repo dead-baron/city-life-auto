@@ -13241,6 +13241,120 @@ Tests: test/world3woods.test.js - the gate tree on its lane, the lane dirt all t
 clear (every solid near it at least 44 px off the lane's middle) and the trunk solid either side, a pickup driven
 along the lane's middle never pushed and pushed back either side of it, never felled, the sign, on the map.
 
+## 2026-10-21 · Nature: sharks
+
+- **the great white** (`server/systems/sharks.js`, new; `shared/fauna.js` shark; the owner, 2026-10-05: "sharks: very
+  rare, likeliest round the prison; fins; blood draws them"):
+  - **where**: only in the open sea, never on land, in a river or a lake, or in the shallows. Every 4 s the game looks
+    at each player swimming out at sea; a shark comes up out of deep water 760-1100 px off, out of sight if it can be.
+    Only one is about at a time.
+  - **how likely**: very rarely anywhere (0.35% a look, about once in 20 minutes' swimming). It's ten times likelier in
+    the water round Prison Island, and likely soon when there's blood in the water (a swimmer bleeding or under half
+    their health).
+  - **the hunt**: it cruises with its fin cutting the water, then finds a swimmer by sight (800 px) or, if they're
+    bleeding, by smell (2200 px). It circles them for about 9 s with the ring closing in, then rushes in and bites (38,
+    and you bleed) and goes round again for another pass.
+  - **getting away**: get out of the water (onto land, a dock or a boat) and it loses you. Hurt it below about half its
+    health and it turns away from you and goes back down.
+  - **as an animal**: nothing to take from it, and no wardens' fine for shooting one to fend it off (not
+    protected). It has its own way of moving (the wildlife's step leaves it alone: `own`). Killed by one, the death screen says "Taken by a great white shark."
+- **its art** (`client/art2/animals.js` sharkModel; `client/art2/game/host.js` wildPose): seen from above, a long dark
+  shape just under the water with the dorsal fin standing out of it and the top of the tail beating side to side. At
+  the bite its head comes up out of the water, the jaws wide with their rows of teeth. Dead, it rolls belly up.
+- **the dev panel**: Animals - "A great white (swim out to sea)" calls one up near you.
+
+Tests: test/sharks.test.js - a sea animal of its own (nothing to take, no fine); up from deep water a way off a swimmer, circling first,
+then the bite (blood, the maul seen, you bleed), never out of the sea; out of the water it loses you and stays in the
+sea; none for someone on land or in fresh water whatever the odds, one soon for a bleeding swimmer, one at a time; hurt
+badly, it goes away; its art (the fin's shape, the jaws at the bite, belly up dead, the tail's two frames).
+
+## 2026-10-21 · Nature: the desert's roads, its windmills and stock tanks
+
+- **the desert's road furniture** (`shared/world3-roadside.js`, new, World v3's done hook; the owner, 10-16: "desert
+  roads look like old desert roads"; the handcraft research's 4.6: "white delineator posts with red reflectors"):
+  white posts with a red reflector near the top stand along both shoulders of the desert's roads and highways every
+  eight tiles, on the sand or gravel by the asphalt (about 3,000 of them along some 70 roads in the Red Rock Desert).
+  None at a junction, on a bridge or a ramp, on a designed place's ground or in a yard. They aren't solid: a car
+  brushes past them. The art is a small voxel post (`client/art2/game/statics.js` delineatorPost).
+- **the desert's asphalt** (`client/art2/game/groundbake.js` markings): out in the desert the sand blows in over the
+  roads' edges in drifts, eating into the edge lines (Dusty Hollow's street half buried), and the highway is
+  sun-cracked like the other roads (elsewhere a highway's asphalt stays smooth).
+- **windmills and stock tanks** (`shared/world3-stocktanks.js`, new, World v3's done hook; NS1-C, the research's
+  "the windmills and stock tanks"): six out on the open range of the Red Rock Desert, far apart and well off the roads.
+  Each is a windmill pump over a round galvanized stock tank brim-full of water (`client/art2/props-rural.js`
+  stockTank, new), a trough, a corner of corral rail fence, a mesquite or two for shade and the ground round the water
+  trodden bare, with a two-rut gravel track out to the nearest road. The tank and the windmill are solid. Each is on
+  the map's nature sites ('stocktank').
+- **range cattle** (`server/systems/wildlife.js` farmNear): the stock tanks keep a few cows about as the farms keep
+  their livestock - cows only, never the farms' sheep or pigs.
+
+Tests: test/world3desert.test.js - the delineators (100 or more along four or more desert roads, each on a desert
+road's shoulder by the asphalt, never on a road, a designed place's ground, a lot or a building); the stock tanks
+(four or more, far apart, out on the range, each with its windmill and trough, the tank and the windmill solid, its
+track out to a road). test/stocktanks.test.js - cows, and only cows, round a stock tank out in the desert.
+
+## 2026-10-21 · World: tidied (the owner's 10-16 clutter list)
+
+The owner, 10-16: "fence posts and hay bales spawning over water; fences across driveways; plants and trees on train
+tracks". A check of the built World v3 found trees, bushes and flowers standing in the water where a river or a shore
+came after them (redwoods in Highland Woods' streams, pines and maples by the lakes), a yard fence running out into
+Liberty Bay, Lighthouse Rock's keeper's cottage and its bench in the shallows, the farm lanes' gate fences running
+along the road's asphalt and across a side road, garden fences cut across by a street, and the wild flowers and
+bushes growing up onto the railway's ballast.
+
+- **the world tidied last** (`shared/world3-tidy.js`, new, the last step of World v3's done hook): anything that needs
+  dry ground (trees, palms, redwoods, bushes, flower beds, cacti, posts, bales, benches, tables, yard fence panels,
+  mailboxes, troughs) and has water under it is taken away, its solids with it. Reeds, cattails and lilies stay in
+  the water, and a jetty's mooring posts stay. A fence run that meets a road, a bridge or the water stops short of
+  it; one with nothing left goes.
+- **the keeper's cottage** (`shared/naturesites.js` lighthouseTidepools): it stands east of the tower where the
+  island's dry ground is there, else west of it or behind it (World v3's Lighthouse Rock has the sea on the east).
+- **the farm gates** (`shared/world3-verges.js`): the gateposts and their fences stand half a tile back off the road
+  (the asphalt's edge isn't the tile's).
+- **the railway's bed** (`client/art2/game/statics.js` railClear): the ground cover keeps off the ballast - no plants
+  within two tiles of a ground-level track, three on its south side, where a plant's sprite would stand up over it.
+
+Tests: test/world3desert.test.js - nothing that needs dry ground in the water anywhere in the world (but a jetty's
+mooring posts), no fence run across a road, a bridge or the water.
+
+## 2026-10-21 · Fields: crops flattened under wheels and trodden underfoot (art v2)
+
+The owner, 10-06 and again 10-15: "grass, wheat and crops sway, part round people and flatten under tyres". The old
+renderer trampled its flora (render/flora); the art v2 page had nothing.
+
+- **flattened under the wheels** (`client/main.js` vehVisual): a car, a truck, a tractor or a bike rolling through a
+  field leaves a swath of flattened crop under each rear wheel, laid every 12 px it travels.
+- **trodden underfoot** (`client/main.js` pedVisual): someone walking or running through a field leaves a narrower
+  trodden track, every 10 px.
+- **the marks** (`client/art2/fx.js` crushFrames, the fx set `dCrush`: 8 angles of a wheel's swath, 8 of a trodden
+  track): dark broken stalks and the ground between them, with pale laid stalks streaking along the way it went;
+  half see-through, so the crop's own colour shows. They stand for two and a half minutes, then fade in 40 s as the
+  crop comes back up. They keep a ring of their own (`client/render/fx.js` crush, 900 marks), so a tractor working
+  a field never pushes the blood and the skid marks out of the decals', and the page draws them under the other
+  decals (`client/art2/game/host.js` _decals).
+- The swaying was there already: art v2's wind leans the crops' ears, the grass tufts and the foliage, with gusts
+  travelling across (`client/art2/game/engine.js` uSway).
+
+Tests: test/crush.test.js - the marks' frames (a swath wider and longer than a track at every angle, dark with pale
+streaks, see-through); their own ring (2,000 marks leave the blood decal in place, the newest kept).
+
+## 2026-10-21 · Fix: rock you couldn't see
+
+The owner, 2026-10-21: "Not seeing some rock or cliff formations showing, you can see it on the minimap and can't walk
+through it but it doesn't load in game" (on the coast below Granite Peaks, 510-530 x 1402-1424). A cliff's face is a
+sprite drawn on the rock's south edge, where it drops to open ground (`shared/world3-relief.js` and the hand-made
+places' cliffs). The rest of the rock was left to the ground bake: a band's top, its sides, a crag with no drop to
+the south, about 55 patches out in the wilds. It drew them as the mountains' scree, or as a building's concrete
+foundation, so you saw forest floor or meadow and walked into an invisible wall.
+
+- **bare rock** (`client/art2/ground.js` crag, new; `client/art2/game/groundbake.js`): out in the wilds, and on a
+  designed place's rock (reserve 32), rock is drawn as bare granite. It's grey slabs split by dark cracks, lichen on
+  them, each slab tilted to the light its own way and raised 8-16 px so it casts its shadow. It's red rock in the
+  desert, as before. The city's walls and the prison's keep their foundation.
+- Most of the wilds' rock already had a cliff sprite over it; under those the change shows only round the edges.
+
+Tests: test/crag.test.js - the material (slabs and cracks, raised, tilted); the wilds' rock raised and grey in the
+ground bake, a city wall flat.
 ## 2026-10-21 · Fix: no fish and no falls' mist on World v3's page
 
 The owner, 2026-10-21: "Should I be seeing fish in the water yet? Haven't seen any". The water life

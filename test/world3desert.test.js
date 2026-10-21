@@ -5,7 +5,8 @@
 // with its seams, as the Old Granite Mine's), the freight yard's ore cars by the main line; Dusty Hollow's empty
 // buildings, its hideout and smuggler's drop; Red Rock Dam on the reservoir's shore and the dry wash below; the lookout,
 // the arch and the hoodoos; the motel, its pool and the billboards; the desert camp; nothing in the highways' room or on
-// the main line. One world build.
+// the main line; the white delineator posts along the desert's roads; the windmills and stock tanks out on the range;
+// and the whole world tidied (nothing that needs dry ground in the water, no fence across a road). One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity, DISTRICTS } from '../shared/map.js';
@@ -14,6 +15,9 @@ import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { skeletonLines, nearestOnPath } from '../shared/world3-skeleton.js';
 import { GULCH, HOLLOW, DESERT, DESERT_SPECIALS, DESERT_IDS } from '../shared/world3-desert.js';
+import { ROADSIDE3 } from '../shared/world3-roadside.js';
+import { STOCK3 } from '../shared/world3-stocktanks.js';
+import { TIDY3 } from '../shared/world3-tidy.js';
 import { undergroundOf, UG, caveOf } from '../shared/underground.js';
 import { prepare } from '../tools/world3-build.mjs';
 
@@ -141,6 +145,61 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
   const mls = m.natureSites.find((s) => s.kind === 'lake' && s.name === 'Mirage Lake');
   check(mls && m.props.some((p) => p && p.t === 'rowboat' && Math.hypot(p.x - mls.x, p.y - mls.y) < 30 * TILE), 'its rowboat by the jetty');
   check(mls && m.props.filter((p) => p && p.t === 'palm_a' && Math.hypot(p.x - mls.x, p.y - mls.y) < 30 * TILE).length >= 4, 'palms round it');
+  // 9. the desert's roads by their furniture (shared/world3-roadside.js): white delineator posts along their shoulders -
+  // on the sand or gravel by the asphalt, in the desert's districts only, never on a road, a designed place's ground,
+  // a lot or a building; along several roads
+  const RS = m.world3.roadside, dl = m.props.filter((p) => p && p.t === 'delineator');
+  console.log('roadside', JSON.stringify(RS), dl.length);
+  check(dl.length >= 100 && RS.roads >= 4 && dl.length <= ROADSIDE3.max, `${dl.length} delineators along ${RS.roads} desert roads`);
+  const styleOf = DISTRICTS.map((d) => (d ? d.style : ''));
+  const dlBad = dl.filter((p) => { const i = Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE); return !(m.tiles[i] === T.SAND || m.tiles[i] === T.DIRT) || !ROADSIDE3.styles.has(styleOf[m.dist[i]]) || (m.reserve[i] & (16 | 32 | 2 | 8)) || m.bld[i] >= 0; });
+  check(dlBad.length === 0, `${dlBad.length} delineators off a desert road's shoulder (${dlBad.slice(0, 3).map((p) => [p.x / TILE | 0, p.y / TILE | 0])})`);
+  // (by the asphalt: a road tile within a few tiles of each)
+  const nearRoad = (p) => { for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const t = m.tiles[(Math.floor(p.y / TILE) + dy) * W + Math.floor(p.x / TILE) + dx]; if (t === T.ROAD || t === T.BRIDGE) return true; } return false; };
+  check(dl.every(nearRoad), 'each by the asphalt');
+  // (the highways' too: Route 9 across the desert)
+  const hwyT = new Set();
+  for (const e of m.edges) if (e && e.kind === 'hwy' && !e.lvl && e.pts) for (let k = 1; k < e.pts.length; k++) {
+    const a = e.pts[k - 1], b = e.pts[k], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 32)), r = Math.ceil(e.hw / TILE) + 2;
+    for (let j = 0; j <= n; j++) { const x = Math.floor((a.x + (b.x - a.x) * j / n) / TILE), y = Math.floor((a.y + (b.y - a.y) * j / n) / TILE); for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) hwyT.add((y + dy) * W + x + dx); }
+  }
+  const hwyPosts = dl.filter((p) => hwyT.has(Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)));
+  check(hwyPosts.length >= 20, `${hwyPosts.length} delineators along the desert's highways`);
+  const railT = new Set();
+  for (const r of m.rails || []) for (const q of r.pts || []) if (!q.under) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) railT.add((Math.floor(q.y / TILE) + dy) * W + Math.floor(q.x / TILE) + dx);
+  const onRail = dl.filter((p) => railT.has(Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)));
+  check(onRail.length === 0, `${onRail.length} delineators at a level crossing (${onRail.slice(0, 3).map((p) => [p.x / TILE | 0, p.y / TILE | 0])})`);
+  // 10. the windmills and stock tanks out on the range (shared/world3-stocktanks.js): far apart, each a windmill over
+  // its tank (both solid), a trough, a two-rut track out to a road; on the map
+  const ST = m.natureSites.filter((s) => s.kind === 'stocktank');
+  console.log('stock tanks', JSON.stringify(m.world3.stockTanks));
+  check(ST.length >= 4, `${ST.length} stock tanks`);
+  for (const s of ST) {
+    const near = (t, r) => m.props.some((p) => p && p.t === t && Math.hypot(p.x - s.x, p.y - s.y) < r * TILE);
+    check(near('stocktank', 1) && near('windmill', 4) && near('trough', 4), `the tank at ${s.x / TILE | 0}, ${s.y / TILE | 0}: its windmill and trough`);
+    check(STOCK3.districts.includes(m.dist[Math.floor(s.y / TILE) * W + Math.floor(s.x / TILE)]), 'out on the range');
+    const sol = (x, y) => { for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const a = m.solidProps.get((Math.floor(y / TILE) + dy) * W + Math.floor(x / TILE) + dx); if (a && a.some((e) => Math.hypot(e.x - x, e.y - y) < 24)) return true; } return false; };
+    check(sol(s.x, s.y) && sol(s.windmill[0], s.windmill[1]), `the tank and the windmill solid at ${s.x / TILE | 0}, ${s.y / TILE | 0}`);
+    const [bx, by] = s.track[1];
+    let road = false;
+    for (let dy = -2; dy <= 2 && !road; dy++) for (let dx = -2; dx <= 2; dx++) if (m.tiles[(Math.floor(by / TILE) + dy) * W + Math.floor(bx / TILE) + dx] === T.ROAD) { road = true; break; }
+    check(road, `its track out to a road (${s.track.map((q) => q.map((v) => v / TILE | 0))})`);
+    check(ST.every((o) => o === s || Math.hypot(o.x - s.x, o.y - s.y) >= STOCK3.apart * TILE), 'far apart');
+  }
+  // 11. the world tidied last (shared/world3-tidy.js; the owner's 10-16 list): nothing that needs dry ground stands in
+  // the water anywhere in the world, and no fence run crosses a road, a bridge or the water
+  console.log('tidy', JSON.stringify(m.world3.tidy));
+  const wetT = (x, y) => { const t = m.tiles[Math.floor(y / TILE) * W + Math.floor(x / TILE)]; return t === T.WATER || t === T.DEEP; };
+  const dockBy = (x, y) => { for (let dy = -48; dy <= 48; dy += 16) for (let dx = -48; dx <= 48; dx += 16) { const t = m.tiles[Math.floor((y + dy) / TILE) * W + Math.floor((x + dx) / TILE)]; if (t === T.DOCK || t === T.BRIDGE) return true; } return false; };
+  const inWater = m.props.filter((p) => p && TIDY3.LAND.has(p.t) && !(p.sp && TIDY3.WET_SP.has(p.sp)) && !(p.t === 'post' && dockBy(p.x, p.y)) && (p.t === 'yfence' && p.x1 !== undefined ? wetT((p.x + p.x1) / 2, (p.y + p.y1) / 2) : wetT(p.x, p.y)));
+  check(inWater.length === 0, `${inWater.length} things in the water that need dry ground (${inWater.slice(0, 4).map((p) => [p.t, p.x / TILE | 0, p.y / TILE | 0])})`);
+  const across = m.props.filter((p) => {
+    if (!p || p.t !== 'fenceline' || !TIDY3.FENCE.has(p.kind || 'iron')) return false;
+    const L = Math.hypot(p.tx || 0, p.ty || 0);
+    for (let s = 0; s <= L; s += 8) { const t = m.tiles[Math.floor((p.y + (p.ty || 0) * (L ? s / L : 0)) / TILE) * W + Math.floor((p.x + (p.tx || 0) * (L ? s / L : 0)) / TILE)]; if (t === T.ROAD || t === T.BRIDGE || t === T.WATER || t === T.DEEP) return L >= 1; }
+    return false;
+  });
+  check(across.length === 0, `${across.length} fences across a road or the water (${across.slice(0, 4).map((p) => [p.kind, p.x / TILE | 0, p.y / TILE | 0])})`);
   console.log('Red Rock Desert', JSON.stringify({ tiles, gulch: gb.length, hollow: hb.length, pois: pois.length, station: Math.round(near), ours: ours.length }));
   assert.deepEqual(bad.slice(0, 20), [], `${bad.length} problems`);
 });
