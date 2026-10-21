@@ -49,6 +49,62 @@ export const TRAIL = { r: 30, blazeEvery: 40, steep: 0.9, drop: 1.5, clear: 46, 
 const VEG = /^(tree_|redwood|shrub_|bush_|flowers_|rwstump|rwlog|log$|fern|gnaw)/;
 const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
+// A* over the tiles in a box round the two ends (a, b: tiles): each step priced by the ground it lands on (cost(i): x10
+// an orthogonal step, 0 closed) and the slope (squared - the line keeps to the contours: o.slope); `free(x, y)` the
+// tiles by the ends a closed one may still be stepped on (not water, a building, the rock). The tile path, or null.
+export function routeTiles(m, a, b, cost, free, o = {}) {
+  const W = m.w, HH = m.h, inF = (x, y) => x >= 0 && y >= 0 && x < W && y < HH, idx = (x, y) => y * W + x;
+  const wetT = (t) => t === T.WATER || t === T.DEEP, SL = o.slope ?? 60;
+  const PAD = o.pad ?? TRAIL.pad;
+  const bx0 = Math.max(1, Math.min(a[0], b[0]) - PAD), by0 = Math.max(1, Math.min(a[1], b[1]) - PAD);
+  const bx1 = Math.min(W - 2, Math.max(a[0], b[0]) + PAD), by1 = Math.min(HH - 2, Math.max(a[1], b[1]) + PAD);
+  const BW = bx1 - bx0 + 1, BH = by1 - by0 + 1, N = BW * BH;
+  const z = new Float32Array(N), c = new Int16Array(N);
+  for (let y = 0; y < BH; y++) for (let x = 0; x < BW; x++) {
+    let s = 0, n = 0;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const tx = bx0 + x + dx, ty = by0 + y + dy; if (inF(tx, ty)) { s += m.relief[idx(tx, ty)]; n++; } }
+    z[y * BW + x] = s / n;
+    const i = idx(bx0 + x, by0 + y);
+    c[y * BW + x] = free(bx0 + x, by0 + y) && !wetT(m.tiles[i]) && cost(i) === 0 && !(m.reserve[i] & (1 | 2 | 8)) && m.tiles[i] !== T.BUILDING && m.tiles[i] !== T.WALL ? 20 : cost(i);
+  }
+  const g = new Float64Array(N).fill(Infinity), came = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
+  const hf = [], hk = [];
+  const push = (f, k) => { hf.push(f); hk.push(k); let i = hf.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (hf[p] < hf[i] || (hf[p] === hf[i] && hk[p] <= hk[i])) break; [hf[p], hf[i]] = [hf[i], hf[p]]; [hk[p], hk[i]] = [hk[i], hk[p]]; i = p; } };
+  const pop = () => {
+    const k = hk[0], lf = hf.pop(), lk = hk.pop();
+    if (hf.length) {
+      hf[0] = lf; hk[0] = lk; let i = 0;
+      for (;;) { const l = 2 * i + 1, r = l + 1; let s = i; if (l < hf.length && (hf[l] < hf[s] || (hf[l] === hf[s] && hk[l] < hk[s]))) s = l; if (r < hf.length && (hf[r] < hf[s] || (hf[r] === hf[s] && hk[r] < hk[s]))) s = r; if (s === i) break; [hf[s], hf[i]] = [hf[i], hf[s]]; [hk[s], hk[i]] = [hk[i], hk[s]]; i = s; }
+    }
+    return k;
+  };
+  const ax = a[0] - bx0, ay = a[1] - by0, gx = b[0] - bx0, gy = b[1] - by0, start = ay * BW + ax, goal = gy * BW + gx;
+  const hx = (k) => { const x = k % BW, y = (k / BW) | 0, dx = Math.abs(x - gx), dy = Math.abs(y - gy); return Math.max(dx, dy) * 10 + Math.min(dx, dy) * 4; };
+  g[start] = 0; push(hx(start), start);
+  while (hf.length) {
+    const k = pop();
+    if (closed[k]) continue;
+    closed[k] = 1;
+    if (k === goal) break;
+    const x = k % BW, y = (k / BW) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= BW || ny >= BH) continue;
+      const j = ny * BW + nx;
+      if (closed[j] || !c[j]) continue;
+      if (dx && dy && (!c[y * BW + nx] || !c[ny * BW + x])) continue;
+      const d = dx && dy ? 1.4142 : 1, dz = Math.abs(z[j] - z[k]) / d;
+      const ng = g[k] + d * (c[j] + SL * dz * dz + 6 * dz);
+      if (ng < g[j]) { g[j] = ng; came[j] = k; push(ng + hx(j), j); }
+    }
+  }
+  if (goal !== start && came[goal] < 0) return null;
+  const path = [];
+  for (let k = goal; k >= 0; k = came[k]) { path.push([bx0 + (k % BW), by0 + ((k / BW) | 0)]); if (k === start) break; }
+  return path.reverse();
+}
+
 export function buildTrails3(m, H3) {
   const out = { trails: [], glades: [], lookout: null, missed: [], cleared: 0 };
   if (!H3 || !H3.addProp || !m.relief) return out;
@@ -84,57 +140,7 @@ export function buildTrails3(m, H3) {
     }
     return 0;
   };
-  // A* over the tiles in a box round the two ends: the step, the slope (squared: it keeps to the contours), the ground
-  const route = (a, b, free) => {
-    const PAD = TRAIL.pad;
-    const bx0 = Math.max(1, Math.min(a[0], b[0]) - PAD), by0 = Math.max(1, Math.min(a[1], b[1]) - PAD);
-    const bx1 = Math.min(W - 2, Math.max(a[0], b[0]) + PAD), by1 = Math.min(HH - 2, Math.max(a[1], b[1]) + PAD);
-    const BW = bx1 - bx0 + 1, BH = by1 - by0 + 1, N = BW * BH;
-    const z = new Float32Array(N), c = new Int16Array(N);
-    for (let y = 0; y < BH; y++) for (let x = 0; x < BW; x++) {
-      let s = 0, n = 0;
-      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const tx = bx0 + x + dx, ty = by0 + y + dy; if (inF(tx, ty)) { s += m.relief[idx(tx, ty)]; n++; } }
-      z[y * BW + x] = s / n;
-      const i = idx(bx0 + x, by0 + y);
-      c[y * BW + x] = free(bx0 + x, by0 + y) && !wetT(m.tiles[i]) && cost(i) === 0 && !(m.reserve[i] & (1 | 2 | 8)) && m.tiles[i] !== T.BUILDING && m.tiles[i] !== T.WALL ? 20 : cost(i);
-    }
-    const g = new Float64Array(N).fill(Infinity), came = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
-    const hf = [], hk = [];
-    const push = (f, k) => { hf.push(f); hk.push(k); let i = hf.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (hf[p] < hf[i] || (hf[p] === hf[i] && hk[p] <= hk[i])) break; [hf[p], hf[i]] = [hf[i], hf[p]]; [hk[p], hk[i]] = [hk[i], hk[p]]; i = p; } };
-    const pop = () => {
-      const k = hk[0], lf = hf.pop(), lk = hk.pop();
-      if (hf.length) {
-        hf[0] = lf; hk[0] = lk; let i = 0;
-        for (;;) { const l = 2 * i + 1, r = l + 1; let s = i; if (l < hf.length && (hf[l] < hf[s] || (hf[l] === hf[s] && hk[l] < hk[s]))) s = l; if (r < hf.length && (hf[r] < hf[s] || (hf[r] === hf[s] && hk[r] < hk[s]))) s = r; if (s === i) break; [hf[s], hf[i]] = [hf[i], hf[s]]; [hk[s], hk[i]] = [hk[i], hk[s]]; i = s; }
-      }
-      return k;
-    };
-    const ax = a[0] - bx0, ay = a[1] - by0, gx = b[0] - bx0, gy = b[1] - by0, start = ay * BW + ax, goal = gy * BW + gx;
-    const hx = (k) => { const x = k % BW, y = (k / BW) | 0, dx = Math.abs(x - gx), dy = Math.abs(y - gy); return Math.max(dx, dy) * 10 + Math.min(dx, dy) * 4; };
-    g[start] = 0; push(hx(start), start);
-    while (hf.length) {
-      const k = pop();
-      if (closed[k]) continue;
-      closed[k] = 1;
-      if (k === goal) break;
-      const x = k % BW, y = (k / BW) | 0;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        if (!dx && !dy) continue;
-        const nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= BW || ny >= BH) continue;
-        const j = ny * BW + nx;
-        if (closed[j] || !c[j]) continue;
-        if (dx && dy && (!c[y * BW + nx] || !c[ny * BW + x])) continue;
-        const d = dx && dy ? 1.4142 : 1, dz = Math.abs(z[j] - z[k]) / d;
-        const ng = g[k] + d * (c[j] + 60 * dz * dz + 6 * dz);
-        if (ng < g[j]) { g[j] = ng; came[j] = k; push(ng + hx(j), j); }
-      }
-    }
-    if (goal !== start && came[goal] < 0) return null;
-    const path = [];
-    for (let k = goal; k >= 0; k = came[k]) { path.push([bx0 + (k % BW), by0 + ((k / BW) | 0)]); if (k === start) break; }
-    return path.reverse();
-  };
+  const route = (a, b, free) => routeTiles(m, a, b, cost, free);
   // the nearest tile a trail may stand on to (x, y), within r
   const snap = (x, y, r = 10) => {
     x = Math.round(x); y = Math.round(y);

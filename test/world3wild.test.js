@@ -125,7 +125,8 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
   // its own region (apart), entered by its own mouth, its own veins on its walls
   const ogm = named('Old Granite Mine')[0], cgm = named('Copper Gulch Mine')[0];
   check(ogm && ogm.seams.length >= 3 && ogm.cave !== false, 'the Old Granite Mine and its seams');
-  check(U && U.caves.length === 2, `two caves: ${U?.caves?.length}`);
+  const mineCaves = U ? U.caves.filter((c) => c.kind !== 'cavern') : [];   // (and after them the caverns: test/world3caves.test.js)
+  check(mineCaves.length === 2, `two mine caves: ${mineCaves.length}`);
   for (const mine of [ogm, cgm]) {
     const K = U && mine && U.caves.find((c) => c.X === mine.x && c.face === mine.y);
     check(K && K.name === mine.name, `${mine?.name}'s cave`);
@@ -133,7 +134,7 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
     check(caveOf(U, K.inside.x, K.inside.y) === K && caveOf(U, K.den.x, K.den.y) === K, `${mine.name}'s cave: in its own region`);
     check(U.veins.filter((v) => v.ug === UG.CAVE && caveOf(U, v.x, v.y) === K).length >= 10, `${mine.name}'s cave: its veins`);
   }
-  if (U && U.caves.length === 2) { const [a, b] = U.caves.map((c) => c.region); check(a.x0 + a.w < b.x0 || b.x0 + b.w < a.x0 || a.y0 + a.h < b.y0 || b.y0 + b.h < a.y0, 'the two caves apart'); }
+  if (U) { const rs = U.caves.map((c) => c.region); for (let i = 0; i < rs.length; i++) for (let j = i + 1; j < rs.length; j++) { const a = rs[i], b = rs[j]; check(a.x0 + a.w < b.x0 || b.x0 + b.w < a.x0 || a.y0 + a.h < b.y0 || b.y0 + b.h < a.y0, `the caves apart (${U.caves[i].name}, ${U.caves[j].name})`); } }
   // (H51) the tracks' edges flagged for the traffic to keep off - and only theirs
   const trackNames = new Set(WILD_TRACKS.map((K) => K.name));
   const flagged = m.edges.filter((e) => e.notraffic), unflagged = m.edges.filter((e) => trackNames.has(e.name) && e.kind === 'dirt' && !e.notraffic);

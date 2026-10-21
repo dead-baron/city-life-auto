@@ -23,6 +23,9 @@ export const VEHICLES = {
   // then the back seats (both renderers draw who's in it there: task #420; the snapshot says who's in a back seat)
   speedboat: { i: 13, name: 'Speedboat',       kind: 'boat', L: 104, W: 48, max: 600, accel: 270, brake: 260, rev: 120, turn: 2.0, grip: 2.4, drift: 1.2, mass: 1.6, hp: 260, seats: 4, slots: [[-24, -10], [-24, 10]], price: 8000, crew: [[-9, 11], [-9, -11], [-35, 10], [-35, -10]] },
   dinghy:    { i: 14, name: 'Dock Motorboat',  kind: 'boat', L: 80,  W: 40, max: 420, accel: 210, brake: 220, rev: 110, turn: 2.2, grip: 2.8, drift: 1.4, mass: 1.0, hp: 160, seats: 2, slots: [[-20, 0]], price: 2500, crew: [[-22, 3], [0, 0]] },
+  // a wooden rowboat: oars, no engine - slow and quiet (the Redwood Caverns' river: shared/world3-caves.js, server/systems/
+  // underground.js; Nature-B1)
+  rowboat:   { i: 66, name: 'Rowboat',         kind: 'boat', L: 64,  W: 28, max: 250, accel: 130, brake: 220, rev: 90,  turn: 2.0, grip: 3.0, drift: 1.5, mass: 0.6, hp: 90,  seats: 2, slots: [[-22, 0]], price: 600, oars: true, crew: [[2, 0], [-16, 0]] },
   jetski:    { i: 16, name: 'Wave Jet Ski',    kind: 'boat', L: 46,  W: 22, max: 690, accel: 520, brake: 300, rev: 90,  turn: 3.2, grip: 3.2, drift: 1.6, mass: 0.5, hp: 110, seats: 2, slots: [[-15, 0]], price: 3500, crew: [[-2, 0], [-14, 0]] },
   policeboat: { i: 17, name: 'Harbor Patrol Boat', kind: 'boat', L: 104, W: 48, max: 650, accel: 320, brake: 280, rev: 130, turn: 2.1, grip: 2.6, drift: 1.2, mass: 1.8, hp: 420, seats: 4, slots: [[-24, 0]], police: true, art: 'speedboat' },   // (a wheelhouse: no crew shown)
   // the search-and-rescue boat (server/systems/rescue.js): an orange and white rigid inflatable out of the nearest dock to

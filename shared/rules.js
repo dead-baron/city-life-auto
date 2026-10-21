@@ -561,6 +561,11 @@ export const BEAR_BITE = 18;               // its bite...
 export const BEAR_BITE_S = 1.3;            // ...this often while you stay
 export const MINE_REACH = 44;              // px: face a vein this close to work it
 export const VEIN_REGROW_S = 300;          // a worked-out vein grows back (somewhere near) after this long
+// a cavern's old chests (the Redwood Caverns' - shared/world3-caves.js): open one close enough for what's in it - a few of
+// these (each [item, least, most]), a little cash - and it fills again this long after (the next explorer's)
+export const CHEST_REACH = 44;
+export const CHEST_REFILL_S = 2700;
+export const CHEST_LOOT = { items: [['doubloon', 1, 4], ['nugget', 0, 2], ['geode', 0, 2], ['amethystGeode', 0, 1], ['arrowhead', 0, 1]], cash: [40, 180] };
 export { PICK_PRICES } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export { ASSAY_PAYS } from './rules-base.js';             // the quarry's assay office pays this much over what a pawn shop does
 

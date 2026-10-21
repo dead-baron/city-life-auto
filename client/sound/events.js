@@ -161,6 +161,7 @@ export const EVENT_SOUNDS = {
   bats: (ev, A) => A.at('bats', ev.x, ev.y),                           // a roost bursting out at a light
   dust: (ev, A) => A.at('trickle', ev.x, ev.y),                        // grit trickling from a cracked roof...
   rockfall: (ev, A) => A.at('rockfall', ev.x, ev.y),                   // ...and the rock coming down
+  chest: (ev, A) => { A.at('gate', ev.x, ev.y, 0.35); A.at('cashtoss', ev.x, ev.y, 0.5); },   // an old chest's lid creaking up, the coins in it (a cavern's: server/systems/underground.js)
   // ---- people ----
   say: speech('talk'),
   thanks: speech('happy'),

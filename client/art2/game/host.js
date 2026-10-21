@@ -33,6 +33,7 @@ import { WorkerPool, takeWarmPool, isPhone } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
+import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
 import { TILE, K, PF, VF, DAY_LOOP_S } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
@@ -1432,7 +1433,9 @@ export class World2 {
     o.alpha = sinking ? 1 - 0.75 * sk : 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = !sinking; o.tint = v.tint || null;   // (render/boom.js)
     if (v.blinkUntil > now) o.alpha *= Math.floor(now * 10) % 2 ? 0.25 : 1;
     const lean = def.kind === 'boat' ? 0 : -(v.lean || 0) * (def.cart ? 0.6 : def.kind === 'bike' ? 2.5 : 1.6);
-    const z0 = this._z0(v, def.kind === 'boat') - (sinking ? sk * 8 : 0);
+    const jz = def.kind === 'bike' || def.kind === 'car' ? jumpLift(this.map, v, now) : 0;   // (riding the MX park's tabletops, flying off them: jumps.js - looks only)
+    v._jz = jz; o.air = jz > 6;
+    const z0 = this._z0(v, def.kind === 'boat') - (sinking ? sk * 8 : 0) + jz;
     // a moving boat: its foam under the hull (bow collar, churned stern, the V close behind) and wake points
     // dropped for the trail that spreads and fades behind it (_wakeTrail)
     if (def.kind === 'boat' && A.wakeKey && !sinking) {
@@ -1447,6 +1450,7 @@ export class World2 {
     const under = def.kind === 'boat' && this._underDeck(v.rx, v.ry, v.ra, def.L);
     o.under = under ? UNDER_Z : 0;
     E.drawSprite(use, v.rx - Math.sin(v.ra) * lean, v.ry, Math.max(0, z0), o);
+    o.air = false;
     o.under = 0;
     this.n.drawn++;
     if (def.turret) this._turret(v, f, N, z0);   // (a tank: its turret at its own angle - H58)
@@ -1642,7 +1646,7 @@ export class World2 {
     const meVeh = S.pred && S.pred.kind === 'veh' ? S.ctrlId : -1;
     for (const v of F.vehs) { this.sprPrio = v.id === meVeh ? -3 : -1; this._veh(v, now, v.id === meVeh); }
     for (const p of F.peds) { this.sprPrio = p.id === S.myPedId ? -3 : -1; this._ped(p, now, p.id === S.myPedId, F); }
-    for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; const car = S.ents.get(p.parent); this._ped(p, now, p.id === S.myPedId, F, 8 + (car ? (car.rz || 0) * EL_Z : 0)); }   // (up on the El: its car's height)
+    for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; const car = S.ents.get(p.parent); this._ped(p, now, p.id === S.myPedId, F, 8 + (car ? (car.rz || 0) * EL_Z + (car._jz || 0) : 0)); }   // (up on the El: its car's height; over a jump: its bike's)
     this.sprPrio = -1;
     for (const c of F.cars) this._train(c, now, F.myTrain);
     this._rides(F, now);
