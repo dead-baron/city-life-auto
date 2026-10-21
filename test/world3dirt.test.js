@@ -1,13 +1,14 @@
 // Dirt-bike country (the nature program, 2026-10-20: Nature-C1): the Red Rock MX Park in World v3's desert
 // (shared/world3-dirt.js) - its course, berms, tabletops, the gate and the timing tower, the floodlights, the pits and
-// their bikes, the lap race - and the clients' tabletop jumps (client/art2/game/jumps.js).
+// their bikes, the lap race - the long rides (Nature-C1-B: the Red Rock Trail, the Highland Enduro) and the clients'
+// tabletop jumps (client/art2/game/jumps.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { T, TILE } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
-import { MX } from '../shared/world3-dirt.js';
+import { MX, RIDES } from '../shared/world3-dirt.js';
 import { jumpLift, JUMP } from '../client/art2/game/jumps.js';
 import { prepare } from '../tools/world3-build.mjs';
 
@@ -65,4 +66,27 @@ test('World v3: the Red Rock MX Park - the course, its berms and tabletops, the 
   const box = m.landmarks.find((l) => l.name === MX.name);
   let roadNear = false; for (let dy = 1; dy <= 18 && !roadNear; dy++) for (let dx = 0; dx < box.w / TILE; dx += 2) if (m.tiles[m.idx(Math.floor(box.x / TILE) + dx, Math.floor(box.y / TILE) - dy)] === T.ROAD) { roadNear = true; break; }
   assert.ok(roadNear, 'a road along its north side');
+  // the long rides: both laid, on ground a bike can ride every step (fords and bridges over the water)
+  for (const R of RIDES) {
+    const r = D.rides.find((q) => q.name === R.name), st = m.natureSites.find((q) => q.name === R.name);
+    assert.ok(r && st && st.line.length > 10, `the ${R.name}`);
+    assert.ok(r.len >= (R.kind === 'enduro' ? 300 : 450), `the ${R.name}: ${r.len} tiles`);
+    let wet = 0; for (const [x, y] of st.line) { const t = m.tiles[m.idx(Math.floor(x / TILE), Math.floor(y / TILE))]; if (t === T.WATER || t === T.DEEP || t === T.WALL || t === T.BUILDING) wet++; }
+    assert.ok(wet <= 1, `the ${R.name}: ${wet} points off what a bike can ride`);
+  }
+  const route = D.rides.find((q) => q.name === 'Red Rock Trail'), enduro = D.rides.find((q) => q.name === 'Highland Enduro');
+  assert.equal(route.markers, 4, 'the route\'s markers 1 to 4');
+  for (const n of ['1', '2', '3', '4']) assert.ok(m.props.some((p) => p && p.t === 'textsign' && p.text === n), `marker ${n}`);
+  const rest = m.props.find((p) => p && p.t === 'pergola' && Math.hypot(p.x - 5584 * TILE, p.y - 1648 * TILE) < 2400);
+  assert.ok(rest && m.props.some((p) => p && p.t === 'otank' && Math.hypot(p.x - rest.x, p.y - rest.y) < 300) && m.props.some((p) => p && p.t === 'picnic' && Math.hypot(p.x - rest.x, p.y - rest.y) < 100), 'the rest stop: the ramada, its table, the tank');
+  assert.ok(D.washTiles >= 100, `the wash: ${D.washTiles} tiles`);
+  assert.ok(enduro.berms >= 4 && enduro.jumps === 3 && enduro.fords >= 1 && enduro.bridges === 1, `the enduro's berms ${enduro.berms}, jumps ${enduro.jumps}, fords ${enduro.fords}, bridges ${enduro.bridges}`);
+  assert.equal(m.jumps.filter((J) => J.name === 'Highland Enduro').length, 3, 'its jump line');
+  const es = m.natureSites.find((q) => q.name === 'Highland Enduro');
+  const nearE = (t, r) => m.props.filter((p) => p && p.t === t && Math.hypot(p.x - es.x, p.y - es.y) < r).length;
+  assert.ok(nearE('rootplate', 8000) === 1 && nearE('rwlog', 8000) >= 1 && nearE('mapboard', 300) >= 1, 'the root plate, the log ride, the board');
+  assert.ok(m.parking.filter((p) => p.ride && p.model === 'dirtbike').length >= 3, 'bikes left at the trailhead');
+  const tk = m.tracks.find((t) => t.ride === 'Highland Enduro');
+  let ford = 0; for (const [x, y] of tk.pts) { const i = m.idx(Math.floor(x / TILE), Math.floor(y / TILE)); if (m.tiles[i] === T.BRIDGE && !m.land[i]) ford++; }
+  assert.ok(ford >= 1, 'the splash through the creek (the water under the ford)');
 });
