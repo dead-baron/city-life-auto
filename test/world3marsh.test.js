@@ -1,7 +1,7 @@
 // The Egret Marsh Boardwalk (Nature-C3, shared/world3-marsh.js): World v3's Egret Coast marsh gets its walk - from a
 // trailhead by a county road, a plank boardwalk zig-zagging out over the channels, a bird hide on piles at a bend, a
 // viewing platform with a bench and a coin telescope out over the water at the far end, a canoe dock with two canoes,
-// a beaver lodge; walkable all the way; nothing else standing on its planks.
+// a beaver lodge; walkable all the way; nothing else standing on its planks; kayaks to hire at the canoe dock.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
@@ -41,6 +41,10 @@ test('World v3: the Egret Marsh Boardwalk - out over the marsh, the hide, the pl
   assert.ok(near('scope', deck.x, deck.y, 120).length && near('pbench', deck.x, deck.y, 120).length, 'the telescope and the bench on it');
   assert.ok(!m.land[m.idx(Math.floor(deck.x / TILE), Math.floor(deck.y / TILE))], 'the platform out over the water');
   assert.equal(near('canoe', P[0][0], P[0][1], 900).length, 2);
+  // the canoe hire at the dock: kayaks waiting on the open water by the canoes, handed back there
+  const R = m.rentals.find((q) => q.name === MARSH.hire), cn = near('canoe', P[0][0], P[0][1], 900)[0];
+  assert.ok(R && B.hire >= 1 && R.models.includes('kayak') && m.pois.some((q) => q.id === R.poi && q.kind === 'rental'), `the canoe hire (${B.hire})`);
+  for (const sp of R.spots) assert.ok(m.tiles[m.idx(Math.floor(sp.x / TILE), Math.floor(sp.y / TILE))] === T.WATER && Math.hypot(sp.x - cn.x, sp.y - cn.y) < 8 * TILE, `a kayak waiting on the water by the dock at ${sp.x}, ${sp.y}`);
   // the legs' planks on the reed islands drawn as the marsh's ground under the boardwalk (m.walkways), and nothing else
   // on any of the planks
   assert.ok(m.walkways && m.walkways.every((i) => m.tiles[i] === T.DOCK), 'the walkways listed');

@@ -13083,9 +13083,47 @@ well down the river, the current running from the one to the other.
     winner's share.
   - **on the map**: the start is listed with the other races (Activities), and its float says what qualifies. Every
     race's float now says this correctly: the raceway and the MX park were labelled "boats" (`client/main.js`).
-- **a flaky test fixed** (`test/burning.test.js`): the faller was sometimes spawned beside the roller. Running about
-  on fire, it could light the roller again. The two now start well apart.
+- **two flaky tests fixed**:
+  - `test/burning.test.js`: the faller was sometimes spawned beside the roller. Running about on fire, it could light
+    the roller again. The two now start well apart.
+  - `test/core.test.js` (ghost state): it counted every bag in the city as the player's drop. A street happening's
+    dropped wallet or an NPC's loot sometimes turned up. It now counts only bags where the body stood.
 
 Tests: test/world3rapids.test.js - the race and its gates (at least 5, each on the water, spaced 15-90 tiles), the
 start at the put-in's kayaks, the finish by the take-out, the race on the map. Then the race itself on the built map:
 a kayak entered and a rowboat not, gate to gate, first home and paid.
+
+## 2026-10-21 · Nature: Twin Falls (the falls chain, part 3)
+
+- **Twin Falls** (`shared/world3-ledgefalls.js`, a ledge falls with `knoll: true`; the research's "twin falls off the
+  rocky knoll", WC186's "twin waterfalls in a granite gorge"): in Highland Woods below the fire lookout, the wide
+  river splits round an island at the top of a steep reach.
+  - **the falls**: the river falls off both sides of the island's head on one row. The west arm's fall is about 38
+    tiles wide and the east arm's about 50, each with its own strands, tiers and horseshoe bow. Each is its own falls
+    site (mist, the falls' fish, the bears), each lip a one-way drop.
+  - **the knoll**: the island's head between the two falls is granite (scree rock, from its tip to six rows below the
+    lip), with boulders on its head and pines on its back. Under each fall the ground stays open, so a fall's drop is
+    its lip alone (`shared/ledges.js`).
+  - **below**: a plunge pool below each fall, as big as the arm allows. A footbridge goes over the narrower arm to the
+    island further down, if one is narrow enough (here neither is).
+  - **the overlooks**: a railed viewing deck on each bank just below the falls, facing the other across the gorge,
+    with a bench on it. Golden aspens and a fallen log stand behind each deck, and the name is on a post by the west
+    one.
+- The ledge-fall machinery now handles any number of lips on a row: a row split by an island is found from the arm
+  the river's centre line is in, across 6-30 tiles of land whose upstream end is the island's tip.
+
+Tests: test/world3rapids.test.js - Twin Falls: two falls on one row, the knoll's rock between them (rock, not a lip,
+not a drop), pines on the knoll, an overlook on each bank; every ledge-falls check (lip, drop, strands, the lip drawn as
+water, the falls' fish in the pool, a bench and the sign) for both. The pocket-spot check now counts only the calm
+pockets: a plunge pool is the falls' own spot.
+
+## 2026-10-21 · Nature: kayaks to hire at the Egret Marsh
+
+- **the canoe hire** (`shared/world3-marsh.js` MARSH.hire; the research's 4.5, "a canoe launch and canoe trail"): the
+  Egret Marsh Boardwalk's canoe dock now hires out kayaks. The desk is where the pier leaves the boardwalk, and the
+  kayaks wait on the open water beyond the two canoes. Paddle the channels between the reed islands, past the herons,
+  the beavers' lodge and dam and the lilies, then hand the kayak back at the dock (any rental dock takes it:
+  `server/systems/rentals.js`). The hire's own note says so.
+
+Tests: test/world3marsh.test.js - the hire at the dock with kayaks, its point on the map, each kayak waiting on open
+water by the canoes.

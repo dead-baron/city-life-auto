@@ -2,7 +2,7 @@
 // Egret Coast marsh (world3-waterbodies.js MARSH_BOX) gets its walk: from a trailhead by a county road (a map board,
 // a split-rail fence along the path in), a plank boardwalk with rails zig-zags out over the channels and the reed
 // islands; a roofed bird hide on piles at a bend; a viewing platform at the far end with a bench and a coin
-// telescope; a canoe dock near the start with two canoes; a beaver lodge out in the water and, where a channel runs
+// telescope; a canoe dock near the start with two canoes, and kayaks to hire there (2026-10-21); a beaver lodge out in the water and, where a channel runs
 // narrow, the beavers' dam with its little fall; lily pads in the quiet water and cattails and reeds on the islands'
 // edges. The herons, the ducks and the fish are the marsh's own (wildlife.js, client/art2/game/waterlife.js). Laid in
 // the World v3 build's last step (world3-world.js done), on tiles that are still open marsh water or open ground: the
@@ -13,7 +13,12 @@
 import { T, TILE } from './constants.js';
 import { MARSH_BOX } from './world3-waterbodies.js';
 
-export const MARSH = { name: 'Egret Marsh Boardwalk', district: 53, seg: [6, 14], segs: 6, turn: [0.75, -0.95, 0.85, -0.7, 0.9], plat: [7, 5] };
+export const MARSH = {
+  name: 'Egret Marsh Boardwalk', district: 53, seg: [6, 14], segs: 6, turn: [0.75, -0.95, 0.85, -0.7, 0.9], plat: [7, 5],
+  // the canoe dock's hire (2026-10-21; the research's 4.5 "a canoe launch and canoe trail"): kayaks to paddle the
+  // channels, handed back at the dock (server/systems/rentals.js)
+  hire: 'Egret Marsh Canoe Hire', models: ['kayak'], note: 'Paddle the channels between the reed islands - the herons, the beavers\' lodge and their dam, the lilies. Hand it back at the dock.',
+};
 const RES = 32;
 const ih = (x, y, s) => { let h = (x * 374761393 + y * 668265263 + s * 2246822519) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 const COS = (a) => Math.cos(a), SIN = (a) => Math.sin(a);   // (called inside generateCity, under withDeterministicMath: shared/dmath.js)
@@ -141,6 +146,17 @@ export function buildMarshBoardwalk3(m, removeProps) {
     for (let s = 0; s <= 4; s++) plank(Math.floor(bx + ux * s), Math.floor(by + uy * s));
     P('pier', (bx + ux * 2.2) * TILE, (by + uy * 2.2) * TILE, { len: 5 * TILE, w: 30, a: Math.atan2(uy, ux) });
     for (const o of [-1.4, 1.4]) { const x = bx + ux * 2.6 + COS(ca) * o, y = by + uy * 2.6 + SIN(ca) * o, i = idx(Math.floor(x), Math.floor(y)); if (marshWater(i, Math.floor(x), Math.floor(y))) { P('canoe', x * TILE, y * TILE, { a: Math.atan2(uy, ux), c: canoes % 3 }); canoes++; } }
+    // the hire: its desk where the pier leaves the boardwalk, the kayaks waiting in the water beyond the canoes
+    if (m.rentals && m.pois) {
+      const spots = [];
+      for (const o of [-3.2, 3.2]) for (const s2 of [3.6, 1.2]) { const x = bx + ux * s2 + COS(ca) * o, y = by + uy * s2 + SIN(ca) * o; if (spots.length < 2 && marshWater(idx(Math.floor(x), Math.floor(y)), Math.floor(x), Math.floor(y))) { spots.push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a: Math.round(Math.atan2(uy, ux) * 1000) / 1000 }); break; } }
+      if (spots.length) {
+        const door = { x: Math.round(bx * TILE), y: Math.round(by * TILE) }, poi = { id: m.pois.length, kind: 'rental', label: MARSH.hire, x: door.x, y: door.y, r: 48 };
+        m.pois.push(poi);
+        m.rentals.push({ poi: poi.id, name: MARSH.hire, spots, models: MARSH.models, dock: door, note: MARSH.note });
+        out.hire = spots.length;
+      }
+    }
     break;
   }
   // 7. the beavers: their lodge in the water off the platform; their dam across a narrow channel near it (a run of

@@ -136,8 +136,8 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   assert.ok(hug >= pockets.length * 0.9, `the pockets hug a bank (${hug} of ${pockets.length})`);
   // the fishing: a cast into a pocket finds it
   const world = { map: m };
-  const found = pockets.filter(([x, y]) => habitatAt(world, x * TILE, y * TILE).spot === 'pocket').length;
-  assert.ok(found >= pockets.length * 0.8, `the fishing's pocket spot (${found} of ${pockets.length})`);
+  const calm = pockets.filter((p) => p[3] !== 2), found = calm.filter(([x, y]) => habitatAt(world, x * TILE, y * TILE).spot === 'pocket').length;   // (a plunge pool is the falls' own spot: below)
+  assert.ok(found >= calm.length * 0.8, `the fishing's pocket spot (${found} of ${calm.length})`);
   // the bake: the wildest rapid's chunk runs fast and white; a pocket's middle lies still
   const words = (cx, cy, px, py) => {
     const G = bakeGround(m, cx, cy, { quality: 1, seed: 1337 }), o = { fast: 0, run: 0, foam: 0, still: 0, near: 0 };
@@ -191,6 +191,19 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
     assert.ok(m.props.some((p) => p && p.t === 'pbench' && Math.hypot(p.x - last.falls.x, p.y - last.falls.y) < Math.max(40 * TILE, last.falls.w)), `${name}: a bench looking at it`);
     assert.ok(m.props.some((p) => p && p.t === 'textsign' && p.text === name.toUpperCase()), `${name}: its sign`);
   }
+  // Twin Falls: two falls side by side on one row where the island splits the river, its head a knoll of rock between
+  // them (rock, not a lip: you can't go down it), pines on it; an overlook on each bank
+  const twin = sites.filter((q) => q.name === 'Twin Falls'), K = (LF.knolls || [])[0];
+  assert.ok(twin.length === 2 && K && K.rock >= 30 && K.decks === 2, `Twin Falls: two falls and the knoll (${JSON.stringify(K)})`);
+  const [ta, tb] = twin.sort((p, q) => p.falls.x - q.falls.x), tly = Math.round((ta.falls.y + 8) / TILE) - 1;
+  assert.equal(Math.round((tb.falls.y + 8) / TILE) - 1, tly, 'side by side on one row');
+  const k0 = Math.floor((ta.falls.x + ta.falls.w / 2 - 8) / TILE), k1 = Math.ceil((tb.falls.x - tb.falls.w / 2 + 8) / TILE) - 1;
+  assert.ok(k1 - k0 >= 6, `the knoll between them (${k0}..${k1})`);
+  for (let x = k0; x <= k1; x++) { const i = tly * W + x; assert.ok(m.tiles[i] === T.WALL && (m.reserve[i] & 96) === 32 && !drops.has(i), `the knoll's rock at ${x}, ${tly}`); }
+  const tmid = (ta.falls.x + tb.falls.x) / 2, tby = ta.falls.y;
+  assert.ok(m.props.some((p) => p && p.t === 'tree_a' && Math.abs(p.x - (k0 + k1 + 1) / 2 * TILE) < (k1 - k0) * TILE && p.y > tby && p.y < tby + 8 * TILE), 'pines on the knoll');
+  const decks = m.props.filter((p) => p && p.t === 'viewdeck' && Math.abs(p.y - tby) < 14 * TILE && Math.abs(p.x - tmid) < 80 * TILE);
+  assert.ok(decks.length === 2 && decks.some((p) => p.x < ta.falls.x) && decks.some((p) => p.x > tb.falls.x), 'an overlook on each bank');
   // the Redwood River Run (shared/world3-riverrun.js): the kayak hire's landing at the put-in in the woods, the take-out
   // above the bay; the current runs from the one to the other
   const RR = m.world3.riverRun;
