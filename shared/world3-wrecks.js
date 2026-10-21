@@ -34,11 +34,11 @@ export function sunkenWrecks3(m) {
   const cand = { lake: [], sea: [] };
   for (let y = 8; y < HH - 8; y += R.step) for (let x = 8; x < W - 8; x += R.step) {
     const i = idx(x, y);
-    if (m.tiles[i] !== T.WATER || (m.river && m.river[i])) continue;
     const where = m.lake && m.lake[i] ? 'lake' : 'sea';
+    if (m.tiles[i] !== T.WATER || (where === 'sea' && m.river && m.river[i])) continue;   // (a lake on a river's still reach: its water the river's too)
     if (!OUT.has(styles[m.dist[i]])) continue;
     let open = true;
-    for (let dy = -R.open; dy <= R.open && open; dy++) for (let dx = -R.open; dx <= R.open; dx++) if (!wet(idx(x + dx, y + dy)) || (m.river && m.river[idx(x + dx, y + dy)])) { open = false; break; }
+    for (let dy = -R.open; dy <= R.open && open; dy++) for (let dx = -R.open; dx <= R.open; dx++) { const j = idx(x + dx, y + dy); if (!wet(j) || (m.river && m.river[j] && !(m.lake && m.lake[j]))) { open = false; break; } }
     if (!open) continue;
     const d = shoreAt(x, y);
     if (d < R.shore[0] || d > R.shore[1] || busy(x, y)) continue;
