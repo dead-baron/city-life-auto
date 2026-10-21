@@ -12697,6 +12697,8 @@ mountains, between the tree line and the snow -
 - **no snow on the designed places up there** (`world3-world.js`'s snowfields, `world3-peaks.js` THAW): the Ridge Trail
   Hunting Camp sat in the snow; now the camp, the fire lookout, the mines' yards, the observatory, the campgrounds and
   the springs have the ground bare round them, 8 tiles out from their boxes.
+- nothing stands on the Summit Trail: the redwoods and stumps where it leaves the woods are cleared off it too, and the
+  meadows' own heather and flowers are not planted on it where it crosses them.
 New art (`client/art2/props-garden.js`): the cairn (and a summit's taller one), the stone hut, the mountain spring.
 Budget: the bake worker's code 828 -> 832 KB (measured 829 with this art and the rivers' white water before it): the
 workers fetch it once, after the page.

@@ -30,7 +30,7 @@ export const PEAKS3 = {
   summits: { n: 3, step: 6, spacing: 200, knob: 14, h: [SNOW_LINE - 0.08, SNOW_LINE + 0.02], keep: 24, names: ['Cairn Peak', 'Eagle Knob', 'Windy Col'] },
   trail: { name: 'Summit Trail', cairnEvery: 30, road: 260, reach: 460 },   // (road: how far to look for its start - a road or a trail; reach: the summit at most this far from the hut)
 };
-const VEG = /^(tree_|shrub_|bush_|flowers_|log$|boulder|outcrop)/;
+const VEG = /^(tree_|redwood|shrub_|bush_|flowers_|log$|boulder|outcrop|rwstump|rwlog)/;
 // the designed places up in the mountains the snow leaves bare round (shared/world3-world.js's snowfields: the landmarks'
 // types) - the Ridge Trail Hunting Camp sat in the snow
 export const THAW = new Set(['huntcamp', 'lookout', 'mine', 'observatory', 'camp', 'springs', 'quarry']);
@@ -218,7 +218,9 @@ export function buildPeaks3(m, H3) {
   }
   // what's taken off, then what's put there; the map's lists
   if (drop.size && H3.removeProps) { const before = m.props.length; H3.removeProps(m, (x, y) => drop.has(x + ',' + y)); out.cleared = before - m.props.length; }
-  for (const [t, x, y, r, ex] of props) H3.addProp(m, t, x, y, r, ex);
+  // (nothing of the meadows' own planting stands on the trail where it crosses them)
+  const tl = out.trail ? out.trail.line : [], onTrail = (x, y) => tl.some(([a, b]) => Math.abs(a - x) < 26 && Math.abs(b - y) < 26);
+  for (const [t, x, y, r, ex] of props) { if (/^(tree_|shrub_|bush_)/.test(t) && onTrail(x, y)) continue; H3.addProp(m, t, x, y, r, ex); }
   for (const s of [...out.meadows, ...out.summits]) {
     m.natureSites.push(s);
     const r = s.r || 4 * TILE;
