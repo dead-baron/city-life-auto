@@ -12681,13 +12681,13 @@ mountains, between the tree line and the snow -
   spot);
 - **three summits** just under the snow (Cairn Peak, Eagle Knob, Windy Col), each a knob with its tall cairn and a bench
   looking out, the highest with a coin telescope;
-- **the Summit Trail**: from the woods' trails (or a road) nearest the hut's meadow, through the meadow past the hut, up
-  to the nearest summit - routed over the land where it walks easiest, packed earth over the grass, a cairn every 30
-  tiles to mark it above the trees.
+- **the Summit Trail**: from the road (or the woods' trails) nearest the hut's meadow - its sign and a map board at the
+  trailhead - through the meadow past the hut, up to the nearest summit; routed over the land where it walks easiest,
+  packed earth through the grass and pale gravel over the scree, a cairn every 30 tiles to mark it above the trees.
 New art (`client/art2/props-garden.js`): the cairn (and a summit's taller one), the stone hut, the mountain spring.
 Budget: the bake worker's code 828 -> 832 KB (measured 829 with this art and the rivers' white water before it): the
 workers fetch it once, after the page.
 
 Tests: test/world3peaks.test.js - the meadows (lush, flowered, open, apart, on the map, under the snow), the hut, its
 spring, the fire ring and its rest spot and seats, the summits' cairns, benches and telescope, the trail from a road or
-a trail through the hut's meadow to a summit with its cairns.
+a trail (its sign and map board) through the hut's meadow to a summit, showing on the ground, with its cairns.

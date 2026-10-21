@@ -8,9 +8,10 @@
 //     and a fire ring to rest by (a campfire rest spot);
 //   - the summits: three knobs just under the snow, each with its cairn and a bench looking out, the highest with a
 //     coin telescope - named on the map;
-//   - the Summit Trail: from the road (or the woods' trail) nearest the hut's meadow, through the meadow past the hut, up to the nearest
-//     summit's cairn - laid over the land where it walks easiest (world3-trails.js routeTiles), packed
-//     earth over the grass, the growth off it, a cairn every 30 tiles to mark it above the trees.
+//   - the Summit Trail: from the road (or the woods' trail) nearest the hut's meadow - its sign and a map board there -
+//     through the meadow past the hut, up to the nearest summit's cairn; routed over the land where it walks easiest
+//     (world3-trails.js routeTiles), packed earth through the grass and pale gravel over the scree, the growth off it,
+//     a cairn every 30 tiles to mark it above the trees.
 // For the whole-world build only (shared/world3-world.js calls buildPeaks3 from its done hook). Deterministic: integer
 // hashes and the peaks' height noise; Math's trig only inside generateCity (withDeterministicMath).
 import { TILE, T } from './constants.js';
@@ -165,7 +166,7 @@ export function buildPeaks3(m, H3) {
     out.summits.push({ kind: 'summit', name, x: Math.round(X), y: Math.round(Y), h: Math.round(c.h * 1000) / 1000 });
   });
 
-  // ---- the Summit Trail: from the road nearest the hut's meadow, through it past the hut, up to the highest summit ----
+  // ---- the Summit Trail: from the road (or trail) nearest the hut's meadow, through it past the hut, up to the nearest summit ----
   // (to the summit nearest the hut's meadow, if one's within reach)
   const hutM = meadows[0], top = hutM && summits.slice().sort((a, b) => Math.hypot(a.tx - hutM.tx, a.ty - hutM.ty) - Math.hypot(b.tx - hutM.tx, b.ty - hutM.ty))[0];
   const up = hutM && top && Math.hypot(top.tx - hutM.tx, top.ty - hutM.ty) < PEAKS3.trail.reach;
@@ -189,7 +190,10 @@ export function buildPeaks3(m, H3) {
         for (let dy = 0; dy <= 1; dy++) for (let dx = 0; dx <= 1; dx++) {
           if (!inF(x + dx, y + dy)) continue;
           const i = idx(x + dx, y + dy);
-          if (m.tiles[i] === T.GRASS && !(m.reserve[i] & ~(RES | 128))) { m.tiles[i] = T.DIRT; m.reserve[i] = (m.reserve[i] | RES) & ~128; }
+          if (m.reserve[i] & ~(RES | 128) || !m.land[i] || m.dist[i] !== D_PEAKS) continue;
+          // (packed earth through the grass; over the scree a path of pale gravel - the renderer's shingle - so it shows)
+          if (m.tiles[i] === T.GRASS) { m.tiles[i] = T.DIRT; m.reserve[i] = (m.reserve[i] | RES) & ~128; }
+          else if (m.tiles[i] === T.DIRT) { m.tiles[i] = T.SAND; m.reserve[i] |= RES | 128; }
         }
         clearVeg((x + 1) * TILE, (y + 1) * TILE, 1.6 * TILE);
         since++;
@@ -198,6 +202,12 @@ export function buildPeaks3(m, H3) {
           P('cairn', (x + 1 + side * 2.2) * TILE, (y + 1) * TILE, 6, { v: j % 3 });
           since = 0;
         }
+      }
+      // the trailhead where it leaves the road or the trail below: its sign and a map board
+      if (start && line.length > 8) {
+        const [sx, sy] = line[Math.min(6, line.length - 1)], [nx, ny] = line[Math.min(10, line.length - 1)], dx = nx - sx, dy = ny - sy, l = Math.hypot(dx, dy) || 1;
+        P('textsign', (sx + 1 - dy / l * 2.4) * TILE, (sy + 1 + dx / l * 2.4) * TILE, 0, { text: 'SUMMIT TRAIL', bg: '#5a4a32', fg: [250, 236, 200], z: 26 });
+        P('mapboard', (sx + 1 + dy / l * 2.6) * TILE, (sy + 1 - dx / l * 2.6) * TILE, 0);
       }
       const pts = line.map(([x, y]) => [Math.round((x + 1) * TILE), Math.round((y + 1) * TILE)]);
       out.trail = { name: PEAKS3.trail.name, len: Math.round(len), from, line: pts };

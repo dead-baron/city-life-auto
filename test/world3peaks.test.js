@@ -57,6 +57,9 @@ test('World v3: Granite Peaks\' alpine meadows, the stone hut and its spring, th
   let road = false; for (let dy = -6; dy <= 6 && !road; dy++) for (let dx = -6; dx <= 6 && !road; dx++) if (m.tiles[at(x0 + dx * TILE, y0 + dy * TILE)] === T.ROAD) road = true;
   const onTrail = (m.natureSites || []).some((s) => s.kind === 'trail' && s !== tr && s.line && s.line.some(([x, y]) => Math.hypot(x - x0, y - y0) < 4 * TILE));
   assert.ok(P.trail.from !== 'meadow' && (road || onTrail), `it starts at a road or a trail (${P.trail.from})`);
+  assert.ok(near('textsign', x0, y0, 14 * TILE).some((p) => p.text === 'SUMMIT TRAIL') && near('mapboard', x0, y0, 14 * TILE).length >= 1, 'its trailhead: the sign and a map board');
+  let shows = 0; for (const [x, y] of tr.line) { const i = at(x, y); if ((m.tiles[i] === T.DIRT && !(m.reserve[i] & 128)) || (m.tiles[i] === T.SAND && m.reserve[i] & 128) || m.tiles[i] === T.ROAD) shows++; }
+  assert.ok(shows > tr.line.length * 0.8, `it shows on the ground (${shows} of ${tr.line.length})`);
   assert.ok(tr.line.some(([x, y]) => Math.hypot(x - hm.x, y - hm.y) < hm.r), 'through the hut\'s meadow');
   assert.ok(P.summits.some((q) => Math.hypot(q.x - x1, q.y - y1) < 6 * TILE), 'up to a summit');
   const cairns = m.props.filter((p) => p && p.t === 'cairn' && !p.big && tr.line.some(([x, y]) => Math.hypot(p.x - x, p.y - y) < 4 * TILE));
