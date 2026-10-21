@@ -935,3 +935,14 @@ export function mxTrailer(c = 0) {
   for (const x of [RL + 70, RL + 90]) for (const y of [0, W - 6]) m.box(x, y, 0, x + 14, y + 6, 12, tyre);
   return m;
 }
+// an upturned root plate: a fallen tree's disc of roots and earth stood on edge, the trunk's stub lying off it
+export function rootPlate() {
+  const m = new Vox(84, 40, 74);
+  const earth = m.mat({ ramp: R('#6a4a30', 7, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(z / 3), 67) - 0.5) * 1.2 });
+  const root = m.mat({ ramp: R('#8a6a48', 6, 3), k: 3, flag: F_THIN }), bark = m.mat({ ramp: R('#5a4030', 6, 3), k: 3, shade: (x, y, z) => (hash(Math.round(x / 3), Math.round(z), 69) - 0.5) * 0.9 });
+  const moss = m.mat({ ramp: R('#5a7a34', 5, 2), k: 3 });
+  m.fill((x, y, z) => { const d = Math.hypot(x - 30, z - 34); return d < 30 + (hash(Math.round(Math.atan2(z - 34, x - 30) * 6), 1, 71) - 0.5) * 8 && y > 16 && y < 26 ? (d > 24 && hash(Math.round(x), Math.round(z), 73) > 0.55 ? root : earth) : -1; });
+  for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2, L = 32 + hash(k, 2, 75) * 10; for (let s = 24; s < L; s++) m.box(30 + Math.cos(a) * s, 18, 34 + Math.sin(a) * s, 31.5 + Math.cos(a) * s, 22, 35.5 + Math.sin(a) * s, root); }
+  m.fill((x, y, z) => (x > 44 && Math.hypot(y - 20, z - 10) < 9 ? (z > 16 && hash(Math.round(x / 4), 1, 77) > 0.6 ? moss : bark) : -1), 44, 8, 0, 84, 32, 20);
+  return m;
+}
