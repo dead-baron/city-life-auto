@@ -199,6 +199,23 @@ export function swimRaft() {
   m.box(26, N - 3, 12, 38, N - 1, 14, steel);
   return m;
 }
+// a climber's crash pad set down at the foot of a crag (Eagle Crag: shared/world3-tarn.js): a thick folded foam pad in
+// its coloured nylon cover, the seam where it folds, two black carry straps across it
+export function crashPad(v = 0) {
+  const m = new Vox(44, 30, 12), col = ['#2f6ac0', '#c8402e', '#3a8a46', '#e0a030'][v % 4];
+  const cover = m.mat({ ramp: R(col, 5, 3), k: 3, shade: (x, y, z) => (Math.round(x) === 22 ? -1.2 : 0) + (z > 9 ? 0.3 : 0) });
+  const strap = m.mat({ ramp: R('#202226', 4, 2), k: 2 });
+  m.box(1, 1, 0, 43, 29, 10, cover);
+  for (const x of [10, 32]) m.box(x, 0, 0, x + 3, 30, 11, strap);
+  return m;
+}
+// a climbing rope flaked in a coil on the ground, its end trailing (Eagle Crag)
+export function ropeCoil(col = '#d8402e') {
+  const m = new Vox(26, 22, 6), rope = m.mat({ ramp: R(col, 5, 3), k: 3, shade: (x, y) => (hash(Math.round(x), Math.round(y), 23) > 0.7 ? -0.6 : 0) });
+  m.fill((x, y, z) => { const r = Math.hypot(x + 0.5 - 12, (y + 0.5 - 11) * 1.15); return r < 10 && r > 3.5 && z < 2 + (10 - r) * 0.35 && (Math.round(r * 1.5) % 2 === 0 || z < 1) ? rope : -1; });
+  m.box(20, 9, 0, 26, 11, 1.5, rope);
+  return m;
+}
 // a culvert's stone headwall (concepts NK1-K, NK1-L): a wall of squared stone along a road's edge with one arched
 // opening for the creek (dark inside, the water spilling out over a lip), a cap course on top, moss in the joints,
 // wing walls angled back at each end. Built along +x, the arch's face toward +y (turn it to face down the creek).

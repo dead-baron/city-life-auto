@@ -216,6 +216,8 @@ export function wildSpots(map, list, taken, h) {
     if (p.t !== 'scope' || !wildStyle(map, p.x, p.y)) continue;
     for (const [dx, dy] of [[22, 6], [-22, 6], [0, 24]]) if (ok(p.x + dx, p.y + dy) && room('birders', p.x + dx, p.y + dy, 900)) { add({ k: 'birders', x: p.x + dx, y: p.y + dy, a: Math.PI / 2, wild: true, view: true }); break; }
   }
+  // the climbers' own crags first (Eagle Crag: shared/world3-tarn.js), at the gear at its foot, facing the rock
+  for (const s of map.natureSites || []) if (s.kind === 'crag' && ok(s.x, s.y) && ok(s.x + 24, s.y + 4) && room('climbers', s.x, s.y, 1800)) add({ k: 'climbers', x: s.x, y: s.y, a: -PI / 2, wild: true });
   // the crags: the cliffs and the big outcrops of the peaks and the canyons, the climbers at their feet facing the rock
   for (const p of map.props || []) {
     if (p.t !== 'cliff' && p.t !== 'cliffwall' && p.t !== 'outcrop') continue;

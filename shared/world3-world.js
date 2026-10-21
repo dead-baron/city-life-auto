@@ -45,6 +45,7 @@ import { buildCaves3 } from './world3-caves.js';
 import { buildClearings3, forageInSight3 } from './world3-clearings.js';
 import { buildPeaks3, THAW } from './world3-peaks.js';
 import { coastByHand3 } from './world3-coast.js';
+import { tarnByHand3 } from './world3-tarn.js';
 import { vergesByHand3 } from './world3-verges.js';
 // (v3b, WORLD-V3.md 9.3: the city - its districts, its streets and its places; on the v3b frame only)
 import { buildAirstrips3 } from './world3-airstrips.js';
@@ -257,6 +258,7 @@ export function worldOpts(asked) {
       m.world3.rapids = rapidsAndPockets3(m);   // (rivers part 2, 2026-10-20: the rapids where the land falls fast, the calm pockets below them and in the bends - world3-rapids.js; after the trails' and the caves' bridges and docks)
       m.world3.clearings = buildClearings3(m, H3);   // (Highland Woods by hand, part 2: the deer meadows, stump clearings and windfalls - world3-clearings.js)
       m.world3.peaks = buildPeaks3(m, H3);   // (Granite Peaks by hand, part 1: the alpine meadows, the stone hut and its spring, the summits' cairns, the Summit Trail - world3-peaks.js)
+      m.world3.tarn = tarnByHand3(m, H3);   // (Granite Peaks by hand, part 2: Summit Tarn's shore, beach and camp; Eagle Crag - world3-tarn.js)
       m.world3.coast = coastByHand3(m, H3);   // (the coasts by hand, part 1: North Cape's tidepool shelf, its blowhole and seal rock; Redwood Cove dug back into the woods, its horn's tidepools - world3-coast.js)
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)
     },

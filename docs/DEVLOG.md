@@ -12791,3 +12791,21 @@ done hook after the farm ponds:
 
 Tests: test/world3kestrel.test.js (the valley's) - no field runs into the water, the banks and their willows, the poles
 along the county roads all on open ground, wired pole to pole.
+
+## 2026-10-20 · Nature: Granite Peaks by hand, part 2 - Summit Tarn's shore and camp, Eagle Crag
+
+From the handcraft research's 4.2-4.3 and the concepts SC3-G, N5, NS1-D and Nature-C4's climbers ("tents on a granite
+shelf", "a rowboat angler", "two at the foot of a crag, one with the rope"); `shared/world3-tarn.js`, new, World v3's
+done hook after Granite Peaks' part 1:
+- **Summit Tarn**: the tarn lay in bare scree to its rim. Now alpine turf greens its north and east shores round to
+  the cabin's meadow, low granite slabs lie along its north shore with boulders in the shallows, and a pebble beach
+  runs along its west shore with a rowboat pulled up on it. Behind the beach, **Summit Tarn Camp** on a level shelf:
+  two tents (the campers come to them and cook out front: `server/systems/wildfolk.js`), a fire ring with three log
+  seats to rest by, a cooler, a lantern on its post, a camp chair; on the map.
+- **Eagle Crag**: a granite crag on the open ground off the tarn's north-east shore - its tall face and a lower
+  buttress, the sign, the route board, two crash pads and a coiled rope at its foot; on the map. The climbers go to it
+  first (wildfolk.js: a nature site of kind 'crag').
+New art (`client/art2/props-park.js`): the crash pad (four colours) and the rope coil.
+
+Tests: test/world3peaks.test.js - the tarn's turf, beach and slabs, the camp's tents, fire ring, rest spot and seats,
+on the map, the pebble beach and its rowboat; Eagle Crag, its crash pads and rope, its sign and its rock.

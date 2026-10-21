@@ -1,6 +1,7 @@
 // Granite Peaks by hand, part 1 (shared/world3-peaks.js): the alpine meadows, the stone hut with its spring and fire
 // ring on the biggest, the summits' cairns and benches, the Summit Trail from the road through the hut's meadow to a
-// summit; no snow on the designed places up there. One World v3 build.
+// summit; no snow on the designed places up there; part 2 (shared/world3-tarn.js): Summit Tarn's turf, slabs, pebble
+// beach, rowboat and camp, Eagle Crag. One World v3 build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
@@ -8,6 +9,7 @@ import '../shared/world3-islands.js';
 import { T, TILE } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { PEAKS3 } from '../shared/world3-peaks.js';
+import { TARN3 } from '../shared/world3-tarn.js';
 import { peakHeight, SNOW_LINE, SNOW_CLS } from '../shared/world3-biomes.js';
 import { terrainAt } from '../shared/mapcore.js';
 import { prepare } from '../tools/world3-build.mjs';
@@ -73,4 +75,21 @@ test('World v3: Granite Peaks\' alpine meadows, the stone hut and its spring, th
   assert.ok(P.summits.some((q) => Math.hypot(q.x - x1, q.y - y1) < 6 * TILE), 'up to a summit');
   const cairns = m.props.filter((p) => p && p.t === 'cairn' && !p.big && tr.line.some(([x, y]) => Math.hypot(p.x - x, p.y - y) < 4 * TILE));
   assert.ok(cairns.length >= 2, `cairns along it (${cairns.length})`);
+  // part 2: Summit Tarn by hand, Eagle Crag
+  const TN = m.world3.tarn;
+  console.log('tarn', JSON.stringify(TN));
+  assert.ok(TN.turf >= 100 && TN.beach >= 20 && TN.slabs >= 2, `the tarn's turf, beach and slabs (${TN.turf}, ${TN.beach}, ${TN.slabs})`);
+  const camp = m.natureSites.find((s) => s.kind === 'camp' && s.name === TARN3.camp.name);
+  assert.ok(camp && near('tent', camp.x, camp.y, 4 * TILE).length === 2, 'the camp\'s two tents');
+  assert.ok(near('campfire', camp.x, camp.y, 2 * TILE).some((p) => p.rest) && (m.restSpots || []).some((r) => r.kind === 'camp' && Math.hypot(r.x - camp.x, r.y - camp.y) < 2 * TILE), 'its fire ring to rest by');
+  assert.equal(near('log', camp.x, camp.y, 3 * TILE).filter((p) => p.seat).length, 3, 'log seats');
+  assert.ok(m.landmarks.some((l) => l.name === TARN3.camp.name && l.type === 'camp'), 'the camp on the map');
+  const tarn = m.natureSites.find((s) => s.kind === 'tarn');
+  let shingle = 0; for (let dy = -20; dy <= 20; dy++) for (let dx = -20; dx <= 20; dx++) { const i = at(tarn.x + dx * TILE, tarn.y + dy * TILE); if (m.tiles[i] === T.SAND && (m.reserve[i] & 128)) shingle++; }
+  assert.ok(shingle >= 20, `the pebble beach (${shingle})`);
+  assert.ok(near('rowboat', tarn.x, tarn.y, 16 * TILE).length >= 1, 'a rowboat pulled up on it');
+  const crag = m.natureSites.find((s) => s.kind === 'crag' && s.name === TARN3.crag.name);
+  assert.ok(crag, 'Eagle Crag');
+  assert.ok(near('crashpad', crag.x, crag.y, 3 * TILE).length === 2 && near('ropecoil', crag.x, crag.y, 3 * TILE).length === 1, 'its crash pads and rope');
+  assert.ok(near('textsign', crag.x, crag.y, 5 * TILE).some((p) => p.text === 'EAGLE CRAG') && near('outcrop', crag.x, crag.y, 6 * TILE).some((p) => p.h >= 100), 'its sign and its rock');
 });
