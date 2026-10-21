@@ -15,7 +15,7 @@ test('the crush marks: a wheel swath and a trodden track at eight angles, dark w
   const px = (g) => { let n = 0, a = 0; for (let i = 3; i < g.col.length; i += 4) if (g.col[i]) { n++; a += g.col[i]; } return [n, n ? a / n : 0]; };
   for (let k = 0; k < 8; k++) {
     const [nb, ab] = px(fr[k]), [ns] = px(fr[8 + k]);
-    assert.ok(nb > 40 && ns > 10 && nb > ns * 2, `angle ${k}: the swath (${nb} px) wider and longer than the track (${ns} px)`);
+    assert.ok(nb > 60 && ns > 25 && nb > ns * 1.5, `angle ${k}: the swath (${nb} px) wider and longer than the track (${ns} px)`);
     assert.ok(ab <= 200, 'see-through: the crop shows under it');
   }
   // dark broken stalks and ground, pale laid stalks streaking along it

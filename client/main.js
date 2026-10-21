@@ -4187,7 +4187,7 @@ function pedVisual(p, now) {
   // (art v2) the crop parts round someone walking through a field and stays trodden: a track every 10 px
   if (S.art2 && !(f & PF.DEAD)) {
     const lx = p._crx ?? p.rx, ly = p._cry ?? p.ry, d = Math.abs(p.rx - lx) + Math.abs(p.ry - ly);
-    if (d > 10) { p._crx = p.rx; p._cry = p.ry; if (d < 60 && S.map.tileAtPx(p.rx, p.ry) === T.FIELD) S.fx.crush(p.rx, p.ry + 2, Math.atan2(p.ry - ly, p.rx - lx), 1, S.loopClock, 0.7); }
+    if (d > 10) { p._crx = p.rx; p._cry = p.ry; if (d < 60 && S.map.tileAtPx(p.rx, p.ry) === T.FIELD) S.fx.crush(p.rx, p.ry + 2, Math.atan2(p.ry - ly, p.rx - lx), 1, S.loopClock, 0.85); }
   }
   const L = pedLook(p, now);
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }

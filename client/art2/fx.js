@@ -1069,12 +1069,12 @@ export function skidDabFrames() {
 
 // crops flattened (the owner, 10-06 / 10-15: "crops ... part round people and flatten under tyres"): stalks laid
 // flat along the way something went through a field - pale straw where the bent stalks show their light undersides,
-// dark creases between them, ragged ends. Frames 0-7: a wheel's swath (18 x 6) at eight angles over half a turn;
-// 8-15: a person's or an animal's trodden track (10 x 4). Semi-opaque, so the crop's own colour shows through.
+// dark creases between them, ragged ends. Frames 0-7: a wheel's swath (18 x 8) at eight angles over half a turn;
+// 8-15: a person's or an animal's trodden track (12 x 6). Semi-opaque, so the crop's own colour shows through.
 const STRAW = [[226, 212, 150], [104, 92, 52], [70, 60, 34]];
 export function crushFrames() {
   const out = [];
-  for (const [L, Wd] of [[9, 3], [5, 2]]) for (let k = 0; k < 8; k++) {
+  for (const [L, Wd] of [[9, 4], [6, 3]]) for (let k = 0; k < 8; k++) {
     const a = k / 8 * Math.PI, ca = Math.cos(a), sa = Math.sin(a), S = 22, G = frame(S, S, S / 2, S / 2, 0, false);
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
       const dx = x + 0.5 - S / 2, dy = y + 0.5 - S / 2, lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
