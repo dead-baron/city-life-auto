@@ -7,7 +7,8 @@
 //   shoals and mullet in the sea's shallows, moon jellies drifting off the beaches and in the harbours. Nature-A1
 //   (2026-10-20): sockeye salmon holding in the white water at a falls' foot, leaping at the falls (and falling back);
 //   bluegill and bass shoaling under a lake's dock; now and then a golden koi gone wild among a pond's carp; in the
-//   tidepools a sculpin or two and a shore crab scuttling sideways over the bed. Each is a flat
+//   tidepools a sculpin or two and a shore crab scuttling sideways over the bed; (rivers part 2) trout and a bass holding
+//   in each river's calm pockets. Each is a flat
 //   decal on the water - the engine's decals blend into the albedo only, so the light pass's waves, glints and
 //   caustics stay on top of them, as on the bed - its tail beating, its shadow on the bed below it in the clear
 //   shallows by day. They dart off from anyone running by or in the water, from boats and fast traffic, and lie low a
@@ -81,9 +82,9 @@ const KOI = [
 ].map((k) => ({ ...k, base: hex(k.base), side: k.side ? hex(k.side) : null, mark: k.mark ? hex(k.mark) : null, ink: k.ink ? hex(k.ink) : null }));
 const KOI_FIN = hex('#eee8de'), BLACK = [10, 14, 18], SILVER_FLASH = [hex('#7a9ab4'), hex('#e8f0f6')];
 // how clearly each water shows what's in it
-const CLEAR = { koi: 1, pond: 0.85, lake: 0.82, deep: 0.75, creek: 1, river: 0.72, marsh: 0.78, shore: 0.95, reef: 1, harbour: 0.5, open: 0.6, falls: 0.8, dock: 0.85, tidepool: 1 };
+const CLEAR = { koi: 1, pond: 0.85, lake: 0.82, deep: 0.75, creek: 1, river: 0.72, marsh: 0.78, shore: 0.95, reef: 1, harbour: 0.5, open: 0.6, falls: 0.8, dock: 0.85, tidepool: 1, pocket: 0.78 };
 // the shallows where a fish's shadow shows on the bed by day
-const SHADOWED = { koi: 1, pond: 1, creek: 1.4, reef: 1.2, shore: 1, lake: 0.6, falls: 0.6, dock: 0.8, tidepool: 1.4 };
+const SHADOWED = { koi: 1, pond: 1, creek: 1.4, reef: 1.2, shore: 1, lake: 0.6, falls: 0.6, dock: 0.8, tidepool: 1.4, pocket: 0.6 };
 // who lives in each water, by patch: [chance, species, fewest, most]
 const POP = {
   koi: [[0.8, 'koi', 2, 4], [0.15, 'carp', 1, 1]],
@@ -101,10 +102,11 @@ const POP = {
   falls: [[0.9, 'salmon', 2, 3], [0.3, 'trout', 1, 1]],             // (the white water at a falls' foot)
   dock: [[0.9, 'bluegill', 4, 7], [0.6, 'bass', 1, 2]],             // (under a lake's dock, among its piles)
   tidepool: [[0.85, 'sculpin', 1, 2], [0.65, 'crab', 1, 1]],
+  pocket: [[0.95, 'trout', 2, 4], [0.4, 'bass', 1, 1]],             // (a river's calm pocket: holding in the slow water by the bank)
 };
 const REEF_MIX = ['tang', 'yellowtang', 'tang', 'clown', 'yellowtang'];
 // the fish that comes to a bobber, by the water
-const TAKER = { koi: 'koi', pond: 'bluegill', lake: 'perch', deep: 'bass', creek: 'trout', desert: 'chub', river: 'bass', marsh: 'carp', shore: 'mullet', reef: 'parrot', harbour: 'mullet', open: 'mullet', falls: 'salmon', dock: 'bass', tidepool: 'sculpin' };
+const TAKER = { koi: 'koi', pond: 'bluegill', lake: 'perch', deep: 'bass', creek: 'trout', desert: 'chub', river: 'bass', marsh: 'carp', shore: 'mullet', reef: 'parrot', harbour: 'mullet', open: 'mullet', falls: 'salmon', dock: 'bass', tidepool: 'sculpin', pocket: 'trout' };
 
 // ---- what water a place is ------------------------------------------------------------------------------------------
 // 0 none, 1 the sea, 2 a lake, 3 a pond, 4 running water
@@ -184,6 +186,8 @@ function cellAt(W, m, cx, cy) {
       o.up = Math.atan2(-ch[1], -ch[0]);
       const k = ch[2].k, t = ch[2].t;
       o.k = k === 'marsh' || t === 'marsh' ? 'marsh' : k === 'lake' ? (bs >= 6 ? 'deep' : 'lake') : t === 'desert' ? 'desert' : k === 'creek' ? 'creek' : 'river';
+      const pk = o.k !== 'marsh' && pocketIn(m, cx, cy);
+      if (pk) { o.k = 'pocket'; o.x = pk[0]; o.y = pk[1]; }
     } else {
       const f = m.flow ? m.flow.get(i) : undefined;
       if (f !== undefined) o.up = f * Math.PI / 8 + Math.PI;
@@ -209,6 +213,12 @@ function cellAt(W, m, cx, cy) {
     if (o.k === 'lake' || o.k === 'pond' || o.k === 'deep') { const dk = dockBy(m, cx, cy); if (dk) { o.k = 'dock'; o.x = dk[0]; o.y = dk[1]; } }
   }
   return o;
+}
+// a river's calm pocket whose middle is in a patch (shared/world3-rapids.js ch.p, tiles): its middle (px), or null
+function pocketIn(m, cx, cy) {
+  const P = m._wlPk || Object.defineProperty(m, '_wlPk', { value: ((m.waters && m.waters.ch) || []).flatMap((c) => c.p || []), enumerable: false })._wlPk;
+  for (const q of P) if (Math.floor(q[0] * TILE / CELL) === cx && Math.floor(q[1] * TILE / CELL) === cy) return [q[0] * TILE, q[1] * TILE];
+  return null;
 }
 // the water beside a dock in a patch (px), or null
 function dockBy(m, cx, cy) {

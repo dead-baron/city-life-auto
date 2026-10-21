@@ -1578,7 +1578,7 @@ function decor(C, G) {
       if (gx >= 0 && gy >= 0 && gx < CHUNK && gy < CHUNK && !(G.flag[gy * CHUNK + gx] & F_WATER)) continue;   // (a boulder)
       const d = b.dist[i] / 10, w = waterAt(C, X, Y, d, TN);
       if (!w || w.k === WK.SEA) continue;
-      const still = w.k === WK.POND || w.k === WK.LAKE || w.k === WK.MARSH || w.fv < 0.2;
+      const still = (w.k === WK.POND || w.k === WK.LAKE || w.k === WK.MARSH || w.fv < 0.2) && !(w.pk > 0.05);   // (a river's calm pocket: no lilies)
       const reedy = vnc(X, Y, 150, seed + 103) + (w.k === WK.MARSH ? 0.25 : w.k === WK.POND ? 0.1 : 0);
       if (w.depth < (w.k === WK.MARSH ? 0.9 : 0.45) && (d < 5 || reedy > 0.55) && h0 < (reedy > 0.55 ? 0.42 : 0.1) * dens) stamp(C, G, coverSprite('reed', (hh(cx, cy, seed + 101) * 6) | 0), X, Y, 0);
       else if (still && w.depth > 0.25 && w.depth < 1.9 && d > 5 && vnc(X, Y, 110, seed + 105) > (w.k === WK.LAKE ? 0.68 : w.k === WK.MARSH ? 0.7 : 0.6) && h0 < 0.55 * dens) stamp(C, G, coverSprite('lily', (hh(cx, cy, seed + 99) * 6) | 0), X, Y, LILY_Z, F_NOCAST);

@@ -31,6 +31,7 @@ import { paintDesert3, layDesert3, buildDesert, desertDone, DESERT_SPECIALS, DES
 import { subwayLoops } from './world3-subway.js';
 import { paintWater3, buildWater3, waterDone } from './world3-water.js';
 import { waterBodies3 } from './world3-waterbodies.js';
+import { rapidsAndPockets3 } from './world3-rapids.js';
 import { riverBanks3 } from './world3-banks.js';
 import { buildMarshBoardwalk3 } from './world3-marsh.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
@@ -241,6 +242,7 @@ export function worldOpts(asked) {
       m.world3.trails = buildTrails3(m, H3);   // (the nature program, 2026-10-20: Highland Woods' trails, their furniture, the glades and the fire lookout - world3-trails.js)
       m.world3.dirt = buildDirt3(m, H3);   // (the nature program, 2026-10-20, Nature-C1: the Red Rock MX Park - world3-dirt.js)
       m.world3.caves = buildCaves3(m, H3);   // (Nature-B1, B2: the Redwood Caverns - their ways in behind Redwood Creek Falls and at Redwood Cove, the plan underground: world3-caves.js)
+      m.world3.rapids = rapidsAndPockets3(m);   // (rivers part 2, 2026-10-20: the rapids where the land falls fast, the calm pockets below them and in the bends - world3-rapids.js; after the trails' and the caves' bridges and docks)
       m.world3.clearings = buildClearings3(m, H3);   // (Highland Woods by hand, part 2: the deer meadows, stump clearings and windfalls - world3-clearings.js)
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)
     },

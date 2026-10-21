@@ -960,11 +960,14 @@ function seaStyle(d, ty) {
 }
 
 // ---- what each tile of the bake's window is -------------------------------------------------------------------
-const F = { n: 0, k: null, st: null, ld: null, dep: null, tmp: null, fx: null, fy: null, fv: null, sa: null, su: null, ch: null, bs: null, cst: null, on: false };
+const F = { n: 0, k: null, st: null, ld: null, dep: null, tmp: null, fx: null, fy: null, fv: null, sa: null, su: null, ch: null, bs: null, cst: null, rp: null, pk: null, pi: null, on: false };
+// the window's calm pockets (world3-rapids.js ch.p): { x, y, r (px), ox, oy (the way out to the current) }
+const PKW = [];
 function ensure(n) {
   if (F.n === n) return;
   F.n = n; F.k = new Uint8Array(n); F.st = new Uint8Array(n); F.ld = new Float32Array(n); F.dep = new Float32Array(n); F.fx = new Float32Array(n); F.fy = new Float32Array(n);
   F.fv = new Float32Array(n); F.sa = new Float32Array(n); F.su = new Float32Array(n); F.ch = new Int16Array(n); F.bs = new Float32Array(n); F.cst = new Uint8Array(n); F.tmp = new Float32Array(n);
+  F.rp = new Float32Array(n); F.pk = new Float32Array(n); F.pi = new Int16Array(n);
 }
 const LAND_R = 24;
 // how far (tiles) each tile of the window is from the nearest land, and which land tile that is: a distance transform
@@ -1017,7 +1020,9 @@ function channels(M) {
     const p = h.pts, s = new Float32Array(p.length), bb = [1e9, 1e9, -1e9, -1e9];
     for (let j = 0; j < p.length; j++) { if (j) s[j] = s[j - 1] + Math.hypot(p[j][0] - p[j - 1][0], p[j][1] - p[j - 1][1]); bb[0] = Math.min(bb[0], p[j][0]); bb[1] = Math.min(bb[1], p[j][1]); bb[2] = Math.max(bb[2], p[j][0]); bb[3] = Math.max(bb[3], p[j][1]); }
     const r = h.w / 2 + 4;
-    return { ...h, s, bb: [bb[0] - r, bb[1] - r, bb[2] + r, bb[3] + r], kind: h.k === 'creek' ? WK.CREEK : h.k === 'marsh' ? WK.MARSH : h.k === 'lake' ? WK.LAKE : WK.RIVER, sty: BY_T[h.t] ?? S.forest };
+    // (each calm pocket's way out to the current: toward the nearest point of the centre line)
+    const pk = (h.p || []).map(([x, y, pr]) => { let bd = 1e9, ox = 0, oy = 0; for (const q of p) { const dx = q[0] - x, dy = q[1] - y, d = dx * dx + dy * dy; if (d < bd) { bd = d; ox = dx; oy = dy; } } const l = Math.hypot(ox, oy) || 1; return { x, y, r: pr, ox: ox / l, oy: oy / l }; });
+    return { ...h, s, pk, bb: [bb[0] - r, bb[1] - r, bb[2] + r, bb[3] + r], kind: h.k === 'creek' ? WK.CREEK : h.k === 'marsh' ? WK.MARSH : h.k === 'lake' ? WK.LAKE : WK.RIVER, sty: BY_T[h.t] ?? S.forest };
   });
   CH.set(W, c);
   return c;
@@ -1029,7 +1034,7 @@ export function waterTiles(C, mats, TN) {
   ensure(n);
   F.on = false;
   if (!M || !M.tiles) return;
-  F.k.fill(0); F.dep.fill(0); F.fx.fill(0); F.fy.fill(0); F.fv.fill(0); F.ch.fill(-1); F.bs.fill(1e9); F.cst.fill(0);
+  F.k.fill(0); F.dep.fill(0); F.fx.fill(0); F.fy.fill(0); F.fv.fill(0); F.ch.fill(-1); F.bs.fill(1e9); F.cst.fill(0); F.rp.fill(0); F.pk.fill(0); F.pi.fill(-1); PKW.length = 0;
   const lk = M.waters && Array.isArray(M.waters.lk) ? M.waters.lk : [], flow = M.flow || null;
   let any = false;
   for (let k = 0; k < n && !any; k++) if (b.tw[k]) any = true;
@@ -1120,8 +1125,31 @@ function channelTiles(chs, TX0, TY0, TN) {
     if (F.k[k] === WK.RIVER) { F.k[k] = c.kind; F.st[k] = c.sty; }
     else if (c.kind === WK.LAKE) F.st[k] = c.sty;   // (a lake laid as a piece: its look)
     if (F.k[k] === WK.LAKE || F.k[k] === WK.POND || F.k[k] === WK.MARSH) { F.fv[k] = 0; continue; }   // (the marsh lies still: its braids barely move)
-    F.fv[k] = c.v;
+    // the rapids (world3-rapids.js ch.r: [s0, s1, how wild], tiles along): white, fast water, easing in and out over a
+    // few tiles at each end
+    let rp = 0;
+    if (c.r) { const s = F.sa[k] / TILE; for (const [s0, s1, w] of c.r) if (s > s0 - 6 && s < s1 + 6) rp = Math.max(rp, w * Math.min(1, (s - s0 + 6) / 10, (s1 + 6 - s) / 10)); }
+    F.rp[k] = rp;
+    F.fv[k] = rp > 0 ? Math.max(c.v, 0.5 + 0.45 * rp) : c.v;
   }
+  // the calm pockets: still, deep water by a bank, fading out into the current over a couple of tiles
+  chs.forEach((c) => {
+    if (!c.pk.length || c.bb[2] < wx0 || c.bb[0] > wx1 || c.bb[3] < wy0 || c.bb[1] > wy1) return;
+    for (const P of c.pk) {
+      const R = P.r + 2.5;
+      if (P.x + R < wx0 || P.x - R > wx1 || P.y + R < wy0 || P.y - R > wy1) continue;
+      const pi = PKW.length;
+      PKW.push({ x: P.x * TILE, y: P.y * TILE, r: P.r * TILE, ox: P.ox, oy: P.oy });
+      for (let j = Math.max(0, Math.floor(P.y - R) - wy0); j <= Math.min(TN - 1, Math.ceil(P.y + R) - wy0); j++) for (let i = Math.max(0, Math.floor(P.x - R) - wx0); i <= Math.min(TN - 1, Math.ceil(P.x + R) - wx0); i++) {
+        const k = j * TN + i;
+        if (F.k[k] !== WK.RIVER && F.k[k] !== WK.CREEK) continue;
+        const d = Math.hypot(wx0 + i + 0.5 - P.x, wy0 + j + 0.5 - P.y), u = Math.min(1, d / R), w = 1 - u * u;   // (deepest in its middle, easing out to the current)
+        if (w <= F.pk[k]) continue;
+        F.pk[k] = w; F.pi[k] = pi;
+        F.fv[k] = F.fv[k] * (1 - 0.95 * w); F.rp[k] *= 1 - w;
+      }
+    }
+  });
 }
 
 // ---- one pixel --------------------------------------------------------------------------------------------------
@@ -1133,12 +1161,14 @@ export const WQ = { c: null, nx: 0, ny: 0, code: 255, inl: false, solid: false, 
 // collar of foam round it - white on the side the current comes from, a broken wake behind.
 const BCELL = 64, BOULDER = [0, 0.1, 0.14, 0.06, 0.06, 0, 0], BOULDER_DT = [0, 5, 99, 3, 3, 0, 0];
 const MOSS_W = RB('#5e7a34', { dark: 0.55, shift: 0.3 }), BASALT_W = RB('#4e4c4a', { dark: 0.6, light: 0.45 });
-function boulder(X, Y, k, st, dt, cst, fx, fy, fv, seed) {
-  const pk = k === WK.SEA ? (cst === 0 ? 0.07 : 0) : k === WK.LAKE ? (st === S.alpine || st === S.forest ? BOULDER[k] : 0) : BOULDER[k];
-  if (!pk || dt > BOULDER_DT[k] + 1) return 0;
+// (rp: how wild the rapids are there - world3-rapids.js: strewn right across them, more the wilder)
+function boulder(X, Y, k, st, dt, cst, fx, fy, fv, seed, rp = 0) {
+  let pk = k === WK.SEA ? (cst === 0 ? 0.07 : 0) : k === WK.LAKE ? (st === S.alpine || st === S.forest ? BOULDER[k] : 0) : BOULDER[k];
+  if (rp > 0.05) pk = Math.max(pk, 0.04 + 0.13 * rp);
+  if (!pk || (dt > BOULDER_DT[k] + 1 && rp < 0.25)) return 0;
   const cx = Math.floor(X / BCELL), cy = Math.floor(Y / BCELL), h = hh(cx, cy, seed + 301);
-  if (h >= pk * (dt < 2.5 ? 1.7 : 0.55)) return 0;   // (most by the banks)
-  const h2 = hh(cy, cx, seed + 303), r = 6 + 9 * h2, bx = (cx + 0.32 + 0.36 * hh(cx, cy, seed + 305)) * BCELL, by2 = (cy + 0.32 + 0.36 * hh(cy, cx, seed + 307)) * BCELL;
+  if (h >= pk * (dt < 2.5 ? 1.7 : 0.55 + rp * 0.6)) return 0;   // (most by the banks - and across a rapid)
+  const h2 = hh(cy, cx, seed + 303), r = 6 + 9 * h2 + 6 * rp, bx = (cx + 0.32 + 0.36 * hh(cx, cy, seed + 305)) * BCELL, by2 = (cy + 0.32 + 0.36 * hh(cy, cx, seed + 307)) * BCELL;
   const dx = X - bx, dy = Y - by2, D = Math.sqrt(dx * dx + dy * dy) * (0.86 + 0.28 * vnc(X, Y, 7, seed + 317));   // (lumpy, not round)
   if (D < r) {
     const u = D / r, x = X | 0, y = Y | 0;
@@ -1181,7 +1211,7 @@ function depthOf(k, dt, cst, st) {
 // (what it is when the window's facts are off: a swatch, a map without tiles)
 export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
   const seed = C.seed | 0, x = X | 0, y = Y | 0;
-  let k = kind, st = kind === WK.SEA ? S.temperate : kind === WK.POND ? S.park : kind === WK.LAKE ? S.forest : S.valley, cst = 0, dt = d / TILE, dep = -1, fx = 0, fy = 0, fv = 0, sa = 0, su = 0, chan = false;
+  let k = kind, st = kind === WK.SEA ? S.temperate : kind === WK.POND ? S.park : kind === WK.LAKE ? S.forest : S.valley, cst = 0, dt = d / TILE, dep = -1, fx = 0, fy = 0, fv = 0, sa = 0, su = 0, chan = false, rp = 0, pk = 0, pi = -1;
   if (F.on) {
     // which water and what look: one of the four tiles round the pixel, picked by their weights through a dither -
     // where two waters meet (a river's mouth at the sea, a creek into a lake, one coast's sea and another's) the
@@ -1202,10 +1232,13 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     if (chan) {
       sa = (F.sa[k00] * (1 - vx) + F.sa[k00 + 1] * vx) * (1 - vy) + (F.sa[k00 + TN] * (1 - vx) + F.sa[k00 + TN + 1] * vx) * vy;
       su = (F.su[k00] * (1 - vx) + F.su[k00 + 1] * vx) * (1 - vy) + (F.su[k00 + TN] * (1 - vx) + F.su[k00 + TN + 1] * vx) * vy;
+      rp = (F.rp[k00] * (1 - vx) + F.rp[k00 + 1] * vx) * (1 - vy) + (F.rp[k00 + TN] * (1 - vx) + F.rp[k00 + TN + 1] * vx) * vy;
     }
+    pk = (F.pk[k00] * (1 - vx) + F.pk[k00 + 1] * vx) * (1 - vy) + (F.pk[k00 + TN] * (1 - vx) + F.pk[k00 + TN + 1] * vx) * vy;
+    if (pk > 0) pi = F.pi[ti] >= 0 ? F.pi[ti] : F.pi[k00] >= 0 ? F.pi[k00] : F.pi[k00 + TN + 1];
   }
   WQ.solid = false;
-  const rock = boulder(X, Y, k, st, dt, cst, fx, fy, fv, seed);
+  const rock = boulder(X, Y, k, st, dt, cst, fx, fy, fv, seed, rp);
   if (rock === 1) return WQ;
   const S0 = STY[st], big = vnc(X, Y, 37, seed + 3), fine = vnc(X, Y, 7, seed + 5);
   // metres of water: the tiles' depths blended (seamless across tiles and waters), shallower still by the shore
@@ -1227,7 +1260,7 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     lat = edge < (q < 1.2 ? 1.05 : 0.75 * (0.4 + vnc(X, Y, 97, seed + 4)));
   } else {
     const w = chan ? worley(sa * 0.5 + fine * 2, su + big * 4, 12, seed + 9, 0.85) : worley(X * 0.9, Y + big * 5, 12, seed + 9, 0.85), edge = w.d2 - w.d1, patch = vnc(X, Y, 71, seed + 11);
-    lat = edge < (q < 0.6 ? 0.85 : patch > 0.55 ? 0.7 : 0.3) * S0.lat;
+    lat = edge < (q < 0.6 ? 0.85 : patch > 0.55 ? 0.7 : 0.3) * S0.lat * (1 - 0.6 * pk);   // (a calm pocket: glassy)
     if (chan && fv > 0.08) {   // the current: long thin lines along the channel, broken, faster water more of them
       const lp = (su + 2.6 * Math.sin(sa * 0.031 + seed)) / 4.2, ln = Math.floor(lp), lh = hh(ln, 7, seed), env = vnc(sa * 0.5 + lh * 400, ln * 13, 14, seed + 9);
       lane = env > 0.78 - fv * 0.12 && lp - ln < 0.3 && Math.sin(sa / (44 + lh * 30) * 6.283 + lh * 40) > -0.1;
@@ -1246,6 +1279,18 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
   if (lat && k === WK.SEA && d < 30 && cst !== 2) c = sd(FOAM, 0.28 + (d < 14 ? 0.15 : 0) + fine * 0.2, x, y, 0.4);   // (the crests break white near the shore)
   else if (lat) c = mixTo(MIX, c, rr[Math.min(rr.length - 1, 5)], q < 0.6 ? 0.34 : 0.2);
   if (lane) c = mixTo(MIX, c, rr[5], 0.22);
+  if (rp > 0.04) {   // the rapids: churns of white water in patches, standing waves in trains by them (thin crests across the current), foam streaks along it, the rest paled with air
+    const ww = vnc(sa * 0.5, su, 26, seed + 241) - 0.8 + rp * 0.32, bit = vnc(X, Y, 4, seed + 231);
+    if (ww > 0 && bit > 0.62 - ww * 1.6) c = sd(FOAM, (hh(x >> 1, y >> 1, seed + 243) > 0.45 ? 0.68 : 0.4) + fine * 0.25, x, y, 0.4);   // (broken: bright foam and blue-grey, gaps between, solid in the middle)
+    else if (ww > -0.12 && Math.sin(sa * 0.3 + Math.sin(su * 0.045 + seed) * 1.4 + big * 2.5) > 0.93 && hh(x >> 1, y >> 1, seed + 235) > 0.3) c = sd(FOAM, 0.38 + fine * 0.2, x, y, 0.4);
+    else if (vnc(sa * 0.1, su * 1.1, 6, seed + 233) > 0.88 - rp * 0.1) c = mixTo(MIX, c, WET, 0.2 + 0.2 * rp);
+    else c = mixTo(MIX, c, WET, 0.2 * rp);
+  } else if (pi >= 0 && pk > 0.04) {   // a calm pocket: a slow swirl turning in it, the eddy's line of foam where the current goes by
+    const P = PKW[pi], ex = X - P.x, ey = Y - P.y, D = Math.sqrt(ex * ex + ey * ey), u = D / P.r;
+    c = mixTo(MIX, c, rr[0], 0.3 * pk);   // (a deep hole: darker, easing out)
+    if (u < 0.9 && fine > 0.35 && Math.sin(D * 0.2 - Math.atan2(ey, ex) * 2 + seed) > 0.95) c = mixTo(MIX, c, rr[5], 0.16);
+    else if (Math.abs(D - P.r) < 2.2 + fine * 1.5 && ex * P.ox + ey * P.oy > D * 0.4 && vnc(X, Y, 7, seed + 237) > 0.45 && hh(x >> 1, y >> 1, seed + 239) > 0.35) c = sd(FOAM, 0.4 + fine * 0.3, x, y, 0.4);
+  }
   // the water's edge
   if (k === WK.SEA) {
     if (cst === 2) { if (d < 1.6) c = sd(FOAM, 0.45, x, y, 0.4); }
@@ -1276,7 +1321,7 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
 }
 // the kind of water and how deep it is at a world point, from the last waterTiles (for the dressing: reeds stand in
 // the shallows, lilies float on still water): { k, depth } or null on land
-export const WAT = { k: 0, depth: 0, fv: 0, st: 0 };
+export const WAT = { k: 0, depth: 0, fv: 0, st: 0, pk: 0 };
 export function waterAt(C, X, Y, d, TN) {
   if (!F.on) return null;
   const tj = Math.floor(Y / TILE) - C.TY0, ti = Math.floor(X / TILE) - C.TX0;
@@ -1284,7 +1329,7 @@ export function waterAt(C, X, Y, d, TN) {
   const k = tj * TN + ti;
   if (!F.k[k]) return null;
   const dt = d < 46 ? d / TILE : Math.max(46 / TILE, F.ld[k] - 0.35);
-  WAT.k = F.k[k]; WAT.depth = depthOf(WAT.k, dt, F.cst[k], F.st[k]); WAT.fv = F.fv[k]; WAT.st = F.st[k];
+  WAT.k = F.k[k]; WAT.depth = depthOf(WAT.k, dt, F.cst[k], F.st[k]); WAT.fv = F.fv[k]; WAT.st = F.st[k]; WAT.pk = F.pk[k];
   return WAT;
 }
 export const STYLE_NAMES = STY.map((s) => s.name);

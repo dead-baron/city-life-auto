@@ -371,8 +371,8 @@ function carAt(world, s) {
   return null;
 }
 
-// dress an NPC from a persona look (personas.js LOOKS) or keep the archetype's own
-function dressAs(world, ped, look) {
+// dress an NPC from a persona look (personas.js LOOKS) or keep the archetype's own (boats.js: the anglers' boats)
+export function dressAs(world, ped, look) {
   const rec = look && (MY_LOOKS[look] || WILD_LOOKS[look] || LOOKS[look]);
   if (!rec) return;
   const g = dress(world, (MY_LOOKS[look] ? 'a:' : WILD_LOOKS[look] ? 'w:' : 'p:') + look, ped.x, ped.y, !!(world.clock && world.clock.isNight), rng, rec);

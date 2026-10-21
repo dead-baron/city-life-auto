@@ -1,6 +1,8 @@
 // Life on the water: NPC boaters cruising between open-sea waypoints, and harbor police patrol
-// boats that chase wanted players who take to the water (and shoot back at 3+ stars).
-import { K } from '../../shared/constants.js';
+// boats that chase wanted players who take to the water (and shoot back at 3+ stars). And (rivers part 2, 2026-10-20:
+// the owner's "NPC fishing boats") the anglers' boats: a rowboat or a dinghy out on a lake near you - or sat in a big
+// river's calm pocket (shared/world3-rapids.js) - its angler's rod out over the side a minute or two, then rowing on.
+import { K, T, TILE } from '../../shared/constants.js';
 import { BOAT_BLOCK } from '../../shared/map.js';
 import { angleDiff, clamp } from '../../shared/math.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
@@ -9,6 +11,7 @@ import { spawnNpc, despawnNpc } from './npc.js';
 import { inAnyView } from '../view.js';
 import { pointGrid } from '../pointgrid.js';
 import * as combat from './combat.js';
+import { dressAs } from './activities.js';
 
 const rng = mulberry32(6060);
 const BOATERS_NEAR = 4;      // NPC boats kept around a player who's out on / by the water
@@ -16,6 +19,11 @@ const PATROLS_NEAR = 1;      // police patrol boats around such a player
 const NEAR_SEA_PX = 900;     // a player this close to open water counts as "by the water"
 const FAR_PX = 2400;         // boats further than this from every player are removed
 const MODELS = [['dinghy', 3], ['speedboat', 2], ['jetski', 2]];
+const FISHERS_NEAR = 2;      // anglers' boats kept on the water near a player who's by a lake or a big river's pocket
+const NEAR_LAKE_PX = 1200;   // a player this close to a lake's open water (or such a pocket) counts as "by it"
+const FISH_MODELS = [['rowboat', 3], ['dinghy', 1]];
+const FISH_ROW = 120;        // how fast an angler rows on (px/s)
+const FISH_S = [40, 120];    // how long an angler sits at a spot (s)
 
 const water = (world, x, y) => !BOAT_BLOCK[world.map.tileAtPx(x, y)];
 function clearLine(world, x1, y1, x2, y2) {
@@ -41,10 +49,10 @@ export function boatSteer(world, v, tx, ty, speed) {
   v.input = { throttle: clamp((sp - fwd) / 120, -1, 1), steer: clamp(diff * 2.2, -1, 1), hb: false };
 }
 
-function pickModel() {
-  let tot = 0; for (const [, w] of MODELS) tot += w;
+function pickModel(list = MODELS) {
+  let tot = 0; for (const [, w] of list) tot += w;
   let r = rng() * tot;
-  for (const [m, w] of MODELS) { r -= w; if (r <= 0) return m; }
+  for (const [m, w] of list) { r -= w; if (r <= 0) return m; }
   return 'dinghy';
 }
 
@@ -70,17 +78,64 @@ function spawnPoint(world, a) {
 
 const byWater = (world, x, y) => seaGrid(world).any(x, y, NEAR_SEA_PX);
 
+// ---- the anglers' boats ----------------------------------------------------------------------------------------------
+// Where an angler's boat sits (once a map): a lake's open water every 8 tiles (the lake 4 tiles round it), and the big
+// rivers' calm pockets (radius 6 tiles or more: room for a boat)
+function fishSpots(world) {
+  const m = world.map;
+  if (m._fishSpots) return m._fishSpots;
+  const out = [], open = (tx, ty) => { if (!m.inside(tx, ty)) return false; const i = m.idx(tx, ty), t = m.tiles[i]; return (t === T.WATER || t === T.DEEP) && m.lake[i] === 1; };
+  if (m.lake) for (let ty = m.y0 + 4; ty < m.y0 + m.h - 4; ty += 8) for (let tx = m.x0 + 4; tx < m.x0 + m.w - 4; tx += 8) if (open(tx, ty) && open(tx - 4, ty) && open(tx + 4, ty) && open(tx, ty - 4) && open(tx, ty + 4)) out.push({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE });
+  for (const c of (m.waters && m.waters.ch) || []) for (const q of c.p || []) if (q[2] >= 6) out.push({ x: q[0] * TILE, y: q[1] * TILE, pocket: true });
+  Object.defineProperty(m, '_fishSpots', { value: out, enumerable: false });
+  return out;
+}
+function fishSpawn(world, a) {
+  const pts = pointGrid(fishSpots(world)).within(a.x, a.y, 500, 1300);
+  for (let k = 0; k < 8 && pts.length; k++) {
+    const p = pts[Math.floor(rng() * pts.length)];
+    if ([...world.players.values()].every((q) => !q.ped || Math.hypot(q.ped.x - p.x, q.ped.y - p.y) > 400) && !inAnyView(world, p.x, p.y, 120) && !world.query(p.x, p.y, 150, K.VEH).length) return p;
+  }
+  return null;
+}
+// the next spot on the same water: a lake's, 250-900 px off in a clear line (a pocket's boat stays in its pocket)
+function nextFishSpot(world, v) {
+  const pts = pointGrid(fishSpots(world)).within(v.x, v.y, 250, 900).filter((p) => !p.pocket);
+  for (let k = 0; k < 12 && pts.length; k++) {
+    const p = pts[Math.floor(rng() * pts.length)];
+    if (clearLine(world, v.x, v.y, p.x, p.y) && !world.query(p.x, p.y, 120, K.VEH).length) return p;
+  }
+  return null;
+}
+export function spawnFisher(world, p) {
+  const v = world.spawnVehicle(pickModel(FISH_MODELS), p.x, p.y, rng() * 6.28, {});
+  const d = spawnNpc(world, 'casual', p.x, p.y, 'driver');
+  dressAs(world, d, 'fisher');
+  d.vehId = v.id; d.seat = 0; v.seats[0] = d.id;
+  v.ai = { kind: 'fisher', to: null, until: world.time + FISH_S[0] * 0.5 + rng() * FISH_S[1] * 0.5, drv: d.id, pocket: !!p.pocket };
+  v.despawnable = false;
+  return v;
+}
+// the rod down (the boat taken, the angler gone): their ped's fishing flag off
+function rodDown(world, ai) { const d = ai && world.get(ai.drv); if (d && d.fishing && d.fishing.npc) d.fishing = null; }
+
 function manage(world) {
   const anchors = [...world.players.values()].filter((p) => p.ped && !p.ped.dead).map((p) => p.ped);
   // tidy up
   for (const v of world.entities.values()) {
-    if (v.kind !== K.VEH || !v.ai || (v.ai.kind !== 'boater' && v.ai.kind !== 'pboat')) continue;
-    if (v.seats.some((s) => s && world.get(s)?.player)) { v.ai = null; v.despawnable = true; continue; }
+    if (v.kind !== K.VEH || !v.ai || (v.ai.kind !== 'boater' && v.ai.kind !== 'pboat' && v.ai.kind !== 'fisher')) continue;
+    if (v.seats.some((s) => s && world.get(s)?.player)) { rodDown(world, v.ai); v.ai = null; v.despawnable = true; continue; }
     if (anchors.some((a) => Math.hypot(a.x - v.x, a.y - v.y) < FAR_PX)) continue;
     for (const sid of v.seats) { const q = sid && world.get(sid); if (q && q.npc) despawnNpc(world, q); }
     world.remove(v);
   }
   for (const a of anchors) {
+    // the anglers' boats: on a lake (or a big river's pocket) near you
+    if (pointGrid(fishSpots(world)).any(a.x, a.y, NEAR_LAKE_PX)) {
+      let fishers = 0;
+      for (const v of world.query(a.x, a.y, 1600, K.VEH)) if (v.ai && v.ai.kind === 'fisher') fishers++;
+      if (fishers < FISHERS_NEAR && world.npcCount + world.trafficCount < world.npcBudget) { const p = fishSpawn(world, a); if (p) spawnFisher(world, p); }
+    }
     if (!byWater(world, a.x, a.y)) continue;
     let boaters = 0, patrols = 0;
     for (const v of world.query(a.x, a.y, 1600, K.VEH)) { if (v.ai && v.ai.kind === 'boater') boaters++; if (v.ai && v.ai.kind === 'pboat') patrols++; }
@@ -133,12 +188,24 @@ export function update(world, dt) {
   for (const v of world.entities.values()) {
     if (v.kind !== K.VEH || !v.ai || v.wreckAt) continue;
     const ai = v.ai;
-    if ((ai.kind === 'boater' || ai.kind === 'pboat') && v.seats[0] && world.get(v.seats[0])?.player) { v.ai = null; v.despawnable = true; v.sirenOn = false; continue; } // taken over by a player
+    if ((ai.kind === 'boater' || ai.kind === 'pboat' || ai.kind === 'fisher') && v.seats[0] && world.get(v.seats[0])?.player) { rodDown(world, ai); v.ai = null; v.despawnable = true; v.sirenOn = false; continue; } // taken over by a player
     if (ai.kind === 'boater') {
       const drv = world.get(v.seats[0]);
       if (!drv || drv.dead) { v.ai = null; v.despawnable = true; continue; }
       if (!ai.to || Math.hypot(ai.to.x - v.x, ai.to.y - v.y) < 120) ai.to = nextPoint(world, v);
       if (ai.to) boatSteer(world, v, ai.to.x, ai.to.y, ai.speed);
+    } else if (ai.kind === 'fisher') {
+      const drv = world.get(v.seats[0]);
+      if (!drv || drv.dead || drv.id !== ai.drv) { rodDown(world, ai); v.ai = null; v.despawnable = true; continue; }
+      if (ai.to) {   // rowing on to the next spot
+        drv.fishing = null;
+        if (Math.hypot(ai.to.x - v.x, ai.to.y - v.y) < 70) { ai.to = null; ai.until = world.time + FISH_S[0] + rng() * (FISH_S[1] - FISH_S[0]); }
+        else boatSteer(world, v, ai.to.x, ai.to.y, FISH_ROW);
+      } else {       // sat still, the rod out over the side
+        v.input = { throttle: 0, steer: 0, hb: false };
+        if (Math.hypot(v.vx, v.vy) < 30) { if (!drv.fishing) drv.fishing = { npc: true }; drv.a = v.a + Math.PI / 2; }
+        if (world.time > ai.until) { const n = ai.pocket ? null : nextFishSpot(world, v); if (n) { ai.to = n; drv.fishing = null; } else ai.until = world.time + FISH_S[0]; }
+      }
     } else if (ai.kind === 'pboat') {
       const crew = v.seats.map((s) => s && world.get(s)).filter((c) => c && !c.dead && c.npc);
       if (!crew.length) { v.ai = null; v.despawnable = true; v.sirenOn = false; continue; }
