@@ -25,7 +25,7 @@ export const WOODSLAKE3 = {
   name: 'Silver Thread Lake', near: [1720, 1095], box: [1560, 980, 1910, 1190],
   shore: { amp: 9, scale: 30, keep: 6, falls: 24, outlet: 20 },
   isles: { n: 3, r: [4, 11], off: 7, apart: 44 },
-  boat: { name: 'Silver Thread Boathouse', rent: 'Silver Thread Canoe Hire', jetty: 9, models: ['rowboat', 'dinghy'] },
+  boat: { name: 'Silver Thread Boathouse', rent: 'Silver Thread Canoe Hire', jetty: 9, models: ['rowboat', 'kayak', 'dinghy'] },
 };
 
 export function woodsLake3(m, H3) {

@@ -191,6 +191,23 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
     assert.ok(m.props.some((p) => p && p.t === 'pbench' && Math.hypot(p.x - last.falls.x, p.y - last.falls.y) < Math.max(40 * TILE, last.falls.w)), `${name}: a bench looking at it`);
     assert.ok(m.props.some((p) => p && p.t === 'textsign' && p.text === name.toUpperCase()), `${name}: its sign`);
   }
+  // the Redwood River Run (shared/world3-riverrun.js): the kayak hire's landing at the put-in in the woods, the take-out
+  // above the bay; the current runs from the one to the other
+  const RR = m.world3.riverRun;
+  assert.ok(RR && RR.put && RR.take, `the river run's put-in and take-out (${JSON.stringify(RR)})`);
+  const { modelsAt } = await import('../server/systems/rentals.js');
+  const { BOAT_RENTAL_PRICE } = await import('../shared/rules.js');
+  const { flowAt } = await import('../shared/flow.js');
+  for (const end of [RR.put, RR.take]) {
+    const R = m.rentals.find((q) => q.poi === end.poi), [sx, sy] = end.shore;
+    assert.ok(R && modelsAt(R).includes('kayak') && BOAT_RENTAL_PRICE.kayak > 0 && R.spots.length >= 2, `kayaks for hire at ${sx}, ${sy}`);
+    let dock = 0; for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) if (m.tiles[(sy + dy) * W + sx + dx] === T.DOCK) dock++;
+    assert.ok(dock >= 9, `a landing of planks at ${sx}, ${sy} (${dock})`);
+  }
+  assert.ok(RR.take.shore[1] < RR.put.shore[1] - 200, 'the take-out well down the river (north, to the bay)');
+  let north = 0, n = 0;
+  for (let y = RR.put.shore[1] - 20; y > RR.take.shore[1] + 20; y -= 12) for (let x = 2300; x < 2560; x += 3) { const f = flowAt(m, (x + 0.5) * TILE, (y + 0.5) * TILE); if (f) { n++; if (f[1] < 0) north++; } }
+  assert.ok(n > 50 && north > n * 0.8, `the current runs down the river to the bay (${north} of ${n} samples northward)`);
   // an angler's hold on the bank below the falls (server/systems/wildfolk.js: the plunge pools early)
   const { spotsOf } = await import('../server/systems/activities.js');
   const holdsAt = spotsOf(m).list.filter((q) => q.k === 'holds');

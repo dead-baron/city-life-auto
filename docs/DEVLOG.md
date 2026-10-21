@@ -13040,3 +13040,33 @@ No reeds or lilies stand on a ledge fall's lip any more: the bake's water decor 
 
 Tests: test/world3rapids.test.js - an anglers' hold below most of the falls.
 
+## 2026-10-21 · Code budgets raised (the owner's call)
+
+The renderer's and the bake workers' code budgets sat at exactly the code's size (382 and 832 KB gzipped), so every new
+piece of art meant raising one or trimming something. The owner agreed to give them room (`tools/perf.mjs`):
+- **the renderer**: 382 to 400 KB.
+- **the bake worker**: 832 to 860 KB.
+- **the page**: 488 to 490 KB. The rivers' current runs in the player's own movement (`shared/flow.js`), and that put
+  the page at 488.4.
+
+The renderer and the bake workers load once you're in the city, never at the title screen. The page stays the one to
+keep lean.
+
+## 2026-10-21 · Nature: the river kayak, and the Redwood River Run
+
+- **the kayak** (`shared/vehicles.js` kayak, `client/art2/vehicles.js`): a one-seat river kayak, quick to turn and
+  light. Its long yellow hull is pointed at both ends, with a black-rimmed cockpit and a double paddle across the deck.
+  Quiet like the rowboat (`client/sound/vehicles.js`). $30 to hire (`shared/rules.js`).
+- **the Redwood River Run** (`shared/world3-riverrun.js`, new, World v3's done hook): the river that leaves Highland
+  Woods to the north runs some 400 tiles to the bay at Northshore, through the white water above the road's bridge and
+  below it.
+  - **the put-in** is in the woods where the river starts: a plank landing square to the bank, a kayak hire whose
+    kayaks wait along the planks, two more boats pulled up on the bank, a sign and a lamp.
+  - **the take-out** is on the beach at the river's mouth, where you hand the kayak back (any rental dock takes one).
+  - **the run**: the current carries you down and the rapids sweep you through. The hires' own word says so
+    (`server/systems/rentals.js`: a rental can carry a note).
+- **kayaks at Silver Thread Lake**: the canoe hire there lets out kayaks too.
+
+Tests: test/world3rapids.test.js - the put-in and the take-out with their landings and kayaks for hire, the take-out
+well down the river, the current running from the one to the other.
+
