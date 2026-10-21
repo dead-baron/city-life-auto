@@ -13190,3 +13190,53 @@ unchanged).
 Tests: test/ambience.test.js - a river from its bank and from 20 tiles off (under a third as loud); a falls at its foot
 (over twice a river's bank, never over the bed's ceiling), 12 tiles off (fading) and 30 tiles off (just the river); a
 rapid's white water between the two; the wind under the trees under half what it is in the open.
+
+## 2026-10-21 · Nature: beach camps
+
+- **the beach camps** (`shared/world3-camps.js` beachCamps3, World v3's done hook after the coasts; the owner's
+  "secluded spots ... beaches", N11's beach bonfire): a few camps on the wild coasts' sand, in the woods', the rocks',
+  the desert's or the country's districts.
+  - **where**: no road or building within 20 tiles, no place on the map within 40, no other campfire within 40. The
+    most out of the way win (nothing built within 32 tiles), at least 600 tiles apart, three at most.
+  - **the camp**: a fire 4-7 tiles up the beach from the water, driftwood seats and two camp chairs facing the sea, a
+    cooler and a lantern. It's a campfire to light and sit by, and a rest spot.
+  - They aren't named on the map: they're there to be found.
+
+Tests: test/world3coast.test.js - at least two beach camps, each on the sand with the sea in front of it, nothing built
+within 18 tiles, its fire, driftwood seats and lantern; far apart.
+
+## 2026-10-21 · Nature: the riders' camp on the Red Rock Trail
+
+- **the riders' camp** (`shared/world3-dirt.js` RIDES' `camp`, `shared/world3-camps.js` kind `riders`; NA1-C's "a
+  dirt-bike trail from the wash out to a party camp"): off the Red Rock Trail at marker 2, on open ground a few tiles
+  from the track, facing it. It has a fire to sit by, two tents, three camp chairs, a cooler and a lantern. The
+  riders' two dirt bikes are parked beside it and their pickup behind it, and you can take them (`m.parking`).
+- **a camp keeps clear of the designed places** (`shared/world3-camps.js` campFits): a camp's spot is refused when the
+  ground it clears holds a designed place's own solids (a lookout tower, a wall, a cut trunk). The riders' camp's first
+  spot was on Lookout Mesa beside marker 2, and laying it took the fire lookout away; it now sits on the trail's other
+  side.
+
+Tests: test/world3dirt.test.js - the camp by marker 2 and its rest spot, its fire, two tents, three chairs, the two
+dirt bikes and the pickup parked on open ground by it.
+
+## 2026-10-21 · Nature: Giant's Gate, the drive-through redwood
+
+- **Giant's Gate** (`shared/world3-drivetree.js`, new, World v3's done hook; task #399, the owner's of 10-09): a giant
+  coast redwood in Highland Woods with a tunnel cut through its foot, on its own dirt lane.
+  - **the site**: a road running east-west through the woods with open forest floor beside it for the lane's length,
+    among the most giants.
+  - **the lane** runs north-south, because the camera looks north and the arch has to face it. It is three tiles of
+    dirt with ruts from the road's edge (`m.tracks`), nothing growing on it, and a turning circle at the far end with
+    a boulder or two. A sign at its mouth reads GIANT'S GATE - DRIVE-THRU TREE, and the tree is on the map.
+  - **the tree** (`client/art2/redwoods.js` giantRedwood `o.tunnel`; `client/art2/game/statics.js` species `gate`) is
+    a size up from the biggest giants. An arch about 92 px wide and 60 px tall is cut through its foot, with the lane
+    seen through it and raw wood round the cut. No root crosses the tunnel's mouth.
+  - **driving through**: the trunk is solid either side of the arch, built from small solids on a grid so a car's
+    corner finds each one by its own tile (`shared/physics.js`), and the arch itself is clear. A pickup has about 20
+    px to spare each side. The tree fades while you're in the tunnel, like any giant you're behind (the host's tree
+    fade, its own outline), and it's never felled (`shared/felling.js`).
+  - Traffic keeps to the road graph, so only players drive through.
+
+Tests: test/world3woods.test.js - the gate tree on its lane, the lane dirt all the way through and off a road, the arch
+clear (every solid near it at least 44 px off the lane's middle) and the trunk solid either side, a pickup driven
+along the lane's middle never pushed and pushed back either side of it, never felled, the sign, on the map.

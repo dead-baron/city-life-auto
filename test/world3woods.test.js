@@ -168,5 +168,31 @@ test('World v3: Highland Woods - the falls, the trails and their furniture, the 
     check(modelsAt(R).every((id) => BOAT_RENTAL_PRICE[id] > 0), 'each boat for hire has its price');
   }
   check(m.landmarks.some((l) => l.name === 'Silver Thread Lake') && m.landmarks.some((l) => l.name === 'Silver Thread Boathouse'), 'on the map');
+  // Giant's Gate (shared/world3-drivetree.js): the drive-through redwood - its dirt lane north-south through the
+  // giant's foot from a road, the arch's way clear, the trunk solid either side of it, never felled; on the map
+  const DT = m.world3.driveTree.site;
+  check(DT && DT.giants > 0 && DT.solids >= 12, `Giant's Gate: ${JSON.stringify(DT)}`);
+  if (DT) {
+    const [gx, gy] = DT.tree, tree = m.props.find((p) => p && p.t === 'redwood' && p.sp === 'gate');
+    check(tree && tree.x === gx && tree.y === gy, 'the gate tree on its lane');
+    const { treeSize } = await import('../shared/felling.js');
+    check(tree && treeSize(tree) === 0, 'never felled');
+    let lane = 0, n = 0;
+    for (let k = 0; k <= 30; k++) for (const dx of [-1, 0, 1]) { n++; if (m.tiles[(DT.y0 + DT.dir * k) * W + DT.x + dx] === T.DIRT) lane++; }
+    check(lane === n, `the lane, dirt all the way through (${lane} of ${n})`);
+    let road = false; for (let k = 1; k <= 6; k++) if (m.tiles[(DT.y0 - DT.dir * k) * W + DT.x] === T.ROAD) road = true;
+    check(road, 'off a road');
+    const near = []; for (const [, arr] of m.solidProps) for (const e of arr) if (Math.abs(e.y - gy) < 90 && Math.abs(e.x - gx) < 160) near.push(e);
+    check(near.every((e) => Math.abs(e.x - gx) - e.r >= 44), 'the arch clear for a car');
+    check(near.some((e) => e.x < gx - 44) && near.some((e) => e.x > gx + 44), 'the trunk solid either side of it');
+    const { collideVehicleTiles } = await import('../shared/physics.js');
+    const { CAR_BLOCK } = await import('../shared/mapcore.js');
+    const { VEHICLES } = await import('../shared/vehicles.js');
+    const truck = (x, y) => { const v = { x, y, a: -Math.PI / 2, vx: 0, vy: -200, av: 0 }; collideVehicleTiles(v, VEHICLES.pickup, m, CAR_BLOCK); return Math.hypot(v.x - x, v.y - y); };
+    let stuck = 0; for (let y = gy - 110; y <= gy + 110; y += 10) if (truck(gx, y) > 0.5) stuck++;
+    check(stuck === 0, `a pickup's way through the tunnel (${stuck} places it's pushed)`);
+    check(truck(gx + 70, gy) > 1 && truck(gx - 70, gy) > 1, 'and the trunk either side of it solid');
+    check(m.landmarks.some((l) => l.name === "Giant's Gate") && m.props.some((p) => p && p.t === 'textsign' && /GIANT'S GATE/.test(p.text)), 'its sign, on the map');
+  }
   assert.deepEqual(fails, []);
 });

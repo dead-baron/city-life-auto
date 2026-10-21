@@ -6,6 +6,9 @@
 //                                 up), root flares and moss on the ground, burls, now and then a fire-scarred hollow
 //                                 at its foot ("goosepen"), the crown in the top half: feathery sprays hanging from
 //                                 short boughs, thicker toward a ragged top. Anchor at the middle of its foot.
+//                                 o.tunnel {w, h}: the drive-through tree (task #399) - an arch w px half-wide and h
+//                                 tall cut north-south through its foot, the road seen through it, the cut face's raw
+//                                 wood round it, no root across its mouth
 //   oldStump(seed, r)             an old-growth stump, sawn long ago: a ring of bark round a punky, mossy, charred top
 //   nurseLog(seed, len, r)        a fallen giant lying east-west, mossed over, ferns and seedlings growing on it
 //   sorrel(seed, w)               a patch of redwood sorrel: clover leaves carpeting the floor, a few pale flowers
@@ -84,6 +87,9 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
   const xAt = (z) => cx + lean * (z / H) ** 1.6;
   const SNAG = ramp('#8c8274', 6, 3, { dark: 0.62, light: 0.38 });
   const scar = !!o.scar, scarH = hw * (1.1 + hash(seed, 10, 4) * 0.9), scarW = 0.38 + hash(seed, 11, 4) * 0.2;
+  // (the drive-through's arch: a half-ellipse w half-wide, h tall at the foot's middle; the cut face round it)
+  const tun = o.tunnel || null, CUT = ramp('#c08a58', 6, 3, { dark: 0.55, light: 0.4 });
+  const archAt = (xo, z, pad = 0) => { if (!tun) return false; const q = xo / (tun.w + pad); return Math.abs(q) < 1 && z < (tun.h + pad) * Math.sqrt(1 - q * q); };
   const burls = [];
   for (let i = 0; i < (o.burls ?? (1 + Math.floor(hash(seed, 12, 4) * 3))); i++) burls.push([(hash(seed, 13 + i, 4) - 0.5) * 1.4, hw * 0.8 + hash(seed, 20 + i, 4) * H * 0.35, hw * (0.18 + hash(seed, 27 + i, 4) * 0.16)]);
   // roots spreading over the floor (the back ones first, the front ones after the trunk)
@@ -91,6 +97,7 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
     for (let i = 0; i < 7; i++) {
       const a = PI * (0.06 + 0.88 * hash(i, 1, seed)) + (i % 2 ? 0 : PI), fr = Math.sin(a) > 0.2;
       if (fr !== front) continue;
+      if (tun && front && Math.abs(Math.cos(a)) < 0.82) continue;   // (none across the tunnel's mouth)
       const L = hw * (0.5 + hash(i, 2, seed) * 0.6), r0 = hw * 0.9, w0 = hw * 0.24;
       for (let s = 0; s < L; s += 0.6) {
         const wv = w0 * (1 - s / L) + 1, X = cx + Math.cos(a) * (r0 + s), Y = foot + Math.sin(a) * (r0 + s) * 0.62;
@@ -122,6 +129,15 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
       if (Math.abs(u) > 1) continue;
       const dep = rr * Math.sqrt(1 - u * u), z = zEst + dep * bulge;
       if (z < 0) continue;
+      if (tun && zEst < tun.h + 4) {
+        const xo = x + 0.5 - xAt(0);
+        if (archAt(xo, zEst)) continue;   // (the tunnel: the road through it shows - the ground's own)
+        if (archAt(xo, zEst, 4)) {        // (the cut face round the arch: raw wood, darker inside the top)
+          const top = zEst > tun.h * 0.55;
+          G.put(x, y, pick(CUT, clamp(0.55 - (top ? 0.25 : 0) - xo / tun.w * 0.15 + (hash(x, y, seed) - 0.5) * 0.2), x, y, 0.5), nrm(-xo / tun.w * 0.5, 0.9, 0.3), z, null, 0);
+          continue;
+        }
+      }
       const phi = Math.asin(u), fl = Math.sin(phi * nfl + vnoise(zc * 0.5, phi * 3, 9, seed) * 2.4 + seed);
       const streak = hash(Math.round(phi * hw * 0.5), Math.floor(zc / (4 + hash(Math.round(phi * hw * 0.5), 0, seed) * 6)), seed);
       const plate = hash(Math.round(phi * hw * 0.35), Math.floor((zc + hash(Math.round(phi * hw * 0.35), 1, seed) * 30) / 26), seed + 3);
@@ -165,7 +181,7 @@ export function giantRedwood(seed = 1, H = 520, hw = 30, o = {}) {
 // heights doubled): twice the tree for the same pixels, and the dither lands on the art grid instead of being
 // averaged away. H and hw in world px.
 export function giantRedwoodArt(seed = 1, H = 620, hw = 54, o = {}) {
-  const G = giantRedwood(seed, H / 2, hw / 2, o);
+  const G = giantRedwood(seed, H / 2, hw / 2, o.tunnel ? { ...o, tunnel: { w: o.tunnel.w / 2, h: o.tunnel.h / 2 } } : o);
   G.ax *= 2; G.ay *= 2; G.ap2 = 2;
   return G;
 }

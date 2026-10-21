@@ -1882,6 +1882,7 @@ const SPECIES = {
   // Highland Woods' old-growth coast redwoods (redwoods.js; the map's 'redwood' props, by size) and its floor
   giantL: [(s) => RW.giantRedwoodArt(s, 720, 70), 250, 770], giant: [(s) => RW.giantRedwoodArt(s, 620, 54), 210, 660], giantS: [(s) => RW.giantRedwoodArt(s, 520, 40), 175, 555],
   redwood2: [(s) => RW.giantRedwoodArt(s, 340, 16, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 100, 365], sorrel: [(s) => RW.sorrel(s, 44), 26, 10],
+  gate: [(s) => RW.giantRedwoodArt(s, 760, 78, { tunnel: { w: 46, h: 60 } }), 270, 815],   // (Giant's Gate, the drive-through: shared/world3-drivetree.js)
   fernR: [(s) => RW.swordFernArt(s, 78 + (s % 3) * 8), 52, 64],
   // shrubs, bushes and flowers
   hedge: [FL.hedge, 38, 51], topBall: [FL.topiaryBall, 20, 57], topCone: [FL.topiaryCone, 17, 66], rose: [FL.roseBush, 24, 41], hydrangea: [FL.hydrangea, 27, 41], lavender: [FL.lavender, 28, 45],
@@ -1991,7 +1992,7 @@ const PLANTS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_
 // their foot - a trunk's width round its base - stays. RW_R: the trunk's half width by species. Only a tree whose
 // trunk (or the sprays just round it) covers you fades - fbox, narrower than the picture - not every crown nearby.
 export const TREE_FADE = 1e6;
-const RW_R = { giantL: 70, giant: 54, giantS: 40, redwood2: 16 };
+const RW_R = { giantL: 70, giant: 54, giantS: 40, redwood2: 16, gate: 78 };
 const NV5 = new Set(['street', 'streetPl', 'oak', 'fir', 'cedar', 'coconut', 'royal', 'mtnPine', 'maple']), NV = (sp) => (NV5.has(sp) ? 4 : 3);
 
 // ================================================================================================
