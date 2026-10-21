@@ -28,11 +28,14 @@ export function sunkenWrecks3(m) {
     for (let r = 1; r <= Math.ceil(R.shore[1]) + 1; r++) for (let k = -r; k <= r; k++) for (const [dx, dy] of [[k, -r], [k, r], [-r, k], [r, k]]) { const X = x + dx, Y = y + dy; if (inF(X, Y) && !wet(idx(X, Y))) return Math.sqrt(dx * dx + dy * dy); }
     return 99;
   };
+  // (out in the country and its coasts: no city pool or park pond, no harbour)
+  const styles = m._distStyle || [], OUT = new Set(['wild', 'rural', 'desert', 'rocky', 'water', 'beach']);
   const cand = { lake: [], sea: [] };
   for (let y = 8; y < HH - 8; y += R.step) for (let x = 8; x < W - 8; x += R.step) {
     const i = idx(x, y);
     if (m.tiles[i] !== T.WATER || (m.river && m.river[i])) continue;
     const where = m.lake && m.lake[i] ? 'lake' : 'sea';
+    if (!OUT.has(styles[m.dist[i]]) || (where === 'lake' && styles[m.dist[i]] === 'water')) continue;
     let open = true;
     for (let dy = -R.open; dy <= R.open && open; dy++) for (let dx = -R.open; dx <= R.open; dx++) if (!wet(idx(x + dx, y + dy)) || (m.river && m.river[idx(x + dx, y + dy)])) { open = false; break; }
     if (!open) continue;
