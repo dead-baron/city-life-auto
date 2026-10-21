@@ -78,14 +78,14 @@ function mxPark(m, H3, out) {
   (m.tracks ||= []).push({ pts, hw: MX.hw, bb: [Math.min(...xs) - 64, Math.min(...ys) - 64, Math.max(...xs) + 64, Math.max(...ys) + 64], mx: 1 });
   // 3. the berms round the outsides of the tight turns, tyre stacks behind them; tape along the straights' edges
   let berms = 0, tables = 0;
-  for (let k = 0; k < N; k += 3) {
+  for (let k = 0; k < N; k += 2) {
     const t = turn(k), a = head(k), nx = -Math.sin(a), ny = Math.cos(a);   // (n: to the right of the way round)
-    if (Math.abs(t) > 0.5) {
+    if (Math.abs(t) > 0.32) {
       const side = t > 0 ? -1 : 1;   // (turning right: the outside is on the left)
       const [x, y] = S[k], bx = x + nx * side * (MX.hw + 14), by = y + ny * side * (MX.hw + 14);
-      P('berm', bx, by, 0, { len: 64, a: Math.round(a * 1000) / 1000, side, h: Math.round(10 + Math.min(1, Math.abs(t) / 1.2) * 12) }); berms++;
-      if (k % 6 === 0) P('tires', x + nx * side * (MX.hw + 56), y + ny * side * (MX.hw + 56), 10);
-    } else if (Math.abs(t) < 0.12 && k % 9 === 0) {
+      P('berm', bx, by, 0, { len: 48, a: Math.round(a * 1000) / 1000, side, h: Math.round(10 + Math.min(1, Math.abs(t) / 0.9) * 12) }); berms++;
+      if (k % 8 === 0) P('tires', x + nx * side * (MX.hw + 56), y + ny * side * (MX.hw + 56), 10);
+    } else if (Math.abs(t) < 0.12 && k % 8 === 0) {
       for (const side of [-1, 1]) P('tapeline', S[k][0] + nx * side * (MX.hw + 18), S[k][1] + ny * side * (MX.hw + 18), 0, { len: 128, a: Math.round(a * 1000) / 1000 });
     }
   }
@@ -109,7 +109,8 @@ function mxPark(m, H3, out) {
   // 5. the start gate across the start straight, the timing tower beside it, the floodlights round the course
   const g0 = S[startK + 6], ga = head(startK + 6), gnx = -Math.sin(ga), gny = Math.cos(ga);
   P('startgate', g0[0], g0[1], 0, { w: MX.hw * 2 + 16, a: Math.round(ga * 1000) / 1000 });
-  P('timingtower', g0[0] + gnx * -(MX.hw + 120), g0[1] + gny * -(MX.hw + 120), 30);
+  const tw = S[startK + 26], ta = head(startK + 26);   // (the tower a little way down the start straight, north of it: clear of the way in)
+  P('timingtower', tw[0] + Math.sin(ta) * (MX.hw + 110), tw[1] - Math.cos(ta) * (MX.hw + 110), 30);
   P('textsign', g0[0] + gnx * -(MX.hw + 200), g0[1] + gny * -(MX.hw + 200) + 40, 0, { text: 'RED ROCK MX', bg: '#a8341e', fg: [250, 236, 200], z: 36 });
   for (const [fx, fy] of [[1, 1], [BW - 2, 1], [1, BH - 2], [BW - 2, BH - 2], [BW >> 1, BH - 2]]) P('floodmast', X(fx) + 16, Y(fy) + 16, 12);
   // 6. the rail fence round the park (a gap in the north side for the way in), the pits to the south-west, the ticket
