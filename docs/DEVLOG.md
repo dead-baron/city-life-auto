@@ -13337,3 +13337,21 @@ renderer trampled its flora (render/flora); the art v2 page had nothing.
 
 Tests: test/crush.test.js - the marks' frames (a swath wider and longer than a track at every angle, dark with pale
 streaks, see-through); their own ring (2,000 marks leave the blood decal in place, the newest kept).
+
+## 2026-10-21 · Fix: rock you couldn't see
+
+The owner, 2026-10-21: "Not seeing some rock or cliff formations showing, you can see it on the minimap and can't walk
+through it but it doesn't load in game" (on the coast below Granite Peaks, 510-530 x 1402-1424). A cliff's face is a
+sprite drawn on the rock's south edge, where it drops to open ground (`shared/world3-relief.js` and the hand-made
+places' cliffs). The rest of the rock was left to the ground bake: a band's top, its sides, a crag with no drop to
+the south, about 55 patches out in the wilds. It drew them as the mountains' scree, or as a building's concrete
+foundation, so you saw forest floor or meadow and walked into an invisible wall.
+
+- **bare rock** (`client/art2/ground.js` crag, new; `client/art2/game/groundbake.js`): out in the wilds, and on a
+  designed place's rock (reserve 32), rock is drawn as bare granite. It's grey slabs split by dark cracks, lichen on
+  them, each slab tilted to the light its own way and raised 8-16 px so it casts its shadow. It's red rock in the
+  desert, as before. The city's walls and the prison's keep their foundation.
+- Most of the wilds' rock already had a cliff sprite over it; under those the change shows only round the edges.
+
+Tests: test/crag.test.js - the material (slabs and cracks, raised, tilted); the wilds' rock raised and grey in the
+ground bake, a city wall flat.
