@@ -32,6 +32,7 @@ import { subwayLoops } from './world3-subway.js';
 import { paintWater3, buildWater3, waterDone } from './world3-water.js';
 import { waterBodies3 } from './world3-waterbodies.js';
 import { rapidsAndPockets3 } from './world3-rapids.js';
+import { kestrelByHand3 } from './world3-kestrel.js';
 import { riverBanks3 } from './world3-banks.js';
 import { buildMarshBoardwalk3 } from './world3-marsh.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
@@ -244,6 +245,7 @@ export function worldOpts(asked) {
       m.world3.marsh = buildMarshBoardwalk3(m, H3 && H3.removeProps);   // (Nature-C3, 2026-10-20: the Egret Marsh Boardwalk - world3-marsh.js)
       m.world3.banks = riverBanks3(m);   // (the nature program, 2026-10-20: the rivers' gravel bars, cut banks and green banks - world3-banks.js)
       m.world3.waterBodies = waterBodies3(m);   // (2026-10-18, the water upgrade: which water is a creek, a river, a lake, a pond or the marsh, which way each channel runs - m.waters, m.lake: world3-waterbodies.js)
+      m.world3.kestrel = kestrelByHand3(m, H3);   // (Kestrel Lake by hand: the south shore's bays and points, Kestrel Beach - world3-kestrel.js)
       m.world3.trails = buildTrails3(m, H3);   // (the nature program, 2026-10-20: Highland Woods' trails, their furniture, the glades and the fire lookout - world3-trails.js)
       m.world3.dirt = buildDirt3(m, H3);   // (the nature program, 2026-10-20, Nature-C1: the Red Rock MX Park - world3-dirt.js)
       m.world3.caves = buildCaves3(m, H3);   // (Nature-B1, B2: the Redwood Caverns - their ways in behind Redwood Creek Falls and at Redwood Cove, the plan underground: world3-caves.js)

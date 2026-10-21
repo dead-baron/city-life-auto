@@ -12695,3 +12695,23 @@ Tests: test/world3peaks.test.js - the meadows (lush, flowered, open, apart, on t
 spring, the fire ring and its rest spot and seats, the summits' cairns, benches and telescope, the trail from a road or
 a trail (its sign and map board) through the hut's meadow to a summit, showing on the ground, with its cairns; the hunting camp and the
 lookout clear of the snow.
+
+## 2026-10-20 · Nature: Kestrel Lake by hand - the south shore's bays, Kestrel Beach
+
+From the handcraft research's 4.11 (WR2-C, SC3-G, NS1-E: "a sand beach on the east side - swim area, buoys, lifeguard
+chair - reeds and lilies in the south bays by the outlet"); `shared/world3-kestrel.js`, new, World v3's done hook after
+the water bodies:
+- **the south shore wanders**: the lake was laid as a polygon and the farm valley's fields up to it, so its south shore
+  ran ruler-straight for a third of a kilometre. Its straight runs now wander in a slow wave: bays dug back into the
+  meadow between the fields and the water (never into a field, nor within a dozen tiles of a dock, the boathouse or a
+  road), the shore built out a little between them; reeds and cattails grow in the bays' shallows and lily rafts float
+  out in them.
+- **Kestrel Beach** on the east shore, where the most open ground lies between the water and the fields: the sand one
+  piece up to 8 tiles from the water (easing off at its ends), a lifeguard chair facing the water, umbrellas and towels,
+  the swim area roped off by a line of red and white floats out, along and back, a swim raft on its barrels in it,
+  picnic blankets on the grass behind (the picnickers come to them), a lifering, its sign; named on the map.
+New art (`client/art2/props-park.js`): the swim raft and the swim area's floats.
+
+Tests: test/world3kestrel.test.js - no long straight stretch left on the south shore, bays dug, no field flooded, the
+fishing dock and the boathouse still on the water, reeds in the bays; the beach's sand, lifeguard chair, umbrellas,
+towels and blankets, its floats and raft on the water, its sign.
