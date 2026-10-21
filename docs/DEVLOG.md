@@ -13367,6 +13367,8 @@ foundation, so you saw forest floor or meadow and walked into an invisible wall.
   them, each slab tilted to the light its own way and raised 8-16 px so it casts its shadow. It's red rock in the
   desert, as before. The city's walls and the prison's keep their foundation.
 - Most of the wilds' rock already had a cliff sprite over it; under those the change shows only round the edges.
+- Its border with the ground round it wanders as the soft ground's borders do (the bake's warp), so a patch of
+  rock has a ragged, rounded edge instead of the tiles' steps.
 
 Tests: test/crag.test.js - the material (slabs and cracks, raised, tilted); the wilds' rock raised and grey in the
 ground bake, a city wall flat.
