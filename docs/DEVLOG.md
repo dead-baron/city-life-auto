@@ -13337,3 +13337,19 @@ renderer trampled its flora (render/flora); the art v2 page had nothing.
 
 Tests: test/crush.test.js - the marks' frames (a swath wider and longer than a track at every angle, dark with pale
 streaks, see-through); their own ring (2,000 marks leave the blood decal in place, the newest kept).
+
+## 2026-10-21 · Nature: the desert's ranch gates and highway pull-offs
+
+More of the desert road kit (the handcraft research's 5.1: "a cattle grid at ranch gates", "gravel pull-off with
+shade ramada, water tank"):
+- **the ranch gates** (`shared/world3-stocktanks.js`): each stock tank's track now runs straight north, south, east
+  or west to its road and leaves it through a ranch gate - a log arch across the track (its posts solid), a cattle
+  grid under it (`client/art2/props-rural.js` cattleGrid, new: steel rails over a dark pit in a concrete frame) and
+  a mailbox by the road.
+- **the pull-offs** (`shared/world3-roadside.js` pullOffs): three on the desert's highways, far apart, each off one
+  shoulder - a gravel apron 12 tiles along the road and 6 deep, a timber shade ramada over a picnic table (unlit:
+  `client/art2/game/statics.js` pergola's `dark`), a water tank at its far end and a bin. No delineator stands in
+  one. Each is on the map's nature sites ('pulloff').
+
+Tests: test/world3desert.test.js - each stock tank's gate, cattle grid and mailbox at the road; two or more
+pull-offs, far apart, each on gravel with its ramada, table, tank and bin and no post in it.

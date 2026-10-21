@@ -1512,7 +1512,7 @@ function voxModel(m, a) {
     case 'hammock': return TW.hammock(a[0]); case 'boulder': return D.boulder(a[0], a[1], a[2]); case 'statue': return PK.statue(); case 'flagpole': return U.flagpole(a[0], a[1]); case 'jersey': return K.jerseyBarrier(a[0], a[1]);
     case 'forklift': return X.forklift(a[0], a[1]); case 'container': return X.container(a[0], a[1]); case 'boxcar': return X.boxcar(a[0]); case 'tankcar': return X.tankCar(a[0]); case 'clockPost': return RD.clockPost(); case 'stopPole': return X.stopPole(a[0]); case 'gazebo': return PK.gazebo(); case 'archBridge': return PK.archBridge(a[0] || 120, a[1] || 26, a[2] || 16); case 'parkSign': return PK.parkSign(a[0]);
     case 'beachChair': return PK.beachChair(a[0]); case 'lifeguard': return P.lifeguardTower(); case 'cafeTable': return P.cafeTable(); case 'chalkboard': return P.chalkboard(); case 'topiary': return D.topiary(a[0], a[1]);
-    case 'trough': return U.trough(); case 'stocktank': return U.stockTank(a[0] || 26); case 'woodpile': return U.woodpile(); case 'propane': return U.propaneTank(); case 'barrierArm': return U.barrierArm(a[0], a[1]); case 'gantryCrane': return X.gantryCrane(a[0], a[1], a[2]);
+    case 'trough': return U.trough(); case 'stocktank': return U.stockTank(a[0] || 26); case 'cattleGrid': return U.cattleGrid(a[0] || 64, a[1] || 28); case 'woodpile': return U.woodpile(); case 'propane': return U.propaneTank(); case 'barrierArm': return U.barrierArm(a[0], a[1]); case 'gantryCrane': return X.gantryCrane(a[0], a[1], a[2]);
     case 'cabana': return D.cabana(a[0] || 0); case 'skySpan': return D.skySpan(a[0] || 150); case 'skyTower': return D.skyTower(a[0] || 144); case 'porte': return D.porte(a[0] || 300, a[1] || 96, a[2] || 58, a[3] || 0);
     case 'timberPergola': return D.timberPergola(a[0] || 380, a[1] || 96, a[2] || 60); case 'bannerPole': return D.bannerPole(a[0] || 0);
     case 'dome': return obsDome(a[0] || 90); case 'marquee': return marquee(); case 'speaker': return speakerPost(); case 'portal': return portal(a[0] || 100); case 'wheelStop': return wheelStop();
@@ -1580,7 +1580,7 @@ function vdim(m, a) {
     case 'hammock': return [a[0] || 40, 10, 22]; case 'boulder': return [Math.ceil((a[1] || 22) * 1.2) + 4, Math.ceil((a[1] || 22) * 1.2) + 4, Math.ceil((a[1] || 22) * 0.9) + 2]; case 'statue': return [24, 24, 84];
     case 'flagpole': return [46, 8, (a[0] || 110) + 4]; case 'jersey': return [a[0] || 48, 14, 18]; case 'forklift': return [46, 26, 50]; case 'container': return [a[1] || 130, 54, 58]; case 'boxcar': return [230, 58, 74]; case 'tankcar': return [210, 58, 74]; case 'clockPost': return [16, 10, 64];
     case 'stopPole': return [14, 8, 60]; case 'gazebo': return [74, 74, 86]; case 'archBridge': return [a[0] || 120, a[1] || 26, (a[2] || 16) + 22]; case 'parkSign': return [26, 6, 30]; case 'beachChair': return [26, 14, 16]; case 'lifeguard': return [34, 30, 46]; case 'cafeTable': return [14, 14, 12]; case 'chalkboard': return [12, 8, 18];
-    case 'topiary': return [16, 16, 30]; case 'trough': return [36, 16, 12]; case 'stocktank': return [(a[0] || 26) * 2 + 6, (a[0] || 26) * 2 + 6, 19]; case 'woodpile': return [30, 12, 16]; case 'propane': return [60, 24, 30]; case 'barrierArm': return [a[0] || 70, 10, 30];
+    case 'topiary': return [16, 16, 30]; case 'trough': return [36, 16, 12]; case 'stocktank': return [(a[0] || 26) * 2 + 6, (a[0] || 26) * 2 + 6, 19]; case 'cattleGrid': return [a[0] || 64, a[1] || 28, 3]; case 'woodpile': return [30, 12, 16]; case 'propane': return [60, 24, 30]; case 'barrierArm': return [a[0] || 70, 10, 30];
     case 'cabana': return [44, 40, 50]; case 'skySpan': return [64, a[0] || 150, 46]; case 'skyTower': return [60, 60, (a[0] || 144) + 4]; case 'porte': return [a[0] || 300, a[1] || 96, (a[2] || 58) + 16];
     case 'timberPergola': return [a[0] || 380, a[1] || 96, (a[2] || 60) + 14]; case 'bannerPole': return [32, 8, 100];
     case 'gantryCrane': return [70, a[0] || 170, (a[1] || 200) + 6]; case 'dome': return [(a[0] || 90) + 10, (a[0] || 90) + 10, (a[0] || 90) * 0.8 + 30]; case 'marquee': return [84, 10, 80]; case 'speaker': return [10, 10, 22];
@@ -2136,7 +2136,7 @@ function propItems(c, p, pi, I) {
     case 'skybridge': { const len = Math.round((p.len || 150) / 2) * 2, z = p.z || 96; V(`sksp:${len}`, 'skySpan', [len], 0, null, { z0: z }); lightAt(I, x, y, z + 30, 130, [1, 0.84, 0.6], 1.1, 'window'); return; }
     case 'sbtower': { const h = p.h || 144; V(`sktw:${h}`, 'skyTower', [h]); lightAt(I, x, y + 20, 40, 120, [1, 0.86, 0.62], 1.2, 'window'); return; }
     case 'porte': { const w = Math.round((p.w || 300) / 8) * 8, d = Math.round((p.d || 96) / 8) * 8, h = p.h || 58, k = p.k ? 1 : 0; V(`porte:${w}:${d}:${h}:${k}`, 'porte', [w, d, h, k]); lightAt(I, x, y, h - 6, 150, k ? [1, 0.45, 0.85] : [1, 0.85, 0.6], k ? 2 : 1.4, k ? 'neon' : 'lamp'); return; }
-    case 'pergola': { const w = Math.round((p.w || 380) / 8) * 8, d = Math.round((p.d || 96) / 8) * 8, h = p.h || 60; V(`tperg:${w}:${d}:${h}`, 'timberPergola', [w, d, h]); lightAt(I, x, y, h - 14, 140, [1, 0.76, 0.45], 1.3, 'lamp'); return; }
+    case 'pergola': { const w = Math.round((p.w || 380) / 8) * 8, d = Math.round((p.d || 96) / 8) * 8, h = p.h || 60; V(`tperg:${w}:${d}:${h}`, 'timberPergola', [w, d, h]); if (!p.dark) lightAt(I, x, y, h - 14, 140, [1, 0.76, 0.45], 1.3, 'lamp'); return; }   // (p.dark: a desert pull-off's shade ramada, no lamp)
     case 'bannerpole': V(`bpole:${(p.v || 0) % 2}`, 'bannerPole', [(p.v || 0) % 2]); lightAt(I, x, y, 92, 100, [1, 0.86, 0.62], 1.2, 'lamp'); return;
     case 'marquee': V('mrq', 'marquee', []); lightAt(I, x, y + 6, 50, 110, [1, 0.84, 0.5], 1.6, 'neon'); return;
     case 'dspeaker': V('spk', 'speaker', []); return;
@@ -2319,6 +2319,7 @@ function propItems(c, p, pi, I) {
     case 'windmill': V('wmill', 'windmill', [120]); return;
     case 'trough': V('trough', 'trough', []); return;
     case 'stocktank': V(`stk:${p.r || 26}`, 'stocktank', [p.r || 26]); return;   // (the desert's stock tanks: world3-stocktanks.js)
+    case 'cattlegrid': V(`cgrid:${qa(p.a || 0, 4).toFixed(2)}`, 'cattleGrid', [64, 28], qa(p.a || 0, 4)); return;   // (a ranch track's, at the road: world3-stocktanks.js)
     case 'hayBale': V('hay:1', 'hayBale', [true], qa(u * PI, 2)); return;
     case 'festoon': {
       const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40;

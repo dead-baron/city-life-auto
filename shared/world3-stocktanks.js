@@ -2,7 +2,9 @@
 // windmills and stock tanks", a desert set piece of a windmill and its stock tank). Out on the open range of the Red
 // Rock Desert and the Dry Creek Desert, far from the towns and well off the roads, a few windmill pumps stand over
 // their round galvanized stock tanks brim-full of water, a trough beside, a corner of corral fence and a mesquite or
-// two for shade, the ground round the water trodden bare - and a two-rut track out to each from the nearest road.
+// two for shade, the ground round the water trodden bare - and a two-rut track out to each from the nearest road,
+// through a ranch gate (a log arch over a cattle grid, the mailbox by the road: the research's 5.1, "a cattle grid at
+// ranch gates").
 // Range cattle graze round them (server/systems/wildlife.js: the stock tanks keep cows about as the farms keep their
 // livestock). Each windmill is on the map (m.natureSites 'stocktank').
 // For the whole-world build only (shared/world3-world.js's done hook). Deterministic: arithmetic, integer hashes.
@@ -34,8 +36,9 @@ export function stockTanks3(m, H3) {
     }
     return true;
   };
-  // the nearest road tile along eight directions (and the way to it all open ground): [x, y, d] or null
-  const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7071, 0.7071], [-0.7071, 0.7071], [0.7071, -0.7071], [-0.7071, -0.7071]];
+  // the nearest road tile north, south, east or west (and the way to it all open ground): [x, y, d] or null - the
+  // track square to the compass, as a ranch's is, so its gate stands square across it
+  const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const roadFrom = (x, y) => {
     let best = null;
     for (const [ux, uy] of DIRS) {
@@ -111,9 +114,15 @@ export function stockTanks3(m, H3) {
       }
       for (let dx = -2; dx <= 2; dx++) for (let dy = -2; dy <= 2; dy++) { const x = Math.floor(cx) + dx, y = Math.floor(cy) + dy; if (inF(x, y)) clear.add(idx(x, y)); }
     }
+    // the ranch gate where the track leaves the road: a log arch across it over a cattle grid, the mailbox by the road
+    const gx = X + ux * (d - 2.5) * TILE, gy = Y + uy * (d - 2.5) * TILE, ga = ux !== 0 ? Math.PI / 2 : 0;
+    put('gatearch', gx, gy, 0, { w: 104, a: ga });
+    put('cattlegrid', gx, gy + 6, 0, { a: ga });
+    put('mailbox', gx + vx * 2.4 * TILE + ux * 1.2 * TILE, gy + vy * 2.4 * TILE + uy * 1.2 * TILE, 0, null);
+    for (const sd of [-1, 1]) solids.push([gx + vx * sd * 1.55 * TILE, gy + vy * sd * 1.55 * TILE, 7]);   // (the gateposts)
     const ax = Math.round(X + ux * 4 * TILE), ay = Math.round(Y + uy * 4 * TILE), bx = Math.round(X + ux * d * TILE), by = Math.round(Y + uy * d * TILE);
     (m.tracks ||= []).push({ pts: [[ax, ay], [bx, by]], hw: 34, bb: [Math.min(ax, bx) - 70, Math.min(ay, by) - 70, Math.max(ax, bx) + 70, Math.max(ay, by) + 70] });
-    m.natureSites.push({ kind: 'stocktank', x: Math.round(X), y: Math.round(Y), windmill: [Math.round(wx), Math.round(wy)], track: [[ax, ay], [bx, by]] });
+    m.natureSites.push({ kind: 'stocktank', x: Math.round(X), y: Math.round(Y), windmill: [Math.round(wx), Math.round(wy)], track: [[ax, ay], [bx, by]], gate: [Math.round(gx), Math.round(gy)] });
     out.sites.push({ x: tx, y: ty, road: d, ruts: ruts.length });
   }
   if (clear.size && H3.removeProps) H3.removeProps(m, (x, y) => clear.has(Math.floor(y / TILE) * W + Math.floor(x / TILE)));

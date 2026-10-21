@@ -63,6 +63,16 @@ export function stockTank(r = 26) {
   m.box(c + r - 4, c - 1, 13, W, c + 1, 15, pipe); m.box(c + r - 4, c - 1, 10, c + r - 2, c + 1, 15, pipe);
   return m;
 }
+// a cattle grid where a ranch track meets the road (under its gate arch: shared/world3-stocktanks.js): steel rails
+// across the way over a dark pit, in a concrete frame; built along +x (the arch's span), the track running along y
+export function cattleGrid(w = 64, d = 28) {
+  const m = new Vox(w, d, 3);
+  const cc = m.mat({ ramp: MAT.stone, k: 3 }), st = m.mat({ ramp: MAT.metal, k: 3 }), pit = m.mat({ ramp: R('#2a2622', 4, 2), k: 1 });
+  m.box(0, 0, 0, w, d, 1, pit);
+  m.box(0, 0, 0, 4, d, 3, cc); m.box(w - 4, 0, 0, w, d, 3, cc); m.box(0, 0, 0, w, 2, 2, cc); m.box(0, d - 2, 0, w, d, 2, cc);
+  for (let y = 3; y < d - 3; y += 4) m.box(4, y, 0, w - 4, y + 2, 2, st);
+  return m;
+}
 // a ranch gate arch: two posts, a crossbeam, a hanging board with a cow silhouette
 export function gateArch(w = 90) {
   const m = new Vox(w, 8, 66);
