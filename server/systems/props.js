@@ -62,6 +62,27 @@ export function blastBreak(world, x, y, r) {
   }
 }
 
+// The coasts' blowholes (shared/world3-coast.js: m.natureSites kind 'blowhole'): with the bigger waves the sea surges
+// up through the cleft in a burst of spray - every few seconds, now and then a set of two close together - when
+// someone is near enough to see it (the page draws it as a spout: the geyser's spray, BLOWHOLE.burst seconds).
+export const BLOWHOLE = { every: [6, 13], set: 0.3, gap: 2.4, burst: 1.4, near: 1600 };
+export function blowholes(world) {
+  if (world.tick % 10 !== 3) return;
+  const map = world.map, holes = map._blowholes || Object.defineProperty(map, '_blowholes', { value: (map.natureSites || []).filter((s) => s.kind === 'blowhole'), enumerable: false })._blowholes;
+  if (!holes.length) return;
+  const B = BLOWHOLE, next = (world.blowNext ||= new Map());
+  for (const h of holes) {
+    const at = next.get(h);
+    if (at !== undefined && world.time < at) continue;
+    const r = world.rand ? world.rand() : Math.random();
+    next.set(h, world.time + (r < B.set ? B.gap : B.every[0] + r * (B.every[1] - B.every[0])));
+    if (at === undefined) continue;   // (the first: its rhythm started)
+    let seen = false;
+    for (const pl of world.players.values()) if (pl.ped && Math.abs(pl.ped.x - h.x) < B.near && Math.abs(pl.ped.y - h.y) < B.near) { seen = true; break; }
+    if (seen) world.emit(h.x, h.y, { e: 'geyser', x: h.x, y: h.y, d: B.burst });
+  }
+}
+
 export function update(world, dt) {
   const map = world.map;
   const g = grid(map);
@@ -76,6 +97,7 @@ export function update(world, dt) {
     world.geysers = world.geysers.filter((q) => q.until > world.time);
     for (const v of world.entities.values()) if (v.kind === K.VEH && v.def.kind !== 'air' && v.ownStepTick !== world.tick) geyserDrag(v, world.geysers, dt);   // (not an aircraft: the page predicts no spray for one)
   }
+  blowholes(world);
   // tidy-up crew: smashed props reappear after a while, but never in front of a player
   if (world.tick % 40 === 7 && world.brokenProps.size) {
     for (const [i, t] of world.brokenProps) {

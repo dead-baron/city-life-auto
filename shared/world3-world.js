@@ -32,6 +32,8 @@ import { subwayLoops } from './world3-subway.js';
 import { paintWater3, buildWater3, waterDone } from './world3-water.js';
 import { waterBodies3 } from './world3-waterbodies.js';
 import { rapidsAndPockets3 } from './world3-rapids.js';
+import { kestrelByHand3 } from './world3-kestrel.js';
+import { farmPonds3 } from './world3-farmponds.js';
 import { riverBanks3 } from './world3-banks.js';
 import { buildMarshBoardwalk3 } from './world3-marsh.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
@@ -41,6 +43,10 @@ import { buildTrails3 } from './world3-trails.js';
 import { buildDirt3 } from './world3-dirt.js';
 import { buildCaves3 } from './world3-caves.js';
 import { buildClearings3, forageInSight3 } from './world3-clearings.js';
+import { buildPeaks3, THAW } from './world3-peaks.js';
+import { coastByHand3 } from './world3-coast.js';
+import { tarnByHand3 } from './world3-tarn.js';
+import { vergesByHand3 } from './world3-verges.js';
 // (v3b, WORLD-V3.md 9.3: the city - its districts, its streets and its places; on the v3b frame only)
 import { buildAirstrips3 } from './world3-airstrips.js';
 import { buildSarHq3 } from './world3-sarhq.js';   // (v3b: the rescue pilots' base)   // (v3b: the crop dusters' strips and Lucky Mesa's)
@@ -218,7 +224,11 @@ export function worldOpts(asked) {
       if (m.world3.desert) m.world3.desert.done = desertDone(m);   // (8.18: the assay office's counter, the summary: world3-desert.js)
       if (m.world3.west) m.world3.west.done = westDone(m);   // (8.20: Egret Point, the raceway's race, the summary: world3-west.js)
       if (m.world3.wild) m.world3.wild = wildDone(m, m.world3.wild);   // (8.19: what was built on the wild land's lots: world3-wild.js)
-      const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE ? SNOW_CLS : c; });
+      // (Granite Peaks by hand: no snow on the designed places up there - the Ridge Trail Hunting Camp, the fire lookout,
+      // the mines' yards, the observatory: a thawed round each one's box, 8 tiles out - world3-peaks.js THAW)
+      const thaw = (m.landmarks || []).filter((l) => THAW.has(l.type)).map((l) => [(l.x + l.w / 2) / TILE, (l.y + l.h / 2) / TILE, Math.max(l.w, l.h) / 2 / TILE + 8]);
+      const thawed = (tx, ty) => thaw.some(([x, y, r]) => (tx - x) * (tx - x) + (ty - y) * (ty - y) < r * r);
+      const old = m.terrainCls; terrain3(m, (tx, ty) => { const c = cls(tx, ty, (x, y) => terrainAt(old.cls, old.cw, x, y)); return c === 4 && L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE && !thawed(tx, ty) ? SNOW_CLS : c; });
       // (no tree on the snowfields: a roadside stop's picnic tree, a grove's edge - whatever a pass planted above the
       // snow line in Granite Peaks goes)
       if (H3) {
@@ -239,11 +249,17 @@ export function worldOpts(asked) {
       m.world3.marsh = buildMarshBoardwalk3(m, H3 && H3.removeProps);   // (Nature-C3, 2026-10-20: the Egret Marsh Boardwalk - world3-marsh.js)
       m.world3.banks = riverBanks3(m);   // (the nature program, 2026-10-20: the rivers' gravel bars, cut banks and green banks - world3-banks.js)
       m.world3.waterBodies = waterBodies3(m);   // (2026-10-18, the water upgrade: which water is a creek, a river, a lake, a pond or the marsh, which way each channel runs - m.waters, m.lake: world3-waterbodies.js)
+      m.world3.kestrel = kestrelByHand3(m, H3);   // (Kestrel Lake by hand: the south shore's bays and points, Kestrel Beach - world3-kestrel.js)
+      m.world3.farmPonds = farmPonds3(m, H3);   // (Willow Valley's farm ponds: jetties, rowboats, windmill pumps - world3-farmponds.js)
+      m.world3.verges = vergesByHand3(m, H3);   // (Willow Valley's countryside: green banks between the fields and the rivers, the power lines along the county roads - world3-verges.js)
       m.world3.trails = buildTrails3(m, H3);   // (the nature program, 2026-10-20: Highland Woods' trails, their furniture, the glades and the fire lookout - world3-trails.js)
       m.world3.dirt = buildDirt3(m, H3);   // (the nature program, 2026-10-20, Nature-C1: the Red Rock MX Park - world3-dirt.js)
       m.world3.caves = buildCaves3(m, H3);   // (Nature-B1, B2: the Redwood Caverns - their ways in behind Redwood Creek Falls and at Redwood Cove, the plan underground: world3-caves.js)
       m.world3.rapids = rapidsAndPockets3(m);   // (rivers part 2, 2026-10-20: the rapids where the land falls fast, the calm pockets below them and in the bends - world3-rapids.js; after the trails' and the caves' bridges and docks)
       m.world3.clearings = buildClearings3(m, H3);   // (Highland Woods by hand, part 2: the deer meadows, stump clearings and windfalls - world3-clearings.js)
+      m.world3.peaks = buildPeaks3(m, H3);   // (Granite Peaks by hand, part 1: the alpine meadows, the stone hut and its spring, the summits' cairns, the Summit Trail - world3-peaks.js)
+      m.world3.tarn = tarnByHand3(m, H3);   // (Granite Peaks by hand, part 2: Summit Tarn's shore, beach and camp; Eagle Crag - world3-tarn.js)
+      m.world3.coast = coastByHand3(m, H3);   // (the coasts by hand, part 1: North Cape's tidepool shelf, its blowhole and seal rock; Redwood Cove dug back into the woods, its horn's tidepools - world3-coast.js)
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)
     },
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a
