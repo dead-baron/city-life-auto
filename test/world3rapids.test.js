@@ -189,4 +189,9 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
     assert.ok(m.props.some((p) => p && p.t === 'pbench' && Math.hypot(p.x - last.falls.x, p.y - last.falls.y) < Math.max(40 * TILE, last.falls.w)), `${name}: a bench looking at it`);
     assert.ok(m.props.some((p) => p && p.t === 'textsign' && p.text === name.toUpperCase()), `${name}: its sign`);
   }
+  // footbridges across the narrower outlets: a deck of bridge tiles under each, from bank to bank
+  assert.ok(LF.bridges >= 1, `a footbridge below a fall (${LF.bridges})`);
+  const fb = m.props.filter((p) => p && p.t === 'fbridge' && sites.some((q) => Math.hypot(p.x - q.falls.x, p.y - q.falls.y) < 30 * TILE));
+  assert.ok(fb.length >= LF.bridges, `the footbridges by the falls (${fb.length})`);
+  for (const p of fb) assert.equal(m.tiles[Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)], T.BRIDGE, `a deck under the footbridge at ${Math.round(p.x / TILE)}, ${Math.round(p.y / TILE)}`);
 });

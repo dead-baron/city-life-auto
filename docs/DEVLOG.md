@@ -13000,3 +13000,14 @@ its place, a boat at the helm drifting and one tied up not.
 The green banks between the fields and the rivers (part 1) left a field's crop stepped tile by tile wherever a river
 slants past it. Now such a field stops in a straight edge clear of the bank, with a grass headland between, wherever
 that keeps most of the field (`shared/world3-verges.js`, the same cut as the fields squared at the valley's edge).
+
+## 2026-10-21 · Nature: footbridges below the falls; the lake's islets in the woods
+
+- **footbridges**: where a ledge fall's outlet is narrow enough (26 tiles at most), a timber footbridge now crosses it
+  just below the plunge pool, so walkers cross the river at the falls (`shared/world3-ledgefalls.js`). Its deck is
+  bridge tiles: swimmers and boats pass beneath it, and the water is drawn under it. Granite Steps has one.
+- **the islets' ground**: Silver Thread Lake's islets and points are the woods' district now, not the water's, for
+  the name shown there and what lives there (`shared/world3-woodslake.js`).
+
+Tests: test/world3rapids.test.js - a footbridge below a fall, a deck of bridge tiles under it.
+

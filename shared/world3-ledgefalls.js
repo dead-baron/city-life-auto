@@ -14,7 +14,8 @@
 // and can't come back up - shared/ledges.js), the falls drawn over it (client/art2/game/statics.js
 // addNature: 'ledgefall'), mist off its foot (client/art2/game/waterlife.js), a calm plunge pool below it where the big
 // fish hold (the rapids' calm pockets: the fishing's 'pocket' spot), the white water starting below the pool, and a bench
-// on the bank below with the falls' name on a post. No tree stands in front of them (shared/world3-falls.js).
+// on the bank below with the falls' name on a post; where the outlet's narrow enough, a footbridge across it below the
+// pool. No tree stands in front of them (shared/world3-falls.js).
 // For the whole-world build only (shared/world3-world.js's done hook, after the rapids and before the falls in view).
 // Deterministic: arithmetic and sqrt.
 import { TILE, T } from './constants.js';
@@ -32,6 +33,7 @@ export const LEDGES3 = [
 ];
 const PIECE = 440;         // px of lip to a piece of the falls (each drawn with its rock either side: a buttress between)
 const SEEDS = [31, 37, 41, 43];
+const BRIDGE = { max: 26 };   // (tiles: the widest outlet a footbridge spans)
 const LIP = 96;            // (reserve on the lip's rock: drawn as the water over it - client/art2/game/groundbake.js)
 // the water of a piece split into strands across its width w (px from its middle: [lo, hi], ...), low rock between -
 // the same for the same width and seed (the art keeps one picture of each)
@@ -39,7 +41,7 @@ const strands = (w, sd) => { const out = []; let x = -w / 2 + 2; for (let i = 0;
 const hh = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
 export function ledgeFalls3(m, H3) {
-  const out = { falls: 0, steps: 0, lip: 0, pools: 0, benches: 0, names: [] };
+  const out = { falls: 0, steps: 0, lip: 0, pools: 0, benches: 0, bridges: 0, names: [] };
   const V = m.waters;
   if (!V || !Array.isArray(V.ch) || !H3 || !H3.addProp) return out;
   const W = m.w, HH = m.h, inF = (x, y) => x >= 0 && y >= 0 && x < W && y < HH, idx = (x, y) => y * W + x;
@@ -114,6 +116,26 @@ export function ledgeFalls3(m, H3) {
     if (r[1] - r0 >= RAPIDS.min) c.r.push([Math.round(r0 * 10) / 10, r[1], r[2]]);   // (what's left of the white water, if it's still a rapid)
     c.r.sort((p, q) => p[0] - q[0]);
     if (!c.r.length) delete c.r;
+    // a footbridge across the outlet below the pool where the river's narrow enough (walkers cross there; bridge tiles:
+    // swimmers and boats pass beneath, the water drawn under it)
+    const sb = last + pool + 3;
+    if (sb < Lc - 6) {
+      const [qx, qy] = ptAt(c.pts, S, sb), q0 = ptAt(c.pts, S, sb - 3), q1 = ptAt(c.pts, S, sb + 3), ql = Math.sqrt((q1[0] - q0[0]) * (q1[0] - q0[0]) + (q1[1] - q0[1]) * (q1[1] - q0[1])) || 1;
+      const nx = -(q1[1] - q0[1]) / ql, ny = (q1[0] - q0[0]) / ql, wetAt = (x, y) => wet(Math.round(x - 0.5), Math.round(y - 0.5));
+      let a = 0, b = 0;
+      while (a < BRIDGE.max && wetAt(qx - nx * (a + 1), qy - ny * (a + 1))) a++;
+      while (b < BRIDGE.max && wetAt(qx + nx * (b + 1), qy + ny * (b + 1))) b++;
+      const e0 = [qx - nx * (a + 1.5), qy - ny * (a + 1.5)], e1 = [qx + nx * (b + 1.5), qy + ny * (b + 1.5)];
+      if (a < BRIDGE.max && b < BRIDGE.max && a + b + 1 <= BRIDGE.max && landOk(Math.floor(e0[0]), Math.floor(e0[1])) && landOk(Math.floor(e1[0]), Math.floor(e1[1]))) {
+        const L2 = Math.sqrt((e1[0] - e0[0]) * (e1[0] - e0[0]) + (e1[1] - e0[1]) * (e1[1] - e0[1])), ux = (e1[0] - e0[0]) / L2, uy = (e1[1] - e0[1]) / L2;
+        for (let d = 0; d <= L2; d += 0.25) for (const o of [-0.6, 0, 0.6]) {
+          const x = Math.floor(e0[0] + ux * d - uy * o), y = Math.floor(e0[1] + uy * d + ux * o), i = idx(x, y);
+          if (wet(x, y)) { m.tiles[i] = T.BRIDGE; m.reserve[i] |= 32 | 4; }
+        }
+        P.push(['fbridge', ((e0[0] + e1[0]) / 2) * TILE, ((e0[1] + e1[1]) / 2) * TILE, 0, { len: Math.round(L2 * TILE + 40), a: Math.round(Math.atan2(uy, ux) * 1000) / 1000 }]);
+        out.bridges++;
+      }
+    }
     // the viewpoint: a bench on the bank beside the pool, looking up at the falls, the name on a post by it
     let seat = null;
     for (const dir of [-1, 1]) {

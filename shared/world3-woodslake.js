@@ -43,6 +43,9 @@ export function woodsLake3(m, H3) {
   out.lake = water.size;
   if (water.size < 2000) return out;
   const dist0 = m.dist[s0], zone0 = m.zone ? m.zone[s0] : 0;
+  // (the woods' district and zone, from the shore: for the ground made out in the water - the islets, the points)
+  let landD = 0, landZ = 0;
+  for (const i of water) { for (const j of [i - 1, i + 1, i - W, i + W]) if (m.land[j] && !water.has(j)) { landD = m.dist[j]; landZ = m.zone ? m.zone[j] : 0; break; } if (landD) break; }
   // what the shore keeps clear of: built or walked ground, the falls, the river's water in and out
   const S = L.shore, hard = [];
   const built = (i) => { const t = m.tiles[i]; return t === T.DOCK || t === T.BRIDGE || t === T.ROAD || t === T.BUILDING || t === T.WALL || t === T.SIDEWALK || t === T.LOT || t === T.PLAZA || (m.bld && m.bld[i] >= 0) || (m.land[i] && (m.reserve[i] & (1 | 2 | 8 | 16 | 32))); };
@@ -82,7 +85,7 @@ export function woodsLake3(m, H3) {
     } else if (!wantWet && d > 0 && m.tiles[i] === T.WATER) {
       let bank = -1; for (const j of [i - 1, i + 1, i - W, i + W]) if (m.land[j] && !water.has(j)) bank = j;
       const bd = bank >= 0 ? m.dist[bank] : 0;
-      m.tiles[i] = T.GRASS; m.land[i] = 1; m.lake[i] = 0; m.river[i] = 0; if (bd) m.dist[i] = bd; m.reserve[i] |= RES;
+      m.tiles[i] = T.GRASS; m.land[i] = 1; m.lake[i] = 0; m.river[i] = 0; m.dist[i] = bd || landD; if (m.zone) m.zone[i] = landZ; m.reserve[i] |= RES;
       water.delete(i); changed.add(i); out.built++;
       if (o < -S.amp * 0.7) points.push(i);
     }
@@ -120,7 +123,7 @@ export function woodsLake3(m, H3) {
     }
     for (const [x, y, f] of tiles) {
       const i = idx(x, y);
-      m.tiles[i] = f > 0.72 ? T.SAND : T.GRASS; m.land[i] = 1; m.lake[i] = 0; m.river[i] = 0; m.reserve[i] |= RES | (f > 0.72 ? LUSH : 0);   // (the rim: pebbles - shingle, sand flagged 128)
+      m.tiles[i] = f > 0.72 ? T.SAND : T.GRASS; m.land[i] = 1; m.lake[i] = 0; m.river[i] = 0; m.dist[i] = landD; if (m.zone) m.zone[i] = landZ; m.reserve[i] |= RES | (f > 0.72 ? LUSH : 0);   // (the rim: pebbles - shingle, sand flagged 128)
       water.delete(i); changed.add(i); out.isleTiles++;
     }
     // boulders round the rim, pines on the middle (fewer on a small one)
