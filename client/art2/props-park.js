@@ -179,6 +179,26 @@ export function laneRope(len = 400) {
   for (let x = 0; x < len; x += 4) { const end = x < 48 || x > len - 48, k = Math.floor(x / 4); m.box(x, 0, 0, x + 4, 4, 3, end ? red : k % 4 < 2 ? white : blue); }
   return m;
 }
+// a float on the swim area's line (Kestrel Beach): a round float, red or white (v), on its rope
+export function swimBuoy(v = 0) {
+  const m = new Vox(10, 10, 6);
+  const f = m.mat({ ramp: R(v ? '#f2f0ea' : '#d8402e', 5, 2), k: 3, flag: F_NOCAST }), rope = m.mat({ ramp: R('#d8c8a0', 4, 2), k: 2, flag: F_NOCAST });
+  m.fill((x, y, z) => { const d = Math.hypot(x + 0.5 - 5, y + 0.5 - 5, (z + 0.5 - 1.5) * 1.3); return d < 3.8 ? f : -1; }, 0, 0, 0, 10, 10, 5);
+  m.box(0, 4.5, 1, 10, 5.5, 2, rope);
+  return m;
+}
+// a swim raft anchored off a lake beach (Kestrel Beach: shared/world3-kestrel.js): a square deck of weathered planks on
+// blue barrels, a steel ladder down its shore side (y = D the front)
+export function swimRaft() {
+  const N = 64, m = new Vox(N, N, 14);
+  const deck = m.mat({ ramp: R('#b49470', 6, 3), k: 3, shade: (x, y) => (Math.round(x) % 8 === 0 ? -1.1 : 0) + (hash(Math.floor(x / 8), Math.round(y / 3), 91) - 0.5) * 0.6 });
+  const drum = m.mat({ ramp: R('#2a5aa0', 5, 2), k: 3, flag: F_NOCAST }), steel = m.mat({ ramp: MAT.metal, k: 3 });
+  for (const [cx, cy] of [[12, 12], [52, 12], [12, 52], [52, 52]]) m.fill((x, y, z) => (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) < 8 && z < 5 ? drum : -1), cx - 9, cy - 9, 0, cx + 9, cy + 9, 5);
+  m.box(2, 2, 5, N - 2, N - 2, 9, deck);
+  for (const x of [26, 36]) m.box(x, N - 3, 0, x + 2, N - 1, 14, steel);
+  m.box(26, N - 3, 12, 38, N - 1, 14, steel);
+  return m;
+}
 // a culvert's stone headwall (concepts NK1-K, NK1-L): a wall of squared stone along a road's edge with one arched
 // opening for the creek (dark inside, the water spilling out over a lip), a cap course on top, moss in the joints,
 // wing walls angled back at each end. Built along +x, the arch's face toward +y (turn it to face down the creek).

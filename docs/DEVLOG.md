@@ -12664,3 +12664,81 @@ Practice Offline plays the old city, not World v3 (the whole v3 world is more th
 `client/practice-worker.js`), so the title screen no longer offers it: `PRACTICE_ON` in `client/main.js` (false) hides
 the PRACTICE OFFLINE button and its note, and the "city isn't reachable" message no longer points to it. The worker and
 its test are kept as they are; CLAUDE.md notes the pause.
+
+## 2026-10-20 · Nature: the desert's way in - Copper Gulch Mine's adit (Nature-B2, panel 3)
+
+The adit in its cliff east of Mine Road's end (`shared/world3-desert.js`) dressed as the concept's third way in: its face
+red sandstone (was granite and moss), taller; the mine's sign by the track ("COPPER GULCH MINE"); saguaros, prickly
+pear, barrel cactus, cholla, an ocotillo and an agave round the face, scrub between; and the way in a two-rut track
+(two narrow ruts of gravel with the desert's ground between them) up from the haul road to the rails. The timbered
+portal, its lanterns, the ore cart, the seams and the cave world behind it are as they were. (The caverns' river under
+Highland Woods doesn't reach it: the desert is 3 km off.)
+
+Tests: test/world3desert.test.js - the adit in red rock, its sign, the cactus round it, the two ruts of the track in.
+
+## 2026-10-20 · Nature: Granite Peaks by hand, part 1 - the alpine meadows, the stone hut, the summits
+
+From the owner's ask ("mountain meadows", "amazing places to walk") and the concepts NS1-D, NA1-B and N5
+(`shared/world3-peaks.js`, new; World v3's done hook after the clearings): up in the high country of the north-west
+mountains, between the tree line and the snow -
+- **five alpine meadows**, each named on the map (Marmot Meadow, Columbine Basin, Heather Bench, Paintbrush Flat,
+  Saxifrage Meadow): a ragged round of lush grass on a level bench fading through the mountain's thin grass into the
+  scree, drifts of lupines, paintbrush and alpine daisies, heather, a few pale granite boulders - the pines and the loose
+  rock taken off it;
+- on the biggest, **the stone hut** (NS1-D): fieldstone walls in courses under a slate roof, a stone chimney, a plank
+  door and two small windows that glow at night; **the spring** beside it (a pipe out of a mossy boulder into a stone
+  basin, a tin mug on its post), a bench at the door, and a fire ring with three log seats to rest by (a campfire rest
+  spot);
+- **three summits** just under the snow (Cairn Peak, Eagle Knob, Windy Col), each a knob with its tall cairn and a bench
+  looking out, the highest with a coin telescope;
+- **the Summit Trail**: from the road (or the woods' trails) nearest the hut's meadow - its sign and a map board at the
+  trailhead - through the meadow past the hut, up to the nearest summit; routed over the land where it walks easiest,
+  packed earth through the grass and pale gravel over the scree, a cairn every 30 tiles to mark it above the trees.
+- **no snow on the designed places up there** (`world3-world.js`'s snowfields, `world3-peaks.js` THAW): the Ridge Trail
+  Hunting Camp sat in the snow; now the camp, the fire lookout, the mines' yards, the observatory, the campgrounds and
+  the springs have the ground bare round them, 8 tiles out from their boxes.
+New art (`client/art2/props-garden.js`): the cairn (and a summit's taller one), the stone hut, the mountain spring.
+Budget: the bake worker's code 828 -> 832 KB (measured 829 with this art and the rivers' white water before it): the
+workers fetch it once, after the page.
+
+Tests: test/world3peaks.test.js - the meadows (lush, flowered, open, apart, on the map, under the snow), the hut, its
+spring, the fire ring and its rest spot and seats, the summits' cairns, benches and telescope, the trail from a road or
+a trail (its sign and map board) through the hut's meadow to a summit, showing on the ground, with its cairns; the hunting camp and the
+lookout clear of the snow.
+
+## 2026-10-20 · Nature: Kestrel Lake by hand - the south shore's bays, Kestrel Beach
+
+From the handcraft research's 4.11 (WR2-C, SC3-G, NS1-E: "a sand beach on the east side - swim area, buoys, lifeguard
+chair - reeds and lilies in the south bays by the outlet"); `shared/world3-kestrel.js`, new, World v3's done hook after
+the water bodies:
+- **the south shore wanders**: the lake was laid as a polygon and the farm valley's fields up to it, so its south shore
+  ran ruler-straight for a third of a kilometre. Its straight runs now wander in a slow wave: bays dug back into the
+  meadow between the fields and the water (never into a field, nor within a dozen tiles of a dock, the boathouse or a
+  road), the shore built out a little between them; reeds and cattails grow in the bays' shallows and lily rafts float
+  out in them.
+- **Kestrel Beach** on the east shore, where the most open ground lies between the water and the fields: the sand one
+  piece up to 8 tiles from the water (easing off at its ends), a lifeguard chair facing the water, umbrellas and towels,
+  the swim area roped off by a line of red and white floats out, along and back, a swim raft on its barrels in it,
+  picnic blankets on the grass behind (the picnickers come to them), a lifering, its sign; named on the map.
+New art (`client/art2/props-park.js`): the swim raft and the swim area's floats.
+
+Tests: test/world3kestrel.test.js - no long straight stretch left on the south shore, bays dug, no field flooded, the
+fishing dock and the boathouse still on the water, reeds in the bays; the beach's sand, lifeguard chair, umbrellas,
+towels and blankets, its floats and raft on the water, its sign.
+
+## 2026-10-20 · Nature: Willow Valley's farm ponds
+
+From the handcraft research's 4.4 and the concepts NS1-E, SC3-E and WC191 ("farm ponds with jetty and rowboat and
+windmill tanks", "a reedy pond with lily pads, a small jetty, willows"); `shared/world3-farmponds.js`, new, World v3's
+done hook after Kestrel Lake's:
+- **six farm ponds** out in the valley's pastures, where the grass lies level and away from the fields, the farmyards,
+  the roads and the other places: Mill Pond, Heron Pond, Cattail Pond, Clover Pond, Bullfrog Pond, Duck Pond, each named
+  on the map;
+- each a round of still water 6-10 tiles across, its rim wavering smoothly; reeds and cattails round its far side, lily
+  pads out on it, a willow leaning over it from the east; **a plank jetty** out from its south bank (a rowboat tied up
+  beside some), a bench; by most, **a windmill pump and its trough**;
+- the water is a pond's (the fishing's pond: bluegill, bass, carp, and the fish seen in it; the biggest fishes as a
+  lake), and each is a nature site with its jetty, for the wildfolk and the people who come out to it.
+
+Tests: test/world3kestrel.test.js - five or more ponds, each with its water, off the fields, in Willow Valley, its
+jetty, reeds and lilies, named on the map, fresh water to fish.
