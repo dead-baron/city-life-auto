@@ -12866,3 +12866,20 @@ From the handcraft research's 4.3 ("each fall: a plunge pool, mist, a trail to a
   and 40: a small white box at the outlet), with more mist; the creeks' falls at least 56 high (was 34).
 
 Tests: test/world3woods.test.js - the falls looked at, no tree hiding any of them.
+
+## 2026-10-21 · Nature: Willow Valley's countryside, part 2 - farm lanes, fields squared at the valley's edge
+
+From the concepts NT1-D and D13 ("farm lanes are dirt with a grass centre strip ... meet the county road through a
+field gate"); `shared/world3-verges.js`:
+- **the farm lanes:** the valley's fifteen farmsteads stood in their meadows with no way in from the road. Now a lane
+  runs from each farmyard to the nearest road over open ground, routed round the field edges and the hedgerows - two
+  dirt wheel ruts with a strip of grass between them. Where it meets the road: a gatepost either side of its mouth, a
+  short rail fence on along the road from each, and a mailbox. The power lines are laid after the lanes, so no pole
+  stands in one.
+- **the fields squared:** a field laid across the valley's edge stopped there tile by tile, so where the valley meets
+  the desert or the woods its crop ran into the sand in a staircase. Now each such field is cut back to the largest
+  straight-edged box of it inside the valley (37 fields), and the rest of its box is meadow; a field left too small is
+  meadow whole (3). Its rail fence and scarecrow follow the new edge (they are drawn from the field's box).
+
+Tests: test/world3kestrel.test.js - no field runs out of the valley; a lane from every farmstead, with a mailbox at the
+road for each.
