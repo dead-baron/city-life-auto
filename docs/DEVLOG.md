@@ -13316,3 +13316,23 @@ bushes growing up onto the railway's ballast.
 
 Tests: test/world3desert.test.js - nothing that needs dry ground in the water anywhere in the world (but a jetty's
 mooring posts), no fence run across a road, a bridge or the water.
+
+## 2026-10-21 · Fields: crops flattened under wheels and trodden underfoot (art v2)
+
+The owner, 10-06 and again 10-15: "grass, wheat and crops sway, part round people and flatten under tyres". The old
+renderer trampled its flora (render/flora); the art v2 page had nothing.
+
+- **flattened under the wheels** (`client/main.js` vehVisual): a car, a truck, a tractor or a bike rolling through a
+  field leaves a swath of flattened crop under each rear wheel, laid every 12 px it travels.
+- **trodden underfoot** (`client/main.js` pedVisual): someone walking or running through a field leaves a narrower
+  trodden track, every 10 px.
+- **the marks** (`client/art2/fx.js` crushFrames, the fx set `dCrush`: 8 angles of a wheel's swath, 8 of a trodden
+  track): dark broken stalks and the ground between them, with pale laid stalks streaking along the way it went;
+  half see-through, so the crop's own colour shows. They stand for two and a half minutes, then fade in 40 s as the
+  crop comes back up. They keep a ring of their own (`client/render/fx.js` crush, 900 marks), so a tractor working
+  a field never pushes the blood and the skid marks out of the decals', and the page draws them under the other
+  decals (`client/art2/game/host.js` _decals).
+- Not yet: the crops swaying in the wind.
+
+Tests: test/crush.test.js - the marks' frames (a swath wider and longer than a track at every angle, dark with pale
+streaks, see-through); their own ring (2,000 marks leave the blood decal in place, the newest kept).
