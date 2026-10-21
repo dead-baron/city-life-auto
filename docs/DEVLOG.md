@@ -12822,9 +12822,12 @@ cliff path"); `shared/world3-coast.js`:
 - **North Cape's cliff path**: along the top of the cliff band over the shelf a worn footpath behind a post-and-rail
   fence, broken where the stairs go down; a coin telescope and a bench on it looking out over the shelf, the blowhole
   and the seal rock (the birders come to it).
+- **the cliff bands' bare rock**: between the basalt faces of North Cape's cliff and the Redwood Coast Road's coves'
+  points, the cliff's tiles drew as bare black squares; now as rubble.
 
 Tests: test/world3coast.test.js - the point's bite table (the three likelier, the rest as on the shore); in World v3 two
-fishing points, on the rock, their rods, the wash off them fishing as the point; the cliff path's fence and telescope.
+fishing points, on the rock, their rods, the wash off them fishing as the point; the cliff path's fence and telescope;
+no bare black rock left in the cliff bands.
 
 ## 2026-10-21 · The Long Reach's weir: a concrete sill, not a staircase of black squares
 

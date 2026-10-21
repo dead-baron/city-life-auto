@@ -28,6 +28,7 @@ export const COAST3 = {
     path: { from: [521, 1100], r: 12 },   // (the cove's trail's end, from its track: shared/naturesites.js redwoodCove)
   },
   capeTop: { rows: [806, 854], from: 486, span: 30 },   // (part 2) North Cape's cliff path: the rows, the column to look east from for the cliff band
+  rubble: [[440, 800, 520, 860], [640, 2440, 730, 2700]],   // (part 2) the cliff bands whose bare rock between the basalt faces draws as rubble: North Cape's, the Redwood Coast Road's coves'
   pool: { gap: 1.5 },   // the pools: this many tiles of rock between two (each one of POOL_SHAPES: small - the tidepool's life, not the sea's fish: client/art2/game/waterlife.js)
 };
 // the pools' shapes (tile offsets from a corner): two tiles across at least each way, so the water shows as a pool
@@ -302,6 +303,9 @@ export function coastByHand3(m, H3) {
     out.cove = cove;
   }
 
+  // (part 2) the cliff bands' bare rock between their basalt faces (shared/world3-west.js): rubble, not black squares
+  out.rubble = 0;
+  for (const [x0, y0, x1, y1] of COAST3.rubble) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = idx(x, y); if (inF(x, y) && m.tiles[i] === T.WALL && !(m.reserve[i] & RES) && m.dist[i] >= 47 && m.dist[i] <= 54) { m.reserve[i] |= RES; out.rubble++; } }
   // what stood on the changed ground goes (the coast's own furniture stays), and the finds on it but the stars
   const kept = new Set(m.props.filter((p) => p && KEEP_PROPS.test(p.t) && changed.has(Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE))).map((p) => p.x + ',' + p.y));
   if (changed.size && H3.removeProps) H3.removeProps(m, (x, y) => changed.has(Math.floor(y / TILE) * W + Math.floor(x / TILE)) && !kept.has(x + ',' + y));

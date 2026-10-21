@@ -120,4 +120,7 @@ test('World v3: North Cape\'s tidepool shelf and blowhole, Redwood Cove dug back
   }
   assert.ok(C.capeTop.fence >= 6 && C.capeTop.scope, `North Cape's cliff path: its fence (${C.capeTop.fence}) and telescope`);
   assert.ok(near('scope', bh.x, bh.y, 40 * TILE).length >= 1, 'the telescope over the shelf');
+  let bare = 0;
+  for (const [x0, y0, x1, y1] of COAST3.rubble) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = at(x, y); if (m.tiles[i] === T.WALL && !(m.reserve[i] & 32) && m.dist[i] >= 47 && m.dist[i] <= 54) bare++; }
+  assert.ok(C.rubble >= 200 && bare === 0, `the cliff bands' bare rock drawn as rubble (${C.rubble}, ${bare} left)`);
 });
