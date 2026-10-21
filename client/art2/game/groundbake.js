@@ -1071,6 +1071,13 @@ function markings(C, G) {
         else if (av < 7 && vnc(X, Y, 9, seed + 3) > 0.45 && e.kind === 'dirt') { const c = GSHADE.grassMeadow(X, Y, seed); setC(G, gi, c); }
         continue;
       }
+      // the desert's roads (the owner, 10-16: "desert roads look like old desert roads"): sun-cracked, the highway too,
+      // and the sand blown in over the asphalt's edges in drifts (the ghost town's street half buried)
+      const dst = DISTRICTS[b.td[(Math.floor(Y / TILE) - TY0) * TN + Math.floor(X / TILE) - TX0]];
+      if (dst && dst.style === 'desert' && e.kind !== 'ramp' && !e.lvl && m !== M_.DECK && m !== M_.DECKF) {
+        if (e.kind === 'hwy') wear = 0.3;
+        if (s >= 0 && v < 9e3) { const edge = e.hw - Math.abs(v); if (edge < 18 && vnc(X, Y, 29, seed + 93) * 20 > edge + 3) { setC(G, gi, GSHADE.desertGround(X, Y, seed)); continue; } }
+      }
       if (a & (A_FILLET | A_BULB) || s < 0 || v > 9e3) { roadWear(C, G, gi, X, Y, wear, 0, 0, e); continue; }
       roadWear(C, G, gi, X, Y, wear, s, v, e);
       // lane lines (not in the junction boxes, nor on short links between two junctions)

@@ -98,7 +98,8 @@ export function wildPlaces(map) {
 const FARMS = new WeakMap();
 function farmNear(map, x, y, r) {
   let fs = FARMS.get(map);
-  if (!fs) FARMS.set(map, fs = (map.pois || []).filter((q) => q.kind === 'farm'));
+  // (the farms, and the desert's stock tanks out on the range: range cattle round those - shared/world3-stocktanks.js)
+  if (!fs) FARMS.set(map, fs = [...(map.pois || []).filter((q) => q.kind === 'farm'), ...(map.natureSites || []).filter((q) => q.kind === 'stocktank').map((q) => ({ kind: 'farm', range: true, x: q.x, y: q.y }))]);
   let best = null, bd = r * r;
   for (const q of fs) { const d = (q.x - x) ** 2 + (q.y - y) ** 2; if (d < bd) { bd = d; best = q; } }
   return best;
@@ -306,8 +307,8 @@ function parkDucks(world, q, anchors) {
 }
 
 // livestock round a farm
-function spawnLivestock(world, x, y) {
-  const kind = pick([['cow', 4], ['sheep', 3], ['horse', 2], ['goat', 1.5], ['pig', 1.5]]), L = LIVESTOCK[kind];
+function spawnLivestock(world, x, y, only = null) {
+  const kind = only || pick([['cow', 4], ['sheep', 3], ['horse', 2], ['goat', 1.5], ['pig', 1.5]]), L = LIVESTOCK[kind];
   const n = L.herd[0] + Math.floor(rng() * (L.herd[1] - L.herd[0] + 1)), herd = (world.nextHerd = (world.nextHerd || 0) + 1);
   let made = 0;
   for (let i = 0; i < n * 3 && made < n; i++) {
@@ -386,7 +387,7 @@ function populate(world) {
         const ang = rng() * 6.28, d = 380 + rng() * 520, x = farm.x + Math.cos(ang) * d, y = farm.y + Math.sin(ang) * d;
         if (!ground(world.map, x, y) || inAnyView(world, x, y, 80) || anchors.some((b) => (b.x - x) ** 2 + (b.y - y) ** 2 < 420 * 420)) continue;
         if (world.query(x, y, 220, K.PED).some((e) => e.wild && !e.dead)) continue;
-        total += spawnLivestock(world, x, y);
+        total += spawnLivestock(world, x, y, farm.range ? 'cow' : null);   // (a stock tank's: range cattle)
         break;
       }
     }

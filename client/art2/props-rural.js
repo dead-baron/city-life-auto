@@ -49,6 +49,20 @@ export function windmill(h = 120) {
   m.box(18, 10, h + 8, 22, 30, h + 12, s); m.box(19, 2, h + 4, 21, 12, h + 18, b);
   return m;
 }
+// a range stock tank (the desert's windmills and stock tanks: shared/world3-stocktanks.js): a round galvanized steel
+// tank, its corrugated ring rusting at the foot, brim-full of water; the windmill's pipe over its rim
+export function stockTank(r = 26) {
+  const W = r * 2 + 6, c = W / 2, m = new Vox(W, W, 19);
+  const st = m.mat({ ramp: R('#a4acb0'), k: 3, shade: (x, y, z) => (Math.round(Math.atan2(y - c, x - c) * r * 0.8) % 3 === 0 ? -0.7 : 0) + (z < 3 ? -1.1 : 0) + (hash(Math.round(x), Math.round(y), Math.round(z)) > 0.9 ? -0.6 : 0) });
+  const rust = m.mat({ ramp: R('#8a5a3a'), k: 3 }), rim = m.mat({ ramp: R('#d0d6d8'), k: 3 }), wt = m.mat({ ramp: R('#3a7480'), k: 3, flag: 2 });
+  const pipe = m.mat({ ramp: MAT.metal, k: 3, flag: F_THIN });
+  m.cyl('z', c, c, 0, r, 0, 14, st, r - 1.6, 0);
+  m.fill((x, y) => { const q = Math.hypot(x - c, y - c); return q <= r && q > r - 1.6 && hash(Math.round(x), Math.round(y), 7) > 0.55 ? rust : -1; }, 0, 0, 0, W, W, 3);
+  m.cyl('z', c, c, 0, r - 1.6, 0, 12, wt);
+  m.cyl('z', c, c, 14, r + 0.6, 14, 16, rim, r - 1.8, 0);
+  m.box(c + r - 4, c - 1, 13, W, c + 1, 15, pipe); m.box(c + r - 4, c - 1, 10, c + r - 2, c + 1, 15, pipe);
+  return m;
+}
 // a ranch gate arch: two posts, a crossbeam, a hanging board with a cow silhouette
 export function gateArch(w = 90) {
   const m = new Vox(w, 8, 66);

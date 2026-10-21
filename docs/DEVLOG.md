@@ -13267,3 +13267,28 @@ Tests: test/sharks.test.js - a sea animal of its own (nothing to take, no fine);
 then the bite (blood, the maul seen, you bleed), never out of the sea; out of the water it loses you and stays in the
 sea; none for someone on land or in fresh water whatever the odds, one soon for a bleeding swimmer, one at a time; hurt
 badly, it goes away; its art (the fin's shape, the jaws at the bite, belly up dead, the tail's two frames).
+
+## 2026-10-21 · Nature: the desert's roads, its windmills and stock tanks
+
+- **the desert's road furniture** (`shared/world3-roadside.js`, new, World v3's done hook; the owner, 10-16: "desert
+  roads look like old desert roads"; the handcraft research's 4.6: "white delineator posts with red reflectors"):
+  white posts with a red reflector near the top stand along both shoulders of the desert's roads and highways every
+  eight tiles, on the sand or gravel by the asphalt (about 3,000 of them along some 70 roads in the Red Rock Desert).
+  None at a junction, on a bridge or a ramp, on a designed place's ground or in a yard. They aren't solid: a car
+  brushes past them. The art is a small voxel post (`client/art2/game/statics.js` delineatorPost).
+- **the desert's asphalt** (`client/art2/game/groundbake.js` markings): out in the desert the sand blows in over the
+  roads' edges in drifts, eating into the edge lines (Dusty Hollow's street half buried), and the highway is
+  sun-cracked like the other roads (elsewhere a highway's asphalt stays smooth).
+- **windmills and stock tanks** (`shared/world3-stocktanks.js`, new, World v3's done hook; NS1-C, the research's
+  "the windmills and stock tanks"): six out on the open range of the Red Rock Desert, far apart and well off the roads.
+  Each is a windmill pump over a round galvanized stock tank brim-full of water (`client/art2/props-rural.js`
+  stockTank, new), a trough, a corner of corral rail fence, a mesquite or two for shade and the ground round the water
+  trodden bare, with a two-rut gravel track out to the nearest road. The tank and the windmill are solid. Each is on
+  the map's nature sites ('stocktank').
+- **range cattle** (`server/systems/wildlife.js` farmNear): the stock tanks keep a few cows about as the farms keep
+  their livestock - cows only, never the farms' sheep or pigs.
+
+Tests: test/world3desert.test.js - the delineators (100 or more along four or more desert roads, each on a desert
+road's shoulder by the asphalt, never on a road, a designed place's ground, a lot or a building); the stock tanks
+(four or more, far apart, out on the range, each with its windmill and trough, the tank and the windmill solid, its
+track out to a road). test/stocktanks.test.js - cows, and only cows, round a stock tank out in the desert.
