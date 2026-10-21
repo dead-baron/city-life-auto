@@ -12994,3 +12994,9 @@ Code budget: the page's code is 488 KB of its 488 (flow.js is about 1.5 KB of it
 Tests: test/flow.test.js - on a small river: the current downstream, slower at the bank, faster in a rapid, none in a
 pocket, the lake or on land; a swimmer carried down, no headway up a rapid but some up the slow reach, a duck holding
 its place, a boat at the helm drifting and one tied up not.
+
+## 2026-10-21 · Nature: Willow Valley's fields squared along the banks
+
+The green banks between the fields and the rivers (part 1) left a field's crop stepped tile by tile wherever a river
+slants past it. Now such a field stops in a straight edge clear of the bank, with a grass headland between, wherever
+that keeps most of the field (`shared/world3-verges.js`, the same cut as the fields squared at the valley's edge).

@@ -9,7 +9,8 @@
 //   over the road now and then (the old countryside's lines ran only along the few roads drawn as country lanes:
 //   shared/countryside.js buildPowerLines). Never in a town, on a bridge, in the water or in a yard.
 // - (part 2, 2026-10-21) the fields kept square where the valley meets the desert or the woods: they stopped at its
-//   edge tile by tile, a staircase of crop into the sand; now each is cut back to a straight edge.
+//   edge tile by tile, a staircase of crop into the sand; now each is cut back to a straight edge. And the same where
+//   a green bank cut into a field along a slanting river: a straight edge and a grass headland.
 // - (part 2) the farm lanes: the farmsteads stood in their meadows with no way in from the road. Now a lane runs from
 //   each farmyard to the nearest road over open ground, round the field edges - two dirt wheel ruts with a strip of
 //   grass between (concepts NT1-D, D13: "farm lanes are dirt with a grass centre strip ... meet the county road through
@@ -36,28 +37,36 @@ export function vergesByHand3(m, H3) {
   // ---- (part 2) the fields kept square where the valley meets the desert or the woods: a field laid across the
   // valley's edge stopped there tile by tile, a staircase of crop into the sand; now it is cut back to a straight edge
   // (the largest whole box of it inside the valley), the rest of its box meadow, its fence and scarecrow with it ----
-  out.squared = 0; out.dropped = 0;
+  out.squared = 0; out.dropped = 0; out.headlands = 0;
+  // (a field's box cut back to the largest whole box of it where ok(x, y) holds - from the east, the west, the south or
+  // the north, each as far as the worst row or column; the rest of its box meadow (lush: 128 if lush). Kept if it keeps
+  // at least `keep` of its area, else dropped (drop) or left as it was)
+  const cutBack = (k, ok, keep, drop, lush) => {
+    const f = m.fields[k], x0 = Math.round(f.x / TILE), y0 = Math.round(f.y / TILE), x1 = Math.round((f.x + f.w) / TILE), y1 = Math.round((f.y + f.h) / TILE);
+    const cands = [];
+    { let e = x1; for (let y = y0; y < y1; y++) { let x = x0; while (x < e && ok(x, y)) x++; e = Math.min(e, x); } cands.push([x0, y0, e, y1]); }
+    { let w = x0; for (let y = y0; y < y1; y++) { let x = x1 - 1; while (x >= w && ok(x, y)) x--; w = Math.max(w, x + 1); } cands.push([w, y0, x1, y1]); }
+    { let sb = y1; for (let x = x0; x < x1; x++) { let y = y0; while (y < sb && ok(x, y)) y++; sb = Math.min(sb, y); } cands.push([x0, y0, x1, sb]); }
+    { let nb = y0; for (let x = x0; x < x1; x++) { let y = y1 - 1; while (y >= nb && ok(x, y)) y--; nb = Math.max(nb, y + 1); } cands.push([x0, nb, x1, y1]); }
+    cands.sort((a, b) => (b[2] - b[0]) * (b[3] - b[1]) - (a[2] - a[0]) * (a[3] - a[1]));
+    const [a0, b0, a1, b1] = cands[0], keepIt = (a1 - a0) >= 8 && (b1 - b0) >= 8 && (a1 - a0) * (b1 - b0) >= keep * (x1 - x0) * (y1 - y0);
+    if (!keepIt && !drop) return 0;
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      if (keepIt && x >= a0 && x < a1 && y >= b0 && y < b1) continue;
+      const i = idx(x, y);
+      if (inF(x, y) && m.tiles[i] === T.FIELD) { m.tiles[i] = T.GRASS; if (lush) m.reserve[i] |= LUSH; }
+    }
+    if (keepIt) { f.x = a0 * TILE; f.y = b0 * TILE; f.w = (a1 - a0) * TILE; f.h = (b1 - b0) * TILE; return 1; }
+    m.fields.splice(k, 1); return -1;
+  };
   for (let k = (m.fields || []).length - 1; k >= 0; k--) {
     const f = m.fields[k], x0 = Math.round(f.x / TILE), y0 = Math.round(f.y / TILE), x1 = Math.round((f.x + f.w) / TILE), y1 = Math.round((f.y + f.h) / TILE);
     let outside = false, mid = m.dist[idx(Math.floor((x0 + x1) / 2), Math.floor((y0 + y1) / 2))];
     if (mid !== D_VALLEY) continue;
     for (let y = y0; y < y1 && !outside; y++) for (let x = x0; x < x1; x++) if (inF(x, y) && m.dist[idx(x, y)] !== D_VALLEY && m.land[idx(x, y)]) { outside = true; break; }
     if (!outside) continue;
-    const inV = (x, y) => inF(x, y) && (m.dist[idx(x, y)] === D_VALLEY || !m.land[idx(x, y)]);
-    // (the four ways to cut it: from the east, the west, the south, the north - each as far as the worst row or column)
-    const cands = [];
-    { let e = x1; for (let y = y0; y < y1; y++) { let x = x0; while (x < e && inV(x, y)) x++; e = Math.min(e, x); } cands.push([x0, y0, e, y1]); }
-    { let w = x0; for (let y = y0; y < y1; y++) { let x = x1 - 1; while (x >= w && inV(x, y)) x--; w = Math.max(w, x + 1); } cands.push([w, y0, x1, y1]); }
-    { let sb = y1; for (let x = x0; x < x1; x++) { let y = y0; while (y < sb && inV(x, y)) y++; sb = Math.min(sb, y); } cands.push([x0, y0, x1, sb]); }
-    { let nb = y0; for (let x = x0; x < x1; x++) { let y = y1 - 1; while (y >= nb && inV(x, y)) y--; nb = Math.max(nb, y + 1); } cands.push([x0, nb, x1, y1]); }
-    cands.sort((a, b) => (b[2] - b[0]) * (b[3] - b[1]) - (a[2] - a[0]) * (a[3] - a[1]));
-    const [a0, b0, a1, b1] = cands[0], keepIt = (a1 - a0) >= 8 && (b1 - b0) >= 8 && (a1 - a0) * (b1 - b0) >= 0.35 * (x1 - x0) * (y1 - y0);
-    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-      if (keepIt && x >= a0 && x < a1 && y >= b0 && y < b1) continue;
-      const i = idx(x, y);
-      if (inF(x, y) && m.tiles[i] === T.FIELD) m.tiles[i] = T.GRASS;
-    }
-    if (keepIt) { f.x = a0 * TILE; f.y = b0 * TILE; f.w = (a1 - a0) * TILE; f.h = (b1 - b0) * TILE; out.squared++; } else { m.fields.splice(k, 1); out.dropped++; }
+    const r = cutBack(k, (x, y) => inF(x, y) && (m.dist[idx(x, y)] === D_VALLEY || !m.land[idx(x, y)]), 0.35, true, false);
+    if (r > 0) out.squared++; else out.dropped++;
   }
   // ---- the banks: fields' tiles within depth of open water become lush grass ----
   const B = VERGES3.bank, dist = new Map(), q = [];
@@ -77,6 +86,14 @@ export function vergesByHand3(m, H3) {
     if (d === 2 && hh(x, y, 61) < 1 / B.willow && !willowAt.some(([a, b]) => Math.abs(a - x) + Math.abs(b - y) < 8)) willowAt.push([x, y]);
   }
   for (const [x, y] of willowAt) { H3.addProp(m, 'tree_a', (x + 0.5) * TILE, (y + 0.5) * TILE, 12, { sp: 'willow', k: 1.1 + hh(x, y, 62) * 0.35 }); out.willows++; }
+  // (the fields the banks cut into, kept square: the bank left the crop stepped tile by tile along a slanting river; now
+  // the field stops in a straight edge clear of it, a headland of grass between - where that keeps most of it)
+  for (let k = (m.fields || []).length - 1; k >= 0; k--) {
+    const f = m.fields[k], x0 = Math.round(f.x / TILE), y0 = Math.round(f.y / TILE), x1 = Math.round((f.x + f.w) / TILE), y1 = Math.round((f.y + f.h) / TILE);
+    let hit = false;
+    for (let y = y0; y < y1 && !hit; y++) for (let x = x0; x < x1; x++) if (inF(x, y) && dist.has(idx(x, y))) { hit = true; break; }
+    if (hit && cutBack(k, (x, y) => inF(x, y) && !dist.has(idx(x, y)) && !wet(idx(x, y)), 0.55, false, true) > 0) out.headlands++;
+  }
   // ---- (part 2) the farm lanes: each farmyard to the nearest road over open ground - along the field edges and the
   // hedgerows' room, round the corners - three tiles wide: a grass strip down the middle, a dirt rut either side ----
   const L = VERGES3.lanes;
