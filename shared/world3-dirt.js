@@ -245,9 +245,9 @@ function ride(m, H3, R, out) {
     if (R.pts[j - 1] && R.pts[j - 1][2]) marks.push([R.pts[j - 1][2], path.length - 1]);
   }
   if (path.length < 20) { out.missed.push(R.name); return null; }
-  // rounded, every 8 px
-  let L = path.filter((_, k) => k % 3 === 0 || k === path.length - 1).map(([x, y]) => [(x + 0.5) * TILE, (y + 0.5) * TILE]);
-  for (let r = 0; r < 2; r++) { const q = [L[0]]; for (let k = 1; k < L.length; k++) { const [x0, y0] = L[k - 1], [x1, y1] = L[k]; q.push([x0 * 0.75 + x1 * 0.25, y0 * 0.75 + y1 * 0.25], [x0 * 0.25 + x1 * 0.75, y0 * 0.25 + y1 * 0.75]); } q.push(L[L.length - 1]); L = q; }
+  // rounded (the router's 45-degree kinks into easy curves: every fifth step, Chaikin three times), every 16 px
+  let L = path.filter((_, k) => k % 5 === 0 || k === path.length - 1).map(([x, y]) => [(x + 0.5) * TILE, (y + 0.5) * TILE]);
+  for (let r = 0; r < 3; r++) { const q = [L[0]]; for (let k = 1; k < L.length; k++) { const [x0, y0] = L[k - 1], [x1, y1] = L[k]; q.push([x0 * 0.75 + x1 * 0.25, y0 * 0.75 + y1 * 0.25], [x0 * 0.25 + x1 * 0.75, y0 * 0.25 + y1 * 0.75]); } q.push(L[L.length - 1]); L = q; }
   const S = [];
   for (let k = 1; k < L.length; k++) { const [x0, y0] = L[k - 1], [x1, y1] = L[k], n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / 16)); for (let j = k === 1 ? 0 : 1; j <= n; j++) S.push([x0 + (x1 - x0) * j / n, y0 + (y1 - y0) * j / n]); }
   const N = S.length, head = (k) => { const a = S[Math.max(0, k - 2)], b = S[Math.min(N - 1, k + 2)]; return Math.atan2(b[1] - a[1], b[0] - a[0]); };
