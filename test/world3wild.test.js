@@ -204,7 +204,7 @@ test('World v3: today\'s wild land\'s country sites at their v3 spots, each on i
   for (const q of MOVED) if (q.keep) {
     const a = q.to[0] + q.keep[0], b = q.to[1] + q.keep[1], c = q.to[0] + q.keep[2], d = q.to[1] + q.keep[3];
     let wash = 0;
-    for (let y = b - 5; y < d + 5; y++) for (let x = a - 5; x < c + 5; x++) if (m.reserve[y * W + x] & 128 && m.dist[y * W + x] === 50) wash++;
+    for (let y = b - 5; y < d + 5; y++) for (let x = a - 5; x < c + 5; x++) if (m.tiles[y * W + x] === T.SAND && m.reserve[y * W + x] & 128 && m.dist[y * W + x] === 50) wash++;   // (a wash's gravel: sand flagged 128 - not the lush grass of Mirage Lake's green belt, world3-mirage.js)
     check(wash === 0, `${q.name}: ${wash} tiles of a dry wash within 5 tiles of its box`);
   }
   assert.deepEqual(bad, []);

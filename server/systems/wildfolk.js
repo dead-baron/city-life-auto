@@ -201,6 +201,8 @@ export function wildSpots(map, list, taken, h) {
     }
   }
   holds.sort((p, q) => p.r - q.r); shores.sort((p, q) => p.r - q.r);
+  // (the coasts' rock fishing points: an angler on each first - shared/world3-coast.js)
+  for (const s of map.natureSites || []) if (s.kind === 'fishpoint' && ok(s.x, s.y)) holds.unshift({ x: s.x, y: s.y, a: s.a ?? Math.PI, r: -2 });
   for (const q of shores) if (q.r < 0.5) holds.push(q);   // (a lake's bank: the anglers' too, now and then)
   for (const q of shores) if (room('birders', q.x, q.y, 1500)) add({ k: 'birders', x: q.x, y: q.y, a: q.a, wild: true });
   for (const q of shores) {   // a kayaker's walk along the shore (square to the water), clear end to end

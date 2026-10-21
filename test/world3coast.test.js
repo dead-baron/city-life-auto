@@ -11,6 +11,7 @@ import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { COAST3 } from '../shared/world3-coast.js';
 import { habitatAt } from '../server/systems/fishing.js';
 import { blowholes, BLOWHOLE } from '../server/systems/props.js';
+import { biteTable, POINT } from '../shared/fish.js';
 import { prepare } from '../tools/world3-build.mjs';
 
 test('a blowhole spouts every few seconds when someone is near, not for nobody', () => {
@@ -28,6 +29,17 @@ test('a blowhole spouts every few seconds when someone is near, not for nobody',
   const n = events.length;
   run(60);
   assert.equal(events.length, n, 'out of sight: no spout');
+});
+
+test('a rock fishing point: the stripers, the redfish and the flounder likelier, the rest as on the shore', () => {
+  const shore = new Map(biteTable({ water: 'shore', spot: null }).map(([f, w]) => [f.id, w]));
+  const point = new Map(biteTable({ water: 'shore', spot: 'point' }).map(([f, w]) => [f.id, w]));
+  for (const [id, w] of point) {
+    const f = biteTable({ water: 'shore', spot: 'point' }).find(([g]) => g.id === id)[0];
+    if (POINT.shapes.includes(f.shape)) assert.ok(w > shore.get(id), `${id} likelier off the rocks`);
+    else assert.equal(w, shore.get(id), `${id} as on the shore`);
+  }
+  assert.ok(['stripedbass', 'redfish', 'flounder'].every((id) => point.get(id) > shore.get(id)));
 });
 
 test('World v3: North Cape\'s tidepool shelf and blowhole, Redwood Cove dug back into the woods with its horn\'s pools', { timeout: 400000 }, () => {
@@ -95,4 +107,20 @@ test('World v3: North Cape\'s tidepool shelf and blowhole, Redwood Cove dug back
   // the caves' sea cave and the cove's fire ring are as they were
   assert.ok(m.natureSites.some((s) => s.kind === 'cavemouth' && /Redwood Cove/.test(s.where || '')), 'the sea cave');
   assert.ok(near('campfire', (V.path.from[0] - 18) * TILE, (V.path.from[1] + 2) * TILE, 8 * TILE).length >= 1, 'the cove\'s fire ring');
+  // part 2: the rock fishing points (an angler's rods on each, the wash off them fishing as the point), North Cape's
+  // cliff path with its fence and telescope
+  const pts = m.natureSites.filter((s) => s.kind === 'fishpoint');
+  assert.equal(pts.length, 2, 'two fishing points');
+  for (const s of pts) {
+    assert.ok(rock(Math.floor(s.x / TILE), Math.floor(s.y / TILE)), `${s.name}: on the rock`);
+    assert.ok(near('rods', s.x, s.y, 2 * TILE).length === 1, `${s.name}: the rods`);
+    let cast = null; for (let k = 2; k < 8 && !cast; k++) if (sea(Math.floor(s.x / TILE) - k, Math.floor(s.y / TILE))) cast = [s.x - k * TILE, s.y];
+    assert.ok(cast, `${s.name}: the sea off it`);
+    assert.deepEqual(habitatAt({ map: m }, cast[0], cast[1]), { water: 'shore', spot: 'point' }, `${s.name}: the wash off it fishes as the point`);
+  }
+  assert.ok(C.capeTop.fence >= 6 && C.capeTop.scope, `North Cape's cliff path: its fence (${C.capeTop.fence}) and telescope`);
+  assert.ok(near('scope', bh.x, bh.y, 40 * TILE).length >= 1, 'the telescope over the shelf');
+  let bare = 0;
+  for (const [x0, y0, x1, y1] of COAST3.rubble) for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = at(x, y); if (m.tiles[i] === T.WALL && !(m.reserve[i] & 32) && m.dist[i] >= 47 && m.dist[i] <= 54) bare++; }
+  assert.ok(C.rubble >= 200 && bare === 0, `the cliff bands' bare rock drawn as rubble (${C.rubble}, ${bare} left)`);
 });

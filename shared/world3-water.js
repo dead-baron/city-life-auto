@@ -231,6 +231,10 @@ function buildLock(m, K, out) {
   // the white water below the weir (downstream: -u), the lock's gates at both ends (their posts and the beams across,
   // drawn open: the boats pass), bollards and lamps along the quay, the lock keeper's house on the bank
   for (let v = vmin + 3; v < wl0 - 1; v += 5) { const [x, yy] = at(-3, v); K.prop('fallsmall', x, yy, 0, { w: 150, h: 16 }); }
+  // (2026-10-21) the crest itself: a concrete sill across the river, the water sheeting over it - its tiles drawn as
+  // rubble under it, not bare wall
+  { const [x, yy] = at(-0.6, (vmin - 2 + wl0) / 2); K.prop('weir', x, yy, 0, { len: Math.round((wl0 - vmin + 3) * TILE), a: Math.round(Math.atan2(ny, nx) * 1000) / 1000 }); }
+  for (let yy = Math.floor(cy - 40); yy <= cy + 40; yy++) for (let x = Math.floor(cx - 50); x <= cx + 50; x++) { const u = (x + 0.5 - cx) * tx + (yy + 0.5 - cy) * ty, v = (x + 0.5 - cx) * nx + (yy + 0.5 - cy) * ny; if (Math.abs(u) <= 1.5 && v >= vmin - 2 && v < wl0 && m.tiles[yy * W + x] === T.WALL) m.reserve[yy * W + x] |= 32; }
   for (const u of [-C.half, C.half]) for (const v of [ch0 - 0.5, e - 1.5]) { const [x, yy] = at(u, v); K.prop('post', x, yy, 5, { h: 40 }); }
   for (let u = -C.half + 2; u <= C.half - 2; u += 5) { const [x, yy] = at(u, e - 1.3); K.prop('bollard', x, yy, 0); }
   for (const u of [-C.half, 0, C.half]) { const [x, yy] = at(u, wl0 + 1.5); K.prop('lamp', x, yy, 0); }

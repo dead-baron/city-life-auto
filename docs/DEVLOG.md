@@ -12811,3 +12811,45 @@ New art (`client/art2/props-park.js`): the crash pad (four colours) and the rope
 
 Tests: test/world3peaks.test.js - the tarn's turf, beach and slabs, the camp's tents, fire ring, rest spot and seats,
 on the map, the pebble beach and its rowboat; Eagle Crag, its crash pads and rope, its sign and its rock.
+
+## 2026-10-21 · Nature: the coasts by hand, part 2 - the fishing rocks, North Cape's cliff path
+
+From the handcraft research's 4.9 and the concepts NS1-F and N8 ("a rock fishing spot on a basalt point", "a fenced
+cliff path"); `shared/world3-coast.js`:
+- **the fishing rocks**: on North Cape's tidepool shelf and on Redwood Cove's north horn, a spot on the rock's seaward
+  lip with an angler's rods and a cooler, an angler there most of the day (`server/systems/wildfolk.js`: the coasts'
+  fishing points before the banks). Cast into the wash off them (within 9 tiles) and the striped bass, the redfish and
+  the flounder are more likely - the rarer ones twice - and run heavier (`shared/fish.js` POINT; `server/systems/
+  fishing.js` habitatAt's spot 'point', a note the first time). In the debug menu's fishing places.
+- **North Cape's cliff path**: along the top of the cliff band over the shelf a worn footpath behind a post-and-rail
+  fence, broken where the stairs go down; a coin telescope and a bench on it looking out over the shelf, the blowhole
+  and the seal rock (the birders come to it).
+- **the cliff bands' bare rock**: between the basalt faces of North Cape's cliff and the Redwood Coast Road's coves'
+  points, the cliff's tiles drew as bare black squares; now as rubble.
+
+Tests: test/world3coast.test.js - the point's bite table (the three likelier, the rest as on the shore); in World v3 two
+fishing points, on the rock, their rods, the wash off them fishing as the point; the cliff path's fence and telescope;
+no bare black rock left in the cliff bands.
+
+## 2026-10-21 · The Long Reach's weir: a concrete sill, not a staircase of black squares
+
+The weir beside the lock at Willow Crossing was its crest's wall tiles and nothing more: the river crosses it on a
+diagonal, so it drew as a staircase of bare black squares across the water. Now the crest is a long sill of weathered
+concrete across the river (`client/art2/props-park.js` weir, placed by `shared/world3-water.js` buildLock along the
+crest), its top wet and dark, the water sheeting over its curved downstream face into a band of foam, and its tiles
+are drawn as rubble under it (the designed rock's ground). The crest still blocks boats; the lock beside it is as it
+was.
+
+Tests: test/world3water.test.js - the weir's sill along the crest, its tiles drawn as rubble.
+
+## 2026-10-21 · Nature: the desert by hand, part 1 - Mirage Lake
+
+From the concepts N4-B, N4-C and SC3-F; `shared/world3-mirage.js`, new, World v3's done hook after the coasts': the lake
+south of the North Coast Road lay in the bare sand as a stiff octagon, the desert's dirt to its edge. Now its rim
+wavers round in slow lobes (the lake grown a little into the sand); a green belt of grass with reeds and cattails at
+the water rings its north and east shores under desert fan palms, date palms and a palo verde; a pale beach of white
+sand lies along its south and west shores with a plank jetty out from it, a rowboat tied up and a bench, boulders on
+the sand. A nature site and on the map. Mirage Camp stands north of it as it was.
+
+Tests: test/world3desert.test.js - Mirage Lake's rim, its green belt and palms, its beach, jetty and rowboat. test/world3wild.test.js's
+check for a dry wash by the desert's camps counts a wash's gravel only (sand flagged 128), not the green belt's lush grass.

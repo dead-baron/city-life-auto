@@ -44,7 +44,7 @@ export const DEV_SECTIONS = [
   { id: 'fish', title: '🎣 Fishing', items: [
     ['🎣 Every rod and 20 of every bait', 'fish', { k: 'kit' }],
     ['🏞 A pond', 'fish', { k: 'go', w: 'pond' }], ['🏞 A lake', 'fish', { k: 'go', w: 'lake' }], ['🏞 A river', 'fish', { k: 'go', w: 'river' }],
-    ['🏞 A creek', 'fish', { k: 'go', w: 'creek' }], ['🌀 A river\'s calm pocket (the big trout)', 'fish', { k: 'go', spot: 'pocket' }], ['🦢 The marshes', 'fish', { k: 'go', w: 'swamp' }], ['🏖 The shallows', 'fish', { k: 'go', w: 'shore' }],
+    ['🏞 A creek', 'fish', { k: 'go', w: 'creek' }], ['🌀 A river\'s calm pocket (the big trout)', 'fish', { k: 'go', spot: 'pocket' }], ['🪨 The fishing rocks (stripers, redfish)', 'fish', { k: 'go', spot: 'point' }], ['🦢 The marshes', 'fish', { k: 'go', w: 'swamp' }], ['🏖 The shallows', 'fish', { k: 'go', w: 'shore' }],
     ['⚓ A pier', 'fish', { k: 'go', w: 'pier' }], ['🐠 The reef (the southern keys)', 'fish', { k: 'go', w: 'reef' }],
     ['🚤 Out at sea in a boat (open water; the deep after dark)', 'fish', { k: 'boat' }], ['🦇 The cave\'s still pool', 'fish', { k: 'cave' }],
     ['✨ The Golden Koi\'s lily pond (a park\'s)', 'fish', { k: 'go', spot: 'lily' }], ['✨ Old Ironsides\' lake drop-off', 'fish', { k: 'go', w: 'lake', spot: 'drop' }],
