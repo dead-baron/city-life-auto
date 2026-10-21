@@ -33,9 +33,9 @@ function swimmer(w) {
   return { p, at };
 }
 
-test('a great white is a sea animal of its own: protected, no habitat for the wildlife to spawn it in', () => {
+test('a great white is a sea animal of its own: no habitat for the wildlife to spawn it in, nothing to take, no fine', () => {
   const S = SPECIES.shark;
-  assert.ok(S && S.protected && S.own && Object.keys(S.habitat).length === 0 && S.loot.length === 0);
+  assert.ok(S && !S.protected && S.own && Object.keys(S.habitat).length === 0 && S.loot.length === 0);
 });
 
 test('one comes up out of the deep near a swimmer in the open sea, circles and bites - and keeps to the sea', () => {

@@ -220,11 +220,12 @@ export const SPECIES = {
   },
   // ---- the sea (2026-10-21; the owner, 10-05: "sharks: very rare, likeliest round the prison; fins; blood draws them"):
   // a great white, out in the open sea - it comes and goes on its own (server/systems/sharks.js: no habitat here, so
-  // the wildlife's spawner never puts one down, and its step leaves it alone); protected, nothing taken from it
+  // the wildlife's spawner never puts one down, and its step leaves it alone); nothing taken from it, and no fine for
+  // one shot fending it off (not protected: hunting.js)
   shark: {
     name: 'Great White Shark', size: 'huge', hp: 320, walk: 0, trot: 0, run: 0, swim: 340,
     sense: { sight: 800, hear: 400, smell: 2200 }, temper: 'aggressive', group: { kind: 'solo', n: [1, 1] },
-    active: 'any', habitat: {}, diet: 'hunt', aquatic: true, swims: 'deep', own: true, bite: 38, protected: true, few: 1,
+    active: 'any', habitat: {}, diet: 'hunt', aquatic: true, swims: 'deep', own: true, bite: 38, few: 1,
     loot: [],
   },
 };

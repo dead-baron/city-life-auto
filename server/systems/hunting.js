@@ -61,6 +61,7 @@ export function interaction(world, p) {
     const w = c.wild, S = SPECIES[w.kind];
     if (LIVESTOCK.has(w.kind)) return { label: "Somebody's livestock - not game", run: () => world.notify(p, 'That was a farmer\'s animal, not game. Hunt the wild animals out in the woods, hills, marshes and desert.', 'warn') };
     if (S && S.protected) return { label: `A dead ${commonName(c)} - protected`, run: () => world.notify(p, `${S.name}s are protected: nobody will buy any part of one.`, 'warn') };
+    if (S && !S.loot.length) return { label: `A dead ${commonName(c)} - nothing to take`, run: () => world.notify(p, `There's nothing to take from a ${S.name.toLowerCase()}.`, 'warn') };   // (the great white: sharks.js)
     if (S && w.young) return { label: `A young ${commonName(c)} - nothing worth taking`, run: () => world.notify(p, 'Too young to be worth dressing. Hunters leave the young ones be.', 'warn') };
     if (S) return { label: w.legend ? `Skin ${S.legend.name.replace(/^the /, 'the ')}` : `Field dress the ${commonName(c)}`, run: () => begin(world, p, 'dress', c.id) };
   }
