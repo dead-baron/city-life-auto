@@ -214,7 +214,9 @@ export class Ambience {
     const want = this.want || (this.want = {});
     want.city = open * roof * Math.min(1, k.urban * 1.4) * (1 - k.wild * 0.7) * (night > 0.5 ? 0.6 : 1) * BED_MAX.city;
     // (the open country's breeze: under the city's hum, gusting - it was 0.05 + 0.26 wild, the leaves on top of it)
-    want.wind = open * roof * (0.04 + 0.2 * k.wild * (1 - k.urban) + 0.1 * rain + 0.15 * Math.max(0, k.water - 0.6)) * this.gust;
+    // (under the trees the wind is up in the canopy - the leaves' rustle - not a whoosh along the ground: the owner,
+    // 2026-10-16, "ocean sounds in the forest" - the wind bed's gusts swelling and falling like waves under the redwoods)
+    want.wind = open * roof * (0.04 + 0.2 * k.wild * (1 - k.urban) + 0.1 * rain + 0.15 * Math.max(0, k.water - 0.6)) * this.gust * (1 - 0.65 * k.woods);
     want.leaves = open * roof * k.woods * LEAVES_LEVEL * this.gust * this.gust;   // (the woods' rustle, in the gusts)
     want.sea = open * roof * Math.pow(k.water, 0.8) * BED_MAX.sea * swell;
     want.surf = open * roof * k.shore * SURF_LEVEL;

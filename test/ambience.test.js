@@ -72,6 +72,9 @@ test('the woods rustle - softly; the leaves never over the city\'s hum, the rain
   assert.ok(woods.loud < HEAVY_RAIN, `the woods in a gale ${woods.loud.toFixed(1)} dBA, under heavy rain`);
   const half = listen(makeMap({ d: WILD, tile: T.GRASS, forest: (tx) => tx < 60 }));
   assert.ok(half.k.woods < woods.k.woods * 0.8 && half.k.woods > 0.3, `half woods, half meadow: less (${half.k.woods.toFixed(2)} of ${woods.k.woods.toFixed(2)})`);
+  // (under the trees the wind's whoosh is mostly gone - the owner's "ocean sounds in the forest", 2026-10-16)
+  const field = listen(makeMap({ d: WILD, tile: T.GRASS }));
+  assert.ok(woods.max.wind < field.max.wind * 0.5, `the wind under the trees (${woods.max.wind.toFixed(3)}) and out in the open (${field.max.wind.toFixed(3)})`);
   const wet = listen(makeMap({}), { rain: 1 });
   assert.ok(wet.max.rain > 0.15 && wet.max.rain <= BED_MAX.rain, 'rain when it rains');
 });

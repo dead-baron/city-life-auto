@@ -13171,7 +13171,7 @@ fire, a seat, a tent and a canoe, the lake all round it.
 Tests: the full suite (the falls are drawn by the statics' recipes; their placement and the bake's checks are
 unchanged).
 
-## 2026-10-21 · Nature: the falls roar; a far river fades
+## 2026-10-21 · Nature: the falls roar; a far river fades; the wind under the trees
 
 - **the water's sound** (`client/sound/ambience.js`; the owner, 2026-10-16: "stream or waterfall sound in the forest
   with no visible source"):
@@ -13183,7 +13183,10 @@ unchanged).
     its width) and fades to nothing 22 tiles away.
   - **a rapid's white water** rushes at a little under half that, out to 12 tiles.
   - The beds' ceilings are unchanged: at its loudest a falls is still under the city's hum.
+- **the wind under the trees** (the owner, 2026-10-16: "ocean sounds in the forest"): in the woods the wind bed's
+  gusts swelled and fell like waves along the ground. Under the trees the wind is up in the canopy, which is the
+  leaves' rustle, so the whoosh is turned down by up to two thirds where the woods close round you.
 
 Tests: test/ambience.test.js - a river from its bank and from 20 tiles off (under a third as loud); a falls at its foot
 (over twice a river's bank, never over the bed's ceiling), 12 tiles off (fading) and 30 tiles off (just the river); a
-rapid's white water between the two.
+rapid's white water between the two; the wind under the trees under half what it is in the open.
