@@ -13701,3 +13701,14 @@ shootouts broke out in the casino town's streets.
 
 Tests: test/gangquiet.test.js - the turf's and the wilds' HQs start shootouts, a back room in a smart part of town
 doesn't.
+
+## 2026-10-22 · Fix: a TV faces the couch, not the wall
+
+The owner, 10-16: "A TV faces the wall (you can't watch it)". Indoors (art v2, `client/render/homeart2.js`), a TV is
+turned to face the couch. With the couch north of the set it should face north, but the test measured the couch's
+distance the wrong way round and never passed. So a set against the south wall with the couch in front of it faced
+the wall.
+
+- Now it faces whichever side the couch is. With no couch in the room, it faces away from the wall it stands against.
+
+Tests: test/homeart.test.js - as laid out, toward the couch; the couch moved north of it, north.
