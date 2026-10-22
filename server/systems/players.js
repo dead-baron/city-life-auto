@@ -103,6 +103,7 @@ export function join(world, conn, profile, opts = {}) {
     if (p.conn && p.conn !== conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Signed in from another tab' }); p.conn.close(4000, 'replaced'); } catch { /* gone */ } }
     p.conn = conn;
     p.ghostUntil = 0; p.ghostSafe = false; p.away = 0;
+    stillHere(p);   // (back: the idle clock starts again)
     p.known = new Map();
     p.inputQ = [];
     // a new connection numbers its inputs afresh (a reloaded page from 1): an input is only taken when it's numbered
@@ -350,8 +351,18 @@ export function wipeAccount(world, p) {
   store.remove(p.pid);
 }
 
+// Idle (decided 10-06 / 10-08: "Idle kick: 'Still there?' then a disconnect - 10 min for everyone"): a player whose
+// keys, stick and aim haven't changed - nor sent a menu pick, a chat line, anything - for IDLE_WARN_MS is asked if
+// they're still there; at IDLE_KICK_MS they're disconnected (the page shows why and a button to come back; the
+// character logs out as any disconnect does). Real time, not the game's: a clock jumped on (a test, a dev skip) isn't
+// idling. (Here, not in shared/rules.js: server-only numbers - see AWAY_SECONDS.)
+export const IDLE_WARN_MS = 9 * 60e3, IDLE_KICK_MS = 10 * 60e3;
+export const IDLE_CLOSE = 4006;
+export function stillHere(p) { p.activeAtMs = Date.now(); p.idleWarned = false; }
 export function queueInput(p, inp) {
   if (inp.seq <= p.ack) return;
+  const prev = p.inputQ.length ? p.inputQ[p.inputQ.length - 1] : p.lastInput;
+  if (!prev || inp.bits !== prev.bits || Math.abs((inp.mx || 0) - (prev.mx || 0)) > 0.05 || Math.abs((inp.my || 0) - (prev.my || 0)) > 0.05 || Math.abs((inp.aim || 0) - (prev.aim || 0)) > 0.02) stillHere(p);
   p.inputQ.push(inp);
   if (p.inputQ.length > 8) {
     // never lose a one-shot press (punch, interact, enter car) when trimming a backed-up queue
@@ -738,8 +749,25 @@ export function onPedDeath(world, ped, killer, cause) {
   store.touch();
 }
 
+function idleCheck(world) {
+  const t = Date.now();
+  for (const p of world.players.values()) {
+    if (!p.conn || !p.conn.open) continue;
+    if (!p.activeAtMs) { p.activeAtMs = t; continue; }
+    const idle = t - p.activeAtMs;
+    if (idle >= IDLE_KICK_MS) {
+      try { p.conn.sendJSON({ t: 'kicked', reason: 'You were idle for 10 minutes, so you were disconnected.', idle: 1 }); p.conn.close(IDLE_CLOSE, 'idle'); } catch { /* gone */ }
+      p.activeAtMs = t;
+    } else if (idle >= IDLE_WARN_MS && !p.idleWarned) {
+      p.idleWarned = true;
+      world.notify(p, 'Still there? Move or press anything - you\'ll be disconnected in a minute if not.', 'warn');
+    }
+  }
+}
+
 export function update(world, dt) {
   const now = world.time;
+  if (world.tick % 20 === 9) idleCheck(world);
   for (const p of [...world.players.values()]) {
     const ped = p.ped;
     if (ped) economy.syncLight(world, p); // the flashlight goes out when you go down or lose it

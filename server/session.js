@@ -64,6 +64,7 @@ export function createSession(world, conn, opts) {
         return;
       }
       if (!player) return;
+      if (msg.t !== 'ping' && msg.t !== 'away' && msg.t !== 'view' && msg.t !== 'perf' && msg.t !== 'cerr' && msg.t !== 'diag') players.stillHere(player);   // (anything they did: not idle)
       if (msg.t === 'view') { setView(player, msg.hw, msg.hh); return; } // how much world the screen shows
       if (msg.t === 'ping') { conn.sendJSON({ t: 'pong', ts: msg.ts }); return; }
       if (msg.t === 'away') { players.setAway(world, player, !!msg.on); return; }   // (the page in the background, or back)

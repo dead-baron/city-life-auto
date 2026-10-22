@@ -183,7 +183,7 @@ function connect() {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     onText(m);
   };
-  ws.onclose = (ev) => { if (S.ws === ws) scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
+  ws.onclose = (ev) => { if (S.ws !== ws) return; if (ev && ev.code === 4006) { idleOut(); return; } scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
   ws.onerror = () => {};
 }
 
@@ -191,6 +191,20 @@ function connect() {
 // boots you out"): a small "Reconnecting..." over the city and straight back in when the server answers; only after a
 // minute of trying does it go back to the title screen.
 const RECONNECT_IN_GAME_MS = 60000;
+// Disconnected for being idle 10 minutes (server players.js idleCheck: close 4006): back to the title, no reconnecting on
+// its own - its PLAY button says RECONNECT and reloads the page into the game
+function idleOut() {
+  S.welcomed = false; S.ws = null; S.playing = false;
+  clearTimeout(S.reconnectT);
+  reconnecting(false);
+  $('title').classList.remove('hidden');
+  $('hud').classList.add('hidden');
+  $('t-resume').classList.add('hidden');
+  $('t-status').textContent = 'You were idle for 10 minutes, so you were disconnected. Your progress is saved.';
+  const b = $('play');
+  b.disabled = false; b.textContent = 'RECONNECT';
+  b.onclick = () => location.reload();
+}
 function scheduleReconnect(why, toTitle = false) {
   if (S.practice) return;
   S.welcomed = false;

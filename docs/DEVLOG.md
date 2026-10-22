@@ -13639,3 +13639,20 @@ The owner, 10-15: "Fewer pigeons". Up to 14 pigeons and gulls were about at once
 - **fewer** (`client/birds.js` BIRDS): up to 7 at once, a new one every 2 to 6 s.
 
 Tests: test/birds.test.js - a few at a time; they still come in from off screen, land and go.
+
+## 2026-10-21 · Idle kick: "Still there?", then a disconnect at ten minutes
+
+Decided 10-06 / 10-08: "Idle kick: 'Still there?' then a disconnect - 10 min for everyone". Only the away timer existed
+(for a page in the background); a player left idle and connected stayed in the world for good.
+
+- **idle** (`server/systems/players.js` idleCheck): nothing done for nine minutes (keys, stick and aim unchanged; no
+  menu pick, chat line or anything sent) and you're asked "Still there? Move or press anything - you'll be
+  disconnected in a minute if not." At ten minutes you're disconnected. The character logs out as any disconnect
+  does: safely if nothing's after you, by the drop rule if something is. Anything you do starts the clock again,
+  and so does reconnecting. It's real time, not the game's, so a clock jumped on doesn't count as idling.
+- **the page** (`client/main.js` idleOut, close code 4006): back to the title with "You were idle for 10 minutes, so
+  you were disconnected. Your progress is saved." It doesn't reconnect on its own; the PLAY button reads RECONNECT
+  and reloads into the game.
+
+Tests: test/idle.test.js - asked at nine minutes, disconnected at ten and told why; a key pressed counts, the same
+keys held don't; a game clock jumped an hour on is no idling.
