@@ -858,6 +858,13 @@ export const HEIST = {
   openS: 300, cooldownS: 1800, cash: 3000, reach: 46, xp: 60, seizeSam: 5,   // (seizeSam: Samaritan points for an officer who takes the drill off)
   load: { lux: [4, 4, 3, 3], suburb: [4, 3, 3], mid: [4, 3, 3], neon: [4, 3, 3], rural: [3, 3, 3], industrial: [3, 3, 3], red: [3, 3, 3], low: [3, 3], rough: [3, 3], wild: [3, 3] },
 };
+// The race book (the owner's #310, horse racing: server/systems/racebook.js, shared/racebook.js, client/racebook.js) at
+// Lucky Mesa's casinos: a race every everyS seconds of the world's clock, the field posted with its odds at the start of
+// that, betting open betS seconds till the off, the race about runS seconds round the oval, the results up till the next
+// is posted. A field of six; win bets only, at the posted odds (the house's edge: take x the fair price), the stake one of
+// stakes, maxBets bets on a race; luck: how much a horse's pace wanders through the race, form: how far off (or above)
+// its class it runs on the day, stumbleP: the chance one stumbles; sims: how many times the book runs the race over to price the field
+export const RACEBOOK = { everyS: 150, betS: 100, runS: 28, field: 6, take: 0.85, maxBets: 3, stakes: [10, 50, 250, 1000], luck: 0.06, form: 0.035, stumbleP: 0.05, sims: 300 };
 export const CASINO = {
   slots: [5, 25, 100], stakes: [10, 50, 250, 1000], bjPays: 1.5, twoCherries: 3,
   reel: {

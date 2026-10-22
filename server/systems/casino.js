@@ -9,7 +9,8 @@
 //               straight-up pick), board (the table as it stands: rows for the page), msg, net (this visit, $),
 //               bj: { bet, you: [cards], dealer: [cards], doubled } while a hand's being played }
 // The page draws `board` (hud.js openMenu: cards, reels, the wheel's pocket) above the options.
-import { CASINO } from '../../shared/rules.js';
+import { CASINO, RACEBOOK } from '../../shared/rules.js';
+import * as racebook from './racebook.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { randomInt } from 'node:crypto';
 import { store } from '../store.js';
@@ -22,7 +23,7 @@ export const isCasino = (poi) => !!(poi && poi.casino);
 export const label = (poi) => `${poi.label} - the casino floor`;
 
 const state = (p, poi) => {
-  if (!p.casino || p.casino.poi !== poi.id) { leave(p); p.casino = { poi: poi.id, view: null, stake: 0, num: 17, board: null, msg: '', net: 0, bj: null, at: 0 }; }
+  if (!p.casino || p.casino.poi !== poi.id) { leave(p); p.casino = { poi: poi.id, view: null, stake: 0, rstake: 0, num: 17, board: null, msg: '', net: 0, bj: null, at: 0 }; }
   return p.casino;
 };
 // a hand still on the table when you go (another casino's floor, logging off, the server restarting): the bet back
@@ -78,6 +79,18 @@ export function menu(world, p, poi) {
       opts.push({ id: 'cs:stake', label: `Stake ${money(stake)}`, note: 'change it' });
       opts.push({ id: 'cs:floor', label: 'Back to the floor' });
     }
+  } else if (C.view === 'race') {   // the race book (racebook.js): the race on the screens, its field and odds, your bets on it
+    const R = racebook.current(world), t = racebook.clock(world), ph = racebook.phase(R, t), rs = RACEBOOK.stakes[C.rstake | 0];
+    const mine = R.bets.filter((b) => b.pid === p.pid), clockText = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    title = `${poi.label} - the race book, race ${R.n % 1000}`;
+    sub = ph === 'betting' ? `Betting open: they're off in ${clockText(racebook.offAt(R.n) - t)}. Win bets at the odds posted.`
+      : ph === 'running' ? 'They\'re running! Watch it on the screen.'
+        : `Result: ${R.res.order.slice(0, 3).map((i, k) => `${['1st', '2nd', '3rd'][k]} ${R.field[i].name}`).join(', ')}. The next race is posted in ${clockText(racebook.postAt(R.n + 1) - t)}.`;
+    C.board = R.field.map((h, i) => { const my = mine.filter((b) => b.h === i).reduce((s, b) => s + b.stake, 0); return { k: `${i + 1}. ${h.name}`, items: [{ t: R.odds.length ? racebook.oddsText(R.odds[i]) : '', c: 'odds' }], v: my ? `your $${my.toLocaleString()}` : '' }; });
+    if (ph === 'betting') R.field.forEach((h, i) => opts.push({ id: `cs:rbet:${i}`, label: `Back ${i + 1}. ${h.name} at ${racebook.oddsText(R.odds[i])}`, price: rs, dis: !can(rs) || mine.length >= RACEBOOK.maxBets, note: mine.length >= RACEBOOK.maxBets ? `${RACEBOOK.maxBets} bets a race` : `returns ${money(racebook.payoutOf(rs, R.odds[i]))}` }));
+    if (ph === 'betting') opts.push({ id: 'cs:rstake', label: `Stake ${money(rs)}`, note: 'change it' });
+    opts.push({ id: 'cs:watch', label: 'Watch the race', note: 'on the screen' });
+    opts.push({ id: 'cs:floor', label: 'Back to the floor' });
   } else if (C.view === 'roulette') {
     title = `${poi.label} - roulette`;
     for (const [k, l, n] of [['red', 'Red', 'pays 1:1'], ['black', 'Black', 'pays 1:1'], ['odd', 'Odd', 'pays 1:1'], ['even', 'Even', 'pays 1:1'], ['low', 'Low (1-18)', 'pays 1:1'], ['high', 'High (19-36)', 'pays 1:1'], ['d1', 'First dozen (1-12)', 'pays 2:1'], ['d2', 'Second dozen (13-24)', 'pays 2:1'], ['d3', 'Third dozen (25-36)', 'pays 2:1']]) opts.push({ id: `cs:rb:${k}`, label: l, price: stake, dis: !can(stake), note: n });
@@ -89,6 +102,7 @@ export function menu(world, p, poi) {
     CASINO.slots.forEach((n, i) => opts.push({ id: `cs:slot:${i}`, label: `Slots - a ${money(n)} spin`, price: n, dis: !can(n), note: i === CASINO.slots.length - 1 ? 'three lotuses pay 300x' : '' }));
     opts.push({ id: 'cs:roulette', label: 'Roulette', note: 'red or black, a dozen, your number' });
     opts.push({ id: 'cs:bj', label: 'Blackjack', note: 'beat the dealer to 21' });
+    opts.push({ id: 'cs:race', label: 'The race book', note: 'a race every few minutes - pick the winner' });
   }
   opts.push({ id: 'close', label: C.net > 0 ? 'Cash out and leave' : 'Leave' });
   const t = tonight(C);
@@ -104,6 +118,17 @@ export function execute(world, p, poi, opt, pay) {
     case 'floor': C.view = null; C.board = null; C.msg = ''; return null;
     case 'roulette': C.view = 'roulette'; C.board = null; C.msg = 'Place your bet. No more bets once the ball\'s dropping.'; return null;
     case 'bj': C.view = 'bj'; C.board = null; C.msg = 'The dealer stands on all 17s. Blackjack pays 3:2.'; return null;
+    case 'race': C.view = 'race'; C.board = null; C.msg = ''; return null;
+    case 'rstake': C.rstake = ((C.rstake | 0) + 1) % RACEBOOK.stakes.length; return null;
+    case 'rbet': {
+      const R = racebook.current(world), h = Number(parts[2]) | 0, st = RACEBOOK.stakes[C.rstake | 0];
+      const err = racebook.bet(world, p, h, st, pay);
+      if (err) return err;
+      C.net -= st;
+      world.notify(p, `$${st.toLocaleString()} on ${R.field[h].name} to win at ${racebook.oddsText(R.odds[h])}. Watch it on the screen.`, 'info');
+      return null;
+    }
+    case 'watch': if (p.conn) p.conn.sendJSON({ ...racebook.screen(world, p), t: 'arcade', game: 'race', id: 0 }); return null;   // (the screen: client/racebook.js, on the arcade's overlay)
     case 'stake': C.stake = (C.stake + 1) % CASINO.stakes.length; return null;
     case 'num': C.num = Math.floor(rng() * 37); C.msg = `Your number: ${C.num}.`; return null;
     case 'slot': {

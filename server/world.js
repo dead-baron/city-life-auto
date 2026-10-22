@@ -40,6 +40,7 @@ import * as heist from './systems/heist.js';
 import * as trains from './systems/trains.js';
 import * as rentals from './systems/rentals.js';
 import * as horses from './systems/horses.js';
+import * as racebook from './systems/racebook.js';
 import * as spikes from './systems/spikes.js';
 import * as pets from './systems/pets.js';
 import * as happenings from './systems/happenings.js';
@@ -120,6 +121,7 @@ const SYSTEMS = [
   ['boats', boats.update],          // NPC boaters + harbor police patrol boats
   ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen
   ['horses', horses.update],        // hired horses' clocks; bolted horses gone once nobody's watching (#325)
+  ['racebook', racebook.update],    // the race book's races: the off, the result, the winners paid (#310)
   ['trains', trains.update],        // the rail loop: trains, riders, crossings, the mail-car strongbox
   ['police', police.update],        // NPC police dispatch / pursuit
   ['k9', k9.update],                // police dogs: riding along, let out, running suspects down (k9.js)

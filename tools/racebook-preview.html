@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Race book screen</title>
+<style>body{margin:0;background:#222;color:#eee;font:11px monospace}canvas{image-rendering:pixelated;width:768px;height:672px;display:block}</style></head><body>
+<canvas id="arc-cv" width="256" height="224"></canvas>
+<!-- The race book's screen (client/racebook.js) with a race of its own: ?n= the race, ?at= seconds after the off (negative:
+     before it), ?seed= the book's seed. -->
+<script type="module">
+import { fieldOf, oddsOf, oddsText, payout } from '../shared/racebook.js';
+import * as RB from '../client/racebook.js';
+const q = new URLSearchParams(location.search), n = Number(q.get('n') || 7), at = Number(q.get('at') || 10), seed = Number(q.get('seed') || 987654321);
+const field = fieldOf(n), odds = oddsOf(field, n), off = 1000;
+RB.start({ n, now: off + at, post: off - 100, off, next: off + 50, ph: at < 0 ? 'betting' : 'running', field, odds: odds.map(oddsText), seed: at < 0 ? null : seed,
+  mine: [{ h: 2, stake: 50, ret: payout(50, odds[2]) }], last: ['Copper Penny', 'Dust Devil', 'High Roller'], send: () => {}, sfx: () => {} });
+setTimeout(() => { window.done = true; }, 600);
+</script></body></html>

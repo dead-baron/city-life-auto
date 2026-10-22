@@ -14858,3 +14858,26 @@ and gone once out of sight; a horse standing still gets its wind back on the ser
 page has its wind from every snapshot (it lost it at each one - the bar stayed full, a blown horse's gallop was
 predicted and corrected); the art v2 sprites keep each coat and the saddle (they were all the plain chestnut); no
 smoke, skid marks or tail lights from a horse, no respray of one, none parked in a garage's bays.
+
+## 2026-10-22 · The race book: horse racing at Lucky Mesa's casinos
+
+The owner's #310 (10-08, "horse racing"; the gambling row's last piece but the cockfights). The casinos' floors have the
+race book now (server/systems/racebook.js; the races: shared/racebook.js; the numbers: shared/rules.js RACEBOOK):
+- **The races** are run at the track out east - Lucky Mesa Downs - and shown in the casinos: one every two and a half
+  minutes of the world's clock, the same race for everyone on the server. Each is posted with its field of six (invented
+  names, their silks, each with its class and its way of running: a front-runner quick away and tiring, a closer coming
+  late) and the book's odds - worked out by running the race over a few hundred times, the house's edge taken off, written
+  up as a bookmaker would (5-2, 11-4, evens).
+- **Betting**: win bets till the off - pick the winner, $10 to $1,000, three bets a race - at the odds posted.
+- **The off**: the book draws the race's luck then (the system's own randomness - nobody can know the result before it's
+  run); the race is run once on the server and the same way on every page watching (each horse's pace from its class,
+  its style, how it's going on the day, its luck through the race, now and then a stumble).
+- **Watching**: "Watch the race" puts it on the arcade's little screen (client/racebook.js, loaded the first time): the
+  oval, the runners in their silks, the board with the odds and where each is running, the call ("And they are off!",
+  "Into the straight..."), your horses starred - and what you collected.
+- **Paid** as the winner crosses the line, in cash, at the odds you took - into your account if you've gone.
+Over many races about 85 cents in the dollar comes back to the punters; the favourite wins a little over a third of them.
+Tests: test/racebook.test.js - the field the same for anyone, a race run alike from its seed, the house's edge and the
+favourites' share; betting till the off (three a race, the stakes), the seed at the off, the winners paid at their odds (one
+who'd gone too), the page's race the server's; the floor's race book and a bet from its menu. tools/racebook-preview.html
+shows the screen at any moment of a race.
