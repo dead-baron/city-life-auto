@@ -14465,3 +14465,8 @@ the rhythm lost.
 - **the phone** loading for the first time says so; a failed load is tried again the next time it opens; what the
   server sent it meanwhile never moves another screen's controller focus.
 - the casino's sounds are where the casino is (not in everyone's ears), and a lost bet is quiet.
+
+Fix (from the full test run): the grenade's throw and bounce, the flamethrower, the skydive's jump, canopy and landing,
+and tennis's racket, bounce and swing had their sounds only through main.js's old sfx calls - none had an entry of its
+own (client/sound/events.js EVENT_SOUNDS, test/sound.test.js); placed where they happen now, and the skydive's three
+had no sound at all before (the canopy fills with a flutter; a soft landing rolls; a splat, or onto a car's roof).
