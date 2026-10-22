@@ -156,7 +156,7 @@ export function collect(world, h, t, how) {
   if (mine.length) prof.bounties = prof.bounties.filter((c) => !mine.includes(c));
   if (city) t.cityBounty = 0;
   // (split with h's crew there - crews.js: the bounty's a crew's when they hunt together)
-  const tp = t.ped || h.ped, crew = tp ? crews.matesOnline(world, h).filter((q) => q.ped && !q.ped.dead && !q.custody && Math.hypot(q.ped.x - tp.x, q.ped.y - tp.y) < CREW.share && q !== t) : [];
+  const tp = t.ped || h.ped, crew = tp ? crews.matesOnline(world, h).filter((q) => q.ped && !q.ped.dead && !q.custody && !!q.ped.sub === !!tp.sub && (q.ped.ug || 0) === (tp.ug || 0) && Math.hypot(q.ped.x - tp.x, q.ped.y - tp.y) < CREW.share && q !== t) : [];
   const cut = Math.floor(paid / (crew.length + 1));
   h.profile.bank += paid - cut * crew.length;
   for (const q of crew) { q.profile.bank += cut; q.meDirty = true; world.notify(q, `Your crew's cut of the bounty on ${t.name}: +${money(cut)} to your bank.`, 'good'); }

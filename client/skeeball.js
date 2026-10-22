@@ -72,8 +72,9 @@ function finish() { report(); G.o.close(); }
 function roll() {
   G.charging = false;
   if (G.ball || G.done || G.left <= 0 || G.power < 0.04) { G.power = 0; return; }
-  const L = landing(G.aim, G.power), wob = (Math.random() - 0.5) * 6;
-  G.ball = { x: RING.x, y: LANE.ball, t: 0, tx: L.x + wob, ty: L.y + (Math.random() - 0.5) * 6, aim: G.aim, z: 0, ph: 'up' };
+  // the bounce's wobble: more the harder it's thrown - a full-power roll is a gamble, not a sure 100
+  const L = landing(G.aim, G.power), sp = 4 + G.power * 8, wob = (Math.random() - 0.5) * sp;
+  G.ball = { x: RING.x, y: LANE.ball, t: 0, tx: L.x + wob, ty: L.y + (Math.random() - 0.5) * sp, aim: G.aim, z: 0, ph: 'up' };
   G.left--; G.power = 0;
   G.o.sfx('click', 0.5);
 }
@@ -152,9 +153,7 @@ function draw() {
   g.fillStyle = '#d8d0c0';
   for (let i = 0; i < G.left - (b ? 0 : 1); i++) { g.beginPath(); g.arc(LANE.x1 + 9, H - 10 - i * 9, 3.5, 0, Math.PI * 2); g.fill(); }
   if (!b && !G.done && G.left > 0) {
-    const L = landing(G.aim, Math.max(0.15, G.power || 0.5));
     g.strokeStyle = 'rgba(255,255,255,.4)'; g.setLineDash([2, 3]); g.beginPath(); g.moveTo(RING.x, LANE.ball); g.lineTo(RING.x + Math.tan(G.aim) * (LANE.ball - LANE.top), LANE.top); g.stroke(); g.setLineDash([]);
-    if (G.charging || G.drag) { g.strokeStyle = 'rgba(255,214,58,.7)'; g.beginPath(); g.arc(L.x, L.y, 3, 0, Math.PI * 2); g.stroke(); }
     ball(g, RING.x, LANE.ball, 0);
     g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(8, H - 14, 52, 6); g.fillStyle = G.power > 0.85 ? '#ff5a5a' : '#ffd23a'; g.fillRect(9, H - 13, 50 * G.power, 4);
   }

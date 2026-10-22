@@ -14676,3 +14676,25 @@ crewmate there, none for one far off.
 The owner, 10-16 ("an option for each sport"). The playtest panel's Events & sport section takes you to a tennis court,
 an arcade, the Rusty Spur's pool table, a casino and a street dice game; Crime, to a bank's vault - right on the spot to
 set a drill (server/dev.js NEAR_KINDS; client/devcats.js). The tennis courts and the casinos are World v3's only.
+
+## 2026-10-22 · Crews, the new arcade games and names: fixes from a review
+
+A review of today's crews, skee-ball, air hockey, pinball and names work turned up these, all fixed:
+- **No friendly fire, everywhere:** a crewmate's swing, taser and pepper spray pass you by (a swing lands on whoever's
+  beyond), their car shoves you aside instead of running you down (server/systems/combat.js mates, vehicles.js
+  crewCar), their flamethrower doesn't set you alight (burning.js), and you can't finish off a downed crewmate
+  (revive.js). Before, only the damage itself was stopped: you were still stunned, floored or thrown.
+- **Asking someone in:** an asking that stands isn't talked over by someone else's, and the same one again only after
+  CREW.askAgainS (no spamming); someone already in a crew isn't offered "Join"; two crews started in one tick get their
+  own ids; taking someone off the crew checks the name the page showed (the list may have changed); starting fresh
+  leaves your crew. A heist's or a bounty's split only goes to crewmates on the same level (not someone in the subway
+  under the bank).
+- **Air hockey:** a "loss" with seven goals is no such game (seven is a win). **Skee-ball:** the gold landing marker is
+  gone - the aim line is all you get - and the bounce wobbles more the harder it's thrown, so a full-power roll is a
+  gamble; a ticket for every 30 points (was 25).
+- **Names:** the game's own words are looked for on the letters alone ("Admin_2", "Guest 1234") and the long ones at the
+  start too ("ModeratorBob"); two words that sit inside ordinary names ("Saltwater", "Swanky") are off the list; a name
+  is taken if it differs only in case or separators ("S_teve." is "Steve" - shared/names.js nameKey); a moment
+  (NAME.tryS) between attempts, since each one looks through every profile.
+Tests: test/crews.test.js (no punch on a crewmate, no run-over by one but a hit by an outsider's car, an asking that
+stands), test/names.test.js, test/arcade.test.js (the seven-goal loss).

@@ -15,7 +15,7 @@ import { CREW } from '../../shared/rules.js';
 import { store } from '../store.js';
 
 const kept = () => (store.kept.crews ||= {});
-let index = null, indexOf = null;   // pid -> crew id (rebuilt when the crews change, or for a new store)
+let index = null, indexOf = null, seq = 0;   // pid -> crew id (rebuilt when the crews change, or for a new store)
 function idx() {
   const K = kept();
   if (index && indexOf === K) return index;
@@ -48,7 +48,7 @@ const fit = (q) => q && q.ped && !q.ped.dead && !q.ped.vehId && !q.custody && !q
 // or ask them in (near the bottom: a shop's door, a car and the rest come first)
 export function joinPrompt(world, p) {
   const ped = p.ped, ask = p.crewAsk;
-  if (!ask || !fit(p) || world.time - ask.at > CREW.inviteS) return null;
+  if (!ask || !fit(p) || world.time - ask.at > CREW.inviteS || crewOf(p.pid)) return null;
   const q = world.players.get(ask.from);
   if (fit(q) && Math.hypot(q.ped.x - ped.x, q.ped.y - ped.y) <= CREW.reach * 1.5) return { label: `Join ${q.name}'s crew`, run: () => accept(world, p) };
   return null;
@@ -65,7 +65,8 @@ export function askPrompt(world, p) {
     if (d < bd && !crewOf(q.pid)) { bd = d; best = q; }
   }
   if (!best) return null;
-  if (best.crewAsk && best.crewAsk.from === p.pid && world.time - best.crewAsk.at <= CREW.inviteS) return { label: `Asked ${best.name} into your crew...`, passive: true, run: () => {} };
+  if (best.crewAsk && best.crewAsk.from === p.pid && world.time - best.crewAsk.at <= CREW.inviteS + CREW.askAgainS) return { label: `Asked ${best.name} into your crew...`, passive: true, run: () => {} };
+  if (best.crewAsk && world.time - best.crewAsk.at <= CREW.inviteS) return null;   // (someone else's asking stands)
   return { label: `Ask ${best.name} into your crew`, run: () => invite(world, p, best) };
 }
 
@@ -73,6 +74,8 @@ export function invite(world, p, q) {
   if (!fit(p) || !fit(q) || q === p || crewOf(q.pid)) return false;
   const mine = crewOf(p.pid);
   if (mine && mine.members.length >= CREW.max) { world.notify(p, `Your crew's full (${CREW.max}).`, 'warn'); return false; }
+  const prev = q.crewAsk;   // (an asking that stands isn't overwritten; the same one again only after a while)
+  if (prev && world.time - prev.at <= CREW.inviteS + (prev.from === p.pid ? CREW.askAgainS : 0)) return false;
   q.crewAsk = { from: p.pid, at: world.time };
   world.notify(q, `${p.name} asks you into their crew - walk up to them and press the action button to join.`, 'info');
   world.notify(p, `You asked ${q.name} into your crew.`, 'info');
@@ -89,7 +92,7 @@ export function accept(world, p) {
   let id = crewIdOf(q.pid), c = id ? K[id] : null;
   if (c && c.members.length >= CREW.max) { world.notify(p, `${q.name}'s crew is full now.`, 'warn'); return false; }
   if (!c) {
-    id = `c${Date.now().toString(36)}${Math.floor(world.time * 10).toString(36)}`;
+    do id = `c${Date.now().toString(36)}${(seq++).toString(36)}`; while (K[id]);   // (two crews in one tick: their own ids)
     c = K[id] = { lead: q.pid, members: [q.pid], names: { [q.pid]: q.name } };
   }
   c.members.push(p.pid);
@@ -114,11 +117,12 @@ export function leave(world, p, why = 'left the crew') {
   return true;
 }
 // whoever started it takes someone off it (k: their place in the list)
-export function kick(world, p, k) {
+export function kick(world, p, k, name = null) {
   const c = crewOf(p.pid);
   if (!c || c.lead !== p.pid) return 'Only whoever started the crew can do that.';
   const pid = c.members[k];
   if (!pid || pid === p.pid) return 'Not in the crew.';
+  if (name !== null && name !== undefined && String(name) !== (c.names[pid] || '')) return 'The crew\'s changed - have another look.';   // (the list the page had is out of date)
   const q = world.players.get(pid);
   leave(world, q || { pid, name: c.names[pid] }, 'was taken off the crew');
   if (q) world.notify(q, 'You were taken off the crew.', 'info');
@@ -167,6 +171,6 @@ export function panel(world, p) {
 export function phone(world, p, msg) {
   if (msg.a === 'crewsay') say(world, p, Number(msg.i));
   else if (msg.a === 'crewleave') leave(world, p);
-  else if (msg.a === 'crewkick') { const err = kick(world, p, Number(msg.k)); if (err) world.notify(p, err, 'warn'); }
+  else if (msg.a === 'crewkick') { const err = kick(world, p, Number(msg.k), msg.n); if (err) world.notify(p, err, 'warn'); }
   return panel(world, p);
 }

@@ -52,7 +52,7 @@ import * as minigames from './minigames.js';
 import * as robbery from './robbery.js';
 import * as heist from './heist.js';
 import * as crews from './crews.js';
-import { cleanName, NAME } from '../../shared/names.js';
+import { cleanName, nameKey, NAME } from '../../shared/names.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
@@ -364,22 +364,18 @@ function finalizeLogout(world, p, dropLoot) {
   rentals.onPlayerGone(world, p);
 }
 
-// Start fresh (task #413: Settings under Repair install, or the debug menu, pressed twice): this player's character and
-// everything that's theirs are gone for good - their body leaves the world at once (no ghost, nothing dropped), their
-// homes go back on the market, their car out in the street goes (with someone else in it, it's nobody's now: theirs to
-// drive off in), the bounties on their head are called off (the placers' money back in their banks: it lived on this
-// profile) and the saved profile is deleted; a login with the same token after this is a brand-new character. Only ever
-// the caller's own account: session.js passes the session's player, never a pid from the message.
 // A name of your own (Settings' account section - the owner's M9 note: "a username"): a name may be (shared/names.js),
-// nobody else's (any case), and changed once every NAME.gapS; over your head at once (the descriptor sent again)
+// nobody else's (any case, separators aside: names.js nameKey), and changed once every NAME.gapS; over your head at once (the descriptor sent again)
 export function rename(world, p, raw) {
   const prof = p.profile, r = cleanName(raw);
   if (r.err) { world.notify(p, r.err, 'warn'); return false; }
   if (r.name === p.name) return true;
   const wait = (prof.nameAt || 0) + NAME.gapS * 1000 - Date.now();
   if (wait > 0) { world.notify(p, `You can change your name again in ${Math.ceil(wait / 60000)} min.`, 'warn'); return false; }
-  const low = r.name.toLowerCase();
-  for (const q of store.all()) if (q.pid !== prof.pid && String(q.name || '').toLowerCase() === low) { world.notify(p, `${r.name} is taken - pick another.`, 'warn'); return false; }
+  if (world.time < (p.renameTryAt || 0)) return false;   // (a moment between tries: each looks through every profile)
+  p.renameTryAt = world.time + NAME.tryS;
+  const key = nameKey(r.name);
+  for (const q of store.all()) if (q.pid !== prof.pid && nameKey(q.name) === key) { world.notify(p, `${r.name} is taken - pick another.`, 'warn'); return false; }
   prof.name = r.name; p.name = r.name; prof.nameAt = Date.now();
   if (p.ped) { p.ped.name = r.name; p.ped.appVer = (p.ped.appVer || 0) + 1; }
   world.notify(p, `You're ${r.name} now.`, 'good');
@@ -388,11 +384,18 @@ export function rename(world, p, raw) {
   return true;
 }
 
+// Start fresh (task #413: Settings under Repair install, or the debug menu, pressed twice): this player's character and
+// everything that's theirs are gone for good - their body leaves the world at once (no ghost, nothing dropped), their
+// homes go back on the market, their car out in the street goes (with someone else in it, it's nobody's now: theirs to
+// drive off in), the bounties on their head are called off (the placers' money back in their banks: it lived on this
+// profile) and the saved profile is deleted; a login with the same token after this is a brand-new character. Only ever
+// the caller's own account: session.js passes the session's player, never a pid from the message.
 export function wipeAccount(world, p) {
   if (p.devMode) devmode.exit(world, p, true);
   struggle.onLeave(world, p); custody.onLeave(world, p);   // (the officers on them let go, as when anyone logs off)
   revive.clearDown(world, p);
   bounties.onWipe(world, p);
+  crews.leave(world, p);   // (out of any crew: a fresh character starts in none - crews.js)
   p.conn = null; p.ghostUntil = 0;
   if (world.players.get(p.pid) === p) finalizeLogout(world, p, false);
   for (const [id, pid] of [...world.homeOwner]) if (pid === p.pid) world.homeOwner.delete(id);
@@ -721,8 +724,6 @@ export function findInteraction(world, p) {
   if (vault) return vault;
   const bankJob = heist.interaction(world, p);   // a bank's vault door: the thermal drill (heist.js)
   if (bankJob) return bankJob;
-  const join = crews.joinPrompt(world, p);   // someone near who asked you into their crew (crews.js)
-  if (join) return join;
 
   const busk = personas.interaction(world, p);   // a coin for the busker (personas.js)
   if (busk) return busk;
@@ -795,8 +796,8 @@ export function findInteraction(world, p) {
 
   const fish = fishHere(world, p, ped);
   if (fish) return fish;
-  const ask = crews.askPrompt(world, p);   // another player beside you: ask them into your crew (crews.js)
-  if (ask) return ask;
+  const join = crews.joinPrompt(world, p) || crews.askPrompt(world, p);   // someone beside you who asked you into their crew: join; or ask them into yours (crews.js)
+  if (join) return join;
 
   const sale = dealer.saleNear(world, ped);
   if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };

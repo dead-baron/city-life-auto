@@ -3,7 +3,7 @@
 // lines to the crew, the Crew app (leaving, taking someone off), a heist's drawers split with the crew there.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, straightRoad } from './helpers.js';
 import { CREW, HEIST } from '../shared/rules.js';
 import { vaultOf } from '../shared/heist.js';
 import * as crews from '../server/systems/crews.js';
@@ -51,6 +51,45 @@ test('a crew: asked in and saying yes, each other on the radar, no friendly fire
   assert.ok(said(B) && said(A) && !said(C), 'the crew heard it, nobody else');
   run(w, CREW.sayGapS + 0.2);
   assert.ok(crews.say(w, A.p, 1));
+});
+
+test('crewmates: no punch between them, no run-over; an asking that stands isn\'t talked over', () => {
+  const w = makeWorld();
+  const A = joinPlayer(w), B = joinPlayer(w), C = joinPlayer(w), D = joinPlayer(w);
+  const x = A.p.ped.x, y = A.p.ped.y;
+  side(w, [A, B, C, D], x, y);
+  assert.ok(crews.invite(w, A.p, B.p));
+  assert.ok(!crews.invite(w, C.p, B.p), 'A\'s asking stands');
+  assert.equal(B.p.crewAsk.from, A.p.pid);
+  assert.ok(!crews.invite(w, A.p, B.p), 'not asked again straight away');
+  assert.ok(crews.accept(w, B.p));
+  assert.equal(crews.joinPrompt(w, B.p), null, 'in a crew: nothing to join');
+  // a swing at a crewmate passes them by (and lands on whoever's beyond)
+  run(w, 4);
+  teleport(w, A.p.ped, x, y); teleport(w, B.p.ped, x + 14, y); teleport(w, C.p.ped, x + 900, y); teleport(w, D.p.ped, x + 900, y + 60);
+  for (const q of [A, B]) { q.p.ped.protectUntil = 0; q.p.ped.nextAttack = 0; }
+  A.p.ped.weapon = 'fists';
+  combat.tryAttack(w, A.p.ped, 0);
+  assert.ok(!(B.p.ped.flinchUntil > w.time), 'no punch on a crewmate');
+  // a crewmate at the wheel shoves you aside; an outsider's car hits you
+  const road = straightRoad(w.map, 900);
+  const hit = (driver) => {
+    const v = w.spawnVehicle('sedan', road.x + 300, road.y, 0, { npcOwned: false });
+    const d = driver.p.ped;
+    d.vehId = v.id; d.seat = 0; v.seats[0] = d.id; d.hidden = true;
+    teleport(w, B.p.ped, v.x + v.def.L / 2 + 4, road.y);
+    B.p.ped.hp = 100; B.p.ped.downUntil = 0; B.p.ped.hitImmuneUntil = 0; B.p.ped.protectUntil = 0;
+    v.vx = 320;
+    run(w, 0.1);
+    const r = { hp: B.p.ped.hp, down: B.p.ped.downUntil > w.time || !!B.p.ped.hoodOf || B.p.ped.dead };
+    d.vehId = 0; v.seats[0] = 0; d.hidden = false; w.remove(v);
+    if (B.p.ped.hoodOf) B.p.ped.hoodOf = 0;
+    return r;
+  };
+  const mate = hit(A);
+  assert.ok(mate.hp === 100 && !mate.down, `a crewmate's car: unhurt (${mate.hp}, ${mate.down})`);
+  const out = hit(C);
+  assert.ok(out.hp < 100 || out.down, `an outsider's car: hit (${out.hp}, ${out.down})`);
 });
 
 test('up to four; the Crew app: who\'s in it, taking someone off, leaving, a crew of one is none', () => {

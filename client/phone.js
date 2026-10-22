@@ -197,7 +197,7 @@ export function createPhone(ctx) {
       ctx.toast(`Waypoint: ${q.n}`, 'info');
       ctx.close();
     };
-    for (const b of el.querySelectorAll('[data-kick]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'crewkick', k: Number(b.dataset.kick) }); };
+    for (const b of el.querySelectorAll('[data-kick]')) b.onclick = () => { b.disabled = true; const q = crew && crew.crew && crew.crew.members[Number(b.dataset.kick)]; ctx.send({ t: 'phone', a: 'crewkick', k: Number(b.dataset.kick), n: q ? q.n : '' }); };
     for (const b of el.querySelectorAll('[data-act="crewleave"]')) b.onclick = () => { if (b.dataset.sure) ctx.send({ t: 'phone', a: 'crewleave' }); else { b.dataset.sure = '1'; b.textContent = 'Press again to leave the crew'; } };
     for (const b of el.querySelectorAll('[data-act="clearwp"]')) b.onclick = () => { ctx.setWaypoint(null); render(); };
   }

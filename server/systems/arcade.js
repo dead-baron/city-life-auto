@@ -114,7 +114,7 @@ function ticketGame(world, p, A, msg) {
     text = `NEON NIGHTS: ${pts.toLocaleString('en-US')}${best ? ' - your best!' : ''}`;
   } else {
     const Hk = ARCADE.hockey, won = !!msg.win && n === Hk.to && el >= Hk.minS;
-    if (n < 0 || n > Hk.to || (msg.win && !won) || el < n * 1.5) return;   // (a goal takes a moment at least)
+    if (n < 0 || (!won && n >= Hk.to) || (msg.win && !won) || el < n * 1.5) return;   // (a goal takes a moment at least; seven goals is a win, not a loss)
     tickets = won ? Hk.win : n * Hk.perGoal;
     if (won) prof.hockeyWins = (prof.hockeyWins || 0) + 1;
     text = won ? `Air hockey: you beat the machine ${n}-${Math.max(0, Math.min(Hk.to - 1, Math.floor(Number(msg.them) || 0)))}!` : `Air hockey: ${n} goal${n === 1 ? '' : 's'} against the machine's ${Hk.to}`;

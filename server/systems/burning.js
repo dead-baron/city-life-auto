@@ -26,6 +26,7 @@ import * as campfires from './campfires.js';
 import * as explosions from './explosions.js';
 import * as npc from './npc.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
+import * as crews from './crews.js';
 
 export const burning = (ped) => (ped.burnT || 0) > 0;
 const span = (world, [a, b]) => a + (b - a) * world.rand();
@@ -35,6 +36,7 @@ const span = (world, [a, b]) => a + (b - a) * world.rand();
 export function ignite(world, ped, by = null, secs = BURN.secs) {
   if (!ped || ped.kind !== K.PED || ped.dead || ped.wild || ped.pet || ped.hidden || ped.interior || ped.vehId || ped.onTrain || ped.cellSafe) return false;
   if (isSwimming(world.map, ped) || world.time < (ped.protectUntil || 0)) return false;   // (spawn and step-out protection: no fire either)
+  if (by && by !== ped && ped.player && by.player && crews.mates(ped.player, by.player)) return false;   // (a crewmate's fire: no friendly fire - crews.js)
   const was = burning(ped);
   ped.burnT = Math.max(ped.burnT || 0, secs);
   if (by && by !== ped) ped.burnBy = by.id;

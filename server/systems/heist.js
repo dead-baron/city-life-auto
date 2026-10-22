@@ -127,7 +127,7 @@ function open(world, V) {
   if (ped && !ped.dead && !p.custody && Math.hypot(ped.x - V.x, ped.y - V.y) < 400) {
     p.profile.criminalExp = (p.profile.criminalExp || 0) + HEIST.xp;
     // the drawers' cash: split with the crewmates there (crews.js), into each one's bag as hot money
-    const there = [p, ...crews.matesOnline(world, p).filter((q) => q.ped && !q.ped.dead && !q.custody && Math.hypot(q.ped.x - V.x, q.ped.y - V.y) < CREW.share)];
+    const there = [p, ...crews.matesOnline(world, p).filter((q) => q.ped && !q.ped.dead && !q.custody && !q.ped.sub && !q.ped.ug && Math.hypot(q.ped.x - V.x, q.ped.y - V.y) < CREW.share)];   // (up here, not in the subway or the sewers under it)
     const cash = Math.round(HEIST.cash * (ROB_TILL_TIER[V.tier] ?? 1)), each = Math.floor(cash / there.length);
     for (const q of there) {
       hot.add(world, q, each, V.x, V.y);

@@ -171,6 +171,10 @@ test('skee-ball and air hockey: the lane\'s rings, the table\'s puck, and their 
   run(w, 10);
   arcade.onScore(w, p, { id: c.id, score: 3, them: 7, win: 0, secs: 60 });
   assert.equal(prof.tickets, t0 + ARCADE.hockey.win + 3 * ARCADE.hockey.perGoal, 'a loss: the goals');
+  arcade.play(w, p, false, null, 'hockey'); c = lastOf(conn, 'arcade');
+  run(w, ARCADE.hockey.minS + 1);
+  arcade.onScore(w, p, { id: c.id, score: ARCADE.hockey.to, them: 3, win: 0, secs: 60 });
+  assert.equal(prof.tickets, t0 + ARCADE.hockey.win + 3 * ARCADE.hockey.perGoal, `${ARCADE.hockey.to} goals is a win, not a loss: no such game`);
 });
 
 test('pinball: the plunger, the bumpers and the flippers keep it up, a drain; the tickets', async () => {
