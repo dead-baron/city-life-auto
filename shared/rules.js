@@ -827,6 +827,11 @@ export const WORKOUT = { minGap: 0.75, maxGap: 3.5, set: 10, drain: 8 };
 // your home - t tickets)
 export const ARCADE = {
   price: 2, perTicket: 100, maxTickets: 40, maxRate: 60, pool: 1,   // (pool: a frame at the Rusty Spur's table, $)
+  // skee-ball (client/skeeball.js): skee.balls rolled for skee.price, a ticket for every skee.perTicket points (a ball's
+  // best is 100); air hockey against the machine (client/airhockey.js): first to hockey.to, hockey.win tickets for a win,
+  // hockey.perGoal for each goal in a loss; the least time a game can take (server's clock, s)
+  skee: { price: 1, balls: 9, perTicket: 25, minS: 12 },
+  hockey: { price: 1, to: 7, win: 20, perGoal: 2, minS: 20 },
   prizes: [{ item: 'glowstick', t: 25 }, { item: 'energy', t: 50 }, { item: 'flare', t: 60 }, { decor: 'art', t: 150 }, { item: 'headlamp', t: 200 }, { decor: 'turntable', t: 400 }, { item: 'skateboard', t: 500 }],
 };
 export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };

@@ -36,6 +36,8 @@ export function menu(world, p, poi) {
     return { t: 'menu', poi: poi.id, title: `${poi.label} - the prize counter`, sub: `You have ${t} ticket${t === 1 ? '' : 's'}.`, opts, cash: prof.cash, bank: prof.bank };
   }
   opts.push({ id: 'ar:play', label: 'Play STARFALL', price: ARCADE.price, note: `tickets for every ${ARCADE.perTicket} points`, shut: true });
+  opts.push({ id: 'ar:skee', label: 'Skee-ball', price: ARCADE.skee.price, note: `${ARCADE.skee.balls} balls - tickets for every ${ARCADE.skee.perTicket} points`, shut: true });
+  opts.push({ id: 'ar:hockey', label: 'Air hockey against the machine', price: ARCADE.hockey.price, note: `first to ${ARCADE.hockey.to} - ${ARCADE.hockey.win} tickets for a win`, shut: true });
   opts.push({ id: 'ar:prizes', label: `The prize counter (${t} ticket${t === 1 ? '' : 's'})` });
   opts.push({ id: 'close', label: 'Leave' });
   return { t: 'menu', poi: poi.id, title: poi.label, sub: `The cabinets blinking in the dark, the bleeps and the high scores. Your best: ${prof.arcadeBest || 0}.`, opts, cash: prof.cash, bank: prof.bank };
@@ -51,6 +53,11 @@ export function execute(world, p, poi, opt, pay) {
     case 'play': {
       if (!pay(p, ARCADE.price)) return 'Not enough money.';
       play(world, p, false, poi.id);
+      return null;
+    }
+    case 'skee': case 'hockey': {   // (skee-ball and air hockey: client/skeeball.js, client/airhockey.js)
+      if (!pay(p, ARCADE[parts[1]].price)) return 'Not enough money.';
+      play(world, p, false, poi.id, parts[1]);
       return null;
     }
     case 'prize': {
@@ -75,13 +82,39 @@ export function execute(world, p, poi, opt, pay) {
 export function play(world, p, free, poi = null, game = 'starfall') {
   if (!p.conn) return;
   p.arcade = { id: randomBytes(6).toString('hex'), at: world.time, free: !!free, poi, game };
-  p.conn.sendJSON({ t: 'arcade', game, id: p.arcade.id, free: !!free, best: (game === 'pool' ? p.profile.poolBest : p.profile.arcadeBest) || 0 });
+  const best = { pool: p.profile.poolBest, skee: p.profile.skeeBest, hockey: p.profile.hockeyWins }[game] ?? p.profile.arcadeBest;
+  p.conn.sendJSON({ t: 'arcade', game, id: p.arcade.id, free: !!free, best: best || 0 });
 }
 // the Rusty Spur's pool table (activities.js poolTable): a frame for ARCADE.pool dollars
 export function poolInteraction(world, p) {
   const ped = p.ped, T = world.map.roadhouse ? poolTable(world.map) : null;
   if (!T || !ped || ped.dead || ped.vehId || Math.hypot(ped.x - T.cx, ped.y - T.cy) > 70) return null;
   return { label: `Rack 'em up at the pool table ($${ARCADE.pool})`, run: () => { if (pay(p, ARCADE.pool)) play(world, p, true, null, 'pool'); else world.notify(p, 'Not enough money.', 'warn'); } };
+}
+
+// skee-ball's points or air hockey's goals: tickets, if it could be true (no more than the game allows, and no quicker)
+function ticketGame(world, p, A, msg) {
+  const prof = p.profile, el = world.time - A.at, n = Math.floor(Number(msg.score) || 0);
+  let tickets = 0, text;
+  if (A.game === 'skee') {
+    const S = ARCADE.skee;
+    if (n < 0 || n > S.balls * 100 || n % 10 || el < S.minS) return;
+    tickets = Math.min(ARCADE.maxTickets, Math.floor(n / S.perTicket));
+    const best = n > (prof.skeeBest || 0);
+    if (best) prof.skeeBest = n;
+    text = `Skee-ball: ${n}${best ? ' - your best!' : ''}`;
+  } else {
+    const Hk = ARCADE.hockey, won = !!msg.win && n === Hk.to && el >= Hk.minS;
+    if (n < 0 || n > Hk.to || (msg.win && !won) || el < n * 1.5) return;   // (a goal takes a moment at least)
+    tickets = won ? Hk.win : n * Hk.perGoal;
+    if (won) prof.hockeyWins = (prof.hockeyWins || 0) + 1;
+    text = won ? `Air hockey: you beat the machine ${n}-${Math.max(0, Math.min(Hk.to - 1, Math.floor(Number(msg.them) || 0)))}!` : `Air hockey: ${n} goal${n === 1 ? '' : 's'} against the machine's ${Hk.to}`;
+  }
+  if (A.free) { world.notify(p, text, 'info'); store.touch(); return; }
+  prof.tickets = (prof.tickets || 0) + tickets;
+  world.notify(p, `${text} - ${tickets} ticket${tickets === 1 ? '' : 's'} (${prof.tickets} in all).`, tickets ? 'good' : 'info');
+  p.meDirty = true;
+  store.touch();
 }
 
 // the score back from the page (session.js): the tickets it's worth, if it's this credit's and could be true
@@ -98,6 +131,7 @@ export function onScore(world, p, msg) {
     store.touch();
     return;
   }
+  if (A.game === 'skee' || A.game === 'hockey') return ticketGame(world, p, A, msg);
   const secs = Math.max(0, Math.min(Number(msg.secs) || 0, world.time - A.at + 2));
   const score = Math.max(0, Math.min(Math.floor(Number(msg.score) || 0), Math.floor(secs * ARCADE.maxRate)));
   const prof = p.profile, best = score > (prof.arcadeBest || 0);

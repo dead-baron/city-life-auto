@@ -14598,3 +14598,23 @@ Tests: test/crews.test.js - asked in and saying yes, each other on the radar (an
 name tags' ids, no friendly fire (an outsider still hurts), the quick lines to the crew only and not too fast; four at
 most, nobody in a crew asked into another, the app's list, taking someone off (only whoever started it), leaving, a
 crew of one is none; a heist's drawers split evenly with a crewmate there.
+
+## 2026-10-22 · Skee-ball and air hockey at the arcades
+
+The owner, 10-08 ("Arcade: walk in and play our own 8-bit games, air hockey, skee-ball, pinball; tickets for
+prizes"). The arcades' counters had STARFALL only. Now two more games for $1 each (shared/rules.js ARCADE.skee,
+ARCADE.hockey; server/systems/arcade.js), each on the arcade's screen and loaded the first time anyone plays:
+- **skee-ball** (client/skeeball.js): nine balls rolled up the wooden lane, off the hump and into the target - 10 round
+  the outside, 20, 30, 40, the 50 cup in the middle, a 100 pocket in each top corner. Aim with left / right and hold the
+  button for the power (it swells and fades - let go at the right moment), or drag up from the ball and let go. A
+  ticket for every 25 points; your best kept.
+- **air hockey** (client/airhockey.js): against the machine, first to seven. Your mallet follows the mouse or your
+  finger round your half (or the keys, the stick, the d-pad); the puck glides, comes off the rails and the mallets with
+  their speed in it, and drops into the goals at the ends. The machine goes after a puck on its half and guards its goal
+  otherwise. Twenty tickets for a win; two for each goal you got in a loss; your wins counted.
+- the server takes a game's result only for its credit, once, if it could be true: no more points than the balls
+  allow (in tens), no win without seven goals, and neither quicker than it could be played (its own clock).
+
+Tests: test/arcade.test.js - the lane's cup, rings, pockets and over-the-top, every ring reachable by the power and a
+pocket by the aim; a puck struck into the machine's goal, the machine going after a puck; the tickets, and the scores
+the server won't take (too quick, impossible, a win in two seconds).

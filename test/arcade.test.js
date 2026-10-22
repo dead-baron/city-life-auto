@@ -113,3 +113,62 @@ test('a frame of pool: the rack, the break spreading them, a pocket, everything 
   arcade.onScore(w, p, { id: lastOf(conn, 'arcade').id, score: 17, secs: 90 });
   assert.equal(prof.poolBest, 17);
 });
+
+test('skee-ball and air hockey: the lane\'s rings, the table\'s puck, and their tickets', async () => {
+  const S = (await import('../client/skeeball.js'))._test;
+  assert.equal(S.pointsAt(S.RING.x, S.RING.y), 50, 'the cup');
+  assert.equal(S.pointsAt(S.POCKETS[0][0], S.POCKETS[0][1]), 100, 'a corner pocket');
+  assert.equal(S.pointsAt(S.RING.x, S.RING.y + S.RING.r[3] - 2), 20);
+  assert.equal(S.pointsAt(S.RING.x, -10), 10, 'over the top: back into the 10');
+  // straight up the middle: from short of the rings, through the cup, to over the top as the power rises
+  const seen = new Set();
+  for (let p = 0; p <= 1.0001; p += 0.05) { const L = S.landing(0, p); seen.add(S.pointsAt(L.x, L.y)); }
+  assert.ok(seen.has(50) && seen.has(40) && seen.has(10), [...seen].join(','));
+  // a pocket can be reached: the aim and power for it
+  let pocket = false;
+  for (let a = -0.42; a <= 0.42 && !pocket; a += 0.01) for (let p = 0; p <= 1 && !pocket; p += 0.01) { const L = S.landing(a, p); if (S.pointsAt(L.x, L.y) === 100) pocket = true; }
+  assert.ok(pocket, 'a 100 pocket reachable');
+  // air hockey: a puck struck toward the machine's goal goes in; the machine's mallet goes after a puck on its half
+  const Hk = (await import('../client/airhockey.js'))._test;
+  const Tb = Hk.newTable();
+  Tb.puck.x = 100; Tb.puck.y = Hk.CY; Tb.me.x = 86; Tb.me.y = Hk.CY; Tb.me.vx = 500; Tb.me.vy = 0;
+  assert.ok(Hk.strike(Tb.puck, Tb.me) && Tb.puck.vx > 200, 'struck');
+  let r = null;
+  for (let k = 0; k < 600 && r !== 'us'; k++) r = Hk.glide(Tb.puck, 1 / 120);
+  assert.equal(r, 'us', 'in the machine\'s goal');
+  const T2 = Hk.newTable(); T2.puck.x = 200; T2.puck.y = Hk.T.y0 + 20;
+  const y0 = T2.cpu.y;
+  for (let k = 0; k < 60; k++) Hk.cpuMove(T2, 1 / 120);
+  assert.ok(T2.cpu.y < y0, 'the machine goes for it');
+  // the server: points into tickets, if they could be true
+  const w = makeWorld();
+  const { p, conn, prof } = joinPlayer(w, { cash: 50 });
+  arcade.play(w, p, false, null, 'skee');
+  let c = lastOf(conn, 'arcade');
+  assert.equal(c.game, 'skee');
+  arcade.onScore(w, p, { id: c.id, score: 450, secs: 3 });
+  assert.ok(!prof.tickets, 'too quick');
+  arcade.play(w, p, false, null, 'skee'); c = lastOf(conn, 'arcade');
+  run(w, ARCADE.skee.minS + 1);
+  arcade.onScore(w, p, { id: c.id, score: 905, secs: 30 });
+  assert.ok(!prof.tickets, 'no such score');
+  arcade.play(w, p, false, null, 'skee'); c = lastOf(conn, 'arcade');
+  run(w, ARCADE.skee.minS + 1);
+  arcade.onScore(w, p, { id: c.id, score: 450, secs: 30 });
+  assert.equal(prof.tickets, Math.floor(450 / ARCADE.skee.perTicket));
+  assert.equal(prof.skeeBest, 450);
+  const t0 = prof.tickets;
+  arcade.play(w, p, false, null, 'hockey'); c = lastOf(conn, 'arcade');
+  run(w, 2);
+  arcade.onScore(w, p, { id: c.id, score: 7, win: 1, secs: 60 });
+  assert.equal(prof.tickets, t0, 'a win in two seconds: no');
+  arcade.play(w, p, false, null, 'hockey'); c = lastOf(conn, 'arcade');
+  run(w, ARCADE.hockey.minS + 1);
+  arcade.onScore(w, p, { id: c.id, score: 7, them: 4, win: 1, secs: 60 });
+  assert.equal(prof.tickets, t0 + ARCADE.hockey.win, 'a win');
+  assert.equal(prof.hockeyWins, 1);
+  arcade.play(w, p, false, null, 'hockey'); c = lastOf(conn, 'arcade');
+  run(w, 10);
+  arcade.onScore(w, p, { id: c.id, score: 3, them: 7, win: 0, secs: 60 });
+  assert.equal(prof.tickets, t0 + ARCADE.hockey.win + 3 * ARCADE.hockey.perGoal, 'a loss: the goals');
+});
