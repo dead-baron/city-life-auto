@@ -13687,3 +13687,17 @@ town's.
 - **the rain** (BED_MAX.rain 0.22 to 0.15): about 3 dB down. It adds less to the wind (0.05, was 0.1).
 
 Tests: test/sound.test.js - mostly lulls, gusts now and then, from near still to a strong gust; the rain's level.
+
+## 2026-10-22 · The casino town's syndicate keeps its head down
+
+The owner, 10-16: "Mesa Flats (casino town) gang: isolate it, or make them Vegas-mafia types who aren't touchy".
+Every few minutes a gang-police shootout breaks out by a gang HQ near a player (`server/systems/gangwar.js`), and
+Lucky Mesa's Counting Room, the syndicate's back rooms behind the Copper Room Supper Club, counted as one. So
+shootouts broke out in the casino town's streets.
+
+- **where shootouts start** (turfSpots): by a gang HQ on the turf (The Yards, Southside, Port Westport) or out in the
+  wilds (the Dusty Hollow hideout). Not by one in town off the turf. The Counting Room stays, and the members' menu and
+  joining work as before; the syndicate there just doesn't start shooting it out with the police.
+
+Tests: test/gangquiet.test.js - the turf's and the wilds' HQs start shootouts, a back room in a smart part of town
+doesn't.

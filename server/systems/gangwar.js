@@ -9,6 +9,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S } from '../../shared/rules.js';
 import { IN } from '../../shared/input.js';
 import { spawnNpc, despawnNpc, seek, startFight } from './npc.js';
+import { wildStyle } from './wildlife.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
 import * as vehicles from './vehicles.js';
@@ -103,10 +104,12 @@ function copWar(world, c, dt, t) {
 }
 
 // ---- random shootouts ---------------------------------------------------------------------
-function turfSpots(world) {
-  // gang HQs, plus the middle of each turf district
-  const out = world.map.pois.filter((p) => p.kind === 'gang').map((p) => ({ x: p.x, y: p.y }));
-  return out;
+export function turfSpots(world) {
+  // gang HQs on the turf or out in the wilds (a ghost town's hideout) - not the casino town's Counting Room, where the
+  // syndicate keeps its head down and doesn't start shooting it out with the police (the owner, 10-16: "Mesa Flats
+  // (casino town) gang: isolate it, or make them Vegas-mafia types who aren't touchy")
+  const m = world.map;
+  return m.pois.filter((p) => p && p.kind === 'gang' && (isTurf(m, p.x, p.y) || wildStyle(m, p.x, p.y))).map((p) => ({ x: p.x, y: p.y }));
 }
 
 export function startShootout(world, nearPlayer = null) {
