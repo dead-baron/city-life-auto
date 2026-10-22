@@ -3816,7 +3816,7 @@ function drawClubShutter(gt, k) {
 function drawTrains(cars, riders, myTrain, sub, now) {
   if (!cars.length && !riders.length) return;
   const byId = new Map(cars.map((c) => [c.id, c])), TC = S.carsMod;   // (the cars themselves: render/traincars.js, loaded with the first train)
-  if (!TC && cars.length && !S.carsP) S.carsP = import('./render/traincars.js').then((m) => { S.carsMod = m; }).catch((e) => { S.carsP = null; console.warn('[traincars]', e); });
+  if (!TC && cars.length && !S.carsP) S.carsP = import('./render/traincars.js').then((m) => { S.carsMod = m; }).catch((e) => { console.warn('[traincars]', e); setTimeout(() => { S.carsP = null; }, 30e3); });   /* (failed: tried again in a while, not every frame) */
   if (TC) for (const c of cars) { const ahead = c.parent ? byId.get(c.parent) : null; if (ahead) TC.drawCoupling(g, ahead, c); }
   if (TC) for (const c of cars) TC.drawTrainCar(g, c, c.d.tr === myTrain, now);
   for (const p of riders) { g.save(); g.translate(p.rx, p.ry); g.scale(0.8, 0.8); g.translate(-p.rx, -p.ry); drawPed(p, now); g.restore(); } // a touch smaller, so two fit abreast
@@ -3873,14 +3873,14 @@ function drawCrossings(view, now) {
 function drawSkyShadows(F, v2) {
   if (!F.peds.some((e) => e.sky)) return;
   if (S.skyMod) S.skyMod.drawSkyShadows(g, F, v2);
-  else if (!S.skyP) S.skyP = import('./render/skyfall.js').then((m) => { S.skyMod = m; }).catch((e) => { S.skyP = null; console.warn('[skyfall]', e); });
+  else if (!S.skyP) S.skyP = import('./render/skyfall.js').then((m) => { S.skyMod = m; }).catch((e) => { console.warn('[skyfall]', e); setTimeout(() => { S.skyP = null; }, 30e3); });   /* (failed: tried again in a while, not every frame) */
 }
 // the front cars' signs near you: where each train stops next (render/trains.js drawTrainSign) - not your own train's
 // (the bar at the top says), nor the subway's under the street or the El's up overhead
 function drawTrainSigns(F) {
   if (!S.playing || F.sub || F.insideB || !F.sp || !F.cars.length) return;
   const M = S.signMod;
-  if (!M) { if (!S.signP) S.signP = import('./render/trainsign.js').then((m) => { S.signMod = m; }).catch((e) => { S.signP = null; console.warn('[trainsign]', e); }); return; }
+  if (!M) { if (!S.signP) S.signP = import('./render/trainsign.js').then((m) => { S.signMod = m; }).catch((e) => { console.warn('[trainsign]', e); setTimeout(() => { S.signP = null; }, 30e3); });   /* (failed: tried again in a while, not every frame) */ return; }
   const { near, far } = M.TRAIN_SIGN;
   for (const e of F.cars) {
     if (e.d.n !== 0 || (e.flags & 33) || e.d.tr === F.myTrain) continue;

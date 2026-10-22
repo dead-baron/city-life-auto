@@ -540,7 +540,7 @@ function sense(world, a, S, ph) {
   const unseen = watcher(w, world.time);   // (dev.js huntScene: the one watching a hunt set up for them goes unnoticed)
   for (const p of world.players.values()) {
     const q = p.ped;
-    if (!q || q.dead || q.hidden || q.sub || q.onTrain || q.id === unseen) continue;
+    if (!q || q.dead || q.hidden || q.sub || q.onTrain || q.sky || q.id === unseen) continue;   // (sky: falling from an aircraft)
     if (q.vehId) { const v = world.get(q.vehId); if (v && v.lz < 0.3 && v.def.kind !== 'boat') consider(v, v.x, v.y, true); continue; }
     consider(q, q.x, q.y, false);
   }

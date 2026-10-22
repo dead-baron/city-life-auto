@@ -123,3 +123,30 @@ test('no parachute, but a car under you: you bounce off its roof - dented, and y
   assert.ok(car.hp < hp0, 'the roof took it');
   assert.ok(Math.hypot(p.ped.x - car.x, p.ped.y - car.y) > car.def.W / 2, 'thrown off beside it');
 });
+
+test('up there: shot where you\'re drawn from any side, not a swimmer over the water, out of an officer\'s reach', async () => {
+  const { FLY } = await import('../shared/flight.js');
+  const { isSwimming } = await import('../shared/mapcore.js');
+  const police = await import('../server/systems/police.js');
+  const { spawnNpc } = await import('../server/systems/npc.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w), { p: s } = joinPlayer(w);
+  const ground = spotOf(w.map, (t) => t === T.GRASS || t === T.PLAZA || t === T.SIDEWALK || t === T.ROAD || t === T.LOT);
+  teleport(w, p.ped, ground.x, ground.y);
+  skydive.start(w, p.ped, { alt: 600, vx: 0, vy: 0 });
+  // a shooter off to the side at the height they're drawn at, firing straight across at them
+  const dy = p.ped.sky.z * FLY.LIFT;
+  teleport(w, s.ped, ground.x - 300, ground.y - dy);
+  s.profile.weapons.pistol = 30; s.ped.weapon = 'pistol'; s.ped.mag.pistol = 12;
+  const hp0 = p.ped.hp;
+  let hit = false;
+  for (let i = 0; i < 6 && !hit; i++) { s.ped.nextAttack = 0; (await import('../server/systems/combat.js')).tryAttack(w, s.ped, 0); hit = p.ped.hp < hp0; }
+  assert.ok(hit, 'hit, shot from the side where they\'re drawn');
+  // over the water: not swimming
+  const sea = spotOf(w.map, (t) => !!WATER_T[t]);
+  const q = { x: sea.x, y: sea.y, lz: 0, sky: { z: 400 } };
+  assert.equal(isSwimming(w.map, q), false, 'up over the water');
+  // an officer below can't tackle someone in the air
+  const cop = spawnNpc(w, 'cop', p.ped.x + 10, p.ped.y, 'cop');
+  assert.ok(!police._tackleHit(w, cop, p.ped), 'no tackle from the ground');
+});

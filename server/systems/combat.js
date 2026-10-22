@@ -44,6 +44,7 @@ export function tryAttack(world, ped, aim) {
   if (!ped.vehId && isSwimming(world.map, ped)) return false; // can't fight while swimming
   const w = WEAPONS[ped.weapon] || WEAPONS.fists;
   if (w.type === 'tool') return false;
+  if (w.type === 'grenade' && ped.sub) return false;   // (not down in the subway: grenades.js)
   ped.a = ped.vehId ? ped.a : aim;
   ped.quietWeapon = !!(w.silenced || w.quiet); // knives and suppressors: kills are only noticed by people who actually see them
   if (w.type === 'melee') return melee(world, ped, w, aim);
@@ -406,9 +407,8 @@ function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true, wal
     if (e === shooter || !!e.sub !== sub || !sameLevel(e.lz, shooter.lz)) continue;
     let t = -1;
     if (e.kind === K.PED) {
-      if (e.dead || e.vehId || e.rollT > 0) continue;
-      // (falling from an aircraft: hit where art v2 draws them, up the screen by their height, as an aircraft is - skydive.js)
-      t = segCircle(x1, y1, x2, y2, e.x, e.sky ? e.y - e.sky.z * FLY.LIFT : e.y, e.r + 2);
+      if (e.dead || e.vehId || e.rollT > 0 || e.sky) continue;   // (falling from an aircraft: below)
+      t = segCircle(x1, y1, x2, y2, e.x, e.y, e.r + 2);
     } else if (e.kind === K.VEH && includeVehicles) {
       if (shooter.vehId === e.id || (e.alt || 0) > FLY.HIGH) continue;   // (an aircraft up in the air: below)
       if (shooter.npc && (shooter.npc.coverCar === e.id || shooter.npc.unit === e.id)) continue; // cops fire over their own cruiser
@@ -418,6 +418,12 @@ function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true, wal
   }
   // aircraft up in the air: hit where art v2 draws them (up the screen by their height - so looked for that much further
   // down the screen than the shot: a short step of a rocket's flight never came near enough to find one), or under them
+  // (and anyone falling from an aircraft - a few at most, skydive.js's list - where they're drawn the same way)
+  if (world.skyPeds && world.skyPeds.size) for (const e of world.skyPeds) {
+    if (!e.sky || e.dead || e.removed || e === shooter || !!e.sub !== sub) continue;
+    const t = segCircle(x1, y1, x2, y2, e.x, e.y - e.sky.z * FLY.LIFT, e.r + 2);
+    if (t >= 0 && t < bestT) { bestT = t; best = e; }
+  }
   if (includeVehicles) for (const e of world.query(mx, my + AIR_REACH / 2, r + AIR_REACH / 2, K.VEH)) {
     if ((e.alt || 0) <= FLY.HIGH || e === shooter || shooter.vehId === e.id || !!e.sub !== sub) continue;
     let t = segObb(x1, y1, x2, y2, e.x, e.y - e.alt * FLY.LIFT, e.a, e.def.L / 2, e.def.W / 2);   // (H66)

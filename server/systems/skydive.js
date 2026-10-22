@@ -32,6 +32,7 @@ export const hasChute = (p) => !!(p && p.profile && (p.profile.inventory.parachu
 export function start(world, ped, v) {
   const p = ped.player;
   ped.sky = { z: Math.max(1, v.alt || 0), vz: 0, open: 0, mx: 0, my: 0, from: v.alt || 0 };
+  (world.skyPeds ||= new Set()).add(ped);   // (who's up there: combat.js traceTarget looks for them where they're drawn)
   ped.vx = (v.vx || 0) * SKYDIVE.carry; ped.vy = (v.vy || 0) * SKYDIVE.carry;
   ped.rollT = 0; ped.tumbleUntil = 0; ped.airUntil = 0;
   if (p) {
@@ -77,10 +78,11 @@ export function interaction(world, p) {
 const fill = (world, s) => (s.open ? Math.min(1, (world.time - s.open) / SKYDIVE.openS) : 0);
 
 export function update(world, dt) {
+  if (world.skyPeds) for (const ped of world.skyPeds) if (!ped.sky || ped.removed) world.skyPeds.delete(ped);
   for (const p of world.players.values()) {
     const ped = p.ped;
     if (!ped || !ped.sky) continue;
-    if (ped.dead || ped.vehId || ped.hidden) { ped.sky = null; p.meDirty = true; continue; }
+    if (ped.dead || ped.vehId || ped.hidden || ped.onTrain || ped.cuffed || ped.ride) { ped.sky = null; p.meDirty = true; continue; }   // (put somewhere else: a train, the cuffs, a ride - the dev menu's hops)
     step(world, ped, dt);
   }
 }

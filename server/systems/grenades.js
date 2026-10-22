@@ -17,6 +17,7 @@ const live = (world) => (world.grenades ||= new Set());
 
 // out of ped's hand the way it aims
 export function toss(world, ped, aim) {
+  if (ped.sub) return null;   // (down in the subway: not here - the ball is the street's)
   const G = GRENADE, c = Math.cos(aim), s = Math.sin(aim);
   const g = world.add({
     id: world.newId(), kind: K.BALL, x: ped.x + c * 14, y: ped.y + s * 14, a: aim, z: 18, lz: ped.lz || 0,

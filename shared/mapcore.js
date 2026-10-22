@@ -304,7 +304,7 @@ Object.defineProperty(CityMap.prototype, 'frame', {
 // Swimming: in open water, or under a bridge deck having swum in. Up on the highway deck you
 // are never swimming, whatever is below.
 export function isSwimming(map, ped) {
-  if ((ped.lz || 0) > 0.35) return false;
+  if ((ped.lz || 0) > 0.35 || ped.sky) return false;   // (sky: falling from an aircraft, up over it - server skydive.js)
   const t = map.tileAtPx(ped.x, ped.y);
   return WATER_T[t] === 1 || (t === T.BRIDGE && !!ped.under);
 }
