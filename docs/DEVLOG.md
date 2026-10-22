@@ -14807,7 +14807,7 @@ the sea:
   break; a carve (a quick turn back) and an air off the lip (the action button, a second's riding between one and the
   next - and land in the white water and it has you all the same) are worth more. Stay in the white water
   behind the break and it has you - a tumble, the ride over. Ride it in, or off the end of the beach (where the beach
-  bends away the ride ends there, on the water), and the ride's counted: its points over you, your best ride kept (the HUD: RIDING and the points, BEST RIDE under the money).
+  bends away the ride ends there, on the water), and the ride's counted: its points over you, your best ride kept (the HUD: RIDING and the points, BEST RIDE under them).
 - **Getting off.** Paddle up onto the sand, a dock or a quay and the board's back in your bag; lying on it, the vehicle
   button still takes you aboard a boat beside you and the action button still does what's in front of you.
 - **How you look.** Lying on the board paddling, up side-on with the knees deep and the arms out, knees tucked in an air
