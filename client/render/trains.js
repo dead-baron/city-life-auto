@@ -475,7 +475,7 @@ export function tunnelSegments(map) {
   tunnelCache.set(map, c);
   return c;
 }
-export function drawTunnel(g, map, view, now) {
+export function drawTunnel(g, map, view, now, platforms = null) {   // (platforms: the stations' platforms - render/tunnelplat.js, loaded the first time you're down there)
   g.fillStyle = '#050608'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0);
   const cells = tunnelSegments(map);
   const segs = [];
@@ -492,6 +492,7 @@ export function drawTunnel(g, map, view, now) {
     g.stroke();
   };
   pass(96, '#1e2026'); pass(78, '#14151a'); pass(60, '#24262c');
+  if (platforms) platforms(g, map, x0, y0, x1, y1);
   for (const s of segs) {
     if (!s.lamp) continue;
     for (const sd of [-1, 1]) {
