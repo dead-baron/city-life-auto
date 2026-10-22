@@ -532,7 +532,7 @@ test('Cedar Hills Golf Club: three holes with greens, flags, bunkers, a pond and
   for (const g of m.golf.greens) assert.ok(m.props.some((q) => q && q.t === 'golfflag' && Math.hypot(q.x - g.x, q.y - g.y) < g.r), 'a flag on every green');
   assert.ok(m.isWater(s.pond.x, s.pond.y), 'the pond');
   assert.ok(m.props.some((q) => q && q.t === 'clubhouse'), 'the clubhouse');
-  assert.ok(m.props.filter((q) => q && q.t === 'golfcart').length >= 3, 'carts');
+  assert.ok((m.parking || []).filter((q) => q.model === 'golfcart').length >= 3, 'carts: parked along the cart path, to drive (or steal)');
   // no tree on a green or a fairway
   for (const q of m.props) if (q && q.t === 'tree_a' && q.x >= pt.x && q.x < pt.x + pt.w && q.y >= pt.y && q.y < pt.y + pt.h) for (const g of m.golf.greens) assert.ok(Math.hypot(q.x - g.x, q.y - g.y) > g.r, 'trees off the greens');
   assert.ok(m.landmarks.some((l) => l.name === 'Cedar Hills Golf Club'));
