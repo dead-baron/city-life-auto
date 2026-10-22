@@ -228,7 +228,9 @@ export class Ambience {
     // (under the trees the wind is up in the canopy - the leaves' rustle - not a whoosh along the ground: the owner,
     // 2026-10-16, "ocean sounds in the forest" - the wind bed's gusts swelling and falling like waves under the redwoods)
     want.wind = open * roof * (0.04 + 0.2 * k.wild * (1 - k.urban) + 0.05 * rain + 0.15 * Math.max(0, k.water - 0.6)) * this.gust * (1 - 0.65 * k.woods);
-    want.leaves = open * roof * k.woods * LEAVES_LEVEL * this.gust * this.gust;   // (the woods' rustle, in the gusts)
+    // (the woods' rustle: a murmur in the lulls, full in a gust - it went with the gust squared when the wind never
+    // dropped below 0.35; with real lulls, 0.12-0.4, that left the woods all but silent most of the time)
+    want.leaves = open * roof * k.woods * LEAVES_LEVEL * (0.35 + 0.65 * this.gust);
     want.sea = open * roof * Math.pow(k.water, 0.8) * BED_MAX.sea * swell;
     want.surf = open * roof * k.shore * SURF_LEVEL;
     want.rain = sub ? 0 : rain * (inside ? 0.09 : BED_MAX.rain) * (0.85 + 0.15 * this.gust);   // (the server's weather: heard through the roof indoors; it swells a little with the gusts)
