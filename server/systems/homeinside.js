@@ -34,6 +34,7 @@ import * as homes from './homes.js';
 import * as economy from './economy.js';
 import * as mortgage from './mortgage.js';
 import * as mail from './mail.js';
+import * as skills from './skills.js';
 
 export const planFor = (h) => layout(planOf(h), tierOf(h));
 // (H67) a home's decor - its owner's (profile.decor[home id]: shared/homedecor.js) - and its plan with the decor laid over
@@ -700,6 +701,7 @@ function wake(world, p, h) {
   const ped = p.ped, prof = p.profile;
   ped.home.sleep = 0;
   ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = 100;
+  if (!ped.home.guest && !ped.home.tour) skills.gain(world, p, 'sleep');   // (a night in your own bed: constitution - skills.js)
   // the night passes for the whole city when everyone online is asleep at home (alone, it's you)
   const night = world.loopTime >= DAY_PART_S - 30 || world.clock.minutes < HOME_IN.wakeH * 60;
   const everyone = [...world.players.values()].every((q) => q === p || !q.conn || !q.ped || (q.ped.home && q.ped.home.sleep));

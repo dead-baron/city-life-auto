@@ -10,6 +10,7 @@ import * as law from './law.js';
 import * as hotmoney from './hotmoney.js';
 import * as explosions from './explosions.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
+import * as skills from './skills.js';
 
 const GRAV = 620;
 // the crates cleared away when left lying a while: a job's, contraband, explosives (off a traffic truck, task #398)
@@ -155,6 +156,7 @@ export function pickUp(world, ped, c) {
     if (ownerP) world.notify(ownerP, `Someone is stealing your ${['', 'wood box', 'steel barrel', 'iron vault', 'carbon-gold case'][c.tier]}!`, 'bad');
   }
   c.touched = true;
+  if (p) skills.gain(world, p, 'haul');   // (lifting: strength - skills.js)
   c.state = 'carried'; c.parent = ped.id; c.z = 10; c.vx = 0; c.vy = 0; c.vz = 0; c.expires = 0;
   ped.carrying = c.id;
   if (p && c.contraband) c.holder = p.pid;

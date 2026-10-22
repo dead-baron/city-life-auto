@@ -147,7 +147,7 @@ export function send(world) {
         const mods = players.pedMods(world, ped);
         self = { x: ped.x, y: ped.y, a: ped.a, vx: ped.vx, vy: ped.vy, av: 0, stamina: ped.stamina, rollT: ped.rollT, rdx: ped.rdx, rdy: ped.rdy, speedMul: mods.speedMul, lz: ped.lz || 0 };
         if (ped.board) Object.assign(self, boardOut(ped));   // (on a skateboard: its kick, grind, manual and air in the slots a rider leaves free, and its own - shared/physics.js)
-        sflags = (mods.canMove ? 1 : 0) | (mods.canSprint ? 2 : 0) | (mods.regenMul > 1 ? 4 : 0) | (mods.staminaMax > 100 ? 8 : 0) | (mods.tumble ? 16 : 0) | (mods.air ? 32 : 0) | (mods.board ? 64 : 0) | (mods.wet ? 128 : 0);   // (64: on a skateboard, 128: in the rain on one - skate.js)
+        sflags = (mods.canMove ? 1 : 0) | (mods.canSprint ? 2 : 0) | (mods.regenMul > 1 ? 4 : 0) | (mods.energy ? 8 : 0) | (mods.tumble ? 16 : 0) | (mods.air ? 32 : 0) | (mods.board ? 64 : 0) | (mods.wet ? 128 : 0);   // (64: on a skateboard, 128: in the rain on one - skate.js)
       }
     } else if (ped) { ctrlId = ped.id; self = { x: ped.x, y: ped.y, a: ped.a, vx: 0, vy: 0, lz: ped.lz || 0 }; }
     if (self && ped && ped.fishing && ped.fishing.F && !ped.board) self.k = fishOut(ped.fishing.F);   // (a line out: the cast's charge, the bite, the fight - shared/fish.js, predicted by the page)

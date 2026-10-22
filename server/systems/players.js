@@ -85,6 +85,7 @@ import * as paramedic from './paramedic.js';
 import * as taxijob from './taxijob.js';
 import * as busjob from './busjob.js';
 import * as towjob from './towjob.js';
+import * as skills from './skills.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -274,8 +275,9 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
   }
   const at = useSaved && pos === prof.pos ? { x: pos.x, y: pos.y } : homes.spawnSpot(world, pos.x, pos.y);
   const ped = world.spawnPed(at.x, at.y, {
-    hp: 100, app: looks.appOf(prof), archetype: 'player', name: p.name,
+    hp: skills.baseHp(p), app: looks.appOf(prof), archetype: 'player', name: p.name,   // (more with constitution: skills.js)
   });
+  ped.baseHp = ped.maxHp;
   if (lz && pos === prof.pos) ped.lz = lz;
   ped.player = p;
   ped.weapon = 'fists';
@@ -412,7 +414,8 @@ export function pedMods(world, ped) {
     board: !!ped.board, wet: !!ped.board && world.weather === WEATHER.RAIN,   // (on a skateboard: shared/physics.js boardStep)
     canSwim: !!ped.player || isSwimming(world.map, ped), // players swim anywhere; NPCs only get out of water
     regenMul: ped.buffs.coffee > now ? 2.2 : 1,
-    staminaMax: ped.buffs.energy > now ? 140 : 100,
+    staminaMax: (ped.buffs.energy > now ? 140 : 100) * (1 + skills.pedBonus(ped, 'stamina')), energy: ped.buffs.energy > now,   // (a longer sprint with stamina: skills.js)
+    swimMul: 1 + skills.pedBonus(ped, 'swimming'),   // (a faster stroke: skills.js)
   };
 }
 
@@ -444,10 +447,22 @@ function inputsOf(world, p, dt) {
       const pressed = inp.bits & ~p.prevBits;
       p.prevBits = inp.bits;
       applyInput(world, p, ped, inp, pressed, dt);
+      practise(world, p, ped, inp, dt);
       const v = ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
       if (v && !v.wreckAt && !v.scripted && !v.onDeck && !v.ferry) { v.ownStepTick = world.tick; vehicles.stepVehicle(world, v, dt); if (v.def.kind !== 'air') props.smashFor(world, v); }   // (an aircraft never smashes the street furniture: it flies over it, and the page predicts none for it)   // (a car on a ferry's deck is held there)
     }
   }
+}
+
+// skills from the moving itself (skills.js): a sprint, a swim, a drive
+function practise(world, p, ped, inp, dt) {
+  const v = ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
+  if (v) { if (v.def.kind !== 'air' && !v.wreckAt) { const sp = Math.hypot(v.vx, v.vy); if (sp > 60) skills.gain(world, p, 'drive', sp * dt / 32000); } return; }   // (a km: 1 m = a tile = 32 px)
+  if (ped.vehId || ped.dead || ped.hidden || ped.onTrain) return;
+  const sp = Math.hypot(ped.vx, ped.vy);
+  if (sp < 40) return;
+  if (isSwimming(world.map, ped)) skills.gain(world, p, 'swim', dt);
+  else if ((inp.bits & IN.SPRINT) && ped.stamina > 1 && sp > 120) skills.gain(world, p, 'run', dt);
 }
 
 function applyInput(world, p, ped, inp, pressed, dt) {
@@ -879,7 +894,7 @@ export function buildMe(world, p) {
     t: 'me',
     name: p.name, hp: ped ? Math.round(ped.hp) : 0, maxHp: ped ? ped.maxHp : 100,
     rob: robbery.hudFor(world, p), train: trains.meInfo(world, p), pedId: ped ? ped.id : 0, interior: ped && ped.interior ? ped.interior.kind : null, dead: ped ? ped.dead : true, respawnIn: p.respawnAt ? Math.max(0, p.respawnAt - world.time) : 0, deathCause: p.deathCause,
-    cash: prof.cash, bank: prof.bank, hot: prof.hot || 0, cexp: prof.criminalExp, sam: prof.samaritan,
+    cash: prof.cash, bank: prof.bank, hot: prof.hot || 0, cexp: prof.criminalExp, sam: prof.samaritan, skl: skills.levels(p),   // (skl: the skills' levels - the page predicts stamina and swimming from them)
     wanted: p.wanted, heat: Math.round(p.heat), peak: prof.peakWanted, disguised: p.disguised,
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),

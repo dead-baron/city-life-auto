@@ -85,7 +85,7 @@ export function pedStep(s, inp, dt, map, mods) {
       s.vx = s.rdx * PED.rollSpeed; s.vy = s.rdy * PED.rollSpeed;
     } else {
       const sprint = (bits & IN.SPRINT) && s.stamina > 1 && ml > 0.1 && mods.canSprint && !swim;
-      const smul = mods.speedMul * (swim ? SWIM_SPEED : 1);
+      const smul = mods.speedMul * (swim ? SWIM_SPEED * (mods.swimMul || 1) : 1);   // (swimMul: the swimming skill)
       if (mods.analog) {
         // players: analog walk/run, eased acceleration and a short glide when the stick is released
         const spd = analogSpeed(ml, sprint) * smul;

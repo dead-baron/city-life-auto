@@ -822,3 +822,23 @@ export const CASINO = {
     BAR: { w: 4, three: 25, icon: 'BAR' }, SEVEN: { w: 2, three: 70, icon: '7' }, LOTUS: { w: 1, three: 300, icon: '❀' },
   },
 };
+// skills (shared/skills.js, server/systems/skills.js): levelled 0..max by doing things - each activity earns xp for one
+// skill (xp a go: a blow landed, a crate picked up, a second sprinting or swimming or by a campfire, a km driven, a
+// race finished, a hit with a gun, a night in your bed, a home-cooked meal), up to `cap` an in-game day; something else
+// for the same skill still counts that day. A skill's bonus tops out at `top` (never a hard advantage); level L takes
+// perLevel * L * (L + 1) xp in all
+export const SKILL = {
+  max: 10, top: 0.15, perLevel: 25,
+  act: {
+    brawl: { skill: 'strength', xp: 1, cap: 20, name: 'landing blows' },
+    haul: { skill: 'strength', xp: 3, cap: 15, name: 'carrying crates' },
+    run: { skill: 'stamina', xp: 0.5, cap: 20, name: 'sprinting' },
+    swim: { skill: 'swimming', xp: 0.5, cap: 25, name: 'swimming' },
+    drive: { skill: 'driving', xp: 4, cap: 20, name: 'driving' },
+    race: { skill: 'driving', xp: 10, cap: 20, name: 'racing' },
+    shoot: { skill: 'shooting', xp: 1, cap: 20, name: 'hitting what you aim at' },
+    sleep: { skill: 'constitution', xp: 15, cap: 15, name: 'a night in your own bed' },
+    meal: { skill: 'constitution', xp: 8, cap: 16, name: 'home-cooked meals' },
+    campfire: { skill: 'constitution', xp: 0.2, cap: 10, name: 'sitting by a campfire' },
+  },
+};

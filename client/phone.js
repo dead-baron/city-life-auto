@@ -38,7 +38,7 @@ const FEED_ICON = { snatch: '👜', drop: '📦', shootout: '💥', robbery: '�
 const flyJobs = (list, job, h = 'Flying') => (list.length ? `<h3>${h}</h3>` + list.map((j) => `<button class="ph-row job" data-take="${j.id}"${job ? ' disabled' : ''}><span class="ic tier">${j.icon}</span><span class="nm">${esc(j.title)}<small>${esc(j.sub)}</small></span><span class="d">$${j.pay}+</span></button>`).join('') : '');
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
-  let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null;
+  let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null;
   let homes = null, RE = null;   // the real-estate app (H65): the server's list, and its code - client/realestate.js, loaded when it opens
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
@@ -62,6 +62,7 @@ export function createPhone(ctx) {
           <button class="ph-app" data-go="transit"><b>🚌</b>Transit</button>
           <button class="ph-app" data-go="homes"><b>🏠</b>Homes</button>
           <button class="ph-app" data-act="dance"><b>💃</b>Dance</button>
+          <button class="ph-app" data-go="skills"><b>💪</b>Skills</button>
           ${wp ? '<button class="ph-app" data-act="clearwp"><b>✕</b>Clear waypoint</button>' : ''}
         </div>
         ${wp ? `<div class="ph-card">Waypoint: <b>${esc(wp.label)}</b> · ${m(dist(wp))}</div>` : ''}
@@ -82,6 +83,10 @@ export function createPhone(ctx) {
       el.innerHTML = '<h3>City feed</h3><p class="ph-hint">What\'s going on anywhere in the city. Tap one to set a waypoint.</p>' + (!feed ? '<p class="ph-empty">Loading…</p>'
         : feed.length ? feed.map((f, i) => `<button class="ph-row feed ${esc(f.kind)}" data-feed="${i}"${f.x === null ? ' disabled' : ''}><span class="ic">${FEED_ICON[f.kind] || '•'}</span><span class="nm">${esc(f.text)}<small>${esc(f.where || 'the city')} · ${ago(f.ago)}</small></span><span class="d">${f.x === null ? '' : m(dist(f))}</span></button>`).join('')
           : '<p class="ph-empty">Quiet out there right now.</p>');
+    } else if (screen === 'skills') {   // (the six skills, levelled by doing things: server skills.js)
+      el.innerHTML = '<h3>Skills</h3>' + (!skl ? '<p class="ph-empty">Loading…</p>' : skl.list.map((k) => `<div class="ph-card skl"><b>${esc(k.name)}</b> level ${k.L} of ${k.max}<small>${esc(k.does)}: +${k.pct}%${k.need ? ` · ${k.xp}/${k.need} to the next` : ''}</small><i style="--w:${k.need ? Math.round(100 * k.xp / k.need) : 100}%"></i></div>`).join('')
+        + '<h3>Today</h3><p class="ph-hint">Each counts up to a limit an in-game day - something else for the same skill still counts.</p>'
+        + skl.today.map((t) => `<div class="ph-row"><span class="nm">${esc(t.name)}<small>${esc(t.skill)} · ${t.left ? `${t.left} xp left today` : 'done for today'}</small></span></div>`).join(''));
     } else if (screen === 'bounties') {
       el.innerHTML = bountiesHtml();
     } else if (screen === 'transit') {
@@ -107,7 +112,7 @@ export function createPhone(ctx) {
   }
 
   function wire(el) {
-    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } render(); };
+    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'skills') ctx.send({ t: 'phone', a: 'skills' }); if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } render(); };
     for (const b of el.querySelectorAll('[data-stop]')) b.onclick = () => {
       const [l, k] = b.dataset.stop.split(':').map(Number);
       const L = transit && transit.lines.find((q) => q.id === l), st = L && L.stops[k];
@@ -259,6 +264,7 @@ export function createPhone(ctx) {
     openApp(s) { screen = s || 'home'; group = null; render(); if (s === 'jobs' || !s) ctx.send({ t: 'phone', a: 'board' }); },
     back() { if (screen === 'group') screen = 'places'; else screen = 'home'; render(); return true; },
     onFeed(msg) { feed = msg.items || []; if (screen === 'feed') render(); },
+    onSkills(msg) { skl = msg; if (screen === 'skills') render(); },
     onTransit(msg) { transit = msg; if (screen === 'transit') render(); },
     onHomes(msg) { homes = msg; if (screen === 'homes') render(); },
     onBounties(msg) {

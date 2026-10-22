@@ -1264,3 +1264,8 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #m-board b.pocket.red { background: #b5222b; }
 #m-board b.pocket.black { background: #161616; }
 #m-board b.pocket.green { background: #1d7a3a; }
+
+/* the phone's Skills app (client/phone.js): a bar to the next level */
+.ph-card.skl i { display: block; height: 5px; margin-top: 6px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; }
+.ph-card.skl i::after { content: ''; display: block; height: 100%; width: var(--w); background: #e2bd57; }
+.ph-card.skl small { display: block; margin-top: 2px; }

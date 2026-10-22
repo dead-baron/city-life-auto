@@ -25,7 +25,6 @@ import { Campfires } from './render/campfx.js';     // the campfires' embers, fl
 import { HUD } from './hud.js';
 import { AreaTracker } from './areaname.js';   // (the title card's place name: water keeps it)
 import { Flock } from './birds.js';   // (the pigeons and gulls: in from off screen)
-import { createPhone } from './phone.js';
 import { createMapWaypoints, ROLE_ICON, ROLE_NAME, KIND_ICON } from './mapwaypoints.js';
 import { createRouter } from './route.js';
 import { iconImg, drawIcon } from './pixicons.js';
@@ -51,6 +50,7 @@ let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.
 import { noteServerBuild, myBuild } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
+import { bonusOf } from '../shared/skills.js';
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
@@ -348,11 +348,12 @@ function onText(m) {
     case 'garden': case 'fields': S[m.t] = m.t === 'garden' ? m.g : m.f; if (!S.farmArt && !S.farmP) S.farmP = import('./render/farmart.js').then((mod) => { S.farmArt = new mod.FarmArt(S); }).catch((e) => { S.farmP = null; console.warn('[farm]', e); }); break;   // (the garden plots and the fields' rows near you: gardening.js, farming.js)
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
-    case 'board': phone.onBoard(m); break;
-    case 'feed': phone.onFeed(m); break;
-    case 'bounties': phone.onBounties(m); break;
-    case 'homes': phone.onHomes(m); break;   // the real-estate app (H65)
-    case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.onTransit(m); if (S.bigmap) mapwp.refreshLegend(); break;
+    case 'board': phone.on('Board', m); break;
+    case 'feed': phone.on('Feed', m); break;
+    case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
+    case 'bounties': phone.on('Bounties', m); break;
+    case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)
+    case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.on('Transit', m); if (S.bigmap) mapwp.refreshLegend(); break;
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
@@ -403,7 +404,8 @@ function onBinary(buf) {
 // ---------------------------------------------------------------------------
 // Client-side prediction for the local character / driven vehicle
 function pedModsFrom(flags, speedMul) {
-  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: flags & 8 ? 140 : 100, tumble: !!(flags & 16), air: !!(flags & 32), board: !!(flags & 64), wet: !!(flags & 128), canSwim: true, analog: true };
+  const sk = (S.me && S.me.skl) || [];   // (the skills' levels: a longer sprint, a faster stroke - shared/skills.js)
+  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: (flags & 8 ? 140 : 100) * (1 + bonusOf(sk[1])), swimMul: 1 + bonusOf(sk[2]), tumble: !!(flags & 16), air: !!(flags & 32), board: !!(flags & 64), wet: !!(flags & 128), canSwim: true, analog: true };
 }
 
 function reconcile(s) {
@@ -1700,14 +1702,26 @@ $('spec-pad').addEventListener('pointercancel', specUp);
 addEventListener('blur', () => { if (S.spec) S.spec.clearKeys(); });
 
 // ---- phone + waypoints ---------------------------------------------------------------------------
-const phone = createPhone({
+// the phone's apps (client/phone.js) load the first time it opens - kept out of the page's first load; what the server
+// sends for them meanwhile (the transit lines, a job board) is kept and handed over then
+const phoneCtx = {
   map: () => S.map, pos: () => selfPos(), isCop: () => !!(S.me && S.me.faction === 'enforcer'), send: (o) => send(o),
   setWaypoint: (w) => { S.waypoint = w; if (S.hud) S.hud.waypoint = w; },
   waypoint: () => S.waypoint,
   toast: (t, tone) => S.hud && S.hud.toast(t, tone),
   refocus: () => { ovFocus = 0; focusOverlay(); },
   close: () => closeOverlay('phone'),
-});
+};
+let phoneMod = null, phoneP = null;
+const phoneQ = new Map();
+const loadPhone = () => (phoneP ||= import('./phone.js').then((mod) => { phoneMod = mod.createPhone(phoneCtx); for (const [k, m] of phoneQ) phoneMod['on' + k](m); phoneQ.clear(); return phoneMod; }, (e) => { phoneP = null; throw e; }));
+const phone = {
+  get screen() { return phoneMod ? phoneMod.screen : 'home'; },
+  back() { return phoneMod ? phoneMod.back() : false; },
+  open() { loadPhone().then((m) => { if (topOverlay() === 'phone') m.open(); }).catch((e) => console.warn('[phone]', e)); },
+  openApp(s) { loadPhone().then((m) => { if (topOverlay() === 'phone') m.openApp(s); }).catch((e) => console.warn('[phone]', e)); },
+  on(k, m) { if (phoneMod) phoneMod['on' + k](m); else if (!m.ok && !m.err) phoneQ.set(k, m); },   // (a job's take or a refusal isn't news by the time it opens)
+};
 const mapwp = createMapWaypoints({
   map: () => S.map, pos: () => selfPos(),
   setWaypoint: (w) => { S.waypoint = w; if (S.hud) S.hud.waypoint = w; if (w) S.hud.toast(`Waypoint set: ${w.label}`, 'info'); },

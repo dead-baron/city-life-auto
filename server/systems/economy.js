@@ -29,6 +29,7 @@ import * as mortgage from './mortgage.js';
 import * as mail from './mail.js';
 import * as skate from './skate.js';
 import * as casino from './casino.js';
+import * as skills from './skills.js';
 import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
 import { SKATEBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
@@ -911,6 +912,7 @@ export function useItem(world, p, id) {
     if (ped.hp >= ped.maxHp && (it.food || !ped.bleeding) && !(it.hearty && !(ped.buffs.hearty > world.time + HEARTY_S * 0.5))) { world.notify(p, it.food ? 'You\'re not hungry - you\'re at full health.' : 'You are already healthy.', 'info'); return; }
     inv[id]--;
     if (it.hearty) applyBuff(world, ped, 'hearty');
+    if (it.cooked) skills.gain(world, p, 'meal');   // (a cooked meal: constitution - skills.js)
     ped.hp = Math.min(ped.maxHp, ped.hp + it.heal); if (it.stopBleed) ped.bleeding = false;   // (food doesn't stop bleeding)
     world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
     world.notify(p, it.food ? `Ate a ${it.name.replace(/^Bunch of /, 'bunch of ')}.${it.hearty ? ` A hearty meal: +${HEARTY_HP} health for ${Math.round(HEARTY_S / 60)} minutes.` : ''}` : `Used ${it.name}.`, 'good');

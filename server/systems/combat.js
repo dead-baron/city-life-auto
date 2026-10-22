@@ -5,6 +5,7 @@ import * as revive from './revive.js';
 import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
 import { collideCircle, AIR_FRICTION, TUMBLE_FRICTION } from '../../shared/physics.js';
 import { levelStep, sameLevel } from '../../shared/levels.js';
+import * as skills from './skills.js';
 import { WEAPONS, stepWeapon } from '../../shared/items.js';
 import { NPC_GUN_MULT, ARMORED_VEHICLES, ARMORED_ROCKETS, SHOTGUN_CLOSE_PX, SHOTGUN_CLOSE_MULT, SOAK_HEAL, SOAK_AFTER_HIT_S, WINE_REGEN, PLAYER_GRIT, PLAYER_GRIT_CAUSE, TRAIN_SURVIVE, TRAIN_SURVIVE_HP, BLAST_FLING, GUARD, FIRE_ARROW, PLASMA_DEFLECT, VEHICLE_WEAPON, VEHICLE_WEAPON_DEFAULT, NPC_GUARD } from '../../shared/rules.js';
 import { angleDiff, segCircle, segObb } from '../../shared/math.js';
@@ -86,7 +87,7 @@ export function tryAttack(world, ped, aim) {
   let hitAny = false;
   const hits = new Map(); // ped -> { n pellets, dmg, a, dist }: a blast lands on each person as one hit
   for (let k = 0; k < pellets; k++) {
-    const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0);
+    const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0) * (1 - skills.pedBonus(ped, 'shooting'));   // (a steadier aim: skills.js)
     if (hitscan(world, ped, w, a, hits)) hitAny = true;
   }
   for (const [t, h] of hits) shotHits(world, t, ped, w, h);
@@ -157,7 +158,8 @@ function melee(world, ped, w, aim) {
     if (!best.dead) best.finisher = best.killBlade = null;
     return true;
   }
-  const dmg = w.dmg * mult * (0.85 + world.rand() * 0.3);
+  const dmg = w.dmg * mult * (0.85 + world.rand() * 0.3) * (1 + skills.pedBonus(ped, 'strength'));   // (harder blows: skills.js)
+  if (ped.player && !soft && !best.dead) skills.gain(world, ped.player, 'brawl');
   // a blade's killing blow: now and then a finisher (a stab, a slash) that drops them where they stand; the plasma
   // blade cuts clean through (reactions.died: how each of them falls)
   const lethal = !best.dead && hurtable(world, best) && !w.nonLethal && best.hp - dmg <= 0;
@@ -280,7 +282,7 @@ function arrowDrop(world, t, w, g) {
 // A bow: the arrow flies (stepArrow), the string twangs - nobody but someone right beside you hears it, and the
 // animals don't take it for a gunshot - and the next arrow is nocked if there is one.
 function loose(world, ped, w, aim) {
-  const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0);
+  const a = aim + (world.rand() - 0.5) * 2 * (w.spread || 0) * (1 - skills.pedBonus(ped, 'shooting'));
   const sx = ped.x + Math.cos(a) * 16, sy = ped.y + Math.sin(a) * 16;
   const proj = world.spawnProjectile(ped.id, sx, sy, a, w.speed || 800, w.range, w.id);
   if (proj) proj.lz = ped.lz || 0;
@@ -448,6 +450,7 @@ function shotHits(world, t, shooter, w, h) {
   // (point blank stays almost always a kill, a player's grit or not)
   if (h.n >= 3 && h.dist < SHOTGUN_CLOSE_PX) dmg *= (1 + (SHOTGUN_CLOSE_MULT - 1) * (1 - h.dist / SHOTGUN_CLOSE_PX)) * gritOf(t, 'gun');
   if (!t.dead && hurtable(world, t)) reactions.shot(world, t, shooter, w, { n: h.n, dist: h.dist, a: h.a, lethal: t.hp - dmg / gritOf(t, 'gun') <= 0 });
+  if (shooter && shooter.player && !t.dead && hurtable(world, t)) skills.gain(world, shooter.player, 'shoot');
   damage(world, t, dmg, shooter, 'gun', h.a);
 }
 

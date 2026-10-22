@@ -29,6 +29,7 @@ import * as realestate from './realestate.js';
 import * as taxijob from './taxijob.js';
 import * as busjob from './busjob.js';
 import * as towjob from './towjob.js';
+import * as skills from './skills.js';
 import { CAB, BUSJOB, TOWJOB } from '../../shared/rules.js';
 
 const rng = mulberry32(7331);
@@ -212,6 +213,7 @@ export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (a === 'board') return boardFor(world, p);
   if (a === 'feed') return events.feedFor(world);
+  if (a === 'skills') return skills.panel(world, p);   // the Skills app (skills.js)
   if (a === 'out') { phoneOut(world, p, !!msg.on); return null; }   // the phone in your hand while its menu is open
   if (a === 'transit') return { ...transit.transitInfo(world, p), ferries: ferries.ferryInfo(world) };   // the Transit app and the lines on the map
   if (a === 'taxi') return transit.taxiPhone(world, p, msg);    // call a taxi / cancel it / where you want to go

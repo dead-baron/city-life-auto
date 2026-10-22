@@ -14382,3 +14382,35 @@ but change a choice box. Now up, down, left and right go to the nearest button t
 phone's grid of apps, a row of tabs), as the debug menu already did (main.js padStep); up or down past the end wraps
 round; a choice box or a tick box still takes left and right for itself. (The d-pad's own shortcuts - the phone, the
 bag, the cop car - were already held back while a menu is open.)
+
+## 2026-10-22 · Skills: six of them, levelled by doing things
+
+The owner, 10-04 / 10-06: "Skills and daily caps (strength, stamina, swimming, driving, shooting, constitution);
+modest gains" (docs/DESIGN-NOTES.md "Skills and progression"; the GDD: "skill bonuses top out at about +15%, never a
+hard advantage"). server/systems/skills.js, shared/skills.js, shared/rules.js SKILL:
+
+- **levels 0 to 10**, each a little more (+1.5% a level, +15% at the top); level L takes 25 x L x (L + 1) xp in all.
+- **what earns them**, each activity capped an in-game day (20 minutes) - and something else for the same skill still
+  counts that day (you're told when one's done for the day, and what else counts):
+  - strength: landing blows; picking up crates
+  - stamina: sprinting
+  - swimming: swimming
+  - driving: driving (by the km); finishing a race
+  - shooting: hitting someone with a gun
+  - constitution: a night in your own bed; home-cooked meals; sitting by a campfire
+- **what they do**: strength - harder blows; stamina - a longer sprint (more stamina); swimming - a faster stroke;
+  driving - less damage to your ride in a crash; shooting - a steadier aim (less spread); constitution - more health
+  (a hearty meal's on top).
+- the page predicts the two that move you (stamina, swimming) from the levels the server sends (`me.skl`) - the
+  energy drink's flag no longer reads "more stamina than 100" (net.js), as a skill can give that too.
+- **the phone's Skills app**: each skill's level, what it does now, the bar to the next level; and today - what each
+  activity has left to give.
+- not yet: the gym and its mini-game, the riding skill for boards and bikes, chores and the bathhouse.
+
+The phone itself now loads the first time it opens (client/phone.js, 9 KB) - what the server sends for its apps
+meanwhile is kept and handed over then. That took the page from 495.2 KB (over its 494 budget with the casino's board,
+the rides and the skills) to 486.7 KB.
+
+Tests: test/skills.test.js - the levels and the top, the daily cap and another way to the same skill, a new day; more
+health, a longer sprint, a faster stroke, harder blows, the levels for the page, health kept after a death; sprinting
+and driving earn theirs.
