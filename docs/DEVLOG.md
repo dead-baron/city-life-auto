@@ -13891,7 +13891,6 @@ trains. But nothing on the platform showed where the lines go.
 Tests: test/world3rail.test.js - most open-air stations have a board, each on its platform and drawn where it's read;
 the prompt there; its rows, each line's next stop first.
 
-<<<<<<< HEAD
 ## 2026-10-22 · Route boards on the El and at the subway's kiosks
 
 The rest of the owner's 10-16 note "An information board or map sign at stations showing where the train goes": the
@@ -14024,7 +14023,7 @@ The owner, 10-06: "Home life: mowing (grass grows), cooking, constitution XP". T
 
 Tests: test/cooking.test.js - the plainest three cooked, the steak and the prize crop kept; the meal in the fridge
 after five seconds; eaten, +60 and hearty; not with two things.
-=======
+
 ## 2026-10-22 · Fix: the classic renderer's world wiped every frame
 
 The way-out note (the walk-ins' exitHint, earlier today) was called from the middle of render()'s chain of renderers.
@@ -14037,4 +14036,3 @@ screen was dark every frame. Found in a review of the batch before it shipped. T
 The soccer pitches' new shape and the mansion's south terrace changed the old city too (shared/map.js's park pitch and
 mansion). Its world map picture (assets/map, `node tools/build-worldmap2.mjs`) was baked for the old shape, and
 test/worldmap.test.js caught it in the batch's full run. Rebaked.
->>>>>>> nature-n19
