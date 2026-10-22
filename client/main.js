@@ -4389,7 +4389,7 @@ function drawSurfHud(sf, now) {
     const k = Math.min(1, (now - S.surfBank.at) / 2);
     if (k < 1) { g.globalAlpha = 1 - k * k; g.font = '800 22px system-ui, sans-serif'; shadow(`+${fmt(sf.last)}`, cx, top + 10 - k * 14, '#7fe07f'); g.globalAlpha = 1; }
   }
-  if (sf.st && sf.best) { g.textAlign = 'right'; g.font = '700 12px system-ui, sans-serif'; shadow(`BEST RIDE ${fmt(sf.best)}`, W - 16, Math.max(96, H * 0.2), '#fff'); }
+  if (sf.st && sf.best) { g.font = '700 11px system-ui, sans-serif'; shadow(`BEST RIDE ${fmt(sf.best)}`, cx, top + 44, '#e8f4ff'); }   // (under the points: clear of the money and the stars down the right)
   g.restore();
 }
 // on fire (server burning.js): flames licking up the body (thrown up from the feet: their height, not a step up the
