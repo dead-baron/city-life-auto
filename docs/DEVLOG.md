@@ -13656,3 +13656,19 @@ Decided 10-06 / 10-08: "Idle kick: 'Still there?' then a disconnect - 10 min for
 
 Tests: test/idle.test.js - asked at nine minutes, disconnected at ten and told why; a key pressed counts, the same
 keys held don't; a game clock jumped an hour on is no idling.
+
+## 2026-10-21 · The playtest panel: the tractor by a field, the water race at the water
+
+Two of the owner's 10-16 notes on the playtest panel:
+
+- **"Tractor option spawns you away from a field: put it by one"** (`server/systems/farming.js` devFarm): the tractor
+  (and the combine) went to the field nearest the map's first farm, at one row's end. On World v3's fields, cut by
+  their wandering edges, a row's end can lie off the crop in the trees. Now it goes to the field nearest you, on the
+  crop itself: the first piece of a row that is field. The combine goes on a piece both its rows have crop on.
+- **"Boat race teleport lands at the land raceway, not a water start"** (`server/dev.js` NEAR_KINDS.race): "Water race
+  start" took the nearest race of any kind, and the raceway's and the MX park's starts are races too. Now it's the
+  water races only: the jetski sprint, the boat classic and the kayak runs, each with its craft waiting (a kayak for
+  a kayak run).
+
+Tests: test/farming.test.js - the dev tractor and combine at the field nearest you, on its crop;
+test/gameplay.test.js - "take me there" for a water race lists only water races.

@@ -346,6 +346,7 @@ test('debug menu: every "take me there" button has somewhere to go, and puts you
     assert.equal(err, null, `${k}: ${err}`);
     assert.ok(!DEV_PED_BLOCK[w.map.tileAtPx(p.ped.x, p.ped.y)] && !w.map.isWater(p.ped.x, p.ped.y), `${k}: on open ground`);
     const d = Math.min(...list.map((q) => Math.hypot(q.x - p.ped.x, q.y - p.ped.y)));
+    if (k === 'race') assert.ok(list.every((q) => q.craft), 'the water races only, not the raceway\'s (the owner, 10-16)');
     if (k === 'race') { // out on the water: the nearest shore, with the race's craft waiting beside you
       assert.ok(d < 1800, `race: on the shore nearby (${Math.round(d)} px)`);
       assert.ok([...w.entities.values()].some((v) => v.issuedTo === p.pid && v.def && v.def.kind === 'boat' && Math.hypot(v.x - p.ped.x, v.y - p.ped.y) < 460), 'race: a craft in the water beside you');

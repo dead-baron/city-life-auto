@@ -241,16 +241,23 @@ function sendNear(world, p) {
 export function devFarm(world, p, msg = {}) {
   const ped = p.ped;
   if (!ped) return 'no body';
-  const coop = world.map.pois.find((q) => q.kind === 'farm');
-  const at = coop && nextRow(world, coop.x, coop.y);
+  // (the field nearest you - the owner, 10-16: "Tractor option spawns you away from a field: put it by one": it took the
+  // first farm's nearest and set you at a row's end, which on World v3's fields cut by a wandering edge could be off
+  // the crop in the trees)
+  const at = nextRow(world, ped.x, ped.y);
   if (!at) return 'no fields';
   const F = at.F, looks = [[0, 0, 0], [1, 0, 0], [2, 0, 0], [2, 0.2, 0], [2, 0.5, 0], [2, 0.85, 0], [3, 0, 0], [0, 0, 0x1f], [1, 0, 0x0f], [3, 0, 0x3f]];
   F.rows.forEach((row, r) => { const [s, g, m] = looks[r % looks.length]; row.s = s; row.g = g; row.m = m & row.ok; });
   F.dirty = true;
-  let [a] = rowEnds(F, Math.min(F.n - 1, 1));
+  // on the crop itself: the first piece of a row that's field, at its row's end of it
+  const onCrop = (r) => { const row = F.rows[r]; for (let k = 0; k < FARM.segs; k++) if (row.ok & (1 << k)) return segCentre(F.f, F.v, r, k); return null; };
+  let a = onCrop(at.r) || onCrop(Math.min(F.n - 1, 1)) || rowEnds(F, at.r)[0];
   if (msg.k === 'combine' && F.n > 2) {   // (the combine: two ripe rows, its header over both)
-    for (const r of [1, 2]) { F.rows[r].s = ROW.RIPE; F.rows[r].m = 0; }
-    const [a1] = rowEnds(F, 1), [a2] = rowEnds(F, 2);
+    const r1 = Math.min(Math.max(at.r, 0), F.n - 2), r2 = r1 + 1;
+    for (const r of [r1, r2]) { F.rows[r].s = ROW.RIPE; F.rows[r].m = 0; }
+    let k0 = -1;
+    for (let k = 0; k < FARM.segs && k0 < 0; k++) if ((F.rows[r1].ok & (1 << k)) && (F.rows[r2].ok & (1 << k))) k0 = k;   // (a piece both rows have crop on)
+    const a1 = k0 >= 0 ? segCentre(F.f, F.v, r1, k0) : rowEnds(F, r1)[0], a2 = k0 >= 0 ? segCentre(F.f, F.v, r2, k0) : rowEnds(F, r2)[0];
     a = { x: (a1.x + a2.x) / 2, y: (a1.y + a2.y) / 2 };
   }
   if (ped.vehId) { const old = world.get(ped.vehId); if (old) old.seats[old.seats.indexOf(ped.id)] = 0; ped.vehId = 0; ped.seat = -1; }
