@@ -1237,3 +1237,7 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #dev.dv-short .dv-tile { min-height: 46px; }
 #dev .dv-head .dev-x { margin-left: auto !important; }
 #dev.as-overlay.dv-port, #dev.as-overlay.dv-short { background: rgba(10, 10, 14, .985); }
+
+/* the way out of a walk-in while its inside is still being drawn (main.js exitHint) */
+#exithint { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); padding: 4px 10px; background: rgba(13,22,45,.9); border: 1px solid rgba(226,189,87,.5); border-radius: 4px; color: #eef1f8; font: 14px var(--pixel); white-space: nowrap; pointer-events: none; z-index: 6; }
+.touch #exithint { font-size: 12px; padding: 3px 8px; }

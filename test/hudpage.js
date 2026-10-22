@@ -58,8 +58,9 @@ if (sc.dev === 'touch') $('touch').classList.remove('hidden');
 const glyph = sc.dev === 'touch' ? '<span class="g-touch">ACT</span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
 const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + (sc.st === 'rob' ? T.shop : T.prompt) + '</span>'; pr.classList.remove('hidden'); if (sc.st !== 'rob') pr.classList.add('crime', 'felony');
 if (sc.st === 'custody') pr.classList.add('hidden');   // (held: nothing to Act on)
-// (the notes as client/hud.js lays them: the words in a .tx box, paged by client/notepages.js when they don't fit)
-const NP = await import('/client/notepages.js');
+// (the notes as client/hud.js lays them: the words in a .tx box, paged by client/notepages.js when they don't fit -
+// imported with the page's script, not after it: the headless page's clock doesn't wait for an import made later)
+import * as NP from '/client/notepages.js';
 for (const [i, n] of (sc.notes || T.notes).entries()) { const el = document.createElement('div'); el.className = 'toast ' + ['info', 'warn', 'bad', 'good'][i]; const tx = el.appendChild(document.createElement('div')); tx.className = 'tx'; tx.textContent = n; $('toasts').appendChild(el); }
 $('job').textContent = T.job; $('job').classList.remove('hidden');
 if (sc.st === 'rob') { $('rob').classList.remove('hidden'); $('rob-take').textContent = 'HOT $1,250 · till $800'; $('rob-fill').style.width = '40%'; }

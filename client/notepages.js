@@ -32,6 +32,8 @@ export function showPage(tx, k, smooth = true) {
 export function stopNote(el) {
   if (el._pg) { clearInterval(el._pg); el._pg = 0; }
 }
+// (client/hud.js loads this the first time a note is too long for its box, and keeps the lifetimes of the ones that
+// fit itself: noteLife)
 
 // set a note up once it's on the page (its words in `tx`): pages it if it needs them; returns how long it stays up (ms)
 export function layNote(el, tx, msg) {

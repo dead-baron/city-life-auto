@@ -13843,3 +13843,30 @@ was far enough from the robbery (`hotmoney.js` walkUps).
 
 Tests: test/atmpopup.test.js - nothing banked on walking up; the pop-up's two rows; Deposit all at a press and closed;
 the full menu; not from a car. test/world.test.js and test/robbery.test.js deposit through the pop-up now.
+
+## 2026-10-22 · Walk-ins: the inside ready before you're in, and the way out while it isn't
+
+The owner, 10-16: "Interior art loads slowly on a phone (bowling alley, deli): preload or bake it" and "Show where
+the exit is while an interior's art loads (spawning in a hospital)". Art v2 draws a walk-in cut away (no roof, the
+shop floor) only once the chunks round it are baked that way. That bake started when you stepped in, and on a phone it
+takes seconds. Until it landed you stood under the roof, unable to see the counter or the door.
+
+- **baked ahead** (`client/art2/game/host.js` `_precut`, `walkInSoon`): when you're on foot within about seven tiles
+  of a walk-in's door, its chunks are baked cut away into the browser's store. When you're down with a hospital
+  picked to wake up in, that hospital's chunks are baked the same way. Going in then finds them in the store, and the
+  floor shows at once. These bakes run after the screen's own bakes, before the usual bake-ahead, once each a
+  session. They're never taken from the server: its chunks are the roofed ones (`worker.js` prebakeChunk skips it for
+  a cut-away).
+- **the way out** (`exitHint`, `insideReady`): inside a walk-in whose chunks on screen aren't drawn cut away yet, a
+  note under you says which way the door is ("The way out ↓ · the inside's on its way"). It only shows if the wait
+  passes 0.4 s, so it doesn't flicker when the store has the chunks.
+- **budget**: the page's code goes from 490 to 492 KB (`tools/perf.mjs`). This batch's HUD fixes are needed from the
+  start on every page: clearing a home's rooms on a new session, the prompt fading at home on a phone, the ATM
+  pop-up's closing option, and setting off a long note's paging. The paging itself (`client/notepages.js`) loads with
+  the first long note. The page's code was already at 490 with the last batch. The walk-in code sits in host.js, so
+  the renderer stays at 28 files.
+
+Tests: test/precut.test.js - near a door, its chunks are asked for cut away once, kept under the cut-away's key, and
+the screen's bakes go first; ready only once what's on screen is cut away; the walk-in ahead (on foot, not driving
+past; down: the hospital picked) and the way out's words. test/hudpage.js imports the note paging with the page (the
+headless page's clock didn't wait for an import made after it: the note test flaked).

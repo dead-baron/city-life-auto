@@ -2807,6 +2807,7 @@ function render(dt) {
   else if (F.ug) drawUnderground(F);
   else if (v2) S.art2.frame(F);
   else if (v1Draws(F)) drawWorldV1(F);
+  if (S.art2 && S.art2.exitHint) S.art2.exitHint(F, v2);   // (the way out of a walk-in while its inside is on its way: art2/game/host.js exitHint)
   else { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#10141c'; g.fillRect(0, 0, canvas.width, canvas.height); }
   if (F.spec) { // spectating close in: the new renderer's picture, the spectator's names / grid / players on top
     S.spec.overlay(g, W, H, DPR);

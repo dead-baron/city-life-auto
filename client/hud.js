@@ -9,7 +9,6 @@ import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
 import { iconURL } from './pixicons.js';
 import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S } from '../shared/rules.js';
-import { layNote, stopNote } from './notepages.js';
 
 const $ = (id) => document.getElementById(id);
 // what Act would do is a crime (1) or a felony (2), on the prompt's plate and on the touch button it pulses (style.css)
@@ -340,9 +339,12 @@ export class HUD {
     tx.textContent = shown;
     $('toasts').appendChild(el);
     this.toastEls.push(el);
-    while (this.toastEls.length > 4) { const old = this.toastEls.shift(); clearTimeout(old._t); stopNote(old); old.remove(); }
-    const life = layNote(el, tx, shown);
-    el._t = setTimeout(() => { stopNote(el); el.remove(); this.toastEls = this.toastEls.filter((x) => x !== el); }, life);
+    while (this.toastEls.length > 4) { const old = this.toastEls.shift(); clearTimeout(old._t); clearInterval(old._pg); old.remove(); }
+    clearInterval(el._pg); el._pg = 0; el.classList.remove('paged');
+    const gone = () => { clearInterval(el._pg); el.remove(); this.toastEls = this.toastEls.filter((x) => x !== el); };
+    el._t = setTimeout(gone, Math.min(6500, 2400 + shown.length * 45));
+    // (too long for its box: paged, notepages.js loaded the first time one is - not with the page)
+    if (tx.scrollHeight > tx.clientHeight + 1) (this.notesP ||= import('./notepages.js')).then((NP) => { if (!el.isConnected || tx.textContent !== shown) return; clearTimeout(el._t); el._t = setTimeout(gone, NP.layNote(el, tx, shown)); }).catch(() => { this.notesP = null; });
   }
 
   // ---- menu ----
