@@ -13890,3 +13890,10 @@ trains. But nothing on the platform showed where the lines go.
 
 Tests: test/world3rail.test.js - most open-air stations have a board, each on its platform and drawn where it's read;
 the prompt there; its rows, each line's next stop first.
+
+## 2026-10-22 · Fix: the classic renderer's world wiped every frame
+
+The way-out note (the walk-ins' exitHint, earlier today) was called from the middle of render()'s chain of renderers.
+That left the chain's last `else` (the dark fill when nothing draws) hanging off the note's own check. With no art v2
+renderer (the classic renderer, `?art=1`, a browser without WebGL2) the fill ran after the world was drawn, and the
+screen was dark every frame. Found in a review of the batch before it shipped. The call now follows the chain.
