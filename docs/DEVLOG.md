@@ -13745,3 +13745,22 @@ Tests: test/notepages.test.js - the garden plot's and the skateboard's instructi
 in a headless Chromium on 844x390, 740x360 and 390x844 phones: three lines at a time, paged, every word reachable, up
 for every page; whole on a 1280x720 desktop. test/hudpage.js builds its notes the way the game does and reports words
 a note never shows as cut off. The HUD layout test covers every screen.
+
+## 2026-10-22 · Fix: reconnecting inside a home
+
+The owner, 10-16: "Reconnecting inside a home leaves you stuck: restore inside, or spawn outside if someone else holds
+the claim". There were three ways to get stuck:
+
+- **Back before the ghost timer ran out, on a new page** (a reload, a phone that dropped the tab). The server still
+  had you inside and walked you round the rooms, but it never sent the new page the rooms. So the page showed you
+  standing in the street, unable to move. Now the rooms are sent again in full (`players.join`), and any menu you had
+  open is closed.
+- **Logged off at home** (the ghost timer ran out, or the server restarted for an update). You came back on the street
+  by the door, but a page that was still open kept showing the rooms. A new session now clears the rooms the page was
+  showing (`client/main.js`, on 'welcome'), and the server sends them again if you're in.
+- **Back inside**: `savePos` now keeps which home you logged off inside (`profile.inHome`). If that home is still yours,
+  you're back in it next time (`backInside`). If someone else holds it now (sold, foreclosed, the world rebuilt), or
+  you were a guest or only looking round, you're out in the street by its door.
+
+Tests: test/homereconnect.test.js - back on a new page: the rooms again, walking round them; logged off at home: back
+inside; someone else's now, or a place you were only looking round: on the street by its door.

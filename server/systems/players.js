@@ -114,6 +114,9 @@ export function join(world, conn, profile, opts = {}) {
     p.meDirty = true;
     noteClientBuild(world, p, opts);
     if (p.spectating) { p.spectating = false; p.invincible = p.specWasGod; } // a new page starts out of the free camera
+    // (inside a home: the new page has never seen its rooms - all of it again, the menu you had open closed; the owner,
+    // 10-16: "Reconnecting inside a home leaves you stuck")
+    if (p.ped && p.ped.home) { p.homeMenu = null; p.ped.home.mv = false; homeinside.send(world, p, true); }
     world.notify(p, 'Reconnected - you made it back before your ghost timer ran out.', 'good');
     return p;
   }
@@ -153,7 +156,21 @@ export function join(world, conn, profile, opts = {}) {
   else world.notify(p, `Welcome to City Life Auto, ${p.name}. You are a clean Citizen.`, 'info');
   bounties.onJoin(world, p);   // bounties still on their head from before they logged off
   if (fresh) delete profile.jail; else custody.onJoin(world, p);   // (logged off in custody: back in the cell)
+  if (!fresh) backInside(world, p);   // (logged off at home: back in it)
   return p;
+}
+
+// Logged off inside your own home (the ghost timer ran out, or the server restarted under you - savePos keeps which):
+// you're back inside it. Not if it isn't yours any more (sold, foreclosed, the world rebuilt), nor from someone else's
+// home or a look round one for sale: then you're out on the street by its door (spawnPlayerPed: the saved spot is the
+// door, the nearest ground you can walk from). The owner, 10-16: "Reconnecting inside a home leaves you stuck: restore
+// inside, or spawn outside if someone else holds the claim".
+function backInside(world, p) {
+  const prof = p.profile, id = prof.inHome, ped = p.ped;
+  if (typeof id !== 'number' || !ped || ped.dead || ped.hidden || p.custody || ped.cuffed) return;
+  const h = homes.homeById(world, id);
+  if (!h || h.gone || h.isLobby || world.homeOwner.get(h.id) !== p.pid) return;
+  homes.goInside(world, p, h);
 }
 
 // Coming back to a server running a newer build than the one your character was last on: start fresh
@@ -212,6 +229,9 @@ function standable(world, pos) {
 // foot stands.
 export function savePos(p, ped) {
   if (!ped || ped.onTrain || ped.sub) return;
+  // (inside your own home: which - you're back in it next time; players.backInside)
+  const s = ped.home;
+  if (s && ped.hidden && !s.tour && !s.guest && !s.lobby && ped.inside === s.id) p.profile.inHome = s.id; else delete p.profile.inHome;
   const back = rides.savedSpot(ped); // (up in a balloon or on the wheel: you come back where you boarded)
   if (back) { p.profile.pos = { x: Math.round(back.x), y: Math.round(back.y), lz: 0 }; return; }
   p.profile.pos = { x: Math.round(ped.x), y: Math.round(ped.y), lz: (ped.lz || 0) > 0.5 ? 1 : 0 };

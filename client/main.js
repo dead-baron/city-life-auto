@@ -293,6 +293,10 @@ function onText(m) {
       }
       if (m.sig && S.win && S.win.sig && m.sig !== S.win.sig && windowNotServers(m)) return;   // (World v3's window: the index's world signature; each region's is checked as it's assembled - client/worldwindow.js)
       S.ents.clear(); S.pred = null; S.pending = [];
+      // (a new session starts out in the street: the rooms of a home this page showed before go - the server sends them
+      // again if you're still in there, or back in after logging off at home; the owner, 10-16: "Reconnecting inside a
+      // home leaves you stuck" - the page kept showing the rooms while the server had you out by the door)
+      if (S.homeP) S.homeP.then((mod) => mod.onMsg(S, { off: 1 })).catch(() => {});
       for (const p of S.map.props) if (p && p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
       S.confirmedBreaks.clear(); S.predBreaks.clear();
       S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;

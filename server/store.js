@@ -29,7 +29,7 @@ export function defaultProfile(pid) {
     loans: {},       // home id -> a mortgage on it { owed, pay, day, missed } (server/systems/mortgage.js; absent on older profiles)
     spawnHome: null,
     lastSpawn: null, // the death screen's wake-up spot you last woke at ('h:<i>' | 'home:<id>'): the next one's default
-    pos: null,
+    pos: null,       // (and inHome: the home you logged off inside, back in it next time - players.savePos; absent when you weren't)
     stats: { kills: 0, deaths: 0, arrests: 0, deliveries: 0, fish: 0 },
     safety: true,    // Safety mode: an act that'd be a crime asks first (server/systems/safety.js) - on for new characters
   };
