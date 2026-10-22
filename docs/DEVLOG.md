@@ -13416,3 +13416,73 @@ empty beach had a crowd of office workers turning up round them.
 
 Tests: test/townfolk.test.js - the rule on a made-up map (by the street, in the park, never out on open grass); and
 a player stood on World v3's open coast for 30 s sees none of the town crowd, only a few country folk.
+
+## 2026-10-21 · Nature: the desert's waters - tinajas and seep pools
+
+The handcraft research's 4.6 (NR1-B, SC3-F): "tinajas (rock water pockets) and seep pools as hidden fishing/water
+spots", "a murky olive seep pool under a palo verde". The desert had Mirage Lake, the reservoir and the stock tanks,
+and no natural water of its own out in the rock.
+
+- **tinajas** (`shared/world3-tinajas.js`, new, World v3's done hook): five pockets of rain water at the foot of a
+  mesa's or a butte's cliff in the Red Rock and Dry Creek deserts, far apart and well off the roads. Each is a bowl of
+  bare slickrock round clear green water with the cliff's face behind it, sandstone boulders on the rim (open on the
+  side away from the cliff, the way down to the water), a palo verde over it, and a cactus or two in the rock.
+- **seep pools:** two in the dry wash below Red Rock Dam, where the dam's water seeps back up through the gravel:
+  murky olive water in a ring of damp dark mud, reeds and cattails at the edge, and a palo verde on the north side so
+  its canopy leaves the pool in sight.
+- Each is fresh still water (a pond: you can fish it, and the desert's animals come down to drink) and is on the
+  map's nature sites ('tinaja', 'seep'), a place to find.
+- **their look** (`client/art2/game/groundbake.js` tinaPx): the slickrock and the mud are drawn per pixel round the
+  water out to a ragged edge, so they come out round and not as a square of tiles. The water's look comes from the
+  water bake's styles: 'forest' (clear green) for a tinaja, 'marsh' (murky, duckweed) for a seep.
+
+Tests: test/desertwaters.test.js - the ring round each kind of water, round and ragged, nothing past it;
+test/world3desert.test.js - the tinajas south of a cliff's foot with its face kept, their boulders and palo verde,
+the seeps in the dam's wash with their reeds, each a pond listed for the bakes, far apart.
+
+## 2026-10-21 · The Syndicate's compound out in the desert, not in Highland Woods
+
+The owner, 10-16: "No gang in the north-west forest: gangs go in isolated rough corners of the city or isolated
+desert spots". Today's world builds the Syndicate's walled compound on Smuggler's Rock, an island off the coast.
+World v3 has no such island, so the compound came out at the island's old place: in Highland Woods, with its guards
+in the pines and its boats tied up on dry land.
+
+- **World v3 leaves the old compound out** (`shared/map.js` buildRock, skipped in the whole v3 world; its random
+  draws are kept so nothing built after it moves). Today's world is unchanged.
+- **and builds it in the desert** (`shared/world3-compound.js`, new, World v3's done hook): far out in the Red Rock
+  or Dry Creek desert, as far from every town as it can be, on level open ground at the end of a long dirt track off
+  a road. It has a block wall with guard towers at two corners, and the gate in the wall facing the track (members
+  only). Inside are the Syndicate Den with its counter (the members' shop and the poaching runs), containers by the
+  back wall, crates, pallets and drums along the sides, and the crew's cars and bikes in front of the Den. The
+  guards' posts are outside the gate, inside it, in the yard and at the Den's door.
+- **the guards** (`server/systems/gang.js`) watch the compound's own ground wherever it is (m.rock.compound), not
+  the old island's box, and say "Members only in here!". The join and leave messages name the compound in the desert
+  in World v3.
+- **its wall** (`client/art2/game/statics.js`) leaves a gap for the gate in whichever side it's in. Before, only a
+  south gate got one, so the Rock's west gate had a wall drawn across it.
+
+Tests: test/world3desert.test.js - the compound in the desert, far from every building, walled all round but the
+gate, the Den and its counter inside, the guards' posts, the track out to a road, nothing of the Syndicate's left in
+Highland Woods; on the v3 map, an outsider at the gate is warned and then shot at, and the gate opens for a member.
+(The compound's parked cars and bikes carry their own mark, `syn`, not the MX park's `mx`: test/world3dirt.test.js
+counts the MX park's bikes and trucks by it.)
+
+## 2026-10-21 · Every waterway to the sea
+
+The owner, 2026-10-21, with a screenshot: "Noticed not all waterways are connecting to the ocean". Kestrel Lake's
+reach runs north to the North Coast Road, where a sea inlet comes down under the road's bridge from the other side.
+The reach stopped eight tiles short: two rows of the road's south pavement and six of sand lay between the lake's
+water and the sea's.
+
+- **the cut** (`shared/world3-outlets.js`, new, World v3's done hook, after the water bodies and Kestrel Lake's
+  shore): it looks at every place where a river's or a lake's water comes within ten tiles of the sea and doesn't
+  meet it anywhere near. Ponds don't count: a pond has no way out. Where it finds one, the open ground between the
+  two waters becomes water, as wide as they face each other. A road or pavement across the gap becomes bridge, and
+  the bake decks the road over it. A pavement is cut only where its road goes over too, so the street never gets a
+  hole in it. The cut also takes away anything that stood on that ground.
+- In World v3 there are two: Kestrel Lake's reach, now open to the sea under the North Coast Road (67 tiles, 19 of
+  them pavement made bridge), and a creek on the west coast that ended two tiles of sand short of the beach. A third
+  place was looked at and left alone: the head of a creek ten tiles in from the shore, with nothing to cut there.
+
+Tests: test/world3kestrel.test.js - Kestrel Lake's reach cut through under a bridge, the lake's water and the sea's
+one water there, and a second look at the whole world finds nothing left to cut.

@@ -234,6 +234,10 @@ function tileFacts(C) {
   const parks = M.parkGrounds || [];        // designed town parks (Lakeview Park): lawn and gravel paths whatever the district, the plaza paved
   const pools = M.pools || [];              // swimming pools (the Stadium Lido): tiled pool water, a pale concrete deck
   const springs = M.springs || [];          // hot spring pools: milky blue-green mineral water (ellipses)
+  // the desert's waters (shared/world3-tinajas.js): a tinaja's bowl of bare slickrock round its water, a seep's ring of
+  // cracked mud - out to its ring, ragged
+  const tinas = (M.tinajas || []).filter((e) => e.x + e.r * 1.3 + e.ring + 64 >= TX0 * TILE && e.x - e.r * 1.3 - e.ring - 64 <= (TX0 + TN) * TILE && e.y + e.r * 1.3 + e.ring + 64 >= TY0 * TILE && e.y - e.r * 1.3 - e.ring - 64 <= (TY0 + TN) * TILE);
+  C.tina = tinas;   // (drawn per pixel by classify: tinaPx)
   const mazes = M.mazes || [];              // hedge mazes: the walls' tiles are lawn under the hedges, the paths gravel
   const tracks = (M.tracks || []).filter((r) => r.bb[2] >= TX0 * TILE - 64 && r.bb[0] <= (TX0 + TN) * TILE + 64 && r.bb[3] >= TY0 * TILE - 64 && r.bb[1] <= (TY0 + TN) * TILE + 64);   // dirt tracks off-road (Red Rock Canyon)
   // (World v3 8.22, H50: the desert's tables - their tops' cap rock, the talus at their feet - and Red Rock Canyon's floor
@@ -381,6 +385,16 @@ function tileFacts(C) {
   waterTiles(C, WMATS, TN);
 }
 const WMATS = { SEA: M_.SEA, LAKE: M_.LAKE, POND: M_.POND, RIVER: M_.RIVER };
+// a tinaja's slickrock (red rock), a seep's damp mud: the material at (X, Y) round one of the desert's waters, or -1
+export function tinaPx(list, X, Y, seed) {
+  for (const e of list) {
+    const dx = X - e.x, dy = Y - e.y, d2 = dx * dx + dy * dy, far = e.r * 1.3 + e.ring * 1.3;
+    if (d2 > far * far) continue;
+    const lim = e.r * 1.1 + e.ring * (0.7 + 0.6 * vnc(X, Y, 34, seed + 77)) + (vnc(X, Y, 9, seed + 79) - 0.5) * 8;
+    if (d2 < lim * lim) return e.k ? M_.MUD : M_.REDROCK;
+  }
+  return -1;
+}
 // true when a run of this tile type through (tx, ty) is longer along x than along y
 function runAxis(M, tx, ty, t) {
   let h = 0, v = 0;
@@ -738,6 +752,9 @@ function classify(C) {
         const t2 = (Math.floor((Y + oy) / TILE) - TY0) * TN + Math.floor((X + ox) / TILE) - TX0;
         if (t2 >= 0 && t2 < TN * TN && isSoft(b.tm[t2]) && !b.tw[t2]) m = b.tm[t2];
       }
+      // --- the desert's waters (shared/world3-tinajas.js): a tinaja's bowl of slickrock, a seep's ring of cracked mud -
+      // round the water out to a ragged edge, per pixel (a tile's step would show as a square)
+      if (C.tina && C.tina.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS)) { const q = tinaPx(C.tina, X, Y, seed); if (q >= 0) m = q; }
       // --- vectors: roads, sidewalks, shoulders, bridge decks
       const a = b.aux[i];
       let z = 0;

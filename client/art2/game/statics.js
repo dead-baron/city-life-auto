@@ -2990,8 +2990,15 @@ function addSetPieces(c, I) {
   if (M.rock && M.rock.compound) {
     const cp = M.rock.compound, x0 = cp.tx * TILE + 8, y0 = cp.ty * TILE + 8, x1 = (cp.tx + cp.tw) * TILE - 8, y1 = (cp.ty + cp.th) * TILE - 8;
     const gate = (M.gates || []).find((g) => g.rule === 'gang');
-    fenceLine(I, 'wall', x0, y0, x1, y0); fenceLine(I, 'wall', x0, y0, x0, y1); fenceLine(I, 'wall', x1, y0, x1, y1);
-    if (gate && Math.abs(gate.y - y1) < 80) { fenceLine(I, 'wall', x0, y1, gate.x - gate.w / 2 - 18, y1); fenceLine(I, 'wall', gate.x + gate.w / 2 + 18, y1, x1, y1); } else fenceLine(I, 'wall', x0, y1, x1, y1);
+    // (each side whole but the one the gate is in - World v3's desert compound's faces its track, the Rock's its dock:
+    // a gap there, the gate's bars in it)
+    const side = (ax, ay, bx, by) => {
+      const h = ay === by, at = gate && (h ? !gate.vertical && Math.abs(gate.y - ay) < 80 : gate.vertical && Math.abs(gate.x - ax) < 80);
+      if (!at) { fenceLine(I, 'wall', ax, ay, bx, by); return; }
+      if (h) { fenceLine(I, 'wall', ax, ay, gate.x - gate.w / 2 - 18, ay); fenceLine(I, 'wall', gate.x + gate.w / 2 + 18, ay, bx, by); }
+      else { fenceLine(I, 'wall', ax, ay, ax, gate.y - gate.w / 2 - 18); fenceLine(I, 'wall', ax, gate.y + gate.w / 2 + 18, bx, by); }
+    };
+    side(x0, y0, x1, y0); side(x0, y0, x0, y1); side(x1, y0, x1, y1); side(x0, y1, x1, y1);
     for (const [x, y] of [[x0 + 24, y0 + 24], [x1 - 24, y1 - 24]]) { put(I, vitem('gtw', 'guardTower', [70, 1], x, y)); lightAt(I, x, y, 100, 220, [1, 0.95, 0.8], 1.8, 'lamp'); }
   }
   // airports: a control tower by each terminal (or hangar)

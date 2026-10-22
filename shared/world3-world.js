@@ -54,6 +54,9 @@ import { desertRoadside3 } from './world3-roadside.js';
 import { stockTanks3 } from './world3-stocktanks.js';
 import { tidyProps3 } from './world3-tidy.js';
 import { sunkenWrecks3 } from './world3-wrecks.js';
+import { desertWaters3 } from './world3-tinajas.js';
+import { desertCompound3 } from './world3-compound.js';
+import { waterOutlets3 } from './world3-outlets.js';
 import { woodsLake3 } from './world3-woodslake.js';
 import { wildEdges3 } from './world3-edges.js';
 import { riverRun3 } from './world3-riverrun.js';
@@ -262,6 +265,7 @@ export function worldOpts(asked) {
       m.world3.banks = riverBanks3(m);   // (the nature program, 2026-10-20: the rivers' gravel bars, cut banks and green banks - world3-banks.js)
       m.world3.waterBodies = waterBodies3(m);   // (2026-10-18, the water upgrade: which water is a creek, a river, a lake, a pond or the marsh, which way each channel runs - m.waters, m.lake: world3-waterbodies.js)
       m.world3.kestrel = kestrelByHand3(m, H3);   // (Kestrel Lake by hand: the south shore's bays and points, Kestrel Beach - world3-kestrel.js)
+      m.world3.outlets = waterOutlets3(m, H3);   // (every waterway to the sea: a channel stopping a few tiles short of it cut through, a road over the gap a bridge - the owner, 10-21: world3-outlets.js)
       m.world3.farmPonds = farmPonds3(m, H3);   // (Willow Valley's farm ponds: jetties, rowboats, windmill pumps - world3-farmponds.js)
       m.world3.verges = vergesByHand3(m, H3);   // (Willow Valley's countryside: green banks between the fields and the rivers, the power lines along the county roads - world3-verges.js)
       m.world3.trails = buildTrails3(m, H3);   // (the nature program, 2026-10-20: Highland Woods' trails, their furniture, the glades and the fire lookout - world3-trails.js)
@@ -281,6 +285,8 @@ export function worldOpts(asked) {
       m.world3.riverRun = riverRun3(m, H3);   // (the Redwood River Run: the kayak hire's put-in in the woods, the take-out above the bay - world3-riverrun.js)
       m.world3.edges = wildEdges3(m, H3);   // (the wild districts' tile-stepped borders meander: the valley and the desert, the tree line, the woods and the valley - world3-edges.js)
       m.world3.roadside = desertRoadside3(m, H3);   // (the desert's roads: white delineator posts with red reflectors along their shoulders - world3-roadside.js; after the edges meander, so a post's district is the one it stands in)
+      m.world3.compound = desertCompound3(m, H3);   // (the Syndicate's compound out in the desert, not in Highland Woods - the owner, 10-16: world3-compound.js)
+      m.world3.desertWaters = desertWaters3(m, H3);   // (the desert's waters: tinajas in the slickrock at the cliffs' feet, seep pools in the dam's dry wash - world3-tinajas.js)
       m.world3.fallsView = fallsInView3(m, H3);   // (the falls chain, part 1: no tree standing where it would hide a fall - world3-falls.js)
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)
       m.world3.wrecks = sunkenWrecks3(m);   // (sunken boats on the bed where the water's clear: rowboats in the lakes, a skiff and a sloop in the sea's shallows - world3-wrecks.js)

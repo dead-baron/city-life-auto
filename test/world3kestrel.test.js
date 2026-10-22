@@ -14,6 +14,7 @@ import { KESTREL3 } from '../shared/world3-kestrel.js';
 import { FARMPONDS } from '../shared/world3-farmponds.js';
 import { habitatAt } from '../server/systems/fishing.js';
 import { prepare } from '../tools/world3-build.mjs';
+import { waterOutlets3, OUTLET3 } from '../shared/world3-outlets.js';
 
 test('World v3: Kestrel Lake\'s south shore wanders (bays, points, reeds), Kestrel Beach, the farm ponds, the valley\'s banks and power lines', { timeout: 400000 }, () => {
   const prep = prepare();
@@ -107,4 +108,21 @@ test('World v3: Kestrel Lake\'s south shore wanders (bays, points, reeds), Kestr
   const roadNear = (p, r) => { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (m.tiles[(ty + dy) * W + tx + dx] === T.ROAD) return true; return false; };
   const boxes = m.props.filter((p) => p && p.t === 'mailbox' && m.dist[Math.floor(p.y / TILE) * W + Math.floor(p.x / TILE)] === 49 && roadNear(p, 4));
   assert.ok(boxes.length >= V.lanes, `a mailbox at each lane's gate (${boxes.length})`);
+  // the lake's reach north runs on under the North Coast Road to the sea (the owner, 10-21: "not all waterways are
+  // connecting to the ocean" - it stopped a strip of sand and pavement short of the bridge), and no river's or lake's
+  // water anywhere is left a few tiles short of the sea (shared/world3-outlets.js: a second look finds nothing to cut)
+  console.log('outlets', JSON.stringify(m.world3.outlets));
+  const KO = m.world3.outlets.cut.find((c) => c.kind === 'lake' && c.x > 3121 && c.x < 3635 && c.y < 760);
+  assert.ok(KO && KO.bridged > 0 && KO.gap <= OUTLET3.gap, 'Kestrel Lake\'s reach cut through to the sea, the road over it a bridge');
+  const wetO = (i) => m.tiles[i] === T.WATER || m.tiles[i] === T.DEEP || m.tiles[i] === T.BRIDGE;
+  const seen = new Set([KO.y * W + KO.x]), q = [KO.y * W + KO.x];
+  let lake = false, sea = false;
+  for (let h = 0; h < q.length && !(lake && sea); h++) {
+    const i = q[h];
+    if (m.lake[i] === 1) lake = true;
+    if (!m.land[i] && !m.lake[i] && !m.river[i]) sea = true;
+    for (const j of [i - 1, i + 1, i - W, i + W]) { const x = j % W, y = (j - x) / W; if (!seen.has(j) && wetO(j) && Math.abs(x - KO.x) < 40 && Math.abs(y - KO.y) < 40) { seen.add(j); q.push(j); } }
+  }
+  assert.ok(lake && sea, `the lake's water and the sea's one water at the cut (${lake}, ${sea})`);
+  assert.deepEqual(waterOutlets3(m, null).cut, [], 'no river or lake left a few tiles short of the sea');
 });
