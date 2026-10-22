@@ -14338,3 +14338,17 @@ bets from across the street; a hand left and come back to, a double down.
 Room in the page for it: the casino's board took the page to its 494 KB budget, so the device report and the
 diagnostics overlay's text moved out to client/diag.js, loaded when they're needed (the report twenty seconds in, the
 overlay the first time it's on) - the page is 492.9 KB.
+
+## 2026-10-22 · Rideshare: three tiers in the Transit app
+
+The owner, 10-06: "Rideshare app in 3 tiers (premium, standard, an 'Ultra Saver' that may wreck)". The phone's
+Transit app now offers three rides (server/systems/transit.js, shared/rules.js RIDESHARE):
+
+- **Cruise Black**: a black sedan, sent from nearer (sooner), at 2.2 times the meter.
+- **Taxi**: as before - the nearest free cab, or one sent from out of sight; or hail one going by.
+- **Ultra Saver**: an old compact at under half the fare - and once you're in, the driver goes flat out, through the
+  lights (the street racers' driving, traffic.js `reckless`). It may well crash: then the ride's on them.
+
+Everything else is the taxi's: the pick-up at the kerb, your waypoint as the destination, the meter, paying getting
+out. Tests: test/transit.test.js - the three tiers in the app, an Ultra Saver called, boarded, racing, its fare, the
+crash free; a Cruise Black's car and fare.

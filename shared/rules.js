@@ -424,6 +424,13 @@ export const TAXI_FLAG = 5;                // the meter starts at this...
 export const TAXI_PER_KM = 30;             // ...and runs this much a kilometre driven (1 m = a tile); paid getting out
 export const TAXI_WAIT_S = 60;             // a taxi you hailed or called waits this long at the kerb for you
 export const TAXI_REFUSE_STARS = 2;        // no taxi stops for anyone this wanted
+// the Transit app's rideshare tiers (the owner, 10-06): the meter times `fare`; the car; the Ultra Saver drives flat out
+// once you're in (reckless px/s: it may well crash - then the ride's on them)
+export const RIDESHARE = {
+  premium: { name: 'Cruise Black', fare: 2.2, model: 'sedan', paint: 3, note: 'a black sedan, sooner - 2.2x the fare' },
+  std: { name: 'Taxi', fare: 1, note: `the meter: $${TAXI_FLAG} + $${TAXI_PER_KM} a km, paid when you get out - or hail one going by` },
+  saver: { name: 'Ultra Saver', fare: 0.45, model: 'compact', paint: 11, reckless: 420, note: 'under half the fare. Your driver is in a hurry' },
+};
 export const HIGHWAY_SPEED = 560;          // traffic cruising speed up on the ring highway (px/s)
 export { BARRIER_BREAK_SPEED } from './rules-base.js';    // ram a highway barrier this fast (px/s, straight into it) and it gives way
 export const BARRIER_REPAIR_S = 300;       // the road crew puts a smashed barrier back after this long (when nobody's looking)
