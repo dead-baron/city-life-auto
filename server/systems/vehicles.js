@@ -497,10 +497,19 @@ function sinkBoom(world, v) {
   world.remove(v);
 }
 
+// A bridge's two layers (shared/physics.js ped.under): its deck and the water under it. From up on the deck you can't
+// reach down to a boat under the bridge, nor from the water up to a car on the deck (the owner, 10-16: "You can steal a
+// boat from a bridge (and probably a car on a bridge from the water)").
+export function acrossBridge(map, ped, v) {
+  const pt = map.tileAtPx(ped.x, ped.y);
+  if (v.def.kind === 'boat') return pt === T.BRIDGE && !ped.under;
+  return map.tileAtPx(v.x, v.y) === T.BRIDGE && (WATER_T[pt] === 1 || (pt === T.BRIDGE && !!ped.under));
+}
 export function nearestVehicle(world, ped, range) {
   let best = null, bestD = Infinity;
   for (const v of world.query(ped.x, ped.y, range + 100, K.VEH)) {
     if (!sameLevel(v.lz, ped.lz) || aircraft.inAir(v)) continue;   // (an aircraft overhead: out of reach - no Act prompt for it)
+    if (acrossBridge(world.map, ped, v)) continue;   // (up on a bridge's deck and down on the water under it: out of reach)
     const h = circleVsObb(ped.x, ped.y, range, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
     if (!h) continue;
     const d = range - h.depth;

@@ -13536,3 +13536,16 @@ the fin, the wheels and the propeller level.
 
 Tests: test/aircraftart.test.js - banked, the fin leans over with the wings, the low wing down and the high one up,
 the span foreshortened.
+
+## 2026-10-21 · Fix: no stealing a boat from up on a bridge, or a car on a bridge from the water
+
+The owner, 10-16: "You can steal a boat from a bridge (and probably a car on a bridge from the water)". Getting in
+looked for the nearest vehicle in reach without minding a bridge's two layers: the deck, and the water under it.
+
+- **across a bridge** (`server/systems/vehicles.js` acrossBridge, in nearestVehicle): standing up on a bridge's
+  deck, a boat on the water under it is out of reach. Swimming in the water, a car up on the deck is out of reach.
+  The Act prompt doesn't offer them either. Down in the water under the bridge you can still climb into the boat,
+  and from the deck you can still get into the car.
+
+Tests: test/bridgelayers.test.js - no boat from the deck, the boat from the water; no car on the deck from the
+water, the car from the deck.
