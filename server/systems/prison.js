@@ -5,7 +5,7 @@
 // nobody hurts anyone (as in the cells: ped.cellSafe); the gate opens for the officers, never for a prisoner. Time
 // served, you're let out and the Prison Boat brings you back to the mainland (Sandpiper Bay Police Dock).
 // The breakout: at the compound's outer wall the action button climbs it - five seconds up and over, in plain sight
-// of the towers. Over the wall you're out (in the water off the island, or on its rocks) - and wanted, three stars: the
+// of the towers. Over the wall you're out (on the island's rocks) - and wanted, three stars, the guards after you: the
 // rest is getting off the island (a long swim, the sharks: sharks.js). Logging off inside keeps the time left, served
 // next time you play (custody.js saveJail / onJoin).
 //   p.prison: { until, since, stars, weapon (back in your hand when you're out), climb: { until, x, y } | null }
@@ -17,6 +17,7 @@ import * as law from './law.js';
 import * as homes from './homes.js';
 import { ferryRoutes } from './ferries.js';
 import { spawnNpc } from './npc.js';
+import { pursue } from './police.js';
 
 const live = (world) => world.map.prison || null;
 const inCompound = (P, x, y) => { const c = P.compound; return x > c.tx * TILE && x < (c.tx + c.tw) * TILE && y > c.ty * TILE && y < (c.ty + c.th) * TILE; };
@@ -67,7 +68,7 @@ export function sentence(world, p, secs, stars, quiet = false) {
   ped.x = at.x; ped.y = at.y; ped.a = -Math.PI / 2;
   world.place(ped);
   p.teleportAt = world.time;
-  p.prison = { since: world.time, until: world.time + secs, stars, weapon: ped.weapon && ped.weapon !== 'fists' ? ped.weapon : null, climb: null };
+  p.prison = { since: world.time, until: world.time + secs, stars, weapon: ped.weapon && ped.weapon !== 'fists' ? ped.weapon : null, climb: null, ped: ped.id };
   ped.weapon = 'fists'; ped.cellSafe = true;
   p.meDirty = true;
   store.touch();
@@ -96,10 +97,10 @@ function wallBy(world, P, ped) {
 export function interaction(world, p) {
   const P = live(world), S = p.prison, ped = p.ped;
   if (!S || !P || !ped || ped.dead) return null;
-  if (S.climb) return { label: 'Climbing...', passive: true };
+  if (S.climb) return { label: 'Climbing...', passive: true, run: () => {} };
   const over = wallBy(world, P, ped);
-  if (over) return { label: 'Climb the wall - the guards will see', crime: false, run: () => climb(world, p, over) };
-  return { label: `Doing time: out in ${fmt(S.until - world.time)}`, passive: true };
+  if (over) return { label: 'Climb the wall - the guards will see', crime: 'escape', run: () => climb(world, p, over) };
+  return { label: `Doing time: out in ${fmt(S.until - world.time)}`, passive: true, run: () => {} };
 }
 function climb(world, p, over) {
   const S = p.prison;
@@ -116,9 +117,14 @@ export function update(world, dt) {
   let any = false;
   for (const p of world.players.values()) {
     const S = p.prison, ped = p.ped;
+    if (p.prisonOut && world.time - p.prisonOut < ESCAPEE_S) any = true;   // (just over the wall: the guards still out)
     if (!S) continue;
-    if (!ped || ped.removed) continue;
+    if (!ped || ped.removed || ped.dead) continue;
     any = true;
+    // a new body (died in there - on fire when booked, say - and woke up in a hospital): back inside, the time left
+    if (S.ped !== ped.id) { const w = S.weapon; if (sentence(world, p, Math.max(5, S.until - world.time), S.stars, true)) { p.prison.weapon = w; world.notify(p, `Patched up and taken back to ${P.name}: ${fmt(p.prison.until - world.time)} left.`, 'warn'); } continue; }
+    // away from the keys (the page closed, a ghost waiting to log off): the clock stops - time offline doesn't count
+    if (!p.conn) { S.until += dt; if (S.climb) S.climb.until += dt; }
     ped.weapon = 'fists'; ped.cellSafe = !S.climb;
     if (S.climb) {   // (on the wall: held there till over it)
       ped.vx = 0; ped.vy = 0;
@@ -135,7 +141,7 @@ export function update(world, dt) {
 // out the hard way: three stars, the weapons back
 function escaped(world, p, msg) {
   const S = p.prison, ped = p.ped;
-  p.prison = null;
+  p.prison = null; p.prisonOut = world.time;
   ped.cellSafe = false;
   if (S.weapon && p.profile.weapons[S.weapon] !== undefined) ped.weapon = S.weapon;
   law.addHeat(world, p, Math.max(0, STAR_HEAT[PR.escapeStars] - (p.heat || 0) + 1), ped.x, ped.y);
@@ -154,6 +160,7 @@ export function release(world, p, msg = null) {
   if (S && S.weapon && p.profile.weapons[S.weapon] !== undefined) ped.weapon = S.weapon;
   const R = (ferryRoutes(world) || []).find((r) => r.custody), land = R && R.stops[0] && R.stops[0].land;
   const at = land ? { x: land.x, y: land.y } : live(world).dock || { x: ped.x, y: ped.y };
+  if (!land && !msg) msg = 'Time served. You\'re let out at the harbour - the Prison Boat isn\'t running.';
   ped.x = at.x; ped.y = at.y; ped.vx = 0; ped.vy = 0;
   world.place(ped);
   homes.protect(world, ped, 3);
@@ -163,25 +170,58 @@ export function release(world, p, msg = null) {
   store.touch();
 }
 
-// the guards at their posts (the gate, the yard's corners, the blocks' doors, the harbour) while anyone's
-// doing time there; gone again when nobody is
+// the guards at their posts (the gate, the yard's corners, the blocks' doors, the harbour) while anyone's doing time
+// there or has just gone over the wall; gone again when nobody is. One down (or carried off) is replaced at their post.
+// A guard who sees someone just broken out - wanted, in sight, near - goes after them on foot (police.js pursue: run
+// down, tackled, taken in)
+const ESCAPEE_S = 120, GUARD_SEE = 520;
 function guards(world, P, any) {
-  const G = (world.prisonGuards ||= []);
+  const G = (world.prisonGuards ||= []), posts = (world.prisonPosts ||= []);
+  const post = (g, k) => {
+    const c = spawnNpc(world, 'cop', g.x, g.y, 'cop');
+    c.a = Math.atan2(P.y - g.y, P.x - g.x);
+    /* (npc.js: a guard holds his post, keeping watch round it) */
+    c.weapon = 'rifle'; c.npc.tactic = 'fire'; c.npc.beat = false; c.npc.keep = true; c.npc.guard = { x: g.x, y: g.y, a: c.a }; c.npc.state = 'idle'; c.npc.prisonGuard = true;
+    G[k] = c.id; posts[k] = g;
+  };
   if (any && !G.length) {
-    for (const g of P.guards) {
-      if (g.tower) continue;   // (up the towers: not drawn - the posts on the ground)
-      const c = spawnNpc(world, 'cop', g.x, g.y, 'cop');
-      c.a = Math.atan2(P.y - g.y, P.x - g.x);
-      /* (npc.js: a guard holds his post, keeping watch round it) */
-      c.weapon = 'rifle'; c.npc.tactic = 'fire'; c.npc.beat = false; c.npc.keep = true; c.npc.guard = { x: g.x, y: g.y, a: c.a }; c.npc.state = 'idle';
-      G.push(c.id);
-    }
+    let k = 0;
+    for (const g of P.guards) if (!g.tower) post(g, k++);   // (up the towers: not drawn - the posts on the ground)
     world.prisonGuardsAt = world.time;
   } else if (!any && G.length && world.time - (world.prisonGuardsAt || 0) > 30) {
-    for (const id of G) { const c = world.get(id); if (c && !c.removed) world.remove(c); }
-    G.length = 0;
+    for (const id of G) { const c = world.get(id); if (c && !c.removed && !c.dead) world.remove(c); }
+    G.length = 0; posts.length = 0;
   }
-  if (any) world.prisonGuardsAt = world.time;
+  if (!any || !G.length) return;
+  world.prisonGuardsAt = world.time;
+  if ((world.tick + 7) % 10) return;
+  // posts left empty (a guard down, carried off, gone after someone and never back): filled again, out of sight
+  for (let k = 0; k < G.length; k++) {
+    const c = world.get(G[k]);
+    if (c && !c.removed && !c.dead) continue;
+    if (!inAnyViewOf(world, posts[k])) post(posts[k], k);
+  }
+  // an escapee in sight
+  for (const q of world.players.values()) {
+    const t = q.ped;
+    if (!t || t.dead || t.vehId || q.prison || !q.prisonOut || world.time - q.prisonOut > ESCAPEE_S || !(q.wanted > 0) || q.custody) continue;
+    for (const id of G) {
+      const c = world.get(id);
+      if (!c || c.dead || c.removed || c.npc.pursue || Math.hypot(t.x - c.x, t.y - c.y) > GUARD_SEE || !world.map.los(c.x, c.y, t.x, t.y)) continue;
+      pursue(world, c, t);
+      world.emit(c.x, c.y, { e: 'say', id: c.id, x: Math.round(c.x), y: Math.round(c.y), text: 'Stop! Escaped prisoner!' });
+    }
+  }
+}
+const inAnyViewOf = (world, g) => { for (const q of world.players.values()) if (q.ped && Math.hypot(q.ped.x - g.x, q.ped.y - g.y) < 700) return true; return false; };
+
+// out of prison another way (the debug teleport, a dev's goto): no sentence, no breakout - the weapon back
+export function drop(world, p) {
+  const S = p.prison;
+  if (!S) return;
+  p.prison = null;
+  if (p.ped) { p.ped.cellSafe = false; if (S.weapon && p.profile.weapons[S.weapon] !== undefined) p.ped.weapon = S.weapon; }
+  p.meDirty = true;
 }
 
 export function meInfo(world, p) {

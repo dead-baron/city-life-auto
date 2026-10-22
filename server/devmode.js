@@ -6,6 +6,7 @@
 // and teleport to / fetch any player.
 import * as vehicles from './systems/vehicles.js';
 import * as trains from './systems/trains.js';
+import * as prison from './systems/prison.js';
 
 const envPw = typeof process !== 'undefined' && process.env ? process.env.CLA_DEV_PASSWORD : '';
 export const DEV_PASSWORD = envPw || 'GODMODE';
@@ -75,6 +76,7 @@ export function goTo(world, p, pid) {
   const q = world.players.get(String(pid));
   if (!q || !q.ped || q.ped.dead || q === p || !p.ped || p.ped.dead) { world.notify(p, '[dev] Can\'t reach that player right now.', 'warn'); return; }
   if (q.ped.hidden) { world.notify(p, `[dev] ${q.name} is hidden indoors.`, 'warn'); return; }
+  prison.drop(world, p);   // (out of Prison Island this way: no sentence, no breakout)
   arriveNear(world, p.ped, q.ped);
   world.notify(p, `[dev] Teleported to ${q.name}.`, 'info');
 }
@@ -83,6 +85,7 @@ export function bring(world, p, pid) {
   const q = world.players.get(String(pid));
   if (!q || !q.ped || q.ped.dead || q === p || !p.ped || p.ped.dead) { world.notify(p, '[dev] Can\'t fetch that player right now.', 'warn'); return; }
   if (q.ped.hidden) { q.ped.hidden = false; q.ped.interior = null; }
+  prison.drop(world, q);
   arriveNear(world, q.ped, p.ped);
   q.meDirty = true;
   world.notify(q, `${p.name} (dev) teleported you to them.`, 'warn');
