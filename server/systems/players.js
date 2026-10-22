@@ -526,7 +526,15 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (pressed & IN.USE) economy.useHealItem(world, p);
 
   if (ped.sky) { skydive.input(world, p, ped, inp, pressed); return; }   // (falling from an aircraft: steering, the parachute - skydive.js)
-  if (ped.surf) { surf.input(world, p, ped, inp, pressed); return; }   // (on a surfboard: paddling, carving, an air - surf.js)
+  if (ped.surf) {   // (on a surfboard: paddling, carving, an air - surf.js)
+    surf.input(world, p, ped, inp, pressed);
+    // lying on the board (or tumbling): the vehicle button still boards a boat beside you, the action button still does
+    // what's in front of you (surf.update takes the board off you once you're aboard)
+    const lying = ped.surf && (ped.surf.st === 'pad' || ped.surf.st === 'wipe');
+    if (lying && (pressed & IN.VEHICLE)) vehicles.playerEnter(world, ped);
+    else if (lying && (pressed & IN.ACTION)) doAct(world, p);
+    return;
+  }
   if (ped.onTrain) { trains.riderInput(world, p, ped, inp, pressed, dt); return; }
   if (ped.hoodOf) { carhits.hoodInput(world, ped, inp); return; }   // (riding a car's hood: move to roll off - carhits.js)
 

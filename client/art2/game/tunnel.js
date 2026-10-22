@@ -191,15 +191,14 @@ export function bakeTunnel(map, cx, cy, ap = 2, into = null) {
     let k = K_EARTH, h = H;
     if (D2[i] < hw2) {
       any = true;
-      const tr = { d: DS[i], s: SA[i] };
-      const d = Math.abs(tr.d), along = tr.s;
+      const d = Math.abs(DS[i]), along = SA[i];
       k = K_FLOOR; h = 0;
       if (d < 27) {
         k = K_BALLAST;
         if (Math.abs(d - TUNNEL.railOff) < 1.6) { k = K_RAIL; h = 4; }
         else if (d < 22 && ((along % TUNNEL.sleeper) + TUNNEL.sleeper) % TUNNEL.sleeper < 6) { k = K_SLEEPER; h = 2; }
       }
-      info[i * 2] = tr.d; info[i * 2 + 1] = along;
+      info[i * 2] = DS[i]; info[i * 2 + 1] = along;
     }
     const st = sts.length ? onPlatform(G, x, y, sts) : null;
     if (st) {

@@ -24,6 +24,7 @@ import { cutWorld, createWorldCdn, keptWorld } from './worldcdn.js';
 import { generateCity } from '../shared/map.js';
 import { mapSignature } from '../shared/mapcore.js';
 import { ferryRoutes } from './systems/ferries.js';
+import { breaksOf as surfBreaks } from './systems/surf.js';
 import { aheadOf as trainAhead } from './systems/trains.js';
 import { TICK_MS } from '../shared/constants.js';
 
@@ -59,6 +60,8 @@ const world = new World(map, { dev: config.dev, npcBudget: config.npcBudget, bui
 console.log(`[server] build ${bootBuild ? bootBuild.v : '(no version.json)'} · fresh start on update: ${config.freshOnUpdate}`);
 // the ferries' routes, worked out now rather than on the first tick (a few hundred ms: server/systems/ferries.js)
 { const t0 = Date.now(), fr = ferryRoutes(world); console.log(`[server] ferries: ${fr.map((r) => `${r.name} (${r.mainland} - ${r.island}, ${Math.round(r.len / 32)} m)`).join(', ') || 'none'} in ${Date.now() - t0} ms`); }
+// the surf breaks, found now rather than in the first tick a surfer's near the sea (most of a second on World v3: surf.js)
+{ const t0 = Date.now(), n = surfBreaks(world).list.length; console.log(`[server] surf breaks: ${n} in ${Date.now() - t0} ms`); }
 // the art from the server: the world's chunks baked here and downloaded by the pages (server/artcdn.js)
 let artCdn = null;
 try { artCdn = createArtCdn({ map, root: config.root, dataDir: config.dataDir, seed: config.seed, world: WORLD3 ? 'v3' : null, onBytes: (n) => { if (limits) limits.addBytes(n); } }); } catch (e) { console.error('[art] not serving chunks:', e); }

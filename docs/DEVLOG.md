@@ -14804,9 +14804,12 @@ the sea:
   its crest catches you up, and you're up.
 - **Riding it.** The wave carries you in; the stick carves you along the face, left or right along the beach. The points
   come for every second up, for your speed along the face, and most of all for riding in the pocket just ahead of the
-  break; a carve (a quick turn back) and an air off the lip (the action button) are worth more. Stay in the white water
+  break; a carve (a quick turn back) and an air off the lip (the action button, a second's riding between one and the
+  next - and land in the white water and it has you all the same) are worth more. Stay in the white water
   behind the break and it has you - a tumble, the ride over. Ride it in, or off the end of the beach (where the beach
   bends away the ride ends there, on the water), and the ride's counted: its points over you, your best ride kept (the HUD: RIDING and the points, BEST RIDE under the money).
+- **Getting off.** Paddle up onto the sand, a dock or a quay and the board's back in your bag; lying on it, the vehicle
+  button still takes you aboard a boat beside you and the action button still does what's in front of you.
 - **How you look.** Lying on the board paddling, up side-on with the knees deep and the arms out, knees tucked in an air
   (client/art2/people.js surfpad, surf, surfair; the descriptor's sf) - on a long white board with an orange stripe.
 The server steps it all (server/systems/surf.js: ped.surf, like the parachute's fall: your page draws you from the
@@ -14814,4 +14817,11 @@ snapshots). Paddling and riding practise the swimming skill. The playtest panel'
 a break, a board in your bag.
 Tests: test/surf.test.js - the waves (sets, the break from one end peeling along, the same at the same moment), the
 breaks (sand behind, open sea in front), a ride (on the board, catching a wave, carving, an air, counted, off the board
-up the beach), paddling in well ahead of a wave and it still catches you up, the white water.
+up the beach), paddling in well ahead of a wave and it still catches you up, the white water, airs no faster than one a
+second and never carried far past the beach, the vehicle button from the board.
+The breaks are found as the server starts (most of a second on World v3) and sent to everyone near the sea, so a surfer
+riding by is seen on the waves by everyone on the beach.
+
+The subway in the new art, from a review: riding on into another window of the world (the map swapped as the train runs
+on), the tunnel's chunks stay on screen and are baked again from it, after the missing ones (they were all dropped - a
+blank tunnel at a region's edge); none of the surface's birds, ride cars or finds drawn underground.
