@@ -14169,3 +14169,33 @@ already fires for as long as the trigger is held, at its own rate; these two are
 
 Tests: test/autoweapons.test.js - held for a second, about ten shots; shown as the police rifle; the cone sets the one
 in front alight and leaves the one behind alone, scorches a car; shown as the bazooka.
+
+## 2026-10-22 · The SAM launcher; rockets hit aircraft up in the air
+
+The owner, 10-16: "A way to fight back against helicopters (a SAM launcher, or aiming up), without making them weak".
+
+- **the SAM launcher** (shared/items.js sam; the Smuggler's Den, $9,000, $650 a missile; illegal): aimed at an aircraft
+  up in the air - at where it's drawn, up the screen by its height - it locks on ("Locked on!"; with nothing within half
+  a radian of the aim, "No lock"). Its missile flies over the rooftops after the aircraft, turning at most 2.6 radians a
+  second and climbing to its height, and hits it: 230, so two bring down a police helicopter (420), three the gunship
+  (700) - a helicopter jinking hard can still shake one off. Lost, it flies on and bursts in the air (server/systems/
+  combat.js samLock, stepMissile; on the wire it climbs in the projectile's extra byte, as the gunship's missiles fall).
+- **rockets into aircraft**: a bazooka's rocket (or a gunship's missile) that meets an aircraft up in the air now hits
+  it, with the burst where it's drawn (combat.js airHit). Before, its blast went off on the ground below and, the
+  aircraft being well above it, missed. A shot's path is now searched for aircraft as far down the screen as the highest
+  is drawn up it (traceTarget: a rocket's short step used never to come near enough to find one).
+- in hand it shows as the bazooka (index 35, past the hand's five bits); its own icon in the bag and the shops.
+
+Tests: test/sam.test.js - the lock, the chase, the hit, two for a police helicopter; no lock, a burst on its own; a bazooka
+rocket into a hovering helicopter.
+
+## 2026-10-22 · The page's start-up budget: 492 -> 494 KB
+
+A decision (CLAUDE.md: raising a budget is one). The batch's weapons and the fall from the sky - grenades, the assault
+rifle, the flamethrower, the SAM launcher, the skydive and the train's sign - each need a little in the code every page
+loads at once: their events (the throw, the bounce, the flamethrower's jet), the sky word's decoding and the camera
+following you down, the weapons' icons. Their drawing loads only when first needed (render/skyfall.js,
+render/trainsign.js), and the classic renderer's train cars moved out to load with its first train
+(render/traincars.js), which bought back about 2 KB; with all that the page is 492.7 KB, over the 492 KB budget.
+tools/perf.mjs: 494 KB. Next to look at for room: the classic renderer's own drawing (main.js drawWorldV1 and its
+helpers), loaded with the classic renderer only.

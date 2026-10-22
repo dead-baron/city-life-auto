@@ -58,6 +58,10 @@ export const WEAPONS = {
   // people alight and scorches cars (combat.js flame). Past the wire's five bits: in hand they show as the police
   // assault rifle and the bazooka's tube (hand - net.js handIndex)
   arifle:   { i: 33, name: 'Assault Rifle',   type: 'gun', dmg: 17, range: 620, spread: 0.06, cd: 0.095, mag: 30, reload: 1.8, illegal: true, hand: 17 },
+  // the SAM launcher (the owner, 10-16: "A way to fight back against helicopters (a SAM launcher, or aiming up), without
+  // making them weak"): aimed at an aircraft up in the air it locks on, and its missile chases it (combat.js
+  // stepMissile) - two hits bring down a police helicopter, three the gunship. Shown in hand as the bazooka.
+  sam:      { i: 35, name: 'SAM Launcher',    type: 'rocket', sam: true, dmg: 230, radius: 60, range: 1700, speed: 760, turn: 2.6, cd: 2.4, mag: 1, reload: 2.8, illegal: true, hand: 12, ammoName: 'missiles', starter: 2 },
   flamer:   { i: 34, name: 'Flamethrower',    type: 'flame', dmg: 5, range: 150, arc: 0.6, cd: 0.1, mag: 60, reload: 2.4, illegal: true, ammoName: 'fuel', hand: 12 },
 };
 export const WEAPON_BY_INDEX = [];
@@ -431,6 +435,7 @@ export const SHOPS = {
     { kind: 'weapon', id: 'grenade', price: 380 }, { kind: 'ammo', id: 'grenade', price: 120, qty: 1 },
     { kind: 'weapon', id: 'arifle', price: 2300 }, { kind: 'ammo', id: 'arifle', price: 70, qty: 30 },
     { kind: 'weapon', id: 'flamer', price: 4800 }, { kind: 'ammo', id: 'flamer', price: 120, qty: 60 },
+    { kind: 'weapon', id: 'sam', price: 9000 }, { kind: 'ammo', id: 'sam', price: 650, qty: 1 },
     { kind: 'weapon', id: 'shotgun', price: 700 }, { kind: 'ammo', id: 'shotgun', price: 40, qty: 12 },
     { kind: 'weapon', id: 'spistol', price: 850 }, { kind: 'ammo', id: 'spistol', price: 35, qty: 10 },
   ], sells: ['purse', 'bonds', 'jewelry'] },
