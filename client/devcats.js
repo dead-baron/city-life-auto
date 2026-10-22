@@ -84,6 +84,7 @@ export const DEV_SECTIONS = [
     ['🚲 Commuter bike', 'car', { m: 'bicycle' }], ['🏖 Beach cruiser', 'car', { m: 'cruiser' }], ['🚵 Mountain bike', 'car', { m: 'mtb' }],
     ['🚴 Road bike', 'car', { m: 'roadbike' }], ['🛞 BMX', 'car', { m: 'bmx' }], ['📦 Cargo bike (two crates)', 'car', { m: 'cargobike' }],
     ['🔒 Nearest bike rack', 'near', { k: 'bikerack' }],
+    ['🐴 A horse beside me', 'car', { m: 'horse' }], ['🐴 Me up on a horse', 'car', { m: 'horse', in: 1 }], ['🐴 A farm co-op (horses to hire, buy; the farm horses)', 'near', { k: 'farm' }],
   ] },
   { id: 'motos', title: '🏍 Motorcycles', items: [
     ['🏍 Dustwing cruiser', 'car', { m: 'vtwin' }], ['🧳 Longhaul tourer', 'car', { m: 'tourer' }], ['🔱 Hellfork chopper', 'car', { m: 'chopper' }],

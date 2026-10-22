@@ -26,7 +26,7 @@ PEAK_MAX = 3.0   # (dBFS at vol 1, before the buses - about -7 dBFS at the maste
 
 UI = {'click', 'notify', 'good', 'bad', 'alert', 'phoneopen', 'phoneclose', 'coin', 'cashin', 'cashout', 'starup', 'stardown',
       'death', 'goal', 'racego', 'checkpoint', 'ridebell', 'bite', 'reloadout', 'reloadin'}
-STEP = {'step', 'stroke', 'leaves', 'twig'}
+STEP = {'step', 'stroke', 'leaves', 'twig', 'hoof'}
 AMB = {'cricket', 'owl', 'bird', 'gull', 'dog', 'farsiren', 'farhorn', 'drop', 'crackle', 'cavedrip', 'squeak', 'drip', 'slidingdoor',
        'clack', 'trickle', 'flutter'}
 GUN = {'gun_pistol', 'gun_revolver', 'gun_smg', 'gun_rifle', 'gun_shotgun', 'gun_sniper', 'gun_rocket'}

@@ -332,6 +332,7 @@ function onText(m) {
     case 'fish': fishGo(m); break;   // (a catch landed: its card)
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
+      if (m.horse && S.pred && S.pred.kind === 'veh' && S.pred.def && S.pred.def.horse) { S.pred.s.stam = m.horse.st; S.pred.s.blown = !!m.horse.bl; }   // (your horse's wind, as the server has it: the gait predicted from it - shared/physics.js)
       if ((m.inv && m.inv.skateboard > 0) || m.sk) loadSkate();
       if (m.fishing) loadFish();   // (a line out: client/fishing.js)   // (a board in your bag: riding it and its tricks - client/skate.js)
       S.ugLayer = m.ug || 0;   // (under the ground: the physics steps you through its own map, the underground view draws)
@@ -498,7 +499,7 @@ function fixedStep() {
   const selfScreen = worldToScreen(selfPos());
   const wcur = S.me ? WEAPONS[S.me.weapon] : null;
   const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
-  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)) });
+  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)), horse: S.ctrlKind === CTRL.DRIVER && !!(S.pred && S.pred.def && S.pred.def.horse) });   // (horse: on one - the stick all the way out gallops, #325)
   const inOverlay = overlayPad();
   const spec = !!(S.spec && S.spec.on);
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
@@ -3448,6 +3449,7 @@ function drawOverlays(F, v2) {
   // HUD bits
   if (S.skate && S.me && S.me.sk) S.skate.drawHud(g, W, H, S.me.sk, now);
   if (S.me && S.me.surf) drawSurfHud(S.me.surf, now);   // (on a surfboard: this ride's points, the last one's, your best - server surf.js)
+  if (S.me && S.me.horse) drawHorseHud(S.me.horse, now);   // (on a horse: its wind, the hire's clock - server horses.js)
   if (S.fish) S.fish.drawHud(g, W, H);   // (the fight, the prompts, the catch card)   // (on a skateboard: the combo, the score, the special meter, a session)
   // (where you are: the water doesn't change it - a river, a lake, the sea near land keep the name - client/areaname.js)
   { const me = F.meEnt, cv = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER ? S.ents.get(S.ctrlId) : null, cd = cv && cv.d && VEHICLE_BY_INDEX[cv.d.m];
@@ -4356,6 +4358,21 @@ function pedVisual(p, now) {
 }
 // surfing (server surf.js, me.surf): riding a wave, its points so far big over you; the ride just done, its points rising
 // away; your best ride under the money
+// On a horse (#325): its wind under the money - a bar running down as it gallops (Sprint), BLOWN when it's spent (a canter
+// till it's got its breath back) - and a hired one's time left
+function drawHorseHud(h, now) {
+  const P = S.pred, st = P && P.def && P.def.horse && P.s.stam !== undefined ? P.s.stam : h.st, blown = P && P.def && P.def.horse ? !!P.s.blown : !!h.bl;
+  g.save();
+  const w = 120, x = W - 16 - w, y = Math.max(104, H * 0.2) + 6;
+  g.textAlign = 'right'; g.textBaseline = 'bottom'; g.font = '700 11px system-ui, sans-serif';
+  g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(blown ? 'BLOWN - LET IT BREATHE' : 'HORSE · SPRINT TO GALLOP', W - 16 + 1, y - 2 + 1);
+  g.fillStyle = blown ? '#ff9a6a' : '#f2e2c4'; g.fillText(blown ? 'BLOWN - LET IT BREATHE' : 'HORSE · SPRINT TO GALLOP', W - 16, y - 2);
+  g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x - 1, y - 1, w + 2, 8);
+  g.fillStyle = blown ? (Math.floor(now * 3) % 2 ? '#c8502a' : '#8a3a22') : st > 0.35 ? '#e8c27a' : '#e0803a';
+  g.fillRect(x, y, Math.round(w * Math.max(0, Math.min(1, st))), 6);
+  if (h.hire !== null && h.hire !== undefined) { g.textBaseline = 'top'; g.fillStyle = h.hire < 60 ? '#ff9a6a' : '#f2e2c4'; g.fillText(`HIRED · ${Math.floor(h.hire / 60)}:${String(h.hire % 60).padStart(2, '0')}`, W - 16, y + 10); }
+  g.restore();
+}
 function drawSurfHud(sf, now) {
   if (!sf.st && !sf.pts) return;
   g.save();

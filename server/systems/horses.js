@@ -169,6 +169,11 @@ export function meInfo(world, p) {
 
 export function update(world) {
   const now = world.time;
+  // on a horse whose wind is going or coming back: the page's bar kept up (a 'me' every few ticks)
+  if (world.tick % 4 === 1) for (const p of world.players.values()) {
+    const v = p.ped && p.ped.vehId ? world.get(p.ped.vehId) : null;
+    if (v && v.def.horse && (v.stam ?? 1) < 1) p.meDirty = true;
+  }
   if (world.tick % 10 === 7) {
     for (const p of world.players.values()) {
       if (!p.horseHire) continue;

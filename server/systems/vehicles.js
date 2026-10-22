@@ -571,7 +571,7 @@ export function tryEnter(world, ped) {
   if (seat === 0 && p) p.lastVehicle = v.id;
   if (seat === 0 && p && p.badge && v.def.police && v.cruiserOf !== p.pid && (v.motorPool !== undefined || v.issuedTo === p.pid)) cruiser.adopt(world, p, v);
   if (seat === 0) { v.lastDriver = ped.id; if (v.ai && v.ai.kind === 'traffic') { v.ai = null; v.despawnable = true; } }
-  if (p) { p.meDirty = true; world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y }); }
+  if (p) { p.meDirty = true; world.emit(v.x, v.y, { e: v.def.horse ? 'mount' : 'door', x: v.x, y: v.y }); }
   return true;
 }
 
@@ -698,7 +698,7 @@ export function ejectPed(world, ped, force, toward = null) {
     ped.under = v.def.kind === 'boat';
     if (ped.lz > 0.3) levelStep(world.map, ped, 11);
     ped.a = v.a;
-    if (ped.player) { ped.player.meDirty = true; world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y }); }
+    if (ped.player) { ped.player.meDirty = true; world.emit(v.x, v.y, { e: v.def.horse ? 'mount' : 'door', x: v.x, y: v.y }); }
     if (i === 0) v.input = { throttle: 0, steer: 0, hb: false };
   }
   ped.vehId = 0; ped.seat = -1;

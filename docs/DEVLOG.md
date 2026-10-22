@@ -14825,3 +14825,30 @@ riding by is seen on the waves by everyone on the beach.
 The subway in the new art, from a review: riding on into another window of the world (the map swapped as the train runs
 on), the tunnel's chunks stay on screen and are baked again from it, after the missing ones (they were all dropped - a
 blank tunnel at a region's edge); none of the surface's birds, ride cars or finds drawn underground.
+
+## 2026-10-22 · Horses
+
+The owner's #325 (10-08). The farms' horses were scenery. Now they're ridden (server/systems/horses.js; the horse a
+vehicle of its own, shared/vehicles.js horse; the numbers shared/rules.js HORSE):
+- **Riding.** Like a bike - but four legs: a canter, or spurred to a gallop (Sprint: Shift, RT all the way down, the
+  thumb all the way out) while its wind lasts - some ten seconds flat out, then it's blown and canters till it has its
+  breath back (a walk or standing brings it back quickest; the HUD's bar under the money). At home on any ground (grass,
+  dirt and sand don't slow it), never into the water (it stops at the shore; a bridge it crosses), no skids, burnouts or
+  donuts (shared/physics.js: its gaits and its wind, predicted on your page as the server rides it), no lamps at night.
+- **The farms' horses**, each in its own coat now (chestnut, bay, black, grey, palomino, a paint), can be ridden off
+  bareback: the vehicle button beside one - they're the farm's, so that's horse theft (Safety mode asks first).
+- **The farm co-ops** (Willow Valley's, Dry Creek's) keep riding horses: hire one saddled ($25, ten minutes - hand it back
+  at a co-op, or leave it and it finds its own way home; kept well past the time it's reported stolen), or buy one of the
+  three in the paddock today ($1,800 - yours, kept with your vehicles, saddled up again at any co-op or your garage).
+- **Hurt**, a horse doesn't burn or blow up: out of health (shot, ridden hard into a wall) it throws whoever's on it and
+  bolts, off at a gallop away from whatever hurt it - a whinny - gone once nobody's watching (a hired one home, yours
+  back at the co-op).
+- **How it looks and sounds**: the farm animal's own model in its coat, saddled (the blanket, the saddle with its horn
+  and cantle, the fenders and stirrups, a bridle and the reins - client/art2/animals.js 'horse:s<coat>'), its legs in
+  step with its speed, its head down to graze when it stands; the rider astride ('saddle' - people.js), rising with the
+  gallop. Hoofbeats instead of an engine - a walk's four, a canter's three, a gallop's drum - clopping on roads and quays,
+  thudding on grass (client/sound/vehicles.js hooves); the whinny as it bolts.
+The playtest panel's bikes section has a horse beside you, you up on one, and the nearest farm co-op.
+Tests: test/horses.test.js - the canter and the gallop, blown and rested, no skids; never into the water; a farm's horse
+ridden off (its coat, horse theft); the co-op's hire and handing back, buying one; out of health it throws you and
+bolts, never a wreck.
