@@ -33,9 +33,9 @@ const recent = (p) => (p.profile.arrests || []).filter((t) => Date.now() - t < P
 // the sentence for a booking at `stars` (s), or 0: the station's cells as ever
 export function sentenceFor(world, p, stars) {
   if (!live(world)) return 0;
-  const n = recent(p);
-  if (stars < PR.stars && n < PR.repeat) return 0;
-  return Math.min(PR.max, PR.base + PR.perStar * stars + PR.perRepeat * Math.max(0, n - 1));
+  const n = recent(p);   // (the bookings before this one, in the while)
+  if (stars < PR.stars && n + 1 < PR.repeat) return 0;
+  return Math.min(PR.max, PR.base + PR.perStar * stars + PR.perRepeat * n);
 }
 
 // ---- in -------------------------------------------------------------------------------------------------------------------
@@ -171,8 +171,9 @@ function guards(world, P, any) {
     for (const g of P.guards) {
       if (g.tower) continue;   // (up the towers: not drawn - the posts on the ground)
       const c = spawnNpc(world, 'cop', g.x, g.y, 'cop');
-      c.weapon = 'rifle'; c.npc.tactic = 'fire'; c.npc.beat = false; c.npc.keep = true; c.npc.guard = true; c.npc.state = 'idle';
       c.a = Math.atan2(P.y - g.y, P.x - g.x);
+      /* (npc.js: a guard holds his post, keeping watch round it) */
+      c.weapon = 'rifle'; c.npc.tactic = 'fire'; c.npc.beat = false; c.npc.keep = true; c.npc.guard = { x: g.x, y: g.y, a: c.a }; c.npc.state = 'idle';
       G.push(c.id);
     }
     world.prisonGuardsAt = world.time;
