@@ -13672,3 +13672,16 @@ Two of the owner's 10-16 notes on the playtest panel:
 
 Tests: test/farming.test.js - the dev tractor and combine at the field nearest you, on its crop;
 test/gameplay.test.js - "take me there" for a water race lists only water races.
+
+## 2026-10-21 · The wind gusts and dies away; the rain quieter
+
+The owner, 10-16: "Rain and wind still drown everything out; wind seems constant". The wind's level wandered at random
+between 0.35 and 1 of its bed, so it never dropped away and never really gusted. The rain's bed peaked over the
+town's.
+
+- **gusts** (`client/sound/ambience.js` gustStep): lulls most of the time (0.12-0.4 for 8-24 s) and, three times in
+  ten, a gust (0.75-1 for 2.5-5 s) that swells in quicker than it dies away. The leaves' rustle in the woods goes
+  with the gusts as before, so it's quiet in the lulls too.
+- **the rain** (BED_MAX.rain 0.22 to 0.15): about 3 dB down. It adds less to the wind (0.05, was 0.1).
+
+Tests: test/sound.test.js - mostly lulls, gusts now and then, from near still to a strong gust; the rain's level.

@@ -335,3 +335,24 @@ test('the master runs through a high-pass under what anyone hears, before the co
   assert.match(src, /const master = gain\(0, hp\)/, 'the master into the high-pass');
   assert.match(src, /hp\.type = 'highpass'; hp\.frequency\.value = SUB_HZ;[^\n]*hp\.connect\(comp\)/, 'and the high-pass into the compressor');
 });
+
+// The wind (the owner, 10-16: "Rain and wind still drown everything out; wind seems constant"): lulls most of the time,
+// a gust now and then swelling in and dying away (client/sound/ambience.js gustStep) - not a level wandering at random;
+// the rain's bed under the town's, not over everything
+test('the wind gusts and falls away; the rain sits lower in the mix', async () => {
+  const { gustStep, BED_MAX } = await import('../client/sound/ambience.js');
+  let seed = 7; const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const g = { gust: 0.3, gustTo: 0.3, gustNext: 0 };
+  let lull = 0, gusts = 0, lo = 1, hi = 0, up = false;
+  for (let t = 0; t < 600; t += 0.25) {
+    const v = gustStep(g, t, rand);
+    if (v < 0.45) lull++;
+    if (v > 0.7 && !up) { gusts++; up = true; } else if (v < 0.5) up = false;
+    lo = Math.min(lo, v); hi = Math.max(hi, v);
+  }
+  assert.ok(lull / 2400 > 0.6, `mostly lulls (${Math.round(lull / 24)}% of the time)`);
+  assert.ok(gusts >= 5, `gusts now and then (${gusts} in ten minutes)`);
+  assert.ok(lo < 0.2 && hi > 0.85, `from near still to a strong gust (${lo.toFixed(2)}-${hi.toFixed(2)})`);
+  assert.ok(BED_MAX.rain <= 0.16, 'the rain: down from 0.22');
+});
+
