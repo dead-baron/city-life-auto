@@ -34,6 +34,9 @@ import * as prison from './systems/prison.js';
 import * as wanderer from './systems/wanderer.js';
 import * as personas from './systems/personas.js';
 import * as activities from './systems/activities.js';
+import { isArcade } from './systems/arcade.js';
+import { isCasino } from './systems/casino.js';
+import { vaultOf } from '../shared/heist.js';
 import * as looks from './systems/looks.js';
 import { SPECIES } from '../shared/fauna.js';
 import { undergroundOf, caveNear } from '../shared/underground.js';
@@ -97,6 +100,14 @@ export const NEAR_KINDS = {
   runway: (m) => (m.airports || []).map((A) => ({ x: A.runway.x + A.runway.w / 2, y: A.runway.y + A.runway.h - 120, name: `${A.name}'s runway` })),
   helipad: (m) => airfields(m).pads.filter((p) => !p.roof).map((p) => ({ x: p.x + 90, y: p.y, name: p.name })),
   skatespot: (m) => (m.skateSpots || []).map((q) => ({ x: (q.x + q.w / 2) * TILE, y: (q.y + q.h / 2) * TILE, name: q.name })),
+  // (the owner, 10-16: "an option for each sport"; and the games that came since: tennis, the arcades, pool, the casinos,
+  // street dice, a bank's vault - exact: right on the spot, not the open ground beside it)
+  tennis: (m) => m.props.filter((q) => q && q.t === 'court' && q.k === 'tennis').map((q) => ({ x: q.x, y: q.y, name: 'a tennis court' })),
+  arcade: (m) => m.pois.filter((q) => q && isArcade({ map: m }, q)).map((q) => ({ x: q.x, y: q.y + 20, name: q.label })),
+  casino: (m) => m.pois.filter((q) => q && isCasino(q)).map((q) => ({ x: q.x, y: q.y + 20, name: q.label })),
+  pooltable: (m) => { const T2 = m.roadhouse ? activities.poolTable(m) : null; return T2 ? [{ x: T2.cx, y: T2.cy + 40, name: 'the Rusty Spur\'s pool table' }] : []; },
+  dice: (m) => activities.spotsOf(m).list.filter((s) => s.k === 'dice').map((s) => ({ x: s.x, y: s.y, name: 'street dice down an alley', exact: true })),
+  vault: (m) => (m.walkIns || []).map((id) => m.buildings[id]).filter((b) => b && vaultOf(b)).map((b) => { const v = vaultOf(b), q = m.pois[v.u.poi]; return { x: v.sx, y: v.sy, name: `${q ? q.label : 'a bank'}'s vault`, exact: true }; }),
 };
 // the stops of every line on the map (one each: a hub's stop is shared by the loops through it), those keep(stop, rail) takes
 function railStops(m, keep) {
@@ -200,7 +211,7 @@ export function near(world, p, k) {
   let best = null, bd = Infinity;
   for (const q of list) { const d = Math.hypot(q.x - ped.x, q.y - ped.y); if (d > 120 && d < bd) { bd = d; best = q; } } // (the next one along if you're already at one)
   best ||= list[0];
-  const at = standAt(world, best.x, best.y, best.craft ? 1800 : 320);   // (a race out on the water: the nearest shore)
+  const at = best.exact ? { x: best.x, y: best.y } : standAt(world, best.x, best.y, best.craft ? 1800 : 320);   // (a race out on the water: the nearest shore; exact: right there)
   if (!at) return `[dev] Couldn't find open ground by ${best.name}.`;
   if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
   if (ped.vehId) return '[dev] Get out of the vehicle first.';

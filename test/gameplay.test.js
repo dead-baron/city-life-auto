@@ -339,8 +339,10 @@ test('debug menu: every "take me there" button has somewhere to go, and puts you
   const kinds = new Set();
   for (const sec of DEV_SECTIONS) for (const [, c, extra] of sec.items) if (c === 'near') kinds.add(extra.k);
   assert.ok(kinds.size > 30, `${kinds.size} kinds of place`);
+  const V3_ONLY = new Set(['tennis', 'casino']);   // (World v3's places: the tennis courts, Lucky Mesa's casinos - not in the old city this test plays)
   for (const k of kinds) {
     const list = devCmds.nearTargets(w.map, k);
+    if (!list.length && V3_ONLY.has(k)) continue;
     assert.ok(list.length, `somewhere to go for "${k}"`);
     const err = devCmds.near(w, p, k);
     assert.equal(err, null, `${k}: ${err}`);
@@ -351,6 +353,7 @@ test('debug menu: every "take me there" button has somewhere to go, and puts you
       assert.ok(d < 1800, `race: on the shore nearby (${Math.round(d)} px)`);
       assert.ok([...w.entities.values()].some((v) => v.issuedTo === p.pid && v.def && v.def.kind === 'boat' && Math.hypot(v.x - p.ped.x, v.y - p.ped.y) < 460), 'race: a craft in the water beside you');
     } else assert.ok(d < 340, `${k}: beside it (${Math.round(d)} px)`);
+    if (list.some((q) => q.exact)) assert.ok(d < 1, `${k}: right on the spot`);
   }
 });
 

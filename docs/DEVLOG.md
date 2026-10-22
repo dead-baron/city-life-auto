@@ -14670,3 +14670,9 @@ The bounty row's "party splits" (10-07: waiting for parties) - crews are here no
 there (within CREW.share of the target, up and not in custody) is split evenly between you and them, each cut into its
 own bank (server/systems/bounties.js collect; you're told how many ways). Tests: test/crews.test.js - split with a
 crewmate there, none for one far off.
+
+## 2026-10-22 · Playtest panel: the new games' places
+
+The owner, 10-16 ("an option for each sport"). The playtest panel's Events & sport section takes you to a tennis court,
+an arcade, the Rusty Spur's pool table, a casino and a street dice game; Crime, to a bank's vault - right on the spot to
+set a drill (server/dev.js NEAR_KINDS; client/devcats.js). The tennis courts and the casinos are World v3's only.

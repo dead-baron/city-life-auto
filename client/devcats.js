@@ -101,7 +101,7 @@ export const DEV_SECTIONS = [
     ['🛥 Deep-sea charter', 'near', { k: 'charter' }], ['🏭 Warehouse', 'near', { k: 'warehouse' }],
   ] },
   { id: 'crime', title: '💰 Crime', items: [
-    ['🏪 Rob a store', 'near', { k: 'convenience' }], ['🏦 Rob a bank', 'near', { k: 'bank' }], ['🏧 ATM', 'near', { k: 'atm' }],
+    ['🏪 Rob a store', 'near', { k: 'convenience' }], ['🏦 Rob a bank', 'near', { k: 'bank' }], ['🔩 A bank\'s vault (bring a drill)', 'near', { k: 'vault' }], ['🏧 ATM', 'near', { k: 'atm' }],
     ['🔫 Gun shop', 'near', { k: 'gunshop' }], ['💍 Pawn shop', 'near', { k: 'pawn' }], ['🕶 Fence', 'near', { k: 'fence' }], ['💰 +$1,000 hot money (stolen here)', 'hot'],
     ['🏴 Gang HQ', 'near', { k: 'gang' }], ['🏝 Smuggler\'s Den', 'near', { k: 'smuggler' }],
     ['🎁 Contraband drop', 'drop', { n: 4 }], ['👜 Snatch-and-grab nearby', 'snatch'], ['👊 A street fight nearby', 'happen', { k: 'fight' }], ['👮 A fight the police break up', 'happen', { k: 'fight', cops: 1 }], ['🚑 Someone collapses nearby', 'happen', { k: 'faint' }], ['👛 Someone drops a wallet nearby', 'happen', { k: 'wallet' }],
@@ -109,6 +109,8 @@ export const DEV_SECTIONS = [
   { id: 'fun', title: '🎉 Events & sport', items: [
     ['🐶 Lost pet nearby', 'pet'], ['🏁 Water race start (craft waiting)', 'near', { k: 'race' }], ['🏐 Pitch or court', 'near', { k: 'venue' }],
     ['🎬 Drive-in', 'near', { k: 'drivein' }], ['🏎 Raceway', 'near', { k: 'raceway' }], ['🪩 Club', 'near', { k: 'club' }],
+    ['🎾 Tennis court', 'near', { k: 'tennis' }], ['🕹 Arcade', 'near', { k: 'arcade' }], ['🎱 Pool table (Rusty Spur)', 'near', { k: 'pooltable' }],
+    ['🎰 Casino', 'near', { k: 'casino' }], ['🎲 Street dice', 'near', { k: 'dice' }],
     ['🏁 Street race nearby', 'street', { k: 'race' }], ['🚓 Police chase nearby', 'street', { k: 'chase' }], ['🚚 Armored truck nearby', 'street', { k: 'armored' }],
   ] },
   { id: 'shops', title: '🏪 Shops & services', items: [
