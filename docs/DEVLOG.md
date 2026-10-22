@@ -14332,3 +14332,8 @@ Tests: test/tennis.test.js (both ways round; the pro floored; the serve left), t
 
 Tests: test/prison.test.js - the time line pressed, held on the wall, no unstuck, no arrest, died and back inside
 with the time left; over the wall with a guard after you.
+
+Fix (from the full test run): the grenade's throw and bounce, the flamethrower, the skydive's jump, canopy and landing,
+and tennis's racket, bounce and swing had their sounds only through main.js's old sfx calls - none had an entry of its
+own (client/sound/events.js EVENT_SOUNDS, test/sound.test.js); placed where they happen now, and the skydive's three
+had no sound at all before (the canopy fills with a flutter; a soft landing rolls; a splat, or onto a car's roof).

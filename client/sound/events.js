@@ -178,6 +178,18 @@ export const EVENT_SOUNDS = {
   splash: (ev, A) => A.at('splash', ev.x, ev.y, 1, { n: ev.n || 10 }),
   // ---- money and things ----
   cash: at('cashtoss'),
+  // the owner's weapons and the fall from the sky: a grenade thrown and bouncing (grenades.js), the flamethrower's roar
+  // (combat.js flame); out of an aircraft (skydive.js) - the jump, the canopy filling, the landing (soft, onto a car, a splat)
+  toss: at('whoosh', 0.7),
+  clink: at('thud', 0.3),
+  flame: at('burner', 0.5),
+  skyjump: at('whoosh_heavy', 0.6),
+  chute: at('flutter', 0.9),
+  skyland: (ev, A) => { if (ev.k === 'soft') A.at('roll', ev.x, ev.y, 0.6); else { A.at('bodyfall', ev.x, ev.y, 1); if (ev.k === 'car') A.at('clang', ev.x, ev.y, 0.8); } },
+  // tennis (tennis.js): the racket on the ball, its bounce, a swing at the air
+  thwock: at('thwack', 0.6),
+  bounce: at('thud', 0.25),
+  swish: (ev, A) => { const e = A.S && A.S.ents && A.S.ents.get(ev.id); if (e || ev.x !== undefined) A.at('whoosh', e ? e.rx : ev.x, e ? e.ry : ev.y, 0.5); },
   loot: at('pickup'),
   deposit: at('deposit'),
   forage: (ev, A) => { if (ev.up) return; const f = A.S.map && A.S.map.forage && A.S.map.forage[ev.i]; if (f) A.at('pluck', f.x, f.y); },
