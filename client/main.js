@@ -2084,6 +2084,20 @@ function menuKey(k) {
   }
   return false;
 }
+// the button nearest `el` going (dx, dy) among `f` (its index; -1 if none that way)
+function padStep(f, el, dx, dy) {
+  const r0 = el.getBoundingClientRect(), cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+  let best = -1, bs = Infinity;
+  f.forEach((q, i) => {
+    if (q === el) return;
+    const r = q.getBoundingClientRect(), ex = r.left + r.width / 2, ey = r.top + r.height / 2, along = dx ? (ex - cx) * dx : (ey - cy) * dy;
+    if (along <= 4 || !r.width) return;
+    const ov = dx ? r.bottom > r0.top + 3 && r.top < r0.bottom - 3 : r.right > r0.left + 3 && r.left < r0.right - 3;
+    const sc = along + (dx ? Math.abs(ey - cy) : Math.abs(ex - cx)) * (ov ? 0.3 : 2.5) + (ov ? 0 : 60);
+    if (sc < bs) { bs = sc; best = i; }
+  });
+  return best;
+}
 function focusOverlay() {
   document.querySelectorAll('.pfocus').forEach((el) => el.classList.remove('pfocus'));
   const f = focusables();
@@ -2104,7 +2118,14 @@ function overlayPad() {
   if (topOverlay() === 'bigmap' && input.padY) { mapMarkCentre(); return true; }
   if (topOverlay() === 'bigmap' && input.menuLR && el && (el.classList.contains('bm-catname') || el.classList.contains('bm-check'))) { const id = el.dataset.group || el.dataset.toggle; mapwp.toggle(id); return true; }
   if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
-  if (input.menuNav) { ovFocus += input.menuNav; focusOverlay(); }
+  // up and down, left and right: to the nearest button that way as they sit (a grid of apps, a row of tabs); up or
+  // down past the end wraps round the list; a choice box or a tick box takes left and right for itself
+  const ownLR = el && (el.tagName === 'SELECT' || el.type === 'checkbox');
+  if (input.menuNav || (input.menuLR && !ownLR)) {
+    const k = el ? padStep(f, el, input.menuNav ? 0 : input.menuLR, input.menuNav) : -1;
+    if (k >= 0) ovFocus = k; else if (input.menuNav) ovFocus = el ? (input.menuNav > 0 ? 0 : f.length - 1) : ovFocus + input.menuNav;
+    focusOverlay();
+  }
   if (el && input.menuLR) {
     if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + input.menuLR + el.options.length) % el.options.length; el.dispatchEvent(new Event('change')); }
     else if (el.type === 'checkbox') { el.checked = input.menuLR > 0; el.dispatchEvent(new Event('change')); }

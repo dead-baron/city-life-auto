@@ -14373,3 +14373,12 @@ crash free; a Cruise Black's car and fare.
 
 Tests: test/prison.test.js - the time line pressed, held on the wall, no unstuck, no arrest, died and back inside
 with the time left; over the wall with a guard after you.
+
+## 2026-10-22 · Menus on a controller: left and right move left and right
+
+The owner, 10-08 and again 10-15: "Menus on a controller: left and right move left and right". The overlays (the
+phone, settings, the bag, the map's panel...) moved the gamepad's focus down a list only - left and right did nothing
+but change a choice box. Now up, down, left and right go to the nearest button that way as they sit on the screen (the
+phone's grid of apps, a row of tabs), as the debug menu already did (main.js padStep); up or down past the end wraps
+round; a choice box or a tick box still takes left and right for itself. (The d-pad's own shortcuts - the phone, the
+bag, the cop car - were already held back while a menu is open.)
