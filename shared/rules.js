@@ -815,6 +815,9 @@ export const K9 = { share: 0.3, stars: 2, maxStars: 3, speed: 2.7, sight: 800, r
 // each booking before it in that time, up to max s; the wall takes climbS s to get over; over it, escapeStars stars
 export const PRISON = { stars: 4, repeat: 3, repeatMs: 2 * 3600e3, base: 90, perStar: 35, perRepeat: 30, max: 300, climbS: 5, escapeStars: 3 };
 // casinos (server/systems/casino.js): slot spins and table stakes ($); the reels' weights and three-of-a-kind pays
+// street dice (server/systems/streetdice.js): the stake a roll ($, cash), what the crew has on them, the chance (at its
+// most, cleaned out) one takes a winner badly; a roll at most every gapS s
+export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
 export const CASINO = {
   slots: [5, 25, 100], stakes: [10, 50, 250, 1000], bjPays: 1.5, twoCherries: 3,
   reel: {

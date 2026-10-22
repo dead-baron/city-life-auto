@@ -14414,3 +14414,22 @@ the rides and the skills) to 486.7 KB.
 Tests: test/skills.test.js - the levels and the top, the daily cap and another way to the same skill, a new day; more
 health, a longer sprint, a faster stroke, harder blows, the levels for the page, health kept after a death; sprinting
 and driving earn theirs.
+
+## 2026-10-22 · Street dice down the alleys
+
+The owner's gambling list (10-08, 10-16): "back-alley dice". A new street activity (server/systems/activities.js
+'dice'): halfway down an alley in a rough or poor part of town, or the red-light district, three crouched against one
+wall over the dice and the money - mostly after dark, never in the rain (World v3: the Old Quarter's alleys and
+Southside's; the old city's rough districts). Walk up and the action button gets you in on it
+(server/systems/streetdice.js; the numbers: shared/rules.js DICE):
+
+- **$20 a roll, cash only**, played as craps' pass line: a 7 or 11 straight off wins, a 2, 3 or 12 loses; anything
+  else is your point, rolled for till you make it again (win) or a 7 comes up (lose) - the rolls are told. Even money,
+  the dice fair (the street's edge is the real game's, 1.4%).
+- the crew has $300 between them: clean them out and they pack it in and go their ways. The further ahead you get,
+  the likelier one of them takes it badly ("Nobody's that lucky...") and comes at you.
+- drawn: the shooter's dice and a few bills on the ground in front of him (client/art2/people.js 'dice'); the rattle
+  of the dice.
+
+Tests: test/streetdice.test.js - the pass line's rules and its odds (49.3% over a hundred thousand rounds); spots down
+the alleys, the crew there with the dice, rolls paid and taken both ways, no cash no roll, cleaned out and packed up.

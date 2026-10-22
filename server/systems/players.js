@@ -86,6 +86,7 @@ import * as taxijob from './taxijob.js';
 import * as busjob from './busjob.js';
 import * as towjob from './towjob.js';
 import * as skills from './skills.js';
+import * as streetdice from './streetdice.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -721,6 +722,8 @@ export function findInteraction(world, p) {
     if (label) return { label, run: () => economy.openMenu(world, p, poi) };
   }
 
+  const dice = streetdice.interaction(world, p);   // a crew shooting dice down an alley (streetdice.js)
+  if (dice) return dice;
   const fruit = picking.interaction(world, p);
   if (fruit) return fruit;
   const wild = foraging.interaction(world, p);

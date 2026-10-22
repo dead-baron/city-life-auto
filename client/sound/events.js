@@ -178,6 +178,7 @@ export const EVENT_SOUNDS = {
   splash: (ev, A) => A.at('splash', ev.x, ev.y, 1, { n: ev.n || 10 }),
   // ---- money and things ----
   cash: at('cashtoss'),
+  dice: (ev, A) => { A.at('clack', ev.x, ev.y, 0.5); A.at('clack', ev.x, ev.y, 0.35); },   // (dice against the alley wall: streetdice.js)
   casino: (ev, A) => { if (ev.k === 'jackpot') { A.ui('ridebell', 0.9); A.at('cashtoss', ev.x, ev.y, 1); A.at('cashtoss', ev.x, ev.y, 0.8); } else if (ev.k === 'win') { A.ui('ridebell', 0.5); A.at('cashtoss', ev.x, ev.y, 0.6); } else A.at('clack', ev.x, ev.y, 0.4); },   // (a casino's slots and tables: casino.js)
   loot: at('pickup'),
   deposit: at('deposit'),

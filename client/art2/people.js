@@ -1978,7 +1978,7 @@ Object.assign(ACC_HANDS, { sax: 2, violin: 2, drums: 2, statue: 2 });
 Object.assign(POSES, { statue: 1, statuebow: 1 });
 // people at their activities (server activities.js, task #423): easel (a street painter's, in front: the brush up to the
 // canvas), cooler (an angler's, on the deck at their side), chess (the board on the table in front of a seated player)
-CARRY.push('easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle');
+CARRY.push('easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle', 'dice');
 Object.assign(ACC_HANDS, { easel: 1, sponge: 1 });   // (sponge: washing the car, the bucket at their feet; crate: a picker's)
 // part 2: fence (the garden fence the neighbours chat over, in front of him), cueup (waiting his turn at the pool table,
 // the cue stood up beside him); the pose cue (bent over the table, the bridge hand on the felt, the stroke: 4 frames)
@@ -2294,6 +2294,10 @@ const ACT_PROPS = {
     C([-4.4, 13.2, 0.4], [-2.4, 15.4, 42], 0.5, 0.4, GR.ACC, 'leg', W); C([4.4, 13.2, 0.4], [2.4, 15.4, 42], 0.5, 0.4, GR.ACC, 'leg', W); C([0, 22, 0.4], [0, 16.2, 38], 0.5, 0.4, GR.ACC, 'leg', W);
     B([0, 15.2, 25.6], I3, [7.6, 1.2, 0.5], GR.ACC, 'ledge', W);
     B([0, 15.6, 33], rx(-0.18), [7.2, 0.5, 6.6], GR.ACC, 'canvas', (Q) => cloth(Math.abs(Q.l0) > 0.88 || Math.abs(Q.l2) > 0.86 ? '#efe7d2' : Q.l2 > 0.2 - Q.l0 * 0.15 ? '#86b8e4' : Q.l2 > -0.1 ? '#6a9a52' : '#c8a060'));
+  },
+  dice(B) {   // a street game's dice and the money down in front of the one shooting (streetdice.js)
+    B([-1.8, 16.5, 1.2], rz(0.4), [1.25, 1.25, 1.2], GR.ACC, 'die', MAT('#f6f4ee', 0.4)); B([1.8, 18.2, 1.2], rz(-0.3), [1.25, 1.25, 1.2], GR.ACC, 'die', MAT('#f6f4ee', 0.4));
+    B([5.2, 14.4, 0.2], rz(0.2), [3.0, 1.4, 0.15], GR.ACC, 'bills', MAT('#5f9a52')); B([-5.0, 19.6, 0.2], rz(-0.5), [3.0, 1.4, 0.15], GR.ACC, 'bills', MAT('#6aa65c'));
   },
   cooler(B) {   // a blue cooler with a white lid on the deck beside them
     B([-10.5, -1.5, 3.2], I3, [3.6, 2.3, 3.0], GR.ACC, 'cooler', MAT('#2f68c8', 0.3)); B([-10.5, -1.5, 6.6], I3, [3.8, 2.5, 0.5], GR.ACC, 'lid', MAT('#f0f0ec', 0.3));
