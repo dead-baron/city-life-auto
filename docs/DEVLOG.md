@@ -14751,3 +14751,12 @@ The playtest panel's Crime section puts you aboard a mail train, the coach ahead
 run if one's there (server/dev.js train { mail }).
 Tests: test/world3rail.test.js - every main-line loop's robbery country is the Red Rock Desert run (long, out in the
 open, no station on it), none under the city; the HUD, the job and the debug hop.
+## 2026-10-22 · The subway's crash on the way into Lake District Station
+
+The owner, 10-22, with two screenshots from the Pink Line: "Something went wrong drawing the game" on the way into Lake
+District Station, and then it crashed. Ridden headless on a World v3 server from The Yards: as the train came off the
+bridge into the tunnel, the art ahead of the train (client/art2/game/host.js _railAhead - the line's points ahead, for
+the chunks to bake before the train comes up) threw every frame. Its index of the line's points was built once, from the
+first window's map; World v3's window holds only its own regions' points, so once the window moved on, the old index
+pointed past the new lists' ends. Each frame stopped there - nothing more drawn. Now the index is built afresh for each
+new window, and a point not held is skipped, never followed. Test: test/railahead.test.js (fails without the fix).
