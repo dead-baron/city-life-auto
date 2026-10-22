@@ -135,8 +135,8 @@ const SYSTEMS = [
   ['spikes', spikes.update],        // police spike strips: shredded tyres
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
   ['barriers', barriers.update],    // smashed highway barriers: the road crew puts them back
-  ['combat', combat.update],
-  ['grenades', grenades.update],    // grenades thrown: their arcs, bounces and fuses (grenades.js)        // projectiles, bleeding, regen, stun timers
+  ['combat', combat.update],        // projectiles, bleeding, regen, stun timers
+  ['grenades', grenades.update],    // grenades thrown: their arcs, bounces and fuses (grenades.js)
   ['cargo', cargo.update],          // crates, loot bags
   ['robbery', robbery.update],      // store hold-ups, silent alarms, squad-car response
   ['law', law.update],              // heat decay, search circles
