@@ -2477,33 +2477,19 @@ function govern(nowMs) {
 // frame rate, the sharpness it settled on, and what the device is - sent to the server, which keeps the latest and
 // lists them at /perf (server/perfreports.js), so how phones and tablets out there do can be read off one page.
 function perfReport(nowMs) {
+  // (what it sends: client/diag.js perfPayload - loaded when it's time, kept out of the page's first load)
+  const ctx = () => ({ S, LOAD, W, H, DPR, GOV, gfx, getDevice, framePct });
   if (LOAD.sent && !LOAD.sent2 && S.art2 && LOAD.at.screen !== undefined && nowMs - LOAD.at.screen > 240000) {
-    // four minutes into play, a second report: how well the art kept up as they went round (the share of frames
-    // with a stand-in on screen, overall and on the move, the longest such stretch) and what was baked ahead
+    // four minutes into play, a second report: how well the art kept up as they went round, what was baked ahead
     LOAD.sent2 = true;
-    const a2 = S.art2.stats(), L = a2.late || {}, d = getDevice();
-    send({ t: 'perf', r: {
-      stage: 'play', kind: d.kind, gpu: (d.gpu || '').slice(0, 80), ua: navigator.userAgent.slice(0, 160), cores: navigator.hardwareConcurrency || 0, mem: navigator.deviceMemory || 0,
-      preset: gfx.preset, w: W, h: H, dpr: +DPR.toFixed(2), scale: +GOV.scale.toFixed(2), steps: GOV.steps, fps: S.fps, p50: +framePct(0.5).toFixed(1), p95: +framePct(0.95).toFixed(1),
-      bake: a2.t ? Math.round(a2.t.bakeAvg || 0) : 0, kept: a2.n ? a2.n.kept || 0 : 0, workers: a2.pool ? a2.pool.workers : 0,
-      late: L.of ? +(100 * L.frames / L.of).toFixed(1) : 0, lateMove: L.moving ? +(100 * L.movingLate / L.moving).toFixed(1) : 0, lateMax: +(L.max || 0).toFixed(1), moving: L.of ? +(100 * L.moving / L.of).toFixed(0) : 0,
-      ahead: a2.ahead ? a2.ahead.baked : 0,
-      cdn: a2.n ? a2.n.cdn || 0 : 0, cdnMs: a2.n && a2.n.cdn && a2.t ? Math.round((a2.t.cdnSum || 0) / a2.n.cdn) : 0,
-      fetched: a2.fetched ? a2.fetched.got + a2.fetched.had : 0, fetchMiss: a2.fetched ? a2.fetched.miss : 0, cdnOff: a2.fetched && a2.fetched.off ? 1 : 0,
-    } });
+    import('./diag.js').then((m) => send({ t: 'perf', r: m.perfPayload(ctx(), 'play') }), () => {});
     return;
   }
   if (LOAD.sent || !S.welcomed || S.practice) return;
   const at = LOAD.at.screen;
   if (at === undefined ? nowMs < 120000 : nowMs - at < 20000) return;
   LOAD.sent = true;
-  const d = getDevice(), a2 = S.art2 ? S.art2.stats() : null;
-  send({ t: 'perf', r: {
-    kind: d.kind, gpu: (d.gpu || '').slice(0, 80), ua: navigator.userAgent.slice(0, 160), cores: navigator.hardwareConcurrency || 0, mem: navigator.deviceMemory || 0,
-    preset: gfx.preset, w: W, h: H, dpr: +DPR.toFixed(2), scale: +GOV.scale.toFixed(2), steps: GOV.steps,
-    at: LOAD.at, ms: LOAD.ms, city: LOAD.city || '', fps: S.fps, p50: +framePct(0.5).toFixed(1), p95: +framePct(0.95).toFixed(1),
-    bake: a2 && a2.t ? Math.round(a2.t.bakeAvg || 0) : 0, kept: a2 && a2.n ? a2.n.kept || 0 : 0, workers: a2 && a2.pool ? a2.pool.workers : 0,
-  } });
+  import('./diag.js').then((m) => send({ t: 'perf', r: m.perfPayload(ctx(), 'load') }), () => {});
 }
 
 // ---- diagnostics overlay (?diag, or Settings) -----------------------------------------------------
@@ -2511,6 +2497,7 @@ function perfReport(nowMs) {
 // goes, the render size, memory, the controller, how often the input device flips. Made for
 // reading off a TV or a phone screenshot.
 const diag = { on: /[?&]diag\b/.test(location.search) || settings.diag === true, lost: 0, el: null, last: 0, frames: [], long: 0, sw0: 0, swAt: performance.now() };
+let diagMod = null;
 function diagFrame(dtMs) {
   if (!diag.on) return;
   diag.frames.push(dtMs); if (diag.frames.length > 120) diag.frames.shift();
@@ -2518,25 +2505,9 @@ function diagFrame(dtMs) {
   const now = performance.now();
   if (now - diag.last < 500) return;
   diag.last = now;
-  if (!diag.el) { diag.el = document.createElement('pre'); diag.el.id = 'diag'; document.body.appendChild(diag.el); }
-  const f = diag.frames.slice().sort((a, b) => a - b), avg = f.reduce((a, b) => a + b, 0) / (f.length || 1);
-  const p = S.perf || {};
-  const mem = performance.memory ? `${Math.round(performance.memory.usedJSHeapSize / 1e6)}/${Math.round(performance.memory.jsHeapSizeLimit / 1e6)} MB` : 'n/a';
-  const pads = (navigator.getGamepads ? [...navigator.getGamepads()] : []).filter(Boolean);
-  const swRate = (deviceStats.switches - diag.sw0) / Math.max(1, (now - diag.swAt) / 60000);
-  if (now - diag.swAt > 60000) { diag.sw0 = deviceStats.switches; diag.swAt = now; }
-  const cacheMB = (S.ground ? S.ground.cache.size : 0) * CHUNK_PX * CHUNK_PX * 4 / 1e6;
-  const cs = canvasStats();
-  diag.el.textContent = [
-    `fps ${S.fps}  frame avg ${avg.toFixed(1)} ms  worst ${(f[f.length - 1] || 0).toFixed(0)} ms  >50ms: ${diag.long}`,
-    `parts ${Object.entries(p).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(' · ')}`,
-    `screen ${W}x${H} @${DPR.toFixed(2)} (device ${(window.devicePixelRatio || 1).toFixed(2)}${GOV.scale < 1 ? `, eased to ${Math.round(GOV.scale * 100)}% to keep it smooth` : ''}) = ${(canvas.width * canvas.height / 1e6).toFixed(1)} MP  gfx ${gfx.preset} (light ${gfx.lighting}, flora ${gfx.flora})  frames p50 ${framePct(0.5).toFixed(1)} p95 ${framePct(0.95).toFixed(1)} ms`,
-    `ground cache ${S.ground ? S.ground.cache.size : 0}/${S.ground ? S.ground.max : 0} chunks (${cacheMB.toFixed(0)} MB)  canvases ${cs.n} (${cs.mb.toFixed(0)} MB)  js heap ${mem}  gfx lost ${diag.lost}${LOW_MEM ? '  low-memory mode' : ''}`,
-    ...(ART2_WANTED ? [S.art2 ? `art2 ${S.art2.diag()}` : `art2 off: ${S.art2Off || 'starting'}`] : []),
-    `load ${loadLine()}`,
-    `input ${input.device}  flips/min ${swRate.toFixed(0)}  pad ${pads.length ? `${pads[0].id.slice(0, 40)} [${pads[0].mapping || 'no mapping'}]` : 'none'}  emulation ${navigator.gamepadInputEmulation ?? 'n/a'}`,
-    `${IS_CONSOLE ? 'console · ' : ''}${navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 110)}`,
-  ].join('\n');
+  /* (the overlay's text: client/diag.js, loaded the first time it's on) */
+  if (!diagMod) { diagMod = 1; import('./diag.js').then((m) => { diagMod = m; }, () => { diagMod = null; }); return; }
+  if (diagMod !== 1) diagMod.diagDraw(diag, { S, W, H, DPR, GOV, canvas, input, deviceStats, canvasStats, loadLine, CHUNK_PX, ART2_WANTED, IS_CONSOLE, now, gfx, framePct, LOW_MEM });
 }
 // rotating a phone in fullscreen doesn't always fire 'resize' right away: catch every signal
 addEventListener('orientationchange', () => { onResize(); setTimeout(onResize, 120); setTimeout(onResize, 400); });

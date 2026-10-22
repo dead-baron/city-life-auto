@@ -360,12 +360,9 @@ export class HUD {
     $('menu').classList.remove('hidden');
     $('m-title').textContent = m.title;
     $('m-sub').textContent = localizeText(m.sub || '');
-    // a table's state above the options (a casino's cards, reels, the wheel's pocket: server casino.js board rows)
-    const board = $('m-board');
-    if (board) {
-      board.classList.toggle('hidden', !m.board);
-      board.innerHTML = (m.board || []).map((r) => `<div class="brow"><span class="bk">${esc(r.k || '')}</span><span class="bi">${(r.items || []).map((it) => `<b class="${esc(it.c || '')}">${esc(it.t)}</b>`).join('')}</span><span class="bv">${esc(r.v || '')}</span></div>`).join('');
-    }
+    const bd = $('m-board');   // (a casino's table: server casino.js)
+    bd.classList.toggle('hidden', !m.board);
+    bd.innerHTML = (m.board || []).map((r) => `<div class="brow"><span class="bk">${esc(r.k)}</span><span class="bi">${r.items.map((i) => `<b class="${i.c}">${esc(i.t)}</b>`).join('')}</span><span class="bv">${esc(r.v)}</span></div>`).join('');
     $('m-money').textContent = `Wallet $${m.cash.toLocaleString()} · Bank $${m.bank.toLocaleString()}`;
     const box = $('m-opts');
     box.innerHTML = '';

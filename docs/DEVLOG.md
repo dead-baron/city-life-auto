@@ -14334,3 +14334,7 @@ Downtown's covered street, every resort on the Strip) stood marked "for the gamb
 Tests: test/casino.test.js - the odds (the slots' payback, the zero's edge on every roulette bet, aces counted either
 way), a floor's slots, a red bet, thirty hands of blackjack each paid as it should be, the tally, no money no bets, no
 bets from across the street; a hand left and come back to, a double down.
+
+Room in the page for it: the casino's board took the page to its 494 KB budget, so the device report and the
+diagnostics overlay's text moved out to client/diag.js, loaded when they're needed (the report twenty seconds in, the
+overlay the first time it's on) - the page is 492.9 KB.
