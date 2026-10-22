@@ -14221,3 +14221,20 @@ when it's in reach (a swing too early or too far is a swish at the air); a hit a
 
 Tests: test/tennis.test.js - the courts from the props; a whole game played out (the pro called, the serve, rallies
 both ways, first to four two clear, the pro let go); a netted ball and a long one the hitter's point lost; walking off.
+
+## 2026-10-22 · K9 units
+
+Task #324 (only the K9 handler's look - the tactical vest and ball cap - existed). server/systems/k9.js: now and then
+(three times in ten) a patrol car sent after someone on foot at two or three stars is a K9 unit - its first officer a
+dog handler in the K9 vest, a German shepherd in the back (police.js spawnUnit). When the crew jumps out the dog is let
+off the lead, with a bark, and runs the suspect down - faster than anyone can run - and a bite puts them on the ground
+for a couple of seconds, long enough for the officers to get there and the cuffs on (no more than one bite every five
+seconds; the numbers: shared/rules.js K9). It leaves people in vehicles alone, gives up on someone well away, heels to
+its handler, and rides back in when the unit stands down. A police dog is never hurt (as no pet is: combat.js
+hurtable) - get into a car, or get away from the officers before it reaches you.
+
+- the dog is a pet-like ped (archetype pet:dog_shepherd, drawn by art v2's animal rig as the shepherd it already had;
+  pet.k9 keeps it out of the lost pets' and the dog walkers' loops), its bark the 'dog' sound.
+
+Tests: test/k9.test.js - the handler's vest, the shepherd on the wire, in the back, let out, a sprinting suspect caught
+and brought down (bitten, not killed), back in with its handler, gone with the unit; not wanted, no bite.

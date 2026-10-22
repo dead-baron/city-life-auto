@@ -799,3 +799,7 @@ export const GRENADE = { speed: 320, carry: 0.5, lift: 230, grav: 720, bounce: 0
 // proStretch more at the edge of its reach; prize to the bank for beating it; leave px off the court ends the game;
 // between s between points
 export const TENNIS = { pace: 430, spray: 120, proSpeed: 0.92, proMiss: 0.06, proStretch: 0.25, prize: 60, leave: 90, between: 1.6 };
+// K9 units (server/systems/k9.js): share of the patrol cars sent after someone on foot at stars..maxStars that carry a
+// dog; the dog runs at speed x a walk, after anyone wanted within sight px; a bite within reach px puts them down for
+// downS s, no more than once every `every` s
+export const K9 = { share: 0.3, stars: 2, maxStars: 3, speed: 2.7, sight: 650, reach: 24, downS: 2.4, every: 5, hp: 70 };

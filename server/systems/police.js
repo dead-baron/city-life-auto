@@ -20,6 +20,8 @@ import * as custody from './custody.js';
 import * as standoff from './standoff.js';
 import * as struggle from './struggle.js';
 import * as stops from './stops.js';
+import * as k9 from './k9.js';
+import { K9 } from '../../shared/rules.js';
 import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
 import { wildStyle } from './wildlife.js';
@@ -147,6 +149,11 @@ function spawnUnit(world, p, o = {}) {
   }
   v.ai = { kind: 'police', target: p.pid, mode: 'drive', route: null, routeAt: 0, force, swat: force === 'swat' };
   world.police.add(v.id);
+  // now and then a K9 unit: its first officer a dog handler, a police dog in the back (k9.js) - after someone on foot
+  if (force === 'police' && p.wanted >= K9.stars && p.wanted <= K9.maxStars && p.ped && !p.ped.vehId && !k9.onTarget(world, p.pid) && rng() < K9.share) {
+    const h = world.get(v.seats[0]);
+    if (h) k9.attach(world, v, h, p);
+  }
   return v;
 }
 

@@ -304,7 +304,7 @@ export function vehicleLights(d) {
 // alert 1 (head up), rear 2 (a bear up on its hind legs), swim 2 (head and back above the water), float 2 (a sea
 // otter on its back), climb 2 (a squirrel on a trunk), dead 1 (on its side); the game birds: peck 2, fly 4 (the
 // wingbeat), swim 2, alert 1, dead 1, dabble 2 (a duck up-ended on the water, feeding: its tail up, its feet paddling).
-const PET_ART = { dog_golden: 'golden', dog_retriever: 'golden', dog_black: 'lab', dog_spaniel: 'spaniel', dog_pup: 'puppy', cat_black: 'catBlack', cat_grey: 'catTabby', cat_ginger: 'catGinger' };
+const PET_ART = { dog_shepherd: 'shepherd', dog_golden: 'golden', dog_retriever: 'golden', dog_black: 'lab', dog_spaniel: 'spaniel', dog_pup: 'puppy', cat_black: 'catBlack', cat_grey: 'catTabby', cat_ginger: 'catGinger' };
 export const ANIMAL_FRAMES = { idle: 4, walk: 4, run: 4, sit: 2, lie: 2, graze: 2, alert: 1, stalk: 4, rear: 2, swim: 2, float: 2, climb: 2, dead: 1, peck: 2, fly: 4, cutA: 1, cutB: 1, hit: 1, limp: 4, down: 2, fall: 2, drink: 2, wade: 4, wadedrink: 2, strut: 2, swipe: 2, pounce: 2, crouch: 2, dive: 1, eatfish: 2, dabble: 2,
   // Nature-A2, the hunt: a heron's strike, its fish, poised over the water (w...: the same stood in the shallows); a
   // bird of prey soaring, stooping, carrying off its catch, in the water after a fish; a bear's salmon (a fox's mouse)

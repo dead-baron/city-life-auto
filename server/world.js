@@ -69,6 +69,7 @@ import * as aircraft from './systems/aircraft.js';
 import * as skydive from './systems/skydive.js';
 import * as grenades from './systems/grenades.js';
 import * as tennis from './systems/tennis.js';
+import * as k9 from './systems/k9.js';
 import * as sar from './systems/sar.js';
 import * as charter from './systems/charter.js';
 import * as dusting from './systems/dusting.js';
@@ -116,6 +117,7 @@ const SYSTEMS = [
   ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen
   ['trains', trains.update],        // the rail loop: trains, riders, crossings, the mail-car strongbox
   ['police', police.update],        // NPC police dispatch / pursuit
+  ['k9', k9.update],                // police dogs: riding along, let out, running suspects down (k9.js)
   ['custody', custody.update],      // the arrested: held, walked to a car, driven to the station, the cells
   ['cells', cells.update],          // the police stations' cell blocks: nobody hurt there, the doors, NPC inmates
   ['cruiser', cruiser.update],      // player officers' personal cruisers: delivery, loss, tow
@@ -137,8 +139,8 @@ const SYSTEMS = [
   ['spikes', spikes.update],        // police spike strips: shredded tyres
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
   ['barriers', barriers.update],    // smashed highway barriers: the road crew puts them back
-  ['combat', combat.update],
-  ['grenades', grenades.update],    // grenades thrown: their arcs, bounces and fuses (grenades.js)        // projectiles, bleeding, regen, stun timers
+  ['combat', combat.update],        // projectiles, bleeding, regen, stun timers
+  ['grenades', grenades.update],    // grenades thrown: their arcs, bounces and fuses (grenades.js)
   ['cargo', cargo.update],          // crates, loot bags
   ['robbery', robbery.update],      // store hold-ups, silent alarms, squad-car response
   ['law', law.update],              // heat decay, search circles
