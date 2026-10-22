@@ -4,7 +4,7 @@ import { K, WORLD_VERSION } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { HIDE_TIME_S, SPAWN_PROTECT_S } from '../../shared/rules.js';
-import { lobbyKey } from '../../shared/homelayout.js';
+import { lobbyKey, planOf } from '../../shared/homelayout.js';
 import { store } from '../store.js';
 import { LEGACY_HOMES } from './legacy-homes.js';
 import * as homeinside from './homeinside.js';
@@ -164,6 +164,23 @@ export function release(world, prof, home) {
   if (prof.spawnHome === home.id) prof.spawnHome = prof.homes.length ? prof.homes[0] : null;
   stowDecor(prof, home.id);
   store.touch();
+}
+// A home's rooms changed under its furniture (the plan its decor was laid in - shared/homelayout.js planOf - isn't the
+// home's now: three villas became mansions, world3-mansions.js): the furniture back in storage, to place again. Decor kept
+// from before plans were noted: noted now, unless its home is one of those villas. At login (players.join); the names
+// of the homes whose furniture was stowed, or null.
+export function replanDecor(world, prof) {
+  const promoted = new Set(((world.map.world3 && world.map.world3.mansions) || []).map((q) => q.id));
+  const moved = [];
+  for (const id of Object.keys(prof.decor || {})) {
+    const d = prof.decor[id], h = world.map.homes[+id];
+    if (!d || !h) continue;
+    const plan = planOf(h);
+    if (d.plan === undefined && !promoted.has(h.id)) { d.plan = plan; continue; }
+    if (d.plan !== plan) { stowDecor(prof, id); moved.push(h.name); }
+  }
+  if (moved.length) store.touch();
+  return moved.length ? moved : null;
 }
 // (H67) a home's furniture back into storage (it's sold, or taken back): placed in your next home
 export function stowDecor(prof, id) {

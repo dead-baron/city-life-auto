@@ -539,6 +539,7 @@ export class World2 {
 
   dispose() {
     this.ready = false; this.failed = true;
+    if (typeof document !== 'undefined') { const el = document.getElementById('exithint'); if (el) el.classList.add('hidden'); }   // (the way-out note: nothing hides it once we're gone)
     if (this.pool) this.pool.dispose();
     try { this.E.dispose(); } catch { /* gone */ }
     this.chunkState.clear(); this.results.clear(); this.upQ.clear(); this.phs.clear(); this.fades.clear();
@@ -817,7 +818,15 @@ export class World2 {
     if (!b || F.insideB || !this.artKey || this.noBake || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;
     if (typeof document !== 'undefined' && document.hidden) return;
     if (P.waiting && P.waiting((k) => k[0] === 'c' && k[1] !== 'B' && k[1] !== 'C') > 0) return;   // (the screen's bakes first)
-    const pc = this.pc || (this.pc = { kept: new Set(), out: new Set() }), q = this.q, [x0, y0, x1, y1] = cutBoxOf(b);
+    const pc = this.pc || (this.pc = { kept: new Set(), out: new Set(), b: -1 }), q = this.q, [x0, y0, x1, y1] = cutBoxOf(b);
+    // (walking on past one shop to the next: what's still queued for the last is let go - one shop's at a time, not a
+    // street's worth holding the workers while the screen's bakes wait)
+    if (pc.b !== b.id) {
+      const mine = `,${b.id},${q}`;
+      P.cancelWhere((jk) => jk[0] === 'c' && jk[1] === 'C' && !jk.endsWith(mine));
+      for (const jk of [...pc.out]) if (!jk.endsWith(mine)) pc.out.delete(jk);
+      pc.b = b.id;
+    }
     for (let cy = Math.floor(y0 / CHUNK); cy <= Math.floor((y1 - 1) / CHUNK); cy++) for (let cx = Math.floor(x0 / CHUNK); cx <= Math.floor((x1 - 1) / CHUNK); cx++) {
       const kk = `${q}:${cx},${cy}:${b.id}`, jk = `cC${cx},${cy},${b.id},${q}`;
       if (pc.out.has(jk) && !P.has(jk)) pc.out.delete(jk);   // (cancelled: asked again)

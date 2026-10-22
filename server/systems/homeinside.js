@@ -41,7 +41,8 @@ export function decorOf(world, h) {
   const pid = h && world.homeOwner.get(h.id);
   if (!pid) return null;
   const q = world.players.get(pid), prof = q ? q.profile : store.get(pid);
-  return (prof && prof.decor && prof.decor[h.id]) || null;
+  const d = prof && prof.decor && prof.decor[h.id];
+  return d && (d.plan === undefined || d.plan === planOf(h)) ? d : null;   // (laid in other rooms: not over these - homes.replanDecor)
 }
 export const planIn = (world, h) => decorate(planFor(h), decorOf(world, h));
 const homeOf = (world, ped) => (ped && ped.home ? homes.homeById(world, ped.home.id) : null);
@@ -528,6 +529,7 @@ function decoMenu(world, p, h, what) {
 }
 // the home's decor replaced (a new object: shared/homedecor.js keeps each one's layout) - saved, and everyone in there sees it
 function setDecor(world, p, h, d) {
+  d.plan = planOf(h);   // (the plan it's laid in: homes.replanDecor stows it should the home's rooms ever change)
   (p.profile.decor ||= {})[h.id] = d;
   store.touch();
   for (const q of world.players.values()) if (q.ped && q.ped.home && q.ped.home.id === h.id) send(world, q, true);

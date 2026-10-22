@@ -13985,3 +13985,25 @@ places by group with a small map beside them, but you could only go to a listed 
 - Nothing changes for players outside a playtest session.
 
 Tests: test/devtp.test.js as before (the server's teleport and its ground-finding); the page loads clean.
+
+## 2026-10-22 · Fixes from a review of the batch
+
+An independent review of everything since the live build (103a204) turned up these:
+
+- **the classic renderer wiped dark every frame**: the way-out note's call sat in the middle of render()'s chain of
+  renderers, so the chain's dark fill hung off the note's own check. It ran over the world whenever art v2 wasn't
+  up: the classic renderer, and the subway and caves before art v2 started. The call now follows the chain. This is
+  also fixed on the batch about to ship (nature-n19).
+- **no wheel stop at a spot with no bay painted** (`statics.js`): a golf cart's spot on the cart path and the
+  compound's yard had a concrete wheel stop in front of them.
+- **the furniture in a villa that became a mansion** (`homes.replanDecor`, at login): it was laid in the house's
+  rooms and would land inside the mansion's walls. It goes back into storage with a note to place it again. A home's
+  decor now notes the plan it was laid in (`setDecor`), so any later change to a home's rooms is caught the same way.
+  Decor saved before this is kept and noted, except at the three promoted villas.
+- **one shop's bake-ahead at a time** (`_precut`): walking past a row of shops queued a cut-away bake for each,
+  holding the workers while the screen's bakes waited. Moving on to the next shop now lets the last one's queued
+  bakes go.
+- **the way-out note** is hidden when the renderer is disposed.
+
+Tests: test/replandecor.test.js (stowed when the plan changed or the home was promoted, kept and noted otherwise;
+decor only read over the rooms it was laid in); test/precut.test.js (the last shop's bakes let go).

@@ -28,7 +28,7 @@ export function moreMansions3(m) {
       h.name = MANOR[out.length % MANOR.length];
       for (const p of m.pois) if (p && p.kind === 'home' && p.home === h.id) p.label = h.name;
     }
-    out.push({ name: h.name, d: d.name, was, price: h.price, x: Math.round(h.x / TILE), y: Math.round(h.y / TILE) });
+    out.push({ id: h.id, name: h.name, d: d.name, was, price: h.price, x: Math.round(h.x / TILE), y: Math.round(h.y / TILE) });
   }
   return out;
 }

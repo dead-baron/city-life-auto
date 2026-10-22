@@ -16,7 +16,7 @@ function host() {
   Object.assign(h, {
     artKey: 'k', noBake: false, q: 2, lowMem: false, map: { seed: 1 }, prov: { ground: true, statics: true },
     E: { ap: 2, has: new Set(), hasChunk(cx, cy) { return this.has.has(`${cx},${cy}`); } },
-    pool: { dead: false, ready: true, jobs: new Map(), waiting: () => 0, has(k) { return this.jobs.has(k); }, request(k, op, args, prio, done) { this.jobs.set(k, { op, args, done }); asked.push({ k, op, args }); } },
+    pool: { dead: false, ready: true, jobs: new Map(), waiting: () => 0, has(k) { return this.jobs.has(k); }, request(k, op, args, prio, done) { this.jobs.set(k, { op, args, done }); asked.push({ k, op, args }); }, cancelWhere(fn) { for (const k of [...this.jobs.keys()]) if (fn(k)) this.jobs.delete(k); } },
     wantChunks: new Map(), chunkState: new Map(),
   });
   return { h, asked };
@@ -42,6 +42,17 @@ test('near a walk-in\'s door: its chunks baked cut away into the store ahead, on
   const o = host(); o.h._precut({ nearB: B, insideB: B }); assert.equal(o.asked.length, 0);
   // the screen's own bakes first
   const w = host(); w.h.pool.waiting = () => 1; w.h._precut({ nearB: B, insideB: null }); assert.equal(w.asked.length, 0);
+});
+
+test('walking on to the next shop: the last one\'s bakes still queued are let go', () => {
+  const { h, asked } = host();
+  h._precut({ nearB: B, insideB: null });
+  const n = asked.length;
+  const B2 = { id: 9, tx: 80, ty: 40, tw: 6, th: 5 };
+  h._precut({ nearB: B2, insideB: null });
+  assert.ok(asked.length > n, 'the next shop\'s asked for');
+  assert.ok([...h.pool.jobs.keys()].every((k) => k.includes(`,${B2.id},`)), 'only its bakes left queued');
+  assert.ok([...h.pc.out].every((k) => k.includes(`,${B2.id},`)));
 });
 
 test('inside: ready once what\'s on screen of it is drawn cut away - till then, the way out shows', () => {
