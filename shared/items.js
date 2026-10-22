@@ -49,6 +49,10 @@ export const WEAPONS = {
   // of explosion picked (the reload key steps through shared/rules.js BOOM_TEST_KINDS) where it lands - server boomtest.js
   // (index 29: the last free one of the wire's five bits)
   boomtest: { i: 29, name: 'Boom Tester (dev)', type: 'boomtest', range: 620, speed: 1100, cd: 0.3, dev: true },
+  // grenades (task #303): thrown in an arc, they bounce and roll, then go off when the fuse burns down (server
+  // grenades.js; the numbers: rules.js GRENADE). Index 32 is past the wire's five bits: in your hand others see empty
+  // hands (hand: 0 - net.js handIndex); the grenade in flight is a ball on the wire (t 5)
+  grenade:  { i: 32, name: 'Grenade',         type: 'grenade', cd: 0.7, mag: 1, reload: 0.45, illegal: true, ammoName: 'grenades', starter: 3, hand: 0 },
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }
@@ -404,6 +408,7 @@ export const SHOPS = {
     { kind: 'weapon', id: 'spistol', price: 950 }, { kind: 'ammo', id: 'spistol', price: 40, qty: 10 },
     { kind: 'weapon', id: 'rocket', price: 6000 }, { kind: 'ammo', id: 'rocket', price: 400, qty: 1 },
     { kind: 'weapon', id: 'katana', price: 1500 },
+    { kind: 'weapon', id: 'grenade', price: 450 }, { kind: 'ammo', id: 'grenade', price: 140, qty: 1 },
   ], sells: ['purse', 'bonds', 'jewelry', 'ghostglass', 'goldStar'], sellPrice: { ghostglass: FORAGE_FENCE_GHOSTGLASS, goldStar: 175 } },
   tackle: { title: 'Hook & Line Bait and Tackle', buy: [
     { kind: 'item', id: 'caneRod', price: 25, qty: 1 }, { kind: 'weapon', id: 'rod', price: 60 }, { kind: 'item', id: 'baitcaster', price: 240, qty: 1 }, { kind: 'item', id: 'flyRod', price: 300, qty: 1 }, { kind: 'item', id: 'surfRod', price: 380, qty: 1 },
@@ -416,6 +421,7 @@ export const SHOPS = {
   smuggler: { title: "Smuggler's Den (members only)", buy: [
     { kind: 'weapon', id: 'smg', price: 1100 }, { kind: 'ammo', id: 'smg', price: 45, qty: 30 },
     { kind: 'weapon', id: 'rocket', price: 5200 }, { kind: 'ammo', id: 'rocket', price: 350, qty: 1 },
+    { kind: 'weapon', id: 'grenade', price: 380 }, { kind: 'ammo', id: 'grenade', price: 120, qty: 1 },
     { kind: 'weapon', id: 'shotgun', price: 700 }, { kind: 'ammo', id: 'shotgun', price: 40, qty: 12 },
     { kind: 'weapon', id: 'spistol', price: 850 }, { kind: 'ammo', id: 'spistol', price: 35, qty: 10 },
   ], sells: ['purse', 'bonds', 'jewelry'] },

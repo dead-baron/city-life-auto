@@ -67,6 +67,7 @@ import * as bowling from './systems/bowling.js';
 import * as cinema from './systems/cinema.js';
 import * as aircraft from './systems/aircraft.js';
 import * as skydive from './systems/skydive.js';
+import * as grenades from './systems/grenades.js';
 import * as sar from './systems/sar.js';
 import * as charter from './systems/charter.js';
 import * as dusting from './systems/dusting.js';
@@ -134,7 +135,8 @@ const SYSTEMS = [
   ['spikes', spikes.update],        // police spike strips: shredded tyres
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
   ['barriers', barriers.update],    // smashed highway barriers: the road crew puts them back
-  ['combat', combat.update],        // projectiles, bleeding, regen, stun timers
+  ['combat', combat.update],
+  ['grenades', grenades.update],    // grenades thrown: their arcs, bounces and fuses (grenades.js)        // projectiles, bleeding, regen, stun timers
   ['cargo', cargo.update],          // crates, loot bags
   ['robbery', robbery.update],      // store hold-ups, silent alarms, squad-car response
   ['law', law.update],              // heat decay, search circles

@@ -23,7 +23,8 @@ import * as explosions from './explosions.js';   // (chain reactions: task #398)
 import * as campfires from './campfires.js';
 import * as dance from './dance.js';
 import * as burning from './burning.js';   // (fire on people: H58)
-import * as boomtest from './boomtest.js';   // (the explosion tester: H58)
+import * as boomtest from './boomtest.js';
+import * as grenades from './grenades.js';   // (the explosion tester: H58)
 import { FLY } from '../../shared/flight.js';   // (an aircraft well up: a blast on the ground doesn't reach it)
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
@@ -62,6 +63,7 @@ export function tryAttack(world, ped, aim) {
     ped.player.meDirty = true;
   }
   if (w.type === 'boomtest') { boomtest.fire(world, ped, w, aim); return true; }   // (the explosion tester: boomtest.js)
+  if (w.type === 'grenade') { grenades.toss(world, ped, aim); if (ped.player && ammoOf(ped, w.id) > 0) reload(world, ped); return true; }   // (the next one in hand: grenades.js)
   if (w.type === 'rocket') {
     const sx = ped.x + Math.cos(aim) * 20, sy = ped.y + Math.sin(aim) * 20;
     const proj = world.spawnProjectile(ped.id, sx, sy, aim, 560, w.range, w.id);

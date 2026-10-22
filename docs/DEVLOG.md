@@ -14132,3 +14132,22 @@ by how high you'd been. Now you fall all the way down (server/systems/skydive.js
 Tests: test/skydive.test.js - the shop, the prompt, the parachute opened (used up, on the wire), the slow sink,
 steering, a soft landing; a splat; the water; a car roof; out of a helicopter, a rider. test/flight.test.js waits
 for the fall to land.
+
+## 2026-10-22 · Grenades
+
+The owner's 10-08 list, task #303 ("Grenades"). A grenade (shared/items.js grenade; the numbers: shared/rules.js
+GRENADE) is thrown the way you aim with the fire button: out in an arc, it bounces off the ground (losing most of its
+speed), off the walls and off cars' bodies low down, rolls to a stop, and goes off when its fuse burns down (2.4 s) - a
+blast about a car's, round wherever it ended up (server/systems/grenades.js). Into the water it sinks and goes off down
+there, smaller. The next one comes to hand by itself (the reload).
+
+- **where**: the black market ($450 with three, $140 more each) and the Smuggler's Den; illegal. A throw is gunfire
+  where it's heard (law.js), the blast a crime as a rocket's is where it hurts someone.
+- **on the wire**: a grenade in flight is a ball (K.BALL, t 5, its height in the extra byte as a ball's), drawn as a
+  little olive egg with its lever (art2/game/actors.js; the classic renderer too). Its weapon index, 32, is past the
+  five bits a person's hand has on the wire: in your hand it shows as empty hands (net.js handIndex, the weapon's
+  `hand`), so this needed no change to the snapshot.
+- a swish as it's thrown, a clink as it bounces.
+
+Tests: test/grenades.test.js - for sale, illegal; thrown in an arc, the next to hand, at rest a way off, the blast hurts
+whoever's by it; off a wall (never inside it); a ball on the wire, empty hands in hand.

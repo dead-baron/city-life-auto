@@ -790,3 +790,7 @@ export const TOWJOB = { firstS: 8, gapS: 20, shiftS: 1800, pay: 150, perKm: 60, 
 
 // jumping out of an aircraft: the fall (px, px/s, px/s²) - what each number is: server/systems/skydive.js
 export const SKYDIVE = { carry: 0.75, grav: 260, fall: 480, steer: 320, drag: 0.4, freeMax: 280, openS: 1.1, lowOpen: 260, chuteFall: 70, chuteEase: 2.4, chuteSteer: 360, chuteDrag: 1.3, chuteMax: 200, hurtFrom: 150, hurtPer: 0.4, splat: 400, waterHurt: 0.12, carHurt: 0.55, rollAt: 120 };
+// grenades (server/systems/grenades.js): thrown at speed px/s (plus a share of your own), up at lift; gravity grav;
+// bouncing back up bounce of the speed it lands at, keeping keep across, rolling to a stop (roll a second); off after
+// fuse s - a blast r px round, dmg at its heart
+export const GRENADE = { speed: 320, carry: 0.5, lift: 230, grav: 720, bounce: 0.38, keep: 0.6, roll: 2.6, fuse: 2.4, r: 92, dmg: 95 };

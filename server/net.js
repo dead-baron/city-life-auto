@@ -43,7 +43,7 @@ export function descriptor(e) {
     case K.CRATE: return { id: e.id, k: K.CRATE, t: e.tier, l: e.label || '', cb: !!e.contraband, val: e.value };
     case K.BAG: return { id: e.id, k: K.BAG, t: bagWireTier(e), val: e.value };
     case K.PROJ: return { id: e.id, k: K.PROJ, w: WEAPONS[e.weapon]?.i ?? 12 };
-    case K.BALL: return { id: e.id, k: K.BALL, t: e.ballKind === 'bowl' ? 4 : e.ballKind === 'hoop' || e.ballKind === 'pickup' ? 3 : e.ballKind === 'golf' ? 2 : e.ballKind === 'volley' ? 1 : 0 };
+    case K.BALL: return { id: e.id, k: K.BALL, t: e.ballKind === 'grenade' ? 5 : e.ballKind === 'bowl' ? 4 : e.ballKind === 'hoop' || e.ballKind === 'pickup' ? 3 : e.ballKind === 'golf' ? 2 : e.ballKind === 'volley' ? 1 : 0 };
     case K.TRAIN: return { id: e.id, k: K.TRAIN, c: e.carType, tr: e.train, n: e.car, l: e.line ?? -1 };   // (l: its line - World v3's loop, an index into the map's rails; the old city's one line: -1)
     default: return null;
   }
@@ -52,6 +52,8 @@ export const _descriptor = (e) => descriptor(e);   // (tests)
 export const _fields = (world, e) => fields(world, e);   // (tests: [flags, hp, parent, extra] on the wire)
 function descVersion(e) { return e.kind === K.PED ? (e.appVer || 0) : e.kind === K.VEH ? (e.descVer || 0) : 0; }
 
+// the weapon in someone's hand on the wire: its index (five bits); one past them (a grenade) shows as its `hand`
+const handIndex = (id) => { const w = WEAPONS[id]; return !w ? 0 : w.i < 32 ? w.i : (w.hand ?? 0); };
 function fields(world, e) {
   switch (e.kind) {
     // extra: bits 0-4 weapon (on a skateboard: what they're doing on it - shared/skate.js TRICKS: the flip, the grab, the
@@ -64,7 +66,7 @@ function fields(world, e) {
     // home with its owner, pets.js)
     case K.PED: if (e.wild) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, (wildlife.poseOf(e) & 31) | (WATER_T[(e.ug ? ugMapOf(world.map) : world.map).tileAtPx(e.x, e.y)] === 1 ? 128 : 0)];
       if (e.pet) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, ((e.pet.mood || 0) & 31) | (isSwimming(world.map, e) ? 128 : 0)];
-      return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), (e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0) || (e.sky ? skyWord(e) : 0)) + (e.burnT > 0 ? 0x80000000 : 0) + (e.dead && e.charred ? 0x40000000 : 0), (e.cuffed ? 0 : e.board ? (e.board.code || 0) & 31 : WEAPONS[e.weapon]?.i ?? 0) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(e.ug ? ugMapOf(world.map) : world.map, e) ? 128 : 0) | (e.vehId && e.seat > 1 ? 128 : 0)];
+      return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), (e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0) || (e.sky ? skyWord(e) : 0)) + (e.burnT > 0 ? 0x80000000 : 0) + (e.dead && e.charred ? 0x40000000 : 0), (e.cuffed ? 0 : e.board ? (e.board.code || 0) & 31 : handIndex(e.weapon)) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(e.ug ? ugMapOf(world.map) : world.map, e) ? 128 : 0) | (e.vehId && e.seat > 1 ? 128 : 0)];
     // (a vehicle on a tow truck's hook: extra bits 0-1 the end up on the wheel lift - 1 its nose, 2 its tail - and bit 2
     // still being winched up: tow.js; the clients draw it tilted)
     // (parent: the damage you can see - its stage, the sides it's dented on, bullet holes, the parts off, a plasma cut:

@@ -878,6 +878,8 @@ function onEvent(ev) {
     case 'gatebreak': fx.sparks(ev.x, ev.y, 6); for (let k = 0; k < 6; k++) fx.spawn(4, ev.x, ev.y, Math.cos(ev.a + (Math.random() - 0.5)) * 160, Math.sin(ev.a + (Math.random() - 0.5)) * 160, 0.5, 3, k % 2 ? '#f4f4f4' : '#c8262b'); sfx('crash', distVol(ev.x, ev.y) * 0.6); break;
     case 'trainhorn': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y); sfx(ev.s === 2 ? 'trainhorn' : 'trainhornshort', Math.max(0, 1 - d / 2400)); break; }
     case 'kick': sfx('thud', distVol(ev.x, ev.y) * 0.6); break;
+    case 'toss': sfx('swing', distVol(ev.x, ev.y) * 0.7); break;   // (a grenade thrown: server grenades.js)
+    case 'clink': sfx('thud', distVol(ev.x, ev.y) * 0.3); break;   // (...bouncing)
     case 'golfhit': sfx(ev.k ? 'golfhit' : 'putt', distVol(ev.x, ev.y)); break;   // (golf: server/systems/golf.js)
     case 'golfcup': sfx('golfcup', distVol(ev.x, ev.y)); break;
     case 'golfsplash': sfx('splash', distVol(ev.x, ev.y)); break;
@@ -3608,6 +3610,12 @@ function drawBays(view) {
 // Soccer ball / volleyball: shadow on the ground, the ball lifted by its height.
 function drawBall(b) {
   const z = (b.extra || 0) * 2;
+  if (b.d.t === 5) { // a grenade (server grenades.js): small, olive, its shadow below it
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(b.rx + z * 0.15, b.ry + z * 0.25 + 1, 3, 1.6, 0, 0, 6.28); g.fill();
+    g.fillStyle = '#4c5a2c'; g.beginPath(); g.ellipse(b.rx, b.ry - z - 3, 2.6, 3.2, 0, 0, 6.28); g.fill(); g.strokeStyle = '#1e2410'; g.lineWidth = 0.7; g.stroke();
+    g.fillStyle = '#9aa0a6'; g.fillRect(b.rx - 1, b.ry - z - 7, 2, 1.6);
+    return;
+  }
   if (b.d.t === 4) { // a bowling ball (Pinwheel Lanes): small and glossy
     g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(b.rx + 0.5, b.ry + 0.6, 3.8, 1.8, 0, 0, 6.28); g.fill();
     g.fillStyle = '#23409a'; g.beginPath(); g.arc(b.rx, b.ry - 3.4, 3.6, 0, 6.28); g.fill(); g.strokeStyle = '#0c1430'; g.lineWidth = 0.6; g.stroke();
