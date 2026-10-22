@@ -380,3 +380,33 @@ test('the front car\'s sign: where the train stops next, on its own line', async
   w.step();
   assert.equal(sign(), next, 'on its way: the station it runs to');
 });
+
+// the desert train robbery (the owner's #326): the mail train's robbery country on World v3's main line is the Red Rock
+// Desert's long run - out there nobody hears the mail car's alarm (trains.js robberyCountry; crackOpen, as today's Dry
+// Creek run: test/trains.test.js); the HUD says so, the job sends you there, the debug menu puts you aboard
+test('the desert train robbery: the main line\'s robbery country is the Red Rock Desert run', () => {
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p } = joinPlayer(w);
+  w.rails.forEach((r, i) => {
+    const c = w.country[i];
+    if (r.subway) { assert.equal(c, null, `${r.name}: none under the city`); return; }
+    assert.ok(c && c.kind === 'desert' && c.name === 'Red Rock Desert', `${r.name}: ${JSON.stringify(c)}`);
+    assert.ok(c.s1 - c.s0 > 15000, `${r.name}: a long run (${Math.round((c.s1 - c.s0) / 32)} tiles)`);
+    for (const st of r.stations) { const d = Math.abs(st.s - (c.s0 + c.s1) / 2); assert.ok(Math.min(d, r.len - d) > (c.s1 - c.s0) / 2, `${st.name} not on it`); }
+    for (const q of r.pts) if (q.s > c.s0 && q.s < c.s1) assert.ok(!q.under, 'out in the open');
+  });
+  devCommand(w, p, 'train', { mail: 1 });
+  const t = w.trains[p.ped.onTrain.t];
+  assert.ok(t.mail > 0 && !w.rails[t.r].subway && p.ped.onTrain.c === t.mail - 1, 'aboard a mail train, the coach ahead of the mail car');
+  const c = w.country[t.r], s = t.s;
+  t.s = (c.s0 + c.s1) / 2 + t.len / 2;
+  assert.ok(trains.onRuralRun(w, t));
+  assert.equal(trains.meInfo(w, p).rural, 'desert', 'the HUD: DESERT RUN');
+  t.s = c.s0 - 4000;
+  assert.ok(!trains.onRuralRun(w, t) && !trains.meInfo(w, p).rural);
+  t.s = s;
+  p.job = null;
+  assert.equal(trains.startTrainJob(w, p), null);
+  assert.ok(w.trains[p.job.train].mail > 0 && !w.rails[w.trains[p.job.train].r].subway, 'the job: a main-line mail train');
+  assert.ok(p.toasts.some((q) => /Red Rock Desert/.test(q.text)), 'sent out to the desert');
+});

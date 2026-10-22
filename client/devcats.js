@@ -104,7 +104,7 @@ export const DEV_SECTIONS = [
     ['🏪 Rob a store', 'near', { k: 'convenience' }], ['🏦 Rob a bank', 'near', { k: 'bank' }], ['🔩 A bank\'s vault (bring a drill)', 'near', { k: 'vault' }], ['🏧 ATM', 'near', { k: 'atm' }],
     ['🔫 Gun shop', 'near', { k: 'gunshop' }], ['💍 Pawn shop', 'near', { k: 'pawn' }], ['🕶 Fence', 'near', { k: 'fence' }], ['💰 +$1,000 hot money (stolen here)', 'hot'],
     ['🏴 Gang HQ', 'near', { k: 'gang' }], ['🏝 Smuggler\'s Den', 'near', { k: 'smuggler' }],
-    ['🎁 Contraband drop', 'drop', { n: 4 }], ['👜 Snatch-and-grab nearby', 'snatch'], ['👊 A street fight nearby', 'happen', { k: 'fight' }], ['👮 A fight the police break up', 'happen', { k: 'fight', cops: 1 }], ['🚑 Someone collapses nearby', 'happen', { k: 'faint' }], ['👛 Someone drops a wallet nearby', 'happen', { k: 'wallet' }],
+    ['🚂 The mail train (on the desert run if one is)', 'train', { mail: 1 }], ['🎁 Contraband drop', 'drop', { n: 4 }], ['👜 Snatch-and-grab nearby', 'snatch'], ['👊 A street fight nearby', 'happen', { k: 'fight' }], ['👮 A fight the police break up', 'happen', { k: 'fight', cops: 1 }], ['🚑 Someone collapses nearby', 'happen', { k: 'faint' }], ['👛 Someone drops a wallet nearby', 'happen', { k: 'wallet' }],
   ] },
   { id: 'fun', title: '🎉 Events & sport', items: [
     ['🐶 Lost pet nearby', 'pet'], ['🏁 Water race start (craft waiting)', 'near', { k: 'race' }], ['🏐 Pitch or court', 'near', { k: 'venue' }],

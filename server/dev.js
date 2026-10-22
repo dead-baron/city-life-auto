@@ -641,6 +641,8 @@ export function command(world, p, c, msg) {
       // owner, 10-16: "jump on nearest train should pick the main line" - any train only where there's no main line)
       const isSub = (q) => !!(world.rails && world.rails[q.r] && world.rails[q.r].subway);
       const main = !msg.sub && world.trains.some((q) => !isSub(q));
+      // (msg.mail: a mail train - out on its robbery country now if one is, aboard the coach ahead of the mail car)
+      if (!t && msg.mail) { const M = world.trains.filter((q) => q.mail > 0 && !isSub(q)); t = M.find((q) => trains.onRuralRun(world, q)) || M[0] || null; if (t) msg.car = t.mail - 1; }
       if (!t) { let bd = Infinity; for (const q of world.trains) { if (msg.sub ? !isSub(q) : main && isSub(q)) continue; const e = world.get(q.cars[0].id); if (!e) continue; const d = Math.hypot(e.x - ped.x, e.y - ped.y); if (d < bd) { bd = d; t = q; } } }
       if (!t) { world.notify(p, msg.sub ? '[dev] There is no subway train running on this map.' : '[dev] No train found.', 'warn'); break; }
       const ci = Math.max(1, Math.min(t.cars.length - 1, Number(msg.car) || 1));

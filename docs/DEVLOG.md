@@ -14716,3 +14716,38 @@ A review of today's crews, skee-ball, air hockey, pinball and names work turned 
   (NAME.tryS) between attempts, since each one looks through every profile.
 Tests: test/crews.test.js (no punch on a crewmate, no run-over by one but a hit by an outsider's car, an asking that
 stands), test/names.test.js, test/arcade.test.js (the seven-goal loss).
+
+## 2026-10-22 · No rapids out to the sea
+
+The owner, 10-22, with two screenshots by the coast: "some water has a rapid effect moving at a rapid pace, doesn't seem
+like it's working correctly". It was the white water of the rapids (rivers part 2, 10-20) where no rapids belong:
+right across the wide rivers, out to the sea through the outlet cut below Kestrel Lake on 10-21 (the land fell fast
+there, from the lake down to the beach) and down a city river into the bay - white streaks racing over what looks like
+the sea. Now (shared/world3-rapids.js RAPIDS wide, mouth, low):
+- no white water right across a river wider than 36 tiles, within two of its widths of its mouth, or where the land under
+  it is down at the coast or the valley floor - the rapids stay on the creeks and narrower rivers up in the hills (six
+  of them; nine before);
+- a river 30 tiles wide or more runs no faster than a glide (shared/world3-waterbodies.js WIDE_GLIDE): the short steep
+  outlet to the sea had the fastest water in the world;
+- the ledge falls still start their steep reaches (Long Ledge Falls, Twin Falls and Sandpiper Falls are on such
+  rivers): they find them in ch.st, the steep reaches, which the falls drop once they're placed - the map keeps only the
+  white water.
+Tests: test/world3rapids.test.js - none down at a mouth cut to the sea or across a wide river, the hills' creek keeps
+its rapid; World v3's rapids all on narrower water, and its seven ledge falls.
+
+## 2026-10-22 · The desert train robbery
+
+The owner's #326 (10-08). The mail train's strongbox was robbery country only out on the old city's Dry Creek run - on
+World v3's main line there was no quiet stretch at all (the line's districts aren't the old city's), so every
+strongbox cracked rang the alarm: three stars, wherever. Now each main-line loop has its robbery country, worked out from
+the districts it runs through (server/systems/trains.js robberyCountry): the longest stretch out in the open desert or
+farmland, at grade, clear of every station by 1,300 px, a short bridge or trestle over a wash carried over - on both
+loops the Red Rock Desert's long run past Lucky Mesa (some 30 km). Out there:
+- crack the mail car's strongbox and nobody hears the alarm; anywhere else it rings, as before;
+- the HUD on the train says DESERT RUN (RURAL RUN in the old city's fields) while you're on it;
+- the fence's mail-train job sends you to a main-line mail train (never the subway's) and tells you where: "best out on
+  the long run through the Red Rock Desert", and its tracker says "The Red Rock Desert run - crack the strongbox NOW".
+The playtest panel's Crime section puts you aboard a mail train, the coach ahead of the mail car - one out on the desert
+run if one's there (server/dev.js train { mail }).
+Tests: test/world3rail.test.js - every main-line loop's robbery country is the Red Rock Desert run (long, out in the
+open, no station on it), none under the city; the HUD, the job and the debug hop.

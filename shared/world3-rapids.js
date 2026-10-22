@@ -18,8 +18,12 @@ import { T } from './constants.js';
 
 // step: the samples' spacing along a channel (tiles); win: the fall measured over this many tiles; slope: the fall per
 // tile that makes a rapid; gap: runs this close joined; min: the shortest rapid; end: none this near a channel's ends;
-// span: how much steeper than `slope` is the wildest water
-export const RAPIDS = { step: 2, win: 16, slope: 0.13, gap: 10, min: 12, end: 10, span: 0.25 };
+// span: how much steeper than `slope` is the wildest water; wide: a river wider than this (tiles) has none - a big
+// river's fall is a long glide, and white water right across it read as the sea gone wrong (the owner, 10-22: "some
+// water has a rapid effect moving at a rapid pace"); mouth: none within this many of its widths of its lower end (where
+// it opens out into the sea, a lake or the marsh); low: none where the land under its lower end is lower than this (the
+// coast, the valley floors - a river cut through to the sea dropped steeply there and came out white to the beach)
+export const RAPIDS = { step: 2, win: 16, slope: 0.13, gap: 10, min: 12, end: 10, span: 0.25, wide: 36, mouth: 2, low: 12 };
 // spacing: tiles between a channel's pockets; apart: between any two pockets; below: an eddy this far below its rapid
 // (tiles: half the channel's width, within these); turn: a bend pool where the channel turns through more than this (the
 // cosine of the turn over `bendW` tiles either side); quiet: a bend pool this far from any rapid; r: the pocket's
@@ -66,22 +70,31 @@ export function rapidsAndPockets3(m) {
     // the fall per tile at each sample (over `win` tiles round it)
     const half = Math.max(1, Math.round(RAPIDS.win / step / 2)), sl = new Float64Array(n);
     for (let j = 0; j < n; j++) { const a = Math.max(0, j - half), b = Math.min(n - 1, j + half); sl[j] = b > a ? (hs[a] - hs[b]) / ((b - a) * step) : 0; }
-    // the rapids: the steep runs, near ones joined, long enough
-    const runs = [];
-    let a0 = -1;
-    for (let j = 0; j <= n; j++) {
-      const on = j < n && sl[j] >= RAPIDS.slope && j * step >= RAPIDS.end && j * step <= L - RAPIDS.end;
-      if (on && a0 < 0) a0 = j;
-      else if (!on && a0 >= 0) { const last = runs[runs.length - 1]; if (last && (a0 - last[1]) * step <= RAPIDS.gap) last[1] = j - 1; else runs.push([a0, j - 1]); a0 = -1; }
-    }
-    const minLen = Math.max(RAPIDS.min, c.w * 0.5), R = [];
-    for (const [a, b] of runs) {
-      if ((b - a) * step < minLen) continue;
-      let s = 0; for (let j = a; j <= b; j++) s += sl[j];
-      R.push([r1(a * step), r1(b * step), r2(clamp((s / (b - a + 1) - RAPIDS.slope) / RAPIDS.span + 0.45, 0.45, 1))]);
-      out.rapids++; out.rapidTiles += (b - a) * step;
-    }
+    // the steep reaches: the steep runs, near ones joined, long enough (ch.st - where the ledge falls may start:
+    // world3-ledgefalls.js, which drops it once it's placed them); the rapids, the white water drawn: those runs, or the
+    // parts of them, that aren't right across a wide river, by its mouth or down at the coast (RAPIDS wide, mouth, low)
+    const tail = Math.max(RAPIDS.end, c.w * RAPIDS.mouth), wide = c.w > RAPIDS.wide;
+    const drawn = (j) => !wide && j * step <= L - tail && hs[Math.min(n - 1, j + half)] >= RAPIDS.low;
+    const runsOf = (pick) => {
+      const runs = [];
+      let a0 = -1;
+      for (let j = 0; j <= n; j++) {
+        const on = j < n && sl[j] >= RAPIDS.slope && j * step >= RAPIDS.end && j * step <= L - RAPIDS.end && pick(j);
+        if (on && a0 < 0) a0 = j;
+        else if (!on && a0 >= 0) { const last = runs[runs.length - 1]; if (last && (a0 - last[1]) * step <= RAPIDS.gap) last[1] = j - 1; else runs.push([a0, j - 1]); a0 = -1; }
+      }
+      const out2 = [];
+      for (const [a, b] of runs) {
+        if ((b - a) * step < minLen) continue;
+        let s = 0; for (let j = a; j <= b; j++) s += sl[j];
+        out2.push([r1(a * step), r1(b * step), r2(clamp((s / (b - a + 1) - RAPIDS.slope) / RAPIDS.span + 0.45, 0.45, 1)), a, b]);
+      }
+      return out2;
+    };
+    const minLen = Math.max(RAPIDS.min, c.w * 0.5), ST = runsOf(() => true), R = runsOf(drawn).map((q) => q.slice(0, 3));
+    for (const q of runsOf(drawn)) { out.rapids++; out.rapidTiles += (q[4] - q[3]) * step; }
     if (R.length) c.r = R;
+    if (ST.length) c.st = ST.map((q) => q.slice(0, 3));
     // the way it runs at a sample, and which side it turns toward there (+1 toward (-uy, ux), -1 the other, 0 straight)
     const tan = (j, w) => { const a = Math.max(0, j - w), b = Math.min(n - 1, j + w), dx = xs[b] - xs[a], dy = ys[b] - ys[a], l = Math.sqrt(dx * dx + dy * dy) || 1; return [dx / l, dy / l]; };
     const bw = Math.max(2, Math.round(POCKETS.bendW / step));
