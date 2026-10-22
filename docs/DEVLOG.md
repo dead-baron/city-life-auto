@@ -13890,3 +13890,19 @@ trains. But nothing on the platform showed where the lines go.
 
 Tests: test/world3rail.test.js - most open-air stations have a board, each on its platform and drawn where it's read;
 the prompt there; its rows, each line's next stop first.
+
+## 2026-10-22 · Route boards on the El and at the subway's kiosks
+
+The rest of the owner's 10-16 note "An information board or map sign at stations showing where the train goes": the
+open-air platforms had their boards, but the El's and the subway's didn't.
+
+- **the El** (`routeBoardAt` handles a station up on the deck; drawn in `addEl`): a board on each of Midtown's two
+  platforms, past the east canopy, up at the deck's height. You read it from the platform, not from the street below.
+  One board per platform: the two lines through Midtown share it.
+- **the subway**: the action button at a kiosk now reads its route board out (the lit sign along the kiosk's back). The
+  kiosk's prompt only looked at World v3's first loop, which has no subway stations, so v3's kiosks said nothing with
+  no train in. Now every line's kiosk shows its countdown ("next train in 1:20 - wait in line, F when it's in (to
+  Harbor) · the route board").
+
+Tests: test/world3rail.test.js - a board on each of the El's platforms, read from the deck and not from the street; a
+subway kiosk's prompt reads the board out.

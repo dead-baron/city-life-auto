@@ -407,9 +407,11 @@ export const CROSSING_ARM = 66;                          // gate arms this far e
 // goes"): on an open-air platform, near its back edge towards one end - past the canopy, clear of the footbridge and
 // the name sign in the middle - where the ground's the platform's: { x, y }, or null (a subway's, the El's, or a street
 // there). tileAt(x, y): the tile at a world px. client/art2/game/statics.js draws it; server/systems/trains.js reads it.
-export const ROUTE_BOARD_OFF = 92, ROUTE_BOARD_ALONG = -0.8;
+// (up on the El's platform, st.deck: past its east canopy, up at the deck - { x, y, el: true })
+export const ROUTE_BOARD_OFF = 92, ROUTE_BOARD_ALONG = -0.8, ROUTE_BOARD_EL = 330;
 export function routeBoardAt(rail, st, tileAt) {
-  if (!st || st.under || st.el || st.deck || !rail || !rail.pts) return null;
+  if (st && st.deck) return { x: Math.round((st.deck.x0 + st.deck.x1) / 2 + ROUTE_BOARD_EL), y: Math.round(st.deck.y + 6), el: true };
+  if (!st || st.under || st.el || !rail || !rail.pts) return null;
   const q = railAt(rail, st.s + ROUTE_BOARD_ALONG * (st.half || 112)), sd = st.side || 1;
   const x = q.x - Math.sin(q.a) * sd * ROUTE_BOARD_OFF, y = q.y + Math.cos(q.a) * sd * ROUTE_BOARD_OFF, t = tileAt(x, y);
   return t === T.PLAZA || t === T.DOCK || t === T.SIDEWALK ? { x: Math.round(x), y: Math.round(y) } : null;
