@@ -55,6 +55,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Kick the ball (soccer) / spike (volleyball) | Click next to the ball | RT next to the ball | FIRE next to the ball |
 | Golf: aim, then hold and let go at the top of the meter (by your ball; each shot starts aimed at the flag) | Mouse · hold left click | Right stick · hold RT | Aim stick · hold FIRE |
 | Shoot hoops (North Point Courts: E for a ball, then hold and let go in the meter's green band) | E · hold left click | B · hold RT | ACT · hold FIRE |
+| Tennis with the club pro (any tennis court: E calls the pro out; serve and hit with the attack button, the ball in reach, aiming left or right; first to four points, two clear) | E · left click | B · RT | ACT · FIRE |
 | Bowl (Pinwheel Lanes: rent a lane at the shoe counter, E on your lane's approach for a ball and again to pick a hook; stand and face where you want it, then hold and let go - the meter is the power) | E · hold left click | B · hold RT | ACT · hold FIRE |
 | Go to the pictures (The Grand Theatre: buy a ticket and popcorn at the counter, walk into a screen and E by a seat to sit and watch; E again, or walk off, to get up; eat the popcorn from your bag) | E | B | ACT |
 | Fish: face the water with a rod (or sit still in a boat) - hold to charge the cast, let go to throw it | Hold E, let go | Hold B, let go | Hold ACT, let go |

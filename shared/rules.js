@@ -794,3 +794,8 @@ export const SKYDIVE = { carry: 0.75, grav: 260, fall: 480, steer: 320, drag: 0.
 // bouncing back up bounce of the speed it lands at, keeping keep across, rolling to a stop (roll a second); off after
 // fuse s - a blast r px round, dmg at its heart
 export const GRENADE = { speed: 320, carry: 0.5, lift: 230, grav: 720, bounce: 0.38, keep: 0.6, roll: 2.6, fuse: 2.4, r: 92, dmg: 95 };
+// tennis with the club pro (server/systems/tennis.js): a hit flies at pace px/s across; a stretched one (the ball at the
+// edge of reach) strays up to spray px; the pro runs at proSpeed of a person's pace and misses proMiss of its swings, plus
+// proStretch more at the edge of its reach; prize to the bank for beating it; leave px off the court ends the game;
+// between s between points
+export const TENNIS = { pace: 430, spray: 120, proSpeed: 0.92, proMiss: 0.06, proStretch: 0.25, prize: 60, leave: 90, between: 1.6 };

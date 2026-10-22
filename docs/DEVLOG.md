@@ -14199,3 +14199,25 @@ render/trainsign.js), and the classic renderer's train cars moved out to load wi
 (render/traincars.js), which bought back about 2 KB; with all that the page is 492.7 KB, over the 492 KB budget.
 tools/perf.mjs: 494 KB. Next to look at for room: the classic renderer's own drawing (main.js drawWorldV1 and its
 helpers), loaded with the classic renderer only.
+
+## 2026-10-22 · Tennis with the club pro
+
+The owner, 10-16: "Tennis" (eleven courts stand in World v3's handcrafted districts - Greenfield Park, Northgate Sports
+Ground, Coral Court, the Hilltop Mansion, Larkspur Green, The Bluffs, the Ritz - with no game on them).
+server/systems/tennis.js: on any tennis court the action button calls the club pro out - an athlete in whites who jogs
+out to the far baseline. You serve with the attack button (the ball in your hand), the way you aim: over the net, deep
+into the far half, left or right as you point. The pro runs to where the ball will come down and sends it back to your
+half - not always: it misses now and then, more often the further it had to stretch. You run the ball down and hit it
+when it's in reach (a swing too early or too far is a swish at the air); a hit at the edge of your reach strays.
+
+- **the rules, kept simple**: a hit must clear the net and land inside the far half; into the net, short of it or out
+  is the hitter's point lost; a second bounce on your side is the other's point. Points count as tennis does (15, 30,
+  40, deuce, advantage, called after each); the first to four, two clear, wins the game - beat the pro and it pays $60
+  (shared/rules.js TENNIS). Walk off the court and the pro takes it.
+- the courts come from the map's court props (k 'tennis': their lines inside the run-off, the net across the middle).
+  The ball's a K.BALL ('tennis', wire t 6: a fuzzy yellow-green ball with its seam, art2/game/actors.js, and in the
+  classic renderer); the pro a civilian the game moves (npc.js leaves an `npc.driven` one alone). The racket's thwock,
+  the bounce, the swish of a miss.
+
+Tests: test/tennis.test.js - the courts from the props; a whole game played out (the pro called, the serve, rallies
+both ways, first to four two clear, the pro let go); a netted ball and a long one the hitter's point lost; walking off.

@@ -68,6 +68,7 @@ import * as cinema from './systems/cinema.js';
 import * as aircraft from './systems/aircraft.js';
 import * as skydive from './systems/skydive.js';
 import * as grenades from './systems/grenades.js';
+import * as tennis from './systems/tennis.js';
 import * as sar from './systems/sar.js';
 import * as charter from './systems/charter.js';
 import * as dusting from './systems/dusting.js';
@@ -126,6 +127,7 @@ const SYSTEMS = [
   ['minigames', minigames.update],  // soccer pitch, beach volleyball          // jetski / boat races
   ['golf', golf.update],            // the golf course (Lakeside Greens): the balls in play
   ['hoops', hoops.update],          // North Point Courts: shooting hoops
+  ['tennis', tennis.update],        // tennis with the club pro on any tennis court (tennis.js)
   ['events', events.update],        // world events (snatch-and-grabs, drops) for blips + arrows
   ['phone', phone.update],          // phone job board + police patrol calls
   ['ems', ems.update],              // ambulances + 45s cleanup loop

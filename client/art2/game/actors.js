@@ -593,9 +593,10 @@ function arrowModel() {
 // balls: a painted sphere (t 0 soccer, 1 volleyball, 2 a golf ball: small, white, dimpled), spin 0..3 turns the
 // pattern as it rolls; anchor = the ground contact, z from 0 at the bottom to the top of the ball
 const ICO = (() => { const p = (1 + Math.sqrt(5)) / 2, v = []; for (const a of [-1, 1]) for (const b of [-p, p]) { v.push(norm([0, a, b]), norm([a, b, 0]), norm([b, 0, a])); } return v; })();
-export const ballKey = (t, spin = 0) => `b|${Math.max(0, Math.min(5, t | 0))}|${((spin % 4) + 4) % 4}`;
+export const ballKey = (t, spin = 0) => `b|${Math.max(0, Math.min(6, t | 0))}|${((spin % 4) + 4) % 4}`;
 export function ballSprite(t = 0, spin = 0) {
   if ((t | 0) === 5) return grenadeBall(spin);
+  if ((t | 0) === 6) return tennisBall(spin);
   if ((t | 0) === 2) return golfBall();
   if ((t | 0) === 3) return basketball(spin);
   if ((t | 0) === 4) return bowlingBall(spin);
@@ -618,6 +619,23 @@ export function ballSprite(t = 0, spin = 0) {
     G.put(x, y, col, n, r + n[2] * r, null, 0);
   }
   G.outline(0.45, false);
+  return G;
+}
+
+// a tennis ball (server tennis.js): small, fuzzy yellow-green, its white seam curling round as it spins
+function tennisBall(spin = 0) {
+  const r = 2.6, S = 8, G = new GBuf(S, S), cx = 4, cyy = S - 1 - r, rot = (((spin % 4) + 4) % 4) * Math.PI / 2;
+  G.ax = 4; G.ay = S - 1;
+  const Y = RP('#d4e436', 5, 2), W = RP('#f2f2ea', 4, 2), L = norm([-0.55, -0.62, 0.56]);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = (x + 0.5 - cx) / r, v = (y + 0.5 - cyy) / r, q = u * u + v * v;
+    if (q > 1) continue;
+    const w = Math.sqrt(1 - q), n = norm([u, (v + w) * 0.7071, (w - v) * 0.7071]), lit = n[0] * L[0] + n[1] * L[1] + n[2] * L[2];
+    const seam = Math.abs(Math.sin((u * Math.cos(rot) + v * Math.sin(rot)) * 3 + w * 2)) < 0.22;
+    const R = seam ? W : Y, tt = 0.55 + lit * 0.35;
+    G.put(x, y, R[Math.max(0, Math.min(R.length - 1, Math.round(tt * (R.length - 1) + bayer(x, y) * 0.4)))], n, r + n[2] * r, null, 0);
+  }
+  G.outline(0.4, false);
   return G;
 }
 

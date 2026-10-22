@@ -879,6 +879,9 @@ function onEvent(ev) {
     case 'trainhorn': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y); sfx(ev.s === 2 ? 'trainhorn' : 'trainhornshort', Math.max(0, 1 - d / 2400)); break; }
     case 'kick': sfx('thud', distVol(ev.x, ev.y) * 0.6); break;
     case 'toss': sfx('swing', distVol(ev.x, ev.y) * 0.7); break;   // (a grenade thrown: server grenades.js)
+    case 'thwock': sfx('thwack', distVol(ev.x, ev.y) * 0.6); break;   // (tennis: the racket on the ball - server tennis.js)
+    case 'bounce': sfx('thud', distVol(ev.x, ev.y) * 0.25); break;
+    case 'swish': { const e = S.ents.get(ev.id); if (e) { e.swingAt = S.loopClock; e.swingSide = (e.swingSide || 0) ^ 1; } sfx('swing', distVol(e ? e.rx : 0, e ? e.ry : 0) * 0.5); break; }
     case 'flame': {   // the flamethrower's jet (server combat.js flame): a cone of fire out of the nozzle, the roar
       const sh = ev.id ? S.ents.get(ev.id) : null, x0 = sh && sh.rx !== undefined ? sh.rx : ev.x, y0 = sh && sh.ry !== undefined ? sh.ry : ev.y;
       for (let k = 0; k < 7; k++) { const aa = ev.a + (Math.random() - 0.5) * 0.5, sp = 380 + Math.random() * 160, d = 14; fx.spawn(3, x0 + Math.cos(ev.a) * d, y0 + Math.sin(ev.a) * d, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.28 + Math.random() * 0.12, 3 + Math.random() * 4, Math.random() < 0.5 ? '#ff9a1a' : '#ffd23a', 18); }
@@ -3617,6 +3620,11 @@ function drawBays(view) {
 // Soccer ball / volleyball: shadow on the ground, the ball lifted by its height.
 function drawBall(b) {
   const z = (b.extra || 0) * 2;
+  if (b.d.t === 6) { // a tennis ball (server tennis.js): small, yellow-green, its shadow below it
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(b.rx + z * 0.15, b.ry + z * 0.25 + 1, 2.4, 1.4, 0, 0, 6.28); g.fill();
+    g.fillStyle = '#d8e83a'; g.beginPath(); g.arc(b.rx, b.ry - z - 2, 2.2, 0, 6.28); g.fill();
+    return;
+  }
   if (b.d.t === 5) { // a grenade (server grenades.js): small, olive, its shadow below it
     g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(b.rx + z * 0.15, b.ry + z * 0.25 + 1, 3, 1.6, 0, 0, 6.28); g.fill();
     g.fillStyle = '#4c5a2c'; g.beginPath(); g.ellipse(b.rx, b.ry - z - 3, 2.6, 3.2, 0, 0, 6.28); g.fill(); g.strokeStyle = '#1e2410'; g.lineWidth = 0.7; g.stroke();

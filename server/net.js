@@ -43,7 +43,7 @@ export function descriptor(e) {
     case K.CRATE: return { id: e.id, k: K.CRATE, t: e.tier, l: e.label || '', cb: !!e.contraband, val: e.value };
     case K.BAG: return { id: e.id, k: K.BAG, t: bagWireTier(e), val: e.value };
     case K.PROJ: return { id: e.id, k: K.PROJ, w: WEAPONS[e.weapon]?.i ?? 12 };
-    case K.BALL: return { id: e.id, k: K.BALL, t: e.ballKind === 'grenade' ? 5 : e.ballKind === 'bowl' ? 4 : e.ballKind === 'hoop' || e.ballKind === 'pickup' ? 3 : e.ballKind === 'golf' ? 2 : e.ballKind === 'volley' ? 1 : 0 };
+    case K.BALL: return { id: e.id, k: K.BALL, t: e.ballKind === 'tennis' ? 6 : e.ballKind === 'grenade' ? 5 : e.ballKind === 'bowl' ? 4 : e.ballKind === 'hoop' || e.ballKind === 'pickup' ? 3 : e.ballKind === 'golf' ? 2 : e.ballKind === 'volley' ? 1 : 0 };
     case K.TRAIN: return { id: e.id, k: K.TRAIN, c: e.carType, tr: e.train, n: e.car, l: e.line ?? -1 };   // (l: its line - World v3's loop, an index into the map's rails; the old city's one line: -1)
     default: return null;
   }

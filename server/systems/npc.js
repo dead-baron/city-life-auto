@@ -188,7 +188,7 @@ export function update(world, dt) {
     }
     // other systems drive these (a word with someone: stops.js; after a crook: police.js; someone held down or cuffed:
     // struggle.js, custody.js)
-    if ((n.role === 'cop' && (!n.beat || n.stop || n.pursue || holding(world, ped))) || n.role === 'medic') continue;
+    if ((n.role === 'cop' && (!n.beat || n.stop || n.pursue || holding(world, ped))) || n.role === 'medic' || n.driven) continue;   // (n.driven: another system moves them - tennis.js's pro)
     if (now < ped.downUntil || now < ped.stunUntil) continue;
     if (n.state === 'passed') { ped.vx = 0; ped.vy = 0; continue; }
     // critically hurt: no more fighting - limp away from the trouble, bleeding; the worst hurt may crawl
