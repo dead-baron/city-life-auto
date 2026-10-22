@@ -14007,3 +14007,19 @@ An independent review of everything since the live build (103a204) turned up the
 
 Tests: test/replandecor.test.js (stowed when the plan changed or the home was promoted, kept and noted otherwise;
 decor only read over the rooms it was laid in); test/precut.test.js (the last shop's bakes let go).
+
+## 2026-10-22 · Cooking at home
+
+The owner, 10-06: "Home life: mowing (grass grows), cooking, constitution XP". This is the cooking part.
+
+- **at the fridge** (`server/systems/homeinside.js`): "Cook a meal" takes three things from the fridge, the plainest
+  first (the least health on its own): fruit, the garden's crops, mushrooms and berries, game. A meal already cooked
+  and a prize crop are never used. You stand at the stove for five seconds (`HOME_IN.cookN`, `cookS`), and then
+  "Dinner's ready": a **Home-cooked Meal** goes into the fridge (`shared/items.js` homeMeal). It's worth +60 health and
+  hearty, more than any single thing that went into it.
+- With fewer than three things to cook, the option is shown greyed out with what counts. Not as someone's guest, nor on
+  a look round.
+- Not yet: the lawn growing, or the skills.
+
+Tests: test/cooking.test.js - the plainest three cooked, the steak and the prize crop kept; the meal in the fridge
+after five seconds; eaten, +60 and hearty; not with two things.

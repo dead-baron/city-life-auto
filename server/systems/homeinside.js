@@ -233,7 +233,7 @@ export function leave(world, p) {
 export function input(world, p, ped, inp, pressed, dt) {
   const s = ped.home, h = homeOf(world, ped);
   if (!s || !h) return false;
-  if (s.sleep || s.shower) { s.mv = false; return true; }   // (asleep, in the shower: nothing to do but wait)
+  if (s.sleep || s.shower || s.cook) { s.mv = false; return true; }   // (asleep, in the shower, at the stove: nothing to do but wait)
   s.mv = stepInside(planIn(world, h), s, inp.mx || 0, inp.my || 0, dt, HOME_IN.walk);
   if (pressed & (IN.ACTION | IN.VEHICLE)) { const act = interaction(world, p); if (act && !act.passive) act.run(); }
   return true;
@@ -255,6 +255,7 @@ export function interaction(world, p) {
   if (!s || !h) return null;
   if (s.sleep) return { label: 'Asleep... the night is passing', passive: true, run: () => {} };
   if (s.shower) return { label: 'In the shower...', passive: true, run: () => {} };
+  if (s.cook) return { label: 'Cooking... something smells good', passive: true, run: () => {} };
   if (s.lobby) return lobbyInteraction(world, p, h, s);   // (H71: a block's lobby)
   if (s.edit) return editPrompt(world, p, h);   // (H67: decorating - the action button is the menu for the spot in front of you)
   const u = useAt(planFor(h), s.x, s.y, HOME_IN.reach);
@@ -329,6 +330,12 @@ function menuOf(world, p, h, what) {
     const food = Object.entries(st.items || {}).filter(([id, n]) => n > 0 && ITEMS[id] && ITEMS[id].food);
     sub = food.length ? `Health ${Math.round(ped.hp)}/${ped.maxHp}. Something to eat?` : 'Empty. Put food from your bag in here and it keeps.';
     for (const [id, n] of food) opts.push({ id: `hi:eat:${id}`, label: `Eat ${ITEMS[id].name}`, note: `+${ITEMS[id].heal} health · ${n} in the fridge` });
+    // cooking (the owner, 10-06: "home life: cooking"): three things from the fridge into a meal at the stove
+    if (!ped.home.guest && !ped.home.tour) {
+      const use = cookPick(st);
+      if (use) opts.unshift({ id: 'hi:cook', label: `Cook a meal: ${use.map((id) => ITEMS[id].name).join(', ')}`, note: `a ${ITEMS.homeMeal.name} (+${ITEMS.homeMeal.heal} health, hearty) · ${HOME_IN.cookS} s` });
+      else opts.push({ id: 'hi:nocook', label: `Cook a meal - ${HOME_IN.cookN} things to cook in the fridge first`, note: 'fruit, the garden\'s crops, mushrooms, game...', dis: true });
+    }
     for (const o of pick('hst')) if (ITEMS[o.id.slice(4)].food) opts.push({ ...o, label: o.label.replace(/^Stash /, 'Put in the fridge: ') });
     for (const o of pick('htk')) if (ITEMS[o.id.slice(4)].food) opts.push({ ...o, label: o.label.replace(/^Take /, 'Take out: '), note: '' });
   } else if (what === 'hall') {   // the home menu itself, and selling the place (you step out to hand the keys over)
@@ -392,6 +399,18 @@ function own(world, p, h, parts) {
       if (it.hearty) economy.applyBuff(world, ped, 'hearty');
       store.touch();
       world.notify(p, `Ate ${/^[aeiou]/i.test(it.name) ? 'an' : 'a'} ${it.name}. +${it.heal} health.`, 'good');
+      return null;
+    }
+    case 'cook': {
+      if (ped.home.sleep || ped.home.shower || ped.home.cook) return null;
+      const use = cookPick(st);
+      if (!use) return `${HOME_IN.cookN} things to cook in the fridge first.`;
+      for (const id of use) st.items[id]--;
+      ped.home.cook = world.time + HOME_IN.cookS; ped.home.mv = false;
+      p.homeMenu = null;
+      store.touch();
+      world.notify(p, `Cooking: ${use.map((id) => ITEMS[id].name).join(', ')}...`, 'info');
+      send(world, p, false);
       return null;
     }
     case 'let': {
@@ -534,6 +553,15 @@ function setDecor(world, p, h, d) {
   store.touch();
   for (const q of world.players.values()) if (q.ped && q.ped.home && q.ped.home.id === h.id) send(world, q, true);
 }
+// what a meal at home is cooked from: HOME_IN.cookN things from the fridge - the plainest first (the least health on
+// its own), never a meal already cooked nor a prize crop - or null when there aren't that many
+function cookPick(st) {
+  const units = [];
+  for (const [id, n] of Object.entries((st && st.items) || {})) { const it = ITEMS[id]; if (n > 0 && it && it.food && !it.cooked && !it.prize) for (let k = 0; k < n && units.length < 64; k++) units.push(id); }
+  if (units.length < HOME_IN.cookN) return null;
+  units.sort((a, b) => ITEMS[a].heal - ITEMS[b].heal || (a < b ? -1 : a > b ? 1 : 0));
+  return units.slice(0, HOME_IN.cookN);
+}
 const copyDecor = (d) => ({ it: ((d && d.it) || []).map((q) => ({ ...q })), wall: { ...((d && d.wall) || {}) }, floor: { ...((d && d.floor) || {}) } });
 function decoOp(world, p, h, parts) {
   const prof = p.profile, s = p.ped.home, op = parts[1];
@@ -650,6 +678,14 @@ export function update(world) {
     }
     if (s.pet) petStep(world, p, s, h);   // (H71: your pet at home)
     if (s.sleep && world.time >= s.sleep) wake(world, p, h);
+    if (s.cook && world.time >= s.cook) {   // (dinner's ready: into the fridge)
+      s.cook = 0;
+      const st = (p.profile.stash ||= { items: {}, weapons: {} });
+      st.items ||= {};
+      st.items.homeMeal = (st.items.homeMeal || 0) + 1;
+      store.touch();
+      world.notify(p, `Dinner's ready: a ${ITEMS.homeMeal.name}, in the fridge.`, 'good');
+    }
     if (s.shower && world.time >= s.shower) {
       s.shower = 0;
       ped.hp = Math.min(ped.maxHp, ped.hp + HOME_IN.showerHeal); ped.bleeding = false; ped.burnT = 0;
