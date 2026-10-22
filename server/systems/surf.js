@@ -11,7 +11,7 @@
 //   ped.surf = { st: 'pad' | 'ride' | 'air' | 'wipe', b: the break near (its id) or -1, mx, my (the stick), w (the wave
 //   ridden), a, va (along the break: where, how fast), pts (this ride's), until (air, wipe), carveAt, sign }
 import { TILE, T, DT } from '../../shared/constants.js';
-import { WATER_T, isSwimming } from '../../shared/mapcore.js';
+import { WATER_T, PED_BLOCK, isSwimming } from '../../shared/mapcore.js';
 import { IN } from '../../shared/input.js';
 import { SURF, wavesAt, onBreak, breakPt, broken, findBreaks } from '../../shared/surf.js';
 import { store } from '../store.js';
@@ -100,7 +100,7 @@ export function input(world, p, ped, inp, pressed) {
   const s = ped.surf;
   s.mx = Math.max(-1, Math.min(1, inp.mx || 0)); s.my = Math.max(-1, Math.min(1, inp.my || 0));
   ped.aimAngle = inp.aim;
-  if ((pressed & (IN.ACTION | IN.DIVE)) && s.st === 'ride') {
+  if ((pressed & (IN.ACTION | IN.DIVE)) && s.st === 'ride' && world.time - (s.airEnd ?? -9) > SURF.airGap) {   // (not again the moment you land)
     s.st = 'air'; s.until = world.time + SURF.airS;
     descOn(ped, 'air');
     world.emit(ped.x, ped.y, { e: 'splash', x: ped.x, y: ped.y, n: 6 });
@@ -145,8 +145,8 @@ function step(world, p, ped, s, dt) {
     ped.vx += (tx - ped.vx) * k; ped.vy += (ty - ped.vy) * k;
     if (Math.hypot(ped.vx, ped.vy) > 12) ped.a = Math.atan2(ped.vy, ped.vx);
     const nx = ped.x + ped.vx * dt, ny = ped.y + ped.vy * dt, tile = m.tileAtPx(nx, ny);
-    if (WATER_T[tile] === 1) { ped.x = nx; ped.y = ny; }
-    else if (tile === T.SAND || tile === T.GRASS || tile === T.DIRT || tile === T.ROCK) { ped.x = nx; ped.y = ny; world.place(ped); stop(world, p); return; }   // (up the beach: off the board, it's in your bag)
+    if (WATER_T[tile] === 1 || tile === T.BRIDGE) { ped.x = nx; ped.y = ny; }   // (a bridge: paddling under it)
+    else if (!PED_BLOCK[tile]) { ped.x = nx; ped.y = ny; world.place(ped); stop(world, p); return; }   // (up the beach, onto a dock or a quay: off the board, it's in your bag)
     else { ped.vx = 0; ped.vy = 0; }
     world.place(ped);
     if (!isSwimming(m, ped)) { stop(world, p); return; }
@@ -175,7 +175,7 @@ function step(world, p, ped, s, dt) {
   const tan = s.mx * -B.ny + s.my * B.nx, want = Math.abs(tan) > 0.15 ? tan * SURF.along : B.side * SURF.along * 0.3;   // (no stick: it trims along, away from where it broke)
   const k = 1 - Math.exp(-(s.st === 'air' ? 0.5 : 3.2) * dt);
   s.va += (want - s.va) * k;
-  s.a += s.va * dt;
+  s.a = Math.max(-B.half - 40, Math.min(B.half + 40, s.a + s.va * dt));   // (never carried far past the beach's end)
   const P = breakPt(B, s.a, w.d - SURF.face);
   if (WATER_T[m.tileAtPx(P.x, P.y)] !== 1) { endRide(world, p, Math.abs(s.a) > B.half - 60 ? 'Off the end of the wave' : 'Rode it in'); return; }   // (the beach not quite straight: never carried up onto it)
   ped.vx = (P.x - ped.x) / dt; ped.vy = (P.y - ped.y) / dt;
@@ -192,8 +192,8 @@ function step(world, p, ped, s, dt) {
   if (sg && s.sign && sg !== s.sign && world.time - s.carveAt > PT.carveS) { s.pts += PT.carve * size; s.carveAt = world.time; }
   if (sg) s.sign = sg;
   if (s.st === 'air') {
-    if (world.time >= s.until) { s.st = 'ride'; s.pts += PT.air * size; descOn(ped, 'ride'); world.emit(ped.x, ped.y, { e: 'splash', x: ped.x, y: ped.y, n: 10 }); }
-    return;
+    if (world.time < s.until) return;   // (up in the air: the white water can't touch you yet)
+    s.st = 'ride'; s.pts += PT.air * size; s.airEnd = world.time; descOn(ped, 'ride'); world.emit(ped.x, ped.y, { e: 'splash', x: ped.x, y: ped.y, n: 10 });   // (landed: where it's broken, or past the end, the ride's over all the same)
   }
   if (broken(B, w, s.a - B.side * 10)) { wipe(world, p, 'The white water got you'); return; }
   if (Math.abs(s.a) > B.half) { endRide(world, p, 'Off the end of the wave'); }
@@ -203,7 +203,9 @@ function step(world, p, ped, s, dt) {
 export function meInfo(world, p) {
   const ped = p.ped;
   if (!ped) return null;
-  const s = ped.surf, near = hasBoard(p) || s ? breaksNear(world, ped.x, ped.y) : [];
+  // (the breaks near anyone, so the waves are drawn for whoever's on the beach - once they've been found: at the server's
+  // start, index.js; until then, only for someone with a board)
+  const s = ped.surf, near = hasBoard(p) || s || BR.has(world.map) ? breaksNear(world, ped.x, ped.y) : [];
   if (!s && !near.length) return null;
   return {
     b: near.map((b) => [b.id, b.x, b.y, b.nx, b.ny, b.half, b.ph, b.side]),

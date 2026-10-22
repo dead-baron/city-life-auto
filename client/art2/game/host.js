@@ -526,6 +526,7 @@ export class World2 {
     this.workerMap = this.workerMap || old;
     this.map = map; this.grid = artGrid(map);
     this.lampGrid = null; this.lampG = null; this.poiG = null; this.seaK = null;
+    this.tunMap = null;   // (the tunnel's chunks baked from the old window: kept on screen, baked again from this one - _tunnel)
     extra().then((X) => { if (!this.failed && this.map === map) X.reworld(this, map, this.workerMap || old); }, (e) => console.error('[art2] setMap', e));
   }
 
@@ -649,6 +650,7 @@ export class World2 {
   // Can this frame under the city be drawn as the tunnel? Not until its code is in: meanwhile the classic tunnel view
   // draws it (main.js), and this keeps the way ahead baking (stream).
   tunnelReady() {
+    if (!this.E || !this.E.keepChunk) return false;   // (the ?art2stub test engine: no chunk layers - the classic tunnel view)
     if (this.TN) return true;
     if (!this.tnP) this.tnP = import('./tunnel.js').then((m) => { this.TN = m; }, (e) => { console.warn('[art2] tunnel', e); setTimeout(() => { this.tnP = null; }, 30e3); });
     return false;
@@ -663,24 +665,28 @@ export class World2 {
       this.tunIn = true; this.wantChunks.clear();
       if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && jk[1] !== 'B' && jk[1] !== 'C');
     }
-    if (this.tunMap !== this.map) { if (this.tunMap && E.dropLayer) E.dropLayer(L); this.tunMap = this.map; this.tunNone = new Set(); }
+    // a new window of the world (the map swapped as the train runs on: setMap): the chunks already baked stay on screen and
+    // are baked again from it, after the ones still missing - the tunnel never goes blank at a region's edge
+    if (this.tunMap !== this.map) { this.tunMap = this.map; this.tunNone = new Set(); this.tunGen = (this.tunGen | 0) + 1; this.tunOf ||= new Map(); }
     const c0 = Math.floor((this.vx0 - 200) / CHUNK), c1 = Math.floor((this.vx1 + 200) / CHUNK), r0 = Math.floor((this.vy0 - 200) / CHUNK), r1 = Math.floor((this.vy1 + 260) / CHUNK);
     const want = [];
     for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
       const k = cy * 100000 + cx;
       if (this.tunNone.has(k)) continue;
-      if (E.hasChunk(cx, cy, L)) { E.keepChunk(cx, cy, L); continue; }
-      want.push([cx, cy, k, Math.hypot((cx + 0.5) * CHUNK - this.camX, (cy + 0.5) * CHUNK - this.camY)]);
+      const have = E.hasChunk(cx, cy, L);
+      if (have) { E.keepChunk(cx, cy, L); if (this.tunOf.get(k) === this.tunGen) continue; }
+      want.push([cx, cy, k, Math.hypot((cx + 0.5) * CHUNK - this.camX, (cy + 0.5) * CHUNK - this.camY) + (have ? 1e7 : 0), have]);
     }
     if (E.reserveChunks) E.reserveChunks((c1 - c0 + 1) * (r1 - r0 + 1) + 1);
     want.sort((a, b) => a[3] - b[3]);
     let budget = isPhone() ? 1 : 2;   // (a chunk is some 15 ms here, a phone's three times that)
-    for (const [cx, cy, k] of want) {
+    for (const [cx, cy, k, , have] of want) {
       if (budget-- <= 0) break;
       const g = TN.bakeTunnel(this.map, cx, cy, ap, this.tunBuf);   // (one buffer baked into again: uploaded at once)
       if (g) this.tunBuf = g;
-      if (!g) { this.tunNone.add(k); continue; }
+      if (!g) { this.tunNone.add(k); if (have) E.dropChunk(cx, cy, L); continue; }
       E.uploadChunk(cx, cy, g, L);
+      this.tunOf.set(k, this.tunGen);
       this.n.chunkUp = (this.n.chunkUp || 0) + 1;
     }
   }
@@ -1954,8 +1960,7 @@ export class World2 {
     for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; const car = S.ents.get(p.parent); this._ped(p, now, p.id === S.myPedId, F, 8 + (car ? (car.rz || 0) * EL_Z + (car._jz || 0) : 0)); }   // (up on the El: its car's height; over a jump: its bike's)
     this.sprPrio = -1;
     for (const c of F.cars) this._train(c, now, F.myTrain);
-    this._rides(F, now);
-    this._forage(F);
+    if (!F.sub) { this._rides(F, now); this._forage(F); }   // (under the city: none of the surface's rides or finds)
     if (A) {
       for (const c of F.crates) {
         const st = c.flags & 3;
@@ -1983,7 +1988,7 @@ export class World2 {
       }
     }
     // the birds (simulated in main.js): the providers' pigeons and gulls, flapping when they fly
-    if (A && A.critterKey && A.critterInfo) for (const b of this.api.birds) {
+    if (A && A.critterKey && A.critterInfo && !F.sub) for (const b of this.api.birds) {   // (not down in the tunnel: they don't fly there)
       const kind = b.gull ? 'seagull' : 'pigeon', info = this.critInfo[kind] || (this.critInfo[kind] = A.critterInfo(kind) || { frames: 1, fps: 10 });
       const nf = info.frames || 1, fps = info.fps || 10, air = info.air || [0, nf - 1], ground = info.ground ? info.ground[0] : 0;
       // (frames: the ground pose, the take-off frame, then the flight cycle)

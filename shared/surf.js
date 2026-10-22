@@ -30,6 +30,7 @@ export const SURF = {
   face: 12,            // px in front of the crest you ride
   pocket: 140,         // px ahead of the break: the pocket, where the points are
   airS: 0.75,          // s up in the air off the lip
+  airGap: 1,           // s riding between one air and the next
   wipeS: 1.6,          // s tumbling in the white water
   pts: { base: 20, speed: 0.14, pocket: 45, air: 300, carve: 90, carveS: 1.2 },   // points: a second's ride, per px/s along, a second in the pocket, an aerial, a carve
   near: 2600,          // px: a break this near you is in your 'me'

@@ -3,7 +3,7 @@
 // Each wave is drawn flat on the water as decals along its crest, turned to the beach: while it's green, the bright lip of
 // the crest and the dark, steep face in front of it, building as it rises; where it has broken - from one end, the break
 // peeling along the crest - churning white water, thinning as it washes in. The ends taper off along the beach.
-import { wavesAt, breakPt, broken, SURF } from '../../../shared/surf.js';
+import { wavesAt, broken, SURF } from '../../../shared/surf.js';
 
 const STEP = 26;   // px along the crest between pieces
 const UP_N = [128, 128, 255];
@@ -61,29 +61,35 @@ const MAKE = {
     return G;
   },
 };
+// each piece's four variants: the decal's key and the function that makes it, built once (no garbage a frame)
+const PIECES = {};
+for (const [k, mk] of Object.entries(MAKE)) PIECES[k] = [0, 1, 2, 3].map((v) => [`sf${k}|${v}`, mk(v)]);
+const conv = (host, k, v) => { const P = PIECES[k][v]; return host._conv(P[0], P[1], true); };
+const WS = [];
 export function drawWaves(host, F, breaks, t) {
-  const E = host.E, out = [], x0 = host.vx0 - 80, x1 = host.vx1 + 80, y0 = host.vy0 - 80, y1 = host.vy1 + 120;
+  const E = host.E, x0 = host.vx0 - 80, x1 = host.vx1 + 80, y0 = host.vy0 - 80, y1 = host.vy1 + 120;
   for (const B of breaks) {
     // (the break near the view at all?)
     if (Math.max(Math.abs(B.x - (x0 + x1) / 2) - (x1 - x0) / 2, Math.abs(B.y - (y0 + y1) / 2) - (y1 - y0) / 2) > B.half + SURF.start + 60) continue;
-    const ang = Math.atan2(B.nx, -B.ny);   // (the pieces' +x along the beach, +y toward it)
-    for (const w of wavesAt(B, t, out)) {
+    const ang = Math.atan2(B.nx, -B.ny), ux = -B.ny, uy = B.nx;   // (the pieces' +x along the beach, +y toward it; u: along it)
+    for (const w of wavesAt(B, t, WS)) {
       const rise = Math.min(1, w.age / 3) * (0.7 + w.size * 0.3), wash = Math.min(1, (w.d - SURF.shore) / 90);
       if (rise * wash < 0.05) continue;
+      const steep = w.green ? Math.min(1, (SURF.start - w.d) / 200) : 1;   // (the face standing up as it comes in)
       let j = 0;
       for (let a = -B.half + STEP / 2; a < B.half; a += STEP, j++) {
-        const P = breakPt(B, a, w.d);
-        if (P.x < x0 || P.x > x1 || P.y < y0 || P.y > y1) continue;
+        // (shared/surf.js breakPt, inline: a along the beach, d out from it)
+        const px = B.x + ux * a + B.nx * w.d, py = B.y + uy * a + B.ny * w.d;
+        if (px < x0 || px > x1 || py < y0 || py > y1) continue;
         const end = Math.min(1, (B.half - Math.abs(a)) / 90), v = (w.id * 7 + j) & 3;
         if (broken(B, w, a)) {
-          const Q = breakPt(B, a, w.d - 4), k = host._conv(`sfw|${v}`, MAKE.white(v), true);
-          if (k) E.drawDecal(k, Q.x, Q.y, ang, 0.95 * wash * end, 0);
+          const k = conv(host, 'white', v);
+          if (k) E.drawDecal(k, px - B.nx * 4, py - B.ny * 4, ang, 0.95 * wash * end, 0);
         } else {
-          const kf = host._conv(`sff|${v}`, MAKE.face(v), true), kl = host._conv(`sfl|${v}`, MAKE.lip(v), true), kb = host._conv(`sfb|${v}`, MAKE.back(v), true), Q = breakPt(B, a, w.d - 2);
-          const steep = w.green ? Math.min(1, (SURF.start - w.d) / 200) : 1;   // (the face standing up as it comes in)
-          if (kb) E.drawDecal(kb, P.x, P.y, ang, 0.6 * rise * end, 0);
-          if (kf) E.drawDecal(kf, Q.x, Q.y, ang, 0.9 * rise * end * steep, 0);
-          if (kl) E.drawDecal(kl, P.x, P.y, ang, Math.min(1, 1.1 * rise) * end, 0);
+          const kf = conv(host, 'face', v), kl = conv(host, 'lip', v), kb = conv(host, 'back', v);
+          if (kb) E.drawDecal(kb, px, py, ang, 0.6 * rise * end, 0);
+          if (kf) E.drawDecal(kf, px - B.nx * 2, py - B.ny * 2, ang, 0.9 * rise * end * steep, 0);
+          if (kl) E.drawDecal(kl, px, py, ang, Math.min(1, 1.1 * rise) * end, 0);
         }
       }
     }

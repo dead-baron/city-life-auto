@@ -126,3 +126,46 @@ test('the white water: stay where the wave has broken and it gets you', () => {
   run(w, SURF.wipeS + 0.2);
   assert.equal(p.ped.surf.st, 'pad', 'back on the board');
 });
+
+test('airs: one a second at most, and landing in the white water still gets you; never carried far past the beach', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  prof.inventory.surfboard = 1;
+  const B = surf.breaksOf(w).list[0];
+  const at = breakPt(B, 0, SURF.brk + 200);
+  teleport(w, p.ped, at.x, at.y);
+  run(w, 0.2);
+  let k = 0, wave = null;
+  for (; k < 800 && !wave; k++) wave = wavesAt(B, (w.tick + k) * DT).find((q) => q.green && Math.abs(q.d - (SURF.brk + 200)) < 4) || null;
+  steer(w, p, 0, 0, 0, Math.max(0, k - 6));
+  teleport(w, p.ped, at.x, at.y);
+  for (let i = 0; i < 30 && p.ped.surf.st === 'pad'; i++) steer(w, p, -B.nx, -B.ny);
+  assert.equal(p.ped.surf.st, 'ride');
+  // carving back toward where it broke, the action button held down: airs one after another, as fast as they come
+  const tx = -B.ny * -B.side, ty = B.nx * -B.side;
+  let airs = 0, was = 'ride', maxA = 0, n = 0;
+  for (; n < 600 && p.ped.surf && (p.ped.surf.st === 'ride' || p.ped.surf.st === 'air'); n++) {
+    steer(w, p, tx, ty, p.ped.surf.st === 'ride' ? IN.ACTION : 0);
+    if (p.ped.surf.st === 'air' && was !== 'air') airs++;
+    was = p.ped.surf.st; maxA = Math.max(maxA, Math.abs(p.ped.surf.a));
+  }
+  assert.ok(p.ped.surf && p.ped.surf.st !== 'ride' && p.ped.surf.st !== 'air', `the ride over (${n} ticks)`);
+  assert.ok(airs <= Math.ceil(n * DT / (SURF.airS + SURF.airGap)) + 1, `airs no faster than one a second (${airs} in ${(n * DT).toFixed(1)} s)`);
+  assert.ok(maxA <= B.half + 40, `kept to the beach (${Math.round(maxA)} of ${B.half})`);
+});
+
+test('lying on the board: the vehicle button still boards a boat beside you', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  prof.inventory.surfboard = 1;
+  const B = surf.breaksOf(w).list[0];
+  const at = breakPt(B, 0, SURF.start + 100);
+  teleport(w, p.ped, at.x, at.y);
+  run(w, 0.3);
+  assert.equal(p.ped.surf && p.ped.surf.st, 'pad');
+  const v = w.spawnVehicle('speedboat', at.x + 20, at.y, 0, { npcOwned: false });
+  v.issuedTo = p.pid;
+  steer(w, p, 0, 0, IN.VEHICLE); steer(w, p, 0, 0, 0, 20);
+  assert.equal(p.ped.vehId, v.id, 'aboard');
+  assert.ok(!p.ped.surf && prof.inventory.surfboard === 1, 'the board in the bag');
+});
