@@ -13870,3 +13870,23 @@ Tests: test/precut.test.js - near a door, its chunks are asked for cut away once
 the screen's bakes go first; ready only once what's on screen is cut away; the walk-in ahead (on foot, not driving
 past; down: the hospital picked) and the way out's words. test/hudpage.js imports the note paging with the page (the
 headless page's clock didn't wait for an import made after it: the note test flaked).
+
+## 2026-10-22 · Route boards on the platforms
+
+The owner, 10-16: "An information board or map sign at stations showing where the train goes". The platform clock
+showed when the next train was due, and the station's timetable menu (at its map point) listed the next three
+trains. But nothing on the platform showed where the lines go.
+
+- **the board** (`routeBoardAt` in `shared/mapcore.js`; drawn by `client/art2/game/statics.js`, model `routeBoard` in
+  `client/art2/props-transit.js`): a navy board on two steel posts with a yellow header strip, the line drawn as a
+  white rule with the stops as dots (this one ringed in red), and the timetable's rows, lit a little at night. It
+  stands on every open-air platform near the back edge towards one end, past the canopy and clear of the footbridge
+  and the name sign. Where the ground there isn't the platform's, there's no board.
+- **read it** (`server/systems/trains.js` routeBoards, routeRows, readRouteBoard): standing at it, the action button
+  shows "The route board - where the trains from Northshore go". It lists every line through the station (each
+  service each way on World v3's main line), when its next train is due, and its next five stops in order. When a
+  train is in, boarding comes first.
+- Not yet on the El's platforms or at the subway's kiosks.
+
+Tests: test/world3rail.test.js - most open-air stations have a board, each on its platform and drawn where it's read;
+the prompt there; its rows, each line's next stop first.

@@ -403,6 +403,18 @@ export const MAIL_BOX = { ox: -58, oy: 0 };              // the strongbox (towar
 export const MAIL_POSTS = [[40, -18], [40, 18]];          // where the guards stand
 export const CROSSING_ARM = 66;                          // gate arms this far either side of the track centre
 
+// A station's route board (the owner, 10-16: "An information board or map sign at stations showing where the train
+// goes"): on an open-air platform, near its back edge towards one end - past the canopy, clear of the footbridge and
+// the name sign in the middle - where the ground's the platform's: { x, y }, or null (a subway's, the El's, or a street
+// there). tileAt(x, y): the tile at a world px. client/art2/game/statics.js draws it; server/systems/trains.js reads it.
+export const ROUTE_BOARD_OFF = 92, ROUTE_BOARD_ALONG = -0.8;
+export function routeBoardAt(rail, st, tileAt) {
+  if (!st || st.under || st.el || st.deck || !rail || !rail.pts) return null;
+  const q = railAt(rail, st.s + ROUTE_BOARD_ALONG * (st.half || 112)), sd = st.side || 1;
+  const x = q.x - Math.sin(q.a) * sd * ROUTE_BOARD_OFF, y = q.y + Math.cos(q.a) * sd * ROUTE_BOARD_OFF, t = tileAt(x, y);
+  return t === T.PLAZA || t === T.DOCK || t === T.SIDEWALK ? { x: Math.round(x), y: Math.round(y) } : null;
+}
+
 // Position + heading at arc length s along the loop (wraps).
 export function railAt(rail, s) {
   const pts = rail.pts, L = rail.len;

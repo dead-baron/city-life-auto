@@ -11,7 +11,7 @@
 import { inAnyView } from '../view.js';
 import { K, T } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
-import { railAt, CONSIST, CAR_GAP, TRAIN_CARS, COACH_SEATS, COACH_STAND, LOCO_SEATS, LOCO_STAND, CAB_OX, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming } from '../../shared/map.js';
+import { railAt, routeBoardAt, CONSIST, CAR_GAP, TRAIN_CARS, COACH_SEATS, COACH_STAND, LOCO_SEATS, LOCO_STAND, CAB_OX, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { obbVsObb, circleVsObb, localToWorld, clamp } from '../../shared/math.js';
 import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAIN_HEADWAY_S, TRAIN_LOOP_HEADWAY_S, TRAIN_LOOP_MAX, TRAIN_HOLD_MAX_S, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, GUARD_DRAW_S, BAIL_SPEED } from '../../shared/rules.js';
 import { STAR_HEAT } from '../../shared/constants.js';
@@ -1368,7 +1368,53 @@ export function interaction(world, p) {
     return { label: `${st.name}: next train in ${Math.floor(eta / 60)}:${String(eta % 60).padStart(2, '0')} - wait in line, F when it's in (to ${nxt})`, run: () => {} };
   }
   const hit = climbable(world, ped, ped.x, ped.y, 48, ped.vx, ped.vy);
-  return hit ? { label: `Hop onto the ${carLabel(world, hit)}`, run: () => climbOn(world, ped, hit) } : null;
+  if (hit) return { label: `Hop onto the ${carLabel(world, hit)}`, run: () => climbOn(world, ped, hit) };
+  // a platform's route board: where the trains from here go
+  if (!ped.vehId && (ped.lz || 0) < 0.3) for (const b of routeBoards(world)) if (Math.abs(ped.x - b.x) < ROUTE_BOARD_R && Math.abs(ped.y - b.y) < ROUTE_BOARD_R) return { label: `The route board - where the trains from ${b.name.replace(/ Station$/, '')} go`, run: () => readRouteBoard(world, p, b.name) };
+  return null;
+}
+
+// ---- the platforms' route boards (the owner, 10-16: "An information board or map sign at stations showing where the
+// train goes"): one on each open-air platform (shared/mapcore.js routeBoardAt, drawn by client/art2/game/statics.js).
+// Read, it lists every line through the station and the stops it runs on to from here.
+const ROUTE_BOARD_R = 40;
+export function routeBoards(world) {
+  if (world.routeBoardsOf === world.map) return world.routeBoardList;
+  const out = [];
+  for (const R of world.rails || [world.map.rail]) for (const st of (R && R.stations) || []) {
+    const b = routeBoardAt(R, st, (x, y) => world.map.tileAtPx(x, y));
+    if (b && !out.some((o) => o.name === st.name && Math.hypot(o.x - b.x, o.y - b.y) < 60)) out.push({ ...b, name: st.name });
+  }
+  world.routeBoardsOf = world.map; world.routeBoardList = out;
+  return out;
+}
+// the board's rows: each line through the station (a service each way on World v3's main line), its next stops
+export function routeRows(world, name) {
+  const rows = [], seen = new Set(), rails = world.rails || [world.map.rail];
+  rails.forEach((R, r) => {
+    const sts = (R && R.stations) || [], i = sts.findIndex((q) => q.name === name);
+    if (i < 0 || sts.length < 2) return;
+    const next = [];
+    for (let k = 1; k < sts.length && next.length < 5; k++) { const n = sts[(i + k) % sts.length].name.replace(/ Station$/, ''); if (n !== name.replace(/ Station$/, '') && !next.includes(n)) next.push(n); }
+    const label = R.name || 'The line', key = label + next.join();
+    if (seen.has(key)) return;
+    seen.add(key);
+    // (its next train in: the soonest of the line's trains to this stop)
+    let eta = Infinity;
+    for (const t of world.trains || []) if ((world.rails ? t.r === r : !off0(t))) eta = Math.min(eta, etaTo(world, t, i));
+    rows.push({ label, next, eta });
+  });
+  return rows;
+}
+export function readRouteBoard(world, p, name) {
+  if (!p.conn) return;
+  const rows = routeRows(world, name);
+  p.conn.sendJSON({
+    t: 'menu', poi: -1, title: `${name.replace(/ Station$/, '')} - where the trains go`,
+    sub: 'Every line through here and the stops it runs on to. The platform clock shows when the next train is due.',
+    opts: rows.length ? rows.map((r) => ({ id: 'close', label: r.label, note: `${Number.isFinite(r.eta) ? (r.eta < 1 ? 'in now' : `next in ${Math.round(r.eta)}s`) + ' · ' : ''}${r.next.join(' → ')}` })) : [{ id: 'close', label: 'OK' }],
+    cash: p.profile.cash, bank: p.profile.bank,
+  });
 }
 const carLabel = (world, hit) => hit.t.cars[hit.ci].def.name.toLowerCase() + (hit.ci === hit.t.mail && guardsOf(world, hit.t).length ? ' - armed guards!' : '');
 
