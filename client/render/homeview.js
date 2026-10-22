@@ -107,8 +107,10 @@ function predicted(L) {
   const s = { x: st.x, y: st.y, a: st.a, nc: (st.cars || []).length }, prev = { ...s };   // (nc: the parked cars are solid)
   let mv = !!st.mv;
   if (!st.sleep && !st.shower && S.pending) {
+    let sat = !!st.seat;   // (sat down: a nudge of the stick keeps you there, as the server has it - homeinside.js step)
     for (const q of S.pending) {
       if (q.seq <= st.ack) continue;
+      if (sat) { if (Math.hypot(q.mx || 0, q.my || 0) < 0.4) continue; sat = false; }
       prev.x = s.x; prev.y = s.y; prev.a = s.a;
       mv = stepInside(L, s, q.mx || 0, q.my || 0, DT, HOME_IN.walk) || mv;
     }

@@ -7,7 +7,7 @@
 //   robbery - p.robbedAt);
 // - the drill works HEIST.drillS seconds through the door on its own - you hold them off. On the way it jams (up to
 //   HEIST.jams times): it stops until someone clears it at the drill (anyone - a crew's friend too). Left jammed
-//   HEIST.abandonS, the police take it away and the job's over;
+//   HEIST.abandonS, the police take it away and the job's over - and a police player at the door takes it off at once;
 // - through: the door swings open and the vault's load spills out in front of it - the district's crates (cargo.js: an
 //   iron safe-deposit box, a carbon-gold case of bars), contraband for the fence - and the drawers' cash goes into the
 //   bag of whoever set the drill, if they're still there (hot money: hotmoney.js). Carry the crates out to something
@@ -50,6 +50,10 @@ export function interaction(world, p) {
   const b = bankAt(world.map, ped.x, ped.y), V0 = b && vaultAt(world, b);
   if (!V0 || Math.hypot(ped.x - V0.sx, ped.y - V0.sy) > HEIST.reach) return null;
   const V = stateOf(world, b.id);
+  if (p.badge) {   // (an officer: takes a drill off the door, never helps one along)
+    if (V && V.st === 'drill') return { label: 'Take the drill off the vault door', run: () => seize(world, p, V) };
+    return { label: V && V.st === 'open' ? 'The vault\'s been cracked' : 'The vault door', run: () => {} };
+  }
   if (V && V.st === 'drill') {
     if (V.jammed) return { label: 'The drill\'s jammed - clear it', run: () => unjam(world, p, V) };
     return { label: `The drill's working through the vault door... ${Math.floor(V.work / HEIST.drillS * 100)}%`, run: () => {}, prog: V.work / HEIST.drillS };
@@ -57,7 +61,6 @@ export function interaction(world, p) {
   if (V && V.st === 'open') return { label: 'The vault\'s open - grab what\'s inside', run: () => {} };
   if (V && V.st === 'shut') return { label: 'The vault\'s been cleaned out - it\'ll be a while before it\'s worth another go', run: () => {} };
   if (!((p.profile.inventory || {}).drill > 0)) return { label: 'The vault door - you\'d need a thermal drill (the black market sells them)', run: () => {} };
-  if (p.badge) return { label: 'The vault door', run: () => {} };
   return { label: 'Set the thermal drill on the vault - a bank heist (the alarm goes at once)', crime: 'heist', run: () => start(world, p, b) };
 }
 
@@ -95,6 +98,16 @@ function unjam(world, p, V) {
   world.notify(p, 'The bit\'s free - the drill\'s back at it.', 'good');
 }
 
+// the drill taken off the door (an officer at it, or left jammed too long): the job's off, the vault shut a while
+function seize(world, p, V) {
+  if (V.st !== 'drill') return;
+  V.st = 'shut'; V.until = world.time + HEIST.cooldownS / 6;
+  world.emit(V.x, V.y, { e: 'vaultgone', id: V.bid });
+  const q = world.players.get(V.by);
+  if (q && q !== p) world.notify(q, `The police took your drill off ${V.label}'s vault - the job's off.`, 'bad');
+  if (p) { world.notify(p, `You took the drill off ${V.label}'s vault.`, 'good'); p.profile.samaritan = (p.profile.samaritan || 0) + HEIST.seizeSam; p.meDirty = true; store.touch(); }
+}
+
 function open(world, V) {
   const now = world.time;
   V.st = 'open'; V.until = now + HEIST.openS; V.jammed = false;
@@ -110,8 +123,8 @@ function open(world, V) {
   events.feed(world, { kind: 'news', text: `${V.label}'s vault was cracked - the alarm's still ringing`, x: V.x, y: V.y });
   const p = world.players.get(V.by), ped = p && p.ped;
   if (!p) return;
-  p.profile.criminalExp = (p.profile.criminalExp || 0) + HEIST.xp;
   if (ped && !ped.dead && !p.custody && Math.hypot(ped.x - V.x, ped.y - V.y) < 400) {
+    p.profile.criminalExp = (p.profile.criminalExp || 0) + HEIST.xp;
     const cash = Math.round(HEIST.cash * (ROB_TILL_TIER[V.tier] ?? 1));
     hot.add(world, p, cash, V.x, V.y);
     world.notify(p, `The vault door swings open! $${cash.toLocaleString('en-US')} from the drawers in your bag (hot money), and ${n} crate${n === 1 ? '' : 's'} on the floor - carry them out to something with an open back and get them to a fence.`, 'good');
@@ -133,7 +146,7 @@ export function update(world, dt) {
     }
     // the drill
     const p = world.players.get(V.by);
-    for (const c of V.calls) if (c[0] && now >= c[0]) { c[0] = 0; if (p && p.ped && !p.ped.dead && p.wanted > 0) police.respondTo(world, p, V.x, V.y, c[1]); }
+    for (const c of V.calls) if (c[0] && now >= c[0]) { c[0] = 0; if (p && p.ped && !p.ped.dead && !p.custody && p.wanted > 0) police.respondTo(world, p, V.x, V.y, c[1]); }
     // (still in the bank while it runs: the heat climbs - in whole stars' worth at a time, as at a robbery - and it's the scene)
     if (p && p.ped && !p.ped.dead && !p.custody && !V.jammed && bankAt(world.map, p.ped.x, p.ped.y) === world.map.buildings[bid]) {
       V.heatAcc = (V.heatAcc || 0) + HEIST.heatS * dt;
@@ -142,12 +155,7 @@ export function update(world, dt) {
     }
     if (now - V.alarmT >= ALARM_S) { V.alarmT = now; world.emit(V.x, V.y, { e: 'alarm', x: V.x, y: V.y }); }
     if (V.jammed) {
-      if (now - V.jamT >= HEIST.abandonS) {   // (nobody saw to it: the police take the drill away)
-        V.st = 'shut'; V.until = now + HEIST.cooldownS / 6;
-        world.emit(V.x, V.y, { e: 'vaultgone', id: bid });
-        if (p) world.notify(p, `The police took your drill off ${V.label}'s vault - the job's off.`, 'bad');
-        continue;
-      }
+      if (now - V.jamT >= HEIST.abandonS) { seize(world, null, V); continue; }   // (nobody saw to it: the police take the drill away)
     } else {
       V.work += dt;
       if (V.jamAt.length && V.work >= V.jamAt[0] * HEIST.drillS) {

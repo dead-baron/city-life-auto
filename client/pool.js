@@ -77,7 +77,7 @@ export function start(o) {
     if (!G) return;
     G.raf = requestAnimationFrame(tick);
     G.acc = Math.min(0.25, G.acc + (now - G.last) / 1000); G.last = now;
-    while (G.acc >= STEP) { step(STEP); G.acc -= STEP; if (!G) return; }
+    while (G.acc >= STEP) { step(STEP); if (!G) return; G.acc -= STEP; }   // (a game over dismissed: closed, G gone)
     draw();
   };
   G.raf = requestAnimationFrame(tick);
@@ -134,7 +134,7 @@ function step(dt) {
   } else if (G.done) {
     let btn = G.keys.has('Space') || G.keys.has('Enter');
     for (const p of navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []) if (p.buttons[0] && p.buttons[0].pressed) btn = true;
-    if (btn && !G.padHeld && G.msgT < 2) finish();
+    if (btn && !G.padHeld && G.msgT < 2) { finish(); return; }
     G.padHeld = btn;
     return;
   }

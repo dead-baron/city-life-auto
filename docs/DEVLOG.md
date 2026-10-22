@@ -14528,8 +14528,8 @@ room table stood as furniture. Now walk up to either and rack 'em up (server/sys
   turn the cue with left / right (the keys, the stick, the d-pad; up / down to fine-tune), hold Space / Enter / A to
   build the power and let go. Esc or B leaves. It plays on the arcade's screen, sized to the table (256 x 160).
 - **the price**: the Rusty Spur's table is $1 a frame (shared/rules.js ARCADE.pool); the mansion's is free.
-- **the score**: a cleared frame's shots go to the server, which keeps your best (no fewer than nine shots, and not
-  in under five seconds); a frame you leave unfinished counts for nothing.
+- **the score**: a cleared frame's shots go to the server, which keeps your best (not cleared
+  in under six seconds by its own clock); a frame you leave unfinished counts for nothing.
 
 Tests: test/arcade.test.js - the rack, a break spreading the balls, everything coming to rest on the table, a ball
 rolled into a corner pocket, the server keeping a frame's shots as the best and refusing an impossible one.
@@ -14560,3 +14560,17 @@ Tests: test/heist.test.js - every bank's vault door behind its counter with floo
 drill; a heist from the drill to the open vault (3 stars, on the record, the scene, the jams stopping it and cleared,
 the load and the hot money, cleaned out, worth another go later); a drill left jammed taken away; no drill for an
 officer.
+
+## 2026-10-22 · Home seats, the arcades, pool and bank heists: fixes from a review
+
+- **the arcades**: Lucky Mesa's Pixel Arcade and Falls Center's Game Zone (the generator's arcades) had no prompt at
+  their doors, nor Midtown's walk-in Penny Arcade - all three are arcades now (server/systems/arcade.js isArcade).
+- **a game over** (STARFALL's, or a cleared pool frame dismissed with a key or the pad) threw an error on the page as the
+  cabinet closed; and at a cabinet the bag and the map keys no longer open over the game.
+- **pool**: a frame counts however few shots it took (a break can sink several - the page said "a new best" while the
+  server threw it away), timed by the server's own clock.
+- **the mansion's sectional** is a seat to watch TV from (the kitchen island had been the seat by mistake); at home a
+  small nudge of the stick while sitting no longer drifts the view (you stay sat until you really move).
+- **bank heists**: a police player at a vault door with a drill on it takes the drill off (the job's off, Samaritan
+  points) and is never offered to clear its jam; the second wave of squads isn't sent once the driller's in custody;
+  the heist's criminal EXP goes, like the drawers' cash, only to a driller still there when the door opens.

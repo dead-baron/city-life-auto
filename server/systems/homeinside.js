@@ -289,7 +289,7 @@ export function interaction(world, p) {
 // nearest you, facing the way it faces (the sectional and the cinema's seats the TV); moving gets you up. A rest there
 // brings health back slowly (HOME_IN.restHeal). The TV switches on and off (everyone in the home sees it: the page's
 // screen flickers and lights the room); with nobody home it goes off.
-const SEATS = new Set(['C', 'n', 'O', 'i']), TVS = new Set(['V', 'v']), CABS = new Set(['j', 'x']);   // (j: the mansion's arcade cabinets, x: its pool table - arcade.js)   // (j: the mansion's arcade cabinets - arcade.js)
+const SEATS = new Set(['C', 's', 'O', 'i']), TVS = new Set(['V', 'v']), CABS = new Set(['j', 'x']);   // (s: the mansion's sectional; j: its arcade cabinets, x: its pool table - arcade.js)
 const near = (q, x, y) => Math.hypot(Math.max(q.x - x, 0, x - (q.x + q.w)), Math.max(q.y - y, 0, y - (q.y + q.h)));
 const tvOn = (world, h) => !!(world.homeTv && world.homeTv.has(h.id));
 function furnitureAt(world, h, s) {
@@ -310,7 +310,7 @@ export function seatOf(world, h, q, x, y) {
   if (!face) {
     let tvp = null, td = 10 * TILE_IN;
     for (const o of L.pieces) if (TVS.has(o.ch)) { const d = Math.hypot(o.x + o.w / 2 - cx, o.y + o.h / 2 - cy); if (d < td) { td = d; tvp = o; } }
-    if ((q.ch === 'n' || q.ch === 'i') && tvp) { const dx = tvp.x + tvp.w / 2 - cx, dy = tvp.y + tvp.h / 2 - cy; face = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'e' : 'w') : dy > 0 ? 's' : 'n'; }
+    if ((q.ch === 's' || q.ch === 'i') && tvp) { const dx = tvp.x + tvp.w / 2 - cx, dy = tvp.y + tvp.h / 2 - cy; face = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'e' : 'w') : dy > 0 ? 's' : 'n'; }
     else face = q.h > q.w ? (L.solid(q.tx - 1, q.ty) ? 'e' : 'w') : L.solid(q.tx, q.ty + q.th) ? 'n' : 's';
   }
   return { x: cx, y: cy, a: FACES[face] ?? Math.PI / 2 };

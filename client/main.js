@@ -1451,6 +1451,7 @@ initInput(canvas, {
       if (k === 'ArrowDown' || k === 'KeyS') { S.hud.navMenu(1); return; }
       if (k === 'Enter' || k === 'Space') { S.hud.choose(S.hud.menuFocus); return; }
     }
+    if (topOverlay() === 'arcade' && k !== 'Escape') return;   // (at a cabinet or the pool table: its keys are the game's - client/arcade.js, pool.js)
     if (k === 'KeyI' && S.playing) { toggleBag(); return; }
     if (k === 'KeyX' && canWheel() && !wheel.open) {
       wheel.show(); S.wheelAt = performance.now();

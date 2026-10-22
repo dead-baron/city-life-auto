@@ -107,7 +107,7 @@ test('a frame of pool: the rack, the break spreading them, a pocket, everything 
   const c = lastOf(conn, 'arcade');
   assert.equal(c.game, 'pool');
   arcade.onScore(w, p, { id: c.id, score: 4, secs: 60 });
-  assert.ok(!prof.poolBest, 'fewer than nine shots: not a frame');
+  assert.ok(!prof.poolBest, 'cleared the moment it started: not a frame');
   arcade.play(w, p, true, null, 'pool');
   run(w, 90);
   arcade.onScore(w, p, { id: lastOf(conn, 'arcade').id, score: 17, secs: 90 });

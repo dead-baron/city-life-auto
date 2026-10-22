@@ -83,7 +83,7 @@ test('a bank heist: the drill on the vault, the alarm, the jams, the vault open,
   assert.match(heist.interaction(w, p).label, /Set the thermal drill/);
 });
 
-test('a drill left jammed is taken away; a police officer can\'t start one', () => {
+test('a drill left jammed is taken away; a police officer can\'t start one, and takes one off', () => {
   const w = makeWorld();
   const { p, prof } = joinPlayer(w);
   const b = banks(w)[1] || banks(w)[0], v = vaultOf(b);
@@ -104,6 +104,18 @@ test('a drill left jammed is taken away; a police officer can\'t start one', () 
   cop.p.badge = true;
   cop.prof.inventory.drill = 1;
   teleport(w2, cop.p.ped, v.sx, v.sy);
-  const a = heist.interaction(w2, cop.p);
+  let a = heist.interaction(w2, cop.p);
   assert.ok(a && !a.crime && !/Set the/.test(a.label));
+  // a crook's drill on the door: the officer takes it off (never clears a jam)
+  const crook = joinPlayer(w2);
+  crook.prof.inventory.drill = 1;
+  teleport(w2, crook.p.ped, v.sx, v.sy);
+  assert.ok(heist.start(w2, crook.p, b));
+  const V2 = heist.stateOf(w2, b.id), sam = cop.prof.samaritan || 0;
+  V2.jammed = true;
+  a = heist.interaction(w2, cop.p);
+  assert.match(a.label, /Take the drill off/);
+  a.run();
+  assert.equal(V2.st, 'shut', 'the job\'s off');
+  assert.ok(cop.prof.samaritan > sam, 'Samaritan points');
 });

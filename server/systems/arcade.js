@@ -16,10 +16,11 @@ import { payFrom as pay } from './economy.js';
 
 // an arcade's door: a business place whose building is an arcade (the strip's storefronts, the Pixel Arcade)
 export function isArcade(world, poi) {
-  if (!poi || poi.kind !== 'delivery' || poi.walk) return false;
+  if (!poi || poi.kind !== 'delivery') return false;
+  if (poi.walk) return poi.store === 'arcade';   // (a hand plan's walk-in arcade: Midtown's Penny Arcade)
   if (poi.arcade !== undefined) return poi.arcade;
   const b = world.map.buildings && world.map.buildings[poi.b];
-  const k = !!b && (b.key === 'arcade' || b.arch === 'arcade' || b.prefab === 'arcade' || (b.art && b.art.shop && b.art.shop.kind === 'arcade'));
+  const k = !!b && (b.kind === 'arcade' || b.key === 'arcade' || b.arch === 'arcade' || (b.art && b.art.shop && b.art.shop.kind === 'arcade'));   // (b.kind: the generator's arcades - Lucky Mesa's Pixel Arcade, Falls Center's Game Zone)
   try { poi.arcade = k; } catch { /* (a frozen place: worked out again next time) */ }
   return k;
 }
@@ -88,9 +89,9 @@ export function onScore(world, p, msg) {
   const A = p.arcade;
   if (!A || String(msg.id || '') !== A.id) return;
   p.arcade = null;
-  if (A.game === 'pool') {   // (a frame cleared: the fewest shots - none fewer than the nine balls)
+  if (A.game === 'pool') {   // (a frame cleared: the fewest shots - a break can sink several, so any number counts)
     const shots = Math.floor(Number(msg.score) || 0), prof = p.profile;
-    if (shots < 9 || (Number(msg.secs) || 0) < 5) return;
+    if (shots < 1 || world.time - A.at < 6) return;   // (the server's own clock: a frame takes a few seconds at least)
     const best = !prof.poolBest || shots < prof.poolBest;
     if (best) prof.poolBest = shots;
     world.notify(p, `Cleared the table in ${shots} shots${best ? ' - your best!' : ''}.`, best ? 'good' : 'info');
