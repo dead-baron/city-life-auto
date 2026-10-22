@@ -59,6 +59,11 @@ test('on the platform with a train in: board it from there, and off again onto t
   t.stop = si; t.dwellUntil = w.time + 60;
   const { p } = joinPlayer(w);
   teleport(w, p.ped, st.x, st.deck.y); p.ped.lz = M.el.lz;
+  // no train in: no prompt (the platform's clock shows when it's due - the owner, 10-16: "No 'next train' popup")
+  const due = t.dwellUntil, stop = t.stop; t.dwellUntil = 0; t.stop = (si + 2) % w.rails[R].stations.length;
+  const none = trains.interaction(w, p);
+  assert.ok(!none || !/next train/i.test(none.label), none && none.label);
+  t.dwellUntil = due; t.stop = stop;
   const act = trains.interaction(w, p);
   assert.ok(act && /Board the train/.test(act.label), act && act.label);
   act.run();

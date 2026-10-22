@@ -1355,17 +1355,8 @@ export function interaction(world, p) {
     }
     if (best >= 0) return { label: `Board the train - next stop ${railOf(world, t).stations[(t.stop + 1) % railOf(world, t).stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
   }
-  // up on an El platform with no train in: when the next one is due; at a stair tower's foot: the way up
-  const rails = world.rails || [world.map.rail];
-  for (let r = 0; r < rails.length; r++) for (let si = 0; si < rails[r].stations.length; si++) {
-    const st = rails[r].stations[si];
-    if (!st.deck || !onDeck(st, ped)) continue;
-    let eta = Infinity;
-    if (world.rails) { for (const t of world.trains) if (t.r === r) eta = Math.min(eta, etaTo(world, t, si)); } else eta = nextTrainIn(world, si);
-    if (eta === Infinity) continue;
-    const s = Math.max(1, Math.round(eta)), to = rails[r].stations[(si + 1) % rails[r].stations.length].name.replace(/ Station$/, '');
-    return { label: `${st.name}: next train in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} (to ${to}) - board at the doors when it's in`, run: () => {} };
-  }
+  // (up on an El platform with no train in: no prompt - the platform's clock shows when the next one's due, the owner,
+  // 10-16: "No 'next train' popup (the station sign shows it)"); at a stair tower's foot: the way up
   if ((ped.lz || 0) < 0.3) for (const s of (world.map.el && world.map.el.stairs) || []) if (s.top && Math.hypot(ped.x - s.x, ped.y - s.y) < 46) return { label: `Up the stairs to the platform - ${s.station}`, run: () => {} };
   // at a subway entrance with no train in: the countdown, and where to wait
   const sts = world.map.rail.stations;

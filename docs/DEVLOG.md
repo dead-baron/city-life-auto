@@ -13582,3 +13582,15 @@ the main loop, the Grand Loop's 18½-minute lap each way, that was a train every
 
 Tests: test/world3rail.test.js - each loop's trains put one into its stations about every two minutes; every train
 still runs and stops in five minutes, and none runs into another.
+
+## 2026-10-21 · No "next train" pop-up on the El's platforms
+
+The owner, 10-16: "No 'next train' popup (the station sign shows it)". Standing on an El platform with no train in,
+the Act prompt read "...: next train in 1:42 (to ...) - board at the doors when it's in". The platform's clock
+already shows that.
+
+- No prompt there now (`server/systems/trains.js` interaction). When a train's in, "Board the train - next stop ..."
+  still shows at its doors. The other half of the note, the next station on a sign on the train itself, is still to
+  do.
+
+Tests: test/elplatform.test.js - on the platform with no train in, no next-train prompt; with one in, board it.
