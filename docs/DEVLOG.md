@@ -14204,7 +14204,7 @@ helpers), loaded with the classic renderer only.
 
 The owner, 10-16: "Tennis" (eleven courts stand in World v3's handcrafted districts - Greenfield Park, Northgate Sports
 Ground, Coral Court, the Hilltop Mansion, Larkspur Green, The Bluffs, the Ritz - with no game on them).
-server/systems/tennis.js: on any tennis court the action button calls the club pro out - an athlete in whites who jogs
+server/systems/tennis.js: on any tennis court the action button calls the club pro out - an athlete who jogs
 out to the far baseline. You serve with the attack button (the ball in your hand), the way you aim: over the net, deep
 into the far half, left or right as you point. The pro runs to where the ball will come down and sends it back to your
 half - not always: it misses now and then, more often the further it had to stretch. You run the ball down and hit it
