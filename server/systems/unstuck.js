@@ -25,6 +25,7 @@ export function canUnstick(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return 'Not right now.';
   if (p.custody) return 'Not in custody.';
+  if (p.prison) return 'Not while you\'re doing time.';
   if (ped.ride) return 'Not during a ride.';
   if (ped.vehId || ped.onTrain || ped.hidden) return 'Only on foot.';
   if (p.wanted > 0) return 'Not while you\'re wanted - lose the cops first, or surrender.';
@@ -132,6 +133,7 @@ export function surrender(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead) return 'Not right now.';
   if (p.custody) return p.custody.stage === 'cell' ? 'You\'re in a cell - wait it out, or pay the bail.' : 'The police already have you.';
+  if (p.prison) return 'You\'re doing time already.';
   if (ped.ride) return 'Not during a ride.';
   if (ped.hidden) return 'Step outside first.';
   if (ped.onTrain) return 'Get off the train first.';

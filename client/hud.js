@@ -163,6 +163,13 @@ export class HUD {
           : cu.stuck ? 'The police car is going nowhere' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`) + brk;
       tb.classList.toggle('brk', !!cu.stuck);
       $('tb-crack').classList.add('hidden');
+    } else if (me.prison && !me.dead) {
+      // doing time on Prison Island (server prison.js): the time left, the way out over the wall
+      const pr = me.prison, s = pr.left;
+      tb.classList.remove('hidden', 'sub', 'warn', 'bus', 'taxi', 'ferry', 'brk'); tb.classList.toggle('alarm', !!pr.climb); tb.style.borderColor = '';
+      $('tb-where').textContent = pr.climb ? 'OVER THE WALL!' : pr.at.toUpperCase();
+      $('tb-next').textContent = pr.climb ? 'Climbing - the towers have seen you' : `Out in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} · or climb the outer wall (the guards will see)`;
+      $('tb-crack').classList.add('hidden');
     } else if (tr && !me.dead) {
       // the mail guards' warning: at the door ('door'), then the seconds left to get out (0: they're shooting)
       const warn = tr.warn ?? null;

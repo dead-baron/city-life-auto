@@ -304,7 +304,7 @@ export function vehicleLights(d) {
 // alert 1 (head up), rear 2 (a bear up on its hind legs), swim 2 (head and back above the water), float 2 (a sea
 // otter on its back), climb 2 (a squirrel on a trunk), dead 1 (on its side); the game birds: peck 2, fly 4 (the
 // wingbeat), swim 2, alert 1, dead 1, dabble 2 (a duck up-ended on the water, feeding: its tail up, its feet paddling).
-const PET_ART = { dog_golden: 'golden', dog_retriever: 'golden', dog_black: 'lab', dog_spaniel: 'spaniel', dog_pup: 'puppy', cat_black: 'catBlack', cat_grey: 'catTabby', cat_ginger: 'catGinger' };
+const PET_ART = { dog_shepherd: 'shepherd', dog_golden: 'golden', dog_retriever: 'golden', dog_black: 'lab', dog_spaniel: 'spaniel', dog_pup: 'puppy', cat_black: 'catBlack', cat_grey: 'catTabby', cat_ginger: 'catGinger' };
 export const ANIMAL_FRAMES = { idle: 4, walk: 4, run: 4, sit: 2, lie: 2, graze: 2, alert: 1, stalk: 4, rear: 2, swim: 2, float: 2, climb: 2, dead: 1, peck: 2, fly: 4, cutA: 1, cutB: 1, hit: 1, limp: 4, down: 2, fall: 2, drink: 2, wade: 4, wadedrink: 2, strut: 2, swipe: 2, pounce: 2, crouch: 2, dive: 1, eatfish: 2, dabble: 2,
   // Nature-A2, the hunt: a heron's strike, its fish, poised over the water (w...: the same stood in the shallows); a
   // bird of prey soaring, stooping, carrying off its catch, in the water after a fish; a bear's salmon (a fox's mouse)
@@ -593,8 +593,10 @@ function arrowModel() {
 // balls: a painted sphere (t 0 soccer, 1 volleyball, 2 a golf ball: small, white, dimpled), spin 0..3 turns the
 // pattern as it rolls; anchor = the ground contact, z from 0 at the bottom to the top of the ball
 const ICO = (() => { const p = (1 + Math.sqrt(5)) / 2, v = []; for (const a of [-1, 1]) for (const b of [-p, p]) { v.push(norm([0, a, b]), norm([a, b, 0]), norm([b, 0, a])); } return v; })();
-export const ballKey = (t, spin = 0) => `b|${Math.max(0, Math.min(4, t | 0))}|${((spin % 4) + 4) % 4}`;
+export const ballKey = (t, spin = 0) => `b|${Math.max(0, Math.min(6, t | 0))}|${((spin % 4) + 4) % 4}`;
 export function ballSprite(t = 0, spin = 0) {
+  if ((t | 0) === 5) return grenadeBall(spin);
+  if ((t | 0) === 6) return tennisBall(spin);
   if ((t | 0) === 2) return golfBall();
   if ((t | 0) === 3) return basketball(spin);
   if ((t | 0) === 4) return bowlingBall(spin);
@@ -616,6 +618,43 @@ export function ballSprite(t = 0, spin = 0) {
     const col = R[Math.max(0, Math.min(R.length - 1, Math.round(tt * (R.length - 1) + bayer(x, y) * 0.4)))];
     G.put(x, y, col, n, r + n[2] * r, null, 0);
   }
+  G.outline(0.45, false);
+  return G;
+}
+
+// a tennis ball (server tennis.js): small, fuzzy yellow-green, its white seam curling round as it spins
+function tennisBall(spin = 0) {
+  const r = 2.6, S = 8, G = new GBuf(S, S), cx = 4, cyy = S - 1 - r, rot = (((spin % 4) + 4) % 4) * Math.PI / 2;
+  G.ax = 4; G.ay = S - 1;
+  const Y = RP('#d4e436', 5, 2), W = RP('#f2f2ea', 4, 2), L = norm([-0.55, -0.62, 0.56]);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const u = (x + 0.5 - cx) / r, v = (y + 0.5 - cyy) / r, q = u * u + v * v;
+    if (q > 1) continue;
+    const w = Math.sqrt(1 - q), n = norm([u, (v + w) * 0.7071, (w - v) * 0.7071]), lit = n[0] * L[0] + n[1] * L[1] + n[2] * L[2];
+    const seam = Math.abs(Math.sin((u * Math.cos(rot) + v * Math.sin(rot)) * 3 + w * 2)) < 0.22;
+    const R = seam ? W : Y, tt = 0.55 + lit * 0.35;
+    G.put(x, y, R[Math.max(0, Math.min(R.length - 1, Math.round(tt * (R.length - 1) + bayer(x, y) * 0.4)))], n, r + n[2] * r, null, 0);
+  }
+  G.outline(0.4, false);
+  return G;
+}
+
+// a grenade (server grenades.js): an olive egg in segments, the lever and the ring at its top - turning as it rolls
+function grenadeBall(spin = 0) {
+  const S = 11, G = new GBuf(S, S + 2), cx = 5.5, rx = 3.1, ry = 3.8, cyy = S + 1 - 1 - ry, rot = (((spin % 4) + 4) % 4) * Math.PI / 2;
+  G.ax = 5; G.ay = S;
+  const O = RP('#56663a', 5, 2), L = norm([-0.55, -0.62, 0.56]), cr = Math.cos(rot), sr = Math.sin(rot);
+  for (let y = 0; y < S + 2; y++) for (let x = 0; x < S; x++) {
+    const u = (x + 0.5 - cx) / rx, v = (y + 0.5 - cyy) / ry, q = u * u + v * v;
+    if (q > 1) continue;
+    const w = Math.sqrt(1 - q), n = norm([u, (v + w) * 0.7071, (w - v) * 0.7071]), lit = n[0] * L[0] + n[1] * L[1] + n[2] * L[2];
+    // the segments: a grid over the egg, turned as it rolls
+    const pu = u * cr - w * sr, groove = Math.abs(((pu * 2 + 4) % 1) - 0.5) < 0.12 || Math.abs(((v * 2.2 + 4) % 1) - 0.5) < 0.1;
+    let tt = 0.55 + lit * 0.35 - (groove ? 0.25 : 0);
+    G.put(x, y, O[Math.max(0, Math.min(O.length - 1, Math.round(tt * (O.length - 1) + bayer(x, y) * 0.4)))], n, ry + n[2] * ry, null, 0);
+  }
+  const M = RP('#9aa0a8', 4, 2);   // the lever, the ring
+  for (const [x, y] of [[5, 0], [6, 0], [6, 1], [7, 1], [7, 2], [4, 1], [5, 1]]) G.put(x, y, M[2], [0, 0, 1], 2 * ry + 1, null, 0);
   G.outline(0.45, false);
   return G;
 }

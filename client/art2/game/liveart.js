@@ -173,6 +173,33 @@ export function umbrellaSprite(i) {
   return A.G;
 }
 
+// ---- the parachute (server/systems/skydive.js: falling from an aircraft, the canopy open) ---------------------------------
+// A ram-air canopy seen from above, in art pixels, anchored at the harness (z 0): its span across the way it flies (o:
+// eighths of a turn, 0 east), arched over the middle, in cells of two colours, the leading edge's openings darker; the
+// lines from its underside down to the harness. Two looks (k): red and white, or blue and yellow.
+export const CHUTE = { span: 58, chord: 22, z: 40, arch: 7 };
+const CHUTE_COLS = [[[214, 52, 44], [240, 236, 228]], [[40, 92, 180], [244, 200, 52]]];
+export function parachuteSprite(o, k = 0) {
+  const C = CHUTE, a = (o | 0) * Math.PI / 4, fx = Math.cos(a), fy = Math.sin(a), sx = -fy, sy = fx, hs = C.span / 2, hc = C.chord / 2;
+  const R = hs + 4, A = artBuf(2 * R, 2 * R + C.z + C.arch + 6, R, R + C.z + C.arch + 3), cols = CHUTE_COLS[k & 1], n = [0, 0, 1];
+  const zOf = (u) => C.z + C.arch * (1 - (u / hs) * (u / hs));
+  // the lines first (the canopy over them where they meet it)
+  const line = [78, 80, 86];
+  for (const u of [-hs + 3, -hs * 0.4, hs * 0.4, hs - 3]) for (const v of [0]) {
+    const X1 = u * sx + v * fx, Y1 = u * sy + v * fy, Z1 = zOf(u) - 1.5;
+    for (let t = 0; t <= 1; t += 0.02) A.dot(X1 * t, Y1 * t, 3 + (Z1 - 3) * t, line, 1, n, 0);
+  }
+  for (let v = -hc; v <= hc; v += 0.4) for (let u = -hs; u <= hs; u += 0.4) {
+    if (Math.abs(u) > hs - 2 && Math.abs(v) > hc - 2) continue;   // (rounded corners)
+    const Z = zOf(u), g = -2 * C.arch * u / (hs * hs), nl = Math.hypot(g, 1);
+    n[0] = -g * sx / nl; n[1] = -g * sy / nl; n[2] = 1 / nl;
+    const cell = Math.floor((u + hs) / 7.25), seam = ((u + hs) % 7.25) < 0.7, nose = v > hc - 2.2;
+    const c = cols[cell & 1];
+    A.dot(u * sx + v * fx, u * sy + v * fy, Z, c, seam ? 0.7 : nose ? 0.55 : 1, n, 0);
+  }
+  return A.G;
+}
+
 // ---- fountains ----------------------------------------------------------------------------------------------------
 // The water of the city's fountains (task #417, the owner: "Fountains that are in the city should be animated and have
 // procedural water effects to them."), drawn live over the stone (props-district.js fountain(30, 2): a round basin, a

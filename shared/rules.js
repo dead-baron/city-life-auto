@@ -443,7 +443,7 @@ export const ATM_DEPOSIT_PX = 48;          // an ATM's reach (it used to bank yo
 // Skateboarding, part 1 (the owner, 2026-10-17; server/systems/skate.js; the board's physics: shared/physics.js BOARD):
 // the board's price at a skate shop, a sports shop or a surf shop; a bail - thrown off into a wall, a post or a car, or off
 // a fall - hurts this much at bailHit speed and up to the most at full speed, and you're down this long
-export { SKATEBOARD_PRICE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
+export { SKATEBOARD_PRICE, PARACHUTE_PRICE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
 // Skateboarding's score (server/systems/skate.js): a combo banked after comboGap s rolling on is its points x its tricks
 // (a trick again in the same combo: half); perS - a grind, grab, manual by the second; the special meter full at
@@ -787,3 +787,23 @@ export const MAIL = { util: 45, week: 7, late: 15, odds: 0.35, off: 20, keep: 12
 export const CAB = { firstS: 5, gapS: 12, shiftS: 1800, waitS: 300, flag: 25, perKm: 50, tip: 0.4, parS: 30, kmS: 450, boardR: 150, dropR: 240, trip: [1500, 6000], hail: [350, 1500], bump: 140, bail: 3 };
 export const BUSJOB = { perStop: 40, perPax: 12, late: 25, haltR: 170, dwellS: 4, wait: [1, 4], speed: 140 };
 export const TOWJOB = { firstS: 8, gapS: 20, shiftS: 1800, pay: 150, perKm: 60, touch: 16, hookS: 3, yardR: 340 };
+
+// jumping out of an aircraft: the fall (px, px/s, px/s²) - what each number is: server/systems/skydive.js
+export const SKYDIVE = { carry: 0.75, grav: 260, fall: 480, steer: 320, drag: 0.4, freeMax: 280, openS: 1.1, lowOpen: 260, chuteFall: 70, chuteEase: 2.4, chuteSteer: 360, chuteDrag: 1.3, chuteMax: 200, hurtFrom: 150, hurtPer: 0.4, splat: 400, waterHurt: 0.12, carHurt: 0.55, rollAt: 120 };
+// grenades (server/systems/grenades.js): thrown at speed px/s (plus a share of your own), up at lift; gravity grav;
+// bouncing back up bounce of the speed it lands at, keeping keep across, rolling to a stop (roll a second); off after
+// fuse s - a blast r px round, dmg at its heart
+export const GRENADE = { speed: 320, carry: 0.5, lift: 230, grav: 720, bounce: 0.38, keep: 0.6, roll: 2.6, fuse: 2.4, r: 92, dmg: 95 };
+// tennis with the club pro (server/systems/tennis.js): a hit flies at pace px/s across; a stretched one (the ball at the
+// edge of reach) strays up to spray px; the pro runs at proSpeed of a person's pace and misses proMiss of its swings, plus
+// proStretch more at the edge of its reach; prize to the bank for beating it; leave px off the court ends the game;
+// between s between points; a serve not hit in serveWait s ends it
+export const TENNIS = { pace: 430, spray: 120, proSpeed: 0.92, proMiss: 0.06, proStretch: 0.25, prize: 60, leave: 90, between: 1.6, serveWait: 45 };
+// K9 units (server/systems/k9.js): share of the patrol cars sent after someone on foot at stars..maxStars that carry a
+// dog; the dog runs at speed x a walk, after anyone wanted within sight px of its handler (the leash); a bite within reach px puts them down for
+// downS s, no more than once every `every` s
+export const K9 = { share: 0.3, stars: 2, maxStars: 3, speed: 2.7, sight: 800, reach: 24, downS: 2.4, every: 5, hp: 70 };
+// Prison Island (server/systems/prison.js): a booking at `stars` or more, or the `repeat`th within repeatMs (wall-clock
+// ms), is a sentence at Kestrel Bay Penitentiary instead of the station's cells: base s + perStar a star + perRepeat for
+// each booking before it in that time, up to max s; the wall takes climbS s to get over; over it, escapeStars stars
+export const PRISON = { stars: 4, repeat: 3, repeatMs: 2 * 3600e3, base: 90, perStar: 35, perRepeat: 30, max: 300, climbS: 5, escapeStars: 3 };

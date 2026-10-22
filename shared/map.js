@@ -3280,12 +3280,23 @@ function buildRailway(m, pts, line = null) {
     const bad = (sd) => { let n = 0; along(best.s, (r, nx, ny) => { for (let off = PLATFORM_IN; off <= PLATFORM_OUT; off += 16) { const t = m.tileAtPx(r.x + nx * sd * off, r.y + ny * sd * off); if (t === T.ROAD || t === T.BUILDING || t === T.WALL || t === T.BRIDGE) n++; else if (t === T.WATER || t === T.DEEP) n += 0.5; } }); return n; };
     const lot = (m.stationLots || []).find((l) => l.name === name);
     const side = line ? line.side : lot ? lot.side : bad(1) <= bad(-1) ? 1 : -1;
-    along(best.s, (r, nx, ny) => {
+    // (World v3, a track at an angle to the grid: paved only the tiles wholly on the platform - the art draws the platform
+    // itself along the track, over whatever ground is under it, and a tile half off it left a ragged apron of paving
+    // round it: the owner, 10-16, "Stations at an angle look awkward". Over the water every tile it touches stands on
+    // piers, as ever.)
+    along(best.s, (r, nx, ny, d) => {
+      const slant = line && Math.abs(Math.sin(2 * r.a)) > 0.14, tx = Math.cos(r.a), ty = Math.sin(r.a);
       for (let off = PLATFORM_IN; off <= PLATFORM_OUT; off += 12) {
         const x = r.x + nx * side * off, y = r.y + ny * side * off;
         const t = m.tileAtPx(x, y);
         if (t === T.WATER || t === T.DEEP) m.set(Math.floor(x / TILE), Math.floor(y / TILE), T.DOCK);
-        else if (t !== T.BUILDING && t !== T.WALL && t !== T.ROAD && t !== T.BRIDGE && t !== T.DOCK) m.set(Math.floor(x / TILE), Math.floor(y / TILE), T.PLAZA);
+        else if (t !== T.BUILDING && t !== T.WALL && t !== T.ROAD && t !== T.BRIDGE && t !== T.DOCK) {
+          if (slant) {
+            const cx = (Math.floor(x / TILE) + 0.5) * TILE - r.x, cy = (Math.floor(y / TILE) + 0.5) * TILE - r.y, o = (cx * nx + cy * ny) * side, u = d + cx * tx + cy * ty;
+            if (o < PLATFORM_IN + TILE * 0.71 || o > PLATFORM_OUT - TILE * 0.71 || Math.abs(u) > PLATFORM_HALF - TILE * 0.71) continue;   // (0.71: half a tile's diagonal)
+          }
+          m.set(Math.floor(x / TILE), Math.floor(y / TILE), T.PLAZA);
+        }
       }
     });
     const nx = -Math.sin(q.a), ny = Math.cos(q.a);

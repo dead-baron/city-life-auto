@@ -3,6 +3,9 @@
 import { PF, FACTION, TILE, K, WEATHER } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
+import * as skydive from './skydive.js';
+import * as tennis from './tennis.js';
+import * as prison from './prison.js';
 import * as aircraft from './aircraft.js';   // (at the controls of an aircraft)
 import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION } from '../../shared/physics.js';
 import { PED_BLOCK, isSwimming } from '../../shared/map.js';
@@ -316,7 +319,7 @@ export function leave(world, p) {
 // driving none.
 export function safeToIdle(world, p) {
   const ped = p.ped;
-  if (!ped || ped.dead || p.wanted > 0 || p.heat >= 1 || p.custody || ped.cuffed || ped.carrying || p.bounty > 0 || p.skull) return false;   // (a bounty on your head: hunted)
+  if (!ped || ped.dead || p.wanted > 0 || p.heat >= 1 || p.custody || p.prison || ped.cuffed || ped.carrying || p.bounty > 0 || p.skull) return false;   // (a bounty on your head: hunted)
   if (world.time < (ped.downUntil || 0) || world.time - (ped.lastHitAt || -1e9) < AWAY_HURT_S) return false;
   const v = ped.vehId ? world.get(ped.vehId) : null;
   if (v && v.cargo && v.cargo.some((c) => c)) return false;
@@ -417,6 +420,11 @@ const HOLD_TICKS = 5; // wait up to 250 ms for a late input before extrapolating
 
 export function processInputs(world, dt) {
   for (const p of world.players.values()) {
+    try { inputsOf(world, p, dt); } catch (e) { world.reportError('inputs', e); }   // (one player's trouble costs nobody else their step)
+  }
+}
+function inputsOf(world, p, dt) {
+  {
     // One simulation step per input, exactly like the client's prediction: consume one input per
     // tick, two when the client's queue backs up, and if this tick's input is late (phone timer
     // jitter, network hiccup) hold the character / car for up to HOLD_TICKS instead of guessing
@@ -443,6 +451,7 @@ export function processInputs(world, dt) {
 }
 
 function applyInput(world, p, ped, inp, pressed, dt) {
+  if (p.prison && p.prison.climb) { ped.vx = 0; ped.vy = 0; return; }   // (on the prison wall: held there till over it - prison.js)
   if (p.struggle) { struggle.input(world, p, ped, inp, pressed, dt); return; }   // (an officer on you, going for the cuffs: fight back)
   // down from a tackle (police.js): moving gets you up sooner - if nobody pins you first
   if (ped.scrambleUntil > world.time && world.time < ped.downUntil && !ped.cuffed && Math.hypot(inp.mx || 0, inp.my || 0) > 0.3) ped.downUntil = Math.max(world.time, ped.downUntil - dt * TACKLE_SCRAMBLE);
@@ -470,6 +479,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (pressed & IN.RELOAD) combat.reload(world, ped);
   if (pressed & IN.USE) economy.useHealItem(world, p);
 
+  if (ped.sky) { skydive.input(world, p, ped, inp, pressed); return; }   // (falling from an aircraft: steering, the parachute - skydive.js)
   if (ped.onTrain) { trains.riderInput(world, p, ped, inp, pressed, dt); return; }
   if (ped.hoodOf) { carhits.hoodInput(world, ped, inp); return; }   // (riding a car's hood: move to roll off - carhits.js)
 
@@ -519,7 +529,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (wasDropping && !ped.dropping) world.emit(ped.x, ped.y, isSwimming(world.map, ped) ? { e: 'splash', x: ped.x, y: ped.y, n: 16 } : { e: 'thud', x: ped.x, y: ped.y });
   if (tumbling) tumbleImpact(world, ped, v0, dt, fr);
   if (ped.rollT > 0 && (p.badge || p.hunter) && !ped.board) tackle(world, ped);   // (an ollie isn't a tackle)
-  const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || bowling.input(world, p, ped, inp, pressed, dt) || firefighter.hose(world, p, ped, inp, pressed, dt);   // (the hose by your fire engine: firefighter.js) (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
+  const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || tennis.input(world, p, ped, inp, pressed) || bowling.input(world, p, ped, inp, pressed, dt) || firefighter.hose(world, p, ped, inp, pressed, dt);   // (the hose by your fire engine: firefighter.js) (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
   const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && !ped.board && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
   if ((inp.bits & IN.FIRE) && !kicked && !swung && !guard && !ped.board) {   // (guarding: no striking; on a board: step off to fight)
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
@@ -541,7 +551,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
 // The Act button: what findInteraction offers - one that's a crime (act.crime) waits for Safety mode's say-so (safety.js).
 function doAct(world, p) {
   const act = findInteraction(world, p);
-  if (act && safety.confirm(world, p, act.crime, act.key2 || act.label)) act.run();
+  if (act && act.run && safety.confirm(world, p, act.crime, act.key2 || act.label)) act.run();   // (a passive line has nothing to run)
 }
 
 // Sliding along the tarmac after bailing out / being blown out of a car: slamming into a wall,
@@ -601,6 +611,8 @@ export function findInteraction(world, p) {
   if (ped && ped.cuffed && !ped.dead && custody.canBreak(p, world)) return { label: 'Make a break for it!', run: () => custody.breakOut(world, p) };
   if (ped && !ped.dead && !ped.cuffed && custody.inCell(p)) return cells.interaction(world, p);   // (the bench, the toilet, the bars)
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
+  if (ped.sky) return skydive.interaction(world, p);   // (up in the sky: the parachute)
+  if (p.prison) return prison.interaction(world, p);   // (doing time on Prison Island: the wall - prison.js)
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
   if (ped.hidden && ped.home) return homeinside.interaction(world, p);   // (the bed, the safe, the front door... homeinside.js)
@@ -712,6 +724,8 @@ export function findInteraction(world, p) {
   if (tee) return tee;
   const hoop = hoops.interaction(world, p);
   if (hoop) return hoop;
+  const court = tennis.interaction(world, p);   // (a tennis court: a game with the club pro - tennis.js)
+  if (court) return court;
   const lane = bowling.interaction(world, p);
   if (lane) return lane;
   const seat = cinema.interaction(world, p);   // (The Grand Theatre's screens: server/systems/cinema.js)
@@ -887,7 +901,7 @@ export function buildMe(world, p) {
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible, safety: safety.on(p),
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
     sk: skate.meInfo(world, p),   // (on a skateboard: the score, the combo, the special meter, a session - skate.js)
-    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p), bowl: bowling.meInfo(world, p), cine: cinema.meInfo(world, p),
+    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p), tennis: tennis.meInfo(world, p), prison: prison.meInfo(world, p), bowl: bowling.meInfo(world, p), cine: cinema.meInfo(world, p),
     arrows: ped && world.arrows && world.arrows.length ? world.arrows.filter((a) => a.owner === ped.id && Math.abs(a.x - ped.x) < 1600 && Math.abs(a.y - ped.y) < 1600).slice(-16).map((a) => [Math.round(a.x), Math.round(a.y), +a.a.toFixed(2)]) : null,
   };
 }

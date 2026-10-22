@@ -14041,3 +14041,299 @@ test/worldmap.test.js caught it in the batch's full run. Rebaked.
 
 The golf carts' spots replaced the carts as props on the old city's course (shared/naturesites.js), which changes the
 old city's signature: its world map picture rebaked (`node tools/build-worldmap2.mjs`).
+
+## 2026-10-22 · Trains turn smoothly round wide curves
+
+The owner, 10-16: "Trains look odd on wide curves (angle steps)". The cars' pose is smooth (server/systems/trains.js
+puts each car between two points along the line, and its angle goes to the page as a float), but the page drew each car
+from a sprite at one of a car's turns: 32 on most screens (`TIERS` N in client/art2/game/host.js). A coach is 212 px long,
+so on a wide curve it snapped round 11 degrees at a time, its ends jumping ~21 px at each step - while a car, a fifth as
+long, jumps 4.
+
+- **twice the turns for train cars** (`trainSteps`): 64 on most screens, 128 on High (32 on the lowest). A step now
+  moves a car's ends about 10 px, 5 on High. The sprites are rendered as they're needed, so this costs only the turns a
+  train actually passes through; the next turn either side is asked for ahead as before.
+
+Tests: test/trainturns.test.js - the steps, how far a car's end jumps at one, and a coach drawn at three fine turns.
+
+## 2026-10-22 · Debug: "Hop on the nearest train" takes the main line
+
+The owner, 10-16: "Debug 'jump on nearest train' should pick the main line; a separate 'nearest subway'". The subway
+hop came on 10-15; the train hop still took whichever train was nearest, often a subway's under your feet. Now it takes
+the main line's nearest (the El's too), and any train only on a map with no main line (server/dev.js 'train').
+
+Tests: test/world3rail.test.js - by a subway train, the hop puts you on the main line; the subway hop on the subway.
+
+## 2026-10-22 · Stations at an angle match their track
+
+The owner, 10-16: "Stations at an angle look awkward: axis-align them, or match sign and station to the track". Six of
+World v3's stations stand where the Grand Loop runs at an angle to the grid (Lucky Mesa 40 degrees off it, Sunset Beach
+34, Red Rock 24, Old Quarter 15, Southside 11, Sandpiper Bay 8). Their platforms were drawn along the track, but:
+
+- **the furniture turned in 22-degree steps** (client/art2/game/statics.js): the canopies, the footbridge and the
+  station house were drawn at the nearest of 16 turns, so at Sunset Beach they stood 11 degrees off the track - the
+  canopies' ends wandering off the platform's edge, the footbridge askew. Now 64 turns (`STATION_TURNS`, within 3
+  degrees), the benches too.
+- **a ragged apron of paving** (shared/map.js buildRailway): the platform paved every tile it touched, and on a slant a
+  tile half off the platform left a saw-toothed border of paving round it. On World v3, where the track runs at an angle,
+  only the tiles wholly under the platform are paved now; the art draws the platform itself along the track, over
+  whatever ground is under it, so its edge is a clean straight line. (Over water every tile it touches still stands on
+  piers. Stations along the grid are as they were.)
+- **the house's forecourt** (shared/world3-passes.js `stationForecourt`): a square of tiles round a turned house - now
+  turned with it, where it faces the track at an angle.
+- the route board stands on the platform wherever it's drawn (shared/mapcore.js routeBoardAt: not on a street, a
+  building, a bridge or the water), so the angled platforms keep theirs.
+
+Tests: test/world3rail.test.js - the forecourt block along the grid and turned; no paving off the angled platforms'
+outer edges; their route boards.
+
+## 2026-10-22 · A sign on the train: where it stops next
+
+The owner, 10-16: "No 'next train' popup (the station sign shows it); show the next station on a sign on the train
+instead". The popup went on 10-21; now a train's front car carries an LED board over its front end: NOW TO and the
+station it's running to, or NEXT STOP and the one after while it stands at a platform with its doors open - so from the
+platform you can see where a train goes before you get on (client/render/trainsign.js, loaded the first time a train
+comes near; client/main.js drawTrainSigns, in both renderers). It shows within a few hundred px of you, fading further
+off; not on your own train (the bar at the top says), nor the subway's under the street or the El's overhead.
+
+- the server sends each car's line (its descriptor's `l`: one of World v3's loops, an index into the map's rails; -1 on
+  the old city's one line) and the station it's at or running to (the snapshot's extra byte) - server/net.js,
+  server/systems/trains.js.
+
+Tests: test/trainsign.test.js (the words, the board); test/world3rail.test.js - a train at a platform shows the stop its
+boarding prompt names, and still does once it has pulled out.
+
+## 2026-10-22 · Jumping out of an aircraft: the fall, the parachute
+
+The owner, 10-16: "Jumping out of an aircraft: fall all the way down (splat or bounce); a parachute to equip". Jumping
+out of a helicopter or a plane up in the air (the second press of get out) used to put you on the ground at once, hurt
+by how high you'd been. Now you fall all the way down (server/systems/skydive.js; the numbers: shared/rules.js SKYDIVE):
+
+- **the fall**: faster and faster to a free-fall limit (from the ceiling, three seconds), steering as you go; the
+  aircraft's speed carries you on at first. The camera pulls back and follows you down, as it does an aircraft (you're
+  a rider meanwhile: the server steps the fall - no prediction).
+- **the parachute** (shared/items.js parachute, $150 at the sports shops; the bag says what it does): the action
+  button opens it - the prompt says so - and the canopy fills over a second, then you sink slowly, steering where to
+  land, down on your feet (a roll if you come in fast). It's used up. Opened too low it doesn't fill in time.
+- **no parachute**: onto the ground from high up, a splat (a short drop: a hard landing, hurt); into the water you
+  live, stung; onto a car's roof you bounce off it - the car dented, you thrown down beside it, hurt but alive.
+- **up there**: shots hit you where you're drawn, as they do an aircraft (combat.js traceTarget); fists, cars and
+  ground blasts don't reach you.
+- **drawn** (art v2, art2/game/host.js _ped): up the screen by your height (SKY_LIFT, as the aircraft), spread out
+  face down in free fall, hanging under the canopy once it's open - a ram-air canopy in red and white or blue and
+  yellow (art2/game/liveart.js parachuteSprite), its span across the way you drift; your shadow on the ground
+  (render/skyfall.js, loaded the first time someone's up there). The classic renderer draws the canopy over you.
+- **on the wire**: the ped's parent word - bit 29 up in the sky, bit 28 the canopy open, the low 12 bits the height
+  (server/net.js, skydive.js skyWord; the page eases the height between snapshots).
+- the debug menu (Aircraft): skydive from high over here, with or without a parachute; a parachute in your bag.
+- the page's start-up code stays inside its budget: the classic renderer's train cars moved to render/traincars.js,
+  loaded with its first train (art v2 draws its own).
+
+Tests: test/skydive.test.js - the shop, the prompt, the parachute opened (used up, on the wire), the slow sink,
+steering, a soft landing; a splat; the water; a car roof; out of a helicopter, a rider. test/flight.test.js waits
+for the fall to land.
+
+## 2026-10-22 · Grenades
+
+The owner's 10-08 list, task #303 ("Grenades"). A grenade (shared/items.js grenade; the numbers: shared/rules.js
+GRENADE) is thrown the way you aim with the fire button: out in an arc, it bounces off the ground (losing most of its
+speed), off the walls and off cars' bodies low down, rolls to a stop, and goes off when its fuse burns down (2.4 s) - a
+blast about a car's, round wherever it ended up (server/systems/grenades.js). Into the water it sinks and goes off down
+there, smaller. The next one comes to hand by itself (the reload).
+
+- **where**: the black market ($450 with three, $140 more each) and the Smuggler's Den; illegal. A throw is gunfire
+  where it's heard (law.js), the blast a crime as a rocket's is where it hurts someone.
+- **on the wire**: a grenade in flight is a ball (K.BALL, t 5, its height in the extra byte as a ball's), drawn as a
+  little olive egg with its lever (art2/game/actors.js; the classic renderer too). Its weapon index, 32, is past the
+  five bits a person's hand has on the wire: in your hand it shows as empty hands (net.js handIndex, the weapon's
+  `hand`), so this needed no change to the snapshot.
+- a swish as it's thrown, a clink as it bounces.
+
+Tests: test/grenades.test.js - for sale, illegal; thrown in an arc, the next to hand, at rest a way off, the blast hurts
+whoever's by it; off a wall (never inside it); a ball on the wire, empty hands in hand.
+
+## 2026-10-22 · Fully automatic: the assault rifle and the flamethrower
+
+Task #318 and the owner's 10-15 note ("flamethrower and fully automatic assault rifles in the debug menu"). Every gun
+already fires for as long as the trigger is held, at its own rate; these two are built for it:
+
+- **the assault rifle** (shared/items.js arifle): ten shots a second from a 30-round magazine, 17 a hit, a little
+  spread. The black market ($2,600) and the Smuggler's Den ($2,300); illegal.
+- **the flamethrower** (flamer): a cone of fire 150 px out in front, a few degrees either way (server combat.js flame):
+  everyone in it set alight (burning.js) and singed, cars in it scorched, nothing through a wall, nobody behind you.
+  60 bursts of fuel to a tank. The Smuggler's Den ($4,800); illegal. The page draws the jet (fire particles out of the
+  nozzle, a glow) and its roar from the 'flame' events (client/main.js).
+- both in the debug menu's give list (it lists every weapon) with their own icons (client/render/peds.js). Their
+  indices, 33 and 34, are past the five bits a hand has on the wire: in hand they show as the police assault rifle and
+  the bazooka's tube (net.js handIndex) - no snapshot change.
+
+Tests: test/autoweapons.test.js - held for a second, about ten shots; shown as the police rifle; the cone sets the one
+in front alight and leaves the one behind alone, scorches a car; shown as the bazooka.
+
+## 2026-10-22 · The SAM launcher; rockets hit aircraft up in the air
+
+The owner, 10-16: "A way to fight back against helicopters (a SAM launcher, or aiming up), without making them weak".
+
+- **the SAM launcher** (shared/items.js sam; the Smuggler's Den, $9,000, $650 a missile; illegal): aimed at an aircraft
+  up in the air - at where it's drawn, up the screen by its height - it locks on ("Locked on!"; with nothing within half
+  a radian of the aim, "No lock"). Its missile flies over the rooftops after the aircraft, turning at most 2.6 radians a
+  second and climbing to its height, and hits it: 230, so two bring down a police helicopter (420), three the gunship
+  (700) - a helicopter jinking hard can still shake one off. Lost, it flies on and bursts in the air (server/systems/
+  combat.js samLock, stepMissile; on the wire it climbs in the projectile's extra byte, as the gunship's missiles fall).
+- **rockets into aircraft**: a bazooka's rocket (or a gunship's missile) that meets an aircraft up in the air now hits
+  it, with the burst where it's drawn (combat.js airHit). Before, its blast went off on the ground below and, the
+  aircraft being well above it, missed. A shot's path is now searched for aircraft as far down the screen as the highest
+  is drawn up it (traceTarget: a rocket's short step used never to come near enough to find one).
+- in hand it shows as the bazooka (index 35, past the hand's five bits); its own icon in the bag and the shops.
+
+Tests: test/sam.test.js - the lock, the chase, the hit, two for a police helicopter; no lock, a burst on its own; a bazooka
+rocket into a hovering helicopter.
+
+## 2026-10-22 · The page's start-up budget: 492 -> 494 KB
+
+A decision (CLAUDE.md: raising a budget is one). The batch's weapons and the fall from the sky - grenades, the assault
+rifle, the flamethrower, the SAM launcher, the skydive and the train's sign - each need a little in the code every page
+loads at once: their events (the throw, the bounce, the flamethrower's jet), the sky word's decoding and the camera
+following you down, the weapons' icons. Their drawing loads only when first needed (render/skyfall.js,
+render/trainsign.js), and the classic renderer's train cars moved out to load with its first train
+(render/traincars.js), which bought back about 2 KB; with all that the page is 492.7 KB, over the 492 KB budget.
+tools/perf.mjs: 494 KB. Next to look at for room: the classic renderer's own drawing (main.js drawWorldV1 and its
+helpers), loaded with the classic renderer only.
+
+## 2026-10-22 · Fixes from a review of the batch
+
+A review of this batch before it ships found these, all fixed:
+
+- **a skydiver shot from the side**: shots looked for people round the shot's own path by their ground positions, so
+  only a shot from below could hit someone drawn high up. Now everyone falling is checked where they're drawn,
+  from a short list of who's up there (combat.js traceTarget, skydive.js world.skyPeds).
+- **up over the water isn't swimming** (shared/mapcore.js isSwimming): a skydiver over the sea was a swimmer to the
+  page (drawn at the water, under bridges), to the sharks (bitten in mid-air) and to the fire (put out).
+- **out of reach up there**: officers on foot no longer tackle or grab someone in the air, nor do the predators go after
+  them (police.js tackleStep / tackleHit, wildlife.js).
+- **no grenades in the subway** (combat.js): the ball is the street's, so one thrown underground went off on the street
+  above. Now the throw doesn't happen there, and nothing's used up.
+- **put somewhere else mid-fall**: the fall stops when you're put on a train, cuffed or on a ride (the dev menu's hops).
+- **the server sees what you see falling** (server/view.js): the page pulls back and follows a skydiver up the screen;
+  the server's view of them now does too, so nothing pops in at the top and nothing is spawned in plain sight.
+- **entity ids** wrap below bit 29 (world.js newId), which the sky now uses on the wire.
+- **lazy loads**: a module that fails to load (the train's sign, the skydiver's shadow, the classic renderer's train
+  cars) is tried again after half a minute, not every frame.
+
+Tests: test/skydive.test.js - shot from the side where drawn, not swimming over the water, no tackle from the ground;
+test/grenades.test.js - nothing thrown or used in the subway.
+
+## 2026-10-22 · Tennis with the club pro
+
+The owner, 10-16: "Tennis" (eleven courts stand in World v3's handcrafted districts - Greenfield Park, Northgate Sports
+Ground, Coral Court, the Hilltop Mansion, Larkspur Green, The Bluffs, the Ritz - with no game on them).
+server/systems/tennis.js: on any tennis court the action button calls the club pro out - an athlete who jogs
+out to the far baseline. You serve with the attack button (the ball in your hand), the way you aim: over the net, deep
+into the far half, left or right as you point. The pro runs to where the ball will come down and sends it back to your
+half - not always: it misses now and then, more often the further it had to stretch. You run the ball down and hit it
+when it's in reach (a swing too early or too far is a swish at the air); a hit at the edge of your reach strays.
+
+- **the rules, kept simple**: a hit must clear the net and land inside the far half; into the net, short of it or out
+  is the hitter's point lost; a second bounce on your side is the other's point. Points count as tennis does (15, 30,
+  40, deuce, advantage, called after each); the first to four, two clear, wins the game - beat the pro and it pays $60
+  (shared/rules.js TENNIS). Walk off the court and the pro takes it.
+- the courts come from the map's court props (k 'tennis': their lines inside the run-off, the net across the middle).
+  The ball's a K.BALL ('tennis', wire t 6: a fuzzy yellow-green ball with its seam, art2/game/actors.js, and in the
+  classic renderer); the pro a civilian the game moves (npc.js leaves an `npc.driven` one alone). The racket's thwock,
+  the bounce, the swish of a miss.
+
+Tests: test/tennis.test.js - the courts from the props; a whole game played out (the pro called, the serve, rallies
+both ways, first to four two clear, the pro let go); a netted ball and a long one the hitter's point lost; walking off.
+
+## 2026-10-22 · K9 units
+
+Task #324 (only the K9 handler's look - the tactical vest and ball cap - existed). server/systems/k9.js: now and then
+(three times in ten) a patrol car sent after someone on foot at two or three stars is a K9 unit - its first officer a
+dog handler in the K9 vest, a German shepherd in the back (police.js spawnUnit). When the crew jumps out the dog is let
+off the lead, with a bark, and runs the suspect down - faster than anyone can run - and a bite puts them on the ground
+for a couple of seconds, long enough for the officers to get there and the cuffs on (no more than one bite every five
+seconds; the numbers: shared/rules.js K9). It leaves people in vehicles alone, gives up on someone well away, heels to
+its handler, and rides back in when the unit stands down. A police dog is never hurt (as no pet is: combat.js
+hurtable) - get into a car, or get away from the officers before it reaches you.
+
+- the dog is a pet-like ped (archetype pet:dog_shepherd, drawn by art v2's animal rig as the shepherd it already had;
+  pet.k9 keeps it out of the lost pets' and the dog walkers' loops), its bark the 'dog' sound.
+
+Tests: test/k9.test.js - the handler's vest, the shepherd on the wire, in the back, let out, a sprinting suspect caught
+and brought down (bitten, not killed), back in with its handler, gone with the unit; not wanted, no bite.
+
+## 2026-10-22 · Prison Island: sentences, and over the wall
+
+The owner, 10-05: "Prison island: sentenced after many arrests, about 5 min max, breakouts, prison-break quests".
+Kestrel Bay Penitentiary was built in World v3 (the walls, the towers, the cell blocks round the exercise yard, the
+gate for officers only, the harbour) with nobody ever sent there. server/systems/prison.js:
+
+- **the sentence** (custody.js book): a booking at four stars or more, or the third within two hours, isn't the
+  station's cells but a sentence at Kestrel Bay - no bail - of 90 s plus 35 s a star plus 30 s for each recent
+  booking before it, five minutes at most (shared/rules.js PRISON). You're inside the walls by the gate.
+- **inside**: the weapons put away (back in your hand when you're out), nobody hurts anyone (as in the cells:
+  ped.cellSafe); the gate never opens for a prisoner (gates.js; an officer coming through still opens it - rush it
+  and you're out). Guards stand at the posts on the ground (the gate, the yard's corners, the blocks' doors, the
+  harbour) while anyone's doing time there. The bar at the top counts the time down.
+- **served**: let out, and the Prison Boat brings you back - off at Sandpiper Bay Police Dock.
+- **over the wall**: by the compound's outer wall the action button climbs it - five seconds in plain sight of the
+  towers (the alarm bell) - and over it you're out: three stars, your weapons back, and an island to get off (a
+  long swim; the sharks are likelier round Prison Island). Leaving the compound any other way counts the same.
+- logged off inside: the time left is kept with the character and served next time (custody.js saveJail / onJoin).
+- not yet: NPC inmates in the yard, a Prison Boat that runs, prison-break quests.
+
+Tests: test/prison.test.js - who goes (four stars, the third booking, five minutes at most); booked at four stars:
+inside, weapons away, nobody hurt, the guards out, the gate shut, served and back on the mainland with the weapon;
+over the wall, three stars; logged off and back inside.
+
+## 2026-10-22 · Tennis and K9: fixes from a review
+
+A read-through of the two new systems found:
+
+- **tennis, the action button while serving** threw in the input system (the serve prompt had nothing to run), which
+  cost every later player that tick's input: it does nothing now. Calling the pro out when it can't come says why.
+- **tennis, the courts either way round**: four of World v3's courts (Pink Mile's, Bayside's, the Bluffs' two) are
+  wider than deep with the net strung north-south, and the game had played them across the short way with an
+  invisible net. tennis.js now works along each court (across its net, from its 'tnet' prop) and across it; the tests
+  play a game each way round.
+- **tennis, the pro**: floored, tased, on fire or in a car, the game's off (it had played on, lying down); it no longer
+  stops to film things mid-game (npc.js spectacle); a floored player can't swing; a serve not hit in 45 s ends the
+  game (rules.js TENNIS.serveWait), so no court is held by someone away from the page.
+- **K9, the bite event** shared the fishing bite's name (a splash on dry ground and the fishing chime for everyone who
+  saw it): it's 'k9bite' now, a bark and a thump.
+- **K9, levels**: the dog bit through the street at someone down a manhole (and on the subway, and on the highway
+  deck from below). It keeps to its own level, and waits in the car while its handler is underground.
+- **K9, the grace**: a bite the moment you broke free of an officer floored you again; it waits out the grace (and
+  homes.js protectUntil).
+- **K9, the leash**: the dog, faster than anyone, never gave up. It's after you only within K9.sight (now 800 px) of
+  its handler - outrun the officers and it's called back - and only while its unit is on the job (not standing down,
+  nor a hijacked car's crew turned on the thief).
+
+Tests: test/tennis.test.js (both ways round; the pro floored; the serve left), test/k9.test.js (levels, grace, leash).
+
+## 2026-10-22 · Prison Island: fixes from a review
+
+- the action button while doing time (or climbing) threw in the input system - costing every later player that
+  tick's step. The time line does nothing now; and the input system no longer lets one player's error cost anyone
+  else their step (players.js: a passive line with nothing to run is skipped, each player's inputs on their own).
+- a server restart (every deploy) let everyone out: the cells and Prison Island are kept on shutting down as on
+  logging off (server/index.js), served on reconnecting.
+- time offline doesn't count: the clock stops while you're away from the keys, and a prisoner is never left as an
+  away-ghost serving it out.
+- died in there (on fire when booked): woken up in a hospital and taken straight back, the time left kept - not an
+  escape with three stars.
+- held on the wall while climbing (no walking off it, no drawing a gun); climbing it is a crime Safety mode asks about.
+- the guards: one who sees someone just over the wall - wanted, near, in sight - goes after them on foot (police.js
+  pursue: run down, tackled, taken in); a guard down is replaced at their post, out of sight; they stay out a couple
+  of minutes after a breakout.
+- no Unstuck, Surrender or arrest while doing time; the debug teleport (and a dev's goto or bring) out of it is no
+  breakout.
+- no Prison Boat to plan: let out at the harbour, and told so.
+
+Tests: test/prison.test.js - the time line pressed, held on the wall, no unstuck, no arrest, died and back inside
+with the time left; over the wall with a guard after you.
+
+Fix (from the full test run): the grenade's throw and bounce, the flamethrower, the skydive's jump, canopy and landing,
+and tennis's racket, bounce and swing had their sounds only through main.js's old sfx calls - none had an entry of its
+own (client/sound/events.js EVENT_SOUNDS, test/sound.test.js); placed where they happen now, and the skydive's three
+had no sound at all before (the canopy fills with a flutter; a soft landing rolls; a splat, or onto a car's roof).

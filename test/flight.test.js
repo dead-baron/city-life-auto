@@ -118,7 +118,7 @@ test('the server: parked aircraft at the pads and the apron; flying one, the alt
   assert.equal(p.ped.vehId, v.id, 'warned first');
   send(IN.VEHICLE); send(0);
   assert.equal(p.ped.vehId, 0, 'jumped');
-  run(w, 2.5);
+  run(w, 4);   // (all the way down, no parachute: test/skydive.test.js)
   assert.ok(p.ped.dead || p.ped.hp < hp - 20, 'a long way down');
   // nobody at the controls: it comes down and is wrecked
   run(w, 8);

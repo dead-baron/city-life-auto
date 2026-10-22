@@ -44,6 +44,7 @@ import * as players from './players.js';
 import * as homes from './homes.js';
 import * as hotmoney from './hotmoney.js';
 import * as struggle from './struggle.js';
+import * as prison from './prison.js';
 import { seek, footWay, walkInAt, sidestep, spawnNpc } from './npc.js';
 import { driveToward, planRoute } from './traffic.js';
 
@@ -109,7 +110,7 @@ function cuff(ped, on) {
 // Cuffed by `by` (an NPC officer, a player officer or a bounty hunter): face down, the officer kneeling on them.
 export function start(world, p, by) {
   const ped = p.ped, now = world.time;
-  if (!ped || ped.dead || p.custody) return;
+  if (!ped || ped.dead || p.custody || p.prison) return;   // (doing time already: prison.js)
   if (ped.vehId) vehicles.ejectPed(world, ped, true);
   if (ped.carrying) cargo.dropCrate(world, ped);   // (it stays where they went down, for anyone to pick up)
   ped.fishing = null; ped.rollT = 0; ped.vx = 0; ped.vy = 0;
@@ -520,6 +521,10 @@ function book(world, p, car = null) {
   const taken = confiscate(world, p, c.stars);
   law.clearWanted(world, p);
   p.profile.peakWanted = 0; p.disguised = false;
+  // the third time in a while, or at four stars or more: Prison Island, not the cells (prison.js)
+  const term = prison.sentenceFor(world, p, c.stars);
+  prison.noteArrest(p);
+  if (term) { p.custody = null; prison.sentence(world, p, term, c.stars); world.notify(p, `Booked at ${st.label}: ${taken}.`, 'bad'); return; }
   const bail = BAIL_PER_STAR * c.stars, b = cells.blockOf(world, st.id);
   if (car && b >= 0 && ped.vehId === car.id && !ped.dead) {
     walkIn(world, p, st, b, car, JAIL_S, bail, c.stars, c.by);
@@ -692,6 +697,7 @@ export function onLeave(world, p) {
   else if (inCustody(p)) book(world, p);
 }
 export function saveJail(world, p) {
+  if (prison.save(p, world)) { store.touch(); return; }   // (doing time on Prison Island: prison.js)
   const c = p.custody;
   if (c && c.stage === 'cell') {
     p.profile.jail = { left: Math.max(1, Math.ceil(c.until - world.time)), station: c.station, bail: c.bail, stars: c.stars };
@@ -705,6 +711,7 @@ export function onJoin(world, p) {
   delete p.profile.jail;
   store.touch();
   if (!ped || ped.dead || !(j.left > 0)) return;
+  if (j.prison) { prison.resume(world, p, j); return; }   // (back on Prison Island: prison.js)
   const st = (world.map.pois[j.station] && world.map.pois[j.station].kind === 'police' ? world.map.pois[j.station] : null) || nearestStation(world, ped.x, ped.y);
   if (!st) return;
   jail(world, p, st, j.left, j.bail || BAIL_PER_STAR * (j.stars || 1), j.stars || 1, null);

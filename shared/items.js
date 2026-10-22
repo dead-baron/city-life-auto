@@ -1,4 +1,4 @@
-import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SKATEBOARD_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
+import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SKATEBOARD_PRICE, PARACHUTE_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
@@ -49,6 +49,20 @@ export const WEAPONS = {
   // of explosion picked (the reload key steps through shared/rules.js BOOM_TEST_KINDS) where it lands - server boomtest.js
   // (index 29: the last free one of the wire's five bits)
   boomtest: { i: 29, name: 'Boom Tester (dev)', type: 'boomtest', range: 620, speed: 1100, cd: 0.3, dev: true },
+  // grenades (task #303): thrown in an arc, they bounce and roll, then go off when the fuse burns down (server
+  // grenades.js; the numbers: rules.js GRENADE). Index 32 is past the wire's five bits: in your hand others see empty
+  // hands (hand: 0 - net.js handIndex); the grenade in flight is a ball on the wire (t 5)
+  grenade:  { i: 32, name: 'Grenade',         type: 'grenade', cd: 0.7, mag: 1, reload: 0.45, illegal: true, ammoName: 'grenades', starter: 3, hand: 0 },
+  // fully automatic (task #318; the owner, 10-15: "flamethrower and fully automatic assault rifles in the debug menu"):
+  // the assault rifle hammers out shots as long as you hold the trigger; the flamethrower a cone of fire that sets
+  // people alight and scorches cars (combat.js flame). Past the wire's five bits: in hand they show as the police
+  // assault rifle and the bazooka's tube (hand - net.js handIndex)
+  arifle:   { i: 33, name: 'Assault Rifle',   type: 'gun', dmg: 17, range: 620, spread: 0.06, cd: 0.095, mag: 30, reload: 1.8, illegal: true, hand: 17 },
+  // the SAM launcher (the owner, 10-16: "A way to fight back against helicopters (a SAM launcher, or aiming up), without
+  // making them weak"): aimed at an aircraft up in the air it locks on, and its missile chases it (combat.js
+  // stepMissile) - two hits bring down a police helicopter, three the gunship. Shown in hand as the bazooka.
+  sam:      { i: 35, name: 'SAM Launcher',    type: 'rocket', sam: true, dmg: 230, radius: 60, range: 1700, speed: 760, turn: 2.6, cd: 2.4, mag: 1, reload: 2.8, illegal: true, hand: 12, ammoName: 'missiles', starter: 2 },
+  flamer:   { i: 34, name: 'Flamethrower',    type: 'flame', dmg: 5, range: 150, arc: 0.6, cd: 0.1, mag: 60, reload: 2.4, illegal: true, ammoName: 'fuel', hand: 12 },
 };
 export const WEAPON_BY_INDEX = [];
 for (const [id, w] of Object.entries(WEAPONS)) { w.id = id; WEAPON_BY_INDEX[w.i] = w; }
@@ -83,7 +97,8 @@ export const ITEMS = {
   medkit:  { name: 'Medical Kit',   heal: 60, stopBleed: true, sell: 30 },
   revivekit: { name: 'Revive Kit', tool: true, sell: 20 },   // defib paddles: revive a downed player to full health (never used up; not on yourself)
   flashlight: { name: 'Flashlight', tool: true, light: true, sell: 10 }, // switched on and off (never used up); no hand slot: you keep your weapon
-  skateboard: { name: 'Skateboard', tool: true, board: true, sell: 30 },   // ridden anywhere smooth: hop on and off with the vehicle button or from the bag (server skate.js)
+  skateboard: { name: 'Skateboard', tool: true, board: true, sell: 30 },
+  parachute: { name: 'Parachute', chute: true, sell: 40 },   // out of an aircraft up in the air, the action button opens it - one jump (server skydive.js)   // ridden anywhere smooth: hop on and off with the vehicle button or from the bag (server skate.js)
   bandage: { name: 'Field Bandage', heal: 15, stopBleed: true, sell: 8 },
   coffee:  { name: 'Hot Coffee',    stamina: true, buff: 'coffee', sell: 0 },
   energy:  { name: 'Energy Drink',  stamina: true, buff: 'energy', sell: 0 },
@@ -378,7 +393,7 @@ export const SHOPS = {
   sports: { title: 'Home Run Sports', buy: [
     { kind: 'weapon', id: 'bat', price: 120 }, { kind: 'weapon', id: 'rod', price: 60 },
     { kind: 'weapon', id: 'pepper', price: 70 }, { kind: 'ammo', id: 'pepper', price: 15, qty: 6 },
-    { kind: 'item', id: 'lure', price: 20, qty: 3 }, { kind: 'item', id: 'skateboard', price: SKATEBOARD_PRICE, qty: 1 },
+    { kind: 'item', id: 'lure', price: 20, qty: 3 }, { kind: 'item', id: 'skateboard', price: SKATEBOARD_PRICE, qty: 1 }, { kind: 'item', id: 'parachute', price: PARACHUTE_PRICE, qty: 1 },
   ] },
   hardware: { title: 'Nail & Gear Hardware', buy: [
     { kind: 'weapon', id: 'knife', price: 90 }, { kind: 'weapon', id: 'crowbar', price: 110 },
@@ -403,6 +418,8 @@ export const SHOPS = {
     { kind: 'weapon', id: 'spistol', price: 950 }, { kind: 'ammo', id: 'spistol', price: 40, qty: 10 },
     { kind: 'weapon', id: 'rocket', price: 6000 }, { kind: 'ammo', id: 'rocket', price: 400, qty: 1 },
     { kind: 'weapon', id: 'katana', price: 1500 },
+    { kind: 'weapon', id: 'grenade', price: 450 }, { kind: 'ammo', id: 'grenade', price: 140, qty: 1 },
+    { kind: 'weapon', id: 'arifle', price: 2600 }, { kind: 'ammo', id: 'arifle', price: 80, qty: 30 },
   ], sells: ['purse', 'bonds', 'jewelry', 'ghostglass', 'goldStar'], sellPrice: { ghostglass: FORAGE_FENCE_GHOSTGLASS, goldStar: 175 } },
   tackle: { title: 'Hook & Line Bait and Tackle', buy: [
     { kind: 'item', id: 'caneRod', price: 25, qty: 1 }, { kind: 'weapon', id: 'rod', price: 60 }, { kind: 'item', id: 'baitcaster', price: 240, qty: 1 }, { kind: 'item', id: 'flyRod', price: 300, qty: 1 }, { kind: 'item', id: 'surfRod', price: 380, qty: 1 },
@@ -415,6 +432,10 @@ export const SHOPS = {
   smuggler: { title: "Smuggler's Den (members only)", buy: [
     { kind: 'weapon', id: 'smg', price: 1100 }, { kind: 'ammo', id: 'smg', price: 45, qty: 30 },
     { kind: 'weapon', id: 'rocket', price: 5200 }, { kind: 'ammo', id: 'rocket', price: 350, qty: 1 },
+    { kind: 'weapon', id: 'grenade', price: 380 }, { kind: 'ammo', id: 'grenade', price: 120, qty: 1 },
+    { kind: 'weapon', id: 'arifle', price: 2300 }, { kind: 'ammo', id: 'arifle', price: 70, qty: 30 },
+    { kind: 'weapon', id: 'flamer', price: 4800 }, { kind: 'ammo', id: 'flamer', price: 120, qty: 60 },
+    { kind: 'weapon', id: 'sam', price: 9000 }, { kind: 'ammo', id: 'sam', price: 650, qty: 1 },
     { kind: 'weapon', id: 'shotgun', price: 700 }, { kind: 'ammo', id: 'shotgun', price: 40, qty: 12 },
     { kind: 'weapon', id: 'spistol', price: 850 }, { kind: 'ammo', id: 'spistol', price: 35, qty: 10 },
   ], sells: ['purse', 'bonds', 'jewelry'] },

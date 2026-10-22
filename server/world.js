@@ -66,6 +66,11 @@ import * as tank from './systems/tank.js';
 import * as bowling from './systems/bowling.js';
 import * as cinema from './systems/cinema.js';
 import * as aircraft from './systems/aircraft.js';
+import * as skydive from './systems/skydive.js';
+import * as grenades from './systems/grenades.js';
+import * as tennis from './systems/tennis.js';
+import * as k9 from './systems/k9.js';
+import * as prison from './systems/prison.js';
 import * as sar from './systems/sar.js';
 import * as charter from './systems/charter.js';
 import * as dusting from './systems/dusting.js';
@@ -113,7 +118,9 @@ const SYSTEMS = [
   ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen
   ['trains', trains.update],        // the rail loop: trains, riders, crossings, the mail-car strongbox
   ['police', police.update],        // NPC police dispatch / pursuit
+  ['k9', k9.update],                // police dogs: riding along, let out, running suspects down (k9.js)
   ['custody', custody.update],      // the arrested: held, walked to a car, driven to the station, the cells
+  ['prison', prison.update],        // Prison Island: time served, the wall climbed, the guards at their posts (prison.js)
   ['cells', cells.update],          // the police stations' cell blocks: nobody hurt there, the doors, NPC inmates
   ['cruiser', cruiser.update],      // player officers' personal cruisers: delivery, loss, tow
   ['gang', gang.update],            // Syndicate membership: Smuggler's Rock guards
@@ -124,6 +131,7 @@ const SYSTEMS = [
   ['minigames', minigames.update],  // soccer pitch, beach volleyball          // jetski / boat races
   ['golf', golf.update],            // the golf course (Lakeside Greens): the balls in play
   ['hoops', hoops.update],          // North Point Courts: shooting hoops
+  ['tennis', tennis.update],        // tennis with the club pro on any tennis court (tennis.js)
   ['events', events.update],        // world events (snatch-and-grabs, drops) for blips + arrows
   ['phone', phone.update],          // phone job board + police patrol calls
   ['ems', ems.update],              // ambulances + 45s cleanup loop
@@ -134,6 +142,7 @@ const SYSTEMS = [
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
   ['barriers', barriers.update],    // smashed highway barriers: the road crew puts them back
   ['combat', combat.update],        // projectiles, bleeding, regen, stun timers
+  ['grenades', grenades.update],    // grenades thrown: their arcs, bounces and fuses (grenades.js)
   ['cargo', cargo.update],          // crates, loot bags
   ['robbery', robbery.update],      // store hold-ups, silent alarms, squad-car response
   ['law', law.update],              // heat decay, search circles
@@ -153,6 +162,7 @@ const SYSTEMS = [
   ['cinema', cinema.update],        // The Grand Theatre: the films in the screens, the audience
   ['activities', activities.update], // people going about their lives: anglers, chess in the park, picnics, a painter (activities.js)
   ['aircraft', aircraft.update],    // helicopters and planes: the parked ones at their pads and stands, mid-air collisions (aircraft.js)
+  ['skydive', skydive.update],      // people falling from aircraft: the fall, the parachute, the landing (skydive.js)
   ['burning', burning.update],      // people on fire: burning down, going out, catching it from fire (H58)
   ['tank', tank.update],            // the tanks' turrets turning to their drivers' aim (H58)
   ['sar', sar.update],              // search and rescue pilots' shifts: the calls, the harness, the hand-over (H59)
@@ -226,7 +236,7 @@ export class World {
 
   get clock() { return gameClock(this.loopTime); }
 
-  newId() { const id = this.nextId++; if (this.nextId > 0xfffffff0) this.nextId = 1; return id; }
+  newId() { const id = this.nextId++; if (this.nextId > 0x1ffffff0) this.nextId = 1; return id; }   // (below bit 29: a ped's parent word on the wire marks the sky there - net.js, skydive.js skyWord)
 
   add(e) { this.entities.set(e.id, e); this.place(e); return e; }
   remove(e) {

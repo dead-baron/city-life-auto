@@ -105,6 +105,26 @@ function hubPlan(m, calling, all, sx, sy) {
   for (const q of info) out.set(q.line, pick.get(q.line) ? pick.get(q.line).i : q.nearest);
   return out;
 }
+// The tiles of a station house's forecourt round its spot h (h.a: the way it faces, out from the track). Where the track
+// runs along the grid, the block of (2·du + 1) by (2·dv + 1) tiles round it, as ever; where it runs at an angle, the
+// tiles whose middles lie in that much turned with the house - du along the track, dv out from it (the owner, 10-16:
+// "Stations at an angle look awkward": the square forecourt stood askew of its house and platforms).
+export function stationForecourt(h, du, dv) {
+  const out = [], tx0 = Math.floor(h.x / TILE), ty0 = Math.floor(h.y / TILE);
+  if (!offAxis(h.a)) {
+    for (let dy = -dv; dy <= dv; dy++) for (let dx = -du; dx <= du; dx++) out.push([tx0 + dx, ty0 + dy]);
+    return out;
+  }
+  const ux = -Math.sin(h.a), uy = Math.cos(h.a), vx = Math.cos(h.a), vy = Math.sin(h.a), U = (du + 0.5) * TILE, V = (dv + 0.5) * TILE, r = du + dv + 2;
+  for (let ty = ty0 - r; ty <= ty0 + r; ty++) for (let tx = tx0 - r; tx <= tx0 + r; tx++) {
+    const dx = (tx + 0.5) * TILE - h.x, dy = (ty + 0.5) * TILE - h.y;
+    if (Math.abs(dx * ux + dy * uy) <= U && Math.abs(dx * vx + dy * vy) <= V) out.push([tx, ty]);
+  }
+  return out;
+}
+// a track (or a house facing out from it) at an angle to the grid: more than 4 degrees off it
+export const offAxis = (a) => Math.abs(Math.sin(2 * a)) > 0.14;
+
 // (H33) World v3's stations, one per name: every loop's platform there (side by side on the straight), its one map point
 // moved to the station's building - behind the platform nearest the middle of them all, on the outer side - and the
 // services calling there: m.railHubs [{ name, poi, x, y, a (the building's facing), services, calls [[loop, station]],
@@ -128,8 +148,9 @@ function buildRailHubs(m) {
       if (d < pd) { pd = d; pick = { x, y, a: Math.atan2(ny, nx) }; }
     }
     h.x = Math.round(pick.x); h.y = Math.round(pick.y); h.a = pick.a;
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -3; dx <= 3; dx++) {   // its forecourt
-      const tx = Math.floor(h.x / TILE) + dx, ty = Math.floor(h.y / TILE) + dy, t = m.tileAt(tx, ty);
+    // its forecourt (turned with the house where the track runs at an angle: stationForecourt)
+    for (const [tx, ty] of stationForecourt(h, 3, 2)) {
+      const t = m.tileAt(tx, ty);
       if (!m.inside(tx, ty) || (m.reserve[m.idx(tx, ty)] & 2 && Math.hypot((tx + 0.5) * TILE - h.x, (ty + 0.5) * TILE - h.y) > 70)) continue;
       if (t === T.GRASS || t === T.SAND || t === T.LOT || t === T.SIDEWALK) m.set(tx, ty, T.PLAZA);   // (not the ballast: DIRT)
     }

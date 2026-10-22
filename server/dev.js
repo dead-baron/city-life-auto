@@ -11,6 +11,7 @@ import { PACK_LIFE_S } from '../shared/rules.js';
 import { store } from './store.js';
 import * as env from './systems/environment.js';
 import * as jobs from './systems/jobs.js';
+import * as skydive from './systems/skydive.js';
 import * as law from './systems/law.js';
 import * as bounties from './systems/bounties.js';
 import * as combat from './systems/combat.js';
@@ -29,6 +30,7 @@ import * as happenings from './systems/happenings.js';
 import * as streetlife from './systems/streetlife.js';
 import * as wildlife from './systems/wildlife.js';
 import * as sharks from './systems/sharks.js';
+import * as prison from './systems/prison.js';
 import * as wanderer from './systems/wanderer.js';
 import * as personas from './systems/personas.js';
 import * as activities from './systems/activities.js';
@@ -66,7 +68,7 @@ import * as busjob from './systems/busjob.js';
 import * as towjob from './systems/towjob.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -624,13 +626,21 @@ export function command(world, p, c, msg) {
       if (!ped || ped.dead || !world.trains.length) break;
       if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
       let t = world.trains[Number(msg.n)] || null;
-      // (msg.sub: the nearest subway train - World v3's Pink and Yellow Lines - not the main line's)
+      // (msg.sub: the nearest subway train - World v3's Pink and Yellow Lines; without it the nearest on the main line, the
+      // owner, 10-16: "jump on nearest train should pick the main line" - any train only where there's no main line)
       const isSub = (q) => !!(world.rails && world.rails[q.r] && world.rails[q.r].subway);
-      if (!t) { let bd = Infinity; for (const q of world.trains) { if (msg.sub && !isSub(q)) continue; const e = world.get(q.cars[0].id); if (!e) continue; const d = Math.hypot(e.x - ped.x, e.y - ped.y); if (d < bd) { bd = d; t = q; } } }
+      const main = !msg.sub && world.trains.some((q) => !isSub(q));
+      if (!t) { let bd = Infinity; for (const q of world.trains) { if (msg.sub ? !isSub(q) : main && isSub(q)) continue; const e = world.get(q.cars[0].id); if (!e) continue; const d = Math.hypot(e.x - ped.x, e.y - ped.y); if (d < bd) { bd = d; t = q; } } }
       if (!t) { world.notify(p, msg.sub ? '[dev] There is no subway train running on this map.' : '[dev] No train found.', 'warn'); break; }
       const ci = Math.max(1, Math.min(t.cars.length - 1, Number(msg.car) || 1));
       trains.board(world, ped, t, ci, 0, 0, 0);
       world.notify(p, `[dev] Aboard train ${t.i}, car ${ci}.`, 'info');
+      break;
+    }
+    case 'sky': {   // up in the sky over here, falling (skydive.js): msg.alt px up, msg.chute a parachute in the bag
+      if (!ped || ped.dead || ped.vehId || ped.onTrain || ped.hidden) { world.notify(p, '[dev] On foot, out in the open first.', 'warn'); break; }
+      if (msg.chute) prof.inventory.parachute = Math.max(1, prof.inventory.parachute || 0);
+      skydive.start(world, ped, { alt: Math.max(60, Math.min(1000, Number(msg.alt) || 900)), vx: 0, vy: 0 });
       break;
     }
     case 'calltrain': { // bring the next train into the nearest station, doors open
@@ -640,6 +650,7 @@ export function command(world, p, c, msg) {
       break;
     }
     case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y); if (ped) { ped.sub = false; ped.ug = 0; }
+      if (ped && !ped.vehId) prison.drop(world, p);   // (out of Prison Island this way: no sentence, no breakout)
       if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) {
         const at = msg.snap ? tpSpot(world.map, msg.x, msg.y) : { x: msg.x, y: msg.y };   // (snap: the debug teleport's places - the server finds the ground)
         ped.x = at.x; ped.y = at.y; ped.lz = !msg.snap && msg.lz === 1 && surfaceZ(world.map, at.x, at.y, 1) !== null ? 1 : 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;

@@ -20,6 +20,7 @@ import { cityRailUnder, STATION_OPEN } from './world3-city.js';
 import { TOWNS3 } from './world3-towns.js';
 import { MESA } from './world3-mesa.js';
 import { GULCH, HOLLOW } from './world3-desert.js';
+import { stationForecourt } from './world3-passes.js';
 
 // ...and under the towns it passes through (Lucky Mesa, the towns' boxes; part 5's ruling: no level crossings in the
 // towns), their stations' stretches but (STATION_OPEN). (The north coast's beach towns keep theirs: the train along
@@ -352,8 +353,8 @@ export function seatStationHouses(m) {
     h.x = Math.round(best.x); h.y = Math.round(best.y); h.a = best.a; h.moved = true; moved++;
     const poi = m.pois[h.poi];
     if (poi) { poi.x = h.x; poi.y = h.y; }
-    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {   // its forecourt
-      const tx = Math.floor(h.x / TILE) + dx, ty = Math.floor(h.y / TILE) + dy, t = m.tileAt(tx, ty);
+    for (const [tx, ty] of stationForecourt(h, 3, 3)) {   // its forecourt (turned with the house where it faces the track at an angle)
+      const t = m.tileAt(tx, ty);
       if (m.inside(tx, ty) && (t === T.GRASS || t === T.SAND || t === T.LOT || t === T.DIRT) && !close.has(sk((tx + 0.5) * TILE, (ty + 0.5) * TILE))) m.set(tx, ty, T.PLAZA);
     }
   }

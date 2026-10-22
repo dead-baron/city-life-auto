@@ -2775,16 +2775,19 @@ function addRail(c, I) {
 }
 // (H33) World v3's stations, one per name: the station building on its forecourt (the map point), lit, with the station's
 // name over its door, and a footbridge over the tracks between each pair of platforms that face each other.
+const STATION_TURNS = 64;
 function railHubs(I, hubs) {
   for (const h of hubs) {
     if (h.el) continue;   // (the El's station: addEl)
     // (H35) the station house: its platform-side canopy toward the tracks, its doors and clock gable on the street side
-    const hd = qa(h.a - PI / 2, 16), ox = Math.cos(h.a) * 18, oy = Math.sin(h.a) * 18;
-    put(I, vitem(`sth:${hd.toFixed(2)}`, 'stationHouse', [1, 140], h.x + ox, h.y + oy, hd));
+    // (its turn, the canopies', the benches' and the footbridges' match the track's to within 3 degrees - STATION_TURNS:
+    // the owner, 10-16, "Stations at an angle look awkward": at 16 turns a station's canopies stood 11 degrees off its track)
+    const hd = qa(h.a - PI / 2, STATION_TURNS), ox = Math.cos(h.a) * 18, oy = Math.sin(h.a) * 18;
+    put(I, vitem(`sth:${hd.toFixed(3)}`, 'stationHouse', [1, 140], h.x + ox, h.y + oy, hd));
     lightAt(I, h.x + Math.cos(h.a) * 70, h.y + Math.sin(h.a) * 70, 60, 140, [1, 0.85, 0.6], 1.5, 'sign');
     lightAt(I, h.x - Math.cos(h.a) * 20, h.y - Math.sin(h.a) * 20, 70, 150, [1, 0.94, 0.8], 1.3, 'lamp');
     put(I, { key: `stb:${h.name}`, recipe: { t: 'sign', text: h.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: 26, posts: true }, x: h.x, y: h.y - 40, ext: [80, 60, 80, 12] });
-    for (const f of h.bridges || []) { const fh = qa(f.a, 16); put(I, vitem(`fbr:${f.len}:${fh.toFixed(2)}`, 'footbridge', [f.len, 30, 6], f.x, f.y, fh)); }
+    for (const f of h.bridges || []) { const fh = qa(f.a, STATION_TURNS); put(I, vitem(`fbr:${f.len}:${fh.toFixed(3)}`, 'footbridge', [f.len, 30, 6], f.x, f.y, fh)); }
   }
 }
 function addRailLoop(c, I, R, once) {
@@ -2812,8 +2815,8 @@ function addRailLoop(c, I, R, once) {
     const at = (d, off) => { const q = railAt(R, st.s + d); return { x: q.x - Math.sin(q.a) * sd * off, y: q.y + Math.cos(q.a) * sd * off, a: q.a }; };
     const ok = (p) => { const t = c.at(p.x, p.y); return t !== T.ROAD && t !== T.BUILDING && t !== T.WALL && t !== T.BRIDGE; };
     const cl = Math.round(L * 0.7 / 8) * 8;
-    for (const f of [-0.42, 0.42]) { const p = at(f * L, 80); if (!ok(p)) continue; const hd = qa(p.a, 16); put(I, vitem(`pcan:${cl}:${hd.toFixed(2)}`, 'platformCanopy', [cl, 40, 1], p.x, p.y, hd)); lightAt(I, p.x, p.y, 52, 160, [1, 0.94, 0.8], 1.5, 'lamp'); }
-    for (const f of [-0.85, -0.12, 0.12, 0.85]) { const p = at(f * L, 62); if (!ok(p)) continue; const n = Math.atan2(Math.cos(p.a) * sd, -Math.sin(p.a) * sd); put(I, vitem(`bn:${qa(n + PI / 2, 8).toFixed(2)}`, 'bench', [], p.x, p.y, qa(n + PI / 2, 8))); }
+    for (const f of [-0.42, 0.42]) { const p = at(f * L, 80); if (!ok(p)) continue; const hd = qa(p.a, STATION_TURNS); put(I, vitem(`pcan:${cl}:${hd.toFixed(3)}`, 'platformCanopy', [cl, 40, 1], p.x, p.y, hd)); lightAt(I, p.x, p.y, 52, 160, [1, 0.94, 0.8], 1.5, 'lamp'); }
+    for (const f of [-0.85, -0.12, 0.12, 0.85]) { const p = at(f * L, 62); if (!ok(p)) continue; const n = Math.atan2(Math.cos(p.a) * sd, -Math.sin(p.a) * sd); put(I, vitem(`bn:${qa(n + PI / 2, STATION_TURNS).toFixed(3)}`, 'bench', [], p.x, p.y, qa(n + PI / 2, STATION_TURNS))); }
     for (const f of [-0.96, -0.6, 0.6, 0.96]) { const p = at(f * L, 98); if (!ok(p)) continue; put(I, vitem('lp:cast:1', 'lampPost', ['cast', 1], p.x, p.y)); lightAt(I, p.x, p.y + 2, 76, 180, LAMP_LIGHT.cast, 3, 'lamp'); }
     const rb = routeBoardAt(R, st, c.at);   // (where the trains go: server/systems/trains.js reads it out)
     if (rb) { put(I, vitem('rboard', 'routeBoard', [], rb.x, rb.y, 0)); lightAt(I, rb.x, rb.y - 4, 30, 60, [0.75, 0.85, 1], 0.9, 'sign'); }

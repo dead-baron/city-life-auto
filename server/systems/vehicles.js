@@ -124,7 +124,7 @@ export function update(world, dt) {
     const spd = speedOf(v);
     const near = world.query(v.x, v.y, v.def.L / 2 + 16 + (v.cutQ ? PLASMA_CUT.slide : 0), K.PED);
     for (const ped of near) {
-      if (ped.vehId || ped.dead || ped.onTrain || ped.hoodOf || !sameLevel(ped.lz, v.lz)) continue;
+      if (ped.vehId || ped.dead || ped.onTrain || ped.hoodOf || ped.sky || !sameLevel(ped.lz, v.lz)) continue;   // (ped.sky: up in the air, falling - skydive.js)
       let h = null;
       if (!v.cutQ) h = circleVsObb(ped.x, ped.y, ped.r, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
       else for (const q of bodyBoxes(v)) if ((h = circleVsObb(ped.x, ped.y, ped.r, q.x, q.y, v.a, q.hl, v.def.W / 2))) break;

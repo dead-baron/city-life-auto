@@ -34,7 +34,7 @@ import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
 import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
-import { TILE, K, PF, VF, DAY_LOOP_S } from '../../../shared/constants.js';
+import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
@@ -50,7 +50,7 @@ import { F_GROUND, F_NOCAST, F_WATER } from '../gbuf.js';
 import { FERRIS, ferrisSite, ferrisCab, balloonRoutes, balloonAt, slideSite, slideRider } from '../../../shared/rides.js';
 import { SPECIES, APOSE } from '../../../shared/fauna.js';
 import { WEAPONS, BLADE_COLORS, hexRgb } from '../../../shared/items.js';
-import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, umbrellaStyle, umbrellaSprite, umbrellaShape, fountainSprite, FOUNTAIN_FRAMES, FOUNTAIN_S, partSprite } from './liveart.js';   // (flags in the wind, umbrellas' canopies, fountains' water)
+import { flagPose, flagWind, flagSprite, FLAG_LIFTS, FLAG_DIRS, FLAG_FRAMES, umbrellaStyle, umbrellaSprite, umbrellaShape, parachuteSprite, fountainSprite, FOUNTAIN_FRAMES, FOUNTAIN_S, partSprite } from './liveart.js';   // (flags in the wind, umbrellas' canopies, fountains' water)
 const PLASMA_I = WEAPONS.plasma.i;   // (the plasma blade: its light in the hand, _lights)
 
 export { DECK_Z };
@@ -264,6 +264,9 @@ function rgbOf(c) {
   return v;
 }
 const quant = (a, N) => ((Math.round(a / TAU * N) % N) + N) % N;
+// A train car's turns: twice a car's (64 on most screens, 128 on High). A coach 212 px long rounded to 32 turns snapped
+// round a wide curve an 11-degree step at a time (the owner, 10-16: "Trains look odd on wide curves (angle steps)").
+export const trainSteps = (N) => Math.min(128, N * 2);
 
 // The giant redwoods' fade ids (statics.js TREE_FADE + the prop's index) and their outlines: the half width (px) a
 // tree covers in each 40 px of its height, from its foot up - the flared foot, the trunk, then the crown from about
@@ -1424,6 +1427,9 @@ export class World2 {
     let ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
     let lift = L.lift || 0;   // (an ollie on a skateboard: client pedLook)
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
+    // falling from an aircraft (server skydive.js): spread out face down in free fall, hanging upright under the canopy
+    const sky = p.sky ? (p.rsky || p.sky) : 0;
+    if (sky) { ppose = p.chute ? 'idle' : 'swim'; lift = 0; }
     // (a paramedic wheeling someone on the stretcher - the descriptor's pa, server ems.js: that very person lies on it, drawn
     // after them; the stretcher empty under them - or with the blanket figure till their sprite is ready)
     const ptk = p.d.pp === 'stretcherPt' && p.d.pa && Pd.litterApp && L.upright ? this._patient(p.d.pa, d8) : null;
@@ -1438,7 +1444,7 @@ export class World2 {
     const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
     // felling a tree (d.ch: server felling.js): the axe swung, the chainsaw held out; the lantern carried by its bail
     if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
-    const wpn = L.board ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
+    const wpn = L.board || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
     if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined)) && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
@@ -1452,7 +1458,7 @@ export class World2 {
     if (!sk) return;
     p._v2k = sk;
     const o = this.opts;
-    o.alpha = 1; o.flash = L.hitK > 0.4 ? L.hitK - 0.4 : 0; o.xray = !!me; o.flipX = false; o.shadow = true; o.tint = null;
+    o.alpha = 1; o.flash = L.hitK > 0.4 ? L.hitK - 0.4 : 0; o.xray = !!me && !sky; o.flipX = false; o.shadow = !sky; o.tint = null;   // (up in the sky: its shadow on the ground is the overlay's - main.js drawSkyShadows)
     // burned to death: blackened (the record's charred bit, server combat.js kill); just put out: singed a while (FI1)
     const sg = now - (p.burnOff ?? -99);
     if (p.char && (f & PF.DEAD)) o.tint = CHAR_PED;
@@ -1460,11 +1466,15 @@ export class World2 {
     if (f & PF.GHOST) o.alpha = 0.45 + 0.2 * Math.sin(now * 8);
     if (p.blink) o.alpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
     const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
-    const z0 = this._z0(p, L.swimming) + lift + extraZ;
+    const z0 = (sky ? sky * SKY_LIFT : this._z0(p, L.swimming) + lift) + extraZ;
     o.under = L.swimming && this.map.tileAtPx(p.rx, p.ry) === TT.BRIDGE ? UNDER_Z : 0;   // (swimming under a bridge)
     E.drawSprite(sk, p.rx + hx, p.ry + hy, z0, o);
     o.under = 0;
     this.n.drawn++;
+    if (sky && p.chute) {   // the canopy over them, its span across the way they're drifting (liveart.js parachuteSprite)
+      const q = ((Math.round(p.ra / (Math.PI / 4)) % 8) + 8) % 8, k = p.id & 1, ck = this._conv(`chute|${q}|${k}`, () => parachuteSprite(q, k), true);
+      if (ck) { o.flash = 0; E.drawSprite(ck, p.rx, p.ry, z0 + 30, o); this.n.drawn++; }
+    }
     if (ptk) {   // (the patient, on the stretcher's pad in front: art2/litter.js)
       const at = Pd.litterAt(d8, this._ltAt || (this._ltAt = [0, 0]));
       o.xray = false; o.flash = 0;
@@ -1674,7 +1684,7 @@ export class World2 {
   _train(c, now, myTrain) {
     const def = TRAIN_CARS[c.d.c], A = this.A;
     if (!def || !A || !A.trainKey) return;
-    const inside = c.d.tr === myTrain, N = this.tier.N;
+    const inside = c.d.tr === myTrain, N = trainSteps(this.tier.N);
     const mode = `${inside ? 'in' : 'roof'}${c.flags & 8 ? '-lit' : ''}${c.flags & 16 ? '-empty' : ''}`;
     const hi = quant(c.ra, N);
     let sk = this._spr('actors', 'train', A.trainKey(c.d.c, mode, hi, N), [c.d.c, mode, hi, N]);
@@ -1898,7 +1908,7 @@ export class World2 {
         const N = this.tier.N, hi = quant(e.ra || 0, N), st = A.vehState(e.flags, 1, e.hp, e.parent);
         if (this._ask('actors', 'vehicle', A.vehicleKey(e.d, st, hi, N), [e.d, st, hi, N], prio)) budget--;
       } else if (e.kind === K.TRAIN && A && A.trainKey && TRAIN_CARS[e.d.c]) {
-        const N = this.tier.N, hi = quant(e.ra || 0, N), mode = `roof${e.flags & 8 ? '-lit' : ''}${e.flags & 16 ? '-empty' : ''}`;
+        const N = trainSteps(this.tier.N), hi = quant(e.ra || 0, N), mode = `roof${e.flags & 8 ? '-lit' : ''}${e.flags & 16 ? '-empty' : ''}`;
         if (this._ask('actors', 'train', A.trainKey(e.d.c, mode, hi, N), [e.d.c, mode, hi, N], prio)) budget--;
       } else if (e.kind === K.CRATE && A && A.crateKey) {
         const hi = quant(e.ra || 0, 16), label = e.d.l || '';

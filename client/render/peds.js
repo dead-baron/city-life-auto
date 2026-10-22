@@ -101,6 +101,10 @@ function weapon(P, w, hx, hy, ang, bc = 0) {
     }
     case 28: { const B = bladeColor(bc); P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 4, '#9aa0aa', 2); P.p(hx, hy, '#2a2c32'); L(13, B.c, 2); P.line(hx + Math.cos(ang), hy + Math.sin(ang), ang, 11, B.core); break; }   // plasma blade (steel hilt, a blade in its colour - blue unless picked - with a white-hot core)
     case 31: L(8, '#24242a', 2); P.line(hx + Math.cos(ang) * 6, hy + Math.sin(ang) * 6, ang, 2, '#9aa0aa', 3); P.p(hx + Math.cos(ang) * 8, hy + Math.sin(ang) * 8, '#fff2c0'); break;   // the heavy flashlight (lights to carry #359)
+    case 35: P.line(hx - Math.cos(ang) * 6, hy - Math.sin(ang) * 6, ang, 16, '#3a4a3a', 2); P.p(hx + Math.cos(ang + 1.57) * 2, hy + Math.sin(ang + 1.57) * 2, '#c8c8b8'); P.p(hx + Math.cos(ang) * 10, hy + Math.sin(ang) * 10, '#d8d040'); break;   // the SAM launcher (its sight)
+    case 33: P.line(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, ang, 3, '#5a4630', 2); L(10, '#24262c', 2); P.p(hx + Math.cos(ang + 1.57) * 2 + Math.cos(ang) * 3, hy + Math.sin(ang + 1.57) * 2 + Math.sin(ang) * 3, '#24262c'); break;   // the assault rifle (its curved magazine)
+    case 34: P.blob(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3, 2.4, 2.4, '#b8341c'); L(9, '#5a5e66', 2); P.p(hx + Math.cos(ang) * 10, hy + Math.sin(ang) * 10, '#ff9a1a'); break;   // the flamethrower (its fuel tank, the pilot light)
+    case 32: P.blob(hx + 2, hy, 2.6, 3.2, '#56663a'); P.r(hx + 1, hy - 4, 2, 1, '#9aa0a8'); P.p(hx + 3, hy - 4, '#9aa0a8'); break;   // a grenade (server grenades.js: the icon - in hand it isn't drawn)
     default: break;
   }
 }

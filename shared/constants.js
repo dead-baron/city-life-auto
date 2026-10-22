@@ -65,6 +65,8 @@ export const WEATHER = { CLEAR: 0, RAIN: 1 };
 export const K = { PED: 1, VEH: 2, CRATE: 3, BAG: 4, PROJ: 5, PICKUP: 6, BALL: 7, TRAIN: 8 };
 
 // Ped flag bits (wire)
+export const SKY_LIFT = 0.66;   // art v2: px up the screen per px of height in the air (flight.js FLY.LIFT, skydive.js)
+
 export const PF = {
   DEAD: 1, DOWN: 2, STUN: 4, SPRINT: 8, ATTACK: 16, AIM: 32, ROLL: 64, CARRY: 128,
   INVEH: 256, BLEED: 512, GHOST: 1024, FLARE: 2048, BADGE: 4096, MOVING: 8192,

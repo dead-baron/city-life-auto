@@ -161,7 +161,7 @@ export function update(world, dt) {
     const n = ped.npc;
     if (n.sar) continue;   // (someone out in the wild waiting for a rescue pilot, a charter's customer: sar.js, charter.js look after them)
     if (n.burn && ped.burnT > 0) { if (now >= ped.downUntil && now >= ped.stunUntil) pedStep(ped, burning.npcStep(world, ped, now), dt, world.map, walkMods(world, ped, 1)); continue; }   // (on fire: running for it - burning.js)
-    if (n.guard && n.state !== 'fight' && n.state !== 'flee') { // Syndicate guard on the Rock: hold the post, keep watch
+    if (n.guard && !n.pursue && n.state !== 'fight' && n.state !== 'flee') { // Syndicate guard on the Rock: hold the post, keep watch (a prison guard after an escapee: police.js pursue)
       const dd = Math.hypot(ped.x - n.guard.x, ped.y - n.guard.y);
       if (dd > 10) {   // (guard.run: a biker running for his bike - bikers.js; a bouncer back to his door steps round what's in the way)
         const inp = seek(ped, n.guard.x, n.guard.y, !!n.guard.run);
@@ -188,7 +188,7 @@ export function update(world, dt) {
     }
     // other systems drive these (a word with someone: stops.js; after a crook: police.js; someone held down or cuffed:
     // struggle.js, custody.js)
-    if ((n.role === 'cop' && (!n.beat || n.stop || n.pursue || holding(world, ped))) || n.role === 'medic') continue;
+    if ((n.role === 'cop' && (!n.beat || n.stop || n.pursue || holding(world, ped))) || n.role === 'medic' || n.driven) continue;   // (n.driven: another system moves them - tennis.js's pro)
     if (now < ped.downUntil || now < ped.stunUntil) continue;
     if (n.state === 'passed') { ped.vx = 0; ped.vy = 0; continue; }
     // critically hurt: no more fighting - limp away from the trouble, bleeding; the worst hurt may crawl
@@ -554,7 +554,7 @@ export function spectacle(world, x, y, { r = 480, near = 120, chance = 1, secs =
   const now = world.time;
   for (const e of world.query(x, y, r, K.PED)) {
     const n = e.npc;
-    if (!n || e.dead || e.vehId || e.hidden || e.onTrain || n.desk || n.guard || n.role !== 'civ') continue;
+    if (!n || e.dead || e.vehId || e.hidden || e.onTrain || n.desk || n.guard || n.driven || n.role !== 'civ') continue;   // (n.driven: a club pro mid-game - tennis.js)
     if (n.state !== 'wander' && n.state !== 'idle') continue;
     if (now - (n.filmedAt ?? -1e9) < 45 || Math.hypot(e.x - x, e.y - y) < near) continue;
     if (rng() < filmChance(e) * chance) startFilming(world, e, x, y, secs * (0.7 + rng() * 0.6));

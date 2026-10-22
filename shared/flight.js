@@ -12,7 +12,7 @@
 //     props (PROP_TOP). Landing on a flat roof works too (the hospital's pad - the next wave lands on it).
 // Nothing here runs while the module loads (CLAUDE.md: deterministic shared code); Math.cos / sin only at run time,
 // as physics.js does.
-import { TILE, T } from './constants.js';
+import { TILE, T, SKY_LIFT } from './constants.js';
 import { IN } from './input.js';
 import { CAR_BLOCK, WATER_T, DISTRICTS } from './mapcore.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
@@ -40,7 +40,7 @@ export const FLY = {
   ALT_Q: 4,            // px per step of the altitude on the wire (a vehicle record's extra byte: 0..1020 px)
   PROP_TOP: 110,       // px - a tree or another solid prop stands this tall
   PAD_R: 72,           // px - a helipad's radius
-  LIFT: 0.66,          // art v2 draws an aircraft this many px up the screen per px of altitude (client/render/aircraft.js V2_LIFT)
+  LIFT: SKY_LIFT,      // art v2 draws an aircraft this many px up the screen per px of altitude (client/render/aircraft.js V2_LIFT)
 };
 
 // How tall a building stands (px, its roof above the ground), by the district it's in and what it is - the art's

@@ -177,7 +177,8 @@ export const DEV_SECTIONS = [
   // flying (shared/flight.js, server/systems/aircraft.js): an aircraft beside you; the airport's runway and the airstrip
   { id: 'air', title: '🚁 Aircraft', items: [
     ['🚁 Helicopter', 'car', { m: 'heli' }], ['✈ Light plane', 'car', { m: 'plane' }], ['🚁 Attack helicopter (missiles)', 'car', { m: 'gunship' }],
-    ['🚔 Police helicopter', 'car', { m: 'policeheli' }], ['🛫 A light plane in the air, you flying it', 'car', { m: 'plane', alt: 500, in: 1 }], ['🚁 A helicopter in the air, you flying it', 'car', { m: 'heli', alt: 400, in: 1 }], ['🛫 A runway (take off from it)', 'near', { k: 'runway' }], ['🅷 A helipad', 'near', { k: 'helipad' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }],
+    ['🚔 Police helicopter', 'car', { m: 'policeheli' }], ['🛫 A light plane in the air, you flying it', 'car', { m: 'plane', alt: 500, in: 1 }], ['🚁 A helicopter in the air, you flying it', 'car', { m: 'heli', alt: 400, in: 1 }], ['🛫 A runway (take off from it)', 'near', { k: 'runway' }],
+    ['🪂 Skydive: high over here, a parachute in your bag', 'sky', { alt: 900, chute: 1 }], ['🪂 Skydive with no parachute (steer for the water)', 'sky', { alt: 900 }], ['🪂 A parachute in my bag', 'give', { kind: 'item', id: 'parachute', n: 1 }], ['🅷 A helipad', 'near', { k: 'helipad' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }],
   ] },
   // fire on people, the tank, the explosion tester (H58: server burning.js, tank.js, boomtest.js)
   { id: 'fire', title: '🔥 Fire, the tank & the Boom Tester', items: [

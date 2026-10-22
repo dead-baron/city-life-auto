@@ -23,8 +23,9 @@ import * as explosions from './explosions.js';   // (chain reactions: task #398)
 import * as campfires from './campfires.js';
 import * as dance from './dance.js';
 import * as burning from './burning.js';   // (fire on people: H58)
-import * as boomtest from './boomtest.js';   // (the explosion tester: H58)
-import { FLY } from '../../shared/flight.js';   // (an aircraft well up: a blast on the ground doesn't reach it)
+import * as boomtest from './boomtest.js';
+import * as grenades from './grenades.js';   // (the explosion tester: H58)
+import { FLY, isAir } from '../../shared/flight.js';   // (an aircraft well up: a blast on the ground doesn't reach it)
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -43,6 +44,7 @@ export function tryAttack(world, ped, aim) {
   if (!ped.vehId && isSwimming(world.map, ped)) return false; // can't fight while swimming
   const w = WEAPONS[ped.weapon] || WEAPONS.fists;
   if (w.type === 'tool') return false;
+  if (w.type === 'grenade' && ped.sub) return false;   // (not down in the subway: grenades.js)
   ped.a = ped.vehId ? ped.a : aim;
   ped.quietWeapon = !!(w.silenced || w.quiet); // knives and suppressors: kills are only noticed by people who actually see them
   if (w.type === 'melee') return melee(world, ped, w, aim);
@@ -62,10 +64,14 @@ export function tryAttack(world, ped, aim) {
     ped.player.meDirty = true;
   }
   if (w.type === 'boomtest') { boomtest.fire(world, ped, w, aim); return true; }   // (the explosion tester: boomtest.js)
+  if (w.type === 'grenade') { grenades.toss(world, ped, aim); if (ped.player && ammoOf(ped, w.id) > 0) reload(world, ped); return true; }   // (the next one in hand: grenades.js)
   if (w.type === 'rocket') {
     const sx = ped.x + Math.cos(aim) * 20, sy = ped.y + Math.sin(aim) * 20;
-    const proj = world.spawnProjectile(ped.id, sx, sy, aim, 560, w.range, w.id);
+    const lock = w.sam ? samLock(world, ped, aim, w) : null;
+    const proj = world.spawnProjectile(ped.id, sx, sy, lock ? Math.atan2(lock.y - sy, lock.x - sx) : aim, w.speed || 560, w.range, w.id);
     if (proj) proj.lz = ped.lz || 0;
+    if (proj && w.sam) { proj.homing = lock ? lock.id : 0; proj.air = true; proj.altNow = 20; }   // (up after the aircraft: stepMissile)
+    if (w.sam && ped.player) world.notify(ped.player, lock ? 'Locked on!' : 'No lock - aim at an aircraft up in the air.', lock ? 'good' : 'warn');
     world.emit(sx, sy, { e: 'shot', x1: sx, y1: sy, x2: sx, y2: sy, w: w.i, id: ped.id });
     law.gunfire(world, ped);
     npc.onGunfire(world, ped.x, ped.y, ped);
@@ -74,6 +80,7 @@ export function tryAttack(world, ped, aim) {
   if (w.type === 'bow') { loose(world, ped, w, aim); return true; }
   if (w.type === 'taser') { taser(world, ped, w, aim); return true; }
   if (w.type === 'spray') { spray(world, ped, w, aim); return true; }
+  if (w.type === 'flame') { flame(world, ped, w, aim); return true; }
   if (w.type === 'deploy') { spikes.deploy(world, ped, aim); return true; }
   const pellets = w.pellets || 1;
   let hitAny = false;
@@ -99,7 +106,7 @@ function melee(world, ped, w, aim) {
   // (nightclubs.js, task #432)
   const only = ped.npc && ped.npc.role === 'bouncer' ? ped.npc.target || -1 : 0;
   for (const o of world.query(ped.x, ped.y, w.range + 14, K.PED)) {
-    if (o === ped || (o.dead && !revive.isDowned(o)) || o.vehId || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level
+    if (o === ped || (o.dead && !revive.isDowned(o)) || o.vehId || o.sky || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level (o.sky: falling from an aircraft, out of reach)
     if (only && o.id !== only) continue;
     const d = Math.hypot(o.x - ped.x, o.y - ped.y);
     if (d > w.range + o.r) continue;
@@ -371,6 +378,24 @@ function spray(world, ped, w, aim) {
   }
 }
 
+// The flamethrower (shared/items.js flamer): a cone of fire in front - everyone in it set alight and singed, cars in it
+// scorched; through nothing solid. The page draws the jet from the 'flame' events (main.js).
+function flame(world, ped, w, aim) {
+  world.emit(ped.x, ped.y, { e: 'flame', id: ped.id, x: Math.round(ped.x), y: Math.round(ped.y), a: +aim.toFixed(2) });
+  for (const o of world.query(ped.x, ped.y, w.range + 40)) {
+    if (o === ped || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz) || (o.kind !== K.PED && o.kind !== K.VEH)) continue;
+    const d = Math.hypot(o.x - ped.x, o.y - ped.y), r = o.kind === K.VEH ? o.def.W / 2 : o.r || 8;
+    if (d > w.range + r) continue;
+    if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > r + 12) continue;
+    if (!world.map.los(ped.x, ped.y, o.x, o.y)) continue;
+    if (o.kind === K.PED) { if (o.dead || o.vehId || o.sky || !hurtable(world, o)) continue; burning.ignite(world, o, ped); damage(world, o, w.dmg, ped, 'fire', aim); }
+    else if (!o.wreckAt && !o.removed && (o.alt || 0) < FLY.HIGH) vehicles.damageVehicle(world, o, w.dmg * 0.8, ped);
+  }
+  law.gunfire(world, ped);
+  npc.onGunfire(world, ped.x, ped.y, ped, 220);
+}
+
+const AIR_REACH = 1000 * FLY.LIFT + 40;   // (px: the furthest up the screen an aircraft is drawn - its ceiling's lift)
 // Returns the first ped or vehicle along the segment before any wall, or null.
 function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true, walls = true) {
   const sub = !!shooter.sub; // down in the subway the city's walls don't apply, only the tunnel's own level
@@ -382,14 +407,27 @@ function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true, wal
     if (e === shooter || !!e.sub !== sub || !sameLevel(e.lz, shooter.lz)) continue;
     let t = -1;
     if (e.kind === K.PED) {
-      if (e.dead || e.vehId || e.rollT > 0) continue;
+      if (e.dead || e.vehId || e.rollT > 0 || e.sky) continue;   // (falling from an aircraft: below)
       t = segCircle(x1, y1, x2, y2, e.x, e.y, e.r + 2);
     } else if (e.kind === K.VEH && includeVehicles) {
-      if (shooter.vehId === e.id) continue;
+      if (shooter.vehId === e.id || (e.alt || 0) > FLY.HIGH) continue;   // (an aircraft up in the air: below)
       if (shooter.npc && (shooter.npc.coverCar === e.id || shooter.npc.unit === e.id)) continue; // cops fire over their own cruiser
-      t = segObb(x1, y1, x2, y2, e.x, e.y, e.a, e.def.L / 2, e.def.W / 2);
-      if (t < 0 && (e.alt || 0) > FLY.HIGH) t = segObb(x1, y1, x2, y2, e.x, e.y - e.alt * FLY.LIFT, e.a, e.def.L / 2, e.def.W / 2);   // (an aircraft up in the air: hit where art v2 draws it, too - H66)
+      t = segObb(x1, y1, x2, y2, e.x, e.y, e.a, e.def.L / 2, e.def.W / 2);   // (an aircraft up in the air: hit where art v2 draws it, too - H66)
     }
+    if (t >= 0 && t < bestT) { bestT = t; best = e; }
+  }
+  // aircraft up in the air: hit where art v2 draws them (up the screen by their height - so looked for that much further
+  // down the screen than the shot: a short step of a rocket's flight never came near enough to find one), or under them
+  // (and anyone falling from an aircraft - a few at most, skydive.js's list - where they're drawn the same way)
+  if (world.skyPeds && world.skyPeds.size) for (const e of world.skyPeds) {
+    if (!e.sky || e.dead || e.removed || e === shooter || !!e.sub !== sub) continue;
+    const t = segCircle(x1, y1, x2, y2, e.x, e.y - e.sky.z * FLY.LIFT, e.r + 2);
+    if (t >= 0 && t < bestT) { bestT = t; best = e; }
+  }
+  if (includeVehicles) for (const e of world.query(mx, my + AIR_REACH / 2, r + AIR_REACH / 2, K.VEH)) {
+    if ((e.alt || 0) <= FLY.HIGH || e === shooter || shooter.vehId === e.id || !!e.sub !== sub) continue;
+    let t = segObb(x1, y1, x2, y2, e.x, e.y - e.alt * FLY.LIFT, e.a, e.def.L / 2, e.def.W / 2);   // (H66)
+    if (t < 0) t = segObb(x1, y1, x2, y2, e.x, e.y, e.a, e.def.L / 2, e.def.W / 2);
     if (t >= 0 && t < bestT) { bestT = t; best = e; }
   }
   if (best) best.hitT = bestT;
@@ -529,6 +567,7 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
     const d = Math.hypot(e.x - x, e.y - y);
     const f = 1 - d / r;
     if (f <= 0 && e.kind !== K.VEH) continue;
+    if (e.kind === K.PED && e.sky && e.sky.z > FLY.HIGH + r * 0.5) continue;   // (falling from an aircraft, well above it - skydive.js)
     if (e.kind === K.PED && !e.vehId && !(e.blastSafeUntil > world.time)) {
       // thrown through the air - the dead too (reactions.js)
       const a = Math.atan2(e.y - y, e.x - x);
@@ -682,9 +721,45 @@ function slideBody(world, e, dt, now) {
 }
 
 const AIR_ARM_PX = 140;
+// The SAM launcher's lock: the aircraft up in the air nearest the aim (the aim is at where it's drawn, up the screen by
+// its height - render/aircraft.js V2_LIFT), within half a radian of it and in range
+function samLock(world, ped, aim, w) {
+  let best = null, bd = 0.5;
+  for (const v of world.query(ped.x, ped.y, w.range, K.VEH)) {
+    if (!isAir(v.def) || v.wreckAt || v.removed || (v.alt || 0) <= FLY.HIGH || v.id === ped.vehId) continue;
+    const d = Math.abs(angleDiff(aim, Math.atan2(v.y - v.alt * FLY.LIFT - ped.y, v.x - ped.x)));
+    if (d < bd) { bd = d; best = v; }
+  }
+  return best;
+}
+// a missile hitting an aircraft up in the air: the hit goes to it (a ground blast under it would miss it), the burst where
+// it's drawn
+function airHit(world, v, dmg, owner) {
+  world.emit(v.x, v.y, { e: 'explode', x: Math.round(v.x), y: Math.round(v.y - (v.alt || 0) * FLY.LIFT), r: 46, b: 0, s: 1 + Math.floor(world.rand() * 2147483646) });
+  vehicles.damageVehicle(world, v, dmg, owner && owner.kind === K.PED ? owner : null, true);
+}
+// The SAM's missile: up and after its aircraft, turning at most w.turn a second, climbing to its height; close enough,
+// it's hit. Lost (shot down, landed, out of reach), it flies on and bursts in the air at the end of its range.
+function stepMissile(world, p, dt, owner) {
+  const w = WEAPONS[p.weapon], t = p.homing ? world.get(p.homing) : null;
+  if (t && !t.removed && !t.wreckAt && (t.alt || 0) > FLY.AIRBORNE) {
+    const have = Math.atan2(p.vy, p.vx), turn = Math.max(-w.turn * dt, Math.min(w.turn * dt, angleDiff(have, Math.atan2(t.y - p.y, t.x - p.x)))), sp = Math.hypot(p.vx, p.vy);
+    p.vx = Math.cos(have + turn) * sp; p.vy = Math.sin(have + turn) * sp;
+    p.altNow += (t.alt - p.altNow) * Math.min(1, dt * 5);
+    if (Math.hypot(t.x - p.x, t.y - p.y) < 60 && Math.abs(t.alt - p.altNow) < 150) { airHit(world, t, w.dmg, owner); world.remove(p); return; }
+  } else p.homing = 0;
+  p.x += p.vx * dt; p.y += p.vy * dt;
+  p.dist += Math.hypot(p.vx, p.vy) * dt;
+  if (p.dist > p.maxDist) {
+    world.emit(p.x, p.y, { e: 'explode', x: Math.round(p.x), y: Math.round(p.y - p.altNow * FLY.LIFT), r: 30, b: 0, s: 1 + Math.floor(world.rand() * 2147483646) });
+    world.remove(p);
+  }
+}
+
 function stepProjectile(world, p, dt) {
   const owner = world.get(p.owner);
   if (WEAPONS[p.weapon] && WEAPONS[p.weapon].type === 'bow') return stepArrow(world, p, dt, owner);   // (the hunting bow, the fire bow)
+  if (p.homing !== undefined) return stepMissile(world, p, dt, owner);   // (the SAM's)
   const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
   // a missile from an aircraft up in the air (aircraft.js fireMissile: p.air) flies over the walls, and over whatever is
   // right under the aircraft until it has gone AIR_ARM_PX - then down on the first thing in its path, or where it runs out
@@ -695,6 +770,7 @@ function stepProjectile(world, p, dt) {
     const ex = p.x + (nx - p.x) * t, ey = p.y + (ny - p.y) * t;
     const w = WEAPONS[p.weapon];
     if (p.land) { p.land(world, p, ex, ey, owner); world.remove(p); return; }   // (a tank's shell, the explosion tester's shot: tank.js, boomtest.js)
+    if (hit.kind === K.VEH && isAir(hit.def) && (hit.alt || 0) > FLY.HIGH) { airHit(world, hit, w.dmg, owner); world.remove(p); return; }   // (a rocket into an aircraft up in the air, where it's drawn)
     world.emit(ex, ey, { e: 'explode', x: ex, y: ey, r: w.radius, s: 1 + Math.floor(world.rand() * 2147483646) });   // (s: the seed every client plays the same blast from)
     blast(world, ex, ey, w.radius, w.dmg, owner, 0, true, p.lz || 0);
     world.remove(p);
