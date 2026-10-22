@@ -13416,3 +13416,26 @@ empty beach had a crowd of office workers turning up round them.
 
 Tests: test/townfolk.test.js - the rule on a made-up map (by the street, in the park, never out on open grass); and
 a player stood on World v3's open coast for 30 s sees none of the town crowd, only a few country folk.
+
+## 2026-10-21 · Nature: the desert's waters - tinajas and seep pools
+
+The handcraft research's 4.6 (NR1-B, SC3-F): "tinajas (rock water pockets) and seep pools as hidden fishing/water
+spots", "a murky olive seep pool under a palo verde". The desert had Mirage Lake, the reservoir and the stock tanks,
+and no natural water of its own out in the rock.
+
+- **tinajas** (`shared/world3-tinajas.js`, new, World v3's done hook): five pockets of rain water at the foot of a
+  mesa's or a butte's cliff in the Red Rock and Dry Creek deserts, far apart and well off the roads. Each is a bowl of
+  bare slickrock round clear green water with the cliff's face behind it, sandstone boulders on the rim (open on the
+  side away from the cliff, the way down to the water), a palo verde over it, and a cactus or two in the rock.
+- **seep pools:** two in the dry wash below Red Rock Dam, where the dam's water seeps back up through the gravel:
+  murky olive water in a ring of damp dark mud, reeds and cattails at the edge, and a palo verde on the north side so
+  its canopy leaves the pool in sight.
+- Each is fresh still water (a pond: you can fish it, and the desert's animals come down to drink) and is on the
+  map's nature sites ('tinaja', 'seep'), a place to find.
+- **their look** (`client/art2/game/groundbake.js` tinaPx): the slickrock and the mud are drawn per pixel round the
+  water out to a ragged edge, so they come out round and not as a square of tiles. The water's look comes from the
+  water bake's styles: 'forest' (clear green) for a tinaja, 'marsh' (murky, duckweed) for a seep.
+
+Tests: test/desertwaters.test.js - the ring round each kind of water, round and ragged, nothing past it;
+test/world3desert.test.js - the tinajas south of a cliff's foot with its face kept, their boulders and palo verde,
+the seeps in the dam's wash with their reeds, each a pond listed for the bakes, far apart.

@@ -6,8 +6,8 @@
 // buildings, its hideout and smuggler's drop; Red Rock Dam on the reservoir's shore and the dry wash below; the lookout,
 // the arch and the hoodoos; the motel, its pool and the billboards; the desert camp; nothing in the highways' room or on
 // the main line; the white delineator posts along the desert's roads and its highways' gravel pull-offs; the windmills
-// and stock tanks out on the range with their ranch gates;
-// and the whole world tidied (nothing that needs dry ground in the water, no fence across a road). One world build.
+// and stock tanks out on the range with their ranch gates; the tinajas at the cliffs' feet and the seep pools in the
+// dam's wash; and the whole world tidied (nothing that needs dry ground in the water, no fence across a road). One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity, DISTRICTS } from '../shared/map.js';
@@ -18,6 +18,7 @@ import { skeletonLines, nearestOnPath } from '../shared/world3-skeleton.js';
 import { GULCH, HOLLOW, DESERT, DESERT_SPECIALS, DESERT_IDS } from '../shared/world3-desert.js';
 import { ROADSIDE3, PULLOFF3 } from '../shared/world3-roadside.js';
 import { STOCK3 } from '../shared/world3-stocktanks.js';
+import { TINAJA3 } from '../shared/world3-tinajas.js';
 import { TIDY3 } from '../shared/world3-tidy.js';
 import { undergroundOf, UG, caveOf } from '../shared/underground.js';
 import { prepare } from '../tools/world3-build.mjs';
@@ -201,6 +202,33 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
     check(m.tiles[i] === T.SAND && (m.reserve[i] & 128), 'on gravel');
     check(!m.props.some((p) => p && p.t === 'delineator' && Math.hypot(p.x - q.x, p.y - q.y) < 3 * TILE), 'no post in it');
     check(PO.every((o) => o === q || Math.hypot(o.x - q.x, o.y - q.y) >= PULLOFF3.apart * TILE), 'far apart');
+  }
+  // 10c. the desert's waters (shared/world3-tinajas.js): tinajas - pools of still water in a bowl of slickrock just
+  // south of a cliff's foot, sandstone boulders on the rim, a palo verde; seep pools in the dam's dry wash, reeds at their
+  // edges; each fresh still water (a pond), listed for the water bake's look and the ground bake's ring, on the map
+  console.log('desert waters', JSON.stringify(m.world3.desertWaters));
+  const TJ = m.natureSites.filter((q) => q.kind === 'tinaja'), SP = m.natureSites.filter((q) => q.kind === 'seep');
+  check(TJ.length >= 4 && TJ.length <= TINAJA3.n, `${TJ.length} tinajas`);
+  check(SP.length === TINAJA3.seeps.n, `${SP.length} seep pools`);
+  const poolOf = (q) => { let n = 0; for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const i = (Math.floor(q.y / TILE) + dy) * W + Math.floor(q.x / TILE) + dx; if (m.tiles[i] === T.WATER && m.lake[i] === 2) n++; } return n; };
+  const listed = (q, look) => m.waters.lk.some((L) => L.t === look && q.x / TILE >= L.box[0] - 1 && q.x / TILE <= L.box[2] + 1 && q.y / TILE >= L.box[1] - 1 && q.y / TILE <= L.box[3] + 1);
+  const ring = (q, k) => (m.tinajas || []).some((e) => e.k === k && Math.hypot(e.x - q.x, e.y - q.y) < 2);
+  for (const q of TJ) {
+    const at = `the tinaja at ${q.x / TILE | 0}, ${q.y / TILE | 0}`, near = (t, r, f = () => true) => m.props.filter((p) => p && p.t === t && f(p) && Math.hypot(p.x - q.x, p.y - q.y) < r * TILE);
+    check(poolOf(q) >= 6, `${at}: its water (${poolOf(q)} tiles, a pond's)`);
+    check(TINAJA3.districts.includes(distAt(q.x, q.y + 3 * TILE)), `${at}: in the desert`);
+    check(near('cliff', 9, (p) => p.relief && p.y < q.y && q.y - p.y < 6 * TILE && Math.abs(p.x - q.x) < p.w / 2 + TILE).length > 0, `${at}: just south of a cliff's foot (its face kept)`);
+    check(near('boulder', 5, (p) => p.style === 'sandstone').length >= 3 && near('tree_a', 6, (p) => p.sp === 'paloVerde').length >= 1, `${at}: sandstone boulders on its rim, a palo verde`);
+    check(listed(q, 'forest') && ring(q, 0), `${at}: listed for the bakes (clear green water, slickrock round it)`);
+  }
+  check(TJ.every((o) => TJ.every((q) => o === q || Math.hypot(o.x - q.x, o.y - q.y) >= TINAJA3.apart * TILE)), 'the tinajas far apart');
+  const [bx0, by0, bx1, by1] = TINAJA3.seeps.box;
+  for (const q of SP) {
+    const at = `the seep at ${q.x / TILE | 0}, ${q.y / TILE | 0}`;
+    check(poolOf(q) >= 6, `${at}: its water (${poolOf(q)} tiles)`);
+    check(q.x / TILE >= bx0 && q.x / TILE < bx1 && q.y / TILE >= by0 && q.y / TILE < by1, `${at}: in the dam's wash`);
+    check(m.props.filter((p) => p && p.t === 'shrub_a' && (p.sp === 'reeds' || p.sp === 'cattails') && Math.hypot(p.x - q.x, p.y - q.y) < 4 * TILE).length >= 3, `${at}: reeds at its edge`);
+    check(listed(q, 'marsh') && ring(q, 1), `${at}: listed for the bakes (murky water, damp mud round it)`);
   }
   // 11. the world tidied last (shared/world3-tidy.js; the owner's 10-16 list): nothing that needs dry ground stands in
   // the water anywhere in the world, and no fence run crosses a road, a bridge or the water
