@@ -13484,3 +13484,16 @@ water and the sea's.
 
 Tests: test/world3kestrel.test.js - Kestrel Lake's reach cut through under a bridge, the lake's water and the sea's
 one water there, and a second look at the whole world finds nothing left to cut.
+
+## 2026-10-21 · Fix: campers and hikers no longer wander into their campfires and go up
+
+The owner, 10-16: "NPCs randomly catching fire (even after a punch)". With World v3's many camps and their lit fires,
+campers and hikers going about round a camp walked straight through the fire, and anyone moving through a lit
+campfire catches. In a six-minute run with players at six camps, three caught fire this way (a camper, two hikers),
+each standing on a lit campfire.
+
+- **a campfire** (`server/systems/burning.js` contacts) now sets alight a player who walks into it, or someone
+  knocked into it (a punch, a car), but not the people going about round it. A burning wreck, someone else on fire
+  and a grass fire still catch anyone moving through them.
+
+Tests: test/burning.test.js - a camper walking through a lit campfire doesn't catch; knocked into it, they do.
