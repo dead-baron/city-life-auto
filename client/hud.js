@@ -261,10 +261,13 @@ export class HUD {
   }
   loadDS() { this.dsLoad ||= import('./deathscreen.js').then((m) => { this.DS = m; if (this.me) m.draw(this, this.me); }).catch(() => { this.dsLoad = null; }); }
   // sitting by a campfire (task #375): its prompt fades after CALM_PROMPT_S still, the HUD after CALM_HUD_S; anything
-  // pressed, moved or touched brings them back at once (a touch then only wakes the screen)
-  calm(sitting, now) {
+  // pressed, moved or touched brings them back at once (a touch then only wakes the screen). still: the prompt alone
+  // fades after CALM_PROMPT_S without a touch (inside a home on a phone - the owner, 10-16: the prompt stayed up over the
+  // rooms and blocked the view)
+  calm(sitting, now, still = false) {
     if (!sitting) this.sitAt = 0; else this.sitAt ||= now;
-    const { prompt: p, hud: h } = calmState(this.sitAt, input.activeAt, now);
+    if (!still) this.stillAt = 0; else this.stillAt ||= now;
+    const { prompt: p0, hud: h } = calmState(this.sitAt, input.activeAt, now), p = p0 || calmState(this.stillAt, input.activeAt, now).prompt;
     if (p !== !!this.calmP) { this.calmP = p; $('helpbox').classList.toggle('calm', p); }
     if (h !== !!this.calmH) { this.calmH = h; document.body.classList.toggle('calm', h); }
   }

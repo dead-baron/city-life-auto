@@ -709,7 +709,9 @@ export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough
 // (px) for the action button to use it; sleepS: a sleep (the screen goes dark while the night passes for you - and for the
 // whole city when everyone online is asleep at home: the clock jumps to wakeH o'clock); showerS: a shower; showerHeal: the
 // health it gives back (and it stops bleeding); eatS: between two bites at the fridge.
-export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6 };
+// (hintS: how long after you go in the prompt says "walk up to something to use it" - then nothing in the way of the
+// rooms until you're by something to use; the owner, 10-16: the prompt stayed up on a phone and blocked the view)
+export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6, hintS: 6 };
 
 // A mortgage (H65; server/systems/mortgage.js): buy a home for a deposit (that share of its price) and the bank lends the
 // rest, plus `rate` on top, paid back from your bank account in `days` equal payments - one each in-game day (DAY_LOOP_S)

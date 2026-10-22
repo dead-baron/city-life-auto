@@ -3381,7 +3381,7 @@ function drawOverlays(F, v2) {
     const area = (S.area ||= new AreaTracker()).update(S.map, sp.x, sp.y, performance.now() / 1000, { train: !!(F.myCar && F.myCar.kind === K.TRAIN), afloat: !!(me && me.swim) || !!(cd && cd.kind === 'boat') || !!(S.me && S.me.bus && S.me.bus.k === 'ferry') });
     if (area) { S.district = area.name; S.hud.showDistrict(area.name, area.isl); } }
   S.hud.setClock(S.loopTime, S.weather);
-  { const mp = S.ents.get(S.myPedId); S.hud.calm(!!(S.playing && mp && mp.d && mp.d.st && S.me && !S.me.dead), performance.now()); }   // (#375)
+  { const mp = S.ents.get(S.myPedId); S.hud.calm(!!(S.playing && mp && mp.d && mp.d.st && S.me && !S.me.dead), performance.now(), !!(S.homeIn && input.device === 'touch')); }   // (#375; at home on a phone, the prompt fades when you're still)
   // the GPS route to your waypoint along the roads, on the radar and the map (client/route.js; worked out again only
   // when you stray from it or the waypoint changes)
   if (S.router) S.hud.route = S.waypoint && S.playing && S.me && !S.me.dead ? S.router.update(sp, S.waypoint, S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) : null;

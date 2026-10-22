@@ -13764,3 +13764,18 @@ the claim". There were three ways to get stuck:
 
 Tests: test/homereconnect.test.js - back on a new page: the rooms again, walking round them; logged off at home: back
 inside; someone else's now, or a place you were only looking round: on the street by its door.
+
+## 2026-10-22 · At home, the prompt out of the way of the rooms
+
+The owner, 10-16: "'Act to use item' stays up inside a home on mobile and blocks the view". Inside a home the prompt was
+never empty. By nothing to use it said "<home> - walk up to something to use it", and on a phone that sat over the
+rooms the whole time you were in there.
+
+- **the hint** (`server/systems/homeinside.js` interaction): it shows for the first few seconds after you go in
+  (`HOME_IN.hintS`, 6 s). After that there's no prompt until you're by something to use (the bed, the fridge, the
+  door...), which still shows what Act does.
+- **on a phone** (`client/hud.js` calm's new `still`): at home, the prompt fades after a few seconds without a touch
+  (`CALM_PROMPT_S`, the campfire's fade). Any touch or move brings it back at once. Unlike by a campfire, the rest of
+  the HUD stays.
+
+Tests: test/homeprompt.test.js - the hint just in, then nothing; by the fridge, what it does; the fade's timing.
