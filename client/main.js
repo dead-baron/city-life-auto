@@ -3159,7 +3159,7 @@ function drawWorldV1(F) {
   }
   mark('ground');
   if (!sub) S.wx.drawWaterSheen(g, view, sky, now);
-  if (sub) drawTunnel(g, S.map, view, now);
+  if (sub) { drawTunnel(g, S.map, view, now, S.platMod ? S.platMod.drawPlatforms : null); if (!S.platMod && !S.platP) S.platP = import('./render/tunnelplat.js').then((m) => { S.platMod = m; }).catch((e) => { console.warn('[platforms]', e); setTimeout(() => { S.platP = null; }, 30e3); }); }   // (the underground stations' platforms: render/tunnelplat.js)
   else fx.drawDecals(g, view, now, rain);
   // grass, crops, bushes and flower beds: sway, part round people, lie flat where cars went (render/flora)
   if (!sub && S.flora) {
@@ -3168,9 +3168,10 @@ function drawWorldV1(F) {
   }
   if (!sub && S.farmArt) S.farmArt.drawV1(g, view, now);   // (the garden plots near you, the fields' rows: render/farmart.js)
   // the elevated highway: its shadow and the ramps' feet lie on the ground
-  const hv = sub ? { slabs: [], pillars: [] } : S.highway.visible(view);
-  S.highway.drawShadows(g, hv.slabs, sky);
-  S.highway.drawLow(g, hv.slabs);
+  // (none of it down in the subway: the classic highway isn't even built for the tunnel view - it threw on World v3's
+  // window, every frame, before the trains were drawn: the owner's 10-16 / 10-22 "this is what I see on the subway")
+  const HW = sub ? null : S.highway, hv = HW ? HW.visible(view) : { slabs: [], pillars: [] };
+  if (HW) { HW.drawShadows(g, hv.slabs, sky); HW.drawLow(g, hv.slabs); }
   // the sun's shadows: buildings (from just off screen too), trees and palms
   if (!sub && sky.sun > 0.05 && gfx.shadows > 0) {
     const reach = 90 * Math.min(3.2, sky.shadowLen);
@@ -3237,7 +3238,7 @@ function drawWorldV1(F) {
   for (const v of vehs) if (!boats.includes(v)) items.push({ y: levelKey(v.ry, v.rz || 0), v, z: v.rz || 0 });
   for (const p of peds) if (!swimmers.includes(p) && (up(p) || !(p.flags & (PF.DEAD | PF.DOWN | PF.STUN)))) items.push({ y: levelKey(p.ry, p.rz || 0) - ((p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) ? 0.4 : 0), p, z: p.rz || 0 });
   for (const c of crates) if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); const pz = par ? par.rz || 0 : 0; items.push({ y: levelKey(par ? par.ry : c.ry, pz) + 0.5, c, z: pz }); }
-  S.highway.items(hv.slabs, hv.pillars, items);
+  if (HW) HW.items(hv.slabs, hv.pillars, items);
   for (const c of crates) if ((c.flags & 3) === 1) items.push({ y: c.ry + 1, c });
   const poles = [];
   if (!sub) for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
@@ -3255,8 +3256,8 @@ function drawWorldV1(F) {
     const lift = it.z ? liftOf(it.z) : 0;
     if (lift) { g.save(); g.translate(0, -lift); }
     if (it.b) S.buildings.draw(g, it.b, it.a);
-    else if (it.slab) S.highway.drawSlab(g, it.slab);
-    else if (it.pillar) S.highway.drawPillar(g, it.pillar);
+    else if (it.slab) HW.drawSlab(g, it.slab);
+    else if (it.pillar) HW.drawPillar(g, it.pillar);
     else if (it.v) drawVehicleEnt(it.v, now, dt);
     else if (it.p) { if (!drawOnStairs(g, S.map, it.p, () => drawPed(it.p, now))) drawPed(it.p, now); }
     else if (it.c) drawCrateEnt(it.c, now);

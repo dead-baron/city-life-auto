@@ -14337,3 +14337,18 @@ Fix (from the full test run): the grenade's throw and bounce, the flamethrower, 
 and tennis's racket, bounce and swing had their sounds only through main.js's old sfx calls - none had an entry of its
 own (client/sound/events.js EVENT_SOUNDS, test/sound.test.js); placed where they happen now, and the skydive's three
 had no sound at all before (the canopy fills with a flutter; a soft landing rolls; a splat, or onto a car's roof).
+
+## 2026-10-22 · The subway: the train shows again, and its stations' platforms
+
+The owner, 10-22, with two screenshots from a ride on the subway: nothing but the dark tunnel's rails and lamps - no
+train, no people, no station at Port Westport Station (the 10-08 / 10-16 note "subway art doesn't load underground",
+still open). Underground the page draws the tunnel view with the classic renderer; on World v3 its elevated highway
+(client/render/highway.js) met the holes in the window's road data and threw - every frame, after the tunnel's dark and
+lamps were drawn but before the trains. Now:
+- the tunnel view builds no highway at all (there's none down there), and the highway skips the window's holes;
+- the train, everyone riding it and the mail car's guards show again, with the lit coaches;
+- the underground stations have platforms (client/render/trains.js tunnelPlatforms): beside each station's track, on
+  the side away from the other line's track, the train's length of tiled platform with the yellow line at its edge,
+  pillars and benches, and the station's name on a blue sign - so stopping at one you can see you're there.
+Checked headless on a World v3 server: a ride from the Pink Line to a stop at Union Square Station. Shipped on its own,
+ahead of the next batch (a page-only fix: the server doesn't restart).

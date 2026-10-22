@@ -18,7 +18,7 @@ export class Highway {
     this.slabs = [];
     this.grid = new Map();
     for (const e of map.edges) {
-      if (e.lvl !== 1 && e.lvl !== 'ramp') continue;
+      if (!e || (e.lvl !== 1 && e.lvl !== 'ramp')) continue;   // (World v3's window: holes where it holds nothing)
       const n = Math.max(1, Math.round(e.len / PIECE));
       for (let k = 0; k < n; k++) {
         const s0 = (k / n) * e.len, s1 = ((k + 1) / n) * e.len;
@@ -58,7 +58,7 @@ export class Highway {
       for (const [P, key] of [[sl.L, 'openL'], [sl.R, 'openR']]) {
         const mx = (P[0] + P[2]) / 2, my = (P[1] + P[3]) / 2;
         for (const q of segs) {
-          if (q.edge === sl.e.id) continue;
+          if (!q || q.edge === sl.e.id) continue;
           let t = (mx - q.ax) * q.ux + (my - q.ay) * q.uy;
           t = Math.max(0, Math.min(q.len, t));
           const qz = q.za + (q.zb - q.za) * (t / q.len);
