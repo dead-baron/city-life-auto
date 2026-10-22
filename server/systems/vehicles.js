@@ -287,7 +287,8 @@ function crashDamage(world, v, dmg, attackerPed, impact, zone = 0) {
   const hard = impact > CRASH_BOOM_IMPACT && !v.def.pedal && v.def.kind !== 'boat';
   if (zone) noteHit(v, zone, dmg);
   if (hard && (v.def.kind === 'bike' || v.dead || v.hp < v.def.hp * CRASH_BOOM_HP)) { explode(world, v, attackerPed); return; }
-  damageVehicle(world, v, dmg, attackerPed, false, hard);
+  const drv = v.seats[0] ? world.get(v.seats[0]) : null;
+  damageVehicle(world, v, dmg * (1 - skills.pedBonus(drv, 'driving')), attackerPed, false, hard);   // (a driver who knows how to take a hit: skills.js)
 }
 
 // ---- damage you can see (task #402; the owner: "dents and parts falling off as it worsens") ----
@@ -413,6 +414,7 @@ import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOO
 import { VDMG, VZ, VPART, damageStage, packVehDamage, hitZone } from '../../shared/vehicles.js';
 import * as ferries from './ferries.js';
 import * as burning from './burning.js';   // (thrown out of it on fire: H58)
+import * as skills from './skills.js';
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);

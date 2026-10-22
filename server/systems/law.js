@@ -16,7 +16,7 @@ import * as cells from './cells.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 import { undergroundOf, ugLos } from '../../shared/underground.js';
-import { ROB_CALLED_HEAT, VANDAL_HEAT, VEH_CRIME } from '../../shared/rules.js';
+import { ROB_CALLED_HEAT, VANDAL_HEAT, VEH_CRIME, HEIST } from '../../shared/rules.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
 // sev: how much more (or less) likely a witness is to call it in than for an assault (WITNESS_REPORT); sight: how far
@@ -46,6 +46,7 @@ export const CRIMES = {
   goldenKoi:   { heat: 15, label: 'Stealing the park\'s Golden Koi', sev: 0.9 },
   robbery:     { heat: ROB_CALLED_HEAT, label: 'Armed robbery', felony: true, sev: 1.5 },   // (1 star; it grows from there: robbery.js)
   trainRobbery: { heat: 50, label: 'Train robbery', felony: true, sev: 1.5 },
+  heist:       { heat: HEIST.heat, label: 'A bank heist', felony: true, sev: 2 },   // (the bank's alarm calls it in: heist.js)
   escape:      { heat: 25, label: 'Escaping custody', felony: true, sev: 1 },
   treeFelling: { heat: FELL_HEAT, label: 'Vandalism: felling a tree', sev: 0.6, minor: true },   // (in town or a park: felling.js)
   vandalism:   { heat: VANDAL_HEAT, label: 'Vandalism: damaging a vehicle', sev: 0.7, minor: true },   // (an empty one: vehicleDamaged)

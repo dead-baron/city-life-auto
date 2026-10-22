@@ -25,7 +25,6 @@ import { Campfires } from './render/campfx.js';     // the campfires' embers, fl
 import { HUD } from './hud.js';
 import { AreaTracker } from './areaname.js';   // (the title card's place name: water keeps it)
 import { Flock } from './birds.js';   // (the pigeons and gulls: in from off screen)
-import { createPhone } from './phone.js';
 import { createMapWaypoints, ROLE_ICON, ROLE_NAME, KIND_ICON } from './mapwaypoints.js';
 import { createRouter } from './route.js';
 import { iconImg, drawIcon } from './pixicons.js';
@@ -51,6 +50,7 @@ let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.
 import { noteServerBuild, myBuild } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
+import { bonusOf } from '../shared/skills.js';
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
@@ -348,11 +348,16 @@ function onText(m) {
     case 'garden': case 'fields': S[m.t] = m.t === 'garden' ? m.g : m.f; if (!S.farmArt && !S.farmP) S.farmP = import('./render/farmart.js').then((mod) => { S.farmArt = new mod.FarmArt(S); }).catch((e) => { S.farmP = null; console.warn('[farm]', e); }); break;   // (the garden plots and the fields' rows near you: gardening.js, farming.js)
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
-    case 'board': phone.onBoard(m); break;
-    case 'feed': phone.onFeed(m); break;
-    case 'bounties': phone.onBounties(m); break;
-    case 'homes': phone.onHomes(m); break;   // the real-estate app (H65)
-    case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.onTransit(m); if (S.bigmap) mapwp.refreshLegend(); break;
+    case 'board': phone.on('Board', m); break;
+    case 'feed': phone.on('Feed', m); break;
+    case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
+    case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
+      openOverlay('arcade');
+      (m.game === 'pool' ? import('./pool.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
+      break;
+    case 'bounties': phone.on('Bounties', m); break;
+    case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)
+    case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.on('Transit', m); if (S.bigmap) mapwp.refreshLegend(); break;
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
@@ -403,7 +408,8 @@ function onBinary(buf) {
 // ---------------------------------------------------------------------------
 // Client-side prediction for the local character / driven vehicle
 function pedModsFrom(flags, speedMul) {
-  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: flags & 8 ? 140 : 100, tumble: !!(flags & 16), air: !!(flags & 32), board: !!(flags & 64), wet: !!(flags & 128), canSwim: true, analog: true };
+  const sk = (S.me && S.me.skl) || [];   // (the skills' levels: a longer sprint, a faster stroke - shared/skills.js)
+  return { canMove: !!(flags & 1), canSprint: !!(flags & 2), speedMul, regenMul: flags & 4 ? 2.2 : 1, staminaMax: (flags & 8 ? 140 : 100) * (1 + bonusOf(sk[1])), swimMul: 1 + bonusOf(sk[2]), tumble: !!(flags & 16), air: !!(flags & 32), board: !!(flags & 64), wet: !!(flags & 128), canSwim: true, analog: true };
 }
 
 function reconcile(s) {
@@ -835,6 +841,12 @@ function onEvent(ev) {
       sfx('spray', distVol(ev.x, ev.y)); break;
     case 'spikes': S.spikes.set(ev.id, { x: ev.x, y: ev.y, a: ev.a, half: ev.half, until: performance.now() + ev.left * 1000 }); break;
     case 'spikesgone': S.spikes.delete(ev.id); break;
+    // a bank's vault (server/systems/heist.js; drawn by client/vault.js): its state, the drill's sparks, the door opening
+    case 'vault': (S.vaults ||= new Map()).set(ev.id, { st: ev.st, k: ev.k || 0, j: ev.j, left: ev.left, at: performance.now(), op: (S.vaults.get(ev.id) || {}).op || (ev.st === 'open' ? performance.now() - 5000 : 0) }); break;
+    case 'vaultgone': if (S.vaults) S.vaults.delete(ev.id); break;
+    case 'vaultopen': (S.vaults ||= new Map()).set(ev.id, { st: 'open', at: performance.now(), op: performance.now() }); fx.sparks(ev.x, ev.y - 21, 10); fx.smoke(ev.x, ev.y - 18, true); S.cam.shake = Math.max(S.cam.shake, 3 * distVol(ev.x, ev.y)); break;
+    case 'drill': fx.sparks(ev.x - 3, ev.y - 21, 3); break;
+    case 'drilljam': fx.smoke(ev.x - 13, ev.y - 21, true); break;
     case 'pop': fx.sparks(ev.x, ev.y, 6); fx.smoke(ev.x, ev.y, false); sfx('pop', distVol(ev.x, ev.y)); break;
     case 'swing': {
       const a = S.ents.get(ev.id), mine = !!(a && a.localSwing && S.loopClock - a.localSwing < 0.6);
@@ -1439,6 +1451,7 @@ initInput(canvas, {
       if (k === 'ArrowDown' || k === 'KeyS') { S.hud.navMenu(1); return; }
       if (k === 'Enter' || k === 'Space') { S.hud.choose(S.hud.menuFocus); return; }
     }
+    if (topOverlay() === 'arcade' && k !== 'Escape') return;   // (at a cabinet or the pool table: its keys are the game's - client/arcade.js, pool.js)
     if (k === 'KeyI' && S.playing) { toggleBag(); return; }
     if (k === 'KeyX' && canWheel() && !wheel.open) {
       wheel.show(); S.wheelAt = performance.now();
@@ -1700,14 +1713,31 @@ $('spec-pad').addEventListener('pointercancel', specUp);
 addEventListener('blur', () => { if (S.spec) S.spec.clearKeys(); });
 
 // ---- phone + waypoints ---------------------------------------------------------------------------
-const phone = createPhone({
+// the phone's apps (client/phone.js) load the first time it opens - kept out of the page's first load; what the server
+// sends for them meanwhile (the transit lines, a job board) is kept and handed over then
+const phoneCtx = {
   map: () => S.map, pos: () => selfPos(), isCop: () => !!(S.me && S.me.faction === 'enforcer'), send: (o) => send(o),
   setWaypoint: (w) => { S.waypoint = w; if (S.hud) S.hud.waypoint = w; },
   waypoint: () => S.waypoint,
   toast: (t, tone) => S.hud && S.hud.toast(t, tone),
-  refocus: () => { ovFocus = 0; focusOverlay(); },
+  refocus: () => { if (topOverlay() === 'phone') { ovFocus = 0; focusOverlay(); } },   // (not another screen's focus: the phone renders while closed too)
   close: () => closeOverlay('phone'),
-});
+};
+let phoneMod = null, phoneP = null;
+const phoneQ = new Map();
+const loadPhone = () => (phoneP ||= import('./phone.js').then((mod) => {
+  phoneMod = mod.createPhone(phoneCtx);
+  for (const [k, m] of phoneQ) try { phoneMod['on' + k](m); } catch (e) { console.warn('[phone]', k, e); }
+  phoneQ.clear();
+  return phoneMod;
+}).catch((e) => { phoneP = null; phoneMod = null; $('ph-screen').innerHTML = '<p class="ph-empty">The phone didn\'t load - try again.</p>'; throw e; }));   // (a failed load: tried again next time it opens)
+const phone = {
+  get screen() { return phoneMod ? phoneMod.screen : 'home'; },
+  back() { return phoneMod ? phoneMod.back() : false; },
+  open() { if (!phoneMod) $('ph-screen').innerHTML = '<p class="ph-empty">Loading…</p>'; loadPhone().then((m) => { if (topOverlay() === 'phone') m.open(); }).catch((e) => console.warn('[phone]', e)); },
+  openApp(s) { loadPhone().then((m) => { if (topOverlay() === 'phone') m.openApp(s); }).catch((e) => console.warn('[phone]', e)); },
+  on(k, m) { if (phoneMod) phoneMod['on' + k](m); else if (!m.ok && !m.err) phoneQ.set(k, m); },   // (a job's take or a refusal isn't news by the time it opens)
+};
 const mapwp = createMapWaypoints({
   map: () => S.map, pos: () => selfPos(),
   setWaypoint: (w) => { S.waypoint = w; if (S.hud) S.hud.waypoint = w; if (w) S.hud.toast(`Waypoint set: ${w.label}`, 'info'); },
@@ -2052,6 +2082,7 @@ function closeOverlay(id = topOverlay()) {
   if (id === 'inv') bag.hide();
   if (id === 'dev') $('dev').classList.remove('as-overlay');
   if (id === 'tutorial') stopTutorial();
+  if (id === 'arcade' && S.arcadeMod) S.arcadeMod.stop();   // (the cabinet left: the score so far goes in)
   if (id === 'settings' && S.afterSettings) { const g2 = S.afterSettings; S.afterSettings = null; settings.gfxPreset ||= gfx.preset; setTimeout(g2, 0); }
   if (id === 'bigmap') { S.bigmap = false; if (S.hud) S.hud.mapFilter = null; }
   if (id === 'phone' && S.welcomed) send({ t: 'phone', a: 'out', on: false });
@@ -2084,6 +2115,20 @@ function menuKey(k) {
   }
   return false;
 }
+// the button nearest `el` going (dx, dy) among `f` (its index; -1 if none that way)
+function padStep(f, el, dx, dy) {
+  const r0 = el.getBoundingClientRect(), cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+  let best = -1, bs = Infinity;
+  f.forEach((q, i) => {
+    if (q === el) return;
+    const r = q.getBoundingClientRect(), ex = r.left + r.width / 2, ey = r.top + r.height / 2, along = dx ? (ex - cx) * dx : (ey - cy) * dy;
+    if (along <= 4 || !r.width) return;
+    const ov = dx ? r.bottom > r0.top + 3 && r.top < r0.bottom - 3 : r.right > r0.left + 3 && r.left < r0.right - 3;
+    const sc = along + (dx ? Math.abs(ey - cy) : Math.abs(ex - cx)) * (ov ? 0.3 : 2.5) + (ov ? 0 : 60);
+    if (sc < bs) { bs = sc; best = i; }
+  });
+  return best;
+}
 function focusOverlay() {
   document.querySelectorAll('.pfocus').forEach((el) => el.classList.remove('pfocus'));
   const f = focusables();
@@ -2104,7 +2149,14 @@ function overlayPad() {
   if (topOverlay() === 'bigmap' && input.padY) { mapMarkCentre(); return true; }
   if (topOverlay() === 'bigmap' && input.menuLR && el && (el.classList.contains('bm-catname') || el.classList.contains('bm-check'))) { const id = el.dataset.group || el.dataset.toggle; mapwp.toggle(id); return true; }
   if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
-  if (input.menuNav) { ovFocus += input.menuNav; focusOverlay(); }
+  // up and down, left and right: to the nearest button that way as they sit (a grid of apps, a row of tabs); up or
+  // down past the end wraps round the list; a choice box or a tick box takes left and right for itself
+  const ownLR = el && (el.tagName === 'SELECT' || el.type === 'checkbox');
+  if (input.menuNav || (input.menuLR && !ownLR)) {
+    const k = el ? padStep(f, el, input.menuNav ? 0 : input.menuLR, input.menuNav) : -1;
+    if (k >= 0) ovFocus = k; else if (input.menuNav) ovFocus = el ? (input.menuNav > 0 ? 0 : f.length - 1) : ovFocus + input.menuNav;
+    focusOverlay();
+  }
   if (el && input.menuLR) {
     if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + input.menuLR + el.options.length) % el.options.length; el.dispatchEvent(new Event('change')); }
     else if (el.type === 'checkbox') { el.checked = input.menuLR > 0; el.dispatchEvent(new Event('change')); }
@@ -2477,33 +2529,19 @@ function govern(nowMs) {
 // frame rate, the sharpness it settled on, and what the device is - sent to the server, which keeps the latest and
 // lists them at /perf (server/perfreports.js), so how phones and tablets out there do can be read off one page.
 function perfReport(nowMs) {
+  // (what it sends: client/diag.js perfPayload - loaded when it's time, kept out of the page's first load)
+  const ctx = () => ({ S, LOAD, W, H, DPR, GOV, gfx, getDevice, framePct });
   if (LOAD.sent && !LOAD.sent2 && S.art2 && LOAD.at.screen !== undefined && nowMs - LOAD.at.screen > 240000) {
-    // four minutes into play, a second report: how well the art kept up as they went round (the share of frames
-    // with a stand-in on screen, overall and on the move, the longest such stretch) and what was baked ahead
+    // four minutes into play, a second report: how well the art kept up as they went round, what was baked ahead
     LOAD.sent2 = true;
-    const a2 = S.art2.stats(), L = a2.late || {}, d = getDevice();
-    send({ t: 'perf', r: {
-      stage: 'play', kind: d.kind, gpu: (d.gpu || '').slice(0, 80), ua: navigator.userAgent.slice(0, 160), cores: navigator.hardwareConcurrency || 0, mem: navigator.deviceMemory || 0,
-      preset: gfx.preset, w: W, h: H, dpr: +DPR.toFixed(2), scale: +GOV.scale.toFixed(2), steps: GOV.steps, fps: S.fps, p50: +framePct(0.5).toFixed(1), p95: +framePct(0.95).toFixed(1),
-      bake: a2.t ? Math.round(a2.t.bakeAvg || 0) : 0, kept: a2.n ? a2.n.kept || 0 : 0, workers: a2.pool ? a2.pool.workers : 0,
-      late: L.of ? +(100 * L.frames / L.of).toFixed(1) : 0, lateMove: L.moving ? +(100 * L.movingLate / L.moving).toFixed(1) : 0, lateMax: +(L.max || 0).toFixed(1), moving: L.of ? +(100 * L.moving / L.of).toFixed(0) : 0,
-      ahead: a2.ahead ? a2.ahead.baked : 0,
-      cdn: a2.n ? a2.n.cdn || 0 : 0, cdnMs: a2.n && a2.n.cdn && a2.t ? Math.round((a2.t.cdnSum || 0) / a2.n.cdn) : 0,
-      fetched: a2.fetched ? a2.fetched.got + a2.fetched.had : 0, fetchMiss: a2.fetched ? a2.fetched.miss : 0, cdnOff: a2.fetched && a2.fetched.off ? 1 : 0,
-    } });
+    import('./diag.js').then((m) => send({ t: 'perf', r: m.perfPayload(ctx(), 'play') }), () => {});
     return;
   }
   if (LOAD.sent || !S.welcomed || S.practice) return;
   const at = LOAD.at.screen;
   if (at === undefined ? nowMs < 120000 : nowMs - at < 20000) return;
   LOAD.sent = true;
-  const d = getDevice(), a2 = S.art2 ? S.art2.stats() : null;
-  send({ t: 'perf', r: {
-    kind: d.kind, gpu: (d.gpu || '').slice(0, 80), ua: navigator.userAgent.slice(0, 160), cores: navigator.hardwareConcurrency || 0, mem: navigator.deviceMemory || 0,
-    preset: gfx.preset, w: W, h: H, dpr: +DPR.toFixed(2), scale: +GOV.scale.toFixed(2), steps: GOV.steps,
-    at: LOAD.at, ms: LOAD.ms, city: LOAD.city || '', fps: S.fps, p50: +framePct(0.5).toFixed(1), p95: +framePct(0.95).toFixed(1),
-    bake: a2 && a2.t ? Math.round(a2.t.bakeAvg || 0) : 0, kept: a2 && a2.n ? a2.n.kept || 0 : 0, workers: a2 && a2.pool ? a2.pool.workers : 0,
-  } });
+  import('./diag.js').then((m) => send({ t: 'perf', r: m.perfPayload(ctx(), 'load') }), () => {});
 }
 
 // ---- diagnostics overlay (?diag, or Settings) -----------------------------------------------------
@@ -2511,6 +2549,7 @@ function perfReport(nowMs) {
 // goes, the render size, memory, the controller, how often the input device flips. Made for
 // reading off a TV or a phone screenshot.
 const diag = { on: /[?&]diag\b/.test(location.search) || settings.diag === true, lost: 0, el: null, last: 0, frames: [], long: 0, sw0: 0, swAt: performance.now() };
+let diagMod = null;
 function diagFrame(dtMs) {
   if (!diag.on) return;
   diag.frames.push(dtMs); if (diag.frames.length > 120) diag.frames.shift();
@@ -2518,25 +2557,9 @@ function diagFrame(dtMs) {
   const now = performance.now();
   if (now - diag.last < 500) return;
   diag.last = now;
-  if (!diag.el) { diag.el = document.createElement('pre'); diag.el.id = 'diag'; document.body.appendChild(diag.el); }
-  const f = diag.frames.slice().sort((a, b) => a - b), avg = f.reduce((a, b) => a + b, 0) / (f.length || 1);
-  const p = S.perf || {};
-  const mem = performance.memory ? `${Math.round(performance.memory.usedJSHeapSize / 1e6)}/${Math.round(performance.memory.jsHeapSizeLimit / 1e6)} MB` : 'n/a';
-  const pads = (navigator.getGamepads ? [...navigator.getGamepads()] : []).filter(Boolean);
-  const swRate = (deviceStats.switches - diag.sw0) / Math.max(1, (now - diag.swAt) / 60000);
-  if (now - diag.swAt > 60000) { diag.sw0 = deviceStats.switches; diag.swAt = now; }
-  const cacheMB = (S.ground ? S.ground.cache.size : 0) * CHUNK_PX * CHUNK_PX * 4 / 1e6;
-  const cs = canvasStats();
-  diag.el.textContent = [
-    `fps ${S.fps}  frame avg ${avg.toFixed(1)} ms  worst ${(f[f.length - 1] || 0).toFixed(0)} ms  >50ms: ${diag.long}`,
-    `parts ${Object.entries(p).map(([k, v]) => `${k} ${v.toFixed(1)}`).join(' · ')}`,
-    `screen ${W}x${H} @${DPR.toFixed(2)} (device ${(window.devicePixelRatio || 1).toFixed(2)}${GOV.scale < 1 ? `, eased to ${Math.round(GOV.scale * 100)}% to keep it smooth` : ''}) = ${(canvas.width * canvas.height / 1e6).toFixed(1)} MP  gfx ${gfx.preset} (light ${gfx.lighting}, flora ${gfx.flora})  frames p50 ${framePct(0.5).toFixed(1)} p95 ${framePct(0.95).toFixed(1)} ms`,
-    `ground cache ${S.ground ? S.ground.cache.size : 0}/${S.ground ? S.ground.max : 0} chunks (${cacheMB.toFixed(0)} MB)  canvases ${cs.n} (${cs.mb.toFixed(0)} MB)  js heap ${mem}  gfx lost ${diag.lost}${LOW_MEM ? '  low-memory mode' : ''}`,
-    ...(ART2_WANTED ? [S.art2 ? `art2 ${S.art2.diag()}` : `art2 off: ${S.art2Off || 'starting'}`] : []),
-    `load ${loadLine()}`,
-    `input ${input.device}  flips/min ${swRate.toFixed(0)}  pad ${pads.length ? `${pads[0].id.slice(0, 40)} [${pads[0].mapping || 'no mapping'}]` : 'none'}  emulation ${navigator.gamepadInputEmulation ?? 'n/a'}`,
-    `${IS_CONSOLE ? 'console · ' : ''}${navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 110)}`,
-  ].join('\n');
+  /* (the overlay's text: client/diag.js, loaded the first time it's on) */
+  if (!diagMod) { diagMod = 1; import('./diag.js').then((m) => { diagMod = m; }, () => { diagMod = null; }); return; }
+  if (diagMod !== 1) diagMod.diagDraw(diag, { S, W, H, DPR, GOV, canvas, input, deviceStats, canvasStats, loadLine, CHUNK_PX, ART2_WANTED, IS_CONSOLE, now, gfx, framePct, LOW_MEM });
 }
 // rotating a phone in fullscreen doesn't always fire 'resize' right away: catch every signal
 addEventListener('orientationchange', () => { onResize(); setTimeout(onResize, 120); setTimeout(onResize, 400); });
@@ -3367,6 +3390,7 @@ function drawOverlays(F, v2) {
   if (S.fireMod && !F.sub) S.fireMod.draw(g, F, S);   // (the fires on the ground, the hoses: render/firejob.js)
   drawBowling(F);
   drawCinema(F);
+  drawVault(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
     const ta = touchAimState();
@@ -3919,6 +3943,13 @@ function drawBowling(F) {
   if (!A || !F.sp) return;
   if (S.bowlView) { S.bowlView.draw(g, F, { walkInAt, DPR, W, H }); g.setTransform(...S.worldTf); }
   else if (!S.bowlAsk && Math.hypot(F.sp.x - A.counter.x, F.sp.y - A.counter.y) < 1600) { S.bowlAsk = 1; import('./bowling.js').then((m) => { S.bowlView = new m.BowlingView(S); }).catch((e) => console.warn('[bowling]', e)); }
+}
+// a bank's vault door (client/vault.js, loaded the first time you walk into a bank): shut, the drill on it, or open
+function drawVault(F) {
+  const b = F.sp && walkInAt(F.sp.x, F.sp.y);
+  if (!b || !b.walkIn.units.some((u) => u.kind === 'bank')) return;
+  if (S.vaultMod) { S.vaultMod.draw(g, b, S); g.setTransform(...S.worldTf); }
+  else if (!S.vaultAsk) { S.vaultAsk = 1; import('./vault.js').then((m) => { S.vaultMod = m; }).catch((e) => { S.vaultAsk = 0; console.warn('[vault]', e); }); }
 }
 const fireJob = () => (S.fireP ||= import('./render/firejob.js').then((m) => { S.fireMod = m; }).catch((e) => { S.fireP = null; console.warn('[fire]', e); }));
 // The Grand Theatre (client/cinema.js, loaded near it): the screen rooms dark, the film on the screen and its light

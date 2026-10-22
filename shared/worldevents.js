@@ -6,6 +6,7 @@ export const EVENT_KINDS = {
   ret: { color: '#3ddc84', label: 'Return the purse', hint: 'Take it back to its owner' },
   shootout: { color: '#ff3b3b', label: 'Gang shootout', hint: 'Syndicate vs police' },
   robbery: { color: '#ffd400', label: 'Store robbery', hint: 'Alarm tripped - police responding' },
+  heist: { color: '#ff8a1a', label: 'Bank heist', hint: 'A vault being drilled - every unit responding' },   // (heist.js)
   pet: { color: '#7fd8ff', label: 'Lost pet', hint: 'Find it and walk it home', stay: 1 },          // (stay: its arrow doesn't fade -
   petret: { color: '#3ddc84', label: 'Pet\'s owner', hint: 'Walk the pet home', stay: 1 },           //  the owner, 2026-10-11)
   revive: { color: '#ff4d6d', label: 'Player down', hint: 'Revive them' },

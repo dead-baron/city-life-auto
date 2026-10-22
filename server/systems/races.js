@@ -4,6 +4,7 @@
 // Anyone who turns up mid-race joins the next round. Leave your vehicle, die, or wander off and you forfeit - the
 // race carries on for everyone else.
 import { store } from '../store.js';
+import * as skills from './skills.js';
 
 export const COUNTDOWN_S = 15;
 const RESULTS_S = 8, MAX_S = 330, CP_R = 130, START_R = 190, LOST_PX = 3200;
@@ -70,6 +71,7 @@ export function update(world) {
           if (race.laps && r.cp % race.lapLen === 0 && r.cp < race.cps.length) world.notify(p, `Lap ${r.cp / race.lapLen} done in ${(now - st.t).toFixed(1)}s - ${race.laps - r.cp / race.lapLen} to go.`, 'info');
           if (r.cp >= race.cps.length) {
             r.done = true; r.place = ++st.finished; r.time = now - st.t;
+            skills.gain(world, p, 'race');   // (driving - skills.js)
             st.results.push({ pid, name: p.name, place: r.place, time: r.time });
             const n = st.racers.size;
             const share = n === 1 ? 0.5 : [0.6, 0.3, 0.1][r.place - 1] || 0;

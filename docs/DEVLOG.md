@@ -14311,6 +14311,47 @@ A read-through of the two new systems found:
 
 Tests: test/tennis.test.js (both ways round; the pro floored; the serve left), test/k9.test.js (levels, grace, leash).
 
+## 2026-10-22 · Casinos: the slots, roulette and blackjack
+
+The owner, 10-08 ("casinos and card games", #309) and 10-16 again; Lucky Mesa's casinos (the old casinos along Old
+Downtown's covered street, every resort on the Strip) stood marked "for the gambling to come". server/systems/casino.js:
+
+- **the floor**: at a casino's door the action button opens it - the slots, roulette, blackjack - through the
+  counters' menus (economy.js: a casino's place has its own), a felt board above the options showing the table as it
+  stands (hud.js openMenu `m.board`: the cards, the reels, the wheel's pocket). Bets come out of the money on you,
+  then your card, as at any counter; winnings are paid out in cash, on you. The menu keeps a running tally of the
+  visit ("Up $85 this visit").
+- **the slots**: $5, $25 and $100 spins; three reels of cherries, lemons, bells, bars, sevens and the golden lotus;
+  three of a kind pays (three lotuses 300 times the bet), two cherries anywhere three times - about 95% back over
+  time (shared/rules.js CASINO; the test works the payback out over every way the reels can stop).
+- **roulette**: a single-zero wheel; red or black, odd or even, low or high at evens, a dozen at 2:1, straight up on
+  your number at 35:1; the zero loses every outside bet. The stake steps $10 / $50 / $250 / $1,000.
+- **blackjack**: dealt from a continuously shuffled shoe; hit, stand, double down on your first two cards; the dealer
+  stands on all 17s; blackjack pays 3:2, a push gives the bet back, no splits at these tables. A hand left on the
+  table (the panel closed) is waiting when you open it again.
+- the sounds: the bell and the coins on a win, more for a jackpot, the clack of a losing spin.
+
+Tests: test/casino.test.js - the odds (the slots' payback, the zero's edge on every roulette bet, aces counted either
+way), a floor's slots, a red bet, thirty hands of blackjack each paid as it should be, the tally, no money no bets, no
+bets from across the street; a hand left and come back to, a double down.
+
+Room in the page for it: the casino's board took the page to its 494 KB budget, so the device report and the
+diagnostics overlay's text moved out to client/diag.js, loaded when they're needed (the report twenty seconds in, the
+overlay the first time it's on) - the page is 492.9 KB.
+
+## 2026-10-22 · Rideshare: three tiers in the Transit app
+
+The owner, 10-06: "Rideshare app in 3 tiers (premium, standard, an 'Ultra Saver' that may wreck)". The phone's
+Transit app now offers three rides (server/systems/transit.js, shared/rules.js RIDESHARE):
+
+- **Cruise Black**: a black sedan, sent from nearer (sooner), at 2.2 times the meter.
+- **Taxi**: as before - the nearest free cab, or one sent from out of sight; or hail one going by.
+- **Ultra Saver**: an old compact at under half the fare - and once you're in, the driver goes flat out, through the
+  lights (the street racers' driving, traffic.js `reckless`). It may well crash: then the ride's on them.
+
+Everything else is the taxi's: the pick-up at the kerb, your waypoint as the destination, the meter, paying getting
+out. Tests: test/transit.test.js - the three tiers in the app, an Ultra Saver called, boarded, racing, its fare, the
+crash free; a Cruise Black's car and fare.
 ## 2026-10-22 · Prison Island: fixes from a review
 
 - the action button while doing time (or climbing) threw in the input system - costing every later player that
@@ -14333,10 +14374,206 @@ Tests: test/tennis.test.js (both ways round; the pro floored; the serve left), t
 Tests: test/prison.test.js - the time line pressed, held on the wall, no unstuck, no arrest, died and back inside
 with the time left; over the wall with a guard after you.
 
+## 2026-10-22 · Menus on a controller: left and right move left and right
+
+The owner, 10-08 and again 10-15: "Menus on a controller: left and right move left and right". The overlays (the
+phone, settings, the bag, the map's panel...) moved the gamepad's focus down a list only - left and right did nothing
+but change a choice box. Now up, down, left and right go to the nearest button that way as they sit on the screen (the
+phone's grid of apps, a row of tabs), as the debug menu already did (main.js padStep); up or down past the end wraps
+round; a choice box or a tick box still takes left and right for itself. (The d-pad's own shortcuts - the phone, the
+bag, the cop car - were already held back while a menu is open.)
+
+## 2026-10-22 · Skills: six of them, levelled by doing things
+
+The owner, 10-04 / 10-06: "Skills and daily caps (strength, stamina, swimming, driving, shooting, constitution);
+modest gains" (docs/DESIGN-NOTES.md "Skills and progression"; the GDD: "skill bonuses top out at about +15%, never a
+hard advantage"). server/systems/skills.js, shared/skills.js, shared/rules.js SKILL:
+
+- **levels 0 to 10**, each a little more (+1.5% a level, +15% at the top); level L takes 25 x L x (L + 1) xp in all.
+- **what earns them**, each activity capped an in-game day (20 minutes) - and something else for the same skill still
+  counts that day (you're told when one's done for the day, and what else counts):
+  - strength: landing blows; picking up crates
+  - stamina: sprinting
+  - swimming: swimming
+  - driving: driving (by the km); finishing a race
+  - shooting: hitting someone with a gun
+  - constitution: a night in your own bed; home-cooked meals; sitting by a campfire
+- **what they do**: strength - harder blows; stamina - a longer sprint (more stamina); swimming - a faster stroke;
+  driving - less damage to your ride in a crash; shooting - a steadier aim (less spread); constitution - more health
+  (a hearty meal's on top).
+- the page predicts the two that move you (stamina, swimming) from the levels the server sends (`me.skl`) - the
+  energy drink's flag no longer reads "more stamina than 100" (net.js), as a skill can give that too.
+- **the phone's Skills app**: each skill's level, what it does now, the bar to the next level; and today - what each
+  activity has left to give.
+- not yet: the gym and its mini-game, the riding skill for boards and bikes, chores and the bathhouse.
+
+The phone itself now loads the first time it opens (client/phone.js, 9 KB) - what the server sends for its apps
+meanwhile is kept and handed over then. That took the page from 495.2 KB (over its 494 budget with the casino's board,
+the rides and the skills) to 486.7 KB.
+
+Tests: test/skills.test.js - the levels and the top, the daily cap and another way to the same skill, a new day; more
+health, a longer sprint, a faster stroke, harder blows, the levels for the page, health kept after a death; sprinting
+and driving earn theirs.
+
+## 2026-10-22 · Street dice down the alleys
+
+The owner's gambling list (10-08, 10-16): "back-alley dice". A new street activity (server/systems/activities.js
+'dice'): halfway down an alley in a rough or poor part of town, or the red-light district, three crouched against one
+wall over the dice and the money - mostly after dark, never in the rain (World v3: the Old Quarter's alleys and
+Southside's; the old city's rough districts). Walk up and the action button gets you in on it
+(server/systems/streetdice.js; the numbers: shared/rules.js DICE):
+
+- **$20 a roll, cash only**, played as craps' pass line: a 7 or 11 straight off wins, a 2, 3 or 12 loses; anything
+  else is your point, rolled for till you make it again (win) or a 7 comes up (lose) - the rolls are told. Even money,
+  the dice fair (the street's edge is the real game's, 1.4%).
+- the crew has $300 between them: clean them out and they pack it in and go their ways. The further ahead you get,
+  the likelier one of them takes it badly ("Nobody's that lucky...") and comes at you.
+- drawn: the shooter's dice and a few bills on the ground in front of him (client/art2/people.js 'dice'); the rattle
+  of the dice.
+
+Tests: test/streetdice.test.js - the pass line's rules and its odds (49.3% over a hundred thousand rounds); spots down
+the alleys, the crew there with the dice, rolls paid and taken both ways, no cash no roll, cleaned out and packed up.
+
+## 2026-10-22 · Working out: push-ups and sit-ups
+
+The rest of the owner's "gym mini-game" (10-04 / 10-06), without a gym yet: the phone's Skills app has Push-ups here
+and Sit-ups here (server/systems/workout.js; shared/rules.js WORKOUT). Down on the ground where you stand (not in the
+water, a car, a crowd of trouble or with the police after you), the action button is a rep - and the game is the pace:
+one about every second (0.75 to 3.5 s after the last). Rush it and the rep doesn't count; stop too long and you've lost
+the rhythm. Each rep takes some stamina, so the set ends at ten reps or when you're spent. Every rep counted is skill
+xp: push-ups strength, sit-ups stamina (capped a day like the rest). Move, punch, dive or get hit and you get up.
+- drawn: two new poses (client/art2/people.js pushup, situp - up on straight arms and the chest down; on the back with
+  the knees up, then curled up to them), dipping on each rep (the descriptor's cv counts them: art2 host.js repFrame);
+  the bar at the top counts the reps.
+
+Tests: test/skills.test.js - from the phone, a rushed rep, a full set at a steady pace (strength), moving gets you up,
+the rhythm lost.
+
+## 2026-10-22 · Casinos, rides and skills: fixes from a review
+
+- **the Ultra Saver's crash**: a crash that kills the engine (as most do - the car's wrecked only when it blows up)
+  billed the full fare; it's on them either way now. A rideshare call waits five seconds after the last (no calling
+  and cancelling a street full of cars); the car that turns up says what it is.
+- **a blackjack hand left on the table** - walking over to another casino's floor, logging off, the server restarting
+  - was lost with its bet: the bet comes back.
+- **the skills' day** counts by the clock (an in-game day's twenty minutes): a server restart (which works the game's
+  day out afresh) or a night slept through no longer hands out another day's caps. Sitting on a car ferry at the wheel
+  no longer counts as driving; sitting by a campfire counts whether or not you're hurt.
+- **a full tank** (the coffee, the energy drink, a rest, a night's sleep) fills the stamina skill's longer one too.
+- **the house's luck** comes from the system's own randomness (the casino, the street dice), not a stream a player
+  could work out.
+- **the phone** loading for the first time says so; a failed load is tried again the next time it opens; what the
+  server sent it meanwhile never moves another screen's controller focus.
+- the casino's sounds are where the casino is (not in everyone's ears), and a lost bet is quiet.
+
 Fix (from the full test run): the grenade's throw and bounce, the flamethrower, the skydive's jump, canopy and landing,
 and tennis's racket, bounce and swing had their sounds only through main.js's old sfx calls - none had an entry of its
 own (client/sound/events.js EVENT_SOUNDS, test/sound.test.js); placed where they happen now, and the skydive's three
 had no sound at all before (the canopy fills with a flutter; a soft landing rolls; a splat, or onto a car's roof).
+
+## 2026-10-22 · Home: sit on the couch, watch TV
+
+The owner, 10-06 and 10-16: "usable furniture: sit, sleep, watch TV..." - "can't find sit, TV". At home
+(server/systems/homeinside.js):
+- **a seat** - the couch, the sectional, an armchair, the mansion's cinema rows, and the ones you've placed yourself -
+  has a prompt as you walk up: Sit down. You sit where it's nearest you, facing the way it faces (the sectional and the
+  cinema's seats toward the TV), drawn sat on it (client/render/homeview.js); move to get up, back where you stood. A
+  rest there brings health back slowly (shared/rules.js HOME_IN.restHeal).
+- **the TV** (the plans' sets, the wall TVs you've hung, the cinema's big screen) switches on and off; on, its light
+  flickers across the room, the picture's colour changing now and then (stronger after dark), and you're told what's
+  on. Everyone in the home sees it (and sits with you); with nobody home it goes off. (It no longer glows at night on
+  its own: off is dark.)
+
+Tests: test/homesofa.test.js - the TV on, sat down to watch, a rest, the page told, up again, the TV off with nobody
+home.
+
+## 2026-10-22 · The arcades: STARFALL and the prize counter
+
+The owner, 10-08 ("Arcade: walk in and play our own 8-bit games... tickets for prizes", AC1-AC7) and 10-16 ("are
+arcades in?"). The Neon Strip's arcades - Retro Rewind, Hi Score, VR Den, the Pixel Arcade, the strip's other Arcade,
+Games and Video storefronts - stood as art only. Now at an arcade's door (server/systems/arcade.js; shared/rules.js
+ARCADE):
+- **a credit** ($2) for **STARFALL**, our own 8-bit shooter (client/arcade.js, loaded the first time anyone plays):
+  forty invaders in formation sliding side to side and dropping a row at each edge, firing back; now and then one
+  breaks off and dives at you (a diver's worth double); clear a wave and the next comes faster; three ships. Left and
+  right to move (the keys, the stick or d-pad, a finger dragged on the screen); the ship fires on its own. It plays on
+  its own little screen (256 x 224) in a glowing cabinet frame over the game; Esc or B leaves.
+- **tickets**: one for every 100 points, 40 at most a game. The page sends the score; the server takes it only for
+  this credit, once, and no faster than 60 points a second of play.
+- **the prize counter**: a glow stick (25), an energy drink (50), a flare (60), a poster for your home (150), a
+  headlamp (200), a turntable for your home (400), a skateboard (500) - your best score at the counter too.
+- **the mansion's games room**: its two arcade cabinets play STARFALL for free (no tickets; the high score).
+
+Tests: test/arcade.test.js - the game's waves and hits; a credit paid, the page told, a wrong credit ignored, a score
+worth its tickets once, an impossible score cut down, a prize won and one out of reach; the mansion's cabinet free.
+
+## 2026-10-22 · The trains on the big map
+
+The owner, 10-06: "live transit on the big map (routes, where each vehicle is now)". The buses and the ferries' boats
+were already on the map where they are (the page asks again every couple of seconds while it's open); the trains
+weren't. Now every train is there too (server/systems/transit.js transitInfo `trains`; client/worldmap.js): a capsule
+along the track pointing the way it runs, in its line's colour (the main line's cream, the Pink and Yellow lines'
+own), dimmer on the subway; under the Transit category like the rest.
+Tests: test/transit.test.js - every train in the map's transit info.
+
+## 2026-10-22 · A frame of pool
+
+The owner, 10-08 (#308, "pool tables you can play") and 10-16. The Rusty Spur's pool table and the mansion's games
+room table stood as furniture. Now walk up to either and rack 'em up (server/systems/arcade.js `poolInteraction`,
+`play(..., 'pool')`; client/pool.js, loaded the first time anyone plays):
+- **the game**: nine balls racked in a diamond on the foot spot, the cue ball on the head spot; clear the table in as
+  few shots as you can. A scratch (the cue ball down a pocket) costs a shot and puts the cue ball back on the spot.
+  Balls roll and slow on the cloth, bounce off the cushions and each other, and drop in the six pockets.
+- **aiming**: drag back from the cue ball like a sling and let go (the further, the harder) - a mouse or a finger; or
+  turn the cue with left / right (the keys, the stick, the d-pad; up / down to fine-tune), hold Space / Enter / A to
+  build the power and let go. Esc or B leaves. It plays on the arcade's screen, sized to the table (256 x 160).
+- **the price**: the Rusty Spur's table is $1 a frame (shared/rules.js ARCADE.pool); the mansion's is free.
+- **the score**: a cleared frame's shots go to the server, which keeps your best (not cleared
+  in under six seconds by its own clock); a frame you leave unfinished counts for nothing.
+
+Tests: test/arcade.test.js - the rack, a break spreading the balls, everything coming to rest on the table, a ball
+rolled into a corner pocket, the server keeping a frame's shots as the best and refusing an impossible one.
+
+## 2026-10-22 · Bank heists
+
+The owner's #306 (10-07 / 10-08: "heists and bank robberies"). A bank's teller could be held up like any shop's clerk;
+the bank itself had nothing more. Now every bank you can walk into (eleven in World v3, from Midtown Savings and the
+downtown First Pixel to Mesa Savings & Trust) has a **vault door** on the back wall behind the counter (shared/heist.js
+`vaultOf`), and there's a job to pull there (server/systems/heist.js; shared/rules.js HEIST):
+- **the drill**: the black market sells a thermal drill ($1,200 - an illegal tool the police take off you). Go round
+  the end of the counter to the vault door and set it there.
+- **the alarm** goes at once: a bank heist on your record and 3 stars, climbing while the drill runs and you're inside;
+  squads come 8-14 s later, four of them, and as many again 25 s after - they surround the bank and come in, as at a
+  robbery (standoff.js). The radar shows it to everyone near (a Bank heist event).
+- **the door**: the drill works about a minute through it on its own; on the way it jams (once or twice) and stops until
+  someone clears it at the drill - a friend can. Left jammed two and a half minutes, the police take it away.
+- **the vault open**: its district's load spills onto the floor - iron safe-deposit boxes and carbon-gold cases of bars
+  (cargo crates, contraband: the fence pays a fortune), four in the richest districts, two in the roughest - and the
+  drawers' cash goes in your bag as hot money (if you're still there). Carry the crates out one at a time to something
+  with an open back and get away. The vault stands open five minutes, then it's cleaned out for half an hour.
+- **on the page** (client/vault.js, loaded the first time you walk into a bank): the round steel door in its frame with
+  the brass plate; the red drill on its legs at the lock, the bit glowing, sparks and the ring of how far through it is;
+  a jam's blinking red light and JAMMED; the door swung open, the vault dark behind with a gold bar or two left on the
+  shelves. The drill's whine, a jam's clunk, the door's clang (client/sound/events.js).
+
+Tests: test/heist.test.js - every bank's vault door behind its counter with floor to stand on, the black market's
+drill; a heist from the drill to the open vault (3 stars, on the record, the scene, the jams stopping it and cleared,
+the load and the hot money, cleaned out, worth another go later); a drill left jammed taken away; no drill for an
+officer.
+
+## 2026-10-22 · Home seats, the arcades, pool and bank heists: fixes from a review
+
+- **the arcades**: Lucky Mesa's Pixel Arcade and Falls Center's Game Zone (the generator's arcades) had no prompt at
+  their doors, nor Midtown's walk-in Penny Arcade - all three are arcades now (server/systems/arcade.js isArcade).
+- **a game over** (STARFALL's, or a cleared pool frame dismissed with a key or the pad) threw an error on the page as the
+  cabinet closed; and at a cabinet the bag and the map keys no longer open over the game.
+- **pool**: a frame counts however few shots it took (a break can sink several - the page said "a new best" while the
+  server threw it away), timed by the server's own clock.
+- **the mansion's sectional** is a seat to watch TV from (the kitchen island had been the seat by mistake); at home a
+  small nudge of the stick while sitting no longer drifts the view (you stay sat until you really move).
+- **bank heists**: a police player at a vault door with a drill on it takes the drill off (the job's off, Samaritan
+  points) and is never offered to clear its jam; the second wave of squads isn't sent once the driller's in custody;
+  the heist's criminal EXP goes, like the drawers' cash, only to a driller still there when the door opens.
 
 ## 2026-10-22 · The subway: the train shows again, and its stations' platforms
 
@@ -14350,5 +14587,8 @@ lamps were drawn but before the trains. Now:
 - the underground stations have platforms (client/render/trains.js tunnelPlatforms): beside each station's track, on
   the side away from the other line's track, the train's length of tiled platform with the yellow line at its edge,
   pillars and benches, and the station's name on a blue sign - so stopping at one you can see you're there.
-Checked headless on a World v3 server: a ride from the Pink Line to a stop at Union Square Station. Shipped on its own,
-ahead of the next batch (a page-only fix: the server doesn't restart).
+Checked headless on a World v3 server: a ride from the Pink Line to a stop at Union Square Station.
+
+Also from the full test run: at home a seat or the TV takes the action button only when you're clearly nearer to it than
+to the hall table, the bed or anything else there (the couch beside the hall table had taken over its menu); and the
+activity spots' test knows street dice is played down an alley's asphalt.

@@ -424,6 +424,13 @@ export const TAXI_FLAG = 5;                // the meter starts at this...
 export const TAXI_PER_KM = 30;             // ...and runs this much a kilometre driven (1 m = a tile); paid getting out
 export const TAXI_WAIT_S = 60;             // a taxi you hailed or called waits this long at the kerb for you
 export const TAXI_REFUSE_STARS = 2;        // no taxi stops for anyone this wanted
+// the Transit app's rideshare tiers (the owner, 10-06): the meter times `fare`; the car; the Ultra Saver drives flat out
+// once you're in (reckless px/s: it may well crash - then the ride's on them)
+export const RIDESHARE = {
+  premium: { name: 'Cruise Black', fare: 2.2, model: 'sedan', paint: 3, note: 'a black sedan and a smooth ride - 2.2x the fare' },
+  std: { name: 'Taxi', fare: 1, note: `the meter: $${TAXI_FLAG} + $${TAXI_PER_KM} a km, paid when you get out - or hail one going by` },
+  saver: { name: 'Ultra Saver', fare: 0.45, model: 'compact', paint: 11, reckless: 420, note: 'under half the fare. Your driver is in a hurry' },
+};
 export const HIGHWAY_SPEED = 560;          // traffic cruising speed up on the ring highway (px/s)
 export { BARRIER_BREAK_SPEED } from './rules-base.js';    // ram a highway barrier this fast (px/s, straight into it) and it gives way
 export const BARRIER_REPAIR_S = 300;       // the road crew puts a smashed barrier back after this long (when nobody's looking)
@@ -443,6 +450,8 @@ export const ATM_DEPOSIT_PX = 48;          // an ATM's reach (it used to bank yo
 // Skateboarding, part 1 (the owner, 2026-10-17; server/systems/skate.js; the board's physics: shared/physics.js BOARD):
 // the board's price at a skate shop, a sports shop or a surf shop; a bail - thrown off into a wall, a post or a car, or off
 // a fall - hurts this much at bailHit speed and up to the most at full speed, and you're down this long
+import { DRILL_PRICE } from './rules-base.js';
+export { DRILL_PRICE };
 export { SKATEBOARD_PRICE, PARACHUTE_PRICE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
 // Skateboarding's score (server/systems/skate.js): a combo banked after comboGap s rolling on is its points x its tricks
@@ -712,7 +721,7 @@ export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough
 // (hintS: how long after you go in the prompt says "walk up to something to use it" - then nothing in the way of the
 // rooms until you're by something to use; the owner, 10-16: the prompt stayed up on a phone and blocked the view)
 // (cookN, cookS: a meal at home takes that many things from the fridge and that long at the stove - homeinside.js cook)
-export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6, hintS: 6, cookN: 3, cookS: 5 };
+export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6, hintS: 6, cookN: 3, cookS: 5, restHeal: 0.8 };   // (restHeal: health a second sat on the couch)
 
 // A mortgage (H65; server/systems/mortgage.js): buy a home for a deposit (that share of its price) and the bank lends the
 // rest, plus `rate` on top, paid back from your bank account in `days` equal payments - one each in-game day (DAY_LOOP_S)
@@ -807,3 +816,59 @@ export const K9 = { share: 0.3, stars: 2, maxStars: 3, speed: 2.7, sight: 800, r
 // ms), is a sentence at Kestrel Bay Penitentiary instead of the station's cells: base s + perStar a star + perRepeat for
 // each booking before it in that time, up to max s; the wall takes climbS s to get over; over it, escapeStars stars
 export const PRISON = { stars: 4, repeat: 3, repeatMs: 2 * 3600e3, base: 90, perStar: 35, perRepeat: 30, max: 300, climbS: 5, escapeStars: 3 };
+// casinos (server/systems/casino.js): slot spins and table stakes ($); the reels' weights and three-of-a-kind pays
+// street dice (server/systems/streetdice.js): the stake a roll ($, cash), what the crew has on them, the chance (at its
+// most, cleaned out) one takes a winner badly; a roll at most every gapS s
+// working out (server/systems/workout.js): a rep counts minGap..maxGap s after the last (sooner: rushed; later: the set's
+// over), takes drain stamina; a set is `set` reps
+export const WORKOUT = { minGap: 0.75, maxGap: 3.5, set: 10, drain: 8 };
+// the arcades (server/systems/arcade.js, client/arcade.js): a credit ($); a ticket for every perTicket points, at most
+// maxTickets a game; a score no faster than maxRate points a second of play; the prize counter (an item, or a piece for
+// your home - t tickets)
+export const ARCADE = {
+  price: 2, perTicket: 100, maxTickets: 40, maxRate: 60, pool: 1,   // (pool: a frame at the Rusty Spur's table, $)
+  prizes: [{ item: 'glowstick', t: 25 }, { item: 'energy', t: 50 }, { item: 'flare', t: 60 }, { decor: 'art', t: 150 }, { item: 'headlamp', t: 200 }, { decor: 'turntable', t: 400 }, { item: 'skateboard', t: 500 }],
+};
+export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
+// bank heists (the owner's #306, 10-07 / 10-08: "heists and bank robberies" - server/systems/heist.js, client/vault.js):
+// a thermal drill from the black market (drillPrice) set on a bank's vault door works drillS seconds through it - stopped
+// while it's jammed (up to `jams` times on the way, each cleared at the drill), taken by the police if nobody clears it
+// in abandonS. The bank's alarm goes the moment it starts: `heat` at once (3 stars) and heatS more a second while it
+// runs; squads after responseS, `units` of them, and as many again `wave2S` later. Open, the vault holds its district's
+// `load` of crates (cargo tiers: 3 an iron safe-deposit box, 4 a carbon-gold case of bars) and `cash` in the drawers
+// (hot money to whoever set the drill, times the district: ROB_TILL_TIER); it stands open openS, then it's cleaned out
+// for cooldownS. `reach`: how close to the vault door's spot to work it (px). An officer at the door takes the drill off
+export const HEIST = {
+  drillPrice: DRILL_PRICE, drillS: 60, jams: 2, abandonS: 150, heat: 62, heatS: 0.4, responseS: [8, 14], units: 4, wave2S: 25,
+  openS: 300, cooldownS: 1800, cash: 3000, reach: 46, xp: 60, seizeSam: 5,   // (seizeSam: Samaritan points for an officer who takes the drill off)
+  load: { lux: [4, 4, 3, 3], suburb: [4, 3, 3], mid: [4, 3, 3], neon: [4, 3, 3], rural: [3, 3, 3], industrial: [3, 3, 3], red: [3, 3, 3], low: [3, 3], rough: [3, 3], wild: [3, 3] },
+};
+export const CASINO = {
+  slots: [5, 25, 100], stakes: [10, 50, 250, 1000], bjPays: 1.5, twoCherries: 3,
+  reel: {
+    CHERRY: { w: 6, three: 10, icon: '🍒' }, LEMON: { w: 7, three: 7, icon: '🍋' }, BELL: { w: 5, three: 14, icon: '🔔' },
+    BAR: { w: 4, three: 25, icon: 'BAR' }, SEVEN: { w: 2, three: 70, icon: '7' }, LOTUS: { w: 1, three: 300, icon: '❀' },
+  },
+};
+// skills (shared/skills.js, server/systems/skills.js): levelled 0..max by doing things - each activity earns xp for one
+// skill (xp a go: a blow landed, a crate picked up, a second sprinting or swimming or by a campfire, a km driven, a
+// race finished, a hit with a gun, a night in your bed, a home-cooked meal), up to `cap` an in-game day; something else
+// for the same skill still counts that day. A skill's bonus tops out at `top` (never a hard advantage); level L takes
+// perLevel * L * (L + 1) xp in all
+export const SKILL = {
+  max: 10, top: 0.15, perLevel: 25,
+  act: {
+    brawl: { skill: 'strength', xp: 1, cap: 20, name: 'landing blows' },
+    haul: { skill: 'strength', xp: 3, cap: 15, name: 'carrying crates' },
+    run: { skill: 'stamina', xp: 0.5, cap: 20, name: 'sprinting' },
+    swim: { skill: 'swimming', xp: 0.5, cap: 25, name: 'swimming' },
+    drive: { skill: 'driving', xp: 4, cap: 20, name: 'driving' },
+    race: { skill: 'driving', xp: 10, cap: 20, name: 'racing' },
+    shoot: { skill: 'shooting', xp: 1, cap: 20, name: 'hitting what you aim at' },
+    sleep: { skill: 'constitution', xp: 15, cap: 15, name: 'a night in your own bed' },
+    meal: { skill: 'constitution', xp: 8, cap: 16, name: 'home-cooked meals' },
+    campfire: { skill: 'constitution', xp: 0.2, cap: 10, name: 'sitting by a campfire' },
+    pushups: { skill: 'strength', xp: 1, cap: 15, name: 'push-ups' },
+    situps: { skill: 'stamina', xp: 1, cap: 15, name: 'sit-ups' },
+  },
+};

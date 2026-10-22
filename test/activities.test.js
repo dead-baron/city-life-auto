@@ -20,7 +20,8 @@ const open = (x, y) => { const t = m.tileAtPx(x, y); return !PED_BLOCK[t] && t !
 
 test('activity spots are found on the map by rules: piers, tables, blankets, landmarks', () => {
   for (const k of ['anglers', 'chess', 'picnic', 'painter']) assert.ok(of(k).length >= 2, `some ${k} spots (${of(k).length})`);
-  for (const s of S.list) if (s.k !== 'carwash') assert.ok(open(s.x, s.y), `${s.k} at ${Math.round(s.x)},${Math.round(s.y)}: on open ground`);   // (a car wash's spot is the car's)
+  for (const s of S.list) if (s.k !== 'carwash' && s.k !== 'dice') assert.ok(open(s.x, s.y), `${s.k} at ${Math.round(s.x)},${Math.round(s.y)}: on open ground`);   // (a car wash's spot is the car's)
+  for (const s of of('dice')) assert.ok(!PED_BLOCK[m.tileAtPx(s.x, s.y)], `dice at ${Math.round(s.x)},${Math.round(s.y)}: down an alley you can walk`);   // (the alley's asphalt is road: streetdice.js)
   for (const s of of('anglers')) {   // the water right beside them, the way they face
     const t = m.tileAtPx(s.x + Math.cos(s.a) * 60, s.y + Math.sin(s.a) * 60), t2 = m.tileAtPx(s.x + Math.cos(s.a) * 24, s.y + Math.sin(s.a) * 24), t3 = m.tileAtPx(s.x + Math.cos(s.a) * 40, s.y + Math.sin(s.a) * 40);
     assert.ok([t, t2, t3].some((q) => q === T.WATER || q === T.DEEP), 'anglers face the water');

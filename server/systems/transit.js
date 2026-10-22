@@ -19,7 +19,7 @@
 import { K, T } from '../../shared/constants.js';
 import { lanePath, exitsFrom, nearestEdge } from '../../shared/roads.js';
 import { project, pointAt } from '../../shared/geom.js';
-import { BUS_DWELL_S, TAXI_FLAG, TAXI_PER_KM, TAXI_WAIT_S, TAXI_REFUSE_STARS } from '../../shared/rules.js';
+import { BUS_DWELL_S, TAXI_FLAG, TAXI_PER_KM, TAXI_WAIT_S, TAXI_REFUSE_STARS, RIDESHARE } from '../../shared/rules.js';
 import { PAINTS } from '../../shared/vehicles.js';
 import { spawnNpc } from './npc.js';
 import { inAnyView } from '../view.js';
@@ -546,10 +546,21 @@ export function rideInfo(world, p) {
   return { k: 'bus', line: L ? L.name : 'Bus', col: PAINTS[L ? L.paint : 0], at: at ? at.name : null, next: nx ? nx.name : '' };
 }
 
+// the trains, for the map (the owner's 10-06 "live transit on the big map": the buses and the ferries' boats were on it
+// already - the page asks again every couple of seconds while it's open): each one's front car [x, y, a, line
+// (map.rails' index; -1 the old city's one line), 1 on the subway]
+function liveTrains(world) {
+  const out = [];
+  for (const t of world.trains || []) {
+    const e = t.cars && t.cars[0] && world.get(t.cars[0].id);
+    if (e) out.push([Math.round(e.x), Math.round(e.y), +e.a.toFixed(2), e.line ?? -1, e.sub ? 1 : 0]);
+  }
+  return out;
+}
 // The Transit app and the map: the lines (their streets and stops), where their buses are, when each stop's next comes
 export function transitInfo(world, p = null) {
   return {
-    t: 'transit', taxi: p ? taxiInfo(world, p) : null, taxiFlag: TAXI_FLAG, taxiKm: TAXI_PER_KM,
+    t: 'transit', trains: liveTrains(world), taxi: p ? taxiInfo(world, p) : null, taxiFlag: TAXI_FLAG, taxiKm: TAXI_PER_KM, rs: TIERS.map((k) => ({ k, name: RIDESHARE[k].name, note: RIDESHARE[k].note })),
     lines: busLines(world).map((L) => ({
       id: L.id, name: L.name, col: PAINTS[L.paint], len: L.len, path: linePath(world, L),
       stops: L.stops.map((s, k) => ({ x: s.x, y: s.y, n: s.name, eta: stopEta(world, L, k) })),
@@ -568,7 +579,9 @@ export function transitInfo(world, p = null) {
 // notes 2026-10-08): you sit back and watch the city go by. Not for anyone the police are after.
 const TAXI_HAIL_PX = 260, TAXI_CALL_PX = 3200;
 const TAXI_STILL = new Set(['wait', 'dest', 'there']);
-const fareOf = (px) => Math.round(TAXI_FLAG + (px / 32 / 1000) * TAXI_PER_KM);   // (1 m = a tile = 32 px)
+// (1 m = a tile = 32 px; the rideshare tiers: the meter times the tier's - RIDESHARE)
+const fareOf = (px, tier) => Math.round((TAXI_FLAG + (px / 32 / 1000) * TAXI_PER_KM) * (RIDESHARE[tier] || RIDESHARE.std).fare);
+const TIERS = Object.keys(RIDESHARE), CALL_GAP_S = 5;
 
 // where a taxi pulls up for a spot: the kerb of the nearest street on its side, clear of the corners (and of a bus
 // stop there: a cab length past it, or before it)
@@ -622,10 +635,10 @@ const freeTaxi = (world, v) => v.model === 'taxi' && !v.taxi && v.ai && v.ai.kin
 const refuse = (p) => (p.wanted >= TAXI_REFUSE_STARS ? `No taxi will stop for you with ${p.wanted} stars on you.` : null);
 
 // a taxi on its way to pick player p up: null, or why it can't
-function sendTaxi(world, p, v) {
+function sendTaxi(world, p, v, tier = 'std') {
   const ped = p.ped, K = kerbAt(world, ped.x, ped.y);
   if (!K) return 'No street near enough here for a taxi.';
-  v.taxi = { pid: p.pid, st: 'pickup', halt: K, meter: 0, left: 0, until: world.time + 150, lx: v.x, ly: v.y, dest: null };
+  v.taxi = { pid: p.pid, st: 'pickup', halt: K, meter: 0, left: 0, until: world.time + 150, lx: v.x, ly: v.y, dest: null, tier };
   if (!taxiRoute(world, v, K)) { delete v.taxi; return 'No taxi can get to you here by road.'; }
   v.despawnable = false;
   p.taxi = v.id; p.meDirty = true;
@@ -640,36 +653,42 @@ function releaseTaxi(world, v, why = null, tone = 'info') {
   if (p && p.taxi === v.id) { p.taxi = 0; p.meDirty = true; if (why) world.notify(p, why, tone); }
   delete v.taxi;
   if (world.taxis) world.taxis.delete(v.id);
-  if (v.ai) { delete v.ai.route; v.ai.next = null; if (v.ai.pts) for (const q of v.ai.pts) delete q.halt; }
+  if (v.ai) { delete v.ai.route; delete v.ai.reckless; v.ai.next = null; if (v.ai.pts) for (const q of v.ai.pts) delete q.halt; }
   v.despawnable = true;
 }
 // out of the cab: the fare (as far as the money goes)
 function payFare(world, p, v) {
-  const T = v.taxi, fare = fareOf(T.meter);
+  const T = v.taxi, fare = fareOf(T.meter, T.tier);
   if (T.meter < 32) return;   // (never got going: no charge)
   const prof = p.profile;
   if (payFrom(p, fare)) world.notify(p, `Taxi fare: $${fare}.`, 'info');
   else { const had = prof.cash + prof.bank; prof.cash = 0; prof.bank = 0; p.meDirty = true; world.notify(p, `The fare was $${fare} - you only had $${had}. The driver took it all.`, 'warn'); }
 }
 
-// called from a phone: the nearest free taxi, or one sent from out of sight nearby
-function callTaxi(world, p) {
+// called from a phone (the rideshare tiers, the owner 10-06: premium, standard, an "Ultra Saver" that may wreck): a
+// standard taxi is the nearest free one, or one sent from out of sight nearby; Cruise Black's car and the Ultra
+// Saver's come from out of sight (Cruise Black's from nearer: sooner)
+function callTaxi(world, p, tier = 'std') {
   const ped = p.ped;
   if (!ped || ped.dead) return 'Not now.';
-  if (taxiOf(world, p)) return 'A taxi is already coming for you.';
+  if (taxiOf(world, p)) return 'A ride is already coming for you.';
+  if (world.time - (p.taxiCallAt ?? -99) < CALL_GAP_S) return 'Give it a moment before calling again.';   // (no calling and cancelling a street full of cars)
+  p.taxiCallAt = world.time;
   const no = refuse(p);
   if (no) return no;
   let best = null, bd = TAXI_CALL_PX;
-  for (const v of world.query(ped.x, ped.y, TAXI_CALL_PX, K.VEH)) { if (!freeTaxi(world, v)) continue; const d = Math.hypot(v.x - ped.x, v.y - ped.y); if (d < bd) { bd = d; best = v; } }
-  if (!best) best = spawnTaxi(world, ped.x, ped.y);
-  if (!best) return 'No taxis free round here right now - try again in a moment.';
-  const err = sendTaxi(world, p, best);
+  if (tier === 'std') for (const v of world.query(ped.x, ped.y, TAXI_CALL_PX, K.VEH)) { if (!freeTaxi(world, v)) continue; const d = Math.hypot(v.x - ped.x, v.y - ped.y); if (d < bd) { bd = d; best = v; } }
+  if (!best) best = spawnTaxi(world, ped.x, ped.y, tier);
+  if (!best) return `No ${tier === 'std' ? 'taxis' : RIDESHARE[tier].name + ' cars'} free round here right now - try again in a moment.`;
+  const err = sendTaxi(world, p, best, tier);
   if (err) return err;
-  world.notify(p, `A taxi is on its way (about ${Math.max(10, Math.round(best.taxi.left / 200 / 5) * 5)}s) - it's the yellow square on your map.`, 'good');
+  world.notify(p, `${tier === 'std' ? 'A taxi' : `Your ${RIDESHARE[tier].name}`} is on its way (about ${Math.max(10, Math.round(best.taxi.left / 200 / 5) * 5)}s) - it's the yellow square on your map.`, 'good');
   return null;
 }
-// a taxi with a driver on a lane out of everyone's sight, 600-1800 px from (x, y)
-function spawnTaxi(world, x, y) {
+// a taxi (or a rideshare tier's car) with a driver on a lane out of everyone's sight, 600-1800 px from (x, y) (Cruise
+// Black's from 400)
+function spawnTaxi(world, x, y, tier = 'std') {
+  const R = RIDESHARE[tier] || RIDESHARE.std, near = tier === 'premium' ? 400 : 600;
   const net = world.map.net;
   const cands = net.edges.filter((e) => e.lvl === 0 && TAXI_OK(e) && e.kind !== 'dirt' && e.len > 200 && (e.bb || (e.bb = bboxOf(e.pts))).x1 > x - 1800 && e.bb.x0 < x + 1800 && e.bb.y1 > y - 1800 && e.bb.y0 < y + 1800);
   for (let tries = 0; tries < 24 && cands.length; tries++) {
@@ -677,8 +696,8 @@ function spawnTaxi(world, x, y) {
     const lp = lanePath(net, e, from, 0), L = lp[lp.length - 1].s;
     if (L < 120) continue;
     const p = pointAt(lp, 40 + world.rand() * (L - 80)), d = Math.hypot(p.x - x, p.y - y);
-    if (d < 600 || d > 1800 || inAnyView(world, p.x, p.y, 160) || world.query(p.x, p.y, 90, K.VEH).length) continue;
-    const v = world.spawnVehicle('taxi', p.x, p.y, Math.atan2(p.ty, p.tx), {});
+    if (d < near || d > 1800 || inAnyView(world, p.x, p.y, 160) || world.query(p.x, p.y, 90, K.VEH).length) continue;
+    const v = world.spawnVehicle(R.model || 'taxi', p.x, p.y, Math.atan2(p.ty, p.tx), R.paint === undefined ? {} : { paint: R.paint });
     const drv = spawnNpc(world, 'casual', p.x, p.y, 'driver');
     drv.vehId = v.id; drv.seat = 0; v.seats[0] = drv.id;
     v.ai = { kind: 'traffic', lane: 0 };
@@ -710,8 +729,8 @@ function cutAhead(world, v) {
 // the cab has pulled up at its halt: at the pick-up it waits for you; at the drop-off you're there
 function taxiArrived(world, v) {
   const T = v.taxi, p = world.players.get(T.pid);
-  if (T.st === 'pickup') { T.st = 'wait'; T.until = world.time + TAXI_WAIT_S; if (p) { p.meDirty = true; world.notify(p, 'Your taxi is here - get in the back (interact by the cab).', 'good'); } }
-  else if (T.st === 'ride') { T.st = 'there'; T.idle = world.time + 90; if (p) { p.meDirty = true; world.notify(p, `Here we are${T.dest && T.dest.label ? ` - ${T.dest.label}` : ''}. $${fareOf(T.meter)}: get out with the vehicle key.`, 'good'); } }
+  if (T.st === 'pickup') { T.st = 'wait'; T.until = world.time + TAXI_WAIT_S; if (p) { p.meDirty = true; world.notify(p, T.tier && T.tier !== 'std' ? `Your ${RIDESHARE[T.tier].name} is here - get in (interact by the car).` : 'Your taxi is here - get in the back (interact by the cab).', 'good'); } }
+  else if (T.st === 'ride') { T.st = 'there'; T.idle = world.time + 90; if (p) { p.meDirty = true; world.notify(p, `Here we are${T.dest && T.dest.label ? ` - ${T.dest.label}` : ''}. $${fareOf(T.meter, T.tier)}: get out with the vehicle key.`, 'good'); } }
 }
 // the passenger told us where to (their waypoint): off we go
 function taxiGo(world, p, v) {
@@ -721,7 +740,8 @@ function taxiGo(world, p, v) {
   if (!K || K.d > 1200) { T.st = 'dest'; T.idle = world.time + 90; world.notify(p, 'The driver can\'t get you anywhere near there by road - pick a waypoint by a street (the islands without a bridge: the ferry).', 'warn'); return; }
   T.st = 'ride';
   if (!taxiRoute(world, v, K)) { T.st = 'dest'; T.idle = world.time + 90; world.notify(p, 'The driver knows no way there by road - pick another waypoint.', 'warn'); return; }
-  world.notify(p, `To ${T.dest.label || 'your waypoint'}: about ${Math.round(T.left / 32)} m, ~$${fareOf(T.meter + T.left)}.`, 'info');
+  if (RIDESHARE[T.tier] && RIDESHARE[T.tier].reckless) v.ai.reckless = RIDESHARE[T.tier].reckless;   // (the Ultra Saver: flat out, through the lights - traffic.js)
+  world.notify(p, `To ${T.dest.label || 'your waypoint'}: about ${Math.round(T.left / 32)} m, ~$${fareOf(T.meter + T.left, T.tier)}.`, 'info');
   p.meDirty = true;
 }
 function boardTaxi(world, p, v) {
@@ -750,8 +770,9 @@ function updateTaxis(world) {
     const p = world.players.get(T.pid), ped = p && p.ped;
     const aboard = ped && ped.vehId === v.id && ped.seat > 0;
     if (!v.ai || v.wreckAt || !v.seats[0] || !world.get(v.seats[0])?.npc) {   // the driver's gone (taken, shot, the cab wrecked)
-      if (aboard && T.st !== 'wait') payFare(world, p, v);
-      releaseTaxi(world, v, 'Your taxi ride is over.', 'warn');
+      const crashed = T.tier === 'saver' && (v.wreckAt || v.dead);   // (the Ultra Saver's driver put it into something - the engine dead or the car wrecked: the ride's on them)
+      if (aboard && T.st !== 'wait' && !crashed) payFare(world, p, v);
+      releaseTaxi(world, v, crashed ? 'Ultra Saver: your driver wrecked the car. This ride\'s on them.' : 'Your taxi ride is over.', 'warn');
       continue;
     }
     if (!p || !ped || ped.dead) { releaseTaxi(world, v); continue; }
@@ -799,7 +820,7 @@ export function taxiInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.vehId) return null;
   const mine = taxiOf(world, p);
-  if (mine && mine.taxi.st === 'wait' && sideDist(mine, ped) < mine.def.W / 2 + DOOR_REACH) return { label: 'Get in the taxi', run: () => boardTaxi(world, p, mine) };
+  if (mine && mine.taxi.st === 'wait' && sideDist(mine, ped) < mine.def.W / 2 + DOOR_REACH) return { label: mine.taxi.tier && mine.taxi.tier !== 'std' ? `Get in your ${RIDESHARE[mine.taxi.tier].name}` : 'Get in the taxi', run: () => boardTaxi(world, p, mine) };
   if (mine) return null;
   for (const v of world.query(ped.x, ped.y, TAXI_HAIL_PX, K.VEH)) {
     if (!freeTaxi(world, v) || Math.hypot(v.x - ped.x, v.y - ped.y) > TAXI_HAIL_PX) continue;
@@ -812,7 +833,7 @@ export function rideInteraction(world, p) {
   const ped = p.ped, v = ped && ped.vehId ? world.get(ped.vehId) : null;
   if (!v || !v.taxi || v.taxi.pid !== p.pid || ped.seat <= 0) return null;
   const T = v.taxi;
-  if (T.st === 'ride') return { label: `On the way${T.dest && T.dest.label ? ` to ${T.dest.label}` : ''} (~$${fareOf(T.meter + T.left)})`, passive: true, run: () => {} };
+  if (T.st === 'ride') return { label: `On the way${T.dest && T.dest.label ? ` to ${T.dest.label}` : ''} (~$${fareOf(T.meter + T.left, T.tier)})`, passive: true, run: () => {} };
   return null;
 }
 const sideDist = (v, ped) => {
@@ -824,7 +845,7 @@ const sideDist = (v, ped) => {
 // the phone (the Transit app): call a taxi, cancel it, and where you want to go (your waypoint, while you have one)
 export function taxiPhone(world, p, msg) {
   const op = String(msg.op || '');
-  if (op === 'call') { const err = callTaxi(world, p); if (err) world.notify(p, err, 'warn'); }
+  if (op === 'call') { const err = callTaxi(world, p, TIERS.includes(msg.tier) ? msg.tier : 'std'); if (err) world.notify(p, err, 'warn'); }
   else if (op === 'cancel') { const v = taxiOf(world, p); if (v && !(p.ped && p.ped.vehId === v.id)) releaseTaxi(world, v, 'Taxi cancelled.'); }
   else if (op === 'dest') {
     const x = Number(msg.x), y = Number(msg.y);
@@ -838,6 +859,6 @@ export function taxiInfo(world, p) {
   const v = taxiOf(world, p);
   if (!v) return null;
   const T = v.taxi;
-  return { st: T.st, x: Math.round(v.x), y: Math.round(v.y), eta: T.st === 'pickup' ? Math.round(T.left / 200) : 0, wait: T.st === 'wait' ? Math.max(0, Math.round(T.until - world.time)) : 0, to: T.dest ? T.dest.label || 'your waypoint' : '', m: Math.round(T.left / 32), fare: fareOf(T.meter), est: fareOf(T.meter + T.left) };
+  return { tier: T.tier || 'std', name: (RIDESHARE[T.tier] || RIDESHARE.std).name, st: T.st, x: Math.round(v.x), y: Math.round(v.y), eta: T.st === 'pickup' ? Math.round(T.left / 200) : 0, wait: T.st === 'wait' ? Math.max(0, Math.round(T.until - world.time)) : 0, to: T.dest ? T.dest.label || 'your waypoint' : '', m: Math.round(T.left / 32), fare: fareOf(T.meter, T.tier), est: fareOf(T.meter + T.left, T.tier) };
 }
 export { terminalStop as _terminalStop };   // (tests: test/transit.test.js)

@@ -24,6 +24,8 @@
 //             one breaking it up with a pick, one down on a knee at it, the foreman stood watching - by day
 //   pool      two at the Rusty Spur's pool table taking turns (round the table to the next shot, bent over the cue),
 //             the other waiting at the end of the table with his cue up; a watcher or two
+//   dice      three shooting dice down an alley in a rough part of town, crouched against the wall over the dice and
+//             the money - mostly after dark; a player can get in on it (streetdice.js)
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
 // player at most), and emptied when nobody's near any more. They stand (sit) and loop a pose: the descriptor's gt (the
 // client's personaPose: 'sit', 'sitlow') and prop (pp: 'easel', 'cooler', 'chess': client/art2/people.js), the anglers'
@@ -41,6 +43,8 @@ import { wildStyle } from './wildlife.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { BUILDS } from '../entities.js';
 import { courtHoops } from '../../shared/hoops.js';
+import { pointAt } from '../../shared/geom.js';
+import { DISTRICTS } from '../../shared/mapcore.js';
 import { foodLayout, foodSeats } from '../../shared/foodrooms.js';
 import { WILD_KINDS, WILD_LOOKS, wildSpots, wildMembers, wildSteer } from './wildfolk.js';   // (the people of the wilds: Nature-C4)
 
@@ -68,7 +72,8 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   skaters: { day: 0.85, night: 0.4, cap: 1 },
   stoop: { day: 0.18, night: 0.45, cap: 2 },
   party: { day: 0.08, night: 0.55, cap: 1 },
-  roadcrew: { day: 0.9, night: 0, cap: 1 },   // (IN8: eating at a food place's tables, the cook at the line)
+  roadcrew: { day: 0.9, night: 0, cap: 1 },
+  dice: { day: 0.3, night: 0.8, cap: 1 },   // (street dice down an alley: streetdice.js)   // (IN8: eating at a food place's tables, the cook at the line)
   ...WILD_KINDS,   // (the people of the wilds: wildfolk.js)
 };
 // a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
@@ -226,6 +231,20 @@ export function spotsOf(map) {
     const x = (b.door.tx + 0.5) * TILE + 2, y = (b.ty + b.th) * TILE + 7;
     if (walkable(map, x, y + 6) && clear(x, y, 90)) { list.push({ k: 'stoop', x, y, a: Math.PI / 2, wild: false }); taken.push({ x, y }); }
   }
+  // street dice: halfway down an alley in a rough part of town (the alley's asphalt is all road: its own check), the
+  // three over the dice against one wall
+  for (const e of (map.net && map.net.edges) || []) {
+    if (e.kind !== 'alley' || e.lvl || e.len < 8 * TILE) continue;
+    const q = pointAt(e.pts, e.len / 2), side = hsh(q.x, q.y, 301) < 0.5 ? -1 : 1, off = Math.max(8, (e.hw || 40) - 24);
+    const x = q.x - q.ty * side * off, y = q.y + q.tx * side * off, tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+    if (!map.inside(tx, ty)) continue;
+    const D = DISTRICTS[map.dist[map.idx(tx, ty)]];
+    if (!D || (D.tier !== 'rough' && D.tier !== 'low' && D.tier !== 'red')) continue;   // (the rough and poor parts of town, the red-light district)
+    const open = (px, py) => { const t = map.tileAtPx(px, py); return !PED_BLOCK[t] && t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE; };
+    const ix = q.ty * side, iy = -q.tx * side;   // (toward the alley's middle)
+    if (!open(x, y) || !open(x + q.tx * 16, y + q.ty * 16) || !open(x - q.tx * 16, y - q.ty * 16) || !open(x + ix * 14, y + iy * 14) || !clear(x, y, 400)) continue;
+    list.push({ k: 'dice', x, y, a: Math.atan2(q.ty, q.tx), ix, iy, wild: false }); taken.push({ x, y });
+  }
   // pool at the Rusty Spur (its bar room's table: where client/art2/game/statics.js roadhouseRoom draws it)
   const pt = poolTable(map);
   if (pt) { list.push({ k: 'pool', x: pt.cx, y: pt.cy, a: 0, table: pt, wild: false }); taken.push({ x: pt.cx, y: pt.cy }); }
@@ -294,6 +313,9 @@ function members(s) {
     }
   } else if (s.k === 'painter') {
     out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: 'busker', pp: 'easel' });
+  } else if (s.k === 'dice') {   // crouched round the dice: either side along the wall, one on the alley side; the dice and the money at the first one's feet
+    const ax = Math.cos(s.a), ay = Math.sin(s.a), at = (x, y) => Math.atan2(s.y - y, s.x - x);
+    for (const [x, y, pp] of [[s.x - ax * 13, s.y - ay * 13, 'dice'], [s.x + ax * 13, s.y + ay * 13, null], [s.x + s.ix * 13, s.y + s.iy * 13, null]]) out.push({ x, y, a: at(x, y), arche: rng() < 0.6 ? 'hustler' : 'casual', look: rng() < 0.6 ? 'tough' : undefined, gt: 'kneel', pp });
   } else if (s.k === 'carwash') {   // beside the car (its .car: carAt), facing it, sponge in hand, the bucket by them
     const v = s.car, a = v ? v.a : s.a, side = s.side || 1, off = ((v && v.def.W) || 44) / 2 + 9, x = (v ? v.x : s.x) - Math.sin(a) * off * side, y = (v ? v.y : s.y) + Math.cos(a) * off * side;
     out.push({ x, y, a: Math.atan2((v ? v.y : s.y) - y, (v ? v.x : s.x) - x), arche: 'casual', pp: 'sponge' });
@@ -483,6 +505,12 @@ function stepPool(world, g) {
   }
 }
 // hold the activity's pose and prop (on: at the spot; off: away from it - walking back, gone off)
+// someone off an activity for good (a street dice game broken up: streetdice.js): the pose and the prop put down
+export function leave(ped) {
+  if (!ped.npc || !ped.npc.act) return;
+  pose(ped, false);
+  ped.npc.act = null; ped.npc.state = 'wander';
+}
 function pose(ped, on) {
   const a = ped.npc.act, gt = on ? a.gt : null, pp = on ? a.pp : null, cv = on ? a.cv ?? null : null;
   if ((ped.gt || null) !== gt || (ped.pp || null) !== pp || (ped.cv ?? null) !== cv) { ped.gt = gt; ped.pp = pp; ped.cv = cv; ped.appVer = (ped.appVer || 0) + 1; }
@@ -493,7 +521,7 @@ function pose(ped, on) {
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
-const RAIN_OFF = new Set(['chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party', 'birders', 'climbers', 'kayakers']);
+const RAIN_OFF = new Set(['dice', 'chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party', 'birders', 'climbers', 'kayakers']);
 export function steer(world, ped, now) {
   const n = ped.npc, a = n.act;
   if (!a) return null;

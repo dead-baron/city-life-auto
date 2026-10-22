@@ -6,6 +6,7 @@
 // someone lit burns down after a while, and the campers light theirs again (a change goes back the way the map
 // laid it out after FIRE_BURN_S). Everyone sees every fire the same (the 'fire' event; the welcome's list).
 import { FIRE_REACH, FIRE_HEAL, FIRE_AFTER_HIT_S, FIRE_BURN_S } from '../../shared/rules.js';
+import * as skills from './skills.js';
 
 const SIT_MOVE_PX = 6;   // a step this far gets you up
 
@@ -100,6 +101,7 @@ export function update(world, dt) {
     if (!s) continue;
     if (ped.dead || ped.vehId || ped.hidden || ped.carrying || now < (ped.downUntil || 0) || (ped.lastHitAt || -99) > s.at
       || Math.hypot(ped.x - s.x, ped.y - s.y) > SIT_MOVE_PX || !isLit(world, s.i)) { standUp(world, ped); continue; }
+    if (now - (ped.lastHitAt || -99) > FIRE_AFTER_HIT_S) skills.gain(world, p, 'campfire', dt);   // (sat by the fire, out of the fight: constitution - skills.js)
     if (ped.hp < ped.maxHp && now - (ped.lastHitAt || -99) > FIRE_AFTER_HIT_S) {
       ped.hp = Math.min(ped.maxHp, ped.hp + FIRE_HEAL * dt);
       if (world.tick % 20 === 0) p.meDirty = true;

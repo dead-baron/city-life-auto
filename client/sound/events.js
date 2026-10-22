@@ -125,6 +125,11 @@ export const EVENT_SOUNDS = {
   pop: at('tyrepop'),
   spikes: at('spikes'),
   spikesgone: null,                              // (the strip picked up: the deploy was heard)
+  // bank heists (heist.js): the thermal drill's whine at the vault door, a jam's clunk, the door swinging open
+  vault: null, vaultgone: null,                  // (the vault's state, said again every few seconds: drawn by client/vault.js)
+  drill: at('chainsaw', 0.5),
+  drilljam: (ev, A) => { A.at('clang', ev.x, ev.y, 0.8); A.at('thud', ev.x, ev.y, 0.6); },
+  vaultopen: (ev, A) => { A.at('clang', ev.x, ev.y, 1); A.at('thud', ev.x, ev.y, 1); A.at('rubble', ev.x, ev.y, 0.4); },
   barrier: (ev, A) => { A.at('crash', ev.x, ev.y, 1, { p: 1 }); A.at('rubble', ev.x, ev.y); },
   barrierfix: null,                              // (repaired off-screen, by the road crews)
   gatebreak: (ev, A) => { A.at('crash', ev.x, ev.y, 0.7, { p: 0.6 }); A.at('woodcrunch', ev.x, ev.y, 0.8); },
@@ -190,6 +195,8 @@ export const EVENT_SOUNDS = {
   thwock: at('thwack', 0.6),
   bounce: at('thud', 0.25),
   swish: (ev, A) => { const e = A.S && A.S.ents && A.S.ents.get(ev.id); if (e || ev.x !== undefined) A.at('whoosh', e ? e.rx : ev.x, e ? e.ry : ev.y, 0.5); },
+  dice: (ev, A) => { A.at('clack', ev.x, ev.y, 0.5); A.at('clack', ev.x, ev.y, 0.35); },   // (dice against the alley wall: streetdice.js)
+  casino: (ev, A) => { if (ev.k === 'jackpot') { A.at('cashtoss', ev.x, ev.y, 1); A.at('cashtoss', ev.x, ev.y, 0.9); A.at('deposit', ev.x, ev.y, 0.8); } else if (ev.k === 'win') A.at('cashtoss', ev.x, ev.y, 0.7); },   // (a casino's slots and tables: casino.js)
   loot: at('pickup'),
   deposit: at('deposit'),
   forage: (ev, A) => { if (ev.up) return; const f = A.S.map && A.S.map.forage && A.S.map.forage[ev.i]; if (f) A.at('pluck', f.x, f.y); },

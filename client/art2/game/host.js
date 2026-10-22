@@ -303,6 +303,11 @@ const CUT_A = { cut: 'a' }, CUT_B = { cut: 'b' };   // (the plasma blade's two h
 // opt (peds.js recolours it; blue, 0, is none) and the light it gives off in the hand
 const BLADE_OPT = BLADE_COLORS.map((_, i) => (i ? { bc: i } : undefined));
 const BLADE_LIGHT = BLADE_COLORS.map((b, i) => (i ? hexRgb(b.c).map((v) => 0.2 + 0.8 * v / 255) : C.plasma));
+// a rep of a workout (server workout.js: the descriptor's cv counts them): down for a moment at each, then back up
+function repFrame(p, now) {
+  if (p._cv !== p.d.cv) { p._cv = p.d.cv; p._cvAt = now; }
+  return now - (p._cvAt ?? -9) < 0.45 ? 1 : 0;
+}
 const bladeOpt = (p, wpn) => (wpn === PLASMA_I && p.d && p.d.bc ? BLADE_OPT[p.d.bc] : undefined);
 // the depth a boat under a bridge is held to: over the water (ground, tested 4 px down) and a pier (4), under a deck (6)
 const UNDER_Z = 1.5;
@@ -1446,7 +1451,7 @@ export class World2 {
     if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
     const wpn = L.board || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
-    if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined)) && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
+    if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined)) && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : q === 'pushup' || q === 'situp' ? repFrame(p, now) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
     const bo = bladeOpt(p, wpn);   // (a plasma blade in its owner's colour)
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo]);

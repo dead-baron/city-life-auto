@@ -16,7 +16,7 @@ import { weaponIcon } from './render/peds.js';
 import { keyName } from './glyphs.js';
 
 export const ITEM_ICON = {
-  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', skateboard: '🛹', parachute: '🪂',
+  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', skateboard: '🛹', parachute: '🪂', drill: '🛠',
   lure: '🎣', worms: '🪱', shrimp: '🦐', squid: '🦑', glowlure: '✨', crickets: '🦗', minnows: '🐟', doughballs: '⚪', chum: '🪣', dryfly: '🪰',
   caneRod: '🎣', baitcaster: '🎣', flyRod: '🎣', surfRod: '🎣', gameRod: '🎣',
   bass: '🐟', catfish: '🐟', salmon: '🐟', tuna: '🐟', grouper: '🐟', swordfish: '🐟', marlin: '🐟',
@@ -148,6 +148,7 @@ function describe(id) {
   if (id === 'revivekit') return 'revive a downed player to full health - never used up';
   if (id === 'skateboard') return `${keyName('vehicle')} hops you on and off where there's no car to get into (or use it here) - push and steer with the stick, pull back to brake, ${keyName('dive')} ollies; roads, pavements and plazas only`;
   if (id === 'parachute') return `jump out of a helicopter or a plane up in the air, then ${keyName('action')} opens it and you float down, steering where to land - one jump`;
+  if (id === 'drill') return 'a bank job: take it behind a bank\'s counter to the vault door and set it there - the alarm goes at once, and it works through in about a minute while you hold them off';
   if (id === 'flashlight') return `${keyName('light')} switches it on and off - held in your free hand (dark while both are busy); everyone sees the beam`;
   if (id === 'headlamp' || id === 'hardhat') return `${keyName('light')} switches it on and off - hands free${id === 'hardhat' ? '; the hat takes some of a falling tree or rock' : ''}; runs on batteries`;
   if (id === 'lantern') return 'a warm glow all round you, in one hand - use it again while it\'s lit to set it down (it stays lit)';

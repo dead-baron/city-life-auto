@@ -160,21 +160,21 @@ test('no money needed: the buses are free', () => {
 });
 
 // ---- taxis -----------------------------------------------------------------------------------------------------------
-import { TAXI_FLAG, TAXI_REFUSE_STARS } from '../shared/rules.js';
+import { TAXI_FLAG, TAXI_PER_KM, TAXI_REFUSE_STARS, RIDESHARE } from '../shared/rules.js';
 import * as traffic from '../server/systems/traffic.js';
 import { spawnNpc } from '../server/systems/npc.js';
 
-function cabRide(world, p, dest) {
+function cabRide(world, p, dest, label = 'Get in the taxi') {
   const v = world.get(p.taxi);
   for (let t = 0; t < 400 && v.taxi && v.taxi.st === 'pickup'; t++) run(world, 0.5);
   assert.equal(v.taxi.st, 'wait', 'the taxi pulled up');
   assert.ok(Math.hypot(v.x - p.ped.x, v.y - p.ped.y) < 400, 'by the kerb near you');
   teleport(world, p.ped, v.x - Math.sin(v.a) * 50, v.y + Math.cos(v.a) * 50);
   const act = findInteraction(world, p);
-  assert.equal(act && act.label, 'Get in the taxi');
+  assert.equal(act && act.label, label);
   act.run();
   assert.equal(p.ped.vehId, v.id);
-  assert.ok(p.ped.seat >= 2, 'in the back');
+  assert.ok(p.ped.seat >= (v.seats.length > 2 ? 2 : 1), 'in the back (up front in a two-seater)');
   assert.equal(v.taxi.st, 'dest', 'asks where to');
   transit.taxiPhone(world, p, { op: 'dest', ...dest });
   run(world, 1.1);
@@ -258,4 +258,46 @@ test('phone menu open: the phone in your hand for everyone (the descriptor), put
   run(world, 1.1);
   assert.equal(p.ped.phoneOut, 0);
   void car;
+});
+
+test('rideshare: the Ultra Saver - under half the fare, flat out once you\'re in, the ride on them when it crashes; Cruise Black - a black sedan at 2.2x', () => {
+  const world = makeWorld();
+  const { p } = joinPlayer(world, { cash: 300, bank: 0 });
+  teleport(world, p.ped, 21648, 18030);
+  run(world, 1);
+  const info = transit.transitInfo(world, p);
+  assert.deepEqual(info.rs.map((r) => r.k), ['premium', 'std', 'saver'], 'three tiers in the app');
+  transit.taxiPhone(world, p, { op: 'call', tier: 'saver' });
+  const v = world.get(p.taxi);
+  assert.ok(v && v.model === RIDESHARE.saver.model && v.taxi.tier === 'saver', 'an old compact on its way');
+  assert.equal(transit.taxiInfo(world, p).name, 'Ultra Saver');
+  cabRide(world, p, { x: 31792, y: 25700, label: 'Southside' }, 'Get in your Ultra Saver');
+  assert.equal(v.ai.reckless, RIDESHARE.saver.reckless, 'your driver is in a hurry');
+  v.taxi.meter = 32000;   // (a kilometre in)
+  assert.equal(transit.taxiInfo(world, p).fare, Math.round((TAXI_FLAG + TAXI_PER_KM) * RIDESHARE.saver.fare), 'under half the fare');
+  vehicles.damageVehicle(world, v, 99999, null, true);   // (into something: the engine dead - vehicles.js killEngine)
+  assert.ok(v.dead, 'the engine dead');
+  run(world, 1.1);
+  assert.equal(p.profile.cash, 300, 'the ride on them');
+  assert.equal(p.taxi, 0);
+  assert.ok(!v.ai || !v.ai.reckless, 'no longer racing');
+  // Cruise Black
+  vehicles.exitVehicle(world, p.ped);
+  teleport(world, p.ped, 21648, 18030);
+  run(world, 1);
+  p.taxiCallAt = -99;   // (past the gap between calls)
+  transit.taxiPhone(world, p, { op: 'call', tier: 'premium' });
+  const b = world.get(p.taxi);
+  assert.ok(b && b.model === RIDESHARE.premium.model && b.paint === RIDESHARE.premium.paint && b.taxi.tier === 'premium', 'a black sedan coming');
+  b.taxi.meter = 32000;
+  assert.equal(transit.taxiInfo(world, p).fare, Math.round((TAXI_FLAG + TAXI_PER_KM) * RIDESHARE.premium.fare), '2.2x the fare');
+});
+
+test('the map\'s live transit: where every train is (the buses and the ferries\' boats were there)', () => {
+  const world = makeWorld();
+  run(world, 1);
+  const info = transit.transitInfo(world, null);
+  assert.ok(Array.isArray(info.trains) && info.trains.length === world.trains.length && info.trains.length > 0, `the trains (${info.trains && info.trains.length})`);
+  const [x, y, a, line, sub] = info.trains[0];
+  assert.ok(Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(a) && Number.isInteger(line) && (sub === 0 || sub === 1));
 });

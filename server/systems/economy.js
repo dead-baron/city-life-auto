@@ -28,6 +28,9 @@ import * as homeinside from './homeinside.js';
 import * as mortgage from './mortgage.js';
 import * as mail from './mail.js';
 import * as skate from './skate.js';
+import * as casino from './casino.js';
+import * as skills from './skills.js';
+import * as arcade from './arcade.js';
 import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
 import { SKATEBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
@@ -47,6 +50,8 @@ function walkCounter(poi) {
   return null;
 }
 export function poiLabel(world, p, poi) {
+  if (casino.isCasino(poi)) return casino.label(poi);   // (Lucky Mesa's casinos: the slots and the tables - casino.js)
+  if (arcade.isArcade(world, poi)) return arcade.label(poi);   // (the arcades: a credit, the prize counter - arcade.js)
   if (poi.walk && poi.kind === 'delivery') return walkCounter(poi) ? `Counter - ${poi.label}` : null;
   switch (poi.kind) {
     case 'delivery': case 'evidence': case 'reception': case 'paint': case 'ride': case 'race': return null;   // (a ride's boarding point: server/systems/rides.js; a race's start: races.js)
@@ -172,6 +177,8 @@ export function buildMenu(world, p, poi) {
   const opts = [];
   let title = poi.label, sub = '', interior = null;
   if (kind === 'hardware' && p.furnShop === poi.id) return furnitureMenu(p, poi);   // (H67: the furniture counter)
+  if (casino.isCasino(poi)) return casino.menu(world, p, poi);   // (a casino's floor: casino.js)
+  if (arcade.isArcade(world, poi)) return arcade.menu(world, p, poi);   // (an arcade's counter: arcade.js)
   if (kind === 'delivery' && poi.walk) {   // (a walk-in shop's counter: walkCounter)
     const W = walkCounter(poi) || { items: [], sub: 'Just looking.' }, none = !(prof.homes || []).length, furn = prof.furn || {};
     for (const [id, price] of W.items) opts.push({ id: `i:${id}:${price}:1`, label: ITEMS[id].name, price, note: prof.inventory[id] ? `have ${prof.inventory[id]}` : '' });
@@ -486,6 +493,8 @@ export function openMenu(world, p, poi) {
   if (!p.conn) return;
   p.menu = { poi: poi.id };
   p.furnShop = null; p.lobbyUnit = null; p.atmFull = null;
+  if (casino.isCasino(poi)) casino.open(world, p, poi);
+  p.arcadePrizes = null;
   p.conn.sendJSON(buildMenu(world, p, poi));
 }
 
@@ -533,6 +542,8 @@ function execute(world, p, poi, opt) {
       return null;
     }
     case 'hot': return hotmoney.execute(world, p, poi, parts[1]);
+    case 'cs': return casino.execute(world, p, poi, opt, pay);   // (a bet at a casino: casino.js)
+    case 'ar': return arcade.execute(world, p, poi, opt, pay);   // (an arcade: arcade.js)
     case 'trainjob': return trains.startTrainJob(world, p);
     case 'w': {
       const id = parts[1], price = Number(parts[2]);
@@ -725,7 +736,7 @@ function execute(world, p, poi, opt) {
     }
     case 'hsell': return homes.sell(world, p, homes.homeFor(world, p, poi));
     case 'hspawn': { const hid = homes.homeFor(world, p, poi).id; prof.spawnHome = hid; prof.lastSpawn = `home:${hid}`; store.touch(); world.notify(p, 'You will wake up here after you die.', 'good'); return null; }
-    case 'hrest': { ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = 100; world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up. Full health.', 'good'); return null; }
+    case 'hrest': { ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = skills.staminaFull(world, ped); world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up. Full health.', 'good'); return null; }
     case 'hhide': return homes.beginEnter(world, p, homes.homeFor(world, p, poi));
     case 'hleave': homes.leaveHome(world, p); return null;
     case 'hst': case 'htk': {
@@ -836,8 +847,8 @@ export function applyDisguise(world, p) {
 }
 
 export function applyBuff(world, ped, buff) {
-  if (buff === 'coffee') { ped.stamina = 100; ped.buffs.coffee = world.time + 60; }
-  if (buff === 'energy') { ped.buffs.energy = world.time + 60; ped.stamina = 140; }
+  if (buff === 'coffee') { ped.buffs.coffee = world.time + 60; ped.stamina = skills.staminaFull(world, ped); }
+  if (buff === 'energy') { ped.buffs.energy = world.time + 60; ped.stamina = skills.staminaFull(world, ped); }   // (a full tank: with the stamina skill, more - skills.js)
   if (buff === 'wine') ped.buffs.wine = world.time + WINE_S;   // (combat.js: health comes back faster)
   if (buff === 'scent') ped.buffs.scent = world.time + SCENT_S;   // (wildlife.js: no animal smells you)
   // a hearty meal (cooked big game): more health while it lasts - topped up, not stacked (heartyEnd puts it back)
@@ -906,6 +917,7 @@ export function useItem(world, p, id) {
     if (ped.hp >= ped.maxHp && (it.food || !ped.bleeding) && !(it.hearty && !(ped.buffs.hearty > world.time + HEARTY_S * 0.5))) { world.notify(p, it.food ? 'You\'re not hungry - you\'re at full health.' : 'You are already healthy.', 'info'); return; }
     inv[id]--;
     if (it.hearty) applyBuff(world, ped, 'hearty');
+    if (it.cooked) skills.gain(world, p, 'meal');   // (a cooked meal: constitution - skills.js)
     ped.hp = Math.min(ped.maxHp, ped.hp + it.heal); if (it.stopBleed) ped.bleeding = false;   // (food doesn't stop bleeding)
     world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
     world.notify(p, it.food ? `Ate a ${it.name.replace(/^Bunch of /, 'bunch of ')}.${it.hearty ? ` A hearty meal: +${HEARTY_HP} health for ${Math.round(HEARTY_S / 60)} minutes.` : ''}` : `Used ${it.name}.`, 'good');

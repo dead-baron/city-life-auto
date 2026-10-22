@@ -38,7 +38,7 @@ const FEED_ICON = { snatch: '👜', drop: '📦', shootout: '💥', robbery: '�
 const flyJobs = (list, job, h = 'Flying') => (list.length ? `<h3>${h}</h3>` + list.map((j) => `<button class="ph-row job" data-take="${j.id}"${job ? ' disabled' : ''}><span class="ic tier">${j.icon}</span><span class="nm">${esc(j.title)}<small>${esc(j.sub)}</small></span><span class="d">$${j.pay}+</span></button>`).join('') : '');
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
-  let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null;
+  let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null;
   let homes = null, RE = null;   // the real-estate app (H65): the server's list, and its code - client/realestate.js, loaded when it opens
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
@@ -62,6 +62,7 @@ export function createPhone(ctx) {
           <button class="ph-app" data-go="transit"><b>🚌</b>Transit</button>
           <button class="ph-app" data-go="homes"><b>🏠</b>Homes</button>
           <button class="ph-app" data-act="dance"><b>💃</b>Dance</button>
+          <button class="ph-app" data-go="skills"><b>💪</b>Skills</button>
           ${wp ? '<button class="ph-app" data-act="clearwp"><b>✕</b>Clear waypoint</button>' : ''}
         </div>
         ${wp ? `<div class="ph-card">Waypoint: <b>${esc(wp.label)}</b> · ${m(dist(wp))}</div>` : ''}
@@ -82,6 +83,10 @@ export function createPhone(ctx) {
       el.innerHTML = '<h3>City feed</h3><p class="ph-hint">What\'s going on anywhere in the city. Tap one to set a waypoint.</p>' + (!feed ? '<p class="ph-empty">Loading…</p>'
         : feed.length ? feed.map((f, i) => `<button class="ph-row feed ${esc(f.kind)}" data-feed="${i}"${f.x === null ? ' disabled' : ''}><span class="ic">${FEED_ICON[f.kind] || '•'}</span><span class="nm">${esc(f.text)}<small>${esc(f.where || 'the city')} · ${ago(f.ago)}</small></span><span class="d">${f.x === null ? '' : m(dist(f))}</span></button>`).join('')
           : '<p class="ph-empty">Quiet out there right now.</p>');
+    } else if (screen === 'skills') {   // (the six skills, levelled by doing things: server skills.js)
+      el.innerHTML = '<h3>Skills</h3><div class="ph-apps"><button class="ph-app" data-act="workout" data-k="pushups"><b>💪</b>Push-ups here</button><button class="ph-app" data-act="workout" data-k="situps"><b>🧘</b>Sit-ups here</button></div>' + (!skl ? '<p class="ph-empty">Loading…</p>' : skl.list.map((k) => `<div class="ph-card skl"><b>${esc(k.name)}</b> level ${k.L} of ${k.max}<small>${esc(k.does)}: +${k.pct}%${k.need ? ` · ${k.xp}/${k.need} to the next` : ''}</small><i style="--w:${k.need ? Math.round(100 * k.xp / k.need) : 100}%"></i></div>`).join('')
+        + '<h3>Today</h3><p class="ph-hint">Each counts up to a limit an in-game day - something else for the same skill still counts.</p>'
+        + skl.today.map((t) => `<div class="ph-row"><span class="nm">${esc(t.name)}<small>${esc(t.skill)} · ${t.left ? `${t.left} xp left today` : 'done for today'}</small></span></div>`).join(''));
     } else if (screen === 'bounties') {
       el.innerHTML = bountiesHtml();
     } else if (screen === 'transit') {
@@ -107,7 +112,7 @@ export function createPhone(ctx) {
   }
 
   function wire(el) {
-    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } render(); };
+    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'skills') ctx.send({ t: 'phone', a: 'skills' }); if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } render(); };
     for (const b of el.querySelectorAll('[data-stop]')) b.onclick = () => {
       const [l, k] = b.dataset.stop.split(':').map(Number);
       const L = transit && transit.lines.find((q) => q.id === l), st = L && L.stops[k];
@@ -125,8 +130,9 @@ export function createPhone(ctx) {
       ctx.toast(`Waypoint: the ${R.name} at ${name}`, 'info');
       ctx.close();
     };
+    for (const b of el.querySelectorAll('[data-act="workout"]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'workout', k: b.dataset.k }); ctx.close(); };   // (a set where you stand: server workout.js)
     for (const b of el.querySelectorAll('[data-act="dance"]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'dance' }); ctx.close(); };   // (dance where you stand: the next move each time - server dance.js; G / L3 too)
-    for (const b of el.querySelectorAll('[data-act="taxicall"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'call' }); };
+    for (const b of el.querySelectorAll('[data-act="taxicall"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'call', tier: b.dataset.tier }); };
     for (const b of el.querySelectorAll('[data-act="taxicancel"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'cancel' }); };
     for (const b of el.querySelectorAll('[data-rail]')) b.onclick = () => {
       const st = railStations(ctx.map())[Number(b.dataset.rail)];
@@ -191,9 +197,9 @@ export function createPhone(ctx) {
     if (!transit) return h + '<p class="ph-empty">Loading…</p>';
     // a taxi: call one (or hail one going by), or how yours is getting on
     const tx = transit.taxi;
-    h += '<h3>🚕 Taxi</h3>' + (tx
-      ? `<div class="ph-card">${tx.st === 'pickup' ? `Your taxi is on its way (about ${Math.max(5, tx.eta)}s) - the yellow square on your map.` : tx.st === 'wait' ? 'Your taxi is waiting at the kerb - get in the back.' : tx.st === 'dest' ? 'Where to? Set a waypoint (Places, or tap the map).' : tx.st === 'ride' ? `On the way to ${esc(tx.to)}: ${tx.m} m, $${tx.fare} so far.` : `There: $${tx.fare}.`}${tx.st === 'pickup' || tx.st === 'wait' ? '<button data-act="taxicancel">Cancel the taxi</button>' : ''}</div>`
-      : `<button class="ph-row" data-act="taxicall"><span class="ic">🚕</span><span class="nm">Call a taxi<small>$${transit.taxiFlag} + $${transit.taxiKm} a km, paid when you get out · or hail one going by</small></span></button>`)
+    h += '<h3>🚕 Rides</h3>' + (tx
+      ? `<div class="ph-card">${tx.st === 'pickup' ? `Your ${tx.tier === 'std' ? 'taxi' : esc(tx.name)} is on its way (about ${Math.max(5, tx.eta)}s) - the yellow square on your map.` : tx.st === 'wait' ? 'Your taxi is waiting at the kerb - get in the back.' : tx.st === 'dest' ? 'Where to? Set a waypoint (Places, or tap the map).' : tx.st === 'ride' ? `On the way to ${esc(tx.to)}: ${tx.m} m, $${tx.fare} so far.` : `There: $${tx.fare}.`}${tx.st === 'pickup' || tx.st === 'wait' ? '<button data-act="taxicancel">Cancel the taxi</button>' : ''}</div>`
+      : (transit.rs || []).map((r) => `<button class="ph-row" data-act="taxicall" data-tier="${r.k}"><span class="ic">${r.k === 'premium' ? '🎩' : r.k === 'saver' ? '🪫' : '🚕'}</span><span class="nm">${esc(r.name)}<small>${esc(r.note)}</small></span></button>`).join(''))
       + '<p class="ph-hint">Your waypoint is where the driver takes you. Skip the ride on the way for the whole fare.</p>';
     h += `<h3>🚌 Buses</h3><p class="ph-hint">Wait at a stop and board the bus when it pulls up. Free, any distance. Get off at any stop with the vehicle key. Tap a stop for a waypoint.</p>`;
     let near = null, nd = Infinity;
@@ -259,6 +265,7 @@ export function createPhone(ctx) {
     openApp(s) { screen = s || 'home'; group = null; render(); if (s === 'jobs' || !s) ctx.send({ t: 'phone', a: 'board' }); },
     back() { if (screen === 'group') screen = 'places'; else screen = 'home'; render(); return true; },
     onFeed(msg) { feed = msg.items || []; if (screen === 'feed') render(); },
+    onSkills(msg) { skl = msg; if (screen === 'skills') render(); },
     onTransit(msg) { transit = msg; if (screen === 'transit') render(); },
     onHomes(msg) { homes = msg; if (screen === 'homes') render(); },
     onBounties(msg) {

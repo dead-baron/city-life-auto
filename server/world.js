@@ -36,6 +36,7 @@ import * as gang from './systems/gang.js';
 import * as races from './systems/races.js';
 import * as minigames from './systems/minigames.js';
 import * as robbery from './systems/robbery.js';
+import * as heist from './systems/heist.js';
 import * as trains from './systems/trains.js';
 import * as rentals from './systems/rentals.js';
 import * as spikes from './systems/spikes.js';
@@ -145,6 +146,7 @@ const SYSTEMS = [
   ['grenades', grenades.update],    // grenades thrown: their arcs, bounces and fuses (grenades.js)
   ['cargo', cargo.update],          // crates, loot bags
   ['robbery', robbery.update],      // store hold-ups, silent alarms, squad-car response
+  ['heist', heist.update],          // bank heists: the drill at a vault door, its jams, the vault opening (heist.js)
   ['law', law.update],              // heat decay, search circles
   ['bounties', bounties.update],    // bounty clocks (while the target is out in the city), refunds, last seen
   ['jobs', jobs.update],            // contraband drops, fishing, jobs
