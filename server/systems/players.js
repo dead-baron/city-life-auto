@@ -52,6 +52,7 @@ import * as minigames from './minigames.js';
 import * as robbery from './robbery.js';
 import * as heist from './heist.js';
 import * as crews from './crews.js';
+import { cleanName, NAME } from '../../shared/names.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
@@ -369,6 +370,24 @@ function finalizeLogout(world, p, dropLoot) {
 // drive off in), the bounties on their head are called off (the placers' money back in their banks: it lived on this
 // profile) and the saved profile is deleted; a login with the same token after this is a brand-new character. Only ever
 // the caller's own account: session.js passes the session's player, never a pid from the message.
+// A name of your own (Settings' account section - the owner's M9 note: "a username"): a name may be (shared/names.js),
+// nobody else's (any case), and changed once every NAME.gapS; over your head at once (the descriptor sent again)
+export function rename(world, p, raw) {
+  const prof = p.profile, r = cleanName(raw);
+  if (r.err) { world.notify(p, r.err, 'warn'); return false; }
+  if (r.name === p.name) return true;
+  const wait = (prof.nameAt || 0) + NAME.gapS * 1000 - Date.now();
+  if (wait > 0) { world.notify(p, `You can change your name again in ${Math.ceil(wait / 60000)} min.`, 'warn'); return false; }
+  const low = r.name.toLowerCase();
+  for (const q of store.all()) if (q.pid !== prof.pid && String(q.name || '').toLowerCase() === low) { world.notify(p, `${r.name} is taken - pick another.`, 'warn'); return false; }
+  prof.name = r.name; p.name = r.name; prof.nameAt = Date.now();
+  if (p.ped) { p.ped.name = r.name; p.ped.appVer = (p.ped.appVer || 0) + 1; }
+  world.notify(p, `You're ${r.name} now.`, 'good');
+  p.meDirty = true;
+  store.touch();
+  return true;
+}
+
 export function wipeAccount(world, p) {
   if (p.devMode) devmode.exit(world, p, true);
   struggle.onLeave(world, p); custody.onLeave(world, p);   // (the officers on them let go, as when anyone logs off)

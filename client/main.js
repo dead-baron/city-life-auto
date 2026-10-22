@@ -51,6 +51,7 @@ import { noteServerBuild, myBuild } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { bonusOf } from '../shared/skills.js';
+import { cleanName } from '../shared/names.js';   // (Settings: your name - the server checks it too)
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
@@ -2211,6 +2212,7 @@ function syncSettings() {
 const PREV_TOKEN_KEY = TOKEN_KEY + '.prev';
 const codeMsg = (t) => { $('s-code-msg').textContent = t; };
 function syncAccount() {
+  $('s-name-in').value = (S.me && S.me.name) || ''; $('s-name-msg').textContent = '';
   let prev = null;
   try { prev = localStorage.getItem(PREV_TOKEN_KEY); } catch { prev = null; }
   $('s-code-back').classList.toggle('hidden', !prev || prev === S.token);
@@ -2232,6 +2234,14 @@ $('s-code-use').onclick = () => {
   if (!/^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/.test(t)) { codeMsg('That doesn\'t look like a transfer code.'); return; }
   if (t === S.token) { codeMsg('That\'s the character you\'re already playing.'); return; }
   switchAccount(t, 'Switching character...');
+};
+// your name (the server checks it again, keeps it unique and says how it went: players.js rename)
+$('s-name-use').onclick = () => {
+  const r = cleanName($('s-name-in').value);
+  if (r.err) { $('s-name-msg').textContent = r.err; return; }
+  if (!S.playing) { $('s-name-msg').textContent = 'Play online first - then you can change it here.'; return; }
+  send({ t: 'name', name: r.name });
+  $('s-name-msg').textContent = `Asked for ${r.name}...`;
 };
 $('s-code-back').onclick = () => {
   let prev = null;

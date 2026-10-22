@@ -14618,3 +14618,17 @@ ARCADE.hockey; server/systems/arcade.js), each on the arcade's screen and loaded
 Tests: test/arcade.test.js - the lane's cup, rings, pockets and over-the-top, every ring reachable by the power and a
 pocket by the aim; a puck struck into the machine's goal, the machine going after a puck; the tickets, and the scores
 the server won't take (too quick, impossible, a win in two seconds).
+
+## 2026-10-22 · A name of your own
+
+The owner's M9 note (10-03: "optional account: sign in on other devices, chat, a username"). Every character was
+"Guest" and four digits for good - and with crews, names matter. Now Settings' account section (above the transfer
+code) has your name: type one and Save (client/main.js; server/systems/players.js rename; shared/names.js):
+- 3 to 16 characters - letters, numbers, spaces, dots, dashes and underscores, starting with a letter; spaces tidied;
+- nobody else's (in any case), not the game's own words (Admin, Police, Guest and a number...), nothing abusive (looked
+  for with the letters run together and the usual digit swaps undone);
+- changed once every ten minutes; over your head for everyone at once, and in your crew's list.
+The page checks it first and the server again; the server says how it went.
+
+Tests: test/names.test.js - the names that may and may not be, a rename over your head at once, taken in any case,
+not again so soon, nothing abusive, the crew's list keeping up.
