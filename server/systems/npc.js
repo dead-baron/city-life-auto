@@ -554,7 +554,7 @@ export function spectacle(world, x, y, { r = 480, near = 120, chance = 1, secs =
   const now = world.time;
   for (const e of world.query(x, y, r, K.PED)) {
     const n = e.npc;
-    if (!n || e.dead || e.vehId || e.hidden || e.onTrain || n.desk || n.guard || n.role !== 'civ') continue;
+    if (!n || e.dead || e.vehId || e.hidden || e.onTrain || n.desk || n.guard || n.driven || n.role !== 'civ') continue;   // (n.driven: a club pro mid-game - tennis.js)
     if (n.state !== 'wander' && n.state !== 'idle') continue;
     if (now - (n.filmedAt ?? -1e9) < 45 || Math.hypot(e.x - x, e.y - y) < near) continue;
     if (rng() < filmChance(e) * chance) startFilming(world, e, x, y, secs * (0.7 + rng() * 0.6));

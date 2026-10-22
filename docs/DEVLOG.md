@@ -14285,3 +14285,28 @@ gate for officers only, the harbour) with nobody ever sent there. server/systems
 Tests: test/prison.test.js - who goes (four stars, the third booking, five minutes at most); booked at four stars:
 inside, weapons away, nobody hurt, the guards out, the gate shut, served and back on the mainland with the weapon;
 over the wall, three stars; logged off and back inside.
+
+## 2026-10-22 · Tennis and K9: fixes from a review
+
+A read-through of the two new systems found:
+
+- **tennis, the action button while serving** threw in the input system (the serve prompt had nothing to run), which
+  cost every later player that tick's input: it does nothing now. Calling the pro out when it can't come says why.
+- **tennis, the courts either way round**: four of World v3's courts (Pink Mile's, Bayside's, the Bluffs' two) are
+  wider than deep with the net strung north-south, and the game had played them across the short way with an
+  invisible net. tennis.js now works along each court (across its net, from its 'tnet' prop) and across it; the tests
+  play a game each way round.
+- **tennis, the pro**: floored, tased, on fire or in a car, the game's off (it had played on, lying down); it no longer
+  stops to film things mid-game (npc.js spectacle); a floored player can't swing; a serve not hit in 45 s ends the
+  game (rules.js TENNIS.serveWait), so no court is held by someone away from the page.
+- **K9, the bite event** shared the fishing bite's name (a splash on dry ground and the fishing chime for everyone who
+  saw it): it's 'k9bite' now, a bark and a thump.
+- **K9, levels**: the dog bit through the street at someone down a manhole (and on the subway, and on the highway
+  deck from below). It keeps to its own level, and waits in the car while its handler is underground.
+- **K9, the grace**: a bite the moment you broke free of an officer floored you again; it waits out the grace (and
+  homes.js protectUntil).
+- **K9, the leash**: the dog, faster than anyone, never gave up. It's after you only within K9.sight (now 800 px) of
+  its handler - outrun the officers and it's called back - and only while its unit is on the job (not standing down,
+  nor a hijacked car's crew turned on the thief).
+
+Tests: test/tennis.test.js (both ways round; the pro floored; the serve left), test/k9.test.js (levels, grace, leash).

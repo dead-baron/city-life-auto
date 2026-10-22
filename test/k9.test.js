@@ -74,3 +74,29 @@ test('the dog leaves someone in a vehicle alone, and a suspect who isn\'t wanted
   assert.ok(!dog.hidden && w.time >= (p.ped.downUntil || 0), 'not wanted: no bite');
   assert.ok(Math.hypot(dog.x - h.x, dog.y - h.y) < 120, 'at its handler\'s heel');
 });
+
+test('the dog stays on its own level, lets someone just broken free get going, and is called back when they\'re well away', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const at = openGround(w.map);
+  teleport(w, p.ped, at.x, at.y);
+  p.wanted = 2;
+  const { v, h, dog } = k9Unit(w, p, at);
+  h.vehId = 0; v.seats[0] = 0; h.x = at.x - 60; h.y = at.y;
+  w.step();
+  dog.x = at.x - 20; dog.y = at.y;
+  // down a manhole (underground.js keeps you at its x, y): out of the dog's reach
+  p.ped.sub = true; p.ped.ug = 1;
+  for (let i = 0; i < 20; i++) w.step();
+  assert.ok(w.time >= (p.ped.downUntil || 0), 'no bite through the street');
+  p.ped.sub = false; p.ped.ug = 0;
+  // just broken free of an officer (struggle.js graceUntil): a moment's grace
+  p.ped.graceUntil = w.time + 1.5;
+  dog.x = at.x - 20; dog.y = at.y;
+  for (let i = 0; i < 20; i++) w.step();
+  assert.ok(w.time >= (p.ped.downUntil || 0), 'no bite in the grace');
+  // well away from the handler: called back to heel
+  teleport(w, p.ped, h.x + K9.sight + 300, h.y);
+  for (let i = 0; i < 20 * 3; i++) w.step();
+  assert.ok(Math.hypot(dog.x - h.x, dog.y - h.y) < 120, 'back at its handler\'s heel');
+});

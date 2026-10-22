@@ -190,6 +190,7 @@ export const EVENT_SOUNDS = {
   nibble: (ev, A) => A.at('splash', ev.x, ev.y, 0.3, { n: 3 }),   // (a fish at the bait: the bobber twitches)
   bite: at('bite'),
   bark: at('dog'),   // (a police dog let out of the car: server k9.js)
+  k9bite: (ev, A) => { A.at('dog', ev.x, ev.y, 1); A.at('punch', ev.x, ev.y, 0.7); },   // (the police dog brings someone down: k9.js)
   hook: (ev, A) => A.at('splash', ev.x, ev.y, ev.leg ? 1 : 0.8, { n: ev.leg ? 16 : 10 }),   // (struck: it's on)
   flost: (ev, A) => A.at('splash', ev.x, ev.y, 0.5, { n: 5 }),   // (it got away, or the line snapped)
   catch: (ev, A) => { A.at('splash', ev.x, ev.y, 0.8, { n: 12 }); A.ui('good', 0.7); },

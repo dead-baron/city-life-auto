@@ -797,12 +797,12 @@ export const GRENADE = { speed: 320, carry: 0.5, lift: 230, grav: 720, bounce: 0
 // tennis with the club pro (server/systems/tennis.js): a hit flies at pace px/s across; a stretched one (the ball at the
 // edge of reach) strays up to spray px; the pro runs at proSpeed of a person's pace and misses proMiss of its swings, plus
 // proStretch more at the edge of its reach; prize to the bank for beating it; leave px off the court ends the game;
-// between s between points
-export const TENNIS = { pace: 430, spray: 120, proSpeed: 0.92, proMiss: 0.06, proStretch: 0.25, prize: 60, leave: 90, between: 1.6 };
+// between s between points; a serve not hit in serveWait s ends it
+export const TENNIS = { pace: 430, spray: 120, proSpeed: 0.92, proMiss: 0.06, proStretch: 0.25, prize: 60, leave: 90, between: 1.6, serveWait: 45 };
 // K9 units (server/systems/k9.js): share of the patrol cars sent after someone on foot at stars..maxStars that carry a
-// dog; the dog runs at speed x a walk, after anyone wanted within sight px; a bite within reach px puts them down for
+// dog; the dog runs at speed x a walk, after anyone wanted within sight px of its handler (the leash); a bite within reach px puts them down for
 // downS s, no more than once every `every` s
-export const K9 = { share: 0.3, stars: 2, maxStars: 3, speed: 2.7, sight: 650, reach: 24, downS: 2.4, every: 5, hp: 70 };
+export const K9 = { share: 0.3, stars: 2, maxStars: 3, speed: 2.7, sight: 800, reach: 24, downS: 2.4, every: 5, hp: 70 };
 // Prison Island (server/systems/prison.js): a booking at `stars` or more, or the `repeat`th within repeatMs (wall-clock
 // ms), is a sentence at Kestrel Bay Penitentiary instead of the station's cells: base s + perStar a star + perRepeat for
 // each booking before it in that time, up to max s; the wall takes climbS s to get over; over it, escapeStars stars
