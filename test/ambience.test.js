@@ -53,7 +53,8 @@ function listen(map, { x = X, y = Y, night = 0, rain = 0, inside = false } = {})
   return { max, avg: sum, loud, mean: pw ? 10 * Math.log10(pw) : -200, k: A.k };
 }
 const CITY_DAY = BED_DBA.city + 20 * Math.log10(BED_MAX.city);   // (the city's hum by day: -32.8 dBA)
-const HEAVY_RAIN = BED_DBA.rain + 20 * Math.log10(BED_MAX.rain);   // (-28.2)
+const HEAVY_RAIN = BED_DBA.rain + 20 * Math.log10(BED_MAX.rain);   // (-31.5; -28.2 till 2026-10-21)
+const FULL_SEA = BED_DBA.sea + 20 * Math.log10(BED_MAX.sea);   // (the open sea at the top of its swell: -30.3)
 
 test('the open country (Willow Valley\'s farmland): a breeze under the city\'s hum, no leaves, no rain, no sea', () => {
   const r = listen(makeMap({}));
@@ -76,7 +77,7 @@ test('the woods rustle - softly; the leaves never over the city\'s hum, the rain
   const field = listen(makeMap({ d: WILD, tile: T.GRASS }));
   assert.ok(woods.max.wind < field.max.wind * 0.5, `the wind under the trees (${woods.max.wind.toFixed(3)}) and out in the open (${field.max.wind.toFixed(3)})`);
   const wet = listen(makeMap({}), { rain: 1 });
-  assert.ok(wet.max.rain > 0.15 && wet.max.rain <= BED_MAX.rain, 'rain when it rains');
+  assert.ok(wet.max.rain > BED_MAX.rain * 0.68 && wet.max.rain <= BED_MAX.rain, `rain when it rains (${wet.max.rain.toFixed(3)})`);   // (0.15 of 0.22 till the rain came down 3 dB, 2026-10-21)
 });
 
 test('a river or a lake isn\'t the sea: no swell, no surf, no gulls\' sea - a quiet babble by a river', () => {
@@ -117,9 +118,10 @@ test('no bed ever over its level: country, woods, shore, river, city, open sea -
     for (const n in r.max) assert.ok(r.max[n] <= BED_MAX[n] + 1e-9, `${n} ${r.max[n]} over ${BED_MAX[n]}`);
     if (!rain) assert.equal(r.max.rain, 0, 'the rain only when it rains');
     // (dry, away from the sea: about the city's hum by day - the woods' rustle and the wind in the gusts a little over
-    // it; a storm at sea, in the wild: a few dB over the rain)
+    // it; a storm at sea, in the wild: a few dB over the loudest bed in it - the rain or the sea's full swell; it was the
+    // rain alone till the rain came down 3 dB, 2026-10-21, and the open sea's swell is louder than that now)
     if (!rain && inland.includes(m)) assert.ok(r.mean <= CITY_DAY + 2 && r.loud <= CITY_DAY + 3, `the whole mix ${r.mean.toFixed(1)} dBA, ${r.loud.toFixed(1)} at its loudest: over the city's hum`);
-    assert.ok(r.loud <= HEAVY_RAIN + 4.5, `the whole mix ${r.loud.toFixed(1)} dBA`);
+    assert.ok(r.loud <= Math.max(HEAVY_RAIN, FULL_SEA) + 4.5, `the whole mix ${r.loud.toFixed(1)} dBA (map ${maps.indexOf(m)}, night ${night}, rain ${rain}, ${inside ? 'inside' : 'out'})`);
   }
 });
 

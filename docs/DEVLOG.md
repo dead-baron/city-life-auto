@@ -13687,3 +13687,17 @@ town's.
 - **the rain** (BED_MAX.rain 0.22 to 0.15): about 3 dB down. It adds less to the wind (0.05, was 0.1).
 
 Tests: test/sound.test.js - mostly lulls, gusts now and then, from near still to a strong gust; the rain's level.
+
+## 2026-10-22 · Fix: the woods rustle in the lulls
+
+The last batch made the wind gust and die away (`gustStep` in `client/sound/ambience.js`): it spends most of its
+time in a lull (0.12-0.4) with a gust now and then. But the leaves' rustle still went with the gust squared, so in a
+lull the woods were all but silent (a twentieth of the rustle at most). test/ambience.test.js listens for a minute in
+the woods, and it failed whenever that minute had no gust in it.
+
+- **the leaves**: a murmur in the lulls (about half), full in a gust. The loudest is the same as before.
+- **the test's yardsticks**: two checks still measured against the old, louder rain. "Rain when it rains" now asks
+  for most of the rain's level. The loudest mix (a storm out at sea) is held to a few dB over the loudest bed in it,
+  the rain or the sea's full swell. With the rain now quieter, the sea's swell is the louder of the two.
+
+Tests: test/ambience.test.js (15 runs in a row, all passing).
