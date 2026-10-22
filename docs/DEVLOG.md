@@ -13726,3 +13726,22 @@ the woods, and it failed whenever that minute had no gust in it.
   the rain or the sea's full swell. With the rain now quieter, the sea's swell is the louder of the two.
 
 Tests: test/ambience.test.js (15 runs in a row, all passing).
+
+## 2026-10-22 · Long notes on a phone: a page at a time, nothing cut off
+
+The owner, 10-16: "Garden plot instructions cut off in the popup", "Text cut off in UI containers (garden
+instructions)". On a phone a note shows three lines at most. A longer note lost the rest of its words under an
+ellipsis: the garden plot's seed instructions, the skateboard's two, and the mail train's strongbox tip.
+
+- **paged** (`client/notepages.js`, used by `client/hud.js`): a note too long for its box shows three lines, then
+  scrolls on to the next three. Each page stays up long enough to read its share of the words (1.4 s plus 45 ms a
+  letter). A thin bar along the note's foot shows how far through it you are. The note stays up until its last page
+  has been read.
+- A note that fits stays up as long as before. On a desktop, notes still show whole.
+- The notes' words now sit in a `.tx` box inside the note, on a whole-pixel line height (14 px on a phone) so each page
+  is exactly three lines.
+
+Tests: test/notepages.test.js - the garden plot's and the skateboard's instructions (the server's own words), measured
+in a headless Chromium on 844x390, 740x360 and 390x844 phones: three lines at a time, paged, every word reachable, up
+for every page; whole on a 1280x720 desktop. test/hudpage.js builds its notes the way the game does and reports words
+a note never shows as cut off. The HUD layout test covers every screen.
