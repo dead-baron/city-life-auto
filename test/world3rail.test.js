@@ -15,6 +15,7 @@ import * as players from '../server/systems/players.js';
 import { joinPlayer, teleport } from './helpers.js';
 import { IN } from '../shared/input.js';
 import { TRAIN_DWELL_S, TRAIN_LOOP_HEADWAY_S, TRAIN_LOOP_MAX } from '../shared/rules.js';
+import { command as devCommand } from '../server/dev.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const mod = (a, n) => ((a % n) + n) % n;
@@ -290,4 +291,20 @@ test('the main line\'s tunnel mouths are on land: over water it crosses on a bri
     }
   }
   assert.ok(mouths > 10, `the mouths (${mouths})`);
+});
+
+// the debug menu's "Hop on the nearest train" takes the main line's nearest, even with a subway train nearer (the
+// owner, 10-16); "Hop on the nearest subway" takes the subway's
+test('the debug hop: the nearest train is the main line\'s, the nearest subway the subway\'s', () => {
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p } = joinPlayer(w);
+  const isSub = (q) => w.rails[q.r].subway;
+  const sub = w.trains.find(isSub);
+  assert.ok(sub && w.trains.some((q) => !isSub(q)), 'both kinds run');
+  const e = w.get(sub.cars[0].id);
+  teleport(w, p.ped, e.x, e.y);   // (right by a subway train)
+  devCommand(w, p, 'train', {});
+  assert.ok(p.ped.onTrain && !isSub(w.trains[p.ped.onTrain.t]), 'aboard a main-line train');
+  devCommand(w, p, 'train', { sub: 1 });
+  assert.ok(p.ped.onTrain && isSub(w.trains[p.ped.onTrain.t]), 'and now a subway train');
 });

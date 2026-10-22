@@ -14055,3 +14055,11 @@ long, jumps 4.
   train actually passes through; the next turn either side is asked for ahead as before.
 
 Tests: test/trainturns.test.js - the steps, how far a car's end jumps at one, and a coach drawn at three fine turns.
+
+## 2026-10-22 · Debug: "Hop on the nearest train" takes the main line
+
+The owner, 10-16: "Debug 'jump on nearest train' should pick the main line; a separate 'nearest subway'". The subway
+hop came on 10-15; the train hop still took whichever train was nearest, often a subway's under your feet. Now it takes
+the main line's nearest (the El's too), and any train only on a map with no main line (server/dev.js 'train').
+
+Tests: test/world3rail.test.js - by a subway train, the hop puts you on the main line; the subway hop on the subway.

@@ -624,9 +624,11 @@ export function command(world, p, c, msg) {
       if (!ped || ped.dead || !world.trains.length) break;
       if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
       let t = world.trains[Number(msg.n)] || null;
-      // (msg.sub: the nearest subway train - World v3's Pink and Yellow Lines - not the main line's)
+      // (msg.sub: the nearest subway train - World v3's Pink and Yellow Lines; without it the nearest on the main line, the
+      // owner, 10-16: "jump on nearest train should pick the main line" - any train only where there's no main line)
       const isSub = (q) => !!(world.rails && world.rails[q.r] && world.rails[q.r].subway);
-      if (!t) { let bd = Infinity; for (const q of world.trains) { if (msg.sub && !isSub(q)) continue; const e = world.get(q.cars[0].id); if (!e) continue; const d = Math.hypot(e.x - ped.x, e.y - ped.y); if (d < bd) { bd = d; t = q; } } }
+      const main = !msg.sub && world.trains.some((q) => !isSub(q));
+      if (!t) { let bd = Infinity; for (const q of world.trains) { if (msg.sub ? !isSub(q) : main && isSub(q)) continue; const e = world.get(q.cars[0].id); if (!e) continue; const d = Math.hypot(e.x - ped.x, e.y - ped.y); if (d < bd) { bd = d; t = q; } } }
       if (!t) { world.notify(p, msg.sub ? '[dev] There is no subway train running on this map.' : '[dev] No train found.', 'warn'); break; }
       const ci = Math.max(1, Math.min(t.cars.length - 1, Number(msg.car) || 1));
       trains.board(world, ped, t, ci, 0, 0, 0);
