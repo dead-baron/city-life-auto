@@ -622,7 +622,7 @@ export const SAFETY_CONFIRM_S = 4;
 // fall (a few steps, then down, burning until they die: fallDps); near water (within waterPx) water of them run for it.
 export const BURN = {
   secs: 9, dps: 6, run: 1.6, roll: 9, rain: 2.2, blast: 0.85, touch: 1.6, campPx: 20, vehPx: 12, pedPx: 18,
-  npc: { run: 0.35, roll: 0.35, fall: 0.3 }, rollAfter: [1.2, 2.6], rollS: 2.4, fallAfter: [0.6, 1.4], fallDps: 14,
+  npc: { run: 0.44, roll: 0.44, fall: 0.12 }, rollAfter: [1.2, 2.6], rollS: 2.4, fallAfter: [0.6, 1.4], fallDps: 14,
   water: 0.7, waterPx: 380, screamS: [1.6, 3.4],
 };
 // ---- the tank (H58; the owner: "Add a tank you can drive and shoot and blow things up with, can spawn in debug"):

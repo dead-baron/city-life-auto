@@ -154,7 +154,7 @@ test('burning NPCs: some run, some stop, drop and roll (and live), some fall and
     plans[k] = (plans[k] || 0) + 1;
     by.set(q, k);
   }
-  assert.ok(plans.run > 3 && plans.roll > 3 && plans.fall > 3, JSON.stringify(plans));
+  assert.ok(plans.run > 3 && plans.roll > 3 && plans.fall >= 1 && plans.fall * 2 < plans.roll, `most run or roll, few fall (the owner, 10-16: "NPC burn deaths ... fewer") ${JSON.stringify(plans)}`);
   run(w, 14);
   let rolledOut = 0, fellDead = 0, fallers = 0, rollers = 0;
   for (const [q, k] of by) {

@@ -167,8 +167,8 @@ export function update(world, dt) {
       if (now >= ped.downUntil) { douse(world, ped); continue; }
     }
     if (ped.burnT <= 0) { douse(world, ped); continue; }
-    // the screams
-    if (now >= (ped.screamAt || 0)) { ped.screamAt = now + span(world, BURN.screamS); world.emit(ped.x, ped.y, { e: 'scream', x: Math.round(ped.x), y: Math.round(ped.y), id: ped.id }); }
+    // the screams - on their feet; not from someone down on the ground (the owner, 10-16: "no whimper")
+    if (!(B && B.down) && now >= (ped.screamAt || 0)) { ped.screamAt = now + span(world, BURN.screamS); world.emit(ped.x, ped.y, { e: 'scream', x: Math.round(ped.x), y: Math.round(ped.y), id: ped.id }); }
     // it hurts
     if (ped.player && (ped.player.invincible || now < (ped.protectUntil || 0))) continue;
     const by = ped.burnBy ? world.get(ped.burnBy) : null;

@@ -13509,3 +13509,17 @@ in a car.
   are part of the buildings' art are unchanged.
 
 Tests: test/flight.test.js - the H drawn while flying, nothing once you're on foot.
+
+## 2026-10-21 · Burning NPCs: fewer deaths, no screams from the ground
+
+The owner, 10-15: "NPC burn deaths less disturbing and fewer; they flee, run for water or stop-drop-roll; no
+whimper". Someone who caught fire ran for water when it was near; otherwise 35% ran about, 35% stopped, dropped and
+rolled (and lived), and 30% fell and burned to death, screaming every two or three seconds the whole time, lying
+down too.
+
+- **fewer burn to death** (`shared/rules.js` BURN.npc): 44% run, 44% stop, drop and roll, 12% fall. Running for the
+  water when it's near is unchanged (seven in ten).
+- **no screams from the ground** (`server/systems/burning.js`): they cry out while on their feet. Once someone is
+  down, rolling or fallen, it's quiet.
+
+Tests: test/burning.test.js - most run or roll, few fall.
