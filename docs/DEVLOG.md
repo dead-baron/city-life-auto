@@ -14199,3 +14199,26 @@ render/trainsign.js), and the classic renderer's train cars moved out to load wi
 (render/traincars.js), which bought back about 2 KB; with all that the page is 492.7 KB, over the 492 KB budget.
 tools/perf.mjs: 494 KB. Next to look at for room: the classic renderer's own drawing (main.js drawWorldV1 and its
 helpers), loaded with the classic renderer only.
+
+## 2026-10-22 · Fixes from a review of the batch
+
+A review of this batch before it ships found these, all fixed:
+
+- **a skydiver shot from the side**: shots looked for people round the shot's own path by their ground positions, so
+  only a shot from below could hit someone drawn high up. Now everyone falling is checked where they're drawn,
+  from a short list of who's up there (combat.js traceTarget, skydive.js world.skyPeds).
+- **up over the water isn't swimming** (shared/mapcore.js isSwimming): a skydiver over the sea was a swimmer to the
+  page (drawn at the water, under bridges), to the sharks (bitten in mid-air) and to the fire (put out).
+- **out of reach up there**: officers on foot no longer tackle or grab someone in the air, nor do the predators go after
+  them (police.js tackleStep / tackleHit, wildlife.js).
+- **no grenades in the subway** (combat.js): the ball is the street's, so one thrown underground went off on the street
+  above. Now the throw doesn't happen there, and nothing's used up.
+- **put somewhere else mid-fall**: the fall stops when you're put on a train, cuffed or on a ride (the dev menu's hops).
+- **the server sees what you see falling** (server/view.js): the page pulls back and follows a skydiver up the screen;
+  the server's view of them now does too, so nothing pops in at the top and nothing is spawned in plain sight.
+- **entity ids** wrap below bit 29 (world.js newId), which the sky now uses on the wire.
+- **lazy loads**: a module that fails to load (the train's sign, the skydiver's shadow, the classic renderer's train
+  cars) is tried again after half a minute, not every frame.
+
+Tests: test/skydive.test.js - shot from the side where drawn, not swimming over the water, no tackle from the ground;
+test/grenades.test.js - nothing thrown or used in the subway.

@@ -230,7 +230,7 @@ export class World {
 
   get clock() { return gameClock(this.loopTime); }
 
-  newId() { const id = this.nextId++; if (this.nextId > 0xfffffff0) this.nextId = 1; return id; }
+  newId() { const id = this.nextId++; if (this.nextId > 0x1ffffff0) this.nextId = 1; return id; }   // (below bit 29: a ped's parent word on the wire marks the sky there - net.js, skydive.js skyWord)
 
   add(e) { this.entities.set(e.id, e); this.place(e); return e; }
   remove(e) {

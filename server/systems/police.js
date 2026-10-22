@@ -215,7 +215,7 @@ function grab(world, c, t, now) {
 // Mid-dive and on them: down they go, long enough to be cuffed. Someone diving out of the way themselves isn't caught,
 // nor someone who just broke free of an officer (struggle.js: a moment's grace).
 function tackleHit(world, c, t) {
-  if (t.dead || t.vehId || t.cuffed || t.rollT > 0 || world.time < t.downUntil || world.time < (t.protectUntil || 0) || world.time < (t.graceUntil || 0) || Math.hypot(t.x - c.x, t.y - c.y) > 28) return false;
+  if (t.dead || t.vehId || t.sky || t.cuffed || t.rollT > 0 || world.time < t.downUntil || world.time < (t.protectUntil || 0) || world.time < (t.graceUntil || 0) || Math.hypot(t.x - c.x, t.y - c.y) > 28) return false;
   const a = Math.atan2(t.y - c.y, t.x - c.x), now = world.time;
   t.vx = Math.cos(a) * 170; t.vy = Math.sin(a) * 170; t.rollT = 0;
   c.rollT = 0; c.vx *= 0.2; c.vy *= 0.2;
@@ -247,7 +247,7 @@ export const _tackleHit = tackleHit;   // (for the tests)
 const CHASE_NPC = 1.2;
 export function tackleStep(world, c, t, dt, gentle = false) {
   const now = world.time;
-  if (now < c.downUntil || now < c.stunUntil) return false;
+  if (now < c.downUntil || now < c.stunUntil || t.sky) return false;   // (falling from an aircraft: out of reach till they're down - skydive.js)
   const d = Math.hypot(t.x - c.x, t.y - c.y), down = now < t.stunUntil || now < t.downUntil;
   if (down && d < 30 && !t.vehId) {
     if (t.player ? !struggle.grab(world, c, t) : !struggle.npcBreaksFree(world, c, t)) { law.arrest(world, c, t); return true; }

@@ -5,6 +5,8 @@
 // does so outside every camera, and the net-cull window is that camera plus a prefetch margin
 // (stretched further ahead of fast movers), so entities reach the client before they scroll
 // onto the screen instead of popping in mid-view.
+import { SKY_LIFT } from '../shared/constants.js';
+
 export const DEFAULT_VIEW = { hw: 780, hh: 440 }; // a 1080p desktop at rest
 const MAX_VIEW = { hw: 1100, hh: 700 };
 const MIN_VIEW = { hw: 200, hh: 150 };
@@ -38,9 +40,10 @@ export function viewRect(world, p, out = {}) {
   const moving = !!(p.ped.vehId || p.ped.onTrain);
   const vx = moving ? f.vx || 0 : 0, vy = moving ? f.vy || 0 : 0;
   const speed = Math.hypot(vx, vy);
-  const zoomOut = p.ped.dead ? DOWN_ZOOM_OUT : p.ped.ride ? RIDE_ZOOM_OUT : 1 + Math.min(0.5, speed / 1300); // down: the camera slowly pulls back
+  const sky = p.ped.sky ? p.ped.sky.z : 0;   // (falling from an aircraft: the page pulls back and follows them up the screen - main.js fallH)
+  const zoomOut = p.ped.dead ? DOWN_ZOOM_OUT : p.ped.ride ? RIDE_ZOOM_OUT : sky > 0 ? Math.min(2, 1 + Math.min(1.3, sky / 650)) : 1 + Math.min(0.5, speed / 1300); // down: the camera slowly pulls back
   const v = p.view || DEFAULT_VIEW;
-  const cx = f.x + Math.max(-560, Math.min(560, vx)) * 0.25, cy = f.y + Math.max(-560, Math.min(560, vy)) * 0.25;
+  const cx = f.x + Math.max(-560, Math.min(560, vx)) * 0.25, cy = f.y + Math.max(-560, Math.min(560, vy)) * 0.25 - sky * SKY_LIFT * 0.66;
   const hw = v.hw * zoomOut, hh = v.hh * zoomOut;
   out.x0 = cx - hw; out.x1 = cx + hw; out.y0 = cy - hh; out.y1 = cy + hh;
   out.vx = vx; out.vy = vy;

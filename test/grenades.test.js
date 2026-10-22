@@ -81,3 +81,12 @@ test('a grenade off a wall: it never ends up inside a building; on the wire a ba
   for (let i = 0; i < 30; i++) { w.step(); assert.ok(g.removed || !PED_BLOCK[m.tileAtPx(g.x, g.y)], 'never in the wall'); }
   assert.ok(g.removed || g.x < at.x + 5 * TILE, 'bounced back off it');
 });
+
+test('no grenades down in the subway (the ball would be the street\'s): nothing thrown, none used', () => {
+  const w = makeWorld();
+  const p = armed(w);
+  p.ped.sub = true;
+  assert.equal(combat.tryAttack(w, p.ped, 0), false);
+  assert.equal(nades(w).length, 0, 'nothing thrown');
+  assert.equal(p.profile.weapons.grenade, 3, 'none used');
+});
