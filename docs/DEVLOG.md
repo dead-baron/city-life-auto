@@ -14574,3 +14574,27 @@ officer.
 - **bank heists**: a police player at a vault door with a drill on it takes the drill off (the job's off, Samaritan
   points) and is never offered to clear its jam; the second wave of squads isn't sent once the driller's in custody;
   the heist's criminal EXP goes, like the drawers' cash, only to a driller still there when the door opens.
+
+## 2026-10-22 · Crews
+
+The owner, 10-08 ("friends and crews (up to 4): land on the same server, crew chat, crew events and heists"; the
+standing rule: crews hold up to 4 for now). Nobody could team up. Now (server/systems/crews.js; shared/rules.js CREW):
+- **asking someone in**: walk up to another player on foot and the action button asks them into your crew; they get a
+  note, and say yes the same way - beside you, within half a minute. Someone already in a crew can't be asked into
+  another; a full crew (four) asks nobody more.
+- **in a crew**:
+  - you see each other on the radar and the big map wherever you are - a green blip with the name, dimmer while
+    they're down - and your crewmates' name tags over their heads are green;
+  - no friendly fire: a crewmate's blows, shots and blasts don't hurt you (so there's nothing to report);
+  - a bank heist's drawers are split with the crewmates there when the vault opens (each cut into their own bag as hot
+    money, and some criminal EXP), and anyone can clear the drill's jams - the crates are everyone's to carry.
+- **the phone's Crew app** (client/phone.js): who's in it - who started it, who's on, where and how far - a waypoint to
+  any of them, quick lines to the crew (On my way!, Need backup!, Meet me where I am - with the district, Go go go!,
+  Get in!, Lie low for a bit, Nice one!, Thanks!: no free text), leaving (press twice), and for whoever started it,
+  taking someone off. A crew down to one is broken up.
+- the crews are kept with the profiles (a restart doesn't break them up), and you stay in yours while you're offline.
+
+Tests: test/crews.test.js - asked in and saying yes, each other on the radar (and not on an outsider's), the green
+name tags' ids, no friendly fire (an outsider still hurts), the quick lines to the crew only and not too fast; four at
+most, nobody in a crew asked into another, the app's list, taking someone off (only whoever started it), leaving, a
+crew of one is none; a heist's drawers split evenly with a crewmate there.

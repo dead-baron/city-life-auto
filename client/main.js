@@ -351,6 +351,7 @@ function onText(m) {
     case 'board': phone.on('Board', m); break;
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
+    case 'crew': phone.on('Crew', m); break;   // the Crew app (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       openOverlay('arcade');
       (m.game === 'pool' ? import('./pool.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
@@ -4763,7 +4764,7 @@ function drawWorldLabels(peds, vehs, now, z) {
     if (p.d.pl && p.d.n && p.id !== S.myPedId) {
       const y = py - 26 / z;
       g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.d.n, p.rx + 1 / z, y + 1 / z);
-      g.fillStyle = p.flags & PF.BADGE ? '#7ab0ff' : '#fff'; g.fillText(p.d.n, p.rx, y);
+      g.fillStyle = S.me && S.me.crew && S.me.crew.ids.includes(p.id) ? '#7dffa0' : p.flags & PF.BADGE ? '#7ab0ff' : '#fff'; g.fillText(p.d.n, p.rx, y);   // (your crew's: green - crews.js)
       if (p.hp < 0.999 && !(p.flags & PF.DEAD)) { g.fillStyle = '#000'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z, 3 / z); g.fillStyle = '#ff4d5e'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z * p.hp, 3 / z); }
     }
   }

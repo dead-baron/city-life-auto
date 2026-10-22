@@ -19,7 +19,7 @@ import * as combat from './combat.js';
 import * as tank from './tank.js';   // (H58)
 import * as cargo from './cargo.js';
 import * as skate from './skate.js';   // (riding a skateboard: the owner, 2026-10-17)
-const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); return out; };   // + the backpack you dropped when you died
+const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); crews.radar(world, p, out); return out; };   // (+ your crewmates: crews.js)   // + the backpack you dropped when you died
 import * as law from './law.js';
 import * as bounties from './bounties.js';
 import * as economy from './economy.js';
@@ -51,6 +51,7 @@ import * as races from './races.js';
 import * as minigames from './minigames.js';
 import * as robbery from './robbery.js';
 import * as heist from './heist.js';
+import * as crews from './crews.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
@@ -701,6 +702,8 @@ export function findInteraction(world, p) {
   if (vault) return vault;
   const bankJob = heist.interaction(world, p);   // a bank's vault door: the thermal drill (heist.js)
   if (bankJob) return bankJob;
+  const join = crews.joinPrompt(world, p);   // someone near who asked you into their crew (crews.js)
+  if (join) return join;
 
   const busk = personas.interaction(world, p);   // a coin for the busker (personas.js)
   if (busk) return busk;
@@ -773,6 +776,8 @@ export function findInteraction(world, p) {
 
   const fish = fishHere(world, p, ped);
   if (fish) return fish;
+  const ask = crews.askPrompt(world, p);   // another player beside you: ask them into your crew (crews.js)
+  if (ask) return ask;
 
   const sale = dealer.saleNear(world, ped);
   if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };
@@ -915,7 +920,7 @@ export function buildMe(world, p) {
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
-    radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p),
+    radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
     fishing: fishing.meInfo(p), creel: fishing.creelInfo(prof),   // (a line out: where, the rod, the fight's parameters once it's cast; the cooler's catch - fishing.js)

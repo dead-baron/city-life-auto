@@ -838,6 +838,14 @@ export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
 // `load` of crates (cargo tiers: 3 an iron safe-deposit box, 4 a carbon-gold case of bars) and `cash` in the drawers
 // (hot money to whoever set the drill, times the district: ROB_TILL_TIER); it stands open openS, then it's cleaned out
 // for cooldownS. `reach`: how close to the vault door's spot to work it (px). An officer at the door takes the drill off
+// crews (the owner, 10-08: "friends and crews (up to 4): crew chat, crew events and heists"; decided: up to 4 for now -
+// server/systems/crews.js, the phone's Crew app): `max` in a crew; an invitation stands inviteS seconds; `reach`: how close
+// to ask someone or to say yes (px); the quick-chat lines (no free text); sayGapS between your lines; a heist's drawers
+// split with the crew there (`share` px of the vault)
+export const CREW = {
+  max: 4, inviteS: 30, reach: 90, sayGapS: 2, share: 400,
+  says: ['On my way!', 'Need backup!', 'Meet me where I am', 'Go go go!', 'Get in!', 'Lie low for a bit', 'Nice one!', 'Thanks!'],
+};
 export const HEIST = {
   drillPrice: DRILL_PRICE, drillS: 60, jams: 2, abandonS: 150, heat: 62, heatS: 0.4, responseS: [8, 14], units: 4, wave2S: 25,
   openS: 300, cooldownS: 1800, cash: 3000, reach: 46, xp: 60, seizeSam: 5,   // (seizeSam: Samaritan points for an officer who takes the drill off)

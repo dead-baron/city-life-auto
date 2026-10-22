@@ -25,7 +25,8 @@ import * as campfires from './campfires.js';
 import * as dance from './dance.js';
 import * as burning from './burning.js';   // (fire on people: H58)
 import * as boomtest from './boomtest.js';
-import * as grenades from './grenades.js';   // (the explosion tester: H58)
+import * as grenades from './grenades.js';
+import * as crews from './crews.js';   // (no friendly fire in a crew)   // (the explosion tester: H58)
 import { FLY, isAir } from '../../shared/flight.js';   // (an aircraft well up: a blast on the ground doesn't reach it)
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
@@ -493,6 +494,7 @@ function hitscan(world, ped, w, a, acc) {
 // set health is multiplied by
 export const gritOf = (ped, cause) => (ped && ped.player && cause !== 'nonlethal' ? PLAYER_GRIT * (PLAYER_GRIT_CAUSE[cause] || 1) : 1);
 export function damage(world, ped, amount, attacker, cause, dir = 0) {
+  if (ped && attacker && ped.player && attacker.player && crews.mates(ped.player, attacker.player)) return false;   // (crewmates: no friendly fire - crews.js)
   if (ped && ped.dead && amount > 0 && attacker && cause !== 'fall' && revive.isDowned(ped)) return revive.finish(world, ped, attacker); // hitting a downed player finishes them
   if (!ped || ped.dead || amount <= 0) return false;
   if (ped.npc && ped.npc.role === 'wanderer') { wanderer.struck(world, ped, attacker); return false; }   // (the stranger: gone in a flash)

@@ -333,6 +333,9 @@ class WorldMap {
         } else if (r.k === 'bounty') {
           g.strokeStyle = '#ffc23d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, Math.max(6, r.r * sc), 0, 6.28); g.stroke();
           plateText(g, x, y - Math.max(6, r.r * sc) - 10, `${r.n} $${r.b}`, 11, '#ffc23d', true);
+        } else if (r.k === 'crew') {   // a crewmate (crews.js)
+          g.fillStyle = r.d ? '#2d6a40' : '#7dffa0'; g.strokeStyle = '#0a0f1d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6, 0, 6.28); g.fill(); g.stroke();
+          plateText(g, x, y - 15, r.d ? `${r.n} (down)` : r.n, 11, '#7dffa0', true);
         } else if (r.k === 'pack') {
           const TT = PACK_TIERS[r.t] || PACK_TIERS[1];
           packIcon(g, x, y, r, 1.6);
