@@ -2519,7 +2519,10 @@ function makeFlat(r) {
       const e = Math.min(x, y, w - 1 - x, h - 1 - y);
       if (e < 4) { c = step2(MAT.stone, e < 1 ? 0.45 : 0.75 - e * 0.05, x, y); z = 2; }
       else if (e < 6) { c = MAT.concrete[2]; z = 1; }
-      else { const p = groundPixel('pool', x + r.s * 31, y, r.s + 3); c = p.c; f = F_WATER | F_GROUND; }
+      // (still inland water - F_NOCAST - the chunk bake gives it a pond's word, POOL_WORD: it was read as open sea, the
+      // sea's waves and glints along the wind over a pool five tiles long - the owner, 10-16, "Mansion pool shimmers in
+      // rapid Z shapes")
+      else { const p = groundPixel('pool', x + r.s * 31, y, r.s + 3); c = p.c; f = F_WATER | F_GROUND | F_NOCAST; }
       if (r.s % 2 && x > w - 14 && x < w - 8 && y > 8 && y < 16) { c = MAT.chrome[3]; z = 6; f = 0; }   // the ladder
     } else if (r.k === 'mosaic') {
       const dx = x - w / 2, dy = (y - h / 2) * 1.25, d = Math.hypot(dx, dy), ang = Math.atan2(dy, dx);

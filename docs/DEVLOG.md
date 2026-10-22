@@ -13810,3 +13810,19 @@ side, on the terrace by the gate, so walking up to the door you could see did no
 
 Tests: test/mansiondoor.test.js - the south door on its terrace; for sale, it points you north; bought, in by it and
 out by it again; the north door as ever.
+
+## 2026-10-22 · Fix: a pool's water lies still
+
+The owner, 10-16: "Mansion pool shimmers in rapid Z shapes". The pool sprite flagged its water as plain open water
+(`F_WATER | F_GROUND`), and the chunk bake gave every sprite pixel a full alpha, 255: that's the open sea's word to the
+light pass (`lightgame.js` waterSurf). So a pool five tiles long ran the sea's waves and glints along the wind. Back
+yards' pools in Midtown did the same.
+
+- **the pool's water** (`client/art2/game/statics.js` makeFlat): now still inland water (`F_NOCAST`, the inland mark).
+- **its word** (`client/art2/game/chunkbake.js` compositeDepth, `POOL_WORD` 230): a sprite's still inland water is
+  baked with a clear pond's word. It's calm, with small glints and the sun's caustics on its floor, like the parks'
+  ponds.
+- Art change: the chunks with pools in them bake again.
+
+Tests: test/poolwater.test.js - the pool's water still and inland; baked with a pond's word, the rim and the ground
+round it as before. test/fountains.test.js unchanged (a fountain's basin keeps its own live ripples).

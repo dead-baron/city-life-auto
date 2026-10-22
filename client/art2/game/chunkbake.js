@@ -33,7 +33,12 @@
 //
 // Providers are optional modules loaded at run time (loadProviders): a missing or broken one is
 // reported, not fatal. Pure and worker-safe (no DOM, no WebGL).
-import { GBuf, hash, F_GROUND, F_WATER, F_WET, F_LEAF } from '../gbuf.js';
+import { GBuf, hash, F_GROUND, F_WATER, F_WET, F_LEAF, F_NOCAST } from '../gbuf.js';
+// A sprite's still water (a pool: F_GROUND | F_WATER | F_NOCAST) gets the water's word in the albedo's alpha that the
+// light pass reads (lightgame.js waterSurf): a clear pond's, calm, with the sun's caustics on its floor. (It had 255,
+// open sea.)
+const STILL_W = F_GROUND | F_WATER | F_NOCAST;
+export const POOL_WORD = 230;
 import { T, TILE } from '../../../shared/constants.js';
 
 // (the chunk's geometry and groundZ live in chunkgeom.js - the page's renderer reads them without loading the bake)
@@ -123,7 +128,7 @@ export function compositeDepth(G, s, sx, sy, z0 = 0, bid = null, k = 0) {
         dc[dj] += (sc[sj] - dc[dj]) * k; dc[dj + 1] += (sc[sj + 1] - dc[dj + 1]) * k; dc[dj + 2] += (sc[sj + 2] - dc[dj + 2]) * k;
         continue;
       }
-      dc[dj] = sc[sj]; dc[dj + 1] = sc[sj + 1]; dc[dj + 2] = sc[sj + 2]; dc[dj + 3] = 255;
+      dc[dj] = sc[sj]; dc[dj + 1] = sc[sj + 1]; dc[dj + 2] = sc[sj + 2]; dc[dj + 3] = (sf[si] & STILL_W) === STILL_W ? POOL_WORD : 255;
       dn[dj] = sn[sj]; dn[dj + 1] = sn[sj + 1]; dn[dj + 2] = sn[sj + 2]; dn[dj + 3] = sn[sj + 3];
       de[dj] = se[sj]; de[dj + 1] = se[sj + 1]; de[dj + 2] = se[sj + 2]; de[dj + 3] = se[sj + 3];
       dz[di] = Math.min(65535, Math.max(hz, 0)); df[di] = sf[si];
@@ -152,7 +157,7 @@ function compositeDepth2(G, s, sx, sy, z0 = 0, bid = null, k = 0) {
         if (hz < (ground ? top - GROUND_TOL : top)) continue;
         const dj = di * 4;
         if (a < 255) { const kk = a / 255; dc[dj] += (sc[sj] - dc[dj]) * kk; dc[dj + 1] += (sc[sj + 1] - dc[dj + 1]) * kk; dc[dj + 2] += (sc[sj + 2] - dc[dj + 2]) * kk; continue; }
-        dc[dj] = sc[sj]; dc[dj + 1] = sc[sj + 1]; dc[dj + 2] = sc[sj + 2]; dc[dj + 3] = 255;
+        dc[dj] = sc[sj]; dc[dj + 1] = sc[sj + 1]; dc[dj + 2] = sc[sj + 2]; dc[dj + 3] = (sf[si] & STILL_W) === STILL_W ? POOL_WORD : 255;
         dn[dj] = sn[sj]; dn[dj + 1] = sn[sj + 1]; dn[dj + 2] = sn[sj + 2]; dn[dj + 3] = sn[sj + 3];
         de[dj] = se[sj]; de[dj + 1] = se[sj + 1]; de[dj + 2] = se[sj + 2]; de[dj + 3] = se[sj + 3];
         dz[di] = Math.min(65535, Math.max(hz, 0)); df[di] = sf[si];
