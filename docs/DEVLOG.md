@@ -14063,3 +14063,42 @@ hop came on 10-15; the train hop still took whichever train was nearest, often a
 the main line's nearest (the El's too), and any train only on a map with no main line (server/dev.js 'train').
 
 Tests: test/world3rail.test.js - by a subway train, the hop puts you on the main line; the subway hop on the subway.
+
+## 2026-10-22 · Stations at an angle match their track
+
+The owner, 10-16: "Stations at an angle look awkward: axis-align them, or match sign and station to the track". Six of
+World v3's stations stand where the Grand Loop runs at an angle to the grid (Lucky Mesa 40 degrees off it, Sunset Beach
+34, Red Rock 24, Old Quarter 15, Southside 11, Sandpiper Bay 8). Their platforms were drawn along the track, but:
+
+- **the furniture turned in 22-degree steps** (client/art2/game/statics.js): the canopies, the footbridge and the
+  station house were drawn at the nearest of 16 turns, so at Sunset Beach they stood 11 degrees off the track - the
+  canopies' ends wandering off the platform's edge, the footbridge askew. Now 64 turns (`STATION_TURNS`, within 3
+  degrees), the benches too.
+- **a ragged apron of paving** (shared/map.js buildRailway): the platform paved every tile it touched, and on a slant a
+  tile half off the platform left a saw-toothed border of paving round it. On World v3, where the track runs at an angle,
+  only the tiles wholly under the platform are paved now; the art draws the platform itself along the track, over
+  whatever ground is under it, so its edge is a clean straight line. (Over water every tile it touches still stands on
+  piers. Stations along the grid are as they were.)
+- **the house's forecourt** (shared/world3-passes.js `stationForecourt`): a square of tiles round a turned house - now
+  turned with it, where it faces the track at an angle.
+- the route board stands on the platform wherever it's drawn (shared/mapcore.js routeBoardAt: not on a street, a
+  building, a bridge or the water), so the angled platforms keep theirs.
+
+Tests: test/world3rail.test.js - the forecourt block along the grid and turned; no paving off the angled platforms'
+outer edges; their route boards.
+
+## 2026-10-22 · A sign on the train: where it stops next
+
+The owner, 10-16: "No 'next train' popup (the station sign shows it); show the next station on a sign on the train
+instead". The popup went on 10-21; now a train's front car carries an LED board over its front end: NOW TO and the
+station it's running to, or NEXT STOP and the one after while it stands at a platform with its doors open - so from the
+platform you can see where a train goes before you get on (client/render/trainsign.js, loaded the first time a train
+comes near; client/main.js drawTrainSigns, in both renderers). It shows within a few hundred px of you, fading further
+off; not on your own train (the bar at the top says), nor the subway's under the street or the El's overhead.
+
+- the server sends each car's line (its descriptor's `l`: one of World v3's loops, an index into the map's rails; -1 on
+  the old city's one line) and the station it's at or running to (the snapshot's extra byte) - server/net.js,
+  server/systems/trains.js.
+
+Tests: test/trainsign.test.js (the words, the board); test/world3rail.test.js - a train at a platform shows the stop its
+boarding prompt names, and still does once it has pulled out.

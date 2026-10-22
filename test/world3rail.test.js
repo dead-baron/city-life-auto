@@ -16,6 +16,8 @@ import { joinPlayer, teleport } from './helpers.js';
 import { IN } from '../shared/input.js';
 import { TRAIN_DWELL_S, TRAIN_LOOP_HEADWAY_S, TRAIN_LOOP_MAX } from '../shared/rules.js';
 import { command as devCommand } from '../server/dev.js';
+import { offAxis, stationForecourt } from '../shared/world3-passes.js';
+import { routeBoardAt } from '../shared/mapcore.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const mod = (a, n) => ((a % n) + n) % n;
@@ -36,7 +38,8 @@ test('the main line is laid: each service both ways, double track, its stations 
         if (st.under) continue;
         // the platform: paved (or a deck over water) beside the track, on the right of the way it runs
         const q = railAt(r, st.s), px = q.x - Math.sin(q.a) * 72, py = q.y + Math.cos(q.a) * 72, t = M.tileAtPx(px, py);
-        assert.ok([T.PLAZA, T.DOCK, T.ROAD, T.BRIDGE, T.SIDEWALK, T.BUILDING].includes(t), `${r.name} ${st.name}: a platform (tile ${t})`);
+        // (at an angle to the grid the platform is drawn over the ground under it, paved or not: the test below)
+        assert.ok([T.PLAZA, T.DOCK, T.ROAD, T.BRIDGE, T.SIDEWALK, T.BUILDING].includes(t) || (offAxis(q.a) && t !== T.WATER && t !== T.DEEP), `${r.name} ${st.name}: a platform (tile ${t})`);
       }
     }
   }
@@ -220,7 +223,8 @@ test('a route board on the platforms: drawn on the platform, read out - each lin
   const open = new Set(); for (const R of w.rails) for (const st of R.stations) if (!st.under && !st.el && !st.deck) open.add(st.name);
   const named = new Set(boards.map((b) => b.name));
   assert.ok(named.size >= open.size * 0.8, `most open-air stations have one (${named.size} of ${open.size})`);
-  for (const b of boards) if (!b.el) assert.ok([T.PLAZA, T.DOCK, T.SIDEWALK].includes(M.tileAtPx(b.x, b.y)), `${b.name}: on the platform`);
+  // (on the platform: its paving - or, where the track runs at an angle to the grid, the ground it's drawn over)
+  for (const b of boards) if (!b.el) assert.ok(![T.ROAD, T.BUILDING, T.WALL, T.BRIDGE, T.WATER, T.DEEP].includes(M.tileAtPx(b.x, b.y)), `${b.name}: on the platform`);
   // drawn where it is read
   const b = boards.find((q) => !q.el);
   const items = staticItems(M, Math.floor(b.x / STATIC_CHUNK), Math.floor(b.y / STATIC_CHUNK));
@@ -307,4 +311,72 @@ test('the debug hop: the nearest train is the main line\'s, the nearest subway t
   assert.ok(p.ped.onTrain && !isSub(w.trains[p.ped.onTrain.t]), 'aboard a main-line train');
   devCommand(w, p, 'train', { sub: 1 });
   assert.ok(p.ped.onTrain && isSub(w.trains[p.ped.onTrain.t]), 'and now a subway train');
+});
+
+// stations where the track runs at an angle to the grid (the owner, 10-16: "Stations at an angle look awkward: axis-align
+// them, or match sign and station to the track"): the platform paved only under itself - no ragged apron of paving
+// tiles half off it - the station house's forecourt turned with the house, and the route board still on the platform
+// (the canopies, benches, footbridges and the house turn with the track to within 3 degrees: client/art2/game/statics.js
+// STATION_TURNS)
+test('stations at an angle: paved only under the platform, the forecourt turned with the house', () => {
+  // the forecourt: the old block where the track runs along the grid; turned with the house where it's at an angle
+  const sq = stationForecourt({ x: 1000, y: 1000, a: Math.PI / 2 }, 3, 2);
+  assert.equal(sq.length, 35, 'the 7 x 5 block');
+  const a = 40 * Math.PI / 180, turned = stationForecourt({ x: 1000, y: 1000, a }, 3, 2);
+  assert.ok(turned.length > 28 && turned.length < 42, `about as many tiles (${turned.length})`);
+  for (const [tx, ty] of turned) {
+    const dx = (tx + 0.5) * TILE - 1000, dy = (ty + 0.5) * TILE - 1000;
+    assert.ok(Math.abs(-dx * Math.sin(a) + dy * Math.cos(a)) <= 3.5 * TILE && Math.abs(dx * Math.cos(a) + dy * Math.sin(a)) <= 2.5 * TILE, 'in the turned block');
+  }
+  // the platforms: the tiles along the outer edge of each angled platform, whose middles are off it, are left as they were
+  const fore = new Set();
+  for (const h of M.railHubs || []) if (!h.el) for (const [tx, ty] of stationForecourt(h, 3, 3)) fore.add(tx + ',' + ty);
+  let angled = 0, ring = 0, boards = 0;
+  for (const r of M.rails) for (const st of r.stations) {
+    if (st.under || r.subway || !offAxis(st.a)) continue;
+    angled++;
+    if (routeBoardAt(r, st, (x, y) => M.tileAtPx(x, y))) boards++;
+    const seen = new Set();
+    for (let d = -st.half + 24; d <= st.half - 24; d += 8) {
+      const q = railAt(r, st.s + d), nx = -Math.sin(q.a) * st.side, ny = Math.cos(q.a) * st.side;
+      for (const o of [st.outer + 12, st.outer + 18]) {
+        const tx = Math.floor((q.x + nx * o) / TILE), ty = Math.floor((q.y + ny * o) / TILE), k = tx + ',' + ty;
+        if (seen.has(k) || fore.has(k)) continue;
+        seen.add(k);
+        if (((tx + 0.5) * TILE - q.x) * nx + ((ty + 0.5) * TILE - q.y) * ny < st.outer + 6) continue;   // (its middle on the platform)
+        ring++;
+        assert.notEqual(M.tileAtPx((tx + 0.5) * TILE, (ty + 0.5) * TILE), T.PLAZA, `${r.name} ${st.name}: paving off the platform at ${tx},${ty}`);
+      }
+    }
+  }
+  assert.ok(angled >= 6 && ring > 60, `the stations at an angle (${angled}), the tiles round them (${ring})`);
+  assert.ok(boards >= angled - 2, `their route boards (${boards} of ${angled})`);
+});
+
+// the front car's sign (the owner, 10-16: "show the next station on a sign on the train"): each car knows its line (the
+// descriptor's l) and the station it's at or running to (the snapshot's extra byte); the sign shows where it stops next
+test('the front car\'s sign: where the train stops next, on its own line', async () => {
+  const { descriptor } = await import('../server/net.js');
+  const { trainSignText } = await import('../client/render/trainsign.js');
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p } = joinPlayer(w);
+  const t = w.trains.find((q) => q.r > 0 && !w.rails[q.r].subway && q.dwellUntil && !w.rails[q.r].stations[q.stop].under);
+  assert.ok(t, 'a train in at a platform');
+  t.dwellUntil = w.time + 8;
+  const rail = w.rails[t.r], st = rail.stations[t.stop];
+  teleport(w, p.ped, st.platform.x, st.platform.y);
+  w.step();
+  const e = w.get(t.cars[0].id), d = descriptor(e);
+  assert.equal(M.rails[d.l], rail, 'its line');
+  const sign = () => trainSignText(M, { d, extra: e.stop & 0xff, flags: e.doors ? 2 : 0 });
+  const next = rail.stations[(t.stop + 1) % rail.stations.length].name.replace(/ Station$/, '').toUpperCase();
+  assert.equal(sign(), next, 'in at a platform: the next stop, as the boarding prompt says');
+  const act = players.findInteraction(w, p);
+  assert.ok(act && act.label.toUpperCase().includes(next), act && act.label);
+  // pulled out: still the station it's running to
+  let moved = false;
+  for (let i = 0; i < TICK_HZ * 60 && !moved; i++) { w.step(); moved = !t.dwellUntil; }
+  assert.ok(moved);
+  w.step();
+  assert.equal(sign(), next, 'on its way: the station it runs to');
 });

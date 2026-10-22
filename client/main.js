@@ -1339,7 +1339,7 @@ function setupDev() {
   $('b-dev').classList.toggle('on', !!on);
   $('b-dev').title = on ? 'Debug menu' : 'Debug menu (switches Dev Debug Mode on)';
   if (!on) { $('dev').classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
-  devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap: () => toggleMap(true) }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });
+  devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });
   devMenuP.then(() => { if (devMenu && (S.dev || S.devMode)) devMenu.setupDev(); });
 }
 function renderDevPlayers() { if (devMenu) devMenu.renderDevPlayers(); }
@@ -2282,6 +2282,7 @@ $('s-smooth').onchange = (e) => { settings.smooth = e.target.checked; saveSettin
 function gfxQuality() { return gfx.lighting; }
 for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
 
+const openMap = () => toggleMap(true);   // (the debug menu's teleport: "Anywhere: the world map")
 function toggleMap(on) {
   $('bm-tp').classList.add('hidden');
   if (on) {
@@ -3283,6 +3284,7 @@ function drawWorldV1(F) {
     drawGates(view);
     drawCrossings(view, now);
     drawStationClocks(view, now);
+    drawTrainSigns(F);
     drawBuoys(view, now);
     drawSignals(view);
     drawBirds();
@@ -3332,6 +3334,7 @@ function drawOverlays(F, v2) {
     drawAtmMarks(F.view, now);
     if (settings.shopMarks !== false && S.art2.shopMarks) S.art2.shopMarks(g, F, drawIcon, KIND_ICON);   // (the shop symbols over doors near you: art2/game/host.js)
     drawStationClocks(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
+    drawTrainSigns(F);
     drawBuoys(F.view, now);
     drawArt2Marks(F);
     S.camp.draw(g, F); S.boom.draw(g, F, W, H, DPR);   // (the campfires' haze; the fireballs, plumes, shockwaves, the flash)
@@ -3836,6 +3839,19 @@ function drawCrossings(view, now) {
 
 // Each platform's countdown to the next train (the server sends the timetable every second;
 // the boards tick down smoothly in between).
+// the front cars' signs near you: where each train stops next (render/trains.js drawTrainSign) - not your own train's
+// (the bar at the top says), nor the subway's under the street or the El's up overhead
+function drawTrainSigns(F) {
+  if (!S.playing || F.sub || F.insideB || !F.sp || !F.cars.length) return;
+  const M = S.signMod;
+  if (!M) { if (!S.signP) S.signP = import('./render/trainsign.js').then((m) => { S.signMod = m; }).catch((e) => { S.signP = null; console.warn('[trainsign]', e); }); return; }
+  const { near, far } = M.TRAIN_SIGN;
+  for (const e of F.cars) {
+    if (e.d.n !== 0 || (e.flags & 33) || e.d.tr === F.myTrain) continue;
+    const d = Math.hypot(e.rx - F.sp.x, e.ry - F.sp.y), k = d < near ? 1 : 1 - (d - near) / (far - near);
+    if (k > 0.02) M.drawTrainSign(g, e, S.map, F.now, k);
+  }
+}
 function drawStationClocks(view, now) {
   const tt = S.tt || { l: [], at: 0 }, R = S.map.rails, by = new Map();
   const since = performance.now() / 1000 - tt.at;

@@ -163,7 +163,7 @@ function initLoops(world) {
         if (signals(world, t, true) !== null) placed = t;
       }
       if (!placed) continue;
-      cars.forEach((c, ci) => { const e = world.add({ id: world.newId(), kind: K.TRAIN, x: 0, y: 0, a: 0, vx: 0, vy: 0, train: ti, car: ci, carType: CAR_IDX[c.kind], sub: false, cx: -1, cy: -1 }); c.id = e.id; });
+      cars.forEach((c, ci) => { const e = world.add({ id: world.newId(), kind: K.TRAIN, x: 0, y: 0, a: 0, vx: 0, vy: 0, train: ti, car: ci, carType: CAR_IDX[c.kind], sub: false, cx: -1, cy: -1, line: world.map.rails.indexOf(rail) }); c.id = e.id; });
       world.trains.push(placed);
       placeCars(world, placed);
       ti++;
@@ -387,6 +387,7 @@ function placeCars(world, t) {
     e.sub = q.sub;
     e.lz = q.ez; e.el = q.ez > 0.35;   // (up on the El - shared/world3-rail.js EL: over the street, out of its reach)
     e.doors = !!t.dwellUntil;
+    e.stop = t.stop;
     e.horn = now < t.hornUntil;
     e.lit = lit || q.sub;
     e.boxGone = e.carType === 2 && now < t.boxReadyAt;

@@ -414,7 +414,9 @@ export function routeBoardAt(rail, st, tileAt) {
   if (!st || st.under || st.el || !rail || !rail.pts) return null;
   const q = railAt(rail, st.s + ROUTE_BOARD_ALONG * (st.half || 112)), sd = st.side || 1;
   const x = q.x - Math.sin(q.a) * sd * ROUTE_BOARD_OFF, y = q.y + Math.cos(q.a) * sd * ROUTE_BOARD_OFF, t = tileAt(x, y);
-  return t === T.PLAZA || t === T.DOCK || t === T.SIDEWALK ? { x: Math.round(x), y: Math.round(y) } : null;
+  // (on the platform wherever it's drawn: not where a street, a building or a bridge cuts it - and at an angle to the grid
+  // the platform is drawn over the ground under it, paved or not: shared/map.js buildRailway)
+  return t !== T.ROAD && t !== T.BUILDING && t !== T.WALL && t !== T.BRIDGE && t !== T.WATER && t !== T.DEEP ? { x: Math.round(x), y: Math.round(y) } : null;
 }
 
 // Position + heading at arc length s along the loop (wraps).

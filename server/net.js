@@ -43,7 +43,7 @@ export function descriptor(e) {
     case K.BAG: return { id: e.id, k: K.BAG, t: bagWireTier(e), val: e.value };
     case K.PROJ: return { id: e.id, k: K.PROJ, w: WEAPONS[e.weapon]?.i ?? 12 };
     case K.BALL: return { id: e.id, k: K.BALL, t: e.ballKind === 'bowl' ? 4 : e.ballKind === 'hoop' || e.ballKind === 'pickup' ? 3 : e.ballKind === 'golf' ? 2 : e.ballKind === 'volley' ? 1 : 0 };
-    case K.TRAIN: return { id: e.id, k: K.TRAIN, c: e.carType, tr: e.train, n: e.car };
+    case K.TRAIN: return { id: e.id, k: K.TRAIN, c: e.carType, tr: e.train, n: e.car, l: e.line ?? -1 };   // (l: its line - World v3's loop, an index into the map's rails; the old city's one line: -1)
     default: return null;
   }
 }
@@ -74,8 +74,10 @@ function fields(world, e) {
     case K.BAG: return [bagBlinks(world, e) ? 1 : 0, 1, 0, bagWireTier(e)];   // flags 1: about to vanish (it blinks)
     case K.PROJ: return [0, 1, 0, e.alt0 ? altByte(e.alt0 * Math.max(0, 1 - e.dist / e.maxDist)) : 0];   // (extra: a missile's height - the gunship's, gliding down from it to where it lands)
     case K.BALL: return [0, 1, 0, Math.max(0, Math.min(255, Math.round(e.z / 2)))]; // extra: height above the ground / 2
-    // train car flags: 1 underground, 2 doors open, 4 horn, 8 lights on, 16 strongbox gone (mail car); parent: the car ahead
-    case K.TRAIN: return [(e.sub ? 1 : 0) | (e.doors ? 2 : 0) | (e.horn ? 4 : 0) | (e.lit ? 8 : 0) | (e.boxGone ? 16 : 0) | (e.el ? 32 : 0), 1, e.car ? world.trains[e.train].cars[e.car - 1].id : 0, 0];
+    // train car flags: 1 underground, 2 doors open, 4 horn, 8 lights on, 16 strongbox gone (mail car), 32 up on the El;
+    // parent: the car ahead; extra: the station it's at (doors open) or running to next, on its line (the front car's
+    // sign shows it: client/render/trains.js drawTrainSign)
+    case K.TRAIN: return [(e.sub ? 1 : 0) | (e.doors ? 2 : 0) | (e.horn ? 4 : 0) | (e.lit ? 8 : 0) | (e.boxGone ? 16 : 0) | (e.el ? 32 : 0), 1, e.car ? world.trains[e.train].cars[e.car - 1].id : 0, (e.stop || 0) & 0xff];
     default: return [0, 0, 0, 0];
   }
 }
