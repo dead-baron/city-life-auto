@@ -14433,3 +14433,35 @@ Southside's; the old city's rough districts). Walk up and the action button gets
 
 Tests: test/streetdice.test.js - the pass line's rules and its odds (49.3% over a hundred thousand rounds); spots down
 the alleys, the crew there with the dice, rolls paid and taken both ways, no cash no roll, cleaned out and packed up.
+
+## 2026-10-22 · Working out: push-ups and sit-ups
+
+The rest of the owner's "gym mini-game" (10-04 / 10-06), without a gym yet: the phone's Skills app has Push-ups here
+and Sit-ups here (server/systems/workout.js; shared/rules.js WORKOUT). Down on the ground where you stand (not in the
+water, a car, a crowd of trouble or with the police after you), the action button is a rep - and the game is the pace:
+one about every second (0.75 to 3.5 s after the last). Rush it and the rep doesn't count; stop too long and you've lost
+the rhythm. Each rep takes some stamina, so the set ends at ten reps or when you're spent. Every rep counted is skill
+xp: push-ups strength, sit-ups stamina (capped a day like the rest). Move, punch, dive or get hit and you get up.
+- drawn: two new poses (client/art2/people.js pushup, situp - up on straight arms and the chest down; on the back with
+  the knees up, then curled up to them), dipping on each rep (the descriptor's cv counts them: art2 host.js repFrame);
+  the bar at the top counts the reps.
+
+Tests: test/skills.test.js - from the phone, a rushed rep, a full set at a steady pace (strength), moving gets you up,
+the rhythm lost.
+
+## 2026-10-22 · Casinos, rides and skills: fixes from a review
+
+- **the Ultra Saver's crash**: a crash that kills the engine (as most do - the car's wrecked only when it blows up)
+  billed the full fare; it's on them either way now. A rideshare call waits five seconds after the last (no calling
+  and cancelling a street full of cars); the car that turns up says what it is.
+- **a blackjack hand left on the table** - walking over to another casino's floor, logging off, the server restarting
+  - was lost with its bet: the bet comes back.
+- **the skills' day** counts by the clock (an in-game day's twenty minutes): a server restart (which works the game's
+  day out afresh) or a night slept through no longer hands out another day's caps. Sitting on a car ferry at the wheel
+  no longer counts as driving; sitting by a campfire counts whether or not you're hurt.
+- **a full tank** (the coffee, the energy drink, a rest, a night's sleep) fills the stamina skill's longer one too.
+- **the house's luck** comes from the system's own randomness (the casino, the street dice), not a stream a player
+  could work out.
+- **the phone** loading for the first time says so; a failed load is tried again the next time it opens; what the
+  server sent it meanwhile never moves another screen's controller focus.
+- the casino's sounds are where the casino is (not in everyone's ears), and a lost bet is quiet.

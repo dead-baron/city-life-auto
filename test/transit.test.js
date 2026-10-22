@@ -275,7 +275,8 @@ test('rideshare: the Ultra Saver - under half the fare, flat out once you\'re in
   assert.equal(v.ai.reckless, RIDESHARE.saver.reckless, 'your driver is in a hurry');
   v.taxi.meter = 32000;   // (a kilometre in)
   assert.equal(transit.taxiInfo(world, p).fare, Math.round((TAXI_FLAG + TAXI_PER_KM) * RIDESHARE.saver.fare), 'under half the fare');
-  v.wreckAt = world.time;   // (into something)
+  vehicles.damageVehicle(world, v, 99999, null, true);   // (into something: the engine dead - vehicles.js killEngine)
+  assert.ok(v.dead, 'the engine dead');
   run(world, 1.1);
   assert.equal(p.profile.cash, 300, 'the ride on them');
   assert.equal(p.taxi, 0);
@@ -284,6 +285,7 @@ test('rideshare: the Ultra Saver - under half the fare, flat out once you\'re in
   vehicles.exitVehicle(world, p.ped);
   teleport(world, p.ped, 21648, 18030);
   run(world, 1);
+  p.taxiCallAt = -99;   // (past the gap between calls)
   transit.taxiPhone(world, p, { op: 'call', tier: 'premium' });
   const b = world.get(p.taxi);
   assert.ok(b && b.model === RIDESHARE.premium.model && b.paint === RIDESHARE.premium.paint && b.taxi.tier === 'premium', 'a black sedan coming');

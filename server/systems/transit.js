@@ -570,7 +570,7 @@ const TAXI_HAIL_PX = 260, TAXI_CALL_PX = 3200;
 const TAXI_STILL = new Set(['wait', 'dest', 'there']);
 // (1 m = a tile = 32 px; the rideshare tiers: the meter times the tier's - RIDESHARE)
 const fareOf = (px, tier) => Math.round((TAXI_FLAG + (px / 32 / 1000) * TAXI_PER_KM) * (RIDESHARE[tier] || RIDESHARE.std).fare);
-const TIERS = Object.keys(RIDESHARE);
+const TIERS = Object.keys(RIDESHARE), CALL_GAP_S = 5;
 
 // where a taxi pulls up for a spot: the kerb of the nearest street on its side, clear of the corners (and of a bus
 // stop there: a cab length past it, or before it)
@@ -661,6 +661,8 @@ function callTaxi(world, p, tier = 'std') {
   const ped = p.ped;
   if (!ped || ped.dead) return 'Not now.';
   if (taxiOf(world, p)) return 'A ride is already coming for you.';
+  if (world.time - (p.taxiCallAt ?? -99) < CALL_GAP_S) return 'Give it a moment before calling again.';   // (no calling and cancelling a street full of cars)
+  p.taxiCallAt = world.time;
   const no = refuse(p);
   if (no) return no;
   let best = null, bd = TAXI_CALL_PX;
@@ -716,7 +718,7 @@ function cutAhead(world, v) {
 // the cab has pulled up at its halt: at the pick-up it waits for you; at the drop-off you're there
 function taxiArrived(world, v) {
   const T = v.taxi, p = world.players.get(T.pid);
-  if (T.st === 'pickup') { T.st = 'wait'; T.until = world.time + TAXI_WAIT_S; if (p) { p.meDirty = true; world.notify(p, 'Your taxi is here - get in the back (interact by the cab).', 'good'); } }
+  if (T.st === 'pickup') { T.st = 'wait'; T.until = world.time + TAXI_WAIT_S; if (p) { p.meDirty = true; world.notify(p, T.tier && T.tier !== 'std' ? `Your ${RIDESHARE[T.tier].name} is here - get in (interact by the car).` : 'Your taxi is here - get in the back (interact by the cab).', 'good'); } }
   else if (T.st === 'ride') { T.st = 'there'; T.idle = world.time + 90; if (p) { p.meDirty = true; world.notify(p, `Here we are${T.dest && T.dest.label ? ` - ${T.dest.label}` : ''}. $${fareOf(T.meter, T.tier)}: get out with the vehicle key.`, 'good'); } }
 }
 // the passenger told us where to (their waypoint): off we go
@@ -757,7 +759,7 @@ function updateTaxis(world) {
     const p = world.players.get(T.pid), ped = p && p.ped;
     const aboard = ped && ped.vehId === v.id && ped.seat > 0;
     if (!v.ai || v.wreckAt || !v.seats[0] || !world.get(v.seats[0])?.npc) {   // the driver's gone (taken, shot, the cab wrecked)
-      const crashed = T.tier === 'saver' && v.wreckAt;   // (the Ultra Saver's driver put it into something: the ride's on them)
+      const crashed = T.tier === 'saver' && (v.wreckAt || v.dead);   // (the Ultra Saver's driver put it into something - the engine dead or the car wrecked: the ride's on them)
       if (aboard && T.st !== 'wait' && !crashed) payFare(world, p, v);
       releaseTaxi(world, v, crashed ? 'Ultra Saver: your driver wrecked the car. This ride\'s on them.' : 'Your taxi ride is over.', 'warn');
       continue;

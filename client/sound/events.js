@@ -179,7 +179,7 @@ export const EVENT_SOUNDS = {
   // ---- money and things ----
   cash: at('cashtoss'),
   dice: (ev, A) => { A.at('clack', ev.x, ev.y, 0.5); A.at('clack', ev.x, ev.y, 0.35); },   // (dice against the alley wall: streetdice.js)
-  casino: (ev, A) => { if (ev.k === 'jackpot') { A.ui('ridebell', 0.9); A.at('cashtoss', ev.x, ev.y, 1); A.at('cashtoss', ev.x, ev.y, 0.8); } else if (ev.k === 'win') { A.ui('ridebell', 0.5); A.at('cashtoss', ev.x, ev.y, 0.6); } else A.at('clack', ev.x, ev.y, 0.4); },   // (a casino's slots and tables: casino.js)
+  casino: (ev, A) => { if (ev.k === 'jackpot') { A.at('cashtoss', ev.x, ev.y, 1); A.at('cashtoss', ev.x, ev.y, 0.9); A.at('deposit', ev.x, ev.y, 0.8); } else if (ev.k === 'win') A.at('cashtoss', ev.x, ev.y, 0.7); },   // (a casino's slots and tables: casino.js)
   loot: at('pickup'),
   deposit: at('deposit'),
   forage: (ev, A) => { if (ev.up) return; const f = A.S.map && A.S.map.forage && A.S.map.forage[ev.i]; if (f) A.at('pluck', f.x, f.y); },

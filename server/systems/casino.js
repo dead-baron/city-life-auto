@@ -11,18 +11,25 @@
 // The page draws `board` (hud.js openMenu: cards, reels, the wheel's pocket) above the options.
 import { CASINO } from '../../shared/rules.js';
 import { mulberry32 } from '../../shared/rng.js';
+import { randomInt } from 'node:crypto';
 import { store } from '../store.js';
 
-let rng = mulberry32((Date.now() ^ 0x5eedca5) >>> 0);
+// the house's luck: the system's own randomness (not a seeded stream a player could work out); a seeded one in tests
+let rng = () => randomInt(0x100000000) / 0x100000000;
 export function seed(n) { rng = mulberry32(n >>> 0); }   // (tests: a known run of luck)
 
 export const isCasino = (poi) => !!(poi && poi.casino);
 export const label = (poi) => `${poi.label} - the casino floor`;
 
 const state = (p, poi) => {
-  if (!p.casino || p.casino.poi !== poi.id) p.casino = { poi: poi.id, view: null, stake: 0, num: 17, board: null, msg: '', net: 0, bj: null, at: 0 };
+  if (!p.casino || p.casino.poi !== poi.id) { leave(p); p.casino = { poi: poi.id, view: null, stake: 0, num: 17, board: null, msg: '', net: 0, bj: null, at: 0 }; }
   return p.casino;
 };
+// a hand still on the table when you go (another casino's floor, logging off, the server restarting): the bet back
+export function leave(p) {
+  const B = p.casino && p.casino.bj;
+  if (B && p.profile) { p.profile.cash += B.bet; p.casino.bj = null; p.meDirty = true; store.touch(); }
+}
 // up to the door (economy.js openMenu): the floor, or the hand you left on the table; a new visit after a while away
 export function open(world, p, poi) {
   const C = state(p, poi);

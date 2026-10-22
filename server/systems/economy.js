@@ -731,7 +731,7 @@ function execute(world, p, poi, opt) {
     }
     case 'hsell': return homes.sell(world, p, homes.homeFor(world, p, poi));
     case 'hspawn': { const hid = homes.homeFor(world, p, poi).id; prof.spawnHome = hid; prof.lastSpawn = `home:${hid}`; store.touch(); world.notify(p, 'You will wake up here after you die.', 'good'); return null; }
-    case 'hrest': { ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = 100; world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up. Full health.', 'good'); return null; }
+    case 'hrest': { ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = skills.staminaFull(world, ped); world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up. Full health.', 'good'); return null; }
     case 'hhide': return homes.beginEnter(world, p, homes.homeFor(world, p, poi));
     case 'hleave': homes.leaveHome(world, p); return null;
     case 'hst': case 'htk': {
@@ -842,8 +842,8 @@ export function applyDisguise(world, p) {
 }
 
 export function applyBuff(world, ped, buff) {
-  if (buff === 'coffee') { ped.stamina = 100; ped.buffs.coffee = world.time + 60; }
-  if (buff === 'energy') { ped.buffs.energy = world.time + 60; ped.stamina = 140; }
+  if (buff === 'coffee') { ped.buffs.coffee = world.time + 60; ped.stamina = skills.staminaFull(world, ped); }
+  if (buff === 'energy') { ped.buffs.energy = world.time + 60; ped.stamina = skills.staminaFull(world, ped); }   // (a full tank: with the stamina skill, more - skills.js)
   if (buff === 'wine') ped.buffs.wine = world.time + WINE_S;   // (combat.js: health comes back faster)
   if (buff === 'scent') ped.buffs.scent = world.time + SCENT_S;   // (wildlife.js: no animal smells you)
   // a hearty meal (cooked big game): more health while it lasts - topped up, not stacked (heartyEnd puts it back)

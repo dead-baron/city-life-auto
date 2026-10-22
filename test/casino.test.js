@@ -120,3 +120,25 @@ test('a hand left on the table is still there when you come back; double down do
   assert.ok(found, 'a hand to play');
   assert.ok(lastMenu(conn).board, 'the table shown');
 });
+
+test('a hand left on the table when you go - another casino, logging off: the bet back', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  prof.cash = 1000; prof.bank = 0;
+  const a = aCasino(w, p);
+  casino.seed(3);
+  economy.openMenu(w, p, a);
+  economy.handleMenu(w, p, a.id, 'cs:bj');
+  for (let k = 0; k < 40 && !p.casino.bj; k++) economy.handleMenu(w, p, a.id, 'cs:deal');
+  assert.ok(p.casino.bj, 'a hand on the table');
+  const before = prof.cash, bet = p.casino.bj.bet;
+  const b = aCasino(w, p);
+  economy.openMenu(w, p, b);   // (the casino next door)
+  assert.equal(prof.cash, before + bet, 'the bet back');
+  assert.ok(!p.casino.bj && p.casino.poi === b.id);
+  economy.handleMenu(w, p, b.id, 'cs:bj');
+  for (let k = 0; k < 40 && !p.casino.bj; k++) economy.handleMenu(w, p, b.id, 'cs:deal');
+  const c0 = prof.cash, bet2 = p.casino.bj.bet;
+  casino.leave(p);   // (logging off: players.js finalizeLogout)
+  assert.equal(prof.cash, c0 + bet2);
+});

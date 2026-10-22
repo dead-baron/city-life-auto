@@ -87,6 +87,8 @@ import * as busjob from './busjob.js';
 import * as towjob from './towjob.js';
 import * as skills from './skills.js';
 import * as streetdice from './streetdice.js';
+import * as workout from './workout.js';
+import * as casino from './casino.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -340,6 +342,7 @@ export function setAway(world, p, on) {
 // Called when the ghost timer expires (drop rule) or when leaving while dead.
 function finalizeLogout(world, p, dropLoot) {
   const ped = p.ped;
+  casino.leave(p);   // (a blackjack hand left on the table: the bet back - casino.js)
   custody.saveJail(world, p);   // (in a cell: the time left goes with the character - back in it next time)
   if (ped && !ped.removed) {
     if (dropLoot) {
@@ -458,7 +461,7 @@ function inputsOf(world, p, dt) {
 // skills from the moving itself (skills.js): a sprint, a swim, a drive
 function practise(world, p, ped, inp, dt) {
   const v = ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
-  if (v) { if (v.def.kind !== 'air' && !v.wreckAt) { const sp = Math.hypot(v.vx, v.vy); if (sp > 60) skills.gain(world, p, 'drive', sp * dt / 32000); } return; }   // (a km: 1 m = a tile = 32 px)
+  if (v) { if (v.def.kind !== 'air' && !v.wreckAt && !v.onDeck && !v.ferry && !v.scripted && !v.towedBy) { const sp = Math.hypot(v.vx, v.vy); if (sp > 60) skills.gain(world, p, 'drive', sp * dt / 32000); } return; }   // (a km: 1 m = a tile = 32 px)
   if (ped.vehId || ped.dead || ped.hidden || ped.onTrain) return;
   const sp = Math.hypot(ped.vx, ped.vy);
   if (sp < 40) return;
@@ -468,7 +471,8 @@ function practise(world, p, ped, inp, dt) {
 
 function applyInput(world, p, ped, inp, pressed, dt) {
   if (p.prison && p.prison.climb) { ped.vx = 0; ped.vy = 0; return; }   // (on the prison wall: held there till over it - prison.js)
-  if (p.struggle) { struggle.input(world, p, ped, inp, pressed, dt); return; }   // (an officer on you, going for the cuffs: fight back)
+  if (p.struggle) { struggle.input(world, p, ped, inp, pressed, dt); return; }
+  if (p.workout && workout.input(world, p, ped, inp, pressed)) return;   // (push-ups, sit-ups: workout.js)   // (an officer on you, going for the cuffs: fight back)
   // down from a tackle (police.js): moving gets you up sooner - if nobody pins you first
   if (ped.scrambleUntil > world.time && world.time < ped.downUntil && !ped.cuffed && Math.hypot(inp.mx || 0, inp.my || 0) > 0.3) ped.downUntil = Math.max(world.time, ped.downUntil - dt * TACKLE_SCRAMBLE);
   if (ped.cuffed || custody.inCell(p)) {   // (in custody: custody.js moves them; the jail panel has the bail)
@@ -897,7 +901,7 @@ export function buildMe(world, p) {
     t: 'me',
     name: p.name, hp: ped ? Math.round(ped.hp) : 0, maxHp: ped ? ped.maxHp : 100,
     rob: robbery.hudFor(world, p), train: trains.meInfo(world, p), pedId: ped ? ped.id : 0, interior: ped && ped.interior ? ped.interior.kind : null, dead: ped ? ped.dead : true, respawnIn: p.respawnAt ? Math.max(0, p.respawnAt - world.time) : 0, deathCause: p.deathCause,
-    cash: prof.cash, bank: prof.bank, hot: prof.hot || 0, cexp: prof.criminalExp, sam: prof.samaritan, skl: skills.levels(p),   // (skl: the skills' levels - the page predicts stamina and swimming from them)
+    cash: prof.cash, bank: prof.bank, hot: prof.hot || 0, cexp: prof.criminalExp, sam: prof.samaritan, skl: skills.levels(p), wo: workout.meInfo(p),   // (skl: the skills' levels - the page predicts stamina and swimming from them)
     wanted: p.wanted, heat: Math.round(p.heat), peak: prof.peakWanted, disguised: p.disguised,
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),

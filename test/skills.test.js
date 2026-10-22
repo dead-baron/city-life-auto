@@ -36,7 +36,7 @@ test('the daily cap: one activity tops out for the in-game day, another for the 
   assert.equal(skills.gain(w, p, 'brawl'), 0);
   assert.equal(skills.gain(w, p, 'haul'), SKILL.act.haul.xp, 'another way still counts');
   // the next in-game day
-  w.day = (w.day || 0) + 1;
+  w.skillDay = 1000;
   assert.equal(skills.gain(w, p, 'run', 1), SKILL.act.run.xp, 'a new day');
   const pan = phone.handle(w, p, { a: 'skills' });
   assert.equal(pan.t, 'skills');
@@ -51,7 +51,7 @@ test('what the levels do: more health, a longer sprint, a faster stroke, harder 
   assert.equal(p.ped.maxHp, 100);
   const set = (k, L) => { (p.profile.skills ||= { xp: {}, day: -1, today: {} }).xp[k] = xpTo(L); };
   p.profile.skills = { xp: { constitution: xpTo(10) - 5 }, day: -1, today: {} };
-  w.day = 0;
+  w.skillDay = 7;
   p.profile.skills.day = -1;
   skills.gain(w, p, 'sleep');   // (over the line to level 10)
   assert.equal(skills.level(p, 'constitution'), 10);
@@ -85,4 +85,34 @@ test('doing it: sprinting and driving earn their skills', () => {
   assert.ok((p.profile.skills.xp.driving || 0) > before, 'driving: driving');
   run(w, 0.1);
   teleport(w, p.ped, p.ped.x, p.ped.y);
+});
+
+test('working out: push-ups from the phone, a press a rep at a steady pace - rushed reps don\'t count, a full set, strength; moving gets you up', async () => {
+  const { WORKOUT } = await import('../shared/rules.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  phone.handle(w, p, { a: 'workout', k: 'pushups' });
+  assert.ok(p.workout && p.ped.gt === 'pushup', 'down for push-ups');
+  let seq = 0;
+  const press = (bits, mx = 0) => { p.inputQ.push({ seq: ++seq, bits, mx, my: 0, aim: 0 }); w.step(); };
+  const wait = (s) => { for (let i = 0; i < Math.round(s * 20); i++) press(0); };
+  // rushed: no rep
+  press(IN.ACTION); press(0);
+  assert.equal(p.workout.reps, 0, 'rushed: no rep');
+  let reps = 0;
+  for (let r = 0; r < WORKOUT.set && p.workout; r++) { wait(WORKOUT.minGap + 0.15); press(IN.ACTION); reps = p.workout ? p.workout.reps : reps + 1; press(0); }
+  assert.ok(!p.workout, 'the set over');
+  assert.ok(reps >= 8, `steady reps counted (${reps})`);
+  assert.ok((p.profile.skills.xp.strength || 0) >= reps * 0.99, 'strength');
+  assert.ok(p.ped.gt !== 'pushup', 'up again');
+  // sit-ups, then walking off
+  phone.handle(w, p, { a: 'workout', k: 'situps' });
+  assert.equal(p.ped.gt, 'situp');
+  press(IN.SPRINT, 1);
+  assert.ok(!p.workout && p.ped.gt !== 'situp', 'moving: up');
+  // too long between reps: over
+  phone.handle(w, p, { a: 'workout', k: 'situps' });
+  wait(WORKOUT.maxGap + 0.3);
+  assert.ok(!p.workout, 'lost the rhythm');
+  assert.equal(players.buildMe(w, p).wo, null);
 });

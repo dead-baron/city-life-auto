@@ -526,6 +526,20 @@ function rig(D, A, pose, f, kind, acc) {
       else { P.hL = vadd(S.shL, [-6.6, 0.8, -8.4]); P.hR = vadd(S.shR, [7.2, 1.4, -7.6]); }
       P.elL = [-1, -0.6, 0]; P.elR = [1, -0.6, 0]; P.openL = P.openR = 1;
     };
+  } else if (pose === 'pushup') {
+    // push-ups (server workout.js): face down up on straight arms (f 0), then the chest lowered to the ground (f 1) -
+    // heels to head in a line
+    P.acc = false; P.ground = true; P.lean = 0; P.headPitch = -0.3;
+    P.root = rx(Math.PI / 2 - (f ? 0.12 : 0.36));
+    P.fL = [-D.hipX + 0.6, 1.2, D.ank]; P.fR = [D.hipX - 0.6, 1.2, D.ank];
+    P.hands = (S) => { P.hL = vadd(S.shL, [-1.4, f ? 4.2 : 8.4, 1.2]); P.hR = vadd(S.shR, [1.4, f ? 4.2 : 8.4, 1.2]); P.elL = [-1, f ? 0.5 : 0, 0.2]; P.elR = [1, f ? 0.5 : 0, 0.2]; P.openL = P.openR = 1; };
+  } else if (pose === 'situp') {
+    // sit-ups (server workout.js): flat on the back, knees up, hands behind the head (f 0); curled up to the knees (f 1)
+    P.acc = false; P.headPitch = f ? 0.45 : 0.1;
+    P.fL = [-D.hipX - 0.6, 8.4, D.ank]; P.fR = [D.hipX + 0.6, 8.4, D.ank]; P.kneeL = [-0.25, 0.4, 1]; P.kneeR = [0.25, 0.4, 1];
+    if (f) { P.pel = [0, -0.6, SEATS.sitlow / CA + 3.7]; P.lean = 0.62; }
+    else { P.ground = true; P.root = [-1, 0, 0, 0, 0, 1, 0, 1, 0]; P.lean = 0; P.fL = [-D.hipX - 0.6, 7.6, D.ank + 6.2]; P.fR = [D.hipX + 0.6, 7.6, D.ank + 6.2]; }
+    P.hands = (S) => { P.hL = vadd(S.shL, [0.6, -2.4, 6.4]); P.hR = vadd(S.shR, [-0.6, -2.4, 6.4]); P.elL = [-1, 0.6, 0.2]; P.elR = [1, 0.6, 0.2]; };
   } else if (pose === 'deadF') {
     // dead face down: one arm up by the head, one down by the side, a leg drawn up, the face turned to the side
     P.acc = false; P.ground = true; P.headYaw = 0.95; P.headPitch = -0.15; P.eyes = 0; P.lean = 0;
@@ -1917,7 +1931,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump', 'cue', 'cartkick', 'cartride', 'cartsit'].includes(pn)) kind = null;   // (nothing in the hands on a shopping cart)
+  if (['pushup', 'situp', 'carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump', 'cue', 'cartkick', 'cartride', 'cartsit'].includes(pn)) kind = null;   // (nothing in the hands on a shopping cart)
   if (pn === 'hood') kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;
@@ -1956,6 +1970,7 @@ function shift(p, dz) {
 // props (app.carry): trolley (a senior's two-wheeled shopping trolley, pulled along), cart (a shopping cart with a blanket
 // in it, pushed), leads (three dog leads out in front, to where the dogs trot), guitar (a busker's), call (the phone at an ear)
 Object.assign(POSES, { hunch: 6, strut: 6, skate: 8, blade: 6, dance: 4, push: 6, lean: 2 });
+Object.assign(POSES, { pushup: 2, situp: 2 });   // (working out: server workout.js)
 // a player on a skateboard (server skate.js, 2026-10-17): skatec rolling with both feet on the deck, side-on, knees soft;
 // skateair the ollie - the crouch to pop, up in the air knees tucked and arms out, the landing (lifted by the renderer).
 // The tricks (shared/skate.js TRICKS, 2026-10-18): skflip a kickflip (frames 0-5, the deck turning over under the feet)

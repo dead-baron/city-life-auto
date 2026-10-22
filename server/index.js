@@ -17,6 +17,7 @@ import { createSession } from './session.js';
 import { World } from './world.js';
 import * as players from './systems/players.js';
 import * as custody from './systems/custody.js';
+import * as casino from './systems/casino.js';
 import { readBuild, watchBuild } from './build.js';
 import { createArtCdn } from './artcdn.js';
 import { cutWorld, createWorldCdn, keptWorld } from './worldcdn.js';
@@ -253,7 +254,7 @@ function shutdown(sig) {
   console.log(`[server] ${sig} received - saving and shutting down`);
   if (artCdn) artCdn.stop();
   for (const p of world.players.values()) {
-    try { custody.onLeave(world, p); custody.saveJail(world, p); } catch (e) { console.error('[server] keeping a sentence failed', e); }   // (the cells, Prison Island: served on reconnecting)
+    try { custody.onLeave(world, p); custody.saveJail(world, p); casino.leave(p); } catch (e) { console.error('[server] keeping a sentence failed', e); }   // (casino.leave: a blackjack hand's bet back)   // (the cells, Prison Island: served on reconnecting)
     if (p.ped && !p.ped.dead) players.savePos(p, p.ped);
     if (p.conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Server restarting - your progress is saved. Reconnecting...' }); } catch { /* closed */ } }
   }

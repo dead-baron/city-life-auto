@@ -427,7 +427,7 @@ export const TAXI_REFUSE_STARS = 2;        // no taxi stops for anyone this want
 // the Transit app's rideshare tiers (the owner, 10-06): the meter times `fare`; the car; the Ultra Saver drives flat out
 // once you're in (reckless px/s: it may well crash - then the ride's on them)
 export const RIDESHARE = {
-  premium: { name: 'Cruise Black', fare: 2.2, model: 'sedan', paint: 3, note: 'a black sedan, sooner - 2.2x the fare' },
+  premium: { name: 'Cruise Black', fare: 2.2, model: 'sedan', paint: 3, note: 'a black sedan and a smooth ride - 2.2x the fare' },
   std: { name: 'Taxi', fare: 1, note: `the meter: $${TAXI_FLAG} + $${TAXI_PER_KM} a km, paid when you get out - or hail one going by` },
   saver: { name: 'Ultra Saver', fare: 0.45, model: 'compact', paint: 11, reckless: 420, note: 'under half the fare. Your driver is in a hurry' },
 };
@@ -817,6 +817,9 @@ export const PRISON = { stars: 4, repeat: 3, repeatMs: 2 * 3600e3, base: 90, per
 // casinos (server/systems/casino.js): slot spins and table stakes ($); the reels' weights and three-of-a-kind pays
 // street dice (server/systems/streetdice.js): the stake a roll ($, cash), what the crew has on them, the chance (at its
 // most, cleaned out) one takes a winner badly; a roll at most every gapS s
+// working out (server/systems/workout.js): a rep counts minGap..maxGap s after the last (sooner: rushed; later: the set's
+// over), takes drain stamina; a set is `set` reps
+export const WORKOUT = { minGap: 0.75, maxGap: 3.5, set: 10, drain: 8 };
 export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
 export const CASINO = {
   slots: [5, 25, 100], stakes: [10, 50, 250, 1000], bjPays: 1.5, twoCherries: 3,
@@ -843,5 +846,7 @@ export const SKILL = {
     sleep: { skill: 'constitution', xp: 15, cap: 15, name: 'a night in your own bed' },
     meal: { skill: 'constitution', xp: 8, cap: 16, name: 'home-cooked meals' },
     campfire: { skill: 'constitution', xp: 0.2, cap: 10, name: 'sitting by a campfire' },
+    pushups: { skill: 'strength', xp: 1, cap: 15, name: 'push-ups' },
+    situps: { skill: 'stamina', xp: 1, cap: 15, name: 'sit-ups' },
   },
 };

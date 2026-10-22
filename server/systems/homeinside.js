@@ -700,7 +700,7 @@ export function update(world) {
 function wake(world, p, h) {
   const ped = p.ped, prof = p.profile;
   ped.home.sleep = 0;
-  ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = 100;
+  ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = skills.staminaFull(world, ped);
   if (!ped.home.guest && !ped.home.tour) skills.gain(world, p, 'sleep');   // (a night in your own bed: constitution - skills.js)
   // the night passes for the whole city when everyone online is asleep at home (alone, it's you)
   const night = world.loopTime >= DAY_PART_S - 30 || world.clock.minutes < HOME_IN.wakeH * 60;

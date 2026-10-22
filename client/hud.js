@@ -163,6 +163,14 @@ export class HUD {
           : cu.stuck ? 'The police car is going nowhere' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`) + brk;
       tb.classList.toggle('brk', !!cu.stuck);
       $('tb-crack').classList.add('hidden');
+    } else if (me.wo && !me.dead) {
+      // a set of push-ups or sit-ups (server workout.js): the reps, a press each, steady
+      const w = me.wo;
+      tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry', 'brk'); tb.style.borderColor = '';
+      $('tb-where').textContent = `${w.name.toUpperCase()} ${w.reps}/${w.of}`;
+      $('tb-crack').classList.remove('hidden');
+      $('tb-fill').style.width = Math.round(100 * w.reps / w.of) + '%';
+      $('tb-next').innerHTML = `${glyph('action')} each rep - steady, about one a second · move to get up`;
     } else if (me.prison && !me.dead) {
       // doing time on Prison Island (server prison.js): the time left, the way out over the wall
       const pr = me.prison, s = pr.left;

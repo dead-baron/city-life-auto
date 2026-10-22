@@ -6,12 +6,14 @@
 // DICE.pot): clean them out and they pack it in. Win too often and one of them may take it badly.
 import { DICE } from '../../shared/rules.js';
 import { mulberry32 } from '../../shared/rng.js';
+import { randomInt } from 'node:crypto';
 import { startFight } from './npc.js';
 import { leave } from './activities.js';
 import { store } from '../store.js';
 
-let rng = mulberry32((Date.now() ^ 0xd1ce) >>> 0);
-export function seed(n) { rng = mulberry32(n >>> 0); }
+// the house's luck: the system's own randomness (not a seeded stream a player could work out); a seeded one in tests
+let rng = () => randomInt(0x100000000) / 0x100000000;
+export function seed(n) { rng = mulberry32(n >>> 0); }   // (tests: a known run of luck)
 const die = () => 1 + Math.floor(rng() * 6);
 
 // a round of the pass line from a run of rolls (each the two dice's sum): { win, rolls (as far as it went), point }

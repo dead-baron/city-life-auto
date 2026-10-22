@@ -101,9 +101,9 @@ export function update(world, dt) {
     if (!s) continue;
     if (ped.dead || ped.vehId || ped.hidden || ped.carrying || now < (ped.downUntil || 0) || (ped.lastHitAt || -99) > s.at
       || Math.hypot(ped.x - s.x, ped.y - s.y) > SIT_MOVE_PX || !isLit(world, s.i)) { standUp(world, ped); continue; }
+    if (now - (ped.lastHitAt || -99) > FIRE_AFTER_HIT_S) skills.gain(world, p, 'campfire', dt);   // (sat by the fire, out of the fight: constitution - skills.js)
     if (ped.hp < ped.maxHp && now - (ped.lastHitAt || -99) > FIRE_AFTER_HIT_S) {
       ped.hp = Math.min(ped.maxHp, ped.hp + FIRE_HEAL * dt);
-      skills.gain(world, p, 'campfire', dt);   // (constitution - skills.js)
       if (world.tick % 20 === 0) p.meDirty = true;
       if (!s.said && now - s.at > 2) { s.said = true; world.notify(p, 'The warmth of the fire soaks into you.', 'good'); }
     }

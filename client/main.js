@@ -1709,16 +1709,21 @@ const phoneCtx = {
   setWaypoint: (w) => { S.waypoint = w; if (S.hud) S.hud.waypoint = w; },
   waypoint: () => S.waypoint,
   toast: (t, tone) => S.hud && S.hud.toast(t, tone),
-  refocus: () => { ovFocus = 0; focusOverlay(); },
+  refocus: () => { if (topOverlay() === 'phone') { ovFocus = 0; focusOverlay(); } },   // (not another screen's focus: the phone renders while closed too)
   close: () => closeOverlay('phone'),
 };
 let phoneMod = null, phoneP = null;
 const phoneQ = new Map();
-const loadPhone = () => (phoneP ||= import('./phone.js').then((mod) => { phoneMod = mod.createPhone(phoneCtx); for (const [k, m] of phoneQ) phoneMod['on' + k](m); phoneQ.clear(); return phoneMod; }, (e) => { phoneP = null; throw e; }));
+const loadPhone = () => (phoneP ||= import('./phone.js').then((mod) => {
+  phoneMod = mod.createPhone(phoneCtx);
+  for (const [k, m] of phoneQ) try { phoneMod['on' + k](m); } catch (e) { console.warn('[phone]', k, e); }
+  phoneQ.clear();
+  return phoneMod;
+}).catch((e) => { phoneP = null; phoneMod = null; $('ph-screen').innerHTML = '<p class="ph-empty">The phone didn\'t load - try again.</p>'; throw e; }));   // (a failed load: tried again next time it opens)
 const phone = {
   get screen() { return phoneMod ? phoneMod.screen : 'home'; },
   back() { return phoneMod ? phoneMod.back() : false; },
-  open() { loadPhone().then((m) => { if (topOverlay() === 'phone') m.open(); }).catch((e) => console.warn('[phone]', e)); },
+  open() { if (!phoneMod) $('ph-screen').innerHTML = '<p class="ph-empty">Loading…</p>'; loadPhone().then((m) => { if (topOverlay() === 'phone') m.open(); }).catch((e) => console.warn('[phone]', e)); },
   openApp(s) { loadPhone().then((m) => { if (topOverlay() === 'phone') m.openApp(s); }).catch((e) => console.warn('[phone]', e)); },
   on(k, m) { if (phoneMod) phoneMod['on' + k](m); else if (!m.ok && !m.err) phoneQ.set(k, m); },   // (a job's take or a refusal isn't news by the time it opens)
 };

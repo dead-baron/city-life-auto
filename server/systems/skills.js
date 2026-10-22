@@ -12,8 +12,13 @@
 import { SKILL, HEARTY_HP } from '../../shared/rules.js';
 import { SKILLS, SKILL_INFO, levelOf, bonusOf, xpTo } from '../../shared/skills.js';
 import { store } from '../store.js';
+import { DAY_LOOP_S } from '../../shared/constants.js';
 
 const own = (p) => (p.profile.skills ||= { xp: {}, day: -1, today: {} });
+// the day the caps count over: an in-game day's length (20 minutes) by the wall clock - not world.day, which a server
+// restart works out afresh and a night slept through moves on (each would hand out a new day's caps); world.skillDay
+// stands in for it in tests
+export const dayOf = (world) => world.skillDay ?? Math.floor(Date.now() / (DAY_LOOP_S * 1000));
 export const level = (p, k) => (p && p.profile && p.profile.skills ? levelOf(p.profile.skills.xp[k] || 0) : 0);
 export const bonus = (p, k) => bonusOf(level(p, k));
 // a ped's bonus (a player's; nobody else levels)
@@ -24,7 +29,8 @@ export function gain(world, p, act, n = 1) {
   const A = SKILL.act[act];
   if (!A || !p || !p.profile || !(n > 0)) return 0;
   const s = own(p);
-  if (s.day !== world.day) { s.day = world.day; s.today = {}; }
+  const d = dayOf(world);
+  if (s.day !== d) { s.day = d; s.today = {}; }
   const used = s.today[act] || 0, add = Math.min(A.xp * n, A.cap - used);
   if (add <= 0) return 0;
   s.today[act] = used + add;
@@ -60,10 +66,12 @@ export function applyHp(world, p) {
 
 // the levels, for the page (players.js me.skl: SKILLS' order)
 export const levels = (p) => SKILLS.map((k) => level(p, k));
+// a full tank of stamina (the coffee, the energy drink, a rest, a night's sleep): as far as the skill and the drink take it
+export const staminaFull = (world, ped) => (ped.buffs && ped.buffs.energy > world.time ? 140 : 100) * (1 + pedBonus(ped, 'stamina'));
 
 // the phone's Skills app: each skill's level, how far to the next, what it does now; what's left today
 export function panel(world, p) {
-  const s = p.profile.skills || { xp: {}, today: {}, day: -1 }, today = s.day === world.day ? s.today : {};
+  const s = p.profile.skills || { xp: {}, today: {}, day: -1 }, today = s.day === dayOf(world) ? s.today : {};
   return {
     t: 'skills',
     list: SKILLS.map((k) => {
