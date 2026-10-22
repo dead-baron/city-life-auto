@@ -22,7 +22,7 @@ import { localToWorld } from '../../shared/math.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { IN } from '../../shared/input.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { STREET_EVERY_S, STREET_RACE_COPS, ARMORED_ESCORT, ARMORED_UNLOCK_S } from '../../shared/rules.js';
+import { STREET_EVERY_S, STREET_RACE_COPS, ARMORED_ESCORT, ARMORED_UNLOCK_S, ARMORED_ASSESS_S } from '../../shared/rules.js';
 import { inAnyView } from '../view.js';
 import { spawnNpc, startFight } from './npc.js';
 import { enterEdge, joinTraffic } from './traffic.js';
@@ -350,7 +350,9 @@ function stepArmored(world, ev, dt) {
   // attacked (hit hard enough to dent it), or robbed: it stops; the guards get out and fight
   const by = van.lastAttacker ? world.get(van.lastAttacker) : null;
   // (a player's doing - shooting at it, ramming it - or a real beating from anyone; not a bump in traffic)
-  if (!ev.attackedAt && ((by && by.player && van.hp < ev.hp - 25) || van.hp < ev.hp - 150)) attacked(world, ev, van, by);
+  // (the owner, 10-16: "Armored truck guards: sometimes don't notice and drive off" - a player's first real hit is
+  // noticed: a shot or two, not five or six)
+  if (!ev.attackedAt && ((by && by.player && van.hp < ev.hp - 8) || van.hp < ev.hp - 150)) attacked(world, ev, van, by);
   ev.hp = Math.min(ev.hp, van.hp);
   if (ev.attackedAt) {
     // the guards back aboard once it's quiet a while (nobody they're fighting near), and on its way again
@@ -412,6 +414,9 @@ function guardsOut(world, ev, van, by) {
     const [px, py] = localToWorld(van.x, van.y, van.a, -12 + i * 20, (i % 2 ? 1 : -1) * (van.def.W / 2 + 22));
     g.npc.guard = { x: px, y: py, run: true, a: van.a };
     if (!g.weapon || g.weapon === 'fists') g.weapon = 'pistol';
+    // (out of the truck they take a second to see what's going on - weapon up, on whoever did it - before they fire: the
+    // owner, 10-16, "take a second to assess before firing")
+    g.npc.holdFireUntil = world.time + ARMORED_ASSESS_S[0] + rng() * (ARMORED_ASSESS_S[1] - ARMORED_ASSESS_S[0]);
     if (by && !by.dead && !by.removed) { startFight(world, g, by, 60); g.aggressors && g.aggressors.set(by.id, world.time); }
   }
 }

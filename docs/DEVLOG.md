@@ -13616,3 +13616,17 @@ The owner, 10-16: "Zoom out at full speed on a train, back in at stations". The 
   up (a phone's bakes), it eases off as it does in a car.
 
 No automated test: it's the page's camera (play it: ride a train between two stations).
+
+## 2026-10-21 · An armored truck's guards: they notice, and size it up before they fire
+
+The owner, 10-16: "Armored truck guards: sometimes don't notice and drive off spilling loot; take a second to assess
+before firing". A player had to knock 25 off the truck's health before it counted as an attack, five or six pistol
+shots, so a light attack went unnoticed and it drove on. Once it stopped, the guards came out shooting that instant.
+
+- **they notice** (`server/systems/streetlife.js`): a player's first real hit (8 off its health, a shot or two) and
+  the truck stops and the guards get out.
+- **they size it up** (`shared/rules.js` ARMORED_ASSESS_S, 0.8-1.6 s; `server/systems/npc.js` fight's holdFireUntil):
+  out of the truck, each guard takes a moment with their weapon up and on whoever did it before they fire.
+
+Tests: test/streetlife.test.js - a single real hit and they stop and get out; no shot while they size it up, then
+they fire.

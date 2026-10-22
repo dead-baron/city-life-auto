@@ -583,6 +583,7 @@ export const STREET_EVERY_S = 300;        // something like this happens about t
 export const STREET_RACE_COPS = 0.45;     // a street race a patrol car happens on (the police go after the racers)
 export const ARMORED_ESCORT = 0.4;        // an armored truck with a squad car escorting it
 export const ARMORED_UNLOCK_S = 3;        // hold ACT this long at the back of a stopped armored truck to get it open
+export const ARMORED_ASSESS_S = [0.8, 1.6];   // an armored truck's guards, out of it, size things up this long (s) before they fire
 
 // Vehicle damage (task #402; the owner: "weapons damage vehicles (strong ones significantly); lightsabers destroy a
 // vehicle in a few hits"). What a weapon does to a vehicle, as a multiple of what it does to a person (then divided by
