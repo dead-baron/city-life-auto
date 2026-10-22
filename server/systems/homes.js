@@ -435,8 +435,19 @@ export function beginEnter(world, p, h) {
   return null;
 }
 
+// A home's garden door (h.back: the Hilltop Mansion's south door - shared/map.js mansion) within reach of (x, y), or null
+export function backDoorNear(world, x, y) {
+  const m = world.map;
+  if (!BACKS.has(m)) BACKS.set(m, m.homes.filter((h) => h && h.back));
+  for (const h of BACKS.get(m)) if (Math.hypot(h.back.x - x, h.back.y - y) <= BACK_R) return h;
+  return null;
+}
+const BACK_R = 44, BACKS = new WeakMap();   // (as near as a front door's: its POI's r; the homes with one, by map)
+
 export function goInside(world, p, h) {
   const ped = p.ped;
+  // (in by the garden door: out by it too - leaveHome)
+  ped.inDoor = h.back && Math.hypot(h.back.x - ped.x, h.back.y - ped.y) < Math.hypot(h.x - ped.x, h.y - ped.y) ? 'back' : null;
   ped.entering = null;
   ped.inside = h.id; ped.hidden = true;
   ped.vx = 0; ped.vy = 0; ped.rollT = 0;
@@ -468,7 +479,9 @@ export function leaveHome(world, p) {
   const h = homeById(world, ped.inside);
   ped.inside = null; ped.hidden = false;
   ped.vx = 0; ped.vy = 0;
-  if (h) { ped.x = h.x + (world.rand() - 0.5) * 20; ped.y = h.y + 10; world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y }); }
+  const d = h && ped.inDoor === 'back' && h.back ? h.back : h;   // (out by the door you came in by)
+  ped.inDoor = null;
+  if (h) { ped.x = d.x + (world.rand() - 0.5) * 20; ped.y = d.y + 10; world.emit(d.x, d.y, { e: 'door', x: d.x, y: d.y }); }
   world.place(ped);
   protect(world, ped);
   p.meDirty = true;

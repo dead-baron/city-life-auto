@@ -293,6 +293,10 @@ function onText(m) {
       }
       if (m.sig && S.win && S.win.sig && m.sig !== S.win.sig && windowNotServers(m)) return;   // (World v3's window: the index's world signature; each region's is checked as it's assembled - client/worldwindow.js)
       S.ents.clear(); S.pred = null; S.pending = [];
+      // (a new session starts out in the street: the rooms of a home this page showed before go - the server sends them
+      // again if you're still in there, or back in after logging off at home; the owner, 10-16: "Reconnecting inside a
+      // home leaves you stuck" - the page kept showing the rooms while the server had you out by the door)
+      if (S.homeP) S.homeP.then((mod) => mod.onMsg(S, { off: 1 })).catch(() => {});
       for (const p of S.map.props) if (p && p.broken) { delete p.broken; const se = S.map.propSolid.get(S.map.props.indexOf(p)); if (se) se.off = false; }
       S.confirmedBreaks.clear(); S.predBreaks.clear();
       S.bayOpen = {}; for (const i of m.bays || []) S.bayOpen[i] = false;
@@ -2804,6 +2808,7 @@ function render(dt) {
   else if (v2) S.art2.frame(F);
   else if (v1Draws(F)) drawWorldV1(F);
   else { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#10141c'; g.fillRect(0, 0, canvas.width, canvas.height); }
+  if (S.art2 && S.art2.exitHint) S.art2.exitHint(F, v2);   // (the way out of a walk-in while its inside is on its way: art2/game/host.js exitHint)
   if (F.spec) { // spectating close in: the new renderer's picture, the spectator's names / grid / players on top
     S.spec.overlay(g, W, H, DPR);
     specTick();
@@ -3377,7 +3382,7 @@ function drawOverlays(F, v2) {
     const area = (S.area ||= new AreaTracker()).update(S.map, sp.x, sp.y, performance.now() / 1000, { train: !!(F.myCar && F.myCar.kind === K.TRAIN), afloat: !!(me && me.swim) || !!(cd && cd.kind === 'boat') || !!(S.me && S.me.bus && S.me.bus.k === 'ferry') });
     if (area) { S.district = area.name; S.hud.showDistrict(area.name, area.isl); } }
   S.hud.setClock(S.loopTime, S.weather);
-  { const mp = S.ents.get(S.myPedId); S.hud.calm(!!(S.playing && mp && mp.d && mp.d.st && S.me && !S.me.dead), performance.now()); }   // (#375)
+  { const mp = S.ents.get(S.myPedId); S.hud.calm(!!(S.playing && mp && mp.d && mp.d.st && S.me && !S.me.dead), performance.now(), !!(S.homeIn && input.device === 'touch')); }   // (#375; at home on a phone, the prompt fades when you're still)
   // the GPS route to your waypoint along the roads, on the radar and the map (client/route.js; worked out again only
   // when you stray from it or the waypoint changes)
   if (S.router) S.hud.route = S.waypoint && S.playing && S.me && !S.me.dead ? S.router.update(sp, S.waypoint, S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) : null;

@@ -80,7 +80,7 @@ test('bicycles: sold at the dealership, slower than a motorcycle, and they buckl
   assert.ok(!p.ped.dead);
 });
 
-test('ATMs in every district with streets (set into building fronts, a few inside); walking up to one banks your cash; the city feed logs events', async () => {
+test('ATMs in every district with streets (set into building fronts, a few inside); at one, its pop-up banks your cash; the city feed logs events', async () => {
   const { DISTRICTS } = await import('../shared/map.js');
   const events = await import('../server/systems/events.js');
   const phone = await import('../server/systems/phone.js');
@@ -102,13 +102,14 @@ test('ATMs in every district with streets (set into building fronts, a few insid
   assert.ok(machines.some((q) => q.inside !== undefined), 'some are inside clubs and stores');
   const { p, prof } = joinPlayer(w, { cash: 750, bank: 100 });
   const atm = m.atms[0];
-  teleport(w, p.ped, atm.x + 120, atm.y);
-  run(w, 0.5);
-  assert.equal(prof.cash, 750, 'not banked from across the street');
   teleport(w, p.ped, atm.x + 10, atm.y + 4);
   run(w, 0.5);
+  assert.equal(prof.cash, 750, 'walking up banks nothing on its own (the owner, 10-06)');
+  const pop = economy.buildMenu(w, p, atm);
+  assert.deepEqual(pop.opts.map((o) => o.id), ['dep:all', 'atmfull'], 'its pop-up: Deposit all, Use ATM');
+  economy.handleMenu(w, p, atm.id, 'dep:all');
   assert.equal(prof.cash, 0);
-  assert.equal(prof.bank, 850, 'walked up and banked it');
+  assert.equal(prof.bank, 850, 'deposited at a press');
   // feed: events anywhere show up on the phone, with a place to go
   events.add(w, { kind: 'robbery', x: 20000, y: 20000, until: w.time + 60 });
   const f = phone.handle(w, p, { a: 'feed' });

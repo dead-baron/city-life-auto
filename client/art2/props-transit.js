@@ -113,6 +113,22 @@ export function stopPole(color = '#2a5a9a') {
   m.box(2, 3, 0, 4, 5, 58, p); m.box(4, 3, 44, 14, 5, 58, f); m.box(4, 3, 26, 11, 5, 40, t);
   return m;
 }
+// a station's route board (shared/mapcore.js routeBoardAt): a navy panel on two steel posts, its header strip in the
+// line's yellow, the line itself - a white rule with the stops as dots, this one ringed in red - and the timetable's rows
+// under it; lit a little at night
+export function routeBoard() {
+  const m = new Vox(46, 8, 52);
+  const post = m.mat({ ramp: MAT.metal, k: 3, flag: F_THIN }), pan = m.mat({ ramp: R('#1c2a4a'), k: 3, emi: [60, 90, 160, 40] });
+  const head = m.mat({ ramp: R('#f2c21b'), k: 3 }), line = m.mat({ ramp: R('#eef1f8', 5, 3), k: 3, emi: [230, 236, 248, 70] }), here = m.mat({ ramp: R('#e0302a'), k: 3, emi: [255, 80, 60, 90] });
+  const rows = m.mat({ ramp: R('#8aa4cc'), k: 3 });
+  for (const x of [3, 40]) m.box(x, 3, 0, x + 3, 6, 50, post);
+  m.box(1, 2, 16, 45, 4, 50, pan);
+  m.box(2, 1, 44, 44, 2, 49, head);
+  m.box(4, 1, 37, 42, 2, 38.5, line);
+  for (let k = 0; k < 6; k++) { const x = 6 + k * 6.8; m.box(x - 1.2, 0.5, 36, x + 1.2, 2, 39.5, k === 2 ? here : line); }
+  for (let r = 0; r < 4; r++) m.box(5, 1, 30 - r * 4, 5 + 24 + ((r * 7) % 11), 2, 31.5 - r * 4, rows);
+  return m;
+}
 export function bikeRack(n = 3) {
   const m = new Vox(n * 12 + 4, 10, 14);
   const r = m.mat({ ramp: MAT.metal, k: 3 });

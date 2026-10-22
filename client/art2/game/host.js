@@ -312,6 +312,69 @@ const XING0 = { d: 0, b: [0, 0] };
 const extra = () => World2.extra || (World2.extra = import('./hostextra.js'));
 
 // ---- the host -----------------------------------------------------------------------------------------------
+// ---- walk-ins ahead, and the way out (the owner, 10-16: "Interior art loads slowly on a phone (bowling alley, deli):
+// preload or bake it", "Show where the exit is while an interior's art loads (spawning in a hospital)"). A walk-in is
+// drawn cut away - no roof, the shop floor - once its chunks are baked that way: seconds on a phone after you step in.
+//   walkInSoon(S, sp)   the walk-in you're about to go into - one whose door is a few steps off, on foot; or, down, the
+//                       hospital you'll wake up in - for World2._precut to bake cut away into the store ahead
+//   exitHint(S, F, on, ready)   inside one while what's on screen of it isn't drawn cut away yet: which way the door
+//                       is, under you, so you're not lost under the roof
+export const WALKIN_SOON_PX = 220;   // (about seven tiles from its door)
+
+function walkInAtM(m, x, y) {
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  if (!m.inside(tx, ty)) return null;
+  const t = m.tileAt(tx, ty);
+  if (t !== TT.FLOOR && t !== TT.COUNTER) return null;
+  const b = m.buildings[m.bld[m.idx(tx, ty)]];
+  return b && b.walkIn ? b : null;
+}
+
+// (looked for every few frames)
+export function walkInSoon(S, sp) {
+  if ((S.wsT = (S.wsT || 0) + 1) % 8) return S.wsB || null;
+  const m = S.map;
+  let b = null;
+  if (S.me && S.me.dead) {
+    const id = (S.hud && S.hud.spawnPick) ?? S.me.spawnChoice, h = typeof id === 'string' && id.startsWith('h:') ? (m.hospitals || [])[Number(id.slice(2))] : null;
+    if (h) b = walkInAtM(m, h.x, h.y);
+  } else if (S.playing && S.pred && S.pred.kind === 'ped' && !(S.me && S.me.ride)) {   // (on foot: not every shop you drive past)
+    let bd = WALKIN_SOON_PX;
+    for (const id of m.walkIns || []) {
+      const w = m.buildings[id];
+      if (!w || !w.walkIn || sp.x < w.tx * TILE - bd || sp.x > (w.tx + w.tw) * TILE + bd || sp.y < w.ty * TILE - bd || sp.y > (w.ty + w.th) * TILE + bd) continue;
+      for (const u of w.walkIn.units) { const d = Math.hypot((u.door.tx + u.door.w / 2) * TILE - sp.x, (u.door.ty + 0.5) * TILE - sp.y); if (d < bd) { bd = d; b = w; } }
+    }
+  }
+  return (S.wsB = b);
+}
+
+const ARROWS = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'];
+// the words: where the nearest door is from you (null: no door)
+export function exitWords(b, x, y) {
+  let best = null, bd = Infinity;
+  for (const u of b.walkIn.units) { const dx = (u.door.tx + u.door.w / 2) * TILE, dy = (u.door.ty + 0.5) * TILE, d = Math.hypot(dx - x, dy - y); if (d < bd) { bd = d; best = [dx, dy]; } }
+  if (!best) return null;
+  if (bd < 40) return 'The way out: here · the inside\'s on its way';
+  const a = Math.atan2(best[1] - y, best[0] - x);
+  return `The way out ${ARROWS[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]} · the inside's on its way`;
+}
+
+export function exitHint(S, F, on, ready) {
+  let el = typeof document !== 'undefined' ? document.getElementById('exithint') : null;
+  const b = F.insideB, waiting = !!(on && b && b.walkIn && !ready(b));
+  S.exitT = waiting ? S.exitT || F.now : 0;
+  if (!waiting || F.now - S.exitT < 0.4) { if (el) el.classList.add('hidden'); return; }   // (from the store, it's there in a frame or two)
+  const txt = exitWords(b, F.sp.x, F.sp.y);
+  if (!txt || typeof document === 'undefined') return;
+  if (!el) { el = document.createElement('div'); el.id = 'exithint'; document.getElementById('hud').appendChild(el); }
+  if (el.textContent !== txt) el.textContent = txt;
+  el.classList.remove('hidden');
+}
+
+// The part of the world a walk-in's cut-away covers: round the building, and up the screen over it (its roof's height)
+function cutBoxOf(b) { return [b.tx * TILE - 40, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 40, (b.ty + b.th) * TILE + 40]; }
+
 export class World2 {
   // null when it can't run here; World2.lastWhy then says why
   static async create(o) {
@@ -494,7 +557,7 @@ export class World2 {
     if (!this.streaming) {   // (the bakes the screen wanted on the way in are for a view no one sees now)
       this.streaming = true;
       this.wantChunks.clear();
-      if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && jk[1] !== 'B');
+      if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && jk[1] !== 'B' && jk[1] !== 'C');
     }
     this._fetchAhead(F); this._prebake(F);
   }
@@ -522,7 +585,8 @@ export class World2 {
     const T = this.part, mk = (k) => { const n = performance.now(); T[k] = (T[k] || 0) * 0.9 + (n - this.pt) * 0.1; this.pt = n; };
     this.pt = t0;
     this._chunks(F); mk('chunks');
-    this._fetchAhead(F); this._prebake(F); mk('prebake');
+    if (!F.sub && !F.spec) F.nearB = F.insideB ? null : walkInSoon(S, F.sp);   // (a walk-in ahead: _precut)
+    this._fetchAhead(F); this._precut(F); this._prebake(F); mk('prebake');
     const preset = this._preset(F);
     const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8);
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
@@ -577,8 +641,7 @@ export class World2 {
     }
     // standing in a walk-in shop: its chunks are baked cut away
     const cut = F.insideB ? F.insideB.id : -1;
-    let cutBox = null;
-    if (cut >= 0) { const b = F.insideB; cutBox = [b.tx * TILE - 40, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 40, (b.ty + b.th) * TILE + 40]; }
+    const cutBox = cut >= 0 ? cutBoxOf(F.insideB) : null;
     const modeOf = (cx, cy) => (cutBox && (cx + 1) * CHUNK > cutBox[0] && cx * CHUNK < cutBox[2] && (cy + 1) * CHUNK > cutBox[1] && cy * CHUNK < cutBox[3] ? cut : -1);
     const offSea = this._offSea();   // (past the map's edge: open sea)
     if (E.reserveChunks) E.reserveChunks(need.size + offSea + 1);
@@ -640,6 +703,7 @@ export class World2 {
       if (peeks.size > 400) for (const [pk, st] of peeks) if (st !== 1 && !this.results.has(pk)) peeks.delete(pk);
     }
     if (this.pre) for (const jk of this.pre.out) jobs.add(jk);   // (baking ahead into the store: _prebake)
+    if (this.pc) for (const jk of this.pc.out) jobs.add(jk);   // (and a walk-in's cut-away ahead: _precut)
     if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && !jobs.has(jk));
     for (const jk of this.results.keys()) if (!jobs.has(jk)) this.results.delete(jk); // landed too late to matter
     // the road ahead already resident (not on screen yet) is kept like what is drawn: the chunks left behind go first
@@ -740,6 +804,43 @@ export class World2 {
   // one later, its bake is a read from the store: tens of ms instead of a second or more on a phone. One worker is
   // always left for what the screen needs, nothing is baked ahead while the page is hidden, and at most PRE_N[phone]
   // chunks round you are kept (the store holds 90 on a phone, 180 elsewhere: pool.js keepCap).
+  // About to go into a walk-in (its door a few steps off, or the hospital you'll wake up in - main.js walkInSoon:
+  // F.nearB): its chunks baked cut away into the browser's store ahead, so going in shows the floor at once (the look
+  // in the store: peekChunk) - not the roof over you for the seconds a phone takes to bake it (the owner, 10-16:
+  // "Interior art loads slowly on a phone (bowling alley, deli): preload or bake it"). Never the server's chunks: they're
+  // the roofed ones.
+  _precut(F) {
+    const b = F.nearB, P = this.pool;
+    if (!b || F.insideB || !this.artKey || this.noBake || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (P.waiting && P.waiting((k) => k[0] === 'c' && k[1] !== 'B' && k[1] !== 'C') > 0) return;   // (the screen's bakes first)
+    const pc = this.pc || (this.pc = { kept: new Set(), out: new Set() }), q = this.q, [x0, y0, x1, y1] = cutBoxOf(b);
+    for (let cy = Math.floor(y0 / CHUNK); cy <= Math.floor((y1 - 1) / CHUNK); cy++) for (let cx = Math.floor(x0 / CHUNK); cx <= Math.floor((x1 - 1) / CHUNK); cx++) {
+      const kk = `${q}:${cx},${cy}:${b.id}`, jk = `cC${cx},${cy},${b.id},${q}`;
+      if (pc.out.has(jk) && !P.has(jk)) pc.out.delete(jk);   // (cancelled: asked again)
+      if (pc.kept.has(kk) || pc.out.has(jk) || P.has(jk)) continue;
+      pc.out.add(jk);
+      P.request(jk, 'prebakeChunk', { cx, cy, opt: { quality: q, seed: this.map.seed, lowMem: this.lowMem, cutaway: b.id }, ck: `q${q}|a${this.E.ap || 1}|u1|${cx},${cy}|c${b.id}` }, 40000, (r, err) => {
+        pc.out.delete(jk);
+        if (err === 'no workers') return;
+        pc.kept.add(kk);   // (kept now - or failed: not tried again this session)
+      });
+    }
+  }
+  // Inside a walk-in while its inside isn't on screen yet: the way out (exitHint above; main.js calls it each frame)
+  exitHint(F, on) { exitHint(this.S, F, on, (b) => this.insideReady(b)); }
+  // Inside a walk-in: is what's on screen of it drawn cut away yet
+  insideReady(b) {
+    if (!b) return true;
+    const [x0, y0, x1, y1] = cutBoxOf(b);
+    for (let cy = Math.floor(y0 / CHUNK); cy <= Math.floor((y1 - 1) / CHUNK); cy++) for (let cx = Math.floor(x0 / CHUNK); cx <= Math.floor((x1 - 1) / CHUNK); cx++) {
+      const k = cy * 1000 + cx;
+      if (!this.wantChunks.has(k)) continue;
+      const st = this.chunkState.get(k);
+      if (!st || st.mode !== b.id || !this.E.hasChunk(cx, cy)) return false;
+    }
+    return true;
+  }
   _prebake(F) {
     const P = this.pool;
     if (!this.artKey || this.lowMem || this.noBake || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;

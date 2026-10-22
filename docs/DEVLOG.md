@@ -13688,6 +13688,31 @@ town's.
 
 Tests: test/sound.test.js - mostly lulls, gusts now and then, from near still to a strong gust; the rain's level.
 
+## 2026-10-22 · The casino town's syndicate keeps its head down
+
+The owner, 10-16: "Mesa Flats (casino town) gang: isolate it, or make them Vegas-mafia types who aren't touchy".
+Every few minutes a gang-police shootout breaks out by a gang HQ near a player (`server/systems/gangwar.js`), and
+Lucky Mesa's Counting Room, the syndicate's back rooms behind the Copper Room Supper Club, counted as one. So
+shootouts broke out in the casino town's streets.
+
+- **where shootouts start** (turfSpots): by a gang HQ on the turf (The Yards, Southside, Port Westport) or out in the
+  wilds (the Dusty Hollow hideout). Not by one in town off the turf. The Counting Room stays, and the members' menu and
+  joining work as before; the syndicate there just doesn't start shooting it out with the police.
+
+Tests: test/gangquiet.test.js - the turf's and the wilds' HQs start shootouts, a back room in a smart part of town
+doesn't.
+
+## 2026-10-22 · Fix: a TV faces the couch, not the wall
+
+The owner, 10-16: "A TV faces the wall (you can't watch it)". Indoors (art v2, `client/render/homeart2.js`), a TV is
+turned to face the couch. With the couch north of the set it should face north, but the test measured the couch's
+distance the wrong way round and never passed. So a set against the south wall with the couch in front of it faced
+the wall.
+
+- Now it faces whichever side the couch is. With no couch in the room, it faces away from the wall it stands against.
+
+Tests: test/homeart.test.js - as laid out, toward the couch; the couch moved north of it, north.
+
 ## 2026-10-22 · Fix: the woods rustle in the lulls
 
 The last batch made the wind gust and die away (`gustStep` in `client/sound/ambience.js`): it spends most of its
@@ -13701,3 +13726,180 @@ the woods, and it failed whenever that minute had no gust in it.
   the rain or the sea's full swell. With the rain now quieter, the sea's swell is the louder of the two.
 
 Tests: test/ambience.test.js (15 runs in a row, all passing).
+
+## 2026-10-22 · Long notes on a phone: a page at a time, nothing cut off
+
+The owner, 10-16: "Garden plot instructions cut off in the popup", "Text cut off in UI containers (garden
+instructions)". On a phone a note shows three lines at most. A longer note lost the rest of its words under an
+ellipsis: the garden plot's seed instructions, the skateboard's two, and the mail train's strongbox tip.
+
+- **paged** (`client/notepages.js`, used by `client/hud.js`): a note too long for its box shows three lines, then
+  scrolls on to the next three. Each page stays up long enough to read its share of the words (1.4 s plus 45 ms a
+  letter). A thin bar along the note's foot shows how far through it you are. The note stays up until its last page
+  has been read.
+- A note that fits stays up as long as before. On a desktop, notes still show whole.
+- The notes' words now sit in a `.tx` box inside the note, on a whole-pixel line height (14 px on a phone) so each page
+  is exactly three lines.
+
+Tests: test/notepages.test.js - the garden plot's and the skateboard's instructions (the server's own words), measured
+in a headless Chromium on 844x390, 740x360 and 390x844 phones: three lines at a time, paged, every word reachable, up
+for every page; whole on a 1280x720 desktop. test/hudpage.js builds its notes the way the game does and reports words
+a note never shows as cut off. The HUD layout test covers every screen.
+
+## 2026-10-22 · Fix: reconnecting inside a home
+
+The owner, 10-16: "Reconnecting inside a home leaves you stuck: restore inside, or spawn outside if someone else holds
+the claim". There were three ways to get stuck:
+
+- **Back before the ghost timer ran out, on a new page** (a reload, a phone that dropped the tab). The server still
+  had you inside and walked you round the rooms, but it never sent the new page the rooms. So the page showed you
+  standing in the street, unable to move. Now the rooms are sent again in full (`players.join`), and any menu you had
+  open is closed.
+- **Logged off at home** (the ghost timer ran out, or the server restarted for an update). You came back on the street
+  by the door, but a page that was still open kept showing the rooms. A new session now clears the rooms the page was
+  showing (`client/main.js`, on 'welcome'), and the server sends them again if you're in.
+- **Back inside**: `savePos` now keeps which home you logged off inside (`profile.inHome`). If that home is still yours,
+  you're back in it next time (`backInside`). If someone else holds it now (sold, foreclosed, the world rebuilt), or
+  you were a guest or only looking round, you're out in the street by its door.
+
+Tests: test/homereconnect.test.js - back on a new page: the rooms again, walking round them; logged off at home: back
+inside; someone else's now, or a place you were only looking round: on the street by its door.
+
+## 2026-10-22 · At home, the prompt out of the way of the rooms
+
+The owner, 10-16: "'Act to use item' stays up inside a home on mobile and blocks the view". Inside a home the prompt was
+never empty. By nothing to use it said "<home> - walk up to something to use it", and on a phone that sat over the
+rooms the whole time you were in there.
+
+- **the hint** (`server/systems/homeinside.js` interaction): it shows for the first few seconds after you go in
+  (`HOME_IN.hintS`, 6 s). After that there's no prompt until you're by something to use (the bed, the fridge, the
+  door...), which still shows what Act does.
+- **on a phone** (`client/hud.js` calm's new `still`): at home, the prompt fades after a few seconds without a touch
+  (`CALM_PROMPT_S`, the campfire's fade). Any touch or move brings it back at once. Unlike by a campfire, the rest of
+  the HUD stays.
+
+Tests: test/homeprompt.test.js - the hint just in, then nothing; by the fridge, what it does; the fade's timing.
+
+## 2026-10-22 · Soccer pitches the shape of a pitch
+
+The owner, 10-16: "Soccer fields are far too long: make them normal size". Three of World v3's four pitches ran about
+twice as long as they were wide, or more: Greenfield Park's was 53 x 25 tiles, Linden Park's 30 x 15, and Westport
+Stadium park's 91 x 36 (the generator's park pitch ran the whole length of the park's south half). A real pitch is
+about half as long again as it is wide.
+
+- **the shape** (`PITCH_LONG` in `shared/constants.js`, 1.5): each pitch keeps its width and is now 1.5 times as long,
+  set in the middle of where it was. Greenfield's is 38 x 25, Linden's 23 x 15, Westport Stadium park's 54 x 36. The
+  ends are park again: grass at Greenfield, trees at Westport, and Linden's pond moves up beside it. The fences, stands
+  and floodlights follow the pitch. Waves Stadium's pitch (86 x 52) was already the right shape.
+- The ground changes, so the chunks round the three parks bake again.
+
+Tests: test/world3world.test.js - every soccer pitch is 1.35-1.75 times as long as wide.
+
+## 2026-10-22 · The mansion's south door
+
+The owner, 10-16: "Mansion entrance on the north only: add a south door". Art v2 draws the Hilltop Mansion's front,
+its door and portico, on its south wall: that's the side you see from above. But the only way in was round the north
+side, on the terrace by the gate, so walking up to the door you could see did nothing.
+
+- **the garden door** (`home.back`, `shared/map.js` mansion): the south door is now a way in too, onto a paved terrace
+  of its own below the portico. At it, the action button takes you inside (`homes.backDoorNear`,
+  `homeinside.doorInteraction`). If the owner is in, you ring the bell there. If the mansion is for sale, it says the
+  front door is round the north side (that's where its menu is).
+- **out by the door you came in by** (`ped.inDoor`, `homes.leaveHome`).
+- The north door works as before.
+
+Tests: test/mansiondoor.test.js - the south door on its terrace; for sale, it points you north; bought, in by it and
+out by it again; the north door as ever.
+
+## 2026-10-22 · Fix: a pool's water lies still
+
+The owner, 10-16: "Mansion pool shimmers in rapid Z shapes". The pool sprite flagged its water as plain open water
+(`F_WATER | F_GROUND`), and the chunk bake gave every sprite pixel a full alpha, 255: that's the open sea's word to the
+light pass (`lightgame.js` waterSurf). So a pool five tiles long ran the sea's waves and glints along the wind. Back
+yards' pools in Midtown did the same.
+
+- **the pool's water** (`client/art2/game/statics.js` makeFlat): now still inland water (`F_NOCAST`, the inland mark).
+- **its word** (`client/art2/game/chunkbake.js` compositeDepth, `POOL_WORD` 230): a sprite's still inland water is
+  baked with a clear pond's word. It's calm, with small glints and the sun's caustics on its floor, like the parks'
+  ponds.
+- Art change: the chunks with pools in them bake again.
+
+Tests: test/poolwater.test.js - the pool's water still and inland; baked with a pond's word, the rim and the ground
+round it as before. test/fountains.test.js unchanged (a fountain's basin keeps its own live ripples).
+
+## 2026-10-22 · ATMs: a pop-up, not a deposit on their own
+
+The owner, 10-06: "ATMs no longer deposit on their own: a pop-up with 'Deposit all' and 'Use ATM', on foot only".
+Walking up to a cash machine banked every dollar on you (`economy.js` quickDeposits), and the robbery bag too once it
+was far enough from the robbery (`hotmoney.js` walkUps).
+
+- **walking up** banks nothing now. The prompt says what's on you ("ATM - $420 on you to deposit").
+- **Act at the machine** opens its pop-up (`economy.js` buildMenu):
+  - **Deposit all ($420)**: your cash goes in at a press, and the pop-up closes. A menu option can now carry `shut`:
+    the page closes the menu as it sends the choice (`hud.js` choose), and the server doesn't send it again.
+  - **Deposit the hot money**: shown when you carry the robbery bag, with why not if it's too hot.
+  - **Use ATM**: the machine's full menu, with amounts to deposit and withdraw. The bank's counter is as before.
+- **on foot only**: no prompt and no deposit from the driver's seat.
+
+Tests: test/atmpopup.test.js - nothing banked on walking up; the pop-up's two rows; Deposit all at a press and closed;
+the full menu; not from a car. test/world.test.js and test/robbery.test.js deposit through the pop-up now.
+
+## 2026-10-22 · Walk-ins: the inside ready before you're in, and the way out while it isn't
+
+The owner, 10-16: "Interior art loads slowly on a phone (bowling alley, deli): preload or bake it" and "Show where
+the exit is while an interior's art loads (spawning in a hospital)". Art v2 draws a walk-in cut away (no roof, the
+shop floor) only once the chunks round it are baked that way. That bake started when you stepped in, and on a phone it
+takes seconds. Until it landed you stood under the roof, unable to see the counter or the door.
+
+- **baked ahead** (`client/art2/game/host.js` `_precut`, `walkInSoon`): when you're on foot within about seven tiles
+  of a walk-in's door, its chunks are baked cut away into the browser's store. When you're down with a hospital
+  picked to wake up in, that hospital's chunks are baked the same way. Going in then finds them in the store, and the
+  floor shows at once. These bakes run after the screen's own bakes, before the usual bake-ahead, once each a
+  session. They're never taken from the server: its chunks are the roofed ones (`worker.js` prebakeChunk skips it for
+  a cut-away).
+- **the way out** (`exitHint`, `insideReady`): inside a walk-in whose chunks on screen aren't drawn cut away yet, a
+  note under you says which way the door is ("The way out ↓ · the inside's on its way"). It only shows if the wait
+  passes 0.4 s, so it doesn't flicker when the store has the chunks.
+- **budget**: the page's code goes from 490 to 492 KB (`tools/perf.mjs`). This batch's HUD fixes are needed from the
+  start on every page: clearing a home's rooms on a new session, the prompt fading at home on a phone, the ATM
+  pop-up's closing option, and setting off a long note's paging. The paging itself (`client/notepages.js`) loads with
+  the first long note. The page's code was already at 490 with the last batch. The walk-in code sits in host.js, so
+  the renderer stays at 28 files.
+
+Tests: test/precut.test.js - near a door, its chunks are asked for cut away once, kept under the cut-away's key, and
+the screen's bakes go first; ready only once what's on screen is cut away; the walk-in ahead (on foot, not driving
+past; down: the hospital picked) and the way out's words. test/hudpage.js imports the note paging with the page (the
+headless page's clock didn't wait for an import made after it: the note test flaked).
+
+## 2026-10-22 · Route boards on the platforms
+
+The owner, 10-16: "An information board or map sign at stations showing where the train goes". The platform clock
+showed when the next train was due, and the station's timetable menu (at its map point) listed the next three
+trains. But nothing on the platform showed where the lines go.
+
+- **the board** (`routeBoardAt` in `shared/mapcore.js`; drawn by `client/art2/game/statics.js`, model `routeBoard` in
+  `client/art2/props-transit.js`): a navy board on two steel posts with a yellow header strip, the line drawn as a
+  white rule with the stops as dots (this one ringed in red), and the timetable's rows, lit a little at night. It
+  stands on every open-air platform near the back edge towards one end, past the canopy and clear of the footbridge
+  and the name sign. Where the ground there isn't the platform's, there's no board.
+- **read it** (`server/systems/trains.js` routeBoards, routeRows, readRouteBoard): standing at it, the action button
+  shows "The route board - where the trains from Northshore go". It lists every line through the station (each
+  service each way on World v3's main line), when its next train is due, and its next five stops in order. When a
+  train is in, boarding comes first.
+- Not yet on the El's platforms or at the subway's kiosks.
+
+Tests: test/world3rail.test.js - most open-air stations have a board, each on its platform and drawn where it's read;
+the prompt there; its rows, each line's next stop first.
+
+## 2026-10-22 · Fix: the classic renderer's world wiped every frame
+
+The way-out note (the walk-ins' exitHint, earlier today) was called from the middle of render()'s chain of renderers.
+That left the chain's last `else` (the dark fill when nothing draws) hanging off the note's own check. With no art v2
+renderer (the classic renderer, `?art=1`, a browser without WebGL2) the fill ran after the world was drawn, and the
+screen was dark every frame. Found in a review of the batch before it shipped. The call now follows the chain.
+
+## 2026-10-22 · The old city's map picture rebaked
+
+The soccer pitches' new shape and the mansion's south terrace changed the old city too (shared/map.js's park pitch and
+mansion). Its world map picture (assets/map, `node tools/build-worldmap2.mjs`) was baked for the old shape, and
+test/worldmap.test.js caught it in the batch's full run. Rebaked.

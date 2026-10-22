@@ -209,3 +209,35 @@ test('riding the v3 main line as today: board a train at its platform, ride, get
   assert.ok(!p.ped.onTrain, 'off the train');
   assert.ok(Math.hypot(p.ped.x - next.platform.x, p.ped.y - next.platform.y) < next.half + 300, 'on its platform');
 });
+
+// the platforms' route boards (the owner, 10-16: "An information board or map sign at stations showing where the train
+// goes"): one on each open-air platform, drawn there; read, every line through the station and its next stops
+test('a route board on the platforms: drawn on the platform, read out - each line through the station, its next stops', async () => {
+  const { staticItems, STATIC_CHUNK } = await import('../client/art2/game/statics.js');
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const boards = trains.routeBoards(w);
+  const open = new Set(); for (const R of w.rails) for (const st of R.stations) if (!st.under && !st.el && !st.deck) open.add(st.name);
+  const named = new Set(boards.map((b) => b.name));
+  assert.ok(named.size >= open.size * 0.8, `most open-air stations have one (${named.size} of ${open.size})`);
+  for (const b of boards) assert.ok([T.PLAZA, T.DOCK, T.SIDEWALK].includes(M.tileAtPx(b.x, b.y)), `${b.name}: on the platform`);
+  // drawn where it is read
+  const b = boards[0];
+  const items = staticItems(M, Math.floor(b.x / STATIC_CHUNK), Math.floor(b.y / STATIC_CHUNK));
+  assert.ok(items.some((it) => /^rboard/.test(it.key) && Math.hypot(it.x - b.x, it.y - b.y) < 2), 'the board drawn there');
+  // read: its rows, the next stops in the line's order
+  const { p, conn } = joinPlayer(w);
+  teleport(w, p.ped, b.x, b.y + 12);
+  const run = w.trains; w.trains = [];   // (no train in: boarding one comes first)
+  const a = players.findInteraction(w, p);
+  w.trains = run;
+  assert.ok(a && /route board/.test(a.label), `the prompt (${a && a.label})`);
+  a.run();
+  const menu = [...conn.sent].reverse().find((m) => m && m.t === 'menu');
+  assert.ok(menu && menu.opts.length >= 1, 'its rows');
+  const rows = trains.routeRows(w, b.name);
+  for (const r of rows) {
+    const R = w.rails.find((q) => q.name === r.label), i = R.stations.findIndex((q) => q.name === b.name);
+    assert.equal(r.next[0], R.stations[(i + 1) % R.stations.length].name.replace(/ Station$/, ''), `${r.label}: the next stop first`);
+  }
+  assert.ok(menu.opts.every((o) => o.id === 'close' && / → |^OK$/.test(o.note || o.label)), 'each line: where it goes');
+});

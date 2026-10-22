@@ -52,7 +52,7 @@ const money = (n) => `$${Math.round(n).toLocaleString()}`;
 export function enter(world, p, h, at) {
   const ped = p.ped;
   const L = planFor(h), sp = at || L.spawn;   // (at: out of a flat's door into its lobby - H71)
-  ped.home = { id: h.id, x: sp.x, y: sp.y, a: at ? Math.PI / 2 : -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, ...(h.isLobby ? { lobby: 1 } : null) };
+  ped.home = { id: h.id, x: sp.x, y: sp.y, a: at ? Math.PI / 2 : -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, inAt: world.time, ...(h.isLobby ? { lobby: 1 } : null) };
   p.homeMenu = null;
   if (!h.isLobby && world.homeOwner.get(h.id) === p.pid) {   // (H71) your pet comes to meet you; the mail by a house's door comes in with you
     petIn(world, p, h);
@@ -67,10 +67,13 @@ export function doorInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.carrying || ped.entering || ped.ug) return null;
   const poi = world.map.poiNear(ped.x, ped.y);
-  if (!poi || poi.kind !== 'home') return null;
-  if (homes.unitsAt(world, poi)) return lobbyDoor(world, p, poi);   // (H71: an apartment block - into its lobby, open to anyone)
-  if (!world.homeOwner.has(poi.home)) return null;
-  const h = world.map.homes[poi.home];
+  let h = null, back = false;
+  if (poi && poi.kind === 'home') {
+    if (homes.unitsAt(world, poi)) return lobbyDoor(world, p, poi);   // (H71: an apartment block - into its lobby, open to anyone)
+    h = world.map.homes[poi.home];
+  } else if ((h = homes.backDoorNear(world, ped.x, ped.y))) back = true;   // (the mansion's garden door, its south side)
+  if (!h) return null;
+  if (!world.homeOwner.has(h.id)) return back ? { label: `${h.name}'s garden door - for sale: its front door is round the north side`, passive: true, run: () => {} } : null;
   if (world.homeOwner.get(h.id) === p.pid) {
     if (!p.homePre && p.conn) { p.homePre = 1; p.conn.sendJSON({ t: 'home', pre: 1 }); }   // (the page fetches the rooms' drawing now, so they're there the moment you're in)
     return { label: `Go inside ${h.name}`, run: () => goIn(world, p, h) };
@@ -259,7 +262,8 @@ export function interaction(world, p) {
     if ((u && u.use === 'door') || dd <= HOME_IN.reach + 2) return { label: `The front door - buy ${h.name} (${money(h.price)}) or step outside`, run: () => openMenu(world, p, 'tour') };
     return { label: `${u ? `${THING[u.use] || 'That'} comes with the place - ` : 'Having a look round - '}${h.name}, ${money(h.price)}`, passive: true, run: () => {} };
   }
-  if (!u) return { label: `${h.name} - walk up to something to use it`, passive: true, run: () => {} };
+  // (by nothing: the hint for the first few seconds in, then no prompt over the rooms - HOME_IN.hintS)
+  if (!u) return world.time - (s.inAt ?? -1e9) < HOME_IN.hintS ? { label: `${h.name} - walk up to something to use it`, passive: true, run: () => {} } : null;
   if (s.guest && u.use !== 'door') { const host = world.players.get(s.guest); return { label: `The ${u.use === 'hall' ? 'hall table' : u.use === 'garage' ? 'garage' : u.use} - ${host ? `${host.name}'s` : 'not yours'}`, passive: true, run: () => {} }; }
   return { label: LABEL[u.use](world, p, h), run: () => use(world, p, h, u.use) };
 }

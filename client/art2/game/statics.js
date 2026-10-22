@@ -67,7 +67,7 @@ const BLAZES = ['#2a62c8', '#c8342a', '#e8c030', '#f2f0e8'];
 import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
 import { foodLayout } from '../../../shared/foodrooms.js';   // (IN8: the diner, the fast-food place, the restaurant)
-import { DISTRICTS, terrainAt, railAt, SEA_ISLES, wildBiome } from '../../../shared/mapcore.js';
+import { DISTRICTS, terrainAt, railAt, routeBoardAt, SEA_ISLES, wildBiome } from '../../../shared/mapcore.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
 import { DECK_LIFT, BARRIER_PIECE } from '../../../shared/levels.js';
 
@@ -1510,7 +1510,7 @@ function voxModel(m, a) {
     case 'soccerGoal': return PK.soccerGoal(a[0], a[1], a[2]); case 'terrace': return U.terrace(a[0], a[1], a[2], a[3]); case 'hayBale': return U.hayBale(a[0]); case 'scarecrow': return U.scarecrow();
     case 'windmill': return U.windmill(a[0]); case 'waterTower': return U.waterTower(a[0]); case 'lightPlane': return U.lightPlane(a[0]); case 'windsock': return U.windsock(); case 'vineRow': return U.vineRow(a[0] || 160, a[1] || 1, a[2] || 0, a[3] || 0); case 'winery': return U.winery(a[0] ?? 0.6); case 'wineBarrels': return U.wineBarrels(); case 'gateArch': return U.gateArch(a[0] || 90); case 'hotAirBalloon': return U.hotAirBalloon(a[0] || 0, a[1] ?? 1); case 'balloonLaid': return U.balloonLaid(a[0] || 0); case 'inflationFan': return U.inflationFan(); case 'missionRuins': return U.missionRuins(); case 'standingStone': return U.standingStone(a[0], a[1], a[2], a[3], a[4]); case 'piling': return P.piling(a[0]); case 'mooring': return X.mooringBollard(); case 'lounger': return D.lounger(a[0]);
     case 'hammock': return TW.hammock(a[0]); case 'boulder': return D.boulder(a[0], a[1], a[2]); case 'statue': return PK.statue(); case 'flagpole': return U.flagpole(a[0], a[1]); case 'jersey': return K.jerseyBarrier(a[0], a[1]);
-    case 'forklift': return X.forklift(a[0], a[1]); case 'container': return X.container(a[0], a[1]); case 'boxcar': return X.boxcar(a[0]); case 'tankcar': return X.tankCar(a[0]); case 'clockPost': return RD.clockPost(); case 'stopPole': return X.stopPole(a[0]); case 'gazebo': return PK.gazebo(); case 'archBridge': return PK.archBridge(a[0] || 120, a[1] || 26, a[2] || 16); case 'parkSign': return PK.parkSign(a[0]);
+    case 'forklift': return X.forklift(a[0], a[1]); case 'container': return X.container(a[0], a[1]); case 'boxcar': return X.boxcar(a[0]); case 'tankcar': return X.tankCar(a[0]); case 'clockPost': return RD.clockPost(); case 'routeBoard': return X.routeBoard(); case 'stopPole': return X.stopPole(a[0]); case 'gazebo': return PK.gazebo(); case 'archBridge': return PK.archBridge(a[0] || 120, a[1] || 26, a[2] || 16); case 'parkSign': return PK.parkSign(a[0]);
     case 'beachChair': return PK.beachChair(a[0]); case 'lifeguard': return P.lifeguardTower(); case 'cafeTable': return P.cafeTable(); case 'chalkboard': return P.chalkboard(); case 'topiary': return D.topiary(a[0], a[1]);
     case 'trough': return U.trough(); case 'stocktank': return U.stockTank(a[0] || 26); case 'cattleGrid': return U.cattleGrid(a[0] || 64, a[1] || 28); case 'woodpile': return U.woodpile(); case 'propane': return U.propaneTank(); case 'barrierArm': return U.barrierArm(a[0], a[1]); case 'gantryCrane': return X.gantryCrane(a[0], a[1], a[2]);
     case 'cabana': return D.cabana(a[0] || 0); case 'skySpan': return D.skySpan(a[0] || 150); case 'skyTower': return D.skyTower(a[0] || 144); case 'porte': return D.porte(a[0] || 300, a[1] || 96, a[2] || 58, a[3] || 0);
@@ -1569,7 +1569,7 @@ function vdim(m, a) {
     case 'lighthouse': return [48, 48, (a[0] || 140) + 36]; case 'pillar': return [(a[1] || 30) + 4, a[2] || 90, a[0] || 90]; case 'canopy': return [a[0] || 150, a[1] || 80, (a[2] || 52) + 10]; case 'fuelPump': return [12, 10, 34];
     case 'jetBridge': return [a[0] || 180, 34, 62]; case 'bagCart': return [36, 24, 26]; case 'beltLoader': return [80, 26, 46]; case 'aircraftTug': return [56, 34, 22]; case 'approachBar': return [8, (a[0] || 5) * 10, 16];
     case 'platformCanopy': return [a[0] || 200, a[1] || 40, 62]; case 'stationEntrance': return [70, 44, 54]; case 'stationHouse': return [a[1] || 140, 92, 74]; case 'lifeguardTower': return [46, 70, 66]; case 'crossingSignal': return [24, 8, 70]; case 'controlTower': return [70, 70, (a[0] || 220) + 50];
-    case 'subwayKiosk': return [128, 96, 64]; case 'erCanopy': return [120, 62, 60];
+    case 'subwayKiosk': return [128, 96, 64]; case 'erCanopy': return [120, 62, 60]; case 'routeBoard': return [46, 8, 52];
     case 'tPorch': return [a[0] || 160, 34 + (a[1] ? 14 : 0), Math.max((a[1] || 0) + 56, (a[2] || 0) + 14)]; case 'tAntlers': return [36, 6, 26]; case 'tLogs': return [a[0] || 160, 42, 34]; case 'tLoader': return [84, 46, 52];
     case 'tSaw': return [40, a[0] || 112, 48]; case 'tSilos': { const n = a[0] || 4, s = a[1] || 360, r = Math.min(48, Math.floor(s / n / 2) - 2); return [s, r * 2 + 4, 150 + Math.ceil(r * 0.45) + 14]; }
     case 'tSteeple': return [44, 44, 214]; case 'tDock': return [a[0] || 240, 40, 30]; case 'tSacks': return [34, 28, 26]; case 'tBoards': return [(a[0] || 5) * 10 + 8, 16, 64]; case 'tShelter': return [84, 64, 62];
@@ -2519,7 +2519,10 @@ function makeFlat(r) {
       const e = Math.min(x, y, w - 1 - x, h - 1 - y);
       if (e < 4) { c = step2(MAT.stone, e < 1 ? 0.45 : 0.75 - e * 0.05, x, y); z = 2; }
       else if (e < 6) { c = MAT.concrete[2]; z = 1; }
-      else { const p = groundPixel('pool', x + r.s * 31, y, r.s + 3); c = p.c; f = F_WATER | F_GROUND; }
+      // (still inland water - F_NOCAST - the chunk bake gives it a pond's word, POOL_WORD: it was read as open sea, the
+      // sea's waves and glints along the wind over a pool five tiles long - the owner, 10-16, "Mansion pool shimmers in
+      // rapid Z shapes")
+      else { const p = groundPixel('pool', x + r.s * 31, y, r.s + 3); c = p.c; f = F_WATER | F_GROUND | F_NOCAST; }
       if (r.s % 2 && x > w - 14 && x < w - 8 && y > 8 && y < 16) { c = MAT.chrome[3]; z = 6; f = 0; }   // the ladder
     } else if (r.k === 'mosaic') {
       const dx = x - w / 2, dy = (y - h / 2) * 1.25, d = Math.hypot(dx, dy), ang = Math.atan2(dy, dx);
@@ -2812,6 +2815,8 @@ function addRailLoop(c, I, R, once) {
     for (const f of [-0.42, 0.42]) { const p = at(f * L, 80); if (!ok(p)) continue; const hd = qa(p.a, 16); put(I, vitem(`pcan:${cl}:${hd.toFixed(2)}`, 'platformCanopy', [cl, 40, 1], p.x, p.y, hd)); lightAt(I, p.x, p.y, 52, 160, [1, 0.94, 0.8], 1.5, 'lamp'); }
     for (const f of [-0.85, -0.12, 0.12, 0.85]) { const p = at(f * L, 62); if (!ok(p)) continue; const n = Math.atan2(Math.cos(p.a) * sd, -Math.sin(p.a) * sd); put(I, vitem(`bn:${qa(n + PI / 2, 8).toFixed(2)}`, 'bench', [], p.x, p.y, qa(n + PI / 2, 8))); }
     for (const f of [-0.96, -0.6, 0.6, 0.96]) { const p = at(f * L, 98); if (!ok(p)) continue; put(I, vitem('lp:cast:1', 'lampPost', ['cast', 1], p.x, p.y)); lightAt(I, p.x, p.y + 2, 76, 180, LAMP_LIGHT.cast, 3, 'lamp'); }
+    const rb = routeBoardAt(R, st, c.at);   // (where the trains go: server/systems/trains.js reads it out)
+    if (rb) { put(I, vitem('rboard', 'routeBoard', [], rb.x, rb.y, 0)); lightAt(I, rb.x, rb.y - 4, 30, 60, [0.75, 0.85, 1], 0.9, 'sign'); }
     const mid = at(0, 50);
     if (ok(mid) && Math.abs(Math.cos(mid.a)) > 0.6) put(I, { key: `stb:${st.name}`, recipe: { t: 'sign', text: st.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: 26, posts: true }, x: mid.x, y: mid.y, ext: [80, 60, 80, 12] });
   }

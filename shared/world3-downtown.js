@@ -19,7 +19,7 @@
 //     pool and the impound yard; offices and the Civic car park toward Harborview Avenue.
 // Every building faces south (the camera); names are invented; draws are fixed by place (hash2). The plan's frame:
 // shared/world3-hand.js (a plan of several rects: Downtown's four bands and the park between them).
-import { TILE, T } from './constants.js';
+import { TILE, T, PITCH_LONG } from './constants.js';
 import { dsin, dcos } from './dmath.js';
 
 const D = 4;   // Downtown's district id (shared/mapcore.js DISTRICTS)
@@ -295,7 +295,10 @@ function greenfieldPark(K, m, out) {
   K.m.squares ||= []; K.m.squares.push({ x: Math.round(F[0]) - 6, y: F[1] - 5, w: 12, h: 10, name: 'Greenfield Fountain' });
   // ---- the soccer pitch in the north-west: turf in chain-link, the covered stand along its north side, floodlights
   {
-    const px0 = x0 + 6, px1 = 3056, py0 = y0 + 9, py1 = 2443;
+    // (a pitch's shape: half as long again as it's wide, like a real one - it ran 53 x 25 across the park's whole
+    // north-west, twice as long as wide; the owner, 10-16: "Soccer fields are far too long: make them normal size".
+    // In the middle of where it was, the ends grass)
+    const py0 = y0 + 9, py1 = 2443, len = Math.round((py1 - py0) * PITCH_LONG), mid = (x0 + 6 + 3056) / 2, px0 = Math.round(mid - len / 2), px1 = px0 + len;
     K.paint(px0 - 2, py0 - 6, px1 - px0 + 4, py1 - py0 + 8, T.GRASS);
     m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Greenfield Park Pitch', rect: { x: px0 * TILE, y: py0 * TILE, w: (px1 - px0) * TILE, h: (py1 - py0) * TILE }, goalW: 5 * TILE });
     prop('bleachers', (px0 + px1) / 2, py0 - 3.4, 10, { len: Math.round((px1 - px0 - 16) * TILE / 2), rows: 4 });

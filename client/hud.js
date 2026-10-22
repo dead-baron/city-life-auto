@@ -260,10 +260,13 @@ export class HUD {
   }
   loadDS() { this.dsLoad ||= import('./deathscreen.js').then((m) => { this.DS = m; if (this.me) m.draw(this, this.me); }).catch(() => { this.dsLoad = null; }); }
   // sitting by a campfire (task #375): its prompt fades after CALM_PROMPT_S still, the HUD after CALM_HUD_S; anything
-  // pressed, moved or touched brings them back at once (a touch then only wakes the screen)
-  calm(sitting, now) {
+  // pressed, moved or touched brings them back at once (a touch then only wakes the screen). still: the prompt alone
+  // fades after CALM_PROMPT_S without a touch (inside a home on a phone - the owner, 10-16: the prompt stayed up over the
+  // rooms and blocked the view)
+  calm(sitting, now, still = false) {
     if (!sitting) this.sitAt = 0; else this.sitAt ||= now;
-    const { prompt: p, hud: h } = calmState(this.sitAt, input.activeAt, now);
+    if (!still) this.stillAt = 0; else this.stillAt ||= now;
+    const { prompt: p0, hud: h } = calmState(this.sitAt, input.activeAt, now), p = p0 || calmState(this.stillAt, input.activeAt, now).prompt;
     if (p !== !!this.calmP) { this.calmP = p; $('helpbox').classList.toggle('calm', p); }
     if (h !== !!this.calmH) { this.calmH = h; document.body.classList.toggle('calm', h); }
   }
@@ -316,26 +319,32 @@ export class HUD {
       return;
     }
     const msg = localizeText(text);
-    // up for as long as it takes to read (a short note goes sooner); the same note again while it's still up isn't
-    // stacked: it moves to the front with its time restarted and a count (the user, 2026-10-08: fewer, smaller notes)
-    const life = Math.min(6500, 2400 + msg.length * 45);
-    let el = this.toastEls.find((x) => x.dataset.msg === msg);
+    // up for as long as it takes to read (a short note goes sooner; one too long for its box - three lines on a phone -
+    // a page at a time, client/notepages.js); the same note again while it's still up isn't stacked: it moves to the
+    // front with its time restarted and a count (the user, 2026-10-08: fewer, smaller notes)
+    let el = this.toastEls.find((x) => x.dataset.msg === msg), shown = msg;
     if (el) {
       clearTimeout(el._t);
       const n = (+el.dataset.n || 1) + 1;
       el.dataset.n = String(n);
-      el.textContent = `${msg} ×${n}`;
+      shown = `${msg} ×${n}`;
       this.toastEls = this.toastEls.filter((x) => x !== el);
     } else {
       el = document.createElement('div');
       el.className = 'toast ' + tone;
       el.dataset.msg = msg;
-      el.textContent = msg;
+      el.appendChild(document.createElement('div')).className = 'tx';
     }
+    const tx = el.firstChild;
+    tx.textContent = shown;
     $('toasts').appendChild(el);
     this.toastEls.push(el);
-    while (this.toastEls.length > 4) { const old = this.toastEls.shift(); clearTimeout(old._t); old.remove(); }
-    el._t = setTimeout(() => { el.remove(); this.toastEls = this.toastEls.filter((x) => x !== el); }, life);
+    while (this.toastEls.length > 4) { const old = this.toastEls.shift(); clearTimeout(old._t); clearInterval(old._pg); old.remove(); }
+    clearInterval(el._pg); el._pg = 0; el.classList.remove('paged');
+    const gone = () => { clearInterval(el._pg); el.remove(); this.toastEls = this.toastEls.filter((x) => x !== el); };
+    el._t = setTimeout(gone, Math.min(6500, 2400 + shown.length * 45));
+    // (too long for its box: paged, notepages.js loaded the first time one is - not with the page)
+    if (tx.scrollHeight > tx.clientHeight + 1) (this.notesP ||= import('./notepages.js')).then((NP) => { if (!el.isConnected || tx.textContent !== shown) return; clearTimeout(el._t); el._t = setTimeout(gone, NP.layNote(el, tx, shown)); }).catch(() => { this.notesP = null; });
   }
 
   // ---- menu ----
@@ -369,6 +378,7 @@ export class HUD {
     if (!o || o.dis) return;
     if (o.id === 'close') { this.closeMenu(); return; }
     this.sendMenu(this.menu.poi, o.id);
+    if (o.shut) { this.closeMenu(); return; }   // (an option that's the end of it: the ATM pop-up's "Deposit all")
     if (['hhide', 'hleave', 'armexit', 'sleave', 'htour', 'hi:tout', 'hi:tbuy', 'hi:tmort'].includes(o.id) || o.id.startsWith('hcargo') || /^hu:(in|tour):|^hi:(deco|d(pick|move|put|stay|store|end))/.test(o.id)) this.closeMenu(); // going in blinks you out; stepping out drops you at the door (a look round, a flat in a block: H65); decorating, a piece picked up or put down (H67)
   }
   navMenu(d) {

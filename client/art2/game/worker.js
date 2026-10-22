@@ -289,7 +289,7 @@ async function handle(msg) {
     const d0 = dirtySig(cx, cy), ck = `${KEEP.art}|${args.ck}${d0 ? '|d' + d0 : ''}`;
     if (await hasChunk(ck)) { self.postMessage({ id, ok: true, result: { kept: true, had: true }, ms: performance.now() - t0 }); return; }
     // (the server's, when it has it and the data saver is off: kept as it came)
-    if (!d0 && !CDN.saveData) {
+    if (!d0 && !CDN.saveData && !(opt && opt.cutaway >= 0)) {   // (the server's are roofed: a cut-away is baked here - host.js _precut)
       const dl = await fromCdn(cx, cy, opt.quality, ck, { keepOnly: true, pre: true });
       if (dl && dl.soon) { self.postMessage({ id, ok: true, result: { kept: false, soon: true }, ms: performance.now() - t0 }); return; }   // (the server has it in a moment: no bake here)
       if (dl) { stats.prebaked = (stats.prebaked || 0) + 1; self.postMessage({ id, ok: true, result: { kept: true, cdn: true }, ms: performance.now() - t0 }); return; }

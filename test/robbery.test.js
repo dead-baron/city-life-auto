@@ -132,28 +132,28 @@ test('hot money: no ATM or bank takes it near the robbery or while you are wante
   hotmoney.add(w, p, 800, atm.x + 300, atm.y);   // stolen just down the street
   assert.equal(prof.hot, 800);
   assert.equal(_descriptor(p.ped).mb, 1, 'everyone sees the money bag');
-  // walk up to the ATM: too hot
+  // at the ATM: too hot (walking up banks nothing on its own - its pop-up does: economy.js buildMenu)
   teleport(w, p.ped, atm.x, atm.y + 10);
   run(w, 0.5);
-  assert.ok(told(p, /Too hot - get it well away from the robbery first/), 'too hot');
   assert.equal(prof.hot, 800); assert.equal(prof.bank, 100);
-  // ...nor at its menu
   economy.handleMenu(w, p, atm.id, 'hot:bank');
-  assert.equal(prof.hot, 800, 'the menu says no too');
+  assert.ok(told(p, /Too hot - get it well away from the robbery first/), 'too hot');
+  assert.equal(prof.hot, 800, 'the menu says no');
   assert.ok(economy.buildMenu(w, p, atm).opts.some((o) => o.id === 'hot:bank' && /too hot/.test(o.note)));
   // the hot money isn't cash: no shopping with it
   assert.ok(!economy.payFrom(p, 200), 'can\'t spend it');
   // far away, but wanted
   prof.hotAt = { x: atm.x + HOT_FAR_PX + 200, y: atm.y };
-  p.atAtmHot = null;
   wanted(w, p, 1);
   economy.handleMenu(w, p, atm.id, 'hot:bank');
   assert.ok(told(p, /Lose the police first/), 'not while wanted');
   assert.equal(prof.hot, 800);
-  // far away and clean: the walk-up banks it
+  // far away and clean: its pop-up banks it
   law.clearWanted(w, p);
-  teleport(w, p.ped, atm.x + 200, atm.y + 200); run(w, 0.3);
   teleport(w, p.ped, atm.x, atm.y + 10); run(w, 0.5);
+  assert.equal(prof.hot, 800, 'not on its own');
+  assert.ok(economy.buildMenu(w, p, atm).opts.some((o) => o.id === 'hot:bank'), 'the pop-up has it');
+  economy.handleMenu(w, p, atm.id, 'hot:bank');
   assert.equal(prof.hot, 0, 'banked');
   assert.equal(prof.bank, 900, 'like a normal deposit');
   assert.equal(prof.cash, 0, 'the cash stays where it was');

@@ -58,7 +58,10 @@ if (sc.dev === 'touch') $('touch').classList.remove('hidden');
 const glyph = sc.dev === 'touch' ? '<span class="g-touch">ACT</span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
 const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + (sc.st === 'rob' ? T.shop : T.prompt) + '</span>'; pr.classList.remove('hidden'); if (sc.st !== 'rob') pr.classList.add('crime', 'felony');
 if (sc.st === 'custody') pr.classList.add('hidden');   // (held: nothing to Act on)
-for (const [i, n] of T.notes.entries()) { const el = document.createElement('div'); el.className = 'toast ' + ['info', 'warn', 'bad', 'good'][i]; el.textContent = n; $('toasts').appendChild(el); }
+// (the notes as client/hud.js lays them: the words in a .tx box, paged by client/notepages.js when they don't fit -
+// imported with the page's script, not after it: the headless page's clock doesn't wait for an import made later)
+import * as NP from '/client/notepages.js';
+for (const [i, n] of (sc.notes || T.notes).entries()) { const el = document.createElement('div'); el.className = 'toast ' + ['info', 'warn', 'bad', 'good'][i]; const tx = el.appendChild(document.createElement('div')); tx.className = 'tx'; tx.textContent = n; $('toasts').appendChild(el); }
 $('job').textContent = T.job; $('job').classList.remove('hidden');
 if (sc.st === 'rob') { $('rob').classList.remove('hidden'); $('rob-take').textContent = 'HOT $1,250 · till $800'; $('rob-fill').style.width = '40%'; }
 if (sc.st === 'custody') { $('trainbar').classList.remove('hidden'); $('trainbar').classList.add('custody'); $('tb-where').textContent = 'IN CUSTODY'; $('tb-next').textContent = 'Held on the ground - a patrol car is on its way'; }
@@ -76,7 +79,18 @@ const box = (el, name) => { const r = el.getBoundingClientRect(); return { name,
 function measure() {
   const read = [], keep = [];
   if (shown(pr)) read.push(box(pr, 'prompt'));
-  document.querySelectorAll('#toasts .toast').forEach((el, i) => { if (shown(el)) read.push(box(el, 'note' + i)); });
+  // (a note's pages: lost - words it never shows - when they don't fit and it isn't paged; whole - the last page ends on
+  // its last line)
+  document.querySelectorAll('#toasts .toast').forEach((el, i) => {
+    const tx = el.firstChild;
+    el.style.animation = 'none';
+    const life = NP.layNote(el, tx, tx.textContent), pages = NP.notePages(tx), lh = parseFloat(getComputedStyle(tx).lineHeight) || 14;
+    NP.stopNote(el);
+    NP.showPage(tx, pages - 1, false);
+    const end = tx.scrollTop + tx.clientHeight >= tx.scrollHeight - 1;
+    NP.showPage(tx, 0, false);
+    if (shown(el)) read.push({ ...box(el, 'note' + i), pages, life, lines: Math.round(tx.clientHeight / lh), lost: pages > 1 && (!el.classList.contains('paged') || !end) });
+  });
   for (const id of ['job', 'cruiser-hint', 'rob', 'trainbar']) if (shown($(id))) read.push(box($(id), id));
   keep.push(box($('radar'), 'minimap'));
   // you: the camera keeps you in the middle of the screen (on foot; your character about 24x32 px on a phone)
@@ -134,6 +148,7 @@ export function problems(r, { you = false } = {}) {
   for (const [i, a] of r.read.entries()) {
     if (a.x0 < 0 || a.y0 < 0 || a.x1 > sc.w || a.y1 > sc.h) out.push(`${tag}: ${a.name} off the screen ${JSON.stringify(a)}`);
     if (a.clip) out.push(`${tag}: ${a.name} cut off (wider than its box)`);
+    if (a.lost) out.push(`${tag}: ${a.name} cut off (words it never shows)`);
     for (const k of r.keep) if ((you || k.name !== 'you') && over(a, k)) out.push(`${tag}: ${a.name} under ${k.name} (${a.x0},${a.y0}-${a.x1},${a.y1} vs ${k.x0},${k.y0}-${k.x1},${k.y1})`);
     for (const b of r.read.slice(i + 1)) if (over(a, b)) out.push(`${tag}: ${a.name} overlaps ${b.name} (${a.x0},${a.y0}-${a.x1},${a.y1} vs ${b.x0},${b.y0}-${b.x1},${b.y1})`);
   }

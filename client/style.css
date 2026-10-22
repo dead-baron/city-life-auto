@@ -929,8 +929,11 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 .touch #money { font-size: 22px; }
 .touch #helpbox { font-size: 14px; }
 .touch .toast { font-size: 12px; }
-/* phones: smaller notes, three lines at most */
-.touch .toast { font-size: 11px; line-height: 1.25; padding: 4px 7px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+/* phones: smaller notes, three lines at most - a longer one a page of three lines at a time (client/notepages.js), a
+   thin bar along its foot for how far through it is (the owner, 10-16: the garden plot's instructions were cut off) */
+.touch .toast { font-size: 11px; line-height: 14px; padding: 4px 7px; position: relative; }
+.touch .toast > .tx { max-height: 42px; overflow: hidden; overflow-wrap: anywhere; }
+.toast.paged::after { content: ''; position: absolute; left: 0; bottom: 0; height: 2px; width: calc(var(--pg, 0) * 100%); background: rgba(238,241,248,.55); transition: width .4s ease; }
 .touch #helpbox > .g-touch { height: 22px; font-size: 12px; }
 .touch #toasts { gap: 3px; }
 
@@ -1234,3 +1237,7 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #dev.dv-short .dv-tile { min-height: 46px; }
 #dev .dv-head .dev-x { margin-left: auto !important; }
 #dev.as-overlay.dv-port, #dev.as-overlay.dv-short { background: rgba(10, 10, 14, .985); }
+
+/* the way out of a walk-in while its inside is still being drawn (main.js exitHint) */
+#exithint { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); padding: 4px 10px; background: rgba(13,22,45,.9); border: 1px solid rgba(226,189,87,.5); border-radius: 4px; color: #eef1f8; font: 14px var(--pixel); white-space: nowrap; pointer-events: none; z-index: 6; }
+.touch #exithint { font-size: 12px; padding: 3px 8px; }

@@ -30,7 +30,7 @@ import * as mail from './mail.js';
 import * as skate from './skate.js';
 import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
-import { SKATEBOARD_PRICE, REVIVE_KIT_PRICE, ATM_DEPOSIT_PX, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
+import { SKATEBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 // A hand plan's walk-in shop's counter (World v3's Midtown: shared/world3-hand.js poi.walk, poi.store): what it has for
@@ -68,7 +68,7 @@ export function poiLabel(world, p, poi) {
       if (owner) return null;
       return `For sale: ${h.name} - $${h.price.toLocaleString()}`;
     }
-    case 'atm': return 'Use ATM';
+    case 'atm': return p.profile.cash > 0 ? `ATM - $${p.profile.cash.toLocaleString()} on you to deposit` : 'Use ATM';
     case 'club': return `Bar - ${poi.label}`;
     case 'roadhouse': return `Bar - ${poi.label} (beer, rye)`;
     case 'vending': return 'Buy an Energy Drink';
@@ -165,6 +165,7 @@ function weaponOffer(o, prof) {
 }
 
 export function buildMenu(world, p, poi) {
+  let atmMore = false;   // (an ATM's pop-up: "Use ATM" last, after the hot money's row)
   const prof = p.profile;
   const ped = () => p.ped;
   const kind = poi.kind;
@@ -219,6 +220,14 @@ export function buildMenu(world, p, poi) {
     case 'bank': case 'atm':
       title = kind === 'bank' ? 'First Pixel Bank' : 'ATM';
       sub = `Wallet $${prof.cash} - Bank $${prof.bank}. Banked money is safe when you die.`;
+      // an ATM's pop-up first: all your cash in at a press (the menu closes), or the machine's full menu (the owner,
+      // 10-06: "ATMs no longer deposit on their own: a pop-up with 'Deposit all' and 'Use ATM', on foot only" -
+      // walking up to one used to bank everything)
+      if (kind === 'atm' && p.atmFull !== poi.id) {
+        opts.push({ id: 'dep:all', label: prof.cash > 0 ? `Deposit all ($${prof.cash.toLocaleString()})` : 'Deposit all', dis: prof.cash <= 0, shut: 1 });
+        atmMore = true;
+        break;
+      }
       for (const amt of [100, 1000]) opts.push({ id: `dep:${amt}`, label: `Deposit $${amt}`, dis: prof.cash < amt });
       opts.push({ id: 'dep:all', label: 'Deposit everything', dis: prof.cash <= 0 });
       for (const amt of [100, 500, 1000]) opts.push({ id: `wd:${amt}`, label: `Withdraw $${amt}`, dis: prof.bank < amt });
@@ -405,6 +414,7 @@ export function buildMenu(world, p, poi) {
   // clothes to buy (task #364): every store that sells clothes has a fitting room (looks.js openShop)
   if (storeOf(poi) && kind !== 'barber') opts.unshift({ id: 'fit', label: 'The fitting room: try on and buy clothes' });
   hotmoney.menuOpts(world, p, poi, opts);   // the robbery bag: banked far from the robbery, stashed at home, fenced
+  if (atmMore) opts.push({ id: 'atmfull', label: 'Use ATM', note: 'deposit or withdraw an amount' });
   if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
   return { t: 'menu', poi: poi.id, title, sub, opts, cash: prof.cash, bank: prof.bank, interior };
 }
@@ -475,7 +485,7 @@ function furnitureMenu(p, poi) {
 export function openMenu(world, p, poi) {
   if (!p.conn) return;
   p.menu = { poi: poi.id };
-  p.furnShop = null; p.lobbyUnit = null;
+  p.furnShop = null; p.lobbyUnit = null; p.atmFull = null;
   p.conn.sendJSON(buildMenu(world, p, poi));
 }
 
@@ -485,11 +495,12 @@ export function handleMenu(world, p, poiId, optId) {
   const ped = p.ped;
   if (!poi || !ped || ped.dead || ped.vehId) return;
   if (Math.hypot(ped.x - poi.x, ped.y - poi.y) > poi.r + 40) { world.notify(p, 'You walked away from the counter.', 'warn'); return; }
+  const shut = !!(buildMenu(world, p, poi).opts.find((o) => o.id === optId) || {}).shut;   // (an option that closes its menu: the page closes it too)
   const err = execute(world, p, poi, String(optId || ''));
   if (err) world.notify(p, err, 'bad');
-  if (optId === 'close') { p.furnShop = null; p.lobbyUnit = null; }
+  if (optId === 'close' || shut) { p.furnShop = null; p.lobbyUnit = null; p.atmFull = null; }
   p.meDirty = true;
-  if (!['close', 'hhide', 'hleave', 'armexit', 'sleave', 'htour'].includes(optId) && !optId.startsWith('hcargo') && !/^hu:(in|tour):/.test(optId) && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
+  if (!shut && !['close', 'hhide', 'hleave', 'armexit', 'sleave', 'htour'].includes(optId) && !optId.startsWith('hcargo') && !/^hu:(in|tour):/.test(optId) && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
 }
 
 function execute(world, p, poi, opt) {
@@ -577,11 +588,13 @@ function execute(world, p, poi, opt) {
       store.touch();
       return null;
     }
+    case 'atmfull': p.atmFull = poi.id; return null;   // (the ATM's full menu: amounts to deposit and withdraw)
     case 'dep': {
       const amt = parts[1] === 'all' ? prof.cash : Number(parts[1]);
       if (amt <= 0 || prof.cash < amt) return 'Not enough cash on you.';
       prof.cash -= amt; prof.bank += amt; store.touch();
-      world.notify(p, `Deposited $${amt}.`, 'good');
+      if (poi.kind === 'atm') world.emit(poi.x, poi.y, { e: 'deposit', x: poi.x, y: poi.y, n: amt });   // (the machine's whirr)
+      world.notify(p, `${poi.kind === 'atm' ? 'ATM: deposited' : 'Deposited'} $${amt.toLocaleString()} - bank $${prof.bank.toLocaleString()}.`, 'good');
       return null;
     }
     case 'wd': {
@@ -846,25 +859,6 @@ function heartyEnd(world) {
   }
 }
 
-// Walk up to a cash machine with money on you and it goes straight into the bank.
-function quickDeposits(world) {
-  for (const p of world.players.values()) {
-    const ped = p.ped;
-    if (!ped || ped.dead || ped.vehId || ped.hidden || p.profile.cash <= 0) { if (p) p.atAtm = null; continue; }
-    let at = null;
-    for (const q of world.map.atms) if (Math.abs(q.x - ped.x) < ATM_DEPOSIT_PX && Math.abs(q.y - ped.y) < ATM_DEPOSIT_PX && Math.hypot(q.x - ped.x, q.y - ped.y) < ATM_DEPOSIT_PX) { at = q; break; }
-    if (!at) { p.atAtm = null; continue; }
-    if (p.atAtm === at.id) continue; // once per visit
-    p.atAtm = at.id;
-    const amt = p.profile.cash;
-    p.profile.cash = 0; p.profile.bank += amt;
-    store.touch();
-    p.meDirty = true;
-    world.emit(at.x, at.y, { e: 'deposit', x: at.x, y: at.y, n: amt });
-    world.notify(p, `ATM: deposited $${amt.toLocaleString()} - bank $${p.profile.bank.toLocaleString()}.`, 'good');
-  }
-}
-
 // The quick bar: four slots of usable items (a flashlight there switches it on and off). A newly bought
 // usable item fills the first empty slot.
 export const QUICK_SLOTS = 4;
@@ -946,7 +940,6 @@ export function useHealItem(world, p) {
 export function update(world) {
   if (world.tick % 5 !== 0) return;
   const now = world.time;
-  quickDeposits(world);
   heartyEnd(world);
   for (const poi of world.map.pois) {
     if (poi.kind !== 'reception') continue;

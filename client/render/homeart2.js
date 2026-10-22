@@ -423,7 +423,7 @@ export class HomeArt {
       if (p.face) face = p.face;   // (H67: the shop's pieces face the way you turned them)
       else if (p.ch === 'Z' || p.ch === 'M') face = 's';   // (H71: a lobby's stairs climb away to the back wall; the mailboxes on it)
       else if (p.ch === 'C' || p.ch === 'O') face = p.h > p.w ? (wall(p.tx - 1, p.ty) ? 'e' : 'w') : wall(p.tx, p.ty + p.th) ? 'n' : 's';
-      else if (p.ch === 'V') { const c = L.pieces.find((q) => q.ch === 'C'); face = c && c.y + c.h <= p.y && Math.abs(c.x + c.w / 2 - p.x - p.w / 2) < c.y - p.y ? 'n' : 's'; }   // (seen from the side a set is a sliver: it faces the camera unless the couch is north of it)
+      else if (p.ch === 'V') { const c = L.pieces.find((q) => q.ch === 'C'); face = c ? (c.y + c.h <= p.y && Math.abs(c.x + c.w / 2 - p.x - p.w / 2) < p.y - c.y ? 'n' : 's') : wall(p.tx, p.ty + p.th) ? 'n' : 's'; }   // (the couch north of it: it faces north - it measured that the wrong way round, so a set against the south wall faced the wall: the owner, 10-16, "A TV faces the wall"; no couch: away from the wall it stands against)   // (seen from the side a set is a sliver: it faces the camera unless the couch is north of it)
       else if (p.ch !== 'T' && p.ch !== 'P' && p.ch !== 'B') face = wall(p.tx, p.ty - 1) ? 's' : wall(p.tx, p.ty + p.th) ? 'n' : wall(p.tx - 1, p.ty) ? 'e' : wall(p.tx + p.tw, p.ty) ? 'w' : 's';
       const side = face === 'e' || face === 'w', mw = side ? p.h : p.w, md = side ? p.w : p.h;
       const head = { s: 0, n: Math.PI, e: -Math.PI / 2, w: Math.PI / 2 }[face];

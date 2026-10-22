@@ -437,7 +437,7 @@ export const BOAT_RENTAL_PRICE = { jetski: 120, dinghy: 150, speedboat: 350, row
 export const SPIKE_STRIP_S = 45;           // a deployed spike strip stays across the road this long (one per officer)
 
 // Money
-export const ATM_DEPOSIT_PX = 48;          // walk up this close to an ATM with cash on you and it's banked automatically
+export const ATM_DEPOSIT_PX = 48;          // an ATM's reach (it used to bank your cash on its own this close: now its pop-up does - economy.js)
 
 // Gear
 // Skateboarding, part 1 (the owner, 2026-10-17; server/systems/skate.js; the board's physics: shared/physics.js BOARD):
@@ -709,7 +709,9 @@ export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough
 // (px) for the action button to use it; sleepS: a sleep (the screen goes dark while the night passes for you - and for the
 // whole city when everyone online is asleep at home: the clock jumps to wakeH o'clock); showerS: a shower; showerHeal: the
 // health it gives back (and it stops bleeding); eatS: between two bites at the fridge.
-export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6 };
+// (hintS: how long after you go in the prompt says "walk up to something to use it" - then nothing in the way of the
+// rooms until you're by something to use; the owner, 10-16: the prompt stayed up on a phone and blocked the view)
+export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6, hintS: 6 };
 
 // A mortgage (H65; server/systems/mortgage.js): buy a home for a deposit (that share of its price) and the bank lends the
 // rest, plus `rate` on top, paid back from your bank account in `days` equal payments - one each in-game day (DAY_LOOP_S)

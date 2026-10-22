@@ -92,3 +92,23 @@ test('the inside in the game\'s 3/4 view: every kind of home builds and lights b
     assert.ok(!bake.includes(f), `${f} is in the chunk bake`);
   }
 });
+
+// A TV faces the couch (the owner, 10-16: "A TV faces the wall (you can't watch it)"): with the couch north of the set
+// it faces north; with the couch south of it, south - it measured the couch's distance the wrong way round, so a set
+// against the south wall with the couch north of it faced the wall.
+test('the TV faces the couch, whichever side of it the couch is', async () => {
+  const prev = globalThis.document;
+  globalThis.document = { createElement: () => { const c = { width: 0, height: 0, px: null }; c.getContext = () => ({ createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), putImageData: (im) => { c.px = im; }, drawImage() {}, fillRect() {}, clearRect() {}, getImageData: (x, y, w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }) }); return c; } };
+  try {
+    const { HomeArt } = await import('../client/render/homeart2.js');
+    const k = PLAN_KEYS.find((q) => { const L = layout(q, 1); return L.pieces.some((p) => p.ch === 'V') && L.pieces.some((p) => p.ch === 'C'); });
+    assert.ok(k, 'a home with a TV and a couch');
+    const faceOf = (L) => { const A = new HomeArt(L, 2); A.work(1e9); const key = [...A.models.keys()].find((q) => q.startsWith('V|')); return key && key.split('|').pop(); };
+    const L1 = layout(k, 1), tv = L1.pieces.find((p) => p.ch === 'V'), couch = L1.pieces.find((p) => p.ch === 'C');
+    assert.equal(faceOf(L1), couch.y > tv.y ? 's' : 'n', 'as laid out: toward the couch');
+    // the couch moved north of the set, square in front of it
+    const L2 = layout(k, 1), tv2 = L2.pieces.find((p) => p.ch === 'V'), c2 = L2.pieces.find((p) => p.ch === 'C');
+    c2.x = tv2.x + tv2.w / 2 - c2.w / 2; c2.y = tv2.y - c2.h - 60;
+    assert.equal(faceOf(L2), 'n', 'the couch north of it: it faces north, not the wall');
+  } finally { globalThis.document = prev; }
+});
