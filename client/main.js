@@ -3197,7 +3197,7 @@ function drawWorldV1(F) {
   }
   mark('ground');
   if (!sub) S.wx.drawWaterSheen(g, view, sky, now);
-  if (sub) drawTunnel(g, S.map, view, now);
+  if (sub) { drawTunnel(g, S.map, view, now, S.platMod ? S.platMod.drawPlatforms : null); if (!S.platMod && !S.platP) S.platP = import('./render/tunnelplat.js').then((m) => { S.platMod = m; }).catch((e) => { console.warn('[platforms]', e); setTimeout(() => { S.platP = null; }, 30e3); }); }   // (the underground stations' platforms: render/tunnelplat.js)
   else fx.drawDecals(g, view, now, rain);
   // grass, crops, bushes and flower beds: sway, part round people, lie flat where cars went (render/flora)
   if (!sub && S.flora) {
