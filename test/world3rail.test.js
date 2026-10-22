@@ -273,3 +273,21 @@ test('the El\'s route boards up on its platforms, read from the deck; the subway
   }
   w.trains = run;
 });
+
+// over water the track stays up till it meets land (the owner, 10-16: "Visible tunnel mouths; over water the track
+// reaches land before its tunnel"): every tunnel's mouth on land, the water before it crossed on a bridge
+test('the main line\'s tunnel mouths are on land: over water it crosses on a bridge', () => {
+  const wet = (p) => [T.WATER, T.DEEP, T.BRIDGE].includes(M.tileAtPx(p.x, p.y));
+  let mouths = 0;
+  for (const R of M.rails.filter((q) => !q.subway)) {   // (the main line's loops: the subway's are its own)
+    const P = R.pts, n = P.length;
+    for (let i = 0; i < n; i++) {
+      const p = P[i], q = P[(i + 1) % n];
+      if (!!p.under === !!q.under || p.elevated || q.elevated) continue;
+      const inside = p.under ? p : q;
+      mouths++;
+      assert.ok(!wet(inside), `${R.name}: a tunnel mouth over water at ${Math.round(inside.x / TILE)},${Math.round(inside.y / TILE)}`);
+    }
+  }
+  assert.ok(mouths > 10, `the mouths (${mouths})`);
+});

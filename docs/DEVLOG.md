@@ -13938,3 +13938,21 @@ The owner, 10-08 (SI1): "Shop symbols over entrances when close (subtle, can be 
 
 Tests: test/shopmarks.test.js - the shop's symbol over its door, none for a home or a place far off, fading as you
 walk away, none from a car.
+
+## 2026-10-22 · Over water, the main line stays up till it reaches land
+
+The owner, 10-16: "Visible tunnel mouths; over water the track reaches land before its tunnel". Where the Grand Loop
+crosses a bay or a strait, its tunnels began or ended out over the water. A bridge ran out from the shore, then a
+tunnel mouth stood at its end in the middle of the bay, and the line ran on under the sea. Eight of the loop's tunnels
+did this.
+
+- **surfaceOverWater** (`shared/world3-rail.js`, run before the mountain bores): a tunnel's run is trimmed from each
+  end while the track is over water (or a deck over it). The line crosses that water on a bridge (`buildRailway` decks
+  a run over water) and goes below ground where it reaches land. The mouth is on the shore now, a portal you can see
+  at the beach. Wet stretches inside a tunnel, with land at both ends, stay below. A tunnel left all on dry ground
+  becomes a bore through the hill as before. The El's viaduct is untouched.
+- The subway's lines are their own (one Pink Line mouth stands on a bridge): not changed here.
+- The ground changes, so the chunks along those crossings bake again.
+
+Tests: test/world3rail.test.js - every main-line tunnel mouth is on land. The rail, hub, road, ferry and water tests
+pass as they were.
