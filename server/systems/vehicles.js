@@ -77,7 +77,7 @@ export function update(world, dt) {
       else stepVehicle(world, v, dt, env);
     }
     // land vehicles that end up in the water sink (not a car on a ferry's deck)
-    if (v.def.kind !== 'boat' && !v.onDeck && !aircraft.inAir(v)) {
+    if (v.def.kind !== 'boat' && !v.def.horse && !v.onDeck && !aircraft.inAir(v)) {   // (a horse never goes in: physics.js)
       if (!v.sinkAt && (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
       if (v.sinkAt) {
         v.vx *= Math.exp(-2.5 * dt); v.vy *= Math.exp(-2.5 * dt);
@@ -619,6 +619,13 @@ export function entryInfo(world, p, v) {
 export function enterLabel(world, p, v) {
   const n = v.def.name, e = entryInfo(world, p, v), c = e.crime && law.CRIMES[e.crime];
   const crime = c ? ` - ${c.label}${c.felony ? ' (felony)' : ''}` : '';
+  if (v.def.horse) switch (e.kind) {   // (a horse: up on it, not in it - horses.js)
+    case 'own': return 'Up on your horse';
+    case 'rental': return 'Up on your hired horse';
+    case 'ride': return 'Up behind the rider';
+    case 'jack': return `Pull the rider off the horse${crime}`;
+    default: return c ? `Ride off on the horse${crime}` : 'Up on the horse';
+  }
   switch (e.kind) {
     case 'own': return `Get in your ${n}`;
     case 'work': return `Get in the ${n} - issued to you for the job`;

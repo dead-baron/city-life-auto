@@ -75,6 +75,15 @@ test('never into the water: a horse ridden at the shore stops at it (a bridge it
   assert.ok(at, 'a shore');
   const s = newVehState(at.x - 60, at.y, 0);
   for (let i = 0; i < 80; i++) { vehStep(s, driveInput(s, { bits: IN.SPRINT, mx: 1, my: 0 }, VEHICLES.horse), DT, m, VEHICLES.horse, {}); assert.ok(!WATER_T[m.tileAtPx(s.x, s.y)], 'never in the water'); }
+  // at a gallop along and into it at every angle, the stick swinging: still never in
+  for (let k = 0; k < 16; k++) {
+    const t = newVehState(at.x - 60, at.y, 0), a0 = (k / 16) * Math.PI - Math.PI / 2;
+    for (let i = 0; i < 120; i++) {
+      const a = a0 + Math.sin(i * 0.15) * 0.8;
+      vehStep(t, driveInput(t, { bits: IN.SPRINT, mx: Math.cos(a), my: Math.sin(a) }, VEHICLES.horse), DT, m, VEHICLES.horse, {});
+      assert.ok(!WATER_T[m.tileAtPx(t.x, t.y)], `never in the water (run ${k}, step ${i})`);
+    }
+  }
 });
 
 test('a farm horse: up on it bareback with the vehicle button - horse theft; its coat kept', () => {

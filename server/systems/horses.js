@@ -12,7 +12,7 @@
 // saddled, 'horse:c<coat>' bare - client/art2/animals.js).
 import { K } from '../../shared/constants.js';
 import { HORSE } from '../../shared/rules.js';
-import { HORSE_BLOCK } from '../../shared/mapcore.js';
+import { HORSE_BLOCK, WATER_T } from '../../shared/mapcore.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { inAnyView } from '../view.js';
 import { store } from '../store.js';
@@ -193,6 +193,13 @@ export function update(world) {
         world.notify(p, 'The co-op reported your horse stolen.', 'bad');
       }
     }
+  }
+  // a horse never stands in the water (shared/physics.js keeps it out as it moves; whatever else shoves it - a car, a
+  // blast - it's back where it last stood dry)
+  for (const v of world.entities.values()) {
+    if (v.kind !== K.VEH || !v.def.horse) continue;
+    if (!WATER_T[world.map.tileAtPx(v.x, v.y)] || (v.lz || 0) > 0.3) { v.dryX = v.x; v.dryY = v.y; }
+    else if (v.dryX !== undefined) { v.x = v.dryX; v.y = v.dryY; v.vx = 0; v.vy = 0; world.place(v); }
   }
   // a bolted horse, its run over, gone once nobody's watching
   if (world.tick % 20 === 11) {
