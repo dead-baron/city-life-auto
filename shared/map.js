@@ -14,7 +14,7 @@
 // Roads are polylines at any angle (roads.js); tiles are rasterized from them for collision and
 // surfaces, and the renderer draws the roads as curves.
 
-import { T, TILE, MAP_W, MAP_H } from './constants.js';
+import { T, TILE, MAP_W, MAP_H, PITCH_LONG } from './constants.js';
 import { mulberry32, hash2 } from './rng.js';
 import { propGrid } from './propgrid.js';
 import { withDeterministicMath } from './dmath.js';
@@ -3887,10 +3887,13 @@ function buildPark(m, b, rand, info) {
       if (k <= 1 && m.tileAt(x, y) === T.GRASS) m.set(x, y, k < 0.45 ? T.DEEP : T.WATER);
     }
   }
-  // a full-size pitch across the park's south half (soccer mini-game)
+  // a pitch in the park's south half (soccer mini-game): half as long again as it's wide, in the middle (it ran the
+  // half's whole length - Westport Stadium's 91 x 36; the owner, 10-16: "Soccer fields are far too long: make them
+  // normal size")
   let pitch = null;
   if (info.pitch) {
-    pitch = { x0: ix + 6, y0: cy + 6, x1: ix + iw - 7, y1: iy + ih - 6 };
+    const y0 = cy + 6, y1 = iy + ih - 6, len = Math.min(iw - 13, Math.round((y1 - y0) * PITCH_LONG)), x0 = cx - Math.floor(len / 2);
+    pitch = { x0, y0, x1: x0 + len, y1 };
     m.fill(pitch.x0 - 1, pitch.y0 - 1, pitch.x1 - pitch.x0 + 2, pitch.y1 - pitch.y0 + 2, T.GRASS);
     m.venues.push({ id: m.venues.length, kind: 'soccer', name: `${info.label} Pitch`, rect: { x: pitch.x0 * TILE, y: pitch.y0 * TILE, w: (pitch.x1 - pitch.x0) * TILE, h: (pitch.y1 - pitch.y0) * TILE }, goalW: 5 * TILE });
   }

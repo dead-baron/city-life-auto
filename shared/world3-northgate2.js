@@ -16,7 +16,7 @@
 //   - east of Harborview Avenue: the Harborview Diner, courtyard walk-ups, the Northgate Clinic and its court, the
 //     sports bars by the stadium, the car park under the deck.
 // Every building faces south (the camera). Names, signs and brands are invented. Draws are fixed by place (hash2).
-import { TILE, T } from './constants.js';
+import { TILE, T, PITCH_LONG } from './constants.js';
 import { towerKit } from './world3-downtown.js';
 
 const D = 2;   // Northgate (shared/mapcore.js DISTRICTS)
@@ -264,8 +264,9 @@ function build(m, api, K) {
     void ax1;
     if (w < 40) return;
     K.fill(x0, y0, w, h, T.GRASS); K.take(x0, y0, w, h);
-    // the pitch in the west half: 30 x 16 turf in chain-link, the bleachers along its north side
-    const px0 = x0 + 3, px1 = px0 + 30, py0 = y0 + 5, py1 = y1 - 2;
+    // the pitch in the west half: turf in chain-link half as long again as it's wide (it was 30 long, twice its width:
+    // the owner, 10-16, "Soccer fields are far too long"), the bleachers along its north side
+    const py0 = y0 + 5, py1 = y1 - 2, px0 = x0 + 3, px1 = px0 + Math.round((py1 - py0) * PITCH_LONG);
     m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Linden Park Pitch', rect: { x: px0 * TILE, y: py0 * TILE, w: (px1 - px0) * TILE, h: (py1 - py0) * TILE }, goalW: 4 * TILE });
     prop('bleachers', (px0 + px1) / 2, py0 - 3.2, 10, { len: Math.round((px1 - px0 - 10) * TILE / 2), rows: 3 });
     const fx0 = px0 - 1.4, fx1 = px1 + 1.4, fy0 = py0 - 1.4, fy1 = py1 + 1.4;

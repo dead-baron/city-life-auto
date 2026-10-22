@@ -1,6 +1,7 @@
 // Shared constants used by both the authoritative server and the browser client.
 
 export const TILE = 32;                 // world pixels per tile
+export const PITCH_LONG = 1.5;          // a soccer pitch's length over its width (a real one's 1.4-1.6): shared/map.js, world3-downtown.js, world3-northgate2.js
 export const MAP_W = 1312;              // tiles: the world map concept, one pixel per tile (1 tile = 1 m)
 export const MAP_H = 1200;              // tiles
 export const WORLD_W = MAP_W * TILE;    // 41984 px

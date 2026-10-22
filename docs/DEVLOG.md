@@ -13779,3 +13779,18 @@ rooms the whole time you were in there.
   the HUD stays.
 
 Tests: test/homeprompt.test.js - the hint just in, then nothing; by the fridge, what it does; the fade's timing.
+
+## 2026-10-22 · Soccer pitches the shape of a pitch
+
+The owner, 10-16: "Soccer fields are far too long: make them normal size". Three of World v3's four pitches ran about
+twice as long as they were wide, or more: Greenfield Park's was 53 x 25 tiles, Linden Park's 30 x 15, and Westport
+Stadium park's 91 x 36 (the generator's park pitch ran the whole length of the park's south half). A real pitch is
+about half as long again as it is wide.
+
+- **the shape** (`PITCH_LONG` in `shared/constants.js`, 1.5): each pitch keeps its width and is now 1.5 times as long,
+  set in the middle of where it was. Greenfield's is 38 x 25, Linden's 23 x 15, Westport Stadium park's 54 x 36. The
+  ends are park again: grass at Greenfield, trees at Westport, and Linden's pond moves up beside it. The fences, stands
+  and floodlights follow the pitch. Waves Stadium's pitch (86 x 52) was already the right shape.
+- The ground changes, so the chunks round the three parks bake again.
+
+Tests: test/world3world.test.js - every soccer pitch is 1.35-1.75 times as long as wide.
