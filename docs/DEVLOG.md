@@ -13826,3 +13826,20 @@ yards' pools in Midtown did the same.
 
 Tests: test/poolwater.test.js - the pool's water still and inland; baked with a pond's word, the rim and the ground
 round it as before. test/fountains.test.js unchanged (a fountain's basin keeps its own live ripples).
+
+## 2026-10-22 · ATMs: a pop-up, not a deposit on their own
+
+The owner, 10-06: "ATMs no longer deposit on their own: a pop-up with 'Deposit all' and 'Use ATM', on foot only".
+Walking up to a cash machine banked every dollar on you (`economy.js` quickDeposits), and the robbery bag too once it
+was far enough from the robbery (`hotmoney.js` walkUps).
+
+- **walking up** banks nothing now. The prompt says what's on you ("ATM - $420 on you to deposit").
+- **Act at the machine** opens its pop-up (`economy.js` buildMenu):
+  - **Deposit all ($420)**: your cash goes in at a press, and the pop-up closes. A menu option can now carry `shut`:
+    the page closes the menu as it sends the choice (`hud.js` choose), and the server doesn't send it again.
+  - **Deposit the hot money**: shown when you carry the robbery bag, with why not if it's too hot.
+  - **Use ATM**: the machine's full menu, with amounts to deposit and withdraw. The bank's counter is as before.
+- **on foot only**: no prompt and no deposit from the driver's seat.
+
+Tests: test/atmpopup.test.js - nothing banked on walking up; the pop-up's two rows; Deposit all at a press and closed;
+the full menu; not from a car. test/world.test.js and test/robbery.test.js deposit through the pop-up now.

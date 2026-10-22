@@ -437,7 +437,7 @@ export const BOAT_RENTAL_PRICE = { jetski: 120, dinghy: 150, speedboat: 350, row
 export const SPIKE_STRIP_S = 45;           // a deployed spike strip stays across the road this long (one per officer)
 
 // Money
-export const ATM_DEPOSIT_PX = 48;          // walk up this close to an ATM with cash on you and it's banked automatically
+export const ATM_DEPOSIT_PX = 48;          // an ATM's reach (it used to bank your cash on its own this close: now its pop-up does - economy.js)
 
 // Gear
 // Skateboarding, part 1 (the owner, 2026-10-17; server/systems/skate.js; the board's physics: shared/physics.js BOARD):

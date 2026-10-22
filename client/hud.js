@@ -376,6 +376,7 @@ export class HUD {
     if (!o || o.dis) return;
     if (o.id === 'close') { this.closeMenu(); return; }
     this.sendMenu(this.menu.poi, o.id);
+    if (o.shut) { this.closeMenu(); return; }   // (an option that's the end of it: the ATM pop-up's "Deposit all")
     if (['hhide', 'hleave', 'armexit', 'sleave', 'htour', 'hi:tout', 'hi:tbuy', 'hi:tmort'].includes(o.id) || o.id.startsWith('hcargo') || /^hu:(in|tour):|^hi:(deco|d(pick|move|put|stay|store|end))/.test(o.id)) this.closeMenu(); // going in blinks you out; stepping out drops you at the door (a look round, a flat in a block: H65); decorating, a piece picked up or put down (H67)
   }
   navMenu(d) {

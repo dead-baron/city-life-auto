@@ -9,7 +9,7 @@
 // Die and the bag drops where you fell (cargo.js dropEverything), still hot and still remembering where it was stolen -
 // anyone can take it. Booked into a cell (custody.js), it's confiscated. A second robbery adds to the bag and moves its
 // "stolen at" spot to the new one.
-import { HOT_FAR_PX, HOT_FENCE_CUT, HOT_PAWN_CUT, ATM_DEPOSIT_PX, PACK_LIFE_S } from '../../shared/rules.js';
+import { HOT_FAR_PX, HOT_FENCE_CUT, HOT_PAWN_CUT, PACK_LIFE_S } from '../../shared/rules.js';
 import { store } from '../store.js';
 
 export const hotOf = (p) => Math.max(0, Math.round((p && p.profile && p.profile.hot) || 0));
@@ -102,26 +102,10 @@ export function execute(world, p, poi, what) {
   return 'Not here.';
 }
 
-// Walk up to a cash machine with the bag and it's banked - far enough from the robbery and nobody after you; else it says
-// why not (once a visit). (economy.js quickDeposits does the same with your cash.)
-function walkUps(world) {
-  for (const p of world.players.values()) {
-    const ped = p.ped;
-    if (!ped || ped.dead || ped.vehId || ped.hidden || hotOf(p) <= 0) { p.atAtmHot = null; continue; }
-    let at = null;
-    for (const q of world.map.atms) if (Math.abs(q.x - ped.x) < ATM_DEPOSIT_PX && Math.abs(q.y - ped.y) < ATM_DEPOSIT_PX && Math.hypot(q.x - ped.x, q.y - ped.y) < ATM_DEPOSIT_PX) { at = q; break; }
-    if (!at) { p.atAtmHot = null; continue; }
-    if (p.atAtmHot === at.id) continue;   // once a visit
-    p.atAtmHot = at.id;
-    const why = refusal(world, p, ped.x, ped.y);
-    if (why) { world.notify(p, `ATM: the hot money stays in the bag. ${why}`, 'warn'); continue; }
-    toBank(world, p, { x: at.x, y: at.y, kind: 'atm' });
-  }
-}
-
+// (a cash machine banks the bag from its menu - economy.js buildMenu's ATM pop-up, menuOpts above: walking up to one
+// used to bank it, and your cash, on its own; the owner, 10-06)
 export function update(world) {
   if (world.tick % 5 !== 2) return;
-  walkUps(world);
   for (const p of world.players.values()) sync(world, p);
 }
 
