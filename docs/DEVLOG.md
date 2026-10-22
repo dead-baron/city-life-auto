@@ -13523,3 +13523,16 @@ down too.
   down, rolling or fallen, it's quiet.
 
 Tests: test/burning.test.js - most run or roll, few fall.
+
+## 2026-10-21 · Fix: a banking plane rolls whole
+
+The owner, 10-16: "Plane wings tilt without the body: bank them together". The plane's banked models (art v2,
+`client/art2/aircraft.js`) tilted the wing and the tailplane one side up and the other down, and left the fuselage,
+the fin, the wheels and the propeller level.
+
+- The plane is now built level and the whole model is rolled about its fuselage for each bank. The fin and the
+  wheels lean over with the wings, and the wings are seen foreshortened from above as they turn. Each voxel of the
+  rolled model is taken from the level one, so a thin strut keeps no holes.
+
+Tests: test/aircraftart.test.js - banked, the fin leans over with the wings, the low wing down and the high one up,
+the span foreshortened.
