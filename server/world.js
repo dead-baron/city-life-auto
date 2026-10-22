@@ -66,6 +66,7 @@ import * as tank from './systems/tank.js';
 import * as bowling from './systems/bowling.js';
 import * as cinema from './systems/cinema.js';
 import * as aircraft from './systems/aircraft.js';
+import * as skydive from './systems/skydive.js';
 import * as sar from './systems/sar.js';
 import * as charter from './systems/charter.js';
 import * as dusting from './systems/dusting.js';
@@ -153,6 +154,7 @@ const SYSTEMS = [
   ['cinema', cinema.update],        // The Grand Theatre: the films in the screens, the audience
   ['activities', activities.update], // people going about their lives: anglers, chess in the park, picnics, a painter (activities.js)
   ['aircraft', aircraft.update],    // helicopters and planes: the parked ones at their pads and stands, mid-air collisions (aircraft.js)
+  ['skydive', skydive.update],      // people falling from aircraft: the fall, the parachute, the landing (skydive.js)
   ['burning', burning.update],      // people on fire: burning down, going out, catching it from fire (H58)
   ['tank', tank.update],            // the tanks' turrets turning to their drivers' aim (H58)
   ['sar', sar.update],              // search and rescue pilots' shifts: the calls, the harness, the hand-over (H59)

@@ -3,6 +3,7 @@
 import { PF, FACTION, TILE, K, WEATHER } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
+import * as skydive from './skydive.js';
 import * as aircraft from './aircraft.js';   // (at the controls of an aircraft)
 import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION } from '../../shared/physics.js';
 import { PED_BLOCK, isSwimming } from '../../shared/map.js';
@@ -470,6 +471,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (pressed & IN.RELOAD) combat.reload(world, ped);
   if (pressed & IN.USE) economy.useHealItem(world, p);
 
+  if (ped.sky) { skydive.input(world, p, ped, inp, pressed); return; }   // (falling from an aircraft: steering, the parachute - skydive.js)
   if (ped.onTrain) { trains.riderInput(world, p, ped, inp, pressed, dt); return; }
   if (ped.hoodOf) { carhits.hoodInput(world, ped, inp); return; }   // (riding a car's hood: move to roll off - carhits.js)
 
@@ -601,6 +603,7 @@ export function findInteraction(world, p) {
   if (ped && ped.cuffed && !ped.dead && custody.canBreak(p, world)) return { label: 'Make a break for it!', run: () => custody.breakOut(world, p) };
   if (ped && !ped.dead && !ped.cuffed && custody.inCell(p)) return cells.interaction(world, p);   // (the bench, the toilet, the bars)
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
+  if (ped.sky) return skydive.interaction(world, p);   // (up in the sky: the parachute)
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
   if (ped.hidden && ped.home) return homeinside.interaction(world, p);   // (the bed, the safe, the front door... homeinside.js)

@@ -11,6 +11,7 @@ import { PACK_LIFE_S } from '../shared/rules.js';
 import { store } from './store.js';
 import * as env from './systems/environment.js';
 import * as jobs from './systems/jobs.js';
+import * as skydive from './systems/skydive.js';
 import * as law from './systems/law.js';
 import * as bounties from './systems/bounties.js';
 import * as combat from './systems/combat.js';
@@ -66,7 +67,7 @@ import * as busjob from './systems/busjob.js';
 import * as towjob from './systems/towjob.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -633,6 +634,12 @@ export function command(world, p, c, msg) {
       const ci = Math.max(1, Math.min(t.cars.length - 1, Number(msg.car) || 1));
       trains.board(world, ped, t, ci, 0, 0, 0);
       world.notify(p, `[dev] Aboard train ${t.i}, car ${ci}.`, 'info');
+      break;
+    }
+    case 'sky': {   // up in the sky over here, falling (skydive.js): msg.alt px up, msg.chute a parachute in the bag
+      if (!ped || ped.dead || ped.vehId || ped.onTrain || ped.hidden) { world.notify(p, '[dev] On foot, out in the open first.', 'warn'); break; }
+      if (msg.chute) prof.inventory.parachute = Math.max(1, prof.inventory.parachute || 0);
+      skydive.start(world, ped, { alt: Math.max(60, Math.min(1000, Number(msg.alt) || 900)), vx: 0, vy: 0 });
       break;
     }
     case 'calltrain': { // bring the next train into the nearest station, doors open

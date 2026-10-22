@@ -99,7 +99,7 @@ function melee(world, ped, w, aim) {
   // (nightclubs.js, task #432)
   const only = ped.npc && ped.npc.role === 'bouncer' ? ped.npc.target || -1 : 0;
   for (const o of world.query(ped.x, ped.y, w.range + 14, K.PED)) {
-    if (o === ped || (o.dead && !revive.isDowned(o)) || o.vehId || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level
+    if (o === ped || (o.dead && !revive.isDowned(o)) || o.vehId || o.sky || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level (o.sky: falling from an aircraft, out of reach)
     if (only && o.id !== only) continue;
     const d = Math.hypot(o.x - ped.x, o.y - ped.y);
     if (d > w.range + o.r) continue;
@@ -383,7 +383,8 @@ function traceTarget(world, shooter, x1, y1, x2, y2, includeVehicles = true, wal
     let t = -1;
     if (e.kind === K.PED) {
       if (e.dead || e.vehId || e.rollT > 0) continue;
-      t = segCircle(x1, y1, x2, y2, e.x, e.y, e.r + 2);
+      // (falling from an aircraft: hit where art v2 draws them, up the screen by their height, as an aircraft is - skydive.js)
+      t = segCircle(x1, y1, x2, y2, e.x, e.sky ? e.y - e.sky.z * FLY.LIFT : e.y, e.r + 2);
     } else if (e.kind === K.VEH && includeVehicles) {
       if (shooter.vehId === e.id) continue;
       if (shooter.npc && (shooter.npc.coverCar === e.id || shooter.npc.unit === e.id)) continue; // cops fire over their own cruiser
@@ -529,6 +530,7 @@ export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = 
     const d = Math.hypot(e.x - x, e.y - y);
     const f = 1 - d / r;
     if (f <= 0 && e.kind !== K.VEH) continue;
+    if (e.kind === K.PED && e.sky && e.sky.z > FLY.HIGH + r * 0.5) continue;   // (falling from an aircraft, well above it - skydive.js)
     if (e.kind === K.PED && !e.vehId && !(e.blastSafeUntil > world.time)) {
       // thrown through the air - the dead too (reactions.js)
       const a = Math.atan2(e.y - y, e.x - x);

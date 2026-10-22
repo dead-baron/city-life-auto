@@ -14102,3 +14102,33 @@ off; not on your own train (the bar at the top says), nor the subway's under the
 
 Tests: test/trainsign.test.js (the words, the board); test/world3rail.test.js - a train at a platform shows the stop its
 boarding prompt names, and still does once it has pulled out.
+
+## 2026-10-22 · Jumping out of an aircraft: the fall, the parachute
+
+The owner, 10-16: "Jumping out of an aircraft: fall all the way down (splat or bounce); a parachute to equip". Jumping
+out of a helicopter or a plane up in the air (the second press of get out) used to put you on the ground at once, hurt
+by how high you'd been. Now you fall all the way down (server/systems/skydive.js; the numbers: shared/rules.js SKYDIVE):
+
+- **the fall**: faster and faster to a free-fall limit (from the ceiling, three seconds), steering as you go; the
+  aircraft's speed carries you on at first. The camera pulls back and follows you down, as it does an aircraft (you're
+  a rider meanwhile: the server steps the fall - no prediction).
+- **the parachute** (shared/items.js parachute, $150 at the sports shops; the bag says what it does): the action
+  button opens it - the prompt says so - and the canopy fills over a second, then you sink slowly, steering where to
+  land, down on your feet (a roll if you come in fast). It's used up. Opened too low it doesn't fill in time.
+- **no parachute**: onto the ground from high up, a splat (a short drop: a hard landing, hurt); into the water you
+  live, stung; onto a car's roof you bounce off it - the car dented, you thrown down beside it, hurt but alive.
+- **up there**: shots hit you where you're drawn, as they do an aircraft (combat.js traceTarget); fists, cars and
+  ground blasts don't reach you.
+- **drawn** (art v2, art2/game/host.js _ped): up the screen by your height (SKY_LIFT, as the aircraft), spread out
+  face down in free fall, hanging under the canopy once it's open - a ram-air canopy in red and white or blue and
+  yellow (art2/game/liveart.js parachuteSprite), its span across the way you drift; your shadow on the ground
+  (render/skyfall.js, loaded the first time someone's up there). The classic renderer draws the canopy over you.
+- **on the wire**: the ped's parent word - bit 29 up in the sky, bit 28 the canopy open, the low 12 bits the height
+  (server/net.js, skydive.js skyWord; the page eases the height between snapshots).
+- the debug menu (Aircraft): skydive from high over here, with or without a parachute; a parachute in your bag.
+- the page's start-up code stays inside its budget: the classic renderer's train cars moved to render/traincars.js,
+  loaded with its first train (art v2 draws its own).
+
+Tests: test/skydive.test.js - the shop, the prompt, the parachute opened (used up, on the wire), the slow sink,
+steering, a soft landing; a splat; the water; a car roof; out of a helicopter, a rider. test/flight.test.js waits
+for the fall to land.

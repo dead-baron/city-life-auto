@@ -1,7 +1,7 @@
 // City Life Auto browser client: a "dumb window" that sends input vectors, predicts only
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
-import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_LOOP_S } from '../shared/constants.js';
+import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_LOOP_S, SKY_LIFT } from '../shared/constants.js';
 import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
@@ -49,7 +49,7 @@ const markTutorialSeen = () => { if (TUT) TUT.markTutorialSeen(); };
 import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild } from './update.js';
-import { drawTrainCar, drawCoupling, drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
+import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
@@ -390,7 +390,7 @@ function onBinary(buf) {
     e.buf.push({ t: s.tick, x: it.x, y: it.y, a: it.a, z: it.lz });
     if (e.buf.length > 5) e.buf.shift();
     e.flags = it.flags; e.hp = it.hp; e.parent = it.parent;
-    if (it.kind === K.PED) { const pb = it.parent, was = !!e.burn; e.burn = pb >= 0x80000000; e.char = (pb & 0x40000000) !== 0; if (pb >= 0x40000000) e.parent = pb & 0x3fffffff; if (e.burn !== was && e.seen !== undefined) e[e.burn ? 'burnOn' : 'burnOff'] = S.loopClock; e.extra = it.extra & 31; e.blink = (it.extra >> 5) & 3; const b7 = (it.extra & 128) !== 0, iv = (it.flags & PF.INVEH) !== 0; e.swim = b7 && !iv; e.back = b7 && iv; } // weapon | blink | in water (in a vehicle: a back seat)
+    if (it.kind === K.PED) { const pb = it.parent, was = !!e.burn; e.burn = pb >= 0x80000000; e.char = (pb & 0x40000000) !== 0; if (pb >= 0x40000000) e.parent = pb & 0x3fffffff; if (e.parent & 0x20000000) { e.sky = e.parent & 0xfff; e.chute = (e.parent & 0x10000000) !== 0; e.parent = 0; e.buf[e.buf.length - 1].k = e.sky; } else if (e.sky) { e.sky = 0; e.chute = false; } /* (falling from an aircraft: how high, the canopy - server skydive.js skyWord) */ if (e.burn !== was && e.seen !== undefined) e[e.burn ? 'burnOn' : 'burnOff'] = S.loopClock; e.extra = it.extra & 31; e.blink = (it.extra >> 5) & 3; const b7 = (it.extra & 128) !== 0, iv = (it.flags & PF.INVEH) !== 0; e.swim = b7 && !iv; e.back = b7 && iv; } // weapon | blink | in water (in a vehicle: a back seat)
     else e.extra = it.extra;
     e.seen = s.tick;
   }
@@ -2666,13 +2666,14 @@ function interp(e, rt) {
   let i = b.length - 1;
   while (i > 0 && b[i - 1].t > rt) i--;
   const s1 = b[i], s0 = i > 0 ? b[i - 1] : s1;
-  let x, y, a, z;
-  if (s0 === s1 || s1.t === s0.t) { x = s1.x; y = s1.y; a = s1.a; z = s1.z || 0; }
+  let x, y, a, z, h;
+  if (s0 === s1 || s1.t === s0.t) { x = s1.x; y = s1.y; a = s1.a; z = s1.z || 0; h = s1.k || 0; }
   else {
     const k = Math.max(0, Math.min(1, (rt - s0.t) / (s1.t - s0.t)));
-    x = lerp(s0.x, s1.x, k); y = lerp(s0.y, s1.y, k); a = lerpAngle(s0.a, s1.a, k); z = lerp(s0.z || 0, s1.z || 0, k);
+    x = lerp(s0.x, s1.x, k); y = lerp(s0.y, s1.y, k); a = lerpAngle(s0.a, s1.a, k); z = lerp(s0.z || 0, s1.z || 0, k); h = s1.k ? lerp(s0.k || s1.k, s1.k, k) : 0;
   }
   e.rz = z;
+  e.rsky = e.sky ? h : 0;   // (falling from an aircraft: how high, smoothly between snapshots)
   if (e.lx !== null) e.walk += Math.hypot(x - e.lx, y - e.ly);
   e.lx = x; e.ly = y;
   e.rx = x; e.ry = y; e.ra = a;
@@ -2946,7 +2947,9 @@ function prepFrame(dt) {
   const airCap = /phone|tablet|console/.test(getDevice().kind) ? 1.45 : 2;
   if (myAir && S.art2 && S.art2.lateNow && S.art2.lateNow()) S.airMax = Math.max(1.1, Math.min(airCap, S.airMax ?? airCap) - 0.2 * dt);
   else S.airMax = Math.min(airCap, (S.airMax ?? airCap) + 0.02 * dt);
-  const flying = !!(myAir && airDefOf(myAir)), airPull = flying ? Math.min(S.airMax, S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4)) : 1;
+  // (falling from an aircraft - server skydive.js: the camera pulls back and follows you down as it does an aircraft)
+  const fallH = S.ctrlKind === CTRL.RIDER ? (S.ents.get(S.myPedId)?.rsky || 0) : 0;
+  const flying = !!(myAir && airDefOf(myAir)), airPull = flying ? Math.min(S.airMax, S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4)) : fallH > 0 ? Math.min(S.airMax, 1 + Math.min(1.3, fallH / 650)) : 1;
   const spdPull = 1 + Math.min(S.zoMax ?? 0.5, speed / 1300);   // (flying, the speed's pull-back is held to the same cap: a helicopter flat out is 1.5x of it)
   const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull);
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
@@ -2959,7 +2962,7 @@ function prepFrame(dt) {
   S.camLead = S.camLead || { x: 0, y: 0 };
   S.camLead.x += (Math.max(-560, Math.min(560, lvx)) * 0.25 - S.camLead.x) * lk;
   S.camLead.y += (Math.max(-560, Math.min(560, lvy)) * 0.25 - S.camLead.y) * lk;
-  const tx = sp.x + S.camLead.x, ty = sp.y + S.camLead.y - (myAir && airDefOf(myAir) && S.art2 && S.art2.ready && S.airMod.liftOf ? S.airMod.liftOf(myAir.ralt ?? (myAir.extra | 0) * 4) * 0.66 : 0);   // (art v2 draws an aircraft up by its height: two thirds of the way up to it)
+  const tx = sp.x + S.camLead.x, ty = sp.y + S.camLead.y - (myAir && airDefOf(myAir) && S.art2 && S.art2.ready && S.airMod.liftOf ? S.airMod.liftOf(myAir.ralt ?? (myAir.extra | 0) * 4) * 0.66 : fallH > 0 && S.art2 && S.art2.ready ? fallH * SKY_LIFT * 0.66 : 0);   // (art v2 draws an aircraft up by its height: two thirds of the way up to it)
   // The camera is locked to the (already smoothed) character + a smoothed look-ahead: a
   // chasing camera with a frame-time-dependent lag made the car slide around on screen when
   // frame times vary (phones). Teleports / respawns still snap.
@@ -3285,6 +3288,7 @@ function drawWorldV1(F) {
     drawCrossings(view, now);
     drawStationClocks(view, now);
     drawTrainSigns(F);
+    drawSkyShadows(F, false);
     drawBuoys(view, now);
     drawSignals(view);
     drawBirds();
@@ -3335,6 +3339,7 @@ function drawOverlays(F, v2) {
     if (settings.shopMarks !== false && S.art2.shopMarks) S.art2.shopMarks(g, F, drawIcon, KIND_ICON);   // (the shop symbols over doors near you: art2/game/host.js)
     drawStationClocks(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
     drawTrainSigns(F);
+    drawSkyShadows(F, true);
     drawBuoys(F.view, now);
     drawArt2Marks(F);
     S.camp.draw(g, F); S.boom.draw(g, F, W, H, DPR);   // (the campfires' haze; the fireballs, plumes, shockwaves, the flash)
@@ -3787,9 +3792,10 @@ function drawClubShutter(gt, k) {
 // into a tunnel mouth.
 function drawTrains(cars, riders, myTrain, sub, now) {
   if (!cars.length && !riders.length) return;
-  const byId = new Map(cars.map((c) => [c.id, c]));
-  for (const c of cars) { const ahead = c.parent ? byId.get(c.parent) : null; if (ahead) drawCoupling(g, ahead, c); }
-  for (const c of cars) drawTrainCar(g, c, c.d.tr === myTrain, now);
+  const byId = new Map(cars.map((c) => [c.id, c])), TC = S.carsMod;   // (the cars themselves: render/traincars.js, loaded with the first train)
+  if (!TC && cars.length && !S.carsP) S.carsP = import('./render/traincars.js').then((m) => { S.carsMod = m; }).catch((e) => { S.carsP = null; console.warn('[traincars]', e); });
+  if (TC) for (const c of cars) { const ahead = c.parent ? byId.get(c.parent) : null; if (ahead) TC.drawCoupling(g, ahead, c); }
+  if (TC) for (const c of cars) TC.drawTrainCar(g, c, c.d.tr === myTrain, now);
   for (const p of riders) { g.save(); g.translate(p.rx, p.ry); g.scale(0.8, 0.8); g.translate(-p.rx, -p.ry); drawPed(p, now); g.restore(); } // a touch smaller, so two fit abreast
   if (!sub) for (const pc of S.portals || []) {
     if (!cars.some((c) => c.rx > pc.x0 - 120 && c.rx < pc.x1 + 120 && c.ry > pc.y0 - 120 && c.ry < pc.y1 + 120)) continue;
@@ -3839,6 +3845,13 @@ function drawCrossings(view, now) {
 
 // Each platform's countdown to the next train (the server sends the timetable every second;
 // the boards tick down smoothly in between).
+// Someone falling from an aircraft (server skydive.js): their shadow on the ground (render/skyfall.js, loaded the first
+// time someone's up there)
+function drawSkyShadows(F, v2) {
+  if (!F.peds.some((e) => e.sky)) return;
+  if (S.skyMod) S.skyMod.drawSkyShadows(g, F, v2);
+  else if (!S.skyP) S.skyP = import('./render/skyfall.js').then((m) => { S.skyMod = m; }).catch((e) => { S.skyP = null; console.warn('[skyfall]', e); });
+}
 // the front cars' signs near you: where each train stops next (render/trains.js drawTrainSign) - not your own train's
 // (the bar at the top says), nor the subway's under the street or the El's up overhead
 function drawTrainSigns(F) {

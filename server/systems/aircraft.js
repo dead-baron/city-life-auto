@@ -7,6 +7,7 @@ import { obbVsObb } from '../../shared/math.js';
 import { isAir, isPlane, flightStep, flightInput, FLY, airfields, rollOf, findPadSpot, floorAt } from '../../shared/flight.js';
 import * as vehicles from './vehicles.js';
 import * as combat from './combat.js';
+import * as skydive from './skydive.js';
 import { inAnyView } from '../view.js';   // (the parked ones never pop up on anyone's screen)
 
 const IDLE = { tank: false, fwd: 0, turn: 0, climb: 0, hb: false, m: 0, dx: 0, dy: 0 };
@@ -59,6 +60,7 @@ export function crash(world, v, why) {
 
 // Getting out in the air: the first press warns, the second within a few seconds jumps - a fall that hurts by the
 // height (into the water much less). Up on a roof: not here (you can only get out on the ground). -> true if handled.
+const SKY_FROM = 24;   // px up: above this a player jumping out falls (skydive.js); lower, a hop down
 export function leaveInAir(world, ped, v) {
   if (!inAir(v)) return false;
   const p = ped.player;
@@ -68,6 +70,7 @@ export function leaveInAir(world, ped, v) {
   ped.jumpArmAt = 0;
   const alt = v.alt || 0, vx = v.vx, vy = v.vy;
   vehicles.ejectPed(world, ped, true);
+  if (p && alt > SKY_FROM) { skydive.start(world, ped, v); return true; }   // (a player falls all the way down: skydive.js)
   const wet = !!WATER_T[world.map.tileAtPx(ped.x, ped.y)];
   vehicles.fling(world, ped, vx * 0.7, vy * 0.7, null, 'crash', 0, { air: Math.min(2.2, 0.4 + alt / 260) });
   const dmg = Math.max(0, alt - 40) * 0.45 * (wet ? 0.25 : 1);

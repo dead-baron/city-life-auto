@@ -79,7 +79,7 @@ function devLocal(c, extra) {
 // a section's command, as its button runs it
 function runItem([, c, extra]) {
   if (c[0] === '@') devLocal(c, extra); else send({ t: 'dev', c, ...(extra || {}) });
-  if (c === 'near' || c === 'train' || c === 'home') closeOverlay('dev');
+  if (c === 'near' || c === 'train' || c === 'home' || c === 'sky') closeOverlay('dev');
 }
 function teleport(pl) {
   sfx('click', 0.8);

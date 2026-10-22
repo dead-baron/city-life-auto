@@ -443,7 +443,7 @@ export const ATM_DEPOSIT_PX = 48;          // an ATM's reach (it used to bank yo
 // Skateboarding, part 1 (the owner, 2026-10-17; server/systems/skate.js; the board's physics: shared/physics.js BOARD):
 // the board's price at a skate shop, a sports shop or a surf shop; a bail - thrown off into a wall, a post or a car, or off
 // a fall - hurts this much at bailHit speed and up to the most at full speed, and you're down this long
-export { SKATEBOARD_PRICE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
+export { SKATEBOARD_PRICE, PARACHUTE_PRICE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
 // Skateboarding's score (server/systems/skate.js): a combo banked after comboGap s rolling on is its points x its tricks
 // (a trick again in the same combo: half); perS - a grind, grab, manual by the second; the special meter full at
@@ -787,3 +787,6 @@ export const MAIL = { util: 45, week: 7, late: 15, odds: 0.35, off: 20, keep: 12
 export const CAB = { firstS: 5, gapS: 12, shiftS: 1800, waitS: 300, flag: 25, perKm: 50, tip: 0.4, parS: 30, kmS: 450, boardR: 150, dropR: 240, trip: [1500, 6000], hail: [350, 1500], bump: 140, bail: 3 };
 export const BUSJOB = { perStop: 40, perPax: 12, late: 25, haltR: 170, dwellS: 4, wait: [1, 4], speed: 140 };
 export const TOWJOB = { firstS: 8, gapS: 20, shiftS: 1800, pay: 150, perKm: 60, touch: 16, hookS: 3, yardR: 340 };
+
+// jumping out of an aircraft: the fall (px, px/s, px/s²) - what each number is: server/systems/skydive.js
+export const SKYDIVE = { carry: 0.75, grav: 260, fall: 480, steer: 320, drag: 0.4, freeMax: 280, openS: 1.1, lowOpen: 260, chuteFall: 70, chuteEase: 2.4, chuteSteer: 360, chuteDrag: 1.3, chuteMax: 200, hurtFrom: 150, hurtPer: 0.4, splat: 400, waterHurt: 0.12, carHurt: 0.55, rollAt: 120 };
