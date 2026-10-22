@@ -3308,7 +3308,7 @@ function drawOverlays(F, v2) {
   }
   g.setTransform(...S.worldTf);
   if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
-  else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (the helipads)
+  else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (a rescue call's flare; the helipads' H only while you fly)
   else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)
   if (S.fireMod && !F.sub) S.fireMod.draw(g, F, S);   // (the fires on the ground, the hoses: render/firejob.js)
   drawBowling(F);

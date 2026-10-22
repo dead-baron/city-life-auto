@@ -13497,3 +13497,15 @@ each standing on a lit campfire.
   and a grass fire still catch anyone moving through them.
 
 Tests: test/burning.test.js - a camper walking through a lit campfire doesn't catch; knocked into it, they do.
+
+## 2026-10-21 · Fix: the helipads' H marks only while you fly
+
+The owner, 10-16: "Helipad H symbols stay visible after you leave the helicopter". The page draws each helipad's H
+(`client/render/aircraft.js` drawPads) once the aircraft code has loaded, which happens the first time you get in a
+helicopter or a plane. After that they stayed on screen for good, painted over the ground and the roofs, on foot or
+in a car.
+
+- They're drawn now only while you're flying, as somewhere to set down. On foot they're gone. The roof helipads that
+  are part of the buildings' art are unchanged.
+
+Tests: test/flight.test.js - the H drawn while flying, nothing once you're on foot.
