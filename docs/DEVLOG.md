@@ -14036,3 +14036,8 @@ screen was dark every frame. Found in a review of the batch before it shipped. T
 The soccer pitches' new shape and the mansion's south terrace changed the old city too (shared/map.js's park pitch and
 mansion). Its world map picture (assets/map, `node tools/build-worldmap2.mjs`) was baked for the old shape, and
 test/worldmap.test.js caught it in the batch's full run. Rebaked.
+
+## 2026-10-22 · The old city's map picture rebaked again
+
+The golf carts' spots replaced the carts as props on the old city's course (shared/naturesites.js), which changes the
+old city's signature: its world map picture rebaked (`node tools/build-worldmap2.mjs`).
