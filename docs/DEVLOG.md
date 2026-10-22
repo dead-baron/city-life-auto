@@ -14352,3 +14352,24 @@ Transit app now offers three rides (server/systems/transit.js, shared/rules.js R
 Everything else is the taxi's: the pick-up at the kerb, your waypoint as the destination, the meter, paying getting
 out. Tests: test/transit.test.js - the three tiers in the app, an Ultra Saver called, boarded, racing, its fare, the
 crash free; a Cruise Black's car and fare.
+## 2026-10-22 · Prison Island: fixes from a review
+
+- the action button while doing time (or climbing) threw in the input system - costing every later player that
+  tick's step. The time line does nothing now; and the input system no longer lets one player's error cost anyone
+  else their step (players.js: a passive line with nothing to run is skipped, each player's inputs on their own).
+- a server restart (every deploy) let everyone out: the cells and Prison Island are kept on shutting down as on
+  logging off (server/index.js), served on reconnecting.
+- time offline doesn't count: the clock stops while you're away from the keys, and a prisoner is never left as an
+  away-ghost serving it out.
+- died in there (on fire when booked): woken up in a hospital and taken straight back, the time left kept - not an
+  escape with three stars.
+- held on the wall while climbing (no walking off it, no drawing a gun); climbing it is a crime Safety mode asks about.
+- the guards: one who sees someone just over the wall - wanted, near, in sight - goes after them on foot (police.js
+  pursue: run down, tackled, taken in); a guard down is replaced at their post, out of sight; they stay out a couple
+  of minutes after a breakout.
+- no Unstuck, Surrender or arrest while doing time; the debug teleport (and a dev's goto or bring) out of it is no
+  breakout.
+- no Prison Boat to plan: let out at the harbour, and told so.
+
+Tests: test/prison.test.js - the time line pressed, held on the wall, no unstuck, no arrest, died and back inside
+with the time left; over the wall with a guard after you.

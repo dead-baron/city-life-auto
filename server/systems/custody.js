@@ -110,7 +110,7 @@ function cuff(ped, on) {
 // Cuffed by `by` (an NPC officer, a player officer or a bounty hunter): face down, the officer kneeling on them.
 export function start(world, p, by) {
   const ped = p.ped, now = world.time;
-  if (!ped || ped.dead || p.custody) return;
+  if (!ped || ped.dead || p.custody || p.prison) return;   // (doing time already: prison.js)
   if (ped.vehId) vehicles.ejectPed(world, ped, true);
   if (ped.carrying) cargo.dropCrate(world, ped);   // (it stays where they went down, for anyone to pick up)
   ped.fishing = null; ped.rollT = 0; ped.vx = 0; ped.vy = 0;

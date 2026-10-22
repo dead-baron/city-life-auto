@@ -319,7 +319,7 @@ export function leave(world, p) {
 // driving none.
 export function safeToIdle(world, p) {
   const ped = p.ped;
-  if (!ped || ped.dead || p.wanted > 0 || p.heat >= 1 || p.custody || ped.cuffed || ped.carrying || p.bounty > 0 || p.skull) return false;   // (a bounty on your head: hunted)
+  if (!ped || ped.dead || p.wanted > 0 || p.heat >= 1 || p.custody || p.prison || ped.cuffed || ped.carrying || p.bounty > 0 || p.skull) return false;   // (a bounty on your head: hunted)
   if (world.time < (ped.downUntil || 0) || world.time - (ped.lastHitAt || -1e9) < AWAY_HURT_S) return false;
   const v = ped.vehId ? world.get(ped.vehId) : null;
   if (v && v.cargo && v.cargo.some((c) => c)) return false;
@@ -420,6 +420,11 @@ const HOLD_TICKS = 5; // wait up to 250 ms for a late input before extrapolating
 
 export function processInputs(world, dt) {
   for (const p of world.players.values()) {
+    try { inputsOf(world, p, dt); } catch (e) { world.reportError('inputs', e); }   // (one player's trouble costs nobody else their step)
+  }
+}
+function inputsOf(world, p, dt) {
+  {
     // One simulation step per input, exactly like the client's prediction: consume one input per
     // tick, two when the client's queue backs up, and if this tick's input is late (phone timer
     // jitter, network hiccup) hold the character / car for up to HOLD_TICKS instead of guessing
@@ -446,6 +451,7 @@ export function processInputs(world, dt) {
 }
 
 function applyInput(world, p, ped, inp, pressed, dt) {
+  if (p.prison && p.prison.climb) { ped.vx = 0; ped.vy = 0; return; }   // (on the prison wall: held there till over it - prison.js)
   if (p.struggle) { struggle.input(world, p, ped, inp, pressed, dt); return; }   // (an officer on you, going for the cuffs: fight back)
   // down from a tackle (police.js): moving gets you up sooner - if nobody pins you first
   if (ped.scrambleUntil > world.time && world.time < ped.downUntil && !ped.cuffed && Math.hypot(inp.mx || 0, inp.my || 0) > 0.3) ped.downUntil = Math.max(world.time, ped.downUntil - dt * TACKLE_SCRAMBLE);
@@ -545,7 +551,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
 // The Act button: what findInteraction offers - one that's a crime (act.crime) waits for Safety mode's say-so (safety.js).
 function doAct(world, p) {
   const act = findInteraction(world, p);
-  if (act && safety.confirm(world, p, act.crime, act.key2 || act.label)) act.run();
+  if (act && act.run && safety.confirm(world, p, act.crime, act.key2 || act.label)) act.run();   // (a passive line has nothing to run)
 }
 
 // Sliding along the tarmac after bailing out / being blown out of a car: slamming into a wall,

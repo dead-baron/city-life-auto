@@ -30,6 +30,7 @@ import * as happenings from './systems/happenings.js';
 import * as streetlife from './systems/streetlife.js';
 import * as wildlife from './systems/wildlife.js';
 import * as sharks from './systems/sharks.js';
+import * as prison from './systems/prison.js';
 import * as wanderer from './systems/wanderer.js';
 import * as personas from './systems/personas.js';
 import * as activities from './systems/activities.js';
@@ -649,6 +650,7 @@ export function command(world, p, c, msg) {
       break;
     }
     case 'tp': if (ped && ped.onTrain) trains.alight(world, ped, ped.x, ped.y); if (ped) { ped.sub = false; ped.ug = 0; }
+      if (ped && !ped.vehId) prison.drop(world, p);   // (out of Prison Island this way: no sentence, no breakout)
       if (ped && !ped.vehId && Number.isFinite(msg.x) && Number.isFinite(msg.y)) {
         const at = msg.snap ? tpSpot(world.map, msg.x, msg.y) : { x: msg.x, y: msg.y };   // (snap: the debug teleport's places - the server finds the ground)
         ped.x = at.x; ped.y = at.y; ped.lz = !msg.snap && msg.lz === 1 && surfaceZ(world.map, at.x, at.y, 1) !== null ? 1 : 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;

@@ -161,7 +161,7 @@ export function update(world, dt) {
     const n = ped.npc;
     if (n.sar) continue;   // (someone out in the wild waiting for a rescue pilot, a charter's customer: sar.js, charter.js look after them)
     if (n.burn && ped.burnT > 0) { if (now >= ped.downUntil && now >= ped.stunUntil) pedStep(ped, burning.npcStep(world, ped, now), dt, world.map, walkMods(world, ped, 1)); continue; }   // (on fire: running for it - burning.js)
-    if (n.guard && n.state !== 'fight' && n.state !== 'flee') { // Syndicate guard on the Rock: hold the post, keep watch
+    if (n.guard && !n.pursue && n.state !== 'fight' && n.state !== 'flee') { // Syndicate guard on the Rock: hold the post, keep watch (a prison guard after an escapee: police.js pursue)
       const dd = Math.hypot(ped.x - n.guard.x, ped.y - n.guard.y);
       if (dd > 10) {   // (guard.run: a biker running for his bike - bikers.js; a bouncer back to his door steps round what's in the way)
         const inp = seek(ped, n.guard.x, n.guard.y, !!n.guard.run);
