@@ -1339,7 +1339,7 @@ function setupDev() {
   $('b-dev').classList.toggle('on', !!on);
   $('b-dev').title = on ? 'Debug menu' : 'Debug menu (switches Dev Debug Mode on)';
   if (!on) { $('dev').classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
-  devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap: () => toggleMap(true) }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });
+  devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });
   devMenuP.then(() => { if (devMenu && (S.dev || S.devMode)) devMenu.setupDev(); });
 }
 function renderDevPlayers() { if (devMenu) devMenu.renderDevPlayers(); }
@@ -2282,6 +2282,7 @@ $('s-smooth').onchange = (e) => { settings.smooth = e.target.checked; saveSettin
 function gfxQuality() { return gfx.lighting; }
 for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
 
+const openMap = () => toggleMap(true);   // (the debug menu's teleport: "Anywhere: the world map")
 function toggleMap(on) {
   $('bm-tp').classList.add('hidden');
   if (on) {
