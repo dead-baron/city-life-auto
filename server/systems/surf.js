@@ -177,6 +177,7 @@ function step(world, p, ped, s, dt) {
   s.va += (want - s.va) * k;
   s.a += s.va * dt;
   const P = breakPt(B, s.a, w.d - SURF.face);
+  if (WATER_T[m.tileAtPx(P.x, P.y)] !== 1) { endRide(world, p, Math.abs(s.a) > B.half - 60 ? 'Off the end of the wave' : 'Rode it in'); return; }   // (the beach not quite straight: never carried up onto it)
   ped.vx = (P.x - ped.x) / dt; ped.vy = (P.y - ped.y) / dt;
   ped.x = P.x; ped.y = P.y;
   // (facing the way you carve, angled in toward the beach)

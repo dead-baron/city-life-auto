@@ -14805,8 +14805,8 @@ the sea:
 - **Riding it.** The wave carries you in; the stick carves you along the face, left or right along the beach. The points
   come for every second up, for your speed along the face, and most of all for riding in the pocket just ahead of the
   break; a carve (a quick turn back) and an air off the lip (the action button) are worth more. Stay in the white water
-  behind the break and it has you - a tumble, the ride over. Ride it in, or off the end of the beach, and the ride's
-  counted: its points over you, your best ride kept (the HUD: RIDING and the points, BEST RIDE under the money).
+  behind the break and it has you - a tumble, the ride over. Ride it in, or off the end of the beach (where the beach
+  bends away the ride ends there, on the water), and the ride's counted: its points over you, your best ride kept (the HUD: RIDING and the points, BEST RIDE under the money).
 - **How you look.** Lying on the board paddling, up side-on with the knees deep and the arms out, knees tucked in an air
   (client/art2/people.js surfpad, surf, surfair; the descriptor's sf) - on a long white board with an orange stripe.
 The server steps it all (server/systems/surf.js: ped.surf, like the parachute's fall: your page draws you from the

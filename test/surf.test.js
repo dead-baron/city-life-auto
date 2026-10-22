@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { SURF, SET_S, LIFE_S, wavesAt, onBreak, breakPt, broken, findBreaks } from '../shared/surf.js';
 import { DT, T, TILE } from '../shared/constants.js';
+import { WATER_T } from '../shared/mapcore.js';
 import { IN } from '../shared/input.js';
 import * as surf from '../server/systems/surf.js';
 import * as players from '../server/systems/players.js';
@@ -73,7 +74,9 @@ test('a ride: on the board in the sea, paddling for the beach as a wave comes, u
   const a0 = p.ped.surf.a;
   steer(w, p, tx, ty, IN.ACTION);
   assert.equal(p.ped.surf.st, 'air', 'up off the lip');
-  for (let i = 0; i < 400 && p.ped.surf && (p.ped.surf.st === 'ride' || p.ped.surf.st === 'air'); i++) steer(w, p, tx * 0.6, ty * 0.6);
+  let dry = 0;
+  for (let i = 0; i < 400 && p.ped.surf && (p.ped.surf.st === 'ride' || p.ped.surf.st === 'air'); i++) { steer(w, p, tx * 0.6, ty * 0.6); if (WATER_T[w.map.tileAtPx(p.ped.x, p.ped.y)] !== 1) dry++; }
+  assert.equal(dry, 0, 'carried along on the water, never up onto the beach');
   assert.ok(p.ped.surf && (p.ped.surf.st === 'pad' || p.ped.surf.st === 'wipe'), `the ride over (${p.ped.surf && p.ped.surf.st})`);
   assert.ok(prof.surfRides === 1 && prof.surfBest > SURF.pts.air, `counted, the air in it (${prof.surfBest})`);
   assert.ok(Math.abs(p.ped.surf.a - a0) > 40 || p.ped.surf.st === 'wipe', 'rode along the face');

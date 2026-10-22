@@ -26,18 +26,28 @@ const MAKE = {
     const w = STEP + 8, h = 6, G = gbuf(w, h, w >> 1, 2);
     for (let x = 0; x < w; x++) {
       const e = hh(x, v, 1);
-      if (e > 0.12) put(G, x, 2, [236, 246, 248]);
-      if (e > 0.45) put(G, x, 1, [200, 228, 232]);
-      if (hh(x, v, 2) > 0.6) put(G, x, 3, [176, 214, 220]);
+      if (e > 0.08) put(G, x, 2, [240, 248, 250]);
+      if (e > 0.3) put(G, x, 1, [214, 236, 240]);
+      if (hh(x, v, 2) > 0.25) put(G, x, 3, [226, 242, 244]);
+      if (hh(x, v, 6) > 0.55) put(G, x, 4, [176, 214, 220]);
     }
     return G;
   },
   // the face in front of the crest: the water standing up, darker, dithered
   face: (v) => () => {
-    const w = STEP + 8, h = 16, G = gbuf(w, h, w >> 1, 0);
+    const w = STEP + 8, h = 20, G = gbuf(w, h, w >> 1, 0);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const k = 1 - y / h;
-      if (hh(x, y + v * 31, 3) < k * 0.75) put(G, x, y, y < 3 ? [70, 150, 160] : [24, 92, 112]);
+      if (hh(x, y + v * 31, 3) < k * 0.85) put(G, x, y, y < 3 ? [70, 150, 160] : y < 9 ? [30, 104, 124] : [24, 92, 112]);
+    }
+    return G;
+  },
+  // the back of the swell behind the crest: the water lifting, lighter toward the top
+  back: (v) => () => {
+    const w = STEP + 8, h = 14, G = gbuf(w, h, w >> 1, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const k = y / h;
+      if (hh(x, y + v * 29, 4) < k * k * 0.8) put(G, x, y, y > h - 4 ? [150, 214, 222] : [96, 182, 198]);
     }
     return G;
   },
@@ -69,9 +79,11 @@ export function drawWaves(host, F, breaks, t) {
           const Q = breakPt(B, a, w.d - 4), k = host._conv(`sfw|${v}`, MAKE.white(v), true);
           if (k) E.drawDecal(k, Q.x, Q.y, ang, 0.95 * wash * end, 0);
         } else {
-          const kf = host._conv(`sff|${v}`, MAKE.face(v), true), kl = host._conv(`sfl|${v}`, MAKE.lip(v), true), Q = breakPt(B, a, w.d - 2);
-          if (kf) E.drawDecal(kf, Q.x, Q.y, ang, 0.55 * rise * end * (w.green ? Math.min(1, (SURF.start - w.d) / 200) : 1), 0);
-          if (kl) E.drawDecal(kl, P.x, P.y, ang, 0.9 * rise * end, 0);
+          const kf = host._conv(`sff|${v}`, MAKE.face(v), true), kl = host._conv(`sfl|${v}`, MAKE.lip(v), true), kb = host._conv(`sfb|${v}`, MAKE.back(v), true), Q = breakPt(B, a, w.d - 2);
+          const steep = w.green ? Math.min(1, (SURF.start - w.d) / 200) : 1;   // (the face standing up as it comes in)
+          if (kb) E.drawDecal(kb, P.x, P.y, ang, 0.6 * rise * end, 0);
+          if (kf) E.drawDecal(kf, Q.x, Q.y, ang, 0.9 * rise * end * steep, 0);
+          if (kl) E.drawDecal(kl, P.x, P.y, ang, Math.min(1, 1.1 * rise) * end, 0);
         }
       }
     }
