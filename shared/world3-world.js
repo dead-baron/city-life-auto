@@ -55,6 +55,7 @@ import { stockTanks3 } from './world3-stocktanks.js';
 import { tidyProps3 } from './world3-tidy.js';
 import { sunkenWrecks3 } from './world3-wrecks.js';
 import { desertWaters3 } from './world3-tinajas.js';
+import { desertCompound3 } from './world3-compound.js';
 import { woodsLake3 } from './world3-woodslake.js';
 import { wildEdges3 } from './world3-edges.js';
 import { riverRun3 } from './world3-riverrun.js';
@@ -282,6 +283,7 @@ export function worldOpts(asked) {
       m.world3.riverRun = riverRun3(m, H3);   // (the Redwood River Run: the kayak hire's put-in in the woods, the take-out above the bay - world3-riverrun.js)
       m.world3.edges = wildEdges3(m, H3);   // (the wild districts' tile-stepped borders meander: the valley and the desert, the tree line, the woods and the valley - world3-edges.js)
       m.world3.roadside = desertRoadside3(m, H3);   // (the desert's roads: white delineator posts with red reflectors along their shoulders - world3-roadside.js; after the edges meander, so a post's district is the one it stands in)
+      m.world3.compound = desertCompound3(m, H3);   // (the Syndicate's compound out in the desert, not in Highland Woods - the owner, 10-16: world3-compound.js)
       m.world3.desertWaters = desertWaters3(m, H3);   // (the desert's waters: tinajas in the slickrock at the cliffs' feet, seep pools in the dam's dry wash - world3-tinajas.js)
       m.world3.fallsView = fallsInView3(m, H3);   // (the falls chain, part 1: no tree standing where it would hide a fall - world3-falls.js)
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)

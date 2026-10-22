@@ -7,7 +7,8 @@
 // the arch and the hoodoos; the motel, its pool and the billboards; the desert camp; nothing in the highways' room or on
 // the main line; the white delineator posts along the desert's roads and its highways' gravel pull-offs; the windmills
 // and stock tanks out on the range with their ranch gates; the tinajas at the cliffs' feet and the seep pools in the
-// dam's wash; and the whole world tidied (nothing that needs dry ground in the water, no fence across a road). One world build.
+// dam's wash; the Syndicate's compound out in the desert (not in Highland Woods), its guards and gate; and the whole
+// world tidied (nothing that needs dry ground in the water, no fence across a road). One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity, DISTRICTS } from '../shared/map.js';
@@ -19,6 +20,9 @@ import { GULCH, HOLLOW, DESERT, DESERT_SPECIALS, DESERT_IDS } from '../shared/wo
 import { ROADSIDE3, PULLOFF3 } from '../shared/world3-roadside.js';
 import { STOCK3 } from '../shared/world3-stocktanks.js';
 import { TINAJA3 } from '../shared/world3-tinajas.js';
+import { COMPOUND3 } from '../shared/world3-compound.js';
+import { World } from '../server/world.js';
+import { joinPlayer, teleport, run } from './helpers.js';
 import { TIDY3 } from '../shared/world3-tidy.js';
 import { undergroundOf, UG, caveOf } from '../shared/underground.js';
 import { prepare } from '../tools/world3-build.mjs';
@@ -229,6 +233,56 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
     check(q.x / TILE >= bx0 && q.x / TILE < bx1 && q.y / TILE >= by0 && q.y / TILE < by1, `${at}: in the dam's wash`);
     check(m.props.filter((p) => p && p.t === 'shrub_a' && (p.sp === 'reeds' || p.sp === 'cattails') && Math.hypot(p.x - q.x, p.y - q.y) < 4 * TILE).length >= 3, `${at}: reeds at its edge`);
     check(listed(q, 'marsh') && ring(q, 1), `${at}: listed for the bakes (murky water, damp mud round it)`);
+  }
+  // 10d. the Syndicate's compound out in the desert (shared/world3-compound.js; the owner, 10-16: "No gang in the
+  // north-west forest"): walled, far from every town, on the desert's ground, its gate in the wall with a dirt track out
+  // to a road, the Den inside it with its counter, the guards' posts in and by it; nothing of the Syndicate's left in
+  // Highland Woods
+  console.log('compound', JSON.stringify(m.world3.compound));
+  const R = m.rock, cp = R && R.compound;
+  check(R && R.desert && cp && cp.tw === COMPOUND3.w && cp.th === COMPOUND3.h, 'the compound built out in the desert');
+  if (cp) {
+    const inside = (x, y) => x >= cp.tx * TILE && x < (cp.tx + cp.tw) * TILE && y >= cp.ty * TILE && y < (cp.ty + cp.th) * TILE;
+    check(COMPOUND3.districts.includes(distAt(R.x, R.y)), 'on the desert\'s ground');
+    const others = m.buildings.filter((b) => b && !b.gone && b.kind !== 'den').map((b) => Math.hypot(b.tx + b.tw / 2 - R.x / TILE, b.ty + b.th / 2 - R.y / TILE));
+    check(Math.min(...others) >= COMPOUND3.lonely, `far from every town (${Math.round(Math.min(...others))} tiles to the nearest building)`);
+    let walls = 0, ring = 0;
+    for (let y = cp.ty; y < cp.ty + cp.th; y++) for (let x = cp.tx; x < cp.tx + cp.tw; x++) if (x === cp.tx || y === cp.ty || x === cp.tx + cp.tw - 1 || y === cp.ty + cp.th - 1) { ring++; if (m.tiles[y * W + x] === T.WALL) walls++; }
+    check(walls === ring - COMPOUND3.gate, `walled all round but the gate (${walls} of ${ring})`);
+    const gate = m.gates.find((g) => g.rule === 'gang');
+    check(gate && inside(gate.x, gate.y) && gate.props.length >= 6, 'the gate in its wall, barred');
+    const den = m.buildings.find((b) => b && b.kind === 'den'), poi = m.pois.find((q) => q.kind === 'smuggler' && q.label === "Smuggler's Den");
+    check(den && inside((den.tx + 1) * TILE, (den.ty + 1) * TILE) && poi && Math.hypot(poi.x - (den.tx + den.tw / 2) * TILE, poi.y - (den.ty + den.th / 2) * TILE) < 8 * TILE, 'the Den inside, its counter at its door');
+    check(R.guards.length >= 5 && R.guards.every((g) => Math.hypot(g.x - R.x, g.y - R.y) < 24 * TILE), 'the guards\' posts in and by it');
+    const trk = (m.tracks || []).find((r) => r.pts.some(([x, y]) => Math.hypot(x - gate.x, y - gate.y) < 3 * TILE));
+    const end = trk && trk.pts.reduce((a, b) => (Math.hypot(b[0] - gate.x, b[1] - gate.y) > Math.hypot(a[0] - gate.x, a[1] - gate.y) ? b : a));
+    let road = false;
+    if (end) for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (m.tiles[(Math.floor(end[1] / TILE) + dy) * W + Math.floor(end[0] / TILE) + dx] === T.ROAD) road = true;
+    check(trk && road, 'a dirt track from the gate out to a road');
+  }
+  check(!m.buildings.some((b) => b && b.kind === 'den' && b.tx < 2200 && b.ty < 1350) && !(m.marina || []).some((b) => b.gang), 'nothing of the Syndicate\'s in Highland Woods, no gang boats on dry land');
+  // the guards: an outsider at the gate is warned, then shot at; a member walks in
+  if (cp) {
+    const w = new World(m, { npcBudget: 0, throwErrors: true });
+    const gi = m.gates.findIndex((g) => g.rule === 'gang'), g = m.gates[gi];
+    const out = g.vertical ? [Math.sign(g.x - R.x) * 90, 0] : [0, Math.sign(g.y - R.y) * 90];
+    const outsider = joinPlayer(w).p;
+    teleport(w, outsider.ped, g.x + out[0], g.y + out[1]);
+    outsider.ped.hp = 5000; outsider.ped.maxHp = 5000;
+    run(w, 1);
+    check(!w.gateState[gi].open, 'the gate shut to outsiders');
+    check(outsider.rockWarnedAt, 'an outsider warned first');
+    run(w, 3.5);
+    const guards = (w.rockGuards || []).map((id) => w.get(id));
+    check(guards.length >= 5, `the guards posted (${guards.length})`);
+    check(guards.some((q) => q && q.npc.state === 'fight' && q.npc.target === outsider.ped.id), 'the guards go for the outsider');
+    teleport(w, outsider.ped, R.x + 3000, R.y);
+    for (const q of guards) if (q) { q.npc.state = 'wander'; q.npc.target = 0; }
+    const member = joinPlayer(w, { gang: 'syndicate' }).p;
+    teleport(w, member.ped, g.x + out[0], g.y + out[1]);
+    run(w, 0.5);
+    check(w.gateState[gi].open, 'the gate opens for a member');
+    check(!guards.some((q) => q && q.npc.state === 'fight' && q.npc.target === member.ped.id), 'members welcome');
   }
   // 11. the world tidied last (shared/world3-tidy.js; the owner's 10-16 list): nothing that needs dry ground stands in
   // the water anywhere in the world, and no fence run crosses a road, a bridge or the water

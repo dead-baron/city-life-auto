@@ -3502,6 +3502,31 @@ function buildGullIsles(m, rand) {
   m.gullIsles.push({ name: 'Coral Cay', x: 1111 * TILE, y: 1101 * TILE, rent: 'Coral Cay Dive & Boat Hire' });
 }
 
+// Smuggler's Rock (today's world): the Syndicate's walled compound on its island, the gate members only, the dock
+function buildRock(m, rand) {
+  const C = ISLANDS.C;
+  shoreSand(m, C.box, T.DIRT, Z.ROCK);
+  const [cx0, cy0, cx1, cy1] = C.box;
+  const ccx = Math.floor((cx0 + cx1) / 2), ccy = Math.floor((cy0 + cy1) / 2);
+  const W = 26, H = 22, wx = ccx - 11, wy = ccy - H / 2;
+  m.fill(wx, wy, W, H, T.LOT);
+  for (let x = wx; x < wx + W; x++) { m.set(x, wy, T.WALL); m.set(x, wy + H - 1, T.WALL); }
+  for (let y = wy; y < wy + H; y++) { m.set(wx, y, T.WALL); m.set(wx + W - 1, y, T.WALL); }
+  const gy0 = ccy - 2; // the gate: 4 tiles of the west wall, facing the dock
+  for (let y = gy0; y < gy0 + 4; y++) m.set(wx, y, T.LOT);
+  m.fill(wx - 14, gy0, 14, 4, T.DIRT); // track down to the dock
+  const den = simpleBuilding(m, wx + 12, wy + 3, 11, 7, 'Syndicate Den', 'den', 15, 'metal', { x: (wx + 17.5) * TILE, y: (wy + 10.4) * TILE, text: 'NO TRESPASSING' });
+  m.pois.push({ id: m.pois.length, kind: 'smuggler', label: "Smuggler's Den", x: (wx + 17.5) * TILE, y: (wy + 10.8) * TILE, r: 46, b: den.id });
+  const ctip = jetty(m, wx - 12, gy0 + 1, -1, 0, 8);
+  for (let k = 0; k < 3; k++) m.marina.push({ x: (ctip.x + 2 + k * 3) * TILE, y: (gy0 - 1.6) * TILE, a: -Math.PI / 2, kind: k === 2 ? 'speedboat' : 'dinghy', gang: true });
+  for (const [x, y] of [[wx + 4, wy + 14], [wx + 6, wy + 16], [wx + 20, wy + 15], [wx + 3, wy + 3]]) addProp(m, ['pallet', 'drum', 'spool', 'pallet_b'][Math.floor(rand() * 4)], (x + 0.5) * TILE, (y + 0.5) * TILE, 10);
+  const gate = { x: (wx + 0.5) * TILE, y: (gy0 + 2) * TILE, w: 4 * TILE, vertical: true, props: [], rule: 'gang', rect: { tx: wx, ty: wy, tw: W, th: H } };
+  for (let py = gy0 * TILE + 8; py <= (gy0 + 4) * TILE - 8; py += 14) { const e = m.addSolidProp(gate.x, py, 10); gate.props.push(e); }
+  m.gates.push(gate);
+  m.rock = { x: ccx * TILE, y: ccy * TILE, compound: { tx: wx, ty: wy, tw: W, th: H }, dock: { x: ctip.x * TILE, y: (gy0 + 1) * TILE },
+    guards: [[wx - 3, gy0 - 1], [wx - 3, gy0 + 4], [wx + 3, gy0 + 1], [wx + 8, wy + 5], [wx + 9, wy + H - 4], [ctip.x + 1, gy0 + 1]].map(([x, y]) => ({ x: (x + 0.5) * TILE, y: (y + 0.5) * TILE })) };
+}
+
 function buildOffshore(m, rand) {
   // --- Pelican Key: beach island with a bar, a charter dock and jetskis -------------------------
   const P = ISLANDS.P;
@@ -3532,27 +3557,9 @@ function buildOffshore(m, rand) {
   m.pelican = { x: pcx * TILE, y: pcy * TILE, dock: { x: tip.x * TILE, y: tip.y * TILE } };
 
   // --- Smuggler's Rock: rocky island, walled Syndicate compound, gate for members only --------
-  const C = ISLANDS.C;
-  shoreSand(m, C.box, T.DIRT, Z.ROCK);
-  const [cx0, cy0, cx1, cy1] = C.box;
-  const ccx = Math.floor((cx0 + cx1) / 2), ccy = Math.floor((cy0 + cy1) / 2);
-  const W = 26, H = 22, wx = ccx - 11, wy = ccy - H / 2;
-  m.fill(wx, wy, W, H, T.LOT);
-  for (let x = wx; x < wx + W; x++) { m.set(x, wy, T.WALL); m.set(x, wy + H - 1, T.WALL); }
-  for (let y = wy; y < wy + H; y++) { m.set(wx, y, T.WALL); m.set(wx + W - 1, y, T.WALL); }
-  const gy0 = ccy - 2; // the gate: 4 tiles of the west wall, facing the dock
-  for (let y = gy0; y < gy0 + 4; y++) m.set(wx, y, T.LOT);
-  m.fill(wx - 14, gy0, 14, 4, T.DIRT); // track down to the dock
-  const den = simpleBuilding(m, wx + 12, wy + 3, 11, 7, 'Syndicate Den', 'den', 15, 'metal', { x: (wx + 17.5) * TILE, y: (wy + 10.4) * TILE, text: 'NO TRESPASSING' });
-  m.pois.push({ id: m.pois.length, kind: 'smuggler', label: "Smuggler's Den", x: (wx + 17.5) * TILE, y: (wy + 10.8) * TILE, r: 46, b: den.id });
-  const ctip = jetty(m, wx - 12, gy0 + 1, -1, 0, 8);
-  for (let k = 0; k < 3; k++) m.marina.push({ x: (ctip.x + 2 + k * 3) * TILE, y: (gy0 - 1.6) * TILE, a: -Math.PI / 2, kind: k === 2 ? 'speedboat' : 'dinghy', gang: true });
-  for (const [x, y] of [[wx + 4, wy + 14], [wx + 6, wy + 16], [wx + 20, wy + 15], [wx + 3, wy + 3]]) addProp(m, ['pallet', 'drum', 'spool', 'pallet_b'][Math.floor(rand() * 4)], (x + 0.5) * TILE, (y + 0.5) * TILE, 10);
-  const gate = { x: (wx + 0.5) * TILE, y: (gy0 + 2) * TILE, w: 4 * TILE, vertical: true, props: [], rule: 'gang', rect: { tx: wx, ty: wy, tw: W, th: H } };
-  for (let py = gy0 * TILE + 8; py <= (gy0 + 4) * TILE - 8; py += 14) { const e = m.addSolidProp(gate.x, py, 10); gate.props.push(e); }
-  m.gates.push(gate);
-  m.rock = { x: ccx * TILE, y: ccy * TILE, compound: { tx: wx, ty: wy, tw: W, th: H }, dock: { x: ctip.x * TILE, y: (gy0 + 1) * TILE },
-    guards: [[wx - 3, gy0 - 1], [wx - 3, gy0 + 4], [wx + 3, gy0 + 1], [wx + 8, wy + 5], [wx + 9, wy + H - 4], [ctip.x + 1, gy0 + 1]].map(([x, y]) => ({ x: (x + 0.5) * TILE, y: (y + 0.5) * TILE })) };
+  // (the whole v3 world has no such island - it came out in Highland Woods: World v3 builds the compound out in the
+  // desert instead, shared/world3-compound.js; the stream's draws kept, so nothing after this moves)
+  if (WD) { for (let k = 0; k < 4; k++) rand(); } else buildRock(m, rand);
 
   // --- open-sea waypoints, offshore grounds ----------------------------------------------------
   m.seaPoints = []; m.offshore = [];

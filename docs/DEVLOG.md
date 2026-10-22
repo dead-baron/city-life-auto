@@ -13439,3 +13439,28 @@ and no natural water of its own out in the rock.
 Tests: test/desertwaters.test.js - the ring round each kind of water, round and ragged, nothing past it;
 test/world3desert.test.js - the tinajas south of a cliff's foot with its face kept, their boulders and palo verde,
 the seeps in the dam's wash with their reeds, each a pond listed for the bakes, far apart.
+
+## 2026-10-21 · The Syndicate's compound out in the desert, not in Highland Woods
+
+The owner, 10-16: "No gang in the north-west forest: gangs go in isolated rough corners of the city or isolated
+desert spots". Today's world builds the Syndicate's walled compound on Smuggler's Rock, an island off the coast.
+World v3 has no such island, so the compound came out at the island's old place: in Highland Woods, with its guards
+in the pines and its boats tied up on dry land.
+
+- **World v3 leaves the old compound out** (`shared/map.js` buildRock, skipped in the whole v3 world; its random
+  draws are kept so nothing built after it moves). Today's world is unchanged.
+- **and builds it in the desert** (`shared/world3-compound.js`, new, World v3's done hook): far out in the Red Rock
+  or Dry Creek desert, as far from every town as it can be, on level open ground at the end of a long dirt track off
+  a road. It has a block wall with guard towers at two corners, and the gate in the wall facing the track (members
+  only). Inside are the Syndicate Den with its counter (the members' shop and the poaching runs), containers by the
+  back wall, crates, pallets and drums along the sides, and the crew's cars and bikes in front of the Den. The
+  guards' posts are outside the gate, inside it, in the yard and at the Den's door.
+- **the guards** (`server/systems/gang.js`) watch the compound's own ground wherever it is (m.rock.compound), not
+  the old island's box, and say "Members only in here!". The join and leave messages name the compound in the desert
+  in World v3.
+- **its wall** (`client/art2/game/statics.js`) leaves a gap for the gate in whichever side it's in. Before, only a
+  south gate got one, so the Rock's west gate had a wall drawn across it.
+
+Tests: test/world3desert.test.js - the compound in the desert, far from every building, walled all round but the
+gate, the Den and its counter inside, the guards' posts, the track out to a road, nothing of the Syndicate's left in
+Highland Woods; on the v3 map, an outsider at the gate is warned and then shot at, and the gate opens for a member.
