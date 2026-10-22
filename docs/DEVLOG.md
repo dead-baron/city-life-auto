@@ -13956,3 +13956,19 @@ did this.
 
 Tests: test/world3rail.test.js - every main-line tunnel mouth is on land. The rail, hub, road, ferry and water tests
 pass as they were.
+
+## 2026-10-22 · More than one mansion
+
+The owner, 10-16: "More than one mansion". World v3 had one: the Hilltop Mansion on Bayside Heights' headland.
+
+- **the finest villa of each rich district** (`shared/world3-mansions.js` moreMansions3, in the whole-world build's
+  done hook) is a mansion now. The finest is the dearest house with a garage, then the biggest. That's Highcliff in
+  Bayside Heights ($210,000, was $130,000), Sea Holly in The Bluffs ($160,000) and a Lake District house, now Rosewood
+  Manor ($150,000). A mansion's price is at least $150,000 or 1.6 times what it was. It has six garage slots, and its
+  owner gets the mansion's rooms (`shared/homelayout.js` planOf). Each keeps its villa outside, already wider than the
+  Hilltop Mansion's house. A house with a street-numbered name takes a manor's name, on the map too.
+- The real-estate app lists them with the big homes, as it lists every mansion. The charter's helicopter lands on the
+  rich districts' lawns as before.
+
+Tests: test/world3world.test.js - at least three mansions, the Hilltop Mansion among them, each with a mansion's price
+and a garage in a rich district, in more than one district.

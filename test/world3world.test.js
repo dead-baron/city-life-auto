@@ -177,4 +177,10 @@ test('World v3: the whole world in one build - every city district on its island
   const pitches = m.venues.filter((v) => v.kind === 'soccer');
   assert.ok(pitches.length >= 3, 'the parks\' pitches and the stadium\'s');
   for (const v of pitches) { const k = v.rect.w / v.rect.h; assert.ok(k >= 1.35 && k <= 1.75, `${v.name}: ${v.rect.w / TILE} x ${v.rect.h / TILE} tiles (${k.toFixed(2)} long to wide)`); }
+  // more than one mansion (the owner, 10-16): the Hilltop Mansion and the finest villa of each rich district
+  const mans = m.homes.filter((h) => h && h.kind === 'mansion');
+  assert.ok(mans.length >= 3, `mansions: ${mans.map((h) => h.name).join(', ')}`);
+  assert.ok(mans.some((h) => h.name === 'Hilltop Mansion'), 'the Hilltop Mansion still');
+  for (const h of mans) assert.ok(h.price >= 150000 && h.garage && m.districtAt(h.x, h.y).style === 'luxury', `${h.name}: a mansion's price, its garage, a rich district`);
+  assert.ok(new Set(mans.map((h) => m.districtAt(h.x, h.y).name)).size >= 2, 'in more than one district');
 });
