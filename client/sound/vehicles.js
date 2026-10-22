@@ -63,9 +63,15 @@ export const ENGINE_CLASS = {
   tank: 'tank',
   tractor: 'truck', combine: 'truck',   // (the farm's diesels: H61)
   golfcart: 'electric',
+  horse: 'pedal',   // (never voiced: its hooves instead - hooves(), #325)
 };
 export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', rescueboat: 'ambulance', rescue4x4: 'ambulance', firetruck: 'fire' };
 const AIR_BRAKES = new Set(['truck', 'bus']);
+// a horse's hoofbeats in a cycle of its gait (#325): when each foot lands; where they clop (a road, a pavement, a plaza, a
+// quay, a bridge: shared/constants.js T) and where they thud
+const HOOF_WALK = [0, 0.25, 0.5, 0.75], HOOF_CANTER = [0, 0.18, 0.36], HOOF_GALLOP = [0, 0.12, 0.24, 0.36];
+const HARD_GROUND = new Set([2, 3, 4, 9, 12, 13]);
+const HOOF_P = { hard: { s: 'hard' }, soft: { s: 'soft' }, hard1: { s: 'hard', mine: true }, soft1: { s: 'soft', mine: true } };
 // the tyres' screech: its level at full slide (tools/sound/bench.py tyres: a few dB over your own engine); how hard it
 // screeches, 0-1, from what the server says (sliding: VF.DRIFT) and what it looks like here - going sideways at speed, or
 // spinning on the spot with the engine on for half a second (a burnout). A hard start in a straight line, also VF.DRIFT
@@ -205,6 +211,7 @@ export class VehicleSounds {
       const ra = v.ra ?? Math.atan2(st.vy, st.vx);
       st.side = Math.abs(-Math.sin(ra) * st.vx + Math.cos(ra) * st.vy);
       st.burnT = (v.flags & VF.DRIFT) && st.spd < 40 ? (st.burnT || 0) + dt : 0;   // (how long it's been spinning on the spot)
+      if (def.horse) { this.hooves(v, st, S, dt, v.id === mine); st.on = false; st.horn = false; st.sir = null; st.flags = v.flags; st.seen = t; st.mine = v.id === mine; continue; }   // (a horse: no engine - its hooves)
       const acc = (st.spd - st.prev) / Math.max(dt, 1e-3);
       const on = v.id === mine || engineOn(v) || (!!def.ferry && !(v.flags & (VF.WRECK | VF.DEAD)));   // (the ferries run their timetable with nobody at the wheel)
       if (on && !st.on && Math.sqrt(d2) < 700 && st.cls !== 'pedal' && !P[st.cls].boat && st.spd < 30) E.play('enginestart', v.rx, v.ry, 0.7, v.id === mine ? MINE : null);
@@ -238,6 +245,17 @@ export class VehicleSounds {
     this.trains(F, S, dt, t);
     if (t >= this.nextXing) { this.nextXing = t + 0.5; this.crossings(S); }
     if (t >= this.nextGc) { this.nextGc = t + 2; for (const [id, st] of this.states) if (t - st.seen > 1.5) { if (st.voice) st.voice.veh = 0; this.states.delete(id); } }
+  }
+  // a horse's hooves (#325): the beat of its gait from how fast it's going - a walk's four even beats, a canter's three
+  // and a pause, a gallop's quick four and its moment in the air - clopping on a road, thudding on grass and dirt
+  hooves(v, st, S, dt, mine) {
+    const sp = st.spd;
+    if (sp < 10) { st.hph = 0; return; }
+    const gallop = sp > 300, canter = sp > 150, cyc = gallop ? 0.42 : canter ? 0.56 : Math.max(0.55, 1.5 - sp / 110);
+    const beats = gallop ? HOOF_GALLOP : canter ? HOOF_CANTER : HOOF_WALK, a = st.hph || 0, b = a + dt / cyc;
+    st.hph = b % 1;
+    const map = S.map, tile = map && map.tileAtPx ? map.tileAtPx(v.rx, v.ry) : 3, s = HARD_GROUND.has(tile) ? 'hard' : 'soft';
+    for (const x of beats) if ((x > a && x <= b) || (b >= 1 && x + 1 <= b)) this.E.play('hoof', v.rx, v.ry, (mine ? 0.9 : 0.7) * (gallop ? 1.1 : 1), HOOF_P[mine ? s + '1' : s]);
   }
   score(st) {
     const near = Math.max(0, 1 - st.d / RANGE);

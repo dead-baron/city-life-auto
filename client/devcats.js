@@ -84,6 +84,7 @@ export const DEV_SECTIONS = [
     ['🚲 Commuter bike', 'car', { m: 'bicycle' }], ['🏖 Beach cruiser', 'car', { m: 'cruiser' }], ['🚵 Mountain bike', 'car', { m: 'mtb' }],
     ['🚴 Road bike', 'car', { m: 'roadbike' }], ['🛞 BMX', 'car', { m: 'bmx' }], ['📦 Cargo bike (two crates)', 'car', { m: 'cargobike' }],
     ['🔒 Nearest bike rack', 'near', { k: 'bikerack' }],
+    ['🐴 A horse beside me', 'car', { m: 'horse' }], ['🐴 Me up on a horse', 'car', { m: 'horse', in: 1 }], ['🐴 A farm co-op (horses to hire, buy; the farm horses)', 'near', { k: 'farm' }],
   ] },
   { id: 'motos', title: '🏍 Motorcycles', items: [
     ['🏍 Dustwing cruiser', 'car', { m: 'vtwin' }], ['🧳 Longhaul tourer', 'car', { m: 'tourer' }], ['🔱 Hellfork chopper', 'car', { m: 'chopper' }],
@@ -109,7 +110,7 @@ export const DEV_SECTIONS = [
   { id: 'fun', title: '🎉 Events & sport', items: [
     ['🐶 Lost pet nearby', 'pet'], ['🏁 Water race start (craft waiting)', 'near', { k: 'race' }], ['🏐 Pitch or court', 'near', { k: 'venue' }],
     ['🎬 Drive-in', 'near', { k: 'drivein' }], ['🏎 Raceway', 'near', { k: 'raceway' }], ['🪩 Club', 'near', { k: 'club' }],
-    ['🎾 Tennis court', 'near', { k: 'tennis' }], ['🕹 Arcade', 'near', { k: 'arcade' }], ['🎱 Pool table (Rusty Spur)', 'near', { k: 'pooltable' }],
+    ['🎾 Tennis court', 'near', { k: 'tennis' }], ['🏄 A surf break (with a board)', 'near', { k: 'surf' }], ['🕹 Arcade', 'near', { k: 'arcade' }], ['🎱 Pool table (Rusty Spur)', 'near', { k: 'pooltable' }],
     ['🎰 Casino', 'near', { k: 'casino' }], ['🎲 Street dice', 'near', { k: 'dice' }],
     ['🏁 Street race nearby', 'street', { k: 'race' }], ['🚓 Police chase nearby', 'street', { k: 'chase' }], ['🚚 Armored truck nearby', 'street', { k: 'armored' }],
   ] },

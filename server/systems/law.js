@@ -33,6 +33,7 @@ export const CRIMES = {
   brandish:    { heat: 6,  label: 'Shots fired', sev: 1.2 },
   theft:       { heat: 10, label: 'Vehicle theft', sev: 0.85 },
   bikeTheft:   { heat: 5,  label: 'Bike theft', sev: 0.55, sight: 0.6, minor: true },
+  horseTheft:  { heat: 10, label: 'Horse theft', sev: 0.85 },   // (a farm's horse ridden off, a hired one kept: horses.js)
   bikejack:    { heat: 15, label: 'Pulling someone off their bike', sev: 1, sight: 0.8 },
   policeTheft: { heat: 25, label: 'Stealing a police vehicle', felony: true, sev: 1.2 },
   carjack:     { heat: 20, label: 'Carjacking', sev: 1.25 },   // (a felony only when the driver's hurt or it's a police car: carjackHurt, copCarjack - the owner, 2026-10-11)

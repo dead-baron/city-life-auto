@@ -34,7 +34,7 @@ import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
 import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
-import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT } from '../../../shared/constants.js';
+import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT, DT } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
@@ -295,7 +295,7 @@ const darkAt = (m) => (m < 720 ? 1 - smooth((m - 330) / 70) : smooth((m - 1180) 
 const C = {
   head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], flash: [1, 0.9, 0.67],
   sodium: [1, 0.73, 0.43], window: [1, 0.77, 0.47], warm: [1, 0.8, 0.55], white: [0.92, 0.94, 1], moon: [0.6, 0.67, 1], cyan: [0.47, 0.9, 1],
-  legend: [0.82, 0.9, 1], plasma: [0.42, 0.66, 1], bolt: [0.74, 0.82, 1],
+  legend: [0.82, 0.9, 1], plasma: [0.42, 0.66, 1], bolt: [0.74, 0.82, 1], tunnel: [1, 0.84, 0.6],   // (tunnel: the subway's wall lamps - tunnel.js)
   rare: [0.35, 0.65, 1], epic: [0.78, 0.47, 1], gold: [1, 0.8, 0.38],   // the dropped backpacks' glows
 };
 const CUT_A = { cut: 'a' }, CUT_B = { cut: 'b' };   // (the plasma blade's two halves: peds.js pedSprite opt)
@@ -526,6 +526,7 @@ export class World2 {
     this.workerMap = this.workerMap || old;
     this.map = map; this.grid = artGrid(map);
     this.lampGrid = null; this.lampG = null; this.poiG = null; this.seaK = null;
+    this.tunMap = null;   // (the tunnel's chunks baked from the old window: kept on screen, baked again from this one - _tunnel)
     extra().then((X) => { if (!this.failed && this.map === map) X.reworld(this, map, this.workerMap || old); }, (e) => console.error('[art2] setMap', e));
   }
 
@@ -596,14 +597,17 @@ export class World2 {
     if (F.now - this.badAt > 20) { this.badKeys.clear(); this.badAt = F.now; } // (a failure may have been passing)
     const T = this.part, mk = (k) => { const n = performance.now(); T[k] = (T[k] || 0) * 0.9 + (n - this.pt) * 0.1; this.pt = n; };
     this.pt = t0;
-    this._chunks(F); mk('chunks');
+    // (riding under the city: the tunnel's own chunks - art2/game/tunnel.js - the city's kept, the way ahead still baked)
+    const sub = !!F.sub && !!this.TN;
+    if (sub) this._tunnel(F); else { this.tunIn = false; this._chunks(F); }
+    mk('chunks');
     if (!F.sub && !F.spec) F.nearB = F.insideB ? null : walkInSoon(S, F.sp);   // (a walk-in ahead: _precut)
-    this._fetchAhead(F); this._precut(F); this._prebake(F); mk('prebake');
-    const preset = this._preset(F);
+    this._fetchAhead(F); if (!sub) this._precut(F); this._prebake(F); mk('prebake');
+    const preset = sub ? this._tunnelPreset() : this._preset(F);
     const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8);
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
     // (viewW / viewH: the view in world px, what the scene covers)
-    this._fades(F, sp);
+    if (!sub) this._fades(F, sp);
     // the wind the vegetation sways in (render/flora/wind.js, from the shared world clock); Settings' "Wind sway"
     // switch turns the swaying off
     E.swayOn = this.gfx.wind !== false;
@@ -611,21 +615,109 @@ export class World2 {
     Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
     // the sea's sparkle tonight (render/atmos.js bioAt: some nights, along some shores; the day from the server)
     const bio = S.bioForce || bioAt((S.day || 0) * DAY_LOOP_S + (S.loopTime || 0), F.sky.minutes, this.bioArr || (this.bioArr = [0, 0]));   // (S.bioForce: the debug menu's)
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio }) === false) return;
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
-    this._waterLife(F); mk('waterlife');
-    this._decals(F); this._wakeTrail(F); mk('decals');
-    if (S.farmArt) S.farmArt.drawV2(this, F, gbuf, put);   // (the garden plots near you, the fields' rows: render/farmart.js)
+    if (!sub) {   // (none of the city's own life down in the tunnel)
+      this._waterLife(F); mk('waterlife');
+      this._decals(F); this._wakeTrail(F); this._surf(F); mk('decals');
+      if (S.farmArt) S.farmArt.drawV2(this, F, gbuf, put);   // (the garden plots near you, the fields' rows: render/farmart.js)
+    }
     this._entities(F); mk('entities');
     this._prefetch(F); mk('prefetch');
-    this._furniture(F); mk('furniture');
+    if (!sub) { this._furniture(F); mk('furniture'); }
     this._particles(F); mk('particles');
-    this._lights(F); mk('lights');
+    if (sub) this._tunnelLights(F); else this._lights(F);
+    mk('lights');
     E.endFrame(); mk('end');
     this.t.frameMs = this.t.frameMs * 0.9 + (performance.now() - t0) * 0.1;
     F.mark('art2');
+  }
+
+  // ---- the surf breaks' waves (art2/game/surfart.js: loaded the first time a break is near you - me.surf) ------------
+  _surf(F) {
+    const me = this.S.me && this.S.me.surf;
+    if (!me || !me.b || !me.b.length) return;
+    if (!this.SA) { if (!this.saP) this.saP = import('./surfart.js').then((m) => { this.SA = m; }, (e) => { console.warn('[art2] surf', e); setTimeout(() => { this.saP = null; }, 30e3); }); return; }
+    const by = this.surfBy || (this.surfBy = new Map()), list = this.surfL || (this.surfL = []);
+    list.length = 0;
+    for (const r of me.b) { let B = by.get(r[0]); if (!B) by.set(r[0], (B = { id: r[0], x: r[1], y: r[2], nx: r[3], ny: r[4], half: r[5], ph: r[6], side: r[7] })); list.push(B); }
+    this.SA.drawWaves(this, F, list, (this.S.renderTick || 0) * DT);
+  }
+
+  // ---- the subway's tunnel (art2/game/tunnel.js: loaded the first time anyone rides under the city) --------------------
+  // Can this frame under the city be drawn as the tunnel? Not until its code is in: meanwhile the classic tunnel view
+  // draws it (main.js), and this keeps the way ahead baking (stream).
+  tunnelReady() {
+    if (!this.E || !this.E.keepChunk) return false;   // (the ?art2stub test engine: no chunk layers - the classic tunnel view)
+    if (this.TN) return true;
+    if (!this.tnP) this.tnP = import('./tunnel.js').then((m) => { this.TN = m; }, (e) => { console.warn('[art2] tunnel', e); setTimeout(() => { this.tnP = null; }, 30e3); });
+    return false;
+  }
+  // the tunnel's chunks round the view: what's there kept, the nearest one missing baked here (two a frame: a chunk
+  // takes a few ms) - none where no tunnel runs (remembered per map); the bakes the city's view wanted on the way down
+  // dropped (the way ahead still bakes: _prebake)
+  _tunnel(F) {
+    const E = this.E, TN = this.TN, L = TN.TUNNEL.layer, ap = E.ap || 2;
+    this._camVel(F);
+    if (!this.tunIn) {
+      this.tunIn = true; this.wantChunks.clear();
+      if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && jk[1] !== 'B' && jk[1] !== 'C');
+    }
+    // a new window of the world (the map swapped as the train runs on: setMap): the chunks already baked stay on screen and
+    // are baked again from it, after the ones still missing - the tunnel never goes blank at a region's edge
+    if (this.tunMap !== this.map) { this.tunMap = this.map; this.tunNone = new Set(); this.tunGen = (this.tunGen | 0) + 1; this.tunOf ||= new Map(); }
+    const c0 = Math.floor((this.vx0 - 200) / CHUNK), c1 = Math.floor((this.vx1 + 200) / CHUNK), r0 = Math.floor((this.vy0 - 200) / CHUNK), r1 = Math.floor((this.vy1 + 260) / CHUNK);
+    const want = [];
+    for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
+      const k = cy * 100000 + cx;
+      if (this.tunNone.has(k)) continue;
+      const have = E.hasChunk(cx, cy, L);
+      if (have) { E.keepChunk(cx, cy, L); if (this.tunOf.get(k) === this.tunGen) continue; }
+      want.push([cx, cy, k, Math.hypot((cx + 0.5) * CHUNK - this.camX, (cy + 0.5) * CHUNK - this.camY) + (have ? 1e7 : 0), have]);
+    }
+    if (E.reserveChunks) E.reserveChunks((c1 - c0 + 1) * (r1 - r0 + 1) + 1);
+    want.sort((a, b) => a[3] - b[3]);
+    let budget = isPhone() ? 1 : 2;   // (a chunk is some 15 ms here, a phone's three times that)
+    for (const [cx, cy, k, , have] of want) {
+      if (budget-- <= 0) break;
+      const g = TN.bakeTunnel(this.map, cx, cy, ap, this.tunBuf);   // (one buffer baked into again: uploaded at once)
+      if (g) this.tunBuf = g;
+      if (!g) { this.tunNone.add(k); if (have) E.dropChunk(cx, cy, L); continue; }
+      E.uploadChunk(cx, cy, g, L);
+      this.tunOf.set(k, this.tunGen);
+      this.n.chunkUp = (this.n.chunkUp || 0) + 1;
+    }
+  }
+  // the tunnel's light: no sky, a little cold fill, the lamps do the rest (lightgame.js 'indoor' darkened)
+  _tunnelPreset() {
+    if (this.tunP) return this.tunP;
+    const P = this.L && this.L.PRESETS_GAME, base = (P && (P.indoor || P.night)) || {};
+    return (this.tunP = { ...base, sunCol: [0, 0, 0], ambSky: [0.07, 0.072, 0.095], ambGround: [0.055, 0.055, 0.068], shadowLen: 0, emiK: 1.25, bloomThr: 0.5, bloomK: 1.25, haze: 0.05, hazeCol: [0.12, 0.1, 0.08], vign: 0.7, sat: 1.05, contrast: 1.12, lift: [0.004, 0.004, 0.012], gain: [1.06, 1.0, 0.94], lampsOn: 1, wet: 0, rain: 0, fog: 0, motes: 0 });
+  }
+  // the tunnel's lamps (the nearest the tier's lights allow), the trains' lit coaches and headlamps, shots and blasts
+  _tunnelLights(F) {
+    const S = this.S, now = F.now;
+    this.lights.length = 0;
+    const x0 = this.vx0 - 220, x1 = this.vx1 + 220, y0 = this.vy0 - 220, y1 = this.vy1 + 300;
+    for (const Lp of this.TN.tunnelLamps(this.map, x0, y0, x1, y1, this.tunLamps || (this.tunLamps = []))) this._light(Lp.x - Lp.nx * 6, Lp.y - Lp.ny * 6, this.TN.TUNNEL.lampZ, Lp.st ? 160 : 180, C.tunnel, Lp.st ? 1.8 : 1.9);
+    for (const c of F.cars) {
+      const def = TRAIN_CARS[c.d.c];
+      if (!def) continue;
+      this._light(c.rx, c.ry, 20, def.L * 0.75, C.window, 1.3);
+      if (c.d.c === 0) this._light(c.rx + Math.cos(c.ra) * def.L / 2, c.ry + Math.sin(c.ra) * def.L / 2, 14, 520, C.head, 2.6, [c.ra, 0.36, 520]);
+    }
+    for (const f of S.flashes) {
+      if (f.kind === 'boom') { const e = Math.min(1.6, f.t * 3.2); this._light(f.x, f.y, 30, f.r * 1.3, C.fire, 2.4 * e); }
+      else this._light(f.x, f.y, 20, f.r || 150, C.flash, 2.2 * Math.min(1.4, f.t * 22));
+    }
+    void now;
+    const out = this.lights;
+    out.sort((a, b) => b.s - a.s);
+    const n = Math.min(out.length, this.tier.lights);
+    for (let i = 0; i < n; i++) this.E.addLight(out[i]);
+    this.n.lights = n;
   }
 
   // ---- chunks ---------------------------------------------------------------------------------------------
@@ -1436,7 +1528,7 @@ export class World2 {
     const api = this.api, L = api.pedLook(p, now), f = p.flags, pose = L.pose;
     let d8 = dir8(p.ra + (L.turn || 0));   // (spun round as they go down; a dancer's spin: below)
     const lying = !L.upright && LYING.has(pose) && !L.flying && !L.swimming;
-    let ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
+    let ppose = L.surf ? pose : L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';   // (L.surf: on a surfboard - surf poses, people.js)
     let lift = L.lift || 0;   // (an ollie on a skateboard: client pedLook)
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
     // falling from an aircraft (server skydive.js): spread out face down in free fall, hanging upright under the canopy
@@ -1456,7 +1548,7 @@ export class World2 {
     const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
     // felling a tree (d.ch: server felling.js): the axe swung, the chainsaw held out; the lantern carried by its bail
     if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
-    const wpn = L.board || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
+    const wpn = L.board || L.surf || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
     if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined)) && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : q === 'pushup' || q === 'situp' ? repFrame(p, now) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
@@ -1574,6 +1666,7 @@ export class World2 {
   _veh(v, now, me) {
     const def = VEHICLE_BY_INDEX[v.d.m], A = this.A;
     if (def && def.kind === 'air') { this._air(v, now, me); return; }   // (aircraft: their block models - H66)
+    if (def && def.horse) { this._horse(v, now, me, def); return; }   // (a horse: the animal's own sprite, its rider up in the saddle - #325)
     if (!def || !A || !A.vehicleKey || !A.vehState) return;
     const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
     const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
@@ -1652,6 +1745,52 @@ export class World2 {
         E.drawSprite(rk, x, y, Math.max(0, z0), o);
         o.under = 0;
       }
+    }
+  }
+
+  // A horse (#325, server horses.js): the animal's sprite in its coat, saddled or bare (the variant: 'horse:s<coat>',
+  // 'horse:c<coat>' - art2/animals.js) - standing (now and then its head down to graze, ridden or not), walking or at a
+  // gallop by its speed, the legs' frames as fast as it goes - and whoever's on it astride its back ('saddle', drawn at
+  // the horse's own feet: the pose sits the rider at its saddle's height), rising and falling with the gallop
+  _horse(v, now, me, def) {
+    const A = this.A, E = this.E, Pd = this.Pd;
+    if (!A || !A.animalKey) return;
+    const vr = v.d.vr | 0, kind = `horse:${vr & 8 ? 'c' : 's'}${vr & 7}`;
+    const b = v.buf, sp = b && b.length > 1 ? Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20 : 0;
+    const was = v._hsp ?? sp, s2 = v._hsp = was + (sp - was) * 0.3;
+    const pose = s2 > 150 ? 'run' : s2 > 8 ? 'walk' : (Math.floor(now / 3.7) + v.id) % 4 ? 'idle' : 'graze';
+    const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(v.ra);
+    // the legs' cycle by the ground it covers (a stride a cycle), so a canter and a gallop look it
+    const dt = Math.min(0.1, Math.max(0, now - (v._hT ?? now))); v._hT = now;
+    v._hph = ((v._hph || 0) + dt * (pose === 'run' ? s2 / 95 : pose === 'walk' ? Math.max(0.8, s2 / 32) : 0.6)) % 1;
+    const fr = Math.floor(v._hph * n) % n;
+    let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
+    if (!sk) sk = v._v2k && E.hasSprite(v._v2k) ? v._v2k : null;
+    if (pose !== v._hp || d8 !== v._hd) { v._hp = pose; v._hd = d8; for (let i = 0; i < n; i++) this._ask('actors', 'animal', A.animalKey(kind, pose, d8, i), [kind, pose, d8, i], me ? -2 : 0); }
+    if (!sk) return;
+    v._v2k = sk;
+    const o = this.opts;
+    o.alpha = 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = true; o.tint = null; o.air = false; o.under = 0;
+    if (v.blinkUntil > now) o.alpha *= Math.floor(now * 10) % 2 ? 0.25 : 1;
+    const z0 = Math.max(0, this._z0(v, false));
+    E.drawSprite(sk, v.rx, v.ry, z0, o);
+    this.n.drawn++;
+    if (!Pd || !Pd.pedKey) return;
+    // the riders: astride, the passenger behind; up and down with the gallop's stride
+    const bob = pose === 'run' ? Math.abs(Math.sin(v._hph * Math.PI * 2)) * 2 : pose === 'walk' ? Math.abs(Math.sin(v._hph * Math.PI * 2)) * 0.6 : 0, myPed = this.S.myPedId;
+    for (const p of this.S.ents.values()) {
+      if (p.kind !== K.PED || p.parent !== v.id || !p.d || (p.flags & PF.DEAD)) continue;
+      const pass = (p.flags & PF.PASSENGER) !== 0, f = pass ? -14 : def.seat ?? 2;
+      const x = v.rx + Math.cos(v.ra) * f, y = v.ry + Math.sin(v.ra) * f, A2 = this._app(p.d.app || {}, p.d.ar), wpn = p.extra | 0, bo = bladeOpt(p, wpn);
+      const was2 = this.sprPrio;
+      if (p.id === myPed) this.sprPrio = -3;
+      let rk = this._spr('peds', 'ped', Pd.pedKey(A2, 'saddle', d8, 0, wpn, bo), [A2, 'saddle', d8, 0, wpn, bo]);
+      this.sprPrio = was2;
+      if (!rk) rk = p._v2r && E.hasSprite(p._v2r) ? p._v2r : null;
+      if (!rk) continue;
+      p._v2r = rk;
+      o.xray = false; o.alpha = 1;
+      E.drawSprite(rk, x, y, z0 + bob, o);
     }
   }
 
@@ -1821,8 +1960,7 @@ export class World2 {
     for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; const car = S.ents.get(p.parent); this._ped(p, now, p.id === S.myPedId, F, 8 + (car ? (car.rz || 0) * EL_Z + (car._jz || 0) : 0)); }   // (up on the El: its car's height; over a jump: its bike's)
     this.sprPrio = -1;
     for (const c of F.cars) this._train(c, now, F.myTrain);
-    this._rides(F, now);
-    this._forage(F);
+    if (!F.sub) { this._rides(F, now); this._forage(F); }   // (under the city: none of the surface's rides or finds)
     if (A) {
       for (const c of F.crates) {
         const st = c.flags & 3;
@@ -1850,7 +1988,7 @@ export class World2 {
       }
     }
     // the birds (simulated in main.js): the providers' pigeons and gulls, flapping when they fly
-    if (A && A.critterKey && A.critterInfo) for (const b of this.api.birds) {
+    if (A && A.critterKey && A.critterInfo && !F.sub) for (const b of this.api.birds) {   // (not down in the tunnel: they don't fly there)
       const kind = b.gull ? 'seagull' : 'pigeon', info = this.critInfo[kind] || (this.critInfo[kind] = A.critterInfo(kind) || { frames: 1, fps: 10 });
       const nf = info.frames || 1, fps = info.fps || 10, air = info.air || [0, nf - 1], ground = info.ground ? info.ground[0] : 0;
       // (frames: the ground pose, the take-off frame, then the flight cycle)
@@ -1916,7 +2054,7 @@ export class World2 {
         const wpn = L.board ? 0 : (e.extra | 0) || (e.d.fl ? 'flashlight' : 0), pf = ppose === 'sitx' && Pd.sitFrame ? Pd.sitFrame(e.d, e.id, now) : ppose === 'sit' && e.d && e.d.gt === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(e.d, e.id, now) : Pd.pedFrame(ppose, L.fr);
         const bo = bladeOpt(e, wpn);
         if (this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo], prio)) budget--;
-      } else if (e.kind === K.VEH && A && A.vehicleKey && A.vehState) {
+      } else if (e.kind === K.VEH && A && A.vehicleKey && A.vehState && !(e.d && (VEHICLE_BY_INDEX[e.d.m] || {}).horse)) {   // (a horse: its animal sprites, asked for as it's drawn - _horse)
         const N = this.tier.N, hi = quant(e.ra || 0, N), st = A.vehState(e.flags, 1, e.hp, e.parent);
         if (this._ask('actors', 'vehicle', A.vehicleKey(e.d, st, hi, N), [e.d, st, hi, N], prio)) budget--;
       } else if (e.kind === K.TRAIN && A && A.trainKey && TRAIN_CARS[e.d.c]) {
@@ -2368,6 +2506,7 @@ export class World2 {
       const def = VEHICLE_BY_INDEX[v.d.m];
       if (!def) continue;
       if (def.kind === 'air') { if (this.AM) this.AM.airLights(this, v, now, night); continue; }   // (their lamps, the searchlight's pool - H66)
+      if (def.horse) continue;   // (a horse: no lamps)
       const f = v.flags, c = Math.cos(v.ra), s = Math.sin(v.ra), zb = this._z0(v, def.kind === 'boat');
       const vl = this.prov.actors && this.A.vehicleLights ? this.A.vehicleLights(v.d) : null;
       const hl = (vl ? vl.L : def.L) / 2;
@@ -2430,6 +2569,9 @@ export class World2 {
     // its flash flickers
     const SL = S.wx && S.wx.strikeLight;
     if (SL && SL.k > 0.02) this._light(SL.x, SL.y, 60, 620, C.bolt, 3.6 * SL.k);
+    // the drive-in's film thrown over the lot, its colour shifting with the picture (client/drivein.js)
+    const DL = S.dinLight;
+    if (DL && DL.k > 0.02 && inV(DL.x, DL.y - 200)) this._light(DL.x, DL.y, DL.z, DL.r, DL.col, DL.k);
     // the plasma blade gives off its own light in the hand (blue, or the colour its owner picked)
     for (const p of F.peds) {
       if ((p.extra | 0) !== PLASMA_I || (p.flags & (PF.INVEH | PF.DEAD)) || p.blink === 3 || !inV(p.rx, p.ry)) continue;

@@ -4,6 +4,7 @@ import { PF, FACTION, TILE, K, WEATHER } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
 import * as skydive from './skydive.js';
+import * as surf from './surf.js';
 import * as tennis from './tennis.js';
 import * as prison from './prison.js';
 import * as aircraft from './aircraft.js';   // (at the controls of an aircraft)
@@ -36,9 +37,11 @@ import * as golf from './golf.js';
 import * as hoops from './hoops.js';
 import * as bowling from './bowling.js';
 import * as cinema from './cinema.js';
+import * as drivein from './drivein.js';
 import * as homes from './homes.js';
 import * as homeinside from './homeinside.js';
 import * as rentals from './rentals.js';
+import * as horses from './horses.js';
 import * as pets from './pets.js';
 import * as happenings from './happenings.js';
 import * as streetlife from './streetlife.js';
@@ -346,7 +349,7 @@ export function setAway(world, p, on) {
 // Called when the ghost timer expires (drop rule) or when leaving while dead.
 function finalizeLogout(world, p, dropLoot) {
   const ped = p.ped;
-  casino.leave(p);   // (a blackjack hand left on the table: the bet back - casino.js)
+  casino.leave(p);   // (a hand left on the table: played out and paid - casino.js)
   custody.saveJail(world, p);   // (in a cell: the time left goes with the character - back in it next time)
   if (ped && !ped.removed) {
     if (dropLoot) {
@@ -362,6 +365,7 @@ function finalizeLogout(world, p, dropLoot) {
   world.players.delete(p.pid);
   law.onPlayerGone(world, p);
   rentals.onPlayerGone(world, p);
+  horses.onPlayerGone(world, p);
 }
 
 // A name of your own (Settings' account section - the owner's M9 note: "a username"): a name may be (shared/names.js),
@@ -525,6 +529,15 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (pressed & IN.USE) economy.useHealItem(world, p);
 
   if (ped.sky) { skydive.input(world, p, ped, inp, pressed); return; }   // (falling from an aircraft: steering, the parachute - skydive.js)
+  if (ped.surf) {   // (on a surfboard: paddling, carving, an air - surf.js)
+    surf.input(world, p, ped, inp, pressed);
+    // lying on the board (or tumbling): the vehicle button still boards a boat beside you, the action button still does
+    // what's in front of you (surf.update takes the board off you once you're aboard)
+    const lying = ped.surf && (ped.surf.st === 'pad' || ped.surf.st === 'wipe');
+    if (lying && (pressed & IN.VEHICLE)) vehicles.playerEnter(world, ped);
+    else if (lying && (pressed & IN.ACTION)) doAct(world, p);
+    return;
+  }
   if (ped.onTrain) { trains.riderInput(world, p, ped, inp, pressed, dt); return; }
   if (ped.hoodOf) { carhits.hoodInput(world, ped, inp); return; }   // (riding a car's hood: move to roll off - carhits.js)
 
@@ -533,12 +546,13 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     if (!v) { ped.vehId = 0; ped.seat = -1; return; }
     if (ped.seat === 0) {
       if (v.def.kind === 'air') aircraft.input(world, v, inp, ped);   // (flying: shared/flight.js)
-      const di = driveInput(v, inp);
+      const di = driveInput(v, inp, v.def);
       v.input.throttle = di.throttle;
       v.input.steer = di.steer;
       v.input.hb = di.hb;
       v.input.slide = di.slide;
       v.input.drv = di.drv;
+      v.input.gallop = di.gallop;   // (on a horse, Sprint: a gallop - shared/physics.js)
       if (inp.bits & IN.HORN) v.hornUntil = world.time + 0.2;
       if ((pressed & IN.HORN) && (v.def.police || v.def.siren)) v.sirenOn = !v.sirenOn;   // (def.siren: a fire engine, an ambulance - H68)
       if (v.def.turret && (inp.bits & IN.FIRE)) tank.fire(world, v, ped);   // (the tank's cannon - tank.js)
@@ -657,6 +671,7 @@ export function findInteraction(world, p) {
   if (ped && !ped.dead && !ped.cuffed && custody.inCell(p)) return cells.interaction(world, p);   // (the bench, the toilet, the bars)
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
   if (ped.sky) return skydive.interaction(world, p);   // (up in the sky: the parachute)
+  if (ped.surf && ped.surf.st !== 'pad') return surf.interaction(world, p);   // (riding a wave: what the buttons do - surf.js)
   if (p.prison) return prison.interaction(world, p);   // (doing time on Prison Island: the wall - prison.js)
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
@@ -671,7 +686,7 @@ export function findInteraction(world, p) {
     if (hop) return hop;
     const fi = fishing.interaction(world, p);
     if (fi) return fi;
-    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped);   // (a boat sitting still: fish over the side)
+    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
@@ -803,6 +818,8 @@ export function findInteraction(world, p) {
   if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };
   const v = vehicles.nearestVehicle(world, ped, 56);
   if (v) return { label: vehicles.enterLabel(world, p, v), key: 'F', crime: vehicles.entryInfo(world, p, v).crime, key2: `veh:${v.id}`, run: () => vehicles.tryEnter(world, ped) };
+  const fh = !ped.board && horses.farmHorseNear(world, ped);   // a farm's horse grazing beside you: up on it bareback - the farm's, so horse theft (horses.js)
+  if (fh) return { label: 'Ride the horse bareback - Horse theft', key: 'F', crime: 'horseTheft', key2: `horse:${fh.id}`, run: () => vehicles.playerEnter(world, ped) };
   return transit.stopNote(world, p);   // at a bus stop with nothing else to do: the line and when its next bus comes
 }
 
@@ -939,8 +956,8 @@ export function buildMe(world, p) {
     blade: prof.blade | 0,   // the plasma blade's colour (shared/items.js BLADE_COLORS; looks.js setBlade)
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
-    radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p),
+    prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
+    radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p), horse: horses.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
     fishing: fishing.meInfo(p), creel: fishing.creelInfo(prof),   // (a line out: where, the rod, the fight's parameters once it's cast; the cooler's catch - fishing.js)
@@ -954,7 +971,7 @@ export function buildMe(world, p) {
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible, safety: safety.on(p),
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
     sk: skate.meInfo(world, p),   // (on a skateboard: the score, the combo, the special meter, a session - skate.js)
-    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p), tennis: tennis.meInfo(world, p), prison: prison.meInfo(world, p), bowl: bowling.meInfo(world, p), cine: cinema.meInfo(world, p),
+    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p), tennis: tennis.meInfo(world, p), prison: prison.meInfo(world, p), bowl: bowling.meInfo(world, p), cine: cinema.meInfo(world, p), din: drivein.meInfo(world, p),
     arrows: ped && world.arrows && world.arrows.length ? world.arrows.filter((a) => a.owner === ped.id && Math.abs(a.x - ped.x) < 1600 && Math.abs(a.y - ped.y) < 1600).slice(-16).map((a) => [Math.round(a.x), Math.round(a.y), +a.a.toFixed(2)]) : null,
   };
 }

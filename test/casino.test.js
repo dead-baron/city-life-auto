@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport, players } from './helpers.js';
-import { CASINO } from '../shared/rules.js';
+import { CASINO } from '../shared/rules-games.js';
 import * as casino from '../server/systems/casino.js';
 import * as economy from '../server/systems/economy.js';
 
@@ -121,7 +121,7 @@ test('a hand left on the table is still there when you come back; double down do
   assert.ok(lastMenu(conn).board, 'the table shown');
 });
 
-test('a hand left on the table when you go - another casino, logging off: the bet back', () => {
+test('a hand left on the table when you go - another casino, logging off: played out as it stands, never the bet back', () => {
   const w = makeWorld();
   const { p, prof } = joinPlayer(w);
   prof.cash = 1000; prof.bank = 0;
@@ -134,11 +134,97 @@ test('a hand left on the table when you go - another casino, logging off: the be
   const before = prof.cash, bet = p.casino.bj.bet;
   const b = aCasino(w, p);
   economy.openMenu(w, p, b);   // (the casino next door)
-  assert.equal(prof.cash, before + bet, 'the bet back');
+  assert.ok([0, bet, 2 * bet].includes(prof.cash - before), `the hand stood and settled (${prof.cash - before} back)`);
+  assert.ok(p.toasts.some((t) => /played out as you left/.test(t.text)), 'told how it went');
   assert.ok(!p.casino.bj && p.casino.poi === b.id);
   economy.handleMenu(w, p, b.id, 'cs:bj');
   for (let k = 0; k < 40 && !p.casino.bj; k++) economy.handleMenu(w, p, b.id, 'cs:deal');
   const c0 = prof.cash, bet2 = p.casino.bj.bet;
   casino.leave(p);   // (logging off: players.js finalizeLogout)
-  assert.equal(prof.cash, c0 + bet2);
+  assert.ok([0, bet2, 2 * bet2].includes(prof.cash - c0) && !p.casino.bj, 'logging off: settled too');
+  // over many hands walked away from, the house keeps its edge (a look at the cards is no free option)
+  let staked = 0, back = 0;
+  for (let k = 0; k < 400; k++) {
+    economy.handleMenu(w, p, b.id, 'cs:bj');
+    prof.cash = 1e6;
+    economy.handleMenu(w, p, b.id, 'cs:deal');
+    if (!p.casino.bj) continue;
+    const c1 = prof.cash; staked += p.casino.bj.bet;
+    casino.leave(p);
+    back += prof.cash - c1;
+  }
+  assert.ok(back < staked, `walking away: ${back} back of ${staked}`);
+});
+
+test('video poker: the hands read right, a deal, holds and the draw; jacks or better pays, a pair of tens does not', () => {
+  const H = (a) => casino.pokerHand(a);
+  // (cards: rank n % 13 - 0 the ace, 9 the ten, 10..12 the court; suit n / 13)
+  assert.equal(H([9, 10, 11, 12, 0]).x, CASINO.poker.royal, 'a royal');
+  assert.equal(H([0, 1, 2, 3, 4]).x, CASINO.poker.straightFlush, 'the wheel, suited');
+  assert.equal(H([13, 1, 2, 3, 4]).x, CASINO.poker.straight, 'the wheel');
+  assert.equal(H([9, 23, 37, 51, 0]).x, CASINO.poker.straight, 'ten to the ace');
+  assert.equal(H([0, 13, 26, 39, 5]).x, CASINO.poker.four);
+  assert.equal(H([10, 23, 4, 17, 30]).x, CASINO.poker.fullHouse);
+  assert.equal(H([1, 3, 5, 7, 11]).x, CASINO.poker.flush);
+  assert.equal(H([4, 17, 30, 1, 15]).x, CASINO.poker.three);
+  assert.equal(H([4, 17, 2, 15, 7]).x, CASINO.poker.twoPair);
+  assert.equal(H([10, 23, 2, 16, 7]).x, CASINO.poker.jacks, 'a pair of jacks');
+  assert.equal(H([9, 22, 2, 16, 7]).x, 0, 'a pair of tens: nothing');
+  // at the machine: deal, hold two, draw - the cards held stay
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  prof.cash = 1000;
+  const poi = aCasino(w, p);
+  casino.seed(5);
+  casino.open(w, p, poi);
+  assert.ok(casino.menu(w, p, poi).opts.some((o) => o.id === 'cs:vp'));
+  casino.execute(w, p, poi, 'cs:vp', economy.payFrom);
+  assert.equal(casino.execute(w, p, poi, 'cs:vdeal', economy.payFrom), null);
+  assert.equal(prof.cash, 1000 - CASINO.stakes[0]);
+  const C = p.casino, dealt = [...C.vp.cards];
+  casino.execute(w, p, poi, 'cs:hold:0', economy.payFrom); casino.execute(w, p, poi, 'cs:hold:3', economy.payFrom);
+  const m = casino.menu(w, p, poi);
+  assert.equal(m.opts.filter((o) => o.id.startsWith('cs:hold:')).length, 5);
+  assert.ok(m.board[0].items[0].c.includes('held'));
+  casino.execute(w, p, poi, 'cs:draw', economy.payFrom);
+  assert.equal(C.vp, null);
+  const after = C.board[0].items.map((i) => i.t);
+  const name = (c) => `${['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][c % 13]}${['♠', '♥', '♦', '♣'][Math.floor(c / 13)]}`;
+  assert.equal(after[0], name(dealt[0])); assert.equal(after[3], name(dealt[3]));
+  // a hand dealt and left (logging off): drawn with its holds and paid, never the bet back
+  casino.execute(w, p, poi, 'cs:vdeal', economy.payFrom);
+  const c0 = prof.cash;
+  casino.leave(p);
+  assert.ok([0, ...Object.values(CASINO.poker)].map((x) => x * CASINO.stakes[0]).includes(prof.cash - c0) && !C.vp, `played out (${prof.cash - c0})`);
+});
+
+test('video poker keeps the house\'s edge: the paytable is for one (a pair of jacks is your bet back)', () => {
+  // a sound simple strategy over many hands: hold what pays, else four to a flush, else the jacks-or-better cards
+  casino.seed(11);
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  const poi = aCasino(w, p);
+  casino.open(w, p, poi);
+  casino.execute(w, p, poi, 'cs:vp', economy.payFrom);
+  const holdFor = (cards) => {
+    const h = casino.pokerHand(cards), ranks = cards.map((c) => c % 13), suits = cards.map((c) => Math.floor(c / 13));
+    const n = (r) => ranks.filter((x) => x === r).length;
+    if (h.x >= CASINO.poker.straight && h.x !== CASINO.poker.three) return [0, 1, 2, 3, 4];
+    if (ranks.some((r) => n(r) >= 2)) return [0, 1, 2, 3, 4].filter((i) => n(ranks[i]) >= 2);
+    for (let su = 0; su < 4; su++) { const f = [0, 1, 2, 3, 4].filter((i) => suits[i] === su); if (f.length === 4) return f; }
+    return [0, 1, 2, 3, 4].filter((i) => ranks[i] === 0 || ranks[i] >= 10).slice(0, 2);
+  };
+  let staked = 0, back = 0, paid = 0;
+  for (let k = 0; k < 4000; k++) {
+    prof.cash = 1e6;
+    casino.execute(w, p, poi, 'cs:vdeal', economy.payFrom);
+    const C = p.casino, c0 = prof.cash;
+    for (const i of holdFor(C.vp.cards)) casino.execute(w, p, poi, `cs:hold:${i}`, economy.payFrom);
+    staked += C.vp.bet;
+    casino.execute(w, p, poi, 'cs:draw', economy.payFrom);
+    back += prof.cash - c0; if (prof.cash > c0) paid++;
+  }
+  const rtp = back / staked;
+  assert.ok(rtp > 0.8 && rtp < 1, `about ${(rtp * 100).toFixed(1)} cents back in the dollar`);
+  assert.ok(paid / 4000 > 0.3 && paid / 4000 < 0.5, `a hand pays now and then (${paid})`);
 });

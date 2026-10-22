@@ -153,6 +153,7 @@ export const EVENT_SOUNDS = {
   club: null,                                    // (a club's music on or off: sound/places.js plays it)
   // ---- doors and gates ----
   door: (ev, A) => A.at(near(A.S, ev.x, ev.y, K.VEH, 70) ? 'cardoor' : 'housedoor', ev.x, ev.y),
+  mount: (ev, A) => A.at('hoof', ev.x, ev.y, 0.5, { s: 'soft' }),   // (up on a horse or down off it: a stamp of its hoof - server vehicles.js)
   garagedoor: (ev, A) => { const h = A.S.map && A.S.map.homes && A.S.map.homes[ev.home]; const d = h && (h.garageDoor || h.garage); if (d) A.at('rollerdoor', d.x, d.y); },
   baydoor: (ev, A) => { const b = A.S.map && A.S.map.bays && A.S.map.bays[ev.i]; if (b) A.at('rollerdoor', (b.tx + b.tw / 2) * 32, (b.ty + b.th / 2) * 32); },
   gate: (ev, A) => { const g = A.S.map && A.S.map.gates && A.S.map.gates[ev.i]; if (g) A.at(g.club ? 'rollerdoor' : 'gate', g.x, g.y, 0.8); },
@@ -181,6 +182,7 @@ export const EVENT_SOUNDS = {
   heal: at('heal', 0.7),
   revive: at('revive'),
   splash: (ev, A) => A.at('splash', ev.x, ev.y, 1, { n: ev.n || 10 }),
+  whinny: (ev, A) => A.at('whinny', ev.x, ev.y, 1),   // (a horse bolting: server horses.js)
   // ---- money and things ----
   cash: at('cashtoss'),
   // the owner's weapons and the fall from the sky: a grenade thrown and bouncing (grenades.js), the flamethrower's roar

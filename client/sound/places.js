@@ -60,6 +60,9 @@ export class Places {
     if (kind && SONG_FOR[kind] && !(QUIET_SOME.has(kind) && hash(at.u.poi + 7) < 0.35)) song = SONG_FOR[kind];
     M.set('shop', song === 'shop' && scene === 'game' ? 0.5 : 0, 5200);
     M.set('lobby', song === 'lobby' && scene === 'game' ? 0.5 : 0, 6000);
+    // ---- the drive-in's score on its speakers (client/drivein.js: how loud and where) ----
+    const dn = S.dinSound;
+    M.set('drivein', dn && scene === 'game' ? dn.k : 0, dn ? dn.lp : 16000, dn ? dn.pan : 0);
     // ---- the nearest open club ----
     let club = null, cd = CLUB_HEAR;
     for (const c of this.clubs) {

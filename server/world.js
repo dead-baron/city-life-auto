@@ -39,6 +39,8 @@ import * as robbery from './systems/robbery.js';
 import * as heist from './systems/heist.js';
 import * as trains from './systems/trains.js';
 import * as rentals from './systems/rentals.js';
+import * as horses from './systems/horses.js';
+import * as racebook from './systems/racebook.js';
 import * as spikes from './systems/spikes.js';
 import * as pets from './systems/pets.js';
 import * as happenings from './systems/happenings.js';
@@ -66,8 +68,10 @@ import * as burning from './systems/burning.js';
 import * as tank from './systems/tank.js';
 import * as bowling from './systems/bowling.js';
 import * as cinema from './systems/cinema.js';
+import * as drivein from './systems/drivein.js';
 import * as aircraft from './systems/aircraft.js';
 import * as skydive from './systems/skydive.js';
+import * as surf from './systems/surf.js';   // (surfing: the breaks, the waves, the rides - #312)
 import * as grenades from './systems/grenades.js';
 import * as tennis from './systems/tennis.js';
 import * as k9 from './systems/k9.js';
@@ -117,6 +121,8 @@ const SYSTEMS = [
   ['ferries', ferries.update],      // the island ferries to their timetable, the cars on their decks
   ['boats', boats.update],          // NPC boaters + harbor police patrol boats
   ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen
+  ['horses', horses.update],        // hired horses' clocks; bolted horses gone once nobody's watching (#325)
+  ['racebook', racebook.update],    // the race book's races: the off, the result, the winners paid (#310)
   ['trains', trains.update],        // the rail loop: trains, riders, crossings, the mail-car strongbox
   ['police', police.update],        // NPC police dispatch / pursuit
   ['k9', k9.update],                // police dogs: riding along, let out, running suspects down (k9.js)
@@ -162,9 +168,11 @@ const SYSTEMS = [
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
   ['cinema', cinema.update],        // The Grand Theatre: the films in the screens, the audience
+  ['drivein', drivein.update],      // the Starlite Drive-In: who's watching (drivein.js)
   ['activities', activities.update], // people going about their lives: anglers, chess in the park, picnics, a painter (activities.js)
   ['aircraft', aircraft.update],    // helicopters and planes: the parked ones at their pads and stands, mid-air collisions (aircraft.js)
   ['skydive', skydive.update],      // people falling from aircraft: the fall, the parachute, the landing (skydive.js)
+  ['surf', surf.update],            // on a surfboard: paddling, catching a wave, riding it, the white water (surf.js)
   ['burning', burning.update],      // people on fire: burning down, going out, catching it from fire (H58)
   ['tank', tank.update],            // the tanks' turrets turning to their drivers' aim (H58)
   ['sar', sar.update],              // search and rescue pilots' shifts: the calls, the harness, the hand-over (H59)

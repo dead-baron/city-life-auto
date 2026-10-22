@@ -23,6 +23,8 @@ import * as burning from './systems/burning.js';
 import * as gangwar from './systems/gangwar.js';
 import * as cruiser from './systems/cruiser.js';
 import * as trains from './systems/trains.js';
+import * as surf from './systems/surf.js';
+import { SURF, breakPt } from '../shared/surf.js';
 import * as hotmoney from './systems/hotmoney.js';
 import * as devmode from './devmode.js';
 import * as pets from './systems/pets.js';
@@ -107,6 +109,8 @@ export const NEAR_KINDS = {
   casino: (m) => m.pois.filter((q) => q && isCasino(q)).map((q) => ({ x: q.x, y: q.y + 20, name: q.label })),
   pooltable: (m) => { const T2 = m.roadhouse ? activities.poolTable(m) : null; return T2 ? [{ x: T2.cx, y: T2.cy + 40, name: 'the Rusty Spur\'s pool table' }] : []; },
   dice: (m) => activities.spotsOf(m).list.filter((s) => s.k === 'dice').map((s) => ({ x: s.x, y: s.y, name: 'street dice down an alley', exact: true })),
+  // a surf break (surf.js): out in its water where the waves come up, a surfboard in the bag (the playtest gives one)
+  surf: (m) => surf.breaksOfMap(m).list.map((b) => { const q = breakPt(b, 0, SURF.brk + 70); return { x: q.x, y: q.y, name: 'a surf break', exact: true, give: 'surfboard' }; }),
   vault: (m) => (m.walkIns || []).map((id) => m.buildings[id]).filter((b) => b && vaultOf(b)).map((b) => { const v = vaultOf(b), q = m.pois[v.u.poi]; return { x: v.sx, y: v.sy, name: `${q ? q.label : 'a bank'}'s vault`, exact: true }; }),
 };
 // the stops of every line on the map (one each: a hub's stop is shared by the loops through it), those keep(stop, rail) takes
@@ -216,6 +220,7 @@ export function near(world, p, k) {
   if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
   if (ped.vehId) return '[dev] Get out of the vehicle first.';
   ped.sub = false; ped.ug = 0; ped.x = at.x; ped.y = at.y; ped.lz = 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;
+  if (best.give) p.profile.inventory[best.give] = Math.max(1, p.profile.inventory[best.give] || 0);   // (what the place needs: a surf break's board)
   if (best.craft) { // and the right craft in the water beside you
     const wat = standAt(world, at.x + Math.sign(best.x - at.x) * 40, at.y + Math.sign(best.y - at.y) * 40, 400, true);
     if (wat) { const v = world.spawnVehicle(best.craft, wat.x, wat.y, Math.atan2(best.y - wat.y, best.x - wat.x), { npcOwned: false }); v.issuedTo = p.pid; }

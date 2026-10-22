@@ -452,7 +452,7 @@ export const ATM_DEPOSIT_PX = 48;          // an ATM's reach (it used to bank yo
 // a fall - hurts this much at bailHit speed and up to the most at full speed, and you're down this long
 import { DRILL_PRICE } from './rules-base.js';
 export { DRILL_PRICE };
-export { SKATEBOARD_PRICE, PARACHUTE_PRICE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
+export { SKATEBOARD_PRICE, SURFBOARD_PRICE, PARACHUTE_PRICE, HORSE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
 // Skateboarding's score (server/systems/skate.js): a combo banked after comboGap s rolling on is its points x its tricks
 // (a trick again in the same combo: half); perS - a grind, grab, manual by the second; the special meter full at
@@ -857,13 +857,6 @@ export const HEIST = {
   drillPrice: DRILL_PRICE, drillS: 60, jams: 2, abandonS: 150, heat: 62, heatS: 0.4, responseS: [8, 14], units: 4, wave2S: 25,
   openS: 300, cooldownS: 1800, cash: 3000, reach: 46, xp: 60, seizeSam: 5,   // (seizeSam: Samaritan points for an officer who takes the drill off)
   load: { lux: [4, 4, 3, 3], suburb: [4, 3, 3], mid: [4, 3, 3], neon: [4, 3, 3], rural: [3, 3, 3], industrial: [3, 3, 3], red: [3, 3, 3], low: [3, 3], rough: [3, 3], wild: [3, 3] },
-};
-export const CASINO = {
-  slots: [5, 25, 100], stakes: [10, 50, 250, 1000], bjPays: 1.5, twoCherries: 3,
-  reel: {
-    CHERRY: { w: 6, three: 10, icon: '🍒' }, LEMON: { w: 7, three: 7, icon: '🍋' }, BELL: { w: 5, three: 14, icon: '🔔' },
-    BAR: { w: 4, three: 25, icon: 'BAR' }, SEVEN: { w: 2, three: 70, icon: '7' }, LOTUS: { w: 1, three: 300, icon: '❀' },
-  },
 };
 // skills (shared/skills.js, server/systems/skills.js): levelled 0..max by doing things - each activity earns xp for one
 // skill (xp a go: a blow landed, a crate picked up, a second sprinting or swimming or by a campfire, a km driven, a

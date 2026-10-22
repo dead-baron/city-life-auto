@@ -14760,3 +14760,176 @@ the chunks to bake before the train comes up) threw every frame. Its index of th
 first window's map; World v3's window holds only its own regions' points, so once the window moved on, the old index
 pointed past the new lists' ends. Each frame stopped there - nothing more drawn. Now the index is built afresh for each
 new window, and a point not held is skipped, never followed. Test: test/railahead.test.js (fails without the fix).
+
+## 2026-10-22 · The subway in the new art
+
+The owner, 10-22 (and 10-08, 10-16): riding the subway "looks like placeholder art". Under the city the page still drew
+the classic renderer's tunnel view - a flat dark band, a lamp glow every few metres and the old flat train. Now the new
+renderer draws the tunnel itself (client/art2/game/tunnel.js), lit by its own lamps:
+- the floor: concrete between the walls, the dark ballast of each track's bed with its sleepers and the two steel rails
+  (each way's loop its own track: World v3's Pink and Yellow Lines, and the main line where it runs under the towns);
+- the walls in the 3/4 view: the north wall face on - grimy concrete in panels, a cable run along it, a lamp every
+  150 px - the south wall's top in front of the floor's edge, as a wall would hide it; on the walls that run north-south
+  the lamps' fittings hang where you'd see them;
+- the stations: a raised platform beside each underground station's track, on the side its trains open, a train long,
+  tiled, the yellow line at its edge, pillars to the roof and benches down the back, the platform's own lamps, and the
+  station's name on blue signs;
+- the earth the tunnel is cut through, dark, with the streets overhead ghosted on it (the 10-07 note: "subway under the
+  world: ghosted street");
+- the light: no sky, a faint cold fill; the wall lamps' warm pools slide over the train as it runs, the coaches' own
+  light and the headlamp's beam ahead of it - the train and its riders are the new renderer's own sprites now.
+The tunnel's chunks are baked on the page (nothing to fetch: about 15 ms a chunk here, one or two a frame - one on a
+phone) and kept as a layer of their own in the engine (engine.js chunk layers: 0 the city's, 1 the tunnel's - the city's
+chunks stay resident under it, and the way ahead keeps baking, so the town is there when the train comes up). Until the
+tunnel's code is in (it loads the first time anyone goes under the city) the classic tunnel view stands in. None of the
+city's own marks (the station clocks, the shop symbols, the rain, the fireflies) are drawn down there.
+Tests: test/tunnelart.test.js - the floor, ballast and rails, the north wall's face, the earth with the street
+ghosted on it, the south wall's top in front; a station's raised platform, its yellow line, its name; the lamps on the
+outer walls only and glowing; a chunk's bake time.
+
+## 2026-10-22 · Surfing
+
+The owner's #312 (10-08). A surfboard ($160 at the surf shops - Salt & Swell, Island Threads - and the sports shops) and
+the sea:
+- **On the board.** In the sea with a board in your bag you lie on it and paddle - faster than you swim; up the beach
+  you're off it and it's back in your bag.
+- **The breaks.** Where a straight sandy beach faces the open sea (shared/surf.js findBreaks: open water out in front as
+  far as the waves rise, the waterline straight along at least 14 tiles of beach) the waves roll in, in sets - three,
+  four and a half seconds apart, then a lull - rising some 22 tiles out, steepening, starting to break 11 tiles out from
+  one end of the beach, the break peeling along the crest toward the other, washing up on the sand. The page draws them
+  on the water in the new art (client/art2/game/surfart.js: the bright lip of the crest and the dark face in front of it
+  while it's green, churning white water where it has broken), from the same arithmetic and the same clock - the
+  world's tick - as the server rides you on them, so what you see is what's there.
+- **Catching one.** Paddle for the beach as a wave comes, where it hasn't broken: it rolls in faster than you paddle, so
+  its crest catches you up, and you're up.
+- **Riding it.** The wave carries you in; the stick carves you along the face, left or right along the beach. The points
+  come for every second up, for your speed along the face, and most of all for riding in the pocket just ahead of the
+  break; a carve (a quick turn back) and an air off the lip (the action button, a second's riding between one and the
+  next - and land in the white water and it has you all the same) are worth more. Stay in the white water
+  behind the break and it has you - a tumble, the ride over. Ride it in, or off the end of the beach (where the beach
+  bends away the ride ends there, on the water), and the ride's counted: its points over you, your best ride kept (the HUD: RIDING and the points, BEST RIDE under them).
+- **Getting off.** Paddle up onto the sand, a dock or a quay and the board's back in your bag; lying on it, the vehicle
+  button still takes you aboard a boat beside you and the action button still does what's in front of you.
+- **How you look.** Lying on the board paddling, up side-on with the knees deep and the arms out, knees tucked in an air
+  (client/art2/people.js surfpad, surf, surfair; the descriptor's sf) - on a long white board with an orange stripe.
+The server steps it all (server/systems/surf.js: ped.surf, like the parachute's fall: your page draws you from the
+snapshots). Paddling and riding practise the swimming skill. The playtest panel's Events & sport section takes you out to
+a break, a board in your bag.
+Tests: test/surf.test.js - the waves (sets, the break from one end peeling along, the same at the same moment), the
+breaks (sand behind, open sea in front), a ride (on the board, catching a wave, carving, an air, counted, off the board
+up the beach), paddling in well ahead of a wave and it still catches you up, the white water, airs no faster than one a
+second and never carried far past the beach, the vehicle button from the board.
+The breaks are found as the server starts (most of a second on World v3) and sent to everyone near the sea, so a surfer
+riding by is seen on the waves by everyone on the beach.
+
+The subway in the new art, from a review: riding on into another window of the world (the map swapped as the train runs
+on), the tunnel's chunks stay on screen and are baked again from it, after the missing ones (they were all dropped - a
+blank tunnel at a region's edge); none of the surface's birds, ride cars or finds drawn underground.
+
+## 2026-10-22 · Horses
+
+The owner's #325 (10-08). The farms' horses were scenery. Now they're ridden (server/systems/horses.js; the horse a
+vehicle of its own, shared/vehicles.js horse; the numbers shared/rules.js HORSE):
+- **Riding.** Like a bike - but four legs: a canter, or spurred to a gallop (Sprint: Shift, RT all the way down, the
+  thumb all the way out) while its wind lasts - some ten seconds flat out, then it's blown and canters till it has its
+  breath back (a walk or standing brings it back quickest; the HUD's bar low in the middle of the screen). At home on any ground (grass,
+  dirt and sand don't slow it), never into the water (it stops at the shore; a bridge it crosses), no skids, burnouts or
+  donuts (shared/physics.js: its gaits and its wind, predicted on your page as the server rides it), no lamps at night.
+- **The farms' horses**, each in its own coat now (chestnut, bay, black, grey, palomino, a paint), can be ridden off
+  bareback: the vehicle button beside one - they're the farm's, so that's horse theft (Safety mode asks first).
+- **The farm co-ops** (Willow Valley's, Dry Creek's) keep riding horses: hire one saddled ($25, ten minutes - hand it back
+  at a co-op, or leave it and it finds its own way home; kept well past the time it's reported stolen), or buy one of the
+  three in the paddock today ($1,800 - yours, kept with your vehicles, saddled up again at any co-op or your garage).
+- **Hurt**, a horse doesn't burn or blow up: out of health (shot, ridden hard into a wall) it throws whoever's on it and
+  bolts, off at a gallop away from whatever hurt it - a whinny - gone once nobody's watching (a hired one home, yours
+  back at the co-op).
+- **How it looks and sounds**: the farm animal's own model in its coat, saddled (the blanket, the saddle with its horn
+  and cantle, the fenders and stirrups, a bridle and the reins - client/art2/animals.js 'horse:s<coat>'), its legs in
+  step with its speed, its head down to graze when it stands; the rider astride ('saddle' - people.js), rising with the
+  gallop. Hoofbeats instead of an engine - a walk's four, a canter's three, a gallop's drum - clopping on roads and quays,
+  thudding on grass (client/sound/vehicles.js hooves); the whinny as it bolts.
+The playtest panel's bikes section has a horse beside you, you up on one, and the nearest farm co-op.
+Tests: test/horses.test.js - the canter and the gallop, blown and rested, no skids; never into the water; a farm's horse
+ridden off (its coat, horse theft); the co-op's hire and handing back, buying one; out of health it throws you and
+bolts, never a wreck.
+Fixes from a review, the same day: a hired horse can't be kept in a garage; two hires at a co-op both wait (the
+second no longer cleared the first away); a horse that has bolted is nobody's - its hire over, nobody gets back on it -
+and gone once out of sight; a horse standing still gets its wind back on the server too (it wasn't stepped), and the
+page has its wind from every snapshot (it lost it at each one - the bar stayed full, a blown horse's gallop was
+predicted and corrected); the art v2 sprites keep each coat and the saddle (they were all the plain chestnut); no
+smoke, skid marks or tail lights from a horse, no respray of one, none parked in a garage's bays.
+
+## 2026-10-22 · The race book: horse racing at Lucky Mesa's casinos
+
+The owner's #310 (10-08, "horse racing"; the gambling row's last piece but the cockfights). The casinos' floors have the
+race book now (server/systems/racebook.js; the races: shared/racebook.js; the numbers: shared/rules-games.js RACEBOOK):
+- **The races** are run at the track out east - Lucky Mesa Downs - and shown in the casinos: one every two and a half
+  minutes of the world's clock, the same race for everyone on the server. Each is posted with its field of six (invented
+  names, their silks, each with its class and its way of running: a front-runner quick away and tiring, a closer coming
+  late) and the book's odds - worked out by running the race over a few hundred times, the house's edge taken off, written
+  up as a bookmaker would (5-2, 11-4, evens).
+- **Betting**: win bets till the off - pick the winner, $10 to $1,000, three bets a race - at the odds posted.
+- **The off**: the book draws the race's luck then (the system's own randomness - nobody can know the result before it's
+  run); the race is run once on the server and the same way on every page watching (each horse's pace from its class,
+  its style, how it's going on the day, its luck through the race, now and then a stumble).
+- **Watching**: "Watch the race" puts it on the arcade's little screen (client/racebook.js, loaded the first time): the
+  oval, the runners in their silks, the board with the odds and where each is running, the call ("And they are off!",
+  "Into the straight..."), your horses starred - and what you collected.
+- **Paid** as the winner crosses the line, in cash, at the odds you took - into your account if you've gone.
+The book prices each race from 2,400 runs of it - a few at a time on the server while the race before is on, so it never
+holds up the world - each runner's chance eased toward the field's share and never under 1 in 40, the longest odds 33-1:
+no runner is a good bet, the long shots included. About 80 cents in the dollar comes back to the punters; the favourite
+wins a little over a third of them. A bet on the next race from a menu left open over the off is refused (the bets name
+their race); the server going down calls off the races not yet settled, every bet back.
+Tests: test/racebook.test.js - the field the same for anyone, a race run alike from its seed, the house's edge, no runner
+a good bet, the favourites' share, the pricing a few runs at a time the same as all at once; betting till the off (three a race, the stakes), the seed at the off, the winners paid at their odds (one
+who'd gone too), the page's race the server's; the floor's race book and a bet from its menu. tools/racebook-preview.html
+shows the screen at any moment of a race.
+
+## 2026-10-22 · Video poker on the casino floor
+
+More of the owner's "casinos and card games" (#309): a video poker machine on every casino's floor (server/systems/
+casino.js; the paytable shared/rules-games.js CASINO.poker) - Jacks or Better. Deal five cards for the stake, hold the ones
+you like (tap them on the menu: they rise and light up), draw once, paid on what you end with - "for one", the bet
+included: a royal flush 250x the bet, a straight flush 50x, four of a kind 25x, a full house 8x, a flush 5x, a straight 4x,
+three of a kind 3x, two pair 2x, a pair of jacks or better your bet back (8/5: about 96 cents back in the dollar played
+well). A hand dealt and left (another casino, logging off, the server restarting) is drawn with the cards you held and
+paid - and a blackjack hand left on the table is played out as it stands (you stand) - never the bet back: a look at the
+cards was a free option to walk away from the bad ones.
+The race book's board shows each runner's name in full now (the board's rows can be wide).
+Tests: test/casino.test.js - every hand read right (the wheel, ten to the ace, tens no good), a deal, holds kept through the
+draw, the house's edge over 4,000 hands of a simple strategy; a hand left, played out (walking away from hands is no way
+to beat the house).
+
+## 2026-10-22 · Films at the Starlite Drive-In
+
+The owner's #322 (drive-in theatres): the Starlite Drive-In on Route 9 had its screen, speaker posts and stalls but
+nothing on. Now it shows films after dark (the bill: shared/drivein.js; the server: server/systems/drivein.js; the page:
+client/drivein.js; the admission: shared/rules-games.js DRIVEIN):
+- **The bill**: five features a night, the first as dark falls, one after another with a ten-second intermission
+  between, the last running out into the dawn - the same for everyone on the server, from the world's clock, and a
+  different run each night. The drive-in's own creature features and westerns - Attack of the 50-Foot Cactus, Saucers
+  Over the Mesa, Showdown at Dry Creek, Beach Blanket Bonanza - and The Grand Theatre's four, drawn as plain shapes of
+  coloured light like the Grand's (client/cinema.js film: new shots for each - a cactus stomping a little town under the
+  searchlights, a cow beamed up into a saucer, two gunfighters at sundown and the draw, a surfer on the face of a wave).
+  Between features the intermission card: what's next, how long till it, a popcorn box and a soda dancing for the snack
+  bar.
+- **On the screen** for anyone in sight of it (art v2: drawn over the screen's sheet; the classic view's too). Its light
+  falls over the lot, changing colour with the picture, and its score - a slow doo-wop, a new song for the speakers
+  (client/sound/music.js 'drivein') - is heard faintly across the lot.
+- **Tune in**: pull into a stall facing the screen, stop, and press interact - the speaker on the window, $8 a car for
+  the night (the others in your car ride on your ticket; come back later that night for nothing). The camera eases back
+  to take in the screen from your stall, the score comes up clear, the HUD tracker counts down the film. Get out, drive
+  off ("you pull out with the speaker still on the window - clunk") or go down and it ends; the night's last feature
+  over, you're wished a safe drive home.
+Tests: test/drivein.test.js - the bill (dusk, the intermissions, the late show past the turn of the loop, the dawn, a new
+run each night); tuning in from a stall (by day, facing away), the admission, the passenger on the car's ticket, the
+next feature, driving off, back for nothing, the night's end; who the page tells what's on.
+
+Also in this batch: a horse carries a crate now - one, behind the saddle, like a motorbike's rear mount (every vehicle
+carries crates: test/gameplay.test.js). The page's code budget goes 494 -> 496 KB (tools/perf.mjs) for the horses -
+riding one is predicted on the page like any vehicle (the gaits, the wind, turning on the spot: shared/physics.js) and
+its stamina rides in the self record - and the drive-in's hooks; to make room the riding HUD (the surf points, the
+horse's wind) moved to client/ridehud.js, loaded the first time you're on a board or a horse, and the casinos', the race
+book's and the drive-in's numbers moved from shared/rules.js (which every page loads at once) to shared/rules-games.js
+(the server's and the screens' that load later): 494.6 KB.

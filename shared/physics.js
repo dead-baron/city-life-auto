@@ -2,7 +2,8 @@
 // exact same functions to predict its own character/vehicle between snapshots.
 
 import { TILE, PED_RADIUS, T } from './constants.js';
-import { PED_BLOCK, SWIM_BLOCK, ROCK_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, SURFACE } from './mapcore.js';
+import { PED_BLOCK, SWIM_BLOCK, ROCK_BLOCK, WATER_T, CAR_BLOCK, BOAT_BLOCK, HORSE_BLOCK, SURFACE } from './mapcore.js';
+import { HORSE } from './rules-base.js';
 import { IN } from './input.js';
 import { clamp, wrapAngle, obbBounds, obbVsAabb, circleVsObb } from './math.js';
 import { levelStep, GROUND_Z, LAND_IMPACT } from './levels.js';
@@ -240,16 +241,17 @@ export function vehStep(s, inp, dt, map, def, env) {
   const speed = Math.hypot(fwd, lat);
   const steering = Math.abs(steer) > 0.2;
   const tracked = !!def.tracks;   // (a tank: it turns on the spot, its tracks never slide - H58)
-  const brakeSlide = !isBoat && !tracked && fwd > 160 && steering && !!inp.slide;
-  const burnout = !isBoat && !tracked && !!inp.hb && t > 0.5 && !steering && Math.abs(fwd) < 70;
-  const donut = !isBoat && !tracked && !!inp.hb && t > 0.5 && steering && speed < 240;
+  const hoof = !!def.horse;   // (a horse: hooves, not tyres - no skids, burnouts or donuts)
+  const brakeSlide = !isBoat && !tracked && !hoof && fwd > 160 && steering && !!inp.slide;
+  const burnout = !isBoat && !tracked && !hoof && !!inp.hb && t > 0.5 && !steering && Math.abs(fwd) < 70;
+  const donut = !isBoat && !tracked && !hoof && !!inp.hb && t > 0.5 && steering && speed < 240;
   const braking = t < -0.05 && fwd > 15;
   const powering = t > 0.6 && fwd > 40;
   // power oversteer: a person flooring it through a tight turn at a decent lick lights up the rear
-  const powerOver = human && t > 0.85 && Math.abs(steer) > 0.7 && fwd > def.max * 0.3;
+  const powerOver = human && !hoof && t > 0.85 && Math.abs(steer) > 0.7 && fwd > def.max * 0.3;
   // -- the drift state (0 gripping .. 1 fully sideways) --
   let drift = s.slip || 0;
-  if (!isBoat && !tracked) {
+  if (!isBoat && !tracked && !hoof) {
     const loose = (inp.hb && speed > 110) || brakeSlide || powerOver || (human && Math.abs(lat) > DRIFT_ENTER && speed > 180);
     if (loose) drift = Math.min(1, drift + 5 * dt);
     else if (Math.abs(lat) < DRIFT_EXIT || speed < 90) drift = Math.max(0, drift - 4 * dt);
@@ -265,7 +267,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   let turnTarget;
   if (donut) turnTarget = Math.sign(steer) * def.turn * 1.45;
   else if (burnout) turnTarget = 0;
-  else if (tracked) turnTarget = def.turn * steer * (1 - 0.3 * clamp(speed / def.max, 0, 1));   // (one track forward, one back: round on the spot)
+  else if (tracked || hoof) turnTarget = def.turn * steer * (1 - 0.3 * clamp(speed / def.max, 0, 1)) * (hoof ? 1 - 0.45 * clamp(speed / def.max, 0, 1) : 1);   // (one track forward, one back: round on the spot - a horse too, wider at a gallop)
   else {
     const bite = braking ? 1.12 : powering ? 0.93 : 1;                     // weight on the nose / on the tail
     const turnMul = inp.hb ? (isBoat ? 1.3 : 1.6) : brakeSlide ? 1.5 : 1;
@@ -291,7 +293,10 @@ export function vehStep(s, inp, dt, map, def, env) {
   lat = -s.vx * sn + s.vy * c;
 
   // -- longitudinal: engine, brakes, burnouts --
-  const maxEff = def.max * surfSpeed * (s.flat ? 0.45 : 1);
+  // a horse canters unless spurred to a gallop, and only while its wind lasts (s.stam: 1 fresh .. 0 blown; s.blown until
+  // it's got a third of it back) - galloping wears it down, a walk or standing still brings it back, a canter slowly
+  const gait = hoof ? (horseWind(s, def, inp.gallop, fwd, dt) ? 1 : HORSE.canter) : 1;
+  const maxEff = def.max * surfSpeed * gait * (s.flat ? 0.45 : 1);
   // analog throttle also sets a cruising speed: a light push drives slowly, full stick flat out
   const cap = maxEff * Math.min(1, 0.18 + 0.82 * Math.abs(t));
   let launch = s.launch || 0, spin = s.spin || 0;
@@ -334,11 +339,26 @@ export function vehStep(s, inp, dt, map, def, env) {
   s.vx = c * fwd - sn * lat;
   s.vy = sn * fwd + c * lat;
   if (isBoat && inp.drv) { const f = flowAt(map, s.x, s.y); if (f) { s.x += f[0] * dt; s.y += f[1] * dt; } }   // (a boat under way drifts with the river: flow.js - never one tied up)
+  const x0 = s.x, y0 = s.y;
   s.x += s.vx * dt; s.y += s.vy * dt;
   edgeBrake(s, map.frame);   // (out past the world's edge: slowed, and stopped at its end - border.js)
-  const hit = collideVehicleTiles(s, def, map, isBoat ? BOAT_BLOCK : CAR_BLOCK);
+  const hit = collideVehicleTiles(s, def, map, isBoat ? BOAT_BLOCK : hoof ? HORSE_BLOCK : CAR_BLOCK);
+  // (a horse at a ragged shore at a gallop, squeezed onto the water between the tiles it was pushed off: it stops dead
+  // where it stood instead - it never steps into the water)
+  if (hoof && WATER_T[map.tileAtPx(s.x, s.y)] && !up(s)) { s.x = x0; s.y = y0; s.vx = 0; s.vy = 0; return Math.max(hit, 1); }
   if (!map.levels || isBoat) return hit;
   return Math.max(hit, levelStep(map, s, def.W / 2, true));
+}
+
+// A horse's wind (s.stam: 1 fresh .. 0 blown; s.blown until it's got a third of it back): galloping (spurred, going
+// faster than a canter) wears it down, a walk or standing still brings it back, a canter slowly. Whether it gallops.
+// (vehStep's, and the server's for a horse standing still - it isn't stepped then: server vehicles.js stepVehicle)
+export function horseWind(s, def, gallop, fwd, dt) {
+  const st = s.stam ?? 1, gal = !!gallop && !s.blown && st > 0;
+  if (gal && fwd > def.max * HORSE.canter * 0.95) s.stam = Math.max(0, st - dt / HORSE.galS);
+  else s.stam = Math.min(1, st + dt / (HORSE.backS * (Math.abs(fwd) > def.max * HORSE.canter * 0.5 ? 3 : 1)));
+  if (s.stam <= 0) s.blown = true; else if (s.blown && s.stam > 0.33) s.blown = false;
+  return gal;
 }
 
 // A vehicle whose engine has died (out of health): no power, the brakes dragging it to a stop, the wheel still turns.
@@ -351,7 +371,21 @@ export function deadInput(s, steer = 0, hb = false) {
 // pushed; steering turns the car toward the stick. Point well behind the car to brake, then reverse
 // (the rear swings toward the stick). Tank mode (IN.TANK, optional for keyboards): up/down = gas /
 // brake, left/right = steer, like the classic games.
-export function driveInput(s, inp) {
+export function driveInput(s, inp, def = null) {
+  const di = def && def.horse ? horseInput(s, inp) : driveInput0(s, inp);
+  di.gallop = !!(inp.bits & IN.SPRINT);   // (on a horse: spurred to a gallop)
+  return di;
+}
+// a horse: the stick points where to go and it turns that way (on the spot if it must - no backing up), easing off to
+// a walk through a sharp turn
+function horseInput(s, inp) {
+  const m = Math.min(1, Math.hypot(inp.mx, inp.my)), hb = !!(inp.bits & IN.DIVE);
+  if (inp.bits & IN.TANK) return { throttle: Math.max(0, -inp.my), steer: inp.mx, hb, slide: false, drv: true };
+  if (m < 0.08) return { throttle: 0, steer: 0, hb, slide: false, drv: true };
+  const d = wrapAngle(Math.atan2(inp.my, inp.mx) - s.a);
+  return { throttle: m * (Math.abs(d) > 1.3 ? 0.25 : Math.abs(d) > 0.6 ? 0.7 : 1), steer: clamp(d * 2.4, -1, 1), hb, slide: false, drv: true };
+}
+function driveInput0(s, inp) {
   const hb = !!(inp.bits & IN.DIVE);
   if (s.dead) { // the engine has cut out: it only rolls to a stop (the wheel still turns)
     const m = Math.hypot(inp.mx, inp.my);

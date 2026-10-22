@@ -81,6 +81,15 @@ export const INSTR = {
     if (s.squeak && R() < 0.12) E.tone(o, t + 0.03, vary(2400, 0.2), 0.05, vv * 0.05, { type: 'sine', f2: 2900 });
     return Math.max(s.dur * 1.2, s.ring ? 0.2 : s.swish ? 0.14 : 0.09);   // (how long it really sounds: the voice is free right after)
   } },
+  // a horse's hoof (#325; client/sound/vehicles.js hooves: the beat of its gait): a ringing clop on a road or a quay, a
+  // dull thud on grass, dirt and sand
+  hoof: { pri: AMBIENT, range: 760, cache: 6, cacheLen: 0.2, cacheKey: (p) => (p.s === 'soft' ? 'soft' : 'hard'), cacheP: (p) => ({ s: p.s === 'soft' ? 'soft' : 'hard' }), play(E, o, t, v, p) {
+    const vv = v * rr(0.8, 1.1);
+    if (p.s === 'soft') { E.tone(o, t, vary(105, 0.1), 0.08, vv * 0.45, { type: 'sine', f2: 58 }); E.noise(o, t, 0.06, vv * 0.35, { ft: 'lowpass', f: vary(650, 0.15) }); return 0.12; }
+    E.tone(o, t, vary(760, 0.08), 0.045, vv * 0.22, { type: 'triangle', f2: 520 }); E.noise(o, t, 0.03, vv * 0.45, { ft: 'bandpass', f: vary(1900, 0.12), q: 2.2 });
+    E.tone(o, t, vary(140, 0.1), 0.05, vv * 0.25, { type: 'sine', f2: 80 });
+    return 0.1;
+  } },
   twig: { pri: MINOR, range: 600, gap: 0.08, cache: 4, cacheLen: 0.12, play(E, o, t, v) { E.noise(o, t, 0.012, v * 0.6, { ft: 'highpass', f: vary(2500) }); E.noise(o, t + rr(0.01, 0.03), 0.02, v * 0.45, { ft: 'bandpass', f: vary(1300), q: 2 }); E.tone(o, t, vary(700, 0.2), 0.02, v * 0.08, { type: 'square', f2: 300 }); return 0.1; } },
   leaves: { pri: AMBIENT, range: 520, cache: 4, cacheLen: 0.3, play(E, o, t, v) { E.noise(o, t, rr(0.12, 0.22), v * 0.3, { color: 'pink', ft: 'bandpass', f: vary(3000, 0.2), q: 0.6, a: 0.02 }); clicks(E, o, t, 4, 0.12, v * 0.2, 2500, 5000, 0.008); return 0.3; } },
   roll: { pri: NORMAL, range: 700, gap: 0.2, play(E, o, t, v) { E.noise(o, t, 0.22, v * 0.25, { color: 'pink', ft: 'bandpass', f: 900, f2: 500, q: 0.7, a: 0.05 }); E.tone(o, t + 0.2, 90, 0.12, v * 0.35, { type: 'sine', f2: 50 }); E.noise(o, t + 0.2, 0.08, v * 0.3, { ft: 'lowpass', f: 600 }); return 0.4; } },
@@ -239,6 +248,15 @@ export const INSTR = {
   growl: { pri: NORMAL, range: 1000, gap: 0.6, play(E, o, t, v) { E.noise(o, t, 0.7, v * 0.5, { ft: 'bandpass', f: vary(170), q: 1.4, a: 0.06 }); E.tone(o, t, vary(68), 0.7, v * 0.22, { type: 'sawtooth', f2: 50, lp: 400, vib: 80 }); return 0.75; } },
   screech: { pri: NORMAL, range: 1000, gap: 0.8, play(E, o, t, v) { E.tone(o, t, vary(980), 0.55, v * 0.07, { type: 'sawtooth', f2: 420, lp: 3000 }); E.noise(o, t, 0.45, v * 0.12, { ft: 'bandpass', f: 2400, q: 2 }); return 0.6; } },
   honk: { pri: MINOR, range: 900, gap: 0.3, play(E, o, t, v) { E.tone(o, t, vary(330), 0.14, v * 0.08, { wave: 'reed', f2: 290 }); E.tone(o, t + 0.18, vary(310), 0.16, v * 0.08, { wave: 'reed', f2: 260 }); return 0.36; } },
+  // a horse's whinny (#325: one bolting, spurred off from a stand): a high nasal call falling and quavering, a snort after
+  whinny: { pri: NORMAL, range: 1300, gap: 1.5, play(E, o, t, v) {
+    const f = rr(820, 980);
+    E.tone(o, t, f, 0.75, v * 0.1, { wave: 'reed', f2: f * 0.55, lp: 2600, vib: 18, a: 0.04 });
+    E.tone(o, t, f * 1.5, 0.6, v * 0.035, { wave: 'saw8', f2: f * 0.8, lp: 3000, vib: 18, a: 0.04 });
+    E.noise(o, t, 0.7, v * 0.12, { ft: 'bandpass', f: 1400, f2: 900, q: 1.2, a: 0.05 });
+    E.noise(o, t + 0.8, 0.18, v * 0.2, { ft: 'bandpass', f: 600, q: 0.9, a: 0.01 });   // (the snort)
+    return 1.05;
+  } },
   bellow: { pri: NORMAL, range: 1300, gap: 1, play(E, o, t, v) { E.tone(o, t, vary(150), 0.9, v * 0.12, { wave: 'reed', f2: 105, lp: 700, a: 0.08 }); return 0.95; } },
   flutter: { pri: MINOR, range: 900, gap: 0.25, play(E, o, t, v) { for (let k = 0; k < 7; k++) E.noise(o, t + k * vary(0.045), 0.05, v * 0.15, { ft: 'bandpass', f: vary(1700), q: 1.4 }); return 0.4; } },
   poof: { pri: MINOR, range: 700, gap: 0.1, play(E, o, t, v) { E.noise(o, t, 0.3, v * 0.25, { color: 'pink', ft: 'bandpass', f: 600, f2: 2000, q: 0.6, a: 0.02 }); return 0.32; } },

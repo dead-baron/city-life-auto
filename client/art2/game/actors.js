@@ -320,6 +320,7 @@ export function animalKind(kind) {
   const [base, v] = k.split(':');
   if (PET_ART[base]) return PET_ART[base];
   if (!ANIMALS[base] && !BIRDS[base]) return 'golden';
+  if (base === 'horse' && v && /^[sc]\d$/.test(v)) return `horse:${v}`;   // (a horse's coat, saddled or not: animals.js - #325)
   return v === 'y' || v === 'L' || (v === 'f' && BIRDS[base]) ? `${base}:${v}` : base;   // (':f' a hen: the quail's plain brown hen)
 }
 const animPose = (pose) => (ANIMAL_FRAMES[pose] ? pose : pose === 'move' ? 'walk' : 'idle');

@@ -43,6 +43,14 @@ export const SONGS = {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       81, _, 79, 77, _, 76, _, _, 74, _, 76, 77, _, 79, _, _, 77, _, 76, 74, _, 72, _, 74, 76, _, _, _, 0, 0, 0, 0] },
     drums: { shaker: 'xxxxxxxx', brush: '..x...x.' }, drumVol: 0.5 },
+  // the drive-in's score on the speaker posts (sound/places.js, client/drivein.js): a slow doo-wop in C, the piano's
+  // triplets under a soft lead, I-vi-IV-V
+  drivein: { bpm: 68, steps: 12, bars: 8, echo: 0.35,
+    chords: ['C', 'Am', 'F', 'G', 'C', 'Am', 'F', 'G'], bassPat: [1, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0], compPat: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    lead: { inst: 'lead', vol: 0.05, notes: [
+      72, _, _, _, _, _, 76, _, _, 79, _, _, 81, _, _, _, _, _, 79, _, _, 76, _, _, 77, _, _, _, _, _, 76, _, _, 74, _, _, 74, _, _, _, _, _, _, _, _, 0, 0, 0,
+      76, _, _, 79, _, _, 84, _, _, _, _, _, 81, _, _, 79, _, _, 76, _, _, 72, _, _, 74, _, _, 77, _, _, 76, _, _, 74, _, _, 72, _, _, _, _, _, _, _, _, 0, 0, 0] },
+    drums: { brush: '...x.....x..', tick: 'x..x..x..x..' }, drumVol: 0.45 },
   // a lobby (the bank, the hospital): slow vibes over a pad, nothing to hurry anyone
   lobby: { bpm: 78, steps: 8, bars: 8, echo: 0.3,
     chords: ['Cmaj7', 'Am7', 'Dm7', 'G7', 'Cmaj7', 'Am7', 'Fmaj7', 'G7'], bassPat: [1, 0, 0, 0, 2, 0, 0, 0], padVol: 0.016,

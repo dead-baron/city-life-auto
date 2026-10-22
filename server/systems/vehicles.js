@@ -1,7 +1,7 @@
 // Vehicle physics, seats (multi-passenger binding), collisions, ped strikes, wrecks.
 import { K, T, VF, WEATHER } from '../../shared/constants.js';
 import { ugMapOf } from '../../shared/underground.js';
-import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput } from '../../shared/physics.js';
+import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput, horseWind } from '../../shared/physics.js';
 import { obbVsObb, circleVsObb, localToWorld } from '../../shared/math.js';
 import { PED_BLOCK, WATER_T } from '../../shared/map.js';
 import { sameLevel, levelStep } from '../../shared/levels.js';
@@ -29,7 +29,7 @@ export function speedOf(v) { return Math.hypot(v.vx, v.vy); }
 export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHER.RAIN }) {
   if (v.def.kind === 'air') { aircraft.step(world, v, dt); return; }   // (flying: shared/flight.js, aircraft.js)
   const moving = Math.abs(v.vx) + Math.abs(v.vy) > 0.5 || Math.abs(v.input.throttle) > 0.05;
-  if (!moving) return;
+  if (!moving) { if (v.def.horse && (v.stam ?? 1) < 1) horseWind(v, v.def, false, 0, dt); return; }   // (a horse standing: getting its wind back, as the page has it)
   // pinned broadside to the nose of a train: carried along with it (tyres can't grip that) -
   // unless whoever's at the wheel powers it off the line
   if (world.time - (v.trainDragAt || -9) < 0.12 && Math.abs(v.input.throttle) < 0.3 && !v.wreckAt) {
@@ -44,7 +44,7 @@ export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHE
     const dmg = (impact - 140) * 0.22 / Math.sqrt(v.def.mass);
     crashDamage(world, v, dmg, null, impact, zoneFrom(v, pvx, pvy));
     world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: Math.min(1, impact / 500) });
-    if (v.def.kind === 'bike' && impact > 280) bikeCrash(world, v, impact);
+    if (v.def.kind === 'bike' && impact > (v.def.horse ? 380 : 280)) bikeCrash(world, v, impact);   // (a horse into a wall at a gallop: you go over its neck)
     if (impact > 330) cargo.knockOff(world, v, impact);
   }
 }
@@ -64,7 +64,8 @@ export function update(world, dt) {
       if (now - v.wreckAt > 45 && !v.seats.some((s) => s) && !v.towedBy && !(v.towCall && world.get(v.towCall))) { cargo.spillCargo(world, v); world.remove(v); continue; }   // (not while a tow truck's coming for it: tow.js)
     } else if (!driver || driver.dead) {
       if (driver && driver.dead) ejectPed(world, driver, true);
-      v.input.throttle = 0; v.input.steer = 0; v.input.hb = false;
+      v.input.throttle = 0; v.input.steer = 0; v.input.hb = false; v.input.gallop = false;
+      if (v.bolt) horses.boltInput(world, v);   // (a horse bolting off on its own)
     }
     // player-driven cars were already stepped once per received input (players.processInputs);
     // AI drivers get two physics sub-steps a tick with their wheel and pedals re-trimmed in
@@ -75,8 +76,9 @@ export function update(world, dt) {
       if (v.ai && v.ai.ctl && v.ai.ctl.t === world.tick && driver && driver.npc) { stepVehicle(world, v, dt / 2, env); traffic.trim(v); stepVehicle(world, v, dt / 2, env); }
       else stepVehicle(world, v, dt, env);
     }
+    if (v.def.horse) horses.keepDry(world, v);   // (a horse: never in the water - horses.js)
     // land vehicles that end up in the water sink (not a car on a ferry's deck)
-    if (v.def.kind !== 'boat' && !v.onDeck && !aircraft.inAir(v)) {
+    if (v.def.kind !== 'boat' && !v.def.horse && !v.onDeck && !aircraft.inAir(v)) {   // (a horse never goes in: physics.js)
       if (!v.sinkAt && (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
       if (v.sinkAt) {
         v.vx *= Math.exp(-2.5 * dt); v.vy *= Math.exp(-2.5 * dt);
@@ -89,8 +91,8 @@ export function update(world, dt) {
     v.reverse = fwd < -10;
     // tyre smoke + skid marks: sliding, e-braking, donuts, or a full-throttle launch (burnout) - never an aircraft (the owner,
     // 2026-10-13: a helicopter left tyre marks on the ground as it flew)
-    v.drift = v.def.kind !== 'air' && (Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player));
-    v.lights = (night && !!driver) || ((v.def.police || v.def.siren) && v.sirenOn);   // (def.siren: an ambulance, a fire engine)
+    v.drift = v.def.kind !== 'air' && !v.def.horse && (Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player));
+    v.lights = (night && !!driver && !v.def.horse) || ((v.def.police || v.def.siren) && v.sirenOn);   // (def.siren: an ambulance, a fire engine)
     v.siren = !!((v.def.police || v.def.siren) && v.sirenOn && driver);
     v.beacon = !v.siren && !!((v.def.police || v.def.siren) && v.beaconOn);   // (the lights flashing with nobody at the wheel: an ambulance at a scene, a tow truck at work - no siren)
     // out of health: rolling to a stop, smoking, then on fire, then up it goes (killEngine)
@@ -271,7 +273,7 @@ export function toughOf(def) { return def.kind === 'bike' ? VEHICLE_TOUGH.bike :
 // A vehicle already dying: a blast or a rocket sets it off at once, gunfire brings the end sooner.
 // zone (shared/vehicles.js VZ): the side it was hit on, for the dents the clients draw there (task #402).
 export function damageVehicle(world, v, amount, attackerPed, raw = false, boom = false, zone = 0) {
-  if (v.wreckAt || amount <= 0 || v.ferry) return;   // (the ferries can't be hurt: ferries.js)
+  if (v.wreckAt || amount <= 0 || v.ferry || v.bolt) return;   // (a horse bolting: already off - horses.js)   // (the ferries can't be hurt: ferries.js)
   const dmg = (raw ? amount : amount / toughOf(v.def)) * (v.def.armor && !raw && !boom ? v.def.armor : 1);   // (a tank's armour: small arms barely scratch it - tank.js)
   if (attackerPed) v.lastAttacker = attackerPed.id;
   if (zone) noteHit(v, zone, dmg);
@@ -374,6 +376,7 @@ export const plasmaCuts = (def) => (def.kind === 'bike' ? PLASMA_CUT.bike : def.
 // Out of health: the engine dies and it rolls to a stop, smoking; it catches fire after DEAD_FIRE_S and blows up
 // after DEAD_BOOM_S. Whoever's inside is told to get out; NPCs at the wheel bail and run.
 export function killEngine(world, v, attackerPed) {
+  if (v.def.horse) { horses.bolt(world, v, attackerPed); return; }   // (a horse: it throws its rider and bolts)
   if (v.dead || v.wreckAt) return;
   v.dead = true; v.hp = 0; v.sirenOn = false;
   v.deadAt = world.time; v.deadFireAt = world.time + DEAD_FIRE_S; v.deadBoomAt = world.time + DEAD_BOOM_S;
@@ -389,6 +392,7 @@ export function killEngine(world, v, attackerPed) {
 }
 
 export function explode(world, v, attackerPed) {
+  if (v.def.horse) { horses.bolt(world, v, attackerPed); return; }   // (nothing to blow up: it bolts)
   v.hp = 0;
   v.wreckAt = world.time;
   v.sirenOn = false;
@@ -422,6 +426,7 @@ import { VDMG, VZ, VPART, damageStage, packVehDamage, hitZone } from '../../shar
 import * as ferries from './ferries.js';
 import * as burning from './burning.js';   // (thrown out of it on fire: H58)
 import * as skills from './skills.js';
+import * as horses from './horses.js';   // (a horse: it bolts instead of burning - #325)
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);
@@ -536,6 +541,7 @@ export function tryEnter(world, ped) {
   if (v.wreckAt) { if (p) world.notify(p, 'That vehicle is wrecked.', 'bad'); return false; }
   if (v.sinkAt) return false;
   if (aircraft.inAir(v)) return false;   // (up in the air: out of reach)
+  if (v.bolt) { if (p) world.notify(p, "It's bolted - you won't catch it now.", 'warn'); return false; }   // (a horse off at a gallop: horses.js)
   if (v.forSale) { if (p) world.notify(p, `It's for sale: $${v.forSale.price.toLocaleString()}. Walk up to it and press interact to buy it.`, 'info'); return false; }
   if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
   if (ped.carrying) cargo.dropCrate(world, ped);
@@ -567,7 +573,7 @@ export function tryEnter(world, ped) {
   if (seat === 0 && p) p.lastVehicle = v.id;
   if (seat === 0 && p && p.badge && v.def.police && v.cruiserOf !== p.pid && (v.motorPool !== undefined || v.issuedTo === p.pid)) cruiser.adopt(world, p, v);
   if (seat === 0) { v.lastDriver = ped.id; if (v.ai && v.ai.kind === 'traffic') { v.ai = null; v.despawnable = true; } }
-  if (p) { p.meDirty = true; world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y }); }
+  if (p) { p.meDirty = true; world.emit(v.x, v.y, { e: v.def.horse ? 'mount' : 'door', x: v.x, y: v.y }); }
   return true;
 }
 
@@ -595,7 +601,7 @@ const mineOf = (p, v) => v.owner === p.pid || v.rentedBy === p.pid || v.issuedTo
 function takeCrime(p, v) {
   if (mineOf(p, v)) return null;
   if (v.def.police && !p.badge) return 'policeTheft';
-  if (v.npcOwned || v.owner || (v.workTruck && v.issuedTo)) return v.def.pedal ? 'bikeTheft' : 'theft';
+  if (v.npcOwned || v.owner || (v.workTruck && v.issuedTo)) return v.def.horse ? 'horseTheft' : v.def.pedal ? 'bikeTheft' : 'theft';
   return null;
 }
 // pulling someone out (carjack): a felony only when a police car's or the driver's hurt - thrown out of a moving car
@@ -615,6 +621,13 @@ export function entryInfo(world, p, v) {
 export function enterLabel(world, p, v) {
   const n = v.def.name, e = entryInfo(world, p, v), c = e.crime && law.CRIMES[e.crime];
   const crime = c ? ` - ${c.label}${c.felony ? ' (felony)' : ''}` : '';
+  if (v.def.horse) switch (e.kind) {   // (a horse: up on it, not in it - horses.js)
+    case 'own': return 'Up on your horse';
+    case 'rental': return 'Up on your hired horse';
+    case 'ride': return 'Up behind the rider';
+    case 'jack': return `Pull the rider off the horse${crime}`;
+    default: return c ? `Ride off on the horse${crime}` : 'Up on the horse';
+  }
   switch (e.kind) {
     case 'own': return `Get in your ${n}`;
     case 'work': return `Get in the ${n} - issued to you for the job`;
@@ -628,6 +641,10 @@ export function enterLabel(world, p, v) {
 // A player getting in by pressing a button: Safety mode asks first when it'd be a crime (safety.js).
 export function playerEnter(world, ped) {
   const p = ped.player;
+  if (p && !ped.vehId && !ped.dead && !nearestVehicle(world, ped, 56)) {   // (no vehicle in reach: a farm's horse beside you - up on it, bareback; horses.js)
+    const a = horses.farmHorseNear(world, ped);
+    if (a) { if (!safety.confirm(world, p, 'horseTheft', `horse:${a.id}`)) return false; horses.fromLivestock(world, a); return tryEnter(world, ped); }
+  }
   if (p && !ped.vehId && !ped.dead) {
     const v = nearestVehicle(world, ped, 56);
     if (v && !v.forSale && !v.ferry && !v.wreckAt) { const e = entryInfo(world, p, v); if (!safety.confirm(world, p, e.crime, `veh:${v.id}`)) return false; }
@@ -690,7 +707,7 @@ export function ejectPed(world, ped, force, toward = null) {
     ped.under = v.def.kind === 'boat';
     if (ped.lz > 0.3) levelStep(world.map, ped, 11);
     ped.a = v.a;
-    if (ped.player) { ped.player.meDirty = true; world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y }); }
+    if (ped.player) { ped.player.meDirty = true; world.emit(v.x, v.y, { e: v.def.horse ? 'mount' : 'door', x: v.x, y: v.y }); }
     if (i === 0) v.input = { throttle: 0, steer: 0, hb: false };
   }
   ped.vehId = 0; ped.seat = -1;
@@ -702,11 +719,11 @@ export function vehFlags(world, v) {
   if (v.lights) f |= VF.LIGHTS;
   if (v.siren) f |= VF.SIREN;
   if (v.beacon) f |= VF.BEACON;
-  if (v.brake) f |= VF.BRAKE;
-  if (v.reverse) f |= VF.REVERSE;
+  if (v.brake && !v.def.horse) f |= VF.BRAKE;
+  if (v.reverse && !v.def.horse) f |= VF.REVERSE;
   if (v.wreckAt) f |= VF.WRECK;
-  if (v.burnUntil > world.time || (v.wreckAt && !v.def.pedal && world.time - v.wreckAt < 20)) f |= VF.BURN;
-  if ((v.hp < v.def.hp * 0.35 || v.dead) && !v.def.pedal) f |= VF.SMOKE;
+  if ((v.burnUntil > world.time || (v.wreckAt && !v.def.pedal && world.time - v.wreckAt < 20)) && !v.def.horse) f |= VF.BURN;
+  if ((v.hp < v.def.hp * 0.35 || v.dead) && !v.def.pedal && !v.def.horse) f |= VF.SMOKE;   // (a horse: no smoke)
   if (v.dead && !v.wreckAt) f |= VF.DEAD;
   if (v.drift) f |= VF.DRIFT;
   if (v.hornUntil > world.time) f |= VF.HORN;

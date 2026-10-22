@@ -207,12 +207,13 @@ export function spawnAnimal(world, kind, x, y, herd = 0, o = {}) {
   const S = SPECIES[kind], L = LIVESTOCK[kind];
   const young = !!o.young && !!S, legend = !!o.legend && !!S;
   const hp = S ? Math.round(S.hp * (young ? 0.4 : 1) * (legend ? 1.7 : 1)) : (L || LIVESTOCK.cow).hp;
-  const a = world.spawnPed(x, y, { hp, archetype: `pet:${kind}${young ? ':y' : legend ? ':L' : ''}`, a: rng() * 6.28, app: { bd: 1 }, name: S ? (legend ? S.legend.name.replace(/^the /, 'The ') : `a ${S.name.toLowerCase()}`) : `a ${kind}` });
+  const coat = kind === 'horse' && !S ? Math.floor(rng() * 6) : -1;   // (a farm's horse: its coat - horses.js COATS, the pages' 'horse:c<i>')
+  const a = world.spawnPed(x, y, { hp, archetype: `pet:${kind}${coat >= 0 ? ':c' + coat : young ? ':y' : legend ? ':L' : ''}`, a: rng() * 6.28, app: { bd: 1 }, name: S ? (legend ? S.legend.name.replace(/^the /, 'The ') : `a ${S.name.toLowerCase()}`) : `a ${kind}` });
   a.r = S ? Math.round(SIZE_R[S.size] * (young ? 0.7 : 1)) : 12;
   a.bornAt = world.time;
   a.wild = {
     kind, state: 'idle', until: world.time + rng() * 4, wx: x, wy: y, hx: x, hy: y, herd, look: 0, fx: 0, fy: 0,
-    aware: 0, threat: 0, pose: 0, hits: [], young, legend, mother: o.mother || 0, lead: !!o.lead, livestock: !S,
+    aware: 0, threat: 0, pose: 0, hits: [], young, legend, mother: o.mother || 0, lead: !!o.lead, livestock: !S, coat: Math.max(0, coat),
     think: world.time + rng() * 0.3, rest: false, predator: false, stalkOf: 0, nextBite: 0, bluffs: 0, tame: !!o.tame,
   };
   if (S && S.predatory && !young) a.wild.predator = rng() < S.predatory;   // (decided once: it may see a lone walker as prey)

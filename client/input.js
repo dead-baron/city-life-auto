@@ -400,7 +400,7 @@ export function sample(view) {
     if (p.r3Edge && !driving) bits |= IN.RELOAD; // (at the wheel R3 is the drive-by's trigger; an empty gun reloads itself)
     if (p.up) bits |= view.inVehicle ? IN.HORN : IN.LIGHT; // D-pad up: horn / siren in a vehicle, the flashlight on foot
     if (p.l3 && !view.inVehicle) bits |= IN.DANCE; // L3 (click the left stick): dance
-    if (view.inVehicle) { if (!driving && !view.air && p.lt > 0.4) bits |= IN.DIVE; } // stick-drive mode: LT = handbrake
+    if (view.inVehicle) { if (!driving && !view.air && p.lt > 0.4) bits |= IN.DIVE; if (view.horse && (driving ? p.rt > 0.95 : Math.hypot(p.lx, p.ly) > FULL_STICK)) bits |= IN.SPRINT; } // stick-drive mode: LT = handbrake; on a horse RT all the way down (the stick all the way out, stick-driving) gallops
     else if (p.lt > 0.4) bits |= IN.BLOCK;
     else if (Math.hypot(p.lx, p.ly) > FULL_STICK) bits |= IN.SPRINT;  // no run button on a pad: the stick all the way out sprints
     const rmag = Math.hypot(p.rx, p.ry);
@@ -418,7 +418,7 @@ export function sample(view) {
     if (touch.firing || touch.btn.has('fire') || touch.tapped.has('fire')) bits |= IN.FIRE;
     else if (held && touch.guard && !view.inVehicle) bits |= IN.BLOCK;
     const tb = touch.btn, tt = touch.tapped;
-    if (!view.inVehicle && Math.hypot(touch.lx, touch.ly) > FULL_STICK) bits |= IN.SPRINT;  // (nor on touch: the thumb all the way out)
+    if ((!view.inVehicle || view.horse) && Math.hypot(touch.lx, touch.ly) > FULL_STICK) bits |= IN.SPRINT;  // (nor on touch: the thumb all the way out - on a horse too, a gallop)
     if (tb.has('dive') || tt.has('dive')) bits |= IN.DIVE;
     if (tb.has('action') || tt.has('action')) bits |= IN.ACTION;
     if (tb.has('vehicle') || tt.has('vehicle')) bits |= IN.VEHICLE;

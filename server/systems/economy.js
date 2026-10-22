@@ -21,6 +21,7 @@ import * as gang from './gang.js';
 import * as cruiser from './cruiser.js';
 import * as trains from './trains.js';
 import * as rentals from './rentals.js';
+import * as horses from './horses.js';
 import * as hotmoney from './hotmoney.js';
 import * as farming from './farming.js';
 
@@ -33,7 +34,7 @@ import * as skills from './skills.js';
 import * as arcade from './arcade.js';
 import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
-import { SKATEBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
+import { SKATEBOARD_PRICE, SURFBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 // A hand plan's walk-in shop's counter (World v3's Midtown: shared/world3-hand.js poi.walk, poi.store): what it has for
@@ -82,7 +83,7 @@ export function poiLabel(world, p, poi) {
     case 'hospital': return 'Hospital front desk';
     case 'bank': return 'Bank teller';
     case 'pawn': return 'Pawn window';
-    case 'farm': return 'Farm Co-op (harvest contracts)';
+    case 'farm': return 'Farm Co-op (contracts, seeds, horses)';
     case 'warehouse': return 'Portside Logistics (courier jobs)';
     default:
       if (poi.counter && COUNTER[poi.kind]) return COUNTER[poi.kind].label(poi.label);
@@ -279,6 +280,7 @@ export function buildMenu(world, p, poi) {
       sub = `${(STORES[storeOf(poi)] || {}).line || 'Clothes'}. Try things on in the fitting room. A fresh outfit drops your public wanted level to 0 (if no cop is watching); your peak record is remembered. They buy handmade furs and buckskin.`;
       opts.push({ id: 'outfit', label: 'Buy a new outfit (whatever fits)', price: 120, dis: p.badge, note: p.badge ? 'off duty only' : '' });
       if (storeOf(poi) === 'kickflip' || storeOf(poi) === 'surf') { const have = (prof.inventory.skateboard || 0) > 0; opts.push({ id: `i:skateboard:${SKATEBOARD_PRICE}:1`, label: ITEMS.skateboard.name, price: SKATEBOARD_PRICE, dis: have, note: have ? 'have one' : 'ride it anywhere smooth' }); }   // (the skate shop's decks, the surf shops' cruisers)
+      if (storeOf(poi) === 'surf') { const have = (prof.inventory.surfboard || 0) > 0; opts.push({ id: `i:surfboard:${SURFBOARD_PRICE}:1`, label: ITEMS.surfboard.name, price: SURFBOARD_PRICE, dis: have, note: have ? 'have one' : 'paddle out at a surf break and catch a wave' }); }   // (surfing: surf.js)
       for (const id of SHOPS.clothing.sells) { const n = prof.inventory[id] || 0; if (n > 0) opts.push({ id: `s:${id}`, label: `Sell ${ITEMS[id].name} (x${n})`, price: -sellPrice(SHOPS.clothing, id), note: n > 1 ? 'sells all' : '' }); }
       break;
     case 'garage': {
@@ -368,9 +370,10 @@ export function buildMenu(world, p, poi) {
       opts.push({ id: 'job:farm', label: p.job ? 'You already have a job' : 'Take a harvest contract (4 boxes)', dis: !!p.job });
       if (p.job) opts.push({ id: 'job:quit', label: 'Abandon current job' });
       title = poi.label;   // (the co-op's counter: seeds and what you grow - SHOPS.farm; farm work on the fields - farming.js)
-      sub = 'Harvest contracts, farm work on the fields with the co-op tractor (paid by the row), seeds for your garden - and they buy what you grow.';
+      sub = 'Harvest contracts, farm work on the fields with the co-op tractor (paid by the row), seeds for your garden - and they buy what you grow. Horses to hire or buy, and yours saddled up.';
       if (!p.job) opts.push({ id: 'job:fieldwork', label: 'Farm work: the co-op tractor on the fields (paid by the row)' });
       if (!p.job && farming.anyRipe(world)) opts.push({ id: 'job:combine', label: 'Harvest: the co-op combine on the ripe rows (two at a time)' });
+      opts.push(...horses.menuOpts(world, p, poi));   // (#325: hire one, buy one, saddle up yours - horses.js)
       break;
     case 'grocery':
       sub = 'Carry Produce Boxes to the front door to get paid. They buy what you grow in your garden, too.';
@@ -683,6 +686,7 @@ function execute(world, p, poi, opt) {
       const v = myVehicleNear(world, p, poi);
       if (!v) return 'Bring your vehicle onto the lot first.';
       if (parts[0] === 'respray') {
+        if (v.def.horse) return "We don't paint horses.";   // (its coat is its own: horses.js)
         if (v.cargo.some((c) => c)) return 'Unload the cargo first - we do not respray loaded vehicles.';
         const blocked = disguiseBlocked(world, p);
         if (blocked) return blocked;
@@ -715,6 +719,7 @@ function execute(world, p, poi, opt) {
     case 'vg': return spawnOwned(world, p, poi, Number(parts[1]));
     case 'rent': return rentals.rent(world, p, poi, parts[1], pay);
     case 'rentback': return rentals.giveBack(world, p);
+    case 'horse': return parts[1] === 'hire' ? horses.hire(world, p, poi, pay) : parts[1] === 'back' ? horses.giveBack(world, p) : parts[1] === 'buy' ? horses.buy(world, p, poi, Number(parts[2]) | 0, pay) : 'No such thing.';
     case 'hboat': {
       const h = homes.homeFor(world, p, poi);
       if (!h.dock) return 'This place has no boat dock.';
@@ -822,7 +827,8 @@ function spawnOwned(world, p, poi, idx) {
     let best = null, bd = Infinity;
     for (const m of world.map.marina) { const dd = Math.hypot(m.x - poi.x, m.y - poi.y); if (dd < bd) { bd = dd; best = m; } }
     spot = best;
-  } else spot = poi.spawnLot || { x: poi.x, y: poi.y + 90, a: -Math.PI / 2 };
+  } else if (VEHICLES[ov.model].horse) spot = horses.spotAt(world, poi);   // (a horse: brought round onto open ground)
+  else spot = poi.spawnLot || { x: poi.x, y: poi.y + 90, a: -Math.PI / 2 };
   return homes.spawnOwnedAt(world, p, idx, spot);
 }
 

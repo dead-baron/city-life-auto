@@ -355,8 +355,9 @@ function onText(m) {
     case 'crew': phone.on('Crew', m); break;   // the Crew app (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       openOverlay('arcade');
-      (m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
+      (m.game === 'race' ? import('./racebook.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
       break;
+    case 'racebook': if (S.arcadeMod && S.arcadeMod.update && topOverlay() === 'arcade') S.arcadeMod.update(m); break;   // the race book's screen: where the race is (server racebook.js)
     case 'bounties': phone.on('Bounties', m); break;
     case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)
     case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.on('Transit', m); if (S.bigmap) mapwp.refreshLegend(); break;
@@ -439,7 +440,8 @@ function reconcile(s) {
     if (def.kind === 'air' && !S.airMod) { S.pred = null; loadAir(); return; }   // (flying: predicted once render/aircraft.js is in)
     st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), ug: S.ugLayer || 0 };
     S.pred = { kind, s: st, def, prev: null };
-    if (def.kind === 'air') { Object.assign(st, { alt: s.self.rdy, vz: s.self.stamina, spool: s.self.rollT, bank: s.self.rdx, slip: 0, spin: 0, launch: 0 }); S.pred.air = true; }   // (net.js: an aircraft's climb rate, spool, bank and altitude in those slots)
+    if (def.kind === 'air') { Object.assign(st, { alt: s.self.rdy, vz: s.self.stamina, spool: s.self.rollT, bank: s.self.rdx, slip: 0, spin: 0, launch: 0 }); S.pred.air = true; }
+    else if (def.horse) { const r = s.self.rdy; st.blown = r < -0.5; st.stam = st.blown ? -1 - r : r; }   // (a horse's wind, as the server has it: server/net.js)   // (net.js: an aircraft's climb rate, spool, bank and altitude in those slots)
   }
   // replay unacknowledged inputs; keep the state before the last one as `prev` so the render
   // interpolation continues exactly as fixedStep would have left it
@@ -475,7 +477,7 @@ function stepPred(inp) {
   if (P.kind === 'ped') { pedStep(P.s, inp, DT, S.map, P.mods); pushOutOfTrains(P.s); }
   else if (P.air) S.airMod.predict(P.s, inp, DT, S.map, P.def, !P.s.dead);   // (flying: shared/flight.js)
   else {
-    vehStep(P.s, driveInput(P.s, inp), DT, S.map, P.def, { rain: S.weather === WEATHER.RAIN });
+    vehStep(P.s, driveInput(P.s, inp, P.def), DT, S.map, P.def, { rain: S.weather === WEATHER.RAIN });
     // predict smashing street furniture exactly like the server does (same momentum loss), so
     // clipping a lamp post doesn't cause a correction. A break predicted during an input that
     // is being replayed counts as not-yet-happened, so the replay re-applies it.
@@ -498,7 +500,7 @@ function fixedStep() {
   const selfScreen = worldToScreen(selfPos());
   const wcur = S.me ? WEAPONS[S.me.weapon] : null;
   const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
-  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)) });
+  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)), horse: S.ctrlKind === CTRL.DRIVER && !!(S.pred && S.pred.def && S.pred.def.horse) });   // (horse: on one - the stick all the way out gallops, #325)
   const inOverlay = overlayPad();
   const spec = !!(S.spec && S.spec.on);
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
@@ -1232,7 +1234,9 @@ function artCdnBase() {
   try { const u = new URL(serverUrl()); return `${u.protocol === 'wss:' ? 'https:' : 'http:'}//${u.host}/art/`; } catch { return null; }
 }
 function showWorld2(on) { if (on === world2Shown || !worldCv) return; world2Shown = on; worldCv.classList.toggle('hidden', !on); }
-function art2Draws(F) { const on = !!(S.art2 && S.art2.ready && !F.sub); showWorld2(on); return on; }
+// (under the city: the new renderer draws the subway's tunnel too once its code is in - art2/game/tunnel.js - the classic
+// tunnel view till then)
+function art2Draws(F) { const on = !!(S.art2 && S.art2.ready && (!F.sub || (S.art2.tunnelReady && S.art2.tunnelReady()))); showWorld2(on); return on; }
 async function startArt2(map) {
   if (!ART2_WANTED || !worldCv) return;
   if (S.art2) { S.art2.dispose(); S.art2 = null; showWorld2(false); }
@@ -3001,7 +3005,7 @@ function prepFrame(dt) {
   const fallH = S.ctrlKind === CTRL.RIDER ? (S.ents.get(S.myPedId)?.rsky || 0) : 0;
   const flying = !!(myAir && airDefOf(myAir)), airPull = flying ? Math.min(S.airMax, S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4)) : fallH > 0 ? Math.min(S.airMax, 1 + Math.min(1.3, fallH / 650)) : 1;
   const spdPull = 1 + Math.min(S.zoMax ?? 0.5, speed / 1300);   // (flying, the speed's pull-back is held to the same cap: a helicopter flat out is 1.5x of it)
-  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull);
+  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull, S.dinView ? S.dinView.pull : 1);
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
@@ -3023,6 +3027,7 @@ function prepFrame(dt) {
     if (t > L.dur || Math.hypot(sp.x - L.px, sp.y - L.py) > 24) S.look = null;
     else { const e = Math.min(1, t / 900, (L.dur - t) / 900), k = e * e * (3 - 2 * e); S.cam.x = tx + (L.x - tx) * k; S.cam.y = ty + (L.y - ty) * k; }
   }
+  if (S.dinView) { const dc = S.dinView.cam(tx, ty); if (dc) { S.cam.x = dc[0]; S.cam.y = dc[1]; } }   // (watching at the drive-in: the screen and your stall)
   if (S.rides && S.rides.size) {   // rides: forget the ones long over (the end can be missed: a rider gone), point my camera
     const nowS = performance.now() / 1000;
     for (const [id, R] of S.rides) if (nowS - R.at > R.d + 4) S.rides.delete(id);
@@ -3384,8 +3389,10 @@ function drawOverlays(F, v2) {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, canvas.width, canvas.height);
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
-    if (F.rain && !underCover(S.map, sp.x, sp.y)) drawRain(F.dt, F.sky);   // (none in a tunnel)
+    if (F.rain && !F.sub && !underCover(S.map, sp.x, sp.y)) drawRain(F.dt, F.sky);   // (none in a tunnel)
     g.setTransform(...S.worldTf);
+  }
+  if (v2 && !F.sub) {   // (none of the city's marks down in the subway's tunnel)
     drawAtmMarks(F.view, now);
     if (settings.shopMarks !== false && S.art2.shopMarks) S.art2.shopMarks(g, F, drawIcon, KIND_ICON);   // (the shop symbols over doors near you: art2/game/host.js)
     drawStationClocks(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
@@ -3405,6 +3412,7 @@ function drawOverlays(F, v2) {
   if (S.fireMod && !F.sub) S.fireMod.draw(g, F, S);   // (the fires on the ground, the hoses: render/firejob.js)
   drawBowling(F);
   drawCinema(F);
+  drawDriveIn(F, v2);
   drawVault(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
@@ -3443,6 +3451,12 @@ function drawOverlays(F, v2) {
 
   // HUD bits
   if (S.skate && S.me && S.me.sk) S.skate.drawHud(g, W, H, S.me.sk, now);
+  // (on a surfboard: this ride's points, the last one's, your best - server surf.js; on a horse: its wind, the hire's
+  // clock - server horses.js: client/ridehud.js, loaded the first time)
+  if (S.me && (S.me.surf || S.me.horse)) {
+    if (S.rideHud) { if (S.me.surf) S.rideHud.drawSurfHud(g, W, H, S, S.me.surf, now); if (S.me.horse) S.rideHud.drawHorseHud(g, W, H, S, S.me.horse, now); }
+    else if (!S.rideHudAsk) { S.rideHudAsk = 1; import('./ridehud.js').then((m) => { S.rideHud = m; }).catch((e) => { S.rideHudAsk = 0; console.warn('[ridehud]', e); }); }
+  }
   if (S.fish) S.fish.drawHud(g, W, H);   // (the fight, the prompts, the catch card)   // (on a skateboard: the combo, the score, the special meter, a session)
   // (where you are: the water doesn't change it - a river, a lake, the sea near land keep the name - client/areaname.js)
   { const me = F.meEnt, cv = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER ? S.ents.get(S.ctrlId) : null, cd = cv && cv.d && VEHICLE_BY_INDEX[cv.d.m];
@@ -3974,6 +3988,18 @@ function drawCinema(F) {
   if (S.cineView) { S.cineView.draw(g, F, { walkInAt }); g.setTransform(...S.worldTf); }
   else if (!S.cineAsk && Math.hypot(F.sp.x - C.counter.x, F.sp.y - C.counter.y) < 1600) { S.cineAsk = 1; import('./cinema.js').then((m) => { S.cineView = new m.CinemaView(S); }).catch((e) => console.warn('[cinema]', e)); }
 }
+// The Starlite Drive-In (client/drivein.js, loaded near it or once you're told what's on): the film on the big screen,
+// its light over the lot and its score, the camera while you watch
+function drawDriveIn(F, v2) {
+  if (S.dinView) { S.dinView.draw(g, F, v2); g.setTransform(...S.worldTf); return; }
+  if (S.dinAsk || !S.map || !F.sp) return;
+  if (S.dinMap !== S.map) { S.dinMap = S.map; S.dinAt = (S.map.landmarks || []).find((q) => q && q.type === 'drivein') || null; }
+  const L = S.dinAt;
+  if ((S.me && S.me.din) || (L && Math.hypot(F.sp.x - (L.x + L.w / 2), F.sp.y - (L.y + L.h / 2)) < 2600)) {
+    S.dinAsk = 1;
+    import('./drivein.js').then((m) => { S.dinView = new m.DriveInView(S); }).catch((e) => { S.dinAsk = 0; console.warn('[drivein]', e); });
+  }
+}
 // ---- rides (shared/rides.js; the server: server/systems/rides.js) -------------------------------------------------
 // What's under way, by id: the kind, the cab, the route and the balloon's colours or the slide and the slider's looks,
 // and when it started on this page's clock (the server says how far in it is). The renderer draws them (art2 host.js
@@ -4114,6 +4140,7 @@ function drawTank(v, def, wreck) {
 function drawVehicleEnt(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def || def.kind === 'air') return;   // (aircraft: over everything - render/aircraft.js)
+  if (def.horse) { drawHorseV1(v, now, def); return; }   // (a horse: the animal and its rider - #325)
   const f = v.flags;
   // a land vehicle in the water is sinking: it settles, darkens and fades, bubbling (vehVisual)
   const sinking = vehSinking(v, def);
@@ -4177,6 +4204,16 @@ function drawVehicleEnt(v, now, dt) {
   void dt;
 }
 
+// A horse in the classic view (#325; art v2 draws its own: host.js _horse): the farm animal's sprite, walking or running by
+// its speed, and whoever's on it up on its back
+const HORSE_V1 = { d: { ar: 'pet:horse' }, as: 0, rx: 0, ry: 0, ra: 0, extra: 0, flags: 0, id: 0, stillSince: undefined };
+function drawHorseV1(v, now, def) {
+  const H = HORSE_V1;
+  H.as = vehSpeed(v); H.rx = v.rx; H.ry = v.ry; H.ra = v.ra; H.id = v.id; H.stillSince = now;
+  drawAnimal(H, now);
+  for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) drawRider(p, v, def, (p.flags & PF.PASSENGER) !== 0 ? [-14, 0] : [def.seat ?? 2, 0]);
+}
+
 // a vehicle's turn on the canvas; on a tow truck's lift (its extra byte: server/net.js) tilted, the hooked end up
 const TOW_TILT_V1 = 0.11;   // (as art v2: actors.js TOW_TILT)
 function vehTurn(g, v, def) {
@@ -4187,7 +4224,7 @@ function vehTurn(g, v, def) {
 }
 
 // how high a vehicle's body stands (world px of visible side wall)
-const LIFT = { bus: 12, flatbed: 9, swat: 10, armored: 10, ambulance: 9, van: 9, pickup: 8, sports: 5, bike: 3, policebike: 3 };
+const LIFT = { bus: 12, flatbed: 9, swat: 10, armored: 10, ambulance: 9, van: 9, pickup: 8, sports: 5, bike: 3, policebike: 3, horse: 20 };   // (a horse: a crate rides up behind the saddle)
 function vehLift(def) { return def.kind === 'boat' ? 3 : LIFT[def.id] ?? 7; }
 
 // rings on the water around a swimmer, plus a little splash while they paddle
@@ -4298,12 +4335,20 @@ function pedLook(p, now) {
     if (!S.skate) { loadSkate(); pose = 'skatec'; fr = 0; }
     else { const me = p.id === S.myPedId && S.pred && S.pred.kind === 'ped' && S.pred.mods && S.pred.mods.board ? S.pred.s : null, sk = S.skate.look(p, f, now, me); pose = sk.pose; fr = sk.fr; lift = sk.lift; }
   } else { p._oa = undefined; p._ks = undefined; }
+  // on a surfboard (the descriptor's sf: server surf.js): lying on it paddling, up on a wave, up off its lip (4: tumbling in
+  // the white water - swimming)
+  const sf = p.d && p.d.sf <= 3 && !(f & (PF.DEAD | PF.DOWN | PF.INVEH)) && !flying ? p.d.sf : 0;
+  if (sf) {
+    pose = sf === 1 ? 'surfpad' : sf === 2 ? 'surf' : 'surfair';
+    fr = sf === 1 ? ((p.as || 0) > 20 ? Math.floor(now * 2.4 + p.id * 0.3) % 2 : 0) : sf === 2 ? Math.floor(now * 0.9 + p.id * 0.17) % 2 : 0;
+    lift = sf === 3 ? 14 : 0;
+  }
   const L = p._look || (p._look = {});
-  L.lift = lift; L.board = !!(p.d && p.d.bd) && SKATE_POSES.has(pose);
+  L.lift = lift; L.board = !!(p.d && p.d.bd) && SKATE_POSES.has(pose); L.surf = sf;
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;
   L.lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
   L.hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
-  L.swimming = !(f & PF.INVEH) && !!p.swim;
+  L.swimming = !(f & PF.INVEH) && !!p.swim && !sf;
   L.upright = UPRIGHT.has(pose) && !flying;
   return L;
 }
@@ -4427,7 +4472,7 @@ function drawPed(p, now) {
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
 const SKATE_POSES = new Set(['skate', 'skatec', 'skateair', 'skflip', 'skshove', 'sktre', 'skgrab', 'skgrind', 'skmanual']);   // (on a skateboard: client/art2/people.js)
-const UPRIGHT = new Set([...SKATE_POSES, 'idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup', 'escortR', 'escortL', 'bars', 'bang', 'thump', 'guard']);
+const UPRIGHT = new Set([...SKATE_POSES, 'surf', 'surfair', 'idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup', 'escortR', 'escortL', 'bars', 'bang', 'thump', 'guard']);
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // flat on the ground (art2 people.js poses)
 const STAGGER_FROM = new Set(['idle', 'move', 'aim', 'aimw', 'punch', 'swing', 'carry']);
 const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', stab: 'deadF', slump: 'dead', spin: 'deadS', slash: 'deadS', halved: 'dead' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
@@ -4437,7 +4482,7 @@ const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', 
 const DEATH_SEQ = { knees: [[0.22, 'stagger', 0], [0.95, 'kneel', 1]], stab: [[0.3, 'stagger', 2], [0.85, 'kneel', 1]], slump: [[0.35, 'stagger', 0], [0.6, 'stagger', 1]], spin: [[0.55, 'stagger', 0]], slash: [[0.4, 'stagger', 0]] };
 const DEATH_TURN = { spin: [4.4, 0.55], slash: [2.2, 0.4] };
 // the old renderer's sprites for the poses it doesn't have (the subway view)
-const V1_POSE = { skate: 'move', skatec: 'idle', skateair: 'idle', skflip: 'idle', skshove: 'idle', sktre: 'idle', skgrab: 'idle', skgrind: 'idle', skmanual: 'idle', stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down', escortR: 'move', escortL: 'move', bars: 'carry', bang: 'carry', thump: 'punch', guard: 'aim' };
+const V1_POSE = { surfpad: 'idle', surf: 'idle', surfair: 'idle', skate: 'move', skatec: 'idle', skateair: 'idle', skflip: 'idle', skshove: 'idle', sktre: 'idle', skgrab: 'idle', skgrind: 'idle', skmanual: 'idle', stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down', escortR: 'move', escortL: 'move', bars: 'carry', bang: 'carry', thump: 'punch', guard: 'aim' };
 const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;
