@@ -14655,3 +14655,11 @@ the city the tunnel view was the dark and the rails alone - no telling where you
   band its own width), so you can follow where the line runs under the city;
 - going down into the tunnel, and coming back up into the daylight, the screen eases from dark instead of cutting (and
   the same down the sewers and into the cave).
+
+## 2026-10-22 · The character preview in poses
+
+The owner's U15 note (10-08: "character preview: turn round, preview idles, sitting and actions"). The creator's big
+preview turned and zoomed but only ever stood breathing. Now the ▶ button beside the magnifier steps it through poses
+(client/creator.js PREV_POSES) - standing, walking, running, sitting, kneeling, hands up, a punch, fishing - each
+animated at its own pace in the game's own pixels, its name under the preview beside the direction; turning still turns
+it, and the look round now and then is the standing pose's only.

@@ -15,13 +15,17 @@
 // barber; a new player's first session is free.
 import * as LK from '../shared/look.js';
 import * as WD from '../shared/wardrobe.js';
-import { person } from './art2/people.js';
+import { person, POSES } from './art2/people.js';
 import { packGBuf, downsample2 } from './art2/gbuf.js';
 
 let C = null;            // main.js's hooks { send, openOverlay, closeOverlay, topOverlay, sfx, toast }
 let root = null;
 let look = null, hist = [], mode = 'edit', tab = 'body';
 let dir = 0, fr = 0, animT = 0, raf = 0;
+// (U15, the owner 10-08: "preview idles, sitting and actions") the preview's pose - the ▶ button steps through them: what
+// you'd look like walking, running, sitting, kneeling, with your hands up, throwing a punch, fishing
+const PREV_POSES = [['idle', 'Standing', 520], ['walk1', 'Walking', 130], ['walk2', 'Running', 100], ['sit', 'Sitting', 600], ['kneel', 'Kneeling', 600], ['handsup', 'Hands up', 600], ['punch', 'A punch', 110], ['fish', 'Fishing', 400]];
+let poseI = 0;
 let state = { cur: null, picked: true, saved: [] };
 let outStyle = '', outSlot = 'top', outBase = null, ctarget = 'c', hairLen = 'all';
 let startPick = 0, startRandomSeed = 1, renaming = -1, focusEl = null, seedN = 1, wheelSel = 0;
@@ -84,7 +88,7 @@ export function init(hooks) {
     <div class="mhead"><h2 class="cc-title">CHARACTER</h2><button class="x" data-act="done" aria-label="Done">✕</button></div>
     <div class="cc-body">
       <div class="cc-left"><canvas class="cc-prev" width="168" height="216"></canvas>
-        <div class="cc-turn"><button data-act="turn" data-v="1" aria-label="Turn left">⟲</button><button class="cc-zoom" data-act="zoom" aria-label="Zoom">🔍</button><button data-act="turn" data-v="-1" aria-label="Turn right">⟳</button></div><span class="cc-pname"></span><div class="cc-under"></div></div>
+        <div class="cc-turn"><button data-act="turn" data-v="1" aria-label="Turn left">⟲</button><button class="cc-zoom" data-act="zoom" aria-label="Zoom">🔍</button><button class="cc-zoom" data-act="pose" aria-label="Preview a pose">▶</button><button data-act="turn" data-v="-1" aria-label="Turn right">⟳</button></div><span class="cc-pname"></span><div class="cc-under"></div></div>
       <div class="cc-right"><div class="cc-tabs"></div><div class="cc-page"></div></div>
     </div>
     <div class="cc-foot"></div>
@@ -217,12 +221,12 @@ const dpr = () => Math.max(1, Math.min(4, (typeof window !== 'undefined' && wind
 // a look's sprite as the game draws it (region 'head': the head and shoulders only), on a canvas one pixel an art pixel;
 // each kept (bounded), so a turn or the idle's second frame is a blit after the first time
 const SPR = new Map();
-function sprite(L, d = 0, f = 0, region = null) {
-  const k = code(L) + '|' + d + '|' + f + '|' + (region || '');
+function sprite(L, d = 0, f = 0, region = null, pose = 'idle') {
+  const k = code(L) + '|' + d + '|' + f + '|' + (region || '') + '|' + pose;
   let S = SPR.get(k);
   if (S) { SPR.delete(k); SPR.set(k, S); return S; }
   let D = null;
-  try { D = downsample2(packGBuf(person(art(L), d, 'idle', f, region ? { tight: true, region } : { tight: true }))); } catch (e) { console.warn('[creator] figure', e); }
+  try { D = downsample2(packGBuf(person(art(L), d, pose, f, region ? { tight: true, region } : { tight: true }))); } catch (e) { console.warn('[creator] figure', e); }
   const cv = document.createElement('canvas');
   cv.width = D && D.w ? D.w : 1; cv.height = D && D.h ? D.h : 1;
   if (D && D.w && D.h) { const c2 = cv.getContext('2d'), id = c2.createImageData(D.w, D.h); id.data.set(D.p0.subarray(0, D.w * D.h * 4)); c2.putImageData(id, 0, 0); }
@@ -265,7 +269,7 @@ function drawPreview() {
   const cv = root.querySelector('.cc-prev'), z = zoomed();
   // (zoomed in on the Face and Hair tabs and in the barber's chair, the hat comes off, so the face and the cut show)
   const L = z && look.outfit.hat && (tab === 'face' || tab === 'hair' || mode === 'barber') ? (() => { const V = clone(look); V.outfit.hat = null; return V; })() : look;
-  const S = sprite(L, dir, fr), r = fitCanvas(cv, 168, 216), W = cv.width, H = cv.height, c2 = cv.getContext('2d');
+  const P = PREV_POSES[poseI] || PREV_POSES[0], S = sprite(L, dir, fr, null, P[0]), r = fitCanvas(cv, 168, 216), W = cv.width, H = cv.height, c2 = cv.getContext('2d');
   c2.imageSmoothingEnabled = false;
   c2.clearRect(0, 0, W, H);
   // the spotlight from above (CC1)
@@ -287,7 +291,7 @@ function drawPreview() {
   cv.classList.toggle('close', z);
   const zb = root.querySelector('[data-act="zoom"]'); if (zb) zb.classList.toggle('on', z);
   const pn = root.querySelector('.cc-pname');
-  if (pn) pn.textContent = mode === 'start' ? (startPick < LK.STARTERS.length ? LK.STARTERS[startPick].name : 'Random') : mode === 'wheel' ? ((state.saved || [])[wheelSel] || {}).n || '' : ['Front', 'Front right', 'Right', 'Back right', 'Back', 'Back left', 'Left', 'Front left'][dir];
+  if (pn) pn.textContent = mode === 'start' ? (startPick < LK.STARTERS.length ? LK.STARTERS[startPick].name : 'Random') : mode === 'wheel' ? ((state.saved || [])[wheelSel] || {}).n || '' : ['Front', 'Front right', 'Right', 'Back right', 'Back', 'Back left', 'Left', 'Front left'][dir] + (poseI ? ` · ${P[1]}` : '');
   // (the starting look's "Play as" / "Customize this character" sit under its row of stages: renderPage, U18)
   const un = root.querySelector('.cc-under');
   if (un && un.innerHTML) un.innerHTML = '';
@@ -298,9 +302,10 @@ function loop() {
   cancelAnimationFrame(raf);
   const step = (t) => {
     if (!isOpen()) { raf = 0; return; }
-    if (t - animT > 520) {
-      animT = t; fr = (fr + 1) & 1;
-      if (t - lastTouch > 6000 && mode !== 'wheel') { glance = (glance + 1) % 12; if (glance === 8) dir = (dir + 1) % 8; else if (glance === 10) dir = (dir + 7) % 8; }
+    const P = PREV_POSES[poseI] || PREV_POSES[0];
+    if (t - animT > P[2]) {
+      animT = t; fr = (fr + 1) % (POSES[P[0]] || 2);
+      if (!poseI && t - lastTouch > 6000 && mode !== 'wheel') { glance = (glance + 1) % 12; if (glance === 8) dir = (dir + 1) % 8; else if (glance === 10) dir = (dir + 7) % 8; }
       drawPreview();
     }
     pumpThumbs();
@@ -596,6 +601,7 @@ function act(a, v, el) {
     case 'tab': { tab = v; renaming = -1; zoomSet = null; render(); const pg = root.querySelector('.cc-page'); pg.classList.remove('tabin'); void pg.offsetWidth; pg.classList.add('tabin'); pg.scrollTop = 0; return; }
     case 'turn': dir = (dir + Number(v) + 8) % 8; drawPreview(); return;
     case 'zoom': zoomSet = !zoomed(); drawPreview(); return;
+    case 'pose': poseI = (poseI + 1) % PREV_POSES.length; fr = 0; drawPreview(); return;   // (U15: the next pose in the preview)
     case 'jacket':
       if (look.outfit.jacket) { jacketOff = look.outfit.jacket; setL((L) => { L.outfit.jacket = null; }); }
       else if (jacketOff) { const j = jacketOff; jacketOff = null; setL((L) => { L.outfit.jacket = j; }); }
