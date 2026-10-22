@@ -22,8 +22,8 @@ import { buildGive, buildQuickGive } from './devgive.js';
 import { DEV_SECTIONS } from './devcats.js';
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-let S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress;
-export function init(ctx) { ({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress } = ctx); }
+let S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap;
+export function init(ctx) { ({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap } = ctx); }
 // (main.js passes the debug menu's keys and pad here while it's the top screen; turning the phone lays it out again)
 let wired = false;
 function wire() {
@@ -249,6 +249,8 @@ function fillTeleport(body) {
   if (!S.map) { body.innerHTML = '<p class="dev-none">The map isn\'t loaded yet.</p>'; return; }
   const all = teleportPlaces(S.map), groups = teleportGroups(S.map), q = UI.q.trim().toLowerCase();
   const chips = document.createElement('div'); chips.className = 'dv-chips'; body.appendChild(chips);
+  // (anywhere: the whole world's map - tap a spot, TELEPORT HERE; the owner, 10-16: "Teleport anywhere: a real map")
+  if (openMap) { const w = button(chips, '🗺 Anywhere: the world map', 'dv-chip', null, 'g:@map'); w.onclick = () => { closeOverlay('dev'); openMap(); S.hud.toast('🛠 Tap a spot on the map, then TELEPORT HERE', 'info'); }; }
   for (const g of [null, ...groups]) {
     const n = g ? all.filter((p) => p.group === g).length : all.length;
     const c = button(chips, `${g || 'All'} (${n})`, `dv-chip${UI.tpGroup === g ? ' on' : ''}`, null, `g:${g || ''}`);

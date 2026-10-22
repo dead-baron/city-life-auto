@@ -1339,7 +1339,7 @@ function setupDev() {
   $('b-dev').classList.toggle('on', !!on);
   $('b-dev').title = on ? 'Debug menu' : 'Debug menu (switches Dev Debug Mode on)';
   if (!on) { $('dev').classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
-  devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });
+  devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap: () => toggleMap(true) }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });
   devMenuP.then(() => { if (devMenu && (S.dev || S.devMode)) devMenu.setupDev(); });
 }
 function renderDevPlayers() { if (devMenu) devMenu.renderDevPlayers(); }
@@ -2283,6 +2283,7 @@ function gfxQuality() { return gfx.lighting; }
 for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
 
 function toggleMap(on) {
+  $('bm-tp').classList.add('hidden');
   if (on) {
     if (topOverlay() !== 'bigmap') openOverlay('bigmap');
     $('bigmap-hint').innerHTML = footHints(input.device === 'touch' ? [['Pinch', 'zoom'], ['Drag', 'look around'], ['Tap', 'set a waypoint']]
@@ -2314,7 +2315,10 @@ function markAt(sx, sy) {
   S.hud.toast(`Waypoint set: ${label}`, 'info');
   sfx('click', 0.6);
   mapwp.refresh();
+  $('bm-tp').classList.toggle('hidden', !S.dev);   // (debug: anywhere on the whole world's map - the owner, 10-16: "Teleport anywhere: a real map")
 }
+// (debug) to the waypoint just set on the map: the server finds the ground there (dev.js tp, snap)
+$('bm-tp').onclick = () => { if (!S.dev || !S.waypoint) return; send({ t: 'dev', c: 'tp', x: Math.round(S.waypoint.x), y: Math.round(S.waypoint.y), snap: true }); $('bm-tp').classList.add('hidden'); toggleMap(false); };
 // Zoom and look around the map: mouse wheel / pinch zooms about the pointer, dragging pans, the
 // + / - / ⌖ buttons (and + - C keys, LT / RT and the right stick on a pad) do the same.
 const mapPtrs = new Map();

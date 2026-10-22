@@ -13972,3 +13972,16 @@ The owner, 10-16: "More than one mansion". World v3 had one: the Hilltop Mansion
 
 Tests: test/world3world.test.js - at least three mansions, the Hilltop Mansion among them, each with a mansion's price
 and a garage in a rich district, in more than one district.
+
+## 2026-10-22 · Debug: teleport anywhere on the world map
+
+The owner, 10-16: "Teleport anywhere: a real map covering the whole world". The playtest panel's Teleport page lists
+places by group with a small map beside them, but you could only go to a listed place.
+
+- **the world map** (the big map, M): in a playtest session, setting a waypoint by tapping or clicking a spot shows a
+  **🛠 TELEPORT HERE** button at the map's foot. It sends you there (`dev` `tp` with `snap`: the server finds the
+  ground nearest the spot, as for a listed place) and closes the map. The map covers the whole of World v3.
+- **from the Teleport page**: a "🗺 Anywhere: the world map" chip opens the map to pick a spot.
+- Nothing changes for players outside a playtest session.
+
+Tests: test/devtp.test.js as before (the server's teleport and its ground-finding); the page loads clean.
