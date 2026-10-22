@@ -13549,3 +13549,19 @@ looked for the nearest vehicle in reach without minding a bridge's two layers: t
 
 Tests: test/bridgelayers.test.js - no boat from the deck, the boat from the water; no car on the deck from the
 water, the car from the deck.
+
+## 2026-10-21 · Fix: NPC boats no longer jam on walls, docks and inlets
+
+The owner, 10-16: "NPC boats stuck on walls, docks and inlets". An NPC boat felt its way round land along its middle
+line only, so a hull could scrape a pier's or a breakwater's edge with its middle clear and stop dead against it,
+meaning to go and going nowhere. In a five-minute run with players on three docks, 9 of 177 boats sat jammed for
+more than five seconds, 8 for more than fifteen and some for minutes, against a promenade's edge in the sea.
+
+- **feelers the hull's width** (`server/systems/boats.js` boatSteer): it checks the way ahead along both sides of
+  the hull as well as the middle.
+- **a way out:** jammed for 2.5 s, a boat backs off turning toward whichever side has the open water, and its
+  skipper picks somewhere else to go. A boater or a patrol boat takes a new heading, and an angler fishes where it
+  got to. One that jams five times is given up once nobody's looking.
+- The same five minutes again: none jammed for more than five seconds.
+
+Tests: test/boatjam.test.js - a boat driven at a quay notices it's jammed and heads somewhere on the water instead.
