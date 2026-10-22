@@ -13464,6 +13464,8 @@ in the pines and its boats tied up on dry land.
 Tests: test/world3desert.test.js - the compound in the desert, far from every building, walled all round but the
 gate, the Den and its counter inside, the guards' posts, the track out to a road, nothing of the Syndicate's left in
 Highland Woods; on the v3 map, an outsider at the gate is warned and then shot at, and the gate opens for a member.
+(The compound's parked cars and bikes carry their own mark, `syn`, not the MX park's `mx`: test/world3dirt.test.js
+counts the MX park's bikes and trucks by it.)
 
 ## 2026-10-21 · Every waterway to the sea
 

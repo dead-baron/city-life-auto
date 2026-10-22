@@ -145,11 +145,11 @@ export function desertCompound3(m, H3) {
   const parking = (m.parking ||= []), cars = ['sports', 'pickup', 'van'], bikes = ['chopper', 'bagger'];
   for (let k = 0; k < 3; k++) {
     const [x, y] = back(0.2 + k * 0.2, 0.64);
-    parking.push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a: vertical ? 0 : Math.PI / 2, model: cars[k], mx: 1, bare: 1 });   // (bare: no bays painted on the yard)
+    parking.push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a: vertical ? 0 : Math.PI / 2, model: cars[k], syn: 1, bare: 1 });   // (bare: no bays painted on the yard)
   }
   for (let k = 0; k < 2; k++) {
     const [x, y] = back(0.8 + k * 0.08, 0.64);
-    parking.push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a: vertical ? 0 : Math.PI / 2, model: bikes[k], mx: 1, bare: 1 });
+    parking.push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a: vertical ? 0 : Math.PI / 2, model: bikes[k], syn: 1, bare: 1 });
   }
   for (const [t, x, y, r, e] of P) H3.addProp(m, t, x, y, r, e);
   // the guards' posts: two outside the gate, one inside it, one at each of the yard's far corners, one at the Den's door
