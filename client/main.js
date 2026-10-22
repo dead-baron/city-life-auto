@@ -879,6 +879,13 @@ function onEvent(ev) {
     case 'trainhorn': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y); sfx(ev.s === 2 ? 'trainhorn' : 'trainhornshort', Math.max(0, 1 - d / 2400)); break; }
     case 'kick': sfx('thud', distVol(ev.x, ev.y) * 0.6); break;
     case 'toss': sfx('swing', distVol(ev.x, ev.y) * 0.7); break;   // (a grenade thrown: server grenades.js)
+    case 'flame': {   // the flamethrower's jet (server combat.js flame): a cone of fire out of the nozzle, the roar
+      const sh = ev.id ? S.ents.get(ev.id) : null, x0 = sh && sh.rx !== undefined ? sh.rx : ev.x, y0 = sh && sh.ry !== undefined ? sh.ry : ev.y;
+      for (let k = 0; k < 7; k++) { const aa = ev.a + (Math.random() - 0.5) * 0.5, sp = 380 + Math.random() * 160, d = 14; fx.spawn(3, x0 + Math.cos(ev.a) * d, y0 + Math.sin(ev.a) * d, Math.cos(aa) * sp, Math.sin(aa) * sp, 0.28 + Math.random() * 0.12, 3 + Math.random() * 4, Math.random() < 0.5 ? '#ff9a1a' : '#ffd23a', 18); }
+      if (sh) S.flashes.push({ x: x0 + Math.cos(ev.a) * 30, y: y0 + Math.sin(ev.a) * 30, t: 0.1, a: ev.a, r: 150, id: ev.id, off: 30 });
+      sfx('burner', distVol(ev.x, ev.y) * 0.5);
+      break;
+    }
     case 'clink': sfx('thud', distVol(ev.x, ev.y) * 0.3); break;   // (...bouncing)
     case 'golfhit': sfx(ev.k ? 'golfhit' : 'putt', distVol(ev.x, ev.y)); break;   // (golf: server/systems/golf.js)
     case 'golfcup': sfx('golfcup', distVol(ev.x, ev.y)); break;

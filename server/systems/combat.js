@@ -76,6 +76,7 @@ export function tryAttack(world, ped, aim) {
   if (w.type === 'bow') { loose(world, ped, w, aim); return true; }
   if (w.type === 'taser') { taser(world, ped, w, aim); return true; }
   if (w.type === 'spray') { spray(world, ped, w, aim); return true; }
+  if (w.type === 'flame') { flame(world, ped, w, aim); return true; }
   if (w.type === 'deploy') { spikes.deploy(world, ped, aim); return true; }
   const pellets = w.pellets || 1;
   let hitAny = false;
@@ -371,6 +372,23 @@ function spray(world, ped, w, aim) {
     law.subdue(world, ped, o);
     if (o.player) world.notify(o.player, 'Pepper spray! You can\'t see a thing...', 'bad');
   }
+}
+
+// The flamethrower (shared/items.js flamer): a cone of fire in front - everyone in it set alight and singed, cars in it
+// scorched; through nothing solid. The page draws the jet from the 'flame' events (main.js).
+function flame(world, ped, w, aim) {
+  world.emit(ped.x, ped.y, { e: 'flame', id: ped.id, x: Math.round(ped.x), y: Math.round(ped.y), a: +aim.toFixed(2) });
+  for (const o of world.query(ped.x, ped.y, w.range + 40)) {
+    if (o === ped || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz) || (o.kind !== K.PED && o.kind !== K.VEH)) continue;
+    const d = Math.hypot(o.x - ped.x, o.y - ped.y), r = o.kind === K.VEH ? o.def.W / 2 : o.r || 8;
+    if (d > w.range + r) continue;
+    if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > r + 12) continue;
+    if (!world.map.los(ped.x, ped.y, o.x, o.y)) continue;
+    if (o.kind === K.PED) { if (o.dead || o.vehId || o.sky || !hurtable(world, o)) continue; burning.ignite(world, o, ped); damage(world, o, w.dmg, ped, 'fire', aim); }
+    else if (!o.wreckAt && !o.removed && (o.alt || 0) < FLY.HIGH) vehicles.damageVehicle(world, o, w.dmg * 0.8, ped);
+  }
+  law.gunfire(world, ped);
+  npc.onGunfire(world, ped.x, ped.y, ped, 220);
 }
 
 // Returns the first ped or vehicle along the segment before any wall, or null.

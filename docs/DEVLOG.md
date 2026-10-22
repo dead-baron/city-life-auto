@@ -14151,3 +14151,21 @@ there, smaller. The next one comes to hand by itself (the reload).
 
 Tests: test/grenades.test.js - for sale, illegal; thrown in an arc, the next to hand, at rest a way off, the blast hurts
 whoever's by it; off a wall (never inside it); a ball on the wire, empty hands in hand.
+
+## 2026-10-22 · Fully automatic: the assault rifle and the flamethrower
+
+Task #318 and the owner's 10-15 note ("flamethrower and fully automatic assault rifles in the debug menu"). Every gun
+already fires for as long as the trigger is held, at its own rate; these two are built for it:
+
+- **the assault rifle** (shared/items.js arifle): ten shots a second from a 30-round magazine, 17 a hit, a little
+  spread. The black market ($2,600) and the Smuggler's Den ($2,300); illegal.
+- **the flamethrower** (flamer): a cone of fire 150 px out in front, a few degrees either way (server combat.js flame):
+  everyone in it set alight (burning.js) and singed, cars in it scorched, nothing through a wall, nobody behind you.
+  60 bursts of fuel to a tank. The Smuggler's Den ($4,800); illegal. The page draws the jet (fire particles out of the
+  nozzle, a glow) and its roar from the 'flame' events (client/main.js).
+- both in the debug menu's give list (it lists every weapon) with their own icons (client/render/peds.js). Their
+  indices, 33 and 34, are past the five bits a hand has on the wire: in hand they show as the police assault rifle and
+  the bazooka's tube (net.js handIndex) - no snapshot change.
+
+Tests: test/autoweapons.test.js - held for a second, about ten shots; shown as the police rifle; the cone sets the one
+in front alight and leaves the one behind alone, scorches a car; shown as the bazooka.
