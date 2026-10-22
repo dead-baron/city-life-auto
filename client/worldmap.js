@@ -168,6 +168,19 @@ class WorldMap {
         }
       }
     }
+    // the trains where they are (the Transit category): a capsule along the track in its line's colour (the main line's
+    // cream; the subways' own), dimmer underground
+    if (cats.has('transit') && T && T.trains) {
+      const rails = this.map.rails || [];
+      for (const [x0, y0, a, li, sub] of T.trains) {
+        const [x, y] = P(x0, y0), R = rails[li], col = (R && R.color) || '#f2e6c4';
+        if (x < -12 || y < -12 || x > cw + 12 || y > ch + 12) continue;
+        g.save(); g.translate(x, y); g.rotate(a); g.globalAlpha = sub ? 0.75 : 1;
+        g.fillStyle = col; g.strokeStyle = '#0a0f1d'; g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(-9, -3.5); g.lineTo(6, -3.5); g.arc(6, 0, 3.5, -Math.PI / 2, Math.PI / 2); g.lineTo(-9, 3.5); g.closePath(); g.fill(); g.stroke();
+        g.restore();
+      }
+    }
     // the ferries: each route dashed in sea blue, an anchor at each pier, and where its boat is
     if (cats.has('transit') && T && T.ferries) {
       g.lineCap = 'round'; g.lineJoin = 'round';

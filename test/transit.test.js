@@ -292,3 +292,12 @@ test('rideshare: the Ultra Saver - under half the fare, flat out once you\'re in
   b.taxi.meter = 32000;
   assert.equal(transit.taxiInfo(world, p).fare, Math.round((TAXI_FLAG + TAXI_PER_KM) * RIDESHARE.premium.fare), '2.2x the fare');
 });
+
+test('the map\'s live transit: where every train is (the buses and the ferries\' boats were there)', () => {
+  const world = makeWorld();
+  run(world, 1);
+  const info = transit.transitInfo(world, null);
+  assert.ok(Array.isArray(info.trains) && info.trains.length === world.trains.length && info.trains.length > 0, `the trains (${info.trains && info.trains.length})`);
+  const [x, y, a, line, sub] = info.trains[0];
+  assert.ok(Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(a) && Number.isInteger(line) && (sub === 0 || sub === 1));
+});

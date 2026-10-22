@@ -14506,3 +14506,12 @@ ARCADE):
 
 Tests: test/arcade.test.js - the game's waves and hits; a credit paid, the page told, a wrong credit ignored, a score
 worth its tickets once, an impossible score cut down, a prize won and one out of reach; the mansion's cabinet free.
+
+## 2026-10-22 · The trains on the big map
+
+The owner, 10-06: "live transit on the big map (routes, where each vehicle is now)". The buses and the ferries' boats
+were already on the map where they are (the page asks again every couple of seconds while it's open); the trains
+weren't. Now every train is there too (server/systems/transit.js transitInfo `trains`; client/worldmap.js): a capsule
+along the track pointing the way it runs, in its line's colour (the main line's cream, the Pink and Yellow lines'
+own), dimmer on the subway; under the Transit category like the rest.
+Tests: test/transit.test.js - every train in the map's transit info.

@@ -546,10 +546,21 @@ export function rideInfo(world, p) {
   return { k: 'bus', line: L ? L.name : 'Bus', col: PAINTS[L ? L.paint : 0], at: at ? at.name : null, next: nx ? nx.name : '' };
 }
 
+// the trains, for the map (the owner's 10-06 "live transit on the big map": the buses and the ferries' boats were on it
+// already - the page asks again every couple of seconds while it's open): each one's front car [x, y, a, line
+// (map.rails' index; -1 the old city's one line), 1 on the subway]
+function liveTrains(world) {
+  const out = [];
+  for (const t of world.trains || []) {
+    const e = t.cars && t.cars[0] && world.get(t.cars[0].id);
+    if (e) out.push([Math.round(e.x), Math.round(e.y), +e.a.toFixed(2), e.line ?? -1, e.sub ? 1 : 0]);
+  }
+  return out;
+}
 // The Transit app and the map: the lines (their streets and stops), where their buses are, when each stop's next comes
 export function transitInfo(world, p = null) {
   return {
-    t: 'transit', taxi: p ? taxiInfo(world, p) : null, taxiFlag: TAXI_FLAG, taxiKm: TAXI_PER_KM, rs: TIERS.map((k) => ({ k, name: RIDESHARE[k].name, note: RIDESHARE[k].note })),
+    t: 'transit', trains: liveTrains(world), taxi: p ? taxiInfo(world, p) : null, taxiFlag: TAXI_FLAG, taxiKm: TAXI_PER_KM, rs: TIERS.map((k) => ({ k, name: RIDESHARE[k].name, note: RIDESHARE[k].note })),
     lines: busLines(world).map((L) => ({
       id: L.id, name: L.name, col: PAINTS[L.paint], len: L.len, path: linePath(world, L),
       stops: L.stops.map((s, k) => ({ x: s.x, y: s.y, n: s.name, eta: stopEta(world, L, k) })),
