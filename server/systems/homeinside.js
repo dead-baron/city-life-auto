@@ -272,7 +272,7 @@ export function interaction(world, p) {
   }
   if (s.seat) return { label: tvOn(world, h) ? 'Watching TV - move to get up' : 'Sitting down - move to get up', passive: true, run: () => {} };
   const f = furnitureAt(world, h, s);   // (a seat or the TV - the couch, an armchair, the cinema's rows; the decor's too)
-  if (f && (!u || near(f, s.x, s.y) < near(u, s.x, s.y))) {
+  if (f && (!u || near(f, s.x, s.y) + 10 < near(u, s.x, s.y))) {   // (a seat or the TV only when clearly nearer: the hall table, the bed and the rest come first)
     if (TVS.has(f.ch)) return { label: tvOn(world, h) ? 'Switch the TV off' : 'Switch the TV on', run: () => tv(world, p, h) };
     if (f.ch === 'x') return { label: 'Rack \'em up at the pool table', run: () => arcade.play(world, p, true, null, 'pool') };
     if (CABS.has(f.ch)) return { label: 'Play STARFALL on the cabinet', run: () => arcade.play(world, p, true) };
