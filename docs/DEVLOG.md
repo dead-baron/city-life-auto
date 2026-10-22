@@ -13604,3 +13604,15 @@ rubber squeal instead of a whoosh and silent on a hard start. Burnouts already s
   under yours (0.6 of the level, was 0.8), and the squeal eases in rather than biting at once.
 
 Tests: test/sound.test.js - the level kept a little over your own engine.
+
+## 2026-10-21 · The camera pulls back at speed on a train
+
+The owner, 10-16: "Zoom out at full speed on a train, back in at stations". The camera's pull-back at speed (up to
+1.5x) read the speed of the car you drive or ride in, and a train's rider got none.
+
+- **on a train** (`client/main.js`, the camera): its speed is how fast you're carried along, smoothed, so the camera
+  pulls back as the train gets up to speed (about 1.4x at full speed) and comes back in as it slows into a station.
+  At the platform it's back to normal. A jump (boarding, a teleport) doesn't count as speed. While the art can't keep
+  up (a phone's bakes), it eases off as it does in a car.
+
+No automated test: it's the page's camera (play it: ride a train between two stations).

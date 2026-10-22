@@ -2899,6 +2899,13 @@ function prepFrame(dt) {
   let speed = 0;
   if (S.pred && S.pred.kind === 'veh') speed = Math.hypot(S.pred.s.vx, S.pred.s.vy);
   else if (S.ctrlKind === CTRL.PASSENGER || S.ctrlKind === CTRL.RIDER) { const e = S.ents.get(S.ctrlId); if (e && e.buf.length > 1) { const b = e.buf; speed = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20; } }
+  // riding a train: its speed from how fast you're carried along (smoothed) - the camera pulls back at full speed and
+  // comes back in as it slows into a station (the owner, 10-16: "Zoom out at full speed on a train, back in at stations")
+  if (S.me && S.me.train) {
+    const L = S.trainCam || (S.trainCam = { x: sp.x, y: sp.y, v: 0 }), d = Math.hypot(sp.x - L.x, sp.y - L.y) / Math.max(dt, 1e-3);
+    L.v += (Math.min(900, d > 2000 ? 0 : d) - L.v) * (1 - Math.exp(-2 * dt)); L.x = sp.x; L.y = sp.y;   // (a jump - boarding, a teleport - isn't speed)
+    speed = Math.max(speed, S.me.train.at ? 0 : L.v);
+  } else S.trainCam = null;
   // down: like a movie camera, it slowly pulls back from your body (never wider than the server sends)
   const downFor = S.me && S.me.dead ? (S.downFor = (S.downFor || 0) + dt) : (S.downFor = 0);
   const pull = downFor ? 1 + (DOWN_PULL - 1) * Math.min(1, downFor / 9) * (0.5 - 0.5 * Math.cos(Math.min(1, downFor / 9) * Math.PI)) : 1;
