@@ -1,4 +1,4 @@
-import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SKATEBOARD_PRICE, PARACHUTE_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
+import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SKATEBOARD_PRICE, PARACHUTE_PRICE, DRILL_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
@@ -151,6 +151,7 @@ export const ITEMS = {
   redcap:  { name: 'Redcap Toadstool',  loot: true, sell: 2 },      // (pretty and poisonous: nobody eats one)
   ghostglass: { name: 'Ghostglass Caps', loot: true, illegal: true, sell: 0 },   // the glowing hallucinogen: only the black market buys them, and the police take them
   goldStar: { name: 'Golden Star',      loot: true, sell: 150 },    // a rare sea star that glows, from the tidepools
+  drill:    { name: 'Thermal Drill',    tool: true, illegal: true, sell: 0 },   // set on a bank's vault door: a heist (server/systems/heist.js); only the black market sells one, and the police take it
   // the wilds' finds (Nature-D1, shared/foraging.js: where each is found, and who buys it) and the tools two of them take
   wildBerries: { name: 'Wild Berries',  food: true, heal: 6, sell: 4 },
   wildHerbs: { name: 'Wild Herbs',      sell: 7 },
@@ -420,6 +421,7 @@ export const SHOPS = {
     { kind: 'weapon', id: 'katana', price: 1500 },
     { kind: 'weapon', id: 'grenade', price: 450 }, { kind: 'ammo', id: 'grenade', price: 140, qty: 1 },
     { kind: 'weapon', id: 'arifle', price: 2600 }, { kind: 'ammo', id: 'arifle', price: 80, qty: 30 },
+    { kind: 'item', id: 'drill', price: DRILL_PRICE, qty: 1 },
   ], sells: ['purse', 'bonds', 'jewelry', 'ghostglass', 'goldStar'], sellPrice: { ghostglass: FORAGE_FENCE_GHOSTGLASS, goldStar: 175 } },
   tackle: { title: 'Hook & Line Bait and Tackle', buy: [
     { kind: 'item', id: 'caneRod', price: 25, qty: 1 }, { kind: 'weapon', id: 'rod', price: 60 }, { kind: 'item', id: 'baitcaster', price: 240, qty: 1 }, { kind: 'item', id: 'flyRod', price: 300, qty: 1 }, { kind: 'item', id: 'surfRod', price: 380, qty: 1 },

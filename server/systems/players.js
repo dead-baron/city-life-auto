@@ -50,6 +50,7 @@ import * as dealer from './dealer.js';
 import * as races from './races.js';
 import * as minigames from './minigames.js';
 import * as robbery from './robbery.js';
+import * as heist from './heist.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
@@ -698,6 +699,8 @@ export function findInteraction(world, p) {
   if (hap) return hap;
   const vault = streetlife.interaction(world, p);   // the back of a stopped armored truck: hold to unlock it (streetlife.js)
   if (vault) return vault;
+  const bankJob = heist.interaction(world, p);   // a bank's vault door: the thermal drill (heist.js)
+  if (bankJob) return bankJob;
 
   const busk = personas.interaction(world, p);   // a coin for the busker (personas.js)
   if (busk) return busk;

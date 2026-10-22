@@ -14533,3 +14533,30 @@ room table stood as furniture. Now walk up to either and rack 'em up (server/sys
 
 Tests: test/arcade.test.js - the rack, a break spreading the balls, everything coming to rest on the table, a ball
 rolled into a corner pocket, the server keeping a frame's shots as the best and refusing an impossible one.
+
+## 2026-10-22 · Bank heists
+
+The owner's #306 (10-07 / 10-08: "heists and bank robberies"). A bank's teller could be held up like any shop's clerk;
+the bank itself had nothing more. Now every bank you can walk into (eleven in World v3, from Midtown Savings and the
+downtown First Pixel to Mesa Savings & Trust) has a **vault door** on the back wall behind the counter (shared/heist.js
+`vaultOf`), and there's a job to pull there (server/systems/heist.js; shared/rules.js HEIST):
+- **the drill**: the black market sells a thermal drill ($1,200 - an illegal tool the police take off you). Go round
+  the end of the counter to the vault door and set it there.
+- **the alarm** goes at once: a bank heist on your record and 3 stars, climbing while the drill runs and you're inside;
+  squads come 8-14 s later, four of them, and as many again 25 s after - they surround the bank and come in, as at a
+  robbery (standoff.js). The radar shows it to everyone near (a Bank heist event).
+- **the door**: the drill works about a minute through it on its own; on the way it jams (once or twice) and stops until
+  someone clears it at the drill - a friend can. Left jammed two and a half minutes, the police take it away.
+- **the vault open**: its district's load spills onto the floor - iron safe-deposit boxes and carbon-gold cases of bars
+  (cargo crates, contraband: the fence pays a fortune), four in the richest districts, two in the roughest - and the
+  drawers' cash goes in your bag as hot money (if you're still there). Carry the crates out one at a time to something
+  with an open back and get away. The vault stands open five minutes, then it's cleaned out for half an hour.
+- **on the page** (client/vault.js, loaded the first time you walk into a bank): the round steel door in its frame with
+  the brass plate; the red drill on its legs at the lock, the bit glowing, sparks and the ring of how far through it is;
+  a jam's blinking red light and JAMMED; the door swung open, the vault dark behind with a gold bar or two left on the
+  shelves. The drill's whine, a jam's clunk, the door's clang (client/sound/events.js).
+
+Tests: test/heist.test.js - every bank's vault door behind its counter with floor to stand on, the black market's
+drill; a heist from the drill to the open vault (3 stars, on the record, the scene, the jams stopping it and cleared,
+the load and the hot money, cleaned out, worth another go later); a drill left jammed taken away; no drill for an
+officer.

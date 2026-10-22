@@ -125,6 +125,11 @@ export const EVENT_SOUNDS = {
   pop: at('tyrepop'),
   spikes: at('spikes'),
   spikesgone: null,                              // (the strip picked up: the deploy was heard)
+  // bank heists (heist.js): the thermal drill's whine at the vault door, a jam's clunk, the door swinging open
+  vault: null, vaultgone: null,                  // (the vault's state, said again every few seconds: drawn by client/vault.js)
+  drill: at('chainsaw', 0.5),
+  drilljam: (ev, A) => { A.at('clang', ev.x, ev.y, 0.8); A.at('thud', ev.x, ev.y, 0.6); },
+  vaultopen: (ev, A) => { A.at('clang', ev.x, ev.y, 1); A.at('thud', ev.x, ev.y, 1); A.at('rubble', ev.x, ev.y, 0.4); },
   barrier: (ev, A) => { A.at('crash', ev.x, ev.y, 1, { p: 1 }); A.at('rubble', ev.x, ev.y); },
   barrierfix: null,                              // (repaired off-screen, by the road crews)
   gatebreak: (ev, A) => { A.at('crash', ev.x, ev.y, 0.7, { p: 0.6 }); A.at('woodcrunch', ev.x, ev.y, 0.8); },

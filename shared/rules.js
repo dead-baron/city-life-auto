@@ -450,6 +450,8 @@ export const ATM_DEPOSIT_PX = 48;          // an ATM's reach (it used to bank yo
 // Skateboarding, part 1 (the owner, 2026-10-17; server/systems/skate.js; the board's physics: shared/physics.js BOARD):
 // the board's price at a skate shop, a sports shop or a surf shop; a bail - thrown off into a wall, a post or a car, or off
 // a fall - hurts this much at bailHit speed and up to the most at full speed, and you're down this long
+import { DRILL_PRICE } from './rules-base.js';
+export { DRILL_PRICE };
 export { SKATEBOARD_PRICE, PARACHUTE_PRICE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
 // Skateboarding's score (server/systems/skate.js): a combo banked after comboGap s rolling on is its points x its tricks
@@ -828,6 +830,19 @@ export const ARCADE = {
   prizes: [{ item: 'glowstick', t: 25 }, { item: 'energy', t: 50 }, { item: 'flare', t: 60 }, { decor: 'art', t: 150 }, { item: 'headlamp', t: 200 }, { decor: 'turntable', t: 400 }, { item: 'skateboard', t: 500 }],
 };
 export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
+// bank heists (the owner's #306, 10-07 / 10-08: "heists and bank robberies" - server/systems/heist.js, client/vault.js):
+// a thermal drill from the black market (drillPrice) set on a bank's vault door works drillS seconds through it - stopped
+// while it's jammed (up to `jams` times on the way, each cleared at the drill), taken by the police if nobody clears it
+// in abandonS. The bank's alarm goes the moment it starts: `heat` at once (3 stars) and heatS more a second while it
+// runs; squads after responseS, `units` of them, and as many again `wave2S` later. Open, the vault holds its district's
+// `load` of crates (cargo tiers: 3 an iron safe-deposit box, 4 a carbon-gold case of bars) and `cash` in the drawers
+// (hot money to whoever set the drill, times the district: ROB_TILL_TIER); it stands open openS, then it's cleaned out
+// for cooldownS. `reach`: how close to the vault door's spot to work it (px)
+export const HEIST = {
+  drillPrice: DRILL_PRICE, drillS: 60, jams: 2, abandonS: 150, heat: 62, heatS: 0.4, responseS: [8, 14], units: 4, wave2S: 25,
+  openS: 300, cooldownS: 1800, cash: 3000, reach: 46, xp: 60,
+  load: { lux: [4, 4, 3, 3], suburb: [4, 3, 3], mid: [4, 3, 3], neon: [4, 3, 3], rural: [3, 3, 3], industrial: [3, 3, 3], red: [3, 3, 3], low: [3, 3], rough: [3, 3], wild: [3, 3] },
+};
 export const CASINO = {
   slots: [5, 25, 100], stakes: [10, 50, 250, 1000], bjPays: 1.5, twoCherries: 3,
   reel: {

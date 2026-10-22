@@ -52,6 +52,7 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Throw / drop crate | Q | Y | THROW |
 | Reload / horn & siren (siren on: traffic pulls over; on a bicycle, the bell) | R / H | — / D-pad up | — / HORN |
 | Rob a store (gun on the clerk; lower it to stop) | Hold right mouse / aim at the clerk | LT aimed at the clerk | aim stick at the clerk |
+| Pull a bank heist: a thermal drill from the black market ($1,200), round the end of a bank's counter to the vault door on the back wall, set it - the alarm, 3 stars, squads on the way; about a minute through the door, clearing the drill when it jams; then carry the vault's crates out to an open bed and on to a fence | E at the vault door (again at a jam) | B at the vault door | ACT at the vault door |
 | Kick the ball (soccer) / spike (volleyball) | Click next to the ball | RT next to the ball | FIRE next to the ball |
 | Golf: aim, then hold and let go at the top of the meter (by your ball; each shot starts aimed at the flag) | Mouse · hold left click | Right stick · hold RT | Aim stick · hold FIRE |
 | Shoot hoops (North Point Courts: E for a ball, then hold and let go in the meter's green band) | E · hold left click | B · hold RT | ACT · hold FIRE |

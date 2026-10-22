@@ -841,6 +841,12 @@ function onEvent(ev) {
       sfx('spray', distVol(ev.x, ev.y)); break;
     case 'spikes': S.spikes.set(ev.id, { x: ev.x, y: ev.y, a: ev.a, half: ev.half, until: performance.now() + ev.left * 1000 }); break;
     case 'spikesgone': S.spikes.delete(ev.id); break;
+    // a bank's vault (server/systems/heist.js; drawn by client/vault.js): its state, the drill's sparks, the door opening
+    case 'vault': (S.vaults ||= new Map()).set(ev.id, { st: ev.st, k: ev.k || 0, j: ev.j, left: ev.left, at: performance.now(), op: (S.vaults.get(ev.id) || {}).op || (ev.st === 'open' ? performance.now() - 5000 : 0) }); break;
+    case 'vaultgone': if (S.vaults) S.vaults.delete(ev.id); break;
+    case 'vaultopen': (S.vaults ||= new Map()).set(ev.id, { st: 'open', at: performance.now(), op: performance.now() }); fx.sparks(ev.x, ev.y - 21, 10); fx.smoke(ev.x, ev.y - 18, true); S.cam.shake = Math.max(S.cam.shake, 3 * distVol(ev.x, ev.y)); break;
+    case 'drill': fx.sparks(ev.x - 3, ev.y - 21, 3); break;
+    case 'drilljam': fx.smoke(ev.x - 13, ev.y - 21, true); break;
     case 'pop': fx.sparks(ev.x, ev.y, 6); fx.smoke(ev.x, ev.y, false); sfx('pop', distVol(ev.x, ev.y)); break;
     case 'swing': {
       const a = S.ents.get(ev.id), mine = !!(a && a.localSwing && S.loopClock - a.localSwing < 0.6);
@@ -3382,6 +3388,7 @@ function drawOverlays(F, v2) {
   if (S.fireMod && !F.sub) S.fireMod.draw(g, F, S);   // (the fires on the ground, the hoses: render/firejob.js)
   drawBowling(F);
   drawCinema(F);
+  drawVault(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
     const ta = touchAimState();
@@ -3934,6 +3941,13 @@ function drawBowling(F) {
   if (!A || !F.sp) return;
   if (S.bowlView) { S.bowlView.draw(g, F, { walkInAt, DPR, W, H }); g.setTransform(...S.worldTf); }
   else if (!S.bowlAsk && Math.hypot(F.sp.x - A.counter.x, F.sp.y - A.counter.y) < 1600) { S.bowlAsk = 1; import('./bowling.js').then((m) => { S.bowlView = new m.BowlingView(S); }).catch((e) => console.warn('[bowling]', e)); }
+}
+// a bank's vault door (client/vault.js, loaded the first time you walk into a bank): shut, the drill on it, or open
+function drawVault(F) {
+  const b = F.sp && walkInAt(F.sp.x, F.sp.y);
+  if (!b || !b.walkIn.units.some((u) => u.kind === 'bank')) return;
+  if (S.vaultMod) { S.vaultMod.draw(g, b, S); g.setTransform(...S.worldTf); }
+  else if (!S.vaultAsk) { S.vaultAsk = 1; import('./vault.js').then((m) => { S.vaultMod = m; }).catch((e) => { S.vaultAsk = 0; console.warn('[vault]', e); }); }
 }
 const fireJob = () => (S.fireP ||= import('./render/firejob.js').then((m) => { S.fireMod = m; }).catch((e) => { S.fireP = null; console.warn('[fire]', e); }));
 // The Grand Theatre (client/cinema.js, loaded near it): the screen rooms dark, the film on the screen and its light
