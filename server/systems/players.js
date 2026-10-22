@@ -5,6 +5,7 @@ import { IN } from '../../shared/input.js';
 import { WEAPONS, ITEMS } from '../../shared/items.js';
 import * as skydive from './skydive.js';
 import * as tennis from './tennis.js';
+import * as prison from './prison.js';
 import * as aircraft from './aircraft.js';   // (at the controls of an aircraft)
 import { pedStep, driveInput, TUMBLE_FRICTION, AIR_FRICTION } from '../../shared/physics.js';
 import { PED_BLOCK, isSwimming } from '../../shared/map.js';
@@ -605,6 +606,7 @@ export function findInteraction(world, p) {
   if (ped && !ped.dead && !ped.cuffed && custody.inCell(p)) return cells.interaction(world, p);   // (the bench, the toilet, the bars)
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
   if (ped.sky) return skydive.interaction(world, p);   // (up in the sky: the parachute)
+  if (p.prison) return prison.interaction(world, p);   // (doing time on Prison Island: the wall - prison.js)
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
   if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
   if (ped.hidden && ped.home) return homeinside.interaction(world, p);   // (the bed, the safe, the front door... homeinside.js)
@@ -893,7 +895,7 @@ export function buildMe(world, p) {
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible, safety: safety.on(p),
     quick: economy.quickSlots(p), down: revive.downState(world, p), limp: !!(ped && ped.limpUntil > world.time),
     sk: skate.meInfo(world, p),   // (on a skateboard: the score, the combo, the special meter, a session - skate.js)
-    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p), tennis: tennis.meInfo(world, p), bowl: bowling.meInfo(world, p), cine: cinema.meInfo(world, p),
+    ride: rides.meInfo(world, p), bus: transit.rideInfo(world, p) || ferries.rideInfo(world, p), taxi: transit.taxiInfo(world, p), golf: golf.meInfo(world, p), hoops: hoops.meInfo(world, p), tennis: tennis.meInfo(world, p), prison: prison.meInfo(world, p), bowl: bowling.meInfo(world, p), cine: cinema.meInfo(world, p),
     arrows: ped && world.arrows && world.arrows.length ? world.arrows.filter((a) => a.owner === ped.id && Math.abs(a.x - ped.x) < 1600 && Math.abs(a.y - ped.y) < 1600).slice(-16).map((a) => [Math.round(a.x), Math.round(a.y), +a.a.toFixed(2)]) : null,
   };
 }

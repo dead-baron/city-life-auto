@@ -36,7 +36,7 @@ export function update(world) {
       const v = ped.vehId ? world.get(ped.vehId) : null;
       const x = v ? v.x : ped.x, y = v ? v.y : ped.y;
       if (allowed(g.rule, p) && near(x, y, 170)) want = true;
-      else if (insideRect(g.rect, x, y) && near(x, y, 130)) want = true; // anyone inside can leave
+      else if (insideRect(g.rect, x, y) && near(x, y, 130) && !p.prison) want = true; // anyone inside can leave (but a prisoner: prison.js)
     }
     if (g.rule === 'police') for (const v of world.query(g.x, g.y, 220, K.VEH)) if (v.ai && v.ai.kind === 'police' && near(v.x, v.y, 170)) want = true;
     const inGateway = world.query(g.x, g.y, g.w / 2 + 40).some((e) => (e.kind === K.PED || e.kind === K.VEH) && !e.removed && !e.dead && (() => { const r = rel(e.x, e.y); return Math.abs(r.depth) < (e.kind === K.VEH ? e.def.L / 2 + 6 : 20) && Math.abs(r.along) < g.w / 2; })());

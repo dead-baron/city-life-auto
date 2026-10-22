@@ -70,6 +70,7 @@ import * as skydive from './systems/skydive.js';
 import * as grenades from './systems/grenades.js';
 import * as tennis from './systems/tennis.js';
 import * as k9 from './systems/k9.js';
+import * as prison from './systems/prison.js';
 import * as sar from './systems/sar.js';
 import * as charter from './systems/charter.js';
 import * as dusting from './systems/dusting.js';
@@ -119,6 +120,7 @@ const SYSTEMS = [
   ['police', police.update],        // NPC police dispatch / pursuit
   ['k9', k9.update],                // police dogs: riding along, let out, running suspects down (k9.js)
   ['custody', custody.update],      // the arrested: held, walked to a car, driven to the station, the cells
+  ['prison', prison.update],        // Prison Island: time served, the wall climbed, the guards at their posts (prison.js)
   ['cells', cells.update],          // the police stations' cell blocks: nobody hurt there, the doors, NPC inmates
   ['cruiser', cruiser.update],      // player officers' personal cruisers: delivery, loss, tow
   ['gang', gang.update],            // Syndicate membership: Smuggler's Rock guards

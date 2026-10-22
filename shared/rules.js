@@ -803,3 +803,7 @@ export const TENNIS = { pace: 430, spray: 120, proSpeed: 0.92, proMiss: 0.06, pr
 // dog; the dog runs at speed x a walk, after anyone wanted within sight px; a bite within reach px puts them down for
 // downS s, no more than once every `every` s
 export const K9 = { share: 0.3, stars: 2, maxStars: 3, speed: 2.7, sight: 650, reach: 24, downS: 2.4, every: 5, hp: 70 };
+// Prison Island (server/systems/prison.js): a booking at `stars` or more, or the `repeat`th within repeatMs (wall-clock
+// ms), is a sentence at Kestrel Bay Penitentiary instead of the station's cells: base s + perStar a star + perRepeat for
+// each booking before it in that time, up to max s; the wall takes climbS s to get over; over it, escapeStars stars
+export const PRISON = { stars: 4, repeat: 3, repeatMs: 2 * 3600e3, base: 90, perStar: 35, perRepeat: 30, max: 300, climbS: 5, escapeStars: 3 };

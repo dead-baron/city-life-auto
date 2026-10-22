@@ -14261,3 +14261,27 @@ hurtable) - get into a car, or get away from the officers before it reaches you.
 
 Tests: test/k9.test.js - the handler's vest, the shepherd on the wire, in the back, let out, a sprinting suspect caught
 and brought down (bitten, not killed), back in with its handler, gone with the unit; not wanted, no bite.
+
+## 2026-10-22 · Prison Island: sentences, and over the wall
+
+The owner, 10-05: "Prison island: sentenced after many arrests, about 5 min max, breakouts, prison-break quests".
+Kestrel Bay Penitentiary was built in World v3 (the walls, the towers, the cell blocks round the exercise yard, the
+gate for officers only, the harbour) with nobody ever sent there. server/systems/prison.js:
+
+- **the sentence** (custody.js book): a booking at four stars or more, or the third within two hours, isn't the
+  station's cells but a sentence at Kestrel Bay - no bail - of 90 s plus 35 s a star plus 30 s for each recent
+  booking before it, five minutes at most (shared/rules.js PRISON). You're inside the walls by the gate.
+- **inside**: the weapons put away (back in your hand when you're out), nobody hurts anyone (as in the cells:
+  ped.cellSafe); the gate never opens for a prisoner (gates.js; an officer coming through still opens it - rush it
+  and you're out). Guards stand at the posts on the ground (the gate, the yard's corners, the blocks' doors, the
+  harbour) while anyone's doing time there. The bar at the top counts the time down.
+- **served**: let out, and the Prison Boat brings you back - off at Sandpiper Bay Police Dock.
+- **over the wall**: by the compound's outer wall the action button climbs it - five seconds in plain sight of the
+  towers (the alarm bell) - and over it you're out: three stars, your weapons back, and an island to get off (a
+  long swim; the sharks are likelier round Prison Island). Leaving the compound any other way counts the same.
+- logged off inside: the time left is kept with the character and served next time (custody.js saveJail / onJoin).
+- not yet: NPC inmates in the yard, a Prison Boat that runs, prison-break quests.
+
+Tests: test/prison.test.js - who goes (four stars, the third booking, five minutes at most); booked at four stars:
+inside, weapons away, nobody hurt, the guards out, the gate shut, served and back on the mainland with the weapon;
+over the wall, three stars; logged off and back inside.
