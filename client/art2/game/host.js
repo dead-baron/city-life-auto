@@ -264,6 +264,9 @@ function rgbOf(c) {
   return v;
 }
 const quant = (a, N) => ((Math.round(a / TAU * N) % N) + N) % N;
+// A train car's turns: twice a car's (64 on most screens, 128 on High). A coach 212 px long rounded to 32 turns snapped
+// round a wide curve an 11-degree step at a time (the owner, 10-16: "Trains look odd on wide curves (angle steps)").
+export const trainSteps = (N) => Math.min(128, N * 2);
 
 // The giant redwoods' fade ids (statics.js TREE_FADE + the prop's index) and their outlines: the half width (px) a
 // tree covers in each 40 px of its height, from its foot up - the flared foot, the trunk, then the crown from about
@@ -1674,7 +1677,7 @@ export class World2 {
   _train(c, now, myTrain) {
     const def = TRAIN_CARS[c.d.c], A = this.A;
     if (!def || !A || !A.trainKey) return;
-    const inside = c.d.tr === myTrain, N = this.tier.N;
+    const inside = c.d.tr === myTrain, N = trainSteps(this.tier.N);
     const mode = `${inside ? 'in' : 'roof'}${c.flags & 8 ? '-lit' : ''}${c.flags & 16 ? '-empty' : ''}`;
     const hi = quant(c.ra, N);
     let sk = this._spr('actors', 'train', A.trainKey(c.d.c, mode, hi, N), [c.d.c, mode, hi, N]);
@@ -1898,7 +1901,7 @@ export class World2 {
         const N = this.tier.N, hi = quant(e.ra || 0, N), st = A.vehState(e.flags, 1, e.hp, e.parent);
         if (this._ask('actors', 'vehicle', A.vehicleKey(e.d, st, hi, N), [e.d, st, hi, N], prio)) budget--;
       } else if (e.kind === K.TRAIN && A && A.trainKey && TRAIN_CARS[e.d.c]) {
-        const N = this.tier.N, hi = quant(e.ra || 0, N), mode = `roof${e.flags & 8 ? '-lit' : ''}${e.flags & 16 ? '-empty' : ''}`;
+        const N = trainSteps(this.tier.N), hi = quant(e.ra || 0, N), mode = `roof${e.flags & 8 ? '-lit' : ''}${e.flags & 16 ? '-empty' : ''}`;
         if (this._ask('actors', 'train', A.trainKey(e.d.c, mode, hi, N), [e.d.c, mode, hi, N], prio)) budget--;
       } else if (e.kind === K.CRATE && A && A.crateKey) {
         const hi = quant(e.ra || 0, 16), label = e.d.l || '';

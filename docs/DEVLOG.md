@@ -14041,3 +14041,17 @@ test/worldmap.test.js caught it in the batch's full run. Rebaked.
 
 The golf carts' spots replaced the carts as props on the old city's course (shared/naturesites.js), which changes the
 old city's signature: its world map picture rebaked (`node tools/build-worldmap2.mjs`).
+
+## 2026-10-22 · Trains turn smoothly round wide curves
+
+The owner, 10-16: "Trains look odd on wide curves (angle steps)". The cars' pose is smooth (server/systems/trains.js
+puts each car between two points along the line, and its angle goes to the page as a float), but the page drew each car
+from a sprite at one of a car's turns: 32 on most screens (`TIERS` N in client/art2/game/host.js). A coach is 212 px long,
+so on a wide curve it snapped round 11 degrees at a time, its ends jumping ~21 px at each step - while a car, a fifth as
+long, jumps 4.
+
+- **twice the turns for train cars** (`trainSteps`): 64 on most screens, 128 on High (32 on the lowest). A step now
+  moves a car's ends about 10 px, 5 on High. The sprites are rendered as they're needed, so this costs only the turns a
+  train actually passes through; the next turn either side is asked for ahead as before.
+
+Tests: test/trainturns.test.js - the steps, how far a car's end jumps at one, and a coach drawn at three fine turns.
