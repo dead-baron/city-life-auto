@@ -11,6 +11,8 @@ import { ARCADE } from '../../shared/rules.js';
 import { ITEMS } from '../../shared/items.js';
 import { PIECES as DECOR } from '../../shared/homedecor.js';
 import { store } from '../store.js';
+import { poolTable } from './activities.js';
+import { payFrom as pay } from './economy.js';
 
 // an arcade's door: a business place whose building is an arcade (the strip's storefronts, the Pixel Arcade)
 export function isArcade(world, poi) {
@@ -67,11 +69,18 @@ export function execute(world, p, poi, opt, pay) {
   return 'Not at this counter.';
 }
 
-// a credit: the page plays it (client/arcade.js)
-export function play(world, p, free, poi = null) {
+// a credit: the page plays it (client/arcade.js STARFALL; client/pool.js a frame of pool - at the Rusty Spur's table
+// and the mansion's)
+export function play(world, p, free, poi = null, game = 'starfall') {
   if (!p.conn) return;
-  p.arcade = { id: randomBytes(6).toString('hex'), at: world.time, free: !!free, poi };
-  p.conn.sendJSON({ t: 'arcade', game: 'starfall', id: p.arcade.id, free: !!free, best: p.profile.arcadeBest || 0 });
+  p.arcade = { id: randomBytes(6).toString('hex'), at: world.time, free: !!free, poi, game };
+  p.conn.sendJSON({ t: 'arcade', game, id: p.arcade.id, free: !!free, best: (game === 'pool' ? p.profile.poolBest : p.profile.arcadeBest) || 0 });
+}
+// the Rusty Spur's pool table (activities.js poolTable): a frame for ARCADE.pool dollars
+export function poolInteraction(world, p) {
+  const ped = p.ped, T = world.map.roadhouse ? poolTable(world.map) : null;
+  if (!T || !ped || ped.dead || ped.vehId || Math.hypot(ped.x - T.cx, ped.y - T.cy) > 70) return null;
+  return { label: `Rack 'em up at the pool table ($${ARCADE.pool})`, run: () => { if (pay(p, ARCADE.pool)) play(world, p, true, null, 'pool'); else world.notify(p, 'Not enough money.', 'warn'); } };
 }
 
 // the score back from the page (session.js): the tickets it's worth, if it's this credit's and could be true
@@ -79,6 +88,15 @@ export function onScore(world, p, msg) {
   const A = p.arcade;
   if (!A || String(msg.id || '') !== A.id) return;
   p.arcade = null;
+  if (A.game === 'pool') {   // (a frame cleared: the fewest shots - none fewer than the nine balls)
+    const shots = Math.floor(Number(msg.score) || 0), prof = p.profile;
+    if (shots < 9 || (Number(msg.secs) || 0) < 5) return;
+    const best = !prof.poolBest || shots < prof.poolBest;
+    if (best) prof.poolBest = shots;
+    world.notify(p, `Cleared the table in ${shots} shots${best ? ' - your best!' : ''}.`, best ? 'good' : 'info');
+    store.touch();
+    return;
+  }
   const secs = Math.max(0, Math.min(Number(msg.secs) || 0, world.time - A.at + 2));
   const score = Math.max(0, Math.min(Math.floor(Number(msg.score) || 0), Math.floor(secs * ARCADE.maxRate)));
   const prof = p.profile, best = score > (prof.arcadeBest || 0);

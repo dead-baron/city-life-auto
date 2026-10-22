@@ -89,6 +89,7 @@ import * as skills from './skills.js';
 import * as streetdice from './streetdice.js';
 import * as workout from './workout.js';
 import * as casino from './casino.js';
+import * as arcade from './arcade.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -728,6 +729,8 @@ export function findInteraction(world, p) {
 
   const dice = streetdice.interaction(world, p);   // a crew shooting dice down an alley (streetdice.js)
   if (dice) return dice;
+  const pool = arcade.poolInteraction(world, p);   // the Rusty Spur's pool table (arcade.js)
+  if (pool) return pool;
   const fruit = picking.interaction(world, p);
   if (fruit) return fruit;
   const wild = foraging.interaction(world, p);

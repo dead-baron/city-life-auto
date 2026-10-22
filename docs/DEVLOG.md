@@ -14515,3 +14515,21 @@ weren't. Now every train is there too (server/systems/transit.js transitInfo `tr
 along the track pointing the way it runs, in its line's colour (the main line's cream, the Pink and Yellow lines'
 own), dimmer on the subway; under the Transit category like the rest.
 Tests: test/transit.test.js - every train in the map's transit info.
+
+## 2026-10-22 · A frame of pool
+
+The owner, 10-08 (#308, "pool tables you can play") and 10-16. The Rusty Spur's pool table and the mansion's games
+room table stood as furniture. Now walk up to either and rack 'em up (server/systems/arcade.js `poolInteraction`,
+`play(..., 'pool')`; client/pool.js, loaded the first time anyone plays):
+- **the game**: nine balls racked in a diamond on the foot spot, the cue ball on the head spot; clear the table in as
+  few shots as you can. A scratch (the cue ball down a pocket) costs a shot and puts the cue ball back on the spot.
+  Balls roll and slow on the cloth, bounce off the cushions and each other, and drop in the six pockets.
+- **aiming**: drag back from the cue ball like a sling and let go (the further, the harder) - a mouse or a finger; or
+  turn the cue with left / right (the keys, the stick, the d-pad; up / down to fine-tune), hold Space / Enter / A to
+  build the power and let go. Esc or B leaves. It plays on the arcade's screen, sized to the table (256 x 160).
+- **the price**: the Rusty Spur's table is $1 a frame (shared/rules.js ARCADE.pool); the mansion's is free.
+- **the score**: a cleared frame's shots go to the server, which keeps your best (no fewer than nine shots, and not
+  in under five seconds); a frame you leave unfinished counts for nothing.
+
+Tests: test/arcade.test.js - the rack, a break spreading the balls, everything coming to rest on the table, a ball
+rolled into a corner pocket, the server keeping a frame's shots as the best and refusing an impossible one.

@@ -79,3 +79,37 @@ test('the mansion\'s cabinet: free, no tickets, the high score', () => {
   assert.ok(!prof.tickets, 'no tickets');
   assert.equal(prof.arcadeBest, 1500);
 });
+
+test('a frame of pool: the rack, the break spreading them, a pocket, everything coming to rest; the shots back to the server', async () => {
+  const P = await import('../client/pool.js');
+  const { rack, physics, POCKETS } = P._test;
+  const balls = rack();
+  assert.equal(balls.length, 10);
+  // the break: the cue ball hard at the rack
+  const cb = balls[0];
+  cb.vx = 420; cb.vy = 3;
+  const potted = [];
+  let t = 0, moving = true;
+  for (; t < 30 && moving; t += 1 / 120) moving = physics(balls, 1 / 120, (b) => potted.push(b.n));
+  assert.ok(!moving, `everything at rest (${t.toFixed(1)} s)`);
+  const spread = Math.max(...balls.filter((b) => b.n && !b.in).map((b) => b.x)) - Math.min(...balls.filter((b) => b.n && !b.in).map((b) => b.x));
+  assert.ok(spread > 30, `the rack broken up (${spread.toFixed(0)} px across)`);
+  for (const b of balls) if (!b.in) assert.ok(b.x > 18 && b.x < 238 && b.y > 20 && b.y < 140, 'on the table');
+  // a ball rolled at a corner pocket drops
+  const lone = [{ n: 1, x: POCKETS[0][0] + 30, y: POCKETS[0][1] + 30, vx: -150, vy: -150, in: false }];
+  const got = [];
+  for (let k = 0; k < 240; k++) physics(lone, 1 / 120, (b) => got.push(b.n));
+  assert.deepEqual(got, [1], 'potted');
+  // the server: a frame's shots kept as the best, nothing for an impossible one
+  const w = makeWorld();
+  const { p, conn, prof } = joinPlayer(w);
+  arcade.play(w, p, true, null, 'pool');
+  const c = lastOf(conn, 'arcade');
+  assert.equal(c.game, 'pool');
+  arcade.onScore(w, p, { id: c.id, score: 4, secs: 60 });
+  assert.ok(!prof.poolBest, 'fewer than nine shots: not a frame');
+  arcade.play(w, p, true, null, 'pool');
+  run(w, 90);
+  arcade.onScore(w, p, { id: lastOf(conn, 'arcade').id, score: 17, secs: 90 });
+  assert.equal(prof.poolBest, 17);
+});

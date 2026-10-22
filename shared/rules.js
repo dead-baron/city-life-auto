@@ -824,7 +824,7 @@ export const WORKOUT = { minGap: 0.75, maxGap: 3.5, set: 10, drain: 8 };
 // maxTickets a game; a score no faster than maxRate points a second of play; the prize counter (an item, or a piece for
 // your home - t tickets)
 export const ARCADE = {
-  price: 2, perTicket: 100, maxTickets: 40, maxRate: 60,
+  price: 2, perTicket: 100, maxTickets: 40, maxRate: 60, pool: 1,   // (pool: a frame at the Rusty Spur's table, $)
   prizes: [{ item: 'glowstick', t: 25 }, { item: 'energy', t: 50 }, { item: 'flare', t: 60 }, { decor: 'art', t: 150 }, { item: 'headlamp', t: 200 }, { decor: 'turntable', t: 400 }, { item: 'skateboard', t: 500 }],
 };
 export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };

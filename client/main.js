@@ -353,7 +353,7 @@ function onText(m) {
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       openOverlay('arcade');
-      import('./arcade.js').then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
+      (m.game === 'pool' ? import('./pool.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
       break;
     case 'bounties': phone.on('Bounties', m); break;
     case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)
