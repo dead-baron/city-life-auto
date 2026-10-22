@@ -13464,3 +13464,23 @@ in the pines and its boats tied up on dry land.
 Tests: test/world3desert.test.js - the compound in the desert, far from every building, walled all round but the
 gate, the Den and its counter inside, the guards' posts, the track out to a road, nothing of the Syndicate's left in
 Highland Woods; on the v3 map, an outsider at the gate is warned and then shot at, and the gate opens for a member.
+
+## 2026-10-21 · Every waterway to the sea
+
+The owner, 2026-10-21, with a screenshot: "Noticed not all waterways are connecting to the ocean". Kestrel Lake's
+reach runs north to the North Coast Road, where a sea inlet comes down under the road's bridge from the other side.
+The reach stopped eight tiles short: two rows of the road's south pavement and six of sand lay between the lake's
+water and the sea's.
+
+- **the cut** (`shared/world3-outlets.js`, new, World v3's done hook, after the water bodies and Kestrel Lake's
+  shore): it looks at every place where a river's or a lake's water comes within ten tiles of the sea and doesn't
+  meet it anywhere near. Ponds don't count: a pond has no way out. Where it finds one, the open ground between the
+  two waters becomes water, as wide as they face each other. A road or pavement across the gap becomes bridge, and
+  the bake decks the road over it. A pavement is cut only where its road goes over too, so the street never gets a
+  hole in it. The cut also takes away anything that stood on that ground.
+- In World v3 there are two: Kestrel Lake's reach, now open to the sea under the North Coast Road (67 tiles, 19 of
+  them pavement made bridge), and a creek on the west coast that ended two tiles of sand short of the beach. A third
+  place was looked at and left alone: the head of a creek ten tiles in from the shore, with nothing to cut there.
+
+Tests: test/world3kestrel.test.js - Kestrel Lake's reach cut through under a bridge, the lake's water and the sea's
+one water there, and a second look at the whole world finds nothing left to cut.
