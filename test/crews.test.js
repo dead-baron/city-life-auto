@@ -99,3 +99,23 @@ test('a heist with the crew there: the drawers split between them', () => {
   assert.ok(A.prof.hot > 0 && A.prof.hot === B.prof.hot, `split evenly (${A.prof.hot} / ${B.prof.hot})`);
   assert.ok(A.prof.hot < HEIST.cash * 2, 'a cut, not the whole');
 });
+
+test('a bounty collected with the crew there: split between them', async () => {
+  const bounties = await import('../server/systems/bounties.js');
+  const w = makeWorld();
+  const H = joinPlayer(w), M = joinPlayer(w), T = joinPlayer(w), far = joinPlayer(w);
+  side(w, [H, M, T], H.p.ped.x, H.p.ped.y);
+  crews.invite(w, H.p, M.p); crews.accept(w, M.p);
+  H.p.hunter = true; T.p.cityBounty = 1000;
+  const hb = H.prof.bank, mb = M.prof.bank;
+  assert.equal(bounties.collect(w, H.p, T.p, 'kill'), 1000);
+  assert.equal(H.prof.bank - hb, 500); assert.equal(M.prof.bank - mb, 500, 'the crewmate\'s cut');
+  // a crewmate far off gets none
+  crews.invite(w, H.p, far.p); teleport(w, far.p.ped, H.p.ped.x + 20, H.p.ped.y); crews.invite(w, H.p, far.p); crews.accept(w, far.p);
+  teleport(w, far.p.ped, H.p.ped.x + 5000, H.p.ped.y);
+  T.p.cityBounty = 900;
+  const h2 = H.prof.bank, f2 = far.prof.bank;
+  bounties.collect(w, H.p, T.p, 'kill');
+  assert.equal(far.prof.bank, f2, 'too far off for a cut');
+  assert.equal(H.prof.bank - h2, 450);
+});

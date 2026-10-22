@@ -14663,3 +14663,10 @@ preview turned and zoomed but only ever stood breathing. Now the ▶ button besi
 (client/creator.js PREV_POSES) - standing, walking, running, sitting, kneeling, hands up, a punch, fishing - each
 animated at its own pace in the game's own pixels, its name under the preview beside the direction; turning still turns
 it, and the look round now and then is the standing pose's only.
+
+## 2026-10-22 · A crew's bounties split
+
+The bounty row's "party splits" (10-07: waiting for parties) - crews are here now. A bounty collected with crewmates
+there (within CREW.share of the target, up and not in custody) is split evenly between you and them, each cut into its
+own bank (server/systems/bounties.js collect; you're told how many ways). Tests: test/crews.test.js - split with a
+crewmate there, none for one far off.
