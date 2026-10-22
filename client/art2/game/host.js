@@ -1016,14 +1016,17 @@ export class World2 {
     return [...out].sort((a, b) => a[1] - b[1]).slice(0, MAXN).map((e) => e[0]);
   }
   // The line a train you ride runs on, ahead of (x, y) heading (vx, vy): points every ~400 px along it for L px, each with its
-  // distance along - [[x, y, d], ...] - or null (no line within reach). The lines' points are kept by 512 px cell once.
+  // distance along - [[x, y, d], ...] - or null (no line within reach). The lines' points are kept by 512 px cell, once per
+  // map: World v3's window holds only its regions' points (shared/regionpack.js), so each new window (setMap) is indexed
+  // afresh - the old window's index pointed past the new lists' ends and threw every frame on the train, the owner's
+  // 10-22 "subway ... crashed" (ridden headless into Lake District Station)
   _railAhead(x, y, vx, vy, L) {
     const rails = this.map.rails || (this.map.rail ? [this.map.rail] : []);
     if (!rails.length) return null;
-    let idx = this.railIdx;
+    let idx = this.railIdxOf === this.map ? this.railIdx : null;
     if (!idx) {
-      idx = this.railIdx = new Map();
-      rails.forEach((r, ri) => { const P = r.pts || []; for (let i = 0; i < P.length; i += 4) { const k = Math.floor(P[i].x / 512) * 4096 + Math.floor(P[i].y / 512); let a = idx.get(k); if (!a) idx.set(k, (a = [])); a.push(ri, i); } });
+      idx = this.railIdx = new Map(); this.railIdxOf = this.map;
+      rails.forEach((r, ri) => { const P = r.pts || []; for (let i = 0; i < P.length; i += 4) { if (!P[i]) continue; const k = Math.floor(P[i].x / 512) * 4096 + Math.floor(P[i].y / 512); let a = idx.get(k); if (!a) idx.set(k, (a = [])); a.push(ri, i); } });
     }
     let best = null, bd = 160 * 160;
     const cx = Math.floor(x / 512), cy = Math.floor(y / 512);
@@ -1031,9 +1034,11 @@ export class World2 {
       const a = idx.get(gx * 4096 + gy);
       if (!a) continue;
       for (let j = 0; j < a.length; j += 2) {
-        const P = rails[a[j]].pts, i = a[j + 1], P0 = P[i], d = (P0.x - x) ** 2 + (P0.y - y) ** 2;
+        const P = rails[a[j]] && rails[a[j]].pts, i = a[j + 1], P0 = P && P[i];
+        if (!P0) continue;
+        const d = (P0.x - x) ** 2 + (P0.y - y) ** 2;
         if (d >= bd) continue;
-        const Q = P[Math.min(P.length - 1, i + 1)], R0 = P[Math.max(0, i - 1)], tx = Q.x - R0.x, ty = Q.y - R0.y;
+        const Q = P[Math.min(P.length - 1, i + 1)] || P0, R0 = P[Math.max(0, i - 1)] || P0, tx = Q.x - R0.x, ty = Q.y - R0.y;
         const along = tx * vx + ty * vy, tl = Math.hypot(tx, ty) * Math.hypot(vx, vy) || 1;
         if (Math.abs(along) / tl < 0.7) continue;   // (a crossing line, not the one you ride)
         bd = d; best = [a[j], i, along > 0 ? 1 : -1];
@@ -1047,7 +1052,9 @@ export class World2 {
     while (d < L) {
       let j = i + dir;
       if (j < 0 || j >= n) { if (!loop) break; j = (j + n) % n; }
-      const q = P[j], s = Math.hypot(q.x - last.x, q.y - last.y);
+      const q = P[j];
+      if (!q) break;
+      const s = Math.hypot(q.x - last.x, q.y - last.y);
       d += s; acc += s; last = q; i = j;
       if (acc >= 400) { acc = 0; out.push([q.x, q.y, d]); }
       if (j === i0) break;

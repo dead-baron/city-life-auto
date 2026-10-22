@@ -14592,3 +14592,13 @@ Checked headless on a World v3 server: a ride from the Pink Line to a stop at Un
 Also from the full test run: at home a seat or the TV takes the action button only when you're clearly nearer to it than
 to the hall table, the bed or anything else there (the couch beside the hall table had taken over its menu); and the
 activity spots' test knows street dice is played down an alley's asphalt.
+
+## 2026-10-22 · The subway's crash on the way into Lake District Station
+
+The owner, 10-22, with two screenshots from the Pink Line: "Something went wrong drawing the game" on the way into Lake
+District Station, and then it crashed. Ridden headless on a World v3 server from The Yards: as the train came off the
+bridge into the tunnel, the art ahead of the train (client/art2/game/host.js _railAhead - the line's points ahead, for
+the chunks to bake before the train comes up) threw every frame. Its index of the line's points was built once, from the
+first window's map; World v3's window holds only its own regions' points, so once the window moved on, the old index
+pointed past the new lists' ends. Each frame stopped there - nothing more drawn. Now the index is built afresh for each
+new window, and a point not held is skipped, never followed. Test: test/railahead.test.js (fails without the fix).
