@@ -23,18 +23,19 @@ export const isCasino = (poi) => !!(poi && poi.casino);
 export const label = (poi) => `${poi.label} - the casino floor`;
 
 const state = (p, poi) => {
-  if (!p.casino || p.casino.poi !== poi.id) { leave(p); p.casino = { poi: poi.id, view: null, stake: 0, rstake: 0, num: 17, board: null, msg: '', net: 0, bj: null, at: 0 }; }
+  if (!p.casino || p.casino.poi !== poi.id) { leave(p); p.casino = { poi: poi.id, view: null, stake: 0, rstake: 0, num: 17, board: null, msg: '', net: 0, bj: null, vp: null, at: 0 }; }
   return p.casino;
 };
 // a hand still on the table when you go (another casino's floor, logging off, the server restarting): the bet back
 export function leave(p) {
-  const B = p.casino && p.casino.bj;
+  const B = p.casino && p.casino.bj, V = p.casino && p.casino.vp;
   if (B && p.profile) { p.profile.cash += B.bet; p.casino.bj = null; p.meDirty = true; store.touch(); }
+  if (V && p.profile) { p.profile.cash += V.bet; p.casino.vp = null; p.meDirty = true; store.touch(); }   // (a poker hand dealt, not drawn: the bet back)
 }
 // up to the door (economy.js openMenu): the floor, or the hand you left on the table; a new visit after a while away
 export function open(world, p, poi) {
   const C = state(p, poi);
-  if (!C.bj) { C.view = null; C.board = null; C.msg = ''; if (world.time - C.at > 600) C.net = 0; }
+  if (!C.bj && !C.vp) { C.view = null; C.board = null; C.msg = ''; if (world.time - C.at > 600) C.net = 0; }
   C.at = world.time;
 }
 const money = (n) => `$${Math.abs(n).toLocaleString()}`;
@@ -86,11 +87,21 @@ export function menu(world, p, poi) {
     sub = ph === 'betting' ? `Betting open: they're off in ${clockText(racebook.offAt(R.n) - t)}. Win bets at the odds posted.`
       : ph === 'running' ? 'They\'re running! Watch it on the screen.'
         : `Result: ${R.res.order.slice(0, 3).map((i, k) => `${['1st', '2nd', '3rd'][k]} ${R.field[i].name}`).join(', ')}. The next race is posted in ${clockText(racebook.postAt(R.n + 1) - t)}.`;
-    C.board = R.field.map((h, i) => { const my = mine.filter((b) => b.h === i).reduce((s, b) => s + b.stake, 0); return { k: `${i + 1}. ${h.name}`, items: [{ t: R.odds.length ? racebook.oddsText(R.odds[i]) : '', c: 'odds' }], v: my ? `your $${my.toLocaleString()}` : '' }; });
+    C.board = R.field.map((h, i) => { const my = mine.filter((b) => b.h === i).reduce((s, b) => s + b.stake, 0); return { k: `${i + 1}. ${h.name}`, cls: 'wide', items: [{ t: R.odds.length ? racebook.oddsText(R.odds[i]) : '', c: 'odds' }], v: my ? `your $${my.toLocaleString()}` : '' }; });
     if (ph === 'betting') R.field.forEach((h, i) => opts.push({ id: `cs:rbet:${i}`, label: `Back ${i + 1}. ${h.name} at ${racebook.oddsText(R.odds[i])}`, price: rs, dis: !can(rs) || mine.length >= RACEBOOK.maxBets, note: mine.length >= RACEBOOK.maxBets ? `${RACEBOOK.maxBets} bets a race` : `returns ${money(racebook.payoutOf(rs, R.odds[i]))}` }));
     if (ph === 'betting') opts.push({ id: 'cs:rstake', label: `Stake ${money(rs)}`, note: 'change it' });
     opts.push({ id: 'cs:watch', label: 'Watch the race', note: 'on the screen' });
     opts.push({ id: 'cs:floor', label: 'Back to the floor' });
+  } else if (C.view === 'vp') {   // video poker: Jacks or Better - five cards, hold the ones you like, draw once
+    title = `${poi.label} - video poker`;
+    if (C.vp) {
+      C.vp.cards.forEach((c, i) => opts.push({ id: `cs:hold:${i}`, label: `${C.vp.held[i] ? 'Let go of' : 'Hold'} the ${cardName(c)}`, note: C.vp.held[i] ? 'held' : '' }));
+      opts.push({ id: 'cs:draw', label: 'Draw', note: `new cards for the ${5 - C.vp.held.filter(Boolean).length} not held` });
+    } else {
+      opts.push({ id: 'cs:vdeal', label: 'Deal', price: stake, dis: !can(stake), note: 'jacks or better pays' });
+      opts.push({ id: 'cs:stake', label: `Stake ${money(stake)}`, note: 'change it' });
+      opts.push({ id: 'cs:floor', label: 'Back to the floor' });
+    }
   } else if (C.view === 'roulette') {
     title = `${poi.label} - roulette`;
     for (const [k, l, n] of [['red', 'Red', 'pays 1:1'], ['black', 'Black', 'pays 1:1'], ['odd', 'Odd', 'pays 1:1'], ['even', 'Even', 'pays 1:1'], ['low', 'Low (1-18)', 'pays 1:1'], ['high', 'High (19-36)', 'pays 1:1'], ['d1', 'First dozen (1-12)', 'pays 2:1'], ['d2', 'Second dozen (13-24)', 'pays 2:1'], ['d3', 'Third dozen (25-36)', 'pays 2:1']]) opts.push({ id: `cs:rb:${k}`, label: l, price: stake, dis: !can(stake), note: n });
@@ -102,6 +113,7 @@ export function menu(world, p, poi) {
     CASINO.slots.forEach((n, i) => opts.push({ id: `cs:slot:${i}`, label: `Slots - a ${money(n)} spin`, price: n, dis: !can(n), note: i === CASINO.slots.length - 1 ? 'three lotuses pay 300x' : '' }));
     opts.push({ id: 'cs:roulette', label: 'Roulette', note: 'red or black, a dozen, your number' });
     opts.push({ id: 'cs:bj', label: 'Blackjack', note: 'beat the dealer to 21' });
+    opts.push({ id: 'cs:vp', label: 'Video poker', note: 'jacks or better: hold, draw, the paytable' });
     opts.push({ id: 'cs:race', label: 'The race book', note: 'a race every few minutes - pick the winner' });
   }
   opts.push({ id: 'close', label: C.net > 0 ? 'Cash out and leave' : 'Leave' });
@@ -119,6 +131,36 @@ export function execute(world, p, poi, opt, pay) {
     case 'roulette': C.view = 'roulette'; C.board = null; C.msg = 'Place your bet. No more bets once the ball\'s dropping.'; return null;
     case 'bj': C.view = 'bj'; C.board = null; C.msg = 'The dealer stands on all 17s. Blackjack pays 3:2.'; return null;
     case 'race': C.view = 'race'; C.board = null; C.msg = ''; return null;
+    case 'vp': C.view = 'vp'; C.board = null; C.msg = `Jacks or better. Pays: a royal ${CASINO.poker.royal}x, a straight flush ${CASINO.poker.straightFlush}x, four of a kind ${CASINO.poker.four}x, a full house ${CASINO.poker.fullHouse}x, a flush ${CASINO.poker.flush}x, a straight ${CASINO.poker.straight}x, three of a kind ${CASINO.poker.three}x, two pair ${CASINO.poker.twoPair}x, jacks or better ${CASINO.poker.jacks}x.`; return null;
+    case 'vdeal': {
+      if (C.vp) return null;
+      if (!pay(p, stake)) return 'Not enough money.';
+      C.net -= stake;
+      const deck = shuffled();
+      C.vp = { bet: stake, deck, cards: deck.splice(0, 5), held: [false, false, false, false, false] };
+      C.board = vpBoard(C.vp); C.msg = `${pokerHand(C.vp.cards).name || 'Nothing yet'}. Hold the cards you want, then draw.`;
+      return null;
+    }
+    case 'hold': {
+      const V = C.vp, i = Number(parts[2]) | 0;
+      if (!V || i < 0 || i > 4) return null;
+      V.held[i] = !V.held[i]; C.board = vpBoard(V);
+      return null;
+    }
+    case 'draw': {
+      const V = C.vp;
+      if (!V) return null;
+      C.vp = null;
+      for (let i = 0; i < 5; i++) if (!V.held[i]) V.cards[i] = V.deck.shift();
+      const h = pokerHand(V.cards), back = h.x ? V.bet * (h.x + 1) : 0;
+      V.held = [false, false, false, false, false];
+      C.board = vpBoard(V);
+      if (back) { win(back); C.net += back; }
+      C.msg = back ? `${h.name}! You win ${money(back)}.` : 'Nothing. Deal again?';
+      world.emit(poi.x, poi.y, { e: 'casino', k: h.x >= CASINO.poker.four ? 'jackpot' : back ? 'win' : 'spin', x: Math.round(poi.x), y: Math.round(poi.y) });
+      if (h.x >= CASINO.poker.straightFlush) world.notify(p, `${h.name} at ${poi.label}: ${money(back)} - in cash, on you.`, 'good');
+      return null;
+    }
     case 'rstake': C.rstake = ((C.rstake | 0) + 1) % RACEBOOK.stakes.length; return null;
     case 'rbet': {
       const R = racebook.current(world), h = Number(parts[2]) | 0, st = RACEBOOK.stakes[C.rstake | 0];
@@ -212,6 +254,32 @@ function settle(world, p, poi, C, win) {
   C.msg = back > B.bet ? `${why} You win ${money(back - B.bet)}.` : back ? why : `${why} The house takes ${money(B.bet)}.`;
   world.emit(poi.x, poi.y, { e: 'casino', k: back > B.bet ? 'win' : 'spin', x: Math.round(poi.x), y: Math.round(poi.y) });
   return null;
+}
+
+// ---- video poker ----------------------------------------------------------------------------------------------------
+// a fresh 52 shuffled (Fisher-Yates, the house's luck)
+function shuffled() { const d = [...Array(52).keys()]; for (let i = 51; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; } return d; }
+const RANK_NAME = ['ace', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'jack', 'queen', 'king'], SUIT_NAME = ['spades', 'hearts', 'diamonds', 'clubs'];
+const cardName = (c) => `${RANK_NAME[c % 13]} of ${SUIT_NAME[Math.floor(c / 13)]}`;
+function vpBoard(V) { return [{ k: 'Your hand', items: V.cards.map((c, i) => { const it = cardItem(c); if (V.held[i]) it.c += ' held'; return it; }), v: '' }]; }
+// what five cards make: { name, x (what it pays, x the bet) }
+export function pokerHand(cards) {
+  const P = CASINO.poker, ranks = cards.map((c) => c % 13), suits = cards.map((c) => Math.floor(c / 13));
+  const counts = new Map(); for (const r of ranks) counts.set(r, (counts.get(r) || 0) + 1);
+  const groups = [...counts.values()].sort((a, b) => b - a), flush = suits.every((s) => s === suits[0]);
+  const hi = [...new Set(ranks.map((r) => (r === 0 ? 13 : r)))].sort((a, b) => a - b), lo = [...new Set(ranks)].sort((a, b) => a - b);
+  const run = (a) => a.length === 5 && a[4] - a[0] === 4;
+  const straight = run(hi) || run(lo), royal = straight && flush && hi[0] === 9;   // (ten to the ace)
+  if (royal) return { name: 'A royal flush', x: P.royal };
+  if (straight && flush) return { name: 'A straight flush', x: P.straightFlush };
+  if (groups[0] === 4) return { name: 'Four of a kind', x: P.four };
+  if (groups[0] === 3 && groups[1] === 2) return { name: 'A full house', x: P.fullHouse };
+  if (flush) return { name: 'A flush', x: P.flush };
+  if (straight) return { name: 'A straight', x: P.straight };
+  if (groups[0] === 3) return { name: 'Three of a kind', x: P.three };
+  if (groups[0] === 2 && groups[1] === 2) return { name: 'Two pair', x: P.twoPair };
+  if (groups[0] === 2) { const pr = [...counts].find(([, n]) => n === 2)[0]; if (pr === 0 || pr >= 10) return { name: 'Jacks or better', x: P.jacks }; }
+  return { name: '', x: 0 };
 }
 
 // ---- the slots and the wheel ----------------------------------------------------------------------------------------

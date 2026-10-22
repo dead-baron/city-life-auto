@@ -867,6 +867,8 @@ export const HEIST = {
 export const RACEBOOK = { everyS: 150, betS: 100, runS: 28, field: 6, take: 0.85, maxBets: 3, stakes: [10, 50, 250, 1000], luck: 0.06, form: 0.035, stumbleP: 0.05, sims: 300 };
 export const CASINO = {
   slots: [5, 25, 100], stakes: [10, 50, 250, 1000], bjPays: 1.5, twoCherries: 3,
+  // video poker (Jacks or Better): what a hand pays, x the bet (the bet back with it) - 7/5 on the full house and the flush
+  poker: { royal: 250, straightFlush: 50, four: 25, fullHouse: 7, flush: 5, straight: 4, three: 3, twoPair: 2, jacks: 1 },
   reel: {
     CHERRY: { w: 6, three: 10, icon: '🍒' }, LEMON: { w: 7, three: 7, icon: '🍋' }, BELL: { w: 5, three: 14, icon: '🔔' },
     BAR: { w: 4, three: 25, icon: 'BAR' }, SEVEN: { w: 2, three: 70, icon: '7' }, LOTUS: { w: 1, three: 300, icon: '❀' },

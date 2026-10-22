@@ -1260,6 +1260,12 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 #m-board b { display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }
 #m-board b.card { width: 30px; height: 42px; background: #fbfaf4; color: #1a1a1a; border-radius: 4px; font-size: 14px; box-shadow: 0 2px 0 rgba(0,0,0,.4); }
 #m-board b.card.red { color: #c0262d; }
+#m-board .brow.wide { min-height: 22px; }
+#m-board .brow.wide .bk { width: auto; flex: 1; font-size: 12px; text-transform: none; }
+#m-board .brow.wide .bi { flex: 0 0 auto; }
+#m-board .brow.wide .bv { font-size: 13px; min-width: 90px; color: #ffd23a; }
+#m-board b.odds { color: #8ad8ff; font-size: 14px; min-width: 44px; }
+#m-board b.card.held { box-shadow: 0 0 0 3px #ffd23a, 0 2px 0 rgba(0,0,0,.4); transform: translateY(-4px); }
 #m-board b.card.back { background: repeating-linear-gradient(45deg, #8e1e2a 0 4px, #6c1520 4px 8px); color: transparent; }
 #m-board b.reel { width: 46px; height: 46px; background: linear-gradient(#fff, #e6e1d2); color: #222; border-radius: 5px; font-size: 24px; box-shadow: inset 0 0 0 2px #b88a2a; }
 #m-board b.reel.bar { font-size: 13px; letter-spacing: .02em; }

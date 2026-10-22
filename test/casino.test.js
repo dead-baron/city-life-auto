@@ -142,3 +142,45 @@ test('a hand left on the table when you go - another casino, logging off: the be
   casino.leave(p);   // (logging off: players.js finalizeLogout)
   assert.equal(prof.cash, c0 + bet2);
 });
+
+test('video poker: the hands read right, a deal, holds and the draw; jacks or better pays, a pair of tens does not', () => {
+  const H = (a) => casino.pokerHand(a);
+  // (cards: rank n % 13 - 0 the ace, 9 the ten, 10..12 the court; suit n / 13)
+  assert.equal(H([9, 10, 11, 12, 0]).x, CASINO.poker.royal, 'a royal');
+  assert.equal(H([0, 1, 2, 3, 4]).x, CASINO.poker.straightFlush, 'the wheel, suited');
+  assert.equal(H([13, 1, 2, 3, 4]).x, CASINO.poker.straight, 'the wheel');
+  assert.equal(H([9, 23, 37, 51, 0]).x, CASINO.poker.straight, 'ten to the ace');
+  assert.equal(H([0, 13, 26, 39, 5]).x, CASINO.poker.four);
+  assert.equal(H([10, 23, 4, 17, 30]).x, CASINO.poker.fullHouse);
+  assert.equal(H([1, 3, 5, 7, 11]).x, CASINO.poker.flush);
+  assert.equal(H([4, 17, 30, 1, 15]).x, CASINO.poker.three);
+  assert.equal(H([4, 17, 2, 15, 7]).x, CASINO.poker.twoPair);
+  assert.equal(H([10, 23, 2, 16, 7]).x, CASINO.poker.jacks, 'a pair of jacks');
+  assert.equal(H([9, 22, 2, 16, 7]).x, 0, 'a pair of tens: nothing');
+  // at the machine: deal, hold two, draw - the cards held stay
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  prof.cash = 1000;
+  const poi = aCasino(w, p);
+  casino.seed(5);
+  casino.open(w, p, poi);
+  assert.ok(casino.menu(w, p, poi).opts.some((o) => o.id === 'cs:vp'));
+  casino.execute(w, p, poi, 'cs:vp', economy.payFrom);
+  assert.equal(casino.execute(w, p, poi, 'cs:vdeal', economy.payFrom), null);
+  assert.equal(prof.cash, 1000 - CASINO.stakes[0]);
+  const C = p.casino, dealt = [...C.vp.cards];
+  casino.execute(w, p, poi, 'cs:hold:0', economy.payFrom); casino.execute(w, p, poi, 'cs:hold:3', economy.payFrom);
+  const m = casino.menu(w, p, poi);
+  assert.equal(m.opts.filter((o) => o.id.startsWith('cs:hold:')).length, 5);
+  assert.ok(m.board[0].items[0].c.includes('held'));
+  casino.execute(w, p, poi, 'cs:draw', economy.payFrom);
+  assert.equal(C.vp, null);
+  const after = C.board[0].items.map((i) => i.t);
+  const name = (c) => `${['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][c % 13]}${['♠', '♥', '♦', '♣'][Math.floor(c / 13)]}`;
+  assert.equal(after[0], name(dealt[0])); assert.equal(after[3], name(dealt[3]));
+  // a hand dealt and left (logging off): the bet back
+  casino.execute(w, p, poi, 'cs:vdeal', economy.payFrom);
+  const c0 = prof.cash;
+  casino.leave(p);
+  assert.equal(prof.cash, c0 + CASINO.stakes[0]);
+});

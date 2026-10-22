@@ -14881,3 +14881,14 @@ Tests: test/racebook.test.js - the field the same for anyone, a race run alike f
 favourites' share; betting till the off (three a race, the stakes), the seed at the off, the winners paid at their odds (one
 who'd gone too), the page's race the server's; the floor's race book and a bet from its menu. tools/racebook-preview.html
 shows the screen at any moment of a race.
+
+## 2026-10-22 · Video poker on the casino floor
+
+More of the owner's "casinos and card games" (#309): a video poker machine on every casino's floor (server/systems/
+casino.js; the paytable shared/rules.js CASINO.poker) - Jacks or Better. Deal five cards for the stake, hold the ones you
+like (tap them on the menu: they rise and light up), draw once, paid on what you end with - a royal flush 250x the bet, a
+straight flush 50x, four of a kind 25x, a full house 7x, a flush 5x, a straight 4x, three of a kind 3x, two pair 2x, a pair
+of jacks or better your bet back and the same again. A hand dealt and left (another casino, logging off): the bet back.
+The race book's board shows each runner's name in full now (the board's rows can be wide).
+Tests: test/casino.test.js - every hand read right (the wheel, ten to the ace, tens no good), a deal, holds kept through the
+draw, a hand left: the bet back.

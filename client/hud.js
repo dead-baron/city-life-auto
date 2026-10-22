@@ -370,7 +370,7 @@ export class HUD {
     $('m-sub').textContent = localizeText(m.sub || '');
     const bd = $('m-board');   // (a casino's table: server casino.js)
     bd.classList.toggle('hidden', !m.board);
-    bd.innerHTML = (m.board || []).map((r) => `<div class="brow"><span class="bk">${esc(r.k)}</span><span class="bi">${r.items.map((i) => `<b class="${i.c}">${esc(i.t)}</b>`).join('')}</span><span class="bv">${esc(r.v)}</span></div>`).join('');
+    bd.innerHTML = (m.board || []).map((r) => `<div class="brow${r.cls ? ' ' + esc(r.cls) : ''}"><span class="bk">${esc(r.k)}</span><span class="bi">${r.items.map((i) => `<b class="${i.c}">${esc(i.t)}</b>`).join('')}</span><span class="bv">${esc(r.v)}</span></div>`).join('');
     $('m-money').textContent = `Wallet $${m.cash.toLocaleString()} · Bank $${m.bank.toLocaleString()}`;
     const box = $('m-opts');
     box.innerHTML = '';
