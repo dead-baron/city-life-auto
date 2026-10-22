@@ -26,9 +26,9 @@ import { HUD } from './hud.js';
 import { AreaTracker } from './areaname.js';   // (the title card's place name: water keeps it)
 import { Flock } from './birds.js';   // (the pigeons and gulls: in from off screen)
 import { createPhone } from './phone.js';
-import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
+import { createMapWaypoints, ROLE_ICON, ROLE_NAME, KIND_ICON } from './mapwaypoints.js';
 import { createRouter } from './route.js';
-import { iconImg } from './pixicons.js';
+import { iconImg, drawIcon } from './pixicons.js';
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
@@ -2134,6 +2134,7 @@ function syncSettings() {
   $('s-blade').value = String((S.me && S.me.blade) | 0); $('s-blade').disabled = !S.welcomed;   // (kept with your character: the server's)
   $('s-safety').checked = !!(S.me && S.me.safety); $('s-safety').disabled = !S.welcomed;   // (Safety mode: the server's too - server/systems/safety.js)
   $('s-vibrate').checked = settings.vibrate;
+  $('s-shopmarks').checked = settings.shopMarks !== false;
   $('s-autofs').checked = settings.autoFullscreen !== false;
   syncGfxPanel();
   $('s-diag').checked = diag.on;
@@ -2273,6 +2274,7 @@ $('s-blade').innerHTML = BLADE_COLORS.map((b, i) => `<option value="${i}">${b.na
 $('s-blade').onchange = (e) => { if (S.welcomed) send({ t: 'look', a: 'blade', c: Number(e.target.value) }); };
 $('s-safety').onchange = (e) => { if (S.welcomed) send({ t: 'safety', on: e.target.checked }); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
+$('s-shopmarks').onchange = (e) => { settings.shopMarks = e.target.checked; saveSettings(); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
 $('s-diag').onchange = (e) => { settings.diag = e.target.checked; diag.on = e.target.checked; saveSettings(); if (!diag.on && diag.el) { diag.el.remove(); diag.el = null; } };
 $('s-smooth').onchange = (e) => { settings.smooth = e.target.checked; saveSettings(); if (!settings.smooth && GOV.scale !== 1) { GOV.scale = 1; onResize(); } };
@@ -3324,6 +3326,7 @@ function drawOverlays(F, v2) {
     if (F.rain && !underCover(S.map, sp.x, sp.y)) drawRain(F.dt, F.sky);   // (none in a tunnel)
     g.setTransform(...S.worldTf);
     drawAtmMarks(F.view, now);
+    if (settings.shopMarks !== false && S.art2.shopMarks) S.art2.shopMarks(g, F, drawIcon, KIND_ICON);   // (the shop symbols over doors near you: art2/game/host.js)
     drawStationClocks(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
     drawBuoys(F.view, now);
     drawArt2Marks(F);

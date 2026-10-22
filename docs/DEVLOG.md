@@ -13923,3 +13923,18 @@ were props.
 
 Tests: test/golfcart.test.js - slower and smaller than a hatchback, drawn and heard; carts parked on the course's path,
 one to get into and drive off.
+
+## 2026-10-22 · Shop symbols over the doors near you
+
+The owner, 10-08 (SI1): "Shop symbols over entrances when close (subtle, can be turned off)".
+
+- **the symbol** (`client/art2/game/host.js` shopMarks, called from main.js's overlay): the map's icon for the place (a
+  wrench for the hardware store, a cross for the pharmacy...) in a small navy badge floating over its door. A walk-in's
+  sits over its door, not its counter inside. It fades in within about eight tiles of you and is full within five,
+  and only shows on foot, not from a car or inside a shop. Homes, ATMs (they have their own marks), stations, rides
+  and races don't get one.
+- **off in Settings**: "Shop symbols over doors near you" (on by default, `settings.shopMarks`).
+- Art v2 only. The classic renderer is the fallback without WebGL2.
+
+Tests: test/shopmarks.test.js - the shop's symbol over its door, none for a home or a place far off, fading as you
+walk away, none from a car.

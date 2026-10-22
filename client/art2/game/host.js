@@ -372,6 +372,9 @@ export function exitHint(S, F, on, ready) {
   el.classList.remove('hidden');
 }
 
+// (shop symbols: shopMarks - full within SHOP_NEAR px of where you'd stand, gone by SHOP_FAR; not the ones that have
+// marks of their own or aren't a door to walk into)
+const SHOP_NEAR = 150, SHOP_FAR = 260, SHOP_SKIP = new Set(['home', 'atm', 'station', 'ride', 'race', 'farm', 'sar']);
 // The part of the world a walk-in's cut-away covers: round the building, and up the screen over it (its roof's height)
 function cutBoxOf(b) { return [b.tx * TILE - 40, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 40, (b.ty + b.th) * TILE + 40]; }
 
@@ -825,6 +828,41 @@ export class World2 {
         if (err === 'no workers') return;
         pc.kept.add(kk);   // (kept now - or failed: not tried again this session)
       });
+    }
+  }
+  // Shop symbols over the doors you're near (the owner, 10-08, SI1: "Shop symbols over entrances when close (subtle, can
+  // be turned off)"): the map's icon for each place within a few steps of you, on foot, floating over where you'd stand
+  // to go in - fading in as you come close and out as you walk on; off in Settings (settings.shopMarks false). g: the
+  // overlay, in world coordinates; icon(g, name, x, y, size) and the icons by kind come from the page (pixicons.js,
+  // mapwaypoints.js KIND_ICON).
+  shopMarks(g, F, icon, kinds) {
+    const S = this.S, sp = F.sp, m = this.map, list = m.pois || [];
+    if (!S.playing || !S.pred || S.pred.kind !== 'ped' || (S.me && S.me.dead) || F.insideB) return;
+    const near = (this.marks ||= { at: -1, list: [] });
+    if (F.now - near.at > 0.5) {   // (looked for twice a second: the places within reach - a walk-in's over its door, not its counter)
+      near.at = F.now; near.list = [];
+      const doors = new Map(), far = SHOP_FAR + 200;
+      for (const id of m.walkIns || []) {
+        const b = m.buildings[id];
+        if (!b || !b.walkIn || Math.abs((b.tx + b.tw / 2) * TILE - sp.x) > far + b.tw * TILE || Math.abs((b.ty + b.th / 2) * TILE - sp.y) > far + b.th * TILE) continue;
+        for (const u of b.walkIn.units) doors.set(u.poi, { x: (u.door.tx + u.door.w / 2) * TILE, y: (u.door.ty + 0.5) * TILE });
+      }
+      for (const p of list) {
+        if (!p || !kinds[p.kind] || SHOP_SKIP.has(p.kind)) continue;
+        const at = doors.get(p.id) || p;
+        if (Math.abs(at.x - sp.x) < SHOP_FAR && Math.abs(at.y - sp.y) < SHOP_FAR) near.list.push({ x: at.x, y: at.y, kind: p.kind, door: at !== p });
+      }
+    }
+    for (const p of near.list) {
+      const d = Math.hypot(p.x - sp.x, p.y - sp.y), k = d < SHOP_NEAR ? 1 : Math.max(0, 1 - (d - SHOP_NEAR) / (SHOP_FAR - SHOP_NEAR));
+      if (k <= 0.02) continue;
+      const y = p.y - (p.door ? 46 : 58) + Math.sin(F.now * 2.2 + p.x * 0.013) * 1.5;
+      g.save();
+      g.globalAlpha = 0.85 * k;
+      g.fillStyle = 'rgba(13,22,45,.82)'; g.strokeStyle = 'rgba(226,189,87,.75)'; g.lineWidth = 1.5;
+      g.beginPath(); g.roundRect ? g.roundRect(p.x - 11, y - 11, 22, 22, 5) : g.rect(p.x - 11, y - 11, 22, 22); g.fill(); g.stroke();
+      icon(g, kinds[p.kind], p.x, y, 14);
+      g.restore();
     }
   }
   // Inside a walk-in while its inside isn't on screen yet: the way out (exitHint above; main.js calls it each frame)
