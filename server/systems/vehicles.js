@@ -44,7 +44,7 @@ export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHE
     const dmg = (impact - 140) * 0.22 / Math.sqrt(v.def.mass);
     crashDamage(world, v, dmg, null, impact, zoneFrom(v, pvx, pvy));
     world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: Math.min(1, impact / 500) });
-    if (v.def.kind === 'bike' && impact > 280) bikeCrash(world, v, impact);
+    if (v.def.kind === 'bike' && impact > (v.def.horse ? 380 : 280)) bikeCrash(world, v, impact);   // (a horse into a wall at a gallop: you go over its neck)
     if (impact > 330) cargo.knockOff(world, v, impact);
   }
 }
@@ -64,7 +64,8 @@ export function update(world, dt) {
       if (now - v.wreckAt > 45 && !v.seats.some((s) => s) && !v.towedBy && !(v.towCall && world.get(v.towCall))) { cargo.spillCargo(world, v); world.remove(v); continue; }   // (not while a tow truck's coming for it: tow.js)
     } else if (!driver || driver.dead) {
       if (driver && driver.dead) ejectPed(world, driver, true);
-      v.input.throttle = 0; v.input.steer = 0; v.input.hb = false;
+      v.input.throttle = 0; v.input.steer = 0; v.input.hb = false; v.input.gallop = false;
+      if (v.bolt) horses.boltInput(world, v);   // (a horse bolting off on its own)
     }
     // player-driven cars were already stepped once per received input (players.processInputs);
     // AI drivers get two physics sub-steps a tick with their wheel and pedals re-trimmed in
@@ -90,7 +91,7 @@ export function update(world, dt) {
     // tyre smoke + skid marks: sliding, e-braking, donuts, or a full-throttle launch (burnout) - never an aircraft (the owner,
     // 2026-10-13: a helicopter left tyre marks on the ground as it flew)
     v.drift = v.def.kind !== 'air' && (Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player));
-    v.lights = (night && !!driver) || ((v.def.police || v.def.siren) && v.sirenOn);   // (def.siren: an ambulance, a fire engine)
+    v.lights = (night && !!driver && !v.def.horse) || ((v.def.police || v.def.siren) && v.sirenOn);   // (def.siren: an ambulance, a fire engine)
     v.siren = !!((v.def.police || v.def.siren) && v.sirenOn && driver);
     v.beacon = !v.siren && !!((v.def.police || v.def.siren) && v.beaconOn);   // (the lights flashing with nobody at the wheel: an ambulance at a scene, a tow truck at work - no siren)
     // out of health: rolling to a stop, smoking, then on fire, then up it goes (killEngine)
@@ -271,7 +272,7 @@ export function toughOf(def) { return def.kind === 'bike' ? VEHICLE_TOUGH.bike :
 // A vehicle already dying: a blast or a rocket sets it off at once, gunfire brings the end sooner.
 // zone (shared/vehicles.js VZ): the side it was hit on, for the dents the clients draw there (task #402).
 export function damageVehicle(world, v, amount, attackerPed, raw = false, boom = false, zone = 0) {
-  if (v.wreckAt || amount <= 0 || v.ferry) return;   // (the ferries can't be hurt: ferries.js)
+  if (v.wreckAt || amount <= 0 || v.ferry || v.bolt) return;   // (a horse bolting: already off - horses.js)   // (the ferries can't be hurt: ferries.js)
   const dmg = (raw ? amount : amount / toughOf(v.def)) * (v.def.armor && !raw && !boom ? v.def.armor : 1);   // (a tank's armour: small arms barely scratch it - tank.js)
   if (attackerPed) v.lastAttacker = attackerPed.id;
   if (zone) noteHit(v, zone, dmg);
@@ -374,6 +375,7 @@ export const plasmaCuts = (def) => (def.kind === 'bike' ? PLASMA_CUT.bike : def.
 // Out of health: the engine dies and it rolls to a stop, smoking; it catches fire after DEAD_FIRE_S and blows up
 // after DEAD_BOOM_S. Whoever's inside is told to get out; NPCs at the wheel bail and run.
 export function killEngine(world, v, attackerPed) {
+  if (v.def.horse) { horses.bolt(world, v, attackerPed); return; }   // (a horse: it throws its rider and bolts)
   if (v.dead || v.wreckAt) return;
   v.dead = true; v.hp = 0; v.sirenOn = false;
   v.deadAt = world.time; v.deadFireAt = world.time + DEAD_FIRE_S; v.deadBoomAt = world.time + DEAD_BOOM_S;
@@ -389,6 +391,7 @@ export function killEngine(world, v, attackerPed) {
 }
 
 export function explode(world, v, attackerPed) {
+  if (v.def.horse) { horses.bolt(world, v, attackerPed); return; }   // (nothing to blow up: it bolts)
   v.hp = 0;
   v.wreckAt = world.time;
   v.sirenOn = false;
@@ -422,6 +425,7 @@ import { VDMG, VZ, VPART, damageStage, packVehDamage, hitZone } from '../../shar
 import * as ferries from './ferries.js';
 import * as burning from './burning.js';   // (thrown out of it on fire: H58)
 import * as skills from './skills.js';
+import * as horses from './horses.js';   // (a horse: it bolts instead of burning - #325)
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);
@@ -595,7 +599,7 @@ const mineOf = (p, v) => v.owner === p.pid || v.rentedBy === p.pid || v.issuedTo
 function takeCrime(p, v) {
   if (mineOf(p, v)) return null;
   if (v.def.police && !p.badge) return 'policeTheft';
-  if (v.npcOwned || v.owner || (v.workTruck && v.issuedTo)) return v.def.pedal ? 'bikeTheft' : 'theft';
+  if (v.npcOwned || v.owner || (v.workTruck && v.issuedTo)) return v.def.horse ? 'horseTheft' : v.def.pedal ? 'bikeTheft' : 'theft';
   return null;
 }
 // pulling someone out (carjack): a felony only when a police car's or the driver's hurt - thrown out of a moving car
@@ -628,6 +632,10 @@ export function enterLabel(world, p, v) {
 // A player getting in by pressing a button: Safety mode asks first when it'd be a crime (safety.js).
 export function playerEnter(world, ped) {
   const p = ped.player;
+  if (p && !ped.vehId && !ped.dead && !nearestVehicle(world, ped, 56)) {   // (no vehicle in reach: a farm's horse beside you - up on it, bareback; horses.js)
+    const a = horses.farmHorseNear(world, ped);
+    if (a) { if (!safety.confirm(world, p, 'horseTheft', `horse:${a.id}`)) return false; horses.fromLivestock(world, a); return tryEnter(world, ped); }
+  }
   if (p && !ped.vehId && !ped.dead) {
     const v = nearestVehicle(world, ped, 56);
     if (v && !v.forSale && !v.ferry && !v.wreckAt) { const e = entryInfo(world, p, v); if (!safety.confirm(world, p, e.crime, `veh:${v.id}`)) return false; }

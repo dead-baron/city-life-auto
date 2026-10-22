@@ -49,7 +49,7 @@ const LT = (() => { const v = [-0.6, 0.38, 0.7], l = Math.hypot(v[0], v[1], v[2]
 export const PERSON_CAM = { elevation: 35, zScale: CA };          // world px of height per model unit = zScale
 // seat heights (world px above the anchor) the seated poses sit on: motorbike / jet ski, bicycle, bench, car, the ground
 // (by a campfire, knees up)
-export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9, sitlow: 3, cartsit: 8 };
+export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9, sitlow: 3, cartsit: 8, saddle: 37 };   // (saddle: up on a horse's back, #325 - drawn at the horse's own feet)
 export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, aimw: 6, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2, sitlow: 2, cuffed: 6,
   // hit reactions: a stagger (0-1 knocked back, 2-3 shoved forward), a limp, crawling on the stomach, down on the face or the
   // back (1: pushing up to get back on their feet), dead face down or on the side ('dead' lies on the back)
@@ -59,6 +59,7 @@ const ALIAS = { move0: 'walk0', move1: 'walk1', move2: 'walk2', move3: 'walk3', 
 // hangers), tucked down on a sport bike ('tuck': chest to the tank, hands low on the clip-ons). Built on the 'ride' pose
 // (rigMoto, below). shared/vehicles.js ride picks one per bike.
 POSES.chop = 1; POSES.tuck = 1;
+POSES.saddle = 1;   // (on a horse: astride the saddle, the legs down its flanks to the stirrups, hands low on the reins - #325)
 const MOTO_POSES = new Set(['chop', 'tuck']);
 // ---- hit by a car (task #361): 'hood', clinging face down on a car's hood, arms spread up to the windscreen (on downF)
 POSES.hood = 1;
@@ -571,10 +572,14 @@ function rig(D, A, pose, f, kind, acc) {
       P.elR = [1, 0, -0.2]; P.elL = [-1, 0, -0.2]; P.openL = P.openR = 1;
     };
     P.root = rx(1.32);
-  } else if (pose === 'ride' || pose === 'pedal' || pose === 'sit' || pose === 'drive' || pose === 'sitlow' || pose === 'cartsit') {
+  } else if (pose === 'ride' || pose === 'pedal' || pose === 'sit' || pose === 'drive' || pose === 'sitlow' || pose === 'cartsit' || pose === 'saddle') {
     const seat = SEATS[pose] / CA;
     P.acc = false; P.pel = [0, pose === 'sit' || pose === 'sitlow' ? -0.6 : -1.6, seat + 3.7];
-    if (pose === 'ride') {
+    if (pose === 'saddle') {   // astride a horse: the knees out round its barrel, the feet down in the stirrups, the hands low on the reins
+      P.lean = 0.2; P.headPitch = -0.1;
+      P.fL = [-9.4, 1.6, seat - 11.5]; P.fR = [9.4, 1.6, seat - 11.5]; P.kneeL = [-1, 0.5, 0.15]; P.kneeR = [1, 0.5, 0.15];
+      P.hands = (S) => { P.hL = [-2.6, 9.6, seat + 7.4]; P.hR = [2.6, 9.6, seat + 7.4]; P.elL = [-1, -0.2, -0.3]; P.elR = [1, -0.2, -0.3]; };
+    } else if (pose === 'ride') {
       P.lean = 0.42; P.headPitch = -0.12;
       P.fL = [-4.8, 3.2, seat - 10.5]; P.fR = [4.8, 3.2, seat - 10.5]; P.kneeL = [-0.5, 1, 0.6]; P.kneeR = [0.5, 1, 0.6];
       P.hands = (S) => { P.hL = [-6, 12.2, seat + 10]; P.hR = [6, 12.2, seat + 10]; P.elL = [-1, -0.2, -0.4]; P.elR = [1, -0.2, -0.4]; };
@@ -1931,7 +1936,7 @@ export function person(app, dir = 0, pose = 'idle', frame = 0, opt = {}) {
   const nf = POSES[pn], f = (((frame | 0) % nf) + nf) % nf;
   let kind = opt.held !== undefined ? (opt.held && ITEMS[opt.held] ? opt.held : null) : heldKind(A);
   if (pn === 'fish') kind = 'fishingRod';
-  if (['pushup', 'situp', 'carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump', 'cue', 'cartkick', 'cartride', 'cartsit', 'surfpad', 'surf', 'surfair'].includes(pn)) kind = null;   // (nothing in the hands on a shopping cart)
+  if (['pushup', 'situp', 'carry', 'handsup', 'cuffed', 'kneel', 'roll', 'down', 'dead', 'swim', 'ride', 'pedal', 'sit', 'sitlow', 'drive', 'crawl', 'downF', 'downB', 'deadF', 'deadS', 'chop', 'tuck', 'sitx', 'bars', 'bang', 'thump', 'cue', 'cartkick', 'cartride', 'cartsit', 'surfpad', 'surf', 'surfair', 'saddle'].includes(pn)) kind = null;   // (nothing in the hands on a shopping cart)
   if (pn === 'hood') kind = null;
   const acc = A.carry && CARRY.includes(A.carry) ? A.carry : null;
   const th = Math.PI / 2 - (((dir | 0) % 8) + 8) % 8 * Math.PI / 4;

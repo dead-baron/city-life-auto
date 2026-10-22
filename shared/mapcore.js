@@ -49,6 +49,9 @@ for (const t of [T.WALL, T.BUILDING, T.COUNTER]) SWIM_BLOCK[t] = 1;
 for (const t of [T.WALL, T.BUILDING, T.FLOOR, T.COUNTER]) CAR_BLOCK[t] = 1;
 for (const t of [T.WALL, T.BUILDING, T.WATER, T.DEEP, T.FLOOR, T.COUNTER]) CAR_SPAWN_BLOCK[t] = 1;
 BOAT_BLOCK[T.WATER] = 0; BOAT_BLOCK[T.DEEP] = 0; BOAT_BLOCK[T.BRIDGE] = 0;
+// a horse (shared/vehicles.js horse): where a car can't go, and never into the water (a bridge is fine)
+export const HORSE_BLOCK = CAR_BLOCK.slice();
+HORSE_BLOCK[T.WATER] = 1; HORSE_BLOCK[T.DEEP] = 1;
 
 // Surface handling multipliers: [speedMul, gripMul, isAsphalt]
 export const SURFACE = [];

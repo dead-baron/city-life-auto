@@ -4119,6 +4119,7 @@ function drawTank(v, def, wreck) {
 function drawVehicleEnt(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def || def.kind === 'air') return;   // (aircraft: over everything - render/aircraft.js)
+  if (def.horse) { drawHorseV1(v, now, def); return; }   // (a horse: the animal and its rider - #325)
   const f = v.flags;
   // a land vehicle in the water is sinking: it settles, darkens and fades, bubbling (vehVisual)
   const sinking = vehSinking(v, def);
@@ -4180,6 +4181,16 @@ function drawVehicleEnt(v, now, dt) {
     for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) { const pass = (p.flags & PF.PASSENGER) !== 0; drawRider(p, v, def, !pass && def.seat !== undefined ? [def.seat, 0] : seats[p.back ? Math.min(seats.length - 1, 2 + nb++) : pass ? 1 : 0]); }
   }
   void dt;
+}
+
+// A horse in the classic view (#325; art v2 draws its own: host.js _horse): the farm animal's sprite, walking or running by
+// its speed, and whoever's on it up on its back
+const HORSE_V1 = { d: { ar: 'pet:horse' }, as: 0, rx: 0, ry: 0, ra: 0, extra: 0, flags: 0, id: 0, stillSince: undefined };
+function drawHorseV1(v, now, def) {
+  const H = HORSE_V1;
+  H.as = vehSpeed(v); H.rx = v.rx; H.ry = v.ry; H.ra = v.ra; H.id = v.id; H.stillSince = now;
+  drawAnimal(H, now);
+  for (const p of S.ents.values()) if (p.kind === K.PED && p.parent === v.id && p.d && !(p.flags & PF.DEAD)) drawRider(p, v, def, (p.flags & PF.PASSENGER) !== 0 ? [-14, 0] : [def.seat ?? 2, 0]);
 }
 
 // a vehicle's turn on the canvas; on a tow truck's lift (its extra byte: server/net.js) tilted, the hooked end up

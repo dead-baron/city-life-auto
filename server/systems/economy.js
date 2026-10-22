@@ -21,6 +21,7 @@ import * as gang from './gang.js';
 import * as cruiser from './cruiser.js';
 import * as trains from './trains.js';
 import * as rentals from './rentals.js';
+import * as horses from './horses.js';
 import * as hotmoney from './hotmoney.js';
 import * as farming from './farming.js';
 
@@ -82,7 +83,7 @@ export function poiLabel(world, p, poi) {
     case 'hospital': return 'Hospital front desk';
     case 'bank': return 'Bank teller';
     case 'pawn': return 'Pawn window';
-    case 'farm': return 'Farm Co-op (harvest contracts)';
+    case 'farm': return 'Farm Co-op (contracts, seeds, horses)';
     case 'warehouse': return 'Portside Logistics (courier jobs)';
     default:
       if (poi.counter && COUNTER[poi.kind]) return COUNTER[poi.kind].label(poi.label);
@@ -369,9 +370,10 @@ export function buildMenu(world, p, poi) {
       opts.push({ id: 'job:farm', label: p.job ? 'You already have a job' : 'Take a harvest contract (4 boxes)', dis: !!p.job });
       if (p.job) opts.push({ id: 'job:quit', label: 'Abandon current job' });
       title = poi.label;   // (the co-op's counter: seeds and what you grow - SHOPS.farm; farm work on the fields - farming.js)
-      sub = 'Harvest contracts, farm work on the fields with the co-op tractor (paid by the row), seeds for your garden - and they buy what you grow.';
+      sub = 'Harvest contracts, farm work on the fields with the co-op tractor (paid by the row), seeds for your garden - and they buy what you grow. Horses to hire or buy, and yours saddled up.';
       if (!p.job) opts.push({ id: 'job:fieldwork', label: 'Farm work: the co-op tractor on the fields (paid by the row)' });
       if (!p.job && farming.anyRipe(world)) opts.push({ id: 'job:combine', label: 'Harvest: the co-op combine on the ripe rows (two at a time)' });
+      opts.push(...horses.menuOpts(world, p, poi));   // (#325: hire one, buy one, saddle up yours - horses.js)
       break;
     case 'grocery':
       sub = 'Carry Produce Boxes to the front door to get paid. They buy what you grow in your garden, too.';
@@ -716,6 +718,7 @@ function execute(world, p, poi, opt) {
     case 'vg': return spawnOwned(world, p, poi, Number(parts[1]));
     case 'rent': return rentals.rent(world, p, poi, parts[1], pay);
     case 'rentback': return rentals.giveBack(world, p);
+    case 'horse': return parts[1] === 'hire' ? horses.hire(world, p, poi, pay) : parts[1] === 'back' ? horses.giveBack(world, p) : parts[1] === 'buy' ? horses.buy(world, p, poi, Number(parts[2]) | 0, pay) : 'No such thing.';
     case 'hboat': {
       const h = homes.homeFor(world, p, poi);
       if (!h.dock) return 'This place has no boat dock.';
@@ -823,7 +826,8 @@ function spawnOwned(world, p, poi, idx) {
     let best = null, bd = Infinity;
     for (const m of world.map.marina) { const dd = Math.hypot(m.x - poi.x, m.y - poi.y); if (dd < bd) { bd = dd; best = m; } }
     spot = best;
-  } else spot = poi.spawnLot || { x: poi.x, y: poi.y + 90, a: -Math.PI / 2 };
+  } else if (VEHICLES[ov.model].horse) spot = horses.spotAt(world, poi);   // (a horse: brought round onto open ground)
+  else spot = poi.spawnLot || { x: poi.x, y: poi.y + 90, a: -Math.PI / 2 };
   return homes.spawnOwnedAt(world, p, idx, spot);
 }
 

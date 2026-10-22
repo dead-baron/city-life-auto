@@ -452,7 +452,7 @@ export const ATM_DEPOSIT_PX = 48;          // an ATM's reach (it used to bank yo
 // a fall - hurts this much at bailHit speed and up to the most at full speed, and you're down this long
 import { DRILL_PRICE } from './rules-base.js';
 export { DRILL_PRICE };
-export { SKATEBOARD_PRICE, SURFBOARD_PRICE, PARACHUTE_PRICE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
+export { SKATEBOARD_PRICE, SURFBOARD_PRICE, PARACHUTE_PRICE, HORSE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
 // Skateboarding's score (server/systems/skate.js): a combo banked after comboGap s rolling on is its points x its tricks
 // (a trick again in the same combo: half); perS - a grind, grab, manual by the second; the special meter full at

@@ -1660,6 +1660,7 @@ export class World2 {
   _veh(v, now, me) {
     const def = VEHICLE_BY_INDEX[v.d.m], A = this.A;
     if (def && def.kind === 'air') { this._air(v, now, me); return; }   // (aircraft: their block models - H66)
+    if (def && def.horse) { this._horse(v, now, me, def); return; }   // (a horse: the animal's own sprite, its rider up in the saddle - #325)
     if (!def || !A || !A.vehicleKey || !A.vehState) return;
     const E = this.E, api = this.api, f = v.flags, N = this.tier.N;
     const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
@@ -1738,6 +1739,52 @@ export class World2 {
         E.drawSprite(rk, x, y, Math.max(0, z0), o);
         o.under = 0;
       }
+    }
+  }
+
+  // A horse (#325, server horses.js): the animal's sprite in its coat, saddled or bare (the variant: 'horse:s<coat>',
+  // 'horse:c<coat>' - art2/animals.js) - standing (now and then its head down to graze, ridden or not), walking or at a
+  // gallop by its speed, the legs' frames as fast as it goes - and whoever's on it astride its back ('saddle', drawn at
+  // the horse's own feet: the pose sits the rider at its saddle's height), rising and falling with the gallop
+  _horse(v, now, me, def) {
+    const A = this.A, E = this.E, Pd = this.Pd;
+    if (!A || !A.animalKey) return;
+    const vr = v.d.vr | 0, kind = `horse:${vr & 8 ? 'c' : 's'}${vr & 7}`;
+    const b = v.buf, sp = b && b.length > 1 ? Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20 : 0;
+    const was = v._hsp ?? sp, s2 = v._hsp = was + (sp - was) * 0.3;
+    const pose = s2 > 150 ? 'run' : s2 > 8 ? 'walk' : (Math.floor(now / 3.7) + v.id) % 4 ? 'idle' : 'graze';
+    const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(v.ra);
+    // the legs' cycle by the ground it covers (a stride a cycle), so a canter and a gallop look it
+    const dt = Math.min(0.1, Math.max(0, now - (v._hT ?? now))); v._hT = now;
+    v._hph = ((v._hph || 0) + dt * (pose === 'run' ? s2 / 95 : pose === 'walk' ? Math.max(0.8, s2 / 32) : 0.6)) % 1;
+    const fr = Math.floor(v._hph * n) % n;
+    let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
+    if (!sk) sk = v._v2k && E.hasSprite(v._v2k) ? v._v2k : null;
+    if (pose !== v._hp || d8 !== v._hd) { v._hp = pose; v._hd = d8; for (let i = 0; i < n; i++) this._ask('actors', 'animal', A.animalKey(kind, pose, d8, i), [kind, pose, d8, i], me ? -2 : 0); }
+    if (!sk) return;
+    v._v2k = sk;
+    const o = this.opts;
+    o.alpha = 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = true; o.tint = null; o.air = false; o.under = 0;
+    if (v.blinkUntil > now) o.alpha *= Math.floor(now * 10) % 2 ? 0.25 : 1;
+    const z0 = Math.max(0, this._z0(v, false));
+    E.drawSprite(sk, v.rx, v.ry, z0, o);
+    this.n.drawn++;
+    if (!Pd || !Pd.pedKey) return;
+    // the riders: astride, the passenger behind; up and down with the gallop's stride
+    const bob = pose === 'run' ? Math.abs(Math.sin(v._hph * Math.PI * 2)) * 2 : pose === 'walk' ? Math.abs(Math.sin(v._hph * Math.PI * 2)) * 0.6 : 0, myPed = this.S.myPedId;
+    for (const p of this.S.ents.values()) {
+      if (p.kind !== K.PED || p.parent !== v.id || !p.d || (p.flags & PF.DEAD)) continue;
+      const pass = (p.flags & PF.PASSENGER) !== 0, f = pass ? -14 : def.seat ?? 2;
+      const x = v.rx + Math.cos(v.ra) * f, y = v.ry + Math.sin(v.ra) * f, A2 = this._app(p.d.app || {}, p.d.ar), wpn = p.extra | 0, bo = bladeOpt(p, wpn);
+      const was2 = this.sprPrio;
+      if (p.id === myPed) this.sprPrio = -3;
+      let rk = this._spr('peds', 'ped', Pd.pedKey(A2, 'saddle', d8, 0, wpn, bo), [A2, 'saddle', d8, 0, wpn, bo]);
+      this.sprPrio = was2;
+      if (!rk) rk = p._v2r && E.hasSprite(p._v2r) ? p._v2r : null;
+      if (!rk) continue;
+      p._v2r = rk;
+      o.xray = false; o.alpha = 1;
+      E.drawSprite(rk, x, y, z0 + bob, o);
     }
   }
 
@@ -2454,6 +2501,7 @@ export class World2 {
       const def = VEHICLE_BY_INDEX[v.d.m];
       if (!def) continue;
       if (def.kind === 'air') { if (this.AM) this.AM.airLights(this, v, now, night); continue; }   // (their lamps, the searchlight's pool - H66)
+      if (def.horse) continue;   // (a horse: no lamps)
       const f = v.flags, c = Math.cos(v.ra), s = Math.sin(v.ra), zb = this._z0(v, def.kind === 'boat');
       const vl = this.prov.actors && this.A.vehicleLights ? this.A.vehicleLights(v.d) : null;
       const hl = (vl ? vl.L : def.L) / 2;

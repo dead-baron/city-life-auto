@@ -40,6 +40,7 @@ import * as cinema from './cinema.js';
 import * as homes from './homes.js';
 import * as homeinside from './homeinside.js';
 import * as rentals from './rentals.js';
+import * as horses from './horses.js';
 import * as pets from './pets.js';
 import * as happenings from './happenings.js';
 import * as streetlife from './streetlife.js';
@@ -363,6 +364,7 @@ function finalizeLogout(world, p, dropLoot) {
   world.players.delete(p.pid);
   law.onPlayerGone(world, p);
   rentals.onPlayerGone(world, p);
+  horses.onPlayerGone(world, p);
 }
 
 // A name of your own (Settings' account section - the owner's M9 note: "a username"): a name may be (shared/names.js),
@@ -674,7 +676,7 @@ export function findInteraction(world, p) {
     if (hop) return hop;
     const fi = fishing.interaction(world, p);
     if (fi) return fi;
-    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped);   // (a boat sitting still: fish over the side)
+    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped);   // (a boat sitting still: fish over the side)
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
@@ -806,6 +808,8 @@ export function findInteraction(world, p) {
   if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };
   const v = vehicles.nearestVehicle(world, ped, 56);
   if (v) return { label: vehicles.enterLabel(world, p, v), key: 'F', crime: vehicles.entryInfo(world, p, v).crime, key2: `veh:${v.id}`, run: () => vehicles.tryEnter(world, ped) };
+  const fh = !ped.board && horses.farmHorseNear(world, ped);   // a farm's horse grazing beside you: up on it bareback - the farm's, so horse theft (horses.js)
+  if (fh) return { label: 'Ride the horse bareback - Horse theft', key: 'F', crime: 'horseTheft', key2: `horse:${fh.id}`, run: () => vehicles.playerEnter(world, ped) };
   return transit.stopNote(world, p);   // at a bus stop with nothing else to do: the line and when its next bus comes
 }
 
@@ -943,7 +947,7 @@ export function buildMe(world, p) {
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
-    radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p),
+    radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p), horse: horses.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
     fishing: fishing.meInfo(p), creel: fishing.creelInfo(prof),   // (a line out: where, the rod, the fight's parameters once it's cast; the cooler's catch - fishing.js)
