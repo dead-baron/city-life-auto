@@ -295,14 +295,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   // -- longitudinal: engine, brakes, burnouts --
   // a horse canters unless spurred to a gallop, and only while its wind lasts (s.stam: 1 fresh .. 0 blown; s.blown until
   // it's got a third of it back) - galloping wears it down, a walk or standing still brings it back, a canter slowly
-  let gait = 1;
-  if (hoof) {
-    const st = s.stam ?? 1, gal = !!inp.gallop && !s.blown && st > 0;
-    gait = gal ? 1 : HORSE.canter;
-    if (gal && fwd > def.max * HORSE.canter * 0.95) s.stam = Math.max(0, st - dt / HORSE.galS);
-    else s.stam = Math.min(1, st + dt / (HORSE.backS * (Math.abs(fwd) > def.max * HORSE.canter * 0.5 ? 3 : 1)));
-    if (s.stam <= 0) s.blown = true; else if (s.blown && s.stam > 0.33) s.blown = false;
-  }
+  const gait = hoof ? (horseWind(s, def, inp.gallop, fwd, dt) ? 1 : HORSE.canter) : 1;
   const maxEff = def.max * surfSpeed * gait * (s.flat ? 0.45 : 1);
   // analog throttle also sets a cruising speed: a light push drives slowly, full stick flat out
   const cap = maxEff * Math.min(1, 0.18 + 0.82 * Math.abs(t));
@@ -355,6 +348,17 @@ export function vehStep(s, inp, dt, map, def, env) {
   if (hoof && WATER_T[map.tileAtPx(s.x, s.y)] && !up(s)) { s.x = x0; s.y = y0; s.vx = 0; s.vy = 0; return Math.max(hit, 1); }
   if (!map.levels || isBoat) return hit;
   return Math.max(hit, levelStep(map, s, def.W / 2, true));
+}
+
+// A horse's wind (s.stam: 1 fresh .. 0 blown; s.blown until it's got a third of it back): galloping (spurred, going
+// faster than a canter) wears it down, a walk or standing still brings it back, a canter slowly. Whether it gallops.
+// (vehStep's, and the server's for a horse standing still - it isn't stepped then: server vehicles.js stepVehicle)
+export function horseWind(s, def, gallop, fwd, dt) {
+  const st = s.stam ?? 1, gal = !!gallop && !s.blown && st > 0;
+  if (gal && fwd > def.max * HORSE.canter * 0.95) s.stam = Math.max(0, st - dt / HORSE.galS);
+  else s.stam = Math.min(1, st + dt / (HORSE.backS * (Math.abs(fwd) > def.max * HORSE.canter * 0.5 ? 3 : 1)));
+  if (s.stam <= 0) s.blown = true; else if (s.blown && s.stam > 0.33) s.blown = false;
+  return gal;
 }
 
 // A vehicle whose engine has died (out of health): no power, the brakes dragging it to a stop, the wheel still turns.

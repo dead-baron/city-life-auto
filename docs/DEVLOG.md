@@ -14852,3 +14852,9 @@ The playtest panel's bikes section has a horse beside you, you up on one, and th
 Tests: test/horses.test.js - the canter and the gallop, blown and rested, no skids; never into the water; a farm's horse
 ridden off (its coat, horse theft); the co-op's hire and handing back, buying one; out of health it throws you and
 bolts, never a wreck.
+Fixes from a review, the same day: a hired horse can't be kept in a garage; two hires at a co-op both wait (the
+second no longer cleared the first away); a horse that has bolted is nobody's - its hire over, nobody gets back on it -
+and gone once out of sight; a horse standing still gets its wind back on the server too (it wasn't stepped), and the
+page has its wind from every snapshot (it lost it at each one - the bar stayed full, a blown horse's gallop was
+predicted and corrected); the art v2 sprites keep each coat and the saddle (they were all the plain chestnut); no
+smoke, skid marks or tail lights from a horse, no respray of one, none parked in a garage's bays.

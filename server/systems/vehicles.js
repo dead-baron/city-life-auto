@@ -1,7 +1,7 @@
 // Vehicle physics, seats (multi-passenger binding), collisions, ped strikes, wrecks.
 import { K, T, VF, WEATHER } from '../../shared/constants.js';
 import { ugMapOf } from '../../shared/underground.js';
-import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput } from '../../shared/physics.js';
+import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput, horseWind } from '../../shared/physics.js';
 import { obbVsObb, circleVsObb, localToWorld } from '../../shared/math.js';
 import { PED_BLOCK, WATER_T } from '../../shared/map.js';
 import { sameLevel, levelStep } from '../../shared/levels.js';
@@ -29,7 +29,7 @@ export function speedOf(v) { return Math.hypot(v.vx, v.vy); }
 export function stepVehicle(world, v, dt, env = { rain: world.weather === WEATHER.RAIN }) {
   if (v.def.kind === 'air') { aircraft.step(world, v, dt); return; }   // (flying: shared/flight.js, aircraft.js)
   const moving = Math.abs(v.vx) + Math.abs(v.vy) > 0.5 || Math.abs(v.input.throttle) > 0.05;
-  if (!moving) return;
+  if (!moving) { if (v.def.horse && (v.stam ?? 1) < 1) horseWind(v, v.def, false, 0, dt); return; }   // (a horse standing: getting its wind back, as the page has it)
   // pinned broadside to the nose of a train: carried along with it (tyres can't grip that) -
   // unless whoever's at the wheel powers it off the line
   if (world.time - (v.trainDragAt || -9) < 0.12 && Math.abs(v.input.throttle) < 0.3 && !v.wreckAt) {
@@ -76,6 +76,7 @@ export function update(world, dt) {
       if (v.ai && v.ai.ctl && v.ai.ctl.t === world.tick && driver && driver.npc) { stepVehicle(world, v, dt / 2, env); traffic.trim(v); stepVehicle(world, v, dt / 2, env); }
       else stepVehicle(world, v, dt, env);
     }
+    if (v.def.horse) horses.keepDry(world, v);   // (a horse: never in the water - horses.js)
     // land vehicles that end up in the water sink (not a car on a ferry's deck)
     if (v.def.kind !== 'boat' && !v.def.horse && !v.onDeck && !aircraft.inAir(v)) {   // (a horse never goes in: physics.js)
       if (!v.sinkAt && (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
@@ -90,7 +91,7 @@ export function update(world, dt) {
     v.reverse = fwd < -10;
     // tyre smoke + skid marks: sliding, e-braking, donuts, or a full-throttle launch (burnout) - never an aircraft (the owner,
     // 2026-10-13: a helicopter left tyre marks on the ground as it flew)
-    v.drift = v.def.kind !== 'air' && (Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player));
+    v.drift = v.def.kind !== 'air' && !v.def.horse && (Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player));
     v.lights = (night && !!driver && !v.def.horse) || ((v.def.police || v.def.siren) && v.sirenOn);   // (def.siren: an ambulance, a fire engine)
     v.siren = !!((v.def.police || v.def.siren) && v.sirenOn && driver);
     v.beacon = !v.siren && !!((v.def.police || v.def.siren) && v.beaconOn);   // (the lights flashing with nobody at the wheel: an ambulance at a scene, a tow truck at work - no siren)
@@ -540,6 +541,7 @@ export function tryEnter(world, ped) {
   if (v.wreckAt) { if (p) world.notify(p, 'That vehicle is wrecked.', 'bad'); return false; }
   if (v.sinkAt) return false;
   if (aircraft.inAir(v)) return false;   // (up in the air: out of reach)
+  if (v.bolt) { if (p) world.notify(p, "It's bolted - you won't catch it now.", 'warn'); return false; }   // (a horse off at a gallop: horses.js)
   if (v.forSale) { if (p) world.notify(p, `It's for sale: $${v.forSale.price.toLocaleString()}. Walk up to it and press interact to buy it.`, 'info'); return false; }
   if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
   if (ped.carrying) cargo.dropCrate(world, ped);
@@ -717,11 +719,11 @@ export function vehFlags(world, v) {
   if (v.lights) f |= VF.LIGHTS;
   if (v.siren) f |= VF.SIREN;
   if (v.beacon) f |= VF.BEACON;
-  if (v.brake) f |= VF.BRAKE;
-  if (v.reverse) f |= VF.REVERSE;
+  if (v.brake && !v.def.horse) f |= VF.BRAKE;
+  if (v.reverse && !v.def.horse) f |= VF.REVERSE;
   if (v.wreckAt) f |= VF.WRECK;
-  if (v.burnUntil > world.time || (v.wreckAt && !v.def.pedal && world.time - v.wreckAt < 20)) f |= VF.BURN;
-  if ((v.hp < v.def.hp * 0.35 || v.dead) && !v.def.pedal) f |= VF.SMOKE;
+  if ((v.burnUntil > world.time || (v.wreckAt && !v.def.pedal && world.time - v.wreckAt < 20)) && !v.def.horse) f |= VF.BURN;
+  if ((v.hp < v.def.hp * 0.35 || v.dead) && !v.def.pedal && !v.def.horse) f |= VF.SMOKE;   // (a horse: no smoke)
   if (v.dead && !v.wreckAt) f |= VF.DEAD;
   if (v.drift) f |= VF.DRIFT;
   if (v.hornUntil > world.time) f |= VF.HORN;

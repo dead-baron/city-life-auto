@@ -168,3 +168,33 @@ test('out of health a horse throws its rider and bolts - no fire, no explosion -
   run(w, 5);
   assert.ok(v.removed, 'gone (nobody watching in a test)');
 });
+
+test('from a review: a hire stays the co-op\'s (no garage keeps it, two hires both wait), a bolted horse is nobody\'s, a horse at rest gets its wind back, its coat drawn', async () => {
+  const w = makeWorld();
+  const a = joinPlayer(w), b = joinPlayer(w);
+  const poi = w.map.pois.find((q) => q.kind === 'farm');
+  for (const q of [a, b]) { q.prof.cash = 10000; teleport(w, q.p.ped, poi.x, poi.y + 40); }
+  assert.equal(horses.hire(w, a.p, poi, economy.payFrom), null);
+  assert.equal(horses.hire(w, b.p, poi, economy.payFrom), null);
+  const ha = horses.hired(w, a.p), hb = horses.hired(w, b.p);
+  assert.ok(ha && hb && !ha.removed && ha !== hb && Math.hypot(ha.x - hb.x, ha.y - hb.y) > 60, 'both hired horses waiting, apart');
+  // no garage keeps a hired horse
+  const homesMod = await import('../server/systems/homes.js');
+  teleport(w, a.p.ped, ha.x, ha.y); vehicles.tryEnter(w, a.p.ped);
+  const n0 = a.prof.vehicles.length;
+  assert.equal(homesMod.storeVehicle(w, a.p, ha, { id: 1, x: ha.x, y: ha.y, garage: { x: ha.x, y: ha.y } }), 'hired');
+  assert.equal(a.prof.vehicles.length, n0, 'not on the list');
+  // bolted: the hire over, nobody's, and nobody gets back on it
+  vehicles.damageVehicle(w, ha, 9999, null, true, true);
+  assert.ok(ha.bolt && !ha.rentedBy && !a.p.horseHire, 'bolted: the hire over');
+  teleport(w, b.p.ped, ha.x + 10, ha.y);
+  assert.equal(vehicles.tryEnter(w, b.p.ped), false, 'not caught');
+  // at rest, its wind comes back (the server doesn't step a horse standing still)
+  hb.stam = 0.2; hb.blown = true;
+  run(w, HORSE.backS + 1);
+  assert.ok(!hb.blown && hb.stam > 0.95, `rested (${hb.stam.toFixed(2)})`);
+  // the pages draw each coat (art v2's sprite key keeps it)
+  const actors = await import('../client/art2/game/actors.js');
+  assert.notEqual(actors.animalKey('horse:s3', 'run'), actors.animalKey('horse:s1', 'run'));
+  assert.notEqual(actors.animalKey('pet:horse:c2', 'idle'), actors.animalKey('pet:horse:c4', 'idle'));
+});

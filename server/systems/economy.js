@@ -686,6 +686,7 @@ function execute(world, p, poi, opt) {
       const v = myVehicleNear(world, p, poi);
       if (!v) return 'Bring your vehicle onto the lot first.';
       if (parts[0] === 'respray') {
+        if (v.def.horse) return "We don't paint horses.";   // (its coat is its own: horses.js)
         if (v.cargo.some((c) => c)) return 'Unload the cargo first - we do not respray loaded vehicles.';
         const blocked = disguiseBlocked(world, p);
         if (blocked) return blocked;

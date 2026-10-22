@@ -2054,7 +2054,7 @@ export class World2 {
         const wpn = L.board ? 0 : (e.extra | 0) || (e.d.fl ? 'flashlight' : 0), pf = ppose === 'sitx' && Pd.sitFrame ? Pd.sitFrame(e.d, e.id, now) : ppose === 'sit' && e.d && e.d.gt === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(e.d, e.id, now) : Pd.pedFrame(ppose, L.fr);
         const bo = bladeOpt(e, wpn);
         if (this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo], prio)) budget--;
-      } else if (e.kind === K.VEH && A && A.vehicleKey && A.vehState) {
+      } else if (e.kind === K.VEH && A && A.vehicleKey && A.vehState && !(e.d && (VEHICLE_BY_INDEX[e.d.m] || {}).horse)) {   // (a horse: its animal sprites, asked for as it's drawn - _horse)
         const N = this.tier.N, hi = quant(e.ra || 0, N), st = A.vehState(e.flags, 1, e.hp, e.parent);
         if (this._ask('actors', 'vehicle', A.vehicleKey(e.d, st, hi, N), [e.d, st, hi, N], prio)) budget--;
       } else if (e.kind === K.TRAIN && A && A.trainKey && TRAIN_CARS[e.d.c]) {

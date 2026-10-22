@@ -332,7 +332,6 @@ function onText(m) {
     case 'fish': fishGo(m); break;   // (a catch landed: its card)
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
-      if (m.horse && S.pred && S.pred.kind === 'veh' && S.pred.def && S.pred.def.horse) { S.pred.s.stam = m.horse.st; S.pred.s.blown = !!m.horse.bl; }   // (your horse's wind, as the server has it: the gait predicted from it - shared/physics.js)
       if ((m.inv && m.inv.skateboard > 0) || m.sk) loadSkate();
       if (m.fishing) loadFish();   // (a line out: client/fishing.js)   // (a board in your bag: riding it and its tricks - client/skate.js)
       S.ugLayer = m.ug || 0;   // (under the ground: the physics steps you through its own map, the underground view draws)
@@ -440,7 +439,8 @@ function reconcile(s) {
     if (def.kind === 'air' && !S.airMod) { S.pred = null; loadAir(); return; }   // (flying: predicted once render/aircraft.js is in)
     st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, av: s.self.av, rev: !!(s.selfFlags & 32), lz: s.self.lz, slip: s.self.stamina, spin: s.self.rollT, launch: s.self.rdx, flat: !!(e.flags & VF.FLAT), dead: !!(e.flags & VF.DEAD), ug: S.ugLayer || 0 };
     S.pred = { kind, s: st, def, prev: null };
-    if (def.kind === 'air') { Object.assign(st, { alt: s.self.rdy, vz: s.self.stamina, spool: s.self.rollT, bank: s.self.rdx, slip: 0, spin: 0, launch: 0 }); S.pred.air = true; }   // (net.js: an aircraft's climb rate, spool, bank and altitude in those slots)
+    if (def.kind === 'air') { Object.assign(st, { alt: s.self.rdy, vz: s.self.stamina, spool: s.self.rollT, bank: s.self.rdx, slip: 0, spin: 0, launch: 0 }); S.pred.air = true; }
+    else if (def.horse) { const r = s.self.rdy; st.blown = r < -0.5; st.stam = st.blown ? -1 - r : r; }   // (a horse's wind, as the server has it: server/net.js)   // (net.js: an aircraft's climb rate, spool, bank and altitude in those slots)
   }
   // replay unacknowledged inputs; keep the state before the last one as `prev` so the render
   // interpolation continues exactly as fixedStep would have left it

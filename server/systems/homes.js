@@ -338,6 +338,7 @@ export function vehicleInteraction(world, p) {
   if (v.def.police || v.model === 'ambulance' || v.model === 'rescue4x4' || v.model === 'rescueboat' || v.model === 'swat') return null;
   const h = nearOwnGarage(world, p, v.x, v.y);
   if (!h) return null;
+  if (v.rentedBy) return { label: `A hired ${v.def.horse ? 'horse' : v.def.name} - your garage won't keep it`, run: () => storeVehicle(world, p, v, h) };   // (storeVehicle says why: horses.js)
   if (v.workTruck) return { label: `A company ${v.def.name} - your garage won't keep it`, run: () => storeVehicle(world, p, v, h) };   // (storeVehicle says why)
   if (Math.hypot(v.vx, v.vy) > 60) return { label: 'Slow down to park in your garage', run: () => {} };
   return { label: `Park ${v.def.name} in your garage`, run: () => storeVehicle(world, p, v, h) };
@@ -347,6 +348,7 @@ export function storeVehicle(world, p, v, home) {
   const prof = p.profile;
   // a company's work truck (jobs.js workTruck): drive it, paint it, keep it out - but a garage won't keep it (the owner,
   // 2026-10-11: "you can't just park a work truck in your garage and keep it")
+  if (v.rentedBy) { world.notify(p, v.def.horse ? "That's the co-op's horse - hand it back at a farm co-op." : `That ${v.def.name} is hired - take it back where you got it.`, 'warn'); return 'hired'; }   // (a hired horse: horses.js)
   if (v.workTruck) { world.notify(p, `That ${v.def.name} belongs to the company - your garage won't keep it. Bring it back where you got it for a bonus.`, 'warn'); return 'work truck'; }
   if (v.def.kind === 'air') { world.notify(p, `A garage can't take the ${v.def.name} - leave it on a helipad or an airfield.`, 'warn'); return 'aircraft'; }   // (flying: shared/flight.js)
   if (v.owner !== p.pid && prof.vehicles.length >= garageCap(world, prof)) { world.notify(p, `Garage full (${prof.vehicles.length}/${garageCap(world, prof)}). Buy another home for more space.`, 'warn'); return; }

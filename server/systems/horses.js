@@ -31,6 +31,7 @@ const rng = mulberry32(3251);
 export const coatOf = (v) => (v.variant | 0) & 7;
 export const isBare = (v) => ((v.variant | 0) & BARE) !== 0;
 export const coatName = (v) => COAT_NAMES[coatOf(v) % COATS];
+// a horse: never painted (a respray, economy.js), its coat kept; a stolen one stored bare stays as it was
 const farms = (world) => world.map.pois.filter((q) => q.kind === 'farm');
 
 // ---- a farm's horse, ridden off -----------------------------------------------------------------------------------
@@ -52,6 +53,13 @@ export function fromLivestock(world, a) {
   return v;
 }
 
+// a horse never stands in the water (shared/physics.js keeps it out as it moves; whatever else shoves it - a car, a
+// blast - it's back where it last stood dry): vehicles.update, each tick, each horse
+export function keepDry(world, v) {
+  if (!WATER_T[world.map.tileAtPx(v.x, v.y)] || (v.lz || 0) > 0.3) { v.dryX = v.x; v.dryY = v.y; }
+  else if (v.dryX !== undefined) { v.x = v.dryX; v.y = v.dryY; v.vx = 0; v.vy = 0; world.place(v); }
+}
+
 // ---- bolting ------------------------------------------------------------------------------------------------------
 // out of health: whoever's on it thrown, and off it goes at a gallop, away from whatever hurt it
 export function bolt(world, v, attackerPed = null) {
@@ -71,11 +79,12 @@ export function bolt(world, v, attackerPed = null) {
   v.dead = false; v.deadBoomAt = 0; v.deadFireAt = 0; v.burnUntil = 0;
   v.parked = false;
   world.emit(v.x, v.y, { e: 'whinny', x: Math.round(v.x), y: Math.round(v.y), id: v.id });
-  // a hired one's hire is over; yours waits at the co-op
+  // a hired one's hire is over; yours waits at the co-op (this one's gone home: nobody's now, and nobody gets back on it)
   for (const p of world.players.values()) {
     if (p.horseHire && p.horseHire.vid === v.id) { p.horseHire = null; p.meDirty = true; world.notify(p, 'Your hired horse bolted for home - the hire is over.', 'info'); }
     if (v.owner === p.pid) { world.notify(p, 'Your horse bolted - saddle it up again at any farm co-op.', 'info'); if (p.activeVehicle === v.id) p.activeVehicle = 0; }
   }
+  v.rentedBy = 0; v.owner = null; v.ownerName = null; v.issuedTo = 0; v.npcOwned = true; v.despawnable = true; v.descVer = (v.descVer || 0) + 1;
 }
 // its stick while it bolts (vehicles.update: nobody on it): flat out away, swerving off what it runs into
 export function boltInput(world, v) {
@@ -107,6 +116,7 @@ export function spotAt(world, poi) {
     const a = k * 0.9, d = 70 + k * 9, x = poi.x + Math.cos(a) * d, y = poi.y + Math.sin(a) * d;
     let ok = true;
     for (const [dx, dy] of [[0, 0], [24, 0], [-24, 0], [0, 12], [0, -12]]) if (HORSE_BLOCK[m.tileAtPx(x + dx, y + dy)]) { ok = false; break; }
+    if (ok && world.query(x, y, 90, K.VEH).some((e) => Math.hypot(e.x - x, e.y - y) < 90)) ok = false;   // (clear of any horse already waiting there - another's hire, yours)
     if (ok) return { x, y, a: 0 };
   }
   return { x: poi.x, y: poi.y + 90, a: 0 };
@@ -116,14 +126,13 @@ export function menuOpts(world, p, poi) {
   opts.push({ id: 'horse:hire', label: 'Hire a horse', price: HORSE.hire, note: `${Math.round(HORSE.hireS / 60)} min`, dis: !!out });
   if (out) opts.push({ id: 'horse:back', label: `Hand back the ${coatName(out)} horse`, dis: Math.hypot(out.x - poi.x, out.y - poi.y) > RETURN_R });
   for (const c of paddock(world, poi)) opts.push({ id: `horse:buy:${c}`, label: `Buy the ${COAT_NAMES[c]} horse`, price: HORSE.price, note: 'yours to keep' });
-  prof.vehicles.forEach((ov, i) => { if (ov.model === 'horse') opts.push({ id: `vg:${i}`, label: `Saddle up your ${COAT_NAMES[(ov.variant | 0) % COATS]} horse` }); });
+  prof.vehicles.forEach((ov, i) => { if (ov.model === 'horse') opts.push({ id: `vg:${i}`, label: `Saddle up your ${COAT_NAMES[((ov.variant | 0) & 7) % COATS]} horse` }); });
   return opts;
 }
 export function hire(world, p, poi, pay) {
   if (hired(world, p)) return 'Bring back the horse you have out first.';
   if (!pay(p, HORSE.hire)) return `You need $${HORSE.hire} (cash + bank).`;
   const s = spotAt(world, poi), coat = paddock(world, poi)[Math.floor(rng() * 3)];
-  for (const e of world.query(s.x, s.y, 50, K.VEH)) if (!e.seats.some((q) => q) && e.def.horse && !e.owner) world.remove(e);
   const v = world.spawnVehicle('horse', s.x, s.y, s.a, { variant: coat, npcOwned: false });
   v.rentedBy = p.pid; v.despawnable = false;
   p.horseHire = { vid: v.id, until: world.time + HORSE.hireS, warned: false, overdue: false, poi: poi.id };
@@ -169,11 +178,6 @@ export function meInfo(world, p) {
 
 export function update(world) {
   const now = world.time;
-  // on a horse whose wind is going or coming back: the page's bar kept up (a 'me' every few ticks)
-  if (world.tick % 4 === 1) for (const p of world.players.values()) {
-    const v = p.ped && p.ped.vehId ? world.get(p.ped.vehId) : null;
-    if (v && v.def.horse && (v.stam ?? 1) < 1) p.meDirty = true;
-  }
   if (world.tick % 10 === 7) {
     for (const p of world.players.values()) {
       if (!p.horseHire) continue;
@@ -194,13 +198,6 @@ export function update(world) {
       }
     }
   }
-  // a horse never stands in the water (shared/physics.js keeps it out as it moves; whatever else shoves it - a car, a
-  // blast - it's back where it last stood dry)
-  for (const v of world.entities.values()) {
-    if (v.kind !== K.VEH || !v.def.horse) continue;
-    if (!WATER_T[world.map.tileAtPx(v.x, v.y)] || (v.lz || 0) > 0.3) { v.dryX = v.x; v.dryY = v.y; }
-    else if (v.dryX !== undefined) { v.x = v.dryX; v.y = v.dryY; v.vx = 0; v.vy = 0; world.place(v); }
-  }
   // a bolted horse, its run over, gone once nobody's watching
   if (world.tick % 20 === 11) {
     for (const v of world.entities.values()) {
@@ -213,5 +210,6 @@ export function update(world) {
 export function onPlayerGone(world, p) {
   const v = p.horseHire ? world.get(p.horseHire.vid) : null;
   if (v && !v.seats.some((s) => s)) world.remove(v);
+  else if (v) { v.rentedBy = 0; v.despawnable = true; v.npcOwned = true; }   // (someone else still up on it: the co-op's, gone once left)
   p.horseHire = null;
 }
