@@ -531,8 +531,27 @@ function drawPlatform(g, P) {
   g.fillStyle = '#1d3f8a'; g.fillRect(tx - w / 2, ty - 8, w, 16);
   g.fillStyle = '#ffffff'; g.fillText(P.name, tx, ty + 0.5);
 }
+// the streets overhead, ghosted through the dark (the owner's 10-07 note: "subway under the world: ghosted street") - so
+// you can tell where you are going under the city
+function ghostStreets(g, map, view) {
+  const E = map.edges;
+  if (!E || !E.length) return;
+  g.strokeStyle = 'rgba(150,165,200,.07)'; g.lineCap = 'round'; g.lineJoin = 'round';
+  for (const e of E) {
+    if (!e || !e.pts || e.pts.length < 2) continue;
+    let b = e.gb;
+    if (!b) { b = e.gb = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }; for (const p of e.pts) { if (p.x < b.x0) b.x0 = p.x; if (p.y < b.y0) b.y0 = p.y; if (p.x > b.x1) b.x1 = p.x; if (p.y > b.y1) b.y1 = p.y; } }
+    if (b.x1 < view.x0 - 100 || b.x0 > view.x1 + 100 || b.y1 < view.y0 - 100 || b.y0 > view.y1 + 100) continue;
+    g.lineWidth = Math.max(24, (e.hw || 40) * 2);
+    g.beginPath(); g.moveTo(e.pts[0].x, e.pts[0].y);
+    for (let i = 1; i < e.pts.length; i++) g.lineTo(e.pts[i].x, e.pts[i].y);
+    g.stroke();
+  }
+  g.lineJoin = 'miter';
+}
 export function drawTunnel(g, map, view, now) {
   g.fillStyle = '#050608'; g.fillRect(view.x0, view.y0, view.x1 - view.x0, view.y1 - view.y0);
+  ghostStreets(g, map, view);
   const cells = tunnelSegments(map);
   const segs = [];
   const x0 = view.x0 - 200, x1 = view.x1 + 200, y0 = view.y0 - 200, y1 = view.y1 + 200;

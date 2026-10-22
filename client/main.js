@@ -2874,7 +2874,11 @@ function render(dt) {
     }
     return;
   }
+  // into the subway's tunnel or back out: the light eases over it (the owner's 10-07 note: "light easing in and out")
+  if (!!F.sub !== !!S.subWas) { S.subWas = !!F.sub; S.subFadeAt = performance.now(); }
   drawOverlays(F, v2);
+  const fk = 1 - (performance.now() - (S.subFadeAt ?? -1e9)) / 600;
+  if (fk > 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(0,0,0,${(fk * 0.9).toFixed(3)})`; g.fillRect(0, 0, canvas.width, canvas.height); }
 }
 
 // ---- under the ground: the sewers and the cave (client/underground/view.js, loaded the first time you go down) ------------

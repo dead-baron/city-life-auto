@@ -14646,3 +14646,12 @@ for every 1,000 points (no faster than a table can score: the server's clock); y
 Tests: test/arcade.test.js - the plunger into the playfield, the bumpers and the flippers keeping a ball up, a ball left
 alone falling between the flippers, a raised flipper sending a ball up the table, the tickets and a score too quick to be
 true.
+
+## 2026-10-22 · Under the city: the streets ghosted overhead, the light easing in and out
+
+The owner's 10-07 note on the subway ("subway under the world: ghosted street, light easing in and out"). Riding under
+the city the tunnel view was the dark and the rails alone - no telling where you were. Now:
+- the streets overhead show faintly through the dark (client/render/trains.js ghostStreets: every road above, as a pale
+  band its own width), so you can follow where the line runs under the city;
+- going down into the tunnel, and coming back up into the daylight, the screen eases from dark instead of cutting (and
+  the same down the sewers and into the cave).
