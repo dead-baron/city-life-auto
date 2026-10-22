@@ -185,17 +185,18 @@ function drawArt(L, me, u, now) {
   for (const it of art.items) list.push({ b: it.base, it });
   (st.cars || []).forEach((c, i) => { const s = art.car(c, i); if (s) list.push({ b: s.base, car: s }); });
   // you, and anyone in here with you: art v2's people, at the street's size
-  const person = (look, x, y, a, mv, sl, sh, nm) => {
+  const person = (look, x, y, a, mv, sl, sh, nm, si) => {
     let pose = mv ? 'move1' : 'idle', fr = mv ? Math.floor(now / 110) % 6 : 0, d8 = dir8Of(a), b = y;
+    if (si) { x = si[0]; y = si[1]; d8 = dir8Of(si[2]); pose = 'sit'; fr = 0; b = y + TILE_IN / 2 + 1; }   // (sat on the couch, an armchair, the cinema's seats: in front of the seat's own base)
     if (sl) { const bed = L.pieces.find((p) => p.ch === 'B'); if (bed) { x = bed.x + bed.w / 2 + (nm ? 14 : -6); y = bed.y + 26; b = bed.y + bed.h + 1; pose = 'down'; fr = 0; d8 = 4; } }
     if (sh) { const s2 = L.pieces.find((p) => p.ch === 'H'); if (s2) { x = s2.x + s2.w / 2; y = s2.y + s2.h / 2 + 4; b = s2.y + s2.h - 1; d8 = 0; } }
     list.push({ b, p: { look, x, y, pose, fr, d8, nm } });
   };
   for (const o of st.others || []) {
     const q = seen.get(o.n), kk = q ? Math.min(1, (performance.now() - q.t) / 50) : 1;
-    person(raw.get(o.n) || {}, q ? q.x0 + (q.x1 - q.x0) * kk : o.x, q ? q.y0 + (q.y1 - q.y0) * kk : o.y, o.a, o.mv, o.sl, false, o.n);
+    person(raw.get(o.n) || {}, q ? q.x0 + (q.x1 - q.x0) * kk : o.x, q ? q.y0 + (q.y1 - q.y0) * kk : o.y, o.a, o.mv, o.sl, false, o.n, o.si);
   }
-  person(app || {}, me.x, me.y, me.a, me.mv, st.sleep, st.shower, null);
+  person(app || {}, me.x, me.y, me.a, me.mv, st.sleep, st.shower, null, st.seat);
   if (st.doors) list.push({ b: TILE_IN + 0.5, marks: 1 }, { b: 2 * TILE_IN + 0.5, mailflag: 1 });   // (H71: the lobby's door plates on the back wall's face, in front of it, behind anyone standing there; new mail's envelope over the mailboxes)
   list.sort((a, b) => a.b - b.b);
   const pulse = 0.7 + 0.3 * Math.sin(now / 220);   // (never faint: the thing in reach always shows)
@@ -249,17 +250,20 @@ function nightV1(L) {
   }
   g.restore();
 }
-// the TV's light flickering on the room at night (over the baked light)
+// the TV on (server homeinside.js tv): its light flickering on the room, the picture changing - the scene's colour now
+// and then (stronger after dark, over the baked light); off, dark
+const TV_HUES = [[110, 150, 255], [255, 190, 120], [140, 255, 170], [255, 120, 160], [220, 230, 255]];
 function tvGlow(L, now) {
-  const d = daylight();
-  if (d > 0.7) return;
-  const tv = L.pieces.find((p) => p.ch === 'V');
-  if (!tv) return;
-  const x = tv.x + tv.w / 2, y = tv.y + tv.h / 2, r = 70;
+  if (!st.tv) return;
+  const d = daylight(), k = 0.45 + 0.55 * (1 - d);
   g.save(); g.globalCompositeOperation = 'lighter';
-  const grd = g.createRadialGradient(x, y, 4, x, y, r);
-  grd.addColorStop(0, `rgba(110,150,255,${(0.1 + 0.06 * Math.sin(now / 130) + 0.04 * Math.sin(now / 47)) * (1 - d)})`); grd.addColorStop(1, 'rgba(110,150,255,0)');
-  g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
+  for (const tv of L.pieces) {
+    if (tv.ch !== 'V' && tv.ch !== 'v') continue;
+    const x = tv.x + tv.w / 2, y = tv.y + tv.h / 2, r = tv.w > 2 * TILE_IN ? 120 : 80, cut = Math.floor(now / 1700 + tv.x) % TV_HUES.length, [cr, cg, cb] = TV_HUES[cut];
+    const grd = g.createRadialGradient(x, y, 4, x, y, r);
+    grd.addColorStop(0, `rgba(${cr},${cg},${cb},${(0.16 + 0.06 * Math.sin(now / 130) + 0.05 * Math.sin(now / 47)) * k})`); grd.addColorStop(1, `rgba(${cr},${cg},${cb},0)`);
+    g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
   g.restore();
 }
 

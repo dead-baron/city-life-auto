@@ -235,6 +235,10 @@ export function input(world, p, ped, inp, pressed, dt) {
   const s = ped.home, h = homeOf(world, ped);
   if (!s || !h) return false;
   if (s.sleep || s.shower || s.cook) { s.mv = false; return true; }   // (asleep, in the shower, at the stove: nothing to do but wait)
+  if (s.seat) {   // (sat down: moving gets you up, back where you stood)
+    if (Math.hypot(inp.mx || 0, inp.my || 0) < 0.4) { s.mv = false; return true; }
+    s.seat = null; send(world, p, true);
+  }
   s.mv = stepInside(planIn(world, h), s, inp.mx || 0, inp.my || 0, dt, HOME_IN.walk);
   if (pressed & (IN.ACTION | IN.VEHICLE)) { const act = interaction(world, p); if (act && !act.passive) act.run(); }
   return true;
@@ -265,11 +269,61 @@ export function interaction(world, p) {
     if ((u && u.use === 'door') || dd <= HOME_IN.reach + 2) return { label: `The front door - buy ${h.name} (${money(h.price)}) or step outside`, run: () => openMenu(world, p, 'tour') };
     return { label: `${u ? `${THING[u.use] || 'That'} comes with the place - ` : 'Having a look round - '}${h.name}, ${money(h.price)}`, passive: true, run: () => {} };
   }
+  if (s.seat) return { label: tvOn(world, h) ? 'Watching TV - move to get up' : 'Sitting down - move to get up', passive: true, run: () => {} };
+  const f = furnitureAt(world, h, s);   // (a seat or the TV - the couch, an armchair, the cinema's rows; the decor's too)
+  if (f && (!u || near(f, s.x, s.y) < near(u, s.x, s.y))) {
+    if (TVS.has(f.ch)) return { label: tvOn(world, h) ? 'Switch the TV off' : 'Switch the TV on', run: () => tv(world, p, h) };
+    return { label: tvOn(world, h) ? 'Sit down and watch TV' : 'Sit down', run: () => sit(world, p, h, f) };
+  }
   // (by nothing: the hint for the first few seconds in, then no prompt over the rooms - HOME_IN.hintS)
   if (!u) return world.time - (s.inAt ?? -1e9) < HOME_IN.hintS ? { label: `${h.name} - walk up to something to use it`, passive: true, run: () => {} } : null;
   if (s.guest && u.use !== 'door') { const host = world.players.get(s.guest); return { label: `The ${u.use === 'hall' ? 'hall table' : u.use === 'garage' ? 'garage' : u.use} - ${host ? `${host.name}'s` : 'not yours'}`, passive: true, run: () => {} }; }
   return { label: LABEL[u.use](world, p, h), run: () => use(world, p, h, u.use) };
 }
+
+// ---- the couch and the TV (the owner, 10-06 / 10-16: "usable furniture: sit, sleep, watch TV...") ----------------------
+// A seat - the couch, the sectional, an armchair, the home cinema's rows (the decor's too) - is sat on where it's
+// nearest you, facing the way it faces (the sectional and the cinema's seats the TV); moving gets you up. A rest there
+// brings health back slowly (HOME_IN.restHeal). The TV switches on and off (everyone in the home sees it: the page's
+// screen flickers and lights the room); with nobody home it goes off.
+const SEATS = new Set(['C', 'n', 'O', 'i']), TVS = new Set(['V', 'v']);
+const near = (q, x, y) => Math.hypot(Math.max(q.x - x, 0, x - (q.x + q.w)), Math.max(q.y - y, 0, y - (q.y + q.h)));
+const tvOn = (world, h) => !!(world.homeTv && world.homeTv.has(h.id));
+function furnitureAt(world, h, s) {
+  let best = null, bd = HOME_IN.reach + 2;
+  for (const q of planIn(world, h).pieces) {
+    if (!SEATS.has(q.ch) && !TVS.has(q.ch)) continue;
+    const d = near(q, s.x, s.y);
+    if (d < bd) { bd = d; best = q; }
+  }
+  return best;
+}
+const FACES = { e: 0, s: Math.PI / 2, w: Math.PI, n: -Math.PI / 2 };
+export function seatOf(world, h, q, x, y) {
+  const L = planIn(world, h);
+  const tx = Math.max(q.tx, Math.min(q.tx + q.tw - 1, Math.floor(x / TILE_IN))), ty = Math.max(q.ty, Math.min(q.ty + q.th - 1, Math.floor(y / TILE_IN)));
+  const cx = (tx + 0.5) * TILE_IN, cy = (ty + 0.5) * TILE_IN;
+  let face = q.face || null;
+  if (!face) {
+    let tvp = null, td = 10 * TILE_IN;
+    for (const o of L.pieces) if (TVS.has(o.ch)) { const d = Math.hypot(o.x + o.w / 2 - cx, o.y + o.h / 2 - cy); if (d < td) { td = d; tvp = o; } }
+    if ((q.ch === 'n' || q.ch === 'i') && tvp) { const dx = tvp.x + tvp.w / 2 - cx, dy = tvp.y + tvp.h / 2 - cy; face = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'e' : 'w') : dy > 0 ? 's' : 'n'; }
+    else face = q.h > q.w ? (L.solid(q.tx - 1, q.ty) ? 'e' : 'w') : L.solid(q.tx, q.ty + q.th) ? 'n' : 's';
+  }
+  return { x: cx, y: cy, a: FACES[face] ?? Math.PI / 2 };
+}
+function sit(world, p, h, q) {
+  const s = p.ped.home;
+  s.seat = seatOf(world, h, q, s.x, s.y); s.mv = false;
+  send(world, p, true);
+}
+function tv(world, p, h) {
+  const T = (world.homeTv ||= new Set());
+  if (T.has(h.id)) T.delete(h.id);
+  else { T.add(h.id); world.notify(p, `The TV comes on: ${SHOWS[Math.floor(world.time / 60) % SHOWS.length]}.`, 'info'); }
+  for (const q of world.players.values()) if (q.ped && q.ped.home && q.ped.home.id === h.id) send(world, q, false);
+}
+const SHOWS = ['a cooking show', 'the news - a car chase downtown', 'a game show', 'a nature documentary about the redwoods', 'reruns of an old sitcom', 'a soap opera', 'the late movie', 'a shopping channel', 'the weather', 'a cop show'];
 
 export function use(world, p, h, what) {
   const ped = p.ped, s = ped.home;
@@ -665,6 +719,7 @@ export function devDecor(world, p, msg) {
 
 // ---- every tick ------------------------------------------------------------------------------------------------------
 export function update(world) {
+  if (world.homeTv && world.homeTv.size && world.tick % 40 === 0) for (const id of [...world.homeTv]) if (![...world.players.values()].some((q) => q.ped && q.ped.home && q.ped.home.id === id)) world.homeTv.delete(id);   // (nobody home: the TV goes off)
   for (const p of world.players.values()) {
     const ped = p.ped, s = ped && ped.home;
     if (!s) continue;
@@ -678,6 +733,7 @@ export function update(world) {
       continue;
     }
     if (s.pet) petStep(world, p, s, h);   // (H71: your pet at home)
+    if (s.seat && ped.hp < ped.maxHp && !ped.bleeding) { ped.hp = Math.min(ped.maxHp, ped.hp + HOME_IN.restHeal / TICK_HZ); if (world.tick % 20 === 0) p.meDirty = true; }   // (a rest on the couch)
     if (s.sleep && world.time >= s.sleep) wake(world, p, h);
     if (s.cook && world.time >= s.cook) {   // (dinner's ready: into the fridge)
       s.cook = 0;
@@ -726,11 +782,12 @@ export function send(world, p, full) {
     t: 'home', id: h.id, plan: L.key, tier: L.tier, x: Math.round(s.x * 10) / 10, y: Math.round(s.y * 10) / 10, a: Math.round(s.a * 100) / 100,
     mv: s.mv ? 1 : 0, ack: p.ack, min: Math.round(world.clock.minutes),
     sleep: s.sleep ? Math.max(0, Math.round((s.sleep - world.time) * 10) / 10) : 0, shower: s.shower ? 1 : 0,
+    seat: s.seat ? [Math.round(s.seat.x), Math.round(s.seat.y), Math.round(s.seat.a * 100) / 100] : 0, tv: tvOn(world, h) ? 1 : 0,
   };
   const others = [];
   for (const q of world.players.values()) {
     const o = q !== p && q.ped && q.ped.home && q.ped.hidden && q.ped.home.id === s.id ? q.ped.home : null;
-    if (o) others.push({ n: q.name, x: Math.round(o.x), y: Math.round(o.y), a: Math.round(o.a * 100) / 100, mv: o.mv ? 1 : 0, sl: o.sleep ? 1 : 0, ...(full || world.tick % 20 === 0 ? { app: q.ped.app || null } : null) });
+    if (o) others.push({ n: q.name, x: Math.round(o.x), y: Math.round(o.y), a: Math.round(o.a * 100) / 100, mv: o.mv ? 1 : 0, sl: o.sleep ? 1 : 0, si: o.seat ? [Math.round(o.seat.x), Math.round(o.seat.y), Math.round(o.seat.a * 100) / 100] : 0, ...(full || world.tick % 20 === 0 ? { app: q.ped.app || null } : null) });
   }
   m.others = others;   // (their looks now and then: the page keeps them)
   const pt = petOf(world, h);   // (H71: the owner's pet - you see it as their guest too)

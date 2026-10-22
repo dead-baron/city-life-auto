@@ -719,7 +719,7 @@ export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough
 // (hintS: how long after you go in the prompt says "walk up to something to use it" - then nothing in the way of the
 // rooms until you're by something to use; the owner, 10-16: the prompt stayed up on a phone and blocked the view)
 // (cookN, cookS: a meal at home takes that many things from the fridge and that long at the stove - homeinside.js cook)
-export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6, hintS: 6, cookN: 3, cookS: 5 };
+export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, showerHeal: 10, eatS: 0.6, hintS: 6, cookN: 3, cookS: 5, restHeal: 0.8 };   // (restHeal: health a second sat on the couch)
 
 // A mortgage (H65; server/systems/mortgage.js): buy a home for a deposit (that share of its price) and the bank lends the
 // rest, plus `rate` on top, paid back from your bank account in `days` equal payments - one each in-game day (DAY_LOOP_S)

@@ -14470,3 +14470,19 @@ Fix (from the full test run): the grenade's throw and bounce, the flamethrower, 
 and tennis's racket, bounce and swing had their sounds only through main.js's old sfx calls - none had an entry of its
 own (client/sound/events.js EVENT_SOUNDS, test/sound.test.js); placed where they happen now, and the skydive's three
 had no sound at all before (the canopy fills with a flutter; a soft landing rolls; a splat, or onto a car's roof).
+
+## 2026-10-22 · Home: sit on the couch, watch TV
+
+The owner, 10-06 and 10-16: "usable furniture: sit, sleep, watch TV..." - "can't find sit, TV". At home
+(server/systems/homeinside.js):
+- **a seat** - the couch, the sectional, an armchair, the mansion's cinema rows, and the ones you've placed yourself -
+  has a prompt as you walk up: Sit down. You sit where it's nearest you, facing the way it faces (the sectional and the
+  cinema's seats toward the TV), drawn sat on it (client/render/homeview.js); move to get up, back where you stood. A
+  rest there brings health back slowly (shared/rules.js HOME_IN.restHeal).
+- **the TV** (the plans' sets, the wall TVs you've hung, the cinema's big screen) switches on and off; on, its light
+  flickers across the room, the picture's colour changing now and then (stronger after dark), and you're told what's
+  on. Everyone in the home sees it (and sits with you); with nobody home it goes off. (It no longer glows at night on
+  its own: off is dark.)
+
+Tests: test/homesofa.test.js - the TV on, sat down to watch, a rest, the page told, up again, the TV off with nobody
+home.
