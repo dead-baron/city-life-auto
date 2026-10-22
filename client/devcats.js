@@ -71,7 +71,7 @@ export const DEV_SECTIONS = [
   ] },
   { id: 'veh', title: '🚗 Vehicles', items: [
     ['🏎 Sports car', 'car', { m: 'sports' }], ['🛻 Pickup', 'car', { m: 'pickup' }], ['🏍 Motorbike', 'car', { m: 'bike' }],
-    ['🚤 Speedboat', 'car', { m: 'speedboat' }], ['📦 Loaded flatbed (cargo)', 'cargo'], ['🔧 Garage', 'near', { k: 'garage' }],
+    ['🚤 Speedboat', 'car', { m: 'speedboat' }], ['⛳ Golf cart', 'car', { m: 'golfcart' }], ['📦 Loaded flatbed (cargo)', 'cargo'], ['🔧 Garage', 'near', { k: 'garage' }],
     ['🎨 Paint shop', 'near', { k: 'paint' }], ['🚘 Car dealer', 'near', { k: 'dealer' }], ['🔑 Rentals', 'near', { k: 'rental' }],
     ['⛽ Filling station', 'near', { k: 'gasstation' }], ['⚓ Marina', 'near', { k: 'marina' }],
   ] },

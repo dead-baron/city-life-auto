@@ -219,9 +219,9 @@ test('a route board on the platforms: drawn on the platform, read out - each lin
   const open = new Set(); for (const R of w.rails) for (const st of R.stations) if (!st.under && !st.el && !st.deck) open.add(st.name);
   const named = new Set(boards.map((b) => b.name));
   assert.ok(named.size >= open.size * 0.8, `most open-air stations have one (${named.size} of ${open.size})`);
-  for (const b of boards) assert.ok([T.PLAZA, T.DOCK, T.SIDEWALK].includes(M.tileAtPx(b.x, b.y)), `${b.name}: on the platform`);
+  for (const b of boards) if (!b.el) assert.ok([T.PLAZA, T.DOCK, T.SIDEWALK].includes(M.tileAtPx(b.x, b.y)), `${b.name}: on the platform`);
   // drawn where it is read
-  const b = boards[0];
+  const b = boards.find((q) => !q.el);
   const items = staticItems(M, Math.floor(b.x / STATIC_CHUNK), Math.floor(b.y / STATIC_CHUNK));
   assert.ok(items.some((it) => /^rboard/.test(it.key) && Math.hypot(it.x - b.x, it.y - b.y) < 2), 'the board drawn there');
   // read: its rows, the next stops in the line's order
@@ -240,4 +240,54 @@ test('a route board on the platforms: drawn on the platform, read out - each lin
     assert.equal(r.next[0], R.stations[(i + 1) % R.stations.length].name.replace(/ Station$/, ''), `${r.label}: the next stop first`);
   }
   assert.ok(menu.opts.every((o) => o.id === 'close' && / → |^OK$/.test(o.note || o.label)), 'each line: where it goes');
+});
+
+test('the El\'s route boards up on its platforms, read from the deck; the subway\'s at its kiosk', async () => {
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const el = trains.routeBoards(w).filter((b) => b.el);
+  assert.ok(el.length >= 2, `a board on each of the El's platforms (${el.length})`);
+  const { p, conn } = joinPlayer(w);
+  const run = w.trains; w.trains = [];   // (no train in)
+  const b = el[0];
+  teleport(w, p.ped, b.x, b.y + 10);
+  p.ped.lz = 0;
+  const below = players.findInteraction(w, p);
+  assert.ok(!below || !/route board/.test(below.label), 'not from the street under the deck');
+  p.ped.lz = 1.45;
+  const a = players.findInteraction(w, p);
+  assert.ok(a && /route board/.test(a.label), `up on the platform (${a && a.label})`);
+  a.run();
+  assert.ok([...conn.sent].reverse().find((m) => m && m.t === 'menu' && /where the trains go/.test(m.title)), 'read out');
+  // the subway: its kiosk's prompt reads the board out
+  const st = w.rails.flatMap((R) => R.stations).find((q) => q.kiosk);
+  assert.ok(st, 'a subway kiosk');
+  {
+    p.ped.lz = 0;
+    const k = st.kiosk;
+    teleport(w, p.ped, k.out ? k.out.x : k.x0 + 64, k.out ? k.out.y : k.y0 + 48);
+    const q = players.findInteraction(w, p);
+    assert.ok(q && /route board/.test(q.label), `at the kiosk (${q && q.label})`);
+    const n = conn.sent.length;
+    q.run();
+    assert.ok(conn.sent.slice(n).some((m) => m && m.t === 'menu'), 'the kiosk reads the route board out');
+  }
+  w.trains = run;
+});
+
+// over water the track stays up till it meets land (the owner, 10-16: "Visible tunnel mouths; over water the track
+// reaches land before its tunnel"): every tunnel's mouth on land, the water before it crossed on a bridge
+test('the main line\'s tunnel mouths are on land: over water it crosses on a bridge', () => {
+  const wet = (p) => [T.WATER, T.DEEP, T.BRIDGE].includes(M.tileAtPx(p.x, p.y));
+  let mouths = 0;
+  for (const R of M.rails.filter((q) => !q.subway)) {   // (the main line's loops: the subway's are its own)
+    const P = R.pts, n = P.length;
+    for (let i = 0; i < n; i++) {
+      const p = P[i], q = P[(i + 1) % n];
+      if (!!p.under === !!q.under || p.elevated || q.elevated) continue;
+      const inside = p.under ? p : q;
+      mouths++;
+      assert.ok(!wet(inside), `${R.name}: a tunnel mouth over water at ${Math.round(inside.x / TILE)},${Math.round(inside.y / TILE)}`);
+    }
+  }
+  assert.ok(mouths > 10, `the mouths (${mouths})`);
 });

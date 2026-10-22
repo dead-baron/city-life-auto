@@ -121,6 +121,7 @@ export function join(world, conn, profile, opts = {}) {
     return p;
   }
   homes.checkWorld(world, profile); // saved in an older world: homes bought back, wake at a hospital
+  const replanned = homes.replanDecor(world, profile);   // (a home's rooms changed under its furniture: back in storage)
   looks.ensureLook(profile); // (an old random outfit becomes a look - before a wipe, which keeps it; a new player wears a starter until they pick)
   const fresh = freshStart(world, profile);
   if (fresh === 'all') wipeProgress(world, profile);
@@ -154,6 +155,7 @@ export function join(world, conn, profile, opts = {}) {
     ? `The game was updated: everyone starts over for this one - a brand-new start at ${p.lastSpawnName || 'the hospital'}.`
     : `The game was updated: fresh start at ${p.lastSpawnName || 'the hospital'}. Your money, things and homes are all still yours.`, 'warn');
   else world.notify(p, `Welcome to City Life Auto, ${p.name}. You are a clean Citizen.`, 'info');
+  if (replanned) world.notify(p, `The rooms at ${replanned.join(' and ')} have changed (a mansion now). Your furniture there is back in storage: place it again from the hall table.`, 'info');
   bounties.onJoin(world, p);   // bounties still on their head from before they logged off
   if (fresh) delete profile.jail; else custody.onJoin(world, p);   // (logged off in custody: back in the cell)
   if (!fresh) backInside(world, p);   // (logged off at home: back in it)

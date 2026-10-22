@@ -13891,6 +13891,139 @@ trains. But nothing on the platform showed where the lines go.
 Tests: test/world3rail.test.js - most open-air stations have a board, each on its platform and drawn where it's read;
 the prompt there; its rows, each line's next stop first.
 
+## 2026-10-22 · Route boards on the El and at the subway's kiosks
+
+The rest of the owner's 10-16 note "An information board or map sign at stations showing where the train goes": the
+open-air platforms had their boards, but the El's and the subway's didn't.
+
+- **the El** (`routeBoardAt` handles a station up on the deck; drawn in `addEl`): a board on each of Midtown's two
+  platforms, past the east canopy, up at the deck's height. You read it from the platform, not from the street below.
+  One board per platform: the two lines through Midtown share it.
+- **the subway**: the action button at a kiosk now reads its route board out (the lit sign along the kiosk's back). The
+  kiosk's prompt only looked at World v3's first loop, which has no subway stations, so v3's kiosks said nothing with
+  no train in. Now every line's kiosk shows its countdown ("next train in 1:20 - wait in line, F when it's in (to
+  Harbor) · the route board").
+
+Tests: test/world3rail.test.js - a board on each of the El's platforms, read from the deck and not from the street; a
+subway kiosk's prompt reads the board out.
+
+## 2026-10-22 · Golf carts to drive (or steal)
+
+The owner, 10-08: "Golf carts to drive (or steal)". The carts on Lakeside Greens' and the country club's cart paths
+were props.
+
+- **the golf cart** (`shared/vehicles.js` golfcart): electric, slow (300 top speed, a hatchback's 520) and small, two
+  seats. Its model (`client/art2/vehicles.js`): a cream body on four little wheels, the black bench seat, a green canopy
+  on four thin posts, and a red bag of clubs standing on the back. It sounds like an electric motor (a thin whine that
+  climbs with speed, and a polite beep for a horn: `client/sound/vehicles.js` electric).
+- **parked on the cart paths**: the props are now parking spots for golf carts (`m.parking`, model 'golfcart', no bay
+  painted): three along each course's path and one by Lakeside Greens' car park. One is parked at a spot most of the
+  time someone's near, like any parked car. Taking one is vehicle theft.
+- In the playtest panel's Vehicles section too.
+
+Tests: test/golfcart.test.js - slower and smaller than a hatchback, drawn and heard; carts parked on the course's path,
+one to get into and drive off.
+
+## 2026-10-22 · Shop symbols over the doors near you
+
+The owner, 10-08 (SI1): "Shop symbols over entrances when close (subtle, can be turned off)".
+
+- **the symbol** (`client/art2/game/host.js` shopMarks, called from main.js's overlay): the map's icon for the place (a
+  wrench for the hardware store, a cross for the pharmacy...) in a small navy badge floating over its door. A walk-in's
+  sits over its door, not its counter inside. It fades in within about eight tiles of you and is full within five,
+  and only shows on foot, not from a car or inside a shop. Homes, ATMs (they have their own marks), stations, rides
+  and races don't get one.
+- **off in Settings**: "Shop symbols over doors near you" (on by default, `settings.shopMarks`).
+- Art v2 only. The classic renderer is the fallback without WebGL2.
+
+Tests: test/shopmarks.test.js - the shop's symbol over its door, none for a home or a place far off, fading as you
+walk away, none from a car.
+
+## 2026-10-22 · Over water, the main line stays up till it reaches land
+
+The owner, 10-16: "Visible tunnel mouths; over water the track reaches land before its tunnel". Where the Grand Loop
+crosses a bay or a strait, its tunnels began or ended out over the water. A bridge ran out from the shore, then a
+tunnel mouth stood at its end in the middle of the bay, and the line ran on under the sea. Eight of the loop's tunnels
+did this.
+
+- **surfaceOverWater** (`shared/world3-rail.js`, run before the mountain bores): a tunnel's run is trimmed from each
+  end while the track is over water (or a deck over it). The line crosses that water on a bridge (`buildRailway` decks
+  a run over water) and goes below ground where it reaches land. The mouth is on the shore now, a portal you can see
+  at the beach. Wet stretches inside a tunnel, with land at both ends, stay below. A tunnel left all on dry ground
+  becomes a bore through the hill as before. The El's viaduct is untouched.
+- The subway's lines are their own (one Pink Line mouth stands on a bridge): not changed here.
+- The ground changes, so the chunks along those crossings bake again.
+
+Tests: test/world3rail.test.js - every main-line tunnel mouth is on land. The rail, hub, road, ferry and water tests
+pass as they were.
+
+## 2026-10-22 · More than one mansion
+
+The owner, 10-16: "More than one mansion". World v3 had one: the Hilltop Mansion on Bayside Heights' headland.
+
+- **the finest villa of each rich district** (`shared/world3-mansions.js` moreMansions3, in the whole-world build's
+  done hook) is a mansion now. The finest is the dearest house with a garage, then the biggest. That's Highcliff in
+  Bayside Heights ($210,000, was $130,000), Sea Holly in The Bluffs ($160,000) and a Lake District house, now Rosewood
+  Manor ($150,000). A mansion's price is at least $150,000 or 1.6 times what it was. It has six garage slots, and its
+  owner gets the mansion's rooms (`shared/homelayout.js` planOf). Each keeps its villa outside, already wider than the
+  Hilltop Mansion's house. A house with a street-numbered name takes a manor's name, on the map too.
+- The real-estate app lists them with the big homes, as it lists every mansion. The charter's helicopter lands on the
+  rich districts' lawns as before.
+
+Tests: test/world3world.test.js - at least three mansions, the Hilltop Mansion among them, each with a mansion's price
+and a garage in a rich district, in more than one district.
+
+## 2026-10-22 · Debug: teleport anywhere on the world map
+
+The owner, 10-16: "Teleport anywhere: a real map covering the whole world". The playtest panel's Teleport page lists
+places by group with a small map beside them, but you could only go to a listed place.
+
+- **the world map** (the big map, M): in a playtest session, setting a waypoint by tapping or clicking a spot shows a
+  **🛠 TELEPORT HERE** button at the map's foot. It sends you there (`dev` `tp` with `snap`: the server finds the
+  ground nearest the spot, as for a listed place) and closes the map. The map covers the whole of World v3.
+- **from the Teleport page**: a "🗺 Anywhere: the world map" chip opens the map to pick a spot.
+- Nothing changes for players outside a playtest session.
+
+Tests: test/devtp.test.js as before (the server's teleport and its ground-finding); the page loads clean.
+
+## 2026-10-22 · Fixes from a review of the batch
+
+An independent review of everything since the live build (103a204) turned up these:
+
+- **the classic renderer wiped dark every frame**: the way-out note's call sat in the middle of render()'s chain of
+  renderers, so the chain's dark fill hung off the note's own check. It ran over the world whenever art v2 wasn't
+  up: the classic renderer, and the subway and caves before art v2 started. The call now follows the chain. This is
+  also fixed on the batch about to ship (nature-n19).
+- **no wheel stop at a spot with no bay painted** (`statics.js`): a golf cart's spot on the cart path and the
+  compound's yard had a concrete wheel stop in front of them.
+- **the furniture in a villa that became a mansion** (`homes.replanDecor`, at login): it was laid in the house's
+  rooms and would land inside the mansion's walls. It goes back into storage with a note to place it again. A home's
+  decor now notes the plan it was laid in (`setDecor`), so any later change to a home's rooms is caught the same way.
+  Decor saved before this is kept and noted, except at the three promoted villas.
+- **one shop's bake-ahead at a time** (`_precut`): walking past a row of shops queued a cut-away bake for each,
+  holding the workers while the screen's bakes waited. Moving on to the next shop now lets the last one's queued
+  bakes go.
+- **the way-out note** is hidden when the renderer is disposed.
+
+Tests: test/replandecor.test.js (stowed when the plan changed or the home was promoted, kept and noted otherwise;
+decor only read over the rooms it was laid in); test/precut.test.js (the last shop's bakes let go).
+
+## 2026-10-22 · Cooking at home
+
+The owner, 10-06: "Home life: mowing (grass grows), cooking, constitution XP". This is the cooking part.
+
+- **at the fridge** (`server/systems/homeinside.js`): "Cook a meal" takes three things from the fridge, the plainest
+  first (the least health on its own): fruit, the garden's crops, mushrooms and berries, game. A meal already cooked
+  and a prize crop are never used. You stand at the stove for five seconds (`HOME_IN.cookN`, `cookS`), and then
+  "Dinner's ready": a **Home-cooked Meal** goes into the fridge (`shared/items.js` homeMeal). It's worth +60 health and
+  hearty, more than any single thing that went into it.
+- With fewer than three things to cook, the option is shown greyed out with what counts. Not as someone's guest, nor on
+  a look round.
+- Not yet: the lawn growing, or the skills.
+
+Tests: test/cooking.test.js - the plainest three cooked, the steak and the prize crop kept; the meal in the fridge
+after five seconds; eaten, +60 and hearty; not with two things.
+
 ## 2026-10-22 · Fix: the classic renderer's world wiped every frame
 
 The way-out note (the walk-ins' exitHint, earlier today) was called from the middle of render()'s chain of renderers.
@@ -13903,3 +14036,8 @@ screen was dark every frame. Found in a review of the batch before it shipped. T
 The soccer pitches' new shape and the mansion's south terrace changed the old city too (shared/map.js's park pitch and
 mansion). Its world map picture (assets/map, `node tools/build-worldmap2.mjs`) was baked for the old shape, and
 test/worldmap.test.js caught it in the batch's full run. Rebaked.
+
+## 2026-10-22 · The old city's map picture rebaked again
+
+The golf carts' spots replaced the carts as props on the old city's course (shared/naturesites.js), which changes the
+old city's signature: its world map picture rebaked (`node tools/build-worldmap2.mjs`).

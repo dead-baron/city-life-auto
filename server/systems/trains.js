@@ -1358,19 +1358,25 @@ export function interaction(world, p) {
   // (up on an El platform with no train in: no prompt - the platform's clock shows when the next one's due, the owner,
   // 10-16: "No 'next train' popup (the station sign shows it)"); at a stair tower's foot: the way up
   if ((ped.lz || 0) < 0.3) for (const s of (world.map.el && world.map.el.stairs) || []) if (s.top && Math.hypot(ped.x - s.x, ped.y - s.y) < 46) return { label: `Up the stairs to the platform - ${s.station}`, run: () => {} };
-  // at a subway entrance with no train in: the countdown, and where to wait
-  const sts = world.map.rail.stations;
-  for (let si = 0; si < sts.length; si++) {
-    const st = sts[si];
-    if (!st.kiosk || !atEntrance(st, ped)) continue;
-    const eta = Math.max(1, Math.round(nextTrainIn(world, si)));
-    const nxt = sts[(si + 1) % sts.length].name.replace(/ Station$/, '');
-    return { label: `${st.name}: next train in ${Math.floor(eta / 60)}:${String(eta % 60).padStart(2, '0')} - wait in line, F when it's in (to ${nxt})`, run: () => {} };
+  // at a subway entrance with no train in: the countdown, and where to wait - on any line's kiosk (World v3's subway
+  // lines are loops of their own; this read only the first loop's, so v3's kiosks said nothing); the action button
+  // reads the route board out (the kiosk's lit sign along its back: every line through here, where it goes)
+  for (const R of world.rails || [world.map.rail]) {
+    const sts = (R && R.stations) || [];
+    for (let si = 0; si < sts.length; si++) {
+      const st = sts[si];
+      if (!st.kiosk || !atEntrance(st, ped)) continue;
+      let eta, nxt;
+      if (world.rails) { const rows = routeRows(world, st.name).sort((a, b) => a.eta - b.eta); eta = rows.length && Number.isFinite(rows[0].eta) ? rows[0].eta : null; nxt = rows.length ? rows[0].next[0] : null; }
+      else { eta = nextTrainIn(world, si); nxt = sts[(si + 1) % sts.length].name.replace(/ Station$/, ''); }
+      const e = eta == null ? null : Math.max(1, Math.round(eta));
+      return { label: `${st.name}: ${e == null ? 'trains every couple of minutes' : `next train in ${Math.floor(e / 60)}:${String(e % 60).padStart(2, '0')}`} - wait in line, F when it's in${nxt ? ` (to ${nxt})` : ''} · the route board`, run: () => readRouteBoard(world, p, st.name) };
+    }
   }
   const hit = climbable(world, ped, ped.x, ped.y, 48, ped.vx, ped.vy);
   if (hit) return { label: `Hop onto the ${carLabel(world, hit)}`, run: () => climbOn(world, ped, hit) };
   // a platform's route board: where the trains from here go
-  if (!ped.vehId && (ped.lz || 0) < 0.3) for (const b of routeBoards(world)) if (Math.abs(ped.x - b.x) < ROUTE_BOARD_R && Math.abs(ped.y - b.y) < ROUTE_BOARD_R) return { label: `The route board - where the trains from ${b.name.replace(/ Station$/, '')} go`, run: () => readRouteBoard(world, p, b.name) };
+  if (!ped.vehId) for (const b of routeBoards(world)) if (Math.abs(ped.x - b.x) < ROUTE_BOARD_R && Math.abs(ped.y - b.y) < ROUTE_BOARD_R && (b.el ? (ped.lz || 0) > 1 : (ped.lz || 0) < 0.3)) return { label: `The route board - where the trains from ${b.name.replace(/ Station$/, '')} go`, run: () => readRouteBoard(world, p, b.name) };
   return null;
 }
 
@@ -1383,7 +1389,7 @@ export function routeBoards(world) {
   const out = [];
   for (const R of world.rails || [world.map.rail]) for (const st of (R && R.stations) || []) {
     const b = routeBoardAt(R, st, (x, y) => world.map.tileAtPx(x, y));
-    if (b && !out.some((o) => o.name === st.name && Math.hypot(o.x - b.x, o.y - b.y) < 60)) out.push({ ...b, name: st.name });
+    if (b && !out.some((o) => Math.hypot(o.x - b.x, o.y - b.y) < 60)) out.push({ ...b, name: st.name });   // (one board a platform: the El's two lines share theirs)
   }
   world.routeBoardsOf = world.map; world.routeBoardList = out;
   return out;

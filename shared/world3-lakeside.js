@@ -104,7 +104,8 @@ function build(m, api, K) {
   // the cart path (pale concrete), the carts parked on it
   const cart = curve(CART, 24);
   for (const [x, y] of cart) for (const [ox, oy] of [[0, 0], [10, 0], [0, 10], [10, 10]]) { const tx = Math.floor((x + ox - 5) / TILE), ty = Math.floor((y + oy - 5) / TILE); if (K.free(tx, ty)) { m.set(tx, ty, T.PLAZA); K.take(tx, ty, 1, 1); } }
-  for (const [k, a, v] of [[10, 0.2, 0], [44, -1.6, 1], [80, Math.PI, 2]]) if (cart[k]) prop('golfcart', cart[k][0] / TILE, cart[k][1] / TILE - 0.15, 12, { a, v });
+  // (golf carts to drive - or steal: the owner, 10-08 - parked on it: server/systems/traffic.js parks one at a spot)
+  for (const [k, a] of [[10, 0.2], [44, -1.6], [80, Math.PI]]) if (cart[k]) m.parking.push({ x: Math.round(cart[k][0]), y: Math.round(cart[k][1] - 0.15 * TILE), a, model: 'golfcart', bare: 1 });
   // the clubhouse: its terrace (tables under umbrellas), the bar at the steps; the car park off 15th Street; the sign
   const [hx, hy] = CLUB;
   prop('clubhouse', hx, hy, 0);
@@ -115,7 +116,7 @@ function build(m, api, K) {
   const py0 = hy + 6;
   for (let y = py0; y < cy1; y++) for (let x = cx0; x < hx + 9; x++) if (K.free(x, y)) { m.set(x, y, T.LOT); K.take(x, y, 1, 1); }
   for (let qx = cx0 + 1; qx + 3 <= hx + 8; qx += 3) { m.stalls.push({ x: qx * TILE, y: py0 * TILE, w: 3 * TILE, h: 4 * TILE }); if (rnd(qx, py0, 51) < 0.6) m.parking.push({ x: (qx + 1.5) * TILE, y: (py0 + 2) * TILE, a: -Math.PI / 2 }); }
-  prop('golfcart', hx + 7.5, py0 + 1.6, 12, { a: Math.PI / 2, v: 1 });
+  m.parking.push({ x: Math.round((hx + 7.5) * TILE), y: Math.round((py0 + 1.6) * TILE), a: Math.PI / 2, model: 'golfcart', bare: 1 });
   prop('textsign', hx + 12, cy1 - 0.4, 0, { text: 'LAKESIDE GREENS', z: 34, sx: 1, bg: '#1e4a32', fg: [240, 230, 190] });
   // the trees between the holes and along the shore (never on a fairway, a green, a tee, the path, the water or the sand)
   const clear = (x, y, r, up = false) => {

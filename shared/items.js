@@ -233,6 +233,8 @@ export const ITEMS = {
   // The Grand Theatre's counter (shared/cinema.js): a ticket gets you a seat in a screen (server/systems/cinema.js); popcorn's eaten
   filmTicket: { name: 'Film Ticket',     sell: 0 },
   popcorn: { name: 'Popcorn',           food: true, heal: 8, sell: 0 },
+  // cooked at home from what's in the fridge (server/systems/homeinside.js cook: the owner's 10-06 "home life: cooking")
+  homeMeal: { name: 'Home-cooked Meal',  food: true, heal: 60, hearty: true, sell: 0, cooked: true },
 };
 
 // Hides and pelts come in grades (shared/fauna.js gradeOf: how cleanly it was taken, and skinned with a hunting

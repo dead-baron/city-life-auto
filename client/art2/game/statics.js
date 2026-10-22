@@ -2885,6 +2885,14 @@ function addEl(c, I) {
       lightAt(I, sx, py, Z + 52, 200, [1, 0.94, 0.8], 1.6, 'lamp', 1);
     }
   }
+  // the route boards up on the platforms (shared/mapcore.js routeBoardAt: server/systems/trains.js reads them out)
+  const boards = [];
+  for (const R of c.M.rails || []) for (const st of R.stations || []) {
+    const b = st.el && st.deck ? routeBoardAt(R, st, c.at) : null;
+    if (!b || boards.some((q) => Math.hypot(q.x - b.x, q.y - b.y) < 60)) continue;
+    boards.push(b);
+    put(I, vitem('rboard', 'routeBoard', [], b.x, b.y, 0, null, { z0: Z })); lightAt(I, b.x, b.y - 4, Z + 30, 60, [0.75, 0.85, 1], 0.9, 'sign', 1);
+  }
   for (const s of E.stairs || []) {
     // (the flight rises away from the foot along x: dir +1 east, -1 west - the model rises along +x, turned for -1)
     const len = 150, hd = s.dir > 0 ? 0 : PI;
@@ -3080,9 +3088,10 @@ function addSetPieces(c, I) {
     if (ms.pool) { const p = ms.pool, w = Math.round(p.tw * TILE), h = Math.round(p.th * TILE); put(I, { key: `pool:${w}:${h}:1`, recipe: { t: 'flat', k: 'pool', w, h, s: 1 }, x: (p.tx + p.tw / 2) * TILE, y: (p.ty + p.th / 2) * TILE, ext: [w / 2 + 2, h / 2 + 4, w / 2 + 2, h / 2 + 2] }); for (let k = 0; k < 3; k++) put(I, vitem('loung', 'lounger', ['#f0eee8'], (p.tx + p.tw + 0.8) * TILE, (p.ty + 1 + k * 1.3) * TILE, PI / 2)); }
     const l = ms.lot; if (l) { fenceLine(I, 'hedge', l.tx * TILE + 8, l.ty * TILE + 8, (l.tx + l.tw) * TILE - 8, l.ty * TILE + 8, { h: 16 }); fenceLine(I, 'hedge', l.tx * TILE + 8, l.ty * TILE + 8, l.tx * TILE + 8, (l.ty + l.th) * TILE - 8, { h: 16 }); fenceLine(I, 'hedge', (l.tx + l.tw) * TILE - 8, l.ty * TILE + 8, (l.tx + l.tw) * TILE - 8, (l.ty + l.th) * TILE - 8, { h: 16 }); }
   }
-  // wheel stops at the head of every marked parking bay
+  // wheel stops at the head of every marked parking bay (not a spot with no bay painted: a golf cart's on the cart path,
+  // the compound's cars on its yard)
   for (const p of M.parking || []) {
-    if (!p || p.drive || p.sparse) continue;
+    if (!p || p.drive || p.sparse || p.bare) continue;
     const a = p.a || 0;
     put(I, vitem(`ws:${qa(a + PI / 2, 4).toFixed(2)}`, 'wheelStop', [], p.x + Math.cos(a) * 54, p.y + Math.sin(a) * 54, qa(a + PI / 2, 4)));
   }

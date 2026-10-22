@@ -165,8 +165,32 @@ export function mainLineLoops(m = null) {
     loops.push({ name: `${sv.name} (${way > 0 ? 'one way' : 'the other way'})`, service: sv.name, way, pts, stations, side: 1, segs: route.segs.map((g) => g.name + (g.way > 0 ? ' +' : ' -')), hub: true, bores: [] });
   }
   for (const l of loops) l.all = loops;   // (a hub station's platforms are placed clear of every loop's track: shared/map.js hubIndex)
-  if (m) mountainBores(m, loops);
+  if (m) { surfaceOverWater(m, loops); mountainBores(m, loops); }
   return loops;
+}
+
+// Over water the track stays up until it reaches land (the owner, 10-16: "Visible tunnel mouths; over water the track
+// reaches land before its tunnel"): a tunnel that began or ended out over the water - its mouth on a bridge's end in
+// the middle of a bay, the line running on under the sea - now starts where the line meets land, the water before it
+// crossed on a bridge (shared/map.js buildRailway decks a run over water). The wet stretches inside a tunnel, between
+// land at both ends, stay below. (Not the El's viaduct: it's `under` to the generator but up in the air.)
+function surfaceOverWater(m, loops) {
+  const wet = (p) => { const t = m.tileAtPx(p.x, p.y); return t === T.WATER || t === T.DEEP || t === T.BRIDGE; };
+  for (const l of loops) {
+    const P = l.pts, n = P.length;
+    let i = 0;
+    while (i < n) {
+      if (!P[i].under || P[i].elevated) { i++; continue; }
+      let j = i; while (j + 1 < n && P[j + 1].under && !P[j + 1].elevated) j++;
+      // (a run that wraps the loop's start is left as it is: the loops start at a station, on land)
+      let a = i, b = j;
+      while (a <= j && wet(P[a])) a++;
+      while (b >= a && wet(P[b])) b--;
+      for (let k = i; k < a; k++) { P[k].under = false; P[k].tunnel = false; }
+      for (let k = b + 1; k <= j; k++) { P[k].under = false; P[k].tunnel = false; }
+      i = j + 1;
+    }
+  }
 }
 
 // The mountain tunnels (H33): a skeleton tunnel under dry, roadless ground is a bore through the hill - the track at
