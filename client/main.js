@@ -476,7 +476,7 @@ function stepPred(inp) {
   if (P.kind === 'ped') { pedStep(P.s, inp, DT, S.map, P.mods); pushOutOfTrains(P.s); }
   else if (P.air) S.airMod.predict(P.s, inp, DT, S.map, P.def, !P.s.dead);   // (flying: shared/flight.js)
   else {
-    vehStep(P.s, driveInput(P.s, inp), DT, S.map, P.def, { rain: S.weather === WEATHER.RAIN });
+    vehStep(P.s, driveInput(P.s, inp, P.def), DT, S.map, P.def, { rain: S.weather === WEATHER.RAIN });
     // predict smashing street furniture exactly like the server does (same momentum loss), so
     // clipping a lamp post doesn't cause a correction. A break predicted during an input that
     // is being replayed counts as not-yet-happened, so the replay re-applies it.
@@ -4363,14 +4363,15 @@ function pedVisual(p, now) {
 function drawHorseHud(h, now) {
   const P = S.pred, st = P && P.def && P.def.horse && P.s.stam !== undefined ? P.s.stam : h.st, blown = P && P.def && P.def.horse ? !!P.s.blown : !!h.bl;
   g.save();
-  const w = 120, x = W - 16 - w, y = Math.max(104, H * 0.2) + 6;
-  g.textAlign = 'right'; g.textBaseline = 'bottom'; g.font = '700 11px system-ui, sans-serif';
-  g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(blown ? 'BLOWN - LET IT BREATHE' : 'HORSE · SPRINT TO GALLOP', W - 16 + 1, y - 2 + 1);
-  g.fillStyle = blown ? '#ff9a6a' : '#f2e2c4'; g.fillText(blown ? 'BLOWN - LET IT BREATHE' : 'HORSE · SPRINT TO GALLOP', W - 16, y - 2);
+  // (low in the middle of the screen: clear of the money and the stars down the right, the sticks and buttons at the sides)
+  const w = 120, x = Math.round(W / 2 - w / 2), y = H - Math.max(70, H * 0.13), lab = blown ? 'BLOWN - LET IT BREATHE' : 'HORSE · SPRINT TO GALLOP';
+  g.textAlign = 'center'; g.textBaseline = 'bottom'; g.font = '700 11px system-ui, sans-serif';
+  g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(lab, W / 2 + 1, y - 2 + 1);
+  g.fillStyle = blown ? '#ff9a6a' : '#f2e2c4'; g.fillText(lab, W / 2, y - 2);
   g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x - 1, y - 1, w + 2, 8);
   g.fillStyle = blown ? (Math.floor(now * 3) % 2 ? '#c8502a' : '#8a3a22') : st > 0.35 ? '#e8c27a' : '#e0803a';
   g.fillRect(x, y, Math.round(w * Math.max(0, Math.min(1, st))), 6);
-  if (h.hire !== null && h.hire !== undefined) { g.textBaseline = 'top'; g.fillStyle = h.hire < 60 ? '#ff9a6a' : '#f2e2c4'; g.fillText(`HIRED · ${Math.floor(h.hire / 60)}:${String(h.hire % 60).padStart(2, '0')}`, W - 16, y + 10); }
+  if (h.hire !== null && h.hire !== undefined) { g.textBaseline = 'top'; g.fillStyle = h.hire < 60 ? '#ff9a6a' : '#f2e2c4'; g.fillText(`HIRED · ${Math.floor(h.hire / 60)}:${String(h.hire % 60).padStart(2, '0')}`, W / 2, y + 10); }
   g.restore();
 }
 function drawSurfHud(sf, now) {

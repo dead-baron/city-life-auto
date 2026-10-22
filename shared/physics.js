@@ -267,7 +267,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   let turnTarget;
   if (donut) turnTarget = Math.sign(steer) * def.turn * 1.45;
   else if (burnout) turnTarget = 0;
-  else if (tracked) turnTarget = def.turn * steer * (1 - 0.3 * clamp(speed / def.max, 0, 1));   // (one track forward, one back: round on the spot)
+  else if (tracked || hoof) turnTarget = def.turn * steer * (1 - 0.3 * clamp(speed / def.max, 0, 1)) * (hoof ? 1 - 0.45 * clamp(speed / def.max, 0, 1) : 1);   // (one track forward, one back: round on the spot - a horse too, wider at a gallop)
   else {
     const bite = braking ? 1.12 : powering ? 0.93 : 1;                     // weight on the nose / on the tail
     const turnMul = inp.hb ? (isBoat ? 1.3 : 1.6) : brakeSlide ? 1.5 : 1;
@@ -363,10 +363,19 @@ export function deadInput(s, steer = 0, hb = false) {
 // pushed; steering turns the car toward the stick. Point well behind the car to brake, then reverse
 // (the rear swings toward the stick). Tank mode (IN.TANK, optional for keyboards): up/down = gas /
 // brake, left/right = steer, like the classic games.
-export function driveInput(s, inp) {
-  const di = driveInput0(s, inp);
+export function driveInput(s, inp, def = null) {
+  const di = def && def.horse ? horseInput(s, inp) : driveInput0(s, inp);
   di.gallop = !!(inp.bits & IN.SPRINT);   // (on a horse: spurred to a gallop)
   return di;
+}
+// a horse: the stick points where to go and it turns that way (on the spot if it must - no backing up), easing off to
+// a walk through a sharp turn
+function horseInput(s, inp) {
+  const m = Math.min(1, Math.hypot(inp.mx, inp.my)), hb = !!(inp.bits & IN.DIVE);
+  if (inp.bits & IN.TANK) return { throttle: Math.max(0, -inp.my), steer: inp.mx, hb, slide: false, drv: true };
+  if (m < 0.08) return { throttle: 0, steer: 0, hb, slide: false, drv: true };
+  const d = wrapAngle(Math.atan2(inp.my, inp.mx) - s.a);
+  return { throttle: m * (Math.abs(d) > 1.3 ? 0.25 : Math.abs(d) > 0.6 ? 0.7 : 1), steer: clamp(d * 2.4, -1, 1), hb, slide: false, drv: true };
 }
 function driveInput0(s, inp) {
   const hb = !!(inp.bits & IN.DIVE);

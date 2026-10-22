@@ -14832,7 +14832,7 @@ The owner's #325 (10-08). The farms' horses were scenery. Now they're ridden (se
 vehicle of its own, shared/vehicles.js horse; the numbers shared/rules.js HORSE):
 - **Riding.** Like a bike - but four legs: a canter, or spurred to a gallop (Sprint: Shift, RT all the way down, the
   thumb all the way out) while its wind lasts - some ten seconds flat out, then it's blown and canters till it has its
-  breath back (a walk or standing brings it back quickest; the HUD's bar under the money). At home on any ground (grass,
+  breath back (a walk or standing brings it back quickest; the HUD's bar low in the middle of the screen). At home on any ground (grass,
   dirt and sand don't slow it), never into the water (it stops at the shore; a bridge it crosses), no skids, burnouts or
   donuts (shared/physics.js: its gaits and its wind, predicted on your page as the server rides it), no lamps at night.
 - **The farms' horses**, each in its own coat now (chestnut, bay, black, grey, palomino, a paint), can be ridden off

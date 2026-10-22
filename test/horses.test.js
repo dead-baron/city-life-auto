@@ -34,7 +34,7 @@ test('a horse canters, gallops when spurred until it is blown, gets its wind bac
   const g = openGround(m, 2400);
   assert.ok(g, 'open ground');
   const s = newVehState(g.x, g.y, 0);
-  const go = (gallop, n) => { let top = 0; for (let i = 0; i < n; i++) { const di = driveInput(s, { bits: gallop ? IN.SPRINT : 0, mx: 1, my: 0 }); vehStep(s, di, DT, m, def, {}); s.x = Math.min(s.x, g.x + 2000); top = Math.max(top, Math.hypot(s.vx, s.vy)); } return top; };
+  const go = (gallop, n) => { let top = 0; for (let i = 0; i < n; i++) { const di = driveInput(s, { bits: gallop ? IN.SPRINT : 0, mx: 1, my: 0 }, def); vehStep(s, di, DT, m, def, {}); s.x = Math.min(s.x, g.x + 2000); top = Math.max(top, Math.hypot(s.vx, s.vy)); } return top; };
   const canter = go(false, 80);
   assert.ok(canter <= def.max * HORSE.canter + 2 && canter > def.max * HORSE.canter * 0.85, `a canter (${Math.round(canter)})`);
   assert.equal(s.stam ?? 1, 1, 'a canter keeps its wind');
@@ -50,8 +50,13 @@ test('a horse canters, gallops when spurred until it is blown, gets its wind bac
   const after = Math.hypot(s.vx, s.vy);
   assert.ok(after <= def.max * HORSE.canter + 4, `blown: back to a canter, spurred or not (${Math.round(after)})`);
   // standing, it gets its breath back
-  for (let i = 0; i < (HORSE.backS + 1) / DT; i++) vehStep(s, driveInput(s, { bits: 0, mx: 0, my: 0 }), DT, m, def, {});
+  for (let i = 0; i < (HORSE.backS + 1) / DT; i++) vehStep(s, driveInput(s, { bits: 0, mx: 0, my: 0 }, def), DT, m, def, {});
   assert.ok(!s.blown && s.stam > 0.95, `rested (${s.stam.toFixed(2)})`);
+  // the stick behind it: it turns round on the spot and goes - it never backs up
+  const t = newVehState(g.x + 600, g.y, Math.PI);
+  let back = 0;
+  for (let i = 0; i < 60; i++) { vehStep(t, driveInput(t, { bits: 0, mx: 1, my: 0 }, def), DT, m, def, {}); back = Math.min(back, t.vx * Math.cos(t.a) + t.vy * Math.sin(t.a)); }
+  assert.ok(back > -5 && Math.cos(t.a) > 0.9 && t.vx > 100, `turned round and away (${t.a.toFixed(2)}, ${Math.round(t.vx)})`);
   // the handbrake at speed: it pulls up - no slide
   s.x = g.x; go(false, 40);
   for (let i = 0; i < 20; i++) vehStep(s, { throttle: 0.5, steer: 1, hb: true, slide: true, drv: true }, DT, m, def, {});
@@ -69,13 +74,13 @@ test('never into the water: a horse ridden at the shore stops at it (a bridge it
   }
   assert.ok(at, 'a shore');
   const s = newVehState(at.x - 60, at.y, 0);
-  for (let i = 0; i < 80; i++) { vehStep(s, driveInput(s, { bits: IN.SPRINT, mx: 1, my: 0 }), DT, m, VEHICLES.horse, {}); assert.ok(!WATER_T[m.tileAtPx(s.x, s.y)], 'never in the water'); }
+  for (let i = 0; i < 80; i++) { vehStep(s, driveInput(s, { bits: IN.SPRINT, mx: 1, my: 0 }, VEHICLES.horse), DT, m, VEHICLES.horse, {}); assert.ok(!WATER_T[m.tileAtPx(s.x, s.y)], 'never in the water'); }
 });
 
 test('a farm horse: up on it bareback with the vehicle button - horse theft; its coat kept', () => {
   const w = makeWorld();
   const { p, prof } = joinPlayer(w);
-  const g = openGround(w.map, 300);
+  const g = openGround(w.map, 1600);
   teleport(w, p.ped, g.x, g.y);
   const a = wildlife.spawnAnimal(w, 'horse', g.x + 30, g.y);
   assert.ok(a.wild.livestock && a.wild.coat >= 0 && a.wild.coat < horses.COATS, 'a farm horse in a coat');
@@ -93,6 +98,11 @@ test('a farm horse: up on it bareback with the vehicle button - horse theft; its
   assert.equal(prof.criminalExp - exp0, Math.round(law.CRIMES.horseTheft.heat / 2), 'booked as horse theft');
   const me = players.buildMe(w, p);
   assert.ok(me.horse && me.horse.st === 1, 'its wind on the page');
+  // ridden off at a gallop (Sprint held): its wind going
+  let top = 0;
+  for (let i = 0; i < 90; i++) { steer(w, p, 1, 0, IN.SPRINT); top = Math.max(top, Math.hypot(v.vx, v.vy)); }
+  assert.ok(top > VEHICLES.horse.max * HORSE.canter + 20, `galloping (${Math.round(top)})`);
+  assert.ok(v.stam < 1 && players.buildMe(w, p).horse.st < 1, 'tiring');
 });
 
 test('the co-op: hire one (handed back there), buy one of today\'s three (yours, saddled up again later)', () => {

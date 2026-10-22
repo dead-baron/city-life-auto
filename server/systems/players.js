@@ -545,12 +545,13 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     if (!v) { ped.vehId = 0; ped.seat = -1; return; }
     if (ped.seat === 0) {
       if (v.def.kind === 'air') aircraft.input(world, v, inp, ped);   // (flying: shared/flight.js)
-      const di = driveInput(v, inp);
+      const di = driveInput(v, inp, v.def);
       v.input.throttle = di.throttle;
       v.input.steer = di.steer;
       v.input.hb = di.hb;
       v.input.slide = di.slide;
       v.input.drv = di.drv;
+      v.input.gallop = di.gallop;   // (on a horse, Sprint: a gallop - shared/physics.js)
       if (inp.bits & IN.HORN) v.hornUntil = world.time + 0.2;
       if ((pressed & IN.HORN) && (v.def.police || v.def.siren)) v.sirenOn = !v.sirenOn;   // (def.siren: a fire engine, an ambulance - H68)
       if (v.def.turret && (inp.bits & IN.FIRE)) tank.fire(world, v, ped);   // (the tank's cannon - tank.js)
