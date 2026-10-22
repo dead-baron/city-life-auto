@@ -38,7 +38,7 @@ const FEED_ICON = { snatch: '👜', drop: '📦', shootout: '💥', robbery: '�
 const flyJobs = (list, job, h = 'Flying') => (list.length ? `<h3>${h}</h3>` + list.map((j) => `<button class="ph-row job" data-take="${j.id}"${job ? ' disabled' : ''}><span class="ic tier">${j.icon}</span><span class="nm">${esc(j.title)}<small>${esc(j.sub)}</small></span><span class="d">$${j.pay}+</span></button>`).join('') : '');
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
-  let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null;
+  let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null, crew = null;
   let homes = null, RE = null;   // the real-estate app (H65): the server's list, and its code - client/realestate.js, loaded when it opens
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
@@ -63,6 +63,7 @@ export function createPhone(ctx) {
           <button class="ph-app" data-go="homes"><b>🏠</b>Homes</button>
           <button class="ph-app" data-act="dance"><b>💃</b>Dance</button>
           <button class="ph-app" data-go="skills"><b>💪</b>Skills</button>
+          <button class="ph-app" data-go="crew"><b>🤝</b>Crew</button>
           ${wp ? '<button class="ph-app" data-act="clearwp"><b>✕</b>Clear waypoint</button>' : ''}
         </div>
         ${wp ? `<div class="ph-card">Waypoint: <b>${esc(wp.label)}</b> · ${m(dist(wp))}</div>` : ''}
@@ -87,6 +88,8 @@ export function createPhone(ctx) {
       el.innerHTML = '<h3>Skills</h3><div class="ph-apps"><button class="ph-app" data-act="workout" data-k="pushups"><b>💪</b>Push-ups here</button><button class="ph-app" data-act="workout" data-k="situps"><b>🧘</b>Sit-ups here</button></div>' + (!skl ? '<p class="ph-empty">Loading…</p>' : skl.list.map((k) => `<div class="ph-card skl"><b>${esc(k.name)}</b> level ${k.L} of ${k.max}<small>${esc(k.does)}: +${k.pct}%${k.need ? ` · ${k.xp}/${k.need} to the next` : ''}</small><i style="--w:${k.need ? Math.round(100 * k.xp / k.need) : 100}%"></i></div>`).join('')
         + '<h3>Today</h3><p class="ph-hint">Each counts up to a limit an in-game day - something else for the same skill still counts.</p>'
         + skl.today.map((t) => `<div class="ph-row"><span class="nm">${esc(t.name)}<small>${esc(t.skill)} · ${t.left ? `${t.left} xp left today` : 'done for today'}</small></span></div>`).join(''));
+    } else if (screen === 'crew') {
+      el.innerHTML = crewHtml();
     } else if (screen === 'bounties') {
       el.innerHTML = bountiesHtml();
     } else if (screen === 'transit') {
@@ -112,7 +115,7 @@ export function createPhone(ctx) {
   }
 
   function wire(el) {
-    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'skills') ctx.send({ t: 'phone', a: 'skills' }); if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } render(); };
+    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'skills') ctx.send({ t: 'phone', a: 'skills' }); if (screen === 'crew') ctx.send({ t: 'phone', a: 'crew' }); if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } render(); };
     for (const b of el.querySelectorAll('[data-stop]')) b.onclick = () => {
       const [l, k] = b.dataset.stop.split(':').map(Number);
       const L = transit && transit.lines.find((q) => q.id === l), st = L && L.stops[k];
@@ -185,6 +188,17 @@ export function createPhone(ctx) {
     for (const b of el.querySelectorAll('[data-take]')) b.onclick = () => ctx.send({ t: 'phone', a: 'take', id: b.dataset.take });
     for (const b of el.querySelectorAll('[data-report]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'report', id: b.dataset.report }); };
     for (const b of el.querySelectorAll('[data-act="cancel"]')) b.onclick = () => ctx.send({ t: 'phone', a: 'cancel' });
+    // the Crew app (server crews.js): a quick line to the crew, a waypoint to one of them, taking someone off, leaving
+    for (const b of el.querySelectorAll('[data-say]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'crewsay', i: Number(b.dataset.say) }); ctx.toast('Sent to the crew', 'info'); };
+    for (const b of el.querySelectorAll('[data-mate]')) b.onclick = () => {
+      const q = crew && crew.crew && crew.crew.members[Number(b.dataset.mate)];
+      if (!q || q.x === null) return;
+      ctx.setWaypoint({ x: q.x, y: q.y, label: q.n });
+      ctx.toast(`Waypoint: ${q.n}`, 'info');
+      ctx.close();
+    };
+    for (const b of el.querySelectorAll('[data-kick]')) b.onclick = () => { b.disabled = true; const q = crew && crew.crew && crew.crew.members[Number(b.dataset.kick)]; ctx.send({ t: 'phone', a: 'crewkick', k: Number(b.dataset.kick), n: q ? q.n : '' }); };
+    for (const b of el.querySelectorAll('[data-act="crewleave"]')) b.onclick = () => { if (b.dataset.sure) ctx.send({ t: 'phone', a: 'crewleave' }); else { b.dataset.sure = '1'; b.textContent = 'Press again to leave the crew'; } };
     for (const b of el.querySelectorAll('[data-act="clearwp"]')) b.onclick = () => { ctx.setWaypoint(null); render(); };
   }
 
@@ -259,6 +273,18 @@ export function createPhone(ctx) {
     return h;
   }
 
+  // the Crew app: who's in it (online, how far, where), the quick lines; asked in by walking up to someone (crews.js)
+  function crewHtml() {
+    if (!crew) return '<h3>Crew</h3><p class="ph-empty">Loading…</p>';
+    if (!crew.crew) return `<h3>Crew</h3><p class="ph-hint">No crew yet. Walk up to another player and press the action button to ask them in - up to ${crew.max} in a crew. They join the same way, near you. In a crew you see each other on the map wherever you are, can't hurt each other, send quick lines to each other here, and split a bank job's drawers.</p>`;
+    const C = crew.crew, n = C.members.length;
+    return `<h3>Your crew (${n}/${crew.max})</h3>`
+      + C.members.map((q, k) => `<div class="ph-row"><span class="ic">${q.lead ? '★' : '•'}</span><span class="nm">${esc(q.n)}${q.me ? ' (you)' : ''}<small>${q.me ? (q.where ? esc(q.where) : '') : q.on ? (q.where ? `${esc(q.where)} · ${m(q.d || 0)}` : 'online') : 'offline'}</small></span>`
+        + (!q.me && q.x !== null ? `<button data-mate="${k}">📍</button>` : '') + (C.lead && !q.me ? `<button data-kick="${k}">✕</button>` : '') + '</div>').join('')
+      + '<h3>Say to the crew</h3><div class="ph-apps ph-says">' + crew.says.map((t, i) => `<button class="ph-app" data-say="${i}">${esc(t)}</button>`).join('') + '</div>'
+      + '<button class="ph-row" data-act="crewleave"><span class="ic">🚪</span><span class="nm">Leave the crew</span></button>';
+  }
+
   return {
     open() { screen = 'home'; group = null; render(); ctx.send({ t: 'phone', a: 'board' }); },
     // straight to one app (the hub's JOBS tab: 'jobs')
@@ -266,6 +292,7 @@ export function createPhone(ctx) {
     back() { if (screen === 'group') screen = 'places'; else screen = 'home'; render(); return true; },
     onFeed(msg) { feed = msg.items || []; if (screen === 'feed') render(); },
     onSkills(msg) { skl = msg; if (screen === 'skills') render(); },
+    onCrew(msg) { crew = msg; if (screen === 'crew') render(); },
     onTransit(msg) { transit = msg; if (screen === 'transit') render(); },
     onHomes(msg) { homes = msg; if (screen === 'homes') render(); },
     onBounties(msg) {

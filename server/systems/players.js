@@ -19,7 +19,7 @@ import * as combat from './combat.js';
 import * as tank from './tank.js';   // (H58)
 import * as cargo from './cargo.js';
 import * as skate from './skate.js';   // (riding a skateboard: the owner, 2026-10-17)
-const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); return out; };   // + the backpack you dropped when you died
+const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); crews.radar(world, p, out); return out; };   // (+ your crewmates: crews.js)   // + the backpack you dropped when you died
 import * as law from './law.js';
 import * as bounties from './bounties.js';
 import * as economy from './economy.js';
@@ -51,6 +51,8 @@ import * as races from './races.js';
 import * as minigames from './minigames.js';
 import * as robbery from './robbery.js';
 import * as heist from './heist.js';
+import * as crews from './crews.js';
+import { cleanName, nameKey, NAME } from '../../shared/names.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
@@ -362,6 +364,26 @@ function finalizeLogout(world, p, dropLoot) {
   rentals.onPlayerGone(world, p);
 }
 
+// A name of your own (Settings' account section - the owner's M9 note: "a username"): a name may be (shared/names.js),
+// nobody else's (any case, separators aside: names.js nameKey), and changed once every NAME.gapS; over your head at once (the descriptor sent again)
+export function rename(world, p, raw) {
+  const prof = p.profile, r = cleanName(raw);
+  if (r.err) { world.notify(p, r.err, 'warn'); return false; }
+  if (r.name === p.name) return true;
+  const wait = (prof.nameAt || 0) + NAME.gapS * 1000 - Date.now();
+  if (wait > 0) { world.notify(p, `You can change your name again in ${Math.ceil(wait / 60000)} min.`, 'warn'); return false; }
+  if (world.time < (p.renameTryAt || 0)) return false;   // (a moment between tries: each looks through every profile)
+  p.renameTryAt = world.time + NAME.tryS;
+  const key = nameKey(r.name);
+  for (const q of store.all()) if (q.pid !== prof.pid && nameKey(q.name) === key) { world.notify(p, `${r.name} is taken - pick another.`, 'warn'); return false; }
+  prof.name = r.name; p.name = r.name; prof.nameAt = Date.now();
+  if (p.ped) { p.ped.name = r.name; p.ped.appVer = (p.ped.appVer || 0) + 1; }
+  world.notify(p, `You're ${r.name} now.`, 'good');
+  p.meDirty = true;
+  store.touch();
+  return true;
+}
+
 // Start fresh (task #413: Settings under Repair install, or the debug menu, pressed twice): this player's character and
 // everything that's theirs are gone for good - their body leaves the world at once (no ghost, nothing dropped), their
 // homes go back on the market, their car out in the street goes (with someone else in it, it's nobody's now: theirs to
@@ -373,6 +395,7 @@ export function wipeAccount(world, p) {
   struggle.onLeave(world, p); custody.onLeave(world, p);   // (the officers on them let go, as when anyone logs off)
   revive.clearDown(world, p);
   bounties.onWipe(world, p);
+  crews.leave(world, p);   // (out of any crew: a fresh character starts in none - crews.js)
   p.conn = null; p.ghostUntil = 0;
   if (world.players.get(p.pid) === p) finalizeLogout(world, p, false);
   for (const [id, pid] of [...world.homeOwner]) if (pid === p.pid) world.homeOwner.delete(id);
@@ -773,6 +796,8 @@ export function findInteraction(world, p) {
 
   const fish = fishHere(world, p, ped);
   if (fish) return fish;
+  const join = crews.joinPrompt(world, p) || crews.askPrompt(world, p);   // someone beside you who asked you into their crew: join; or ask them into yours (crews.js)
+  if (join) return join;
 
   const sale = dealer.saleNear(world, ped);
   if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };
@@ -915,7 +940,7 @@ export function buildMe(world, p) {
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
-    radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p),
+    radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
     fishing: fishing.meInfo(p), creel: fishing.creelInfo(prof),   // (a line out: where, the rod, the fight's parameters once it's cast; the cooler's catch - fishing.js)

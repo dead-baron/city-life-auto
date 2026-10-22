@@ -14584,7 +14584,7 @@ still open). Underground the page draws the tunnel view with the classic rendere
 lamps were drawn but before the trains. Now:
 - the tunnel view builds no highway at all (there's none down there), and the highway skips the window's holes;
 - the train, everyone riding it and the mail car's guards show again, with the lit coaches;
-- the underground stations have platforms (client/render/trains.js tunnelPlatforms): beside each station's track, on
+- the underground stations have platforms (client/render/tunnelplat.js, loaded the first time you go down): beside each station's track, on
   the side away from the other line's track, the train's length of tiled platform with the yellow line at its edge,
   pillars and benches, and the station's name on a blue sign - so stopping at one you can see you're there.
 Checked headless on a World v3 server: a ride from the Pink Line to a stop at Union Square Station.
@@ -14593,6 +14593,164 @@ Also from the full test run: at home a seat or the TV takes the action button on
 to the hall table, the bed or anything else there (the couch beside the hall table had taken over its menu); and the
 activity spots' test knows street dice is played down an alley's asphalt.
 
+## 2026-10-22 · Crews
+
+The owner, 10-08 ("friends and crews (up to 4): land on the same server, crew chat, crew events and heists"; the
+standing rule: crews hold up to 4 for now). Nobody could team up. Now (server/systems/crews.js; shared/rules.js CREW):
+- **asking someone in**: walk up to another player on foot and the action button asks them into your crew; they get a
+  note, and say yes the same way - beside you, within half a minute. Someone already in a crew can't be asked into
+  another; a full crew (four) asks nobody more.
+- **in a crew**:
+  - you see each other on the radar and the big map wherever you are - a green blip with the name, dimmer while
+    they're down - and your crewmates' name tags over their heads are green;
+  - no friendly fire: a crewmate's blows, shots and blasts don't hurt you (so there's nothing to report);
+  - a bank heist's drawers are split with the crewmates there when the vault opens (each cut into their own bag as hot
+    money, and some criminal EXP), and anyone can clear the drill's jams - the crates are everyone's to carry.
+- **the phone's Crew app** (client/phone.js): who's in it - who started it, who's on, where and how far - a waypoint to
+  any of them, quick lines to the crew (On my way!, Need backup!, Meet me where I am - with the district, Go go go!,
+  Get in!, Lie low for a bit, Nice one!, Thanks!: no free text), leaving (press twice), and for whoever started it,
+  taking someone off. A crew down to one is broken up.
+- the crews are kept with the profiles (a restart doesn't break them up), and you stay in yours while you're offline.
+
+Tests: test/crews.test.js - asked in and saying yes, each other on the radar (and not on an outsider's), the green
+name tags' ids, no friendly fire (an outsider still hurts), the quick lines to the crew only and not too fast; four at
+most, nobody in a crew asked into another, the app's list, taking someone off (only whoever started it), leaving, a
+crew of one is none; a heist's drawers split evenly with a crewmate there.
+
+## 2026-10-22 · Skee-ball and air hockey at the arcades
+
+The owner, 10-08 ("Arcade: walk in and play our own 8-bit games, air hockey, skee-ball, pinball; tickets for
+prizes"). The arcades' counters had STARFALL only. Now two more games for $1 each (shared/rules.js ARCADE.skee,
+ARCADE.hockey; server/systems/arcade.js), each on the arcade's screen and loaded the first time anyone plays:
+- **skee-ball** (client/skeeball.js): nine balls rolled up the wooden lane, off the hump and into the target - 10 round
+  the outside, 20, 30, 40, the 50 cup in the middle, a 100 pocket in each top corner. Aim with left / right and hold the
+  button for the power (it swells and fades - let go at the right moment), or drag up from the ball and let go. A
+  ticket for every 25 points; your best kept.
+- **air hockey** (client/airhockey.js): against the machine, first to seven. Your mallet follows the mouse or your
+  finger round your half (or the keys, the stick, the d-pad); the puck glides, comes off the rails and the mallets with
+  their speed in it, and drops into the goals at the ends. The machine goes after a puck on its half and guards its goal
+  otherwise. Twenty tickets for a win; two for each goal you got in a loss; your wins counted.
+- the server takes a game's result only for its credit, once, if it could be true: no more points than the balls
+  allow (in tens), no win without seven goals, and neither quicker than it could be played (its own clock).
+
+Tests: test/arcade.test.js - the lane's cup, rings, pockets and over-the-top, every ring reachable by the power and a
+pocket by the aim; a puck struck into the machine's goal, the machine going after a puck; the tickets, and the scores
+the server won't take (too quick, impossible, a win in two seconds).
+
+## 2026-10-22 · A name of your own
+
+The owner's M9 note (10-03: "optional account: sign in on other devices, chat, a username"). Every character was
+"Guest" and four digits for good - and with crews, names matter. Now Settings' account section (above the transfer
+code) has your name: type one and Save (client/main.js; server/systems/players.js rename; shared/names.js):
+- 3 to 16 characters - letters, numbers, spaces, dots, dashes and underscores, starting with a letter; spaces tidied;
+- nobody else's (in any case), not the game's own words (Admin, Police, Guest and a number...), nothing abusive (looked
+  for with the letters run together and the usual digit swaps undone);
+- changed once every ten minutes; over your head for everyone at once, and in your crew's list.
+The page checks it first and the server again; the server says how it went.
+
+Tests: test/names.test.js - the names that may and may not be, a rename over your head at once, taken in any case,
+not again so soon, nothing abusive, the crew's list keeping up.
+
+## 2026-10-22 · Pinball at the arcades
+
+The last of the owner's arcade games (10-08: "air hockey, skee-ball, pinball"). NEON NIGHTS, a little table of our own
+(client/pinball.js; shared/rules.js ARCADE.pinball; $1 at any arcade's counter): the plunger up the shooter lane (hold,
+let go - harder the longer), three pop bumpers at the top (100 each), a slingshot over each flipper kicking the ball back
+across the table, a bank of three drop targets on the left wall (500 each; all three down, 2,000 more and they come back
+up), two flippers, three balls. The flippers on Left / Right (A / D, Z / M), the bumpers LB / RB or the triggers, or a
+finger on each half of the screen; the plunger on Space, Enter, Down or pad A, or a finger on the shooter lane. A ticket
+for every 1,000 points (no faster than a table can score: the server's clock); your best kept.
+
+Tests: test/arcade.test.js - the plunger into the playfield, the bumpers and the flippers keeping a ball up, a ball left
+alone falling between the flippers, a raised flipper sending a ball up the table, the tickets and a score too quick to be
+true.
+
+## 2026-10-22 · Under the city: the streets ghosted overhead, the light easing in and out
+
+The owner's 10-07 note on the subway ("subway under the world: ghosted street, light easing in and out"). Riding under
+the city the tunnel view was the dark and the rails alone - no telling where you were. Now:
+- the streets overhead show faintly through the dark (client/render/trains.js ghostStreets: every road above, as a pale
+  band its own width), so you can follow where the line runs under the city;
+- going down into the tunnel, and coming back up into the daylight, the screen eases from dark instead of cutting (and
+  the same down the sewers and into the cave).
+
+## 2026-10-22 · The character preview in poses
+
+The owner's U15 note (10-08: "character preview: turn round, preview idles, sitting and actions"). The creator's big
+preview turned and zoomed but only ever stood breathing. Now the ▶ button beside the magnifier steps it through poses
+(client/creator.js PREV_POSES) - standing, walking, running, sitting, kneeling, hands up, a punch, fishing - each
+animated at its own pace in the game's own pixels, its name under the preview beside the direction; turning still turns
+it, and the look round now and then is the standing pose's only.
+
+## 2026-10-22 · A crew's bounties split
+
+The bounty row's "party splits" (10-07: waiting for parties) - crews are here now. A bounty collected with crewmates
+there (within CREW.share of the target, up and not in custody) is split evenly between you and them, each cut into its
+own bank (server/systems/bounties.js collect; you're told how many ways). Tests: test/crews.test.js - split with a
+crewmate there, none for one far off.
+
+## 2026-10-22 · Playtest panel: the new games' places
+
+The owner, 10-16 ("an option for each sport"). The playtest panel's Events & sport section takes you to a tennis court,
+an arcade, the Rusty Spur's pool table, a casino and a street dice game; Crime, to a bank's vault - right on the spot to
+set a drill (server/dev.js NEAR_KINDS; client/devcats.js). The tennis courts and the casinos are World v3's only.
+
+## 2026-10-22 · Crews, the new arcade games and names: fixes from a review
+
+A review of today's crews, skee-ball, air hockey, pinball and names work turned up these, all fixed:
+- **No friendly fire, everywhere:** a crewmate's swing, taser and pepper spray pass you by (a swing lands on whoever's
+  beyond), their car shoves you aside instead of running you down (server/systems/combat.js mates, vehicles.js
+  crewCar), their flamethrower doesn't set you alight (burning.js), and you can't finish off a downed crewmate
+  (revive.js). Before, only the damage itself was stopped: you were still stunned, floored or thrown.
+- **Asking someone in:** an asking that stands isn't talked over by someone else's, and the same one again only after
+  CREW.askAgainS (no spamming); someone already in a crew isn't offered "Join"; two crews started in one tick get their
+  own ids; taking someone off the crew checks the name the page showed (the list may have changed); starting fresh
+  leaves your crew. A heist's or a bounty's split only goes to crewmates on the same level (not someone in the subway
+  under the bank).
+- **Air hockey:** a "loss" with seven goals is no such game (seven is a win). **Skee-ball:** the gold landing marker is
+  gone - the aim line is all you get - and the bounce wobbles more the harder it's thrown, so a full-power roll is a
+  gamble; a ticket for every 30 points (was 25).
+- **Names:** the game's own words are looked for on the letters alone ("Admin_2", "Guest 1234") and the long ones at the
+  start too ("ModeratorBob"); two words that sit inside ordinary names ("Saltwater", "Swanky") are off the list; a name
+  is taken if it differs only in case or separators ("S_teve." is "Steve" - shared/names.js nameKey); a moment
+  (NAME.tryS) between attempts, since each one looks through every profile.
+Tests: test/crews.test.js (no punch on a crewmate, no run-over by one but a hit by an outsider's car, an asking that
+stands), test/names.test.js, test/arcade.test.js (the seven-goal loss).
+
+## 2026-10-22 · No rapids out to the sea
+
+The owner, 10-22, with two screenshots by the coast: "some water has a rapid effect moving at a rapid pace, doesn't seem
+like it's working correctly". It was the white water of the rapids (rivers part 2, 10-20) where no rapids belong:
+right across the wide rivers, out to the sea through the outlet cut below Kestrel Lake on 10-21 (the land fell fast
+there, from the lake down to the beach) and down a city river into the bay - white streaks racing over what looks like
+the sea. Now (shared/world3-rapids.js RAPIDS wide, mouth, low):
+- no white water right across a river wider than 36 tiles, within two of its widths of its mouth, or where the land under
+  it is down at the coast or the valley floor - the rapids stay on the creeks and narrower rivers up in the hills (six
+  of them; nine before);
+- a river 30 tiles wide or more runs no faster than a glide (shared/world3-waterbodies.js WIDE_GLIDE): the short steep
+  outlet to the sea had the fastest water in the world;
+- the ledge falls still start their steep reaches (Long Ledge Falls, Twin Falls and Sandpiper Falls are on such
+  rivers): they find them in ch.st, the steep reaches, which the falls drop once they're placed - the map keeps only the
+  white water.
+Tests: test/world3rapids.test.js - none down at a mouth cut to the sea or across a wide river, the hills' creek keeps
+its rapid; World v3's rapids all on narrower water, and its seven ledge falls.
+
+## 2026-10-22 · The desert train robbery
+
+The owner's #326 (10-08). The mail train's strongbox was robbery country only out on the old city's Dry Creek run - on
+World v3's main line there was no quiet stretch at all (the line's districts aren't the old city's), so every
+strongbox cracked rang the alarm: three stars, wherever. Now each main-line loop has its robbery country, worked out from
+the districts it runs through (server/systems/trains.js robberyCountry): the longest stretch out in the open desert or
+farmland, at grade, clear of every station by 1,300 px, a short bridge or trestle over a wash carried over - on both
+loops the Red Rock Desert's long run past Lucky Mesa (some 30 km). Out there:
+- crack the mail car's strongbox and nobody hears the alarm; anywhere else it rings, as before;
+- the HUD on the train says DESERT RUN (RURAL RUN in the old city's fields) while you're on it;
+- the fence's mail-train job sends you to a main-line mail train (never the subway's) and tells you where: "best out on
+  the long run through the Red Rock Desert", and its tracker says "The Red Rock Desert run - crack the strongbox NOW".
+The playtest panel's Crime section puts you aboard a mail train, the coach ahead of the mail car - one out on the desert
+run if one's there (server/dev.js train { mail }).
+Tests: test/world3rail.test.js - every main-line loop's robbery country is the Red Rock Desert run (long, out in the
+open, no station on it), none under the city; the HUD, the job and the debug hop.
 ## 2026-10-22 · The subway's crash on the way into Lake District Station
 
 The owner, 10-22, with two screenshots from the Pink Line: "Something went wrong drawing the game" on the way into Lake

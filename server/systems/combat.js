@@ -25,8 +25,12 @@ import * as campfires from './campfires.js';
 import * as dance from './dance.js';
 import * as burning from './burning.js';   // (fire on people: H58)
 import * as boomtest from './boomtest.js';
-import * as grenades from './grenades.js';   // (the explosion tester: H58)
+import * as grenades from './grenades.js';
+import * as crews from './crews.js';   // (no friendly fire in a crew)   // (the explosion tester: H58)
 import { FLY, isAir } from '../../shared/flight.js';   // (an aircraft well up: a blast on the ground doesn't reach it)
+
+// two players in one crew (crews.js): no friendly fire - a swing, a zap or a spray passes them by
+const mates = (a, b) => !!(a && b && a !== b && a.player && b.player && crews.mates(a.player, b.player));
 
 const DRY_CONCRETE = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DOCK]);
 const BLOOD_POOL_S = 600; // a pool of blood stays sticky this long (the ambulance crew don't mop)
@@ -109,6 +113,7 @@ function melee(world, ped, w, aim) {
   for (const o of world.query(ped.x, ped.y, w.range + 14, K.PED)) {
     if (o === ped || (o.dead && !revive.isDowned(o)) || o.vehId || o.sky || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level (o.sky: falling from an aircraft, out of reach)
     if (only && o.id !== only) continue;
+    if (mates(ped, o)) continue;
     const d = Math.hypot(o.x - ped.x, o.y - ped.y);
     if (d > w.range + o.r) continue;
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 4) continue;
@@ -351,7 +356,7 @@ function taser(world, ped, w, aim) {
   const target = traceTarget(world, ped, ped.x, ped.y, x2, y2, false);
   const ex = target ? target.x : x2, ey = target ? target.y : y2;
   world.emit(ped.x, ped.y, { e: 'taser', x1: ped.x, y1: ped.y, x2: ex, y2: ey });
-  if (target && target.kind === K.PED && hurtable(world, target)) {   // (spawn protection, indoors, dev invincibility: no zap)
+  if (target && target.kind === K.PED && hurtable(world, target) && !mates(ped, target)) {   // (spawn protection, indoors, dev invincibility: no zap)
     target.stunUntil = world.time + w.stun;
     target.downUntil = world.time + w.stun;
     target.rollT = 0;
@@ -370,7 +375,7 @@ function spray(world, ped, w, aim) {
     const d = Math.hypot(o.x - ped.x, o.y - ped.y);
     if (d > w.range + o.r) continue;
     if (Math.abs(angleDiff(aim, Math.atan2(o.y - ped.y, o.x - ped.x))) > w.arc / 2 && d > o.r + 6) continue;
-    if (!world.map.los(ped.x, ped.y, o.x, o.y) || !hurtable(world, o)) continue;
+    if (!world.map.los(ped.x, ped.y, o.x, o.y) || !hurtable(world, o) || mates(ped, o)) continue;
     o.stunUntil = Math.max(o.stunUntil || 0, now + w.stun);
     o.rollT = 0;
     o.vx *= 0.2; o.vy *= 0.2;
@@ -493,6 +498,7 @@ function hitscan(world, ped, w, a, acc) {
 // set health is multiplied by
 export const gritOf = (ped, cause) => (ped && ped.player && cause !== 'nonlethal' ? PLAYER_GRIT * (PLAYER_GRIT_CAUSE[cause] || 1) : 1);
 export function damage(world, ped, amount, attacker, cause, dir = 0) {
+  if (ped && attacker && ped.player && attacker.player && crews.mates(ped.player, attacker.player)) return false;   // (crewmates: no friendly fire - crews.js)
   if (ped && ped.dead && amount > 0 && attacker && cause !== 'fall' && revive.isDowned(ped)) return revive.finish(world, ped, attacker); // hitting a downed player finishes them
   if (!ped || ped.dead || amount <= 0) return false;
   if (ped.npc && ped.npc.role === 'wanderer') { wanderer.struck(world, ped, attacker); return false; }   // (the stranger: gone in a flash)

@@ -21,6 +21,8 @@ import * as law from './law.js';
 import * as looks from './looks.js';
 import * as events from './events.js';
 import * as homes from './homes.js';
+import * as crews from './crews.js';
+import { CREW } from '../../shared/rules.js';
 
 const SELF_DEFENCE_S = 60;   // hit by the one you killed this recently, and you didn't start it: self-defence (as law.js immune)
 const FIGHT_S = 300;         // ...you started it if you threw the first blow this recently
@@ -153,12 +155,16 @@ export function collect(world, h, t, how) {
   const placed = mine.reduce((n, c) => n + c.amount, 0), paid = placed + city;
   if (mine.length) prof.bounties = prof.bounties.filter((c) => !mine.includes(c));
   if (city) t.cityBounty = 0;
-  h.profile.bank += paid;
+  // (split with h's crew there - crews.js: the bounty's a crew's when they hunt together)
+  const tp = t.ped || h.ped, crew = tp ? crews.matesOnline(world, h).filter((q) => q.ped && !q.ped.dead && !q.custody && !!q.ped.sub === !!tp.sub && (q.ped.ug || 0) === (tp.ug || 0) && Math.hypot(q.ped.x - tp.x, q.ped.y - tp.y) < CREW.share && q !== t) : [];
+  const cut = Math.floor(paid / (crew.length + 1));
+  h.profile.bank += paid - cut * crew.length;
+  for (const q of crew) { q.profile.bank += cut; q.meDirty = true; world.notify(q, `Your crew's cut of the bounty on ${t.name}: +${money(cut)} to your bank.`, 'good'); }
   h.profile.samaritan += CLAIM_SAM;
   if (h.badge) law.addPolicePts(world, h, 15);
   const them = how === 'arrest' ? 'arrested them' : how === 'detain' ? 'brought them in alive' : 'took them out';
   const did = how === 'arrest' ? `arrested ${t.name}` : how === 'detain' ? `brought ${t.name} in` : `took out ${t.name}`;
-  world.notify(h, `Bounty on ${t.name} collected: +${money(paid)} to your bank, +${CLAIM_SAM} Samaritan.`, 'good');
+  world.notify(h, `Bounty on ${t.name} collected: +${money(paid - cut * crew.length)} to your bank${crew.length ? ` (split ${crew.length + 1} ways with your crew)` : ''}, +${CLAIM_SAM} Samaritan.`, 'good');
   world.notify(t, `${h.name} collected the bounty on your head.`, 'bad');
   if (mine.length) {
     // the ones who placed them, the other hunters on them, and everyone who heard the bounty announced

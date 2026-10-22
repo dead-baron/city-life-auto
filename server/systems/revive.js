@@ -18,6 +18,7 @@ import * as events from './events.js';
 import * as ems from './ems.js';
 import { inWater } from './rescue.js';
 import { sync as syncBounty } from './bounties.js';
+import * as crews from './crews.js';
 
 const REACH = 48;      // stand this close to a downed player to work on them
 const KEEP_REACH = 70; // ...and don't wander further than this while you do
@@ -224,7 +225,7 @@ export function interaction(world, p) {
   if (!t) return null;
   if (p.badge && t.bookable) return null; // a cop over a wanted player: booking them (law.js) comes first
   const kit = (p.profile.inventory.revivekit || 0) > 0;
-  return { label: `Hold to revive ${t.player.name}${kit ? ' (Revive Kit: full health)' : ' (no kit: low health)'} · hold F to finish them`, run: () => startChannel(world, p, 'revive', t) };
+  return { label: `Hold to revive ${t.player.name}${kit ? ' (Revive Kit: full health)' : ' (no kit: low health)'}${crews.mates(p, t.player) ? '' : ' · hold F to finish them'}`, run: () => startChannel(world, p, 'revive', t) };
 }
 
 // The vehicle button pressed on foot: over a downed player it starts finishing them (instead of
@@ -233,7 +234,7 @@ export function tryFinish(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || p.channel) return false;
   const t = downedNear(world, p);
-  if (!t) return false;
+  if (!t || (t.player && crews.mates(p, t.player))) return false;   // (never a crewmate: crews.js)
   startChannel(world, p, 'finish', t);
   return true;
 }

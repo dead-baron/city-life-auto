@@ -64,6 +64,23 @@ test('rapids where the land falls fast; an eddy below, hugging the bank; a pool 
   for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) assert.ok(Math.hypot(all[i][0] - all[j][0], all[i][1] - all[j][1]) >= POCKETS.apart - 0.01, 'apart');
 });
 
+// (the owner, 10-22: "some water has a rapid effect moving at a rapid pace" - the river cut through to the sea below
+// Kestrel Lake came out white right to the beach, and a wide city river's fall into the bay too)
+test('no rapids down at the coast, at a river\'s mouth, or right across a wide river', () => {
+  // three steep reaches: a creek cut down to sea level through the coast (its last stretch), a creek high in the hills
+  // falling 0.3 a tile (its middle), and a wide river in the hills the same
+  const line = (y) => { const p = []; for (let x = 10; x <= 330; x += 2) p.push([x, y]); return p; };
+  const m = standIn(360, 300, [{ pts: line(40), w: 20 }, { pts: line(130), w: 20 }, { pts: line(230), w: 44 }], (x, y) => {
+    if (y < 80) return x < 290 ? 18 - x * 0.01 : Math.max(0, 15.1 - (x - 290) * 0.38);   // (cut through to the sea: steep over its last 40 tiles)
+    return x < 120 ? 80 - x * 0.01 : x < 200 ? 78.8 - (x - 120) * 0.3 : 54.8 - (x - 200) * 0.01;   // (in the hills)
+  });
+  rapidsAndPockets3(m);
+  const [mouth, hills, wide] = m.waters.ch;
+  assert.ok(!mouth.r, `none at the mouth (${JSON.stringify(mouth.r)})`);
+  assert.ok(hills.r && hills.r.length === 1, `the hills' creek keeps its rapid (${JSON.stringify(hills.r)})`);
+  assert.ok(!wide.r, `none right across a wide river (${JSON.stringify(wide.r)})`);
+});
+
 test('a calm pocket: the trout and the bass hold there - likelier, and heavier', () => {
   const tab = (spot) => new Map(FS.biteTable({ water: 'river', spot }, { when: 'day' }).map(([f, w]) => [f.id, w]));
   const open = tab(null), pocket = tab('pocket');
@@ -117,7 +134,9 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   const m = generateCity(1337, { world3: true, frame: { w: FRAME_W, h: FRAME_H }, land: prep.land, today: prep.today });
   const S = m.world3.rapids;
   console.log('rapids and pockets', JSON.stringify(S));
-  assert.ok(S.rapids >= 8 && S.rapidTiles / S.riverTiles > 0.04 && S.rapidTiles / S.riverTiles < 0.15, `rapids on the steep tenth or so of the rivers (${JSON.stringify(S)})`);
+  // (on the creeks and narrower rivers up in the hills: none across the wide rivers, at a mouth or down on the coast - 10-22)
+  assert.ok(S.rapids >= 5 && S.rapidTiles / S.riverTiles > 0.02 && S.rapidTiles / S.riverTiles < 0.15, `rapids on the steep stretches of the rivers (${JSON.stringify(S)})`);
+  for (const c of m.waters.ch) if (c.r) assert.ok(c.w <= RAPIDS.wide, `none across a wide river (${c.w})`);
   const CH = m.waters.ch, pockets = CH.flatMap((c) => c.p || []);
   const LF = m.world3.ledges;   // (the ledge falls' plunge pools join them: shared/world3-ledgefalls.js)
   assert.ok(S.eddies >= 4 && S.pools >= 8 && pockets.length === S.eddies + S.pools + LF.pools, `eddies and bend pools (${S.eddies}, ${S.pools}, ${LF.pools})`);

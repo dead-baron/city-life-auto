@@ -192,12 +192,13 @@ export function ledgeFalls3(m, H3) {
   };
   const clear = new Set(), P = [];
   for (const F of LEDGES3) {
-    // the steep reach: the rapid starting nearest the spot
+    // the steep reach: the one starting nearest the spot (world3-rapids.js ch.st - its white water, ch.r, may be less of it)
     let best = null;
     for (const c of V.ch) {
-      if (!Array.isArray(c.r) || (c.k !== 'river' && c.k !== 'creek')) continue;
+      const st = c.st || c.r;
+      if (!Array.isArray(st) || (c.k !== 'river' && c.k !== 'creek')) continue;
       const S = cum(c.pts);
-      for (const r of c.r) { const p = ptAt(c.pts, S, r[0]), d = Math.sqrt((p[0] - F.near[0]) * (p[0] - F.near[0]) + (p[1] - F.near[1]) * (p[1] - F.near[1])); if (d < 16 && (!best || d < best.d)) best = { c, S, r, d }; }
+      for (const r of st) { const p = ptAt(c.pts, S, r[0]), d = Math.sqrt((p[0] - F.near[0]) * (p[0] - F.near[0]) + (p[1] - F.near[1]) * (p[1] - F.near[1])); if (d < 16 && (!best || d < best.d)) best = { c, S, r, d }; }
     }
     if (!best) continue;
     const { c, S, r } = best, Lc = S[S.length - 1], steps = F.steps || 1, gap = F.gap || 9;
@@ -256,11 +257,15 @@ export function ledgeFalls3(m, H3) {
     let ok = !F.knoll;
     for (let dy = -pr; dy <= pr && ok; dy++) for (let dx = -pr; dx <= pr; dx++) if (dx * dx + dy * dy <= pr * pr && !openRiver(Math.round(px0) + dx, Math.round(py0) + dy)) { ok = false; break; }
     if (ok) { (c.p ||= []).push([Math.round(px0 * 10) / 10, Math.round(py0 * 10) / 10, pr, 2]); out.pools++; }   // (kind 2: a plunge pool - world3-rapids.js's are 0 an eddy, 1 a bend pool)
-    const r0 = last + pool;
-    c.r = c.r.filter((q) => q !== r);
-    if (r[1] - r0 >= RAPIDS.min) c.r.push([Math.round(r0 * 10) / 10, r[1], r[2]]);   // (what's left of the white water, if it's still a rapid)
-    c.r.sort((p, q) => p[0] - q[0]);
-    if (!c.r.length) delete c.r;
+    // (what's left of the white water below the pool, if it's still a rapid - none above it, down to the pool)
+    const r0 = last + pool, rest = [];
+    for (const q of c.r || []) {
+      if (q[1] <= r[0] || q[0] >= r[1]) rest.push(q);   // (another reach's)
+      else if (q[1] - Math.max(q[0], r0) >= RAPIDS.min) rest.push([Math.round(Math.max(q[0], r0) * 10) / 10, q[1], q[2]]);
+    }
+    rest.sort((p, q) => p[0] - q[0]);
+    if (rest.length) c.r = rest; else delete c.r;
+    if (c.st) c.st = c.st.filter((q) => q !== r);
     // a footbridge across the outlet below the pool where the river's narrow enough (walkers cross there; bridge tiles:
     // swimmers and boats pass beneath, the water drawn under it)
     const sb = last + pool + 3;
@@ -308,5 +313,6 @@ export function ledgeFalls3(m, H3) {
   }
   if (clear.size && H3.removeProps) H3.removeProps(m, (x, y) => clear.has(Math.floor(y / TILE) * W + Math.floor(x / TILE)));
   for (const [t, x, y, r, ex] of P) H3.addProp(m, t, Math.round(x), Math.round(y), r, ex);
+  for (const c of V.ch) delete c.st;   // (the steep reaches: only the falls needed them - the map keeps its white water, ch.r)
   return out;
 }

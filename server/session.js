@@ -111,6 +111,7 @@ export function createSession(world, conn, opts) {
         return;
       }
       if (msg.t === 'safety') { safety.set(player, !!msg.on); return; }   // (Settings: Safety mode - server/systems/safety.js)
+      if (msg.t === 'name') { players.rename(world, player, msg.name); return; }   // (Settings: your name - players.js rename)
       if (msg.t === 'plist') { conn.sendJSON(devmode.playerList(world, player)); return; } // who's online (options / map)
       if (msg.t === 'devmode') { if (msg.leave) devmode.exit(world, player); else if (!player.devMode) devmode.tryPassword(world, player, msg.pw); return; }
       if (msg.t === 'dev' && (opts.dev || player.devMode)) { dev.command(world, player, String(msg.c || ''), msg); }

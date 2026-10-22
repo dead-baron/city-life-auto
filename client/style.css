@@ -456,6 +456,11 @@ body.portrait #tut-text { font-size: 14px; max-height: 30vh; }
 .ph-row small { color: #8a90a2; font-size: 12px; }
 .ph-row .d { color: #9fd4ff; font-weight: 700; }
 .ph-row.pfocus, .ph-app.pfocus { border-color: #fff; outline: 2px solid #fff; }
+div.ph-row { cursor: default; }
+.ph-apps.ph-says { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ph-apps.ph-says .ph-app { padding: 9px 6px; font-size: 13px; text-align: center; }
+.ph-row > button { flex: none; padding: 5px 10px; border-radius: 8px; border: 1px solid #3a4560; background: #22293a; color: #fff; font: 600 13px Rubik, sans-serif; cursor: pointer; }   /* (the Crew app's waypoint and take-off buttons) */
+.ph-row > button.pfocus { outline: 2px solid #fff; border-color: #fff; }
 .ph-card { margin: 10px 0; padding: 10px; border-radius: 12px; background: #1f2636; border-left: 3px solid #4fd6ff; font-size: 13px; }
 .ph-card.job { border-left-color: #ffd400; }
 .ph-card.saw { border-left-color: #ff5a4a; }

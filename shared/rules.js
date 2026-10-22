@@ -827,6 +827,13 @@ export const WORKOUT = { minGap: 0.75, maxGap: 3.5, set: 10, drain: 8 };
 // your home - t tickets)
 export const ARCADE = {
   price: 2, perTicket: 100, maxTickets: 40, maxRate: 60, pool: 1,   // (pool: a frame at the Rusty Spur's table, $)
+  // skee-ball (client/skeeball.js): skee.balls rolled for skee.price, a ticket for every skee.perTicket points (a ball's
+  // best is 100); air hockey against the machine (client/airhockey.js): first to hockey.to, hockey.win tickets for a win,
+  // hockey.perGoal for each goal in a loss; the least time a game can take (server's clock, s)
+  skee: { price: 1, balls: 9, perTicket: 30, minS: 12 },
+  hockey: { price: 1, to: 7, win: 20, perGoal: 2, minS: 20 },
+  // pinball (client/pinball.js, NEON NIGHTS): a ticket for every pinball.perTicket points, no more than maxRate points a second
+  pinball: { price: 1, perTicket: 1000, maxRate: 400, minS: 10 },
   prizes: [{ item: 'glowstick', t: 25 }, { item: 'energy', t: 50 }, { item: 'flare', t: 60 }, { decor: 'art', t: 150 }, { item: 'headlamp', t: 200 }, { decor: 'turntable', t: 400 }, { item: 'skateboard', t: 500 }],
 };
 export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
@@ -838,6 +845,14 @@ export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
 // `load` of crates (cargo tiers: 3 an iron safe-deposit box, 4 a carbon-gold case of bars) and `cash` in the drawers
 // (hot money to whoever set the drill, times the district: ROB_TILL_TIER); it stands open openS, then it's cleaned out
 // for cooldownS. `reach`: how close to the vault door's spot to work it (px). An officer at the door takes the drill off
+// crews (the owner, 10-08: "friends and crews (up to 4): crew chat, crew events and heists"; decided: up to 4 for now -
+// server/systems/crews.js, the phone's Crew app): `max` in a crew; an invitation stands inviteS seconds; `reach`: how close
+// to ask someone or to say yes (px); the quick-chat lines (no free text); sayGapS between your lines; a heist's drawers
+// split with the crew there (`share` px of the vault)
+export const CREW = {
+  max: 4, inviteS: 30, askAgainS: 60, reach: 90, sayGapS: 2, share: 400,   // (askAgainS: the same asking again only this long after one lapsed)
+  says: ['On my way!', 'Need backup!', 'Meet me where I am', 'Go go go!', 'Get in!', 'Lie low for a bit', 'Nice one!', 'Thanks!'],
+};
 export const HEIST = {
   drillPrice: DRILL_PRICE, drillS: 60, jams: 2, abandonS: 150, heat: 62, heatS: 0.4, responseS: [8, 14], units: 4, wave2S: 25,
   openS: 300, cooldownS: 1800, cash: 3000, reach: 46, xp: 60, seizeSam: 5,   // (seizeSam: Samaritan points for an officer who takes the drill off)

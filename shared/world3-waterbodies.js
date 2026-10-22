@@ -29,6 +29,8 @@ export const MARSH_BOX = [820, 1890, 1530, 3300];
 export const DESERT_X = 4250;
 // a pond dug on land bigger than this (tiles) is a lake
 export const LAKE_TILES = 1500;
+// a river this wide (tiles) or wider runs no faster than a glide
+export const WIDE_GLIDE = 30;
 
 const key = (p) => `${p[0]},${p[1]}`;
 const len = (pts) => { let l = 0; for (let j = 1; j < pts.length; j++) { const dx = pts[j][0] - pts[j - 1][0], dy = pts[j][1] - pts[j - 1][1]; l += Math.sqrt(dx * dx + dy * dy); } return l; };
@@ -57,7 +59,9 @@ export function waterBodies3(m) {
     const k = lake ? 'lake' : marsh ? 'marsh' : S === RIVER || w >= 30 ? 'river' : 'creek';
     const t = marsh ? 'marsh' : hm >= 100 ? 'alpine' : mid[0] >= DESERT_X ? 'desert' : hm < 12 ? 'valley' : 'forest';
     const slope = L > 0 ? drop / L : 0;
-    const v = k === 'lake' ? 0 : k === 'marsh' ? 0.12 : Math.min(1, Math.max(k === 'creek' ? 0.45 : 0.3, 0.3 + slope * 9));
+    // (a wide river glides: never the fast water's look, however short and steep its reach - the owner, 10-22: the river cut
+    // through to the sea below Kestrel Lake raced like rapids out to the beach)
+    const v = k === 'lake' ? 0 : k === 'marsh' ? 0.12 : Math.min(w >= WIDE_GLIDE ? 0.5 : 1, Math.max(k === 'creek' ? 0.45 : 0.3, 0.3 + slope * 9));
     out.ch.push({ k, w, t, v: r1(v), pts });
     sum[k]++;
     if (lake) stampPath(pts, w / 2 + 1, W, H, (i) => { if (under(i) && m.river[i] && !m.lake[i]) { m.lake[i] = 1; sum.lakeTiles++; } });

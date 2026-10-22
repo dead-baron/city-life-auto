@@ -7,7 +7,8 @@
 // Anyone can ride: players, NPC commuters (seated or standing), and cops who come aboard at the
 // next station for a wanted passenger. Level crossings drop their gates when a train is coming;
 // most drivers wait, a few gamble, and you can smash straight through the arms.
-// The mail train carries a strongbox: the long run through Dry Creek is robbery country.
+// The mail train carries a strongbox: the long run through Dry Creek is robbery country (World v3: the Red Rock Desert's
+// - robberyCountry, below).
 import { inAnyView } from '../view.js';
 import { K, T } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
@@ -84,7 +85,7 @@ function anyCoach(t) {
 export function init(world) {
   world.trains = [];
   world.xing = [];
-  world.rails = null;
+  world.rails = null; world.country = null;
   if (world.map.rails && world.map.rails.length > 1) { initLoops(world); return; }
   const rail = world.map.rail;
   if (!rail || !rail.stations || !rail.stations.length) return;   // (no railway: World v3's isn't laid yet)
@@ -136,12 +137,46 @@ export function init(world) {
 // into each of its stations about every TRAIN_LOOP_HEADWAY_S: the main loop's 18-minute lap nine, the shorter loops four;
 // two at the least)
 const loopTrains = (T) => Math.max(2, Math.min(TRAIN_LOOP_MAX, Math.round(T.reduce((a, q) => a + q.total + TRAIN_DWELL_S, 0) / TRAIN_LOOP_HEADWAY_S)));
+// The desert train robbery (the owner's #326): the mail train's robbery country - the longest stretch of a loop out in
+// the open desert or farmland at grade, clear of its stations (no tunnels, nobody on a platform to hear): crack the
+// strongbox out there and the alarm rings for nobody (crackOpen). Today's world lays it with the line (map.js: Dry
+// Creek's run); World v3's loops get theirs here from the districts the line runs through - the Red Rock Desert's long
+// run past Lucky Mesa. A short bridge or a dry wash's trestle doesn't end it.
+const COUNTRY = new Set(['desert', 'rural']);
+const COUNTRY_CLEAR = 1300, COUNTRY_GAP = 1600;   // (px: clear of a station either way; the longest break it carries over)
+export function robberyCountry(map, rail) {
+  if (rail.subway || !rail.pts || rail.pts.length < 2 || !map.districtAt || !rail.stations) return null;
+  const nearSt = (s) => rail.stations.some((st) => { const d = Math.abs(s - st.s); return Math.min(d, rail.len - d) < COUNTRY_CLEAR; });
+  let best = null, cur = null, gap0 = -1;
+  const close = () => { if (cur && (!best || cur.s1 - cur.s0 > best.s1 - best.s0)) best = cur; cur = null; gap0 = -1; };
+  for (const p of rail.pts) {
+    const d = map.districtAt(p.x, p.y), hard = p.under || nearSt(p.s);
+    if (!hard && d && COUNTRY.has(d.style)) {
+      if (!cur) cur = { s0: p.s, s1: p.s, by: new Map() };
+      cur.s1 = p.s; gap0 = -1;
+      const k = `${d.name}|${d.style}`; cur.by.set(k, (cur.by.get(k) || 0) + 1);
+    } else if (cur) {
+      if (hard) close();
+      else if (gap0 < 0) gap0 = p.s;
+      else if (p.s - gap0 > COUNTRY_GAP) close();
+    }
+  }
+  close();
+  if (!best || best.s1 - best.s0 < 3000) return null;
+  const [name, style] = [...best.by].sort((a, b) => b[1] - a[1])[0][0].split('|');
+  return { s0: best.s0 + 200, s1: best.s1 - 100, name, kind: style };
+}
+const countryOf = (world, t) => (world.country ? world.country[t.r] : world.map.rail.rural) || null;
+const runName = (r) => (r && r.name ? `The ${r.name} run` : 'The Dry Creek run');
+const runText = (r) => (r && r.name ? `the long run through the ${r.name}` : 'the long run through the fields of Dry Creek');
+
 function initLoops(world) {
   const rails = world.map.rails.filter((r) => r.stations && r.stations.length);
   if (!rails.length) return;
   world.rails = rails;
   world.railTimings = rails.map((r) => buildTiming(r));
   world.railTiming = world.railTimings[0];
+  world.country = rails.map((r) => r.rural || robberyCountry(world.map, r));   // (the desert train robbery: each loop's quiet stretch - kept here, the map as built)
   world.sig = { own: new Map(), cells: rails.map(cellsOfRail), box: null };
   world.sig.box = boxesOf(rails, world.sig.cells);
   let ti = 0;
@@ -1513,7 +1548,7 @@ function stepCracking(world) {
 }
 
 export function onRuralRun(world, t) {
-  const r = railOf(world, t).rural;
+  const r = countryOf(world, t);
   if (!r) return false;
   const mid = mod(t.s - t.len / 2, railOf(world, t).len);
   return mid > r.s0 && mid < r.s1;
@@ -1552,10 +1587,10 @@ function crackOpen(world, p, t) {
 // ---- the train-robbery job (offered by the fence) ----------------------------------------------
 export function startTrainJob(world, p) {
   if (p.job) return 'You already have a job.';
-  const t = world.trains.find((q) => q.mail >= 0);
+  const t = world.trains.find((q) => q.mail >= 0 && countryOf(world, q)) || world.trains.find((q) => q.mail >= 0);   // (one out to the country, not the subway's)
   if (!t) return 'No mail train running.';
   p.job = { type: 'trainjob', stage: 'board', train: t.i, tx: 0, ty: 0, text: '', failOnDeath: false };
-  world.notify(p, 'The mail train carries a strongbox. Get aboard (any station, or climb on from a car alongside), work back to the mail car and crack it - best out on the long run through the fields of Dry Creek, where nobody hears the alarm.', 'info');
+  world.notify(p, `The mail train carries a strongbox. Get aboard (any station, or climb on from a car alongside), work back to the mail car and crack it - best out on ${runText(countryOf(world, t))}, where nobody hears the alarm.`, 'info');
   updateJobs(world);
   return null;
 }
@@ -1587,7 +1622,7 @@ function updateJobs(world) {
     }
     if (ped.onTrain && ped.onTrain.t === t.i) {
       j.stage = 'crack';
-      j.text = world.time < t.boxReadyAt ? 'Someone already cracked this one - the next box is loaded later' : onRuralRun(world, t) ? 'The Dry Creek run - crack the strongbox NOW' : 'Work back to the mail car - crack it out on the Dry Creek run';
+      j.text = world.time < t.boxReadyAt ? 'Someone already cracked this one - the next box is loaded later' : onRuralRun(world, t) ? `${runName(countryOf(world, t))} - crack the strongbox NOW` : `Work back to the mail car - crack it out on ${runName(countryOf(world, t)).replace(/^The/, 'the')}`;
     } else { j.stage = 'board'; j.text = 'Get aboard the mail train'; }
     j.tx = mail.x; j.ty = mail.y;
   }
@@ -1696,7 +1731,7 @@ export function meInfo(world, p) {
   const next = t.dwellUntil ? sts[t.stop] : sts[t.stop];
   return {
     sub: !!e.sub, car: t.cars[ped.onTrain.c].kind, next: next.name, at: !!t.dwellUntil, eta: Math.round(etaTo(world, t, t.stop)),
-    crack: p.crack ? Math.min(1, (world.time - p.crack.t0) / STRONGBOX_CRACK_S) : null, rural: onRuralRun(world, t),
+    crack: p.crack ? Math.min(1, (world.time - p.crack.t0) / STRONGBOX_CRACK_S) : null, rural: onRuralRun(world, t) ? (countryOf(world, t).kind || 'rural') : false,   // (the robbery country: 'desert' or 'rural')
     warn: ped.onTrain.warnHud ?? null, // the mail guards: 'door' (shouted at to stay out), seconds left to get out, 0 = shooting
   };
 }

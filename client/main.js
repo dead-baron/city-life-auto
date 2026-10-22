@@ -51,6 +51,7 @@ import { noteServerBuild, myBuild } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules.js';
 import { bonusOf } from '../shared/skills.js';
+import { cleanName } from '../shared/names.js';   // (Settings: your name - the server checks it too)
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
 import { charSprite, dir8, baseDir, CW, FOOT_Y } from './render/chars.js';
 import { bodySprite, loadBodies, lyingSprite, LW, LH } from './render/body.js';
@@ -351,9 +352,10 @@ function onText(m) {
     case 'board': phone.on('Board', m); break;
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
+    case 'crew': phone.on('Crew', m); break;   // the Crew app (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       openOverlay('arcade');
-      (m.game === 'pool' ? import('./pool.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
+      (m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
       break;
     case 'bounties': phone.on('Bounties', m); break;
     case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)
@@ -2210,6 +2212,7 @@ function syncSettings() {
 const PREV_TOKEN_KEY = TOKEN_KEY + '.prev';
 const codeMsg = (t) => { $('s-code-msg').textContent = t; };
 function syncAccount() {
+  $('s-name-in').value = (S.me && S.me.name) || ''; $('s-name-msg').textContent = '';
   let prev = null;
   try { prev = localStorage.getItem(PREV_TOKEN_KEY); } catch { prev = null; }
   $('s-code-back').classList.toggle('hidden', !prev || prev === S.token);
@@ -2231,6 +2234,14 @@ $('s-code-use').onclick = () => {
   if (!/^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/.test(t)) { codeMsg('That doesn\'t look like a transfer code.'); return; }
   if (t === S.token) { codeMsg('That\'s the character you\'re already playing.'); return; }
   switchAccount(t, 'Switching character...');
+};
+// your name (the server checks it again, keeps it unique and says how it went: players.js rename)
+$('s-name-use').onclick = () => {
+  const r = cleanName($('s-name-in').value);
+  if (r.err) { $('s-name-msg').textContent = r.err; return; }
+  if (!S.playing) { $('s-name-msg').textContent = 'Play online first - then you can change it here.'; return; }
+  send({ t: 'name', name: r.name });
+  $('s-name-msg').textContent = `Asked for ${r.name}...`;
 };
 $('s-code-back').onclick = () => {
   let prev = null;
@@ -2863,7 +2874,11 @@ function render(dt) {
     }
     return;
   }
+  // into the subway's tunnel or back out: the light eases over it (the owner's 10-07 note: "light easing in and out")
+  if (!!F.sub !== !!S.subWas) { S.subWas = !!F.sub; S.subFadeAt = performance.now(); }
   drawOverlays(F, v2);
+  const fk = 1 - (performance.now() - (S.subFadeAt ?? -1e9)) / 600;
+  if (fk > 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(0,0,0,${(fk * 0.9).toFixed(3)})`; g.fillRect(0, 0, canvas.width, canvas.height); }
 }
 
 // ---- under the ground: the sewers and the cave (client/underground/view.js, loaded the first time you go down) ------------
@@ -4764,7 +4779,7 @@ function drawWorldLabels(peds, vehs, now, z) {
     if (p.d.pl && p.d.n && p.id !== S.myPedId) {
       const y = py - 26 / z;
       g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.d.n, p.rx + 1 / z, y + 1 / z);
-      g.fillStyle = p.flags & PF.BADGE ? '#7ab0ff' : '#fff'; g.fillText(p.d.n, p.rx, y);
+      g.fillStyle = S.me && S.me.crew && S.me.crew.ids.includes(p.id) ? '#7dffa0' : p.flags & PF.BADGE ? '#7ab0ff' : '#fff'; g.fillText(p.d.n, p.rx, y);   // (your crew's: green - crews.js)
       if (p.hp < 0.999 && !(p.flags & PF.DEAD)) { g.fillStyle = '#000'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z, 3 / z); g.fillStyle = '#ff4d5e'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z * p.hp, 3 / z); }
     }
   }

@@ -182,7 +182,7 @@ export class HUD {
       // the mail guards' warning: at the door ('door'), then the seconds left to get out (0: they're shooting)
       const warn = tr.warn ?? null;
       tb.classList.remove('hidden'); tb.classList.toggle('sub', !!tr.sub); tb.classList.toggle('warn', warn === 'door'); tb.classList.toggle('alarm', warn !== null && warn !== 'door');
-      $('tb-where').textContent = warn === 'door' ? 'MAIL CAR AHEAD' : tr.car === 'mail' ? 'MAIL CAR' : tr.sub ? 'SUBWAY' : tr.rural ? 'RURAL RUN' : 'ON THE TRAIN';
+      $('tb-where').textContent = warn === 'door' ? 'MAIL CAR AHEAD' : tr.car === 'mail' ? 'MAIL CAR' : tr.sub ? 'SUBWAY' : tr.rural ? (tr.rural === 'desert' ? 'DESERT RUN' : 'RURAL RUN') : 'ON THE TRAIN';
       $('tb-next').textContent = warn === 'door' ? 'Armed guards - staff only! Walk in and they shoot.'
         : warn !== null ? (warn > 0 ? `GUARDS: "GET OUT!" - ${warn}` : 'The guards are shooting!')
           : tr.at ? `At ${tr.next} - F to get off` : `Next: ${tr.next} · ${tr.eta}s`;
@@ -452,6 +452,7 @@ export class HUD {
         else if (r.k === 'wanted') { g.fillStyle = (performance.now() / 200 | 0) % 2 ? '#ff3b3b' : '#3b6bff'; g.beginPath(); g.arc(x, y, big ? 7 : 4, 0, 6.28); g.fill(); }
         else if (r.k === 'bounty') { g.strokeStyle = '#ffc23d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, Math.max(5, r.r * scale), 0, 6.28); g.stroke(); if (big) { g.fillStyle = '#ffc23d'; g.fillText(`${r.n} $${r.b}`, x, y - r.r * scale - 8); } }
         else if (r.k === 'pack') packIcon(g, x, y, r, big ? 1.4 : 1);
+        else if (r.k === 'crew') { g.fillStyle = r.d ? '#2d6a40' : '#7dffa0'; g.strokeStyle = '#0a0f1d'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, big ? 6 : 3.5, 0, 6.28); g.fill(); g.stroke(); if (big) { g.fillStyle = '#7dffa0'; g.fillText(r.n, x, y - 11); } }   // (a crewmate: crews.js)
       }
       // crimes reported near you (police): pulsing blips, fresher = brighter
       if (me.dispatch) {

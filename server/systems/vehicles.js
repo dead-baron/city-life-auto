@@ -17,6 +17,7 @@ import * as traffic from './traffic.js';
 import * as explosions from './explosions.js';   // (task #363: the blast by the vehicle, the wreck blown into the air)
 import * as carhits from './carhits.js';         // (task #361: run over, onto the hood)
 import * as aircraft from './aircraft.js';       // (helicopters and planes: up in the air, nothing on the ground touches them)
+import * as crews from './crews.js';             // (a crewmate at the wheel: shoved aside, not run down)
 
 
 export function driverOf(world, v) { return v.seats[0] ? world.get(v.seats[0]) : null; }
@@ -130,7 +131,7 @@ export function update(world, dt) {
       else for (const q of bodyBoxes(v)) if ((h = circleVsObb(ped.x, ped.y, ped.r, q.x, q.y, v.a, q.hl, v.def.W / 2))) break;
       if (!h) continue;
       const vn = (v.vx - ped.vx) * h.nx + (v.vy - ped.vy) * h.ny;
-      if (spd > 120 && vn > 120 && ped.rollT <= 0 && world.time > (ped.hitImmuneUntil || 0)) {
+      if (spd > 120 && vn > 120 && ped.rollT <= 0 && world.time > (ped.hitImmuneUntil || 0) && !crewCar(world, v, ped)) {
         strikePed(world, v, ped, vn, h);
       } else {
         ped.x += h.nx * h.depth; ped.y += h.ny * h.depth;
@@ -189,6 +190,12 @@ function resolveVehicleHit(world, a, b, hit) {
     if (a.ai) npc.onVehicleHit(world, a, aFaster ? null : db);
     if (b.ai) npc.onVehicleHit(world, b, aFaster ? da : null);
   }
+}
+
+// a crewmate at the wheel (crews.js): no friendly fire - you're shoved aside, not run down
+function crewCar(world, v, ped) {
+  const d = ped.player && driverOf(world, v);
+  return !!(d && d.player && d !== ped && crews.mates(d.player, ped.player));
 }
 
 function strikePed(world, v, ped, vn, h) {

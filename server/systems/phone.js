@@ -31,6 +31,7 @@ import * as busjob from './busjob.js';
 import * as towjob from './towjob.js';
 import * as skills from './skills.js';
 import * as workout from './workout.js';
+import * as crews from './crews.js';
 import { CAB, BUSJOB, TOWJOB } from '../../shared/rules.js';
 
 const rng = mulberry32(7331);
@@ -215,6 +216,8 @@ export function handle(world, p, msg) {
   if (a === 'board') return boardFor(world, p);
   if (a === 'feed') return events.feedFor(world);
   if (a === 'skills') return skills.panel(world, p);   // the Skills app (skills.js)
+  if (a === 'crew') return crews.panel(world, p);   // the Crew app (crews.js)
+  if (a === 'crewsay' || a === 'crewleave' || a === 'crewkick') return crews.phone(world, p, msg);
   if (a === 'workout') { phoneOut(world, p, false); const no = workout.start(world, p, String(msg.k || '')); if (no) world.notify(p, no, 'warn'); return null; }   // a set of push-ups or sit-ups (workout.js)
   if (a === 'out') { phoneOut(world, p, !!msg.on); return null; }   // the phone in your hand while its menu is open
   if (a === 'transit') return { ...transit.transitInfo(world, p), ferries: ferries.ferryInfo(world) };   // the Transit app and the lines on the map

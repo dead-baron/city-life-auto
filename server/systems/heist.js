@@ -18,7 +18,7 @@
 // 'drilljam', 'vaultopen'; client/vault.js draws the door, the drill and the open vault.
 //   world.vaults: building id -> { bid, x, y, sx, sy, label, tier, u, st: 'drill' | 'open' | 'shut', by (pid), at, work,
 //     jamAt [fractions], jammed, jamT, said, buzz, until, calls [[time, units]] }
-import { HEIST, ROB_TILL_TIER, ROB_SCENE_S } from '../../shared/rules.js';
+import { HEIST, CREW, ROB_TILL_TIER, ROB_SCENE_S } from '../../shared/rules.js';
 import { vaultOf, bankAt } from '../../shared/heist.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
@@ -26,6 +26,7 @@ import * as law from './law.js';
 import * as events from './events.js';
 import * as police from './police.js';
 import * as hot from './hotmoney.js';
+import * as crews from './crews.js';
 
 const rng = mulberry32(3060);
 const ANNOUNCE_S = 3, BUZZ_S = 1.1, ALARM_S = 18;
@@ -125,9 +126,14 @@ function open(world, V) {
   if (!p) return;
   if (ped && !ped.dead && !p.custody && Math.hypot(ped.x - V.x, ped.y - V.y) < 400) {
     p.profile.criminalExp = (p.profile.criminalExp || 0) + HEIST.xp;
-    const cash = Math.round(HEIST.cash * (ROB_TILL_TIER[V.tier] ?? 1));
-    hot.add(world, p, cash, V.x, V.y);
-    world.notify(p, `The vault door swings open! $${cash.toLocaleString('en-US')} from the drawers in your bag (hot money), and ${n} crate${n === 1 ? '' : 's'} on the floor - carry them out to something with an open back and get them to a fence.`, 'good');
+    // the drawers' cash: split with the crewmates there (crews.js), into each one's bag as hot money
+    const there = [p, ...crews.matesOnline(world, p).filter((q) => q.ped && !q.ped.dead && !q.custody && !q.ped.sub && !q.ped.ug && Math.hypot(q.ped.x - V.x, q.ped.y - V.y) < CREW.share)];   // (up here, not in the subway or the sewers under it)
+    const cash = Math.round(HEIST.cash * (ROB_TILL_TIER[V.tier] ?? 1)), each = Math.floor(cash / there.length);
+    for (const q of there) {
+      hot.add(world, q, each, V.x, V.y);
+      if (q !== p) { q.profile.criminalExp = (q.profile.criminalExp || 0) + Math.round(HEIST.xp / 2); world.notify(q, `The vault's open! Your cut of the drawers: $${each.toLocaleString('en-US')} in your bag (hot money). Get the crates out.`, 'good'); q.meDirty = true; }
+    }
+    world.notify(p, `The vault door swings open! $${each.toLocaleString('en-US')} from the drawers in your bag (hot money${there.length > 1 ? `, your cut - split ${there.length} ways` : ''}), and ${n} crate${n === 1 ? '' : 's'} on the floor - carry them out to something with an open back and get them to a fence.`, 'good');
   } else world.notify(p, `${V.label}'s vault is open - the crates are on the floor for whoever gets there first.`, 'warn');
   p.meDirty = true;
   store.touch();
