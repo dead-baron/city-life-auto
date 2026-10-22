@@ -30,6 +30,8 @@ const P = {
   jetski: { f0: 46, f1: 205, gears: 0, wave: 'buzz', sub: 0.2, noise: 0.3, nf: 2200, lp0: 700, lp1: 3500, q: 2.5, am: 0.4, amr: 1, vol: 0.34, boat: 1, horn: [622, 784], hw: 'square' },
   ship: { f0: 9, f1: 22, gears: 0, wave: 'saw8', sub: 1, noise: 0.22, nf: 320, lp0: 150, lp1: 380, q: 1, am: 0.6, amr: 1, vol: 0.5, boat: 1, horn: [73, 92], hw: 'saw8' },
   pedal: { pedal: 1, vol: 0.14, nf: 5200 },
+  // a golf cart's electric motor: a thin whine climbing with its speed, hardly any rasp, no gears, a polite beep
+  electric: { f0: 110, f1: 360, gears: 0, wave: 'buzz', sub: 0, noise: 0.06, nf: 4200, lp0: 700, lp1: 2000, q: 1.4, am: 0.04, amr: 1, vol: 0.16, horn: [988, 1175], hw: 'square' },
   // the motorcycles (task #366): a V-twin's slow lumpy burble (a deep note, a big wobble at half the firing rate), a sport
   // bike's four-cylinder scream (high and smooth to a high red line), a scooter's thin buzz, a dirt bike's two-stroke
   // ring (a nasal, wobbling ring-ding with lots of rasp), a café racer's single thump
@@ -60,6 +62,7 @@ export const ENGINE_CLASS = {
 
   tank: 'tank',
   tractor: 'truck', combine: 'truck',   // (the farm's diesels: H61)
+  golfcart: 'electric',
 };
 export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', rescueboat: 'ambulance', rescue4x4: 'ambulance', firetruck: 'fire' };
 const AIR_BRAKES = new Set(['truck', 'bus']);

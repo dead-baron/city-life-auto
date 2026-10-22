@@ -231,7 +231,8 @@ function golfClub(m, H) {
   // the cart path: a concrete ribbon from the clubhouse round the holes (pale concrete: plaza tiles)
   const cart = spline([P(43, 9.5), P(38, 11), P(26, 12.4), P(14, 13.2), P(9, 14.5), P(10, 21), P(18, 24.5), P(26, 31.5), P(33, 33.6), P(40, 33.2), P(44, 28), P(50, 23), P(51.5, 16), P(48.5, 11)], 12);
   for (const [x, y] of cart) { const i = at(x / TILE, y / TILE); if (m.tiles[i] === T.GRASS) m.tiles[i] = T.PLAZA; }
-  for (const [k, a, v] of [[6, Math.PI, 0], [60, 1.2, 1], [118, -0.4, 2]]) if (cart[k]) { const [x, y] = cart[k]; H.addProp(m, 'golfcart', Math.round(x), Math.round(y - 4), 12, { a, v }); }
+  // (golf carts to drive - or steal: the owner, 10-08 - parked on it: server/systems/traffic.js parks one at a spot)
+  for (const [k, a] of [[6, Math.PI], [60, 1.2], [118, -0.4]]) if (cart[k]) { const [x, y] = cart[k]; m.parking.push({ x: Math.round(x), y: Math.round(y - 4), a, model: 'golfcart', bare: 1 }); }
   // the clubhouse at the north-east corner, the veranda on its south side; its car park out to the road
   add('clubhouse', 44.5, 4.2, 0);
   addCounter(m, 'clubhouse', 'Cedar Hills Golf Club', (PX + 44.5) * TILE, (PY + 6.8) * TILE, 44);   // (at the veranda steps: the bar)

@@ -28,7 +28,7 @@ import { F_GLASS, F_NOCAST, hash } from './gbuf.js';
 export const VEHICLE_DIMS = {
   compact: [80, 48], sedan: [94, 52], taxi: [100, 48], sports: [96, 48], pickup: [110, 50], flatbed: [150, 56],
   van: [112, 54], bus: [186, 62], police: [100, 48], swat: [120, 58], ambulance: [112, 56], armored: [122, 54],
-  bike: [48, 20], policebike: [50, 20], bicycle: [40, 14], speedboat: [104, 48], dinghy: [80, 40], rowboat: [64, 28], kayak: [52, 16], jetski: [46, 22],
+  bike: [48, 20], policebike: [50, 20], bicycle: [40, 14], speedboat: [104, 48], dinghy: [80, 40], rowboat: [64, 28], kayak: [52, 16], jetski: [46, 22], golfcart: [54, 30],
   cruiser: [42, 16], mtb: [42, 16], roadbike: [42, 12], bmx: [34, 14], cargobike: [58, 18], cart: [30, 20],
   policeboat: [104, 48], boxtruck: [150, 58], dumptruck: [140, 60], mixer: [146, 60], tanker: [160, 58],
   garbage: [140, 60], firetruck: [172, 66], towtruck: [134, 58],
@@ -56,7 +56,7 @@ export const VEHICLE_DIMS = {
 export const VEHICLE_TALL = {
   compact: 31, sedan: 33, taxi: 33, police: 33, sports: 27, pickup: 36, van: 46, suv: 42, limo: 32, ambulance: 54, armored: 50,
   swat: 52, bus: 62, flatbed: 46, boxtruck: 62, dumptruck: 46, mixer: 62, tanker: 54, garbage: 60, firetruck: 56, towtruck: 50,
-  bike: 24, policebike: 31, bicycle: 20, speedboat: 22, dinghy: 14, rowboat: 11, kayak: 8, jetski: 16, policeboat: 34,
+  bike: 24, policebike: 31, bicycle: 20, speedboat: 22, dinghy: 14, rowboat: 11, kayak: 8, jetski: 16, policeboat: 34, golfcart: 40,
   cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20, cart: 26,
   tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, waterbus: 70, foodtruck: 60,
   fbi: 42, army: 52,
@@ -69,7 +69,7 @@ const DEFAULT_PAINT = {
   compact: '#3f8a46', sedan: '#3f6a8e', taxi: '#e8b830', sports: '#c8302c', pickup: '#b0402e', van: '#e2e0d8',
   police: '#22242c', swat: '#262c44', ambulance: '#ecebe4', armored: '#7a7e84', flatbed: '#e6e2d8', boxtruck: '#e6e2d8',
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#3f7a3a', firetruck: '#c0302a', towtruck: '#2f4a8a',
-  bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a', rowboat: '#3f6a7a', kayak: '#e8a020',
+  bus: '#e8e0cc', bike: '#c8302c', policebike: '#e8e8e4', bicycle: '#4a7a3a', speedboat: '#f0eee8', dinghy: '#4e6a4a', rowboat: '#3f6a7a', kayak: '#e8a020', golfcart: '#f0eee8',
   cruiser: '#5ab0a8', mtb: '#d8682a', roadbike: '#c8302c', bmx: '#3a7ad0', cargobike: '#2f5a7a', cart: '#c8302c',
   vtwin: '#26282e', tourer: '#b8302a', chopper: '#2a2a2e', bobber: '#26282e', caferacer: '#e6e2d8', dirtbike: '#2f56b0', scooter: '#7ac0a0', trike: '#22357a', ratbike: '#4e5a34', bagger: '#22357a',
   jetski: '#c8302c', policeboat: '#22305a', suv: '#2c3a5e', fbi: '#17181d', army: '#4f5a36', limo: '#1c1e24', foodtruck: '#2f6ab0', tram: '#ecebe4', tugboat: '#2a2c36', ferry: '#f0eee6', waterbus: '#f0eee6', tractor: '#b83a2e', combine: '#3f9a2c', plane: '#ecebe4', excavator: '#e0b030',
@@ -1215,6 +1215,21 @@ export function vehicleModel(type, o = {}) {
       for (let k = -7; k <= 7; k++) m.box(L * 0.62 + k * 0.35, cy + k, hz + 1, L * 0.62 + k * 0.35 + 1.4, cy + k + 1, hz + 2, M.dark);   // the double paddle across the deck ahead of the cockpit
       for (const sd of [-1, 1]) m.box(L * 0.62 + sd * 2.4 - 2.2, cy + sd * 6 - 1, hz + 1, L * 0.62 + sd * 2.4 + 2.2, cy + sd * 6 + 2, hz + 2.2, M.black);   // its blades
       A.seat = [L * 0.45, cy, 4]; A.head.push([L - 2, cy, hz]); A.tail.push([1, cy, hz]); A.wake = [0, cy]; A.fire.push([L * 0.45, cy, 4]);
+      break;
+    }
+    case 'golfcart': {
+      // a golf cart: a low body in the paint on four little wheels, the black bench seat, a green canopy on four thin
+      // posts, the bag of clubs standing on the back
+      const cy = W / 2, roof = m.mat({ ramp: R('#2e5a3e'), k: 3 }), bag = m.mat({ ramp: R('#b8342e'), k: 3 }), club = m.mat({ ramp: MAT.metal, k: 2 });
+      for (const x of [10, L - 11]) for (const y of [0, W - 5]) m.cyl('y', x, 0, 5, 5, y, y + 5, M.tyre, 3, M.rim);
+      m.box(3, 3, 4, L - 2, W - 3, 11, M.body);
+      m.box(L - 14, 3, 11, L - 2, W - 3, 16, M.body);
+      m.box(15, 5, 11, 30, W - 5, 15, M.dark); m.box(15, 5, 15, 19, W - 5, 25, M.dark);
+      for (const x of [7, L - 15]) for (const y of [4, W - 6]) m.box(x, y, 11, x + 2, y + 2, 38, M.trim);
+      m.box(4, 2, 38, L - 10, W - 2, 40, roof);
+      m.box(1, cy - 5, 9, 9, cy + 5, 28, bag);
+      for (let k = 0; k < 3; k++) m.box(2 + k * 2.4, cy - 4 + k * 3, 28, 3.5 + k * 2.4, cy - 2.5 + k * 3, 32, club);
+      lamps(m, M, { zh: 11, h: 3, inset: 6, wd: 4, bumpers: false });
       break;
     }
     case 'speedboat': case 'policeboat': case 'dinghy': case 'jetski': {

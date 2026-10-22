@@ -13906,3 +13906,20 @@ open-air platforms had their boards, but the El's and the subway's didn't.
 
 Tests: test/world3rail.test.js - a board on each of the El's platforms, read from the deck and not from the street; a
 subway kiosk's prompt reads the board out.
+
+## 2026-10-22 · Golf carts to drive (or steal)
+
+The owner, 10-08: "Golf carts to drive (or steal)". The carts on Lakeside Greens' and the country club's cart paths
+were props.
+
+- **the golf cart** (`shared/vehicles.js` golfcart): electric, slow (300 top speed, a hatchback's 520) and small, two
+  seats. Its model (`client/art2/vehicles.js`): a cream body on four little wheels, the black bench seat, a green canopy
+  on four thin posts, and a red bag of clubs standing on the back. It sounds like an electric motor (a thin whine that
+  climbs with speed, and a polite beep for a horn: `client/sound/vehicles.js` electric).
+- **parked on the cart paths**: the props are now parking spots for golf carts (`m.parking`, model 'golfcart', no bay
+  painted): three along each course's path and one by Lakeside Greens' car park. One is parked at a spot most of the
+  time someone's near, like any parked car. Taking one is vehicle theft.
+- In the playtest panel's Vehicles section too.
+
+Tests: test/golfcart.test.js - slower and smaller than a hatchback, drawn and heard; carts parked on the course's path,
+one to get into and drive off.
