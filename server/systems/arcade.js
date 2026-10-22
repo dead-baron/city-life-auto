@@ -37,6 +37,7 @@ export function menu(world, p, poi) {
   }
   opts.push({ id: 'ar:play', label: 'Play STARFALL', price: ARCADE.price, note: `tickets for every ${ARCADE.perTicket} points`, shut: true });
   opts.push({ id: 'ar:skee', label: 'Skee-ball', price: ARCADE.skee.price, note: `${ARCADE.skee.balls} balls - tickets for every ${ARCADE.skee.perTicket} points`, shut: true });
+  opts.push({ id: 'ar:pinball', label: 'Pinball - NEON NIGHTS', price: ARCADE.pinball.price, note: `three balls - a ticket for every ${ARCADE.pinball.perTicket.toLocaleString('en-US')} points`, shut: true });
   opts.push({ id: 'ar:hockey', label: 'Air hockey against the machine', price: ARCADE.hockey.price, note: `first to ${ARCADE.hockey.to} - ${ARCADE.hockey.win} tickets for a win`, shut: true });
   opts.push({ id: 'ar:prizes', label: `The prize counter (${t} ticket${t === 1 ? '' : 's'})` });
   opts.push({ id: 'close', label: 'Leave' });
@@ -55,7 +56,7 @@ export function execute(world, p, poi, opt, pay) {
       play(world, p, false, poi.id);
       return null;
     }
-    case 'skee': case 'hockey': {   // (skee-ball and air hockey: client/skeeball.js, client/airhockey.js)
+    case 'skee': case 'hockey': case 'pinball': {   // (skee-ball and air hockey: client/skeeball.js, client/airhockey.js)
       if (!pay(p, ARCADE[parts[1]].price)) return 'Not enough money.';
       play(world, p, false, poi.id, parts[1]);
       return null;
@@ -82,7 +83,7 @@ export function execute(world, p, poi, opt, pay) {
 export function play(world, p, free, poi = null, game = 'starfall') {
   if (!p.conn) return;
   p.arcade = { id: randomBytes(6).toString('hex'), at: world.time, free: !!free, poi, game };
-  const best = { pool: p.profile.poolBest, skee: p.profile.skeeBest, hockey: p.profile.hockeyWins }[game] ?? p.profile.arcadeBest;
+  const best = { pool: p.profile.poolBest, skee: p.profile.skeeBest, hockey: p.profile.hockeyWins, pinball: p.profile.pinballBest }[game] ?? p.profile.arcadeBest;
   p.conn.sendJSON({ t: 'arcade', game, id: p.arcade.id, free: !!free, best: best || 0 });
 }
 // the Rusty Spur's pool table (activities.js poolTable): a frame for ARCADE.pool dollars
@@ -103,6 +104,14 @@ function ticketGame(world, p, A, msg) {
     const best = n > (prof.skeeBest || 0);
     if (best) prof.skeeBest = n;
     text = `Skee-ball: ${n}${best ? ' - your best!' : ''}`;
+  } else if (A.game === 'pinball') {
+    const Pb = ARCADE.pinball;
+    if (n < 0 || n % 10 || el < Pb.minS) return;
+    const pts = Math.min(n, Math.floor((el + 2) * Pb.maxRate));   // (no faster than a table can score)
+    tickets = Math.min(ARCADE.maxTickets, Math.floor(pts / Pb.perTicket));
+    const best = pts > (prof.pinballBest || 0);
+    if (best) prof.pinballBest = pts;
+    text = `NEON NIGHTS: ${pts.toLocaleString('en-US')}${best ? ' - your best!' : ''}`;
   } else {
     const Hk = ARCADE.hockey, won = !!msg.win && n === Hk.to && el >= Hk.minS;
     if (n < 0 || n > Hk.to || (msg.win && !won) || el < n * 1.5) return;   // (a goal takes a moment at least)
@@ -131,7 +140,7 @@ export function onScore(world, p, msg) {
     store.touch();
     return;
   }
-  if (A.game === 'skee' || A.game === 'hockey') return ticketGame(world, p, A, msg);
+  if (A.game === 'skee' || A.game === 'hockey' || A.game === 'pinball') return ticketGame(world, p, A, msg);
   const secs = Math.max(0, Math.min(Number(msg.secs) || 0, world.time - A.at + 2));
   const score = Math.max(0, Math.min(Math.floor(Number(msg.score) || 0), Math.floor(secs * ARCADE.maxRate)));
   const prof = p.profile, best = score > (prof.arcadeBest || 0);

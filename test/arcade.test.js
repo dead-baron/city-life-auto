@@ -172,3 +172,45 @@ test('skee-ball and air hockey: the lane\'s rings, the table\'s puck, and their 
   arcade.onScore(w, p, { id: c.id, score: 3, them: 7, win: 0, secs: 60 });
   assert.equal(prof.tickets, t0 + ARCADE.hockey.win + 3 * ARCADE.hockey.perGoal, 'a loss: the goals');
 });
+
+test('pinball: the plunger, the bumpers and the flippers keep it up, a drain; the tickets', async () => {
+  const P = (await import('../client/pinball.js'))._test;
+  // the plunger sends it up the lane and round into the playfield; flippers raised as it comes down keep it in play
+  const T = P.newTable();
+  T.ball = { x: 181, y: 210, vx: 0, vy: -650, lane: true };
+  const hits = {};
+  let t = 0, drained = null, left = false;
+  for (; t < 60 && !drained; t += 1 / 240) {
+    const b = T.ball;
+    if (b && !b.lane) { left = true; T.up[0] = b.y > 175 && b.x < 123 && b.vy > 0; T.up[1] = b.y > 175 && b.x >= 123 && b.vy > 0; }
+    if (P.physics(T, 1 / 240, (w) => { hits[w] = (hits[w] || 0) + 1; }) === 'drain') drained = t;
+  }
+  assert.ok(left, 'out of the shooter lane');
+  assert.ok(hits.bumper && hits.flip, `the bumpers and the flippers (${JSON.stringify(hits)})`);
+  assert.ok(T.score >= 100, `points (${T.score})`);
+  // left alone, a ball falls between the flippers
+  const T2 = P.newTable();
+  T2.ball = { x: 123, y: 120, vx: 0, vy: 0 };
+  let r = null;
+  for (let k = 0; k < 240 * 5 && r !== 'drain'; k++) r = P.physics(T2, 1 / 240);
+  assert.equal(r, 'drain');
+  // a raised flipper hits a ball resting on it up the table
+  const T3 = P.newTable(), [ex, ey] = P.flipperEnd(T3.flips[0]);
+  T3.ball = { x: (T3.flips[0].px + ex) / 2, y: (T3.flips[0].py + ey) / 2 - 4, vx: 0, vy: 0 };
+  T3.up[0] = true;
+  for (let k = 0; k < 12; k++) P.physics(T3, 1 / 240);
+  assert.ok(T3.ball && T3.ball.vy < -100, `flipped up (${T3.ball && T3.ball.vy.toFixed(0)})`);
+  // the server
+  const w = makeWorld();
+  const { p, conn, prof } = joinPlayer(w, { cash: 50 });
+  arcade.play(w, p, false, null, 'pinball');
+  let c = lastOf(conn, 'arcade');
+  run(w, 30);
+  arcade.onScore(w, p, { id: c.id, score: 8000, secs: 30 });
+  assert.equal(prof.tickets, 8, 'a ticket a thousand');
+  assert.equal(prof.pinballBest, 8000);
+  arcade.play(w, p, false, null, 'pinball'); c = lastOf(conn, 'arcade');
+  run(w, ARCADE.pinball.minS + 1);
+  arcade.onScore(w, p, { id: c.id, score: 999990, secs: 11 });
+  assert.ok(prof.tickets - 8 <= Math.floor((ARCADE.pinball.minS + 3) * ARCADE.pinball.maxRate / ARCADE.pinball.perTicket), 'no faster than a table scores');
+});

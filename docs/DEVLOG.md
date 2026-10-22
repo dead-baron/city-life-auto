@@ -14632,3 +14632,17 @@ The page checks it first and the server again; the server says how it went.
 
 Tests: test/names.test.js - the names that may and may not be, a rename over your head at once, taken in any case,
 not again so soon, nothing abusive, the crew's list keeping up.
+
+## 2026-10-22 · Pinball at the arcades
+
+The last of the owner's arcade games (10-08: "air hockey, skee-ball, pinball"). NEON NIGHTS, a little table of our own
+(client/pinball.js; shared/rules.js ARCADE.pinball; $1 at any arcade's counter): the plunger up the shooter lane (hold,
+let go - harder the longer), three pop bumpers at the top (100 each), a slingshot over each flipper kicking the ball back
+across the table, a bank of three drop targets on the left wall (500 each; all three down, 2,000 more and they come back
+up), two flippers, three balls. The flippers on Left / Right (A / D, Z / M), the bumpers LB / RB or the triggers, or a
+finger on each half of the screen; the plunger on Space, Enter, Down or pad A, or a finger on the shooter lane. A ticket
+for every 1,000 points (no faster than a table can score: the server's clock); your best kept.
+
+Tests: test/arcade.test.js - the plunger into the playfield, the bumpers and the flippers keeping a ball up, a ball left
+alone falling between the flippers, a raised flipper sending a ball up the table, the tickets and a score too quick to be
+true.

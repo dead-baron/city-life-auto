@@ -832,6 +832,8 @@ export const ARCADE = {
   // hockey.perGoal for each goal in a loss; the least time a game can take (server's clock, s)
   skee: { price: 1, balls: 9, perTicket: 25, minS: 12 },
   hockey: { price: 1, to: 7, win: 20, perGoal: 2, minS: 20 },
+  // pinball (client/pinball.js, NEON NIGHTS): a ticket for every pinball.perTicket points, no more than maxRate points a second
+  pinball: { price: 1, perTicket: 1000, maxRate: 400, minS: 10 },
   prizes: [{ item: 'glowstick', t: 25 }, { item: 'energy', t: 50 }, { item: 'flare', t: 60 }, { decor: 'art', t: 150 }, { item: 'headlamp', t: 200 }, { decor: 'turntable', t: 400 }, { item: 'skateboard', t: 500 }],
 };
 export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };

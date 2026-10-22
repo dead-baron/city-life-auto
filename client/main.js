@@ -355,7 +355,7 @@ function onText(m) {
     case 'crew': phone.on('Crew', m); break;   // the Crew app (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       openOverlay('arcade');
-      (m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
+      (m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
       break;
     case 'bounties': phone.on('Bounties', m); break;
     case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)
@@ -3202,9 +3202,10 @@ function drawWorldV1(F) {
   }
   if (!sub && S.farmArt) S.farmArt.drawV1(g, view, now);   // (the garden plots near you, the fields' rows: render/farmart.js)
   // the elevated highway: its shadow and the ramps' feet lie on the ground
-  const hv = sub ? { slabs: [], pillars: [] } : S.highway.visible(view);
-  S.highway.drawShadows(g, hv.slabs, sky);
-  S.highway.drawLow(g, hv.slabs);
+  // (none of it down in the subway: the classic highway isn't even built for the tunnel view - it threw on World v3's
+  // window, every frame, before the trains were drawn: the owner's 10-16 / 10-22 "this is what I see on the subway")
+  const HW = sub ? null : S.highway, hv = HW ? HW.visible(view) : { slabs: [], pillars: [] };
+  if (HW) { HW.drawShadows(g, hv.slabs, sky); HW.drawLow(g, hv.slabs); }
   // the sun's shadows: buildings (from just off screen too), trees and palms
   if (!sub && sky.sun > 0.05 && gfx.shadows > 0) {
     const reach = 90 * Math.min(3.2, sky.shadowLen);
@@ -3271,7 +3272,7 @@ function drawWorldV1(F) {
   for (const v of vehs) if (!boats.includes(v)) items.push({ y: levelKey(v.ry, v.rz || 0), v, z: v.rz || 0 });
   for (const p of peds) if (!swimmers.includes(p) && (up(p) || !(p.flags & (PF.DEAD | PF.DOWN | PF.STUN)))) items.push({ y: levelKey(p.ry, p.rz || 0) - ((p.flags & (PF.DEAD | PF.DOWN | PF.STUN)) ? 0.4 : 0), p, z: p.rz || 0 });
   for (const c of crates) if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); const pz = par ? par.rz || 0 : 0; items.push({ y: levelKey(par ? par.ry : c.ry, pz) + 0.5, c, z: pz }); }
-  S.highway.items(hv.slabs, hv.pillars, items);
+  if (HW) HW.items(hv.slabs, hv.pillars, items);
   for (const c of crates) if ((c.flags & 3) === 1) items.push({ y: c.ry + 1, c });
   const poles = [];
   if (!sub) for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++)
@@ -3289,8 +3290,8 @@ function drawWorldV1(F) {
     const lift = it.z ? liftOf(it.z) : 0;
     if (lift) { g.save(); g.translate(0, -lift); }
     if (it.b) S.buildings.draw(g, it.b, it.a);
-    else if (it.slab) S.highway.drawSlab(g, it.slab);
-    else if (it.pillar) S.highway.drawPillar(g, it.pillar);
+    else if (it.slab) HW.drawSlab(g, it.slab);
+    else if (it.pillar) HW.drawPillar(g, it.pillar);
     else if (it.v) drawVehicleEnt(it.v, now, dt);
     else if (it.p) { if (!drawOnStairs(g, S.map, it.p, () => drawPed(it.p, now))) drawPed(it.p, now); }
     else if (it.c) drawCrateEnt(it.c, now);
