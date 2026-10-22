@@ -13565,3 +13565,20 @@ more than five seconds, 8 for more than fifteen and some for minutes, against a 
 - The same five minutes again: none jammed for more than five seconds.
 
 Tests: test/boatjam.test.js - a boat driven at a quay notices it's jammed and heads somewhere on the water instead.
+
+## 2026-10-21 · More trains: one into each station every couple of minutes
+
+The owner, 10-16: "More trains on the main loop: one every 1-2 minutes". World v3 ran two trains on every loop. On
+the main loop, the Grand Loop's 18½-minute lap each way, that was a train every nine minutes.
+
+- **trains by lap** (`server/systems/trains.js` loopTrains; `shared/rules.js` TRAIN_LOOP_HEADWAY_S = 120,
+  TRAIN_LOOP_MAX = 10): each loop gets as many trains as put one into each of its stations about every two minutes,
+  two at the least. The main loop has nine each way and the shorter loops four, 34 trains in all (12 before).
+- **kept spaced** (the station stop): a train that comes in close behind the one before it waits at the platform,
+  at most 75 s, until it's its loop's headway behind. Bunched trains spread out again round the loop, and within
+  twenty minutes they're about two minutes apart all the way round. The platform clocks count down to the held
+  departure. The trains start out spread round each loop by place, no longer held back by minutes in turn.
+- The server's tick with all 34 running: under 3 ms.
+
+Tests: test/world3rail.test.js - each loop's trains put one into its stations about every two minutes; every train
+still runs and stops in five minutes, and none runs into another.

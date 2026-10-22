@@ -400,6 +400,9 @@ export const ROB_SCENE_S = 180;          // the police treat the place as the sc
 
 // Trains
 export const TRAIN_HEADWAY_S = 60;       // a train pulls into each station about this often (the fleet size follows from the loop's run time)
+export const TRAIN_LOOP_HEADWAY_S = 120; // World v3's loops: a train into each station about this often (the owner, 10-16: "one every 1-2 minutes")
+export const TRAIN_LOOP_MAX = 10;        // ...but no more than this many trains to a loop
+export const TRAIN_HOLD_MAX_S = 75;      // a train close behind the one before waits at a platform at most this long, to space out
 export const TRAIN_SPEED = 560;          // cruising speed (px/s) - as quick as a fast car; nothing stops it, nothing damages it
 export const TRAIN_ACCEL = 85;           // pulling away (px/s^2) - eased in and out, no lurch
 export const TRAIN_BRAKE = 115;          // braking into a station

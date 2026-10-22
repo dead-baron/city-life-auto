@@ -14,6 +14,7 @@ import * as trains from '../server/systems/trains.js';
 import * as players from '../server/systems/players.js';
 import { joinPlayer, teleport } from './helpers.js';
 import { IN } from '../shared/input.js';
+import { TRAIN_DWELL_S, TRAIN_LOOP_HEADWAY_S, TRAIN_LOOP_MAX } from '../shared/rules.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const mod = (a, n) => ((a % n) + n) % n;
@@ -96,6 +97,12 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
   assert.ok(ts.length >= SERVICES.length * 2, `${ts.length} trains`);
   const loops = new Set(ts.filter((t) => !w.rails[t.r].subway).map((t) => t.r));   // (the subway lines' own: test/world3subway.test.js)
   assert.equal(loops.size, SERVICES.length * 2, 'trains on every loop');
+  // as many trains to a loop as put one into each of its stations about every TRAIN_LOOP_HEADWAY_S (the owner, 10-16:
+  // "More trains on the main loop: one every 1-2 minutes")
+  for (const r of loops) {
+    const lap = w.railTimings[r].reduce((a, q) => a + q.total + TRAIN_DWELL_S, 0), n = ts.filter((t) => t.r === r).length;
+    assert.ok(lap / n <= TRAIN_LOOP_HEADWAY_S * 1.4 || n >= TRAIN_LOOP_MAX - 1, `${w.rails[r].name}: ${n} trains on a ${Math.round(lap)} s lap - one every ${Math.round(lap / n)} s`);
+  }
   const run = ts.map(() => ({ dist: 0, stops: new Set(), last: null }));
   let hits = 0, steps = 0, firstHit = null;
   const downs = new Set(), closedFor = new Set();   // (the level crossings whose gates came down; the loops they came down for)
