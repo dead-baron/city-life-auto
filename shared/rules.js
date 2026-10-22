@@ -807,3 +807,13 @@ export const K9 = { share: 0.3, stars: 2, maxStars: 3, speed: 2.7, sight: 800, r
 // ms), is a sentence at Kestrel Bay Penitentiary instead of the station's cells: base s + perStar a star + perRepeat for
 // each booking before it in that time, up to max s; the wall takes climbS s to get over; over it, escapeStars stars
 export const PRISON = { stars: 4, repeat: 3, repeatMs: 2 * 3600e3, base: 90, perStar: 35, perRepeat: 30, max: 300, climbS: 5, escapeStars: 3 };
+// casinos (server/systems/casino.js): the slot machines' spins ($); the tables' stakes ($, changed in turn); blackjack
+// pays bjPays to one; the reels' symbols - weight on each reel, three of a kind paying `three` times the bet (the bet
+// back included), two cherries anywhere twoCherries: about 95% back over time
+export const CASINO = {
+  slots: [5, 25, 100], stakes: [10, 50, 250, 1000], bjPays: 1.5, twoCherries: 3,
+  reel: {
+    CHERRY: { w: 6, three: 10, icon: '🍒' }, LEMON: { w: 7, three: 7, icon: '🍋' }, BELL: { w: 5, three: 14, icon: '🔔' },
+    BAR: { w: 4, three: 25, icon: 'BAR' }, SEVEN: { w: 2, three: 70, icon: '7' }, LOTUS: { w: 1, three: 300, icon: '❀' },
+  },
+};

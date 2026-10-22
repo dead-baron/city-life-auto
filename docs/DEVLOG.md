@@ -14310,3 +14310,27 @@ A read-through of the two new systems found:
   nor a hijacked car's crew turned on the thief).
 
 Tests: test/tennis.test.js (both ways round; the pro floored; the serve left), test/k9.test.js (levels, grace, leash).
+
+## 2026-10-22 · Casinos: the slots, roulette and blackjack
+
+The owner, 10-08 ("casinos and card games", #309) and 10-16 again; Lucky Mesa's casinos (the old casinos along Old
+Downtown's covered street, every resort on the Strip) stood marked "for the gambling to come". server/systems/casino.js:
+
+- **the floor**: at a casino's door the action button opens it - the slots, roulette, blackjack - through the
+  counters' menus (economy.js: a casino's place has its own), a felt board above the options showing the table as it
+  stands (hud.js openMenu `m.board`: the cards, the reels, the wheel's pocket). Bets come out of the money on you,
+  then your card, as at any counter; winnings are paid out in cash, on you. The menu keeps a running tally of the
+  visit ("Up $85 this visit").
+- **the slots**: $5, $25 and $100 spins; three reels of cherries, lemons, bells, bars, sevens and the golden lotus;
+  three of a kind pays (three lotuses 300 times the bet), two cherries anywhere three times - about 95% back over
+  time (shared/rules.js CASINO; the test works the payback out over every way the reels can stop).
+- **roulette**: a single-zero wheel; red or black, odd or even, low or high at evens, a dozen at 2:1, straight up on
+  your number at 35:1; the zero loses every outside bet. The stake steps $10 / $50 / $250 / $1,000.
+- **blackjack**: dealt from a continuously shuffled shoe; hit, stand, double down on your first two cards; the dealer
+  stands on all 17s; blackjack pays 3:2, a push gives the bet back, no splits at these tables. A hand left on the
+  table (the panel closed) is waiting when you open it again.
+- the sounds: the bell and the coins on a win, more for a jackpot, the clack of a losing spin.
+
+Tests: test/casino.test.js - the odds (the slots' payback, the zero's edge on every roulette bet, aces counted either
+way), a floor's slots, a red bet, thirty hands of blackjack each paid as it should be, the tally, no money no bets, no
+bets from across the street; a hand left and come back to, a double down.

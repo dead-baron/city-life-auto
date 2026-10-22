@@ -1,0 +1,223 @@
+// Casinos (the owner, 10-08: "casinos and card games" (#309), and again 10-16; Lucky Mesa's casinos stood marked for
+// "the gambling to come"). At a casino's door - the old casinos along Old Downtown's covered street, the Strip's resorts -
+// the action button opens the floor: the slots, roulette and blackjack, played against the house. Bets come out of the
+// money on you (then your card, as at any counter: economy.js pay); winnings are paid in cash - walk out with them, and
+// mind who saw you win. The house's edge is the real games': roulette's single zero, blackjack paying 3:2 with the
+// dealer standing on all 17s (no splits at these tables), slots paying back about 95% (the paytable: shared/rules.js
+// CASINO). Luck runs hot and cold; the house wins in the end.
+//   p.casino: { poi, view: null (the floor) | 'roulette' | 'bj', stake (index into CASINO.stakes), num (roulette's
+//               straight-up pick), board (the table as it stands: rows for the page), msg, net (this visit, $),
+//               bj: { bet, you: [cards], dealer: [cards], doubled } while a hand's being played }
+// The page draws `board` (hud.js openMenu: cards, reels, the wheel's pocket) above the options.
+import { CASINO } from '../../shared/rules.js';
+import { mulberry32 } from '../../shared/rng.js';
+import { store } from '../store.js';
+
+let rng = mulberry32((Date.now() ^ 0x5eedca5) >>> 0);
+export function seed(n) { rng = mulberry32(n >>> 0); }   // (tests: a known run of luck)
+
+export const isCasino = (poi) => !!(poi && poi.casino);
+export const label = (poi) => `${poi.label} - the casino floor`;
+
+const state = (p, poi) => {
+  if (!p.casino || p.casino.poi !== poi.id) p.casino = { poi: poi.id, view: null, stake: 0, num: 17, board: null, msg: '', net: 0, bj: null, at: 0 };
+  return p.casino;
+};
+// up to the door (economy.js openMenu): the floor, or the hand you left on the table; a new visit after a while away
+export function open(world, p, poi) {
+  const C = state(p, poi);
+  if (!C.bj) { C.view = null; C.board = null; C.msg = ''; if (world.time - C.at > 600) C.net = 0; }
+  C.at = world.time;
+}
+const money = (n) => `$${Math.abs(n).toLocaleString()}`;
+const tonight = (C) => (C.net > 0 ? `Up ${money(C.net)} this visit.` : C.net < 0 ? `Down ${money(C.net)} this visit.` : '');
+
+// ---- the cards ------------------------------------------------------------------------------------------------------
+// a card: 0..51 (rank n % 13: 0 the ace, 1..9 two to ten, 10..12 the court; suit n / 13); dealt from a shoe shuffled
+// continuously (each card drawn fresh)
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'], SUITS = ['♠', '♥', '♦', '♣'];
+const draw = () => Math.floor(rng() * 52);
+export function handValue(cards) {
+  let v = 0, aces = 0;
+  for (const c of cards) { const r = c % 13; if (r === 0) { aces++; v += 11; } else v += Math.min(10, r + 1); }
+  while (v > 21 && aces) { v -= 10; aces--; }
+  return v;
+}
+const natural = (cards) => cards.length === 2 && handValue(cards) === 21;
+const cardItem = (c) => { const s = Math.floor(c / 13); return { t: `${RANKS[c % 13]}${SUITS[s]}`, c: s === 1 || s === 2 ? 'card red' : 'card' }; };
+function bjBoard(B, hide) {
+  const dealer = B.dealer.map(cardItem);
+  if (hide) dealer[1] = { t: '?', c: 'card back' };
+  return [
+    { k: 'Dealer', items: dealer, v: hide ? '' : String(handValue(B.dealer)) },
+    { k: 'You', items: B.you.map(cardItem), v: String(handValue(B.you)) },
+  ];
+}
+
+// ---- the floor's menu (economy.js buildMenu) ------------------------------------------------------------------------
+export function menu(world, p, poi) {
+  const C = state(p, poi), prof = p.profile, stake = CASINO.stakes[C.stake], opts = [];
+  const can = (n) => prof.cash + prof.bank >= n;
+  let title = poi.label, sub = C.msg || 'The floor hums: bells, chips, the croupiers\' calls. Winnings paid in cash.';
+  if (C.view === 'bj') {
+    title = `${poi.label} - blackjack`;
+    if (C.bj) {
+      const B = C.bj;
+      opts.push({ id: 'cs:hit', label: 'Hit', note: 'another card' });
+      opts.push({ id: 'cs:stand', label: 'Stand', note: 'the dealer plays' });
+      if (B.you.length === 2 && !B.doubled) opts.push({ id: 'cs:double', label: 'Double down', price: B.bet, dis: !can(B.bet), note: 'double the bet, one card' });
+    } else {
+      opts.push({ id: 'cs:deal', label: 'Deal', price: stake, dis: !can(stake), note: 'blackjack pays 3:2' });
+      opts.push({ id: 'cs:stake', label: `Stake ${money(stake)}`, note: 'change it' });
+      opts.push({ id: 'cs:floor', label: 'Back to the floor' });
+    }
+  } else if (C.view === 'roulette') {
+    title = `${poi.label} - roulette`;
+    for (const [k, l, n] of [['red', 'Red', 'pays 1:1'], ['black', 'Black', 'pays 1:1'], ['odd', 'Odd', 'pays 1:1'], ['even', 'Even', 'pays 1:1'], ['low', 'Low (1-18)', 'pays 1:1'], ['high', 'High (19-36)', 'pays 1:1'], ['d1', 'First dozen (1-12)', 'pays 2:1'], ['d2', 'Second dozen (13-24)', 'pays 2:1'], ['d3', 'Third dozen (25-36)', 'pays 2:1']]) opts.push({ id: `cs:rb:${k}`, label: l, price: stake, dis: !can(stake), note: n });
+    opts.push({ id: 'cs:rb:n', label: `Straight up on ${C.num}`, price: stake, dis: !can(stake), note: 'pays 35:1' });
+    opts.push({ id: 'cs:num', label: 'Pick another number' });
+    opts.push({ id: 'cs:stake', label: `Stake ${money(stake)}`, note: 'change it' });
+    opts.push({ id: 'cs:floor', label: 'Back to the floor' });
+  } else {
+    CASINO.slots.forEach((n, i) => opts.push({ id: `cs:slot:${i}`, label: `Slots - a ${money(n)} spin`, price: n, dis: !can(n), note: i === CASINO.slots.length - 1 ? 'three lotuses pay 300x' : '' }));
+    opts.push({ id: 'cs:roulette', label: 'Roulette', note: 'red or black, a dozen, your number' });
+    opts.push({ id: 'cs:bj', label: 'Blackjack', note: 'beat the dealer to 21' });
+  }
+  opts.push({ id: 'close', label: C.net > 0 ? 'Cash out and leave' : 'Leave' });
+  const t = tonight(C);
+  return { t: 'menu', poi: poi.id, title, sub: t ? `${sub} ${t}` : sub, opts, cash: prof.cash, bank: prof.bank, board: C.board || undefined };
+}
+
+// ---- playing (economy.js execute: `cs:...` options; pay is its pay()) -------------------------------------------------
+export function execute(world, p, poi, opt, pay) {
+  const C = state(p, poi), parts = opt.split(':'), stake = CASINO.stakes[C.stake], prof = p.profile;
+  C.at = world.time;
+  const win = (n) => { prof.cash += n; p.meDirty = true; store.touch(); };
+  switch (parts[1]) {
+    case 'floor': C.view = null; C.board = null; C.msg = ''; return null;
+    case 'roulette': C.view = 'roulette'; C.board = null; C.msg = 'Place your bet. No more bets once the ball\'s dropping.'; return null;
+    case 'bj': C.view = 'bj'; C.board = null; C.msg = 'The dealer stands on all 17s. Blackjack pays 3:2.'; return null;
+    case 'stake': C.stake = (C.stake + 1) % CASINO.stakes.length; return null;
+    case 'num': C.num = Math.floor(rng() * 37); C.msg = `Your number: ${C.num}.`; return null;
+    case 'slot': {
+      const bet = CASINO.slots[Number(parts[2])];
+      if (!bet) return 'No such machine.';
+      if (!pay(p, bet)) return 'Not enough money.';
+      C.net -= bet;
+      const reels = [spinReel(), spinReel(), spinReel()], x = slotPays(reels);
+      C.board = [{ k: 'Reels', items: reels.map((r) => ({ t: CASINO.reel[r].icon, c: `reel ${r.toLowerCase()}` })), v: '' }];
+      if (x > 0) {
+        const n = Math.round(bet * x);
+        win(n); C.net += n;
+        const what = reels[0] === reels[1] && reels[1] === reels[2] ? `Three ${PLURAL[reels[0]]}` : 'Two cherries';
+        C.msg = x >= 70 ? `${what} - JACKPOT! ${money(n)} in cash!` : `${what}: pays ${money(n)}.`;
+        world.emit(poi.x, poi.y, { e: 'casino', k: x >= 70 ? 'jackpot' : 'win', x: Math.round(poi.x), y: Math.round(poi.y) });
+        if (x >= 70) world.notify(p, `JACKPOT at ${poi.label}: ${money(n)} - in cash, on you.`, 'good');
+      } else { C.msg = 'Nothing this time.'; world.emit(poi.x, poi.y, { e: 'casino', k: 'spin', x: Math.round(poi.x), y: Math.round(poi.y) }); }
+      return null;
+    }
+    case 'rb': {
+      if (!pay(p, stake)) return 'Not enough money.';
+      C.net -= stake;
+      const n = Math.floor(rng() * 37), x = roulettePays(parts[2], n, C.num);
+      C.board = [{ k: 'The wheel', items: [{ t: String(n), c: `pocket ${pocketColour(n)}` }], v: n === 0 ? 'zero' : `${pocketColour(n)}, ${n % 2 ? 'odd' : 'even'}` }];
+      if (x > 0) {
+        const pay2 = stake * (x + 1);
+        win(pay2); C.net += pay2;
+        C.msg = `${n} ${pocketColour(n)} - you win ${money(pay2)}!`;
+        world.emit(poi.x, poi.y, { e: 'casino', k: x >= 35 ? 'jackpot' : 'win', x: Math.round(poi.x), y: Math.round(poi.y) });
+      } else { C.msg = `${n} ${pocketColour(n)}. The house takes it.`; world.emit(poi.x, poi.y, { e: 'casino', k: 'spin', x: Math.round(poi.x), y: Math.round(poi.y) }); }
+      return null;
+    }
+    case 'deal': {
+      if (C.bj) return null;
+      if (!pay(p, stake)) return 'Not enough money.';
+      C.net -= stake;
+      const B = C.bj = { bet: stake, you: [draw(), draw()], dealer: [draw(), draw()], doubled: false };
+      if (natural(B.you) || natural(B.dealer)) return settle(world, p, poi, C, win);
+      C.board = bjBoard(B, true); C.msg = 'Hit or stand?';
+      return null;
+    }
+    case 'hit': case 'double': {
+      const B = C.bj;
+      if (!B) return null;
+      if (parts[1] === 'double') {
+        if (B.you.length !== 2 || B.doubled) return 'Not now.';
+        if (!pay(p, B.bet)) return 'Not enough money.';
+        C.net -= B.bet; B.bet *= 2; B.doubled = true;
+      }
+      B.you.push(draw());
+      const v = handValue(B.you);
+      if (v > 21 || v === 21 || B.doubled) return settle(world, p, poi, C, win);
+      C.board = bjBoard(B, true); C.msg = `${v}. Hit or stand?`;
+      return null;
+    }
+    case 'stand': return C.bj ? settle(world, p, poi, C, win) : null;
+  }
+  return 'Not at this table.';
+}
+
+// the hand played out: the dealer draws to 17, the bets paid
+function settle(world, p, poi, C, win) {
+  const B = C.bj, you = handValue(B.you);
+  C.bj = null;
+  let back = 0, why;
+  if (natural(B.you) || natural(B.dealer)) {
+    if (natural(B.you) && natural(B.dealer)) { back = B.bet; why = 'Blackjack each - a push.'; }
+    else if (natural(B.you)) { back = B.bet + Math.floor(B.bet * CASINO.bjPays); why = 'Blackjack!'; }
+    else why = 'The dealer has blackjack.';
+  } else if (you > 21) why = `Bust at ${you}.`;
+  else {
+    while (handValue(B.dealer) < 17) B.dealer.push(draw());
+    const d = handValue(B.dealer);
+    if (d > 21) { back = B.bet * 2; why = `The dealer busts at ${d}.`; }
+    else if (you > d) { back = B.bet * 2; why = `${you} beats ${d}.`; }
+    else if (you === d) { back = B.bet; why = `${you} each - a push.`; }
+    else why = `${d} beats ${you}.`;
+  }
+  C.board = bjBoard(B, false);
+  if (back) { win(back); C.net += back; }
+  C.msg = back > B.bet ? `${why} You win ${money(back - B.bet)}.` : back ? why : `${why} The house takes ${money(B.bet)}.`;
+  world.emit(poi.x, poi.y, { e: 'casino', k: back > B.bet ? 'win' : 'spin', x: Math.round(poi.x), y: Math.round(poi.y) });
+  return null;
+}
+
+// ---- the slots and the wheel ----------------------------------------------------------------------------------------
+const REELS = Object.keys(CASINO.reel);
+const PLURAL = { CHERRY: 'cherries', LEMON: 'lemons', BELL: 'bells', BAR: 'bars', SEVEN: 'sevens', LOTUS: 'golden lotuses' };
+const REEL_W = REELS.reduce((s, k) => s + CASINO.reel[k].w, 0);
+function spinReel() {
+  let r = rng() * REEL_W;
+  for (const k of REELS) { r -= CASINO.reel[k].w; if (r < 0) return k; }
+  return REELS[REELS.length - 1];
+}
+// what a spin pays, times the bet (the bet back included): three of a kind by the paytable; two cherries anywhere
+export function slotPays(reels) {
+  if (reels[0] === reels[1] && reels[1] === reels[2]) return CASINO.reel[reels[0]].three;
+  return reels.filter((r) => r === 'CHERRY').length === 2 ? CASINO.twoCherries : 0;
+}
+// the slots' payback over every way the reels can stop (tests: the house's edge is real but fair)
+export function slotReturn() {
+  let s = 0;
+  for (const a of REELS) for (const b of REELS) for (const c of REELS) s += CASINO.reel[a].w * CASINO.reel[b].w * CASINO.reel[c].w / (REEL_W * REEL_W * REEL_W) * slotPays([a, b, c]);
+  return s;
+}
+const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+export const pocketColour = (n) => (n === 0 ? 'green' : RED.has(n) ? 'red' : 'black');
+// what a bet wins on pocket n, times the stake (on top of the stake back), 0 a loss - the zero loses every outside bet
+export function roulettePays(bet, n, num) {
+  if (bet === 'n') return n === num ? 35 : 0;
+  if (n === 0) return 0;
+  switch (bet) {
+    case 'red': return RED.has(n) ? 1 : 0;
+    case 'black': return RED.has(n) ? 0 : 1;
+    case 'odd': return n % 2 ? 1 : 0;
+    case 'even': return n % 2 ? 0 : 1;
+    case 'low': return n <= 18 ? 1 : 0;
+    case 'high': return n >= 19 ? 1 : 0;
+    case 'd1': return n <= 12 ? 2 : 0;
+    case 'd2': return n >= 13 && n <= 24 ? 2 : 0;
+    case 'd3': return n >= 25 ? 2 : 0;
+  }
+  return 0;
+}
