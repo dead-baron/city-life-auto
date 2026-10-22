@@ -13594,3 +13594,13 @@ already shows that.
   do.
 
 Tests: test/elplatform.test.js - on the platform with no train in, no next-train prompt; with one in, board it.
+
+## 2026-10-21 · The tyres' screech softer
+
+The owner, 10-10 and again 10-15: "Tyre screech softer; burnouts". The first pass (#373, 10-10) made the screech a
+rubber squeal instead of a whoosh and silent on a hard start. Burnouts already screech and smoke on the spot.
+
+- **softer** (`client/sound/vehicles.js` TYRE_LEVEL 0.08 to 0.05): about 4 dB down. Other people's cars sit further
+  under yours (0.6 of the level, was 0.8), and the squeal eases in rather than biting at once.
+
+Tests: test/sound.test.js - the level kept a little over your own engine.

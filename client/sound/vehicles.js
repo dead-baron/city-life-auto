@@ -67,7 +67,7 @@ const AIR_BRAKES = new Set(['truck', 'bus']);
 // screeches, 0-1, from what the server says (sliding: VF.DRIFT) and what it looks like here - going sideways at speed, or
 // spinning on the spot with the engine on for half a second (a burnout). A hard start in a straight line, also VF.DRIFT
 // (it passes through the low speeds in a moment), is silent.
-export const TYRE_LEVEL = 0.08;
+export const TYRE_LEVEL = 0.05;   // (0.08 till 2026-10-21: the owner, 10-15, "Tyre screech softer" - 4 dB down, and other people's cars' under yours)
 export function screech(st, p) {
   if (!(st.flags & VF.DRIFT) || (p.pedal && st.spd < 60)) return 0;
   if (st.spd < 40) return st.on && !p.boat && !p.pedal && st.burnT > 0.5 ? 0.75 : 0;
@@ -322,7 +322,7 @@ export class VehicleSounds {
           const f = (st.spd < 40 ? 640 : 760 + 380 * Math.min(1, st.side / 420)) * dop;
           setp(Ty.a.frequency, f, t, 0.05); setp(Ty.b.frequency, f * 1.47, t, 0.05);
           setp(Ty.hg.gain, st.spd < 40 ? 0.45 : 0.3, t, 0.1);   // (more smoke in a burnout)
-          setp(Ty.g.gain, sc * TYRE_LEVEL * (st.mine ? 1 : 0.8), t, 0.04);
+          setp(Ty.g.gain, sc * TYRE_LEVEL * (st.mine ? 1 : 0.6), t, 0.07);   // (eased in: no sudden bite)
         } else {
           setp(Ty.nf.frequency, p.boat ? 2600 : 800, t, 0.03); setp(Ty.nf.Q, p.boat ? 0.6 : 1, t, 0.05);
           setp(Ty.g.gain, (p.boat ? 0.25 : 0.2) * sc, t, 0.04);

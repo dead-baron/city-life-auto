@@ -317,7 +317,7 @@ test('the tyres screech sliding sideways or in a burnout, never on a hard start 
   assert.ok(mid > 0 && mid < 1, `a little sideways: some (${mid.toFixed(2)})`);
   assert.equal(screech(st({ flags: 0, spd: 300, side: 300 }), car), 0, 'not without the server saying it slides');
   assert.equal(screech(st({ spd: 5, burnT: 2 }), { boat: 1 }), 0, 'a boat has no burnout');
-  assert.ok(TYRE_LEVEL > 0 && TYRE_LEVEL <= 0.12, 'a few dB over your own engine, not over everything (tools/sound/bench.py tyres)');
+  assert.ok(TYRE_LEVEL > 0 && TYRE_LEVEL <= 0.06, 'softer: a little over your own engine, not over everything (tools/sound/bench.py tyres; the owner, 10-15: "Tyre screech softer")');
 });
 
 test('the surf on the waterline sits in the mix, not over it (#397)', () => {
