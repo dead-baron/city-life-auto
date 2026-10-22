@@ -871,6 +871,39 @@ const BED = {
   rock: RB('#6e6c68', { dark: 0.6, light: 0.45, shift: 0.18 }),
   coral: [RB('#c87868', { shift: 0.2 }), RB('#c89a58', { shift: 0.2 }), RB('#9a78a8', { shift: 0.2 }), RB('#b8b070', { shift: 0.2 }), RB('#c8909a', { shift: 0.2 }), RB('#7a8a5a', { shift: 0.2 })],
 };
+// ---- the wrecks on the bed (shared/world3-wrecks.js; the owner, 10-16: "underwater rocks and wrecks") ------------
+// A sunken boat lying on the bed, seen through the water as the bed is (tinted by it, fading as it deepens): its
+// planks along the hull, the dark rim of the gunwale broken here and there, the ribs showing where the planking's
+// gone (the bed through between them), a thwart across a rowboat, weed growing on it; a sloop's mast lying beside.
+// wreckPx(list, X, Y, seed): the bed's colour there, or null where no wreck is (list: the chunk's, groundbake C.wk).
+const WRK = { wood: RB('#6c5638', { dark: 0.55 }), dark: RB('#3a2c20', { dark: 0.6 }), weed: RB('#4e6034', { dark: 0.5, shift: 0.2 }), sand: RB('#ddd2b0', { dark: 0.35, light: 0.45 }) };
+export function wreckPx(list, X, Y, seed) {
+  for (let n = 0; n < list.length; n++) {
+    const w = list[n], dx = X - w.x, dy = Y - w.y, R = w.len * 0.6 + 40;
+    if (dx * dx + dy * dy > R * R) continue;
+    const ca = Math.cos(w.a), sa = Math.sin(w.a), lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca, hl = w.len / 2, x = X | 0, y = Y | 0, s = seed + w.v * 13;
+    if (w.kind === 'sloop') {   // (the mast, fallen across the bed from its step, with a tangle of rigging)
+      const px = lx + hl * 0.05, py = ly + w.beam * 0.25, mc = Math.cos(-0.65), ms = Math.sin(-0.65), along = px * mc + py * ms, off = -px * ms + py * mc;
+      if (along > 0 && along < w.len * 0.85 && Math.abs(off) < 2.2) return sd(Math.abs(off) > 1.2 ? WRK.dark : WRK.wood, 0.45 - along / w.len * 0.1, x, y, 0.4);
+    }
+    // (round it, the sand the currents scour pale: the dark hull stands out against it)
+    const u = Math.max(-1, Math.min(1, lx / hl)), hb = w.beam / 2 * (u > 0 ? 1 - u * u : 1 - u * u * u * u * 0.55);
+    const ay = Math.abs(ly), out = Math.max(Math.abs(lx) - hl, ay - hb);
+    if (out > 0) { if (out < 7 + vnc(X, Y, 9, s + 1) * 5 && !(out > 4 && by(x, y) > 0.2)) return sd(WRK.sand, 0.55 + (vnc(X, Y, 5, s + 2) - 0.5) * 0.2, x, y, 0.4); continue; }
+    const edge = hb - ay, weed = vnc(X, Y, 6, s + 5) > 0.74;
+    if (edge < 2.4) {   // the gunwale's rim, broken in places
+      if (vnc(lx, ly, 11, s + 3) > 0.83) return null;
+      return sd(weed ? WRK.weed : WRK.dark, 0.5 + (edge < 1 ? -0.15 : 0.05), x, y, 0.4);
+    }
+    if (w.kind === 'rowboat' && Math.abs(lx - hl * 0.1) < 2.6) return sd(WRK.dark, 0.5, x, y, 0.4);   // (the thwart)
+    // the planking gone in holes, the ribs across between them and the bed showing through
+    if (Math.abs(u) < 0.8 && vnc(lx, ly, 10, s + 7) > 0.64) return ((((lx | 0) % 9) + 9) % 9) < 2 ? sd(WRK.dark, 0.42, x, y, 0.4) : null;
+    if (weed) return sd(WRK.weed, 0.45 + (hh(x >> 1, y >> 1, s + 9) - 0.5) * 0.2, x, y, 0.4);
+    const pl = Math.floor((ly + hb) / 4), seam = ((ly + hb) % 4 + 4) % 4 < 0.9;
+    return sd(WRK.wood, 0.52 + (hh(pl, w.v, s + 11) - 0.5) * 0.24 - (seam ? 0.22 : 0) - (1 - edge / hb) * 0.08, x, y, 0.4);
+  }
+  return null;
+}
 // one stone of a bed: its ramp's colour, lit from the upper left with a dark rim, or null between the stones
 function stoneOf(X, Y, sz, seed, fill, A, B) {
   const w = worley(X + 0.5, Y + 0.5, sz, seed, 0.85), r = sz * fill * (0.65 + 0.7 * w.h);
@@ -1287,11 +1320,13 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
   let c = sd(rr, t, x, y, 0.7);
   // the bed through the water: tinted by it, fading as it deepens (in dithered steps)
   if (vis > 0.04) {
-    const bed = bedPx(q > 1.2 && still ? S0.deepBed : k === WK.SEA ? (cst === 1 ? S0.bed : cst === 2 ? 0 : S0.bed === 7 || S0.bed === 6 ? 8 : S0.bed) : S0.bed, X, Y, dt, fine, seed);
+    let bed = bedPx(q > 1.2 && still ? S0.deepBed : k === WK.SEA ? (cst === 1 ? S0.bed : cst === 2 ? 0 : S0.bed === 7 || S0.bed === 6 ? 8 : S0.bed) : S0.bed, X, Y, dt, fine, seed);
+    let near = 0;
+    if (C.wk && C.wk.length) { const wp = wreckPx(C.wk, X, Y, seed); if (wp) { bed = wp; near = 1; } }   // (a sunken boat lying on it: shared/world3-wrecks.js - seen a little more clearly than the bed round it)
     // (seen through water: coloured by it - the reds go first - and dimmer the deeper it lies)
     const mul = S0.mul, dim = 0.62 + 0.3 * vis;
     MIX2[0] = bed[0] * mul[0] * dim; MIX2[1] = bed[1] * mul[1] * dim; MIX2[2] = bed[2] * mul[2] * dim;
-    const kd = Math.floor(clamp01(vis * 1.05 + by(x, y) * 0.22) * 4) / 4;
+    const kd = Math.floor(clamp01((near ? Math.min(1, vis * 1.35 + 0.12) : vis) * 1.05 + by(x, y) * 0.22) * 4) / 4;
     if (kd > 0) c = mixTo(MIX, c, MIX2, kd * 0.88);
   }
   if (lat && k === WK.SEA && d < 30 && cst !== 2) c = sd(FOAM, 0.28 + (d < 14 ? 0.15 : 0) + fine * 0.2, x, y, 0.4);   // (the crests break white near the shore)

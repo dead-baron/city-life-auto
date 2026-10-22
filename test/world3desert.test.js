@@ -5,7 +5,8 @@
 // with its seams, as the Old Granite Mine's), the freight yard's ore cars by the main line; Dusty Hollow's empty
 // buildings, its hideout and smuggler's drop; Red Rock Dam on the reservoir's shore and the dry wash below; the lookout,
 // the arch and the hoodoos; the motel, its pool and the billboards; the desert camp; nothing in the highways' room or on
-// the main line; the white delineator posts along the desert's roads; the windmills and stock tanks out on the range;
+// the main line; the white delineator posts along the desert's roads and its highways' gravel pull-offs; the windmills
+// and stock tanks out on the range with their ranch gates;
 // and the whole world tidied (nothing that needs dry ground in the water, no fence across a road). One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,7 +16,7 @@ import { TILE, T } from '../shared/constants.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { skeletonLines, nearestOnPath } from '../shared/world3-skeleton.js';
 import { GULCH, HOLLOW, DESERT, DESERT_SPECIALS, DESERT_IDS } from '../shared/world3-desert.js';
-import { ROADSIDE3 } from '../shared/world3-roadside.js';
+import { ROADSIDE3, PULLOFF3 } from '../shared/world3-roadside.js';
 import { STOCK3 } from '../shared/world3-stocktanks.js';
 import { TIDY3 } from '../shared/world3-tidy.js';
 import { undergroundOf, UG, caveOf } from '../shared/underground.js';
@@ -185,6 +186,21 @@ test('World v3: the Red Rock Desert - Copper Gulch and its mine, Dusty Hollow, t
     for (let dy = -2; dy <= 2 && !road; dy++) for (let dx = -2; dx <= 2; dx++) if (m.tiles[(Math.floor(by / TILE) + dy) * W + Math.floor(bx / TILE) + dx] === T.ROAD) { road = true; break; }
     check(road, `its track out to a road (${s.track.map((q) => q.map((v) => v / TILE | 0))})`);
     check(ST.every((o) => o === s || Math.hypot(o.x - s.x, o.y - s.y) >= STOCK3.apart * TILE), 'far apart');
+    const at = (t, r) => m.props.some((p) => p && p.t === t && Math.hypot(p.x - s.gate[0], p.y - s.gate[1]) < r * TILE);
+    check(s.gate && at('gatearch', 1) && at('cattlegrid', 1) && at('mailbox', 4), `its ranch gate, cattle grid and mailbox at the road (${s.gate})`);
+  }
+  // 10b. the gravel pull-offs on the desert's highways (world3-roadside.js): far apart, each a gravel apron with a
+  // shade ramada over a picnic table, a water tank and a bin; no delineator on one
+  const PO = m.natureSites.filter((q) => q.kind === 'pulloff');
+  console.log('pull-offs', JSON.stringify(m.world3.roadside.pullOffs));
+  check(PO.length >= 2, `${PO.length} pull-offs on the desert's highways`);
+  for (const q of PO) {
+    const near = (t, r) => m.props.some((p) => p && p.t === t && Math.hypot(p.x - q.x, p.y - q.y) < r * TILE);
+    const i = Math.floor(q.y / TILE) * W + Math.floor(q.x / TILE);
+    check(near('pergola', 1) && near('picnic', 2) && near('otank', 8) && near('trashcan', 8), `the pull-off at ${q.x / TILE | 0}, ${q.y / TILE | 0}: its ramada, table, tank and bin`);
+    check(m.tiles[i] === T.SAND && (m.reserve[i] & 128), 'on gravel');
+    check(!m.props.some((p) => p && p.t === 'delineator' && Math.hypot(p.x - q.x, p.y - q.y) < 3 * TILE), 'no post in it');
+    check(PO.every((o) => o === q || Math.hypot(o.x - q.x, o.y - q.y) >= PULLOFF3.apart * TILE), 'far apart');
   }
   // 11. the world tidied last (shared/world3-tidy.js; the owner's 10-16 list): nothing that needs dry ground stands in
   // the water anywhere in the world, and no fence run crosses a road, a bridge or the water

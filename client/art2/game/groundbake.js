@@ -95,7 +95,7 @@ mat('TRACK', 'asphaltFresh', 3); mat('RUNWAY', 'asphaltOld', 3); mat('GORE', 'as
 mat('WALKC', 'slabConcrete', 4); mat('WALKCR', 'slabCracked', 4); mat('WALKS', 'slabStone', 4); mat('WALKB', 'brickRun', 4); mat('WALKO', 'cobbleSett', 4);
 mat('PLAZAC', 'slabPlaza', 4); mat('PLAZAS', 'slabStone', 4); mat('PLAZAB', 'brickHerring', 4); mat('PLAZAO', 'cobbleSett', 4);
 mat('DRIVE', 'slabDrive', 4); mat('APRONG', 'apron', 3); mat('ISLAND', 'slabConcrete', 4); mat('PATH', 'pathGravel', 4); mat('BOARD', 'boardwalk', 4); mat('BOARDV', 'boardwalkV', 4); mat('DOCK', 'planks', 4); mat('DOCKX', 'planksX', 4); mat('DECKWALK', 'slabConcrete', 4);
-mat('FOUND', 'foundation', 1); mat('WALL', 'foundation', 1); mat('CRAG', 'crag', 1); mat('FLOOR', 'floorTile', 1); mat('FLOORW', 'floorWood', 1); mat('COUNTER', 'counterTop', 1);
+mat('FOUND', 'foundation', 1); mat('WALL', 'foundation', 1); mat('CRAG', 'crag', 0);   // (kind 0, as the soft ground: its border with the ground round it wanders through the warp, not the tiles' steps) mat('FLOOR', 'floorTile', 1); mat('FLOORW', 'floorWood', 1); mat('COUNTER', 'counterTop', 1);
 mat('BALLAST', 'ballastStone', 1); mat('PLATFORM', 'slabPlaza', 1); mat('RAILDECK', 'planksX', 1);
 mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); mat('POOL', '', 2); mat('SPRING', '', 2);
 mat('SNOW', 'snowfield', 0);   // (World v3's summits: terrain class 9, shared/world3-biomes.js)
@@ -163,6 +163,8 @@ export function* groundSteps(M, cx, cy, opt = {}) {
   // ap 2: the live game draws the chunk at 1 art pixel = 2 world px - the paint (lane lines, zebras, stop lines,
   // arrows, stalls, court lines, wear) is decided once per art pixel so it comes out in whole art pixels
   const C = { M, b, q, seed, X0, Y0, WX0, WY0, TX0, TY0, deckZ: opt.deckZ ?? 6, E: [], ap: opt.artPx === 2 ? 2 : 1, later: !!opt.reliefLater };
+  // (the wrecks on the water's bed in reach of this chunk: client/art2/water.js wreckPx)
+  C.wk = (M.wrecks || []).filter((w) => w.x + w.len > WX0 - 40 && w.x - w.len < WX0 + WN + 40 && w.y + w.len > WY0 - 40 && w.y - w.len < WY0 + WN + 40);
   // (opt.scratch: a bake worker's - the G-buffer is used up before the next bake, so one is kept and cleared rather than
   // a fresh 9 MB every chunk)
   const G = opt.scratch ? scratchG() : new GBuf(CHUNK, CHUNK); G.ax = 0; G.ay = 0;

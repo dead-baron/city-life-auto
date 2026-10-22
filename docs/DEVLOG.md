@@ -13338,6 +13338,21 @@ renderer trampled its flora (render/flora); the art v2 page had nothing.
 Tests: test/crush.test.js - the marks' frames (a swath wider and longer than a track at every angle, dark with pale
 streaks, see-through); their own ring (2,000 marks leave the blood decal in place, the newest kept).
 
+## 2026-10-21 · Nature: the desert's ranch gates and highway pull-offs
+
+More of the desert road kit (the handcraft research's 5.1: "a cattle grid at ranch gates", "gravel pull-off with
+shade ramada, water tank"):
+- **the ranch gates** (`shared/world3-stocktanks.js`): each stock tank's track now runs straight north, south, east
+  or west to its road and leaves it through a ranch gate - a log arch across the track (its posts solid), a cattle
+  grid under it (`client/art2/props-rural.js` cattleGrid, new: steel rails over a dark pit in a concrete frame) and
+  a mailbox by the road.
+- **the pull-offs** (`shared/world3-roadside.js` pullOffs): three on the desert's highways, far apart, each off one
+  shoulder - a gravel apron 12 tiles along the road and 6 deep, a timber shade ramada over a picnic table (unlit:
+  `client/art2/game/statics.js` pergola's `dark`), a water tank at its far end and a bin. No delineator stands in
+  one. Each is on the map's nature sites ('pulloff').
+
+Tests: test/world3desert.test.js - each stock tank's gate, cattle grid and mailbox at the road; two or more
+pull-offs, far apart, each on gravel with its ramada, table, tank and bin and no post in it.
 ## 2026-10-21 · Fix: rock you couldn't see
 
 The owner, 2026-10-21: "Not seeing some rock or cliff formations showing, you can see it on the minimap and can't walk
@@ -13352,6 +13367,8 @@ foundation, so you saw forest floor or meadow and walked into an invisible wall.
   them, each slab tilted to the light its own way and raised 8-16 px so it casts its shadow. It's red rock in the
   desert, as before. The city's walls and the prison's keep their foundation.
 - Most of the wilds' rock already had a cliff sprite over it; under those the change shows only round the edges.
+- Its border with the ground round it wanders as the soft ground's borders do (the bake's warp), so a patch of
+  rock has a ragged, rounded edge instead of the tiles' steps.
 
 Tests: test/crag.test.js - the material (slabs and cracks, raised, tilted); the wilds' rock raised and grey in the
 ground bake, a city wall flat.
@@ -13363,3 +13380,39 @@ holes in its props. The first hole threw, every frame, so no fish, rise, leap or
 caught it and warned once. A hole is now skipped.
 
 Tests: test/waterlife.test.js - a map with holes in its props still has its fish.
+
+## 2026-10-21 · Nature: wrecks under the water
+
+The owner, 10-16: "see-through clear water ... underwater rocks and wrecks". The clear water showed its bed (pebbles,
+sand, seagrass, boulders), with nothing lying on it.
+
+- **the wrecks** (`shared/world3-wrecks.js`, new, World v3's done hook): sunken boats on the bed where the water is
+  clear and shallow enough to see them. There are rowboats and a skiff in the lakes, and skiffs and a sloop in the
+  sea's shallows, each lying at its own angle. They're always in open water 2.5-6 tiles off a shore out in the
+  country, never in a city pool, a park pond or a harbour, and far apart. Each is on the map's nature sites
+  ('sunken'), a place to find.
+- **their art** (`client/art2/water.js` wreckPx, drawn into the water's bed by the ground bake): the hull's planks,
+  the gunwale's dark rim broken here and there, holes with the ribs and the bed showing through, weed, a rowboat's
+  thwart, a sloop's mast fallen beside it, and pale scoured sand round it. The water tints it like the bed, a little
+  more clearly so it stands out.
+
+Tests: test/wrecks.test.js - the art (hull, rim and holes, a sloop's mast, nothing where none lies);
+test/world3coast.test.js - wrecks in the lakes and the sea, each in open shallow water out in the country, on the map,
+far apart.
+
+## 2026-10-21 · Fix: the town's people only where the town is
+
+The owner, 10-16: "NPCs spawning where there's no development (by a river, nothing around)". The server spawned its
+town crowd (executives, sweepers, socialites and the rest) on any walkable ground in a town district. World v3's
+coast and rocks are town districts (beach, rocky) that run for miles past the last street, so a player stood on an
+empty beach had a crowd of office workers turning up round them.
+
+- **where the town's people spawn** (`server/systems/npc.js` peopleBelongAt): on a pavement, a plaza, a lot, a dock
+  or a bridge, in a park, or on open grass, sand or dirt with a street, a path or a building within 8 tiles. In a
+  town that's still almost everywhere; out on the open coast it's nowhere.
+- **the open coast and the rocks are as quiet as the country:** past the last street, the beach, the rocks and the
+  lakeshores get the country's head count and the country's people (spawnCountry): folk round a site, and now and
+  then a lone beachcomber or a hiker on the rocks.
+
+Tests: test/townfolk.test.js - the rule on a made-up map (by the street, in the park, never out on open grass); and
+a player stood on World v3's open coast for 30 s sees none of the town crowd, only a few country folk.

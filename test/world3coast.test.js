@@ -1,12 +1,13 @@
 // The coasts by hand, part 1 (shared/world3-coast.js): North Cape's tidepool shelf - its rock out into the sea, the
 // pools in it (closed, clear, alive), the golden stars, the blowhole and its spout, the seal rock; Redwood Cove dug back
 // into the woods, its beach, its horn's tidepools and the path down. One World v3 build (and the blowhole's spout on
-// a stand-in world).
+// a stand-in world); and the wrecks lying in the clear water.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { T, TILE } from '../shared/constants.js';
+import { DISTRICTS } from '../shared/mapcore.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { COAST3 } from '../shared/world3-coast.js';
 import { habitatAt } from '../server/systems/fishing.js';
@@ -138,4 +139,18 @@ test('World v3: North Cape\'s tidepool shelf and blowhole, Redwood Cove dug back
     assert.ok(near('campfire', c.x, c.y, 8).length === 1 && near('driftwood', c.x, c.y, 3 * TILE).length >= 2 && near('lantern', c.x, c.y, 3 * TILE).length === 1, `${at2}: the fire, driftwood seats, a lantern`);
   }
   for (let i = 0; i < BC.camps.length; i++) for (let j = i + 1; j < BC.camps.length; j++) assert.ok(Math.abs(BC.camps[i].tx - BC.camps[j].tx) + Math.abs(BC.camps[i].ty - BC.camps[j].ty) >= 600, 'far apart');
+  // the wrecks under the water (shared/world3-wrecks.js): in the lakes and the sea's shallows out in the country, in
+  // open clear water a few tiles from the shore, far apart, on the map; none in a city pool, pond or harbour
+  const WR = m.wrecks || [], WS = m.world3.wrecks;
+  console.log('wrecks', JSON.stringify(WS), JSON.stringify(WR.map((w) => [w.kind, w.x / TILE | 0, w.y / TILE | 0])));
+  assert.ok(WS.lake >= 2 && WS.sea >= 2, `wrecks in the lakes (${WS.lake}) and the sea (${WS.sea})`);
+  const OUT = new Set(['wild', 'rural', 'desert', 'rocky', 'water', 'beach']), styleOf = (x, y) => (DISTRICTS[m.dist[at(x, y)]] || {}).style;
+  for (const w of WR) {
+    const tx = Math.floor(w.x / TILE), ty = Math.floor(w.y / TILE);
+    let open = true; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const t = m.tiles[at(tx + dx, ty + dy)]; if (t !== T.WATER && t !== T.DEEP) open = false; }
+    assert.ok(open && m.tiles[at(tx, ty)] === T.WATER, `the ${w.kind} at ${tx}, ${ty}: in open shallow water`);
+    assert.ok(OUT.has(styleOf(tx, ty)), `the ${w.kind} at ${tx}, ${ty}: out in the country (${styleOf(tx, ty)})`);
+    assert.ok(m.natureSites.some((q) => q.kind === 'sunken' && q.x === w.x && q.y === w.y), 'on the map');
+    assert.ok(WR.every((o) => o === w || Math.hypot(o.x - w.x, o.y - w.y) >= 100 * TILE), 'far apart');
+  }
 });
