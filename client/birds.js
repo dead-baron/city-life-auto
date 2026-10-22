@@ -10,7 +10,7 @@
 import { PF } from '../shared/constants.js';
 
 export const BIRDS = Object.freeze({
-  MAX: 14,            // at most this many about
+  MAX: 7,             // at most this many about (14 till 2026-10-21: the owner, 10-15, "Fewer pigeons")
   OUT: 170,           // where they come in from / are let go: this far past the view (which is 64 px past the screen)
   Z_IN: 110,          // flying in, they glide down from at most this high...
   GLIDE: 0.45,        // ...this many px of height per px still to go
@@ -18,7 +18,7 @@ export const BIRDS = Object.freeze({
   CLIMB: 55,          // px a second
   IN_SPEED: [150, 200], OUT_SPEED: 230,
   STAY: [14, 50],     // seconds on the ground before they fly off (unless scared off sooner)
-  NEXT: [0.6, 2.4],   // seconds between arrivals
+  NEXT: [2, 6],       // seconds between arrivals (0.6-2.4 before: fewer)
   NEAR_YOU: 200,      // they don't land closer than this to the middle of the view (you)
   SCARE_CAR: 110, SCARE_PED: 45,
 });

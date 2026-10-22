@@ -13630,3 +13630,12 @@ shots, so a light attack went unnoticed and it drove on. Once it stopped, the gu
 
 Tests: test/streetlife.test.js - a single real hit and they stop and get out; no shot while they size it up, then
 they fire.
+
+## 2026-10-21 · Fewer pigeons
+
+The owner, 10-15: "Fewer pigeons". Up to 14 pigeons and gulls were about at once, a new one arriving every 0.6 to
+2.4 s.
+
+- **fewer** (`client/birds.js` BIRDS): up to 7 at once, a new one every 2 to 6 s.
+
+Tests: test/birds.test.js - a few at a time; they still come in from off screen, land and go.
