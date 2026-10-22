@@ -13,7 +13,7 @@ import { K, T } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { railAt, CONSIST, CAR_GAP, TRAIN_CARS, COACH_SEATS, COACH_STAND, LOCO_SEATS, LOCO_STAND, CAB_OX, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { obbVsObb, circleVsObb, localToWorld, clamp } from '../../shared/math.js';
-import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAIN_HEADWAY_S, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, GUARD_DRAW_S, BAIL_SPEED } from '../../shared/rules.js';
+import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAIN_HEADWAY_S, TRAIN_LOOP_HEADWAY_S, TRAIN_LOOP_MAX, TRAIN_HOLD_MAX_S, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, GUARD_DRAW_S, BAIL_SPEED } from '../../shared/rules.js';
 import { STAR_HEAT } from '../../shared/constants.js';
 import { KB, TOUCH } from '../../shared/controls.js';
 import { mulberry32 } from '../../shared/rng.js';
@@ -132,7 +132,10 @@ export function init(world) {
 // another, none meets one head on. Where loops cross or part (a diamond, a turnout: cells another loop's track
 // passes on another heading - a junction's `box`), a train takes the whole box and a train's length of clear track
 // beyond it, or none of it: it never stops in a junction, so trains at a junction can't hold each other up for good.
-const LOOP_TRAINS = 2;
+// (the owner, 10-16: "More trains on the main loop: one every 1-2 minutes" - each loop gets as many trains as put one
+// into each of its stations about every TRAIN_LOOP_HEADWAY_S: the main loop's 18-minute lap nine, the shorter loops four;
+// two at the least)
+const loopTrains = (T) => Math.max(2, Math.min(TRAIN_LOOP_MAX, Math.round(T.reduce((a, q) => a + q.total + TRAIN_DWELL_S, 0) / TRAIN_LOOP_HEADWAY_S)));
 function initLoops(world) {
   const rails = world.map.rails.filter((r) => r.stations && r.stations.length);
   if (!rails.length) return;
@@ -143,7 +146,8 @@ function initLoops(world) {
   world.sig.box = boxesOf(rails, world.sig.cells);
   let ti = 0;
   rails.forEach((rail, r) => {
-    const sts = rail.stations, T = world.railTimings[r];
+    const sts = rail.stations, T = world.railTimings[r], LOOP_TRAINS = loopTrains(T);
+    (world.loopHeadway ||= [])[r] = T.reduce((a, q) => a + q.total + TRAIN_DWELL_S, 0) / LOOP_TRAINS;
     for (let k = 0; k < LOOP_TRAINS; k++) {
       const cons = consistFor(ti);
       const cars = [];
@@ -154,7 +158,7 @@ function initLoops(world) {
       let placed = null;
       for (let tries = 0; tries < sts.length && !placed; tries++) {
         const si = (Math.floor(k * sts.length / LOOP_TRAINS) + tries) % sts.length;
-        const t = { i: ti, r, cars, len, s: mod(sts[si].s + len / 2, rail.len), v: 0, acc: 0, stop: si, dwellUntil: world.time + 1 + k * TRAIN_HEADWAY_S / 2 + r * 3,
+        const t = { i: ti, r, cars, len, s: mod(sts[si].s + len / 2, rail.len), v: 0, acc: 0, stop: si, dwellUntil: world.time + 1 + k * 4 + r * 3,
           riders: new Set(), boarding: new Set(), mail: cons.indexOf('mail'), boxReadyAt: 0, hornUntil: 0, hornedFor: -1, hadPlayer: false, held: null };
         if (signals(world, t, true) !== null) placed = t;
       }
@@ -330,7 +334,10 @@ function stepTrain(world, t, dt) {
   const rail = railOf(world, t), sts = rail.stations, now = world.time;
   if (t.dwellUntil) {
     t.v = 0;
-    if (now >= t.dwellUntil) { t.dwellUntil = 0; t.stop = (t.stop + 1) % sts.length; t.hornUntil = now + 0.9; departed(world, t); }
+    if (now >= t.dwellUntil) {
+      if (world.loopHeadway) ((world.lastDep ||= [])[t.r] ||= [])[t.stop] = now;   // (the loop's last departure from here: the next train keeps its distance)
+      t.dwellUntil = 0; t.stop = (t.stop + 1) % sts.length; t.hornUntil = now + 0.9; departed(world, t);
+    }
     return;
   }
   const target = sts[t.stop].s + t.len / 2;
@@ -340,7 +347,14 @@ function stepTrain(world, t, dt) {
   else for (const u of world.trains) if (u !== t) gap = Math.min(gap, mod(u.s - u.len - t.s, rail.len));
   const step = drive(t, d, gap, dt);
   t.s = mod(t.s + step, rail.len);
-  if (d - step < 1.5) { t.s = mod(target, rail.len); t.v = 0; t.acc = 0; t.braking = false; t.dwellUntil = now + TRAIN_DWELL_S; arrived(world, t); }
+  if (d - step < 1.5) {
+    t.s = mod(target, rail.len); t.v = 0; t.acc = 0; t.braking = false; t.dwellUntil = now + TRAIN_DWELL_S;
+    // (World v3's loops: a train close behind the one before it waits at the platform till it's its loop's headway
+    // behind - bunched trains spread out again round the loop, a train into each station every couple of minutes)
+    const H = world.loopHeadway && world.loopHeadway[t.r], L = H && world.lastDep && world.lastDep[t.r] && world.lastDep[t.r][t.stop];
+    if (H && L !== undefined) t.dwellUntil = Math.max(t.dwellUntil, Math.min(L + H * 0.97, now + TRAIN_HOLD_MAX_S));
+    arrived(world, t);
+  }
 }
 
 // Where the train someone rides will be in the next stretch (the art from the server bakes those chunks first - server/
@@ -1341,17 +1355,8 @@ export function interaction(world, p) {
     }
     if (best >= 0) return { label: `Board the train - next stop ${railOf(world, t).stations[(t.stop + 1) % railOf(world, t).stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
   }
-  // up on an El platform with no train in: when the next one is due; at a stair tower's foot: the way up
-  const rails = world.rails || [world.map.rail];
-  for (let r = 0; r < rails.length; r++) for (let si = 0; si < rails[r].stations.length; si++) {
-    const st = rails[r].stations[si];
-    if (!st.deck || !onDeck(st, ped)) continue;
-    let eta = Infinity;
-    if (world.rails) { for (const t of world.trains) if (t.r === r) eta = Math.min(eta, etaTo(world, t, si)); } else eta = nextTrainIn(world, si);
-    if (eta === Infinity) continue;
-    const s = Math.max(1, Math.round(eta)), to = rails[r].stations[(si + 1) % rails[r].stations.length].name.replace(/ Station$/, '');
-    return { label: `${st.name}: next train in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} (to ${to}) - board at the doors when it's in`, run: () => {} };
-  }
+  // (up on an El platform with no train in: no prompt - the platform's clock shows when the next one's due, the owner,
+  // 10-16: "No 'next train' popup (the station sign shows it)"); at a stair tower's foot: the way up
   if ((ped.lz || 0) < 0.3) for (const s of (world.map.el && world.map.el.stairs) || []) if (s.top && Math.hypot(ped.x - s.x, ped.y - s.y) < 46) return { label: `Up the stairs to the platform - ${s.station}`, run: () => {} };
   // at a subway entrance with no train in: the countdown, and where to wait
   const sts = world.map.rail.stations;

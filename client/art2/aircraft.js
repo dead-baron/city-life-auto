@@ -112,10 +112,34 @@ function heliModel(type, T) {
 // fin, the cowling and the propeller, the wheels; the wing tips' lights (red left, green right) ---------------------------
 // (banked, the model stands zoffOf(bank) px higher in a taller box, the low wing tip still in it: drawn that much lower)
 export const zoffOf = (bank) => (bank ? Math.ceil(84 * Math.abs(Math.sin(bank))) + 2 : 0);
+// Banked, the whole plane rolls about its fuselage - the body, the fin, the wheels and the propeller with the wings (the
+// owner, 10-16: "Plane wings tilt without the body: bank them together"): it's built level, then turned (rolled).
 function planeModel(T, bank) {
-  const zo = zoffOf(bank), L = 128, W = 168, H = 64 + 2 * zo, cy = W / 2, zb = 18 + zo, sb = Math.sin(bank);
+  const m = planeLevel(T, zoffOf(bank));
+  return bank ? rolled(m, bank, 168 / 2, 18 + zoffOf(bank) + 4) : m;
+}
+// (each voxel of the rolled model from the level one's, turned back about the x axis through (cy, zr): banked right, the
+// right wing (+y) down; the nearest voxel to the turned-back point, else the next nearest across its nearer edge, so a
+// thin strut keeps no holes and the model hardly thickens)
+function rolled(src, bank, cy, zr) {
+  const out = new Vox(src.w, src.d, src.h), c = Math.cos(bank), s = Math.sin(bank);
+  out.mats = src.mats;
+  for (let z = 0; z < src.h; z++) for (let y = 0; y < src.d; y++) {
+    const dy = y + 0.5 - cy, dz = z + 0.5 - zr, ys = cy + dy * c - dz * s - 0.5, zs = zr + dy * s + dz * c - 0.5;
+    const y0 = Math.floor(ys), z0 = Math.floor(zs), fy = ys - y0, fz = zs - z0;
+    const ny = fy < 0.5 ? y0 : y0 + 1, nz = fz < 0.5 ? z0 : z0 + 1, order = Math.abs(fy - 0.5) < Math.abs(fz - 0.5) ? [[ny, nz], [fy < 0.5 ? y0 + 1 : y0, nz]] : [[ny, nz], [ny, fz < 0.5 ? z0 + 1 : z0]];
+    for (let x = 0; x < src.w; x++) {
+      let v = 0;
+      for (const [yy, zz] of order) { v = src.get(x, yy, zz); if (v) break; }
+      if (v) out.v[out.idx(x, y, z)] = v;
+    }
+  }
+  return out;
+}
+function planeLevel(T, zo) {
+  const L = 128, W = 168, H = 64 + 2 * zo, cy = W / 2, zb = 18 + zo;
   const m = new Vox(L, W, H), M = mats(m, T);
-  const dz = (y) => -(y - cy) * sb;   // (banked right: the right wing (+y) down)
+  const dz = () => 0;   // (level: the roll is the whole model's - planeModel)
   // the fuselage: thin at the tail, the cabin's bulk, the cowling at the nose
   m.fill((x, y, z) => {
     const t = x / L, r = t < 0.5 ? 3 + 8 * (t / 0.5) : t < 0.86 ? 11 : 11 - (t - 0.86) * 30, zc = zb + 4 + (t < 0.5 ? (0.5 - t) * 8 : 0);
@@ -133,7 +157,7 @@ function planeModel(T, bank) {
   m.box(L * 0.6, 1, zb + 15 + dz(2), L * 0.64, 4, zb + 18 + dz(2), M.red);
   m.box(L * 0.6, W - 4, zb + 15 + dz(W - 2), L * 0.64, W - 1, zb + 18 + dz(W - 2), M.green);
   // the tailplane (it rolls with it too) and the fin
-  m.fill((x, y, z) => { const zt = zb + 6 + dz(y) * 0.3; return z >= zt && z < zt + 2 ? M.body : -1; }, 2, cy - 26, 0, 18, cy + 26, H);
+  m.fill((x, y, z) => { const zt = zb + 6 + dz(y); return z >= zt && z < zt + 2 ? M.body : -1; }, 2, cy - 26, 0, 18, cy + 26, H);
   m.fill((x, y, z) => (Math.abs(y - cy) < 1.6 && z > zb + 6 && z < zb + 30 && x < 18 - (z - zb - 6) * 0.45 ? (z > zb + 24 ? M.trim : M.body) : -1), 0, 0, zb, 20, W, H);
   // the propeller (two blades, still) and the spinner
   m.box(L - 4, cy - 2, zb + 1, L, cy + 2, zb + 6, M.dark);

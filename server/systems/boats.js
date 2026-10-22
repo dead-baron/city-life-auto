@@ -32,21 +32,47 @@ function clearLine(world, x1, y1, x2, y2) {
   return true;
 }
 
-// Steer a boat toward (tx, ty), feeling its way round land ahead.
+// Steer a boat toward (tx, ty), feeling its way round land ahead - along its hull's width, not only its middle (a hull
+// scraping a pier's edge with its middle line clear came to a stop against it). Meaning to go and going nowhere for a
+// couple of seconds (jammed on a wall, a dock, a breakwater, an inlet's end: the owner, 10-16, "NPC boats stuck on
+// walls, docks and inlets"), it backs off, turning, and its skipper picks somewhere else to go (v.ai.lost: an NPC
+// boat's update takes a new heading) - and one that keeps jamming is given up once nobody's looking (v.ai.gone).
+const STUCK_S = 2.5, BACK_S = 1.5, GIVE_UP = 5;
 export function boatSteer(world, v, tx, ty, speed) {
-  const want = Math.atan2(ty - v.y, tx - v.x);
+  const ai = v.ai, now = world.time;
+  if (ai && ai.backUntil > now) { v.input = { throttle: -0.8, steer: ai.backSteer || 1, hb: false }; return; }
+  const want = Math.atan2(ty - v.y, tx - v.x), half = (v.def.W || 40) / 2 + 6;
   let best = null;
   for (const off of [0, 0.35, -0.35, 0.7, -0.7, 1.1, -1.1, 1.6, -1.6, 2.2, -2.2]) {
-    const a = want + off;
+    const a = want + off, c = Math.cos(a), sn = Math.sin(a);
     let ok = true;
-    for (const d of [50, 100, 160]) if (!water(world, v.x + Math.cos(a) * d, v.y + Math.sin(a) * d)) { ok = false; break; }
+    for (const d of [50, 100, 160]) {
+      for (const sd of [0, -half, half]) if (!water(world, v.x + c * d - sn * sd, v.y + sn * d + c * sd)) { ok = false; break; }
+      if (!ok) break;
+    }
     if (ok) { best = a; break; }
   }
   const fwd = vehForwardSpeed(v);
-  if (best === null) { v.input = { throttle: -0.6, steer: 0.8, hb: false }; return; }
-  const diff = angleDiff(v.a, best);
-  const sp = Math.abs(diff) > 1.2 ? Math.min(speed, 160) : speed;
-  v.input = { throttle: clamp((sp - fwd) / 120, -1, 1), steer: clamp(diff * 2.2, -1, 1), hb: false };
+  if (best === null) v.input = { throttle: -0.6, steer: 0.8, hb: false };
+  else {
+    const diff = angleDiff(v.a, best);
+    const sp = Math.abs(diff) > 1.2 ? Math.min(speed, 160) : speed;
+    v.input = { throttle: clamp((sp - fwd) / 120, -1, 1), steer: clamp(diff * 2.2, -1, 1), hb: false };
+  }
+  if (!ai) return;
+  // jammed: going nowhere while it means to go
+  if (Math.abs(v.input.throttle) > 0.2 && Math.hypot(v.vx, v.vy) < 25) {
+    if (!ai.slowSince) ai.slowSince = now;
+    else if (now - ai.slowSince > STUCK_S) {
+      ai.slowSince = 0; ai.jams = (ai.jams || 0) + 1;
+      // (back off turning toward whichever side has the open water)
+      const l = water(world, v.x + Math.cos(v.a - 1.2) * 80, v.y + Math.sin(v.a - 1.2) * 80), r = water(world, v.x + Math.cos(v.a + 1.2) * 80, v.y + Math.sin(v.a + 1.2) * 80);
+      ai.backSteer = l && !r ? 1 : r && !l ? -1 : ai.jams % 2 ? 1 : -1;
+      ai.backUntil = now + BACK_S;
+      ai.lost = true;
+      if (ai.jams >= GIVE_UP) ai.gone = true;
+    }
+  } else ai.slowSince = 0;
 }
 
 function pickModel(list = MODELS) {
@@ -188,15 +214,23 @@ export function update(world, dt) {
   for (const v of world.entities.values()) {
     if (v.kind !== K.VEH || !v.ai || v.wreckAt) continue;
     const ai = v.ai;
+    if ((ai.kind === 'boater' || ai.kind === 'pboat' || ai.kind === 'fisher') && ai.gone && !inAnyView(world, v.x, v.y, 120) && !v.seats.some((sid) => sid && world.get(sid)?.player)) {   // (jammed again and again: given up, once out of sight)
+      rodDown(world, ai);
+      for (const sid of v.seats) { const q = sid && world.get(sid); if (q && q.npc) despawnNpc(world, q); }
+      world.remove(v);
+      continue;
+    }
     if ((ai.kind === 'boater' || ai.kind === 'pboat' || ai.kind === 'fisher') && v.seats[0] && world.get(v.seats[0])?.player) { rodDown(world, ai); v.ai = null; v.despawnable = true; v.sirenOn = false; continue; } // taken over by a player
     if (ai.kind === 'boater') {
       const drv = world.get(v.seats[0]);
       if (!drv || drv.dead) { v.ai = null; v.despawnable = true; continue; }
+      if (ai.lost) { ai.lost = false; ai.to = nextPoint(world, v, 300, 1100); }   // (jammed: somewhere else)
       if (!ai.to || Math.hypot(ai.to.x - v.x, ai.to.y - v.y) < 120) ai.to = nextPoint(world, v);
       if (ai.to) boatSteer(world, v, ai.to.x, ai.to.y, ai.speed);
     } else if (ai.kind === 'fisher') {
       const drv = world.get(v.seats[0]);
       if (!drv || drv.dead || drv.id !== ai.drv) { rodDown(world, ai); v.ai = null; v.despawnable = true; continue; }
+      if (ai.lost) { ai.lost = false; if (ai.to) { ai.to = null; ai.until = world.time + FISH_S[0]; } }   // (jammed rowing on: fishes where it got to)
       if (ai.to) {   // rowing on to the next spot
         drv.fishing = null;
         if (Math.hypot(ai.to.x - v.x, ai.to.y - v.y) < 70) { ai.to = null; ai.until = world.time + FISH_S[0] + rng() * (FISH_S[1] - FISH_S[0]); }
@@ -224,6 +258,7 @@ export function update(world, dt) {
         }
       } else {
         v.sirenOn = false;
+        if (ai.lost) { ai.lost = false; ai.to = nextPoint(world, v, 300, 1100); }   // (jammed: somewhere else)
         if (!ai.to || Math.hypot(ai.to.x - v.x, ai.to.y - v.y) < 140) ai.to = nextPoint(world, v, 600, 1600);
         if (ai.to) boatSteer(world, v, ai.to.x, ai.to.y, 300);
       }

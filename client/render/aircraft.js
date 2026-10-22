@@ -43,7 +43,7 @@ export function drawAir(g, F, S, dt, v2 = false) {
   const list = F.air;
   const sky = F.sky, sun = sky && sky.sunDir ? sky.sunDir : { x: 0.55, y: 0.83 };
   const now = F.now;
-  drawPads(g, F, S, v2);
+  if (S.pred && S.pred.air) drawPads(g, F, S, v2);   // (the pads' H as you fly - somewhere to set down; on foot they're gone: the owner, 10-16, "Helipad H symbols stay visible after you leave the helicopter")
   const job = S.me && S.me.job;
   if (job && job.flare) { drawFlare(g, job.flare, now); flarePin(g, job.flare, now, (F.view.x1 - F.view.x0 - 128) / innerWidth); }   // (a rescue call: they're found - server sar.js)
   for (const v of list) {

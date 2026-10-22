@@ -25,7 +25,15 @@ export const SURF_LEVEL = 0.32;
 // in the country - the "loud nonstop ocean or wind" the owner heard at Willow Valley station (2026-10-15). Now it's
 // the woods' own (the map's forest cells round you) and peaks under the city's hum (-32.8 by day): -34.3 in a full gust.
 export const BED_DBA = Object.freeze({ city: -25.3, wind: -21.3, leaves: -16.6, sea: -24.3, surf: -28.5, rain: -15, sub: -30.9, fire: -26.6, flow: -19.7, cave: -35 });
-export const BED_MAX = Object.freeze({ city: 0.42, wind: 0.4, leaves: 0.13, sea: 0.5, surf: SURF_LEVEL, rain: 0.22, sub: 0.6, fire: 0.35, flow: 0.3, cave: 0.28 });
+// The wind's gusts (g: { gust, gustTo, gustNext }, stepped four times a second at t s): a lull most of the time (0.12-0.4
+// for 8-24 s), and three times in ten a gust (0.75-1 for 2.5-5 s), swelling in quicker than it dies away
+export function gustStep(g, t, rand = Math.random) {
+  if (t >= (g.gustNext || 0)) { const up = rand() < 0.3, r = (a, b) => a + rand() * (b - a); g.gustTo = up ? r(0.75, 1) : r(0.12, 0.4); g.gustNext = t + (up ? r(2.5, 5) : r(8, 24)); }
+  const step = g.gustTo > g.gust ? 0.09 : 0.04;
+  g.gust += Math.max(-step, Math.min(step, (g.gustTo ?? 0.3) - g.gust));
+  return g.gust;
+}
+export const BED_MAX = Object.freeze({ city: 0.42, wind: 0.4, leaves: 0.13, sea: 0.5, surf: SURF_LEVEL, rain: 0.15, sub: 0.6, fire: 0.35, flow: 0.3, cave: 0.28 });   // (rain 0.22 till 2026-10-21: "Rain and wind still drown everything out" - 3 dB down)
 const LEAVES_LEVEL = BED_MAX.leaves, RIVER_LEVEL = 0.07, LAKE_K = 0.3;   // (a river running by: a quiet babble; a lake laps)
 // the falls and the white water (2026-10-21; the owner, 10-16: "stream or waterfall sound in the forest with no visible
 // source"): a river's babble was as loud from 24 tiles off as from its bank, any way you looked - heard off the top or
@@ -67,7 +75,7 @@ export class Ambience {
     };
     this.surfEnv = this.beds.surf.chain[2];   // (the wave crashes: its own envelope, under the shore's level)
     this.windF = this.beds.wind.chain[0];
-    this.gust = 0.7; this.swellPh = R() * 6.28;
+    this.gust = 0.3; this.gustTo = 0.3; this.gustNext = 0; this.swellPh = R() * 6.28;
     this.next = { ugdrip: 0, rat: 0, flap: 0, scan: 0, bird: 0, cricket: 0, owl: rr(20, 60), dog: rr(20, 60), siren: rr(40, 120), horn: rr(8, 30), gull: rr(5, 15), drop: 0, crackle: 0, surf: 0 };
     this.crickets = [[0, 0], [0, 0], [0, 0]];
     this.k = { water: 0, sand: 0, green: 0, urban: 0, shore: 0, wx: 0, wild: 0, woods: 0, river: 0, roar: 0, style: '' };
@@ -207,7 +215,10 @@ export class Ambience {
   // the beds' levels for where you are (eased: a slow crossfade)
   levels(F, S, t, inside) {
     const k = this.k, B = this.beds, night = F.clock ? F.clock.dark : 0, rain = S.rainK || 0, sub = !!F.sub;
-    this.gust = Math.max(0.35, Math.min(1, this.gust + (R() - 0.5) * 0.25));
+    // the wind's gusts: lulls most of the time, and now and then a gust that swells in and dies away (the owner, 10-16:
+    // "Rain and wind still drown everything out; wind seems constant" - it wandered between 0.35 and 1 at random, never
+    // dropping away)
+    gustStep(this, t, R);
     this.swellPh += 0.25 * 6.283 / rr(7.5, 10);
     const swell = 0.65 + 0.35 * Math.sin(this.swellPh);
     const roof = inside ? 0.35 : 1, open = sub ? 0 : 1;
@@ -216,8 +227,10 @@ export class Ambience {
     // (the open country's breeze: under the city's hum, gusting - it was 0.05 + 0.26 wild, the leaves on top of it)
     // (under the trees the wind is up in the canopy - the leaves' rustle - not a whoosh along the ground: the owner,
     // 2026-10-16, "ocean sounds in the forest" - the wind bed's gusts swelling and falling like waves under the redwoods)
-    want.wind = open * roof * (0.04 + 0.2 * k.wild * (1 - k.urban) + 0.1 * rain + 0.15 * Math.max(0, k.water - 0.6)) * this.gust * (1 - 0.65 * k.woods);
-    want.leaves = open * roof * k.woods * LEAVES_LEVEL * this.gust * this.gust;   // (the woods' rustle, in the gusts)
+    want.wind = open * roof * (0.04 + 0.2 * k.wild * (1 - k.urban) + 0.05 * rain + 0.15 * Math.max(0, k.water - 0.6)) * this.gust * (1 - 0.65 * k.woods);
+    // (the woods' rustle: a murmur in the lulls, full in a gust - it went with the gust squared when the wind never
+    // dropped below 0.35; with real lulls, 0.12-0.4, that left the woods all but silent most of the time)
+    want.leaves = open * roof * k.woods * LEAVES_LEVEL * (0.35 + 0.65 * this.gust);
     want.sea = open * roof * Math.pow(k.water, 0.8) * BED_MAX.sea * swell;
     want.surf = open * roof * k.shore * SURF_LEVEL;
     want.rain = sub ? 0 : rain * (inside ? 0.09 : BED_MAX.rain) * (0.85 + 0.15 * this.gust);   // (the server's weather: heard through the roof indoors; it swells a little with the gusts)

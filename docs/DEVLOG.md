@@ -13486,3 +13486,218 @@ water and the sea's.
 
 Tests: test/world3kestrel.test.js - Kestrel Lake's reach cut through under a bridge, the lake's water and the sea's
 one water there, and a second look at the whole world finds nothing left to cut.
+
+## 2026-10-21 · Fix: campers and hikers no longer wander into their campfires and go up
+
+The owner, 10-16: "NPCs randomly catching fire (even after a punch)". With World v3's many camps and their lit fires,
+campers and hikers going about round a camp walked straight through the fire, and anyone moving through a lit
+campfire catches. In a six-minute run with players at six camps, three caught fire this way (a camper, two hikers),
+each standing on a lit campfire.
+
+- **a campfire** (`server/systems/burning.js` contacts) now sets alight a player who walks into it, or someone
+  knocked into it (a punch, a car), but not the people going about round it. A burning wreck, someone else on fire
+  and a grass fire still catch anyone moving through them.
+
+Tests: test/burning.test.js - a camper walking through a lit campfire doesn't catch; knocked into it, they do.
+
+## 2026-10-21 · Fix: the helipads' H marks only while you fly
+
+The owner, 10-16: "Helipad H symbols stay visible after you leave the helicopter". The page draws each helipad's H
+(`client/render/aircraft.js` drawPads) once the aircraft code has loaded, which happens the first time you get in a
+helicopter or a plane. After that they stayed on screen for good, painted over the ground and the roofs, on foot or
+in a car.
+
+- They're drawn now only while you're flying, as somewhere to set down. On foot they're gone. The roof helipads that
+  are part of the buildings' art are unchanged.
+
+Tests: test/flight.test.js - the H drawn while flying, nothing once you're on foot.
+
+## 2026-10-21 · Burning NPCs: fewer deaths, no screams from the ground
+
+The owner, 10-15: "NPC burn deaths less disturbing and fewer; they flee, run for water or stop-drop-roll; no
+whimper". Someone who caught fire ran for water when it was near; otherwise 35% ran about, 35% stopped, dropped and
+rolled (and lived), and 30% fell and burned to death, screaming every two or three seconds the whole time, lying
+down too.
+
+- **fewer burn to death** (`shared/rules.js` BURN.npc): 44% run, 44% stop, drop and roll, 12% fall. Running for the
+  water when it's near is unchanged (seven in ten).
+- **no screams from the ground** (`server/systems/burning.js`): they cry out while on their feet. Once someone is
+  down, rolling or fallen, it's quiet.
+
+Tests: test/burning.test.js - most run or roll, few fall.
+
+## 2026-10-21 · Fix: a banking plane rolls whole
+
+The owner, 10-16: "Plane wings tilt without the body: bank them together". The plane's banked models (art v2,
+`client/art2/aircraft.js`) tilted the wing and the tailplane one side up and the other down, and left the fuselage,
+the fin, the wheels and the propeller level.
+
+- The plane is now built level and the whole model is rolled about its fuselage for each bank. The fin and the
+  wheels lean over with the wings, and the wings are seen foreshortened from above as they turn. Each voxel of the
+  rolled model is taken from the level one, so a thin strut keeps no holes.
+
+Tests: test/aircraftart.test.js - banked, the fin leans over with the wings, the low wing down and the high one up,
+the span foreshortened.
+
+## 2026-10-21 · Fix: no stealing a boat from up on a bridge, or a car on a bridge from the water
+
+The owner, 10-16: "You can steal a boat from a bridge (and probably a car on a bridge from the water)". Getting in
+looked for the nearest vehicle in reach without minding a bridge's two layers: the deck, and the water under it.
+
+- **across a bridge** (`server/systems/vehicles.js` acrossBridge, in nearestVehicle): standing up on a bridge's
+  deck, a boat on the water under it is out of reach. Swimming in the water, a car up on the deck is out of reach.
+  The Act prompt doesn't offer them either. Down in the water under the bridge you can still climb into the boat,
+  and from the deck you can still get into the car.
+
+Tests: test/bridgelayers.test.js - no boat from the deck, the boat from the water; no car on the deck from the
+water, the car from the deck.
+
+## 2026-10-21 · Fix: NPC boats no longer jam on walls, docks and inlets
+
+The owner, 10-16: "NPC boats stuck on walls, docks and inlets". An NPC boat felt its way round land along its middle
+line only, so a hull could scrape a pier's or a breakwater's edge with its middle clear and stop dead against it,
+meaning to go and going nowhere. In a five-minute run with players on three docks, 9 of 177 boats sat jammed for
+more than five seconds, 8 for more than fifteen and some for minutes, against a promenade's edge in the sea.
+
+- **feelers the hull's width** (`server/systems/boats.js` boatSteer): it checks the way ahead along both sides of
+  the hull as well as the middle.
+- **a way out:** jammed for 2.5 s, a boat backs off turning toward whichever side has the open water, and its
+  skipper picks somewhere else to go. A boater or a patrol boat takes a new heading, and an angler fishes where it
+  got to. One that jams five times is given up once nobody's looking.
+- The same five minutes again: none jammed for more than five seconds.
+
+Tests: test/boatjam.test.js - a boat driven at a quay notices it's jammed and heads somewhere on the water instead.
+
+## 2026-10-21 · More trains: one into each station every couple of minutes
+
+The owner, 10-16: "More trains on the main loop: one every 1-2 minutes". World v3 ran two trains on every loop. On
+the main loop, the Grand Loop's 18½-minute lap each way, that was a train every nine minutes.
+
+- **trains by lap** (`server/systems/trains.js` loopTrains; `shared/rules.js` TRAIN_LOOP_HEADWAY_S = 120,
+  TRAIN_LOOP_MAX = 10): each loop gets as many trains as put one into each of its stations about every two minutes,
+  two at the least. The main loop has nine each way and the shorter loops four, 34 trains in all (12 before).
+- **kept spaced** (the station stop): a train that comes in close behind the one before it waits at the platform,
+  at most 75 s, until it's its loop's headway behind. Bunched trains spread out again round the loop, and within
+  twenty minutes they're about two minutes apart all the way round. The platform clocks count down to the held
+  departure. The trains start out spread round each loop by place, no longer held back by minutes in turn.
+- The server's tick with all 34 running: under 3 ms.
+
+Tests: test/world3rail.test.js - each loop's trains put one into its stations about every two minutes; every train
+still runs and stops in five minutes, and none runs into another.
+
+## 2026-10-21 · No "next train" pop-up on the El's platforms
+
+The owner, 10-16: "No 'next train' popup (the station sign shows it)". Standing on an El platform with no train in,
+the Act prompt read "...: next train in 1:42 (to ...) - board at the doors when it's in". The platform's clock
+already shows that.
+
+- No prompt there now (`server/systems/trains.js` interaction). When a train's in, "Board the train - next stop ..."
+  still shows at its doors. The other half of the note, the next station on a sign on the train itself, is still to
+  do.
+
+Tests: test/elplatform.test.js - on the platform with no train in, no next-train prompt; with one in, board it.
+
+## 2026-10-21 · The tyres' screech softer
+
+The owner, 10-10 and again 10-15: "Tyre screech softer; burnouts". The first pass (#373, 10-10) made the screech a
+rubber squeal instead of a whoosh and silent on a hard start. Burnouts already screech and smoke on the spot.
+
+- **softer** (`client/sound/vehicles.js` TYRE_LEVEL 0.08 to 0.05): about 4 dB down. Other people's cars sit further
+  under yours (0.6 of the level, was 0.8), and the squeal eases in rather than biting at once.
+
+Tests: test/sound.test.js - the level kept a little over your own engine.
+
+## 2026-10-21 · The camera pulls back at speed on a train
+
+The owner, 10-16: "Zoom out at full speed on a train, back in at stations". The camera's pull-back at speed (up to
+1.5x) read the speed of the car you drive or ride in, and a train's rider got none.
+
+- **on a train** (`client/main.js`, the camera): its speed is how fast you're carried along, smoothed, so the camera
+  pulls back as the train gets up to speed (about 1.4x at full speed) and comes back in as it slows into a station.
+  At the platform it's back to normal. A jump (boarding, a teleport) doesn't count as speed. While the art can't keep
+  up (a phone's bakes), it eases off as it does in a car.
+
+No automated test: it's the page's camera (play it: ride a train between two stations).
+
+## 2026-10-21 · An armored truck's guards: they notice, and size it up before they fire
+
+The owner, 10-16: "Armored truck guards: sometimes don't notice and drive off spilling loot; take a second to assess
+before firing". A player had to knock 25 off the truck's health before it counted as an attack, five or six pistol
+shots, so a light attack went unnoticed and it drove on. Once it stopped, the guards came out shooting that instant.
+
+- **they notice** (`server/systems/streetlife.js`): a player's first real hit (8 off its health, a shot or two) and
+  the truck stops and the guards get out.
+- **they size it up** (`shared/rules.js` ARMORED_ASSESS_S, 0.8-1.6 s; `server/systems/npc.js` fight's holdFireUntil):
+  out of the truck, each guard takes a moment with their weapon up and on whoever did it before they fire.
+
+Tests: test/streetlife.test.js - a single real hit and they stop and get out; no shot while they size it up, then
+they fire.
+
+## 2026-10-21 · Fewer pigeons
+
+The owner, 10-15: "Fewer pigeons". Up to 14 pigeons and gulls were about at once, a new one arriving every 0.6 to
+2.4 s.
+
+- **fewer** (`client/birds.js` BIRDS): up to 7 at once, a new one every 2 to 6 s.
+
+Tests: test/birds.test.js - a few at a time; they still come in from off screen, land and go.
+
+## 2026-10-21 · Idle kick: "Still there?", then a disconnect at ten minutes
+
+Decided 10-06 / 10-08: "Idle kick: 'Still there?' then a disconnect - 10 min for everyone". Only the away timer existed
+(for a page in the background); a player left idle and connected stayed in the world for good.
+
+- **idle** (`server/systems/players.js` idleCheck): nothing done for nine minutes (keys, stick and aim unchanged; no
+  menu pick, chat line or anything sent) and you're asked "Still there? Move or press anything - you'll be
+  disconnected in a minute if not." At ten minutes you're disconnected. The character logs out as any disconnect
+  does: safely if nothing's after you, by the drop rule if something is. Anything you do starts the clock again,
+  and so does reconnecting. It's real time, not the game's, so a clock jumped on doesn't count as idling.
+- **the page** (`client/main.js` idleOut, close code 4006): back to the title with "You were idle for 10 minutes, so
+  you were disconnected. Your progress is saved." It doesn't reconnect on its own; the PLAY button reads RECONNECT
+  and reloads into the game.
+
+Tests: test/idle.test.js - asked at nine minutes, disconnected at ten and told why; a key pressed counts, the same
+keys held don't; a game clock jumped an hour on is no idling.
+
+## 2026-10-21 · The playtest panel: the tractor by a field, the water race at the water
+
+Two of the owner's 10-16 notes on the playtest panel:
+
+- **"Tractor option spawns you away from a field: put it by one"** (`server/systems/farming.js` devFarm): the tractor
+  (and the combine) went to the field nearest the map's first farm, at one row's end. On World v3's fields, cut by
+  their wandering edges, a row's end can lie off the crop in the trees. Now it goes to the field nearest you, on the
+  crop itself: the first piece of a row that is field. The combine goes on a piece both its rows have crop on.
+- **"Boat race teleport lands at the land raceway, not a water start"** (`server/dev.js` NEAR_KINDS.race): "Water race
+  start" took the nearest race of any kind, and the raceway's and the MX park's starts are races too. Now it's the
+  water races only: the jetski sprint, the boat classic and the kayak runs, each with its craft waiting (a kayak for
+  a kayak run).
+
+Tests: test/farming.test.js - the dev tractor and combine at the field nearest you, on its crop;
+test/gameplay.test.js - "take me there" for a water race lists only water races.
+
+## 2026-10-21 · The wind gusts and dies away; the rain quieter
+
+The owner, 10-16: "Rain and wind still drown everything out; wind seems constant". The wind's level wandered at random
+between 0.35 and 1 of its bed, so it never dropped away and never really gusted. The rain's bed peaked over the
+town's.
+
+- **gusts** (`client/sound/ambience.js` gustStep): lulls most of the time (0.12-0.4 for 8-24 s) and, three times in
+  ten, a gust (0.75-1 for 2.5-5 s) that swells in quicker than it dies away. The leaves' rustle in the woods goes
+  with the gusts as before, so it's quiet in the lulls too.
+- **the rain** (BED_MAX.rain 0.22 to 0.15): about 3 dB down. It adds less to the wind (0.05, was 0.1).
+
+Tests: test/sound.test.js - mostly lulls, gusts now and then, from near still to a strong gust; the rain's level.
+
+## 2026-10-22 · Fix: the woods rustle in the lulls
+
+The last batch made the wind gust and die away (`gustStep` in `client/sound/ambience.js`): it spends most of its
+time in a lull (0.12-0.4) with a gust now and then. But the leaves' rustle still went with the gust squared, so in a
+lull the woods were all but silent (a twentieth of the rustle at most). test/ambience.test.js listens for a minute in
+the woods, and it failed whenever that minute had no gust in it.
+
+- **the leaves**: a murmur in the lulls (about half), full in a gust. The loudest is the same as before.
+- **the test's yardsticks**: two checks still measured against the old, louder rain. "Rain when it rains" now asks
+  for most of the rain's level. The loudest mix (a storm out at sea) is held to a few dB over the loudest bed in it,
+  the rain or the sea's full swell. With the rain now quieter, the sea's swell is the louder of the two.
+
+Tests: test/ambience.test.js (15 runs in a row, all passing).

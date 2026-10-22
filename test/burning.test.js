@@ -129,7 +129,9 @@ test('what sets people alight: a blast, their car blowing up with them in it, a 
   const c = w.map.props[i], camper = spawnNpc(w, 'casual', c.x, c.y);
   caught = false;
   for (let k = 0; k < 200 && !caught && camper; k++) { teleport(w, camper, c.x + 4, c.y); camper.vx = 60; w.tick++; w.time += 0.05; burning.update(w, 0.05); caught = burning.burning(camper); }
-  assert.ok(caught, 'walking into a campfire');
+  assert.ok(!caught, 'a camper going about round the fire steps round it (the owner, 10-16: "NPCs randomly catching fire")');
+  for (let k = 0; k < 200 && !caught && camper; k++) { teleport(w, camper, c.x + 4, c.y); camper.vx = 60; camper.downUntil = w.time + 0.3; w.tick++; w.time += 0.05; burning.update(w, 0.05); caught = burning.burning(camper); }
+  assert.ok(caught, 'knocked into a campfire');
   // standing still beside a burning wreck: no (everyone else out of the way first: the walker is still stood where it
   // caught, moving - it'd catch again, and someone alight brushing past lights you)
   for (const b of [...w.burning]) burning.douse(w, b);
@@ -152,7 +154,7 @@ test('burning NPCs: some run, some stop, drop and roll (and live), some fall and
     plans[k] = (plans[k] || 0) + 1;
     by.set(q, k);
   }
-  assert.ok(plans.run > 3 && plans.roll > 3 && plans.fall > 3, JSON.stringify(plans));
+  assert.ok(plans.run > 3 && plans.roll > 3 && plans.fall >= 1 && plans.fall * 2 < plans.roll, `most run or roll, few fall (the owner, 10-16: "NPC burn deaths ... fewer") ${JSON.stringify(plans)}`);
   run(w, 14);
   let rolledOut = 0, fellDead = 0, fallers = 0, rollers = 0;
   for (const [q, k] of by) {

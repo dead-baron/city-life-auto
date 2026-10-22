@@ -122,10 +122,12 @@ function contacts(world, dt) {
       if (!burning(q) && !q.vehId && moving(q) && explosions.bodyDist(v, q.x, q.y) < BURN.vehPx && world.rand() < p) ignite(world, q, null);
     }
   }
+  // (a campfire: a player who walks into it, or someone knocked into it - not the campers and hikers going about round it,
+  // who step round their fire: the owner, 10-16, "NPCs randomly catching fire" - they'd wander through it and go up)
   for (const i of campfires.fireIdx(world.map)) {
     const c = world.map.props[i];
     if (!c || c.broken || !campfires.isLit(world, i)) continue;
-    for (const q of world.query(c.x, c.y, BURN.campPx, K.PED)) if (!burning(q) && !q.sit && moving(q) && Math.hypot(q.x - c.x, q.y - c.y) < BURN.campPx && world.rand() < p) ignite(world, q, null, BURN.secs * 0.6);
+    for (const q of world.query(c.x, c.y, BURN.campPx, K.PED)) if (!burning(q) && !q.sit && moving(q) && (q.player || now < (q.downUntil || 0) + 0.5) && Math.hypot(q.x - c.x, q.y - c.y) < BURN.campPx && world.rand() < p) ignite(world, q, null, BURN.secs * 0.6);
   }
   for (const b of world.burning) {
     if (b.dead) continue;
@@ -165,8 +167,8 @@ export function update(world, dt) {
       if (now >= ped.downUntil) { douse(world, ped); continue; }
     }
     if (ped.burnT <= 0) { douse(world, ped); continue; }
-    // the screams
-    if (now >= (ped.screamAt || 0)) { ped.screamAt = now + span(world, BURN.screamS); world.emit(ped.x, ped.y, { e: 'scream', x: Math.round(ped.x), y: Math.round(ped.y), id: ped.id }); }
+    // the screams - on their feet; not from someone down on the ground (the owner, 10-16: "no whimper")
+    if (!(B && B.down) && now >= (ped.screamAt || 0)) { ped.screamAt = now + span(world, BURN.screamS); world.emit(ped.x, ped.y, { e: 'scream', x: Math.round(ped.x), y: Math.round(ped.y), id: ped.id }); }
     // it hurts
     if (ped.player && (ped.player.invincible || now < (ped.protectUntil || 0))) continue;
     const by = ped.burnBy ? world.get(ped.burnBy) : null;

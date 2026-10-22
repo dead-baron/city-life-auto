@@ -222,3 +222,23 @@ test('the file store keeps the world\'s kept state with the profiles (H69: the f
   f.touch(); f.flushSync();
   assert.deepEqual(new FileStore().kept.fields, { sig: 'x', rows: [[[1, 500, 3]]] }, 'read back after a restart');
 });
+
+// The playtest panel's tractor (and combine): at the field nearest you, on the crop itself (the owner, 10-16: "Tractor
+// option spawns you away from a field: put it by one")
+test('the dev tractor and combine: at the field nearest you, on its crop', async () => {
+  const { T, TILE } = await import('../shared/constants.js');
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const fs = farming.fieldsOf(w), far = fs[fs.length - 1].f;
+  teleport(w, p.ped, far.x + far.w / 2, far.y - 200);   // (by the last field in the list, not the first farm's)
+  for (const k of [null, 'combine']) {
+    assert.equal(farming.devFarm(w, p, k ? { k } : {}), null);
+    const v = w.get(p.ped.vehId);
+    assert.ok(v && v.def.id === (k || 'tractor'), `in the ${k || 'tractor'}`);
+    assert.equal(w.map.tileAtPx(v.x, v.y), T.FIELD, `on the crop (${Math.round(v.x / TILE)}, ${Math.round(v.y / TILE)})`);
+    const near = fs.reduce((b, F) => { const d = Math.hypot(F.f.x + F.f.w / 2 - v.x, F.f.y + F.f.h / 2 - v.y); return d < b.d ? { F, d } : b; }, { d: Infinity });
+    assert.ok(Math.hypot(near.F.f.x + near.F.f.w / 2 - (far.x + far.w / 2), near.F.f.y + near.F.f.h / 2 - (far.y + far.h / 2)) < 1500, 'at a field near you');
+    vehicles.ejectPed(w, p.ped, true);
+    teleport(w, p.ped, far.x + far.w / 2, far.y - 200);
+  }
+});

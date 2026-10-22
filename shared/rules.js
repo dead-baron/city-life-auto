@@ -400,6 +400,9 @@ export const ROB_SCENE_S = 180;          // the police treat the place as the sc
 
 // Trains
 export const TRAIN_HEADWAY_S = 60;       // a train pulls into each station about this often (the fleet size follows from the loop's run time)
+export const TRAIN_LOOP_HEADWAY_S = 120; // World v3's loops: a train into each station about this often (the owner, 10-16: "one every 1-2 minutes")
+export const TRAIN_LOOP_MAX = 10;        // ...but no more than this many trains to a loop
+export const TRAIN_HOLD_MAX_S = 75;      // a train close behind the one before waits at a platform at most this long, to space out
 export const TRAIN_SPEED = 560;          // cruising speed (px/s) - as quick as a fast car; nothing stops it, nothing damages it
 export const TRAIN_ACCEL = 85;           // pulling away (px/s^2) - eased in and out, no lurch
 export const TRAIN_BRAKE = 115;          // braking into a station
@@ -580,6 +583,7 @@ export const STREET_EVERY_S = 300;        // something like this happens about t
 export const STREET_RACE_COPS = 0.45;     // a street race a patrol car happens on (the police go after the racers)
 export const ARMORED_ESCORT = 0.4;        // an armored truck with a squad car escorting it
 export const ARMORED_UNLOCK_S = 3;        // hold ACT this long at the back of a stopped armored truck to get it open
+export const ARMORED_ASSESS_S = [0.8, 1.6];   // an armored truck's guards, out of it, size things up this long (s) before they fire
 
 // Vehicle damage (task #402; the owner: "weapons damage vehicles (strong ones significantly); lightsabers destroy a
 // vehicle in a few hits"). What a weapon does to a vehicle, as a multiple of what it does to a person (then divided by
@@ -622,7 +626,7 @@ export const SAFETY_CONFIRM_S = 4;
 // fall (a few steps, then down, burning until they die: fallDps); near water (within waterPx) water of them run for it.
 export const BURN = {
   secs: 9, dps: 6, run: 1.6, roll: 9, rain: 2.2, blast: 0.85, touch: 1.6, campPx: 20, vehPx: 12, pedPx: 18,
-  npc: { run: 0.35, roll: 0.35, fall: 0.3 }, rollAfter: [1.2, 2.6], rollS: 2.4, fallAfter: [0.6, 1.4], fallDps: 14,
+  npc: { run: 0.44, roll: 0.44, fall: 0.12 }, rollAfter: [1.2, 2.6], rollS: 2.4, fallAfter: [0.6, 1.4], fallDps: 14,
   water: 0.7, waterPx: 380, screamS: [1.6, 3.4],
 };
 // ---- the tank (H58; the owner: "Add a tank you can drive and shoot and blow things up with, can spawn in debug"):

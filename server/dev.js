@@ -71,13 +71,16 @@ export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die',
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
 // closest one to the player and puts them on open ground beside it (inside, at the desk, for walk-ins).
+const WATER_RACES = { jetski: 'jetski', boat: 'speedboat', kayak: 'kayak' };   // (a water race's kind: the craft waiting at its start)
 export const NEAR_KINDS = {
   bikerack: (m) => m.props.filter((q) => q.t === 'bikerack').map((q) => ({ x: q.x, y: q.y + 40, name: 'a bike rack' })),
   // (every line's stops: World v3 runs a rail per loop - m.rail is only the first, the main line - the owner, 2026-10-15:
   // "find nearest subway station ... says there is no subway station on this map")
   subway: (m) => railStops(m, (s, r) => s.under && (s.kiosk || r.subway)).map((s) => (s.kiosk ? { x: s.kiosk.out.x, y: s.kiosk.out.y, name: s.name } : { x: s.platform.x, y: s.platform.y, name: s.name })),
   platform: (m) => railStops(m, (s) => !s.under).map((s) => ({ x: s.platform.x, y: s.platform.y, name: s.name })),
-  race: (m) => (m.races || []).filter((r) => r.start).map((r) => ({ x: r.start.x, y: r.start.y, name: r.name || 'Race start', craft: r.kind === 'jetski' ? 'jetski' : r.kind === 'boat' ? 'speedboat' : null })),
+  // (the water races only - the jetski sprint, the boat classic, the kayak runs: the owner, 10-16, "Boat race teleport lands
+  // at the land raceway, not a water start" - the raceway's and the MX park's starts are races too; theirs: 'raceway')
+  race: (m) => (m.races || []).filter((r) => r.start && WATER_RACES[r.kind]).map((r) => ({ x: r.start.x, y: r.start.y, name: r.name || 'Race start', craft: WATER_RACES[r.kind] })),
   venue: (m) => (m.venues || []).filter((v) => v.rect).map((v) => ({ x: v.rect.x + v.rect.w / 2, y: v.rect.y + v.rect.h + 24, name: v.name || v.kind })),
   nature: (m) => (m.natureSites || []).map((q) => ({ x: q.x, y: q.y, name: q.name || q.kind })),
   beaver: (m) => (m.beaverPonds || []).map((b) => ({ x: b.x + 160, y: b.y + 140, name: `${b.name || 'Heron Marsh'} beaver pond` })),

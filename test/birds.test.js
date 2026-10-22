@@ -37,6 +37,7 @@ test('birds fly in from off screen, land on their spot, and leave off screen', (
   assert.ok(dropped.length > 20, 'and go');
   for (const b of dropped) assert.ok(offScreen(b, 30), `let go off screen: ${Math.round(b.x)},${Math.round(b.y)} (${b.st})`);
   assert.ok(F.list.length + F.free.length <= BIRDS.MAX + 3, `the same few objects over and over (${F.list.length + F.free.length})`);
+  assert.ok(BIRDS.MAX <= 8 && BIRDS.NEXT[0] >= 1.5, 'a few at a time (the owner, 10-15: "Fewer pigeons")');
 });
 
 test('a car or a runner scares them off, away from it; gulls on the sand', () => {

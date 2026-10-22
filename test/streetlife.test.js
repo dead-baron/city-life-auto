@@ -195,6 +195,26 @@ test('attacked, it stops and the guards get out and fight; the attacker is wante
   assert.ok(ev.attackedAt, 'attacked');
   for (const id of ev.guards) { const g = w.get(id); assert.ok(!g.vehId, 'out of the truck'); assert.equal(g.npc.state, 'fight'); assert.equal(g.npc.target, p.ped.id); }
   assert.ok(p.wanted > 0, 'police heat');
+  // (the owner, 10-16: "take a second to assess before firing") out of the truck, they size it up a moment first
+  for (const id of ev.guards) { const g = w.get(id); assert.ok(g.npc.holdFireUntil > ev.attackedAt + 0.7, 'a moment to size it up'); }
+});
+
+test('the guards notice a player\'s first real hit: a shot or two, not five or six (the owner, 10-16)', () => {
+  const { w, p, ev, van } = armored(23);
+  run(w, 1);
+  teleport(w, p.ped, van.x + 200, van.y);
+  p.ped.hp = 1e4;
+  van.hp -= 12; van.lastAttacker = p.ped.id;
+  run(w, 1);
+  assert.ok(ev.attackedAt, 'a single real hit: they stop and get out');
+  // held fire a moment (weapons up), then they shoot: the guards' shots by when they're fired
+  const ids = new Set(ev.guards), shots = [], emit = w.emit.bind(w);
+  w.emit = (x, y, e) => { if (e && e.e === 'shot' && ids.has(e.id)) shots.push({ id: e.id, t: w.time }); return emit(x, y, e); };
+  run(w, 3);
+  w.emit = emit;
+  const early = shots.filter((q) => q.t < w.get(q.id).npc.holdFireUntil - 0.06);
+  assert.deepEqual(early, [], 'no shot while they size it up');
+  assert.ok(shots.length > 0, `and then they fire (${shots.length} shots)`);
 });
 
 test('an escorted armored truck: the squad car follows it, and turns on whoever attacks it', () => {

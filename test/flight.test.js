@@ -271,3 +271,22 @@ test('the page\'s airfields: holes in the places are passed over, and worked out
   page.pois = m.pois.slice();
   assert.equal(pageAirfields(page).pads.length, full, 'all the pads once every region is in');
 });
+
+// The helipads' H marks (render/aircraft.js drawPads) are drawn while you fly, somewhere to set down; once you've left
+// the helicopter they go (the owner, 10-16: "Helipad H symbols stay visible after you leave the helicopter" - the
+// aircraft module, loaded once you'd flown, drew them for good).
+test('the helipads\' H marks: drawn while you fly, gone once you are on foot again', async () => {
+  globalThis.innerWidth ??= 1280;
+  const { drawAir, pageAirfields } = await import('../client/render/aircraft.js');
+  const { generateCity } = await import('../shared/map.js');
+  const m = generateCity(1337), pad = pageAirfields(m).pads[0];
+  let marks = 0;
+  const g = new Proxy({}, { get: (o, k) => (k in o ? o[k] : k === 'fillRect' ? () => { marks++; } : () => {}), set: (o, k, v) => { o[k] = v; return true; } });
+  const F = { air: [], view: { x0: pad.x - 400, y0: pad.y - 400, x1: pad.x + 400, y1: pad.y + 400 }, now: 1, dt: 0.016, sky: null };
+  drawAir(g, F, { map: m, me: null, pred: { air: true } }, 0.016, false);
+  assert.ok(marks > 0, 'flying: the pad\'s H drawn');
+  marks = 0;
+  drawAir(g, F, { map: m, me: null, pred: null }, 0.016, false);
+  assert.equal(marks, 0, 'on foot: no H');
+});
+

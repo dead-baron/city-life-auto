@@ -18,8 +18,16 @@ test('the helicopters and the plane build as block models, the plane banking', (
   assert.ok(solid(level) > 10000, 'the plane');
   // banked right: the right wing tip (+y) lower than the left
   const top = (m, y) => { for (let z = m.h - 1; z >= 0; z--) for (let x = 0; x < m.w; x++) if (m.get(x, y, z)) return z; return -1; };
-  assert.equal(top(level, 6), top(level, level.d - 7), 'level: the tips at one height');
-  assert.ok(top(banked, 6) > top(banked, banked.d - 7) + 20, 'banked right: the right wing down, the left up');
+  const tips = (m) => { let lo = m.d, hi = -1; for (let y = 0; y < m.d; y++) for (let z = 0; z < m.h && (y < lo || y > hi); z++) for (let x = 0; x < m.w; x++) if (m.get(x, y, z)) { lo = Math.min(lo, y); hi = Math.max(hi, y); break; } return [lo + 2, hi - 2]; };
+  const [l0, r0] = tips(level), [l1, r1] = tips(banked);
+  assert.equal(top(level, l0), top(level, r0), 'level: the tips at one height');
+  assert.ok(top(banked, l1) > top(banked, r1) + 20, 'banked right: the right wing down, the left up');
+  // the whole plane rolls, not the wings alone (the owner, 10-16: "Plane wings tilt without the body: bank them
+  // together"): the fin, standing up off the fuselage at the tail, leans over with it
+  const fin = (m) => { let fz = -1, fy = 0; for (let z = 0; z < m.h; z++) for (let y = 0; y < m.d; y++) for (let x = 0; x < 14; x++) if (m.get(x, y, z) && z > fz) { fz = z; fy = y; } return fy - m.d / 2; };
+  assert.ok(Math.abs(fin(level)) <= 2, `level: the fin upright (${fin(level)})`);
+  assert.ok(fin(banked) > 8 && fin(AM.bodyModel('plane', { bank: -0.6 })) < -8, `banked: the fin leans over with the wings (${fin(banked)})`);
+  assert.ok(r1 - l1 < r0 - l0 - 10, 'banked: the wings seen foreshortened from above, as they turn');
 });
 
 test('they render to sprites at a heading; the rotor\'s blades and its disc', () => {

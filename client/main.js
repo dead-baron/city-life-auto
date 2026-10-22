@@ -183,7 +183,7 @@ function connect() {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     onText(m);
   };
-  ws.onclose = (ev) => { if (S.ws === ws) scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
+  ws.onclose = (ev) => { if (S.ws !== ws) return; if (ev && ev.code === 4006) { idleOut(); return; } scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
   ws.onerror = () => {};
 }
 
@@ -191,6 +191,20 @@ function connect() {
 // boots you out"): a small "Reconnecting..." over the city and straight back in when the server answers; only after a
 // minute of trying does it go back to the title screen.
 const RECONNECT_IN_GAME_MS = 60000;
+// Disconnected for being idle 10 minutes (server players.js idleCheck: close 4006): back to the title, no reconnecting on
+// its own - its PLAY button says RECONNECT and reloads the page into the game
+function idleOut() {
+  S.welcomed = false; S.ws = null; S.playing = false;
+  clearTimeout(S.reconnectT);
+  reconnecting(false);
+  $('title').classList.remove('hidden');
+  $('hud').classList.add('hidden');
+  $('t-resume').classList.add('hidden');
+  $('t-status').textContent = 'You were idle for 10 minutes, so you were disconnected. Your progress is saved.';
+  const b = $('play');
+  b.disabled = false; b.textContent = 'RECONNECT';
+  b.onclick = () => location.reload();
+}
 function scheduleReconnect(why, toTitle = false) {
   if (S.practice) return;
   S.welcomed = false;
@@ -2899,6 +2913,13 @@ function prepFrame(dt) {
   let speed = 0;
   if (S.pred && S.pred.kind === 'veh') speed = Math.hypot(S.pred.s.vx, S.pred.s.vy);
   else if (S.ctrlKind === CTRL.PASSENGER || S.ctrlKind === CTRL.RIDER) { const e = S.ents.get(S.ctrlId); if (e && e.buf.length > 1) { const b = e.buf; speed = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20; } }
+  // riding a train: its speed from how fast you're carried along (smoothed) - the camera pulls back at full speed and
+  // comes back in as it slows into a station (the owner, 10-16: "Zoom out at full speed on a train, back in at stations")
+  if (S.me && S.me.train) {
+    const L = S.trainCam || (S.trainCam = { x: sp.x, y: sp.y, v: 0 }), d = Math.hypot(sp.x - L.x, sp.y - L.y) / Math.max(dt, 1e-3);
+    L.v += (Math.min(900, d > 2000 ? 0 : d) - L.v) * (1 - Math.exp(-2 * dt)); L.x = sp.x; L.y = sp.y;   // (a jump - boarding, a teleport - isn't speed)
+    speed = Math.max(speed, S.me.train.at ? 0 : L.v);
+  } else S.trainCam = null;
   // down: like a movie camera, it slowly pulls back from your body (never wider than the server sends)
   const downFor = S.me && S.me.dead ? (S.downFor = (S.downFor || 0) + dt) : (S.downFor = 0);
   const pull = downFor ? 1 + (DOWN_PULL - 1) * Math.min(1, downFor / 9) * (0.5 - 0.5 * Math.cos(Math.min(1, downFor / 9) * Math.PI)) : 1;
@@ -3308,7 +3329,7 @@ function drawOverlays(F, v2) {
   }
   g.setTransform(...S.worldTf);
   if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
-  else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (the helipads)
+  else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (a rescue call's flare; the helipads' H only while you fly)
   else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)
   if (S.fireMod && !F.sub) S.fireMod.draw(g, F, S);   // (the fires on the ground, the hoses: render/firejob.js)
   drawBowling(F);
