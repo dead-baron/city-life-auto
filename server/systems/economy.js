@@ -33,7 +33,7 @@ import * as skills from './skills.js';
 import * as arcade from './arcade.js';
 import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
-import { SKATEBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
+import { SKATEBOARD_PRICE, SURFBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 // A hand plan's walk-in shop's counter (World v3's Midtown: shared/world3-hand.js poi.walk, poi.store): what it has for
@@ -279,6 +279,7 @@ export function buildMenu(world, p, poi) {
       sub = `${(STORES[storeOf(poi)] || {}).line || 'Clothes'}. Try things on in the fitting room. A fresh outfit drops your public wanted level to 0 (if no cop is watching); your peak record is remembered. They buy handmade furs and buckskin.`;
       opts.push({ id: 'outfit', label: 'Buy a new outfit (whatever fits)', price: 120, dis: p.badge, note: p.badge ? 'off duty only' : '' });
       if (storeOf(poi) === 'kickflip' || storeOf(poi) === 'surf') { const have = (prof.inventory.skateboard || 0) > 0; opts.push({ id: `i:skateboard:${SKATEBOARD_PRICE}:1`, label: ITEMS.skateboard.name, price: SKATEBOARD_PRICE, dis: have, note: have ? 'have one' : 'ride it anywhere smooth' }); }   // (the skate shop's decks, the surf shops' cruisers)
+      if (storeOf(poi) === 'surf') { const have = (prof.inventory.surfboard || 0) > 0; opts.push({ id: `i:surfboard:${SURFBOARD_PRICE}:1`, label: ITEMS.surfboard.name, price: SURFBOARD_PRICE, dis: have, note: have ? 'have one' : 'paddle out at a surf break and catch a wave' }); }   // (surfing: surf.js)
       for (const id of SHOPS.clothing.sells) { const n = prof.inventory[id] || 0; if (n > 0) opts.push({ id: `s:${id}`, label: `Sell ${ITEMS[id].name} (x${n})`, price: -sellPrice(SHOPS.clothing, id), note: n > 1 ? 'sells all' : '' }); }
       break;
     case 'garage': {

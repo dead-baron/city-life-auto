@@ -1232,7 +1232,9 @@ function artCdnBase() {
   try { const u = new URL(serverUrl()); return `${u.protocol === 'wss:' ? 'https:' : 'http:'}//${u.host}/art/`; } catch { return null; }
 }
 function showWorld2(on) { if (on === world2Shown || !worldCv) return; world2Shown = on; worldCv.classList.toggle('hidden', !on); }
-function art2Draws(F) { const on = !!(S.art2 && S.art2.ready && !F.sub); showWorld2(on); return on; }
+// (under the city: the new renderer draws the subway's tunnel too once its code is in - art2/game/tunnel.js - the classic
+// tunnel view till then)
+function art2Draws(F) { const on = !!(S.art2 && S.art2.ready && (!F.sub || (S.art2.tunnelReady && S.art2.tunnelReady()))); showWorld2(on); return on; }
 async function startArt2(map) {
   if (!ART2_WANTED || !worldCv) return;
   if (S.art2) { S.art2.dispose(); S.art2 = null; showWorld2(false); }
@@ -3384,8 +3386,10 @@ function drawOverlays(F, v2) {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, canvas.width, canvas.height);
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
-    if (F.rain && !underCover(S.map, sp.x, sp.y)) drawRain(F.dt, F.sky);   // (none in a tunnel)
+    if (F.rain && !F.sub && !underCover(S.map, sp.x, sp.y)) drawRain(F.dt, F.sky);   // (none in a tunnel)
     g.setTransform(...S.worldTf);
+  }
+  if (v2 && !F.sub) {   // (none of the city's marks down in the subway's tunnel)
     drawAtmMarks(F.view, now);
     if (settings.shopMarks !== false && S.art2.shopMarks) S.art2.shopMarks(g, F, drawIcon, KIND_ICON);   // (the shop symbols over doors near you: art2/game/host.js)
     drawStationClocks(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
@@ -3443,6 +3447,7 @@ function drawOverlays(F, v2) {
 
   // HUD bits
   if (S.skate && S.me && S.me.sk) S.skate.drawHud(g, W, H, S.me.sk, now);
+  if (S.me && S.me.surf) drawSurfHud(S.me.surf, now);   // (on a surfboard: this ride's points, the last one's, your best - server surf.js)
   if (S.fish) S.fish.drawHud(g, W, H);   // (the fight, the prompts, the catch card)   // (on a skateboard: the combo, the score, the special meter, a session)
   // (where you are: the water doesn't change it - a river, a lake, the sea near land keep the name - client/areaname.js)
   { const me = F.meEnt, cv = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER ? S.ents.get(S.ctrlId) : null, cd = cv && cv.d && VEHICLE_BY_INDEX[cv.d.m];
@@ -4298,12 +4303,20 @@ function pedLook(p, now) {
     if (!S.skate) { loadSkate(); pose = 'skatec'; fr = 0; }
     else { const me = p.id === S.myPedId && S.pred && S.pred.kind === 'ped' && S.pred.mods && S.pred.mods.board ? S.pred.s : null, sk = S.skate.look(p, f, now, me); pose = sk.pose; fr = sk.fr; lift = sk.lift; }
   } else { p._oa = undefined; p._ks = undefined; }
+  // on a surfboard (the descriptor's sf: server surf.js): lying on it paddling, up on a wave, up off its lip (4: tumbling in
+  // the white water - swimming)
+  const sf = p.d && p.d.sf <= 3 && !(f & (PF.DEAD | PF.DOWN | PF.INVEH)) && !flying ? p.d.sf : 0;
+  if (sf) {
+    pose = sf === 1 ? 'surfpad' : sf === 2 ? 'surf' : 'surfair';
+    fr = sf === 1 ? ((p.as || 0) > 20 ? Math.floor(now * 2.4 + p.id * 0.3) % 2 : 0) : sf === 2 ? Math.floor(now * 0.9 + p.id * 0.17) % 2 : 0;
+    lift = sf === 3 ? 14 : 0;
+  }
   const L = p._look || (p._look = {});
-  L.lift = lift; L.board = !!(p.d && p.d.bd) && SKATE_POSES.has(pose);
+  L.lift = lift; L.board = !!(p.d && p.d.bd) && SKATE_POSES.has(pose); L.surf = sf;
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;
   L.lvl = (p.as || 0) < 62 ? 0 : p.as < 112 ? 1 : p.as < 165 ? 2 : 3;
   L.hitK = p.hitAt !== undefined ? Math.max(0, 1 - (now - p.hitAt) / 0.22) : 0;
-  L.swimming = !(f & PF.INVEH) && !!p.swim;
+  L.swimming = !(f & PF.INVEH) && !!p.swim && !sf;
   L.upright = UPRIGHT.has(pose) && !flying;
   return L;
 }
@@ -4329,6 +4342,26 @@ function pedVisual(p, now) {
   if (!lying && (f & PF.BLEED) && Math.random() < 0.08) S.fx.spawn(1, p.rx, p.ry, 0, 0, 0.3, 2, '#9a0f14');
   if (p.burn || p.burnOff !== undefined || p.char) burnFx(p, !!L.upright && !lying, now, L);
   if (f & PF.STUN && Math.random() < 0.3) S.fx.spawn(4, p.rx + (Math.random() - 0.5) * 14, p.ry - (L.upright ? 20 : 0) + (Math.random() - 0.5) * 14, 0, 0, 0.15, 2, '#9fdcff');
+}
+// surfing (server surf.js, me.surf): riding a wave, its points so far big over you; the ride just done, its points rising
+// away; your best ride under the money
+function drawSurfHud(sf, now) {
+  if (!sf.st && !sf.pts) return;
+  g.save();
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  const cx = W / 2, top = Math.max(64, H * 0.14), shadow = (t, x, y, c) => { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(t, x + 1.5, y + 1.5); g.fillStyle = c; g.fillText(t, x, y); };
+  const fmt = (n) => Math.round(n).toLocaleString('en-US');
+  if (sf.pts !== null && sf.pts !== undefined) {
+    g.font = '700 13px system-ui, sans-serif'; shadow(sf.st === 'air' ? 'AIR!' : 'RIDING', cx, top, sf.st === 'air' ? '#ffd34a' : '#bfefff');
+    g.font = '800 22px system-ui, sans-serif'; shadow(fmt(sf.pts), cx, top + 22, '#fff');
+    S.surfBank = null;
+  } else if (sf.last) {
+    if (!S.surfBank || S.surfBank.pts !== sf.last) S.surfBank = { pts: sf.last, at: now };
+    const k = Math.min(1, (now - S.surfBank.at) / 2);
+    if (k < 1) { g.globalAlpha = 1 - k * k; g.font = '800 22px system-ui, sans-serif'; shadow(`+${fmt(sf.last)}`, cx, top + 10 - k * 14, '#7fe07f'); g.globalAlpha = 1; }
+  }
+  if (sf.st && sf.best) { g.textAlign = 'right'; g.font = '700 12px system-ui, sans-serif'; shadow(`BEST RIDE ${fmt(sf.best)}`, W - 16, Math.max(96, H * 0.2), '#fff'); }
+  g.restore();
 }
 // on fire (server burning.js): flames licking up the body (thrown up from the feet: their height, not a step up the
 // screen, so art v2's depth keeps them in front of the body; along it, lying down) and dark smoke rising - the pooled
@@ -4427,7 +4460,7 @@ function drawPed(p, now) {
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
 const SKATE_POSES = new Set(['skate', 'skatec', 'skateair', 'skflip', 'skshove', 'sktre', 'skgrab', 'skgrind', 'skmanual']);   // (on a skateboard: client/art2/people.js)
-const UPRIGHT = new Set([...SKATE_POSES, 'idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup', 'escortR', 'escortL', 'bars', 'bang', 'thump', 'guard']);
+const UPRIGHT = new Set([...SKATE_POSES, 'surf', 'surfair', 'idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup', 'escortR', 'escortL', 'bars', 'bang', 'thump', 'guard']);
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // flat on the ground (art2 people.js poses)
 const STAGGER_FROM = new Set(['idle', 'move', 'aim', 'aimw', 'punch', 'swing', 'carry']);
 const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', stab: 'deadF', slump: 'dead', spin: 'deadS', slash: 'deadS', halved: 'dead' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
@@ -4437,7 +4470,7 @@ const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', 
 const DEATH_SEQ = { knees: [[0.22, 'stagger', 0], [0.95, 'kneel', 1]], stab: [[0.3, 'stagger', 2], [0.85, 'kneel', 1]], slump: [[0.35, 'stagger', 0], [0.6, 'stagger', 1]], spin: [[0.55, 'stagger', 0]], slash: [[0.4, 'stagger', 0]] };
 const DEATH_TURN = { spin: [4.4, 0.55], slash: [2.2, 0.4] };
 // the old renderer's sprites for the poses it doesn't have (the subway view)
-const V1_POSE = { skate: 'move', skatec: 'idle', skateair: 'idle', skflip: 'idle', skshove: 'idle', sktre: 'idle', skgrab: 'idle', skgrind: 'idle', skmanual: 'idle', stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down', escortR: 'move', escortL: 'move', bars: 'carry', bang: 'carry', thump: 'punch', guard: 'aim' };
+const V1_POSE = { surfpad: 'idle', surf: 'idle', surfair: 'idle', skate: 'move', skatec: 'idle', skateair: 'idle', skflip: 'idle', skshove: 'idle', sktre: 'idle', skgrab: 'idle', skgrind: 'idle', skmanual: 'idle', stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down', escortR: 'move', escortL: 'move', bars: 'carry', bang: 'carry', thump: 'punch', guard: 'aim' };
 const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;

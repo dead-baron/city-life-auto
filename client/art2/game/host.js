@@ -34,7 +34,7 @@ import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
 import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
-import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT } from '../../../shared/constants.js';
+import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT, DT } from '../../../shared/constants.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
@@ -295,7 +295,7 @@ const darkAt = (m) => (m < 720 ? 1 - smooth((m - 330) / 70) : smooth((m - 1180) 
 const C = {
   head: [1, 0.93, 0.76], tail: [1, 0.16, 0.12], red: [1, 0.18, 0.14], blue: [0.3, 0.5, 1], fire: [1, 0.55, 0.2], flash: [1, 0.9, 0.67],
   sodium: [1, 0.73, 0.43], window: [1, 0.77, 0.47], warm: [1, 0.8, 0.55], white: [0.92, 0.94, 1], moon: [0.6, 0.67, 1], cyan: [0.47, 0.9, 1],
-  legend: [0.82, 0.9, 1], plasma: [0.42, 0.66, 1], bolt: [0.74, 0.82, 1],
+  legend: [0.82, 0.9, 1], plasma: [0.42, 0.66, 1], bolt: [0.74, 0.82, 1], tunnel: [1, 0.84, 0.6],   // (tunnel: the subway's wall lamps - tunnel.js)
   rare: [0.35, 0.65, 1], epic: [0.78, 0.47, 1], gold: [1, 0.8, 0.38],   // the dropped backpacks' glows
 };
 const CUT_A = { cut: 'a' }, CUT_B = { cut: 'b' };   // (the plasma blade's two halves: peds.js pedSprite opt)
@@ -596,14 +596,17 @@ export class World2 {
     if (F.now - this.badAt > 20) { this.badKeys.clear(); this.badAt = F.now; } // (a failure may have been passing)
     const T = this.part, mk = (k) => { const n = performance.now(); T[k] = (T[k] || 0) * 0.9 + (n - this.pt) * 0.1; this.pt = n; };
     this.pt = t0;
-    this._chunks(F); mk('chunks');
+    // (riding under the city: the tunnel's own chunks - art2/game/tunnel.js - the city's kept, the way ahead still baked)
+    const sub = !!F.sub && !!this.TN;
+    if (sub) this._tunnel(F); else { this.tunIn = false; this._chunks(F); }
+    mk('chunks');
     if (!F.sub && !F.spec) F.nearB = F.insideB ? null : walkInSoon(S, F.sp);   // (a walk-in ahead: _precut)
-    this._fetchAhead(F); this._precut(F); this._prebake(F); mk('prebake');
-    const preset = this._preset(F);
+    this._fetchAhead(F); if (!sub) this._precut(F); this._prebake(F); mk('prebake');
+    const preset = sub ? this._tunnelPreset() : this._preset(F);
     const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8);
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
     // (viewW / viewH: the view in world px, what the scene covers)
-    this._fades(F, sp);
+    if (!sub) this._fades(F, sp);
     // the wind the vegetation sways in (render/flora/wind.js, from the shared world clock); Settings' "Wind sway"
     // switch turns the swaying off
     E.swayOn = this.gfx.wind !== false;
@@ -611,21 +614,104 @@ export class World2 {
     Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
     // the sea's sparkle tonight (render/atmos.js bioAt: some nights, along some shores; the day from the server)
     const bio = S.bioForce || bioAt((S.day || 0) * DAY_LOOP_S + (S.loopTime || 0), F.sky.minutes, this.bioArr || (this.bioArr = [0, 0]));   // (S.bioForce: the debug menu's)
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet, quality: this.q, flash, fog, fades: this.fades, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio }) === false) return;
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
-    this._waterLife(F); mk('waterlife');
-    this._decals(F); this._wakeTrail(F); mk('decals');
-    if (S.farmArt) S.farmArt.drawV2(this, F, gbuf, put);   // (the garden plots near you, the fields' rows: render/farmart.js)
+    if (!sub) {   // (none of the city's own life down in the tunnel)
+      this._waterLife(F); mk('waterlife');
+      this._decals(F); this._wakeTrail(F); this._surf(F); mk('decals');
+      if (S.farmArt) S.farmArt.drawV2(this, F, gbuf, put);   // (the garden plots near you, the fields' rows: render/farmart.js)
+    }
     this._entities(F); mk('entities');
     this._prefetch(F); mk('prefetch');
-    this._furniture(F); mk('furniture');
+    if (!sub) { this._furniture(F); mk('furniture'); }
     this._particles(F); mk('particles');
-    this._lights(F); mk('lights');
+    if (sub) this._tunnelLights(F); else this._lights(F);
+    mk('lights');
     E.endFrame(); mk('end');
     this.t.frameMs = this.t.frameMs * 0.9 + (performance.now() - t0) * 0.1;
     F.mark('art2');
+  }
+
+  // ---- the surf breaks' waves (art2/game/surfart.js: loaded the first time a break is near you - me.surf) ------------
+  _surf(F) {
+    const me = this.S.me && this.S.me.surf;
+    if (!me || !me.b || !me.b.length) return;
+    if (!this.SA) { if (!this.saP) this.saP = import('./surfart.js').then((m) => { this.SA = m; }, (e) => { console.warn('[art2] surf', e); setTimeout(() => { this.saP = null; }, 30e3); }); return; }
+    const by = this.surfBy || (this.surfBy = new Map()), list = this.surfL || (this.surfL = []);
+    list.length = 0;
+    for (const r of me.b) { let B = by.get(r[0]); if (!B) by.set(r[0], (B = { id: r[0], x: r[1], y: r[2], nx: r[3], ny: r[4], half: r[5], ph: r[6], side: r[7] })); list.push(B); }
+    this.SA.drawWaves(this, F, list, (this.S.renderTick || 0) * DT);
+  }
+
+  // ---- the subway's tunnel (art2/game/tunnel.js: loaded the first time anyone rides under the city) --------------------
+  // Can this frame under the city be drawn as the tunnel? Not until its code is in: meanwhile the classic tunnel view
+  // draws it (main.js), and this keeps the way ahead baking (stream).
+  tunnelReady() {
+    if (this.TN) return true;
+    if (!this.tnP) this.tnP = import('./tunnel.js').then((m) => { this.TN = m; }, (e) => { console.warn('[art2] tunnel', e); setTimeout(() => { this.tnP = null; }, 30e3); });
+    return false;
+  }
+  // the tunnel's chunks round the view: what's there kept, the nearest one missing baked here (two a frame: a chunk
+  // takes a few ms) - none where no tunnel runs (remembered per map); the bakes the city's view wanted on the way down
+  // dropped (the way ahead still bakes: _prebake)
+  _tunnel(F) {
+    const E = this.E, TN = this.TN, L = TN.TUNNEL.layer, ap = E.ap || 2;
+    this._camVel(F);
+    if (!this.tunIn) {
+      this.tunIn = true; this.wantChunks.clear();
+      if (this.pool && !this.pool.dead) this.pool.cancelWhere((jk) => jk[0] === 'c' && jk[1] !== 'B' && jk[1] !== 'C');
+    }
+    if (this.tunMap !== this.map) { if (this.tunMap && E.dropLayer) E.dropLayer(L); this.tunMap = this.map; this.tunNone = new Set(); }
+    const c0 = Math.floor((this.vx0 - 200) / CHUNK), c1 = Math.floor((this.vx1 + 200) / CHUNK), r0 = Math.floor((this.vy0 - 200) / CHUNK), r1 = Math.floor((this.vy1 + 260) / CHUNK);
+    const want = [];
+    for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
+      const k = cy * 100000 + cx;
+      if (this.tunNone.has(k)) continue;
+      if (E.hasChunk(cx, cy, L)) { E.keepChunk(cx, cy, L); continue; }
+      want.push([cx, cy, k, Math.hypot((cx + 0.5) * CHUNK - this.camX, (cy + 0.5) * CHUNK - this.camY)]);
+    }
+    if (E.reserveChunks) E.reserveChunks((c1 - c0 + 1) * (r1 - r0 + 1) + 1);
+    want.sort((a, b) => a[3] - b[3]);
+    let budget = isPhone() ? 1 : 2;   // (a chunk is some 15 ms here, a phone's three times that)
+    for (const [cx, cy, k] of want) {
+      if (budget-- <= 0) break;
+      const g = TN.bakeTunnel(this.map, cx, cy, ap, this.tunBuf);   // (one buffer baked into again: uploaded at once)
+      if (g) this.tunBuf = g;
+      if (!g) { this.tunNone.add(k); continue; }
+      E.uploadChunk(cx, cy, g, L);
+      this.n.chunkUp = (this.n.chunkUp || 0) + 1;
+    }
+  }
+  // the tunnel's light: no sky, a little cold fill, the lamps do the rest (lightgame.js 'indoor' darkened)
+  _tunnelPreset() {
+    if (this.tunP) return this.tunP;
+    const P = this.L && this.L.PRESETS_GAME, base = (P && (P.indoor || P.night)) || {};
+    return (this.tunP = { ...base, sunCol: [0, 0, 0], ambSky: [0.07, 0.072, 0.095], ambGround: [0.055, 0.055, 0.068], shadowLen: 0, emiK: 1.25, bloomThr: 0.5, bloomK: 1.25, haze: 0.05, hazeCol: [0.12, 0.1, 0.08], vign: 0.7, sat: 1.05, contrast: 1.12, lift: [0.004, 0.004, 0.012], gain: [1.06, 1.0, 0.94], lampsOn: 1, wet: 0, rain: 0, fog: 0, motes: 0 });
+  }
+  // the tunnel's lamps (the nearest the tier's lights allow), the trains' lit coaches and headlamps, shots and blasts
+  _tunnelLights(F) {
+    const S = this.S, now = F.now;
+    this.lights.length = 0;
+    const x0 = this.vx0 - 220, x1 = this.vx1 + 220, y0 = this.vy0 - 220, y1 = this.vy1 + 300;
+    for (const Lp of this.TN.tunnelLamps(this.map, x0, y0, x1, y1, this.tunLamps || (this.tunLamps = []))) this._light(Lp.x - Lp.nx * 6, Lp.y - Lp.ny * 6, this.TN.TUNNEL.lampZ, Lp.st ? 160 : 180, C.tunnel, Lp.st ? 1.8 : 1.9);
+    for (const c of F.cars) {
+      const def = TRAIN_CARS[c.d.c];
+      if (!def) continue;
+      this._light(c.rx, c.ry, 20, def.L * 0.75, C.window, 1.3);
+      if (c.d.c === 0) this._light(c.rx + Math.cos(c.ra) * def.L / 2, c.ry + Math.sin(c.ra) * def.L / 2, 14, 520, C.head, 2.6, [c.ra, 0.36, 520]);
+    }
+    for (const f of S.flashes) {
+      if (f.kind === 'boom') { const e = Math.min(1.6, f.t * 3.2); this._light(f.x, f.y, 30, f.r * 1.3, C.fire, 2.4 * e); }
+      else this._light(f.x, f.y, 20, f.r || 150, C.flash, 2.2 * Math.min(1.4, f.t * 22));
+    }
+    void now;
+    const out = this.lights;
+    out.sort((a, b) => b.s - a.s);
+    const n = Math.min(out.length, this.tier.lights);
+    for (let i = 0; i < n; i++) this.E.addLight(out[i]);
+    this.n.lights = n;
   }
 
   // ---- chunks ---------------------------------------------------------------------------------------------
@@ -1436,7 +1522,7 @@ export class World2 {
     const api = this.api, L = api.pedLook(p, now), f = p.flags, pose = L.pose;
     let d8 = dir8(p.ra + (L.turn || 0));   // (spun round as they go down; a dancer's spin: below)
     const lying = !L.upright && LYING.has(pose) && !L.flying && !L.swimming;
-    let ppose = L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';
+    let ppose = L.surf ? pose : L.swimming ? 'swim' : L.upright ? (pose === 'move' ? 'walk' + L.lvl : pose) : lying ? pose : pose === 'roll' ? 'roll' : 'down';   // (L.surf: on a surfboard - surf poses, people.js)
     let lift = L.lift || 0;   // (an ollie on a skateboard: client pedLook)
     if (L.flying) { const k = L.flT / (p.flingDur || 1); lift = Math.sin(Math.PI * k) * 20; }
     // falling from an aircraft (server skydive.js): spread out face down in free fall, hanging upright under the canopy
@@ -1456,7 +1542,7 @@ export class World2 {
     const phone = !!p.d.ph && (ppose === 'idle' || ppose.startsWith('walk'));
     // felling a tree (d.ch: server felling.js): the axe swung, the chainsaw held out; the lantern carried by its bail
     if (p.d.ch && L.upright) { ppose = 'swing'; pf = p.d.ch === 4 ? 1 + (Math.floor(now * 14) & 1) : Pd.pedFrame('swing', Math.floor(now * 6 + p.id) % 4); }
-    const wpn = L.board || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
+    const wpn = L.board || L.surf || sky ? 0 : phone ? (p.d.ph === 2 ? 'phoneUp' : 'phone') : p.d.ch ? (p.d.ch === 4 ? 'chainsaw' : p.d.ch === 5 ? 'pickaxe' : 'axe') : (p.extra | 0) || (p.d.fl === 1 ? 'flashlight' : p.d.fl === 4 ? 'lantern' : umb ? 'umbrella' : 0);
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
     if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined)) && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : q === 'pushup' || q === 'situp' ? repFrame(p, now) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)

@@ -346,7 +346,8 @@ test('debug menu: every "take me there" button has somewhere to go, and puts you
     assert.ok(list.length, `somewhere to go for "${k}"`);
     const err = devCmds.near(w, p, k);
     assert.equal(err, null, `${k}: ${err}`);
-    assert.ok(!DEV_PED_BLOCK[w.map.tileAtPx(p.ped.x, p.ped.y)] && !w.map.isWater(p.ped.x, p.ped.y), `${k}: on open ground`);
+    if (k === 'surf') assert.ok(w.map.isWater(p.ped.x, p.ped.y) && p.profile.inventory.surfboard > 0, 'surf: out in the water at a break, a board in the bag');   // (surf.js)
+    else assert.ok(!DEV_PED_BLOCK[w.map.tileAtPx(p.ped.x, p.ped.y)] && !w.map.isWater(p.ped.x, p.ped.y), `${k}: on open ground`);
     const d = Math.min(...list.map((q) => Math.hypot(q.x - p.ped.x, q.y - p.ped.y)));
     if (k === 'race') assert.ok(list.every((q) => q.craft), 'the water races only, not the raceway\'s (the owner, 10-16)');
     if (k === 'race') { // out on the water: the nearest shore, with the race's craft waiting beside you

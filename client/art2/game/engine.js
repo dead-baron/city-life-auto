@@ -108,7 +108,9 @@ const HMAX = 4096, GSINK = 4, DECAL_H = 3.5, FL = 16;
 const EMPTY = Object.freeze({});
 const Z4 = new Float32Array(4), ONE = new Float32Array([1]), CLR = new Float32Array(4);
 const CAM_OCT = octEncode(0, 0.55, 0.835);           // an upright card facing the camera
-const ckey = (cx, cy) => (cy + 32768) * 65536 + (cx + 32768);
+// (layer: 0 the city's chunks, 1 the subway's tunnel - art2/game/tunnel.js: the two kept apart, the city's resident under
+// the tunnel while you ride, drawn whichever this frame's layer is)
+const ckey = (cx, cy, layer = 0) => layer * 4294967296 + (cy + 32768) * 65536 + (cx + 32768);
 const clampQ = (q) => Math.max(0, Math.min(3, Math.round(+q || 0)));
 const ema = (a, v) => (a ? a * 0.9 + v * 0.1 : v);
 const r16 = (v) => Math.ceil(Math.max(0, v) / 16) * 16;
@@ -616,14 +618,14 @@ export class Art2Engine {
   }
 
   // ---- static chunks ----------------------------------------------------------------------------------------
-  hasChunk(cx, cy) { const s = this.chunks.get(ckey(cx, cy)); return !!(s && s.real); }
+  hasChunk(cx, cy, layer = 0) { const s = this.chunks.get(ckey(cx, cy, layer)); return !!(s && s.real); }
   // a resident chunk the host still wants (the road ahead, not on screen yet): kept as if it had been drawn this
   // frame, so the least recently drawn - the chunks left behind - go first when a slot is needed
-  keepChunk(cx, cy) { const s = this.chunks.get(ckey(cx, cy)); if (s && s.used < this.frameNo) s.used = this.frameNo; }
+  keepChunk(cx, cy, layer = 0) { const s = this.chunks.get(ckey(cx, cy, layer)); if (s && s.used < this.frameNo) s.used = this.frameNo; }
   hasFallback(cx, cy) { const s = this.chunks.get(ckey(cx, cy)); return !!(s && !s.real); }
-  chunkKeys() { const out = []; for (const s of this.chunks.values()) out.push(s.cx + ',' + s.cy); return out; }
-  _slot(cx, cy) {
-    const k = ckey(cx, cy);
+  chunkKeys() { const out = []; for (const s of this.chunks.values()) if (!s.layer) out.push(s.cx + ',' + s.cy); return out; }
+  _slot(cx, cy, layer = 0) {
+    const k = ckey(cx, cy, layer);
     let s = this.chunks.get(k);
     if (s) return s;
     for (const x of this.slots) if (x.key < 0) { s = x; break; }
@@ -633,7 +635,7 @@ export class Art2Engine {
       this.slots.push(s);
     }
     if (!s) { for (const x of this.slots) if (!s || x.used < s.used) s = x; this.chunks.delete(s.key); }
-    s.key = k; s.cx = cx; s.cy = cy; s.real = false; s.src = null; s.used = this.frameNo - 1;
+    s.key = k; s.cx = cx; s.cy = cy; s.layer = layer; s.real = false; s.src = null; s.used = this.frameNo - 1;
     this.chunks.set(k, s);
     return s;
   }
@@ -646,9 +648,9 @@ export class Art2Engine {
     gl.clearBufferfv(gl.COLOR, 0, CLR);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
-  uploadChunk(cx, cy, g) {
+  uploadChunk(cx, cy, g, layer = 0) {
     if (this.lost || !g) return false;
-    const gl = this.gl, s = this._slot(cx, cy), T = this.ctx;
+    const gl = this.gl, s = this._slot(cx, cy, layer), T = this.ctx;
     let pk = g.p0 ? g : this._pack(g), under = g.under || null;
     if ((g.ap || 1) < this.ap) {
       // full resolution (baked on this thread, or planes packed elsewhere): to art pixels here
@@ -701,8 +703,10 @@ export class Art2Engine {
     s.real = false; s.src = source; s.under = false; s.bids = null;
     return true;
   }
-  dropChunk(cx, cy) {
-    const k = ckey(cx, cy), s = this.chunks.get(k);
+  // every chunk of a layer gone (the subway's, baked from a window the page has since moved on from)
+  dropLayer(layer) { for (const s of [...this.chunks.values()]) if ((s.layer | 0) === layer) this.dropChunk(s.cx, s.cy, layer); }
+  dropChunk(cx, cy, layer = 0) {
+    const k = ckey(cx, cy, layer), s = this.chunks.get(k);
     if (!s) return;
     this.chunks.delete(k); s.key = -1; s.real = false; s.src = null; s.used = 0;
   }
@@ -827,6 +831,7 @@ export class Art2Engine {
     this.air = f.air || null;                                      // how far the air has carried things (wind.js air)
     this.bio = f.bio || null;                                      // the sea's sparkle tonight: [strength, seed] (atmos.js bioAt)
     this.zoom = f.zoom > 0 ? f.zoom : 1; this.camX = +f.camX || 0; this.camY = +f.camY || 0;
+    this.layer = f.layer | 0;                                      // (the chunks drawn: 0 the city's, 1 the subway's tunnel)
     // margins: the shadow reach on the side the sun is, room above for wet reflections, a little slack
     const sd = P.sunDir || PRESET_DEFAULTS.sunDir, sl = Math.hypot(sd[0], sd[1], sd[2]) || 1, sz = sd[2] / sl;
     const reach = sz > 0.02 ? Math.min(P.shadowLen ?? 0, T.contact ? 36 : T.reach) : 0;
@@ -997,7 +1002,7 @@ export class Art2Engine {
     const c0 = Math.floor(this.ox / CHUNK_PX), c1 = Math.floor((this.ox + this.SW - 1) / CHUNK_PX), r0 = Math.floor(this.oy / CHUNK_PX), r1 = Math.floor((this.oy + this.SH - 1) / CHUNK_PX);
     let n = 0;
     for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
-      const s = this.chunks.get(ckey(cx, cy));
+      const s = this.chunks.get(ckey(cx, cy, this.layer));
       if (!s) continue;
       s.used = this.frameNo;
       for (let i = 0; i < 3; i++) { gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, s.t[i]); }

@@ -14760,3 +14760,58 @@ the chunks to bake before the train comes up) threw every frame. Its index of th
 first window's map; World v3's window holds only its own regions' points, so once the window moved on, the old index
 pointed past the new lists' ends. Each frame stopped there - nothing more drawn. Now the index is built afresh for each
 new window, and a point not held is skipped, never followed. Test: test/railahead.test.js (fails without the fix).
+
+## 2026-10-22 · The subway in the new art
+
+The owner, 10-22 (and 10-08, 10-16): riding the subway "looks like placeholder art". Under the city the page still drew
+the classic renderer's tunnel view - a flat dark band, a lamp glow every few metres and the old flat train. Now the new
+renderer draws the tunnel itself (client/art2/game/tunnel.js), lit by its own lamps:
+- the floor: concrete between the walls, the dark ballast of each track's bed with its sleepers and the two steel rails
+  (each way's loop its own track: World v3's Pink and Yellow Lines, and the main line where it runs under the towns);
+- the walls in the 3/4 view: the north wall face on - grimy concrete in panels, a cable run along it, a lamp every
+  150 px - the south wall's top in front of the floor's edge, as a wall would hide it; on the walls that run north-south
+  the lamps' fittings hang where you'd see them;
+- the stations: a raised platform beside each underground station's track, on the side its trains open, a train long,
+  tiled, the yellow line at its edge, pillars to the roof and benches down the back, the platform's own lamps, and the
+  station's name on blue signs;
+- the earth the tunnel is cut through, dark, with the streets overhead ghosted on it (the 10-07 note: "subway under the
+  world: ghosted street");
+- the light: no sky, a faint cold fill; the wall lamps' warm pools slide over the train as it runs, the coaches' own
+  light and the headlamp's beam ahead of it - the train and its riders are the new renderer's own sprites now.
+The tunnel's chunks are baked on the page (nothing to fetch: about 15 ms a chunk here, one or two a frame - one on a
+phone) and kept as a layer of their own in the engine (engine.js chunk layers: 0 the city's, 1 the tunnel's - the city's
+chunks stay resident under it, and the way ahead keeps baking, so the town is there when the train comes up). Until the
+tunnel's code is in (it loads the first time anyone goes under the city) the classic tunnel view stands in. None of the
+city's own marks (the station clocks, the shop symbols, the rain, the fireflies) are drawn down there.
+Tests: test/tunnelart.test.js - the floor, ballast and rails, the north wall's face, the earth with the street
+ghosted on it, the south wall's top in front; a station's raised platform, its yellow line, its name; the lamps on the
+outer walls only and glowing; a chunk's bake time.
+
+## 2026-10-22 · Surfing
+
+The owner's #312 (10-08). A surfboard ($160 at the surf shops - Salt & Swell, Island Threads - and the sports shops) and
+the sea:
+- **On the board.** In the sea with a board in your bag you lie on it and paddle - faster than you swim; up the beach
+  you're off it and it's back in your bag.
+- **The breaks.** Where a straight sandy beach faces the open sea (shared/surf.js findBreaks: open water out in front as
+  far as the waves rise, the waterline straight along at least 14 tiles of beach) the waves roll in, in sets - three,
+  four and a half seconds apart, then a lull - rising some 22 tiles out, steepening, starting to break 11 tiles out from
+  one end of the beach, the break peeling along the crest toward the other, washing up on the sand. The page draws them
+  on the water in the new art (client/art2/game/surfart.js: the bright lip of the crest and the dark face in front of it
+  while it's green, churning white water where it has broken), from the same arithmetic and the same clock - the
+  world's tick - as the server rides you on them, so what you see is what's there.
+- **Catching one.** Paddle for the beach as a wave comes, where it hasn't broken: it rolls in faster than you paddle, so
+  its crest catches you up, and you're up.
+- **Riding it.** The wave carries you in; the stick carves you along the face, left or right along the beach. The points
+  come for every second up, for your speed along the face, and most of all for riding in the pocket just ahead of the
+  break; a carve (a quick turn back) and an air off the lip (the action button) are worth more. Stay in the white water
+  behind the break and it has you - a tumble, the ride over. Ride it in, or off the end of the beach, and the ride's
+  counted: its points over you, your best ride kept (the HUD: RIDING and the points, BEST RIDE under the money).
+- **How you look.** Lying on the board paddling, up side-on with the knees deep and the arms out, knees tucked in an air
+  (client/art2/people.js surfpad, surf, surfair; the descriptor's sf) - on a long white board with an orange stripe.
+The server steps it all (server/systems/surf.js: ped.surf, like the parachute's fall: your page draws you from the
+snapshots). Paddling and riding practise the swimming skill. The playtest panel's Events & sport section takes you out to
+a break, a board in your bag.
+Tests: test/surf.test.js - the waves (sets, the break from one end peeling along, the same at the same moment), the
+breaks (sand behind, open sea in front), a ride (on the board, catching a wave, carving, an air, counted, off the board
+up the beach), paddling in well ahead of a wave and it still catches you up, the white water.

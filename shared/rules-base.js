@@ -7,6 +7,7 @@ export const REVIVE_KIT_PRICE = 50;           // hospitals and pharmacies; never
 export const FORAGE_FENCE_GHOSTGLASS = 70;   // what the Back-Alley Exchange pays a cap (nobody else will touch them)
 export const BARRIER_BREAK_SPEED = 300;    // ram a highway barrier this fast (px/s, straight into it) and it gives way
 export const SKATEBOARD_PRICE = 85;
+export const SURFBOARD_PRICE = 160;   // a surfboard at the surf shops and the sports shops (server/systems/surf.js)
 export const PARACHUTE_PRICE = 150;   // (a parachute: one jump - server/systems/skydive.js)
 export const DRILL_PRICE = 1200;   // (a thermal drill for a bank's vault, at the black market - server/systems/heist.js)
 export const FLASHLIGHT_PRICE = 35;        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
