@@ -351,6 +351,10 @@ function onText(m) {
     case 'board': phone.on('Board', m); break;
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
+    case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
+      openOverlay('arcade');
+      import('./arcade.js').then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
+      break;
     case 'bounties': phone.on('Bounties', m); break;
     case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)
     case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.on('Transit', m); if (S.bigmap) mapwp.refreshLegend(); break;
@@ -2071,6 +2075,7 @@ function closeOverlay(id = topOverlay()) {
   if (id === 'inv') bag.hide();
   if (id === 'dev') $('dev').classList.remove('as-overlay');
   if (id === 'tutorial') stopTutorial();
+  if (id === 'arcade' && S.arcadeMod) S.arcadeMod.stop();   // (the cabinet left: the score so far goes in)
   if (id === 'settings' && S.afterSettings) { const g2 = S.afterSettings; S.afterSettings = null; settings.gfxPreset ||= gfx.preset; setTimeout(g2, 0); }
   if (id === 'bigmap') { S.bigmap = false; if (S.hud) S.hud.mapFilter = null; }
   if (id === 'phone' && S.welcomed) send({ t: 'phone', a: 'out', on: false });

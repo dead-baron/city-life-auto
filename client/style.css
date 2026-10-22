@@ -1269,3 +1269,10 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
 .ph-card.skl i { display: block; height: 5px; margin-top: 6px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; }
 .ph-card.skl i::after { content: ''; display: block; height: 100%; width: var(--w); background: #e2bd57; }
 .ph-card.skl small { display: block; margin-top: 2px; }
+
+/* an arcade cabinet's screen (client/arcade.js): the game over everything, in its own pixels */
+#arcade { position: fixed; inset: 0; z-index: 60; background: rgba(2,3,10,.92); display: flex; align-items: center; justify-content: center; }
+#arcade.hidden { display: none; }
+#arcade .arc-frame { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; border-radius: 14px; background: linear-gradient(#2a1a4a, #140c26); box-shadow: 0 0 0 3px #5ae0ff, 0 0 40px rgba(90,224,255,.35); }
+#arc-cv { width: min(92vw, calc((92vh - 60px) * 256 / 224)); height: auto; aspect-ratio: 256 / 224; image-rendering: pixelated; image-rendering: crisp-edges; background: #05060f; touch-action: none; border-radius: 4px; }
+#arc-hint { color: #8a90b8; font: 600 12px/1 monospace; letter-spacing: .05em; }

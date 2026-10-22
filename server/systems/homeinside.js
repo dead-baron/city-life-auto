@@ -35,6 +35,7 @@ import * as economy from './economy.js';
 import * as mortgage from './mortgage.js';
 import * as mail from './mail.js';
 import * as skills from './skills.js';
+import * as arcade from './arcade.js';
 
 export const planFor = (h) => layout(planOf(h), tierOf(h));
 // (H67) a home's decor - its owner's (profile.decor[home id]: shared/homedecor.js) - and its plan with the decor laid over
@@ -273,6 +274,7 @@ export function interaction(world, p) {
   const f = furnitureAt(world, h, s);   // (a seat or the TV - the couch, an armchair, the cinema's rows; the decor's too)
   if (f && (!u || near(f, s.x, s.y) < near(u, s.x, s.y))) {
     if (TVS.has(f.ch)) return { label: tvOn(world, h) ? 'Switch the TV off' : 'Switch the TV on', run: () => tv(world, p, h) };
+    if (CABS.has(f.ch)) return { label: 'Play STARFALL on the cabinet', run: () => arcade.play(world, p, true) };
     return { label: tvOn(world, h) ? 'Sit down and watch TV' : 'Sit down', run: () => sit(world, p, h, f) };
   }
   // (by nothing: the hint for the first few seconds in, then no prompt over the rooms - HOME_IN.hintS)
@@ -286,13 +288,13 @@ export function interaction(world, p) {
 // nearest you, facing the way it faces (the sectional and the cinema's seats the TV); moving gets you up. A rest there
 // brings health back slowly (HOME_IN.restHeal). The TV switches on and off (everyone in the home sees it: the page's
 // screen flickers and lights the room); with nobody home it goes off.
-const SEATS = new Set(['C', 'n', 'O', 'i']), TVS = new Set(['V', 'v']);
+const SEATS = new Set(['C', 'n', 'O', 'i']), TVS = new Set(['V', 'v']), CABS = new Set(['j']);   // (j: the mansion's arcade cabinets - arcade.js)
 const near = (q, x, y) => Math.hypot(Math.max(q.x - x, 0, x - (q.x + q.w)), Math.max(q.y - y, 0, y - (q.y + q.h)));
 const tvOn = (world, h) => !!(world.homeTv && world.homeTv.has(h.id));
 function furnitureAt(world, h, s) {
   let best = null, bd = HOME_IN.reach + 2;
   for (const q of planIn(world, h).pieces) {
-    if (!SEATS.has(q.ch) && !TVS.has(q.ch)) continue;
+    if (!SEATS.has(q.ch) && !TVS.has(q.ch) && !CABS.has(q.ch)) continue;
     const d = near(q, s.x, s.y);
     if (d < bd) { bd = d; best = q; }
   }

@@ -27,6 +27,7 @@ import { brokenBarrierList } from './systems/barriers.js';
 import { setView } from './view.js';
 import * as devmode from './devmode.js';
 import * as looks from './systems/looks.js';
+import * as arcade from './systems/arcade.js';
 import * as safety from './systems/safety.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
@@ -92,6 +93,7 @@ export function createSession(world, conn, opts) {
       }
       if (msg.t === 'respawn' && typeof msg.choice === 'string' && msg.choice.length < 20) { player.respawnChoice = msg.choice; player.meDirty = true; return; } // just picks; the normal wake-up timer runs
       if (msg.t === 'phone') { const r = phone.handle(world, player, msg); if (r) conn.sendJSON(r); return; }
+      if (msg.t === 'arcade') { arcade.onScore(world, player, msg); return; }   // a game's score from the cabinet (arcade.js)
       if (msg.t === 'interior' && player.ped && player.ped.interior) { station.openInterior(world, player); return; }
       if (msg.t === 'bail') { const err = custody.payBail(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'unstuck') { unstuck.request(world, player); return; }

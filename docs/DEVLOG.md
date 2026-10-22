@@ -14486,3 +14486,23 @@ The owner, 10-06 and 10-16: "usable furniture: sit, sleep, watch TV..." - "can't
 
 Tests: test/homesofa.test.js - the TV on, sat down to watch, a rest, the page told, up again, the TV off with nobody
 home.
+
+## 2026-10-22 · The arcades: STARFALL and the prize counter
+
+The owner, 10-08 ("Arcade: walk in and play our own 8-bit games... tickets for prizes", AC1-AC7) and 10-16 ("are
+arcades in?"). The Neon Strip's arcades - Retro Rewind, Hi Score, VR Den, the Pixel Arcade, the strip's other Arcade,
+Games and Video storefronts - stood as art only. Now at an arcade's door (server/systems/arcade.js; shared/rules.js
+ARCADE):
+- **a credit** ($2) for **STARFALL**, our own 8-bit shooter (client/arcade.js, loaded the first time anyone plays):
+  forty invaders in formation sliding side to side and dropping a row at each edge, firing back; now and then one
+  breaks off and dives at you (a diver's worth double); clear a wave and the next comes faster; three ships. Left and
+  right to move (the keys, the stick or d-pad, a finger dragged on the screen); the ship fires on its own. It plays on
+  its own little screen (256 x 224) in a glowing cabinet frame over the game; Esc or B leaves.
+- **tickets**: one for every 100 points, 40 at most a game. The page sends the score; the server takes it only for
+  this credit, once, and no faster than 60 points a second of play.
+- **the prize counter**: a glow stick (25), an energy drink (50), a flare (60), a poster for your home (150), a
+  headlamp (200), a turntable for your home (400), a skateboard (500) - your best score at the counter too.
+- **the mansion's games room**: its two arcade cabinets play STARFALL for free (no tickets; the high score).
+
+Tests: test/arcade.test.js - the game's waves and hits; a credit paid, the page told, a wrong credit ignored, a score
+worth its tickets once, an impossible score cut down, a prize won and one out of reach; the mansion's cabinet free.
