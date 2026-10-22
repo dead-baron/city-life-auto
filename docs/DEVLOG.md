@@ -13794,3 +13794,19 @@ about half as long again as it is wide.
 - The ground changes, so the chunks round the three parks bake again.
 
 Tests: test/world3world.test.js - every soccer pitch is 1.35-1.75 times as long as wide.
+
+## 2026-10-22 · The mansion's south door
+
+The owner, 10-16: "Mansion entrance on the north only: add a south door". Art v2 draws the Hilltop Mansion's front,
+its door and portico, on its south wall: that's the side you see from above. But the only way in was round the north
+side, on the terrace by the gate, so walking up to the door you could see did nothing.
+
+- **the garden door** (`home.back`, `shared/map.js` mansion): the south door is now a way in too, onto a paved terrace
+  of its own below the portico. At it, the action button takes you inside (`homes.backDoorNear`,
+  `homeinside.doorInteraction`). If the owner is in, you ring the bell there. If the mansion is for sale, it says the
+  front door is round the north side (that's where its menu is).
+- **out by the door you came in by** (`ped.inDoor`, `homes.leaveHome`).
+- The north door works as before.
+
+Tests: test/mansiondoor.test.js - the south door on its terrace; for sale, it points you north; bought, in by it and
+out by it again; the north door as ever.

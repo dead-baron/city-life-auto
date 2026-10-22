@@ -67,10 +67,13 @@ export function doorInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.carrying || ped.entering || ped.ug) return null;
   const poi = world.map.poiNear(ped.x, ped.y);
-  if (!poi || poi.kind !== 'home') return null;
-  if (homes.unitsAt(world, poi)) return lobbyDoor(world, p, poi);   // (H71: an apartment block - into its lobby, open to anyone)
-  if (!world.homeOwner.has(poi.home)) return null;
-  const h = world.map.homes[poi.home];
+  let h = null, back = false;
+  if (poi && poi.kind === 'home') {
+    if (homes.unitsAt(world, poi)) return lobbyDoor(world, p, poi);   // (H71: an apartment block - into its lobby, open to anyone)
+    h = world.map.homes[poi.home];
+  } else if ((h = homes.backDoorNear(world, ped.x, ped.y))) back = true;   // (the mansion's garden door, its south side)
+  if (!h) return null;
+  if (!world.homeOwner.has(h.id)) return back ? { label: `${h.name}'s garden door - for sale: its front door is round the north side`, passive: true, run: () => {} } : null;
   if (world.homeOwner.get(h.id) === p.pid) {
     if (!p.homePre && p.conn) { p.homePre = 1; p.conn.sendJSON({ t: 'home', pre: 1 }); }   // (the page fetches the rooms' drawing now, so they're there the moment you're in)
     return { label: `Go inside ${h.name}`, run: () => goIn(world, p, h) };

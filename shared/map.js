@@ -2653,6 +2653,11 @@ function mansion(m, rand, x, y) {
   const T_ = ESTATE_TYPES.mansion;
   const door = { x: (bx + 6) * TILE, y: (by - 1.5) * TILE }; // on the terrace, in front of the portico
   const home = { id, kind: 'mansion', name: `${T_.name}`, price: T_.price, slots: T_.slots, x: door.x, y: door.y, garage: null, b: bid };
+  // and the garden door on the south side, the one you see (art v2 draws the house's front and its portico on its south
+  // wall): in and out there too, onto a terrace of its own (the owner, 10-16: "Mansion entrance on the north only: add
+  // a south door"; server/systems/homes.js backDoorNear)
+  home.back = { x: (bx + 6) * TILE, y: (by + bh + 1.2) * TILE };
+  m.fill(bx + 4, by + bh, 4, 2, T.PLAZA);
   m.homes.push(home);
   m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: door.x, y: door.y, r: 44, b: bid });
   b.home = id;
