@@ -14575,6 +14575,24 @@ officer.
   points) and is never offered to clear its jam; the second wave of squads isn't sent once the driller's in custody;
   the heist's criminal EXP goes, like the drawers' cash, only to a driller still there when the door opens.
 
+## 2026-10-22 · The subway: the train shows again, and its stations' platforms
+
+The owner, 10-22, with two screenshots from a ride on the subway: nothing but the dark tunnel's rails and lamps - no
+train, no people, no station at Port Westport Station (the 10-08 / 10-16 note "subway art doesn't load underground",
+still open). Underground the page draws the tunnel view with the classic renderer; on World v3 its elevated highway
+(client/render/highway.js) met the holes in the window's road data and threw - every frame, after the tunnel's dark and
+lamps were drawn but before the trains. Now:
+- the tunnel view builds no highway at all (there's none down there), and the highway skips the window's holes;
+- the train, everyone riding it and the mail car's guards show again, with the lit coaches;
+- the underground stations have platforms (client/render/tunnelplat.js, loaded the first time you go down): beside each station's track, on
+  the side away from the other line's track, the train's length of tiled platform with the yellow line at its edge,
+  pillars and benches, and the station's name on a blue sign - so stopping at one you can see you're there.
+Checked headless on a World v3 server: a ride from the Pink Line to a stop at Union Square Station.
+
+Also from the full test run: at home a seat or the TV takes the action button only when you're clearly nearer to it than
+to the hall table, the bed or anything else there (the couch beside the hall table had taken over its menu); and the
+activity spots' test knows street dice is played down an alley's asphalt.
+
 ## 2026-10-22 · Crews
 
 The owner, 10-08 ("friends and crews (up to 4): land on the same server, crew chat, crew events and heists"; the
