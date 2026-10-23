@@ -14955,6 +14955,8 @@ Tests: test/world3estuary.test.js - a stand-in coast: the mouth wider toward the
 banks, upstream as it was, the road and what's beside it untouched, the widened channel the river's water and the cut
 the sea's, a river that doesn't reach the sea left alone; the bake blends a river and the sea over a stretch (each
 shows the other's water a few tiles in).
+The Redwood River Run ends in the new estuary at Northshore: its finish gate now stands on the water just off the
+take-out's landing (the channel's middle is a long way out from the bank there) - shared/world3-riverrun.js.
 
 ## 2026-10-23 · Cinematic mode and staged scenes, for videos and pictures
 
