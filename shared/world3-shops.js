@@ -25,6 +25,7 @@ import { TILE, T } from './constants.js';
 import { DISTRICTS } from './mapcore.js';
 import { hash2 } from './rng.js';
 import { propGrid } from './propgrid.js';
+import { handPlanAt } from './world3-hand.js';
 
 export const SHOP_NEEDS = {
   weapons: ['gunshop', 'pawn', 'fence', 'lodge', 'huntcamp'],
@@ -248,6 +249,8 @@ export function shops3(m, H) {
     return null;
   };
   const lotOk = (x0, y0, w, h, d, any, wild) => {
+    // (never on a handcrafted district's ground - its forecourts, its squares, its lawns are its plan's)
+    if (handPlanAt(x0, y0) || handPlanAt(x0 + w, y0) || handPlanAt(x0, y0 + h) || handPlanAt(x0 + w, y0 + h)) return false;
     const resOk = wild ? ~4 : ~0;
     for (let y = y0 - 1; y <= y0 + h; y++) for (let x = x0 - 1; x <= x0 + w; x++) {
       if (!m.inside(x, y)) return false;
