@@ -503,6 +503,7 @@ function fixedStep() {
   let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)), horse: S.ctrlKind === CTRL.DRIVER && !!(S.pred && S.pred.def && S.pred.def.horse) });   // (horse: on one - the stick all the way out gallops, #325)
   const inOverlay = overlayPad();
   const spec = !!(S.spec && S.spec.on);
+  if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
   if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
   if (!inOverlay && !S.playing) titlePad();
@@ -518,7 +519,7 @@ function fixedStep() {
   // the weapon wheel (hold RB or LB; a tap just takes out the next / previous one: input.js): point a stick, let go
   if (!spec && input.wheelHold && canWheel() && !wheel.open && !wpick.open) wwheel.show();
   if (wwheel.open) { if (input.wheelRelease) wwheel.pick(); else if (!input.wheelHeld || !canWheel()) wwheel.close(); else wwheel.point(input.padAxes); }
-  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open || wpick.open || wwheel.open || spec;
+  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open || wpick.open || wwheel.open || spec || !!(DIR && DIR.holds());   // (DIR: the cinematic mode's free camera has the keys)
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
   // ignore the action buttons until they're released, or B would instantly reopen the shop menu
   if (S.menuWasUp && !menuUp) S.suppressBits = IN.ACTION | IN.DIVE | IN.VEHICLE | IN.FIRE | IN.THROW | IN.USE;
@@ -1429,6 +1430,8 @@ $('play').onclick = firstPlay(playGo);
 
 initInput(canvas, {
   onKey(k) {
+    if (k === 'F2' || k === 'F4' || k === 'F8') { cine(k); return; }   // (the cinematic mode: client/director.js)
+    if (DIR && !topOverlay() && DIR.key(k, true)) return;
     if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
     if (topOverlay() === 'creator' && S.creator && S.creator.key(k)) return;
@@ -1474,7 +1477,7 @@ initInput(canvas, {
     if (k === 'Backquote' && S.playing) { if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
-  onKeyUp(k) { if (S.spec) S.spec.key(k, false); if (k === 'KeyX' && wheel.open) wheel.release(performance.now() - (S.wheelAt || 0) < 250); },
+  onKeyUp(k) { if (DIR) DIR.key(k, false); if (S.spec) S.spec.key(k, false); if (k === 'KeyX' && wheel.open) wheel.release(performance.now() - (S.wheelAt || 0) < 250); },
   onItems() { if (S.spec && S.spec.on) return; if (canWheel()) { if (wheel.open) wheel.close(); else wheel.show(true); } },
   onWeaponPick() { openWeaponPick(); },
   onDev() { if (!S.playing) return; if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); },
@@ -1548,6 +1551,13 @@ for (const ov of document.querySelectorAll('.overlay')) {
   ov.addEventListener('pointerdown', (e) => { if (e.target === ov && topOverlay() === ov.id) closeOverlay(ov.id); });
 }
 
+// ---- the cinematic mode (client/director.js, loaded the first time: F2 a clean screen, F4 its panel, F8 a picture) -
+let DIR = null, dirP = null;
+const dtFix = 1 / 60;
+function cine(k) {
+  (dirP ||= import('./director.js').then((m) => { DIR = m.makeDirector(S, { input, $, send, selfPos, size: () => [W, H], toast: (t, c) => S.hud.toast(t, c), grab: (fn) => { S.cineGrab = fn; } }); }).catch((e) => { dirP = null; console.warn('[director]', e); }))
+    .then(() => { if (DIR) DIR.key(k, true); });
+}
 // ---- spectator (debug menu): a free camera over the whole city ----------------------------------
 // Your character stays where it is (made invincible on the server); the camera flies anywhere. The
 // city's art is drawn from what this browser already generates, so it never asks the server for
@@ -2330,6 +2340,7 @@ for (const b of document.querySelectorAll('#pause [data-p]')) {
     else if (a === 'controls') openOverlay('controls');
     else if (a === 'look') { closeOverlay('pause'); openCreator('edit'); }
     else if (a === 'unstuck') { closeOverlay('pause'); send({ t: 'unstuck' }); }
+    else if (a === 'cine') { closeOverlay('pause'); cine('F4'); }   // (the cinematic mode's panel: client/director.js)
     else if (a === 'surrender') {
       // press twice: dying (or, when wanted, turning yourself in) isn't something to do by accident
       if (b.dataset.armed && performance.now() - Number(b.dataset.armed) < 4000) { delete b.dataset.armed; optText(b, 'Surrender'); closeOverlay('pause'); send({ t: 'surrender' }); }
@@ -3005,7 +3016,7 @@ function prepFrame(dt) {
   const fallH = S.ctrlKind === CTRL.RIDER ? (S.ents.get(S.myPedId)?.rsky || 0) : 0;
   const flying = !!(myAir && airDefOf(myAir)), airPull = flying ? Math.min(S.airMax, S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4)) : fallH > 0 ? Math.min(S.airMax, 1 + Math.min(1.3, fallH / 650)) : 1;
   const spdPull = 1 + Math.min(S.zoMax ?? 0.5, speed / 1300);   // (flying, the speed's pull-back is held to the same cap: a helicopter flat out is 1.5x of it)
-  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull, S.dinView ? S.dinView.pull : 1);
+  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull, S.dinView ? S.dinView.pull : 1) * (DIR ? DIR.zoomK : 1);
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
@@ -3041,22 +3052,25 @@ function prepFrame(dt) {
   // so it follows you out there; never past where nothing can go (the world's frame: the map's m.frame, a window's too)
   if (S.map) clampCam(S.cam, S.map.frame);
   if (S.specArt) { const st = S.spec.state; S.cam.x = st.x; S.cam.y = st.y; S.cam.zoom = st.z; S.cam.shake = 0; } // (the spectator's camera)
+  else if (DIR) DIR.cam(S.cam, dt, tx, ty);   // (the cinematic mode's: smooth, free, on someone, the tour - client/director.js)
   S.cam.shake *= Math.exp(-6 * dt);
   const shx = (Math.random() - 0.5) * S.cam.shake, shy = (Math.random() - 0.5) * S.cam.shake;
 
   const z = S.cam.zoom;
   const halfW = W / 2 / z, halfH = H / 2 / z;
   const view = { x0: S.cam.x - halfW - 64, x1: S.cam.x + halfW + 64, y0: S.cam.y - halfH - 64, y1: S.cam.y + halfH + 64 };
-  const clock = gameClock(S.loopTime);
-  const rain = S.weather === WEATHER.RAIN;
+  const LT = DIR && DIR.lt !== null ? DIR.lt : S.loopTime;   // (the cinematic mode's time of day, on this screen only)
+  const clock = gameClock(LT);
+  const rain = DIR && DIR.wx ? DIR.wx === 'rain' : S.weather === WEATHER.RAIN;
   // the sky: time of day, how long it's been raining, fog, lightning (render/atmos.js)
   S.rainK = (S.rainK || 0) + ((rain ? 1 : 0) - (S.rainK || 0)) * (1 - Math.exp(-dt / 8));
   // (the storm's lightning: the shared clock counting the days and your view - render/lightning.js)
   const wst = S.wxSt || (S.wxSt = {});
-  wst.lt = (S.day || 0) * DAY_LOOP_S + S.loopTime; wst.x = S.cam.x; wst.y = S.cam.y; wst.w = W / z; wst.h = H / z;
+  wst.lt = (S.day || 0) * DAY_LOOP_S + LT; wst.x = S.cam.x; wst.y = S.cam.y; wst.w = W / z; wst.h = H / z;
   S.wx.update(dt, rain, now, wst);
-  wind.update((S.day || 0) * DAY_LOOP_S + S.loopTime, S.rainK || 0, dt);   // (the clock counting the days; dt: the air moves on - the canopy's drift, the gusts)
-  const sky = skyAt((S.day || 0) * DAY_LOOP_S + S.loopTime, clock.minutes, S.rainK);   // (the clock counting the days: some mornings and nights are foggy)
+  wind.update((S.day || 0) * DAY_LOOP_S + LT, S.rainK || 0, dt);   // (the clock counting the days; dt: the air moves on - the canopy's drift, the gusts)
+  const sky = skyAt((S.day || 0) * DAY_LOOP_S + LT, clock.minutes, S.rainK);
+  if (DIR) DIR.sky(sky);   // (the clock counting the days: some mornings and nights are foggy)
   if (S.wx.flash > 0) { const f = S.wx.flash * (0.5 + 0.4 * sky.night); sky.amb = sky.amb.map((v) => v + (1 - v) * f); }
   const quality = gfxQuality();
   S.fx.thin = !gfx.particles;
@@ -3084,6 +3098,7 @@ function prepFrame(dt) {
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
   for (const e of S.ents.values()) {
     if (!vis(e) || !e.d) continue;
+    if (DIR && DIR.hideMe && e === meEnt) continue;   // (the cinematic mode: your own character out of the picture)
     if (S.map.cover && e !== meEnt && e !== myCar && coverHides(S.map, sp.x, sp.y, e.rx, e.ry)) continue;   // under a tunnel's hill you aren't under (shared/tunnels.js)
     if (e.kind === K.PED && e.parent) { const c = S.ents.get(e.parent); if (c && c.kind === K.TRAIN) { if (c.d && c.d.tr === myTrain) riders.push(e); continue; } } // riders of other trains are under the roof
     if (e.kind === K.TRAIN) cars.push(e);
@@ -3392,14 +3407,15 @@ function drawOverlays(F, v2) {
     if (F.rain && !F.sub && !underCover(S.map, sp.x, sp.y)) drawRain(F.dt, F.sky);   // (none in a tunnel)
     g.setTransform(...S.worldTf);
   }
+  const clean = !!(DIR && DIR.clean);   // (the cinematic mode's clean screen: no marks, labels, sights or HUD bits)
   if (v2 && !F.sub) {   // (none of the city's marks down in the subway's tunnel)
-    drawAtmMarks(F.view, now);
-    if (settings.shopMarks !== false && S.art2.shopMarks) S.art2.shopMarks(g, F, drawIcon, KIND_ICON);   // (the shop symbols over doors near you: art2/game/host.js)
+    if (!clean) drawAtmMarks(F.view, now);
+    if (!clean && settings.shopMarks !== false && S.art2.shopMarks) S.art2.shopMarks(g, F, drawIcon, KIND_ICON);   // (the shop symbols over doors near you: art2/game/host.js)
     drawStationClocks(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
     drawTrainSigns(F);
     drawSkyShadows(F, true);
     drawBuoys(F.view, now);
-    drawArt2Marks(F);
+    if (!clean) drawArt2Marks(F);
     S.camp.draw(g, F); S.boom.draw(g, F, W, H, DPR);   // (the campfires' haze; the fireballs, plumes, shockwaves, the flash)
     if (S.carry) S.carry.draw(g, F);   // (a felled tree toppling; flares, glow sticks and lanterns on the ground)
     if (S.flies) S.flies.draw(g, F, gfx);   // (the fireflies after dark: render/fireflies.js, loaded the first night - never on Low)
@@ -3415,7 +3431,7 @@ function drawOverlays(F, v2) {
   drawDriveIn(F, v2);
   drawVault(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
-  if (input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
+  if (!clean && input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
     const ta = touchAimState();
     const fire = S.lastFire || ta.firing;
     const a = S.lastAim, x0 = sp.x + Math.cos(a) * 22, y0 = sp.y + Math.sin(a) * 22;
@@ -3434,11 +3450,11 @@ function drawOverlays(F, v2) {
   if (S.fish) S.fish.drawWorld(g);   // (the lines out, your cast's meter)
   tunnelsTop(F);   // the hills over the tunnels, their portals, the inside of the one you're in (client/tunnels.js)
   // name tags + public flares + rumor marker
-  drawWorldLabels(F.peds, F.vehs, now, z);
-  if (S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z, F.vehs);
+  if (!clean) drawWorldLabels(F.peds, F.vehs, now, z);
+  if (!clean && S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z, F.vehs);
   // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
   const edge = S.playing && S.me && !S.me.dead ? edgeInfo(sp.x, sp.y, EDGE_I, S.map && S.map.frame) : null;
-  if (edge && edge.d > 0) drawEdgeArrow(sp, edge, now);
+  if (edge && edge.d > 0 && !clean) drawEdgeArrow(sp, edge, now);
   edgeWarn(edge && edge.d > 0 ? (edge.d > EDGE_SLOW ? 2 : 1) : 0);
 
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -3450,6 +3466,7 @@ function drawOverlays(F, v2) {
   }
 
   // HUD bits
+  if (clean) { if (S.cineGrab) { const fn = S.cineGrab; S.cineGrab = null; fn(canvas, worldCv); } return; }   // (the cinematic mode's clean screen: none - and its picture, taken now)
   if (S.skate && S.me && S.me.sk) S.skate.drawHud(g, W, H, S.me.sk, now);
   // (on a surfboard: this ride's points, the last one's, your best - server surf.js; on a horse: its wind, the hire's
   // clock - server horses.js: client/ridehud.js, loaded the first time)

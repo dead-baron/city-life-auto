@@ -14955,3 +14955,36 @@ Tests: test/world3estuary.test.js - a stand-in coast: the mouth wider toward the
 banks, upstream as it was, the road and what's beside it untouched, the widened channel the river's water and the cut
 the sea's, a river that doesn't reach the sea left alone; the bake blends a river and the sea over a stretch (each
 shows the other's water a few tiles in).
+
+## 2026-10-23 · Cinematic mode and staged scenes, for videos and pictures
+
+The owner, 10-22: "Can you add an option to disable UI, and any other cinematic options I could take advantage of, so I
+can take some really strong video capture and screenshots of gameplay?" and "Would you be able to setup staged scenarios
+on all the [things] I talked about ... and others you can think of?" The cinematic mode (client/director.js, loaded the
+first time it's asked for: F2, F4, F8 or the pause menu's "Cinematic mode") - everything in it is your screen's only:
+- **F2, the clean screen**: no HUD, prompts, notes, radar, touch buttons, name tags, marks over shops and ATMs, aim
+  sights or riding meters - just the world. **F8** saves a picture of the screen as it is, clean (PNG).
+- **F4, the panel**: the camera - Follow (the game's own), Smooth (it trails you like a camera operator, the amount on a
+  slider), Drift (a slow pan across wherever you are), Drone (free: WASD / arrows / the left stick fly it, Q / E zoom,
+  Shift faster, Esc back to you - your character stands still meanwhile), On someone (a person or vehicle near you,
+  [ and ] for the next), the Tour (the camera glides through the world's sights one after another, cutting through
+  black while each one's art comes in); the zoom (wider and closer than play allows); the time of day (dawn to the
+  small hours) and the weather (clear, rain, fog, mist) on your screen only; letterbox bars (2.39:1, 1.85:1); hiding
+  your own character; no camera shake.
+- **The staged scenes** (in dev mode: they run the debug menu's commands): 60 of them in ten groups - action (a police
+  chase with you at the wheel, cops after a getaway car, a night street race on the Neon Strip, an armored truck, a
+  gang shootout, a tanker going up, a street fight, a tank on the boulevard), vehicles (the helicopter at golden hour,
+  a plane taking off, a speedboat, jet skis, off-road in the desert, the MX park, a motorbike through the peaks,
+  horseback across the valley), police (patrol, the police helicopter, a bounty), jobs (taxi, ambulance, firefighting,
+  search and rescue, the coast guard, crop dusting, towing, the bus, the combine), crime (the mail train, a bank
+  vault, a mugging), life (at home, the garden, fishing at dawn and out at sea, wolves hunting, a bear fishing, an
+  eagle, the drive-in, the casino, a club), fun (skating, surfing, soccer, bowling, the arcade, golf, the pier, the
+  balloons), exploring (a cave, the kayak run, the subway, the main line), people (chess, a picnic, a busker, someone
+  collapsing) and weather (a thunderstorm, fog over the valley, the sea sparkling at night). Each takes you there
+  (out of any vehicle first), sets the time and weather on your screen, spawns and starts what it needs and sets the
+  camera; press it again to reset. The drive-in, the club and the storm change everyone's clock or weather (the shows,
+  the doors and the rain are the server's) - the panel says so.
+The debug menu's 'place' finds a district by its name now (its middle), and 'afoot' takes you out of whatever you're in.
+Tests: test/director.test.js - the screen's time of day is the server clock's; every scene's commands are the debug
+menu's, its vehicles real, its places found, every group there; 'place' to a district, 'afoot' out of a car; the page
+loads the cinematic mode only when asked.
