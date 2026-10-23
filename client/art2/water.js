@@ -1011,7 +1011,7 @@ function seaStyle(d, ty) {
 }
 
 // ---- what each tile of the bake's window is -------------------------------------------------------------------
-const F = { n: 0, k: null, st: null, ld: null, dep: null, tmp: null, fx: null, fy: null, fv: null, sa: null, su: null, ch: null, bs: null, cst: null, rp: null, pk: null, pi: null, on: false };
+const F = { n: 0, k: null, st: null, ld: null, dep: null, tmp: null, fx: null, fy: null, fv: null, sa: null, su: null, ch: null, bs: null, cst: null, rp: null, pk: null, pi: null, mx: null, mk: null, ms: null, mr: null, on: false };
 // the window's calm pockets (world3-rapids.js ch.p): { x, y, r (px), ox, oy (the way out to the current) }
 const PKW = [];
 function ensure(n) {
@@ -1019,6 +1019,7 @@ function ensure(n) {
   F.n = n; F.k = new Uint8Array(n); F.st = new Uint8Array(n); F.ld = new Float32Array(n); F.dep = new Float32Array(n); F.fx = new Float32Array(n); F.fy = new Float32Array(n);
   F.fv = new Float32Array(n); F.sa = new Float32Array(n); F.su = new Float32Array(n); F.ch = new Int16Array(n); F.bs = new Float32Array(n); F.cst = new Uint8Array(n); F.tmp = new Float32Array(n);
   F.rp = new Float32Array(n); F.pk = new Float32Array(n); F.pi = new Int16Array(n);
+  F.mx = new Float32Array(n); F.mk = new Uint8Array(n); F.ms = new Uint8Array(n); F.mr = new Float32Array(n);
 }
 const LAND_R = 24;
 // how far (tiles) each tile of the window is from the nearest land, and which land tile that is: a distance transform
@@ -1060,6 +1061,86 @@ function landField(M, TX0, TY0, TN) {
   }
   return G;
 }
+// Where a river runs out into the sea (the owner, 10-22: "these water connections ... unnatural"): the two waters blend
+// over a stretch, not at a seam - the river's water carried out into the sea in a plume, the sea's up into the mouth a
+// little way. For each wet tile of the window, how far it is (through water, tiles) from the other water - a river tile
+// from the sea, a sea tile from a river - over the window and MOUTH_R round it: F.mx how much of the other water shows
+// there (0..1), F.mk / F.ms which water and what look it is (waterPx dithers between them in drifting streaks).
+const MOUTH_R = 20, MOUTH_UP = 20, MOUTH_OUT = 13;
+const MF = { n: 0, kind: null, ds: null, dr: null, hr: null };
+function mouths(M, TX0, TY0, TN) {
+  const R = MOUTH_R, G = TN + 2 * R, n = G * G, X0 = TX0 - R, Y0 = TY0 - R, BIG = 1e6;
+  if (MF.n !== n) { MF.n = n; MF.kind = new Uint8Array(n); MF.ds = new Float32Array(n); MF.dr = new Float32Array(n); MF.hr = new Int32Array(n); }
+  const K = MF.kind, DS = MF.ds, DR = MF.dr, HR = MF.hr;
+  let sea = 0, riv = 0;
+  for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
+    const k = j * G + i, x = X0 + i, y = Y0 + j;
+    let c = 0;
+    if (M.inside(x, y)) {
+      const g = M.idx(x, y), t = M.tiles[g];
+      if ((t === T.WATER || t === T.DEEP || t === T.BRIDGE) && !M.land[g] && !(M.lake && M.lake[g])) c = M.river && M.river[g] ? 2 : 1;
+    } else c = 1;   // (off the map: the open sea)
+    K[k] = c; if (c === 1) sea++; else if (c === 2) riv++;
+    DS[k] = c === 1 ? 0 : BIG; DR[k] = c === 2 ? 0 : BIG; HR[k] = c === 2 ? k : -1;
+  }
+  if (!sea || !riv) return;
+  // (two passes each way, through the water only: land between a river and the sea keeps them apart)
+  const S2 = 1.4142;
+  const pass = (D, H, fwd) => {
+    for (let jj = 0; jj < G; jj++) for (let ii = 0; ii < G; ii++) {
+      const j = fwd ? jj : G - 1 - jj, i = fwd ? ii : G - 1 - ii, k = j * G + i;
+      if (!K[k]) continue;
+      let v = D[k], h = H ? H[k] : 0;
+      const s = fwd ? -1 : 1;
+      const ti = (o, w, ok) => { if (ok && K[o] && D[o] + w < v) { v = D[o] + w; if (H) h = H[o]; } };
+      ti(k + s, 1, fwd ? i > 0 : i < G - 1);
+      ti(k + s * G, 1, fwd ? j > 0 : j < G - 1);
+      ti(k + s * G + s, S2, fwd ? i > 0 && j > 0 : i < G - 1 && j < G - 1);
+      ti(k + s * G - s, S2, fwd ? i < G - 1 && j > 0 : i > 0 && j < G - 1);
+      D[k] = v; if (H) H[k] = h;
+    }
+  };
+  pass(DS, null, true); pass(DS, null, false); pass(DR, HR, true); pass(DR, HR, false);
+  for (let j = 0; j < TN; j++) for (let i = 0; i < TN; i++) {
+    const k = j * TN + i, q = (j + R) * G + i + R, kk = F.k[k];
+    if (!kk) continue;
+    if (K[q] === 2 && (kk === WK.RIVER || kk === WK.CREEK || kk === WK.MARSH) && DS[q] < MOUTH_UP) {
+      const u = 1 - DS[q] / MOUTH_UP;
+      F.mx[k] = u * (0.25 + 0.6 * u); F.mk[k] = WK.SEA;
+      const tx = TX0 + i, ty = TY0 + j;
+      F.ms[k] = seaStyle(M.inside(tx, ty) ? M.dist[M.idx(tx, ty)] : 13, ty);
+    }
+    if (K[q] === 1 && kk === WK.SEA) F.mr[k] = DR[q];   // (the sea off a river's mouth: shallow over the bar it builds - waterTiles)
+    else if (K[q] === 2 && (kk === WK.RIVER || kk === WK.CREEK || kk === WK.MARSH)) F.mr[k] = DS[q] < MOUTH_UP ? DS[q] : 1e6;   // (...and the river shoaling as it runs out over it)
+    if (K[q] === 1 && kk === WK.SEA && DR[q] < MOUTH_OUT) {
+      const u = 1 - DR[q] / MOUTH_OUT, h = HR[q];
+      F.mx[k] = u * u * 0.8; F.mk[k] = WK.RIVER; F.ms[k] = S.valley;
+      if (h >= 0) {   // (the river's own look: its tile's in the window, else its channel's)
+        const hi = (h / G | 0) - R, hj = h % G - R, wk = hi >= 0 && hj >= 0 && hi < TN && hj < TN ? hi * TN + hj : -1;
+        if (wk >= 0 && (F.k[wk] === WK.RIVER || F.k[wk] === WK.CREEK || F.k[wk] === WK.MARSH)) { F.mk[k] = F.k[wk]; F.ms[k] = F.st[wk]; }
+        else if (wk < 0) { const L = lookOf(M, TX0 - R + hj + 0.5, TY0 - R + hi + 0.5); if (L) { F.mk[k] = L.kind; F.ms[k] = L.sty; } }
+      }
+    }
+  }
+}
+// the look of the channel nearest a point (tiles) - a river's water beyond the window, as channelTiles would have it
+function lookOf(M, x, y) {
+  const chs = channels(M);
+  if (!chs) return null;
+  let best = null, bd = Infinity;
+  for (const c of chs) {
+    if (x < c.bb[0] || x > c.bb[2] || y < c.bb[1] || y > c.bb[3] || c.kind === WK.LAKE) continue;
+    const p = c.pts;
+    for (let q = 1; q < p.length; q++) {
+      const ax = p[q - 1][0], ay = p[q - 1][1], dx = p[q][0] - ax, dy = p[q][1] - ay, L2 = dx * dx + dy * dy;
+      let t = L2 ? ((x - ax) * dx + (y - ay) * dy) / L2 : 0;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const ex = x - ax - dx * t, ey = y - ay - dy * t, d = (ex * ex + ey * ey) / (c.w * c.w);
+      if (d < bd) { bd = d; best = c; }
+    }
+  }
+  return best && bd < 1 ? best : null;
+}
 // the channels of m.waters with their bounding boxes and lengths along (tiles), kept per map
 const CH = new WeakMap();
 function channels(M) {
@@ -1085,7 +1166,7 @@ export function waterTiles(C, mats, TN) {
   ensure(n);
   F.on = false;
   if (!M || !M.tiles) return;
-  F.k.fill(0); F.dep.fill(0); F.fx.fill(0); F.fy.fill(0); F.fv.fill(0); F.ch.fill(-1); F.bs.fill(1e9); F.cst.fill(0); F.rp.fill(0); F.pk.fill(0); F.pi.fill(-1); PKW.length = 0;
+  F.k.fill(0); F.dep.fill(0); F.fx.fill(0); F.fy.fill(0); F.fv.fill(0); F.ch.fill(-1); F.bs.fill(1e9); F.cst.fill(0); F.rp.fill(0); F.pk.fill(0); F.pi.fill(-1); F.mx.fill(0); F.mr.fill(1e6); PKW.length = 0;
   const lk = M.waters && Array.isArray(M.waters.lk) ? M.waters.lk : [], flow = M.flow || null;
   let any = false;
   for (let k = 0; k < n && !any; k++) if (b.tw[k]) any = true;
@@ -1122,7 +1203,8 @@ export function waterTiles(C, mats, TN) {
   // along it and across it (px) it is
   const chs = channels(M);
   if (chs) channelTiles(chs, TX0, TY0, TN);
-  for (let k = 0; k < n; k++) if (F.k[k]) F.dep[k] = depthOf(F.k[k], F.ld[k], F.cst[k], F.st[k]);
+  mouths(M, TX0, TY0, TN);
+  for (let k = 0; k < n; k++) if (F.k[k]) F.dep[k] = depthOf(F.k[k], F.ld[k], F.cst[k], F.st[k]) * (F.mr[k] < MOUTH_R ? 0.15 + 0.85 * (F.mr[k] / MOUTH_R) ** 2 : 1);   // (off a river's mouth the sea is shallow: the bar the river builds, fanning out)
   // (blurred twice over the water's tiles: where a shallow creek runs into a deep lake the bed falls away over a few
   // tiles, not in the tiles' steps)
   const T2 = F.tmp;
@@ -1262,7 +1344,7 @@ function depthOf(k, dt, cst, st) {
 // (what it is when the window's facts are off: a swatch, a map without tiles)
 export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
   const seed = C.seed | 0, x = X | 0, y = Y | 0;
-  let k = kind, st = kind === WK.SEA ? S.temperate : kind === WK.POND ? S.park : kind === WK.LAKE ? S.forest : S.valley, cst = 0, dt = d / TILE, dep = -1, fx = 0, fy = 0, fv = 0, sa = 0, su = 0, chan = false, rp = 0, pk = 0, pi = -1;
+  let capDep = 1e9, k = kind, st = kind === WK.SEA ? S.temperate : kind === WK.POND ? S.park : kind === WK.LAKE ? S.forest : S.valley, cst = 0, dt = d / TILE, dep = -1, fx = 0, fy = 0, fv = 0, sa = 0, su = 0, chan = false, rp = 0, pk = 0, pi = -1;
   if (F.on) {
     // which water and what look: one of the four tiles round the pixel, picked by their weights through a dither -
     // where two waters meet (a river's mouth at the sea, a creek into a lake, one coast's sea and another's) the
@@ -1271,10 +1353,23 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
     let kc = r < w00 ? k00 : r < w00 + w10 ? k00 + 1 : r < w00 + w10 + w01 ? k00 + TN : k00 + TN + 1;
     if (!F.k[kc]) kc = ti;
     if (F.k[kc]) { k = F.k[kc]; st = F.st[kc]; cst = F.cst[kc]; }
+    // a river's mouth: the other water in drifting streaks, drawn out along the current (mouths)
+    const mw = (F.mx[k00] * (1 - vx) + F.mx[k00 + 1] * vx) * (1 - vy) + (F.mx[k00 + TN] * (1 - vx) + F.mx[k00 + TN + 1] * vx) * vy;
+    capDep = 1e9;
+    if (mw > 0.01) {
+      const ax = F.fx[ti], ay = F.fy[ti], al = ax || ay ? X * ax + Y * ay : X, ac = ax || ay ? -X * ay + Y * ax : Y;
+      const nz = vnc(al * 0.45, ac, 26, seed + 301) * 0.7 + vnc(X, Y, 8, seed + 303) * 0.3;
+      if (nz < mw) {
+        let kb = k00, wb = F.mx[k00];
+        for (const o of [k00 + 1, k00 + TN, k00 + TN + 1]) if (F.mx[o] > wb) { wb = F.mx[o]; kb = o; }
+        k = F.mk[kb]; st = F.ms[kb]; cst = k === WK.SEA ? 1 : 0;
+        if (k !== WK.SEA) capDep = 1.2;   // (the river's water out over the bar: shallow, never the sea's deep)
+      }
+    }
     const ld = (F.ld[k00] * (1 - vx) + F.ld[k00 + 1] * vx) * (1 - vy) + (F.ld[k00 + TN] * (1 - vx) + F.ld[k00 + TN + 1] * vx) * vy;
     const far = Math.max(46 / TILE, ld - 0.35), u = d < 36 ? 0 : (d - 36) / 10;
     dt = d >= 46 ? far : d / TILE * (1 - u) + Math.max(d / TILE, far) * u;
-    dep = (F.dep[k00] * (1 - vx) + F.dep[k00 + 1] * vx) * (1 - vy) + (F.dep[k00 + TN] * (1 - vx) + F.dep[k00 + TN + 1] * vx) * vy;
+    dep = Math.min(capDep, (F.dep[k00] * (1 - vx) + F.dep[k00 + 1] * vx) * (1 - vy) + (F.dep[k00 + TN] * (1 - vx) + F.dep[k00 + TN + 1] * vx) * vy);
     fx = (F.fx[k00] * (1 - vx) + F.fx[k00 + 1] * vx) * (1 - vy) + (F.fx[k00 + TN] * (1 - vx) + F.fx[k00 + TN + 1] * vx) * vy;
     fy = (F.fy[k00] * (1 - vx) + F.fy[k00 + 1] * vx) * (1 - vy) + (F.fy[k00 + TN] * (1 - vx) + F.fy[k00 + TN + 1] * vx) * vy;
     fv = F.fv[ti];

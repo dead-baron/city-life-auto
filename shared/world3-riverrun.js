@@ -106,6 +106,18 @@ export function riverRun3(m, H3) {
       cps.push({ x: Math.round((gx + 0.5) * TILE), y: Math.round((gy + 0.5) * TILE) });
       run = 0;
     }
+    // (the finish just off the take-out's landing: the river opens out into its estuary there - world3-estuary.js - and
+    // the channel's middle can be a long way out from the bank)
+    if (cps.length) {
+      const [sx, sy] = out.take.shore, f = cps[cps.length - 1], fx = f.x / TILE - 0.5, fy = f.y / TILE - 0.5, L = Math.sqrt((fx - sx) * (fx - sx) + (fy - sy) * (fy - sy));
+      if (L > 12) for (let d = 2; d < L; d++) {
+        const gx = Math.round(sx + (fx - sx) * d / L), gy = Math.round(sy + (fy - sy) * d / L);
+        if (!wet(gx, gy)) continue;
+        const e = Math.min(L, d + 6), hx = Math.round(sx + (fx - sx) * e / L), hy = Math.round(sy + (fy - sy) * e / L);
+        if (wet(hx, hy)) { f.x = Math.round((hx + 0.5) * TILE); f.y = Math.round((hy + 0.5) * TILE); }
+        break;
+      }
+    }
     if (cps.length >= 4 && m.races) {
       const st = m.rentals.find((q) => q.poi === out.put.poi).spots[0];
       const race = { id: m.races.length, name: R.name, kind: 'kayak', start: { x: Math.round(st.x), y: Math.round(st.y) }, cps, prize: R.prize, where: 'the put-in\'s landing in the woods' };

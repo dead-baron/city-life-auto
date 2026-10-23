@@ -35,6 +35,7 @@ import { rapidsAndPockets3 } from './world3-rapids.js';
 import { kestrelByHand3 } from './world3-kestrel.js';
 import { farmPonds3 } from './world3-farmponds.js';
 import { riverBanks3 } from './world3-banks.js';
+import { estuaries3 } from './world3-estuary.js';
 import { buildMarshBoardwalk3 } from './world3-marsh.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
 import { wildSites3, wildDone, movedAt, wildDist, wildFarm3 } from './world3-wild.js';
@@ -267,6 +268,7 @@ export function worldOpts(asked) {
       m.world3.waterBodies = waterBodies3(m);   // (2026-10-18, the water upgrade: which water is a creek, a river, a lake, a pond or the marsh, which way each channel runs - m.waters, m.lake: world3-waterbodies.js)
       m.world3.kestrel = kestrelByHand3(m, H3);   // (Kestrel Lake by hand: the south shore's bays and points, Kestrel Beach - world3-kestrel.js)
       m.world3.outlets = waterOutlets3(m, H3);   // (every waterway to the sea: a channel stopping a few tiles short of it cut through, a road over the gap a bridge - the owner, 10-21: world3-outlets.js)
+      m.world3.estuaries = estuaries3(m, H3, (i) => L.water[i] === WATER3.SEA || L.water[i] === WATER3.DEEP);   // (every river's mouth at the sea opens out: the channel widening over its last stretch, cut on through the beach into the sea, sand up its banks - the owner, 10-22: world3-estuary.js)
       m.world3.farmPonds = farmPonds3(m, H3);   // (Willow Valley's farm ponds: jetties, rowboats, windmill pumps - world3-farmponds.js)
       m.world3.verges = vergesByHand3(m, H3);   // (Willow Valley's countryside: green banks between the fields and the rivers, the power lines along the county roads - world3-verges.js)
       m.world3.trails = buildTrails3(m, H3);   // (the nature program, 2026-10-20: Highland Woods' trails, their furniture, the glades and the fire lookout - world3-trails.js)

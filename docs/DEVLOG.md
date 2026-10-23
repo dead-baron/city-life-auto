@@ -14933,3 +14933,27 @@ its stamina rides in the self record - and the drive-in's hooks; to make room th
 horse's wind) moved to client/ridehud.js, loaded the first time you're on a board or a horse, and the casinos', the race
 book's and the drive-in's numbers moved from shared/rules.js (which every page loads at once) to shared/rules-games.js
 (the server's and the screens' that load later): 494.6 KB.
+
+## 2026-10-23 · River mouths: estuaries instead of seams
+
+The owner, 10-22: "can we fix these water connections around the world to look better? Right now its unnatural" - a
+river running down to the sea ended in a round blob poking through the beach, met the sea at a narrow neck or a single
+point, and its water stopped in a hard line against the sea's. Now every river's mouth opens out
+(shared/world3-estuary.js, World v3's build, after the outlets):
+- the channel widens over its last stretch (longer for a wider river: up to almost twice its width and a few tiles
+  more), its banks wandering a little, each side its own way and ragged at the tile;
+- past its end it runs on through the beach or the dunes into the sea at that width, opening wider from where the sea
+  begins, the corners where it meets the coast rounded off - no straight cut along the grid;
+- where the coast is a beach, sand curves up the banks of the widened stretch, tapering off upstream;
+- open ground only: never a road, a pavement, a bridge, a dock, a building, a designed place or the railway's line
+  (and kept a couple of tiles clear of them) - in a town the river keeps its quays.
+And the two waters blend where they meet (client/art2/water.js mouths): the river's water carried out into the sea in
+streaks drawn out along the current, the sea's a little way up the mouth, over about a dozen tiles each way instead of
+a seam; the sea shoals over the bar off the mouth and the river over its last reach, the bed showing through - no deep
+blue running right up to the river. The Egret marsh's mouths blend the same way.
+Tests: test/world3estuary.test.js - a stand-in coast: the mouth wider toward the sea, cut through the beach, sand up its
+banks, upstream as it was, the road and what's beside it untouched, the widened channel the river's water and the cut
+the sea's, a river that doesn't reach the sea left alone; the bake blends a river and the sea over a stretch (each
+shows the other's water a few tiles in).
+The Redwood River Run ends in the new estuary at Northshore: its finish gate now stands on the water just off the
+take-out's landing (the channel's middle is a long way out from the bank there) - shared/world3-riverrun.js.
