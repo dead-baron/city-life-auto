@@ -157,6 +157,6 @@ test('the server\'s world on the v3 map: players downtown, at Port Westport, in 
   const atm = M.pois.filter((q) => q.kind === 'atm').sort((a, b) => Math.hypot(a.x - mart.x, a.y - mart.y) - Math.hypot(b.x - mart.x, b.y - mart.y))[0];
   at(atm);
   const cash = buyer.profile.cash;
-  economy.handleMenu(w, buyer, atm.id, 'dep:100');
-  assert.deepEqual([buyer.profile.cash, buyer.profile.bank], [cash - 100, 100], 'a deposit at the ATM');
+  economy.handleMenu(w, buyer, atm.id, 'dep:all');   // (the ATM's pop-up: all your cash in at a press)
+  assert.deepEqual([buyer.profile.cash, buyer.profile.bank], [0, cash], 'a deposit at the ATM');
 });

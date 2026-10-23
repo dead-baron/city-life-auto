@@ -432,6 +432,8 @@ export function shops3(m, H) {
     let at = lot(anchor[0], anchor[1], w, 6, 60, S.d, false, true) || lot(anchor[0], anchor[1], w, 6, 60, S.d, true, true);
     // (none by its crossroads: along its roads, nearest that first)
     if (!at) for (const [x, y] of roadSpots(m, S.d, anchor)) { at = lot(x, y, w, 6, 16, S.d, false, true); if (at) break; }
+    // (still none - a village's harbour built up to the water: on open ground near it, over the district's edge if need be)
+    if (!at) at = lot(anchor[0], anchor[1], w, 6, 120, -1, true, true);
     if (!at) { out.stuck[`${DISTRICTS[S.d].name} (wild)`] = 1; continue; }
     const b = build(at[0], at[1], w, at[2], distAt(at[0], at[1]), S.units, S.roof);
     row(b, S.units.map(([k, name]) => [k, name, name]), true, distAt(at[0], at[1]), { counter: true });
