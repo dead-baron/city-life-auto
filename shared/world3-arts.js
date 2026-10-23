@@ -146,7 +146,9 @@ function build(m, api, K) {
     if (!neon) spec.plaques = [];
     if (o.blade && !neon) spec.blades = [{ text: o.blade, side: shop && shop.door === 'left' ? 'right' : 'left' }];
     const food = store === 'cafe' || store === 'diner';
-    const poi = o.poi !== undefined ? o.poi : food ? { kind: 'coffee', label: o.name, food: store === 'diner' } : store === 'bar' || store === 'gallery' || store === 'lobby' ? { kind: 'delivery', label: o.name } : { kind: 'delivery', label: o.name, walk: true, store };
+    // (a bike shop sells sports gear, a supply store hardware - its counter by its trade: the shops where you need them, 2026-10-23)
+    const trade = o.name && !o.poi ? (/Bike Shop$/.test(o.name) ? 'sports' : /Supply$/.test(o.name) && !/Art Supply$/.test(o.name) ? 'hardware' : null) : null;
+    const poi = o.poi !== undefined ? o.poi : trade ? { kind: trade, label: o.name } : food ? { kind: 'coffee', label: o.name, food: store === 'diner' } : store === 'bar' || store === 'gallery' || store === 'lobby' ? { kind: 'delivery', label: o.name } : { kind: 'delivery', label: o.name, walk: true, store };
     const home = o.home !== undefined ? o.home : floors >= 3 && w >= 6 && r(15) < 0.55 ? { kind: 'apartment', price: look === 'loft' ? 22000 : 17000 } : null;
     if (store === 'gallery') out.galleries++;
     return { arch: o.arch || 'mixed', ...(o.key ? { key: o.key } : food ? { key: store === 'cafe' ? 'greenbistro' : 'rest1' } : {}), name: o.name, poi, ...(home ? { home } : {}), whole: true,
@@ -547,7 +549,7 @@ function build(m, api, K) {
       { w: 9, name: 'Corner Bodega', store: 'mart', look: 'paint', floors: 3, awning: ['#e0b040', '#f0ece4'], poi: { kind: 'convenience', label: 'Corner Bodega' }, home: { kind: 'apartment', price: 16000 } },
       { w: 12, name: 'The Hair Loft', store: 'salon', look: 'brick', floors: 4, home: { kind: 'apartment', price: 18000 } },
       { w: 7, gap: 7, kind: 'passage' },
-      { w: 12, name: 'Bric-a-Brac', store: 'pawn', look: 'brick', floors: 4, blade: 'ANTIQUES', home: { kind: 'apartment', price: 18000 } },
+      { w: 12, name: 'Bric-a-Brac', store: 'pawn', look: 'brick', floors: 4, blade: 'ANTIQUES & PAWN', poi: { kind: 'pawn', label: 'Bric-a-Brac Antiques & Pawn' }, home: { kind: 'apartment', price: 18000 } },
       { w: 0, name: 'Olive & Fig', store: 'diner', look: 'paint', floors: 3 },
     ], { only: true, depth: rowD });
     // the court

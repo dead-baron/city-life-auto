@@ -242,7 +242,7 @@ function build(m, api, K) {
       { w: 10, name: 'Westhill Pharmacy', store: 'mart', poi: { kind: 'pharmacy', label: 'Westhill Pharmacy' }, sign: ['#2a7a6a', [250, 250, 245]] },
       { w: 9, name: 'Bean There', store: 'cafe', poi: { kind: 'coffee', label: 'Bean There' }, sign: ['#3a2a20', [236, 214, 150]] },
       { w: 10, name: 'Sunny Side Diner', store: 'diner', poi: { kind: 'coffee', label: 'Sunny Side Diner', food: true }, sign: ['#c8302a', [250, 246, 230]] },
-      { w: 10, name: 'Hills Hardware', store: 'mart', poi: { kind: 'delivery', label: 'Hills Hardware' }, sign: ['#a83a2a', [250, 240, 220]] },
+      { w: 10, name: 'Hills Hardware', store: 'mart', poi: { kind: 'hardware', label: 'Hills Hardware' }, sign: ['#a83a2a', [250, 240, 220]] },
       { w: 9, name: 'Paws & Claws', store: 'mart', poi: { kind: 'delivery', label: 'Paws & Claws' }, sign: ['#e8a030', [40, 30, 20]] },
       { w: 9, name: 'Fluff & Fold', store: 'laundry', poi: { kind: 'delivery', label: 'Fluff & Fold' }, sign: ['#3a6a9a', [250, 250, 245]] },
     ];

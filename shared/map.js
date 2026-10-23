@@ -392,6 +392,7 @@ function buildCity(seed, opts = null, frame = null) {
   buildBoatDocks(m); unpin();
   buildSignals(m);
   buildStreetAtms(m);
+  if (OPTS?.shops) { ATM_PG = propGrid(m); try { OPTS.shops(m, { addProp, removeProps, simpleBuilding, wallAtm: (b, x, look, loose) => wallAtm(m, b, x, look, false, loose) }); } finally { ATM_PG = null; } }   // (World v3: shops where you need them - shared/world3-shops.js)
   m.atms = m.pois.filter((p) => p.kind === 'atm');
   aimLamps(m);
   m.levels = buildLevels(m);
@@ -4493,8 +4494,10 @@ function buildWilds(m, rand) {
       // the edge of a forest grove: now and then a fallen log (solid along its length, not smashable)
       if (c === 2 && t !== T.SAND && !rocky[i] && g > 0.3 && g < 0.42 && hash2(LX(gx), LY(gy), 66) < 0.035 && !inField(tx, ty, 64) && clear(tx, ty, 3)) {
         const a = hash2(LX(gx), LY(gy), 67) * Math.PI, len = 90 + Math.floor(hash2(LX(gx), LY(gy), 68) * 4) * 20;
-        addProp(m, 'log', x, y, 0, { a: Math.round(a * 100) / 100, len });
-        for (const k of [-0.36, 0, 0.36]) m.addSolidProp(x + Math.cos(a) * len * k, y + Math.sin(a) * len * k * 0.7, 11);
+        if (!WD || logClear(m, x, y, a, len + 40)) {   // (World v3: never across a track's bed or a road)
+          addProp(m, 'log', x, y, 0, { a: Math.round(a * 100) / 100, len });
+          for (const k of [-0.36, 0, 0.36]) m.addSolidProp(x + Math.cos(a) * len * k, y + Math.sin(a) * len * k * 0.7, 11);
+        }
       }
       continue;
     }
@@ -4557,7 +4560,7 @@ function redwoodGroves(m, wild, inField, clear, rocky) {
       continue;
     }
     // a fallen giant, lying roughly east-west, solid along its length
-    if (g > 0.35 && u > 0.94 && okAt(tx, ty, 6) && roomFor(x, y, 150)) {
+    if (g > 0.35 && u > 0.94 && okAt(tx, ty, 6) && roomFor(x, y, 150) && (!WD || logClear(m, x, y, 0, 180 + Math.floor(hash2(LX(gx), LY(gy), 313) * 5) * 24 + 80))) {   // (World v3: the giant never across a track's bed)
       const len = 180 + Math.floor(hash2(LX(gx), LY(gy), 313) * 5) * 24, a = 0, flip = hash2(LX(gx), LY(gy), 315) < 0.5 ? 1 : 0;   // (drawn east-west: redwoods.js nurseLog)
       addProp(m, 'rwlog', x, y, 0, { len, a: Math.round(a * 100) / 100, flip });
       for (const kk of [-0.4, -0.2, 0, 0.2, 0.4]) m.addSolidProp(x + Math.cos(a) * len * kk, y + Math.sin(a) * len * kk * 0.7 - 6, 15);
@@ -4639,7 +4642,7 @@ function buildStreetProps(m) {
     // inner sidewalk ring: district dressing (the rough end of town gets more bins, dumpsters and junk - but no garbage
     // piled on the pavement: the owner, 2026-10-10, "I'd rather not have garbage like that piled up everywhere in the city")
     if (h < (d.tier === 'rough' || d.tier === 'low' ? 0.08 : 0.05)) {
-      const pool = {
+      const pool = OPTS?.pavement?.[d.style] || {   // (World v3: furniture only, no junk on the pavement - shared/world3-clutter.js)
         houses: ['tree_a', 'shrub_a', 'mailbox', 'bush_a'], apartments: ['tree_b', 'bench_a', 'bush_b', 'trashcan'], civic: ['tree_a', 'bench_b', 'planter_sq'],
         towers: ['planter_sq', 'bench_m', 'news_a', 'news_b', 'trashcan', 'palm_s', 'bollard', 'tree_b'], commercial: ['news_c', 'trashcan', 'bench_a', 'planter_g', 'bikerack', 'phonebox', 'tree_a', 'mailbox'],
         nightlife: ['palm_s', 'palm_d', 'trashcan', 'news_b', 'foodcart', 'phonebox', 'bollard'], industrial: ['dump_g', 'drum', 'pallet_s', 'cone', 'crates', 'spool'],
@@ -4714,6 +4717,10 @@ function buildBusStops(m, doorsNear) {
   }
 }
 
+// (World v3) a spot on an alley's own asphalt, no street or pavement round it; a fallen log (heading a, length len)
+// lying clear of the track beds, the roads and the pavements
+const inAlley = (m, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const t = m.tileAt(tx + dx, ty + dy); if (t === T.SIDEWALK || ((t === T.ROAD || t === T.BRIDGE) && m.roadRank[m.idx(tx + dx, ty + dy)] !== 1)) return false; } return m.tileAt(tx, ty) === T.ROAD; };
+const logClear = (m, x, y, a, len) => { const c = Math.cos(a), s = Math.sin(a); for (let k = -len / 2; k <= len / 2; k += 16) { const tx = Math.floor((x + c * k) / TILE), ty = Math.floor((y + s * k) / TILE); if (!m.inside(tx, ty) || m.reserve[m.idx(tx, ty)] & 3 || WILD_CLEAR.has(m.tiles[m.idx(tx, ty)]) || m.tiles[m.idx(tx, ty)] === T.SIDEWALK) return false; } return true; };
 // Back alleys: dumpsters (a few bin bags beside one now and then, mostly in the rough districts), crates, AC units,
 // drums and pallets against the walls, the odd wall lamp - all of it smashable by anything driving through. (No heaps
 // of loose garbage: the owner, 2026-10-10.)
@@ -4729,9 +4736,11 @@ function dressAlleys(m) {
       const side = hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 612) < 0.5 ? -1 : 1;
       const x = q.x - q.ty * side * (e.hw - 12), y = q.y + q.tx * side * (e.hw - 12);
       const t = pool[Math.floor(hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 613) * pool.length)];
-      addProp(m, t, x, y, t.startsWith('dump') ? 14 : t === 'crates' || t === 'acunit' ? 12 : t === 'drum' || t === 'tires' ? 9 : 0);
-      const dd = DISTRICTS[m.dist[Math.floor(y / TILE) * m.w + Math.floor(x / TILE)]], rough = !!dd && (dd.tier === 'rough' || dd.tier === 'low');
-      if (t.startsWith('dump') && hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 614) < (rough ? 0.5 : 0.06)) addProp(m, 'bags', x + q.tx * 34, y + q.ty * 34, 0);   // (bags by the dumpster: mostly in the rough districts)
+      if (!(WD && !inAlley(m, x, y))) {   // (World v3: only on the alley's own asphalt, never out at its mouth on the street)
+        addProp(m, t, x, y, t.startsWith('dump') ? 14 : t === 'crates' || t === 'acunit' ? 12 : t === 'drum' || t === 'tires' ? 9 : 0);
+        const dd = DISTRICTS[m.dist[Math.floor(y / TILE) * m.w + Math.floor(x / TILE)]], rough = !!dd && (dd.tier === 'rough' || dd.tier === 'low');
+        if (t.startsWith('dump') && hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 614) < (rough ? 0.5 : 0.06) && !(WD && !inAlley(m, x + q.tx * 34, y + q.ty * 34))) addProp(m, 'bags', x + q.tx * 34, y + q.ty * 34, 0);   // (bags by the dumpster: mostly in the rough districts)
+      }
       if (k % 5 === 2) { const l = addProp(m, 'lamp', q.x + q.ty * side * (e.hw - 4), q.y - q.tx * side * (e.hw - 4)); l.a = Math.atan2(q.tx * side, -q.ty * side); l.wall = true; }
     }
   }

@@ -14957,3 +14957,76 @@ the sea's, a river that doesn't reach the sea left alone; the bake blends a rive
 shows the other's water a few tiles in).
 The Redwood River Run ends in the new estuary at Northshore: its finish gate now stands on the water just off the
 take-out's landing (the channel's middle is a long way out from the bank there) - shared/world3-riverrun.js.
+
+## 2026-10-23 · Cinematic mode and staged scenes, for videos and pictures
+
+The owner, 10-22: "Can you add an option to disable UI, and any other cinematic options I could take advantage of, so I
+can take some really strong video capture and screenshots of gameplay?" and "Would you be able to setup staged scenarios
+on all the [things] I talked about ... and others you can think of?" The cinematic mode (client/director.js, loaded the
+first time it's asked for: F2, F4, F8 or the pause menu's "Cinematic mode") - everything in it is your screen's only:
+- **F2, the clean screen**: no HUD, prompts, notes, radar, touch buttons, name tags, marks over shops and ATMs, aim
+  sights or riding meters - just the world. **F8** saves a picture of the screen as it is, clean (PNG).
+- **F4, the panel**: the camera - Follow (the game's own), Smooth (it trails you like a camera operator, the amount on a
+  slider), Drift (a slow pan across wherever you are), Drone (free: WASD / arrows / the left stick fly it, Q / E zoom,
+  Shift faster, Esc back to you - your character stands still meanwhile), On someone (a person or vehicle near you,
+  [ and ] for the next), the Tour (the camera glides through the world's sights one after another, cutting through
+  black while each one's art comes in); the zoom (wider and closer than play allows); the time of day (dawn to the
+  small hours) and the weather (clear, rain, fog, mist) on your screen only; letterbox bars (2.39:1, 1.85:1); hiding
+  your own character; no camera shake.
+- **The staged scenes** (in dev mode: they run the debug menu's commands): 60 of them in ten groups - action (a police
+  chase with you at the wheel, cops after a getaway car, a night street race on the Neon Strip, an armored truck, a
+  gang shootout, a tanker going up, a street fight, a tank on the boulevard), vehicles (the helicopter at golden hour,
+  a plane taking off, a speedboat, jet skis, off-road in the desert, the MX park, a motorbike through the peaks,
+  horseback across the valley), police (patrol, the police helicopter, a bounty), jobs (taxi, ambulance, firefighting,
+  search and rescue, the coast guard, crop dusting, towing, the bus, the combine), crime (the mail train, a bank
+  vault, a mugging), life (at home, the garden, fishing at dawn and out at sea, wolves hunting, a bear fishing, an
+  eagle, the drive-in, the casino, a club), fun (skating, surfing, soccer, bowling, the arcade, golf, the pier, the
+  balloons), exploring (a cave, the kayak run, the subway, the main line), people (chess, a picnic, a busker, someone
+  collapsing) and weather (a thunderstorm, fog over the valley, the sea sparkling at night). Each takes you there
+  (out of any vehicle first), sets the time and weather on your screen, spawns and starts what it needs and sets the
+  camera; press it again to reset. The drive-in, the club and the storm change everyone's clock or weather (the shows,
+  the doors and the rain are the server's) - the panel says so.
+The debug menu's 'place' finds a district by its name now (its middle), and 'afoot' takes you out of whatever you're in.
+Tests: test/director.test.js - the screen's time of day is the server clock's; every scene's commands are the debug
+menu's, its vehicles real, its places found, every group there; 'place' to a district, 'afoot' out of a car; the page
+loads the cinematic mode only when asked.
+
+## 2026-10-23 · Shops where you need them, and nothing blocking the streets
+The owner, 10-15: "There are fences that spawn over sidewalks ... they don't spawn over streets or sidewalks or train
+tracks", "Some world objects are spawning on the train tracks like mossy logs", and shops easy to find wherever you
+are. Two passes started then (WIP on a branch since) are finished and in the world now:
+- **Nothing blocking** (shared/world3-clutter.js, the last pass of the world's build): on a street's roadway or a road
+  bridge nothing stands (a lamp, a signal pole, a utility pole or a mailbox moves to the kerb, anything else goes); on
+  a pavement only street furniture; in an alley only what stands against its walls; nothing within reach of a track
+  (a log or a fence along its length) or on a station's platform but its lamps; nothing solid on a door. The fields'
+  rail fences run over open ground only, their bales and scarecrows kept off the roads. The pavements' generic dressing
+  in World v3 is furniture only (no dumpsters, drums or pallets out front), alley dressing only on the alley's own
+  asphalt, a fallen log never across a track bed or a road. **The handcrafted districts are left as their plans laid
+  them** - the Neon Strip's and Bayside's median palms, the lights strung over their streets, Midtown's and Northgate's
+  market stalls, the Yards' fences: the plans mark what they lay (handLaid, a WeakSet on the map, never sent) and the
+  guard only takes something solid off a doorway there. The boardwalks, footbridges, log bridges and rope bridges are
+  not roads (a bridge tile off the road net). What it does on seed 1337: 59 signal poles, 5 utility poles and 5
+  mailboxes moved to the kerb, 18 trees and 23 planters, pots, benches and racks off doorways, a few boulders, reeds and a cairn
+  off country roads, 83 field fences cut round roads; nothing left blocking.
+- **Shops where you need them** (shared/world3-shops.js, after the street ATMs): each built-up district's farthest
+  street from a need (weapons, equipment, food and everyday items, cash) gets a row of shops in the nearest plain
+  building (a gun shop, a hardware / sports / tackle store, a corner store, an ATM by the door), else a generic
+  storefront taken over, else a small row of shops on open ground by the street - and, only to bring a far street
+  within reach, a roadside store on open ground just over the district's edge, in the country - else a snack cart or an
+  ATM kiosk; the wild land its themed places (the trailhead store, the feed and tool, the trading post, the marsh camp);
+  an ATM by every station and gas station. The handcrafted districts lay their own stores, so their plans got the
+  trades their names already said: Hills Hardware and Hills Home Center (West Hills) and Ninth Street Hardware are
+  hardware stores, the Bayside and Gull Harbor chandleries tackle shops, Bayside Dive & Sail and Coral Dive Co. sports
+  stores, Cay Post & Supply a hardware store; and every fifth of Northgate's corner shops is a gun shop or a hardware
+  store in turn (Northgate Arms, Linden Arms, Laurel Hardware...). A shop counter shows a hand plan's shop by its own
+  name. The handcrafted districts' own buildings and ground are never the pass's
+  (a casino stays a casino, a forecourt a forecourt: m.handBuilt, handPlanAt), so the gulf island's plans got their
+  own: Downtown's Ironside Hardware and Harborline Arms by the police HQ, the Civic Center's Capitol Hardware and
+  Archive Antiques & Pawn, the Neon Strip's Neon Pawn & Guns, the Arts District's Bric-a-Brac Antiques & Pawn and its
+  bike shops (sports) and supply stores (hardware), Marina Sporting Arms on Bayside's marina terrace (where the
+  Harbourmaster's office was). On seed 1337: 28 new buildings and 23 rows of shops (25 gun shops, 14 hardware, 37
+  corner stores, 3 tackle, 3 sports, a hunt camp), 58 carts, 73 kiosks, 107 ATMs. The test's rule (test/world3server.test.js): every street of the
+  city, the towns and the beach towns within reach of each need (400 tiles for weapons and equipment, 140 for food and
+  cash) and food and cash in every district itself; the villages food, cash and their tackle shop of their own and no
+  gun shop (a long way out, like the wild land) - a quiet district (the villas, the houses by the station) may have its
+  gun shop a short drive away. tools/world3b/shops.mjs reports it district by district, with each one's worst street.

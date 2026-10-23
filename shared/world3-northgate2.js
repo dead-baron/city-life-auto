@@ -70,12 +70,14 @@ const HIGH = [
   ['Ninth Street Coffee', 'cafe', 'coffee', ['#3a2a20', '#d8c8a8']], ['Clip Joint Barbers', 'salon', 'barber', ['#7a1e2a', '#efe6d0']],
   ['Northgate Pharmacy', 'mart', 'pharmacy', ['#2a7a6a', '#f0ece4']], ['Lucky Noodle', 'diner', 'coffee', ['#a8343a', '#a8343a']],
   ['Second Hand Rose', 'clothes', 'clothing', ['#8a3a5a', '#efe6d0']], ['Hot Bagel Co.', 'cafe', 'coffee', ['#c8702a', '#f0ece4']],
-  ['Ninth Street Hardware', 'mart', null, ['#a83a2a', '#e8e4dc']], ['Page Turner Books', 'books', null, ['#3a2a20', '#d8c8a8']],
+  ['Ninth Street Hardware', 'mart', 'hardware', ['#a83a2a', '#e8e4dc']], ['Page Turner Books', 'books', null, ['#3a2a20', '#d8c8a8']],
   ['Spin City Records', 'records', null, ['#2a2a3a', '#e8c040']], ['Wash World', 'laundry', null, ['#3a6a9a', '#3a6a9a']],
   ['Tony\'s Pizza', 'diner', 'coffee', ['#2f6a4e', '#c8302a']], ['Bloom & Stem', 'florist', null, ['#4a7a3a', '#f0ece4']],
 ];
 const CORNER = ['Sycamore Grocer', 'Laurel Deli', 'Allotment Mart', 'Rowan Bodega', 'Spur Stop', 'Orchard Market', 'Linden Pantry', 'Westside Deli'];
 const CORNER_E = ['Gameday Bodega', 'Corner Pantry', 'Harborview Market', 'Stadium Stop', 'Quick Pick', 'Daily Needs'];
+const CORNER_GUNS = ['Linden Arms', 'Rowan Street Guns', 'Harborview Firearms', 'Spur Sporting Arms', 'Westside Gun & Ammo'];
+const CORNER_TOOLS = ['Laurel Hardware', 'Linden Tool & Supply', 'Orchard Hardware', 'Harborview Hardware', 'Spur Lumber & Tool'];
 
 function build(m, api, K) {
   const { rnd, pick, prop } = K;
@@ -101,10 +103,13 @@ function build(m, api, K) {
   const walkArt = (x, y, w, floors, shop = null) => tower(x, y, { name: shop ? shop.name : '', style: rnd(x, y, 41) < 0.8 ? 'brick' : 'stone', tone: pick(BRICK, rnd(x, y, 42)), wall: pick(STONE, rnd(x, y, 43)), floors,
     ...(shop ? { store: shop.store, awning: shop.awning, grille: shop.grille ?? false } : { shop: false }), win: pick(['pair', 'even', 'tall'], rnd(x, y, 44)), cornice: pick(['bracket', 'dentil'], rnd(x, y, 47)), parapet: 6, roofMat: pick(['gravel', 'membrane', 'gravel'], rnd(x, y, 45)),
     spec: floors >= 4 && w >= 8 && rnd(x, y, 46) < 0.55 ? { fireEscape: [Math.max(8, Math.round(w * TILE * 0.55) - 25), 50] } : null });
-  let ce = 0;
+  let ce = 0, cn = 0;
+  // (World v3b, the shops where you need them: every fifth corner shop a gun shop or a hardware store in turn - the
+  // west side's far blocks were a long way from either - shared/world3-shops.js)
   const cornerStore = (x, y1, w, floors) => {
-    const name = x >= NX.harborview ? CORNER_E[ce++ % CORNER_E.length] : CORNER[ci++ % CORNER.length];
-    return { w, arch: 'mixed', name, poi: { kind: 'convenience', label: name }, home: { kind: 'apartment' }, whole: true, art: walkArt(x, y1, w, floors, { name, store: 'mart', awning: pick([['#2f6a4e', '#f0ece4'], ['#7a1e2a', '#efe6d0'], ['#2a3a5a', '#efe6d0']], rnd(x, y1, 54)), grille: true }) };
+    const n = cn++, trade = n % 5 === 2 ? 'gunshop' : n % 5 === 4 ? 'hardware' : 'convenience', q = Math.floor(n / 5);
+    const name = trade === 'gunshop' ? CORNER_GUNS[q % CORNER_GUNS.length] : trade === 'hardware' ? CORNER_TOOLS[q % CORNER_TOOLS.length] : x >= NX.harborview ? CORNER_E[ce++ % CORNER_E.length] : CORNER[ci++ % CORNER.length];
+    return { w, arch: 'mixed', name, poi: { kind: trade, label: name }, home: { kind: 'apartment' }, whole: true, art: walkArt(x, y1, w, floors, { name, store: trade === 'gunshop' ? 'pawn' : 'mart', awning: pick([['#2f6a4e', '#f0ece4'], ['#7a1e2a', '#efe6d0'], ['#2a3a5a', '#efe6d0']], rnd(x, y1, 54)), grille: true }) };
   };
   // A row of walk-ups facing the street south of it (opt north: against the band's north edge, their doors on the
   // street north of it); a corner store at the row's end now and then

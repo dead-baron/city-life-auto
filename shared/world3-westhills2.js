@@ -490,7 +490,7 @@ function build(m, api, K) {
     while (bx0 < x1 && !K.allFree(bx0, by0 - 2, 1, y1 - by0 + 2)) bx0++;
     const box = (x, w, name, poi, look) => K.building({ x, y: by0, w, h: bh, arch: 'strip', key: 'strip', name, poi, whole: true,
       art: { spec: { floors: 2, style: 'concrete', wallColor: look.wall, parapet: 8, grime: 0.06, blades: [], plaques: [] }, shop: { kind: 'mart', door: 'left', open: true, people: 4, awning: null, sign: { text: name.toUpperCase(), bg: look.bg, fg: look.fg, lit: true } } } });
-    const hc = box(bx0 + 1, 40, 'Hills Home Center', { kind: 'delivery', label: 'Hills Home Center' }, { wall: '#d8d0c0', bg: '#e07020', fg: [250, 250, 245] });
+    const hc = box(bx0 + 1, 40, 'Hills Home Center', { kind: 'hardware', label: 'Hills Home Center' }, { wall: '#d8d0c0', bg: '#e07020', fg: [250, 250, 245] });
     let gx = bx0 + 42;
     if (hc) {
       out.shops++;

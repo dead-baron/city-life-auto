@@ -942,7 +942,7 @@ function townKit(I, list) {
     const m = TKIT[k.k];
     if (!m) continue;
     const hd = qa(k.a || 0, k.k === 'rail' ? 32 : 4), K = k.k;
-    const a = K === 'porch' ? [k.len || 160, k.z || 0, k.ff || 0, k.c || '#7a5436'] : K === 'logs' || K === 'saw' || K === 'dock' || K === 'rail' ? [k.len || 160] : K === 'silos' ? [k.n || 4, k.len || 360] : K === 'boards' ? [k.n || 5] : K === 'lamp' ? ['cast', 1] : [];
+    const a = K === 'porch' ? [k.len || 160, k.z || 0, k.ff || 0, k.c || '#7a5436', k.open ? 1 : 0] : K === 'logs' || K === 'saw' || K === 'dock' || K === 'rail' ? [k.len || 160] : K === 'silos' ? [k.n || 4, k.len || 360] : K === 'boards' ? [k.n || 5] : K === 'lamp' ? ['cast', 1] : [];
     put(I, vitem(`tk:${m}:${a.join(',')}:${hd.toFixed(3)}`, m, a, k.x, k.y, hd, null, K === 'antlers' ? { z0: k.z || 50 } : null));
     if (K === 'lamp') lightAt(I, k.x, k.y, 80, 130, [1, 0.85, 0.6], 1.2, 'lamp');
   }
@@ -1500,7 +1500,7 @@ function voxModel(m, a) {
     case 'lighthouse': return WL.lighthouse(a[0], a[1]); case 'pillar': return RD.pillar(a[0], a[1], a[2]); case 'canopy': return U.fuelCanopy(a[0], a[1], a[2], a[3]); case 'fuelPump': return U.fuelPump(a[0], a[1]);
     case 'platformCanopy': return RD.platformCanopy(a[0], a[1], a[2]); case 'stationEntrance': return RD.stationEntrance(a[0], a[1]); case 'stationHouse': return RD.stationHouse(a[0], a[1]); case 'lifeguardTower': return RD.lifeguardTower(); case 'crossingSignal': return RD.crossingSignal(a[0], a[1]);
     case 'subwayKiosk': return RD.subwayKiosk(a[0], a[1]);   // (SU5-B: a subway stop's street entrance on its kiosk's footprint)
-    case 'tPorch': return TN.porch(a[0], a[1], a[2], a[3]); case 'tAntlers': return TN.antlers(); case 'tLogs': return TN.logStack(a[0]); case 'tLoader': return TN.logLoader();   // (H40: World v3's towns' own models, props-towns.js)
+    case 'tPorch': return TN.porch(a[0], a[1], a[2], a[3], a[4]); case 'tAntlers': return TN.antlers(); case 'tLogs': return TN.logStack(a[0]); case 'tLoader': return TN.logLoader();   // (H40: World v3's towns' own models, props-towns.js)
     case 'tSaw': return TN.sawLine(a[0]); case 'tSilos': return TN.silos(a[0], a[1]); case 'tSteeple': return TN.steeple(); case 'tDock': return TN.loadingDock(a[0]);
     case 'tSacks': return TN.feedSacks(); case 'tBoards': return TN.boardRack(a[0]); case 'tShelter': return TN.pierShelter();
     case 'erCanopy': return RD.erCanopy(a[0]);   // (IN1-B: the hospital's ambulance bay)
@@ -3108,19 +3108,23 @@ function addSetPieces(c, I) {
   // farm fields: the crops are the ground's (groundbake.js: wheat that sways, corn, furrows, vegetable rows, hay
   // by field); rail fences round them, a scarecrow, hay bales by the gate
   // (only on the land: a river or a road that cuts a field's box breaks its fence; the scarecrow and the bales stand in
-  // the field, never in the water)
+  // the field, never in the water - and World v3's fields carry their fence's runs over open ground, never across a
+  // road, a pavement or the track, and whether the bales and the scarecrow have room: shared/world3-clutter.js)
   const dryAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); if (!M.inside(tx, ty)) return false; const t = M.tiles[M.idx(tx, ty)]; return t !== T.WATER && t !== T.DEEP && t !== T.ROAD && t !== T.BRIDGE; };
   (M.fields || []).forEach((f) => {
     const y0 = f.y - 10, x1 = f.x + f.w + 10;
-    let a = null;
-    for (let x = f.x - 10; ; x += 16) {
-      const ok = x <= x1 && dryAt(x, y0);
-      if (ok && a === null) a = x;
-      else if (!ok && a !== null) { const b = Math.min(x1, x - 16); if (b - a >= 48) fenceLine(I, 'rail', a, y0, b, y0); a = null; }
-      if (x > x1) break;
+    if (f.fence) for (const [a, b] of f.fence) fenceLine(I, 'rail', a, y0, b, y0);
+    else {
+      let a = null;
+      for (let x = f.x - 10; ; x += 16) {
+        const ok = x <= x1 && dryAt(x, y0);
+        if (ok && a === null) a = x;
+        else if (!ok && a !== null) { const b = Math.min(x1, x - 16); if (b - a >= 48) fenceLine(I, 'rail', a, y0, b, y0); a = null; }
+        if (x > x1) break;
+      }
     }
-    if (dryAt(f.x + f.w * 0.5, f.y + f.h * 0.4)) put(I, vitem('scare', 'scarecrow', [], f.x + f.w * 0.5, f.y + f.h * 0.4));
-    for (let k = 0; k < 3; k++) if (dryAt(f.x + 30 + k * 34, f.y + f.h + 26)) put(I, vitem('hay:1', 'hayBale', [true], f.x + 30 + k * 34, f.y + f.h + 26));
+    if (f.crow !== 0 && dryAt(f.x + f.w * 0.5, f.y + f.h * 0.4)) put(I, vitem('scare', 'scarecrow', [], f.x + f.w * 0.5, f.y + f.h * 0.4));
+    if (f.bales !== 0) for (let k = 0; k < 3; k++) if (dryAt(f.x + 30 + k * 34, f.y + f.h + 26)) put(I, vitem('hay:1', 'hayBale', [true], f.x + 30 + k * 34, f.y + f.h + 26));
   });
 }
 

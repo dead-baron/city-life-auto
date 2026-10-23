@@ -2,6 +2,7 @@
 // online from a player in Dev Debug Mode (devmode.js - nothing they do there is saved).
 import { surfaceZ } from '../shared/levels.js';
 import { PED_BLOCK, CAR_SPAWN_BLOCK } from '../shared/map.js';
+import { DISTRICTS } from '../shared/mapcore.js';
 import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT, T, K, WEATHER, TILE } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { blastSize } from '../shared/explosions.js';
@@ -73,7 +74,7 @@ import * as busjob from './systems/busjob.js';
 import * as towjob from './systems/towjob.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'afoot', 'place'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -113,6 +114,25 @@ export const NEAR_KINDS = {
   surf: (m) => surf.breaksOfMap(m).list.map((b) => { const q = breakPt(b, 0, SURF.brk + 70); return { x: q.x, y: q.y, name: 'a surf break', exact: true, give: 'surfboard' }; }),
   vault: (m) => (m.walkIns || []).map((id) => m.buildings[id]).filter((b) => b && vaultOf(b)).map((b) => { const v = vaultOf(b), q = m.pois[v.u.poi]; return { x: v.sx, y: v.sy, name: `${q ? q.label : 'a bank'}'s vault`, exact: true }; }),
 };
+// a district's middle by its name (lower case; the first whose name it is, else starts with): the mean of its tiles,
+// sampled every 6th, kept on the world - the nearest of its own tiles to that (a crescent's middle can be outside it)
+function districtMiddle(world, n) {
+  const id = DISTRICTS.findIndex((d) => d && d.name && d.name.toLowerCase() === n), id2 = id >= 0 ? id : DISTRICTS.findIndex((d) => d && d.name && d.name.toLowerCase().startsWith(n));
+  if (id2 < 0) return null;
+  const C = (world.distMid ||= new Map());
+  if (!C.has(id2)) {
+    const m = world.map, pts = [];
+    for (let ty = m.y0; ty < m.y0 + m.h; ty += 6) for (let tx = m.x0; tx < m.x0 + m.w; tx += 6) { const i = m.idx(tx, ty); if (m.dist[i] === id2 && m.land[i]) pts.push([tx, ty]); }
+    let q = null;
+    if (pts.length) {
+      const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length, cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+      let bd = Infinity;
+      for (const [tx, ty] of pts) { const d = (tx - cx) ** 2 + (ty - cy) ** 2; if (d < bd) { bd = d; q = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, name: DISTRICTS[id2].name }; } }
+    }
+    C.set(id2, q);
+  }
+  return C.get(id2);
+}
 // the stops of every line on the map (one each: a hub's stop is shared by the loops through it), those keep(stop, rail) takes
 function railStops(m, keep) {
   const out = [], seen = new Set();
@@ -690,6 +710,12 @@ export function command(world, p, c, msg) {
       break;
     }
     case 'rescue': devRescue(world, p, ped, String(msg.at || 'water')); break;   // tasks #409, #420
+    case 'afoot': {   // out of whatever you're in, on your feet where it is (the cinematic mode's scenes start this way: client/director.js)
+      if (!ped || ped.dead) break;
+      if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
+      if (ped.vehId) { const v = world.get(ped.vehId), k = v ? v.seats.indexOf(ped.id) : -1; if (k >= 0) v.seats[k] = 0; ped.vehId = 0; ped.seat = -1; ped.lz = 0; p.meDirty = true; if (world.place) world.place(ped); }
+      break;
+    }
     case 'place': {   // a place by its name: World v3's handcrafted districts' places and sights (map.world3hand), a landmark, a district
       if (!ped || ped.dead) break;
       if (ped.vehId) { world.notify(p, '[dev] Get out of the vehicle first.', 'warn'); break; }
@@ -700,6 +726,7 @@ export function command(world, p, c, msg) {
         for (const sg of (H && H.sights) || []) if (!q && sg.name && sg.name.toLowerCase().includes(n)) q = { x: sg.x, y: sg.y, name: sg.name };
       }
       if (!q) for (const l of m.landmarks || []) if (!q && l.name && l.name.toLowerCase().includes(n)) q = { x: l.x + (l.w || 0) / 2, y: l.y + (l.h || 0) / 2, name: l.name };
+      if (!q) q = districtMiddle(world, n);   // (a district by its name: its middle - the cinematic mode's staged scenes, client/director.js)
       if (!q) { world.notify(p, `[dev] No "${msg.n}" on this map (World v3's places).`, 'warn'); break; }
       const at = tpSpot(m, q.x, q.y);
       if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);

@@ -13,7 +13,8 @@ const grain = (x, y, z) => (hash(Math.round(x / 3), Math.round(y), Math.round(z)
 // a covered porch along a shopfront or a house (a raised one on stilts at the beach): a plank deck, posts with a rail
 // between them (open in the middle for the steps), a shed roof sloping down from the wall; a shopfront's false front
 // (ff: its top, col: its boards) - the boarded facade standing up over the porch roof and the gable behind, a stepped top
-export function porch(len = 160, raise = 0, ff = 0, col = '#7a5436') {
+// (open: a porch over the pavement - the roof on its posts, no hand rail across the walk: shared/world3-towns.js)
+export function porch(len = 160, raise = 0, ff = 0, col = '#7a5436', open = 0) {
   const D = 34, m = new Vox(len, D + (raise ? 14 : 0), Math.max(raise + 56, ff + 14));
   const deck = m.mat({ ramp: MAT.woodDock, k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -0.6 : 0) }), post = m.mat({ ramp: R('#e8e0cc'), k: 3 });
   const roof = m.mat({ ramp: R('#5a4a3e'), k: 3, shade: (x) => (Math.round(x) % 5 === 0 ? -0.5 : 0) });
@@ -32,7 +33,7 @@ export function porch(len = 160, raise = 0, ff = 0, col = '#7a5436') {
   for (let x = 1; x < len - 4; x += 30) posts.push(x);
   posts.push(len - 4);
   for (const x of posts) m.box(x, D - 4, raise + 3, x + 3, D - 1, raise + 42, post);
-  for (const x0 of [0, len / 2 + 12]) m.box(x0, D - 3, raise + 16, x0 + len / 2 - 12, D - 2, raise + 18, post);
+  if (!open) for (const x0 of [0, len / 2 + 12]) m.box(x0, D - 3, raise + 16, x0 + len / 2 - 12, D - 2, raise + 18, post);
   for (let y = 0; y < D; y++) { const z = raise + 50 - y * 0.24; m.box(0, y, z, len, y + 1, z + 3, roof); }
   return m;
 }

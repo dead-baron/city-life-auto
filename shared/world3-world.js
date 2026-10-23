@@ -70,6 +70,8 @@ import { buildSarHq3 } from './world3-sarhq.js';   // (v3b: the rescue pilots' b
 import { buildNorth, NORTH_STYLES } from './world3-north.js';   // (v3b, WORLD-V3.md 9.6: the north coast's piers, the fish shack, North Point Light)
 import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';
 import { buildHand, handPlanAt, HAND_PLANS } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
+import { shops3, stationAtms3 } from './world3-shops.js';   // (v3b: the stores and ATMs where you need them)
+import { clearClutter3, handLaid, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -260,6 +262,7 @@ export function worldOpts(asked) {
       }
       m.world3.el = elFurniture(m, H3 && H3.removeProps);   // (2026-10-17: the El over Trestle Street - its piers, its station's stairs)
       m.world3.housesMoved = seatStationHouses(m);   // (8.14: each station's house on open ground)
+      if (H3 && city && H3.addProp) m.world3.stationAtms = stationAtms3(m, H3);   // (v3b: an ATM by every station and gas station - world3-shops.js)
       if (H3) { m.world3.railCleared = clearRailDressing(m, H3.removeProps); clearBeachFront(m, H3.removeProps); }   // (8.14: no tree over the main line or a platform; the promenade and car parks clear)
       m.world3.ferries = buildFerries3(m, H3);   // (H42, 8.17: the ferries' piers, terminals, ramps and pontoons where each route calls: world3-ferries.js)
       waterDone(m, H3);   // (H46, 8.21: the boat rental at Kestrel Lake, the quays at the River Water Bus's stops, the prison's harbour: world3-water.js)
@@ -294,13 +297,17 @@ export function worldOpts(asked) {
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)
       m.world3.wrecks = sunkenWrecks3(m);   // (sunken boats on the bed where the water's clear: rowboats in the lakes, a skiff and a sloop in the sea's shallows - world3-wrecks.js)
       m.world3.mansions = moreMansions3(m);   // (the finest villa of each rich district a mansion too - the owner, 10-16: "More than one mansion": world3-mansions.js)
+      if (H3 && city) m.world3.clutter = clearClutter3(m, H3);   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors - world3-clutter.js)
       m.world3.tidy = tidyProps3(m);   // (last: nothing that needs dry ground left standing in the water, no fence run across a road - world3-tidy.js)
     },
+    // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)
+    pavement: city ? PAVEMENT3 : null,   // (v3b: the pavements' inner ring, street furniture only - map.js buildStreetProps)
+    shops: city ? (m, H2) => { const s = shops3(m, H2); delete s.list; m.world3.shops = s; } : null,   // (the new places themselves: POIs with own: 1)
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a
     // handcrafted district's plan, which places its own
     special: (sp) => built.has(sp.d) && !(city && HAND_PLANS.some((P) => P.d === sp.d && P.specials.includes(sp.names[0]))),
     // the handcrafted districts (shared/world3-hand.js): laid before the blocks are found; their pavements dressed by hand
-    ...(city ? { hand: (m, api) => { m.world3hand = buildHand(m, api); }, handAt: (tx, ty) => !!handPlanAt(tx, ty) } : {}),
+    ...(city ? { hand: (m, api) => { const had = new Set(m.props), hadB = new Set(m.buildings); m.world3hand = buildHand(m, api); handLaid(m, had, hadB); }, handAt: (tx, ty) => !!handPlanAt(tx, ty) } : {}),
     specials: REGIONAL ? [...TOWN_SPECIALS, ...MESA_SPECIALS, ...DESERT_SPECIALS] : [],   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
     styles: REGIONAL ? { ...TOWN_STYLES, ...MESA_STYLES, ...DESERT_STYLES, ...(city ? NORTH_STYLES : {}) } : {},   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)

@@ -115,14 +115,14 @@ function build(m, api, K) {
   function shops() {
     const LIST = [
       [CX.coral + 6, CX.conch - 5, [
-        { name: 'Coral Dive Co.', store: 'mart', w: 12, poi: { kind: 'delivery', label: 'Coral Dive Co.' }, awning: ['#2a6aa8', '#f0ece4'], signC: ['#2a6aa8', [250, 246, 230]] },
+        { name: 'Coral Dive Co.', store: 'mart', w: 12, poi: { kind: 'sports', label: 'Coral Dive Co.' }, awning: ['#2a6aa8', '#f0ece4'], signC: ['#2a6aa8', [250, 246, 230]] },
         { name: 'Cay Market', store: 'mart', w: 12, poi: { kind: 'grocery', label: 'Cay Market' }, awning: ['#3a8a4a', '#f2e2a8'], signC: ['#3a8a4a', [255, 246, 220]] },
         { name: 'Reef Cafe', store: 'cafe', key: 'rest2', w: 9, poi: { kind: 'coffee', label: 'Reef Cafe', food: true }, awning: ['#e8604a', '#f0ece4'], signC: ['#e8604a', [255, 250, 240]] },
       ]],
       [CX.conch + 6, CX.reef - 5, [
         { name: 'Island Threads', store: 'clothes', w: 11, poi: { kind: 'clothing', label: 'Island Threads', store: 'surf' }, awning: ['#d0507a', '#f0ece4'], signC: ['#d0507a', [255, 246, 250]] },
         { name: 'The Conch Bar', store: 'bar', w: 12, wall: '#2a4a5a', poi: { kind: 'club', label: 'The Conch Bar' }, neon: { name: 'CONCH BAR', kind: 'bar', col: 4, pic: 'palm' }, signC: ['#1a2a34', [255, 210, 120]] },
-        { name: 'Cay Post & Supply', store: 'mart', w: 10, poi: { kind: 'delivery', label: 'Cay Post & Supply' }, awning: ['#e8b030', '#2a5a8a'], signC: ['#2a5a8a', [255, 220, 90]] },
+        { name: 'Cay Post & Supply', store: 'mart', w: 10, poi: { kind: 'hardware', label: 'Cay Post & Supply' }, awning: ['#e8b030', '#2a5a8a'], signC: ['#2a5a8a', [255, 220, 90]] },
       ]],
     ];
     for (const [x0, x1, list] of LIST) {

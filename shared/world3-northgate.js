@@ -51,6 +51,10 @@ const COL = { a: [3125, 3178], b: [3191, 3247], c: [3258, 3314], d: [3327, 3368]
 const BRICK = ['#a85a42', '#8e4a3a', '#b8705a', '#7a4a3a', '#9a5040', '#b0644c'];
 const STONE = ['#d4c8b0', '#c8bca4', '#cfc4ae', '#bfb4a0'];
 const STORES = ['Corner Deli', 'Northgate Market', 'Lucky Mart', 'Overpass Bodega', '3rd Street Grocery', 'Sycamore Mini Mart', 'Quick Stop', 'Elm Street Deli'];
+// (World v3b, the shops where you need them: every fifth corner shop a gun shop or a hardware store in turn - Northgate's
+// far blocks were a long way from either - shared/world3-shops.js)
+const CORNER_GUNS = ['Northgate Arms', 'Overpass Guns & Ammo', 'Sycamore Sporting Arms', 'Elm Street Firearms'];
+const CORNER_TOOLS = ['Corner Hardware', 'Northgate Tool & Supply', 'Overpass Hardware', 'Elm Street Hardware'];
 
 function build(m, api, K) {
   const { rnd, pick, prop } = K;
@@ -68,8 +72,9 @@ function build(m, api, K) {
     const w = room <= 14 ? room : 8 + Math.floor(rnd(x, y0 + y1, 51) * 5), floors = 3 + Math.floor(rnd(x, y0, 52) * 3);
     const corner = !north && (i === 0 || room <= 14) && rnd(x, y1, 53) < 0.35;
     if (corner) {
-      const name = STORES[si++ % STORES.length];
-      return { w, depth, arch: 'mixed', name, poi: { kind: 'convenience', label: name }, home: { kind: 'apartment' }, whole: true, art: walkArt(x, y1, w, floors, { name, store: 'mart', awning: pick([['#2f6a4e', '#f0ece4'], ['#7a1e2a', '#efe6d0'], ['#2a3a5a', '#efe6d0']], rnd(x, y1, 54)) }) };
+      const n = si++, trade = n % 5 === 2 ? 'gunshop' : n % 5 === 4 ? 'hardware' : 'convenience', q = Math.floor(n / 5);
+      const name = trade === 'gunshop' ? CORNER_GUNS[q % CORNER_GUNS.length] : trade === 'hardware' ? CORNER_TOOLS[q % CORNER_TOOLS.length] : STORES[(n - q * 2 - (n % 5 > 2 ? 1 : 0)) % STORES.length];
+      return { w, depth, arch: 'mixed', name, poi: { kind: trade, label: name }, home: { kind: 'apartment' }, whole: true, art: walkArt(x, y1, w, floors, { name, store: trade === 'gunshop' ? 'pawn' : 'mart', awning: pick([['#2f6a4e', '#f0ece4'], ['#7a1e2a', '#efe6d0'], ['#2a3a5a', '#efe6d0']], rnd(x, y1, 54)) }) };
     }
     return { w, depth, arch: 'walkup', ...(north ? { face: 'N' } : { door: x + Math.floor(w * 0.22 + 0.3) }), home: { kind: 'apartment' }, whole: true, art: walkArt(x, north ? y0 : y1, w, floors) };
   }, north ? { north: true } : {});

@@ -139,6 +139,9 @@ function northBand(K, m, ctx) {
     { w: 11, name: 'Cask & Cork', store: 'bar', awning: ['#5a2a2e', '#efe6d0'] },
     { w: 13, name: 'Gilt & Grain', store: 'cafe', poi: { kind: 'coffee', label: 'Gilt & Grain Bakery', food: true }, awning: ['#8a6a2a', '#f0ece4'] },
     { w: 10, name: 'Fernwood Florist', store: 'florist', awning: ['#2f6a4e', '#f0ece4'] },
+    // (2026-10-23: downtown's gun shop and hardware store - the shops where you need them, world3-shops.js)
+    { w: 11, name: 'Ironside Hardware', sign: 'IRONSIDE HARDWARE', store: 'mart', poi: { kind: 'hardware', label: 'Ironside Hardware' }, awning: ['#a83a2a', '#e8e4dc'] },
+    { w: 11, name: 'Crosstown Arms', sign: 'CROSSTOWN ARMS', store: 'pawn', poi: { kind: 'gunshop', label: 'Crosstown Arms' }, awning: ['#2a2a2a', '#2a2a2a'] },
   ];
   K.row(ca[0], ca[1], sr[0], sr[1], (x, room) => {
     const L = westShops[k++];
@@ -546,7 +549,7 @@ function southBand(K, m, ctx) {
     towerLot({ x: c1[0], y: rs[0] + 2, w: 28, h: rs[1] - rs[0] - 1, name: 'Ledger Building', style: 'stone', floors: 10, wall: '#c8bca4', cornice: 'step' });
     const fx0 = hx + hw + 29, fw = Math.floor((c1[1] - fx0) / 2);
     towerLot({ x: fx0, y: rs[0] + 4, w: fw - 1, h: rs[1] - rs[0] - 3, name: 'Fairmont Tower', floors: 13, tint: '#2a4a6a' });
-    towerLot({ x: fx0 + fw, y: rs[0] + 20, w: c1[1] - fx0 - fw, h: rs[1] - rs[0] - 19, name: 'Bayside Arcade', arch: 'mixed', style: 'stone', wall: '#e2dac6', floors: 3, win: 'arch', cornice: 'dentil', store: 'mart', awning: ['#1e2a3a', '#f0ece4'], poi: { kind: 'delivery', label: 'Bayside Arcade', walk: true, store: 'mart' } });
+    towerLot({ x: fx0 + fw, y: rs[0] + 20, w: c1[1] - fx0 - fw, h: rs[1] - rs[0] - 19, name: 'Harborline Arms', sign: 'HARBORLINE ARMS', arch: 'mixed', style: 'stone', wall: '#e2dac6', floors: 3, win: 'arch', cornice: 'dentil', store: 'pawn', awning: ['#1e2a3a', '#f0ece4'], poi: { kind: 'gunshop', label: 'Harborline Arms' } });   // (2026-10-23: downtown's gun shop by the police HQ - the shops where you need them)
   }
   // ---- the bank plaza (WC353/354): Union Trust Tower and Sterling Tower on their stone podiums, the raised plaza
   // between them - the long pool with its three jets, tables under umbrellas; in front, First Pixel Bank's domed stone

@@ -319,11 +319,22 @@ export function townModels(m) {
   const out = [];
   for (const t of TOWNS3) {
     const looks = {}, n = {};
-    const add = (k, x, y, o = {}) => { const it = { k, x: Math.round(x), y: Math.round(y), ...o }; if (it.s && !open(it.x, it.y)) delete it.s; if (it.s) m.addSolidProp(it.x, it.y, it.s); kit.push(it); n[k] = (n[k] || 0) + 1; return it; };
+    const add = (k, x, y, o = {}) => {
+      const it = { k, x: Math.round(x), y: Math.round(y), ...o };
+      // (v3b: a porch whose deck stands on the pavement is open - its roof on posts, no rail across the walk; the feed
+      // sacks and the surfboards stand on the shop's own ground, never out on the pavement)
+      if (k === 'porch') { const h = (it.len || 160) / 2; for (let dx = -h + 8; dx <= h - 8 && !it.open; dx += 16) for (const dy of [-10, 0, 10]) { const tl = m.tileAtPx(it.x + dx, it.y + dy); if (tl === T.SIDEWALK || tl === T.ROAD || tl === T.BRIDGE) { it.open = 1; break; } } }
+      else if (k === 'sacks' || k === 'boards') {
+        const ok = (y) => open(it.x, y) && m.tileAtPx(it.x, y) !== T.SIDEWALK;
+        if (!ok(it.y)) { const y = [o.fy + o.o * 30, o.fy + o.o * 18].find(ok); if (y === undefined) return it; it.y = Math.round(y); }   // (back toward the wall: on its porch)
+        delete it.fy; delete it.o;
+      }
+      if (it.s && !open(it.x, it.y)) delete it.s; if (it.s) m.addSolidProp(it.x, it.y, it.s); kit.push(it); n[k] = (n[k] || 0) + 1; return it;
+    };
     for (const b of m.buildings) {
       if (!b || b.gone || m.dist[(b.ty + (b.th >> 1)) * W + b.tx + (b.tw >> 1)] !== t.d) continue;
       // (a lot the generator built as a plain roof - a house or a shop it had no prefab for: small ones are houses)
-      const p = b.prefab >= 0 ? m.prefabs[b.prefab] : null, roof = !p && b.kind === 'roof' && b.name !== 'Lot', house = b.kind.startsWith('house') || (roof && b.tw <= 16 && b.th <= 14);
+      const p = b.prefab >= 0 ? m.prefabs[b.prefab] : null, roof = !p && b.kind === 'roof' && b.name !== 'Lot', house = b.kind.startsWith('house') || (roof && b.tw <= 16 && b.th <= 14 && !b.shop3);   // (shop3: a row of shops - world3-shops.js)
       if (!p && !roof) continue;
       const look = named.get(b.name) || (house ? (t.d === 59 && (b.kind === 'house9' || b.id % 3 === 0) ? 'stilts' : HOUSE_LOOK[t.d]) : SHOP_KINDS.has(b.kind) || roof ? SHOP_LOOK[t.d] : null);
       if (!look) continue;
@@ -363,8 +374,8 @@ export function townModels(m) {
         }
       }
       if (look === 'lodgerow') { const s = sign(/LODGE/i); if (s) add('antlers', s.x, fy + o * 2, { z: 50, a }); }
-      if (look === 'feedrow') { const s = sign(/FEED/i); if (s) add('sacks', s.x + 34, fy + o * 44, { a }); }
-      if (look === 'surfrow') { const s = sign(/SURF/i); if (s) add('boards', s.x + 40, fy + o * 46, { n: 5, a }); }
+      if (look === 'feedrow') { const s = sign(/FEED/i); if (s) add('sacks', s.x + 34, fy + o * 44, { a, fy, o }); }
+      if (look === 'surfrow') { const s = sign(/SURF/i); if (s) add('boards', s.x + 40, fy + o * 46, { n: 5, a, fy, o }); }
     }
     // the beach town's boardwalk (8.13.1's planks along the top of the sand, townsFront): a rail along its sea side
     // (stepping with the planks down the diagonal shore, open where the pier leaves it), benches facing the sea and
