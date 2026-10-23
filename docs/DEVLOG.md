@@ -15023,3 +15023,5 @@ are. Two passes started then (WIP on a branch since) are finished and in the wor
   cash) and food and cash in every district itself; the villages food, cash and their tackle shop of their own and no
   gun shop (a long way out, like the wild land) - a quiet district (the villas, the houses by the station) may have its
   gun shop a short drive away. tools/world3b/shops.mjs reports it district by district, with each one's worst street.
+(With the river mouths, 2026-10-23: the Redwood River Run's finish gate on the water just off the take-out's landing in
+the new estuary - shared/world3-riverrun.js.)
