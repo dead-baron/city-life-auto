@@ -461,7 +461,7 @@ function build(m, api, K) {
         { w: 14, name: 'Spinnaker', store: 'diner', look: '#f4f4f0', sign: ['#1e3a5e', [240, 236, 220]], poi: { kind: 'coffee', label: 'Spinnaker', food: true }, roof: 'deck' },
         { w: 11, name: 'Bayside Chandlery', store: 'mart', look: '#5a8aa0', sign: ['#f0ece4', [30, 58, 94]], poi: { kind: 'tackle', label: 'Bayside Chandlery' }, roof: 'tar' },
         { w: 8, name: 'Gelato al Porto', store: 'cafe', look: '#f3c8b8', sign: ['#e86a8a', [250, 246, 240]], poi: { kind: 'coffee', label: 'Gelato al Porto', food: true }, roof: 'tar' },
-        { w: 10, name: 'Harbourmaster', store: 'mart', look: '#e8e4da', sign: ['#1e3a5e', [240, 236, 220]], poi: { kind: 'delivery', label: 'Harbourmaster' }, roof: 'tar' },
+        { w: 10, name: 'Marina Sporting Arms', store: 'pawn', look: '#e8e4da', sign: ['#1e3a5e', [240, 236, 220]], poi: { kind: 'gunshop', label: 'Marina Sporting Arms' }, roof: 'tar' },   // (2026-10-23: clay-shooting guns by the yachts - the shops where you need them)
         { w: 11, name: 'Bayside Dive & Sail', store: 'mart', look: '#a8cce8', sign: ['#f2a03a', [30, 40, 60]], poi: { kind: 'sports', label: 'Bayside Dive & Sail' }, roof: 'tar' },
       ][i];
       if (!L) return null;

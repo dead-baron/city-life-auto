@@ -49,6 +49,7 @@ const NC = { A: [3193, 3247], C: [3260, 3313], E: [3328, 3394], G: [3407, 3473] 
 
 // the shops along the bands' streets: the clerks' and the lawyers' town
 const SHOPS = [
+  { name: 'Archive Antiques & Pawn', store: 'pawn', poi: 'pawn', awning: ['#4a3a2a', '#d8c8a8'] },
   { name: 'Gavel & Grind', store: 'cafe', poi: 'coffee', awning: ['#3a2a20', '#efe6d0'] },
   { name: 'The Docket Diner', store: 'diner', poi: 'coffee', awning: ['#7a1e2a', '#f0ece4'] },
   { name: "Clerk's Books", store: 'books', awning: ['#2a3a5a', '#efe6d0'] },
@@ -66,12 +67,11 @@ const SHOPS = [
   { name: 'Chambers Coffee', store: 'cafe', poi: 'coffee', awning: ['#2a3a2a', '#efe6d0'] },
   { name: 'Recess Records', store: 'records', awning: ['#2a2a3a', '#c84a5a'] },
   { name: 'Affidavit Bakery', store: 'cafe', poi: 'coffee', awning: ['#8a5a3a', '#f0ece4'] },
-  { name: 'Codex Print Shop', store: 'mart', awning: ['#3a4a5a', '#efe6d0'] },
+  { name: 'Capitol Hardware', store: 'mart', poi: 'hardware', awning: ['#3a4a5a', '#efe6d0'] },   // (2026-10-23: the shops where you need them - world3-shops.js)
   { name: 'The Bailiff Pub', store: 'bar', awning: ['#2a3a2a', '#c8a050'] },
   { name: 'Union Barbers', store: 'salon', awning: ['#7a1e2a', '#f0ece4'] },
   { name: 'Precedent Pens', store: 'mart', awning: ['#2a2a3a', '#d8c8a8'] },
   { name: 'Mayor Street Bagels', store: 'diner', poi: 'coffee', awning: ['#a86a2a', '#f0ece4'] },
-  { name: 'Archive Antiques', store: 'mart', awning: ['#4a3a2a', '#d8c8a8'] },
   { name: 'Jury Room Tavern', store: 'bar', awning: ['#3a2a20', '#efe6d0'] },
 ];
 const TONES = ['#a85a42', '#8e4a3a', '#b8705a', '#7a4a3a'];
@@ -88,7 +88,7 @@ function build(m, api, K) {
     const w = room <= 15 ? room : 9 + Math.floor(rnd(x, y1, 41) * 5);
     const S = SHOPS[si++ % SHOPS.length], brick = rnd(x, y1, 42) < 0.45, floors = 3 + Math.floor(rnd(x, y1, 43) * 4);
     const art = tower(x, y1, { name: S.name, style: brick ? 'brick' : 'stone', ...(brick ? { tone: pick(TONES, rnd(x, y1, 44)) } : { wall: pick(STONES, rnd(x, y1, 45)) }), floors, store: S.store, awning: S.awning, win: pick(['pair', 'even', 'tall'], rnd(x, y1, 46)), cornice: pick(['bracket', 'dentil'], rnd(x, y1, 47)), parapet: 6, roofMat: 'gravel' });
-    const poi = S.poi === 'coffee' ? { kind: 'coffee', label: S.name, food: S.store === 'diner' } : { kind: 'delivery', label: S.name, walk: true, store: S.store === 'cafe' || S.store === 'diner' ? 'mart' : S.store };
+    const poi = S.poi === 'coffee' ? { kind: 'coffee', label: S.name, food: S.store === 'diner' } : S.poi ? { kind: S.poi, label: S.name } : { kind: 'delivery', label: S.name, walk: true, store: S.store === 'cafe' || S.store === 'diner' ? 'mart' : S.store };
     return { w, depth, arch: 'mixed', name: S.name, poi, ...(floors >= 3 && w >= 6 && rnd(x, y1, 48) < 0.6 ? { home: { kind: 'apartment' } } : {}), whole: true, art };
   });
   // A row of walk-ups along a band's north edge, their doors on the street north of it (drawn from behind: their back

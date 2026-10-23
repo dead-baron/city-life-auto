@@ -15019,9 +15019,13 @@ are. Two passes started then (WIP on a branch since) are finished and in the wor
   hardware stores, the Bayside and Gull Harbor chandleries tackle shops, Bayside Dive & Sail and Coral Dive Co. sports
   stores, Cay Post & Supply a hardware store; and every fifth of Northgate's corner shops is a gun shop or a hardware
   store in turn (Northgate Arms, Linden Arms, Laurel Hardware...). A shop counter shows a hand plan's shop by its own
-  name. The handcrafted districts' own buildings are never made into shops (a
-  casino stays a casino: m.handBuilt). On seed 1337: 41 new buildings and 21 rows of shops (36 gun shops, 22 hardware,
-  42 corner stores, 3 tackle, 5 sports, a hunt camp), 53 carts, 72 kiosks, 119 ATMs. The test's rule (test/world3server.test.js): every street of the
+  name. The handcrafted districts' own buildings and ground are never the pass's
+  (a casino stays a casino, a forecourt a forecourt: m.handBuilt, handPlanAt), so the gulf island's plans got their
+  own: Downtown's Ironside Hardware and Harborline Arms by the police HQ, the Civic Center's Capitol Hardware and
+  Archive Antiques & Pawn, the Neon Strip's Neon Pawn & Guns, the Arts District's Bric-a-Brac Antiques & Pawn and its
+  bike shops (sports) and supply stores (hardware), Marina Sporting Arms on Bayside's marina terrace (where the
+  Harbourmaster's office was). On seed 1337: 28 new buildings and 23 rows of shops (25 gun shops, 14 hardware, 37
+  corner stores, 3 tackle, 3 sports, a hunt camp), 58 carts, 73 kiosks, 107 ATMs. The test's rule (test/world3server.test.js): every street of the
   city, the towns and the beach towns within reach of each need (400 tiles for weapons and equipment, 140 for food and
   cash) and food and cash in every district itself; the villages food, cash and their tackle shop of their own and no
   gun shop (a long way out, like the wild land) - a quiet district (the villas, the houses by the station) may have its

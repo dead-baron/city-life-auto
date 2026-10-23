@@ -210,6 +210,7 @@ function build(m, api, K) {
     { w: 11, name: 'Afterglow', store: 'clothes', neon: 'bar', pic: 'tiger', sign: 'STREETWEAR', poi: { kind: 'clothing', label: 'Afterglow' }, floors: 4 },
     { w: 8, name: 'Moon Burger 24', store: 'diner', neon: 'diner', blade: 'OPEN 24', floors: 4 },
     { w: 10, name: 'Nite Mart', store: 'mart', neon: 'mart', sign: 'NITE MART 24/7', poi: { kind: 'convenience', label: 'Nite Mart 24/7' }, floors: 4 },
+    { w: 9, name: 'Neon Pawn', store: 'pawn', neon: 'mart', sign: 'PAWN & GUNS', poi: { kind: 'pawn', label: 'Neon Pawn & Guns' }, floors: 4 },   // (2026-10-23: the shops where you need them)
   ], { depth: 22, floors: 4 });
   litRow(PLAZA[1], bx1, ry0, by1, [
     { w: 16, lot: { arch: 'arcade', key: 'arcade', name: 'Pixel Arcade', poi: { kind: 'delivery', label: 'Pixel Arcade' }, whole: true, art: litArt(5, 'arcade', 'PIXEL ARCADE', 'arcade', 1, null, 'GAMES') }, depth: 22 },
