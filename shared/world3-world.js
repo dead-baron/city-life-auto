@@ -307,7 +307,7 @@ export function worldOpts(asked) {
     // handcrafted district's plan, which places its own
     special: (sp) => built.has(sp.d) && !(city && HAND_PLANS.some((P) => P.d === sp.d && P.specials.includes(sp.names[0]))),
     // the handcrafted districts (shared/world3-hand.js): laid before the blocks are found; their pavements dressed by hand
-    ...(city ? { hand: (m, api) => { const had = new Set(m.props); m.world3hand = buildHand(m, api); handLaid(m, had); }, handAt: (tx, ty) => !!handPlanAt(tx, ty) } : {}),
+    ...(city ? { hand: (m, api) => { const had = new Set(m.props), hadB = new Set(m.buildings); m.world3hand = buildHand(m, api); handLaid(m, had, hadB); }, handAt: (tx, ty) => !!handPlanAt(tx, ty) } : {}),
     specials: REGIONAL ? [...TOWN_SPECIALS, ...MESA_SPECIALS, ...DESERT_SPECIALS] : [],   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
     styles: REGIONAL ? { ...TOWN_STYLES, ...MESA_STYLES, ...DESERT_STYLES, ...(city ? NORTH_STYLES : {}) } : {},   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)

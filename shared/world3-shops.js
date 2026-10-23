@@ -121,6 +121,7 @@ export function shops3(m, H) {
   const cands = new Map();   // district -> [{ b, d, fx, fy }]
   for (const b of m.buildings) {
     if (!b || b.gone || b.kind !== 'roof' || b.prefab >= 0 || busy.has(b.id) || b.home !== undefined || b.walkIn || b.name === 'Lot' || b.tw < 6 || b.th < 4) continue;
+    if (m.handBuilt && m.handBuilt.has(b)) continue;   // (a handcrafted district's own buildings - its casinos, its halls - stay what its plan made them)
     const d = distAt(b.tx + (b.tw >> 1), b.ty + (b.th >> 1)), pk = placeKind3(d);
     if (pk === 'wild' || pk === 'none' || OPEN.has(d)) continue;
     const fy = b.ty + b.th;

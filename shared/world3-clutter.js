@@ -53,9 +53,13 @@ const MARKS = new Set(['painted', 'plamp']);
 // over their streets, their market stalls, their yards' fences - placed and checked by hand: handLaid(m, before) marks
 // every prop not in before (a Set of the props there were) as theirs, on m.handProps (a WeakSet, not enumerable: never
 // copied or sent)
-export function handLaid(m, before) {
+export function handLaid(m, before, beforeB = null) {
   if (!m.handProps) Object.defineProperty(m, 'handProps', { value: new WeakSet(), enumerable: false, configurable: true });
   for (const p of m.props) if (p && !before.has(p)) m.handProps.add(p);
+  // ...and the buildings they put up, on m.handBuilt (the same): no other pass makes shops of them - shared/world3-shops.js
+  if (!beforeB) return;
+  if (!m.handBuilt) Object.defineProperty(m, 'handBuilt', { value: new WeakSet(), enumerable: false, configurable: true });
+  for (const b of m.buildings) if (b && !beforeB.has(b)) m.handBuilt.add(b);
 }
 
 // a prop's body: its extent as a segment (fences, logs, rails: their two ends) and a radius round it
