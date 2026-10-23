@@ -150,7 +150,7 @@ export function robberyCountry(map, rail) {
   let best = null, cur = null, gap0 = -1;
   const close = () => { if (cur && (!best || cur.s1 - cur.s0 > best.s1 - best.s0)) best = cur; cur = null; gap0 = -1; };
   for (const p of rail.pts) {
-    const d = map.districtAt(p.x, p.y), hard = p.under || nearSt(p.s);
+    const d = map.districtAt(p.x, p.y), hard = (p.under && !p.underpass) || nearSt(p.s);   // (a moment under a road's bridge doesn't end the run: shared/world3-stations.js underpassLeft)
     if (!hard && d && COUNTRY.has(d.style)) {
       if (!cur) cur = { s0: p.s, s1: p.s, by: new Map() };
       cur.s1 = p.s; gap0 = -1;

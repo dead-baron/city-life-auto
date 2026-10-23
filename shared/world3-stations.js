@@ -261,7 +261,12 @@ export function squareCrossings3(lines, m, loops = mainLineLoops()) {
       if (c.angle >= SQUARE) continue;
       const r = squareOne(m, lines, grid, tracks, li, c, stations);
       const rec = { name: l.name || l.kind, kind: l.kind, at: [Math.round(c.x / TILE), Math.round(c.y / TILE)], angle: Math.round(c.angle * 10) / 10 };
-      if (!r) { out.left.push({ ...rec, x: Math.round(c.x), y: Math.round(c.y), tx: c.tx, ty: c.ty, hw: hwOf(l.kind) }); continue; }
+      if (!r) {
+        const q = { ...rec, x: Math.round(c.x), y: Math.round(c.y), tx: c.tx, ty: c.ty, hw: hwOf(l.kind) };
+        // (the road's line near it, for the underpass to run as far as the road keeps over the tracks - not listed)
+        Object.defineProperty(q, 'road', { value: l.pts.map((p) => ({ x: p.x, y: p.y })), enumerable: false });
+        out.left.push(q); continue;
+      }
       l.pts = r.pts;
       rec.after = Math.round(Math.min(...crossingsOf(l, tracks).filter((q) => Math.hypot(q.x - c.x, q.y - c.y) < 20 * TILE).map((q) => q.angle)) * 10) / 10;
       rec.jog = [r.H, r.d, r.dt];
@@ -285,6 +290,20 @@ export function underpassLeft(m, loops, left) {
     const wet = runs.some((P) => P.some((p) => { const t = m.tileAtPx(p.x, p.y); return t === T.WATER || t === T.DEEP || t === T.BRIDGE; }));
     if (wet) { out.push({ ...c, under: false }); continue; }
     for (const P of runs) for (const p of P) { p.under = true; p.underpass = true; }
+    // (a road that runs on alongside the tracks at its slant - over their bed - keeps them under it as far as it does,
+    // and the ramp beyond)
+    const wetHere = (p) => { const t = m.tileAtPx(p.x, p.y); return t === T.WATER || t === T.DEEP || t === T.BRIDGE; };
+    if (c.road) for (const l of loops) {
+      const P = l.pts;
+      let s0 = Infinity, s1 = -Infinity;
+      for (const p of P) {
+        if (Math.abs(p.x - c.x) > 4000 || Math.abs(p.y - c.y) > 4000) continue;
+        let d = Infinity;
+        for (let k = 0; k + 1 < c.road.length; k++) d = Math.min(d, segDist(p.x, p.y, c.road[k], c.road[k + 1]));
+        if (d < c.hw + 64 && p.s !== undefined) { s0 = Math.min(s0, p.s); s1 = Math.max(s1, p.s); }
+      }
+      if (s0 <= s1) for (const p of P) if (p.s >= s0 - UNDER_RAMP && p.s <= s1 + UNDER_RAMP && !wetHere(p)) { p.under = true; p.underpass = true; }
+    }
     out.push({ ...c, under: true });
   }
   return out;
@@ -403,7 +422,8 @@ function tryFront(m, lines, grid, tracks, st, P, tx, ty, nx, ny) {
   const c0 = FRONT_C + (hw + 64) / TILE + 0.5;
   let c1 = c0 + LOT_D;
   for (const e of ends) if (e && Math.abs(((e.x - P.x) * nx + (e.y - P.y) * ny) - C) > 4 * TILE) c1 = Math.min(c1, ((e.x - P.x) * nx + (e.y - P.y) * ny) / TILE - 4);
-  const cost = (ends[0] ? ends[0].len : 0) + (ends[1] ? ends[1].len : 0) + (a1 - a0) + (loop ? 0 : 60 * TILE);
+  // (a car park squeezed between its arms costs: the other side, or the other way, may have room for a whole one)
+  const cost = (ends[0] ? ends[0].len : 0) + (ends[1] ? ends[1].len : 0) + (a1 - a0) + (loop ? 0 : 60 * TILE) + Math.max(0, c0 + LOT_D - c1) * 30 * TILE;
   const la0 = a0 / TILE + 3, la1 = a1 / TILE - 3;
   return { how: 'front', loop, roads, trims, arms: ends.filter(Boolean), ends: ends.map((e) => (e ? { at: [Math.round(e.x / TILE), Math.round(e.y / TILE)], len: Math.round(e.len / TILE) } : null)), crossers: crossers.size, front: { c: FRONT_C, a0: a0 / TILE, a1: a1 / TILE }, lot: c1 - c0 >= 3 && la1 - la0 >= 8 ? { a0: la0, a1: la1, c0, c1, open: [FRONT_C + hw / TILE, c0] } : null, cost };
 }

@@ -15023,3 +15023,30 @@ are. Two passes started then (WIP on a branch since) are finished and in the wor
   cash) and food and cash in every district itself; the villages food, cash and their tackle shop of their own and no
   gun shop (a long way out, like the wild land) - a quiet district (the villas, the houses by the station) may have its
   gun shop a short drive away. tools/world3b/shops.mjs reports it district by district, with each one's worst street.
+
+## 2026-10-23 · Stations with a street and a car park, level crossings square on
+The owner, 10-15: "Train stations should have streets and parking lots connected to them ... so that cars can make a
+turn out of the parking lot and back out, instead sometimes in the world they would just form traffic jams leading up
+to the parking lots of train stations" and "train tracks should cross streets almost perpendicular so the crossing
+guard cross the street instead of just angled on the street". The WIP from 10-15 (shared/world3-stations.js) is
+finished and in the world:
+- **Every main-line station** gets a street to its front and a car park on a loop, never a dead end: a station road
+  along its front with its ends carried on to the nearest roads and the car park behind it, or - where a road already
+  runs along its front (Metro Central on Bayside Avenue) - a loop off it through the car park across the road. The
+  station house faces its street across a paved forecourt; rows of spaces, nose in. A car park squeezed between its
+  arms costs the plan more, so the other side or the other way wins where there's room (Lucky Mesa's was four spaces).
+  Midtown's station up on the El is reached by its stairs from Trestle Street and has none.
+- **Level crossings**: a road meeting the main line at less than 80 degrees is bent to cross it square on (a Z of round
+  corners: Sandpiper Road, Sandpiper Drive, Hollow Road, Mesa Road); one that can't be (North Coast Road at 14 degrees,
+  Valley Parkway's corner, Gulch Road's end) goes over the tracks instead - the line dips under it between two portals,
+  as it does under the highways - and as far as the road keeps over the tracks' bed (North Coast Road runs on beside
+  them a while). A road beside the tracks - a road bridge next to the rail bridge, a road along the bed - or one the
+  track only grazes at a tunnel's mouth is no level crossing any more (no gates on a bridge's deck or down a road).
+  The gates' arms stand across the road (shared/mapcore.js crossingGate; the server and both renderers). The
+  handcrafted districts' streets keep their crossings as their plans drew them (Falls Center's 13th Street at 70).
+- The desert train robbery's run (server/systems/trains.js robberyCountry) carries on under a road's bridge.
+- The blocks round the stations were cut again for their car parks: a handful of homes fewer (3,491 to 3,486).
+Tools: tools/world3b/stations.mjs audits it (each station's street, its car park and its loop, each crossing's angle,
+pictures; --sim N runs traffic by each station). Tests: test/world3rail.test.js - a plan per station, a street at its
+front and its own road no dead end, a car park with spaces (not the El's), every crossing's road at 75 degrees or more
+outside the handcrafted districts with its arms across the road, the gates coming down for the trains, the robbery run.

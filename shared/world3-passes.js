@@ -34,6 +34,17 @@ function rails(m, railLines) {
     m.railXings[xi].uses.push([ri, c.s]); c.xi = xi;
   }));
   roadOfCrossings(m);   // (2026-10-15: the road each crosses - its gates go across it)
+  // (World v3: a road alongside the tracks - a road bridge beside the rail bridge, a road on by the bed - is no level
+  // crossing: no gates on a bridge's deck or down a road's length; those are dropped, the rest renumbered)
+  // ...nor is a road the track only grazes at a tunnel's mouth, going under it (the Old Quarter's boulevard)
+  const mouth = (c) => c.uses.some(([ri, cs]) => (m.rails[ri].pts || []).some((p) => p.under && Math.abs(p.s - cs) < 96));
+  const along = (c) => (c.ra !== undefined && Math.abs(Math.sin(c.ra - c.a)) < Math.sin(25 * Math.PI / 180)) || mouth(c);
+  if (m.railXings.some(along)) {
+    const map = new Map(), kept = [];
+    m.railXings.forEach((c, i) => { if (!along(c)) { map.set(i, kept.length); kept.push(c); } });
+    m.railXings = kept;
+    for (const r of m.rails) { r.crossings = r.crossings.filter((c) => map.has(c.xi)); for (const c of r.crossings) c.xi = map.get(c.xi); }
+  }
   buildRailHubs(m);   // (H33: one station per name - its building, its one map point, the services calling)
   railSwitches(m);    // (H33: the turnouts and the diamonds where the loops' tracks part and cross)
 }
