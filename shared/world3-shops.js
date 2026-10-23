@@ -339,7 +339,8 @@ export function shops3(m, H) {
   const order = [...samples.keys()].sort((a, b) => a - b);
   for (const d of order) {
     const S = samples.get(d), n = S.length >> 1, D = DISTRICTS[d];
-    const needs = OPEN.has(d) ? ['food', 'cash'] : NEED_KEYS;
+    // (the park and the airfield: food and cash; the remote villages no gun shop - everything else: SHOP_NEEDS)
+    const needs = OPEN.has(d) ? ['food', 'cash'] : VILLAGE.has(d) ? NEED_KEYS.filter((k) => k !== 'weapons') : NEED_KEYS;
     // each sample's distance to the nearest of each need (only the places within reach of the district's box count)
     let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
     for (let j = 0; j < n; j++) { const x = S[2 * j], y = S[2 * j + 1]; if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
@@ -406,7 +407,9 @@ export function shops3(m, H) {
       if (!OPEN.has(d) && wk !== 'cash') {
         const ks = want(tx, ty), w = ks.length >= 3 ? 16 : ks.length === 2 ? 11 : 7;
         const lr = wk === 'food' ? 48 : Math.min(160, Math.floor(R * 0.4));
-        const at = lot(tx, ty, w, 6, lr, d) || (ownOnly ? null : lotNear(tx, ty, w, lr));
+        // (in the district; else in any built-up one near; else - only to bring a far street within reach - on open
+        // ground by the road just over its edge, in the country: a roadside store)
+        const at = lot(tx, ty, w, 6, lr, d) || (ownOnly ? null : lotNear(tx, ty, w, lr) || lot(tx, ty, w, 6, lr, -1, true, true));
         if (at) {
           const bd2 = distAt(at[0], at[1]);
           const b = build(at[0], at[1], w, at[2], bd2, ks.map((k) => [UNIT_OF(k, bd2, tx, ty)]));

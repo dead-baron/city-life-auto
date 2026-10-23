@@ -14988,3 +14988,38 @@ The debug menu's 'place' finds a district by its name now (its middle), and 'afo
 Tests: test/director.test.js - the screen's time of day is the server clock's; every scene's commands are the debug
 menu's, its vehicles real, its places found, every group there; 'place' to a district, 'afoot' out of a car; the page
 loads the cinematic mode only when asked.
+
+## 2026-10-23 · Shops where you need them, and nothing blocking the streets
+The owner, 10-15: "There are fences that spawn over sidewalks ... they don't spawn over streets or sidewalks or train
+tracks", "Some world objects are spawning on the train tracks like mossy logs", and shops easy to find wherever you
+are. Two passes started then (WIP on a branch since) are finished and in the world now:
+- **Nothing blocking** (shared/world3-clutter.js, the last pass of the world's build): on a street's roadway or a road
+  bridge nothing stands (a lamp, a signal pole, a utility pole or a mailbox moves to the kerb, anything else goes); on
+  a pavement only street furniture; in an alley only what stands against its walls; nothing within reach of a track
+  (a log or a fence along its length) or on a station's platform but its lamps; nothing solid on a door. The fields'
+  rail fences run over open ground only, their bales and scarecrows kept off the roads. The pavements' generic dressing
+  in World v3 is furniture only (no dumpsters, drums or pallets out front), alley dressing only on the alley's own
+  asphalt, a fallen log never across a track bed or a road. **The handcrafted districts are left as their plans laid
+  them** - the Neon Strip's and Bayside's median palms, the lights strung over their streets, Midtown's and Northgate's
+  market stalls, the Yards' fences: the plans mark what they lay (handLaid, a WeakSet on the map, never sent) and the
+  guard only takes something solid off a doorway there. The boardwalks, footbridges, log bridges and rope bridges are
+  not roads (a bridge tile off the road net). What it does on seed 1337: 59 signal poles, 5 utility poles and 5
+  mailboxes moved to the kerb, 18 trees and 23 planters, pots, benches and racks off doorways, a few boulders, reeds and a cairn
+  off country roads, 83 field fences cut round roads; nothing left blocking.
+- **Shops where you need them** (shared/world3-shops.js, after the street ATMs): each built-up district's farthest
+  street from a need (weapons, equipment, food and everyday items, cash) gets a row of shops in the nearest plain
+  building (a gun shop, a hardware / sports / tackle store, a corner store, an ATM by the door), else a generic
+  storefront taken over, else a small row of shops on open ground by the street - and, only to bring a far street
+  within reach, a roadside store on open ground just over the district's edge, in the country - else a snack cart or an
+  ATM kiosk; the wild land its themed places (the trailhead store, the feed and tool, the trading post, the marsh camp);
+  an ATM by every station and gas station. The handcrafted districts lay their own stores, so their plans got the
+  trades their names already said: Hills Hardware and Hills Home Center (West Hills) and Ninth Street Hardware are
+  hardware stores, the Bayside and Gull Harbor chandleries tackle shops, Bayside Dive & Sail and Coral Dive Co. sports
+  stores, Cay Post & Supply a hardware store; and every fifth of Northgate's corner shops is a gun shop or a hardware
+  store in turn (Northgate Arms, Linden Arms, Laurel Hardware...). A shop counter shows a hand plan's shop by its own
+  name. On seed 1337: 40 new buildings and 21 rows of shops (35 gun shops, 22 hardware, 41 corner stores, 3 tackle, 5
+  sports, a hunt camp), 53 carts, 72 kiosks, 118 ATMs. The test's rule (test/world3server.test.js): every street of the
+  city, the towns and the beach towns within reach of each need (400 tiles for weapons and equipment, 140 for food and
+  cash) and food and cash in every district itself; the villages food, cash and their tackle shop of their own and no
+  gun shop (a long way out, like the wild land) - a quiet district (the villas, the houses by the station) may have its
+  gun shop a short drive away. tools/world3b/shops.mjs reports it district by district, with each one's worst street.

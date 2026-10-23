@@ -19,8 +19,9 @@
 // ATMs always stay (their POIs are kept by index). The fields' rail fences (the renderer draws one along each field's
 // north edge: client/art2/game/statics.js) are laid as runs over open ground only (field.fence), the hay bales and the
 // scarecrow left out where they would stand on a road (field.bales, field.crow).
-//   clearClutter3(m, H) -> { dropped: { 'type tile': n }, moved: { 'type': n }, fields: n, kit: n }   H: { removeProps }
-//   clutterOn(m) -> [{ t, x, y, why }]   what still stands where it may not (the test's and the tool's check)
+//   clearClutter3(m, H, hand) -> { dropped: { 'type tile': n }, moved: { 'type': n }, fields: n, kit: n }   H: { removeProps }; hand: the handcrafted plans' own props, left be
+//     (default m.handProps: handLaid(m, before) marks them as the plans lay them)
+//   clutterOn(m, hand) -> [{ t, x, y, why }]   what still stands where it may not (the test's and the tool's check)
 // Deterministic: no Math.random; a heading's cosine and sine are shared/dmath.js'; the moves are to spots in whole px.
 import { TILE, T } from './constants.js';
 import { dcos, dsin } from './dmath.js';
@@ -39,11 +40,23 @@ export const PAVEMENT3 = {
   oldtown: ['trashcan', 'bench_a', 'mailbox', 'news_c', 'phonebox', 'tree_b'],
 };
 // what moves to the kerb rather than going
-const MOVES = new Set(['lamp', 'sigpole']);
+const MOVES = new Set(['lamp', 'sigpole', 'upole', 'mailbox']);
 // px from a track's centre line that a prop's body keeps clear of (a train is 76 px wide: 38 either side)
 export const TRACK_CLEAR = 38;
 const POLE_GROUND = new Set([T.SIDEWALK, T.PLAZA, T.GRASS, T.LOT, T.DIRT, T.SAND]);
-const STREET = (m, i) => m.tiles[i] === T.BRIDGE || (m.tiles[i] === T.ROAD && m.roadRank[i] !== 1);
+// (a bridge carries a street when it is on the road net: a boardwalk's, a footbridge's, a log bridge's deck is not one)
+const STREET = (m, i) => (m.tiles[i] === T.BRIDGE && m.roadRank[i] > 0) || (m.tiles[i] === T.ROAD && m.roadRank[i] !== 1);
+// not props at all: the marks of a painted block (the art shows it)
+const MARKS = new Set(['painted', 'plamp']);
+
+// the handcrafted districts' plans (world3-hand.js) lay their own dressing - their medians' palms, the lights strung
+// over their streets, their market stalls, their yards' fences - placed and checked by hand: handLaid(m, before) marks
+// every prop not in before (a Set of the props there were) as theirs, on m.handProps (a WeakSet, not enumerable: never
+// copied or sent)
+export function handLaid(m, before) {
+  if (!m.handProps) Object.defineProperty(m, 'handProps', { value: new WeakSet(), enumerable: false, configurable: true });
+  for (const p of m.props) if (p && !before.has(p)) m.handProps.add(p);
+}
 
 // a prop's body: its extent as a segment (fences, logs, rails: their two ends) and a radius round it
 function body(p, solidR) {
@@ -103,8 +116,11 @@ function context(m) {
 }
 
 // why prop p may not stand where it is (null: it may)
-function judge(m, X, p, solidR) {
-  if (p.t === 'atmw' || p.t === 'atm') return null;
+function judge(m, X, p, solidR, hand = null) {
+  if (p.t === 'atmw' || p.t === 'atm' || MARKS.has(p.t)) return null;
+  // (a handcrafted district's own dressing - its medians' palms, the lights strung over its streets, its market stalls,
+  // its yards' fences - stands where its plan put it: only something solid on a door goes)
+  if (hand && hand.has(p)) { if (solidR > 0) { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); if (m.inside(tx, ty) && X.doors.has(m.idx(tx, ty))) return 'door'; } return null; }
   // (street furniture by where it stands - its foot; anything else by its whole body: a log's or a fence's length, a
   // rock's bulk)
   const furn = FURNITURE.has(p.t), B = body(p, solidR), pts = furn ? [[p.x, p.y]] : bodyPts(B);
@@ -126,28 +142,28 @@ function judge(m, X, p, solidR) {
 }
 const solidOf = (m) => { const o = new Map(); for (const [i, e] of m.propSolid || []) o.set(i, e); return o; };
 
-export function clutterOn(m) {
+export function clutterOn(m, hand = m.handProps || null) {
   const X = context(m), S = solidOf(m), out = [];
-  m.props.forEach((p, i) => { if (!p) return; const e = S.get(i), why = judge(m, X, p, e && !e.off ? e.r : 0); if (why) out.push({ t: p.t, x: p.x, y: p.y, why }); });
+  m.props.forEach((p, i) => { if (!p) return; const e = S.get(i), why = judge(m, X, p, e && !e.off ? e.r : 0, hand); if (why) out.push({ t: p.t, x: p.x, y: p.y, why }); });
   return out;
 }
 
 // The guard. H: { removeProps } (map.js)
-export function clearClutter3(m, H) {
+export function clearClutter3(m, H, hand = m.handProps || null) {
   const out = { dropped: {}, moved: {}, fields: 0, kit: 0 };
   const X = context(m), S = solidOf(m);
   const drop = new Set(), extra = [];
   const tileName = (x, y) => { const t = m.tileAtPx(x, y); return t === T.ROAD ? 'road' : t === T.BRIDGE ? 'bridge' : t === T.SIDEWALK ? 'sidewalk' : 'ground'; };
   m.props.forEach((p, i) => {
     if (!p) return;
-    const e = S.get(i), r = e && !e.off ? e.r : 0, why = judge(m, X, p, r);
+    const e = S.get(i), r = e && !e.off ? e.r : 0, why = judge(m, X, p, r, hand);
     if (!why) return;
     if (why === 'road' && MOVES.has(p.t)) {
       const to = kerb(m, p.x, p.y);
       if (to) {
         const [nx, ny] = to, ox = p.x, oy = p.y;
         p.x = nx; p.y = ny;
-        if (!judge(m, X, p, r)) {
+        if (!judge(m, X, p, r, hand)) {
           if (e) moveSolid(m, e, nx, ny);
           if (p.t === 'sigpole') for (const sg of m.signals || []) {
             if (!sg) continue;

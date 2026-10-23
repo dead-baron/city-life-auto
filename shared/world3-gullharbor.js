@@ -122,7 +122,7 @@ function build(m, api, K) {
       [GX.net + 4, GX.ferry - 5, [
         { name: 'Harbor General Store', store: 'mart', w: 12, wall: '#ece9e0', poi: { kind: 'convenience', label: 'Harbor General Store' }, signC: ['#1e2a4a', [240, 232, 200]], awning: ['#2a4a7a', '#f0ece4'], sign: 'HARBOR GENERAL' },
         { name: 'The Anchor', store: 'bar', w: 15, wall: '#8a9aa8', poi: { kind: 'club', label: 'The Anchor' }, signC: ['#1e3a2e', [240, 220, 160]], door: 'right', people: 4 },
-        { name: 'Gull Harbor Chandlery', store: 'mart', w: 10, wall: '#e8dcae', floors: 1, poi: { kind: 'delivery', label: 'Gull Harbor Chandlery' }, signC: ['#8a3a2a', [255, 236, 200]], sign: 'CHANDLERY' },
+        { name: 'Gull Harbor Chandlery', store: 'mart', w: 10, wall: '#e8dcae', floors: 1, poi: { kind: 'tackle', label: 'Gull Harbor Chandlery' }, signC: ['#8a3a2a', [255, 236, 200]], sign: 'CHANDLERY' },
       ]],
       [GX.ferry + 5, GX.gull - 4, [
         { name: 'The Salty Gull Cafe', store: 'cafe', key: 'rest2', w: 11, wall: '#ece9e0', poi: { kind: 'coffee', label: 'The Salty Gull Cafe', food: true }, signC: ['#c8302a', [255, 250, 240]], awning: ['#c8302a', '#f0ece4'], sign: 'SALTY GULL CAFE' },

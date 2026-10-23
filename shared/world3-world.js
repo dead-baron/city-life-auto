@@ -71,7 +71,7 @@ import { buildNorth, NORTH_STYLES } from './world3-north.js';   // (v3b, WORLD-V
 import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';
 import { buildHand, handPlanAt, HAND_PLANS } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 import { shops3, stationAtms3 } from './world3-shops.js';   // (v3b: the stores and ATMs where you need them)
-import { clearClutter3, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
+import { clearClutter3, handLaid, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -307,7 +307,7 @@ export function worldOpts(asked) {
     // handcrafted district's plan, which places its own
     special: (sp) => built.has(sp.d) && !(city && HAND_PLANS.some((P) => P.d === sp.d && P.specials.includes(sp.names[0]))),
     // the handcrafted districts (shared/world3-hand.js): laid before the blocks are found; their pavements dressed by hand
-    ...(city ? { hand: (m, api) => { m.world3hand = buildHand(m, api); }, handAt: (tx, ty) => !!handPlanAt(tx, ty) } : {}),
+    ...(city ? { hand: (m, api) => { const had = new Set(m.props); m.world3hand = buildHand(m, api); handLaid(m, had); }, handAt: (tx, ty) => !!handPlanAt(tx, ty) } : {}),
     specials: REGIONAL ? [...TOWN_SPECIALS, ...MESA_SPECIALS, ...DESERT_SPECIALS] : [],   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
     styles: REGIONAL ? { ...TOWN_STYLES, ...MESA_STYLES, ...DESERT_STYLES, ...(city ? NORTH_STYLES : {}) } : {},   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)

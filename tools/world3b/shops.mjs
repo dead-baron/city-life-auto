@@ -48,7 +48,7 @@ function edt(g, W, H) {
 // a POI's district (the tile it stands on)
 const distOf = (m, p) => { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); return m.inside(tx, ty) ? m.dist[m.idx(tx, ty)] : -1; };
 
-// -> { districts: [{ d, name, kind, streets, count: { need: n }, worst: { need: tiles }, p95: { need: tiles }, shops: [[kind, label]] }],
+// -> { districts: [{ d, name, kind, streets, count: { need: n }, worst: { need: tiles }, at: { need: [tx, ty] } (the worst street tile), p95: { need: tiles }, shops: [[kind, label]] }],
 //      groups: { kind: { districts, missing: { need: n }, worst: { need: tiles } } } }
 // streets: the district's road and pavement tiles (not a highway's at-grade lanes: no shop fronts a highway).
 export function shopCoverage(m) {
@@ -82,12 +82,15 @@ export function shopCoverage(m) {
     edt(g, W, H);
     // each district's distances along its streets: the worst, and the 95th percentile (a histogram by whole tiles)
     hist.clear();
+    const far = new Map();   // (district -> [tiles, i]: its worst street tile)
     for (let i = 0; i < N; i++) {
       if (!street[i]) continue;
       const d = m.dist[i], e = Math.min(4000, Math.round(Math.sqrt(g[i])));
       let h = hist.get(d); if (!h) hist.set(d, (h = new Uint32Array(4001)));
       h[e]++;
+      const f = far.get(d); if (!f || e > f[0]) far.set(d, [e, i]);
     }
+    for (const [d, [, i]] of far) (rows[d].at ||= {})[k] = [(m.x0 || 0) + i % W, (m.y0 || 0) + Math.floor(i / W)];
     for (const [d, h] of hist) {
       const n = streets[d]; let acc = 0, p95 = -1, worst = 0;
       for (let e = 0; e <= 4000; e++) { if (!h[e]) continue; acc += h[e]; worst = e; if (p95 < 0 && acc >= n * 0.95) p95 = e; }

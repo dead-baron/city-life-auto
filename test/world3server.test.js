@@ -44,19 +44,24 @@ test('the v3 world as the server builds it: the frame, its places', () => {
   assert.ok(!('frame' in cityData(M)), 'the frame is not a field of the city as data');
 });
 
-// (World v3b, 2026-10-15: shared/world3-shops.js) every built-up district - the city's, the towns, the beach towns, the
-// villages - has each need (weapons, equipment, food and everyday items, cash) within reach of every bit of its streets
-// and a place of each of its own (the park and the airfield: food and cash within reach); the wild land its few themed
-// places. (The measure is tools/world3b/shops.mjs': the exact distance from every street tile.)
-test('shops where you need them: every built-up district has each need within reach, and of its own; the wild land a few themed places', () => {
+// (World v3b, 2026-10-15 and 10-23: shared/world3-shops.js) every built-up district - the city's, the towns, the beach
+// towns - has each need (weapons, equipment, food and everyday items, cash) within reach of every bit of its streets, and
+// the everyday ones (food, cash) of its own; the villages food, cash and their tackle shop of their own (no gun shop:
+// they are a long way out, like the wild land); the park and the airfield food and cash within reach; the wild land its
+// few themed places. (Most of the city is handcrafted now, its stores laid by its plans: a quiet district - the villas,
+// the houses by the station - may have its gun shop a short drive away. The measure is tools/world3b/shops.mjs': the
+// exact distance from every street tile.)
+test('shops where you need them: every built-up district has each need within reach, the everyday ones of its own; the wild land a few themed places', () => {
   const cov = shopCoverage(M), bad = [];
   const OPEN = new Set([12, 27]), SLACK = 8;   // (the pass samples every third tile: a few tiles over at the worst)
   for (const r of cov.districts) {
-    if (placeKind3(r.d) === 'wild') continue;
+    const pk = placeKind3(r.d);
+    if (pk === 'wild') continue;
     for (const k of NEED_KEYS) {
       if (OPEN.has(r.d) && (k === 'weapons' || k === 'equipment')) continue;
-      if (r.worst[k] > SHOP_REACH[k] + SLACK) bad.push(`${r.name} ${k}: ${r.worst[k]} tiles at the worst`);
-      if (!OPEN.has(r.d) && !r.count[k]) bad.push(`${r.name}: no ${k} of its own`);
+      if (pk === 'village' && k === 'weapons') continue;
+      if (pk !== 'village' || k === 'food' || k === 'cash') if (r.worst[k] > SHOP_REACH[k] + SLACK) bad.push(`${r.name} ${k}: ${r.worst[k]} tiles at the worst`);
+      if (!OPEN.has(r.d) && (k === 'food' || k === 'cash' || pk === 'village') && !r.count[k]) bad.push(`${r.name}: no ${k} of its own`);
     }
   }
   assert.deepEqual(bad, []);
