@@ -583,7 +583,7 @@ export { ASSAY_PAYS } from './rules-base.js';             // the quarry's assay 
 
 // guarding (combat.js blocked): walk speed, front arc (rad); the plasma blade's deflection odds by angle (deflectChance);
 // fire arrows: extra damage, to a vehicle (burning for vehBurnS), a campfire within lightPx catches
-export const GUARD = { speed: 0.55, arc: 1.31 };
+export const GUARD = { speed: 0.55, arc: 1.31, strikeS: 0.3 };   // strikeS: a punch or a swing thrown from the guard drops it this long (s)
 export const PLASMA_DEFLECT = { front: 0.9, frontArc: 1.05, side: 0.3, sideArc: 1.92, idleArc: 1.21 };
 export const FIRE_ARROW = { burn: 18, veh: 14, vehBurnS: 3, lightPx: 48 };
 // The streets coming alive (server/systems/streetlife.js, the owner 2026-10-10): now and then, near someone out in town,

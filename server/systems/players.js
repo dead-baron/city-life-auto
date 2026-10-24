@@ -573,8 +573,11 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   const wasDropping = !!ped.dropping;
   // the guard (rules.js GUARD; combat.js blocked, deflects): held with something to block with, on your feet, not busy
   const gw = WEAPONS[ped.weapon] || WEAPONS.fists;
-  const guard = !!(inp.bits & IN.BLOCK) && !!gw.guard && !ped.carrying && !ped.fishing && !(ped.rollT > 0) && !tumbling && !ped.board
+  // a punch or a swing thrown from the guard (the owner's notes, 10-22: "you should be able to still punch even if you're
+  // holding block") drops it for the blow (GUARD.strikeS); held still, it comes straight back up
+  const guardHeld = !!(inp.bits & IN.BLOCK) && !!gw.guard && !ped.carrying && !ped.fishing && !(ped.rollT > 0) && !tumbling && !ped.board
     && world.time >= ped.downUntil && world.time >= ped.stunUntil && !isSwimming(world.map, ped);
+  const guard = guardHeld && world.time >= (ped.guardBreakUntil || 0);
   ped.guardUntil = guard ? world.time + 0.12 : 0;
   if (guard) ped.aimUntil = world.time + 0.3;   // (the aim pose for an older page; the guard's own pose: the 'guard' event)
   if (guard ? world.time - (ped.guardShownAt ?? -9) >= NPC_GUARD.showS : ped.guardShownAt !== undefined) {
@@ -590,9 +593,17 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (ped.rollT > 0 && (p.badge || p.hunter) && !ped.board) tackle(world, ped);   // (an ollie isn't a tackle)
   const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || tennis.input(world, p, ped, inp, pressed) || bowling.input(world, p, ped, inp, pressed, dt) || firefighter.hose(world, p, ped, inp, pressed, dt);   // (the hose by your fire engine: firefighter.js) (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
   const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && !ped.board && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
-  if ((inp.bits & IN.FIRE) && !kicked && !swung && !guard && !ped.board) {   // (guarding: no striking; on a board: step off to fight)
+  if ((inp.bits & IN.FIRE) && !kicked && !swung && !ped.board) {   // (on a board: step off to fight)
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
-    else if (!ped.fishing) combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
+    else if (!ped.fishing) {
+      if (guard) ped.guardUntil = 0;   // (striking from the guard: down for the blow - combat.js tryAttack won't strike from it)
+      const struck = combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
+      if (guard && !struck) ped.guardUntil = world.time + 0.12;   // (not ready to strike again yet: the guard stays up)
+      else if (guard) {
+        ped.guardBreakUntil = world.time + GUARD.strikeS;
+        if (ped.guardShownAt !== undefined) { world.emit(ped.x, ped.y, { e: 'guard', id: ped.id, t: 0 }); ped.guardShownAt = undefined; }   // (the blow's pose, not the guard's)
+      }
+    }
   }
   if (pressed & IN.THROW) { if (ped.carrying) cargo.throwCrate(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a); }
   // the vehicle button: into a vehicle in reach; with none, on or off your skateboard (off it, into the vehicle by you)
