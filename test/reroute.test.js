@@ -132,3 +132,37 @@ test('re-plans are rate-limited: a few drivers a tick, once in a while each; the
   assert.ok(w.blockedEdges.size <= reroute.MEMORY, 'the memory keeps only the latest few');
   assert.ok(reroute.isBlocked(w, 59) && !reroute.isBlocked(w, 0), 'the oldest forgotten first');
 });
+
+// (the owner's notes, 10-22: "a lot of cars start getting jammed in a spot" - a passer-by pinned in the road, the cars
+// behind waiting on them for ever: traffic.js PED_HONK_S / PED_CREEP_S, npc.js shoo)
+test('someone on foot in the road: the driver honks, a passer-by steps out of the road; one who won\'t is nudged past at a crawl, unhurt', async () => {
+  const { K } = await import('../shared/constants.js');
+  const run = (state) => {
+    const w = makeWorld();
+    const r = straightRoad(w.map, 1400);
+    const e = edgeAt(w.map, r.x + 600, r.y);
+    const a = joinPlayer(w);
+    teleport(w, a.p.ped, r.x + 500, r.y - r.hw - 260);
+    for (const q of [...w.entities.values()]) if (q !== a.p.ped && (q.kind === K.VEH || q.kind === K.PED) && Math.abs(q.y - r.y) < 400 && Math.abs(q.x - r.x - 500) < 700) w.remove(q);
+    const y0 = laneY(r, e, 0), x0 = r.x + 300;
+    const ped = spawnNpc(w, 'casual', x0 + 130, y0, 'civ');
+    const hp0 = ped.hp;
+    ped.npc.state = 'watch'; ped.npc.target = 0; ped.npc.fx = x0 + 400; ped.npc.fy = y0; ped.npc.until = w.time + 99;   // (stood in the road, watching something)
+    const v = car(w, 'sedan', x0, y0, 0);
+    traffic.joinTraffic(w, v);
+    const evs = [];
+    let honked = false, steppedOff = false, past = false;
+    for (let t = 0; t < 25 * 20 && !past; t++) {
+      if (state === 'stubborn') { ped.npc.state = 'film'; ped.npc.fx = x0 + 600; ped.npc.fy = y0; ped.npc.until = w.time + 99; }   // (filming something down the road: won't move)
+      w.step();
+      if (v.hornUntil > w.time) honked = true;
+      if (Math.abs(ped.y - y0) > 40) steppedOff = true;
+      past = v.x > ped.x + 60;
+    }
+    return { honked, steppedOff, past, hurt: hp0 - ped.hp, dead: ped.dead, v };
+  };
+  const loose = run('watch');
+  assert.ok(loose.honked && loose.steppedOff && loose.past, `a passer-by: honked at, steps out of the road, the car goes on (${JSON.stringify({ ...loose, v: 0 })})`);
+  const stubborn = run('stubborn');
+  assert.ok(stubborn.honked && stubborn.past && !stubborn.dead && stubborn.hurt < 1, `one who stands there: nudged past at a crawl, unhurt (${JSON.stringify({ ...stubborn, v: 0 })})`);
+});

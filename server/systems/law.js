@@ -382,7 +382,10 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
   return true;   // (called in: robbery.js starts the heat growing)
 }
 
-// heat after `amount` more: above 3 stars' heat it climbs at only HEAT_TOP.mult of the rate (rules.js)
+// heat after `amount` more: above 3 stars' heat it climbs at only HEAT_TOP.mult of the rate (rules.js; the owner's notes,
+// 10-22: a full 5 stars should take a while) - two murders still make 3 stars, but 4 takes four and 5 seven (were three
+// and four); 4 stars takes two police killings and 5 four (were two and two). The thresholds, STAR_HEAT, live in
+// rules.js, not constants.js: a change to constants.js re-keys every browser's kept World v3 and baked chunks.
 export function heatAfter(heat, amount) {
   const top = STAR_HEAT[HEAT_TOP.from];
   if (!(amount > 0)) return heat + (amount || 0);

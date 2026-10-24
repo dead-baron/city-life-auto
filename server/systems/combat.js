@@ -109,7 +109,9 @@ function melee(world, ped, w, aim) {
   let best = null, bestD = Infinity;
   // a nightclub's bouncer picks his punches: only ever whoever he's after - never his partner or a patron in the way
   // (nightclubs.js, task #432)
-  const only = ped.npc && ped.npc.role === 'bouncer' ? ped.npc.target || -1 : 0;
+  // and anyone else in a fight swings at the one they're fighting: a street brawl's blows don't land on the people round
+  // it, who'd turn on them - and on and on (the owner's notes, 10-22: "fights break out")
+  const only = ped.npc && ped.npc.role === 'bouncer' ? ped.npc.target || -1 : ped.npc && ped.npc.state === 'fight' && ped.npc.target ? ped.npc.target : 0;
   for (const o of world.query(ped.x, ped.y, w.range + 14, K.PED)) {
     if (o === ped || (o.dead && !revive.isDowned(o)) || o.vehId || o.sky || !!o.sub !== !!ped.sub || !sameLevel(o.lz, ped.lz)) continue; // the subway / the highway deck is another level (o.sky: falling from an aircraft, out of reach)
     if (only && o.id !== only) continue;

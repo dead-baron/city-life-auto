@@ -16,7 +16,7 @@ import { K, T } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import {
   HAPPEN_EVERY_S, FIGHT_BREAKUP_SAMARITAN, FAINT_HELP_REWARD, FAINT_HELP_SAMARITAN, WALLET_TIP, WALLET_SAMARITAN,
-  FIGHT_MUTUAL, BRAWL_AFTER_S, FIGHT_POLICE,
+  FIGHT_MUTUAL, BRAWL_AFTER_S, FIGHT_POLICE, CALM_STREETS,
 } from '../../shared/rules.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
@@ -233,7 +233,10 @@ export function update(world) {
   const ps = [...world.players.values()].filter((q) => q.ped && !q.ped.dead && !q.ped.hidden && !q.ped.vehId && !q.ped.sub && !q.ped.interior && !wildlife.wildStyle(world.map, q.ped.x, q.ped.y));
   if (!ps.length) return;
   const p = ps[Math.floor(rng() * ps.length)];
-  const kinds = KINDS.filter((k) => k !== world.lastHappening);
+  if (events.calmBusy(world, p.ped.x, p.ped.y)) return;   // (enough going on round them already: rules.js CALM_STREETS)
+  // a street fight: in the rough parts of town; elsewhere only now and then (CALM_STREETS.fightShare)
+  const fights = events.roughAt(world.map, p.ped.x, p.ped.y) || rng() < CALM_STREETS.fightShare;
+  const kinds = KINDS.filter((k) => k !== world.lastHappening && (k !== 'fight' || fights));
   for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
   for (const k of kinds) if (start(world, k, p)) { world.lastHappening = k; break; }
 }

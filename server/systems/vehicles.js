@@ -189,8 +189,13 @@ function resolveVehicleHit(world, a, b, hit) {
     if (impact > 300 && !a.lz && !b.lz) npc.spectacle(world, (a.x + b.x) / 2, (a.y + b.y) / 2, { r: 440, near: 80, chance: impact > 450 ? 1 : 0.55, secs: 9 });   // (a smash: phones out)
     if (a.def.kind === 'bike' && impact > 250) bikeCrash(world, a, impact);
     if (b.def.kind === 'bike' && impact > 250) bikeCrash(world, b, impact);
-    if (a.ai) npc.onVehicleHit(world, a, aFaster ? null : db);
-    if (b.ai) npc.onVehicleHit(world, b, aFaster ? da : null);
+    // (a player's car in it: the NPC driver panics - or gets out to have it out with them. Two of the city's drivers
+    // bumping each other don't: a headless run in Midtown had a hundred such knocks in ten minutes, and each sent both
+    // careering off at full speed, blind to what's ahead - into the next car, the next crowd: the owner's notes, 10-22,
+    // "cars jammed in a spot, fights break out")
+    const pa = !!(da && da.player), pb = !!(db && db.player);
+    if (a.ai && (pa || pb)) npc.onVehicleHit(world, a, aFaster ? null : db);
+    if (b.ai && (pa || pb)) npc.onVehicleHit(world, b, aFaster ? da : null);
   }
 }
 
