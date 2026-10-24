@@ -38,8 +38,10 @@ The owner's 10-23 notes on the World v3 map (the PDF's pages 5, 8-10 and 14-17):
   the road where it bridges the water (the Pink Mile, Neon Strip, the Harbor, Bayside's), hedges and yard fences laid
   over a roadway (Bayside Heights, The Yards). Now a hand plan's railing, hedge, yard or lot fence (no solid along it)
   that crosses a roadway (not one along its kerb) is cut back to its longest stretch off it, or goes when that's under
-  24 px (world3-clutter.js cutHandRuns).
-  (The police motor pools' chain-link still runs down a pavement's edge beside their lots in three towns: left.)
+  24 px (world3-clutter.js cutHandRuns) - Willow Valley's and Neon Strip's waterfront railings no longer run across the
+  roads down to the water. (Left as they are: The Yards' and
+  Bayside Heights' fences and hedges laid along a kerb on its roadway's edge tiles, and the police motor pools' chain-link
+  down a pavement's edge beside their lots in three towns - along the street, not across it.)
 - **The water's "rapid lines"** on large waters. The sea's surface in the light pass (lightgame.js waterSurf) was three
   swells at fixed angles: their glints fell in a regular lattice of white marks marching diagonally over a whole bay.
   Now its swells are lower, a slow noise bends their crests out of line, and the sun catches them in patches - a

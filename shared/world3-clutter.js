@@ -240,7 +240,7 @@ export function clearClutter3(m, H, hand = m.handProps || null) {
   // stop at a street: cut back to their longest stretch off the roadway, or gone when that's under HAND_RUN_MIN px (the
   // owner, 10-23: "fences still spawning in the middle of the street" - a promenade's railing carried on across the road
   // where it bridges the water)
-  if (hand) out.cut = cutHandRuns(m, hand, S, H);
+  if (hand) out.cut = cutHandRuns(m, hand, solidOf(m), H);   // (the solids by prop index again: the drops above re-indexed them)
   // the fields' fences: runs over open ground only; the bales and the scarecrow kept off the roads
   const openAt = (x, y) => { const t = m.tileAtPx(x, y); return t !== T.ROAD && t !== T.BRIDGE && t !== T.SIDEWALK && t !== T.WATER && t !== T.DEEP && t !== T.BUILDING && t !== T.WALL && t !== T.DOCK && X.trackD(x, y) >= TRACK_CLEAR + 6; };
   for (const f of m.fields || []) {
