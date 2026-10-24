@@ -194,3 +194,35 @@ test('the server\'s world on the v3 map: players downtown, at Port Westport, in 
   economy.handleMenu(w, buyer, atm.id, 'dep:all');   // (the ATM's pop-up: all your cash in at a press)
   assert.deepEqual([buyer.profile.cash, buyer.profile.bank], [0, cash], 'a deposit at the ATM');
 });
+
+// (2026-10-24, the owner's batch 4 notes) the skateboards lying about World v3 - a rack at each skate park, a few by the
+// skate and surf shops and the boardwalks, never on a road (server/systems/skate.js boardSpots) - and every arcade's door
+// the way onto its floor (server/systems/arcade.js)
+test('World v3\'s skateboards: a rack at every skate park, a sparse few elsewhere, none on a road; every arcade\'s door leads onto its floor', async () => {
+  const skate = await import('../server/systems/skate.js'), arcade = await import('../server/systems/arcade.js'), players = await import('../server/systems/players.js');
+  const { boardGround } = await import('../shared/board.js');
+  const S = skate.boardSpots(M), parks = M.skateSpots || [];
+  assert.ok(parks.length >= 4, `the skate parks (${parks.length})`);
+  for (const q of parks) {
+    const rack = S.filter((s) => s.kind === 'park' && s.x >= (q.x - 1) * TILE && s.x < (q.x + q.w + 1) * TILE && s.y >= (q.y - 1) * TILE && s.y < (q.y + q.h + 1) * TILE);
+    assert.equal(rack.length, 3, `${q.name}: a rack of three`);
+  }
+  const rest = S.filter((s) => s.kind !== 'park');
+  assert.ok(rest.length >= 1 && rest.length <= 12, `a sparse few by the shops and the boardwalks (${rest.length}: ${rest.map((s) => s.kind).join(', ')})`);
+  for (const s of S) for (const [dx, dy] of [[-13, -6], [13, -6], [-13, 6], [13, 6], [0, 0]]) {
+    const t = M.tileAtPx(s.x + dx, s.y + dy);
+    assert.ok(t !== T.ROAD && t !== T.BRIDGE && boardGround(t) <= 1, `${s.kind} board at ${Math.round(s.x)},${Math.round(s.y)}: never on a road (tile ${t})`);
+  }
+  const arcades = M.pois.filter((p) => arcade.isArcade({ map: M }, p));
+  assert.ok(arcades.length >= 8, `the arcades (${arcades.length})`);
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p } = joinPlayer(w, { cash: 50 });
+  for (const poi of arcades) {
+    teleport(w, p.ped, poi.x, poi.y);
+    const it = players.findInteraction(w, p);
+    assert.ok(it && /the arcade/.test(it.label), `${poi.label}: ${it && it.label}`);
+    it.run();
+    assert.ok(p.ped.home && p.ped.home.arcade && p.ped.home.id === arcade.hallOf(w, poi).id, `${poi.label}: onto its floor`);
+    (await import('../server/systems/homeinside.js')).leave(w, p);
+  }
+});

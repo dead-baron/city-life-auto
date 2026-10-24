@@ -1,18 +1,30 @@
 // The arcades (the owner, 10-08: "Arcade: walk in and play our own 8-bit games... tickets for prizes"; 10-16: "are
-// arcades in?"): the Neon Strip's arcades (Retro Rewind, Hi Score, VR Den, the Pixel Arcade and the rest) - at the
-// door, the action button: a credit for STARFALL, our own shooter (client/arcade.js, its own little screen), and the
-// prize counter. The page plays the game and sends the score back; it's worth tickets (ARCADE.perTicket points each, at
-// most ARCADE.maxTickets a game - a score is checked against how long the game took, as a page could say anything),
-// and tickets buy the prizes (an item in your bag, or a piece for your home, delivered). The mansion's own cabinets
-// play for free (homeinside.js): no tickets, the high score.
+// arcades in?"; 2026-10-24: "The Arcade should be a building that has an interior you walk into and you can go up to
+// different arcades or games to play different things, and the prize counter should be somewhere inside that you walk
+// up to and interact with"): the Neon Strip's arcades (Retro Rewind, Hi Score, VR Den, the Pixel Arcade and the rest),
+// the Pier Arcade, the Game Zones, Midtown's Penny Arcade - every arcade's door (isArcade) opens onto its floor: a level
+// of its own like a home's (shared/homelayout.js 'arcade': not part of the map, walked round as a home is -
+// homeinside.js; the page draws it the same, client/render/homeview.js), open to anyone. Along the back wall a cabinet
+// for each game (GAMES: STARFALL, our own shooter - client/arcade.js, skee-ball, pinball, air hockey against the
+// machine): walk up to one and Act puts in a credit and plays it on its own little screen. Down the east wall the prize
+// counter: Act there for the prizes. The page plays the game and sends the score back; it's worth tickets
+// (ARCADE.perTicket points each, at most ARCADE.maxTickets a game - a score is checked against how long the game took,
+// as a page could say anything), and tickets buy the prizes (an item in your bag, a piece for your home, delivered, or a
+// skateboard of your own). Out by the door you came in. The mansion's own cabinets play for free (homeinside.js): no
+// tickets, the high score.
 //   p.arcade: { id (this credit's), at (world.time it began), free, poi } while a game's on; profile.tickets; profile.arcadeBest
+//   world.arcadeHalls: the arcades' floors (hallOf), by id - ARC0 + the door's POI id; ped.home.arcade: 1 on one
 import { randomBytes } from 'node:crypto';
-import { ARCADE } from '../../shared/rules.js';
+import { ARCADE, HOME_IN } from '../../shared/rules.js';
 import { ITEMS } from '../../shared/items.js';
 import { PIECES as DECOR } from '../../shared/homedecor.js';
+import { layout, useAt } from '../../shared/homelayout.js';
 import { store } from '../store.js';
 import { poolTable } from './activities.js';
 import { payFrom as pay } from './economy.js';
+import * as homes from './homes.js';
+import * as homeinside from './homeinside.js';
+import * as skate from './skate.js';
 
 // an arcade's door: a business place whose building is an arcade (the strip's storefronts, the Pixel Arcade)
 export function isArcade(world, poi) {
@@ -26,50 +38,116 @@ export function isArcade(world, poi) {
 }
 export const label = (poi) => `${poi.label} - the arcade`;
 
-// the counter's menu (economy.js buildMenu): a credit, the prize counter
+// ---- the floor -------------------------------------------------------------------------------------------------------
+export const ARC0 = 5000000;   // (an arcade's floor's id: clear of the homes' and the flats' - homes.js UNIT0)
+// the cabinets along the back wall, west to east (shared/homelayout.js 'arcade': its j pieces in order), a game each
+export const GAMES = ['starfall', 'skee', 'pinball', 'hockey'];
+const GAME = {
+  starfall: { name: 'STARFALL', price: () => ARCADE.price, note: () => `tickets for every ${ARCADE.perTicket} points` },
+  skee: { name: 'Skee-ball', price: () => ARCADE.skee.price, note: () => `${ARCADE.skee.balls} balls - tickets for every ${ARCADE.skee.perTicket} points` },
+  pinball: { name: 'Pinball - NEON NIGHTS', price: () => ARCADE.pinball.price, note: () => `three balls - a ticket for every ${ARCADE.pinball.perTicket.toLocaleString('en-US')} points` },
+  hockey: { name: 'Air hockey against the machine', price: () => ARCADE.hockey.price, note: () => `first to ${ARCADE.hockey.to} - ${ARCADE.hockey.win} tickets for a win` },
+};
+const PLAN = 'arcade', TIER = 3;   // (the mansion's palette: the deep purple carpet, the dark walls)
+export const hallLayout = () => layout(PLAN, TIER);
+// the floor behind an arcade's door (made the first time anyone goes in): a "home" to homes.js and homeinside.js -
+// x, y its door out in the street (where you come out), price only for the plan's palette (homelayout.js tierOf)
+export function hallOf(world, poi) {
+  const id = ARC0 + poi.id, H = (world.arcadeHalls ||= new Map());
+  let h = H.get(id);
+  if (!h) H.set(id, (h = { id, isArcade: 1, poi: poi.id, kind: 'arcade', plan: PLAN, price: 60000, name: poi.label, x: poi.x, y: poi.y, slots: 0, welcome: `In ${poi.label}: walk up to a cabinet to play, the prize counter for your tickets.` }));
+  return h;
+}
+export const hallById = (world, id) => (world.arcadeHalls ? world.arcadeHalls.get(Number(id)) || null : null);
+const inHall = (p, poi) => !!(p.ped && p.ped.hidden && p.ped.home && p.ped.home.arcade && p.ped.home.id === ARC0 + poi.id);
+// At an arcade's door (players.js findInteraction): in you go
+export function doorInteraction(world, p) {
+  const ped = p.ped;
+  if (!ped || ped.dead || ped.vehId || ped.hidden || ped.entering || ped.ug || ped.carrying) return null;
+  const poi = world.map.poiNear(ped.x, ped.y);
+  if (!poi || !isArcade(world, poi)) return null;
+  if (!p.homePre && p.conn) { p.homePre = 1; p.conn.sendJSON({ t: 'home', pre: 1 }); }   // (the floor's drawing loaded ahead: homeview.js)
+  return { label: `Into ${poi.label} - the arcade`, run: () => goIn(world, p, poi) };
+}
+// in through the door: as a block's lobby (homeinside.js intoLobby) - not with the police watching; wanted, out of their
+// sight, the door takes its moment (homes.update)
+export function goIn(world, p, poi) {
+  const ped = p.ped;
+  const err = !ped || ped.dead || ped.vehId || ped.hidden ? 'Not right now.' : ped.carrying ? 'Set the crate down first.' : p.wanted > 0 && world.time - (p.seenAt || -99) < 1.5 ? 'Not with the police watching you!' : null;
+  if (err) { world.notify(p, err, 'bad'); return err; }
+  if (ped.board) skate.hopOff(world, ped);   // (your board left by the door)
+  const h = hallOf(world, poi);
+  if (p.wanted > 0) { ped.entering = { home: h.id, at: world.time, x: ped.x, y: ped.y }; ped.vx = 0; ped.vy = 0; world.notify(p, `Slipping into ${poi.label}... (stand still)`, 'info'); return null; }
+  homes.goInside(world, p, h);
+  return null;
+}
+// the cabinet within reach of (x, y) - the nearest, to its edge - with its game, or null
+const edge = (q, x, y) => Math.hypot(Math.max(q.x - x, 0, x - (q.x + q.w)), Math.max(q.y - y, 0, y - (q.y + q.h)));
+export function cabinetAt(L, x, y) {
+  let best = null, bd = HOME_IN.reach + 2;
+  L.pieces.filter((q) => q.ch === 'j').forEach((q, i) => { const d = edge(q, x, y); if (d < bd) { bd = d; best = { piece: q, game: GAMES[i % GAMES.length], d }; } });
+  return best;
+}
+// What the action button does where you stand on the floor (homeinside.js interaction)
+export function hallInteraction(world, p, h, s) {
+  const L = hallLayout(), poi = world.map.pois[h.poi], none = () => {};
+  const u = useAt(L, s.x, s.y, HOME_IN.reach), cab = cabinetAt(L, s.x, s.y);
+  if (cab && (!u || cab.d <= edge(u, s.x, s.y))) {
+    const G = GAME[cab.game], best = bestOf(p.profile, cab.game);
+    return { label: `Play ${G.name} - $${G.price()} (${G.note()}${best ? `; your best ${best.toLocaleString('en-US')}` : ''})`, run: () => credit(world, p, poi, cab.game) };
+  }
+  if (u && u.use === 'door') return { label: 'Out to the street', run: () => homeinside.leave(world, p) };
+  if (u && u.use === 'prizes') { const t = p.profile.tickets || 0; return { label: `The prize counter - ${t} ticket${t === 1 ? '' : 's'}`, run: () => openCounter(world, p, poi) }; }
+  return world.time - (s.inAt ?? -1e9) < HOME_IN.hintS ? { label: `${h.name} - walk up to a cabinet to play, the prize counter for your tickets`, passive: true, run: none } : null;
+}
+const bestOf = (prof, game) => ({ skee: prof.skeeBest, hockey: prof.hockeyWins, pinball: prof.pinballBest }[game] ?? prof.arcadeBest) || 0;
+// a credit in a cabinet: paid for, and the page plays it (play)
+export function credit(world, p, poi, game) {
+  const G = GAME[game];
+  if (!G || !poi) return 'Out of order.';
+  if (!pay(p, G.price())) { world.notify(p, 'Not enough money.', 'warn'); return 'Not enough money.'; }
+  play(world, p, false, poi.id, game);
+  return null;
+}
+// the prize counter's menu, up on the page (economy.js handleMenu: its choices)
+export function openCounter(world, p, poi) {
+  if (!p.conn || !poi) return;
+  p.menu = { poi: poi.id };
+  p.conn.sendJSON(menu(world, p, poi));
+}
+
+// the menu at an arcade's POI (economy.js buildMenu): on its floor at the counter, the prizes; out at the door (a menu
+// opened some other way), the way in
 export function menu(world, p, poi) {
   const prof = p.profile, t = prof.tickets || 0, opts = [];
-  if (p.arcadePrizes === poi.id) {
-    ARCADE.prizes.forEach((q, i) => opts.push({ id: `ar:prize:${i}`, label: `${prizeName(q)} - ${q.t} tickets`, dis: t < q.t, note: q.decor ? 'for your home, delivered' : '' }));
-    opts.push({ id: 'ar:back', label: 'Back to the games' });
-    opts.push({ id: 'close', label: 'Leave' });
-    return { t: 'menu', poi: poi.id, title: `${poi.label} - the prize counter`, sub: `You have ${t} ticket${t === 1 ? '' : 's'}.`, opts, cash: prof.cash, bank: prof.bank };
+  if (inHall(p, poi)) {
+    ARCADE.prizes.forEach((q, i) => { const have = q.board && skate.owns(p); opts.push({ id: `ar:prize:${i}`, label: `${prizeName(q)} - ${q.t} tickets`, dis: t < q.t || have, note: q.decor ? 'for your home, delivered' : have ? 'have one' : q.board ? 'yours, set down by the door' : '' }); });
+    opts.push({ id: 'close', label: 'Done' });
+    return { t: 'menu', poi: poi.id, title: `${poi.label} - the prize counter`, sub: `You have ${t} ticket${t === 1 ? '' : 's'}. Your best at STARFALL: ${prof.arcadeBest || 0}.`, opts, cash: prof.cash, bank: prof.bank };
   }
-  opts.push({ id: 'ar:play', label: 'Play STARFALL', price: ARCADE.price, note: `tickets for every ${ARCADE.perTicket} points`, shut: true });
-  opts.push({ id: 'ar:skee', label: 'Skee-ball', price: ARCADE.skee.price, note: `${ARCADE.skee.balls} balls - tickets for every ${ARCADE.skee.perTicket} points`, shut: true });
-  opts.push({ id: 'ar:pinball', label: 'Pinball - NEON NIGHTS', price: ARCADE.pinball.price, note: `three balls - a ticket for every ${ARCADE.pinball.perTicket.toLocaleString('en-US')} points`, shut: true });
-  opts.push({ id: 'ar:hockey', label: 'Air hockey against the machine', price: ARCADE.hockey.price, note: `first to ${ARCADE.hockey.to} - ${ARCADE.hockey.win} tickets for a win`, shut: true });
-  opts.push({ id: 'ar:prizes', label: `The prize counter (${t} ticket${t === 1 ? '' : 's'})` });
+  opts.push({ id: 'ar:in', label: 'Go inside', note: 'the cabinets and the prize counter', shut: true });
   opts.push({ id: 'close', label: 'Leave' });
-  return { t: 'menu', poi: poi.id, title: poi.label, sub: `The cabinets blinking in the dark, the bleeps and the high scores. Your best: ${prof.arcadeBest || 0}.`, opts, cash: prof.cash, bank: prof.bank };
+  return { t: 'menu', poi: poi.id, title: poi.label, sub: `The cabinets blinking in the dark, the bleeps and the high scores. You have ${t} ticket${t === 1 ? '' : 's'}.`, opts, cash: prof.cash, bank: prof.bank };
 }
-const prizeName = (q) => (q.item ? ITEMS[q.item].name : DECOR[q.decor].name);
+const prizeName = (q) => (q.item ? ITEMS[q.item].name : q.board ? 'A skateboard of your own' : DECOR[q.decor].name);
 
 // economy.js execute: 'ar:...' (pay: economy.js pay)
-export function execute(world, p, poi, opt, pay) {
+export function execute(world, p, poi, opt) {
   const parts = opt.split(':'), prof = p.profile;
   switch (parts[1]) {
-    case 'prizes': p.arcadePrizes = poi.id; return null;
-    case 'back': p.arcadePrizes = null; return null;
-    case 'play': {
-      if (!pay(p, ARCADE.price)) return 'Not enough money.';
-      play(world, p, false, poi.id);
-      return null;
-    }
-    case 'skee': case 'hockey': case 'pinball': {   // (skee-ball and air hockey: client/skeeball.js, client/airhockey.js)
-      if (!pay(p, ARCADE[parts[1]].price)) return 'Not enough money.';
-      play(world, p, false, poi.id, parts[1]);
-      return null;
-    }
+    case 'in': return goIn(world, p, poi);
     case 'prize': {
       const q = ARCADE.prizes[Number(parts[2])];
       if (!q) return 'Not on the shelf.';
+      if (!inHall(p, poi)) return 'The prize counter\'s inside.';
       if ((prof.tickets || 0) < q.t) return 'Not enough tickets.';
       if (q.decor && !(prof.homes || []).length) return 'You need a home to put it in.';
+      if (q.board && skate.owns(p)) return 'You have a skateboard already.';
       prof.tickets -= q.t;
       if (q.item) prof.inventory[q.item] = (prof.inventory[q.item] || 0) + 1;
+      else if (q.board) { prof.board = { paint: Math.floor(world.rand() * 14), variant: Math.floor(world.rand() * 1000) }; skate.bringOut(world, p, poi.outside || poi); }
       else { prof.furn ||= {}; prof.furn[q.decor] = (prof.furn[q.decor] || 0) + 1; }
-      world.notify(p, `Won: ${prizeName(q)}${q.decor ? ' - delivered to your home\'s storage (place it from the hall table: Decorate)' : ' - in your bag'}.`, 'good');
+      world.notify(p, `Won: ${prizeName(q)}${q.decor ? ' - delivered to your home\'s storage (place it from the hall table: Decorate)' : q.board ? ' - by the door outside (the vehicle button steps on and off it)' : ' - in your bag'}.`, 'good');
       p.meDirty = true;
       store.touch();
       return null;
@@ -152,7 +230,7 @@ export function onScore(world, p, msg) {
   if (A.free) { world.notify(p, `STARFALL: ${score}${best ? ' - a new high score!' : ''}`, best ? 'good' : 'info'); store.touch(); return; }
   const tickets = Math.min(ARCADE.maxTickets, Math.floor(score / ARCADE.perTicket));
   prof.tickets = (prof.tickets || 0) + tickets;
-  world.notify(p, `STARFALL: ${score}${best ? ' - a new high score!' : ''} ${tickets} ticket${tickets === 1 ? '' : 's'} (${prof.tickets} in all - the prize counter's at the door).`, tickets ? 'good' : 'info');
+  world.notify(p, `STARFALL: ${score}${best ? ' - a new high score!' : ''} ${tickets} ticket${tickets === 1 ? '' : 's'} (${prof.tickets} in all - the prize counter's by the east wall).`, tickets ? 'good' : 'info');
   p.meDirty = true;
   store.touch();
 }

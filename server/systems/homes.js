@@ -40,7 +40,7 @@ export const isUnit = (id) => Number(id) >= UNIT0;
 export function homeById(world, id) {
   if (id == null) return null;
   const n = Number(id);
-  if (n >= UNIT0) return (world.units && world.units.get(n)) || (world.lobbies && world.lobbies.get(n)) || null;   // (a block's lobby: H71)
+  if (n >= UNIT0) return (world.units && world.units.get(n)) || (world.lobbies && world.lobbies.get(n)) || (world.arcadeHalls && world.arcadeHalls.get(n)) || null;   // (a block's lobby: H71; an arcade's floor - arcade.js)
   return (world.map.homes && world.map.homes[n]) || null;
 }
 // how many homes an apartment block holds: by its footprint (an 8x11 walk-up: 6), 4 to 8
@@ -478,7 +478,7 @@ export function goInside(world, p, h) {
   ped.fishing = null;
   world.place(ped);
   world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
-  world.notify(p, `You're inside ${h.name}. Nobody can see or hurt you in here.`, 'good');
+  world.notify(p, h.welcome || `You're inside ${h.name}. Nobody can see or hurt you in here.`, 'good');   // (an arcade's floor: its own - arcade.js)
   p.meDirty = true;
   homeinside.enter(world, p, h);   // (the rooms to walk round: homeinside.js)
 }

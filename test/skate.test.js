@@ -1,7 +1,9 @@
-// Skateboarding, part 1 (the owner, 2026-10-17): a skateboard bought at a skate, sports or surf shop and carried in the
-// bag; the vehicle button hops you on where there's no car to get into, and off again. On the board: push, carve, coast,
-// brake and ollie (shared/physics.js BOARD - the page predicts it the same); faster than running, not as fast as a bike;
-// it rolls on anything paved, and on grass you step off. Run into a wall hard and you bail. The rider's look on the wire.
+// Skateboarding, part 1 (the owner, 2026-10-17; 2026-10-24: "just making it like other vehicles would work best"): a
+// skateboard is a vehicle lying in the world - a rack at each skate park, a few by the skate shops and the boardwalks,
+// yours bought at a skate, surf or sports shop and set down by the door; the vehicle button by one steps you on, and again
+// off (it's left at your feet). On the board: push, carve, coast, brake and ollie (shared/physics.js BOARD - the page
+// predicts it the same); faster than running, not as fast as a bike; it rolls on anything paved, and on grass you step
+// off. Run into a wall hard and you bail. The rider's look on the wire. A board in an old bag: your own board now.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport, run, straightRoad } from './helpers.js';
@@ -9,6 +11,9 @@ import { T, TILE, PF } from '../shared/constants.js';
 import { IN } from '../shared/input.js';
 import { ITEMS, SHOPS } from '../shared/items.js';
 import { SKATEBOARD_PRICE } from '../shared/rules.js';
+import { VEHICLES } from '../shared/vehicles.js';
+import { K } from '../shared/constants.js';
+import * as traffic from '../server/systems/traffic.js';
 import { pedStep, newPedState, PED, boardOn } from '../shared/physics.js';
 import { BOARD, KICK, boardGround, boardOut, boardIn } from '../shared/board.js';
 import * as SK from '../shared/skate.js';
@@ -25,13 +30,15 @@ const W = makeWorld();
 const M = W.map;
 const ROAD = straightRoad(M, 1200);
 const push = (p, mx, my, bits = 0) => p.inputQ.push({ seq: p.ack + 1 + p.inputQ.length, bits, mx, my, aim: Math.atan2(my, mx) });
+// a player at (x, y) with a skateboard lying at their feet (opts.board false: none)
 function rider(x, y, opts = {}) {
   const { p } = joinPlayer(W, { cash: 500 });
-  if (opts.board !== false) p.profile.inventory.skateboard = 1;
   teleport(W, p.ped, x, y);
   p.ped.vx = 0; p.ped.vy = 0; p.ped.a = 0;
+  if (opts.board !== false) { const v = W.spawnVehicle('skateboard', x, y + 14, 0, { npcOwned: false }); v.parked = false; }
   return p;
 }
+const boardsNear = (x, y, r = 60) => W.query(x, y, r, K.VEH).filter((v) => v.def.board && !v.removed);
 // hold the stick (and the buttons) for t seconds; the buttons pressed on the first step only when `tap`
 function hold(p, t, mx, my, bits = 0, tap = 0) {
   const n = Math.round(t * 20);
@@ -97,12 +104,17 @@ test('the board: as fast as a bike pushing, kick by kick; coasts a long way; bra
 });
 
 // ---- on and off, the look on the wire ------------------------------------------------------------------------------
-test('the vehicle button: on the board where there\'s no car to get into, off again; the rider\'s look and flags on the wire', () => {
+test('a skateboard on the ground: the vehicle button gets you on it (taken up off the ground), off again (left at your feet); the rider\'s look and flags on the wire', () => {
   assert.ok(ROAD, 'a long straight road');
+  assert.ok(VEHICLES.skateboard && VEHICLES.skateboard.board && !ITEMS.skateboard, 'a vehicle, not a thing in the bag');
+  assert.ok(!SHOPS.sports.buy.some((o) => o.id === 'skateboard'), 'not on a shop\'s shelf of things');
   const p = rider(ROAD.x + 300, ROAD.y);
   const ped = p.ped, v0 = ped.appVer || 0;
+  assert.equal(boardsNear(ped.x, ped.y).length, 1, 'a board lying there');
+  assert.equal(players.findInteraction(W, p).label, 'Get on the skateboard', 'the prompt');
   hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
   assert.ok(skate.riding(ped), 'on the board');
+  assert.equal(boardsNear(ped.x, ped.y).length, 0, 'taken up off the ground');
   const d = _descriptor(ped);
   assert.equal(d.gt, 'skate'); assert.equal(d.pp, 'board'); assert.equal(d.bd, 1);
   assert.ok((ped.appVer || 0) > v0, 'the look sent again');
@@ -115,25 +127,24 @@ test('the vehicle button: on the board where there\'s no car to get into, off ag
   hold(p, 0.8, 0, 0);
   assert.ok(!(players.pedFlags(W, ped) & PF.ROLL), 'landed');
   assert.ok(!(players.pedFlags(W, ped) & PF.SPRINT) && speed(ped) > 100, 'coasting: no push frames, still rolling');
+  hold(p, 1.5, -1, 0);
   hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
   assert.ok(!skate.riding(ped), 'off again');
   const d2 = _descriptor(ped);
   assert.ok(!d2.bd && d2.gt !== 'skate' && d2.pp !== 'board', 'the look back to walking');
-  assert.equal(p.profile.inventory.skateboard, 1, 'the board still in the bag');
-  // from the bag: on, and off
-  economy.useItem(W, p, 'skateboard');
-  assert.ok(skate.riding(ped), 'used from the bag: on');
-  economy.useItem(W, p, 'skateboard');
-  assert.ok(!skate.riding(ped), 'and off');
+  const [b] = boardsNear(ped.x, ped.y, 40);
+  assert.ok(b && Math.hypot(b.x - ped.x, b.y - ped.y) < 30, 'the board left at your feet');
+  assert.ok(b.despawnable && !b.owner && !b.parked, 'a park\'s board, nobody\'s: gone once nobody\'s about');
+  hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
+  assert.ok(skate.riding(ped), 'and back on it');
+  hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
   leave(p);
 });
 
 test('no board, no ride; not on grass, in the water or indoors; a car beside you takes you off the board and into it', () => {
   const p = rider(ROAD.x + 600, ROAD.y, { board: false });
   hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
-  assert.ok(!skate.riding(p.ped), 'no skateboard in the bag: nothing');
-  assert.match(skate.blocked(W, p, p.ped), /need a skateboard/);
-  p.profile.inventory.skateboard = 1;
+  assert.ok(!skate.riding(p.ped), 'no skateboard by you: nothing (the bag has none to use)');
   // rough ground, the water, indoors
   const find = (pred) => { for (let ty = M.y0 + 10; ty < M.y0 + M.h - 10; ty += 3) for (let tx = M.x0 + 10; tx < M.x0 + M.w - 10; tx += 3) if (pred(M.tileAt(tx, ty))) return [(tx + 0.5) * TILE, (ty + 0.5) * TILE]; return null; };
   for (const [what, t, re] of [['grass', T.GRASS, /rough/], ['water', T.WATER, /water/], ['a shop floor', T.FLOOR, /indoors/]]) {
@@ -141,20 +152,26 @@ test('no board, no ride; not on grass, in the water or indoors; a car beside you
     if (!at) continue;
     teleport(W, p.ped, at[0], at[1]);
     assert.match(skate.blocked(W, p, p.ped) || '', re, `${what}: not here`);
+    const v = W.spawnVehicle('skateboard', at[0], at[1], 0, { npcOwned: false });
+    assert.ok(!skate.mount(W, p, p.ped, v) && !v.removed, `${what}: the board stays where it lies`);
+    W.remove(v);
   }
-  // a car right there: off the board and in
+  // a car right there: off the board and in (the board left lying)
   teleport(W, p.ped, ROAD.x + 600, ROAD.y);
-  assert.ok(skate.hopOn(W, p, p.ped));
-  const car = W.spawnVehicle('sedan', p.ped.x + 30, p.ped.y, 0, { parked: true });
+  const v = W.spawnVehicle('skateboard', p.ped.x, p.ped.y, 0, { npcOwned: false });
+  assert.ok(skate.mount(W, p, p.ped, v));
+  const car = W.spawnVehicle('sedan', p.ped.x + 40, p.ped.y, 0, { parked: true });
   car.owner = p.pid;   // (your own: no Safety mode prompt)
   hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
   assert.ok(!skate.riding(p.ped), 'off the board');
   assert.equal(p.ped.vehId, car.id, 'and into the car');
+  assert.equal(boardsNear(car.x, car.y, 90).length, 1, 'the board left on the ground');
   vehicles.exitVehicle(W, p.ped); W.remove(car);
+  for (const b of boardsNear(car.x, car.y, 120)) W.remove(b);
   leave(p);
 });
 
-test('riding onto grass you step off; into a wall hard you bail - down, a little hurt, the board flying off, still yours', () => {
+test('riding onto grass you step off; into a wall hard you bail - down, a little hurt, the board flying off and landing where it stops', () => {
   // a pavement or plaza run of 10 tiles ending at a building's wall, and one ending at grass
   const runTo = (end) => {
     for (let ty = M.y0 + 20; ty < M.y0 + M.h - 20; ty++) for (let tx = M.x0 + 20; tx < M.x0 + M.w - 20; tx++) {
@@ -189,14 +206,18 @@ test('riding onto grass you step off; into a wall hard you bail - down, a little
   assert.ok(seen.includes('bail'), 'the bail: the board flies off');
   assert.ok(p.ped.hp < hp0, `hurt a little (${hp0} -> ${p.ped.hp})`);
   assert.ok(hp0 - p.ped.hp <= 25, 'only a little');
-  assert.equal(p.profile.inventory.skateboard, 1, 'the board is still yours');
   run(W, 2);
+  const [b] = boardsNear(p.ped.x, p.ped.y, 170);
+  assert.ok(b, 'down again where it stopped');
+  teleport(W, p.ped, b.x, b.y - 16);
   hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
   assert.ok(skate.riding(p.ped), 'up again, and back on it');
+  hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
+  for (const q of boardsNear(p.ped.x, p.ped.y, 80)) W.remove(q);
   leave(p);
 });
 
-test('knocked down on the board: off it; the shops sell boards; the poses build', () => {
+test('knocked down on the board: off it; the board\'s a short hop, slower than a bike; the poses build', () => {
   const p = rider(ROAD.x + 900, ROAD.y);
   hold(p, 0.1, 1, 0, 0, IN.VEHICLE);
   assert.ok(skate.riding(p.ped));
@@ -204,21 +225,125 @@ test('knocked down on the board: off it; the shops sell boards; the poses build'
   hold(p, 0.1, 0, 0);
   assert.ok(!skate.riding(p.ped), 'knocked down: off the board');
   leave(p);
-  // where you buy one
-  assert.ok(ITEMS.skateboard && ITEMS.skateboard.tool && ITEMS.skateboard.board);
-  assert.ok(SHOPS.sports.buy.some((o) => o.id === 'skateboard' && o.price === SKATEBOARD_PRICE), 'the sports shops');
-  const q = joinPlayer(W, { cash: 500 }).p;
-  for (const store of ['kickflip', 'surf']) {
-    const menu = economy.buildMenu(W, q, { id: 9999, kind: 'clothing', store, label: 'Test', x: 0, y: 0 });
-    assert.ok(menu.opts.some((o) => o.id === `i:skateboard:${SKATEBOARD_PRICE}:1`), `the ${store} shop sells a board`);
-  }
-  leave(q);
+  // (the owner, 2026-10-24: "too powerful ... people will always be using skateboards to get around faster")
+  for (const id of ['bicycle', 'cruiser', 'bmx', 'mtb']) assert.ok(BOARD.push < VEHICLES[id].max, `cruising slower than a ${VEHICLES[id].name} (${BOARD.push} < ${VEHICLES[id].max})`);
+  assert.ok(BOARD.pushHard < VEHICLES.bicycle.max, 'pushing hard (and tiring) still short of the commuter bike');
   // the rider's poses: the kick (8), rolling (1), the ollie (3) - each frame its own
   assert.equal(POSES.skate, 8); assert.equal(POSES.skatec, 1); assert.equal(POSES.skateair, 3);
   const app = { s: 2, h: 1, hc: '#3a2414', t: 4, tc: '#7a3a2a', tc2: '#eee', l: '#4a5a3a', sh: '#eee', bd: 1 };
   const sum = (G) => { let h = 0; for (let i = 0; i < G.col.length; i += 3) h = (Math.imul(h, 31) + G.col[i]) | 0; return h; };
   const frames = new Set([sum(pedSprite(app, 'skatec', 2, 0, 0, { ar: 'casual' })), ...[0, 1, 2].map((f) => sum(pedSprite(app, 'skateair', 2, f, 0, { ar: 'casual' })))]);
   assert.equal(frames.size, 4, 'rolling and the three ollie frames all differ');
+});
+
+// ---- the boards lying about, yours, the old bag's ------------------------------------------------------------------
+test('the boards set out: a rack at each skate park, one or two by the skate and surf shops and the boardwalks - sparse, never on a road', () => {
+  const tx = Math.floor(ROAD.x / TILE) + 40, ty = Math.floor(ROAD.y / TILE) - 8;
+  const spots0 = M.skateSpots, cache = M._boardSpots;
+  M.skateSpots = [{ name: 'Test Park', x: tx, y: ty, w: 14, h: 6, seats: [] }]; delete M._boardSpots;
+  try {
+    const S = skate.boardSpots(M);
+    const park = S.filter((q) => q.kind === 'park');
+    assert.equal(park.length, 3, 'a rack of three at the park');
+    for (const q of park) assert.ok(q.x >= tx * TILE && q.x < (tx + 14) * TILE && q.y >= ty * TILE - 40 && q.y < (ty + 6) * TILE + 40, 'at the park');
+    assert.ok(Math.hypot(park[1].x - park[0].x, park[1].y - park[0].y) < 20, 'side by side');
+    const ROADISH = new Set([T.ROAD, T.BRIDGE]);
+    for (const q of S) for (const [dx, dy] of [[-13, -6], [13, -6], [-13, 6], [13, 6], [0, 0]]) {
+      const t = M.tileAtPx(q.x + dx, q.y + dy);
+      assert.ok(!ROADISH.has(t) && boardGround(t) <= 1, `never on a road (${q.kind} at ${Math.round(q.x)},${Math.round(q.y)})`);
+    }
+    assert.ok(S.filter((q) => q.kind !== 'park').length <= 2 * M.pois.filter((p) => p.kind === 'clothing' || /boardwalk/i.test(p.label || '')).length, 'one or two a shop at most');
+    // put out round a player, where nobody's looking
+    const p = rider(park[0].x, park[0].y + 120, { board: false });
+    p.teleportAt = W.time;
+    run(W, 1);
+    const out = [...W.entities.values()].filter((v) => v.kind === K.VEH && v.def.board && v.boardSpot !== undefined && S[v.boardSpot].kind === 'park');
+    assert.equal(out.length, 3, 'the rack filled');
+    assert.ok(out.every((v) => !v.owner && !v.npcOwned), 'free to take');
+    // taken and ridden off: its place empty till it's gone for good
+    teleport(W, p.ped, out[0].x, out[0].y - 14); p.teleportAt = W.time;
+    hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
+    assert.ok(skate.riding(p.ped));
+    run(W, 1);
+    assert.equal([...W.entities.values()].filter((v) => v.kind === K.VEH && v.def.board && v.boardSpot === out[0].boardSpot).length, 0, 'no new one while it\'s ridden');
+    hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
+    const left = boardsNear(p.ped.x, p.ped.y, 40)[0];
+    assert.ok(left && left.despawnable, 'left lying');
+    // nobody about: gone (traffic.js manage), and the rack fills again when someone comes back
+    for (const o of W.players.values()) if (o.ped) teleport(W, o.ped, o.ped.x + 4000, o.ped.y);   // (everyone: the ghosts of the tests before too)
+    run(W, 2);
+    assert.ok(!W.get(left.id), 'gone once nobody\'s about');
+    void traffic;
+    leave(p);
+  } finally { M.skateSpots = spots0; if (cache) M._boardSpots = cache; else delete M._boardSpots; }
+});
+
+test('your own board: bought at a skate, surf or sports shop and set down by the door; one at a time, brought out at the shop or at home; left lying, it goes home', () => {
+  const { p } = joinPlayer(W, { cash: 500 });
+  const shop = M.pois.find((q) => q.kind === 'sports') || { id: 9998, kind: 'sports', label: 'Test Sports', x: ROAD.x + 1400, y: ROAD.y + 60, r: 40 };
+  for (const store of ['kickflip', 'surf']) {
+    const menu = economy.buildMenu(W, p, { id: 9999, kind: 'clothing', store, label: 'Test', x: 0, y: 0 });
+    assert.ok(menu.opts.some((o) => o.id === 'bd:buy' && o.price === SKATEBOARD_PRICE), `the ${store} shop sells a board`);
+  }
+  assert.ok(economy.buildMenu(W, p, shop).opts.some((o) => o.id === 'bd:buy'), 'the sports shops');
+  const at = shop.outside || shop;
+  teleport(W, p.ped, shop.x, shop.y);
+  const cash0 = p.profile.cash;
+  economy.handleMenu(W, p, shop.id, 'bd:buy');
+  assert.equal(p.profile.cash, cash0 - SKATEBOARD_PRICE, 'paid');
+  assert.ok(p.profile.board, 'yours');
+  const mine = () => [...W.entities.values()].filter((v) => v.kind === K.VEH && v.def.board && v.owner === p.pid);
+  assert.equal(mine().length, 1, 'set down');
+  const b = mine()[0];
+  assert.ok(Math.hypot(b.x - at.x, b.y - at.y) < 4.5 * TILE, 'by the door (outside a walk-in shop)');
+  assert.ok(![T.ROAD, T.FLOOR, T.COUNTER].includes(M.tileAtPx(b.x, b.y)), 'out on the pavement');
+  const m2 = economy.buildMenu(W, p, shop);
+  assert.ok(!m2.opts.some((o) => o.id === 'bd:buy') && m2.opts.some((o) => o.id === 'bd:out'), 'one board: bring yours out instead');
+  assert.equal(vehicles.enterLabel(W, p, b), 'Get on your skateboard');
+  // someone else's: theirs to steal (bike theft)
+  const { p: q } = joinPlayer(W);
+  teleport(W, q.ped, b.x, b.y - 14);
+  assert.equal(vehicles.entryInfo(W, q, b).crime, 'bikeTheft');
+  assert.match(vehicles.enterLabel(W, q, b), /Ride off on the skateboard - .*Theft/i);
+  leave(q);
+  // ridden away and stepped off: still yours
+  teleport(W, p.ped, b.x, b.y - 14);
+  hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
+  assert.ok(skate.riding(p.ped));
+  hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
+  assert.equal(mine().length, 1, 'down again, still yours');
+  // brought out at the shop again: the one lying about gone - never two
+  const far = mine()[0];
+  teleport(W, p.ped, shop.x, shop.y);
+  economy.handleMenu(W, p, shop.id, 'bd:out');
+  assert.equal(mine().length, 1); assert.ok(!W.get(far.id) || mine()[0].id !== far.id, 'the old one gone, a fresh one by the door');
+  // left lying where you're nowhere near: home again (and a word about it)
+  teleport(W, p.ped, mine()[0].x + 6000, mine()[0].y);
+  const said = [], n0 = W.notify.bind(W);
+  W.notify = (o, t, tone) => { if (o === p) said.push(t); return n0(o, t, tone); };
+  run(W, 2.5);
+  W.notify = n0;
+  assert.equal(mine().length, 0, 'gone home');
+  assert.ok(said.some((t) => /back home/.test(t)), 'and a word about it');
+  // the home menu: take it out by your front door
+  const homeOpts = [];
+  skate.shopOptions(p, homeOpts, true);
+  assert.ok(homeOpts.some((o) => o.id === 'bd:out'), 'at home: take your skateboard out');
+  leave(p);
+});
+
+test('a skateboard in an old bag: yours to keep as your own board (no item left, a word about it); the vehicle button never pulls a board from nowhere', () => {
+  const { p } = joinPlayer(W, { cash: 50, inventory: { skateboard: 1, medkit: 1 }, quick: ['skateboard', 'medkit', null, null] });
+  assert.ok(!p.profile.inventory.skateboard, 'out of the bag');
+  assert.equal(p.profile.inventory.medkit, 1, 'the rest of the bag as it was');
+  assert.ok(p.profile.board, 'your own board now');
+  assert.ok(!p.profile.quick.includes('skateboard'), 'off the quick wheel');
+  const menu = economy.buildMenu(W, p, { id: 9999, kind: 'clothing', store: 'kickflip', label: 'Test', x: 0, y: 0 });
+  assert.ok(menu.opts.some((o) => o.id === 'bd:out') && !menu.opts.some((o) => o.id === 'bd:buy'), 'brought out free at a skate shop');
+  teleport(W, p.ped, ROAD.x + 1100, ROAD.y);
+  hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
+  assert.ok(!skate.riding(p.ped), 'no board lying by you: the vehicle button does nothing');
+  leave(p);
 });
 
 // ---- parts 2 and 3: the tricks (shared/skate.js - the page predicts them the same), their score, the sessions ---------

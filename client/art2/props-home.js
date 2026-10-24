@@ -363,6 +363,19 @@ export function arcade(w = 32, d = 32, tier = 3, on = 0) {
   void tier;
   return m;
 }
+// an arcade's prize counter (shared/homelayout.js G; server arcade.js): a dark counter, its front a glass case of prizes
+// lit from inside, the top glass over more, and plush toys along the back of it
+export function prizeCounter(w = 96, d = 32, tier = 3) {
+  const m = new Vox(w, d, 40);
+  const base = m.mat({ ramp: R('#3a2a4a'), k: 3 }), trim = m.mat({ ramp: R('#e85a9a'), k: 3, emi: [255, 110, 190, 70], flag: F_NOCAST });
+  const gl = m.mat({ ramp: R('#cfe6ee', 5, 3), k: 3, flag: F_GLASS | F_NOCAST }), toys = ['#e85a9a', '#f2c21b', '#3ad0e8', '#7ae86a', '#f08a3a'].map((c) => m.mat({ ramp: R(c), k: 3 }));
+  m.box(0, 2, 0, w, d, 8, base); m.box(0, 2, 8, 2, d, 24, base); m.box(w - 2, 2, 8, w, d, 24, base); m.box(0, 2, 8, w, 6, 24, base);
+  for (let x = 4, i = 0; x < w - 6; x += 7, i++) { m.box(x, 10, 8, x + 4, 14, 12 + (i % 3) * 2, toys[i % 5]); m.box(x + 2, 20, 8, x + 5, 23, 11, toys[(i + 2) % 5]); }
+  m.box(2, d - 1, 8, w - 2, d, 24, gl); m.box(2, 6, 24, w - 2, d, 25, gl); m.box(0, d - 1, 24, w, d, 26, trim);
+  for (let x = 6, i = 0; x < w - 6; x += 9, i++) m.ell(x, 4, 28, 3, 2.5, 3.5, toys[(i + 1) % 5]);
+  void tier;
+  return m;
+}
 // a row of cinema seats: deep red recliners, one to each 32 px, wide arms between them with cup holders
 export function cinemaSeats(w = 128, d = 32, tier = 3) {
   const m = new Vox(w, d, 30);
@@ -482,4 +495,4 @@ export function recordCrates(w = 32, d = 32, tier = 1) {
   void tier;
   return m;
 }
-export const MAKERS = { M: mailboxes, d: turntable, q: recordCrates, Z: stairs, B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench, x: poolTable, j: arcade, i: cinemaSeats, n: island, s: sectional, h: bathtub };
+export const MAKERS = { M: mailboxes, d: turntable, q: recordCrates, Z: stairs, B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench, x: poolTable, j: arcade, G: prizeCounter, i: cinemaSeats, n: island, s: sectional, h: bathtub };

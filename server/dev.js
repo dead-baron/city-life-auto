@@ -799,8 +799,8 @@ function run(world, p, c, msg) {
       world.notify(p, `[dev] At ${q.name}.`, 'info');
       break;
     }
-    case 'skate': case 'cart': case 'fish': {   // today's new play (2026-10-18): skateboarding, the shopping carts, fishing - server/devplay.js
-      const err = (c === 'skate' ? devplay.devSkate : c === 'cart' ? devplay.devCart : devplay.devFish)(world, p, msg);
+    case 'skate': case 'cart': case 'fish': case 'arcade': {   // today's new play (2026-10-18): skateboarding, the shopping carts, fishing (and the arcades' floors) - server/devplay.js
+      const err = (c === 'skate' ? devplay.devSkate : c === 'cart' ? devplay.devCart : c === 'arcade' ? devplay.devArcade : devplay.devFish)(world, p, msg);
       if (err) world.notify(p, err, 'warn');
       break;
     }

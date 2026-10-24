@@ -333,8 +333,8 @@ function onText(m) {
     case 'fish': fishGo(m); break;   // (a catch landed: its card)
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
-      if ((m.inv && m.inv.skateboard > 0) || m.sk) loadSkate();
-      if (m.fishing) loadFish();   // (a line out: client/fishing.js)   // (a board in your bag: riding it and its tricks - client/skate.js)
+      if (m.sk) loadSkate();   // (on a board: riding it and its tricks - client/skate.js)
+      if (m.fishing) loadFish();   // (a line out: client/fishing.js)
       S.ugLayer = m.ug || 0;   // (under the ground: the physics steps you through its own map, the underground view draws)
       syncTaxiDest();
       if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
@@ -509,7 +509,7 @@ function fixedStep() {
   if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
   if (!inOverlay && !S.playing) titlePad();
   const padUI = !spec && !inOverlay && S.playing && !S.hud.menuOpen && !S.bigmap, up = padUI && !(S.me && S.me.dead);   // (down, the D-pad picks where to wake up)
-  if (up && input.padCall) { if (S.me && S.me.cruiser) callCruiser(); else quickBoard(); }   // (D-pad down: the cop car, else the skateboard)
+  if (up && input.padCall && S.me && S.me.cruiser) callCruiser();   // (D-pad down: the cop car)
   if (up && input.padPhone) openPhone();
   // the bag (D-pad →) and the quick wheel (hold View, point with the right stick, let go)
   if (padUI && input.padRight) toggleBag();
@@ -1477,7 +1477,6 @@ initInput(canvas, {
     if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
     if (k === 'KeyV' && S.playing && !topOverlay()) callCruiser();
-    if (k === 'KeyB' && S.playing && !topOverlay() && !inCell()) quickBoard();
     if (k === 'Backquote' && S.playing) { if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
@@ -1487,7 +1486,6 @@ initInput(canvas, {
   onDev() { if (!S.playing) return; if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
   onCruiser() { if (S.playing) callCruiser(); },
-  onBoard() { if (S.playing) quickBoard(); },
   onPhone() { if (S.playing) openPhone(); },
   onSettings() { openSettings(true); },
   onFullscreen() { toggleFullscreen(); },
@@ -2608,15 +2606,6 @@ function baseZoom() {
   return long / (viewH * 16 / 9) * (S.camScale || 1); // (S.camScale: a closer camera, for trying framings)
 }
 
-// ---- the skateboard straight out of the bag (the owner, 2026-10-18: "pulling it out of the inventory is a hassle") ----
-// B, the touch 🛹 pill (there while you own a board, on foot) or D-pad down (when there's no cop car to call): on it
-// where you stand, or off - the bag's own use (server economy.js useItem -> skate.js toggle), which says why not
-function quickBoard() {
-  const me = S.me;
-  if (!me || me.dead || !(me.inv && me.inv.skateboard > 0)) return;
-  if (S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) return;
-  send({ t: 'inv', a: 'use', id: 'skateboard' });
-}
 // ---- personal police cruiser: radio dispatch, then an arrow leads you to it ------------------
 function callCruiser() {
   const c = S.me && S.me.cruiser;
@@ -2751,7 +2740,7 @@ function interp(e, rt) {
 }
 
 // Skateboarding on the page (client/skate.js: the board's step and its tricks for the prediction, how riders look, the
-// combo and the score on the screen): loaded once, when you get a board or first see someone ride one
+// combo and the score on the screen): loaded once, when a board's in sight or someone rides one
 function loadFish() {
   if (S.fish || S.fishAsk) return;
   S.fishAsk = 1;
@@ -2763,7 +2752,7 @@ function loadSkate() {
   S.skateAsk = 1;
   import('./skate.js').then((k) => { S.skate = new k.SkateView(S); }).catch((e) => { S.skateAsk = 0; console.warn('[skate]', e); });
 }
-// a skateboard on its own, seen from above (the deck along x, the wheels at each end): flying off after a bail
+// a skateboard on its own, seen from above (the deck along x, the wheels at each end): flying off after a bail, lying about
 let BOARD_IMG = null;
 function boardImg() {
   if (BOARD_IMG || typeof document === 'undefined') return BOARD_IMG;
@@ -3173,7 +3162,7 @@ function tickVisuals(F) {
     birdsTick(dt, view, F.vehs, F.peds);
   }
   S.lastPeds = F.peds; S.lastVehs = F.vehs;
-  for (const v of F.vehs) { const d = VEHICLE_BY_INDEX[v.d.m]; if (d) { v._L = d.L; v._W = d.W; } }
+  for (const v of F.vehs) { const d = VEHICLE_BY_INDEX[v.d.m]; if (d) { v._L = d.L; v._W = d.W; if (d.board) loadSkate(); } }   // (a board lying about: its riding ready - client/skate.js)
   S.trainCars = F.cars;
   fx.update(dt);
   soundFrame(F, S);   // engines, footsteps, the ambience, the places' music (client/sound/)
@@ -4170,6 +4159,7 @@ function drawVehicleEnt(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def || def.kind === 'air') return;   // (aircraft: over everything - render/aircraft.js)
   if (def.horse) { drawHorseV1(v, now, def); return; }   // (a horse: the animal and its rider - #325)
+  if (def.board) { const im = boardImg(); if (im) { g.save(); g.translate(v.rx, v.ry); g.rotate(v.ra); g.drawImage(im, -13, -5, 26, 10); g.restore(); } return; }   // (a skateboard lying on the ground)
   const f = v.flags;
   // a land vehicle in the water is sinking: it settles, darkens and fades, bubbling (vehVisual)
   const sinking = vehSinking(v, def);

@@ -1,7 +1,7 @@
 // The debug menu's commands for today's new play (the owner, 2026-10-18: "make sure all these new features are
-// accessible in the debug menu for easy testing"): skateboarding, the shopping carts and fishing. server/dev.js hands
+// accessible in the debug menu for easy testing"): skateboarding, the shopping carts and fishing (and the arcades' floors). server/dev.js hands
 // them on ('skate', 'cart', 'fish'); the buttons are client/devcats.js's sections. Each returns an error or null.
-//   devSkate(world, p, msg)   msg.k: 'on' (a board, and on it), 'spot' (the nearest skate spot, on your board),
+//   devSkate(world, p, msg)   msg.k: 'on' (a board at your feet, and on it), 'spot' (the nearest skate spot, on your board),
 //                             'session' (and a session started there), 'special' (the special meter full: on now),
 //                             'rail' / 'ramp' (the nearest ledge, flat bar or bench / kicker, quarter pipe or pyramid, lined
 //                             up on your board a run-up away)
@@ -22,6 +22,7 @@ import { undergroundOf, ugMapOf, caveNear } from '../shared/underground.js';
 import * as SK from '../shared/skate.js';
 import { store } from './store.js';
 import * as skate from './systems/skate.js';
+import * as arcade from './systems/arcade.js';
 import * as fishing from './systems/fishing.js';
 import * as vehicles from './systems/vehicles.js';
 import * as underground from './systems/underground.js';
@@ -32,7 +33,7 @@ import { spawnNpc } from './systems/npc.js';
 function moveMe(world, p, x, y, a) {
   const ped = p.ped;
   if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
-  if (ped.board) skate.hopOff(world, ped);
+  if (ped.board) skate.hopOff(world, ped, false);
   if (ped.fishing && ped.fishing.F) fishing.cancel(world, p, null);
   ped.sub = false; ped.ug = 0; ped.x = x; ped.y = y; ped.lz = 0; ped.vx = 0; ped.vy = 0;
   if (Number.isFinite(a)) ped.a = a;
@@ -50,12 +51,33 @@ function nearestProp(world, ped, keep) {
   for (const q of world.map.props) { if (!q || !keep(q.t)) continue; const d = Math.hypot(q.x - ped.x, q.y - ped.y); if (d > 40 && d < bd) { bd = d; best = q; } }
   return best;
 }
-const boardUp = (world, p) => { if (!skate.has(p)) { p.profile.inventory.skateboard = 1; p.meDirty = true; } return p.ped.board || skate.hopOn(world, p, p.ped); };
+// a skateboard at your feet, and on it (shared/vehicles.js 'skateboard': skate.js mount)
+function boardUp(world, p) {
+  if (p.ped.board) return true;
+  const v = world.spawnVehicle('skateboard', p.ped.x, p.ped.y, p.ped.a, { npcOwned: false });
+  v.parked = false;
+  if (skate.mount(world, p, p.ped, v)) return true;
+  world.remove(v);
+  return false;
+}
 export function devSkate(world, p, msg) {
   const err = free(p);
   if (err) return err;
   const ped = p.ped, k = String(msg.k || 'on');
   if (k === 'on') { if (!boardUp(world, p)) return '[dev] Can\'t ride here - stand on a road, a pavement or a plaza.'; world.notify(p, '[dev] On your board.', 'info'); return null; }
+  if (k === 'mine') {   // a board of your own, set down beside you (skate.js bringOut)
+    p.profile.board ||= { paint: 3, variant: 7 };
+    if (!skate.bringOut(world, p, ped)) return '[dev] Nowhere to set it down here.';
+    world.notify(p, '[dev] Your own skateboard, beside you.', 'info'); return null;
+  }
+  if (k === 'rack') {   // the nearest skate park's rack of boards (skate.js boardSpots), stood by it
+    const S = skate.boardSpots(world.map).filter((q) => q.kind === 'park');
+    if (!S.length) return '[dev] No skate park\'s rack on this map (World v3 has four).';
+    let q = S[0], bd = Infinity;
+    for (const s2 of S) { const d = Math.hypot(s2.x - ped.x, s2.y - ped.y); if (d < bd) { bd = d; q = s2; } }
+    moveMe(world, p, q.x, q.y - 30, Math.PI / 2);
+    world.notify(p, '[dev] At a skate park\'s rack: the vehicle button by a board gets you on it.', 'info'); return null;
+  }
   if (k === 'special') { skate.devSpecial(world, p); if (!ped.board) boardUp(world, p); world.notify(p, '[dev] SPECIAL on: tricks are their specials, worth three times, till you bail.', 'info'); return null; }
   if (k === 'spot' || k === 'session') {
     const S = world.map.skateSpots || [];
@@ -89,7 +111,20 @@ export function devSkate(world, p, msg) {
     world.notify(p, `[dev] Lined up on a ${q.t}: push at it, ${k === 'rail' ? 'ollie onto it and keep your balance' : 'and ollie off the lip'}.`, 'info');
     return null;
   }
-  return '[dev] Skate what? (on, spot, session, special, rail, ramp)';
+  return '[dev] Skate what? (on, mine, rack, spot, session, special, rail, ramp)';
+}
+
+// ---- the arcades (arcade.js): msg.k 'in' (onto the nearest arcade's floor), 'tickets' (500 more) ----------------------
+export function devArcade(world, p, msg) {
+  const k = String(msg.k || 'in');
+  if (k === 'tickets') { p.profile.tickets = (p.profile.tickets || 0) + 500; p.meDirty = true; world.notify(p, `[dev] ${p.profile.tickets} tickets.`, 'info'); return null; }
+  const err = free(p);
+  if (err) return err;
+  let best = null, bd = Infinity;
+  for (const q of world.map.pois) if (arcade.isArcade(world, q)) { const d = Math.hypot(q.x - p.ped.x, q.y - p.ped.y); if (d < bd) { bd = d; best = q; } }
+  if (!best) return '[dev] No arcade on this map.';
+  moveMe(world, p, best.x, best.y, -Math.PI / 2);
+  return arcade.goIn(world, p, best);
 }
 
 // ---- shopping carts ------------------------------------------------------------------------------------------------

@@ -434,6 +434,7 @@ import * as ferries from './ferries.js';
 import * as burning from './burning.js';   // (thrown out of it on fire: H58)
 import * as skills from './skills.js';
 import * as horses from './horses.js';   // (a horse: it bolts instead of burning - #325)
+import * as skate from './skate.js';   // (a skateboard on the ground: up on it - skate.js mount)
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);
@@ -526,10 +527,10 @@ export function acrossBridge(map, ped, v) {
   if (v.def.kind === 'boat') return pt === T.BRIDGE && !ped.under;
   return map.tileAtPx(v.x, v.y) === T.BRIDGE && (WATER_T[pt] === 1 || (pt === T.BRIDGE && !!ped.under));
 }
-export function nearestVehicle(world, ped, range) {
+export function nearestVehicle(world, ped, range, noBoard = false) {   // (noBoard: past the skateboards on the ground)
   let best = null, bestD = Infinity;
   for (const v of world.query(ped.x, ped.y, range + 100, K.VEH)) {
-    if (!sameLevel(v.lz, ped.lz) || aircraft.inAir(v)) continue;   // (an aircraft overhead: out of reach - no Act prompt for it)
+    if (!sameLevel(v.lz, ped.lz) || aircraft.inAir(v) || (noBoard && v.def.board)) continue;   // (an aircraft overhead: out of reach - no Act prompt for it)
     if (acrossBridge(world.map, ped, v)) continue;   // (up on a bridge's deck and down on the water under it: out of reach)
     const h = circleVsObb(ped.x, ped.y, range, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
     if (!h) continue;
@@ -539,9 +540,9 @@ export function nearestVehicle(world, ped, range) {
   return best;
 }
 
-export function tryEnter(world, ped) {
+export function tryEnter(world, ped, noBoard = false) {
   if (ped.vehId || ped.dead) return false;
-  const v = nearestVehicle(world, ped, 56);
+  const v = nearestVehicle(world, ped, 56, noBoard);
   if (!v) return false;
   const p = ped.player;
   if (v.ferry) { if (p) world.notify(p, 'Board the ferry with interact while it\'s in at the pier.', 'info'); return false; }   // (ferries.js: never taken)
@@ -551,6 +552,13 @@ export function tryEnter(world, ped) {
   if (v.bolt) { if (p) world.notify(p, "It's bolted - you won't catch it now.", 'warn'); return false; }   // (a horse off at a gallop: horses.js)
   if (v.forSale) { if (p) world.notify(p, `It's for sale: $${v.forSale.price.toLocaleString()}. Walk up to it and press interact to buy it.`, 'info'); return false; }
   if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
+  if (v.def.board) {   // a skateboard on the ground: taken up and ridden as the board (skate.js) - someone else's, theft
+    const crime = p ? entryInfo(world, p, v).crime : null, victim = v.owner ? world.players.get(v.owner)?.ped || null : null, x = v.x, y = v.y;
+    if (!p || !skate.mount(world, p, ped, v)) return false;
+    if (crime) { law.crime(world, ped, crime, victim, x, y); if (ped.board && ped.board.deck) ped.board.deck.stolen.push(p.pid); }
+    p.meDirty = true;
+    return true;
+  }
   if (ped.carrying) cargo.dropCrate(world, ped);
   if (v.tipped) { v.tipped = false; v.flat = false; world.emit(v.x, v.y, { e: 'cartup', x: Math.round(v.x), y: Math.round(v.y) }); }   // (a shopping cart over on its side: stood up as you take it - cartCrash)
   let seat = -1;
@@ -628,6 +636,7 @@ export function entryInfo(world, p, v) {
 export function enterLabel(world, p, v) {
   const n = v.def.name, e = entryInfo(world, p, v), c = e.crime && law.CRIMES[e.crime];
   const crime = c ? ` - ${c.label}${c.felony ? ' (felony)' : ''}` : '';
+  if (v.def.board) return e.kind === 'own' ? 'Get on your skateboard' : c ? `Ride off on the skateboard${crime}` : 'Get on the skateboard';   // (skate.js)
   if (v.def.horse) switch (e.kind) {   // (a horse: up on it, not in it - horses.js)
     case 'own': return 'Up on your horse';
     case 'rental': return 'Up on your hired horse';
@@ -646,17 +655,17 @@ export function enterLabel(world, p, v) {
   }
 }
 // A player getting in by pressing a button: Safety mode asks first when it'd be a crime (safety.js).
-export function playerEnter(world, ped) {
+export function playerEnter(world, ped, noBoard = false) {
   const p = ped.player;
   if (p && !ped.vehId && !ped.dead && !nearestVehicle(world, ped, 56)) {   // (no vehicle in reach: a farm's horse beside you - up on it, bareback; horses.js)
     const a = horses.farmHorseNear(world, ped);
     if (a) { if (!safety.confirm(world, p, 'horseTheft', `horse:${a.id}`)) return false; horses.fromLivestock(world, a); return tryEnter(world, ped); }
   }
   if (p && !ped.vehId && !ped.dead) {
-    const v = nearestVehicle(world, ped, 56);
+    const v = nearestVehicle(world, ped, 56, noBoard);
     if (v && !v.forSale && !v.ferry && !v.wreckAt) { const e = entryInfo(world, p, v); if (!safety.confirm(world, p, e.crime, `veh:${v.id}`)) return false; }
   }
-  return tryEnter(world, ped);
+  return tryEnter(world, ped, noBoard);
 }
 
 export function exitVehicle(world, ped) {
