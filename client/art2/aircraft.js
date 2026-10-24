@@ -239,14 +239,14 @@ export function drawAir(H, v, now, me) {
   if (!k) k = H._near((h) => `air|${type}|${bi}|${h}|${N}`, hi, N) || H._near((h) => `air|${type}|2|${h}|${N}`, hi, N);
   if (!k) return false;
   const o = H.opts, z0 = lift + (alt < 1 ? H._z0(v, false) : 0) - (T.plane ? zoffOf(BANKS[bi]) : 0);
-  o.alpha = 1; o.flash = 0; o.xray = !!me && alt < 30; o.flipX = false; o.shadow = alt < 40; o.under = 0; o.air = alt > 24;
+  o.alpha = 1; o.flash = 0; o.xray = !!me && alt < 30; o.flipX = false; o.shadow = alt < 6; o.under = 0; o.air = alt > 24;   // (off the ground its shadow is the overlay's: render/aircraft.js airShadow - the march would make a column of it)
   o.tint = f & VF.WRECK ? [0.32, 0.3, 0.3] : null;
   E.drawSprite(k, v.rx, v.ry, z0, o);
   H.n.drawn++;
   // the main rotor over the mast: the blades while it spools (turning), the blurred disc once it's up to speed
   if (!T.plane && !(f & VF.WRECK)) {
     const R = def.rotor || 76, s = v._spin || 0, c = Math.cos(v.ra), sn = Math.sin(v.ra), mx = v.rx + c * def.L * MAST, my = v.ry + sn * def.L * MAST;
-    o.shadow = alt < 40; o.xray = false; o.tint = null;
+    o.shadow = alt < 6; o.xray = false; o.tint = null;
     // (up to speed, the blurred disc is the overlay's - render/aircraft.js rotorDisc: a canvas blends, the renderer only
     // dithers - and here only the blades while they're still to be seen)
     if (s < 0.9) {

@@ -186,3 +186,70 @@ test('a hole in the map\'s props (World v3\'s map has them) never stops the fish
   for (let i = 0; i < 5 * 30; i++) { wl.update(M2, V, now, 1 / 30, [], [], ENV); now += 1 / 30; }
   assert.ok(wl.fish.length > 0, `fish (${wl.fish.length})`);
 });
+
+// (the owner's notes, 2026-10-23) "Water under helicopter has a weird effect happening even when you're high up": an
+// aircraft up high is nothing to the water (the fish fled anything over them); a helicopter low over it blows it about -
+// rings and spray blown outward from under the rotor, more the lower it is
+test('a helicopter\'s downwash: nothing to the water up high, rings and spray under it low down, the lower the more', async () => {
+  const { washK, WASH_H } = await import('../client/art2/game/waterlife.js');
+  assert.equal(washK(WASH_H), 0); assert.equal(washK(600), 0); assert.equal(washK(0), 1);
+  assert.ok(washK(30) > washK(90) && washK(90) > 0, 'stronger the lower');
+  const at = waterView('lake') || waterView('shore');
+  const h = { map: M, q: 1, vx0: at.x - 640, vy0: at.y - 360, vx1: at.x + 640, vy1: at.y + 360, E: { drawDecal: () => true, drawSprite: () => true }, _conv: (k) => k, S: { fx: { splash: () => {} } } };
+  const near = (wl) => {
+    let rings = 0, spray = 0;
+    for (let j = 0; j < wl.rings.length; j += 5) if (wl.rings[j + 4] && Math.hypot(wl.rings[j] - at.x, wl.rings[j + 1] - at.y) < 160) rings++;
+    for (const p of wl.puffs) if (p.on && Math.hypot(p.x - at.x, p.y - at.y) < 260 && Math.hypot(p.vx, p.vy) > 20) spray++;
+    return { rings, spray };
+  };
+  const fly = (alt) => {
+    const wl = new WaterLife(1), heli = { id: 9, rx: at.x, ry: at.y, ra: 0, flags: 0, d: { m: 60 }, extra: 0, _alt: alt, _spin: 1 };
+    let most = { rings: 0, spray: 0 };
+    for (let i = 0; i < 60; i++) { wl.frame(h, { now: i / 30, peds: [], vehs: [heli], sky: { night: 0, minutes: 700, sunDir: { x: 0.3, y: 0.7 } } }); const n = near(wl); most = { rings: Math.max(most.rings, n.rings), spray: Math.max(most.spray, n.spray) }; }
+    return { wl, most };
+  };
+  const high = fly(400);
+  assert.equal(high.wl.mv.length, 0, 'up high it is no one the fish notice');
+  assert.equal(high.most.rings + high.most.spray, 0, 'and nothing on the water under it');
+  const low = fly(20), mid = fly(110);
+  assert.ok(low.wl.mv.length === 1 && low.wl.mv[0].wet, 'low down its wash scatters the fish');
+  assert.ok(low.most.rings >= 3 && low.most.spray >= 6, `low: rings and spray (${JSON.stringify(low.most)})`);
+  assert.ok(low.most.rings + low.most.spray > mid.most.rings + mid.most.spray, `more the lower (${JSON.stringify(low.most)} vs ${JSON.stringify(mid.most)})`);
+});
+
+// "Blood in water is a static image": blood landing on open water is a cloud in it (render/fx.js), not a stain on the
+// surface - it blooms out, drifts with the current and thins out (waterlife.js blood)
+test('blood in the water: a cloud that blooms, drifts with the current and thins out', async () => {
+  const { FX } = await import('../client/render/fx.js');
+  const { flowAt } = await import('../shared/flow.js');
+  // a stretch of river running east (tiles 0..400 x 0..40, its channel along y 20) and dry land south of it
+  const W = 400, H = 40, R = { x0: 0, y0: 0, w: W, h: H, inside: (tx, ty) => tx >= 0 && ty >= 0 && tx < W && ty < H, idx: (tx, ty) => ty * W + tx, tiles: new Uint8Array(W * H).fill(T.WATER), lake: new Uint8Array(W * H), river: new Uint8Array(W * H).fill(1), waters: { ch: [{ k: 'river', w: 30, v: 1, pts: [[0, 20], [W, 20]] }] }, props: [] };
+  const river = { x: 60 * TILE, y: 20 * TILE };
+  assert.ok(flowAt(R, river.x, river.y)[0] > 15, 'its current');
+  const fx = new FX();
+  fx.water = (x, y) => R.inside(Math.floor(x / TILE), Math.floor(y / TILE));
+  const d0 = fx.d.filter((d) => d.on).length;
+  fx.blood(river.x, river.y, 0, 14, 0);
+  fx.decal(1, river.x, river.y + 40, 0, 6, '#7a0d12', 0);
+  assert.equal(fx.d.filter((d) => d.on).length, d0, 'no stain left on the water');
+  const B = fx.bc.filter((o) => o && o.on);
+  assert.ok(B.length >= 2, 'clouds in the water');
+  fx.decal(1, river.x, (H + 5) * TILE, 0, 6, '#7a0d12', 0);
+  assert.equal(fx.d.filter((d) => d.on).length, d0 + 1, 'blood on the ground: a stain as ever');
+  const wl = new WaterLife(1);
+  wl.env = { ...ENV, ws: 0 };
+  const c = B[0], x0 = c.x, y0 = c.y, f0 = flowAt(R, x0, y0).slice();
+  const spread = [];
+  for (let i = 0; i <= 30 * 20; i++) {
+    const draws = [];
+    wl.blood(R, fx.bc, i / 30, 1 / 30, { drawDecal: (k, x, y, a, al) => { draws.push([x, y, al]); return true; } }, (k) => k);
+    if (i % 30 === 0 && c.on) { let r = 0; for (const [x, y] of draws.slice(0, 8)) r = Math.max(r, Math.hypot(x - c.x, y - c.y)); spread.push([i / 30, r, draws.length ? draws[0][2] : 0]); }
+  }
+  const moved = Math.hypot(c.x - x0, c.y - y0);
+  assert.ok(spread.length >= 5, 'drawn a while');
+  assert.ok(spread[3][1] > spread[0][1], `it blooms out (${spread.map((s) => s[1].toFixed(0))})`);
+  assert.ok(spread[spread.length - 1][2] < spread[1][2], 'and thins out');
+  assert.ok(!fx.bc.some((o) => o && o.on), 'gone in the end');
+  assert.ok(moved > 30, `carried by the current (${moved.toFixed(0)} px)`);
+  assert.ok(((c.x - x0) * f0[0] + (c.y - y0) * f0[1]) > 0, 'downstream');
+});

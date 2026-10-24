@@ -15,9 +15,11 @@
 //   +dropSprite(key)  +spriteInfo(key) -> {w, h, ax, ay} (read only)
 //   - uploadChunk g.under (optional RGBA8, 768^2): the chunk before its buildings (rgb) + the local number of
 //     the building on top (alpha), g.blds [[building index, ...]] per local number; beginFrame f.fades: a Map
-//     building index -> 0..1 fades those whole buildings (smoothly; past half way they stop hiding what is
-//     behind them).
-//   beginFrame(f) -> bool  drawSprite(key, x, y, z0, o) -> bool  drawDecal(key, x, y, angle, alpha, +z0)
+//     building index -> 0..1 fades those whole buildings (smoothly, to a ghost: GHOST; < 0 a thin one, GHOST_THIN);
+//     +f.clear (Float32Array 16): up to four clear spaces in them [x, y, radius, strength] round figures (past half
+//     way a texel stops hiding what is behind it).
+//   beginFrame(f) -> bool  drawSprite(key, x, y, z0, o) -> bool  drawDecal(key, x, y, angle, alpha, +z0, +zt)
+//   (drawDecal zt: px over its ground it also covers - a field's rows over the crop standing on it, farmart.js)
 //   (drawSprite o.under: a height its depth test never goes past - a boat under a bridge, hidden by any deck over it
 //   while the water round it never covers it; its own heights still light it)
 //   addLight(L)  endFrame()
@@ -125,11 +127,15 @@ uniform vec4 uRect; uniform vec2 uScene;
 void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2.0 - 1.0, 0.0, 1.0); }`;
 // a chunk texel copied into the scene, depth from its height
 // Fading buildings: a chunk's under layer holds the chunk before its buildings (rgb) and, in alpha, the local
-// number of the building on top at each texel. uFade[k] (0..1) fades building k toward the under layer where its
-// picture covers ground outside its own footprint (uFoot[k], chunk texels) - the street and pavement behind it -
-// while over its footprint it stays, so the inside isn't shown until you walk in: the colour blends smoothly;
-// past half way the texel also takes the ground's height and normal, so people and cars behind it draw over it
-// (the host eases each building in and out round the player).
+// number of the building on top at each texel. uFade[k] (0..1, the host eases it in and out over ~0.2 s) fades
+// building k toward the under layer where its picture covers ground outside its own footprint (uFoot[k], chunk
+// texels) - the street and pavement behind it - while over its footprint it stays, so the inside isn't shown until
+// you walk in. Not the whole of that at once (the owner, 10-23: "watching half a building disappear this abruptly
+// isn't the best look"): it goes semi-transparent - a ghost, GHOST of the street showing through (a tall thin one,
+// uFade < 0: a mast's hut, a tree, GHOST_THIN, so it doesn't vanish by half) - and only round the people that matter
+// (uClr[i]: world x, y of a figure's middle, its radius, strength - you, players near you) is it fully clear, the
+// edge of that soft. Past half way a texel also takes the ground's height and normal, so whoever is behind it draws
+// over it (dithered in whole art pixels at the clear space's edge).
 // Swaying vegetation: leaf texels (F_LEAF: foliage, grass tufts, crops) lean with the wind (uWind: strength,
 // gustiness, direction) by whole texels, more the higher they stand above their ground - so a tree's crown sways over
 // its trunk and grass tips nod. Not as one wave over the screen (task #385, the owner: "all the trees kind of move in
@@ -151,6 +157,19 @@ void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2
 // for every pixel): r repeats over 16 texels and g over 32, so the gust layers (512 and 256 px cells) repeat over
 // the 8192 px gd wraps at and its wrap never shows; b and a for what stays put (a stand's phase and rhythm, 230 px
 // cells; a cluster's phase, 26 px).
+// see-through buildings (STATIC_FS): how much of the street shows through the ghost of one that hides you (a tall thin
+// one's lighter, so it keeps its shape), the clear space round a figure - how much of its radius is the soft edge, how
+// much taller than wide it is
+export const GHOST = 0.45, GHOST_THIN = 0.2, CLR_SOFT = 0.45, CLR_TALL = 1.3;
+// seeThrough: STATIC_FS's fade of a texel at world (x, y) outside its building's footprint, in JS (the tests): f the
+// building's fade (uFade), C the clear spaces (uClr) -> 0..1 (past ~0.55 whatever is behind it shows)
+export function seeThrough(f, x, y, C) {
+  const gh = f < 0 ? GHOST_THIN : GHOST, a = Math.abs(f), sst2 = (e0, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (1 - e0))); return t * t * (3 - 2 * t); };
+  let cl = 0;
+  for (let i = 0; i < 4; i++) if (C[i * 4 + 2] > 0) cl = Math.max(cl, (1 - sst2(1 - CLR_SOFT, Math.hypot((x - C[i * 4]) / C[i * 4 + 2], (y - C[i * 4 + 1]) / (C[i * 4 + 2] * CLR_TALL)))) * C[i * 4 + 3]);
+  return a * (gh + (1 - gh) * cl);
+}
+const CLR0 = new Float32Array(16);
 const FLUT = (k) => (2 * Math.PI * k / 256).toFixed(6);   // (whole turns over wind.js FLUT_P)
 const WN = 128;
 const hash2 = (x, y) => { let h = (Math.imul(x >>> 0, 374761393) + Math.imul(y >>> 0, 668265263)) >>> 0; h = Math.imul((h ^ (h >>> 13)) >>> 0, 1274126177) >>> 0; return ((h ^ (h >>> 16)) & 16777215) / 16777216; };
@@ -206,7 +225,7 @@ export function leanOf(pw, pi, h, f, R, ap = ART_PX) {
 const STATIC_FS = (AP) => HDR + `
 #define AP ${AP}
 #define CTX ${CHUNK_PX / AP}
-uniform sampler2D t0, t1, t2, t3, tN; uniform vec2 uOff; uniform float uFadeOn; uniform float uFade[64]; uniform vec4 uFoot[64];
+uniform sampler2D t0, t1, t2, t3, tN; uniform vec2 uOff; uniform float uFadeOn; uniform float uFade[64]; uniform vec4 uFoot[64]; uniform vec4 uClr[4];
 uniform vec4 uWind, uGust; uniform float uFlut; uniform int uSway; uniform vec2 uChunk;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
@@ -276,12 +295,21 @@ void main(){
     vec4 u = texelFetch(t3, src, 0);
     int k = int(u.a * 255.0 + 0.5);
     if (k > 0 && k < 64) {
-      float f = uFade[k];
+      float f = uFade[k], gh = ${GHOST};
+      if (f < 0.0) { f = -f; gh = ${GHOST_THIN}; }
       vec4 fp = uFoot[k];
       vec2 sp = vec2(src * AP) + 0.5 * float(AP);   // (world px: the art pixel's centre)
       // over its own footprint it stays (x0 > x1: the footprint is the ellipse in that box - a tree's foot)
       if (fp.x <= fp.z ? sp.x >= fp.x && sp.x < fp.z && sp.y >= fp.y && sp.y < fp.w : length((sp - (fp.xy + fp.zw) * 0.5) / max((fp.xw - fp.zy) * 0.5, vec2(1.0))) < 1.0) f = 0.0;
       if (f > 0.002) {
+        // the clear space round each figure: an upright ellipse, its outer ${CLR_SOFT * 100}% soft
+        vec2 wp = uChunk + sp;
+        float cl = 0.0;
+        for (int i = 0; i < 4; i++) {
+          vec4 q = uClr[i];
+          if (q.z > 0.0) cl = max(cl, (1.0 - smoothstep(${(1 - CLR_SOFT).toFixed(2)}, 1.0, length((wp - q.xy) / vec2(q.z, q.z * ${CLR_TALL.toFixed(2)})))) * q.w);
+        }
+        f *= gh + (1.0 - gh) * cl;
         a.rgb = mix(a.rgb, u.rgb, f);
         c.rgb *= 1.0 - f;
         if (f > 0.55 + bayer4(src) * 0.2) {
@@ -336,7 +364,7 @@ void main(){
   o2 = vec4(min(c.rgb + vec3(vPar.z * 0.85), vec3(1.0)), c.a);
 }`;
 // flat ground decals, rotated about their anchor: iA (anchor x, y, cos, sin), iSrc (atlas x, y, layer),
-// iSz (w, h, ax, ay in atlas texels), iPar (alpha, z0, world px per texel). A decal is sampled once per art pixel
+// iSz (w, h, ax, ay in atlas texels), iPar (alpha, z0, world px per texel, zt: px over the ground it also covers). A decal is sampled once per art pixel
 // of the world's grid (at its centre), so even turned it lands in whole art pixels; the quad grows a texel each
 // side so the art pixels its edge cuts are whole too.
 const DECAL_VS = `#version 300 es
@@ -361,7 +389,7 @@ void main(){
   if (l.x < 0 || l.y < 0 || l.x >= int(vSz.x + 0.5) || l.y >= int(vSz.y + 0.5)) discard;
   vec4 a = texelFetch(tA, ivec3(int(vSrc.x + 0.5) + l.x, int(vSrc.y + 0.5) + l.y, int(vSrc.z + 0.5)), 0);
   if (a.a < 0.02) discard;
-  gl_FragDepth = 1.0 - (${DECAL_H.toFixed(2)} + vPar.y) * ${(1 / HMAX).toFixed(8)};
+  gl_FragDepth = 1.0 - (${DECAL_H.toFixed(2)} + vPar.y + vPar.w) * ${(1 / HMAX).toFixed(8)};
   o0 = vec4(a.rgb, a.a * vPar.x);
 }`;
 // the lit scene to the canvas: nearest (integer scale), sharp bilinear (>= 1) or area (< 1), vignette
@@ -826,6 +854,7 @@ export class Art2Engine {
     const P = f.preset || PRESETS_GAME.noon, T = LIGHT_TIERS[this.q];
     this.P = P; this.time = f.time || 0; this.wet = f.wet || 0; this.flash = f.flash || 0; this.fog = f.fog || 0;
     if (f.fades !== undefined) this.fades = f.fades;
+    this.clr = f.clear || null;                                    // the clear spaces round figures in a see-through building (uClr)
     this.wind = f.wind || null;                                    // [strength, gustiness, dir x, dir y]
     this.gd = f.gd || null; this.ft = f.ft || 0;                   // the gust patches' travel, the flutter clock (wind.js)
     this.air = f.air || null;                                      // how far the air has carried things (wind.js air)
@@ -875,7 +904,7 @@ export class Art2Engine {
     }
     return true;
   }
-  drawDecal(key, x, y, angle = 0, alpha = 1, z0 = 0) {
+  drawDecal(key, x, y, angle = 0, alpha = 1, z0 = 0, zt = 0) {
     if (!this.inFrame) return false;
     const r = this.sprites.get(key);
     if (!r) return false;
@@ -889,7 +918,7 @@ export class Art2Engine {
     D[b] = ax; D[b + 1] = ay; D[b + 2] = Math.cos(angle); D[b + 3] = Math.sin(angle);
     D[b + 4] = r.x; D[b + 5] = r.y; D[b + 6] = r.layer; D[b + 7] = 0;
     D[b + 8] = r.w; D[b + 9] = r.h; D[b + 10] = r.ax; D[b + 11] = r.ay;
-    D[b + 12] = alpha; D[b + 13] = z0; D[b + 14] = r.ap; D[b + 15] = 0;
+    D[b + 12] = alpha; D[b + 13] = z0; D[b + 14] = r.ap; D[b + 15] = zt;
     return true;
   }
   // L: {x, y (world ground point), z (height), r (radius px), col [r,g,b] 0..1, k, cone?: {a, spread, len}}
@@ -1011,7 +1040,7 @@ export class Art2Engine {
       if (fades && s.under && s.t[3] && s.bids) {
         FA.fill(0);
         for (let i = 0; i < s.bids.length && i < 63; i++) { const f = fades.get(s.bids[i]); if (f) { FA[i + 1] = f; on = 1; } }
-        if (on) { gl.uniform1fv(u.uFade, FA); gl.uniform4fv(u.uFoot, s.foot); }
+        if (on) { gl.uniform1fv(u.uFade, FA); gl.uniform4fv(u.uFoot, s.foot); gl.uniform4fv(u.uClr, this.clr || CLR0); }
       }
       gl.uniform1f(u.uFadeOn, on);
       const x = cx * CHUNK_PX - this.ox, y = cy * CHUNK_PX - this.oy;

@@ -12,6 +12,7 @@
 //                                   a blade sign down the side, a tube along the cornice
 // Names and icons are original (no real venues, brands or logos). Pure and worker-safe.
 import { drawText, textWidth } from './font.js';
+import { F_GLASS } from './gbuf.js';
 import { buildingH } from './buildings.js';
 
 export const NEON_COLS = [[255, 60, 200], [70, 230, 255], [255, 80, 150], [170, 100, 255], [255, 190, 60], [110, 255, 150], [255, 110, 70]];
@@ -257,10 +258,16 @@ function picOf(k) {
 }
 // a picture sign's size on the face (px; s: px per picture pixel - 2, one art pixel each)
 export const picSize = (k, s = 2) => { const P = picOf(k); return [P.w * s + (P.panel ? 12 : 0), P.h * s + (P.panel ? 12 : 0)]; };
+// (2026-10-23, the owner: "Neon tiger sign is way blown out, can't see details" - the sign's own light, 18 px in front of it
+// at its middle, lit its colours two and a half times over, the bloom did the rest: a yellow blob. Now the picture is
+// glass - the lights round it reach it a third as much (lightgame.js F_GLASS) - its tubes glow bright and its fills dimly,
+// so the dark between them (the tiger's stripes, the eyes, the outline's gaps) stays dark and the drawing reads; its
+// light on the pavement stands out from the wall and lower down: handNeon.)
+const PIC_TUBE = 190, PIC_FILL = 96;
 function paintPic(G, sg) {
   const P = picOf(sg.pic), s = sg.s || 2, pad = P.panel ? 6 : 0, [w, h] = picSize(sg.pic, s), S = [0, 1, 0];
   const X0 = G.ax + sg.x, Y1 = G.ay - sg.v, Y0 = Y1 - h, col = sg.col || [255, 80, 200];
-  const put = (X, Y, c, e) => { if (G.inside(X, Y) && G.alpha(X, Y)) G.put(X, Y, c, S, G.ay - Y, e, 0); };
+  const put = (X, Y, c, e) => { if (G.inside(X, Y) && G.alpha(X, Y)) G.put(X, Y, c, S, G.ay - Y, e, F_GLASS); };
   // the halo it throws on the wall
   const R = 18;
   for (let Y = Y0 - R; Y < Y1 + R; Y++) for (let X = X0 - R; X < X0 + w + R; X++) {
@@ -268,7 +275,7 @@ function paintPic(G, sg) {
     const dx = X < X0 ? X0 - X : X >= X0 + w ? X - X0 - w + 1 : 0, dy = Y < Y0 ? Y0 - Y : Y >= Y1 ? Y - Y1 + 1 : 0, d = Math.hypot(dx, dy);
     if (d <= 0 || d >= R) continue;
     const k = 1 - d / R;
-    G.glow(X, Y, [col[0], col[1], col[2], Math.round(8 + 56 * k * k)]);
+    G.glow(X, Y, [col[0], col[1], col[2], Math.round(6 + 40 * k * k)]);
   }
   // the panel's dark backing and its tube (the portrait), or nothing behind the cut-out
   if (P.panel) for (let Y = Y0; Y < Y1; Y++) for (let X = X0; X < X0 + w; X++) {
@@ -281,7 +288,7 @@ function paintPic(G, sg) {
     const i = P.px[y * P.w + x];
     if (i < 0) continue;
     const c = P.pal[i], lum = c[0] + c[1] + c[2];
-    for (let j = 0; j < s; j++) for (let k = 0; k < s; k++) put(X0 + pad + x * s + k, Y0 + pad + y * s + j, c, lum > 120 ? [c[0], c[1], c[2], lum > 500 ? 200 : 150] : null);
+    for (let j = 0; j < s; j++) for (let k = 0; k < s; k++) put(X0 + pad + x * s + k, Y0 + pad + y * s + j, c, lum > 120 ? [c[0], c[1], c[2], lum > 500 ? PIC_TUBE : PIC_FILL] : null);
   }
 }
 // a blade sign: a narrow lit panel down the face with its word stacked letter over letter (KARAOKE, HOTEL, RAMEN)
@@ -329,7 +336,7 @@ export function handNeon(spec, N, ctx) {
       const x = Math.round(N.picX !== undefined ? Math.max(6, Math.min(w - pw - 6, N.picX)) : (w - pw) / 2);
       const pc = N.picCol || picGlow(N.pic);
       out.push({ pic: N.pic, x, v, s, col: pc });
-      lights.push([x + pw / 2, 18, v + ph / 2, 300, L(pc), 2.6, 'neon']);
+      lights.push([x + pw / 2, 44, Math.round(v * 0.7), 280, L(pc), 1.5, 'neon']);   // (out over the pavement, below the sign: paintPic)
     }
   }
   if (N.trim !== false && !spec.trim) { spec.trim = col2; lights.push([w / 2, 10, H - 8, 180, L(col2), 1.2, 'neon']); }

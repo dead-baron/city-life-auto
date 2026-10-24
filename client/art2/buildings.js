@@ -388,6 +388,10 @@ const BAYPAINT = ramp('#ecebe2', 5, 2), CARS = ['#c8342e', '#2a5aa8', '#ecebe6',
 const RUST = ramp('#8a5a3a', 6, 3), PAD = ramp('#b6b0a4', 6, 3);
 const SEDUM = [ramp('#6e8e3a', 6, 3), ramp('#8e6c3a', 6, 3), ramp('#4a6e3c', 6, 3), ramp('#9a5c4c', 6, 3)];
 const GPAVE = [ramp('#8e7258', 6, 3), ramp('#9a705c', 6, 3), ramp('#d870a0', 5, 2), ramp('#e8c848', 5, 2)];   // (a garden's decking, its clay pavers; sedum in flower)
+// a stadium's stand (roofMat 'seats'): the club's seats (red, navy), the cantilever roof's sheeting and its white steel,
+// the advertising boards along the front, the people sat here and there - skin, shirts - and the concrete of the steps
+const STAND = [ramp('#b42a2e', 6, 3), ramp('#22345e', 6, 3), ramp('#c9ccd0', 6, 3), ramp('#eef0f0', 5, 2), ramp('#2a7a4a', 5, 2), ramp('#e8c040', 5, 2),
+  ramp('#e2b48c', 5, 2), ramp('#8a5a3c', 5, 2), ramp('#c08a62', 5, 2), ramp('#3a6ab0', 5, 2), ramp('#ecebe6', 5, 2), ramp('#34363c', 5, 2), ramp('#b0aca4', 6, 3)];
 // the parapet's coping: stone on brick and stone, metal on glass and sheds, the wall's own colour on render
 function coping(style) {
   if (style === 'glass' || style === 'corrugated') return MAT.metal;
@@ -419,8 +423,9 @@ function roofDeck(G, spec, w, d, H, seed, style) {
   if (iw > 0 && id > 0) {
     // per deck pixel: a shade (T) and which ramp (RI: 0 the material, 1 rust, 2 walkway pads, 3 gravel, 4-7 sedum, 8 decking,
     // 9 clay pavers, 10-11 sedum flowers, 12 membrane)
-    const RS = [DECK[mat] || DECK.tar, RUST, PAD, DECK.gravel, SEDUM[0], SEDUM[1], SEDUM[2], SEDUM[3], ...GPAVE, DECK.membrane, BAYPAINT, ...CARS, CARGLASS], DI = [mat === 'gravel' || mat === 'paver' || mat === 'green' ? 0.3 : 0.5, 0.5, 0.5, 0.3, 0.6, 0.6, 0.6, 0.6, 0.5, 0.35, 0.3, 0.3, 0.5, 0.2, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.2];
-    const T = new Float32Array(iw * id), RI = new Uint8Array(iw * id), F = (sx, sy, s) => noiseField(w, d, sx, sy, s);
+    const RS = [DECK[mat] || DECK.tar, RUST, PAD, DECK.gravel, SEDUM[0], SEDUM[1], SEDUM[2], SEDUM[3], ...GPAVE, DECK.membrane, BAYPAINT, ...CARS, CARGLASS, ...STAND], DI = [mat === 'gravel' || mat === 'paver' || mat === 'green' ? 0.3 : 0.5, 0.5, 0.5, 0.3, 0.6, 0.6, 0.6, 0.6, 0.5, 0.35, 0.3, 0.3, 0.5, 0.2, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.2, ...STAND.map(() => 0.15)];
+    // (ZO: a deck pixel's height over the deck - the stand's rows stepping up from the pitch, its roof over the back rows)
+    const T = new Float32Array(iw * id), RI = new Uint8Array(iw * id), ZO = mat === 'seats' ? new Int8Array(iw * id) : null, F = (sx, sy, s) => noiseField(w, d, sx, sy, s);
     const each = (fn) => { for (let v = 0, i = 0; v < id; v++) for (let u = 0; u < iw; u++, i++) fn(u, v, i, u + rw, v + rw); };
     switch (mat) {
       case 'gravel': { const A = F(4, 4, seed + 5), B = F(40, 40, seed); each((u, v, i, x, y) => { const j = y * w + x, h1 = hash(x, y, seed + 2); T[i] = 0.5 + (A[j] - 0.5) * 0.2 + (h1 > 0.86 ? 0.12 : h1 < 0.1 ? -0.12 : 0) + (B[j] - 0.5) * 0.12; }); break; }   // (calm: the art pixel shows the stones)
@@ -469,17 +474,55 @@ function roofDeck(G, spec, w, d, H, seed, style) {
         });
         break;
       }
-      case 'seats': {                                                          // a stadium's stand from above: rows of seats stepping down to its front
-        // edge (spec.seatTo 'N' 'S' 'E' 'W': toward the pitch), concrete risers, aisles of steps, the crowd in its colours
-        // (spec.crowd: how full); a row higher up a shade lighter (The Yards' neighbour, the Stadium District, WC405)
-        const to = spec.seatTo || 'S', ax = to === 'E' || to === 'W', n = ax ? iw : id, full = spec.crowd ?? 0.6, CR = [2, 10, 11, 1, 7, 9, 12, 3];
-        each((u, v, i, x, y) => {
-          const f = to === 'S' ? id - 1 - v : to === 'N' ? v : to === 'E' ? iw - 1 - u : u, along = ax ? v : u, r = f % 7;
-          T[i] = 0.4 + (f / n) * 0.22;
-          if (along % 112 < 6) { RI[i] = 3; T[i] += r < 2 ? -0.18 : 0.06; return; }   // (the aisle's steps)
-          if (r < 2) { RI[i] = 12; T[i] = r ? 0.24 : 0.4; return; }                    // (the riser)
-          const h1 = hash(x >> 1, y >> 1, seed + 21);
-          if (h1 < full) { RI[i] = CR[(hash(x >> 1, y >> 1, seed + 22) * 8) | 0]; T[i] = 0.4 + hash(x, y, seed + 23) * 0.3; }
+      case 'seats': {
+        // A stadium's stand from above (spec.seatTo 'N' 'S' 'E' 'W': toward the pitch). The owner, 10-23: "Stadium seating
+        // looks weird. Hard to tell what it is ... we should just have rows of seats with occasional NPCs sitting in them
+        // ... The outside wall (facing us) is super thin too, maybe we have less seating areas so we can add some thickness
+        // to the stadium structure. Or just put a stadium roof/cover over the seating areas but make it so you can still
+        // see all of the field": from the pitch back - the advertising boards along the front wall, then the rows of
+        // seats stepping up (each row: its concrete step, the seat pans, the seat backs, the riser's shadow; seats in the
+        // club's red with navy bands, aisles of steps with yellow nosings every so often), a few people sat about (spec.crowd
+        // scales how many: a quiet day's handful), the way-in tunnels (vomitories) half way up, and over the back third
+        // the cantilever roof - pale sheeting on white steel ribs, its fascia casting a shadow on the rows below it - the
+        // stand's thick back, never out over the pitch.
+        const to = spec.seatTo || 'S', ax = to === 'E' || to === 'W', n = ax ? iw : id, along = ax ? id : iw, full = spec.crowd ?? 0.6;
+        const S0 = 21, RED = S0, NAVY = S0 + 1, SHEET = S0 + 2, STEEL = S0 + 3, ADS = [S0 + 4, S0 + 5, S0 + 10, S0 + 1], SKIN = [S0 + 6, S0 + 7, S0 + 8], SHIRT = [S0 + 9, S0 + 10, S0, S0 + 5, S0 + 4, S0 + 11], CONC = S0 + 12;
+        const FRONT = 8, ROOF = Math.round(n * 0.3), RP = 10, SP = 8, AISLE = 128, seatEnd = n - ROOF, rows = Math.floor((seatEnd - FRONT) / RP), vom = Math.floor(rows / 2);
+        const sit = full * 0.18;   // (how many are sat: about a sixth of crowd's old "how full" - a quiet day's one seat in ten)
+        each((u, v, i) => {
+          const f = to === 'S' ? id - 1 - v : to === 'N' ? v : to === 'E' ? iw - 1 - u : u, a = ax ? v : u;
+          ZO[i] = Math.round(-36 * (1 - Math.min(1, f / seatEnd)));                                     // (stepping up from the front)
+          if (f < FRONT) {                                                                               // the front wall: its cap, the boards
+            ZO[i] = -32;
+            if (f < 2 || f === FRONT - 1) { RI[i] = CONC; T[i] = f === 0 ? 0.8 : 0.55; return; }
+            const bd = Math.floor(a / 72), ba = a % 72;
+            RI[i] = ADS[bd % 4]; T[i] = ba < 2 ? 0.2 : (f === 3 && ba % 9 < 6 && ba > 8 && ba < 64) ? 0.95 : 0.55;   // (a board, a line of its lettering)
+            return;
+          }
+          if (f >= seatEnd) {                                                                            // the roof over the back rows
+            const g = f - seatEnd;
+            ZO[i] = 4;
+            if (g < 3) { RI[i] = STEEL; T[i] = g === 0 ? 0.35 : 0.85; return; }          // (its fascia)
+            if (a % 48 < 3) { RI[i] = STEEL; T[i] = a % 48 === 1 ? 0.9 : 0.6; return; }                   // (a rib)
+            RI[i] = SHEET; T[i] = 0.56 + (g % 6 === 0 ? -0.14 : g % 6 === 1 ? 0.06 : 0) + (g < 10 ? -0.04 : 0);   // (the sheeting's corrugations, along the fascia)
+            return;
+          }
+          const q = f - FRONT, row = Math.floor(q / RP), r = q % RP;
+          const shade = seatEnd - f < 14 ? -0.18 * (1 - (seatEnd - f) / 14) : 0;                         // (under the roof's edge)
+          if (row === vom && a % 400 > 180 && a % 400 < 228) { RI[i] = 20; T[i] = r < 2 ? 0.5 : 0.2; if (a % 400 < 183 || a % 400 > 225) { RI[i] = CONC; T[i] = 0.7; } return; }   // (a tunnel's mouth)
+          if (a % AISLE < 8) { RI[i] = CONC; T[i] = (r < 1 ? 0.85 : r < 5 ? 0.6 : 0.45) + shade; if (r === 0) { RI[i] = S0 + 5; T[i] = 0.6; } return; }   // (the aisle's steps, their yellow nosings)
+          if (r < 3) { RI[i] = CONC; T[i] = (r === 0 ? 0.3 : 0.62) + shade; return; }                   // the step in front of the row
+          const sa = a % SP, seat = Math.floor(a / SP), col = row < 2 || row === vom + 1 || row === vom + 2 ? NAVY : RED;   // (navy bands: the front rows, the two over the tunnels)
+          if (sa === SP - 1) { RI[i] = CONC; T[i] = 0.35 + shade; return; }                              // (between two seats)
+          // somebody sat in this one: their shirt over the seat, their head above it (on screen: toward the back of a
+          // stand facing the camera, toward the front of one facing away - seen from behind)
+          const who = hash(seat, row, seed + 61);
+          if (who < sit) {
+            const k = (hash(seat, row, seed + 62) * 64) | 0, rr = to === 'N' ? 12 - r : r;
+            if (rr >= 7 && sa > 0 && sa < SP - 2) { RI[i] = SKIN[k % 3]; T[i] = 0.55 + (rr === 9 ? -0.1 : 0.08) + shade; if (k % 7 === 0 && rr === 9) { RI[i] = SHIRT[(k >> 3) % 6]; T[i] = 0.5; } return; }   // (a head, some in a cap)
+            if (rr >= 3 && rr < 7) { RI[i] = SHIRT[(k >> 2) % 6]; T[i] = 0.42 + (sa === 0 || sa === SP - 2 ? -0.1 : 0.06) + shade; return; }
+          }
+          RI[i] = col; T[i] = (r < 5 ? 0.6 : r < 8 ? 0.42 : 0.28) + (sa === 0 ? -0.08 : 0) + shade;     // the seat: its pan, its back, the riser's shadow
         });
         break;
       }
@@ -516,7 +559,7 @@ function roofDeck(G, spec, w, d, H, seed, style) {
       const pu = 6 + rn(k, 3) * (iw - 12 - pw) | 0, pv = 6 + rn(k, 4) * (id - 12 - ph) | 0;
       for (let v = pv; v < pv + ph; v++) for (let u = pu; u < pu + pw; u++) T[v * iw + u] += u === pu || v === pv ? 0.14 : -0.06;
     }
-    const nd = mat === 'green' || mat === 'sedum' || mat === 'deck' || iw < 40 || id < 40 ? 0 : 1 + Math.round(w * d / 40000);
+    const nd = mat === 'green' || mat === 'sedum' || mat === 'deck' || mat === 'seats' || iw < 40 || id < 40 ? 0 : 1 + Math.round(w * d / 40000);
     for (let k = 0; k < nd; k++) {
       const du = 12 + rn(k, 5) * (iw - 24) | 0, dv = 12 + rn(k, 6) * (id - 24) | 0;
       for (let v = Math.max(0, dv - 13); v <= Math.min(id - 1, dv + 13); v++) for (let u = Math.max(0, du - 13); u <= Math.min(iw - 1, du + 13); u++) { const dd = Math.sqrt((u - du) * (u - du) + (v - dv) * (v - dv)); if (dd < 14) T[v * iw + u] -= dd < 2.5 ? 0.45 : (1 - dd / 14) * 0.14; }
@@ -526,7 +569,7 @@ function roofDeck(G, spec, w, d, H, seed, style) {
     }
     for (let v = 0, i = 0; v < id; v++) for (let u = 0; u < iw; u++, i++) {
       const x = u + rw, y = v + rw, e = Math.min(v, u, iw - 1 - u), ri = RI[i];             // the parapets' inner shadow
-      G.put(x, y + L, step(RS[ri], T[i] - (e < 6 && L > 0 ? (6 - e) * 0.03 : 0), x, y, DI[ri]), UP, zD, null, 0);
+      G.put(x, y + L, step(RS[ri], T[i] - (e < 6 && L > 0 ? (6 - e) * 0.03 : 0), x, y, DI[ri]), UP, zD + (ZO ? ZO[i] : 0), null, 0);
     }
   }
   for (let k = 0; k < L; k++) for (let x = rw; x < w - rw; x++) {

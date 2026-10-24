@@ -360,6 +360,7 @@ function build(m, api, K) {
       prop('tree_a', x + 0.5, y + 0.5, 10, { sp: rnd(x, y, 71) < 0.7 ? 'apple' : 'orange', k: 1.05 + rnd(x, y, 72) * 0.15 }); K.take(x - 1, y - 1, 3, 3); trees++;
     }
     out.orchard = trees;
+    if (trees) (m.orchards ||= []).push({ x: 1587 * TILE, y: 3429 * TILE, w: (GX.ferry - 6 - 1587) * TILE, h: 64 * TILE, k: 'orchard' });   // (its ground mown, no wild flowers among the trees: the art - world3-biomes.js m.orchards)
     place('Windrush Farm', GX.ferry, 3424, fx + 44, fy + 40);
     // the fields: a grid of plots over the island's middle inside the loop road, a hedgerow round each (oaks in it now
     // and then); a couple left as meadow

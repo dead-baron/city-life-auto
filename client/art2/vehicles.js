@@ -1318,14 +1318,40 @@ export function vehicleModel(type, o = {}) {
       break;
     }
     case 'combine': {
-      const hx = L - 26;
+      // (the owner, 10-23: "Hard to tell what is being harvested with the harvester": a combine you can read from
+      // above - the wide header out front with its crop dividers and cutter bar, the reel of yellow bats over it (o.reel
+      // 0-2: turned a third of a bat at a time as it works - host.js), the feeder house up into the body, the open grain
+      // tank on top heaped with the crop, the unloading auger folded along its side, the cab over the header)
+      const hx = L - 30, ph = ((o.reel | 0) % 3) / 3, YEL = paintSet(m, '#e8b828').body, GRAIN = paintSet(m, '#d8b450').body;
       shell(m, { x0: 4, x1: hx, y0: 26, y1: W - 26, z0: 16, z1: 56, r: 4, rz: 4, mat: M.body });
-      m.box(10, 30, 56, 60, W - 30, 62, M.body);
-      shell(m, { x0: hx - 28, x1: hx, y0: 40, y1: W - 40, z0: 44, z1: 70, r: 2, rz: 2, mat: glassy(M.body, M.glass, { band: [48, 66], pillars: [], sideGlass: true }) });
-      m.box(hx - 6, 4, 6, L, W - 4, 22, M.body); m.box(hx - 4, 4, 22, L - 2, W - 4, 24, M.trim);
-      m.cyl('y', L - 10, 0, 22, 9, 4, W - 4, M.trim, 6, 0);
-      for (let y = 6; y < W - 6; y += 6) m.box(L - 2, y, 4, L, y + 2, 8, M.steel);
-      for (let k = 0; k < 50; k++) m.box(30 + k * 0.4, 20 - k * 0.3, 58 + k * 0.1, 33 + k * 0.4, 24 - k * 0.3, 61 + k * 0.1, M.body);
+      m.box(0, 34, 14, 6, W - 34, 30, M.dark);                                                  // the straw spreader at the back
+      // the grain tank: an open bin on top, the crop heaped in it
+      m.box(30, 30, 56, 96, W - 30, 72, M.body);
+      m.fill((x, y, z) => (z < 66 + 5 * (1 - (((x - 63) / 30) ** 2 + ((y - W / 2) / 27) ** 2)) ? GRAIN : 0), 33, 33, 60, 93, W - 33, 72);
+      // the cab, toward the front over the feeder house
+      shell(m, { x0: hx - 30, x1: hx - 2, y0: 40, y1: W - 40, z0: 44, z1: 72, r: 2, rz: 2, mat: glassy(M.body, M.glass, { band: [48, 68], pillars: [], sideGlass: true }) });
+      m.box(hx - 31, 39, 72, hx - 1, W - 39, 75, M.white);
+      // the feeder house from the header up into the body
+      m.box(hx - 4, 44, 10, hx + 10, W - 44, 30, M.body);
+      // the header: its floor, the back wall with the cross auger, the crop dividers' points, the cutter bar's teeth
+      m.box(hx + 6, 2, 4, L, W - 2, 10, M.body);
+      m.box(hx + 6, 2, 10, hx + 12, W - 2, 24, M.body); m.box(hx + 6, 2, 24, hx + 12, W - 2, 26, M.trim);
+      m.cyl('y', hx + 16, 0, 13, 4, 4, W - 4, M.steel);
+      for (const y of [2, W - 6]) m.box(hx + 6, y, 10, L - 2, y + 4, 20, M.body);              // its end walls
+      for (let y = 2; y <= W - 6; y += 23) m.fill((x, yy, z) => (Math.abs(yy - y - 2) < 2.2 - (x - (L - 12)) * 0.18 ? YEL : -1), L - 12, y - 1, 4, L, y + 6, 9);   // the dividers
+      for (let y = 6; y < W - 6; y += 5) m.box(L - 3, y, 4, L, y + 2, 6, M.steel);
+      // the reel: its axle on two arms, five yellow bats round it, the spider arms out to them
+      const rx = L - 14, rz = 27, rr = 10;
+      for (const y of [4, W - 8]) { m.box(hx + 10, y, 24, rx + 1, y + 4, 28, M.steel); }
+      m.cyl('y', rx, 0, rz, 2, 6, W - 6, M.steel);
+      for (let k = 0; k < 5; k++) {
+        const t = (k + ph) / 5 * Math.PI * 2, bx = rx + Math.cos(t) * rr, bz = rz + Math.sin(t) * rr;
+        m.box(bx - 1.5, 8, bz - 1.5, bx + 1.5, W - 8, bz + 1.5, YEL);
+        for (const y of [10, W / 2, W - 12]) for (let q = 2; q < rr; q += 1) m.box(rx + Math.cos(t) * q - 0.6, y, rz + Math.sin(t) * q - 0.6, rx + Math.cos(t) * q + 0.6, y + 2, rz + Math.sin(t) * q + 0.6, M.steel);
+      }
+      // the unloading auger folded along the left side, its spout at the front
+      m.cyl('x', 0, 24, 66, 3, 18, hx - 34, M.body);
+      m.box(hx - 38, 21, 58, hx - 32, 27, 66, M.body);
       for (const y of [20, W - 34]) m.cyl('y', hx - 20, 0, 16, 16, y, y + 14, M.tyre, 9, M.rim);
       for (const y of [28, W - 38]) m.cyl('y', 20, 0, 10, 10, y, y + 10, M.tyre, 6, M.rim);
       break;

@@ -99,6 +99,7 @@ mat('FOUND', 'foundation', 1); mat('WALL', 'foundation', 1); mat('CRAG', 'crag',
 mat('BALLAST', 'ballastStone', 1); mat('PLATFORM', 'slabPlaza', 1); mat('RAILDECK', 'planksX', 1);
 mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); mat('POOL', '', 2); mat('SPRING', '', 2);
 mat('SNOW', 'snowfield', 0);   // (World v3's summits: terrain class 9, shared/world3-biomes.js)
+mat('ORCHARD', 'orchardGrass', 0);   // (World v3's orchards: m.orchards - mown between the rows)
 const NM = MATS.length;
 const KIND = new Uint8Array(NM), SHADER = [];
 for (let i = 0; i < NM; i++) { KIND[i] = MATS[i][1]; SHADER[i] = GSHADE[MATS[i][0]] || null; }
@@ -106,6 +107,7 @@ for (let i = 0; i < NM; i++) { KIND[i] = MATS[i][1]; SHADER[i] = GSHADE[MATS[i][
 SHADER[M_.FLOOR] = (x, y, s) => interior('tileWhite', x, y, s); SHADER[M_.FLOORW] = (x, y, s) => interior('woodFloor', x, y, s);
 const TURFPAL = new Int8Array(NM).fill(-1), TURFCLOV = new Float32Array(NM);
 TURFPAL[M_.LAWN] = 0; TURFPAL[M_.PARK] = 1; TURFPAL[M_.CLOVER] = 1; TURFPAL[M_.MEADOW] = 2; TURFPAL[M_.PASTURE] = 2; TURFPAL[M_.DRYGRASS] = 3; TURFPAL[M_.ALPINE] = 4; TURFPAL[M_.FOREST] = 2;
+TURFPAL[M_.ORCHARD] = 1;
 TURFCLOV[M_.PARK] = 0.12; TURFCLOV[M_.CLOVER] = 0.55; TURFCLOV[M_.PASTURE] = 0.15; TURFCLOV[M_.LAWN] = 0.05;
 const WALKS = { concrete: M_.WALKC, slate: M_.WALKS, brick: M_.WALKB }, PLAZAS = { concrete: M_.PLAZAC, slate: M_.PLAZAS, brick: M_.PLAZAB };
 const isWater = (m) => KIND[m] === 2, isSoft = (m) => KIND[m] === 0, roadLike = (m) => KIND[m] === 3, raised = (m) => KIND[m] === 4;
@@ -218,7 +220,10 @@ export function bakeSwatches(names = E1_SWATCHES, opt = {}) {
 }
 
 // ---- 1. tiles ----------------------------------------------------------------------------------------------------
+// what grows in field f: the server's farm work reports the same crop (shared/fieldcrop.js fieldKind - kept here, not
+// imported, so the bake workers load no more files; test/harvestart.test.js holds the two to one rule)
 const FIELD_KINDS = ['WHEAT', 'CORN', 'PLOW', 'VEG', 'HAY', 'WHEAT', 'CORN'];
+export const fieldKindAt = (f, seed) => FIELD_KINDS[Math.floor(hh(f, 0, seed + 9) * FIELD_KINDS.length)];
 function tileFacts(C) {
   const { M, b, TX0, TY0, seed } = C;
   const { cls, cw } = M.terrainCls;
@@ -258,6 +263,10 @@ function tileFacts(C) {
     for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) { const x = tx + dx, y = ty + dy, a = Math.max(Math.abs(dx), Math.abs(dy)); if (a < d && M.inside(x, y) && M.tiles[M.idx(x, y)] === T.WALL && inRect(cyn, x * TILE + 16, y * TILE + 16)) d = a; }
     return d <= 1 || (d <= 6 && rhash(tx, ty, 7313) < 0.85 - d / 7) ? M_.REDROCK : base;
   };
+  // (World v3's orchards and the lavender and sunflower rows, the nature sites' orchard and vineyard: farmed ground -
+  // shared/world3-biomes.js m.orchards; a vineyard's rows run along x as the lavender's do)
+  const orch = farmRects(M).filter((r) => r.x + r.w >= TX0 * TILE && r.x <= (TX0 + TN) * TILE && r.y + r.h >= TY0 * TILE && r.y <= (TY0 + TN) * TILE);
+  const farmed = (X, Y) => { for (const r of orch) if (inRect(r, X, Y)) return r.k === 'orchard' ? M_.ORCHARD : M_.PLOW; return -1; };   // (the rows run along x: world3-biomes.js)
   const onTrack = (X, Y) => tracks.some((r) => { if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
   for (let j = 0; j < TN; j++) { const ty = TY0 + j, row = M.row(ty), rowIn = ty >= M.y0 && ty < M.y0 + M.h; for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, k = j * TN + i;
@@ -275,6 +284,7 @@ function tileFacts(C) {
     else if (t === T.WATER || t === T.DEEP || t === T.BRIDGE || lip) m = M.lake[g] === 2 ? M_.POND : M.lake[g] ? M_.LAKE : !M.land[g] ? (M.river[g] ? M_.RIVER : M_.SEA) : M_.POND;
     else if (t === T.DOCK && M.walkways && walkways(M).has(g)) m = !M.land[g] ? (M.lake[g] === 2 ? M_.POND : M.lake[g] ? M_.LAKE : M.river[g] ? M_.RIVER : M_.POND) : M_.MEADOW;   // (under a boardwalk's legs: the marsh, its model's planks over it - shared/world3-marsh.js)
     else if (t === T.DOCK) m = runAxis(M, tx, ty, T.DOCK) ? M_.DOCK : M_.DOCKX;
+    else if ((t === T.GRASS || t === T.DIRT) && orch.length && farmed(X, Y) >= 0) m = farmed(X, Y);
     else if (t === T.GRASS) {
       if (b.tdeck[k]) m = M_.UNDERDECK;
       else if (b.tres[k] & 128) m = M_.PASTURE;                 // (a river's lush banks, even in dry country: Willow River)
@@ -310,7 +320,7 @@ function tileFacts(C) {
     }
     else if (t === T.FIELD) {
       const f = fields.findIndex((r) => X >= r.x && X < r.x + r.w && Y >= r.y && Y < r.y + r.h);
-      const fk = FIELD_KINDS[Math.floor(hh(f >= 0 ? f : tx >> 3, f >= 0 ? 0 : ty >> 3, seed + 9) * FIELD_KINDS.length)];
+      const fk = f >= 0 ? fieldKindAt(f, seed) : FIELD_KINDS[Math.floor(hh(tx >> 3, ty >> 3, seed + 9) * FIELD_KINDS.length)];
       const long = f >= 0 && fields[f].w > fields[f].h;
       m = fk === 'CORN' ? (long ? M_.CORN : M_.CORNV) : fk === 'PLOW' ? (long ? M_.PLOW : M_.PLOWV) : M_[fk];
     } else if (t === T.SIDEWALK) m = walkOf(D);
@@ -411,6 +421,15 @@ function walkOf(D) {
   if (D.style === 'beach') return M_.PLAZAB;
   if (D.walk === 'concrete') return D.tier === 'rough' || D.tier === 'low' || D.tier === 'industrial' ? M_.WALKCR : M_.WALKC;
   return WALKS[D.walk] ?? M_.WALKC;
+}
+// the farmed strips (as statics.js farmRects: kept on the map, not sent)
+function farmRects(M) {
+  const F = M._farm;
+  if (F && F.o === M.orchards && F.l === M.landmarks) return F.out;
+  const out = (M.orchards || []).slice();
+  for (const l of M.landmarks || []) if (l && (l.type === 'orchard' || l.type === 'vineyard')) out.push({ x: l.x, y: l.y, w: l.w, h: l.h, k: l.type });
+  Object.defineProperty(M, '_farm', { value: { o: M.orchards, l: M.landmarks, out }, enumerable: false, configurable: true, writable: true });
+  return out;
 }
 const inRect = (r, X, Y) => r && X >= r.x && X < r.x + r.w && Y >= r.y && Y < r.y + r.h;
 const inRects = (list, X, Y, key) => list.some((r) => (!key || r.key === key) && inRect(r, X, Y));

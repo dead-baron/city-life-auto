@@ -6,6 +6,7 @@
 // Aiming: the mouse or a finger - drag back from the cue ball and let go (the further, the harder); or turn the cue with
 // left / right (the stick, the d-pad, A D or the arrows; up / down to fine-tune), hold the shoot button (Space, Enter, A)
 // to build the power and let go. Esc / B leaves.
+import { fitScreen } from './arcscreen.js';
 const W = 256, H = 160, STEP = 1 / 120;
 const T = { x0: 22, y0: 24, x1: 234, y1: 136 };   // the cloth inside the cushions
 const R = 4.2, PR = 8.5;   // a ball's radius, a pocket's
@@ -155,6 +156,7 @@ function step(dt) {
 
 function draw() {
   const g = G.g, cb = G.balls[0];
+  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: sharp)
   g.fillStyle = '#1a0f08'; g.fillRect(0, 0, W, H);
   g.fillStyle = '#5a3418'; g.fillRect(T.x0 - 12, T.y0 - 12, T.x1 - T.x0 + 24, T.y1 - T.y0 + 24);   // the rails
   g.fillStyle = '#1e6a3a'; g.fillRect(T.x0 - 4, T.y0 - 4, T.x1 - T.x0 + 8, T.y1 - T.y0 + 8);   // the cushions

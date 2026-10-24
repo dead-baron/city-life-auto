@@ -60,19 +60,11 @@ export function drawAir(g, F, S, dt, v2 = false) {
     // shadow are the renderer's; here only the shadow once it's up off the ground, and the searchlight
     const modeled = v2 && performance.now() - (v._v2at || 0) < 250;
     // the shadow: on the ground (or the roof under it), away from the sun by the height above it, fainter and softer higher up
-    const fl = floorAt(S.map, v.rx, v.ry), above = Math.max(0, alt - fl), so = 3 + above * 0.42, fade = Math.max(0.25, 1 - above / 1400) * (modeled ? Math.min(1, Math.max(0, (above - 30) / 40)) : 1);
+    // (low down on art v2 the renderer casts the model's own - airShadow)
+    const fl = floorAt(S.map, v.rx, v.ry), above = Math.max(0, alt - fl);
     const spot = spotOf(v, dt);
     if (spot) drawBeam(g, v, def, spot, lift, now);
-    if (fade > 0.01) {
-      g.save();
-      g.translate(v.rx + sun.x * so, v.ry + sun.y * so - (v2 ? liftOf(fl) : 0));
-      g.rotate(v.ra);
-      g.globalAlpha = 0.32 * fade;
-      g.fillStyle = '#000';
-      silhouette(g, def, v);
-      if (!isPlane(def) && v._spin > 0.55) { g.globalAlpha = 0.1 * fade; g.beginPath(); g.arc(def.L * 0.06, 0, def.rotor, 0, Math.PI * 2); g.fill(); }
-      g.restore();
-    }
+    airShadow(g, v, def, sky, sun, above, v2 ? liftOf(fl) : 0, modeled ? Math.min(1, Math.max(0, (above - 3) / 8)) : 1, F.rain);   // (on the ground the renderer casts the model's own: art2/aircraft.js)
     if (modeled) {
       // (the rotor's blurred disc stays here, over the model's mast: a canvas blends it, the renderer can only dither)
       if (!isPlane(def) && v._spin > 0.55 && !(f & VF.WRECK)) {
@@ -98,17 +90,107 @@ export function drawAir(g, F, S, dt, v2 = false) {
   if (job && job.hoist) drawHoist(g, job.hoist, list, dt, now, v2);
 }
 
-function silhouette(g, def, v) {
-  const L = def.L;
-  if (isPlane(def)) {
-    const span = def.span || def.W, c = Math.cos(v.rbank ?? v._bank ?? 0);
-    g.fillRect(-L / 2, -8, L, 16);
-    g.fillRect(-2, -span / 2 * c, 26, span * c);
-    g.fillRect(-L / 2, -26, 14, 52);
-    return;
+// ---- the shadow (the owner, 10-23: "Shadow of helicopter looks like placeholder art", "Shadows on air vehicles could look
+// better") ----------------------------------------------------------------------------------------------------------------
+// The aircraft's own shape seen from above, as art/aircraft.js builds its models - a helicopter's cabin, the tail boom
+// tapering to the fin and the tailplane, the skids on their struts, the tail rotor edge on (the gunship's stub wings and
+// rocket pods, its chin gun); the plane's fuselage, the high wing (foreshortened as it banks), the tailplane and fin, the
+// wheels, the crop duster's spray boom - drawn once into a mask, blurred to the softness a height gives (a few steps),
+// kept. Each frame: the mask on the ground away from the sun by the drawn height, as the renderer's shadows fall
+// (atmos.js sunDir, shadowLen), fading with the height, at night and in the rain; the main rotor's spinning disc a faint
+// ring over it (its blades while it spools), the propeller's a faint line.
+const MASKS = new Map();
+const SOFT = [1.5, 3, 5, 8];    // blur (px) at each step of height
+const softOf = (above) => (above < 120 ? 0 : above < 300 ? 1 : above < 600 ? 2 : 3);
+const PAD = 12;
+function maskOf(def, bank, soft) {
+  const plane = isPlane(def), bi = plane ? Math.max(0, Math.min(8, Math.round(Math.abs(bank) / 0.1))) : 0, key = `${def.id}|${bi}|${soft}`;
+  let c = MASKS.get(key);
+  if (c) return c;
+  const L = def.L, half = plane ? 84 : def.missiles ? 48 : 30, w = L + 2 * PAD + 8, h = 2 * half + 2 * PAD;
+  c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
+  c.ox = L / 2 + PAD; c.oy = h / 2;
+  const g = c.getContext('2d');
+  g.translate(c.ox, c.oy); g.fillStyle = '#000';
+  if (plane) planeMask(g, def, Math.cos(bi * 0.1)); else heliMask(g, def);
+  blurAlpha(g, w, h, SOFT[soft]);
+  MASKS.set(key, c);
+  return c;
+}
+const box = (g, x0, y0, x1, y1) => g.fillRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0));
+// (x along the body, the nose +x, from the middle: the models' x from the tail less L/2)
+function heliMask(g, def) {
+  const L = def.L, gun = !!def.missiles, hw = gun ? 13 : 23, sy = gun ? 14 : 22;
+  g.beginPath(); g.ellipse(L * 0.1, 0, L * (gun ? 0.3 : 0.27), hw, 0, 0, Math.PI * 2); g.fill();   // the cabin
+  g.beginPath(); g.moveTo(-L * 0.47, -2.6); g.lineTo(-L * 0.04, -6.8); g.lineTo(-L * 0.04, 6.8); g.lineTo(-L * 0.47, 2.6); g.fill();   // the boom
+  box(g, -L * 0.38, -13, -L * 0.3, 13);                    // the tailplane
+  box(g, -L / 2, -1.6, -L * 0.36, 1.6);                    // the fin, edge on
+  box(g, -L * 0.45 - 9, 2, -L * 0.45 + 9, 3.2);            // the tail rotor, edge on
+  for (const s of [-1, 1]) {
+    box(g, -L * 0.26, s * sy - 1.5, L * 0.26, s * sy + 1.5);   // the skids
+    box(g, L * 0.24, s * sy - 1.5, L * 0.28, s * sy + 1.5 - s * 2);
+    for (const x of [-L * 0.14, L * 0.14]) box(g, x, s * (sy - 6), x + 2.5, s * sy);   // their struts
   }
-  g.beginPath(); g.ellipse(L * 0.12, 0, L * 0.36, def.W * 0.42, 0, 0, Math.PI * 2); g.fill();
-  g.fillRect(-L / 2, -4, L * 0.4, 8);
+  if (gun) {
+    box(g, 0, -46, L * 0.1, 46);                           // the stub wings
+    for (const s of [-1, 1]) for (const [d, r] of [[38, 5], [27, 4]]) box(g, -L * 0.06, s * d - r, L * 0.19, s * d + r);   // the pods
+    box(g, L * 0.36, -2, L * 0.45, 2);                     // the chin gun
+  }
+}
+function planeMask(g, def, c) {
+  const L = 128, k = def.L / L;
+  g.scale(k, k);
+  g.beginPath();
+  const r = (t) => (t < 0.5 ? 3 + 16 * t : t < 0.86 ? 11 : 11 - (t - 0.86) * 30);
+  for (let i = 0; i <= 20; i++) { const t = i / 20; g.lineTo(-64 + t * 128, -r(t)); }
+  for (let i = 20; i >= 0; i--) { const t = i / 20; g.lineTo(-64 + t * 128, r(t)); }
+  g.fill();                                                // the fuselage
+  g.beginPath(); g.moveTo(2.5, -82 * c); g.lineTo(21.8, -80 * c); g.lineTo(21.8, 80 * c); g.lineTo(2.5, 82 * c); g.fill();   // the wing, foreshortened as it banks
+  box(g, -62, -26, -46, 26);                               // the tailplane
+  box(g, -64, -1.6, -46, 1.6);                             // the fin
+  for (const s of [-1, 1]) { box(g, 5, s * 14, 15, s * 18); box(g, 9, s * 4, 11, s * 15); }   // the wheels, the gear legs
+  box(g, 44, -1.5, 52, 1.5);                               // the nose wheel
+  if (def.spray) box(g, 0, -76 * c, 2.6, 76 * c);          // the crop duster's boom
+  for (const s of [-1, 1]) { g.beginPath(); g.moveTo(10, s * 9); g.lineTo(12.5, s * 39 * c); g.lineTo(14.5, s * 39 * c); g.lineTo(12, s * 9); g.fill(); }   // the struts
+}
+// a box blur of the alpha, three passes each way (the mask is black: only its alpha matters)
+function blurAlpha(g, w, h, rad) {
+  const im = g.getImageData(0, 0, w, h), d = im.data, a = new Float32Array(w * h), b = new Float32Array(w * h), R = Math.max(1, Math.round(rad / 1.7));
+  for (let i = 0; i < w * h; i++) a[i] = d[i * 4 + 3];
+  for (let pass = 0; pass < 3; pass++) {
+    for (let y = 0; y < h; y++) { let s = 0; for (let x = -R; x <= R; x++) s += a[y * w + Math.min(w - 1, Math.max(0, x))]; for (let x = 0; x < w; x++) { b[y * w + x] = s / (2 * R + 1); s += a[y * w + Math.min(w - 1, x + R + 1)] - a[y * w + Math.max(0, x - R)]; } }
+    for (let x = 0; x < w; x++) { let s = 0; for (let y = -R; y <= R; y++) s += b[Math.min(h - 1, Math.max(0, y)) * w + x]; for (let y = 0; y < h; y++) { a[y * w + x] = s / (2 * R + 1); s += b[Math.min(h - 1, y + R + 1) * w + x] - b[Math.max(0, y - R) * w + x]; } }
+  }
+  for (let i = 0; i < w * h; i++) { d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = 0; d[i * 4 + 3] = a[i]; }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.putImageData(im, 0, 0);
+}
+// above: px over the ground under it; up: the drawn height of that ground (a roof, art v2); k: the share left to draw here
+export function airShadow(g, v, def, sky, sun, above, up, k = 1, rain = 0) {
+  const night = sky ? sky.night || 0 : 0, sl = sky && sky.shadowLen ? sky.shadowLen : 0.6, l = Math.hypot(sun.x, sun.y) || 1;
+  const fade = k * Math.max(0.22, 1 - above / 1500) * (1 - 0.75 * night) * (1 - 0.6 * Math.min(1, rain || 0));
+  if (fade < 0.02) return;
+  const d = 3 + above * V2_LIFT * Math.max(0.35, Math.min(1.4, sl)) / 0.62, plane = isPlane(def);   // (the drawn height, as the renderer's shadows fall)
+  const bank = plane ? (v._own ? v.rbank : v._bank) || 0 : 0, M = maskOf(def, bank, softOf(above));
+  g.save();
+  g.translate(v.rx + sun.x / l * d, v.ry + sun.y / l * d - up);
+  g.rotate(v.ra);
+  g.globalAlpha = 0.48 * fade;
+  g.drawImage(M, -M.ox, -M.oy);
+  const s = v._spin || 0;
+  if (!plane && !((v.flags | 0) & VF.WRECK)) {
+    const hx = def.L * 0.06, R = def.rotor;
+    if (s > 0.55) {   // the disc: a faint ring at the tips, fainter inside
+      g.globalAlpha = 0.07 * fade * s; g.fillStyle = '#000'; g.beginPath(); g.arc(hx, 0, R, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 0.09 * fade * s; g.strokeStyle = '#000'; g.lineWidth = 4; g.beginPath(); g.arc(hx, 0, R - 3, 0, Math.PI * 2); g.stroke();
+    }
+    if (s < 0.9) {   // the blades while it spools
+      g.globalAlpha = 0.4 * fade * (1 - Math.max(0, (s - 0.55) / 0.35)); g.strokeStyle = '#000'; g.lineWidth = 5; g.lineCap = 'round';
+      for (let i = 0; i < 4; i++) { const a = (v._ph || 0) + i * Math.PI / 2; g.beginPath(); g.moveTo(hx, 0); g.lineTo(hx + Math.cos(a) * R, Math.sin(a) * R); g.stroke(); }
+      g.lineCap = 'butt';
+    }
+  } else if (plane && s > 0.4) { g.globalAlpha = 0.12 * fade; g.fillStyle = '#000'; g.fillRect(def.L / 2 - 1, -17, 3, 34); }   // the propeller's disc, edge on
+  g.restore();
 }
 
 function drawHeli(g, def, v, alt, now) {

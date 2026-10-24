@@ -843,6 +843,8 @@ export const GSHADE = {
   grassGreen(x, y, s) { const ck = (((x / 14) | 0) + ((y / 14) | 0)) & 1, n = hh(x, y, s + 3), b = vnc(x, y, 40, s + 7); return at(G_GREEN, 5 - ck + (n > 0.94 ? 1 : n < 0.04 ? -1 : 0) + (b > 0.7 ? 1 : 0)); },   // (mown in a checker)
   grassGolf(x, y, s) { const k = (((x + y * 0.2) / 44) | 0) & 1; const c = grass(G_PARK, x, y, s, 3); return k ? c : at(G_PARK, G_PARK.indexOf(c) - 1); },
   pasture(x, y, s) { const c = clover(x, y, s, 0.18); return c || grass(G_MEAD, x, y, s, 4); },
+  // an orchard's floor (World v3's Willow Valley, m.orchards): kept grass, short and mown in stripes, worn bare here and there
+  orchardGrass(x, y, s) { if (vnc(x, y, 29, s + 71) < 0.13) return GSHADE.dirtPebbly(x, y, s); return grass(G_PARK, x, y, s, 3, 1); },
   // --- earth --------------------------------------------------------------------------------------------
   forestFloor(x, y, s) {
     const m = vnc(x, y, 14, s + 7);

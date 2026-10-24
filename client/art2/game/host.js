@@ -78,6 +78,22 @@ const CHAR_PED = [0.2, 0.18, 0.17], SINGED = [0.72, 0.66, 0.62];   // (someone b
 const GRAZERS = new Set(['deer', 'rabbit', 'cow', 'sheep', 'horse', 'goat']); // animals.js kinds that graze when still
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // people flat on the ground (main.js pedLook)
 const WILD_IDLE = new Set(['coyote', 'raccoon', 'pig']);                     // ...and wild ones that just stand (a pet sits)
+const snapTo = (v, ap) => Math.round(v / ap) * ap;   // (an offset in whole art pixels)
+// a flying bird's wingspan (px) for its shadow (_flyShadow); and the shadow itself: seen from above, head along +x - the
+// body, the tail's fan, the wings swept back and narrowing to the tips; w 0 spread, 1 half up, 2 tucked in (a dive)
+const SPAN = { quail: 14, pheasant: 18, turkey: 26, duck: 20, goose: 32, heron: 40, osprey: 32, eagle: 44 };
+function birdShadow(s, w) {
+  const hw = s / 2 * [1, 0.62, 0.3][w], L = Math.max(6, s * 0.42), W = Math.ceil(Math.max(hw, L / 2)) * 2 + 4, G = gbuf(W, W, W >> 1, W >> 1), c = W / 2, rgb = [14, 16, 24];
+  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
+    const x = i + 0.5 - c, y = Math.abs(j + 0.5 - c), t = y / Math.max(1, hw);
+    const body = (x / (L / 2)) ** 2 + (y / Math.max(1.5, s * 0.06)) ** 2 < 1;
+    const tail = x < -L * 0.3 && x > -L * 0.62 && y < 1 + (-L * 0.3 - x) * 0.45;
+    const cw = s * 0.21 * (1 - 0.55 * t), sx = -y * 0.2 * (w ? 0.5 : 1);
+    const wing = t < 1 && x > sx - cw * 0.55 && x < sx + cw * 0.45;
+    if (body || tail || wing) put(G, i, j, rgb, 0, UP_N, F_GROUND);
+  }
+  return G;
+}
 // a happy pet's hops (px up): quick little bounces, a beat between them, each pet in its own time
 const petHop = (t, id) => { const k = (t * 2.4 + id * 0.37) % 1; return k < 0.55 ? Math.sin(Math.PI * k / 0.55) * 7 : 0; };
 // A wild animal's pose (actors.js ANIMAL_FRAMES) from what the server says it's doing (shared/fauna.js APOSE, the
@@ -587,7 +603,10 @@ export class World2 {
     if (q !== this.q) { this.q = q; this.tier = TIERS[q]; if (E.setQuality) E.setQuality(q); }
     // sprites snap to the art grid: the camera moves with the player's position rounded to it (plus the smooth
     // look-ahead) so the player stays steady on screen (engine.js integration notes)
-    const ap = E.ap || 1, sp = F.sp, camX = Math.round(sp.x / ap) * ap + (S.cam.x - sp.x) - F.shx / z, camY = Math.round(sp.y / ap) * ap + (S.cam.y - sp.y) - F.shy / z;
+    // (riding a train: where you're drawn - your car's spot on the grid plus your place in it, _ped - so the train and its
+    // riders hold still on screen together: b2a, "riding on train is a bit jittery")
+    const ap = E.ap || 1, sp = F.sp, tc = F.myTrain >= 0 ? F.myCar : null, gx = tc ? tc.rx + snapTo(sp.x - tc.rx, ap) : Math.round(sp.x / ap) * ap, gy = tc ? tc.ry + snapTo(sp.y - tc.ry, ap) : Math.round(sp.y / ap) * ap;
+    const camX = gx + (S.cam.x - sp.x) - F.shx / z, camY = gy + (S.cam.y - sp.y) - F.shy / z;
     const hw = this.W / 2 / z, hh = this.H / 2 / z;
     this.vx0 = camX - hw; this.vx1 = camX + hw; this.vy0 = camY - hh; this.vy1 = camY + hh;
     this.camX = camX; this.camY = camY;
@@ -615,7 +634,7 @@ export class World2 {
     Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
     // the sea's sparkle tonight (render/atmos.js bioAt: some nights, along some shores; the day from the server)
     const bio = S.bioForce || bioAt((S.day || 0) * DAY_LOOP_S + (S.loopTime || 0), F.sky.minutes, this.bioArr || (this.bioArr = [0, 0]));   // (S.bioForce: the debug menu's)
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, clear: this.clr || null, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
@@ -1232,35 +1251,46 @@ export class World2 {
   }
 
   // ---- see-through buildings --------------------------------------------------------------------------------
-  // Whole buildings standing in front of you (their base south of you) whose picture covers the space round
-  // you ease to transparent and back (the engine shows the street under them; past half way they stop hiding
-  // what is behind them). Driving clears a wider space. A building already fading keeps a slightly bigger box,
-  // so walking along its edge doesn't make it flicker.
+  // A building whose picture covers you eases (~0.2 s) to a ghost, clear round you and the players near you (engine.js
+  // STATIC_FS: GHOST, uClr); its footprint never fades; a tall thin one fades less (GHOST_THIN) - the owner, 10-23.
   _fades(F, sp) {
     const S = this.S, inVeh = S.pred ? S.pred.kind === 'veh' : false, onTrain = F.myTrain !== undefined && F.myTrain >= 0;
     const z0 = (sp.z || 0) > 0.01 ? DECK_Z * sp.z : this._gz(sp.x, sp.y), px = sp.x, py = sp.y, sy = py - z0;
-    // On a train only what really stands over you fades (passing beside buildings, the ones either side of the
-    // track kept fading in and out); in a car a wider space round you, on foot a little less.
-    const rx = onTrain ? 28 : inVeh ? 150 : 100, up = onTrain ? 70 : inVeh ? 160 : 128, down = onTrain ? 12 : 44;
-    const want = this._fadeWant || (this._fadeWant = new Set());
+    // your figure on screen (from your feet up) and the space kept clear round it
+    const rx = onTrain ? 28 : inVeh ? 64 : 30, up = onTrain ? 70 : inVeh ? 72 : 62, down = onTrain ? 12 : inVeh ? 30 : 12;
+    const want = this._fadeWant || (this._fadeWant = new Map());
     want.clear();
     const riding = !!(S.me && S.me.ride);   // (up on the wheel or in a balloon: nothing round your feet to see past)
     if (!F.sub && !F.spec && !riding) for (const st of this.chunkState.values()) { // (none while spectating)
       if (!st.blds) continue;
       for (const r of st.blds) {
-        const b = r[0], fading = (this.fades.get(b) || 0) > 0.05, m = fading ? 24 : 0;
+        const b = r[0], fading = (this.fades.get(b) || 0) !== 0, m = fading ? 16 : 0;
         if (r[5] <= py + 2) continue;   // (its foot north of yours: it stands behind you)
         // a giant redwood only when it's really in front of you (not every tree whose box you're near)
-        if (b >= TREE_FADE) { if (!onTrain && this._treeCovers(b - TREE_FADE, px, sy, inVeh, fading ? 10 : 0)) want.add(b); continue; }
+        if (b >= TREE_FADE) { if (!onTrain && this._treeCovers(b - TREE_FADE, px, sy, inVeh, fading ? 10 : 0)) want.set(b, 1); continue; }
         if (r[3] < px - rx - m || r[1] > px + rx + m || r[4] < sy - up - m || r[2] > sy + down + m) continue;
-        want.add(b);
+        // (thin: its picture much taller than wide, or narrow - a hut by a mast, a lighthouse, a silo)
+        const pw = r[3] - r[1], ph = r[4] - r[2];
+        want.set(b, pw < 72 || pw * 2.2 < ph ? -1 : 1);
       }
     }
-    const k = 1 - Math.exp(-5 * Math.min(0.1, F.dt || 0.016));
-    for (const b of want) if (!this.fades.has(b)) this.fades.set(b, 0);
+    const k = 1 - Math.exp(-11 * Math.min(0.1, F.dt || 0.016));   // (eased: most of the way in ~0.2 s)
+    for (const [b, sg] of want) if (!this.fades.has(b)) this.fades.set(b, sg * 1e-3);
     for (const [b, f] of this.fades) {
-      const on = want.has(b), nf = f + ((on ? 0.88 : 0) - f) * k; // (a faint ghost of it stays: you still see its shape)
-      if (!on && nf < 0.01) this.fades.delete(b); else this.fades.set(b, nf);
+      const on = want.has(b), sg = on ? want.get(b) : f < 0 ? -1 : 1, a = Math.abs(f), na = a + ((on ? 1 : 0) - a) * k;
+      if (!on && na < 0.01) this.fades.delete(b); else this.fades.set(b, sg * Math.max(1e-3, na));
+    }
+    // the clear spaces: round you (a car's a little bigger), then the players near you (engine.js uClr)
+    const C = this.clr || (this.clr = new Float32Array(16));
+    C.fill(0);
+    if (this.fades.size && !F.spec) {
+      C[0] = px; C[1] = sy - (inVeh ? 16 : 22); C[2] = inVeh ? 66 : 40; C[3] = 1;
+      let n = 1;
+      for (const p of F.peds || []) {
+        if (n >= 4) break;
+        if (p.id === S.myPedId || !p.d || !p.d.pl || (p.flags & PF.DEAD) || Math.abs(p.rx - px) > 360 || Math.abs(p.ry - py) > 300) continue;
+        C[n * 4] = p.rx; C[n * 4 + 1] = p.ry - 22; C[n * 4 + 2] = 32; C[n * 4 + 3] = 1; n++;
+      }
     }
   }
   // does the redwood (its prop index) stand in front of you? Your figure on screen - 12 px either side of you
@@ -1520,7 +1550,8 @@ export class World2 {
   // A person: the peds provider's figure (people.js) for their pose, heading and stride, the weapon in hand -
   // or the flashlight when they carry nothing and have it switched on. The rest of a stride is asked for as
   // soon as a walk starts (or turns), so the next frames are there in time.
-  _ped(p, now, me, F, extraZ = 0) {
+  // car: the train car they ride - drawn from its spot plus a whole-pixel offset, at its height (no jitter: 10-23)
+  _ped(p, now, me, F, extraZ = 0, car = null) {
     const E = this.E, Pd = this.Pd;
     if (p.flags & PF.INVEH) return;
     if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { this._pet(p, now); return; }
@@ -1570,9 +1601,9 @@ export class World2 {
     if (f & PF.GHOST) o.alpha = 0.45 + 0.2 * Math.sin(now * 8);
     if (p.blink) o.alpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
     const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
-    const z0 = (sky ? sky * SKY_LIFT : this._z0(p, L.swimming) + lift) + extraZ;
+    const z0 = (sky ? sky * SKY_LIFT : (car ? 0 : this._z0(p, L.swimming)) + lift) + extraZ, ap = E.ap || 1;
     o.under = L.swimming && this.map.tileAtPx(p.rx, p.ry) === TT.BRIDGE ? UNDER_Z : 0;   // (swimming under a bridge)
-    E.drawSprite(sk, p.rx + hx, p.ry + hy, z0, o);
+    E.drawSprite(sk, (car ? car.rx + snapTo(p.rx - car.rx, ap) : p.rx) + hx, (car ? car.ry + snapTo(p.ry - car.ry, ap) : p.ry) + hy, z0, o);
     o.under = 0;
     this.n.drawn++;
     if (sky && p.chute) {   // the canopy over them, its span across the way they're drifting (liveart.js parachuteSprite)
@@ -1657,8 +1688,12 @@ export class World2 {
     const up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : HIGH[pose] ? HIGH[pose] + Math.sin(now * 0.9 + p.id) * (pose === 'soar' ? 6 : 2) : hop;
     o.air = pose === 'fly' || hop > 0.5 || !!HIGH[pose];
     if (p.hitAt !== undefined && now - p.hitAt < 0.12) o.flash = 0.6;   // (hit: a white flash, like people)
-    E.drawSprite(sk, p.rx, p.ry, this._z0(p, false) + up, o); this.n.drawn++;
-    o.air = false;
+    // a bird up in the air: its own shape on the ground, not the column the shadow march makes of something up off it
+    const flies = up > 8 && S2 && S2.bird;
+    const gz = this._z0(p, false);
+    if (flies) { o.shadow = false; this._flyShadow(p.rx, p.ry, up, p.ra, SPAN[base] || 16, pose === 'fly' ? fr / n : pose === 'stoop' ? -1 : 0, gz); }
+    E.drawSprite(sk, p.rx, p.ry, gz + up, o); this.n.drawn++;
+    o.air = false; o.shadow = true;
   }
 
   // a vehicle: the actors provider's model at heading hi of N (by tier), its lights, brakes, siren, wreck;
@@ -1673,6 +1708,16 @@ export class World2 {
     const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase, v.hp, v.parent);   // (parent: its damage word - task #402)
     if (st.cut) { this._vehCut(v, now, me, st, hi, N); return; }   // (cut in two by a plasma blade)
     if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);   // (on a tow truck's hook: drawn tilted, the hooked end up - server tow.js)
+    // a combine at work: its reel turning (a third of a bat a step, six steps a second) while it moves and a moment after
+    if (def.id === 'combine' && !(f & VF.WRECK)) {
+      const mv = Math.abs(v.rx - (v._rlx ?? v.rx)) + Math.abs(v.ry - (v._rly ?? v.ry));
+      v._rlx = v.rx; v._rly = v.ry;
+      if (mv > 0.15) v._reelT = now;
+      if (now - (v._reelT ?? -9) < 0.5) {
+        st.reel = Math.floor(now * 6) % 3;
+        for (let q = 1; q < 3; q++) { const s3 = { ...st, reel: (st.reel + q) % 3 }; this._ask('actors', 'vehicle', A.vehicleKey(v.d, s3, hi, N), [v.d, s3, hi, N], me ? -2 : 0); }
+      }
+    }
     let use = this._spr('actors', 'vehicle', A.vehicleKey(v.d, st, hi, N), [v.d, st, hi, N]);
     if (!use && v._v2k && E.hasSprite(v._v2k)) use = v._v2k;
     if (!use) use = this._near((h) => A.vehicleKey(v.d, st, h, N), hi, N);
@@ -1961,7 +2006,7 @@ export class World2 {
     const meVeh = S.pred && S.pred.kind === 'veh' ? S.ctrlId : -1;
     for (const v of F.vehs) { this.sprPrio = v.id === meVeh ? -3 : -1; this._veh(v, now, v.id === meVeh); }
     for (const p of F.peds) { this.sprPrio = p.id === S.myPedId ? -3 : -1; this._ped(p, now, p.id === S.myPedId, F); }
-    for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; const car = S.ents.get(p.parent); this._ped(p, now, p.id === S.myPedId, F, 8 + (car ? (car.rz || 0) * EL_Z + (car._jz || 0) : 0)); }   // (up on the El: its car's height; over a jump: its bike's)
+    for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; const car = S.ents.get(p.parent); this._ped(p, now, p.id === S.myPedId, F, 8 + (car ? (car.rz || 0) * EL_Z + (car._jz || 0) : 0), car && car.kind === K.TRAIN ? car : null); }   // (up on the El: its car's height; over a jump: its bike's)
     this.sprPrio = -1;
     for (const c of F.cars) this._train(c, now, F.myTrain);
     if (!F.sub) { this._rides(F, now); this._forage(F); }   // (under the city: none of the surface's rides or finds)
@@ -2004,10 +2049,11 @@ export class World2 {
       b._v2k = k;
       // flying: well up in the air (its shadow, when the sun reaches that far, falls well away from it) and no
       // mirror image in wet streets or water
-      const o = this.opts; o.alpha = 1; o.xray = false; o.flash = 0; o.shadow = true; o.tint = null; o.flipX = false; o.air = !!b.fly;
-      this.E.drawSprite(k, b.x, b.y, b.fly ? b.z ?? Math.min(140, 10 + b.fly * 55) : 0, o);   // (b.z: gliding in to land, climbing away - client/birds.js)
+      const o = this.opts, z = b.fly ? b.z ?? Math.min(140, 10 + b.fly * 55) : 0; o.alpha = 1; o.xray = false; o.flash = 0; o.shadow = z < 8; o.tint = null; o.flipX = false; o.air = !!b.fly;
+      if (z >= 8) this._flyShadow(b.x, b.y, z, b.a, b.gull ? 22 : 14, Math.max(0, fr - air[0]) / (air[1] - air[0] + 1));   // (up in the air: its shape on the ground below)
+      this.E.drawSprite(k, b.x, b.y, z, o);   // (b.z: gliding in to land, climbing away - client/birds.js)
     }
-    this.opts.air = false;
+    this.opts.air = false; this.opts.shadow = true;
     // muzzle flashes (S.flashes, lit in _lights): the providers' flash sprite along the shot
     if (A && A.muzzleKey) for (const f of S.flashes) {
       if (f.kind === 'boom' || f.a === undefined) continue;
@@ -2015,6 +2061,20 @@ export class World2 {
       const k = this._spr('actors', 'muzzle', A.muzzleKey(1, hi, 16, frm), [1, hi, 16, frm]);
       if (k) { const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false; this.E.drawSprite(k, f.x, f.y, 18, o); }
     }
+  }
+
+  // A flying bird's shadow (10-23: no column): its shape from above (span; k the wingbeat, -1 tucked) on the ground,
+  // away from the sun by its height, fainter higher up, at night and in the rain
+  _flyShadow(x, y, z, a, span, k, gz = 0) {
+    const sky = this.F && this.F.sky;
+    if (!sky || !sky.sunDir || this.F.sub) return;
+    const al = 0.6 * (1 - sky.night) * (1 - 0.7 * Math.min(1, this.F.rain || 0)) * Math.max(0.3, 1 - z / 320);
+    if (al < 0.04) return;
+    const w = k < 0 ? 2 : k === 0 ? 0 : Math.round(Math.abs(Math.sin(k * Math.PI)) * 2), s = Math.max(8, Math.round(span / 4) * 4);
+    const key = this._conv(`bsh|${s}|${w}`, () => birdShadow(s, w), true);
+    if (!key) return;
+    const u = sky.sunDir, l = Math.hypot(u.x, u.y) || 1, d = z * Math.max(0.3, Math.min(2.5, sky.shadowLen)) / 0.62;
+    this.E.drawDecal(key, x + u.x / l * d, y + u.y / l * d, a, al, gz);
   }
 
   // ---- getting sprites ready before they are needed ---------------------------------------------------------------
@@ -2293,8 +2353,8 @@ export class World2 {
       const k = p.life / p.max, name = A.v1ParticleFx(p), frm = A.v1ParticleFrame(p);
       const key = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm]);
       if (!key) continue;
-      o.alpha = (p.type === 2 ? Math.min(1, (1 - k) * 6) * k * 0.9 + 0.1 : p.type === 3 ? Math.min(1, k * 1.5) : p.type === 8 ? 1 : Math.min(1, k * 2)) * (p.veil ?? 1);
-      E.drawSprite(key, p.x, p.y, Math.max(0, p.z * (p.type === 8 ? 0.5 : 0.3)), o); // (v1's heights)
+      o.alpha = (p.type === 2 ? (p.lift ? Math.min(1, k * 2.5) * 0.85 : Math.min(1, (1 - k) * 6) * k * 0.9 + 0.1) : p.type === 3 ? Math.min(1, k * 1.5) : p.type === 8 ? 1 : Math.min(1, k * 2)) * (p.veil ?? 1);
+      E.drawSprite(key, p.x, p.y, Math.max(0, p.z * (p.type === 8 ? 0.5 : 0.3)) + (p.lift || 0), o); // (v1's heights; lift: a combine's chaff up over the crop)
     }
     // pieces off vehicles, tumbling and then lying where they fell (render/fx.js chunks tagged with what they are:
     // render/vehdmg.js a part that came off, render/boom.js an explosion's pieces - task #402), turned in eighths

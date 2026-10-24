@@ -15311,3 +15311,208 @@ shading stays); what a face stands on stays rock. Test: test/world3relief.test.j
 Performance budget (tools/perf.mjs): the page's code 496 -> 498 KB for this batch - the quarter pipe's surface and
 coping, a helicopter meeting a bridge deck, a bridge's edge as a railing on foot, the guarded walk and a blow from the
 guard, the job vehicle's word: all predicted on the page as the player moves. The new comments were trimmed first (497).
+
+## 2026-10-23 - The owner's shipping-fixes notes, batch 2a: shadows in the air, the water, the train, the camera phones, the skate parks
+
+Seven of the owner's notes (fix-pdf pages 10, 17-19, 21, 24 and the text). Pictures: the session's scratchpad `b2a/before`,
+`b2a/before2`, `b2a/after`, `b2a/after2` and `b2a/after3` (a local World v3 server in dev mode, art v2 in headless Chromium,
+13:00).
+
+**Aircraft shadows** ("Shadow of helicopter looks like placeholder art", "Shadows on air vehicles could look better"). The
+overlay drew an ellipse and a bar for a helicopter, three bars for a plane. Now `client/render/aircraft.js airShadow` draws the
+aircraft's own shape seen from above, as `client/art2/aircraft.js` builds its models: a helicopter's cabin, the tail boom
+tapering to the fin and tailplane, the skids on their struts, the tail rotor edge on, the gunship's stub wings, rocket pods
+and chin gun; the plane's fuselage, the high wing foreshortened as it banks (nine steps), tailplane, fin, gear and struts, the
+crop duster's boom. Each shape is drawn once into a mask and box-blurred to one of four softnesses by height, then kept. The
+shadow lands away from the sun by the drawn height, the way the renderer's shadows fall (atmos.js `sunDir`, `shadowLen`,
+clamped so a low sun doesn't throw it miles off). It fades with height, at night and in the rain. On a helicopter the rotor's
+spinning disc is a faint ring, with its blades while it spools; on a plane the propeller is a faint line. The renderer's own
+shadow of the model (the march) is kept only for an aircraft on the ground (under 6 px; it was under 40). Off the ground the
+march made a column of it, and the overlay's shadow had been held back below 70 px, so a helicopter hovering low had next to
+none. The overlay now takes over from 3 to 11 px. Pictures: `after3/rescueheli-town.png`, `heli-town.png`, `gunship-town.png`, `after/plane.png`,
+`duster.png`, `policeheli-mid-water.png` against the same shots in `before/`. Also `after3/wash-sheet.png`, the helicopter at
+18, 70, 130 and 300 px. The masks on their
+own are in `mask/masks.png`.
+
+**Birds' shadows** ("Eagles cast a full shadow that drapes down"). The shadow march takes anything drawn up off the ground as
+a column down to it, so a soaring eagle threw a long band. Now a bird up in the air casts nothing in the march. Instead
+`host.js _flyShadow` lays a dark decal of its shape on the ground below it (`birdShadow`: the body, the tail's fan, the wings
+swept back and narrowing; spread, half up or tucked in a stoop by the wingbeat, sized by species - `SPAN`). The decal is offset
+away from the sun by the bird's height and fades with height, at night and in rain. This covers the wild birds (eagle, osprey,
+heron, geese, ducks, quail, pheasant, turkey) and the town's pigeons and gulls in flight. Pictures: `after/eagle-1-z.png` and `after2/eagle-2-c.png`
+(contrast raised) against `before2/eagle-*.png`.
+
+**Water under a helicopter** ("a weird effect happening even when you're high up"). There was no rotor wash. What reacted was
+the water life (`art2/game/waterlife.js`): every vehicle over water counted as a mover in it, so the fish scattered and dived
+under an aircraft at any height. Now an aircraft up high is nothing to the water. A helicopter below `WASH_H` (150 px) blows
+the water about. The strength is `washK`, from 0 at 150 px to 1 at the surface: rings spread from under the rotor, and spray
+and foam blow outward past its tips. Only when it's low enough (k > 0.3) does its wash scatter the fish. Pictures:
+`after3/wash-18-b-z.png` (spray and rings round it, the shadow and the rotor's ring under it) and `after3/wash-sheet.png`
+(nothing on the water at 130 and 300 px); `before/heli-low-water-z.png`.
+
+**Blood in water** ("a static image, maybe we have a new VFX"). Blood landing on open water (render/fx.js `decal`, types 1 and
+5 but not the oil slick) no longer leaves a stain on the surface. It becomes a cloud in a pool of 48 (`fx.bc`). Art v2 draws it
+in `waterlife.js blood`: a few dithered wisps round where it went in, each turning slowly its own way. They bloom out over the
+first seconds, drift with the current (shared/flow.js `flowAt`, or a little with the wind on still water) and thin out over
+8-18 s, under the surface like the fish. A cloud washed ashore is gone in a second. The classic renderer draws a fading,
+spreading disc. Pictures: `after/blood-sheet.png` (0, 3, 7, 12 s) against `before/blood-sheet.png` (a
+still stain). Not seen on the page: the drift with a river's current. In the live run the page's World v3 map had no `waters`
+(`S.map.waters` undefined, though `river` had 11477 tiles), so `flowAt` is null everywhere on the page and the clouds only
+drift with the wind. That gap also affects the page's own prediction of swimmers in a current (physics.js) and is worth a
+look. The current itself is covered by the test.
+
+**Riding a train** ("the other NPC riders and the player will jitter a bit"). The engine snaps every sprite to the 2 px art
+grid on its own. The car and each rider in it had different fractions, so they snapped at different moments and the riders
+shook a pixel against the car. A simulation of the engine's rounding: a seated rider's drawn offset from its car changed on
+1146 of 1800 frames before and on 0 after. The riders were also lifted by the ground's height under them (kerbs, sidewalks)
+as the train rolled over it. Now (`host.js _ped`, `car`) a train's riders are drawn from their car's spot plus their place in
+it in whole art pixels, at the car's height. While you ride, the camera follows that drawn spot too, so the train and its
+riders hold still on screen together. Logged in-game, frame by frame while the train runs:
+`before2/train-log.json` shows seated riders whose drawn height against their car jumps 8 px back and forth (24, 16, 24) as
+the train crosses kerbs. `after/train-log.json` shows each seated rider's drawn offset from its car the same in every frame.
+
+**Taking a picture through a wall.** A passer-by stopped to film something (npc.js `spectacle`, the panic's filmers) wherever
+they stood, which could be pressed against a shop front with the thing behind the building. The selfie-takers' spot by a
+landmark could be facing a wall, and the tourist pair's other half was put 14 px to the side without a look at what was there.
+Now `personas.js filmFrom` sets the rule: open ground (nothing solid within 20 px) and a clear line of sight to what they film.
+Filming starts only from there. The selfie spot must pass it both toward the landmark and the way they face. The other half of
+a pair stands where there's open ground, or doesn't come. The owner's exact case wasn't met in the live runs (`before2/` and
+`after/photo-all.png`: the selfie-takers on open ground by a fountain either way); the wall case is in the test.
+
+**People walking through the skate park.** Wanderers picked waypoints across it like any open ground. Now (`npc.js skateAt`,
+`skateCrossed`, `skateOff`):
+
+- A wanderer's next waypoint is never on a skate park (map.skateSpots, a 12 px margin) nor across it.
+- Someone who finds themselves on one heads off it the nearest way and doesn't stop to idle there.
+- Nobody is spawned on one.
+
+The skaters, the friends sitting on the ledges and those hanging out (the activities.js 'skaters' spot), and a skater
+persona on a board are left to it.
+
+Tests: `test/passersby.test.js` (new): the skate park - nobody wandering walks onto it in 40 s, those put on it are off it in
+25 s, and it fails with the waypoint rules taken out. Filming - not from against a wall, not through a building, yes from open
+ground; a spectacle behind a building isn't filmed through it. `test/waterlife.test.js`: the downwash (nothing at 400 px, none
+of the fish bothered; rings and spray low, more at 20 px than at 110) and the blood (no stain on water, a stain on land as ever,
+the cloud blooms, thins, drifts downstream on a river's current and is gone). Also run: phones, npcpeople, activities,
+aircraftart, flight, policeair, skate, trains, dmath, mapwindow, pagemodules, lazypage, view. The page's code is 497.4 KB
+(budget 498): the hooks on the page are two lines (fx.js's water check, main.js's `S.fx.water`). The drawing is in modules
+that load when needed (render/aircraft.js, art2/game/waterlife.js). The renderer is 397.4 of 400 KB (the bird shadows and the
+riders in host.js).
+
+## 2026-10-23 · Owner's notes, batch b2b: tracks and pavements clear of scrub, farmed fields, upright town palms, hospital canopies over the doors, readable picture neon, the sea's sparkle
+
+The owner's 10-23 notes on the World v3 map (the PDF's pages 5, 8-10 and 14-17):
+- **Dirt roads and pavements** ("dirt trails getting a lot of vegetation growing on it", "full flowers and bushes coming
+  out of the sidewalk doesn't look right"). The wild's scrub, cacti and trees were laid before the tracks (Willow Valley,
+  the desert, the ridge: world3-biomes.js dress3), and the renderer's ground cover grew on any dirt tile. Now the clutter
+  guard (shared/world3-clutter.js) takes every tree, palm, shrub, bush, flower and cactus off a ground-level dirt road's
+  bed (the tiles it lays as dirt: DIRT_BED) and off the pavements out in the country (WILD_STYLES); the ground cover
+  (client/art2/game/statics.js coverItems, trackClear) grows nothing on a dirt road's bed and only a low tuft of grass
+  now and then along its edges (the new `weed` / `dryTuft` species). A shrub or a flower on a town's pavement or plaza is
+  drawn in a planter (a topiary in its pot, a flower box, tulips or daffodils - plantFor); at the rough end of town a
+  tuft of grass up through the cracks; the desert towns' agave and cactus beds and a farmyard's lavender stay.
+- **Fields** ("crop fields or orchard fields or flower fields are overgrown with other types of vegetation"). Willow
+  Valley's orchards and lavender and sunflower rows are recorded on the map (m.orchards: the ground each row's run of
+  plants stands on, rows that run alike joined - world3-biomes.js; Windrush
+  Farm's orchard in world3-gullharbor.js) and, with the nature sites' orchard and vineyard (their landmarks), the art
+  keeps the wild flowers and scrub out of them (a grass tuft now and then at the edge) and gives them farmed ground:
+  an orchard's floor mown in stripes (ground.js orchardGrass, groundbake.js ORCHARD), tilled furrows under the lavender,
+  the sunflowers and the vines (soilPlowed). (The crop fields' own tiles grew none already.)
+- **Palms** ("so many crooked palm trees in the city"). A coconut or a leaning palm in town - a median, a row, a plaza, a
+  garden - is drawn as `cocoUp` (flora.js cityCoconut: upright, a slight lean either way by the tree); on the sand,
+  out in the wild or within four tiles of the sea a palm still leans and curves.
+- **Hospitals** ("hospital entrances not lining up with overhang"). The red-H entrance canopy was put at the end of the
+  front away from the doors; now it stands over the doorway (slid up to 20 px to clear a street lamp), on every hospital
+  drawn from the hospital prefab (Old Town Infirmary, Northshore Medical Center, Southbank Medical, Westside Clinic,
+  Westport General, Cedar Falls Clinic, Sandpiper Bay Clinic, Lucky Mesa General, Northshore Medical). St. Neon
+  General keeps its own glass canopy over its doors and the red-H one over its ambulance bay.
+- **Picture neon** ("neon tiger sign is way blown out, can't see details"). The sign's own light hung 18 px in front of
+  its middle at 2.6 - it lit the tiger's orange two and a half times over and the bloom did the rest. The picture signs
+  (neonsigns.js paintPic: the tigers, the eye-patch woman, the Pink Mile's and the Arts District's pictures, the
+  saguaro) are now glass (the point lights reach them a third as much), their tubes glow bright and their fills dimly
+  (PIC_TUBE / PIC_FILL), their halo on the wall is softer, and their light stands out over the pavement below them (44 px
+  out, at 0.7 of the sign's height, 1.5): the stripes, the eyes and the outlines read.
+- **Fences and scarecrows in the street.** Checked on today's build: no field fence run, hay bale or scarecrow the
+  renderer draws stands on a road, a pavement, a bridge or the water (the 10-22 guard's field.fence / bales / crow), and
+  no map prop fence, post or scarecrow outside the handcrafted plans' own dressing stands on a road or a pavement. What
+  was left were the hand plans' own runs, which the guard leaves be: the promenades' seawall railings carried on across
+  the road where it bridges the water (the Pink Mile, Neon Strip, the Harbor, Bayside's), hedges and yard fences laid
+  over a roadway (Bayside Heights, The Yards). Now a hand plan's railing, hedge, yard or lot fence (no solid along it)
+  that crosses a roadway (not one along its kerb) is cut back to its longest stretch off it, or goes when that's under
+  24 px (world3-clutter.js cutHandRuns) - Willow Valley's and Neon Strip's waterfront railings no longer run across the
+  roads down to the water. (Left as they are: The Yards' and
+  Bayside Heights' fences and hedges laid along a kerb on its roadway's edge tiles, and the police motor pools' chain-link
+  down a pavement's edge beside their lots in three towns - along the street, not across it.)
+- **The water's "rapid lines"** on large waters. The sea's surface in the light pass (lightgame.js waterSurf) was three
+  swells at fixed angles: their glints fell in a regular lattice of white marks marching diagonally over a whole bay.
+  Now its swells are lower, a slow noise bends their crests out of line, and the sun catches them in patches - a
+  sparkle here and there. Rivers 36 tiles wide or more and a river's last stretch to the sea (water.js WIDE_STILL,
+  MOUTH_UP) take the still water's wind waves instead of the running water's flecks; their current shows in the bake.
+
+Tests: test/world3clutter.test.js - nothing grows on a dirt road's bed nor on a pavement in the country, a shrub at the
+track's edge and the street trees in town stay; a hand plan's railing across a street is cut back to its stretch off the
+roadway, one wholly on it goes, one clear of it is as it was.
+
+## 2026-10-23 · b2c: see-through buildings, the stadium's stands, sharp arcade screens, the harvest you can see
+
+**Buildings that hide you go semi-transparent, clear round you** (the owner: "The way buildings go transparent doesn't
+currently look like it's the best solution ... maybe they should only go semi-transparent? Or semi-transparent but the
+area around your character is fully transparent?"; a mast's hut "half of it disappears when walking near it"; "watching
+half a building disappear this abruptly isn't the best look"). Before, every building whose picture came within 100 px
+of you (150 in a car) faded almost all the way (0.88) everywhere outside its footprint - half the building gone in a
+clean-edged block, even when it didn't cover you. Now (client/art2/game/host.js _fades, engine.js STATIC_FS):
+- a building fades only while its picture covers your figure (and a little round it: 30 px either side on foot, 64 in a
+  car; a train still only what stands over it), eased in and out in about 0.2 s;
+- it goes to a ghost of itself (GHOST 0.45: its shape kept, the street behind showing through), and only round you - an
+  upright soft-edged ellipse, 40 px (66 in a car), the outer 45 % of it soft - is it fully clear, so whoever is behind it
+  draws over it there; round the players near you too (up to three more clear spaces, engine.js uClr);
+- a tall thin one (its picture under 72 px wide, or more than 2.2 times taller than wide: a mast's hut, a lighthouse, a
+  silo) ghosts less (GHOST_THIN 0.2) - it never vanishes by half;
+- its footprint still never fades (no interiors shown until you walk in); the giant redwoods use the same ghost.
+Cheap on phones: four more uniforms and a few ALU ops, only on the texels of a fading building. Tests:
+test/seethrough.test.js (engine.js seeThrough is the shader's rule in JS), test/redwood-fade.test.js.
+
+**The stadium's stands: rows of seats, a few people in them, a roof over the back** (the owner: "Stadium seating looks
+weird. Hard to tell what it is ... we should just have rows of seats with occasional NPCs sitting in them ... The outside
+wall (facing us) is super thin too ... Or just put a stadium roof/cover over the seating areas but make it so you can
+still see all of the field just fine"). The stands' decks (client/art2/buildings.js roofMat 'seats') were a 2 px noise of
+crowd colours over 7 px rows. Now, from the pitch back: the front wall with its advertising boards; rows of seats 10 px
+apart, each its concrete step, the seat pans and backs in the club's red with navy bands (the front rows, the two over the tunnels), a gap between seats; aisles
+of steps with yellow nosings every 128 px; the tunnels' mouths half way up; a few people sat about (about one seat in ten: a
+quiet day's handful, their heads over their shirts, the right way round for a stand seen from behind);
+and over the back 30 % the cantilever roof - corrugated sheeting on white ribs, its fascia shading the rows under its
+edge - the stand's thick back, never out over the pitch. The rows step up 36 px from the front (deck heights: the sun
+throws each row's shadow on the next). The north stand's face toward the pitch (statics.js standsOn) has the same red
+seats, its front rows navy, a few people in them. Not done: more people when a match is on - the stadium's matches are players' pickup
+games (server minigames.js), nothing tells the page a big game is on; a live crowd would need that message and an
+overlay.
+
+**The arcade's screens are sharp** (the owner: "Arcade games are really blurry right now (especially the text), is this
+by design?"). The cabinets' games drew on a 256 x 224 canvas (the pool table's 256 x 160) that CSS stretched over most of
+the window - circles, lines and the 5-8 px text smeared. client/arcscreen.js fitScreen gives the canvas as many pixels as
+it covers on the device (CSS size x devicePixelRatio) and scales the drawing to it each frame, so the games keep their
+256-wide coordinates and come out sharp; STARFALL's pixel art at a whole number of device pixels per pixel with
+smoothing off. Skee-ball, pinball, air hockey, pool, the race book and STARFALL. Loaded with the games, not the page.
+Test: test/arcade.test.js.
+
+**The harvest you can see** (the owner: "Hard to tell what is being harvested with the harvester, can we make a better
+visual for harvesting crops?"):
+- The stubble reads as cut: dry soil between lines of short pale stalk ends with their shadows, a windrow of loose straw
+  down the middle - plainly different from the gold of the standing crop (it was a pale gold a shade off the ripe one).
+- The rows' state shows over the crop the ground was baked with: their decals cover up to 18 px over the ground
+  (engine.js drawDecal zt, the decal shader's depth) - before, a cut stretch lay under the baked wheat's 8-12 px stalks
+  and barely showed. A ripe row's uncut stretches still show the baked crop.
+- A swath cut as you go: the server marks a tenth of a row cut the moment the header reaches it, so a whole stretch
+  turned to stubble ahead of the machine. Now a machine working a ripe row stamps fresh stubble under its header every
+  7 px (two rows wide for a combine), and the stretch it's in shows its stubble only once it has left it
+  (render/farmart.js _working, a pooled ring of 1600 stamps).
+- Chaff blows out of the combine's back and bits of straw fly (render/fx.js particles; art v2's own sets pChaff, pStraw:
+  client/art2/fx.js, actors.js; a particle's new `lift` draws the chaff up over the crop - host.js _particles).
+- The combine itself (client/art2/vehicles.js): the wide header with its crop dividers, cutter bar and cross auger, the
+  reel of five yellow bats that turns while it moves (three looks, actors.js st.reel - host.js asks for the next ones
+  ahead), the open grain tank heaped with the crop, the unloading auger along its side, the cab's white roof.
+- What and how much: the field's crop is shared/fieldcrop.js (the rule the ground bake uses, groundbake.js fieldKindAt,
+  held to it by a test) and the combine's tank fills a stretch at a time (server/systems/farming.js v.tank): "Harvesting
+  wheat: the header cuts two rows at once and the grain fills the tank as you go", each row "Row of wheat harvested ...
+  the tank: 60 bu of wheat", and the farm-work line on the HUD adds "- 120 bu of wheat cut".
+Tests: test/harvestart.test.js, test/farming.test.js.
