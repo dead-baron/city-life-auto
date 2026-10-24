@@ -112,6 +112,7 @@ export const EVENT_SOUNDS = {
   boardon: (ev, A) => A.at('clack', ev.x, ev.y, 0.35),
   ollie: (ev, A) => A.at('clack', ev.x, ev.y, 0.7),
   land: (ev, A) => { A.at('clack', ev.x, ev.y, 0.55); A.at('thud', ev.x, ev.y, 0.3); },
+  hop: (ev, A) => { const e = A.S.ents.get(ev.id); if (e) A.at('roll', e.rx, e.ry, 0.3); },   // over a fence (shared/fences.js)
   bail: (ev, A) => { A.at('scrape', ev.x, ev.y, 0.7); A.at('thud', ev.x, ev.y, 0.9); },
   // the tricks (2026-10-18): onto a rail - the clack and the trucks' scrape (a metal rail rings: clank); a combo banked
   skgrind: (ev, A) => { A.at('clack', ev.x, ev.y, 0.6); A.at(ev.q === 'rail' || ev.q === 'coping' ? 'clank' : 'scrape', ev.x, ev.y, 0.5); },
