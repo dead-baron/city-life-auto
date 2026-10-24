@@ -77,6 +77,7 @@ import * as skydive from './systems/skydive.js';
 import * as surf from './systems/surf.js';   // (surfing: the breaks, the waves, the rides - #312)
 import * as grenades from './systems/grenades.js';
 import * as tennis from './systems/tennis.js';
+import * as cinefollow from './systems/cinefollow.js';
 import * as k9 from './systems/k9.js';
 import * as prison from './systems/prison.js';
 import * as sar from './systems/sar.js';
@@ -124,6 +125,7 @@ const SYSTEMS = [
   ['transit', transit.update],      // the bus lines: buses into service round their loops, the doors closing
   ['ferries', ferries.update],      // the island ferries to their timetable, the cars on their decks
   ['boats', boats.update],          // NPC boaters + harbor police patrol boats
+  ['cinefollow', cinefollow.update], // the cinematic mode's follow scenes: who the camera's on, its own actors (cinefollow.js)
   ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen
   ['horses', horses.update],        // hired horses' clocks; bolted horses gone once nobody's watching (#325)
   ['racebook', racebook.update],    // the race book's races: the off, the result, the winners paid (#310)

@@ -35,7 +35,7 @@
 import { K, T, TILE, WEATHER } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { inAnyView } from '../view.js';
+import { inAnyView, cineEyes } from '../view.js';
 import { dress } from './npclooks.js';
 import { LOOKS } from './personas.js';
 import { item } from '../../shared/look.js';
@@ -525,7 +525,7 @@ function pose(ped, on) {
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
-const RAIN_OFF = new Set(['dice', 'chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party', 'birders', 'climbers', 'kayakers']);
+export const RAIN_OFF = new Set(['dice', 'chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party', 'birders', 'climbers', 'kayakers']);
 export function steer(world, ped, now) {
   const n = ped.npc, a = n.act;
   if (!a) return null;
@@ -584,6 +584,7 @@ function fillRound(world) {
   const A = (world.acts ||= new Map()), now = world.time;
   const anchors = [];
   for (const p of world.players.values()) if (p.ped && !p.ped.dead) anchors.push(p.ped);
+  anchors.push(...cineEyes(world));   // (the cinematic mode following someone: round them too - view.js)
   // empty the groups nobody's near (or whose people are all gone)
   for (const [id, g] of A) {
     g.ids = g.ids.filter((i) => { const e = world.get(i); return e && !e.removed && !e.dead && ((e.npc && e.npc.act) || (e.pet && e.pet.walked)); });

@@ -23,10 +23,13 @@ export function setView(p, hw, hh) {
   };
 }
 
-// The thing the camera follows: your vehicle, else you (a train rider moves with the car).
+// The thing the camera follows: your vehicle, else you (a train rider moves with the car) - or, in the cinematic mode's
+// follow scenes, whoever it's following (server/systems/cinefollow.js: p.cineF.fid).
 export function focusOf(world, p) {
   const ped = p.ped;
   if (!ped) return null;
+  const c = p.cineF;
+  if (c && c.fid) { const e = world.get(c.fid); if (e && !e.removed) return e; }
   const veh = ped.vehId ? world.get(ped.vehId) : null;
   return veh || ped;
 }
@@ -37,6 +40,7 @@ export const RIDE_ZOOM_OUT = 1.45; // ...and on the Ferris wheel or up in a ball
 export function viewRect(world, p, out = {}) {
   const f = focusOf(world, p);
   if (!f) return null;
+  if (p.cineF && p.cineF.fid === f.id) return cineRect(f, p.view || DEFAULT_VIEW, out);
   const moving = !!(p.ped.vehId || p.ped.onTrain);
   const vx = moving ? f.vx || 0 : 0, vy = moving ? f.vy || 0 : 0;
   const speed = Math.hypot(vx, vy);
@@ -49,6 +53,25 @@ export function viewRect(world, p, out = {}) {
   out.vx = vx; out.vy = vy;
   return out;
 }
+
+// following someone (the cinematic mode): round them, leading their way, out as far as its widest shot shows
+export const CINE_ZOOM_OUT = 1.9;
+function cineRect(f, v, out) {
+  const vx = f.vx || 0, vy = f.vy || 0, k = CINE_ZOOM_OUT + Math.min(0.5, Math.hypot(vx, vy) / 1300);
+  const cx = f.x + Math.max(-560, Math.min(560, vx)) * 0.25, cy = f.y + Math.max(-560, Math.min(560, vy)) * 0.25;
+  out.x0 = cx - v.hw * k; out.x1 = cx + v.hw * k; out.y0 = cy - v.hh * k; out.y1 = cy + v.hh * k;
+  out.vx = vx; out.vy = vy;
+  return out;
+}
+// Where the cinematic mode's follow scenes have the camera (cinefollow.js p.cineF.eye: { x, y, player }): the world comes
+// alive round them as round a player - the systems that fill the world round the players (traffic.js, npc.js,
+// activities.js, boats.js, wildlife.js) take these with the players' characters.
+export function cineEyes(world) {
+  let out = null;
+  for (const p of world.players.values()) if (p.cineF && p.cineF.fid && p.conn) (out ||= []).push(p.cineF.eye);
+  return out || NONE;
+}
+const NONE = [];
 
 // The rectangle a player is sent: the camera, a margin all round, stretched ahead of travel.
 export function netRect(world, p, out = {}) {

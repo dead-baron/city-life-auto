@@ -16,7 +16,7 @@ import { mulberry32, hash2 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc, shoo } from './npc.js';
 import { wildStyle } from './wildlife.js';
 import { crossingLimit } from './trains.js';
-import { inAnyView } from '../view.js';
+import { inAnyView, cineEyes } from '../view.js';
 import { pointGrid } from '../pointgrid.js';
 import { HIGHWAY_SPEED } from '../../shared/rules.js';
 import { routeSteps, haltsOn, haltCap, haltAt, rejoin } from './transit.js';
@@ -863,6 +863,7 @@ function manage(world) {
   world.trafficCount = tc;
   const anchors = [];
   for (const p of world.players.values()) if (p.ped && !p.ped.dead) anchors.push(p.ped);
+  anchors.push(...cineEyes(world));   // (the cinematic mode following someone: round them too - view.js)
   const near = (x, y, r) => { for (const a of anchors) if ((a.x - x) ** 2 + (a.y - y) ** 2 < r * r) return true; return false; };
   // despawn
   const now = world.time, mine = new Set();

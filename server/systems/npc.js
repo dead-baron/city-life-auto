@@ -19,7 +19,7 @@ import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
 import * as trains from './trains.js';
 import * as wildlife from './wildlife.js';
-import { inAnyView } from '../view.js';
+import { inAnyView, cineEyes } from '../view.js';
 import * as npclooks from './npclooks.js';
 import * as personas from './personas.js';
 import * as activities from './activities.js';
@@ -759,6 +759,7 @@ function manageDensity(world) {
   world.npcCount = nc;
   const anchors = [];
   for (const p of world.players.values()) if (p.ped && !p.ped.dead) anchors.push(p.ped);
+  anchors.push(...cineEyes(world));   // (the cinematic mode following someone: round them too - view.js)
   // despawn far NPCs
   for (const e of world.entities.values()) {
     if (e.kind !== K.PED || !e.npc || e.vehId) continue;

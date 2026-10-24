@@ -39,7 +39,7 @@ import { circleVsObb } from '../../shared/math.js';
 import { sameLevel } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { SPECIES, YOUNG_SCALE, APOSE, PREDATORS_OF, SIZE_ORDER, huntClass, gradeOf } from '../../shared/fauna.js';
-import { inAnyView } from '../view.js';
+import { inAnyView, cineEyes } from '../view.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
 import * as hunting from './hunting.js';
@@ -358,6 +358,7 @@ function populate(world) {
   let total = 0;
   const anchors = [];
   for (const p of world.players.values()) { const q = p.ped; if (q && !q.dead && !q.hidden && !q.sub && !q.interior) anchors.push(q); }
+  anchors.push(...cineEyes(world));   // (the cinematic mode following someone: round them too - view.js)
   for (const e of world.entities.values()) {
     if (!isAnimal(e) || e.ug) continue;   // (the cave's den bear comes and goes with the cave: underground.js)
     let near = false;

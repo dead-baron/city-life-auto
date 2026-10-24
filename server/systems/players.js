@@ -128,6 +128,7 @@ export function join(world, conn, profile, opts = {}) {
     p.meDirty = true;
     noteClientBuild(world, p, opts);
     if (p.spectating) { p.spectating = false; p.invincible = p.specWasGod; } // a new page starts out of the free camera
+    p.cineF = null;   // (and out of the cinematic mode's follow scenes: cinefollow.js)
     // (inside a home: the new page has never seen its rooms - all of it again, the menu you had open closed; the owner,
     // 10-16: "Reconnecting inside a home leaves you stuck")
     if (p.ped && p.ped.home) { p.homeMenu = null; p.ped.home.mv = false; homeinside.send(world, p, true); }
