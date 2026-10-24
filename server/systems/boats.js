@@ -26,6 +26,40 @@ const FISH_ROW = 120;        // how fast an angler rows on (px/s)
 const FISH_S = [40, 120];    // how long an angler sits at a spot (s)
 
 const water = (world, x, y) => !BOAT_BLOCK[world.map.tileAtPx(x, y)];
+
+// Real water (the owner's notes, 10-22: "NPC boats showing up in city ponds"): the boaters, the patrol boats and the
+// anglers only go on a body of water of some size - the sea, a lake, a big river - never a park's pond, a plaza's
+// pool or a fountain. How big the water round (x, y) is: its open-water tiles (WATER / DEEP; a bridge over it joins
+// it up), counted out to `cap` (a bounded flood fill; the sea and the big lakes stop at the cap).
+const BOATERS_WATER = 2500;   // tiles: the boaters' and the patrol boats' water (about 50 x 50 at the least)
+const ANGLERS_WATER = 300;    // tiles: an angler's lake (the smallest World v3 has, a tarn in Granite Peaks, is 368)
+const OPEN_T = new Uint8Array(16); OPEN_T[T.WATER] = 1; OPEN_T[T.DEEP] = 1;
+export function waterSize(m, x, y, cap) {
+  let tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  if (!m.inside(tx, ty) || BOAT_BLOCK[m.tiles[m.idx(tx, ty)]]) return 0;
+  const seen = new Set([m.idx(tx, ty)]), stack = [tx, ty];
+  let n = 0;
+  while (stack.length && n < cap) {
+    ty = stack.pop(); tx = stack.pop();
+    if (OPEN_T[m.tiles[m.idx(tx, ty)]]) n++;
+    for (let k = 0; k < 4; k++) {
+      const nx = tx + (k === 0 ? 1 : k === 1 ? -1 : 0), ny = ty + (k === 2 ? 1 : k === 3 ? -1 : 0);
+      if (!m.inside(nx, ny)) continue;
+      const i = m.idx(nx, ny);
+      if (seen.has(i) || BOAT_BLOCK[m.tiles[i]]) continue;
+      seen.add(i); stack.push(nx, ny);
+      if (seen.size > cap * 3) return cap;   // (a long bridge's deck: as good as big)
+    }
+  }
+  return n;
+}
+// a sea point a boat may use (each point's answer kept: the points round the players are asked again and again)
+const BIG = new WeakMap();
+export function bigWater(world, p) {
+  let ok = BIG.get(p);
+  if (ok === undefined) { ok = waterSize(world.map, p.x, p.y, BOATERS_WATER) >= BOATERS_WATER; BIG.set(p, ok); }
+  return ok;
+}
 function clearLine(world, x1, y1, x2, y2) {
   const d = Math.hypot(x2 - x1, y2 - y1), n = Math.ceil(d / 48);
   for (let i = 1; i <= n; i++) if (!water(world, x1 + (x2 - x1) * i / n, y1 + (y2 - y1) * i / n)) return false;
@@ -85,16 +119,18 @@ function pickModel(list = MODELS) {
 // (the sea's points through their spatial index, server/pointgrid.js: at World v3's frame there are 190,000)
 const seaGrid = (world) => pointGrid(world.map.seaPoints || []);
 function nextPoint(world, v, minD = 500, maxD = 1500) {
-  const pts = seaGrid(world).within(v.x, v.y, minD, maxD * 1.6);
+  const pts = seaGrid(world).within(v.x, v.y, minD, maxD * 1.6).filter((p) => bigWater(world, p));
   for (let k = 0; k < 20 && pts.length; k++) {
     const p = pts[Math.floor(rng() * pts.length)];
     if (clearLine(world, v.x, v.y, p.x, p.y)) return p;
   }
-  return seaGrid(world).nearest(v.x, v.y, 300);
+  let best = null, bd = Infinity;   // (none in a clear line: the nearest on real water past 300 px - boatSteer feels its way)
+  for (const p of seaGrid(world).within(v.x, v.y, 300, 2000)) { const d = Math.hypot(p.x - v.x, p.y - v.y); if (d < bd && bigWater(world, p)) { bd = d; best = p; } }
+  return best;
 }
 
 function spawnPoint(world, a) {
-  const pts = seaGrid(world).within(a.x, a.y, 750, 1400).filter((p) => { const d = Math.hypot(p.x - a.x, p.y - a.y); return d > 750 && d < 1400; });
+  const pts = seaGrid(world).within(a.x, a.y, 750, 1400).filter((p) => { const d = Math.hypot(p.x - a.x, p.y - a.y); return d > 750 && d < 1400 && bigWater(world, p); });
   for (let k = 0; k < 8 && pts.length; k++) {
     const p = pts[Math.floor(rng() * pts.length)];
     if ([...world.players.values()].every((q) => !q.ped || Math.hypot(q.ped.x - p.x, q.ped.y - p.y) > 500) && !inAnyView(world, p.x, p.y, 120) && !world.query(p.x, p.y, 120, K.VEH).length) return p;
@@ -102,16 +138,20 @@ function spawnPoint(world, a) {
   return null;
 }
 
-const byWater = (world, x, y) => seaGrid(world).any(x, y, NEAR_SEA_PX);
+const byWater = (world, x, y) => seaGrid(world).any(x, y, NEAR_SEA_PX) && seaGrid(world).within(x, y, 0, NEAR_SEA_PX).some((p) => bigWater(world, p));
 
 // ---- the anglers' boats ----------------------------------------------------------------------------------------------
-// Where an angler's boat sits (once a map): a lake's open water every 8 tiles (the lake 4 tiles round it), and the big
-// rivers' calm pockets (radius 6 tiles or more: room for a boat)
-function fishSpots(world) {
+// Where an angler's boat sits (once a map): a lake's open water every 8 tiles (the lake 4 tiles round it) - a lake of
+// ANGLERS_WATER tiles or more, not a park's pond - and the big rivers' calm pockets (radius 6 tiles or more: room for
+// a boat)
+export function fishSpots(world) {
   const m = world.map;
   if (m._fishSpots) return m._fishSpots;
   const out = [], open = (tx, ty) => { if (!m.inside(tx, ty)) return false; const i = m.idx(tx, ty), t = m.tiles[i]; return (t === T.WATER || t === T.DEEP) && m.lake[i] === 1; };
-  if (m.lake) for (let ty = m.y0 + 4; ty < m.y0 + m.h - 4; ty += 8) for (let tx = m.x0 + 4; tx < m.x0 + m.w - 4; tx += 8) if (open(tx, ty) && open(tx - 4, ty) && open(tx + 4, ty) && open(tx, ty - 4) && open(tx, ty + 4)) out.push({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE });
+  if (m.lake) for (let ty = m.y0 + 4; ty < m.y0 + m.h - 4; ty += 8) for (let tx = m.x0 + 4; tx < m.x0 + m.w - 4; tx += 8) if (open(tx, ty) && open(tx - 4, ty) && open(tx + 4, ty) && open(tx, ty - 4) && open(tx, ty + 4)) {
+    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE;
+    if (waterSize(m, x, y, ANGLERS_WATER) >= ANGLERS_WATER) out.push({ x, y });
+  }
   for (const c of (m.waters && m.waters.ch) || []) for (const q of c.p || []) if (q[2] >= 6) out.push({ x: q[0] * TILE, y: q[1] * TILE, pocket: true });
   Object.defineProperty(m, '_fishSpots', { value: out, enumerable: false });
   return out;
