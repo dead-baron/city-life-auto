@@ -238,7 +238,7 @@ export class HUD {
     const w = WEAPON_BY_ID[me.weapon] || WEAPONS.fists;
     $('w-name').textContent = w.name;
     const ow = me.weapons.find((x) => x.id === me.weapon);
-    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? 'tap: next · hold: pick' : input.device === 'gamepad' ? 'RB / LB: tap or hold' : `${keyName('nextw')} to switch`) : '');
+    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? '' : input.device === 'gamepad' ? 'RB / LB: tap or hold' : `${keyName('nextw')} to switch`) : '');
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
     // the touch WPN button shows what's in your hands (tap: the next one, hold: the picker)

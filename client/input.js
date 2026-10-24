@@ -134,7 +134,7 @@ function initTouch(hooks) {
   // the FIRE toggle by the aim stick (settings.touchEdgeFire)
   const ft = document.getElementById('firetog');
   if (ft) {
-    input.showFireToggle = () => { ft.classList.toggle('on', !!settings.touchEdgeFire); ft.innerHTML = `FIRE<br>${settings.touchEdgeFire ? 'ON' : 'OFF'}`; };
+    input.showFireToggle = () => { ft.classList.toggle('on', !!settings.touchEdgeFire); ft.textContent = `FIRE ${settings.touchEdgeFire ? 'ON' : 'OFF'}`; };
     input.showFireToggle();
     const flip = (e) => { e.preventDefault(); e.stopPropagation(); settings.touchEdgeFire = !settings.touchEdgeFire; saveSettings(); input.showFireToggle(); if (settings.vibrate && navigator.vibrate) navigator.vibrate(10); };
     ft.addEventListener('touchstart', flip, { passive: false });

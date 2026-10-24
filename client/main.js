@@ -2078,7 +2078,7 @@ function openOverlay(id) {
   if (id === 'pause') {
     requestPlayers();
     document.querySelectorAll('#pause .online-only').forEach((b) => b.classList.toggle('hidden', !!S.practice));
-    // the debug menu is the top option (it switches Dev Debug Mode on if needed); leaving dev mode lower down
+    // (the debug menu the last line - it switches Dev Debug Mode on if needed - leaving dev mode above it)
     $('p-devmode').classList.toggle('hidden', !S.devMode || !!S.practice);
   }
   if (id === 'pause') { buildHubs('sys'); S.uiTopKey = ''; }
@@ -2327,7 +2327,6 @@ function uiTop() {
   const hp = Math.max(0, Math.round((me.hp / me.maxHp) * 100));
   for (const el of document.querySelectorAll('.ui-bar.hp')) { el.firstChild.style.width = hp + '%'; el.lastChild.textContent = Math.round(me.hp); }
   for (const el of document.querySelectorAll('.ui-bar.st')) { el.firstChild.style.width = Math.min(100, st) + '%'; el.lastChild.textContent = Math.round(st); }
-  for (const el of document.querySelectorAll('.ui-wpn')) el.innerHTML = `${$('w-icon').innerHTML}<span>${$('w-ammo').textContent || $('w-name').textContent}</span>`;
   let stars = '';
   for (let i = 1; i <= 5; i++) stars += i <= (me.wanted || 0) ? '★' : '<i>★</i>';
   for (const el of document.querySelectorAll('.ui-money')) el.innerHTML = `<span class="c">$${me.cash.toLocaleString('en-US')}</span><span class="b">🏦 $${me.bank.toLocaleString('en-US')}</span><span class="st">${stars}</span>`;

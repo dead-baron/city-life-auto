@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 
 const css = readFileSync(new URL('../client/style.css', import.meta.url), 'utf8');
 const BASE = css.match(/#tbtns button \{[^}]*\}/)[0];
-const px = (r, k) => { const m = new RegExp(`(?:^|[ ;{])${k}: (\\d+)px`).exec(r); return m ? Number(m[1]) : null; };
+const px = (r, k) => { const m = new RegExp(`(?:^|[ ;{])${k}: (?:max\\()?(\\d+)px`).exec(r); return m ? Number(m[1]) : null; };   // (max(10px, the safe area): its 10)
 // a #tbtns button's box from its own rules: right offset (past the safe area), bottom, width, height
 function box(cls) {
   const rules = [...css.matchAll(new RegExp(`(?:^|\\n)#tbtns \\.${cls}[ ,][^{]*\\{[^}]*\\}`, 'g'))].map((m) => m[0]);
@@ -22,4 +22,5 @@ test('in the air the climb and descend buttons overlap neither FIRE, the brake n
   for (const b of [box('fire'), box('dive'), down]) assert.ok(!overlap(up, b), `climb clear of ${b.cls} (${JSON.stringify(up)} vs ${JSON.stringify(b)})`);
   for (const b of [box('fire'), box('dive')]) assert.ok(!overlap(down, b), `descend clear of ${b.cls}`);
   assert.match(css, /body\.in-air #tbtns \.horn, body\.in-air #tbtns \.reload \{ display: none; \}/, 'what shares the climb button\'s place is put away up there');
+  assert.match(css, /body\.in-air #tbtns \.dive \{ display: none; \}/, 'BRAKE put away in the air (its place is DOWN\'s on a phone held upright)');
 });

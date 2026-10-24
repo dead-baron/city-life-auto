@@ -27,16 +27,17 @@ export function drawJobWay(g, S, view, sp, now, z) {
     g.strokeStyle = '#ffae2a'; g.lineWidth = 3 * u; g.stroke();
     g.setLineDash([]);
     if (Math.hypot(sp.x - ax, sp.y - ay) < ar) {   // (in it: look about - no arrow to the middle)
-      plate(g, sp.x, view.y0 + 58 * u, 'SEARCH AREA - LOOK FOR THEM', u, '#ffd08a');
+      plate(g, sp.x, view.y0 + (open()[1] + 12) * u, 'SEARCH AREA - LOOK FOR THEM', u, '#ffd08a');
       g.restore();
       return;
     }
   }
   if (j.veh) { g.restore(); return; }   // (get to the job's truck first: its own ring and arrow - main.js drawJobTruck)
-  const x = j.x, y = j.y, m = 64 + 30 * u, x0 = view.x0 + m, x1 = view.x1 - m, y0 = view.y0 + m, y1 = view.y1 - m;
+  const [ml, mt, mr, mb] = open(), x = j.x, y = j.y, x0 = view.x0 + ml * u, x1 = view.x1 - mr * u, y0 = view.y0 + mt * u, y1 = view.y1 - mb * u;
   if (x >= x0 && x <= x1 && y >= y0 && y <= y1) { g.restore(); return; }   // (on screen: the marker over it - main.js)
-  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, dx = x - cx, dy = y - cy;
-  const k = Math.min((x1 - cx) / (Math.abs(dx) || 1e-6), (y1 - cy) / (Math.abs(dy) || 1e-6));
+  // (from you - or the nearest point of that open part of the screen - out toward the target, to its edge)
+  const cx = Math.min(x1, Math.max(x0, sp.x)), cy = Math.min(y1, Math.max(y0, sp.y)), dx = x - cx, dy = y - cy;
+  const k = Math.min((dx < 0 ? cx - x0 : x1 - cx) / (Math.abs(dx) || 1e-6), (dy < 0 ? cy - y0 : y1 - cy) / (Math.abs(dy) || 1e-6));
   const ex = cx + dx * k, ey = cy + dy * k, a = Math.atan2(dy, dx), s = 20 * u, pulse = 0.85 + 0.15 * Math.sin(now * 5);
   g.save(); g.translate(ex, ey); g.rotate(a); g.globalAlpha = pulse;
   g.fillStyle = COL; g.strokeStyle = EDGE; g.lineWidth = 2.5 * u;
@@ -46,6 +47,14 @@ export function drawJobWay(g, S, view, sp, now, z) {
   const d = Math.hypot(x - sp.x, y - sp.y), back = 46 * u;
   plate(g, ex - Math.cos(a) * back, ey - Math.sin(a) * back, `${j.area ? 'SEARCH ' : ''}${fmtDist(d)}`, u, '#fff');
   g.restore();
+}
+
+// the part of the screen the arrow keeps to, as screen px in from the left, top, right and bottom: on a phone the open
+// middle, clear of the HUD along the top, the sticks and the buttons (a phone on its side: the action buttons fill the
+// right; upright: the round buttons down the right, the prompt over you, the sticks and the buttons below)
+function open() {
+  const b = document.body.classList;
+  return !b.contains('touch') ? [94, 94, 94, 94] : b.contains('portrait') ? [40, 340, 80, 330] : [175, 110, 370, 130];
 }
 
 // a little navy plate with the text on it, centred on (x, y)

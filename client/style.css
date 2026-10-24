@@ -72,7 +72,7 @@ body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
    and low down the custody bar over the job line and a phone's FIRE button - H70; a phone upright keeps them in the
    middle) */
 #hud-msg > #rob, #hud-msg > #trainbar { position: static; transform: none; max-width: 100%; flex-wrap: wrap; }
-body.portrait.touch #hud-msg > #rob, body.portrait.touch #hud-msg > #trainbar { position: absolute; top: calc(186px + var(--corner-top)); left: 50%; transform: translateX(-50%); }
+body.portrait.touch #hud-msg > #rob, body.portrait.touch #hud-msg > #trainbar { position: absolute; top: calc(244px + var(--corner-top)); left: 50%; transform: translateX(-50%); }
 body.portrait.touch #hud-msg > #trainbar.custody { bottom: auto; }
 .touch #hud-msg > #rob, .touch #hud-msg > #trainbar { padding: 5px 10px; gap: 6px 8px; } .touch #rob .rob-bar { width: 80px; } .touch #rob span { min-width: 0; font-size: 13px; }
 #helpbox { position: relative; max-width: 100%; background: rgba(0,0,0,.8); border-radius: 3px; padding: 10px 14px; font-size: 18px; font-weight: 600; line-height: 1.35; display: flex; align-items: center; gap: 10px; animation: hin .18s ease-out; }
@@ -106,9 +106,11 @@ body.portrait.touch #hud-msg > #trainbar.custody { bottom: auto; }
 #w-carry { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: 16px; font-size: 14px; font-weight: 700; color: var(--gold); text-shadow: var(--outline-s); text-align: right; }
 #fishbar { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); font-family: var(--display); font-size: 28px; color: var(--warn); text-shadow: var(--outline); display: flex; gap: 10px; align-items: center; }
 #fishbar.bite { color: #fff; animation: starflash .3s steps(2) infinite; }
-#net { position: absolute; right: 10px; bottom: 40px; font-size: 11px; color: var(--dim); text-shadow: var(--outline-s); }
+#net { display: none; position: absolute; right: 10px; bottom: 40px; font-size: 11px; color: var(--dim); text-shadow: var(--outline-s); }
+body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame rate and the lag: Dev Debug Mode only) */
 #hud-btns { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: auto; opacity: .7; }
 #hud-btns button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid rgba(255,255,255,.35); background: rgba(0,0,0,.55); color: #fff; font-size: 17px; cursor: pointer; }
+.touch #hud-btns { top: max(4px, var(--cam-top)); gap: 0; }
 body.kbm #b-fs { display: none; }
 
 /* district title card */
@@ -226,14 +228,17 @@ body.kbm #t-fs { display: none; }
 .stick { position: absolute; border-radius: 50%; pointer-events: none; }
 #stick-l { left: calc(max(20px, env(safe-area-inset-left)) + 66px); top: calc(100% - 100px); width: 132px; height: 132px; margin: -66px 0 0 -66px; border: 3px solid rgba(255,255,255,.22); background: rgba(0,0,0,.16); opacity: .55; transition: opacity .15s; }
 #stick-l.active { opacity: 1; }
-#stick-r { right: max(22px, env(safe-area-inset-right)); bottom: 22px; width: 132px; height: 132px; pointer-events: auto; touch-action: none; border: 3px solid rgba(255,255,255,.25); background: rgba(0,0,0,.2); }
+#stick-r { right: max(22px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom)); width: 132px; height: 132px; pointer-events: auto; touch-action: none; border: 3px solid rgba(255,255,255,.25); background: rgba(0,0,0,.2); }
 #stick-r .ring { position: absolute; inset: 6px; border-radius: 50%; border: 9px solid rgba(255,60,60,.22); }
 #stick-r.aiming { border-color: rgba(255,255,255,.55); }
 #stick-r.firing .ring { border-color: rgba(255,60,60,.75); }
 #stick-r.firing .knob { background: #e8323a; }
-#stick-r .lbl { position: absolute; left: 0; right: 0; top: -22px; text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 2px; color: rgba(255,255,255,.6); }
-#firetog { position: absolute; right: calc(max(22px, env(safe-area-inset-right)) - 12px); bottom: 124px; width: 42px; height: 42px; border-radius: 50%; pointer-events: auto; touch-action: none; border: 2px solid rgba(255,255,255,.35); background: rgba(0,0,0,.55); color: rgba(255,255,255,.7); font-size: 9px; font-weight: 700; line-height: 1.1; padding: 0; }
-#firetog.on { background: rgba(200,22,30,.8); border-color: #fff; color: #fff; }
+#stick-r .lbl { position: absolute; left: 0; right: 0; bottom: -17px; text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 2px; color: rgba(255,255,255,.6); }
+/* the small pills (ITEMS, FIRE ON - off the aim stick's ring, a thumb on its edge flipped it - the flashlight, COP CAR):
+   44 px to tap, the pill drawn 30 px tall inside a clear border, its edge an inset shadow */
+#tbtns .heal, #tbtns .light, #tbtns .cruiser, #firetog { position: absolute; left: calc(max(10px, env(safe-area-inset-left)) + 116px); top: 2px; width: 52px; height: 44px; padding: 0; border: solid transparent !important; border-width: 7px 0 !important; border-radius: 22px; background-clip: padding-box !important; box-shadow: inset 0 0 0 2px rgba(255,255,255,.4); font-size: 11px; }
+#firetog { top: 48px; width: 56px; pointer-events: auto; touch-action: none; background-color: rgba(0,0,0,.55); color: rgba(255,255,255,.75); font-weight: 700; }
+#firetog.on { background-color: rgba(200,22,30,.8); color: #fff; box-shadow: inset 0 0 0 2px #fff; }
 body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 .stick .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(255,255,255,.4); border: 2px solid rgba(0,0,0,.45); box-shadow: 0 3px 8px rgba(0,0,0,.4); }
 #tbtns { position: absolute; inset: 0; pointer-events: none; }
@@ -248,31 +253,31 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 #tbtns button.pulse.felony { outline: 2px solid #ff5a52; outline-offset: 3px; }
 #tbtns button.pulse.armed { animation-duration: .4s; }
 #tbtns .fire { width: 78px; height: 78px; right: calc(max(22px, env(safe-area-inset-right)) + 146px); bottom: 84px; background: rgba(200,22,30,.7); font-size: 16px; }
-#tbtns .dive { right: calc(max(22px, env(safe-area-inset-right)) + 150px); bottom: 10px; width: 66px; height: 54px; border-radius: 27px; }
+#tbtns .dive { right: calc(max(22px, env(safe-area-inset-right)) + 150px); bottom: max(10px, env(safe-area-inset-bottom)); width: 66px; height: 54px; border-radius: 27px; }
 #tbtns .act { right: calc(max(22px, env(safe-area-inset-right)) + 8px); bottom: 166px; }
 #tbtns .car { right: calc(max(22px, env(safe-area-inset-right)) + 74px); bottom: 186px; }
 #tbtns .throw { right: calc(max(22px, env(safe-area-inset-right)) + 140px); bottom: 176px; }
-#tbtns .horn, #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: 74px; width: 58px; height: 46px; border-radius: 23px; font-size: 12px; }
+#tbtns .horn, #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: 74px; width: 58px; height: 50px; border-radius: 25px; font-size: 12px; }
+body.in-veh #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 140px); bottom: 176px; }   /* (armed at the wheel: THROW's place, the horn keeps its own) */
 /* WPN: next weapon (tap) or the weapon picker (hold), above RELOAD / HORN by the fire button, while you carry more
    than fists */
-#tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 254px); bottom: 128px; width: 62px; height: 48px; border-radius: 16px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+#tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 254px); bottom: 128px; width: 62px; height: 50px; border-radius: 16px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
 #tbtns .wpn .wi canvas { width: 44px; height: 22px; image-rendering: pixelated; display: block; }
 #tbtns .wpn .wl { font-size: 10px; line-height: 1; letter-spacing: .5px; }
 body:not(.multi-wpn) #tbtns .wpn { display: none; }
 body.touch.multi-wpn #weapon::after { content: '⇄'; margin-left: 6px; font-size: 14px; opacity: .75; }
-#wpick { position: fixed; inset: 0; z-index: 31; background: rgba(0,0,0,.28); touch-action: none; display: flex; align-items: flex-end; justify-content: center; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
-#wpick .wp-box { width: min(780px, 96vw); max-height: 86vh; overflow-y: auto; background: rgba(10,12,16,.9); border: 2px solid rgba(255,255,255,.25); border-radius: 14px; padding: 6px 8px 8px; touch-action: pan-y; }
+#wpick { position: fixed; inset: 0; z-index: 31; background: rgba(0,0,0,.28); touch-action: none; display: flex; align-items: flex-end; justify-content: center; padding: max(8px, env(safe-area-inset-top)) 0 max(14px, env(safe-area-inset-bottom)); }
+#wpick .wp-box { width: min(780px, 96vw); max-height: min(86vh, 100%); overflow-y: auto; background: rgba(10,12,16,.9); border: 2px solid rgba(255,255,255,.25); border-radius: 14px; padding: 6px 8px 8px; touch-action: pan-y; }
 #wpick .wp-h { font: 700 11px Rubik, sans-serif; letter-spacing: 2px; color: #aab; text-transform: uppercase; margin: 0 0 5px 2px; }
 #wpick .wp-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 5px; }
 #wpick .wp-w { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; padding: 4px 3px; background: rgba(0,0,0,.55); border: 2px solid rgba(255,255,255,.2); color: #fff; border-radius: 10px; font: 600 11px/1.1 Rubik, sans-serif; text-align: center; cursor: pointer; touch-action: manipulation; }
 #wpick .wp-w.on { border-color: #f2c21b; background: rgba(242,194,27,.15); }
 #wpick .wp-w canvas { width: 44px; height: auto; image-rendering: pixelated; }
 #wpick .wp-w small { display: block; color: #aaa; font-size: 10px; }
-#tbtns .heal { left: calc(max(10px, env(safe-area-inset-left)) + 124px); top: 10px; width: 52px; height: 30px; border-radius: 15px; font-size: 11px; }
 body.touch #weapon { pointer-events: auto; cursor: pointer; }
 #tbtns .map { display: none; }
-#tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 182px); top: 10px; width: 84px; height: 30px; border-radius: 15px; font-size: 11px; background: rgba(40,70,190,.75); }
-#tbtns .cruiser.cooling { background: rgba(0,0,0,.5); color: #aab; }
+#tbtns .cruiser { top: 140px; width: 56px; background-color: rgba(40,70,190,.75); }
+#tbtns .cruiser.cooling { background-color: rgba(0,0,0,.5); color: #aab; }
 body:not(.can-call) #tbtns .cruiser { display: none; }
 #dev-btn { display: none !important; }   /* (the 🐞 in the round menu buttons opens the debug menu on every device) */
 #tbtns .veh { display: none; }
@@ -282,21 +287,23 @@ body.in-veh #tbtns .dive .foot { display: none; } body.in-veh #tbtns .dive .veh 
 body.on-board #tbtns .dive .foot, body.on-board #tbtns .car .nb, body.on-board #tbtns .fire .nb { display: none; } body.on-board #tbtns .brd { display: inline; }   /* (on a skateboard: OLLIE, OFF, TRICK) */
 body:not(.in-veh) #tbtns .horn, body:not(.carrying) #tbtns .throw, body:not(.armed) #tbtns .reload { display: none; }
 /* at the controls of an aircraft (shared/flight.js): climb and descend */
-#tbtns .climb, #tbtns .descend { display: none; width: 66px; height: 54px; border-radius: 27px; font-size: 20px; background: rgba(40,120,200,.7); }
+#tbtns .climb, #tbtns .descend { display: none; width: 66px; height: 54px; border-radius: 27px; font-size: 11px; line-height: 1; padding: 0; background: rgba(40,120,200,.7); }
+#tbtns .climb b, #tbtns .descend b { display: block; font-size: 15px; }
 #tbtns .climb { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: 74px; }   /* (over the descend button, clear of FIRE: it sat under FIRE's lower half - H69; the horn's place, and the horn's no use up there) */
-#tbtns .descend { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: 10px; }
+#tbtns .descend { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: max(10px, env(safe-area-inset-bottom)); }
 body.in-air #tbtns .climb, body.in-air #tbtns .descend { display: block; }
 body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
+body.in-air #tbtns .dive { display: none; }   /* (BRAKE: only a plane on its wheels brakes, and pulling the stick back does that) */
 
 /* touch HUD arrangement: radar moves top-left (the left thumb owns the bottom-left) */
-.touch #net, .touch #w-carry { display: none; }
+.touch #w-carry { display: none; }
 .touch #radar-wrap { top: 10px; bottom: auto; left: max(10px, env(safe-area-inset-left)); width: 112px; }
 .touch #radar { width: 112px; height: 112px; border-width: 3px; }
 .touch #status { font-size: 10px; }
 /* the prompt and the notes right of the ITEMS / flashlight buttons, under the round buttons, clear of the cash and the
    stars on the right; the job line at the bottom between the sticks (H70: on a phone the prompt sat under the round
    buttons, its first word or two showing, and the notes over the job line) */
-.touch #hud-msg { left: calc(max(10px, env(safe-area-inset-left)) + 182px); top: 48px; width: min(380px, calc(100vw - 482px)); }
+.touch #hud-msg { left: calc(max(10px, env(safe-area-inset-left)) + 186px); top: 52px; width: min(380px, calc(100vw - 482px)); }
 .touch #helpbox { font-size: 15px; padding: 7px 10px; }
 .touch #hud-sub { bottom: max(8px, env(safe-area-inset-bottom)); left: calc(max(20px, env(safe-area-inset-left)) + 140px); right: calc(max(22px, env(safe-area-inset-right)) + 316px); width: fit-content; max-width: none; margin: 0 auto; transform: none; }
 .touch .toast { font-size: 13px; padding: 5px 8px; }
@@ -325,7 +332,7 @@ body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
   #t-gfx { flex-direction: row; align-items: center; padding: 3px 8px 9px; gap: 8px; } #t-gfxseg { gap: 4px; } #t-gfx > small { display: none; }
   #t-gfxseg button { min-width: 0; padding: 8px 7px 4px; font-size: 12px; }
   #t-practice { font-size: 12px; line-height: 1.3; }
-  .touch #stick-r, #tbtns button { transform: scale(.9); }
+  .touch #stick-r, #tbtns button:not(.heal, .light, .cruiser) { transform: scale(.9); }
   /* the top-right column packs into three short rows (weapon; cash and bank; stars, clock and status), so the
      CAR / ACT / THROW buttons above the right stick don't sit on it (an iPhone in Safari: 340 px tall) */
   .touch #hud-tr { display: grid; grid-template-columns: auto auto auto; justify-items: end; align-items: baseline; column-gap: 8px; }
@@ -353,16 +360,10 @@ body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
   body:not(.touch) #hud-btns button { width: 30px; height: 30px; font-size: 15px; }
   .touch #job { font-size: 13px; padding: 4px 10px; }
 }
-/* a narrow phone on its side (740 px): the round buttons smaller, between the ITEMS button and the weapon, and the
-   police's COP CAR button under the minimap (it lay over the menu button) */
-@media (max-width: 800px) and (orientation: landscape) {
-  .touch #hud-btns { gap: 4px; }
-  .touch #hud-btns button { width: 30px; height: 30px; font-size: 15px; }
-  .touch #tbtns .cruiser { left: max(10px, env(safe-area-inset-left)); top: 158px; }
-  .touch #rob > b { display: none; }   /* (the bar's gold edge says robbery: the bar and the takings on one line) */
-}
-/* (an iPhone SE on its side, 667 px: the round buttons start beside the ITEMS button, clear of the weapon) */
-@media (max-width: 700px) and (orientation: landscape) { .touch #hud-btns { left: calc(max(10px, env(safe-area-inset-left)) + 182px); transform: none; gap: 2px; } }
+/* a narrow phone (740 px on its side, or upright): the robbery bar and its takings on one line (its gold edge says
+   robbery); on its side the round buttons start beside the small pills, the cash and the weapon closer to the edge */
+@media (max-width: 800px) { .touch #rob > b { display: none; } }
+@media (max-width: 800px) and (orientation: landscape) { .touch #hud-btns { left: calc(max(10px, env(safe-area-inset-left)) + 176px); transform: none; } .touch #hud-tr { right: max(10px, env(safe-area-inset-right)); } .touch #hud-btns #b-dev:not(.on) { display: none; } }   /* (the 🐞 off the row there till Dev Debug Mode is on: the pause menu's Debug menu line still opens it) */
 /* phones on their side with a prompt or a robbery, a train ride's or custody's bar over the notes: the newest note only,
    so the column ends above you (you're in the middle of the screen) */
 @media (max-height: 430px) { .touch #hud-msg:has(> #helpbox:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #rob:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #trainbar:not(.hidden)) .toast:nth-last-child(n+2) { display: none; } }
@@ -372,18 +373,33 @@ body.portrait:not(.touch) #hud-sub { max-width: 90vw; }
 /* portrait phones: controls hug the bottom, HUD compacts */
 body.portrait.touch #hud-tr { max-width: 46vw; }
 body.portrait.touch #money { font-size: 24px; }
-body.portrait.touch #weapon { display: none; }
+body.portrait.touch #weapon { min-height: 0; padding: 1px 8px 1px 6px; gap: 5px; }   /* (what you hold and its rounds, compact) */
+body.portrait.touch #w-icon canvas { width: 48px; height: 24px; }
+body.portrait.touch :is(#w-name, #w-ammo) { font-size: 11px; }
 body.portrait.touch #hud-msg { display: contents; }
-body.portrait.touch #helpbox, body.portrait.touch #toasts { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(282px + var(--corner-top)); max-width: 80vw; width: auto; }
+body.portrait.touch #helpbox, body.portrait.touch #toasts { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(296px + var(--corner-top)); max-width: 80vw; width: auto; }
 /* the notes on a phone held upright: one at a time, tucked in at the top beside the minimap, clear of the buttons on the
    right (the user, 2026-10-08: they covered too much of the screen) */
-body.portrait.touch #toasts { top: calc(114px + var(--corner-top)); left: calc(max(10px, env(safe-area-inset-left)) + 120px); right: 54px; width: auto; max-width: none; }
+body.portrait.touch #toasts { top: calc(148px + var(--corner-top)); left: calc(max(10px, env(safe-area-inset-left)) + 120px); right: 54px; width: auto; max-width: none; }
 body.portrait.touch #toasts .toast:nth-last-child(n+2) { display: none; }
-body.portrait.touch #hud-sub { bottom: 300px; left: max(10px, env(safe-area-inset-left)); right: 54px; margin: 0 auto; transform: none; width: fit-content; max-width: none; }   /* (clear of the round buttons down the right) */
-body.portrait.touch #tbtns .horn, body.portrait.touch #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 228px); bottom: 246px; }
-body.portrait.touch #tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 154px); bottom: 172px; }   /* (just above FIRE) */
-body.portrait.touch #tbtns .heal { left: max(10px, env(safe-area-inset-left)); top: calc(206px + var(--corner-top)); }
-body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 60px); top: calc(206px + var(--corner-top)); }
+body.portrait.touch #hud-sub { bottom: 176px; left: max(10px, env(safe-area-inset-left)); right: calc(50% + 6px); margin: 0 auto; transform: none; width: fit-content; max-width: none; }   /* (the left half, over the move stick) */
+/* the right-hand controls all right of the middle (the left half is the move stick's): FIRE and ACT over the aim stick,
+   WPN, CAR and THROW over them; beside the stick ROLL / BRAKE and HORN / RELOAD - CLIMB and DOWN in their places in
+   the air (they sat on the move stick); the small pills in a row under the minimap */
+body.portrait.touch { --pr: max(10px, env(safe-area-inset-right)); }
+body.portrait.touch #stick-r { right: var(--pr); }
+body.portrait.touch #tbtns .fire { right: calc(var(--pr) + 103px); bottom: 158px; }
+body.portrait.touch #tbtns .act { right: calc(var(--pr) + 8px); }
+body.portrait.touch #tbtns .wpn { right: calc(var(--pr) + 121px); bottom: 244px; width: 60px; }
+body.portrait.touch #tbtns .car { right: calc(var(--pr) + 59px); bottom: 240px; }
+body.portrait.touch #tbtns .throw, body.portrait.touch.in-veh #tbtns .reload { right: var(--pr); bottom: 240px; }
+body.portrait.touch #tbtns :is(.dive, .descend, .horn, .reload, .climb) { right: calc(var(--pr) + 135px); width: 46px; height: 50px; border-radius: 23px; font-size: 10px; }
+body.portrait.touch #tbtns :is(.dive, .descend) { bottom: max(22px, env(safe-area-inset-bottom)); height: 56px; }
+body.portrait.touch #tbtns :is(.horn, .reload, .climb) { bottom: calc(max(22px, env(safe-area-inset-bottom)) + 66px); }
+body.portrait.touch #tbtns .heal, body.portrait.touch #firetog, body.portrait.touch #tbtns .light, body.portrait.touch #tbtns .cruiser { left: max(10px, env(safe-area-inset-left)); top: calc(192px + var(--corner-top)); }
+body.portrait.touch #firetog { left: calc(max(10px, env(safe-area-inset-left)) + 56px); }
+body.portrait.touch #tbtns .light { left: calc(max(10px, env(safe-area-inset-left)) + 116px); }
+body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 172px); }
 /* a phone held upright (the user, 2026-10-08): the minimap top-left with the time and the weather on its plate; the cash,
    the bank and the stars top-right; the round buttons (menu, phone, bag...) down the right edge under them. Nothing at
    the top centre, where phones like the Pixel 7 Pro have the camera in the screen. */
@@ -393,9 +409,9 @@ body.portrait.touch #hud-tr #clock { display: none; }
 body.portrait.touch #rclock { display: flex; top: 112px; }   /* (straddling the bottom of the minimap's ring) */
 body.portrait.touch #vitals { margin-top: 13px; }
 body.portrait.touch #status { width: max-content; max-width: calc(100vw - 76px); }   /* (one line where it fits, clear of the buttons on the right) */
-body.portrait.touch #hud-btns { left: auto; right: max(10px, env(safe-area-inset-right)); top: calc(112px + var(--corner-top)); transform: none; flex-direction: column; gap: 8px; }
+body.portrait.touch #hud-btns { left: auto; right: max(10px, env(safe-area-inset-right)); top: calc(152px + var(--corner-top)); transform: none; flex-direction: column; }
 /* the banners in the middle keep clear of the HUD at the top and of that column of buttons */
-body.portrait.touch #trainbar, body.portrait.touch #rob { top: calc(186px + var(--corner-top)); max-width: calc(100vw - 140px); }
+body.portrait.touch #trainbar, body.portrait.touch #rob { top: calc(244px + var(--corner-top)); max-width: calc(100vw - 140px); }
 body.portrait.touch #zone-l { top: 50%; width: 50%; }
 @media (max-width: 760px) and (min-height: 431px) { #death h1 { font-size: 64px; } #district { font-size: 34px; } }
 
@@ -481,7 +497,8 @@ div.ph-row { cursor: default; }
 .ph-amts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
 .ph-amts button { margin-top: 0; padding: 7px 2px; }
 .ph-card button.pfocus { outline: 2px solid #fff; border-color: #fff; }
-body.portrait #phone { justify-content: center; padding: 0; }
+body.portrait #phone { justify-content: center; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }   /* (clear of the camera and the home bar) */
+body.portrait .ph-body { max-height: 100%; }
 
 #tut-ask, #gfx-ask { position: absolute; inset: 0; z-index: 44; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; }
 #tut-ask .panel { width: min(460px, 92vw); }
@@ -686,12 +703,9 @@ body.portrait #spec { width: 210px; font-size: 14px; }
 @keyframes updspin { to { transform: rotate(360deg); } }
 
 /* the flashlight: a touch button while you own one (on foot), lit while it's on */
-#tbtns .light { left: calc(max(10px, env(safe-area-inset-left)) + 124px); top: 46px; width: 52px; height: 30px; border-radius: 15px; font-size: 15px; }
-#tbtns .light.lit { background: rgba(255,228,140,.85); border-color: #fff; }
+#tbtns .light { top: 94px; font-size: 15px; }
+#tbtns .light.lit { background-color: rgba(255,228,140,.85); box-shadow: inset 0 0 0 2px #fff; }
 body:not(.has-light) #tbtns .light, body.in-veh #tbtns .light { display: none; }
-body.portrait.touch #tbtns .light { left: max(10px, env(safe-area-inset-left)); top: calc(242px + var(--corner-top)); }
-/* the skateboard (the owner, 2026-10-18): the same small pill beside it while there's a board in your bag (on foot), lit
-   while you're riding - a tap gets on or off, no digging in the bag */
 #inv .inv-use.lit { background: #8a6a12; border-color: #ffd23e; }
 
 /* dev give menu (client/devgive.js) */
@@ -784,15 +798,13 @@ img.pi { image-rendering: pixelated; image-rendering: crisp-edges; vertical-alig
 .ui-top { display: flex; align-items: center; gap: 14px; padding: max(6px, var(--cam-top)) max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left)); background: linear-gradient(180deg, #111a33, #0a1124); border-bottom: 2px solid var(--rim); flex: none; }
 .ui-logo { height: 54px; width: auto; filter: drop-shadow(0 2px 0 var(--ink)); }
 .ui-top .hub { flex: 1; }
-.ui-stat { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+.ui-stat { display: flex; flex-direction: column; gap: 4px; min-width: 150px; margin-right: 34px; }   /* (room for the bars' numbers, past their right end) */
 .ui-clock { font: 700 18px var(--pixel); color: var(--cream); background: #0b1226; border: 2px solid rgba(226,189,87,.7); border-radius: 5px; padding: 3px 10px; display: flex; align-items: center; gap: 8px; justify-content: center; }
 .ui-bars { display: flex; flex-direction: column; gap: 3px; }
 .ui-bar { position: relative; height: 9px; background: #0b1226; border: 1px solid #000; border-radius: 2px; }
 .ui-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 1px; }
 .ui-bar.hp i { background: linear-gradient(#ff6b6b, #c8161e); } .ui-bar.st i { background: linear-gradient(#7ec8ff, #2f74c0); }
 .ui-bar b { position: absolute; right: -34px; top: -4px; font: 700 11px var(--pixel); color: var(--cream); width: 30px; }
-.ui-wpn { width: 64px; height: 54px; border: 2px solid rgba(226,189,87,.7); border-radius: 6px; background: #0b1226; display: flex; flex-direction: column; align-items: center; justify-content: center; font: 700 11px var(--pixel); color: var(--cream); margin-left: 26px; }
-.ui-wpn img { width: 44px; height: 22px; image-rendering: pixelated; }
 .ui-foot { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 5px max(14px, env(safe-area-inset-left)); background: #0a1124; border-top: 1px solid rgba(226,189,87,.45); font: 12px var(--pixel); color: #cdd4e8; flex: none; }
 .ui-foot .hint { display: inline-flex; align-items: center; gap: 6px; margin-right: 16px; }
 .ui-foot .g-pad, .ui-foot .g-key, .ui-foot .g-touch { transform: scale(.85); }
@@ -842,7 +854,7 @@ img.pi { image-rendering: pixelated; image-rendering: crisp-edges; vertical-alig
 .bm-row.back { color: var(--rim); font-weight: 700; }
 .bm-row:hover, .bm-row.pfocus { background: linear-gradient(90deg, rgba(226,189,87,.25), rgba(226,189,87,.04)) !important; box-shadow: inset 0 0 0 2px var(--rim); color: #fff !important; }
 .bm-hint { color: #8f99b6; font: 12px var(--pixel); margin: 8px 4px; }
-body.portrait #bigmap .ui-logo, body.portrait #bigmap .ui-wpn, body.portrait #bigmap .ui-stat { display: none; }
+body.portrait #bigmap .ui-logo, body.portrait #bigmap .ui-stat { display: none; }
 body.portrait #bm-body { flex-direction: column-reverse; }
 body.portrait #bm-panel { width: auto; max-height: 34vh; }
 body.portrait #bm-mapwrap { min-height: 40vh; }
@@ -890,11 +902,10 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 #stars .on { color: #ffd34a; -webkit-text-stroke: 2px #070b16; text-shadow: 0 0 8px rgba(255,211,74,.55); }
 #clock { font-family: var(--pixel); font-weight: 700; font-size: 14px; color: var(--cream); text-shadow: 0 2px 0 #070b16, 1px 0 0 #070b16, -1px 0 0 #070b16; }
 #faction { font-family: var(--pixel); font-weight: 700; font-size: 11px; letter-spacing: 2px; background: rgba(13,22,45,.85); border: 1px solid rgba(226,189,87,.6); border-radius: 4px; padding: 3px 8px; margin-top: 5px; text-shadow: none; }
-/* (U17, H76: an ordinary act's plate has a light edge and white words; the key a light chip and a colon - on touch the
-   button's name, ACT / CAR; a pad keeps its coloured button) */
+/* (U17, H76: an ordinary act's plate has a light edge and white words; the key a light chip, then a space (a colon
+   after it read as a typo) - on touch the button's name, ACT / CAR; a pad keeps its coloured button) */
 #helpbox { background: linear-gradient(180deg, rgba(21,34,63,.95), rgba(13,22,45,.95)); border: 2px solid #c9d6ee; border-radius: 6px; box-shadow: 0 0 0 2px #070b16, inset 0 0 0 2px #0a1226, inset 0 0 0 3px rgba(201,214,238,.2); font-family: var(--pixel); font-weight: 400; font-size: 16px; color: #fff; gap: 8px; }
 #helpbox > .g-key, #helpbox > .g-touch { min-width: 26px; height: 26px; padding: 0 5px; border-radius: 3px; background: linear-gradient(#f6f9ff, #cbd6ea); color: #10203f; border: 2px solid #070b16; box-shadow: inset 0 -3px 0 #8d9bb8; font: 700 15px var(--pixel); letter-spacing: 0; }
-#helpbox > :is(.g-key, .g-touch, .g-pad) + span::before { content: ':'; color: #e8eef8; margin-right: .55em; }
 /* what Act would do is a crime (server players.js: me.pcr; hud.js crimeMarks), the owner, 2026-10-15: "not a big popup,
    just have the Act button change color - red if it's a crime, green if it's not". The plate stays as it is; only its key
    chip turns red with a "!" badge on its corner (a felony: a red ring round it too) - the colour, a mark and a ring, so it
@@ -918,6 +929,9 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 #hud-btns { opacity: .85; }
 #hud-btns button { display: inline-grid; place-items: center; padding: 0; background: radial-gradient(circle at 50% 35%, #2a3a6a, #121c38 70%); border: 2px solid rgba(226,189,87,.7); box-shadow: 0 0 0 2px #070b16; }
 #hud-btns button img.pi { width: 18px; height: auto; }
+/* (touch: 44 px to tap, the 34 px circle drawn inside a clear border - the ring as inset shadows) */
+.touch #hud-btns button { width: 44px; height: 44px; border: 5px solid transparent; background-clip: padding-box; box-shadow: inset 0 0 0 2px #070b16, inset 0 0 0 4px rgba(226,189,87,.7); }
+.touch #hud-btns #b-dev { border-color: transparent; background-clip: padding-box; box-shadow: inset 0 0 0 2px #070b16, inset 0 0 0 4px #ffc2de; }
 #district { font-family: var(--pixel); font-weight: 700; font-size: 44px; letter-spacing: 4px; text-shadow: 0 4px 0 #070b16, 3px 0 0 #070b16, -3px 0 0 #070b16, 0 -3px 0 #070b16, 0 0 24px rgba(0,0,0,.6); }
 #district small { font-family: var(--pixel); font-weight: 700; font-size: 14px; letter-spacing: 6px; color: #ffd34a; }
 .touch #district { font-size: 30px; }
@@ -974,7 +988,7 @@ body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px;
 
 /* arrested (server custody.js): the custody banner and the jail screen over the cell */
 #trainbar.custody { border-color: #ff6a6a; color: #ff9a9a; top: auto; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 58px); } #trainbar.custody span { color: #ffd6d6; }
-body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--corner-top)); max-width: calc(100vw - 140px); }   /* (under the HUD, above the prompt and the notes) */   /* (low down, clear of the toasts at the top) */
+body.portrait.touch #trainbar.custody { bottom: auto; top: calc(244px + var(--corner-top)); max-width: calc(100vw - 140px); }   /* (under the HUD, above the prompt and the notes) */   /* (low down, clear of the toasts at the top) */
 /* (interiors.js drawInterior puts the room on the right of wide screens and low down on tall ones: the panel takes the
    free side, the left of a wide screen, the top of a tall one) */
 #jail { position: absolute; left: 50%; top: max(24px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 3; width: min(360px, 88vw); box-sizing: border-box;
@@ -1165,6 +1179,25 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(186px + var(--co
   #t-gfxseg button { flex: 1 1 0; min-width: 0; padding: 12px 1px 8px; font-size: clamp(10px, 3vw, 13px); }
   #t-gfxseg button small { font-size: 7px; letter-spacing: 0; padding: 0 2px; }
 }
+
+/* ---- a finger's targets, 44 px or more (the UI review, 2026-10-24): where the art should stay small, a clear border
+   round it makes the target (its edge an inset shadow) ---- */
+.touch :is(.x, #m-close, #s-close, .ui-x, .bm-x) { width: 44px; height: 44px; border: 5px solid transparent; background-clip: padding-box; box-shadow: inset 0 0 0 2px rgba(226,189,87,.7); }
+.touch #bigmap .bm-x { border-width: 9px; }
+.touch #ph-back { min-width: 44px; min-height: 44px; }
+.touch .hub button { min-width: 48px; }
+.touch :is(#t-gfxseg button, #t-tools button, .srow select, #creator .cc-tab, #creator .cc-chip, #creator .cc-btn, #inv .inv-use, #inv .inv-pin, #d-help .help-btn, .bm-zb, .bm-catname, .bm-setwp, .bm-row, #d-map button) { min-height: 44px; }
+.touch :is(#creator .cc-turn button, .bm-zb, #inv .inv-pin, #d-map header button) { min-width: 44px; }
+.touch #creator .cc-turn button { height: 44px; }
+.touch .bm-check { width: 44px; height: 44px; border: 11px solid transparent; background-clip: padding-box; box-shadow: inset 0 0 0 2px #c9cfe0; }
+.touch .bm-check.on::after { left: 16px; top: 12px; }
+.touch #creator .cc-sw { width: 44px; height: 44px; border: 9px solid transparent; background-clip: padding-box !important; box-shadow: inset 0 0 0 2px rgba(7,11,22,.9), 0 0 0 1px rgba(226,189,87,.25); }
+.touch #creator .cc-sw.on { transform: none; box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px var(--rim); }
+.touch .srow input[type=checkbox] { appearance: none; -webkit-appearance: none; flex: none; width: 44px; height: 44px; margin: -11px -10px -11px 0; border: 10px solid transparent; border-radius: 12px; background: #0b1226 padding-box; box-shadow: inset 0 0 0 2px rgba(226,189,87,.7); }
+.touch .srow input[type=checkbox]:checked { background: var(--rim) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12l5 5 9-10' fill='none' stroke='%23070b16' stroke-width='3.5'/%3E%3C/svg%3E") center / 18px no-repeat padding-box; }
+.touch :is(.srow, .soundbox .snd-vol) input[type=range] { height: 44px; }
+.touch .d-step { flex: none; width: 44px; height: 44px; border: 7px solid transparent; background-clip: padding-box; box-shadow: inset 0 0 0 2px rgba(226,189,87,.6); }
+.touch #d-hide { min-height: 44px; border: 9px solid transparent; background-clip: padding-box; box-shadow: inset 0 0 0 1px rgba(226,189,87,.6); margin: -9px -9px -9px auto; padding: 3px 8px; }
 
 /* a connection lost mid-game (main.js scheduleReconnect): a small note at the top while it's made again, the game left as it was */
 #reconn { position: fixed; z-index: 60; left: 50%; top: calc(max(8px, env(safe-area-inset-top)) + 4px); transform: translateX(-50%); padding: 5px 14px; border-radius: 14px; background: rgba(10,12,20,.82); border: 1px solid rgba(255,211,74,.6); color: #ffe9a8; font: 700 13px var(--pixel); letter-spacing: 1px; pointer-events: none; animation: reconn 1.4s ease-in-out infinite; }

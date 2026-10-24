@@ -172,7 +172,7 @@ export function makeDirector(S, api) {
 body.cine-clean #view, body.cine-clean #world { cursor: none; }
 .cine-bar { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 60; pointer-events: none; transition: height .5s ease; }
 #cine-fade { position: fixed; inset: 0; background: #000; opacity: 0; z-index: 61; pointer-events: none; transition: opacity .6s ease; }
-#cine-panel { position: fixed; right: 12px; top: 12px; width: 290px; max-height: calc(100vh - 24px); overflow: auto; z-index: 70; background: rgba(14,16,22,.94); color: #e8eaf0; font: 12px/1.35 system-ui, sans-serif; border: 1px solid #39404e; border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+#cine-panel { position: fixed; right: max(12px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); width: 290px; max-height: calc(100vh - 24px - env(safe-area-inset-top, 0px)); overflow: auto; z-index: 70; background: rgba(14,16,22,.94); color: #e8eaf0; font: 12px/1.35 system-ui, sans-serif; border: 1px solid #39404e; border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
 #cine-panel h3 { margin: 10px 0 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #9aa6c0; }
 #cine-panel .row { display: flex; flex-wrap: wrap; gap: 4px; }
 #cine-panel button { background: #262c38; color: #e8eaf0; border: 1px solid #3c4454; border-radius: 6px; padding: 4px 7px; font: inherit; cursor: pointer; }
@@ -181,7 +181,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 #cine-panel .sc small { color: #9aa6c0; }
 #cine-panel .tip { color: #9aa6c0; margin: 6px 0 0; }
 #cine-panel input[type=range] { width: 100%; }
-#cine-ctl { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 69; display: none; align-items: center; gap: 8px; max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center; background: rgba(14,16,22,.82); color: #e8eaf0; font: 12px/1.3 system-ui, sans-serif; border: 1px solid #39404e; border-radius: 12px; padding: 7px 10px; transition: opacity .4s ease; touch-action: none; user-select: none; }
+#cine-ctl { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 69; display: none; align-items: center; gap: 8px; max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center; background: rgba(14,16,22,.82); color: #e8eaf0; font: 12px/1.3 system-ui, sans-serif; border: 1px solid #39404e; border-radius: 12px; padding: 7px 10px; transition: opacity .4s ease; touch-action: none; user-select: none; }
 #cine-ctl button, #cine-panel .dirs button { background: #262c38; color: #e8eaf0; border: 1px solid #3c4454; border-radius: 6px; padding: 5px 8px; font: inherit; cursor: pointer; min-width: 30px; }
 #cine-ctl button.on { background: #ffd23a; color: #1a1a1a; border-color: #ffd23a; }
 #cine-ctl .lbl { min-width: 56px; text-align: center; }
@@ -190,7 +190,12 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 .cine-dial i { position: absolute; left: 50%; top: 50%; width: 3px; height: 24px; margin-left: -1.5px; background: #ffd23a; border-radius: 2px; transform-origin: 50% 0; }
 .cine-dial b { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #ffd23a; }
 .cine-dial.sm { width: 34px; height: 34px; } .cine-dial.sm i { height: 13px; }
-#cine-panel .dirs { display: grid; grid-template-columns: repeat(3, 34px); gap: 3px; }`;
+#cine-panel .dirs { display: grid; grid-template-columns: repeat(3, 34px); gap: 3px; }
+.touch #cine-panel button, .touch #cine-ctl button { min-width: 44px; min-height: 44px; }
+.touch #cine-panel .dirs { grid-template-columns: repeat(3, 44px); }
+.touch #cine-ctl { left: auto; right: max(12px, env(safe-area-inset-right)); transform: none; max-width: min(320px, calc(50vw - 16px)); justify-content: flex-end; }
+.touch #cine-ctl .who { max-width: 100%; }
+body.touch.cine-bar #tbtns, body.touch.cine-bar #stick-r, body.touch.cine-bar #firetog, body.dead #cine-ctl { display: none !important; }`;
   document.head.appendChild(css);
   const bars = [0, 1].map((k) => { const b = document.createElement('div'); b.className = 'cine-bar'; b.style[k ? 'bottom' : 'top'] = '0'; document.body.appendChild(b); return b; });
   const fadeEl = document.createElement('div'); fadeEl.id = 'cine-fade'; document.body.appendChild(fadeEl);
@@ -381,6 +386,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
   // the bar along the bottom (drift / follow scenes): made again when what it shows changes
   function barShow() {
     const want = D.mode === 'drift' || D.mode === 'scene';
+    document.body.classList.toggle('cine-bar', want);   // (on a phone the bar takes the action buttons' corner: they do nothing while the camera has the controls)
     if (!want) { if (bar) bar.style.display = 'none'; return; }
     if (!bar) { bar = document.createElement('div'); bar.id = 'cine-ctl'; bar.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); wake(); }); document.body.appendChild(bar); }
     const key = D.mode === 'drift' ? `d${dr.si}` : `s${fs ? `${fs.k}|${fs.n}|${fs.tour}|${fs.none || 0}` : '-'}|${near}`;
@@ -543,6 +549,8 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
   }
   D.sky = (sky) => { if (D.wx === 'clear') { sky.rain = 0; } };
   D.cam = (cam, dt, tx, ty) => {
+    // (down: the panel shuts and the camera comes back to you - the death screen's choices take the keys and the screen)
+    if (S.me && S.me.dead) { if (shown) toggle(false); if (D.holds()) setMode('follow'); }
     if (D.noShake) cam.shake = 0;
     if (!inited) { x = cam.x; y = cam.y; inited = true; }
     barShow();

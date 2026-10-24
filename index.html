@@ -55,7 +55,7 @@
     <div id="zone-l"></div>
     <div id="stick-l" class="stick"><div class="knob"></div></div>
     <div id="stick-r" class="stick"><div class="ring"></div><div class="knob"></div><span class="lbl">AIM</span></div>
-    <button id="firetog" class="on" title="Aim stick fires when pushed all the way">FIRE<br>ON</button>
+    <button id="firetog" class="on" title="Aim stick fires when pushed all the way">FIRE ON</button>
     <div id="tbtns">
       <button data-b="fire" class="big fire"><span class="nb">FIRE</span><span class="brd">TRICK</span></button>
       <button data-b="action" class="act">ACT</button>
@@ -70,8 +70,8 @@
       <button data-b="cruiser" class="cruiser" id="b-cruiser">COP CAR</button>
       <button data-b="light" class="light" id="b-light" title="Flashlight on / off">🔦</button>
       <button data-b="dev" id="dev-btn" class="hidden">DEV</button>
-      <button data-b="climb" class="climb" title="Climb">▲</button>
-      <button data-b="descend" class="descend" title="Descend">▼</button>
+      <button data-b="climb" class="climb" title="Climb"><b>▲</b>CLIMB</button>
+      <button data-b="descend" class="descend" title="Descend"><b>▼</b>DOWN</button>
     </div>
   </div>
 
@@ -95,7 +95,6 @@
       <img class="ui-logo" src="assets/logo.png" alt="City Life Auto">
       <nav class="hub"></nav>
       <div class="ui-stat"><div class="ui-clock"></div><div class="ui-bars"><div class="ui-bar hp"><i></i><b></b></div><div class="ui-bar st"><i></i><b></b></div></div></div>
-      <div class="ui-wpn"></div>
     </div>
     <div id="bm-body">
       <div id="bm-panel"><div id="bm-list"></div></div>
@@ -109,7 +108,7 @@
   <template id="help-tpl">
       <div class="kbm-only"><b>Keyboard + mouse</b> WASD / arrows move · driving: W gas, S brake / reverse, A/D steer (Settings: Controls 2 points the way) · Mouse aim · Click shoot / punch · hold right mouse block (fists, bat, sword, katana, plasma blade) · Shift sprint · C or Ctrl walk · Space roll / handbrake · E interact · F get in/out · Q throw · R reload · X heal · L flashlight (once you have one) · H horn / siren · V call cruiser (police) · Tab / wheel / 1-9 weapons · M map · Esc pause menu</div>
       <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster, all the way out to sprint) · right stick aim · RT fire · LT block (fists, a bat, a blade) · A roll · B interact · X get in/out · Y throw · RB / LB tap: next / previous weapon (LB from fists: the plasma blade) · hold RB or LB: weapon wheel (point a stick, let go) · R3 reload · View heal · D-pad up flashlight<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, R3 (click it) fires a drive-by · D-pad up horn / siren · D-pad down call cruiser (police) · Menu pause menu (map, settings, controls, debug)</div>
-      <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · Right stick aims · tap FIRE, or push the aim stick into its red outer ring to fire (the FIRE toggle by the stick: off, the stick only aims) · hold the aim stick short of the ring to block (fists, a bat, a blade) · ACT interact · CAR get in/out · 🔦 flashlight (once you have one)</div>
+      <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · Right stick aims · tap FIRE, or push the aim stick into its red outer ring to fire (the FIRE ON pill top left: off, the stick only aims) · hold the aim stick short of the ring to block (fists, a bat, a blade) · ACT interact · CAR get in/out · 🔦 flashlight (once you have one)</div>
   </template>
 
   <div id="title">
@@ -130,7 +129,7 @@
     <div class="mhead"><h2>SETTINGS</h2><button id="s-close" class="x" data-close>✕</button></div>
     <label class="srow"><span>Keyboard driving</span><select id="s-kbdrive"><option value="car">Car: W gas, S brake/reverse, A/D steer</option><option value="direction">Controls 2: WASD points the way (W up, S down)</option></select></label>
     <label class="srow"><span>Gamepad driving</span><select id="s-paddrive"><option value="triggers">Classic: RT gas, LT brake, stick steers</option><option value="stick">Point the left stick where to go</option></select></label>
-    <label class="srow"><span>Touch: aim stick outer ring fires (the FIRE toggle by the stick)</span><input type="checkbox" id="s-edgefire"></label>
+    <label class="srow"><span>Touch: aim stick outer ring fires (the FIRE ON pill top left)</span><input type="checkbox" id="s-edgefire"></label>
     <label class="srow"><span>Gamepad: pushing the right stick all the way also fires (RT always does; R3 at the wheel)</span><input type="checkbox" id="s-padfire"></label>
     <label class="srow"><span>Plasma blade colour</span><select id="s-blade"></select></label>
     <label class="srow"><span>Vibration</span><input type="checkbox" id="s-vibrate"></label>
@@ -199,7 +198,6 @@
     <div class="pz-head"><img src="assets/logo.png" alt="City Life Auto"><div class="pz-paused">PAUSED</div><button class="x" data-close>✕</button></div>
     <p class="msub" id="p-sub">Game menu</p>
     <div class="m-opts">
-      <button class="opt" data-p="dev" data-icon="bug">Debug menu</button>
       <button class="opt" data-p="resume" data-icon="play">Resume</button>
       <button class="opt" data-p="map" data-icon="map">Map</button>
       <button class="opt" data-p="phone" data-icon="phone">Phone<span class="note">places, jobs, waypoints</span></button>
@@ -214,6 +212,7 @@
       <button class="opt" data-p="fullscreen" data-icon="full">Fullscreen</button>
       <button class="opt online-only hidden" data-p="devmode" id="p-devmode" data-icon="exit">Leave Dev Debug Mode (keep my progress)</button>
       <button class="opt" data-p="title" data-icon="exit">Exit to title</button>
+      <button class="opt" data-p="dev" data-icon="bug">Debug menu</button>
     </div>
     <div class="ui-foot pz-foot"></div>
   </div></div>
