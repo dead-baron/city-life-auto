@@ -776,17 +776,21 @@ function junctionClear(world, v, n, stop) {
   return true;
 }
 
-// Is a vehicle running its siren coming up behind us (or straight at us down the same road)?
-function sirenBehind(world, v) {
-  for (const e of world.query(v.x, v.y, 460, K.VEH)) {
+// Is a vehicle running its siren coming up behind us (or straight at us down the same road)? Heard a long way off and
+// given way to even when it's crawling up behind in a queue (the owner, 10-23: the ambulance should have a siren "that
+// makes people get out of the way faster so it's easier to drive"): SIREN_YIELD.
+export const SIREN_YIELD = { minSpeed: 20, ahead: 520, perSpeed: 0.6, side: 110 };
+export function sirenBehind(world, v) {
+  const Y = SIREN_YIELD;
+  for (const e of world.query(v.x, v.y, Y.ahead + 200, K.VEH)) {
     if (e === v || !e.siren || !sameLevel(e.lz, v.lz)) continue;
     const sp = Math.hypot(e.vx, e.vy);
-    if (sp < 60) continue;
+    if (sp < Y.minSpeed) continue;
     const ux = e.vx / sp, uy = e.vy / sp;
     const dx = v.x - e.x, dy = v.y - e.y;
     const ahead = dx * ux + dy * uy;
     const lateral = Math.abs(-dx * uy + dy * ux);
-    if (ahead > 0 && ahead < 380 + sp * 0.4 && lateral < 90) return true;
+    if (ahead > 0 && ahead < Y.ahead + sp * Y.perSpeed && lateral < Y.side) return true;
   }
   return false;
 }

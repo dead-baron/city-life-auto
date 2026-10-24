@@ -3,14 +3,18 @@
 // out and search for them and retrieve them. They're either injured and you have to land and pick them up and bring them
 // back and fly them to the hospital, which you can land on top of, or you need to lower a harness down to hard-to-reach
 // places, or find them in the water and lower a harness, or just locate a missing person and pick them up").
-// Sign on at the Search & Rescue HQ (World v3: its door or its helipad - shared/world3-sarhq.js; a world without one, a
-// hospital's yard pad) or from the phone's job list: a rescue helicopter (shared/vehicles.js
-// rescueheli) is issued to you like a work truck (jobs.js: v.issuedTo / v.workTruck, the ring and the arrows). A shift
-// of calls (shared/rules.js SAR): someone out in the wild - hurt on open ground, stuck where nothing can land (rough
-// ground among the trees and rocks), in the water off the coast, or just lost - found from the built map (sitesOf: the
-// wild, rural, park, rocky, beach and desert districts; the water near the shore), never coordinates. The page gets a
-// search circle (the job target's area: the minimap, the world map), not the spot; within SAR.seeR they see you, wave
-// (the fist pump: shared/dance.js) and a smoke flare goes up (flare: drawn by client/render/aircraft.js in both
+// Sign on at a Search & Rescue HQ (World v3: its door or its helipad - shared/world3-sarhq.js SAR_HQS: the airport's,
+// the ranger station under the peaks, the coastguard stations, the desert post; a world without one, a hospital's yard
+// pad) or from the phone's job list (the nearest base): a rescue helicopter (shared/vehicles.js rescueheli) is issued to
+// you like a work truck (jobs.js: v.issuedTo / v.workTruck, the ring and the arrows). A shift of calls (shared/rules.js
+// SAR): someone out in the wild - hurt on open ground, stuck where nothing can land (rough ground among the trees and
+// rocks), in the water off the coast, or just lost - found from the built map (sitesOf), never coordinates. Only out in
+// the wilderness (the owner, 10-23: "Search and rescue missions should be out in the wilderness not in a small city
+// park"): the wild districts - the woods, the mountains, the desert, the rocks and islets, the open coast (wildDistrict)
+// - and the water off their shores and on their lakes, never within a town's reach of its buildings (TOWN_R); the calls
+// come near the base you signed on at (SAR.dist of it, the nearer the likelier: pick). The page gets a search circle
+// (the job target's area: the waypoint arrow, the minimap, the world map), not the spot; within SAR.seeR they see you,
+// wave (the fist pump: shared/dance.js) and a smoke flare goes up (flare: drawn by client/render/aircraft.js in both
 // renderers). Land near the hurt and the lost (they're helped aboard); hover low over the stuck and the swimmer and hold
 // Act: the harness's cable pays out (hoist: drawn on the overlay) - too high or drifting and it can't reach; clipped on,
 // it winches them in. A hurt patient's life runs down (a hard landing costs some); land on a hospital's roof pad (or its
@@ -21,6 +25,8 @@
 // The calls come to the rescue helicopter (the owner, 10-23): out of it, or flying another one, the shift stands by.
 //   target(world, p, j)          the job tracker's target (phone.js jobTarget): area / flare / hoist for the page
 //   sitesOf(m)                   { open, rough, water }: where calls can come from (px points)
+//   pick(list, x, y, nearOnly)   a call's spot of list near the base at (x, y)
+//   wildDistrict(d)              a district a call can come from
 import { K, T, TILE } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { DISTRICTS, WATER_T, PED_BLOCK } from '../../shared/mapcore.js';
@@ -33,7 +39,12 @@ import { spawnNpc, despawnNpc } from './npc.js';
 import * as jobs from './jobs.js';
 
 const rng = mulberry32(6464);
-const WILD = new Set(['wild', 'rural', 'park', 'rocky', 'beach', 'desert']);
+// the wilderness: a wild district (the woods, the peaks, the desert, the rocks, the islets - not the open sea's own) or an
+// open coast that's a region of its own (World v3's Sandpiper Coast: beach and meadow, its town a district apart)
+export const wildDistrict = (d) => !!d && d.style !== 'water' && (d.tier === 'wild' || (d.style === 'beach' && d.isl === d.name && d.tier !== 'lux'));
+const WILD_D = new Set(DISTRICTS.filter(wildDistrict).map((d) => d.id));
+// a town's reach (tiles): a call's spot has at most TOWN_MAX buildings this near it (a cabin, a campground's - not a town)
+const TOWN_R = 40, TOWN_MAX = 2, CELL = 16;
 const OPEN_T = new Set([T.GRASS, T.DIRT, T.SAND, T.FIELD]);
 const KINDS = [['ground', 3], ['rough', 2.5], ['water', 2], ['lost', 2.5]];
 const SAY = {
@@ -52,16 +63,21 @@ export function sitesOf(m) {
   if (S) return S;
   S = { open: [], rough: [], water: [] };
   const step = 5;
-  const styleAt = (tx, ty) => { const d = DISTRICTS[m.dist[m.idx(tx, ty)]]; return d ? d.style : ''; };
-  const landNear = (tx, ty, r) => { for (let a = 0; a < 8; a++) { const c = Math.cos(a * Math.PI / 4), s = Math.sin(a * Math.PI / 4); for (let d = 2; d <= r; d += 2) { const x = tx + Math.round(c * d), y = ty + Math.round(s * d); if (m.inside(x, y) && !WATER_T[m.tileAt(x, y)]) return true; } } return false; };
+  const wildAt = (tx, ty) => WILD_D.has(m.dist[m.idx(tx, ty)]);
+  const landNear = (tx, ty, r) => { for (let a = 0; a < 8; a++) { const c = Math.cos(a * Math.PI / 4), s = Math.sin(a * Math.PI / 4); for (let d = 2; d <= r; d += 2) { const x = tx + Math.round(c * d), y = ty + Math.round(s * d); if (m.inside(x, y) && !WATER_T[m.tileAt(x, y)]) return wildAt(x, y); } } return false; };   // (the shore it's off: the wild's)
   const pool = (x, y) => (m.pools || []).some((r) => (r.ring ? Math.hypot((x - r.ring.cx) / r.ring.rx, (y - r.ring.cy) / r.ring.ry) < 1.4 : x >= r.x - 64 && x < r.x + r.w + 64 && y >= r.y - 64 && y < r.y + r.h + 64));
   const propsNear = (tx, ty) => { let n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!m.inside(tx + dx, ty + dy)) continue; const ps = m.solidProps.size ? m.solidProps.get(m.idx(tx + dx, ty + dy)) : null; if (ps) n += ps.filter((q) => !q.off).length; } return n; };
   const underDeck = (tx, ty) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (m.inside(tx + dx, ty + dy) && m.deck[m.idx(tx + dx, ty + dy)]) return true; return false; };   // (not under the elevated highway)
+  // the buildings by CELL-tile cell (their middles), for "away from the towns"
+  const gw = Math.ceil(m.w / CELL) + 1, gh = Math.ceil(m.h / CELL) + 1, bc = new Uint16Array(gw * gh);
+  for (const b of m.buildings) { if (!b) continue; const gx = Math.floor((b.tx + b.tw / 2 - m.x0) / CELL), gy = Math.floor((b.ty + b.th / 2 - m.y0) / CELL); if (gx >= 0 && gy >= 0 && gx < gw && gy < gh) bc[gy * gw + gx]++; }
+  const R = Math.ceil(TOWN_R / CELL);
+  const lonely = (tx, ty) => { const gx = Math.floor((tx - m.x0) / CELL), gy = Math.floor((ty - m.y0) / CELL); let n = 0; for (let y = Math.max(0, gy - R); y <= Math.min(gh - 1, gy + R); y++) for (let x = Math.max(0, gx - R); x <= Math.min(gw - 1, gx + R); x++) if ((n += bc[y * gw + x]) > TOWN_MAX) return false; return true; };
   for (let ty = m.y0 + 2; ty < m.y0 + m.h - 2; ty += step) for (let tx = m.x0 + 2; tx < m.x0 + m.w - 2; tx += step) {
     const t = m.tileAt(tx, ty), x = tx * TILE + TILE / 2, y = ty * TILE + TILE / 2;
     if (m.deck && underDeck(tx, ty)) continue;
-    if (t === T.WATER) { if (landNear(tx, ty, 8) && !pool(x, y)) S.water.push({ x, y }); continue; }
-    if (!OPEN_T.has(t) || !WILD.has(styleAt(tx, ty))) continue;
+    if (t === T.WATER) { if (landNear(tx, ty, 8) && !pool(x, y) && lonely(tx, ty)) S.water.push({ x, y }); continue; }
+    if (!OPEN_T.has(t) || !wildAt(tx, ty) || !lonely(tx, ty)) continue;
     const n = propsNear(tx, ty);
     if (n >= 2 && !PED_BLOCK[t]) {   // among the trees and rocks: nowhere a helicopter can put down - but somewhere to stand
       const ps = m.solidProps.size ? m.solidProps.get(m.idx(tx, ty)) : null;
@@ -104,19 +120,28 @@ export function start(world, p, pad = null) {
 }
 
 // ---- the calls --------------------------------------------------------------------------------------------------------------
-function pick(list, x, y) {
+// a spot for a call near the base (x, y): of SAR.draws drawn from those within SAR.dist of it, the nearest - else, none
+// that near, the nearest beyond SAR.dist[0] (nearOnly: null)
+export function pick(list, x, y, nearOnly = false) {
   if (!list.length) return null;
-  for (let k = 0; k < 60; k++) { const s = list[Math.floor(rng() * list.length)], d = Math.hypot(s.x - x, s.y - y); if (d >= SAR.dist[0] && d <= SAR.dist[1]) return s; }
+  const [d0, d1] = SAR.dist, near = list.filter((s) => { const d = Math.hypot(s.x - x, s.y - y); return d >= d0 && d <= d1; });
   let best = null, bd = Infinity;
-  for (const s of list) { const d = Math.abs(Math.hypot(s.x - x, s.y - y) - SAR.dist[0]); if (d < bd) { bd = d; best = s; } }
+  if (near.length) {
+    for (let k = 0; k < SAR.draws; k++) { const s = near[Math.floor(rng() * near.length)], d = Math.hypot(s.x - x, s.y - y); if (d < bd) { bd = d; best = s; } }
+    return best;
+  }
+  if (nearOnly) return null;
+  for (const s of list) { const d = Math.hypot(s.x - x, s.y - y); if (d >= d0 && d < bd) { bd = d; best = s; } }
   return best;
 }
 function newCall(world, p, force = null) {
-  const j = p.job, m = world.map, S = sitesOf(m), from = p.ped;
+  const j = p.job, m = world.map, S = sitesOf(m), from = j.base || p.ped;   // (near the base you signed on at)
   let kind = force;
   if (!kind) { let r = rng() * KINDS.reduce((a, k) => a + k[1], 0); for (const [k, w] of KINDS) { r -= w; if (r <= 0) { kind = k; break; } } kind ||= 'ground'; }
-  let s = pick(kind === 'water' ? S.water : kind === 'rough' ? S.rough : S.open, from.x, from.y);
-  if (!s && kind !== 'ground') { kind = 'ground'; s = pick(S.open, from.x, from.y); }
+  const of = (k) => (k === 'water' ? S.water : k === 'rough' ? S.rough : S.open);
+  let s = pick(of(kind), from.x, from.y, true);   // (none of this kind near the base: someone hurt on open ground near it instead)
+  if (!s && kind !== 'ground' && kind !== 'lost') { s = pick(S.open, from.x, from.y, true); if (s) kind = 'ground'; }
+  s ||= pick(of(kind), from.x, from.y);
   if (!s) { j.nextAt = world.time + 30; return null; }
   return callAt(world, p, kind, s.x, s.y);
 }

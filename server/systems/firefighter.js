@@ -306,7 +306,9 @@ export function callAt(world, p, k, site) {
   const where = k === 'person' ? site.cook || `outside ${site.name}` : site.name;
   j.stage = 'go';
   j.text = `Fire call: ${SAY[k](where)}`;
-  world.notify(p, `Fire call! ${SAY[k](where)[0].toUpperCase()}${SAY[k](where).slice(1)}. Siren on (H).`, 'good');
+  const eng = world.get(j.truck);
+  if (eng && !eng.removed) eng.sirenOn = true;   // (on for the call, as the paramedic's: H switches it off)
+  world.notify(p, `Fire call! ${SAY[k](where)[0].toUpperCase()}${SAY[k](where).slice(1)}. Siren's on (H to switch it off).`, 'good');
   p.meDirty = true;
   return c;
 }

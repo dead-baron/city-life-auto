@@ -1772,6 +1772,7 @@ const mapwp = createMapWaypoints({
   markHere: () => mapMarkCentre(),
   device: () => input.device,
   job: () => S.me && S.me.job,
+  center: (x, y) => S.hud && S.hud.centerMap(x, y),
 });
 function openPhone() { if (!S.playing || !S.map) return; if (topOverlay() !== 'phone') openOverlay('phone'); phone.open(); }
 // arrive at a phone waypoint -> it clears itself
@@ -3456,6 +3457,7 @@ function drawOverlays(F, v2) {
   // name tags + public flares + rumor marker
   if (!clean) drawWorldLabels(F.peds, F.vehs, now, z);
   if (!clean && S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z, F.vehs);
+  if (!clean && S.me && S.me.job && F.view) { if (S.jobWay) S.jobWay.drawJobWay(g, S, F.view, sp, now, z); else if (!S.jobWayAsk) { S.jobWayAsk = 1; import('./jobway.js').then((m) => { S.jobWay = m; }).catch(() => { S.jobWayAsk = 0; }); } }   // (the job's arrow at the screen's edge, its search circle: client/jobway.js)
   // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
   const edge = S.playing && S.me && !S.me.dead ? edgeInfo(sp.x, sp.y, EDGE_I, S.map && S.map.frame) : null;
   if (edge && edge.d > 0 && !clean) drawEdgeArrow(sp, edge, now);
@@ -3485,9 +3487,9 @@ function drawOverlays(F, v2) {
     if (area) { S.district = area.name; S.hud.showDistrict(area.name, area.isl); } }
   S.hud.setClock(S.loopTime, S.weather);
   { const mp = S.ents.get(S.myPedId); S.hud.calm(!!(S.playing && mp && mp.d && mp.d.st && S.me && !S.me.dead), performance.now(), !!(S.homeIn && input.device === 'touch')); }   // (#375; at home on a phone, the prompt fades when you're still)
-  // the GPS route to your waypoint along the roads, on the radar and the map (client/route.js; worked out again only
-  // when you stray from it or the waypoint changes)
-  if (S.router) S.hud.route = S.waypoint && S.playing && S.me && !S.me.dead ? S.router.update(sp, S.waypoint, S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) : null;
+  // the GPS route to your waypoint (else your job's) along the roads, on the radar and the map (client/route.js; worked
+  // out again only when you stray from it or the waypoint changes)
+  if (S.router) { const dv = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, to = S.waypoint || (S.jobWay && S.jobWay.routeTo(S, dv)); S.hud.route = to && S.playing && S.me && !S.me.dead ? S.router.update(sp, to, dv) : null; }
   S.hud.drawRadar(sp.x, sp.y, sp.a);
   {
     const showTouch = input.device === 'touch' && S.playing;

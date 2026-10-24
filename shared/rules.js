@@ -668,7 +668,8 @@ export const BOOM_TEST_KINDS = ['small', 'medium', 'big', 'ultra', 'car', 'launc
 // respond to calls of missing or hurt hikers out in nature spots, and you get a general idea where they may be but you
 // gotta go out and search for them and retrieve them") - server/systems/sar.js. A shift of calls, one after another:
 // firstS after signing on, then gapS after each; a call nobody answers in callS is dropped (the next one comes). Calls
-// come from dist px away; the search circle is circleR px across the middle of it (the spot somewhere inside); within
+// come from dist px from the base you signed on at - of draws spots drawn that near, the nearest (sar.js pick); the
+// search circle is circleR px across the middle of it (the spot somewhere inside); within
 // seeR px they see you - they wave and a smoke flare goes up. Landed within landR px of them they're helped aboard
 // (boardS); the harness: hovering within reach px of them across, the cable pays out (payout px/s, while you hold Act)
 // up to maxLen px - higher than that above them, or drifting faster than drift px/s, and it can't reach; clipped on,
@@ -678,7 +679,7 @@ export const BOOM_TEST_KINDS = ['small', 'medium', 'big', 'ultra', 'car', 'launc
 // rescue (the time against parS + a second per perKmS px), less hardCut a hard landing with someone aboard (down to
 // minPay of it); samaritan points a rescue.
 export const SAR = {
-  firstS: 8, gapS: [25, 50], callS: 720, shiftS: 3600, dist: [1400, 9000], circleR: 900, seeR: 560, landR: 320, boardS: 3,
+  firstS: 8, gapS: [25, 50], callS: 720, shiftS: 3600, dist: [1400, 24000], draws: 4, circleR: 900, seeR: 560, landR: 320, boardS: 3,
   hoist: { reach: 80, maxLen: 300, payout: 85, winch: 110, drift: 120 },
   life: [260, 380], hardLife: 40, base: 260, perKm: 90, fast: 0.6, parS: 120, perKmS: 70, hardCut: 0.25, minPay: 0.4, samaritan: 6,
 };
