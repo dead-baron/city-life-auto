@@ -214,13 +214,8 @@ function planeStep(s, fi, dt, map, def, onGround, above) {
   s.vx = c * fwd; s.vy = sn * fwd;   // (it flies where its nose points)
 }
 
-// The bridges (the owner, b1c: "Helicopters can fly through bridges"): the elevated highway's deck stands DECK_ALT px up
-// (art v2 draws it levels.js DECK_LIFT px up the screen, an aircraft FLY.LIFT px a px of altitude: below this it's
-// under the deck's picture), a bridge's deck over the water BRIDGE_ALT (its parapets). Below that an aircraft flies into
-// its side; above it, over it. One that is under a deck already (lifted off from the road below, ditched beside a
-// bridge) isn't held there: it gets out the way it likes. Not the ground's height (floorAt): nothing lands on them.
-// Helicopters only: a plane low over a highway is on its approach or its climb-out (server airtraffic.js glides the
-// airliners in over whatever lies off the runway's end), where the deck isn't in its way.
+// (the owner, 10-23: helicopters flew through bridges) A helicopter below a deck's height - the elevated highway's
+// DECK_ALT, a bridge's BRIDGE_ALT - flies into its side; above, over it; one already under a deck gets out. Not planes.
 export const DECK_ALT = 134, BRIDGE_ALT = 14;
 function deckTop(map, tx, ty, inDeck, inBridge) {
   if (!map.inside(tx, ty)) return 0;

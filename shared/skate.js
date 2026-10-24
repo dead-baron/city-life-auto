@@ -153,12 +153,8 @@ export function nearby(map, x, y, what = 'segs') {
   return out;
 }
 const gone = (map, q) => q.pi >= 0 && !!(map.propSolid && map.propSolid.get(q.pi) && map.propSolid.get(q.pi).off);
-// The ramps' surfaces (the owner, b1c: "you can just walk through the quarter pipe ... going transparent through the
-// quarter pipe instead of being in front of it"): how high the ramp under a point is (px), as its art is shaped
-// (client/art2/props-park.js skateQuarter, skateKicker, skatePyramid - the same curves) - a quarter pipe's transition
-// curving up from its toe on the south to the deck at its back (QP: its depth, its height, the deck's depth), a kicker's
-// straight slope up to its lip on the north, a pyramid's banks. The page lifts whoever is on one by it (client/skate.js
-// rampAt); a quarter pipe's tall part is solid besides (shared/map.js addProp: qpipeSolids).
+// The ramps' surfaces (the owner, 10-23: walking through the quarter pipe): a ramp's height under a point (px), shaped as
+// its art (client/art2/props-park.js); the page lifts riders by it (client/skate.js), the tall part is solid (map.js).
 export const QP = { d: 48, h: 32, deck: 9 };
 export function qpSurf(yy) {   // yy: px in from the quarter pipe's back edge
   const L = QP.d - QP.deck;
