@@ -332,11 +332,16 @@ float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 
   if (still) {
     vec2 d1 = normalize(wind4.zw + vec2(1e-3, 0.0)), d2 = normalize(vec2(-d1.y, d1.x) * 0.7 + d1), d3 = vec2(d1.x * 0.77 + d1.y * 0.64, -d1.x * 0.64 + d1.y * 0.77);
     bool pond = inl && cf >= 224 && cf < 232;
-    float f = inl ? 1.75 : 1.0, A = inl ? (pond ? 0.025 + wind4.x * 0.04 : 0.05 + wind4.x * 0.14) : 0.16 + wind4.x * 0.5;
-    float p1 = dot(w, d1) * 0.13 * f - t * 1.7, p2 = dot(w, d2) * 0.21 * f - t * 2.3 + 1.7, p3 = dot(w, d3) * 0.47 * f - t * 3.1;
+    // (the sea, 2026-10-23 - the owner: "rapid lines moving diagonally like if it's a rapids but that shouldn't be happening
+    // in large bodies of water": three swells crossing at fixed angles made a lattice of glints marching over a whole bay.
+    // Now its swells are lower, a slow noise bends their crests out of line (wv), and the sun catches them in patches)
+    float f = inl ? 1.75 : 1.0, A = inl ? (pond ? 0.025 + wind4.x * 0.04 : 0.05 + wind4.x * 0.14) : 0.1 + wind4.x * 0.3;
+    float wv = inl ? 0.0 : wnoise(w * 0.0071 + d1 * (t * 0.05)) * 9.0;
+    float p1 = dot(w, d1) * 0.13 * f - t * 1.7 + wv, p2 = dot(w, d2) * 0.21 * f - t * 2.3 + 1.7 + wv * 1.3, p3 = dot(w, d3) * 0.47 * f - t * 3.1 - wv * 0.7;
     alb *= 1.0 + (sin(p1) + sin(p2) * 0.6 + sin(p3) * 0.25) * (inl ? (0.012 + wind4.x * 0.02) * (pond ? 0.35 : 1.0) : 0.025 + wind4.x * 0.03);
     vec3 nw = normalize(vec3(n.xy + (d1 * cos(p1) + d2 * (cos(p2) * 0.6) + d3 * (cos(p3) * 0.25)) * A, n.z));
-    glint = step(inl ? 0.8 + bayer4(wq) * 0.18 : 0.72 + bayer4(wq) * 0.25, pow(max(dot(nw, H), 0.0), inl ? 200.0 : 160.0)) * (pond ? 0.22 : inl ? 0.4 : 0.5);
+    glint = step(inl ? 0.8 + bayer4(wq) * 0.18 : 0.72 + bayer4(wq) * 0.25, pow(max(dot(nw, H), 0.0), inl ? 200.0 : 60.0)) * (pond ? 0.22 : inl ? 0.4 : 0.5);
+    if (!inl) glint *= step(0.5, wnoise(w * 0.0053 - d1 * (t * 0.03) + 7.0));   // (the sea's: in patches, a sparkle here and there)
     float k = inl ? (cf >= 192 && cf < 216 ? 1.0 : cf >= 216 && cf < 232 ? float(cf - (pond ? 224 : 216)) / 7.0 : 0.0) : cf >= 239 && cf <= 254 ? float(cf - 239) / 15.0 : cf >= 191 && cf <= 238 ? 0.55 * (1.0 - float(cf - 191) / 47.0) : 0.0;
     if (k > 0.2) alb += caustics(w + d1 * (t * 3.5), t * 0.75, k * (pond ? 0.6 : 0.9), wq);
     if (inl) {
