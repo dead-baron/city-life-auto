@@ -166,3 +166,27 @@ test('the debug menu\'s vehicles and crashes, one at a time: a new plane takes y
   const carts = [...W.entities.values()].filter((e) => e.kind === K.VEH && e.def.cart && !e.removed && e.id >= id0);
   assert.equal(carts.length, 2, 'just the new pair');
 });
+
+test('every vehicle type in the debug menu, grouped by kind, and each spawns beside you - still one of a kind at a time', async () => {
+  const { VEHICLES } = await import('../shared/vehicles.js');
+  const { VEH_GROUPS, vehGroup } = await import('../client/devcats.js');
+  const listed = new Map();
+  for (const [g] of VEH_GROUPS) for (const [label, c, x] of DEV_SECTIONS.find((s) => s.id === 'v' + g).items) {
+    assert.equal(c, 'car', label);
+    assert.equal(vehGroup(x.m), g, `${x.m} in its group`);
+    listed.set(x.m, (listed.get(x.m) || 0) + 1);
+  }
+  for (const id of Object.keys(VEHICLES)) assert.equal(listed.get(id), 1, `${id}: once in the spawn lists`);
+  assert.deepEqual(VEH_GROUPS.map(([g]) => g), ['cars', 'bikes', 'boats', 'air', 'work', 'other']);
+  for (const id of ['dirtbike', 'golfcart', 'skateboard', 'horse', 'convertible']) assert.ok(listed.has(id), `the owner's: ${id}`);
+  // each one, spawned: there, yours, and the last of its class taken away
+  const { p } = fresh();
+  const mine = () => [...W.entities.values()].filter((e) => e.kind === K.VEH && !e.removed && e.issuedTo === p.pid);
+  for (const id of Object.keys(VEHICLES)) {
+    command(W, p, 'car', { m: id });
+    const got = mine();
+    assert.ok(got.some((v) => v.model === id), `${id} spawned`);
+    assert.ok(got.length <= 3, `one at a time per class (${got.map((v) => v.model).join(', ')})`);
+  }
+  for (const v of mine()) W.remove(v);
+});

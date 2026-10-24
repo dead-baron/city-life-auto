@@ -1,5 +1,6 @@
 // Combat: melee arcs, hitscan ballistics, tasers, rockets, damage, death, bleeding,
 // regeneration and blood-trail footprints (GDD §14C combat feedback).
+import * as k9 from './k9.js';
 import { K, T, WEATHER, PED_RADIUS } from '../../shared/constants.js';
 import * as revive from './revive.js';
 import { isSwimming, inHotSpring, SWIM_BLOCK } from '../../shared/map.js';
@@ -486,8 +487,8 @@ function hitscan(world, ped, w, a, acc) {
     // (rules.js VEHICLE_WEAPON - task #402)
     hit.holes = Math.min(99, (hit.holes || 0) + 1);
     vehicles.damageVehicle(world, hit, w.dmg * vehWeapon(w), ped, false, false, vehicles.zoneAt(hit, hx, hy));
-    // exposed riders on bikes take hits too
-    if (hit.def.kind === 'bike' && hit.seats[0]) { const rider = world.get(hit.seats[0]); if (rider) damage(world, rider, w.dmg * 0.5, ped, 'gun', a); }
+    // exposed riders take hits too - on a bike, a horse, an open boat's deck (vehicles.js openRide: hit hard enough, thrown off)
+    if (vehicles.openRide(hit.def)) { const on = hit.seats.filter((s) => s), rider = on.length ? world.get(on[Math.floor(world.rand() * on.length)]) : null; if (rider) damage(world, rider, w.dmg * 0.5 * (rider.player || !ped.player ? 1 : NPC_GUN_MULT / (rider.grit || 1)), ped, 'gun', a); }
     law.vehicleDamaged(world, ped, hit);   // (shots fired is a crime already: hitting someone else's vehicle is one more)
     if (hit.ai) npc.onVehicleHit(world, hit, ped);
     return true;
@@ -503,6 +504,7 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (ped && attacker && ped.player && attacker.player && crews.mates(ped.player, attacker.player)) return false;   // (crewmates: no friendly fire - crews.js)
   if (ped && ped.dead && amount > 0 && attacker && cause !== 'fall' && revive.isDowned(ped)) return revive.finish(world, ped, attacker); // hitting a downed player finishes them
   if (!ped || ped.dead || amount <= 0) return false;
+  if (ped.k9) return k9.hurt(world, ped, amount, attacker);   // (a police dog: hurt, it lets go and limps off - never killed: k9.js)
   if (ped.npc && ped.npc.role === 'wanderer') { wanderer.struck(world, ped, attacker); return false; }   // (the stranger: gone in a flash)
   const now = world.time;
   if (ped.hidden || ped.pet || ped.cellSafe || now < (ped.protectUntil || 0)) return false; // indoors / spawn protection / nobody hurts a lost pet / the cells (cells.js)
@@ -532,6 +534,7 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (ped.player) ped.player.meDirty = true;
   if (cause === 'nonlethal' && ped.hp < 1) ped.hp = 1;
   if (ped.hp <= 0) { kill(world, ped, attacker, cause, dir); return true; }
+  if (ped.vehId || ped.board) vehicles.riderHit(world, ped, amount, cause, dir, attacker);   // (out in the open on a bike, a horse, a boat's deck: knocked off - vehicles.js)
   if (ped.npc) npc.onAttacked(world, ped, attacker);
   else if (ped.wild) wildlife.onHurt(world, ped, attacker);
   return false;
@@ -539,13 +542,14 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
 
 export function kill(world, ped, attacker, cause, dir = 0) {
   if (ped.dead) return;
+  if (ped.k9) { ped.hp = Math.max(1, ped.hp); return; }   // (a police dog is never killed: k9.js)
   if (ped.player && ped.player.invincible) { ped.hp = Math.max(ped.hp, 1); return; } // dev: invincible
   ped.dead = true;
   ped.deadAt = world.time;
   ped.hp = 0;
   ped.bleeding = false;
   ped.charred = cause === 'fire';   // (burned to death: the body lies blackened - the wire's charred bit, net.js)
-  if (ped.vehId) { vehicles.ejectPed(world, ped, true); ped.vx *= 0.3; ped.vy *= 0.3; }
+  if (ped.vehId) { const v = world.get(ped.vehId); if (v && vehicles.openRide(v.def) && !v.fly) vehicles.throwRider(world, ped, v, dir, attacker, true); else { vehicles.ejectPed(world, ped, true); ped.vx *= 0.3; ped.vy *= 0.3; } }   // (dying up on a bike or a boat's deck: thrown off it)
   if (ped.carrying) cargo.dropCrate(world, ped);
   reactions.died(world, ped, cause, dir); // the fall (a slide, a roll, knocked back, a crumple) and the death event: how they lie
   if (!ped.wild) npc.spectacle(world, ped.x, ped.y, { r: 420, near: 110, chance: 0.8, secs: 10 });   // (somebody down in the street: phones out)

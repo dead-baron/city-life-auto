@@ -310,6 +310,7 @@ function onText(m) {
       for (const [i, lit] of m.fires || []) setFire(i, lit, false);
       for (const i of m.broken || []) { S.confirmedBreaks.add(i); setPropBroken(i, 0, false); }
       for (let k = 0; k + 1 < (m.felled || []).length; k += 2) setFelled(m.felled[k], m.felled[k + 1], true);   // ([index, angle code, ...])
+      S.logs0 = m.logs;   // (the felled trunks lying there: render/carryfx.js)
       S.glights.clear(); for (const r of m.glights || []) setGlight({ id: r[0], k: r[1], x: r[2], y: r[3], c: r[4], s: r[5], dark: r[6] });
       if (S.map.levels) { S.map.levels.broken = new Map(); for (const k of m.barriers || []) S.map.levels.broken.set(k, true); }
       if (S.art2) S.art2.resync(); // (back in after a reconnect: the art v2 bakes follow the server's broken props and barriers)
@@ -940,9 +941,10 @@ function onEvent(ev) {
     }
     case 'barrierfix': for (const k of ev.k) S.map.levels.broken.delete(k); if (S.art2) S.art2.barrierChanged(ev.k, false); break;
     case 'glight': setGlight(ev); break;
-    case 'treefall': { setFelled(ev.i, ev.q, true); const p = S.map.props[ev.i]; if (S.carry && p) S.carry.fall(ev.x, ev.y, ev.q / 64 * 6.2832, ev.s, p.t.startsWith('palm')); break; }
+    case 'treefall': { setFelled(ev.i, ev.q, true); const p = S.map.props[ev.i]; if (S.carry && p) S.carry.fall(ev.x, ev.y, ev.q / 64 * 6.2832, ev.s, p.t.startsWith('palm'), ev.i); break; }
     case 'treecrash': { const p = S.map.props[ev.i]; if (S.carry && p && p.broken) S.carry.crash(ev.x, ev.y, p.broken.a, ev.s); break; }
     case 'treeup': setFelled(ev.i, 0, false); break;
+    case 'logcut': if (S.carry) S.carry.cut(ev); break;
     case 'propbreak': S.confirmedBreaks.add(ev.i); S.predBreaks.delete(ev.i); setPropBroken(ev.i, ev.a, true); break;
     case 'fire': setFire(ev.i, ev.lit, true); break;
     case 'propfix': {
@@ -3422,6 +3424,7 @@ function drawOverlays(F, v2) {
     else if (gfx.particles && F.sky && F.sky.night > 0.3 && !S.fliesAsk) { S.fliesAsk = 1; import('./render/fireflies.js').then((m) => { S.flies = new m.Fireflies(S); }).catch((e) => console.warn('[fireflies]', e)); }
   }
   g.setTransform(...S.worldTf);
+  if (S.carry && !F.sub) S.carry.over(g, F);   // (both views: a tree falling, the trunks lying, the police dogs' leads)
   if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
   else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (a rescue call's flare; the helipads' H only while you fly)
   else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)

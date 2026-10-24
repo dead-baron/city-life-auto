@@ -307,6 +307,12 @@ export function drawVehicleShadow(g, desc, def, placed = false) {
 // Crates & bags
 const CRATE_COL = [null, ['#9a6a3a', '#5a3a1a'], ['#4a6a3a', '#2a3a1e'], ['#6a6e76', '#3a3d44'], ['#1e1e24', '#e8b923']];
 export function drawCrate(g, tier, label, t) {
+  if (label === 'Firewood') {   // a bundle of firewood (server felling.js): split logs stacked three and two, roped round
+    g.fillStyle = '#4a3020'; g.fillRect(-12, -7, 24, 15);
+    for (const [x, y] of [[-8, 3], [0, 3], [8, 3], [-4, -4], [4, -4]]) { g.fillStyle = '#c8955a'; g.beginPath(); g.arc(x, y, 4, 0, 6.28); g.fill(); g.fillStyle = '#8a5a34'; g.fillRect(x - 1, y - 1, 2, 2); }
+    g.fillStyle = '#c8b07a'; g.fillRect(-1, -8, 2, 16);
+    return;
+  }
   const fr = frame(label === 'Produce Box' ? 'produce' : `crate${tier}`);
   const s = 26;
   if (fr) g.drawImage(atlas.imgs[fr.a], fr.x, fr.y, fr.w, fr.h, -s / 2, -s / 2 * (fr.h / fr.w), s, s * (fr.h / fr.w));

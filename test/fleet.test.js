@@ -25,7 +25,7 @@ const OPEN = { jeep: 2, pontoon: 4, trawler: 4 };   // (the open beds and decks:
 const solid = (m) => { let n = 0; for (let i = 0; i < m.v.length; i++) if (m.v[i]) n++; return n; };
 void ITEMS;
 
-test('the new types: valid vehicles, each its own index, sound, a classic stand-in; the open beds carry crates', () => {
+test('the new types: valid vehicles, each its own index, sound, a classic stand-in; the open beds carry crates', async () => {
   const idx = Object.values(VEHICLES).map((d) => d.i);
   assert.equal(new Set(idx).size, idx.length, 'indexes unique');
   for (const id of [...CARS, ...BOATS, ...AIR]) {
@@ -47,8 +47,9 @@ test('the new types: valid vehicles, each its own index, sound, a classic stand-
   for (const id of BOATS) assert.ok(buys('marina').includes(id) && VEHICLES[id].price > 0, `${id} at the marina`);
   for (const id of RENTAL_MODELS) assert.ok(BOAT_RENTAL_PRICE[id] > 0, `${id}: its hire price`);
   // the debug menu spawns each
-  const dev = readFileSync(new URL('../client/devcats.js', import.meta.url), 'utf8');
-  for (const id of [...CARS, ...BOATS, ...AIR]) assert.ok(dev.includes(`{ m: '${id}' }`), `${id} in the debug menu`);
+  const { DEV_SECTIONS } = await import('../client/devcats.js');
+  const dev = new Set(DEV_SECTIONS.flatMap((sec) => sec.items).filter(([, c, x]) => c === 'car' && x && x.m).map(([, , x]) => x.m));
+  for (const id of [...CARS, ...BOATS, ...AIR]) assert.ok(dev.has(id), `${id} in the debug menu`);
 });
 
 test('every type has a model: the fleet loaded when first seen, out of the renderer\'s and the bake workers\' startup code', async () => {

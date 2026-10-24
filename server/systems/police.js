@@ -21,7 +21,7 @@ import * as standoff from './standoff.js';
 import * as struggle from './struggle.js';
 import * as stops from './stops.js';
 import * as k9 from './k9.js';
-import { K9 } from '../../shared/rules.js';
+import { K9 } from '../../shared/rules-play.js';
 import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
 import { wildStyle } from './wildlife.js';

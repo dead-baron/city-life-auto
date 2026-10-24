@@ -16,7 +16,7 @@
 //   wakeKey / wakeSprite(d, hi, N, frame)   a boat's foam (4 looping frames), drawn under the hull
 //   animalKey / animalSprite(kind, pose, dir8, frame)   kind 'pet:<art>' or any animals.js kind; poses and
 //       frame counts in ANIMAL_FRAMES (idle 4, walk 4, run 4, sit 2, lie 2, graze 2)
-//   crateKey / crateSprite(tier 1-4, label, hi = 0, N = 16)   ('Produce Box' label = the produce crate, 'Explosives' the red one)
+//   crateKey / crateSprite(tier 1-4, label, hi = 0, N = 16)   (labels: 'Produce Box', 'Explosives', 'Firewood')
 //   bagKey / bagSprite(tier 0-4, hi, N)   ballKey / ballSprite(t 0 soccer | 1 volleyball, spin 0-3)
 //   projKey / projSprite(w, hi, N)   the rocket in flight (body at z ~14, exhaust glowing)
 //   trainKey / trainCarSprite(c, mode, hi, N)   c = TRAIN_CARS index (or {kind, L, W}); mode 'roof' | 'in'
@@ -30,10 +30,8 @@
 //   rideKey / rideSprite(kind, v)   the rides (shared/rides.js): 'cab' a Ferris wheel gondola (colour v 0-3; anchor
 //       the ground point under its floor), 'balloon' a balloon on a flight (palette v 0-3, burner lit; anchor under
 //       the basket)
-//   useArt({ ferrisCab, hotAirBalloon, starfish })   the art the rides and the tidepools' star are drawn with
-//       (props-park.js, props-rural.js, props-wild.js), handed in by whoever draws them - the bake workers
-//       (worker.js), which have those modules loaded for the statics anyway. The page's renderer loads this module
-//       only for the sprite keys: it never draws these, so it doesn't load their 40 KB of art before it can draw.
+//   useArt({ ferrisCab, hotAirBalloon, starfish })   their art (props-park.js, props-rural.js, props-wild.js), handed
+//       in by the bake workers (worker.js) - the page's renderer uses this module only for the sprite keys
 //   SPRITES / KEYS   one table per kind for the workers: SPRITES[kind](...args), KEYS[kind](...args)
 //   clearActorCaches(), setActorBudget({ modelMB | lowMem })   the model caches (vehicles are kept packed,
 //       compactVox / renderCompact: 6 bytes a voxel; default 48 MB of vehicle models, 16 MB on lowMem)
@@ -396,6 +394,12 @@ export function animalSprite(kind, pose = 'idle', dir8 = 0, frame = 0) {
 const RP = (h, n = 6, k) => ramp(h, n, k);
 function objModel(w, d, h) { const m = new Vox(w, d, h); m.smooth = 1; return m; }
 function crateModel(tier, label) {
+  if (label === 'Firewood') {   // split logs stacked three and two, pale cut ends, roped round (server felling.js)
+    const m = objModel(26, 22, 16), bark = m.mat({ ramp: RP('#5a3a22'), k: 3, shade: (x, y, z) => (hash(x >> 1, (y + z) | 0, 9) - 0.5) * 0.9 }), end = m.mat({ ramp: RP('#d0a066', 5, 3), k: 3 }), pith = m.mat({ ramp: RP('#9a6a3a'), k: 2 }), rope = m.mat({ ramp: RP('#c8b07a'), k: 3 });
+    for (const [y, z] of [[5, 3.6], [11, 3.6], [17, 3.6], [8, 9.6], [14, 9.6]]) { m.cyl('x', 0, y, z, 3.4, 2, 24, bark); for (const x of [2, 23]) m.cyl('x', 0, y, z, 3.1, x, x + 1, end, 1.3, pith); }
+    for (const x of [8, 16]) { m.box(x, 1, 0, x + 2, 2.2, 8, rope); m.box(x, 19.8, 0, x + 2, 21, 8, rope); m.box(x, 4, 12, x + 2, 18, 13.6, rope); }
+    return m;
+  }
   if (label === 'Produce Box') {
     const m = objModel(24, 20, 14), wood = m.mat({ ramp: RP('#b08048'), k: 3, shade: (x) => ((x | 0) % 7 === 0 ? -0.8 : 0) }), dark = m.mat({ ramp: RP('#6a4a2c'), k: 2 });
     const fruit = ['#c8302c', '#e88a2a', '#5e9a34', '#e8c840', '#a82848'].map((c) => m.mat({ ramp: RP(c, 5, 2), k: 2.6 }));
@@ -592,7 +596,7 @@ function rocketModel() {
 }
 const OBJ_MODELS = new LRU(16);
 const objRender = (key, make, hi, N) => { const m = OBJ_MODELS.get(key, () => { const mm = make(); patchHidden(mm); return mm; }); return trimSprite(m.render(wrapHi(hi, N) * TAU / N, { dither: 0.3, px: ART_PX })); };
-const crateK = (tier, label) => (label === 'Produce Box' ? 'P' : label === 'Explosives' ? 'X' : Math.max(1, Math.min(4, tier | 0)));
+const crateK = (tier, label) => (label === 'Produce Box' ? 'P' : label === 'Explosives' ? 'X' : label === 'Firewood' ? 'W' : Math.max(1, Math.min(4, tier | 0)));
 export const crateKey = (tier, label = '', hi = 0, N = 16) => `c|${crateK(tier, label)}|${wrapHi(hi, N)}|${N}`;
 export function crateSprite(tier, label = '', hi = 0, N = 16) { return objRender('crate' + crateK(tier, label), () => crateModel(tier, label), hi, N); }
 export const bagKey = (tier, hi = 0, N = 16) => `g|${Math.max(0, Math.min(9, tier | 0))}|${wrapHi(hi, N)}|${N}`;

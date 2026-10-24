@@ -4,10 +4,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
-import { FIRE_HEAL, FIRE_BURN_S, HUNT_COOK_S } from '../shared/rules.js';
+import { FIRE_HEAL, FIRE_BURN_S, HUNT_COOK_S, BURN } from '../shared/rules.js';
 import { DAY_PART_S } from '../shared/constants.js';
 import * as campfires from '../server/systems/campfires.js';
 import * as places from '../server/systems/places.js';
+import * as burning from '../server/systems/burning.js';
 
 const fireWhere = (w, lit) => {
   const i = w.map.props.findIndex((q) => q && q.t === 'campfire' && !!q.lit === lit);
@@ -99,4 +100,28 @@ test('stargazing at the observatory: capped by day; after dark two dollars and t
   assert.ok(st && st.s > 0 && places.SKY_SIGHTS.some(([k]) => k === st.what), `tonight's sight (${st && st.what})`);
   assert.equal(p.profile.cash, 8, 'two dollars');
   assert.equal(places.skySight(w)[0], st.what, 'the same for everyone tonight');
+});
+
+test('standing in a lit campfire takes a few seconds (BURN.campS) before you go up; stepping out cools it off', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w);
+  const f = fireWhere(w, true).p ? fireWhere(w, true) : fireWhere(w, false);
+  campfires.setLit(w, f.i, true);
+  const ped = p.ped;
+  ped.protectUntil = 0;
+  for (const e of w.query(f.p.x, f.p.y, 200, 1)) if (e !== ped && e.npc) w.remove(e);
+  const stand = (secs, x = f.p.x + 4) => {
+    let t = 0;
+    while (t < secs && !burning.burning(ped)) { teleport(w, ped, x, f.p.y); ped.vx = 0; ped.vy = 0; w.tick++; w.time += 0.05; burning.update(w, 0.05); t += 0.05; }
+    return t;
+  };
+  assert.ok(BURN.campS >= 2 && BURN.campS <= 3, 'about two and a half seconds');
+  stand(BURN.campS - 0.5);
+  assert.ok(!burning.burning(ped), 'not straight away');
+  stand(3, f.p.x + 200);                        // out of it a while: it cools off
+  assert.ok(!(ped.campHeat > 0), 'cooled off');
+  stand(BURN.campS - 0.5);
+  assert.ok(!burning.burning(ped), 'and the clock started again');
+  const t = stand(3);
+  assert.ok(burning.burning(ped), `stood in it long enough: alight (${t.toFixed(2)} s more)`);
 });

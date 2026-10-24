@@ -1659,9 +1659,9 @@ export class World2 {
     const happy = !S2 && ((p.extra || 0) & 31) === APOSE.happy && !(p.flags & (PF.DEAD | PF.DOWN));
     // a wild animal: what it's doing comes from the server (fauna.js APOSE in the extra byte; bit 7 in the water);
     // a pet or a farm animal: standing still a while it sits, or puts its head down and grazes (now and then looking
-    // up); down or dead: lying on its side
+    // up); down or dead: lying on its side; hurt (a police dog: server k9.js), limping
     const pose = S2 ? wildPose(p, S2, base, sp, now, this.map)
-      : p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still || happy ? 'idle'
+      : p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 12 && p.hp < 0.5 ? 'limp' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still || happy ? 'idle'
         : GRAZERS.has(kind) ? ((Math.floor(now / 3.3) + p.id) % 4 ? 'graze' : 'idle') : WILD_IDLE.has(kind) ? 'idle' : 'sit';
     const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(p.ra);
     // cut in two by the plasma blade: the carcass in two halves, the cut edges seared (actors.js 'cutA' / 'cutB')

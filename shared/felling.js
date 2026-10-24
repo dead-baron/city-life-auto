@@ -5,17 +5,20 @@
 //
 //   treeSize(prop) -> 0 (not a tree) .. 4 (a giant redwood)
 //   TREE_SIZES[size]: { name, work, logs, len, wide, dmg }: work: how much cutting it takes (tool rate x seconds);
-//     logs: the bundles it breaks into; len / wide: the trunk lying on the ground (px); dmg: the hurt where it lands
+//     logs: the rounds its trunk is cut into, a firewood bundle each; len / wide: the trunk lying on the ground (px); dmg:
+//     the hurt where it lands
 //   FELL_TOOLS[id]: { max, rate, name, fuel, loud }: the biggest size it can cut, its cutting rate (work per second)
 //   fellTime(tool, size) -> seconds, or Infinity when the tool can't cut that size
 //   fallAngle(tree, x, y) -> the angle it falls at, away from a cutter standing at (x, y)
 //   underFall(tree, a, size, x, y) -> 0 (clear), or how squarely (0-1] a falling tree lands on (x, y)
 //   logSpots(tree, a, size) -> [[x, y], ...] where its log bundles lie, along the fallen trunk
+//   roundSpots(tree, a, size) -> [[x, y], ...] the middles of the rounds along the fallen trunk, from the stump end; the
+//     segment k of the trunk runs from roundAlong(size, k) to roundAlong(size, k + 1) px out from the stump
 export const TREE_SIZES = [
   null,
-  { name: 'small tree', work: 4, logs: 1, len: 64, wide: 12, dmg: 30 },
-  { name: 'tree', work: 10, logs: 2, len: 104, wide: 16, dmg: 60 },
-  { name: 'big redwood', work: 24, logs: 4, len: 190, wide: 22, dmg: 110 },
+  { name: 'small tree', work: 4, logs: 2, len: 64, wide: 12, dmg: 30 },
+  { name: 'tree', work: 10, logs: 3, len: 104, wide: 16, dmg: 60 },
+  { name: 'big redwood', work: 24, logs: 5, len: 190, wide: 22, dmg: 110 },
   { name: 'giant redwood', work: 64, logs: 9, len: 330, wide: 34, dmg: 400 },
 ];
 export const FELL_TOOLS = {
@@ -83,6 +86,15 @@ export function logSpots(tree, a, size) {
     const side = (k % 2 ? 1 : -1) * Math.min(14, S.wide * 0.45);
     out.push([Math.round(tree.x + c * d - s * side), Math.round(tree.y + s * d + c * side)]);
   }
+  return out;
+}
+// the fallen trunk, cut into rounds: from just past the stump to where the crown starts
+export const roundAlong = (size, k) => { const S = TREE_SIZES[size]; return S ? S.len * (0.1 + 0.68 * k / S.logs) : 0; };
+export function roundSpots(tree, a, size) {
+  const S = TREE_SIZES[size];
+  if (!S) return [];
+  const c = Math.cos(a), s = Math.sin(a), out = [];
+  for (let k = 0; k < S.logs; k++) { const d = (roundAlong(size, k) + roundAlong(size, k + 1)) / 2; out.push([tree.x + c * d, tree.y + s * d]); }
   return out;
 }
 // the angle on the wire: 0..63

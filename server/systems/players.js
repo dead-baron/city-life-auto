@@ -65,6 +65,7 @@ import * as transit from './transit.js';
 import * as ferries from './ferries.js';
 
 import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE, GUARD, NPC_GUARD } from '../../shared/rules.js';
+import { K9 } from '../../shared/rules-play.js';
 // A disconnected player with nothing after them (not wanted, not hurt in the last AWAY_HURT_S, no cargo: a phone switching
 // apps) waits AWAY_SECONDS rather than GHOST_SECONDS and logs out without dropping anything. (Here, not in shared/rules.js:
 // a change there re-keys World v3's world and art - tools/stamp-version.mjs world3Hash - and every browser and the server
@@ -459,6 +460,7 @@ export function pedMods(world, ped) {
   if (ped.fishing) speedMul *= 0;
   if (ped.limpUntil > now) speedMul *= REVIVE_LIMP_SPEED; // just revived bare-handed: limping
   if (now < (ped.guardUntil || 0)) speedMul *= GUARD.speed;   // guarding: a careful step (rules.js GUARD)
+  if (now < (ped.k9Until || 0)) speedMul *= K9.drag;   // a police dog hanging on to you (k9.js)
   return {
     canMove, canSprint: !ped.carrying, speedMul, tumble: now < (ped.tumbleUntil || 0), air: now < (ped.airUntil || 0),
     board: !!ped.board, wet: !!ped.board && world.weather === WEATHER.RAIN,   // (on a skateboard: shared/physics.js boardStep)
@@ -714,7 +716,7 @@ export function findInteraction(world, p) {
     if (hop) return hop;
     const fi = fishing.interaction(world, p);
     if (fi) return fi;
-    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
+    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || felling.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
@@ -726,7 +728,7 @@ export function findInteraction(world, p) {
 
   if (ped.carrying) {
     const crate = world.get(ped.carrying);
-    const logs = felling.sellZone(world, p, crate);   // a bundle of logs at the hardware store (felling.js)
+    const logs = felling.sellZone(world, p, crate);   // a bundle of firewood at a buyer, or at your own garage (felling.js)
     if (logs) return logs;
     const dz = jobs.deliveryZoneFor(world, p, crate);
     if (dz) return { label: dz.label, run: () => dz.run() };
@@ -754,7 +756,7 @@ export function findInteraction(world, p) {
   if (bag) return { label: cargo.bagLabel(bag, p), run: () => cargo.lootBag(world, p, bag) };
 
   const fellAct = felling.interaction(world, p);   // at a tree with a cutting tool: hold to fell it (felling.js)
-  if (fellAct && ped.chop) return fellAct;
+  if (fellAct && (ped.chop || fellAct.log)) return fellAct;   // (cutting up a felled trunk, facing it: before the bundles lying by it)
   const crate = cargo.nearestCrate(world, ped);
   if (crate) { const theirs = !!(crate.owner && crate.owner !== p.pid); return { label: (crate.state === 'loaded' ? `Unload ${crateName(crate)}` : `Pick up ${crateName(crate)}`) + (theirs ? ' - Cargo theft' : ''), crime: theirs ? 'cargoTheft' : null, run: () => cargo.pickUp(world, ped, crate) }; }
   const lantern = lights.interaction(world, p);   // a lantern someone set down (lights.js)

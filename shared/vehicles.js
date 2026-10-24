@@ -97,7 +97,7 @@ export const VEHICLES = {
   // ---- the fleet of batch 4 (the owner: "Add more vehicle and boat types", "more helicopter and plane looks"): their
   // models in client/art2/fleet.js (loaded when one is first seen); sprite: the classic view's stand-in. Where they turn
   // up: server traffic.js (by district), boats.js and the marinas (big water only), aircraft.js, airtraffic.js.
-  convertible: { i: 52, name: 'Riviera Convertible', kind: 'car', L: 104, W: 50, max: 600, accel: 320, brake: 680, rev: 170, turn: 2.6, grip: 8.4, drift: 2.2, mass: 1.3, hp: 220, seats: 2, slots: [[-38, 0]], price: 18000, sprite: 'sports' },
+  convertible: { i: 76, name: 'Riviera Convertible', kind: 'car', L: 104, W: 50, max: 600, accel: 320, brake: 680, rev: 170, turn: 2.6, grip: 8.4, drift: 2.2, mass: 1.3, hp: 220, seats: 2, slots: [[-38, 0]], price: 18000, sprite: 'sports' },
   lowrider:  { i: 53, name: 'Bajito Lowrider',  kind: 'car',  L: 112, W: 50, max: 540, accel: 280, brake: 660, rev: 160, turn: 2.4, grip: 8.2, drift: 2.5, mass: 1.5, hp: 240, seats: 4, slots: [[-40, 0]], price: 12000, sprite: 'sedan' },
   muscle:    { i: 54, name: 'Stallion 440',     kind: 'car',  L: 104, W: 50, max: 770, accel: 480, brake: 760, rev: 180, turn: 2.6, grip: 8.4, drift: 2.6, mass: 1.4, hp: 240, seats: 2, slots: [[-36, 0]], price: 16000, sprite: 'sports' },
   hothatch:  { i: 55, name: 'Zipper GTi',       kind: 'car',  L: 82,  W: 46, max: 680, accel: 440, brake: 780, rev: 170, turn: 3.1, grip: 9.4, drift: 2.0, mass: 1.0, hp: 190, seats: 4, slots: [[-28, 0]], price: 9500, sprite: 'compact' },
