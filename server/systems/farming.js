@@ -81,6 +81,7 @@ export function rowAt(world, x, y) {
   return null;
 }
 export const jobOf = (row) => JOB_OF[row.s] || null;
+export const npcWork = (world, v) => work(world, null, v);
 const bits = (m) => { let n = 0; while (m) { m &= m - 1; n++; } return n; };
 // a row's middle and its two ends (the job tracker's mark: the start of the next row to work)
 export function rowEnds(F, r) {
@@ -112,6 +113,7 @@ export function update(world) {
 
 // one tick of a tractor over the field: the segment under it done for its row's job; the row's job done once enough is.
 // A combine: the stretches under its header (two rows wide, at its front) harvested - it only harvests.
+// (p null: a combine an NPC drives - the cinematic mode's, server/systems/cinefollow.js: the rows done, nobody paid)
 export function work(world, p, v) {
   if (v.model !== 'combine') return workAt(world, p, v.x, v.y, null, v);
   const c = Math.cos(v.a), s = Math.sin(v.a), f = v.def.L / 2 - 12;
@@ -127,7 +129,7 @@ function fill(world, p, v, F) {
   const C = cropOf(F.i, world.map.seed);
   if (!v.tank || v.tank.name !== C.name) {
     v.tank = { name: C.name, unit: C.unit, n: 0 };
-    world.notify(p, `Harvesting ${C.name}: the header cuts two rows at once and the grain fills the tank as you go.`, 'info');
+    if (p) world.notify(p, `Harvesting ${C.name}: the header cuts two rows at once and the grain fills the tank as you go.`, 'info');
   }
   v.tank.n += C.per;
   return v.tank;
@@ -149,7 +151,8 @@ function finishRow(world, p, F, r, job, v = null) {
   row.s = job === 'plough' ? ROW.PLOUGHED : job === 'sow' ? ROW.SOWN : ROW.STUBBLE;
   row.g = 0; row.m = 0;
   F.dirty = true;
-  const j = p.job;
+  const j = p && p.job;
+  if (!p) { keep(world); return job; }
   // (harvested: the crop, and what's in the tank now - "Row of wheat harvested (the tank: 54 bu of wheat)")
   const what = job === 'harvest' ? `Row of ${cropOf(F.i, world.map.seed).name} harvested` : `Row ${VERB[job]}`, tank = job === 'harvest' && v && v.tank ? ` - the tank: ${tankText(v.tank)}` : '';
   if (j && j.type === 'fieldwork') {
@@ -247,7 +250,8 @@ function track(world, p) {
 function sendNear(world, p) {
   const ped = p.ped;
   if (!p.conn || !ped) return;
-  const near = ped.hidden ? [] : fieldsOf(world).filter((F) => ped.x > F.f.x - FARM.near && ped.x < F.f.x + F.f.w + FARM.near && ped.y > F.f.y - FARM.near && ped.y < F.f.y + F.f.h + FARM.near);
+  const at = (p.cineF && p.cineF.fid && p.cineF.eye) || ped;   // (the cinematic mode following someone: round them - cinefollow.js)
+  const near = at.hidden ? [] : fieldsOf(world).filter((F) => at.x > F.f.x - FARM.near && at.x < F.f.x + F.f.w + FARM.near && at.y > F.f.y - FARM.near && at.y < F.f.y + F.f.h + FARM.near);
   for (const F of near) if (F.dirty) { F.dirty = false; F.ver = (F.ver || 0) + 1; }
   const ver = near.map((F) => `${F.i}:${F.ver || 0}`).join(',');
   if (ver === (p.fieldsSig || '')) return;

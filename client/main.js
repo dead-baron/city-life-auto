@@ -350,6 +350,7 @@ function onText(m) {
     case 'garden': case 'fields': S[m.t] = m.t === 'garden' ? m.g : m.f; if (!S.farmArt && !S.farmP) S.farmP = import('./render/farmart.js').then((mod) => { S.farmArt = new mod.FarmArt(S); }).catch((e) => { S.farmP = null; console.warn('[farm]', e); }); break;   // (the garden plots and the fields' rows near you: gardening.js, farming.js)
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
+    case 'cinef': if (DIR) DIR.follow(m); break;   // (the cinematic mode's follow scenes: whom the camera's on)
     case 'board': phone.on('Board', m); break;
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
@@ -508,17 +509,17 @@ function fixedStep() {
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
   if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
   if (!inOverlay && !S.playing) titlePad();
-  const padUI = !spec && !inOverlay && S.playing && !S.hud.menuOpen && !S.bigmap, up = padUI && !(S.me && S.me.dead);   // (down, the D-pad picks where to wake up)
+  const ch = !!(DIR && DIR.holds()), padUI = !spec && !ch && !inOverlay && S.playing && !S.hud.menuOpen && !S.bigmap, up = padUI && !(S.me && S.me.dead);   // (down, the D-pad picks where to wake up)
   if (up && input.padCall && S.me && S.me.cruiser) callCruiser();   // (D-pad down: the cop car)
   if (up && input.padPhone) openPhone();
   // the bag (D-pad →) and the quick wheel (hold View, point with the right stick, let go)
   if (padUI && input.padRight) toggleBag();
-  if (!spec && input.padView && !S.padViewHeld && canWheel() && !wheel.open && !wwheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
+  if (!spec && !ch && input.padView && !S.padViewHeld && canWheel() && !wheel.open && !wwheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
   if (wheel.open && S.padWheel && input.padAxes) wheel.point(input.padAxes.rx * 100, input.padAxes.ry * 100);
   if (!input.padView && S.padViewHeld && wheel.open && S.padWheel) { S.padWheel = false; wheel.release(performance.now() - (S.wheelAt || 0) < 250); }
   S.padViewHeld = input.padView;
   // the weapon wheel (hold RB or LB; a tap just takes out the next / previous one: input.js): point a stick, let go
-  if (!spec && input.wheelHold && canWheel() && !wheel.open && !wpick.open) wwheel.show();
+  if (!spec && !ch && input.wheelHold && canWheel() && !wheel.open && !wpick.open) wwheel.show();
   if (wwheel.open) { if (input.wheelRelease) wwheel.pick(); else if (!input.wheelHeld || !canWheel()) wwheel.close(); else wwheel.point(input.padAxes); }
   const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open || wpick.open || wwheel.open || spec || !!(DIR && DIR.holds());   // (DIR: the cinematic mode's free camera has the keys)
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
@@ -1159,10 +1160,10 @@ function keepWindow(job) {
   clearInterval(S.winTimer);
   S.winTimer = setInterval(() => {
     if (!S.welcomed || !S.map || !S.win) return;
-    const me = selfPos();
+    const me = selfPos(), eye = (DIR && DIR.eye()) || me;   // (the cinematic mode's camera off you: the window goes with it)
     if (!me || !Number.isFinite(me.x)) return;
     const at = [Math.floor(me.x / TILE), Math.floor(me.y / TILE)];
-    try { job.worker.postMessage({ where: at }); } catch { /* gone */ }
+    try { job.worker.postMessage({ where: [Math.floor(eye.x / TILE), Math.floor(eye.y / TILE)] }); } catch { /* gone */ }
     if (performance.now() - saved > 5000) { saved = performance.now(); try { localStorage.setItem('cla.at3', JSON.stringify(at)); } catch { /* blocked */ } }
   }, 300);
 }

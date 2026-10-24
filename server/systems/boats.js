@@ -8,7 +8,7 @@ import { angleDiff, clamp } from '../../shared/math.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc } from './npc.js';
-import { inAnyView } from '../view.js';
+import { inAnyView, cineEyes } from '../view.js';
 import { pointGrid } from '../pointgrid.js';
 import * as combat from './combat.js';
 import { dressAs } from './activities.js';
@@ -186,7 +186,7 @@ export function spawnFisher(world, p) {
 function rodDown(world, ai) { const d = ai && world.get(ai.drv); if (d && d.fishing && d.fishing.npc) d.fishing = null; }
 
 function manage(world) {
-  const anchors = [...world.players.values()].filter((p) => p.ped && !p.ped.dead).map((p) => p.ped);
+  const anchors = [...world.players.values()].filter((p) => p.ped && !p.ped.dead).map((p) => p.ped).concat(cineEyes(world));   // (and the cinematic mode's: view.js)
   // tidy up
   for (const v of world.entities.values()) {
     if (v.kind !== K.VEH || !v.ai || (v.ai.kind !== 'boater' && v.ai.kind !== 'pboat' && v.ai.kind !== 'fisher')) continue;

@@ -205,7 +205,7 @@ export function meInfo(world, p) {
   if (!ped) return null;
   // (the breaks near anyone, so the waves are drawn for whoever's on the beach - once they've been found: at the server's
   // start, index.js; until then, only for someone with a board)
-  const s = ped.surf, near = hasBoard(p) || s || BR.has(world.map) ? breaksNear(world, ped.x, ped.y) : [];
+  const s = ped.surf, at = (p.cineF && p.cineF.fid && p.cineF.eye) || ped, near = hasBoard(p) || s || BR.has(world.map) ? breaksNear(world, at.x, at.y) : [];   // (at: the cinematic mode following someone - round them, cinefollow.js)
   if (!s && !near.length) return null;
   return {
     b: near.map((b) => [b.id, b.x, b.y, b.nx, b.ny, b.half, b.ph, b.side]),

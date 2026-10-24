@@ -3,6 +3,9 @@
 // Granite Peaks for World v3" when teleporting to the peaks: a name on two districts, the first not on this map); search
 // and rescue signs on at a Search & Rescue HQ's pad, never at a hospital - a few HQs across the regions, the calls out in
 // the wilderness near the one you signed on at; the Rusty Spur's pool table racks up from any side.
+// And the follow scenes (the owner, 10-24: "automatic scenes that has the camera follow NPCs like in cop chases or street
+// races or fishing or surfing"): each kind finds someone at it on World v3 - or one is started for the camera - or is
+// skipped cleanly; what you're sent is round them; the camera moves on when their activity ends.
 // (One v3 build, about 100 s and 2 GB: the heavy lock.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,6 +24,10 @@ import { SAR_HQS } from '../shared/world3-sarhq.js';
 import { SAR } from '../shared/rules.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { TILE } from '../shared/constants.js';
+import * as cinefollow from '../server/systems/cinefollow.js';
+import * as streetlife from '../server/systems/streetlife.js';
+import { focusOf, netRect, cineEyes } from '../server/view.js';
+import { CINE_KINDS, CINE_TOUR, CINE_TOUR_S } from '../shared/cinekinds.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const w = new World(M, { npcBudget: 60, throwErrors: true });
@@ -129,4 +136,96 @@ test('World v3: the Rusty Spur\'s pool table racks up from any side of it', () =
     const it = players.findInteraction(w, q);
     assert.ok(it && /pool table/.test(it.label), `${where}: ${it && it.label}`);
   }
+});
+
+test('World v3: every follow scene finds someone at it - or starts one for the camera - or is skipped cleanly', () => {
+  const { p: q, conn } = joinPlayer(w);
+  q.devMode = true;
+  dev.command(w, q, 'clear', {});   // (after the staged scenes' storm: what the rain sends home - chess, hoops, the skaters - isn't started in it)
+  dev.command(w, q, 'time', { m: 720 });
+  dev.command(w, q, 'place', { n: 'Midtown' });
+  steps(20);
+  const found = {}, skipped = [];
+  for (const K of CINE_KINDS) {
+    conn.sent.length = 0;
+    cinefollow.request(w, q, { f: K.id, near: true }, true);
+    steps(20);
+    const said = conn.sent.filter((m) => m && m.t === 'cinef');
+    const C = q.cineF;
+    assert.ok(C && C.k === K.id, `${K.id}: following`);
+    if (C.sub) {
+      const e = w.get(C.sub.id);
+      assert.ok(e && !e.removed && !e.player, `${K.id}: a live subject, never a player`);
+      assert.ok(cinefollow.candidates(w, K.id).some((c) => c.e === e), `${K.id}: doing it`);
+      assert.ok(said.some((m) => m.id && m.k === K.id), `${K.id}: the page told whom`);
+      assert.equal(focusOf(w, q).id, C.fid, `${K.id}: the view on them`);
+      const r = netRect(w, q, {}), f = w.get(C.fid);
+      assert.ok(f.x > r.x0 && f.x < r.x1 && f.y > r.y0 && f.y < r.y1, `${K.id}: sent what's round them`);
+      assert.ok(q.known.has(C.fid), `${K.id}: they're sent to the page`);
+      found[K.id] = said.filter((m) => m.id).at(-1).n;
+    } else {
+      assert.ok(said.some((m) => m.none && m.k === K.id), `${K.id}: skipped, and the page told`);
+      skipped.push(K.id);
+    }
+  }
+  console.log(`[follow scenes] found ${Object.keys(found).length}: ${Object.values(found).join('; ')}\n[follow scenes] skipped: ${skipped.join(', ') || 'none'}`);
+  // the ones World v3 always has, or that the camera starts in dev mode where nobody's at it
+  for (const k of ['race', 'chase', 'armored', 'train', 'plane', 'combine', 'horse', 'surf', 'fishing', 'traffic', 'skate', 'hoops', 'chess', 'bus', 'wildlife']) assert.ok(found[k], `${k} (skipped: ${skipped.join(', ')})`);
+  assert.ok(cineEyes(w).length >= 1 || !q.cineF.sub, 'the world comes alive round them');
+  cinefollow.request(w, q, { f: 'stop' }, true);
+  assert.equal(q.cineF, null);
+  assert.equal(focusOf(w, q), q.ped, 'back on you');
+});
+
+test('World v3: the camera moves on when the activity ends - the same scene\'s next one first; the tour to the next kind', () => {
+  const { p: q, conn } = joinPlayer(w);
+  q.devMode = true;
+  dev.command(w, q, 'place', { n: 'Downtown' });
+  steps(20);
+  const said = () => conn.sent.filter((m) => m && m.t === 'cinef');
+  // a street race: the racer the camera's on drops out - the next racer in the same race
+  cinefollow.request(w, q, { f: 'race', near: true }, true);
+  steps(5);
+  const C = q.cineF;
+  assert.ok(C.sub, 'on a racer');
+  const ev = streetlife.live(w).find((e) => e.sl === 'race' && e.racers.includes(C.fid));
+  assert.ok(ev, 'in a race');
+  const first = C.fid, tag = C.sub.tag, left = ev.racers.filter((id) => !ev.done.includes(id) && id !== first).length;
+  ev.done.push(first);
+  steps(10);
+  assert.notEqual(q.cineF.fid, first, 'off the one who dropped out');
+  if (left) assert.equal(q.cineF.sub.tag, tag, 'onto another in the same race');
+  // the whole race over: someone else's scene, or a new one
+  for (const id of ev.racers) if (!ev.done.includes(id)) ev.done.push(id);
+  steps(10);
+  assert.ok(!q.cineF.sub || q.cineF.sub.tag !== tag, 'not the race that\'s over');
+  // the camera's own actor done (a combine through its passes): the next
+  cinefollow.request(w, q, { f: 'combine', near: true }, true);
+  steps(5);
+  const A = (w.cineActors || []).find((a) => a.main === q.cineF.fid);
+  assert.ok(A, 'a combine started for the camera');
+  for (let i = 0; i < 100 && !(w.fields || []).some((F) => F.rows.some((row) => row.m)); i++) steps(5);
+  assert.ok((w.fields || []).some((F) => F.rows.some((row) => row.m)), 'it harvests as it goes');
+  A.done = true;
+  steps(10);
+  assert.notEqual(q.cineF.sub && q.cineF.sub.id, A.main, 'moved on when it was done');
+  // the tour: a kind a while, then the next
+  conn.sent.length = 0;
+  cinefollow.request(w, q, { f: 'tour', near: true }, true);
+  steps(5);
+  const k1 = q.cineF.cur, i1 = CINE_TOUR.indexOf(k1);
+  assert.ok(k1 && q.cineF.sub, `the tour on ${k1}`);
+  q.cineF.kindAt -= CINE_TOUR_S + 1;
+  steps(10);
+  assert.notEqual(q.cineF.cur, k1, 'on to the next kind');
+  assert.ok(CINE_TOUR.indexOf(q.cineF.cur) > i1, 'further along the tour');
+  // its subject gone with nobody else in its scene: the next kind straight away
+  const k2 = q.cineF.cur, e2 = w.get(q.cineF.sub.id);
+  for (const c of cinefollow.candidates(w, k2)) if (c.tag === q.cineF.sub.tag && c.e.kind !== 8) w.remove(c.e);
+  if (e2 && e2.kind !== 8 && !e2.removed) w.remove(e2);
+  steps(10);
+  if (e2 && e2.kind !== 8) assert.notEqual(q.cineF.sub && q.cineF.sub.id, e2.id, 'not on the one who\'s gone');
+  assert.ok(said().filter((m) => m.id).length >= 2, 'the page told of each');
+  cinefollow.request(w, q, { f: 'stop' }, true);
+  steps(50);   // (the actors tidied away out of sight)
 });
