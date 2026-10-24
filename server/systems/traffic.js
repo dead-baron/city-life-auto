@@ -426,8 +426,23 @@ function roadPointToward(world, v, gx, gy) {
 // The point a smooth driver looks at: `look` px ahead along the path (the car's position, then
 // the waypoints in order). Steering at it rather than at the next waypoint takes bends in one
 // clean arc instead of a series of little corrections.
-function lookAhead(v, pts, look) {
+// lw: the waypoint it last passed (steerTraffic), while ai.pts is still the list it was passed on: a car off the line
+// between it and the next waypoint by more than LANE_BACK[0] px (swung wide coming out of a corner, eased over for a
+// siren, nudged in a jam) looks ahead along that line from the nearest point on it, so it steers back into its lane
+// within a car's length or two - it used to aim straight at the next waypoint, which after a corner may be the far end
+// of the street, and drove most of the street half in the oncoming lane: by Midtown station a car out of the bend nose
+// to nose with a tanker coming up the other lane, neither with room to back off, the corner locked for minutes.
+const LANE_BACK = [8, 96];
+function lookAhead(v, pts, look, lw = null) {
   let px = v.x, py = v.y, left = look;
+  if (lw && lw.of === pts && lw.n === pts.length && pts.length) {
+    const q = pts[0], dx = q.x - lw.x, dy = q.y - lw.y, L2 = dx * dx + dy * dy;
+    const t = L2 > 1 ? ((v.x - lw.x) * dx + (v.y - lw.y) * dy) / L2 : -1;
+    if (t > 0 && t < 1) {
+      const ox = lw.x + dx * t, oy = lw.y + dy * t, off = Math.hypot(v.x - ox, v.y - oy);
+      if (off > LANE_BACK[0] && off < LANE_BACK[1]) { px = ox; py = oy; }
+    }
+  }
   for (let i = 0; i < Math.min(pts.length, 6); i++) {
     const q = pts[i];
     const d = Math.hypot(q.x - px, q.y - py);
@@ -436,6 +451,23 @@ function lookAhead(v, pts, look) {
     if (q.stop || q.final) break;
   }
   return { x: px, y: py };
+}
+
+// A vehicle nobody's in, standing still wholly off the roadway (a bike at a rack, a car left up on the pavement): the
+// look-ahead box is straight ahead of the car, so on a bend it sweeps over the kerb - a pickup turning the corner by
+// Midtown station had a bike parked at the rack there in its box and stopped in the bend for good, the queues behind
+// it both ways locking the corner for minutes. The lanes never leave the road: it's never in the way. (Remembered while
+// it stands where it is.)
+const ROADWAY = new Set([T.ROAD, T.BRIDGE, T.LOT]);
+function parkedOff(m, e) {
+  if (Math.abs(e.vx) + Math.abs(e.vy) > 4 || e.lz || e.seats.some((s) => s)) return false;
+  const k = e._offAt;
+  if (k && k[0] === e.x && k[1] === e.y && k[2] === e.a) return k[3];
+  const c = Math.cos(e.a), s = Math.sin(e.a), hl = e.def.L / 2, hw = e.def.W / 2;
+  let off = true;
+  for (const [u, w] of [[0, 0], [hl, hw], [hl, -hw], [-hl, hw], [-hl, -hw]]) if (ROADWAY.has(m.tileAtPx(e.x + c * u - s * w, e.y + s * u + c * w))) { off = false; break; }
+  e._offAt = [e.x, e.y, e.a, off];
+  return off;
 }
 
 // How much room a driver leaves to the car in front when stopped (px, 0.6-2.4 m): some creep right up, others hang
@@ -450,6 +482,7 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
     if (e.kind === K.PED) { if (e.vehId || e.dead) continue; }
     else if (e.kind !== K.VEH) continue;
     else if ((e.alt || 0) > FLY.HIGH) continue;   // (an aircraft overhead: drive on under it)
+    else if (parkedOff(world.map, e)) continue;   // (a bike at a rack on the pavement: not on the road, never in the way)
     if (!sameLevel(e.lz, v.lz)) continue; // traffic up on the deck doesn't brake for the street below
     const dx = e.x - v.x, dy = e.y - v.y;
     const lx = dx * c + dy * s, ly = -dx * s + dy * c;
@@ -603,6 +636,7 @@ function steerTraffic(world, v, t) {
   if (d < 30 || passed(v, wp) || beside || ai.turned > Math.PI * 1.9) {
     ai.turned = 0;
     ai.pts.shift();
+    ai.lastWp = { x: wp.x, y: wp.y, of: ai.pts, n: ai.pts.length };   // (the line back to its lane: lookAhead)
     if (wp.halt !== undefined) haltAt(world, v, wp.halt);   // (a bus at its stop, a taxi where it's picking up or dropping off)
     if (wp.stop) { crossJunction(world, v); if (!v.ai) return; ai.replans = 0; }
     if (!ai.pts.length && !ai.turn) { crossJunction(world, v); if (!v.ai) return; }
@@ -703,7 +737,7 @@ function steerTraffic(world, v, t) {
   if (!panic && (world.tick + v.id) % 10 === 0) breakRing(world, v);
   // stopped behind a backup: another lane, or another way (reroute.js)
   if (!panic && unjam(world, v, holding)) { if (!v.ai || !ai.pts || !ai.pts.length) return; }
-  const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190));
+  const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190), ai.lastWp);
   let ignore = ai.passUntil > now && ai.passBlk ? new Set([ai.passBlk]) : null;
   // held up by someone on foot in the road (nothing else in its way, not at a light or a junction): after PED_HONK_S a
   // honk, and someone at a loose end steps out of the road (npc.js shoo); after PED_CREEP_S it edges on at a crawl,
@@ -759,10 +793,31 @@ function breakRing(world, v) {
     const r = roomBehind(world, q, 96);
     if (r > room || (r === room && best && q.id < best.id)) { room = r; best = q; }
   }
+  if (!best) makeRoom(world, v, ring);
   if (best !== v) return;
   ai.ringAt = undefined; ai.stuck = 0;
   ai.reverseUntil = now + Math.min(1.8, 0.5 + room / 70);
   world.ringsBroken = (world.ringsBroken || 0) + 1;
+}
+// Nobody in the ring has the room to back off - each has the queue behind it right up to its bumper (by Midtown station:
+// a car out of the bend nose to nose with a tanker coming up the other lane, a car close behind each - the corner locked
+// for minutes). Then the car queued behind one of them with the most room behind it (an NPC's) backs off first, and the
+// one in the ring in front of it can the next time round. The ring's first car (by id) decides, once every RING_S.
+function makeRoom(world, v, ring) {
+  const now = world.time;
+  if (ring.some((q) => q.ai && q.ai.reverseUntil > now) || v.id !== Math.min(...ring.map((q) => q.id))) return;
+  v.ai.ringAt = now;
+  let fb = null, room = 30;
+  for (const q of ring) for (const f of world.query(q.x, q.y, q.def.L + 120, K.VEH)) {
+    if (f._blk !== q.id || ring.includes(f) || !f.ai || f.ai.kind !== 'traffic' || f.ai.turn || f.ai.reverseUntil > now || Math.hypot(f.vx, f.vy) > 10 || !sameLevel(f.lz, q.lz)) continue;
+    const r = roomBehind(world, f, 96);
+    if (r > room || (r === room && fb && f.id < fb.id)) { room = r; fb = f; }
+  }
+  if (!fb) return;
+  fb.ai.ringAt = undefined; fb.ai.stuck = 0;
+  fb.ai.reverseUntil = now + Math.min(1.8, 0.5 + room / 70);
+  world.ringsBroken = (world.ringsBroken || 0) + 1;
+  world.ringRoomMade = (world.ringRoomMade || 0) + 1;
 }
 
 // The painted stop line is this far back from where a lane meets a signalled junction (px)
