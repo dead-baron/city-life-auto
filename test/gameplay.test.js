@@ -47,7 +47,7 @@ test('bailing out: slow, you roll away unhurt (even off a bike, next to it); fas
 });
 
 test('every vehicle carries crates: bikes and jet skis one, trucks a few, work trucks more, armored trucks lots', () => {
-  for (const [id, d] of Object.entries(VEHICLES)) assert.ok(d.slots.length >= 1, `${id} can carry a crate`);
+  for (const [id, d] of Object.entries(VEHICLES)) assert.ok(d.slots.length >= 1 || d.board, `${id} can carry a crate`);   // (but a skateboard: you ride it as the board - server skate.js)
   for (const id of ['bike', 'jetski', 'speedboat', 'dinghy', 'sports', 'taxi', 'police']) assert.ok(VEHICLES[id].slots.length >= 1, id);
   assert.ok(VEHICLES.pickup.slots.length >= 3, 'pickup: a few');
   assert.ok(VEHICLES.flatbed.slots.length > VEHICLES.pickup.slots.length, 'work truck: more');

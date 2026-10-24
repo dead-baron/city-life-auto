@@ -103,7 +103,19 @@ const PLANS = {
     '###D################',
   ],
 };
-export const PLAN_KEYS = Object.keys(PLANS);
+export const PLAN_KEYS = Object.keys(PLANS);   // (the homes' plans: the lobbies' and the arcade's come after)
+// (2026-10-24, the owner: "The Arcade should be a building that has an interior you walk into") an arcade's floor, every
+// arcade's door opening into one of its own (server/systems/arcade.js): the cabinets along the back wall - one a game,
+// in arcade.js GAMES's order - and the prize counter down the east wall (G: use it), a plant by the door
+PLANS.arcade = [
+  '################',
+  '#cjccjccjccjccc#',
+  '#cccccccccccccG#',
+  '#PccccccccccccG#',
+  '#cccccccccccccG#',
+  '#cccccccccccccc#',
+  '#######D########',
+];
 // (H71) an apartment block's lobby (HO5), lobby4 .. lobby8 by its number of flats: in by the front door, the tiled hall -
 // the mailboxes on the back wall, the lift beside them, the stairs up in the corner, a plant by the door - and the
 // landing's carpet runner along the back wall with the flats' doors, unit 1 first (U, numbered in order), each one's
@@ -120,10 +132,10 @@ for (let n = 4; n <= 8; n++) {
   ];
 }
 
-const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZ', ...PLAN_LOWER]);
+const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZG', ...PLAN_LOWER]);
 const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);
 const FLOORS = new Set(['.', 'c', 't', 'g', '+']);
-export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail' };
+export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail', G: 'prizes' };   // (G: an arcade's prize counter)
 
 // The plan for a home: its kind (a trailer, an apartment, a house, a mansion) and how well it's furnished (0 a shack's
 // odds and ends .. 3 a mansion's)

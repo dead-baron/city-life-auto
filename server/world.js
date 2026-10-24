@@ -75,6 +75,7 @@ import * as drivein from './systems/drivein.js';
 import * as aircraft from './systems/aircraft.js';
 import * as skydive from './systems/skydive.js';
 import * as surf from './systems/surf.js';   // (surfing: the breaks, the waves, the rides - #312)
+import * as skate from './systems/skate.js';   // (the skateboards lying about: their racks, a bail's landing, yours taken home)
 import * as grenades from './systems/grenades.js';
 import * as tennis from './systems/tennis.js';
 import * as k9 from './systems/k9.js';
@@ -176,6 +177,7 @@ const SYSTEMS = [
   ['activities', activities.update], // people going about their lives: anglers, chess in the park, picnics, a painter (activities.js)
   ['aircraft', aircraft.update],    // helicopters and planes: the parked ones at their pads and stands, mid-air collisions (aircraft.js)
   ['skydive', skydive.update],      // people falling from aircraft: the fall, the parachute, the landing (skydive.js)
+  ['skate', skate.update],          // the skateboards on the ground: put out at their racks, a bail's landing, yours left lying taken home (skate.js)
   ['surf', surf.update],            // on a surfboard: paddling, catching a wave, riding it, the white water (surf.js)
   ['burning', burning.update],      // people on fire: burning down, going out, catching it from fire (H58)
   ['tank', tank.update],            // the tanks' turrets turning to their drivers' aim (H58)

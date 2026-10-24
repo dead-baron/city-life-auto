@@ -12,15 +12,15 @@ import * as SK from './skate.js';
 
 // Its numbers. Speeds px/s, rates /s:
 // push - the top speed pushing with the stick all the way (pushHard: with sprint / the full stick, at a little stamina) -
-// a bicycle's (the owner, 2026-10-18: "about as fast as bicycles... we want them to be cool": the commuter bike does
-// 330, the road bike 430); kickAcc - the push of a kick (KICK below), surge - how far over your cruising speed a kick's
+// a little under a bicycle's (2026-10-24, the owner: "too powerful ... people will always be using skateboards to get
+// around faster": a short hop, not a way across town - the commuter bike does 330, the beach cruiser 290); kickAcc - the push of a kick (KICK below), surge - how far over your cruising speed a kick's
 // first shove carries you; roll - the drag rolling on smooth ground (coasting), dock - on boards and planks,
 // rough - on grass, dirt and sand (the wheels dig in: you step off - skate.js); brake - a foot dragged (the stick pulled
 // back); turnLo / turnHi - how fast the deck carves at a standstill / at full speed; kick - a kick-turn on the spot;
 // grip - how fast the wheels bring the slide back in line (wetGrip: in the rain); ollieT - the time in the air;
 // bailHit - the speed into a wall, a car or a post that throws you off; drain - stamina a second pushing hard.
 export const BOARD = {
-  push: 330, pushHard: 380, kickAcc: 620, surge: 1.03, roll: 24, dock: 70, rough: 650, brake: 430, turnLo: 4.6, turnHi: 2.4, kick: 7,
+  push: 270, pushHard: 315, kickAcc: 620, surge: 1.03, roll: 24, dock: 70, rough: 650, brake: 430, turnLo: 4.6, turnHi: 2.4, kick: 7,
   grip: 14, wetGrip: 4.5, ollieT: 0.55, bailHit: 150, drain: 9,
 };
 // A push is a run of kicks (the owner, 2026-10-18: "like it really looks like you're kicking a skateboard, it goes a little

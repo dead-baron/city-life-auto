@@ -1,6 +1,7 @@
 // The arcades (the owner, 10-08 / 10-16: "Arcade: walk in and play our own 8-bit games... tickets for prizes" - server
-// arcade.js, client/arcade.js): a credit at an arcade's door, the score back from the page worth tickets (checked against
-// the time it took), the prize counter; the mansion's cabinet free, no tickets.
+// arcade.js, client/arcade.js; 2026-10-24: a building you walk into): the floor behind an arcade's door, a cabinet a game,
+// a credit, the score back from the page worth tickets (checked against the time it took), the prize counter you walk up
+// to; the mansion's cabinet free, no tickets.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
@@ -19,9 +20,10 @@ test('the game\'s own rules: a wave of forty, three kinds, boxes that meet', () 
   assert.ok(A._test.hit(0, 0, 4, 4, 3, 3, 4, 4) && !A._test.hit(0, 0, 4, 4, 5, 5, 4, 4));
 });
 
-test('an arcade: a credit, the score worth tickets (and no more than the time allows), the prize counter', () => {
-  const w = makeWorld();
-  const { p, conn, prof } = joinPlayer(w, { cash: 50, bank: 0 });
+// (2026-10-24, the owner: "The Arcade should be a building that has an interior you walk into and you can go up to
+// different arcades or games to play different things, and the prize counter should be somewhere inside that you walk up
+// to and interact with") - the arcade's floor (server arcade.js, shared/homelayout.js 'arcade')
+function arcadeDoor(w, p) {
   let poi = w.map.pois.find((q) => arcade.isArcade(w, q));
   if (!poi) {   // (the old city's arcade, or one made here)
     const b = w.map.buildings.find((q) => q && q.tw >= 2);
@@ -29,43 +31,137 @@ test('an arcade: a credit, the score worth tickets (and no more than the time al
     poi = { id: w.map.pois.length, kind: 'delivery', label: 'Test Arcade', x: p.ped.x + 10, y: p.ped.y, r: 40, b: w.map.buildings.indexOf(b) };
     w.map.pois.push(poi);
   }
+  return poi;
+}
+// walk to (x, y) on the floor (the server's own steps: homeinside.js input)
+async function walkTo(w, p, x, y) {
+  for (let k = 0; k < 200; k++) {
+    const s = p.ped.home, dx = x - s.x, dy = y - s.y, d = Math.hypot(dx, dy);
+    if (d < 3) break;
+    p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: dx / d, my: dy / d, aim: 0 }); w.step();
+  }
+  p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: 0, my: 0, aim: 0 }); w.step();
+}
+test('the arcade: a building you walk into - a cabinet for every game along the back wall, the prize counter, out by the door', async () => {
+  const players = await import('../server/systems/players.js');
+  const { useAt, TILE_IN } = await import('../shared/homelayout.js');
+  const w = makeWorld();
+  const { p, conn, prof } = joinPlayer(w, { cash: 50, bank: 0 });
+  const poi = arcadeDoor(w, p);
   assert.ok(arcade.isArcade(w, poi));
   teleport(w, p.ped, poi.x, poi.y);
-  economy.openMenu(w, p, poi);
-  let m = lastOf(conn, 'menu');
-  assert.ok(m.opts.some((o) => o.id === 'ar:play' && o.price === ARCADE.price && o.shut), 'a credit');
-  economy.handleMenu(w, p, poi.id, 'ar:play');
+  // at the door: in you go (no credit at the door any more)
+  const it = players.findInteraction(w, p);
+  assert.match(it.label, /Into .* the arcade/);
+  it.run();
+  assert.ok(p.ped.hidden && p.ped.home && p.ped.home.arcade, 'on its floor');
+  const msg = lastOf(conn, 'home');
+  assert.equal(msg.plan, 'arcade', 'the page draws its floor');
+  const L = arcade.hallLayout();
+  // the plan: a cabinet a game, the prize counter, all within reach of the floor from the door
+  const cabs = L.pieces.filter((q) => q.ch === 'j');
+  assert.equal(cabs.length, arcade.GAMES.length, 'a cabinet for each game');
+  assert.deepEqual([...arcade.GAMES].sort(), ['hockey', 'pinball', 'skee', 'starfall'], 'every arcade game there is');
+  assert.ok(L.pieces.some((q) => q.use === 'prizes'), 'the prize counter');
+  const seen = new Set(), q = [[Math.floor(L.spawn.x / TILE_IN), Math.floor(L.spawn.y / TILE_IN)]], reach = new Set();
+  while (q.length) { const [x, y] = q.pop(); if (seen.has(x + ',' + y) || L.solid(x, y)) continue; seen.add(x + ',' + y); q.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
+  for (const c of seen) { const [x, y] = c.split(',').map(Number), px = (x + 0.5) * TILE_IN, py = (y + 0.5) * TILE_IN; const u = useAt(L, px, py, 26); if (u) reach.add(u.use); const cb = arcade.cabinetAt(L, px, py); if (cb) reach.add(cb.game); }
+  for (const u of ['door', 'prizes', ...arcade.GAMES]) assert.ok(reach.has(u), `the ${u} within reach`);
+  // up to each cabinet: its own game
+  const games = [];
+  for (const c of cabs) {
+    await walkTo(w, p, c.x + c.w / 2, c.y + c.h + 14);
+    const a = players.findInteraction(w, p);
+    assert.match(a.label, /^Play /, `at the cabinet: ${a.label}`);
+    games.push(arcade.cabinetAt(L, p.ped.home.x, p.ped.home.y).game);
+  }
+  assert.deepEqual(games, arcade.GAMES, 'a different game at each');
+  // the first: STARFALL - a credit, the page told to play it, the score worth tickets (no more than the time allows)
+  const c0 = cabs[0];
+  await walkTo(w, p, c0.x + c0.w / 2, c0.y + c0.h + 14);
+  const a0 = players.findInteraction(w, p);
+  assert.match(a0.label, new RegExp(`STARFALL - \\$${ARCADE.price}`));
+  a0.run();
   assert.equal(prof.cash, 50 - ARCADE.price, 'paid');
   const credit = lastOf(conn, 'arcade');
   assert.ok(credit && credit.game === 'starfall' && credit.id && !credit.free, 'the page told to play');
-  // a wrong credit: nothing
   arcade.onScore(w, p, { id: 'nope', score: 5000, secs: 100 });
-  assert.ok(!prof.tickets);
-  // two minutes of play, 3,000 points
+  assert.ok(!prof.tickets, 'a wrong credit: nothing');
   run(w, 120);
   arcade.onScore(w, p, { id: credit.id, score: 3000, secs: 120 });
   assert.equal(prof.tickets, Math.min(ARCADE.maxTickets, 30), '30 tickets');
   assert.equal(prof.arcadeBest, 3000);
   arcade.onScore(w, p, { id: credit.id, score: 3000, secs: 120 });
   assert.equal(prof.tickets, 30, 'a credit counts once');
-  // a score the time can't have made: cut to what it could
-  economy.handleMenu(w, p, poi.id, 'ar:play');
+  a0.run();
   const c2 = lastOf(conn, 'arcade');
   run(w, 2);
   arcade.onScore(w, p, { id: c2.id, score: 99999, secs: 2 });
   assert.ok(prof.tickets - 30 <= Math.floor(4 * ARCADE.maxRate / ARCADE.perTicket), `no more than the time allows (${prof.tickets - 30})`);
-  // the prize counter
+  // the skee-ball cabinet: its own credit and its own game on the page
+  const c1 = cabs[1], cash1 = prof.cash;
+  await walkTo(w, p, c1.x + c1.w / 2, c1.y + c1.h + 14);
+  players.findInteraction(w, p).run();
+  assert.equal(lastOf(conn, 'arcade').game, 'skee'); assert.equal(prof.cash, cash1 - ARCADE.skee.price);
+  // the prize counter: walked up to, Act, the prizes; redeemed
   prof.tickets = 60;
-  economy.handleMenu(w, p, poi.id, 'ar:prizes');
-  m = lastOf(conn, 'menu');
-  assert.match(m.sub, /60 tickets/);
-  const i = ARCADE.prizes.findIndex((q) => q.item === 'energy');
+  const G = L.pieces.find((z) => z.use === 'prizes');
+  await walkTo(w, p, G.x - 14, G.y + G.h / 2);
+  const pc = players.findInteraction(w, p);
+  assert.match(pc.label, /prize counter - 60 tickets/);
+  pc.run();
+  let m = lastOf(conn, 'menu');
+  assert.match(m.title, /prize counter/); assert.match(m.sub, /60 tickets/);
+  const i = ARCADE.prizes.findIndex((z) => z.item === 'energy');
   assert.ok(!m.opts.find((o) => o.id === `ar:prize:${i}`).dis);
   economy.handleMenu(w, p, poi.id, `ar:prize:${i}`);
   assert.equal(prof.tickets, 60 - ARCADE.prizes[i].t);
   assert.equal(prof.inventory.energy, 1, 'won: an energy drink');
-  const sk = ARCADE.prizes.findIndex((q) => q.item === 'skateboard');
-  assert.ok(lastOf(conn, 'menu').opts.find((o) => o.id === `ar:prize:${sk}`).dis, 'not enough for the board');
+  const sk = ARCADE.prizes.findIndex((z) => z.board);
+  assert.ok(lastOf(conn, 'menu').opts.find((o) => o.id === `ar:prize:${sk}`).dis, 'not enough for the skateboard');
+  // a skateboard of your own as a prize: yours, set down by the door outside
+  prof.tickets = ARCADE.prizes[sk].t;
+  economy.handleMenu(w, p, poi.id, `ar:prize:${sk}`);
+  assert.ok(prof.board, 'a skateboard of your own');
+  const out = [...w.entities.values()].find((v) => v.def && v.def.board && v.owner === p.pid);
+  assert.ok(out && Math.hypot(out.x - poi.x, out.y - poi.y) < 160, 'by the door');
+  // out by the door: back in the street at the arcade's door
+  await walkTo(w, p, L.door.x, L.door.y - 20);
+  const d = players.findInteraction(w, p);
+  assert.match(d.label, /Out to the street/);
+  d.run();
+  run(w, 0.2);
+  assert.ok(!p.ped.hidden && !p.ped.home, 'outside');
+  assert.ok(Math.hypot(p.ped.x - poi.x, p.ped.y - poi.y) < 40, 'at its door');
+  assert.equal(lastOf(conn, 'home').off, 1, 'the page back to the street');
+  // the old way, a menu at the door: no credits or prizes there - it takes you in
+  economy.openMenu(w, p, poi);
+  m = lastOf(conn, 'menu');
+  assert.ok(!m.opts.some((o) => /^ar:(play|skee|pinball|hockey|prize)/.test(o.id)), 'nothing to play at the door');
+  assert.ok(m.opts.some((o) => o.id === 'ar:in'));
+  economy.handleMenu(w, p, poi.id, 'ar:in');
+  assert.ok(p.ped.home && p.ped.home.arcade, 'and in');
+});
+
+test('the arcade\'s floor: open to anyone - two players see each other; not with the police watching; every arcade\'s door leads onto one', () => {
+  const w = makeWorld();
+  const { p } = joinPlayer(w, { cash: 50 }), { p: q, conn: cq } = joinPlayer(w, { cash: 50 });
+  const poi = arcadeDoor(w, p);
+  teleport(w, p.ped, poi.x, poi.y); teleport(w, q.ped, poi.x, poi.y);
+  arcade.goIn(w, p, poi); arcade.goIn(w, q, poi);
+  run(w, 0.1);
+  const m = lastOf(cq, 'home');
+  assert.ok(m.others.some((o) => o.n === p.name), 'the other player in there with you');
+  assert.equal(arcade.hallOf(w, poi).id, p.ped.home.id, 'one floor for its door');
+  // wanted, in the police's sight: no way in
+  const { p: r } = joinPlayer(w);
+  teleport(w, r.ped, poi.x, poi.y);
+  r.wanted = 2; r.seenAt = w.time;
+  assert.match(arcade.goIn(w, r, poi) || '', /police/);
+  assert.ok(!r.ped.hidden);
+  // every arcade's door (isArcade) is the way onto a floor of its own
+  const all = w.map.pois.filter((z) => arcade.isArcade(w, z));
+  for (const z of all) assert.equal(arcade.hallOf(w, z).plan, 'arcade');
 });
 
 test('the mansion\'s cabinet: free, no tickets, the high score', () => {
@@ -220,9 +316,9 @@ test('pinball: the plunger, the bumpers and the flippers keep it up, a drain; th
 });
 
 // (the owner, 10-23: "Tried playing pool and it said you can't do it indoors or something"): round the Rusty Spur's table
-// from any side - its ends too - Act racks them up; the vehicle button there (with a skateboard in the bag: it used to try
-// the board, "Not indoors") does the same
-test('the Rusty Spur\'s pool table: from any side of it, Act - or the vehicle button - racks them up', async () => {
+// from any side - its ends too - Act racks them up; the vehicle button there (it used to try the skateboard in the bag,
+// "Not indoors" - the boards lie in the world now, 2026-10-24) says nothing of the sort
+test('the Rusty Spur\'s pool table: from any side of it, Act racks them up; the vehicle button there says nothing about indoors', async () => {
   const players = await import('../server/systems/players.js');
   const { IN } = await import('../shared/input.js');
   const { poolTable } = await import('../server/systems/activities.js');
@@ -237,8 +333,7 @@ test('the Rusty Spur\'s pool table: from any side of it, Act - or the vehicle bu
   }
   teleport(w, p.ped, T.x1 + 90, T.cy);
   assert.ok(!/pool table/.test(players.findInteraction(w, p)?.label || ''), 'not from across the room');
-  // the vehicle button, a board in the bag
-  prof.inventory.skateboard = 1;
+  // the vehicle button
   teleport(w, p.ped, T.x1 + 18, T.cy);
   const said = [], n0 = w.notify.bind(w);
   w.notify = (q, t, tone) => { if (q === p) said.push(t); return n0(q, t, tone); };
@@ -248,8 +343,11 @@ test('the Rusty Spur\'s pool table: from any side of it, Act - or the vehicle bu
   p.inputQ.push({ seq: ++seq, bits: 0, mx: 0, my: 0, aim: 0 }); w.step();
   w.notify = n0;
   assert.ok(!said.some((t) => /indoors/i.test(t)), `no "not indoors" (${said.join(' | ')})`);
-  assert.equal(conn.sent.filter((m) => m && m.t === 'arcade' && m.game === 'pool').length, n + 1, 'a frame of pool');
-  assert.ok(!p.ped.board, 'not on the board');
+  assert.equal(conn.sent.filter((m) => m && m.t === 'arcade').length, n, 'nothing played by it');
+  assert.ok(!p.ped.board, 'not on a board');
+  players.findInteraction(w, p).run();
+  assert.equal(conn.sent.filter((m) => m && m.t === 'arcade' && m.game === 'pool').length, n + 1, 'Act: a frame of pool');
+  void prof;
 });
 
 // the cabinets' screens drawn at the size they're shown (the owner, 10-23: "Arcade games are really blurry ...

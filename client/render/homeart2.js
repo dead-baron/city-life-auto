@@ -173,7 +173,7 @@ export class HomeArt {
   // chairs - is buildFurniture's: yardThings)
   buildYard() {
     const L = this.L, ap = this.ap, M = YARD, G = new GBuf(Math.ceil((L.w + 2 * M) / ap), Math.ceil((L.h + 2 * M) / ap));
-    const key = L.key, paved = /^(apartment|studio|penthouse|lobby)/.test(key), house = key === 'house', trailer = key === 'trailer', mansion = key === 'mansion';
+    const key = L.key, paved = /^(apartment|studio|penthouse|lobby|arcade)/.test(key), house = key === 'house', trailer = key === 'trailer', mansion = key === 'mansion';
     const grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
     const stone = ramp('#d8ceb8', 6, 3), plank = ramp('#9a6c44', 6, 3), board = ramp('#7a5034', 6, 3), white = ramp('#eeeae0', 5, 2), soil = ramp('#5a3e2a', 5, 2);
     const hedge = ramp('#3e6a2e', 6, 3), sea = ramp('#2e6a9a', 6, 3), rock = ramp('#7a7068', 6, 3);

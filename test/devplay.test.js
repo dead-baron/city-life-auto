@@ -10,6 +10,7 @@ import { DEV_SECTIONS } from '../client/devcats.js';
 import { command } from '../server/dev.js';
 import { CART_DELAY_S } from '../server/devplay.js';
 import * as fishing from '../server/systems/fishing.js';
+import * as arcade from '../server/systems/arcade.js';
 import { store } from '../server/store.js';
 
 const W = makeWorld();
@@ -25,14 +26,14 @@ test('the debug menu lists the new sections and every command they send is one t
   // every item's command reaches a handler (no "what?" back)
   for (const id of ['new', 'skate', 'cart', 'fish']) for (const [label, c, extra] of DEV_SECTIONS.find((s) => s.id === id).items) {
     assert.ok(typeof c === 'string' && c.length, `${label}: a command`);
-    if (c === 'skate' || c === 'cart' || c === 'fish') assert.ok(extra && extra.k, `${label}: says which`);
+    if (c === 'skate' || c === 'cart' || c === 'fish' || c === 'arcade') assert.ok(extra && extra.k, `${label}: says which`);
   }
 });
 
 test('skateboarding from the debug menu: a board and on it, the special, a rail and a ramp lined up', () => {
   const { p } = fresh();
   command(W, p, 'skate', { k: 'on' });
-  assert.ok(p.ped.board && p.profile.inventory.skateboard > 0, 'on a board');
+  assert.ok(p.ped.board && !p.profile.inventory.skateboard, 'on a board (a vehicle from the ground, not the bag)');
   command(W, p, 'skate', { k: 'special' });
   assert.ok(p.sk && p.sk.spUntil > W.time, 'SPECIAL on');
   const hasRail = W.map.props.some((q) => q && ['ledge', 'flatbar', 'planter_fl', 'planter_g', 'bench_a', 'bench_b', 'bench_m', 'pbench'].includes(q.t));
@@ -41,6 +42,20 @@ test('skateboarding from the debug menu: a board and on it, the special, a rail 
   command(W, p, 'skate', { k: 'spot' });
   if ((W.map.skateSpots || []).length) assert.ok(p.ped.board, 'at the skate spot on the board');
   else assert.match(last(p), /skate spot/, 'no skate spot on this map: it says so');
+  // a board of your own beside you; the nearest skate park's rack (none on the test map: it says so)
+  command(W, p, 'skate', { k: 'mine' });
+  assert.ok(p.profile.board && [...W.entities.values()].some((v) => v.def && v.def.board && v.owner === p.pid), 'your own, beside you');
+  command(W, p, 'skate', { k: 'rack' });
+  if (!(W.map.skateSpots || []).length) assert.match(last(p), /rack/);
+});
+
+test('the arcades from the debug menu: onto the nearest arcade\'s floor; tickets', () => {
+  const { p } = fresh();
+  command(W, p, 'arcade', { k: 'tickets' });
+  assert.equal(p.profile.tickets, 500);
+  command(W, p, 'arcade', { k: 'in' });
+  if (W.map.pois.some((q) => arcade.isArcade(W, q))) assert.ok(p.ped.home && p.ped.home.arcade, 'on an arcade\'s floor');
+  else assert.match(last(p), /arcade/);
 });
 
 test('shopping carts from the debug menu: you and a friend, two loaded carts head on, tipped over, crushed', () => {

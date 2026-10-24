@@ -28,7 +28,8 @@ export const DEV_SECTIONS = [
     ['🛍 Westport Galleria (the Stadium District)', 'place', { n: 'Westport Galleria' }], ['🦆 Stadium Ponds (fishing)', 'place', { n: 'Stadium Ponds' }],
   ] },
   { id: 'skate', title: '🛹 Skateboarding', items: [
-    ['🛹 A skateboard, and on it', 'skate', { k: 'on' }], ['🛹 The nearest skate spot, on your board', 'skate', { k: 'spot' }],
+    ['🛹 A skateboard, and on it', 'skate', { k: 'on' }], ['🛹 My own skateboard, beside me', 'skate', { k: 'mine' }], ['🛹 The nearest skate park\'s rack of boards', 'skate', { k: 'rack' }],
+    ['🛹 The nearest skate spot, on your board', 'skate', { k: 'spot' }], ['🕹 Into the nearest arcade', 'arcade', { k: 'in' }], ['🎟 500 arcade tickets', 'arcade', { k: 'tickets' }],
     ['⏱ A skate session there (5 min, goals, a high score)', 'skate', { k: 'session' }],
     ['🛤 Lined up on the nearest ledge, flat bar or bench (grind it)', 'skate', { k: 'rail' }],
     ['📐 Lined up on the nearest kicker, quarter pipe or pyramid', 'skate', { k: 'ramp' }],
