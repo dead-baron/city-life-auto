@@ -242,6 +242,7 @@ const SIGHT_BIZ = new Set(['police', 'bank', 'hospital', 'grocery', 'pharmacy', 
 // ---------------------------------------------------------------------------------------------------------------
 // The kit: the composers a plan builds its blocks with. All in tiles; a row's front is its south edge.
 export const FREE_T = new Set([T.GRASS]);
+const CUT = 40, CUT_W = 3;   // tiles: the longest run of a row backing onto an alley without a way through; the passage's width
 function makeKit(m, api, P) {
   const { handBuilding, addProp, hash2 } = api;
   const [X0, Y0, X1, Y1] = P.rect;
@@ -262,6 +263,18 @@ function makeKit(m, api, P) {
   const prop = (t, x, y, solid = 0, extra = null) => addProp(m, t, x * TILE, y * TILE, solid, extra);
   // repaint open ground the plan has already taken (a lawn on a paved court): never a road, a building or a kept plaza
   const paint = (x, y, w, h, t) => { for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) { const k = at(xx, yy); if (k < 0) continue; const i = yy * W + xx, c = m.tiles[i]; if ((c === T.GRASS || c === T.PLAZA || c === T.LOT) && !(m.reserve[i] & ~16) && m.bld[i] < 0) { m.tiles[i] = t; used[k] = 1; } } };
+
+  // a band with a back alley along one side of it (an alley's asphalt - roadRank 1 - on most of the tiles just beyond
+  // its north or south edge)
+  const alleyBy = (x0, x1, y0, y1) => {
+    const on = (x, y) => y >= 0 && y < m.h && x >= 0 && x < W && m.tiles[y * W + x] === T.ROAD && m.roadRank[y * W + x] === 1;
+    for (const ys of [[y0 - 1, y0 - 2, y0 - 3], [y1 + 1, y1 + 2, y1 + 3]]) {
+      let n = 0, k = 0;
+      for (let x = x0; x < x1; x += 2, k++) if (ys.some((y) => on(x, y))) n++;
+      if (k && n * 2 >= k) return true;
+    }
+    return false;
+  };
 
   const K = {
     m, P, free, take, allFree, rnd, pick, fill, paint, prop,
@@ -289,16 +302,21 @@ function makeKit(m, api, P) {
     // diagonal street: what's left in front is paved and planted), as deep as `depth` allows and the band is free.
     row(x0, x1, y0, y1, next, opt = {}) {
       const made = [], mk = opt.mask || null, col = (xx) => K.column(xx, y0, y1, mk);
-      let x = x0, i = 0;
+      // (the owner, 2026-10-23: "really long empty alleyways that could be broken up with more side alleys connecting
+      // them") a row backing onto a back alley gets a way through to it at least every CUT tiles: a passage paved from
+      // its street to the alley (K.gap 'passage': the bins, a bike rack) where the row has no gap of its own by then
+      const cut = opt.cut ?? (alleyBy(x0, x1, y0, y1) ? CUT : 0);
+      let x = x0, i = 0, since = 0;
       while (x < x1) {
         // skip columns with nothing free in the band
         const c0 = col(x);
-        if (!c0 || c0[0] - c0[1] + 1 < 4) { x++; continue; }
+        if (!c0 || c0[0] - c0[1] + 1 < 4) { x++; since = 0; continue; }
         const room = (() => { let r = 0; while (x + r < x1 && col(x + r)) r++; return r; })();
-        const L = next(x, room, i++);
+        const L = cut && since >= cut && room >= CUT_W + 8 ? { gap: CUT_W, kind: 'passage' } : next(x, room, i++);
         if (!L) break;
         const w = Math.min(L.w || L.gap || 1, room);
         if (w < 1) break;
+        since = L.gap ? 0 : since + w;
         // the lot's front: the northmost of its columns' southmost free tiles; its back: as deep as wanted and free
         let front = y1, back = y0;
         for (let xx = x; xx < x + w; xx++) { const c = col(xx); if (!c) { front = -1; break; } front = Math.min(front, c[0]); back = Math.max(back, c[1]); }

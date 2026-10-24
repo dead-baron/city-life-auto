@@ -20,7 +20,7 @@ import { ISLANDS, PIECES, ARTERIALS, PORT_WESTPORT } from './world3-skeleton.js'
 import { WATER3, TERRAIN3 } from './world3-land.js';
 import { joinPlace } from './world3-crossings.js';
 import { layRoads, roadTunnels } from './world3-roads.js';
-import { mainLineLoops, clearRailDressing, seatStationHouses, elFurniture } from './world3-rail.js';
+import { mainLineLoops, clearRailDressing, seatStationHouses, elFurniture, buryStubs } from './world3-rail.js';
 import { beachStreets, beachFront, clearBeachFront } from './world3-beach.js';
 import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3, peakHeight, SNOW_LINE, SNOW_CLS } from './world3-biomes.js';
 import { terrainAt } from './mapcore.js';
@@ -319,7 +319,7 @@ export function worldOpts(asked) {
     specials: REGIONAL ? [...TOWN_SPECIALS, ...MESA_SPECIALS, ...DESERT_SPECIALS] : [],   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
     styles: REGIONAL ? { ...TOWN_STYLES, ...MESA_STYLES, ...DESERT_STYLES, ...(city ? NORTH_STYLES : {}) } : {},   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)
-    rails: (m) => { if (REGIONAL) { beachFront(m, L); const tf = townsFront(m); if (m.world3?.towns) m.world3.towns.front = tf; if (m.world3?.mesa) m.world3.mesa.lots = mesaLots(m); } return [...stationsOnTiles(m), ...subwayLoops(m)]; },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
+    rails: (m) => { if (REGIONAL) { beachFront(m, L); const tf = townsFront(m); if (m.world3?.towns) m.world3.towns.front = tf; if (m.world3?.mesa) m.world3.mesa.lots = mesaLots(m); } const loops = [...stationsOnTiles(m), ...subwayLoops(m)]; const stubs = buryStubs(m, loops); if (m.world3) m.world3.railStubs = stubs; return loops; },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
     lines(lines, m) {
       const out = { split: 0, offFrame: 0 };
       const inF = (p) => p.x >= 0 && p.y >= 0 && p.x < W * TILE && p.y < H * TILE;

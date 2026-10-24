@@ -36,7 +36,8 @@ export const FURNITURE = new Set(['lamp', 'sigpole', 'upole', 'hydrant', 'hydran
   'umbrella_y', 'umbrella_r', 'umbrella_b', 'umbrella_g', 'cafetable', 'vend_a', 'vend_cola', 'vend_c', 'roadsign', 'textsign', 'fingerpost', 'mapboard', 'chalkboard',
   'billboard', 'tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c', 'flowers_a', 'flowers_big',
   'flowerbed', 'bags', 'scope', 'lifering', 'post', 'lantern', 'festoon', 'dspeaker', 'stand']);
-export const ALLEY_DRESS = new Set(['dump_g', 'dump_b', 'dump_o', 'crates', 'acunit', 'drum', 'tires', 'pallet', 'pallet_b', 'pallet_s', 'bags', 'lamp']);
+export const ALLEY_DRESS = new Set(['dump_g', 'dump_b', 'dump_o', 'crates', 'acunit', 'drum', 'tires', 'pallet', 'pallet_b', 'pallet_s', 'bags', 'lamp',
+  'steamvent', 'handtruck', 'spool', 'pipes', 'planks', 'trashpile', 'burnbarrel']);   // (the 2026-10-23 alleys' extra kinds: map.js dressAlleys)
 // the pavement's inner ring (map.js buildStreetProps) by district style, World v3's: street furniture only - the
 // industrial and rough districts' dumpsters, drums, pallets, crates, spools, cones and tyres stay in their yards
 export const PAVEMENT3 = {

@@ -1,6 +1,7 @@
 // Gardening at home (H61; the owner, 2026-10-11: "Have we added farm jobs and gardening mechanics yet?"). An owned
 // home's yard has a few garden plots (GARDEN.plots), found from the built map - two tiles of open yard side by side, off
-// the house, its door and its drive, a little bed of them in the back of the lot (nothing is added to the map: the
+// the house, its door and its drive, a little bed of them in the front or side yard, where you see it from the street
+// (never behind a house's picture: findSpots) (nothing is added to the map: the
 // world's hash stays). At an empty plot of your own: plant the seeds you carry (seed_<crop>: the farm co-op, the market,
 // the hardware store); at a growing one: water it (the rain waters them all). A watering lasts GARDEN.waterDays in-game
 // days; a plant grows only while it's wet, ripe after its crop's days of wet growing (shared/rules.js GARDEN_CROPS); dry
@@ -50,6 +51,24 @@ function propNear(map, x, y, r) {
   }
   return false;
 }
+// (the owner, 2026-10-23: "gardening spaces or other home features shouldn't be placed behind the home, they should be
+// out and easy to see and access for the home owner") The camera looks north at a 3/4 view: a building's walls and
+// roof are drawn up over the ground north of its footprint, so a plot with a building just south of it - its own house
+// when it's in the back yard, the next row's when the lots are tight - is behind that picture. HIDE_T tiles: about a
+// two-storey house's walls and roof.
+const HIDE_T = 5, YARD_PAD = 4;   // (YARD_PAD tiles: how far round its footprint a house's yard is looked for)
+const builtAt = (map, tx, ty) => map.inside(tx, ty) && (map.bld[map.idx(tx, ty)] >= 0 || map.tiles[map.idx(tx, ty)] === T.BUILDING);
+// how many tiles south of the two-tile bed at (tx, ty) the nearest building is (99: none within reach of hiding it)
+function hiddenBy(map, tx, ty) {
+  for (let dy = 1; dy <= HIDE_T + 4; dy++) for (let dx = 0; dx <= 1; dx++) if (builtAt(map, tx + dx, ty + dy)) return dy;
+  return 99;
+}
+// a tile beside a street (its pavement or roadway): the lot's edge, its fence or hedge - no bed there
+const STREETY = new Set([T.SIDEWALK, T.ROAD, T.BRIDGE]);
+function byStreet(map, tx, ty) {
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 2; dx++) if (map.inside(tx + dx, ty + dy) && STREETY.has(map.tiles[map.idx(tx + dx, ty + dy)])) return true;
+  return false;
+}
 function findSpots(map, h) {
   if (!h || h.gone || h.kind === 'apartment') return [];   // (an apartment has no yard)
   const b = h.b != null ? map.buildings[h.b] : null;
@@ -58,23 +77,45 @@ function findSpots(map, h) {
   const mn = !pf && map.mansions ? map.mansions.find((q) => q.tx === b.tx && q.ty === b.ty) : null;
   const lot = pf || (mn && mn.lot) || { tx: b.tx - 3, ty: b.ty - 3, tw: b.tw + 6, th: b.th + 6 };
   const near = (tx, ty) => tx >= b.tx - 1 && tx < b.tx + b.tw + 1 && ty >= b.ty - 1 && ty < b.ty + b.th + 1;   // (a tile's clearance from the walls)
-  const cands = [];
   // (a tile in from the lot's edge: the painted lots have their hedges and fences there)
-  for (let ty = lot.ty + 1; ty < lot.ty + lot.th - 1; ty++) for (let tx = lot.tx + 1; tx < lot.tx + lot.tw - 2; tx++) {
+  const inLot = (tx, ty) => ty >= lot.ty + 1 && ty < lot.ty + lot.th - 1 && tx >= lot.tx + 1 && tx < lot.tx + lot.tw - 2;
+  // the house's own yard beyond its lot (a handcrafted house's lot is its footprint and forecourt; its lawns round it):
+  // open ground nearer this house than any other building
+  const bi = h.b;
+  const ours = (tx, ty) => {
+    const d = Math.max(b.tx - tx, tx - (b.tx + b.tw - 1), b.ty - ty, ty - (b.ty + b.th - 1), 0);
+    for (let yy = ty - d + 1; yy <= ty + d - 1; yy++) for (let xx = tx - d + 1; xx <= tx + d; xx++) {
+      if (!map.inside(xx, yy)) continue;
+      const j = map.bld[map.idx(xx, yy)];
+      if (j >= 0 && j !== bi) return false;
+    }
+    return true;
+  };
+  const cands = [];
+  const x0 = Math.min(lot.tx + 1, b.tx - YARD_PAD), x1 = Math.max(lot.tx + lot.tw - 2, b.tx + b.tw + YARD_PAD);
+  const y0 = Math.min(lot.ty + 1, b.ty - YARD_PAD), y1 = Math.max(lot.ty + lot.th - 1, b.ty + b.th + YARD_PAD);
+  for (let ty = y0; ty < y1; ty++) for (let tx = x0; tx < x1; tx++) {
     if (!yardTile(map, tx, ty) || !yardTile(map, tx + 1, ty) || near(tx, ty) || near(tx + 1, ty)) continue;
+    const lotTile = inLot(tx, ty) && inLot(tx + 1, ty);
+    if (!lotTile && (byStreet(map, tx, ty) || !ours(tx, ty) || !ours(tx + 1, ty))) continue;
     const x = (tx + 1) * TILE, y = (ty + 0.5) * TILE;
     if (Math.hypot(x - h.x, y - h.y) < 96) continue;                                  // not by the door
     if (h.garage && Math.hypot(x - h.garage.x, y - h.garage.y) < 110) continue;        // not on the drive
     if (propNear(map, x, y, 26)) continue;
-    cands.push({ x, y, d: Math.hypot(x - h.x, y - h.y) });
+    // (how far you walk to it from the door: round the house to a yard on its far side)
+    cands.push({ x, y, d: Math.abs(x - h.x) + Math.abs(y - h.y), hid: hiddenBy(map, tx, ty) });
   }
   if (!cands.length) return [];
-  // a bed of them: the first as far from the door as the yard goes, the rest beside it
-  cands.sort((p, q) => q.d - p.d || p.y - q.y || p.x - q.x);
-  const a = cands[0];
-  cands.sort((p, q) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(q.x - a.x, q.y - a.y) || p.y - q.y || p.x - q.x);
+  // in sight if the yard has room there (the front yard, a side yard, a back-to-the-camera house's yard to the south);
+  // else (a yard that is all behind a house: a terrace's back yard) as far out from behind it as the yard goes
+  const seen = cands.filter((c) => c.hid > HIDE_T), most = Math.max(...cands.map((c) => c.hid));
+  const pool = seen.length ? seen : cands.filter((c) => c.hid === most);
+  // a bed of them: the first the nearest walk from the door, the rest beside it
+  pool.sort((p, q) => p.d - q.d || p.y - q.y || p.x - q.x);
+  const a = pool[0];
+  pool.sort((p, q) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(q.x - a.x, q.y - a.y) || p.y - q.y || p.x - q.x);
   const out = [];
-  for (const c of cands) {
+  for (const c of pool) {
     if (out.length >= GARDEN.plots) break;
     if (out.some((o) => Math.abs(o.x - c.x) < 68 && Math.abs(o.y - c.y) < 40)) continue;
     if (Math.hypot(c.x - a.x, c.y - a.y) > 260) break;

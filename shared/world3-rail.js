@@ -176,7 +176,10 @@ export function mainLineLoops(m = null) {
 // crossed on a bridge (shared/map.js buildRailway decks a run over water). The wet stretches inside a tunnel, between
 // land at both ends, stay below. (Not the El's viaduct: it's `under` to the generator but up in the air.)
 function surfaceOverWater(m, loops) {
-  const wet = (p) => { const t = m.tileAtPx(p.x, p.y); return t === T.WATER || t === T.DEEP || t === T.BRIDGE; };
+  const wetT = (t) => t === T.WATER || t === T.DEEP || t === T.BRIDGE;
+  const wet = (p) => wetT(m.tileAtPx(p.x, p.y));
+  // (a mouth out in the water: no dry ground within 2 tiles of it - a bridge's mouths stand on its shores)
+  const offshore = (p) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (!wetT(m.tileAtPx(p.x + dx * TILE, p.y + dy * TILE))) return false; return true; };
   for (const l of loops) {
     const P = l.pts, n = P.length;
     let i = 0;
@@ -213,6 +216,49 @@ function mountainBores(m, loops) {
   }
 }
 export const mainJunctions = () => MAIN_JUNCTIONS.map((j) => ({ name: j.name, x: j.at[0] * TILE, y: j.at[1] * TILE }));
+
+// The stray stretches of track (the owner, 2026-10-23: "Random train tracks in this area, I don't think are supposed to
+// be here?"): a loop that comes up out of its tunnel for a short way and goes straight back down - across a strip of
+// country between two city areas' tunnels (Willow Valley's meadow between the Old Quarter and Old Town, the gap by
+// Westport International), or onto a road bridge's deck with its mouth out in the bay (the Pink Line by the Civic
+// Bridge) - is a piece of track lying in a field between two portals. It stays below ground. Kept: a station's stretch
+// (its platforms and the ramps either side), the El's inclines, a bore, and a crossing of open water from shore to shore
+// (a bridge: the track up over the water, its mouths on land either side).
+//   buryStubs(m, loops) -> [{ loop, x, y, len }] (tiles) the stretches put below ground. Called from shared/world3-world.js'
+//   rails hook, on the main line's and the subway's loops, before the generator lays them.
+const STUB = 100, STUB_STATION = 70;   // tiles: the longest stretch that counts as a stub; how near a station keeps it
+export function buryStubs(m, loops) {
+  const wetT = (t) => t === T.WATER || t === T.DEEP || t === T.BRIDGE;
+  const wet = (p) => wetT(m.tileAtPx(p.x, p.y));
+  // (a mouth out in the water: no dry ground within 2 tiles of it - a bridge's mouths stand on its shores)
+  const offshore = (p) => { for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (!wetT(m.tileAtPx(p.x + dx * TILE, p.y + dy * TILE))) return false; return true; };
+  const R = STUB_STATION * TILE, sta = STATIONS.map((q) => [q.at[0] * TILE, q.at[1] * TILE]);
+  const nearStation = (p) => sta.some(([x, y]) => (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y) < R * R);
+  const out = [];
+  loops.forEach((l, li) => {
+    const P = l.pts, n = P.length, st = P.findIndex((p) => p.under);
+    if (st < 0) return;
+    for (let k = 0; k < n; k++) {
+      if (P[(st + k) % n].under) continue;
+      let j = k;
+      while (j + 1 < n && !P[(st + j + 1) % n].under) j++;
+      let len = 0, keep = false, anyWet = false;
+      for (let q = k; q <= j; q++) {
+        const p = P[(st + q) % n];
+        if (q > k) { const o = P[(st + q - 1) % n]; len += Math.sqrt((p.x - o.x) * (p.x - o.x) + (p.y - o.y) * (p.y - o.y)); }
+        if (p.incline || p.elevated || p.bore || p.ez || nearStation(p)) { keep = true; break; }
+        if (wet(p)) anyWet = true;
+      }
+      const a = P[(st + k) % n], b = P[(st + j) % n];
+      if (!keep && len < STUB * TILE && (!anyWet || offshore(a) || offshore(b))) {
+        for (let q = k; q <= j; q++) { const p = P[(st + q) % n]; p.under = true; p.tunnel = true; if (l.subway) p.subway = true; }
+        out.push({ loop: li, x: Math.round(a.x / TILE), y: Math.round(a.y / TILE), len: Math.round(len / TILE) });
+      }
+      k = j;
+    }
+  });
+  return out;
+}
 
 // The El's furniture (2026-10-17): where it stands for the server and both renderers - m.el = { y (its centre line,
 // px), x0, x1, x2, x3 (px: the portals and the ends of its full height), Z (unused here: the art's EL_Z), piers: [x]
