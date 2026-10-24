@@ -1,6 +1,7 @@
 // The paramedic (H68; the owner, 2026-10-11: "more jobs for players trying to make an honest living"). Sign on at a
 // hospital (Act at its doors) or from the phone's job list: an ambulance (shared/vehicles.js ambulance) is issued like a
-// work truck (jobs.js workTruck: yours, the ring and the arrows; H for the siren - traffic pulls over). A shift of calls
+// work truck (jobs.js workTruck: yours, the ring and the arrows; the siren on with each call, H to switch it - traffic
+// pulls over, people get out of the road: traffic.js sirenBehind, npc.js clearWay). A shift of calls
 // (shared/rules.js MEDIC), each from the built map (firefighter.js sitesOf / openNear: by the shops, in the parks):
 //   minor    someone who's had a fall - hold Act by them to treat them on the spot; up they get
 //   serious  someone hit by a car or collapsed - treat them (hold Act) to stabilise them, then bring the ambulance
@@ -113,7 +114,9 @@ export function callAt(world, p, k, site) {
   (world.medicCalls ||= new Map()).set(c.id, { pid: p.pid, c });
   const where = k === 'player' ? site.name : site.name ? `outside ${site.name}` : placeIn(world, c.x, c.y);
   j.text = `Medical call: ${SAY[k](where)}`;
-  world.notify(p, `Medical call! ${SAY[k](where)[0].toUpperCase()}${SAY[k](where).slice(1)}. Siren on (H).`, 'good');
+  const amb = world.get(j.truck);
+  if (amb && !amb.removed) amb.sirenOn = true;   // (on for the call - the traffic pulls over, the road ahead clears; H switches it off)
+  world.notify(p, `Medical call! ${SAY[k](where)[0].toUpperCase()}${SAY[k](where).slice(1)}. Siren's on - traffic pulls over (H to switch it off).`, 'good');
   p.meDirty = true;
   return c;
 }

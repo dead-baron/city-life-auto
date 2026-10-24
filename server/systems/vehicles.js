@@ -94,6 +94,7 @@ export function update(world, dt) {
     v.drift = v.def.kind !== 'air' && !v.def.horse && (Math.abs(vehLateralSpeed(v)) > 110 || (v.slip || 0) > 0.3 || (v.spin || 0) > 0 || (v.input.hb && (Math.abs(fwd) > 120 || v.input.throttle > 0.5)) || (v.input.throttle > 0.9 && fwd > 5 && fwd < 140 && !!driver && !!driver.player));
     v.lights = (night && !!driver && !v.def.horse) || ((v.def.police || v.def.siren) && v.sirenOn);   // (def.siren: an ambulance, a fire engine)
     v.siren = !!((v.def.police || v.def.siren) && v.sirenOn && driver);
+    if ((world.tick + v.id) % 4 === 0 && (v.siren || (v.hornUntil > now && driver && driver.player)) && v.def.kind !== 'air' && v.def.kind !== 'boat') npc.clearWay(world, v, v.siren);   // (people out of the road ahead: npc.js)
     v.beacon = !v.siren && !!((v.def.police || v.def.siren) && v.beaconOn);   // (the lights flashing with nobody at the wheel: an ambulance at a scene, a tow truck at work - no siren)
     // out of health: rolling to a stop, smoking, then on fire, then up it goes (killEngine)
     if (v.dead && !v.wreckAt) {
