@@ -15644,3 +15644,250 @@ Copper Gulch, next door to the town's clinic.
 - test/fences.test.js: held walking, hopped at a run (the crouch, the lift, the far side), the event, chain-link holds,
   a crate holds, a wall behind it holds, the page's prediction matches.
 - Page code: 497.9 KB of the 498 budget (the fences load after the page; the spawn map with the death screen).
+## 2026-10-24 - Batch 4a: finding your way on jobs, the siren that clears the road, search and rescue out in the wild
+
+### The job's waypoint (the owner: "On jobs let's give a waypoint arrow or line that helps players know where they're going for the job. In the ambulance job it's hard to know where to go")
+- The server already decided each job's target (server/systems/phone.js jobTarget: the fare then the drop, the next bus
+  stop, the wreck then the impound, the patient then the hospital, the fire, the delivery, the field, the search circle,
+  the job's truck until you're in it) and the self record carried it (me.job). The radar and the map marked it; on the
+  screen there was only a small marker over it once it was in view.
+- client/jobway.js (new, loaded the first time you have a job): off screen, a pulsing yellow arrow at the screen's edge
+  points to it, with how far (m / km) on a plate beside it. A rescue call's search circle is drawn on the ground too
+  (dashed orange); inside it the arrow gives way to "SEARCH AREA - LOOK FOR THEM". While the job's truck is waiting for
+  you its own ring and arrow lead (as before).
+- The GPS line (client/route.js) follows the roads to the job when you've set no waypoint of your own - on the radar and
+  the map, on foot or driving; not in an aircraft or a boat. A target on the move (a fare walking up) is snapped to a
+  96 px grid so it doesn't re-route every frame.
+- The map's panel: picking the job's line takes the map to it (the search circle with it).
+- test/jobway.test.js: every job on the phone's list (deliveries, the farm, search and rescue, crop dusting, charter,
+  the coast guard by boat and air, field work, firefighter, paramedic, taxi, bus, tow truck) sends a finite target, its
+  vehicle marked until you're in it and the target in the self record; the target follows the job (the patient, the
+  fire, the fare then where they go, the search circle's middle then the person found).
+
+### The siren (the owner: "There should be a siren for the ambulance that makes people get out of the way faster so it's easier to drive")
+- H already switched it (any police car, the ambulance, the fire engine); traffic eased over only for one coming at 60
+  px/s or more within 380 px. Now (server/systems/traffic.js SIREN_YIELD) it's heard from 520 px plus 0.6 s of its speed,
+  110 px either side, even crawling up behind a queue (20 px/s).
+- People get out of the road (server/systems/npc.js clearWay, called a few times a second from vehicles.js): anyone at a
+  loose end in the road up to 380 px ahead (more the faster it comes), 80 px either side of its way, steps off to the
+  nearest pavement at a run. A player's horn now does the same for someone just in front (170 px), at a walk. NPC
+  police cars, ambulances and fire engines running their sirens clear the road the same way.
+- The ambulance's and the fire engine's siren come on by themselves with each call (H still switches it off); the call's
+  message says so.
+
+### Search and rescue (the owner: "Search and rescue missions should be out in the wilderness not in a small city park"; "We should have a few specific search and rescue HQs to take these missions not the hospital")
+- Five bases (shared/world3-sarhq.js SAR_HQS, built by the same layout as the first): the Search & Rescue HQ at Westport
+  International, the Granite Peaks Ranger Station (up in the peaks, by the road), the Egret Coast Coastguard Station (by
+  the shore: the marsh and the open sea), the Red Rock Rescue Post (in the canyons off the desert road), the Sandpiper
+  Coastguard Station (on the east coast west of the point). Each: the HQ building and its door (a 'sar' place), the
+  hangar, the helipad with its lights (a rescue helicopter parked on it), the windsock, the fuel, the lamps and a paved
+  drive to the nearest road. The wild ones keep off the designed nature places and 3 tiles clear of the relief's cliff bands (no drive
+  where it would run along one), and clear the trees and rocks off their
+  apron and drive. m.world3.sarHqs lists them (sarHq the first, as before).
+- Calls only from the wilderness (server/systems/sar.js wildDistrict): the wild districts (the woods, the peaks, the
+  desert, the rocks and islets) and the open coast that's a region of its own (the Sandpiper Coast) - no parks, no farm
+  valley, no beach towns - with at most two buildings within 40 tiles (a cabin, a campground, not a town), and the water
+  off a wild shore or on a wild lake. On the v3 world: 179,528 open spots, 1,204 rough, 8,864 in the water.
+- Near the base you signed on at (sar.js pick): of four spots drawn within 1,400 - 24,000 px of the base (SAR.dist,
+  SAR.draws), the nearest - none of the kind that near (no rough ground by the airport), someone hurt on open ground
+  near it instead. Signing on at a base's pad (Act there) starts the shift there; the phone's job list offers the
+  nearest base.
+- test/world3scenes.test.js: the five bases built, each in its region with its pad, far apart; signing on at each one's pad starts
+  the shift there and its calls come near it; every call spot in a wild district. test/jobway.test.js: the same rules on
+  today's city (no park, no town), pick within reach of the base.
+
+### Numbers
+- Page code: 498.1 KB of the 498 budget (the arrow and its drawing load with the first job: client/jobway.js); the
+  renderer untouched.
+## 2026-10-24 - Batch 4b of the owner's notes: lost pets with posters, someone collapsing in front of you
+
+### Lost pets, redone (the owner: "a 'lost pet' poster are hung up and if you actually read the poster gives an approximate area where the pet was last seen ... These should pay a lot more ... a way to get the pet to stop following you")
+- server/systems/pets.js, rewritten round a real home. Now and then (PET_EVERY_S, at most PET_MAX_LOST = 3 at once) a
+  dog or a cat goes missing from a house, a cottage or a flat nobody plays in, 400-2600 px from someone on foot. Its
+  owner stands at their door the whole time ("Lost my dog!" over them for anyone within 700 px); killed or cleared, the
+  next from the house comes out once nobody's looking. No more owners or pets popping up at random spots.
+- Its last-seen area (PET_AREA_R = 320 px) is 900-2200 px from home (PET_LOST_PX), on the same island, in town; the pet
+  is in it where a lost pet ends up - the best of 50 looks scored for a yard or a park (grass), an alley's asphalt,
+  under a porch (beside a house, off the pavement), the pavement least; never the road, the water or indoors
+  (petGround). Lost, it sniffs about at half pace, sitting a while now and then, and never leaves the area.
+- The posters (PET_POSTERS = 4): by the home, a third and two thirds of the way to the area and at its near edge, each
+  on the nearest pole within 220 px (street lamps, utility and signal poles, posts, bus stops, finger posts, road signs
+  - a neighbourhood map board counts as a noticeboard) whose foot isn't in the road, else a wall's face over the
+  pavement; 120 px apart at least, put up out of everyone's sight. The page draws them as props (client/lostposter.js,
+  loaded the first time one is near: a sheet up the pole with a red LOST band, the pet's picture in its own colours, the
+  tear-off tabs, stirring a little) - the server sends the ones within 900 px in the event list (k 'poster').
+- Reading one (ACT at it: "Read the "Lost dog" poster") gives a note: its name, what it looks like, where it was last
+  seen ("Pine Hills, a short walk north-east of here - marked on your map") and the owner's address (the home's name
+  and district). From then on the area is a dashed circle on the minimap, the big map and the ground (k 'petarea', r)
+  with a lasting arrow to it, wherever you are, till someone has the pet at heel.
+- Found: take its collar (the label names its home). It trots at your heel and the way to its door is marked (k
+  'petret', as before). Handed back at the door it pays PET_REWARD = $300 + $8 a metre from where you found it to the
+  door, at most $1,200 (rewardFor; about $500-900 for the usual walk - it was a flat $220), and 12 Samaritan points
+  (was 8). The happy reunion and the adoption offer (task #427, H71) are as they were; the posters come down.
+- Let it go: with it at heel and nothing else to do, ACT is "Let Biscuit go (stop walking it home)" (pets.letGo, the
+  last of players.js findInteraction - anything else near you comes first). Let go, or lost (a car, a teleport, 900 px
+  off), it sniffs about where it is now: the area moves there with it (for everyone who read a poster) and the posters
+  stay up. Take it again any time.
+- Nobody brings it home in PET_LOST_S (30 minutes): once nobody sees it, it finds its own way back and the posters come
+  down. The lost pets no longer count as happenings (no radar blip on the pet itself, nothing for the calm streets).
+- shared/rules.js: PET_MAX_LOST, PET_LOST_PX, PET_AREA_R, PET_POSTERS, PET_LOST_S, PET_REWARD { base, perM, max }
+  (PET_OWNER_PX gone). shared/worldevents.js: the 'poster' and 'petarea' kinds. The paused tour's lost-pet stop still
+  reads PET_REWARD as a number - it wants its words redone when the tour comes back.
+
+### Someone collapses in front of you (the owner: "you actually see them trip and fall or pass out or something and you can go help them up?")
+- server/systems/happenings.js: the collapse now happens where you can see it - someone walking along the pavement well
+  inside your view (90-460 px off; nobody there yet: the next one who walks into sight, within 40 s). They sway, weave
+  and slow for 1.6 s - a stagger back on their heels, then forward - and go down face first, still (a 'collapse'
+  event: k 's' the stagger, k 'F' face down; the page: client/main.js, the existing stagger and face-down poses; the
+  thud of a body falling). Then the note: "hold ACT beside them to help them up".
+- Hold ACT FAINT_HELP_HOLD_S (1.5 s) beside them ("Helping them up... 0.8s (keep holding)", the prompt's bar; let go or
+  walk off and it stops) and they're back on their feet, turn to you, thank you ("Thank you!" over them) and press $40
+  on you, +6 Samaritan, as before.
+- Left lying FAINT_EMS_S (30 s), someone calls an ambulance: server/systems/ems.js dispatchFor sends one the usual way
+  for a living patient (emsPatient - drive() and the scene take one as they take a body); the paramedics treat them and
+  wheel them off on the stretcher. Helped up meanwhile, it turns round. No road to them: after FAINT_S they come round
+  and limp off as before. The ambulance also keeps clear of anyone passed out on the ground now, not only bodies.
+- The weakest of the random happenings, the one that just dropped someone on the spot, is gone with this; the fight
+  and the dropped wallet are unchanged.
+
+### Tests
+- test/lostpets.test.js (new): the posters by the home and along the way, on a pole or a wall, never in the road,
+  spread out; reading one (the note, the area marked for that reader only, wherever they are); the pet in its area, off
+  the road, staying there sniffing about for a minute; found, followed, the way home marked, handed back - the reward
+  from the walk; let go - it stays round there, the area moved, the posters up, taken again; lost from a car; nobody
+  brings it home - gone, the posters down.
+- test/happenings.test.js: the collapse in sight - the stagger on the wire, down face first, a tap isn't enough, held:
+  up, paid, thanked; left lying - the ambulance takes them away (or they come round); helped up while it's coming - it
+  turns round; lost pets from real homes, their areas a walk away. test/pets.test.js, test/world.test.js,
+  test/lobby.test.js: their lost pets now come from a home near the player.
+- Page code: 498.2 KB of the 498 budget (the rules' new numbers with short comments; the posters' drawing loads when
+  first near). README: rows for the lost pets and helping someone up (ACT, no new control).
+## 2026-10-24 - Batch 4c: skateboards you find and leave lying about, the walk-in arcade
+
+### Skateboards are vehicles now (the owner: "people will always be using skateboards to get around faster ... just making it like other vehicles would work best")
+- A skateboard is a vehicle lying on the ground (shared/vehicles.js 'skateboard', i 52: kind bike, pedal, board), not a
+  thing in your bag. The bag's skateboard, its quick button (B, D-pad down, the touch 🛹 pill) and its use from the bag
+  are gone (shared/items.js, shared/controls.js, client/main.js quickBoard, hud.js, input.js, style.css, index.html).
+- Where they lie (server/systems/skate.js boardSpots, worked out from the map at run time - the world's hash doesn't
+  change): a rack of three at each skate park (on its smooth ground, clear of the ramps, the rails and the benches,
+  the first run found from its south edge), two by the skate shop (Kickflip Skate Co.), one by most surf shops and by
+  half the boardwalk's places, one at a campus (World v3 has none yet). Never on a road or a bridge, never on grass,
+  never indoors. In World v3: 12 at the four skate parks and a handful elsewhere. They're put out round a player where
+  nobody's looking, as the shopping carts are (skate.js setOut), free to take.
+- The vehicle button by one (the prompt: "Get on the skateboard") steps you on: the board is taken up off the ground
+  (vehicles.js tryEnter -> skate.js mount) and you ride it as before - the push, the carve, the ollie, every trick,
+  the ramps' surfaces and the quarter pipes (shared/skate.js rampSurface, map.js qpipeSolids: unchanged), the sessions.
+  The vehicle button again steps you off and leaves it at your feet (beside you, on your level); by a car it's off
+  the board and into the car. A bail throws it ahead of you and it lands 1.2 s later where it stopped (short of the
+  wall); into the water it's gone. A park's board left lying is nobody's: traffic.js clears it once nobody's about,
+  and its rack fills again; while it's ridden its place stays empty.
+- The board's speed (shared/board.js BOARD): push 330 -> 270 px/s, pushHard 380 -> 315 - under every bike's top speed
+  (the commuter's 330, the beach cruiser's 290), so it's a short hop and a trick ride, not a way across town.
+- Your own board: bought at a skate shop, a surf shop or a sports shop ($85, "Skateboard": skate.js shopOptions), set
+  down by the door - outside a walk-in shop. One at a time (profile.board): after that the shops (free) and your home's
+  menu offer "bring it out" - the one lying about anywhere else goes first, never two. Taking someone else's is bike
+  theft. Left lying more than 2,000 px from you, or when you log off, it goes home (skate.js tidy, with a word about it).
+- The old bag's board, a fair swap (skate.js convert, on joining): a skateboard in your bag becomes your own board -
+  out of the bag and the quick wheel, profile.board set, a note saying where to take it out. Chosen over a refund: you
+  paid for a board, you keep a board. The arcade's 500-ticket prize is now a skateboard of your own too.
+- Both renderers draw a board on the ground: art v2 a voxel model (client/art2/vehicles.js 'skateboard'), the classic
+  view the bail's board sprite (main.js drawVehicleEnt). client/skate.js loads when a board's in sight.
+- Debug menu: "My own skateboard, beside me" and "The nearest skate park's rack of boards" (server/devplay.js).
+
+### The arcade you walk into (the owner: "The Arcade should be a building that has an interior you walk into ... the prize counter should be somewhere inside")
+- Every arcade's door - the Neon Strip's (Retro Rewind, Hi Score, VR Den, the Pixel Arcade, the Koi, the Nightfall,
+  Ultra Games), the Pier Arcade, the two Game Zones, Midtown's Penny Arcade: the 11 POIs arcade.js isArcade finds in
+  World v3 - opens onto its floor: a level of its own as a home's or a block's lobby is (shared/homelayout.js 'arcade',
+  walked round by server/systems/homeinside.js, drawn by client/render/homeview.js and homeart2.js; one floor per door:
+  arcade.js hallOf, ids from ARC0). Open to anyone, others in there with you; not with the police watching (wanted and
+  out of sight, the door takes its moment, as a lobby's).
+- Inside: a cabinet along the back wall for each arcade game (STARFALL, skee-ball, pinball NEON NIGHTS, air hockey -
+  arcade.js GAMES): walk up to one and Act puts in its credit and plays it on its own screen (the minigame flow and
+  client/arcscreen.js as before). Down the east wall the prize counter (G: a glass case of prizes lit from inside, plush
+  toys along it - client/art2/props-home.js prizeCounter, homeview.js): Act there for the prizes and your tickets.
+  Out by the door into the street at the arcade's door.
+- The menu at the door with the credits and the counter is gone: a menu opened at an arcade some other way offers only
+  "Go inside".
+
+### Tests
+- test/skate.test.js: a board on the ground, on and off with the vehicle button (taken up, left at your feet), the prompt;
+  no board no ride, not on grass, the water or indoors, off the board into a car; the bail's board landing; slower than
+  the bikes; the boards set out (a rack of three at a park, side by side, never on a road, filled round a player, free,
+  its place empty while it's ridden, gone once nobody's about); your own board bought and set down by the door, one at a
+  time, brought out, theft, gone home when left; the old bag's board converted.
+- test/arcade.test.js: in at the door, a cabinet for every game and each in reach, a different game at each, a credit
+  played and its tickets, the counter walked up to and a prize redeemed (the skateboard prize set down by the door), out
+  by the door; open to two players, not with the police watching, every arcade's door leads onto a floor.
+- test/world3server.test.js: World v3's racks at all four skate parks, a sparse few elsewhere, none on a road; every one
+  of its arcades' doors leads onto its floor. test/devplay.test.js: the new debug buttons.
+- Page code 497 KB of 498 (the board's vehicle in; the quick button, its pill and the bag's board out); the renderer
+  399.9 KB of 400 (the board's model in, a few of art2/vehicles.js's comments shorter).
+## 2026-10-24 - Batch 4d: the cinematic mode's drift controls and follow scenes
+
+The owner: "Can cinematic mode have more controls for the camera like choosing which direction the camera drifts at and
+the speed it drifts at? Can we set up automatic scenes that has the camera follow NPCs like in cop chases or street
+races or fishing or surfing (or every activity and stuff we've established so I can take some cinematic shots of
+everything, anything that can be automated with NPCs would be great.)"
+
+### The drift, steered
+- client/director.js: the Drift camera has a way (8 ways from the panel's compass, or any angle on the dial - drag
+  it) and a speed (Off, Crawl, Slow, Steady, Quick, Fast: 0-170 world px a second at the zoom of 1, slower across the
+  world further in), kept from one drift to the next; a new speed or way eases in. WASD / arrows / the left stick steer
+  it (it turns toward the way held), Z / X or LB / RB slower / faster, Space stops it and starts it again, Q / E or
+  LT / RT zoom, Esc / B back to you. While drifting the keys are the camera's (your character stands still).
+- The bar along the bottom (#cine-ctl) holds the drift's dial, speed and zoom (the follow scenes' kind, Next, Tour and
+  zoom). It shows with the HUD; on the clean screen it's hidden, and comes back for 3.5 s when you press a key or a
+  pad button, move a stick or the mouse, or touch the screen - then fades for the shot.
+- On a pad, while the camera has the controls: Y the panel, X a picture, B back; the bag, the quick wheel and the
+  weapon wheel stay shut (client/main.js: `ch`).
+
+### Follow scenes
+- shared/cinekinds.js (new): 36 kinds - Action (police chase, street race, armored truck, gang shootout, street fight,
+  purse snatcher, biker club ride, police on patrol, police helicopter, ambulance call), Vehicles (traffic, city bus,
+  taxi, main-line train, ferry, boats, a plane taking off or landing, the news helicopter), Country (combine
+  harvesting, horse rider, wildlife, shark, hunter, hikers / rangers / climbers), Fun (anglers, surfer, skaters, pickup
+  basketball, pool, dancers), People (chess, picnic, painter, diners, street corner life, street characters) - and the
+  tour's order (the action between the quiet ones), CINE_TOUR_S 45 s a kind, CINE_SUBJECT_S 120 s a subject.
+- server/systems/cinefollow.js (new): the page asks `{ t: 'cine', f: kind | 'tour' | 'next' | 'stop', near }`; the
+  server finds who's doing it from the systems' own state (streetlife's events, the police's targets, the shootouts,
+  the happenings, the activities' groups, the personas, the flights, the buses, taxis, ferries, trains, boats,
+  animals) - an NPC, an animal, a train or an aircraft, never another player - near you first (9 km) or anywhere, and
+  tells the page `{ t: 'cinef', id, k, n, z, cut, x, y }`: whom to follow (the vehicle they're in), what to call it,
+  how wide, cut or glide. When their activity ends it moves on: the same scene's next first (the next racer in the
+  race), else another of the kind; the tour moves on to the next kind (and after 45 s anyway). Nobody at it: in dev
+  mode one is started where that's cheap (a street race, a chase, an armored truck's run as the debug menu does, a gang
+  shootout, a street fight, a purse snatch, a plane on the nearest runway, an activity's spot filled, a street
+  character), at most once a minute a kind; otherwise the kind is skipped (the page says so and it keeps looking).
+- Its own actors, for what nobody does on their own yet: a combine harvesting a field (two ripe rows a pass, down and
+  back - farming.js npcWork: the rows cut, the stubble behind it, nobody paid), a rider out on a horse along the
+  country's roads and tracks (traffic.js planRoute / driveToward), a surfer at the nearest break (out at the line-up,
+  up on a wave as its crest comes, carving along the face ahead of the break, now and then an air, wiping out in the
+  white water, paddling back out - shared/surf.js's waves, the page's surf poses). They go once they're done and
+  nobody's looking.
+- The view goes with the camera: view.js focusOf / viewRect is the subject while you follow one (round them, leading
+  their way, out to the widest shot); cineEyes - traffic.js, npc.js, activities.js, boats.js, wildlife.js fill the
+  world round them as round a player, and farming.js / surf.js send the fields and the breaks round them. The page's
+  world window follows the camera when it's off you (main.js keepWindow: DIR.eye()). Your character stays where you
+  left it.
+- The page (client/director.js 'scene' mode, "Follow scenes" in the panel - it starts on the tour): the camera on the
+  subject, leading the way they go (0.6 s ahead, at most 380 px), the framing changing every 9-16 s (wider, closer,
+  off to one side), an aircraft followed where art v2 draws it up by its height; a cut fades through black while the
+  art comes in. N / Enter / A the next one, [ ] / LB RB the kind, T the tour, Q / E / LT RT zoom, Esc / B back.
+  Near me / Anywhere in the panel. Like the tour, it tells the server once a minute that it's playing on by itself
+  (the idle clock runs slow).
+- Not here, because nobody does them on their own: golf, tennis (the club pro only plays you), soccer and volleyball,
+  the jetski and raceway races (players').
+
+### Tests
+- test/world3scenes.test.js: on World v3 every kind finds someone at it, starts one for the camera or is skipped
+  cleanly (the page told either way; the view, the net window and what's sent on them); the street race, chase,
+  armored truck, train, plane, combine, horse, surfer, anglers and traffic always found; the hand-off (a racer out:
+  the next in the same race; the race over: another scene; the combine done: moved on), the tour's next kind.
+- test/director.test.js: the drift goes the way it's pointed at the speed picked (8 ways, the speeds in order, off
+  stays put, the zoom), steered by the keys and a stick; the follow camera leads its subject and settles when they
+  stop; every kind is the server's and in the tour once.
+- On the test's World v3 run from Midtown at noon, 29 of the 36 kinds found someone (or started one); skipped there:
+  the gang shootout (no turf near Midtown), the biker clubs, a police patrol, the police helicopter, an ambulance, a
+  taxi, a shark - nobody at those just then, and nothing cheap to start.
+- Page code: 498.0 KB of the 498 budget (the hooks in main.js: the 'cinef' message, the window following the camera,
+  the pad's wheels and bag shut while the camera has the controls); everything else loads with the director.
