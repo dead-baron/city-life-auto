@@ -9,7 +9,8 @@ import { signalFor } from '../../shared/signals.js';
 import { pointAt, measure, project } from '../../shared/geom.js';
 import { angleDiff, clamp } from '../../shared/math.js';
 import { TRAFFIC_MIX, PARKED_MIX, RACK_MIX, TRUCK_MODELS, VEHICLES, motoMix } from '../../shared/vehicles.js';
-import { PED_BLOCK, CAR_BLOCK } from '../../shared/map.js';
+import { PED_BLOCK, CAR_BLOCK, BOAT_BLOCK, WATER_T } from '../../shared/map.js';
+import { waterSize as boatsWaterSize } from './boats.js';   // (the marinas' bigger boats: big water only)
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
@@ -518,7 +519,48 @@ const DRIVEWAY_CARS = ['sedan', 'compact', 'pickup', 'sports', 'sedan', 'compact
 // Out in the open country the roads are quiet, and what's on them belongs there: farmers' pickups and
 // flatbeds, campers' vans, off-roaders on motorbikes, the odd tanker for the oil field or a dump truck
 // for the quarry - no taxis, buses or bin lorries.
-const COUNTRY_MIX = [['pickup', 40], ['van', 12], ['sedan', 12], ['compact', 8], ['bike', 10], ['flatbed', 8], ['tanker', 2], ['dumptruck', 2], ['boxtruck', 2], ['roadbike', 3], ['mtb', 3]];
+const COUNTRY_MIX = [['pickup', 40], ['van', 12], ['sedan', 12], ['compact', 8], ['bike', 10], ['flatbed', 8], ['tanker', 2], ['dumptruck', 2], ['boxtruck', 2], ['roadbike', 3], ['mtb', 3],
+  ['jeep', 14], ['muscle', 1.5], ['movingvan', 1.5]];   // (batch 4: the open-top 4x4s at home out here)
+// The batch-4 fleet in town, by the district's style, on top of the mix (TRAFFIC_MIX, PARKED_MIX): convertibles, 4x4s and
+// the ice-cream vans by the beach; lowriders and muscle cars on the south side and the strips; hot hatches and moving
+// vans among the homes and the flats (not in the busy centre: a long van in its kerb bays and junctions jams it); convertibles
+// in the smart districts and the old town; the ice-cream van by the park
+export const DISTRICT_MIX = {
+  beach: [['convertible', 8], ['icecream', 4], ['jeep', 5], ['hothatch', 3]],
+  luxury: [['convertible', 9], ['muscle', 3], ['jeep', 2]],
+  southside: [['lowrider', 14], ['muscle', 6], ['hothatch', 2], ['icecream', 1.5]],
+  houses: [['hothatch', 6], ['movingvan', 4], ['icecream', 2.5], ['jeep', 2], ['lowrider', 1.5], ['convertible', 1]],
+  apartments: [['hothatch', 7], ['movingvan', 4], ['lowrider', 3], ['icecream', 1.5]],
+  oldtown: [['convertible', 5], ['hothatch', 4], ['icecream', 1]],
+  nightlife: [['muscle', 6], ['lowrider', 4], ['convertible', 3]],
+  redlight: [['muscle', 4], ['lowrider', 5]],
+  commercial: [['hothatch', 4], ['muscle', 1], ['convertible', 1]],
+  towers: [['hothatch', 3], ['convertible', 2]],
+  civic: [['hothatch', 3]],
+  park: [['icecream', 6], ['convertible', 2]],
+  industrial: [['movingvan', 5]], factory: [['movingvan', 4]], harbor: [['movingvan', 3], ['jeep', 2]],
+};
+export const trafficMix = (style, country) => (country ? COUNTRY_MIX : TRAFFIC_MIX.concat(DISTRICT_MIX[style] || []));
+export const parkedMix = (style) => PARKED_MIX.concat(DISTRICT_MIX[style] || []);
+// The marinas' berths: now and then one of the batch-4 boats in a speedboat's or a dinghy's place, on big water only
+// (boats.js waterSize) and only where the bigger hull clears the pier (every point of it on open water); the trawlers
+// at the harbours. Its answer kept per berth.
+const MARINA_NEW = [['cabincruiser', 3], ['sailboat', 3], ['pontoon', 2], ['rib', 2]];
+export function marinaModel(world, sp, i) {
+  const m = world.map, memo = m._marinaNew || Object.defineProperty(m, '_marinaNew', { value: new Map(), enumerable: false })._marinaNew;
+  if (memo.has(i)) return memo.get(i);
+  let model = sp.kind || (i % 3 === 0 ? 'speedboat' : i % 3 === 1 ? 'jetski' : 'dinghy');
+  if ((model === 'speedboat' || model === 'dinghy') && !sp.charter && !sp.gang && hash2(i, 41, m.seed) < 0.4) {
+    const harbor = m.districtAt(sp.x, sp.y).style === 'harbor', h = hash2(i, 43, m.seed);
+    const want = harbor && h < 0.3 ? 'trawler' : (() => { let t = 0; for (const [, w] of MARINA_NEW) t += w; let r = h * t; for (const [id, w] of MARINA_NEW) { r -= w; if (r <= 0) return id; } return 'rib'; })();
+    const d = VEHICLES[want], c = Math.cos(sp.a), sn = Math.sin(sp.a);
+    let ok = boatsWaterSize(m, sp.x, sp.y, 2500) >= 2500;
+    for (let f = -d.L / 2 - 6; ok && f <= d.L / 2 + 6; f += 12) for (const r of [-d.W / 2 - 4, 0, d.W / 2 + 4]) { const t = m.tileAtPx(sp.x + c * f - sn * r, sp.y + sn * f + c * r); if (!WATER_T[t] || BOAT_BLOCK[t]) { ok = false; break; } }
+    if (ok) model = want;
+  }
+  memo.set(i, model);
+  return model;
+}
 const COUNTRY_TARGET_DAY = 2, COUNTRY_TARGET_NIGHT = 1;
 const countryDriver = (model, style) => (model === 'van' ? (rng() < 0.6 ? 'camper' : 'casual') : model === 'pickup' || model === 'flatbed' ? (style === 'rural' || rng() < 0.4 ? 'farmer' : style === 'desert' ? 'nomad' : 'camper') : model === 'bike' || model === 'mtb' ? (rng() < 0.5 ? 'hiker' : 'casual') : model === 'roadbike' ? 'athlete' : 'casual');
 // who rides what in town: a road bike's rider is out training, the rest are anyone
@@ -902,7 +944,7 @@ function manage(world) {
       if (!fresh && inAnyView(world, sp.x, sp.y, 80)) continue; // never pops in on someone's screen
       if (world.npcCount + world.trafficCount > world.npcBudget) break;
       if (sp.kerb && world.query(sp.x, sp.y, 70, K.VEH).length) continue;   // (a kerb's bay on a live street: not on a car going by)
-      let pm = sp.model && VEHICLES[sp.model] ? sp.model : sp.drive ? DRIVEWAY_CARS[Math.floor(hash2(i, 5, 2) * DRIVEWAY_CARS.length)] : weighted(PARKED_MIX);   // (sp.model: a van in a shop's loading bay - World v3's Midtown)
+      let pm = sp.model && VEHICLES[sp.model] ? sp.model : sp.drive ? DRIVEWAY_CARS[Math.floor(hash2(i, 5, 2) * DRIVEWAY_CARS.length)] : weighted(parkedMix(world.map.districtAt(sp.x, sp.y).style));   // (sp.model: a van in a shop's loading bay - World v3's Midtown)
       if (pm === 'bike') pm = weighted(motoMix('', world.map.districtAt(sp.x, sp.y).style));   // (which motorcycle: by district - task #366)
       const v = world.spawnVehicle(pm, sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });
       world.parked.set(i, v.id);
@@ -913,7 +955,7 @@ function manage(world) {
       if ((sp.x - a.x) ** 2 + (sp.y - a.y) ** 2 > 1100 * 1100) return;
       const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
       if (!fresh && inAnyView(world, sp.x, sp.y, 80)) return;
-      const v = world.spawnVehicle(sp.kind || (i % 3 === 0 ? 'speedboat' : i % 3 === 1 ? 'jetski' : 'dinghy'), sp.x, sp.y, sp.a, { parked: true });
+      const v = world.spawnVehicle(marinaModel(world, sp, i), sp.x, sp.y, sp.a, { parked: true });
       world.marinaParked.set(i, v.id);
     });
     // bikes locked up at the street bike racks: one or two at most of them (anyone's to take - it's theft)
@@ -980,7 +1022,7 @@ function manage(world) {
       if (world.query(p.x, p.y, 90, K.VEH).some((q) => sameLevel(q.lz, z))) continue;
       const st = world.map.districtAt(p.x, p.y).style, country = e.kind !== 'hwy' ? wildStyle(world.map, p.x, p.y) : null;
       const heavy = e.kind === 'hwy' || st === 'harbor' || st === 'industrial' || st === 'factory' || st === 'airport';
-      let model = weighted((country ? COUNTRY_MIX : TRAFFIC_MIX).filter(([id]) => !(e.kind === 'dirt' && (TRUCK_MODELS.has(id) || id === 'roadbike'))
+      let model = weighted(trafficMix(st, country).filter(([id]) => !(e.kind === 'dirt' && (TRUCK_MODELS.has(id) || id === 'roadbike'))
         && !(VEHICLES[id].pedal && (NO_BIKES.has(e.kind) || e.lvl !== 0 || z > 0.05))).map(([id, wt]) => [id, heavy && TRUCK_MODELS.has(id) ? wt * 3 : wt]));
       const moto = model === 'bike';
       if (moto) model = weighted(motoMix(e.kind, country || st));   // which motorcycle: by road and district (task #366)

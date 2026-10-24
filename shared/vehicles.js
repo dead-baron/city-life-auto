@@ -24,23 +24,17 @@ export const VEHICLES = {
   // then the back seats (both renderers draw who's in it there: task #420; the snapshot says who's in a back seat)
   speedboat: { i: 13, name: 'Speedboat',       kind: 'boat', L: 104, W: 48, max: 600, accel: 270, brake: 260, rev: 120, turn: 2.0, grip: 2.4, drift: 1.2, mass: 1.6, hp: 260, seats: 4, slots: [[-24, -10], [-24, 10]], price: 8000, crew: [[-9, 11], [-9, -11], [-35, 10], [-35, -10]] },
   dinghy:    { i: 14, name: 'Dock Motorboat',  kind: 'boat', L: 80,  W: 40, max: 420, accel: 210, brake: 220, rev: 110, turn: 2.2, grip: 2.8, drift: 1.4, mass: 1.0, hp: 160, seats: 2, slots: [[-20, 0]], price: 2500, crew: [[-22, 3], [0, 0]] },
-  // a wooden rowboat: oars, no engine - slow and quiet (the Redwood Caverns' river: shared/world3-caves.js, server/systems/
-  // underground.js; Nature-B1)
+  // a wooden rowboat: oars, no engine (the Redwood Caverns' river: world3-caves.js, underground.js)
   rowboat:   { i: 66, name: 'Rowboat',         kind: 'boat', L: 64,  W: 28, max: 250, accel: 130, brake: 220, rev: 90,  turn: 2.0, grip: 3.0, drift: 1.5, mass: 0.6, hp: 90,  seats: 2, slots: [[-22, 0]], price: 600, oars: true, crew: [[2, 0], [-16, 0]] },
-  // a river kayak: one seat, a double paddle, quick to turn and light - for the lakes and the white water (Silver Thread
-  // Lake's hire, the Redwood River run: shared/world3-woodslake.js, world3-riverrun.js; the nature program 2026-10-21)
+  // a river kayak: one seat, a double paddle (Silver Thread Lake's hire, the Redwood River run)
   kayak:     { i: 67, name: 'River Kayak',     kind: 'boat', L: 52,  W: 16, max: 300, accel: 230, brake: 240, rev: 80,  turn: 3.0, grip: 3.2, drift: 1.6, mass: 0.3, hp: 60,  seats: 1, slots: [[-17, 0]], price: 450, paddle: true, crew: [[-1, 0]] },
-  // a golf cart (the owner, 10-08: "Golf carts to drive (or steal)"): electric, slow and quiet, two seats under its canopy,
-  // the clubs in their bag on the back; parked along the golf courses' cart paths (shared/world3-lakeside.js,
-  // shared/naturesites.js: m.parking spots with model 'golfcart')
+  // a golf cart (the owner, 10-08): parked on the courses' cart paths (m.parking spots with model 'golfcart')
   golfcart:  { i: 68, name: 'Golf Cart',        kind: 'car',  L: 54,  W: 30, max: 300, accel: 190, brake: 520, rev: 120, turn: 3.0, grip: 8.0, drift: 2.0, mass: 0.6, hp: 120, seats: 2, slots: [[-20, 0]], price: 1800, rough: 0.6 },
   jetski:    { i: 16, name: 'Wave Jet Ski',    kind: 'boat', L: 46,  W: 22, max: 690, accel: 520, brake: 300, rev: 90,  turn: 3.2, grip: 3.2, drift: 1.6, mass: 0.5, hp: 110, seats: 2, slots: [[-15, 0]], price: 3500, crew: [[-2, 0], [-14, 0]] },
   policeboat: { i: 17, name: 'Harbor Patrol Boat', kind: 'boat', L: 104, W: 48, max: 650, accel: 320, brake: 280, rev: 130, turn: 2.1, grip: 2.6, drift: 1.2, mass: 1.8, hp: 420, seats: 4, slots: [[-24, 0]], police: true, art: 'speedboat' },   // (a wheelhouse: no crew shown)
-  // the search-and-rescue boat (server/systems/rescue.js): an orange and white rigid inflatable out of the nearest dock to
-  // someone down in the water, lights and siren like an ambulance; two crew in orange up at the console, the rescued aft
+  // the search-and-rescue boat (rescue.js): a rigid inflatable, lights and siren; the crew at the console, the rescued aft
   rescueboat: { i: 45, name: 'Rescue Boat',    kind: 'boat', L: 96,  W: 48, max: 620, accel: 340, brake: 300, rev: 130, turn: 2.3, grip: 2.8, drift: 1.2, mass: 1.5, hp: 420, seats: 4, slots: [[-34, 0]], siren: true, crew: [[-6, 6], [-6, -6], [-28, 7], [-28, -7]] },
-  // the off-road ambulance (ems.js: sent to someone down far from any road - RS1): a white and orange 4x4 with a light
-  // bar and a roof rack, the stretcher in the back like the ambulance's
+  // the off-road ambulance (ems.js, RS1): a white and orange 4x4
   rescue4x4: { i: 46, name: 'Rescue 4x4',     kind: 'car',  L: 104, W: 50, max: 600, accel: 330, brake: 660, rev: 170, turn: 2.5, grip: 8.6, drift: 2.3, mass: 1.8, hp: 420, seats: 4, slots: [[-28, -11], [-28, 11]], siren: true, rough: 0.55 },
   policebike: { i: 15, name: 'Police Motorcycle', kind: 'bike', L: 50, W: 20, max: 780, accel: 570, brake: 820, rev: 80, turn: 3.6, grip: 10.5, drift: 3.0, mass: 0.45, hp: 130, seats: 1, slots: [[-19, 0]], police: true, art: 'bike', moto: 'tourer' },
   // work trucks (traffic on the highways and in the industrial districts)
@@ -51,10 +45,8 @@ export const VEHICLES = {
   garbage:   { i: 22, name: 'Garbage Truck',    kind: 'car',  L: 140, W: 60, max: 380, accel: 170, brake: 500, rev: 120, turn: 1.8, grip: 7.2, drift: 2.4, mass: 3.4, hp: 520, seats: 2, slots: [[-50, 0]] },
   firetruck: { i: 23, name: 'Fire Engine',      kind: 'car',  L: 176, W: 64, max: 470, accel: 200, brake: 520, rev: 120, turn: 1.7, grip: 7.2, drift: 2.4, mass: 4.0, hp: 700, seats: 4, slots: [[-30, -15], [-30, 15], [-60, -15], [-60, 15]], siren: true },
   towtruck:  { i: 24, name: 'Tow Truck',        kind: 'car',  L: 134, W: 58, max: 480, accel: 220, brake: 560, rev: 140, turn: 2.0, grip: 7.6, drift: 2.4, mass: 2.6, hp: 400, seats: 2, slots: [[-34, -13], [-34, 13]], price: 9500 },
-  // pedal power: quiet, nimble, all faster than running on a road; a bike buckles instead of blowing up (pedal).
-  // rough: how much grass, dirt and sand slow it and loosen its grip (1: as a car; the mountain bike shrugs them off,
-  // the road bike hates them). seat: where the rider sits, px forward of the middle (the renderers).
-  // (the commuter keeps the id 'bicycle': it's the one players already own)
+  // pedal power (a bike buckles, pedal). rough: how much grass, dirt and sand slow it (1: as a car). seat: where the
+  // rider sits, px forward of the middle. (the commuter keeps the id 'bicycle')
   bicycle:   { i: 25, name: 'Commuter Bike',    kind: 'bike', L: 40,  W: 14, max: 330, accel: 260, brake: 620, rev: 50,  turn: 3.9, grip: 10,  drift: 3.0, mass: 0.25, hp: 50, seats: 1, slots: [[-14, 0]], price: 250, pedal: true, rough: 1, seat: 2, blurb: 'everyday, quick in town' },
   cruiser:   { i: 26, name: 'Beach Cruiser',    kind: 'bike', L: 42,  W: 16, max: 290, accel: 220, brake: 560, rev: 50,  turn: 3.4, grip: 11.5, drift: 3.4, mass: 0.3, hp: 55, seats: 1, slots: [[-15, 0]], price: 220, pedal: true, rough: 0.5, seat: 0, blurb: 'steady, fat tyres for the beach' },
   mtb:       { i: 27, name: 'Mountain Bike',    kind: 'bike', L: 42,  W: 16, max: 340, accel: 290, brake: 700, rev: 50,  turn: 3.9, grip: 10.5, drift: 3.0, mass: 0.28, hp: 65, seats: 1, slots: [[-15, 0]], price: 480, pedal: true, rough: 0.25, seat: 2, blurb: 'rides rough ground' },
@@ -63,24 +55,17 @@ export const VEHICLES = {
   // the ferries to the islands (server/systems/ferries.js): run to a timetable, never driven, never hurt
   ferry:     { i: 31, name: 'Car Ferry',        kind: 'boat', L: 470, W: 150, max: 320, accel: 60, brake: 80, rev: 60, turn: 0.4, grip: 2, drift: 1, mass: 60, hp: 99999, seats: 24, slots: [[-140, -40], [-140, 40]], ferry: true },
   waterbus:  { i: 32, name: 'Water Bus',        kind: 'boat', L: 240, W: 76,  max: 320, accel: 60, brake: 80, rev: 60, turn: 0.5, grip: 2, drift: 1, mass: 30, hp: 99999, seats: 16, slots: [[-80, 0]], ferry: true },
-  // the shopping cart (task #329): kicked along, ridden on the back rail, one in the basket (crew: where they are); a
-  // crash throws them (server vehicles.js cartCrash); free outside the groceries (traffic.js cartSpots)
-  // ---- the horse (#325; server/systems/horses.js): ridden like a bike - but four legs, not wheels: no engine, at home
-  // on any ground (rough 0: grass, dirt and sand don't slow it), never into the water (shared/physics.js HORSE_BLOCK);
-  // a canter (max * HORSE.canter) unless spurred to a gallop (Sprint), which tires it (HORSE.stamina); it doesn't burn
-  // or blow up - out of health it throws its rider and bolts. Its coat is its variant (horses.js COATS).
+  // the shopping cart (task #329; crew: the kicker, the one in the basket). The horse (#325, horses.js): no engine,
+  // rough 0, never into the water (physics.js HORSE_BLOCK), a canter unless spurred to a gallop; it bolts, never burns.
+  // Its coat is its variant (horses.js COATS).
   horse:     { i: 51, name: 'Horse',            kind: 'bike', L: 56,  W: 18, max: 440, accel: 300, brake: 560, rev: 40,  turn: 3.4, grip: 11,  drift: 3.0, mass: 0.6, hp: 150, seats: 2, slots: [[-20, 0]], price: HORSE.price, horse: true, rough: 0, seat: 2, blurb: 'four legs: anywhere off the road; a gallop tires it' },
   cart:      { i: 50, name: 'Shopping Cart',    kind: 'bike', L: 30,  W: 20, max: 330, accel: 250, brake: 420, rev: 60,  turn: 3.7, grip: 7.0, drift: 2.4, mass: 0.22, hp: 60, seats: 2, slots: [[1, 0]], pedal: true, cart: true, rough: 2.4, crew: [[-20, 0], [3, 0]], blurb: 'kick it along, ride the back rail; one rides in the basket' },
   cargobike: { i: 30, name: 'Cargo Bike',       kind: 'bike', L: 58,  W: 18, max: 280, accel: 190, brake: 520, rev: 50,  turn: 3.0, grip: 10,  drift: 2.8, mass: 0.45, hp: 75, seats: 1, slots: [[15, 0], [-19, 0]], price: 900, pedal: true, rough: 1.1, seat: -11, blurb: 'slow, carries two crates' },
-  // the five-star response (server/systems/police.js): the FBI's black SUVs (strobes in the grille, no light bar) and the
-  // army's olive troop trucks (no siren; armoured like the SWAT truck)
+  // the five-star response (police.js): the FBI's black SUVs, the army's olive trucks
   fbi:       { i: 33, name: 'Federal SUV',      kind: 'car',  L: 104, W: 50, max: 660, accel: 380, brake: 780, rev: 180, turn: 2.6, grip: 8.8, drift: 2.2, mass: 1.8, hp: 520, seats: 4, slots: [[-36, 0]], police: true },
   army:      { i: 34, name: 'Army Truck',       kind: 'car',  L: 120, W: 58, max: 480, accel: 240, brake: 620, rev: 140, turn: 2.0, grip: 8.0, drift: 2.4, mass: 3.2, hp: 900, seats: 4, slots: [[30, -13], [30, 13], [8, -13], [8, 13], [-14, -13], [-14, 13], [-36, -13], [-36, 13]], police: true, military: true, art: 'swat' },
-  // ---- the motorcycles (MC1, task #366): each its own silhouette, colours and feel; one crate on the rear rack or the
-  // luggage. ride: the rider's pose ('chop' leaned back on the chopper's forward pegs, 'tuck' down behind a screen);
-  // stable: three wheels - it never throws its rider in a crash; rough as the bicycles (the dirt bike shrugs off dirt and
-  // grass, a sport bike hates them); seat: where the rider sits, px forward of the middle; sprite: the old renderer's
-  // stand-in art; moto: the bike's family (traffic.js picks by district, the engine sound by it)
+  // ---- the motorcycles (MC1, task #366). ride: the rider's pose; stable: three wheels (never throws its rider); seat:
+  // where the rider sits; sprite: the classic view's stand-in; moto: its family (traffic.js mixes, the engine sound)
   vtwin:     { i: 35, name: 'Dustwing 1200',    kind: 'bike', L: 54,  W: 20, max: 640, accel: 400, brake: 700, rev: 70,  turn: 3.0, grip: 10.5, drift: 3.2, mass: 0.6, hp: 120, seats: 2, slots: [[-20, 0]], price: 5200, rough: 1.1, seat: -4, sprite: 'bike', moto: 'cruiser', blurb: 'the classic cruiser: low, heavy, steady' },
   tourer:    { i: 36, name: 'Longhaul GT',      kind: 'bike', L: 58,  W: 26, max: 660, accel: 380, brake: 720, rev: 70,  turn: 2.8, grip: 10.5, drift: 3.2, mass: 0.75, hp: 140, seats: 2, slots: [[-24, 0]], price: 9800, rough: 1.1, seat: -1, sprite: 'bike', moto: 'tourer', blurb: 'fairing, panniers, a seat for two' },
   chopper:   { i: 37, name: 'Hellfork Chopper', kind: 'bike', L: 66,  W: 20, max: 650, accel: 420, brake: 600, rev: 60,  turn: 2.1, grip: 9.5, drift: 3.0, mass: 0.55, hp: 110, seats: 1, slots: [[-26, 0]], price: 7400, rough: 1.2, seat: -9, ride: 'chop', sprite: 'bike', moto: 'cruiser', blurb: 'the long fork: wide turns, all style' },
@@ -91,37 +76,42 @@ export const VEHICLES = {
   trike:     { i: 42, name: 'Tribuck Trike',    kind: 'bike', L: 60,  W: 38, max: 560, accel: 330, brake: 680, rev: 80,  turn: 2.6, grip: 11,  drift: 3.4, mass: 0.9, hp: 160, seats: 2, slots: [[-26, 0]], price: 8600, rough: 1.1, seat: 4, stable: true, sprite: 'bike', moto: 'cruiser', blurb: 'three wheels: never throws you off' },
   ratbike:   { i: 43, name: 'Rustbucket',       kind: 'bike', L: 54,  W: 22, max: 600, accel: 420, brake: 640, rev: 70,  turn: 3.0, grip: 10,  drift: 3.4, mass: 0.6, hp: 140, seats: 1, slots: [[-20, 0]], price: 2200, rough: 0.8, seat: -3, sprite: 'bike', moto: 'cruiser', blurb: 'wire, rust and leather bags: goes anywhere' },
   bagger:    { i: 44, name: 'Saddlebag King',   kind: 'bike', L: 58,  W: 26, max: 640, accel: 370, brake: 700, rev: 70,  turn: 2.8, grip: 10.5, drift: 3.2, mass: 0.75, hp: 140, seats: 2, slots: [[-24, 0]], price: 8800, rough: 1.1, seat: -2, sprite: 'bike', moto: 'cruiser', blurb: 'batwing fairing, hard bags' },
-  // ---- aircraft (shared/flight.js, server/systems/aircraft.js; HE1 the helicopters): kind 'air', air 'heli' | 'plane'.
-  // climb / sink: px/s up and down at full stick; ceiling: the highest it goes (px); turn: a helicopter's yaw rate, a
-  // plane's turn rate per radian of bank; vr: a plane's lift-off speed, stall: below it the wing quits, bank: its
-  // steepest bank (rad); rotor: the main rotor's radius (px, the clients draw it), span: the wingspan (px, drawn - the
-  // box is narrower); livery: how it's painted (the clients). (indexes from 60: clear of the next ground vehicles)
+  // ---- aircraft (flight.js, aircraft.js): climb / sink px/s, ceiling px; turn: yaw rate (heli) or turn per radian of
+  // bank (plane); vr lift-off, stall, bank (rad); rotor radius, span (drawn); livery (the clients)
   heli:       { i: 60, name: 'Skylark Helicopter', kind: 'air', air: 'heli', L: 150, W: 54, max: 720, accel: 340, brake: 400, rev: 0, turn: 1.9, grip: 8, drift: 2, mass: 1.6, hp: 320, seats: 4, slots: [[-34, 0]], climb: 170, sink: 200, ceiling: 1000, rotor: 76, livery: 'news' },
   policeheli: { i: 61, name: 'Police Air Unit',    kind: 'air', air: 'heli', L: 150, W: 54, max: 760, accel: 360, brake: 400, rev: 0, turn: 2.0, grip: 8, drift: 2, mass: 1.6, hp: 420, seats: 4, slots: [[-34, 0]], climb: 180, sink: 210, ceiling: 1000, rotor: 76, police: true, livery: 'police' },
   plane:      { i: 62, name: 'Larkspur 172',       kind: 'air', air: 'plane', L: 128, W: 112, max: 1150, accel: 190, brake: 420, rev: 0, turn: 1.25, grip: 8, drift: 2, mass: 1.4, hp: 280, seats: 2, slots: [[-34, 0]], climb: 140, sink: 210, ceiling: 1000, vr: 520, stall: 400, bank: 0.75, span: 168, livery: 'plane' },
   gunship:    { i: 63, name: 'Hornet Gunship',     kind: 'air', air: 'heli', L: 160, W: 50, max: 820, accel: 400, brake: 400, rev: 0, turn: 2.2, grip: 8, drift: 2, mass: 2.0, hp: 700, seats: 2, slots: [[-40, 0]], climb: 200, sink: 230, ceiling: 1000, rotor: 80, military: true, missiles: true, livery: 'army' },
 
-  // ---- the tank (H58; the owner: "Add a tank you can drive and shoot and blow things up with, can spawn in debug"): on
-  // tracks (it turns on the spot and never slides: shared/physics.js), heavy enough to shove cars aside, a turret that
-  // turns to the driver's aim and fires shells that go up where they land (server tank.js; shared/rules.js TANK). Small
-  // arms barely scratch it (armor: their damage multiplied by it); rockets: a rocket or a shell takes 1/rockets of it.
-  // Debug only for now - nobody sells one. (i 47: the next free index after the fleet's; 60-63 are the aircraft.)
+  // ---- the tank (H58; debug only): tracks, a turret, shells (tank.js; rules.js TANK); armor: small arms' damage
+  // multiplied by it; rockets: a rocket or a shell takes 1/rockets of it
   tank:      { i: 47, name: 'Ironclad Battle Tank', kind: 'car', L: 150, W: 80, max: 270, accel: 150, brake: 700, rev: 170, turn: 1.25, grip: 16, drift: 14, mass: 14, hp: 3000, seats: 1, slots: [[-62, 0]], tracks: true, turret: true, armor: 0.06, rockets: 6, rough: 0.15 },
-  // ---- the search-and-rescue helicopter (H59: server/systems/sar.js issues one to a rescue pilot): red and white, a
-  // winch and its harness by the side door (hoist: the clients draw the cable). (i 64: the next free aircraft index)
-  // ---- the crop duster (the owner, 2026-10-14: "the farm should have a small farm runway or two for crop dusters"): a
-  // single-seat ag plane, yellow with a green stripe, the spray boom along its wing's trailing edge - issued on the
-  // crop-dusting contract at a farm strip (server/systems/dusting.js; spray: the clients draw the mist while it sprays).
-  // Slower than the Larkspur, quicker to turn and happy slower before the wing quits. (i 65: the next free aircraft index)
+  // ---- the SAR helicopter (H59, sar.js; hoist: the cable drawn) and the crop duster (dusting.js; spray: the mist drawn)
   duster:     { i: 65, name: 'Hopper Ag-Wing',     kind: 'air', air: 'plane', L: 128, W: 112, max: 950, accel: 210, brake: 440, rev: 0, turn: 1.55, grip: 8, drift: 2, mass: 1.2, hp: 240, seats: 1, slots: [[-30, 0]], climb: 150, sink: 220, ceiling: 800, vr: 440, stall: 340, bank: 0.85, span: 168, livery: 'duster', spray: true },
   rescueheli: { i: 64, name: 'Lifeline Rescue Helicopter', kind: 'air', air: 'heli', L: 156, W: 56, max: 740, accel: 350, brake: 400, rev: 0, turn: 2.0, grip: 8, drift: 2, mass: 1.7, hp: 420, seats: 4, slots: [[-36, 0]], climb: 175, sink: 205, ceiling: 1000, rotor: 78, hoist: true, livery: 'rescue' },
-  // ---- the farm tractor (H61: server/systems/farming.js; issued on the co-op's farm-work contract like a work truck):
-  // slow, tough, at home on rough ground (rough: hardly slowed by dirt, grass or the fields). Driven down a field's row it
-  // ploughs, sows or harvests it. (i 48: the next free index after the tank's; art v2's 'tractor' model, a red one)
+  // ---- the farm's tractor and combine (H61, farming.js): driven down a row they plough, sow or harvest it
   tractor:   { i: 48, name: 'Furrowmaster Tractor', kind: 'car', L: 84, W: 54, max: 250, accel: 170, brake: 600, rev: 110, turn: 2.0, grip: 11, drift: 6, mass: 3.2, hp: 900, seats: 1, slots: [[-34, 0]], rough: 0.08 },
-  // ---- the combine harvester (H61: farming.js): slower still, its header as wide as two rows - it harvests both as it
-  // goes (it doesn't plough or sow). (i 49; art v2's 'combine' model)
   combine:   { i: 49, name: 'Reaper Combine Harvester', kind: 'car', L: 150, W: 120, max: 190, accel: 110, brake: 500, rev: 80, turn: 1.4, grip: 12, drift: 8, mass: 6, hp: 1400, seats: 1, slots: [[-60, 0]], rough: 0.08 },
+  // ---- the fleet of batch 4 (the owner: "Add more vehicle and boat types", "more helicopter and plane looks"): their
+  // models in client/art2/fleet.js (loaded when one is first seen); sprite: the classic view's stand-in. Where they turn
+  // up: server traffic.js (by district), boats.js and the marinas (big water only), aircraft.js, airtraffic.js.
+  convertible: { i: 52, name: 'Riviera Convertible', kind: 'car', L: 104, W: 50, max: 600, accel: 320, brake: 680, rev: 170, turn: 2.6, grip: 8.4, drift: 2.2, mass: 1.3, hp: 220, seats: 2, slots: [[-38, 0]], price: 18000, sprite: 'sports' },
+  lowrider:  { i: 53, name: 'Bajito Lowrider',  kind: 'car',  L: 112, W: 50, max: 540, accel: 280, brake: 660, rev: 160, turn: 2.4, grip: 8.2, drift: 2.5, mass: 1.5, hp: 240, seats: 4, slots: [[-40, 0]], price: 12000, sprite: 'sedan' },
+  muscle:    { i: 54, name: 'Stallion 440',     kind: 'car',  L: 104, W: 50, max: 770, accel: 480, brake: 760, rev: 180, turn: 2.6, grip: 8.4, drift: 2.6, mass: 1.4, hp: 240, seats: 2, slots: [[-36, 0]], price: 16000, sprite: 'sports' },
+  hothatch:  { i: 55, name: 'Zipper GTi',       kind: 'car',  L: 82,  W: 46, max: 680, accel: 440, brake: 780, rev: 170, turn: 3.1, grip: 9.4, drift: 2.0, mass: 1.0, hp: 190, seats: 4, slots: [[-28, 0]], price: 9500, sprite: 'compact' },
+  jeep:      { i: 56, name: 'Trailcat 4x4',     kind: 'car',  L: 92,  W: 50, max: 560, accel: 330, brake: 680, rev: 170, turn: 2.7, grip: 8.8, drift: 2.2, mass: 1.5, hp: 300, seats: 4, slots: [[-30, -11], [-30, 11]], price: 9000, rough: 0.35, sprite: 'pickup' },
+  movingvan: { i: 57, name: 'Haul-Away Moving Van', kind: 'car', L: 132, W: 56, max: 440, accel: 210, brake: 560, rev: 130, turn: 2.0, grip: 7.6, drift: 2.4, mass: 2.4, hp: 380, seats: 2, slots: [[-30, 0]], price: 8500, sprite: 'boxtruck' },
+  icecream:  { i: 58, name: 'Mr. Frosty Ice Cream Van', kind: 'car', L: 114, W: 54, max: 420, accel: 220, brake: 600, rev: 140, turn: 2.3, grip: 8.0, drift: 2.4, mass: 1.8, hp: 300, seats: 2, slots: [[-34, 0]], price: 6500, sprite: 'van' },
+  sailboat:  { i: 59, name: 'Gull 26 Sailboat', kind: 'boat', L: 118, W: 40, max: 340, accel: 110, brake: 160, rev: 70,  turn: 1.5, grip: 2.4, drift: 1.4, mass: 1.6, hp: 220, seats: 4, slots: [[-34, 0]], price: 9000, sprite: 'speedboat', crew: [[-42, 0], [-30, -9], [-30, 9], [-20, 0]] },
+  pontoon:   { i: 69, name: 'Sunday Pontoon',   kind: 'boat', L: 112, W: 52, max: 360, accel: 150, brake: 220, rev: 100, turn: 1.7, grip: 2.6, drift: 1.3, mass: 1.8, hp: 260, seats: 6, slots: [[-34, -12], [-34, 12], [26, -12], [26, 12]], price: 7500, sprite: 'dinghy', crew: [[8, 12], [8, -12], [-14, 14], [-14, -14], [-34, 14], [-34, -14]] },
+  trawler:   { i: 70, name: 'Fishing Trawler',  kind: 'boat', L: 150, W: 56, max: 380, accel: 120, brake: 180, rev: 90,  turn: 1.3, grip: 2.2, drift: 1.2, mass: 3.4, hp: 600, seats: 4, slots: [[-46, -12], [-46, 12], [-24, -12], [-24, 12]], price: 22000, sprite: 'speedboat' },
+  cabincruiser: { i: 71, name: 'Seaview 32 Cruiser', kind: 'boat', L: 128, W: 50, max: 520, accel: 220, brake: 240, rev: 110, turn: 1.8, grip: 2.4, drift: 1.2, mass: 2.2, hp: 380, seats: 4, slots: [[-44, -10], [-44, 10]], price: 26000, sprite: 'speedboat' },
+  rib:       { i: 72, name: 'Sport RIB',        kind: 'boat', L: 88,  W: 42, max: 640, accel: 330, brake: 300, rev: 130, turn: 2.4, grip: 2.9, drift: 1.2, mass: 1.2, hp: 300, seats: 4, slots: [[-30, 0]], price: 9000, sprite: 'dinghy', crew: [[-4, 5], [-4, -5], [-24, 6], [-24, -6]] },
+  // the aircraft's: the news crew's own helicopter, the air ambulance (a hospital's pad), the floatplane (it lands on water:
+  // floats - server aircraft.js, vehicles.js; the water rolls it at 0.4 of max: vr under that)
+  newsheli:  { i: 73, name: 'Channel 7 SkyCam', kind: 'air', air: 'heli', L: 150, W: 54, max: 720, accel: 340, brake: 400, rev: 0, turn: 1.9, grip: 8, drift: 2, mass: 1.6, hp: 320, seats: 3, slots: [[-34, 0]], climb: 170, sink: 200, ceiling: 1000, rotor: 76, livery: 'tv' },
+  medheli:   { i: 74, name: 'Mercy Air Ambulance', kind: 'air', air: 'heli', L: 156, W: 56, max: 740, accel: 350, brake: 400, rev: 0, turn: 2.0, grip: 8, drift: 2, mass: 1.7, hp: 380, seats: 4, slots: [[-36, 0]], climb: 175, sink: 205, ceiling: 1000, rotor: 78, siren: true, livery: 'med' },
+  seaplane:  { i: 75, name: 'Otter Floatplane', kind: 'air', air: 'plane', L: 128, W: 112, max: 880, accel: 200, brake: 300, rev: 0, turn: 1.3, grip: 8, drift: 2, mass: 1.5, hp: 300, seats: 4, slots: [[-34, 0]], climb: 135, sink: 200, ceiling: 900, vr: 320, stall: 280, bank: 0.75, span: 168, floats: true, livery: 'sea' },
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);
@@ -169,11 +159,9 @@ export const TRAFFIC_MIX = [
 // what's locked up at the street bike racks (server/systems/traffic.js)
 export const RACK_MIX = [['bicycle', 4], ['cruiser', 2], ['roadbike', 1.5], ['mtb', 1.5], ['bmx', 1], ['cargobike', 0.6]];
 // heavier on the highways and in the docks, yards and industrial districts
-export const TRUCK_MODELS = new Set(['flatbed', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'towtruck']);
+export const TRUCK_MODELS = new Set(['flatbed', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'towtruck', 'movingvan']);
 export const PARKED_MIX = [['sedan', 30], ['compact', 30], ['pickup', 15], ['van', 8], ['sports', 6], ['bike', 7], ['flatbed', 5]];
-// Which motorcycle it is, where (traffic.js swaps a mix's 'bike' for one of these, moving or parked): sport bikes
-// downtown and on the highways, scooters by the beach and in the busy centre, cruisers and baggers out on the rural and
-// desert roads, dirt bikes on the country tracks. By road kind first (hwy, dirt), then by the district's style.
+// Which motorcycle, where (traffic.js swaps a mix's 'bike' for one): by road kind (hwy, dirt), then the district's style.
 export const MOTO_MIX = {
   hwy: [['bike', 5], ['tourer', 2], ['vtwin', 2], ['bagger', 2], ['caferacer', 1], ['trike', 0.5]],
   dirt: [['dirtbike', 8], ['ratbike', 1]],
@@ -204,18 +192,13 @@ export function respray(v, rand) {
 }
 
 // ---- damage you can see (task #402) ----
-// The server decides how damaged a vehicle is; the clients draw it from one 32-bit word on the wire (a vehicle's
-// record's parent field, which vehicles don't otherwise use): bits 0-2 the stage (VDMG), 3-6 the sides it has been
-// hit on (VZ: the front, the back, the left side, the right side - dents and crumples go there), 7-9 how shot up it is
-// (bullet holes, 0-7), 10-15 the parts gone or hanging (VPART), 16-23 where a plasma blade cut it in two (0: it
-// wasn't; else the cut's place along it, 1 at the tail to 255 at the nose).
+// The clients draw it from one word (a vehicle record's parent field): bits 0-2 the stage (VDMG), 3-6 the sides hit (VZ),
+// 7-9 bullet holes, 10-15 parts gone or hanging (VPART), 16-23 where a plasma blade cut it (1 tail .. 255 nose; 0 not).
 export const VDMG = { NEW: 0, SCUFFED: 1, DENTED: 2, CRUMPLED: 3, HANGING: 4, BURNT: 5 };
 export const VZ = { F: 1, B: 2, L: 4, R: 8 };
 // BUMPER_F / BUMPER_B / BONNET: fallen off; DOOR_L / DOOR_R: hanging open; WHEEL: a buckled front wheel
 export const VPART = { BUMPER_F: 1, BUMPER_B: 2, DOOR_L: 4, DOOR_R: 8, BONNET: 16, WHEEL: 32 };
-// the stage from its health (0..1), whether its engine's dead and whether it's a wreck: scuffs below 85%, dents and a
-// cracked windscreen below 60%, a crumpled bonnet, smoke and the bumper hanging off below 35% (the SMOKE flag), a
-// door hanging and fire under the bonnet once the engine dies, the burnt-out shell once it's blown up
+// the stage from health (0..1), a dead engine and a wreck
 export const damageStage = (hp, dead, wreck) => (wreck ? 5 : dead ? 4 : hp < 0.35 ? 3 : hp < 0.6 ? 2 : hp < 0.85 ? 1 : 0);
 export const packVehDamage = (o) => ((o.stage & 7) | ((o.zones & 15) << 3) | ((o.holes & 7) << 7) | ((o.off & 63) << 10) | ((o.cut & 255) << 16)) >>> 0;
 export const unpackVehDamage = (w) => ({ stage: Math.min(5, (w >>> 0) & 7), zones: (w >>> 3) & 15, holes: (w >>> 7) & 7, off: (w >>> 10) & 63, cut: (w >>> 16) & 255 });

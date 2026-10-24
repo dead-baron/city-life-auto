@@ -105,7 +105,8 @@ export class WorkerPool {
   // answered (or failed).
   init(M, key = null, keep = null) {
     this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx, cacheMB: this.budget.stat, sprMB: this.budget.spr, modelMB: this.budget.model, artKey: (keep && keep.artKey) || null, keepCap: keepCap(this.lowMem),
-      cdn: (keep && keep.cdn) || null, saveData: !!(typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData), phone: isPhone() };   // (the art from the server: worker.js; a phone's bakes are slow - worth waiting for the server's)
+      cdn: (keep && keep.cdn) || null, saveData: !!(typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData), phone: isPhone(),   // (the art from the server: worker.js; a phone's bakes are slow - worth waiting for the server's)
+      art: { fleet: new URL('../fleet.js', import.meta.url).href, horse: new URL('../horse.js', import.meta.url).href } };   // (the newer art, loaded when a sprite first wants it: actors.js artFrom)
     let post = 0;
     const answers = this.workers.filter((w) => w.alive).map((w) => new Promise((res) => {
       const t = performance.now();

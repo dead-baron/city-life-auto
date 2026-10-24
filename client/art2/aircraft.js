@@ -23,13 +23,27 @@ const TAU = Math.PI * 2;
 const quant = (a, N) => ((Math.round(a / TAU * N) % N) + N) % N;
 // the game's aircraft -> the model and its look (HE1's liveries)
 export const TYPES = {
-  heli: { body: '#e9edf2', trim: '#2c55b8', lower: '#e9edf2', tip: '#f2c230', cam: true },
+  heli: { body: '#e9edf2', trim: '#2c55b8', lower: '#e9edf2', tip: '#f2c230' },   // (a private or charter Skylark: LIVERIES)
   policeheli: { body: '#1d1f24', trim: '#eef0f3', lower: '#1d1f24', tip: '#e8402e', bar: true, light: true },
   rescueheli: { body: '#d8382e', trim: '#f2f2f2', lower: '#d8382e', tip: '#f2f2f2', cross: true },
   gunship: { body: '#646a70', trim: '#80868c', lower: '#4c5157', tip: '#f2c230', gun: true },   // (grey: the owner's MV1, H78)
   plane: { body: '#f1f2f0', trim: '#c4302b', plane: true },
   duster: { body: '#f2c230', trim: '#2f7a3c', lower: '#e0a81e', plane: true, boom: true },   // (the crop duster: yellow, a green stripe, the spray boom)
+  // batch 4 (the owner: "Add more helicopter and plane looks"): the news crew's own (deep blue and gold, the camera
+  // turret under the nose, the dish on the roof, the mast), the air ambulance (white, a green band, the blue star of
+  // life on its doors, the beacon), the floatplane (on its floats)
+  newsheli: { body: '#1d3f8a', trim: '#f2c230', lower: '#e9edf2', tip: '#f2c230', cam: true, news: true },
+  medheli: { body: '#f4f4f0', trim: '#1f9a6a', lower: '#f4f4f0', tip: '#f2f2f2', med: true },
+  seaplane: { body: '#f1f2f0', trim: '#c8302c', plane: true, floats: true },
 };
+// the liveries a civil aircraft wears by its variant (the wire's vr): the Skylarks, the Larkspurs, the floatplanes
+export const LIVERIES = {
+  heli: [{}, { body: '#c8302c', trim: '#26282e', lower: '#c8302c' }, { body: '#26282e', trim: '#e0b040', lower: '#26282e', tip: '#e0b040' }, { body: '#f2c230', trim: '#2a2c32', lower: '#f2c230' }, { body: '#e9edf2', trim: '#2f8a5a', lower: '#e9edf2' }],
+  plane: [{}, { trim: '#2c55b8' }, { body: '#f2c230', trim: '#26282e' }, { body: '#ece4cc', trim: '#2f7a3c' }, { body: '#2a3448', trim: '#e8e8e4' }],
+  seaplane: [{}, { body: '#e8a020', trim: '#26282e' }, { body: '#2f6ab0', trim: '#f1f2f0' }],
+};
+export const liveryOf = (type, vr) => (LIVERIES[type] ? (((vr | 0) % LIVERIES[type].length) + LIVERIES[type].length) % LIVERIES[type].length : 0);
+const typeOf = (type, li) => (li && LIVERIES[type] ? { ...TYPES[type], ...LIVERIES[type][li] } : TYPES[type] || TYPES.heli);
 export const LIFT = 0.66;   // (render/aircraft.js V2_LIFT: px up the screen per px of altitude)
 const R6 = (h, n = 6, k = 3, o) => ramp(h, n, k, o);
 
@@ -93,7 +107,13 @@ function heliModel(type, T) {
   // the police one: the light bar on the roof, the searchlight under the nose; the news one: its camera ball
   if (T.bar) { m.box(L * 0.66, cy - 10, 40, L * 0.7, cy - 1, 43, M.red); m.box(L * 0.66, cy + 1, 40, L * 0.7, cy + 10, 43, M.blue); }
   if (T.light) { m.ell(L * 0.78, cy, 9, 5, 5, 4, M.dark); m.box(L * 0.81, cy - 3, 7, L * 0.83, cy + 3, 11, M.lamp); }
-  if (T.cam) m.ell(L * 0.8, cy, 10, 4, 4, 4, M.dark);
+  if (T.cam) m.ell(L * 0.8, cy, 10, T.news ? 5.5 : 4, T.news ? 5.5 : 4, T.news ? 5 : 4, M.dark);
+  if (T.news) { m.box(L * 0.83, cy - 2, 8, L * 0.85, cy + 2, 12, M.glass); m.cyl('z', L * 0.34, cy, 0, 5, 44, 46, M.white); m.ell(L * 0.34, cy, 47, 4, 4, 2, M.white); m.box(L * 0.46, cy - 0.5, 47, L * 0.47, cy + 0.5, 58, M.dark); }   // (the camera's lens, the dish, the mast)
+  if (T.med) {   // the star of life on each door, the beacon on the roof, the hoist's rail over the door
+    const sx = L * 0.6, sz = 26;
+    m.fill((x, y, z) => { if (Math.abs(y - cy) < hw * 0.6 || !m.get(Math.floor(x), Math.floor(y), Math.floor(z))) return -1; const dx = x - sx, dz = z - sz, r = Math.hypot(dx, dz), a = Math.atan2(dz, dx); return r < 6 * (0.42 + 0.58 * Math.abs(Math.cos(a * 3)) ** 3) ? M.blue : -1; }, Math.floor(sx - 7), 0, sz - 7, Math.ceil(sx + 7), W, sz + 7);
+    m.box(L * 0.5, cy - 2, 47, L * 0.53, cy + 2, 49, M.red);
+  }
   if (T.cross) { m.box(L * 0.5, cy - 4, 45, L * 0.54, cy + 4, 46, M.white); m.box(L * 0.48, cy - 1.5, 45, L * 0.56, cy + 1.5, 46, M.white); }   // (a white cross on the roof)
   // the gunship: stub wings, the rocket pods under them (red-tipped), the chin gun
   if (T.gun) {
@@ -165,6 +185,13 @@ function planeLevel(T, zo) {
   // the wheels: the main gear under the wing, the nose wheel
   for (const s of [-1, 1]) { m.cyl('y', L * 0.58, 0, zo + 5, 5, cy + s * 16 - 2, cy + s * 16 + 2, M.dark); for (let z = zo + 5; z < zb; z++) m.box(L * 0.58 - 1, cy + s * (16 - (z - zo - 5) * 0.5) - 1, z, L * 0.58 + 1, cy + s * (16 - (z - zo - 5) * 0.5) + 1, z + 1, M.metal); }
   m.cyl('y', L * 0.88, 0, zo + 4, 4, cy - 1.5, cy + 1.5, M.dark); m.box(L * 0.88 - 1, cy - 1, zo + 4, L * 0.88 + 1, cy + 1, zb, M.metal);
+  if (T.floats) {   // (the floatplane: the wheels' place taken by two long floats on their struts, pointed at the bow)
+    m.fill((x, y, z) => (z < zo + 6 ? 0 : -1), 0, 0, 0, L, W, zo + 6);
+    for (const s of [-1, 1]) {
+      m.fill((x, y, z) => { const t = x / L, r = 4.2 * (t > 0.82 ? Math.max(0.15, 1 - (t - 0.82) / 0.2) : t < 0.12 ? 0.4 + t * 5 : 1); return Math.hypot(y - cy - s * 17, (z - zo - 4) * 1.3) < r ? (z > zo + 5.5 ? M.trim : M.body) : -1; }, Math.floor(L * 0.08), Math.floor(cy + s * 17 - 6), 0, Math.ceil(L * 0.98), Math.ceil(cy + s * 17 + 6), zo + 9);
+      for (const x of [L * 0.45, L * 0.72]) for (let z = zo + 7; z < zb; z++) m.box(x, cy + s * (17 - (z - zo - 7) * 0.6) - 1, z, x + 2, cy + s * (17 - (z - zo - 7) * 0.6) + 1, z + 1, M.metal);
+    }
+  }
   m.box(L * 0.3, cy - 1, zb + 11, L * 0.34, cy + 1, zb + 13, M.red);   // (the beacon on the back)
   if (T.boom) {   // (the crop duster: the spray boom under the wing's trailing edge, its nozzles; the hopper's lid ahead of the cabin)
     for (let y = 8; y < W - 8; y++) { const z = zb + 12 + dz(y); m.box(L * 0.5, y, z, L * 0.52, y + 1, z + 1, M.dark); if (y % 9 === 0) m.box(L * 0.5, y, z - 2, L * 0.51, y + 1, z, M.metal); }
@@ -193,7 +220,7 @@ export function rotorModel(R, disc, tip) {
   return m;
 }
 
-export function bodyModel(type, o = {}) { const T = TYPES[type] || TYPES.heli; return T.plane ? planeModel(T, o.bank || 0) : heliModel(type, T); }
+export function bodyModel(type, o = {}) { const T = typeOf(type, o.li | 0); return T.plane ? planeModel(T, o.bank || 0) : heliModel(type, T); }
 
 // ---- made on the page: the models kept packed (compact), each heading rendered the first time it's wanted -----------------
 const MODELS = new Map(), MADE = new Map();
@@ -215,8 +242,8 @@ function compact(key, make, half, staged = false) {
   return C || null;
 }
 const BANKS = [-0.6, -0.3, 0, 0.3, 0.6];
-export function bodySprite(type, hi, N, bi, px, staged = false) {
-  const C = compact(`${type}|${bi}`, () => bodyModel(type, { bank: BANKS[bi] ?? 0 }), true, staged);
+export function bodySprite(type, hi, N, bi, px, staged = false, li = 0) {
+  const C = compact(`${type}|${bi}|${li}`, () => bodyModel(type, { bank: BANKS[bi] ?? 0, li }), true, staged);
   return C && trimSprite(renderCompact(C, hi * TAU / N, { dither: 0.35, px }));
 }
 export function rotorSprite(R, disc, tip, hi, N, px, staged = false) {
@@ -230,13 +257,13 @@ const altOf = (v) => (v._own && v.ralt !== undefined && v.ralt !== null ? v.ralt
 
 export function drawAir(H, v, now, me) {
   const def = VEHICLE_BY_INDEX[v.d.m], E = H.E, N = H.tier.N;
-  const type = def && TYPES[def.id] ? def.id : 'heli', T = TYPES[type], px = E.ap || 1;
+  const type = def && TYPES[def.id] ? def.id : 'heli', li = liveryOf(type, v.d.vr), T = typeOf(type, li), px = E.ap || 1;
   const alt = altOf(v), lift = Math.max(0, alt) * LIFT, f = v.flags | 0, hi = quant(v.ra, N);
   // the plane's bank: yours from the prediction, the others' from their turning (render/aircraft.js keeps v._bank)
   const bank = isPlane(def) ? (v._own ? v.rbank : v._bank) || 0 : 0, bi = Math.max(0, Math.min(4, Math.round(bank / 0.3) + 2));
-  const key = `air|${type}|${bi}|${hi}|${N}`;
-  let k = H._conv(key, () => bodySprite(type, hi, N, bi, px, true), true);
-  if (!k) k = H._near((h) => `air|${type}|${bi}|${h}|${N}`, hi, N) || H._near((h) => `air|${type}|2|${h}|${N}`, hi, N);
+  const key = `air|${type}${li}|${bi}|${hi}|${N}`;
+  let k = H._conv(key, () => bodySprite(type, hi, N, bi, px, true, li), true);
+  if (!k) k = H._near((h) => `air|${type}${li}|${bi}|${h}|${N}`, hi, N) || H._near((h) => `air|${type}${li}|2|${h}|${N}`, hi, N);
   if (!k) return false;
   const o = H.opts, z0 = lift + (alt < 1 ? H._z0(v, false) : 0) - (T.plane ? zoffOf(BANKS[bi]) : 0);
   o.alpha = 1; o.flash = 0; o.xray = !!me && alt < 30; o.flipX = false; o.shadow = alt < 6; o.under = 0; o.air = alt > 24;   // (off the ground its shadow is the overlay's: render/aircraft.js airShadow - the march would make a column of it)
@@ -270,6 +297,7 @@ export function airLights(H, v, now, night) {
   const T = TYPES[def.id] || TYPES.heli, alt = altOf(v), z = Math.max(0, alt) * LIFT, c = Math.cos(v.ra), s = Math.sin(v.ra);
   const at = (fx, fy) => [v.rx + c * fx - s * fy, v.ry + s * fx + c * fy];
   const k = 0.4 + 1.4 * night;
+  if (T.med && (f & (VF.SIREN | VF.BEACON)) && Math.floor(now * 3) % 2) { const [x, y] = at(-def.L * 0.06, 0); H._light(x, y, z + 48, 120, COL.red, 1.4 * k); }   // (the air ambulance's beacon on a call)
   if (T.bar && (f & VF.ROTOR)) { const [x, y] = at(def.L * 0.18, 0), red = Math.floor(now * 6) % 2; H._light(x, y, z + 44, 150, red ? COL.red : COL.blue, 1.6 * k); }
   if (Math.floor(now * 1.3 + v.id * 0.37) % 2) { const [x, y] = at(-def.L * 0.48, 0); H._light(x, y, z + 46, 50, COL.red, 0.9 * k); }
   if (T.plane) { const hs = (def.span || 168) / 2; let [x, y] = at(def.L * 0.12, -hs); H._light(x, y, z + 34, 46, COL.red, 0.9 * k); [x, y] = at(def.L * 0.12, hs); H._light(x, y, z + 34, 46, COL.green, 0.9 * k); }

@@ -106,7 +106,7 @@ export function news(world, A, p) {
   const a = world.rand() * Math.PI * 2, d = 1600;
   let x = p.ped.x + Math.cos(a) * d, y = p.ped.y + Math.sin(a) * d;
   for (let k = 0; k < 6 && inAnyView(world, x, y, 300); k++) { x = p.ped.x + Math.cos(a + k) * d * 1.3; y = p.ped.y + Math.sin(a + k) * d * 1.3; }
-  const v = world.spawnVehicle('heli', x, y, Math.atan2(p.ped.y - y, p.ped.x - x), {});
+  const v = world.spawnVehicle('newsheli', x, y, Math.atan2(p.ped.y - y, p.ped.x - x), {});   // (the news crew's own: batch 4)
   v.alt = AIR_TRAFFIC.newsAlt + 200; v.spool = 1;
   A.newsAt = world.time + AIR_TRAFFIC.newsEveryS;
   return start(world, A, v, { kind: 'news', mode: 'circle', pid: p.pid, th: a, x: p.ped.x, y: p.ped.y });

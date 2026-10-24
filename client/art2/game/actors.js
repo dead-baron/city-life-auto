@@ -40,15 +40,28 @@
 import { GBuf, F_NOCAST, F_GLASS, hash, bayer, norm, cutGBuf } from '../gbuf.js';
 import { Vox } from '../voxel.js';
 import { ramp, MAT } from '../palette.js';
-import { vehicleModel, vehicleAnchors, carPaint, patchHidden, paintSheen, VEHICLE_DIMS, PEDAL, MOTO } from '../vehicles.js';
+import { vehicleModel, vehicleAnchors, carPaint, patchHidden, paintSheen, VEHICLE_DIMS, PEDAL, MOTO, CIVIL_X } from '../vehicles.js';
 import { animalModel, renderUpright, ANIMALS } from '../animals.js';
 import { birdModel, BIRDS } from '../birds.js';
 import { FX, fxFrames, memo, muzzleFlash, tracer, wakeFrames } from '../fx.js';
 import { CRITTERS, critterFrames, shadowBlob } from '../critters.js';
 import { groundSprite as forageGround } from '../forage.js';
 import { VEHICLE_BY_INDEX, PAINTS, unpackVehDamage } from '../../../shared/vehicles.js';
-const ART = {};   // (useArt: ferrisCab, hotAirBalloon, starfish)
+const ART = {};   // (useArt: ferrisCab, hotAirBalloon, starfish; horseModel - loadArt)
 export function useArt(o) { Object.assign(ART, o); }
+// The newer art, loaded when first needed and out of the startup code (the renderer's and the bake workers'): the batch-4
+// fleet's models (../fleet.js: they add themselves to vehicles.js) and the horse (../horse.js). Whoever draws with this
+// module says how to load them (artFrom: the page's host.js, the workers from the URLs the pool sends them - pool.js);
+// the page loads the fleet the first time one is seen (vehType), a worker waits for what a sprite needs (needsArt).
+let LOAD = null, fleetP = null, horseP = null;
+export function artFrom(o) { LOAD = o; }
+const warn = (w) => (e) => { console.warn('[art2]', w, e); };
+export const loadFleet = () => (fleetP ||= LOAD ? LOAD.fleet().catch(warn('fleet')) : null);
+export const loadArt = () => Promise.all([loadFleet(), horseP ||= LOAD ? LOAD.horse().then((m) => useArt({ horseModel: m.horseModel }), warn('horse')) : null]);
+export function needsArt(kind, a) {
+  if (kind === 'vehicle') { const D = vehDef(a[0]); return !(a[0] && a[0].tt) && !VEHICLE_DIMS[D.id] && D.kind !== 'air' && !!LOAD; }
+  return kind === 'animal' && !ART.horseModel && !!LOAD && animalKind(a[0]).startsWith('horse');
+}
 
 const TAU = Math.PI * 2;
 
@@ -213,7 +226,13 @@ const WORK = new Set(['flatbed', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'ga
 const CABS = ['#e6e2d8', '#e6e2d8', '#c0402c', '#2f5a9a', '#e0b030', '#3f7a46', '#e6e2d8', '#8a8e96', '#e6e2d8', '#2c2e36'];
 export const vehDef = (d) => VEHICLE_BY_INDEX[d && d.m] || VEHICLE_BY_INDEX[1];
 // the art2 model for a game model (every game model has its own art2 model of the same id)
-export const vehType = (d) => { if (d && d.tt) return 'tankturret'; const id = vehDef(d).id; return VEHICLE_DIMS[id] ? id : 'sedan'; };   // (tt: a tank's turret, drawn on its own - H58)
+export const vehType = (d) => {
+  if (d && d.tt) return 'tankturret';
+  const D = vehDef(d);
+  if (VEHICLE_DIMS[D.id]) return D.id;
+  loadFleet();
+  return D.kind === 'boat' ? 'speedboat' : 'sedan';   // (until the fleet's in: a stand-in, keyed as itself)
+};   // (tt: a tank's turret, drawn on its own - H58)
 // st from the wire flags (shared/constants.js VF): the host may also pass its own object
 // dmg: the damage stage 0-4 (task #402: scuffed, dented, crumpled, the engine dead - a door hanging; the burnt shell is
 // the wreck) from the server's damage word dw (a vehicle record's parent field: shared/vehicles.js packVehDamage), with
@@ -244,7 +263,7 @@ export const towOf = (extra) => { const e = (extra | 0) & 3; return !e ? 0 : (e 
 const stKey = (s) => (s.tip ? 'P' : '') + (s.wreck ? 'W' : '') + (s.burn ? 'B' : '') + (s.lights ? 'L' : '') + (s.siren ? 'S' + s.siren : '') + (s.brake ? 'K' : '') + (s.rev ? 'R' : '') + (s.bloody ? 'X' : '') + (s.dmg ? 'D' + s.dmg + 'z' + s.zones + 'o' + s.off : '') + (s.holes ? 'H' + s.holes : '') + (s.half ? 'C' + s.cut + s.half : '') + (s.reel ? 'r' + s.reel : '') || '-';   // (reel: a combine's reel turning - a third of a bat a step)
 function vehLook(d) {
   const t = vehType(d), tn = d.tn ?? -1, p = (((d.p ?? 0) % PAINTS.length) + PAINTS.length) % PAINTS.length;
-  if (CIVIL.has(t)) return { t, paint: carPaint(PAINTS[tn >= 0 ? tn : p]) };
+  if (CIVIL.has(t) || CIVIL_X.has(t)) return { t, paint: carPaint(PAINTS[tn >= 0 ? tn : p]) };
   if (WORK.has(t)) return { t, cab: tn >= 0 ? carPaint(PAINTS[tn]) : p % 5 < 2 ? undefined : CABS[p % CABS.length] };   // 2 in 5 keep the model's own cab
   if (t === 'bus' && tn < 0) return { t, band: carPaint(PAINTS[p]) };   // a bus wears its line's colour in a band (server transit.js)
   return tn >= 0 ? { t, paint: carPaint(PAINTS[tn]) } : { t };
@@ -305,7 +324,7 @@ export function vehicleLights(d) {
 // otter on its back), climb 2 (a squirrel on a trunk), dead 1 (on its side); the game birds: peck 2, fly 4 (the
 // wingbeat), swim 2, alert 1, dead 1, dabble 2 (a duck up-ended on the water, feeding: its tail up, its feet paddling).
 const PET_ART = { dog_shepherd: 'shepherd', dog_golden: 'golden', dog_retriever: 'golden', dog_black: 'lab', dog_spaniel: 'spaniel', dog_pup: 'puppy', cat_black: 'catBlack', cat_grey: 'catTabby', cat_ginger: 'catGinger' };
-export const ANIMAL_FRAMES = { idle: 4, walk: 4, run: 4, sit: 2, lie: 2, graze: 2, alert: 1, stalk: 4, rear: 2, swim: 2, float: 2, climb: 2, dead: 1, peck: 2, fly: 4, cutA: 1, cutB: 1, hit: 1, limp: 4, down: 2, fall: 2, drink: 2, wade: 4, wadedrink: 2, strut: 2, swipe: 2, pounce: 2, crouch: 2, dive: 1, eatfish: 2, dabble: 2,
+export const ANIMAL_FRAMES = { idle: 4, walk: 4, run: 4, stride: 8, trot: 6, canter: 6, gallop: 6, sit: 2, lie: 2, graze: 2, alert: 1, stalk: 4, rear: 2, swim: 2, float: 2, climb: 2, dead: 1, peck: 2, fly: 4, cutA: 1, cutB: 1, hit: 1, limp: 4, down: 2, fall: 2, drink: 2, wade: 4, wadedrink: 2, strut: 2, swipe: 2, pounce: 2, crouch: 2, dive: 1, eatfish: 2, dabble: 2,
   // Nature-A2, the hunt: a heron's strike, its fish, poised over the water (w...: the same stood in the shallows); a
   // bird of prey soaring, stooping, carrying off its catch, in the water after a fish; a bear's salmon (a fox's mouse)
   // and its grab in the white water
@@ -322,6 +341,17 @@ export function animalKind(kind) {
   if (!ANIMALS[base] && !BIRDS[base]) return 'golden';
   if (base === 'horse' && v && /^[sc]\d$/.test(v)) return `horse:${v}`;   // (a horse's coat, saddled or not: animals.js - #325)
   return v === 'y' || v === 'L' || (v === 'f' && BIRDS[base]) ? `${base}:${v}` : base;   // (':f' a hen: the quail's plain brown hen)
+}
+// A ridden horse's gait by its speed (px/s): [pose, from px/s, strides per px] - the walk (four beats), the trot, the
+// canter (the horse's own pace: shared/rules.js HORSE.canter of its top speed) and the gallop (spurred) - each kept until
+// the speed is a little past the next's (no flicker at the edge); slower than the walk it stands. The legs' cycle runs
+// by the ground it covers (host.js _horse): a stride a cycle.
+export const HORSE_GAITS = [['stride', 6, 1 / 42], ['trot', 66, 1 / 78], ['canter', 172, 1 / 112], ['gallop', 300, 1 / 150]];
+export function horseGait(sp, was = '') {
+  const k = HORSE_GAITS.findIndex((q) => q[0] === was);
+  let g = -1;
+  for (let i = 0; i < HORSE_GAITS.length; i++) if (sp >= HORSE_GAITS[i][1] + (k < i ? 8 : -8)) g = i;   // (8 px/s past an edge to change up, below it to change down)
+  return g < 0 ? null : { pose: HORSE_GAITS[g][0], rate: HORSE_GAITS[g][2] };
 }
 const animPose = (pose) => (ANIMAL_FRAMES[pose] ? pose : pose === 'move' ? 'walk' : 'idle');
 const wrap8 = (d) => ((Math.round(d) % 8) + 8) % 8;
@@ -349,7 +379,8 @@ export function animalSprite(kind, pose = 'idle', dir8 = 0, frame = 0) {
   const cut = p === 'cutA' || p === 'cutB';
   if (cut) o = { pose: 'dead' };
   const mk = cut ? 'dead' : p;
-  const m = ANIMAL_MODELS.get(`${k}|${mk}|${p === mk ? f : 0}`, () => { const mm = bird ? birdModel(k, o) : animalModel(k, o); mm.bytes = mm.w * mm.d * mm.h * 17; return mm; });
+  const hm = !bird && ART.horseModel && k.split(':')[0] === 'horse';   // (a horse: its own model, client/art2/horse.js)
+  const m = ANIMAL_MODELS.get(`${k}|${mk}|${p === mk ? f : 0}`, () => { const mm = hm ? ART.horseModel(k, mk, p === mk ? f : 0, p === mk ? n : 1) : bird ? birdModel(k, o) : animalModel(k, o); mm.bytes = mm.w * mm.d * mm.h * 17; return mm; });
   // (a bird of prey up in the air, a heron in flight: seen more from above - the wings' full spread - than the people's
   // and the animals' character view on the ground)
   const air = bird && (AIRP.has(p) || (p === 'fly' && BIG_FLIERS.has(k.split(':')[0])));
