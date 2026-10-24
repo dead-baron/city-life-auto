@@ -5,20 +5,26 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
 import { APOSE } from '../shared/fauna.js';
-import { PET_REWARD } from '../shared/rules.js';
 import * as pets from '../server/systems/pets.js';
 import { _fields } from '../server/net.js';
 import { mulberry32 } from '../shared/rng.js';
 
+// a pet gone missing from a home near you (test/lostpets.test.js lostNear)
+function lostNear(w, p) {
+  for (const h of w.map.homes) {
+    if (!h || h.kind !== 'house') continue;
+    teleport(w, p.ped, h.x, h.y);
+    const pet = pets.spawnLost(w, p);
+    if (pet) return pet;
+  }
+  return null;
+}
 // a pet on your collar, walked right up to its owner
 function atTheOwner(seed = 1) {
   pets.setRng(mulberry32(seed));
   const w = makeWorld();
-  const shop = w.map.pois.find((q) => q.kind === 'coffee');
   const a = joinPlayer(w, { cash: 0 });
-  teleport(w, a.p.ped, shop.x, shop.y + 40);
-  let pet = null;
-  for (let k = 0; k < 20 && !pet; k++) pet = pets.spawnLost(w, a.p);
+  const pet = lostNear(w, a.p);
   assert.ok(pet, 'a pet went missing');
   const owner = w.get(pet.pet.owner);
   pet.pet.follow = a.p.ped.id;
@@ -35,7 +41,7 @@ test('handed back, the pet runs to its owner, races round them and hops up at th
   const act = players.findInteraction(w, a.p);
   assert.ok(act && /Give .* back/.test(act.label), act && act.label);
   act.run();
-  assert.equal(a.prof.cash, PET_REWARD, 'the reward');
+  assert.equal(a.prof.cash, pets.rewardFor(pet), 'the reward');
   assert.ok(w.get(pet.id), 'it is still there');
   assert.ok(pet.pet.home && !pet.pet.follow, 'off your collar, back with them');
   assert.ok(!pets.lostPets(w).includes(pet) && !(w.happenings || []).some((e) => e.kind === 'pet' && e.pet === pet.id), 'no longer lost, off the radar');
@@ -100,15 +106,13 @@ test('a pet whose owner is gone before it gets to them goes too, once nobody see
 test('a lost pet: its arrow lasts, and its owner is marked on the wire - for everyone near, and as the way home once you have it', async () => {
   const events = await import('../server/systems/events.js');
   const { EVENT_KINDS, EVENT_RANGE } = await import('../shared/worldevents.js');
-  assert.ok(EVENT_KINDS.pet.stay && EVENT_KINDS.petret.stay, 'the arrows to the pet and to its owner don\'t fade');
+  assert.ok(EVENT_KINDS.petret.stay && EVENT_KINDS.petarea.stay, 'the arrows to its last-seen area and to its owner don\'t fade');
   assert.ok(EVENT_KINDS.petown && EVENT_KINDS.petown.noArrow && EVENT_KINDS.petown.stay, 'the owner is marked for others, lasting, without an arrow of its own');
   pets.setRng(mulberry32(4));
   const w = makeWorld();
-  const shop = w.map.pois.find((q) => q.kind === 'coffee');
   const a = joinPlayer(w, { cash: 0 }), b = joinPlayer(w, { cash: 0 });
-  teleport(w, a.p.ped, shop.x, shop.y + 40);
-  let pet = null;
-  for (let k = 0; k < 20 && !pet; k++) pet = pets.spawnLost(w, a.p);
+  teleport(w, b.p.ped, 0, 0);
+  const pet = lostNear(w, a.p);
   assert.ok(pet, 'a pet went missing');
   const owner = w.get(pet.pet.owner);
   const list = (p) => events.forPlayer(w, p) || [];
@@ -122,7 +126,7 @@ test('a lost pet: its arrow lasts, and its owner is marked on the wire - for eve
   // far from everything: nothing of theirs
   teleport(w, b.p.ped, owner.x + EVENT_RANGE + 2000, owner.y);
   run(w, 0.3);
-  assert.ok(!list(b.p).some((e) => e.k === 'petown' || e.k === 'petret'), 'not marked for someone across town');
+  assert.ok(!list(b.p).some((e) => e.k === 'petown' || e.k === 'petret' || e.k === 'poster'), 'not marked for someone across town');
   // a takes the collar
   teleport(w, a.p.ped, pet.x + 20, pet.y);
   run(w, 0.1);
@@ -148,5 +152,5 @@ test('a lost pet: its arrow lasts, and its owner is marked on the wire - for eve
   run(w, 0.3);
   teleport(w, b.p.ped, owner.x + 200, owner.y);
   run(w, 0.3);
-  for (const p of [a.p, b.p]) assert.ok(!list(p).some((e) => e.k === 'pet' || e.k === 'petret' || e.k === 'petown'), 'home: no marker, no arrow');
+  for (const p of [a.p, b.p]) assert.ok(!list(p).some((e) => e.k === 'pet' || e.k === 'petret' || e.k === 'petown' || e.k === 'poster' || e.k === 'petarea'), 'home: no marker, no arrow, the posters down');
 });

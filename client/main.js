@@ -862,7 +862,8 @@ function onEvent(ev) {
       else if (ev.id !== S.myPedId) sfx('swing', distVol(ev.x, ev.y));
       break;
     }
-    case 'hop': { const e = S.ents.get(ev.id); if (e) e.hopAt = S.loopClock; break; }   // (over a fence: shared/fences.js; pedLook lifts them)
+    case 'hop': { const e = S.ents.get(ev.id); if (e) e.hopAt = S.loopClock; break; }
+    case 'collapse': { const e = S.ents.get(ev.id); if (e) { if (ev.k === 's') { e.reactAt = S.loopClock; e.reactD = ev.d; e.reactA = ev.a; } else { e.runAt = now; e.runK = 'F'; e.runD = ev.d; } } break; }   // (over a fence: shared/fences.js; pedLook lifts them)
     case 'fling': { const e = S.ents.get(ev.id); if (e) { e.flingAt = S.loopClock; e.flingDur = ev.d; e.flingK = ev.k; e.flingLanded = false; } break; }
     case 'bang': { const e = S.ents.get(ev.id); if (e) { e.bangAt = S.loopClock; e.bangK = ev.k; } break; }   // (fight in a cell: the bars rattled, a fist on the wall - server cells.js; the clang or thud: sound/events.js)
     case 'knockdown': {
@@ -2627,6 +2628,7 @@ function callCruiser() {
 // when it's on screen). Each arrow shows for ARROW_SHOW_S seconds from when it first appeared
 // and then fades, so an ignored event doesn't nag forever; the radar blip stays.
 const evSeen = new Map();
+let lostArt = 0;
 function drawEventArrows(g, list, z, now) {
   const me = selfPos();
   const tNow = performance.now() / 1000;
@@ -2640,6 +2642,10 @@ function drawEventArrows(g, list, z, now) {
     const age = tNow - evSeen.get(ev.id);
     const alpha = kind.stay || age < ARROW_SHOW_S - ARROW_FADE_S ? 1 : Math.max(0, (ARROW_SHOW_S - age) / ARROW_FADE_S);   // (stay: a lost pet's, till you have it or it's home)
     if (alpha <= 0) continue;
+    if (ev.k === 'poster' || ev.r) {
+      if (lostArt && lostArt !== 1) lostArt.mark(g, ev, kind, z, now); else if (!lostArt) { lostArt = 1; import('./lostposter.js').then((m) => { lostArt = m; }, () => { lostArt = 0; }); }
+      if (ev.k === 'poster') continue;
+    }
     if (ev.w) {   // a lost pet's owner: "Lost my dog!" over them (server/systems/pets.js targetFor)
       // (U17: a speech bubble - the navy plate, a light edge, its tail down to them - with a paw at its left)
       const o = S.ents.get(ev.e), on = o && o.rx !== undefined, t = `Lost my ${ev.w}!`, oy = (on ? o.ry : ev.y) - 50 - 24 / z + Math.sin(now * 4) * 2 / z, ox = on ? o.rx : ev.x, u = 1 / z;   // (clear above the head: drawWorldLabels)

@@ -153,6 +153,21 @@ export function dispatchPaid(world, ped, pid) {
   return null;
 }
 
+// Someone alive lying in the street (happenings.js: they collapsed and nobody helped): somebody calls an ambulance. The
+// crew treat them and take them away on the stretcher like anyone else (emsPatient: until they're helped up - then it
+// turns round). Null when none can get there.
+export function dispatchFor(world, ped) {
+  world.ambulances ??= new Set();
+  if (world.ambulances.size >= 3 || rescue.inWater(world.map, ped)) return null;
+  const k = kerbFor(world, ped.x, ped.y);
+  if (world.map.zoneAt(k.x, k.y) !== world.map.zoneAt(ped.x, ped.y)) return null;
+  for (const [lo, hi] of [[650, 1400], [500, 2200]]) {
+    const cands = starts(world, k, lo, hi);
+    if (cands.length) { ped.emsPatient = true; return launch(world, ped, cands[Math.floor(rng() * Math.min(4, cands.length))], k, world.time); }
+  }
+  return null;
+}
+
 // The downed player cancelled: the crew turns round (no charge).
 export function recall(world, vehId) {
   const v = world.get(vehId);
@@ -267,7 +282,7 @@ function runAmbulance(world, v, dt, now) {
 // lying there (parkSpot) - or as near as it can get. It has stopped before anyone gets out.
 function drive(world, v, ai, body, crew, now) {
   v.sirenOn = true;
-  if (!body || !body.dead || (ai.paid && !revive.isDowned(body))) { ai.mode = 'leave'; return; } // revived / finished / woke up elsewhere
+  if (!body || !(body.dead || body.emsPatient) || (ai.paid && !revive.isDowned(body))) { ai.mode = 'leave'; return; } // revived / finished / woke up elsewhere / helped up
   if (ai.stopping) {
     // pulling up: on the brakes with the driver still at the wheel (a van nobody's driving rolls on: vehicles.js), and
     // the doors open once it's standing
@@ -341,7 +356,7 @@ function holdClock(world, ai, body, now) {
 }
 
 // ---- keeping clear of anyone lying on the ground (task #435) ----------------------------------------------------------
-const lyingDown = (e, v) => e.kind === K.PED && e.dead && !e.removed && !e.vehId && !e.wild && !e.onTrain && sameLevel(e.lz, v.lz);
+const lyingDown = (e, v) => e.kind === K.PED && (e.dead || e.passedOut) && !e.removed && !e.vehId && !e.wild && !e.onTrain && sameLevel(e.lz, v.lz);
 function lyingNear(world, v, x, y, r = 260) {
   const out = [];
   for (const e of world.query(x, y, r, K.PED)) if (lyingDown(e, v)) out.push(e);
@@ -534,7 +549,7 @@ function backOf(world, v) {
 function scene(world, v, ai, body, crew, dt, now) {
   halt(v); v.beaconOn = true; waterGuard(world, v);
   const T = live(world, ai.treater) || crew[0], P = live(world, ai.porter) || crew[crew.length - 1];
-  const patientOk = body && body.dead && !body.removed && (!ai.paid || revive.isDowned(body)) && !body.npc?.onStretcher;
+  const patientOk = body && (body.dead || body.emsPatient) && !body.removed && (!ai.paid || revive.isDowned(body)) && !body.npc?.onStretcher;
   if (now - ai.sceneAt > SCENE_MAX + 2.5 * walkS(ai)) ai.step = 'back';
   if ((ai.step === 'out' || ai.step === 'treat') && !patientOk) { ai.step = 'back'; ai.stepAt = now; }
   if (ai.step === 'out' || ai.step === 'treat') {

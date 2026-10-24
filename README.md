@@ -81,6 +81,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Blades: slash with a knife, a sword (pawn shops) or a katana (the fence). A killing blow is now and then a finishing stab or slash; the plasma blade cuts clean through and now and then turns a bullet aside | Left click | RT | FIRE |
 | Plasma blade colour: blue to start, or red, green, purple, yellow, orange, cyan, pink or white - kept with your character, everyone sees it (the blade, its light and its arcs) | Esc → Settings → Plasma blade colour, or the swatches under the blade in the bag (I) | Start → Settings → Plasma blade colour, or the bag (D-pad →) | ⚙ → Plasma blade colour, or 🎒 |
 | Speak to the hooded stranger (rare: at night, somewhere quiet in the wilds; he sells the plasma blade) | E | B | ACT |
+| Lost pets: read a "Lost dog / cat" poster on a pole, a noticeboard or a wall (its last-seen area goes on your map); take its collar when you find it and hand it back at the owner's door; with it at heel and nothing else to do, let it go | E | B | ACT |
+| Help someone who collapsed on the pavement back to their feet | Hold E | Hold B | Hold ACT |
 | Light a campfire / sit by a lit one to warm up and heal (any step gets you up) / sitting, put it out | E | B | ACT |
 | Train: board at a station / hop on alongside · walk through the cars (roof comes off) · get off or leap off · crack the mail-car strongbox | E · WASD · F · E | B · left stick · X · B | ACT · left thumb · CAR · ACT |
 | Bus: board at a stop while one waits there (free; the prompt at the stop says when the next comes) · get off at a stop | E · F | B · X | ACT · CAR |

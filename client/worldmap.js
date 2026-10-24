@@ -291,6 +291,7 @@ class WorldMap {
         const kind = EVENT_KINDS[ev.k];
         if (!kind) continue;
         const [x, y] = P(ev.x, ev.y);
+        if (ev.r) { g.strokeStyle = kind.color; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, ev.r * sc, 0, 6.28); g.stroke(); g.setLineDash([]); }
         const ph = (now / 900) % 1;
         g.strokeStyle = kind.color; g.globalAlpha = 1 - ph; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6 + ph * 14, 0, 6.28); g.stroke(); g.globalAlpha = 1;
         g.fillStyle = kind.color; g.strokeStyle = '#0a0f1d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 7, 0, 6.28); g.fill(); g.stroke();

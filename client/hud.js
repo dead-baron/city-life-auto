@@ -474,6 +474,7 @@ export class HUD {
         const kind = EVENT_KINDS[ev.k];
         if (!kind) continue;
         let [x, y] = toR(ev.x, ev.y);
+        if (ev.r) { g.strokeStyle = kind.color; g.lineWidth = 1.5; g.setLineDash([4, 3]); g.beginPath(); g.arc(x, y, ev.r * scale, 0, 6.28); g.stroke(); g.setLineDash([]); }
         const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 7;
         if (d > lim && !big) { x = size / 2 + dx / d * lim; y = size / 2 + dy / d * lim; }
         const ph = (performance.now() / 900) % 1;
