@@ -83,7 +83,11 @@ test('World v3: every river system runs to the sea; gravel bars on the bends, cu
   // no pavement out in the country: not on the wild, the farm or the desert districts' tiles, nor along the unbuilt
   // Sandpiper Coast's road; the beach towns keep theirs
   const walk = new Map();
-  for (let i = 0; i < N; i++) if (m.tiles[i] === T.SIDEWALK) walk.set(m.dist[i], (walk.get(m.dist[i]) || 0) + 1);
+  // (a main-line station's street and car park keep their pavements: the passengers walk to the platforms - 2026-10-23,
+  // shared/world3-stations.js)
+  const stations = (m.world3?.stations || []).filter((q) => q.house).map((q) => [q.house.x / TILE, q.house.y / TILE]);
+  const byStation = (i) => { const x = (m.x0 || 0) + i % W, y = (m.y0 || 0) + Math.floor(i / W); return stations.some(([sx, sy]) => Math.abs(x - sx) < 48 && Math.abs(y - sy) < 48); };
+  for (let i = 0; i < N; i++) if (m.tiles[i] === T.SIDEWALK && !byStation(i)) walk.set(m.dist[i], (walk.get(m.dist[i]) || 0) + 1);
   for (const d of [47, 48, 49, 50, 51, 53, 56]) assert.ok((walk.get(d) || 0) < 400, `no country pavements in district ${d} (${walk.get(d) || 0})`);
   assert.ok((walk.get(52) || 0) < 1200, `the Sandpiper Coast's road without pavements (${walk.get(52) || 0}: what's left are the towns' own streets that run into it, Elm Street's and Pier Street's - 8,259 before)`);
   assert.ok((walk.get(54) || 0) > 2000, `the beach towns keep their pavements (${walk.get(54) || 0})`);
