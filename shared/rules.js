@@ -620,6 +620,12 @@ export const NPC_GUARD = { chance: { fists: 0.22, bat: 0.3, sword: 0.35, katana:
 // away) and a garage won't keep one.
 export const WORK_TRUCK_RETURN = 150;
 export const WORK_TRUCK = { returnR: 240, returnS: 900, searchR: 1400 };
+// A job's vehicle recalled (the owner, 2026-10-23: "Canceling a job should make you have to give up the vehicle like a
+// helicopter"; server jobs.js recall): a job that ends undone - cancelled, quit, expired, lost - and a return window run
+// out take back what the job issued. On the ground you're set down beside it outS seconds after (a moment to pull over);
+// a boat once it's by a shore or a pier (and slower than slowPx px/s); an aircraft only once it's down on the ground -
+// never in mid-air. Nobody aboard: it's gone goneS seconds later. remindS: how often you're told while it waits.
+export const RECALL = { outS: 3, goneS: 4, slowPx: 70, remindS: 25 };
 // Safety mode (server safety.js): the first act that would be a crime only warns; pressing again within confirmS does it
 export const SAFETY_CONFIRM_S = 4;
 

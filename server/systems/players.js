@@ -418,6 +418,21 @@ export function wipeAccount(world, p) {
 // idling. (Here, not in shared/rules.js: server-only numbers - see AWAY_SECONDS.)
 export const IDLE_WARN_MS = 9 * 60e3, IDLE_KICK_MS = 10 * 60e3;
 export const IDLE_CLOSE = 4006;
+// Along for the ride (the owner, 10-23: "riding the train for 10 minutes kicked me out for idling"): a passenger - on a
+// train, a bus, a ferry, in a cab or anyone's back seat, up in a balloon or on the wheel - or watching the cinematic
+// mode's tour (client/director.js) sits still for a while without being away: their idle clock runs at IDLE_RIDE_RATE
+// (a third as fast: asked after 27 minutes aboard, gone at 30). The rest of the time it runs as before.
+export const IDLE_RIDE_RATE = 1 / 3;
+export function riding(world, p) {
+  const ped = p.ped;
+  if (!ped || ped.dead) return false;
+  if (ped.onTrain || ped.ride) return true;   // (the trains and the subway; the Ferris wheel, a balloon flight - rides.js)
+  if (p.cineTourMs && Date.now() - p.cineTourMs < 90e3) return true;   // (the tour going: the page says so every minute)
+  const v = ped.vehId ? world.get(ped.vehId) : null;
+  if (!v) return false;
+  if (ped.seat > 0) return true;   // (a passenger: a bus, a cab, a ferry, someone's car)
+  return !!(v.onDeck || v.ferry);   // (in your car on a ferry's deck)
+}
 export function stillHere(p) { p.activeAtMs = Date.now(); p.idleWarned = false; }
 export function queueInput(p, inp) {
   if (inp.seq <= p.ack) return;
@@ -598,7 +613,12 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   // the vehicle button: into a vehicle in reach; with none, on or off your skateboard (off it, into the vehicle by you)
   if ((pressed & IN.VEHICLE) && !revive.tryFinish(world, p)) {
     if (ped.board) { skate.hopOff(world, ped); if (vehicles.nearestVehicle(world, ped, 56)) vehicles.playerEnter(world, ped); }
-    else if (!vehicles.nearestVehicle(world, ped, 56) && skate.has(p)) skate.hopOn(world, p, ped);
+    else if (!vehicles.nearestVehicle(world, ped, 56) && skate.has(p)) {
+      // (indoors there's no riding - and the vehicle button by the pool table, the bar, a counter does what Act would
+      // rather than say so: the owner, 10-23, "Tried playing pool and it said you can't do it indoors")
+      const act = skate.indoors(world, ped) ? findInteraction(world, p) : null;
+      if (act && act.run && !act.passive) doAct(world, p); else skate.hopOn(world, p, ped);
+    }
     else vehicles.playerEnter(world, ped);   // (Safety mode asks first when it'd be a crime)
   }
   if (pressed & IN.ACTION) {   // (step off to do it - but at a skate spot, the session there: on the board)
@@ -859,10 +879,13 @@ function idleCheck(world) {
   const t = Date.now();
   for (const p of world.players.values()) {
     if (!p.conn || !p.conn.open) continue;
-    if (!p.activeAtMs) { p.activeAtMs = t; continue; }
+    if (!p.activeAtMs) { p.activeAtMs = t; p.idleAtMs = t; continue; }
+    const step = Math.max(0, Math.min(5e3, t - (p.idleAtMs || t)));   // (since the last look - a stalled server's gap isn't counted in full)
+    p.idleAtMs = t;
+    if (step && riding(world, p)) p.activeAtMs = Math.min(t, p.activeAtMs + step * (1 - IDLE_RIDE_RATE));   // (riding: the clock runs slow)
     const idle = t - p.activeAtMs;
     if (idle >= IDLE_KICK_MS) {
-      try { p.conn.sendJSON({ t: 'kicked', reason: 'You were idle for 10 minutes, so you were disconnected.', idle: 1 }); p.conn.close(IDLE_CLOSE, 'idle'); } catch { /* gone */ }
+      try { p.conn.sendJSON({ t: 'kicked', reason: `You were idle for ${riding(world, p) ? 'half an hour along for the ride' : '10 minutes'}, so you were disconnected.`, idle: 1 }); p.conn.close(IDLE_CLOSE, 'idle'); } catch { /* gone */ }
       p.activeAtMs = t;
     } else if (idle >= IDLE_WARN_MS && !p.idleWarned) {
       p.idleWarned = true;

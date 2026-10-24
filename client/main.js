@@ -9,7 +9,7 @@ import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
-import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
+import { VEHICLE_BY_INDEX, vehicleWord } from '../shared/vehicles.js';
 import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb } from '../shared/items.js';
 import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
@@ -4787,12 +4787,14 @@ function tagPlate(x, cy, tw, u) {
   g.beginPath(); g.rect(bx, by, tw, 22 * u); g.moveTo(x - 6 * u, bb); g.lineTo(x, bb + 7 * u); g.lineTo(x + 6 * u, bb); g.stroke(); g.fill();
   g.strokeStyle = '#c9d6ee'; g.lineWidth = 2 * u; g.beginPath(); g.moveTo(x - 6 * u, bb); g.lineTo(bx, bb); g.lineTo(bx, by); g.lineTo(bx + tw, by); g.lineTo(bx + tw, bb); g.lineTo(x + 6 * u, bb); g.lineTo(x, bb + 6 * u); g.closePath(); g.stroke();
 }
-// (U17: two dashed ellipses round it, turned with it, and a "YOUR TRUCK" plate above)
-function drawJobTruck([x, y], view, now, z, vehs) {
+// (U17: two dashed ellipses round it, turned with it, and a "YOUR TRUCK" plate above - "YOUR HELICOPTER", "YOUR CAB"...: the
+// vehicle's word, from the one in view or the model the server sends with the mark)
+function drawJobTruck([x, y, m3], view, now, z, vehs) {
   const col = '#45b8ff', m = 64 + 30 / z, x0 = view.x0 + m, x1 = view.x1 - m, y0 = view.y0 + m, y1 = view.y1 - m, u = 1 / z;
   let v = null;
   for (const q of vehs || []) if (Math.abs(q.rx - x) < 60 && Math.abs(q.ry - y) < 60) { v = q; break; }
-  const def = v ? VEHICLE_BY_INDEX[v.d.m] : null, L = def ? def.L : 150, W = def ? def.W : 60, ra = v ? v.ra : 0;
+  const def = v ? VEHICLE_BY_INDEX[v.d.m] : VEHICLE_BY_INDEX[m3] || null, L = def ? def.L : 150, W = def ? def.W : 60, ra = v ? v.ra : 0;
+  const plate = `YOUR ${vehicleWord(def).toUpperCase()}`;   // (by what it is: your helicopter, your cab - shared/vehicles.js)
   if (v) { x = v.rx; y = v.ry; }
   g.save(); g.lineWidth = 3 * u; g.setLineDash([12 * u, 7 * u]); g.lineDashOffset = -now * 24 * u;
   let hh = 0;
@@ -4805,8 +4807,8 @@ function drawJobTruck([x, y], view, now, z, vehs) {
   g.setLineDash([]); g.globalAlpha = 1;
   g.font = `700 ${13 * u}px "CLA Pixel", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
   const ty = y - hh - 26 * u;
-  tagPlate(x, ty, g.measureText('YOUR TRUCK').width + 20 * u, u);
-  g.fillStyle = '#fff'; g.fillText('YOUR TRUCK', x, ty + u);
+  tagPlate(x, ty, g.measureText(plate).width + 20 * u, u);
+  g.fillStyle = '#fff'; g.fillText(plate, x, ty + u);
   if (x < x0 || x > x1 || y < y0 || y > y1) {
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, dx = x - cx, dy = y - cy, k = Math.min((x1 - cx) / (Math.abs(dx) || 1e-6), (y1 - cy) / (Math.abs(dy) || 1e-6)), s = 18 / z;
     g.translate(cx + dx * k, cy + dy * k); g.rotate(Math.atan2(dy, dx)); g.globalAlpha = 0.8 + 0.2 * Math.sin(now * 6);

@@ -42,3 +42,38 @@ test('idle: a clock jumped on in the game (a test, a skip) isn\'t idling', () =>
   step(w);
   assert.ok(p.conn.open, 'still connected');
 });
+
+// (the owner, 10-23: "riding the train for 10 minutes kicked me out for idling"): along for the ride - a passenger - the
+// idle clock runs a third as fast: still there after ten minutes aboard, asked at twenty-seven, gone at thirty; at the wheel
+// it's the ten minutes as ever
+test('idle: a passenger isn\'t idling at ten minutes - the clock runs slow along for the ride; at the wheel it doesn\'t', () => {
+  const w = makeWorld();
+  const real = Date.now;
+  let now = real();
+  Date.now = () => now;
+  try {
+    const { p } = joinPlayer(w);
+    step(w, 20);
+    const v = w.spawnVehicle('sedan', p.ped.x + 60, p.ped.y, 0, { npcOwned: false });
+    v.seats[1] = p.ped.id; p.ped.vehId = v.id; p.ped.seat = 1;
+    assert.ok(players.riding(w, p), 'a passenger: riding');
+    players.stillHere(p);
+    const mins = (m) => { const until = now + m * 60e3; while (now < until && p.conn.open) { now += 5e3; step(w, 20); } };
+    mins(10.5);
+    assert.ok(p.conn.open && !p.idleWarned, 'ten and a half minutes aboard: still here, not even asked');
+    mins(17);
+    assert.ok(p.conn.open && p.idleWarned, 'twenty-seven and a half: still there?');
+    mins(3);
+    assert.ok(!p.conn.open, 'half an hour: gone');
+    // at the wheel: ten minutes, as before
+    const q = joinPlayer(w).p;
+    step(w, 20);
+    const v2 = w.spawnVehicle('sedan', q.ped.x + 60, q.ped.y, 0, { npcOwned: false });
+    v2.seats[0] = q.ped.id; q.ped.vehId = v2.id; q.ped.seat = 0;
+    assert.ok(!players.riding(w, q), 'at the wheel: not riding');
+    players.stillHere(q);
+    const mins2 = (m) => { const until = now + m * 60e3; while (now < until && q.conn.open) { now += 5e3; step(w, 20); } };
+    mins2(10.2);
+    assert.ok(!q.conn.open, 'ten minutes at the wheel doing nothing: gone');
+  } finally { Date.now = real; }
+});

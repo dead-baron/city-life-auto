@@ -675,7 +675,7 @@ function sideSpot(v, ped) {
 // A bridge tile is two layers (map.js T.BRIDGE): the deck up top and the water under it. A boat is down on the water,
 // so from a boat a bridge is no place to step out onto (task #381: it put you up on the deck from under it) - only
 // dry ground or a pier is; failing that it's over the side into the water (ejectPed: under the deck, swimming).
-function findExitSpot(world, v, ped, maxR, toward = null) {
+export function findExitSpot(world, v, ped, maxR, toward = null) {   // (jobs.js recall: whether a boat is by somewhere to step off)
   const hw = v.def.W / 2 + 16, hl = v.def.L / 2 + 16;
   if ((v.lz || 0) > 0.3) return null; // up on the deck: step out beside it (the barriers keep you on)
   const cands = [[0, -hw], [0, hw], [-hl, 0], [hl, 0], [-hl / 2, -hw], [-hl / 2, hw]].map(([lx, ly]) => localToWorld(v.x, v.y, v.a, lx, ly));

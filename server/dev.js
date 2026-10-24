@@ -114,24 +114,50 @@ export const NEAR_KINDS = {
   surf: (m) => surf.breaksOfMap(m).list.map((b) => { const q = breakPt(b, 0, SURF.brk + 70); return { x: q.x, y: q.y, name: 'a surf break', exact: true, give: 'surfboard' }; }),
   vault: (m) => (m.walkIns || []).map((id) => m.buildings[id]).filter((b) => b && vaultOf(b)).map((b) => { const v = vaultOf(b), q = m.pois[v.u.poi]; return { x: v.sx, y: v.sy, name: `${q ? q.label : 'a bank'}'s vault`, exact: true }; }),
 };
-// a district's middle by its name (lower case; the first whose name it is, else starts with): the mean of its tiles,
-// sampled every 6th, kept on the world - the nearest of its own tiles to that (a crescent's middle can be outside it)
+// a district's middle by its name (lower case; the districts whose name it is, else those it starts): the mean of its
+// tiles, sampled every 6th, kept on the world - the nearest of its own tiles to that (a crescent's middle can be outside
+// it). A name can be on more than one district (World v3 keeps today's city's list and adds its own - Highland Woods,
+// Granite Peaks: the owner, 10-23, "No Granite Peaks for World v3"): the one with the most ground on this map.
 function districtMiddle(world, n) {
-  const id = DISTRICTS.findIndex((d) => d && d.name && d.name.toLowerCase() === n), id2 = id >= 0 ? id : DISTRICTS.findIndex((d) => d && d.name && d.name.toLowerCase().startsWith(n));
-  if (id2 < 0) return null;
-  const C = (world.distMid ||= new Map());
-  if (!C.has(id2)) {
-    const m = world.map, pts = [];
-    for (let ty = m.y0; ty < m.y0 + m.h; ty += 6) for (let tx = m.x0; tx < m.x0 + m.w; tx += 6) { const i = m.idx(tx, ty); if (m.dist[i] === id2 && m.land[i]) pts.push([tx, ty]); }
-    let q = null;
-    if (pts.length) {
-      const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length, cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
-      let bd = Infinity;
-      for (const [tx, ty] of pts) { const d = (tx - cx) ** 2 + (ty - cy) ** 2; if (d < bd) { bd = d; q = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, name: DISTRICTS[id2].name }; } }
+  let ids = DISTRICTS.map((d, i) => (d && d.name && d.name.toLowerCase() === n ? i : -1)).filter((i) => i >= 0);
+  if (!ids.length) ids = DISTRICTS.map((d, i) => (d && d.name && d.name.toLowerCase().startsWith(n) ? i : -1)).filter((i) => i >= 0);
+  if (!ids.length) return null;
+  const C = (world.distMid ||= new Map()), key = ids.join(',');
+  if (!C.has(key)) {
+    const m = world.map, want = new Set(ids), pts = new Map();
+    for (let ty = m.y0; ty < m.y0 + m.h; ty += 6) for (let tx = m.x0; tx < m.x0 + m.w; tx += 6) {
+      const i = m.idx(tx, ty), d = m.dist[i];
+      if (want.has(d) && m.land[i]) { if (!pts.has(d)) pts.set(d, []); pts.get(d).push([tx, ty]); }
     }
-    C.set(id2, q);
+    let q = null, most = 0;
+    for (const [id, P] of pts) {
+      if (P.length <= most) continue;
+      most = P.length;
+      const cx = P.reduce((s, p) => s + p[0], 0) / P.length, cy = P.reduce((s, p) => s + p[1], 0) / P.length;
+      let bd = Infinity;
+      for (const [tx, ty] of P) { const d = (tx - cx) ** 2 + (ty - cy) ** 2; if (d < bd) { bd = d; q = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, name: DISTRICTS[id].name }; } }
+    }
+    C.set(key, q);
   }
-  return C.get(id2);
+  return C.get(key);
+}
+// A place by its name (the debug menu's 'place', the cinematic mode's staged scenes - client/director.js): a place or
+// sight of World v3's handcrafted districts (map.world3hand), a landmark, a district - the one named exactly first (a
+// scene's "Midtown" is the district, not Midtown Houses), then the first whose name has it in it.
+export function placeNamed(world, name) {
+  const n = String(name || '').toLowerCase().trim(), m = world.map;
+  if (!n) return null;
+  const all = [];
+  for (const H of Object.values(m.world3hand || {})) {
+    for (const pl of (H && H.places) || []) if (pl.name) all.push({ x: ((pl.x0 + pl.x1) / 2) * TILE, y: ((pl.y0 + pl.y1) / 2) * TILE, name: pl.name });
+    for (const sg of (H && H.sights) || []) if (sg.name) all.push({ x: sg.x, y: sg.y, name: sg.name });
+  }
+  for (const l of m.landmarks || []) if (l.name) all.push({ x: l.x + (l.w || 0) / 2, y: l.y + (l.h || 0) / 2, name: l.name });
+  const exact = all.find((q) => q.name.toLowerCase() === n);
+  if (exact) return exact;
+  const d = DISTRICTS.some((q) => q && q.name && q.name.toLowerCase() === n) ? districtMiddle(world, n) : null;
+  if (d) return d;
+  return all.find((q) => q.name.toLowerCase().includes(n)) || districtMiddle(world, n);
 }
 // the stops of every line on the map (one each: a hub's stop is shared by the loops through it), those keep(stop, rail) takes
 function railStops(m, keep) {
@@ -202,8 +228,9 @@ function setScene(world, ped, scene, k = 0) {
       const W = water();
       if (!W) return null;
       const kind = scene === 'bear' ? 'blackbear' : scene;
-      const pt = scene === 'otter' ? W : wildlife.edgeSpot(world.map, W.x, W.y) && { x: W.x, y: W.y };
-      const g = scene === 'otter' ? W : standAt(world, pt.x, pt.y, 300);
+      const e = scene === 'otter' ? null : wildlife.edgeSpot(world.map, W.x, W.y);   // ([x, y] on the bank of fresh water, or null: none near)
+      if (scene !== 'otter' && !e) return null;   // (it threw here: "Cannot read properties of null" - the owner's bear scene)
+      const g = scene === 'otter' ? W : standAt(world, e[0], e[1], 300);
       if (!g) return null;
       const a = wildlife.spawnAnimal(world, kind, g.x, g.y, 0, { lead: true });
       a.wild.calmUntil = 0;
@@ -423,7 +450,51 @@ export function blastTest(world, p, k) {
 
 // Find a clear spot near the player for a dev-spawned vehicle (never inside buildings).
 
+// ---- one at a time (the owner, 2026-10-23: "Debug spawning airplanes you can fly in lets you spawn infinite airplanes. In
+// general let's not let players spawn infinite debug items like planes or shopping cart crashes. Maybe put a cool down
+// timer on debug spawns"): what the debug menu makes you is yours one of a kind at a time - a new plane takes your last
+// one away (a car your last car, a boat your last boat; the carts and their riders, a damaged car, a loaded flatbed
+// likewise: SPAWN_KEYS), unless someone's aboard it. The staged happenings that bring cars and people in (a street race or
+// chase, a shootout, a fight, a mugging: EVENT_KEYS) have a cool-down: one at a time, DEV_SPAWN.eventS apart.
+export const DEV_SPAWN = { eventS: 5 };
+const VCLASS = (m) => { const d = VEHICLES[m] || VEHICLES.pickup; return d.kind === 'air' ? 'air' : d.kind === 'boat' ? 'boat' : 'land'; };
+const SPAWN_KEYS = { car: (msg) => `car:${VCLASS(msg.m)}`, cargo: () => 'cargo', vdmg: () => 'vdmg', boom: () => 'boom', cart: () => 'cart' };
+const EVENT_KEYS = new Set(['street', 'happen', 'shootout', 'snatch']);
 export function command(world, p, c, msg) {
+  const vk = SPAWN_KEYS[c] ? SPAWN_KEYS[c](msg || {}) : null;
+  if (!vk && !EVENT_KEYS.has(c)) return run(world, p, c, msg);
+  const D = (p.devSpawn ||= { at: {}, made: {} }), now = world.time;
+  if (!vk) {
+    const k = `ev:${c}`, left = DEV_SPAWN.eventS - (now - (D.at[k] ?? -1e9));
+    if (left > 0) { world.notify(p, `[dev] One at a time - try again in ${Math.ceil(left)} s.`, 'warn'); return; }
+    D.at[k] = now;
+    return run(world, p, c, msg);
+  }
+  const key = vk;
+  // (what it makes, caught as it's made: the vehicles, and the people sat in them - the carts' riders)
+  const made = [], had = Object.prototype.hasOwnProperty.call(world, 'spawnVehicle') || Object.prototype.hasOwnProperty.call(world, 'spawnPed');
+  if (!had) {
+    world.spawnVehicle = function (...a) { const e = Object.getPrototypeOf(world).spawnVehicle.apply(world, a); made.push(e.id); return e; };
+    world.spawnPed = function (...a) { const e = Object.getPrototypeOf(world).spawnPed.apply(world, a); made.push(e.id); return e; };
+  }
+  try { run(world, p, c, msg); } finally { if (!had) { delete world.spawnVehicle; delete world.spawnPed; } }
+  if (!made.length) return;   // (nothing made - no room, say: the last ones stay)
+  for (const id of D.made[key] || []) takeBack(world, p, id);
+  D.made[key] = made;
+}
+// one the debug menu made you before, taken away - not with anyone but its own NPCs aboard (then it's left to be tidied up)
+function takeBack(world, p, id) {
+  const e = world.get(id);
+  if (!e || e.removed) return;
+  if (e.kind === K.VEH) {
+    if (e.seats.some((s) => { const q = s ? world.get(s) : null; return q && q.player; })) { e.despawnable = true; return; }
+    for (const s of e.seats) { const q = s ? world.get(s) : null; if (q && q.npc) npc.despawnNpc(world, q); }
+    for (const cid of e.cargo) { const cr = cid ? world.get(cid) : null; if (cr) world.remove(cr); }   // (its load went with it: the dev's own crates)
+    world.remove(e);
+  } else if (e.kind === K.PED && e.npc) npc.despawnNpc(world, e);
+}
+
+function run(world, p, c, msg) {
   const ped = p.ped;
   const prof = p.profile;
   const lt0 = world.loopTime;
@@ -719,14 +790,7 @@ export function command(world, p, c, msg) {
     case 'place': {   // a place by its name: World v3's handcrafted districts' places and sights (map.world3hand), a landmark, a district
       if (!ped || ped.dead) break;
       if (ped.vehId) { world.notify(p, '[dev] Get out of the vehicle first.', 'warn'); break; }
-      const n = String(msg.n || '').toLowerCase(), m = world.map;
-      let q = null;
-      for (const H of Object.values(m.world3hand || {})) {
-        for (const pl of (H && H.places) || []) if (!q && pl.name && pl.name.toLowerCase().includes(n)) q = { x: ((pl.x0 + pl.x1) / 2) * TILE, y: ((pl.y0 + pl.y1) / 2) * TILE, name: pl.name };
-        for (const sg of (H && H.sights) || []) if (!q && sg.name && sg.name.toLowerCase().includes(n)) q = { x: sg.x, y: sg.y, name: sg.name };
-      }
-      if (!q) for (const l of m.landmarks || []) if (!q && l.name && l.name.toLowerCase().includes(n)) q = { x: l.x + (l.w || 0) / 2, y: l.y + (l.h || 0) / 2, name: l.name };
-      if (!q) q = districtMiddle(world, n);   // (a district by its name: its middle - the cinematic mode's staged scenes, client/director.js)
+      const m = world.map, q = placeNamed(world, msg.n);   // (a district by its name: its middle - the cinematic mode's staged scenes, client/director.js)
       if (!q) { world.notify(p, `[dev] No "${msg.n}" on this map (World v3's places).`, 'warn'); break; }
       const at = tpSpot(m, q.x, q.y);
       if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);

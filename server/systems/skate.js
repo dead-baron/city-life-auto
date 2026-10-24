@@ -42,6 +42,8 @@ function clearBoard(ped) {
 }
 const grinding = (ped) => ped.bm === 1 || ped.bm === 3;
 
+// on a building's floor (a walk-in's: the Rusty Spur, a shop) - no riding in there
+export const indoors = (world, ped) => { const t = tileUnder(world, ped); return t === T.FLOOR || t === T.COUNTER; };
 // Why you can't get on here (null: you can)
 export function blocked(world, p, ped) {
   if (!has(p)) return `You need a skateboard - Kickflip Skate Co., the sports shops and the surf shops sell them ($${SKATEBOARD_PRICE}).`;

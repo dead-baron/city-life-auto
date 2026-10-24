@@ -2,11 +2,13 @@
 // contraband drops for the black market / evidence locker, and the deep-sea charter (the fishing itself: fishing.js).
 import { K } from '../../shared/constants.js';
 import { ITEMS } from '../../shared/items.js';
-import { POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, WORK_TRUCK, WORK_TRUCK_RETURN } from '../../shared/rules.js';
+import { POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, WORK_TRUCK, WORK_TRUCK_RETURN, RECALL } from '../../shared/rules.js';
+import { FLY } from '../../shared/flight.js';
+import * as cargo from './cargo.js';
 import * as law from './law.js';
 import { CAR_SPAWN_BLOCK } from '../../shared/map.js';
 import * as fishing from './fishing.js';
-import { VEHICLES } from '../../shared/vehicles.js';
+import { VEHICLES, vehicleWord } from '../../shared/vehicles.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import * as npc from './npc.js';
@@ -41,6 +43,7 @@ export function update(world) {
     if (p.truckReturn) checkReturn(world, p);
     if (p.job && p.job.type === 'poach') stepPoach(world, p, 0.05);
   }
+  if (world.recalls && world.recalls.size) stepRecalls(world);   // (the jobs' vehicles going back: recall)
   fishing.tick(world);   // (a line out: a boat driven off, a cast left - fishing.js)
 }
 
@@ -129,6 +132,7 @@ export function workTruck(world, p, pad, model = 'flatbed', poi = null) {
   if (!v) return null;
   v.npcOwned = false; v.parked = false;
   v.issuedTo = p.pid; v.workTruck = true; v.despawnable = false;   // (kept while the job's on: releaseTruck lets it go)
+  v.recall = null;   // (one on its way back, issued again for this job: kept)
   v.returnTo = { x: Math.round(v.x), y: Math.round(v.y), label: poi ? poi.label : 'the yard' };
   if (world.parked) for (const [i, id] of world.parked) if (id === v.id) world.parked.delete(i);   // (a parked one taken over: not the spawner's any more)
   if (p.job) p.job.truck = v.id;
@@ -136,20 +140,89 @@ export function workTruck(world, p, pad, model = 'flatbed', poi = null) {
   return v;
 }
 
-// The job's over: done (the return bonus is on offer for a while: checkReturn), or not (the company collects it).
+// The job's over: done (the return bonus is on offer for a while: checkReturn), or not (the company takes it back: recall).
 function releaseTruck(world, p, done) {
   const v = p.job && p.job.truck ? world.get(p.job.truck) : null;
-  if (!v || v.removed || v.wreckAt) return;
+  if (!v || v.removed) return;
+  if (v.wreckAt) { v.despawnable = true; return; }   // (a wreck: cleared away as wrecks are)
   if (done && v.returnTo) {
     p.truckReturn = { id: v.id, until: world.time + WORK_TRUCK.returnS };
     world.notify(p, `Bring the ${v.def.name} back to ${v.returnTo.label} for a $${WORK_TRUCK_RETURN} bonus - it's marked on your map.`, 'info');
-  } else v.despawnable = true;
+  } else recall(world, v, p);
 }
 function checkReturn(world, p) {
   const r = p.truckReturn, v = world.get(r.id);
   if (v && !v.removed && !v.wreckAt && world.time < r.until && !p.job) return;
-  if (v && !v.removed && !(p.job && p.job.truck === v.id)) v.despawnable = true;   // (taken on again for a new job: kept)
+  if (v && !v.removed && !(p.job && p.job.truck === v.id)) { if (v.wreckAt) v.despawnable = true; else recall(world, v, p); }   // (taken on again for a new job: kept)
   p.truckReturn = null; p.meDirty = true;
+}
+
+// ---- a job's vehicle goes back -------------------------------------------------------------------------------------------
+// (the owner, 2026-10-23: "Canceling a job should make you have to give up the vehicle like a helicopter so that you can't
+// just take a job to steal a helicopter then cancel it and have a helicopter") What a job issued - the flatbeds, the
+// cab, the ambulance, the fire engine, the bus, the tow truck, the tractor, the rescue and charter helicopters, the crop
+// duster, the coast guard's boat - stays the company's: a job that ends undone (cancelled, quit, expired, lost) or a
+// return window run out recalls it (shared/rules.js RECALL). Nobody aboard: it's collected a few seconds later. You at
+// the wheel: on the ground you're set down beside it a moment later; a boat waits till it's by a shore or a pier; an
+// aircraft till it's down on the ground - never in mid-air. Taken on again for a new job before then (workTruck): kept.
+export function recall(world, v, p = null) {
+  if (!v || v.removed || v.recall) return;
+  v.recall = { pid: p ? p.pid : v.issuedTo || null, at: world.time, empty: null, said: world.time };
+  v.despawnable = false;   // (the recall takes it, not the street's tidy-up)
+  (world.recalls ||= new Set()).add(v.id);
+  if (p && p.ped && p.ped.vehId === v.id) world.notify(p, recallNote(world, v), 'warn');
+}
+export const recalled = (v) => !!(v && v.recall);
+const inAirNow = (v) => v.def.kind === 'air' && (v.alt || 0) > FLY.AIRBORNE;
+// where it is that it can't be taken back yet: null when it can (the people aboard set down beside it)
+function waitWhy(world, v, ped) {
+  if (v.onDeck || v.ferry) return 'deck';
+  if (inAirNow(v)) return 'air';
+  if (v.def.kind === 'air' && Math.hypot(v.vx, v.vy) > RECALL.slowPx) return 'air';   // (still rolling down the runway)
+  if (v.def.kind === 'boat' && (Math.hypot(v.vx, v.vy) > RECALL.slowPx || !vehicles.findExitSpot(world, v, ped, 150))) return 'boat';
+  return null;
+}
+function recallNote(world, v, why = waitWhy(world, v, null)) {
+  const w = vehicleWord(v.def);
+  if (why === 'air') return `The job's over - the company wants its ${w} back. Set it down on the ground and it's collected.`;
+  if (why === 'boat') return `The job's over - the company wants its ${w} back. Bring it in to a shore or a pier and it's collected.`;
+  return `The job's over - the company takes its ${w} back. Pull over: you're set down beside it.`;
+}
+function stepRecalls(world) {
+  const now = world.time;
+  for (const id of world.recalls) {
+    const v = world.get(id), R = v && v.recall;
+    if (!v || v.removed || !R) { world.recalls.delete(id); continue; }
+    if (v.wreckAt) { v.recall = null; v.despawnable = true; world.recalls.delete(id); continue; }   // (wrecked on the way: cleared as wrecks are)
+    const aboard = v.seats.map((s) => (s ? world.get(s) : null)).filter((q) => q && q.player && !q.removed);
+    if (aboard.length) {
+      R.empty = null;
+      const why = waitWhy(world, v, aboard[0]);
+      if (why || now - R.at < RECALL.outS) {
+        if (why && now - R.said >= RECALL.remindS) { R.said = now; for (const q of aboard) if (q.seat === 0) world.notify(q.player, recallNote(world, v, why), 'warn'); }
+        continue;
+      }
+      v.vx = 0; v.vy = 0; v.av = 0; v.input = { throttle: 0, steer: 0, hb: false };   // (stopped where it is: nobody's thrown out at speed)
+      for (const q of aboard) {
+        vehicles.exitVehicle(world, q);
+        if (q.vehId === v.id) vehicles.ejectPed(world, q, true);   // (whatever kept them in: out)
+        world.notify(q.player, `The company's taken the ${vehicleWord(v.def)} back.`, 'info');
+      }
+      R.empty = now;
+      continue;
+    }
+    if (R.empty === null) { R.empty = now; continue; }
+    if (now - R.empty < RECALL.goneS) continue;
+    collect(world, v);
+    world.recalls.delete(id);
+  }
+}
+// gone: its cargo on the ground where it stood, anyone on its hook let go, whoever was sitting in it (the job's NPCs) with it
+function collect(world, v) {
+  cargo.spillCargo(world, v);
+  for (const e of world.query(v.x, v.y, 400, K.VEH)) if (e.towedBy === v.id) { e.towedBy = 0; e.despawnable = true; }
+  for (const s of v.seats) { const q = s ? world.get(s) : null; if (q && q.npc) npc.despawnNpc(world, q); else if (q) vehicles.ejectPed(world, q, true); }
+  world.remove(v);
 }
 // the truck you're returning: { v, x, y, label } (the job tracker: phone.jobTarget)
 export function returnInfo(world, p) {
@@ -174,7 +247,7 @@ export function returnTruck(world, p) {
   p.truckReturn = null;
   world.remove(v);
   world.emit(ri.x, ri.y, { e: 'cash', x: ri.x, y: ri.y });
-  world.notify(p, `Truck returned. Bonus +$${WORK_TRUCK_RETURN}.`, 'good');
+  world.notify(p, `The ${v.def.name} is returned. Bonus +$${WORK_TRUCK_RETURN}.`, 'good');
   p.meDirty = true;
   store.touch();
   return null;
