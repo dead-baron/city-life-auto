@@ -15644,3 +15644,69 @@ Copper Gulch, next door to the town's clinic.
 - test/fences.test.js: held walking, hopped at a run (the crouch, the lift, the far side), the event, chain-link holds,
   a crate holds, a wall behind it holds, the page's prediction matches.
 - Page code: 497.9 KB of the 498 budget (the fences load after the page; the spawn map with the death screen).
+## 2026-10-24 - b3c: the shops where you need them, again after batch 3
+
+Batch 3 broke test/world3server.test.js "shops where you need them": Pine Hills' and Sunset Beach's south-west streets
+were 433 and 462 tiles from a gun shop (the reach is 400), and The Strip had no food of its own.
+- The cause (World v3 built at batch 2 and at batch 3, the shop places compared): not the clinics. Batch 2's Sunset
+  Beach gun shop stood in a plain roof block behind the houses at (2774, 3158); batch 3a's back gardens (map.js
+  `fillerInner`) put a garden there instead, and no plain building, generic storefront or open lot was left within reach
+  of that corner, so the shops pass gave up. The Strip's snack cart was put on the pavement's last row, its map point one
+  tile further south, in Mesa Flats. It counted as Mesa Flats' food, and the pass made one try only.
+- shared/world3-shops.js:
+  - where nothing else will do (no plain building, no generic storefront, no open ground near), a named business's
+    storefront is taken over, by the rules the clinics take theirs (world3-medics.js `STORE_KEYS` / `NOT_INTO`, now
+    exported): a shop, restaurant or small office lot building with only storefront doors in it. Never a home's, a
+    handcrafted district's or a painted one (`fixed`), and one need to a building. Sunset Beach now has Marksman Firearms
+    and Home Run Sports this way.
+  - Failing that, a gun shop or a hardware store (not for a remote village) goes farther off, just inside the reach and
+    over the district's edge: in a plain building, a named storefront or on open ground in a built-up district (past the
+    park and the wild land). Downtown, built by hand to its edges between the park and the handcrafted districts, had
+    its south-east corner's hardware store from Pine Hills' pass by luck (394 tiles at the worst). The first fix moved
+    Pine Hills' shops and took it to 411; a hardware store now goes up for it on open ground in Pine Hills, where batch 2's gun shop stood (366).
+  - A snack cart's or an ATM kiosk's map point must be in the district it is for. A district gets up to three tries at a
+    place of its own, each at the street then farthest from one; a try that finds nothing ends them.
+- After (tools/world3b/shops.mjs): Pine Hills weapons 340 at the worst, Sunset Beach 318, Pelican Key 317 (was 371),
+  Downtown equipment 366; The Strip has its own Lemonade Stand. The Gull Harbor and Egret Point equipment
+  give-ups are as at batch 2 (the test doesn't ask a village for reach).
+- test/world3shops.test.js has a new case: a street built up with named restaurants, the water across it, gets its gun
+  shop, hardware store and corner store in three of them.
+## 2026-10-24 - b3d: the corner by Midtown station stays clear (test/calmstreets.test.js on batch 3)
+
+### What locked it
+Batch 3's run of test/calmstreets.test.js (a player standing still by Midtown station for eight minutes) had 14 cars
+stuck round the player at the worst, 8.2 on average (the limit 10 and 3; batch 2: 0.7). Traced headless: no batch 3
+change touched that corner - the station block's roads, props and buildings are the same tile for tile in batch 2 and
+batch 3 (the only fence near is the coffee shop's yard fence, there in batch 2 too), and the traffic round the player
+is as dense (8-12 NPC vehicles within 20 m, about 300 entities, in both). The run isn't the same twice, and batch 3's
+changes drew one that hit three locks the traffic code already had, all at the bend where the street past the station
+turns south (one street - one edge, a lane each way - round a tight corner):
+- a pickup turning the bend stopped for a bike parked at the station's bike rack, on the pavement: the look-ahead box
+  (traffic.js obstacleSpeed) is straight ahead of the car, so on a bend it sweeps over the kerb, and a wide car's
+  reached the bike. Parked bikes never move: the pickup stood in the bend for good, the queues behind it both ways locked
+  the corner, and the cars that turned round to get out made it worse (most of the 14);
+- out of the bend a car aimed straight at its next waypoint - the far end of the street, 17 tiles on - so a car that
+  swung wide on the corner drove most of the street half in the oncoming lane, and met a tanker coming up it nose to
+  nose;
+- the two of them, a car close behind each: breakRing (a ring of cars each stopped for the next) backs off the one in
+  the ring with room behind it, and neither had any - they waited for ever.
+
+### The fixes (server/systems/traffic.js)
+- obstacleSpeed: a vehicle nobody's in, standing still wholly off the roadway (a bike at a rack, a car left up on the
+  pavement - parkedOff: its middle and corners on no road, bridge or car park) isn't in a car's way; the lanes never
+  leave the road. Remembered while it stands where it is.
+- lookAhead: a car off the line between the waypoint it last passed and the next one by more than 8 px (swung wide out
+  of a corner, eased over for a siren, nudged in a jam - up to 3 tiles) looks ahead along that line from the nearest
+  point on it, so it's back in its lane within a car's length or two. Only while the waypoints are the ones it passed
+  that one on (a lane change, a new road, a turn round: as before).
+- breakRing -> makeRoom: when nobody in a ring has room to back off, the car queued behind one of them with the most
+  room behind it (an NPC's) backs off first - then the one in front of it can, the next time round. world.ringRoomMade
+  counts them.
+
+### Checks
+- test/calmstreets.test.js passes (run after each fix). Its steps, run headless with a trace, vary from run to run;
+  batch 2: 0.7 cars stuck on average (7 at the worst); batch 3 before: 8.2 (14); with the first fix only: 3.8 (13 -
+  the tanker); with the first two: 4.4 (14 - two more nose-to-nose pairs, at the west bend and the junction by the
+  station, neither with room behind) and 0.3; with all three: 0.2, 0.4 and 0.3 (3, 7, 7 at the worst).
+- test/trafficwalls.test.js: a bike parked on the pavement beside a car's way doesn't stop it (one in the road does);
+  two cars nose to nose with a car close behind each - one of those behind backs off.
