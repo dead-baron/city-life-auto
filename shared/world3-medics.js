@@ -45,9 +45,10 @@ export const POSTS3 = [
 ];
 export const DROP_SPECIALS3 = new Set(['Northshore Medical']);
 
-// the lot buildings a clinic may move into (the prefab's key): storefronts, shops, restaurants, small offices
-const STORE_KEYS = /^(apt1|apt2|rest1|rest2|strip|shanty|shops|liquor|conv|quickstop|diner|boutique|tattoo|trail|repair|bank2)/;
-const NOT_INTO = /church|chapel|hotel|motel|inn\b|lodge|warehouse|factory|freight|cargo|stadium|galleria|station|school|library|museum|theatre|club|bar\b|saloon|tap\b|pub\b|bank|police|fire|casino|salvage|mill|elevator/i;
+// the lot buildings a clinic may move into (the prefab's key): storefronts, shops, restaurants, small offices (the shops
+// pass takes one by the same rules where a gun shop or a store can go nowhere else - world3-shops.js storefront)
+export const STORE_KEYS = /^(apt1|apt2|rest1|rest2|strip|shanty|shops|liquor|conv|quickstop|diner|boutique|tattoo|trail|repair|bank2)/;
+export const NOT_INTO = /church|chapel|hotel|motel|inn\b|lodge|warehouse|factory|freight|cargo|stadium|galleria|station|school|library|museum|theatre|club|bar\b|saloon|tap\b|pub\b|bank|police|fire|casino|salvage|mill|elevator/i;
 
 export function clinics3(m) {
   const out = { made: [], none: [] };
