@@ -4,6 +4,7 @@
 // 'arcade' overlay, loaded the first time someone plays); the goals go to the server (server arcade.js: tickets).
 //   start({ id, best, send, close, sfx }) / stop()
 // The mallet: the mouse or a finger (it follows where you point), or the keys, the stick or the d-pad. Esc / B leaves.
+import { fitScreen } from './arcscreen.js';
 const W = 256, H = 224, STEP = 1 / 120;
 const T = { x0: 14, x1: 242, y0: 28, y1: 206 };   // the rails (the puck's centre stays inside by its radius)
 const GOAL = 30, PUCK_R = 6, MAL_R = 11, TO = 7;  // the goal mouth's half-width, the puck, the mallets, first to
@@ -139,6 +140,7 @@ function step(dt) {
 
 function draw() {
   const g = G.g, Tb = G.T;
+  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: sharp)
   g.fillStyle = '#06080f'; g.fillRect(0, 0, W, H);
   // the table: the rails, the ice-blue top with its air holes, the centre line and circle, the goals
   g.fillStyle = '#c8202a'; g.fillRect(T.x0 - 6, T.y0 - 6, T.x1 - T.x0 + 12, T.y1 - T.y0 + 12);

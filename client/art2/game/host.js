@@ -634,7 +634,7 @@ export class World2 {
     Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
     // the sea's sparkle tonight (render/atmos.js bioAt: some nights, along some shores; the day from the server)
     const bio = S.bioForce || bioAt((S.day || 0) * DAY_LOOP_S + (S.loopTime || 0), F.sky.minutes, this.bioArr || (this.bioArr = [0, 0]));   // (S.bioForce: the debug menu's)
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, clear: this.clr || null, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
@@ -1251,35 +1251,52 @@ export class World2 {
   }
 
   // ---- see-through buildings --------------------------------------------------------------------------------
-  // Whole buildings standing in front of you (their base south of you) whose picture covers the space round
-  // you ease to transparent and back (the engine shows the street under them; past half way they stop hiding
-  // what is behind them). Driving clears a wider space. A building already fading keeps a slightly bigger box,
+  // A building standing in front of you (its base south of you) whose picture covers you - your figure and a little
+  // round it - eases (~0.2 s) to a ghost of itself, the street behind showing through, and is fully clear only in a
+  // soft space round you and the players near you (engine.js STATIC_FS: GHOST, uClr); it eases back once you're out
+  // from behind it. Its own footprint never fades (the inside stays hidden until you go in). A tall thin one - a
+  // mast's hut by its mast, a lighthouse, a silo - fades less (a negative fade: GHOST_THIN), so it never vanishes by
+  // half (the owner, 10-23: "half of it disappears when walking near it"). In a car you see a little further round
+  // you; on a train only what really stands over you fades. A building already fading keeps a slightly bigger box,
   // so walking along its edge doesn't make it flicker.
   _fades(F, sp) {
     const S = this.S, inVeh = S.pred ? S.pred.kind === 'veh' : false, onTrain = F.myTrain !== undefined && F.myTrain >= 0;
     const z0 = (sp.z || 0) > 0.01 ? DECK_Z * sp.z : this._gz(sp.x, sp.y), px = sp.x, py = sp.y, sy = py - z0;
-    // On a train only what really stands over you fades (passing beside buildings, the ones either side of the
-    // track kept fading in and out); in a car a wider space round you, on foot a little less.
-    const rx = onTrain ? 28 : inVeh ? 150 : 100, up = onTrain ? 70 : inVeh ? 160 : 128, down = onTrain ? 12 : 44;
-    const want = this._fadeWant || (this._fadeWant = new Set());
+    // your figure on screen (from your feet up) and the space kept clear round it
+    const rx = onTrain ? 28 : inVeh ? 64 : 30, up = onTrain ? 70 : inVeh ? 72 : 62, down = onTrain ? 12 : inVeh ? 30 : 12;
+    const want = this._fadeWant || (this._fadeWant = new Map());
     want.clear();
     const riding = !!(S.me && S.me.ride);   // (up on the wheel or in a balloon: nothing round your feet to see past)
     if (!F.sub && !F.spec && !riding) for (const st of this.chunkState.values()) { // (none while spectating)
       if (!st.blds) continue;
       for (const r of st.blds) {
-        const b = r[0], fading = (this.fades.get(b) || 0) > 0.05, m = fading ? 24 : 0;
+        const b = r[0], fading = (this.fades.get(b) || 0) !== 0, m = fading ? 16 : 0;
         if (r[5] <= py + 2) continue;   // (its foot north of yours: it stands behind you)
         // a giant redwood only when it's really in front of you (not every tree whose box you're near)
-        if (b >= TREE_FADE) { if (!onTrain && this._treeCovers(b - TREE_FADE, px, sy, inVeh, fading ? 10 : 0)) want.add(b); continue; }
+        if (b >= TREE_FADE) { if (!onTrain && this._treeCovers(b - TREE_FADE, px, sy, inVeh, fading ? 10 : 0)) want.set(b, 1); continue; }
         if (r[3] < px - rx - m || r[1] > px + rx + m || r[4] < sy - up - m || r[2] > sy + down + m) continue;
-        want.add(b);
+        // (thin: its picture much taller than wide, or narrow - a hut by a mast, a lighthouse, a silo)
+        const pw = r[3] - r[1], ph = r[4] - r[2];
+        want.set(b, pw < 72 || pw * 2.2 < ph ? -1 : 1);
       }
     }
-    const k = 1 - Math.exp(-5 * Math.min(0.1, F.dt || 0.016));
-    for (const b of want) if (!this.fades.has(b)) this.fades.set(b, 0);
+    const k = 1 - Math.exp(-11 * Math.min(0.1, F.dt || 0.016));   // (eased: most of the way in ~0.2 s)
+    for (const [b, sg] of want) if (!this.fades.has(b)) this.fades.set(b, sg * 1e-3);
     for (const [b, f] of this.fades) {
-      const on = want.has(b), nf = f + ((on ? 0.88 : 0) - f) * k; // (a faint ghost of it stays: you still see its shape)
-      if (!on && nf < 0.01) this.fades.delete(b); else this.fades.set(b, nf);
+      const on = want.has(b), sg = on ? want.get(b) : f < 0 ? -1 : 1, a = Math.abs(f), na = a + ((on ? 1 : 0) - a) * k;
+      if (!on && na < 0.01) this.fades.delete(b); else this.fades.set(b, sg * Math.max(1e-3, na));
+    }
+    // the clear spaces: round you (a car's a little bigger), then the players near you (engine.js uClr)
+    const C = this.clr || (this.clr = new Float32Array(16));
+    C.fill(0);
+    if (this.fades.size && !F.spec) {
+      C[0] = px; C[1] = sy - (inVeh ? 16 : 22); C[2] = inVeh ? 66 : 40; C[3] = 1;
+      let n = 1;
+      for (const p of F.peds || []) {
+        if (n >= 4) break;
+        if (p.id === S.myPedId || !p.d || !p.d.pl || (p.flags & PF.DEAD) || Math.abs(p.rx - px) > 360 || Math.abs(p.ry - py) > 300) continue;
+        C[n * 4] = p.rx; C[n * 4 + 1] = p.ry - 22; C[n * 4 + 2] = 32; C[n * 4 + 3] = 1; n++;
+      }
     }
   }
   // does the redwood (its prop index) stand in front of you? Your figure on screen - 12 px either side of you
@@ -1699,6 +1716,16 @@ export class World2 {
     const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase, v.hp, v.parent);   // (parent: its damage word - task #402)
     if (st.cut) { this._vehCut(v, now, me, st, hi, N); return; }   // (cut in two by a plasma blade)
     if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);   // (on a tow truck's hook: drawn tilted, the hooked end up - server tow.js)
+    // a combine at work: its reel turning (a third of a bat a step, six steps a second) while it moves and a moment after
+    if (def.id === 'combine' && !(f & VF.WRECK)) {
+      const mv = Math.abs(v.rx - (v._rlx ?? v.rx)) + Math.abs(v.ry - (v._rly ?? v.ry));
+      v._rlx = v.rx; v._rly = v.ry;
+      if (mv > 0.15) v._reelT = now;
+      if (now - (v._reelT ?? -9) < 0.5) {
+        st.reel = Math.floor(now * 6) % 3;
+        for (let q = 1; q < 3; q++) { const s3 = { ...st, reel: (st.reel + q) % 3 }; this._ask('actors', 'vehicle', A.vehicleKey(v.d, s3, hi, N), [v.d, s3, hi, N], me ? -2 : 0); }
+      }
+    }
     let use = this._spr('actors', 'vehicle', A.vehicleKey(v.d, st, hi, N), [v.d, st, hi, N]);
     if (!use && v._v2k && E.hasSprite(v._v2k)) use = v._v2k;
     if (!use) use = this._near((h) => A.vehicleKey(v.d, st, h, N), hi, N);
@@ -2337,8 +2364,8 @@ export class World2 {
       const k = p.life / p.max, name = A.v1ParticleFx(p), frm = A.v1ParticleFrame(p);
       const key = this._spr('actors', 'fx', A.fxKey(name, frm), [name, frm]);
       if (!key) continue;
-      o.alpha = (p.type === 2 ? Math.min(1, (1 - k) * 6) * k * 0.9 + 0.1 : p.type === 3 ? Math.min(1, k * 1.5) : p.type === 8 ? 1 : Math.min(1, k * 2)) * (p.veil ?? 1);
-      E.drawSprite(key, p.x, p.y, Math.max(0, p.z * (p.type === 8 ? 0.5 : 0.3)), o); // (v1's heights)
+      o.alpha = (p.type === 2 ? (p.lift ? Math.min(1, k * 2.5) * 0.85 : Math.min(1, (1 - k) * 6) * k * 0.9 + 0.1) : p.type === 3 ? Math.min(1, k * 1.5) : p.type === 8 ? 1 : Math.min(1, k * 2)) * (p.veil ?? 1);
+      E.drawSprite(key, p.x, p.y, Math.max(0, p.z * (p.type === 8 ? 0.5 : 0.3)) + (p.lift || 0), o); // (v1's heights; lift: a combine's chaff up over the crop)
     }
     // pieces off vehicles, tumbling and then lying where they fell (render/fx.js chunks tagged with what they are:
     // render/vehdmg.js a part that came off, render/boom.js an explosion's pieces - task #402), turned in eighths

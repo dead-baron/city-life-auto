@@ -5,6 +5,7 @@
 //   start({ id, best, send, close, sfx }) / stop()
 // Aiming: the mouse or a finger - drag up from the ball and let go (the way it goes, how hard); or left / right to aim
 // (the keys, the stick, the d-pad) and hold the button (Space, Enter, A) for the power, let go to roll. Esc / B leaves.
+import { fitScreen } from './arcscreen.js';
 const W = 256, H = 224, STEP = 1 / 60;
 const LANE = { x0: 76, x1: 180, top: 92, ball: 206 };   // the lane (px), the hump at its top, where the ball sits
 const RING = { x: 128, y: 48, r: [7, 16, 26, 36, 46], pts: [50, 40, 30, 20, 10] };   // the target: the cup, the rings
@@ -130,6 +131,7 @@ function step(dt) {
 
 function draw() {
   const g = G.g, b = G.ball;
+  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: sharp rings and text)
   g.fillStyle = '#0c0614'; g.fillRect(0, 0, W, H);
   // the cabinet's sides, the lane, the hump
   g.fillStyle = '#3a1a5a'; g.fillRect(LANE.x0 - 14, 0, LANE.x1 - LANE.x0 + 28, H);

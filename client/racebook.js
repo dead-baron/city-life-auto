@@ -5,6 +5,7 @@
 // run); then the result, and what you won. The page asks the server where the race is now and then (the seed comes at the
 // off), and draws the clock from it in between.
 //   start({ n, now, post, off, next, ph, field, odds, seed, mine, last, send, close, sfx })   update(screen)   stop()
+import { fitScreen } from './arcscreen.js';
 import { run } from '../shared/racebook.js';
 
 const W = 256, H = 224;
@@ -87,6 +88,7 @@ function infield(g, s, c) {
 }
 function draw(t) {
   const g = G.g, S = G.S;
+  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: sharp)
   g.fillStyle = '#0b1a10'; g.fillRect(0, 0, W, H);
   if (!S) { text(g, 'LOADING THE CARD...', W / 2 - textW('LOADING THE CARD...') / 2, 100, '#aab'); return; }
   const off = t - S.off, R = G.res, running = R && off >= 0;
