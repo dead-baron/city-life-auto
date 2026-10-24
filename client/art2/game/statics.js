@@ -1879,7 +1879,7 @@ const SPECIES = {
   fir: [FL.douglasFir, 38, 134], cedar: [FL.westernRedCedar, 38, 138], pondPine: [FL.ponderosaPine, 32, 138], pine: [FL.ponderosaPine, 32, 138],   /* ('pine': Pine Hills' and the Lakeside course's - drawn as nothing till 2026-10-21) */ spruce: [FL.blueSpruce, 34, 122], redwood: [(s) => RW.giantRedwoodArt(s, 380, 17, { flare: 0.45, crown: 1, low: 0.3, cone: 1 }), 110, 405],
   mtnPine: [FL.mountainPine, 36, 150], mtnFir: [FL.mountainFir, 40, 157], whitePine: [FL.whitebarkPine, 50, 114], larch: [FL.goldenLarch, 38, 154],
   mesquite: [FL.mesquite, 48, 116], paloVerde: [FL.paloVerde, 54, 115], joshua: [FL.joshuaTree, 52, 101], deadSnag: [FL.deadSnag, 38, 77],
-  coconut: [FL.coconutPalm, 76, 151], royal: [FL.royalPalm, 56, 150], leaning: [FL.leaningPalm, 110, 133], fanSkirt: [FL.fanPalmSkirt, 52, 126], date: [FL.datePalm, 40, 92], desertFan: [FL.desertFanPalm, 38, 78],
+  coconut: [FL.coconutPalm, 76, 151], cocoUp: [FL.cityCoconut, 76, 151], royal: [FL.royalPalm, 56, 150], leaning: [FL.leaningPalm, 110, 133], fanSkirt: [FL.fanPalmSkirt, 52, 126], date: [FL.datePalm, 40, 92], desertFan: [FL.desertFanPalm, 38, 78],
   smallPalm: [(s) => TR.fanPalm(s, 46), 36, 76], coastCypress: [FL.coastalCypress, 80, 98], banana: [FL.banana, 60, 99],
   // Highland Woods' old-growth coast redwoods (redwoods.js; the map's 'redwood' props, by size) and its floor
   giantL: [(s) => RW.giantRedwoodArt(s, 720, 70), 250, 770], giant: [(s) => RW.giantRedwoodArt(s, 620, 54), 210, 660], giantS: [(s) => RW.giantRedwoodArt(s, 520, 40), 175, 555],
@@ -1897,6 +1897,7 @@ const SPECIES = {
   duneGrass: [FL.duneGrass, 48, 61], beachGrass: [FL.beachGrass, 43, 45], icePlant: [FL.icePlant, 56, 33], flHedge: [FL.floweringHedge, 62, 55], poppies: [FL.poppies, 33, 45], lupines: [FL.lupines, 27, 64],
   daisies: [FL.daisies, 35, 37], tallGrass: [FL.tallGrass, 51, 57], cattails: [FL.cattails, 27, 69], reeds: [FL.reeds, 26, 70], juniper: [FL.juniperMat, 63, 53], twisted: [FL.twistedShrub, 46, 73],
   berryShrub: [FL.berryShrub, 40, 56], aLupine: [FL.alpineLupine, 27, 60], paintbrush: [FL.paintbrush, 27, 51], heather: [FL.heather, 31, 36], aDaisies: [FL.alpineDaisies, 31, 33],
+  weed: [FL.weedTuft, 31, 36], dryTuft: [(s) => FL.dryGrass(s, 0.6), 34, 31],
   sunflowers: [FL.sunflowers, 35, 69], wildflowers: [(s) => FL.wildflowerLawn(s), 68, 47],
 };
 const BASED = new Set(['street', 'streetPl', 'flowerTree', 'young', 'ginkgo', 'cherry', 'magnolia', 'redMaple']);   // drawn with a grate or planter
@@ -1917,7 +1918,35 @@ function fitem(key, sp, seed, x, y, k = 1, extra = null, bare = false) {
 }
 // the species for a planted prop by where it stands: biome (terrain class), district style and zone
 const WILDS = new Set(['wild', 'rural', 'desert', 'airport', 'water', 'rocky']);
+// A palm in town stands up (a coconut or a leaning palm in a median, a row, a plaza, a garden: cocoUp); only out in the
+// wild, on the sand or right by the sea does one lean and curve as the wind grew it (the owner, 10-23)
+// A shrub or a flower on the pavement or a plaza grows in a planter (the owner, 10-23: "full flowers and bushes coming out
+// of the sidewalk doesn't look right"): a topiary in its pot, a flower box, a planter of tulips or daffodils - at the rough
+// end of town, a tuft of grass up through the cracks instead.
+const PLANTERS = new Set(['tulips', 'daffodils', 'boxStone', 'boxIron', 'topBall', 'topCone', 'hedge', 'flHedge']);
+const POTTED = /^(shrub_|bush_|flowers_)/, DRYBED = /^(agave|yucca|pear|barrel|cholla|ocotillo|saguaro|creosote|sage|brittle|bursage|dryGrass|dFlowers|dPoppies)/;   // (the desert towns' gravel beds: the Strip's agave and cactus)
 function plantFor(c, p) {
+  const r = plantFor0(c, p);
+  if (r && (r[0] === 'coconut' || r[0] === 'leaning') && !palmMayLean(c, p)) return ['cocoUp', r[1]];
+  if (r && POTTED.test(p.t) && !PLANTERS.has(r[0]) && !DRYBED.test(r[0])) {
+    const tile = c.at(p.x, p.y);
+    const D = c.dist(p.x, p.y);
+    if ((tile === T.SIDEWALK || tile === T.PLAZA) && !WILDS.has(D.style)) {   // (a farmyard's lavender stays lavender)
+      if (D.tier === 'rough' || D.tier === 'low' || D.tier === 'industrial') return ['weed', 1];   // (the rough end of town: grass come up through the cracks)
+      return [pick(p.t.startsWith('flowers') ? ['tulips', 'daffodils', 'boxStone', 'boxIron'] : ['topBall', 'topCone', 'boxStone', 'boxIron'], hh(p.x, p.y, 47)), 1];
+    }
+  }
+  return r;
+}
+function palmMayLean(c, p) {
+  const tile = c.at(p.x, p.y);
+  if (tile === T.SAND) return true;
+  if (tile !== T.GRASS && tile !== T.DIRT) return false;
+  if (WILDS.has(c.dist(p.x, p.y).style)) return true;
+  const ds = c.M.distSea ? c.M.distSea[c.M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))] : 99;
+  return ds < 16;   // (quarter tiles: within four tiles of the sea - the beach's own palms)
+}
+function plantFor0(c, p) {
   if (p.sp) return [p.sp, p.k ?? 1.3];   // (the species set by the map: the hero corner's trees)
   const D = c.dist(p.x, p.y), st = D.style, bio = c.biome(p.x, p.y), u = hh(p.x, p.y, 41), u2 = hh(p.y, p.x, 43), t = p.t;
   const di = c.di(p.x, p.y), tile = c.at(p.x, p.y), wild = WILDS.has(st);
@@ -1995,7 +2024,7 @@ const PLANTS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_
 // trunk (or the sprays just round it) covers you fades - fbox, narrower than the picture - not every crown nearby.
 export const TREE_FADE = 1e6;
 const RW_R = { giantL: 70, giant: 54, giantS: 40, redwood2: 16, gate: 78 };
-const NV5 = new Set(['street', 'streetPl', 'oak', 'fir', 'cedar', 'coconut', 'royal', 'mtnPine', 'maple']), NV = (sp) => (NV5.has(sp) ? 4 : 3);
+const NV5 = new Set(['street', 'streetPl', 'oak', 'fir', 'cedar', 'coconut', 'cocoUp', 'royal', 'mtnPine', 'maple']), NV = (sp) => (NV5.has(sp) ? 4 : 3);
 
 // ================================================================================================
 // props
@@ -3292,13 +3321,23 @@ function addLots(c, I) {
       return;
     }
     if (key === 'church') { for (const dx of [24, w - 24]) put(I, fitem(`f:cypress:${dx > w / 2 ? 1 : 0}:1.2`, 'cypress', 1000 + (dx > w / 2 ? 1 : 0) * 37 + 49, x0 + dx, y0 + h - 30, 1.2)); fenceLine(I, 'iron', x0 + 8, y0 + h - 6, x0 + w / 2 - 30, y0 + h - 6); fenceLine(I, 'iron', x0 + w / 2 + 30, y0 + h - 6, x0 + w - 8, y0 + h - 6); return; }
-    if (key === 'hospital') {   // (IN1-B: the ambulance bay's canopy - beside the glass doors, at the end away from them)
+    if (key === 'hospital') {   // (IN1-B: the entrance canopy, over the glass doors)
       const hb = M.buildings.find((q) => q && q.prefab === pi && q.walkIn), hu = hb && hb.walkIn.south ? hb.walkIn.units[0] : null;
-      const hdx = hu ? (hu.door.tx + (hu.door.w || 2) / 2) * TILE : null;
-      let ex = hdx === null || w < 360 ? x0 + w / 2 : hdx > x0 + w / 2 ? x0 + 96 : x0 + w - 96;
-      // (clear of the street lamps along the front: moved in along it, away from the doors, until none stands under it)
+      const hdx = hu ? (hu.door.tx + (hu.door.w || 2) / 2) * TILE : hb && hb.door && hb.door.ty >= hb.ty + hb.th - 1 ? (hb.door.tx + (hb.door.w || 1) / 2) * TILE : null;
       const lampUnder = (e) => M.props.some((p) => p && (p.t === 'lamp' || /^(tree|palm)/.test(p.t)) && Math.abs(p.x - e) < 70 && p.y > by1 - 6 && p.y < by1 + 68);
-      if (lampUnder(ex)) for (let k = 1, dir = ex < x0 + w / 2 ? 1 : -1; k <= 30; k++) { const e2 = ex + dir * k * 8; if (!lampUnder(e2) && (hdx === null || Math.abs(e2 - hdx) > 100)) { ex = e2; break; } }
+      // (a hand plan's own canopy over the doors already - St. Neon General's: this one is the ambulance bay's, at the end
+      // away from the doors, clear of the street lamps along the front)
+      const own = hdx !== null && M.props.some((p) => p && p.t === 'canopy' && Math.abs(p.x - hdx) < 120 && p.y > by1 - 8 && p.y < by1 + 6 * TILE);
+      let ex;
+      if (hdx !== null && !own) {
+        // over the doors (the owner, 10-23: "Hospital entrances not lining up with overhang"): its 120 px over the 64 px
+        // doorway, slid up to 20 px either way to stand clear of a street lamp or a tree there, else right over them
+        ex = hdx;
+        for (const d of [0, 8, -8, 16, -16, 20, -20]) if (!lampUnder(hdx + d)) { ex = hdx + d; break; }
+      } else {
+        ex = hdx === null || w < 360 ? x0 + w / 2 : hdx > x0 + w / 2 ? x0 + 96 : x0 + w - 96;
+        if (lampUnder(ex)) for (let k = 1, dir = ex < x0 + w / 2 ? 1 : -1; k <= 30; k++) { const e2 = ex + dir * k * 8; if (!lampUnder(e2) && (hdx === null || Math.abs(e2 - hdx) > 100)) { ex = e2; break; } }
+      }
       put(I, vitem('hcan:er', 'erCanopy', [1], ex, by1 + 30, 0)); lightAt(I, ex, by1 + 34, 46, 130, [1, 0.92, 0.82], 1.4, 'lamp'); return;
     }
     if (key === 'pool') {
@@ -3567,17 +3606,72 @@ function railClear(M) {
   RAILCLEAR.set(M, s);
   return s;
 }
+// ...and off the dirt roads' beds (the owner, 10-23: "Dirt trails getting a lot of vegetation growing on it ... fully stacked
+// with bushes and trees ... isn't right"): a ground-level dirt road's bed (2) grows nothing; its edges (1) a tuft of grass
+// now and then - an old track's weeds, not its scrub. The dirt roads of the map's road graph and its off-road tracks.
+// the farmed strips: World v3's orchards and lavender and sunflower rows (m.orchards), the nature sites' orchard and
+// vineyard (their landmarks)
+export function farmRects(M) {
+  const F = M._farm;
+  if (F && F.o === M.orchards && F.l === M.landmarks) return F.out;
+  const out = (M.orchards || []).slice();
+  for (const l of M.landmarks || []) if (l && (l.type === 'orchard' || l.type === 'vineyard')) out.push({ x: l.x, y: l.y, w: l.w, h: l.h, k: l.type });
+  Object.defineProperty(M, '_farm', { value: { o: M.orchards, l: M.landmarks, out }, enumerable: false, configurable: true, writable: true });
+  return out;
+}
+const TRACKCLEAR = new WeakMap();
+function trackClear(M) {
+  let s = TRACKCLEAR.get(M);
+  if (s) return s;
+  s = new Map();
+  const lay = (P, hw) => {
+    for (let k = 1; k < P.length; k++) {
+      const ax = P[k - 1][0], ay = P[k - 1][1], bx = P[k][0], by = P[k][1], L = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.ceil(L / 8));
+      if (L > 4000) continue;
+      for (let j = 0; j <= n; j++) {
+        const x = ax + (bx - ax) * j / n, y = ay + (by - ay) * j / n, r = Math.ceil((hw + 10) / TILE);
+        for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+          const tx = Math.floor(x / TILE) + dx, ty = Math.floor(y / TILE) + dy;
+          if (!M.inside(tx, ty)) continue;
+          const d = Math.hypot((tx + 0.5) * TILE - x, (ty + 0.5) * TILE - y), v = d < hw - 6 ? 2 : d < hw + 10 ? 1 : 0;
+          if (!v) continue;
+          const i = M.idx(tx, ty);
+          if ((s.get(i) || 0) < v) s.set(i, v);
+        }
+      }
+    }
+  };
+  for (const e of M.edges || []) if (e && e.kind === 'dirt' && !e.lvl && !e.tunnel && e.pts && e.pts.length > 1) lay(e.pts.map((q) => [q.x, q.y]), e.hw || 32);
+  for (const r of M.tracks || []) if (r && r.pts && r.pts.length > 1) lay(r.pts, r.hw || 24);
+  TRACKCLEAR.set(M, s);
+  return s;
+}
 function coverItems(c, I, cx, cy) {
-  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M);
+  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M), trk = trackClear(c.M);
+  // (World v3's orchards and the lavender and sunflower rows, the nature sites' orchard and vineyard: farmed - no wild
+  // flowers or scrub among the rows, a tuft of grass now and then just outside them: shared/world3-biomes.js m.orchards)
+  const X0 = cx * CH - 120, Y0 = cy * CH - 80, X1 = (cx + 1) * CH + 120, Y1 = (cy + 1) * CH + 140;
+  const orch = farmRects(c.M).filter((r) => r.x < X1 && r.x + r.w > X0 && r.y < Y1 && r.y + r.h > Y0);
   const tx0 = Math.max(c.M.x0 + 1, Math.floor((cx * CH - 80) / TILE)), tx1 = Math.min(c.M.x0 + W - 2, Math.floor(((cx + 1) * CH + 80) / TILE));
   const ty0 = Math.max(c.M.y0 + 1, Math.floor((cy * CH - 40) / TILE)), ty1 = Math.min(c.M.y0 + H - 2, Math.floor(((cy + 1) * CH + 110) / TILE));
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
     const i = c.M.idx(tx, ty);
     const res = c.M.reserve ? c.M.reserve[i] : 0, lush = res & 128;   // (128: a river's lush banks - reeds right to the water)
     if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16) || rails.has(i)) continue;
+    const tk = trk.get(i) || 0;
+    if (tk === 2) continue;
     const x = Math.round((tx + hash(tx, ty, 7005)) * TILE), y = Math.round((ty + hash(tx, ty, 7007)) * TILE); // (anywhere in its tile: no rows)
-    const r = coverAt(c, tx, ty, x, y);
+    let weed = tk === 1;
+    if (orch.length) {
+      const o = orch.find((q) => x >= q.x - 16 && x < q.x + q.w + 16 && y >= q.y - 16 && y < q.y + q.h + 16);
+      if (o) { if (orch.some((q) => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h)) continue; weed = true; }   // (among the rows nothing; along the strip's edge a tuft now and then)
+    }
+    let r = coverAt(c, tx, ty, x, y);
     if (!r || !(lush ? coverClearWet(c, tx, ty) : coverClear(c, tx, ty, 1))) continue;
+    if (weed) {   // (a track's edge, an orchard's: a low tuft of grass now and then, the dry country's dry grass)
+      if (hash(tx, ty, 7177) > 0.3) continue;
+      r = [/^(creosote|bursage|brittle|dryGrass|sage|tumble|dFlowers|dPoppies|barrel|pear|agave|cholla|saguaroSmall|yucca|heather|juniper|twisted|aDaisies|aLupine|paintbrush)$/.test(r[0]) ? 'dryTuft' : 'weed', 1];
+    }
     const [sp, k] = r, v = Math.floor(hash(tx, ty, 13) * NV(sp));
     out.push(fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k));
   }

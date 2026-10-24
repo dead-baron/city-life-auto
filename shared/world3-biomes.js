@@ -214,14 +214,33 @@ export function dress3(m, L, keep, H) {
       } else if (use === 'orchard' || use === 'lavender' || use === 'sunflowers') {
         const step = use === 'orchard' ? 4 : 3, sp = use === 'orchard' ? (hash2(sx, sy + j, 5607) < 0.7 ? 'apple' : 'orange') : use;
         let cnt = 0;
-        for (let y = r[1] + 1; y < r[3] - 1; y += step) for (let x = r[0] + 1; x < r[2] - 1; x += use === 'orchard' ? 4 : 2) {
-          const i = y * W + x;
-          if (x < 0 || y < 0 || x >= W || y >= HH || L.dist[i] !== D3.VALLEY || free[i] || !okTile(i, T.GRASS, T.DIRT) || !clear(x, y, 1)) continue;
-          if (use === 'orchard') plant('tree_a', x, y, sp, 1.1 + hash2(x, y, 5608) * 0.15, 12);
-          else plant(use === 'lavender' ? 'shrub_a' : 'flowers_a', x, y, sp, 1);
-          cnt++;
+        const dx = use === 'orchard' ? 4 : 2, runs = [];   // (the planted rows' runs: [y, first x, last x])
+        for (let y = r[1] + 1; y < r[3] - 1; y += step) {
+          let a = -1, b = -1;
+          for (let x = r[0] + 1; x < r[2] - 1; x += dx) {
+            const i = y * W + x;
+            if (x < 0 || y < 0 || x >= W || y >= HH || L.dist[i] !== D3.VALLEY || free[i] || !okTile(i, T.GRASS, T.DIRT) || !clear(x, y, 1)) { if (a >= 0 && b > a) runs.push([y, a, b]); a = -1; continue; }
+            if (use === 'orchard') plant('tree_a', x, y, sp, 1.1 + hash2(x, y, 5608) * 0.15, 12);
+            else plant(use === 'lavender' ? 'shrub_a' : 'flowers_a', x, y, sp, 1);
+            cnt++;
+            if (a < 0) a = x;
+            b = x;
+          }
+          if (a >= 0 && b > a) runs.push([y, a, b]);
         }
         if (cnt) { if (use === 'orchard') { n.orchards++; n.trees += cnt; } else n.plants += cnt; }
+        // (the strip, for the art: farmed ground under its rows - mown grass in an orchard, tilled soil under the lavender
+        // and the sunflowers - and no wild flowers or scrub among them: client/art2/game/groundbake.js, statics.js coverItems;
+        // the ground each run of a row's plants stands on, the rows that run alike joined)
+        if (cnt >= 8) {
+          const hx = dx >> 1, hy = step >> 1, out = [];
+          for (const [y, a, b] of runs) {
+            const last = out[out.length - 1];
+            if (last && last.a === a && last.b === b && last.y1 === y - step) { last.y1 = y; continue; }
+            out.push({ a, b, y0: y, y1: y });
+          }
+          for (const q of out) (m.orchards ||= []).push({ x: (q.a - hx) * TILE, y: (q.y0 - hy) * TILE, w: (q.b - q.a + 2 * hx + 1) * TILE, h: (q.y1 - q.y0 + 2 * hy + 1) * TILE, k: use });
+        }
       } else {   // a pasture: open grass with a few shade trees
         for (let y = r[1] + 4; y < r[3] - 4; y += 9) for (let x = r[0] + 4; x < r[2] - 4; x += 9) {
           const i = y * W + x;

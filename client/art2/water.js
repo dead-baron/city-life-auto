@@ -1019,8 +1019,14 @@ function ensure(n) {
   F.n = n; F.k = new Uint8Array(n); F.st = new Uint8Array(n); F.ld = new Float32Array(n); F.dep = new Float32Array(n); F.fx = new Float32Array(n); F.fy = new Float32Array(n);
   F.fv = new Float32Array(n); F.sa = new Float32Array(n); F.su = new Float32Array(n); F.ch = new Int16Array(n); F.bs = new Float32Array(n); F.cst = new Uint8Array(n); F.tmp = new Float32Array(n);
   F.rp = new Float32Array(n); F.pk = new Float32Array(n); F.pi = new Int16Array(n);
-  F.mx = new Float32Array(n); F.mk = new Uint8Array(n); F.ms = new Uint8Array(n); F.mr = new Float32Array(n);
+  F.mx = new Float32Array(n); F.mk = new Uint8Array(n); F.ms = new Uint8Array(n); F.mr = new Float32Array(n); F.wd = new Uint8Array(n);
 }
+// A river this wide (tiles) or wider - wider than the screen, as world3-rapids.js RAPIDS.wide - or the last stretch of one
+// where it opens out into the sea (MOUTH_UP) is a broad body of water: the light pass gives it the still water's slow wind
+// waves and glints, not the running water's flecks hurrying downstream (the owner, 10-23: "rapid lines moving diagonally
+// like if it's a rapids but that shouldn't be happening in large bodies of water"). Its current still shows in the bake
+// (the long lines along it).
+export const WIDE_STILL = 36;
 const LAND_R = 24;
 // how far (tiles) each tile of the window is from the nearest land, and which land tile that is: a distance transform
 // (chamfer 1 / 1.4, carrying the nearest land) over the window and LAND_R tiles round it - land further off doesn't
@@ -1166,7 +1172,7 @@ export function waterTiles(C, mats, TN) {
   ensure(n);
   F.on = false;
   if (!M || !M.tiles) return;
-  F.k.fill(0); F.dep.fill(0); F.fx.fill(0); F.fy.fill(0); F.fv.fill(0); F.ch.fill(-1); F.bs.fill(1e9); F.cst.fill(0); F.rp.fill(0); F.pk.fill(0); F.pi.fill(-1); F.mx.fill(0); F.mr.fill(1e6); PKW.length = 0;
+  F.k.fill(0); F.dep.fill(0); F.fx.fill(0); F.fy.fill(0); F.fv.fill(0); F.wd.fill(0); F.ch.fill(-1); F.bs.fill(1e9); F.cst.fill(0); F.rp.fill(0); F.pk.fill(0); F.pi.fill(-1); F.mx.fill(0); F.mr.fill(1e6); PKW.length = 0;
   const lk = M.waters && Array.isArray(M.waters.lk) ? M.waters.lk : [], flow = M.flow || null;
   let any = false;
   for (let k = 0; k < n && !any; k++) if (b.tw[k]) any = true;
@@ -1258,6 +1264,7 @@ function channelTiles(chs, TX0, TY0, TN) {
     if (F.k[k] === WK.RIVER) { F.k[k] = c.kind; F.st[k] = c.sty; }
     else if (c.kind === WK.LAKE) F.st[k] = c.sty;   // (a lake laid as a piece: its look)
     if (F.k[k] === WK.LAKE || F.k[k] === WK.POND || F.k[k] === WK.MARSH) { F.fv[k] = 0; continue; }   // (the marsh lies still: its braids barely move)
+    if (c.w >= WIDE_STILL) F.wd[k] = 1;
     // the rapids (world3-rapids.js ch.r: [s0, s1, how wild], tiles along): white, fast water, easing in and out over a
     // few tiles at each end
     let rp = 0;
@@ -1457,7 +1464,7 @@ export function waterPx(C, X, Y, d, ti, k00, vx, vy, TN, kind = WK.RIVER) {
   // what the light pass needs (the header)
   const clear = vis > 0.3 ? 1 : 0;
   if (k === WK.SEA) { WQ.inl = false; WQ.code = d < 46.5 ? 191 + Math.round(d) : vis > 0.02 ? 239 + Math.min(15, (vis * 18) | 0) : 255; }
-  else if (fv > 0.08 && (fx || fy)) {
+  else if (fv > 0.08 && (fx || fy) && !(F.on && (F.wd[ti] || F.mr[ti] < MOUTH_UP))) {   // (a broad river, a mouth: still water's look - WIDE_STILL)
     WQ.inl = true;
     const dir = Math.round(Math.atan2(fy, fx) / (Math.PI / 8)) & 15;
     WQ.code = 128 + dir * 4 + (fv > 0.55 ? 2 : 0) + clear;

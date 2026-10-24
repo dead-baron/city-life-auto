@@ -94,3 +94,39 @@ test('the guard: a field\'s rail fence runs over open ground only; a signal pole
   assert.equal(m.tileAtPx(pole.x, pole.y), T.SIDEWALK, 'the pole stands on the kerb');
   assert.deepEqual([m.signals[0].x, m.signals[0].y], [pole.x, pole.y], 'its signal\'s arm starts from it');
 });
+
+test('the guard: nothing grows on a dirt road\'s bed, nor on the pavement out in the country; the street trees in town stay', async () => {
+  const { DISTRICTS } = await import('../shared/mapcore.js');
+  const { DIRT_BED } = await import('../shared/world3-clutter.js');
+  const m = town();
+  const town0 = DISTRICTS.findIndex((d) => d && d.style === 'houses'), wild = DISTRICTS.findIndex((d) => d && d.style === 'rural');
+  assert.ok(town0 >= 0 && wild >= 0);
+  m.setDist(0, 0, 30, 50, town0); m.setDist(30, 0, 30, 50, wild);   // (the west half a town's, the east half the country's)
+  // a dirt road along row 44 (its half width 40 px: the bed its tiles within 28 px of its line)
+  for (let x = 0; x < 60; x++) m.set(x, 44, T.DIRT);
+  m.edges = [{ id: 0, kind: 'dirt', lvl: 0, hw: 40, pts: [{ x: 0, y: 44.5 * TILE }, { x: 60 * TILE, y: 44.5 * TILE }] }];
+  const drop = [addProp(m, 'tree_a', ...at(10, 44), 12), addProp(m, 'cactus', ...at(50, 44), 8), addProp(m, 'shrub_a', ...at(33, 44), 0, { sp: 'creosote' }),
+    addProp(m, 'flowers_a', ...at(45, 13), 0, { sp: 'lupines' }), addProp(m, 'bush_a', ...at(50, 9), 0)];
+  const keep = [addProp(m, 'tree_a', ...at(10, 13), 10), addProp(m, 'shrub_a', ...at(12, 9), 0), addProp(m, 'shrub_b', 20 * TILE, 44.5 * TILE + 40 - DIRT_BED / 2, 0),
+    addProp(m, 'tree_b', ...at(40, 47), 12)];
+  clearClutter3(m, { removeProps });
+  for (const p of drop) assert.ok(!m.props.includes(p), `${p.t} at ${p.x / TILE}, ${p.y / TILE} goes`);
+  for (const p of keep) assert.ok(m.props.includes(p), `${p.t} at ${p.x / TILE}, ${p.y / TILE} stays`);
+  assert.deepEqual(clutterOn(m), []);
+});
+
+test('the guard: a handcrafted plan\'s railing or hedge stops at the street - cut back to its stretch off the roadway, or gone', () => {
+  const m = town();
+  const hand = new WeakSet();
+  // a railing north to south across the street at column 30, a short one wholly on its roadway, a hedge out in the field
+  const across = addProp(m, 'rail', 30 * TILE, 6 * TILE, 0, { tx: 0, ty: 12 * TILE });   // (rows 6 to 18: over the street, rows 10-12)
+  const short = addProp(m, 'rail', 34 * TILE, 10.2 * TILE, 0, { tx: 0, ty: 1.5 * TILE });   // (wholly on the roadway)
+  const clear = addProp(m, 'hedgerun', 2 * TILE, 30 * TILE, 0, { tx: 10 * TILE, ty: 0 });
+  for (const p of [across, short, clear]) hand.add(p);
+  clearClutter3(m, { removeProps }, hand);
+  assert.ok(m.props.includes(across), 'the long railing stays...');
+  for (let k = 0; k <= 8; k++) { const y = across.y + across.ty * k / 8; assert.ok(m.tileAtPx(across.x, y) !== T.ROAD, `...off the roadway (${y / TILE})`); }
+  assert.ok(across.ty >= 5 * TILE, `its longer stretch kept (${across.ty / TILE} tiles)`);
+  assert.ok(!m.props.includes(short), 'the one on the roadway goes');
+  assert.ok(m.props.includes(clear) && clear.tx === 10 * TILE, 'one clear of the street is as it was');
+});

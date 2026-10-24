@@ -1300,6 +1300,10 @@ function fanFrond(G, tx, ty, f, R, seed) {
 export const coconutPalm = (seed = 1) => palmTree(seed, { h: 98, lean: 10, bend: 18, r: 58, n: 13, leaf: 10, R: FOL('#4a8a2a'), nuts: 5, tex: 'ring', ground: true });
 export const royalPalm = (seed = 1) => palmTree(seed, { h: 102, lean: 0, bend: 0, r: 52, n: 13, leaf: 10, R: FOL('#4e8a2a'), B: RR('#b0a898', 7, 3, { dark: 0.55, light: 0.4 }), tex: 'smooth', shaft: true, tw: 4, ground: true, k: 1 });
 export const fanPalmSkirt = (seed = 1) => palmTree(seed, { h: 82, lean: 0, r: 48, n: 13, fan: true, R: FOL('#4e8a2c'), B: RR('#7a5a3a', 7, 3), tex: 'diamond', tw: 6, skirt: 0.32, ground: true, k: 2 });
+// a town's coconut palm (a median's, a plaza's, a row along a promenade): planted, so it stands up - a slight lean either
+// way by the tree, never the beach's curve (the owner, 10-23: "So many crooked palm trees in the city")
+const CITY_LEAN = [-3, 2, -1, 3, 1, -2];
+export const cityCoconut = (seed = 1) => { const l = CITY_LEAN[seed % CITY_LEAN.length]; return palmTree(seed, { h: 100, lean: l, bend: l * 0.5, r: 58, n: 13, leaf: 10, R: FOL('#4a8a2a'), nuts: 5, tex: 'ring', ground: true }); };
 export const leaningPalm = (seed = 1) => palmTree(seed, { h: 84, lean: 50, bend: 4, r: 54, n: 13, leaf: 10, R: FOL('#4a8a2a'), tex: 'ring', ground: true, droop: 0.75, k: 3 });
 export const datePalm = (seed = 1) => palmTree(seed, { h: 52, lean: 0, r: 38, n: 16, R: FOL('#4e8a2a'), B: RR('#8a5a34', 7, 3), tex: 'diamond', tw: 5.5, dates: 3, ground: true, leaf: 6, droop: 0.4, k: 4 });
 export const desertFanPalm = (seed = 1) => palmTree(seed, { h: 40, lean: 0, r: 34, n: 11, fan: true, R: FOL('#6a9a2a'), B: RR('#8a6438', 7, 3), tex: 'diamond', tw: 7, skirt: 0.45, squat: true, ground: true, k: 5 });
@@ -1363,6 +1367,8 @@ export function grassClump(seed = 1, o = {}) {
 export const duneGrass = (seed = 1) => grassClump(seed, { h: 46, n: 110, spread: 1.3, R: FOL('#9aa040', { warm: 50 }), plume: RR('#d8c08a', 6, 3, { dark: 0.45 }), plumes: 6, k: 1 });
 export const beachGrass = (seed = 1) => grassClump(seed, { h: 42, n: 140, spread: 1.4, R: FOL('#a0a048', { warm: 48, desat: 0.2 }), k: 2 });
 export const tallGrass = (seed = 1) => grassClump(seed, { h: 46, n: 150, spread: 1.1, R: FOL('#6e9230'), plume: RR('#c0a050', 5, 2), plumes: 9, plumeW: 0.6, plumeLen: 6, k: 3 });
+// a low tuft of grass - the weeds along an old track's edge, at an orchard's margin (statics.js coverItems)
+export const weedTuft = (seed = 1) => grassClump(seed, { h: 18, n: 40, spread: 1, R: FOL('#6e9230'), k: 6 });
 export function icePlant(seed = 1) {
   const rnd = mulberry32(seed * 347 + 1), G = sprite(120, 40, 6), cx = G.ax, foot = G.ay, R = FOL('#6aa03a', { warm: 70 }), P = RR('#e8509a', 6, 3, { light: 0.6 });
   const pts = []; for (let i = 0; i < 380; i++) { const a = rnd() * TAU, q = Math.sqrt(rnd()); pts.push([cx + Math.cos(a) * q * 50, foot - 6 + Math.sin(a) * q * 11 - (1 - q) * 5]); }
@@ -1600,13 +1606,13 @@ export const FLORA = {
   saguaroBig, saguaroMid, saguaroSmall, joshuaTree, ocotillo, paloVerde, mesquite, pricklyPear, barrelCacti, cholla, agave, yucca: (s) => yucca(s),
   creosote, sagebrush, brittlebush, whiteBursage, desertPoppies, desertFlowers, dryGrass: (s) => dryGrass(s), tumbleweed: (s) => tumbleweed(s), deadSnag, datePalm, desertFanPalm,
   // tropical coast
-  coconutPalm, royalPalm, fanPalmSkirt, leaningPalm, banana, monstera, elephantEar, birdOfParadise, hibiscus, bougainvillea,
+  coconutPalm, cityCoconut, royalPalm, fanPalmSkirt, leaningPalm, banana, monstera, elephantEar, birdOfParadise, hibiscus, bougainvillea,
   duneGrass, beachGrass, icePlant, coastalCypress, kelpPile, seaweed, mangroves,
   // farm, garden, wetland
   wheat0: (s) => wheat(s, 0), wheat1: (s) => wheat(s, 1), wheat2: (s) => wheat(s, 2), corn0: (s) => corn(s, 0), corn1: (s) => corn(s, 1), corn2: (s) => corn(s, 2),
   cabbage0: (s) => cabbage(s, 0), cabbage1: (s) => cabbage(s, 1), cabbage2: (s) => cabbage(s, 2), tomato0: (s) => tomato(s, 0), tomato1: (s) => tomato(s, 1), tomato2: (s) => tomato(s, 2),
   pumpkin0: (s) => pumpkin(s, 0), pumpkin1: (s) => pumpkin(s, 1), pumpkin2: (s) => pumpkin(s, 2), sunflowers, strawberries, grapevineTrellis,
-  appleTree, orangeTree, lemonTree, floweringHedge, poppies, lupines: (s) => lupines(s), daisies, tallGrass, clover, cattails: (s) => cattails(s), reeds, rushes, lilyPads: (s) => lilyPads(s), weepingWillow, cypressKnees,
+  appleTree, orangeTree, lemonTree, floweringHedge, poppies, lupines: (s) => lupines(s), daisies, tallGrass, weedTuft, clover, cattails: (s) => cattails(s), reeds, rushes, lilyPads: (s) => lilyPads(s), weepingWillow, cypressKnees,
   // mountain
   mountainFir, mountainPine, whitebarkPine, goldenLarch, snowySpruce, juniperMat, twistedShrub, snowyShrub, berryShrub,
   alpineLupine, paintbrush, columbine, heather, alpineDaisies, buttercups,
