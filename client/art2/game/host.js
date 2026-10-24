@@ -1251,14 +1251,8 @@ export class World2 {
   }
 
   // ---- see-through buildings --------------------------------------------------------------------------------
-  // A building standing in front of you (its base south of you) whose picture covers you - your figure and a little
-  // round it - eases (~0.2 s) to a ghost of itself, the street behind showing through, and is fully clear only in a
-  // soft space round you and the players near you (engine.js STATIC_FS: GHOST, uClr); it eases back once you're out
-  // from behind it. Its own footprint never fades (the inside stays hidden until you go in). A tall thin one - a
-  // mast's hut by its mast, a lighthouse, a silo - fades less (a negative fade: GHOST_THIN), so it never vanishes by
-  // half (the owner, 10-23: "half of it disappears when walking near it"). In a car you see a little further round
-  // you; on a train only what really stands over you fades. A building already fading keeps a slightly bigger box,
-  // so walking along its edge doesn't make it flicker.
+  // A building whose picture covers you eases (~0.2 s) to a ghost, clear round you and the players near you (engine.js
+  // STATIC_FS: GHOST, uClr); its footprint never fades; a tall thin one fades less (GHOST_THIN) - the owner, 10-23.
   _fades(F, sp) {
     const S = this.S, inVeh = S.pred ? S.pred.kind === 'veh' : false, onTrain = F.myTrain !== undefined && F.myTrain >= 0;
     const z0 = (sp.z || 0) > 0.01 ? DECK_Z * sp.z : this._gz(sp.x, sp.y), px = sp.x, py = sp.y, sy = py - z0;
@@ -1556,9 +1550,7 @@ export class World2 {
   // A person: the peds provider's figure (people.js) for their pose, heading and stride, the weapon in hand -
   // or the flashlight when they carry nothing and have it switched on. The rest of a stride is asked for as
   // soon as a walk starts (or turns), so the next frames are there in time.
-  // car: a train car they ride - drawn from its spot plus their place in it, that offset in whole art pixels (the car and
-  // each rider were snapped to the art grid each on its own: their fractions crossed at different moments and the riders
-  // shook a pixel against the car), at the car's height (not the ground's under them as the train rolls over kerbs)
+  // car: the train car they ride - drawn from its spot plus a whole-pixel offset, at its height (no jitter: 10-23)
   _ped(p, now, me, F, extraZ = 0, car = null) {
     const E = this.E, Pd = this.Pd;
     if (p.flags & PF.INVEH) return;
@@ -2071,11 +2063,8 @@ export class World2 {
     }
   }
 
-  // A bird's shadow (the owner, 10-23: "Eagles cast a full shadow that drapes down instead of having an eagle shaped shadow
-  // on the ground"): the shadow march sees something drawn up off the ground as a column down to it, so a flying bird casts
-  // none and gets this instead - its shape seen from above (span px across the wings; k the wingbeat 0..1, -1 wings
-  // tucked in a stoop) as a dark decal on the ground under it, away from the sun by its height as everything's shadows
-  // fall (atmos.js sunDir, shadowLen), fainter the higher it is, at night and in the rain
+  // A flying bird's shadow (10-23: no column): its shape from above (span; k the wingbeat, -1 tucked) on the ground,
+  // away from the sun by its height, fainter higher up, at night and in the rain
   _flyShadow(x, y, z, a, span, k, gz = 0) {
     const sky = this.F && this.F.sky;
     if (!sky || !sky.sunDir || this.F.sub) return;
