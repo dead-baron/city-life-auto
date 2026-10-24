@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run } from './helpers.js';
-import { STAR_HEAT } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 import { AIR_TRAFFIC } from '../shared/rules.js';
 import { onStrip, FLY } from '../shared/flight.js';
 import { VEHICLES } from '../shared/vehicles.js';

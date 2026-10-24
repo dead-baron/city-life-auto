@@ -241,6 +241,7 @@ export function update(world, dt) {
   const ps = [...world.players.values()].filter((q) => q.ped && !q.ped.dead && !q.ped.hidden && !q.ped.sub && !q.ped.ug && !q.ped.interior && !q.custody && !wildStyle(world.map, q.ped.x, q.ped.y));
   if (!ps.length) return;
   const p = ps[Math.floor(rng() * ps.length)];
+  if (events.calmBusy(world, p.ped.x, p.ped.y)) return;   // (enough going on round them already: rules.js CALM_STREETS)
   const kinds = KINDS.filter((k) => k !== st.last && (k !== 'race' || world.clock.isNight));
   for (let i = kinds.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [kinds[i], kinds[j]] = [kinds[j], kinds[i]]; }
   for (const k of kinds) { const ev = start(world, k, p); if (ev) { st.live.push(ev); st.last = k; break; } }

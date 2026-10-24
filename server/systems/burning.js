@@ -113,15 +113,21 @@ export function npcStep(world, ped, now) {
 }
 
 // Walking into fire (every CONTACT_TICKS ticks): a burning vehicle or a fresh wreck still alight, a lit campfire, someone
-// else on fire brushing past - on the move (standing still beside a fire you don't catch: you walk or run into it)
+// else on fire brushing past - on the move (standing still beside a fire you don't catch: you walk or run into it).
+// The city's people step round a fire as they go about (the owner's notes, 10-22: "NPCs randomly catching on fire ...
+// burst into flames and run off and die" - a headless hour in Midtown had nine in ten of its people set alight by
+// someone else on fire: a burning passer-by, or one down and burning on the pavement, lit whoever walked by, who ran
+// on through the crowd and lit more - 370 in 15 minutes round one player). So: a player catches walking into any of
+// it; someone else only when they're thrown into it (knocked down, flung, tumbling) or a player alight runs into them.
 const CONTACT_TICKS = 4;
 const moving = (q) => Math.abs(q.vx) + Math.abs(q.vy) > 30;
+const knocked = (q, now) => now < (q.downUntil || 0) + 0.5 || now < (q.tumbleUntil || 0) || now < (q.airUntil || 0);
 function contacts(world, dt) {
   const now = world.time, p = BURN.touch * dt;
   for (const v of world.entities.values()) {
     if (v.kind !== K.VEH || v.def.pedal || (v.alt || 0) > FLY.HIGH || !(v.burnUntil > now || (v.wreckAt && now - v.wreckAt < 20))) continue;
     for (const q of world.query(v.x, v.y, v.def.L / 2 + BURN.vehPx + 12, K.PED)) {
-      if (!burning(q) && !q.vehId && moving(q) && explosions.bodyDist(v, q.x, q.y) < BURN.vehPx && world.rand() < p) ignite(world, q, null);
+      if (!burning(q) && !q.vehId && moving(q) && (q.player || knocked(q, now)) && explosions.bodyDist(v, q.x, q.y) < BURN.vehPx && world.rand() < p) ignite(world, q, null);
     }
   }
   // (a campfire: a player who walks into it, or someone knocked into it - not the campers and hikers going about round it,
@@ -133,7 +139,7 @@ function contacts(world, dt) {
   }
   for (const b of world.burning) {
     if (b.dead) continue;
-    for (const q of world.query(b.x, b.y, BURN.pedPx, K.PED)) if (q !== b && !burning(q) && (moving(b) || moving(q)) && Math.hypot(q.x - b.x, q.y - b.y) < BURN.pedPx && world.rand() < p * 0.5) ignite(world, q, b.burnBy ? world.get(b.burnBy) : null, BURN.secs * 0.7);
+    for (const q of world.query(b.x, b.y, BURN.pedPx, K.PED)) if (q !== b && !burning(q) && (q.player || b.player || knocked(q, now)) && (moving(b) || moving(q)) && Math.hypot(q.x - b.x, q.y - b.y) < BURN.pedPx && world.rand() < p * 0.5) ignite(world, q, b.burnBy ? world.get(b.burnBy) : null, BURN.secs * 0.7);
   }
 }
 

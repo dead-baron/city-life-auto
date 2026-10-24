@@ -9,7 +9,8 @@
 // rest is getting off the island (a long swim, the sharks: sharks.js). Logging off inside keeps the time left, served
 // next time you play (custody.js saveJail / onJoin).
 //   p.prison: { until, since, stars, weapon (back in your hand when you're out), climb: { until, x, y } | null }
-import { TILE, T, STAR_HEAT } from '../../shared/constants.js';
+import { TILE, T } from '../../shared/constants.js';
+import { STAR_HEAT } from '../../shared/rules.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { PRISON as PR } from '../../shared/rules.js';
 import { store } from '../store.js';

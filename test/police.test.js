@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, straightRoad } from './helpers.js';
 import * as traffic from '../server/systems/traffic.js';
 import { K, T } from '../shared/constants.js';
+import {  } from '../shared/rules.js';
 import { CAR_BLOCK } from '../shared/map.js';
 import * as players from '../server/systems/players.js';
 import { VEHICLES } from '../shared/vehicles.js';
@@ -243,7 +244,8 @@ import * as law from '../server/systems/law.js';
 import * as police from '../server/systems/police.js';
 import { wildStyle } from '../server/systems/wildlife.js';
 import { viewRect } from '../server/view.js';
-import { STAR_HEAT, TILE, MAP_W } from '../shared/constants.js';
+import { TILE, MAP_W } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 import { WILD_SIGHT, COVER_SIGHT, WILD_COOL, WILD_UNITS } from '../shared/rules.js';
 
 // An open spot out in the wilds (no cover within a few tiles, no buildings for 500 px east of it).

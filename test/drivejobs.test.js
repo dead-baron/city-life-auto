@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run } from './helpers.js';
 import { CAB, BUSJOB, TOWJOB } from '../shared/rules.js';
-import { STAR_HEAT } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 
 const cab = await import('../server/systems/taxijob.js');
 const bus = await import('../server/systems/busjob.js');

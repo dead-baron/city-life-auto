@@ -13,7 +13,7 @@ import { PED_BLOCK, CAR_BLOCK } from '../../shared/map.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
-import { spawnNpc, despawnNpc } from './npc.js';
+import { spawnNpc, despawnNpc, shoo } from './npc.js';
 import { wildStyle } from './wildlife.js';
 import { crossingLimit } from './trains.js';
 import { inAnyView } from '../view.js';
@@ -443,7 +443,7 @@ const standoff = (v) => v.standoff ?? (v.standoff = 14 + (Math.imul(v.id | 0, 26
 function obstacleSpeed(world, v, fwd, ignore = null) {
   const c = Math.cos(v.a), s = Math.sin(v.a);
   const look = v.def.L / 2 + 50 + standoff(v) + Math.max(0, fwd) * 0.7;
-  let limit = Infinity, blk = 0, bl = Infinity;
+  let limit = Infinity, blk = 0, bl = Infinity, pblk = 0, pbl = Infinity;
   for (const e of world.query(v.x + c * look / 2, v.y + s * look / 2, look / 2 + 40)) {
     if (e === v || (ignore && ignore.has(e.id))) continue;
     if (e.kind === K.PED) { if (e.vehId || e.dead) continue; }
@@ -459,8 +459,10 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
     const gap = lx - v.def.L / 2 - (e.kind === K.VEH ? e.def.L / 2 : 10) - 10 - (e.kind === K.VEH ? standoff(v) : 0);
     limit = Math.min(limit, Math.max(0, gap * 1.8));
     if (e.kind === K.VEH && gap < bl) { bl = gap; blk = e.id; }
+    if (e.kind === K.PED && gap < pbl) { pbl = gap; pblk = e.id; }
   }
   v._blk = blk;   // (the vehicle in the way, if any: reroute.js)
+  v._pblk = pblk; // (someone on foot in the way, if any: steerTraffic's honk and creep)
   return limit;
 }
 
@@ -660,8 +662,35 @@ function steerTraffic(world, v, t) {
   // stopped behind a backup: another lane, or another way (reroute.js)
   if (!panic && unjam(world, v, holding)) { if (!v.ai || !ai.pts || !ai.pts.length) return; }
   const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190));
-  driveToward(world, v, la.x, la.y, desired, { ignoreObstacles: panic, ignore: ai.passUntil > now && ai.passBlk ? new Set([ai.passBlk]) : null, round: !!v.bus && ai.roundUntil > now });
+  let ignore = ai.passUntil > now && ai.passBlk ? new Set([ai.passBlk]) : null;
+  // held up by someone on foot in the road (nothing else in its way, not at a light or a junction): after PED_HONK_S a
+  // honk, and someone at a loose end steps out of the road (npc.js shoo); after PED_CREEP_S it edges on at a crawl,
+  // nudging past them - a crawl only shoves, never hurts (vehicles.js). The owner's notes, 10-22: "a lot of cars start
+  // getting jammed in a spot" - a passer-by pinned against a lorry in the road, the cars behind waiting for ever.
+  if (ai.creepUntil > now) {
+    (ignore ||= new Set()).add(ai.creepPast); desired = Math.min(desired, PED_CREEP_PX);
+    // (nudged aside: off the car's line, a step at a time, onto open ground only)
+    const q = world.get(ai.creepPast), c = Math.cos(v.a), sn = Math.sin(v.a);
+    if (q && !q.dead && !q.vehId && !q.player) {
+      const lx = (q.x - v.x) * c + (q.y - v.y) * sn, ly = -(q.x - v.x) * sn + (q.y - v.y) * c;
+      if (lx > 0 && lx < v.def.L / 2 + 40 && Math.abs(ly) < v.def.W / 2 + 12) {
+        const sd = ly >= 0 ? 1 : -1, nx = q.x - sn * sd * 2.5, ny = q.y + c * sd * 2.5;
+        if (!PED_BLOCK[world.map.tileAtPx(nx, ny)]) { q.x = nx; q.y = ny; }
+      }
+    }
+  }
+  else {
+    const pb = !panic && !holding && !v._blk && v._pblk ? world.get(v._pblk) : null;
+    if (pb && !pb.dead && Math.abs(vehForwardSpeed(v)) < 15) {
+      ai.pedWaitAt ??= now;
+      const waited = now - ai.pedWaitAt;
+      if (waited > PED_HONK_S && !ai.honked) { ai.honked = true; v.hornUntil = now + 0.6; shoo(world, pb, v); }
+      if (waited > PED_CREEP_S) { ai.creepPast = pb.id; ai.creepUntil = now + PED_CREEP_FOR_S; ai.pedWaitAt = undefined; ai.honked = false; (ignore ||= new Set()).add(pb.id); desired = Math.min(desired, PED_CREEP_PX); }
+    } else { ai.pedWaitAt = undefined; ai.honked = false; }
+  }
+  driveToward(world, v, la.x, la.y, desired, { ignoreObstacles: panic, ignore, round: !!v.bus && ai.roundUntil > now });
 }
+const PED_HONK_S = 2.5, PED_CREEP_S = 6, PED_CREEP_PX = 28, PED_CREEP_FOR_S = 3;
 
 // A ring of cars each stopped for the next - two nose to nose in a junction, three or four boxed in round one - waits for
 // ever: nobody in it is held up by a breakdown, so nobody looks for another way (reroute.js). The owner (2026-10-09):
