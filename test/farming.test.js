@@ -8,6 +8,7 @@ import { makeWorld, joinPlayer, teleport, run } from './helpers.js';
 import { K, DAY_LOOP_S } from '../shared/constants.js';
 import { VEHICLES, VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { FARM } from '../shared/rules.js';
+import { cropOf, fieldKind, FIELD_KINDS } from '../shared/fieldcrop.js';
 
 const farming = await import('../server/systems/farming.js');
 const economy = await import('../server/systems/economy.js');
@@ -184,6 +185,14 @@ test('the combine (vehicle 49): its header harvests the two ripe rows under it a
   for (let t = -0.1; t <= 1.0001; t += 0.02) { v.x = a.x + (b.x - a.x) * t - Math.cos(ang) * f; v.y = a.y + (b.y - a.y) * t - Math.sin(ang) * f; farming.work(w, p, v); }
   assert.equal(F.rows[r].s, ROW.STUBBLE, 'one row harvested');
   assert.equal(F.rows[r + 1].s, ROW.STUBBLE, 'and the one beside it, in the same pass');
+  // what it cut (the owner, 10-23: "Hard to tell what is being harvested"): the field's crop - the one its ground is
+  // drawn with - and how much, in the tank and in the messages
+  const C = cropOf(F.i, w.map.seed);
+  assert.ok(v.tank && v.tank.name === C.name && v.tank.n >= C.per * FARM.segs, `the tank: ${JSON.stringify(v.tank)}`);
+  const said = (p.toasts || []).map((t) => t.text).join(' | ');
+  assert.match(said, new RegExp(`Harvesting ${C.name}`), 'told what it is cutting');
+  assert.match(said, new RegExp(`Row of ${C.name} harvested.*the tank: \\d+ ${C.unit} of ${C.name}`), `told how much: ${said}`);
+  assert.match(farming.tankText(v.tank), new RegExp(`^\\d+ ${C.unit} of ${C.name}$`));
   // it doesn't plough
   F.rows[r].s = ROW.STUBBLE; F.rows[r].m = 0;
   for (let t = -0.1; t <= 1.0001; t += 0.02) { v.x = a.x + (b.x - a.x) * t - Math.cos(ang) * f; v.y = a.y + (b.y - a.y) * t - Math.sin(ang) * f; farming.work(w, p, v); }
@@ -241,4 +250,11 @@ test('the dev tractor and combine: at the field nearest you, on its crop', async
     vehicles.ejectPed(w, p.ped, true);
     teleport(w, p.ped, far.x + far.w / 2, far.y - 200);
   }
+});
+
+test('what grows in a field: the crop its ground is baked with is the one the combine reports (shared/fieldcrop.js)', () => {
+  const w = makeWorld();
+  const seen = new Set();
+  w.map.fields.forEach((f, i) => { const k = fieldKind(i, w.map.seed); assert.ok(FIELD_KINDS.includes(k)); const C = cropOf(i, w.map.seed); assert.ok(C && C.name && C.per > 0); seen.add(C.name); });
+  assert.ok(seen.size >= 2, `more than one crop about (${[...seen]})`);
 });

@@ -110,12 +110,21 @@ function crop(c, st, fl, set) {
 // (across: px across the row 0..w-1, along: px along it). The owner's FA4 concept, calm (H61's were busy and speckled):
 // four crop lines to a row - ploughed ridges, the seed drills, the shoots, the leafy rows, the tall crop, ripe golden
 // wheat, the pale stubble (and round bales: farmart drawV1 / drawV2) - little noise.
+// (the stubble, cut: the owner, 10-23 - "Hard to tell what is being harvested": it read as the ripe wheat beside it.
+// Now the dry soil shows between the lines of short pale stalk ends, each with its shadow, and a windrow of loose straw
+// lies down the middle where the combine dropped it - plainly cut beside the gold of the standing crop)
 const STUB = [[198, 170, 108], [168, 140, 84], [214, 190, 130]], PLOW = [[76, 50, 30], [100, 68, 42], [124, 86, 54], [142, 100, 64]];
+const CUT = { soil: [146, 118, 78], soil2: [128, 102, 66], end: [238, 224, 172], stalk: [192, 168, 110], shade: [106, 84, 52], straw: [[200, 176, 112], [220, 198, 136], [238, 222, 164]] };
 const RIPE = [[214, 176, 76], [180, 142, 54], [238, 208, 116]], CROPG = [[70, 132, 46], [46, 98, 34], [108, 168, 66]];
 export function rowLook(s, g) { return s === 0 ? 0 : s === 1 ? 1 : s === 3 ? 6 : g < 8 ? 2 : g < 30 ? 3 : g < 65 ? 4 : 5; }
 export function rowPixel(look, a, b) {
   const q = b & 7, ridge = Math.abs(q - 4);   // (0 on a crop line .. 4 between them)
-  if (look === 0) return (b & 3) === 1 && (a & 1) ? STUB[1] : hsh(a, b >> 1, 6) > 0.95 ? STUB[2] : STUB[0];
+  if (look === 0) {
+    if (Math.abs(b - 16) <= 2 + (hsh(a >> 1, 3, 9) > 0.55 ? 1 : 0)) { const h = hsh(a, b, 11); return CUT.straw[h > 0.72 ? 2 : h > 0.3 ? 1 : 0]; }   // the windrow
+    if (ridge === 0) return (a & 1) === 0 ? CUT.end : CUT.stalk;                        // the stalks' cut ends along a line
+    if (ridge === 1 && b > (b & ~7) + 4) return (a & 1) === 0 ? CUT.shade : CUT.soil2;   // their shadow, falling south of the line
+    return hsh(a, b >> 1, 6) > 0.9 ? STUB[1] : CUT.soil;
+  }
   if (look === 1) return ridge === 0 ? PLOW[3] : ridge === 1 ? PLOW[2] : ridge >= 3 ? PLOW[0] : PLOW[1];   // ridges and furrows
   const soil = ridge === 4 ? PLOW[0] : PLOW[1];
   if (look === 2) return ridge === 0 && (a & 3) === 0 ? [184, 160, 96] : ridge === 0 ? PLOW[0] : soil;                   // the seed drills
@@ -202,6 +211,11 @@ export function drawCombine(g, L, W, paint, wreck) {
 }
 
 const COMBINE_GREEN = '#3f9a2c';
+// the harvest as it happens (FarmArt._working): the swath's stamps kept (a ring), each CUT_L px long across FARM_RW px a
+// row; CROP_Z: px over the ground a row's look covers (the baked crop: wheat ~12, corn ~17); the chaff's and the straw's
+// colours (art v2 draws particles of these as actors.js pChaff / pStraw: CHAFF_RGBA, STRAW_HEX)
+const CUT_MAX = 1600, CUT_L = 12, FARM_RW = 64, CROP_Z = 18;
+export const CHAFF = 'rgba(212,190,136,', STRAW = '#e2c97a';
 export class FarmArt {
   constructor(S) { this.S = S; this.cv = new Map(); }
   drawTractor(g, def, p, wreck) { const c = def.id === 'combine'; (c ? drawCombine : drawTractor)(g, def.L, def.W, c && !p ? COMBINE_GREEN : PAINTS[p % PAINTS.length] || '#c8262b', wreck); }   // (the combine green: FA4)
@@ -247,10 +261,62 @@ export class FarmArt {
       g.drawImage(cv, x - PLOT_W, y - PLOT_AY * P, PLOT_W * P, PLOT_H * P);
     }
   }
+  // ---- the harvest as it happens (the owner, 10-23: "Hard to tell what is being harvested with the harvester, can we
+  // make a better visual for harvesting crops?"): the server marks a stretch of a row cut the moment the header reaches
+  // it (server farming.js) - a whole stretch (a tenth of the row) turned to stubble at once, ahead of the machine. So
+  // here a machine working a ripe row leaves its own swath: a strip of fresh stubble stamped every few px under its
+  // header as it goes (two rows wide for a combine, its own width for a tractor), kept while the row stays ripe; the
+  // stretch it's in shows its stubble only once it has left it. Out of the back of a combine blow the chaff and bits
+  // of straw (render/fx.js particles: art v2 draws them as actors.js pChaff / pStraw).
+  _working(F) {
+    const S = this.S, cuts = this.cuts || (this.cuts = new Float32Array(CUT_MAX * 4).fill(NaN)), hd = this.heads || (this.heads = []);
+    hd.length = 0;
+    if (!S.fields || !S.fields.length) return;
+    for (const v of F.vehs || []) {
+      const def = v.d && VEHICLE_BY_INDEX[v.d.m];
+      if (!def || (def.id !== 'combine' && def.id !== 'tractor') || (v.flags & 16)) continue;
+      const a = v.ra || 0, c = Math.cos(a), sn = Math.sin(a), comb = def.id === 'combine', fw = comb ? def.L / 2 - 12 : 0;
+      const hx = v.rx + c * fw, hy = v.ry + sn * fw, at = this._rowAt(hx, hy);
+      if (!at) continue;
+      hd.push(hx, hy, hx + c * 48, hy + sn * 48);   // (and a little ahead: the server's machine is a moment ahead of the one drawn)
+      const moved = v._cutX !== undefined ? Math.hypot(hx - v._cutX, hy - v._cutY) : 99;
+      if (moved < 7) continue;
+      v._cutX = hx; v._cutY = hy;
+      if (moved > 60 || at.s !== 3) continue;   // (a jump - a teleport, a new machine: no strip across; only a ripe row is cut)
+      const k = (this.cutN = ((this.cutN || 0) + 1) % CUT_MAX) * 4;
+      cuts[k] = hx; cuts[k + 1] = hy; cuts[k + 2] = a; cuts[k + 3] = comb ? 2 : 1;
+      if (comb && S.fx) {   // the chaff out of the back, a straw now and then
+        const bx = v.rx - c * (def.L / 2 + 4), by = v.ry - sn * (def.L / 2 + 4), r = Math.random;
+        // (thrown up out of the spreader and drifting down over the stubble: up in the air, over the crop's height)
+        const p = S.fx.spawn(2, bx + (r() - 0.5) * 30 * sn, by - (r() - 0.5) * 30 * c, -c * 24 + (r() - 0.5) * 16, -sn * 24 + (r() - 0.5) * 16 - 6, 1.2 + r() * 0.5, 9 + r() * 5, CHAFF, 12);
+        p.lift = 18 + r() * 14;
+        if (r() < 0.6) { const q = S.fx.spawn(8, bx, by, -c * 50 + (r() - 0.5) * 50, -sn * 50 + (r() - 0.5) * 50, 1.2 + r() * 0.6, 3, STRAW, 0, 40 + r() * 30); q.ph = r() * 6.28; q.z = 30; }
+      }
+    }
+  }
+  // the row under (x, y) in the fields sent: { s: its state, k: the stretch, f, r } or null
+  _rowAt(x, y) {
+    for (const f of this.S.fields || []) {
+      if (x < f.x || y < f.y || x >= f.x + f.w || y >= f.y + f.h) continue;
+      const len = f.v ? f.h : f.w, r = Math.floor((f.v ? x - f.x : y - f.y) / f.rw), k = Math.floor(((f.v ? y - f.y : x - f.x) / len) * f.segs);
+      if (r < 0 || r * 4 >= f.r.length || k < 0 || k >= f.segs || !(f.r[r * 4 + 3] & (1 << k))) return null;
+      return { s: f.r[r * 4], k, f, r };
+    }
+    return null;
+  }
+  // a machine's header in that stretch of that row now (its stubble waits for the swath to reach the end of it)
+  _beingCut(f, r, k) {
+    const hd = this.heads || [];
+    for (let i = 0; i < hd.length; i += 4) for (let j = 0; j < 4; j += 2) { const at = this._rowAt(hd[i + j], hd[i + j + 1]); if (at && at.f === f && at.k === k && Math.abs(at.r - r) <= 1) return true; }
+    return false;
+  }
   // ---- art v2: ground decals (the host's generated sprites: gbuf / put, made once and kept) ----
+  // The rows' looks lie over the crop the ground was baked with (zt: CROP_Z px over the ground - the tallest corn), so
+  // the field shows the server's state - except a ripe row's uncut stretches, where the baked crop stands as it is.
   drawV2(host, F, gbuf, put) {
     const S = this.S, E = host.E, x0 = host.vx0 - 64, x1 = host.vx1 + 64, y0 = host.vy0 - 64, y1 = host.vy1 + 64;
     const N = [128, 128, 255, 255], GROUND = 1;   // (flat ground: gbuf.js F_GROUND)
+    this._working(F);
     if (S.fields && S.fields.length) for (const f of S.fields) {
       if (f.x > x1 || f.y > y1 || f.x + f.w < x0 || f.y + f.h < y0) continue;
       const len = f.v ? f.h : f.w, sl = Math.round(len / f.segs), n = f.r.length >> 2;
@@ -260,20 +326,35 @@ export class FarmArt {
           if (!(ok & (1 << k))) continue;
           const x = f.v ? f.x + r * f.rw : f.x + k * (len / f.segs), y = f.v ? f.y + k * (len / f.segs) : f.y + r * f.rw;
           if (x > x1 || y > y1 || x + (f.v ? f.rw : sl) < x0 || y + (f.v ? sl : f.rw) < y0) continue;
-          const look = m & (1 << k) ? (s === 0 ? 1 : s === 1 ? 2 : 0) : rowLook(s, gr);
+          const done = !!(m & (1 << k)), look = done && !(s === 3 && this._beingCut(f, r, k)) ? (s === 0 ? 1 : s === 1 ? 2 : 0) : rowLook(s, gr);   // (being cut: still the ripe crop - the swath shows how far it's got)
           const key = host._conv(`farm|r${look}|${f.v}|${sl}|${f.rw}`, () => {
             const A = Math.ceil(sl / P), B = f.rw / P, w = f.v ? B : A, h = f.v ? A : B, G = gbuf(w, h, 0, 0);
             G.ap = P;
             for (let a = 0; a < A; a++) for (let b = 0; b < B; b++) put(G, f.v ? b : a, f.v ? a : b, rowPixel(look, a, b), 0, N, GROUND);
             return G;
           }, true);
-          if (key) E.drawDecal(key, x, y, 0, 1, 0);
-          if (look === 0 && baleAt(r, k)) {   // (a round bale on the stubble)
+          if (key) E.drawDecal(key, x, y, 0, 1, 0, look === 6 ? 0 : CROP_Z);
+          if (look === 0 && baleAt(r, k) && s === 0) {   // (a round bale on the stubble, once the row's done)
             const bk = host._conv('farm|bale', () => { const G = gbuf(BALE, BALE, BALE >> 1, BALE >> 1); G.ap = P; balePixels((px, py, rgb) => put(G, px, py, rgb, 0, N, GROUND)); return G; }, true);
-            if (bk) E.drawDecal(bk, x + (f.v ? f.rw : sl) / 2, y + (f.v ? sl : f.rw) / 2, 0, 1, 0);
+            if (bk) E.drawDecal(bk, x + (f.v ? f.rw : sl) / 2, y + (f.v ? sl : f.rw) / 2, 0, 1, 0, CROP_Z);
           }
         }
       }
+    }
+    // the swaths cut as you go (_working), over the crop still standing in the stretch being cut
+    const cuts = this.cuts;
+    if (cuts) for (let i = 0; i < cuts.length; i += 4) {
+      const cx = cuts[i], cy = cuts[i + 1], cw = cuts[i + 3];
+      if (!(cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1)) continue;   // (NaN: an empty slot)
+      const at = this._rowAt(cx, cy);
+      if (!at || at.s !== 3) { cuts[i] = NaN; continue; }   // (the row finished - its stubble's drawn whole - or grown again)
+      const key = host._conv(`farm|cut${cw}`, () => {
+        const A = CUT_L / P, B = (cw * FARM_RW) / P, G = gbuf(A, B, A >> 1, B >> 1);
+        G.ap = P;
+        for (let a = 0; a < A; a++) for (let b = 0; b < B; b++) put(G, a, b, rowPixel(0, a, b % (FARM_RW / P)), 0, N, GROUND);
+        return G;
+      }, true);
+      if (key) E.drawDecal(key, cx, cy, cuts[i + 2], 1, 0, CROP_Z);
     }
     for (const v of F.vehs || []) {   // the plough behind each tractor (FA4)
       const def = v.d && VEHICLE_BY_INDEX[v.d.m];

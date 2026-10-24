@@ -8,6 +8,7 @@
 //   stop() - the cabinet left (the overlay closed: main.js)
 // Controls: left / right (A, D, the arrows; the stick or the d-pad; a finger dragged on the screen), the ship fires on
 // its own; any button starts; Esc / B leaves.
+import { fitScreen } from './arcscreen.js';
 const W = 256, H = 224, STEP = 1 / 60;
 let G = null;   // the game running, or null
 
@@ -181,6 +182,7 @@ function step(dt) {
 
 function draw() {
   const g = G.g;
+  fitScreen(G.cv, g, W, H, true);   // (sharp: a whole number of device pixels to each of its pixels)
   g.fillStyle = '#05060f'; g.fillRect(0, 0, W, H);
   for (const s of G.stars) { g.fillStyle = s.v > 24 ? '#8aa0d8' : COL.star; g.fillRect(s.x | 0, s.y | 0, 1, 1); }
   text(g, `SCORE ${G.score}`, 6, 5, '#fff');

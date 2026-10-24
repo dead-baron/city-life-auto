@@ -893,8 +893,10 @@ export function footprints() {
 const SMOKE_M = [[58, 56, 68], [82, 80, 92], [108, 106, 118], [136, 134, 146], [166, 164, 174]];
 // smoke / steam puffs over a life: 8 frames growing (r 3 -> 10) and breaking up. kind 'dark' (a burning
 // car), 'light' (steam, tyre smoke) or 'mid' (when the source isn't known)
+// (chaff: the dust of straw and husks a combine blows out of its back - render/farmart.js)
+const SMOKE_C = [[96, 82, 60], [128, 110, 80], [160, 140, 104], [190, 170, 130], [214, 198, 160]];
 export function puffFrames(kind = 'mid') {
-  const R = kind === 'dark' || kind === true ? SMOKE_D : kind === 'light' ? SMOKE_L : SMOKE_M, out = [];
+  const R = kind === 'dark' || kind === true ? SMOKE_D : kind === 'light' ? SMOKE_L : kind === 'chaff' ? SMOKE_C : SMOKE_M, out = [];
   const RS = [3, 4, 5, 6, 7, 8, 9, 10], DIS = [0, 0, 0.08, 0.18, 0.32, 0.46, 0.6, 0.74];
   RS.forEach((r, f) => {
     const S = Math.ceil(r * 2 + 6), G = frame(S, S, S >> 1, S - 2), k = DIS[f];
@@ -954,13 +956,14 @@ export function rubbleFrames() {
   return out;
 }
 // paper scraps and leaves fluttering: 4 frames turning edge-on and back (paper white, leaf green, leaf orange)
+// (straw: a bit of cut stalk tossed out of a combine's back - thin, golden)
 export function flutterFrames(kind = 'paper') {
-  const R = kind === 'paper' ? [[150, 146, 140], [196, 192, 184], [226, 222, 212], [246, 244, 236]] : kind === 'leaf' ? LEAF_G : LEAF_O, out = [];
+  const R = kind === 'paper' ? [[150, 146, 140], [196, 192, 184], [226, 222, 212], [246, 244, 236]] : kind === 'straw' ? [[150, 120, 60], [196, 164, 88], [226, 198, 120], [244, 226, 160]] : kind === 'leaf' ? LEAF_G : LEAF_O, out = [];
   for (let f = 0; f < 4; f++) {
     const G = frame(10, 9, 5, 7), k = [1, 0.55, 0.15, 0.6][f], a = f * 0.7;
     for (let y = 0; y < 9; y++) for (let x = 0; x < 10; x++) {
       const dx = x + 0.5 - 5, dy = y + 0.5 - 4, lx = dx * Math.cos(a) + dy * Math.sin(a), ly = -dx * Math.sin(a) + dy * Math.cos(a);
-      const inside = kind === 'paper' ? Math.abs(lx) < 3.2 && Math.abs(ly) < 2.2 * k + 0.4 : (lx / 3.6) ** 2 + (ly / (1.8 * k + 0.45)) ** 2 < 1;
+      const inside = kind === 'paper' ? Math.abs(lx) < 3.2 && Math.abs(ly) < 2.2 * k + 0.4 : kind === 'straw' ? Math.abs(lx) < 3.6 && Math.abs(ly) < 0.45 * k + 0.35 : (lx / 3.6) ** 2 + (ly / (1.8 * k + 0.45)) ** 2 < 1;
       if (inside) dot(G, x, y, step(R, cl(0.6 - ly * 0.08 + (f === 2 ? -0.2 : 0)), x, y, 0.5), 0, 1);
     }
     out.push(finish(G));
@@ -1136,6 +1139,8 @@ export const FX = {
   pSmoke: { make: M(puffFrames, 'mid'), frames: 8, particle: true },
   pSmokeDark: { make: M(puffFrames, 'dark'), frames: 8, particle: true },
   pSteam: { make: M(puffFrames, 'light'), frames: 8, particle: true },
+  pChaff: { make: M(puffFrames, 'chaff'), frames: 8, particle: true },
+  pStraw: { make: M(flutterFrames, 'straw'), frames: 4, particle: true },
   pFlame: { make: M(flameFrames), frames: 8, particle: true },
   pSpark: { make: M(sparkFrames), frames: 3, particle: true },
   pBlood: { make: M(dropFrames, true), frames: 3, particle: true },

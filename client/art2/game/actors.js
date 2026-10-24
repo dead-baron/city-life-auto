@@ -229,11 +229,11 @@ export function vehState(flags, sirenPhase = 1, hp = 1, dw = 0) {
 // (holes in steps of 0-3 and the zones only where they show: a few damage looks per model, cached like the other states)
 function normSt(st = {}, t = '') {
   const s = { tip: t === 'cart' && !!st.tip, wreck: !!st.wreck, burn: !!st.burn, lights: !!st.lights, siren: st.siren === true ? 3 : st.siren | 0, brake: !!st.brake, rev: !!st.rev, bloody: !!st.bloody, dmg: st.dmg === true ? 3 : Math.max(0, Math.min(4, st.dmg | 0)), tow: Math.max(-2, Math.min(2, st.tow | 0)),
-    zones: (st.zones | 0) & 15, holes: Math.min(3, Math.ceil((st.holes | 0) / 2)), off: (st.off | 0) & 63, cut: (st.cut | 0) & 255, half: st.half === 'a' || st.half === 'b' ? st.half : '' };
+    zones: (st.zones | 0) & 15, holes: Math.min(3, Math.ceil((st.holes | 0) / 2)), off: (st.off | 0) & 63, cut: (st.cut | 0) & 255, half: st.half === 'a' || st.half === 'b' ? st.half : '', reel: t === 'combine' ? ((st.reel | 0) % 3 + 3) % 3 : 0 };
   if (!s.dmg) { s.zones = 0; s.off = 0; }
   if (s.dmg && !s.zones) s.zones = 1;
   if (!s.cut) s.half = '';
-  if (s.wreck || s.burn) { s.lights = false; s.siren = 0; s.brake = false; s.rev = false; s.bloody = false; }
+  if (s.wreck || s.burn) { s.lights = false; s.siren = 0; s.brake = false; s.rev = false; s.bloody = false; s.reel = 0; }
   if (s.wreck) { s.dmg = 0; s.zones = 0; s.holes = 0; s.off = 0; }   // (the burnt shell)
   return s;
 }
@@ -241,7 +241,7 @@ function normSt(st = {}, t = '') {
 export const TOW_TILT = 0.11;
 // st.tow from a vehicle's wire record (main.js keeps the extra byte: bits 0-1 the end up - 1 nose, 2 tail - bit 2 being winched)
 export const towOf = (extra) => { const e = (extra | 0) & 3; return !e ? 0 : (e === 2 ? -1 : 1) * ((extra & 4) ? 1 : 2); };
-const stKey = (s) => (s.tip ? 'P' : '') + (s.wreck ? 'W' : '') + (s.burn ? 'B' : '') + (s.lights ? 'L' : '') + (s.siren ? 'S' + s.siren : '') + (s.brake ? 'K' : '') + (s.rev ? 'R' : '') + (s.bloody ? 'X' : '') + (s.dmg ? 'D' + s.dmg + 'z' + s.zones + 'o' + s.off : '') + (s.holes ? 'H' + s.holes : '') + (s.half ? 'C' + s.cut + s.half : '') || '-';
+const stKey = (s) => (s.tip ? 'P' : '') + (s.wreck ? 'W' : '') + (s.burn ? 'B' : '') + (s.lights ? 'L' : '') + (s.siren ? 'S' + s.siren : '') + (s.brake ? 'K' : '') + (s.rev ? 'R' : '') + (s.bloody ? 'X' : '') + (s.dmg ? 'D' + s.dmg + 'z' + s.zones + 'o' + s.off : '') + (s.holes ? 'H' + s.holes : '') + (s.half ? 'C' + s.cut + s.half : '') + (s.reel ? 'r' + s.reel : '') || '-';   // (reel: a combine's reel turning - a third of a bat a step)
 function vehLook(d) {
   const t = vehType(d), tn = d.tn ?? -1, p = (((d.p ?? 0) % PAINTS.length) + PAINTS.length) % PAINTS.length;
   if (CIVIL.has(t)) return { t, paint: carPaint(PAINTS[tn >= 0 ? tn : p]) };
@@ -264,7 +264,7 @@ const COARSE = { ferry: 2, waterbus: 2 };
 function vehModel(d, s) {
   const k = vehLook(d), vr = (((d.vr ?? 0) % VARIANTS) + VARIANTS) % VARIANTS, key = `${k.t}|${k.paint || k.cab || k.band || 'L'}|${vr}|${stKey(s)}`;
   return MODELS.get(key, () => {
-    const o = { paint: k.paint, cab: k.cab, band: k.band, variant: vr, lights: s.lights ? 1 : 0, brake: s.brake, reverse: s.rev, siren: s.siren || false, bloody: s.bloody, state: modelState(k.t, s),
+    const o = { paint: k.paint, cab: k.cab, band: k.band, variant: vr, lights: s.lights ? 1 : 0, brake: s.brake, reverse: s.rev, siren: s.siren || false, bloody: s.bloody, state: modelState(k.t, s), reel: s.reel,
       damage: s.dmg || s.holes ? { stage: s.dmg, zones: s.zones, holes: s.holes * 2, off: s.off } : null, half: s.half || null, cut: s.cut, cool: s.wreck };
     const q = ART_PX > 1 ? COARSE[k.t] : 0;
     return compactVox(q ? halveVox(vehicleModel(k.t, { ...o, dry: true }), q) : vehicleModel(k.t, o));
@@ -878,9 +878,12 @@ export const FX_FOR_V1 = {
 };
 // the leading number of a v1 'rgba(n,' colour (allocation-free)
 const rgbaLead = (c) => { let n = 0; if (typeof c !== 'string') return 128; for (let i = 5; i < c.length; i++) { const k = c.charCodeAt(i) - 48; if (k < 0 || k > 9) break; n = n * 10 + k; } return n; };
+// (a combine's chaff and straw: render/farmart.js spawns them in these colours)
+export const CHAFF_RGBA = 'rgba(212,190,136,', STRAW_HEX = '#e2c97a';
 export function v1ParticleFx(p) {
-  if (p.type === 2) return rgbaLead(p.color) < 100 ? 'pSmokeDark' : 'pSteam';
+  if (p.type === 2) return p.color === CHAFF_RGBA ? 'pChaff' : rgbaLead(p.color) < 100 ? 'pSmokeDark' : 'pSteam';
   if (p.type === 8) {
+    if (p.color === STRAW_HEX) return 'pStraw';
     const c = typeof p.color === 'string' && p.color[0] === '#' && p.color.length >= 7 ? p.color : '#e8e4d8', r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16);
     return g > r + 12 && g > b + 12 ? 'pLeaf' : r > g + 30 && g > b ? 'pLeafAutumn' : 'pPaper';
   }

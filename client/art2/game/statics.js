@@ -1437,14 +1437,17 @@ function upright(F, lift = 0) {
   return F;
 }
 // grandstand seating painted over a facade: rows of seats stepping up with aisles, a roof edge on top
+// (the club's seats as the stands' decks have them - client/art2/buildings.js roofMat 'seats' - red, the front rows navy, a
+// few people sat about: a head over a shirt)
 function standsOn(G, spec) {
-  const { w, d } = spec, H = buildingH(spec), seats = [[214, 60, 60], [60, 110, 190], [230, 200, 80], [240, 238, 230]];
+  const { w, d } = spec, H = buildingH(spec), RED = [180, 42, 46], NAVY = [34, 52, 94], SKIN = [[226, 180, 140], [138, 90, 60], [192, 138, 98]], SHIRT = [[58, 106, 176], [236, 235, 230], [180, 42, 46], [232, 192, 64], [42, 122, 74]];
   for (let v = 14; v < H - 10; v++) for (let x = 4; x < w - 4; x++) {
-    const Y = d + H - v, row = Math.floor((v - 14) / 6), ly = (v - 14) % 6, aisle = x % 90 < 6;
+    const Y = d + H - v, row = Math.floor((v - 14) / 6), ly = (v - 14) % 6, aisle = x % 96 < 6, seat = x >> 3, sx = x & 7;
     let c;
     if (aisle) c = MAT.concrete[ly < 2 ? 2 : 3];
-    else if (ly < 2) c = MAT.concrete[1 + (ly & 1)];
-    else c = seats[(Math.floor(x / 90) + row) % 4].map((q) => q * (ly === 2 ? 1.1 : 0.85 - (hash(x >> 1, row, 3) > 0.85 ? 0.3 : 0)));
+    else if (ly < 2 || sx === 7) c = MAT.concrete[1 + (ly & 1)];
+    else if (hash(seat, row, 61) < 0.14 && sx > 0 && sx < 6) { const k = (hash(seat, row, 62) * 64) | 0; c = ly >= 4 ? SKIN[k % 3] : SHIRT[(k >> 2) % 5]; }   // (somebody sat there: their head over their shirt)
+    else c = (row < 2 ? NAVY : RED).map((q) => q * (ly === 2 ? 1.15 : 0.9));
     const j = (Y * G.w + x) * 4; if (!G.inside(x, Y)) continue;
     G.col[j] = Math.min(255, c[0]); G.col[j + 1] = Math.min(255, c[1]); G.col[j + 2] = Math.min(255, c[2]);
   }

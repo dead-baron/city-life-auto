@@ -10,6 +10,7 @@ import { TILE, T, DAY_LOOP_S } from '../../shared/constants.js';
 import { FARM } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
+import { cropOf } from '../../shared/fieldcrop.js';
 
 const DAY = DAY_LOOP_S;
 export const ROW = { STUBBLE: 0, PLOUGHED: 1, SOWN: 2, RIPE: 3 };
@@ -112,28 +113,45 @@ export function update(world) {
 // one tick of a tractor over the field: the segment under it done for its row's job; the row's job done once enough is.
 // A combine: the stretches under its header (two rows wide, at its front) harvested - it only harvests.
 export function work(world, p, v) {
-  if (v.model !== 'combine') return workAt(world, p, v.x, v.y, null);
+  if (v.model !== 'combine') return workAt(world, p, v.x, v.y, null, v);
   const c = Math.cos(v.a), s = Math.sin(v.a), f = v.def.L / 2 - 12;
   let job = null;
-  for (const off of [-FARM.rowW / 2, FARM.rowW / 2]) job = workAt(world, p, v.x + c * f - s * off, v.y + s * f + c * off, 'harvest') || job;
+  for (const off of [-FARM.rowW / 2, FARM.rowW / 2]) job = workAt(world, p, v.x + c * f - s * off, v.y + s * f + c * off, 'harvest', v) || job;
   return job;
 }
-function workAt(world, p, x, y, only) {
+// what's in a machine's grain tank (the owner, 10-23: "Hard to tell what is being harvested with the harvester"): the
+// crop of the field (shared/fieldcrop.js - the one its ground is drawn with) and how much, filled a stretch at a time
+// as the rows are cut; a different crop starts it afresh. { name, unit, n } on the vehicle (v.tank); shown in the
+// job's line and with each row done.
+function fill(world, p, v, F) {
+  const C = cropOf(F.i, world.map.seed);
+  if (!v.tank || v.tank.name !== C.name) {
+    v.tank = { name: C.name, unit: C.unit, n: 0 };
+    world.notify(p, `Harvesting ${C.name}: the header cuts two rows at once and the grain fills the tank as you go.`, 'info');
+  }
+  v.tank.n += C.per;
+  return v.tank;
+}
+export const tankText = (t) => (t ? `${Math.round(t.n)} ${t.unit} of ${t.name}` : '');
+function workAt(world, p, x, y, only, v = null) {
   const at = rowAt(world, x, y);
   if (!at) return null;
   const { F, r, k, row } = at, job = jobOf(row);
   if (!job || (only && job !== only) || !(row.ok & (1 << k)) || row.m & (1 << k)) return null;
   row.m |= 1 << k;
   F.dirty = true;
+  if (job === 'harvest' && v) fill(world, p, v, F);
   if (bits(row.m & row.ok) < Math.ceil(row.okN * FARM.cover)) return null;
-  return finishRow(world, p, F, r, job);
+  return finishRow(world, p, F, r, job, v);
 }
-function finishRow(world, p, F, r, job) {
+function finishRow(world, p, F, r, job, v = null) {
   const row = F.rows[r];
   row.s = job === 'plough' ? ROW.PLOUGHED : job === 'sow' ? ROW.SOWN : ROW.STUBBLE;
   row.g = 0; row.m = 0;
   F.dirty = true;
   const j = p.job;
+  // (harvested: the crop, and what's in the tank now - "Row of wheat harvested (the tank: 54 bu of wheat)")
+  const what = job === 'harvest' ? `Row of ${cropOf(F.i, world.map.seed).name} harvested` : `Row ${VERB[job]}`, tank = job === 'harvest' && v && v.tank ? ` - the tank: ${tankText(v.tank)}` : '';
   if (j && j.type === 'fieldwork') {
     const pay = FARM.pay[job];
     p.profile.cash += pay;
@@ -142,10 +160,10 @@ function finishRow(world, p, F, r, job) {
     if (j.done >= j.rows) {
       p.profile.cash += FARM.bonus;
       p.profile.stats.deliveries = (p.profile.stats.deliveries || 0) + 1;
-      world.notify(p, `Row ${VERB[job]}: +$${pay}. That's the ${j.rows} rows - the co-op adds a $${FARM.bonus} bonus. Good work!`, 'good');
+      world.notify(p, `${what}: +$${pay}${tank}. That's the ${j.rows} rows - the co-op adds a $${FARM.bonus} bonus. Good work!`, 'good');
       jobs.jobDone(world, p);
-    } else world.notify(p, `Row ${VERB[job]}: +$${pay} (${j.done}/${j.rows}).`, 'good');
-  } else world.notify(p, `Row ${VERB[job]}. (Take the farm-work contract at the co-op to be paid by the row.)`, 'info');
+    } else world.notify(p, `${what}: +$${pay} (${j.done}/${j.rows})${tank}.`, 'good');
+  } else world.notify(p, `${what}${tank}. (Take the farm-work contract at the co-op to be paid by the row.)`, 'info');
   p.meDirty = true;
   keep(world);
   return job;
@@ -217,7 +235,8 @@ function track(world, p) {
   if (world.tick % 10 !== 0 && j.text) return;
   const from = ped ? (ped.vehId ? world.get(ped.vehId) || ped : ped) : { x: j.tx, y: j.ty };
   const at = nextRow(world, from.x, from.y, j.field, j.only) || nextRow(world, from.x, from.y, -1, j.only);
-  const text = at ? `Farm work ${j.done}/${j.rows}: ${jobOf(at.F.rows[at.r])} a row (the marker: its end)` : `Farm work ${j.done}/${j.rows}: the fields are all growing - wait for the next to ripen`;
+  const veh = ped && ped.vehId ? world.get(ped.vehId) : null, tank = veh && veh.tank ? ` - ${tankText(veh.tank)} cut` : '';
+  const text = at ? `Farm work ${j.done}/${j.rows}: ${jobOf(at.F.rows[at.r])} a row (the marker: its end)${tank}` : `Farm work ${j.done}/${j.rows}: the fields are all growing - wait for the next to ripen${tank}`;
   if (at) { j.tx = at.e.x; j.ty = at.e.y; }
   if (text !== j.text) { j.text = text; j.pickupText = text; p.meDirty = true; }
 }

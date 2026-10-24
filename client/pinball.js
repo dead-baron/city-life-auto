@@ -6,6 +6,7 @@
 //   start({ id, best, send, close, sfx }) / stop()
 // Controls: the left flipper - Left / A / Z / LB, or the left half of the screen; the right - Right / D / M / RB, or the
 // right half; the plunger - hold Space / Enter / Down / pad A (or a finger on the shooter lane) and let go. Esc / B leaves.
+import { fitScreen } from './arcscreen.js';
 const W = 256, H = 224, STEP = 1 / 240, R = 3.5, GRAV = 300, BALLS = 3;
 // the table: walls as segments [x1, y1, x2, y2] (the outer case, the shooter lane, the inlanes and the slingshots)
 const X0 = 70, X1 = 186, LANE = 176;   // the playfield's sides, the shooter lane's wall
@@ -174,6 +175,7 @@ function step(dt) {
 
 function draw() {
   const g = G.g, T = G.T, now = performance.now() / 1000;
+  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: sharp)
   g.fillStyle = '#080510'; g.fillRect(0, 0, W, H);
   // the cabinet's glass: the table's dark blue with its neon stripes
   g.fillStyle = '#121a3a'; g.fillRect(X0 - 4, 10, X1 - X0 + 8, H - 10);

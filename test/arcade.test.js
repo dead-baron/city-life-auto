@@ -251,3 +251,23 @@ test('the Rusty Spur\'s pool table: from any side of it, Act - or the vehicle bu
   assert.equal(conn.sent.filter((m) => m && m.t === 'arcade' && m.game === 'pool').length, n + 1, 'a frame of pool');
   assert.ok(!p.ped.board, 'not on the board');
 });
+
+// the cabinets' screens drawn at the size they're shown (the owner, 10-23: "Arcade games are really blurry ...
+// especially the text"): client/arcscreen.js fitScreen
+test('the arcade screen: as many pixels as it covers on the device, pixel art at whole multiples', async () => {
+  const { fitScreen } = await import('../client/arcscreen.js');
+  const cv = (w) => ({ width: 256, height: 224, getBoundingClientRect: () => ({ width: w }) });
+  const g = () => ({ t: null, setTransform(...a) { this.t = a; }, imageSmoothingEnabled: false });
+  globalThis.devicePixelRatio = 2;
+  try {
+    const c = cv(562), G = g();
+    fitScreen(c, G, 256, 224);
+    assert.equal(c.width, 1124); assert.equal(c.height, Math.round(224 * 1124 / 256));
+    assert.ok(Math.abs(G.t[0] - 1124 / 256) < 1e-9 && G.imageSmoothingEnabled, 'scaled to it, smooth curves');
+    const p = cv(562), Gp = g();
+    fitScreen(p, Gp, 256, 224, true);
+    assert.equal(p.width, 256 * 4); assert.equal(Gp.t[0], 4); assert.equal(Gp.imageSmoothingEnabled, false);
+    const small = cv(120); fitScreen(small, g(), 256, 224, true);
+    assert.equal(small.width, 256, 'never below its own size');
+  } finally { delete globalThis.devicePixelRatio; }
+});

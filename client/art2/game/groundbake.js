@@ -218,7 +218,10 @@ export function bakeSwatches(names = E1_SWATCHES, opt = {}) {
 }
 
 // ---- 1. tiles ----------------------------------------------------------------------------------------------------
+// what grows in field f: the server's farm work reports the same crop (shared/fieldcrop.js fieldKind - kept here, not
+// imported, so the bake workers load no more files; test/harvestart.test.js holds the two to one rule)
 const FIELD_KINDS = ['WHEAT', 'CORN', 'PLOW', 'VEG', 'HAY', 'WHEAT', 'CORN'];
+export const fieldKindAt = (f, seed) => FIELD_KINDS[Math.floor(hh(f, 0, seed + 9) * FIELD_KINDS.length)];
 function tileFacts(C) {
   const { M, b, TX0, TY0, seed } = C;
   const { cls, cw } = M.terrainCls;
@@ -310,7 +313,7 @@ function tileFacts(C) {
     }
     else if (t === T.FIELD) {
       const f = fields.findIndex((r) => X >= r.x && X < r.x + r.w && Y >= r.y && Y < r.y + r.h);
-      const fk = FIELD_KINDS[Math.floor(hh(f >= 0 ? f : tx >> 3, f >= 0 ? 0 : ty >> 3, seed + 9) * FIELD_KINDS.length)];
+      const fk = f >= 0 ? fieldKindAt(f, seed) : FIELD_KINDS[Math.floor(hh(tx >> 3, ty >> 3, seed + 9) * FIELD_KINDS.length)];
       const long = f >= 0 && fields[f].w > fields[f].h;
       m = fk === 'CORN' ? (long ? M_.CORN : M_.CORNV) : fk === 'PLOW' ? (long ? M_.PLOW : M_.PLOWV) : M_[fk];
     } else if (t === T.SIDEWALK) m = walkOf(D);

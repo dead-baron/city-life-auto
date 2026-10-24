@@ -67,7 +67,7 @@ export class FX {
     if (this.thin && type !== 6 && (this.skip = !this.skip)) return this.scratch || (this.scratch = {});
     const o = this.p[this.pi];
     this.pi = (this.pi + 1) % MAX_P;
-    o.on = true; o.type = type; o.x = x; o.y = y; o.vx = vx; o.vy = vy; o.life = life; o.max = life; o.size = size; o.color = color; o.grow = grow; o.z = 0; o.vz = vz; o.veil = 1;   // (veil: drawn this much less solid - a manhole's thin steam)
+    o.on = true; o.type = type; o.x = x; o.y = y; o.vx = vx; o.vy = vy; o.life = life; o.max = life; o.size = size; o.color = color; o.grow = grow; o.z = 0; o.vz = vz; o.veil = 1; o.lift = 0;   // (veil: drawn this much less solid - a manhole's thin steam; lift: art v2 draws it that high up - a combine's chaff over the crop)
     return o;
   }
   // a crush mark in a field's crop (small: a person's or an animal's track, else a wheel's swath), along angle a
