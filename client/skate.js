@@ -26,6 +26,9 @@ function kickFrame(kp) { for (let i = 0; i < KICK_FR.length; i++) if (kp < KICK_
 export class SkateView {
   constructor(S) { this.S = S; this.bank = null; }
   boardIn(st, self) { return boardIn(st, self); }
+  // how high the skate ramp under a point is (px, 0 off them): anyone on one - rolling, walking - drawn up on its surface,
+  // not sunk into it (main.js pedLook; the owner, b1c: "going transparent through the quarter pipe")
+  rampAt(x, y) { return SK.rampSurface(this.S.map, x, y); }
   // a rider's pose, frame and height off the ground (me: your own prediction's state, for your own ped)
   look(p, f, now, me) {
     const t = this.trick(p, now, me);

@@ -337,6 +337,51 @@ test('tricks: up a quarter pipe straight and back down the way you came; the sco
   leave(p);
 });
 
+// (the owner, b1c: "you can just walk through the quarter pipe ... riding on skateboard it shows you going transparent
+// through the quarter pipe instead of being in front of it")
+test('a quarter pipe: its tall part is solid on foot and slow; ridden up fast, up its face to the coping, never past it; the ramps\' surfaces', async () => {
+  const { qpipeSolids } = await import('../shared/map.js');
+  const QY = 140 * TILE, qp = { t: 'qpipe', x: 3000, y: QY, w: 192 };
+  const Q = kerbMap([qp]);
+  Q.addSolidProp = (x, y, r) => { const k = Q.idx(Math.floor(x / TILE), Math.floor(y / TILE)); let a = Q.solidProps.get(k); if (!a) Q.solidProps.set(k, (a = [])); const e = { x, y, r, pi: -1, off: false }; a.push(e); return e; };
+  qpipeSolids(Q, qp);
+  // on foot: walking up to it from the south, held in front of its tall part
+  const WALK = { canMove: true, canSprint: true, speedMul: 1, analog: true, canSwim: true };
+  for (const x0 of [3000, 3010, 2930, 3080]) {
+    const w = newPedState(x0, QY + 120);
+    let into = 0;
+    for (let i = 0; i < 60; i++) { pedStep(w, { bits: 0, mx: 0, my: -1, aim: 0 }, 0.05, Q, WALK); if (Math.abs(w.x - 3000) < 96 && w.y < QY + 3) into++; }
+    assert.equal(into, 0, `on foot from ${x0}: never into its tall part (${Math.round(w.x - 3000)}, ${Math.round(w.y - QY)})`);
+    if (Math.abs(w.x - 3000) < 90) assert.ok(SK.rampSurface(Q, w.x, w.y) < 6, 'held on its low toe');
+  }
+  // walking in from the side along its back: held out too
+  const sd = newPedState(3000 + 140, QY - 10);
+  let side = 0;
+  for (let i = 0; i < 60; i++) { pedStep(sd, { bits: 0, mx: -1, my: 0, aim: 0 }, 0.05, Q, WALK); if (Math.abs(sd.x - 3000) < 96 && sd.y < QY + 3) side++; }
+  assert.equal(side, 0, `from the side: never into its tall part (${Math.round(sd.x - 3000)}, ${Math.round(sd.y - QY)})`);
+  // ridden up it fast: up the face, the coping its top (the deck and the wall behind never), and back down; no bail
+  for (const v0 of [200, 380]) {
+    const s = newPedState(3000, QY + 200); s.a = -Math.PI / 2; s.vy = -v0; s.skEv = [];
+    let top = 1e9, up = false;
+    for (let i = 0; i < 80; i++) { pedStep(s, { bits: 0, mx: 0, my: s.rollT > 0 || up ? 0 : -1, aim: 0 }, 0.05, Q, RIDE); top = Math.min(top, s.y); if (s.airK === 2) up = true; }
+    assert.ok(up, `${v0} px/s: up it`);
+    assert.ok(!s.boardHit && !s.skFall, `${v0} px/s: no bail`);
+    assert.ok(top >= QY - 24 + SK.QP.deck, `${v0} px/s: never past its coping (${Math.round(top - QY)})`);
+    assert.ok(s.vy > 0, `${v0} px/s: back down`);
+  }
+  // rolling into it slowly: stopped by it, not through it
+  const sl = newPedState(3000, QY + 60); sl.a = -Math.PI / 2; sl.skEv = [];
+  for (let i = 0; i < 40; i++) pedStep(sl, { bits: 0, mx: 0, my: -0.25, aim: 0 }, 0.05, Q, RIDE);
+  assert.ok(sl.y > QY + 8, `slow: held at its face (${Math.round(sl.y - QY)})`);
+  // the surfaces, as the art shapes them
+  assert.ok(SK.rampSurface(Q, 3000, QY + 23) < 1, 'its toe: the ground');
+  assert.ok(Math.abs(SK.rampSurface(Q, 3000, QY - 20) - SK.QP.h) < 0.01, 'its deck: its full height');
+  const K2 = kerbMap([{ t: 'kicker', x: 3000, y: QY }, { t: 'pyramid', x: 3400, y: QY }]);
+  assert.ok(SK.rampSurface(K2, 3000, QY - 16) > 11 && SK.rampSurface(K2, 3000, QY + 16) < 1.5, 'a kicker: up to its lip on the north');
+  assert.ok(Math.abs(SK.rampSurface(K2, 3400, QY) - 16) < 0.01 && SK.rampSurface(K2, 3400 - 58, QY) < 2, 'a pyramid: its top, its banks');
+  assert.equal(SK.rampSurface(K2, 3200, QY), 0, 'off them: nothing');
+});
+
 test('skate sessions: the action button at a skate spot on your board starts one (and leaves you on it); banked combos score it; the goals pay; the spot keeps its best', () => {
   const p = rider(ROAD.x + 700, ROAD.y);
   const spots = M.skateSpots;

@@ -4360,6 +4360,7 @@ function pedLook(p, now) {
     fr = sf === 1 ? ((p.as || 0) > 20 ? Math.floor(now * 2.4 + p.id * 0.3) % 2 : 0) : sf === 2 ? Math.floor(now * 0.9 + p.id * 0.17) % 2 : 0;
     lift = sf === 3 ? 14 : 0;
   }
+  if (S.skate && !flying && !(f & PF.INVEH) && !p.swim) lift = Math.max(lift, S.skate.rampAt(p.rx ?? p.x, p.ry ?? p.y));   // (up on a skate ramp: on its surface - client/skate.js)
   const L = p._look || (p._look = {});
   L.lift = lift; L.board = !!(p.d && p.d.bd) && SKATE_POSES.has(pose); L.surf = sf;
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;

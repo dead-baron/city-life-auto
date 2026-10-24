@@ -153,6 +153,40 @@ export function nearby(map, x, y, what = 'segs') {
   return out;
 }
 const gone = (map, q) => q.pi >= 0 && !!(map.propSolid && map.propSolid.get(q.pi) && map.propSolid.get(q.pi).off);
+// The ramps' surfaces (the owner, b1c: "you can just walk through the quarter pipe ... going transparent through the
+// quarter pipe instead of being in front of it"): how high the ramp under a point is (px), as its art is shaped
+// (client/art2/props-park.js skateQuarter, skateKicker, skatePyramid - the same curves) - a quarter pipe's transition
+// curving up from its toe on the south to the deck at its back (QP: its depth, its height, the deck's depth), a kicker's
+// straight slope up to its lip on the north, a pyramid's banks. The page lifts whoever is on one by it (client/skate.js
+// rampAt); a quarter pipe's tall part is solid besides (shared/map.js addProp: qpipeSolids).
+export const QP = { d: 48, h: 32, deck: 9 };
+export function qpSurf(yy) {   // yy: px in from the quarter pipe's back edge
+  const L = QP.d - QP.deck;
+  if (yy < 0 || yy > QP.d) return 0;
+  if (yy < QP.deck) return QP.h;
+  const u = (QP.d - yy) / L;
+  return QP.h * (1 - Math.sqrt(Math.max(0, 1 - u * u)));
+}
+export function rampSurface(map, x, y) {
+  if (!map || !map.props) return 0;
+  const cx = Math.floor(x / TILE / CH), cy = Math.floor(y / TILE / CH);
+  let h = 0;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    for (const r of chunkAt(map, cx + dx, cy + dy).ramps) {
+      if (x <= r.x0 || x >= r.x1 || y <= r.y0 || y >= r.y1 || gone(map, r)) continue;
+      const yy = y - r.y0;
+      const z = r.k === 'qp' ? qpSurf(yy) : r.k === 'kick' ? 13 * (1 - (yy + 0.5) / (r.y1 - r.y0))
+        : Math.min(16, 16 * Math.min(x - r.x0, r.x1 - x, yy, r.y1 - y) / 30);
+      if (z > h) h = z;
+    }
+  }
+  return h;
+}
+// the quarter pipe a rider is going up (null: none) - its coping is QP.deck px in from its back
+function qpUnder(map, x, y) {
+  for (const r of nearby(map, x, y, 'ramps')) if (r.k === 'qp' && x > r.x0 && x < r.x1 && y > r.y0 - 8 && y < r.y1 + 8 && !gone(map, r)) return r;
+  return null;
+}
 // the seg named `id` near (x, y)
 export function segById(map, x, y, id) {
   for (const q of nearby(map, x, y)) if (q.id === id && !gone(map, q)) return q;
@@ -242,6 +276,9 @@ function air(s, bits, pressed, mx, my, ml, dt, map) {
   if (s.airK === 2) {   // a quarter pipe: up the ramp, stopped at the top - the hang - and back down; turned round as you go
     const v0 = s.vg || 0, u = 1 - 2 * k;
     s.vy = -v0 * Math.sign(u) * u * u * u * u; s.vx *= Math.exp(-3 * dt);
+    // (never on past its coping into the deck and the wall behind - fast, the rest of the way is straight up over it: b1c)
+    const r = map && s.vy < 0 ? qpUnder(map, s.x, s.y) : null;
+    if (r) { const top = r.y0 + QP.deck + 1; if (s.y + s.vy * dt < top) s.vy = Math.min(0, (top - s.y) / dt); }
     s.a = wrapAngle(-Math.PI / 2 + Math.PI * Math.min(1, k * 1.15) * (stickWay(-Math.PI / 2, mx, my, ml) === 2 ? -1 : 1));
   } else if (ml > 0.15) { const d = wrapAngle(Math.atan2(my, mx) - s.a), st = 1.6 * dt; s.a = wrapAngle(s.a + clamp(d, -st, st)); }
   // the trick button: a flip, or - in a big air, held - a grab
