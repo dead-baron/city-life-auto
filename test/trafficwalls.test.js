@@ -269,3 +269,50 @@ test('stopped behind a street blocked across both lanes, a queue behind it: nobo
   assert.ok(longest <= 40, `nobody against a building for more than 2 s (${(longest / 20).toFixed(1)} s)`);
   assert.ok((w.turnsHeld || 0) > 0, 'they waited their turn instead');
 });
+
+// (World v3, Midtown station: a pickup turning the corner by the station's bike rack had a bike parked there in its
+// look-ahead box - straight ahead of it, so over the kerb on the bend - and stopped in the bend for good, the queues
+// behind it both ways locking the corner; test/calmstreets.test.js)
+test('a bike parked on the pavement beside a car\'s way never stops it; one standing in the road does', () => {
+  const w = makeWorld(), m = w.map;
+  // a straight kerb: a run of road with the pavement along its north side
+  let spot = null;
+  for (let ty = m.y0 + 2; ty < m.y0 + m.h - 4 && !spot; ty++) for (let tx = m.x0 + 2; tx < m.x0 + m.w - 16; tx++) {
+    let ok = true;
+    for (let k = 0; k < 12 && ok; k++) ok = m.tileAt(tx + k, ty - 1) === T.SIDEWALK && m.tileAt(tx + k, ty) === T.ROAD && m.tileAt(tx + k, ty + 1) === T.ROAD;
+    if (ok) { spot = { x: (tx + 3) * TILE, kerb: ty * TILE }; break; }
+  }
+  assert.ok(spot, 'a kerb');
+  const pick = car(w, 'pickup', spot.x, spot.kerb + 19, 0);
+  // the bike: wholly on the pavement, 28 px across from the pickup's middle (inside its look-ahead box)
+  const bike = w.spawnVehicle('cruiser', spot.x + 150, spot.kerb - 9, 0, {});
+  assert.equal(m.tileAtPx(bike.x, bike.y + bike.def.W / 2), T.SIDEWALK);
+  traffic.driveToward(w, pick, spot.x + 400, pick.y, 200);
+  assert.equal(pick._blk, 0, 'the bike on the pavement is not in its way');
+  // the same bike out in the road, just off the kerb: it is
+  bike.y = spot.kerb + 10; w.place(bike);
+  traffic.driveToward(w, pick, spot.x + 400, pick.y, 200);
+  assert.equal(pick._blk, bike.id, 'a bike standing in the road is');
+});
+
+// (World v3, Midtown station: a car out of the bend nose to nose with a tanker coming up the other lane, a car close
+// behind each - neither with room to back off, the corner locked for minutes; test/calmstreets.test.js)
+test('two cars nose to nose with a car close behind each: one of those behind backs off to make room', () => {
+  const w = makeWorld(), m = w.map;
+  const S = streetByBuilding(m);
+  assert.ok(S, 'a straight street');
+  const { p: pl } = joinPlayer(w);
+  teleport(w, pl.ped, S.x + 300, S.r.y + S.r.hw + 150);
+  const y = S.r.y + laneOffset(S.e, 0), x0 = S.x + 300;
+  const mk = (model, x, a) => { const v = car(w, model, x, y, a); v.despawnable = false; traffic.joinTraffic(w, v); return v; };
+  // A heads west in the eastbound lane, B east in it: nose to nose; A2 and B2 close behind them
+  const A = mk('sedan', x0 + 70, Math.PI), B = mk('sedan', x0 - 70, 0);
+  const A2 = mk('sedan', A.x + A.def.L + 16, Math.PI), B2 = mk('sedan', B.x - B.def.L - 16, 0);
+  const a2x = A2.x, b2x = B2.x;
+  let backed = false;
+  for (let t = 0; t < 20 * 20 && !backed; t++) {
+    w.step();
+    backed = (w.ringRoomMade || 0) > 0 && (A2.x > a2x + 10 || B2.x < b2x - 10);
+  }
+  assert.ok(backed, `one of the cars behind backed off (A2 ${(A2.x - a2x).toFixed(0)} px, B2 ${(b2x - B2.x).toFixed(0)} px)`);
+});
