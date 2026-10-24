@@ -272,6 +272,15 @@ export const SHOOTOUT_EVERY_S = [180, 300]; // how often a gang-police shootout 
 // Lying low in the wilds (woods, farmland, desert): fewer eyes and more cover than in town
 export const WILD_SIGHT = 0.7;       // the police spot a wanted suspect out there at this share of their town range...
 export const COVER_SIGHT = 0.45;     // ...and on foot in thick trees or rocks, up to this much less again
+// Wanted: heat -> stars (law.js; 4 and 5 were 100, 160 - the owner, 10-22). Not constants.js's old copy: test/wantedladder
+export const STAR_HEAT = [0, 10, 30, 60, 110, 200];
+export function starsForHeat(heat) {
+  let s = 0;
+  for (let i = 1; i < STAR_HEAT.length; i++) if (heat >= STAR_HEAT[i]) s = i;
+  return s;
+}
+// above STAR_HEAT[from] a crime's heat counts `mult` of itself (law.js heatAfter)
+export const HEAT_TOP = { from: 3, mult: 0.6 };
 export const WILD_COOL = 1.8;        // out of sight in the wilds, heat cools this many times faster
 export const WILD_UNITS = 1;         // ...and once they've lost you, no more cars join the search beyond this many
 
@@ -382,7 +391,7 @@ export const ROB_TILL = { convenience: 400, gasstation: 450, coffee: 300, tackle
 export const ROB_TILL_TIER = { lux: 1.6, suburb: 1.2, mid: 1, rural: 0.9, wild: 0.8, neon: 1.1, industrial: 0.8, low: 0.7, red: 0.8, rough: 0.6 };
 export const ROB_REFILL_S = 900;
 // Heat that grows: once the police are called (a witness or a camera saw it, or the silent alarm) you're on 1 star
-// (ROB_CALLED_HEAT; stars: shared/constants.js STAR_HEAT) - then for as long as it goes on, heat rises ROB_HEAT_S a second
+// (ROB_CALLED_HEAT; stars: STAR_HEAT) - then for as long as it goes on, heat rises ROB_HEAT_S a second
 // and ROB_HEAT_PER_100 for every $100 taken, times the kind of place and the district's wealth. A corner store in a rough
 // part of town stays minor if you're quick; a bank in a rich one is a huge crime in seconds.
 export const ROB_CALLED_HEAT = 12;
@@ -494,6 +503,8 @@ export const BOUNCER_CHASE_PX = 560;       // ...but go no further than this fro
 
 // Little happenings round the players (server/systems/happenings.js): a street fight, someone collapsing, a dropped wallet
 export const HAPPEN_EVERY_S = 150;         // roughly how often one happens somewhere near someone in town
+// The calm streets (the owner, 10-22): server events.js roughAt, busyNear
+export const CALM_STREETS = { fightShare: 0.2, snatchShare: 0.5, incidents: 2, incidentPx: 900 };
 export const FIGHT_BREAKUP_SAMARITAN = 4;  // breaking up a street fight
 export const FAINT_HELP_REWARD = 40;       // helping someone who collapsed back on their feet (cash, from them)...
 export const FAINT_HELP_SAMARITAN = 6;     // ...and the Samaritan points
@@ -583,7 +594,7 @@ export { ASSAY_PAYS } from './rules-base.js';             // the quarry's assay 
 
 // guarding (combat.js blocked): walk speed, front arc (rad); the plasma blade's deflection odds by angle (deflectChance);
 // fire arrows: extra damage, to a vehicle (burning for vehBurnS), a campfire within lightPx catches
-export const GUARD = { speed: 0.55, arc: 1.31 };
+export const GUARD = { speed: 0.55, arc: 1.31, strikeS: 0.3 };   // strikeS: a blow from the guard drops it this long
 export const PLASMA_DEFLECT = { front: 0.9, frontArc: 1.05, side: 0.3, sideArc: 1.92, idleArc: 1.21 };
 export const FIRE_ARROW = { burn: 18, veh: 14, vehBurnS: 3, lightPx: 48 };
 // The streets coming alive (server/systems/streetlife.js, the owner 2026-10-10): now and then, near someone out in town,
@@ -620,6 +631,12 @@ export const NPC_GUARD = { chance: { fists: 0.22, bat: 0.3, sword: 0.35, katana:
 // away) and a garage won't keep one.
 export const WORK_TRUCK_RETURN = 150;
 export const WORK_TRUCK = { returnR: 240, returnS: 900, searchR: 1400 };
+// A job's vehicle recalled (the owner, 2026-10-23: "Canceling a job should make you have to give up the vehicle like a
+// helicopter"; server jobs.js recall): a job that ends undone - cancelled, quit, expired, lost - and a return window run
+// out take back what the job issued. On the ground you're set down beside it outS seconds after (a moment to pull over);
+// a boat once it's by a shore or a pier (and slower than slowPx px/s); an aircraft only once it's down on the ground -
+// never in mid-air. Nobody aboard: it's gone goneS seconds later. remindS: how often you're told while it waits.
+export const RECALL = { outS: 3, goneS: 4, slowPx: 70, remindS: 25 };
 // Safety mode (server safety.js): the first act that would be a crime only warns; pressing again within confirmS does it
 export const SAFETY_CONFIRM_S = 4;
 

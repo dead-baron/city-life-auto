@@ -527,8 +527,11 @@ export function buildRelief3(m, L, addProp) {
   keepB.fill(0);
   for (let y = 1; y < H - 2; y++) for (let x = 1; x < W - 2; x++) { const i = y * W + x; if (thick(i)) keepB[i] = keepB[i + 1] = keepB[i + W] = keepB[i + W + 1] = 1; }
   for (let i = 0; i < N; i++) if (cliff[i] && !keepB[i]) { cliff[i] = 0; cliffs--; }
-  for (let i = 0; i < N; i++) if (cliff[i]) { m.tiles[i] = T.WALL; m.reserve[i] |= 32; }
+  const was = new Uint8Array(N);   // (what each band tile was: given back where no face stands on it - below)
+  for (let i = 0; i < N; i++) if (cliff[i]) { was[i] = m.tiles[i]; m.tiles[i] = T.WALL; m.reserve[i] |= 32; }
   CLIFFS.set(m, cliff);
+  const faced = new Uint8Array(N);   // (the band tiles under a face's picture)
+  const face = (x0, y0, x1, y1) => { for (let y = Math.max(0, y0); y <= Math.min(H - 1, y1); y++) for (let x = Math.max(0, x0); x <= Math.min(W - 1, x1); x++) faced[y * W + x] = 1; };
   // the desert's tables (H50): red sandstone all round each rim - its band in arcs of 6 to 13 tiles round the rim (shorter on a small one; 2026-10-21:
   // was a 6-tile grid, a ring of even knobs), each arc's face as tall as the table on the south, two thirds of it east
   // and west, a low lip on the north (the face looks away), each a little taller or lower than the next
@@ -549,6 +552,7 @@ export function buildRelief3(m, L, addProp) {
       const nx = (sx / n - t.x) / t.rx, ny = (sy / n - t.y) / t.ry, nl = Math.sqrt(nx * nx + ny * ny) || 1, f = ny / nl;
       const kf = f > 0.45 ? 1 : f > -0.45 ? 0.65 : 0.3, h = Math.round(clamp((40 + t.h * 3) * kf * (0.85 + 0.3 * hash(t.x, t.y + k, 7314)), 30, 160) / 10) * 10;
       addProp(m, 'cliff', (x0 + x1 + 1) / 2 * TILE, (y1 + 1) * TILE, 0, { w: (x1 - x0 + 1) * TILE, d: (y1 - y0 + 1) * TILE, h, s: (t.s * 7 + k * 13) % 8 + 1, st: 'sandstone', relief: 1 });
+      face(x0, y0, x1, y1);
       faces++;
     }
   }
@@ -563,9 +567,29 @@ export function buildRelief3(m, L, addProp) {
         const x0 = x - run, st = (DISTRICTS[m.dist[y * W + x0]] || {}).style, cx = (x0 + run / 2) * TILE, cy = (y + 1) * TILE, h = Math.round(clamp(40 + drop * 3, 50, 160) / 10) * 10;
         if (st === 'desert' || st === 'rocky' || m.dist[y * W + x0] === 48) addProp(m, 'cliff', cx, cy, 0, { w: run * TILE, d: depth * TILE, h, s: (x0 * 7 + y) % 50 + 1, relief: 1, ...(st === 'desert' && { st: 'sandstone' }) });
         else addProp(m, 'cliffwall', cx, cy - 0.4 * TILE, 0, { len: run * TILE, h, d: 64, s: x0 + y, relief: 1 });
+        face(x0, y - depth + 1, x - 1, y);
         faces++;
       }
       run = foot ? 1 : 0; drop = foot ? z[i - W] - z[i + W] : 0; depth = foot ? 1 : 0;
+    }
+  }
+  // (the owner, b1c: "Can't walk through this shadow in the red rock desert?", "Can't walk through this patch either,
+  // looks like incomplete environment asset") the desert's band with no face on it - a coast's drop facing the sea, a
+  // band's east or west side, a short arc, the back of a wide one - was solid rock drawn as flat red ground
+  // (groundbake.js REDROCK): it's the ground it was again, the slope's shading on it. What a face stands on stays rock.
+  let bare = 0;
+  for (let i = 0; i < N; i++) {
+    if (!cliff[i] || faced[i] || (DISTRICTS[m.dist[i]] || {}).style !== 'desert') continue;
+    m.tiles[i] = was[i]; m.reserve[i] &= ~32; cliff[i] = 0; cliffs--; bare++;
+  }
+  // (and a neighbouring district's piece of such a band left less than two tiles thick by it, with no face: the same)
+  const in2 = (i) => { for (const j of [i, i - 1, i - W, i - W - 1]) if (cliff[j] && cliff[j + 1] && cliff[j + W] && cliff[j + W + 1]) return true; return false; };
+  for (let pass = 0, more = bare > 0; more && pass < 8; pass++) {
+    more = false;
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x;
+      if (!cliff[i] || faced[i] || in2(i)) continue;
+      m.tiles[i] = was[i]; m.reserve[i] &= ~32; cliff[i] = 0; cliffs--; bare++; more = true;
     }
   }
   // the tables, for the bake (its cap rock on each top, the talus at the foot) and the dressing (no small mesas on them)
@@ -575,5 +599,5 @@ export function buildRelief3(m, L, addProp) {
   let top = 0;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x, h = z[i]; if (h > top) top = h; rel[i] = clamp(Math.floor(h + BAYER[(y & 3) * 4 + (x & 3)]), 0, 255); }
   m.relief = rel;
-  return { cell: RELIEF_CELL, top: Math.round(top), tables: tables.length, mesas: tables.filter((t) => t.mesa).length, tableList: tables.map((t) => ({ x: t.x, y: t.y, rx: t.rx, ry: t.ry, h: t.h, mesa: t.mesa, s: t.s })), cliffs, faces, outcrops, cut, fill, falls: fallsOf3(m).map((f) => f.name) };
+  return { cell: RELIEF_CELL, top: Math.round(top), tables: tables.length, mesas: tables.filter((t) => t.mesa).length, tableList: tables.map((t) => ({ x: t.x, y: t.y, rx: t.rx, ry: t.ry, h: t.h, mesa: t.mesa, s: t.s })), cliffs, faces, bare, outcrops, cut, fill, falls: fallsOf3(m).map((f) => f.name) };
 }

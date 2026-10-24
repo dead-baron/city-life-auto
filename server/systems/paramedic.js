@@ -242,7 +242,8 @@ export function devMedic(world, p, msg) {
   if (!p.job) { const err = start(world, p); if (err) return err; }
   const j = p.job;
   if (j.call) endCall(world, p, false, '[dev] call dropped');
-  const at = openNear(world.map, ped.x + 50, ped.y) || { x: ped.x + 50, y: ped.y };
+  const amb = world.get(j.truck);   // (inside the hospital - the debug menu's 'near hospital' puts you at its desk: out by the ambulance instead)
+  const at = openNear(world.map, ped.x + 50, ped.y) || (amb && openNear(world.map, amb.x + 90, amb.y)) || { x: ped.x + 50, y: ped.y };
   const c = callAt(world, p, k, { x: at.x, y: at.y, name: '' });
   if (!c) return 'no room for a patient here';
   const v = world.get(j.truck), sp = openNear(world.map, ped.x - 120, ped.y);

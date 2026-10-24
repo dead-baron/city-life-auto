@@ -6,7 +6,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, straightRoad } from './helpers.js';
-import { STAR_HEAT, K } from '../shared/constants.js';
+import { K } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 import { JAIL_S, BAIL_PER_STAR, BUST_FINE_PER_STAR, HOLD_S, ARREST_REWARD_PER_STAR, DELIVER_BONUS, CUSTODY_STUCK_S, CUSTODY_SKIP_S, CUSTODY_WAIT_BREAK_S, GHOST_SECONDS, ESCORT_WALK_PX, BREAK_RETRY_S, BREAK_KNOCK_S, BREAK_DAZE_S, STRUGGLE_GRACE_S } from '../shared/rules.js';
 import { mulberry32 } from '../shared/rng.js';
 import { IN } from '../shared/input.js';

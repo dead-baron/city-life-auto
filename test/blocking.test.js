@@ -76,9 +76,26 @@ test('guarding by input: the block bit with something to block with raises the g
   send(w, p, IN.BLOCK | IN.AIMING, 0);
   assert.ok(d.guardUntil > w.time, 'guard up');
   assert.ok(players.pedMods(w, d).speedMul <= GUARD.speed + 1e-9, 'a careful step');
+  // a blow from the guard (the owner's notes, 10-22: holding the right button, a left click did nothing): the swing goes,
+  // the guard is down for it (GUARD.strikeS), and comes back up while the button is still held
   const next = d.nextAttack;
+  const log = [], emit = w.emit.bind(w);
+  w.emit = (x, y, ev) => { log.push(ev); return emit(x, y, ev); };
   send(w, p, IN.BLOCK | IN.AIMING | IN.FIRE, 0);
-  assert.equal(d.nextAttack, next, 'no swing while guarding');
+  assert.ok(d.nextAttack > next, 'the swing goes, guard held or not');
+  assert.ok(log.some((ev) => ev.e === 'swing' && ev.id === d.id), 'the swing shown');
+  assert.ok(log.some((ev) => ev.e === 'guard' && ev.id === d.id && ev.t === 0), 'the guard dropped for it');
+  assert.ok(!(d.guardUntil > w.time), 'down for the blow');
+  send(w, p, IN.BLOCK | IN.AIMING, 0);
+  assert.ok(!(d.guardUntil > w.time), 'still down mid-swing');
+  for (let t = 0; t < Math.ceil(GUARD.strikeS / 0.05) + 1; t++) send(w, p, IN.BLOCK | IN.AIMING, 0);
+  assert.ok(d.guardUntil > w.time, 'back up after the blow, the button still held');
+  assert.ok(GUARD.strikeS > 0.1 && GUARD.strikeS <= 0.5, 'down only for the blow');
+  // the button held down with the guard: a blow each time the weapon is ready, the guard up in between
+  let swings = 0, upTicks = 0;
+  for (let t = 0; t < 60; t++) { log.length = 0; send(w, p, IN.BLOCK | IN.AIMING | IN.FIRE, 0); if (log.some((ev) => ev.e === 'swing' && ev.id === d.id)) swings++; if (d.guardUntil > w.time) upTicks++; }
+  assert.ok(swings >= 2 && upTicks >= 10, `held: ${swings} blows, the guard up ${upTicks} of 60 ticks in between`);
+  w.emit = emit;
   send(w, p, IN.AIMING, 0);
   assert.ok(!(d.guardUntil > w.time), 'let go: down again');
   // walking: the guard slows you
@@ -203,6 +220,18 @@ test("the guard has a pose of its own: a player's shown while held and dropped w
   }
   // the classic view: the page knows the pose (pedPose, the 'guard' event), the body draws it
   const main = src('client/main.js');
-  assert.ok(/case 'guard'/.test(main) && /return 'guard'/.test(main) && /'thump', 'guard'\]/.test(main), 'main.js: the event, the pose, upright');
+  assert.ok(/case 'guard'/.test(main) && /return 'guard'/.test(main) && /'thump', 'guard', 'guardw'\]/.test(main), 'main.js: the event, the pose, upright');
+  // walking in the guard (the owner's notes, 10-22: "you just sort of float across the ground"): a stride of its own
+  assert.ok(/pose === 'guard' && \(p\.as \|\| 0\) > 14\) pose = 'guardw'/.test(main), 'main.js: moving in the guard walks');
+  assert.equal(POSES.guardw, 6);
+  for (const wpn of [0, WEAPONS.bat.i, WEAPONS.katana.i]) {
+    const fr = [0, 1, 2, 3, 4, 5].map((f) => sum(pedSprite(app, 'guardw', 1, f, wpn, { ar: 'casual' })));
+    assert.ok(new Set(fr).size >= 4, `weapon ${wpn}: the legs stride (${new Set(fr).size} distinct frames)`);
+    const gd = sum(pedSprite(app, 'guard', 1, 0, wpn, { ar: 'casual' }));
+    for (const w2 of ['walk0', 'aimw']) assert.ok(!fr.includes(sum(pedSprite(app, w2, 1, 0, wpn, { ar: 'casual' }))), `weapon ${wpn}: not the ${w2}`);
+    assert.ok(!fr.includes(gd), `weapon ${wpn}: not the standing guard`);
+  }
+  const { pedFrame } = await import('../client/art2/game/peds.js');
+  assert.deepEqual([0, 2, 4, 7].map((f) => pedFrame('guardw', f)), [0, 1, 3, 5], 'on the stride phase');
   assert.ok(/pose === 'guard'/.test(src('client/render/body.js')), 'render/body.js draws it');
 });

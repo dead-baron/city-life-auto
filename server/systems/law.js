@@ -1,7 +1,8 @@
 // Law & tri-faction systems: witness network (GDD §6), legal immunity matrix (§7),
 // heat/wanted stars with the 3-second flare and expanding search circle, peak-wanted
 // disguise memory (§4B), enforcer badge + demotion (§4C), bounties and arrests.
-import { K, FACTION, STAR_HEAT, starsForHeat, TILE } from '../../shared/constants.js';
+import { K, FACTION, TILE } from '../../shared/constants.js';
+import { STAR_HEAT, starsForHeat } from '../../shared/rules.js';
 import * as revive from './revive.js';
 import { angleDiff } from '../../shared/math.js';
 import { isTurf } from '../../shared/map.js';
@@ -16,7 +17,7 @@ import * as cells from './cells.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 import { undergroundOf, ugLos } from '../../shared/underground.js';
-import { ROB_CALLED_HEAT, VANDAL_HEAT, VEH_CRIME, HEIST } from '../../shared/rules.js';
+import { ROB_CALLED_HEAT, VANDAL_HEAT, VEH_CRIME, HEIST, HEAT_TOP } from '../../shared/rules.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
 // sev: how much more (or less) likely a witness is to call it in than for an assault (WITNESS_REPORT); sight: how far
@@ -267,7 +268,7 @@ export function calledIn(world, sp, call, caller) {
   if (spec.minor && !usual(sp)) { if (!soft(sp)) star(world, sp, call.type, sp.ped.x, sp.ped.y, 'witness'); }   // (on that star already: likely the same punches - no more of it)
   else {
     if (spec.felony) sp.profile.felonies++;
-    addHeat(world, sp, spec.heat, sp.ped.x, sp.ped.y);
+    addHeat(world, sp, spec.heat, sp.ped.x, sp.ped.y, true);
     logDispatch(world, call.type, sp.ped.x, sp.ped.y, sp, sp.wanted, 'witness');
     world.notify(sp, `${spec.label}: a witness called you in, and the police know your description!`, 'bad');
   }
@@ -365,7 +366,7 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
 
   p.profile.criminalExp += Math.round(spec.heat / 2);
   store.touch();
-  if (opts.silentCheck === false) { if (spec.felony) p.profile.felonies++; addHeat(world, p, spec.heat, x, y); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return true; }
+  if (opts.silentCheck === false) { if (spec.felony) p.profile.felonies++; addHeat(world, p, spec.heat, x, y, true); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return true; }
   const w = witnesses(world, x, y, ped, victim, (type === 'brandish' || type === 'murder') && !opts.quiet, type);
   for (const q of w.saw) sawCrime(world, q, p, type, x, y);
   if (w.count === 0) {
@@ -375,13 +376,25 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
   }
   if (spec.minor && !usual(p)) return smallCrime(world, p, type, x, y, w);   // (a small crime: it adds up - task #405)
   if (spec.felony) p.profile.felonies++; // only crimes someone saw go on your record
-  addHeat(world, p, spec.heat, x, y);
+  addHeat(world, p, spec.heat, x, y, true);
   logDispatch(world, type, x, y, p, p.wanted, w.cam ? 'camera' : w.cop ? 'officer' : 'witness');
   world.notify(p, `${spec.label} reported${w.cam ? (w.secCam ? ' by a security camera' : ' by a traffic camera') : w.cop ? ' by police' : ''}!`, 'bad');
   return true;   // (called in: robbery.js starts the heat growing)
 }
 
-export function addHeat(world, p, amount, x, y) {
+// heat after `amount` more: above 3 stars' heat it climbs at only HEAT_TOP.mult of the rate (rules.js; the owner's notes,
+// 10-22: a full 5 stars should take a while) - two murders still make 3 stars, but 4 takes four and 5 seven (were three
+// and four); 4 stars takes two police killings and 5 four (were two and two). The thresholds, STAR_HEAT, live in
+// rules.js, not constants.js: a change to constants.js re-keys every browser's kept World v3 and baked chunks.
+export function heatAfter(heat, amount) {
+  const top = STAR_HEAT[HEAT_TOP.from];
+  if (!(amount > 0)) return heat + (amount || 0);
+  const below = Math.max(0, Math.min(amount, top - heat));
+  return heat + below + (amount - below) * HEAT_TOP.mult;
+}
+// damp: heat from a crime (crime, calledIn) or a robbery's / a heist's heat growing (robbery.js, heist.js) - it climbs
+// slower above 3 stars (heatAfter); without it the amount is as it is (an alarm putting you at so many stars, the dev menu)
+export function addHeat(world, p, amount, x, y, damp = false) {
   const now = world.time;
   const prof = p.profile;
   p.soft = false;   // (heat from anything but small crimes: the usual chase - star() makes a small crime's star soft again)
@@ -391,7 +404,7 @@ export function addHeat(world, p, amount, x, y) {
     p.disguised = false;
     world.notify(p, `Disguise blown! Your ${prof.peakWanted}-star record was recognized.`, 'bad');
   }
-  p.heat = Math.min(STAR_HEAT[5] + 60, p.heat + amount);
+  p.heat = Math.min(STAR_HEAT[5] + 60, damp ? heatAfter(p.heat, amount) : p.heat + amount);
   const before = p.wanted;
   p.wanted = Math.min(5, starsForHeat(p.heat));
   if (p.wanted >= 3 && before < p.wanted) events.feed(world, { kind: 'wanted', text: `Police hunting ${p.name}: ${'★'.repeat(p.wanted)}`, x, y });

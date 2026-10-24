@@ -8,6 +8,7 @@ import { K, TILE } from '../shared/constants.js';
 import * as FS from '../shared/fish.js';
 import { DEV_SECTIONS } from '../client/devcats.js';
 import { command } from '../server/dev.js';
+import { CART_DELAY_S } from '../server/devplay.js';
 import * as fishing from '../server/systems/fishing.js';
 import { store } from '../server/store.js';
 
@@ -57,7 +58,9 @@ test('shopping carts from the debug menu: you and a friend, two loaded carts hea
   assert.equal(carts.length, 2, 'two carts');
   const riders = carts.flatMap((c) => c.seats.filter(Boolean));
   assert.equal(riders.length, 4, 'loaded');
-  run(W, 2);
+  run(W, CART_DELAY_S - 0.5);
+  for (const c of carts) assert.ok(Math.hypot(c.vx, c.vy) < 1 && c.seats.filter(Boolean).length === 2, 'held still a few seconds: time to close the menu and watch');
+  run(W, 2.5);
   for (const id of riders) { const q = W.get(id); assert.ok(!q || !q.vehId, 'everyone thrown'); }
   for (const c of carts) W.remove(c);
   command(W, p, 'cart', { k: 'tipped' });
@@ -117,4 +120,34 @@ test("places by name (World v3's handcrafted districts, the landmarks): there, o
   }
   command(W, p, 'place', { n: 'Nowhere Such' });
   assert.match(last(p), /No "Nowhere Such"/);
+});
+
+// (the owner, 10-23: "Debug spawning airplanes you can fly in lets you spawn infinite airplanes ... let's not let players
+// spawn infinite debug items like planes or shopping cart crashes"): one of a kind at a time - a new one takes the last away
+test('the debug menu\'s vehicles and crashes, one at a time: a new plane takes your last plane away, a new crash the last one\'s carts', () => {
+  const { p } = fresh();
+  const planes = () => [...W.entities.values()].filter((e) => e.kind === K.VEH && e.model === 'plane' && !e.removed && e.issuedTo === p.pid);
+  command(W, p, 'car', { m: 'plane' });
+  const first = planes();
+  assert.equal(first.length, 1, 'a plane');
+  for (let k = 0; k < 4; k++) command(W, p, 'car', { m: 'plane' });
+  assert.equal(planes().length, 1, 'still just the one');
+  assert.ok(first[0].removed, 'the first taken away');
+  command(W, p, 'car', { m: 'sedan' });
+  assert.equal(planes().length, 1, 'a car of yours doesn\'t take your plane');
+  // one you're aboard stays yours (nobody's put out of it)
+  command(W, p, 'car', { m: 'speedboat', in: 1 });
+  const boat = W.get(p.ped.vehId);
+  command(W, p, 'car', { m: 'speedboat' });
+  assert.ok(!boat.removed && p.ped.vehId === boat.id, 'the boat you\'re in stays');
+  p.ped.vehId = 0; p.ped.seat = -1; boat.seats[0] = 0; teleport(W, p.ped, ROAD.x + 300, ROAD.y);
+  // the cart crash: a second one takes the first one's carts and riders away
+  const id0 = W.nextId;
+  command(W, p, 'cart', { k: 'headon' });
+  const a = [...W.entities.values()].filter((e) => e.kind === K.VEH && e.def.cart && e.id >= id0), ra = a.flatMap((c) => c.seats.filter(Boolean));
+  assert.equal(a.length, 2);
+  command(W, p, 'cart', { k: 'headon' });
+  assert.ok(a.every((c) => c.removed) && ra.every((id) => !W.get(id)), 'the last crash\'s carts and riders gone');
+  const carts = [...W.entities.values()].filter((e) => e.kind === K.VEH && e.def.cart && !e.removed && e.id >= id0);
+  assert.equal(carts.length, 2, 'just the new pair');
 });

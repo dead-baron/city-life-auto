@@ -218,3 +218,36 @@ test('pinball: the plunger, the bumpers and the flippers keep it up, a drain; th
   arcade.onScore(w, p, { id: c.id, score: 999990, secs: 11 });
   assert.ok(prof.tickets - 8 <= Math.floor((ARCADE.pinball.minS + 3) * ARCADE.pinball.maxRate / ARCADE.pinball.perTicket), 'no faster than a table scores');
 });
+
+// (the owner, 10-23: "Tried playing pool and it said you can't do it indoors or something"): round the Rusty Spur's table
+// from any side - its ends too - Act racks them up; the vehicle button there (with a skateboard in the bag: it used to try
+// the board, "Not indoors") does the same
+test('the Rusty Spur\'s pool table: from any side of it, Act - or the vehicle button - racks them up', async () => {
+  const players = await import('../server/systems/players.js');
+  const { IN } = await import('../shared/input.js');
+  const { poolTable } = await import('../server/systems/activities.js');
+  const w = makeWorld();
+  const T = w.map.roadhouse && poolTable(w.map);
+  assert.ok(T, 'the table');
+  const { p, conn, prof } = joinPlayer(w, { cash: 50 });
+  for (const [x, y, where] of [[T.x1 + 18, T.cy, 'the east end'], [T.x0 - 18, T.cy, 'the west end'], [T.cx, T.y1 + 20, 'the long side']]) {
+    teleport(w, p.ped, x, y);
+    const it = players.findInteraction(w, p);
+    assert.ok(it && /pool table/.test(it.label), `${where}: ${it && it.label}`);
+  }
+  teleport(w, p.ped, T.x1 + 90, T.cy);
+  assert.ok(!/pool table/.test(players.findInteraction(w, p)?.label || ''), 'not from across the room');
+  // the vehicle button, a board in the bag
+  prof.inventory.skateboard = 1;
+  teleport(w, p.ped, T.x1 + 18, T.cy);
+  const said = [], n0 = w.notify.bind(w);
+  w.notify = (q, t, tone) => { if (q === p) said.push(t); return n0(q, t, tone); };
+  const n = conn.sent.filter((m) => m && m.t === 'arcade').length;
+  let seq = 9000;
+  p.inputQ.push({ seq: ++seq, bits: IN.VEHICLE, mx: 0, my: 0, aim: 0 }); w.step();
+  p.inputQ.push({ seq: ++seq, bits: 0, mx: 0, my: 0, aim: 0 }); w.step();
+  w.notify = n0;
+  assert.ok(!said.some((t) => /indoors/i.test(t)), `no "not indoors" (${said.join(' | ')})`);
+  assert.equal(conn.sent.filter((m) => m && m.t === 'arcade' && m.game === 'pool').length, n + 1, 'a frame of pool');
+  assert.ok(!p.ped.board, 'not on the board');
+});

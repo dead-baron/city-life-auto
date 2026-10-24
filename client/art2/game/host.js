@@ -1562,7 +1562,7 @@ export class World2 {
     if (!sk) return;
     p._v2k = sk;
     const o = this.opts;
-    o.alpha = 1; o.flash = L.hitK > 0.4 ? L.hitK - 0.4 : 0; o.xray = !!me && !sky; o.flipX = false; o.shadow = !sky; o.tint = null;   // (up in the sky: its shadow on the ground is the overlay's - main.js drawSkyShadows)
+    o.alpha = 1; o.flash = L.hitK > 0.4 ? L.hitK - 0.4 : 0; o.xray = !!me && !sky && !p.parent && !L.board && !L.surf; o.flipX = false; o.shadow = !sky; o.tint = null;   // (up in the sky: its shadow on the ground is the overlay's - main.js drawSkyShadows)
     // burned to death: blackened (the record's charred bit, server combat.js kill); just put out: singed a while (FI1)
     const sg = now - (p.burnOff ?? -99);
     if (p.char && (f & PF.DEAD)) o.tint = CHAR_PED;
@@ -1695,7 +1695,10 @@ export class World2 {
     if (!use) return;
     v._v2k = use;
     const o = this.opts;
-    o.alpha = sinking ? 1 - 0.75 * sk : 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = !sinking; o.tint = v.tint || null;   // (render/boom.js)
+    // (your own car shows through what hides it; anything ridden in the open - a bike, a cart, a boat, a jet ski -
+    // doesn't: its rider drawn over it would read as something in front of it, an outline through the rider - owner, b1c)
+    const open = def.kind === 'bike' || def.kind === 'boat' || !!def.crew || !!def.cart;
+    o.alpha = sinking ? 1 - 0.75 * sk : 1; o.flash = 0; o.xray = !!me && !open; o.flipX = false; o.shadow = !sinking; o.tint = v.tint || null;   // (render/boom.js)
     if (v.blinkUntil > now) o.alpha *= Math.floor(now * 10) % 2 ? 0.25 : 1;
     const lean = def.kind === 'boat' ? 0 : -(v.lean || 0) * (def.cart ? 0.6 : def.kind === 'bike' ? 2.5 : 1.6);
     const jz = def.kind === 'bike' || def.kind === 'car' ? jumpLift(this.map, v, now) : 0;   // (riding the MX park's tabletops, flying off them: jumps.js - looks only)
@@ -1703,16 +1706,17 @@ export class World2 {
     const z0 = this._z0(v, def.kind === 'boat') - (sinking ? sk * 8 : 0) + jz;
     // a moving boat: its foam under the hull (bow collar, churned stern, the V close behind) and wake points
     // dropped for the trail that spreads and fades behind it (_wakeTrail)
+    // a boat (or a swimmer) part-way under a bridge: the deck over it hides it (o.under caps its depth below a deck's) -
+    // its foam too (the owner, b1c: "their VFX show up over the bridge")
+    const under = def.kind === 'boat' && this._underDeck(v.rx, v.ry, v.ra, def.L);
     if (def.kind === 'boat' && A.wakeKey && !sinking) {
       const b = v.buf, sp = b && b.length > 1 ? Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20 : 0;
       if (sp > 40) {
         const fr = Math.floor(now * 8) & 3, wk = this._spr('actors', 'wake', A.wakeKey(v.d, hi, N, fr), [v.d, hi, N, fr]);
-        if (wk) { const wo = this.wakeO || (this.wakeO = {}); wo.alpha = Math.min(1, sp / 220); wo.shadow = false; wo.flash = 0; wo.xray = false; wo.flipX = false; wo.tint = null; E.drawSprite(wk, v.rx, v.ry, 0, wo); }
+        if (wk) { const wo = this.wakeO || (this.wakeO = {}); wo.alpha = Math.min(1, sp / 220); wo.shadow = false; wo.flash = 0; wo.xray = false; wo.flipX = false; wo.tint = null; wo.under = under ? UNDER_Z : 0; E.drawSprite(wk, v.rx, v.ry, 0, wo); }
         if (now - (v._wkT || 0) > 0.09) { v._wkT = now; this._wakeDrop(v.rx - Math.cos(v.ra) * def.L * 0.45, v.ry - Math.sin(v.ra) * def.L * 0.45, v.ra, now, def.W * 0.5, sp); }
       }
     }
-    // a boat (or a swimmer) part-way under a bridge: the deck over it hides it (o.under caps its depth below a deck's)
-    const under = def.kind === 'boat' && this._underDeck(v.rx, v.ry, v.ra, def.L);
     o.under = under ? UNDER_Z : 0;
     E.drawSprite(use, v.rx - Math.sin(v.ra) * lean, v.ry, Math.max(0, z0), o);
     o.air = false;
@@ -1770,7 +1774,7 @@ export class World2 {
     if (!sk) return;
     v._v2k = sk;
     const o = this.opts;
-    o.alpha = 1; o.flash = 0; o.xray = !!me; o.flipX = false; o.shadow = true; o.tint = null; o.air = false; o.under = 0;
+    o.alpha = 1; o.flash = 0; o.xray = false; o.flipX = false; o.shadow = true; o.tint = null; o.air = false; o.under = 0;   // (no outline through its rider)
     if (v.blinkUntil > now) o.alpha *= Math.floor(now * 10) % 2 ? 0.25 : 1;
     const z0 = Math.max(0, this._z0(v, false));
     E.drawSprite(sk, v.rx, v.ry, z0, o);
@@ -2386,11 +2390,13 @@ export class World2 {
       if (age < 0 || age > LIFE) continue;
       const x = W.d[j], y = W.d[j + 1];
       if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+      if (this.map.tileAtPx(x, y) === TT.BRIDGE) continue;   // (dropped under a bridge: the deck over it hides the foam - b1c)
       const a = W.d[j + 2], hw = W.d[j + 4], sp = W.d[j + 5], f = 1 - age / LIFE, alpha = Math.pow(f, 1.3) * Math.min(1, sp / 300) * 0.9;
       const spread = hw * 0.8 + age * (10 + sp * 0.035), nx = -Math.sin(a), ny = Math.cos(a);
       for (let s = -1; s <= 1; s += 2) {
         const key = streak[(k + (s > 0 ? 1 : 0)) % 3];
-        if (key) E.drawDecal(key, x + nx * spread * s, y + ny * spread * s, a + s * 0.35, alpha, 0);
+        const qx = x + nx * spread * s, qy = y + ny * spread * s;
+        if (key && this.map.tileAtPx(qx, qy) !== TT.BRIDGE) E.drawDecal(key, qx, qy, a + s * 0.35, alpha, 0);
       }
       if (age < 1 && churn) E.drawDecal(churn, x, y, a, (1 - age) * alpha, 0);
     }

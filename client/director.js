@@ -36,7 +36,7 @@ export const SCENES = [
   { g: 'Action', n: 'Street race on the Neon Strip at night', s: [[0, 'place', { n: 'Neon Strip' }], [2500, 'street', { k: 'race' }]], t: 1380, cam: 'smooth', z: 0.8 },
   { g: 'Action', n: 'Armored truck run', s: [[0, 'place', { n: 'Downtown' }], [2500, 'street', { k: 'armored' }]], cam: 'smooth', z: 0.85 },
   { g: 'Action', n: 'Gang shootout in The Yards', s: [[0, 'place', { n: 'The Yards' }], [2500, 'guns', {}], [600, 'godp', {}], [600, 'shootout', {}]], cam: 'smooth', z: 0.9 },
-  { g: 'Action', n: 'A tanker goes up by a row of cars', s: [[0, 'place', { n: 'Port Westport' }], [2500, 'blast', { k: 'row' }]], cam: 'follow', z: 0.85 },
+  { g: 'Action', n: 'A tanker goes up by a row of cars', s: [[0, 'place', { n: 'Westport Center' }], [2500, 'blast', { k: 'row' }]], cam: 'follow', z: 0.85 },   // (Port Westport's middle is the container stacks: no room for the row)
   { g: 'Action', n: 'A street fight the police break up', s: [[0, 'place', { n: 'Old Town' }], [2500, 'happen', { k: 'fight', cops: 1 }]], cam: 'smooth', z: 1.2 },
   { g: 'Action', n: 'A tank on the boulevard', s: [[0, 'place', { n: 'Midtown' }], [2500, 'car', { m: 'tank', in: 1 }]], cam: 'smooth', z: 0.85 },
   { g: 'Vehicles', n: 'Helicopter over the city at golden hour', s: [[0, 'near', { k: 'helipad' }], [2500, 'car', { m: 'heli', in: 1 }]], t: 1125, cam: 'smooth', z: 0.8, note: 'take off and fly over downtown' },
@@ -47,8 +47,8 @@ export const SCENES = [
   { g: 'Vehicles', n: 'Dirt bike at the MX park', s: [[0, 'near', { k: 'raceway' }], [2500, 'car', { m: 'dirtbike', in: 1 }]], cam: 'smooth', z: 1 },
   { g: 'Vehicles', n: 'Motorbike through the peaks', s: [[0, 'place', { n: 'Granite Peaks' }], [2500, 'car', { m: 'tourer', in: 1 }]], t: 1125, cam: 'smooth', z: 0.9 },
   { g: 'Vehicles', n: 'Horseback across the farm valley', s: [[0, 'near', { k: 'farm' }], [2500, 'car', { m: 'horse', in: 1 }]], t: 1125, cam: 'smooth', z: 1.1, note: 'Shift to gallop' },
-  { g: 'Police', n: 'On patrol in a cruiser', s: [[0, 'cop', {}], [600, 'place', { n: 'Civic Center' }], [2500, 'car', { m: 'police', in: 1 }]], cam: 'smooth', z: 0.9 },
-  { g: 'Police', n: 'Police helicopter', s: [[0, 'cop', {}], [600, 'near', { k: 'helipad' }], [2500, 'car', { m: 'policeheli', in: 1 }]], t: 1380, cam: 'smooth', z: 0.8 },
+  { g: 'Police', n: 'On patrol in a cruiser', s: [[0, 'place', { n: 'Civic Center' }], [2500, 'cop', {}]], cam: 'smooth', z: 0.9, note: 'on duty, at the wheel of your cruiser' },
+  { g: 'Police', n: 'Police helicopter', s: [[0, 'near', { k: 'helipad' }], [2500, 'cop', {}], [600, 'car', { m: 'policeheli', in: 1 }]], t: 1380, cam: 'smooth', z: 0.8 },
   { g: 'Police', n: 'Bounty hunter on a contract', s: [[0, 'hunter', {}], [600, 'bounty', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Taxi fare', s: [[0, 'place', { n: 'Midtown' }], [2500, 'cabjob', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Ambulance call', s: [[0, 'near', { k: 'hospital' }], [2500, 'medicjob', {}]], cam: 'smooth', z: 0.9 },
@@ -62,13 +62,13 @@ export const SCENES = [
   { g: 'Crime', n: 'The mail train (rob it)', s: [[0, 'train', { mail: 1 }]], cam: 'smooth', z: 0.85 },
   { g: 'Crime', n: 'A bank vault (the drill)', s: [[0, 'near', { k: 'vault' }]], cam: 'follow', z: 1.2 },
   { g: 'Crime', n: 'A mugging on the street', s: [[0, 'place', { n: 'Southside' }], [2500, 'snatch', {}]], cam: 'smooth', z: 1.1 },
-  { g: 'Life', n: 'At home', s: [[0, 'homein', {}]], cam: 'follow', z: 1.2 },
+  { g: 'Life', n: 'At home', s: [[0, 'homein', { kind: 'house' }]], cam: 'follow', z: 1.2 },
   { g: 'Life', n: 'The garden', s: [[0, 'garden', {}]], cam: 'follow', z: 1.2 },
   { g: 'Life', n: 'Fishing a river at dawn', s: [[0, 'fish', { k: 'go', w: 'river' }]], t: 390, cam: 'follow', z: 1.2 },
   { g: 'Life', n: 'Fishing out at sea', s: [[0, 'fish', { k: 'boat' }]], t: 1125, cam: 'smooth', z: 1 },
   { g: 'Life', n: 'Hunting: wolves run down a deer', s: [[0, 'place', { n: 'Highland Woods' }], [2500, 'animal', { scene: 'wolves' }]], cam: 'follow', z: 0.9 },
-  { g: 'Life', n: 'Wildlife: a bear fishing', s: [[0, 'animal', { scene: 'bear' }]], cam: 'follow', z: 1.2 },
-  { g: 'Life', n: 'Wildlife: an eagle takes a rabbit', s: [[0, 'animal', { scene: 'eagle' }]], cam: 'follow', z: 1 },
+  { g: 'Life', n: 'Wildlife: a bear fishing', s: [[0, 'place', { n: 'Pine Lake' }], [2500, 'animal', { scene: 'bear' }]], cam: 'follow', z: 1.2 },
+  { g: 'Life', n: 'Wildlife: an eagle takes a rabbit', s: [[0, 'place', { n: 'Willow Valley' }], [2500, 'animal', { scene: 'eagle' }]], cam: 'follow', z: 1 },
   { g: 'Life', n: 'The drive-in after dark', s: [[0, 'time', { m: 1195 }], [400, 'near', { k: 'drivein' }]], st: 1, cam: 'follow', z: 0.85, note: 'sets everyone\'s clock to dusk' },
   { g: 'Life', n: 'A night at the casino', s: [[0, 'near', { k: 'casino' }]], t: 1380, cam: 'follow', z: 1 },
   { g: 'Life', n: 'Dancing at a club', s: [[0, 'time', { m: 1380 }], [400, 'near', { k: 'club' }]], st: 1, cam: 'follow', z: 1.2, note: 'sets everyone\'s clock to night' },
@@ -98,6 +98,11 @@ export function makeDirector(S, api) {
   const keys = new Set();
   let axes = null, panel = null, shown = false, x = 0, y = 0, inited = false, target = 0, tour = null, drift = null, scene = null, fade = null;
   D.holds = () => D.mode === 'drone' || D.mode === 'tour';
+  // the server's idle clock (players.js idleCheck): the camera flown or the panel used is someone there ({ t: 'cine' }, at
+  // most every 20 s); the tour running on by itself is like riding a train ({ t: 'cine', tour: 1 } a minute: the clock
+  // runs slow - the owner, 10-23, "riding the train for 10 minutes kicked me out for idling")
+  let hereAt = -1e9, tourAt = -1e9;
+  const here = () => { const t = performance.now(); if (t - hereAt > 20e3) { hereAt = t; api.send({ t: 'cine' }); } };
 
   // ---- the page's own bits: the clean screen's rule, the bars, the fade ----
   const css = document.createElement('style');
@@ -196,6 +201,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
   function tourStep(cam, dt) {
     const T = tour;
     T.t += dt;
+    { const t = performance.now(); if (t - tourAt > 60e3) { tourAt = t; api.send({ t: 'cine', tour: 1 }); } }
     if (!T.shot || T.t >= SHOT_S + HOLD_S) {
       T.i = (T.i + 1) % T.list.length; T.t = 0;
       const q = T.list[T.i], a = (T.i * 2.39) % 6.283, r = 260;
@@ -263,7 +269,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
   // ---- the panel ----
   function render() {
     if (!panel || !shown) return;
-    const btn = (label, on, fn, cls = '') => { const b = document.createElement('button'); b.textContent = label; if (on) b.classList.add('on'); if (cls) b.classList.add(cls); b.onclick = (ev) => { ev.stopPropagation(); fn(); b.blur(); }; return b; };
+    const btn = (label, on, fn, cls = '') => { const b = document.createElement('button'); b.textContent = label; if (on) b.classList.add('on'); if (cls) b.classList.add(cls); b.onclick = (ev) => { ev.stopPropagation(); here(); fn(); b.blur(); }; return b; };
     const row = (...bs) => { const r = document.createElement('div'); r.className = 'row'; for (const b of bs) r.appendChild(b); return r; };
     const h = (t) => { const e = document.createElement('h3'); e.textContent = t; return e; };
     panel.textContent = '';
@@ -308,6 +314,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
     if (down && k === 'F8') { shot(); return true; }
     if (D.mode === 'target' && down && (k === 'BracketLeft' || k === 'BracketRight')) { nextTarget(k === 'BracketRight' ? 1 : -1); return true; }
     if (!D.holds()) return false;
+    if (down) here();
     if (down && k === 'Escape') { setMode('follow'); return true; }
     if (D.mode === 'drone' && down && (k === 'KeyQ' || k === 'Minus')) { setZoom(D.zi - 1); return true; }
     if (D.mode === 'drone' && down && (k === 'KeyE' || k === 'Equal')) { setZoom(D.zi + 1); return true; }
@@ -330,7 +337,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
     } else if (D.mode === 'drone') {
       let mx = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
       let my = (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) - (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0);
-      if (axes && Math.hypot(axes.lx || 0, axes.ly || 0) > 0.15) { mx = axes.lx; my = axes.ly; }
+      if (axes && Math.hypot(axes.lx || 0, axes.ly || 0) > 0.15) { mx = axes.lx; my = axes.ly; here(); }
       const sp = (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 1500 : 480) / (cam.zoom || 1);
       D.vx = (D.vx || 0) + (mx * sp - (D.vx || 0)) * lag(4); D.vy = (D.vy || 0) + (my * sp - (D.vy || 0)) * lag(4);
       x += D.vx * dt; y += D.vy * dt;

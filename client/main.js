@@ -9,7 +9,7 @@ import { pedStep, vehStep, driveInput } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
-import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
+import { VEHICLE_BY_INDEX, vehicleWord } from '../shared/vehicles.js';
 import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb } from '../shared/items.js';
 import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
@@ -2784,10 +2784,11 @@ function pedPose(e) {
   if (e.bangAt !== undefined && S.loopClock - e.bangAt < BANG_S && !(f & PF.MOVING)) return e.bangK === 2 ? 'thump' : 'bang';   // (fight in a cell: rattling the bars, a fist on the wall)
   if (e.d && e.d.hb && !(f & PF.MOVING)) return 'bars';   // in a cell, both hands on the bars, the arms straight out (server cells.js)
   if (e.pickAt !== undefined && S.loopClock - e.pickAt < 0.42) return 'swing';   // mining: the pickaxe coming down on the rock (server underground.js 'pick')
-  if (S.loopClock - e.guardAt < e.guardT) return 'guard';   // guarding (the 'guard' event: server combat.js, players.js)
   const w = WEAPON_BY_INDEX[e.extra];
   const meleeW = w && w.type === 'melee';
+  // a punch or a swing thrown from the guard shows as the blow, then the guard again (server players.js GUARD.strikeS)
   if (meleeW && e.swingAt !== undefined && S.loopClock - e.swingAt < SWING_TIME) return e.extra === 0 ? 'punch' : 'swing';
+  if (S.loopClock - e.guardAt < e.guardT) return 'guard';   // guarding (the 'guard' event: server combat.js, players.js)
   if (f & PF.ATTACK) {
     if (!meleeW) return 'aim';
   }
@@ -4335,7 +4336,8 @@ function pedLook(p, now) {
   if (stag) pose = 'stagger';
   else if (pose === 'move' && (f & PF.BLEED) && !(f & PF.SPRINT) && (p.as || 0) < 175) pose = 'limp';
   else if (pose === 'aim' && (p.as || 0) > 14) pose = 'aimw';   // walking while aiming: the legs stride, the gun stays up
-  let fr = pose === 'move' || pose === 'carry' || pose === 'limp' || pose === 'aimw' || pose === 'cuffed' || pose === 'escortR' || pose === 'escortL' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1
+  else if (pose === 'guard' && (p.as || 0) > 14) pose = 'guardw';   // walking in the guard: the legs stride, the guard stays up
+  let fr = pose === 'move' || pose === 'carry' || pose === 'limp' || pose === 'aimw' || pose === 'guardw' || pose === 'cuffed' || pose === 'escortR' || pose === 'escortL' ? Math.floor(p.phase || 0) % 8 : pose === 'roll' ? Math.floor(now * 12) % 4 : pose === 'idle' ? Math.floor(now * 1.5 + p.id) % 8 : pose === 'down' && (f & PF.STUN) ? 1
     : pose === 'stagger' ? (Math.cos((p.reactA || 0) - (p.ra || 0)) > 0.2 ? 2 : 0) + (rT > p.reactD * 0.45 ? 1 : 0)
       : pose === 'crawl' ? Math.floor(now * 3.2 + p.id) % 4 : (pose === 'downF' || pose === 'downB') && tL > 0.55 ? 1 : pose === 'sitlow' ? Math.floor(now * 0.22 + p.id * 0.37) % 2
         : pose === 'bars' ? heldWay(p.id, now, 6, 4) : pose === 'bang' || pose === 'thump' ? (now - p.bangAt < 0.14 ? 0 : 1) : 0;
@@ -4360,6 +4362,7 @@ function pedLook(p, now) {
     fr = sf === 1 ? ((p.as || 0) > 20 ? Math.floor(now * 2.4 + p.id * 0.3) % 2 : 0) : sf === 2 ? Math.floor(now * 0.9 + p.id * 0.17) % 2 : 0;
     lift = sf === 3 ? 14 : 0;
   }
+  if (S.skate && !flying && !(f & PF.INVEH) && !p.swim) lift = Math.max(lift, S.skate.rampAt(p.rx ?? p.x, p.ry ?? p.y));   // (up on a skate ramp: on its surface - client/skate.js)
   const L = p._look || (p._look = {});
   L.lift = lift; L.board = !!(p.d && p.d.bd) && SKATE_POSES.has(pose); L.surf = sf;
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;
@@ -4489,7 +4492,7 @@ function drawPed(p, now) {
 
 // Upright 3/4 character: feet on the ground point, mirrored for the east-facing directions.
 const SKATE_POSES = new Set(['skate', 'skatec', 'skateair', 'skflip', 'skshove', 'sktre', 'skgrab', 'skgrind', 'skmanual']);   // (on a skateboard: client/art2/people.js)
-const UPRIGHT = new Set([...SKATE_POSES, 'surf', 'surfair', 'idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup', 'escortR', 'escortL', 'bars', 'bang', 'thump', 'guard']);
+const UPRIGHT = new Set([...SKATE_POSES, 'surf', 'surfair', 'idle', 'move', 'punch', 'swing', 'aim', 'aimw', 'carry', 'fish', 'kneel', 'stagger', 'limp', 'sitlow', 'cuffed', 'handsup', 'escortR', 'escortL', 'bars', 'bang', 'thump', 'guard', 'guardw']);
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // flat on the ground (art2 people.js poses)
 const STAGGER_FROM = new Set(['idle', 'move', 'aim', 'aimw', 'punch', 'swing', 'carry']);
 const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', stab: 'deadF', slump: 'dead', spin: 'deadS', slash: 'deadS', halved: 'dead' }, FLING_LIE = { face: 'face', slide: 'back', roll: 'side' }, DEAD_BY_ID = ['back', 'face', 'side'];
@@ -4499,7 +4502,7 @@ const DEAD_POSE = { face: 'deadF', back: 'dead', side: 'deadS', knees: 'deadF', 
 const DEATH_SEQ = { knees: [[0.22, 'stagger', 0], [0.95, 'kneel', 1]], stab: [[0.3, 'stagger', 2], [0.85, 'kneel', 1]], slump: [[0.35, 'stagger', 0], [0.6, 'stagger', 1]], spin: [[0.55, 'stagger', 0]], slash: [[0.4, 'stagger', 0]] };
 const DEATH_TURN = { spin: [4.4, 0.55], slash: [2.2, 0.4] };
 // the old renderer's sprites for the poses it doesn't have (the subway view)
-const V1_POSE = { surfpad: 'idle', surf: 'idle', surfair: 'idle', skate: 'move', skatec: 'idle', skateair: 'idle', skflip: 'idle', skshove: 'idle', sktre: 'idle', skgrab: 'idle', skgrind: 'idle', skmanual: 'idle', stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down', escortR: 'move', escortL: 'move', bars: 'carry', bang: 'carry', thump: 'punch', guard: 'aim' };
+const V1_POSE = { surfpad: 'idle', surf: 'idle', surfair: 'idle', skate: 'move', skatec: 'idle', skateair: 'idle', skflip: 'idle', skshove: 'idle', sktre: 'idle', skgrab: 'idle', skgrind: 'idle', skmanual: 'idle', stagger: 'idle', limp: 'move', aimw: 'aim', crawl: 'down', downF: 'down', downB: 'down', deadF: 'dead', deadS: 'dead', cuffed: 'move', handsup: 'carry', hood: 'down', escortR: 'move', escortL: 'move', bars: 'carry', bang: 'carry', thump: 'punch', guard: 'aim', guardw: 'aim' };
 const CSCALE = 1.32; // world px per character art px
 function drawUpright(p, pose, fr, hitK, swimming, now) {
   const f = p.flags;
@@ -4787,12 +4790,14 @@ function tagPlate(x, cy, tw, u) {
   g.beginPath(); g.rect(bx, by, tw, 22 * u); g.moveTo(x - 6 * u, bb); g.lineTo(x, bb + 7 * u); g.lineTo(x + 6 * u, bb); g.stroke(); g.fill();
   g.strokeStyle = '#c9d6ee'; g.lineWidth = 2 * u; g.beginPath(); g.moveTo(x - 6 * u, bb); g.lineTo(bx, bb); g.lineTo(bx, by); g.lineTo(bx + tw, by); g.lineTo(bx + tw, bb); g.lineTo(x + 6 * u, bb); g.lineTo(x, bb + 6 * u); g.closePath(); g.stroke();
 }
-// (U17: two dashed ellipses round it, turned with it, and a "YOUR TRUCK" plate above)
-function drawJobTruck([x, y], view, now, z, vehs) {
+// (U17: two dashed ellipses round it, turned with it, and a "YOUR TRUCK" plate above - "YOUR HELICOPTER", "YOUR CAB"...: the
+// vehicle's word, from the one in view or the model the server sends with the mark)
+function drawJobTruck([x, y, m3], view, now, z, vehs) {
   const col = '#45b8ff', m = 64 + 30 / z, x0 = view.x0 + m, x1 = view.x1 - m, y0 = view.y0 + m, y1 = view.y1 - m, u = 1 / z;
   let v = null;
   for (const q of vehs || []) if (Math.abs(q.rx - x) < 60 && Math.abs(q.ry - y) < 60) { v = q; break; }
-  const def = v ? VEHICLE_BY_INDEX[v.d.m] : null, L = def ? def.L : 150, W = def ? def.W : 60, ra = v ? v.ra : 0;
+  const def = v ? VEHICLE_BY_INDEX[v.d.m] : VEHICLE_BY_INDEX[m3] || null, L = def ? def.L : 150, W = def ? def.W : 60, ra = v ? v.ra : 0;
+  const plate = `YOUR ${vehicleWord(def).toUpperCase()}`;   // (by what it is: your helicopter, your cab - shared/vehicles.js)
   if (v) { x = v.rx; y = v.ry; }
   g.save(); g.lineWidth = 3 * u; g.setLineDash([12 * u, 7 * u]); g.lineDashOffset = -now * 24 * u;
   let hh = 0;
@@ -4805,8 +4810,8 @@ function drawJobTruck([x, y], view, now, z, vehs) {
   g.setLineDash([]); g.globalAlpha = 1;
   g.font = `700 ${13 * u}px "CLA Pixel", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
   const ty = y - hh - 26 * u;
-  tagPlate(x, ty, g.measureText('YOUR TRUCK').width + 20 * u, u);
-  g.fillStyle = '#fff'; g.fillText('YOUR TRUCK', x, ty + u);
+  tagPlate(x, ty, g.measureText(plate).width + 20 * u, u);
+  g.fillStyle = '#fff'; g.fillText(plate, x, ty + u);
   if (x < x0 || x > x1 || y < y0 || y > y1) {
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, dx = x - cx, dy = y - cy, k = Math.min((x1 - cx) / (Math.abs(dx) || 1e-6), (y1 - cy) / (Math.abs(dy) || 1e-6)), s = 18 / z;
     g.translate(cx + dx * k, cy + dy * k); g.rotate(Math.atan2(dy, dx)); g.globalAlpha = 0.8 + 0.2 * Math.sin(now * 6);

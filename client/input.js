@@ -416,7 +416,7 @@ export function sample(view) {
     const recent = performance.now() - touch.aimAt < 1200; // aim lingers so the FIRE button uses it
     if (held || (recent && (view.armed || touch.btn.has('fire')))) { aim = touch.aim; bits |= IN.AIMING; }
     if (touch.firing || touch.btn.has('fire') || touch.tapped.has('fire')) bits |= IN.FIRE;
-    else if (held && touch.guard && !view.inVehicle) bits |= IN.BLOCK;
+    if (held && touch.guard && !view.inVehicle) bits |= IN.BLOCK;   // (FIRE with the guard held: a blow from the guard, then back up - server players.js)
     const tb = touch.btn, tt = touch.tapped;
     if ((!view.inVehicle || view.horse) && Math.hypot(touch.lx, touch.ly) > FULL_STICK) bits |= IN.SPRINT;  // (nor on touch: the thumb all the way out - on a horse too, a gallop)
     if (tb.has('dive') || tt.has('dive')) bits |= IN.DIVE;

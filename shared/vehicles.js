@@ -140,6 +140,19 @@ for (const [id, v] of Object.entries(VEHICLES)) {
   }
 }
 
+// A vehicle in a word, the way a job names the one it issues you ("your helicopter", "your cab" - the owner, 10-23:
+// "Helicopter is referred to as 'your truck' during a job"): client/main.js drawJobTruck's plate, the jobs' notes.
+const WORD_OF = { ambulance: 'ambulance', taxi: 'cab', bus: 'bus', firetruck: 'fire engine', tractor: 'tractor', combine: 'combine', towtruck: 'tow truck', police: 'cruiser' };
+export function vehicleWord(def) {
+  if (!def) return 'vehicle';
+  if (WORD_OF[def.id]) return WORD_OF[def.id];
+  if (def.kind === 'air') return def.air === 'heli' ? 'helicopter' : 'plane';
+  if (def.kind === 'boat') return 'boat';
+  if (def.horse) return 'horse';
+  if (def.kind === 'bike') return def.pedal ? 'bike' : 'motorbike';
+  return TRUCK_MODELS.has(def.id) || /Truck/.test(def.name) ? 'truck' : 'car';
+}
+
 // Paint palette used for procedural placeholder sprites and NPC traffic variety.
 export const PAINTS = [
   '#c8262b', '#2350c8', '#e8e8e8', '#2a2a2e', '#f2c21b', '#ef7a1a', '#2f9a3a', '#7a3ac8',

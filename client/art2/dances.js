@@ -139,7 +139,7 @@ function holdItem(P, kind, axis, down) {   // (people.js setItem, two-handed)
   const d = down[0] * axis[0] + down[1] * axis[1] + down[2] * axis[2];
   P.item = { kind, axis, vdir: vn([down[0] - axis[0] * d, down[1] - axis[1] * d, down[2] - axis[2] * d]), two: true };
 }
-Object.assign(POSES, { guard: 1 });
+Object.assign(POSES, { guard: 1, guardw: 6 });
 Object.assign(GAITS2, {
   guard(D, P, f, kind) {
     P.acc = false; P.lean = 0.14; P.twist = -0.14; P.headPitch = 0.2; P.splay = 0.25;
@@ -151,5 +151,14 @@ Object.assign(GAITS2, {
       P.hR = vadd(S.shR, [-1.4, 5.8, 3.8]);
       holdItem(P, kind, [-0.72, 0.18, 0.68], [0, 1, 0]);
     };
+  },
+  // walking in the guard (the owner's notes, 10-22: "you just sort of float across the ground"): the walk's stride, a
+  // little lower on bent knees, and the guard's arms, lean and head held over it - six frames, on the stride's phase
+  guardw(D, P, f, kind) {
+    GAITS2.escortR(D, P, f);   // (people.js gait: the walk's legs)
+    const legs = { fL: P.fL, fR: P.fR, toeL: P.toeL, toeR: P.toeR, pel: P.pel.slice(), pelYaw: P.pelYaw };
+    GAITS2.guard(D, P, 0, kind);
+    Object.assign(P, legs);
+    P.pel[2] -= 1.2; P.splay = 0.18; P.kneeL = [-0.3, 1, 0]; P.kneeR = [0.3, 1, 0];
   },
 });

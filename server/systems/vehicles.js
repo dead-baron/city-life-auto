@@ -128,6 +128,7 @@ export function update(world, dt) {
     const near = world.query(v.x, v.y, v.def.L / 2 + 16 + (v.cutQ ? PLASMA_CUT.slide : 0), K.PED);
     for (const ped of near) {
       if (ped.vehId || ped.dead || ped.onTrain || ped.hoodOf || ped.sky || !sameLevel(ped.lz, v.lz)) continue;   // (ped.sky: up in the air, falling - skydive.js)
+      if (acrossBridge(world.map, ped, v)) continue;   // (a boat under a bridge and someone up on its deck, a car on the deck and a swimmer under it: b1c)
       let h = null;
       if (!v.cutQ) h = circleVsObb(ped.x, ped.y, ped.r, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
       else for (const q of bodyBoxes(v)) if ((h = circleVsObb(ped.x, ped.y, ped.r, q.x, q.y, v.a, q.hl, v.def.W / 2))) break;
@@ -189,8 +190,13 @@ function resolveVehicleHit(world, a, b, hit) {
     if (impact > 300 && !a.lz && !b.lz) npc.spectacle(world, (a.x + b.x) / 2, (a.y + b.y) / 2, { r: 440, near: 80, chance: impact > 450 ? 1 : 0.55, secs: 9 });   // (a smash: phones out)
     if (a.def.kind === 'bike' && impact > 250) bikeCrash(world, a, impact);
     if (b.def.kind === 'bike' && impact > 250) bikeCrash(world, b, impact);
-    if (a.ai) npc.onVehicleHit(world, a, aFaster ? null : db);
-    if (b.ai) npc.onVehicleHit(world, b, aFaster ? da : null);
+    // (a player's car in it: the NPC driver panics - or gets out to have it out with them. Two of the city's drivers
+    // bumping each other don't: a headless run in Midtown had a hundred such knocks in ten minutes, and each sent both
+    // careering off at full speed, blind to what's ahead - into the next car, the next crowd: the owner's notes, 10-22,
+    // "cars jammed in a spot, fights break out")
+    const pa = !!(da && da.player), pb = !!(db && db.player);
+    if (a.ai && (pa || pb)) npc.onVehicleHit(world, a, aFaster ? null : db);
+    if (b.ai && (pa || pb)) npc.onVehicleHit(world, b, aFaster ? da : null);
   }
 }
 
@@ -675,7 +681,7 @@ function sideSpot(v, ped) {
 // A bridge tile is two layers (map.js T.BRIDGE): the deck up top and the water under it. A boat is down on the water,
 // so from a boat a bridge is no place to step out onto (task #381: it put you up on the deck from under it) - only
 // dry ground or a pier is; failing that it's over the side into the water (ejectPed: under the deck, swimming).
-function findExitSpot(world, v, ped, maxR, toward = null) {
+export function findExitSpot(world, v, ped, maxR, toward = null) {   // (jobs.js recall: whether a boat is by somewhere to step off)
   const hw = v.def.W / 2 + 16, hl = v.def.L / 2 + 16;
   if ((v.lz || 0) > 0.3) return null; // up on the deck: step out beside it (the barriers keep you on)
   const cands = [[0, -hw], [0, hw], [-hl, 0], [hl, 0], [-hl / 2, -hw], [-hl / 2, hw]].map(([lx, ly]) => localToWorld(v.x, v.y, v.a, lx, ly));

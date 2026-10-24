@@ -86,10 +86,14 @@ export function play(world, p, free, poi = null, game = 'starfall') {
   const best = { pool: p.profile.poolBest, skee: p.profile.skeeBest, hockey: p.profile.hockeyWins, pinball: p.profile.pinballBest }[game] ?? p.profile.arcadeBest;
   p.conn.sendJSON({ t: 'arcade', game, id: p.arcade.id, free: !!free, best: best || 0 });
 }
-// the Rusty Spur's pool table (activities.js poolTable): a frame for ARCADE.pool dollars
+// the Rusty Spur's pool table (activities.js poolTable): a frame for ARCADE.pool dollars - from anywhere round it, within
+// POOL_REACH px of its rim (the owner, 10-23: "Tried playing pool and it said you can't do it indoors": at the table's
+// ends - over 70 px from its middle - there was nothing to Act on, and the vehicle button there tried the skateboard)
+export const POOL_REACH = 40;
 export function poolInteraction(world, p) {
   const ped = p.ped, T = world.map.roadhouse ? poolTable(world.map) : null;
-  if (!T || !ped || ped.dead || ped.vehId || Math.hypot(ped.x - T.cx, ped.y - T.cy) > 70) return null;
+  if (!T || !ped || ped.dead || ped.vehId) return null;
+  if (Math.hypot(Math.max(T.x0 - ped.x, 0, ped.x - T.x1), Math.max(T.y0 - ped.y, 0, ped.y - T.y1)) > POOL_REACH) return null;
   return { label: `Rack 'em up at the pool table ($${ARCADE.pool})`, run: () => { if (pay(p, ARCADE.pool)) play(world, p, true, null, 'pool'); else world.notify(p, 'Not enough money.', 'warn'); } };
 }
 

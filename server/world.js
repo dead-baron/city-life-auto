@@ -77,6 +77,7 @@ import * as tennis from './systems/tennis.js';
 import * as k9 from './systems/k9.js';
 import * as prison from './systems/prison.js';
 import * as sar from './systems/sar.js';
+import * as devplay from './devplay.js';
 import * as charter from './systems/charter.js';
 import * as dusting from './systems/dusting.js';
 import * as coastguard from './systems/coastguard.js';
@@ -191,6 +192,7 @@ const SYSTEMS = [
   ['taxijob', taxijob.update],      // taxi drivers' fares: hailing, aboard, the meter, the tip (H72)
   ['busjob', busjob.update],        // bus drivers' lines: the stops, the passengers on and off, the timetable (H72)
   ['towjob', towjob.update],        // tow truck drivers' calls: backed up to, hooked, towed to the impound (H72)
+  ['devplay', devplay.update],      // the debug menu's staged bits on a timer: the head-on cart crash's carts setting off (devplay.js)
 ];
 
 export class World {

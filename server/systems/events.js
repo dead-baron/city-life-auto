@@ -2,7 +2,7 @@
 // return a recovered purse). Clients get a small list in their `me` payload and draw blips +
 // a fading arrow (client/hud.js, client/main.js).
 import { K } from '../../shared/constants.js';
-import { HELP_PING_PX } from '../../shared/rules.js';
+import { HELP_PING_PX, CALM_STREETS } from '../../shared/rules.js';
 import { EVENT_RANGE, EVENT_KINDS, FEED_MAX, FEED_KEEP_S } from '../../shared/worldevents.js';
 
 let petTarget = () => null; // set by pets.js (it imports this module)
@@ -88,3 +88,27 @@ export function forPlayer(world, p) {
   }
   return out.length ? out : null;
 }
+
+// ---- the calm streets (rules.js CALM_STREETS; the owner's notes, 10-22) ----------------------------------------------
+// "If you stand in one place for not too long it always seems to fall apart into a chaotic scene ... Maybe in the 'bad'
+// parts of town or gang areas, but otherwise things should be pretty tame": away from the rough, the poor and the
+// red-light districts and the gangs' turf (roughAt) only fightShare of the happenings that would be a street fight are
+// one (happenings.js), and snatchShare of the purse snatches happen (npc.js); and nothing new starts round a player - a
+// happening, a snatch, a street race / chase / armored run (streetlife.js) - while `incidents` are already going on
+// within incidentPx of them (busyNear: happenings, snatches, NPC fights - two people at it count as one).
+// The rough parts of town: the rough, the poor and the red-light districts, and the gangs' turf - where trouble's usual
+const ROUGH_TIERS = new Set(['rough', 'low', 'red']);
+export function roughAt(map, x, y) {
+  const d = map.districtAt(x, y);
+  return !!d && (ROUGH_TIERS.has(d.tier) || !!d.turf);
+}
+// How much is going on round (x, y) already: the happenings and snatches under way (not a contraband crate's rumour),
+// and the people fighting (two at it: one incident)
+export function busyNear(world, x, y, r = CALM_STREETS.incidentPx) {
+  const now = world.time;
+  let n = 0, f = 0;
+  for (const e of world.happenings || []) if (e.until > now && e.kind !== 'drop' && e.x !== undefined && Math.hypot(e.x - x, e.y - y) < r) n++;
+  for (const q of world.query(x, y, r, K.PED)) if (q.npc && !q.dead && q.npc.state === 'fight' && !q.npc.happening && Math.hypot(q.x - x, q.y - y) < r) f++;
+  return n + Math.ceil(f / 2);
+}
+export const calmBusy = (world, x, y) => busyNear(world, x, y) >= CALM_STREETS.incidents;

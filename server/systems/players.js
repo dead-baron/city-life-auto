@@ -418,6 +418,21 @@ export function wipeAccount(world, p) {
 // idling. (Here, not in shared/rules.js: server-only numbers - see AWAY_SECONDS.)
 export const IDLE_WARN_MS = 9 * 60e3, IDLE_KICK_MS = 10 * 60e3;
 export const IDLE_CLOSE = 4006;
+// Along for the ride (the owner, 10-23: "riding the train for 10 minutes kicked me out for idling"): a passenger - on a
+// train, a bus, a ferry, in a cab or anyone's back seat, up in a balloon or on the wheel - or watching the cinematic
+// mode's tour (client/director.js) sits still for a while without being away: their idle clock runs at IDLE_RIDE_RATE
+// (a third as fast: asked after 27 minutes aboard, gone at 30). The rest of the time it runs as before.
+export const IDLE_RIDE_RATE = 1 / 3;
+export function riding(world, p) {
+  const ped = p.ped;
+  if (!ped || ped.dead) return false;
+  if (ped.onTrain || ped.ride) return true;   // (the trains and the subway; the Ferris wheel, a balloon flight - rides.js)
+  if (p.cineTourMs && Date.now() - p.cineTourMs < 90e3) return true;   // (the tour going: the page says so every minute)
+  const v = ped.vehId ? world.get(ped.vehId) : null;
+  if (!v) return false;
+  if (ped.seat > 0) return true;   // (a passenger: a bus, a cab, a ferry, someone's car)
+  return !!(v.onDeck || v.ferry);   // (in your car on a ferry's deck)
+}
 export function stillHere(p) { p.activeAtMs = Date.now(); p.idleWarned = false; }
 export function queueInput(p, inp) {
   if (inp.seq <= p.ack) return;
@@ -573,8 +588,11 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   const wasDropping = !!ped.dropping;
   // the guard (rules.js GUARD; combat.js blocked, deflects): held with something to block with, on your feet, not busy
   const gw = WEAPONS[ped.weapon] || WEAPONS.fists;
-  const guard = !!(inp.bits & IN.BLOCK) && !!gw.guard && !ped.carrying && !ped.fishing && !(ped.rollT > 0) && !tumbling && !ped.board
+  // a punch or a swing thrown from the guard (the owner's notes, 10-22: "you should be able to still punch even if you're
+  // holding block") drops it for the blow (GUARD.strikeS); held still, it comes straight back up
+  const guardHeld = !!(inp.bits & IN.BLOCK) && !!gw.guard && !ped.carrying && !ped.fishing && !(ped.rollT > 0) && !tumbling && !ped.board
     && world.time >= ped.downUntil && world.time >= ped.stunUntil && !isSwimming(world.map, ped);
+  const guard = guardHeld && world.time >= (ped.guardBreakUntil || 0);
   ped.guardUntil = guard ? world.time + 0.12 : 0;
   if (guard) ped.aimUntil = world.time + 0.3;   // (the aim pose for an older page; the guard's own pose: the 'guard' event)
   if (guard ? world.time - (ped.guardShownAt ?? -9) >= NPC_GUARD.showS : ped.guardShownAt !== undefined) {
@@ -590,15 +608,28 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (ped.rollT > 0 && (p.badge || p.hunter) && !ped.board) tackle(world, ped);   // (an ollie isn't a tackle)
   const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || tennis.input(world, p, ped, inp, pressed) || bowling.input(world, p, ped, inp, pressed, dt) || firefighter.hose(world, p, ped, inp, pressed, dt);   // (the hose by your fire engine: firefighter.js) (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
   const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && !ped.board && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
-  if ((inp.bits & IN.FIRE) && !kicked && !swung && !guard && !ped.board) {   // (guarding: no striking; on a board: step off to fight)
+  if ((inp.bits & IN.FIRE) && !kicked && !swung && !ped.board) {   // (on a board: step off to fight)
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
-    else if (!ped.fishing) combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
+    else if (!ped.fishing) {
+      if (guard) ped.guardUntil = 0;   // (striking from the guard: down for the blow - combat.js tryAttack won't strike from it)
+      const struck = combat.tryAttack(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
+      if (guard && !struck) ped.guardUntil = world.time + 0.12;   // (not ready to strike again yet: the guard stays up)
+      else if (guard) {
+        ped.guardBreakUntil = world.time + GUARD.strikeS;
+        if (ped.guardShownAt !== undefined) { world.emit(ped.x, ped.y, { e: 'guard', id: ped.id, t: 0 }); ped.guardShownAt = undefined; }   // (the blow's pose, not the guard's)
+      }
+    }
   }
   if (pressed & IN.THROW) { if (ped.carrying) cargo.throwCrate(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a); }
   // the vehicle button: into a vehicle in reach; with none, on or off your skateboard (off it, into the vehicle by you)
   if ((pressed & IN.VEHICLE) && !revive.tryFinish(world, p)) {
     if (ped.board) { skate.hopOff(world, ped); if (vehicles.nearestVehicle(world, ped, 56)) vehicles.playerEnter(world, ped); }
-    else if (!vehicles.nearestVehicle(world, ped, 56) && skate.has(p)) skate.hopOn(world, p, ped);
+    else if (!vehicles.nearestVehicle(world, ped, 56) && skate.has(p)) {
+      // (indoors there's no riding - and the vehicle button by the pool table, the bar, a counter does what Act would
+      // rather than say so: the owner, 10-23, "Tried playing pool and it said you can't do it indoors")
+      const act = skate.indoors(world, ped) ? findInteraction(world, p) : null;
+      if (act && act.run && !act.passive) doAct(world, p); else skate.hopOn(world, p, ped);
+    }
     else vehicles.playerEnter(world, ped);   // (Safety mode asks first when it'd be a crime)
   }
   if (pressed & IN.ACTION) {   // (step off to do it - but at a skate spot, the session there: on the board)
@@ -859,10 +890,13 @@ function idleCheck(world) {
   const t = Date.now();
   for (const p of world.players.values()) {
     if (!p.conn || !p.conn.open) continue;
-    if (!p.activeAtMs) { p.activeAtMs = t; continue; }
+    if (!p.activeAtMs) { p.activeAtMs = t; p.idleAtMs = t; continue; }
+    const step = Math.max(0, Math.min(5e3, t - (p.idleAtMs || t)));   // (since the last look - a stalled server's gap isn't counted in full)
+    p.idleAtMs = t;
+    if (step && riding(world, p)) p.activeAtMs = Math.min(t, p.activeAtMs + step * (1 - IDLE_RIDE_RATE));   // (riding: the clock runs slow)
     const idle = t - p.activeAtMs;
     if (idle >= IDLE_KICK_MS) {
-      try { p.conn.sendJSON({ t: 'kicked', reason: 'You were idle for 10 minutes, so you were disconnected.', idle: 1 }); p.conn.close(IDLE_CLOSE, 'idle'); } catch { /* gone */ }
+      try { p.conn.sendJSON({ t: 'kicked', reason: `You were idle for ${riding(world, p) ? 'half an hour along for the ride' : '10 minutes'}, so you were disconnected.`, idle: 1 }); p.conn.close(IDLE_CLOSE, 'idle'); } catch { /* gone */ }
       p.activeAtMs = t;
     } else if (idle >= IDLE_WARN_MS && !p.idleWarned) {
       p.idleWarned = true;

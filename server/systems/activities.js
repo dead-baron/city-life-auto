@@ -221,7 +221,9 @@ export function spotsOf(map) {
   // the skate spots (shared/world3-midtown.js skateSpot: the lot in tiles, its ledges to sit on in px)
   for (const q of map.skateSpots || []) {
     const box = { x0: q.x * TILE, y0: q.y * TILE, x1: (q.x + q.w) * TILE, y1: (q.y + q.h) * TILE }, x = (box.x0 + box.x1) / 2, y = (box.y0 + box.y1) / 2;
-    list.push({ k: 'skaters', x, y, a: 0, box, seats: q.seats || [], wild: false }); taken.push({ x, y });
+    // (its quarter pipes' footprints, solid at the back - shared/map.js qpipeSolids: the laps keep off them, b1c)
+    const qps = (map.props || []).filter((p) => p && p.t === 'qpipe' && p.x > box.x0 && p.x < box.x1 && p.y > box.y0 && p.y < box.y1).map((p) => ({ x0: p.x - (p.w || 128) / 2 - 16, x1: p.x + (p.w || 128) / 2 + 16, y0: p.y - 40, y1: p.y + 40, s: p.y < (box.y0 + box.y1) / 2 ? 1 : -1 }));
+    list.push({ k: 'skaters', x, y, a: 0, box, seats: q.seats || [], qps, wild: false }); taken.push({ x, y });
   }
   for (const q of map.partySpots || []) { list.push({ k: 'party', x: q.x, y: q.y, a: 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
   for (const q of map.crewSpots || []) { list.push({ k: 'roadcrew', x: q.x, y: q.y, a: q.a || 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
@@ -344,7 +346,9 @@ function members(s) {
       const rx = W * (0.26 + rng() * 0.12), ry = H * (0.22 + rng() * 0.1), dir = rng() < 0.5 ? 1 : -1, ph = rng() * Math.PI * 2, ride = [];
       for (let k = 0; k < 10; k++) {
         const a = ph + dir * k * Math.PI / 5, x = s.x + Math.cos(a) * rx + (rng() - 0.5) * 24, y = s.y + Math.sin(a) * ry + (rng() - 0.5) * 24;
-        ride.push({ x: Math.max(B.x0 + 20, Math.min(B.x1 - 20, x)), y: Math.max(B.y0 + 60, Math.min(B.y1 - 20, y)) });
+        const q = { x: Math.max(B.x0 + 20, Math.min(B.x1 - 20, x)), y: Math.max(B.y0 + 60, Math.min(B.y1 - 20, y)) };
+        for (const Q of s.qps || []) if (q.x > Q.x0 && q.x < Q.x1 && q.y > Q.y0 && q.y < Q.y1) q.y = Q.s > 0 ? Q.y1 : Q.y0;   // (off a quarter pipe: in front of it)
+        ride.push(q);
       }
       out.push({ x: ride[0].x, y: ride[0].y, a: 0, arche: 'casual', look: 'skater', gt: 'skate', pp: 'board', ride });
     }

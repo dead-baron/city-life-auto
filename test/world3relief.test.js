@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
 import '../shared/world3-islands.js';
 import { TILE, T } from '../shared/constants.js';
+import { DISTRICTS } from '../shared/mapcore.js';
 import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { reliefOf3, reliefCliffs, HIGH_SPOTS, LOOKOUT_MESA, CLIFF_SLOPE, tableEdge, GORGE } from '../shared/world3-relief.js';
 import { DESERT, HOLLOW } from '../shared/world3-desert.js';
@@ -126,12 +127,19 @@ test('World v3: the land\'s relief - heights, cliff bands off the roads, the lan
   let thin = 0;
   for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
     const i = y * W + x;
-    if (!cliffAt[i]) continue;
+    if (!cliffAt[i] || (DISTRICTS[m.dist[i]] || {}).style === 'desert') continue;   // (b1c: the desert's band is what its faces stand on - their art over it, however thin)
     let ok = false;
     for (const [ox, oy] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) { const j = i + oy * W + ox; if (cliffAt[j] && cliffAt[j + 1] && cliffAt[j + W] && cliffAt[j + W + 1]) { ok = true; break; } }
     if (!ok) thin++;
   }
   check(thin === 0, `cliff tiles not in a band two tiles thick: ${thin}`);
+  // (b1c) the desert's band with no face over it is its ground again, not flat red rock you can't walk on
+  check(sum.bare > 0, `the desert's faceless band given back its ground (${sum.bare} tiles)`);
+  for (const [x0, y0, x1, y1] of [[4608, 666, 4614, 672], [5912, 1583, 5917, 1600]]) {
+    let rock = 0;
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (m.tiles[y * W + x] === T.WALL) rock++;
+    check(rock === 0, `the faceless red patch at ${x0}, ${y0}: walkable (${rock} rock tiles)`);
+  }
   check(lowTables.length <= Math.max(1, Math.floor(sum.tableList.length * 0.02)), `tables standing low on their foot: ${lowTables.join('; ')}`);
   const cy = (m.paintings || []).find((p) => p.key === 'canyon');
   if (cy) {

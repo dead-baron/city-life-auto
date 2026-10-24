@@ -11,11 +11,12 @@
 // - robberyCountry, below).
 import { inAnyView } from '../view.js';
 import { K, T } from '../../shared/constants.js';
+import {  } from '../../shared/rules.js';
 import { IN } from '../../shared/input.js';
 import { railAt, routeBoardAt, CONSIST, CAR_GAP, TRAIN_CARS, COACH_SEATS, COACH_STAND, LOCO_SEATS, LOCO_STAND, CAB_OX, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming, crossingGate } from '../../shared/map.js';
 import { obbVsObb, circleVsObb, localToWorld, clamp } from '../../shared/math.js';
 import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAIN_HEADWAY_S, TRAIN_LOOP_HEADWAY_S, TRAIN_LOOP_MAX, TRAIN_HOLD_MAX_S, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, GUARD_DRAW_S, BAIL_SPEED } from '../../shared/rules.js';
-import { STAR_HEAT } from '../../shared/constants.js';
+import { STAR_HEAT } from '../../shared/rules.js';
 import { KB, TOUCH } from '../../shared/controls.js';
 import { mulberry32 } from '../../shared/rng.js';
 import * as vehicles from './vehicles.js';
@@ -333,13 +334,19 @@ function runTimeAt(seg, x) {
 // they'd do to what's round them (collisions, the horn, people stepping off the line, riders and boarders walking)
 // waits until someone is near: the tick it is, its cars are placed first. Today's world's one loop runs as it did.
 export const NEAR_PX = 6000;
+// Someone near where its cars were last placed counts too (the owner, b1c: "train art stopped at station and you pull into
+// it and then through it, it's like a ghost artifact"): unplaced, the cars stand where they were - at the platform they
+// started at, or where the last player left them - and anyone who comes by would see a train standing there that has
+// long gone; the tick they're near, the cars go to where the train is (out of their sight, if it's far).
 export function nearSomeone(world, t) {
   if (!world.players.size) return false;
   if (playerAboard(world, t)) return true;
   const rail = railOf(world, t), a = railAt(rail, t.s), b = railAt(rail, t.s - t.len), r2 = NEAR_PX * NEAR_PX;
+  const c0 = world.get(t.cars[0].id), c1 = world.get(t.cars[t.cars.length - 1].id);
+  const by = (q, e) => !!e && (q.x - e.x) ** 2 + (q.y - e.y) ** 2 < r2;
   for (const p of world.players.values()) {
     const q = p.ped;
-    if (q && ((q.x - a.x) ** 2 + (q.y - a.y) ** 2 < r2 || (q.x - b.x) ** 2 + (q.y - b.y) ** 2 < r2)) return true;
+    if (q && (by(q, a) || by(q, b) || by(q, c0) || by(q, c1))) return true;
   }
   return false;
 }

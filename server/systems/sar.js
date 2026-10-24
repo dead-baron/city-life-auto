@@ -3,7 +3,8 @@
 // out and search for them and retrieve them. They're either injured and you have to land and pick them up and bring them
 // back and fly them to the hospital, which you can land on top of, or you need to lower a harness down to hard-to-reach
 // places, or find them in the water and lower a harness, or just locate a missing person and pick them up").
-// Sign on at a hospital's helipad (Act there) or from the phone's job list: a rescue helicopter (shared/vehicles.js
+// Sign on at the Search & Rescue HQ (World v3: its door or its helipad - shared/world3-sarhq.js; a world without one, a
+// hospital's yard pad) or from the phone's job list: a rescue helicopter (shared/vehicles.js
 // rescueheli) is issued to you like a work truck (jobs.js: v.issuedTo / v.workTruck, the ring and the arrows). A shift
 // of calls (shared/rules.js SAR): someone out in the wild - hurt on open ground, stuck where nothing can land (rough
 // ground among the trees and rocks), in the water off the coast, or just lost - found from the built map (sitesOf: the
@@ -16,7 +17,8 @@
 // yard's) to hand them over: paid by how far, how fast and how gently. A patient who runs out of time dies.
 //   update(world, dt)            the shifts (world.js SYSTEMS)
 //   start(world, p, pad)         sign on at a hospital pad ({ x, y, name } - the nearest yard pad if null) -> error | null
-//   interaction(world, p)        Act: signing on at a hospital's helipad on foot; the harness in the helicopter
+//   interaction(world, p)        Act: signing on at the HQ on foot; the harness in the helicopter
+// The calls come to the rescue helicopter (the owner, 10-23): out of it, or flying another one, the shift stands by.
 //   target(world, p, j)          the job tracker's target (phone.js jobTarget): area / flare / hoist for the page
 //   sitesOf(m)                   { open, rough, water }: where calls can come from (px points)
 import { K, T, TILE } from '../../shared/constants.js';
@@ -165,10 +167,18 @@ function step(world, p, dt) {
   const j = p.job, now = world.time, ped = p.ped;
   const v = world.get(j.truck);
   if (!v || v.removed || v.wreckAt) { jobs.failJob(world, p, 'Your rescue helicopter is lost. The shift is over.'); return; }
-  if (!j.call) { if (now >= j.nextAt && ped && !ped.dead) newCall(world, p); return; }
+  const flying = ped && !ped.dead && ped.vehId === v.id && ped.seat === 0;
+  // (the owner, 10-23: "Regular helicopter shouldn't trigger search and rescue missions ... they should have a search and
+  // rescue helicopter to fly for them"): the calls come to the rescue helicopter - none while you're out of it, and
+  // flying something else the shift waits for you to get back to it
+  if (!j.call) {
+    if (!flying) { standBy(world, p, j, v); return; }
+    if (j.stage === 'board') { j.stage = 'wait'; j.text = 'Search & rescue: on call - stand by for the next call'; j.nextAt = Math.max(j.nextAt, now + 3); p.meDirty = true; }
+    if (now >= j.nextAt) newCall(world, p);
+    return;
+  }
   const c = j.call, vic = world.get(c.vic);
   if (!vic || vic.removed) { endCall(world, p, 'The call was cancelled - someone else got to them.', 'info'); return; }
-  const flying = ped && !ped.dead && ped.vehId === v.id && ped.seat === 0;
   // a hurt patient's time runs down (aboard too); a hard landing with them aboard costs them (aircraft.js landSink)
   if ((v.landAt || 0) > c.landAt) {
     c.landAt = v.landAt;
@@ -183,7 +193,9 @@ function step(world, p, dt) {
   if (c.hooked && vic.vehId !== v.id) { c.hooked = false; c.cable = 0; }   // (thrown off the cable: the helicopter came down)
   // searching: within sight they spot you - they wave, a flare goes up
   if (!c.found) {
-    const ex = flying ? v.x : ped ? ped.x : v.x, ey = flying ? v.y : ped ? ped.y : v.y;
+    const afoot = ped && !ped.dead && !ped.vehId;   // (in some other aircraft: it's not the rescue crew looking)
+    if (!flying && !afoot) return;
+    const ex = flying ? v.x : ped.x, ey = flying ? v.y : ped.y;
     if (Math.hypot(ex - vic.x, ey - vic.y) < SAR.seeR) {
       c.found = true; c.flareAt = now; j.stage = 'rescue';
       j.text = HARNESS[c.kind] ? 'There they are! Hover low right over them and hold Act to lower the harness' : 'There they are! Land near them and they\'ll be helped aboard';
@@ -196,6 +208,18 @@ function step(world, p, dt) {
   vic.a = Math.atan2(v.y - vic.y, v.x - vic.x);
   if (HARNESS[c.kind]) stepHoist(world, p, j, c, v, vic, flying, dt);
   else stepLanding(world, p, j, c, v, vic, flying, dt);
+}
+
+// on shift but not in the rescue helicopter: no calls till you are (told once, and again if you take off in another one)
+function standBy(world, p, j, v) {
+  const ped = p.ped, other = ped && ped.vehId && ped.vehId !== v.id ? world.get(ped.vehId) : null;
+  const k = other ? (other.def.kind === 'air' ? 'other-air' : 'other') : 'out';
+  if (j.stage !== 'board' || j.told !== k) {
+    j.stage = 'board'; j.told = k;
+    j.text = `Search & rescue: get in your ${v.def.name} - the calls come to it`;
+    if (k === 'other-air') world.notify(p, `Rescue calls only come to the rescue helicopter, not a ${other.def.name} - your ${v.def.name} is the green ring.`, 'warn');
+    p.meDirty = true;
+  }
 }
 
 function wave(vic, on) {
@@ -292,7 +316,10 @@ export function interaction(world, p) {
     return { label: j.call.hooked ? 'Hold: winch them up' : 'Hold: lower the harness', run: () => {} };
   }
   if (p.job) return null;
-  const pad = basePads(world.map).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < FLY.PAD_R + 30);
+  // at a Search & Rescue HQ (World v3: shared/world3-sarhq.js) - its door or its pad; never a hospital where there's an
+  // HQ (the owner, 10-23: "we should have a few specific search and rescue HQs to take these missions not the hospital")
+  const m = world.map, hq = (m.pois || []).find((q) => q && q.kind === 'sar' && Math.hypot(q.x - ped.x, q.y - ped.y) < (q.r || 44) + 30);
+  const pad = hq ? nearestBase(m, hq.x, hq.y) : basePads(m).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < FLY.PAD_R + 30);
   if (!pad) return null;
   return { label: 'Sign on as a search & rescue pilot (a rescue helicopter is issued)', run: () => { const err = start(world, p, pad); if (err) world.notify(p, err, 'bad'); } };
 }
@@ -322,7 +349,7 @@ export function devSar(world, p, msg = {}) {
   if (!ped || ped.dead) return 'Not right now.';
   if (!p.job || p.job.type !== 'sar') {
     if (p.job) jobs.failJob(world, p, 'Job cancelled.');
-    const err = start(world, p, nearestPad(world.map, ped.x, ped.y, false));
+    const err = start(world, p, nearestBase(world.map, ped.x, ped.y));   // (the Search & Rescue HQ's pad - a hospital's yard only where there's no HQ)
     if (err) return err;
   }
   const j = p.job, v = world.get(j.truck);

@@ -24,7 +24,7 @@ import * as npclooks from './npclooks.js';
 import * as personas from './personas.js';
 import * as activities from './activities.js';
 import * as burning from './burning.js';
-import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME } from '../../shared/rules.js';
+import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME, CALM_STREETS } from '../../shared/rules.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
@@ -322,6 +322,24 @@ function wander(world, ped, now) {
 }
 
 const onRoad = (world, ped) => { const t = world.map.tileAtPx(ped.x, ped.y); return t === T.ROAD || t === T.BRIDGE; };
+
+// Honked at by a car they're holding up (traffic.js): someone on foot going about their business in the road gets out
+// of it - to the nearest pavement off to the side of the car's way (a passer-by stuck walking into the side of a lorry
+// in a jam, the car behind waiting for them for ever: a headless run in Midtown had a dozen cars locked that way round
+// one corner for minutes). Only someone at a loose end - not in a fight, running, at work, filming a scene...
+const SHOO_STATES = new Set(['wander', 'idle', 'watch', 'audience', 'waitHelp']);
+export function shoo(world, ped, v) {
+  const n = ped.npc;
+  if (!n || ped.dead || ped.vehId || n.desk || n.guard || n.keep || n.driven || n.role !== 'civ' || !SHOO_STATES.has(n.state)) return false;
+  const c = Math.cos(v.a), s = Math.sin(v.a), side = (-(ped.x - v.x) * s + (ped.y - v.y) * c) >= 0 ? 1 : -1;
+  for (let r = 1; r <= 6; r++) for (const sd of [side, -side]) for (const along of [0, -1, 1]) {
+    const x = ped.x + (-s * sd * r + c * along) * TILE, y = ped.y + (c * sd * r + s * along) * TILE, t = world.map.tileAtPx(x, y);
+    if (!WALK_TILES.has(t) || t === T.FLOOR || PED_BLOCK[t]) continue;
+    n.state = 'wander'; n.wx = x; n.wy = y; n.until = world.time + 6; n.target = 0;
+    return true;
+  }
+  return false;
+}
 
 // Standing around: glance one way, then another, then wander off somewhere new (never just
 // frozen in place, and never loitering in the middle of the road).
@@ -822,6 +840,8 @@ export function snatchEvent(world, force = null) {
   if (!online.length) return;
   const p = force || online[Math.floor(rng() * online.length)];
   if (force && !online.includes(force)) return;
+  // (the calm streets, rules.js CALM_STREETS: fewer away from the rough parts of town, none while enough's going on)
+  if (!force && (events.calmBusy(world, p.ped.x, p.ped.y) || (!events.roughAt(world.map, p.ped.x, p.ped.y) && rng() >= CALM_STREETS.snatchShare))) return;
   let victims = world.query(p.ped.x, p.ped.y, 650, K.PED).filter((e) => e.npc && e.npc.role === 'civ' && !e.dead && (e.npc.archetype === 'socialite' || e.npc.archetype === 'executive') && e.npc.state === 'wander');
   if (!victims.length && force) { const sp = spawnNpc(world, 'socialite', p.ped.x + 160, p.ped.y, 'civ'); victims = [sp]; }
   if (!victims.length) return;

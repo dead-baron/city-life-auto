@@ -3939,7 +3939,17 @@ function addProp(m, t, x, y, solidR = 0, extra = null) {
   if (t === 'lamp' && !solidR) solidR = 5; // lamp posts are solid poles (and can be knocked down)
   if (solidR > 0) { const e = m.addSolidProp(x, y, solidR); e.pi = m.props.length - 1; e.brk = BREAKABLE.has(t); m.propSolid.set(e.pi, e); }
   if (t === 'lamp') m.lamps.push(p);
+  if (t === 'qpipe') qpipeSolids(m, p);
   return p;
+}
+// A quarter pipe (the owner, b1c: "you can just walk through the quarter pipe in the skatepark"): its deck and the tall
+// part of its curve are solid - two rows of posts across its width, out to where the face is ~4 px high; the low toe in
+// front of them is open (walked onto, a little up it: client/skate.js rampAt). A rider going up the face passes over
+// them (shared/physics.js: a board in a quarter pipe's air skips the props - shared/skate.js airK 2). (Its art:
+// client/art2/props-park.js skateQuarter, 48 px deep, centred on the prop.)
+export function qpipeSolids(m, p) {
+  const w = p.w || 128, r = 9, n = Math.ceil((w - 2 * r) / 12);
+  for (const dy of [-15, -6]) for (let k = 0; k <= n; k++) m.addSolidProp(Math.round(p.x - w / 2 + r + (w - 2 * r) * k / n), Math.round(p.y + dy), r).qp = 1;
 }
 
 // Point every lamp's arm at the nearest road so the head hangs over the street.

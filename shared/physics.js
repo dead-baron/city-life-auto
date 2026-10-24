@@ -132,8 +132,15 @@ export function pedStep(s, inp, dt, map, mods) {
   s.x += s.vx * dt; s.y += s.vy * dt;
   edgeBrake(s, map.frame);   // (out past the world's edge: slowed, and stopped at its end - border.js)
   const bx = s.x, by = s.y, pvx = s.vx, pvy = s.vy;
-  // (up off the ground on a board - grinding, high in an air - the benches, bins and posts are under you: only the walls)
-  collideCircle(s, PED_RADIUS, map, mods.canSwim ? SWIM_BLOCK : mods.rock ? ROCK_BLOCK : PED_BLOCK, !!(mods.board && s.over));   // (mods.rock: a sure-footed animal's)
+  // (up off the ground on a board - grinding, high in an air - the benches, bins and posts are under you: only the walls;
+  // up a quarter pipe's face the ramp is under you too: shared/skate.js airK 2)
+  // On a bridge's deck or a pier's planks the water beside them is behind the railing (the owner, b1c: "Fell through the
+  // bridge", "Walking bridges are bugged ... clipping through"): someone who can swim doesn't walk off the side into it -
+  // a dive roll still jumps in.
+  const rail = mods.canSwim && !swim && !(s.rollT > 0) && (tile === T.BRIDGE || tile === T.DOCK);
+  // (rolling hard up the way a quarter pipe faces - north - its posts don't stop you short of its toe: up the face you go)
+  const over = !!mods.board && (s.over || (s.airK === 2 && s.rollT > 0)), upQp = !!mods.board && s.vy < -120 && Math.abs(s.vx) < -s.vy;
+  collideCircle(s, PED_RADIUS, map, mods.canSwim && !rail ? SWIM_BLOCK : mods.rock ? ROCK_BLOCK : PED_BLOCK, over ? true : upQp ? 'qp' : false);   // (mods.rock: a sure-footed animal's)
   // on a board: how hard it ran into what it hit (a wall, a post, a tree: the push back out of it against the way it was
   // going) - hard enough and you're thrown off (s.boardHit: server skate.js bails you); a glancing touch just loses that
   // much speed (a solid prop moves you out but keeps your speed: take it off here)
@@ -176,9 +183,9 @@ export function collideCircle(s, r, map, block, noProps = false) {
           }
         }
       }
-      const props = !noProps && map.solidProps.size ? map.solidProps.get(map.idx(tx, ty)) : null;   // (none at all: a bare test map)
+      const props = noProps !== true && map.solidProps.size ? map.solidProps.get(map.idx(tx, ty)) : null;   // (none at all: a bare test map)
       if (props) for (const p of props) {
-        if (p.off) continue;
+        if (p.off || (p.qp && noProps === 'qp')) continue;   // (noProps 'qp': all but a quarter pipe's posts - shared/map.js qpipeSolids)
         const dx = s.x - p.x, dy = s.y - p.y, rr = r + p.r;
         const d2 = dx * dx + dy * dy;
         if (d2 < rr * rr && d2 > 1e-6) {

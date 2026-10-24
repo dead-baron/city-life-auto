@@ -284,7 +284,7 @@ export function jobTarget(world, p) {
   if (t.stage === 'pickup' && Number.isFinite(j.tx)) t.dest = [Math.round(j.tx), Math.round(j.ty)];   // (and where it goes after: the minimap)
   return t;
 }
-const truckMark = (p, v) => (p.ped && p.ped.vehId === v.id ? null : [Math.round(v.x), Math.round(v.y)]);
+const truckMark = (p, v) => (p.ped && p.ped.vehId === v.id ? null : [Math.round(v.x), Math.round(v.y), v.def.i]);   // (the model: the plate over it names it - "YOUR HELICOPTER", client/main.js drawJobTruck)
 function target(world, p, j) {
   if (j.type === 'sar') return sar.target(world, p, j);   // (the search circle, the flare, the harness: sar.js)
   if (j.type === 'dusting') return dusting.target(world, p, j);   // (the next field's crops still to spray, then the strip: dusting.js)

@@ -15057,3 +15057,257 @@ Tools: tools/world3b/stations.mjs audits it (each station's street, its car park
 pictures; --sim N runs traffic by each station). Tests: test/world3rail.test.js - a plan per station, a street at its
 front and its own road no dead end, a car park with spaces (not the El's), every crossing's road at 75 degrees or more
 outside the handcrafted districts with its arms across the road, the gates coming down for the trains, the robbery run.
+
+## 2026-10-23 · Owner's notes, batch b1a: job vehicles go back, debug spawns one at a time, riding isn't idling, the job vehicle's name, search & rescue at its HQ, the cinematic scenes on World v3, pool
+
+### A job's vehicle goes back when the job ends undone
+The owner: "Canceling a job should make you have to give up the vehicle like a helicopter so that you can't just take a
+job to steal a helicopter then cancel it and have a helicopter." A job given up only marked its vehicle `despawnable`,
+which the street tidy-up acts on only once nobody is near and nobody is in it - so whoever was at the wheel kept it for
+as long as they liked. Now `jobs.js recall` takes back whatever a job issued (the flatbeds, the cab, the ambulance, the
+fire engine, the bus, the tow truck, the tractor and combine, the rescue and charter helicopters, the crop duster, the
+coast guard's boat and helicopter) whenever the job ends undone - cancelled from the phone, quit at the counter, expired,
+lost - and when a finished job's return-bonus window runs out. Never harsh: on the ground you're set down beside it
+three seconds after (time to pull over; it's stopped where it is, nobody thrown out at speed); a boat waits until it's
+slow and by a shore or a pier; an aircraft until it's down on the ground - nobody is ever put out in mid-air, and you're
+told to land it. Nobody aboard, it's collected four seconds later; its cargo is left on the ground, anyone on its tow
+hook let go, the job's NPCs in it go with it. Taken on again for a new job before it goes (the same truck by the
+pickup), it's kept. The numbers are `RECALL` in shared/rules.js. Tests: `test/jobrecall.test.js` (new: the cab
+cancelled at the wheel, the charter helicopter kept while airborne and taken once landed, the flatbed collected with its
+crate left on the ground, the recalled truck issued again and kept); `honestliving`, `sar`, `drivejobs`, `dusting`,
+`firefighter`, `paramedic`, `farming` updated / pass.
+
+### The debug menu's vehicles and crashes, one at a time; the cart crash starts after a moment
+The owner: "Debug spawning airplanes you can fly in lets you spawn infinite airplanes ... let's not let players spawn
+infinite debug items like planes or shopping cart crashes", and "Debug for shopping cart crash, it lets you spawn
+infinite shopping cart riders but should just let you do one at a time. It also should start a few seconds after
+triggering it so you can watch without the debug menu in the way." `server/dev.js command` now catches what a spawning
+command makes (the vehicles and the NPCs sat in them) and, the next time the same kind is asked for, takes the last lot
+away: one plane or helicopter of yours at a time, one boat, one car (or bike, cart...), one damaged car, one loaded
+flatbed, one cart scene with its riders - unless a player is aboard the old one (then it's left to be tidied up as
+usual). The staged happenings that bring cars and people in (street race / chase / armored truck, shootout, a fight, a
+mugging) have a five-second cool-down per player. The head-on cart crash's carts now stand still for three seconds
+(`devplay.js CART_DELAY_S`, set rolling by `devplay.update`, a new entry in world.js SYSTEMS) and the debug menu closes
+itself after any cart command. Tests: `test/devplay.test.js` (the head-on crash held still, then everyone thrown; a
+new test: five planes in a row leave one, a car doesn't take your plane, the boat you're in stays, a second crash takes
+the first one's carts and riders away).
+
+### Riding the train isn't idling
+The owner: "riding the train for 10 minutes kicked me out for idling." The idle kick (players.js idleCheck: asked at
+nine minutes, gone at ten) now runs its clock a third as fast for someone along for the ride: on a train or the subway,
+a passenger in a bus, a cab, a ferry or anyone's back seat, in your car on a ferry's deck, on the Ferris wheel or a
+balloon flight, or watching the cinematic mode's tour (the page sends `{ t: 'cine', tour: 1 }` once a minute while it
+runs). That's asked after 27 minutes aboard, disconnected at 30; at the wheel it's ten minutes as before. Flying the
+cinematic mode's drone camera or using its panel now counts as being there (`{ t: 'cine' }`, at most every 20 s): those
+keys never reached the server before. Test: `test/idle.test.js` (new: a passenger still there at ten and a half
+minutes, asked at twenty-seven and a half, gone at thirty; at the wheel, gone at ten).
+
+### "Your truck" for a helicopter
+The owner: "Helicopter is referred to as 'your truck' during a job." The plate over the job's vehicle (client/main.js
+drawJobTruck) always said YOUR TRUCK. The job's mark now carries the vehicle's model (phone.js truckMark: `[x, y, model]`)
+and the plate says what it is - YOUR HELICOPTER, YOUR PLANE, YOUR BOAT, YOUR AMBULANCE, YOUR CAB, YOUR BUS, YOUR FIRE
+ENGINE, YOUR TRACTOR, YOUR TRUCK (`vehicleWord` in shared/vehicles.js); the return bonus's note names the vehicle too.
+Tests: `test/jobrecall.test.js` (the words; the mark's model), `test/honestliving.test.js` updated.
+
+### Search & rescue: the calls come to the rescue helicopter, signing on at the HQ
+The owner: "Regular helicopter shouldn't trigger search and rescue missions, search and rescue jobs should happen when
+you accept that job and they should have a search and rescue helicopter to fly for them", and "Prompt to sign in as
+search and rescue pilot happens randomly outside of a hospital, we should have a few specific search and rescue HQs".
+On a shift the calls now come only while you're at the controls of the rescue helicopter the job issued: out of it the
+shift stands by ("get in your Lifeline Rescue Helicopter - the calls come to it"), flying any other helicopter you're
+told the calls only come to the rescue one, and nobody out there is "found" from another aircraft. On World v3 signing
+on was already only at the Search & Rescue HQ's pad (checked: none of its 25 hospital yard pads offers it), but the
+debug menu's / cinematic mode's "Search and rescue" started the shift at the nearest hospital's pad - now at the HQ.
+Standing by the HQ's door counts as at the HQ too. (World v3 has the one HQ, at Westport International; more HQs would be a world
+change - not in this batch.) Tests: `test/sar.test.js` (no call on foot, the first one once you're in it; a new test: a
+Skylark over the hurt hiker finds nobody, no calls come to it, back in the rescue helicopter they do);
+`test/world3scenes.test.js` (new, World v3: no hospital pad offers the sign-on, the HQ's pad does, the dev shift starts
+from the HQ).
+
+### The cinematic mode's staged scenes, every one, on World v3
+The owner: "'No Granite Peaks for World v3' error coming up when trying to teleport to the peaks (through the cinematic
+mode)". The debug menu's `place` found a district by the first district of that name in the list - and World v3 keeps
+today's city's districts and adds its own, so Granite Peaks and Highland Woods are each in the list twice, the first not
+on the v3 map. It now takes the one with the most ground (dev.js districtMiddle), and a name that's exactly a place or a
+district wins over one that merely contains it (`placeNamed`: a scene's "Midtown" is the district, not Midtown Houses).
+Running all 60 scenes on the v3 world turned up more: the bear scene threw (`wildlife.edgeSpot`'s `[x, y]` read as a
+point - now it stands the bear on that bank); the bear and eagle scenes had no place to start from (now Pine Lake and
+Willow Valley); the police scenes went on duty first, which seats you in your cruiser, so their teleport refused ("get
+out of the vehicle first" - now the place first, then on duty); "At home" needed a home already (now it takes a house);
+the tanker-and-row-of-cars scene had no room in Port Westport's container stacks (now Westport Center); the ambulance
+scene's patient found no room when `near hospital` had put you at the desk inside (paramedic.js devMedic now looks by
+the ambulance). Test: `test/world3scenes.test.js` (new, heavy: every scene's commands run on World v3 - every place
+found, no "[dev] No ..." / "Couldn't" / refusal, nothing thrown).
+
+### Pool at the Rusty Spur
+The owner: "Tried playing pool and it said you can't do it indoors or something, seems bugged out right now." On World v3
+the table works from its long sides, but the prompt only came within 70 px of the table's middle - at its ends (50 px of
+table) there was nothing to Act on, and with a skateboard in the bag the vehicle button there tried the board: "Not
+indoors - ride it outside." Now the table racks up from within 40 px of its rim on any side (arcade.js POOL_REACH), and
+indoors, where there's no riding, the vehicle button does what Act would (the pool table, the bar...) instead of trying
+the board. Tests: `test/arcade.test.js` (new: both ends and the side give the prompt, across the room doesn't; the
+vehicle button with a board in the bag racks them up, no "not indoors"), `test/world3scenes.test.js` (the v3 table from
+every side).
+
+# Pending DEVLOG entries (branch fix-b1b, the owner's notes of 10-22)
+
+## Blows from the guard; a guarded walk
+The owner: holding the right mouse button to block, a left click did nothing; walking in the guard (fists, a sword...)
+there was no walk - the character floated along in the guard pose.
+- A punch or a swing thrown with the guard held now goes (server/systems/players.js): the guard drops for the blow
+  (rules.js `GUARD.strikeS`, 0.3 s - a 'guard' t:0 event so everyone sees the blow, not the guard) and comes straight
+  back up while the button is held; held down with the attack button too, a blow each time the weapon is ready and the
+  guard up in between. NPCs still don't strike from their guard; only the plasma blade deflects bullets and arrows.
+- Touch: the fire button with the aim stick held short of firing keeps the guard bit (client/input.js), so it works
+  the same there; a pad already sent RT and LT together.
+- The page shows the blow over the guard (main.js pedPose), and moving in the guard is a pose of its own, `guardw`
+  (client/art2/dances.js): the walk's stride on bent knees with the guard's arms, lean and head - six frames on the
+  stride's phase (peds.js pedFrame, main.js pedLook). The classic view draws it as the aim, like the guard.
+- Tests: test/blocking.test.js (a blow from the guard and the guard back after it; held: blows with the guard up in
+  between; `guardw` strides and is its own pose).
+
+## A more forgiving wanted level at the top
+The owner: "Getting a 5 star wanted level is really aggressive/sensitive, it should take longer to get a full 5 star."
+- 4 and 5 stars need more heat (`STAR_HEAT`: 110 and 200, were 100 and 160; 1-3 stars unchanged at 10 / 30 / 60). The
+  live thresholds and `starsForHeat` now live in shared/rules.js and everything imports them from there; the old copy in
+  shared/constants.js is left byte-for-byte as it was, because any change to constants.js re-keys the World v3 world and
+  every browser's baked chunks (`world3` / `art` / `art3` in version.json) - remove it the next time constants.js has to
+  change anyway (test/wantedladder.test.js fails if anything imports it). And above 3 stars' heat a crime's heat counts for only 60% of itself (rules.js `HEAT_TOP`; law.js
+  `heatAfter`, applied in `crime`, `calledIn` and to a robbery's and a bank heist's growing heat). Alarms and the dev
+  menu that put you at so many stars (`addHeat` without `damp`) still do. PeakWantedLevelMemory is as it was.
+- Crimes (called in) to reach each star, before -> after: murders 2/3/4/5 stars at 1/2/3/4 -> 1/2/4/7; killing
+  officers 3/4/5 at 1/2/2 -> 1/2/4; assaults 1/2/3/4/5 at 1/2/4/7/11 -> 1/2/4/10/20.
+- Tests: test/wantedladder.test.js (new: the ladder, alarms still set stars, nobody reads the old copy); core, crime, robbery, heist, police, arrests, prison, stops, bounties,
+  policeair, trains, brawls, struggle, cells, airtraffic, underground and drivejobs still pass.
+
+## People no longer burst into flames walking down the street
+The owner: "Some NPCs seem to be randomly catching on fire ... they will just burst into flames and run off and die"
+(a city street; the campfire fix of 10-21 didn't cover it).
+- Found with a headless run (World v3, a player standing still in Midtown 15 in-game minutes, every 'ignite' traced to
+  its caller): 370 people set alight round the player, 360 of them by burning.js's contact with someone else on fire -
+  a burning passer-by, or someone down and burning on the pavement (the 'fall' plan burns on where they lie), lit
+  whoever walked past, who ran on through the crowd and lit more; the first fire came from a car burning out after a
+  crash (8 by walking past a burning car or wreck, 2 by the blast). Westport Center: 153, 133 of them the same way.
+- burning.js `contacts`: the city's people step round fire as they go about. A player still catches walking into a
+  burning car, a wreck, a campfire or someone alight; anyone else only when thrown into it (knocked down, flung,
+  tumbling - as the campfire rule of 10-16 already did) or when a burning player runs into them. Blasts, a car blowing
+  up with you in it, fire arrows, the flamethrower and the firefighter job's fires are as they were.
+- Tests: test/burning.test.js (a passer-by steps round a burning wreck, knocked into it they catch, a player brushing
+  it catches; new: someone down and burning lights none of 30 passers-by, but a player walking into them). After the
+  fix the same Midtown run had 0 ignitions from contact (see the calm-streets entry for the numbers).
+
+## NPC boats only on real water
+The owner: "NPC boats showing up in city ponds, assuming they are showing up in other places they shouldn't be at too?"
+(a boat in a plaza's lily pond).
+- The boaters (dinghies, speedboats, jet skis) and the harbour patrol boats were put on the map's `seaPoints` - every
+  10 tiles of any 7 x 7 tiles of open water that isn't a river. A survey of World v3 (every sea point's water body,
+  flood-filled): 26 of the 126,378 points are in ponds - Midtown's plaza pond (323 tiles of water), Northgate's two
+  (196, 552), the Stadium District's (526, 613), The Strip's (416, 640), West Hills' long pond (567), the airport's
+  (1,374) and a puddle in Liberty Bay. Standing by one counted as "by the water" and brought boats onto it. The
+  anglers' rowboats (`fishSpots`: lakes only) were all on real lakes already - the smallest a tarn in Granite Peaks,
+  368 tiles of water - and the big rivers' calm pockets.
+- server/systems/boats.js: `waterSize` (a bounded flood fill of a water body's open water) and `bigWater`: the boaters'
+  and patrol boats' points must be on 2,500 tiles of water or more (spawning, picking where to go next, and "by the
+  water" at all); the anglers' lakes on 300 or more (none dropped today; ponds stay out from now on). The answer for
+  each point is kept, so only the points round the players are ever filled.
+- Tests: test/calmstreets.test.js (heavy: builds World v3) - no boat on any pond's point, the anglers' lakes, a player
+  by the biggest pond a minute: no NPC boat on it.
+
+## Calm streets: a player standing about no longer watches the block fall apart
+The owner: "When staying in one area too long it seems like chaos starts happening, a lot of cars start getting jammed
+in a spot, fights break out" / "Maybe in the 'bad' parts of town or gang areas, but otherwise things should be pretty
+tame."
+- Measured headless (World v3 as the server runs it, npcBudget 700, a player standing still on a pavement for 15
+  in-game minutes; counted within 640 px every 10 s): Midtown before - 370 people set alight, 92 deaths, 406 crash
+  events, 7 cars blown up, 146 NPC punches/swings, up to 15 people fleeing at once, 5.4 cars stuck 30 s+ on average (12
+  at the worst); Westport Center - 153 alight, 45 deaths, 257 crashes, 11 cars blown up; West Hills (quiet suburb) was
+  already calm. The loops found:
+  1. fire passing from person to person (see the fire entry);
+  2. two NPC cars knocking each other (impact > 110 px/s - a hundred-odd times in 10 minutes round one player) sent both
+     drivers into a 10 s panic: 520 px/s, blind to what's ahead (vehicles.js -> npc.onVehicleHit) - into the next car,
+     the next crowd, a burning wreck; and a slow knock could get the driver out to fight the other driver;
+  3. a street brawl's blows landed on whoever stood nearest in the arc - the crowd that stops to watch and film - who
+     fought back (npc.onAttacked), and so on;
+  4. a passer-by pinned in the road against a lorry in a queue, and the car behind waiting on someone on foot for ever:
+     a dozen cars locked round the corner by Midtown station for the whole run (never cleared: in the player's view);
+  5. a purse snatch every 70-130 s, a happening every 90-210 s (a third of them street fights) and a street event every
+     3-7 minutes, all round the same player wherever they stood.
+- Changes: vehicles.js - an NPC driver panics (or gets out to fight) only when a player's car is in the knock; combat.js
+  melee - someone in a fight only lands blows on the one they're fighting; traffic.js - held up by someone on foot in
+  the road, a driver honks after 2.5 s (the horn flag), someone at a loose end steps out to the nearest pavement
+  (npc.js `shoo`), and after 6 s the car edges past at 28 px/s, nudging them aside (a crawl only shoves, never hurts);
+  rules.js `CALM_STREETS` + events.js `roughAt` / `busyNear`: away from the rough, poor and red-light districts and gang
+  turf only 20% of the happenings that would be a street fight are one and half the snatches happen, and nothing new
+  starts round a player (a happening, a snatch, a street race / chase / armored run) while two incidents are already
+  going on within 900 px.
+- After, same runs: Midtown - 0 alight, 3 deaths (run over), 46 crashes, 0 cars blown up, 17 swings, at most 4 fleeing,
+  0 panicked cars, 0.38 cars stuck on average (6 at the worst, cleared); Westport Center - 0 alight, 0 deaths, 7
+  crashes, 0 blown up, 1 swing; West Hills - 0 / 0 / 0 crashes, two happening street fights.
+- Tests: test/calmstreets.test.js (heavy, new: 8 in-game minutes in Midtown - at most 2 set alight, 4 deaths, 100
+  crashes, 1 car blown up, 4 fights, 1 panicked car, 10 stuck at the worst and 3 on average); test/reroute.test.js
+  (new: honked at, a passer-by steps out of the road; one who won't move is nudged past unhurt); happenings,
+  streetlife, brawls, blocking, reactions, npcpeople, core, police, gameplay, crime, vehdamage, bikes, roadends,
+  trafficwalls, transit, ems still pass. The sim script itself: scratchpad calm.mjs (not committed).
+
+## 2026-10-23 · b1c: riders' outlines, the skate park's quarter pipes, ghost trains, bridges, the desert's red patches
+
+**No see-through outline on anything ridden in the open** (the owner: "Player is showing a white outline in some
+vehicles like boats or shopping cart or on trains", "on a dirtbike this time", on a horse). The outline was the
+vehicle's own x-ray (art v2's engine draws the parts of your own sprite hidden by something taller over the frame): the
+rider drawn on top of a bike, a cart, an open boat or a horse stands taller than it, so the vehicle's shape showed
+through the rider. Now nothing ridden in the open is x-rayed (bikes, carts, boats, jet skis, horses), nor anyone seated
+on something (a train's riders, a cart's passenger), on a skateboard or a surfboard; your own car (rider hidden inside)
+still shows through the buildings that hide it (client/art2/game/host.js _veh, _horse, _ped). Test:
+test/ridexray.test.js.
+
+**The skate park's quarter pipes** ("you can just walk through the quarter pipe ... when riding on skateboard it shows
+you going transparent through the quarter pipe instead of being in front of it"). A quarter pipe was no obstacle at
+all: you walked or rolled into it at ground level and sank into its curve (the art in front of you hid you, the x-ray
+outlined you). Now:
+- its deck and the tall part of its curve are solid (two rows of posts across it: shared/map.js qpipeSolids) - you're
+  held at its low toe on foot, rolling into it slowly, or from the sides;
+- rolled up hard (the quarter pipe's air: shared/skate.js) you pass its posts and go up the face as before - but never
+  on past the coping into the deck and the wall behind (fast, the rest is straight up over it);
+- anyone on a ramp is drawn on its surface, not sunk into it: the page lifts a rider or a walker by the ramp's height
+  where they are (shared/skate.js rampSurface - the quarter pipe's curve, a kicker's slope, a pyramid's banks, as
+  client/art2/props-park.js shapes them; client/skate.js rampAt, client/main.js pedLook);
+- the NPC skaters' laps keep off the quarter pipes (server/systems/activities.js).
+Test: test/skate.test.js (on foot and slow held at its face, fast up to the coping and back with no bail, the surfaces).
+
+**No ghost train at the stations** ("Train stations showing train art stopped at station and you pull into it and then
+through it"). A World v3 train nobody is near runs without placing its cars (docs/WORLD-V3.md 8.23), so its cars stood
+where they were last placed - the platform it started at when the server came up, or where the last player left it -
+long after it had gone, and anyone coming by saw (and rode through) a train standing there. A player near a train's
+cars as they stand now counts as near it too: the tick they are, the cars go to where the train really is
+(server/systems/trains.js nearSomeone). Test: test/world3rail.test.js.
+
+**Bridges** ("Helicopters can fly through bridges", "Boats can be seen between the streets on a highway bridge and their
+VFX show up over the bridge, and the boats seem to be able to hit you", "Water VFX visible through bridge"):
+- a boat under a bridge no longer hits people up on its deck, nor a car on the deck a swimmer under it
+  (server/systems/vehicles.js: the deck and the water under it are two layers, as acrossBridge already said for
+  getting in);
+- a boat's foam under a bridge is hidden by the deck like its hull (the bow wave capped below the deck; the trail's
+  foam not drawn on a bridge's tiles), and so are the fish, the rings and the swimmers' wakes (client/art2/game/host.js,
+  waterlife.js);
+- a helicopter below a bridge's deck flies into its side - the elevated highway's (134 px up, where art v2 draws it)
+  and a road bridge's over the water (14 px, its parapets); above it, over it; one that lifted off under a deck gets out
+  as it likes. Helicopters only: planes low over a highway are on their approach (shared/flight.js collideAir).
+Tests: test/bridgelayers.test.js, test/flight.test.js.
+
+**Walking on bridges and piers** ("Fell through the bridge here in the red rock desert", "Walking bridges are bugged,
+should be easier to walk on bridges and stairs without clipping through"). A player can swim, so their step let them
+walk off a bridge's deck or a pier's planks straight into the water beside it - near the parapet, or on a footbridge or
+a creek's plank bridge a step to the side. On a bridge's deck or a pier the water beside it is now behind the railing;
+a dive roll still jumps in (shared/physics.js pedStep). Test: test/bridgelayers.test.js.
+
+**The desert's flat red patches** ("Can't walk through this shadow in the red rock desert?", "Can't walk through this
+patch either, looks like incomplete environment asset"). The relief's cliff bands (shared/world3-relief.js) are solid
+rock, and only a band's south-facing run gets a face (the cliff sprite); in the desert the rest - a coast's drop facing
+the sea, a band's east or west side, a short arc - was drawn as flat red ground (groundbake.js REDROCK) you couldn't
+walk on: squares and strips of it by the coasts (seed 1337: 4608,666 and 4659,666 on the north coast; 5912-5940,
+1576-1616 on the east coast). The desert's band tiles with no face over them are their ground again (the slope's
+shading stays); what a face stands on stays rock. Test: test/world3relief.test.js.
+
+Performance budget (tools/perf.mjs): the page's code 496 -> 498 KB for this batch - the quarter pipe's surface and
+coping, a helicopter meeting a bridge deck, a bridge's edge as a railing on foot, the guarded walk and a blow from the
+guard, the job vehicle's word: all predicted on the page as the player moves. The new comments were trimmed first (497).

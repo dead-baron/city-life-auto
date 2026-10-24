@@ -6,7 +6,8 @@
 //                             'rail' / 'ramp' (the nearest ledge, flat bar or bench / kicker, quarter pipe or pyramid, lined
 //                             up on your board a run-up away)
 //   devCart(world, p, msg)    msg.k: 'pair' (a cart, you at the handle, a friend in the basket), 'headon' (two loaded carts
-//                             meeting head on just ahead), 'tipped' / 'crushed' (a cart over on its side / buckled)
+//                             meeting head on just ahead, setting off CART_DELAY_S after - update), 'tipped' / 'crushed'
+//                             (a cart over on its side / buckled)
 //   devFish(world, p, msg)    msg.k: 'kit' (every rod, a stack of every bait), 'go' (msg.w a water, msg.spot a legendary's
 //                             place: the nearest bank of it, facing it), 'cave' (the cave's still pool), 'boat' (out at sea in
 //                             a boat sitting still), 'bite' (msg.f: 'now' - the next bite at once; 'rare', 'legend' or a
@@ -92,6 +93,19 @@ export function devSkate(world, p, msg) {
 }
 
 // ---- shopping carts ------------------------------------------------------------------------------------------------
+export const CART_DELAY_S = 3;   // the head-on crash: the carts set off this long after it's asked for
+// every tick (world.js SYSTEMS): the debug menu's carts waiting to roll, off when their moment comes
+export function update(world) {
+  const L = world.devLaunch;
+  if (!L || !L.length) return;
+  for (let i = L.length - 1; i >= 0; i--) {
+    const q = L[i], v = world.get(q.id);
+    if (!v || v.removed) { L.splice(i, 1); continue; }
+    if (world.time < q.at) { v.vx = 0; v.vy = 0; continue; }   // (held still till then)
+    v.vx = q.vx; v.vy = q.vy;
+    L.splice(i, 1);
+  }
+}
 function cartAt(world, x, y, a) { const v = world.spawnVehicle('cart', x, y, a, { npcOwned: false }); v.parked = false; return v; }
 function seatNpc(world, v, s) { const c = spawnNpc(world, 'casual', v.x, v.y); if (!c) return null; c.vehId = v.id; c.seat = s; v.seats[s] = c.id; return c; }
 export function devCart(world, p, msg) {
@@ -106,14 +120,18 @@ export function devCart(world, p, msg) {
     world.notify(p, '[dev] At the handle with a friend in the basket. Crash it and they go flying.', 'info');
     return null;
   }
-  if (k === 'headon') {   // two loaded carts a little way ahead, rolling at each other
+  if (k === 'headon') {   // two loaded carts a little way ahead, rolling at each other - CART_DELAY_S after (the owner, 10-23:
+    // "It also should start a few seconds after triggering it so you can watch without the debug menu in the way": the page
+    // closes the menu, client/devmenu.js; one crash at a time - server/dev.js takes the last one's carts away)
     const c = ahead(ped, 170), nx = -Math.sin(ped.a), ny = Math.cos(ped.a), sp = VEHICLES.cart.max * 0.75;
+    const at = world.time + CART_DELAY_S;
     for (const s of [-1, 1]) {
       const v = cartAt(world, c.x + nx * 120 * s, c.y + ny * 120 * s, Math.atan2(-ny * s, -nx * s));
       seatNpc(world, v, 0); seatNpc(world, v, 1);
-      v.vx = -nx * s * sp; v.vy = -ny * s * sp;
+      v.vx = 0; v.vy = 0;
+      (world.devLaunch ||= []).push({ id: v.id, at, vx: -nx * s * sp, vy: -ny * s * sp });
     }
-    world.notify(p, '[dev] Two loaded carts head on, just ahead of you.', 'info');
+    world.notify(p, `[dev] Two loaded carts head on, just ahead of you - rolling in ${CART_DELAY_S} seconds.`, 'info');
     return null;
   }
   if (k === 'tipped' || k === 'crushed') {

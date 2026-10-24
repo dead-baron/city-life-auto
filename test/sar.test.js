@@ -52,8 +52,14 @@ test('signing on at a hospital\'s helipad (or from the phone) issues a rescue he
   assert.ok(v.workTruck && !v.despawnable, 'kept for the shift');
   const t = phone.jobTarget(w, p);
   assert.ok(t.veh, 'the ring and the arrows point at it');
-  // the first call comes in after a few seconds
+  // no calls while you're not in the rescue helicopter (the owner, 10-23: "Regular helicopter shouldn't trigger search and
+  // rescue missions") - in it, the first call comes in a few seconds later
   run(w, SAR.firstS + 1);
+  assert.ok(!p.job.call && p.job.stage === 'board' && /get in your/.test(p.job.text), `standing by till you're in it (${p.job.text})`);
+  p.ped.x = v.x + 30; p.ped.y = v.y; w.place(p.ped);
+  send(p, IN.VEHICLE); send(p, 0);
+  assert.equal(p.ped.vehId, v.id, 'in the rescue helicopter');
+  run(w, 4);
   assert.ok(p.job.call, 'a call came in');
   const c = p.job.call, vic = w.get(c.vic);
   assert.ok(vic && vic.npc && vic.npc.sar === p.pid, 'someone out there');
@@ -64,7 +70,7 @@ test('signing on at a hospital\'s helipad (or from the phone) issues a rescue he
   phone.handle(w, p, { a: 'cancel' });
   run(w, 0.2);
   assert.ok(!w.get(c.vic) || w.get(c.vic).removed, 'cancelled: the one out there is gone');
-  assert.ok(v.despawnable, 'the helicopter goes back');
+  assert.ok(v.recall || v.removed, 'the helicopter goes back (jobs.js recall)');
 });
 
 test('close in and they wave and a flare goes up; land and the hurt are helped aboard; the roof pad hands them over for the pay', () => {
@@ -197,7 +203,7 @@ test('charter pilot: a customer waits at a helipad, an airfield, a mansion\'s la
   assert.equal(prof.cash - cash2, t2.fare, 'just the fare');
   phone.handle(w, p, { a: 'cancel' });
   run(w, 0.2);
-  assert.ok(v.despawnable, 'the helicopter goes back');
+  assert.ok(v.recall || v.removed, 'the helicopter goes back (jobs.js recall)');
 });
 
 // ---- the coast guard (server/systems/coastguard.js) --------------------------------------------------------------------
@@ -321,5 +327,34 @@ test('coast guard by air: low over the smugglers they heave to; a crewman goes d
   act.run();
   assert.equal(p.job.call, null, 'seized');
   assert.ok(prof.cash - cash >= COAST.bust, `the reward (+$${prof.cash - cash})`);
+  phone.handle(w, p, { a: 'cancel' });
+});
+
+// (the owner, 10-23: "Regular helicopter shouldn't trigger search and rescue missions, search and rescue jobs should happen
+// when you accept that job and they should have a search and rescue helicopter to fly for them")
+test('the calls come to the rescue helicopter: flying another one, nobody\'s found and no new calls come in', () => {
+  const { p, v } = onShift();
+  const s = S.open[Math.floor(S.open.length / 2)];
+  const c = sar.callAt(w, p, 'ground', s.x, s.y);
+  // into a Skylark by them
+  const sky = w.spawnVehicle('heli', s.x + 200, s.y, 0, { npcOwned: false });
+  const i = v.seats.indexOf(p.ped.id); v.seats[i] = 0;
+  sky.seats[0] = p.ped.id; p.ped.vehId = sky.id; p.ped.seat = 0;
+  hover(sky, s.x + 100, s.y, 150);
+  run(w, 1);
+  assert.ok(!c.found, 'a Skylark overhead: not the rescue crew - not found');
+  // the call over (handed on), and none while you're in the Skylark
+  sar.callAt(w, p, 'lost', s.x, s.y);
+  p.job.call = null; p.job.nextAt = w.time;
+  const said = [], n0 = w.notify.bind(w);
+  w.notify = (q, t, tone) => { if (q === p) said.push(t); return n0(q, t, tone); };
+  run(w, SAR.gapS[1] + 5);
+  w.notify = n0;
+  assert.ok(!p.job.call, 'no call to a Skylark');
+  assert.ok(said.some((t) => /only come to the rescue helicopter/.test(t)), `told so (${said.join(' | ')})`);
+  // back in the rescue helicopter: the calls come again
+  sky.seats[0] = 0; v.seats[0] = p.ped.id; p.ped.vehId = v.id; p.ped.seat = 0;
+  run(w, 5);
+  assert.ok(p.job.call, 'a call');
   phone.handle(w, p, { a: 'cancel' });
 });

@@ -6,7 +6,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
-import { STAR_HEAT, PED_RADIUS } from '../shared/constants.js';
+import { PED_RADIUS } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 import { JAIL_S, BAIL_PER_STAR, HOLD_S, GHOST_SECONDS, CELL_WALK_S, CELL_CAP, CELL_SHARE, CELL_REGULARS, INMATE_S } from '../shared/rules.js';
 import { mulberry32 } from '../shared/rng.js';
 import { K } from '../shared/constants.js';

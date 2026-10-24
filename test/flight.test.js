@@ -290,3 +290,29 @@ test('the helipads\' H marks: drawn while you fly, gone once you are on foot aga
   assert.equal(marks, 0, 'on foot: no H');
 });
 
+
+// (the owner, b1c: "Helicopters can fly through bridges") below a bridge's deck an aircraft flies into its side - the
+// elevated highway's and a bridge's over the water; above it, over it; one that lifted off under the highway gets out
+test('below a bridge\'s deck an aircraft hits its side; above it, it flies over; one under a deck gets out', async () => {
+  const { DECK_ALT, BRIDGE_ALT } = await import('../shared/flight.js');
+  const d = VEHICLES.heli;
+  // the elevated highway over the water from x 1200 on (its deck layer), a road bridge's deck from x 2400 on
+  const map = bare(T.WATER);
+  map.deck = new Proxy({}, { get: (o, k) => (Number(k) % 4096 >= 38 && Number(k) % 4096 < 48 ? 1 : 0) });
+  const lo = { ...still(), alt: DECK_ALT - 40, spool: 1 };
+  const w = fly(lo, d, { bits: 0, mx: 1, my: 0 }, 3, map);
+  assert.ok(w.hit > 0 && lo.x < 38 * 32, `bumped off the highway's side (${Math.round(lo.x)})`);
+  const hi = { ...still(), alt: DECK_ALT + 30, spool: 1 };
+  fly(hi, d, { bits: 0, mx: 1, my: 0 }, 3, map);
+  assert.ok(hi.x > 48 * 32, 'over it');
+  const under = { ...still(), x: 43 * 32, alt: 40, spool: 1 };
+  fly(under, d, { bits: 0, mx: 1, my: 0 }, 3, map);
+  assert.ok(under.x > 48 * 32, `lifted off under it: out the other side (${Math.round(under.x)})`);
+  const br = bare(T.WATER);
+  br.tileAt = (tx) => (tx >= 38 && tx < 44 ? T.BRIDGE : T.WATER); br.tileAtPx = (x) => br.tileAt(Math.floor(x / 32));
+  const skim = { ...still(), alt: BRIDGE_ALT - 6, spool: 1 };
+  const w2 = fly(skim, d, { bits: 0, mx: 1, my: 0 }, 2, br);
+  assert.ok(w2.hit > 0 && skim.x < 38 * 32, 'skimming the water: into the bridge\'s side');
+  const ok = { ...still(), alt: 60, spool: 1 };
+  assert.equal(fly(ok, d, { bits: 0, mx: 1, my: 0 }, 3, br).hit, 0, 'over it');
+});

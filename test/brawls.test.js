@@ -5,7 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
-import { K, T, STAR_HEAT } from '../shared/constants.js';
+import { K, T } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 import { DISTRICTS } from '../shared/map.js';
 import { mulberry32, hash2 } from '../shared/rng.js';
 import { BRAWL_AFTER_S, PATROL_PURSUE, FIGHT_MUTUAL, FIGHT_POLICE } from '../shared/rules.js';

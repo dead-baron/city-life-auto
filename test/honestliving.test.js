@@ -35,11 +35,11 @@ test('every courier job comes with its flatbed: issued, kept while the job is on
     assert.ok(v.issuedTo === p.pid && v.workTruck && !v.despawnable, `${poi.label}: issued to you, kept`);
     assert.ok(Math.hypot(v.x - pad.x, v.y - pad.y) <= WORK_TRUCK.searchR + 1, `${poi.label}: near the pickup`);
     const t = phone.jobTarget(w, p);
-    assert.deepEqual(t.veh, [Math.round(v.x), Math.round(v.y)], 'the truck is marked');
+    assert.deepEqual(t.veh, [Math.round(v.x), Math.round(v.y), v.def.i], 'the truck is marked (its model with it: the plate names it)');
     assert.equal(t.stage, 'pickup');
     assert.deepEqual(t.dest, [Math.round(dest.x), Math.round(dest.y)], 'and where the cargo goes after');
     jobs.failJob(w, p, 'test');
-    assert.ok(v.despawnable, 'a job given up: the company collects its truck');
+    assert.ok(v.recall, 'a job given up: the company takes its truck back (jobs.js recall)');
     w.remove(v);
     n++;
   }
