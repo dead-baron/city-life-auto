@@ -56,13 +56,17 @@ function offRoad(w) {
   return null;
 }
 // two spots on the pavement either side of a building (no way straight through, no shop door to go in by)
-function eitherSide(w) {
+// (deep: the building that deep above and below the row too - a step or two aside doesn't get you round its corner)
+function eitherSide(w, deep = 0) {
   const m = w.map;
   for (let ty = 60; ty < m.h - 60; ty += 3) for (let tx = 60; tx < m.w - 60; tx++) {
     if (m.tiles[ty * m.w + tx] !== T.SIDEWALK || !PED_BLOCK[m.tiles[ty * m.w + tx + 1]]) continue;
     let k = 2;
     while (k < 12 && PED_BLOCK[m.tiles[ty * m.w + tx + k]]) k++;
     if (k < 5 || k >= 12 || m.tiles[ty * m.w + tx + k] !== T.SIDEWALK) continue;
+    let solid = true;
+    for (let dy = -deep; dy <= deep && solid; dy++) for (let i = 1; i < k; i++) if (!PED_BLOCK[m.tiles[(ty + dy) * m.w + tx + i]]) { solid = false; break; }
+    if (!solid) continue;
     const a = { x: tx * 32 + 16, y: ty * 32 + 16 }, b = { x: (tx + k) * 32 + 16, y: ty * 32 + 16 };
     if (!m.los(a.x, a.y, b.x, b.y) && !walkInAt(m, a.x, a.y) && !walkInAt(m, b.x, b.y) && !wildStyle(m, a.x, a.y)) return { a, b };
   }
@@ -254,16 +258,21 @@ test('nobody found where it happened (in a park): the car pulls up at the kerb, 
 test('an officer who can\'t get any nearer the scene (a building in the way: no path finding on foot) looks round from there, then leaves', () => {
   const w = makeWorld(), heard = hear(w);
   const { p } = joinPlayer(w);
-  const at = eitherSide(w);
+  // (a building three tiles deep above and below the row at least: on a one-tile-deep corner his sidestep, npc.js, takes
+  // him round it along the pavement - fair walking, but then he's no longer kept out - depending on where he happened
+  // to be stood when the call came)
+  const at = eitherSide(w, 3);
   assert.ok(at, 'a building with pavement either side');
   const cop = spawnNpc(w, 'cop', at.a.x, at.a.y, 'cop');
   cop.npc.beat = true; cop.npc.temper = 'easy';
   teleport(w, p.ped, at.b.x, at.b.y);
   law.smallStar(w, p, 'punch', at.b.x, at.b.y, 'officer', cop.id);   // (he saw it from round the corner)
   teleport(w, p.ped, at.b.x + 3000, at.b.y);   // (long gone)
-  assert.ok(until(w, () => p.stop && p.stop.stage === 'look', 15, () => stand(p)), `looking round where he got to (stage ${p.stop && p.stop.stage})`);
+  let inWall = false;
+  assert.ok(until(w, () => p.stop && p.stop.stage === 'look', 15, () => { stand(p); if (PED_BLOCK[w.map.tileAtPx(cop.x, cop.y)]) inWall = true; }), `looking round where he got to (stage ${p.stop && p.stop.stage})`);
   assert.equal(p.stop.cop, cop.id);
   assert.ok(cop.x < at.b.x - 40, 'never got through the building');
+  assert.ok(!inWall, 'never stood inside it');
   assert.ok(until(w, () => !p.stop, STOP_LOOK_S + 3, () => stand(p)), 'and gave up');
   assert.ok(heard.some((e) => e.e === 'say' && e.id === cop.id && /Nobody about/.test(e.text)));
   assert.ok(until(w, () => p.wanted === 0, 12, () => stand(p)), 'the star fades');
