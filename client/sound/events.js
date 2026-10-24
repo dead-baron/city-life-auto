@@ -107,6 +107,7 @@ export const EVENT_SOUNDS = {
   // a car cut in two by a plasma blade: the blade's sear through the metal, the shell parting
   vcut: (ev, A) => { A.at('sear', ev.x, ev.y, 1); A.at('hum', ev.x, ev.y, 1.2); A.at('clang', ev.x, ev.y, 0.7); },
   wreckland: (ev, A) => { A.at('crash', ev.x, ev.y, 1, { p: 1 }); A.at('rubble', ev.x, ev.y, 0.8); A.at('clang', ev.x, ev.y, 0.7); },   // a wreck blown up into the air slams down
+  collapse: (ev, A) => { if (ev.k !== 's') A.at('bodyfall', ev.x, ev.y, 0.8); },
   runover: (ev, A) => { A.at('bonk', ev.x, ev.y, 1); A.at('bodyfall', ev.x, ev.y, 0.9); A.at('crash', ev.x, ev.y, 0.5, { p: 0.2 }); },   // a body under a car (task #361)
   // a skateboard (server skate.js): stepping on, an ollie's pop and its landing, a bail - the scrape and the thump down
   boardon: (ev, A) => A.at('clack', ev.x, ev.y, 0.35),

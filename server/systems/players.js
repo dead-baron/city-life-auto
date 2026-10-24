@@ -851,7 +851,7 @@ export function findInteraction(world, p) {
   if (v) return { label: vehicles.enterLabel(world, p, v), key: 'F', crime: vehicles.entryInfo(world, p, v).crime, key2: `veh:${v.id}`, run: () => vehicles.tryEnter(world, ped) };
   const fh = !ped.board && horses.farmHorseNear(world, ped);   // a farm's horse grazing beside you: up on it bareback - the farm's, so horse theft (horses.js)
   if (fh) return { label: 'Ride the horse bareback - Horse theft', key: 'F', crime: 'horseTheft', key2: `horse:${fh.id}`, run: () => vehicles.playerEnter(world, ped) };
-  return transit.stopNote(world, p);   // at a bus stop with nothing else to do: the line and when its next bus comes
+  return pets.letGo(world, p) || transit.stopNote(world, p);   // a lost pet at your heel: let it go (pets.js); at a bus stop with nothing else to do: the line and when its next bus comes
 }
 
 export function crateName(c) {

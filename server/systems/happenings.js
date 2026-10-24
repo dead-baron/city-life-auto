@@ -6,8 +6,11 @@
 //     FIGHT_MUTUAL of the time - the players near are told which) is a criminal while it lasts and BRAWL_AFTER_S after
 //     (task #395): hitting them is no crime, killing them still is. Now and then (FIGHT_POLICE) somebody calls the
 //     police, who come and break it up with tackles (police.js callFight).
-//   - someone collapses on the pavement: help them up (ACT beside them) - or after a minute they come round and limp
-//     off by themselves.
+//   - someone collapses (the owner's notes, batch 4: "you actually see them trip and fall or pass out ... and you can go
+//     help them up"): a passer-by in sight of you sways, staggers and goes down face first on the pavement. Hold ACT
+//     beside them (FAINT_HELP_HOLD_S) and they're back on their feet, thank you and press a little cash on you; left
+//     lying FAINT_EMS_S, someone calls an ambulance and the paramedics take them away (ems.js dispatchFor) - or, if none
+//     can get there, after a while they come round and limp off by themselves.
 //   - a dropped wallet: someone walking along drops it and only notices a little way on - they stand there patting
 //     their pockets. Pick it up (it's on the ground behind them) and hand it back for a thank-you, or keep it and sell
 //     it at a pawn shop.
@@ -15,16 +18,21 @@
 import { K, T } from '../../shared/constants.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import {
-  HAPPEN_EVERY_S, FIGHT_BREAKUP_SAMARITAN, FAINT_HELP_REWARD, FAINT_HELP_SAMARITAN, WALLET_TIP, WALLET_SAMARITAN,
+  HAPPEN_EVERY_S, FIGHT_BREAKUP_SAMARITAN, FAINT_HELP_REWARD, FAINT_HELP_SAMARITAN, FAINT_HELP_HOLD_S, FAINT_EMS_S, WALLET_TIP, WALLET_SAMARITAN,
   FIGHT_MUTUAL, BRAWL_AFTER_S, FIGHT_POLICE, CALM_STREETS,
 } from '../../shared/rules.js';
+import { IN } from '../../shared/input.js';
 import { mulberry32 } from '../../shared/rng.js';
+import { pedStep } from '../../shared/physics.js';
+import { inAnyView } from '../view.js';
 import { store } from '../store.js';
 import * as npc from './npc.js';
 import * as events from './events.js';
 import * as wildlife from './wildlife.js';
 import * as law from './law.js';
 import * as police from './police.js';
+import * as players from './players.js';
+import * as ems from './ems.js';
 
 let rng = mulberry32(7321);
 export function setRng(r) { rng = r; }
@@ -33,7 +41,10 @@ const KINDS = ['fight', 'faint', 'wallet'];
 const FIGHT_S = 40;          // a street fight goes on at most this long
 const FIGHT_DOWN_HP = 0.5;   // ...and ends when one of them is this hurt (they go down; nobody's killed: combat.js pulls
                              // the punches of two people in one, to a third)
-const FAINT_S = 70;          // someone who collapsed comes round by themselves after this long
+const FAINT_S = 70;          // someone who collapsed (and no ambulance came) comes round by themselves after this long down
+const SWAY_S = 1.6;          // ...swaying and staggering this long before they go down
+const SEEN_PAD = -90;        // ...well inside someone's view (px inside its edge)
+const WAIT_S = 40;           // ...nobody in sight just now: the next who walks into sight, within this long
 const WALLET_S = 150;        // the owner looks for their wallet this long, then gives up
 const NEAR = [260, 820];     // how far from the player it happens (in sight, or just round the corner)
 const REACH = 60;            // stand this close to help
@@ -89,15 +100,9 @@ function start(world, kind, p, opts = {}) {
     if (opts.cops ?? rng() < FIGHT_POLICE) police.callFight(world, ev.by, 5 + rng() * 6);   // (somebody calls the police)
     return true;
   }
-  if (kind === 'faint') {
-    const a = someone(world, at.x, at.y);
-    if (!a) return false;
-    const n = a.npc;
-    n.state = 'passed'; a.passedOut = true; a.vx = 0; a.vy = 0;
-    const ev = events.add(world, { kind: 'faint', x: a.x, y: a.y, until: world.time + FAINT_S + 5, who: a.id, text: 'Someone collapsed in the street' });
-    n.happening = ev.id; n.keep = true;
-    npc.spectacle(world, a.x, a.y, { r: 300, near: 60, chance: 0.35, secs: 8 });
-    events.tellNear(world, a.x, a.y, 'Someone\'s collapsed on the pavement - help them up.', 'info');
+  if (kind === 'faint') {   // (you see it happen: someone walking past in sight of you - now, or the next who does: faintWait)
+    const a = inSight(world, at);
+    if (a) faint(world, a); else world.faintWait = { pid: p.pid, until: world.time + WAIT_S };
     return true;
   }
   if (kind === 'wallet') {
@@ -121,6 +126,7 @@ function finish(world, ev, how) {
     const q = id && world.get(id);
     if (!q || !q.npc) continue;
     q.npc.happening = 0; q.npc.keep = false; q.npc.lostWallet = 0;
+    q.npc.driven = false; q.emsPatient = false;
     if (ev.by && ev.by.includes(q.id)) q.npc.brawl = Math.min(q.npc.brawl || 0, world.time + BRAWL_AFTER_S);   // (whoever started it: a criminal a little while yet)
   }
   void how;
@@ -135,9 +141,12 @@ export function interaction(world, p) {
       const a = world.get(ev.a), b = world.get(ev.b);
       if (!a || !b || a.dead || b.dead) continue;
       if (Math.min(Math.hypot(a.x - ped.x, a.y - ped.y), Math.hypot(b.x - ped.x, b.y - ped.y)) < REACH + 30) return { label: `Break up the fight (+${FIGHT_BREAKUP_SAMARITAN} Samaritan)`, run: () => breakUp(world, p, ev) };
-    } else if (ev.kind === 'faint' && ev.until > world.time) {
+    } else if (ev.kind === 'faint' && ev.until > world.time && ev.phase === 'down') {
       const a = world.get(ev.who);
-      if (a && !a.dead && a.passedOut && Math.hypot(a.x - ped.x, a.y - ped.y) < REACH) return { label: `Help them up (+${FAINT_HELP_SAMARITAN} Samaritan)`, run: () => helpUp(world, p, ev, a) };
+      if (!a || a.dead || !a.passedOut || Math.hypot(a.x - ped.x, a.y - ped.y) > REACH) continue;
+      const h = world.helpHold && world.helpHold.get(p.pid);
+      if (h && h.ev === ev.id) { const left = Math.max(0, h.until - world.time); return { label: `Helping them up... ${left.toFixed(1)}s (keep holding)`, run: () => {}, prog: 1 - left / FAINT_HELP_HOLD_S }; }
+      return { label: `Hold to help them up (+$${FAINT_HELP_REWARD}, +${FAINT_HELP_SAMARITAN} Samaritan)`, run: () => startHelp(world, p, ev) };
     } else if (ev.kind === 'wallet' && ev.until > world.time && (p.profile.inventory.wallet || 0) > 0) {
       const a = world.get(ev.who);
       if (a && !a.dead && Math.hypot(a.x - ped.x, a.y - ped.y) < REACH) return { label: `Give the wallet back (+${WALLET_SAMARITAN} Samaritan)`, run: () => giveWallet(world, p, ev, a) };
@@ -156,8 +165,70 @@ function breakUp(world, p, ev) {
   finish(world, ev, 'broken');
 }
 
+// Holding ACT beside someone who collapsed: up they come once it's held FAINT_HELP_HOLD_S (let go, walk off: it stops)
+function startHelp(world, p, ev) {
+  (world.helpHold ||= new Map()).set(p.pid, { ev: ev.id, until: world.time + FAINT_HELP_HOLD_S });
+  p.meDirty = true;
+}
+function holdStep(world) {
+  for (const [pid, h] of [...world.helpHold]) {
+    const p = world.players.get(pid), ped = p && p.ped;
+    const ev = (world.happenings || []).find((e) => e.id === h.ev && e.until > world.time), a = ev && world.get(ev.who);
+    if (!ped || ped.dead || ped.vehId || !((p.prevBits || 0) & IN.ACTION) || !a || a.dead || !a.passedOut || Math.hypot(a.x - ped.x, a.y - ped.y) > REACH + 10) {
+      world.helpHold.delete(pid);
+      if (p) p.meDirty = true;
+      continue;
+    }
+    if (world.time < h.until) continue;
+    world.helpHold.delete(pid);
+    helpUp(world, p, ev, a);
+  }
+}
+
+const onPavement = (m, x, y) => { const t = m.tileAtPx(x, y); return t === T.SIDEWALK || t === T.PLAZA; };
+// someone walking along the pavement well inside the view of the player at (x, y)
+function inSight(world, at) {
+  for (let k = 0; k < 6; k++) { const q = passerBy(world, at.x, at.y, 90, 460); if (q && onPavement(world.map, q.x, q.y) && inAnyView(world, q.x, q.y, SEEN_PAD)) return q; }
+  return null;
+}
+// they start to sway (this system moves them now - npc.driven - till they're down)
+function faint(world, a) {
+  const ev = events.add(world, { kind: 'faint', x: a.x, y: a.y, until: world.time + FAINT_S + 150, who: a.id, phase: 'sway', sw: world.time, h0: a.a, text: 'Someone collapsed in the street' });
+  const n = a.npc;
+  n.happening = ev.id; n.keep = true; n.driven = true;
+  world.emit(a.x, a.y, { e: 'collapse', id: a.id, k: 's', d: 0.7, a: +(a.a + Math.PI).toFixed(2), x: a.x, y: a.y });   // (back on their heels)
+  return ev;
+}
+// The collapse as it happens (every tick): swaying, weaving and slowing, a stagger the other way, and down on their face
+function faintStep(world, ev, dt) {
+  const a = world.get(ev.who), now = world.time;
+  if (!a || a.dead || a.removed || !a.npc) { finish(world, ev, 'gone'); return; }
+  if (a.npc.state !== 'wander' && a.npc.state !== 'idle') { finish(world, ev, 'scared'); return; }   // (something made them run)
+  const m = world.map, t = now - ev.sw, h = ev.h0 + Math.sin(t * 6) * 0.7;
+  const inp = npc.seek(a, a.x + Math.cos(h) * 30, a.y + Math.sin(h) * 30, false, Math.max(0.1, 0.45 - t * 0.25));
+  if (t > 0.8 && !ev.sw2) { ev.sw2 = 1; world.emit(a.x, a.y, { e: 'collapse', id: a.id, k: 's', d: 0.7, a: +a.a.toFixed(2), x: a.x, y: a.y }); }   // (and forward)
+  if (t >= SWAY_S) { fall(world, ev, a); return; }
+  if (onPavement(m, a.x + inp.mx * 8, a.y + inp.my * 8)) {
+    const mods = players.pedMods(world, a);
+    mods.speedMul *= (a.npc.speed || 1) * 0.55;
+    pedStep(a, inp, dt, m, mods);
+    if (inp.mx || inp.my) a.a = Math.atan2(inp.my, inp.mx);
+    world.place(a);
+  } else { a.vx = 0; a.vy = 0; }
+  ev.x = a.x; ev.y = a.y;
+}
+function fall(world, ev, a) {
+  const now = world.time, n = a.npc;
+  n.driven = false; n.state = 'passed'; a.passedOut = true; a.vx = 0; a.vy = 0;
+  ev.phase = 'down'; ev.downAt = now; ev.x = a.x; ev.y = a.y;
+  world.emit(a.x, a.y, { e: 'collapse', id: a.id, k: 'F', d: FAINT_S + 150, x: a.x, y: a.y });   // (face down, still)
+  npc.spectacle(world, a.x, a.y, { r: 300, near: 60, chance: 0.35, secs: 8 });
+  events.tellNear(world, a.x, a.y, 'Someone just collapsed on the pavement - hold ACT beside them to help them up.', 'info');
+}
+
 function helpUp(world, p, ev, a) {
-  a.passedOut = false; a.npc.state = 'wander';
+  a.passedOut = false; a.emsPatient = false; a.npc.state = 'wander';
+  a.a = Math.atan2(p.ped.y - a.y, p.ped.x - a.x);
   p.profile.cash += FAINT_HELP_REWARD; p.profile.samaritan += FAINT_HELP_SAMARITAN;
   world.emit(a.x, a.y, { e: 'thanks', x: a.x, y: a.y });
   world.notify(p, `"Oh... thank you. I don't know what happened." +$${FAINT_HELP_REWARD}, +${FAINT_HELP_SAMARITAN} Samaritan.`, 'good');
@@ -190,7 +261,15 @@ export function walletTarget(world, p) {
   return null;
 }
 
-export function update(world) {
+export function update(world, dt) {
+  if (world.helpHold && world.helpHold.size) holdStep(world);
+  for (const ev of world.happenings || []) if (ev.kind === 'faint' && ev.phase === 'sway' && ev.until > world.time) faintStep(world, ev, dt);
+  const fw = world.faintWait;
+  if (fw && world.tick % 5 === 1) {   // (waiting for someone to walk into sight of them)
+    const q = world.players.get(fw.pid), a = q && q.ped && !q.ped.dead && world.time < fw.until ? inSight(world, q.ped) : null;
+    if (a) faint(world, a);
+    if (a || !q || !q.ped || world.time >= fw.until) world.faintWait = null;
+  }
   if (world.tick % 10 !== 4) return;
   const now = world.time;
   // what's going on
@@ -211,11 +290,22 @@ export function update(world) {
       }
       // one of them broke off (someone else scared them off, or picked a fight with them): it's over
       if (a.npc.state !== 'fight' || b.npc.state !== 'fight') { finish(world, ev, 'stopped'); continue; }
-    } else if (ev.kind === 'faint') {
+    } else if (ev.kind === 'faint' && ev.phase === 'down') {
       const a = world.get(ev.who);
-      if (!a || a.dead || a.removed || !a.passedOut) { finish(world, ev, 'gone'); continue; }
-      if (now > ev.t + FAINT_S) {   // nobody helped: they come round by themselves and limp off
-        a.passedOut = false; a.npc.state = 'limp'; a.npc.until = now + 20; a.npc.fx = a.x; a.npc.fy = a.y - 10;
+      if (!a || a.dead || a.removed || !a.passedOut) {
+        if (ev.amb && (!a || a.removed)) events.feed(world, { kind: 'news', text: 'Paramedics took away someone who collapsed in the street', x: ev.x, y: ev.y });
+        finish(world, ev, 'gone'); continue;
+      }
+      // left lying: somebody calls an ambulance (the paramedics take them away: ems.js) - none can come, or it's gone
+      // without them: they come round by themselves after a while and limp off
+      if (!ev.emsTried && now - ev.downAt > FAINT_EMS_S) {
+        ev.emsTried = true;
+        const v = ems.dispatchFor(world, a);
+        if (v) { ev.amb = v.id; events.tellNear(world, a.x, a.y, 'Somebody\'s called an ambulance for the person lying on the pavement.', 'info'); }
+      }
+      const amb = ev.amb && world.get(ev.amb);
+      if ((!amb || amb.removed) && now > ev.downAt + (ev.amb ? FAINT_EMS_S : FAINT_S)) {
+        a.passedOut = false; a.emsPatient = false; a.npc.state = 'limp'; a.npc.until = now + 20; a.npc.fx = a.x; a.npc.fy = a.y - 10;
         finish(world, ev, 'came round');
       }
     } else if (ev.kind === 'wallet') {

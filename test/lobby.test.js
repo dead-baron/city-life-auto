@@ -252,7 +252,7 @@ test('a pet: brought home, offered, adopted - it waits at home on its bed and ru
   const h = w.map.homes.find((q) => q && q.kind === 'house' && !w.homeOwner.has(q.id));
   homes.claim(w, a.p, h, h.price);
   let pet = null;
-  for (let k = 0; k < 12 && !pet; k++) pet = pets.spawnLost(w, a.p);
+  for (const q of w.map.homes) { if (pet) break; if (q && q.kind === 'house' && q !== h) { teleport(w, a.p.ped, q.x, q.y); pet = pets.spawnLost(w, a.p); } }
   assert.ok(pet, 'a lost pet');
   pet.pet.follow = a.p.ped.id;
   const owner = w.get(pet.pet.owner);

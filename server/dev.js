@@ -575,7 +575,7 @@ function run(world, p, c, msg) {
     case 'snatch': npc.snatchEvent(world, p); world.notify(p, '[dev] A mugger is on the way to a nearby pedestrian.', 'info'); break;
     case 'happen': world.notify(p, happenings.startNow(world, String(msg.k || 'fight'), p, { cops: msg.cops ? true : undefined }) ? `[dev] Started: ${msg.k}.` : '[dev] Nobody about to start it with - try a busier street.', 'info'); break;
     case 'street': world.notify(p, streetlife.startNow(world, String(msg.k || 'race'), p) ? `[dev] Started: ${msg.k || 'race'} - coming your way.` : '[dev] No street to start it on round here - try somewhere in town, out on the street.', 'info'); break;   // a street race (msg.k 'race'), a police chase ('chase'), an armored truck ('armored'): streetlife.js
-    case 'pet': pets.spawnLost(world, p); world.notify(p, '[dev] A pet ran off nearby.', 'info'); break;
+    case 'pet': { const pet = pets.spawnLost(world, p); world.notify(p, pet ? `[dev] ${pet.pet.name} ran off from ${pet.pet.house.name} - ${pet.pet.posters.length} posters up nearby.` : '[dev] No home near enough for a lost pet just now.', pet ? 'info' : 'warn'); break; }
     case 'samaritan': prof.samaritan += 50; world.notify(p, '[dev] +50 Samaritan', 'info'); break;
     case 'car': {
       if (!ped) break;

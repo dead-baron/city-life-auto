@@ -475,11 +475,15 @@ export const CART = { hit: 70, hard: 230, driverP: 0.55, hurt: [3, 14] };
 export const SKATE_SESSION = { s: 120, goalPay: 40, goals: [['bank', 3000, 'Bank a 3,000-point combo'], ['tricks', 5, 'Land a 5-trick combo'], ['gap', 1, 'Hit a gap'], ['score', 15000, 'Score 15,000']] };
 export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
 
-// Lost pets
-export const PET_EVERY_S = 480;            // roughly how often a pet goes missing somewhere near a player (was 150: too often)
-export const PET_OWNER_PX = [1600, 2800];  // how far from the pet its owner is out looking (a real walk home, not round the corner)
-export const PET_REWARD = 220;             // the owner's thank-you (cash) for bringing it home...
-export const PET_SAMARITAN = 8;            // ...and the Samaritan points
+// Lost pets (server/systems/pets.js)
+export const PET_EVERY_S = 480;            // about how often one goes missing near a player
+export const PET_MAX_LOST = 3;             // at most this many at once
+export const PET_LOST_PX = [900, 2200];    // its last-seen area this far from home
+export const PET_AREA_R = 320;             // ...this big
+export const PET_POSTERS = 4;
+export const PET_LOST_S = 1800;            // not home by then: it finds its own way back
+export const PET_REWARD = { base: 300, perM: 8, max: 1200 };   // + perM a metre from where you found it to its door
+export const PET_SAMARITAN = 12;
 
 // Nightclubs (server/systems/nightclubs.js, task #432): open from dusk; at the end of the night the music stops, the
 // dancers walk out and the line breaks up, and the shutter comes down once the floor's empty
@@ -508,6 +512,8 @@ export const CALM_STREETS = { fightShare: 0.2, snatchShare: 0.5, incidents: 2, i
 export const FIGHT_BREAKUP_SAMARITAN = 4;  // breaking up a street fight
 export const FAINT_HELP_REWARD = 40;       // helping someone who collapsed back on their feet (cash, from them)...
 export const FAINT_HELP_SAMARITAN = 6;     // ...and the Samaritan points
+export const FAINT_HELP_HOLD_S = 1.5;      // hold ACT this long to help them up
+export const FAINT_EMS_S = 30;             // left lying this long: an ambulance is called
 export const WALLET_TIP = [40, 90];        // handing a dropped wallet back: their thank-you
 export const WALLET_SAMARITAN = 8;
 
