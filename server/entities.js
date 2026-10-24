@@ -131,7 +131,7 @@ export function createVehicle(id, model, x, y, a, opts = {}) {
     x, y, a, vx: 0, vy: 0, av: 0,
     hp: def.hp, seats: new Array(def.seats).fill(0), cargo: new Array(def.slots.length).fill(0),
     paint: opts.paint ?? Math.floor(Math.random() * PAINTS.length),
-    variant: opts.variant ?? Math.floor(Math.random() * (def.horse ? 6 : 1000)),   // (a horse's: its coat, saddled - horses.js)
+    variant: opts.variant ?? Math.floor(Math.random() * (def.horse ? 8 : 1000)),   // (a horse's: its coat, saddled - horses.js)
     owner: opts.owner || null, ownerName: opts.ownerName || null,
     npcOwned: opts.npcOwned ?? true,
     lights: false, siren: false, sirenOn: false, hornUntil: 0, brake: false, reverse: false, drift: false,

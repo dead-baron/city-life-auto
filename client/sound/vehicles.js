@@ -63,6 +63,9 @@ export const ENGINE_CLASS = {
   tank: 'tank',
   tractor: 'truck', combine: 'truck',   // (the farm's diesels: H61)
   golfcart: 'electric',
+  // batch 4: the cars, the boats (the sailboat under sail: quiet), the aircraft
+  convertible: 'muscle', lowrider: 'muscle', muscle: 'muscle', hothatch: 'sports', jeep: 'van', movingvan: 'truck', icecream: 'van',
+  sailboat: 'pedal', pontoon: 'dinghy', trawler: 'ship', cabincruiser: 'outboard', rib: 'outboard', newsheli: 'rotor', medheli: 'rotor', seaplane: 'prop',
   horse: 'pedal',   // (never voiced: its hooves instead - hooves(), #325)
 };
 export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', rescueboat: 'ambulance', rescue4x4: 'ambulance', firetruck: 'fire' };

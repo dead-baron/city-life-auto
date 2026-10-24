@@ -78,7 +78,7 @@ export function update(world, dt) {
     }
     if (v.def.horse) horses.keepDry(world, v);   // (a horse: never in the water - horses.js)
     // land vehicles that end up in the water sink (not a car on a ferry's deck)
-    if (v.def.kind !== 'boat' && !v.def.horse && !v.onDeck && !aircraft.inAir(v)) {   // (a horse never goes in: physics.js)
+    if (v.def.kind !== 'boat' && !v.def.horse && !v.def.floats && !v.onDeck && !aircraft.inAir(v)) {   // (a horse never goes in: physics.js; the floatplane floats)
       if (!v.sinkAt && (v.lz || 0) < 0.3 && WATER_T[world.map.tileAtPx(v.x, v.y)]) startSink(world, v);
       if (v.sinkAt) {
         v.vx *= Math.exp(-2.5 * dt); v.vy *= Math.exp(-2.5 * dt);

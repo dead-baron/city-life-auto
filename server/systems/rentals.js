@@ -7,7 +7,7 @@ import { VEHICLES } from '../../shared/vehicles.js';
 import { BOAT_RENTAL_S, BOAT_RENTAL_GRACE_S, BOAT_RENTAL_PRICE } from '../../shared/rules.js';
 import * as law from './law.js';
 
-export const RENTAL_MODELS = ['jetski', 'dinghy', 'speedboat'];
+export const RENTAL_MODELS = ['jetski', 'dinghy', 'speedboat', 'rib', 'pontoon', 'sailboat'];   // (a sea dock's; a lake's: modelsAt)
 const RETURN_R = 260;     // drive within this of a rental dock to hand the boat back
 const WARN_BEFORE_S = 60; // "a minute left" nudge
 

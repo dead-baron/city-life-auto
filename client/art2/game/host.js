@@ -471,6 +471,7 @@ export class World2 {
       const t = performance.now();
       const [A, Pd] = await Promise.all([import('./actors.js').catch(() => null), import('./peds.js').catch(() => null)]);
       this.A = A; this.Pd = Pd;
+      if (A && A.artFrom) A.artFrom({ fleet: () => import('../fleet.js'), horse: () => import('../horse.js') });   // (the batch-4 fleet's models, the horse: when first needed - actors.js)
       this._loadMark('artmods', performance.now() - t);
     } catch { /* providers optional */ }
     if (this.failed) return;
@@ -1797,21 +1798,22 @@ export class World2 {
     }
   }
 
-  // A horse (#325, server horses.js): the animal's sprite in its coat, saddled or bare (the variant: 'horse:s<coat>',
-  // 'horse:c<coat>' - art2/animals.js) - standing (now and then its head down to graze, ridden or not), walking or at a
-  // gallop by its speed, the legs' frames as fast as it goes - and whoever's on it astride its back ('saddle', drawn at
-  // the horse's own feet: the pose sits the rider at its saddle's height), rising and falling with the gallop
+  // A horse (#325, server horses.js): its sprite in its coat, saddled or bare (the variant: 'horse:s<coat>', 'horse:c<coat>'
+  // - art2/horse.js) - standing (now and then its head down to graze, ridden or not), or at the walk, the trot, the
+  // canter or the gallop by its speed (actors.js horseGait), the legs' frames as fast as the ground goes by - and whoever's
+  // on it astride its back ('saddle', drawn at the horse's own feet: the pose sits the rider at its saddle's height),
+  // rising and falling with the gait
   _horse(v, now, me, def) {
     const A = this.A, E = this.E, Pd = this.Pd;
     if (!A || !A.animalKey) return;
     const vr = v.d.vr | 0, kind = `horse:${vr & 8 ? 'c' : 's'}${vr & 7}`;
     const b = v.buf, sp = b && b.length > 1 ? Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20 : 0;
     const was = v._hsp ?? sp, s2 = v._hsp = was + (sp - was) * 0.3;
-    const pose = s2 > 150 ? 'run' : s2 > 8 ? 'walk' : (Math.floor(now / 3.7) + v.id) % 4 ? 'idle' : 'graze';
+    const g = A.horseGait ? A.horseGait(s2, v._hp) : null, pose = g ? g.pose : (Math.floor(now / 3.7) + v.id) % 4 ? 'idle' : 'graze';
     const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(v.ra);
     // the legs' cycle by the ground it covers (a stride a cycle), so a canter and a gallop look it
     const dt = Math.min(0.1, Math.max(0, now - (v._hT ?? now))); v._hT = now;
-    v._hph = ((v._hph || 0) + dt * (pose === 'run' ? s2 / 95 : pose === 'walk' ? Math.max(0.8, s2 / 32) : 0.6)) % 1;
+    v._hph = ((v._hph || 0) + dt * (g ? Math.max(0.7, s2 * g.rate) : 0.6)) % 1;
     const fr = Math.floor(v._hph * n) % n;
     let sk = this._spr('actors', 'animal', A.animalKey(kind, pose, d8, fr), [kind, pose, d8, fr]);
     if (!sk) sk = v._v2k && E.hasSprite(v._v2k) ? v._v2k : null;
@@ -1826,7 +1828,7 @@ export class World2 {
     this.n.drawn++;
     if (!Pd || !Pd.pedKey) return;
     // the riders: astride, the passenger behind; up and down with the gallop's stride
-    const bob = pose === 'run' ? Math.abs(Math.sin(v._hph * Math.PI * 2)) * 2 : pose === 'walk' ? Math.abs(Math.sin(v._hph * Math.PI * 2)) * 0.6 : 0, myPed = this.S.myPedId;
+    const bk = { stride: 0.4, trot: 1.1, canter: 1.3, gallop: 1.5 }[pose] || 0, bob = bk * 0.5 * (1 - Math.cos(v._hph * Math.PI * (pose === 'trot' || pose === 'stride' ? 4 : 2))), myPed = this.S.myPedId;
     for (const p of this.S.ents.values()) {
       if (p.kind !== K.PED || p.parent !== v.id || !p.d || (p.flags & PF.DEAD)) continue;
       const pass = (p.flags & PF.PASSENGER) !== 0, f = pass ? -14 : def.seat ?? 2;

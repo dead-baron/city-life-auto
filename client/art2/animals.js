@@ -142,8 +142,7 @@ export function animalModel(kind, o = {}) {
   let A = ANIMALS[baseKind] || ANIMALS.golden;
   if (variant === 'y') A = youngOf(A, baseKind);
   else if (variant === 'L') A = legendOf(A);
-  const tack = baseKind === 'horse' && variant && variant[0] === 's';   // ('horse:s<coat>': a riding horse - saddled, bridled; 'horse:c<coat>': a farm's, in its coat)
-  if (baseKind === 'horse' && variant && (variant[0] === 's' || variant[0] === 'c')) A = { ...A, ...HORSE_COATS[(+variant.slice(1) || 0) % HORSE_COATS.length] };
+  // (a horse in the game is client/art2/horse.js's own model - game/actors.js; this rig's is its stand-in)
   const pose0 = o.pose || 'stand';
   if (pose0 === 'float') return floatModel(A);
   if (pose0 === 'rear' || pose0 === 'climb') return pitchUp(animalModel(kind, { ...o, pose: pose0 === 'rear' ? 'stand' : 'alert', phase: 0 }), A, pose0 === 'rear' ? 1.15 : 1.45, pose0 === 'rear');
@@ -340,40 +339,13 @@ export function animalModel(kind, o = {}) {
   else if (A.tail === 'otter') [...Array(10)].forEach((_, i) => { const t = i / 9, x = tx - i * 0.9, z = tz - bodyR * 0.3 - i * 0.25; const r = 1.8 - t * 1.2; m.ell(x, cy, Math.max(r, z), r, r, r, coat(x, cy, z + 6)); });   // an otter's thick, tapering tail
   else if (A.tail === 'squirrel') [...Array(16)].forEach((_, i) => { const t = i / 15, x = tx - 1 - Math.sin(t * Math.PI * 0.9) * 2.4 + (t > 0.7 ? (t - 0.7) * 5 : 0), z = tz + t * 7.5; const r = 1 + Math.sin(t * Math.PI) * 1.3; m.ell(x, cy, z, r, r, r, coat(x, cy, z)); });   // a squirrel's plume up over its back
   else tail([[0, 0], [0.8, 0.4]], () => 1);
-  if (tack && !lie && !sit) {
-    // a riding horse's tack (#325): the saddle blanket over the back, the leather saddle on it - the cantle behind, the
-    // horn in front - the fenders and stirrups down each flank, a bridle round the head and the reins back to the horn
-    const xs = x0 + A.len * 0.56, top = bz + bodyR * 1.3 + (xs - (x0 + x1) / 2) / (x1 - x0) * 1.2, leather = R('#6a3c1e'), dk = R('#3a2414'), blanket = R(A.blanket || '#b8322a'), steel = R('#b8b4ac', 2);
-    m.ell(xs, cy, top - 1.2, 8.2, bodyR * 1.16, 2.8, blanket);
-    m.ell(xs, cy, top + 0.4, 6.2, bodyR * 0.92, 1.7, leather);
-    m.ell(xs - 5, cy, top + 1.6, 1.3, bodyR * 0.72, 1.5, dk);   // (the cantle)
-    m.ell(xs + 5.2, cy, top + 2.2, 1.0, 1.0, 1.7, dk);          // (the horn)
-    for (const sd of [-1, 1]) {
-      const fy = cy + sd * bodyR * 1.18;
-      m.box(xs - 2.2, fy - 0.5, top - 8, xs + 1.6, fy + 0.5, top - 0.6, leather);   // (the fender)
-      m.box(xs - 1.4, fy - 0.9, top - 10.4, xs + 1.2, fy + 0.9, top - 9.2, steel);   // (the stirrup)
-      // the reins: from the horn down the neck to the bit at the mouth's corner
-      const bx = sx + A.snout * 0.35, by = cy + sd * HD * 0.48, bzz = sz - HD * 0.05;
-      for (let t = 0; t <= 1; t += 0.05) { const x = xs + 5.2 + (bx - xs - 5.2) * t, y = cy + sd * 1.2 + (by - cy - sd * 1.2) * t, z = top + 2 + (bzz - top - 2) * t - Math.sin(t * Math.PI) * 2.2; m.box(x - 0.4, y - 0.4, z - 0.4, x + 0.4, y + 0.4, z + 0.4, dk); }
-    }
-    for (let a = 0; a < Math.PI * 2; a += 0.2) m.box(hx - 0.2 + Math.cos(a) * 0.2, cy + Math.sin(a) * HD * 0.95 - 0.4, hz + Math.cos(a) * HD * 0.9 - 0.4, hx + 0.6, cy + Math.sin(a) * HD * 0.95 + 0.4, hz + Math.cos(a) * HD * 0.9 + 0.4, dk);   // (the headstall behind the eyes)
-    for (let a = 0; a < Math.PI * 2; a += 0.25) m.box(sx - 0.3, cy + Math.sin(a) * HD * 0.56 - 0.4, sz + Math.cos(a) * HD * 0.48 - 0.4, sx + 0.5, cy + Math.sin(a) * HD * 0.56 + 0.4, sz + Math.cos(a) * HD * 0.48 + 0.4, dk);   // (the noseband)
-  }
   m.smooth = 1;
   patchHidden(m);
   return m;
 }
-// a riding horse's coats ('horse:s<i>', #325): chestnut with white socks, bay, black, grey, palomino, a paint; the blanket
-// under the saddle in a colour to go with each
-export const HORSE_COATS = [
-  { coat: '#8a4a26', belly: '#8a4a26', mane: '#2a1e1a', socks: '#f2eee8', blanket: '#2f5a9a' },
-  { coat: '#5a3220', belly: '#5a3220', mane: '#18120e', socks: '#18120e', blanket: '#b8322a' },
-  { coat: '#24202a', belly: '#24202a', mane: '#141216', socks: null, blanket: '#c89a2a' },
-  { coat: '#aeaca8', belly: '#c4c2be', mane: '#e8e6e2', socks: null, blanket: '#2a6a4a' },
-  { coat: '#d4a85a', belly: '#e0bc78', mane: '#f2ead6', socks: '#f2eee8', blanket: '#7a2a5a' },
-  { coat: '#f0ece4', belly: '#f0ece4', mane: '#3a2a20', socks: null, patch: '#6a3a22', pattern: 'spots', blanket: '#2a4a8a' },
-];
 
+// (the whole-body poses below, for client/art2/horse.js too)
+export const REPOSE = { onSide: (m, A) => onSide(m, A), waterline: (m, A, k) => waterline(m, A, k) };
 // ---- whole-body poses made from a standing model -----------------------------------------------------------
 // copy a model into a new one through a mapping from the new voxel to the old (null: empty)
 function remap(m, w, d, h, fn) {
