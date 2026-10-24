@@ -313,7 +313,7 @@ function wander(world, ped, now) {
   const n = ped.npc;
   const d = Math.hypot(n.wx - ped.x, n.wy - ped.y);
   if (d < 10 || now > n.until) {
-    if (rng() < 0.2 && !onRoad(world, ped)) { n.state = 'idle'; n.until = now + 2 + rng() * 5; n.lookAt = now; return NO_INPUT; }
+    if (rng() < 0.2 && !onRoad(world, ped) && (skating(ped) || !skateAt(world.map, ped.x, ped.y))) { n.state = 'idle'; n.until = now + 2 + rng() * 5; n.lookAt = now; return NO_INPUT; }
     pickWaypoint(world, ped);
     n.until = now + 8;
     if (Math.hypot(n.wx - ped.x, n.wy - ped.y) < 10) { n.state = 'idle'; n.until = now + 1 + rng() * 2; n.lookAt = now; return NO_INPUT; }
@@ -378,10 +378,14 @@ function pickWaypoint(world, ped) {
       if (WALK_TILES.has(world.map.tileAtPx(x, y))) { n.wx = x; n.wy = y; return; }
     }
   }
+  // on a skate park's ground and not a skater: off it by the nearest way (skateOff)
+  const sk = skating(ped) ? null : skateAt(world.map, ped.x, ped.y);
+  if (sk) { const o = skateOff(world.map, sk, ped.x, ped.y); if (o) { n.wx = o.x; n.wy = o.y; return; } }
   const away = n.awayFrom; n.awayFrom = undefined;
   // country folk keep round their campground / farm / filling station
   if (n.patch && Math.hypot(n.patch.x - ped.x, n.patch.y - ped.y) > 420) towards = n.patch;
   const pref = n.country ? COUNTRY_PREFERRED : PREFERRED;
+  const offSk = !skating(ped);
   for (let k = 0; k < 14; k++) {
     const ang = towards && k < 6 ? Math.atan2(towards.y - ped.y, towards.x - ped.x) + (rng() - 0.5) * 1.6
       : away !== undefined && k < 6 ? away + (rng() - 0.5) * 2 : rng() * Math.PI * 2;
@@ -392,12 +396,43 @@ function pickWaypoint(world, ped) {
     if (t === T.FLOOR && nightclubs.shutAt(world, x, y)) continue;   // (not into a club that's shut or shutting: nightclubs.js)
     if (!pref.has(t) && rng() < 0.6) continue;
     if (!crossesRoadOk(world, ped.x, ped.y, x, y)) continue;
+    if (offSk && skateCrossed(world.map, ped.x, ped.y, x, y)) continue;   // (round a skate park, not across it)
     if (world.map.rayTiles(ped.x, ped.y, x, y) < 1) continue;
     if (world.map.rail && trains.railBlocked(world, ped.x, ped.y, x, y)) continue; // not into (or across the line in front of) a train
     n.wx = x; n.wy = y;
     return;
   }
   n.wx = ped.x; n.wy = ped.y;
+}
+
+// The skate parks' ground (map.skateSpots: the lot in tiles) is the skaters' and the friends hanging out there - the
+// activities.js 'skaters' spot, a skater persona on a board: passers-by keep off it and go round (the owner, 10-23:
+// "Skatepark has a bunch of NPCs walking around it, they shouldn't be walking around the skatepark unless they're
+// skateboarding or hanging out"). A wanderer's next waypoint is never in it nor across it; one who finds themselves on
+// it (spawned there before, scared onto it) heads off it the nearest way; nobody's spawned on it.
+const SKATE_PAD = 12;
+const skating = (ped) => ped.gt === 'skate' || ped.gt === 'blades' || !!ped.board;
+export function skateAt(map, x, y) {
+  const L = map.skateSpots;
+  if (!L) return null;
+  for (const q of L) if (x > q.x * TILE - SKATE_PAD && x < (q.x + q.w) * TILE + SKATE_PAD && y > q.y * TILE - SKATE_PAD && y < (q.y + q.h) * TILE + SKATE_PAD) return q;
+  return null;
+}
+export function skateCrossed(map, x0, y0, x1, y1) {
+  if (!map.skateSpots) return false;
+  const n = Math.max(2, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 24));
+  for (let i = 1; i <= n; i++) if (skateAt(map, x0 + (x1 - x0) * i / n, y0 + (y1 - y0) * i / n)) return true;
+  return false;
+}
+// the nearest walkable point just outside the lot's edge (a tile out), straight out from where they are
+export function skateOff(map, q, x, y) {
+  const X0 = q.x * TILE, Y0 = q.y * TILE, X1 = (q.x + q.w) * TILE, Y1 = (q.y + q.h) * TILE, out = TILE + SKATE_PAD;
+  const ways = [[x - X0, X0 - out, y], [X1 - x, X1 + out, y], [y - Y0, x, Y0 - out], [Y1 - y, x, Y1 + out]].sort((a, b) => a[0] - b[0]);
+  for (const [, ex, ey] of ways) for (const s of [0, 1, -1, 2, -2]) {
+    const vert = ex === x, px = vert ? ex + s * TILE : ex, py = vert ? ey : ey + s * TILE, t = map.tileAtPx(px, py);
+    if (WALK_TILES.has(t) && t !== T.FLOOR && !PED_BLOCK[t] && !skateAt(map, px, py)) return { x: px, y: py };
+  }
+  return null;
 }
 
 function crossesRoadOk(world, x1, y1, x2, y2) {
@@ -544,7 +579,7 @@ export function onGunfire(world, x, y, shooter, radius = 360) {
     if (n.role !== 'civ' || n.state === 'fight' || n.state === 'passed') continue;
     if (n.tough && Math.hypot(e.x - x, e.y - y) > 90) { e.a = Math.atan2(y - e.y, x - e.x); continue; }   // tough guys don't back off
     // (far enough off, now and then someone films it instead of running)
-    if (radius >= 360 && n.state !== 'flee' && Math.hypot(e.x - x, e.y - y) > radius * 0.7 && rng() < filmChance(e) * 0.4) { startFilming(world, e, x, y, 6 + rng() * 6); continue; }
+    if (radius >= 360 && n.state !== 'flee' && Math.hypot(e.x - x, e.y - y) > radius * 0.7 && rng() < filmChance(e) * 0.4 && startFilming(world, e, x, y, 6 + rng() * 6, true)) continue;
     flee(world, e, x, y, 5 + rng() * 3);
   }
   if (radius >= 360) spectacle(world, x, y, { r: radius + 260, near: radius, chance: 0.6, secs: 9 });
@@ -575,15 +610,18 @@ export function spectacle(world, x, y, { r = 480, near = 120, chance = 1, secs =
     if (!n || e.dead || e.vehId || e.hidden || e.onTrain || n.desk || n.guard || n.driven || n.role !== 'civ') continue;   // (n.driven: a club pro mid-game - tennis.js)
     if (n.state !== 'wander' && n.state !== 'idle') continue;
     if (now - (n.filmedAt ?? -1e9) < 45 || Math.hypot(e.x - x, e.y - y) < near) continue;
-    if (rng() < filmChance(e) * chance) startFilming(world, e, x, y, secs * (0.7 + rng() * 0.6));
+    if (rng() < filmChance(e) * chance) startFilming(world, e, x, y, secs * (0.7 + rng() * 0.6), true);
   }
 }
-export function startFilming(world, ped, x, y, secs) {
+// (check: only from somewhere personas.js filmFrom allows - open ground, in sight of it - else nothing, false)
+export function startFilming(world, ped, x, y, secs, check = false) {
+  if (check && !personas.filmFrom(world.map, ped.x, ped.y, x, y)) return false;
   const n = ped.npc;
   n.state = 'film'; n.fx = x; n.fy = y; n.until = world.time + secs; n.filmedAt = world.time;
   n.photo = rng() < 0.35; n.nextFlash = world.time + 0.5 + rng() * 0.8;
   ped.vx = 0; ped.vy = 0;
   if (!ped.filming) { ped.phoneOut = world.time; ped.filming = 2; ped.appVer = (ped.appVer || 0) + 1; }
+  return true;
 }
 function stopFilming(ped) {
   if (!ped.filming) return;
@@ -741,7 +779,7 @@ function manageDensity(world) {
       const ang = rng() * Math.PI * 2, d = 450 + rng() * 800;
       const x = a.x + Math.cos(ang) * d, y = a.y + Math.sin(ang) * d;
       const t = world.map.tileAtPx(x, y), style = wildlife.wildStyle(world.map, x, y);
-      if (!WALK_TILES.has(t) || (t === T.DIRT && !style)) continue;
+      if (!WALK_TILES.has(t) || (t === T.DIRT && !style) || skateAt(world.map, x, y)) continue;   // (not on a skate park: npc.js skateAt)
       let tooClose = false;
       for (const b of anchors) if ((b.x - x) ** 2 + (b.y - y) ** 2 < 400 * 400) { tooClose = true; break; }
       if (tooClose || inAnyView(world, x, y, 64)) continue; // just off screen: they walk into view

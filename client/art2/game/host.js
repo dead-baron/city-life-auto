@@ -78,6 +78,22 @@ const CHAR_PED = [0.2, 0.18, 0.17], SINGED = [0.72, 0.66, 0.62];   // (someone b
 const GRAZERS = new Set(['deer', 'rabbit', 'cow', 'sheep', 'horse', 'goat']); // animals.js kinds that graze when still
 const LYING = new Set(['down', 'dead', 'deadF', 'deadS', 'downF', 'downB', 'crawl', 'hood']); // people flat on the ground (main.js pedLook)
 const WILD_IDLE = new Set(['coyote', 'raccoon', 'pig']);                     // ...and wild ones that just stand (a pet sits)
+const snapTo = (v, ap) => Math.round(v / ap) * ap;   // (an offset in whole art pixels)
+// a flying bird's wingspan (px) for its shadow (_flyShadow); and the shadow itself: seen from above, head along +x - the
+// body, the tail's fan, the wings swept back and narrowing to the tips; w 0 spread, 1 half up, 2 tucked in (a dive)
+const SPAN = { quail: 14, pheasant: 18, turkey: 26, duck: 20, goose: 32, heron: 40, osprey: 32, eagle: 44 };
+function birdShadow(s, w) {
+  const hw = s / 2 * [1, 0.62, 0.3][w], L = Math.max(6, s * 0.42), W = Math.ceil(Math.max(hw, L / 2)) * 2 + 4, G = gbuf(W, W, W >> 1, W >> 1), c = W / 2, rgb = [14, 16, 24];
+  for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
+    const x = i + 0.5 - c, y = Math.abs(j + 0.5 - c), t = y / Math.max(1, hw);
+    const body = (x / (L / 2)) ** 2 + (y / Math.max(1.5, s * 0.06)) ** 2 < 1;
+    const tail = x < -L * 0.3 && x > -L * 0.62 && y < 1 + (-L * 0.3 - x) * 0.45;
+    const cw = s * 0.21 * (1 - 0.55 * t), sx = -y * 0.2 * (w ? 0.5 : 1);
+    const wing = t < 1 && x > sx - cw * 0.55 && x < sx + cw * 0.45;
+    if (body || tail || wing) put(G, i, j, rgb, 0, UP_N, F_GROUND);
+  }
+  return G;
+}
 // a happy pet's hops (px up): quick little bounces, a beat between them, each pet in its own time
 const petHop = (t, id) => { const k = (t * 2.4 + id * 0.37) % 1; return k < 0.55 ? Math.sin(Math.PI * k / 0.55) * 7 : 0; };
 // A wild animal's pose (actors.js ANIMAL_FRAMES) from what the server says it's doing (shared/fauna.js APOSE, the
@@ -587,7 +603,10 @@ export class World2 {
     if (q !== this.q) { this.q = q; this.tier = TIERS[q]; if (E.setQuality) E.setQuality(q); }
     // sprites snap to the art grid: the camera moves with the player's position rounded to it (plus the smooth
     // look-ahead) so the player stays steady on screen (engine.js integration notes)
-    const ap = E.ap || 1, sp = F.sp, camX = Math.round(sp.x / ap) * ap + (S.cam.x - sp.x) - F.shx / z, camY = Math.round(sp.y / ap) * ap + (S.cam.y - sp.y) - F.shy / z;
+    // (riding a train: where you're drawn - your car's spot on the grid plus your place in it, _ped - so the train and its
+    // riders hold still on screen together: b2a, "riding on train is a bit jittery")
+    const ap = E.ap || 1, sp = F.sp, tc = F.myTrain >= 0 ? F.myCar : null, gx = tc ? tc.rx + snapTo(sp.x - tc.rx, ap) : Math.round(sp.x / ap) * ap, gy = tc ? tc.ry + snapTo(sp.y - tc.ry, ap) : Math.round(sp.y / ap) * ap;
+    const camX = gx + (S.cam.x - sp.x) - F.shx / z, camY = gy + (S.cam.y - sp.y) - F.shy / z;
     const hw = this.W / 2 / z, hh = this.H / 2 / z;
     this.vx0 = camX - hw; this.vx1 = camX + hw; this.vy0 = camY - hh; this.vy1 = camY + hh;
     this.camX = camX; this.camY = camY;
@@ -1520,7 +1539,10 @@ export class World2 {
   // A person: the peds provider's figure (people.js) for their pose, heading and stride, the weapon in hand -
   // or the flashlight when they carry nothing and have it switched on. The rest of a stride is asked for as
   // soon as a walk starts (or turns), so the next frames are there in time.
-  _ped(p, now, me, F, extraZ = 0) {
+  // car: a train car they ride - drawn from its spot plus their place in it, that offset in whole art pixels (the car and
+  // each rider were snapped to the art grid each on its own: their fractions crossed at different moments and the riders
+  // shook a pixel against the car), at the car's height (not the ground's under them as the train rolls over kerbs)
+  _ped(p, now, me, F, extraZ = 0, car = null) {
     const E = this.E, Pd = this.Pd;
     if (p.flags & PF.INVEH) return;
     if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { this._pet(p, now); return; }
@@ -1570,9 +1592,9 @@ export class World2 {
     if (f & PF.GHOST) o.alpha = 0.45 + 0.2 * Math.sin(now * 8);
     if (p.blink) o.alpha *= Math.floor(now * (p.blink === 1 ? 3 : 10)) % 2 ? 0.18 : 1;
     const hx = L.hitK ? Math.cos(p.hitA) * 4 * L.hitK : 0, hy = L.hitK ? Math.sin(p.hitA) * 3 * L.hitK : 0;
-    const z0 = (sky ? sky * SKY_LIFT : this._z0(p, L.swimming) + lift) + extraZ;
+    const z0 = (sky ? sky * SKY_LIFT : (car ? 0 : this._z0(p, L.swimming)) + lift) + extraZ, ap = E.ap || 1;
     o.under = L.swimming && this.map.tileAtPx(p.rx, p.ry) === TT.BRIDGE ? UNDER_Z : 0;   // (swimming under a bridge)
-    E.drawSprite(sk, p.rx + hx, p.ry + hy, z0, o);
+    E.drawSprite(sk, (car ? car.rx + snapTo(p.rx - car.rx, ap) : p.rx) + hx, (car ? car.ry + snapTo(p.ry - car.ry, ap) : p.ry) + hy, z0, o);
     o.under = 0;
     this.n.drawn++;
     if (sky && p.chute) {   // the canopy over them, its span across the way they're drifting (liveart.js parachuteSprite)
@@ -1657,8 +1679,12 @@ export class World2 {
     const up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : HIGH[pose] ? HIGH[pose] + Math.sin(now * 0.9 + p.id) * (pose === 'soar' ? 6 : 2) : hop;
     o.air = pose === 'fly' || hop > 0.5 || !!HIGH[pose];
     if (p.hitAt !== undefined && now - p.hitAt < 0.12) o.flash = 0.6;   // (hit: a white flash, like people)
-    E.drawSprite(sk, p.rx, p.ry, this._z0(p, false) + up, o); this.n.drawn++;
-    o.air = false;
+    // a bird up in the air: its own shape on the ground, not the column the shadow march makes of something up off it
+    const flies = up > 8 && S2 && S2.bird;
+    const gz = this._z0(p, false);
+    if (flies) { o.shadow = false; this._flyShadow(p.rx, p.ry, up, p.ra, SPAN[base] || 16, pose === 'fly' ? fr / n : pose === 'stoop' ? -1 : 0, gz); }
+    E.drawSprite(sk, p.rx, p.ry, gz + up, o); this.n.drawn++;
+    o.air = false; o.shadow = true;
   }
 
   // a vehicle: the actors provider's model at heading hi of N (by tier), its lights, brakes, siren, wreck;
@@ -1961,7 +1987,7 @@ export class World2 {
     const meVeh = S.pred && S.pred.kind === 'veh' ? S.ctrlId : -1;
     for (const v of F.vehs) { this.sprPrio = v.id === meVeh ? -3 : -1; this._veh(v, now, v.id === meVeh); }
     for (const p of F.peds) { this.sprPrio = p.id === S.myPedId ? -3 : -1; this._ped(p, now, p.id === S.myPedId, F); }
-    for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; const car = S.ents.get(p.parent); this._ped(p, now, p.id === S.myPedId, F, 8 + (car ? (car.rz || 0) * EL_Z + (car._jz || 0) : 0)); }   // (up on the El: its car's height; over a jump: its bike's)
+    for (const p of F.riders) { this.sprPrio = p.id === S.myPedId ? -3 : -1; const car = S.ents.get(p.parent); this._ped(p, now, p.id === S.myPedId, F, 8 + (car ? (car.rz || 0) * EL_Z + (car._jz || 0) : 0), car && car.kind === K.TRAIN ? car : null); }   // (up on the El: its car's height; over a jump: its bike's)
     this.sprPrio = -1;
     for (const c of F.cars) this._train(c, now, F.myTrain);
     if (!F.sub) { this._rides(F, now); this._forage(F); }   // (under the city: none of the surface's rides or finds)
@@ -2004,10 +2030,11 @@ export class World2 {
       b._v2k = k;
       // flying: well up in the air (its shadow, when the sun reaches that far, falls well away from it) and no
       // mirror image in wet streets or water
-      const o = this.opts; o.alpha = 1; o.xray = false; o.flash = 0; o.shadow = true; o.tint = null; o.flipX = false; o.air = !!b.fly;
-      this.E.drawSprite(k, b.x, b.y, b.fly ? b.z ?? Math.min(140, 10 + b.fly * 55) : 0, o);   // (b.z: gliding in to land, climbing away - client/birds.js)
+      const o = this.opts, z = b.fly ? b.z ?? Math.min(140, 10 + b.fly * 55) : 0; o.alpha = 1; o.xray = false; o.flash = 0; o.shadow = z < 8; o.tint = null; o.flipX = false; o.air = !!b.fly;
+      if (z >= 8) this._flyShadow(b.x, b.y, z, b.a, b.gull ? 22 : 14, Math.max(0, fr - air[0]) / (air[1] - air[0] + 1));   // (up in the air: its shape on the ground below)
+      this.E.drawSprite(k, b.x, b.y, z, o);   // (b.z: gliding in to land, climbing away - client/birds.js)
     }
-    this.opts.air = false;
+    this.opts.air = false; this.opts.shadow = true;
     // muzzle flashes (S.flashes, lit in _lights): the providers' flash sprite along the shot
     if (A && A.muzzleKey) for (const f of S.flashes) {
       if (f.kind === 'boom' || f.a === undefined) continue;
@@ -2015,6 +2042,23 @@ export class World2 {
       const k = this._spr('actors', 'muzzle', A.muzzleKey(1, hi, 16, frm), [1, hi, 16, frm]);
       if (k) { const o = this.opts; o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = false; o.tint = null; o.flipX = false; this.E.drawSprite(k, f.x, f.y, 18, o); }
     }
+  }
+
+  // A bird's shadow (the owner, 10-23: "Eagles cast a full shadow that drapes down instead of having an eagle shaped shadow
+  // on the ground"): the shadow march sees something drawn up off the ground as a column down to it, so a flying bird casts
+  // none and gets this instead - its shape seen from above (span px across the wings; k the wingbeat 0..1, -1 wings
+  // tucked in a stoop) as a dark decal on the ground under it, away from the sun by its height as everything's shadows
+  // fall (atmos.js sunDir, shadowLen), fainter the higher it is, at night and in the rain
+  _flyShadow(x, y, z, a, span, k, gz = 0) {
+    const sky = this.F && this.F.sky;
+    if (!sky || !sky.sunDir || this.F.sub) return;
+    const al = 0.6 * (1 - sky.night) * (1 - 0.7 * Math.min(1, this.F.rain || 0)) * Math.max(0.3, 1 - z / 320);
+    if (al < 0.04) return;
+    const w = k < 0 ? 2 : k === 0 ? 0 : Math.round(Math.abs(Math.sin(k * Math.PI)) * 2), s = Math.max(8, Math.round(span / 4) * 4);
+    const key = this._conv(`bsh|${s}|${w}`, () => birdShadow(s, w), true);
+    if (!key) return;
+    const u = sky.sunDir, l = Math.hypot(u.x, u.y) || 1, d = z * Math.max(0.3, Math.min(2.5, sky.shadowLen)) / 0.62;
+    this.E.drawDecal(key, x + u.x / l * d, y + u.y / l * d, a, al, gz);
   }
 
   // ---- getting sprites ready before they are needed ---------------------------------------------------------------

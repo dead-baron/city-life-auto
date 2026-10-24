@@ -109,6 +109,7 @@ S.lightOf = lightOf; S.glights = new Map(); S.carry = null;
 import('./render/carryfx.js').then((m) => { S.carry = new m.CarryFx(S); }).catch((e) => console.warn('[carryfx]', e));
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
+S.fx.water = (x, y) => !!S.map && WATER_T[S.map.tileAtPx(x, y)] === 1;   // (render/fx.js)
 
 // ---- the load timeline -------------------------------------------------------------------------------------
 // How long each step of getting into the city took on this device, in ms since the page started loading: the

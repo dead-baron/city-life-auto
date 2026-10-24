@@ -235,7 +235,15 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
     const fa = benchFacing(world.map, b), k = P.sleep ? 18 : 0;
     at = { x: b.x + Math.cos(fa) * k, y: b.y + Math.sin(fa) * k, a: fa };
   }
-  if (P.selfie) { const m = propsNear(world.map, x, y, 600, MARK)[0]; if (!m) return null; at = spotNear(world, m.x, m.y, 40, 80) || null; if (!at) return null; at.mark = m; }
+  if (P.selfie) {   // (on open ground in sight of it, the way they face - away from it - open too: filmFrom - never facing a wall)
+    const m = propsNear(world.map, x, y, 600, MARK)[0]; if (!m) return null;
+    at = null;
+    for (let k = 0; k < 12 && !at; k++) {
+      const s = spotNear(world, m.x, m.y, 40, 100), d = s ? Math.hypot(s.x - m.x, s.y - m.y) || 1 : 1;
+      if (s && filmFrom(world.map, s.x, s.y, m.x, m.y) && filmFrom(world.map, s.x, s.y, s.x + (s.x - m.x) / d * 110, s.y + (s.y - m.y) / d * 110)) at = s;
+    }
+    if (!at) return null; at.mark = m;
+  }
   if (P.lean) { at = wallSpot(world, x, y); if (!at) return null; }
   if (P.cart) { const c = propsNear(world.map, x, y, 700, CART).find((q) => !world.query(q.x, q.y + 18, 24, K.PED).some((e) => e.npc && e.npc.persona === key)); if (!c || !walkable(world.map, c.x, c.y + 18)) return null; at = { x: c.x, y: c.y + 18 }; }
   if (P.fish) {   // at a pier's rail, facing the water
@@ -276,10 +284,13 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
   if (P.lean) { n.spot = { x: at.x, y: at.y, a: at.a }; ped.a = at.a; n.until = world.time + 30 + rng() * 60; }
   if (P.fish) { n.spot = { x: at.x, y: at.y, a: at.water }; ped.a = at.water; ped.fishing = { npc: true }; }
   if (P.pair) {   // the other half: the same tracksuit (the tourists: snapping photos), a step to the side
-    const p2 = spawnNpc(world, P.arche, at.x + 14, at.y + 4, 'civ');
-    apply(world, p2, key, night, ped);
-    p2.npc.with = ped.id; ped.npc.with2 = p2.id;
-    if (P.look !== 'couple') p2.pp = 'phone';
+    const off = [[14, 4], [-14, 4], [4, 14], [4, -14]].find(([dx, dy]) => walkable(world.map, at.x + dx, at.y + dy) && !PED_BLOCK[world.map.tileAtPx(at.x + dx * 2, at.y + dy * 2)]);   // (beside them on open ground, not in the wall: b2a)
+    const p2 = off ? spawnNpc(world, P.arche, at.x + off[0], at.y + off[1], 'civ') : null;
+    if (p2) {
+      apply(world, p2, key, night, ped);
+      p2.npc.with = ped.id; ped.npc.with2 = p2.id;
+      if (P.look !== 'couple') p2.pp = 'phone';
+    }
   }
   if (P.dogs) {
     ped.dogs = [];
@@ -327,6 +338,17 @@ export function benchFacing(map, b) {
     hd = rd !== null ? qa4(rd - Math.PI / 2) : qa4(Math.floor(ahash(Math.floor(b.x), Math.floor(b.y), 7) * 4) * Math.PI / 2);
   }
   return hd + Math.PI / 2;
+}
+// Somewhere to film (x, y) from: on open ground - nothing solid within FILM_CLEAR px round them (not pressed against a
+// shop front or in a doorway) - and nothing solid between them and it (the owner, 10-23: "Guy taking picture through
+// wall": they'd stopped where they were, against a wall, facing into it).
+const FILM_CLEAR = 20;
+export function filmFrom(map, px, py, x, y) {
+  for (let k = 0; k <= 8; k++) {
+    const a = k * Math.PI / 4, r = k === 8 ? 0 : FILM_CLEAR, t = map.tileAtPx(px + Math.cos(a) * r, py + Math.sin(a) * r);
+    if (PED_BLOCK[t] || t === T.BUILDING || t === T.WALL) return false;
+  }
+  return map.los(px, py, x, y);
 }
 function spotNear(world, x, y, r0, r1) {
   for (let k = 0; k < 16; k++) { const a = rng() * Math.PI * 2, d = r0 + rng() * (r1 - r0), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; if (walkable(world.map, px, py)) return { x: px, y: py }; }

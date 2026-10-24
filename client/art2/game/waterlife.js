@@ -21,10 +21,13 @@
 // For show only, on the page: where the fish are comes from the map (the same patch of water has the same fish), what
 // they do from what's about them; nothing of it is sent or kept. update() is the simulation, draw() puts it on the
 // frame (the test harness runs them without the rest of the renderer); frame() is the renderer's glue.
-import { TILE, T, PF } from '../../../shared/constants.js';
+import { TILE, T, PF, VF } from '../../../shared/constants.js';
 import { DISTRICTS } from '../../../shared/mapcore.js';
 import { PH, nibbles } from '../../../shared/fish.js';
 import { wind } from '../../render/flora/wind.js';
+import { VEHICLE_BY_INDEX } from '../../../shared/vehicles.js';
+import { altOfByte } from '../../../shared/flight.js';
+import { flowAt } from '../../../shared/flow.js';
 
 const TAU = Math.PI * 2;
 const CELL = 6 * TILE;              // the patches of water fish are placed by (px)
@@ -117,6 +120,9 @@ function wcls(m, x, y) {
   if (t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE) return 0;
   return m.lake && m.lake[i] ? (m.lake[i] === 2 ? 3 : 2) : m.river && m.river[i] ? 4 : 1;
 }
+// a helicopter's downwash on the water: none above WASH_H px, full at the surface (k 0..1)
+export const WASH_H = 150;
+export const washK = (alt) => (alt >= WASH_H ? 0 : Math.pow(1 - Math.max(0, alt) / WASH_H, 1.5));
 // (x, y) and r px round it all the same water
 const clearAt = (m, x, y, c, r) => wcls(m, x, y) === c && wcls(m, x + r, y) === c && wcls(m, x - r, y) === c && wcls(m, x, y + r) === c && wcls(m, x, y - r) === c;
 
@@ -414,6 +420,17 @@ function streakSprite() {
 }
 // a puff of spray (k 0-2: growing) or a fleck of foam (3-5): dithered, as the art's pixels are
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+// a wisp of blood in the water (R art px): dense and dark at the heart, thinning to a ragged dithered edge; v: which of two
+function bloodSprite(R, v) {
+  const n = 2 * R + 2, G = gb(n, n, n / 2, n / 2), C1 = hex('#5a0810'), C2 = hex('#8a1418'), C3 = hex('#a8242a');
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const dx = (x + 0.5 - n / 2) / R, dy = (y + 0.5 - n / 2) / (R * 0.8), d = Math.sqrt(dx * dx + dy * dy) + (hh(x, y, 7 + v) - 0.5) * 0.35;
+    if (d >= 1) continue;
+    const p = Math.pow(1 - d, 0.9), th = (BAYER[(x & 3) + (y & 3) * 4] + 0.5) / 16;
+    if (p > th * 0.95) px(G, x, y, d < 0.35 ? C1 : hh(x, y, 3 + v) < 0.6 ? C2 : C3, 255);
+  }
+  return G;
+}
 function puffSprite(k) {
   const foam = k >= 3, R = foam ? [2, 3, 4][k - 3] : [4, 7, 10][k], n = 2 * R + 2, G = gb(n, n, n / 2, n / 2);
   const C1 = hex(foam ? '#f6fafc' : '#eef4f8'), C2 = hex(foam ? '#cfe2ec' : '#dde8ee');
@@ -455,6 +472,28 @@ export class WaterLife {
     this._lines(m, V, now, dt, lines || []);
     this._mist(m, V, now, dt);
     this._wakes(movers, now);
+    if (this.washL) this._wash(m, now, dt, this.washL);
+  }
+  // A helicopter's downwash on the water under it (WASH_H px up and lower: the lower, the stronger - k 0..1): rings
+  // spreading from under the rotor, the surface whipped into spray blown outward past the rotor's tips, a churned
+  // patch right under it once it's very low
+  _wash(m, now, dt, list) {
+    for (const a of list) {
+      let acc = (this.washAcc || 0) + dt * (6 + 44 * a.k);
+      for (; acc >= 1; acc -= 1) {
+        const t = this.rnd() * TAU, r = a.R * (0.25 + this.rnd() * (0.5 + 0.6 * a.k)), x = a.x + Math.cos(t) * r, y = a.y + Math.sin(t) * r * 0.85;
+        if (!wcls(m, x, y)) continue;
+        if (this.rnd() < 0.4) this._ring(x, y, 6 + 12 * a.k * this.rnd(), Math.min(1, 0.7 + 0.6 * a.k));
+        if (a.k < 0.25) continue;
+        const p = this._puff();
+        if (!p) break;
+        const out = 30 + 110 * a.k * (0.6 + this.rnd() * 0.6), c = Math.cos(t), sn = Math.sin(t);
+        p.on = true; p.foam = this.rnd() < 0.5; p.t0 = now; p.life = 0.7 + this.rnd() * (0.5 + 0.6 * a.k);
+        p.x = x; p.y = y; p.z = p.foam ? 0 : 2 + this.rnd() * 8 * a.k; p.vx = c * out; p.vy = sn * out * 0.85; p.vz = p.foam ? 0 : 4 + this.rnd() * 10 * a.k;
+        p.k = 0.6 + 0.4 * a.k; p.s = p.foam ? 1 + Math.floor(this.rnd() * 2) : Math.floor(this.rnd() * 2 * a.k); p.lift = 0;
+      }
+      this.washAcc = acc;
+    }
   }
   // the swimmers' wake points, dropped as they go (a ring of MAXW)
   _wakes(movers, now) {
@@ -876,7 +915,20 @@ export class WaterLife {
     };
     // (in the water: a person, or an animal - a duck's wake small, a goose's or an otter's bigger)
     for (const p of F.peds) if (!(p.flags & PF.INVEH)) add(p, !!p.swim, p.swim ? (p.d && p.d.ar && p.d.ar.startsWith('pet:') ? (/duck|quail|:y/.test(p.d.ar) ? 2.5 : 4) : 4.5) : 0);
-    for (const v of F.vehs) add(v, wcls(m, v.rx, v.ry) > 0, 0);
+    // (an aircraft: nothing to the water up high - only a helicopter low over it blows it about, _wash - the owner, 10-23:
+    // "Water under helicopter has a weird effect happening even when you're high up": the fish fled anything over them)
+    const wash = this.washL || (this.washL = []);
+    wash.length = 0;
+    for (const v of F.vehs) {
+      const def = VEHICLE_BY_INDEX[v.d.m];
+      if (def && def.kind === 'air') {
+        const alt = v._own && v.ralt !== undefined && v.ralt !== null ? v.ralt : v._alt ?? altOfByte(v.extra | 0), k = washK(alt) * (def.air === 'heli' ? Math.min(1, v._spin ?? ((v.flags | 0) & VF.ROTOR ? 1 : 0)) : 0);
+        if (k > 0.02 && wcls(m, v.rx, v.ry) && v.rx > V.x0 - 300 && v.rx < V.x1 + 300 && v.ry > V.y0 - 300 && v.ry < V.y1 + 300) wash.push({ x: v.rx, y: v.ry, k, R: def.rotor || 76 });
+        if (k > 0.3) add(v, true, 0);   // (low enough for its wash to scatter the fish)
+        continue;
+      }
+      add(v, wcls(m, v.rx, v.ry) > 0, 0);
+    }
     mv.length = n;
     if (seen % 120 === 0) for (const [k, q] of pos) if (seen - q.n > 60) pos.delete(k);
     // the light (the shadows fall away from the sun), the dusk the trout rise in, the rain, the wind
@@ -897,6 +949,33 @@ export class WaterLife {
       drawSprite: (key, x, y, z, o) => this.host.E.drawSprite(key, x, y, z, o),
     });
     this.draw(DE, (key, make) => h._conv(key, make, true));
+    if (F.fx && F.fx.bc) this.blood(m, F.fx.bc, now, dt, DE, (key, make) => h._conv(key, make, true));
+  }
+  // Blood in the water (the owner, 10-23: "Blood in water is a static image, maybe we have a new VFX for blood in water?"):
+  // each cloud (render/fx.js decal on open water: o {x, y, s size px, born, a}) blooms out from where it went in - a few
+  // wisps round it, each its own way and turning slowly, spreading as it ages - drifts with the current where there is
+  // one (shared/flow.js; a little with the wind on still water) and thins out over its life; under the surface like the
+  // fish (the light's waves and glints over it). Gone when it's thinned out or washed ashore.
+  blood(m, B, now, dt, E, conv) {
+    const e = this.env;
+    for (let i = 0; i < B.length; i++) {
+      const o = B[i];
+      if (!o || !o.on) continue;
+      const life = 8 + Math.min(10, o.s * 0.5), t = now - o.born;
+      if (t > life || t < 0) { o.on = false; continue; }
+      if (o.sd === undefined || o.b0 !== o.born) { o.b0 = o.born; o.sd = (Math.imul(i + 1, 2654435761) ^ Math.floor(o.x * 7 + o.y * 13)) >>> 0; }
+      const f = flowAt(m, o.x, o.y);
+      o.x += ((f ? f[0] : 0) + e.wx * e.ws * 3) * dt; o.y += ((f ? f[1] : 0) + e.wy * e.ws * 3) * dt;
+      if (!wcls(m, o.x, o.y)) { o.born = Math.min(o.born, now - life + 1); continue; }   // (washed ashore: gone in a second)
+      const u = t / life, bloom = 1 - Math.exp(-t / 1.6), r = o.s * (0.5 + 2.6 * bloom), al = Math.min(1, t * 5) * Math.pow(1 - u, 1.3) * 0.62;
+      const n = 3 + Math.min(4, Math.floor(o.s / 5));
+      for (let k = 0; k <= n; k++) {
+        const h1 = hh(o.sd, k, 1), h2 = hh(o.sd, k, 2), th = h1 * TAU + t * (h2 - 0.5) * 0.5, d = k ? r * (0.35 + 0.55 * h2) : 0;
+        const rad = Math.max(2, Math.min(14, Math.round((k ? 0.55 + 0.35 * h1 : 0.75) * (o.s * (0.45 + 1.7 * bloom)) / ART)));
+        const key = conv(`wlb|${rad}|${k & 1}`, () => bloodSprite(rad, k & 1));
+        if (key) E.drawDecal(key, o.x + Math.cos(th) * d, o.y + Math.sin(th) * d * 0.85 + FISH_Z, th, al * (k ? 0.75 : 1), FISH_Z);
+      }
+    }
   }
   // the bobbers out: everyone else's (client/fishing.js lines: from the server's events), and yours (its prediction)
   _linesOf(S) {
