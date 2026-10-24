@@ -58,6 +58,8 @@ import { sunkenWrecks3 } from './world3-wrecks.js';
 import { desertWaters3 } from './world3-tinajas.js';
 import { moreMansions3 } from './world3-mansions.js';
 import { desertCompound3 } from './world3-compound.js';
+import { clinics3, DROP_SPECIALS3 } from './world3-medics.js';
+import { fenceGaps3 } from './world3-fencegaps.js';
 import { waterOutlets3 } from './world3-outlets.js';
 import { woodsLake3 } from './world3-woodslake.js';
 import { wildEdges3 } from './world3-edges.js';
@@ -307,13 +309,15 @@ export function worldOpts(asked) {
       m.world3.mansions = moreMansions3(m);   // (the finest villa of each rich district a mansion too - the owner, 10-16: "More than one mansion": world3-mansions.js)
       if (H3 && city) m.world3.clutter = clearClutter3(m, H3);   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors - world3-clutter.js)
       m.world3.tidy = tidyProps3(m);   // (last: nothing that needs dry ground left standing in the water, no fence run across a road - world3-tidy.js)
+      if (city) m.world3.fenceGaps = fenceGaps3(m);   // (then: the fences people can't walk through - shared/fences.js - leave every door, gate and path open: world3-fencegaps.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)
     pavement: city ? PAVEMENT3 : null,   // (v3b: the pavements' inner ring, street furniture only - map.js buildStreetProps)
+    clinics: city ? (m) => { m.world3.clinics = clinics3(m); } : null,   // (a clinic where a region has none near: world3-medics.js; POSTS3 with the shops)
     shops: city ? (m, H2) => { const s = shops3(m, H2); delete s.list; m.world3.shops = s; } : null,   // (the new places themselves: POIs with own: 1)
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a
     // handcrafted district's plan, which places its own
-    special: (sp) => built.has(sp.d) && !(city && HAND_PLANS.some((P) => P.d === sp.d && P.specials.includes(sp.names[0]))),
+    special: (sp) => built.has(sp.d) && !DROP_SPECIALS3.has(sp.names[0]) && !(city && HAND_PLANS.some((P) => P.d === sp.d && P.specials.includes(sp.names[0]))),
     // the handcrafted districts (shared/world3-hand.js): laid before the blocks are found; their pavements dressed by hand
     ...(city ? { hand: (m, api) => { const had = new Set(m.props), hadB = new Set(m.buildings); m.world3hand = buildHand(m, api); handLaid(m, had, hadB); }, handAt: (tx, ty) => !!handPlanAt(tx, ty) } : {}),
     specials: REGIONAL ? [...TOWN_SPECIALS, ...MESA_SPECIALS, ...DESERT_SPECIALS] : [],   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)

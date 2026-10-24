@@ -380,6 +380,7 @@ function buildCity(seed, opts = null, frame = null) {
   buildMotorPools(m);
   buildCornerStores(m);
   buildClothesShops(m);   // (task #364: the clothing stores by style and district, the barbers and salons)
+  if (OPTS?.clinics) OPTS.clinics(m);   // (World v3: a clinic in each part of the world that has none near - shared/world3-medics.js; walk-ins next)
   buildInteriors(m);
   buildBowlingAlley(m, { T, DISTRICTS, keep: OPTS?.quays ? OPTS.quays.map((q) => q.freight).filter(Boolean) : null });   // (Pinwheel Lanes: eight lanes in the biggest plain warehouse - shared/bowling.js; World v3's ports keep their freight stop)
   buildCinema(m, { T, DISTRICTS });   // (The Grand Theatre becomes a cinema: the lobby, two screens - shared/cinema.js)

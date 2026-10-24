@@ -286,7 +286,7 @@ export class HUD {
     if (h !== !!this.calmH) { this.calmH = h; document.body.classList.toggle('calm', h); }
   }
   deathBack() { return !!this.DS && this.DS.back(this); }   // (Esc / B: the choices folded away to watch, and back)
-  stepSpawn(s) { if (this.DS) this.DS.step(this, s); }
+  stepSpawn(s, ax) { if (this.DS) this.DS.step(this, s, ax); }   // (ax: the way on the spawn map - 'h', 'v')
 
   // the clock in the HUD's top-right column, and on the minimap's plate (a phone held upright: the sun or the moon, the
   // time, a rain cloud when it rains) - written only when the minute or the weather changes

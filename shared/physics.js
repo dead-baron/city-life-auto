@@ -35,6 +35,10 @@ export const PED = {
 let BSTEP = null, BAIL_HIT = 150;
 export function setBoard(step, bailHit) { BSTEP = step; BAIL_HIT = bailHit; }
 export const boardOn = () => !!BSTEP;
+// The fences (shared/fences.js FENCES: held off them, the hop over a low one): the server registers them, the page once
+// it has the city
+let FEN = null;
+export function setFences(f) { FEN = f; }
 
 // Analog stick magnitude (0..1) -> target ground speed for players.
 export function analogSpeed(m, sprint) {
@@ -69,8 +73,9 @@ export function pedStep(s, inp, dt, map, mods) {
     // knocked down: stop dead; tumbling (bailed out of a fast car / blown out of one): slide and roll
     if (mods.air) { const k = Math.exp(-AIR_FRICTION * dt); s.vx *= k; s.vy *= k; }
     else if (mods.tumble) { const k = Math.exp(-(swim ? 6 : TUMBLE_FRICTION) * dt); s.vx *= k; s.vy *= k; } else { s.vx *= 0.5; s.vy *= 0.5; }
-    s.rollT = 0;
-  } else if (s.rollT > 0 && !(mods.board && !swim)) {   // (on a board rollT is the ollie's air time: boardStep)
+    s.rollT = 0; s.hop = 0;
+  } else if (s.hop > 0 && FEN) FEN.move(s, dt);
+  else if (s.rollT > 0 && !(mods.board && !swim)) {   // (on a board rollT is the ollie's air time: boardStep)
     s.rollT -= dt;
     s.vx = s.rdx * PED.rollSpeed; s.vy = s.rdy * PED.rollSpeed;
     if (s.rollT <= 0) { s.rollT = 0; s.vx *= 0.3; s.vy *= 0.3; }
@@ -140,7 +145,8 @@ export function pedStep(s, inp, dt, map, mods) {
   const rail = mods.canSwim && !swim && !(s.rollT > 0) && (tile === T.BRIDGE || tile === T.DOCK);
   // (rolling hard up the way a quarter pipe faces - north - its posts don't stop you short of its toe: up the face you go)
   const over = !!mods.board && (s.over || (s.airK === 2 && s.rollT > 0)), upQp = !!mods.board && s.vy < -120 && Math.abs(s.vx) < -s.vy;
-  collideCircle(s, PED_RADIUS, map, mods.canSwim && !rail ? SWIM_BLOCK : mods.rock ? ROCK_BLOCK : PED_BLOCK, over ? true : upQp ? 'qp' : false);   // (mods.rock: a sure-footed animal's)
+  collideCircle(s, PED_RADIUS, map, mods.canSwim && !rail ? SWIM_BLOCK : mods.rock ? ROCK_BLOCK : PED_BLOCK, over || s.hop > 0 ? true : upQp ? 'qp' : false);   // (mods.rock: a sure-footed animal's)
+  if (FEN && !up(s)) FEN.collide(s, inp, map, mods, swim);
   // on a board: how hard it ran into what it hit (a wall, a post, a tree: the push back out of it against the way it was
   // going) - hard enough and you're thrown off (s.boardHit: server skate.js bails you); a glancing touch just loses that
   // much speed (a solid prop moves you out but keeps your speed: take it off here)
