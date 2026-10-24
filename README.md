@@ -186,7 +186,7 @@ docs/                 DEVLOG, ARCHITECTURE, ART_SPEC, DEPLOY
 | Drive-by | Mouse aim + click | Right stick aim, R3 (click the stick) to fire - RT is the gas (a passenger fires with RT) | Aim stick / FIRE |
 | Aim | Mouse cursor | Right stick | Right stick |
 | Fire / punch (on foot) | Click | RT | FIRE button, or push the aim stick into its red ring (the FIRE toggle by the stick: on by default; tap it off and the stick only aims) |
-| Block / guard (fists, bat, sword, katana, plasma blade: a blow from in front does little or nothing; guarding you walk slowly and can't strike. The plasma blade turns most bullets and arrows aside facing the shooter - fewer from the side, none from behind) | Hold right mouse | Hold LT (on foot) | Hold the aim stick short of its red ring (anywhere, with the FIRE toggle off) |
+| Block / guard (fists, bat, sword, katana, plasma blade: a blow from in front does little or nothing; guarding you walk slowly; attack while holding it and the blow goes, the guard down for it and straight back up. The plasma blade turns most bullets and arrows aside facing the shooter - fewer from the side, none from behind) | Hold right mouse (left click from it: a blow) | Hold LT (on foot; RT from it: a blow) | Hold the aim stick short of its red ring (anywhere, with the FIRE toggle off; FIRE from it: a blow) |
 | Sprint | Shift | Left stick all the way out | Left thumb all the way out |
 | Roll / handbrake | Space | A (LT in a car) | ROLL / BRAKE |
 | Interact · get in/out · throw | E · F · Q | B · X · Y | ACT · CAR · THROW |
