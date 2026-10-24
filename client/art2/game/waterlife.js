@@ -889,7 +889,14 @@ export class WaterLife {
     env.wx = wind.dx || 0; env.wy = wind.dy || 0; env.ws = wind.strength || 0;
     this.onSplash = S.fx && S.fx.splash ? (x, y, k) => S.fx.splash(x, y, k) : null;
     this.update(m, V, now, dt, mv, this._linesOf(S), env);
-    this.draw(h.E, (key, make) => h._conv(key, make, true));
+    // (nothing of it over a bridge's deck: the fish, the rings, the wakes and the foam under one are hidden by it - the
+    // owner, b1c: "Water VFX visible through bridge")
+    this.host = h;
+    const DE = this.DE || (this.DE = {
+      drawDecal: (key, x, y, a, al, z) => (this.host.map.tileAtPx(x, y - (z || 0)) === T.BRIDGE ? true : this.host.E.drawDecal(key, x, y, a, al, z)),
+      drawSprite: (key, x, y, z, o) => this.host.E.drawSprite(key, x, y, z, o),
+    });
+    this.draw(DE, (key, make) => h._conv(key, make, true));
   }
   // the bobbers out: everyone else's (client/fishing.js lines: from the server's events), and yours (its prediction)
   _linesOf(S) {

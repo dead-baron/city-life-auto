@@ -334,13 +334,19 @@ function runTimeAt(seg, x) {
 // they'd do to what's round them (collisions, the horn, people stepping off the line, riders and boarders walking)
 // waits until someone is near: the tick it is, its cars are placed first. Today's world's one loop runs as it did.
 export const NEAR_PX = 6000;
+// Someone near where its cars were last placed counts too (the owner, b1c: "train art stopped at station and you pull into
+// it and then through it, it's like a ghost artifact"): unplaced, the cars stand where they were - at the platform they
+// started at, or where the last player left them - and anyone who comes by would see a train standing there that has
+// long gone; the tick they're near, the cars go to where the train is (out of their sight, if it's far).
 export function nearSomeone(world, t) {
   if (!world.players.size) return false;
   if (playerAboard(world, t)) return true;
   const rail = railOf(world, t), a = railAt(rail, t.s), b = railAt(rail, t.s - t.len), r2 = NEAR_PX * NEAR_PX;
+  const c0 = world.get(t.cars[0].id), c1 = world.get(t.cars[t.cars.length - 1].id);
+  const by = (q, e) => !!e && (q.x - e.x) ** 2 + (q.y - e.y) ** 2 < r2;
   for (const p of world.players.values()) {
     const q = p.ped;
-    if (q && ((q.x - a.x) ** 2 + (q.y - a.y) ** 2 < r2 || (q.x - b.x) ** 2 + (q.y - b.y) ** 2 < r2)) return true;
+    if (q && (by(q, a) || by(q, b) || by(q, c0) || by(q, c1))) return true;
   }
   return false;
 }

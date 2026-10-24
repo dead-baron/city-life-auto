@@ -232,6 +232,21 @@ test('a train nobody is near runs on with its cars unplaced; the tick someone is
   const far = w.trains.find((q) => !q.near && !trains.nearSomeone(w, q));
   assert.ok(far, 'trains far from the player stay unplaced');
 });
+// (the owner, b1c: a ghost train standing at a platform, ridden through) a train's unplaced cars stand where they were
+// left - the platform it started at; someone who comes there long after it's gone has them put where the train is
+test('no ghost train: someone where its cars were left, far from the train itself, has them put where it is', () => {
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const t = w.trains.find((q) => !w.rails[q.r].subway && !q.r);
+  const e0 = w.get(t.cars[0].id), at0 = [e0.x, e0.y], rail = w.rails[t.r];
+  const off = () => { const a = railAt(rail, t.s), b = railAt(rail, t.s - t.len); return Math.min(Math.hypot(a.x - at0[0], a.y - at0[1]), Math.hypot(b.x - at0[0], b.y - at0[1])); };
+  for (let i = 0; i < TICK_HZ * 900 && off() < trains.NEAR_PX * 1.3; i++) w.step();
+  assert.ok(off() >= trains.NEAR_PX * 1.3, `the train went on (${Math.round(off())} px)`);
+  assert.deepEqual([e0.x, e0.y], at0, 'its cars still where it started');
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, at0[0] + 60, at0[1]);
+  w.step();
+  assert.ok(Math.hypot(e0.x - at0[0], e0.y - at0[1]) > trains.NEAR_PX, 'its cars gone from the platform, where the train is');
+});
 
 test('riding the v3 main line as today: board a train at its platform, ride, get off at the next stop', () => {
   const w = new World(M, { npcBudget: 0, throwErrors: true });

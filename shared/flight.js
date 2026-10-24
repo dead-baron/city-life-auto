@@ -214,10 +214,27 @@ function planeStep(s, fi, dt, map, def, onGround, above) {
   s.vx = c * fwd; s.vy = sn * fwd;   // (it flies where its nose points)
 }
 
-// In the air: whatever stands taller than it is at its altitude (buildings by height, walls, trees and solid props)
-// pushes it back out, like a wall does a car. -> the speed it hit at (px/s), 0 if nothing.
+// The bridges (the owner, b1c: "Helicopters can fly through bridges"): the elevated highway's deck stands DECK_ALT px up
+// (art v2 draws it levels.js DECK_LIFT px up the screen, an aircraft FLY.LIFT px a px of altitude: below this it's
+// under the deck's picture), a bridge's deck over the water BRIDGE_ALT (its parapets). Below that an aircraft flies into
+// its side; above it, over it. One that is under a deck already (lifted off from the road below, ditched beside a
+// bridge) isn't held there: it gets out the way it likes. Not the ground's height (floorAt): nothing lands on them.
+// Helicopters only: a plane low over a highway is on its approach or its climb-out (server airtraffic.js glides the
+// airliners in over whatever lies off the runway's end), where the deck isn't in its way.
+export const DECK_ALT = 134, BRIDGE_ALT = 14;
+function deckTop(map, tx, ty, inDeck, inBridge) {
+  if (!map.inside(tx, ty)) return 0;
+  const i = map.idx(tx, ty);
+  if (!inDeck && map.deck && map.deck[i]) return DECK_ALT;
+  if (!inBridge && map.tileAt(tx, ty) === T.BRIDGE) return BRIDGE_ALT;
+  return 0;
+}
+// In the air: whatever stands taller than it is at its altitude (buildings by height, walls, trees and solid props,
+// the bridges' decks) pushes it back out, like a wall does a car. -> the speed it hit at (px/s), 0 if nothing.
 export function collideAir(s, def, map) {
   const hl = def.L / 2, hw = def.W / 2;
+  const cx = Math.floor(s.x / TILE), cy = Math.floor(s.y / TILE), ci = map.inside(cx, cy) ? map.idx(cx, cy) : -1;
+  const heli = isHeli(def), inDeck = ci >= 0 && !!map.deck && !!map.deck[ci], inBridge = ci >= 0 && map.tileAt(cx, cy) === T.BRIDGE;
   let impact = 0;
   for (let iter = 0; iter < 3; iter++) {
     const bb = obbBounds(s.x, s.y, s.a, hl, hw);
@@ -225,7 +242,7 @@ export function collideAir(s, def, map) {
     const ty0 = Math.floor(bb.minY / TILE), ty1 = Math.floor(bb.maxY / TILE);
     let best = null;
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
-      const top = tileTop(map, tx, ty);
+      const top = Math.max(tileTop(map, tx, ty), heli && s.alt < DECK_ALT ? deckTop(map, tx, ty, inDeck, inBridge) : 0);
       if (top > s.alt + 0.5) {
         const hit = obbVsAabb(s.x, s.y, s.a, hl, hw, tx * TILE, ty * TILE, TILE, TILE);
         if (hit && (!best || hit.depth > best.depth)) best = hit;
