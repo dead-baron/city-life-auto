@@ -26,7 +26,8 @@
 //   p.stop: the stop on them;  officer.npc.stop: the pid they're dealing with
 // Stages: 'come' (on the way) -> 'look' (round the scene) -> 'walk' (up to you) -> 'talk' -> the verdict; 'run' (you went
 // off: let go, or after you); 'hot' (a hothead: the arrest).
-import { STAR_HEAT, K } from '../../shared/constants.js';
+import { K } from '../../shared/constants.js';
+import { STAR_HEAT } from '../../shared/rules.js';
 import { pedStep } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { hash2 } from '../../shared/rng.js';

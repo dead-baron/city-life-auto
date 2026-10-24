@@ -115,7 +115,7 @@ function grow(world, p, r, took) {
   const now = world.time;
   r.heatAcc += ((now - r.heatAt) * ROB_HEAT_S + (took / 100) * ROB_HEAT_PER_100) * heatMul(r);
   r.heatAt = now;
-  if (r.heatAcc >= 1) { const n = Math.floor(r.heatAcc); r.heatAcc -= n; law.addHeat(world, p, n, r.x, r.y); }
+  if (r.heatAcc >= 1) { const n = Math.floor(r.heatAcc); r.heatAcc -= n; law.addHeat(world, p, n, r.x, r.y, true); }   // (slower above 3 stars: law.js heatAfter)
 }
 
 function alarm(world, p) {

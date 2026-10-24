@@ -156,7 +156,7 @@ export function update(world, dt) {
     // (still in the bank while it runs: the heat climbs - in whole stars' worth at a time, as at a robbery - and it's the scene)
     if (p && p.ped && !p.ped.dead && !p.custody && !V.jammed && bankAt(world.map, p.ped.x, p.ped.y) === world.map.buildings[bid]) {
       V.heatAcc = (V.heatAcc || 0) + HEIST.heatS * dt;
-      if (V.heatAcc >= 1 && p.wanted > 0) { const n = Math.floor(V.heatAcc); V.heatAcc -= n; law.addHeat(world, p, n, p.ped.x, p.ped.y); }
+      if (V.heatAcc >= 1 && p.wanted > 0) { const n = Math.floor(V.heatAcc); V.heatAcc -= n; law.addHeat(world, p, n, p.ped.x, p.ped.y, true); }
       if (p.robbedAt && p.robbedAt.bid === bid) p.robbedAt.until = now + ROB_SCENE_S;
     }
     if (now - V.alarmT >= ALARM_S) { V.alarmT = now; world.emit(V.x, V.y, { e: 'alarm', x: V.x, y: V.y }); }

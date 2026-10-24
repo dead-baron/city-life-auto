@@ -272,6 +272,20 @@ export const SHOOTOUT_EVERY_S = [180, 300]; // how often a gang-police shootout 
 // Lying low in the wilds (woods, farmland, desert): fewer eyes and more cover than in town
 export const WILD_SIGHT = 0.7;       // the police spot a wanted suspect out there at this share of their town range...
 export const COVER_SIGHT = 0.45;     // ...and on foot in thick trees or rocks, up to this much less again
+// Wanted thresholds (heat points -> stars 1..5; server law.js). 4 and 5 stars take a lot more than they did (the owner's
+// notes, 10-22: "getting a 5 star wanted level is really aggressive ... so you don't get 4 or 5 stars so easily"; were 100
+// and 160). (Here, not shared/constants.js - whose copy is the old one, kept as it was: a change to constants.js re-keys
+// every browser's kept World v3 and baked chunks. Everything reads these; test/wantedladder.test.js checks.)
+export const STAR_HEAT = [0, 10, 30, 60, 110, 200];
+export function starsForHeat(heat) {
+  let s = 0;
+  for (let i = 1; i < STAR_HEAT.length; i++) if (heat >= STAR_HEAT[i]) s = i;
+  return s;
+}
+// Above 3 stars' heat (STAR_HEAT[from]) each crime's heat counts for only `mult` of itself (law.js
+// addHeat; the owner's notes, 10-22: a full 5 stars should take a while): two murders still make 3 stars, but 4 takes
+// four and 5 takes seven (was three and four); 4 stars takes two police killings and 5 four (was one... and two)
+export const HEAT_TOP = { from: 3, mult: 0.6 };
 export const WILD_COOL = 1.8;        // out of sight in the wilds, heat cools this many times faster
 export const WILD_UNITS = 1;         // ...and once they've lost you, no more cars join the search beyond this many
 
@@ -382,7 +396,7 @@ export const ROB_TILL = { convenience: 400, gasstation: 450, coffee: 300, tackle
 export const ROB_TILL_TIER = { lux: 1.6, suburb: 1.2, mid: 1, rural: 0.9, wild: 0.8, neon: 1.1, industrial: 0.8, low: 0.7, red: 0.8, rough: 0.6 };
 export const ROB_REFILL_S = 900;
 // Heat that grows: once the police are called (a witness or a camera saw it, or the silent alarm) you're on 1 star
-// (ROB_CALLED_HEAT; stars: shared/constants.js STAR_HEAT) - then for as long as it goes on, heat rises ROB_HEAT_S a second
+// (ROB_CALLED_HEAT; stars: STAR_HEAT above) - then for as long as it goes on, heat rises ROB_HEAT_S a second
 // and ROB_HEAT_PER_100 for every $100 taken, times the kind of place and the district's wealth. A corner store in a rough
 // part of town stays minor if you're quick; a bank in a rich one is a huge crime in seconds.
 export const ROB_CALLED_HEAT = 12;

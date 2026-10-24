@@ -5,7 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
-import { K, STAR_HEAT, TILE } from '../shared/constants.js';
+import { K, TILE } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 import { IN } from '../shared/input.js';
 import { ROB_TILL, ROB_TILL_TIER, ROB_REFILL_S, ROB_CALLED_HEAT, HOT_FAR_PX, HOT_FENCE_CUT, HOT_PAWN_CUT, STANDOFF_S } from '../shared/rules.js';
 import * as robbery from '../server/systems/robbery.js';

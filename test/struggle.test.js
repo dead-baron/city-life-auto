@@ -9,7 +9,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport } from './helpers.js';
-import { STAR_HEAT, K, PF } from '../shared/constants.js';
+import { K, PF } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 import { IN } from '../shared/input.js';
 import { mulberry32 } from '../shared/rng.js';
 import { STRUGGLE_CUFF_S, STRUGGLE_GRACE_S, STRUGGLE_KNOCK_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_DOWN_S, TACKLE_RECOVER_S, TACKLE_APPROACH } from '../shared/rules.js';

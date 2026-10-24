@@ -3,7 +3,8 @@
 import { surfaceZ } from '../shared/levels.js';
 import { PED_BLOCK, CAR_SPAWN_BLOCK } from '../shared/map.js';
 import { DISTRICTS } from '../shared/mapcore.js';
-import { DAY_LOOP_S, DAY_PART_S, STAR_HEAT, T, K, WEATHER, TILE } from '../shared/constants.js';
+import { DAY_LOOP_S, DAY_PART_S, T, K, WEATHER, TILE } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { blastSize } from '../shared/explosions.js';
 import { collideVehicleTiles } from '../shared/physics.js';

@@ -12,7 +12,8 @@
 //  * test/tutorial.test.js requires every POI kind, island, gang turf, control action and rule
 //    to be covered here - add a place type or control and the tests tell you to teach it.
 import { ISLANDS, DISTRICTS, ESTATE_TYPES, HERO_CORNER } from './map.js';
-import { TILE, MAP_W, MAP_H, STAR_HEAT, DAY_LOOP_S, DAY_PART_S } from './constants.js';
+import { TILE, MAP_W, MAP_H, DAY_LOOP_S, DAY_PART_S } from './constants.js';
+import { STAR_HEAT } from './rules.js';
 import { SHOPS, WEAPONS, ITEMS } from './items.js';
 import { VEHICLES } from './vehicles.js';
 import { EVENT_KINDS, ARROW_SHOW_S } from './worldevents.js';

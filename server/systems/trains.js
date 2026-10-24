@@ -11,11 +11,12 @@
 // - robberyCountry, below).
 import { inAnyView } from '../view.js';
 import { K, T } from '../../shared/constants.js';
+import {  } from '../../shared/rules.js';
 import { IN } from '../../shared/input.js';
 import { railAt, routeBoardAt, CONSIST, CAR_GAP, TRAIN_CARS, COACH_SEATS, COACH_STAND, LOCO_SEATS, LOCO_STAND, CAB_OX, MAIL_BOX, MAIL_POSTS, CROSSING_ARM, PED_BLOCK, isSwimming, crossingGate } from '../../shared/map.js';
 import { obbVsObb, circleVsObb, localToWorld, clamp } from '../../shared/math.js';
 import { TRAIN_SPEED, TRAIN_ACCEL, TRAIN_BRAKE, TRAIN_HEADWAY_S, TRAIN_LOOP_HEADWAY_S, TRAIN_LOOP_MAX, TRAIN_HOLD_MAX_S, TRAIN_DWELL_S, TRAIN_DRAG_EXPLODE_S, CROSSING_WARN_PX, TRAIN_JOB_PAY, STRONGBOX_CRACK_S, TRAIN_ALARM_STARS, MAIL_WARN_S, GUARD_DRAW_S, BAIL_SPEED } from '../../shared/rules.js';
-import { STAR_HEAT } from '../../shared/constants.js';
+import { STAR_HEAT } from '../../shared/rules.js';
 import { KB, TOUCH } from '../../shared/controls.js';
 import { mulberry32 } from '../../shared/rng.js';
 import * as vehicles from './vehicles.js';

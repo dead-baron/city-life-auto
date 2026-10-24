@@ -5,7 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run } from './helpers.js';
-import { STAR_HEAT, DAY_PART_S } from '../shared/constants.js';
+import { DAY_PART_S } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { POLICE_AIR } from '../shared/rules.js';
 import { FLY } from '../shared/flight.js';

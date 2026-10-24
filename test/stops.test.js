@@ -7,7 +7,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, straightRoad } from './helpers.js';
-import { STAR_HEAT, T } from '../shared/constants.js';
+import { T } from '../shared/constants.js';
+import { STAR_HEAT } from '../shared/rules.js';
 import { IN } from '../shared/input.js';
 import { PED } from '../shared/physics.js';
 import { PED_BLOCK } from '../shared/map.js';
