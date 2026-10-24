@@ -115,14 +115,25 @@ test('what sets people alight: a blast, their car blowing up with them in it, a 
   const proj = w.spawnProjectile(shooter.id, shooter.x + 20, shooter.y, 0, 900, 560, 'firebow');
   for (let i = 0; i < 20 && w.get(proj.id); i++) w.step();
   assert.ok(burning.burning(target) || target.dead, 'a fire arrow sets them alight');
-  // a burning wreck: walk into it and you catch
+  // a burning wreck: walk into it and you catch (a player); the city's people step round it - unless knocked into it
+  // (the owner's notes, 10-22: "NPCs randomly catching on fire")
   const wreck = w.spawnVehicle('sedan', road.x + 300, road.y + 200, 0, { npcOwned: false });
   wreck.wreckAt = w.time; wreck.hp = 0;
   const walker = spawnNpc(w, 'casual', 0, 0);
   walker.npc.desk = null;
   let caught = false;
   for (let i = 0; i < 200 && !caught; i++) { teleport(w, walker, wreck.x + wreck.def.L / 2 + 4, wreck.y); walker.vx = -80; w.tick++; w.time += 0.05; burning.update(w, 0.05); caught = burning.burning(walker); }
-  assert.ok(caught, 'brushing against a burning wreck');
+  assert.ok(!caught, 'a passer-by steps round a burning wreck');
+  for (let i = 0; i < 200 && !caught; i++) { teleport(w, walker, wreck.x + wreck.def.L / 2 + 4, wreck.y); walker.vx = -80; walker.downUntil = w.time + 0.3; w.tick++; w.time += 0.05; burning.update(w, 0.05); caught = burning.burning(walker); }
+  assert.ok(caught, 'knocked against a burning wreck');
+  {
+    const { p: pl } = joinPlayer(w);
+    pl.ped.protectUntil = 0;
+    let lit = false;
+    for (let i = 0; i < 200 && !lit; i++) { teleport(w, pl.ped, wreck.x - wreck.def.L / 2 - 4, wreck.y); pl.ped.vx = 80; w.tick++; w.time += 0.05; burning.update(w, 0.05); lit = burning.burning(pl.ped); }
+    assert.ok(lit, 'a player brushing against a burning wreck');
+    burning.douse(w, pl.ped); w.remove(pl.ped); w.players.delete(pl.pid);
+  }
   // a lit campfire
   const i = w.map.props.findIndex((q) => q && q.t === 'campfire');
   campfires.setLit(w, i, true);
@@ -245,4 +256,26 @@ test('the fire frames\' poses and the redrawn machines build in art v2', async (
   for (const t of ['combine', 'tractor', 'tank']) assert.ok(vehicleModel(t).anchors, t);
   assert.ok(AM.bodyModel('gunship'), 'the gunship');
   assert.equal(AM.TYPES.gunship.body, '#646a70', 'grey (MV1)');
+});
+
+test("someone alight doesn't set the passers-by alight (no fire running through a crowd); a player brushing past them catches", () => {
+  const { w, road } = scene();
+  const b = spawnNpc(w, 'casual', road.x + 400, road.y);
+  b.hp = b.maxHp = 1e6;
+  burning.ignite(w, b, null);
+  b.npc.burn.k = 'fall'; b.npc.burn.until = w.time;   // (down and burning where they lie: the worst case)
+  let lit = 0;
+  for (let i = 0; i < 30; i++) {
+    const q = spawnNpc(w, 'casual', b.x - 6, b.y);
+    if (!q) continue;
+    for (let k = 0; k < 20; k++) { teleport(w, q, b.x - 6 + k, b.y); q.vx = 80; w.tick++; w.time += 0.05; burning.update(w, 0.05); }
+    if (burning.burning(q)) lit++;
+    w.remove(q);
+  }
+  assert.equal(lit, 0, 'passers-by step round them');
+  const { p } = joinPlayer(w);
+  p.ped.protectUntil = 0;
+  let caught = false;
+  for (let k = 0; k < 200 && !caught; k++) { teleport(w, p.ped, b.x - 6, b.y); p.ped.vx = 80; w.tick++; w.time += 0.05; burning.update(w, 0.05); caught = burning.burning(p.ped); }
+  assert.ok(caught, 'a player walking into them catches');
 });

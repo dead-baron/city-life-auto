@@ -28,3 +28,19 @@ The owner: "Getting a 5 star wanted level is really aggressive/sensitive, it sho
   officers 3/4/5 at 1/2/2 -> 1/2/4; assaults 1/2/3/4/5 at 1/2/4/7/11 -> 1/2/4/10/20.
 - Tests: test/wantedladder.test.js (new: the ladder, alarms still set stars, nobody reads the old copy); core, crime, robbery, heist, police, arrests, prison, stops, bounties,
   policeair, trains, brawls, struggle, cells, airtraffic, underground and drivejobs still pass.
+
+## People no longer burst into flames walking down the street
+The owner: "Some NPCs seem to be randomly catching on fire ... they will just burst into flames and run off and die"
+(a city street; the campfire fix of 10-21 didn't cover it).
+- Found with a headless run (World v3, a player standing still in Midtown 15 in-game minutes, every 'ignite' traced to
+  its caller): 370 people set alight round the player, 360 of them by burning.js's contact with someone else on fire -
+  a burning passer-by, or someone down and burning on the pavement (the 'fall' plan burns on where they lie), lit
+  whoever walked past, who ran on through the crowd and lit more; the first fire came from a car burning out after a
+  crash (8 by walking past a burning car or wreck, 2 by the blast). Westport Center: 153, 133 of them the same way.
+- burning.js `contacts`: the city's people step round fire as they go about. A player still catches walking into a
+  burning car, a wreck, a campfire or someone alight; anyone else only when thrown into it (knocked down, flung,
+  tumbling - as the campfire rule of 10-16 already did) or when a burning player runs into them. Blasts, a car blowing
+  up with you in it, fire arrows, the flamethrower and the firefighter job's fires are as they were.
+- Tests: test/burning.test.js (a passer-by steps round a burning wreck, knocked into it they catch, a player brushing
+  it catches; new: someone down and burning lights none of 30 passers-by, but a player walking into them). After the
+  fix the same Midtown run had 0 ignitions from contact (see the calm-streets entry for the numbers).
