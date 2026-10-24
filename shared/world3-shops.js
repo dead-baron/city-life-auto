@@ -26,6 +26,7 @@ import { DISTRICTS } from './mapcore.js';
 import { hash2 } from './rng.js';
 import { propGrid } from './propgrid.js';
 import { handPlanAt } from './world3-hand.js';
+import { POSTS3, roadNear3 } from './world3-medics.js';
 
 export const SHOP_NEEDS = {
   weapons: ['gunshop', 'pawn', 'fence', 'lodge', 'huntcamp'],
@@ -442,6 +443,46 @@ export function shops3(m, H) {
     const b = build(at[0], at[1], w, at[2], distAt(at[0], at[1]), S.units, S.roof);
     row(b, S.units.map(([k, name]) => [k, name, name]), true, distAt(at[0], at[1]), { counter: true });
     out.wild++;
+  }
+  // open ground for a lifeguard tower within 40 tiles of (tx, ty): 3 x 4 tiles of sand, grass or paving, nothing built,
+  // reserved, kept or solid on it, nothing's map point near
+  const towerSpot = (tx, ty) => {
+    for (let k = 2; k <= 40; k++) for (let dy = -k; dy <= k; dy++) for (let dx = -k; dx <= k; dx += (Math.abs(dy) === k ? 1 : 2 * k)) {
+      const x = tx + dx, y = ty + dy;
+      let ok = true;
+      for (let yy = y - 1; yy <= y + 2 && ok; yy++) for (let xx = x - 1; xx <= x + 1 && ok; xx++) {
+        if (!m.inside(xx, yy)) { ok = false; break; }
+        const i = m.idx(xx, yy);
+        if (!(m.tiles[i] === T.SAND || m.tiles[i] === T.GRASS || m.tiles[i] === T.PLAZA) || m.bld[i] >= 0 || m.reserve[i] & 3 || m.deck[i] || m.solidProps.has(i)) ok = false;
+      }
+      if (!ok || solidNear((x + 0.5) * TILE, (y + 0.5) * TILE, 40) || m.pois.some((p) => Math.abs(p.x - (x + 0.5) * TILE) < 96 && Math.abs(p.y - (y + 1) * TILE) < 96)) continue;
+      if (propsIn((x - 1) * TILE, (y - 1) * TILE, (x + 2) * TILE, (y + 3) * TILE).some((pr) => KEEP.has(pr.t))) continue;
+      return [x, y];
+    }
+    return null;
+  };
+  // where there's no town: a ranger station or a first-aid post by the road nearest its spot, somewhere to come round
+  // (kind 'hospital': a respawn point - shared/world3-medics.js)
+  out.posts = [];
+  for (const [name, xy, roof] of POSTS3) {
+    const at0 = typeof xy === 'string' ? m.pois.find((q) => q.label === xy) : null, a = at0 ? [Math.floor(at0.x / TILE), Math.floor(at0.y / TILE)] : typeof xy === 'string' ? null : roadNear3(m, xy[0], xy[1]);   // (a place's name: by it)
+    let at = null, w = 8;
+    if (a) for (const [ww, hh, r] of [[8, 6, 30], [7, 5, 60], [6, 5, 90]]) { at = lot(a[0], a[1], ww, hh, r, -1, true, true); if (at) { w = ww; break; } }
+    if (!at && a) for (const [x, y] of roadSpots(m, distAt(a[0], a[1]), a)) { at = lot(x, y, 8, 6, 16, -1, true, true); if (at) break; }
+    if (!at) {
+      // (no room for a building - a handcrafted key built up to its beaches: a lifeguard tower with the first-aid post at
+      // its foot, on open ground near the road)
+      const q = a && towerSpot(a[0], a[1]);
+      if (!q) { out.stuck[name] = 1; continue; }
+      for (const pr of propsIn((q[0] - 1) * TILE, (q[1] - 1) * TILE, (q[0] + 2) * TILE, (q[1] + 3) * TILE)) gone.add(pr);   // (the greenery off its spot)
+      H.addProp(m, 'lifeguard', (q[0] + 0.5) * TILE, (q[1] + 0.5) * TILE, 16);
+      m.pois.push({ id: m.pois.length, kind: 'hospital', label: name, x: (q[0] + 0.5) * TILE, y: (q[1] + 1.8) * TILE, r: 44, counter: true, own: 1 });
+      out.posts.push([name, q[0], q[1], 'tower']);
+      continue;
+    }
+    const d = distAt(at[0], at[1]), b = build(at[0], at[1], w, at[2], d, [['hospital', name]], roof);
+    row(b, [['hospital', name, name]], false, d, { counter: true });
+    out.posts.push([name, at[0], at[1]]);
   }
   if (gone.size) { const keys = new Set([...gone].map((p) => p.x + ',' + p.y)); H.removeProps(m, (x, y) => keys.has(x + ',' + y)); }
   return out;

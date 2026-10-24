@@ -221,10 +221,14 @@ export function sell(world, p, home) {
 }
 
 // ---- respawn ------------------------------------------------------------------
+// (each with where it is, for the death screen's map: client/deathscreen.js; the hospitals nearest where you went down
+// first)
 export function spawnOptions(world, p) {
-  const opts = world.map.hospitals.map((h, i) => ({ id: `h:${i}`, label: h.name, kind: 'hospital' }));
+  const at = p.ped || null, far = (o) => (at ? (o.x - at.x) * (o.x - at.x) + (o.y - at.y) * (o.y - at.y) : 0);
+  const opts = world.map.hospitals.map((h, i) => ({ id: `h:${i}`, label: h.name, kind: 'hospital', x: Math.round(h.x), y: Math.round(h.y) }));
+  opts.sort((a, b) => far(a) - far(b));
   if (p.policeKill) return opts;   // (killed by the police: a hospital - custody.js / players.onPedDeath)
-  for (const h of ownedHomes(world, p.profile)) opts.unshift({ id: `home:${h.id}`, label: h.name, kind: 'home' });
+  for (const h of ownedHomes(world, p.profile)) opts.unshift({ id: `home:${h.id}`, label: h.name, kind: 'home', x: Math.round(h.x), y: Math.round(h.y) });
   return opts;
 }
 // the hospital nearest a spot ('h:<i>')

@@ -1,6 +1,9 @@
 // Authoritative world: entity registry, spatial chunk grid, clock/weather, tick order.
 import { CHUNK_PX, CHUNK_TILES, DT, K, DAY_LOOP_S, gameClock } from '../shared/constants.js';
 import { createPed, createVehicle, createCrate, createBag, createProjectile } from './entities.js';
+import { setFences } from '../shared/physics.js';
+import { FENCES } from '../shared/fences.js';
+setFences(FENCES);   // (the fences people collide with and hop: shared/fences.js - the page registers them too, client/main.js)
 import * as players from './systems/players.js';
 import * as vehicles from './systems/vehicles.js';
 import * as combat from './systems/combat.js';
@@ -360,7 +363,10 @@ export class World {
       this.sysMs[i] = this.sysMs[i] * 0.98 + (performance.now() - t) * 0.02;
     }
 
-    for (const e of this.entities.values()) this.place(e);
+    for (const e of this.entities.values()) {
+      if (e.hopNew) { e.hopNew = 0; this.emit(e.x, e.y, { e: 'hop', id: e.id }); }   // (over a fence: the others see the hop - shared/fences.js)
+      this.place(e);
+    }
     const tn = performance.now();
     try { net.send(this); } catch (e) { this.reportError('net', e); }
     this.netMs = this.netMs * 0.98 + (performance.now() - tn) * 0.02;

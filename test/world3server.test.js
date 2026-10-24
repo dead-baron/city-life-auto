@@ -11,6 +11,7 @@ import { joinPlayer, teleport } from './helpers.js';
 import { World } from '../server/world.js';
 import { buildWorld3 } from '../server/world3.js';
 import { T, TILE, K } from '../shared/constants.js';
+import { DISTRICTS } from '../shared/mapcore.js';
 import { FRAME_W, FRAME_H, REGION_TILES, REGIONS_X, REGIONS_Y, REGION_COUNT } from '../shared/world3.js';
 import { CITY_SEEDS } from '../shared/world3-city.js';
 import { BIOMES, inPoly } from '../shared/world3-skeleton.js';
@@ -20,6 +21,7 @@ import { cutWorld } from '../server/worldcdn.js';
 import { assembleCity, readIndex } from '../shared/regionpack.js';
 import { shopCoverage, homesList } from '../tools/world3b/shops.mjs';
 import { placeKind3, SHOP_REACH, NEED_KEYS, WILD_SHOPS3 } from '../shared/world3-shops.js';
+import { POSTS3 } from '../shared/world3-medics.js';
 import { clutterOn } from '../shared/world3-clutter.js';
 import * as economy from '../server/systems/economy.js';
 
@@ -77,6 +79,38 @@ test('shops where you need them: every built-up district has each need within re
   }
   // the homes: as many as before the shops (no home became a shop)
   assert.ok(homesList(M).every(([, b]) => b < 0 || !M.buildings[b].shop3), 'no home is a shop');
+});
+
+// (the owner, 10-23: "a clinic or hospital to spawn at spread around the world ... one for each district/region" -
+// shared/world3-medics.js) every part of the world with land enough to walk has a place to come round near its middle,
+// each new clinic a walk-in with its reception, each post and ranger station built; no fence shuts a door off
+// (shared/world3-fencegaps.js)
+test('somewhere to wake up in every part of the world; no fence shuts a door', () => {
+  const C = M.world3.clinics, S = M.world3.shops;
+  assert.deepEqual(C.none, [], 'every clinic found a storefront');
+  for (const [name] of POSTS3) assert.ok(!S.stuck[name] && M.hospitals.some((h) => h.name === name), `${name} built`);
+  for (const [name] of C.made) {
+    const p = M.pois.find((q) => q.kind === 'hospital' && q.label === name), b = p && M.buildings[p.b];
+    assert.ok(b && b.walkIn, `${name}: a walk-in`);
+    assert.ok(M.pois.some((q) => q.kind === 'reception' && q.b === p.b), `${name}: its reception`);
+  }
+  assert.ok(!M.hospitals.some((h) => h.name === 'Northshore Medical'), 'no second Northshore hospital out in Copper Gulch');
+  // each district's land (sampled every 8 tiles): its middle within REACH tiles of a place to wake up (Prison Island
+  // and the scattered islets are no one's to walk round; Liberty Bay is water)
+  const REACH = 600, skip = new Set([13, 55, 56, 20, 21, 19]), acc = new Map();
+  for (let ty = M.y0; ty < M.y0 + M.h; ty += 8) for (let tx = M.x0; tx < M.x0 + M.w; tx += 8) {
+    const i = M.idx(tx, ty), t = M.tiles[i];
+    if (t === T.WATER || t === T.DEEP) continue;
+    const a = acc.get(M.dist[i]) || [0, 0, 0]; a[0]++; a[1] += tx; a[2] += ty; acc.set(M.dist[i], a);
+  }
+  const far = [];
+  for (const [d, [n, sx, sy]] of acc) {
+    if (n < 20 || skip.has(d)) continue;
+    const cx = sx / n, cy = sy / n, best = Math.min(...M.hospitals.map((h) => Math.hypot(h.x / TILE - cx, h.y / TILE - cy)));
+    if (best > REACH) far.push(`${DISTRICTS[d].name}: ${Math.round(best)} tiles`);
+  }
+  assert.deepEqual(far, []);
+  assert.ok(M.world3.fenceGaps && M.world3.fenceGaps.stuck === 0, 'every door a fence shut opened');
 });
 
 test('nothing blocking on a street, a pavement, the track or a door (shared/world3-clutter.js)', () => {
