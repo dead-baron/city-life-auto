@@ -168,7 +168,7 @@ function drawArt(L, me, u, now) {
   // paint or floor changed, the furniture's models kept - while the old one stays on screen until it's ready
   if (!art || art.ap !== ap || (art.L !== L && !(art.next && art.next.L === L))) {
     const same = !!art && art.ap === ap && (art.L.base || art.L) === (L.base || L);
-    const nx = new artMod.HomeArt(L, ap, same ? art : null);
+    const nx = new artMod.HomeArt(L, ap, same ? art : null, st.id);   // (st.id: the home's own scheme - homeart2.js schemeOf)
     if (same && art.ready) art.next = nx; else art = nx;
   }
   if (art.next) { const nx = art.next; nx.relight(daylight()); if (nx.work(6)) { art = nx; } }

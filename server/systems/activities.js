@@ -24,6 +24,8 @@
 //             one breaking it up with a pick, one down on a knee at it, the foreman stood watching - by day
 //   pool      two at the Rusty Spur's pool table taking turns (round the table to the next shot, bent over the cue),
 //             the other waiting at the end of the table with his cue up; a watcher or two
+//   shoppers  a customer or two in a shop fitted out by its trade (shared/shoprooms.js): browsing an aisle, waiting at the
+//             counter, sat in the barber's chair, at the bar
 //   dice      three shooting dice down an alley in a rough part of town, crouched against the wall over the dice and
 //             the money - mostly after dark; a player can get in on it (streetdice.js)
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
@@ -46,6 +48,7 @@ import { courtHoops } from '../../shared/hoops.js';
 import { pointAt } from '../../shared/geom.js';
 import { DISTRICTS } from '../../shared/mapcore.js';
 import { foodLayout, foodSeats } from '../../shared/foodrooms.js';
+import { shopRoom } from '../../shared/shoprooms.js';
 import { WILD_KINDS, WILD_LOOKS, wildSpots, wildMembers, wildSteer } from './wildfolk.js';   // (the people of the wilds: Nature-C4)
 
 let rng = mulberry32(42300);
@@ -69,6 +72,7 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   hoops: { day: 0.75, night: 0.2, cap: 1 },
   pool: { day: 0.5, night: 0.9, cap: 1 },
   diners: { day: 0.85, night: 0.6, cap: 2 },
+  shoppers: { day: 0.8, night: 0.45, cap: 3 },
   skaters: { day: 0.85, night: 0.4, cap: 1 },
   stoop: { day: 0.18, night: 0.45, cap: 2 },
   party: { day: 0.08, night: 0.55, cap: 1 },
@@ -257,6 +261,15 @@ export function spotsOf(map) {
     const x = (L.X0 + L.X1) / 2, y = (L.Ya + L.Yb) / 2;
     list.push({ k: 'diners', x, y, a: 0, food: L, wild: false }); taken.push({ x, y });
   }
+  // a customer or two in the shops fitted out by their trade (not the clubs: nightclubs.js has their crowd; the Rusty
+  // Spur its pool players)
+  for (const b of map.buildings || []) if (b && b.walkIn) for (const u of b.walkIn.units) {
+    if (u.kind === 'coffee' || u.kind === 'club' || u.kind === 'roadhouse') continue;
+    const R = shopRoom(b, u, TILE, map);
+    if (!R || !R.people.length) continue;
+    const x = (R.X0 + R.X1) / 2, y = (R.Ya + R.Yb) / 2;
+    list.push({ k: 'shoppers', x, y, a: 0, shop: R, wild: false }); taken.push({ x, y });
+  }
   const cells = new Map();
   list.forEach((s, i) => {
     s.id = i;
@@ -340,6 +353,9 @@ function members(s) {
     const n = Math.min(groups.length, 1 + Math.floor(rng() * 2) + (groups.length > 3 ? 1 : 0));
     for (let k = 0; k < n; k++) { const seats = groups[order[k][1]], two = rng() < 0.65 ? 2 : 1; for (let j = 0; j < two; j++) { const q = seats[j]; out.push({ x: q.x, y: q.y, a: q.a, arche: rng() < 0.3 ? 'senior' : 'casual', gt: 'sit' }); } }
     if (L.cook) out.push({ x: L.cook.x, y: L.cook.y, a: L.cook.a, arche: 'casual', look: 'cook' });
+  } else if (s.k === 'shoppers') {   // one to three of the shop's customers' places taken
+    const P = s.shop.people, order = P.map((q, i) => [rng(), i]).sort((p, q) => p[0] - q[0]), n = Math.min(P.length, 1 + Math.floor(rng() * (P.length > 3 ? 3 : 2)));
+    for (let k = 0; k < n; k++) { const q = P[order[k][1]]; out.push({ x: q.x, y: q.y, a: q.a, arche: rng() < 0.25 ? 'senior' : rng() < 0.15 ? 'executive' : 'casual', gt: q.gt || null }); }
   } else if (s.k === 'skaters') {   // two to four riding laps (each their own loop round the middle, either way round); a friend on a ledge
     const B = s.box, W = B.x1 - B.x0, H = B.y1 - B.y0, n = 2 + Math.floor(rng() * 3);
     for (let i = 0; i < n; i++) {
