@@ -7,8 +7,10 @@ import assert from 'node:assert/strict';
 import { World } from '../server/world.js';
 import { buildWorld3 } from '../server/world3.js';
 import { T, TILE, TICK_HZ } from '../shared/constants.js';
-import { railAt } from '../shared/mapcore.js';
-import { SERVICES, MAIN_JUNCTIONS, MAIN_LINE, RADIUS, linePath, wetRanges } from '../shared/world3-skeleton.js';
+import { railAt, crossingGate, CROSSING_ARM } from '../shared/mapcore.js';
+import { SERVICES, MAIN_JUNCTIONS, MAIN_LINE, RADIUS, STATIONS, linePath, wetRanges } from '../shared/world3-skeleton.js';
+import { segDist } from '../shared/geom.js';
+import { deadWays } from '../server/systems/roadends.js';
 import { TRACK_OFF } from '../shared/world3-rail.js';
 import * as trains from '../server/systems/trains.js';
 import * as players from '../server/systems/players.js';
@@ -18,6 +20,7 @@ import { TRAIN_DWELL_S, TRAIN_LOOP_HEADWAY_S, TRAIN_LOOP_MAX } from '../shared/r
 import { command as devCommand } from '../server/dev.js';
 import { offAxis, stationForecourt } from '../shared/world3-passes.js';
 import { routeBoardAt } from '../shared/mapcore.js';
+import { HAND_PLANS } from '../shared/world3-hand.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const mod = (a, n) => ((a % n) + n) % n;
@@ -95,6 +98,51 @@ function overlap(a, b, la, wa, lb, wb) {
   return true;
 }
 
+// (2026-10-15, the owner's playtest: "Train stations should have streets and parking lots connected to them ... so that
+// cars can make a turn out of the parking lot and back out"; "train tracks should cross streets almost perpendicular so
+// the crossing guard cross the street" - shared/world3-stations.js, shared/mapcore.js crossingGate)
+test('every main-line station has a street to its front and a car park on a loop; every level crossing meets its road square on, its gates across the road', () => {
+  const net = M.net, dead = deadWays(net);
+  const plans = M.world3.stations;
+  assert.equal(plans.length, STATIONS.filter((q) => q.line === 'main').length, 'a plan per station');
+  for (const h of M.railHubs) {
+    const plan = plans.find((q) => `${q.name} Station` === h.name);
+    assert.ok(plan && plan.how !== 'none', `${h.name}: planned`);
+    // a street (not a highway) within 12 tiles of its front door
+    const fx = h.x + Math.cos(h.a) * 80, fy = h.y + Math.sin(h.a) * 80;
+    let d = Infinity;
+    for (const e of net.edges) if (e.lvl === 0 && e.kind !== 'hwy' && e.kind !== 'ramp') for (let k = 0; k + 1 < e.pts.length; k++) d = Math.min(d, segDist({ x: fx, y: fy }, e.pts[k], e.pts[k + 1]));
+    // (within 12 tiles; a station on a road along its front: as far as its paved forecourt runs to it)
+    const lim = plan.how === 'road' ? (plan.front.c - plan.houseC + 1) * TILE : 12 * TILE;
+    assert.ok(d < lim, `${h.name}: a street ${Math.round(d / TILE)} tiles from its front`);
+    // its own roads: none leads only to a road's end (a loop through the car park, or past it)
+    const mine = net.edges.filter((e) => e.name === `${h.name} Road`);
+    assert.ok(mine.length, `${h.name}: its station road`);
+    for (const e of mine) assert.ok(!dead.has(e.id * 2) && !dead.has(e.id * 2 + 1), `${h.name}: its road ${e.id} is no dead end`);
+    // the car park: paved, with spaces
+    let lot = 0;
+    for (let ty = Math.floor(h.y / TILE) - 40; ty <= Math.floor(h.y / TILE) + 40; ty++) for (let tx = Math.floor(h.x / TILE) - 40; tx <= Math.floor(h.x / TILE) + 40; tx++) if (M.inside(tx, ty) && M.tiles[M.idx(tx, ty)] === T.LOT) lot++;
+    // (not up on the El: Midtown's station is reached by its stairs from Trestle Street, downtown, its streets handcrafted)
+    if (!h.el) assert.ok(lot >= 60 && plan.spaces >= 6, `${h.name}: a car park (${lot} tiles, ${plan.spaces} spaces)`);
+  }
+  // the level crossings: the road and the tracks at 75 degrees or more; the arms across the road, either side
+  assert.ok(M.railXings.length > 10, `${M.railXings.length} level crossings`);
+  for (const c of M.railXings) {
+    assert.ok(c.ra !== undefined && c.rw > 0, `crossing at ${Math.round(c.x / TILE)},${Math.round(c.y / TILE)}: its road`);
+    const ang = Math.acos(Math.min(1, Math.abs(Math.cos(c.ra - c.a)))) * 180 / Math.PI;
+    // (not where a handcrafted district's streets meet the line as its plan drew them: their gates across the road all the same)
+    const di = M.dist[M.idx(Math.floor(c.x / TILE), Math.floor(c.y / TILE))];
+    if (!HAND_PLANS.some((P) => P.d === di)) assert.ok(ang >= 75, `crossing at ${Math.round(c.x / TILE)},${Math.round(c.y / TILE)}: ${ang.toFixed(1)} degrees`);
+    for (const sg of [1, -1]) {
+      const g = crossingGate(c, sg);
+      assert.ok(Math.abs(g.dx * Math.cos(c.ra) + g.dy * Math.sin(c.ra)) < 1e-9, 'the arm across the road');
+      const off = (g.x - c.x) * -Math.sin(c.a) + (g.y - c.y) * Math.cos(c.a);
+      assert.ok(Math.abs(off - sg * (c.arm || CROSSING_ARM)) < 1, 'its gate the arm\'s distance off the tracks, on its side');
+      assert.ok(Math.abs(Math.hypot(g.px - g.x, g.py - g.y) - (c.rw + 6)) < 1e-6, 'pivoting at the road\'s edge');
+    }
+  }
+});
+
 test('the trains on the v3 main line, five minutes: every service runs, stops at its stations, and no train runs into another', () => {
   const w = new World(M, { npcBudget: 0, throwErrors: true });
   const ts = w.trains;
@@ -142,7 +190,7 @@ test('the trains on the v3 main line, five minutes: every service runs, stops at
   // the gates: every loop's crossings, once each (a double track's two crossings of a road one, its gates outside both) -
   // they came down for the trains of every main-line loop, not only the first's
   assert.equal(w.xing.length, M.railXings.length);
-  assert.ok(downs.size > 20, `${downs.size} crossings closed`);
+  assert.ok(downs.size >= 10 && downs.size >= M.railXings.length * 0.7, `${downs.size} of ${M.railXings.length} crossings closed`);   // (fewer since 2026-10-23: the ones under the roads, the roads alongside the tracks no crossings)
   for (const ri of loops) assert.ok(closedFor.has(ri), `the gates came down for ${w.rails[ri].name}'s trains`);
   // the NPCs see a train coming on any loop: right in front of a moving train on a loop other than the first
   const t = ts.find((q) => q.r > 0 && q.v > 100 && !w.rails[q.r].pts[Math.floor(q.s / 8) % w.rails[q.r].pts.length].under);
@@ -342,6 +390,7 @@ test('stations at an angle: paved only under the platform, the forecourt turned 
       for (const o of [st.outer + 12, st.outer + 18]) {
         const tx = Math.floor((q.x + nx * o) / TILE), ty = Math.floor((q.y + ny * o) / TILE), k = tx + ',' + ty;
         if (seen.has(k) || fore.has(k)) continue;
+        if (M.inside(tx, ty) && M.reserve[M.idx(tx, ty)] & 16) continue;   // (a station's own forecourt and car park: shared/world3-stations.js stampStations3)
         seen.add(k);
         if (((tx + 0.5) * TILE - q.x) * nx + ((ty + 0.5) * TILE - q.y) * ny < st.outer + 6) continue;   // (its middle on the platform)
         ring++;
@@ -393,7 +442,7 @@ test('the desert train robbery: the main line\'s robbery country is the Red Rock
     assert.ok(c && c.kind === 'desert' && c.name === 'Red Rock Desert', `${r.name}: ${JSON.stringify(c)}`);
     assert.ok(c.s1 - c.s0 > 15000, `${r.name}: a long run (${Math.round((c.s1 - c.s0) / 32)} tiles)`);
     for (const st of r.stations) { const d = Math.abs(st.s - (c.s0 + c.s1) / 2); assert.ok(Math.min(d, r.len - d) > (c.s1 - c.s0) / 2, `${st.name} not on it`); }
-    for (const q of r.pts) if (q.s > c.s0 && q.s < c.s1) assert.ok(!q.under, 'out in the open');
+    for (const q of r.pts) if (q.s > c.s0 && q.s < c.s1) assert.ok(!q.under || q.underpass, 'out in the open (or a moment under a road)');
   });
   devCommand(w, p, 'train', { mail: 1 });
   const t = w.trains[p.ped.onTrain.t];

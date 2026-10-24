@@ -4,7 +4,7 @@
 // board here" glow are drawn live. Procedural canvas drawing, except the subway entrance kiosks
 // (cut from the concept art, in the sprite atlas).
 import { T, TILE, CHUNK_PX } from '../../shared/constants.js';
-import { CROSSING_ARM, railAt } from '../../shared/mapcore.js';
+import { CROSSING_ARM, railAt, crossingGate } from '../../shared/mapcore.js';
 import { atlas } from './sprites.js';
 
 const TIE_STEP = 18, RAIL_OFF = 12;
@@ -399,12 +399,13 @@ export function drawStationClock(g, rail, st, secs, now) {
 // ---- level crossings ---------------------------------------------------------------------------
 // anim: 0 = arms up, 1 = arms down (eased by the caller); broken: [side0, side1]
 export function drawCrossing(g, c, anim, broken, down, now) {
-  const tx = Math.cos(c.a), ty = Math.sin(c.a), rx = -Math.sin(c.a), ry = Math.cos(c.a);
   for (const side of [0, 1]) {
     const sg = side ? -1 : 1;
-    // pivot on the road's edge, on the approach lanes' side; the arm swings out across them
-    const px = c.x + rx * sg * CROSSING_ARM + tx * sg * (c.hw + 6), py = c.y + ry * sg * CROSSING_ARM + ty * sg * (c.hw + 6);
-    const len = c.hw + 2;
+    // pivot on the road's edge, on the approach lanes' side; the arm swings out across them (mapcore.js crossingGate:
+    // across the road - World v3's crossings know their road)
+    const G = crossingGate(c, sg, c.ra === undefined ? CROSSING_ARM : undefined);
+    const px = G.px, py = G.py, rx = G.ux, ry = G.uy, tx = -G.dx * sg, ty = -G.dy * sg;
+    const len = G.len;
     g.save(); g.translate(px, py);
     // crossbuck post
     g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(-4, -2, 10, 10);
@@ -419,7 +420,7 @@ export function drawCrossing(g, c, anim, broken, down, now) {
     const dirx = -tx * sg, diry = -ty * sg;
     if (broken[side]) {
       g.fillStyle = '#f4f4f4'; g.fillRect(-2, -2, dirx * 10 + 4, diry * 10 + 4);
-      g.save(); g.translate(dirx * len * 0.55 + rx * sg * 14, diry * len * 0.55 + ry * sg * 14); g.rotate(c.a + 0.5 * sg);
+      g.save(); g.translate(dirx * len * 0.55 + rx * sg * 14, diry * len * 0.55 + ry * sg * 14); g.rotate(Math.atan2(ty, tx) + 0.5 * sg);
       g.fillStyle = '#f4f4f4'; g.fillRect(-len * 0.3, -2, len * 0.6, 4);
       g.fillStyle = '#c8262b'; for (let k = -len * 0.3; k < len * 0.3; k += 12) g.fillRect(k, -2, 6, 4);
       g.restore();

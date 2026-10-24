@@ -405,6 +405,18 @@ export const LOCO_STAND = [[-7, -18], [7, -18], [-7, 18], [7, 18], [-72, 0], [-4
 export const MAIL_BOX = { ox: -58, oy: 0 };              // the strongbox (towards the back of the mail car)
 export const MAIL_POSTS = [[40, -18], [40, 18]];          // where the guards stand
 export const CROSSING_ARM = 66;                          // gate arms this far either side of the track centre
+// A crossing's gate on side sg (1 | -1): its middle (x, y) on the road, the arm's pivot (px, py) at the road's edge and
+// way down (dx, dy), len; (ux, uy) along the road. Across the road (c.ra, c.rw: World v3's), else along the tracks.
+export function crossingGate(c, sg, arm = c.arm || CROSSING_ARM) {
+  const tx = Math.cos(c.a || 0), ty = Math.sin(c.a || 0), rx = -ty, ry = tx;
+  if (c.ra === undefined || c.rw === undefined) {
+    const hw = c.hw || 40, x = c.x + rx * sg * arm, y = c.y + ry * sg * arm;
+    return { x, y, px: x + tx * sg * (hw + 6), py: y + ty * sg * (hw + 6), dx: -tx * sg, dy: -ty * sg, len: hw + 2, ux: rx, uy: ry, hw };
+  }
+  const ux = Math.cos(c.ra), uy = Math.sin(c.ra), wx = uy, wy = -ux, hw = c.rw;
+  const k = arm / Math.max(0.5, ux * rx + uy * ry), x = c.x + ux * sg * k, y = c.y + uy * sg * k;
+  return { x, y, px: x + wx * sg * (hw + 6), py: y + wy * sg * (hw + 6), dx: -wx * sg, dy: -wy * sg, len: hw + 2, ux, uy, hw };
+}
 
 // A station's route board (the owner, 10-16: "An information board or map sign at stations showing where the train
 // goes"): on an open-air platform, near its back edge towards one end - past the canopy, clear of the footbridge and

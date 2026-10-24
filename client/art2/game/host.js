@@ -35,7 +35,7 @@ import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
 import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
 import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT, DT } from '../../../shared/constants.js';
-import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS } from '../../../shared/mapcore.js';
+import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
 import { BARRIER_PIECE } from '../../../shared/levels.js';
@@ -2126,19 +2126,18 @@ export class World2 {
     const xs = M.railXings || (M.rail && M.rail.crossings) || [];   // (World v3: every loop's crossings, once each)
     for (let i = 0; i < xs.length; i++) {
       const c = xs[i];
-      if (c.x < x0 - 160 || c.x > x1 + 160 || c.y < y0 - 160 || c.y > y1 + 160) continue;
+      if (c.x < x0 - 320 || c.x > x1 + 320 || c.y < y0 - 320 || c.y > y1 + 320) continue;
       const st = (S.xing && S.xing[i]) || XING0, anim = Math.max(0, Math.min(1, (S.xingAnim && S.xingAnim[i]) || 0)), down = !!st.d;
-      const tx = Math.cos(c.a || 0), ty = Math.sin(c.a || 0), rx = -ty, ry = tx, hw = c.hw || 40;
       const flash = Math.floor(now * 3) % 2;
       for (let side = 0; side < 2; side++) {
         const sg = side ? -1 : 1;
-        const arm = c.arm || CROSSING_ARM;   // (World v3: a double track's crossing has its gates outside both tracks)
-        const px = c.x + rx * sg * arm + tx * sg * (hw + 6), py = c.y + ry * sg * arm + ty * sg * (hw + 6), gz = this._gz(px, py);
+        // (the gate across the road, one each side of the tracks - World v3: outside both tracks - mapcore.js crossingGate)
+        const g = crossingGate(c, sg), px = g.px, py = g.py, gz = this._gz(px, py);
         o.shadow = true;
         const post = this._genXPost();
         if (post) E.drawSprite(post, px, py, gz, o);
         if (!(st.b && st.b[side])) { // (an arm knocked off is gone)
-          const arm = this._genXArm(quant(Math.atan2(-ty * sg, -tx * sg), 16), Math.round(anim * 6), Math.max(8, Math.round((hw + 2) / 4) * 4));
+          const arm = this._genXArm(quant(Math.atan2(g.dy, g.dx), 16), Math.round(anim * 6), Math.max(8, Math.round(g.len / 4) * 4));
           if (arm) E.drawSprite(arm, px, py, gz + XARM_Z, o);
         }
         if (down && (side ? !flash : flash)) { // the flashers, side to side

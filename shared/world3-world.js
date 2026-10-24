@@ -72,6 +72,7 @@ import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS,
 import { buildHand, handPlanAt, HAND_PLANS } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 import { shops3, stationAtms3 } from './world3-shops.js';   // (v3b: the stores and ATMs where you need them)
 import { clearClutter3, handLaid, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
+import { squareCrossings3, planStations3, stampStations3, underpassLeft } from './world3-stations.js';   // (2026-10-15: the level crossings square on, the stations' streets and car parks)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
 // marsh as grass, scrub as rock
@@ -163,6 +164,13 @@ export function worldOpts(asked) {
   const metro = ISLANDS.find((I) => I.key === 'metro') || ISLANDS.find((I) => I.key === 'big');   // (World v3b: the big Gulf Island)
   const box = [W, H, 0, 0];
   for (const [x, y] of metro.poly) { box[0] = Math.min(box[0], x - 40); box[1] = Math.min(box[1], y - 40); box[2] = Math.max(box[2], x + 40); box[3] = Math.max(box[3], y + 40); }
+  // the main line's loops for the generator (the crossings that couldn't be squared carried under their roads), the
+  // stations' car parks and forecourts on the tiles before the blocks are cut (shared/world3-stations.js)
+  const stationsOnTiles = (m) => {
+    const loops = mainLineLoops(m);
+    if (m.world3) { m.world3.underpasses = underpassLeft(m, loops, m.world3.squared && m.world3.squared.left); m.world3.stationLots = stampStations3(m); }
+    return loops;
+  };
   const o = {
     ...(city ? { parks: CITY_PARKS, airports: [CITY_AIRPORT], seedOf: (d) => CITY_SEEDS[d], spotOf: (sp) => ({ 'Metro Museum of Art': CITY_SPOTS.museum, 'The Playhouse': CITY_SPOTS.playhouse })[sp.names && sp.names[0]] || null } : {}),   // (v3b: the park, the stadium and the airport at their v3b spots; each district's heart - world3-city.js)
     world: { spawn: [3248, 1600], pick, base, placeLine, cls, pieces, dist: REGIONAL ? wildDist : (d) => d, farm: (m, rand, G) => { if (REGIONAL && m.world3?.wild) m.world3.wild.farmBuilt = wildFarm3(m, rand, G); } },   // (H51: Dry Creek's farm - map.js buildFarm's hook)   // (dist: today's wild districts' v3 regions, for the moved nature sites - 8.19)
@@ -311,7 +319,7 @@ export function worldOpts(asked) {
     specials: REGIONAL ? [...TOWN_SPECIALS, ...MESA_SPECIALS, ...DESERT_SPECIALS] : [],   // (the towns' clinics, sheriffs, stores and places: world3-towns.js)
     styles: REGIONAL ? { ...TOWN_STYLES, ...MESA_STYLES, ...DESERT_STYLES, ...(city ? NORTH_STYLES : {}) } : {},   // (the towns' own building styles and the beach towns' sparser one, by district: world3-towns.js, 8.13.1)
     tunnels: (m) => roadTunnels(m),   // (the skeleton's tunnels on the built edges: shared/world3-roads.js)
-    rails: (m) => { if (!REGIONAL) return [...mainLineLoops(m), ...subwayLoops(m)]; beachFront(m, L); const tf = townsFront(m); if (m.world3?.towns) m.world3.towns.front = tf; if (m.world3?.mesa) m.world3.mesa.lots = mesaLots(m); return [...mainLineLoops(m), ...subwayLoops(m)]; },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
+    rails: (m) => { if (REGIONAL) { beachFront(m, L); const tf = townsFront(m); if (m.world3?.towns) m.world3.towns.front = tf; if (m.world3?.mesa) m.world3.mesa.lots = mesaLots(m); } return [...stationsOnTiles(m), ...subwayLoops(m)]; },     // (the beach towns' promenade, car parks and lifeguard towers before the blocks - world3-beach.js, 8.14; the main line: each service both ways, double track - shared/world3-rail.js, 8.10)
     lines(lines, m) {
       const out = { split: 0, offFrame: 0 };
       const inF = (p) => p.x >= 0 && p.y >= 0 && p.x < W * TILE && p.y < H * TILE;
@@ -351,13 +359,22 @@ export function worldOpts(asked) {
       m.world3 = { pieces: pieces.map((p) => ({ key: p.key, at: p.at, s: p.s })), split: out.split, offFrame: out.offFrame, cut: j.cut, dropped: j.dropped, bridged: j.bridged, canal: j.canal, crossings };
       m.world3.roads = layRoads(lines, m, L);   // (the skeleton's highways and arterials: shared/world3-roads.js, 8.7)
       if (city) m.world3.city = { painted: city, streets: layCity3(lines, m) };   // (v3b: the city's avenues, streets and alleys, the bridges met - world3-city.js)
-      if (!REGIONAL) return;
+      if (!REGIONAL) { o.roadsDone(lines, m); return; }
       m.world3.towns = { painted: towns, streets: layTowns3(lines, m) };   // (the towns' street grids: world3-towns.js, 8.13)
       m.world3.beach = beachStreets(lines, m, L);   // (Northshore's beach towns' streets: shared/world3-beach.js, 8.14)
       m.world3.mesa = { painted: mesa, streets: layMesa3(lines, m) };   // (Lucky Mesa's Strip and side streets: shared/world3-mesa.js, 8.15)
       m.world3.desert = { painted: desert, streets: layDesert3(lines, m) };   // (Copper Gulch's main street and side streets: shared/world3-desert.js, 8.18)
       m.world3.west = { painted: west, streets: layWest3(lines, m) };   // (Egret Point's Harbor Road, Light Road, Raceway Road: shared/world3-west.js, 8.20)
       m.world3.wild = wildSites3(lines, m, L, (tx, ty) => L.dist[ty * W + tx] === 48 && peakHeight(tx, ty) >= SNOW_LINE && (!m.terrainCls || cls(tx, ty, (x, y) => terrainAt(m.terrainCls.cls, m.terrainCls.cw, x, y)) === 4));   // (H50: the snow the done hook paints - the tracks keep off it; H44, 8.19: today's wild land's country sites at their v3 spots, each with its road in: shared/world3-wild.js)
+      o.roadsDone(lines, m);
+    },
+    // (2026-10-15, the owner's playtest) Every road laid: the roads that meet the main line at grade at a slant bent to
+    // cross it square on, and every main-line station given a street to its front and a car park on a loop
+    // (shared/world3-stations.js). Its own hook, called at the end of `lines`.
+    roadsDone(lines, m) {
+      const loops = mainLineLoops();
+      m.world3.squared = squareCrossings3(lines, m, loops);
+      m.world3.stations = planStations3(lines, m, loops);
     },
   };
   return o;
