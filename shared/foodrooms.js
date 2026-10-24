@@ -19,7 +19,8 @@ export function foodLayout(b, u, TILE) {
   const X0 = u.x0 * TILE, X1 = (u.x1 + 1) * TILE, W = X1 - X0, back = wi.y0 * TILE, cy = u.counterRow * TILE;
   const Ya = cy + TILE, Yb = (wi.y1 + 1) * TILE, dx = u.door.tx * TILE, dw = (u.door.w || 2) * TILE, dc = dx + dw / 2;
   const tillX = Math.round((X0 + X1) / 2), side = dc > (X0 + X1) / 2 ? -1 : 1;   // (side: -1 the booths / the machine on the west wall, away from the door)
-  const L = { style, X0, X1, back, cy, Ya, Yb, dc, dx, dw, tillX, side, booths: [], stools: [], tables: [], queue: null, drinks: null, host: null, jukebox: null, cook: null };
+  // (v: the place's own colours, by its building - the diner's booths and checkers, the fast food's chairs: statics.js FOOD_V)
+  const L = { style, v: ((b.tx | 0) * 7 + (b.ty | 0) * 13 + u.x0 * 3) % 3, X0, X1, back, cy, Ya, Yb, dc, dx, dw, tillX, side, booths: [], stools: [], tables: [], queue: null, drinks: null, host: null, jukebox: null, cook: null };
   const inDoorway = (x0, x1, y1) => y1 > Yb - 44 && x1 > dx - 8 && x0 < dx + dw + 8;   // (the way in from the door kept clear)
   const free = (x0, y0, x1, y1) => !inDoorway(x0, x1, y1) && x0 >= X0 + 2 && x1 <= X1 - 2 && y0 >= Ya + 2 && y1 <= Yb - 2;
   // the cook at the kitchen line along the back wall, west of the till (the clerk's at the till: shared/map.js)
