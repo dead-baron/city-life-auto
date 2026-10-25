@@ -1,14 +1,17 @@
 // Felling trees (task #358: shared/felling.js, server/systems/felling.js): the tools cut the sizes they can at their
 // speeds; a tree falls away from the side it was cut from, hurts whoever it lands on by its size, and breaks into log
-// bundles that carry and load like crates and sell at the hardware store; felling in town is vandalism; a stump grows
-// back only when nobody's near; and the felled trees reach the client as a short list of numbers.
+// trunk lying there to be cut into rounds, each a firewood bundle that carries and loads like a crate, sells at the
+// hardware store (more at a sawmill) and stacks at your home's garage; felling in town is vandalism; a stump grows back
+// only when nobody's near; and the felled trees and trunks reach the client as short lists of numbers.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
 import { IN } from '../shared/input.js';
 import { K } from '../shared/constants.js';
-import { treeSize, TREE_SIZES, FELL_TOOLS, fellTime, bestTool, fallAngle, underFall, logSpots, codeAngle } from '../shared/felling.js';
+import { treeSize, TREE_SIZES, FELL_TOOLS, fellTime, bestTool, fallAngle, underFall, roundSpots, codeAngle } from '../shared/felling.js';
 import { TREE_REGROW_S, TREE_REGROW_NEAR, LOG_BUNDLE_PRICE, HARDHAT_GUARD } from '../shared/rules.js';
+import { FIREWOOD } from '../shared/rules-play.js';
+import * as economy from '../server/systems/economy.js';
 import { ITEMS, SHOPS } from '../shared/items.js';
 import * as felling from '../server/systems/felling.js';
 import * as cargo from '../server/systems/cargo.js';
@@ -130,21 +133,46 @@ test('felling: the tree falls away from the cutter, and it hurts whoever it land
   assert.ok(dh > 0 && dn > 0 && Math.abs(dh - dn * (1 - HARDHAT_GUARD)) < 4, `the hard hat took some of it (${dh.toFixed(1)} vs ${dn.toFixed(1)})`);
 });
 
-test('felling: logs by the tree\'s size; carried, loaded onto a pickup like crates, sold at the hardware store', () => {
+test('felling: the trunk lies where it fell, cut into rounds by the tree\'s size - each a firewood bundle, carried and loaded like a crate, sold at the hardware store', () => {
   const w = makeWorld();
   const { p, prof } = joinPlayer(w);
+  prof.inventory.axe = 1;
   const big = findTree(w, 3, true, 40) || findTree(w, 2, true);
-  const size = treeSize(big.p);
+  const size = treeSize(big.p), n = TREE_SIZES[size].logs;
   felling.fell(w, big.i, null, 0);
   run(w, felling.FALL_S + 0.2);
-  const logs = [...w.entities.values()].filter((e) => e.kind === K.CRATE && e.logs);
-  assert.equal(logs.length, TREE_SIZES[size].logs, 'its log bundles');
-  assert.equal(logSpots(big.p, 0, 1).length, TREE_SIZES[1].logs); assert.ok(TREE_SIZES[4].logs > TREE_SIZES[3].logs && TREE_SIZES[3].logs > TREE_SIZES[1].logs, 'more logs from bigger trees');
-  // pick one up: the carry
-  const c = logs[0];
-  teleport(w, p.ped, c.x - 20, c.y);
+  assert.equal([...w.entities.values()].filter((e) => e.kind === K.CRATE && e.logs).length, 0, 'no crates out of nowhere: the trunk lies there');
+  assert.deepEqual(felling.logList(w), [big.i, size, (1 << n) - 1], 'the trunk, every round uncut, for a player joining');
+  assert.ok(TREE_SIZES[4].logs > TREE_SIZES[3].logs && TREE_SIZES[3].logs > TREE_SIZES[1].logs && TREE_SIZES[1].logs >= 2, 'more rounds from bigger trees, two at least');
+  // at the trunk with the axe: hold to cut it up, round after round
+  const spots = roundSpots(big.p, 0, size);
+  teleport(w, p.ped, spots[0][0], spots[0][1] + TREE_SIZES[size].wide / 2 + 10); p.ped.a = -Math.PI / 2;
   let act = players.findInteraction(w, p);
-  assert.ok(act && /Pick up Log Bundle/.test(act.label), `the prompt (${act && act.label})`);
+  assert.ok(act && /cut the trunk into rounds/.test(act.label) && new RegExp(`${n} rounds left`).test(act.label), `the prompt (${act && act.label})`);
+  const per = FIREWOOD.work / FELL_TOOLS.axe.rate;
+  hold(w, p, 0.05); hold(w, p, per * 0.6);
+  assert.match(players.findInteraction(w, p).label, /Cutting a round .* \d+% \(keep holding\)/);
+  hold(w, p, per * 0.6);
+  let wood = [...w.entities.values()].filter((e) => e.kind === K.CRATE && e.wood);
+  assert.equal(wood.length, 1, 'one round off: a firewood bundle');
+  assert.equal(wood[0].label, felling.FIREWOOD_LABEL, 'labelled firewood: the stacked logs the clients draw');
+  assert.equal(wood[0].tier, 1, 'a crate like any other');
+  // keep holding, moving along the trunk: the rest of it
+  for (let k = 0; k < n * 3 && w.logs.has(big.i); k++) {
+    const L = w.logs.get(big.i), j = [...Array(n).keys()].find((q) => L.m & (1 << q));
+    if (!p.ped.chop) { teleport(w, p.ped, spots[j][0], spots[j][1] + TREE_SIZES[size].wide / 2 + 10); p.ped.a = -Math.PI / 2; release(w, p); hold(w, p, 0.05); }
+    hold(w, p, per + 0.1);
+  }
+  assert.ok(!w.logs.has(big.i), 'the trunk all cut up');
+  wood = [...w.entities.values()].filter((e) => e.kind === K.CRATE && e.wood);
+  assert.equal(wood.length, n, `a bundle a round (${n})`);
+  assert.deepEqual(felling.logList(w), [], 'nothing lying there');
+  // pick one up: the carry
+  release(w, p);
+  const c = wood[0];
+  teleport(w, p.ped, c.x - 20, c.y);
+  act = players.findInteraction(w, p);
+  assert.ok(act && /Pick up/.test(act.label), `the prompt (${act && act.label})`);
   act.run();
   assert.equal(p.ped.carrying, c.id, 'carrying the bundle');
   // onto a pickup's bed
@@ -161,10 +189,64 @@ test('felling: logs by the tree\'s size; carried, loaded onto a pickup like crat
   teleport(w, p.ped, shop.x, shop.y);
   const cash0 = prof.cash;
   act = players.findInteraction(w, p);
-  assert.ok(act && /Sell the logs/.test(act.label), `the prompt (${act && act.label})`);
+  assert.ok(act && /Sell the firewood/.test(act.label), `the prompt (${act && act.label})`);
   act.run();
   assert.equal(prof.cash, cash0 + LOG_BUNDLE_PRICE, 'paid');
   assert.ok(!p.ped.carrying && !w.entities.has(c.id), 'the bundle is gone');
+});
+
+test('firewood: driven to a buyer on the bed it sells by the load (a sawmill pays more); at your own garage it\'s stacked and kept', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w, { bank: 1e6 });
+  const bundle = (x, y) => { const c = w.spawnCrate(1, x, y, { label: felling.FIREWOOD_LABEL, value: LOG_BUNDLE_PRICE, contraband: false }); c.logs = true; c.wood = true; return c; };
+  const loaded = (v, k) => { for (let i = 0; i < k; i++) { const c = bundle(v.x, v.y); c.state = 'loaded'; c.parent = v.id; c.slot = i; v.cargo[i] = c.id; } };
+  // at the hardware store, in a pickup with two on the back
+  const shop = w.map.pois.find((q) => q.kind === 'hardware');
+  const v = w.spawnVehicle('flatbed', shop.x, shop.y, 0, { npcOwned: false });
+  loaded(v, 2);
+  p.ped.vehId = v.id; p.ped.seat = 0; v.seats[0] = p.ped.id;
+  let act = players.findInteraction(w, p);
+  assert.ok(act && /Sell the 2 bundles of wood/.test(act.label), `the prompt (${act && act.label})`);
+  const cash0 = prof.cash;
+  act.run();
+  assert.equal(prof.cash, cash0 + 2 * LOG_BUNDLE_PRICE, 'paid for the load');
+  assert.ok(v.cargo.every((id) => !id), 'the bed empty');
+  // a sawmill (World v3's Timber Bend Sawmill; on the test map, one like it): more a bundle
+  const mill = { ...shop, id: 99999, kind: 'delivery', label: 'Timber Bend Sawmill', x: shop.x + 3000, y: shop.y };
+  w.map.pois.push(mill);
+  try {
+    v.x = mill.x; v.y = mill.y; w.place(v);
+    loaded(v, 1);
+    act = players.findInteraction(w, p);
+    assert.ok(act && /Timber Bend Sawmill/.test(act.label) && act.label.includes(`+$${FIREWOOD.mill}`), `the sawmill's prompt (${act && act.label})`);
+    assert.ok(FIREWOOD.mill > LOG_BUNDLE_PRICE, 'the mill pays better');
+    act.run();
+  } finally { w.map.pois.pop(); }
+  // home: buy a house, drive up to its garage with firewood on the back - stacked there, kept as a count
+  p.ped.vehId = 0; p.ped.seat = -1; v.seats[0] = 0;
+  const h = w.map.homes.find((q) => q.kind === 'house' && !w.homeOwner.has(q.id));
+  teleport(w, p.ped, h.x, h.y);
+  economy.handleMenu(w, p, w.map.pois.find((q) => q.kind === 'home' && q.home === h.id).id, 'hbuy');
+  assert.equal(w.homeOwner.get(h.id), p.pid, 'my home');
+  v.x = h.garage.x; v.y = h.garage.y; v.vx = 0; v.vy = 0; w.place(v);
+  loaded(v, 2);
+  p.ped.vehId = v.id; p.ped.seat = 0; v.seats[0] = p.ped.id;
+  act = players.findInteraction(w, p);
+  assert.ok(act && /Stack the 2 bundles of firewood in your garage/.test(act.label), `the prompt (${act && act.label})`);
+  act.run();
+  assert.equal(prof.homeWood[h.id], 2, 'two bundles kept at that home');
+  assert.ok(v.cargo.every((id) => !id), 'off the bed');
+  // carried up to it on foot: one more
+  p.ped.vehId = 0; p.ped.seat = -1; v.seats[0] = 0; w.remove(v);
+  teleport(w, p.ped, h.garage.x + 30, h.garage.y);
+  const c = bundle(p.ped.x + 10, p.ped.y);
+  cargo.pickUp(w, p.ped, c);
+  assert.equal(p.ped.carrying, c.id);
+  act = players.findInteraction(w, p);
+  assert.ok(act && /Stack the firewood in your garage/.test(act.label), `on foot (${act && act.label})`);
+  act.run();
+  assert.equal(prof.homeWood[h.id], 3, 'three now');
+  assert.equal(felling.woodAt(p, h), 3);
 });
 
 test('felling: in town it\'s vandalism (a little heat), in the wilds free; stumps grow back only when nobody is near; the client gets a short list', () => {
@@ -203,4 +285,51 @@ test('felling: in town it\'s vandalism (a little heat), in the wilds free; stump
   assert.ok(!w.map.propSolid.get(wild.i).off, 'solid again');
   assert.ok(felling.felledList(w).length <= 2);
   assert.ok(w.globalEvents.length >= ev0);
+});
+
+test('the clients draw it: the tree tipping, bouncing and settling, its trunk cut a round at a time, the police dog\'s lead (render/carryfx.js), and the firewood bundle in both views', async () => {
+  const { CarryFx } = await import('../client/render/carryfx.js');
+  const calls = { moveTo: 0, lineTo: 0, ellipse: 0, quadraticCurveTo: 0 };
+  const g = new Proxy({}, { get: (o, k) => (k in calls ? (...a) => { calls[k]++; void a; } : typeof k === 'string' && /^[a-z]/.test(k) && !['lineWidth', 'strokeStyle', 'fillStyle', 'lineCap', 'globalAlpha'].includes(k) ? () => {} : o[k]), set: (o, k, v) => { o[k] = v; return true; } });
+  const w = makeWorld();
+  const tree = findTree(w, 2, true);
+  const fx = { smoke() {}, spawn() {}, ring() {} };
+  const S = { fx, map: w.map, ents: new Map(), logs0: null };
+  const C = new CarryFx(S);
+  const F = { view: { x0: tree.p.x - 600, x1: tree.p.x + 600, y0: tree.p.y - 600, y1: tree.p.y + 600 } };
+  C.fall(tree.p.x, tree.p.y, 0, 2, false, tree.i);
+  C.over(g, F);
+  const L = C.logs.get(tree.i);
+  assert.ok(L && L.m === (1 << TREE_SIZES[2].logs) - 1, 'falling: every round on the trunk');
+  // through the fall, the bounce and the settle: the trunk's top goes from up the screen to flat out along the ground
+  const tip = (t) => { L.t0 = performance.now() / 1000 - t; return C._pt(L, TREE_SIZES[2].len, Math.PI / 2 * Math.min(1, (t / felling.FALL_S) ** 2)); };
+  assert.ok(tip(0)[1] < tree.p.y - 50 && Math.abs(tip(felling.FALL_S)[1] - tree.p.y) < 1, 'upright, then flat');
+  for (const t of [0.3, 0.9, 1.25, 1.4, 2, 5]) { L.t0 = performance.now() / 1000 - t; C.over(g, F); }
+  assert.ok(calls.lineTo > 10 && calls.ellipse > 10, 'trunk and crown drawn');
+  C.cut({ i: tree.i, m: L.m & ~1, x: tree.p.x + 20, y: tree.p.y });
+  assert.equal(C.logs.get(tree.i).m, L.m, 'a round off');
+  C.cut({ i: tree.i, m: 0 });
+  assert.ok(!C.logs.has(tree.i), 'all cut up: gone');
+  // a player joining: the trunks lying there
+  w.map.props[tree.i].broken = { a: 0, f: 1 };
+  S.logs0 = [tree.i, 2, 3];
+  C.over(g, F);
+  assert.equal(C.logs.get(tree.i).m, 3, 'from the welcome');
+  delete w.map.props[tree.i].broken;
+  // the police dog on its lead
+  S.ents.set(1, { id: 1, kind: K.PED, rx: tree.p.x, ry: tree.p.y, ra: 0, d: { ar: 'cop' } });
+  S.ents.set(2, { id: 2, kind: K.PED, rx: tree.p.x + 20, ry: tree.p.y, ra: 0, parent: 1, d: { ar: 'pet:dog_shepherd' } });
+  const q0 = calls.quadraticCurveTo;
+  C.over(g, F);
+  assert.equal(calls.quadraticCurveTo, q0 + 1, 'the lead drawn');
+  // the bundle: the classic view's own drawing, art v2's stacked-log model
+  const { drawCrate } = await import('../client/render/sprites.js');
+  const arcs = [];
+  const g2 = new Proxy({}, { get: (o, k) => (k === 'arc' ? (...a) => arcs.push(a) : k === 'drawImage' ? () => assert.fail('not the wooden box\'s frame') : typeof k === 'string' && /^[a-z]/.test(k) && !['lineWidth', 'strokeStyle', 'fillStyle'].includes(k) ? () => {} : o[k]), set: (o, k, v) => { o[k] = v; return true; } });
+  drawCrate(g2, 1, felling.FIREWOOD_LABEL, 0);
+  assert.equal(arcs.length, 5, 'the classic view: five log ends stacked');
+  const A = await import('../client/art2/game/actors.js');
+  assert.notEqual(A.crateKey(1, felling.FIREWOOD_LABEL), A.crateKey(1, ''), 'its own sprite, not a wooden box');
+  const spr = A.crateSprite(1, felling.FIREWOOD_LABEL);
+  assert.ok(spr && spr.w > 8 && spr.h > 6, 'the stacked logs');
 });
